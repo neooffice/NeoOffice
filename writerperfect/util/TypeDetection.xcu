@@ -5287,11 +5287,13 @@
     <value>writer_DocBook_File writer_Flat_XML_File writer_XHTML_File writer_MS_Word_2003 calc_MS_Excel_2003</value>
    </prop>
   </node>
+<!--
   <node oor:name="com.sun.star.comp.Writer.WordPerfectImportFilter" oor:op="replace">
    <prop oor:name="Types">
     <value>writer_WordPerfect_Document writer_WordPerfect_41_W4W writer_WordPerfect_42_W4W writer_WordPerfect_50_W4W writer_WordPerfect_51_W4W writer_WordPerfect_60_W4W writer_WordPerfect_61_W4W writer_WordPerfect_Mac_1_W4W writer_WordPerfect_Mac_2_W4W writer_WordPerfect_Mac_3_W4W writer_WordPerfect_Win_51_52_W4W writer_WordPerfect_Win_60_W4W writer_WordPerfect_Win_61_W4W writer_WordPerfect_Win_70_W4W</value>
    </prop>
   </node>
+-->
  </node>
  <node oor:name="FrameLoaders">
   <node oor:name="com.sun.star.comp.sfx2.SfxMacroLoader" oor:op="replace">
