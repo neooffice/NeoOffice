@@ -830,10 +830,33 @@ void SalInstance::Yield( BOOL bWait )
 	// Dispatch pending non-AWT events
 	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( 0, FALSE ) ) != NULL )
 	{
-		// Ignore SALEVENT_SHUTDOWN events when recursing into this method or
-		// when in presentation mode
-		if ( ( nRecursionLevel == 1 && !pSalData->mpPresentationFrame ) || pEvent->getID() != SALEVENT_SHUTDOWN )
-			pEvent->dispatch();
+		USHORT nID = pEvent->getID();
+		switch ( nID )
+		{
+			case SALEVENT_SHUTDOWN:
+				// Ignore SALEVENT_SHUTDOWN events when recursing into this
+				// method or when in presentation mode
+				if ( nRecursionLevel == 1 && !pSalData->mpPresentationFrame )
+					pEvent->dispatch();
+				break;
+			case SALEVENT_OPENDOCUMENT:
+			case SALEVENT_PRINTDOCUMENT:
+				// Fix bug 168 by reposting SALEVENT_*DOCUMENT events when
+				// recursing into this method
+				if ( nRecursionLevel == 1 )
+				{
+					pEvent->dispatch();
+				}
+				else
+				{
+					com_sun_star_vcl_VCLEvent aEvent( pEvent->getJavaObject() );
+					pSalData->mpEventQueue->postCachedEvent( &aEvent );
+				}
+				break;
+			default:
+				pEvent->dispatch();
+				break;
+		}
 		delete pEvent;
 
 		ULONG nCount = ReleaseYieldMutex();
