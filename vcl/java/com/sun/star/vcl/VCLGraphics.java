@@ -571,7 +571,8 @@ public final class VCLGraphics {
 		if (clip != null && !clip.intersects(destBounds))
 			return;
 		Graphics2D g = (Graphics2D)graphics.create(destX, destY, destWidth, destHeight);
-		g.scale((double)destWidth / srcWidth, (double)destHeight / srcHeight);
+		if (destWidth != srcWidth || destHeight != srcHeight)
+			g.scale((double)destWidth / srcWidth, (double)destHeight / srcHeight);
 		g.drawImage(img, 0, 0, srcWidth, srcHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
 		g.dispose();
 		addToFlush(destBounds);
@@ -1326,27 +1327,31 @@ public final class VCLGraphics {
 		}
 		else {
 			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
-			srcImage.getGraphics().drawImage(image.getImage(), bounds.x, bounds.y, bounds.width, bounds.height, 0, 0, bounds.width, bounds.height);
-
-			int[] destData = srcImage.getData();
-			int totalPixels = bounds.width * bounds.height;
-
-			// Invert pixel
-			for (int i = 0; i < totalPixels; i++)
-				destData[i] = ~destData[i] | 0xff000000;
-
+			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
+			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 			Shape clip = graphics.getClip();
 			Area polygonClip = new Area(polygon);
 			if (clip != null) {
 				Area area = new Area(clip);
 				area.intersect(polygonClip);
-				graphics.setClip(area);
+				srcGraphics.setClip(area);
 			}
 			else {
-				graphics.setClip(polygonClip);
+				srcGraphics.setClip(polygonClip);
 			}
+			srcGraphics.drawImage(image.getImage(), bounds.x, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height, bounds.x, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height, null);
+			srcGraphics.dispose();
+
+			int[] destData = srcImage.getData();
+			int totalPixels = bounds.width * bounds.height;
+
+			// Invert pixel
+			for (int i = 0; i < totalPixels; i++) {
+				if ((destData[i] & 0xff000000) == 0xff000000)
+					destData[i] = ~destData[i] | 0xff000000;
+			}
+
 			drawImage(srcImage.getImage(), 0, 0, bounds.width, bounds.height, bounds.x, bounds.y, bounds.width, bounds.height);
-			graphics.setClip(clip);
 			srcImage.dispose();
 		}
 
