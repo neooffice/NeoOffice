@@ -57,7 +57,7 @@ int main( int argc, char *argv[] )
 	// do any accidental damage
 	if ( getuid() == 0 )
 	{
-		fprintf( stderr, "%s: cannot run as root user. Exiting...\n", argv[ 0 ] );
+		fprintf( stderr, "%s: running as root user is not allowed\n", argv[ 0 ]  );
 		_exit( 1 );
 	}
 
