@@ -112,6 +112,7 @@ build.neo_patches: \
 	build.neo_desktop_patch \
 	build.neo_dtrans_patch \
 	build.neo_forms_patch \
+	build.neo_readlicense_patch \
 	build.neo_offmgr_patch \
 	build.neo_sysui_patch \
 	build.neo_toolkit_patch \
@@ -122,6 +123,7 @@ build.all: build.oo_all build.neo_patches
 	source "$(OO_ENV_JAVA)" ; cd "desktop" ; `alias build` -u $(BUILD_ARGS)
 	source "$(OO_ENV_JAVA)" ; cd "dtrans" ; `alias build` -u $(BUILD_ARGS)
 	source "$(OO_ENV_JAVA)" ; cd "forms" ; `alias build` -u $(BUILD_ARGS)
+	source "$(OO_ENV_JAVA)" ; cd "readlicense" ; `alias build` -u $(BUILD_ARGS)
 	source "$(OO_ENV_JAVA)" ; cd "offmgr" ; `alias build` -u $(BUILD_ARGS)
 	source "$(OO_ENV_JAVA)" ; cd "sysui" ; `alias build` -u $(BUILD_ARGS)
 	source "$(OO_ENV_JAVA)" ; cd "toolkit" ; `alias build` -u $(BUILD_ARGS)
