@@ -505,13 +505,14 @@ void JavaDragSource::runDragExecute( void *pData )
 					aTrackingEventQueue = GetCurrentEventQueue();
 					aCarbonEventQueueMutex.release();
 
+					// Fix bug 249 by preventing drags to other applications
+					SetDragAllowableActions( aDrag, kDragActionNothing, false );
+
 					if ( TrackDrag( aDrag, &aEventRecord, aRegion ) == noErr )
 					{
 						aDragMutex.acquire();
 
-						// Fix bug 249 by only when there is a successful drop
-						// within our application
-						if ( bNoRejectCursor && nCurrentAction != DNDConstants::ACTION_NONE )
+						if ( nCurrentAction != DNDConstants::ACTION_NONE )
 						{
 							aDragEvent.DropAction = nCurrentAction;
 							aDragEvent.DropSuccess = sal_True;
@@ -525,6 +526,7 @@ void JavaDragSource::runDragExecute( void *pData )
 						SetThemeCursor( kThemeArrowCursor );
 					}
 #endif	// MACOSX
+
 
 					aCarbonEventQueueMutex.acquire();
 					aTrackingEventQueue = NULL;
