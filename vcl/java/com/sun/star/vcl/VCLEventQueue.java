@@ -87,16 +87,6 @@ public final class VCLEventQueue {
 	private boolean autoFlush = true;
 
 	/**
-	 * The queue of cached AWT events.
-	 */
-	private VCLEventQueue.Queue awtQueue = new VCLEventQueue.Queue();
-
-	/**
-	 * The queue of cached non-AWT events.
-	 */
-	private VCLEventQueue.Queue nonAWTQueue = new VCLEventQueue.Queue();
-
-	/**
 	 * The list of queues.
 	 */
 	private VCLEventQueue.Queue[] queueList = new VCLEventQueue.Queue[2];
@@ -109,8 +99,8 @@ public final class VCLEventQueue {
 		VCLGraphics.setAutoFlush(true);
 
 		// Create the list of queues
-		queueList[0] = awtQueue;
-		queueList[1] = nonAWTQueue;
+		queueList[0] = new VCLEventQueue.Queue();
+		queueList[1] = new VCLEventQueue.Queue();
 
 		// Load platform specific event handlers
 		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
@@ -151,13 +141,13 @@ public final class VCLEventQueue {
 	 */
 	public boolean anyCachedEvent(int type) {
 
-		for (int i = 0; i < queueList.length; i++) {
-			VCLEventQueue.Queue queue = queueList[i];
+		synchronized (queueList) {
+			for (int i = 0; i < queueList.length; i++) {
+				VCLEventQueue.Queue queue = queueList[i];
 
-			if (queue.head == null)
-				continue;
+				if (queue.head == null)
+					continue;
 
-			synchronized (queue) {
 				VCLEventQueue.QueueItem eqi = queue.head;
 				while (eqi != null) {
 					if (!eqi.remove && (type & eqi.type) != 0)
@@ -182,7 +172,7 @@ public final class VCLEventQueue {
 	 *  queue and <code>false</code> to use the non-<code>AWTEvent</code> queue
 	 * @return the next cached <code>VCLEvent</code> instance
 	 */
-	public VCLEvent getNextCachedEvent(long wait, boolean awtEvents ) {
+	public VCLEvent getNextCachedEvent(long wait, boolean awtEvents) {
 
 		if (autoFlush) {
 			// Turn off auto flushing
@@ -202,19 +192,17 @@ public final class VCLEventQueue {
 			}
 		}
 
-		VCLEventQueue.Queue queue = (awtEvents ? awtQueue : nonAWTQueue);
+		VCLEventQueue.Queue queue = (awtEvents ? queueList[0] : queueList[1]);
 
 		if (wait <= 0 && queue.head == null)
 			return null;
 
-		synchronized (queue) {
+		synchronized (queueList) {
 			if (wait > 0 && queue.head == null) {
-				synchronized (queueList) {
-					try {
-						queueList.wait(wait);
-					}
-					catch (Throwable t) {}
+				try {
+					queueList.wait(wait);
 				}
+				catch (Throwable t) {}
 			}
 			VCLEventQueue.QueueItem eqi = null;
 			eqi = queue.head;
@@ -237,12 +225,12 @@ public final class VCLEventQueue {
 	 */
 	public void postCachedEvent(VCLEvent event) {
 
-		VCLEventQueue.Queue queue = (event.isAWTEvent() ? awtQueue : nonAWTQueue);
+		VCLEventQueue.Queue queue = (event.isAWTEvent() ? queueList[0] : queueList[1]);
 
 		// Add the event to the cache
 		VCLEventQueue.QueueItem newItem = new VCLEventQueue.QueueItem(event);
 		int id = newItem.event.getID();
-		synchronized (queue) {
+		synchronized (queueList) {
 			// Coalesce mouse move events
 			if (id == VCLEvent.SALEVENT_MOUSEMOVE) {
 				if (queue.mouseMove != null && queue.mouseMove.next == null)
@@ -277,9 +265,7 @@ public final class VCLEventQueue {
 					newItem.type = VCLEventQueue.INPUT_OTHER;
 					break;
 			}
-			synchronized (queueList) {
-				queueList.notifyAll();
-			}
+			queueList.notifyAll();
 		}
 
 	}
@@ -292,13 +278,13 @@ public final class VCLEventQueue {
 	 */
 	void removeCachedEvents(long frame) {
 
-		for (int i = 0; i < queueList.length; i++) {
-			VCLEventQueue.Queue queue = queueList[i];
+		synchronized (queueList) {
+			for (int i = 0; i < queueList.length; i++) {
+				VCLEventQueue.Queue queue = queueList[i];
 
-			if (queue.head == null)
-				continue;
+				if (queue.head == null)
+					continue;
 
-			synchronized (queue) {
 				VCLEventQueue.QueueItem eqi = queue.head;
 				while (eqi != null) {
 					if (eqi.event.getFrame() == frame)
