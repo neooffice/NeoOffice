@@ -300,11 +300,8 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				mpCharsToGlyphs[ nIndex ] = i;
 		}
 
-		nBufSize = nLen * sizeof( bool );
-		bool *pNeedFallback = (bool *)rtl_allocateMemory( nBufSize );
-		memset( pNeedFallback, 0, nBufSize );
-
 		// Find positions that require fallback fonts
+		bool *pNeedFallback = NULL;
 		UniCharArrayOffset nCurrentPos = 0;
 		UniCharCount nOffset;
 		ATSUFontID nFontID;
@@ -318,6 +315,13 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			}
 			else if ( nErr == kATSUFontsMatched )
 			{
+				if ( !pNeedFallback )
+				{
+					nBufSize = nLen * sizeof( bool );
+					pNeedFallback = (bool *)rtl_allocateMemory( nBufSize );
+					memset( pNeedFallback, 0, nBufSize );
+				}
+
 				int nOffsetPos = nCurrentPos + nOffset;
 				for ( ; nCurrentPos < nOffsetPos; nCurrentPos++ )
 				{
@@ -351,16 +355,19 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		}
 
 		// Create fallback runs
-		bool bPosRTL;
-		int nCharPos = -1;
-		rArgs.ResetPos();
-		while ( rArgs.GetNextPos( &nCharPos, &bPosRTL ) )
+		if ( pNeedFallback )
 		{
-			if ( pNeedFallback[ nCharPos - rArgs.mnMinCharPos + 1 ] )
-				rArgs.NeedFallback( nCharPos, bPosRTL );
-		}
+			bool bPosRTL;
+			int nCharPos = -1;
+			rArgs.ResetPos();
+			while ( rArgs.GetNextPos( &nCharPos, &bPosRTL ) )
+			{
+				if ( pNeedFallback[ nCharPos - rArgs.mnMinCharPos + 1 ] )
+					rArgs.NeedFallback( nCharPos, bPosRTL );
+			}
 
-		rtl_freeMemory( pNeedFallback );
+			rtl_freeMemory( pNeedFallback );
+		}
 
 		if ( bVertical )
 		{
@@ -445,9 +452,6 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				nCharWidth = Float32ToLong( ( mpGlyphInfoArray->glyphs[ i + 1 ].idealX - mpGlyphInfoArray->glyphs[ i ].idealX ) * mnUnitsPerPixel );
 			}
 
-			if ( mpGlyphInfoArray->glyphs[ i ].layoutFlags & ( kATSGlyphInfoIsWhiteSpace | kATSGlyphInfoTerminatorGlyph ) )
-				nGlyph = GF_IDXMASK;
-
 			int nGlyphFlags = nCharWidth ? 0 : GlyphItem::IS_IN_CLUSTER;
 
 			if ( bPosRTL )
@@ -455,7 +459,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 			GlyphItem aGI( nCharPos, nGlyph, aPos, nGlyphFlags, nCharWidth );
 			aGI.mnNewWidth = nCharWidth;
-				AppendGlyph( aGI );
+			AppendGlyph( aGI );
 
 			aPos.X() += nCharWidth;
 		}
@@ -484,23 +488,6 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 		if ( !nGlyphCount )
 			break;
 
-		// Don't draw undisplayable characters
-		int i;
-		for ( i = 0; i < nGlyphCount && ( aGlyphArray[ i ] & GF_IDXMASK ) == GF_IDXMASK; i++ )
-			;
-		if ( i )
-		{
-			nStart -= nGlyphCount - i;
-			continue;
-		}
-		for ( i = 0; i < nGlyphCount && ( aGlyphArray[ i ] & GF_IDXMASK ) != GF_IDXMASK; i++ )
-			;
-		if ( i )
-		{
-			nStart -= nGlyphCount - i;
-			nGlyphCount = i;
-		}
-
 		int nOrientation = GetOrientation();
 
 		if ( mpGlyphTranslations && aGlyphArray[ 0 ] & GF_ROTMASK )
@@ -524,7 +511,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 		}
 		else
 		{
-			for ( i = 0; i < nGlyphCount; i++ )
+			for ( int i = 0; i < nGlyphCount; i++ )
 				aGlyphArray[ i ] &= GF_IDXMASK;
 
 			rGraphics.maGraphicsData.mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), nGlyphCount, aGlyphArray, aDXArray, mpVCLFont, rGraphics.maGraphicsData.mnTextColor, nOrientation, 0, 0, mnUnitsPerPixel );

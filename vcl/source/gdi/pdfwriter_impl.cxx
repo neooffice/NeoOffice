@@ -3254,23 +3254,6 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
     sal_Unicode *pTmpUnicodes = pUnicodes;
     while( ( nGlyphs = rLayout.GetNextGlyphs( nMaxGlyphs - nTmpOffset, pTmpGlyphs, aTmpPos, nTmpIndex, pTmpAdvanceWidths, pTmpCharPosAry ) ) || nTmpOffset )
     {
-		// Don't draw undisplayable characters
-		int j;
-		for ( j = 0; j < nGlyphs && ( pTmpGlyphs[ j ] & GF_IDXMASK ) == GF_IDXMASK; j++ )
-			;
-		if ( j )
-		{
-			nTmpIndex -= nGlyphs - j;
-			continue;
-		}
-		for ( j = 0; j < nGlyphs && ( pTmpGlyphs[ j ] & GF_IDXMASK ) != GF_IDXMASK; j++ )
-			;
-		if ( j )
-		{
-			nTmpIndex -= nGlyphs - j;
-			nGlyphs = j;
-		}
-
         for( int i = 0; i < nGlyphs; i++ )
         {
             if( pTmpGlyphs[i] & GF_FONTMASK )
@@ -3280,9 +3263,6 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
 
             nGlyphFlags[i] = (pTmpGlyphs[i] & GF_FLAGMASK);
             pTmpGlyphs[i] &= GF_IDXMASK;
-
-            if ( pTmpGlyphs[i] == GF_IDXMASK )
-                pTmpGlyphs[i] = 0;
 
             if( pTmpCharPosAry[i] >= nMinCharPos && pTmpCharPosAry[i] <= nMaxCharPos )
                 pTmpUnicodes[i] = rText.GetChar( pTmpCharPosAry[i] );
@@ -3324,23 +3304,6 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
 #endif	// USE_JAVA && MACOSX
     while( (nGlyphs = rLayout.GetNextGlyphs( nMaxGlyphs, pGlyphs, aPos, nIndex, pAdvanceWidths, pCharPosAry )) )
     {
-		// Don't draw undisplayable characters
-		int j;
-		for ( j = 0; j < nGlyphs && ( pGlyphs[ j ] & GF_IDXMASK ) == GF_IDXMASK; j++ )
-			;
-		if ( j )
-		{
-			nIndex -= nGlyphs - j;
-			continue;
-		}
-		for ( j = 0; j < nGlyphs && ( pGlyphs[ j ] & GF_IDXMASK ) != GF_IDXMASK; j++ )
-			;
-		if ( j )
-		{
-			nIndex -= nGlyphs - j;
-			nGlyphs = j;
-		}
-
         bWasYChange = (aGlyphPos.Y() != aPos.Y());
         aGlyphPos = aPos;
         // back transformation to current coordinate system
@@ -3378,9 +3341,6 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
 #endif
 #if defined USE_JAVA && defined MACOSX
             pGlyphs[i] &= GF_IDXMASK;
-
-            if ( pGlyphs[i] == GF_IDXMASK )
-                pGlyphs[i] = 0;
 #endif	// USE_JAVA && MACOSX
             if( pCharPosAry[i] >= nMinCharPos && pCharPosAry[i] <= nMaxCharPos )
                 pUnicodes[i] = rText.GetChar( pCharPosAry[i] );
