@@ -58,6 +58,9 @@
 #ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
 #endif
+#ifndef _OSL_CONDITN_HXX_
+#include <osl/conditn.hxx>
+#endif
 #include <crt_externs.h>
 #include <premac.h>
 #include <Carbon/Carbon.h>
@@ -72,7 +75,7 @@ typedef OSStatus ReceiveNextEvent_Type( UInt32, const EventTypeSpec *, EventTime
 class SVMainThread : public ::vos::OThread
 {
 protected:
-	virtual void run() { SVMain(); _exit( 0 ); }
+	virtual void			run() { SVMain(); _exit( 0 ); }
 };
 
 using namespace osl;
@@ -82,6 +85,7 @@ using namespace vos;
 
 static OModule aJDirectModule;
 static OThread::TThreadIdentifier nCarbonLockThread = 0;
+static Condition aCarbonLockCondition;
 static Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0_Type *pCarbonLockAcquire = NULL;
 static Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type *pCarbonLockGetInstance = NULL;
 static Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *pCarbonLockInit = NULL;
@@ -96,10 +100,17 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( JNIEnv 
 {
 	// Don't lock if this is the main thread
 	if ( OThread::getCurrentIdentifier() == nCarbonLockThread )
+	{
+		aCarbonLockCondition.wait();
+		aCarbonLockCondition.reset();
 		return 0;
+	}
 
 	if ( pCarbonLockAcquire )
+	{
+		aCarbonLockCondition.set();
 		return pCarbonLockAcquire( pEnv, object );
+	}
 
 	return 1;
 }
@@ -123,7 +134,7 @@ static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( J
 static void JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_init( JNIEnv *pEnv, jobject object )
 {
 	if ( pCarbonLockInit )
-		return pCarbonLockInit( pEnv, object );
+		pCarbonLockInit( pEnv, object );
 }
 #endif
 
@@ -245,7 +256,7 @@ int main( int argc, char *argv[] )
 		// Start the Cocoa event loop
 		RunCocoaEventLoop();
 		aThread.join();
-		exit( 0 );
+		return( 0 );
 	}
 	else
 	{
@@ -295,6 +306,7 @@ int main( int argc, char *argv[] )
 			if ( carbonLockClass && pCarbonLockAcquire && pCarbonLockGetInstance && pCarbonLockInit && pCarbonLockRelease )
 			{
 				nCarbonLockThread = OThread::getCurrentIdentifier();
+				aCarbonLockCondition.reset();
 
 				// Reregister the native methods
 				JNINativeMethod pMethods[4];
@@ -320,18 +332,13 @@ int main( int argc, char *argv[] )
 				OModule aModule;
 				aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) );
 
-				// Run a Carbon event loop but don't dispatch any events in
-				// this thread
+				// Run a Carbon event loop but have it block until the Java
+				// event loop is started. Having an event loop in this
+				// blocked state is enough to solve the keyboard layout
+				// switching problem on Panther.
 				ReceiveNextEvent_Type *pReceiveNextEvent = (ReceiveNextEvent_Type *)aModule.getSymbol( OUString::createFromAscii( "ReceiveNextEvent" ) );
 				if ( pReceiveNextEvent )
-				{
-					EventRef aEvent;
-					for ( ; ; )
-					{
-						pReceiveNextEvent( 0, NULL, kEventDurationForever, false, &aEvent );
-						OThread::yield();
-					}
-				}
+					pReceiveNextEvent( 0, NULL, kEventDurationForever, false, NULL );
 
 				aModule.unload();
 				aThread.join();
