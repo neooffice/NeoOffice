@@ -1190,6 +1190,7 @@ void SalInstance::Yield( BOOL bWait )
 			pEvent->dispatch();
 		}
 		delete pEvent;
+		pEvent = NULL;
 
 		if ( bReturn )
 		{
