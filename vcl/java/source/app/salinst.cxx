@@ -704,26 +704,29 @@ void SalInstance::Yield( BOOL bWait )
 	}
 
 	// Dispatch pending AWT events
-	BOOL bContinue = TRUE;
-	while ( bContinue && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
+	while ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
 	{
 		// Reset timeout
 		nTimeout = 0;
 
-		// If this is a mouse or key pressed event, make another pass through
-		// the loop in case the next event is a mouse released event. If the
-		// timer is run between continguous mouse or key pressed and released
-		// the application acts is if two mouse clicks have been made instead
-		// of one.
 		USHORT nID = pEvent->getID();
-		if ( nID == SALEVENT_MOUSELEAVE || nID == SALEVENT_MOUSEMOVE )
-			bContinue = FALSE;
+
 		if ( pSalData->mpPresentationFrame )
 			pSalData->mpPresentationFrame->maFrameData.mpVCLFrame->setAutoFlush( TRUE );
 		pEvent->dispatch();
 		if ( pSalData->mpPresentationFrame )
 			pSalData->mpPresentationFrame->maFrameData.mpVCLFrame->setAutoFlush( FALSE );
 		delete pEvent;
+
+		// If this is a mouse or key pressed event, make another pass through
+		// the loop in case the next event is a mouse released event. If the
+		// timer is run between continguous mouse or key pressed and released
+		// the application acts is if two mouse clicks have been made instead
+		// of one.
+		if ( nID == SALEVENT_KEYINPUT || nID == SALEVENT_MOUSEBUTTONDOWN )
+			continue;
+		else
+			break;
 	}
 
 	nRecursionLevel--;
