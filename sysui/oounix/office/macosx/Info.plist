@@ -263,9 +263,19 @@
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>application/msword</string>
+				<string>application/vnd.wordperfect</string>
+				<string>application/vnd.wordperfect5.1</string>
+				<string>application/vnd.wordperfect6.1</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>.WP5</string>
+				<string>.WP6</string>
+				<string>WPD3</string>
+				<string>WPPC</string>
+			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSIsAppleDefaultForType</key>
