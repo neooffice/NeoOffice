@@ -509,7 +509,9 @@ void JavaDragSource::runDragExecute( void *pData )
 					{
 						aDragMutex.acquire();
 
-						if ( nCurrentAction != DNDConstants::ACTION_NONE )
+						// Fix bug 249 by only when there is a successful drop
+						// within our application
+						if ( bNoRejectCursor && nCurrentAction != DNDConstants::ACTION_NONE )
 						{
 							aDragEvent.DropAction = nCurrentAction;
 							aDragEvent.DropSuccess = sal_True;
