@@ -338,7 +338,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 			// Execute menu updates while the VCL event queue is blocked
 			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-				UpdateMenusForFrame( (*it), NULL/*, nKind == kEventMenuEndTracking ? true : false */ );
+				UpdateMenusForFrame( *it, NULL );
 
 			// Relock the Carbon lock
 			if ( t.pEnv )
