@@ -299,44 +299,38 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			if ( pInputEvent )
 				delete pInputEvent;
 			dispatchEvent( nID, pFrame, NULL );
-			pSalData->mnLastExtTextInputLen = 0;
 			return;
 		}
 		case SALEVENT_EXTTEXTINPUT:
 		{
-			XubString aText( getText() );
-			ULONG nLen = aText.Len();
-			ULONG nCommitted = getCommittedCharacterCount();
-			USHORT *pAttributes = getTextAttributes();
 			SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)pData;
 			if ( !pInputEvent )
 			{
 				pInputEvent = new SalExtTextInputEvent();
 				pInputEvent->mnTime = getWhen();
-				pInputEvent->maText = aText;
-				pInputEvent->mpTextAttr = pAttributes;
-				pInputEvent->mnCursorPos = nLen;
+				pInputEvent->maText = XubString( getText() );
+				pInputEvent->mpTextAttr = getTextAttributes();
+				pInputEvent->mnCursorPos = pInputEvent->maText.Len();
 				pInputEvent->mnDeltaStart = 0;
 				pInputEvent->mbOnlyCursor = FALSE;
 				pInputEvent->mnCursorFlags = 0;
 			}
-			// Fix bug 323 by sending an event with no attributes if the
-			// string is shorter than the last event
-			if ( nLen < pSalData->mnLastExtTextInputLen && pInputEvent->mpTextAttr )
+			// Fix bug 323 by sending an event with no attributes if there
+			// are attributes
+			if (  pInputEvent->mpTextAttr )
 			{
 				const USHORT *pEventAttributes = pInputEvent->mpTextAttr;
-				dispatchEvent( nID, pFrame, pInputEvent );
 				pInputEvent->mpTextAttr = NULL;
+				dispatchEvent( nID, pFrame, pInputEvent );
 				pInputEvent->mpTextAttr = pEventAttributes;
 			}
 			dispatchEvent( nID, pFrame, pInputEvent );
-			delete pInputEvent;
-			if ( pAttributes )
-				rtl_freeMemory( pAttributes );
-			pSalData->mnLastExtTextInputLen = nLen;
 			// If there is no text, the character is committed
-			if ( nLen == nCommitted )
+			if ( pInputEvent->maText.Len() == getCommittedCharacterCount() )
 				dispatchEvent( SALEVENT_ENDEXTTEXTINPUT, pFrame, NULL );
+			if ( pInputEvent->mpTextAttr )
+				rtl_freeMemory( (USHORT *)pInputEvent->mpTextAttr );
+			delete pInputEvent;
 			return;
 		}
 		case SALEVENT_GETFOCUS:

@@ -1080,18 +1080,22 @@ public final class VCLEvent extends AWTEvent {
 					count++;
 				}
 				text = buf.toString();
-				textAttributes = new int[count];
-				count = 0;
-				for (char c = i.first(); c != CharacterIterator.DONE; c = i.next()) {
-					int attribute = 0;
-					InputMethodHighlight hl = (InputMethodHighlight)i.getAttribute(TextAttribute.INPUT_METHOD_HIGHLIGHT);
-					if (hl != null) {
-						if (hl.isSelected())
-							attribute |= SAL_EXTTEXTINPUT_ATTR_BOLDUNDERLINE;
-						else
-							attribute |= SAL_EXTTEXTINPUT_ATTR_UNDERLINE;
+
+				if (getCommittedCharacterCount() < count)
+				{
+					textAttributes = new int[count];
+					count = 0;
+					for (char c = i.first(); c != CharacterIterator.DONE; c = i.next()) {
+						int attribute = 0;
+						InputMethodHighlight hl = (InputMethodHighlight)i.getAttribute(TextAttribute.INPUT_METHOD_HIGHLIGHT);
+						if (hl != null) {
+							if (hl.isSelected())
+								attribute |= SAL_EXTTEXTINPUT_ATTR_BOLDUNDERLINE;
+							else
+								attribute |= SAL_EXTTEXTINPUT_ATTR_UNDERLINE;
+						}
+						textAttributes[count++] = attribute;
 					}
-					textAttributes[count++] = attribute;
 				}
 			}
 		}

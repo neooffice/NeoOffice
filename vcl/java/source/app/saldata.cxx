@@ -60,7 +60,6 @@ SalData::SalData()
 	mpTimerProc = NULL;
 	mpEventQueue = NULL;
 	mpPresentationFrame = NULL;
-	mnLastExtTextInputLen = 0;
 
 	// Set conditions so that they don't block
 	maNativeEventStartCondition.set();
