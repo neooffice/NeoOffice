@@ -67,6 +67,7 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 struct ImplATSLayoutDataHash {
 	int					mnFallbackLevel;
+	int					mnBeginChars;
 	int					mnLen;
 	ATSUFontID			mnFontID;
 	long				mnFontSize;
@@ -130,6 +131,7 @@ bool ImplHashEquality::operator()( const ImplATSLayoutDataHash *p1, const ImplAT
 	// HACK: Don't compare leading and trailing spaces as they might not be
 	// valid memory
 	return ( p1->mnFallbackLevel == p2->mnFallbackLevel &&
+		p1->mnBeginChars == p2->mnBeginChars &&
 		p1->mnLen == p2->mnLen &&
 		p1->mnFontID == p2->mnFontID &&
 		p1->mnFontSize == p2->mnFontSize &&
@@ -156,7 +158,8 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 
 	ImplATSLayoutDataHash *pLayoutHash = new ImplATSLayoutDataHash();
 	pLayoutHash->mnFallbackLevel = nFallbackLevel;
-	pLayoutHash->mnLen = rArgs.mnEndCharPos - rArgs.mnMinCharPos + 2;
+	pLayoutHash->mnBeginChars = ( rArgs.mnMinCharPos ? 1 : 0 );
+	pLayoutHash->mnLen = rArgs.mnEndCharPos - rArgs.mnMinCharPos + pLayoutHash->mnBeginChars + ( rArgs.mnEndCharPos < rArgs.mnLength ? 1 : 0 );
 	pLayoutHash->mnFontID = (ATSUFontID)pVCLFont->getNativeFont();
 	pLayoutHash->mnFontSize = pVCLFont->getSize();
 	pLayoutHash->mfFontScaleX = pVCLFont->getScaleX();
@@ -168,16 +171,8 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 	// spaces so that ATSUGetGlyphInfo() will not fail as described in
 	// bug 554
 	pLayoutHash->mpStr = (sal_Unicode *)rtl_allocateMemory( pLayoutHash->mnLen * sizeof( sal_Unicode ) );
-	if ( rArgs.mnMinCharPos )
-		pLayoutHash->mpStr[ 0 ] = rArgs.mpStr[ rArgs.mnMinCharPos - 1 ];
-	else
-		pLayoutHash->mpStr[ 0 ] = 0x0020;
-	memcpy( pLayoutHash->mpStr + 1, rArgs.mpStr + rArgs.mnMinCharPos, ( rArgs.mnEndCharPos - rArgs.mnMinCharPos ) * sizeof( sal_Unicode ) );
-	if ( rArgs.mnEndCharPos < rArgs.mnLength )
-		pLayoutHash->mpStr[ pLayoutHash->mnLen - 1 ] = rArgs.mpStr[ rArgs.mnEndCharPos ];
-	else
-		pLayoutHash->mpStr[ pLayoutHash->mnLen - 1 ] = 0x0020;
-	pLayoutHash->mnStrHash = rtl_ustr_hashCode_WithLength( rArgs.mpStr + rArgs.mnMinCharPos, rArgs.mnEndCharPos - rArgs.mnMinCharPos );
+	memcpy( pLayoutHash->mpStr, rArgs.mpStr + rArgs.mnMinCharPos - pLayoutHash->mnBeginChars, pLayoutHash->mnLen * sizeof( sal_Unicode ) );
+	pLayoutHash->mnStrHash = rtl_ustr_hashCode_WithLength( pLayoutHash->mpStr, pLayoutHash->mnLen );
 
 	// Search cache for matching layout
 	::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplHash, ImplHashEquality >::const_iterator it = maLayoutCache.find( pLayoutHash );
@@ -256,10 +251,15 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 		return;
 	}
 
-	// Fix bug 449 by turning off Unicode composition
-	ATSUFontFeatureType nType = kDiacriticsType;
-	ATSUFontFeatureSelector nSelector = kDecomposeDiacriticsSelector;
-	if ( ATSUSetFontFeatures( maFontStyle, 1, &nType, &nSelector ) != noErr )
+	// Fix bug 449 by turning off Unicode composition and turn off rare
+	// ligatures to be more consistent with TextEdit's layout behavior
+	ATSUFontFeatureType aTypes[2];
+	ATSUFontFeatureSelector aSelectors[2];
+	aTypes[0] = kDiacriticsType;
+	aSelectors[0] = kDecomposeDiacriticsSelector;
+	aTypes[1] = kLigaturesType;
+	aSelectors[1] = kRareLigaturesOffSelector;
+	if ( ATSUSetFontFeatures( maFontStyle, 2, aTypes, aSelectors ) != noErr )
 	{
 		Destroy();
 		return;
@@ -361,6 +361,16 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 		return;
 	}
 
+	// Fix bug 652 by forcing ATSUI to layout the text before we request any
+	// glyph data
+	ATSTrapezoid aTrapezoid;
+	if ( ATSUGetGlyphBounds( maLayout, 0, 0, kATSUFromTextBeginning, kATSUToTextEnd, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) != noErr )
+	{
+		Destroy();
+		return;
+	}
+
+
 	ByteCount nBufSize;
 	if ( ATSUGetGlyphInfo( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nBufSize, NULL ) != noErr )
 	{
@@ -400,7 +410,6 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 
 	// Fix bug 448 by eliminating subpixel advances.
 	UniCharArrayOffset nNextCaretPos = 0;
-	ATSTrapezoid aTrapezoid;
 	for ( i = 0; i < mpHash->mnLen; i = nNextCaretPos )
 	{
 		if ( ATSUNextCursorPosition( maLayout, i, kATSUByCharacterCluster, &nNextCaretPos ) == noErr )
@@ -451,7 +460,9 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 		}
 		else
 		{
-			nNextCaretPos++;
+			nNextCaretPos = i + 1;
+			if ( ATSUGetGlyphBounds( maLayout, 0, 0, i, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
+				mpCharAdvances[ i ] = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX );
 		}
 	}
 	
@@ -709,7 +720,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		rArgs.ResetPos();
 		while ( rArgs.GetNextPos( &nCharPos, &bPosRTL ) )
 		{
-			if ( mpLayoutData->mpNeedFallback[ nCharPos - rArgs.mnMinCharPos + 1 ] )
+			if ( mpLayoutData->mpNeedFallback[ nCharPos - rArgs.mnMinCharPos + mpLayoutData->mpHash->mnBeginChars ] )
 				rArgs.NeedFallback( nCharPos, bPosRTL );
 		}
 
@@ -732,7 +743,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	rArgs.ResetPos();
 	while ( rArgs.GetNextPos( &nCharPos, &bPosRTL ) )
 	{
-		int nIndex = nCharPos - rArgs.mnMinCharPos + 1;
+		int nIndex = nCharPos - rArgs.mnMinCharPos + mpLayoutData->mpHash->mnBeginChars;
 		sal_Unicode nChar = mpLayoutData->mpHash->mpStr[ nIndex ];
 		long nCharWidth = mpLayoutData->mpCharAdvances[ nIndex ];
 
@@ -866,7 +877,7 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector )
 			continue;
 		}
 
-		int nIndex = aCharPosArray[ 0 ] - mnMinCharPos + 1;
+		int nIndex = aCharPosArray[ 0 ] - mnMinCharPos + mpLayoutData->mpHash->mnBeginChars;
 		for ( int i = mpLayoutData->mpCharsToGlyphs[ nIndex ]; i < mpLayoutData->mnGlyphCount && mpLayoutData->mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
 		{
 			long nGlyph = mpLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID;
