@@ -82,14 +82,17 @@ build.oo_checkout:
 	chmod -Rf u+w "$(BUILD_HOME)"
 	touch "$@"
 
-build.oo_patches: build.oo_checkout
+build.oo_patches: build.oo_checkout \
+	build.oo_extensions_patch \
+	build.oo_external_patch \
+	build.oo_scp_patch
 	touch "$@"
 
 build.oo_odk_patches: build.oo_checkout \
 	build.oo_sdk_oo_patch
 	touch "$@"
 
-build.oo_external_patch: $(OO_PATCHES_HOME)/external.patch build.oo_checkout
+build.oo_external_patch: build.oo_checkout
 	chmod -Rf u+w "$(BUILD_HOME)/external/gpc"
 	gnutar zxf "$(OO_PATCHES_HOME)/gpc231.tar.Z" -C "$(BUILD_HOME)/external/gpc"
 	chmod -Rf u+w "$(BUILD_HOME)/external/gpc"
