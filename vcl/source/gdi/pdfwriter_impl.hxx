@@ -130,12 +130,26 @@ class MetaTextArrayPDFAction : public MetaTextArrayAction
 {
 private:
 
+    long*               mpDXAry;
     bool                mbTextLines;
 
 public:
-                        MetaTextArrayPDFAction( const Point& rPt, const XubString& rStr, const long* pDXAry, USHORT nIndex, USHORT nLen, bool bTextLines ) : MetaTextArrayAction( rPt, rStr, pDXAry, nIndex, nLen ), mbTextLines( bTextLines ) {}
-    virtual             ~MetaTextArrayPDFAction() {}
+                        MetaTextArrayPDFAction( const Point& rPt, const XubString& rStr, const long* pDXAry, USHORT nIndex, USHORT nLen, bool bTextLines ) : MetaTextArrayAction( rPt, rStr, pDXAry, nIndex, nLen ), mbTextLines( bTextLines )
+                        {
+                            if ( pDXAry )
+                            {
+                                size_t nSize = nLen * sizeof( long );
+                                mpDXAry = (long *)rtl_allocateMemory( nSize );
+                                memcpy( mpDXAry, pDXAry, nSize );
+                            }
+                        }
+    virtual             ~MetaTextArrayPDFAction()
+                        {
+                            if ( mpDXAry )
+                                delete mpDXAry;
+                        }
 
+    long*               GetDXArray() const { return mpDXAry; }
     bool                IsTextLines() const { return mbTextLines; }
 };
 

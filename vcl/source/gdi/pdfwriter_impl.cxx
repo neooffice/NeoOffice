@@ -2577,7 +2577,7 @@ bool PDFWriterImpl::emit()
                 case( META_TEXT_PDF_ACTION ):
                 {
                     const MetaTextPDFAction* pA = (const MetaTextPDFAction*) pAction;
-                    aWriter.drawText( pA->GetPoint(), String( pA->GetText(), pA->GetIndex(), pA->GetLen() ), pA->IsTextLines() );
+                    aWriter.drawText( pA->GetPoint(), pA->GetText(), pA->GetIndex(), pA->GetLen(), pA->IsTextLines() );
                 }
                 break;
 
