@@ -570,6 +570,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private static boolean capture = false;
 
 	/**
+	 * The shared input context.
+	 */
+	private static InputContext inputContext = null;
+
+	/**
 	 * The last capture frame.
 	 */
 	private static VCLFrame lastCaptureFrame = null;
@@ -589,6 +594,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private static int keyModifiersPressed = 0;
 
+	/**
+	 * Initialize input context.
+	 */
+	static {
+
+		// We need to create a static shared input context as separate
+		// input contexts cause strange behavior on Mac OS X
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
+			inputContext = InputContext.getInstance();
+
+	}
+	
 	/**
 	 * The bit count.
 	 */
@@ -703,11 +720,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param event the input method event
 	 */
-	public void caretPositionChanged(InputMethodEvent e) {
-
-		e.consume();
-
-	}
+	public void caretPositionChanged(InputMethodEvent e) {}
 
 	/**
 	 * Invoked when the the native window's size changes.
@@ -716,7 +729,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void componentResized(ComponentEvent e) {
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVERESIZE, this, 0));
+		if (queue != null)
+			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVERESIZE, this, 0));
 
 	}
 
@@ -727,7 +741,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void componentMoved(ComponentEvent e) {
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVERESIZE, this, 0));
+		if (queue != null)
+			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVERESIZE, this, 0));
 
 	}
 
@@ -840,7 +855,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void focusGained(FocusEvent e) {
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_GETFOCUS, this, 0));
+		if (queue != null)
+			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_GETFOCUS, this, 0));
 
 	}
 
@@ -851,7 +867,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void focusLost(FocusEvent e) {
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
+		if (queue != null)
+			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
 
 	}
 
@@ -1397,9 +1414,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void inputMethodTextChanged(InputMethodEvent e) {
 
-		e.consume();
-
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_EXTTEXTINPUT, this, 0));
+		if (queue != null)
+			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_EXTTEXTINPUT, this, 0));
 
 	}
 
@@ -1409,6 +1425,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param e the <code>KeyEvent</code>
 	 */
 	public void keyPressed(KeyEvent e) {
+
+		if (queue == null)
+			return;
 
 		int keyCode = e.getKeyCode();
 		if (keyCode == KeyEvent.VK_SHIFT || keyCode == KeyEvent.VK_CONTROL || keyCode == KeyEvent.VK_ALT)
@@ -1428,6 +1447,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param e the <code>KeyEvent</code>
 	 */
 	public void keyReleased(KeyEvent e) {
+
+		if (queue == null)
+			return;
 
 		int keyCode = e.getKeyCode();
 		if (keyCode == KeyEvent.VK_SHIFT || keyCode == KeyEvent.VK_CONTROL || keyCode == KeyEvent.VK_ALT) {
@@ -1462,6 +1484,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void keyTyped(KeyEvent e) {
 
+		if (queue == null)
+			return;
+
 		// If a modifier is used to set the character (e.g. the "Alt-c"
 		// generates a "c-cedilla" in the Mac OS X U.S. keyboard, we must strip
 		// off the modifiers so that the C++ code does not get confused.
@@ -1490,6 +1515,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void mousePressed(MouseEvent e) {
 
+		if (queue == null)
+			return;
+
 		MouseEvent mouseEntered = new MouseEvent(e.getComponent(), MouseEvent.MOUSE_ENTERED, e.getWhen(), e.getModifiers(), e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
 		mouseEntered(mouseEntered);
 
@@ -1515,6 +1543,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param e the <code>MouseEvent</code>
 	 */
 	public void mouseReleased(MouseEvent e) {
+
+		if (queue == null)
+			return;
 
 		VCLFrame f = this;
 
@@ -1562,6 +1593,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void mouseDragged(MouseEvent e) {
 
+		if (queue == null)
+			return;
+
 		VCLFrame f = this;
 
 		if (VCLFrame.lastDragFrame == null)
@@ -1601,7 +1635,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				VCLFrame.lastCaptureFrame = f;
 		}
 
-
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, f, 0, keyModifiersPressed));
 
 	}
@@ -1613,7 +1646,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void mouseEntered(MouseEvent e) {
 
-		if (!VCLFrame.capture)
+		if (!VCLFrame.capture && queue != null)
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, this, 0, keyModifiersPressed));
 
 	}
@@ -1625,7 +1658,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void mouseExited(MouseEvent e) {
 
-		if (!VCLFrame.capture)
+		if (!VCLFrame.capture && queue != null)
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSELEAVE, this, 0, keyModifiersPressed));
 
 	}
@@ -1638,7 +1671,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void mouseMoved(MouseEvent e) {
 
-		if (!VCLFrame.capture)
+		if (!VCLFrame.capture && queue != null)
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, this, 0, keyModifiersPressed));
 
 	}
@@ -1917,7 +1950,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void windowClosing(WindowEvent e) {
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_CLOSE, this, 0));
+		if (queue != null)
+			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_CLOSE, this, 0));
 
 	}
 
@@ -1984,6 +2018,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		/**
+		 * Gets the input context used by this frame for handling the
+		 * communication with input methods when text is entered in this
+		 * frame.
+		 */
+		public InputContext getInputContext() {
+
+			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
+				return VCLFrame.inputContext;
+			else
+				return super.getInputContext();
+
+		}
+
+		/**
 		 * This method performs no painting of the frame. This method is used
 		 * to prevent Java from painting over what VCL has painted.
 		 *
@@ -2027,6 +2075,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			frame = f;
 			enableInputMethods(true);
+
+		}
+
+		/**
+		 * Gets the input context used by this panel for handling the
+		 * communication with input methods when text is entered in this
+		 * panel.
+		 */
+		public InputContext getInputContext() {
+
+			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
+				return VCLFrame.inputContext;
+			else
+				return super.getInputContext();
 
 		}
 
@@ -2087,6 +2149,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			super(new VCLFrame.NoPaintFrame(f));
 			frame = f;
 			enableInputMethods(false);
+
+		}
+
+		/**
+		 * Gets the input context used by this window for handling the
+		 * communication with input methods when text is entered in this
+		 * window.
+		 */
+		public InputContext getInputContext() {
+
+			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
+				return VCLFrame.inputContext;
+			else
+				return super.getInputContext();
 
 		}
 

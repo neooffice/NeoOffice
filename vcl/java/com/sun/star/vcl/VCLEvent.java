@@ -1014,7 +1014,6 @@ public final class VCLEvent extends AWTEvent {
 							attribute |= SAL_EXTTEXTINPUT_ATTR_BOLDUNDERLINE;
 						else
 							attribute |= SAL_EXTTEXTINPUT_ATTR_UNDERLINE;
-						System.out.println(hl.getState() + " " + hl.isSelected());
 					}
 					textAttributes[count++] = attribute;
 				}
