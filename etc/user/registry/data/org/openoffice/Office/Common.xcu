@@ -17,4 +17,14 @@
    <value>4</value>
   </prop>
  </node>
+ <node oor:name="Help">
+  <node oor:name="Registration">
+   <prop oor:name="ReminderDate" oor:type="xs:string">
+    <value xsi:nil="true"/>
+   </prop>
+   <prop oor:name="RequestDialog" oor:type="xs:int">
+    <value>0</value>
+   </prop>
+  </node>
+ </node>
 </oor:component-data>
