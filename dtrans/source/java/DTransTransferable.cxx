@@ -63,6 +63,7 @@
 typedef OSStatus ClearCurrentScrap_Type( void );
 typedef OSErr CloseComponent_Type( ComponentInstance );
 typedef void DisposeHandle_Type( Handle );
+typedef MacOSSize GetHandleSize_Type( Handle );
 typedef OSStatus GetCurrentScrap_Type( ScrapRef * );
 typedef OSStatus GetScrapFlavorData_Type( ScrapRef, ScrapFlavorType, MacOSSize *, void * );
 typedef OSStatus GetScrapFlavorSize_Type( ScrapRef, ScrapFlavorType, MacOSSize * );
@@ -153,12 +154,13 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 		{
 			CloseComponent_Type *pCloseComponent = (CloseComponent_Type *)aModule.getSymbol( OUString::createFromAscii( "CloseComponent" ) );
 			DisposeHandle_Type *pDisposeHandle = (DisposeHandle_Type *)aModule.getSymbol( OUString::createFromAscii( "DisposeHandle" ) );
+			GetHandleSize_Type *pGetHandleSize = (GetHandleSize_Type *)aModule.getSymbol( OUString::createFromAscii( "GetHandleSize" ) );
 			KillPicture_Type *pKillPicture = (KillPicture_Type *)aModule.getSymbol( OUString::createFromAscii( "KillPicture" ) );
 			NewHandle_Type *pNewHandle = (NewHandle_Type *)aModule.getSymbol( OUString::createFromAscii( "NewHandle" ) );
 			OpenADefaultComponent_Type *pOpenADefaultComponent = (OpenADefaultComponent_Type *)aModule.getSymbol( OUString::createFromAscii( "OpenADefaultComponent" ) );
 			PtrToHand_Type *pPtrToHand = (PtrToHand_Type *)aModule.getSymbol( OUString::createFromAscii( "PtrToHand" ) );
 			PutScrapFlavor_Type *pPutScrapFlavor = (PutScrapFlavor_Type *)aModule.getSymbol( OUString::createFromAscii( "PutScrapFlavor" ) );
-			if ( pCloseComponent && pDisposeHandle && pKillPicture && pNewHandle && pOpenADefaultComponent && pPtrToHand && pPutScrapFlavor )
+			if ( pCloseComponent && pDisposeHandle && pGetHandleSize && pKillPicture && pNewHandle && pOpenADefaultComponent && pPtrToHand && pPutScrapFlavor )
 			{
 				BOOL bFlavorFound = FALSE;
 				DataFlavor aFlavor;
@@ -217,9 +219,35 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 						Sequence< sal_Int8 > aData;
 						aValue >>= aData;
 
-						if ( nType == 'PICT' || nType == 'TIFF' )
+						if ( nType == 'PICT' )
 						{
-							// Convert to PICT or TIFF from our BMP data
+							// Convert to PICT from our BMP data
+							ComponentInstance aImporter;
+							if ( pOpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
+							{
+								Handle hData;
+								if ( pPtrToHand( aData.getArray(), &hData, aData.getLength() ) == noErr )
+								{
+									// Free the source data
+									aData = Sequence< sal_Int8 >();
+
+									if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr )
+									{
+										PicHandle hPict;
+										if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
+										{
+											nErr = pPutScrapFlavor( (ScrapRef)pTransferable->getNativeTransferable(), nType, kScrapFlavorMaskNone, pGetHandleSize( (Handle)hPict ), (const void *)*hPict );
+											pKillPicture( hPict );
+										}
+										pDisposeHandle( hData );
+									}
+									pCloseComponent( aImporter );
+								}
+							}
+						}
+						else if ( nType == 'TIFF' )
+						{
+							// Convert to TIFF from our BMP data
 							ComponentInstance aImporter;
 							if ( pOpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
 							{
@@ -379,7 +407,36 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 							}
 							else if ( aFlavor.DataType.equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
 							{
-								if ( nRequestedType == 'PICT' || nRequestedType == 'TIFF' )
+								if ( nRequestedType == 'PICT' )
+								{
+									// Convert to BMP format
+									ComponentInstance aExporter;
+									if ( pOpenADefaultComponent( GraphicsExporterComponentType, 'BMPf', &aExporter ) == noErr );
+									{
+										Handle hData;
+										if ( pPtrToHand( aData.getArray(), &hData, aData.getLength() ) == noErr )
+										{
+											if ( GraphicsExportSetInputPicture( aExporter, (PicHandle)hData ) == noErr )
+											{
+												Handle hExportData = pNewHandle( 0 );
+												if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
+												{
+													unsigned long nDataLen;
+													if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
+													{
+														Sequence< sal_Int8 > aExportData( nDataLen );
+														memcpy( aExportData.getArray(), *hExportData, nDataLen );
+														out <<= aExportData;
+													}
+													pDisposeHandle( hExportData );
+												}
+											}
+											pDisposeHandle( hData );
+										}
+										pCloseComponent( aExporter );
+									}
+								}
+								else if ( nRequestedType == 'TIFF' )
 								{
 									// Convert to BMP format
 									ComponentInstance aImporter;
@@ -408,7 +465,7 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 																if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
 																{
 																	Sequence< sal_Int8 > aExportData( nDataLen );
-																	memcpy( aExportData.getArray(), *hExportData, aExportData.getLength() );
+																	memcpy( aExportData.getArray(), *hExportData, nDataLen );
 																	out <<= aExportData;
 																}
 																pDisposeHandle( hExportData );
