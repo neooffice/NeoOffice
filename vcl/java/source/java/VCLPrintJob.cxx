@@ -41,12 +41,12 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
-
-#ifdef MACOSX
-#include <math.h>
+#ifndef _VOS_THREAD_HXX
+#include <vos/thread.hxx>
 #endif
 
 using namespace vcl;
+using namespace vos;
 
 // ============================================================================
 
@@ -228,82 +228,6 @@ com_sun_star_vcl_VCLPrintJob::com_sun_star_vcl_VCLPrintJob() : java_lang_Object(
 	jobject tempObj;
 	tempObj = t.pEnv->NewObject( getMyClass(), mID );
 	saveRef( tempObj );
-
-#ifdef MACOSX
-	// Mac OS X does not update the JobAttributes that we pass to the print
-	// job so we need to update it ourselves
-	static jfieldID fIDPrintJob = NULL;
-	static jfieldID fIDPrinterJob = NULL;
-	static jmethodID mIDGetFirstPage = NULL;
-	static jmethodID mIDGetLastPage = NULL;
-	static jfieldID fIDPageRanges = NULL;
-	jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
-	if ( !fIDPrintJob )
-	{
-		char *cSignature = "Ljava/awt/PrintJob;";
-		fIDPrintJob = t.pEnv->GetFieldID( tempObjClass, "printJob", cSignature );
-	}
-	OSL_ENSURE( fIDPrintJob, "Unknown field id!" );
-	if ( fIDPrintJob )
-	{
-		jobject printJob = t.pEnv->GetObjectField( tempObj, fIDPrintJob );
-		if ( printJob )
-		{
-			jclass printJobClass = t.pEnv->GetObjectClass( printJob );
-			if ( !fIDPrinterJob )
-			{
-				char *cSignature = "Ljava/awt/print/PrinterJob;";
-				fIDPrinterJob = t.pEnv->GetFieldID( printJobClass, "printerJob", cSignature );
-			}
-			OSL_ENSURE( fIDPrinterJob, "Unknown field id!" );
-			if ( fIDPrinterJob )
-			{
-				jobject printerJob = t.pEnv->GetObjectField( printJob, fIDPrinterJob );
-				if ( printerJob )
-				{
-					jclass printerJobClass = t.pEnv->GetObjectClass( printerJob );
-					if ( !mIDGetFirstPage )
-					{
-						char *cSignature = "()I";
-						mIDGetFirstPage = t.pEnv->GetMethodID( printerJobClass, "getFirstPage", cSignature );
-					}
-					OSL_ENSURE( mIDGetFirstPage, "Unknown method id!" );
-					if ( !mIDGetLastPage )
-					{
-						char *cSignature = "()I";
-						mIDGetLastPage = t.pEnv->GetMethodID( printerJobClass, "getLastPage", cSignature );
-					}
-					OSL_ENSURE( mIDGetLastPage, "Unknown method id!" );
-					if ( mIDGetFirstPage && mIDGetLastPage )
-					{
-						jint pageNumbers[2];
-						pageNumbers[0] = t.pEnv->CallIntMethod( printerJob, mIDGetFirstPage );
-						if ( pageNumbers[0] < pow( 2, 31 ) )
-							pageNumbers[0]++;
-						pageNumbers[1] = t.pEnv->CallIntMethod( printerJob, mIDGetLastPage );
-						if ( pageNumbers[1] < pow( 2, 31 ) )
-							pageNumbers[1]++;
-						if ( !fIDPageRanges )
-						{
-							char *cSignature = "[[I";
-							fIDPageRanges = t.pEnv->GetFieldID( tempObjClass, "pageRanges", cSignature );
-						}
-						OSL_ENSURE( fIDPageRanges, "Unknown field id!" );
-						if ( fIDPageRanges )
-						{
-							jintArray pages = t.pEnv->NewIntArray( 2 );
-							t.pEnv->SetIntArrayRegion( pages, 0, 2, pageNumbers );
-							jobjectArray pageRanges = t.pEnv->NewObjectArray( 1, t.pEnv->GetObjectClass( pages ), NULL );
-							t.pEnv->SetObjectArrayElement( pageRanges, 0, pages );
-							t.pEnv->SetObjectField( tempObj, fIDPageRanges, pageRanges );
-						}
-					}
-				}
-			}
-		}
-	}
-#endif	// MACOSX
-
 }
 
 // ----------------------------------------------------------------------------
@@ -420,6 +344,13 @@ com_sun_star_vcl_VCLGraphics *com_sun_star_vcl_VCLPrintJob::startPage()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
+#ifdef MACOSX
+			// Mac OS X creates two graphics for each page so we discard
+			// the even numbered pages and print to the odd numbered pages
+			t.pEnv->CallObjectMethod( object, mID );
+			endPage();
+			OThread::yield();
+#endif
 			jobject tempObj = t.pEnv->CallObjectMethod( object, mID );
 			if ( tempObj )
 				out = new com_sun_star_vcl_VCLGraphics( tempObj );

@@ -36,16 +36,15 @@
 package com.sun.star.vcl;
 
 import java.awt.Dimension;
-import java.awt.Frame;
+import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.JobAttributes;
-import java.awt.PageAttributes;
-import java.awt.PrintJob;
 import java.awt.Rectangle;
-import java.awt.Toolkit;
 import java.awt.geom.AffineTransform;
 import java.awt.print.PageFormat;
+import java.awt.print.Printable;
+import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
+import java.util.LinkedList;
 
 /**
  * The Java class that implements the SalPrinter C++ class methods.
@@ -53,7 +52,7 @@ import java.awt.print.PrinterJob;
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public class VCLPrintJob {
+public class VCLPrintJob extends Thread implements Printable {
 
 	/** 
 	 * ORIENTATION_PORTRAIT constant.
@@ -66,19 +65,9 @@ public class VCLPrintJob {
 	public final static int ORIENTATION_LANDSCAPE = 0x1; 
 
 	/**
-	 * The cached frame.
-	 */
-	private static Frame frame = new Frame();
-
-	/**
 	 * The page format.
 	 */
 	private static PageFormat pageFormat = null;
-
-	/**
-	 * The printer job.
-	 */
-	private static PrinterJob printerJob = null;
 
 	/**
 	 * Get the imageable bounds of the page using a resolution of 72 dpi.
@@ -87,11 +76,9 @@ public class VCLPrintJob {
 	 *
 	 * @return the imageable bounds of the page using a resolution of 72 dpi
 	 */
-	public static Rectangle getImageableBounds() {
+	public synchronized static Rectangle getImageableBounds() {
 
-		synchronized (pageFormat) {
-			return new Rectangle((int)pageFormat.getImageableX(), (int)pageFormat.getImageableY(), (int)pageFormat.getImageableWidth(), (int)pageFormat.getImageableHeight());
-		}
+		return new Rectangle((int)pageFormat.getImageableX(), (int)pageFormat.getImageableY(), (int)pageFormat.getImageableWidth(), (int)pageFormat.getImageableHeight());
 
 	}
 
@@ -100,14 +87,12 @@ public class VCLPrintJob {
 	 *
 	 * @return the page orientation
 	 */
-	public static int getOrientation() {
+	public synchronized static int getOrientation() {
 
-		synchronized (pageFormat) {
-			if (pageFormat.getOrientation() == PageFormat.PORTRAIT)
-				return ORIENTATION_PORTRAIT;
-			else
-				return ORIENTATION_LANDSCAPE;
-		}
+		if (pageFormat.getOrientation() == PageFormat.PORTRAIT)
+			return ORIENTATION_PORTRAIT;
+		else
+			return ORIENTATION_LANDSCAPE;
 
 	}
 
@@ -117,11 +102,9 @@ public class VCLPrintJob {
 	 *
 	 * @return the page size using a resolution of 72 dpi
 	 */
-	public static Dimension getPageSize() {
+	public synchronized static Dimension getPageSize() {
 
-		synchronized (pageFormat) {
-			return new Dimension((int)pageFormat.getWidth(), (int)pageFormat.getHeight());
-		}
+		return new Dimension((int)pageFormat.getWidth(), (int)pageFormat.getHeight());
 
 	}
 
@@ -129,11 +112,9 @@ public class VCLPrintJob {
 	 * Setup the page configuration. This method displays a native page setup
 	 * dialog and saves any changes made by the user.
 	 */
-	public static void setup() {
+	public synchronized static void setup() {
 
-		synchronized (pageFormat) {
-			pageFormat = printerJob.validatePage(printerJob.pageDialog(pageFormat));
-		}
+		pageFormat = PrinterJob.getPrinterJob().pageDialog(pageFormat);
 
 	}
 
@@ -142,10 +123,19 @@ public class VCLPrintJob {
 	 */
 	static {
 
-		printerJob = PrinterJob.getPrinterJob();
-		pageFormat = printerJob.validatePage(printerJob.defaultPage());
+		pageFormat = PrinterJob.getPrinterJob().defaultPage();
 
 	}
+
+	/**
+	 * The current <code>VCLGraphics</code>
+	 */
+	private VCLGraphics currentGraphics = null;
+
+	/**
+	 * The current printer job page.
+	 */
+	private int currentJobPage = -1;
 
 	/**
 	 * The current page.
@@ -153,19 +143,19 @@ public class VCLPrintJob {
 	private int currentPage = 0;
 
 	/**
-	 * The cached job attributes.
+	 * The end job flag.
 	 */
-	private JobAttributes jobAttributes = new JobAttributes();
+	private boolean endJob = false;
 
 	/**
-	 * The cached page attributes.
+	 * The cached queue of graphics.
 	 */
-	private PageAttributes pageAttributes = new PageAttributes();
+	private LinkedList graphicsQueue = new LinkedList();
 
 	/**
-	 * The current page's graphics.
+	 * The cached printer job.
 	 */
-	private VCLGraphics pageGraphics = null;
+	private PrinterJob job = PrinterJob.getPrinterJob();
 
 	/**
 	 * The current page's image.
@@ -173,33 +163,12 @@ public class VCLPrintJob {
 	private VCLImage pageImage = null;
 
 	/**
-	 * The page ranges to print.
-	 */
-	private int[][] pageRanges = null;
-
-	/**
-	 * The print job.
-	 */
-	private PrintJob printJob = null;
-
-	/**
 	 * Constructs a new <code>VCLPrintJob</code> instance.
 	 */
 	public VCLPrintJob() {
 
-		if (pageFormat.getOrientation() == PageFormat.PORTRAIT)
-			pageAttributes.setOrientationRequested(PageAttributes.OrientationRequestedType.PORTRAIT);
-		else
-			pageAttributes.setOrientationRequested(PageAttributes.OrientationRequestedType.LANDSCAPE);
-		pageAttributes.setOrigin(PageAttributes.OriginType.PRINTABLE);
-
-		// Create the print job
-		printJob = Toolkit.getDefaultToolkit().getPrintJob(frame, "", jobAttributes, pageAttributes);
-
-		// Note: this does not work on Mac OS X and is implemented in the
-		// C++ class that calls this constructor
-		if (jobAttributes.getDefaultSelection() == JobAttributes.DefaultSelectionType.RANGE)
-			pageRanges = jobAttributes.getPageRanges();
+		// Copy the cached page format to this printer job
+		job.setPrintable(this, VCLPrintJob.pageFormat);
 
 	}
 
@@ -209,9 +178,12 @@ public class VCLPrintJob {
 	public void abortJob() {
 
 		// End the job before disposing of the graphics
-		if (printJob != null)
-			printJob.end();
+		job.cancel();
 		endPage();
+		try {
+			join();
+		}
+		catch (Throwable t) {}
 		dispose();
 
 	}
@@ -222,20 +194,18 @@ public class VCLPrintJob {
 	 */
 	public void dispose() {
 
+		if (currentGraphics != null)
+			currentGraphics.dispose();
+		currentGraphics = null;
+		currentJobPage = -1;
 		currentPage = 0;
-		jobAttributes = null;
-		pageAttributes = null;
-		// Make sure that the print job is ended
-		if (printJob != null)
-			printJob.end();
-		printJob = null;
-		if (pageGraphics != null)
-			pageGraphics.dispose();
-		pageGraphics = null;
+		endJob = false;
+		while (graphicsQueue.size() > 0)
+			graphicsQueue.removeFirst();
+		job = null;
 		if (pageImage != null)
 			pageImage.dispose();
 		pageImage = null;
-		pageRanges = null;
 
 	}
 
@@ -245,9 +215,12 @@ public class VCLPrintJob {
 	public void endJob() {
 
 		// End the job after disposing of the graphics
+		endJob = true;
 		endPage();
-		if (printJob != null)
-			printJob.end();
+		try {
+			join();
+		}
+		catch (Throwable t) {}
 		dispose();
 
 	}
@@ -257,13 +230,79 @@ public class VCLPrintJob {
 	 */
 	public void endPage() {
 
-		if (pageGraphics != null)	
-			pageGraphics.dispose();
-		pageGraphics = null;
-		if (pageImage != null)
-			pageImage.dispose();
-		pageImage = null;
+		synchronized (graphicsQueue) {
+			if (currentGraphics != null)
+				currentGraphics.dispose();
+			currentGraphics = null;
+			if (pageImage != null) {
+				pageImage.dispose();
+				pageImage = null;
+				return;
+			}
+			// Allow the printer thread to move to the next page
+			graphicsQueue.notifyAll();
+		}
+		Thread.currentThread().yield();
 
+	}
+
+	/**
+	 * Prints the specified page into the specified <code>Graphics</code>
+	 * context. This method will block until the <code>endPage</code> is
+	 * invoked.
+	 */
+	public int print(Graphics g, PageFormat f, int i) throws PrinterException {
+
+		if (endJob)
+			return Printable.NO_SUCH_PAGE;
+		else if (job.isCancelled())
+			throw new PrinterException();
+
+		// Mac OS X creates two graphics for each page so we need to create
+		// separate page numbers for each page.
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+			if (currentJobPage == i * 2) 
+				currentJobPage++;
+			else
+				currentJobPage = i * 2;
+		}
+		else {
+			currentJobPage = i;
+		}
+
+		graphicsQueue.add(g);
+
+		// Wait until painting is finished
+		try {
+			graphicsQueue.wait();
+		}
+		catch (Throwable t) {}
+	
+		if (endJob)
+			return Printable.NO_SUCH_PAGE;
+		else if (job.isCancelled())
+			throw new PrinterException();
+		else
+			return Printable.PAGE_EXISTS;
+
+	}
+
+	/**
+	 * This method invokes the <code>PrinterJob.print()</code> method. This
+	 * method will block in each page until the <code>endPage</code> is
+	 * invoked.
+	 */
+	public void run() {
+
+		synchronized (graphicsQueue) {
+			// Notify the thread that started this thread that it can proceed
+			graphicsQueue.notifyAll();
+			try {
+				job.print();
+			}
+			catch (Throwable t) {}
+		}
+		
 	}
 
 	/**
@@ -275,10 +314,23 @@ public class VCLPrintJob {
 	public boolean startJob() {
 
 		// Detect if the user cancelled the print dialog
-		if (printJob == null)
-			return false;
-		else
+		if (job.printDialog()) {
+			synchronized (graphicsQueue) {
+				// Start the printing thread
+				setPriority(Thread.MAX_PRIORITY);
+				start();
+				// Wait for the printing thread to gain the lock on the
+				// graphics queue
+				try {
+					graphicsQueue.wait();
+				}
+				catch (Throwable t) {}
+			}
 			return true;
+		}
+		else {
+			return false;
+		}
 
 	}
 
@@ -289,38 +341,20 @@ public class VCLPrintJob {
 	 */
 	public VCLGraphics startPage() {
 
-		// Increment the current page
-		currentPage++;
-
-		// Determine if this page is in the printable range
-		boolean printPage = true;
-		if (pageRanges != null) {
-			printPage = false;
-			for (int i = 0; i < pageRanges.length; i++) {
-				if (currentPage >= pageRanges[i][0] && currentPage <= pageRanges[i][1]) {
-					printPage = true;
-					break;
-				}
+		synchronized (graphicsQueue) {
+			if (currentPage++ != currentJobPage || !isAlive()) {
+				// Return a dummy graphics if this page is not in the selected
+				// page range
+				pageImage = new VCLImage(1, 1, 0);
+				currentGraphics = pageImage.getGraphics();
+			}
+			else {
+				currentGraphics = new VCLGraphics((Graphics2D)graphicsQueue.getFirst());
+				graphicsQueue.removeFirst();
 			}
 		}
 
-		// Get print graphics
-		if (printPage && printJob != null) {
-			Graphics2D g = (Graphics2D)printJob.getGraphics();
-			if (g != null) {
-				// Set the transform in case we are printing landscape
-				g.transform(new AffineTransform(pageFormat.getMatrix()));
-				pageGraphics = new VCLGraphics(g);
-			}
-		}
-
-		// Fall back to a dummy graphics
-		if (pageGraphics == null) {
-			pageImage = new VCLImage(1, 1, 0);
-			pageGraphics = pageImage.getGraphics();
-		}
-
-		return pageGraphics;
+		return currentGraphics;
 
 	}
 

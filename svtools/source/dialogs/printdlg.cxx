@@ -570,6 +570,7 @@ short PrintDialog::Execute()
 	}
 
 #ifdef USE_JAVA
+	mpPrinter->Setup();
 	return TRUE;
 #else	// USE_JAVA
 	// Controls initialisieren
