@@ -1109,10 +1109,9 @@ public final class VCLGraphics {
 			update.y -= 1;
 			update.width += 2;
 			update.height += 2;
-			panelGraphics.setClip(update);
-			panelGraphics.drawRenderedImage(image.getImage(), null);
+			update = graphicsBounds.intersection(update);
+			panelGraphics.drawImage(image.getImage().getSubimage(update.x, update.y, update.width, update.height), update.x, update.y, null);
 			update = null;
-			panelGraphics.setClip(null);
 		}
 
 	}

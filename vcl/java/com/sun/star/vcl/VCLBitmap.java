@@ -38,6 +38,7 @@ package com.sun.star.vcl;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.Transparency;
 import java.awt.color.ColorSpace;
@@ -261,9 +262,40 @@ public final class VCLBitmap {
 		if (srcImage == null)
 			return;
 
-		Graphics2D destGraphics = image.createGraphics();
-		destGraphics.drawImage(srcImage.getImage(), destX, destY, destX + srcWidth, destY + srcHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
-		destGraphics.dispose();
+		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, srcImage.getWidth(), srcImage.getHeight()));
+		if (srcBounds.isEmpty())
+			return;
+		if (srcX < 0)
+			destX -= srcX;
+		if (srcY < 0)
+			destY -= srcY;
+		Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, width, height));
+		if (destBounds.isEmpty())
+			return;
+		srcBounds.x += destBounds.x - destX;
+		srcBounds.y += destBounds.y - destY;
+		int[] srcData = srcImage.getData();
+		int srcDataWidth = srcImage.getWidth();
+		Point srcPoint = new Point(srcBounds.x, srcBounds.y);
+		Point destPoint = new Point(destBounds.x, destBounds.y);
+		int totalPixels = destBounds.width * destBounds.height;
+
+		for (int i = 0; i < totalPixels; i++) {
+			// Copy pixel
+			setPixel(destPoint, srcData[(srcPoint.y * srcDataWidth) + srcPoint.x]);
+
+			// Update current points
+			srcPoint.x++;
+			if (srcPoint.x >= srcBounds.x + destBounds.width) {
+				srcPoint.x = srcBounds.x;
+				srcPoint.y++;
+			}
+			destPoint.x++;
+			if (destPoint.x >= destBounds.x + destBounds.width) {
+				destPoint.x = destBounds.x;
+				destPoint.y++;
+			}
+		}
 
 	}
 

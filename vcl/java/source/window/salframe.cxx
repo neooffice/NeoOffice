@@ -170,7 +170,7 @@ void SalFrame::Show( BOOL bVisible )
 		pPaintEvent->mnBoundWidth = maGeometry.nWidth + maGeometry.nLeftDecoration;
 		pPaintEvent->mnBoundHeight = maGeometry.nHeight + maGeometry.nTopDecoration;
 		com_sun_star_vcl_VCLEvent aVCLPaintEvent( SALEVENT_PAINT, this, (void *)pPaintEvent );
-		GetSalData()->mpEventQueue->postCachedEvent( &aVCLPaintEvent );
+		aVCLPaintEvent.dispatch();
 	}
 }
 
