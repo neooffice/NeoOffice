@@ -2081,8 +2081,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void windowDeiconified(WindowEvent e) {
 
-		if (window != null)
-			window.repaint();
+		if (panel != null) {
+			Graphics g = panel.getGraphics();
+			panel.paint(g);
+			g.dispose();
+		}
 
 	}
 
@@ -2094,7 +2097,15 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>WindowEvent</code>
 	 */
-	public void windowActivated(WindowEvent e) {}
+	public void windowActivated(WindowEvent e) {
+
+		if (panel != null) {
+			Graphics g = panel.getGraphics();
+			panel.paint(g);
+			g.dispose();
+		}
+
+	}
 
 	/**
 	 * Invoked when a window is no longer the user's active window, which
