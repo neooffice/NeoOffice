@@ -39,6 +39,14 @@
 #include <com/sun/star/vcl/VCLFont.hxx>
 #endif
 
+#ifdef MACOSX
+
+#include <premac.h>
+#include <Carbon/Carbon.h>
+#include <postmac.h>
+
+#endif	// MACOSX
+
 using namespace vcl;
 
 // ============================================================================
@@ -348,6 +356,62 @@ long com_sun_star_vcl_VCLFont::getLeading()
 
 // ----------------------------------------------------------------------------
 
+void *com_sun_star_vcl_VCLFont::getNativeFont()
+{
+	void *out = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		java_lang_Object *peer = getPeer();
+		if ( peer )
+		{
+			jobject tempObj = peer->getJavaObject();
+			if ( tempObj )
+			{
+#ifdef MACOSX
+				// Test the JVM version and if it is below 1.4, use Carbon APIs
+				if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+				{
+					jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/graphics/VFontPeer" );
+					if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
+					{
+						static jfieldID fIDMacFont = NULL;
+						static jfieldID fIDMacFace = NULL;
+						if ( !fIDMacFont )
+						{
+							char *cSignature = "S";
+							fIDMacFont = t.pEnv->GetFieldID( tempClass, "fMacFont", cSignature );
+						}
+						OSL_ENSURE( fIDMacFont, "Unknown field id!" );
+						if ( !fIDMacFace )
+						{
+							char *cSignature = "S";
+							fIDMacFace = t.pEnv->GetFieldID( tempClass, "fMacFace", cSignature );
+						}
+						OSL_ENSURE( fIDMacFace, "Unknown field id!" );
+						if ( fIDMacFont && fIDMacFace )
+						{
+							jshort macFont = 0;
+							jshort macFace = 0;
+							macFont = t.pEnv->GetShortField( tempObj, fIDMacFont );
+							macFace = t.pEnv->GetShortField( tempObj, fIDMacFace );
+
+							FMFont aFont;
+							if ( FMGetFontFromFontFamilyInstance( macFont, macFace, &aFont, NULL ) == noErr)
+								out = (void *)aFont;
+						}
+					}
+				}
+#endif	// MACOSX
+			}
+			delete peer;
+		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
 short com_sun_star_vcl_VCLFont::getOrientation()
 {
 	static jmethodID mID = NULL;
@@ -363,6 +427,41 @@ short com_sun_star_vcl_VCLFont::getOrientation()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 			out = (short)t.pEnv->CallNonvirtualShortMethod( object, getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+java_lang_Object *com_sun_star_vcl_VCLFont::getPeer()
+{
+	static jmethodID mID = NULL;
+	java_lang_Object *out = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Ljava/awt/peer/FontPeer;";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getPeer", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jobject tempObj;
+			if ( com_sun_star_vcl_VCLFont::useDefaultFont )
+			{
+				com_sun_star_vcl_VCLFont *pDefaultFont = getDefaultFont();
+				tempObj = t.pEnv->CallNonvirtualObjectMethod( pDefaultFont->getJavaObject(), getMyClass(), mID );
+				delete pDefaultFont;
+			}
+			else
+			{
+				tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
+			}
+			if ( tempObj )
+				out = new java_lang_Object( tempObj );
+		}
 	}
 	return out;
 }

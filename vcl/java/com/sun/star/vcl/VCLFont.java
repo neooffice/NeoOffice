@@ -40,6 +40,7 @@ import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.image.BufferedImage;
+import java.awt.peer.FontPeer;
 import java.util.ArrayList;
 
 /** 
@@ -453,6 +454,17 @@ public final class VCLFont {
 	public short getOrientation() {
 
 		return orientation;
+
+	}
+
+	/**
+	 * Returns the <code>FontPeer</code>.
+	 *
+	 * @return the <code>FontPeer</code>
+	 */
+	public FontPeer getPeer() {
+
+		return font.getPeer();
 
 	}
 

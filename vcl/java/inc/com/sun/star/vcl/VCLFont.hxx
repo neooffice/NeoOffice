@@ -69,7 +69,9 @@ public:
 	long				getKerning( USHORT _par0, USHORT _par1 );
 	long				getLeading();
 	::rtl::OUString		getName();
+	void*				getNativeFont();
 	short				getOrientation();
+	java_lang_Object*	getPeer();
 	long				getSize();
 	sal_Bool			isAntialiased();
 	sal_Bool			isBold();

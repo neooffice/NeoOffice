@@ -49,7 +49,6 @@
 #endif
 
 #include <premac.h>
-#include <ApplicationServices/ApplicationServices.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 
@@ -221,9 +220,13 @@ ATSLayout::ATSLayout( com_sun_star_vcl_VCLFont *pVCLFont ) :
 
 		// Set font
 		// TODO: Don't hardcode name
-		ATSUFontID nFontID;
-		if ( ATSUFindFontFromName( "Monaco", 6, kFontFullName, kFontNoPlatformCode, kFontNoScriptCode, kFontNoLanguageCode, &nFontID ) != noErr )
-			nFontID = kATSUInvalidFontID;
+		ATSUFontID nFontID = (ATSUFontID)mpVCLFont->getNativeFont();
+		if ( !nFontID )
+		{
+			// Fall back to Geneva as a last resort
+			if ( ATSUFindFontFromName( "Geneva", 6, kFontFullName, kFontNoPlatformCode, kFontNoScriptCode, kFontNoLanguageCode, &nFontID ) != noErr )
+				nFontID = kATSUInvalidFontID;
+		}
 		nTags[0] = kATSUFontTag;
 		nBytes[0] = sizeof( ATSUFontID );
 		nVals[0] = &nFontID;
