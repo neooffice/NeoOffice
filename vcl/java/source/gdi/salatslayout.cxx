@@ -351,6 +351,14 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 		return;
 	}
 
+	// Break lines that are more than 32K pixels long to avoid messing up
+	// the metrics that ATSUGetGlyphBounds() returns
+	if ( ATSUBatchBreakLines( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, Long2Fix( 32768 ), NULL ) != noErr )
+	{
+		Destroy();
+		return;
+	}
+
 	ByteCount nBufSize;
 	if ( ATSUGetGlyphInfo( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nBufSize, NULL ) != noErr )
 	{
@@ -388,32 +396,32 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	mpCharAdvances = (long *)rtl_allocateMemory( nBufSize );
 	memset( mpCharAdvances, 0, nBufSize );
 
-	// Fix bug 448 by eliminating subpixel advances
-	ATSUTextMeasurement fBefore;
-	ATSUTextMeasurement fAfter;
-	ATSUTextMeasurement fAscent;
-	ATSUTextMeasurement fDescent;
-	for ( i = 0; i < mpHash->mnLen - 1; i++ )
+	// Fix bug 448 by eliminating subpixel advances.
+	int nLastCaretPos = 0;
+	int nNextCaretPos = 0;
+	ATSTrapezoid aTrapezoid;
+	for ( i = 0; i < mpHash->mnLen; i++ )
 	{
-		if ( ATSUGetUnjustifiedBounds( maLayout, i, 2, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
+		if ( ATSUGetGlyphBounds( maLayout, 0, 0, i, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
 		{
-			Fixed fCurrentX = fAfter;
-			if ( ATSUGetUnjustifiedBounds( maLayout, i + 1, 1, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
-				fCurrentX -= fAfter;
-			if ( fCurrentX < 0 && i )
-				mpCharAdvances[ i - 1 ] += Float32ToLong( Fix2X( fCurrentX ) * mpHash->mfFontScaleX );
+			UniCharArrayOffset nCaretPos = 0;
+			if ( ATSUNextCursorPosition( maLayout, i, kATSUByCharacterCluster, &nCaretPos ) == noErr && nCaretPos == nNextCaretPos )
+			{
+				if ( mpHash->mbRTL )
+					mpCharAdvances[ nLastCaretPos ] += Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX );
+				else
+					mpCharAdvances[ i ] = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX );
+			}
 			else
-				mpCharAdvances[ i ] = Float32ToLong( Fix2X( fCurrentX ) * mpHash->mfFontScaleX );
-		}
-		else if ( ATSUGetUnjustifiedBounds( maLayout, i, 1, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
-		{
-			mpCharAdvances[ i ] = Float32ToLong( Fix2X( fAfter ) * mpHash->mfFontScaleX );
+			{
+				mpCharAdvances[ i ] = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX );
+				nLastCaretPos = i;
+				if ( nCaretPos > nNextCaretPos )
+					nNextCaretPos = nCaretPos;
+			}
 		}
 	}
 	
-	if ( ATSUGetUnjustifiedBounds( maLayout, i, 1, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
-		mpCharAdvances[ i ] = Float32ToLong( Fix2X( fAfter ) * mpHash->mfFontScaleX );
-
 	// Find positions that require fallback fonts
 	mpNeedFallback = NULL;
 	UniCharArrayOffset nCurrentPos = 0;
