@@ -35,6 +35,9 @@
 
 #define _SV_JAVA_LANG_OBJECT_CXX
 
+#ifndef _SV_SVAPP_HXX
+#include <svapp.hxx>
+#endif
 #ifndef _VCL_UNOHELP_HXX
 #include <unohelp.hxx>
 #endif
@@ -99,7 +102,7 @@ VCLThreadAttach::~VCLThreadAttach()
 
 void VCLThreadAttach::AttachThread()
 {
-	if ( xVM.is() && pJVM && pJVM->GetEnv( (void**)&pEnv, JNI_VERSION_1_2 ) != JNI_OK && xRG11Ref.is() )
+	if ( !Application::IsShutDown() && xVM.is() && pJVM && pJVM->GetEnv( (void**)&pEnv, JNI_VERSION_1_2 ) != JNI_OK && xRG11Ref.is() )
 	{
 		pJVM->AttachCurrentThread( (void**)&pEnv, NULL );
 		xRG11Ref->registerThread();
@@ -116,10 +119,10 @@ void VCLThreadAttach::DetachThread()
 
 sal_Bool VCLThreadAttach::StartJava()
 {
-	if ( !xVM.is() )
+	if ( !xVM.is() && !Application::IsShutDown() )
 	{
 		OGuard aGuard( OMutex::getGlobalMutex() );
-		if ( !xVM.is() )
+		if ( !xVM.is() && !Application::IsShutDown() )
 		{
 			pJVM = NULL;
 

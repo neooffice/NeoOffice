@@ -35,6 +35,9 @@
 
 #define _JAVA_DTRANS_JAVA_LANG_OBJECT_CXX
 
+#ifndef _SV_SVAPP_HXX
+#include <vcl/svapp.hxx>
+#endif
 #ifndef _VCL_UNOHELP_HXX
 #include <vcl/unohelp.hxx>
 #endif
@@ -100,7 +103,7 @@ DTransThreadAttach::~DTransThreadAttach()
 
 void DTransThreadAttach::AttachThread()
 {
-	if ( xVM.is() && pJVM && pJVM->GetEnv( (void**)&pEnv, JNI_VERSION_1_2 ) != JNI_OK && xRG11Ref.is() )
+	if ( !Application::IsShutDown() && xVM.is() && pJVM && pJVM->GetEnv( (void**)&pEnv, JNI_VERSION_1_2 ) != JNI_OK && xRG11Ref.is() )
 	{
 		pJVM->AttachCurrentThread( (void**)&pEnv, NULL );
 		xRG11Ref->registerThread();
@@ -117,10 +120,10 @@ void DTransThreadAttach::DetachThread()
 
 sal_Bool DTransThreadAttach::StartJava()
 {
-	if ( !xVM.is() )
+	if ( !xVM.is() && !Application::IsShutDown() )
 	{
 		OGuard aGuard( OMutex::getGlobalMutex() );
-		if ( !xVM.is() )
+		if ( !xVM.is() && !Application::IsShutDown() )
 		{
 			pJVM = NULL;
 
