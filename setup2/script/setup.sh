@@ -215,18 +215,37 @@ fi
 
 # Install application fonts
 if [ "$os" = "Darwin" ] ; then
-    appfontdir="$sharebase/fonts/truetype"
     userfontdir="$HOME/Library/Fonts"
     mkdir -p "$userfontdir"
-    if [ -d "$appfontdir" -a -d "$userfontdir" ] ; then
-        for i in `cd "$appfontdir" ; find . -name '*.ttf'` ; do
-            if [ -L "$userfontdir/$i" ] ; then
-                rm -f "$userfontdir/$i"
-            fi
-            if [ ! -f "$userfontdir/$i" ] ; then
-                cat /dev/null "$appfontdir/$i" > "$userfontdir/$i"
-            fi
-        done
+    if [ -d "$userfontdir" ] ; then
+        appfontdir="$userinstall/fonts"
+        if [ -d "$appfontdir" ] ; then
+            for i in `cd "$appfontdir" ; find . -name '*.ttf' -o -name '*.TTF'` ; do
+                if [ -z "$i" ] ; then
+                    continue;
+                fi
+                if [ -L "$userfontdir/$i" ] ; then
+                    rm -f "$userfontdir/$i"
+                fi
+                if [ ! -f "$userfontdir/$i" ] ; then
+                    cat /dev/null "$appfontdir/$i" > "$userfontdir/$i"
+                fi
+            done
+        fi
+        appfontdir="$sharebase/fonts/truetype"
+        if [ -d "$appfontdir" ] ; then
+            for i in `cd "$appfontdir" ; find . -name '*.ttf' -o -name '*.TTF'` ; do
+                if [ -z "$i" ] ; then
+                    continue;
+                fi
+                if [ -L "$userfontdir/$i" ] ; then
+                    rm -f "$userfontdir/$i"
+                fi
+                if [ ! -f "$userfontdir/$i" ] ; then
+                    cat /dev/null "$appfontdir/$i" > "$userfontdir/$i"
+                fi
+            done
+        fi
     fi
 fi
 
