@@ -254,8 +254,10 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	}
 	else if ( maFrameData.mpParent )
 	{
-		nX += maFrameData.mpParent->maGeometry.nX;
-		nY += maFrameData.mpParent->maGeometry.nY;
+		if ( nFlags & SAL_FRAME_POSSIZE_X )
+			nX += maFrameData.mpParent->maGeometry.nX;
+		if ( nFlags & SAL_FRAME_POSSIZE_Y )
+			nY += maFrameData.mpParent->maGeometry.nY;
 
 		// If this is a popup window, we need to put the window on the correct
 		// screen when the parent window straddles more than one screen
@@ -341,7 +343,12 @@ void SalFrame::SetWindowState( const SalFrameState* pState )
 	if ( pState->mnMask & SAL_FRAMESTATE_MASK_HEIGHT )
 		nFlags |= SAL_FRAME_POSSIZE_HEIGHT;
 	if ( nFlags )
-		SetPosSize( pState->mnX, pState->mnY, pState->mnWidth, pState->mnHeight, nFlags );
+	{
+		Rectangle aPosSize( Point( pState->mnX, pState->mnY ), Size( pState->mnWidth, pState->mnHeight ) );
+		if ( maFrameData.mpParent )
+			aPosSize.Move( -maFrameData.mpParent->maGeometry.nX, -maFrameData.mpParent->maGeometry.nY );
+		SetPosSize( aPosSize.nLeft, aPosSize.nTop, aPosSize.GetWidth(), aPosSize.GetHeight(), nFlags );
+	}
 
 	if ( pState->mnMask & SAL_FRAMESTATE_MASK_STATE )
 	{
@@ -362,12 +369,6 @@ BOOL SalFrame::GetWindowState( SalFrameState* pState )
 	pState->mnWidth = maGeometry.nWidth;
 	pState->mnHeight = maGeometry.nHeight;
 	pState->mnState = maFrameData.mpVCLFrame->getState();
-
-	if ( maFrameData.mpParent )
-	{
-		pState->mnX -= maFrameData.mpParent->maGeometry.nX;
-		pState->mnY -= maFrameData.mpParent->maGeometry.nY;
-	}
 
 	return TRUE;
 }
