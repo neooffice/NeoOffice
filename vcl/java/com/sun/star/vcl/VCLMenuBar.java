@@ -324,7 +324,6 @@ public final class VCLMenuBar {
      * menu bar contains peers of the proper classes.
      */
     public static synchronized void regenerateAllMenuBars() {
-	System.err.println("regenerateAllMenuBars");
         Enumeration menuBars=activeMenubars.elements();
         while(menuBars.hasMoreElements()) {
             VCLMenuBar mb=(VCLMenuBar)menuBars.nextElement();
