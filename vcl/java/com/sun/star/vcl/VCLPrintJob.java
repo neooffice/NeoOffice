@@ -358,10 +358,10 @@ public final class VCLPrintJob implements Printable, Runnable {
 
 				// Rotate the page if necessary
 				int orientation = graphicsInfo.pageFormat.getOrientation();
-				Dimension pageResolution = pageFormat.getPageResolution();
 				Rectangle imageableBounds = new Rectangle(pageFormat.getImageableBounds());
 				imageableBounds.x = 0;
 				imageableBounds.y = 0;
+				boolean rotatedPage = false;
 				if (o == VCLPageFormat.ORIENTATION_PORTRAIT && orientation != PageFormat.PORTRAIT) {
 					if (orientation == PageFormat.REVERSE_LANDSCAPE) {
 						graphicsInfo.graphics.translate(0, (int)graphicsInfo.pageFormat.getImageableHeight());
@@ -371,20 +371,24 @@ public final class VCLPrintJob implements Printable, Runnable {
 						graphicsInfo.graphics.translate((int)graphicsInfo.pageFormat.getImageableWidth(), 0);
 						graphicsInfo.graphics.rotate(Math.toRadians(90));
 					}
-					pageResolution = new Dimension(pageResolution.height, pageResolution.width);
+					rotatedPage = true;
 					imageableBounds = new Rectangle(imageableBounds.y, imageableBounds.x, imageableBounds.height, imageableBounds.width);
 				}
 				else if (o != VCLPageFormat.ORIENTATION_PORTRAIT && orientation == PageFormat.PORTRAIT ) {
 					graphicsInfo.graphics.translate(0, (int)graphicsInfo.pageFormat.getImageableHeight());
 					graphicsInfo.graphics.rotate(Math.toRadians(-90));
-					pageResolution = new Dimension(pageResolution.height, pageResolution.width);
+					rotatedPage = true;
 					imageableBounds = new Rectangle(imageableBounds.y, imageableBounds.x, imageableBounds.height, imageableBounds.width);
 				}
 
 				// Scale to printer resolution
-				graphicsInfo.graphics.scale((double)72 / pageResolution.width, (double)72 / pageResolution.height);
+				Dimension pageResolution = pageFormat.getPageResolution();
+				if (rotatedPage)
+					graphicsInfo.graphics.scale((double)72 / pageResolution.height, (double)72 / pageResolution.width);
+				else
+					graphicsInfo.graphics.scale((double)72 / pageResolution.width, (double)72 / pageResolution.height);
 
-				currentGraphics = new VCLGraphics(graphicsInfo.graphics, pageResolution, imageableBounds);
+				currentGraphics = new VCLGraphics(graphicsInfo.graphics, pageFormat, rotatedPage);
 			}
 			else {
 				currentGraphics = null;

@@ -348,6 +348,21 @@ void SalInstance::DestroyMenuItem( SalMenuItem* pItem )
 void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu )
 {
 #ifndef NO_NATIVE_MENUS
+	SalData *pSalData = GetSalData();
+
+	// Check is frame is valid
+	bool bFrameFound = false;
+	for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+	{
+		if ( *it == pFrame )
+		{
+			bFrameFound = true;
+			break;
+		}
+	}
+	if ( !bFrameFound )
+		return;
+
 	bool bWasMenuBarInvocation = false;
 	if(!pMenu) {
 		// locate the menubar for the frame
