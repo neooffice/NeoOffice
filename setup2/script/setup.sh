@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/sh
 ##########################################################################
 #
 #   $RCSfile$
@@ -138,14 +138,27 @@ if [ ! -d "$xmltemplatedir" ] ; then
     error
 fi
 for i in `cd "$xmltemplatedir" ; find . ! -type d` ; do
-    if [ ! -z "$repair" -o ! -f "$xmldir/$i" -o "$i" = "./Setup.xml" ] ; then
+    if [ ! -z "$repair" -o ! -f "$xmldir/$i" ] ; then
         sed 's#>USER_INSTALL_DIR<#>'"$userinstall"'<#g' "$xmltemplatedir/$i" | sed 's#>LOCALE<#>'"$locale"'<#g' | sed 's#>NSWRAPPER_PATH<#>'"$apphome/nswrapper"'<#g' | sed 's#>CURRENT_DATE<#>'`date +%d.%m.%Y/%H.%M.%S`'<#g' > "$xmldir/$i"
     fi
 done
 
+# Set the locale
+setupxml="$xmldir/Setup.xml"
+if [ ! -f "$setupxml" ] ; then
+    error
+fi
+setupxmlbak="$setupxml.bak"
+rm -f "$setupxmlbak"
+if [ ! -f "$setupxmlbak" ] ; then
+    cp -f "$setupxml" "$setupxmlbak"
+    sed 's#>USER_INSTALL_DIR<#>'"$userinstall"'<#g' "$setupxmlbak" | sed 's#>.*</ooLocale>#>'"$locale"'</ooLocale>#g' > "$setupxml"
+    rm -f "$setupxmlbak"
+fi
+
 # Make locale the default document language
 linguxml="$xmldir/Office/Linguistic.xml"
-if [ ! "$linguxml" ] ; then
+if [ ! -f "$linguxml" ] ; then
     error
 fi
 linguxmlbak="$linguxml.bak"
