@@ -66,12 +66,9 @@ void SalTimer::Start( ULONG nMS )
 	pSalData->mnTimerInterval = nMS;
 
 	// Wakeup the event queue by sending it a dummy event
-	if ( aTimeout > pSalData->maTimeout )
-	{
-		SalFrame *pFrame = pSalData->maFrameList.front();
-		if ( pFrame )
-			pFrame->PostEvent( NULL );
-	}
+	SalFrame *pFrame = pSalData->maFrameList.front();
+	if ( pFrame )
+		pFrame->PostEvent( NULL );
 } 
 
 // -----------------------------------------------------------------------
