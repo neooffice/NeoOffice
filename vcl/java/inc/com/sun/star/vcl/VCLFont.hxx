@@ -36,6 +36,7 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
 #define	_SV_COM_SUN_STAR_VCL_VCLFONT_HXX
 
+#include <list>
 #include <map>
 
 #ifndef _SV_JAVA_LANG_OBJECT_HXX
@@ -56,6 +57,7 @@ protected:
 
 public:
 	static jboolean		useDefaultFont;
+	static ::std::list< void* >	validNativeFonts;
 
 	static jclass		getMyClass();
 	static ::std::map< ::rtl::OUString, com_sun_star_vcl_VCLFont* >	getAllFonts();
