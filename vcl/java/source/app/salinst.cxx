@@ -437,17 +437,13 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 			SalFrame* pNextFrame = NULL;
 			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
-				if ( (*it) &&
-					( (*it)->maFrameData.mpParent ||
-						(*it)->maFrameData.mnStyle == SAL_FRAME_STYLE_DEFAULT ||
-						! ( (*it)->maFrameData.mnStyle & SAL_FRAME_STYLE_SIZEABLE ) ||
-						! (*it)->GetGeometry().nWidth ||
-						! (*it)->GetGeometry().nHeight )
-					)
-				{
-					if ( (*it) != pFrame )
+				if ( (*it) && (*it) != pFrame &&
+					! (*it)->maFrameData.mpParent &&
+					(*it)->maFrameData.mnStyle != SAL_FRAME_STYLE_DEFAULT &&
+					(*it)->maFrameData.mnStyle & SAL_FRAME_STYLE_SIZEABLE &&
+					(*it)->GetGeometry().nWidth &&
+					(*it)->GetGeometry().nHeight )
 						pNextFrame = *it;
-				}
 			}
 
 			if ( pNextFrame )
