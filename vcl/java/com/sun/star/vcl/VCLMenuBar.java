@@ -187,6 +187,11 @@ public final class VCLMenuBar {
 	private VCLFrame frame = null;
 
 	/**
+	 * AWT MenuBar object which we will swap in when we hide the real menubar.
+	 */
+	private MenuBar hiddenMenuBar = null;
+
+	/**
 	 * Queue to which all menu events for this menubar should be posted.
 	 */
 	private VCLEventQueue queue = null;
@@ -231,6 +236,10 @@ public final class VCLMenuBar {
 		menus=null;
 		queue=null;
 		frame=null;
+		if (hiddenMenuBar != null) {
+			hiddenMenuBar.removeNotify();
+			hiddenMenuBar = null;
+		}
 
 	}
 	
@@ -398,8 +407,12 @@ public final class VCLMenuBar {
 	 */
 	public void hide() {
 
-	  	if(getFrame()!=null)
-			((Frame)getFrame().getWindow()).setMenuBar(new MenuBar());
+	  	if(getFrame()!=null) {
+			if(hiddenMenuBar==null)
+				hiddenMenuBar = new MenuBar();
+			((Frame)getFrame().getWindow()).setMenuBar(hiddenMenuBar);
+		}
+
 	}
 	
 	/**
@@ -408,8 +421,15 @@ public final class VCLMenuBar {
 	 */
 	public void show() {
 
-	  	if(getFrame()!=null)
-			((Frame)getFrame().getWindow()).setMenuBar(getAWTMenuBar());
+	  	if(getFrame()!=null) {
+			Frame f = (Frame)getFrame().getWindow();
+			if (f.getMenuBar() == hiddenMenuBar) {
+				hiddenMenuBar.removeNotify();
+				hiddenMenuBar = null;
+			}
+			f.setMenuBar(getAWTMenuBar());
+		}
+
 	}
 
 	/**
