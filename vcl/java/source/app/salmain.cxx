@@ -406,6 +406,48 @@ int main( int argc, char *argv[] )
 					aModule.unload();
 				}
 
+				jint nFonts = 0;
+				ATSFontIterator aIterator;
+				ATSFontRef aFont;
+
+				// Get the array of fonts
+				BOOL bContinue = TRUE;
+				while ( bContinue )
+				{
+					ATSFontIteratorCreate( kATSFontContextLocal, NULL, NULL, kATSOptionFlagsUnRestrictedScope, &aIterator );
+					for ( ; ; )
+					{
+						OSStatus nErr = ATSFontIteratorNext( aIterator, &aFont );
+						if ( nErr == kATSIterationCompleted )
+						{
+							// Register notification callback
+							ATSFontNotificationSubscribe( (ATSNotificationCallback)ImplFontListChangedCallback, kATSFontNotifyOptionReceiveWhileSuspended, NULL, NULL );
+							bContinue = FALSE;
+							break;
+						}
+						else if ( nErr == kATSIterationScopeModified )
+						{
+							nFonts = 0;
+							while ( pNativeFontList )
+							{
+								SVNativeFontList *pFont = pNativeFontList;
+								pNativeFontList = pFont->mpNext;
+								delete pFont;
+							}
+							break;
+						}
+						else
+						{
+							SVNativeFontList *pFont = new SVNativeFontList();
+							pFont->maFont = aFont;
+							pFont->mpNext = pNativeFontList;
+							pNativeFontList = pFont;
+							nFonts++;
+						}
+					}
+					ATSFontIteratorRelease( &aIterator );
+				}
+
 				// We need to be fill in the static sFonts and sNumFonts fields 
 				// in the NativeFontWrapper class as the JVM's implementation
 				// will include disabled fonts will can crash the application
@@ -428,48 +470,6 @@ int main( int argc, char *argv[] )
 					OSL_ENSURE( fIDNumFonts, "Unknown field id!" );
 					if ( fIDFonts && fIDNumFonts )
 					{
-						jint nFonts = 0;
-						ATSFontIterator aIterator;
-						ATSFontRef aFont;
-
-						// Get the array of fonts
-						BOOL bContinue = TRUE;
-						while ( bContinue )
-						{
-							ATSFontIteratorCreate( kATSFontContextLocal, NULL, NULL, kATSOptionFlagsUnRestrictedScope, &aIterator );
-							for ( ; ; )
-							{
-								OSStatus nErr = ATSFontIteratorNext( aIterator, &aFont );
-								if ( nErr == kATSIterationCompleted )
-								{
-									// Register notification callback
-									ATSFontNotificationSubscribe( (ATSNotificationCallback)ImplFontListChangedCallback, kATSFontNotifyOptionReceiveWhileSuspended, NULL, NULL );
-									bContinue = FALSE;
-									break;
-								}
-								else if ( nErr == kATSIterationScopeModified )
-								{
-									nFonts = 0;
-									while ( pNativeFontList )
-									{
-										SVNativeFontList *pFont = pNativeFontList;
-										pNativeFontList = pFont->mpNext;
-										delete pFont;
-									}
-									break;
-								}
-								else
-								{
-									SVNativeFontList *pFont = new SVNativeFontList();
-									pFont->maFont = aFont;
-									pFont->mpNext = pNativeFontList;
-									pNativeFontList = pFont;
-									nFonts++;
-								}
-							}
-							ATSFontIteratorRelease( &aIterator );
-						}
-
 						// Create the font array
 						jintArray pFonts = t.pEnv->NewIntArray( nFonts );
 						jsize i = 0;
