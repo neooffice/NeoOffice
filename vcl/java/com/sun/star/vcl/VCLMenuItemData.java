@@ -331,7 +331,9 @@ public final class VCLMenuItemData {
         {
             if(isChecked)
             {
-                // we were just set to checked, so we need to use instances of CheckMenuItem AWT objects instead
+                isCheckbox=true;
+                
+		// we were just set to checked, so we need to use instances of CheckMenuItem AWT objects instead
                 // of regular MenuItems.  We need to invalidate our peers.
                 
                 if(!awtPeers.isEmpty())
@@ -339,9 +341,6 @@ public final class VCLMenuItemData {
                     awtPeers.clear();
                     throw new AWTPeersInvalidatedException();
                 }
-                
-                isChecked=true;
-                isCheckbox=true;
             }
         }
         else
