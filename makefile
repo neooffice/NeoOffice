@@ -51,7 +51,7 @@ PRODUCT_DIR_NAME=NeoOfficeJ
 # Important: Note that there are escape characters in the PRODUCT_NAME for the
 # UTF-8 trademark symbol. Don't replace these with "\x##" literal strings!
 PRODUCT_TRADEMARKED_NAME=NeoOffice™/J
-PRODUCT_VERSION=0.0.1
+PRODUCT_VERSION=0.7
 PRODUCT_FILETYPE=no%f
 
 # CVS macros
