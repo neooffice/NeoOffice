@@ -277,7 +277,7 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 		nHeight = aPosSize.GetHeight();
 
 	// Adjust position for RTL layout
-	if ( maFrameData.mpParent && ! ( nFlags & ( SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT ) ) && Application::GetSettings().GetLayoutRTL() )
+	if ( maFrameData.mpParent && nFlags & ( SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y ) && Application::GetSettings().GetLayoutRTL() )
 	{
 		Rectangle aParentPosSize( Point( maFrameData.mpParent->maGeometry.nX - maFrameData.mpParent->maGeometry.nLeftDecoration, maFrameData.mpParent->maGeometry.nY - maFrameData.mpParent->maGeometry.nTopDecoration ), Size( maFrameData.mpParent->maGeometry.nWidth, maFrameData.mpParent->maGeometry.nHeight ) );
 		nX = aParentPosSize.GetWidth() - nWidth - nX - 1;

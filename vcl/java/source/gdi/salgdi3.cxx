@@ -111,7 +111,7 @@ void SalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 		pMetric->mnOrientation = 0;
 		pMetric->meFamily = FAMILY_DONTKNOW;
 	}
-	pMetric->meCharSet = gsl_getSystemTextEncoding();
+	pMetric->meCharSet = RTL_TEXTENCODING_UNICODE;
 	if ( maGraphicsData.mpVCLFont && maGraphicsData.mpVCLFont->isBold() )
 		pMetric->meWeight = WEIGHT_BOLD;
 	else
@@ -177,7 +177,7 @@ void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 		pFontData->mnWidth = 0;
 		pFontData->mnHeight = 0;
 		pFontData->meFamily = pFontList->mpFonts[ i ]->getFamilyType();
-		pFontData->meCharSet = gsl_getSystemTextEncoding();
+		pFontData->meCharSet = RTL_TEXTENCODING_UNICODE;
 		if ( pFontData->meFamily == FAMILY_MODERN )
 			pFontData->mePitch = PITCH_FIXED;
 		else

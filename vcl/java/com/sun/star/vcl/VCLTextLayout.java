@@ -40,7 +40,6 @@ import java.awt.Rectangle;
 import java.awt.font.GlyphVector;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
-import java.text.AttributedString;
 
 /**
  * The Java class that implements the JavaLayout C++ class methods.
@@ -49,6 +48,66 @@ import java.text.AttributedString;
  * @author 	    $Author$
  */
 public final class VCLTextLayout {
+
+	/**
+	 * SAL_LAYOUT_BIDI_RTL constant.
+	 */
+	public final static int SAL_LAYOUT_BIDI_RTL = 0x0001;
+
+	/**
+	 * SAL_LAYOUT_BIDI_STRONG constant.
+	 */
+	public final static int SAL_LAYOUT_BIDI_STRONG = 0x0002;
+
+	/**
+	 * SAL_LAYOUT_RIGHT_ALIGN constant.
+	 */
+	public final static int SAL_LAYOUT_RIGHT_ALIGN = 0x0004;
+
+	/**
+	 * SAL_LAYOUT_KERNING_PAIRS constant.
+	 */
+	public final static int SAL_LAYOUT_KERNING_PAIRS = 0x0010;
+
+	/**
+	 * SAL_LAYOUT_KERNING_ASIAN constant.
+	 */
+	public final static int SAL_LAYOUT_KERNING_ASIAN = 0x0020;
+
+	/**
+	 * SAL_LAYOUT_VERTICAL constant.
+	 */
+	public final static int SAL_LAYOUT_VERTICAL = 0x0040;
+
+	/**
+	 * SAL_LAYOUT_COMPLEX_DISABLED constant.
+	 */
+	public final static int SAL_LAYOUT_COMPLEX_DISABLED = 0x0100;
+
+	/**
+	 * SAL_LAYOUT_ENABLE_LIGATURES constant.
+	 */
+	public final static int SAL_LAYOUT_ENABLE_LIGATURES = 0x0200;
+
+	/**
+	 * SAL_LAYOUT_SUBSTITUTE_DIGITS constant.
+	 */
+	public final static int SAL_LAYOUT_SUBSTITUTE_DIGITS = 0x0400;
+
+	/**
+	 * SAL_LAYOUT_KASHIDA_JUSTIFICATON constant.
+	 */
+	public final static int SAL_LAYOUT_KASHIDA_JUSTIFICATON = 0x0800;
+
+	/**
+	 * SAL_LAYOUT_DISABLE_GLYPH_PROCESSING constant.
+	 */
+	public final static int SAL_LAYOUT_DISABLE_GLYPH_PROCESSING = 0x1000;
+
+	/**
+	 * SAL_LAYOUT_FOR_FALLBACK constant.
+	 */
+	public final static int SAL_LAYOUT_FOR_FALLBACK = 0x2000;
 
 	/**
 	 * The bounds.
@@ -61,7 +120,7 @@ public final class VCLTextLayout {
 	private int beginIndex = 0;
 
 	/*
-	 * The number of characters.
+	 * The number of glyphs.
 	 */
 	private int count = 0;
 
@@ -94,6 +153,11 @@ public final class VCLTextLayout {
 	 * The graphics.
 	 */
 	private VCLGraphics graphics = null;
+
+	/**
+	 * The layout flags.
+	 */
+	private int[] layoutFlags = null;
 
 	/**
 	 * Constructs a new <code>VCLTextLayout</code> instance.
@@ -214,10 +278,9 @@ public final class VCLTextLayout {
 		if (bounds == null) {
 			Rectangle2D r = glyphs.getLogicalBounds();
 			bounds = r.getBounds();
-			// If Java rounds the width up by more than half a pixel, round
-			// down instead
-			if (bounds.width - r.getWidth() > 0.5)
-				bounds.width--;
+			// Always round down so that ligature glyphs are not separated when
+			// justifying the glyph vector
+			bounds.width = (int)r.getWidth();
 		}
 
 		return bounds.width;
@@ -245,7 +308,7 @@ public final class VCLTextLayout {
 		int n = charAdvances.length - 1;
 		for (i = 0; i < n; i++) {
 			currentAdvance = glyphs.getGlyphPosition(i + 1);
-			currentAdvance.setLocation(currentAdvance.getX() + charAdjust, currentAdvance.getY());
+			currentAdvance.setLocation((double)currentAdvance.getX() + charAdjust, currentAdvance.getY());
 			glyphs.setGlyphPosition(i + 1, currentAdvance);
 			charAdvances[i] = (int)(currentAdvance.getX() - previousAdvance);
 			previousAdvance += charAdvances[i];
@@ -260,24 +323,24 @@ public final class VCLTextLayout {
 	/**
 	 * Layout text.
 	 *
-	 * @param s the string to layout
+	 * @param chars the chars to be laid out
 	 * @param b the beginning index
 	 * @param e the ending index
 	 * @param f the layout flags
 	 */
-	public void layoutText(String s, int b, int e, int f) {
+	public void layoutText(char[] chars, int b, int e, int[] f) {
 
 		beginIndex = b;
 		endIndex = e;
-		count = endIndex - beginIndex;
+		layoutFlags = f;
 
 		bounds = null;
 		charAdvances = null;
 		caretPositions = null;
 
 		// Create the attributed string and the glyph vector
-		AttributedString as = new AttributedString(s);
-		glyphs = font.getFont().createGlyphVector(graphics.getFontRenderContext(), as.getIterator());
+		glyphs = font.getFont().createGlyphVector(graphics.getFontRenderContext(), chars);
+		count = glyphs.getNumGlyphs();
 
 	}
 

@@ -45,6 +45,8 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
 
+#include <unicode/ushape.h>
+
 using namespace rtl;
 using namespace vcl;
 
@@ -321,17 +323,89 @@ void com_sun_star_vcl_VCLTextLayout::layoutText( ImplLayoutArgs& _par0 )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(Ljava/lang/String;III)V";
+			char *cSignature = "([CII[I)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "layoutText", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
+			int nElements = 0;
+			bool bVertical = ( ( _par0.mnFlags & SAL_LAYOUT_VERTICAL ) != 0 );
+			bool bRTL;
+			int i, j;
+
+			// Calculate number of characters
+			_par0.ResetPos();
+			while ( _par0.GetNextRun( &i, &j, &bRTL ) )
+			{
+				int nRunLen = j - i;
+				if ( bRTL && !bVertical )
+				{
+					// Calculate number of Arabic characters
+					UErrorCode aErr = U_ZERO_ERROR;
+					nElements += u_shapeArabic( _par0.mpStr + i, nRunLen, NULL, 0, U_SHAPE_LETTERS_SHAPE, &aErr );
+				}
+				else
+				{
+					nElements += nRunLen;
+				}
+			}
+
+			jcharArray chars = t.pEnv->NewCharArray( nElements );
+			jintArray flags = t.pEnv->NewIntArray( nElements );
+
+			jboolean bCopy( sal_False );
+			jchar *pCharBits = (jchar *)t.pEnv->GetPrimitiveArrayCritical( chars, &bCopy );
+			bCopy = sal_False;
+			jint *pFlagBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( flags, &bCopy );
+
+			int nElementsCopied = 0;
+			_par0.ResetPos();
+			while ( _par0.GetNextRun( &i, &j, &bRTL ) )
+			{
+				int nRunLen = j - i;
+				if ( bRTL && !bVertical )
+				{
+					// Substitute Arabic characters
+					UErrorCode aErr = U_ZERO_ERROR;
+					int nShapedChars = u_shapeArabic( _par0.mpStr + i, nRunLen, pCharBits + nElementsCopied, nElements - nElementsCopied, U_SHAPE_LETTERS_SHAPE, &aErr );
+
+					int nFlags = _par0.mnFlags | SAL_LAYOUT_BIDI_RTL;
+					for ( i = 0 ; i < nShapedChars ; i++ )
+					{
+						// Reverse RTL chars
+						int k = i + nElementsCopied;
+						int l = nElementsCopied + nShapedChars - i - 1;
+						if ( k < l )
+						{
+							pCharBits[ k ] ^= pCharBits[ l ];
+							pCharBits[ l ] ^= pCharBits[ k ];
+							pCharBits[ k ] ^= pCharBits[ l ];
+						}
+						pFlagBits[ k ] = nFlags;
+					}
+					nElementsCopied += nShapedChars;
+				}
+				else
+				{
+					for ( ; i < j ; i++ )
+					{
+						int k = i - _par0.mnMinCharPos;
+						pCharBits[ k ] = _par0.mpStr[ i ];
+						pFlagBits[ k ] = _par0.mnFlags;
+					}
+					nElementsCopied += nRunLen;
+				}
+			}
+
+			t.pEnv->ReleasePrimitiveArrayCritical( flags, (void *)pFlagBits, 0 );
+			t.pEnv->ReleasePrimitiveArrayCritical( chars, (void *)pCharBits, 0 );
+
 			jvalue args[4];
-			args[0].l = StringToJavaString( t.pEnv, OUString( _par0.mpStr + _par0.mnMinCharPos, _par0.mnEndCharPos - _par0.mnMinCharPos ) );
+			args[0].l = chars;
 			args[1].i = _par0.mnMinCharPos;
 			args[2].i = _par0.mnEndCharPos;
-			args[3].i = _par0.mnFlags;
+			args[3].l = flags;
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
