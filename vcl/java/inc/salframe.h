@@ -54,6 +54,7 @@ class com_sun_star_vcl_VCLEvent;
 class com_sun_star_vcl_VCLEventQueue;
 class com_sun_star_vcl_VCLFrame;
 class com_sun_star_vcl_VCLMenuBar;
+class com_sun_star_vcl_VCLPrintJob;
 class java_lang_Object;
 }
 
@@ -69,10 +70,11 @@ class SalFrameData
 	friend class	SalGraphics;
 	friend class	SalInstance;
 	friend class	SalMenu;
-	friend class	::vcl::com_sun_star_vcl_VCLMenuBar;
 	friend class	::vcl::com_sun_star_vcl_VCLEvent;
 	friend class	::vcl::com_sun_star_vcl_VCLEventQueue;
 	friend class	::vcl::com_sun_star_vcl_VCLFrame;
+	friend class	::vcl::com_sun_star_vcl_VCLMenuBar;
+	friend class	::vcl::com_sun_star_vcl_VCLPrintJob;
 	friend void 	UpdateMenusForFrame( SalFrame*, SalMenu* );
 #ifdef MACOSX
 	friend void 	CarbonDMExtendedNotificationCallback( void*, short, void* );

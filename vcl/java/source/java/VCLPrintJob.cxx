@@ -38,6 +38,9 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX
 #include <com/sun/star/vcl/VCLPrintJob.hxx>
 #endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
+#include <com/sun/star/vcl/VCLFrame.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
@@ -46,6 +49,12 @@
 #endif
 #ifndef _SV_JAVA_LANG_CLASS_HXX
 #include <java/lang/Class.hxx>
+#endif
+#ifndef _SV_SALDATA_HXX
+#include <saldata.hxx>
+#endif
+#ifndef _SV_SALFRAME_HXX
+#include <salframe.hxx>
 #endif
 #ifndef _STRING_HXX
 #include <tools/string.hxx>
@@ -398,6 +407,12 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 			delete printerJob;
 		}
 #endif	// MACOSX
+
+		// Force the focus frame to the front as Java usually uses the name of
+		// the print job from the front-most window
+		SalData *pSalData = GetSalData();
+		if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->maFrameData.mbVisible )
+			pSalData->mpFocusFrame->maFrameData.mpVCLFrame->toFront();
 
 		if ( !mID )
 		{
