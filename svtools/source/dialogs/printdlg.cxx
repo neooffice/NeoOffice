@@ -577,8 +577,7 @@ short PrintDialog::Execute()
 	ImplModifyControlHdl( NULL );
 
 #ifdef USE_JAVA
-	ClickOptionsHdl();
-	short nRet = TRUE;
+	short nRet = ClickOptionsHdl();
 #else	// USE_JAVA
 	// Dialog starten
 	short nRet = ModalDialog::Execute();
