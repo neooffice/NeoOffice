@@ -59,11 +59,10 @@ struct SystemEnvData
 	HWND				hWnd;			// the window hwnd
 #elif defined( OS2 )
 	HWND				hWnd;			// the client hwnd
-#elif defined( USE_JAVA )
-	jobject				aComponent;		// the Java component
 #elif defined( UNX )
 	void*				pDisplay;		// the relevant display connection
 	long				aWindow;		// the window of the object
+#ifndef USE_JAVA
 	void*				pSalFrame;		// contains a salframe, if object has one
 	void*				pWidget;		// the corresponding widget
 	void*				pVisual;		// the visual in use
@@ -72,6 +71,7 @@ struct SystemEnvData
 	void*				pAppContext;	// the application context in use
 	long				aShellWindow;	// the window of the frame's shell
 	void*				pShellWidget;	// the frame's shell widget
+#endif	// !USE_JAVA
 #endif
 #endif
 };
@@ -90,8 +90,6 @@ struct SystemParentData
 	HWND			hWnd;			// the window hwnd
 #elif defined( OS2 )
 	HWND			hWnd;			// the client hwnd
-#elif defined( USE_JAVA )
-	jobject			aComponent;		// the Java component
 #elif defined( UNX )
 	long		    aWindow;		// the window of the object
 #endif

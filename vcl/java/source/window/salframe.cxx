@@ -611,7 +611,8 @@ SalFrameData::SalFrameData()
 	mpInst = NULL;
 	mpProc = ImplSalCallbackDummy;
 	maSysData.nSize = sizeof( SystemEnvData );
-	maSysData.aComponent = NULL;
+	maSysData.pDisplay = NULL;
+	maSysData.aWindow = 0;
 	mbCenter = TRUE;
 	memset( &maOriginalGeometry, 0, sizeof( maOriginalGeometry ) );
 	mbFullScreen = FALSE;

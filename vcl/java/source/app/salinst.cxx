@@ -357,6 +357,8 @@ BOOL SalInstance::AnyInput( USHORT nType )
 
 SalFrame* SalInstance::CreateChildFrame( SystemParentData* pSystemParentData, ULONG nSalFrameStyle )
 {
+	if ( pSystemParentData->aWindow )
+		fprintf( stderr, "Here: %p is a component", pSystemParentData->aWindow );
 #ifdef DEBUG
 	fprintf( stderr, "SalInstance::CreateChildFrame not implemented\n" );
 #endif
@@ -372,9 +374,9 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 	pFrame->maFrameData.mpVCLFrame = new com_sun_star_vcl_VCLFrame( nSalFrameStyle, pFrame, pParent );
 	pFrame->maFrameData.mpPanel = pFrame->maFrameData.mpVCLFrame->getPanel();
 	if ( pFrame->maFrameData.mpPanel )
-		pFrame->maFrameData.maSysData.aComponent = pFrame->maFrameData.mpPanel->getJavaObject();
+		pFrame->maFrameData.maSysData.aWindow = (long)pFrame->maFrameData.mpPanel->getJavaObject();
 	else
-		pFrame->maFrameData.maSysData.aComponent = NULL;
+		pFrame->maFrameData.maSysData.aWindow = NULL;
 	pFrame->maFrameData.mnStyle = nSalFrameStyle;
 
 	pFrame->maFrameData.mpParent = pParent;
