@@ -169,9 +169,9 @@ public final class VCLFont {
 	 *
 	 * @return the font ascent of the <code>Font</code>
 	 */
-	public long getAscent() {
+	public int getAscent() {
 
-		return (long)fontMetrics.getAscent();
+		return fontMetrics.getAscent();
 
 	}
 
@@ -186,8 +186,7 @@ public final class VCLFont {
 
 		int[] widths = new int[end - start + 1];
 		for (char i = start; i <= end; i++) {
-			int type = Character.getType(i);
-			if (type == Character.NON_SPACING_MARK && font.canDisplay(i))
+			if (Character.getType(i) == Character.NON_SPACING_MARK && font.canDisplay(i))
 				widths[i - start] = 0;
 			else
 				widths[i - start] = fontMetrics.charWidth(i);
@@ -201,9 +200,9 @@ public final class VCLFont {
 	 *
 	 * @return the font descent of the <code>Font</code>
 	 */
-	public long getDescent() {
+	public int getDescent() {
 
-		return (long)fontMetrics.getDescent();
+		return fontMetrics.getDescent();
 
 	}
 
@@ -219,13 +218,36 @@ public final class VCLFont {
 	}
 
 	/**
+	 * Determines the kerning adjustment for the specified characters.
+	 *
+	 * @param a the first character
+	 * @param b the second character
+	 * @return the kerning adjustment for the specified characters
+	 */
+	public int getKerning(char a, char b) {
+
+		// Get width without kerning
+		int width = 0;
+		if (Character.getType(a) != Character.NON_SPACING_MARK || !font.canDisplay(a))
+			width += fontMetrics.charWidth(a);
+		if (Character.getType(b) != Character.NON_SPACING_MARK || !font.canDisplay(b))
+			width += fontMetrics.charWidth(b);
+
+		// Subtract the width with kerning
+		width -= fontMetrics.charsWidth(new char[]{ a, b }, 0, 2);
+
+		return width;
+
+	}
+
+	/**
 	 * Determines the standard leading of the <code>Font</code>.
 	 *
 	 * @return the standard leading of the <code>Font</code>
 	 */
-	public long getLeading() {
+	public int getLeading() {
 
-		return (long)fontMetrics.getLeading();
+		return fontMetrics.getLeading();
 
 	}
 
@@ -256,9 +278,9 @@ public final class VCLFont {
 	 *
 	 * @return the point size of the <code>Font</code>
 	 */
-	public long getSize() {
+	public int getSize() {
 
-		return (long)font.getSize();
+		return font.getSize();
 
 	}
 

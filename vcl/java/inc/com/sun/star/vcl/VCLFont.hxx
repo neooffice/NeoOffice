@@ -65,6 +65,7 @@ public:
 	long				getAscent();
 	void				getCharWidth( sal_Unicode _par0, sal_Unicode _par1, long *_par2 );
 	long				getDescent();
+	long				getKerning( USHORT _par0, USHORT _par1 );
 	long				getLeading();
 	::rtl::OUString		getName();
 	short				getOrientation();

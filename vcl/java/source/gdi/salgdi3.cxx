@@ -122,10 +122,17 @@ void SalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 
 ULONG SalGraphics::GetKernPairs( ULONG nPairs, ImplKernPairData* pKernPairs )
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalGraphics::GetKernPairs not implemented\n" );
-#endif
-	return 0;
+	if ( maGraphicsData.mpVCLFont )
+	{
+		ImplKernPairData *pPair = pKernPairs;
+		for ( ULONG i = 0; i < nPairs; i++ )
+		{
+			pPair->mnKern = maGraphicsData.mpVCLFont->getKerning( pPair->mnChar1, pPair->mnChar2 );
+			pPair++;
+		}
+	}
+
+	return nPairs;
 }
 
 // -----------------------------------------------------------------------

@@ -456,7 +456,7 @@ void com_sun_star_vcl_VCLGraphics::drawTextArray( long _par0, long _par1, const 
 			jcharArray chars = t.pEnv->NewCharArray( elements );
 			t.pEnv->SetCharArrayRegion( chars, 0, elements, (jchar *)_par2 );
 			jintArray offsets = t.pEnv->NewIntArray( elements );
-			t.pEnv->SetIntArrayRegion( offsets, 0, elements, (jint *)_par6 );
+			t.pEnv->SetIntArrayRegion( offsets, 0, elements - 1, (jint *)_par6 );
 			jvalue args[6];
 			args[0].i = jint( _par0 );
 			args[1].i = jint( _par1 );

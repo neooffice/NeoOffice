@@ -136,12 +136,12 @@ long com_sun_star_vcl_VCLFont::getAscent()
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()J";
+			char *cSignature = "()I";
 			mID = t.pEnv->GetMethodID( getMyClass(), "getAscent", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (long)t.pEnv->CallNonvirtualLongMethod( object, getMyClass(), mID );
+			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
 }
@@ -187,12 +187,12 @@ long com_sun_star_vcl_VCLFont::getDescent()
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()J";
+			char *cSignature = "()I";
 			mID = t.pEnv->GetMethodID( getMyClass(), "getDescent", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (long)t.pEnv->CallNonvirtualLongMethod( object, getMyClass(), mID );
+			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
 }
@@ -208,12 +208,38 @@ long com_sun_star_vcl_VCLFont::getLeading()
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()J";
+			char *cSignature = "()I";
 			mID = t.pEnv->GetMethodID( getMyClass(), "getLeading", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (long)t.pEnv->CallNonvirtualLongMethod( object, getMyClass(), mID );
+			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+long com_sun_star_vcl_VCLFont::getKerning( USHORT _par0, USHORT _par1 )
+{
+	static jmethodID mID = NULL;
+	long out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getKerning", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[2];
+			args[0].c = jchar( _par0 );
+			args[1].c = jchar( _par1 );
+			out = (long)t.pEnv->CallNonvirtualIntMethodA( object, getMyClass(), mID, args );
+		}
 	}
 	return out;
 }
@@ -276,12 +302,12 @@ long com_sun_star_vcl_VCLFont::getSize()
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()J";
+			char *cSignature = "()I";
 			mID = t.pEnv->GetMethodID( getMyClass(), "getSize", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (long)t.pEnv->CallNonvirtualLongMethod( object, getMyClass(), mID );
+			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
 }
