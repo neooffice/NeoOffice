@@ -141,7 +141,7 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 			if ( !mIDAcquire0 )
 			{
 				char *cSignature = "()I";
-				mIDAcquire0 = t.pEnv->GetStaticMethodID( carbonLockClass, "release0", cSignature );
+				mIDAcquire0 = t.pEnv->GetStaticMethodID( carbonLockClass, "acquire0", cSignature );
 			}
 			OSL_ENSURE( mIDAcquire0, "Unknown method id!" );
 		}
