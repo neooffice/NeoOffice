@@ -10,6 +10,6 @@ Required NO
 Relocatable NO
 RequiresReboot NO
 UseUserMask NO
-OverwritePermissions YES
+OverwritePermissions NO
 InstallFat NO
 RootVolumeOnly NO
