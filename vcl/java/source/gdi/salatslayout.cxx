@@ -58,9 +58,9 @@ inline int Float32ToInt( Float32 f ) { return (int)( f + 0.5 ); }
 class ATSLayout : public SalLayout
 {
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
+	ATSUStyle			maFontStyle;
 	ATSUTextLayout		maLayout;
 	ItemCount			mnRuns;
-	ATSUStyle*			mpStyles;
 	UniCharArrayOffset	mnStart;
 	UniCharCount		mnLen;
 	mutable long		mnWidth;
@@ -112,6 +112,7 @@ public:
 };
 
 using namespace vcl;
+using namespace vos;
 
 // ============================================================================
 
@@ -160,7 +161,7 @@ SalLayout *SalGraphics::GetTextLayout( ImplLayoutArgs& rArgs, int nFallbackLevel
 
 ATSLayout::ATSLayout( com_sun_star_vcl_VCLFont *pVCLFont ) :
 	maLayout( NULL ),
-	mpStyles( NULL ),
+	maFontStyle( NULL ),
 	mnRuns( 0 ),
 	mnStart( 0 ),
 	mnLen( 0 ),
@@ -169,6 +170,54 @@ ATSLayout::ATSLayout( com_sun_star_vcl_VCLFont *pVCLFont ) :
 	mpGlyphInfoArray( NULL )
 {
 	mpVCLFont = new com_sun_star_vcl_VCLFont( pVCLFont->getJavaObject() );
+
+	// Create font style
+	if ( ATSUCreateStyle( &maFontStyle ) == noErr )
+	{
+		ATSUAttributeTag nTags[4];
+		ByteCount nBytes[4];
+		ATSUAttributeValuePtr nVals[4];
+
+		// Set font
+		// TODO: Don't hardcode name
+		ATSUFontID nFontID;
+		if ( ATSUFindFontFromName( "Monaco", 6, kFontFullName, kFontNoPlatformCode, kFontNoScriptCode, kFontNoLanguageCode, &nFontID ) != noErr )
+			nFontID = kATSUInvalidFontID;
+		nTags[0] = kATSUFontTag;
+		nBytes[0] = sizeof( ATSUFontID );
+		nVals[0] = &nFontID;
+
+		// Set font size
+		Fixed nSize = Long2Fix( mpVCLFont->getSize() );
+		nTags[1] = kATSUSizeTag;
+		nBytes[1] = sizeof( Fixed );
+		nVals[1] = &nSize;
+
+		// Set color
+		RGBColor aColor;
+		aColor.red = 0x0;
+		aColor.green = 0x0;
+		aColor.blue = 0x0;
+		nTags[2] = kATSUColorTag;
+		nBytes[2] = sizeof( RGBColor );
+		nVals[2] = &aColor;
+
+		// Set antialiasing
+		ATSStyleRenderingOptions nOptions;
+		if ( mpVCLFont->isAntialiased() )
+			nOptions = kATSStyleApplyAntiAliasing;
+		else
+			nOptions = kATSStyleNoAntiAliasing;
+		nTags[3] = kATSUStyleRenderingOptionsTag;
+		nBytes[3] = sizeof( ATSStyleRenderingOptions );
+		nVals[3] = &nOptions;
+
+		if ( ATSUSetAttributes( maFontStyle, 4, nTags, nBytes, nVals ) != noErr )
+		{
+			ATSUDisposeStyle( maFontStyle );
+			maFontStyle = NULL;
+		}
+	}
 }
 
 // ----------------------------------------------------------------------------
@@ -179,7 +228,9 @@ ATSLayout::~ATSLayout()
 
 	if ( mpVCLFont )
 		delete mpVCLFont;
-	mpVCLFont = NULL;
+
+	if ( maFontStyle )
+		ATSUDisposeStyle( maFontStyle );
 }
 
 // ----------------------------------------------------------------------------
@@ -189,6 +240,9 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	OSStatus		theErr;
 
 	Destroy();
+
+	if ( !maFontStyle )
+		return false;
 
 	mnLen = rArgs.mnEndCharPos - rArgs.mnMinCharPos;
 	if ( !mnLen )
@@ -205,76 +259,20 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	while ( rArgs.GetNextRun( &i, &j, &bRTL ) )
 		mnRuns++;
 
-	mpStyles = (ATSUStyle *)rtl_allocateMemory( mnRuns * sizeof( ATSUStyle ) );
-
 	// Populate run lengths and style arrays
 	bool bVertical = ( ( rArgs.mnFlags & SAL_LAYOUT_VERTICAL ) != 0 );
 	UniCharCount aRunLengths[ mnRuns ];
+	ATSUStyle aStyles[ mnRuns ];
 	ItemCount nRunsProcessed = 0;
 	rArgs.ResetPos();
 	while ( rArgs.GetNextRun( &i, &j, &bRTL ) && nRunsProcessed < mnRuns )
 	{
-		ATSUStyle aStyle;
-		if ( ATSUCreateStyle( &aStyle ) == noErr )
-		{
-			ATSUAttributeTag nTags[5];
-			ByteCount nBytes[5];
-			ATSUAttributeValuePtr nVals[5];
-
-			// Set font
-			// TODO: Don't hardcode Geneva
-			ATSUFontID nFontID = kFontIDGeneva;
-			nTags[0] = kATSUFontTag;
-			nBytes[0] = sizeof( ATSUFontID );
-			nVals[0] = &nFontID;
-			Fixed nSize = Long2Fix( mpVCLFont->getSize() );
-			nTags[1] = kATSUSizeTag;
-			nBytes[1] = sizeof( Fixed );
-			nVals[1] = &nSize;
-
-			// Set vertical or horizontal
-			UInt16 nVerticalDirection;
-			nTags[2] = kATSUVerticalCharacterTag;
-			nBytes[2] = sizeof( UInt16 );
-			if ( bVertical )
-				nVerticalDirection = kATSUStronglyVertical;
-			else
-				nVerticalDirection = kATSUStronglyHorizontal;
-			nVals[2] = &nVerticalDirection;
-
-			// Set LTR or RTL
-			UInt16 nLineDirection;
-			nTags[3] = kATSULineDirectionTag;
-			nBytes[3] = sizeof( UInt16 );
-			if ( bRTL && !bVertical )
-				nLineDirection = kATSURightToLeftBaseDirection;
-			else
-				nLineDirection = kATSULeftToRightBaseDirection;
-			nVals[3] = &nLineDirection;
-
-			// Set antialiasing
-			ATSStyleRenderingOptions nOptions;
-			if ( mpVCLFont->isAntialiased() )
-				nOptions = kATSStyleApplyAntiAliasing;
-			else
-				nOptions = kATSStyleNoAntiAliasing;
-			nTags[4] = kATSUStyleRenderingOptionsTag;
-			nBytes[4] = sizeof( ATSStyleRenderingOptions );
-			nVals[4] = &nOptions;
-
-			ATSUSetAttributes( aStyle, 5, nTags, nBytes, nVals );
-		}
-		else
-		{
-			aStyle = NULL;
-		}
-
 		aRunLengths[ nRunsProcessed ] = j - i;
-		mpStyles[ nRunsProcessed ] = aStyle;
-		nRunsProcessed++;	
+		aStyles[ nRunsProcessed ] = maFontStyle;
+		nRunsProcessed++;
 	}
 
-	if ( ATSUCreateTextLayoutWithTextPtr( rArgs.mpStr + mnStart, kATSUFromTextBeginning, kATSUToTextEnd, mnLen, mnRuns, aRunLengths, mpStyles, &maLayout ) != noErr )
+	if ( ATSUCreateTextLayoutWithTextPtr( rArgs.mpStr + mnStart, kATSUFromTextBeginning, kATSUToTextEnd, mnLen, mnRuns, aRunLengths, aStyles, &maLayout ) != noErr )
 	{
 		Destroy();
 		return false;
@@ -342,24 +340,30 @@ void ATSLayout::DrawText( SalGraphics& rGraphics ) const
 		nVals[1] = &nOrientation;
 		ATSUSetLayoutControls( maLayout, 2, nTags, nBytes, nVals );
 
-		// Since there is no CGrafPtr associated with the CGContext, we need
-		// to set the font size, color, etc. ourselves
-		CGContextSaveGState( aCGContext );
-		CGContextTranslateCTM( aCGContext, aPos.X(), aPos.Y() * -1 );
-		float nScaleFactor = (float)mpVCLFont->getSize() / 12;
-		CGContextScaleCTM( aCGContext, nScaleFactor, nScaleFactor );
-		SalColor nColor = rGraphics.maGraphicsData.mnTextColor;
-		CGContextSetRGBFillColor( aCGContext, (float)SALCOLOR_RED( nColor ) / 256, (float)SALCOLOR_GREEN( nColor ) / 256, (float)SALCOLOR_BLUE( nColor ) / 256, 1.0 );
-		CGContextSetShouldAntialias( aCGContext, mpVCLFont->isAntialiased() );
+		// Update color
+		if ( maFontStyle )
+		{
+			SalColor nColor = rGraphics.maGraphicsData.mnTextColor;
+			RGBColor aColor;
+			aColor.red = SALCOLOR_RED( nColor ) & 0xff;
+			aColor.red |= ( aColor.red << 8 );
+			aColor.green = SALCOLOR_GREEN( nColor ) & 0xff;
+			aColor.green |= ( aColor.green << 8 );
+			aColor.blue = SALCOLOR_BLUE( nColor ) & 0xff;
+			aColor.blue |= ( aColor.blue << 8 );
+			ATSUAttributeTag nColorTag = kATSUColorTag;
+			ByteCount nColorByte = sizeof( RGBColor );
+			ATSUAttributeValuePtr nColorVal = &aColor;
 
+			ATSUSetAttributes( maFontStyle, 1, &nColorTag, &nColorByte, &nColorVal );
+		}
+	
 		// Draw the text
-		ATSUDrawText( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, 0, 0 );
 		Rectangle aRect;
 		if ( GetBoundRect( rGraphics, aRect ) )
 			rGraphics.maGraphicsData.mpVCLGraphics->addToFlush( aPos.X() + aRect.nLeft - 1, aPos.Y() + aRect.nTop - 1, aRect.GetWidth() + 2, aRect.GetHeight() + 2 );
 
-		// Restore the CGContext state
-		CGContextRestoreGState( aCGContext );
+		ATSUDrawText( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, Long2Fix( aPos.X() ), Long2Fix( aPos.Y() * - 1 ) );
 
 		// Reset layout controls
 		ATSUClearLayoutControls( maLayout, 2, nTags );
@@ -479,7 +483,7 @@ bool ATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rPPV ) const
 		long nDeltaY = Float32ToInt( pG->deltaY );
 		aPolyArgs.Init( &rPPV[i], pG->screenX, nDeltaY );
 		OSStatus nStatus, nCBStatus;
-		nStatus = ATSUGlyphGetCubicPaths( mpStyles[0], nGlyphId, MyATSCubicMoveToCallback, MyATSCubicLineToCallback, MyATSCubicCurveToCallback, MyATSCubicClosePathCallback, &aPolyArgs, &nCBStatus );
+		nStatus = ATSUGlyphGetCubicPaths( maFontStyle, nGlyphId, MyATSCubicMoveToCallback, MyATSCubicLineToCallback, MyATSCubicCurveToCallback, MyATSCubicClosePathCallback, &aPolyArgs, &nCBStatus );
 
 		if ( nStatus != noErr && nCBStatus != noErr )
 		{
@@ -499,8 +503,7 @@ bool ATSLayout::GetBoundRect( SalGraphics& rGraphics, Rectangle& rRect ) const
 
 	if ( ATSUMeasureTextImage( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, 0, 0, &aMacRect ) == noErr )
 	{
-		float nScaleFactor = (float)mpVCLFont->getSize() / 12;
-		rRect = Rectangle( 0, (long)( nScaleFactor * aMacRect.top), (long)( nScaleFactor * ( aMacRect.right - aMacRect.left ) ), (long)( nScaleFactor * aMacRect.bottom ) );
+		rRect = Rectangle( aMacRect.left, aMacRect.top, aMacRect.right, aMacRect.bottom );
 		return true;
 	}
 	else
@@ -544,19 +547,21 @@ void ATSLayout::Destroy()
 		ATSUDisposeTextLayout( maLayout );
 	maLayout = NULL;
 
-	mnRuns = 0;
-
-	if ( mpStyles )
+	// Reset color
+	if ( maFontStyle )
 	{
-		for ( ItemCount i = 0; i < mnRuns; i++ )
-		{
-			if ( mpStyles[ i ] )
-				ATSUDisposeStyle( mpStyles[ i ] );
-		}
-		rtl_freeMemory( mpStyles );
-	}
-	mpStyles = NULL;
+		RGBColor aColor;
+		aColor.red = 0x0;
+		aColor.green = 0x0;
+		aColor.blue = 0x0;
+		ATSUAttributeTag nColorTag = kATSUColorTag;
+		ByteCount nColorByte = sizeof( RGBColor );
+		ATSUAttributeValuePtr nColorVal = &aColor;
 
+		ATSUSetAttributes( maFontStyle, 1, &nColorTag, &nColorByte, &nColorVal );
+	}
+	
+	mnRuns = 0;
 	mnStart = 0;
 	mnLen = 0;
 	mnWidth = 0;
@@ -584,15 +589,13 @@ bool ATSLayout::InitAdvances() const
 		rtl_freeMemory( mpAdvances );
 	mpAdvances = (long *)rtl_allocateMemory( mnLen * sizeof( long ) );
 
-	Fixed nScaleFactor = FixDiv( Long2Fix( mpVCLFont->getSize() ), Long2Fix( 12 ) );
-
 	long nPreviousX = 0;
 	for ( int i = 0; i < mnLen; i++ )
 	{
 		ATSUCaret aCaret;
 		if ( ATSUOffsetToCursorPosition( maLayout, i + 1, true, kATSUByCharacter, &aCaret, NULL, NULL ) == noErr )
 		{
-			mpAdvances[ i ] = Fix2Long( FixMul( aCaret.fX, nScaleFactor ) ) - nPreviousX;
+			mpAdvances[ i ] = Fix2Long( aCaret.fX ) - nPreviousX;
 			nPreviousX += mpAdvances[ i ];
 		}
 		else
