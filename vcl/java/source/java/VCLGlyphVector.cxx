@@ -159,15 +159,18 @@ long com_sun_star_vcl_VCLGlyphVector::fillDXArray( long *_par0 )
 			jintArray tempObj = (jintArray)t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			if ( tempObj )
 			{
-				out = (long)t.pEnv->GetArrayLength( tempObj );
-				if ( out )
+				jsize nElements = t.pEnv->GetArrayLength( tempObj );
+				if ( nElements )
 				{
-					long nSize = out * sizeof( jint );
+					long nSize = nElements * sizeof( jint );
 					jboolean bCopy( sal_False );
-					jint *pSrcBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( tempObj, &bCopy );
-					jint *pDestBits = (jint *)rtl_allocateMemory( nSize );
-					memcpy( pDestBits, pSrcBits, nSize );
-					t.pEnv->ReleasePrimitiveArrayCritical( tempObj, (void *)pSrcBits, JNI_ABORT );
+					jint *pPosBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( tempObj, &bCopy );
+					int i;
+					for ( i = 0; i < nElements; i++)
+						out += (long)pPosBits[ i ];
+					if ( _par0 )
+						memcpy( _par0, pPosBits, nSize );
+					t.pEnv->ReleasePrimitiveArrayCritical( tempObj, (void *)pPosBits, JNI_ABORT );
 				}
 			}
 		}

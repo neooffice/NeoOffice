@@ -86,7 +86,7 @@ int JavaLayout::GetTextBreak( long nMaxWidth, long nCharExtra, int nFactor ) con
 #ifdef DEBUG
 	fprintf( stderr, "JavaLayout::GetTextBreak not implemented\n" );
 #endif
-	return 0;
+	return STRING_LEN;
 }
 
 // -----------------------------------------------------------------------
