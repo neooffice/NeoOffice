@@ -51,16 +51,6 @@ import java.util.ArrayList;
  */
 public class VCLFont {
 
-    /** 
-     * INTERFACE_SYSTEM constant.
-     */
-    public final static String INTERFACE_SYSTEM = "Interface System";
-
-    /** 
-     * INTERFACE_USER constant.
-     */
-    public final static String INTERFACE_USER = "Interface User";
-
 	/**
 	 * Cached fonts.
 	 */
@@ -81,34 +71,29 @@ public class VCLFont {
 			macosx = true;
 
 		// Get all of the fonts and screen out duplicates
-		Font[] inFonts = GraphicsEnvironment.getLocalGraphicsEnvironment().getAllFonts();
+		String[] fontFamilies = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
 		ArrayList array = new ArrayList();
-		for (int i = 0; i < inFonts.length; i++) {
-			String name = inFonts[i].getName().toLowerCase();
+		for (int i = 0; i < fontFamilies.length; i++) {
+			String name = fontFamilies[i].toLowerCase();
 			if (name.endsWith("bold"))
 				continue;
 			else if (name.endsWith("italic"))
 				continue;
 			else if (name.endsWith("bold italic"))
 				continue;
-			if (!inFonts[i].isPlain())
-				continue;
+			// Get rid of hidden Mac OS X fonts
 			if (macosx && name.startsWith("."))
 				continue;
-			array.add(new VCLFont(inFonts[i]));
-		}
-		// Add in the INTERFACE_SYSTEM and INTERFACE_USER virtual fonts
-		if (macosx) {
-			// Mac OS X has some predefined font names that we can use
-			array.add(new VCLFont(new Font("System", Font.PLAIN, 1), INTERFACE_SYSTEM));
-			array.add(new VCLFont(new Font("Application", Font.PLAIN, 1), INTERFACE_USER));
-		}
-		else {
-			Graphics2D g = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB_PRE).createGraphics();
-			Font f = g.getFont();
-			array.add(new VCLFont(f, INTERFACE_SYSTEM));
-			array.add(new VCLFont(f, INTERFACE_USER));
-			g.dispose();
+			// Chop off redundant portions of the family name
+			int j = name.indexOf(" regular");
+			if (j >= 0)
+				fontFamilies[i] = fontFamilies[i].substring(0, j);
+			j = name.indexOf(" medium");
+			if (j >= 0)
+				fontFamilies[i] = fontFamilies[i].substring(0, j);
+			Font font = new Font(fontFamilies[i], Font.PLAIN, 1);
+			if (font.isPlain())
+				array.add(new VCLFont(font));
 		}
 		VCLFont.fonts = (VCLFont[])array.toArray(new VCLFont[array.size()]);
 
