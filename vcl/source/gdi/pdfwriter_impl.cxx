@@ -3412,6 +3412,11 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
         }
         else // normal case
         {
+#if !defined USE_JAVA && !defined MACOSX
+            // Fix bug 684 by not using the optimized text drawing code on
+            // Mac OS X. For some reason, the incorrect map mode is used as a
+            // result of our running all drawing actions through a meta file.
+
             // optimize use of Td vs. Tm
             if( fXScale == 1.0 && fCos == 1.0 && fSin == 0.0 )
             {
@@ -3451,6 +3456,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                 aLine.append( " Td " );
             }
             else
+#endif	// !USE_JAVA && !MACOSX
             {
                 appendDouble( fXScale*fCos, aLine );
                 aLine.append( ' ' );
