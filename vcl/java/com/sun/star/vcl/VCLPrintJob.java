@@ -360,12 +360,12 @@ public final class VCLPrintJob implements Printable, Runnable {
 				int orientation = graphicsInfo.pageFormat.getOrientation();
 				if (o == VCLPageFormat.ORIENTATION_PORTRAIT && orientation != PageFormat.PORTRAIT) {
 					if (orientation == PageFormat.REVERSE_LANDSCAPE) {
-						graphicsInfo.graphics.translate((int)graphicsInfo.pageFormat.getImageableWidth(), 0);
-						graphicsInfo.graphics.rotate(Math.toRadians(90));
-					}
-					else {
 						graphicsInfo.graphics.translate(0, (int)graphicsInfo.pageFormat.getImageableHeight());
 						graphicsInfo.graphics.rotate(Math.toRadians(-90));
+					}
+					else {
+						graphicsInfo.graphics.translate((int)graphicsInfo.pageFormat.getImageableWidth(), 0);
+						graphicsInfo.graphics.rotate(Math.toRadians(90));
 					}
 				}
 				else if (o != VCLPageFormat.ORIENTATION_PORTRAIT && orientation == PageFormat.PORTRAIT ) {
