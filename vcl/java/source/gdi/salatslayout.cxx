@@ -211,9 +211,11 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	maFontStyle( NULL ),
 	mpNeedFallback( NULL ),
 	mpFallbackFont( NULL ),
+	maLayout( NULL ),
 	mnGlyphCount( 0 ),
 	mpGlyphInfoArray( NULL ),
 	mpCharsToGlyphs( NULL ),
+	mpCharAdvances( NULL ),
 	maVerticalFontStyle( NULL ),
 	mnBaselineDelta( 0 ),
 	mbValid( false )
@@ -334,20 +336,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 		return;
 	}
 
-	// Cache glyph widths
-	ByteCount nBufSize = mpHash->mnLen * sizeof( long );
-	mpCharAdvances = (long *)rtl_allocateMemory( nBufSize );
-	memset( mpCharAdvances, 0, nBufSize );
-
-	int i;
-	ATSTrapezoid aTrapezoid;
-	for ( i = 0; i < mpHash->mnLen; i++ )
-	{
-		// Fix bug 448 by eliminating subpixel advances
-		if ( ATSUGetGlyphBounds( maLayout, 0, 0, i, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
-			mpCharAdvances[ i ] = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX );
-	}
-
+	ByteCount nBufSize;
 	if ( ATSUGetGlyphInfo( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nBufSize, NULL ) != noErr )
 	{
 		Destroy();
@@ -364,6 +353,28 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	}
 
 	mnGlyphCount = mpGlyphInfoArray->numGlyphs;
+
+	// Break lines that are more than 32K pixels long to avoid messing up
+	// the metrics that ATSUGetGlyphBounds() returns
+	if ( ATSUBatchBreakLines( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, Long2Fix( 32768 ), NULL ) != noErr )
+	{
+		Destroy();
+		return;
+	}
+
+	// Cache glyph widths
+	nBufSize = mpHash->mnLen * sizeof( long );
+	mpCharAdvances = (long *)rtl_allocateMemory( nBufSize );
+	memset( mpCharAdvances, 0, nBufSize );
+
+	int i;
+	ATSTrapezoid aTrapezoid;
+	for ( i = 0; i < mpHash->mnLen; i++ )
+	{
+		// Fix bug 448 by eliminating subpixel advances
+		if ( ATSUGetGlyphBounds( maLayout, 0, 0, i, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
+			mpCharAdvances[ i ] = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX );
+	}
 
 	// Cache mapping of characters to glyphs
 	nBufSize = mpHash->mnLen * sizeof( int );
@@ -656,8 +667,6 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	{
 		sal_Unicode nChar = mpLayoutData->mpHash->mpStr[ nCharPos ];
 		long nCharWidth = mpLayoutData->mpCharAdvances[ nCharPos ];
-		if ( nCharWidth < 0 )
-			nCharWidth = 0;
 
 		bool bFirstGlyph = true;
 		for ( int i = mpLayoutData->mpCharsToGlyphs[ nCharPos ]; i < mpLayoutData->mnGlyphCount && mpLayoutData->mpGlyphInfoArray->glyphs[ i ].charIndex == nCharPos; i++ )
