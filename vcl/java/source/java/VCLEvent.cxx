@@ -145,6 +145,11 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 	switch ( nID )
 	{
 		case SALEVENT_CLOSE:
+		{
+			if ( pFrame->maFrameData.mbVisible )
+				dispatchEvent( nID, pFrame, NULL );
+			return;
+		}
 		case SALEVENT_GETFOCUS:
 		case SALEVENT_LOSEFOCUS:
 		{

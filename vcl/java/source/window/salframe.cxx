@@ -154,7 +154,11 @@ void SalFrame::SetIcon( USHORT nIcon )
 
 void SalFrame::Show( BOOL bVisible )
 {
+	if ( bVisible == maFrameData.mbVisible )
+		return;
+
 	maFrameData.mpVCLFrame->setVisible( bVisible );
+	maFrameData.mbVisible = bVisible;
 
 	// Reset graphics
 	com_sun_star_vcl_VCLGraphics *pVCLGraphics = maFrameData.mpVCLFrame->getGraphics();
@@ -164,7 +168,7 @@ void SalFrame::Show( BOOL bVisible )
 		delete pVCLGraphics;
 	}
 
-	if ( bVisible )
+	if ( maFrameData.mbVisible )
 	{
 		// Update the cached position
 		Rectangle *pBounds = new Rectangle( maFrameData.mpVCLFrame->getBounds() );
