@@ -205,7 +205,13 @@ public final class VCLMenuItemData {
 		keyboardShortcut=null;
 		menuItems=null;
 		title=null;
-
+		
+		// if we're a delegate for another object, set that object's
+		// delegate to null to avoid a dangling reference to a
+		// disposed object
+		
+		if(delegateForObject!=null)
+			delegateForObject.delegate=null;
 	}
 
 	/**
