@@ -277,7 +277,7 @@ long com_sun_star_vcl_VCLFont::getSize()
 sal_Bool com_sun_star_vcl_VCLFont::isBold()
 {
 	static jmethodID mID = NULL;
-	sal_Bool out = FALSE;
+	sal_Bool out = sal_False;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
@@ -300,7 +300,7 @@ sal_Bool com_sun_star_vcl_VCLFont::isBold()
 sal_Bool com_sun_star_vcl_VCLFont::isItalic()
 {
 	static jmethodID mID = NULL;
-	sal_Bool out = FALSE;
+	sal_Bool out = sal_False;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{

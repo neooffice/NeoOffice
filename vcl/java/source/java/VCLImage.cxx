@@ -41,9 +41,6 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
-#ifndef _SV_SALDATA_HXX
-#include <saldata.hxx>
-#endif
 
 using namespace vcl;
 
@@ -94,7 +91,6 @@ com_sun_star_vcl_VCLImage::com_sun_star_vcl_VCLImage( long nDX, long nDY, USHORT
 void com_sun_star_vcl_VCLImage::dispose()
 {
 	static jmethodID mID = NULL;
-	com_sun_star_vcl_VCLGraphics *out = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
@@ -105,9 +101,7 @@ void com_sun_star_vcl_VCLImage::dispose()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
 			t.pEnv->CallVoidMethod( object, mID );
-		}
 	}
 }
 
