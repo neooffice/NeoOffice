@@ -9,13 +9,13 @@
  *  The Contents of this file are made available subject to the terms of
  *  either of the following licenses
  *
- *         - GNU General Public License Version 2.1
+ *	 - GNU General Public License Version 2.1
  *
- *  Patrick Luby, June 2003
+ *  Edward Peterlin, September 2004
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2003 by Patrick Luby (patrick.luby@planamesa.com)
+ *  Copyright 2004 by Edward Peterlin (OPENSTEP@neooffice.org)
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
@@ -32,7 +32,7 @@
  *  MA  02111-1307  USA
  *
  ************************************************************************/
- 
+
 #define _SV_COM_SUN_STAR_VCL_VCLMENUITEMDATA_CXX
 
 #ifndef _SV_COM_SUN_STAR_VCL_VCLMENUITEMDATA_HXX
@@ -73,81 +73,79 @@ com_sun_star_vcl_VCLMenuItemData::com_sun_star_vcl_VCLMenuItemData( ::rtl::OUStr
 		char *cSignature = "(Ljava/lang/String;ZSI)V";
 		mID = t.pEnv->GetMethodID( getMyClass(), "<init>", cSignature );
 	}
-        OSL_ENSURE( mID, "Unknown method id!" );
-        jvalue args[4];
-        args[0].l = StringToJavaString( t.pEnv, newTitle );
-        args[1].z = jboolean( separator );
-        args[2].s = jshort( id );
-        args[3].i = jint( m );
-        jobject tempObj;
-        tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
-        saveRef( tempObj );
+	OSL_ENSURE( mID, "Unknown method id!" );
+	jvalue args[4];
+	args[0].l = StringToJavaString( t.pEnv, newTitle );
+	args[1].z = jboolean( separator );
+	args[2].s = jshort( id );
+	args[3].i = jint( m );
+	jobject tempObj;
+	tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
+	saveRef( tempObj );
 }
 
 // ----------------------------------------------------------------------------
 
 void com_sun_star_vcl_VCLMenuItemData::setTitle( ::rtl::OUString _par0 )
 {
-        static jmethodID mID = NULL;
-        VCLThreadAttach t;
-        if ( t.pEnv )
-        {
-                if ( !mID )
-                {
-                        char *cSignature = "(Ljava/lang/String;)V";
-                        mID = t.pEnv->GetMethodID( getMyClass(), "setTitle", cSignature );
-                }
-                OSL_ENSURE( mID, "Unknown method id!" );
-                if ( mID )
-                {
-                        jvalue args[1];
-                        args[0].l = StringToJavaString( t.pEnv, _par0 );
-                        t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
-                }
-        }
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(Ljava/lang/String;)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "setTitle", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[1];
+			args[0].l = StringToJavaString( t.pEnv, _par0 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
 }
 
 // ----------------------------------------------------------------------------
 
 void com_sun_star_vcl_VCLMenuItemData::setKeyboardShortcut( int _par0, bool _par1 )
 {
-        static jmethodID mID = NULL;
-        VCLThreadAttach t;
-        if ( t.pEnv )
-        {
-                if ( !mID )
-                {
-                        char *cSignature = "(IZ)V";
-                        mID = t.pEnv->GetMethodID( getMyClass(), "setKeyboardShortcut", cSignature );
-                }
-                OSL_ENSURE( mID, "Unknown method id!" );
-                if ( mID )
-                {
-                        jvalue args[2];
-                        args[0].i = jint( _par0 );
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(IZ)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "setKeyboardShortcut", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[2];
+			args[0].i = jint( _par0 );
 			args[1].z = jboolean( _par1 );
-                        t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
-                }
-        }
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
 }
 
 // ----------------------------------------------------------------------------
 
 void com_sun_star_vcl_VCLMenuItemData::dispose( )
 {
-        static jmethodID mID = NULL;
-        VCLThreadAttach t;
-        if ( t.pEnv )
-        {
-                if ( !mID )
-                {
-                        char *cSignature = "()V";
-                        mID = t.pEnv->GetMethodID( getMyClass(), "dispose", cSignature );
-                }
-                OSL_ENSURE( mID, "Unknown method id!" );
-                if ( mID )
-                {
-                        t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, NULL );
-                }
-        }
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "dispose", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, NULL );
+	}
 }

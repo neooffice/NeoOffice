@@ -9,13 +9,13 @@
  *  The Contents of this file are made available subject to the terms of
  *  either of the following licenses
  *
- *         - GNU General Public License Version 2.1
+ *	 - GNU General Public License Version 2.1
  *
- *  Patrick Luby, June 2003
+ *  Edward Peterlin, September 2004
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2003 by Patrick Luby (patrick.luby@planamesa.com)
+ *  Copyright 2004 by Edward Peterlin (OPENSTEP@neooffice.org)
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
@@ -74,7 +74,7 @@ jclass com_sun_star_vcl_VCLMenuBar::getMyClass()
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLMenuBar::com_sun_star_vcl_VCLMenuBar( ) : java_lang_Object( (jobject)NULL )
+com_sun_star_vcl_VCLMenuBar::com_sun_star_vcl_VCLMenuBar() : java_lang_Object( (jobject)NULL )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -88,11 +88,7 @@ com_sun_star_vcl_VCLMenuBar::com_sun_star_vcl_VCLMenuBar( ) : java_lang_Object( 
 	OSL_ENSURE( mID, "Unknown method id!" );
 	jobject tempObj;
 	jvalue args[1];
-	com_sun_star_vcl_VCLEventQueue * q = GetSalData()->mpEventQueue;
-	if ( q )
-			args[0].l = q->getJavaObject();
-	else
-			args[0].l = NULL;
+	args[0].l = GetSalData()->mpEventQueue->getJavaObject();
 	tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
 	saveRef( tempObj );
 }
@@ -133,10 +129,7 @@ void com_sun_star_vcl_VCLMenuBar::setFrame( com_sun_star_vcl_VCLFrame *_par0 )
 		if ( mID )
 		{
 			jvalue args[1];
-			if ( _par0 )
-				args[0].l = _par0->getJavaObject();
-			else
-				args[0].l = NULL;
+			args[0].l = _par0->getJavaObject();
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
@@ -146,99 +139,93 @@ void com_sun_star_vcl_VCLMenuBar::setFrame( com_sun_star_vcl_VCLFrame *_par0 )
 
 void com_sun_star_vcl_VCLMenuBar::addMenuItem( com_sun_star_vcl_VCLMenuItemData *_par0, int _par1 )
 {
-        static jmethodID mID = NULL;
-        VCLThreadAttach t;
-        if ( t.pEnv )
-        {
-                if ( !mID )
-                {
-                        char *cSignature = "(Lcom/sun/star/vcl/VCLMenuItemData;I)V";
-                        mID = t.pEnv->GetMethodID( getMyClass(), "addMenuItem", cSignature );
-                }
-                OSL_ENSURE( mID, "Unknown method id!" );
-                if ( mID )
-                {
-                        jvalue args[2];
-                        if ( _par0 )
-                                args[0].l = _par0->getJavaObject();
-                        else
-                                args[0].l = NULL;
-                        args[1].i = jint( _par1 );
-                        t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
-                }
-        }
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(Lcom/sun/star/vcl/VCLMenuItemData;I)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "addMenuItem", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[2];
+			args[0].l = _par0->getJavaObject();
+			args[1].i = jint( _par1 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
 }
 
 // ----------------------------------------------------------------------------
 
 void com_sun_star_vcl_VCLMenuBar::removeMenu( int _par0 )
 {
-        static jmethodID mID = NULL;
-        VCLThreadAttach t;
-        if ( t.pEnv )
-        {
-                if ( !mID )
-                {
-                        char *cSignature = "(I)V";
-                        mID = t.pEnv->GetMethodID( getMyClass(), "removeMenu", cSignature );
-                }
-                OSL_ENSURE( mID, "Unknown method id!" );
-                if ( mID )
-                {
-                        jvalue args[1];
-                        args[0].i = jint( _par0 );
-                        t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
-                }
-        }
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(I)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "removeMenu", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[1];
+			args[0].i = jint( _par0 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
 }
 
 // ----------------------------------------------------------------------------
 
 void com_sun_star_vcl_VCLMenuBar::changeMenu( com_sun_star_vcl_VCLMenuItemData *_par0, int _par1 )
 {
-        static jmethodID mID = NULL;
-        VCLThreadAttach t;
-        if ( t.pEnv )
-        {
-                if ( !mID )
-                {
-                        char *cSignature = "(Lcom/sun/star/vcl/VCLMenuItemData;I)V";
-                        mID = t.pEnv->GetMethodID( getMyClass(), "changeMenu", cSignature );
-                }
-                OSL_ENSURE( mID, "Unknown method id!" );
-                if ( mID )
-                {
-                        jvalue args[2];
-                        if ( _par0 )
-                                args[0].l = _par0->getJavaObject();
-                        else
-                                args[0].l = NULL;
-                        args[1].i = jint( _par1 );
-                        t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
-                }
-        }
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(Lcom/sun/star/vcl/VCLMenuItemData;I)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "changeMenu", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[2];
+			args[0].l = _par0->getJavaObject();
+			args[1].i = jint( _par1 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
 }
 
 // ----------------------------------------------------------------------------
 
 void com_sun_star_vcl_VCLMenuBar::enableMenu( int _par0, bool _par1 )
 {
-        static jmethodID mID = NULL;
-        VCLThreadAttach t;
-        if ( t.pEnv )
-        {
-                if ( !mID )
-                {
-                        char *cSignature = "(IZ)V";
-                        mID = t.pEnv->GetMethodID( getMyClass(), "enableMenu", cSignature );
-                }
-                OSL_ENSURE( mID, "Unknown method id!" );
-                if ( mID )
-                {
-                        jvalue args[2];
-                        args[0].i = jint( _par0 );
-                        args[1].z = jboolean( _par1 );
-                        t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
-                }
-        }
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(IZ)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "enableMenu", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[2];
+			args[0].i = jint( _par0 );
+			args[1].z = jboolean( _par1 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
 }

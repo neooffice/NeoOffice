@@ -9,13 +9,13 @@
  *  The Contents of this file are made available subject to the terms of
  *  either of the following licenses
  *
- *         - GNU General Public License Version 2.1
+ *	 - GNU General Public License Version 2.1
  *
- *  Patrick Luby, June 2003
+ *  Edward Peterlin, September 2004
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2003 by Patrick Luby (patrick.luby@planamesa.com)
+ *  Copyright 2004 by Edward Peterlin (OPENSTEP@neooffice.org)
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
@@ -53,22 +53,21 @@ protected:
 	static jclass		theClass;
 
 public:
-        friend class SalMenu;
-        
+	friend class SalMenu;
+	
 	static jclass		getMyClass();
-                                
-                                com_sun_star_vcl_VCLMenuBar( jobject myObj ) : java_lang_Object( myObj ) {}
-                                
-                                com_sun_star_vcl_VCLMenuBar( );
-        virtual			~com_sun_star_vcl_VCLMenuBar() { }
-        
-        void			setFrame( com_sun_star_vcl_VCLFrame *_par0 );
-        void			dispose();
-        
-        void			addMenuItem( com_sun_star_vcl_VCLMenuItemData *_par0, int _par1 );
-        void			removeMenu( int _par0 );
-        void			changeMenu( com_sun_star_vcl_VCLMenuItemData *_par0, int _par1 );
-        void			enableMenu( int _par0, bool _par1 );
+				
+						com_sun_star_vcl_VCLMenuBar( jobject myObj ) : java_lang_Object( myObj ) {}
+				
+						com_sun_star_vcl_VCLMenuBar();
+	virtual				~com_sun_star_vcl_VCLMenuBar() {}
+	
+	void				setFrame( com_sun_star_vcl_VCLFrame *_par0 );
+	void				dispose();
+	void				addMenuItem( com_sun_star_vcl_VCLMenuItemData *_par0, int _par1 );
+	void				removeMenu( int _par0 );
+	void				changeMenu( com_sun_star_vcl_VCLMenuItemData *_par0, int _par1 );
+	void				enableMenu( int _par0, bool _par1 );
 };
 
 } // namespace vcl

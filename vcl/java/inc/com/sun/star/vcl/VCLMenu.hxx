@@ -9,13 +9,13 @@
  *  The Contents of this file are made available subject to the terms of
  *  either of the following licenses
  *
- *         - GNU General Public License Version 2.1
+ *	 - GNU General Public License Version 2.1
  *
- *  Patrick Luby, June 2003
+ *  Edward Peterlin, September 2004
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2003 by Patrick Luby (patrick.luby@planamesa.com)
+ *  Copyright 2004 by Edward Peterlin (OPENSTEP@neooffice.org)
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
@@ -50,25 +50,25 @@ class com_sun_star_vcl_VCLMenuItemData;
 class com_sun_star_vcl_VCLMenu : public java_lang_Object
 {
 protected:
-        static jclass				theClass;
+	static jclass		theClass;
 
 public:
-        static jclass				getMyClass();
-        
-                                                com_sun_star_vcl_VCLMenu( jobject myObj ) : java_lang_Object( myObj ) {};
-                                
-                                                com_sun_star_vcl_VCLMenu( );
-        virtual					~com_sun_star_vcl_VCLMenu() { };
+	static jclass		getMyClass();
 	
-	void					dispose( );
-        
-        com_sun_star_vcl_VCLMenuItemData *	getMenuItemDataObject();
-        
-        void		insertItem(com_sun_star_vcl_VCLMenuItemData *_par0, int _par1);
-        void		removeItem(int _par0);
-        void		checkItem(int _par0, bool _par1);
-        void		enableItem(int _par0, bool _par1);
-        void		attachSubmenu(com_sun_star_vcl_VCLMenuItemData *_par0, int par1);
+						com_sun_star_vcl_VCLMenu( jobject myObj ) : java_lang_Object( myObj ) {};
+				
+						com_sun_star_vcl_VCLMenu();
+	virtual				~com_sun_star_vcl_VCLMenu() {};
+	
+	void				dispose( );
+	
+	com_sun_star_vcl_VCLMenuItemData *	getMenuItemDataObject();
+	
+	void				insertItem(com_sun_star_vcl_VCLMenuItemData *_par0, int _par1);
+	void				removeItem(int _par0);
+	void				checkItem(int _par0, bool _par1);
+	void				enableItem(int _par0, bool _par1);
+	void				attachSubmenu(com_sun_star_vcl_VCLMenuItemData *_par0, int par1);
 };
 
 } // namespace vcl
