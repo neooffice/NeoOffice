@@ -1526,7 +1526,9 @@ public final class VCLGraphics {
 						imageHead.method.invoke(graphics, imageHead.params);
 					}
 					catch (Throwable t) {}
+					imageHead = null;
 				}
+				imageTail = null;
 			}
 
 			// Invoke all of the queued drawing operations

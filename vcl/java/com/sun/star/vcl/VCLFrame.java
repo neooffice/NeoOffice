@@ -40,6 +40,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.EventQueue;
 import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -59,6 +60,7 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.awt.event.PaintEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.awt.im.InputContext;
@@ -717,12 +719,16 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public void focusGained(FocusEvent e) {
 
 		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+			EventQueue eventQueue = Toolkit.getDefaultToolkit().getSystemEventQueue();
 			Frame[] frames = Frame.getFrames();
 			for (int i = 0; i < frames.length; i++) {
-				frames[i].repaint();
+				if (frames[i].isShowing())
+					eventQueue.postEvent(new PaintEvent(frames[i], PaintEvent.UPDATE, new Rectangle(0, 0, frames[i].getWidth(), frames[i].getHeight())));
 				Window[] windows = frames[i].getOwnedWindows();
-				for (int j = 0; j < windows.length; j++)
-					windows[j].repaint();
+				for (int j = 0; j < windows.length; j++) {
+					if (windows[j].isShowing())
+						eventQueue.postEvent(new PaintEvent(windows[j], PaintEvent.UPDATE, new Rectangle(0, 0, windows[j].getWidth(), windows[j].getHeight())));
+				}
 			}
 		}
 
