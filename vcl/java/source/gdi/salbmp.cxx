@@ -99,14 +99,24 @@ BOOL SalBitmap::Create( const Size& rSize, USHORT nBitCount, const BitmapPalette
 		if ( rPal.GetEntryCount() )
 			mpVCLBitmap->setPalette( rPal );
 
-		return TRUE;
+		// Fill the buffer with pointers to the Java buffer
+		mpData = mpVCLBitmap->getData();
+		VCLThreadAttach t;
+		if ( t.pEnv )
+		{
+			jboolean bCopy( sal_False );
+			mpBits = (BYTE *)t.pEnv->GetByteArrayElements( (jbyteArray)mpData->getJavaObject(), &bCopy );
+		}
+
 	}
-	else
+
+	if ( !mpVCLBitmap || !mpData || !mpBits )
 	{
 		Destroy();
 		return FALSE;
 	}
 
+	return TRUE;
 }
 
 // ------------------------------------------------------------------
@@ -231,20 +241,7 @@ BitmapBuffer* SalBitmap::AcquireBuffer( BOOL bReadOnly )
 	pBuffer->mnHeight = maSize.Height();
 	pBuffer->mnScanlineSize = AlignedWidth4Bytes( mnBitCount * maSize.Width() );
 	mpVCLBitmap->getPalette( pBuffer->maPalette );
-
-	// Fill the buffer with pointers to the Java buffer
-	if ( !mpData )
-		mpData = mpVCLBitmap->getData();
-	if ( !mpBits )
-	{
-		VCLThreadAttach t;
-		if ( t.pEnv )
-		{
-			jboolean bCopy( sal_False );
-			mpBits = (BYTE *)t.pEnv->GetByteArrayElements( (jbyteArray)mpData->getJavaObject(), &bCopy );
-			pBuffer->mpBits = mpBits;
-		}
-	}
+	pBuffer->mpBits = mpBits;
 
 	return pBuffer;
 }
@@ -263,17 +260,10 @@ void SalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, BOOL bReadOnly )
 				jbyteArray pArray = (jbyteArray)mpData->getJavaObject();
 				if ( !bReadOnly )
 				{
-					t.pEnv->ReleaseByteArrayElements( pArray, (jbyte *)mpBits, 0 );
+					t.pEnv->ReleaseByteArrayElements( pArray, (jbyte *)mpBits, JNI_COMMIT );
 					// Save the palette
 					mpVCLBitmap->setPalette( pBuffer->maPalette );
 				}
-				else
-				{
-					t.pEnv->ReleaseByteArrayElements( pArray, (jbyte *)mpBits, JNI_ABORT );
-				}
-				mpBits = NULL;
-				delete mpData;
-				mpData = NULL;
 			}
 		}
 		delete pBuffer;
