@@ -370,7 +370,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 					{
 						if ( it->second == (void *)aWindow )
 						{
-							pSalData->mpEventQueue->postMouseWheelEvent( it->first, 0, aPoint.h, aPoint.v, 3, nDelta * -1 );
+							pSalData->mpEventQueue->postMouseWheelEvent( it->first, 0, aPoint.h, aPoint.v, 1, nDelta * -1 );
 							break;
 						}
 					}
