@@ -81,7 +81,6 @@ class JavaDragSource : public ::cppu::WeakComponentImplHelper3< ::com::sun::star
 private:
 	sal_Int8				mnActions;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	maContents;
-	sal_Int8				mnDragAction;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDragSourceListener >	maListener;
     ::osl::Mutex			maMutex;
 	void*					mpNativeWindow;

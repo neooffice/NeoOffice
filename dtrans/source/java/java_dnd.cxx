@@ -141,10 +141,20 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 	{
 		if ( !bNoRejectCursor )
 		{
+			ClearableMutexGuard aDragGuard( aDragMutex );
+
 			if ( nMessage == kDragTrackingLeaveHandler )
 				SetThemeCursor( kThemeArrowCursor );
-			else
+			else if ( nCurrentAction == DNDConstants::ACTION_MOVE )
 				SetThemeCursor( kThemeClosedHandCursor );
+			else if ( nCurrentAction == DNDConstants::ACTION_COPY )
+				SetThemeCursor( kThemeCopyArrowCursor );
+			else if ( nCurrentAction == DNDConstants::ACTION_LINK )
+				SetThemeCursor( kThemeAliasArrowCursor );
+			else
+				SetThemeCursor( kThemeArrowCursor );
+
+			aDragGuard.clear();
 		}
 
 		((JavaDragSource *)pData)->handleDrag( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) );
@@ -244,7 +254,6 @@ XMultiServiceFactory >& xMultiServiceFactory )
 JavaDragSource::JavaDragSource() :
 	WeakComponentImplHelper3< XDragSource, XInitialization, XServiceInfo >( maMutex ),
 	mnActions( DNDConstants::ACTION_NONE ),
-	mnDragAction( DNDConstants::ACTION_NONE ),
 	mpNativeWindow( NULL )
 {
 }
@@ -368,7 +377,6 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 
 	mnActions = sourceActions;
 	maContents = transferable;
-	mnDragAction = trigger.DragAction;
 	maListener = listener;
 
 	// Test the JVM version and if it is 1.4 or higher use Cocoa, otherwise
@@ -383,7 +391,6 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 	{
 		mnActions = DNDConstants::ACTION_NONE;
 		maContents.clear();
-		mnDragAction = DNDConstants::ACTION_NONE;
 		maListener.clear();
 
 		aGuard.clear();
@@ -465,12 +472,15 @@ void JavaDragSource::runDragExecute( void *pData )
 		DragRef aDrag;
 		if ( NewDrag( &aDrag ) == noErr )
 		{
-
+			UInt32 nKeyModifiers = 0;
 			EventRecord aEventRecord;
 			aEventRecord.what = nullEvent;
 			aCarbonEventQueueMutex.acquire();
 			if ( aLastMouseDraggedEvent )
+			{
+				GetEventParameter( aLastMouseDraggedEvent, kEventParamKeyModifiers, typeUInt32, NULL, sizeof( UInt32 ), NULL, &nKeyModifiers );
 				ConvertEventRefToEventRecord( aLastMouseDraggedEvent, &aEventRecord );
+			}
 			aCarbonEventQueueMutex.release();
 
 			if ( aEventRecord.what != nullEvent )
@@ -478,8 +488,20 @@ void JavaDragSource::runDragExecute( void *pData )
 				RgnHandle aRegion = NewRgn();
 				if ( aRegion )
 				{
-					if ( pSource->mnActions & pSource->mnDragAction )
-						nCurrentAction = pSource->mnDragAction;
+					if ( ( nKeyModifiers & shiftKey ) && ! ( nKeyModifiers & cmdKey ) )
+						nCurrentAction = DNDConstants::ACTION_MOVE;
+					else if ( ! ( nKeyModifiers & shiftKey ) && ( nKeyModifiers & cmdKey ) )
+						nCurrentAction = DNDConstants::ACTION_COPY;
+					else if ( nKeyModifiers & ( shiftKey | cmdKey ) )
+						nCurrentAction = DNDConstants::ACTION_LINK;
+					else if ( pSource->mnActions & DNDConstants::ACTION_MOVE )
+						nCurrentAction = DNDConstants::ACTION_MOVE;
+					else if ( pSource->mnActions & DNDConstants::ACTION_COPY )
+						nCurrentAction = DNDConstants::ACTION_COPY;
+					else if ( pSource->mnActions & DNDConstants::ACTION_LINK )
+						nCurrentAction = DNDConstants::ACTION_LINK;
+					else
+						nCurrentAction = DNDConstants::ACTION_NONE;
 
 					bNoRejectCursor = false;
 
