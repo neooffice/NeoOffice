@@ -87,7 +87,7 @@ void JavaLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 void JavaLayout::DrawText( SalGraphics& rGraphics ) const
 {
 	Point aPoint( GetDrawPosition() );
-	mpVCLTextLayout->drawText( aPoint.X(), aPoint.Y(), GetOrientation(), rGraphics.maGraphicsData.mnTextColor );
+	mpVCLTextLayout->drawText( aPoint.X(), aPoint.Y(), rGraphics.maGraphicsData.mnTextColor );
 }
 
 // -----------------------------------------------------------------------

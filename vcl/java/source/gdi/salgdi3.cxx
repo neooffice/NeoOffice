@@ -71,7 +71,7 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	if ( maGraphicsData.mpVCLFont )
 		delete maGraphicsData.mpVCLFont;
 
-	maGraphicsData.mpVCLFont = ((com_sun_star_vcl_VCLFont *)pFont->mpFontData->mpSysData)->deriveFont( pFont->mnHeight, pFont->meWeight <= WEIGHT_MEDIUM ? FALSE : TRUE, pFont->meItalic == ITALIC_NONE ? FALSE : TRUE, !pFont->mbNonAntialiased );
+	maGraphicsData.mpVCLFont = ((com_sun_star_vcl_VCLFont *)pFont->mpFontData->mpSysData)->deriveFont( pFont->mnHeight, pFont->meWeight <= WEIGHT_MEDIUM ? FALSE : TRUE, pFont->meItalic == ITALIC_NONE ? FALSE : TRUE, pFont->mnOrientation, !pFont->mbNonAntialiased );
 
 	if ( maGraphicsData.mpPrinter )
 		return SAL_SETFONT_USEDRAWTEXTARRAY;
@@ -102,7 +102,7 @@ void SalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 	if ( maGraphicsData.mpVCLFont )
 	{
 		pMetric->maName = maGraphicsData.mpVCLFont->getName();
-		pMetric->mnOrientation = 0;
+		pMetric->mnOrientation = maGraphicsData.mpVCLFont->getOrientation();
 		pMetric->meFamily = maGraphicsData.mpVCLFont->getFamilyType();
 	}
 	else

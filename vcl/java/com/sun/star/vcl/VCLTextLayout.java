@@ -112,15 +112,14 @@ public final class VCLTextLayout {
 	 *
 	 * @param x the x coordinate
 	 * @param y the y coordinate
-	 * @param orientation the orientation to draw the text runs
 	 * @param color the color to draw the text runs
 	 */
-	public void drawText(int x, int y, int orientation, int color) {
+	public void drawText(int x, int y, int color) {
 
 		// Force glyph layout to match current width
 		justify(getWidth());
 
-		graphics.drawTextArray(glyphs, x, y, orientation, color, font.isAntialiased());
+		graphics.drawTextArray(glyphs, x, y, font.getOrientation(), color, font.isAntialiased());
 
 	}
 

@@ -91,7 +91,7 @@ com_sun_star_vcl_VCLTextLayout::com_sun_star_vcl_VCLTextLayout( com_sun_star_vcl
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLTextLayout::drawText( long _par0, long _par1, int _par2, SalColor _par3 )
+void com_sun_star_vcl_VCLTextLayout::drawText( long _par0, long _par1, SalColor _par2 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -99,17 +99,16 @@ void com_sun_star_vcl_VCLTextLayout::drawText( long _par0, long _par1, int _par2
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(IIII)V";
+			char *cSignature = "(III)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "drawText", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[4];
+			jvalue args[3];
 			args[0].i = jint( _par0 );
 			args[1].i = jint( _par1 );
 			args[2].i = jint( _par2 );
-			args[3].i = jint( _par3 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}

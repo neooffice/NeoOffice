@@ -112,17 +112,18 @@ public final class VCLFont {
 	 * @param s the size of the font
 	 * @param b <code>true</code> if the font is bold
 	 * @param i <code>true</code> if the font is italic
+	 * @param o the orientation of the font in degrees
 	 * @param a <code>true</code> to enable antialiasing and <code>false</code>
 	 *  to disable antialiasing
 	 * @return the default font adjusted to the specified size and style
 	 */
-	static VCLFont getDefaultFont(int s, boolean b, boolean i, boolean a) {
+	static VCLFont getDefaultFont(int s, boolean b, boolean i, short o, boolean a) {
 
 		// Set default font
 		if (defaultFont == null)
-			defaultFont = new VCLFont("Dialog", 1, false, false, true);
+			defaultFont = new VCLFont("Dialog", 1, o, false, false, true);
 
-		return new VCLFont(VCLFont.defaultFont.getName(), s, b, i, a);
+		return new VCLFont(VCLFont.defaultFont.getName(), s, o, b, i, a);
 
 	}
 
@@ -148,7 +149,7 @@ public final class VCLFont {
 				// Get rid of hidden, bold, and italic Mac OS X fonts
 				if (macosx && name.startsWith("."))
 					continue;
-				array.add(new VCLFont(fontFamilies[i], 1, false, false, true));
+				array.add(new VCLFont(fontFamilies[i], 1, (short)0, false, false, true));
 			}
 	
 			fonts = (VCLFont[])array.toArray(new VCLFont[array.size()]);
@@ -204,6 +205,11 @@ public final class VCLFont {
 	private String name = null;
 
 	/**
+	 * The cached orientation.
+	 */
+	private short orientation = 0;
+
+	/**
 	 * The cached size.
 	 */
 	private int size = 0;
@@ -223,17 +229,19 @@ public final class VCLFont {
 	 *
 	 * @param n the name of the font
 	 * @param s the size of the font
+	 * @param o the orientation of the new <code>VCLFont</code> in degrees
 	 * @param b <code>true</code> if the font is bold
 	 * @param i <code>true</code> if the font is italic
 	 * @param a <code>true</code> to enable antialiasing and <code>false</code>
 	 *  to disable antialiasing
 	 */
-	VCLFont(String n, int s, boolean b, boolean i, boolean a) {
+	VCLFont(String n, int s, short o, boolean b, boolean i, boolean a) {
 
 		antialiased = a;
 		bold = b;
 		italic = i;
 		name = n;
+		orientation = o;
 		size = s;
 
 		// Cache style
@@ -286,11 +294,12 @@ public final class VCLFont {
 	 * @param s the size for the new <code>VCLFont</code>
 	 * @param b whether the new <code>VCLFont</code> should be bold
 	 * @param i whether the new <code>VCLFont</code> should be italic
+	 * @param o the orientation of the new <code>VCLFont</code> in degrees
 	 * @param a <code>true</code> to enable antialiasing and <code>false</code>
 	 *  to disable antialiasing
 	 * @return a new <code>VCLFont</code> object
 	 */
-	public VCLFont deriveFont(int s, boolean b, boolean i, boolean a) {
+	public VCLFont deriveFont(int s, boolean b, boolean i, short o, boolean a) {
 
 		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 			String fontName = name.toLowerCase();
@@ -302,17 +311,17 @@ public final class VCLFont {
 				if (!fontFamilyName.startsWith(fontName))
 					continue;
 				if (b && i && fontFamilyName.endsWith(" bold italic"))
-					return new VCLFont(fontFamilies[j], s, false, false, a);
+					return new VCLFont(fontFamilies[j], s, o, false, false, a);
 				else if (b && !i && fontFamilyName.endsWith(" bold"))
-					return new VCLFont(fontFamilies[j], s, false, false, a);
+					return new VCLFont(fontFamilies[j], s, o, false, false, a);
 				else if (!b && i && fontFamilyName.endsWith(" italic") && !fontFamilyName.endsWith(" bold italic"))
-					return new VCLFont(fontFamilies[j], s, false, false, a);
+					return new VCLFont(fontFamilies[j], s, o, false, false, a);
 				else if (!b && !i && fontFamilyName.endsWith(" regular"))
-					return new VCLFont(fontFamilies[j], s, false, false, a);
+					return new VCLFont(fontFamilies[j], s, o, false, false, a);
 			}
 		}
 
-		return new VCLFont(name, s, b, i, a);
+		return new VCLFont(name, s, o, b, i, a);
 
 	}
 
@@ -365,7 +374,7 @@ public final class VCLFont {
 	 */
 	public VCLFont getDefaultFont() {
 
-		return VCLFont.getDefaultFont(size, bold, italic, antialiased);
+		return VCLFont.getDefaultFont(size, bold, italic, orientation, antialiased);
 
 	}
 
@@ -433,6 +442,17 @@ public final class VCLFont {
 	public String getName() {
 
 		return name;
+
+	}
+
+	/**
+	 * Returns the orientation of the <code>VCLFont</code> in degrees.
+	 *
+	 * @return the orientation of the <code>VCLFont</code>
+	 */
+	public short getOrientation() {
+
+		return orientation;
 
 	}
 

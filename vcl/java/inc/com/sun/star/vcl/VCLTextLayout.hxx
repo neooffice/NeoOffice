@@ -63,7 +63,7 @@ public:
 						com_sun_star_vcl_VCLTextLayout( ::vcl::com_sun_star_vcl_VCLGraphics *pGraphics, ::vcl::com_sun_star_vcl_VCLFont *pFont );
 	virtual				~com_sun_star_vcl_VCLTextLayout() {};
 
-	void				drawText( long _par0, long _par1, int _par2, SalColor _par3 );
+	void				drawText( long _par0, long _par1, SalColor _par2 );
 	long				fillDXArray( long *_par0 );
 	bool				getBounds( Rectangle& _par0 );
 	void				getCaretPositions( int _par0, long *_par1 );
