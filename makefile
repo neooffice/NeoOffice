@@ -56,8 +56,8 @@ PRODUCT_DIR_NAME=NeoOfficeJ
 # Important: Note that there are escape characters in the PRODUCT_NAME for the
 # UTF-8 trademark symbol. Don't replace these with "\x##" literal strings!
 PRODUCT_TRADEMARKED_NAME=NeoOffice®/J
-PRODUCT_VERSION=1.1 Alpha 1
-PRODUCT_DIR_VERSION:=1.1_Alpha_1
+PRODUCT_VERSION=1.1 Alpha 2
+PRODUCT_DIR_VERSION:=1.1_Alpha_2
 PRODUCT_FILETYPE=NO%F
 PRODUCT_INSTALL_URL=http://www.planamesa.com/neojava/download.php\\\#install
 PRODUCT_BUILD_URL=http://www.planamesa.com/neojava/build.php
@@ -68,7 +68,7 @@ OO_PACKAGES:=OpenOffice
 OO_TAG:=cws_srx645_ooo112fix2
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOfficeJ
-NEO_TAG:=NeoOfficeJ-1_1_Alpha_1
+NEO_TAG:=NeoOfficeJ-1_1_Alpha_2
 
 all: build.all
 
