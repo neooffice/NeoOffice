@@ -44,6 +44,9 @@
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
+#ifndef _SV_SETTINGS_HXX
+#include <settings.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 #include <com/sun/star/vcl/VCLEvent.hxx>
 #endif
@@ -528,9 +531,15 @@ XubString SalFrame::GetSymbolKeyName( const XubString&, USHORT nKeyCode )
 
 void SalFrame::UpdateSettings( AllSettings& rSettings )
 {
+#ifdef MACOSX
+	MouseSettings aMouseSettings = rSettings.GetMouseSettings();
+	aMouseSettings.SetDoubleClickTime( GetDblTime() * 1000 / CLK_TCK );
+	rSettings.SetMouseSettings( aMouseSettings );
+#else	// MACOSX
 #ifdef DEBUG
 	fprintf( stderr, "SalFrame::UpdateSettings not implemented\n" );
 #endif
+#endif	// MACOSX
 }
 
 // -----------------------------------------------------------------------

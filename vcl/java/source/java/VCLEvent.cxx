@@ -197,29 +197,21 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			dispatchEvent( nID, pFrame, NULL );
 
 #ifdef MACOSX
-			// Test the JVM version and if it is below 1.4, use Carbon APIs
-			java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
-			if ( !pClass )
+			// Mark front window as dirty so that the native buffer gets
+			// flushed to screen
+			WindowRef aWindow = FrontWindow();
+			if ( aWindow )
 			{
-				// Mark front window as dirty so that the native buffer gets
-				// flushed to screen
-				WindowRef aWindow = FrontWindow();
-				if ( aWindow )
+				GrafPtr aGrafPort = GetWindowPort( aWindow );
+				if ( aGrafPort )
 				{
-					GrafPtr aGrafPort = GetWindowPort( aWindow );
-					if ( aGrafPort )
-					{
-						Rect aRect;
-						GetPortBounds( aGrafPort, &aRect );
-						QDAddRectToDirtyRegion( aGrafPort, &aRect );
-					}
+					Rect aRect;
+					GetPortBounds( aGrafPort, &aRect );
+					QDAddRectToDirtyRegion( aGrafPort, &aRect );
 				}
 			}
-			else
-			{
-				delete pClass;
-			}
 #endif	// MACOSX
+
 			// In presentation mode, don't let presentation window lose focus
 			if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame != pFrame )
 				pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_FOREGROUNDTASK );
@@ -540,9 +532,7 @@ USHORT com_sun_star_vcl_VCLEvent::getKeyCode()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
 			out = (USHORT)t.pEnv->CallNonvirtualCharMethod( object, getMyClass(), mID );
-		}
 	}
 	return out;
 }
@@ -563,9 +553,7 @@ USHORT com_sun_star_vcl_VCLEvent::getID()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
 			out = (USHORT)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
-		}
 	}
 	return out;
 }
@@ -586,9 +574,7 @@ USHORT com_sun_star_vcl_VCLEvent::getModifiers()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
 			out = (USHORT)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
-		}
 	}
 	return out;
 }
@@ -759,9 +745,7 @@ ULONG com_sun_star_vcl_VCLEvent::getWhen()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
-			out = (ULONG)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
-		}
+			out = (ULONG)t.pEnv->CallNonvirtualLongMethod( object, getMyClass(), mID );
 	}
 	return out;
 }
@@ -782,9 +766,7 @@ long com_sun_star_vcl_VCLEvent::getX()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
 			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
-		}
 	}
 	return out;
 }
@@ -805,9 +787,7 @@ long com_sun_star_vcl_VCLEvent::getY()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
 			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
-		}
 	}
 	return out;
 }
