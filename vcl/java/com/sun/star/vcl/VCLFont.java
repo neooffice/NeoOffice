@@ -126,7 +126,7 @@ public final class VCLFont {
 			array.add(new VCLFont(fontFamilies[i], 1, (short)0, false, false, true));
 		}
 
-		VCLFont.fonts = (VCLFont[])array.toArray(new VCLFont[array.size()]);
+		fonts = (VCLFont[])array.toArray(new VCLFont[array.size()]);
 
 		// Set default font
 		defaultFont = new VCLFont("Dialog", 1, (short)0, false, false, true);
@@ -364,7 +364,7 @@ public final class VCLFont {
 	 */
 	public VCLFont getDefaultFont() {
 
-		return new VCLFont(defaultFont.getName(), size, orientation, bold, italic, antialiased);
+		return new VCLFont(VCLFont.defaultFont.getName(), size, orientation, bold, italic, antialiased);
 
 	}
 
