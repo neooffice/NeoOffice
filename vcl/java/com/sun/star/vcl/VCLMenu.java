@@ -100,19 +100,6 @@ public final class VCLMenu {
      	return(menuData);
     }
    
-	/**
-	 * Returns the <code>MenuPeer</code>.
-	 *
-	 * @return the <code>MenuPeer</code>
-	 */
-	public MenuPeer getPeer() {
-
-		// TODO: Need to get access to the AWT Menu instance so that we can
-		// invoke Menu.getPeer()
-		return null;
-
-	}
- 
     /**
      * Add a new menu item into the menu
      *

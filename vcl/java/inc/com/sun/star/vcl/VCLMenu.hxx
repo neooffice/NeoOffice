@@ -63,8 +63,6 @@ public:
 	void					dispose( );
         
         com_sun_star_vcl_VCLMenuItemData *	getMenuItemDataObject();
-        void *		getNativeMenu();
-        java_lang_Object *	getPeer();
         
         void		insertItem(com_sun_star_vcl_VCLMenuItemData *_par0, int _par1);
         void		removeItem(int _par0);
