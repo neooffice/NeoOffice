@@ -40,10 +40,34 @@
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif    
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
 #include <com/sun/star/vcl/VCLFont.hxx>
-#endif    
+#endif
+
+#ifdef MACOSX
+
+#ifndef _SV_SALPRN_HXX
+#include <salprn.hxx>
+#endif
+#ifndef _SV_JAVA_LANG_CLASS_HXX
+#include <java/lang/Class.hxx>
+#endif
+#ifndef _VOS_MODULE_HXX_
+#include <vos/module.hxx>
+#endif
+
+#include <premac.h>
+#include <Carbon/Carbon.h>
+typedef OSStatus PMSessionPostScriptBegin_Type( PMPrintSession );
+typedef OSStatus PMSessionPostScriptData_Type( PMPrintSession, Ptr, Size );
+typedef OSStatus PMSessionPostScriptEnd_Type( PMPrintSession );
+#include <postmac.h>
+
+using namespace rtl;
+using namespace vos;
+
+#endif	// MACOSX
 
 using namespace vcl;
 
@@ -277,10 +301,40 @@ void SalGraphics::DrawPolyPolygon( ULONG nPoly, const ULONG* pPoints,
 
 BOOL SalGraphics::DrawEPS( long nX, long nY, long nWidth, long nHeight, void* pPtr, ULONG nSize )
 {
+	if ( !maGraphicsData.mpPrinter )
+		return FALSE;
+
+#ifdef MACOSX
+	// Test the JVM version and if it is below 1.4, use Carbon printing APIs
+	java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
+	if ( !pClass )
+	{
+		PMPrintSession pSession = (PMPrintSession)maGraphicsData.mpPrinter->maPrinterData.mpVCLPrintJob->getNativePrintJob();
+		if ( pSession )
+		{
+			OModule aModule;
+			if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
+			{
+				PMSessionPostScriptBegin_Type *pPSBegin = (PMSessionPostScriptBegin_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionPostScriptBegin" ) );
+				PMSessionPostScriptData_Type *pPSData = (PMSessionPostScriptData_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionPostScriptData" ) );
+				PMSessionPostScriptEnd_Type *pPSEnd = (PMSessionPostScriptEnd_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionPostScriptEnd" ) );
+				if ( pPSBegin && pPSData && pPSEnd )
+				{
+					pPSBegin( pSession );
+					pPSData( pSession, pPtr, nSize );
+					pPSEnd( pSession );
+				}
+				aModule.unload();
+				return TRUE;
+			}
+		}
+	}
+#else	// MACOSX
 #ifdef DEBUG
 	fprintf( stderr, "SalGraphics::DrawEPS not implemented\n" );
 #endif
 	return FALSE;
+#endif	// MACOSX
 }
 
 // -----------------------------------------------------------------------

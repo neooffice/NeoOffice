@@ -75,6 +75,7 @@ public:
 	void				dispose();
 	void				endJob();
 	void				endPage();
+	void*				getNativePrintJob();
 	sal_Bool			isFinished();
 	sal_Bool			startJob();
 	com_sun_star_vcl_VCLGraphics*	startPage();

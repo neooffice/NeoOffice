@@ -68,6 +68,7 @@ class SalInfoPrinterData
 
 class SalPrinterData
 {
+	friend class	SalGraphics;
 	friend class	SalPrinter;
 
 					SalPrinterData();

@@ -358,6 +358,17 @@ public final class VCLPrintJob extends Thread implements Printable {
 	}
 
 	/**
+	 * Returns the <code>PrinterJob</code> instance.
+	 *
+	 * @return the <code>PrinterJob</code> instance
+	 */
+	public PrinterJob getPrinterJob() {
+
+		return job;
+
+	}
+
+	/**
 	 * Return the status of the print job.
 	 *
 	 * @return <code>true</code> if a print job has ended or aborted or

@@ -41,10 +41,14 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
+#ifndef _SV_JAVA_LANG_CLASS_HXX
+#include <java/lang/Class.hxx>
+#endif
 #ifndef _VOS_THREAD_HXX
 #include <vos/thread.hxx>
 #endif
 
+using namespace rtl;
 using namespace vcl;
 using namespace vos;
 
@@ -354,6 +358,62 @@ void com_sun_star_vcl_VCLPrintJob::endPage()
 		if ( mID )
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 	}
+}
+
+// ----------------------------------------------------------------------------
+
+void *com_sun_star_vcl_VCLPrintJob::getNativePrintJob()
+{
+	static jmethodID mID = NULL;
+	void *out = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Ljava/awt/print/PrinterJob;";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getPrinterJob", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
+			if ( tempObj )
+			{
+#ifdef MACOSX
+				jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/printing/MacPrinterJob" );
+				if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
+				{
+					static jfieldID fIDSession = NULL;
+					if ( !fIDSession )
+					{
+						char *cSignature = "Lcom/apple/mrj/macos/generated/PMPrintSessionOpaque;";
+						fIDSession = t.pEnv->GetFieldID( tempClass, "fPrintSession", cSignature );
+					}
+					OSL_ENSURE( fIDSession, "Unknown field id!" );
+					if ( fIDSession )
+					{
+						jobject session = t.pEnv->GetObjectField( tempObj, fIDSession );
+						if ( session )
+						{
+							static jmethodID mIDGetPointer = NULL;
+							jclass sessionClass = t.pEnv->GetObjectClass( session );
+							if ( !mIDGetPointer )
+							{
+								char *cSignature = "()I";
+								mIDGetPointer = t.pEnv->GetMethodID( sessionClass, "getPointer", cSignature );
+							}
+							OSL_ENSURE( mIDGetPointer, "Unknown method id!" );
+							if ( mIDGetPointer )
+								out = (void *)t.pEnv->CallNonvirtualLongMethod( session, sessionClass, mIDGetPointer );
+						}
+					}
+				}
+#endif	// MACOSX
+			}
+		}
+	}
+	return out;
 }
 
 // ----------------------------------------------------------------------------
