@@ -186,7 +186,7 @@ void SalFrame::Show( BOOL bVisible )
 		pPaintEvent->mnBoundWidth = maGeometry.nWidth + maGeometry.nLeftDecoration;
 		pPaintEvent->mnBoundHeight = maGeometry.nHeight + maGeometry.nTopDecoration;
 		com_sun_star_vcl_VCLEvent aVCLPaintEvent( SALEVENT_PAINT, this, (void *)pPaintEvent );
-		pSalData->mpEventQueue->postCachedEvent( &aVCLPaintEvent );
+		aVCLPaintEvent.dispatch();
 	}
 	else
 	{
@@ -261,7 +261,7 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 
 		// If this is a popup window, we need to put the window on the correct
 		// screen when the parent window straddles more than one screen
-		Rectangle aBounds( Point( nX, nY ), Size( nWidth + maGeometry.nLeftDecoration + maGeometry.nRightDecoration, nWidth + maGeometry.nTopDecoration + maGeometry.nBottomDecoration ) );
+		Rectangle aBounds( Point( nX, nY ), Size( nWidth + maGeometry.nLeftDecoration + maGeometry.nRightDecoration, nHeight + maGeometry.nTopDecoration + maGeometry.nBottomDecoration ) );
 		maFrameData.mpVCLFrame->setBounds( aBounds.nLeft, aBounds.nTop, aBounds.GetWidth(), aBounds.GetHeight() );
 		GetWorkArea( aWorkArea );
 		if ( aBounds.Intersection( aWorkArea ).IsEmpty() )
