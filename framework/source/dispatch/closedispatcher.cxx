@@ -121,9 +121,6 @@
 #include <vcl/window.hxx>
 #include <vcl/wrkwin.hxx>
 #include <vcl/svapp.hxx>
-#ifdef MACOSX
-#include <vcl/sound.hxx>
-#endif	// MACOSX
 
 //_________________________________________________________________________________________________________________
 //	namespace
@@ -672,10 +669,7 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, pVoid )
         // Behave like a Mac application by not exiting when user tries to
         // close last window
         if (m_eAsyncOperation == E_EXIT_APP)
-        {
-            Sound::Beep();
             m_eAsyncOperation = E_ESTABLISH_BACKINGMODE;
-        }
 #endif	// MACOSX
 
         // decide, which operation must be done here
