@@ -226,7 +226,7 @@ void com_sun_star_vcl_VCLGraphics::drawBitmap( const com_sun_star_vcl_VCLBitmap 
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2, long *_par3, long *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, long _par8, long _par9, int _par10, int _par11 )
+void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2, long *_par3, long *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, long _par8, long _par9, int _par10, sal_Bool _par11 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -234,7 +234,7 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(II[I[ILcom/sun/star/vcl/VCLFont;IIIIII)V";
+			char *cSignature = "(II[I[ILcom/sun/star/vcl/VCLFont;IIIIIZ)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "drawGlyphs", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -260,7 +260,7 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2
 			args[7].i = jint( _par8 );
 			args[8].i = jint( _par9 );
 			args[9].i = jint( _par10 );
-			args[10].i = jint( _par11 );
+			args[10].z = jboolean( _par11 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 			if ( pFont )
 				delete pFont;
