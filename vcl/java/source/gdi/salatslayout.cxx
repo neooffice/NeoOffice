@@ -69,6 +69,7 @@ class ATSLayout : public SalLayout
 	void				Destroy();
 	bool				InitAdvances() const;
 	bool				InitGlyphInfoArray() const;
+	void				Justify( long nNewWidth ) const;
 
 public:
 						ATSLayout( ::vcl::com_sun_star_vcl_VCLFont *pVCLFont );
@@ -214,12 +215,11 @@ ATSLayout::ATSLayout( com_sun_star_vcl_VCLFont *pVCLFont ) :
 	// Create font style
 	if ( ATSUCreateStyle( &maFontStyle ) == noErr )
 	{
-		ATSUAttributeTag nTags[4];
-		ByteCount nBytes[4];
-		ATSUAttributeValuePtr nVals[4];
+		ATSUAttributeTag nTags[3];
+		ByteCount nBytes[3];
+		ATSUAttributeValuePtr nVals[3];
 
 		// Set font
-		// TODO: Don't hardcode name
 		ATSUFontID nFontID = (ATSUFontID)mpVCLFont->getNativeFont();
 		if ( !nFontID )
 		{
@@ -237,26 +237,17 @@ ATSLayout::ATSLayout( com_sun_star_vcl_VCLFont *pVCLFont ) :
 		nBytes[1] = sizeof( Fixed );
 		nVals[1] = &nSize;
 
-		// Set color
-		RGBColor aColor;
-		aColor.red = 0x0;
-		aColor.green = 0x0;
-		aColor.blue = 0x0;
-		nTags[2] = kATSUColorTag;
-		nBytes[2] = sizeof( RGBColor );
-		nVals[2] = &aColor;
-
 		// Set antialiasing
 		ATSStyleRenderingOptions nOptions;
 		if ( mpVCLFont->isAntialiased() )
 			nOptions = kATSStyleApplyAntiAliasing;
 		else
 			nOptions = kATSStyleNoAntiAliasing;
-		nTags[3] = kATSUStyleRenderingOptionsTag;
-		nBytes[3] = sizeof( ATSStyleRenderingOptions );
-		nVals[3] = &nOptions;
+		nTags[2] = kATSUStyleRenderingOptionsTag;
+		nBytes[2] = sizeof( ATSStyleRenderingOptions );
+		nVals[2] = &nOptions;
 
-		if ( ATSUSetAttributes( maFontStyle, 4, nTags, nBytes, nVals ) != noErr )
+		if ( ATSUSetAttributes( maFontStyle, 3, nTags, nBytes, nVals ) != noErr )
 		{
 			ATSUDisposeStyle( maFontStyle );
 			maFontStyle = NULL;
@@ -329,32 +320,20 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 void ATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 {
-/*
-	int nPixelWidth = rArgs.mnLayoutWidth;
-	if( !nPixelWidth && rArgs.mpDXArray )
+	SalLayout::AdjustLayout( rArgs );
+
+	if ( rArgs.mpDXArray )
 	{
-		// For now we are only interested in the layout width
-		// TODO: account for individual logical widths
-		nPixelWidth = rArgs.mpDXArray[ mnLen - 1 ];
+		// TODO: actually position individual glyphs instead of justifying it
+		long nWidth = 0;
+		for ( int i = 0; i < mnLen; i++ )
+			nWidth += rArgs.mpDXArray[ i ];
+		Justify( nWidth );
 	}
-
-	if( !nPixelWidth )
-		return;
-
-	ATSUAttributeTag nTags[2];
-	ATSUAttributeValuePtr nVals[2];
-	ByteCount nBytes[2];
-
-	Fixed nFixedWidth = Long2Fix( nPixelWidth );
-	Fixed nFixedOne = Long2Fix( 1 );
-	nTags[0] = kATSULineWidthTag;
-	nBytes[0] = sizeof( Fixed );
-	nVals[0] = &nFixedWidth;
-	nTags[1] = kATSULineJustificationFactorTag;
-	nBytes[1] = sizeof( Fixed );
-	nVals[1] = &nFixedOne;
-	ATSUSetLayoutControls( maLayout, 2, nTags, nBytes, nVals );
-*/
+	else if ( rArgs.mnLayoutWidth )
+	{
+		Justify( rArgs.mnLayoutWidth );
+	}
 }
 
 // ----------------------------------------------------------------------------
@@ -368,6 +347,8 @@ void ATSLayout::DrawText( com_sun_star_vcl_VCLGraphics *pGraphics, SalColor nCol
 	CGContextRef aCGContext = (CGContextRef)pGraphics->getNativeGraphics();
 	if ( aCGContext )
 	{
+		CGContextSaveGState( aCGContext );
+
 		// Set the layout's CGContext and orientation
 		ATSUAttributeTag nTags[2];
 		ByteCount nBytes[2];
@@ -381,23 +362,16 @@ void ATSLayout::DrawText( com_sun_star_vcl_VCLGraphics *pGraphics, SalColor nCol
 		nVals[1] = &nOrientation;
 		ATSUSetLayoutControls( maLayout, 2, nTags, nBytes, nVals );
 
-		// Update color
+		// Set color
+		CGContextSetRGBFillColor( aCGContext, (float)SALCOLOR_RED( nColor ) / 0xff, (float)SALCOLOR_GREEN( nColor ) / 0xff, (float)SALCOLOR_BLUE( nColor ) / 0xff, 1.0 );
 		if ( maFontStyle )
 		{
-			RGBColor aColor;
-			aColor.red = SALCOLOR_RED( nColor ) & 0xff;
-			aColor.red |= ( aColor.red << 8 );
-			aColor.green = SALCOLOR_GREEN( nColor ) & 0xff;
-			aColor.green |= ( aColor.green << 8 );
-			aColor.blue = SALCOLOR_BLUE( nColor ) & 0xff;
-			aColor.blue |= ( aColor.blue << 8 );
-			ATSUAttributeTag nColorTag = kATSUColorTag;
-			ByteCount nColorByte = sizeof( RGBColor );
-			ATSUAttributeValuePtr nColorVal = &aColor;
-
-			ATSUSetAttributes( maFontStyle, 1, &nColorTag, &nColorByte, &nColorVal );
+			ATSUAttributeTag nColorTags[2];
+			nColorTags[0] = kATSUColorTag;
+			nColorTags[1] = kATSURGBAlphaColorTag;
+			ATSUClearAttributes( maFontStyle, 2, (const ATSUAttributeTag *)&nColorTags );
 		}
-	
+
 		// Draw the text
 		ATSUDrawText( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, Long2Fix( aPos.X() ), Long2Fix( aPos.Y() * - 1 ) );
 
@@ -408,6 +382,8 @@ void ATSLayout::DrawText( com_sun_star_vcl_VCLGraphics *pGraphics, SalColor nCol
 
 		// Reset layout controls
 		ATSUClearLayoutControls( maLayout, 2, nTags );
+
+		CGContextRestoreGState( aCGContext );
 
 		pGraphics->releaseNativeGraphics( aCGContext );
 	}
@@ -433,7 +409,7 @@ int ATSLayout::GetTextBreak( long nMaxWidth, long nCharExtra, int nFactor ) cons
 		return STRING_LEN;
 
 	if ( ( ( mnWidth * nFactor ) + ( mnLen * nCharExtra ) ) <= nMaxWidth )
-		return -1;
+		return STRING_LEN;
 
 	// Iterate through advances until the maximum width is reached
 	long nCurrentWidth = 0;
@@ -441,11 +417,11 @@ int ATSLayout::GetTextBreak( long nMaxWidth, long nCharExtra, int nFactor ) cons
 	{
 		nCurrentWidth += ( mpAdvances[ i ] * nFactor );
 		if ( nCurrentWidth >= nMaxWidth )
-			return mnStart + 1;
+			return mnStart + i;
 		nCurrentWidth += nCharExtra;
 	}
 
-	return -1;
+	return STRING_LEN;
 }
 
 // ----------------------------------------------------------------------------
@@ -600,20 +576,6 @@ void ATSLayout::Destroy()
 		ATSUDisposeTextLayout( maLayout );
 	maLayout = NULL;
 
-	// Reset color
-	if ( maFontStyle )
-	{
-		RGBColor aColor;
-		aColor.red = 0x0;
-		aColor.green = 0x0;
-		aColor.blue = 0x0;
-		ATSUAttributeTag nColorTag = kATSUColorTag;
-		ByteCount nColorByte = sizeof( RGBColor );
-		ATSUAttributeValuePtr nColorVal = &aColor;
-
-		ATSUSetAttributes( maFontStyle, 1, &nColorTag, &nColorByte, &nColorVal );
-	}
-	
 	mnRuns = 0;
 	mnStart = 0;
 	mnLen = 0;
@@ -632,14 +594,18 @@ void ATSLayout::Destroy()
 
 bool ATSLayout::InitAdvances() const
 {
-	if ( mpAdvances && mnWidth )
+	if ( mpAdvances )
 		return true;
 
 	if ( !maLayout )
 		return false;
 
-	if ( mpAdvances )
-		rtl_freeMemory( mpAdvances );
+	// Force width to an integer since the OOo code cannot handle a fractional
+	// layout width
+	Rect aRect;
+	if ( ATSUMeasureTextImage( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, 0, 0, &aRect ) == noErr )
+		Justify( aRect.right - aRect.left + 1 );
+
 	mpAdvances = (long *)rtl_allocateMemory( mnLen * sizeof( long ) );
 
 	long nPreviousX = 0;
@@ -655,10 +621,14 @@ bool ATSLayout::InitAdvances() const
 		{
 			mpAdvances[ i ] = 0;
 		}
-			
 	}
 
-	mnWidth = nPreviousX;
+	// This should only happen in rare cases
+	if ( !mnWidth )
+		mnWidth = nPreviousX;
+
+	// Adjust for rounding errors
+	mpAdvances[ mnLen - 1 ] += mnWidth - nPreviousX;
 
 	return true;
 }
@@ -669,6 +639,15 @@ bool ATSLayout::InitGlyphInfoArray() const
 {
 	if ( mpGlyphInfoArray )
 		return true;
+
+	if ( !maLayout )
+		return false;
+
+	// Force width to an integer since the OOo code cannot handle a fractional
+	// layout width
+	Rect aRect;
+	if ( ATSUMeasureTextImage( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, 0, 0, &aRect ) == noErr )
+		Justify( aRect.right - aRect.left + 1 );
 
 	// TODO: is there a good way to predict the maximum glyph count?
 	ByteCount nBufSize = 3 * ( mnLen + 16 ) * sizeof( ATSUGlyphInfo );
@@ -685,6 +664,40 @@ bool ATSLayout::InitGlyphInfoArray() const
 	{
 		return true;
 	}
+}
+
+// ----------------------------------------------------------------------------
+
+void ATSLayout::Justify( long nNewWidth ) const
+{
+	if ( nNewWidth == mnWidth )
+		return;
+
+	mnWidth = 0;
+
+	if ( mpAdvances )
+		rtl_freeMemory( mpAdvances );
+	mpAdvances = NULL;
+
+	if ( mpGlyphInfoArray )
+		rtl_freeMemory( mpGlyphInfoArray );
+	mpGlyphInfoArray = NULL;
+
+	ATSUAttributeTag nTags[2];
+	ByteCount nBytes[2];
+	ATSUAttributeValuePtr nVals[2];
+
+	ATSUTextMeasurement nWidth = Long2Fix( nNewWidth );
+	nTags[0] = kATSULineWidthTag;
+	nBytes[0] = sizeof( ATSUTextMeasurement );
+	nVals[0] = &nWidth;
+	Fract nJustification = kATSUFullJustification;
+	nTags[1] = Fix2Frac( Long2Fix( 1 ) );
+	nBytes[1] = sizeof( Fract );
+	nVals[1] = &nJustification;
+
+	if ( ATSUSetLayoutControls( maLayout, 2, nTags, nBytes, nVals ) == noErr )
+		mnWidth = nNewWidth;
 }
 
 // ============================================================================
