@@ -462,6 +462,9 @@ public final class VCLGraphics {
 	 */
 	public void drawBitmap(VCLBitmap bmp, VCLBitmap transBmp, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY ) {
 
+		if (image == null)
+			return;
+
 		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, bmp.getWidth(), bmp.getHeight()));
 		if (srcBounds.isEmpty())
 			return;
@@ -481,7 +484,7 @@ public final class VCLGraphics {
 			else if (clip.contains((double)destBounds.x, (double)destBounds.y, (double)destBounds.width, (double)destBounds.height))
 				clip = null;
 		}
-		if (image == null || clip != null) {
+		if (clip != null) {
 			// Draw to a temporary image
 			VCLImage mergedImage = new VCLImage(destBounds.width, destBounds.height, bmp.getBitCount());
 			mergedImage.getGraphics().drawBitmap(bmp, transBmp, srcBounds.x, srcBounds.y, destBounds.width, destBounds.height, 0, 0);
@@ -624,7 +627,7 @@ public final class VCLGraphics {
 			else if (clip.contains((double)destBounds.x, (double)destBounds.y, (double)destBounds.width, (double)destBounds.height))
 				clip = null;
 		}
-		if (image == null || clip != null) {
+		if (clip != null) {
 			// Draw to a temporary image
 			VCLImage destImage = new VCLImage(destBounds.width, destBounds.height, img.getBitCount());
 			destImage.getGraphics().drawImage(image, destBounds.x, destBounds.y, destBounds.width, destBounds.height, 0, 0);
@@ -719,6 +722,9 @@ public final class VCLGraphics {
 	 */
 	public void drawMask(VCLBitmap bmp, int color, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY) {
 
+		if (image == null)
+			return;
+
 		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, bmp.getWidth(), bmp.getHeight()));
 		if (srcBounds.isEmpty())
 			return;
@@ -738,7 +744,7 @@ public final class VCLGraphics {
 			else if (clip.contains((double)destBounds.x, (double)destBounds.y, (double)destBounds.width, (double)destBounds.height))
 				clip = null;
 		}
-		if (image == null || clip != null) {
+		if (clip != null) {
 			// Draw to a temporary image
 			VCLImage maskImage = new VCLImage(destBounds.width, destBounds.height, bmp.getBitCount());
 			maskImage.getGraphics().drawMask(bmp, color, srcBounds.x, srcBounds.y, destBounds.width, destBounds.height, 0, 0);
