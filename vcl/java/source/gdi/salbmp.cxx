@@ -178,7 +178,7 @@ void SalBitmap::Destroy()
 		{
 			VCLThreadAttach t;
 			if ( t.pEnv )
-				t.pEnv->ReleasePrimitiveArrayCritical( (jbyteArray)mpData->getJavaObject(), (jbyte *)mpBits, JNI_ABORT );
+				t.pEnv->ReleaseByteArrayElements( (jbyteArray)mpData->getJavaObject(), (jbyte *)mpBits, JNI_ABORT );
 		}
 		mpBits = NULL;
 		delete mpData;
@@ -241,7 +241,7 @@ BitmapBuffer* SalBitmap::AcquireBuffer( BOOL bReadOnly )
 		if ( t.pEnv )
 		{
 			jboolean bCopy( sal_False );
-			mpBits = (BYTE *)t.pEnv->GetPrimitiveArrayCritical( (jbyteArray)mpData->getJavaObject(), &bCopy );
+			mpBits = (BYTE *)t.pEnv->GetByteArrayElements( (jbyteArray)mpData->getJavaObject(), &bCopy );
 		}
 	}
 	pBuffer->mpBits = mpBits;
@@ -264,13 +264,13 @@ void SalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, BOOL bReadOnly )
 				jbyteArray pArray = (jbyteArray)mpData->getJavaObject();
 				if ( !bReadOnly )
 				{
-					t.pEnv->ReleasePrimitiveArrayCritical( pArray, (jbyte *)mpBits, JNI_COMMIT );
+					t.pEnv->ReleaseByteArrayElements( pArray, (jbyte *)mpBits, JNI_COMMIT );
 					// Save the palette
 					mpVCLBitmap->setPalette( pBuffer->maPalette );
 				}
 				if ( --mnAcquired == 0 )
 				{
-					t.pEnv->ReleasePrimitiveArrayCritical( pArray, (jbyte *)mpBits, JNI_ABORT );
+					t.pEnv->ReleaseByteArrayElements( pArray, (jbyte *)mpBits, JNI_ABORT );
 					mpBits = NULL;
 					delete mpData;
 					mpData = NULL;
