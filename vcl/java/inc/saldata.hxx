@@ -70,6 +70,7 @@ public:
 	XubString				maDefaultPrinter;
 	::vcl::com_sun_star_vcl_VCLEventQueue*	mpEventQueue;
 	::vcl::com_sun_star_vcl_VCLFontList*	mpFontList;
+	BOOL					mbPresentation;
 
 							SalData();
 							~SalData();

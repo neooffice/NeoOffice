@@ -55,6 +55,7 @@ protected:
 
 public:
 	static jclass		getMyClass();
+	static const Rectangle	getFrameInsets();
 	static const Size	getScreenSize();
 
 						com_sun_star_vcl_VCLScreen( jobject myObj ) : java_lang_Object( myObj ) {};

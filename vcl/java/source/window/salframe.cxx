@@ -57,6 +57,22 @@
 #include <com/sun/star/vcl/VCLScreen.hxx>
 #endif
 
+#ifdef MACOSX
+
+#ifndef _VOS_MODULE_HXX_
+#include <vos/module.hxx>
+#endif
+
+#include <premac.h>
+#include <Carbon/Carbon.h>
+#include <postmac.h>
+typedef OSStatus SetSystemUIMode_Type( SystemUIMode, SystemUIOptions );
+
+using namespace rtl;
+using namespace vos;
+
+#endif	// MACOSX
+
 using namespace vcl;
 
 // =======================================================================
@@ -201,9 +217,10 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 
 	if ( maFrameData.mbCenter && ! ( nFlags & SAL_FRAME_POSSIZE_X ) && ! ( nFlags & SAL_FRAME_POSSIZE_Y ) && !maFrameData.mbVisible )
 	{
-		const Size& rScreenSize( com_sun_star_vcl_VCLScreen::getScreenSize() );
-		nX = ( rScreenSize.Width() - nWidth ) / 2;
-		nY = ( rScreenSize.Height() - nHeight ) / 2;
+		Rectangle aWorkArea;
+		GetWorkArea( aWorkArea );
+		nX = ( aWorkArea.GetWidth() - nWidth ) / 2;
+		nY = ( aWorkArea.GetHeight() - nHeight ) / 2;
 	}
 
 	maFrameData.mpVCLFrame->setBounds( nX, nY, nWidth + maGeometry.nLeftDecoration + maGeometry.nRightDecoration, nHeight + maGeometry.nTopDecoration + maGeometry.nBottomDecoration );
@@ -223,6 +240,15 @@ void SalFrame::GetWorkArea( Rectangle &rRect )
 	rRect.nTop = 0;
 	rRect.nRight = rScreenSize.Width() - 1;
 	rRect.nBottom = rScreenSize.Height() - 1;
+
+#ifdef MACOSX
+	// Adjust for system menu bar when in presentation mode
+	if ( maFrameData.mbPresentation )
+	{
+		const Rectangle& rFrameInsets( com_sun_star_vcl_VCLScreen::getFrameInsets() );
+		rRect.nBottom += rFrameInsets.nTop;
+	}
+#endif	// MACOSX
 }
 
 // -----------------------------------------------------------------------
@@ -256,30 +282,104 @@ BOOL SalFrame::GetWindowState( SalFrameState* pState )
 
 void SalFrame::ShowFullScreen( BOOL bFullScreen )
 {
-	maFrameData.mpVCLFrame->setFullScreenMode( bFullScreen );
+	if ( bFullScreen == maFrameData.mbFullScreen )
+		return;
 
-	// Update the cached position
-	Rectangle *pBounds = new Rectangle( maFrameData.mpVCLFrame->getBounds() );
-	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pBounds );
-	aEvent.dispatch();
+	USHORT nFlags = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT;
+
+	if ( bFullScreen )
+	{
+		memcpy( &maFrameData.maOriginalGeometry, &maGeometry, sizeof( SalFrameGeometry ) );
+		Rectangle aWorkArea;
+		GetWorkArea( aWorkArea );
+		SetPosSize( aWorkArea.nLeft + maGeometry.nLeftDecoration, aWorkArea.nTop + maGeometry.nTopDecoration, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
+	}
+	else
+	{
+		SetPosSize( maFrameData.maOriginalGeometry.nX, maFrameData.maOriginalGeometry.nY, maFrameData.maOriginalGeometry.nWidth, maFrameData.maOriginalGeometry.nHeight, nFlags );
+		memset( &maFrameData.maOriginalGeometry, 0, sizeof( SalFrameGeometry ) );
+	}
+
+	maFrameData.mpVCLFrame->setFullScreenMode( bFullScreen );
+	maFrameData.mbFullScreen = bFullScreen;
 
 	// Post a paint event
-	SalPaintEvent *pPaintEvent = new SalPaintEvent();
-	pPaintEvent->mnBoundX = 0;
-	pPaintEvent->mnBoundY = 0;
-	pPaintEvent->mnBoundWidth = maGeometry.nWidth + maGeometry.nLeftDecoration;
-	pPaintEvent->mnBoundHeight = maGeometry.nHeight + maGeometry.nTopDecoration;
-	com_sun_star_vcl_VCLEvent aVCLPaintEvent( SALEVENT_PAINT, this, (void *)pPaintEvent );
-	aVCLPaintEvent.dispatch();
+	SalPaintEvent *pEvent = new SalPaintEvent();
+	pEvent->mnBoundX = 0;
+	pEvent->mnBoundY = 0;
+	pEvent->mnBoundWidth = maGeometry.nWidth + maGeometry.nLeftDecoration;
+	pEvent->mnBoundHeight = maGeometry.nHeight + maGeometry.nTopDecoration;
+	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_PAINT, this, (void *)pEvent );
+	aEvent.dispatch();
 }
 
 // -----------------------------------------------------------------------
 
 void SalFrame::StartPresentation( BOOL bStart )
 {
+	if ( bStart == maFrameData.mbPresentation )
+		return;
+
+#ifdef MACOSX
+	OModule aModule;
+	if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
+	{
+		SetSystemUIMode_Type *pSetSystemUIMode = (SetSystemUIMode_Type *)aModule.getSymbol( OUString::createFromAscii( "SetSystemUIMode" ) );
+
+		if ( pSetSystemUIMode )
+		{
+			if ( bStart )
+				pSetSystemUIMode( kUIModeAllHidden, kUIOptionDisableAppleMenu | kUIOptionDisableProcessSwitch );
+			else
+				pSetSystemUIMode( kUIModeNormal, 0 );
+
+		}
+		aModule.unload();
+	}
+
+	maFrameData.mbPresentation = bStart;
+	GetSalData()->mbPresentation = bStart;
+
+	// Adjust window size if in full screen mode
+	if ( maFrameData.mbFullScreen )
+	{
+		USHORT nFlags = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT;
+
+		Rectangle aWorkArea;
+		GetWorkArea( aWorkArea );
+
+		// The system menu bar is a dead zone of coordinates so we need to set
+		// the top of the window at -1 and make the cached insets larger to
+		// make the window appear at the top of the screen
+		unsigned int nRealTopDecoration = 0;
+		if ( bStart )
+		{
+			aWorkArea.nTop -= 1;
+			aWorkArea.nBottom += 1;
+			nRealTopDecoration = maGeometry.nTopDecoration;
+			maGeometry.nTopDecoration += 1;
+		}
+		else
+		{
+			maGeometry.nTopDecoration -= 1;
+			nRealTopDecoration = maGeometry.nTopDecoration;
+		}
+		SetPosSize( aWorkArea.nLeft + maGeometry.nLeftDecoration, aWorkArea.nTop + nRealTopDecoration, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - nRealTopDecoration - maGeometry.nBottomDecoration, nFlags );
+
+		// Post a paint event
+		SalPaintEvent *pEvent = new SalPaintEvent();
+		pEvent->mnBoundX = 0;
+		pEvent->mnBoundY = 0;
+		pEvent->mnBoundWidth = maGeometry.nWidth + maGeometry.nLeftDecoration;
+		pEvent->mnBoundHeight = maGeometry.nHeight + maGeometry.nTopDecoration;
+		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_PAINT, this, (void *)pEvent );
+		aEvent.dispatch();
+	}
+#else	// MACOSX
 #ifdef DEBUG
 	fprintf( stderr, "SalFrame::StartPresentation not implemented\n" );
 #endif
+#endif	// MACOSX
 }
 
 // -----------------------------------------------------------------------
@@ -431,6 +531,9 @@ SalFrameData::SalFrameData()
 	maSysData.nSize = sizeof( SystemEnvData );
 	maSysData.pVCLFrame = NULL;
 	mbCenter = TRUE;
+	memset( &maOriginalGeometry, 0, sizeof( maOriginalGeometry ) );
+	mbFullScreen = FALSE;
+	mbPresentation = FALSE;
 }
 
 // -----------------------------------------------------------------------

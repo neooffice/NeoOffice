@@ -57,12 +57,14 @@ public final class VCLScreen {
 	/**
 	 * The cached screen size.
 	 */
-	private static Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+	private static Dimension screenSize = null;
 
 	/**
-	 * Perform platform specific adjustments to the screen size.
+	 * Initialize screen size and frame insets.
 	 */
 	static {
+
+		screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 
 		Frame f = new Frame();
 		f.addNotify();

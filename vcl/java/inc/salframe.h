@@ -46,7 +46,10 @@
 #endif
 #ifndef _SALJAVA_H
 #include <saljava.h>
-#endif 
+#endif
+#ifndef _SV_SALGEOM_HXX
+#include <salgeom.hxx>
+#endif
 
 namespace vcl
 {
@@ -80,6 +83,9 @@ class SalFrameData
 	SALFRAMEPROC	mpProc;
 	SystemEnvData	maSysData;
 	BOOL			mbCenter;
+	SalFrameGeometry	maOriginalGeometry;
+	BOOL			mbFullScreen;
+	BOOL			mbPresentation;
 
 					SalFrameData();
 					~SalFrameData();

@@ -586,11 +586,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private KeyEvent lastKeyPressed = null;
 
 	/**
-	 * The native window's original bounds.
-	 */
-	private Rectangle originalBounds = null;
-
-	/**
 	 * The native window's panel.
 	 */
 	private VCLFrame.NoPaintPanel panel = null;
@@ -760,7 +755,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 		window = null;
 		lastKeyPressed = null;
-		originalBounds = null;
 
 	}
 
@@ -1449,19 +1443,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *  <code>false</code> sets it to normal mode
 	 */
 	public void setFullScreenMode(boolean b) {
-
-		if (b == fullScreenMode)
-			return;
-
-		if (b) {
-			originalBounds = getBounds();
-			Dimension d = VCLScreen.getScreenSize();
-			setBounds(0, 0, d.width, d.height);
-		}
-		else {
-			setBounds(originalBounds.x, originalBounds.y, originalBounds.width, originalBounds.height);
-			originalBounds = null;
-		}
 
 		fullScreenMode = b;
 

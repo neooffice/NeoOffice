@@ -83,9 +83,6 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX
 #include <com/sun/star/vcl/VCLPageFormat.hxx>
 #endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLSCREEN_HXX
-#include <com/sun/star/vcl/VCLScreen.hxx>
-#endif
 
 #include "salinst.hrc"
 
@@ -245,8 +242,9 @@ void SalInstance::Yield( BOOL bWait )
 	// Dispatch pending non-AWT events
 	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, FALSE ) ) != NULL )
 	{
-		// Ignore SALEVENT_SHUTDOWN events when recursing into this method
-		if ( nRecursionLevel == 1 || pEvent->getID() != SALEVENT_SHUTDOWN )
+		// Ignore SALEVENT_SHUTDOWN events when recursing into this method or
+		// when in presentation mode
+		if ( ( nRecursionLevel == 1 && !pSalData->mbPresentation ) || pEvent->getID() != SALEVENT_SHUTDOWN )
 		{
 			pEvent->dispatch();
 			com_sun_star_vcl_VCLGraphics::flushAll();
@@ -353,11 +351,12 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 	pFrame->maGeometry.nBottomDecoration = aRect.nBottom;
 
 	// Set default window size based on style
-	const Size& rScreenSize( com_sun_star_vcl_VCLScreen::getScreenSize() );
+	Rectangle aWorkArea;
+	pFrame->GetWorkArea( aWorkArea );
 	long nX = 0;
 	long nY = 0;
-	long nWidth = rScreenSize.Width();
-	long nHeight = rScreenSize.Height();
+	long nWidth = aWorkArea.GetWidth();
+	long nHeight = aWorkArea.GetHeight();
 	if ( nSalFrameStyle & SAL_FRAME_STYLE_FLOAT )
     {
 		pFrame->maFrameData.mbCenter = FALSE;
@@ -393,7 +392,7 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 				nHeight = rGeom.nHeight + rGeom.nTopDecoration + rGeom.nBottomDecoration;
 				// If the window spills off the screen, place it at the 
 				// top left of the screen
-				if ( ( nX + nWidth ) > rScreenSize.Width() || ( nY + nHeight ) > rScreenSize.Height() )
+				if ( ( nX + nWidth ) > aWorkArea.GetWidth() || ( nY + nHeight ) > aWorkArea.GetHeight() )
 				{
 					nX = 0;
 					nY = 0;
@@ -405,8 +404,8 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 	// Center the window by default
 	if ( pFrame->maFrameData.mbCenter )
 	{
-		nX = ( rScreenSize.Width() - nWidth ) / 2;
-		nY = ( rScreenSize.Height() - nHeight ) / 2;
+		nX = ( aWorkArea.GetWidth() - nWidth ) / 2;
+		nY = ( aWorkArea.GetHeight() - nHeight ) / 2;
 	}
 
 	pFrame->maFrameData.mpVCLFrame->setBounds( nX, nY, nWidth, nHeight );
