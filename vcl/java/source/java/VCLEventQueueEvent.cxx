@@ -788,16 +788,7 @@ USHORT com_sun_star_vcl_VCLEvent::getModifiers()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
 			out = (USHORT)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
-#ifdef MACOSX
-			// Fix bug 200 by preventing all Alt key modifiers from passing
-			// through to the OOo code. On Mac OS X, the Alt key is used solely
-			// as a dead key.
-			if ( ! ( out & ~( KEY_MOD2 | KEY_SHIFT ) ) )
-				out &= ~KEY_MOD2;
-#endif	// MACOSX
-		}
 	}
 	return out;
 }
