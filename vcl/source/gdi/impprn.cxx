@@ -473,6 +473,10 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 		if ( nDPIY && nDPIY < nMaxBmpDPIY )
 			nMaxBmpDPIY = nDPIY;
 
+		// Limit resolution to a reasonable amount
+		nMaxBmpDPIX = Min( (long) OPTIMAL_BMP_RESOLUTION, nMaxBmpDPIX );
+		nMaxBmpDPIY = Min( (long) OPTIMAL_BMP_RESOLUTION, nMaxBmpDPIY );
+
 		if ( nMaxBmpDPIX && nMaxBmpDPIY && nMaxBmpDPIX < mnDPIX && nMaxBmpDPIY < mnDPIY )
 		{
 			mpPrinter->SetResolution( nMaxBmpDPIX, nMaxBmpDPIY );
