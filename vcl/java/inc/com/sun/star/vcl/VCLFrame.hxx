@@ -56,12 +56,12 @@ protected:
 
 public:
 	static jclass		getMyClass();
-	com_sun_star_vcl_VCLFrame*	parentFrame;
 
-						com_sun_star_vcl_VCLFrame( jobject myObj ) : java_lang_Object( myObj ), parentFrame( NULL ) {}
+						com_sun_star_vcl_VCLFrame( jobject myObj ) : java_lang_Object( myObj ) {}
 						com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, const SalFrame *pFrame, const SalFrame *pParent );
-	virtual				~com_sun_star_vcl_VCLFrame();
+	virtual				~com_sun_star_vcl_VCLFrame() {}
 
+	void				addChild( SalFrame *_par0 );
 	void				dispose();
 	void				endComposition();
 	void				flush();
@@ -73,7 +73,7 @@ public:
 	void*				getNativeWindow();
 	java_lang_Object*	getPeer();
 	ULONG				getState();
-	sal_Bool			isFloatingWindow();
+	void				removeChild( SalFrame *_par0 );
 	void				requestFocus();
 	void				setAutoFlush( sal_Bool _par0 );
 	void				setBounds( long _par0, long _par1, long _par2, long _par3 );
@@ -83,7 +83,7 @@ public:
 	void				setPointer( USHORT _par0 );
 	void				setState( ULONG _par0 );
 	void				setTitle( ::rtl::OUString _par0 );
-	void				setVisible( sal_Bool _par0, sal_Bool _par1, SalFrame *_par2 );
+	void				setVisible( sal_Bool _par0, sal_Bool _par1 );
 	void				toFront();
 };
 

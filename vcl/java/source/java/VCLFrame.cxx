@@ -70,68 +70,6 @@ static EventLoopTimerUPP pEventLoopTimerUPP = NULL;
 
 using namespace vcl;
 
-#ifdef MACOSX
-/**
- * Parameter block for window selection timer
- */
-struct SelectWindowParamBlk {
-	WindowRef aWindow;
-	bool bBringToFront;
-	bool bActivate;
-};
-#endif
-
-// ----------------------------------------------------------------------------
-
-#ifdef MACOSX
-static void SelectWindowTimerCallback( EventLoopTimerRef aTimer, void *pData )
-{
-	SelectWindowParamBlk * p = (SelectWindowParamBlk *)pData;
-	if ( p )
-	{
-		// some of our borderless windows are not in the document group
-		// which can cause Z ordering problems with respect to other
-		// windows in the group.  VCL does not have a concept of groups,
-		// so all VCL windows need to be in the same group.
-		//
-		// Bug 427
-		
-		WindowGroupRef docGroup = GetWindowGroupOfClass( kDocumentWindowClass );
-		if ( GetWindowGroup( p->aWindow ) != docGroup )
-			SetWindowGroup( p->aWindow, docGroup );
-			
-		if ( p->bBringToFront )
-		{
-			if ( p->bActivate )
-				SelectWindow( p->aWindow );
-			else
-				BringToFront( p->aWindow );
-		}
-		else if ( p->bActivate )
-		{
-			// we want to focus a window but not change its Z ordering.
-			// we need SelectWindow() for side-effects (?), so let's issue
-			// SelectWindow() followed by successive BringToFronts() to
-			// re-establish the Z ordering.
-			//
-			// Bug 436
-			
-			std::list< WindowRef > topWindows;
-			WindowRef iter = GetPreviousWindow( p->aWindow );
-			while ( iter )
-			{
-				topWindows.push_back( iter );
-				iter = GetPreviousWindow( iter );
-			}
-			SelectWindow( p->aWindow );
-			for( std::list< WindowRef >::iterator i = topWindows.begin(); i != topWindows.end(); i++ )
-				BringToFront( ( *i ) );
-		}
-		delete p;
-	}
-}
-#endif	// MACOSX
-
 // ============================================================================
 
 #ifdef MACOSX
@@ -141,25 +79,20 @@ static void JNICALL Java_com_apple_mrj_macos_generated_MacWindowFunctions_Select
 
 	WindowRef aWindow = (WindowRef)pWindowRef;
 
-	// when debugging some of the various window selection issues, it was
-	// thought that there may possibly be race conditions between
-	// selectwindow being invoked from a VCL thread and the Java VM
-	// processing events on the Carbon thread, similar to window destruction
-	// To eliminate this possibility we'll issue this as a timer call that
-	// will get processed on the main Carbon thread.
-	//
-	// Bug 436
-	
-	SelectWindowParamBlk * p = new SelectWindowParamBlk;
-	p->aWindow = aWindow;
-	p->bBringToFront = bBringToFront;
-	p->bActivate = bActivate;
-	
-	static EventLoopTimerUPP pSelectWindowTimer = NULL; // our calls are mutex guarded so we can safely do static variable creation in this fashion
-	if ( ! pSelectWindowTimer )
-		pSelectWindowTimer = NewEventLoopTimerUPP( SelectWindowTimerCallback );
-	
-	InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pSelectWindowTimer, p, NULL );
+	if ( bBringToFront )
+		BringToFront( aWindow );
+
+	WindowClass nClass;
+	if ( GetWindowClass( aWindow, &nClass ) == noErr && nClass == kDocumentWindowClass )
+	{
+		if ( bActivate )
+			SelectWindow( aWindow );
+	}
+	else
+	{
+		// Non-document windows must always be activated for mouse events
+		ActivateWindow( aWindow, true );
+	}
 }
 #endif	// MACOSX
 
@@ -175,9 +108,10 @@ static void JNICALL Java_com_apple_mrj_macos_generated_MacWindowFunctions_ShowWi
 	// Make sure that the native window size really matches the size that we
 	// expect since it can get out of sync due to our call to the Java window's
 	// addNotify() method before it is first shown
-	SetWindowBounds( aWindow, kWindowContentRgn, &aRealBounds );
+	SetWindowBounds( aWindow, kWindowStructureRgn, &aRealBounds );
 
 	ShowHide( aWindow, true );
+
 	Java_com_apple_mrj_macos_generated_MacWindowFunctions_SelectWindow( pEnv, object, pWindowRef );
 }
 #endif	// MACOSX
@@ -245,7 +179,7 @@ jclass com_sun_star_vcl_VCLFrame::getMyClass()
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, const SalFrame *pFrame, const SalFrame *pParent ) : java_lang_Object( (jobject)NULL ), parentFrame( NULL )
+com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, const SalFrame *pFrame, const SalFrame *pParent ) : java_lang_Object( (jobject)NULL )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -258,26 +192,12 @@ com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, cons
 	}
 	OSL_ENSURE( mID, "Unknown method id!" );
 
-	// Fix bug 377 by providing a parent frame if one isn't passed in
-	if ( !pParent )
-	{
-		jvalue args[4];
-		args[0].j = jlong( SAL_FRAME_STYLE_DEFAULT );
-		args[1].l = GetSalData()->mpEventQueue->getJavaObject();
-		args[2].i = jint( 0 );
-		args[3].l = NULL;
-		jobject frameObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
-		parentFrame = new com_sun_star_vcl_VCLFrame( frameObj );
-	}
-
 	jvalue args[4];
 	args[0].j = jlong( nSalFrameStyle );
 	args[1].l = GetSalData()->mpEventQueue->getJavaObject();
 	args[2].i = jint( pFrame );
 	if ( pParent )
 		args[3].l = pParent->maFrameData.mpVCLFrame->getJavaObject();
-	else if ( parentFrame )
-		args[3].l = parentFrame->getJavaObject();
 	else
 		args[3].l = NULL;
 	jobject tempObj;
@@ -287,18 +207,7 @@ com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, cons
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLFrame::~com_sun_star_vcl_VCLFrame()
-{
-	if ( parentFrame )
-	{
-		parentFrame->dispose();
-		delete parentFrame;
-	}
-}
-
-// ----------------------------------------------------------------------------
-
-void com_sun_star_vcl_VCLFrame::endComposition()
+void com_sun_star_vcl_VCLFrame::addChild( SalFrame *_par0 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -306,12 +215,19 @@ void com_sun_star_vcl_VCLFrame::endComposition()
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()V";
-			mID = t.pEnv->GetMethodID( getMyClass(), "endComposition", cSignature );
+			char *cSignature = "(Lcom/sun/star/vcl/VCLFrame;)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "addChild", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+		{
+			jvalue args[1];
+			if ( _par0 )
+				args[0].l = _par0->maFrameData.mpVCLFrame->getJavaObject();
+			else
+				args[0].l = NULL;
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
 	}
 }
 
@@ -350,6 +266,25 @@ void com_sun_star_vcl_VCLFrame::dispose()
 				InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pEventLoopTimerUPP, aWindow, NULL );
 		}
 #endif	// MACOSX
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLFrame::endComposition()
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "endComposition", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 	}
 }
 
@@ -669,23 +604,28 @@ ULONG com_sun_star_vcl_VCLFrame::getState()
 
 // ----------------------------------------------------------------------------
 
-sal_Bool com_sun_star_vcl_VCLFrame::isFloatingWindow()
+void com_sun_star_vcl_VCLFrame::removeChild( SalFrame *_par0 )
 {
 	static jmethodID mID = NULL;
-	sal_Bool out = sal_False;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()Z";
-			mID = t.pEnv->GetMethodID( getMyClass(), "isFloatingWindow", cSignature );
+			char *cSignature = "(Lcom/sun/star/vcl/VCLFrame;)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "removeChild", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethod( object, getMyClass(), mID );
+		{
+			jvalue args[1];
+			if ( _par0 )
+				args[0].l = _par0->maFrameData.mpVCLFrame->getJavaObject();
+			else
+				args[0].l = NULL;
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
 	}
-	return out;
 }
 
 // ----------------------------------------------------------------------------
@@ -911,7 +851,7 @@ void com_sun_star_vcl_VCLFrame::setTitle( ::rtl::OUString _par0 )
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0, sal_Bool _par1, SalFrame *_par2 )
+void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0, sal_Bool _par1 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -930,8 +870,9 @@ void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0, sal_Bool _par1, SalF
 			bActivate = !_par1;
 			bBringToFront = true;
 
-			// Make the real bounds accessible to the native methods
-			SetRect( &aRealBounds, _par2->maGeometry.nX, _par2->maGeometry.nY, _par2->maGeometry.nX + _par2->maGeometry.nWidth, _par2->maGeometry.nY + _par2->maGeometry.nHeight );
+			// Make the Java bounds accessible to the native methods
+			Rectangle aRect( getBounds() );
+			SetRect( &aRealBounds, aRect.nLeft, aRect.nTop, aRect.nLeft + aRect.GetWidth(), aRect.nTop + aRect.GetHeight() );
 #endif	// MACOSX
 
 			jvalue args[1];

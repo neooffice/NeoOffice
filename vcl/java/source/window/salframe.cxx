@@ -211,13 +211,10 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 	maFrameData.mbVisible = bVisible;
 
-	if ( bNoActivate && maFrameData.mpVCLFrame->isFloatingWindow() )
-		bNoActivate = FALSE;
-
 	if ( !maFrameData.mbVisible && maFrameData.mpParent && pSalData->mpFocusFrame == this)
 		maFrameData.mpParent->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
 
-	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible, bNoActivate, this );
+	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible, bNoActivate );
 
 	// Reset graphics
 	com_sun_star_vcl_VCLGraphics *pVCLGraphics = maFrameData.mpVCLFrame->getGraphics();
@@ -522,7 +519,7 @@ void SalFrame::ShowFullScreen( BOOL bFullScreen )
  */
 static void SetSystemUIModeTimerCallback( EventLoopTimerRef aTimer, void *pData )
 {
-	BOOL enterFullscreen = ( BOOL ) pData;
+	bool enterFullscreen = (bool)pData;
 	
 	if ( enterFullscreen )
 		SetSystemUIMode( kUIModeAllHidden, kUIOptionDisableAppleMenu | kUIOptionDisableProcessSwitch );
@@ -550,7 +547,15 @@ static void InstallSetSystemUIModeTimer( BOOL bStart )
 	::osl::MutexGuard aGuard( aMutex );
 	if ( !pSystemUIModeTimerUPP )
 		pSystemUIModeTimerUPP = NewEventLoopTimerUPP( SetSystemUIModeTimerCallback );
-	InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pSystemUIModeTimerUPP, (void *)bStart, NULL );
+	if ( pSystemUIModeTimerUPP )
+	{
+		InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pSystemUIModeTimerUPP, (void *)( bStart ? true : false ), NULL );
+
+		// Let the native event thread run
+		ULONG nCount = Application::ReleaseSolarMutex();
+		OThread::yield();
+		Application::AcquireSolarMutex( nCount );
+	}
 }
 #endif
 
@@ -779,11 +784,17 @@ ULONG SalFrame::GetCurrentModButtons()
 void SalFrame::SetParent( SalFrame* pNewParent )
 {
 	if ( maFrameData.mpParent )
+	{
 		maFrameData.mpParent->maFrameData.maChildren.remove( this );
+		maFrameData.mpParent->maFrameData.mpVCLFrame->removeChild( this );
+	}
 	maFrameData.mpParent = pNewParent;
 	maFrameData.mpVCLFrame->setParent( maFrameData.mpParent );
 	if ( maFrameData.mpParent )
+	{
 		maFrameData.mpParent->maFrameData.maChildren.push_back( this );
+		maFrameData.mpParent->maFrameData.mpVCLFrame->addChild( this );
+	}
 }
 
 // -----------------------------------------------------------------------

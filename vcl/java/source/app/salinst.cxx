@@ -1249,25 +1249,32 @@ void SalInstance::Yield( BOOL bWait )
 	nCount = ReleaseYieldMutex();
 	while ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
 	{
-		if ( nCount )
-		{
-			AcquireYieldMutex( nCount );
-			nCount = 0;
-		}
+		AcquireYieldMutex( nCount );
+		nCount = 0;
 
 		nTimeout = 0;
 
 		USHORT nID = pEvent->getID();
+		bool bMouseEvent= ( nID == SALEVENT_MOUSEBUTTONDOWN || nID == SALEVENT_MOUSEBUTTONDOWN || nID == SALEVENT_MOUSELEAVE || nID == SALEVENT_MOUSEMOVE );
+
+		if ( bMouseEvent )
+		{
+			// Give drag handler threads a chance to run
+			nCount = ReleaseYieldMutex();
+			OThread::yield();
+			AcquireYieldMutex( nCount );
+			nCount = 0;
+		}
+
 		pEvent->dispatch();
 		delete pEvent;
 
 		// Fix for bug 416 and 428 without causing bug 380
-		if ( nID != SALEVENT_MOUSEBUTTONDOWN && nID != SALEVENT_MOUSEBUTTONDOWN && nID != SALEVENT_MOUSELEAVE && nID != SALEVENT_MOUSEMOVE )
+		if ( !bMouseEvent )
 			break;
 	}
 
-	if ( nCount )
-		AcquireYieldMutex( nCount );
+	AcquireYieldMutex( nCount );
 	nRecursionLevel--;
 }
 

@@ -68,6 +68,7 @@
 #include <postmac.h>
 
 using namespace vcl;
+using namespace vos;
 
 // ============================================================================
 
@@ -190,56 +191,14 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_ACTIVATE_APPLICATION:
 		{
-			if ( Application::IsInModalMode() )
-			{
-				// Make sure that the modal dialog frame and its children
-				// are visible
-				Window *pWindow = (Window *)ImplGetSVData()->maWinData.mpLastExecuteDlg;
-				if ( pWindow )
-				{
-					SalFrame *pFocusFrame = pWindow->ImplGetFrame();
-					if ( pFocusFrame )
-					{
-						SalFrame *pParent = pSalData->mpFocusFrame;
-						while ( pParent )
-						{
-							if ( pParent == pFocusFrame )
-								break;
-							pParent = pParent->maFrameData.mpParent;
-						}
-						if ( !pParent )
-						{
-							pParent = pFocusFrame;
-							while ( pParent && pParent->maFrameData.mpParent )
-								pParent = pParent->maFrameData.mpParent;
-							pParent->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
-							pFocusFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
-						}
-					}
-				}
-			}
-			else if ( pSalData->mpPresentationFrame )
-			{
-				// Make sure document window does not float to front
-				SalFrame *pParent = pSalData->mpFocusFrame;
-				while ( pParent )
-				{
-					if ( pParent == pSalData->mpPresentationFrame )
-						break;
-					pParent = pParent->maFrameData.mpParent;
-				}
-				if ( !pParent )
-					pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
-			}
-			else if ( pSalData->mpFocusFrame )
-			{
-				// Make sure that the current document window is showing
-				SalFrame *pParent = pSalData->mpFocusFrame;
-				while ( pParent && pParent->maFrameData.mpParent )
-					pParent = pParent->maFrameData.mpParent;
+			// Make sure that the current document window is showing
+			SalFrame *pParent = pSalData->mpFocusFrame;
+			while ( pParent && pParent->maFrameData.mpParent )
+				pParent = pParent->maFrameData.mpParent;
+			if ( pParent )
 				pParent->ToTop( 0 );
+			if ( pSalData->mpFocusFrame )
 				pSalData->mpFocusFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
-			}
 			// Force all "always on top" windows to the front without focus
 			for ( std::list< SalFrame* >::const_iterator it = pSalData->maAlwaysOnTopFrameList.begin(); it != pSalData->maAlwaysOnTopFrameList.end(); ++it )
 				(*it)->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
@@ -328,11 +287,10 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_GETFOCUS:
 		{
-			if ( pFrame && pSalData->mpFocusFrame != pFrame )
-			{
-				pSalData->mpFocusFrame = pFrame;
-				dispatchEvent( nID, pFrame, NULL );
-			}
+			if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame == pFrame )
+				dispatchEvent( SALEVENT_LOSEFOCUS, pSalData->mpFocusFrame, NULL );
+			pSalData->mpFocusFrame = pFrame;
+			dispatchEvent( nID, pFrame, NULL );
 			// Force all "always on top" windows to the front without focus
 			for ( std::list< SalFrame* >::const_iterator it = pSalData->maAlwaysOnTopFrameList.begin(); it != pSalData->maAlwaysOnTopFrameList.end(); ++it )
 				(*it)->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
@@ -340,11 +298,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_LOSEFOCUS:
 		{
-			if ( pFrame && pSalData->mpFocusFrame == pFrame )
-			{
-				pSalData->mpFocusFrame = NULL;
-				dispatchEvent( nID, pFrame, NULL );
-			}
+			pSalData->mpFocusFrame = NULL;
+			dispatchEvent( nID, pFrame, NULL );
 			// Force all "always on top" windows to the front without focus
 			for ( std::list< SalFrame* >::const_iterator it = pSalData->maAlwaysOnTopFrameList.begin(); it != pSalData->maAlwaysOnTopFrameList.end(); ++it )
 				(*it)->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
@@ -543,6 +498,25 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 		{
 			if ( pFrame == *it )
 			{
+				if ( nID == SALEVENT_GETFOCUS && pSalData->mpPresentationFrame && pFrame != pSalData->mpPresentationFrame )
+				{
+					// Make sure document window does not float to front
+					SalFrame *pParent = pFrame;
+					while ( pParent )
+					{
+						if ( pParent == pSalData->mpPresentationFrame )
+							break;
+						pParent = pParent->maFrameData.mpParent;
+					}
+
+					if ( !pParent )
+					{
+						// Reset the focus and don't dispatch the event
+						pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+						return;
+					}
+				}
+
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
 				break;
 			}
@@ -553,53 +527,6 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 		{
 			if ( pFrame == *it )
 			{
-				if ( nID == SALEVENT_MOUSEBUTTONUP )
-				{
-					// Handle case where focus has changed but Java has not
-					// posted any focus change events
-					if ( Application::IsInModalMode() )
-					{
-						// Make sure that the modal dialog frame and its
-						// children are visible
-						Window *pWindow = (Window *)ImplGetSVData()->maWinData.mpLastExecuteDlg;
-						if ( pWindow )
-						{
-							SalFrame *pFocusFrame = pWindow->ImplGetFrame();
-							if ( pFocusFrame )
-							{
-								SalFrame *pParent = pFrame;
-								while ( pParent )
-								{
-									if ( pParent == pFocusFrame )
-										break;
-									pParent = pParent->maFrameData.mpParent;
-								}
-								if ( !pParent )
-								{
-									pParent = pFocusFrame;
-									while ( pParent && pParent->maFrameData.mpParent )
-										pParent = pParent->maFrameData.mpParent;
-									pParent->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
-									pFocusFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
-								}
-							}
-						}
-					}
-					else if ( pSalData->mpPresentationFrame )
-					{
-						// Make sure document window does not float to front
-						SalFrame *pParent = pFrame;
-						while ( pParent )
-						{
-							if ( pParent == pSalData->mpPresentationFrame )
-								break;
-							pParent = pParent->maFrameData.mpParent;
-						}
-						if ( !pParent )
-							pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
-					}
-				}
-
 				pFrame->Flush();
 				break;
 			}
