@@ -69,6 +69,7 @@ static DragTrackingHandlerUPP pDropTrackingHandlerUPP = NULL;
 static DragReceiveHandlerUPP pDragReceiveHandlerUPP = NULL;
 static EventQueueRef aTrackingEventQueue = NULL;
 static EventRef aLastMouseDraggedEvent = NULL;
+static bool bNoDropCursor = false;
 
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData );
 
@@ -136,8 +137,18 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 	Rect aRect;
 	if ( pData && GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
 	{
-		if ( nMessage == kDragTrackingLeaveHandler && !bNoRejectCursor )
-			SetThemeCursor( kThemeNotAllowedCursor );
+		if ( !bNoRejectCursor )
+		{
+			if ( nMessage == kDragTrackingLeaveHandler )
+				SetThemeCursor( kThemeNotAllowedCursor );
+			else
+				SetThemeCursor( kThemeClosedHandCursor );
+		}
+
+		if ( nMessage == kDragTrackingEnterHandler )
+			bNoDropCursor = true;
+		else if ( nMessage == kDragTrackingLeaveHandler )
+			bNoDropCursor = false;
 
 		((JavaDragSource *)pData)->handleDrag( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) );
 	}
@@ -506,6 +517,12 @@ void JavaDragSource::runDragExecute( void *pData )
 
 						aDragMutex.release();
 					}
+#ifdef MACOSX
+					else if ( !bNoDropCursor )
+					{
+						SetThemeCursor( kThemeArrowCursor );
+					}
+#endif	// MACOSX
 
 					aCarbonEventQueueMutex.acquire();
 					aTrackingEventQueue = NULL;
