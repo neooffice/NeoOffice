@@ -141,6 +141,24 @@ public final class VCLFont {
 		if (fonts == null) {
 			// Get all of the fonts and screen out duplicates
 			fontFamilies = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
+
+			// Java sometimes sets Times to Times Roman
+			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+				int timesRomanIndex = -1;
+				for (int i = 0; i < fontFamilies.length; i++) {
+					if (fontFamilies[i].equals("Times")) {
+						timesRomanIndex = -1;
+						break;
+					}
+					else if (fontFamilies[i].equals("Times Roman")) {
+						timesRomanIndex = i;
+					}
+				}
+
+				if (timesRomanIndex > 0)
+					fontFamilies[timesRomanIndex] = "Times";
+			}
+
 			ArrayList array = new ArrayList();
 			for (int i = 0; i < fontFamilies.length; i++) {
 				// Get rid of hidden Mac OS X fonts
