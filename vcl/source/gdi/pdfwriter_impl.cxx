@@ -72,6 +72,9 @@
 
 #if defined USE_JAVA && defined MACOSX
 
+#ifndef _SV_SALATSLAYOUT_HXX
+#include <salatslayout.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
 #include <com/sun/star/vcl/VCLFont.hxx>
 #endif
@@ -2696,7 +2699,8 @@ void PDFWriterImpl::registerGlyphs(
             continue;
 
         com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)pCurrentFont->mpSysData;
-        ATSFontRef aATSFont = FMGetATSFontRefFromFont( (FMFont)pVCLFont->getNativeFont() );
+        ATSUFontID nFontID = (ATSUFontID)( pVCLFont->getNativeFont() );
+        ATSFontRef aATSFont = FMGetATSFontRefFromFont( nFontID );
         CGFontRef aFont = CGFontCreateWithPlatformFont( (void *)&aATSFont );
         if ( !aFont )
             continue;
@@ -2725,10 +2729,7 @@ void PDFWriterImpl::registerGlyphs(
                 {
                     CGContextBeginPage( aContext, NULL );
                     CGContextSetFont( aContext, aFont );
-                    CGContextSetFontSize( aContext, pVCLFont->getSize() );
-                    sal_Bool bAntialias = pVCLFont->isAntialiased();
-                    CGContextSetShouldAntialias( aContext, bAntialias );
-                    CGContextSetShouldSmoothFonts( aContext, bAntialias );
+                    CGContextSetFontSize( aContext, 12 );
                     CGContextShowGlyphs( aContext, aGlyphIDs, nGlyphIDs );
                     CGContextEndPage( aContext );
                     CGContextRelease( aContext );

@@ -217,11 +217,6 @@ public final class VCLFont {
 	private int size = 0;
 
 	/**
-	 * The cached style.
-	 */
-	private int style = 0;
-
-	/**
 	 * The family type.
 	 */
 	private int type = VCLFont.FAMILY_SWISS;
@@ -246,21 +241,27 @@ public final class VCLFont {
 	VCLFont(String n, int s, short o, boolean b, boolean i, boolean a, boolean v) {
 
 		antialiased = a;
-		bold = b;
-		italic = i;
+		// Mac OS X applications and printing can't handle artificial bold and
+		// italics generation very well so we always use the plain version
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+			bold = false;
+			italic = false;
+		}
+		else {
+			bold = b;
+			italic = i;
+		}
 		name = n;
 		orientation = o;
 		size = s;
 		vertical = v;
 
-		// Cache style
-		style = Font.PLAIN;
+		// Cache font and font metrics
+		int style = Font.PLAIN;
 		if (bold)
 			style |= Font.BOLD;
 		if (italic)
 			style |= Font.ITALIC;
-
-		// Cache font and font metrics
 		font = new Font(name, style, size);
 
 		// Exceptions can be thrown if a font is disabled or removed
@@ -312,26 +313,6 @@ public final class VCLFont {
 	 * @return a new <code>VCLFont</code> object
 	 */
 	public VCLFont deriveFont(int s, boolean b, boolean i, short o, boolean a, boolean v) {
-
-		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-			String fontName = name.toLowerCase();
-			int index = 0;
-			if ((index = fontName.lastIndexOf(" bold italic")) != -1 || (index = fontName.lastIndexOf(" bold")) != -1 || (index = fontName.lastIndexOf(" italic")) != -1 || (index = fontName.lastIndexOf(" regular")) != -1)
-				fontName = fontName.substring(0, index);
-			for (int j = 0; j < fontFamilies.length; j++) {
-				String fontFamilyName = fontFamilies[j].toLowerCase();
-				if (!fontFamilyName.startsWith(fontName))
-					continue;
-				if (b && i && fontFamilyName.endsWith(" bold italic"))
-					return new VCLFont(fontFamilies[j], s, o, false, false, a, v);
-				else if (b && !i && fontFamilyName.endsWith(" bold"))
-					return new VCLFont(fontFamilies[j], s, o, false, false, a, v);
-				else if (!b && i && fontFamilyName.endsWith(" italic") && !fontFamilyName.endsWith(" bold italic"))
-					return new VCLFont(fontFamilies[j], s, o, false, false, a, v);
-				else if (!b && !i && fontFamilyName.endsWith(" regular"))
-					return new VCLFont(fontFamilies[j], s, o, false, false, a, v);
-			}
-		}
 
 		return new VCLFont(name, s, o, b, i, a, v);
 
@@ -467,17 +448,6 @@ public final class VCLFont {
 	public int getSize() {
 
 		return size;
-
-	}
-
-	/**
-	 * Determines the style of the <code>Font</code>.
-	 *
-	 * @return the style of the <code>Font</code>
-	 */
-	int getStyle() {
-
-		return style;
 
 	}
 

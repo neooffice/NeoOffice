@@ -112,12 +112,6 @@
 typedef jobject Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type( JNIEnv *, jobject );
 typedef void Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type( JNIEnv *, jobject );
 
-struct SVNativeFontList
-{
-	ATSFontRef				maFont;
-	SVNativeFontList*		mpNext;
-};
-
 class SVMainThread : public ::vos::OThread
 {
 	Application*			mpApp;
@@ -139,7 +133,7 @@ static Mutex aMutex;
 static OModule aJDirectModule;
 static Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type *pCarbonLockGetInstance = NULL;
 static Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *pCarbonLockInit = NULL;
-static SVNativeFontList *pNativeFontList = NULL;
+static ::std::list< ATSFontRef > aNativeFontList;
 
 static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( JNIEnv *pEnv, jobject object );
 
@@ -162,15 +156,15 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef, void* )
 	MutexGuard aGuard( aMutex );
 
 	// Get the array of fonts
-	SVNativeFontList *pNewFontList = NULL;
+	::std::list< ATSFontRef > aNewNativeFontList;
 	BOOL bContinue = TRUE;
 	while ( bContinue )
 	{
 		ATSFontIterator aIterator;
-		ATSFontRef aFont;
 		ATSFontIteratorCreate( kATSFontContextLocal, NULL, NULL, kATSOptionFlagsUnRestrictedScope, &aIterator );
 		for ( ; ; )
 		{
+			ATSFontRef aFont;
 			OSStatus nErr = ATSFontIteratorNext( aIterator, &aFont );
 			if ( nErr == kATSIterationCompleted )
 			{
@@ -179,20 +173,12 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef, void* )
 			}
 			else if ( nErr == kATSIterationScopeModified )
 			{
-				while ( pNewFontList )
-				{
-					SVNativeFontList *pFont = pNewFontList;
-					pNewFontList = pFont->mpNext;
-					delete pFont;
-				}
+				aNewNativeFontList.clear();
 				break;
 			}
 			else
 			{
-				SVNativeFontList *pFont = new SVNativeFontList();
-				pFont->maFont = aFont;
-				pFont->mpNext = pNewFontList;
-				pNewFontList = pFont;
+				aNewNativeFontList.push_back( aFont );
 			}
 		}
 		ATSFontIteratorRelease( &aIterator );
@@ -200,42 +186,19 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef, void* )
 
 	// If any of the Java fonts have been disabled, use the default font
 	BOOL bUseDefaultFont = FALSE;
-	SVNativeFontList *pCurrentFont = pNativeFontList;
-	while ( pCurrentFont )
+	for ( ::std::list< ATSFontRef >::const_iterator it = aNativeFontList.begin(); it != aNativeFontList.end(); ++it )
 	{
-		SVNativeFontList *pNewFont = pNewFontList;
-		BOOL bFound = FALSE;
-		while ( pNewFont )
-		{
-			if ( pCurrentFont->maFont == pNewFont->maFont )
-			{
-				bFound = TRUE;
-				break;
-			}
-			else
-			{
-				pNewFont = pNewFont->mpNext;
-			}
-		}
+		for ( ::std::list< ATSFontRef >::const_iterator nit = aNewNativeFontList.begin(); *nit != *it && nit != aNewNativeFontList.end(); ++nit )
+			;
 
-		if ( !bFound )
+		if ( nit == aNewNativeFontList.end() )
 		{
 			bUseDefaultFont = TRUE;
 			break;
 		}
-
-		pCurrentFont = pCurrentFont->mpNext;
 	}
 
 	com_sun_star_vcl_VCLFont::useDefaultFont = bUseDefaultFont;
-
-	// Release the temporary font list
-	while ( pNewFontList )
-	{
-		SVNativeFontList *pFont = pNewFontList;
-		pNewFontList = pFont->mpNext;
-		delete pFont;
-	}
 }
 #endif	// MACOSX
 
@@ -330,9 +293,7 @@ void ExecuteApplicationMain( Application *pApp )
 		}
 	}
 
-	jint nFonts = 0;
 	ATSFontIterator aIterator;
-	ATSFontRef aFont;
 
 	// Get the array of fonts
 	BOOL bContinue = TRUE;
@@ -343,6 +304,7 @@ void ExecuteApplicationMain( Application *pApp )
 		ATSFontIteratorCreate( kATSFontContextLocal, NULL, NULL, kATSOptionFlagsUnRestrictedScope, &aIterator );
 		for ( ; ; )
 		{
+			ATSFontRef aFont;
 			OSStatus nErr = ATSFontIteratorNext( aIterator, &aFont );
 			if ( nErr == kATSIterationCompleted )
 			{
@@ -353,22 +315,12 @@ void ExecuteApplicationMain( Application *pApp )
 			}
 			else if ( nErr == kATSIterationScopeModified )
 			{
-				nFonts = 0;
-				while ( pNativeFontList )
-				{
-					SVNativeFontList *pFont = pNativeFontList;
-					pNativeFontList = pFont->mpNext;
-					delete pFont;
-				}
+				aNativeFontList.clear();
 				break;
 			}
 			else
 			{
-				SVNativeFontList *pFont = new SVNativeFontList();
-				pFont->maFont = aFont;
-				pFont->mpNext = pNativeFontList;
-				pNativeFontList = pFont;
-				nFonts++;
+				aNativeFontList.push_back( aFont );
 			}
 		}
 		ATSFontIteratorRelease( &aIterator );
@@ -486,19 +438,19 @@ void ExecuteApplicationMain( Application *pApp )
 					OSL_ENSURE( fIDNumFonts, "Unknown field id!" );
 					if ( fIDFonts && fIDNumFonts )
 					{
-						// Create the font array and add the fonts in reverse
-						// order since we originally stored them that way
-						jintArray pFonts = t.pEnv->NewIntArray( nFonts );
-						jsize i = nFonts;
-						jboolean bCopy( sal_False );
-						jint *pData = t.pEnv->GetIntArrayElements( pFonts, &bCopy );
 						ClearableMutexGuard aGuard( aMutex );
 
-						SVNativeFontList *pFont = pNativeFontList;
-						while ( pFont )
+						// Create the font array and add the fonts in reverse
+						// order since we originally stored them that way
+						jsize nFonts  = aNativeFontList.size();
+						jintArray pFonts = t.pEnv->NewIntArray( nFonts );
+						jboolean bCopy( sal_False );
+						jint *pData = t.pEnv->GetIntArrayElements( pFonts, &bCopy );
+						jsize i = 0;
+						for ( ::std::list< ATSFontRef >::const_iterator it = aNativeFontList.begin(); it != aNativeFontList.end(); ++it )
 						{
-							pData[--i] = (jint)CGFontCreateWithPlatformFont( (void *)&pFont->maFont );
-							pFont = pFont->mpNext;
+							ATSFontRef aFontRef = *it;
+							pData[i++] = (jint)CGFontCreateWithPlatformFont( (void *)&aFontRef );
 						}
 						t.pEnv->ReleaseIntArrayElements( pFonts, pData, 0 );
 

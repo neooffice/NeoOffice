@@ -51,6 +51,12 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
 
+#ifdef MACOSX
+#include <premac.h>
+#include <Carbon/Carbon.h>
+#include <postmac.h>
+#endif	// MACOSX
+
 using namespace rtl;
 using namespace vcl;
 
@@ -68,7 +74,56 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	if ( maGraphicsData.mpVCLFont )
 		delete maGraphicsData.mpVCLFont;
 
-	maGraphicsData.mpVCLFont = ((com_sun_star_vcl_VCLFont *)pFont->mpFontData->mpSysData)->deriveFont( pFont->mnHeight, pFont->meWeight <= WEIGHT_MEDIUM ? FALSE : TRUE, pFont->meItalic == ITALIC_NONE ? FALSE : TRUE, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical );
+	com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)pFont->mpFontData->mpSysData;
+	OUString aName = pFont->maName;
+	sal_Bool bBold = ( pFont->meWeight > WEIGHT_MEDIUM );
+	sal_Bool bItalic = ( pFont->meItalic != ITALIC_NONE );
+
+#ifdef MACOSX
+	if ( bBold || bItalic || pFont->maName != pFont->maFoundName )
+	{
+		FMFont nFontID = (FMFont)((com_sun_star_vcl_VCLFont *)pFont->mpFontData->mpSysData)->getNativeFont( bBold, bItalic );
+		ATSFontRef aFont = FMGetATSFontRefFromFont( nFontID );
+		CFStringRef aFontNameRef;
+		if ( aFont && ATSFontGetName( aFont, kATSOptionFlagsDefault, &aFontNameRef ) == noErr )
+		{
+			sal_Int32 nBufSize = CFStringGetLength( aFontNameRef );
+			sal_Unicode aBuf[ nBufSize + 1 ];
+			CFRange aRange;
+
+			aRange.location = 0;
+			aRange.length = nBufSize;
+			CFStringGetCharacters( aFontNameRef, aRange, aBuf );
+			aBuf[ nBufSize ] = 0;
+			aName = OUString( aBuf );
+
+			CFRelease( aFontNameRef );
+		}
+	}
+#endif	// MACOSX
+
+	if ( XubString( aName ) != pFont->maName )
+	{
+		SalData *pSalData = GetSalData();
+
+		if ( !pSalData->mpFontList )
+			pSalData->mpFontList = com_sun_star_vcl_VCLFont::getAllFonts();
+
+		com_sun_star_vcl_VCLFontList *pFontList = GetSalData()->mpFontList;
+
+		// Iterate through fonts and find a font a matching font
+		for ( jsize i = 0; i < pFontList->mnCount; i++ )
+		{
+			if ( aName == pFontList->mpFonts[ i ]->getName() )
+			{
+				pVCLFont = pFontList->mpFonts[ i ];
+				break;
+			}
+		}
+	}
+
+	pFont->maFoundName = aName;
+	maGraphicsData.mpVCLFont = pVCLFont->deriveFont( pFont->mnHeight, bBold, bItalic, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical );
 
 	if ( maGraphicsData.mpPrinter )
 		return SAL_SETFONT_USEDRAWTEXTARRAY;

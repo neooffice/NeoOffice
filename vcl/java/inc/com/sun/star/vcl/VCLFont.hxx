@@ -70,6 +70,7 @@ public:
 	long				getLeading();
 	::rtl::OUString		getName();
 	void*				getNativeFont();
+	void*				getNativeFont( sal_Bool _par1, sal_Bool _par2 );
 	short				getOrientation();
 	java_lang_Object*	getPeer();
 	long				getSize();

@@ -49,19 +49,12 @@
 
 class SalGraphics;
 
-namespace vcl
-{
-	class PDFWriterImpl;
-}
-
 // ----------------
 // - SalATSLayout -
 // ----------------
 
 class SalATSLayout : public GenericSalLayout
 {
-    friend class		::vcl::PDFWriterImpl;
-
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
 	bool				mbUseScreenMetrics;
 	ATSUStyle			maFontStyle;

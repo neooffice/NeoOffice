@@ -84,18 +84,12 @@ SalATSLayout::SalATSLayout( com_sun_star_vcl_VCLFont *pVCLFont, bool bUseScreenM
 	// Create font style
 	if ( ATSUCreateStyle( &maFontStyle ) == noErr )
 	{
-		ATSUAttributeTag nTags[5];
-		ByteCount nBytes[5];
-		ATSUAttributeValuePtr nVals[5];
+		ATSUAttributeTag nTags[3];
+		ByteCount nBytes[3];
+		ATSUAttributeValuePtr nVals[3];
 
 		// Set font
 		ATSUFontID nFontID = (ATSUFontID)mpVCLFont->getNativeFont();
-		if ( !nFontID )
-		{
-			// Fall back to Geneva as a last resort
-			if ( ATSUFindFontFromName( "Geneva", 6, kFontFullName, kFontNoPlatformCode, kFontNoScriptCode, kFontNoLanguageCode, &nFontID ) != noErr )
-				nFontID = kATSUInvalidFontID;
-		}
 		nTags[0] = kATSUFontTag;
 		nBytes[0] = sizeof( ATSUFontID );
 		nVals[0] = &nFontID;
@@ -115,18 +109,6 @@ SalATSLayout::SalATSLayout( com_sun_star_vcl_VCLFont *pVCLFont, bool bUseScreenM
 		nTags[2] = kATSUStyleRenderingOptionsTag;
 		nBytes[2] = sizeof( ATSStyleRenderingOptions );
 		nVals[2] = &nOptions;
-
-		// Set bold
-		MacOSBoolean bBold = mpVCLFont->isBold();
-		nTags[3] = kATSUQDBoldfaceTag;
-		nBytes[3] = sizeof( MacOSBoolean );
-		nVals[3] = &bBold;
-
-		// Set italic
-		MacOSBoolean bItalic = mpVCLFont->isItalic();
-		nTags[4] = kATSUQDItalicTag;
-		nBytes[4] = sizeof( MacOSBoolean );
-		nVals[4] = &bItalic;
 
 		if ( ATSUSetAttributes( maFontStyle, 3, nTags, nBytes, nVals ) != noErr )
 		{

@@ -2839,6 +2839,25 @@ void OutputDevice::ImplInitFont()
         {
             // Select Font
             mpFontEntry->mnSetFontFlags = mpGraphics->SetFont( &(mpFontEntry->maFontSelData), 0 );
+
+#if defined USE_JAVA && defined MACOSX
+            // We may have switched fonts so that update font data
+            XubString& rFoundName = mpFontEntry->maFontSelData.maFoundName;
+            if ( rFoundName != mpFontEntry->maFontSelData.mpFontData->maName )
+            {
+                for ( ImplDevFontListData* pEntry = mpFontList->First(); pEntry; pEntry = mpFontList->Next() )
+                {
+                    for( ImplFontData* pFontData = pEntry->mpFirst; pFontData; pFontData = pFontData->mpNext )
+                    {
+                        if ( rFoundName == pFontData->maName )
+                        {
+                            mpFontEntry->maFontSelData.mpFontData = pFontData;
+                            break;
+                        }
+                    }
+                }
+            }
+#endif	// USE_JAVA && MACOSX
         }
         mbInitFont = FALSE;
     }
@@ -5827,6 +5846,25 @@ SalLayout* OutputDevice::ImplLayout( const String& rOrigStr,
             }
 
             pFallbackFont->mnSetFontFlags = mpGraphics->SetFont( &aFontSelData, nLevel );
+
+#if defined USE_JAVA && defined MACOSX
+            // We may have switched fonts so that update font data
+            XubString& rFoundName = mpFontEntry->maFontSelData.maFoundName;
+            if ( rFoundName != mpFontEntry->maFontSelData.mpFontData->maName )
+            {
+                for ( ImplDevFontListData* pEntry = mpFontList->First(); pEntry; pEntry = mpFontList->Next() )
+                {
+                    for( ImplFontData* pFontData = pEntry->mpFirst; pFontData; pFontData = pFontData->mpNext )
+                    {
+                        if ( rFoundName == pFontData->maName )
+                        {
+                            mpFontEntry->maFontSelData.mpFontData = pFontData;
+                            break;
+                        }
+                    }
+                }
+            }
+#endif	// USE_JAVA && MACOSX
 
             // create and add fallback layout to multilayout
             aLayoutArgs.ResetPos();

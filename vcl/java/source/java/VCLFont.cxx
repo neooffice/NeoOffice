@@ -41,13 +41,101 @@
 
 #ifdef MACOSX
 
+#include <map>
+
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 
+static std::map< ::rtl::OUString, sal_uInt32 > aNativeFontMap;
+
 #endif	// MACOSX
 
+using namespace rtl;
 using namespace vcl;
+
+// ============================================================================
+
+#ifdef MACOSX
+static sal_uInt32 GetMacFontFace( com_sun_star_vcl_VCLFont *pVCLFont )
+{
+	sal_uInt32 out = 0;
+
+	OUString aFontName( pVCLFont->getName() );
+	std::map< OUString, sal_uInt32 >::iterator it = aNativeFontMap.find( aFontName );
+	if ( it != aNativeFontMap.end() )
+		out = it->second;
+
+	if ( !out )
+	{
+		VCLThreadAttach t;
+		if ( t.pEnv )
+		{
+			java_lang_Object *peer = pVCLFont->getPeer();
+			if ( peer )
+			{
+				jobject tempObj = peer->getJavaObject();
+				if ( tempObj )
+				{
+					// Test the JVM version and if it is below 1.4, use
+					// Font Manager APIs
+					if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+					{
+						jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/graphics/VFontPeer" );
+						if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
+						{
+							static jfieldID fIDMacFont = NULL;
+							if ( !fIDMacFont )
+							{
+								char *cSignature = "S";
+								fIDMacFont = t.pEnv->GetFieldID( tempClass, "fMacFont", cSignature );
+							}
+							OSL_ENSURE( fIDMacFont, "Unknown field id!" );
+							if ( fIDMacFont )
+							{
+								FMFontFamily nFamily = (FMFontFamily)t.pEnv->GetShortField( tempObj, fIDMacFont );
+								FMFontFamilyInstanceIterator aIterator;
+								if ( FMCreateFontFamilyInstanceIterator( nFamily, &aIterator ) == noErr )
+								{
+									FMFont nFont;
+									FMFontStyle nStyle;
+									FMFontSize nSize;
+									while ( FMGetNextFontFamilyInstance( &aIterator, &nFont, &nStyle, &nSize ) == noErr )
+									{
+										ATSFontRef aFont = FMGetATSFontRefFromFont( nFont );
+										CFStringRef aFontNameRef;
+										if ( aFont && ATSFontGetName( aFont, kATSOptionFlagsDefault, &aFontNameRef ) == noErr )
+										{
+											sal_Int32 nBufSize = CFStringGetLength( aFontNameRef );
+											sal_Unicode aBuf[ nBufSize + 1 ];
+											CFRange aRange;
+
+											aRange.location = 0;
+											aRange.length = nBufSize;
+											CFStringGetCharacters( aFontNameRef, aRange, aBuf );
+											aBuf[ nBufSize ] = 0;
+											CFRelease( aFontNameRef );
+
+											sal_uInt32 nFontFace = ( nFamily << 16 ) | nStyle;
+											OUString aName( aBuf );
+											aNativeFontMap[ aName ] = nFontFace;
+											if ( aFontName == aName )
+												out = nFontFace;
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+				delete peer;
+			}
+		}
+	}
+
+	return out;
+}
+#endif	// MACOSX
 
 // ============================================================================
 
@@ -331,10 +419,10 @@ long com_sun_star_vcl_VCLFont::getLeading()
 
 // ----------------------------------------------------------------------------
 
-::rtl::OUString com_sun_star_vcl_VCLFont::getName()
+OUString com_sun_star_vcl_VCLFont::getName()
 {
 	static jmethodID mID = NULL;
-	::rtl::OUString out;
+	OUString out;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
@@ -360,54 +448,74 @@ long com_sun_star_vcl_VCLFont::getLeading()
 void *com_sun_star_vcl_VCLFont::getNativeFont()
 {
 	void *out = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		java_lang_Object *peer = getPeer();
-		if ( peer )
-		{
-			jobject tempObj = peer->getJavaObject();
-			if ( tempObj )
-			{
-#ifdef MACOSX
-				// Test the JVM version and if it is below 1.4, use Carbon APIs
-				if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
-				{
-					jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/graphics/VFontPeer" );
-					if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
-					{
-						static jfieldID fIDMacFont = NULL;
-						static jfieldID fIDMacFace = NULL;
-						if ( !fIDMacFont )
-						{
-							char *cSignature = "S";
-							fIDMacFont = t.pEnv->GetFieldID( tempClass, "fMacFont", cSignature );
-						}
-						OSL_ENSURE( fIDMacFont, "Unknown field id!" );
-						if ( !fIDMacFace )
-						{
-							char *cSignature = "S";
-							fIDMacFace = t.pEnv->GetFieldID( tempClass, "fMacFace", cSignature );
-						}
-						OSL_ENSURE( fIDMacFace, "Unknown field id!" );
-						if ( fIDMacFont && fIDMacFace )
-						{
-							jshort macFont = 0;
-							jshort macFace = 0;
-							macFont = t.pEnv->GetShortField( tempObj, fIDMacFont );
-							macFace = t.pEnv->GetShortField( tempObj, fIDMacFace );
 
-							FMFont aFont;
-							if ( FMGetFontFromFontFamilyInstance( macFont, macFace, &aFont, NULL ) == noErr)
-								out = (void *)aFont;
-						}
-					}
-				}
-#endif	// MACOSX
-			}
-			delete peer;
-		}
+#ifdef MACOSX
+	sal_uInt32 nFontFace;
+	if ( com_sun_star_vcl_VCLFont::useDefaultFont )
+	{
+		com_sun_star_vcl_VCLFont *pDefaultFont = getDefaultFont();
+		nFontFace = GetMacFontFace( pDefaultFont );
+		delete pDefaultFont;
 	}
+	else
+	{
+		nFontFace = GetMacFontFace( this );
+	}
+
+	if ( nFontFace )
+	{
+        FMFontFamily nFont = (FMFontFamily)( nFontFace >> 16 );
+        FMFontStyle nStyle = (FMFontStyle)( nFontFace & 0x00ff );
+		FMFont aFont;
+		if ( FMGetFontFromFontFamilyInstance( nFont, nStyle, &aFont, NULL ) == noErr )
+			out = (void *)FMGetATSFontRefFromFont( aFont );
+	}
+#endif	// MACOSX
+
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+void *com_sun_star_vcl_VCLFont::getNativeFont( sal_Bool _par0, sal_Bool _par1 )
+{
+	void *out = NULL;
+
+#ifdef MACOSX
+	sal_uInt32 nFontFace;
+	if ( com_sun_star_vcl_VCLFont::useDefaultFont )
+	{
+		com_sun_star_vcl_VCLFont *pDefaultFont = getDefaultFont();
+		nFontFace = GetMacFontFace( pDefaultFont );
+		delete pDefaultFont;
+	}
+	else
+	{
+		nFontFace = GetMacFontFace( this );
+	}
+
+	if ( nFontFace )
+	{
+        FMFontFamily nFont = (FMFontFamily)( nFontFace >> 16 );
+        FMFontStyle nStyle = (FMFontStyle)( nFontFace & 0x00ff );
+		if ( !_par0 && !_par1 )
+		{
+			nStyle &= ~( bold | italic );
+		}
+		else
+		{
+			if ( _par0 )
+				nStyle |= bold;
+			if ( _par1 )
+				nStyle |= italic;
+		}
+
+		FMFont aFont;
+		if ( FMGetFontFromFontFamilyInstance( nFont, nStyle, &aFont, NULL ) == noErr )
+			out = (void *)FMGetATSFontRefFromFont( aFont );
+	}
+#endif	// MACOSX
+
 	return out;
 }
 
