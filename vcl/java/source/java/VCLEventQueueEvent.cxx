@@ -275,6 +275,9 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pKeyModEvent->mnTime = getWhen();
 				pKeyModEvent->mnCode = getModifiers();
 			}
+			// Make a pass through the native menus before dispatching
+			if ( pFrame && pKeyModEvent->mnCode )
+				UpdateMenusForFrame( pFrame, NULL );
 			dispatchEvent( nID, pFrame, pKeyModEvent );
 			delete pKeyModEvent;
 			return;
