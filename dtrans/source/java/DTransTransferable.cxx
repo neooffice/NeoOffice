@@ -101,8 +101,6 @@ static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 )
 };
 
-static ScrapPromiseKeeperUPP pScrapPromiseKeeperUPP = NULL;
-
 #endif	// MACOSX
 
 using namespace com::sun::star::datatransfer;
@@ -488,11 +486,27 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 
 // ----------------------------------------------------------------------------
 
+com_sun_star_dtrans_DTransTransferable::com_sun_star_dtrans_DTransTransferable( void *myNativeTransferable ) : java_lang_Object( NULL ), mpNativeTransferable( myNativeTransferable )
+{
+#ifdef MACOSX
+	mpScrapPromiseKeeperUPP = (void *)NewScrapPromiseKeeperUPP( (ScrapPromiseKeeperProcPtr)ImplScrapPromiseKeeperCallback );
+#endif	// MACOSX
+}
+
 com_sun_star_dtrans_DTransTransferable::~com_sun_star_dtrans_DTransTransferable()
 {
 	MutexGuard aGuard( aMutex );
 
 	aTransferableList.remove( this );
+
+#ifdef MACOSX
+	// Clear the native clipboard if this object has ownership
+	if ( hasOwnership() )
+		ClearCurrentScrap();
+
+	if ( mpScrapPromiseKeeperUPP )
+		DisposeScrapPromiseKeeperUPP( (ScrapPromiseKeeperUPP)mpScrapPromiseKeeperUPP );
+#endif	// MACOSX
 }
 
 // ----------------------------------------------------------------------------
@@ -663,15 +677,8 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< X
 
 			aTransferableList.push_back( this );
 
-			// Test the JVM version and if it is below 1.4, render immediately
-			// since some data flavors require Java to render which, if done
-			// in the callback, will cause the application to crash when the
-			// next AEEvent is dispatched so we can't risk using delayed
-			// rendering
 			BOOL bRenderImmediately = FALSE;
-			if ( !pScrapPromiseKeeperUPP )
-				pScrapPromiseKeeperUPP = NewScrapPromiseKeeperUPP( (ScrapPromiseKeeperProcPtr)ImplScrapPromiseKeeperCallback );
-			if ( !pScrapPromiseKeeperUPP || SetScrapPromiseKeeper( (ScrapRef)mpNativeTransferable, pScrapPromiseKeeperUPP, (const void *)this ) != noErr )
+			if ( !mpScrapPromiseKeeperUPP || SetScrapPromiseKeeper( (ScrapRef)mpNativeTransferable, (ScrapPromiseKeeperUPP)mpScrapPromiseKeeperUPP, (const void *)this ) != noErr )
 				bRenderImmediately = TRUE;
 
 			for ( i = 0; i < nLen; i++ )
