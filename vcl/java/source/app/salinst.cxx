@@ -678,9 +678,12 @@ void SalInstance::Yield( BOOL bWait )
 			}
 			else
 			{
-				// Flush all of the window buffers to the native windows
+				// Flush all of the window buffers to the native windows and synchronize native menus
 				for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+                                {
 					(*it)->Flush();
+                                        UpdateMenusForFrame( (*it), NULL );
+                                }
 			}
 		}
 	}
