@@ -33,7 +33,7 @@
  *  MA  02111-1307  USA
  *  
  *  =================================================
- *  Modified June 2003 by Patrick Luby. SISSL Removed. NeoOffice is
+ *  Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
  *  distributed under GPL only under modification term 3 of the LGPL.
  *
  *  Contributor(s): _______________________________________
@@ -419,7 +419,7 @@ short PrinterSetupDialog::Execute()
 #else	// USE_JAVA
 	// Dialog starten
 	short nRet = ModalDialog::Execute();
-#endif	// USE_JAVA
+#endif  // USE_JAVA
 
 	// Wenn Dialog mit OK beendet wurde, dann die Daten updaten
 	if ( nRet == TRUE )
