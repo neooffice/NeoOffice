@@ -210,7 +210,7 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 
 					// Replace line feeds with carriage returns
 					sal_Unicode *pArray = (sal_Unicode *)aString.getStr();
-					sal_Int32 nLen = aString.getLength();
+					sal_Int32 nLen = aString.getLength() * sizeof( sal_Unicode );
 					sal_Int32 j = 0;
 					for ( j = 0; j < nLen; j++ )
 					{
@@ -230,9 +230,9 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 					else
 					{
 						if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
-							nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, aString.getLength(), (const void *)aString.getStr() );
+							nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nLen, (const void *)aString.getStr() );
 						else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
-							nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aString.getStr(), aString.getLength(), 0 );
+							nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aString.getStr(), nLen, 0 );
 					}
 				}
 				else if ( aValue.getValueType().equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
@@ -442,7 +442,7 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 					}
 					else
 					{
-						nLen = aData.getLength() / 2; 
+						nLen = aData.getLength() / 2;
 						if ( ( (sal_Unicode *)aData.getArray() )[ nLen - 1 ] == 0 )
 							nLen--;
 						aString = OUString( (sal_Unicode *)aData.getArray(), nLen );
