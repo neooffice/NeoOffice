@@ -53,7 +53,7 @@ if [ -d "$scriptdir" -a -f "$scriptdir/installutils" ] ; then
 		while read i ; do
 			check_installation "$i" && exit 0
 		done << !
-`find "$volume/Applications" -type d -name "*.app" -prune`
+`find -L "$volume/Applications" -type d -name "*.app" -prune`
 !
 
 	fi
