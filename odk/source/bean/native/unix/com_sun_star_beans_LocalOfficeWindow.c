@@ -80,11 +80,7 @@
 JNIEXPORT jint JNICALL Java_com_sun_star_beans_LocalOfficeWindow_getNativeWindowSystemType
   (JNIEnv * env, jobject obj_this)
 {
-#ifdef USE_JAVA
-    return (SYSTEM_JAVA);
-#else	// USE_JAVA
     return (SYSTEM_XWINDOW);
-#endif	// USE_JAVA
 }
 
 
@@ -98,18 +94,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_star_beans_LocalOfficeWindow_getNativeWindo
   (JNIEnv * env, jobject obj_this)
 {
 #ifdef USE_JAVA
-	jlong out = 0;
-
-	static jmethodID mID = NULL;
-	if ( !mID )
-	{
-		char *cSignature = "()Ljava/awt/Container;";
-		mID = (*env)->GetMethodID( env, (*env)->GetObjectClass( env, obj_this ), "getParent", cSignature );
-	}
-	if ( mID )
-		out = (jlong)((*env)->CallObjectMethod( env, obj_this, mID ));
-
-	return out;
+	return (jlong)obj_this;
 #else	// USE_JAVA
 	jboolean result;
 	jint lock;
