@@ -65,8 +65,7 @@ JAVAFILES = \
 	VCLPageFormat.java \
 	VCLPlatform.java \
 	VCLPrintJob.java \
-	VCLScreen.java \
-	VCLTextLayout.java
+	VCLScreen.java
 
 .ENDIF		# "$(GUIBASE)"!="java"
 

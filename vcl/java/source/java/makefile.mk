@@ -70,7 +70,6 @@ SLOFILES = \
 	$(SLO)/VCLPageFormat.obj \
 	$(SLO)/VCLPrintJob.obj \
 	$(SLO)/VCLScreen.obj \
-	$(SLO)/VCLTextLayout.obj \
 	$(SLO)/tools.obj
 
 .ENDIF
