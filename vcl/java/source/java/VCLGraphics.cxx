@@ -770,7 +770,7 @@ void com_sun_star_vcl_VCLGraphics::resetGraphics()
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::setAntialias( sal_Bool _par0 )
+void com_sun_star_vcl_VCLGraphics::setLineAntialiasing( sal_Bool _par0 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -779,7 +779,7 @@ void com_sun_star_vcl_VCLGraphics::setAntialias( sal_Bool _par0 )
 		if ( !mID )
 		{
 			char *cSignature = "(Z)V";
-			mID = t.pEnv->GetMethodID( getMyClass(), "setAntialias", cSignature );
+			mID = t.pEnv->GetMethodID( getMyClass(), "setLineAntialiasing", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )

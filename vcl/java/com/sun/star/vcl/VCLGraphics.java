@@ -1420,11 +1420,11 @@ public final class VCLGraphics {
 	}
 
 	/**
-	 * Set the antialiasing drawing attributes.
+	 * Set the line drawing antialiasing attributes.
 	 *
-	 * @param b the antialiasing flag
+	 * @param b the line drawing antialiasing flag
 	 */
-	public void setAntialias(boolean b) {
+	public void setLineAntialiasing(boolean b) {
 
 		RenderingHints hints = graphics.getRenderingHints();
 		if (b)

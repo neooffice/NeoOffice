@@ -63,7 +63,7 @@ void SalGraphics::SetTextColor( SalColor nSalColor )
 
 // -----------------------------------------------------------------------
 
-USHORT SalGraphics::SetFont( ImplFontSelectData* pFont )
+USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 {
 	if ( maGraphicsData.mpVCLFont )
 		delete maGraphicsData.mpVCLFont;
@@ -78,6 +78,7 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont )
 
 // -----------------------------------------------------------------------
 
+/*
 long SalGraphics::GetCharWidth( sal_Unicode nChar1, sal_Unicode nChar2, long* pWidthAry )
 {
 	if ( maGraphicsData.mpVCLFont )
@@ -87,6 +88,7 @@ long SalGraphics::GetCharWidth( sal_Unicode nChar1, sal_Unicode nChar2, long* pW
 
 	return 1;
 }
+*/
 
 // -----------------------------------------------------------------------
 
@@ -208,15 +210,18 @@ void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 
 // -----------------------------------------------------------------------
 
+/*
 void SalGraphics::DrawText( long nX, long nY,
                             const xub_Unicode* pStr, xub_StrLen nLen )
 {
 	if ( maGraphicsData.mpVCLFont )
 		maGraphicsData.mpVCLGraphics->drawText( nX, nY, pStr, nLen, maGraphicsData.mpVCLFont, maGraphicsData.mnTextColor );
 }
+*/
 
 // -----------------------------------------------------------------------
 
+/*
 void SalGraphics::DrawTextArray( long nX, long nY,
                                  const xub_Unicode* pStr, xub_StrLen nLen,
                                  const long* pDXAry )
@@ -224,28 +229,112 @@ void SalGraphics::DrawTextArray( long nX, long nY,
 	if ( maGraphicsData.mpVCLFont )
 		maGraphicsData.mpVCLGraphics->drawTextArray( nX, nY, pStr, nLen, maGraphicsData.mpVCLFont, maGraphicsData.mnTextColor, pDXAry );
 }
+*/
 
 // -----------------------------------------------------------------------
 
-BOOL SalGraphics::GetGlyphBoundRect( xub_Unicode cChar, long* pX, long* pY,
-                                     long* pWidth, long* pHeight )
+BOOL SalGraphics::GetGlyphBoundRect( long nIndex, Rectangle& rRect,
+                                     const OutputDevice *pOutDev )
 {
 #ifdef DEBUG
 	fprintf( stderr, "SalGraphics::GetGlyphBoundRect not implemented\n" );
+#endif
+	rRect = Rectangle();
+	return FALSE;
+}
+
+// -----------------------------------------------------------------------
+
+BOOL SalGraphics::GetGlyphOutline( long nIndex, PolyPolygon& rPolyPoly,
+                                   const OutputDevice *pOutDev )
+{
+#ifdef DEBUG
+	fprintf( stderr, "SalGraphics::GetGlyphOutline not implemented\n" );
+#endif
+	rPolyPoly.Clear();
+	return FALSE;
+}
+
+// -----------------------------------------------------------------------
+
+SalLayout* SalGraphics::GetTextLayout( ImplLayoutArgs& rArgs,
+                                       int nFallbackLevel )
+{
+#ifdef DEBUG
+	fprintf( stderr, "SalGraphics::GetTextLayout not implemented\n" );
+#endif
+	return NULL;
+}
+
+// -----------------------------------------------------------------------
+
+void SalGraphics::GetDevFontSubstList( OutputDevice* pOutDev )
+{
+}
+
+// -----------------------------------------------------------------------
+
+ImplFontData* SalGraphics::AddTempDevFont( const String& rFontFileURL,
+                                           const String& rFontName )
+{
+#ifdef DEBUG
+	fprintf( stderr, "SalGraphics::AddTempDevFont not implemented\n" );
+#endif
+	return NULL;
+}
+
+// -----------------------------------------------------------------------
+
+void SalGraphics::RemovingFont( ImplFontData* )
+{
+#ifdef DEBUG
+	fprintf( stderr, "SalGraphics::RemovingFont not implemented\n" );
+#endif
+}
+
+// -----------------------------------------------------------------------
+
+BOOL SalGraphics::CreateFontSubset( const rtl::OUString& rToFile,
+                                    ImplFontData* pFont, long* pGlyphIDs,
+                                    sal_uInt8* pEncoding, sal_Int32* pWidths,
+                                    int nGlyphs, FontSubsetInfo& rInfo )
+{
+#ifdef DEBUG
+	fprintf( stderr, "SalGraphics::CreateFontSubset not implemented\n" );
 #endif
 	return FALSE;
 }
 
 // -----------------------------------------------------------------------
 
-ULONG SalGraphics::GetGlyphOutline( xub_Unicode cChar, USHORT** ppPolySizes,
-                                    SalPoint** ppPoints, BYTE** ppFlags )
+const void* SalGraphics::GetEmbedFontData( ImplFontData* pFont,
+                                           const sal_Unicode* pUnicodes,
+                                           sal_Int32* pWidths,
+                                           FontSubsetInfo& rInfo,
+                                           long* pDataLen )
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalGraphics::GetGlyphOutline not implemented\n" );
+	fprintf( stderr, "SalGraphics::GetEmbedFontData not implemented\n" );
 #endif
-	*ppPolySizes = NULL;
-	*ppPoints = NULL;
-	*ppFlags = NULL;
-	return 0;
+	return NULL;
+}
+
+// -----------------------------------------------------------------------
+
+void SalGraphics::FreeEmbedFontData( const void* pData, long nLen )
+{
+	if ( pData )
+		free( (void*)pData );
+}
+
+// -----------------------------------------------------------------------
+
+const std::map< sal_Unicode, sal_Int32 >* SalGraphics::GetFontEncodingVector(
+                ImplFontData* pFont,
+                const std::map< sal_Unicode, rtl::OString >** pNonEncoded )
+{
+#ifdef DEBUG
+	fprintf( stderr, "SalGraphics::GetFontEncodingVector not implemented\n" );
+#endif
+	return NULL;
 }

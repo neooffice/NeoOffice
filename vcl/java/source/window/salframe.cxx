@@ -44,6 +44,9 @@
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
+#ifndef _SV_SALSYS_HXX
+#include <salsys.hxx>
+#endif
 #ifndef _SV_SETTINGS_HXX
 #include <settings.hxx>
 #endif
@@ -85,6 +88,27 @@ long ImplSalCallbackDummy( void*, SalFrame*, USHORT, const void* )
 }
 
 // -----------------------------------------------------------------------
+
+bool GetSalSystemDisplayInfo( System::DisplayInfo& rInfo )
+{
+#ifdef DEBUG
+	fprintf( stderr, "GetSalSystemDisplayInfo not implemented\n" );
+#endif
+	return false;
+}
+
+// -----------------------------------------------------------------------
+
+int ImplShowNativeMessageBox( const String& rTitle, const String& rMessage,
+                              int nButtonCombination, int nDefaultButton)
+{
+#ifdef DEBUG
+	fprintf( stderr, "ImplShowNativeMessageBox not implemented\n" );
+#endif
+	return 0;
+}
+
+// =======================================================================
 
 SalFrame::SalFrame()
 {
@@ -595,6 +619,55 @@ void SalFrame::SetCallback( void* pInst, SALFRAMEPROC pProc )
 		maFrameData.mpProc = pProc;
 	else
 		maFrameData.mpProc = ImplSalCallbackDummy;
+}
+
+// -----------------------------------------------------------------------
+
+SalFrame* SalFrame::GetParent() const
+{
+#ifdef DEBUG
+	fprintf( stderr, "SalFrame::GetParent not implemented\n" );
+#endif
+	return NULL;
+}
+
+// -----------------------------------------------------------------------
+
+LanguageType SalFrame::GetInputLanguage()
+{
+#ifdef DEBUG
+	fprintf( stderr, "SalFrame::GetInputLanguage not implemented\n" );
+#endif
+	return 0;
+}
+
+// -----------------------------------------------------------------------
+
+ULONG SalFrame::GetCurrentModButtons()
+{
+#ifdef DEBUG
+	fprintf( stderr, "SalFrame::GetCurrentModButtons not implemented\n" );
+#endif
+	return 0;
+}
+
+// -----------------------------------------------------------------------
+
+void SalFrame::SetParent( SalFrame* pNewParent )
+{
+#ifdef DEBUG
+	fprintf( stderr, "SalFrame::SetParent not implemented\n" );
+#endif
+}
+
+// -----------------------------------------------------------------------
+
+bool SalFrame::SetPluginParent( SystemParentData* pNewParent )
+{
+#ifdef DEBUG
+	fprintf( stderr, "SalFrame::SetPluginParentnot implemented\n" );
+#endif
+	return false;
 }
 
 // =======================================================================

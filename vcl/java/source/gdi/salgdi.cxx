@@ -38,6 +38,9 @@
 #ifndef _SV_SALGDI_HXX
 #include <salgdi.hxx>
 #endif
+#ifndef _SV_SALFRAME_HXX
+#include <salframe.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
@@ -118,7 +121,8 @@ void SalGraphics::BeginSetClipRegion( ULONG nRectCount )
 
 // -----------------------------------------------------------------------
 
-BOOL SalGraphics::UnionClipRegion( long nX, long nY, long nWidth, long nHeight )
+BOOL SalGraphics::UnionClipRegion( long nX, long nY, long nWidth, long nHeight,
+                                   const OutputDevice *pOutDev )
 {
 	maGraphicsData.mpVCLGraphics->unionClipRegion( nX, nY, nWidth, nHeight );
 	return TRUE;
@@ -188,7 +192,7 @@ void SalGraphics::SetROPFillColor( SalROPColor nROPColor )
 
 // -----------------------------------------------------------------------
 
-void SalGraphics::DrawPixel( long nX, long nY )
+void SalGraphics::DrawPixel( long nX, long nY, const OutputDevice *pOutDev )
 {
 	if ( maGraphicsData.mnLineColor != 0xffffffff )
 		maGraphicsData.mpVCLGraphics->setPixel( nX, nY, maGraphicsData.mnLineColor );
@@ -196,14 +200,16 @@ void SalGraphics::DrawPixel( long nX, long nY )
 
 // -----------------------------------------------------------------------
 
-void SalGraphics::DrawPixel( long nX, long nY, SalColor nSalColor )
+void SalGraphics::DrawPixel( long nX, long nY, SalColor nSalColor,
+                             const OutputDevice *pOutDev )
 {
 	maGraphicsData.mpVCLGraphics->setPixel( nX, nY, nSalColor );
 }
 
 // -----------------------------------------------------------------------
 
-void SalGraphics::DrawLine( long nX1, long nY1, long nX2, long nY2 )
+void SalGraphics::DrawLine( long nX1, long nY1, long nX2, long nY2,
+                             const OutputDevice *pOutDev )
 {
 	if ( maGraphicsData.mnLineColor != 0xffffffff )
 		maGraphicsData.mpVCLGraphics->drawLine( nX1, nY1, nX2, nY2, maGraphicsData.mnLineColor );
@@ -211,7 +217,8 @@ void SalGraphics::DrawLine( long nX1, long nY1, long nX2, long nY2 )
 
 // -----------------------------------------------------------------------
 
-void SalGraphics::DrawRect( long nX, long nY, long nWidth, long nHeight )
+void SalGraphics::DrawRect( long nX, long nY, long nWidth, long nHeight,
+                            const OutputDevice *pOutDev )
 {
 	if ( maGraphicsData.mnFillColor != 0xffffffff )
 		maGraphicsData.mpVCLGraphics->drawRect( nX, nY, nWidth, nHeight, maGraphicsData.mnFillColor, TRUE );
@@ -221,7 +228,8 @@ void SalGraphics::DrawRect( long nX, long nY, long nWidth, long nHeight )
 
 // -----------------------------------------------------------------------
 
-void SalGraphics::DrawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
+void SalGraphics::DrawPolyLine( ULONG nPoints, const SalPoint* pPtAry,
+                                const OutputDevice *pOutDev )
 {
 	long pXPoints[ nPoints ];
 	long pYPoints[ nPoints ];
@@ -238,7 +246,8 @@ void SalGraphics::DrawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
 
 // -----------------------------------------------------------------------
 
-void SalGraphics::DrawPolygon( ULONG nPoints, const SalPoint* pPtAry )
+void SalGraphics::DrawPolygon( ULONG nPoints, const SalPoint* pPtAry,
+                               const OutputDevice *pOutDev )
 {
 	long pXPoints[ nPoints ];
 	long pYPoints[ nPoints ];
@@ -258,7 +267,8 @@ void SalGraphics::DrawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 // -----------------------------------------------------------------------
 
 void SalGraphics::DrawPolyPolygon( ULONG nPoly, const ULONG* pPoints,
-								   PCONSTSALPOINT* pPtAry )
+								   PCONSTSALPOINT* pPtAry,
+                                   const OutputDevice *pOutDev )
 {
 	long *pXPtsAry[ nPoly ];
 	long *pYPtsAry[ nPoly ];
@@ -290,10 +300,50 @@ void SalGraphics::DrawPolyPolygon( ULONG nPoly, const ULONG* pPoints,
 	}
 }
 
+// -----------------------------------------------------------------------
+
+sal_Bool SalGraphics::DrawPolyLineBezier( ULONG nPoints,
+                                          const SalPoint* pPtAry,
+                                          const BYTE* pFlgAry,
+                                          const OutputDevice* )
+{
+#ifdef DEBUG
+	fprintf( stderr, "SalGraphics::DrawPolyLineBezier not implemented\n" );
+#endif
+	return sal_False;
+}
 
 // -----------------------------------------------------------------------
 
-BOOL SalGraphics::DrawEPS( long nX, long nY, long nWidth, long nHeight, void* pPtr, ULONG nSize )
+sal_Bool SalGraphics::DrawPolygonBezier( ULONG nPoints,
+                                         const SalPoint* pPtAry,
+                                         const BYTE* pFlgAry,
+                                         const OutputDevice* )
+{
+#ifdef DEBUG
+	fprintf( stderr, "SalGraphics::DrawPolygonBezier not implemented\n" );
+#endif
+	return sal_False;
+}
+
+// -----------------------------------------------------------------------
+
+sal_Bool SalGraphics::DrawPolyPolygonBezier( ULONG nPoly, const ULONG* nPoints,
+                                         const SalPoint* const* pPtAry,
+                                         const BYTE* const* pFlgAry,
+                                         const OutputDevice* )
+{
+#ifdef DEBUG
+	fprintf( stderr, "SalGraphics::DrawPolyPolygonBezier not implemented\n" );
+#endif
+	return sal_False;
+}
+
+// -----------------------------------------------------------------------
+
+BOOL SalGraphics::DrawEPS( long nX, long nY, long nWidth, long nHeight,
+                           void* pPtr, ULONG nSize,
+                           const OutputDevice *pOutDev )
 {
 	if ( !maGraphicsData.mpPrinter )
 		return FALSE;
@@ -319,9 +369,19 @@ BOOL SalGraphics::DrawEPS( long nX, long nY, long nWidth, long nHeight, void* pP
 
 // -----------------------------------------------------------------------
 
-void SalGraphics::SetAntialias( BOOL bAntialias )
+long SalGraphics::GetGraphicsWidth()
 {
-	maGraphicsData.mpVCLGraphics->setAntialias( bAntialias );
+	if ( maGraphicsData.mpFrame )
+		return maGraphicsData.mpFrame->maGeometry.nWidth;
+	else
+		return 0;
+}
+
+// -----------------------------------------------------------------------
+
+void SalGraphics::SetLineAntialiasing( BOOL bAntialias )
+{
+	maGraphicsData.mpVCLGraphics->setLineAntialiasing( bAntialias );
 }
 
 // =======================================================================

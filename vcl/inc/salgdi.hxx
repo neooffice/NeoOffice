@@ -259,7 +259,7 @@ public:
 
     virtual BOOL                    DrawEPS( long nX, long nY, long nWidth, long nHeight, void* pPtr, ULONG nSize, const OutputDevice *pOutDev );
 #ifdef USE_JAVA
-	virtual void					SetAntialias( BOOL bAntialias );
+	virtual void					SetLineAntialiasing( BOOL bAntialias );
 #endif
 };
 
@@ -327,9 +327,6 @@ public:
 	void					Invert( long nX, long nY, long nWidth, long nHeight, SalInvert nFlags, const OutputDevice *pOutDev );
 	void					Invert( ULONG nPoints, const SalPoint* pPtAry, SalInvert nFlags, const OutputDevice *pOutDev );
 	BOOL					DrawEPS( long nX, long nY, long nWidth, long nHeight, void* pPtr, ULONG nSize, const OutputDevice *pOutDev );
-#ifdef USE_JAVA
-	void					SetAntialias( BOOL bAntialias );
-#endif
 };
 
 #endif // _SV_SALGDI_HXX

@@ -86,7 +86,7 @@ public:
 	void				invert( ULONG _par0, const long *_par1, const long *_par2, SalInvert _par3 );
 	void				resetClipRegion();
 	void				resetGraphics();
-	void				setAntialias( sal_Bool _par0 );
+	void				setLineAntialiasing( sal_Bool _par0 );
 	void				setPixel( long _par0, long _par1, SalColor _par2 );
 	void				setXORMode( sal_Bool _par0 );
 	void				unionClipRegion( long _par0, long _par1, long _par2, long _par3 );

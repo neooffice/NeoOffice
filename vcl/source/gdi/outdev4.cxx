@@ -391,7 +391,7 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 	aPoly.Rotate( aCenter, nAngle );
 
 #ifdef USE_JAVA
-	mpGraphics->SetAntialias( FALSE );
+	mpGraphics->SetLineAntialiasing( FALSE );
 #endif
 
 	// Schleife, um rotierten Verlauf zu fuellen
@@ -476,7 +476,7 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 	}
 
 #ifdef USE_JAVA
-	mpGraphics->SetAntialias( TRUE );
+	mpGraphics->SetLineAntialiasing( TRUE );
 #endif
 }
 
@@ -645,7 +645,7 @@ void OutputDevice::ImplDrawComplexGradient( const Rectangle& rRect,
 #endif
 
 #ifdef USE_JAVA
-	mpGraphics->SetAntialias( FALSE );
+	mpGraphics->SetLineAntialiasing( FALSE );
 #endif
 
 	// Schleife, um nacheinander die Polygone/PolyPolygone auszugeben
@@ -749,7 +749,7 @@ void OutputDevice::ImplDrawComplexGradient( const Rectangle& rRect,
 	}
 
 #ifdef USE_JAVA
-	mpGraphics->SetAntialias( TRUE );
+	mpGraphics->SetLineAntialiasing( TRUE );
 #endif
 }
 
