@@ -598,7 +598,7 @@ XubString SalInstance::GetDefaultPrinter()
 SalPrinter* SalInstance::CreatePrinter( SalInfoPrinter* pInfoPrinter )
 {
 	SalPrinter *pPrinter = new SalPrinter();
-	pPrinter->maPrinterData.mpPrinter = pInfoPrinter;
+	pPrinter->SetInfoPrinter( pInfoPrinter );
 	return pPrinter;
 }
 

@@ -142,19 +142,30 @@ public: 					// public for Sal Implementation
 #endif
 
 public:
+#ifdef USE_JAVA
+	BOOL					StartJob( const XubString* pFileName,
+									  const XubString& rJobName,
+									  const XubString& rAppName,
+									  ULONG nCopies, BOOL bCollate,
+									  ImplJobSetup* pSetupData,
+									  BOOL bShowDialog );
+#else	// USE_JAVA
 	BOOL					StartJob( const XubString* pFileName,
 									  const XubString& rJobName,
 									  const XubString& rAppName,
 									  ULONG nCopies, BOOL bCollate,
 									  ImplJobSetup* pSetupData );
+#endif	// USE_JAVA
 	BOOL					EndJob();
 	BOOL					AbortJob();
 	SalGraphics*			StartPage( ImplJobSetup* pSetupData, BOOL bNewJobData );
 	BOOL					EndPage();
 	ULONG					GetErrorCode();
 #ifdef USE_JAVA
+	XubString				GetPageRange();
+	void					SetInfoPrinter( SalInfoPrinter *pInfoPrinter );
 	void					SetResolution( long nDPIX, long nDPIY );
-#endif
+#endif	// USE_JAVA
 };
 
 #endif // _SV_SALPRN_HXX

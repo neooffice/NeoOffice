@@ -317,20 +317,14 @@ public final class VCLPrintJob implements Printable, Runnable {
 			}
 
 			// Get the current page's graphics context
-			int page = currentPage++;
-			// Mac OS X creates two graphics for each page so we need to
-			// process each page twice
-			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
-				page /= 2;
-			if (page != graphicsInfo.pageIndex || printThread == null || !printThread.isAlive()) {
-				// Return a dummy graphics if this page is not in the selected
-				// page range
+			currentPage++;
+			if (printThread == null || !printThread.isAlive())
 				currentGraphics = null;
-			}
-			else {
+			else
 				currentGraphics = new VCLGraphics(graphicsInfo.graphics, pageFormat);
-			}
-			// On Mac OS X, skip the first graphics for each page
+
+			// Mac OS X creates two graphics for each page so we need to
+			// ignore the first and only print to the second
 			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && currentPage % 2 != 0)
 				return null;
 		}

@@ -486,6 +486,10 @@ void Printer::ImplInitData()
 	mpQMtf				= NULL;
 	mbIsQueuePrinter	= FALSE;
     mpPrinterOptions    = new PrinterOptions;
+#ifdef USE_JAVA
+	mbDummy3			= FALSE;
+	mpDummy3			= NULL;
+#endif	// USE_JAVA
 
 	// Printer in die Liste eintragen
 	ImplSVData* pSVData = ImplGetSVData();
@@ -1594,7 +1598,26 @@ BOOL Printer::StartJob( const XubString& rJobName )
 	if ( !mnPageQueueSize )
 	{
 		ImplSVData* pSVData = ImplGetSVData();
+#ifdef USE_JAVA
+		if ( !mbDummy3 )
+		{
+			mpDummy3 = pSVData->mpDefInst->CreatePrinter( mpInfoPrinter );
+		}
+		else if ( mbDummy3 && !mpDummy3 )
+		{
+			mnError = ImplSalPrinterErrorCodeToVCL( mpPrinter->GetErrorCode() );
+			if ( !mnError )
+				mnError = PRINTER_GENERALERROR;
+			return FALSE;
+		}
+		else
+		{
+			((SalPrinter *)mpDummy3)->SetInfoPrinter( mpInfoPrinter );
+		}
+		mpPrinter = (SalPrinter *)mpDummy3;
+#else	// USE_JAVA
 		mpPrinter = pSVData->mpDefInst->CreatePrinter( mpInfoPrinter );
+#endif	// USE_JAVA
 
 		if ( !mpPrinter )
 			return FALSE;
@@ -1605,9 +1628,16 @@ BOOL Printer::StartJob( const XubString& rJobName )
 		else
 			pPrintFile = NULL;
 
+#ifdef USE_JAVA
+		if ( !mpPrinter->StartJob( pPrintFile, rJobName, Application::GetDisplayName(),
+								   nCopies, bCollateCopy,
+								   maJobSetup.ImplGetConstData(),
+								   !mbDummy3 ) && !mbDummy3 )
+#else	// USE_JAVA
 		if ( !mpPrinter->StartJob( pPrintFile, rJobName, Application::GetDisplayName(),
 								   nCopies, bCollateCopy,
 								   maJobSetup.ImplGetConstData() ) )
+#endif	// USE_JAVA
 		{
 			mnError = ImplSalPrinterErrorCodeToVCL( mpPrinter->GetErrorCode() );
 			if ( !mnError )
@@ -1615,10 +1645,19 @@ BOOL Printer::StartJob( const XubString& rJobName )
 			ImplSVData* pSVData = ImplGetSVData();
 			pSVData->mpDefInst->DestroyPrinter( mpPrinter );
 			mpPrinter = NULL;
+#ifdef USE_JAVA
+			mpDummy3 = NULL;
+#endif	// USE_JAVA
 			return FALSE;
 		}
 
 #ifdef USE_JAVA
+		if ( !mbDummy3 )
+		{
+			mbDummy3 = TRUE;
+			return TRUE;
+		}
+
 		// The resolution of the printer may have changed
 		ImplUpdatePageData();
 		ImplUpdateFontList();
@@ -1637,8 +1676,18 @@ BOOL Printer::StartJob( const XubString& rJobName )
 		mpQPrinter = new ImplQPrinter( this );
 		mpQPrinter->SetUserCopy( bUserCopy );
         mpQPrinter->SetPrinterOptions( *mpPrinterOptions );
+#ifdef USE_JAVA
+		mpQPrinter->mbDummy3 = mbDummy3;
+		mpQPrinter->mpDummy3 = mpDummy3;
+		if ( mpQPrinter->StartJob( rJobName ) && mbDummy3 )
+#else	// USE_JAVA
 		if ( mpQPrinter->StartJob( rJobName ) )
+#endif	// USE_JAVA
 		{
+#ifdef USE_JAVA
+			mbDummy3 = FALSE;
+			mpDummy3 = NULL;
+#endif	// USE_JAVA
 			mbNewJobSetup	= FALSE;
 			maJobName		= rJobName;
 			mnCurPage		= 1;
@@ -1649,10 +1698,26 @@ BOOL Printer::StartJob( const XubString& rJobName )
 		}
 		else
 		{
+#ifdef USE_JAVA
+			mbDummy3 = mpQPrinter->mbDummy3;
+			mpDummy3 = mpQPrinter->mpDummy3;
+#endif	// USE_JAVA
 			mnError = mpQPrinter->GetErrorCode();
 			mpQPrinter->Destroy();
 			mpQPrinter = NULL;
+#ifdef USE_JAVA
+			if ( mpDummy3 )
+			{
+				// Get and store the page range
+				SetJobValue( XubString::CreateFromAscii( "PAGERANGE" ), ((SalPrinter *)mpDummy3)->GetPageRange() );
+				return TRUE;
+			}
+			else {
+				return FALSE;
+			}
+#else	// USE_JAVA
 			return FALSE;
+#endif	// USE_JAVA
 		}
 	}
 #else
@@ -1671,8 +1736,19 @@ BOOL Printer::StartJob( const XubString& rJobName )
 
 BOOL Printer::EndJob()
 {
+#ifdef USE_JAVA
+	if ( !IsJobActive() )
+	{
+		mbDummy3 = FALSE;
+		if ( mpDummy3 )
+			ImplGetSVData()->mpDefInst->DestroyPrinter( (SalPrinter *)mpDummy3 );
+		mbDummy3 = NULL;
+		return FALSE;
+	}
+#else	// USE_JAVA
 	if ( !IsJobActive() )
 		return FALSE;
+#endif	// USE_JAVA
 
 	DBG_ASSERT( !mbInPrintPage, "Printer::EndJob() - StartPage() without EndPage() called" );
 

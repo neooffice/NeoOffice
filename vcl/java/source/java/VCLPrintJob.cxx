@@ -47,6 +47,9 @@
 #ifndef _SV_JAVA_LANG_CLASS_HXX
 #include <java/lang/Class.hxx>
 #endif
+#ifndef _STRING_HXX
+#include <tools/string.hxx>
+#endif
 
 using namespace rtl;
 using namespace vcl;
@@ -174,15 +177,10 @@ void *com_sun_star_vcl_VCLPrintJob::getNativePrintJob()
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
-		if ( !mID )
+		java_lang_Object *printerJob = getPrinterJob();
+		if ( printerJob )
 		{
-			char *cSignature = "()Ljava/awt/print/PrinterJob;";
-			mID = t.pEnv->GetMethodID( getMyClass(), "getPrinterJob", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
+			jobject tempObj = printerJob->getJavaObject();
 			if ( tempObj )
 			{
 #ifdef MACOSX
@@ -216,6 +214,86 @@ void *com_sun_star_vcl_VCLPrintJob::getNativePrintJob()
 				}
 #endif	// MACOSX
 			}
+		}
+		delete printerJob;
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+XubString com_sun_star_vcl_VCLPrintJob::getPageRange()
+{
+	static jmethodID mID = NULL;
+	XubString out;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		java_lang_Object *printerJob = getPrinterJob();
+		if ( printerJob )
+		{
+			jobject tempObj = printerJob->getJavaObject();
+			if ( tempObj )
+			{
+#ifdef MACOSX
+				jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/printing/MacPrinterJob" );
+				if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
+				{
+					jint firstPage = 0;
+					jint lastPage = 0;
+					static jfieldID fIDFirstPage = NULL;
+					static jfieldID fIDLastPage = NULL;
+					if ( !fIDFirstPage )
+					{
+						char *cSignature = "I";
+						fIDFirstPage = t.pEnv->GetFieldID( tempClass, "mFirstPage", cSignature );
+					}
+					OSL_ENSURE( fIDFirstPage, "Unknown field id!" );
+					if ( fIDFirstPage )
+						firstPage = t.pEnv->GetIntField( tempObj, fIDFirstPage ) + 1;
+					if ( !fIDLastPage )
+					{
+						char *cSignature = "I";
+						fIDLastPage = t.pEnv->GetFieldID( tempClass, "mLastPage", cSignature );
+					}
+					OSL_ENSURE( fIDLastPage, "Unknown field id!" );
+					if ( fIDLastPage )
+						lastPage = t.pEnv->GetIntField( tempObj, fIDLastPage ) + 1;
+					if ( firstPage > 0 && lastPage > 0 && firstPage <= lastPage && lastPage < 0x7fffffff )
+					{
+						out = XubString::CreateFromInt32( firstPage );
+						out += '-';
+						out += XubString::CreateFromInt32( lastPage );
+					}
+				}
+#endif	// MACOSX
+			}
+		}
+		delete printerJob;
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+java_lang_Object *com_sun_star_vcl_VCLPrintJob::getPrinterJob()
+{
+	static jmethodID mID = NULL;
+	java_lang_Object *out = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Ljava/awt/print/PrinterJob;";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getPrinterJob", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
+			if ( tempObj )
+				out = new java_lang_Object( tempObj );
 		}
 	}
 	return out;

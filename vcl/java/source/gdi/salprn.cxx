@@ -230,14 +230,17 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 						   const XubString& rJobName,
 						   const XubString&,
 						   ULONG nCopies, BOOL bCollate,
-						   ImplJobSetup* pSetupData )
+						   ImplJobSetup* pSetupData,
+						   BOOL bShowDialog )
 {
 	// Set but don't update values
 	maPrinterData.mpPrinter->SetPrinterData( pSetupData );
 
-	maPrinterData.mbStarted = maPrinterData.mpVCLPrintJob->startJob( maPrinterData.mpPrinter->maPrinterData.mpVCLPageFormat );
-
-	if ( maPrinterData.mbStarted )
+	if ( bShowDialog )
+	{
+		maPrinterData.mbStarted = maPrinterData.mpVCLPrintJob->startJob( maPrinterData.mpPrinter->maPrinterData.mpVCLPageFormat );
+	}
+	else if ( maPrinterData.mbStarted )
 	{
 #ifdef MACOSX
 		// Test the JVM version and if it is below 1.4, use Carbon printing APIs
@@ -357,6 +360,20 @@ ULONG SalPrinter::GetErrorCode()
 		return SAL_PRINTER_ERROR_ABORT;
 	else
 		return 0;
+}
+
+// -----------------------------------------------------------------------
+
+XubString SalPrinter::GetPageRange()
+{
+	return maPrinterData.mpVCLPrintJob->getPageRange();
+}
+
+// -----------------------------------------------------------------------
+
+void SalPrinter::SetInfoPrinter( SalInfoPrinter *pInfoPrinter )
+{
+	maPrinterData.mpPrinter = pInfoPrinter;
 }
 
 // -----------------------------------------------------------------------

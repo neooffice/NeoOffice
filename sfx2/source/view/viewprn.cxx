@@ -463,8 +463,13 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 		// need a dialog?
 		if ( ( !rReq.GetArgs() || !rReq.GetArgs()->Count() ) && !bSilent && !rReq.IsAPI() )
 		{
+#ifdef USE_JAVA
+			// Don't make a copy as we need to run StartJob() multiple times
+			SfxPrinter* pDlgPrinter = pPrinter;
+#else	// USE_JAVA
 			// Printer-Dialog braucht tempor"aren Printer
 			SfxPrinter* pDlgPrinter = pPrinter->Clone();
+#endif	// USE_JAVA
 
 			// Print bwz. Print-Options Dialog ausf"urhren
 			nDialogRet = 0;
@@ -513,8 +518,10 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 
 			if ( nDialogRet == RET_OK )
 			{
+#ifndef USE_JAVA
 				// "Anderungen feststellen und Drucker setzen
 				pPrinter = SetPrinter_Impl( pDlgPrinter );
+#endif	// !USE_JAVA
 
 				if ( SID_PRINTDOC == nId )
 				{
@@ -529,9 +536,11 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 					pPrinter->SetCopyCount(nCopies);
 				}
 			}
+#ifndef USE_JAVA
 			else
 				// Abbruch => Einstellungen werden nicht ben"otigt
 				DELETEX(pDlgPrinter);
+#endif	// !USE_JAVA
 
 			// Printer-Setup-Dialog abr"aumen
 			DELETEX(pOptBtn);
@@ -634,6 +643,15 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 
         if ( SID_PRINTDOCDIRECT == nId )
         {
+#ifdef USE_JAVA
+			// Redirect slot to make sure that the print dialog is shown
+			BOOL bPrintOptions = pImp->bHasPrintOptions;
+			pImp->bHasPrintOptions = FALSE;
+			rReq.SetSlot(SID_PRINTDOC);
+			ExecPrint_Impl( rReq );
+			pImp->bHasPrintOptions = bPrintOptions;
+			return;
+#else	// USE_JAVA
             //redirect slot to call the print dialog if the document's printer
             //is available but not system default
             if( pPrinter->IsOriginal() &&
@@ -643,6 +661,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 				ExecPrint_Impl( rReq );
 				return;
             }
+#endif	// USE_JAVA
         }
 
 		if( bCollate )
@@ -677,8 +696,15 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 
         if ( bDontModifyDoc && bOldFlag != pObjSh->IsEnableSetModified() )
             pObjSh->EnableSetModified( bOldFlag );
-
+#ifdef USE_JAVA
+		ErrCode nError;
+		if ( pPrintDlg->IsRangeChecked( PRINTDIALOG_RANGE ) )
+        	nError = DoPrint( pPrinter, pPrintDlg, bSilent );
+		else
+        	nError = DoPrint( pPrinter, NULL, FALSE );
+#else	// USE_JAVA
         ErrCode nError = DoPrint( pPrinter, pPrintDlg, bSilent );
+#endif	// USE_JAVA
 		if ( nError == PRINTER_OK )
 		{
             bOldFlag = pObjSh->IsEnableSetModified();

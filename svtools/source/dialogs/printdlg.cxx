@@ -577,7 +577,23 @@ short PrintDialog::Execute()
 	ImplModifyControlHdl( NULL );
 
 #ifdef USE_JAVA
-	short nRet = ClickOptionsHdl();
+	short nRet = mpPrinter->StartJob( String() );
+	if ( nRet )
+		nRet = ClickOptionsHdl();
+	if ( nRet )
+	{
+		// Get and store the page range
+		XubString aRange( mpPrinter->GetJobValue( XubString::CreateFromAscii( "PAGERANGE" ) ) );
+		if ( aRange.Len() > 0 )
+		{
+			maRbtPages.Check( TRUE );
+			maEdtPages.SetText( aRange );
+		}
+	}
+	else
+	{
+		mpPrinter->EndJob();
+	}
 #else	// USE_JAVA
 	// Dialog starten
 	short nRet = ModalDialog::Execute();
