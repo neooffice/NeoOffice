@@ -297,17 +297,16 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			delete pPosSize;
 			if ( pFrame )
 			{
-				// Invoke a paint event if the size has changed
-				if ( pFrame->maGeometry.nWidth != aOldSize.Width() || pFrame->maGeometry.nHeight != aOldSize.Height() )
-				{
-					SalPaintEvent *pPaintEvent = new SalPaintEvent();
-					pPaintEvent->mnBoundX = 0;
-					pPaintEvent->mnBoundY = 0;
-					pPaintEvent->mnBoundWidth = pFrame->maGeometry.nWidth;
-					pPaintEvent->mnBoundHeight = pFrame->maGeometry.nHeight;
-					com_sun_star_vcl_VCLEvent aVCLPaintEvent( SALEVENT_PAINT, pFrame, (void *)pPaintEvent );
-					GetSalData()->mpEventQueue->postCachedEvent( &aVCLPaintEvent );
-				}
+				// Invoke a paint event. Note that we repaint even if the size
+				// is the same as it may be due to the window being reset to
+				// the minimum client size.
+				SalPaintEvent *pPaintEvent = new SalPaintEvent();
+				pPaintEvent->mnBoundX = 0;
+				pPaintEvent->mnBoundY = 0;
+				pPaintEvent->mnBoundWidth = pFrame->maGeometry.nWidth;
+				pPaintEvent->mnBoundHeight = pFrame->maGeometry.nHeight;
+				com_sun_star_vcl_VCLEvent aVCLPaintEvent( SALEVENT_PAINT, pFrame, (void *)pPaintEvent );
+				GetSalData()->mpEventQueue->postCachedEvent( &aVCLPaintEvent );
 			}
 			return;
 		}

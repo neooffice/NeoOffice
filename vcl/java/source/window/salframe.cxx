@@ -232,8 +232,7 @@ void SalFrame::Enable( BOOL bEnable )
 
 void SalFrame::SetMinClientSize( long nWidth, long nHeight )
 {
-	nWidth = 1;
-	nHeight = 1;
+	maFrameData.mpVCLFrame->setMinClientSize( nWidth, nHeight );
 }
 
 // -----------------------------------------------------------------------
