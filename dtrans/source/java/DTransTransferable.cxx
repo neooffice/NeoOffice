@@ -86,7 +86,7 @@ static OUString aSupportedMimeTypes[] = {
 	OUString::createFromAscii( "text/richtext" ),
 	OUString::createFromAscii( "text/plain;charset=utf-16" ),
 	OUString::createFromAscii( "text/plain;charset=utf-16" ),
-	OUString::createFromAscii( "application/x-openoffice;windows_formatname=\"Bitmap\"" )
+	OUString::createFromAscii( "image/bmp" )
 };
 
 // List of supported data types in priority order
