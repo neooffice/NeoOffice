@@ -117,20 +117,12 @@ static void JNICALL Java_com_apple_mrj_macos_generated_MacWindowFunctions_ShowWi
 static void DisposeNativeWindowTimerCallback( EventLoopTimerRef aTimer, void *pData )
 {
 	WindowRef aWindow = (WindowRef)pData;
-
-	ItemCount nCount = GetWindowRetainCount( aWindow );
-	if ( nCount )
+	if ( aWindow )
 	{
 		// Fix bug 261 by explicitly flushing the window's buffer before
 		// destroying it
-		if ( aWindow )
-			QDFlushPortBuffer( GetWindowPort( aWindow ), NULL );
-
-		while ( nCount )
-		{
-			nCount--;
-			ReleaseWindow( aWindow );
-		}
+		QDFlushPortBuffer( GetWindowPort( aWindow ), NULL );
+		ReleaseWindow( aWindow );
 	}
 }
 #endif	// MACOSX
