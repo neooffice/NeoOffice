@@ -311,10 +311,8 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv 
 #ifdef MACOSX
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData )
 {
-	UInt32 nClass = GetEventClass( aEvent );
-
 	// Let the VCL event handlers handle menu shortcuts
-	if ( nClass == kEventClassMenu )
+	if ( GetEventClass( aEvent ) == kEventClassMenu )
 	{
 		if ( GetEventKind( aEvent ) == kEventMenuBeginTracking )
 		{
@@ -323,28 +321,31 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 			if ( GetEventParameter( aEvent, kEventParamCurrentMenuTrackingMode, typeMenuTrackingMode, NULL, sizeof( MenuTrackingMode ), NULL, &nMode ) != noErr || nMode == kMenuTrackingModeKeyboard )
 				return userCanceledErr;
 
-			// Post a yield event and wait the VCL event queue to block
-			SalData *pSalData = GetSalData();
-			pSalData->maNativeEventStartCondition.reset();
-			com_sun_star_vcl_VCLEvent aYieldEvent( SALEVENT_YIELDEVENTQUEUE, NULL, NULL );
-			pSalData->mpEventQueue->postCachedEvent( &aYieldEvent );
+			if ( ImplGetSVData()->maAppData.mbInAppExecute )
+			{
+				// Post a yield event and wait the VCL event queue to block
+				SalData *pSalData = GetSalData();
+				pSalData->maNativeEventStartCondition.reset();
+				com_sun_star_vcl_VCLEvent aYieldEvent( SALEVENT_YIELDEVENTQUEUE, NULL, NULL );
+				pSalData->mpEventQueue->postCachedEvent( &aYieldEvent );
 
-			// Unlock the Carbon lock
-			VCLThreadAttach t;
-			if ( t.pEnv )
-				Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
+				// Unlock the Carbon lock
+				VCLThreadAttach t;
+				if ( t.pEnv )
+					Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
 
-			pSalData->maNativeEventStartCondition.wait();
+				pSalData->maNativeEventStartCondition.wait();
 
-			// Execute menu updates while the VCL event queue is blocked
-			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-				UpdateMenusForFrame( *it, NULL );
+				// Execute menu updates while the VCL event queue is blocked
+				for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+					UpdateMenusForFrame( *it, NULL );
 
-			// Relock the Carbon lock
-			if ( t.pEnv )
-				Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
+				// Relock the Carbon lock
+				if ( t.pEnv )
+					Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
 
-			pSalData->maNativeEventEndCondition.set();
+				pSalData->maNativeEventEndCondition.set();
+			}
 		}
 	}
 
