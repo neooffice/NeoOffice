@@ -64,6 +64,8 @@ protected:
 	virtual void run() { SVMain(); _exit( 0 ); }
 };
 
+static ::vos::OMutex aCarbonLock;
+
 using namespace rtl;
 using namespace vcl;
 using namespace vos;
@@ -71,6 +73,33 @@ using namespace vos;
 #endif
 
 // ============================================================================
+
+#ifdef MACOSX
+static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( JNIEnv *pEnv, jobject object )
+{
+	return ( aCarbonLock.tryToAcquire() ? 0 : 1 );
+}
+#endif
+
+// ----------------------------------------------------------------------------
+
+#ifdef MACOSX
+static void JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_init( JNIEnv *pEnv, jobject object )
+{
+}
+#endif
+
+// ----------------------------------------------------------------------------
+
+#ifdef MACOSX
+static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv *pEnv, jobject object )
+{
+	aCarbonLock.release();
+	return 0;
+}
+#endif
+
+// ----------------------------------------------------------------------------
 
 BEGIN_C
 
@@ -175,6 +204,30 @@ int main( int argc, char *argv[] )
 	}
 	else
 	{
+		// Panther expects applications to run their event loop in main thread
+		// and Java 1.3.1 runs its event loop in a separate thread. So, we need
+		// to disable the lock that Java 1.3.1 uses and simultaneously run an
+		// event loop in this thread.
+		VCLThreadAttach t;
+		if ( t.pEnv )
+		{
+			jclass carbonLockClass = t.pEnv->FindClass( "com/apple/mrj/macos/carbon/CarbonLock" );
+			if ( carbonLockClass )
+			{
+				JNINativeMethod pMethods[3];
+				pMethods[0].name = "acquire0";
+				pMethods[0].signature = "()I";
+				pMethods[0].fnPtr = Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0;
+				pMethods[1].name = "init";
+				pMethods[1].signature = "()V";
+				pMethods[1].fnPtr = Java_com_apple_mrj_macos_carbon_CarbonLock_init;
+				pMethods[2].name = "release0";
+				pMethods[2].signature = "()I";
+				pMethods[2].fnPtr = Java_com_apple_mrj_macos_carbon_CarbonLock_release0;
+				t.pEnv->RegisterNatives( carbonLockClass, pMethods, sizeof( pMethods ) / sizeof( JNINativeMethod* ) );
+			}
+		}
+
 		SVMain();
 	}
 #else	// MACOSX
