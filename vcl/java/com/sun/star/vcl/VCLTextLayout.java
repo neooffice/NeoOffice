@@ -112,6 +112,9 @@ public final class VCLTextLayout {
 	 */
 	public void drawText(int x, int y, int orientation, int color) {
 
+		if (layout == null)
+			layout = measurer.getLayout(0, count);
+
 		graphics.drawTextArray(layout, x, y, orientation, color, font.isAntialiased());
 
 	}
@@ -123,6 +126,19 @@ public final class VCLTextLayout {
 	 */
 	public int[] fillDXArray() {
 
+		// Cache the character advances
+		if (charAdvances == null) {
+			charAdvances = new int[count];
+			int currentAdvance = 0;
+			int previousAdvance = 0;
+			for (int i = 0; i < charAdvances.length; i++) {
+				currentAdvance = (int)measurer.getAdvanceBetween(0, i + 1);
+				charAdvances[i] = currentAdvance - previousAdvance;
+				previousAdvance = currentAdvance;
+			}
+			width = currentAdvance;
+		}
+
 		return charAdvances;
 
 	}
@@ -133,6 +149,18 @@ public final class VCLTextLayout {
 	 * @return an array of the cursor offsets for each character
 	 */
 	public int[] getCaretPositions() {
+
+		// Cache the caret positions
+		if (caretPositions == null) {
+			int[] advances = fillDXArray();
+			caretPositions = new int[count * 2];
+			int currentPosition = 0;
+			for (int i = 0; i < caretPositions.length; i += 2) {
+				caretPositions[i] = currentPosition;
+				currentPosition += advances[i / 2];
+				caretPositions[i + 1] = currentPosition;
+			}
+		}
 
 		return caretPositions;
 
@@ -171,36 +199,16 @@ public final class VCLTextLayout {
 	 */
 	public void layoutText(String s) {
 
-		count = s.length();
+		charAdvances = null;
+		caretPositions = null;
+		layout = null;
+		width = 0;
 
 		// Create the attributed string
+		count = s.length();
 		AttributedString as = new AttributedString(s);
 		as.addAttribute(TextAttribute.FONT, font.getFont());
-
 		measurer = new TextMeasurer(as.getIterator(), graphics.getFontRenderContext());
-		layout = measurer.getLayout(0, count);
-
-		// Cache the character advances
-		charAdvances = new int[count];
-		int currentAdvance = 0;
-		int previousAdvance = 0;
-		for (int i = 0; i < charAdvances.length; i++) {
-			currentAdvance = (int)measurer.getAdvanceBetween(0, i + 1);
-			charAdvances[i] = currentAdvance - previousAdvance;
-			previousAdvance = currentAdvance;
-		}
-
-		// Cache the width
-		width = currentAdvance;
-
-		// Cache the caret positions
-		caretPositions = new int[count * 2];
-		int currentPosition = 0;
-		for (int i = 0; i < caretPositions.length; i += 2) {
-			caretPositions[i] = currentPosition;
-			currentPosition += charAdvances[i / 2];
-			caretPositions[i + 1] = currentPosition;
-		}
 
 	}
 
