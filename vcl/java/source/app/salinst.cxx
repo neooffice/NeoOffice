@@ -306,11 +306,19 @@ void SalInstance::Yield( BOOL bWait )
 	}
 
 	// Dispatch pending AWT events
-	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
+	BOOL bContinue = TRUE;
+	while ( bContinue && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
 	{
 		// Reset timeout
 		nTimeout = 0;
 
+		// If this is a mouse button pressed event, make another pass through
+		// the loop in case the next event is a mouse released event. If the
+		// timer is run between continguous mouse pressed and released events,
+		// the application acts is if two mouse clicks have been made instead
+		// of one.
+		if ( pEvent->getID() != SALEVENT_MOUSEBUTTONDOWN )
+			bContinue = FALSE;
 		pEvent->dispatch();
 		com_sun_star_vcl_VCLGraphics::flushAll();
 		delete pEvent;
