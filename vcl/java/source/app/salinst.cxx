@@ -398,13 +398,13 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				// the root menu.
 				MenuRef rootMenu = AcquireRootMenu(); // increments ref count
 				bool isMenubar = false;
-			
+
 				if ( ( trackingRef == NULL ) || ( trackingRef == rootMenu ) )
 					isMenubar = true;
-			
+
 				if ( rootMenu != NULL )
 					ReleaseMenu( rootMenu );
-			
+
 				if ( isMenubar )
 				{
 					// Ignore key matching context
@@ -618,7 +618,7 @@ void ExecuteApplicationMain( Application *pApp )
 				// keyboard layout switching problem on Panther.
 				ReceiveNextEvent( 0, NULL, 0, false, NULL );
 
-				// We need to be fill in the static sFonts and sNumFonts fields 
+				// We need to be fill in the static sFonts and sNumFonts fields
 				// in the NativeFontWrapper class as the JVM's implementation
 				// will include disabled fonts will can crash the application
 				jclass nativeFontWrapperClass = t.pEnv->FindClass( "sun/awt/font/NativeFontWrapper" );
@@ -672,7 +672,7 @@ void ExecuteApplicationMain( Application *pApp )
 								CFRange aRange;
 
 								aRange.location = 0;
-								aRange.length = nBufSize; 
+								aRange.length = nBufSize;
 								CFStringGetCharacters( aFontNameRef, aRange, aBuf );
 								CFRelease( aFontNameRef );
 
@@ -855,6 +855,8 @@ void SalInstance::Yield( BOOL bWait )
 
 	nRecursionLevel++;
 
+	ULONG nCount = ReleaseYieldMutex();
+
 	// Dispatch pending non-AWT events
 	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( 0, FALSE ) ) != NULL )
 	{
@@ -887,18 +889,10 @@ void SalInstance::Yield( BOOL bWait )
 		}
 		delete pEvent;
 
-		ULONG nCount = ReleaseYieldMutex();
-		if ( bWait )
-			OThread::yield();
 		AcquireYieldMutex( nCount );
 		nRecursionLevel--;
 		return;
 	}
-
-	ULONG nCount = ReleaseYieldMutex();
-	if ( !bWait )
-		OThread::yield();
-	AcquireYieldMutex( nCount );
 
 	// Check timer
 	if ( pSalData->mnTimerInterval )
@@ -970,6 +964,8 @@ void SalInstance::Yield( BOOL bWait )
 		if ( nID == SALEVENT_MOUSEMOVE )
 			break;
 	}
+
+	AcquireYieldMutex( nCount );
 
 	nRecursionLevel--;
 }
