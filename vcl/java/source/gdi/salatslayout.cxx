@@ -290,6 +290,8 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 {
 	OSStatus		theErr;
 
+	SalLayout::AdjustLayout( rArgs );
+
 	Destroy();
 
 	if ( !maFontStyle )
@@ -351,7 +353,15 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		ATSUAttributeValuePtr nVal = &nVertical;
 
 		if ( ATSUSetAttributes( maFontStyle, 1, &nTag, &nBytes, &nVal ) == noErr )
+		{
 			mbVertical = true;
+			for ( i = 0; i < mnLen; i++ )
+			{
+				sal_Unicode nChar = GetVerticalChar( mpStr[ i ] );
+				if ( nChar )
+					mpStr[ i ] = nChar;
+			}
+		}
 	}
 
 	int nPreviousChar = 0;
@@ -366,7 +376,16 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		ByteCount nBytes = sizeof( MacOSBoolean );
 		ATSUAttributeValuePtr nVal = &nDirection;
 
-		ATSUSetLineControls( maLayout, nPreviousChar, mpRunLengths[ i ], &nTag, &nBytes, &nVal );
+		if ( ATSUSetLineControls( maLayout, nPreviousChar, mpRunLengths[ i ], &nTag, &nBytes, &nVal ) )
+		{
+			int nEndingChar = nPreviousChar + mpRunLengths[ i ];
+			for ( int j = nPreviousChar; j < nEndingChar; j++ )
+			{
+				sal_Unicode nChar = GetMirroredChar( mpStr[ i ] );
+				if ( nChar )
+					mpStr[ i ] = nChar;
+			}
+		}
 
 		nPreviousChar += mpRunLengths[ i ];
 	}
@@ -381,6 +400,8 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 void ATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 {
+	SalLayout::AdjustLayout( rArgs );
+
 	if ( rArgs.mpDXArray )
 	{
 		// TODO: actually position individual glyphs instead of justifying it
@@ -510,7 +531,7 @@ void ATSLayout::GetCaretPositions( int nArraySize, long *pCaretXArray ) const
 	if ( pCaretXArray )
 	{
 		for ( int i = 0; i < nArraySize; i++ )
-			pCaretXArray[ i ]  = -1;
+			pCaretXArray[ i ] = -1;
 	}
 
 	if ( !InitAdvances() )
@@ -743,21 +764,17 @@ bool ATSLayout::InitAdvances() const
 		{
 			// Get the advance from end of the run
 			int nRunAdvance = mnWidth;
-			j = nCurrentChar + mpRunLengths[ i ];
-			if ( j < mnLen && ATSUOffsetToCursorPosition( maLayout, j, true, kATSUByCharacter, &aCaret, NULL, NULL ) == noErr )
-				nRunAdvance -= Fix2Long( aCaret.fX );
+			if ( ATSUOffsetToCursorPosition( maLayout, nCurrentChar + mpRunLengths[ i ], true, kATSUByCharacter, &aCaret, NULL, NULL ) == noErr )
+				nRunAdvance = Fix2Long( aCaret.fX );
 
-			int nPreviousRunX = 0;
-			for ( j = nCurrentChar + mpRunLengths[ i ] - 1; j >= nCurrentChar; j-- )
+			for ( j = nCurrentChar, nCurrentChar += mpRunLengths[ i ]; j < nCurrentChar - 1; j++ )
 			{
-				if ( !j )
-					mpAdvances[ j ] = nRunAdvance - nPreviousRunX;
-				else if ( ATSUOffsetToCursorPosition( maLayout, j, true, kATSUByCharacter, &aCaret, NULL, NULL ) == noErr )
-					mpAdvances[ j ] = Fix2Long( aCaret.fX ) - nPreviousRunX;
-				nPreviousRunX += mpAdvances[ j ];
+				if ( ATSUOffsetToCursorPosition( maLayout, j + 1, true, kATSUByCharacter, &aCaret, NULL, NULL ) == noErr )
+					mpAdvances[ j ] = nRunAdvance - Fix2Long( aCaret.fX ) - nPreviousX;
+				nPreviousX += mpAdvances[ j ];
 			}
-			nCurrentChar += mpRunLengths[ i ];
-			nPreviousX += nRunAdvance;
+			mpAdvances[ j ] = nPreviousX;
+			nPreviousX += mpAdvances[ j ];
 		}
 		else
 		{
@@ -770,8 +787,8 @@ bool ATSLayout::InitAdvances() const
 		}
 	}
 
-    // Force any remaining advance into the last character
-    mpAdvances[ mnLen - 1 ] += mnWidth - nPreviousX;
+	// Force any remaining advance into the last character
+	mpAdvances[ mnLen - 1 ] += mnWidth - nPreviousX;
 
 	return true;
 }
