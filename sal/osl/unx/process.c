@@ -1349,6 +1349,16 @@ oslProcessError SAL_CALL osl_psz_executeProcess(sal_Char *pszImageName,
 		(osl_searchPath_impl(pszImageName, NULL, '\0', path, sizeof(path)) == osl_Process_E_None))
 		pszImageName = path;
 
+#ifdef MACOSX
+	// The fork() function will eventually hang the process if too many
+	// non-existant executables are called so don't bother forking if we know
+	// exec() will fail
+	if (access(pszImageName, R_OK | X_OK))
+	{
+		return osl_Process_E_NotFound;
+	}
+#endif	/* MACOSX */
+
 	Data.m_pszArgs[0] = strdup(pszImageName);
 	Data.m_pszArgs[1] = 0;
 
