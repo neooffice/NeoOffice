@@ -350,80 +350,76 @@ public final class VCLGraphics {
 	}
 
 	/**
-	 * Draws specified <code>VCLGraphics</code> to the underlying graphics
-	 * scaled to the specified specified width and height.
+	 * Draws specified <code>VCLGraphics</code> to the underlying graphics.
 	 *
 	 * @param g the graphics to be copied 
-	 * @param destX the x coordinate of the graphics to copy to
-	 * @param destY the y coordinate of the graphics to copy to
-	 * @param destWidth the width of the graphics to copy to
-	 * @param destHeight the height of the graphics to copy to
 	 * @param srcX the x coordinate of the graphics to be copied
 	 * @param srcY the y coordinate of the graphics to be copied 
-	 * @param srcWidth the width of the graphics to be copied 
-	 * @param srcHeight the height of the graphics to be copied 
+	 * @param srcWidth the width of the graphics to be copied
+	 * @param srcHeight the height of the graphics to be copied
+	 * @param destY the x coordinate of the graphics to copy to
+	 * @param destY the y coordinate of the graphics to copy to
 	 */
-	public void copyBits(VCLGraphics g, int destX, int destY, int destWidth, int destHeight, int srcX, int srcY, int srcWidth, int srcHeight) {
+	public void copyBits(VCLGraphics g, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY) {
 
 		VCLImage i = g.getImage();
 		if (i != null)
-			drawImage(i, destX, destY, destWidth, destHeight, srcX, srcY, srcWidth, srcHeight);
+			drawImage(i, srcX, srcY, srcWidth, srcHeight, destX, destY);
 
 	}
 
 	/**
-	 * Draws specified <code>VCLBitmap</code> to the underlying graphics scaled
-	 * to the specified width and height.
+	 * Draws specified <code>VCLBitmap</code> to the underlying graphics.
 	 *
 	 * @param bmp the bitmap to be drawn
-	 * @param destX the x coordinate of the graphics to draw to
-	 * @param destY the y coordinate of the graphics to draw to
-	 * @param destWidth the width of the graphics to draw to
-	 * @param destHeight the height of the graphics to draw to
 	 * @param srcX the x coordinate of the bitmap to be drawn
 	 * @param srcY the y coordinate of the bitmap to be drawn
 	 * @param srcWidth the width of the bitmap to be drawn
 	 * @param srcHeight the height of the bitmap to be drawn
+	 * @param destX the x coordinate of the graphics to draw to
+	 * @param destY the y coordinate of the graphics to draw to
 	 */
-	public void drawBitmap(VCLBitmap bmp, int destX, int destY, int destWidth, int destHeight, int srcX, int srcY, int srcWidth, int srcHeight) {
+	public void drawBitmap(VCLBitmap bmp, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY) {
 
 		Shape clip = graphics.getClip();
-		if (clip != null && clip.contains((double)destX, (double)destY, (double)destWidth, (double)destHeight))
+		if (clip != null && clip.contains((double)destX, (double)destY, (double)srcWidth, (double)srcHeight))
 			clip = null;
-		if (image == null || clip != null || destWidth != srcWidth || destHeight != srcHeight) {
-			// Draw to a temporary image and scale it
+		if (image == null || clip != null) {
+			// Draw to a temporary image
 			VCLImage bmpImage = new VCLImage(srcWidth, srcHeight, bmp.getBitCount());
-			bmpImage.getGraphics().drawBitmap(bmp, 0, 0, srcWidth, srcHeight, srcX, srcY, srcWidth, srcHeight);
+			bmpImage.getGraphics().drawBitmap(bmp, srcX, srcY, srcWidth, srcHeight, 0, 0);
 			if (image == null && VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 				// Mac OS X will render only PDF 1.3 (which is not supported by
 				// the Mac OS X Preview application) if we draw images that are
 				// smaller than the page
-				VCLImage pageImage = new VCLImage(pageBounds.width + 1, pageBounds.height + 1, bmp.getBitCount());
-				pageImage.getGraphics().drawImage(bmpImage, destX, destY, destWidth, destHeight, 0, 0, srcWidth, srcHeight);
-				drawImage(pageImage, 0, 0, pageImage.getWidth(), pageImage.getHeight(), 0, 0, pageImage.getWidth(), pageImage.getHeight());
+				VCLImage pageImage = new VCLImage(pageBounds.x + pageBounds.width + 1, pageBounds.y + pageBounds.height + 1, bmp.getBitCount());
+				pageImage.getGraphics().drawImage(bmpImage, 0, 0, srcWidth, srcHeight, destX, destY);
+				drawImage(pageImage, 0, 0, pageImage.getWidth(), pageImage.getHeight(), 0, 0);
 				pageImage.dispose();
 			}
 			else {
-				drawImage(bmpImage, destX, destY, destWidth, destHeight, 0, 0, srcWidth, srcHeight);
+				drawImage(bmpImage, 0, 0, srcWidth, srcHeight, destX, destY);
 			}
 			bmpImage.dispose();
 		}
 		else {
-			if (destX < 0) {
-				destWidth += destX;
-				srcX += destX;
-				destX = 0;
-			}
-			if (destY < 0) {
-				destHeight += destY;
-				srcY += destY;
-				destY = 0;
-			}
+			Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, bmp.getWidth(), bmp.getHeight()));
+			if (srcX < 0)
+				srcBounds.width += srcX;
+			if (srcY < 0)
+				srcBounds.height += srcY;
+			Rectangle destBounds = new Rectangle(destX, destY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
+			if (destX < 0)
+				destBounds.width += destX;
+			if (destY < 0)
+				destBounds.height += destY;
+			srcWidth = (srcBounds.width > destBounds.width) ? destBounds.width : srcBounds.width;
+			srcHeight = (srcBounds.height > destBounds.height) ? destBounds.height: srcBounds.height;
 			int[] destData = image.getData();
 			int destDataWidth = image.getWidth();
-			Point srcPoint = new Point(srcX, srcY);
-			Point destPoint = new Point(destX, destY);
-			int totalPixels = destWidth * destHeight;
+			Point srcPoint = new Point(srcBounds.x, srcBounds.y);
+			Point destPoint = new Point(destBounds.x, destBounds.y);
+			int totalPixels = srcWidth * srcHeight;
 
 			// Copy all pixels
 			for (int i = 0; i < totalPixels; i++) {
@@ -437,71 +433,71 @@ public final class VCLGraphics {
 					srcPoint.y++;
 				}
 				destPoint.x++;
-				if (destPoint.x >= destX + destWidth) {
+				if (destPoint.x >= destX + srcWidth) {
 					destPoint.x = destX;
 					destPoint.y++;
 				}
 			}
 		}
-		addToFlush(new Rectangle(destX, destY, destWidth, destHeight));
+		addToFlush(new Rectangle(destX, destY, srcWidth, srcHeight));
 
 	}
 
 	/**
 	 * Draws all of the pixels in the first specified <code>VCLBitmap</code>
 	 * where the pixels in the second specified <code>VCLBitmap</code> are
-	 * zero to the underlying graphics scaled to the specified width and height.
+	 * zero to the underlying graphics.
 	 *
 	 * @param bmp the bitmap to be drawn
 	 * @param transBmp the transparent bitmap to be drawn
-	 * @param destX the x coordinate of the graphics to draw to
-	 * @param destY the y coordinate of the graphics to draw to
-	 * @param destWidth the width of the graphics to draw to
-	 * @param destHeight the height of the graphics to draw to
 	 * @param srcX the x coordinate of the bitmap to be drawn
 	 * @param srcY the y coordinate of the bitmap to be drawn
 	 * @param srcWidth the width of the bitmap to be drawn
 	 * @param srcHeight the height of the bitmap to be drawn
+	 * @param destX the x coordinate of the graphics to draw to
+	 * @param destY the y coordinate of the graphics to draw to
 	 */
-	public void drawBitmap(VCLBitmap bmp, VCLBitmap transBmp, int destX, int destY, int destWidth, int destHeight, int srcX, int srcY, int srcWidth, int srcHeight) {
+	public void drawBitmap(VCLBitmap bmp, VCLBitmap transBmp, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY ) {
 
 		Shape clip = graphics.getClip();
-		if (clip != null && clip.contains((double)destX, (double)destY, (double)destWidth, (double)destHeight))
+		if (clip != null && clip.contains((double)destX, (double)destY, (double)srcWidth, (double)srcHeight))
 			clip = null;
-		if (image == null || clip != null || destWidth != srcWidth || destHeight != srcHeight) {
+		if (image == null || clip != null) {
 			VCLImage mergedImage = new VCLImage(srcWidth, srcHeight, bmp.getBitCount());
-			mergedImage.getGraphics().drawBitmap(bmp, transBmp, 0, 0, srcWidth, srcHeight, srcX, srcY, srcWidth, srcHeight);
-			// Draw to a temporary image and scale it
+			mergedImage.getGraphics().drawBitmap(bmp, transBmp, srcX, srcY, srcWidth, srcHeight, 0, 0);
+			// Draw to a temporary image
 			if (image == null && VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 				// Mac OS X will render only PDF 1.3 (which is not supported by
 				// the Mac OS X Preview application) if we draw images that are
 				// smaller than the page
-				VCLImage pageImage = new VCLImage(pageBounds.width + 1, pageBounds.height + 1, bmp.getBitCount());
-				pageImage.getGraphics().drawImage(mergedImage, destX, destY, destWidth, destHeight, 0, 0, srcWidth, srcHeight);
-				drawImage(pageImage, 0, 0, pageImage.getWidth(), pageImage.getHeight(), 0, 0, pageImage.getWidth(), pageImage.getHeight());
+				VCLImage pageImage = new VCLImage(pageBounds.x + pageBounds.width + 1, pageBounds.y + pageBounds.height + 1, bmp.getBitCount());
+				pageImage.getGraphics().drawImage(mergedImage, 0, 0, srcWidth, srcHeight, destX, destY);
+				drawImage(pageImage, 0, 0, pageImage.getWidth(), pageImage.getHeight(), 0, 0);
 				pageImage.dispose();
 			}
 			else {
-				drawImage(mergedImage, destX, destY, destWidth, destHeight, 0, 0, srcWidth, srcHeight);
+				drawImage(mergedImage, 0, 0, srcWidth, srcHeight, destX, destY);
 			}
 			mergedImage.dispose();
 		}
 		else {
-			if (destX < 0) {
-				destWidth += destX;
-				srcX += destX;
-				destX = 0;
-			}
-			if (destY < 0) {
-				destHeight += destY;
-				srcY += destY;
-				destY = 0;
-			}
+			Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, bmp.getWidth(), bmp.getHeight()));
+			if (srcX < 0)
+				srcBounds.width += srcX;
+			if (srcY < 0)
+				srcBounds.height += srcY;
+			Rectangle destBounds = new Rectangle(destX, destY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
+			if (destX < 0)
+				destBounds.width += destX;
+			if (destY < 0)
+				destBounds.height += destY;
+			srcWidth = (srcBounds.width > destBounds.width) ? destBounds.width : srcBounds.width;
+			srcHeight = (srcBounds.height > destBounds.height) ? destBounds.height: srcBounds.height;
 			int[] destData = image.getData();
 			int destDataWidth = image.getWidth();
-			Point srcPoint = new Point(srcX, srcY);
-			Point destPoint = new Point(destX, destY);
-			int totalPixels = destWidth * destHeight;
+			Point srcPoint = new Point(srcBounds.x, srcBounds.y);
+			Point destPoint = new Point(destBounds.x, destBounds.y);
+			int totalPixels = srcWidth * srcHeight;
 
 			// If the pixel in the second image is black, copy the pixel
 			// from the first image. Otherwise mark it as transparent.
@@ -517,100 +513,87 @@ public final class VCLGraphics {
 					srcPoint.y++;
 				}
 				destPoint.x++;
-				if (destPoint.x >= destX + destWidth) {
+				if (destPoint.x >= destX + srcWidth) {
 					destPoint.x = destX;
 					destPoint.y++;
 				}
 			}
 		}
-		addToFlush(new Rectangle(destX, destY, destWidth, destHeight));
+		addToFlush(new Rectangle(destX, destY, srcWidth, srcHeight));
 
 	}
 
 	/**
-	 * Draws specified <code>VCLImage</code> to the underlying graphics
-	 * scaled to the specified specified width and height.
+	 * Draws specified <code>VCLImage</code> to the underlying graphics.
 	 *
 	 * @param image the image to be drawn 
-	 * @param destX the x coordinate of the image to draw to
-	 * @param destY the y coordinate of the image to draw to
-	 * @param destWidth the width of the image to draw to
-	 * @param destHeight the height of the image to draw to
 	 * @param srcX the x coordinate of the image to be drawn
 	 * @param srcY the y coordinate of the image to be drawn 
-	 * @param srcWidth the width of the image to be drawn 
-	 * @param srcHeight the height of the image to be drawn 
+	 * @param srcWidth the width of the image to be drawn
+	 * @param srcHeight the height of the image to be drawn
+	 * @param destX the x coordinate of the image to draw to
+	 * @param destY the y coordinate of the image to draw to
 	 */
-	void drawImage(VCLImage img, int destX, int destY, int destWidth, int destHeight, int srcX, int srcY, int srcWidth, int srcHeight) {
+	void drawImage(VCLImage img, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY) {
 
-		Graphics2D g = (Graphics2D)graphics.create(destX, destY, destWidth, destHeight);
-		if (destWidth != srcWidth || destHeight != srcHeight)
-			g.scale((double)destWidth / srcWidth, (double)destHeight / srcHeight);
+		Graphics2D g = (Graphics2D)graphics.create(destX, destY, srcWidth, srcHeight);
 		g.drawRenderedImage(img.getImage().getSubimage(srcX, srcY, srcWidth, srcHeight), null);
 		g.dispose();
 
-		addToFlush(new Rectangle(destX, destY, destWidth, destHeight));
+		addToFlush(new Rectangle(destX, destY, srcWidth, srcHeight));
 
 	}
 
 	/**
 	 * Draws specified <code>VCLImage</code> in XOR mode to the underlying
-	 * graphics scaled to the specified specified width and height.
+	 * graphics.
 	 *
 	 * @param image the image to be drawn 
-	 * @param destX the x coordinate of the image to draw to
-	 * @param destY the y coordinate of the image to draw to
-	 * @param destWidth the width of the image to draw to
-	 * @param destHeight the height of the image to draw to
 	 * @param srcX the x coordinate of the image to be drawn
 	 * @param srcY the y coordinate of the image to be drawn 
-	 * @param srcWidth the width of the image to be drawn 
-	 * @param srcHeight the height of the image to be drawn 
+	 * @param srcWidth the width of the image to be drawn
+	 * @param srcHeight the height of the image to be drawn
+	 * @param destX the x coordinate of the image to draw to
+	 * @param destY the y coordinate of the image to draw to
 	 */
-	void drawImageXOR(VCLImage img, int destX, int destY, int destWidth, int destHeight, int srcX, int srcY, int srcWidth, int srcHeight) {
+	void drawImageXOR(VCLImage img, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY) {
 
 		if (image == null) {
-			drawImage(img, destX, destY, destWidth, destHeight, srcX, srcY, srcWidth, srcHeight);
-			return;
-		}
-		else if (destWidth != srcWidth || destHeight != srcHeight) {
-			// Scale source image
-			VCLImage destImage = new VCLImage(destWidth, destHeight, bitCount);
-			destImage.getGraphics().drawImage(img, 0, 0, destWidth, destHeight, srcX, srcY, srcWidth, srcHeight);
-			drawImageXOR(destImage, destX, destY, destWidth, destHeight, 0, 0, destWidth, destHeight);
-			destImage.dispose();
+			drawImage(img, srcX, srcY, srcWidth, srcHeight, destX, destY);
 			return;
 		}
 
 		Shape clip = graphics.getClip();
-		if (clip != null && clip.contains((double)destX, (double)destY, (double)destWidth, (double)destHeight))
+		if (clip != null && clip.contains((double)destX, (double)destY, (double)srcWidth, (double)srcHeight))
 			clip = null;
 		if (clip != null) {
 			// Draw to a temporary image to handle clipping
-			VCLImage destImage = new VCLImage(destWidth, destHeight, bitCount);
-			destImage.getGraphics().drawImage(image, 0, 0, destWidth, destHeight, destX, destY, destWidth, destHeight);
-			destImage.getGraphics().drawImageXOR(img, 0, 0, destWidth, destHeight, srcX, srcY, srcWidth, srcHeight);
-			drawImage(destImage, destX, destY, destWidth, destHeight, 0, 0, destWidth, destHeight);
+			VCLImage destImage = new VCLImage(srcWidth, srcHeight, bitCount);
+			destImage.getGraphics().drawImage(image, destX, destY, srcWidth, srcHeight, 0, 0);
+			destImage.getGraphics().drawImageXOR(img, srcX, srcY, srcWidth, srcHeight, 0, 0);
+			drawImage(destImage, 0, 0, srcWidth, srcHeight, destX, destY);
 			destImage.dispose();
 		}
 		else {
-			if (destX < 0) {
-				destWidth += destX;
-				srcX += destX;
-				destX = 0;
-			}
-			if (destY < 0) {
-				destHeight += destY;
-				srcY += destY;
-				destY = 0;
-			}
+			Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, img.getWidth(), img.getHeight()));
+			if (srcX < 0)
+				srcBounds.width += srcX;
+			if (srcY < 0)
+				srcBounds.height += srcY;
+			Rectangle destBounds = new Rectangle(destX, destY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
+			if (destX < 0)
+				destBounds.width += destX;
+			if (destY < 0)
+				destBounds.height += destY;
+			srcWidth = (srcBounds.width > destBounds.width) ? destBounds.width : srcBounds.width;
+			srcHeight = (srcBounds.height > destBounds.height) ? destBounds.height: srcBounds.height;
 			int[] srcData = img.getData();
 			int srcDataWidth = img.getWidth();
 			int[] destData = image.getData();
 			int destDataWidth = image.getWidth();
-			Point srcPoint = new Point(srcX, srcY);
-			Point destPoint = new Point(destX, destY);
-			int totalPixels = destWidth * destHeight;
+			Point srcPoint = new Point(srcBounds.x, srcBounds.y);
+			Point destPoint = new Point(destBounds.x, destBounds.y);
+			int totalPixels = srcWidth * srcHeight;
 
 			for (int i = 0; i < totalPixels; i++) {
 				// XOR pixel
@@ -625,13 +608,13 @@ public final class VCLGraphics {
 					srcPoint.y++;
 				}
 				destPoint.x++;
-				if (destPoint.x >= destX + destWidth) {
+				if (destPoint.x >= destX + srcWidth) {
 					destPoint.x = destX;
 					destPoint.y++;
 				}
 			}
 		}
-		addToFlush(new Rectangle(destX, destY, destWidth, destHeight));
+		addToFlush(new Rectangle(destX, destY, srcWidth, srcHeight));
 	}
 
 	/**
@@ -664,7 +647,7 @@ public final class VCLGraphics {
 			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 			srcGraphics.drawLine(x1, y1, x2, y2);
 			srcGraphics.dispose();
-			drawImageXOR(srcImage, bounds.x, bounds.y, bounds.width, bounds.height, 0, 0, bounds.width, bounds.height);
+			drawImageXOR(srcImage, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y);
 			srcImage.dispose();
 		}
 		else {
@@ -677,48 +660,47 @@ public final class VCLGraphics {
 
 	/**
 	 * Draws the specified color for all of the pixels in the specified
-	 * <code>VCLBitmap</code> where the pixels are non-white scaled to the
-	 * specified width and height.
+	 * <code>VCLBitmap</code> where the pixels are non-white.
 	 *
 	 * @param bmp the bitmap to be drawn
 	 * @param color the color that is used to match which pixels to draw
-	 * @param destX the x coordinate of the graphics to draw to
-	 * @param destY the y coordinate of the graphics to draw to
-	 * @param destWidth the width of the graphics to draw to
-	 * @param destHeight the height of the graphics to draw to
 	 * @param srcX the x coordinate of the bitmap to be drawn
 	 * @param srcY the y coordinate of the bitmap to be drawn
-	 * @param srcWidth the width of the bitmap to be drawn
-	 * @param srcHeight the height of the bitmap to be drawn
+	 * @param srcWidth the width of the graphics to be drawn
+	 * @param srcHeight the height of the graphics to be drawn
+	 * @param destX the x coordinate of the graphics to draw to
+	 * @param destY the y coordinate of the graphics to draw to
 	 */
-	public void drawMask(VCLBitmap bmp, int color, int destX, int destY, int destWidth, int destHeight, int srcX, int srcY, int srcWidth, int srcHeight) {
+	public void drawMask(VCLBitmap bmp, int color, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY) {
 
 		Shape clip = graphics.getClip();
-		if (clip != null && clip.contains((double)destX, (double)destY, (double)destWidth, (double)destHeight))
+		if (clip != null && clip.contains((double)destX, (double)destY, (double)srcWidth, (double)srcHeight))
 			clip = null;
-		if (image == null || clip != null || destWidth != srcWidth || destHeight != srcHeight) {
-			// Draw to a temporary image and scale it
+		if (image == null || clip != null) {
+			// Draw to a temporary image
 			VCLImage maskImage = new VCLImage(srcWidth, srcHeight, bmp.getBitCount());
-			maskImage.getGraphics().drawMask(bmp, color, 0, 0, srcWidth, srcHeight, srcX, srcY, srcWidth, srcHeight);
-			drawImage(maskImage, destX, destY, destWidth, destHeight, 0, 0, srcWidth, srcHeight);
+			maskImage.getGraphics().drawMask(bmp, color, srcX, srcY, srcWidth, srcHeight, 0, 0);
+			drawImage(maskImage, 0, 0, srcWidth, srcHeight, destX, destY);
 			maskImage.dispose();
 		}
 		else {
-			if (destX < 0) {
-				destWidth += destX;
-				srcX += destX;
-				destX = 0;
-			}
-			if (destY < 0) {
-				destHeight += destY;
-				srcY += destY;
-				destY = 0;
-			}
+			Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, bmp.getWidth(), bmp.getHeight()));
+			if (srcX < 0)
+				srcBounds.width += srcX;
+			if (srcY < 0)
+				srcBounds.height += srcY;
+			Rectangle destBounds = new Rectangle(destX, destY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
+			if (destX < 0)
+				destBounds.width += destX;
+			if (destY < 0)
+				destBounds.height += destY;
+			srcWidth = (srcBounds.width > destBounds.width) ? destBounds.width : srcBounds.width;
+			srcHeight = (srcBounds.height > destBounds.height) ? destBounds.height: srcBounds.height;
 			int[] destData = image.getData();
 			int destDataWidth = image.getWidth();
-			Point srcPoint = new Point(srcX, srcY);
-			Point destPoint = new Point(destX, destY);
-			int totalPixels = destWidth * destHeight;
+			Point srcPoint = new Point(srcBounds.x, srcBounds.y);
+			Point destPoint = new Point(destBounds.x, destBounds.y);
+			int totalPixels = srcWidth * srcHeight;
 
 			// If the pixel is black, set the pixel to the mask color
 			color |= 0xff000000;
@@ -734,13 +716,13 @@ public final class VCLGraphics {
 					srcPoint.y++;
 				}
 				destPoint.x++;
-				if (destPoint.x >= destX + destWidth) {
+				if (destPoint.x >= destX + srcWidth) {
 					destPoint.x = destX;
 					destPoint.y++;
 				}
 			}
 		}
-		addToFlush(new Rectangle(destX, destY, destWidth, destHeight));
+		addToFlush(new Rectangle(destX, destY, srcWidth, srcHeight));
 
 	}
 
@@ -776,7 +758,7 @@ public final class VCLGraphics {
 				srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 				srcGraphics.drawPolygon(polygon);
 				srcGraphics.dispose();
-				drawImageXOR(srcImage, bounds.x, bounds.y, bounds.width, bounds.height, 0, 0, bounds.width, bounds.height);
+				drawImageXOR(srcImage, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y);
 				srcImage.dispose();
 			}
 			else {
@@ -807,7 +789,7 @@ public final class VCLGraphics {
 			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 			srcGraphics.drawPolyline(xpoints, ypoints, npoints);
 			srcGraphics.dispose();
-			drawImageXOR(srcImage, bounds.x, bounds.y, bounds.width, bounds.height, 0, 0, bounds.width, bounds.height);
+			drawImageXOR(srcImage, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y);
 			srcImage.dispose();
 		}
 		else {
@@ -850,7 +832,7 @@ public final class VCLGraphics {
 				srcGraphics.translate(x * -1, y * -1);
 				srcGraphics.drawRect(x, y, width - 1, height - 1);
 				srcGraphics.dispose();
-				drawImageXOR(srcImage, x, y, width - 1, height - 1, 0, 0, width - 1, height - 1);
+				drawImageXOR(srcImage, 0, 0, width - 1, height - 1, x, y);
 				srcImage.dispose();
 			}
 			else {
@@ -1010,17 +992,6 @@ public final class VCLGraphics {
 	}
 
 	/**
-	 * Returns the resolution of the underlying graphics device.
-	 *
-	 * @return the resolution of the underlying graphics device.
-	 */
-	public int getResolution() {
-
-		return resolution;
-
-	}
-
-	/**
 	 * Returns the pixel color in ARGB format for the specified coordinate.
 	 *
 	 * @param x the x coordinate of the source rectangle
@@ -1034,6 +1005,28 @@ public final class VCLGraphics {
 
 		int[] pixels = image.getData();
 		return pixels[(image.getWidth() * y) + x];
+
+	}
+
+	/**
+	 * Returns the resolution of the underlying graphics device.
+	 *
+	 * @return the resolution of the underlying graphics device.
+	 */
+	public int getResolution() {
+
+		return resolution;
+
+	}
+
+	/**
+	 * Returns the resolution of the underlying graphics device.
+	 *
+	 * @return the font resolution of the underlying graphics device.
+	 */
+	public int getScreenFontResolution() {
+
+		return screenFontResolution;
 
 	}
 
@@ -1076,9 +1069,7 @@ public final class VCLGraphics {
 
 		// Clip any area outside of the image
 		Rectangle bounds = polygon.getBounds();
-		bounds = new Rectangle(0, 0, image.getWidth(), image.getHeight()).intersection(bounds);
-		if (bounds.isEmpty())
-			return;
+		bounds = bounds.intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
 
 		// Invert the image 
 		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME) {
@@ -1091,7 +1082,7 @@ public final class VCLGraphics {
 			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 			srcGraphics.drawPolyline(xpoints, ypoints, npoints);
 			srcGraphics.dispose();
-			drawImageXOR(srcImage, bounds.x, bounds.y, bounds.width, bounds.height, 0, 0, bounds.width, bounds.height);
+			drawImageXOR(srcImage, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y);
 			srcImage.dispose();
 		}
 		else if ((options & VCLGraphics.SAL_INVERT_50) == VCLGraphics.SAL_INVERT_50) {
@@ -1102,12 +1093,12 @@ public final class VCLGraphics {
 			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 			srcGraphics.fillPolygon(polygon);
 			srcGraphics.dispose();
-			drawImageXOR(srcImage, bounds.x, bounds.y, bounds.width, bounds.height, 0, 0, bounds.width, bounds.height);
+			drawImageXOR(srcImage, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y);
 			srcImage.dispose();
 		}
 		else {
 			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
-			srcImage.getGraphics().drawImage(image, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y, bounds.width, bounds.height);
+			srcImage.getGraphics().drawImage(image, bounds.x, bounds.y, bounds.width, bounds.height, 0, 0);
 
 			int[] destData = srcImage.getData();
 			int totalPixels = bounds.width * bounds.height;
@@ -1126,7 +1117,7 @@ public final class VCLGraphics {
 			else {
 				graphics.setClip(polygonClip);
 			}
-			drawImage(srcImage, bounds.x, bounds.y, bounds.width, bounds.height, 0, 0, bounds.width, bounds.height);
+			drawImage(srcImage, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y);
 			graphics.setClip(clip);
 			srcImage.dispose();
 		}

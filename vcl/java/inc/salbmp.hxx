@@ -75,6 +75,7 @@ public:
 	BOOL			Create( const SalBitmap& rSalBmp );
 	BOOL			Create( const SalBitmap& rSalBmp, SalGraphics *pGraphics );
 	BOOL			Create( const SalBitmap& rSalBmp, USHORT nNewBitCount );
+	BOOL			Create( const SalBitmap& rSalBmp, const SalTwoRect& rPosAry );
 
 	void			Destroy();
 
@@ -84,9 +85,5 @@ public:
 	BitmapBuffer*	AcquireBuffer( BOOL bReadOnly );
 	void			ReleaseBuffer( BitmapBuffer* pBuffer, BOOL bReadOnly );
 };
-
-inline long AlignedWidth1Byte( long nWidthBits )
-{ return ( ( nWidthBits ) + 7 ) >> 3;  }
-
 
 #endif // _SV_SALBMP_HXX

@@ -149,6 +149,33 @@ BOOL SalBitmap::Create( const SalBitmap& rSalBmp, USHORT nNewBitCount )
 
 // ------------------------------------------------------------------
 
+BOOL SalBitmap::Create( const SalBitmap& rSalBmp, const SalTwoRect& rPosAry )
+{
+	Destroy();
+
+	BitmapPalette aPalette;
+	if ( rSalBmp.mpVCLBitmap )
+		rSalBmp.mpVCLBitmap->getPalette( aPalette );
+
+	BitmapBuffer *pSrcBuffer = rSalBmp.AcquireBuffer( TRUE );
+	BitmapBuffer *pScaledBuffer = StretchAndConvert( *pSrcBuffer, rPosAry, pSrcBuffer->mnFormat, &aPalette );
+	BOOL bRet = Create( Size( pScaledBuffer->mnWidth, pScaledBuffer->mnHeight ), pScaledBuffer->mnBitCount, pScaledBuffer->maPalette );
+
+	if ( bRet )
+	{
+		BitmapBuffer *pDestBuffer = AcquireBuffer( FALSE );
+		memcpy( pDestBuffer->mpBits, pScaledBuffer->mpBits, sizeof( BYTE ) * pScaledBuffer->mnScanlineSize * pScaledBuffer->mnHeight );
+		ReleaseBuffer( pDestBuffer, FALSE );
+	}
+
+	delete pScaledBuffer;
+	rSalBmp.ReleaseBuffer( pSrcBuffer, TRUE );
+
+	return bRet;
+}
+
+// ------------------------------------------------------------------
+
 void SalBitmap::Destroy()
 {
 	maSize = Size( 0, 0 );
@@ -202,7 +229,7 @@ BitmapBuffer* SalBitmap::AcquireBuffer( BOOL bReadOnly )
 		pBuffer->mnFormat |= BMP_FORMAT_24BIT_TC_RGB;
 	pBuffer->mnWidth = maSize.Width();
 	pBuffer->mnHeight = maSize.Height();
-	pBuffer->mnScanlineSize = AlignedWidth1Byte( mnBitCount * maSize.Width() );
+	pBuffer->mnScanlineSize = AlignedWidth4Bytes( mnBitCount * maSize.Width() );
 	mpVCLBitmap->getPalette( pBuffer->maPalette );
 
 	// Fill the buffer with pointers to the Java buffer

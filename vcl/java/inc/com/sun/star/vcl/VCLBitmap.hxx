@@ -65,7 +65,7 @@ public:
 						com_sun_star_vcl_VCLBitmap( long nDX, long nDY, USHORT nBitCount );
 	virtual				~com_sun_star_vcl_VCLBitmap() {};
 
-	void				copyBits( const com_sun_star_vcl_VCLGraphics *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8 );
+	void				copyBits( const com_sun_star_vcl_VCLGraphics *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6 );
 	USHORT				getBitCount();
 	java_lang_Object*	getData();
 	void				getPalette( BitmapPalette& rPalette );

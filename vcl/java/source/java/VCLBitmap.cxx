@@ -91,7 +91,7 @@ com_sun_star_vcl_VCLBitmap::com_sun_star_vcl_VCLBitmap( long nDX, long nDY, USHO
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLBitmap::copyBits( const com_sun_star_vcl_VCLGraphics *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8 )
+void com_sun_star_vcl_VCLBitmap::copyBits( const com_sun_star_vcl_VCLGraphics *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -99,13 +99,13 @@ void com_sun_star_vcl_VCLBitmap::copyBits( const com_sun_star_vcl_VCLGraphics *_
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(Lcom/sun/star/vcl/VCLGraphics;IIIIIIII)V";
+			char *cSignature = "(Lcom/sun/star/vcl/VCLGraphics;IIIIII)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "copyBits", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[9];
+			jvalue args[7];
 			args[0].l = _par0->getJavaObject();
 			args[1].i = jint( _par1 );
 			args[2].i = jint( _par2 );
@@ -113,8 +113,6 @@ void com_sun_star_vcl_VCLBitmap::copyBits( const com_sun_star_vcl_VCLGraphics *_
 			args[4].i = jint( _par4 );
 			args[5].i = jint( _par5 );
 			args[6].i = jint( _par6 );
-			args[7].i = jint( _par7 );
-			args[8].i = jint( _par8 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}

@@ -68,7 +68,7 @@ public final class VCLPrintJob extends Thread implements Printable {
 	/**
 	 * SCALE_FACTOR constant.
 	 */
-	private final static int SCALE_FACTOR = 2;
+	private final static int SCALE_FACTOR = 1;
 
 	/**
 	 * Cached native graphics.
@@ -408,8 +408,6 @@ public final class VCLPrintJob extends Thread implements Printable {
 			}
 		}
 
-		Thread.yield();
-
 		synchronized (graphicsInfo) {
 			if (currentPage++ != graphicsInfo.pageIndex || !isAlive()) {
 				// Return a dummy graphics if this page is not in the selected
@@ -417,7 +415,7 @@ public final class VCLPrintJob extends Thread implements Printable {
 				currentGraphics = null;
 			}
 			else {
-				currentGraphics = new VCLGraphics(graphicsInfo.graphics, VCLPrintJob.SCALE_FACTOR * 72, new Rectangle(0, 0, (int)graphicsInfo.pageFormat.getWidth() * VCLPrintJob.SCALE_FACTOR, (int)graphicsInfo.pageFormat.getHeight() * VCLPrintJob.SCALE_FACTOR));
+				currentGraphics = new VCLGraphics(graphicsInfo.graphics, VCLPrintJob.SCALE_FACTOR * 72, new Rectangle((int)graphicsInfo.pageFormat.getImageableX() * -1, (int)graphicsInfo.pageFormat.getImageableY() * -1, (int)graphicsInfo.pageFormat.getWidth() * VCLPrintJob.SCALE_FACTOR, (int)graphicsInfo.pageFormat.getHeight() * VCLPrintJob.SCALE_FACTOR));
 				graphicsInfo.graphics = null;
 				graphicsInfo.pageFormat = null;
 			}

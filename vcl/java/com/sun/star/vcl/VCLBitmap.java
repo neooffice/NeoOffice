@@ -36,6 +36,7 @@
 package com.sun.star.vcl;
 
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.awt.image.IndexColorModel;
@@ -74,6 +75,11 @@ public final class VCLBitmap {
 	private int[] palette = null;
 
 	/**
+	 * The scanline.
+	 */
+	private int scanline = 0;
+
+	/**
 	 * The width.
 	 */
 	private int width = 0;
@@ -105,7 +111,9 @@ public final class VCLBitmap {
 			bitCount = 24;
 		}
 
-		data = new byte[(bitCount / 8) * width * height];
+		// Align buffer to 4 bytes
+		scanline = (((bitCount * width) + 31) >> 5) << 2;
+		data = new byte[scanline * height];
 
 	}
 
@@ -114,49 +122,49 @@ public final class VCLBitmap {
 	 * bitmap with scaling.
 	 *
 	 * @param g the <code>VCLGraphics</code>
-	 * @param destX the x coordinate of the bitmap
-	 * @param destY the y coordinate of the bitmap
-	 * @param destWidth the width to copy to
-	 * @param destHeight the height to copy to
 	 * @param srcX the x coordinate of the graphics
 	 * @param srcY the y coordinate of the graphics
-	 * @param srcWidth the width to copy from
-	 * @param srcHeight the height to copy from
+	 * @param srcWidth the width to be copied
+	 * @param srcHeight the height to be copied
+	 * @param destX the x coordinate of the bitmap
+	 * @param destY the y coordinate of the bitmap
 	 */
-	public void copyBits(VCLGraphics g, int destX, int destY, int destWidth, int destHeight, int srcX, int srcY, int srcWidth, int srcHeight) {
+	public void copyBits(VCLGraphics g, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY) {
 
-		if (destWidth != srcWidth || destHeight != srcHeight) {
-			VCLImage copyImage = new VCLImage(destWidth, destHeight, g.getBitCount());
-			VCLGraphics copyGraphics = copyImage.getGraphics();
-			copyGraphics.drawImage(g.getImage(), 0, 0, destWidth, destHeight, srcX, srcY, srcWidth, srcHeight);
-			copyBits(copyGraphics, destX, destY, destWidth, destHeight, 0, 0, destWidth, destHeight);
-			copyImage.dispose();
-		}
-		else {
-			VCLImage srcImage = g.getImage();
-			int[] srcData = srcImage.getData();
-			int srcDataWidth = srcImage.getWidth();
-			Point srcPoint = new Point(srcX, srcY);
-			Point destPoint = new Point(destX, destY);
-			int totalPixels = destWidth * destHeight;
+		VCLImage srcImage = g.getImage();
+		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, srcImage.getWidth(), srcImage.getHeight()));
+		if (srcX < 0)
+			srcBounds.width += srcX;
+		if (srcY < 0)
+			srcBounds.height += srcY;
+		Rectangle destBounds = new Rectangle(destX, destY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, width, height));
+		if (destX < 0)
+			destBounds.width += destX;
+		if (destY < 0)
+			destBounds.height += destY;
+		srcWidth = (srcBounds.width > destBounds.width) ? destBounds.width : srcBounds.width;
+		srcHeight = (srcBounds.height > destBounds.height) ? destBounds.height : srcBounds.height;
+		int[] srcData = srcImage.getData();
+		int srcDataWidth = srcImage.getWidth();
+		Point srcPoint = new Point(srcBounds.x, srcBounds.y);
+		Point destPoint = new Point(destBounds.x, destBounds.y);
+		int totalPixels = srcWidth * srcHeight;
 
-			for (int i = 0; i < totalPixels; i++) {
-				// Copy pixel
-				setPixel(destPoint, srcData[(srcPoint.y * srcDataWidth) + srcPoint.x]);
+		for (int i = 0; i < totalPixels; i++) {
+			// Copy pixel
+			setPixel(destPoint, srcData[(srcPoint.y * srcDataWidth) + srcPoint.x]);
 
-				// Update current points
-				srcPoint.x++;
-				if (srcPoint.x >= srcX + srcWidth) {
-					srcPoint.x = srcX;
-					srcPoint.y++;
-				}
-				destPoint.x++;
-				if (destPoint.x >= destX + destWidth) {
-					destPoint.x = destX;
-					destPoint.y++;
-				}
+			// Update current points
+			srcPoint.x++;
+			if (srcPoint.x >= srcX + srcWidth) {
+				srcPoint.x = srcX;
+				srcPoint.y++;
 			}
-
+			destPoint.x++;
+			if (destPoint.x >= destX + srcWidth) {
+				destPoint.x = destX;
+				destPoint.y++;
+			}
 		}
 
 	}
@@ -214,16 +222,15 @@ public final class VCLBitmap {
 	int getPixel(Point p) {
 
 		int pixel = 0;
-		int i = (p.y * width) + p.x;
 		if (bitCount <= 8) { 
-			int j = data[i];
-			if (j < 0)
-				j += 256;
-			pixel = palette[j];
+			int i = data[(p.y * scanline) + p.x];
+			if (i < 0)
+				i += 256;
+			pixel = palette[i];
 		}
 		else if (bitCount <= 24) {
-			int j = i * 3;
-			pixel = 0xff000000 | ((data[j++] << 16) & 0x00ff0000) | ((data[j++] << 8) & 0x0000ff00) | (data[j++] & 0x000000ff);
+			int i = (p.y * scanline) + (p.x * 3);
+			pixel = 0xff000000 | ((data[i++] << 16) & 0x00ff0000) | ((data[i++] << 8) & 0x0000ff00) | (data[i++] & 0x000000ff);
 		}
 		return pixel;
 
@@ -267,15 +274,14 @@ public final class VCLBitmap {
 	 */
 	void setPixel(Point p, int c) {
 
-		int i = (p.y * width) + p.x;
 		if (bitCount <= 8) {
-			data[i] = ((byte[])model.getDataElements(c, null))[0];
+			data[(p.y * scanline) + p.x] = ((byte[])model.getDataElements(c, null))[0];
 		}
 		else if (bitCount <= 24) {
-			int j = i * 3;
-			data[j++] = (byte)((c & 0x00ff0000) >> 16);
-			data[j++] = (byte)((c & 0x0000ff00) >> 8);
-			data[j++] = (byte)(c & 0x000000ff);
+			int i = (p.y * scanline) + (p.x * 3);
+			data[i++] = (byte)((c & 0x00ff0000) >> 16);
+			data[i++] = (byte)((c & 0x0000ff00) >> 8);
+			data[i++] = (byte)(c & 0x000000ff);
 		}
 
 	}

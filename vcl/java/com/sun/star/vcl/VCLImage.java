@@ -122,16 +122,21 @@ public final class VCLImage {
 
 		this(w, h, bmp.getBitCount());
 
-		Point srcPoint = new Point(x, y);
-		int totalPixels = w * h;
+		Rectangle bounds = new Rectangle(x, y, w, h).intersection(new Rectangle(0, 0, bmp.getWidth(), bmp.getHeight()));
+		if (x < 0)
+			bounds.width += x;
+		if (y < 0)
+			bounds.height += y;
+		Point srcPoint = new Point(bounds.x, bounds.y);
+		int totalPixels = bounds.width * bounds.height;
 		for (int i = 0; i < totalPixels; i++) {
 			// Copy the pixels from the bitmap
 			data[i] = bmp.getPixel(srcPoint);
 
 			// Update curent points
 			srcPoint.x++;
-			if (srcPoint.x >= x + w) {
-				srcPoint.x = x;
+			if (srcPoint.x >= bounds.x + bounds.width) {
+				srcPoint.x = bounds.x;
 				srcPoint.y++;
 			}
 		}
