@@ -41,16 +41,23 @@ if [ -d "$2" ]; then
 	touch "$tempfile"
 	if [ -f "$tempfile" ]; then
 		cd "$2"
+		chmod -Rf u+rw "$(PRODUCT_DIR_NAME).app/Contents/share/config/registry"
+        if [ $? != 0 ] ; then
+            exit 1
+        fi
 		for i in `find "$(PRODUCT_DIR_NAME).app/Contents/share/config/registry" -type f` ; do
-		    chmod u+rw "$i"
 			rm -f "$tempfile"
 			cp -p "$i" "$tempfile"
 			sed 's#/Applications/$(PRODUCT_DIR_NAME).app#'"$2/$(PRODUCT_DIR_NAME).app"'#g' "$tempfile" > "$i"
             if [ $? != 0 ] ; then
-                exit 1;
+                exit 1
             fi
 			touch -r "$tempfile" "$i"
 		done
+		chmod -Rf u-w,u+r "$(PRODUCT_DIR_NAME).app/Contents/share/config/registry"
+        if [ $? != 0 ] ; then
+            exit 1
+        fi
 	fi
 
 fi
