@@ -194,13 +194,7 @@ public final class VCLMenuItemData {
     if(delegateForObject!=null)
         delegateForObject.setDelegate(null);
     }
-    
-    /**
-     * Exception thrown by any of the methods when the method results in a change that invalidates any
-     * AWT mirror objects generated from this menu item data are invalid and must be regenerated.
-     */
-    public class AWTPeersInvalidatedException extends java.lang.Exception { }
-    
+        
     /**
      * Fetch the current title of the menu item.
      */
@@ -235,14 +229,10 @@ public final class VCLMenuItemData {
             if(delegateForObject!=null)
                 delegateForObject.title=new String(title);
             
-            if(awtPeers==null)
-		System.err.println("NULL peers array!");
 	    if(!awtPeers.isEmpty()) {
 		Enumeration e=awtPeers.elements();
 		while(e.hasMoreElements()) {
 		    MenuItem m=(MenuItem)e.nextElement();
-		    if(m==null)
-			System.err.println("NULL menu item in our peers!");
 		    m.setLabel(title);
 		}
 	    }
@@ -356,20 +346,17 @@ public final class VCLMenuItemData {
      * submenus, cannot be checked.
      *
      * @param newCheck	true if the item should be checked, false if unchecked
-     * @throws AWTPeersInvalidatedException to indicate that the AWT peers are no longer valid and need to be
-     * 	regenerated
-     * @throws IllegalArgumentException to indicate that the checked state does not apply if other characteristics
-     *	of the menu item make it inappropriate
+     * @return true if the state change requires AWT peers to be refreshed
+     *  to appear correctly, false if all required changes have been
+     *  propogated to their peers
      */
-    synchronized public void setChecked(boolean newCheck) throws AWTPeersInvalidatedException, IllegalArgumentException {
+    synchronized public boolean setChecked(boolean newCheck) {
         if(delegate!=null) {
-            delegate.setChecked(newCheck);
-            return;
+            return(delegate.setChecked(newCheck));
         }
         
-        if(newCheck && (isSeparator || isSubmenu))
-            throw new IllegalArgumentException();
-                
+        boolean peersInvalidated=false;
+        
         isChecked=newCheck;
         if(!isCheckbox)
         {
@@ -383,7 +370,7 @@ public final class VCLMenuItemData {
                 if(!awtPeers.isEmpty())
                 {
                     awtPeers.clear();
-                    throw new AWTPeersInvalidatedException();
+                    peersInvalidated=true;
                 }
             }
         }
@@ -400,6 +387,8 @@ public final class VCLMenuItemData {
 		}
 	    }
         }
+        
+        return(peersInvalidated);
     }
     
     /**
@@ -419,19 +408,21 @@ public final class VCLMenuItemData {
      * Mark a menu item as designated for a submenu prior to the insertion of any elements into it.
      * This should only be used by VCLMenu constructors.
      *
-     * @throws AWTPeersInvalidatedException
+     * @return true if the peers were invalidated and need dto be reinserted,
+     *  false if all changes hav been properly sent to peers
      */
-    protected void makeMenu() throws AWTPeersInvalidatedException {
+    protected boolean makeMenu() {
         if(delegate!=null) {
-            delegate.makeMenu();
-            return;
+            return(delegate.makeMenu());
         }
+        boolean peersInvalidated=false;
         isSubmenu=true;
         if(!awtPeers.isEmpty())
         {
             awtPeers.clear();
-            throw new AWTPeersInvalidatedException();
+                peersInvalidated=true;
         }
+        return(peersInvalidated);
     }
     
     /**
@@ -441,21 +432,19 @@ public final class VCLMenuItemData {
      * @param newItem	item to be added into the menu
      * @param nPos	position at which the item should be inserted.  Any item in that position or
      *			occuring after that position will be pushed down in the menu order
-     * @throws IllegalArgumentException if the item cannot be added.  Separators or checked items cannot
-     *		be transfigured into menus
-     * @throws AWTPeersInvalidatedException if any underlying peers had to be destroyed due to the change
+     * @return true if the peers were invalidated and must be reinserted into
+     *  their parents, false if the changes have already successfully propogated
+     *  to any AWT peers.
      */
-    synchronized public void addMenuItem(VCLMenuItemData newItem, int nPos) throws IllegalArgumentException, AWTPeersInvalidatedException {
+    synchronized public boolean addMenuItem(VCLMenuItemData newItem, int nPos) {
         if(delegate!=null) {
-            delegate.addMenuItem(newItem, nPos);
-            return;
+            return(delegate.addMenuItem(newItem, nPos));
         }
+        
+        boolean peersInvalidated=false;
         
         if((nPos < 0) || (nPos == 65535))
             nPos=menuItems.size();
-        
-        if(isSeparator || isCheckbox || (nPos > menuItems.size()))
-            throw new IllegalArgumentException();
         
         menuItems.insertElementAt(newItem, nPos);
 	newItem.parentMenus.add(this);
@@ -465,7 +454,7 @@ public final class VCLMenuItemData {
             if(!awtPeers.isEmpty())
             {
                 awtPeers.clear();
-                throw new AWTPeersInvalidatedException();
+                peersInvalidated=true;
             }
         }
         else
@@ -483,20 +472,21 @@ public final class VCLMenuItemData {
                     // When in a menu, the checkbox state can be set properly.
                     
                     if(newItem.getChecked()) {
-                        newItem.setChecked(true);
+                        peersInvalidated=(peersInvalidated || newItem.setChecked(true));
                     }
 		}
 	    }
         }
+        
+        return(peersInvalidated);
     }
     
     /**
      * Remove a menu item at a particular position.  This only applies for menu style menu items.
      *
      * @param nPos	position of item to delete
-     * @throws IllegalArgumentException if the menu item is of the incorrect type
      */
-    synchronized public void removeMenuItem(int nPos) throws IllegalArgumentException {
+    synchronized public void removeMenuItem(int nPos) {
         if(delegate!=null) {
             delegate.removeMenuItem(nPos);
             return;
@@ -504,9 +494,6 @@ public final class VCLMenuItemData {
         
         if((nPos < 0) || (nPos == 65535))
             nPos=menuItems.size();
-        
-        if(!isSubmenu || (isSubmenu && (nPos >= menuItems.size())))
-            throw new IllegalArgumentException();
         
 	((VCLMenuItemData)menuItems.elementAt(nPos)).parentMenus.remove(this);
         menuItems.removeElementAt(nPos);
@@ -525,16 +512,12 @@ public final class VCLMenuItemData {
      * Retrieve a menu item at a particular position.  This only applies for menu style menu items.
      *
      * @param nPos	position of item to retrieve
-     * @throws IllegalArgumentException if the menu item is of the incorrect type
      */
-    public VCLMenuItemData getMenuItem(int nPos) throws IllegalArgumentException {
+    public VCLMenuItemData getMenuItem(int nPos) {
         if(delegate!=null) {
             return(delegate.getMenuItem(nPos));
         }
-        
-        if(!isSubmenu || (isSubmenu && (nPos >= menuItems.size())))
-            throw new IllegalArgumentException();
-        
+                
         return((VCLMenuItemData)menuItems.elementAt(nPos));
     }
     
@@ -547,17 +530,12 @@ public final class VCLMenuItemData {
      * @param item  item whose position should be retrieved
      * @return index of the item in the menu or -1 if the item is not in the
      * menu
-     * @throws IllegalArgumentException if the menu item is of the incorrect
-     * type
      */
-    public int getMenuItemIndex(VCLMenuItemData item) throws IllegalArgumentException {
+    public int getMenuItemIndex(VCLMenuItemData item) {
 	if(delegate!=null) {
 	    return(delegate.getMenuItemIndex(item));
 	}
-	
-	if(!isSubmenu)
-	    throw new IllegalArgumentException();
-	
+		
 	int toReturn=-1;
 	for(int i=0; i<menuItems.size(); i++) {
 	    if(menuItems.elementAt(i)==item) {
@@ -573,15 +551,11 @@ public final class VCLMenuItemData {
      * Fetch the number of menu items in this menu
      *
      * @return number of menu item elements
-     * @throws IllegalArgumentException if the item is not a menu
      */
-    public int getNumMenuItems() throws IllegalArgumentException {
+    public int getNumMenuItems() {
         if(delegate!=null) {
             return(delegate.getNumMenuItems());
         }
-        
-        if(!isSubmenu)
-            throw new IllegalArgumentException();
         
         return(menuItems.size());
     }
@@ -667,10 +641,6 @@ public final class VCLMenuItemData {
             if(mb!=null) {
                 mb.getEventQueue().postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUCOMMAND, mb.getFrame(), d.getVCLID(), d.getVCLCookie()));
             }
-            else
-            {
-                System.err.println("MenuItem chosen, but no VCLFrame target found!");
-            }
         }
     }
     
@@ -750,25 +720,11 @@ public final class VCLMenuItemData {
 	Enumeration parents=parentMenus.elements();
 	while(parents.hasMoreElements()) {
 	    VCLMenuItemData parent=(VCLMenuItemData)parents.nextElement();
-	    try {
-		int menuPos=parent.getMenuItemIndex(this);
-		if(menuPos >= 0) {
-		    parent.removeMenuItem(menuPos);
-		    try {
-			parent.addMenuItem(this, menuPos); // creates a new peer
-		    } catch(Exception e) {
-			// ignore any exceptions since this function is used
-			// to respond to them
-                        System.err.println("Exception in refreshAWTPeers: "+e);
-		    }
-		}
-                else
-                {
-                        System.err.println("Menu item not found!");
+                int menuPos=parent.getMenuItemIndex(this);
+                if(menuPos >= 0) {
+                    parent.removeMenuItem(menuPos);
+                    parent.addMenuItem(this, menuPos); // creates a new peer
                 }
-	    } catch (IllegalArgumentException e) {
-		System.err.println("Got an illegal argument while refreshing awtpeers! Parent wasn't a menu.");
-	    }
 	}
     }
     

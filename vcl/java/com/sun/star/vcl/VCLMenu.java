@@ -39,8 +39,6 @@ import java.awt.Menu;
 import java.awt.peer.MenuPeer;
 import com.sun.star.vcl.VCLMenuItemData;
 import com.sun.star.vcl.VCLMenuBar;
-import java.lang.IllegalArgumentException;
-import com.sun.star.vcl.VCLMenuItemData.AWTPeersInvalidatedException;
 import java.lang.System;
 
 /**
@@ -68,14 +66,7 @@ public final class VCLMenu {
      */
     public VCLMenu( ) {
         menuData=new VCLMenuItemData( "", false, (short)0, 0 );
-        try
-        {
-            menuData.makeMenu();
-        }
-        catch (AWTPeersInvalidatedException e)
-        {
-            // no peers yet
-        }
+        menuData.makeMenu();
     }
     
     /**
@@ -110,18 +101,8 @@ public final class VCLMenu {
         if((nPos < 0) || (nPos == 65535))
             nPos=menuData.getNumMenuItems();
         
-        try
-        {
-            menuData.addMenuItem(newItem, nPos);
-        }
-        catch (IllegalArgumentException e)
-        {
-            System.err.println("Illegal argument exception in VCLMenu.insertItem");
-        }
-        catch (AWTPeersInvalidatedException e)
-        {
+        if(menuData.addMenuItem(newItem, nPos))
             menuData.refreshAWTPeersInParentMenus();
-        }
     }
     
     /**
@@ -130,14 +111,7 @@ public final class VCLMenu {
      * @param nPos	position of the item to remove
      */
     public void removeItem(int nPos) {
-        try
-        {
             menuData.removeMenuItem(nPos);
-        }
-        catch (IllegalArgumentException e)
-        {
-            System.err.println("Illegal argument exception in VCLMenu.removeItem");
-        }
     }
     
     /**
@@ -147,23 +121,17 @@ public final class VCLMenu {
      * @param bCheck	new checkmark state of the item
      */
     public void checkItem(int nPos, boolean bCheck) {
-        VCLMenuItemData item=null;
-	try
-        {
-            item=(VCLMenuItemData)menuData.getMenuItem(nPos);
-            item.setChecked(bCheck);
-        }
-        catch (IllegalArgumentException e)
-        {
-            System.err.println("Illegal argument exception in VCLMenu.checkItem");
-        }
-        catch (AWTPeersInvalidatedException e)
-        {
-	    // checkbox items can't be top level menus, so we only have to
-	    // worry about reinserting new peers into their parent menus
-            if(item!=null)
-		item.refreshAWTPeersInParentMenus();
-        }
+                VCLMenuItemData item=null;
+                item=(VCLMenuItemData)menuData.getMenuItem(nPos);
+                if((item!=null) && item.setChecked(bCheck)) {
+                        // our peers were invalidated and need to be
+                        // reconstructed.
+                        
+                        // checkbox items can't be top level menus, so we only have to
+                        // worry about reinserting new peers into their parent menus
+                        if(item!=null)
+                        item.refreshAWTPeersInParentMenus();
+                }
     }
     
     /**
@@ -173,15 +141,8 @@ public final class VCLMenu {
      * @param bEnable	new enabled state of the item
      */
     public void enableItem(int nPos, boolean bEnable) {
-        try
-        {
             VCLMenuItemData item=(VCLMenuItemData)menuData.getMenuItem(nPos);
             item.setEnabled(bEnable);
-        }
-        catch (IllegalArgumentException e)
-        {
-            System.err.println("Illegal argument exception in VCLMenu.checkItem");
-        }
     }
     
     /**
@@ -191,15 +152,9 @@ public final class VCLMenu {
      * @param nPos		position where the submenu should be attached
      */
     public void attachSubmenu(VCLMenuItemData newMenu, int nPos) {
-	if(newMenu==null)
-	    System.err.println("New menu is null");
-	    
-        try
-        {
             VCLMenuItemData item=null;
 	    item=(VCLMenuItemData)menuData.getMenuItem(nPos);
 	    if(item==null) {
-		System.err.println("Item is null");
 		return;
 	    }
 	    
@@ -215,10 +170,5 @@ public final class VCLMenu {
             item.setDelegate(newMenu);
 	    
 	    item.refreshAWTPeersInParentMenus();
-        }
-        catch (Exception e)
-        {
-            System.err.println("Error in attaching submenu "+e);
-        }
     }
 }
