@@ -190,7 +190,7 @@ public class VCLGraphics {
 	/**
 	 * The cached update area.
 	 */
-	private Rectangle update = null;
+	private Area update = null;
 
 	/**
 	 * The cached clipping area.
@@ -255,10 +255,11 @@ public class VCLGraphics {
 	void addToFlush(Rectangle b) {
 
 		Toolkit.getDefaultToolkit().sync();
+		Area area = new Area(b);
 		if (update != null)
-			update.add(b);
+			update.add(area);
 		else
-			update = b;
+			update = area;
 
 		if (autoFlush)
 			flush();
@@ -718,12 +719,11 @@ public class VCLGraphics {
 	void flush() {
 
 		if (panelGraphics != null && update != null) {
-			update = new Rectangle(0, 0, image.getWidth(), image.getHeight()).intersection(update);
-			if (update.width > 0 && update.height > 0) {
-				panelGraphics.drawImage(image.getImage(), update.x, update.y, update.x + update.width, update.y + update.height, update.x, update.y, update.x + update.width, update.y + update.height, null);
-				Toolkit.getDefaultToolkit().sync();
-			}
+			panelGraphics.setClip(update);
+			panelGraphics.drawRenderedImage(image.getImage(), null);
+			Toolkit.getDefaultToolkit().sync();
 			update = null;
+			panelGraphics.setClip(null);
 		}
 
 	}
