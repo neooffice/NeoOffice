@@ -57,7 +57,7 @@ PRODUCT_FILETYPE=no%f
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.openoffice.org:/cvs
 OO_PACKAGE:=all
 OO_TAG:=OOO_STABLE_1_PORTS
-NEO_CVSROOT:=:pserver:anoncvs@cvs.neooffice.org:/cvs
+NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOfficeJ
 NEO_TAG:=NeoOfficeJ-0_0
 
