@@ -34,6 +34,11 @@
 # 
 ##########################################################################
 
+# Check that the BSD tools are installed
+if [ ! -d "/Library/Receipts/BSD.pkg" ] ; then
+	exit 99;
+fi
+
 # Check that the user is running Mac OS X 10.2 or higher
 if [ -x "/usr/bin/sw_vers" ] ; then
     # Return 96 + 3 if it is a bad version
