@@ -133,7 +133,7 @@ commonxml="$registrydir/Office/Common.xcu"
 if [ ! -f "$commonxml" ] ; then
     error
 fi
-commonxmlset="$commonxml.set"
+commonxmlset="$commonxml.set.1"
 commonxmlbak="$commonxml.bak"
 rm -f "$commonxmlbak"
 if [ ! -f "$commonxmlset" -a ! -f "$commonxmlbak" ] ; then
