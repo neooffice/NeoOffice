@@ -51,7 +51,6 @@ import java.awt.RenderingHints;
 import java.awt.Shape;
 import java.awt.TexturePaint;
 import java.awt.Toolkit;
-import java.awt.font.FontRenderContext;
 import java.awt.font.GlyphVector;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
@@ -214,7 +213,7 @@ public final class VCLGraphics {
 			t.printStackTrace();
 		}
 		try {
-			drawTextArrayMethod = VCLGraphics.class.getMethod("drawTextArray", new Class[]{ GlyphVector.class, int.class, int.class, int.class, int.class, boolean.class });
+			drawTextArrayMethod = VCLGraphics.class.getMethod("drawTextArray", new Class[]{ int.class, int.class, char[].class, VCLFont.class, int.class, int[].class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -1001,27 +1000,47 @@ public final class VCLGraphics {
 	}
 
 	/**
-	 * Draws the text given by the specified glyph vector using the glyph
-	 * vector's font with the specified color.
+	 * Draws the text given by the specified characters, using this graphics
+	 * context's current font and color. The baseline of the leftmost character
+	 * is at position <code>(x, y)</code> in this graphics context's coordinate
+	 * system.
 	 *
-	 * @param glyphs the glyph vector
 	 * @param x the x coordinate
 	 * @param y the y coordinate
-	 * @param orientation the orientation
+	 * @param chars the array of characters to be drawn
+	 * @param font the font of the text
 	 * @param color the color of the text
-	 * @param antialias <code>true</code> to enable antialiasing and
-	 *  <code>false</code> to disable antialiasing
 	 */
-	public void drawTextArray(GlyphVector glyphs, int x, int y, int orientation, int color, boolean antialias) {
+	public void drawText(int x, int y, char[] chars, VCLFont font, int color) {
+
+		drawTextArray(x, y, chars, font, color, null);
+
+	}
+
+	/**
+	 * Draws the text given by the specified characters, using this graphics
+	 * context's current font and color. The baseline of each character's
+	 * leftmost position is at <code>(x + offsets[i], y)</code> in this graphics
+	 * context's coordinate system where <code>i</code> is the position of
+	 * each character in the specified <code>str</code>.
+	 *
+	 * @param x the x coordinate
+	 * @param y the y coordinate
+	 * @param chars the array of characters to be drawn
+	 * @param font the font of the text
+	 * @param color the color of the text
+	 * @param offsets the x coordinate offsets for each character
+	 */
+	public void drawTextArray(int x, int y, char[] chars, VCLFont font, int color, int[] offsets) {
 
 		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawTextArrayMethod, new Object[]{ glyphs, new Integer(x), new Integer(y), new Integer(orientation), new Integer(color), new Boolean(antialias) });
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawTextArrayMethod, new Object[]{ new Integer(x), new Integer(y), chars, font, new Integer(color), offsets });
 			pageQueue.postDrawingOperation(pqi);
 			return;
 		}
 
 		// The graphics may adjust the font
-		Font f = glyphs.getFont();
+		Font f = font.getFont();
 		FontMetrics fm = null;
 
 		// Exceptions can be thrown if a font is disabled or removed
@@ -1029,14 +1048,14 @@ public final class VCLGraphics {
 			fm = graphics.getFontMetrics(f);
 		}
 		catch (Throwable t) {
-			f = VCLFont.getDefaultFont(f.getSize(), f.isBold(), f.isItalic(), antialias).getFont();
+			f = font.getDefaultFont().getFont();
 			fm = graphics.getFontMetrics(f);
 		}
 
 		graphics.setFont(f);
 
 		RenderingHints hints = graphics.getRenderingHints();
-		if (antialias)
+		if (font.isAntialiased())
 			hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 		else
 			hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
@@ -1045,6 +1064,7 @@ public final class VCLGraphics {
 
 		// Set rotation
 		Point2D origin = new Point2D.Float((float)x, (float)y);
+		short orientation = font.getOrientation();
 		AffineTransform transform = null;
 		AffineTransform rotateTransform = null;
 		if (orientation != 0) {
@@ -1056,8 +1076,27 @@ public final class VCLGraphics {
 			origin = AffineTransform.getRotateInstance(radians).transform(origin, null);
 		}
 
-		Rectangle bounds = glyphs.getLogicalBounds().getBounds();
-		graphics.drawGlyphVector(glyphs, (float)origin.getX(), (float)origin.getY());
+		Rectangle bounds = null;
+		if (offsets != null) {
+			char[] currentChar = new char[1];
+			for (int i = 0; i < chars.length; i++) {
+				currentChar[0] = chars[i];
+				int adjust = i > 0 ? offsets[i - 1] : 0;
+				GlyphVector glyphs = f.createGlyphVector(graphics.getFontRenderContext(), currentChar);
+				graphics.drawGlyphVector(glyphs, (float)(origin.getX() + adjust), (float)origin.getY());
+				Rectangle glyphBounds = glyphs.getLogicalBounds().getBounds();
+				glyphBounds.x += adjust;
+				if (bounds == null)
+					bounds = glyphBounds;
+				else
+					bounds.add(glyphBounds);
+			}
+		}
+		else {
+			GlyphVector glyphs = f.createGlyphVector(graphics.getFontRenderContext(), chars);
+			graphics.drawGlyphVector(glyphs, (float)origin.getX(), (float)origin.getY());
+			bounds = glyphs.getLogicalBounds().getBounds();
+		}
 
 		// Reverse rotation
 		if (transform != null)
@@ -1120,17 +1159,6 @@ public final class VCLGraphics {
 	public int getBitCount() {
 
 		return bitCount;
-
-	}
-
-	/**
-	 * Returns the font render context of the underlying graphics device.
-	 *
-	 * @return the font render context of the underlying graphics device
-	 */
-	FontRenderContext getFontRenderContext() {
-
-		return graphics.getFontRenderContext();
 
 	}
 
@@ -1422,11 +1450,11 @@ public final class VCLGraphics {
 	}
 
 	/**
-	 * Set the line drawing antialiasing attributes.
+	 * Set the antialiasing drawing attributes.
 	 *
-	 * @param b the line drawing antialiasing flag
+	 * @param b the antialiasing flag
 	 */
-	public void setLineAntialiasing(boolean b) {
+	public void setAntialias(boolean b) {
 
 		RenderingHints hints = graphics.getRenderingHints();
 		if (b)

@@ -33,7 +33,7 @@
  *  MA  02111-1307  USA
  *  
  *  =================================================
- *  Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
+ *  Modified June 2003 by Patrick Luby. SISSL Removed. NeoOffice is
  *  distributed under GPL only under modification term 3 of the LGPL.
  *
  *  Contributor(s): _______________________________________
@@ -62,14 +62,6 @@
 #include <prnsetup.hxx>
 #include <printdlg.hxx>
 #include <svtdata.hxx>
-#include <filedlg.hxx>
-
-#ifndef _PICKERHELPER_HXX
-#include "pickerhelper.hxx"
-#endif
-#ifndef _SVT_HELPID_HRC
-#include "helpid.hrc"
-#endif
 
 #ifndef  _COM_SUN_STAR_UI_DIALOGS_TEMPLATEDESCRIPTION_HPP_
 #include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
@@ -85,6 +77,9 @@
 #endif
 #ifndef _COM_SUN_STAR_LANG_XMULTISERVICEFACTORY_HPP_
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
+#endif
+#ifndef  _COM_SUN_STAR_LANG_XINITIALIZATION_HPP_
+#include <com/sun/star/lang/XInitialization.hpp>
 #endif
 #ifndef _COMPHELPER_PROCESSFACTORY_HXX_
 #include <comphelper/processfactory.hxx>
@@ -124,7 +119,7 @@ PrintDialog::PrintDialog( Window* pWindow ) :
 	maFiComment 	( this, SvtResId( FI_COMMENT ) ),
 	maCbxFilePrint	( this, SvtResId( CBX_FILEPRINT ) ),
 	maFiPrintFile	( this, SvtResId( FI_PRINTFILE ) ),
-	maBtnBrowse_nomore 	( this, SvtResId( BTN_BROWSE ) ),
+	maBtnBrowse 	( this, SvtResId( BTN_BROWSE ) ),
 	maFlPrintRange 	( this, SvtResId( FL_PRINTRANGE ) ),
 	maRbtAll		( this, SvtResId( RBT_ALL ) ),
 	maRbtPages		( this, SvtResId( RBT_PAGES ) ),
@@ -168,6 +163,7 @@ PrintDialog::PrintDialog( Window* pWindow ) :
 	maStatusTimer.SetTimeoutHdl( LINK( this, PrintDialog, ImplStatusHdl ) );
 	maBtnProperties.SetClickHdl( LINK( this, PrintDialog, ImplPropertiesHdl ) );
 	maLbName.SetSelectHdl( LINK( this, PrintDialog, ImplChangePrinterHdl ) );
+	maBtnBrowse.SetClickHdl( LINK( this, PrintDialog, ImplBrowseHdl ) );
 
 	maFiPrintFile.SetStyle( maFiPrintFile.GetStyle() | WB_PATHELLIPSIS );
 
@@ -181,10 +177,8 @@ PrintDialog::PrintDialog( Window* pWindow ) :
 	maCbxCollate.SetClickHdl( aLink );
 	maBtnOptions.SetClickHdl( aLink );
 	maEdtFaxNo.SetModifyHdl( aLink );
-    maBtnOK.SetClickHdl( aLink );
 
 	maRbtAll.Check();
-    ImplSetImages();
 }
 
 // -----------------------------------------------------------------------
@@ -193,22 +187,6 @@ PrintDialog::~PrintDialog()
 {
 	ImplFreePrnDlgListBox( &maLbName, FALSE );
 	delete mpPrinterImpl;
-}
-
-// -----------------------------------------------------------------------
-
-void PrintDialog::ImplSetImages()
-{
-    if( ! GetSettings().GetStyleSettings().GetDialogColor().IsDark() )
-    {
-        maImgCollate.SetModeImage( Image( SvtResId( RID_IMG_PRNDLG_COLLATE ) ), BMP_COLOR_NORMAL );
-        maImgNotCollate.SetModeImage( Image( SvtResId( RID_IMG_PRNDLG_NOCOLLATE ) ), BMP_COLOR_NORMAL );
-    }
-    else
-    {
-        maImgCollate.SetModeImage( Image( SvtResId( RID_IMG_PRNDLG_COLLATE_HC ) ), BMP_COLOR_HIGHCONTRAST );
-        maImgNotCollate.SetModeImage( Image( SvtResId( RID_IMG_PRNDLG_NOCOLLATE_HC ) ), BMP_COLOR_HIGHCONTRAST );
-    }
 }
 
 // -----------------------------------------------------------------------
@@ -237,7 +215,7 @@ void PrintDialog::ImplSetInfo()
 	{
 		maFiPrintFile.Show( FALSE );
 		maCbxFilePrint.Show( FALSE );
-		maBtnBrowse_nomore.Show( FALSE );
+		maBtnBrowse.Show( FALSE );
 		maFiFaxNo.Show( TRUE );
 		maEdtFaxNo.Show( TRUE );
 		Printer* pPrinter = TEMPPRINTER() ? TEMPPRINTER() : mpPrinter;
@@ -248,7 +226,7 @@ void PrintDialog::ImplSetInfo()
 	{
 		maFiPrintFile.Show( TRUE );
 		maCbxFilePrint.Show( TRUE );
-		maBtnBrowse_nomore.Show( FALSE );
+		maBtnBrowse.Show( TRUE );
 		maFiFaxNo.Show( FALSE );
 		maEdtFaxNo.Show( FALSE );
 	}
@@ -261,6 +239,9 @@ void PrintDialog::ImplCheckOK()
 {
 	// Ueberprueft, ob der OK-Button enabled ist
 	BOOL bEnable = TRUE;
+
+	if ( maCbxFilePrint.IsChecked() )
+		bEnable = maFiPrintFile.GetText().Len() > 0;
 
 	if ( bEnable && maRbtPages.IsChecked() )
 		bEnable = maEdtPages.GetText().Len() > 0;
@@ -386,96 +367,80 @@ IMPL_LINK( PrintDialog, ImplChangePrinterHdl, void*, EMPTYARG )
 	TEMPPRINTER() = ImplPrnDlgListBoxSelect( &maLbName, &maBtnProperties,
 											 mpPrinter, TEMPPRINTER() );
 	ImplSetInfo();
-    ImplCheckOK(); // Check if "OK" button can be enabled now!
 
 	return 0;
 }
 
 // -----------------------------------------------------------------------
 
-bool PrintDialog::ImplGetFilename()
+IMPL_LINK( PrintDialog, ImplBrowseHdl, void*, EMPTYARG )
 {
     Reference< XMultiServiceFactory > xFactory( ::comphelper::getProcessServiceFactory() );
     if( xFactory.is() )
     {
-        Sequence< Any > aTempl( 1 );
-        aTempl.getArray()[0] <<= TemplateDescription::FILESAVE_AUTOEXTENSION;
-        
-        Reference< XFilePicker > xFilePicker( xFactory->
-                                              createInstanceWithArguments( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.ui.dialogs.FilePicker" ) ),
-                                                                           aTempl ),
-                                              UNO_QUERY );
+        Reference< XFilePicker > xFilePicker( xFactory->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.ui.dialogs.FilePicker" ) ) ), UNO_QUERY );
         DBG_ASSERT( xFilePicker.is(), "could not get FilePicker service" );
 
+        Reference< XInitialization > xInit( xFilePicker, UNO_QUERY );
         Reference< XFilterManager > xFilterMgr( xFilePicker, UNO_QUERY );
-        if( xFilePicker.is() && xFilterMgr.is() )
+        if( xInit.is() && xFilePicker.is() && xFilterMgr.is() )
         {
+            Sequence< Any > aServiceType( 1 );
+            aServiceType[0] <<= TemplateDescription::FILESAVE_SIMPLE;
+            xInit->initialize( aServiceType );
+
+#ifdef UNX
+            // add PostScript and PDF
             try
             {
-#ifdef UNX
-                // add PostScript and PDF
-                if( ! Application::IsRemoteServer() )
-                    // sensible only for Unix local
-                {
-                    Printer* pPrinter = TEMPPRINTER() ? TEMPPRINTER() : mpPrinter;
-                    bool bPS = true, bPDF = true;
-                    if( pPrinter )
-                    {
-                        if( pPrinter->GetCapabilities( PRINTER_CAPABILITIES_PDF ) )
-                            bPS = false;
-                        else
-                            bPDF = false;
-                    }
-                    if( bPS )
-                        xFilterMgr->appendFilter( OUString( RTL_CONSTASCII_USTRINGPARAM( "PostScript" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "*.ps" ) ) );
-                    if( bPDF )
-                        xFilterMgr->appendFilter( OUString( RTL_CONSTASCII_USTRINGPARAM( "Portable Document Format" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "*.pdf" ) ) );
-                }
-#elif defined WNT
-                xFilterMgr->appendFilter( OUString( RTL_CONSTASCII_USTRINGPARAM( "*.PRN" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "*.prn" ) ) );
-#endif
-                // add arbitrary files
-                xFilterMgr->appendFilter( maAllFilterStr, OUString( RTL_CONSTASCII_USTRINGPARAM( "*.*" ) ) );
+                xFilterMgr->appendFilter( OUString( RTL_CONSTASCII_USTRINGPARAM( "PostScript" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "*.ps" ) ) );
+                xFilterMgr->appendFilter( OUString( RTL_CONSTASCII_USTRINGPARAM( "PDF" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "*.pdf" ) ) );
             }
-            catch( IllegalArgumentException rExc )
+            catch( IllegalArgumentException& rExc )
             {
                 DBG_ASSERT( 0, "caught IllegalArgumentException when registering filter\n" );
             }
+#endif
+
+            // add arbitrary files
+            try
+            {
+                xFilterMgr->appendFilter( maAllFilterStr, OUString( RTL_CONSTASCII_USTRINGPARAM( "*.*" ) ) );
+            }
+            catch( IllegalArgumentException& )
+            {
+                DBG_ASSERT( 0, "caught IllegalArgumentException when registering filter\n" );
+            }
+
             if( xFilePicker->execute() == ExecutableDialogResults::OK )
             {
                 Sequence< OUString > aPathSeq( xFilePicker->getFiles() );
-                INetURLObject aObj( aPathSeq[0] );
-                maFiPrintFile.SetText( aObj.PathToFileName() );
-                return true;
+				INetURLObject aObj( aPathSeq[0] );
+				maFiPrintFile.SetText( aObj.PathToFileName() );
             }
-            return false;
+
+            return 0;
         }
     }
 
-    // something went awry, lets try the old fashioned dialogue
-    Window* pDlgParent = IsReallyVisible() ? this : GetParent();
-    FileDialog aDlg( pDlgParent, WB_STDDIALOG | WB_SAVEAS );
-#ifdef WNT
-    aDlg.AddFilter( String( RTL_CONSTASCII_USTRINGPARAM( "*.prn" ) ), String( RTL_CONSTASCII_USTRINGPARAM( "*.prn" ) ) );
-    aDlg.SetDefaultExt( String( RTL_CONSTASCII_USTRINGPARAM( "prn" ) ) );
-#elif defined UNX
-    aDlg.AddFilter( String( RTL_CONSTASCII_USTRINGPARAM( "PostScript" ) ), String( RTL_CONSTASCII_USTRINGPARAM( "*.ps" ) ) );
-    aDlg.SetDefaultExt( String( RTL_CONSTASCII_USTRINGPARAM( "ps" ) ) );
-#endif
-    if( aDlg.Execute() )
-    {
-        String aTargetFile = aDlg.GetPath();
-        maFiPrintFile.SetText( aTargetFile );
-        return true;
-    }
-
-	return false;
+	return 0;
 }
 
 // -----------------------------------------------------------------------
 
 IMPL_LINK( PrintDialog, ImplModifyControlHdl, void*, p )
 {
+	// Drucken in Datei
+	if ( !p || (p == &maCbxFilePrint) )
+	{
+		BOOL bCheck = maCbxFilePrint.IsChecked();
+		if ( bCheck && !maFiPrintFile.GetText().Len() )
+			ImplBrowseHdl( &maBtnBrowse );
+		maFiPrintFile.Enable( bCheck );
+		maBtnBrowse.Enable( bCheck );
+		ImplCheckOK();
+	}
+
 	// Radiobuttons (Umfang)
 	if ( !p || (p == &maRbtAll) || (p == &maRbtPages) || (p == &maRbtSelection) )
 	{
@@ -486,7 +451,7 @@ IMPL_LINK( PrintDialog, ImplModifyControlHdl, void*, p )
 		ImplCheckOK();
 	}
 
-	// Edit-Felder (Seiten)
+	// Edit-Felder (Dateiname, Seiten)
 	if ( p == &maEdtPages )
 		ImplCheckOK();
 
@@ -535,11 +500,6 @@ IMPL_LINK( PrintDialog, ImplModifyControlHdl, void*, p )
 	// Zus"atze
 	if ( p == &maBtnOptions )
 		ClickOptionsHdl();
-
-    if( p == &maBtnOK )
-    {
-        EndDialog( maCbxFilePrint.IsChecked() ? ImplGetFilename() : TRUE );
-    }
 
 	return 0;
 }
@@ -595,8 +555,6 @@ void PrintDialog::DataChanged( const DataChangedEvent& rDCEvt )
 		ImplSetInfo();
 		ImplCheckOK();
 	}
-    else if ( rDCEvt.GetType() == DATACHANGED_SETTINGS )
-        ImplSetImages();
 
 	ModalDialog::DataChanged( rDCEvt );
 }

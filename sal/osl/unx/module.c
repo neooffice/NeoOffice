@@ -33,7 +33,7 @@
  *  MA  02111-1307  USA
  *  
  *  =================================================
- *  Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
+ *  Modified April 2004 by Patrick Luby. SISSL Removed. NeoOffice is
  *  distributed under GPL only under modification term 3 of the LGPL.
  *
  *  Contributor(s): _______________________________________
@@ -88,7 +88,7 @@ int dladdr(void *address, Dl_info *dl)
 
 #include "system.h"
 
-#if OSL_DEBUG_LEVEL > 1
+#if defined(DEBUG)
 #include <stdio.h>
 #endif
 
@@ -106,7 +106,7 @@ extern int _dlclose(void *handle);
 #endif /* MACOSX */
 
 /* implemented in file.c */
-extern int UnicodeToText( char *, size_t, const sal_Unicode *, sal_Int32 );
+extern UnicodeToText( char *, size_t, const sal_Unicode *, sal_Int32 );
 
 oslModule SAL_CALL osl_psz_loadModule(const sal_Char *pszModuleName, sal_Int32 nRtldMode);
 void* SAL_CALL osl_psz_getSymbol(oslModule hModule, const sal_Char* pszSymbolName);
@@ -122,21 +122,21 @@ oslModule SAL_CALL osl_loadModule(rtl_uString *ustrModuleName, sal_Int32 nRtldMo
     rtl_uString* ustrTmp = NULL;
 
     OSL_ENSURE(ustrModuleName,"osl_loadModule : string is not valid");
-
+    
     /* ensure ustrTmp hold valid string */
     if( osl_File_E_None != osl_getSystemPathFromFileURL( ustrModuleName, &ustrTmp ) )
         rtl_uString_assign( &ustrTmp, ustrModuleName );
-
+    
     if( ustrTmp )
-    {
+    {    
         char buffer[PATH_MAX];
-
+        
         if( UnicodeToText( buffer, PATH_MAX, ustrTmp->buffer, ustrTmp->length ) )
             pModule = osl_psz_loadModule( buffer, nRtldMode );
     }
 
     rtl_uString_release( ustrTmp );
-
+    
     return pModule;
 }
 
@@ -153,7 +153,7 @@ oslModule SAL_CALL osl_psz_loadModule(const sal_Char *pszModuleName, sal_Int32 n
         const struct mach_header      *pLib = NULL;
         oslModule               pModule;
         sal_Char		buf[PATH_MAX + 1];
-        oslMutex				*pMutex;
+		oslMutex				*pMutex;	
 
 	OSL_ASSERT(pszModuleName);
 
@@ -161,29 +161,30 @@ oslModule SAL_CALL osl_psz_loadModule(const sal_Char *pszModuleName, sal_Int32 n
 		return NULL;
 
 #ifndef NO_DL_FUNCTIONS
-        // Synchronize calls to NSAddImage to prevent crashing on multiple CPUs
-        pMutex = osl_getGlobalMutex();
-        if ( pMutex )
-            osl_acquireMutex( *pMutex );
+
+		// Synchronize calls to NSAddImage to prevent crashing on multiple CPUs
+		pMutex = osl_getGlobalMutex();
+		if ( pMutex )
+			osl_acquireMutex( *pMutex );
 
         // Check if module is already loaded
         strncpy(buf, pszModuleName, sizeof(buf));
         buf[sizeof(buf)-1] = '\0';
-        pLib = NSAddImage(buf, NSADDIMAGE_OPTION_RETURN_ONLY_IF_LOADED |
+        pLib = NSAddImage(buf, NSADDIMAGE_OPTION_RETURN_ONLY_IF_LOADED | 
                           NSADDIMAGE_OPTION_RETURN_ON_ERROR);
 
         if (!pLib) {
-                // Module not already loaded. Try to load the module using
+                // Module not already loaded. Try to load the module using 
                 // the name as given (search includes DYLD_LIBRARY_PATH)
                 strncpy(buf, pszModuleName, sizeof(buf));
                 buf[sizeof(buf)-1] = '\0';
-                pLib = NSAddImage(buf, NSADDIMAGE_OPTION_WITH_SEARCHING |
+                pLib = NSAddImage(buf, NSADDIMAGE_OPTION_WITH_SEARCHING | 
                                   NSADDIMAGE_OPTION_RETURN_ON_ERROR);
         }
 
         if (!pLib  &&  pszModuleName[0] != '/') {
-                // Didn't find module in DYLD_LIBRARY_PATH. Try looking
-                // in application's bundle.
+                // Didn't find module in DYLD_LIBRARY_PATH. Try looking 
+                // in application's bundle. 
                 // But don't bother if the name is an absolute path.
                 strncpy(buf, "@executable_path/", sizeof(buf));
                 strncat(buf, pszModuleName, sizeof(buf) - strlen(buf));
@@ -192,12 +193,12 @@ oslModule SAL_CALL osl_psz_loadModule(const sal_Char *pszModuleName, sal_Int32 n
                                   NSADDIMAGE_OPTION_RETURN_ON_ERROR);
         }
 
-        if ( pMutex )
-            osl_releaseMutex( *pMutex );
+		if ( pMutex )
+			osl_releaseMutex( *pMutex );
 
         if (!pLib) {
                 // Still couldn't find it - give up
-#if OSL_DEBUG_LEVEL > 1
+#ifdef DEBUG
                 // fixme use NSLinkEditError() to get a better error message
                 fprintf( stderr,
                          "osl_loadModule: cannot load module %s for reason: %s\n",
@@ -208,7 +209,7 @@ oslModule SAL_CALL osl_psz_loadModule(const sal_Char *pszModuleName, sal_Int32 n
 
         pModule = (oslModule)malloc( sizeof( struct _oslModule ) );
         if (!pModule) {
-#if OSL_DEBUG_LEVEL > 1
+#ifdef DEBUG
                 fprintf( stderr,
                          "osl_loadModule: cannot load module %s for reason: %s\n",
                          pszModuleName, "out of memory!" );
@@ -239,7 +240,7 @@ oslModule SAL_CALL osl_psz_loadModule(const sal_Char *pszModuleName, sal_Int32 n
 
 #else /* MACOSX */
 
-	sal_Int32 rtld_mode;
+	sal_Int32 rtld_mode;	
 
     if ( nRtldMode == 0 )
     {
@@ -251,38 +252,20 @@ oslModule SAL_CALL osl_psz_loadModule(const sal_Char *pszModuleName, sal_Int32 n
     }
 
 	OSL_ASSERT(pszModuleName);
-
+	
 	if (pszModuleName)
 	{
 #ifndef NO_DL_FUNCTIONS
-
 		void* pLib = dlopen(pszModuleName, rtld_mode );
-		if ((pLib == 0) && (strchr (pszModuleName, '/') == 0))
-		{
-			/* module w/o pathname not found, try cwd as last chance */
-			char buffer[PATH_MAX];
-
-			buffer[0] = '.', buffer[1] = '/', buffer[2] = '\0';
-			strncat (buffer, pszModuleName, sizeof(buffer) - 2);
-
-			pLib = dlopen(buffer, rtld_mode);
-		}
-
-#if OSL_DEBUG_LEVEL > 1
-		if (pLib == 0)
-		{
-			/* module not found, give up */
-			fprintf (stderr,
-					 "osl_loadModule: cannot load module %s for reason: %s\n",
-					 pszModuleName, dlerror());
-		}
-#endif  /* OSL_DEBUG_LEVEL */
-
-		return ((oslModule)(pLib));
-
-#else   /* NO_DL_FUNCTIONS */
+#ifdef DEBUG
+		if( ! pLib )
+			fprintf( stderr, "osl_loadModule: cannot load module %s for reason: %s\n",
+					 pszModuleName, dlerror() );
+#endif		
+		return ((oslModule)pLib);
+#else
 		printf("No DL Functions\n");
-#endif  /* NO_DL_FUNCTIONS */
+#endif 
 	}
 	return NULL;
 
@@ -294,6 +277,8 @@ oslModule SAL_CALL osl_psz_loadModule(const sal_Char *pszModuleName, sal_Int32 n
 /*****************************************************************************/
 void SAL_CALL osl_unloadModule(oslModule hModule)
 {
+	OSL_ENSURE(hModule,"osl_unloadModule : module handle is not valid");
+    
 #ifdef MACOSX
 
         // Unloading dylibs is not yet supported on Mac OS X.
@@ -310,18 +295,18 @@ void SAL_CALL osl_unloadModule(oslModule hModule)
          *     is not to dlclose libraries. Since most of them are closed at shutdown
          *     this does not make that much a difference
          */
-
+        
         int nRet = 0;
-
+        
         nRet = dlclose(hModule);
-#if OSL_DEBUG_LEVEL > 1
+#if defined(DEBUG)
         if ( nRet != 0 )
-        {
+        {    
 			fprintf( stderr, "osl_getsymbol: cannot close lib for reason: %s\n", dlerror() );
         }
-#endif /* if OSL_DEBUG_LEVEL */
+#endif /* if DEBUG */
 #endif /* ifndef GCC */
-
+        
 #endif /* ifndef NO_DL_FUNCTIONS */
 	}
 
@@ -337,21 +322,21 @@ void* SAL_CALL osl_getSymbol(oslModule Module, rtl_uString* ustrSymbolName)
 
     OSL_ENSURE(Module,"osl_getSymbol : module handle is not valid");
     OSL_ENSURE(Module,"osl_getSymbol : ustrSymbolName");
-
+    
     if ( Module!= 0 && ustrSymbolName != 0 )
     {
         rtl_String* strSymbolName=0;
         sal_Char* pszSymbolName=0;
-
+        
         rtl_uString2String( &strSymbolName,
                             rtl_uString_getStr(ustrSymbolName),
                             rtl_uString_getLength(ustrSymbolName),
                             osl_getThreadTextEncoding(),
-                            OUSTRING_TO_OSTRING_CVTFLAGS );
+                            OUSTRING_TO_OSTRING_CVTFLAGS );    
 
         pszSymbolName = rtl_string_getStr(strSymbolName);
 
-
+        
         pHandle=osl_psz_getSymbol(Module,pszSymbolName);
 
         if ( strSymbolName != 0 )
@@ -359,8 +344,8 @@ void* SAL_CALL osl_getSymbol(oslModule Module, rtl_uString* ustrSymbolName)
             rtl_string_release(strSymbolName);
         }
     }
-
-
+    
+    
     return pHandle;
 }
 
@@ -388,7 +373,7 @@ void* SAL_CALL osl_psz_getSymbol(oslModule hModule, const sal_Char* pszSymbolNam
                 free(name);
                 if (pSymbol) {
                         return NSAddressOfSymbol(pSymbol);
-                }
+                } 
 #endif
 	}
 	return NULL;
@@ -405,16 +390,16 @@ void* SAL_CALL osl_psz_getSymbol(oslModule hModule, const sal_Char* pszSymbolNam
 
         pSym = dlsym(hModule, pszSymbolName);
 
-#if OSL_DEBUG_LEVEL > 1
+#ifdef DEBUG
 		if( ! pSym )
 			fprintf( stderr, "osl_getsymbol: cannot get Symbol %s for reason: %s\n",
 					 pszSymbolName, dlerror() );
 		else
 			fprintf( stderr, "osl_getsymbol: got Symbol %s \n", pszSymbolName);
-#endif
-
+#endif		
+        
         return pSym;
-
+        
 #endif
 	}
 	return NULL;
@@ -436,7 +421,7 @@ sal_Bool SAL_CALL osl_getModuleURLFromAddress(void * addr, rtl_uString ** ppLibr
 	unsigned long			imageLowAddress;
 	unsigned long			imageHighAddress;
 	unsigned char			*imageName = NULL;
-
+	
 	/* Run through all loaded images in the process' address space and
 	 * test each segment of each image for the address we want.
 	 * NOTE:  This simply checks to see if the address is in the image's
@@ -453,7 +438,7 @@ sal_Bool SAL_CALL osl_getModuleURLFromAddress(void * addr, rtl_uString ** ppLibr
 			 * the segment they load for the address we were passed.
 			 */
 			imageVMAddressSlide = _dyld_get_image_vmaddr_slide( imageIndex );
-
+			
 			loadCmd = (struct load_command *)((char *)imageMachHeader + sizeof(struct mach_header));
 			for ( mhCmdIndex = 0; mhCmdIndex < imageMachHeader->ncmds; mhCmdIndex++ )
 			{
@@ -478,7 +463,7 @@ sal_Bool SAL_CALL osl_getModuleURLFromAddress(void * addr, rtl_uString ** ppLibr
 			/* Bad index was passed to _dyld_get_image_header() or the image
 			 * doesn't exist.
 			 */
-            #if OSL_DEBUG_LEVEL > 1
+			#ifdef DEBUG
 				fprintf( stderr, "osl_getModuleURLFromAddress(): bad index passed to _dyld_get_image_header(), mach_header returned was NULL.\n" );
 			#endif
 			result = sal_False;
@@ -490,28 +475,28 @@ sal_Bool SAL_CALL osl_getModuleURLFromAddress(void * addr, rtl_uString ** ppLibr
 
 		osl_getProcessWorkingDir( &workDir );
 
-    #if OSL_DEBUG_LEVEL > 1
+	#ifdef DEBUG
 		OSL_TRACE( "module.c::osl_getModuleURLFromAddress - %s\n", imageName );
 	#endif
 		rtl_string2UString( ppLibraryUrl, imageName, strlen(imageName), osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
-		osl_getFileURLFromSystemPath( *ppLibraryUrl, ppLibraryUrl ); // convert it to be a file url
+		osl_getFileURLFromSystemPath( *ppLibraryUrl, ppLibraryUrl ); // convert it to be a file url   
 		osl_getAbsoluteFileURL( workDir, *ppLibraryUrl, ppLibraryUrl ); // ensure it is an abosolute file url
 	}
 
 #else	/* MACOSX */
 	Dl_info dl_info;
 
-	if((result = dladdr(addr, &dl_info)) != 0)
+	if(result = dladdr(addr, &dl_info)) 
 	{
 		rtl_uString * workDir = NULL;
 		osl_getProcessWorkingDir(&workDir);
 
-#if OSL_DEBUG_LEVEL > 1
+#ifdef DEBUG
 		OSL_TRACE("module.c::osl_getModuleURLFromAddress - %s\n", dl_info.dli_fname);
 #endif
 
 		rtl_string2UString(ppLibraryUrl, dl_info.dli_fname, strlen(dl_info.dli_fname), osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS);
-		osl_getFileURLFromSystemPath(*ppLibraryUrl, ppLibraryUrl); // convert it to be a file url
+		osl_getFileURLFromSystemPath(*ppLibraryUrl, ppLibraryUrl); // convert it to be a file url   
 		osl_getAbsoluteFileURL(workDir, *ppLibraryUrl, ppLibraryUrl); // ensure it is an abosolute file url
 
 		result = sal_True;

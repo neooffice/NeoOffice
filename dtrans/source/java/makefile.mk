@@ -37,7 +37,7 @@ PRJ=..$/..
 
 PRJNAME=dtrans
 TARGET=dtransjava
-TARGETTYPE=CUI
+TARGETTYPE=GUI
 
 ENABLE_EXCEPTIONS=TRUE
 COMP1TYPELIST=$(TARGET)
@@ -77,16 +77,13 @@ SHL1TARGET= $(TARGET)$(UPD)$(DLLPOSTFIX)
 SHL1STDLIBS= \
 		$(SALLIB)	\
 		$(TOOLSLIB)	\
-		$(VCLLIB)	\
 		$(VOSLIB)	\
 		$(CPPULIB) 	\
 		$(CPPUHELPERLIB)	\
 		$(COMPHELPERLIB)
 
 .IF "$(OS)"=="MACOSX"
-SHL1STDLIBS += \
-	-framework Carbon	\
-	-framework QuickTime
+SHL1STDLIBS += -framework Carbon -framework QuickTime
 .ENDIF
 
 SHL1DEPN=

@@ -58,6 +58,7 @@
 #ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
 #endif
+#include <crt_externs.h>
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
@@ -255,6 +256,24 @@ int main( int argc, char *argv[] )
 	char *pCmdPath = argv[ 0 ];
 
 #ifdef MACOSX
+	// We need to use _NSGetEnviron() here to get the path of this executable
+	// because argv[0] does not have any directory when the executable is
+	// found in the user's PATH environment variable
+	char **ppEnviron = NULL;
+	if(_NSGetEnviron())
+		ppEnviron = *_NSGetEnviron();
+
+	// Get full executable path. We can't use __progname as that only holds
+	// the name of the executable and not the path. The full executable path
+	// is listed after the first NULL in *environ.
+	if ( ppEnviron ) {
+		char **ppTmp;
+		ppTmp = ppEnviron;
+		while ( *ppTmp++ )
+			;
+		pCmdPath = *ppTmp;
+	}
+
 	// Get absolute path of command's directory
 	ByteString aCmdPath( pCmdPath );
 	if ( aCmdPath.Len() )
@@ -274,6 +293,20 @@ int main( int argc, char *argv[] )
 		{
 			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
 			aTmpPath += aPath;
+		}
+		putenv( aTmpPath.GetBuffer() );
+	}
+
+	// Assign command's directory to STAR_RESOURCEPATH environment variable
+	ByteString aResPath( getenv( "STAR_RESOURCEPATH" ) );
+	if ( aCmdPath.Len() )
+	{
+		ByteString aTmpPath( "STAR_RESOURCEPATH=" );
+		aTmpPath += aCmdPath;
+		if ( aResPath.Len() )
+		{
+			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
+			aTmpPath += aResPath;
 		}
 		putenv( aTmpPath.GetBuffer() );
 	}
@@ -458,16 +491,16 @@ int main( int argc, char *argv[] )
 				JNINativeMethod pMethods[4];
 				pMethods[0].name = "acquire0";
 				pMethods[0].signature = "()I";
-				pMethods[0].fnPtr = (void *)Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0;
+				pMethods[0].fnPtr = Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0;
 				pMethods[1].name = "getInstance";
 				pMethods[1].signature = "()Ljava/lang/Object;";
-				pMethods[1].fnPtr = (void *)Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance;
+				pMethods[1].fnPtr = Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance;
 				pMethods[2].name = "init";
 				pMethods[2].signature = "()V";
-				pMethods[2].fnPtr = (void *)Java_com_apple_mrj_macos_carbon_CarbonLock_init;
+				pMethods[2].fnPtr = Java_com_apple_mrj_macos_carbon_CarbonLock_init;
 				pMethods[3].name = "release0";
 				pMethods[3].signature = "()I";
-				pMethods[3].fnPtr = (void *)Java_com_apple_mrj_macos_carbon_CarbonLock_release0;
+				pMethods[3].fnPtr = Java_com_apple_mrj_macos_carbon_CarbonLock_release0;
 				t.pEnv->RegisterNatives( carbonLockClass, pMethods, 4 );
 
 				// Peek for a Carbon event. This is enough to solve the

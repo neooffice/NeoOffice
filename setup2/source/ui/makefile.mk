@@ -33,82 +33,69 @@
 #   MA  02111-1307  USA
 #   
 #   =================================================
-#   Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
+#   Modified June 2003 by Patrick Luby. SISSL Removed. NeoOffice is
 #   distributed under GPL only under modification term 3 of the LGPL.
 # 
 #   Contributor(s): _______________________________________
 # 
 ##########################################################################
 
-PRJ=..$/..$/..
+PRJ=..$/..
 
-PRJNAME=extensions
-TARGET=pl
-TARGETTYPE=GUI
+PROJECTPCH=setuppch
+PROJECTPCHSOURCE=$(PRJ)$/source\pch\setuppch
+
+PRJNAME=setup2
+TARGET=ui
 
 # --- Settings -----------------------------------------------------
 
+.INCLUDE :  svpre.mk
 .INCLUDE :  settings.mk
+.INCLUDE :  sv.mk
 
 # --- Files --------------------------------------------------------
 
-LIB1TARGET = $(SLB)$/plall.lib
-LIB1FILES  = \
-	$(SLB)$/plbase.lib	\
-	$(SHL1LINKLIB)
+CXXFILES =           		\
+		main.cxx     		\
+		mainwnd.cxx  		\
+		mainevt.cxx  		\
+		magenda.cxx  		\
+		rspwizard.cxx  		\
+		textani.cxx
 
-.IF "$(GUI)" == "UNX"
-SHL1LINKLIB = $(SLB)$/plunx.lib
-.IF "$(OS)" == "SOLARIS"
-SHL1OWNLIBS = -lsocket
-.ENDIF # SOLARIS
-.ENDIF # UNX
+SRCFILES =				\
+		error.src		\
+		app.src
 
-.IF "$(GUI)" == "WNT"
-SHL1LINKLIB = $(SLB)$/plwin.lib
-SHL1OWNLIBS = \
-	version.lib	\
-	ole32.lib	\
-	advapi32.lib
-.ENDIF # WNT
+SRS1NAME = 				\
+		appmain
 
-.IF "$(GUI)" == "OS2"
-SHL1LINKLIB = $(SLB)$/plos2.lib
-.ENDIF # OS2
+SRC1FILES = 			\
+		appmain.src
 
-SHL1TARGET= $(TARGET)$(UPD)$(DLLPOSTFIX)
-SHL1IMPLIB= i$(TARGET)
+EXCEPTIONSFILES=\
+		$(OBJ)$/main.obj
 
-SHL1VERSIONMAP=exports.map
-SHL1DEF=$(MISC)$/$(SHL1TARGET).def
-DEF1NAME=$(SHL1TARGET)
+OBJFILES =				\
+		$(OBJ)$/main.obj	\
+		$(OBJ)$/mainwnd.obj	\
+		$(OBJ)$/mainevt.obj	\
+		$(OBJ)$/magenda.obj	\
+		$(OBJ)$/rspwizard.obj	\
+		$(OBJ)$/textani.obj	\
 
-SHL1LIBS=$(LIB1TARGET)
-
+.IF "$(GUI)"=="UNX"
 .IF "$(OS)"=="MACOSX"
-SHL1STDLIBS= \
-	$(LIBSTLPORT)		\
-	$(TKLIB)
+.IF "$(GUIBASE)"=="unx" || "$(GUIBASE)"=="java"
+OBJFILES += $(OBJ)$/unxmain.obj
+.ENDIF
 .ELSE
-SHL1STDLIBS= \
-	$(TKLIB)
+OBJFILES += $(OBJ)$/unxmain.obj
+.ENDIF
 .ENDIF
 
-SHL1STDLIBS+= \
-	$(VCLLIB)			\
-	$(SVLLIB)			\
-	$(TOOLSLIB)			\
-	$(VOSLIB)			\
-	$(UCBHELPERLIB)		\
-	$(CPPUHELPERLIB)	\
-	$(CPPULIB)			\
-	$(SALLIB)
-
-SHL1STDLIBS+=$(SHL1OWNLIBS)
-
-# --- Targets ------------------------------------------------------
+# --- Tagets -------------------------------------------------------
 
 .INCLUDE :  target.mk
-
-
 

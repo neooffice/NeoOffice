@@ -33,7 +33,7 @@
  *  MA  02111-1307  USA
  *  
  *  =================================================
- *  Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
+ *  Modified August 2003 by Patrick Luby. SISSL Removed. NeoOffice is
  *  distributed under GPL only under modification term 3 of the LGPL.
  *
  *  Contributor(s): _______________________________________
@@ -42,7 +42,6 @@
 
 #include <math.h>
 #include <string.h>
-
 
 #define _SV_OUTDEV_CXX
 
@@ -60,11 +59,7 @@
 #ifndef _SV_RMOUTDEV_HXX
 #include <rmoutdev.hxx>
 #endif
-#endif // REMOTE_APPSERVER
-
-#ifndef _SV_SALLAYOUT_HXX
-#include <sallayout.hxx>
-#endif // _SV_SALLAYOUT_HXX
+#endif
 
 #ifndef _RTL_TENCINFO_H
 #include <rtl/tencinfo.h>
@@ -127,20 +122,11 @@
 #ifndef _SV_EDIT_HXX
 #include <edit.hxx>
 #endif
-#ifndef _VCL_FONTCFG_HXX
-#include <fontcfg.hxx>
-#endif
 #ifndef _OSL_FILE_H
 #include <osl/file.h>
 #endif
 
 #include <unohelp.hxx>
-#ifndef _VCL_PDFWRITER_IMPL_HXX
-#include <pdfwriter_impl.hxx>
-#endif
-#ifndef _VCL_CONTROLLAYOUT_HXX
-#include <controllayout.hxx>
-#endif
 
 #ifndef _COM_SUN_STAR_BEANS_PROPERTYVALUES_HDL_
 #include <com/sun/star/beans/PropertyValues.hdl>
@@ -160,15 +146,6 @@
 #define GLYPH_FONT_HEIGHT   256
 #endif
 
-#if defined(WIN32)
-#include <malloc.h>
-#define alloca _alloca
-#elif defined(SOLARIS) || defined(IRIX)
-#include <alloca.h>
-#endif
-
-#include <memory>
-
 // =======================================================================
 
 DBG_NAMEEX( OutputDevice );
@@ -177,9 +154,7 @@ DBG_NAMEEX( Font );
 // =======================================================================
 
 using namespace ::com::sun::star;
-using namespace ::com::sun::star::uno;
 using namespace ::rtl;
-using namespace ::vcl;
 
 // =======================================================================
 
@@ -193,7 +168,7 @@ using namespace ::vcl;
 // =======================================================================
 
 static void ImplRotatePos( long nOriginX, long nOriginY, long& rX, long& rY,
-                           int nOrientation )
+                           short nOrientation )
 {
     if ( (nOrientation >= 0) && !(nOrientation % 900) )
     {
@@ -238,7 +213,7 @@ static void ImplRotatePos( long nOriginX, long nOriginY, long& rX, long& rY,
         long nY = rY-nOriginY;
 
         // Rotation...
-        rX = +((long)(nCos*nX + nSin*nY)) + nOriginX;
+        rX =  ((long)(nCos*nX + nSin*nY)) + nOriginX;
         rY = -((long)(nSin*nX - nCos*nY)) + nOriginY;
     }
 }
@@ -252,7 +227,6 @@ void OutputDevice::ImplUpdateFontData( BOOL bNewFontLists )
         mpFontCache->Release( mpFontEntry );
         mpFontEntry = NULL;
     }
-
     if ( bNewFontLists )
     {
         if ( mpGetDevFontList )
@@ -267,50 +241,21 @@ void OutputDevice::ImplUpdateFontData( BOOL bNewFontLists )
         }
     }
 
-    if ( GetOutDevType() == OUTDEV_PRINTER || mpPDFWriter )
+    if ( GetOutDevType() == OUTDEV_PRINTER )
     {
-        ImplSVData* pSVData = ImplGetSVData();
-
-        if( mpFontCache && mpFontCache != pSVData->maGDIData.mpScreenFontCache )
-            mpFontCache->Clear();
+        mpFontCache->Clear();
 
         if ( bNewFontLists )
         {
-            // we need a graphics
 #ifndef REMOTE_APPSERVER
+            // we need a graphics
             if ( ImplGetGraphics() )
 #else
-            if ( ImplGetServerGraphics() )
+			if ( ImplGetServerGraphics() )
 #endif
             {
-                if( mpFontList && mpFontList != pSVData->maGDIData.mpScreenFontList )
-                    mpFontList->Clear();
-
-                if( mpPDFWriter )
-                {
-                    if( mpFontList && mpFontList != pSVData->maGDIData.mpScreenFontList )
-                        delete mpFontList;
-                    if( mpFontCache && mpFontCache != pSVData->maGDIData.mpScreenFontCache )
-                        delete mpFontCache;
-                    mpFontList = mpPDFWriter->filterDevFontList( pSVData->maGDIData.mpScreenFontList );
-                    mpFontCache = new ImplFontCache( FALSE );
-                }
-                else
-                {
-                    if( mpOutDevData )
-                    {
-                        ImplFontSubstEntry* pEntry = mpOutDevData->mpFirstFontSubstEntry;
-                        while( pEntry )
-                        {
-                            ImplFontSubstEntry* pNext = pEntry->mpNext;
-                            delete pEntry;
-                            pEntry = pNext;
-                        }
-                        mpOutDevData->mpFirstFontSubstEntry = NULL;
-                    }
-                    mpGraphics->GetDevFontList( mpFontList );
-                    mpGraphics->GetDevFontSubstList( this );
-                }
+                mpFontList->Clear();
+                mpGraphics->GetDevFontList( mpFontList );
             }
         }
     }
@@ -318,7 +263,7 @@ void OutputDevice::ImplUpdateFontData( BOOL bNewFontLists )
     mbInitFont = TRUE;
     mbNewFont = TRUE;
 
-    // also update child windows if needed
+    // Bei Fenstern auch alle Child-Fenster mit updaten
     if ( GetOutDevType() == OUTDEV_WINDOW )
     {
         Window* pChild = ((Window*)this)->mpFirstChild;
@@ -336,7 +281,7 @@ void OutputDevice::ImplUpdateAllFontData( BOOL bNewFontLists )
 {
     ImplSVData* pSVData = ImplGetSVData();
 
-    // update all windows
+    // Alle Fenster updaten
     Window* pFrame = pSVData->maWinData.mpFirstFrame;
     while ( pFrame )
     {
@@ -352,7 +297,7 @@ void OutputDevice::ImplUpdateAllFontData( BOOL bNewFontLists )
         pFrame = pFrame->mpFrameData->mpNextFrame;
     }
 
-    // update all virtual devices
+    // Alle VirDev's updaten
     VirtualDevice* pVirDev = pSVData->maGDIData.mpFirstVirDev;
     while ( pVirDev )
     {
@@ -360,7 +305,7 @@ void OutputDevice::ImplUpdateAllFontData( BOOL bNewFontLists )
         pVirDev = pVirDev->mpNext;
     }
 
-    // update all printers
+    // Alle Printer updaten
     Printer* pPrinter = pSVData->maGDIData.mpFirstPrinter;
     while ( pPrinter )
     {
@@ -368,7 +313,7 @@ void OutputDevice::ImplUpdateAllFontData( BOOL bNewFontLists )
         pPrinter = pPrinter->mpNext;
     }
 
-    // clear global font lists to have them updated
+    // Globale Fontlisten leeren, damit diese geupdatet werden
     pSVData->maGDIData.mpScreenFontCache->Clear();
     if ( bNewFontLists )
     {
@@ -400,6 +345,7 @@ static sal_Unicode const aGulim[] = { 0xAD74, 0xB9BC, 0, 0 };
 static sal_Unicode const aGulimChe[] = { 0xAD74, 0xB9BC, 0xCCB4, 0, 0 };
 static sal_Unicode const aDotum[] = { 0xB3CB, 0xC6C0, 0, 0 };
 static sal_Unicode const aDotumChe[] = { 0xB3CB, 0xC6C0, 0xCCB4, 0, 0 };
+
 static sal_Unicode const aSimSun[] = { 0x5B8B, 0x4F53, 0, 0 };
 static sal_Unicode const aNSimSun[] = { 0x65B0, 0x5B8B, 0x4F53, 0, 0 };
 static sal_Unicode const aSimHei[] = { 0x9ED1, 0x4F53, 0, 0 };
@@ -418,62 +364,20 @@ static sal_Unicode const aMHei[] = { 'm', 0x7B80, 0x9ED1, 0, 'm', 0x6F60, 0x7AAA
 static sal_Unicode const aMKai[] = { 'm', 0x7B80, 0x6977, 0x566C, 0, 'm', 0x6F60, 0x7FF1, 0x628E, 0, 0 };
 static sal_Unicode const aMSong[] = { 'm', 0x7B80, 0x5B8B, 0, 'm', 0x6F60, 0x51BC, 0, 0 };
 static sal_Unicode const aCFangSong[] = { 'm', 0x7B80, 0x592B, 0x5B8B, 0, 'm', 0x6F60, 0x6E98, 0x51BC, 0, 0 };
+
 static sal_Unicode const aMingLiU[] = { 0x7D30, 0x660E, 0x9AD4, 0, 0 };
 static sal_Unicode const aPMingLiU[] = { 0x65B0, 0x7D30, 0x660E, 0x9AD4, 0, 0 };
 static sal_Unicode const aHei[] = { 0x6865, 0, 0 };
 static sal_Unicode const aKai[] = { 0x6B61, 0, 0 };
 static sal_Unicode const aMing[] = { 0x6D69, 0x6E67, 0, 0 };
-static sal_Unicode const aMSGothic[] = { 0xFF2D, 0xFF33, ' ', 0x30B4, 0x30B7, 0x30C3, 0x30AF, 0, 0 };
-static sal_Unicode const aMSPGothic[] = { 0xFF2D, 0xFF33, ' ', 0xFF30, 0x30B4, 0x30B7, 0x30C3, 0x30AF, 0, 0 };
-static sal_Unicode const aMSMincho[] = { 0xFF2D, 0xFF33, ' ', 0x660E, 0x671D, 0, 0 };
-static sal_Unicode const aMSPMincho[] = { 0xFF2D, 0xFF33, ' ', 0xFF30, 0x660E, 0x671D, 0, 0 };
+
+static sal_Unicode const aMSGothic[] = { 'm', 's', 0x30B4, 0x30B7, 0x30C3, 0x30AF, 0, 0 };
+static sal_Unicode const aMSPGothic[] = { 'm', 's', 'p', 0x30B4, 0x30B7, 0x30C3, 0x30AF, 0, 0 };
+static sal_Unicode const aMSMincho[] = { 'm', 's', 0x660E, 0x671D, 0, 0 };
+static sal_Unicode const aMSPMincho[] = { 'm', 's', 'p', 0x660E, 0x671D, 0, 0 };
 static sal_Unicode const aHGMinchoL[] = { 'h', 'g', 0x660E, 0x671D, 'l', 0, 0 };
 static sal_Unicode const aHGGothicB[] = { 'h', 'g', 0x30B4, 0x30B7, 0x30C3, 0x30AF, 'b', 0, 0 };
 static sal_Unicode const aHGHeiseiMin[] = { 'h', 'g', 0x5E73, 0x6210, 0x660E, 0x671D, 0x4F53, 0, 'h', 'g', 0x5E73, 0x6210, 0x660E, 0x671D, 0x4F53, 'w', '3', 'x', '1', '2', 0, 0 };
-static sal_Unicode const aSunDotum[] = { 0xC36C, 0xB3CB, 0xC6C0, 0, 0 };
-static sal_Unicode const aSunGulim[] = { 0xC36C, 0xAD74, 0xB9BC, 0, 0 };
-static sal_Unicode const aSunBatang[] = { 0xC36C, 0xBC14, 0xD0D5, 0, 0 };
-static sal_Unicode const aBaekmukDotum[] = { 0xBC31, 0xBB35, 0xB3CB, 0xC6C0, 0, 0 };
-static sal_Unicode const aBaekmukGulim[] = { 0xBC31, 0xBB35, 0xAD74, 0xB9BC, 0, 0 };
-static sal_Unicode const aBaekmukBatang[] = { 0xBC31, 0xBB35, 0xBC14, 0xD0D5, 0, 0 };
-static sal_Unicode const aFzHeiTi[] = { 0x65B9, 0x6B63, 0x9ED1, 0x9AD4, 0, 0 };
-static sal_Unicode const aFzMingTi[] = { 0x65B9, 0x6B63, 0x660E, 0x9AD4, 0, 0 };
-static sal_Unicode const aFzSongTi[] = { 0x65B9, 0x6B63, 0x5B8B, 0x4F53, 0, 0 };
-static sal_Unicode const aHYMyeongJoExtra[]         = { 'h', 'y', 0xACAC, 0xBA85, 0xC870, 0, 0 };
-static sal_Unicode const aHYSinMyeongJoMedium[]     = { 'h', 'y', 0xC2E0, 0xBA85, 0xC870, 0, 0 };
-static sal_Unicode const aHYGothicMedium[]          = { 'h', 'y', 0xC911, 0xACE0, 0xB515, 0, 0 };
-static sal_Unicode const aHYGraphicMedium[]         = { 'h', 'y', 0xADF8, 0xB798, 0xD53D, 'm', 0, 0 };
-static sal_Unicode const aHYGraphic[]               = { 'h', 'y', 0xADF8, 0xB798, 0xD53D, 0, 0 };
-static sal_Unicode const aNewGulim[]                = { 0xC0C8, 0xAD74, 0xB9BC, 0, 0 };
-static sal_Unicode const aSunGungseo[]              = { 0xC36C, 0xAD81, 0xC11C, 0, 0 };
-static sal_Unicode const aHYGungSoBold[]            = { 'h','y', 0xAD81, 0xC11C, 'b', 0, 0 };
-static sal_Unicode const aHYGungSo[]                 = { 'h','y', 0xAD81, 0xC11C, 0, 0 };
-static sal_Unicode const aSunHeadLine[]             = { 0xC36C, 0xD5E4, 0xB4DC, 0xB77C, 0xC778, 0, 0 };
-static sal_Unicode const aHYHeadLineMedium[]        = { 'h', 'y', 0xD5E4, 0xB4DC, 0xB77C, 0xC778, 'm', 0, 0 };
-static sal_Unicode const aHYHeadLine[]              = { 'h', 'y', 0xD5E4, 0xB4DC, 0xB77C, 0xC778, 0, 0 };
-static sal_Unicode const aYetR[]                    = { 0xD734, 0xBA3C, 0xC61B, 0xCCB4, 0, 0 };
-static sal_Unicode const aHYGothicExtra[]           = { 'h', 'y', 0xACAC, 0xACE0, 0xB515, 0, 0 };
-static sal_Unicode const aSunMokPan[]               = { 0xC36C, 0xBAA9, 0xD310, 0, 0 };
-static sal_Unicode const aSunYeopseo[]              = { 0xC36C, 0xC5FD, 0xC11C, 0, 0 };
-static sal_Unicode const aSunBaekSong[]              = { 0xC36C, 0xBC31, 0xC1A1, 0, 0 };
-static sal_Unicode const aHYPostLight[]             = { 'h', 'y', 0xC5FD, 0xC11C, 'l', 0, 0 };
-static sal_Unicode const aHYPost[]                  = { 'h', 'y', 0xC5FD, 0xC11C, 0, 0 };
-static sal_Unicode const aMagicR[]                  = { 0xD734, 0xBA3C, 0xB9E4, 0xC9C1, 0xCCB4, 0, 0 };
-static sal_Unicode const aSunCrystal[]              = { 0xC36C, 0xD06C, 0xB9AC, 0xC2A4, 0xD0C8, 0, 0 };
-static sal_Unicode const aSunSaemmul[]              = { 0xC36C, 0xC0D8, 0xBB3C, 0, 0 };
-static sal_Unicode const aHYShortSamulMedium[]      = { 'h', 'y', 0xC595, 0xC740, 0xC0D8, 0xBB3C, 'm', 0, 0 };
-static sal_Unicode const aHYShortSamul[]            = { 'h', 'y', 0xC595, 0xC740, 0xC0D8, 0xBB3C, 0, 0 };
-static sal_Unicode const aHaansoftBatang[]          = { 0xD55C, 0xCEF4, 0xBC14, 0xD0D5, 0, 0 };
-static sal_Unicode const aHaansoftDotum[]           = { 0xD55C, 0xCEF4, 0xB3CB, 0xC6C0, 0, 0 };
-static sal_Unicode const aHyhaeseo[]                = { 0xD55C, 0xC591, 0xD574, 0xC11C, 0, 0 };
-static sal_Unicode const aMDSol[]                   = { 'm', 'd', 0xC194, 0xCCB4, 0, 0 };
-static sal_Unicode const aMDGaesung[]               = { 'm', 'd', 0xAC1C, 0xC131, 0xCCB4, 0, 0 };
-static sal_Unicode const aMDArt[]                   = { 'm', 'd', 0xC544, 0xD2B8, 0xCCB4, 0, 0 };
-static sal_Unicode const aMDAlong[]                 = { 'm', 'd', 0xC544, 0xB871, 0xCCB4, 0, 0 };
-static sal_Unicode const aMDEasop[]                 = { 'm', 'd', 0xC774, 0xC19D, 0xCCB4, 0, 0 };
-static sal_Unicode const HYShortSamulMedium[]       = { 'h', 'y', 0xC595, 0xC740, 0xC0D8, 0xBB3C, 'm', 0, 0 };
-static sal_Unicode const HYShortSamul[]             = { 'h', 'y', 0xC595, 0xC740, 0xC0D8, 0xBB3C, 0, 0 };
-
 
 static ImplLocaliziedFontName const aImplLocaliziedNamesList[] =
 {
@@ -513,49 +417,6 @@ static ImplLocaliziedFontName const aImplLocaliziedNamesList[] =
 {   "hgminchol",            aHGMinchoL },
 {   "hggothicb",            aHGGothicB },
 {   "hgheiseimin",          aHGHeiseiMin },
-{   "sundotum",             aSunDotum },
-{   "sungulim",             aSunGulim },
-{   "sunbatang",            aSunBatang },
-{   "baekmukdotum",         aBaekmukDotum },
-{   "baekmukgulim",         aBaekmukGulim },
-{   "baekmukbatang",        aBaekmukBatang },
-{   "fzheiti",              aFzHeiTi },
-{   "fzmingti",             aFzMingTi },
-{   "fzsongti",             aFzSongTi },
-{   "hymyeongjoextra",      aHYMyeongJoExtra },     
-{   "hysinmyeongjomedium",  aHYSinMyeongJoMedium }, 
-{   "hygothicmedium",       aHYGothicMedium },      
-{   "hygraphicmedium",      aHYGraphicMedium },     
-{   "hygraphic",            aHYGraphic },     
-{   "newgulim",             aNewGulim },            
-{   "sungungseo",           aSunGungseo },          
-{   "hygungsobold",         aHYGungSoBold },        
-{   "hygungso",             aHYGungSo },        
-{   "sunheadline",          aSunHeadLine },         
-{   "hyheadlinemedium",     aHYHeadLineMedium },    
-{   "hyheadline",           aHYHeadLine },    
-{   "yetr",                 aYetR },                
-{   "hygothicextra",        aHYGothicExtra },       
-{   "sunmokpan",            aSunMokPan },           
-{   "sunyeopseo",           aSunYeopseo },          
-{   "sunbaeksong",          aSunBaekSong },          
-{   "hypostlight",          aHYPostLight },         
-{   "hypost",               aHYPost },         
-{   "magicr",               aMagicR },              
-{   "suncrystal",           aSunCrystal },          
-{   "sunsaemmul",           aSunSaemmul },          
-{   "hyshortsamulmedium",   aHYShortSamulMedium },  
-{   "hyshortsamul",         aHYShortSamul },  
-{   "haansoftbatang",       aHaansoftBatang },    
-{   "haansoftdotum",        aHaansoftDotum },     
-{   "hyhaeseo",             aHyhaeseo },          
-{   "mdsol",                aMDSol },             
-{   "mdgaesung",            aMDGaesung },         
-{   "mdart",                aMDArt },             
-{   "mdalong",              aMDAlong },           
-{   "mdeasop",              aMDEasop },           
-{   "hyshortsamulmedium",   HYShortSamulMedium }, 
-{   "hyshortsamul",         HYShortSamul },       
 {   NULL,                   NULL },
 };
 
@@ -616,7 +477,7 @@ void ImplGetEnglishSearchFontName( String& rName )
             {
                 c -= 0xFF00-0x0020;
                 // Upper to Lower
-                if ( (c >= 'A') && (c <= 'Z') )
+                if ( (c >= 0x0041) && (c <= 0x005A) )
                     c += 0x0020;
                 rName.SetChar( i, c );
             }
@@ -627,15 +488,15 @@ void ImplGetEnglishSearchFontName( String& rName )
             }
         }
         // not lowercase Ascii
-        else if ( !((c >= 'a') && (c <= 'z')) )
+        else if ( !((c >= 0x0061) && (c <= 0x007A)) )
         {
             // To Lowercase-Ascii
-            if ( (c >= 'A') && (c <= 'Z') )
+            if ( (c >= 0x0041) && (c <= 0x005A) )
             {
                 c += 0x0020;
                 rName.SetChar( i, c );
             }
-            else if( ((c < '0') || (c > '9')) && (c != ';') ) // not 0-9 or semicolon
+            else if ( !((c >= 0x0030) && (c <= 0x0039)) ) // not 0-9
             {
                 // Remove white spaces and special characters
                 rName.Erase( i, 1 );
@@ -669,7 +530,7 @@ void ImplGetEnglishSearchFontName( String& rName )
 
         pTranslateNames++;
     }
-}
+};
 
 // -----------------------------------------------------------------------
 
@@ -681,11 +542,11 @@ String GetFontToken( const String& rStr, xub_StrLen nToken, xub_StrLen& rIndex )
     xub_StrLen          nFirstChar      = rIndex;
     xub_StrLen          i               = nFirstChar;
 
-    // get the token position and it's length
+    // Bestimme die Token-Position und Laenge
     pStr += i;
     while ( i < nLen )
     {
-        // increase TokCount when the token matches
+        // Stimmt das Tokenzeichen ueberein, dann erhoehe TokCount
         if ( (*pStr == ';') || (*pStr == ',') )
         {
             nTok++;
@@ -718,6 +579,1006 @@ String GetFontToken( const String& rStr, xub_StrLen nToken, xub_StrLen& rIndex )
     }
 }
 
+// =======================================================================
+
+static const char* const aImplKillLeadingList[] =
+{
+    "microsoft",
+    "monotype",
+    "linotype",
+    "adobe",
+    "nimbus",
+    "zycjk",
+    "itc",
+    "sun",
+    "amt",
+    "ms",
+    "mt",
+    "cg",
+    "hg",
+    "fz",
+    NULL
+};
+
+// -----------------------------------------------------------------------
+
+static const char* const aImplKillTrailingList[] =
+{
+    "microsoft",
+    "monotype",
+    "linotype",
+    "adobe",
+    "nimbus",
+    "itc",
+    "sun",
+    "amt",
+    "ms",
+    "mt",
+    // Scripts, for compatibility with older versions
+    "we",
+    "cyr",
+    "tur",
+    "wt",
+    "greek",
+    "wl",
+    // CJK extensions
+    "gb",
+    "big5",
+    "pro",
+    "z01",
+    "z02",
+    "z03",
+    "z13",
+    "b01",
+    "w3x12",
+    // Old Printer Fontnames
+    "5cpi",
+    "6cpi",
+    "7cpi",
+    "8cpi",
+    "9cpi",
+    "10cpi",
+    "11cpi",
+    "12cpi",
+    "13cpi",
+    "14cpi",
+    "15cpi",
+    "16cpi",
+    "18cpi",
+    "24cpi",
+    "scale",
+    "pc",
+    NULL
+};
+
+// -----------------------------------------------------------------------
+
+static const char* const aImplKillTrailingWithExceptionsList[] =
+{
+    "ce", "monospa", "oldfa", NULL,
+    "ps", "ca", NULL,
+    NULL
+};
+
+// -----------------------------------------------------------------------
+
+struct ImplFontAttrWeightSearchData
+{
+    const char*             mpStr;
+    FontWeight              meWeight;
+};
+
+static ImplFontAttrWeightSearchData const aImplWeightAttrSearchList[] =
+{
+{   "extrablack",           WEIGHT_BLACK },
+{   "ultrablack",           WEIGHT_BLACK },
+{   "black",                WEIGHT_BLACK },
+{   "heavy",                WEIGHT_BLACK },
+{   "ultrabold",            WEIGHT_ULTRABOLD },
+{   "semibold",             WEIGHT_SEMIBOLD },
+{   "bold",                 WEIGHT_BOLD },
+{   "ultralight",           WEIGHT_ULTRALIGHT },
+{   "semilight",            WEIGHT_SEMILIGHT },
+{   "light",                WEIGHT_LIGHT },
+{   "demi",                 WEIGHT_SEMIBOLD },
+{   "medium",               WEIGHT_MEDIUM },
+{   NULL,                   WEIGHT_DONTKNOW },
+};
+
+// -----------------------------------------------------------------------
+
+struct ImplFontAttrWidthSearchData
+{
+    const char*             mpStr;
+    FontWidth               meWidth;
+};
+
+static ImplFontAttrWidthSearchData const aImplWidthAttrSearchList[] =
+{
+{   "narrow",               WIDTH_CONDENSED },
+{   "semicondensed",        WIDTH_SEMI_CONDENSED },
+{   "ultracondensed",       WIDTH_ULTRA_CONDENSED },
+{   "semiexpanded",         WIDTH_SEMI_EXPANDED },
+{   "ultraexpanded",        WIDTH_ULTRA_EXPANDED },
+{   "expanded",             WIDTH_EXPANDED },
+{   "wide",                 WIDTH_ULTRA_EXPANDED },
+{   "condensed",            WIDTH_CONDENSED },
+{   "cond",                 WIDTH_CONDENSED },
+{   "cn",                   WIDTH_CONDENSED },
+{   NULL,                   WIDTH_DONTKNOW },
+};
+
+// -----------------------------------------------------------------------
+
+// IMPL_FONT_ATTR_DEFAULT       - Default-Font like Andale Sans UI, Palace Script, Albany, Thorndale, Cumberland, ...
+// IMPL_FONT_ATTR_STANDARD      - Standard-Font like Arial, Times, Courier, ...
+// IMPL_FONT_ATTR_NORMAL        - normal Font for writing text like Arial, Verdana, Arial Narrow, Trebuchet, Times, Courier, ...
+// IMPL_FONT_ATTR_SYMBOL        - Font with symbols
+// IMPL_FONT_ATTR_DECORATIVE    - Readable and normally used for drawings
+// IMPL_FONT_ATTR_SPECIAL       - very special design
+// IMPL_FONT_ATTR_TITLING       - only uppercase characters
+// IMPL_FONT_ATTR_FULL          - Font with normally all characters
+// IMPL_FONT_ATTR_CAPTITALS     - only uppercase characters, but lowercase characters smaller as the uppercase characters
+// IMPL_FONT_ATTR_TYPEWRITER    - like a typewriter: Courier, ...
+// IMPL_FONT_ATTR_SCRIPT        - Handwriting or Script
+// IMPL_FONT_ATTR_HANDWRITING   - More Handwriting with normal letters
+// IMPL_FONT_ATTR_CHANCERY      - Like Zapf Chancery
+// IMPL_FONT_ATTR_COMIC         - Like Comic Sans MS
+// IMPL_FONT_ATTR_BRUSHSCRIPT   - More Script
+// IMPL_FONT_ATTR_OTHERSTYLE    - OldStyle, ... so negativ points
+#define IMPL_FONT_ATTR_DEFAULT       ((ULONG)0x00000001)
+#define IMPL_FONT_ATTR_STANDARD      ((ULONG)0x00000002)
+#define IMPL_FONT_ATTR_NORMAL        ((ULONG)0x00000004)
+#define IMPL_FONT_ATTR_SYMBOL        ((ULONG)0x00000008)
+#define IMPL_FONT_ATTR_FIXED         ((ULONG)0x00000010)
+#define IMPL_FONT_ATTR_SANSSERIF     ((ULONG)0x00000020)
+#define IMPL_FONT_ATTR_SERIF         ((ULONG)0x00000040)
+#define IMPL_FONT_ATTR_DECORATIVE    ((ULONG)0x00000080)
+#define IMPL_FONT_ATTR_SPECIAL       ((ULONG)0x00000100)
+#define IMPL_FONT_ATTR_ITALIC        ((ULONG)0x00000200)
+#define IMPL_FONT_ATTR_TITLING       ((ULONG)0x00000400)
+#define IMPL_FONT_ATTR_CAPITALS      ((ULONG)0x00000800)
+#define IMPL_FONT_ATTR_CJK           ((ULONG)0x00001000)
+#define IMPL_FONT_ATTR_CJK_JP        ((ULONG)0x00002000)
+#define IMPL_FONT_ATTR_CJK_SC        ((ULONG)0x00004000)
+#define IMPL_FONT_ATTR_CJK_TC        ((ULONG)0x00008000)
+#define IMPL_FONT_ATTR_CJK_KR        ((ULONG)0x00010000)
+#define IMPL_FONT_ATTR_CTL           ((ULONG)0x00020000)
+#define IMPL_FONT_ATTR_NONELATIN     ((ULONG)0x00040000)
+#define IMPL_FONT_ATTR_FULL          ((ULONG)0x00080000)
+#define IMPL_FONT_ATTR_OUTLINE       ((ULONG)0x00100000)
+#define IMPL_FONT_ATTR_SHADOW        ((ULONG)0x00200000)
+#define IMPL_FONT_ATTR_ROUNDED       ((ULONG)0x00400000)
+#define IMPL_FONT_ATTR_TYPEWRITER    ((ULONG)0x00800000)
+#define IMPL_FONT_ATTR_SCRIPT        ((ULONG)0x01000000)
+#define IMPL_FONT_ATTR_HANDWRITING   ((ULONG)0x02000000)
+#define IMPL_FONT_ATTR_CHANCERY      ((ULONG)0x04000000)
+#define IMPL_FONT_ATTR_COMIC         ((ULONG)0x08000000)
+#define IMPL_FONT_ATTR_BRUSHSCRIPT   ((ULONG)0x10000000)
+#define IMPL_FONT_ATTR_GOTHIC        ((ULONG)0x20000000)
+#define IMPL_FONT_ATTR_SCHOOLBOOK    ((ULONG)0x40000000)
+#define IMPL_FONT_ATTR_OTHERSTYLE    ((ULONG)0x80000000)
+
+#define IMPL_FONT_ATTR_CJK_ALLLANG   (IMPL_FONT_ATTR_CJK_JP | IMPL_FONT_ATTR_CJK_SC | IMPL_FONT_ATTR_CJK_TC | IMPL_FONT_ATTR_CJK_KR)
+#define IMPL_FONT_ATTR_ALLSCRIPT     (IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_HANDWRITING | IMPL_FONT_ATTR_CHANCERY | IMPL_FONT_ATTR_COMIC | IMPL_FONT_ATTR_BRUSHSCRIPT)
+#define IMPL_FONT_ATTR_ALLSUBSCRIPT  (IMPL_FONT_ATTR_HANDWRITING | IMPL_FONT_ATTR_CHANCERY | IMPL_FONT_ATTR_COMIC | IMPL_FONT_ATTR_BRUSHSCRIPT)
+#define IMPL_FONT_ATTR_ALLSERIFSTYLE (IMPL_FONT_ATTR_ALLSCRIPT |\
+                                      IMPL_FONT_ATTR_SANSSERIF | IMPL_FONT_ATTR_SERIF |\
+                                      IMPL_FONT_ATTR_FIXED | IMPL_FONT_ATTR_ITALIC |\
+                                      IMPL_FONT_ATTR_GOTHIC | IMPL_FONT_ATTR_SCHOOLBOOK |\
+                                      IMPL_FONT_ATTR_SHADOW | IMPL_FONT_ATTR_OUTLINE)
+
+struct ImplFontAttrTypeSearchData
+{
+    const char*             mpStr;
+    ULONG                   mnType;
+};
+
+static ImplFontAttrTypeSearchData const aImplTypeAttrSearchList[] =
+{
+{   "monotype",             0 },
+{   "linotype",             0 },
+{   "titling",              IMPL_FONT_ATTR_TITLING },
+{   "captitals",            IMPL_FONT_ATTR_CAPITALS },
+{   "captital",             IMPL_FONT_ATTR_CAPITALS },
+{   "caps",                 IMPL_FONT_ATTR_CAPITALS },
+{   "italic",               IMPL_FONT_ATTR_ITALIC },
+{   "oblique",              IMPL_FONT_ATTR_ITALIC },
+{   "rounded",              IMPL_FONT_ATTR_ROUNDED },
+{   "outline",              IMPL_FONT_ATTR_OUTLINE },
+{   "shadow",               IMPL_FONT_ATTR_SHADOW },
+{   "handwriting",          IMPL_FONT_ATTR_HANDWRITING | IMPL_FONT_ATTR_SCRIPT },
+{   "hand",                 IMPL_FONT_ATTR_HANDWRITING | IMPL_FONT_ATTR_SCRIPT },
+{   "signet",               IMPL_FONT_ATTR_HANDWRITING | IMPL_FONT_ATTR_SCRIPT },
+{   "script",               IMPL_FONT_ATTR_BRUSHSCRIPT | IMPL_FONT_ATTR_SCRIPT },
+{   "calligraphy",          IMPL_FONT_ATTR_CHANCERY | IMPL_FONT_ATTR_SCRIPT },
+{   "chancery",             IMPL_FONT_ATTR_CHANCERY | IMPL_FONT_ATTR_SCRIPT },
+{   "corsiva",              IMPL_FONT_ATTR_CHANCERY | IMPL_FONT_ATTR_SCRIPT },
+{   "gothic",               IMPL_FONT_ATTR_SANSSERIF | IMPL_FONT_ATTR_GOTHIC },
+{   "schoolbook",           IMPL_FONT_ATTR_SERIF | IMPL_FONT_ATTR_SCHOOLBOOK },
+{   "schlbk",               IMPL_FONT_ATTR_SERIF | IMPL_FONT_ATTR_SCHOOLBOOK },
+{   "typewriter",           IMPL_FONT_ATTR_TYPEWRITER | IMPL_FONT_ATTR_FIXED },
+{   "lineprinter",          IMPL_FONT_ATTR_TYPEWRITER | IMPL_FONT_ATTR_FIXED },
+{   "monospaced",           IMPL_FONT_ATTR_FIXED },
+{   "monospace",            IMPL_FONT_ATTR_FIXED },
+{   "mono",                 IMPL_FONT_ATTR_FIXED },
+{   "fixed",                IMPL_FONT_ATTR_FIXED },
+{   "sansserif",            IMPL_FONT_ATTR_SANSSERIF },
+{   "sans",                 IMPL_FONT_ATTR_SANSSERIF },
+{   "swiss",                IMPL_FONT_ATTR_SANSSERIF },
+{   "serif",                IMPL_FONT_ATTR_SERIF },
+{   "bright",               IMPL_FONT_ATTR_SERIF },
+{   "symbols",              IMPL_FONT_ATTR_SYMBOL },
+{   "symbol",               IMPL_FONT_ATTR_SYMBOL },
+{   "dingbats",             IMPL_FONT_ATTR_SYMBOL },
+{   "dings",                IMPL_FONT_ATTR_SYMBOL },
+{   "ding",                 IMPL_FONT_ATTR_SYMBOL },
+{   "bats",                 IMPL_FONT_ATTR_SYMBOL },
+{   "math",                 IMPL_FONT_ATTR_SYMBOL },
+{   "oldstyle",             IMPL_FONT_ATTR_OTHERSTYLE },
+{   "oldface",              IMPL_FONT_ATTR_OTHERSTYLE },
+{   "old",                  IMPL_FONT_ATTR_OTHERSTYLE },
+{   "new",                  0 },
+{   "modern",               0 },
+{   "lucida",               0 },
+{   "regular",              0 },
+{   "extended",             0 },
+{   "extra",                IMPL_FONT_ATTR_OTHERSTYLE },
+{   "ext",                  0 },
+{   "scalable",             0 },
+{   "scale",                0 },
+{   "nimbus",               0 },
+{   "adobe",                0 },
+{   "itc",                  0 },
+{   "amt",                  0 },
+{   "mt",                   0 },
+{   "ms",                   0 },
+{   "cpi",                  0 },
+{   "no",                   0 },
+{   NULL,                   0 },
+};
+
+// -----------------------------------------------------------------------
+
+static BOOL ImplKillLeading( String& rName, const char* const* ppStr )
+{
+    while ( *ppStr )
+    {
+        const char*         pStr = *ppStr;
+        const xub_Unicode*  pNameStr = rName.GetBuffer();
+        while ( (*pNameStr == (xub_Unicode)(unsigned char)*pStr) && *pStr )
+        {
+            pNameStr++;
+            pStr++;
+        }
+        if ( !*pStr )
+        {
+            rName.Erase( 0, (xub_StrLen)(pNameStr-rName.GetBuffer()) );
+            return TRUE;
+        }
+
+        ppStr++;
+    }
+
+    return FALSE;
+}
+
+// -----------------------------------------------------------------------
+
+static xub_StrLen ImplIsTrailing( const sal_Unicode* pEndName, const char* pStr )
+{
+    const char* pTempStr = pStr;
+    while ( *pTempStr )
+        pTempStr++;
+
+    xub_StrLen nStrLen = (xub_StrLen)(pTempStr-pStr);
+    const sal_Unicode* pNameStr = pEndName-nStrLen;
+    while ( (*pNameStr == (xub_Unicode)(unsigned char)*pStr) && *pStr )
+    {
+        pNameStr++;
+        pStr++;
+    }
+
+    if ( *pStr )
+        return 0;
+    else
+        return nStrLen;
+}
+
+// -----------------------------------------------------------------------
+
+static BOOL ImplKillTrailing( String& rName, const char* const* ppStr )
+{
+    const xub_Unicode* pEndName = rName.GetBuffer()+rName.Len();
+    while ( *ppStr )
+    {
+        xub_StrLen nTrailLen = ImplIsTrailing( pEndName, *ppStr );
+        if ( nTrailLen )
+        {
+            rName.Erase( rName.Len()-nTrailLen );
+            return TRUE;
+        }
+
+        ppStr++;
+    }
+
+    return FALSE;
+}
+
+// -----------------------------------------------------------------------
+
+static BOOL ImplKillTrailingWithExceptions( String& rName, const char* const* ppStr )
+{
+    const xub_Unicode* pEndName = rName.GetBuffer()+rName.Len();
+    while ( *ppStr )
+    {
+        xub_StrLen nTrailLen = ImplIsTrailing( pEndName, *ppStr );
+        if ( nTrailLen )
+        {
+            const xub_Unicode* pEndNameTemp = pEndName-nTrailLen;
+            while ( *ppStr )
+            {
+                if ( ImplIsTrailing( pEndNameTemp, *ppStr ) )
+                    return FALSE;
+                ppStr++;
+            }
+
+            rName.Erase( rName.Len()-nTrailLen );
+            return TRUE;
+        }
+        else
+        {
+            while ( *ppStr )
+                ppStr++;
+        }
+
+        ppStr++;
+    }
+
+    return FALSE;
+}
+
+// -----------------------------------------------------------------------
+
+static BOOL ImplFindAndErase( String& rName, const char* pStr )
+{
+    xub_StrLen nPos = rName.SearchAscii( pStr );
+    if ( nPos == STRING_NOTFOUND )
+        return FALSE;
+
+    const char* pTempStr = pStr;
+    while ( *pTempStr )
+        pTempStr++;
+    rName.Erase( nPos, (xub_StrLen)(pTempStr-pStr) );
+    return TRUE;
+}
+
+// -----------------------------------------------------------------------
+
+static void ImplGetMapName( const String& rOrgName,
+                            String& rShortName, String& rFamilyName,
+                            FontWeight& rWeight, FontWidth& rWidth,
+                            ULONG& rType )
+{
+    rShortName = rOrgName;
+
+    // Kill leading vendor names and other unimportant data
+    ImplKillLeading( rShortName, aImplKillLeadingList );
+
+    // Kill trailing vendor names and other unimportant data
+    ImplKillTrailing( rShortName, aImplKillTrailingList );
+    ImplKillTrailingWithExceptions( rShortName, aImplKillTrailingWithExceptionsList );
+
+    rFamilyName = rShortName;
+
+    // Kill attributes from the name and update the data
+    // Weight
+    const ImplFontAttrWeightSearchData* pWeightList = aImplWeightAttrSearchList;
+    while ( pWeightList->mpStr )
+    {
+        if ( ImplFindAndErase( rFamilyName, pWeightList->mpStr ) )
+        {
+            if ( (rWeight == WEIGHT_DONTKNOW) || (rWeight == WEIGHT_NORMAL) )
+                rWeight = pWeightList->meWeight;
+            break;
+        }
+        pWeightList++;
+    }
+
+    // Width
+    const ImplFontAttrWidthSearchData* pWidthList = aImplWidthAttrSearchList;
+    while ( pWidthList->mpStr )
+    {
+        if ( ImplFindAndErase( rFamilyName, pWidthList->mpStr ) )
+        {
+            if ( (rWidth == WIDTH_DONTKNOW) || (rWidth == WIDTH_NORMAL) )
+                rWidth = pWidthList->meWidth;
+            break;
+        }
+        pWidthList++;
+    }
+
+    // Type
+    rType = 0;
+    const ImplFontAttrTypeSearchData* pTypeList = aImplTypeAttrSearchList;
+    while ( pTypeList->mpStr )
+    {
+        if ( ImplFindAndErase( rFamilyName, pTypeList->mpStr ) )
+            rType |= pTypeList->mnType;
+        pTypeList++;
+    }
+
+    // Remove numbers
+    xub_StrLen i = 0;
+    while ( i < rFamilyName.Len() )
+    {
+        sal_Unicode c = rFamilyName.GetChar( i );
+        if ( (c >= 0x0030) && (c <= 0x0039) )
+            rFamilyName.Erase( i, 1 );
+        else
+            i++;
+    }
+}
+
+// =======================================================================
+
+static char const aImplSubsSansUnicode[] = "andalesansui;arialunicodems;lucidaunicode";
+static char const aImplSubsSans[] = "albany;arial;helvetica;lucidasans;lucida;geneva;helmet;sansserif;nimbussansl;nimbussans";
+static char const aImplSubsSerif[] = "thorndale;timesnewroman;times;timesroman;newyork;timmons;serif;lucidaserif;lucidabright;roman;nimbusromanno9;nimbusromanno9l;bookman;itcbookman;garamond;garamondmt;palatino";
+static char const aImplSubsFixed[] = "cumberland;couriernew;courier;lucidatypewriter;lucidasanstypewriter;monaco;monospaced;nimbusmono;nimbusmonol";
+static char const aImplSubsStarSymbol[] = "starsymbol;opensymbol;starbats;wingdings;zapfdingbats;itczapfdingbats;monotypesorts;dingbats;lucidadingbats;lucidasansdingbats;webdings;symbol;standardsymbols;standardsymbolsl";
+static char const aImplSubsDingBats[] = "starsymbol;zapfdingbats;itczapfdingbats;monotypesorts;dingbats;opensymbol";
+static char const aImplSubsSymbol[] = "starsymbol;symbol;standardsymbols;standardsymbolsl;mtsymbol;opensymbol";
+static char const aImplSubsWingdings[] = "starsymbol;wingdings;morewingbats;opensymbol";
+
+static char const aImplSubsAndaleSans[] = "andalesans;verdana;trebuchetms";
+static char const aImplSubsSansNarrow[] = "arialnarrow;helveticanarrow;helmetcondensed;nimbussanslcondensed;nimbussanscondensed";
+static char const aImplSubsBroadway[] = "broadway;mtbroadway;broadwaymt";
+static char const aImplSubsComic[] = "comicsansms;kidprint;";
+static char const aImplSubsPalaceScript[] = "palacescript;palacescriptmt;arioso;shelley";
+static char const aImplSubsSheffield[] = "sheffield;conga;centurygothic;copperlategothic;felixtitling";
+
+static char const aImplSubsJPGothic[] = "msgothic;mspgothic;hggothic;hggothicb;hggothice;andalesansui;gothic";
+static char const aImplSubsJPMincho[] = "hgmincholightj;msmincho;mspmincho;hgminchoj;hgminchol;minchol;mincho;hgheiseimin;heiseimin;minchou";
+static char const aImplSubsSCSun[] = "msunglightsc;simsun;nsimsun;zycjksun";
+static char const aImplSubsSCHei[] = "simhei;fzhei;zycjkhei;mhei;hei;andalesansui";
+static char const aImplSubsSCKai[] = "simkai;fzkai;zycjkkai;mkai;kai";
+static char const aImplSubsSCSong[] = "song;fzsongyi;fzsong;msong;shusong;fzshusong";
+static char const aImplSubsSCFangSong[] = "fangsong;fzfangsong;cfangsong";
+static char const aImplSubsTCMing[] = "msunglighttc;mingliu;pmingliu;ming";
+static char const aImplSubsTCHei[] = "hei;andalesansui";
+static char const aImplSubsTCKai[] = "kai";
+static char const aImplSubsSTCHei[] = "hei;andalesansui;simhei;fzhei;zycjkhei;mhei"; // SC and TC names, because the original name could be SC or TC
+static char const aImplSubsSTCKai[] = "kai;simkai;fzkai;zycjkkai;mkai"; // SC and TC names, because the original name could be SC or TC
+static char const aImplSubsKRBatang[] = "hymyeongjolightk;myeongjo;batang;batangche;gungsuh;gungsuhche;myeomjo";
+static char const aImplSubsKRGulim[] = "gulim;gulimche;dotum;dotumche;roundgothic;kodig;andalesansui";
+
+static char const aImplSubsCenturyGothic[] = "centurygothic;avantgarde;itcavantgarde;gothic;avantgardegothic;conga";
+static char const aImplSubsNewCenturySchoolbook[] = "newcenturyschlbk;newcenturyschoolbook;centuryschoolbook;centuryschoolbookl";
+static char const aImplSubsBookman[] = "bookman;itcbookman;bookmanl;bookmanoldstyle;";
+static char const aImplSubsPalatino[] = "palatino;bookantiqua;palladio;palladiol";
+
+static char const aImplSubsImprintShadow[] = "imprintmtshadow;imprintshadow;imprint;chevaraoutline;chevara;gallia;colonnamt;algerian;castellar";
+static char const aImplSubsOutline[] = "monotypeoldstyleboldoutline;monotypeoldstyleoutline;chevaraoutline;imprintmtshadow;imprintshadow;imprint;colonnamt;castellar";
+static char const aImplSubsShadow[] = "imprintmtshadow;imprintshadow;imprint;chevara;gallia;algerian";
+static char const aImplSubsFalstaff[] = "falstaff;widelatin;latinwide;impact";
+static char const aImplSubsZapfChancery[] = "zapfchancery;itczapfchancery;monotypecorsiva;corsiva;chancery;chanceryl;lucidacalligraphy;lucidahandwriting";
+
+
+static char const aImplMSSubsArial[] = "Arial";
+static char const aImplMSSubsTimesNewRoman[] = "Times New Roman";
+static char const aImplMSSubsCourierNew[] = "Courier New";
+static char const aImplMSSubsArialUnicodeMS[] = "Arial Unicode MS;Andale Sans UI";
+
+static char const aImplPSSubsHelvetica[] = "Helvetica";
+static char const aImplPSSubsTimes[] = "Times";
+static char const aImplPSSubsCourier[] = "Courier";
+
+static char const aImplHTMLSubsSerif[] = "serif";
+static char const aImplHTMLSubsSansSerif[] = "sans-serif";
+static char const aImplHTMLSubsMonospace[] = "monospace";
+static char const aImplHTMLSubsCursive[] = "cursive";
+static char const aImplHTMLSubsFantasy[] = "fantasy";
+
+// -----------------------------------------------------------------------
+
+struct ImplFontNameAttr
+{
+    const char*             mpName;
+    const char*             mpSubstitution1;
+    const char*             mpSubstitution2;
+    const char*             mpSubstitution3;
+    const char*             mpSubstitution4;
+    const char*             mpMSSubstitution;
+    const char*             mpPSSubstitution;
+    const char*             mpHTMLSubstitution;
+    FontWeight              meWeight;
+    FontWidth               meWidth;
+    ULONG                   mnType;
+};
+
+// Not classified
+// Cloisterblack - old english style - comes with Applixware
+
+// List is sorted alphabetic
+static ImplFontNameAttr const aImplFontNameList[] =
+{
+{   "albany",               aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, aImplMSSubsArial, aImplPSSubsHelvetica, aImplHTMLSubsSansSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF | IMPL_FONT_ATTR_STANDARD | IMPL_FONT_ATTR_DEFAULT },
+{   "algerian",             aImplSubsShadow, aImplSubsImprintShadow, aImplSubsOutline, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_OUTLINE | IMPL_FONT_ATTR_SHADOW | IMPL_FONT_ATTR_DECORATIVE | IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_TITLING },
+{   "almanac",              aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "andalesans",           aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, aImplHTMLSubsSansSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "andalesansui",         aImplSubsSansUnicode, aImplSubsSans, NULL, NULL, aImplMSSubsArialUnicodeMS, NULL, aImplHTMLSubsSansSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF | IMPL_FONT_ATTR_FULL | IMPL_FONT_ATTR_DEFAULT },
+{   "andalewtui",           aImplSubsSansUnicode, aImplSubsSans, NULL, NULL, aImplMSSubsArialUnicodeMS, NULL, aImplHTMLSubsSansSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF | IMPL_FONT_ATTR_FULL | IMPL_FONT_ATTR_DEFAULT },
+{   "andy",                 aImplSubsComic, aImplSubsZapfChancery, NULL, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_COMIC | IMPL_FONT_ATTR_ITALIC },
+{   "antiqueolive",         aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, aImplHTMLSubsSansSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "arial",                aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, aImplPSSubsHelvetica, aImplHTMLSubsSansSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF | IMPL_FONT_ATTR_STANDARD },
+{   "arialnarrow",          aImplSubsSansNarrow, aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_CONDENSED, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "arialunicode",         aImplSubsSansUnicode, aImplSubsSans, NULL, NULL, NULL, NULL, aImplHTMLSubsSansSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF | IMPL_FONT_ATTR_FULL },
+{   "arioso",               aImplSubsPalaceScript, aImplSubsZapfChancery, aImplSubsComic, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_BRUSHSCRIPT | IMPL_FONT_ATTR_ITALIC },
+{   "avantgarde",           aImplSubsCenturyGothic, aImplSubsSans, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "baskervilleoldface",   aImplSubsSerif, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF | IMPL_FONT_ATTR_OTHERSTYLE },
+{   "batang",               aImplSubsKRBatang, aImplSubsKRGulim, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_KR },
+{   "batangche",            aImplSubsKRBatang, aImplSubsKRGulim, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_KR },
+{   "bell",                 aImplSubsSerif, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF },
+{   "blackadder",           aImplSubsPalaceScript, aImplSubsZapfChancery, aImplSubsComic, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_BRUSHSCRIPT | IMPL_FONT_ATTR_ITALIC },
+{   "bookantiqua",          aImplSubsPalatino, aImplSubsSerif, NULL, NULL, NULL, NULL, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF },
+{   "bookman",              aImplSubsBookman, aImplSubsSerif, NULL, NULL, NULL, NULL, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF },
+{   "bookmanl",             aImplSubsBookman, aImplSubsSerif, NULL, NULL, NULL, NULL, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF },
+{   "bookmanoldstyle",      aImplSubsBookman, aImplSubsSerif, NULL, NULL, NULL, NULL, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF | IMPL_FONT_ATTR_OTHERSTYLE },
+{   "bradleyhand",          aImplSubsComic, aImplSubsZapfChancery, aImplSubsPalaceScript, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_HANDWRITING | IMPL_FONT_ATTR_ITALIC },
+{   "broadway",             aImplSubsBroadway, aImplSubsFalstaff, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_BLACK, WIDTH_EXPANDED, IMPL_FONT_ATTR_DECORATIVE | IMPL_FONT_ATTR_SPECIAL },
+{   "calisto",              aImplSubsSerif, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF },
+{   "castellar",            aImplSubsOutline, aImplSubsImprintShadow, aImplSubsShadow, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_OUTLINE | IMPL_FONT_ATTR_SHADOW | IMPL_FONT_ATTR_DECORATIVE | IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_TITLING },
+{   "century",              aImplSubsNewCenturySchoolbook, aImplSubsSerif, NULL, NULL, NULL, NULL, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF },
+{   "centurygothic",        aImplSubsCenturyGothic, aImplSubsSans, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "centuryschoolbook",    aImplSubsNewCenturySchoolbook, aImplSubsSerif, NULL, NULL, NULL, NULL, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF | IMPL_FONT_ATTR_SCHOOLBOOK },
+{   "centuryschoolbookl",   aImplSubsNewCenturySchoolbook, aImplSubsSerif, NULL, NULL, NULL, NULL, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF | IMPL_FONT_ATTR_SCHOOLBOOK },
+{   "cfangsong",            aImplSubsSCFangSong, aImplSubsSCKai, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_SC },
+{   "cgtimes",              aImplSubsSerif, NULL, NULL, NULL, NULL, aImplPSSubsTimes, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF },
+{   "chancery",             aImplSubsZapfChancery, aImplSubsPalaceScript, aImplSubsComic, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_CHANCERY | IMPL_FONT_ATTR_ITALIC },
+{   "chanceryl",            aImplSubsZapfChancery, aImplSubsPalaceScript, aImplSubsComic, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_CHANCERY | IMPL_FONT_ATTR_ITALIC },
+{   "chevara",              aImplSubsShadow, aImplSubsImprintShadow, aImplSubsOutline, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_OUTLINE | IMPL_FONT_ATTR_SHADOW | IMPL_FONT_ATTR_DECORATIVE | IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_CAPITALS },
+{   "chevaraoutline",       aImplSubsOutline, aImplSubsImprintShadow, aImplSubsShadow, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_OUTLINE | IMPL_FONT_ATTR_SHADOW | IMPL_FONT_ATTR_DECORATIVE | IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_CAPITALS },
+{   "chicago",              aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, aImplPSSubsHelvetica, aImplHTMLSubsSansSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "chiller",              aImplSubsComic, aImplSubsZapfChancery, aImplSubsPalaceScript, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_ITALIC | IMPL_FONT_ATTR_SPECIAL },
+{   "colonna",              aImplSubsOutline, aImplSubsImprintShadow, aImplSubsShadow, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_OUTLINE | IMPL_FONT_ATTR_SHADOW | IMPL_FONT_ATTR_DECORATIVE | IMPL_FONT_ATTR_SPECIAL },
+{   "comicsans",            aImplSubsComic, aImplSubsZapfChancery, NULL, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_COMIC | IMPL_FONT_ATTR_ITALIC | IMPL_FONT_ATTR_STANDARD },
+{   "comicsansms",          aImplSubsComic, aImplSubsZapfChancery, NULL, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_COMIC | IMPL_FONT_ATTR_ITALIC | IMPL_FONT_ATTR_STANDARD },
+{   "conga",                aImplSubsSheffield, aImplSubsCenturyGothic, aImplSubsSans, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF | IMPL_FONT_ATTR_DECORATIVE | IMPL_FONT_ATTR_CAPITALS },
+{   "copperlategothic",     aImplSubsSheffield, aImplSubsCenturyGothic, aImplSubsSans, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF | IMPL_FONT_ATTR_DECORATIVE | IMPL_FONT_ATTR_CAPITALS },
+{   "corsiva",              aImplSubsZapfChancery, aImplSubsPalaceScript, NULL, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_CHANCERY | IMPL_FONT_ATTR_ITALIC },
+{   "courier",              aImplSubsFixed, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsMonospace,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_TYPEWRITER | IMPL_FONT_ATTR_FIXED | IMPL_FONT_ATTR_STANDARD },
+{   "couriernew",           aImplSubsFixed, NULL, NULL, NULL, NULL, aImplPSSubsCourier, aImplHTMLSubsMonospace,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_TYPEWRITER | IMPL_FONT_ATTR_FIXED | IMPL_FONT_ATTR_STANDARD },
+{   "cumberland",           aImplSubsFixed, NULL, NULL, NULL, aImplMSSubsCourierNew, aImplPSSubsCourier, aImplHTMLSubsMonospace,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_TYPEWRITER | IMPL_FONT_ATTR_FIXED | IMPL_FONT_ATTR_STANDARD | IMPL_FONT_ATTR_DEFAULT },
+{   "curlz",                aImplSubsComic, aImplSubsZapfChancery, aImplSubsPalaceScript, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_ITALIC | IMPL_FONT_ATTR_SPECIAL },
+{   "cursive",              aImplSubsComic, aImplSubsZapfChancery, aImplSubsPalaceScript, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_ITALIC },
+{   "dingbats",             aImplSubsDingBats, aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "dotum",                aImplSubsKRGulim, aImplSubsKRBatang, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_KR },
+{   "dotumche",             aImplSubsKRGulim, aImplSubsKRBatang, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_KR },
+{   "edwardianscript",      aImplSubsPalaceScript, aImplSubsZapfChancery, aImplSubsComic, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_BRUSHSCRIPT | IMPL_FONT_ATTR_ITALIC },
+{   "elite",                aImplSubsFixed, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsMonospace,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_TYPEWRITER | IMPL_FONT_ATTR_FIXED },
+{   "elited",               aImplSubsFixed, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsMonospace,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_TYPEWRITER | IMPL_FONT_ATTR_FIXED },
+{   "engravers",            aImplSubsSheffield, aImplSubsCenturyGothic, aImplSubsSans, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF | IMPL_FONT_ATTR_DECORATIVE | IMPL_FONT_ATTR_CAPITALS },
+{   "extra",                aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "falstaff",             aImplSubsFalstaff, aImplSubsBroadway, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_BLACK, WIDTH_ULTRA_EXPANDED, IMPL_FONT_ATTR_SERIF | IMPL_FONT_ATTR_DECORATIVE | IMPL_FONT_ATTR_SPECIAL },
+{   "fangsong",             aImplSubsSCFangSong, aImplSubsSCKai, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_SC },
+{   "fantasy",              aImplSubsImprintShadow, aImplSubsOutline, aImplSubsShadow, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_DECORATIVE },
+{   "felixtitling",         aImplSubsSheffield, aImplSubsCenturyGothic, aImplSubsSans, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF | IMPL_FONT_ATTR_DECORATIVE | IMPL_FONT_ATTR_CAPITALS },
+{   "forte",                aImplSubsComic, aImplSubsZapfChancery, NULL, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_COMIC | IMPL_FONT_ATTR_ITALIC | IMPL_FONT_ATTR_DECORATIVE },
+{   "frenchscript",         aImplSubsPalaceScript, aImplSubsZapfChancery, aImplSubsComic, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_BRUSHSCRIPT | IMPL_FONT_ATTR_ITALIC | IMPL_FONT_ATTR_SPECIAL },
+{   "frutiger",             aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "fujiyama",             aImplSubsSansNarrow, aImplSubsSans, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_CONDENSED, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "fzhei",                aImplSubsSCHei, aImplSubsSCSun, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_SC },
+{   "fzkai",                aImplSubsSCKai, aImplSubsSCFangSong, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_SC },
+{   "gallia",               aImplSubsShadow, aImplSubsImprintShadow, aImplSubsOutline, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_OUTLINE | IMPL_FONT_ATTR_SHADOW | IMPL_FONT_ATTR_DECORATIVE | IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_TITLING },
+{   "garamond",             aImplSubsSerif, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF },
+{   "geneva",               aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, aImplPSSubsHelvetica, aImplHTMLSubsSansSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "gigi",                 aImplSubsComic, aImplSubsZapfChancery, aImplSubsPalaceScript, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_ITALIC | IMPL_FONT_ATTR_SPECIAL },
+{   "gothic",               aImplSubsJPGothic, aImplSubsJPMincho, aImplSubsCenturyGothic, aImplSubsSansUnicode, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_JP },
+{   "gothicb",              aImplSubsJPGothic, aImplSubsJPMincho, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_JP },
+{   "gothicl",              aImplSubsJPGothic, aImplSubsJPMincho, aImplSubsCenturyGothic, aImplSubsSansUnicode, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_JP },
+{   "gulim",                aImplSubsKRGulim, aImplSubsKRBatang, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_KR },
+{   "gulimche",             aImplSubsKRGulim, aImplSubsKRBatang, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_KR },
+{   "gungsuh",              aImplSubsKRBatang, aImplSubsKRGulim, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_KR },
+{   "gungsuhche",           aImplSubsKRBatang, aImplSubsKRGulim, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_KR },
+{   "hei",                  aImplSubsSTCHei, aImplSubsTCMing, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_TC },
+{   "heiseimin",            aImplSubsJPMincho, aImplSubsJPGothic, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_JP },
+{   "helmet",               aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, aImplMSSubsArial, aImplPSSubsHelvetica, aImplHTMLSubsSansSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "helmetcondensed",      aImplSubsSansNarrow, aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_CONDENSED, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "helv",                 aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, aImplHTMLSubsSansSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "helvetica",            aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, aImplHTMLSubsSansSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF | IMPL_FONT_ATTR_STANDARD },
+{   "helveticanarrow",      aImplSubsSansNarrow, aImplSubsSans, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_CONDENSED, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "hggothic",             aImplSubsJPGothic, aImplSubsJPMincho, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_JP },
+{   "hggothicb",            aImplSubsJPGothic, aImplSubsJPMincho, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_JP },
+{   "hggothice",            aImplSubsJPGothic, aImplSubsJPMincho, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_JP },
+{   "hgminchoj",            aImplSubsJPMincho, aImplSubsJPGothic, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_JP },
+{   "hgminchol",            aImplSubsJPMincho, aImplSubsJPGothic, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_JP },
+{   "hgmincholightj",       aImplSubsJPMincho, aImplSubsJPGothic, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_JP },
+{   "holidaypi",            aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "holidays",             aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "hymyeongjolightk",     aImplSubsKRBatang, aImplSubsKRGulim, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_KR },
+{   "impact",               aImplSubsFalstaff, aImplSubsBroadway, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_BLACK, WIDTH_ULTRA_EXPANDED, IMPL_FONT_ATTR_SANSSERIF | IMPL_FONT_ATTR_DECORATIVE | IMPL_FONT_ATTR_SPECIAL },
+{   "imprint",              aImplSubsImprintShadow, aImplSubsOutline, aImplSubsShadow, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_OUTLINE | IMPL_FONT_ATTR_SHADOW | IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_DECORATIVE },
+{   "imprintmtshadow",      aImplSubsImprintShadow, aImplSubsOutline, aImplSubsShadow, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_OUTLINE | IMPL_FONT_ATTR_SHADOW | IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_DECORATIVE },
+{   "imprintshadow",        aImplSubsImprintShadow, aImplSubsOutline, aImplSubsShadow, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_OUTLINE | IMPL_FONT_ATTR_SHADOW | IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_DECORATIVE },
+{   "informalroman",        aImplSubsZapfChancery, aImplSubsComic, aImplSubsPalaceScript, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_ITALIC },
+{   "kai",                  aImplSubsSTCKai, aImplSubsTCMing, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_TC },
+{   "kidprint",             aImplSubsComic, aImplSubsZapfChancery, NULL, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_COMIC | IMPL_FONT_ATTR_ITALIC | IMPL_FONT_ATTR_STANDARD | IMPL_FONT_ATTR_DEFAULT },
+{   "kodig",                aImplSubsKRGulim, aImplSubsKRBatang, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_KR },
+{   "kristen",              aImplSubsComic, aImplSubsZapfChancery, NULL, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_COMIC | IMPL_FONT_ATTR_ITALIC },
+{   "kunstlerscript",       aImplSubsPalaceScript, aImplSubsZapfChancery, aImplSubsComic, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_BRUSHSCRIPT | IMPL_FONT_ATTR_ITALIC },
+{   "latinwide",            aImplSubsFalstaff, aImplSubsBroadway, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_BLACK, WIDTH_ULTRA_EXPANDED, IMPL_FONT_ATTR_SERIF | IMPL_FONT_ATTR_DECORATIVE | IMPL_FONT_ATTR_SPECIAL },
+{   "lettergothic",         aImplSubsFixed, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsMonospace,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_FIXED },
+{   "linedraw",             aImplSubsFixed, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsMonospace,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_FIXED },
+{   "lineprinter",          aImplSubsFixed, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsMonospace,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_TYPEWRITER | IMPL_FONT_ATTR_FIXED },
+{   "losangeles",           "onyx", aImplSubsSansNarrow, aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_CONDENSED, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF | IMPL_FONT_ATTR_SPECIAL },
+{   "lucidabright",         aImplSubsSerif, NULL, NULL, NULL, NULL, aImplPSSubsTimes, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF },
+{   "lucidacalligraphic",   aImplSubsZapfChancery, aImplSubsPalaceScript, aImplSubsComic, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_CHANCERY | IMPL_FONT_ATTR_ITALIC },
+{   "lucidacalligraphy",    aImplSubsZapfChancery, aImplSubsPalaceScript, aImplSubsComic, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_CHANCERY | IMPL_FONT_ATTR_ITALIC },
+{   "lucidaconsole",        aImplSubsFixed, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsMonospace,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_FIXED },
+{   "lucidadingbats",       aImplSubsDingBats, aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "lucidahandwriting",    aImplSubsComic, aImplSubsZapfChancery, aImplSubsPalaceScript, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_HANDWRITING | IMPL_FONT_ATTR_ITALIC },
+{   "lucidasans",           aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, aImplPSSubsHelvetica, aImplHTMLSubsSansSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "lucidasansdingbats",   aImplSubsDingBats, aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "lucidasanstyp",        aImplSubsFixed, NULL, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_TYPEWRITER | IMPL_FONT_ATTR_FIXED },
+{   "lucidasanstypewriter", aImplSubsFixed, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsMonospace,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_TYPEWRITER | IMPL_FONT_ATTR_FIXED },
+{   "lucidasansunicode",    aImplSubsSansUnicode, aImplSubsSans, NULL, NULL, NULL, NULL, aImplHTMLSubsSansSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "lucidatypewriter",     aImplSubsFixed, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsMonospace,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_TYPEWRITER | IMPL_FONT_ATTR_FIXED },
+{   "marlett",              aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "mhei",                 aImplSubsSCHei, aImplSubsSCSun, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_SC },
+{   "mincho",               aImplSubsJPMincho, aImplSubsJPGothic, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_JP },
+{   "minchoj",              aImplSubsJPMincho, aImplSubsJPGothic, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_JP },
+{   "minchol",              aImplSubsJPMincho, aImplSubsJPGothic, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_JP },
+{   "minchou",              aImplSubsJPMincho, aImplSubsJPGothic, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_JP },
+{   "ming",                 aImplSubsTCMing, aImplSubsTCHei, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_TC },
+{   "mingli",               aImplSubsTCMing, aImplSubsTCHei, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_TC },
+{   "mingliu",              aImplSubsTCMing, aImplSubsTCHei, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_TC },
+{   "mkai",                 aImplSubsSCKai, aImplSubsSCFangSong, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_SC },
+{   "monaco",               aImplSubsFixed, NULL, NULL, NULL, NULL, aImplPSSubsCourier, aImplHTMLSubsMonospace,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_TYPEWRITER | IMPL_FONT_ATTR_FIXED },
+{   "mono",                 aImplSubsFixed, NULL, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_FIXED },
+{   "monol",                aImplSubsFixed, NULL, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_FIXED },
+{   "monospace",            aImplSubsFixed, NULL, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_FIXED },
+{   "monospaced",           aImplSubsFixed, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsMonospace,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_FIXED },
+{   "morewingbats",         aImplSubsWingdings, aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "msgothic",             aImplSubsJPGothic, aImplSubsJPMincho, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_JP },
+{   "msmincho",             aImplSubsJPMincho, aImplSubsJPGothic, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_JP },
+{   "msong",                aImplSubsSCSong, aImplSubsSCSun, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_SC },
+{   "mspmincho",            aImplSubsJPMincho, aImplSubsJPGothic, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_JP },
+{   "msuigothic",           aImplSubsJPGothic, aImplSubsJPMincho, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_JP },
+{   "msunglightsc",         aImplSubsSCSun, aImplSubsSCSong, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_SC },
+{   "msunglighttc",         aImplSubsTCMing, aImplSubsTCHei, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_TC },
+{   "mtbroadway",           aImplSubsBroadway, aImplSubsFalstaff, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_BLACK, WIDTH_ULTRA_EXPANDED, IMPL_FONT_ATTR_DECORATIVE | IMPL_FONT_ATTR_SPECIAL },
+{   "myeongjo",             aImplSubsKRBatang, aImplSubsKRGulim, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_KR },
+{   "newcenturyschlbk",     aImplSubsNewCenturySchoolbook, aImplSubsSerif, NULL, NULL, NULL, NULL, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF | IMPL_FONT_ATTR_SCHOOLBOOK },
+{   "newcenturyschoolbook", aImplSubsNewCenturySchoolbook, aImplSubsSerif, NULL, NULL, NULL, NULL, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF | IMPL_FONT_ATTR_SCHOOLBOOK },
+{   "newyork",              aImplSubsSerif, NULL, NULL, NULL, NULL, aImplPSSubsTimes, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF },
+{   "nlq",                  aImplSubsFixed, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsMonospace,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_TYPEWRITER | IMPL_FONT_ATTR_FIXED },
+{   "nsimsun",              aImplSubsSCSun, aImplSubsSCSong, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_SC },
+{   "ocean",                aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "omega",                aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, aImplHTMLSubsSansSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "onyx",                 "losangeles", aImplSubsSansNarrow, aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_CONDENSED, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF | IMPL_FONT_ATTR_SPECIAL },
+{   "opensymbol",           "starsymbol", aImplSubsSansUnicode, aImplSubsStarSymbol, NULL, aImplMSSubsArialUnicodeMS, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "outlook",              aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "palacescript",         aImplSubsPalaceScript, aImplSubsZapfChancery, aImplSubsComic, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_BRUSHSCRIPT | IMPL_FONT_ATTR_ITALIC | IMPL_FONT_ATTR_DEFAULT },
+{   "palatino",             aImplSubsPalatino, aImplSubsSerif, NULL, NULL, NULL, NULL, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF },
+{   "palladio",             aImplSubsPalatino, aImplSubsSerif, NULL, NULL, NULL, NULL, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF },
+{   "palladiol",            aImplSubsPalatino, aImplSubsSerif, NULL, NULL, NULL, NULL, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF },
+{   "pepita",               aImplSubsZapfChancery, aImplSubsPalaceScript, aImplSubsComic, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_CHANCERY | IMPL_FONT_ATTR_ITALIC },
+{   "pgothic",              aImplSubsJPGothic, aImplSubsJPMincho, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_JP },
+{   "pica",                 aImplSubsFixed, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsMonospace,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_TYPEWRITER | IMPL_FONT_ATTR_FIXED },
+{   "picad",                aImplSubsFixed, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsMonospace,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_TYPEWRITER | IMPL_FONT_ATTR_FIXED },
+{   "pmincho",              aImplSubsJPMincho, aImplSubsJPGothic, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_JP },
+{   "pmingliu",             aImplSubsTCMing, aImplSubsTCHei, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_TC },
+{   "pristina",             aImplSubsZapfChancery, aImplSubsPalaceScript, aImplSubsComic, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_CHANCERY | IMPL_FONT_ATTR_ITALIC },
+{   "ps",                   aImplSubsFixed, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsMonospace,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_FIXED },
+{   "psd",                  aImplSubsFixed, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsMonospace,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_FIXED },
+{   "psnlq",                aImplSubsFixed, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsMonospace,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_FIXED },
+{   "roman",                aImplSubsFixed, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsMonospace,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_FIXED },
+{   "romanno9",             aImplSubsSerif, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF },
+{   "romanno9l",            aImplSubsSerif, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF },
+{   "romanps",              aImplSubsFixed, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsMonospace,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_FIXED },
+{   "roundgothic",          aImplSubsKRGulim, aImplSubsKRBatang, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_KR },
+{   "sans",                 aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "sanscondensed",        aImplSubsSansNarrow, aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_CONDENSED, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "sansl",                aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "sanslcondensed",       aImplSubsSansNarrow, aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_CONDENSED, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "sansserif",            aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "schoolbook",           aImplSubsNewCenturySchoolbook, aImplSubsSerif, NULL, NULL, NULL, NULL, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF | IMPL_FONT_ATTR_SCHOOLBOOK },
+{   "script",               aImplSubsPalaceScript, aImplSubsZapfChancery, aImplSubsComic, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_BRUSHSCRIPT | IMPL_FONT_ATTR_ITALIC },
+{   "segoe",                aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "serif",                aImplSubsSerif, NULL, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF },
+{   "sheffield",            aImplSubsSheffield, aImplSubsCenturyGothic, aImplSubsSans, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF | IMPL_FONT_ATTR_DECORATIVE | IMPL_FONT_ATTR_CAPITALS | IMPL_FONT_ATTR_DEFAULT },
+{   "shelley",              aImplSubsPalaceScript, aImplSubsZapfChancery, aImplSubsComic, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_BRUSHSCRIPT | IMPL_FONT_ATTR_ITALIC },
+{   "shusong",              aImplSubsSCSong, aImplSubsSCSun, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_SC },
+{   "simhei",               aImplSubsSCHei, aImplSubsSCSun, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_SC },
+{   "simkai",               aImplSubsSCKai, aImplSubsSCFangSong, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_SC },
+{   "simsong",              aImplSubsSCSong, aImplSubsSCSun, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_SC },
+{   "simsun",               aImplSubsSCSun, aImplSubsSCSong, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_SC },
+{   "snowcap",              aImplSubsImprintShadow, aImplSubsOutline, aImplSubsShadow, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_OUTLINE | IMPL_FONT_ATTR_SHADOW | IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_DECORATIVE },
+{   "song",                 aImplSubsSCSong, aImplSubsSCSun, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_SC },
+{   "sorts",                aImplSubsDingBats, aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "sorts2",               aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "sorts3",               aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "spartan",              aImplSubsSheffield, aImplSubsCenturyGothic, aImplSubsSans, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF | IMPL_FONT_ATTR_DECORATIVE | IMPL_FONT_ATTR_CAPITALS },
+{   "standardsymbols",      aImplSubsSymbol, aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "standardsymbolsl",     aImplSubsSymbol, aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "starbats",             aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "starmath",             aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "starsymbol",           "opensymbol", aImplSubsSansUnicode, aImplSubsStarSymbol, NULL, aImplMSSubsArialUnicodeMS, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "swiss",                aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, aImplHTMLSubsSansSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "swissnarrow",          aImplSubsSansNarrow, aImplSubsSans, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_CONDENSED, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "symbol",               aImplSubsSymbol, aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "tahoma",               aImplSubsSansUnicode, aImplSubsSans, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "thorndale",            aImplSubsSerif, NULL, NULL, NULL, aImplMSSubsTimesNewRoman, aImplPSSubsTimes, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF | IMPL_FONT_ATTR_STANDARD | IMPL_FONT_ATTR_DEFAULT },
+{   "times",                aImplSubsSerif, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF | IMPL_FONT_ATTR_STANDARD },
+{   "timesnewroman",        aImplSubsSerif, NULL, NULL, NULL, NULL, aImplPSSubsTimes, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF | IMPL_FONT_ATTR_STANDARD },
+{   "timesroman",           aImplSubsSerif, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF },
+{   "timmons",              aImplSubsSerif, NULL, NULL, NULL, aImplMSSubsTimesNewRoman, aImplPSSubsTimes, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF },
+{   "tmsrmn",               aImplSubsSerif, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF },
+{   "trebuchet",            aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, aImplHTMLSubsSansSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "univers",              aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, aImplPSSubsHelvetica, aImplHTMLSubsSansSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "universcondensed",     aImplSubsSansNarrow, aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_CONDENSED, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "utah",                 aImplSubsSans, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "utopia",               aImplSubsNewCenturySchoolbook, aImplSubsSerif, NULL, NULL, NULL, NULL, aImplHTMLSubsSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SERIF },
+{   "vacation",             aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "verdana",              aImplSubsSans, NULL, NULL, NULL, NULL, NULL, aImplHTMLSubsSansSerif,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_NORMAL | IMPL_FONT_ATTR_SANSSERIF },
+{   "vinerhand",            aImplSubsComic, aImplSubsZapfChancery, aImplSubsPalaceScript, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_HANDWRITING | IMPL_FONT_ATTR_ITALIC },
+{   "vivaldi",              aImplSubsPalaceScript, aImplSubsZapfChancery, aImplSubsComic, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_BRUSHSCRIPT | IMPL_FONT_ATTR_ITALIC },
+{   "vladimirscript",       aImplSubsPalaceScript, aImplSubsZapfChancery, aImplSubsComic, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_BRUSHSCRIPT | IMPL_FONT_ATTR_ITALIC },
+{   "webdings",             aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "webdings2",            aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "webdings3",            aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "widelatin",            aImplSubsFalstaff, aImplSubsBroadway, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_BLACK, WIDTH_ULTRA_EXPANDED, IMPL_FONT_ATTR_SERIF | IMPL_FONT_ATTR_DECORATIVE | IMPL_FONT_ATTR_SPECIAL },
+{   "wingdings",            aImplSubsWingdings, aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "wingdings2",           aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "wingdings3",           aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "wingdings4",           aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "zapfcalligraphic",     aImplSubsZapfChancery, aImplSubsPalaceScript, aImplSubsComic, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_CHANCERY | IMPL_FONT_ATTR_ITALIC },
+{   "zapfcalligraphy",      aImplSubsZapfChancery, aImplSubsPalaceScript, aImplSubsComic, NULL, NULL, NULL, aImplHTMLSubsCursive,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_CHANCERY | IMPL_FONT_ATTR_ITALIC },
+{   "zapfchancery",         aImplSubsZapfChancery, aImplSubsPalaceScript, aImplSubsComic, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SCRIPT | IMPL_FONT_ATTR_CHANCERY | IMPL_FONT_ATTR_ITALIC },
+{   "zapfdingbats",         aImplSubsDingBats, aImplSubsStarSymbol, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_SPECIAL | IMPL_FONT_ATTR_SYMBOL },
+{   "zycjkhei",             aImplSubsSCHei, aImplSubsSCSun, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_SC },
+{   "zycjkkai",             aImplSubsSCKai, aImplSubsSCFangSong, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_SC },
+{   "zycjksun",             aImplSubsSCSun, aImplSubsSCSong, aImplSubsSansUnicode, NULL, NULL, NULL, NULL,
+                            WEIGHT_NORMAL, WIDTH_NORMAL, IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_SC }
+};
+
 // -----------------------------------------------------------------------
 
 static int ImplStrMatchCompare( const String& rStr1, const char* pStr2 )
@@ -735,13 +1596,51 @@ static int ImplStrMatchCompare( const String& rStr1, const char* pStr2 )
         return *pStr1-((xub_Unicode)(unsigned char)*pStr2);
 }
 
+// -----------------------------------------------------------------------
+
+static const ImplFontNameAttr* ImplGetFontNameAttr( const String& rName )
+{
+    int nCount = sizeof( aImplFontNameList ) / sizeof( ImplFontNameAttr );
+    for( int nLower = 0, nUpper = nCount-1; nLower <= nUpper; )
+    {
+        long nMid = (nUpper + nLower) >> 1;
+        int nComp = ImplStrMatchCompare( rName, aImplFontNameList[nMid].mpName );
+        if ( !nComp )
+        {
+            // Find shortest match
+            while ( nMid &&
+                    (ImplStrMatchCompare( rName, aImplFontNameList[nMid-1].mpName ) == 0) )
+                nMid--;
+            return &(aImplFontNameList[nMid]);
+        }
+        else if ( nComp < 0 )
+            nUpper = nMid-1;
+        else /* ( nComp > 0 ) */
+            nLower = nMid+1;
+    }
+
+    return NULL;
+}
+
+// =======================================================================
+
+struct ImplFontSubstEntry
+{
+    String                  maName;
+    String                  maReplaceName;
+    String                  maSearchName;
+    String                  maSearchReplaceName;
+    USHORT                  mnFlags;
+    ImplFontSubstEntry*     mpNext;
+};
+
 // =======================================================================
 
 void ImplFreeOutDevFontData()
 {
     ImplSVData*         pSVData = ImplGetSVData();
     ImplFontSubstEntry* pEntry = pSVData->maGDIData.mpFirstFontSubst;
-    while( pEntry )
+    while ( pEntry )
     {
         ImplFontSubstEntry* pNext = pEntry->mpNext;
         delete pEntry;
@@ -798,35 +1697,12 @@ void OutputDevice::AddFontSubstitute( const XubString& rFontName,
 
 // -----------------------------------------------------------------------
 
-void OutputDevice::ImplAddDevFontSubstitute( const XubString& rFontName,
-                                             const XubString& rReplaceFontName,
-                                             USHORT nFlags )
-{
-    ImplInitOutDevData();
-
-    ImplFontSubstEntry* pEntry = new ImplFontSubstEntry;
-
-    pEntry->maName              = rFontName;
-    pEntry->maReplaceName       = rReplaceFontName;
-    pEntry->maSearchName        = rFontName;
-    pEntry->maSearchReplaceName = rReplaceFontName;
-    pEntry->mnFlags             = nFlags;
-    pEntry->mpNext              = mpOutDevData->mpFirstFontSubstEntry;
-    ImplGetEnglishSearchFontName( pEntry->maSearchName );
-    ImplGetEnglishSearchFontName( pEntry->maSearchReplaceName );
-
-    mpOutDevData->mpFirstFontSubstEntry = pEntry;
-}
-
-// -----------------------------------------------------------------------
-
 void OutputDevice::RemoveFontSubstitute( USHORT n )
 {
     ImplSVData*         pSVData = ImplGetSVData();
     ImplFontSubstEntry* pEntry = pSVData->maGDIData.mpFirstFontSubst;
     ImplFontSubstEntry* pPrev = NULL;
     USHORT              nCount = 0;
-
     while ( pEntry )
     {
         if ( nCount == n )
@@ -889,8 +1765,8 @@ void OutputDevice::GetFontSubstitute( USHORT n,
 
 // -----------------------------------------------------------------------
 
-static void ImplFontSubstitute( String& rFontName,
-                                USHORT nFlags, ImplFontSubstEntry* pDevSpecific )
+static BOOL ImplFontSubstitute( XubString& rFontName,
+                                USHORT nFlags1, USHORT nFlags2 )
 {
 #ifdef DBG_UTIL
     String aTempName = rFontName;
@@ -898,36 +1774,52 @@ static void ImplFontSubstitute( String& rFontName,
     DBG_ASSERT( aTempName == rFontName, "ImplFontSubstitute() called without a searchname" );
 #endif
 
-    // apply global replacement (e.g. from the Tools->Options->Fonts dialog)
-    ImplSVData* pSVData = ImplGetSVData();
-    const ImplFontSubstEntry* pEntry = pSVData->maGDIData.mpFirstFontSubst;
-    for(; pEntry; pEntry = pEntry->mpNext ) // linear search => TODO
+    ImplSVData*         pSVData = ImplGetSVData();
+    ImplFontSubstEntry* pEntry = pSVData->maGDIData.mpFirstFontSubst;
+    while ( pEntry )
     {
-        // replace if ALWAYS or SCREENONLY flags match or nFlags is zero
-        if(((pEntry->mnFlags & nFlags) || !nFlags)
-        &&  (pEntry->maSearchName == rFontName) )
+        if ( ((pEntry->mnFlags & nFlags1) == nFlags2) &&
+             (pEntry->maSearchName == rFontName) )
         {
             rFontName = pEntry->maSearchReplaceName;
-            return;
+            return TRUE;
         }
+
+        pEntry = pEntry->mpNext;
     }
 
-    // apply device specific replacement (e.g. Arial->Helvetica on a PS printer)
-    if( pDevSpecific )
-    {
-        for( pEntry = pDevSpecific; pEntry; pEntry = pEntry->mpNext )
-        {
-            if(((pEntry->mnFlags & nFlags) || !nFlags)
-            &&  (pEntry->maSearchName == rFontName) )
-            {
-                rFontName = pEntry->maSearchReplaceName;
-                return;
-            }
-        }
-    }
+    return FALSE;
 }
 
 // =======================================================================
+
+#ifdef USE_JAVA
+static char const aImplDefSansUnicode[] = "SansSerif";
+static char const aImplDefSansUI[] = "SansSerif";
+static char const aImplDefSans[] = "SansSerif";
+static char const aImplDefSerif[] = "Serif";
+static char const aImplDefFixed[] = "Monospaced";
+#else	// USE_JAVA
+static char const aImplDefSansUnicode[] = "Andale Sans UI;Arial Unicode MS;Lucida Sans Unicode;Tahoma";
+static char const aImplDefSansUI[] = "Interface User;WarpSans;Geneva;Tahoma;MS Sans Serif;Helv;Dialog;Albany;Lucida;Helvetica;Charcoal;Chicago;Arial;Helmet;Interface System;Sans Serif";
+static char const aImplDefSans[] = "Albany;Arial;Helvetica;Lucida;Geneva;Helmet;SansSerif";
+static char const aImplDefSerif[] = "Thorndale;Times New Roman;Times;Lucida Serif;Lucida Bright;Timmons;New York;Serif";
+static char const aImplDefFixed[] = "Cumberland;Courier New;Courier;Lucida Sans Typewriter;Lucida Typewriter;Monaco;Monospaced";
+#endif	// USE_JAVA
+static char const aImplDefSymbol[] = "StarSymbol;OpenSymbol;Andale Sans UI;Arial Unicode MS;StarBats;Zapf Dingbats;WingDings;Symbol";
+static char const aImplDef_CJK_JP_Mincho[] = "HG Mincho Light J;MS Mincho;HG Mincho J;HG Mincho L;HG Mincho;Mincho;MS PMincho;Hiragino Mincho Pro";
+static char const aImplDef_CJK_JP_Gothic[] = "HG Mincho Light J;MS Gothic;HG Gothic J;HG Gothic B;HG Gothic;Gothic;MS PGothic;Hiragino Kaku Gothic Pro";
+static char const aImplDef_CJK_JP_UIGothic[] = "Andale Sans UI;MS Gothic;HG Gothic J;HG Gothic B;HG Gothic;Gothic;MS PGothic;Hiragino Kaku Gothic Pro";
+static char const aImplDef_CJK_SC[] = "MSung Light SC;SimSun;Song;FZSongYi;FZShuSong;NSimSun";
+static char const aImplDef_CJK_TC[] = "MSung Light TC;MingLiU;Ming;PMingLiU;Apple LiSung";
+static char const aImplDef_CJK_KR_Batang[] = "HY MyeongJo Light K;Batang;Myeongjo;Apple Myungjo";
+static char const aImplDef_CJK_KR_Gulim[] = "Andale Sans UI;Gulim;Roundgothic";
+static char const aImplDef_CJK_JP_Fixed[] = "HG Mincho Light J;Hiragino Mincho Pro";
+static char const aImplDef_CJK_SC_Fixed[] = "MSung Light SC";
+static char const aImplDef_CJK_TC_Fixed[] = "MSung Light TC";
+static char const aImplDef_CJK_KR_Fixed[] = "HY MyeongJo Light K;Apple Myungjo";
+
+// -----------------------------------------------------------------------
 
 static BOOL ImplIsFontToken( const String& rName, const String& rToken )
 {
@@ -984,30 +1876,39 @@ static void ImplAddTokenFontName( String& rName, const String& rNewToken )
 
 // -----------------------------------------------------------------------
 
-static void ImplAddTokenFontNames( String& rName, const OUString& rFontNames )
+static void ImplAddTokenFontNames( String& rName, const char* pFontNames )
 {
-    sal_Int32 nOuterIndex = 0;
-    String aName;
+    const char* pStr = pFontNames;
     do
     {
-        aName = rFontNames.getToken( 0, ';', nOuterIndex );
-        String      aTempName;
-        xub_StrLen  nIndex = 0;
-        do
+        if ( !(*pStr) || (*pStr == ';') )
         {
-            aTempName = GetFontToken( rName, 0, nIndex );
-            if ( aName == aTempName )
+            String      aName( pFontNames, pStr-pFontNames, RTL_TEXTENCODING_ASCII_US );
+            String      aTempName;
+            xub_StrLen  nIndex = 0;
+            do
             {
-                aName.Erase();
-                break;
+                aTempName = GetFontToken( rName, 0, nIndex );
+                if ( aName == aTempName )
+                {
+                    aName.Erase();
+                    break;
+                }
             }
-        }
-        while ( nIndex != STRING_NOTFOUND );
+            while ( nIndex != STRING_NOTFOUND );
 
-        if ( aName.Len() )
-            ImplAppendFontToken( rName, aName );
+            if ( aName.Len() )
+                ImplAppendFontToken( rName, aName );
+
+            if ( !(*pStr) )
+                break;
+
+            pFontNames = pStr+1;
+        }
+
+        pStr++;
     }
-    while ( nOuterIndex != -1 );
+    while ( 1 );
 }
 
 // -----------------------------------------------------------------------
@@ -1015,22 +1916,20 @@ static void ImplAddTokenFontNames( String& rName, const OUString& rFontNames )
 Font OutputDevice::GetDefaultFont( USHORT nType, LanguageType eLang,
                                    ULONG nFlags, const OutputDevice* pOutDev )
 {
-    if( eLang == LANGUAGE_NONE || eLang == LANGUAGE_SYSTEM || eLang == LANGUAGE_DONTKNOW )
-    {
-        eLang = Application::GetSettings().GetUILanguage();
-    }
+    Font            aFont;
+    const char*     pSearch1 = NULL;
+    const char*     pSearch2 = NULL;
+    const char*     pSearch3 = NULL;
 
-    DefaultFontConfigItem* pDefaults = DefaultFontConfigItem::get();
-    String aSearch = pDefaults->getUserInterfaceFont( eLang ); // ensure a fallback
-    String aDefault = pDefaults->getDefaultFont( eLang, nType );
-    if( aDefault.Len() )
-        aSearch = aDefault;
-
-    Font aFont;
     switch ( nType )
     {
         case DEFAULTFONT_SANS_UNICODE:
         case DEFAULTFONT_UI_SANS:
+            pSearch1 = aImplDefSansUnicode;
+            if ( nType == DEFAULTFONT_UI_SANS )
+                pSearch2 = aImplDefSansUI;
+            else
+                pSearch2 = aImplDefSans;
             aFont.SetFamily( FAMILY_SWISS );
             break;
 
@@ -1038,12 +1937,15 @@ Font OutputDevice::GetDefaultFont( USHORT nType, LanguageType eLang,
         case DEFAULTFONT_LATIN_HEADING:
         case DEFAULTFONT_LATIN_SPREADSHEET:
         case DEFAULTFONT_LATIN_DISPLAY:
+            pSearch1 = aImplDefSans;
+            pSearch2 = aImplDefSansUnicode;
             aFont.SetFamily( FAMILY_SWISS );
             break;
 
         case DEFAULTFONT_SERIF:
         case DEFAULTFONT_LATIN_TEXT:
         case DEFAULTFONT_LATIN_PRESENTATION:
+            pSearch1 = aImplDefSerif;
             aFont.SetFamily( FAMILY_ROMAN );
             break;
 
@@ -1052,10 +1954,35 @@ Font OutputDevice::GetDefaultFont( USHORT nType, LanguageType eLang,
         case DEFAULTFONT_UI_FIXED:
             aFont.SetPitch( PITCH_FIXED );
             aFont.SetFamily( FAMILY_MODERN );
+            switch ( eLang )
+            {
+                case LANGUAGE_JAPANESE:
+                    pSearch1 = aImplDef_CJK_JP_Fixed;
+                    break;
+                case LANGUAGE_CHINESE:
+                case LANGUAGE_CHINESE_SIMPLIFIED:
+                case LANGUAGE_CHINESE_SINGAPORE:
+                    pSearch1 = aImplDef_CJK_SC_Fixed;
+                    break;
+                case LANGUAGE_CHINESE_TRADITIONAL:
+                case LANGUAGE_CHINESE_HONGKONG:
+                case LANGUAGE_CHINESE_MACAU:
+                    pSearch1 = aImplDef_CJK_TC_Fixed;
+                    break;
+                case LANGUAGE_KOREAN:
+                case LANGUAGE_KOREAN_JOHAB:
+                    pSearch1 = aImplDef_CJK_KR_Fixed;
+                    break;
+            }
+            if ( pSearch1 )
+                pSearch2 = aImplDefFixed;
+            else
+                pSearch1 = aImplDefFixed;
             break;
 
         case DEFAULTFONT_SYMBOL:
             aFont.SetCharSet( RTL_TEXTENCODING_SYMBOL );
+            pSearch1 = aImplDefSymbol;
             break;
 
         case DEFAULTFONT_CJK_TEXT:
@@ -1063,6 +1990,39 @@ Font OutputDevice::GetDefaultFont( USHORT nType, LanguageType eLang,
         case DEFAULTFONT_CJK_SPREADSHEET:
         case DEFAULTFONT_CJK_HEADING:
         case DEFAULTFONT_CJK_DISPLAY:
+            if ( (eLang == LANGUAGE_CHINESE) ||
+                 (eLang == LANGUAGE_CHINESE_SIMPLIFIED) ||
+                 (eLang == LANGUAGE_CHINESE_SINGAPORE) )
+                pSearch1 = aImplDef_CJK_SC;
+            else if ( (eLang == LANGUAGE_CHINESE_TRADITIONAL) ||
+                      (eLang == LANGUAGE_CHINESE_HONGKONG) ||
+                      (eLang == LANGUAGE_CHINESE_MACAU) )
+                pSearch1 = aImplDef_CJK_TC;
+            else if ( (eLang == LANGUAGE_KOREAN) ||
+                      (eLang == LANGUAGE_KOREAN_JOHAB) )
+            {
+                if ( nType == DEFAULTFONT_CJK_DISPLAY )
+                    pSearch1 = aImplDef_CJK_KR_Gulim;
+                else
+                {
+                    pSearch1 = aImplDef_CJK_KR_Batang;
+                    pSearch2 = aImplDef_CJK_KR_Gulim;
+                }
+            }
+            else
+            {
+                if ( (nType == DEFAULTFONT_CJK_DISPLAY) ||
+                     (nType == DEFAULTFONT_CJK_SPREADSHEET) )
+                    pSearch1 = aImplDef_CJK_JP_UIGothic;
+                else if ( nType == DEFAULTFONT_CJK_PRESENTATION )
+                    pSearch1 = aImplDef_CJK_JP_Gothic;
+                else
+                {
+                    pSearch1 = aImplDef_CJK_JP_Mincho;
+                    pSearch2 = aImplDef_CJK_JP_Gothic;
+                }
+            }
+            pSearch3 = aImplDefSansUnicode;
             break;
 
         case DEFAULTFONT_CTL_TEXT:
@@ -1070,10 +2030,11 @@ Font OutputDevice::GetDefaultFont( USHORT nType, LanguageType eLang,
         case DEFAULTFONT_CTL_SPREADSHEET:
         case DEFAULTFONT_CTL_HEADING:
         case DEFAULTFONT_CTL_DISPLAY:
+            pSearch1 = "Arial Unicode MS";
             break;
     }
 
-    if ( aSearch.Len() )
+    if ( pSearch1 )
     {
         aFont.SetSize( Size( 0, 12 ) );
         aFont.SetWeight( WEIGHT_NORMAL );
@@ -1085,7 +2046,18 @@ Font OutputDevice::GetDefaultFont( USHORT nType, LanguageType eLang,
         // Should we only return available fonts on the given device
         if ( pOutDev )
         {
-            pOutDev->ImplInitFontList();
+            // Create Token String
+            String aNames( pSearch1, RTL_TEXTENCODING_ASCII_US );
+            if ( pSearch2 )
+            {
+                aNames += ';';
+                aNames.AppendAscii( pSearch2 );
+            }
+            if ( pSearch3 )
+            {
+                aNames += ';';
+                aNames.AppendAscii( pSearch3 );
+            }
 
             // Search Font in the FontList
             String      aName;
@@ -1093,7 +2065,7 @@ Font OutputDevice::GetDefaultFont( USHORT nType, LanguageType eLang,
             xub_StrLen  nIndex = 0;
             do
             {
-                aTempName = GetFontToken( aSearch, 0, nIndex );
+                aTempName = GetFontToken( aNames, 0, nIndex );
                 ImplGetEnglishSearchFontName( aTempName );
                 ImplDevFontListData* pFoundData = pOutDev->mpFontList->ImplFind( aTempName );
                 if ( pFoundData )
@@ -1110,43 +2082,71 @@ Font OutputDevice::GetDefaultFont( USHORT nType, LanguageType eLang,
         // No Name, than set all names
         if ( !aFont.GetName().Len() )
         {
-            xub_StrLen nIndex = 0;
             if ( nFlags & DEFAULTFONT_FLAGS_ONLYONE )
             {
-                //aFont.SetName( aSearch.GetToken( 0, ';', nIndex ) );
+                // Try to get a default output device and only return fonts it supports */
+
+                // This snipped copied from SRX644 GetDefaultFont()
                 if( !pOutDev )
                     pOutDev = (const OutputDevice *)ImplGetSVData()->mpDefaultWin;
-                if( !pOutDev )
-                    aFont.SetName( aSearch.GetToken( 0, ';', nIndex ) );
-                else
+                // HACK:  code simply copied from above pOutDev case.  Could be reflowed,
+                // to mesh with the above case, but this would make later changes harder to track.
+                if ( pOutDev )
                 {
-                    pOutDev->ImplInitFontList();
-
-                    aFont.SetName( aSearch );
-
-                    // convert to pixel height
-                    Size aSize = pOutDev->ImplLogicToDevicePixel( aFont.GetSize() );
-                    if ( !aSize.Height() )
+                    // Create Token String
+                    String aNames( pSearch1, RTL_TEXTENCODING_ASCII_US );
+                    if ( pSearch2 )
                     {
-                        // use default pixel height only when logical height is zero
-                        if ( aFont.GetSize().Height() )
-                            aSize.Height() = 1;
-                        else
-                            aSize.Height() = (12*pOutDev->mnDPIY)/72;
+                        aNames += ';';
+                        aNames.AppendAscii( pSearch2 );
+                    }
+                    if ( pSearch3 )
+                    {
+                        aNames += ';';
+                        aNames.AppendAscii( pSearch3 );
                     }
 
-                    // use default width only when logical width is zero
-                    if( (0 == aSize.Width()) && (0 != aFont.GetSize().Width()) )
-                        aSize.Width() = 1;
-
-                    ImplFontEntry* pEntry = pOutDev->mpFontCache->Get( pOutDev->mpFontList, aFont, aSize, pOutDev->mpOutDevData ? pOutDev->mpOutDevData->mpFirstFontSubstEntry : NULL );
-                    aFont.SetName( pEntry->maFontSelData.maFoundName ); // returns a single name
+                    // Search Font in the FontList
+                    String      aName;
+                    String      aTempName;
+                    xub_StrLen  nIndex = 0;
+                    do
+                    {
+                        aTempName = GetFontToken( aNames, 0, nIndex );
+                        ImplGetEnglishSearchFontName( aTempName );
+                        ImplDevFontListData* pFoundData = pOutDev->mpFontList->ImplFind( aTempName );
+                        if ( pFoundData )
+                        {
+                            ImplAddTokenFontName( aName, pFoundData->mpFirst->maName );
+                            if ( nFlags & DEFAULTFONT_FLAGS_ONLYONE )
+                                break;
+                        }
+                    }
+                    while ( nIndex != STRING_NOTFOUND );
+                    aFont.SetName( aName );
+                }
+                else
+                {
+                    // Simply pass back the first font in the list
+                    const char* pStr = pSearch1;
+                    while ( *pStr && (*pStr != ';') )
+                        pStr++;
+                    String aName( pSearch1, pStr-pSearch1, RTL_TEXTENCODING_ASCII_US );
+                    aFont.SetName( aName );
                 }
             }
             else
-                aFont.SetName( aSearch );
+            {
+                String aName( pSearch1, RTL_TEXTENCODING_ASCII_US );
+                if ( pSearch2 )
+                    ImplAddTokenFontNames( aName, pSearch2 );
+                if ( pSearch3 )
+                    ImplAddTokenFontNames( aName, pSearch3 );
+                aFont.SetName( aName );
+            }
         }
     }
+
     return aFont;
 }
 
@@ -1164,40 +2164,33 @@ String GetSubsFontName( const String& rName, ULONG nFlags )
       ||  aOrgName.EqualsAscii( "opensymbol" ) ) )
         return aName;
 
-    const FontSubstConfigItem::FontNameAttr* pAttr = FontSubstConfigItem::get()->getSubstInfo( aOrgName );
-    if ( pAttr )
+    // Search Font in FontList
+    const ImplFontNameAttr* pFontAttr = ImplGetFontNameAttr( aOrgName );
+    if ( pFontAttr )
     {
-        for( int i = 0; i < 3; i++ )
+        String aTempName;
+
+        if ( (nFlags & SUBSFONT_MS) && pFontAttr->mpMSSubstitution )
+            ImplAppendFontToken( aTempName, pFontAttr->mpMSSubstitution );
+        if ( (nFlags & SUBSFONT_PS) && pFontAttr->mpPSSubstitution )
+            ImplAppendFontToken( aTempName, pFontAttr->mpPSSubstitution );
+        if ( (nFlags & SUBSFONT_HTML) && pFontAttr->mpHTMLSubstitution )
+            ImplAppendFontToken( aTempName, pFontAttr->mpHTMLSubstitution );
+
+        // Add all names which aren't in the original font name
+        String      aTempToken;
+        xub_StrLen  nIndex = 0;
+        do
         {
-            const ::std::vector< String >* pVector = NULL;
-            switch( i )
+            aTempToken = GetFontToken( aTempName, 0, nIndex );
+            if ( !ImplIsFontToken( rName, aTempToken ) )
             {
-                case 0:
-                    if( nFlags & SUBSFONT_MS  &&  pAttr->MSSubstitutions.size() )
-                        pVector = &pAttr->MSSubstitutions;
-                    break;
-                case 1:
-                    if( nFlags & SUBSFONT_PS  &&  pAttr->PSSubstitutions.size() )
-                        pVector = &pAttr->PSSubstitutions;
-                    break;
-                case 2:
-                    if( nFlags & SUBSFONT_HTML  &&  pAttr->HTMLSubstitutions.size() )
-                        pVector = &pAttr->HTMLSubstitutions;
+                ImplAppendFontToken( aName, aTempToken );
+                if ( nFlags & SUBSFONT_ONLYONE )
                     break;
             }
-            if( ! pVector )
-                continue;
-            for( ::std::vector< String >::const_iterator it = pVector->begin(); it != pVector->end(); ++it )
-                if( ! ImplIsFontToken( rName, *it ) )
-                {
-                    ImplAppendFontToken( aName, *it );
-                    if( nFlags & SUBSFONT_ONLYONE )
-                    {
-                        i = 4;
-                        break;
-                    }
-                }
         }
+        while ( nIndex != STRING_NOTFOUND );
     }
 
     return aName;
@@ -1205,43 +2198,27 @@ String GetSubsFontName( const String& rName, ULONG nFlags )
 
 // =======================================================================
 
-static unsigned ImplIsCJKFont( const String& rFontName )
+static BOOL ImplIsCJKFont( const String& rFontName )
 {
     // Test, if Fontname includes CJK characters --> In this case we
     // mention that it is a CJK font
     const sal_Unicode* pStr = rFontName.GetBuffer();
     while ( *pStr )
     {
-        // japanese
-        if ( ((*pStr >= 0x3040) && (*pStr <= 0x30FF)) ||
-             ((*pStr >= 0x3190) && (*pStr <= 0x319F)) )
-            return IMPL_FONT_ATTR_CJK|IMPL_FONT_ATTR_CJK_JP;
-
-        // korean
-        if ( ((*pStr >= 0xAC00) && (*pStr <= 0xD7AF)) ||
-             ((*pStr >= 0x3130) && (*pStr <= 0x318F)) ||
-             ((*pStr >= 0x1100) && (*pStr <= 0x11FF)) )
-            return IMPL_FONT_ATTR_CJK|IMPL_FONT_ATTR_CJK_KR;
-
-        // chinese
-        if ( ((*pStr >= 0x3400) && (*pStr <= 0x9FFF)) )
-            return IMPL_FONT_ATTR_CJK|IMPL_FONT_ATTR_CJK_TC|IMPL_FONT_ATTR_CJK_SC;
-
-        // cjk
         if ( ((*pStr >= 0x3000) && (*pStr <= 0xD7AF)) ||
              ((*pStr >= 0xFF00) && (*pStr <= 0xFFEE)) )
-            return IMPL_FONT_ATTR_CJK;
+            return TRUE;
 
         pStr++;
     }
 
-    return 0;
+    return FALSE;
 }
 
 // -----------------------------------------------------------------------
 
 static void ImplCalcType( ULONG& rType, FontWeight& rWeight, FontWidth& rWidth,
-                          FontFamily eFamily, const FontSubstConfigItem::FontNameAttr* pFontAttr )
+                          FontFamily eFamily, const ImplFontNameAttr* pFontAttr )
 {
     if ( eFamily != FAMILY_DONTKNOW )
     {
@@ -1259,14 +2236,14 @@ static void ImplCalcType( ULONG& rType, FontWeight& rWeight, FontWidth& rWidth,
 
     if ( pFontAttr )
     {
-        rType |= pFontAttr->Type;
+        rType |= pFontAttr->mnType;
 
         if ( ((rWeight == WEIGHT_DONTKNOW) || (rWeight == WEIGHT_NORMAL)) &&
-             (pFontAttr->Weight != WEIGHT_DONTKNOW) )
-            rWeight = pFontAttr->Weight;
+             (pFontAttr->meWeight != WEIGHT_DONTKNOW) )
+            rWeight = pFontAttr->meWeight;
         if ( ((rWidth == WIDTH_DONTKNOW) || (rWidth == WIDTH_NORMAL)) &&
-             (pFontAttr->Width != WIDTH_DONTKNOW) )
-            rWidth = pFontAttr->Width;
+             (pFontAttr->meWidth != WIDTH_DONTKNOW) )
+            rWidth = pFontAttr->meWidth;
     }
 }
 
@@ -1277,8 +2254,6 @@ ImplDevFontList::ImplDevFontList() :
 {
     mbMatchData = FALSE;
     mbMapNames  = FALSE;
-    mpFallbackList  = NULL;
-    mnFallbackCount = -1;
 }
 
 // -----------------------------------------------------------------------
@@ -1292,30 +2267,25 @@ ImplDevFontList::~ImplDevFontList()
 
 void ImplDevFontList::ImplClear()
 {
-    // clear all entries in the device font list
-    for( ImplDevFontListData* pEntry = First(); pEntry; pEntry = Next() )
+    // Alle Eintraege loeschen
+    ImplDevFontListData* pEntry = First();
+    while ( pEntry )
     {
-        for( ImplFontData* pFontData = pEntry->mpFirst; pFontData; )
+        // Liste der Font loeschen
+        ImplFontData* pFontData = pEntry->mpFirst;
+        do
         {
-            ImplFontData* pNextFD = pFontData->mpNext;
-
-            // tell lower layers about the imminent death
-            SalGraphics::RemovingFont( pFontData );
-            delete pFontData;
-
-            pFontData = pNextFD;
+            ImplFontData* pTempFontData = pFontData;
+            pFontData = pFontData->mpNext;
+            delete pTempFontData;
         }
+        while ( pFontData );
 
+        // Entry loeschen
         delete pEntry;
+
+        pEntry = Next();
     }
-
-    // remove fallback lists
-    delete[] mpFallbackList;
-    mpFallbackList = NULL;
-    mnFallbackCount = -1;
-
-    // match data must be recalculated too
-    mbMatchData = FALSE;
 }
 
 // -----------------------------------------------------------------------
@@ -1328,34 +2298,10 @@ void ImplDevFontList::Clear()
 
 // -----------------------------------------------------------------------
 
-bool ImplDevFontList::HasFallbacks() const
-{
-    return (mnFallbackCount >= 0);
-}
-
-// -----------------------------------------------------------------------
-
-void ImplDevFontList::SetFallbacks( ImplDevFontListData** pList, int nCount )
-{
-    mnFallbackCount = nCount;
-    mpFallbackList  = pList;
-}
-
-// -----------------------------------------------------------------------
-
-ImplDevFontListData* ImplDevFontList::GetFallback( int nIndex ) const
-{
-    if( nIndex < mnFallbackCount )
-        return mpFallbackList[ nIndex ];
-    return NULL;
-}
-
-// -----------------------------------------------------------------------
-
 static StringCompare ImplCompareFontDataWithoutSize( const ImplFontData* pEntry1,
                                                      const ImplFontData* pEntry2 )
 {
-    // compare their width, weight, italic and style name
+    // Vergleichen nach Groesse, Breite, Weight, Italic, StyleName
     if ( pEntry1->meWidthType < pEntry2->meWidthType )
         return COMPARE_LESS;
     else if ( pEntry1->meWidthType > pEntry2->meWidthType )
@@ -1377,7 +2323,6 @@ static StringCompare ImplCompareFontDataWithoutSize( const ImplFontData* pEntry1
 
     return eCompare;
 }
-
 
 // -----------------------------------------------------------------------
 
@@ -1408,7 +2353,7 @@ void ImplDevFontList::Add( ImplFontData* pNewData )
     XubString aSearchName = pNewData->maName;
     ImplGetEnglishSearchFontName( aSearchName );
 
-    // add font
+    // Add Font
     ULONG                   nIndex;
     ImplDevFontListData*    pFoundData = ImplFind( aSearchName, &nIndex );
     BOOL                    bInsert = TRUE;
@@ -1437,7 +2382,7 @@ void ImplDevFontList::Add( ImplFontData* pNewData )
             pFoundData->mePitch = pNewData->mePitch;
     }
 
-    // set match data
+    // set Match data
     if ( (pNewData->meType == TYPE_SCALABLE) && (pNewData->mnHeight == 0) )
         pFoundData->mnTypeFaces |= IMPL_DEVFONT_SCALABLE;
     if ( pNewData->meCharSet == RTL_TEXTENCODING_SYMBOL )
@@ -1459,13 +2404,7 @@ void ImplDevFontList::Add( ImplFontData* pNewData )
               (pNewData->meItalic == ITALIC_OBLIQUE) )
         pFoundData->mnTypeFaces |= IMPL_DEVFONT_ITALIC;
 
-    // TODO: is it cheaper to calc match data now or later?
-    if( (pFoundData->meMatchWeight == WEIGHT_DONTKNOW)
-    ||  (pFoundData->meMatchWidth  == WIDTH_DONTKNOW)
-    ||  (pFoundData->mnMatchType   == 0) )
-        mbMatchData = FALSE;
-
-    // add map/alias names
+    // Add map/alias names
     if ( pNewData->maMapNames.Len() )
     {
         String      aName;
@@ -1485,7 +2424,7 @@ void ImplDevFontList::Add( ImplFontData* pNewData )
 
     if ( bInsert )
     {
-        // reassign name (sharing saves memory)
+        // replace Name (saves memory)
         if ( pNewData->maName == pFoundData->maName )
             pNewData->maName = pFoundData->maName;
 
@@ -1496,11 +2435,12 @@ void ImplDevFontList::Add( ImplFontData* pNewData )
             StringCompare eComp = ImplCompareFontData( pNewData, pTemp );
             if ( eComp != COMPARE_GREATER )
             {
-                // prefer device font, else remove duplicate
+                // Wenn Font gleich ist, nehmen wir einen Devicefont,
+                // oder ignorieren den Font
                 if ( eComp == COMPARE_EQUAL )
                 {
-                    // prefer font with better quality
-                    // else prefer device font
+                    // Wir nehmen den Font mit der besseren Quality,
+                    // ansonsten ziehen wir den Device-Font vor
                     if ( (pNewData->mnQuality > pTemp->mnQuality) ||
                          ((pNewData->mnQuality == pTemp->mnQuality) &&
                           (pNewData->mbDevice && !pTemp->mbDevice)) )
@@ -1554,7 +2494,7 @@ ImplDevFontListData* ImplDevFontList::ImplFind( const XubString& rFontName, ULON
         return NULL;
     }
 
-    // find fonts in font list
+    // Fonts in der Liste suchen
     ImplDevFontListData*    pCompareData;
     ImplDevFontListData*    pFoundData = NULL;
     ULONG                   nLow = 0;
@@ -1609,20 +2549,31 @@ ImplDevFontListData* ImplDevFontList::FindFont( const XubString& rFontName ) con
 
 // -----------------------------------------------------------------------
 
-ImplDevFontListData* ImplDevFontList::ImplFindFontFromToken( const String& rStr ) const
+ImplDevFontListData* ImplDevFontList::ImplFindFontFromToken( const char* pStr ) const
 {
-    xub_StrLen nIndex = 0;
-    while( nIndex != STRING_NOTFOUND )
+    const char* pTempStr = pStr;
+    while ( *pTempStr )
     {
-        String aName( rStr.GetToken( 0, ';', nIndex ) );
-        if ( aName.Len() )
+        if ( *pTempStr == ';' )
         {
-            ImplDevFontListData* pData = ImplFind( aName );
-            if ( pData )
-                return pData;
+            String aName( pStr, pTempStr-pStr, RTL_TEXTENCODING_ASCII_US );
+            if ( aName.Len() )
+            {
+                ImplDevFontListData* pData = ImplFind( aName );
+                if ( pData )
+                    return pData;
+            }
+            pStr = pTempStr+1;
         }
+
+        pTempStr++;
     }
-    return NULL;
+
+    String aName( pStr, pTempStr-pStr, RTL_TEXTENCODING_ASCII_US );
+    if ( aName.Len() )
+        return ImplFind( aName );
+    else
+        return NULL;
 }
 
 // -----------------------------------------------------------------------
@@ -1634,20 +2585,20 @@ void ImplDevFontList::InitMatchData()
 
     // Calculate MatchData for all Entries
     ImplDevFontListData* pEntry = First();
-    const FontSubstConfigItem* pFontSubst = FontSubstConfigItem::get();
     while ( pEntry )
     {
         // Get all information about the matching font
-        const FontSubstConfigItem::FontNameAttr* pTempFontAttr;
+        const ImplFontNameAttr* pTempFontAttr;
         String                  aTempShortName;
-        pFontSubst->getMapName( pEntry->maSearchName, aTempShortName, pEntry->maMatchFamilyName,
-                                pEntry->meMatchWeight, pEntry->meMatchWidth, pEntry->mnMatchType );
-        pTempFontAttr = FontSubstConfigItem::get()->getSubstInfo( pEntry->maSearchName );
+        ImplGetMapName( pEntry->maSearchName, aTempShortName, pEntry->maMatchFamilyName,
+                        pEntry->meMatchWeight, pEntry->meMatchWidth, pEntry->mnMatchType );
+        pTempFontAttr = ImplGetFontNameAttr( pEntry->maSearchName );
         if ( !pTempFontAttr && (aTempShortName != pEntry->maSearchName) )
-            pTempFontAttr = pFontSubst->getSubstInfo( aTempShortName );
+            pTempFontAttr = ImplGetFontNameAttr( aTempShortName );
         ImplCalcType( pEntry->mnMatchType, pEntry->meMatchWeight, pEntry->meMatchWidth,
                       pEntry->meFamily, pTempFontAttr );
-        pEntry->mnMatchType |= ImplIsCJKFont( pEntry->maName );
+        if ( ImplIsCJKFont( pEntry->maName ) )
+            pEntry->mnMatchType |= IMPL_FONT_ATTR_CJK;
 
         pEntry = Next();
     }
@@ -1682,7 +2633,11 @@ void ImplGetDevSizeList::Add( long nNewHeight )
 
 ImplFontEntry::~ImplFontEntry()
 {
-    delete[] mpKernPairs;
+    if ( mpWidthAry )
+        delete mpWidthAry;
+
+    if ( mpKernPairs )
+        delete mpKernPairs;
 }
 
 // =======================================================================
@@ -1698,20 +2653,49 @@ ImplFontCache::ImplFontCache( BOOL bPrinter )
 
 ImplFontCache::~ImplFontCache()
 {
-    for( ImplFontEntry* pEntry = mpFirstEntry; pEntry; )
+    // Alle Eintraege loeschen
+    ImplFontEntry* pTemp;
+    ImplFontEntry* pEntry = mpFirstEntry;
+    while ( pEntry )
     {
-        ImplFontEntry* pNext = pEntry->mpNext;
+        pTemp = pEntry->mpNext;
         delete pEntry;
-        pEntry = pNext;
+        pEntry = pTemp;
     }
 }
 
 // -----------------------------------------------------------------------
 
 ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
-                                   const Font& rFont, const Size& rSize, ImplFontSubstEntry* pDevSpecific )
+                                   const Font& rFont, const Size& rSize )
 {
-    String aName                = rFont.GetName();
+#ifdef DBG_UTIL
+    {
+    // Test all Fonttables for correct sorting
+    static BOOL bInit = FALSE;
+    if ( !bInit )
+    {
+        const ImplFontNameAttr* pList = aImplFontNameList;
+        int                     nCount = sizeof( aImplFontNameList ) / sizeof( ImplFontNameAttr );
+        int                     i;
+        for ( i = 1; i < nCount; i++ )
+        {
+            if ( ImplStrMatchCompare( String( pList[i].mpName, RTL_TEXTENCODING_ASCII_US ),
+                                      pList[i-1].mpName ) <= 0 )
+            {
+                ByteString aStr( "ImplFontNameList not sorted: " );
+                aStr += pList[i-1].mpName;
+                aStr.Append( " >= " );
+                aStr += pList[i].mpName;
+                DBG_ERROR( aStr.GetBuffer() );
+            }
+        }
+        bInit = TRUE;
+    }
+    }
+#endif
+
+    const XubString& rName      = rFont.GetName();
     const XubString& rStyleName = rFont.GetStyleName();
     long nWidth                 = rSize.Width();
     long nHeight                = rSize.Height();
@@ -1727,28 +2711,27 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
     // normalize orientation between 0 and 3600
     if ( nOrientation )
     {
-        while( nOrientation < 0 )
+        while ( nOrientation < 0 )
             nOrientation += 3600;
         nOrientation %= 3600;
     }
 
-    // correct size
+    // Groesse anpassen
     if ( nHeight < 0 )
         nHeight = -nHeight;
     if ( nWidth < 0 )
         nWidth = -nWidth;
 
-    // find entry
+    // Eintrag suchen
     ImplFontEntry* pPrevEntry = NULL;
     ImplFontEntry* pEntry = mpFirstEntry;
     while ( pEntry )
     {
         ImplFontSelectData* pFontSelData = &(pEntry->maFontSelData);
-        if ( !(pEntry->mnSetFontFlags & SAL_SETFONT_BADFONT)    // avoid known bad fonts
-        &&   (nHeight       == pFontSelData->mnHeight)    &&
+        if ( (nHeight       == pFontSelData->mnHeight)    &&
              (eWeight       == pFontSelData->meWeight)    &&
              (eItalic       == pFontSelData->meItalic)    &&
-             ((aName == pFontSelData->maName) || (aName == pFontSelData->maFoundName)) &&
+             (rName         == pFontSelData->maName)      &&
              (rStyleName    == pFontSelData->maStyleName) &&
              (eFamily       == pFontSelData->meFamily)    &&
              (ePitch        == pFontSelData->mePitch)     &&
@@ -1758,10 +2741,12 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
              (bVertical     == pFontSelData->mbVertical)  &&
              (nOrientation  == pFontSelData->mnOrientation) )
         {
-            if ( !pEntry->mnRefCount++ )
+            if ( !pEntry->mnRefCount )
                 mnRef0Count--;
 
-            // entry becomes head of list
+            pEntry->mnRefCount++;
+
+            // Entry nach vorne bringen
             if ( pPrevEntry )
             {
                 pPrevEntry->mpNext = pEntry->mpNext;
@@ -1778,56 +2763,52 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
 
     const ImplCvtChar*      pConvertFontTab = NULL;
     ImplFontData*           pFontData = NULL;
-
     ImplDevFontListData*    pFoundData;
     String                  aSearchName;
+    USHORT                  nSubstFlags1 = FONT_SUBSTITUTE_ALWAYS;
+    USHORT                  nSubstFlags2 = FONT_SUBSTITUTE_ALWAYS;
+    xub_StrLen              nFirstNameIndex = 0;
     xub_StrLen              nIndex = 0;
     int                     nToken = 0;
     ULONG                   i;
 
-    USHORT nSubstFlags = FONT_SUBSTITUTE_ALWAYS;
-    if ( !mbPrinter )
-        nSubstFlags |= FONT_SUBSTITUTE_SCREENONLY;
+    if ( mbPrinter )
+        nSubstFlags1 |= FONT_SUBSTITUTE_SCREENONLY;
 
-    // check if the first font in the semicolon separated list of font names
-    // is available, substitute the font there is a matching entry in the
-    // Tools->Options->Fonts dialog with ALWAYS or SCREENONLY flags set
+    // Test if one Font in the name list is available
     do
     {
         nToken++;
-        String aToken = GetFontToken( aName, 0, nIndex );
-        aSearchName = aToken;
+        aSearchName = GetFontToken( rName, 0, nIndex );
         ImplGetEnglishSearchFontName( aSearchName );
-        ImplFontSubstitute( aSearchName, nSubstFlags, pDevSpecific );
+        ImplFontSubstitute( aSearchName, nSubstFlags1, nSubstFlags2 );
         pFoundData = pFontList->ImplFind( aSearchName );
-        if( pFoundData )
-        {
-            aName = aToken;
+        if ( pFoundData )
             break;
-        }
     }
     while ( nIndex != STRING_NOTFOUND );
 
-    // if the first font was not available find the next available font in
-    // the semicolon separated list of font names. A font is also considered
-    // available when there is a matching entry in the Tools->Options->Fonts
-    // dialog witho neither ALWAYS nor SCREENONLY flags set and the substitution
-    // font is available
-    if( !pFoundData )
+    // Danach versuchen wir es nocheinmal unter Beruecksichtigung
+    // der gloablen Fontersetzungstabelle, wobei wir jetzt auch
+    // die Fonts nehmen, die ersetzt werden sollen, wenn sie
+    // nicht vorhanden sind
+    if ( !pFoundData )
     {
+        nSubstFlags1 &= ~FONT_SUBSTITUTE_ALWAYS;
+        nSubstFlags2 &= ~FONT_SUBSTITUTE_ALWAYS;
         nIndex = 0;
         do
         {
             if ( nToken > 1 )
             {
-                aSearchName = GetFontToken( aName, 0, nIndex );
+                aSearchName = GetFontToken( rName, 0, nIndex );
                 ImplGetEnglishSearchFontName( aSearchName );
             }
             else
                 nIndex = STRING_NOTFOUND;
-            ImplFontSubstitute( aSearchName, 0, pDevSpecific );
+            ImplFontSubstitute( aSearchName, nSubstFlags1, nSubstFlags2 );
             pFoundData = pFontList->ImplFind( aSearchName );
-            if( pFoundData )
+            if ( pFoundData )
                 break;
         }
         while ( nIndex != STRING_NOTFOUND );
@@ -1842,82 +2823,71 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
         if ( nToken > 1 )
         {
             nIndex = 0;
-            aSearchName = GetFontToken( aName, 0, nIndex );
+            aSearchName = GetFontToken( rName, 0, nIndex );
             ImplGetEnglishSearchFontName( aSearchName );
         }
 
-        const FontSubstConfigItem::FontNameAttr* pFontAttr = NULL;
-        const FontSubstConfigItem* pFontSubst = FontSubstConfigItem::get();
+        const ImplFontNameAttr* pFontAttr = NULL;
         String                  aSearchShortName;
         String                  aSearchFamilyName;
         ULONG                   nSearchType = 0;
         FontWeight              eSearchWeight = eWeight;
         FontWidth               eSearchWidth = rFont.GetWidthType();
         BOOL                    bSymbolEncoding = (eCharSet == RTL_TEXTENCODING_SYMBOL);
-        FontSubstConfigItem::getMapName( aSearchName, aSearchShortName, aSearchFamilyName,
-                                         eSearchWeight, eSearchWidth, nSearchType );
-
-        // note: the search name was already translated to english (if possible)
+        ImplGetMapName( aSearchName, aSearchShortName, aSearchFamilyName,
+                        eSearchWeight, eSearchWidth, nSearchType );
 
         // Search, if ShortName is available
         if ( aSearchShortName != aSearchName )
         {
-#ifdef UNX
             /* #96738# don't use mincho as an replacement for "MS Mincho" on X11: Mincho is
                a korean bitmap font that is not suitable here. Use the font replacement table,
                that automatically leads to the desired "HG Mincho Light J". Same story for 
                MS Gothic, there are thai and korean "Gothic" fonts, so we even prefer Andale */ 
+            #ifdef UNX
             static String aMS_Mincho = String(RTL_CONSTASCII_USTRINGPARAM("msmincho"));
             static String aMS_Gothic = String(RTL_CONSTASCII_USTRINGPARAM("msgothic"));
             if ((aSearchName != aMS_Mincho) && (aSearchName != aMS_Gothic))
-#endif
+            #endif
             pFoundData = pFontList->ImplFind( aSearchShortName );
         }
         if ( !pFoundData && aSearchName.Len() )
         {
-            // look for substitution tables for the name, shortname and family name in that order
-            pFontAttr = pFontSubst->getSubstInfo( aSearchName );
+            pFontAttr = ImplGetFontNameAttr( aSearchName );
             if ( !pFontAttr && (aSearchShortName != aSearchName) )
-                pFontAttr = pFontSubst->getSubstInfo( aSearchShortName );
-            if ( !pFontAttr && (aSearchFamilyName != aSearchShortName) )
-                pFontAttr = pFontSubst->getSubstInfo( aSearchFamilyName );
+                pFontAttr = ImplGetFontNameAttr( aSearchShortName );
 
             // Try Substitution
-            if ( pFontAttr )
+            if ( pFontAttr && pFontAttr->mpSubstitution1 )
             {
-                for( ::std::vector< String >::const_iterator it = pFontAttr->Substitutions.begin();
-                     ! pFoundData && it != pFontAttr->Substitutions.end(); ++it )
+                pFoundData = pFontList->ImplFindFontFromToken( pFontAttr->mpSubstitution1 );
+                if ( !pFoundData && pFontAttr->mpSubstitution2 )
                 {
-                    String aFontname( *it );
-                    // list may contain localized names -> translate
-                    ImplGetEnglishSearchFontName( aFontname );
-                    pFoundData = pFontList->ImplFind( aFontname );
+                    pFoundData = pFontList->ImplFindFontFromToken( pFontAttr->mpSubstitution2 );
+                    if ( !pFoundData && pFontAttr->mpSubstitution3 )
+                        pFoundData = pFontList->ImplFindFontFromToken( pFontAttr->mpSubstitution3 );
                 }
             }
         }
 
         if ( !pFoundData && bSymbolEncoding )
-        {
-            String aFontname = DefaultFontConfigItem::get()->getDefaultFont( LANGUAGE_ENGLISH, DEFAULTFONT_SYMBOL );
-            ImplGetEnglishSearchFontName( aFontname );
-            pFoundData = pFontList->ImplFindFontFromToken( aFontname );
-        }
+            pFoundData = pFontList->ImplFindFontFromToken( aImplSubsStarSymbol );
 
         // If we haven't found a font, we try this with the other Font Token names, if availble
         if ( !pFoundData && (nToken > 1) )
         {
             while ( nIndex != STRING_NOTFOUND )
             {
-                const FontSubstConfigItem::FontNameAttr* pTempFontAttr;
-                String                  aTempName = GetFontToken( aName, 0, nIndex );
+                const ImplFontNameAttr* pTempFontAttr;
+                String                  aTempName = GetFontToken( rName, 0, nIndex );
                 String                  aTempShortName;
                 String                  aTempFamilyName;
                 ULONG                   nTempType = 0;
                 FontWeight              eTempWeight = eWeight;
                 FontWidth               eTempWidth = WIDTH_DONTKNOW;
                 ImplGetEnglishSearchFontName( aTempName );
-                FontSubstConfigItem::getMapName( aTempName, aTempShortName, aTempFamilyName,
-                                                 eTempWeight, eTempWidth, nTempType );
+                ImplGetMapName( aTempName, aTempShortName, aTempFamilyName,
+                                eTempWeight, eTempWidth, nTempType );
 
                 // Temp, if ShortName is available
                 if ( aTempShortName != aTempName )
@@ -1925,23 +2895,23 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
 
                 if ( !pFoundData && aTempName.Len() )
                 {
-                    // look for substitution tables for the name, shortname and family name in that order
-                    pTempFontAttr = pFontSubst->getSubstInfo( aTempName );
+                    pTempFontAttr = ImplGetFontNameAttr( aTempName );
                     if ( !pTempFontAttr && (aTempShortName != aTempName) )
-                        pTempFontAttr = pFontSubst->getSubstInfo( aTempShortName );
-                    if ( !pTempFontAttr && (aTempFamilyName != aTempShortName) )
-                        pTempFontAttr = pFontSubst->getSubstInfo( aTempFamilyName );
+                        pTempFontAttr = ImplGetFontNameAttr( aTempShortName );
 
                     // Try Substitution
-                    if ( pTempFontAttr )
+                    if ( pTempFontAttr && pTempFontAttr->mpSubstitution1 )
                     {
-                        for( ::std::vector< String >::const_iterator it = pTempFontAttr->Substitutions.begin();
-                             ! pFoundData && it != pTempFontAttr->Substitutions.end(); ++it )
+                        pFoundData = pFontList->ImplFindFontFromToken( pTempFontAttr->mpSubstitution1 );
+                        if ( !pFoundData && pTempFontAttr->mpSubstitution2 )
                         {
-                            String aFontname( *it );
-                            // list may contain localized names -> translate
-                            ImplGetEnglishSearchFontName( aFontname );
-                            pFoundData = pFontList->ImplFind( aFontname );
+                            pFoundData = pFontList->ImplFindFontFromToken( pTempFontAttr->mpSubstitution2 );
+                            if ( !pFoundData && pTempFontAttr->mpSubstitution3 )
+                            {
+                                pFoundData = pFontList->ImplFindFontFromToken( pTempFontAttr->mpSubstitution3 );
+                                if ( !pFoundData && pTempFontAttr->mpSubstitution4 )
+                                    pFoundData = pFontList->ImplFindFontFromToken( pTempFontAttr->mpSubstitution4 );
+                            }
                         }
                     }
                 }
@@ -2002,7 +2972,10 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
             else if ( eLang == LANGUAGE_JAPANESE )
                 nSearchType |= IMPL_FONT_ATTR_CJK | IMPL_FONT_ATTR_CJK_JP;
             else
-                nSearchType |= ImplIsCJKFont( aName );
+            {
+                if ( ImplIsCJKFont( rName ) )
+                    nSearchType |= IMPL_FONT_ATTR_CJK;
+            }
             if ( bSymbolEncoding )
                 nSearchType |= IMPL_FONT_ATTR_SYMBOL;
 
@@ -2101,6 +3074,7 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
                     else if ( nMatchType & IMPL_FONT_ATTR_SYMBOL )
                         nTestMatch -= 10000;
 
+
                     if ( (aSearchFamilyName == pData->maMatchFamilyName) &&
                          aSearchFamilyName.Len() )
                         nTestMatch += 1000000*3;
@@ -2195,6 +3169,7 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
                     else if ( nMatchType & (IMPL_FONT_ATTR_OUTLINE | IMPL_FONT_ATTR_SHADOW) )
                         nTestMatch -= 1000000;
 
+
                     if ( (aSearchFamilyName.Len() && pData->maMatchFamilyName.Len()) &&
                          ((aSearchFamilyName.Search( pData->maMatchFamilyName ) != STRING_NOTFOUND) ||
                           (pData->maMatchFamilyName.Search( aSearchFamilyName ) != STRING_NOTFOUND)) )
@@ -2269,7 +3244,8 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
                               !(pData->mnTypeFaces & IMPL_DEVFONT_NORMAL) )
                         nTestMatch -= 1000000;
 
-                    // prefer scalable fonts
+                    // skalierbare Schriften haben schon einen echten Vorteil
+                    // gegenueber nicht skalierbaren Schriften
                     if ( pData->mnTypeFaces & IMPL_DEVFONT_SCALABLE )
                         nTestMatch += 10000*4;
                     else
@@ -2319,7 +3295,7 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
                     }
                     else if ( nTestMatch == nBestMatch )
                     {
-                        // some fonts are more suitable defaults
+                        // We have some fonts, where we think that they are more useful
                         if ( nMatchType & IMPL_FONT_ATTR_DEFAULT )
                         {
                             pFoundData  = pData;
@@ -2358,52 +3334,26 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
         {
             // Try to use a Standard Unicode or a Standard Font to get
             // as max as possible characters
-            DefaultFontConfigItem* pDefaults = DefaultFontConfigItem::get();
-            String aFontname = pDefaults->getDefaultFont( LANGUAGE_ENGLISH, DEFAULTFONT_SANS_UNICODE );
-            ImplGetEnglishSearchFontName( aFontname );
-
-            pFoundData = pFontList->ImplFindFontFromToken( aFontname );
+            pFoundData = pFontList->ImplFindFontFromToken( aImplSubsSansUnicode );
             if ( !pFoundData )
             {
-                aFontname = pDefaults->getDefaultFont( LANGUAGE_ENGLISH, DEFAULTFONT_SANS );
-                ImplGetEnglishSearchFontName( aFontname );
-                pFoundData = pFontList->ImplFindFontFromToken( aFontname );
+                pFoundData = pFontList->ImplFindFontFromToken( aImplSubsSans );
                 if ( !pFoundData )
                 {
-                    aFontname = pDefaults->getDefaultFont( LANGUAGE_ENGLISH, DEFAULTFONT_SERIF );
-                    ImplGetEnglishSearchFontName( aFontname );
-                    pFoundData = pFontList->ImplFindFontFromToken( aFontname );
+                    pFoundData = pFontList->ImplFindFontFromToken( aImplSubsSerif );
                     if ( !pFoundData )
-                    {
-                        aFontname = pDefaults->getDefaultFont( LANGUAGE_ENGLISH, DEFAULTFONT_FIXED );
-                        ImplGetEnglishSearchFontName( aFontname );
-                        pFoundData = pFontList->ImplFindFontFromToken( aFontname );
-                    }
+                        pFoundData = pFontList->ImplFindFontFromToken( aImplSubsFixed );
                 }
             }
 
-            // if nothing helps, we try to use a reasonable non-symbol font
+            // If nothing helps, we use the first one
             if ( !pFoundData )
-            {
-                pFontList->InitMatchData();
-                for( i = 0; i < nFontCount; ++i )
-                {
-                    ImplDevFontListData* pData = pFontList->Get( i );
-                    if( pData->mnMatchType & IMPL_FONT_ATTR_SYMBOL )
-                        continue;
-                    pFoundData = pData;
-                    if( pData->mnMatchType & (IMPL_FONT_ATTR_DEFAULT|IMPL_FONT_ATTR_STANDARD) )
-                        break;
-                }
-                // if there was no reasonable font just use the first in the font list
-                if( i >= nFontCount )
-                    pFoundData = pFontList->Get( 0 );
-            }
+                pFoundData = pFontList->Get( 0 );
         }
     }
 
-    // we found a useable Font, than we look which font maps best
-    // with the requested attributes
+    // We have found a useable Font, than we look with Font mapps at best
+    // with the wished attributes
     if ( pFoundData )
     {
         ULONG           nBestMatch = 0;         // Der groessere Wert ist der bessere
@@ -2427,8 +3377,8 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
             nHeightMatch = 0;
             nWidthMatch = 0;
 
-            if ( (aName == pCurFontData->maName) ||
-                 aName.EqualsIgnoreCaseAscii( pCurFontData->maName ) )
+            if ( (rName == pCurFontData->maName) ||
+                 rName.EqualsIgnoreCaseAscii( pCurFontData->maName ) )
                 nMatch += 240000;
 
             if ( pCompareStyleName &&
@@ -2441,8 +3391,8 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
             if ( (eFamily != FAMILY_DONTKNOW) && (eFamily == pCurFontData->meFamily) )
                 nMatch += 30000;
 
-            // prefer NORMAL font width
-            // TODO: change when the upper layers can tell their preference
+            // Normale Schriftbreiten bevorzugen, da wir noch keine Daten
+            // von den Applikationen bekommen
             if ( pCurFontData->meWidthType == WIDTH_NORMAL )
                 nMatch += 15000;
 
@@ -2536,8 +3486,9 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
             }
             else if ( nMatch == nBestMatch )
             {
-                // when two fonts are still competing prefer the
-                // one with the closest height
+                // Wenn 2 gleichwertig sind, kommt die Size-Bewertung
+                // Hier gewinnt der jenige, der die niedrigere Abweichung
+                // in der Groesse hat (also den kleinsten Match)
                 if ( nHeightMatch < nBestHeightMatch )
                 {
                     pFontData           = pCurFontData;
@@ -2557,181 +3508,161 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
             pCurFontData = pCurFontData->mpNext;
         }
 
-        // we have not found the font => try to use a font-conversion table
+        // If we haven't the font, try to find a Font-TextConversion table
         if ( aSearchName != pFoundData->maSearchName )
             pConvertFontTab = ImplGetRecodeData( aSearchName, pFoundData->maSearchName );
     }
 
-    // add a new entry into the cache
+    // Daten initialisieren und in die Liste aufnehmen
     pEntry                          = new ImplFontEntry;
     pEntry->mpNext                  = mpFirstEntry;
     pEntry->mpConversion            = pConvertFontTab;
     pEntry->mnWidthInit             = 0;
+    pEntry->mnWidthAryCount         = 0;
+    pEntry->mnWidthArySize          = 0;
+    pEntry->mpWidthAry              = NULL;
     pEntry->mpKernPairs             = NULL;
     pEntry->mnOwnOrientation        = 0;
     pEntry->mnOrientation           = 0;
     pEntry->mbInit                  = FALSE;
-    pEntry->mnSetFontFlags          = 0;
     pEntry->mnRefCount              = 1;
     mpFirstEntry                    = pEntry;
 
-    // initialize font selection data
-    ImplFontSelectData& rFontSelData = pEntry->maFontSelData;
-    rFontSelData.mpFontData        = pFontData;
-    rFontSelData.maName            = rFont.GetName();
-    rFontSelData.maFoundName       = aName;
-    rFontSelData.maStyleName       = rStyleName;
-    rFontSelData.mnWidth           = nWidth;
-    rFontSelData.mnHeight          = nHeight;
-    rFontSelData.meFamily          = eFamily;
-    rFontSelData.meCharSet         = eCharSet;
-    rFontSelData.meLanguage        = eLanguage;
-    rFontSelData.meWidthType       = WIDTH_DONTKNOW;
-    rFontSelData.meWeight          = eWeight;
-    rFontSelData.meItalic          = eItalic;
-    rFontSelData.mePitch           = ePitch;
-    rFontSelData.mnOrientation     = nOrientation;
-    rFontSelData.mbVertical        = bVertical;
-    rFontSelData.mbNonAntialiased  = FALSE;
+    // Font-Selection-Daten setzen
+    ImplFontSelectData* pFontSelData = &(pEntry->maFontSelData);
+    pFontSelData->mpFontData        = pFontData;
+    pFontSelData->mpSysSelData      = NULL;
+    pFontSelData->maName            = rName;
+    pFontSelData->maStyleName       = rStyleName;
+    pFontSelData->mnWidth           = nWidth;
+    pFontSelData->mnHeight          = nHeight;
+    pFontSelData->meFamily          = eFamily;
+    pFontSelData->meCharSet         = eCharSet;
+    pFontSelData->meLanguage        = eLanguage;
+    pFontSelData->meWidthType       = WIDTH_DONTKNOW;
+    pFontSelData->meWeight          = eWeight;
+    pFontSelData->meItalic          = eItalic;
+    pFontSelData->mePitch           = ePitch;
+    pFontSelData->mnOrientation     = nOrientation;
+    pFontSelData->mbVertical        = bVertical;
 
     return pEntry;
 }
 
 // -----------------------------------------------------------------------
 
-ImplFontEntry* ImplFontCache::GetFallback( ImplDevFontList* pFontList,
-    const Font& rOrigFont, const Size& rSize, int nLevel, ImplFontSubstEntry* pDevSpecific )
-{
-    // make sure the fontlist knows it's fallbacks
-    if( !pFontList->HasFallbacks() )
-    {
-        // TODO: implement dynamic lists or improve static lists
-        #define FALLBACKFONT_NAMELIST \
-            "arialunicodems;andalesansui;cyberbit;starsymbol;opensymbol;lucidatypeWriter;"  \
-            "fzmingti;sunbatang;sundotum;baekmukdotum;"                     \
-            "hgmincholightj;msunglightsc;msunglighttc;hymyeongjolightk;"    \
-            "lucidasans;tahoma;"                                            \
-            "shree;mangal;raavi;shruti;tunga;latha;"                        \
-            "shayyalmt;naskmt;david;nachlieli;lucidagrande;"                \
-            "norasi;angsanaupc;"                                            \
-            "gulim;batang;dotum;msmincho"
-        String aNameList( RTL_CONSTASCII_USTRINGPARAM(FALLBACKFONT_NAMELIST) );
-        int nMaxLevel = 0;
-        ImplDevFontListData** pFallbackList = NULL;
-        for( xub_StrLen nTokenPos = 0; nTokenPos != STRING_NOTFOUND; )
-        {
-            String aTokenName = GetFontToken( aNameList, 0, nTokenPos );
-            ImplGetEnglishSearchFontName( aTokenName );
-            // TODO: use font substitution lists for fallback? default is no
-            //ImplFontSubstitute( aSearchName, nSubstFlags1, nSubstFlags2 );
-            ImplDevFontListData* pFoundData = pFontList->ImplFind( aTokenName );
-            // TODO: check FontCharset and reject if the charset is already covered
-            if( pFoundData && (pFoundData->mpFirst->meType == TYPE_SCALABLE) )
-            {
-                if( !pFallbackList )
-                    pFallbackList = new ImplDevFontListData*[ MAX_FALLBACK ];
-                pFallbackList[ nMaxLevel ] = pFoundData;
-                if( ++nMaxLevel >= MAX_FALLBACK )
-                    break;
-            }
-        }
-
-        pFontList->SetFallbacks( pFallbackList, nMaxLevel );
-    }
-
-    // nLevel>=1 for fallback => remove +1 offset
-    ImplDevFontListData* pFallbackData = pFontList->GetFallback( nLevel-1 );
-    if( !pFallbackData )
-        return NULL;
-
-    // TODO: use pFallbackData directly
-    Font aFallbackFont = rOrigFont;
-    aFallbackFont.SetName( pFallbackData->maName );
-    ImplFontEntry* pFallbackFont = Get( pFontList, aFallbackFont, rSize, pDevSpecific );
-
-    if( pFallbackFont && !pFallbackFont->mbInit )
-    {
-        // HACK: maMetrics are irrelevant for fallback fonts, but
-        // to prevent trouble at cleanup we need to set some members
-        pFallbackFont->maMetric.maName      =
-        pFallbackFont->maMetric.maStyleName = pFallbackData->maName;
-    }
-
-    return pFallbackFont;
-}
-
-// -----------------------------------------------------------------------
-
 void ImplFontCache::Release( ImplFontEntry* pEntry )
 {
-    static const int FONTCACHE_MIN = 5;
-    static const int FONTCACHE_MAX = 50;
+    pEntry->mnRefCount--;
 
-    DBG_ASSERT( (pEntry->mnRefCount > 0), "ImplFontCache::Release() - font recount underflow" );
-    if( --pEntry->mnRefCount > 0 )
-        return;
-
-    if( ++mnRef0Count < FONTCACHE_MAX )
-        return;
-
-    // delete least-recently-used unreferenced entries
-    int nRef0Index = 0;
-    for( ImplFontEntry** pNextPtr = &mpFirstEntry; pEntry = *pNextPtr; )
+    if ( !pEntry->mnRefCount )
     {
-        if( (pEntry->mnRefCount > 0) || (++nRef0Index <= FONTCACHE_MIN) )
-            pNextPtr = &pEntry->mpNext;
-        else
+        if ( mnRef0Count >= MAXFONT_CACHE )
         {
-            *pNextPtr = pEntry->mpNext;
-            delete pEntry;
-            --mnRef0Count;
-            DBG_ASSERT( (mnRef0Count >= 0), "ImplFontCache::Release() - refcount0 underflow" );
-        }
-    }
+            // Letzten Entry mit RefCount 0 loeschen
+            ImplFontEntry* pPrevDelEntry = mpFirstEntry;
+            ImplFontEntry* pDelEntry = pPrevDelEntry->mpNext;
+            USHORT nCurRef0Count = !(pPrevDelEntry->mnRefCount);
+            while ( pDelEntry )
+            {
+                if ( !pDelEntry->mnRefCount )
+                    nCurRef0Count++;
 
-    DBG_ASSERT( (mnRef0Count<=FONTCACHE_MIN), "ImplFontCache::Release() - mismatch" );
+                if ( nCurRef0Count >= MAXFONT_CACHE )
+                {
+                    pPrevDelEntry->mpNext = pDelEntry->mpNext;
+                    delete pDelEntry;
+                    break;
+                }
+
+                pPrevDelEntry = pDelEntry;
+                pDelEntry = pDelEntry->mpNext;
+            }
+        }
+        else
+            mnRef0Count++;
+    }
 }
 
 // -----------------------------------------------------------------------
 
 void ImplFontCache::Clear()
 {
-    // delete unreferenced entries
-    ImplFontEntry** pNextPtr = &mpFirstEntry;
-    while( ImplFontEntry* pEntry = *pNextPtr )
+    // Alle Eintraege loeschen
+    ImplFontEntry* pTemp;
+    ImplFontEntry* pEntry = mpFirstEntry;
+    while ( pEntry )
     {
-        if( pEntry->mnRefCount > 0 )
-            pNextPtr = &pEntry->mpNext;
-        else
-        {
-            *pNextPtr = pEntry->mpNext;
-            delete pEntry;
-            --mnRef0Count;
-        }
+        DBG_ASSERT( !pEntry->mnRefCount, "ImplFontCache::Clear() - Font in use" );
+        pTemp = pEntry->mpNext;
+        delete pEntry;
+        pEntry = pTemp;
     }
 
-    // #112304# make sure the font cache is really clean
-    // #112304# there are still referenced entries
-    mpFirstEntry = NULL;
-
-    DBG_ASSERT( (mnRef0Count==0), "ImplFontCache::Clear() - mnRef0Count non-zero" );
+    mpFirstEntry    = NULL;
+    mnRef0Count     = 0;
 }
 
 // =======================================================================
 
+class ImplTextLineInfo
+{
+private:
+    long        mnWidth;
+    xub_StrLen  mnIndex;
+    xub_StrLen  mnLen;
+
+public:
+                ImplTextLineInfo( long nWidth, xub_StrLen nIndex, xub_StrLen nLen )
+                {
+                    mnWidth = nWidth;
+                    mnIndex = nIndex;
+                    mnLen   = nLen;
+                }
+
+    long        GetWidth() const { return mnWidth; }
+    xub_StrLen  GetIndex() const { return mnIndex; }
+    xub_StrLen  GetLen() const { return mnLen; }
+};
+
+#define MULTITEXTLINEINFO_RESIZE    16
+typedef ImplTextLineInfo* PImplTextLineInfo;
+
+class ImplMultiTextLineInfo
+{
+private:
+    PImplTextLineInfo*  mpLines;
+    xub_StrLen          mnLines;
+    xub_StrLen          mnSize;
+
+public:
+                        ImplMultiTextLineInfo();
+                        ~ImplMultiTextLineInfo();
+
+    void                AddLine( ImplTextLineInfo* pLine );
+    void                Clear();
+
+    ImplTextLineInfo*   GetLine( USHORT nLine ) const
+                            { return mpLines[nLine]; }
+    xub_StrLen          Count() const { return mnLines; }
+
+private:
+                            ImplMultiTextLineInfo( const ImplMultiTextLineInfo& );
+    ImplMultiTextLineInfo&  operator=( const ImplMultiTextLineInfo& );
+};
+
 ImplMultiTextLineInfo::ImplMultiTextLineInfo()
 {
-    mpLines = new PImplTextLineInfo[MULTITEXTLINEINFO_RESIZE];
-    mnLines = 0;
-    mnSize  = MULTITEXTLINEINFO_RESIZE;
+    mpLines         = new PImplTextLineInfo[MULTITEXTLINEINFO_RESIZE];
+    mnLines         = 0;
+    mnSize          = MULTITEXTLINEINFO_RESIZE;
 }
-
 
 ImplMultiTextLineInfo::~ImplMultiTextLineInfo()
 {
     for ( xub_StrLen i = 0; i < mnLines; i++ )
         delete mpLines[i];
-    delete [] mpLines;
+    delete mpLines;
 }
 
 void ImplMultiTextLineInfo::AddLine( ImplTextLineInfo* pLine )
@@ -2757,7 +3688,7 @@ void ImplMultiTextLineInfo::Clear()
 
 // =======================================================================
 
-FontEmphasisMark OutputDevice::ImplGetEmphasisMarkStyle( const Font& rFont )
+static FontEmphasisMark ImplGetEmphasisMarkStyle( const Font& rFont )
 {
     FontEmphasisMark nEmphasisMark = rFont.GetEmphasisMark();
 
@@ -2787,34 +3718,34 @@ FontEmphasisMark OutputDevice::ImplGetEmphasisMarkStyle( const Font& rFont )
 
 // -----------------------------------------------------------------------
 
-BOOL OutputDevice::ImplIsUnderlineAbove( const Font& rFont )
+static BOOL ImplIsUnderlineAbove( const Font& rFont )
 {
     if ( !rFont.IsVertical() )
         return FALSE;
 
-    if( (LANGUAGE_JAPANESE == rFont.GetLanguage())
-    ||  (LANGUAGE_JAPANESE == rFont.GetCJKContextLanguage()) )
-        // the underline is right for Japanese only
-        return TRUE;
-
-    return FALSE;
-}
-
-// =======================================================================
-
-void OutputDevice::ImplInitFontList() const
-{
-    if( ! mpFontList->Count() )
+    LanguageType eLang = rFont.GetLanguage();
+    // In all Chinese Languages the underline is left
+    if ( (eLang == LANGUAGE_CHINESE)                ||
+         (eLang == LANGUAGE_CHINESE_TRADITIONAL)    ||
+         (eLang == LANGUAGE_CHINESE_SIMPLIFIED)     ||
+         (eLang == LANGUAGE_CHINESE_HONGKONG)       ||
+         (eLang == LANGUAGE_CHINESE_SINGAPORE)      ||
+         (eLang == LANGUAGE_CHINESE_MACAU) )
+        return FALSE;
+    else
     {
-        if( mpGraphics || ImplGetGraphics() )
-        {
-            mpGraphics->GetDevFontList( mpFontList );
-            if( !mpFontList->Count() )
-                // dummy mode, no fonts at all
-                // at least we should not crash or loop
-                return;
-        }
+        eLang = rFont.GetCJKContextLanguage();
+        // In all Chinese Languages the underline is left
+        if ( (eLang == LANGUAGE_CHINESE)                ||
+             (eLang == LANGUAGE_CHINESE_TRADITIONAL)    ||
+             (eLang == LANGUAGE_CHINESE_SIMPLIFIED)     ||
+             (eLang == LANGUAGE_CHINESE_HONGKONG)       ||
+             (eLang == LANGUAGE_CHINESE_SINGAPORE)      ||
+             (eLang == LANGUAGE_CHINESE_MACAU) )
+            return FALSE;
     }
+
+    return TRUE;
 }
 
 // =======================================================================
@@ -2828,18 +3759,15 @@ void OutputDevice::ImplInitFont()
         if ( meOutDevType != OUTDEV_PRINTER )
         {
             // decide if antialiasing is appropriate
-            bool bNonAntialiased = (GetAntialiasing() & ANTIALIASING_DISABLE_TEXT) != 0;
+            BOOL bNonAntialiased = (GetAntialiasing() & ANTIALIASING_DISABLE_TEXT) != 0;
             const StyleSettings& rStyleSettings = GetSettings().GetStyleSettings();
-            bNonAntialiased |= ((rStyleSettings.GetDisplayOptions() & DISPLAY_OPTION_AA_DISABLE) != 0);
+            bNonAntialiased |= (rStyleSettings.GetDisplayOptions() & DISPLAY_OPTION_AA_DISABLE) != 0;
             bNonAntialiased |= (rStyleSettings.GetAntialiasingMinPixelHeight() > mpFontEntry->maFontSelData.mnHeight);
-            mpFontEntry->maFontSelData.mbNonAntialiased = (BOOL)bNonAntialiased;
+            mpFontEntry->maFontSelData.mbNonAntialiased = bNonAntialiased;
         }
 
-        if( !mpPDFWriter || !mpPDFWriter->isBuiltinFont( mpFontEntry->maFontSelData.mpFontData ) )
-        {
-            // Select Font
-            mpFontEntry->mnSetFontFlags = mpGraphics->SetFont( &(mpFontEntry->maFontSelData), 0 );
-        }
+        // Select Font
+        mpFontEntry->mnSetFontFlags = mpGraphics->SetFont( &(mpFontEntry->maFontSelData) );
         mbInitFont = FALSE;
     }
 }
@@ -2867,15 +3795,6 @@ int OutputDevice::ImplNewFont()
 {
     DBG_TESTSOLARMUTEX();
 
-    // get correct font list on the PDF writer if necessary
-    if( mpPDFWriter )
-    {
-        const ImplSVData* pSVData = ImplGetSVData();
-        if( mpFontList == pSVData->maGDIData.mpScreenFontList
-        ||  mpFontCache == pSVData->maGDIData.mpScreenFontCache )
-            ImplUpdateFontData( TRUE );
-    }
-
     if ( !mbNewFont )
         return TRUE;
 
@@ -2883,21 +3802,25 @@ int OutputDevice::ImplNewFont()
 
 #ifndef REMOTE_APPSERVER
     // we need a graphics
-    if ( !mpGraphics && !ImplGetGraphics() )
-        return FALSE;
+    if ( !mpGraphics )
+    {
+        if ( !ImplGetGraphics() )
+            return FALSE;
+    }
     SalGraphics* pGraphics = mpGraphics;
 #else
-    // due to clipping we may get NULL, so don't use return value
+    // Da wegen Clipping hier NULL zurueckkommen kann, koennen wir nicht
+    // den Rueckgabewert nehmen
     ImplGetServerGraphics();
     ImplServerGraphics* pGraphics = mpGraphics;
 #endif
-    ImplInitFontList();
 
-    // convert to pixel height
+    // Groesse umrechnen
     Size aSize = ImplLogicToDevicePixel( maFont.GetSize() );
     if ( !aSize.Height() )
     {
-        // use default pixel height only when logical height is zero
+        // Nur dann Defaultgroesse setzen, wenn Fonthoehe auch in logischen
+        // Koordinaaten 0 ist
         if ( maFont.GetSize().Height() )
             aSize.Height() = 1;
         else
@@ -2905,27 +3828,27 @@ int OutputDevice::ImplNewFont()
     }
 
     // use default width only when logical width is zero
-    if( (0 == aSize.Width()) && (0 != maFont.GetSize().Width()) )
+    if( !aSize.Width() && (0 != maFont.GetSize().Width()) )
         aSize.Width() = 1;
 
-    // get font entry
+    // Neuen Font besorgen
     ImplFontEntry* pOldEntry = mpFontEntry;
-    mpFontEntry = mpFontCache->Get( mpFontList, maFont, aSize, mpOutDevData ? mpOutDevData->mpFirstFontSubstEntry : NULL );
+    mpFontEntry = mpFontCache->Get( mpFontList, maFont, aSize );
     ImplFontEntry* pFontEntry = mpFontEntry;
 
-    // do lower layers need notification
+    // Feststellen, ob Font neu selektiert werden muss
     if ( pFontEntry != pOldEntry )
         mbInitFont = TRUE;
 
     // these two may be filled in remote version
     ImplKernPairData* pKernPairs = NULL;
     long nKernPairs = 0;
-    // select font when it has not been initialized yet
+    // Wenn Font nicht initialisiert ist, dann sofort selektieren
     if ( !pFontEntry->mbInit )
     {
         ImplInitFont();
 
-        // get font data
+        // und die Font-Daten besorgen
         if ( pGraphics )
         {
             pFontEntry->mbInit = TRUE;
@@ -2982,31 +3905,38 @@ int OutputDevice::ImplNewFont()
             pFontEntry->maMetric.mnDStrikeoutSize           = 0;
             pFontEntry->maMetric.mnDStrikeoutOffset1        = 0;
             pFontEntry->maMetric.mnDStrikeoutOffset2        = 0;
-
-            if( mpPDFWriter && mpPDFWriter->isBuiltinFont( pFontEntry->maFontSelData.mpFontData ) )
-                mpPDFWriter->getFontMetric( &pFontEntry->maFontSelData, &(pFontEntry->maMetric) );
-            else
-            {
 #ifndef REMOTE_APPSERVER
-                pGraphics->GetFontMetric( &(pFontEntry->maMetric) );
+            pGraphics->GetFontMetric( &(pFontEntry->maMetric) );
+            // Query the first latin area, because we need a
+            // WidthFactor for some methods (e.g. GetTextBreak)
+            pFontEntry->mnWidthFactor = pGraphics->GetCharWidth( IMPL_CACHE_A1_FIRST, IMPL_CACHE_A1_LAST,
+                                                                 pFontEntry->maWidthAry+IMPL_CACHE_A1_INDEX );
+            if ( pFontEntry->mnWidthFactor )
+                pFontEntry->mnWidthInit |= IMPL_CACHE_A1_BIT;
+            else
+                pFontEntry->mnWidthFactor = IMPL_FACTOR_NOTINIT;
 #else
-                long nFactor = 0;
-                pGraphics->GetFontMetric(
-                                         pFontEntry->maMetric, nFactor,
-                                         0x21, 0x20, NULL,
-                                         (maFont.GetKerning() & KERNING_FONTSPECIFIC) != 0,
-                                         &pKernPairs, nKernPairs );
+            long nFactor = 0;
+            pGraphics->GetFontMetric(
+                pFontEntry->maMetric,
+                nFactor, IMPL_CACHE_A1_FIRST, IMPL_CACHE_A1_LAST,
+                pFontEntry->maWidthAry+IMPL_CACHE_A1_INDEX,
+                (maFont.GetKerning() & KERNING_FONTSPECIFIC) != 0,
+                &pKernPairs, nKernPairs );
+            pFontEntry->mnWidthFactor = nFactor;
+            if ( pFontEntry->mnWidthFactor )
+                pFontEntry->mnWidthInit |= IMPL_CACHE_A1_BIT;
+            else
+                pFontEntry->mnWidthFactor = IMPL_FACTOR_NOTINIT;
 #endif
-            }
 
             pFontEntry->mbFixedFont     = pFontEntry->maMetric.mePitch == PITCH_FIXED;
-            pFontEntry->mnLineHeight    = pFontEntry->maMetric.mnAscent + pFontEntry->maMetric.mnDescent;
+            pFontEntry->mnLineHeight    = pFontEntry->maMetric.mnAscent+pFontEntry->maMetric.mnDescent;
             pFontEntry->mbInitKernPairs = FALSE;
             pFontEntry->mnKernPairs     = nKernPairs;
 
-            if( pFontEntry->maFontSelData.mnOrientation
-            && !pFontEntry->maMetric.mnOrientation
-            && (meOutDevType != OUTDEV_PRINTER) )
+            if ( pFontEntry->maFontSelData.mnOrientation && !pFontEntry->maMetric.mnOrientation &&
+                (meOutDevType != OUTDEV_PRINTER) )
             {
                 pFontEntry->mnOwnOrientation = pFontEntry->maFontSelData.mnOrientation;
                 pFontEntry->mnOrientation = pFontEntry->mnOwnOrientation;
@@ -3016,7 +3946,7 @@ int OutputDevice::ImplNewFont()
         }
     }
 
-    // get kerning array if requested
+    // Wenn Kerning gewuenscht ist, die Kerning-Werte ermitteln
     if ( maFont.GetKerning() & KERNING_FONTSPECIFIC )
     {
         ImplInitKerningPairs( pKernPairs, nKernPairs );
@@ -3027,7 +3957,7 @@ int OutputDevice::ImplNewFont()
     if ( maFont.GetKerning() & KERNING_ASIAN )
         mbKerning = TRUE;
 
-    // calculate EmphasisArea
+    // Calculate the EmphasisArea
     mnEmphasisAscent = 0;
     mnEmphasisDescent = 0;
     if ( maFont.GetEmphasisMark() & EMPHASISMARK_STYLE )
@@ -3042,7 +3972,7 @@ int OutputDevice::ImplNewFont()
             mnEmphasisAscent = nEmphasisHeight;
     }
 
-    // calculate text offset depending on TextAlignment
+    // Je nach TextAlign den TextOffset berechnen
     TextAlign eAlign = maFont.GetAlign();
     if ( eAlign == ALIGN_BASELINE )
     {
@@ -3052,14 +3982,14 @@ int OutputDevice::ImplNewFont()
     else if ( eAlign == ALIGN_TOP )
     {
         mnTextOffX = 0;
-        mnTextOffY = +pFontEntry->maMetric.mnAscent + mnEmphasisAscent;
+        mnTextOffY = pFontEntry->maMetric.mnAscent+mnEmphasisAscent;
         if ( pFontEntry->mnOrientation )
             ImplRotatePos( 0, 0, mnTextOffX, mnTextOffY, pFontEntry->mnOrientation );
     }
     else // eAlign == ALIGN_BOTTOM
     {
         mnTextOffX = 0;
-        mnTextOffY = -pFontEntry->maMetric.mnDescent + mnEmphasisDescent;
+        mnTextOffY = -pFontEntry->maMetric.mnDescent+mnEmphasisDescent;
         if ( pFontEntry->mnOrientation )
             ImplRotatePos( 0, 0, mnTextOffX, mnTextOffY, pFontEntry->mnOrientation );
     }
@@ -3096,16 +4026,182 @@ int OutputDevice::ImplNewFont()
 
 // -----------------------------------------------------------------------
 
-inline bool CmpKernData( const ImplKernPairData& a, const ImplKernPairData& b )
+BOOL OutputDevice::ImplGetCharWidths( sal_Unicode c1, sal_Unicode c2,
+                                      long* pAry ) const
 {
-    return (*(sal_uInt32*)&a) > (*(sal_uInt32*)&b);
+    // Um die Zeichenbreite zu ermitteln, brauchen wir einen Graphics und der
+    // Font muss natuerlich auch selektiert sein
+#ifndef REMOTE_APPSERVER
+    // we need a graphics
+    if ( !mpGraphics )
+    {
+        if ( !((OutputDevice*)this)->ImplGetGraphics() )
+            return FALSE;
+    }
+#else
+    // Da wegen Clipping hier NULL zurueckkommen kann, koennen wir nicht
+    // den Rueckgabewert nehmen
+    ((OutputDevice*)this)->ImplGetServerGraphics();
+#endif
+
+    if ( mbNewFont )
+        ((OutputDevice*)this)->ImplNewFont();
+    if ( mbInitFont )
+        ((OutputDevice*)this)->ImplInitFont();
+
+#ifndef REMOTE_APPSERVER
+    long nWidthFactor = mpGraphics->GetCharWidth( c1, c2, pAry );
+    if ( !nWidthFactor )
+        return FALSE;
+    if ( mpFontEntry->mnWidthFactor == IMPL_FACTOR_NOTINIT )
+        mpFontEntry->mnWidthFactor = nWidthFactor;
+    DBG_ASSERT( (nWidthFactor == mpFontEntry->mnWidthFactor),
+                "OutputDevice::ImplGetCharWidths() - other WidthFactor" );
+#else
+    mpGraphics->GetCharWidth( c1, c2, pAry );
+#endif
+
+    return TRUE;
 }
+
+// -----------------------------------------------------------------------
+
+long OutputDevice::ImplGetCharWidth( sal_Unicode c ) const
+{
+    ImplFontEntry* pFontEntry = mpFontEntry;
+
+    USHORT nChar = (USHORT)c;
+    if ( nChar < IMPL_WIDTH_CACHE_MAX )
+    {
+        ULONG   nTestBit = 0;
+        USHORT  nFirst;
+        USHORT  nLast;
+        USHORT  nIndex;
+
+        // Test Standard-Areas (Latin, Extended Latin, Greek and Cyrillic)
+        if ( (nChar >= IMPL_CACHE_A1_FIRST) && (nChar <= IMPL_CACHE_A1_LAST) )
+        {
+            nTestBit    = IMPL_CACHE_A1_BIT;
+            nFirst      = IMPL_CACHE_A1_FIRST;
+            nLast       = IMPL_CACHE_A1_LAST;
+            nIndex      = IMPL_CACHE_A1_INDEX;
+        }
+        else if ( (nChar >= IMPL_CACHE_A2_FIRST) && (nChar <= IMPL_CACHE_A2_LAST) )
+        {
+            nTestBit    = IMPL_CACHE_A2_BIT;
+            nFirst      = IMPL_CACHE_A2_FIRST;
+            nLast       = IMPL_CACHE_A2_LAST;
+            nIndex      = IMPL_CACHE_A2_INDEX;
+        }
+        else if ( (nChar >= IMPL_CACHE_A3_FIRST) && (nChar <= IMPL_CACHE_A3_LAST) )
+        {
+            nTestBit    = IMPL_CACHE_A3_BIT;
+            nFirst      = IMPL_CACHE_A3_FIRST;
+            nLast       = IMPL_CACHE_A3_LAST;
+            nIndex      = IMPL_CACHE_A3_INDEX;
+        }
+        else if ( (nChar >= IMPL_CACHE_A4_FIRST) && (nChar <= IMPL_CACHE_A4_LAST) )
+        {
+            nTestBit    = IMPL_CACHE_A4_BIT;
+            nFirst      = IMPL_CACHE_A4_FIRST;
+            nLast       = IMPL_CACHE_A4_LAST;
+            nIndex      = IMPL_CACHE_A4_INDEX;
+        }
+
+        if ( nTestBit )
+        {
+            // Characters not queried yet
+            if ( !(pFontEntry->mnWidthInit & nTestBit) )
+            {
+                if ( !ImplGetCharWidths( nFirst, nLast,
+                                         &(pFontEntry->maWidthAry[nIndex]) ) )
+                    return 0;
+                pFontEntry->mnWidthInit |= nTestBit;
+            }
+
+            nIndex += nChar-nFirst;
+            DBG_ASSERT( nIndex < IMPL_WIDTH_CACHE_COUNT,
+                        "OutputDevice::ImplGetCharWidth() - nIndex >= IMPL_WIDTH_CACHE_COUNT" );
+            return pFontEntry->maWidthAry[nIndex];
+        }
+    }
+
+    ImplWidthInfoData*  pInfo;
+    ImplWidthInfoData*  pWidthAry =  pFontEntry->mpWidthAry;
+    USHORT              nWidthCount = pFontEntry->mnWidthAryCount;
+    USHORT              nInsIndex;
+
+    if ( nWidthCount )
+    {
+        USHORT  nLow;
+        USHORT  nHigh;
+        USHORT  nMid;
+        USHORT  nCompareChar;
+
+        nLow  = 0;
+        nHigh = nWidthCount-1;
+        do
+        {
+            nMid = (nLow+nHigh)/2;
+            pInfo = pWidthAry+nMid;
+            nCompareChar = pInfo->mnChar;
+            if ( nChar < nCompareChar )
+            {
+                if ( !nMid )
+                    break;
+                nHigh = nMid-1;
+            }
+            else
+            {
+                if ( nChar > nCompareChar )
+                    nLow = nMid+1;
+                else
+                    return pInfo->mnWidth;
+            }
+        }
+        while ( nLow <= nHigh );
+
+        if ( nChar > nCompareChar )
+            nInsIndex = nMid+1;
+        else
+            nInsIndex = nMid;
+    }
+    else
+    {
+        pFontEntry->mnWidthArySize = IMPL_WIDTH_ARY_INIT;
+        pFontEntry->mpWidthAry = new ImplWidthInfoData[pFontEntry->mnWidthArySize];
+        pWidthAry = pFontEntry->mpWidthAry;
+        nInsIndex = 0;
+    }
+
+    if ( nWidthCount == pFontEntry->mnWidthArySize )
+    {
+        USHORT nOldSize = pFontEntry->mnWidthArySize;
+        pFontEntry->mnWidthArySize += IMPL_WIDTH_ARY_RESIZE;
+        pFontEntry->mpWidthAry = new ImplWidthInfoData[pFontEntry->mnWidthArySize];
+        memcpy( pFontEntry->mpWidthAry, pWidthAry, nOldSize*sizeof(ImplWidthInfoData) );
+        delete pWidthAry;
+        pWidthAry = pFontEntry->mpWidthAry;
+    }
+
+    long nWidth;
+    if ( !ImplGetCharWidths( nChar, nChar, &nWidth ) )
+        return 0;
+
+    // Breite in Liste einfuegen und zurueckgeben
+    pInfo = pWidthAry+nInsIndex;
+    memmove( pInfo+1, pInfo, (nWidthCount-nInsIndex)*sizeof(ImplWidthInfoData) );
+    pFontEntry->mnWidthAryCount++;
+    pInfo->mnChar = nChar;
+    pInfo->mnWidth = nWidth;
+    return nWidth;
+}
+
+// -----------------------------------------------------------------------
 
 static void ImplSortKernPairs( ImplKernPairData* pKernPairs, long l, long r )
 {
-#if 1 // TODO: use STL's insertion sort
     long                i = l;
-
     long                j = r;
     ImplKernPairData*   pComp = pKernPairs + ((l+r) >> 1);
     sal_uInt32          nComp = *((sal_uInt32*)pComp);
@@ -3131,17 +4227,17 @@ static void ImplSortKernPairs( ImplKernPairData* pKernPairs, long l, long r )
         ImplSortKernPairs( pKernPairs, l, j );
     if ( i < r )
         ImplSortKernPairs( pKernPairs, i, r );
-#else
-    std::sort( pKernPairs+l, pKernPairs+r, CmpKernData );
-#endif
 }
 
 // -----------------------------------------------------------------------
 
 void OutputDevice::ImplInitKerningPairs( ImplKernPairData* pKernPairs, long nKernPairs )
 {
-    if( mbNewFont && !ImplNewFont() )
-        return;
+    if ( mbNewFont )
+    {
+        if ( !ImplNewFont() )
+            return;
+    }
 
     ImplFontEntry* pFontEntry = mpFontEntry;
     if ( !pFontEntry->mbInitKernPairs )
@@ -3149,12 +4245,6 @@ void OutputDevice::ImplInitKerningPairs( ImplKernPairData* pKernPairs, long nKer
         if ( mbInitFont )
             ImplInitFont();
         pFontEntry->mbInitKernPairs = TRUE;
-        if( mpPDFWriter && mpPDFWriter->isBuiltinFont( mpFontEntry->maFontSelData.mpFontData ) )
-        {
-            pFontEntry->mnKernPairs = 0;
-            pFontEntry->mpKernPairs = NULL;
-            return;
-        }
 #ifndef REMOTE_APPSERVER
         pFontEntry->mnKernPairs = mpGraphics->GetKernPairs( 0, NULL );
         if ( pFontEntry->mnKernPairs )
@@ -3179,10 +4269,171 @@ void OutputDevice::ImplInitKerningPairs( ImplKernPairData* pKernPairs, long nKer
 
 // -----------------------------------------------------------------------
 
-long OutputDevice::ImplGetTextWidth( const SalLayout& rSalLayout ) const
+// returns asian kerning values in quarter of character width units
+// to enable automatic halfwidth substitution for fullwidth punctuation
+// return value is negative for l, positive for r, zero for neutral
+
+// If the range doesn't match in 0x3000 and 0x30FB, please change
+// also ImplCalcKerning.
+
+static int CalcAsianKerning( sal_Unicode c, bool bLeft )
 {
-    long nWidth = rSalLayout.GetTextWidth();
-    nWidth /= rSalLayout.GetUnitsPerPixel();
+    // http://www.asahi-net.or.jp/~sd5a-ucd/freetexts/jis/x4051/1995/appendix.html
+    static signed char nTable[0x30] =
+    {
+         0, -2, -2,  0,   0,  0,  0,  0,  +2, -2, +2, -2,  +2, -2, +2, -2,
+        +2, -2,  0,  0,  +2, -2, +2, -2,   0,  0,  0,  0,   0, +2, -2, -2,
+         0,  0,  0,  0,   0,  0,  0,  0,   0,  0, -2, -2,  +2, +2, -2, -2
+    };
+
+    int nResult;
+    if( c>=0x3000 && c<0x3030 )
+        nResult = nTable[ c - 0x3000 ];
+    else switch( c )
+    {
+        // TODO: only for monospaced font, but how to test if it is all monospaced?
+        //case ':': case ';': case '!':
+        case 0x30FB:
+            nResult = bLeft ? -1 : +1; break;   // 25% left and right
+        default:
+            nResult = 0; break;
+    }
+    return nResult;
+}
+
+// -----------------------------------------------------------------------
+
+long OutputDevice::ImplCalcKerning( const sal_Unicode* pStr, xub_StrLen nLen,
+                                    long* pDXAry, xub_StrLen nAryLen ) const
+{
+    if ( !nLen )
+        return 0;
+
+    ImplFontEntry* pEntry           = mpFontEntry;
+    ImplKernPairData* pKernPairs    = pEntry->mpKernPairs;
+    ULONG nKernPairs                = pEntry->mnKernPairs;
+    long nWidth                     = 0;
+    xub_StrLen i;
+
+    if( (maFont.GetKerning() & KERNING_FONTSPECIFIC) && nKernPairs )
+    {
+#ifdef DBG_UTIL
+        {
+        ImplKernPairData    aTestPair;
+#ifdef __LITTLEENDIAN
+        sal_uInt32          nTestComp  = ((sal_uInt32)((USHORT)0xAABB) << 16) | (USHORT)0xCCDD;
+#else
+        sal_uInt32          nTestComp  = ((sal_uInt32)((USHORT)0xCCDD) << 16) | (USHORT)0xAABB;
+#endif
+        aTestPair.mnChar1 = 0xCCDD;
+        aTestPair.mnChar2 = 0xAABB;
+        DBG_ASSERT( nTestComp == *((ULONG*)&aTestPair), "Code doesn't work in this Version" );
+        }
+#endif
+
+        const sal_Unicode* pTempStr = pStr;
+        for ( i = 0; i < nLen-1; i++ )
+        {
+            USHORT nIndex = (USHORT)*pTempStr;
+            pTempStr++;
+#ifdef __LITTLEENDIAN
+            sal_uInt32 nComp  = ((sal_uInt32)((USHORT)*pTempStr) << 16) | nIndex;
+#else
+            sal_uInt32 nComp  = ((sal_uInt32)nIndex << 16) | ((USHORT)*pTempStr);
+#endif
+
+            // Search for Kerning Pair
+            for( long nLower = 0, nUpper = (long)nKernPairs-1; nLower <= nUpper; )
+            {
+                long nMid = (nUpper + nLower) >> 1;
+                ImplKernPairData* pCurKernPair = pKernPairs+nMid;
+                sal_uInt32 nCurComp = *((sal_uInt32*)pCurKernPair);
+                if ( nComp == nCurComp )
+                {
+                    long nAmount = pCurKernPair->mnKern;
+                    nWidth += nAmount;
+                    if ( pDXAry )
+                    {
+                        for ( xub_StrLen n = i; n < nAryLen; n++ )
+                            pDXAry[n] += nAmount;
+                    }
+                    break;
+                }
+                else if ( nComp < nCurComp )
+                    nUpper = nMid-1;
+                else /* ( nComp > nCurComp ) */
+                    nLower = nMid+1;
+            }
+        }
+    }
+
+    if ( (maFont.GetKerning() & KERNING_ASIAN) &&
+         (ImplGetCharWidth(0x3001) == ImplGetCharWidth(0x3007)) )  // monospaced font?
+    {
+        for( i = 0; i < nLen-1; ++i )
+        {
+            sal_Unicode nFirst = pStr[i];
+            sal_Unicode nNext  = pStr[i+1];
+
+            if ( (nFirst >= 0x3000) && (nNext >= 0x3000) &&
+                 (nFirst <= 0x30FB) && (nNext <= 0x30FB) )
+            {
+                long nKernFirst = +CalcAsianKerning( nFirst, true );
+                long nKernNext  = -CalcAsianKerning( nNext, false );
+
+                long nAmount = (nKernFirst < nKernNext) ? nKernFirst : nKernNext;
+                if( nAmount<0 && nKernFirst!=0 && nKernNext!=0 )
+                {
+                    nAmount *= ImplGetCharWidth( nFirst );
+                    nAmount /= 4 * mpFontEntry->mnWidthFactor;
+                    nWidth += nAmount;
+                    for( xub_StrLen n = i; n < nAryLen; ++n )
+                        pDXAry[n] += nAmount;
+                }
+            }
+        }
+    }
+
+    return nWidth;
+}
+
+// -----------------------------------------------------------------------
+
+long OutputDevice::ImplGetTextWidth( const xub_Unicode* pStr, xub_StrLen nLen,
+                                     const long* pDX )
+{
+    ImplFontEntry*  pFontEntry = mpFontEntry;
+    long            nWidth = 0;
+
+    if ( nLen )
+    {
+        if ( pDX )
+        {
+            if ( nLen > 1 )
+                nWidth += pDX[nLen-2];
+            nWidth += ImplGetCharWidth( pStr[nLen-1] ) / mpFontEntry->mnWidthFactor;
+        }
+        else
+        {
+            // Also Fixed-Fonts are calculated char by char, because
+            // not every Font or in every CJK Fonts all characters have
+            // the same width
+            const sal_Unicode*  pTempStr = pStr;
+            xub_StrLen          nTempLen = nLen;
+            while ( nTempLen )
+            {
+                nWidth += ImplGetCharWidth( *pTempStr );
+                nTempLen--;
+                pTempStr++;
+            }
+            nWidth /= mpFontEntry->mnWidthFactor;
+
+            // Kerning beruecksichtigen
+            if ( mbKerning )
+                nWidth += ImplCalcKerning( pStr, nLen, NULL, 0 );
+        }
+    }
+
     return nWidth;
 }
 
@@ -3233,8 +4484,10 @@ void OutputDevice::ImplDrawTextRect( long nBaseX, long nBaseY,
         }
         else
         {
-            // inflate because polygons are drawn smaller
-            Rectangle aRect( Point( nX, nY ), Size( nWidth+1, nHeight+1 ) );
+            // Da Polygone kleiner gezeichnet werden
+            nHeight++;
+            nWidth++;
+            Rectangle aRect( Point( nX, nY ), Size( nWidth, nHeight ) );
             Polygon   aPoly( aRect );
             aPoly.Rotate( Point( nBaseX, nBaseY ), mpFontEntry->mnOrientation );
 #ifndef REMOTE_APPSERVER
@@ -3247,7 +4500,7 @@ void OutputDevice::ImplDrawTextRect( long nBaseX, long nBaseY,
     }
 
 #ifndef REMOTE_APPSERVER
-    mpGraphics->DrawRect( nX, nY, nWidth, nHeight, this );
+    mpGraphics->DrawRect( nX, nY, nWidth, nHeight );
 #else
     Rectangle aRect( Point( nX, nY ), Size( nWidth, nHeight ) );
     mpGraphics->DrawRect( aRect );
@@ -3256,13 +4509,10 @@ void OutputDevice::ImplDrawTextRect( long nBaseX, long nBaseY,
 
 // -----------------------------------------------------------------------
 
-void OutputDevice::ImplDrawTextBackground( const SalLayout& rSalLayout )
+void OutputDevice::ImplDrawTextBackground( long nX, long nY,
+                                           const xub_Unicode* pStr, xub_StrLen nLen,
+                                           const long* pDXAry )
 {
-    long nWidth = rSalLayout.GetTextWidth();
-    Point aBase = rSalLayout.GetDrawPosition();
-    long nX = aBase.X();
-    long nY = aBase.Y();
-
 #ifndef REMOTE_APPSERVER
     if ( mbLineColor || mbInitLineColor )
     {
@@ -3273,7 +4523,7 @@ void OutputDevice::ImplDrawTextBackground( const SalLayout& rSalLayout )
     mbInitFillColor = TRUE;
 
     ImplDrawTextRect( nX, nY, nX, nY-mpFontEntry->maMetric.mnAscent-mnEmphasisAscent,
-                      nWidth,
+                      ImplGetTextWidth( pStr, nLen, pDXAry ),
                       mpFontEntry->mnLineHeight+mnEmphasisAscent+mnEmphasisDescent );
 #else
     Color aOldLineColor = GetLineColor();
@@ -3285,7 +4535,7 @@ void OutputDevice::ImplDrawTextBackground( const SalLayout& rSalLayout )
     if ( mbInitFillColor )
         ImplInitFillColor();
     ImplDrawTextRect( nX, nY, nX, nY-mpFontEntry->maMetric.mnAscent-mnEmphasisAscent,
-                      nWidth,
+                      ImplGetTextWidth( pStr, nLen, pDXAry ),
                       mpFontEntry->mnLineHeight+mnEmphasisAscent+mnEmphasisDescent );
     SetLineColor( aOldLineColor );
     SetFillColor( aOldFillColor );
@@ -3294,20 +4544,27 @@ void OutputDevice::ImplDrawTextBackground( const SalLayout& rSalLayout )
 
 // -----------------------------------------------------------------------
 
-Rectangle OutputDevice::ImplGetTextBoundRect( const SalLayout& rSalLayout )
+Rectangle OutputDevice::ImplGetTextBoundRect( long nX, long nY,
+                                              const xub_Unicode* pStr, xub_StrLen nLen,
+                                              const long* pDXAry )
 {
-    Point aPoint = rSalLayout.GetDrawPosition();
-    long nX = aPoint.X();
-    long nY = aPoint.Y();
+    if ( !nLen )
+        return Rectangle();
 
-    long nWidth = rSalLayout.GetTextWidth();
-    long nHeight = mpFontEntry->mnLineHeight + mnEmphasisAscent + mnEmphasisDescent;
+    if ( mbNewFont )
+        ImplNewFont();
 
-    nY -= mpFontEntry->maMetric.mnAscent + mnEmphasisAscent;
+    if ( mbInitFont )
+        ImplInitFont();
+
+    long nBaseX = nX, nBaseY = nY;
+    long nWidth = ImplGetTextWidth( pStr, nLen, pDXAry );
+    long nHeight = mpFontEntry->mnLineHeight+mnEmphasisAscent+mnEmphasisDescent;
+
+    nY -= mpFontEntry->maMetric.mnAscent+mnEmphasisAscent;
 
     if ( mpFontEntry->mnOrientation )
     {
-        long nBaseX = nX, nBaseY = nY;
         if ( !(mpFontEntry->mnOrientation % 900) )
         {
             long nX2 = nX+nWidth;
@@ -3319,8 +4576,10 @@ Rectangle OutputDevice::ImplGetTextBoundRect( const SalLayout& rSalLayout )
         }
         else
         {
-            // inflate by +1+1 because polygons are drawn smaller
-            Rectangle aRect( Point( nX, nY ), Size( nWidth+1, nHeight+1 ) );
+            // Da Polygone kleiner gezeichnet werden
+            nHeight++;
+            nWidth++;
+            Rectangle aRect( Point( nX, nY ), Size( nWidth, nHeight ) );
             Polygon   aPoly( aRect );
             aPoly.Rotate( Point( nBaseX, nBaseY ), mpFontEntry->mnOrientation );
             return aPoly.GetBoundRect();
@@ -3339,7 +4598,6 @@ void OutputDevice::ImplInitTextLineSize()
     long            nLineHeight2;
     long            nBLineHeight;
     long            nBLineHeight2;
-
     long            n2LineHeight;
     long            n2LineDY;
     long            n2LineDY2;
@@ -3410,9 +4668,6 @@ void OutputDevice::ImplInitTextLineSize()
         }
         else
             pFontEntry->maMetric.mnWUnderlineSize = ((nWCalcSize*50)+50) / 100;
-         // #109280# the following line assures that wavelnes are never placed below the descent, however  
-         // for most fonts the waveline then is drawn into the text, so we better keep the old solution  
-         // pFontEntry->maMetric.mnWUnderlineOffset     = pFontEntry->maMetric.mnDescent + 1 - pFontEntry->maMetric.mnWUnderlineSize;        
         pFontEntry->maMetric.mnWUnderlineOffset     = nUnderlineOffset;
     }
 
@@ -3452,10 +4707,9 @@ void OutputDevice::ImplInitAboveTextLineSize()
     nLeading = pFontEntry->maMetric.mnLeading;
     if ( !nLeading )
     {
-        // if no leading is available, we assume 15% of the ascent
+        // If no leading is available, we take 15% of the Ascent
         nLeading = pFontEntry->maMetric.mnAscent*150/1000;
         if ( !nLeading )
-
             nLeading = 1;
     }
 
@@ -3513,7 +4767,6 @@ void OutputDevice::ImplInitAboveTextLineSize()
         }
         else
             pFontEntry->maMetric.mnAboveWUnderlineSize = ((nWCalcSize*50)+50) / 100;
-
         pFontEntry->maMetric.mnAboveWUnderlineOffset    = nUnderlineOffset;
     }
 }
@@ -3528,9 +4781,7 @@ static void ImplDrawWavePixel( long nOriginX, long nOriginY,
 #else
                                ImplServerGraphics* pGraphics,
 #endif
-                               OutputDevice* pOutDev,
                                BOOL bDrawPixAsRect,
-
                                long nPixWidth, long nPixHeight )
 {
     if ( nOrientation )
@@ -3539,8 +4790,7 @@ static void ImplDrawWavePixel( long nOriginX, long nOriginY,
     if ( bDrawPixAsRect )
     {
 #ifndef REMOTE_APPSERVER
-
-        pGraphics->DrawRect( nCurX, nCurY, nPixWidth, nPixHeight, pOutDev );
+        pGraphics->DrawRect( nCurX, nCurY, nPixWidth, nPixHeight );
 #else
         Point       aPos( nCurX, nCurY );
         Size        aSize( nPixWidth, nPixHeight );
@@ -3551,7 +4801,7 @@ static void ImplDrawWavePixel( long nOriginX, long nOriginY,
     else
     {
 #ifndef REMOTE_APPSERVER
-        pGraphics->DrawPixel( nCurX, nCurY, pOutDev );
+        pGraphics->DrawPixel( nCurX, nCurY );
 #else
         Point aPos( nCurX, nCurY );
         pGraphics->DrawPixel( aPos );
@@ -3591,7 +4841,7 @@ void OutputDevice::ImplDrawWaveLine( long nBaseX, long nBaseY,
             ImplRotatePos( nBaseX, nBaseY, nEndX, nEndY, nOrientation );
         }
 #ifndef REMOTE_APPSERVER
-        mpGraphics->DrawLine( nStartX, nStartY, nEndX, nEndY, this );
+        mpGraphics->DrawLine( nStartX, nStartY, nEndX, nEndY );
 #else
         mpGraphics->DrawLine( Point( nStartX, nStartY ), Point( nEndX, nEndY ) );
 #endif
@@ -3616,7 +4866,6 @@ void OutputDevice::ImplDrawWaveLine( long nBaseX, long nBaseY,
 #ifdef REMOTE_APPSERVER
         Color   aOldLineColor = GetLineColor();
         Color   aOldFillColor = GetFillColor();
-
 #endif
         // Auf Druckern die Pixel per DrawRect() ausgeben
         if ( (GetOutDevType() == OUTDEV_PRINTER) || (nLineWidth > 1) )
@@ -3662,7 +4911,7 @@ void OutputDevice::ImplDrawWaveLine( long nBaseX, long nBaseY,
             while ( nWidth )
             {
                 ImplDrawWavePixel( nBaseX, nBaseY, nCurX, nCurY, nOrientation,
-                                   mpGraphics, this,
+                                   mpGraphics,
                                    bDrawPixAsRect, nPixWidth, nPixHeight );
                 nCurX++;
                 nWidth--;
@@ -3677,7 +4926,7 @@ void OutputDevice::ImplDrawWaveLine( long nBaseX, long nBaseY,
                 for( i = nDiffY; i; --i )
                 {
                     ImplDrawWavePixel( nBaseX, nBaseY, nCurX, nCurY, nOrientation,
-                                       mpGraphics, this,
+                                       mpGraphics,
                                        bDrawPixAsRect, nPixWidth, nPixHeight );
                     nCurX++;
                     nCurY += nOffY;
@@ -3685,7 +4934,7 @@ void OutputDevice::ImplDrawWaveLine( long nBaseX, long nBaseY,
                 for( i = nDiffX; i; --i )
                 {
                     ImplDrawWavePixel( nBaseX, nBaseY, nCurX, nCurY, nOrientation,
-                                       mpGraphics, this,
+                                       mpGraphics,
                                        bDrawPixAsRect, nPixWidth, nPixHeight );
                     nCurX++;
                 }
@@ -3697,16 +4946,15 @@ void OutputDevice::ImplDrawWaveLine( long nBaseX, long nBaseY,
                 for( i = nDiffY; i && nFreq; --i, --nFreq )
                 {
                     ImplDrawWavePixel( nBaseX, nBaseY, nCurX, nCurY, nOrientation,
-                                       mpGraphics, this,
+                                       mpGraphics,
                                        bDrawPixAsRect, nPixWidth, nPixHeight );
                     nCurX++;
                     nCurY += nOffY;
-
                 }
                 for( i = nDiffX; i && nFreq; --i, --nFreq )
                 {
                     ImplDrawWavePixel( nBaseX, nBaseY, nCurX, nCurY, nOrientation,
-                                       mpGraphics, this,
+                                       mpGraphics,
                                        bDrawPixAsRect, nPixWidth, nPixHeight );
                     nCurX++;
                 }
@@ -3740,11 +4988,6 @@ void OutputDevice::ImplDrawTextLine( long nBaseX,
     long            nLinePos2;
     long            nLeft;
     BOOL            bNormalLines = TRUE;
-
-    // TODO: fix rotated text
-    if( ImplHasMirroredGraphics() && IsRTLEnabled() )
-        // --- RTL --- mirror at basex
-        nX = nBaseX - nWidth - (nX - nBaseX - 1);
 
     if ( !IsTextLineColor() )
         aUnderlineColor = GetTextColor();
@@ -3795,7 +5038,6 @@ void OutputDevice::ImplDrawTextLine( long nBaseX,
             long nLineDY2 = nLineDY/2;
             if ( !nLineDY2 )
                 nLineDY2 = 1;
-
             nLinePos -= nLineWidthHeight-nLineDY2;
             ImplDrawWaveLine( nBaseX, nBaseY, nX, nLinePos, nWidth, nLineHeight,
                               nLineWidth, mpFontEntry->mnOrientation, aUnderlineColor );
@@ -3810,7 +5052,6 @@ void OutputDevice::ImplDrawTextLine( long nBaseX,
                               nLineWidth, mpFontEntry->mnOrientation, aUnderlineColor );
         }
 
-
         if ( (eStrikeout == STRIKEOUT_NONE) ||
              (eStrikeout == STRIKEOUT_DONTKNOW) )
             bNormalLines = FALSE;
@@ -3824,63 +5065,51 @@ void OutputDevice::ImplDrawTextLine( long nBaseX,
         Color aOldColor = GetTextColor();
         SetTextColor( aStrikeoutColor );
         ImplInitTextColor();
-        xub_Unicode pChars[5];
+        xub_Unicode c;
         if ( eStrikeout == STRIKEOUT_SLASH )
-            pChars[0] = '/';
-        else // ( eStrikeout == STRIKEOUT_X )
-            pChars[0] = 'X';
-        pChars[3]=pChars[2]=pChars[1]=pChars[0];
-        // calculate approximation of strikeout atom size
-        long nStrikeoutWidth = nWidth;
-        String aStrikeoutTest( pChars, 4 );
-        SalLayout* pSalLayout = ImplLayout( aStrikeoutTest, 0, 4 );
-        if( pSalLayout )
-        {
-            nStrikeoutWidth = (pSalLayout->GetTextWidth() + 2) / 4;
-            pSalLayout->Release();
-        }
-        // calculate acceptable strikeout length
-        // allow the strikeout to be one pixel larger than the text it strikes out
-        long nMaxWidth = nStrikeoutWidth/2;
+            c = '/';
+        else /* ( eStrikeout == STRIKEOUT_X ) */
+            c = 'X';
+        // Strikeout-String zusammenbauen
+        XubString aStrikeoutText( c );
+        aStrikeoutText += aStrikeoutText.GetChar( 0 );
+        long nStrikeoutWidth = GetTextWidth( aStrikeoutText );
+        long nChars = nWidth/(nStrikeoutWidth/2);
+        aStrikeoutText.Fill( (USHORT)(nChars+1), c );
+        // String solange kuerzen, bis er nicht allzuweit uebersteht
+        long nMaxWidth = nStrikeoutWidth/4;
         if ( nMaxWidth < 2 )
             nMaxWidth = 2;
-        nMaxWidth += nWidth + 1;
-        // build strikeout string
-        long nFullStrikeoutWidth = 0;
-        String aStrikeoutText( pChars, 0 );
-        while( (nFullStrikeoutWidth+=nStrikeoutWidth) < nMaxWidth+1 )
-            aStrikeoutText += pChars[0];
-        // if the text width is smaller than the strikeout text, then do not
-        // strike out at all. This case requires user interaction, e.g. adding
-        // a space to the text
-        if( (aStrikeoutText.Len() > 0)
-        && !(mpPDFWriter && mpPDFWriter->isBuiltinFont(mpFontEntry->maFontSelData.mpFontData) ) )
+        nMaxWidth += nWidth;
+        long nFullStrikeoutWidth = GetTextWidth( aStrikeoutText );
+        // allow the strikeout to be one pixel larger than the text it strikes out
+        while ( (nFullStrikeoutWidth > (nMaxWidth + 1)) && aStrikeoutText.Len() )
         {
-            if( mpFontEntry->mnOrientation )
-                ImplRotatePos( nBaseX, nBaseY, nX, nY, mpFontEntry->mnOrientation );
-            SalLayout* pSalLayout = ImplLayout( aStrikeoutText, 0, STRING_LEN, Point(nX,nY) );
-            if( pSalLayout )
-            {
-                pSalLayout->DrawBase() = Point( nX+mnTextOffX, nY+mnTextOffY );
-                pSalLayout->DrawText( *mpGraphics );
-                pSalLayout->Release();
-            }
+            aStrikeoutText.Erase( aStrikeoutText.Len()-1 );
+            nFullStrikeoutWidth = GetTextWidth( aStrikeoutText );
         }
-
+        // if the textwidth is smaller than the strikeout text, then resign from striking
+        // out at all. This case requires user interaction, e.g. adding a space to the text
+        if (aStrikeoutText.Len() > 0)
+        {
+            if ( mpFontEntry->mnOrientation )
+                ImplRotatePos( nBaseX, nBaseY, nX, nY, mpFontEntry->mnOrientation );
+            ImplDrawTextDirect( nX, nY,
+                            aStrikeoutText.GetBuffer(), aStrikeoutText.Len(),
+                            NULL, FALSE );
+        }
+        
         SetTextColor( aOldColor );
         ImplInitTextColor();
         EnableMapMode( bOldMap );
 
-        switch( eUnderline )
-        {
-            case UNDERLINE_NONE:
-            case UNDERLINE_DONTKNOW:
-            case UNDERLINE_SMALLWAVE:
-            case UNDERLINE_WAVE:
-            case UNDERLINE_DOUBLEWAVE:
-            case UNDERLINE_BOLDWAVE:
-                bNormalLines = FALSE;
-        }
+        if ( (eUnderline == UNDERLINE_NONE) ||
+             (eUnderline == UNDERLINE_DONTKNOW) ||
+             (eUnderline == UNDERLINE_SMALLWAVE) ||
+             (eUnderline == UNDERLINE_WAVE) ||
+             (eUnderline == UNDERLINE_DOUBLEWAVE) ||
+             (eUnderline == UNDERLINE_BOLDWAVE) )
+            bNormalLines = FALSE;
     }
 
     if ( bNormalLines )
@@ -3918,7 +5147,6 @@ void OutputDevice::ImplDrawTextLine( long nBaseX,
         else if ( (eUnderline == UNDERLINE_BOLD) ||
                   (eUnderline == UNDERLINE_BOLDDOTTED) ||
                   (eUnderline == UNDERLINE_BOLDDASH) ||
-
                   (eUnderline == UNDERLINE_BOLDLONGDASH) ||
                   (eUnderline == UNDERLINE_BOLDDASHDOT) ||
                   (eUnderline == UNDERLINE_BOLDDASHDOTDOT) )
@@ -4003,7 +5231,6 @@ void OutputDevice::ImplDrawTextLine( long nBaseX,
                         nTempWidth = nEnd-nLeft;
                     ImplDrawTextRect( nBaseX, nBaseY, nLeft, nLinePos, nTempWidth, nLineHeight );
                     nLeft += nDotWidth*2;
-
                 }
             }
             else if ( (eUnderline == UNDERLINE_DASH) ||
@@ -4015,7 +5242,6 @@ void OutputDevice::ImplDrawTextLine( long nBaseX,
                 nDotWidth += mnDPIY/2;
                 nDotWidth /= mnDPIY;
                 long nMinDashWidth;
-
                 long nMinSpaceWidth;
                 long nSpaceWidth;
                 long nDashWidth;
@@ -4084,12 +5310,10 @@ void OutputDevice::ImplDrawTextLine( long nBaseX,
                 }
             }
             else if ( (eUnderline == UNDERLINE_DASHDOTDOT) ||
-
                       (eUnderline == UNDERLINE_BOLDDASHDOTDOT) )
             {
                 long nDotWidth = nLineHeight*mnDPIY;
                 nDotWidth += mnDPIY/2;
-
                 nDotWidth /= mnDPIY;
                 long nDashWidth = ((100*mnDPIX)+1270)/2540;
                 long nMinDashWidth = nDotWidth*4;
@@ -4131,7 +5355,6 @@ void OutputDevice::ImplDrawTextLine( long nBaseX,
             if ( !pFontEntry->maMetric.mnStrikeoutSize )
                 ImplInitTextLineSize();
             nLineHeight = pFontEntry->maMetric.mnStrikeoutSize;
-
             nLinePos    = nY + pFontEntry->maMetric.mnStrikeoutOffset;
         }
         else if ( eStrikeout == STRIKEOUT_BOLD )
@@ -4192,66 +5415,67 @@ void OutputDevice::ImplDrawTextLine( long nBaseX,
 
 // -----------------------------------------------------------------------
 
-void OutputDevice::ImplDrawTextLines( SalLayout& rSalLayout,
-    FontStrikeout eStrikeout, FontUnderline eUnderline, BOOL bWordLine, BOOL bUnderlineAbove )
+static BOOL ImplIsLineCharacter( sal_Unicode c )
 {
-    if( bWordLine )
-    {
-        Point aPos, aStartPt;
-        long nWidth = 0, nAdvance=0;
-        for( int nStart = 0;;)
-        {
-            long nGlyphIndex;
-            if( !rSalLayout.GetNextGlyphs( 1, &nGlyphIndex, aPos, nStart, &nAdvance ) )
-                break;
-
-            if( !rSalLayout.IsSpacingGlyph( nGlyphIndex ) )
-            {
-                if( !nWidth )
-                {
-                    aStartPt = aPos;//rSalLayout.DrawBase() - (aPos - rSalLayout.DrawOffset());
-                }
-
-                nWidth += nAdvance;
-            }
-            else if( nWidth > 0 )
-            {
-                ImplDrawTextLine( rSalLayout.DrawBase().X(), aStartPt.X(), aStartPt.Y(), nWidth,
-                    eStrikeout, eUnderline, bUnderlineAbove );
-                nWidth = 0;
-            }
-        }
-
-        if( nWidth > 0 )
-        {
-            ImplDrawTextLine( rSalLayout.DrawBase().X(), aStartPt.X(), aStartPt.Y(), nWidth,
-                eStrikeout, eUnderline, bUnderlineAbove );
-        }
-    }
-    else
-    {
-        Point aStartPt = rSalLayout.GetDrawPosition();
-        int nWidth = rSalLayout.GetTextWidth() / rSalLayout.GetUnitsPerPixel();
-        ImplDrawTextLine( rSalLayout.DrawBase().X(), aStartPt.X(), aStartPt.Y(), nWidth,
-            eStrikeout, eUnderline, bUnderlineAbove );
-    }
+    // !(Control+Space, C1-Control+HardSpace, General Space Punctuation)
+    if ( ((c > 0x0020) && (c < 0x0080)) ||
+         ((c > 0x00A0) && (c < 0x2000)) ||
+         (c > 0x200F) )
+        return TRUE;
+    return FALSE;
 }
 
 // -----------------------------------------------------------------------
 
-void OutputDevice::ImplDrawMnemonicLine( long nX, long nY, long nWidth )
+void OutputDevice::ImplDrawTextLines( long nX, long nY,
+                                      const sal_Unicode* pStr, xub_StrLen nLen,
+                                      const long* pDXAry,
+                                      FontStrikeout eStrikeout,
+                                      FontUnderline eUnderline,
+                                      BOOL bWordLine, BOOL bUnderlineAbove )
 {
-    long nBaseX = nX;
-    if( ImplHasMirroredGraphics() && IsRTLEnabled() )
+    if ( bWordLine )
     {
-        // --- RTL ---
-        // add some strange offset
-        nX += 2;
-        // revert the hack that will be done later in ImplDrawTextLine
-        nX = nBaseX - nWidth - (nX - nBaseX - 1);
-    }
+        BOOL        bLine = FALSE;
+        xub_StrLen  nLineStart = 0;
+        xub_StrLen  nLineEnd = 0;
+        while ( nLineEnd < nLen )
+        {
+            BOOL bCurLine = ImplIsLineCharacter( *(pStr+nLineEnd) );
 
-    ImplDrawTextLine( nBaseX, nX, nY, nWidth, STRIKEOUT_NONE, UNDERLINE_SINGLE, FALSE );
+            // draw a new line?
+            if ( bLine && !bCurLine )
+            {
+                // Query Size to text start and draw the Line to text end
+                long nStartX = ImplGetTextWidth( pStr, nLineStart, pDXAry );
+                long nEndX = ImplGetTextWidth( pStr, nLineEnd, pDXAry );
+                ImplDrawTextLine( nX, nX+nStartX, nY, nEndX-nStartX, eStrikeout, eUnderline, bUnderlineAbove );
+            }
+            if ( bLine != bCurLine )
+            {
+                bLine = bCurLine;
+                nLineStart = nLineEnd;
+            }
+            nLineEnd++;
+        }
+
+        if ( bLine && nLen )
+        {
+            // Query Size to text start and draw the Line to text end
+            long nStartX = ImplGetTextWidth( pStr, nLineStart, pDXAry );
+            long nEndX = ImplGetTextWidth( pStr, nLineEnd, pDXAry );
+            ImplDrawTextLine( nX, nX+nStartX, nY, nEndX-nStartX, eStrikeout, eUnderline, bUnderlineAbove );
+        }
+    }
+    else
+        ImplDrawTextLine( nX, nX, nY, ImplGetTextWidth( pStr, nLen, pDXAry ), eStrikeout, eUnderline, bUnderlineAbove );
+}
+
+// -----------------------------------------------------------------------
+
+void OutputDevice::ImplDrawMnemonicLine( long nX, long nY, xub_Unicode c )
+{
+    ImplDrawTextLine( nX, nX, nY, ImplGetTextWidth( &c, 1, NULL ), STRIKEOUT_NONE, UNDERLINE_SINGLE, FALSE );
 }
 
 // -----------------------------------------------------------------------
@@ -4400,8 +5624,8 @@ void OutputDevice::ImplGetEmphasisMark( PolyPolygon& rPolyPoly, BOOL& rPolyLine,
             break;
     }
 
-    // calculate position
-    long nOffY = 1+(mnDPIY/300); // one visible pixel space
+    // Calculate Position
+    long nOffY = 1+(mnDPIY/300); // One visible pixel space
     long nSpaceY = nHeight-nDotSize;
     if ( nSpaceY >= nOffY*2 )
         rYOff += nOffY;
@@ -4411,20 +5635,10 @@ void OutputDevice::ImplGetEmphasisMark( PolyPolygon& rPolyPoly, BOOL& rPolyLine,
 
 // -----------------------------------------------------------------------
 
-void OutputDevice::ImplDrawEmphasisMark( long nBaseX, long nX, long nY,
+void OutputDevice::ImplDrawEmphasisMark( long nX, long nY,
                                          const PolyPolygon& rPolyPoly, BOOL bPolyLine,
                                          const Rectangle& rRect1, const Rectangle& rRect2 )
 {
-    // TODO: pass nWidth as width of this mark
-    long nWidth = 0;
-
-    if( ImplHasMirroredGraphics() && IsRTLEnabled() )
-        // --- RTL --- mirror at basex
-        nX = nBaseX - nWidth - (nX - nBaseX - 1);
-
-    nX -= mnOutOffX;
-    nY -= mnOutOffY;
-
     if ( rPolyPoly.Count() )
     {
         if ( bPolyLine )
@@ -4452,14 +5666,15 @@ void OutputDevice::ImplDrawEmphasisMark( long nBaseX, long nX, long nY,
     {
         Rectangle aRect( Point( nX+rRect2.Left(),
                                 nY+rRect2.Top() ), rRect2.GetSize() );
-
         DrawRect( aRect );
     }
 }
 
 // -----------------------------------------------------------------------
 
-void OutputDevice::ImplDrawEmphasisMarks( SalLayout& rSalLayout )
+void OutputDevice::ImplDrawEmphasisMarks( long nX, long nY,
+                                          const sal_Unicode* pStr, xub_StrLen nLen,
+                                          const long* pDXAry )
 {
     Color               aOldColor       = GetTextColor();
     Color               aOldLineColor   = GetLineColor();
@@ -4476,6 +5691,8 @@ void OutputDevice::ImplDrawEmphasisMarks( SalLayout& rSalLayout )
     long                nEmphasisYOff;
     long                nEmphasisWidth;
     long                nEmphasisHeight;
+    long                nEmphasisWidth2;
+    long                nEmphasisHeight2;
     BOOL                bPolyLine;
 
     if ( nEmphasisMark & EMPHASISMARK_POS_BELOW )
@@ -4500,40 +5717,38 @@ void OutputDevice::ImplDrawEmphasisMarks( SalLayout& rSalLayout )
         SetFillColor( GetTextColor() );
     }
 
-    Point aOffset = Point(0,0);
-
+    long                nOffX = nX - mnOutOffX;
+    long                nOffY = nY - mnOutOffY;
+    long                nBaseX = nOffX;
+    long                nBaseY = nOffY;
+    xub_StrLen          i = 0;
     if ( nEmphasisMark & EMPHASISMARK_POS_BELOW )
-        aOffset.Y() += mpFontEntry->maMetric.mnDescent + nEmphasisYOff;
+        nOffY += mpFontEntry->maMetric.mnDescent+nEmphasisYOff;
     else
-        aOffset.Y() -= mpFontEntry->maMetric.mnAscent + nEmphasisYOff;
+        nOffY -= mpFontEntry->maMetric.mnAscent+nEmphasisYOff;
 
-    long nEmphasisWidth2  = nEmphasisWidth / 2;
-    long nEmphasisHeight2 = nEmphasisHeight / 2;
-    aOffset += Point( nEmphasisWidth2, nEmphasisHeight2 );
+    nEmphasisWidth2     = nEmphasisWidth / 2;
+    nEmphasisHeight2    = nEmphasisHeight / 2;
+    nOffY += nEmphasisHeight2;
 
-    Point aOutPoint;
-    Rectangle aRectangle;
-    for( int nStart = 0;;)
+    while ( i < nLen )
     {
-        long nGlyphIndex;
-        if( !rSalLayout.GetNextGlyphs( 1, &nGlyphIndex, aOutPoint, nStart ) )
-            break;
-
-        if( !mpGraphics->GetGlyphBoundRect( nGlyphIndex, aRectangle, NULL ) )
-            continue;
-
-        if( !rSalLayout.IsSpacingGlyph( nGlyphIndex ) )
+        if ( ImplIsLineCharacter( *(pStr+i) ) )
         {
-            Point aAdjPoint = aOffset;
-            aAdjPoint.X() += aRectangle.Left() + (aRectangle.GetWidth() - nEmphasisWidth) / 2;
+            long nStartX = ImplGetTextWidth( pStr, i, pDXAry );
+            long nEndX = ImplGetTextWidth( pStr, i+1, pDXAry );
+            long nOutX = nOffX + nStartX + ((nEndX-nStartX-nEmphasisWidth)/2) + nEmphasisWidth2;
+            long nOutY = nOffY;
             if ( mpFontEntry->mnOrientation )
-                ImplRotatePos( 0, 0, aAdjPoint.X(), aAdjPoint.Y(), mpFontEntry->mnOrientation );
-            aOutPoint += aAdjPoint;
-            aOutPoint -= Point( nEmphasisWidth2, nEmphasisHeight2 );
-            ImplDrawEmphasisMark( rSalLayout.DrawBase().X(),
-                                  aOutPoint.X(), aOutPoint.Y(),
-                                  aPolyPoly, bPolyLine, aRect1, aRect2 );
+                ImplRotatePos( nBaseX, nBaseY, nOutX, nOutY, mpFontEntry->mnOrientation );
+            nOutX -= nEmphasisWidth2;
+            nOutY -= nEmphasisHeight2;
+            ImplDrawEmphasisMark( nOutX, nOutY,
+                                  aPolyPoly, bPolyLine,
+                                  aRect1, aRect2 );
         }
+
+        i++;
     }
 
     SetLineColor( aOldLineColor );
@@ -4544,142 +5759,200 @@ void OutputDevice::ImplDrawEmphasisMarks( SalLayout& rSalLayout )
 
 // -----------------------------------------------------------------------
 
-bool OutputDevice::ImplDrawRotateText( SalLayout& rSalLayout )
+BOOL OutputDevice::ImplDrawRotateText( long nX, long nY,
+                                       const xub_Unicode* pStr, xub_StrLen nLen,
+                                       const long* pDXAry )
 {
-    int nX = rSalLayout.DrawBase().X();
-    int nY = rSalLayout.DrawBase().Y();
-
-    Rectangle aBoundRect;
-    rSalLayout.DrawBase() = Point( 0, 0 );
-    rSalLayout.DrawOffset() = Point( 0, 0 );
-    int nWidthFactor = rSalLayout.GetUnitsPerPixel();
-    if( !rSalLayout.GetBoundRect( *mpGraphics, aBoundRect ) )
-    {
-        // guess vertical text extents if GetBoundRect failed
-        int nRight = rSalLayout.GetTextWidth();
-        int nTop = mpFontEntry->maMetric.mnAscent + mnEmphasisAscent;
-        long nHeight = mpFontEntry->mnLineHeight + mnEmphasisAscent + mnEmphasisDescent;
-        aBoundRect = Rectangle( 0, -nTop, nRight, nHeight - nTop );
-    }
-
-    // cache virtual device for rotation
     if ( !mpOutDevData )
         ImplInitOutDevData();
     if ( !mpOutDevData->mpRotateDev )
         mpOutDevData->mpRotateDev = new VirtualDevice( *this, 1 );
-    VirtualDevice* pVDev = mpOutDevData->mpRotateDev;
 
-    // size it accordingly
-    if( !pVDev->SetOutputSizePixel( aBoundRect.GetSize() ) )
-        return false;
+    VirtualDevice*  pVDev = mpOutDevData->mpRotateDev;
+    long            nWidth = ImplGetTextWidth( pStr, nLen, pDXAry );
+    long            nHeight = mpFontEntry->mnLineHeight+mnEmphasisAscent+mnEmphasisDescent;
+    Size            aSize( nWidth, nHeight );
 
-    Font aFont( GetFont() );
-    aFont.SetOrientation( 0 );
-    aFont.SetSize( Size( mpFontEntry->maFontSelData.mnWidth, mpFontEntry->maFontSelData.mnHeight ) );
-    pVDev->SetFont( aFont );
-    pVDev->SetTextColor( Color( COL_BLACK ) );
-    pVDev->SetTextFillColor();
-    pVDev->ImplNewFont();
-    pVDev->ImplInitFont();
-    pVDev->ImplInitTextColor();
-
-    // draw text into upper left corner
-    rSalLayout.DrawBase() -= aBoundRect.TopLeft();
-    rSalLayout.DrawText( *pVDev->mpGraphics );
-
-    Bitmap aBmp = pVDev->GetBitmap( Point(), aBoundRect.GetSize() );
-    if ( !aBmp || !aBmp.Rotate( mpFontEntry->mnOwnOrientation, COL_WHITE ) )
-        return false;
-
-    // calculate rotation offset
-    Polygon aPoly( aBoundRect );
-    aPoly.Rotate( Point(), mpFontEntry->mnOwnOrientation );
-    Point aPoint = aPoly.GetBoundRect().TopLeft();
-    aPoint += Point( nX, nY );
-
-    // mask output with text colored bitmap
-    GDIMetaFile* pOldMetaFile = mpMetaFile;
-    long nOldOffX = mnOutOffX;
-    long nOldOffY = mnOutOffY;
-    BOOL bOldMap = mbMap;
-
-    mnOutOffX   = 0L;
-    mnOutOffY   = 0L;
-    mpMetaFile  = NULL;
-    mbMap       = FALSE;
-
-    DrawMask( aPoint, aBmp, GetTextColor() );
-
-    mbMap       = bOldMap;
-    mnOutOffX   = nOldOffX;
-    mnOutOffY   = nOldOffY;
-    mpMetaFile  = pOldMetaFile;
-
-    return true;
-}
-
-// -----------------------------------------------------------------------
-
-void OutputDevice::ImplDrawTextDirect( SalLayout& rSalLayout, BOOL bTextLines )
-{
-    if( mpFontEntry->mnOwnOrientation )
-        if( ImplDrawRotateText( rSalLayout ) )
-            return;
-
-    long nOldX = rSalLayout.DrawBase().X();
-    if( ! (mpPDFWriter && mpPDFWriter->isBuiltinFont(mpFontEntry->maFontSelData.mpFontData) ) )
+    if ( pVDev->SetOutputSizePixel( aSize ) )
     {
-        if( ImplHasMirroredGraphics() )
+        Font    aFont( GetFont() );
+        Bitmap  aBmp;
+        long    nOff;
+
+        nX -= mnTextOffX;
+        nY -= mnTextOffY;
+        if ( GetTextAlign() == ALIGN_TOP )
         {
-            long w = meOutDevType == OUTDEV_VIRDEV ? mnOutWidth : mpGraphics->GetGraphicsWidth();
-            long x = rSalLayout.DrawBase().X();
-       		rSalLayout.DrawBase().X() = w - 1 - x;
-            if( !IsRTLEnabled() )
-            {
-                // mirror this window back
-                long devX = w-mnOutWidth-mnOutOffX;   // re-mirrored mnOutOffX
-                rSalLayout.DrawBase().X() = devX + ( mnOutWidth - 1 - (rSalLayout.DrawBase().X() - devX) ) ;
-            }
+            nOff = 0L;
+            nY  += mpFontEntry->maMetric.mnAscent;
+        }
+        else if ( GetTextAlign() == ALIGN_BOTTOM )
+        {
+            nOff = mpFontEntry->maMetric.mnAscent;
+            nY  += -mpFontEntry->maMetric.mnDescent;
+        }
+        else
+            nOff = mpFontEntry->maMetric.mnAscent;
+
+        aFont.SetShadow( FALSE );
+        aFont.SetOutline( FALSE );
+        aFont.SetRelief( RELIEF_NONE );
+        aFont.SetOrientation( 0 );
+        aFont.SetSize( Size( mpFontEntry->maFontSelData.mnWidth, mpFontEntry->maFontSelData.mnHeight ) );
+        pVDev->SetFont( aFont );
+        // Da Farben und Alignment noch im Font haengen, muessen diese jedesmal
+        // gesetzt werden
+        pVDev->SetTextAlign( ALIGN_TOP );
+        pVDev->SetTextColor( Color( COL_BLACK ) );
+        pVDev->SetTextFillColor();
+        pVDev->ImplNewFont();
+        pVDev->ImplInitFont();
+        pVDev->ImplInitTextColor();
+        pVDev->ImplDrawText( 0, 0, pStr, nLen, pDXAry );
+
+        aBmp = pVDev->GetBitmap( Point(), aSize );
+        if ( !!aBmp && aBmp.Rotate( mpFontEntry->mnOwnOrientation, COL_WHITE ) )
+        {
+            Point           aTempPoint;
+            Polygon         aPoly( Rectangle( aTempPoint, aSize ) );
+            long            nOldOffX = mnOutOffX;
+            long            nOldOffY = mnOutOffY;
+            GDIMetaFile*    pOldMetaFile = mpMetaFile;
+            BOOL            bOldMap = mbMap;
+
+            aTempPoint.Y() = nOff;
+            aPoly.Rotate( aTempPoint, mpFontEntry->mnOwnOrientation );
+            const Rectangle aBound( aPoly.GetBoundRect() );
+
+            mnOutOffX   = 0L;
+            mnOutOffY   = 0L;
+            mpMetaFile  = NULL;
+            mbMap       = FALSE;
+
+            DrawMask( Point( nX + aBound.Left(),
+                             nY + aBound.Top() - (mpFontEntry->maMetric.mnAscent+mnEmphasisAscent) ),
+                      aBmp, GetTextColor() );
+
+            mnOutOffX   = nOldOffX;
+            mnOutOffY   = nOldOffY;
+            mbMap       = bOldMap;
+            mpMetaFile  = pOldMetaFile;
         }
 
-        rSalLayout.DrawText( *mpGraphics );
+        return TRUE;
     }
 
-    rSalLayout.DrawBase().X() = nOldX;
-
-    if( bTextLines )
-        ImplDrawTextLines( rSalLayout,
-            maFont.GetStrikeout(), maFont.GetUnderline(),
-            maFont.IsWordLineMode(), ImplIsUnderlineAbove( maFont ) );
-
-    // emphasis marks
-    if( maFont.GetEmphasisMark() & EMPHASISMARK_STYLE )
-        ImplDrawEmphasisMarks( rSalLayout );
+    return FALSE;
 }
 
 // -----------------------------------------------------------------------
 
-void OutputDevice::ImplDrawSpecialText( SalLayout& rSalLayout )
+void OutputDevice::ImplDrawTextDirect( long nX, long nY,
+                                       const xub_Unicode* pStr, xub_StrLen nLen,
+                                       const long* pDXAry,
+                                       BOOL bTextLines )
+{
+    BOOL bDraw = FALSE;
+    ImplFontEntry* pFontEntry = mpFontEntry;
+    if ( pFontEntry->mnOwnOrientation )
+        bDraw = ImplDrawRotateText( nX, nY, pStr, nLen, pDXAry );
+    if ( !bDraw )
+    {
+        if ( !pDXAry )
+        {
+#ifndef REMOTE_APPSERVER
+            if ( pFontEntry->mnSetFontFlags & SAL_SETFONT_USEDRAWTEXTARRAY )
+            {
+                long                nOffset = 0;
+                long                aStackAry[128];
+                long*               pTempDXAry = (long*)ImplGetStackBuffer( sizeof(long)*(nLen-1), aStackAry, sizeof( aStackAry ) );
+                const xub_Unicode*  pTempStr = pStr;
+                for ( xub_StrLen i = 0; i < nLen-1; i++ )
+                {
+                    nOffset += ImplGetCharWidth( *pTempStr );
+                    pTempDXAry[i] = nOffset / mpFontEntry->mnWidthFactor;
+                    pTempStr++;
+                }
+                mpGraphics->DrawTextArray( nX, nY, pStr, nLen, pTempDXAry );
+                ImplReleaseStackBuffer( pTempDXAry, aStackAry );
+            }
+            else
+#endif
+                mpGraphics->DrawText( nX, nY, pStr, nLen );
+        }
+        else
+        {
+#ifndef REMOTE_APPSERVER
+            if ( pFontEntry->mnSetFontFlags & SAL_SETFONT_USEDRAWTEXT )
+            {
+                long                nOffset = 0;
+                long                nDiff;
+                long                nTempX = nX;
+                const sal_Unicode*  pTempStr = pStr;
+                xub_StrLen          nCombineChars = 1;
+                for ( xub_StrLen i = 0; i < nLen-1; i++ )
+                {
+                    nOffset += ImplGetCharWidth( pStr[i] );
+                    nDiff = (nOffset/mpFontEntry->mnWidthFactor) - pDXAry[i];
+                    if ( (nDiff < -1) || (nDiff > 0) )
+                    {
+                        mpGraphics->DrawText( nTempX, nY, pTempStr, nCombineChars );
+                        nTempX    = nX+pDXAry[i];
+                        nOffset   = pDXAry[i]*mpFontEntry->mnWidthFactor;
+                        pTempStr += nCombineChars;
+                        nCombineChars = 1;
+                    }
+                    else
+                        nCombineChars++;
+                }
+                mpGraphics->DrawText( nTempX, nY, pTempStr, nCombineChars );
+            }
+            else
+#endif
+                mpGraphics->DrawTextArray( nX, nY, pStr, nLen, pDXAry );
+        }
+
+        if ( bTextLines )
+        {
+            ImplDrawTextLines( nX, nY, pStr, nLen, pDXAry,
+                               maFont.GetStrikeout(),
+                               maFont.GetUnderline(),
+                               maFont.IsWordLineMode(),
+                               ImplIsUnderlineAbove( maFont ) );
+        }
+
+        // EmphasisMark
+        if ( maFont.GetEmphasisMark() & EMPHASISMARK_STYLE )
+        {
+            ImplDrawEmphasisMarks( nX, nY, pStr, nLen, pDXAry );
+        }
+    }
+}
+
+// -----------------------------------------------------------------------
+
+void OutputDevice::ImplDrawSpecialText( long nX, long nY,
+                                        const xub_Unicode* pStr, xub_StrLen nLen,
+                                        const long* pDXAry )
 {
     Color       aOldColor           = GetTextColor();
     Color       aOldTextLineColor   = GetTextLineColor();
     FontRelief  eRelief             = maFont.GetRelief();
 
-    Point aOrigPos = rSalLayout.DrawBase();
     if ( eRelief != RELIEF_NONE )
     {
         Color   aReliefColor( COL_LIGHTGRAY );
         Color   aTextColor( aOldColor );
-
         Color   aTextLineColor( aOldTextLineColor );
 
-        // we don't have a automatic color, so black is always drawn on white
+        // We don't have a automatic Color, so Black is always drawn
+        // in White
         if ( aTextColor.GetColor() == COL_BLACK )
             aTextColor = Color( COL_WHITE );
         if ( aTextLineColor.GetColor() == COL_BLACK )
             aTextLineColor = Color( COL_WHITE );
 
-        // relief-color is black for white text, in all other cases
+        // Relief-Color is Black for White Text, in all other cases
         // we set this to LightGray
         if ( aTextColor.GetColor() == COL_WHITE )
             aReliefColor = Color( COL_BLACK );
@@ -4687,24 +5960,21 @@ void OutputDevice::ImplDrawSpecialText( SalLayout& rSalLayout )
         SetTextColor( aReliefColor );
         ImplInitTextColor();
 
-        // calculate offset - for high resolution printers the offset
+        // Calculate Offset - for High resolution printers the offset
         // should be greater so that the effect is visible
         long nOff = 1;
         nOff += mnDPIX/300;
 
         if ( eRelief == RELIEF_ENGRAVED )
             nOff = -nOff;
-        rSalLayout.DrawOffset() += Point( nOff, nOff);
-        ImplDrawTextDirect( rSalLayout, mbTextLines );
-        rSalLayout.DrawOffset() -= Point( nOff, nOff);
+        ImplDrawTextDirect( nX+nOff, nY+nOff, pStr, nLen, pDXAry, mbTextLines );
 
         SetTextLineColor( aTextLineColor );
         SetTextColor( aTextColor );
         ImplInitTextColor();
-        ImplDrawTextDirect( rSalLayout, mbTextLines );
+        ImplDrawTextDirect( nX, nY, pStr, nLen, pDXAry, mbTextLines );
 
         SetTextLineColor( aOldTextLineColor );
-
         if ( aTextColor != aOldColor )
         {
             SetTextColor( aOldColor );
@@ -4719,47 +5989,36 @@ void OutputDevice::ImplDrawSpecialText( SalLayout& rSalLayout )
             if ( maFont.IsOutline() )
                 nOff++;
             SetTextLineColor();
-            if ( (GetTextColor().GetColor() == COL_BLACK)
-            ||   (GetTextColor().GetLuminance() < 8) )
+            if ( (GetTextColor().GetColor() == COL_BLACK) ||
+                 (GetTextColor().GetLuminance() < 8) )
                 SetTextColor( Color( COL_LIGHTGRAY ) );
             else
                 SetTextColor( Color( COL_BLACK ) );
             ImplInitTextColor();
-            rSalLayout.DrawBase() += Point( nOff, nOff );
-            ImplDrawTextDirect( rSalLayout, mbTextLines );
-            rSalLayout.DrawBase() -= Point( nOff, nOff );
+            ImplDrawTextDirect( nX+nOff, nY+nOff, pStr, nLen, pDXAry, mbTextLines );
             SetTextColor( aOldColor );
             SetTextLineColor( aOldTextLineColor );
             ImplInitTextColor();
 
             if ( !maFont.IsOutline() )
-                ImplDrawTextDirect( rSalLayout, mbTextLines );
+                ImplDrawTextDirect( nX, nY, pStr, nLen, pDXAry, mbTextLines );
         }
 
         if ( maFont.IsOutline() )
         {
-            rSalLayout.DrawBase() = aOrigPos + Point(-1,-1);
-            ImplDrawTextDirect( rSalLayout, mbTextLines );
-            rSalLayout.DrawBase() = aOrigPos + Point(+1,+1);
-            ImplDrawTextDirect( rSalLayout, mbTextLines );
-            rSalLayout.DrawBase() = aOrigPos + Point(-1,+0);
-            ImplDrawTextDirect( rSalLayout, mbTextLines );
-            rSalLayout.DrawBase() = aOrigPos + Point(-1,+1);
-            ImplDrawTextDirect( rSalLayout, mbTextLines );
-            rSalLayout.DrawBase() = aOrigPos + Point(+0,+1);
-            ImplDrawTextDirect( rSalLayout, mbTextLines );
-            rSalLayout.DrawBase() = aOrigPos + Point(+0,-1);
-            ImplDrawTextDirect( rSalLayout, mbTextLines );
-            rSalLayout.DrawBase() = aOrigPos + Point(+1,-1);
-            ImplDrawTextDirect( rSalLayout, mbTextLines );
-            rSalLayout.DrawBase() = aOrigPos + Point(+1,+0);
-            ImplDrawTextDirect( rSalLayout, mbTextLines );
-            rSalLayout.DrawBase() = aOrigPos;
+            ImplDrawTextDirect( nX-1, nY-1, pStr, nLen, pDXAry, mbTextLines );
+            ImplDrawTextDirect( nX+1, nY+1, pStr, nLen, pDXAry, mbTextLines );
+            ImplDrawTextDirect( nX-1, nY+1, pStr, nLen, pDXAry, mbTextLines );
+            ImplDrawTextDirect( nX,   nY+1, pStr, nLen, pDXAry, mbTextLines );
+            ImplDrawTextDirect( nX-1, nY,   pStr, nLen, pDXAry, mbTextLines );
+            ImplDrawTextDirect( nX+1, nY,   pStr, nLen, pDXAry, mbTextLines );
+            ImplDrawTextDirect( nX,   nY-1, pStr, nLen, pDXAry, mbTextLines );
+            ImplDrawTextDirect( nX+1, nY-1, pStr, nLen, pDXAry, mbTextLines );
 
             SetTextColor( Color( COL_WHITE ) );
             SetTextLineColor( Color( COL_WHITE ) );
             ImplInitTextColor();
-            ImplDrawTextDirect( rSalLayout, mbTextLines );
+            ImplDrawTextDirect( nX, nY, pStr, nLen, pDXAry, mbTextLines );
             SetTextColor( aOldColor );
             SetTextLineColor( aOldTextLineColor );
             ImplInitTextColor();
@@ -4769,24 +6028,68 @@ void OutputDevice::ImplDrawSpecialText( SalLayout& rSalLayout )
 
 // -----------------------------------------------------------------------
 
-void OutputDevice::ImplDrawText( SalLayout& rSalLayout )
+void OutputDevice::ImplDrawText( long nX, long nY,
+                                 const xub_Unicode* pStr, xub_StrLen nLen, const long* pDXAry )
 {
-    if( mbInitClipRegion )
-        ImplInitClipRegion();
-    if( mbOutputClipped )
-        return;
-    if( mbInitTextColor )
-        ImplInitTextColor();
+    nX += mnTextOffX;
+    nY += mnTextOffY;
 
-    rSalLayout.DrawBase() += Point( mnTextOffX, mnTextOffY );
+    if ( IsTextFillColor() )
+        ImplDrawTextBackground( nX, nY, pStr, nLen, pDXAry );
 
-    if( IsTextFillColor() )
-        ImplDrawTextBackground( rSalLayout );
-
-    if( mbTextSpecial )
-        ImplDrawSpecialText( rSalLayout );
+    if ( mbTextSpecial )
+        ImplDrawSpecialText( nX, nY, pStr, nLen, pDXAry );
     else
-        ImplDrawTextDirect( rSalLayout, mbTextLines );
+        ImplDrawTextDirect( nX, nY, pStr, nLen, pDXAry, mbTextLines );
+}
+
+// -----------------------------------------------------------------------
+
+void OutputDevice::ImplFillDXAry( long* pDXAry,
+                                  const xub_Unicode* pStr, xub_StrLen nLen, long nWidth )
+{
+    ImplFontEntry* pFontEntry = mpFontEntry;
+
+    // Breiten-Array fuer errechnete Werte mit den Breiten der einzelnen
+    // Character fuellen
+    xub_StrLen  i;
+    long        nSum = 0;
+    for ( i = 0; i < nLen; i++ )
+    {
+        // Characterbreiten ueber Array holen
+        nSum += ImplGetCharWidth( pStr[i] );
+        pDXAry[i] = nSum / mpFontEntry->mnWidthFactor;
+    }
+    nSum /= mpFontEntry->mnWidthFactor;
+
+    // Differenz zwischen Soll- und Ist-Laenge errechnen
+    // Zusaetzliche Pixel per Character errechnen
+    // Anzahl der zusaetzlich verbliebenen Pixel errechnen
+    long nDelta        = (long)nWidth - nSum;
+    long nDeltaPerChar = 0;
+    long nDeltaRest    = 0;
+    if ( nLen > 1 )
+    {
+        nDeltaPerChar = nDelta / (long)(nLen-1);
+        nDeltaRest    = nDelta % (long)(nLen-1);
+    }
+    long nDeltaRestAbs = Abs( nDeltaRest );
+
+    long nErrorSum = nDeltaRestAbs;
+    long nDeltaSum = 0;
+    for ( i = 0; i < nLen-1; i++, nErrorSum += nDeltaRestAbs )
+    {
+        nDeltaSum += nDeltaPerChar;
+        if ( nErrorSum >= nLen-1 )
+        {
+            nErrorSum -= nLen-1;
+            if ( nDeltaRest > 0 )
+                nDeltaSum++;
+            else if ( nDeltaRest < 0 )
+                nDeltaSum--;
+        }
+        pDXAry[i] += nDeltaSum;
+    }
 }
 
 // -----------------------------------------------------------------------
@@ -4815,7 +6118,6 @@ long OutputDevice::ImplGetTextLines( ImplMultiTextLineInfo& rLineInfo,
         while ( nPos < nLen )
         {
             xub_StrLen nBreakPos = nPos;
-
             while ( ( nBreakPos < nLen ) && ( rStr.GetChar( nBreakPos ) != _CR ) && ( rStr.GetChar( nBreakPos ) != _LF ) )
                 nBreakPos++;
 
@@ -4826,16 +6128,15 @@ long OutputDevice::ImplGetTextLines( ImplMultiTextLineInfo& rLineInfo,
                     xBI = vcl::unohelper::CreateBreakIterator();
 
                 if ( xBI.is() )
-                {
-                    static const com::sun::star::lang::Locale aDefLocale;
-                    xub_StrLen nSoftBreak = GetTextBreak( rStr, nWidth, nPos, nBreakPos - nPos );
-                    DBG_ASSERT( nSoftBreak < nBreakPos, "Break?!" );
-                    i18n::LineBreakResults aLBR = xBI->getLineBreak( aText, nSoftBreak, aDefLocale, nPos, aHyphOptions, aUserOptions );
-                    nBreakPos = (xub_StrLen)aLBR.breakIndex;
-                    if ( nBreakPos <= nPos )
-                        nBreakPos = nSoftBreak;
-                    nLineWidth = GetTextWidth( rStr, nPos, nBreakPos-nPos );
-                }
+				{
+					xub_StrLen nSoftBreak = GetTextBreak( rStr, nWidth, nPos, nBreakPos - nPos );
+					DBG_ASSERT( nSoftBreak < nBreakPos, "Break?!" );
+					i18n::LineBreakResults aLBR = xBI->getLineBreak( aText, nSoftBreak, GetSettings().GetLocale(), nPos, aHyphOptions, aUserOptions );
+					nBreakPos = (xub_StrLen)aLBR.breakIndex;
+					if ( nBreakPos <= nPos )
+						nBreakPos = nSoftBreak;
+					nLineWidth = GetTextWidth( rStr, nPos, nBreakPos-nPos );
+				}
             }
 
             if ( nLineWidth > nMaxLineWidth )
@@ -4889,12 +6190,11 @@ void OutputDevice::SetFont( const Font& rNewFont )
     DBG_CHKOBJ( &rNewFont, Font, NULL );
 
     Font aFont( rNewFont );
-    if ( mnDrawMode & (DRAWMODE_BLACKTEXT | DRAWMODE_WHITETEXT | DRAWMODE_GRAYTEXT | DRAWMODE_GHOSTEDTEXT | DRAWMODE_SETTINGSTEXT |
+    if ( mnDrawMode & (DRAWMODE_BLACKTEXT | DRAWMODE_WHITETEXT | DRAWMODE_GRAYTEXT | DRAWMODE_GHOSTEDTEXT |
                        DRAWMODE_BLACKFILL | DRAWMODE_WHITEFILL | DRAWMODE_GRAYFILL | DRAWMODE_NOFILL |
-                       DRAWMODE_GHOSTEDFILL | DRAWMODE_SETTINGSFILL ) )
+                       DRAWMODE_GHOSTEDFILL) )
     {
         Color aTextColor( aFont.GetColor() );
-
         if ( mnDrawMode & DRAWMODE_BLACKTEXT )
             aTextColor = Color( COL_BLACK );
         else if ( mnDrawMode & DRAWMODE_WHITETEXT )
@@ -4904,23 +6204,18 @@ void OutputDevice::SetFont( const Font& rNewFont )
             const UINT8 cLum = aTextColor.GetLuminance();
             aTextColor = Color( cLum, cLum, cLum );
         }
-        else if ( mnDrawMode & DRAWMODE_SETTINGSTEXT )
-            aTextColor = GetSettings().GetStyleSettings().GetFontColor();
-        
         if ( mnDrawMode & DRAWMODE_GHOSTEDTEXT )
         {
             aTextColor = Color( (aTextColor.GetRed() >> 1 ) | 0x80,
                                 (aTextColor.GetGreen() >> 1 ) | 0x80,
                                 (aTextColor.GetBlue() >> 1 ) | 0x80 );
         }
-
         aFont.SetColor( aTextColor );
 
         BOOL bTransFill = aFont.IsTransparent();
         if ( !bTransFill )
         {
             Color aTextFillColor( aFont.GetFillColor() );
-
             if ( mnDrawMode & DRAWMODE_BLACKFILL )
                 aTextFillColor = Color( COL_BLACK );
             else if ( mnDrawMode & DRAWMODE_WHITEFILL )
@@ -4930,21 +6225,17 @@ void OutputDevice::SetFont( const Font& rNewFont )
                 const UINT8 cLum = aTextFillColor.GetLuminance();
                 aTextFillColor = Color( cLum, cLum, cLum );
             }
-            else if( mnDrawMode & DRAWMODE_SETTINGSFILL )
-                aTextFillColor = GetSettings().GetStyleSettings().GetWindowColor();
             else if ( mnDrawMode & DRAWMODE_NOFILL )
             {
                 aTextFillColor = Color( COL_TRANSPARENT );
                 bTransFill = TRUE;
             }
-
             if ( !bTransFill && (mnDrawMode & DRAWMODE_GHOSTEDFILL) )
             {
                 aTextFillColor = Color( (aTextFillColor.GetRed() >> 1) | 0x80,
                                         (aTextFillColor.GetGreen() >> 1) | 0x80,
                                         (aTextFillColor.GetBlue() >> 1) | 0x80 );
             }
-
             aFont.SetFillColor( aTextFillColor );
         }
     }
@@ -4970,33 +6261,6 @@ void OutputDevice::SetFont( const Font& rNewFont )
 
 // -----------------------------------------------------------------------
 
-void OutputDevice::SetLayoutMode( ULONG nTextLayoutMode )
-{
-    DBG_TRACE( "OutputDevice::SetTextLayoutMode()" );
-
-    if( mpMetaFile )
-        mpMetaFile->AddAction( new MetaLayoutModeAction( nTextLayoutMode ) );
-
-    mnTextLayoutMode = nTextLayoutMode;
-}
-
-// -----------------------------------------------------------------------
-
-void OutputDevice::SetDigitLanguage( LanguageType eTextLanguage )
-{
-    DBG_TRACE( "OutputDevice::SetTextLanguage()" );
-
-    if( mpMetaFile )
-        mpMetaFile->AddAction( new MetaTextLanguageAction( eTextLanguage ) );
-
-    if( eTextLanguage == LANGUAGE_SYSTEM )
-        eTextLanguage = GetSystemLanguage();
-
-    meTextLanguage = eTextLanguage;
-}
-
-// -----------------------------------------------------------------------
-
 void OutputDevice::SetTextColor( const Color& rColor )
 {
     DBG_TRACE( "OutputDevice::SetTextColor()" );
@@ -5005,8 +6269,7 @@ void OutputDevice::SetTextColor( const Color& rColor )
     Color aColor( rColor );
 
     if ( mnDrawMode & ( DRAWMODE_BLACKTEXT | DRAWMODE_WHITETEXT |
-                        DRAWMODE_GRAYTEXT | DRAWMODE_GHOSTEDTEXT |
-                        DRAWMODE_SETTINGSTEXT ) )
+                        DRAWMODE_GRAYTEXT | DRAWMODE_GHOSTEDTEXT ) )
     {
         if ( mnDrawMode & DRAWMODE_BLACKTEXT )
             aColor = Color( COL_BLACK );
@@ -5017,8 +6280,6 @@ void OutputDevice::SetTextColor( const Color& rColor )
             const UINT8 cLum = aColor.GetLuminance();
             aColor = Color( cLum, cLum, cLum );
         }
-        else if ( mnDrawMode & DRAWMODE_SETTINGSTEXT )
-            aColor = GetSettings().GetStyleSettings().GetFontColor();
 
         if ( mnDrawMode & DRAWMODE_GHOSTEDTEXT )
         {
@@ -5068,7 +6329,7 @@ void OutputDevice::SetTextFillColor( const Color& rColor )
     {
         if ( mnDrawMode & ( DRAWMODE_BLACKFILL | DRAWMODE_WHITEFILL |
                             DRAWMODE_GRAYFILL | DRAWMODE_NOFILL |
-                            DRAWMODE_GHOSTEDFILL | DRAWMODE_SETTINGSFILL ) )
+                            DRAWMODE_GHOSTEDFILL ) )
         {
             if ( mnDrawMode & DRAWMODE_BLACKFILL )
                 aColor = Color( COL_BLACK );
@@ -5079,14 +6340,11 @@ void OutputDevice::SetTextFillColor( const Color& rColor )
                 const UINT8 cLum = aColor.GetLuminance();
                 aColor = Color( cLum, cLum, cLum );
             }
-            else if( mnDrawMode & DRAWMODE_SETTINGSFILL )
-                aColor = GetSettings().GetStyleSettings().GetWindowColor();
             else if ( mnDrawMode & DRAWMODE_NOFILL )
             {
                 aColor = Color( COL_TRANSPARENT );
                 bTransFill = TRUE;
             }
-
             if ( !bTransFill && (mnDrawMode & DRAWMODE_GHOSTEDFILL) )
             {
                 aColor = Color( (aColor.GetRed() >> 1) | 0x80,
@@ -5138,8 +6396,7 @@ void OutputDevice::SetTextLineColor( const Color& rColor )
     Color aColor( rColor );
 
     if ( mnDrawMode & ( DRAWMODE_BLACKTEXT | DRAWMODE_WHITETEXT |
-                        DRAWMODE_GRAYTEXT | DRAWMODE_GHOSTEDTEXT |
-                        DRAWMODE_SETTINGSTEXT ) )
+                        DRAWMODE_GRAYTEXT | DRAWMODE_GHOSTEDTEXT ) )
     {
         if ( mnDrawMode & DRAWMODE_BLACKTEXT )
             aColor = Color( COL_BLACK );
@@ -5150,8 +6407,6 @@ void OutputDevice::SetTextLineColor( const Color& rColor )
             const UINT8 cLum = aColor.GetLuminance();
             aColor = Color( cLum, cLum, cLum );
         }
-        else if ( mnDrawMode & DRAWMODE_SETTINGSTEXT )
-            aColor = GetSettings().GetStyleSettings().GetFontColor();
 
         if ( mnDrawMode & DRAWMODE_GHOSTEDTEXT )
         {
@@ -5168,7 +6423,6 @@ void OutputDevice::SetTextLineColor( const Color& rColor )
 }
 
 // -----------------------------------------------------------------------
-
 
 void OutputDevice::SetTextAlign( TextAlign eAlign )
 {
@@ -5202,33 +6456,36 @@ void OutputDevice::DrawTextLine( const Point& rPos, long nWidth,
          ((eStrikeout == STRIKEOUT_NONE) || (eStrikeout == STRIKEOUT_DONTKNOW)) )
         return;
 
-    if ( !IsDeviceOutputNecessary() || ImplIsRecordLayout() )
+    if ( !IsDeviceOutputNecessary() )
         return;
 
 #ifndef REMOTE_APPSERVER
     // we need a graphics
-    if( !mpGraphics && !ImplGetGraphics() )
-        return;
-    if( mbInitClipRegion )
+    if ( !mpGraphics )
+    {
+        if ( !ImplGetGraphics() )
+            return;
+    }
+
+    if ( mbInitClipRegion )
         ImplInitClipRegion();
-    if( mbOutputClipped )
+    if ( mbOutputClipped )
         return;
 #else
-    if( !ImplGetServerGraphics() )
+    if ( !ImplGetServerGraphics() )
         return;
 #endif
 
-    // initialize font if needed to get text offsets
-    // TODO: only needed for mnTextOff!=(0,0)
-    if( mbNewFont )
-        if( !ImplNewFont() )
+    if ( mbNewFont )
+    {
+        if ( !ImplNewFont() )
             return;
-    if( mbInitFont )
-        ImplInitFont();
+    }
 
     Point aPos = ImplLogicToDevicePixel( rPos );
     nWidth = ImplLogicWidthToDevicePixel( nWidth );
-    aPos += Point( mnTextOffX, mnTextOffY );
+    aPos.X() += mnTextOffX;
+    aPos.Y() += mnTextOffY;
     ImplDrawTextLine( aPos.X(), aPos.X(), aPos.Y(), nWidth, eStrikeout, eUnderline, bUnderlineAbove );
 }
 
@@ -5248,13 +6505,15 @@ void OutputDevice::DrawWaveLine( const Point& rStartPos, const Point& rEndPos,
     DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
 
 #ifndef REMOTE_APPSERVER
-    if ( !IsDeviceOutputNecessary() || ImplIsRecordLayout() )
+    if ( !IsDeviceOutputNecessary() )
         return;
 
     // we need a graphics
-    if( !mpGraphics )
-        if( !ImplGetGraphics() )
+    if ( !mpGraphics )
+    {
+        if ( !ImplGetGraphics() )
             return;
+    }
 
     if ( mbInitClipRegion )
         ImplInitClipRegion();
@@ -5269,7 +6528,6 @@ void OutputDevice::DrawWaveLine( const Point& rStartPos, const Point& rEndPos,
     long    nEndY = aEndPt.Y();
     short   nOrientation = 0;
 
-    // when rotated
     if ( (nStartY != nEndY) || (nStartX > nEndX) )
     {
         long nDX = nEndX - nStartX;
@@ -5295,14 +6553,7 @@ void OutputDevice::DrawWaveLine( const Point& rStartPos, const Point& rEndPos,
     else // WAVE_FLAT
         nWaveHeight = 1;
 
-     // #109280# make sure the waveline does not exceed the descent to avoid paint problems  
-     ImplFontEntry*  pFontEntry = mpFontEntry;  
-     if ( !pFontEntry->maMetric.mnWUnderlineSize )  
-         ImplInitTextLineSize();  
-     if( nWaveHeight > pFontEntry->maMetric.mnWUnderlineSize )  
-         nWaveHeight = pFontEntry->maMetric.mnWUnderlineSize;
-     
-     ImplDrawWaveLine( nStartX, nStartY, nStartX, nStartY,
+    ImplDrawWaveLine( nStartX, nStartY, nStartX, nStartY,
                       nEndX-nStartX, nWaveHeight, 1,
                       nOrientation, GetLineColor() );
 #else
@@ -5321,101 +6572,143 @@ void OutputDevice::DrawWaveLine( const Point& rStartPos, const Point& rEndPos,
 
 // -----------------------------------------------------------------------
 
-void OutputDevice::DrawText( const Point& rStartPt, const String& rStr,
-                             xub_StrLen nIndex, xub_StrLen nLen,
-                             MetricVector* pVector, String* pDisplayText
-                             )
+void OutputDevice::DrawText( const Point& rStartPt, const String& rOrigStr,
+                             xub_StrLen nIndex, xub_StrLen nLen )
 {
-    if( mpOutDevData && mpOutDevData->mpRecordLayout )
-    {
-        pVector = &mpOutDevData->mpRecordLayout->m_aUnicodeBoundRects;
-        pDisplayText = &mpOutDevData->mpRecordLayout->m_aDisplayText;
-    }
-
     DBG_TRACE( "OutputDevice::DrawText()" );
     DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
 
     if ( mpMetaFile )
-        mpMetaFile->AddAction( new MetaTextAction( rStartPt, rStr, nIndex, nLen ) );
-    if( pVector )
-    {
-        Region aClip( GetClipRegion() );
-        if( meOutDevType == OUTDEV_WINDOW )
-            aClip.Intersect( Rectangle( Point(), GetOutputSize() ) );
-        if( mpOutDevData && mpOutDevData->mpRecordLayout )
-		{
-            mpOutDevData->mpRecordLayout->m_aLineIndices.push_back( mpOutDevData->mpRecordLayout->m_aDisplayText.Len() );
-			aClip.Intersect( mpOutDevData->maRecordRect );
-		}
-        if( ! aClip.IsNull() )
-        {
-            MetricVector aTmp;
-            GetGlyphBoundRects( rStartPt, rStr, nIndex, nLen, nIndex, aTmp );
-            
-            bool bInserted = false;
-            for( MetricVector::const_iterator it = aTmp.begin(); it != aTmp.end(); ++it, nIndex++ )
-            {
-                bool bAppend = false;
+        mpMetaFile->AddAction( new MetaTextAction( rStartPt, rOrigStr, nIndex, nLen ) );
 
-                if( aClip.IsOver( *it ) )
-                    bAppend = true;
-                else if( rStr.GetChar( nIndex ) == ' ' && bInserted )
-                {
-                    MetricVector::const_iterator next = it;
-                    ++next;
-                    if( next != aTmp.end() && aClip.IsOver( *next ) )
-                        bAppend = true;
-                }
-
-                if( bAppend )
-                {
-                    pVector->push_back( *it );
-                    if( pDisplayText )
-                        pDisplayText->Append( rStr.GetChar( nIndex ) );
-                    bInserted = true;
-                }
-            }
-        }
-        else
-        {
-            GetGlyphBoundRects( rStartPt, rStr, nIndex, nLen, nIndex, *pVector );
-            if( pDisplayText )
-                pDisplayText->Append( rStr.Copy( nIndex, nLen ) );
-        }
-    }
-
-    if ( !IsDeviceOutputNecessary() || pVector )
+    if ( !IsDeviceOutputNecessary() )
         return;
-#if defined UNX && !defined USE_JAVA
-    String aStr( rStr );
-    if( meOutDevType == OUTDEV_PRINTER )
+
+    // get string length for calculating extents
+    if ( (ULONG)nLen+nIndex > rOrigStr.Len() )
     {
-        if( !mpGraphics )
-            if( !ImplGetGraphics() )
-                return;
-        xub_StrLen nCutStart, nCutStop;
-        aStr = mpGraphics->maGraphicsData.FaxPhoneComment( rStr, nIndex, nLen, nCutStart, nCutStop );
+        if ( nIndex < rOrigStr.Len() )
+            nLen = rOrigStr.Len() - nIndex;
+        else
+            nLen = 0;
     }
-    SalLayout* pSalLayout = ImplLayout( aStr, nIndex, nLen, rStartPt );
+
+    // don't bother if there is nothing to do
+    if ( !nLen )
+        return;
+
+#ifndef REMOTE_APPSERVER
+    // we need a graphics
+    if ( !mpGraphics )
+    {
+        if ( !ImplGetGraphics() )
+            return;
+    }
+
+    if ( mbInitClipRegion )
+        ImplInitClipRegion();
+    if ( mbOutputClipped )
+        return;
 #else
-    SalLayout* pSalLayout = ImplLayout( rStr, nIndex, nLen, rStartPt );
+    if ( !ImplGetServerGraphics() )
+        return;
 #endif
-    if( pSalLayout )
+
+    if ( mbNewFont )
+        ImplNewFont();
+    if ( mbInitFont )
+        ImplInitFont();
+    if ( mbInitTextColor )
+        ImplInitTextColor();
+
+    String aStr = rOrigStr;
+    if( mpFontEntry->mpConversion )
+        ImplRecodeString( mpFontEntry->mpConversion, aStr, nIndex, nLen );
+
+    Point aStartPt = ImplLogicToDevicePixel( rStartPt );
+
+    // Pointer auf den String-Buffer setzen und um den Index korrigieren
+    const sal_Unicode* pStr = aStr.GetBuffer();
+    pStr += nIndex;
+
+    if ( mbKerning )
     {
-        ImplDrawText( *pSalLayout );
-        pSalLayout->Release();
+        ImplFontEntry*  pFontEntry = mpFontEntry;
+        USHORT          i;
+
+        // DX-Array berechnen
+        long  nOffset = 0;
+        long  aStackAry[128];
+        long* pDXAry = (long*)ImplGetStackBuffer( sizeof(long)*(nLen-1), aStackAry, sizeof( aStackAry ) );
+        const sal_Unicode* pTempStr = pStr;
+        for ( i = 0; i < nLen-1; i++ )
+        {
+            nOffset += ImplGetCharWidth( *pTempStr );
+            pDXAry[i] = nOffset / mpFontEntry->mnWidthFactor;
+            pTempStr++;
+        }
+        ImplCalcKerning( pStr, nLen, pDXAry, nLen-1 );
+        ImplDrawText( aStartPt.X(), aStartPt.Y(), pStr, nLen, pDXAry );
+        ImplReleaseStackBuffer( pDXAry, aStackAry );
     }
+    else
+        ImplDrawText( aStartPt.X(), aStartPt.Y(), pStr, nLen, NULL );
 }
 
 // -----------------------------------------------------------------------
 
-long OutputDevice::GetTextWidth( const String& rStr,
+long OutputDevice::GetTextWidth( const String& rOrigStr,
                                  xub_StrLen nIndex, xub_StrLen nLen ) const
 {
     DBG_TRACE( "OutputDevice::GetTextWidth()" );
     DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
 
-    long nWidth = GetTextArray( rStr, NULL, nIndex, nLen );
+    if ( mbNewFont )
+    {
+        if ( !((OutputDevice*)this)->ImplNewFont() )
+            return 0;
+    }
+
+    ImplFontEntry*  pFontEntry = mpFontEntry;
+    long            nWidth  = 0;
+
+    if ( nIndex < rOrigStr.Len() )
+    {
+        // String-Laenge fuer die Ermittlung der Groesse setzen
+        if ( (ULONG)nLen+nIndex > rOrigStr.Len() )
+            nLen = rOrigStr.Len() - nIndex;
+
+        if ( nLen )
+        {
+            String aStr = rOrigStr;
+            if( pFontEntry->mpConversion )
+                ImplRecodeString( pFontEntry->mpConversion, aStr, nIndex, nLen );
+
+            // Also Fixed-Fonts are calculated char by char, because
+            // not every Font or in every CJK Fonts all characters have
+            // the same width
+            const sal_Unicode*  pStr = aStr.GetBuffer();
+            const sal_Unicode*  pTempStr;
+            xub_StrLen          nTempLen;
+            pStr += nIndex;
+            pTempStr = pStr;
+            nTempLen = nLen;
+            while ( nTempLen )
+            {
+                nWidth += ImplGetCharWidth( *pTempStr );
+                nTempLen--;
+                pTempStr++;
+            }
+            nWidth /= pFontEntry->mnWidthFactor;
+
+            if ( mbKerning )
+                nWidth += ImplCalcKerning( pStr, nLen, NULL, 0 );
+        }
+    }
+
+    if ( mbMap )
+        nWidth = ImplDevicePixelToLogicWidth( nWidth );
+
     return nWidth;
 }
 
@@ -5426,11 +6719,13 @@ long OutputDevice::GetTextHeight() const
     DBG_TRACE( "OutputDevice::GetTextHeight()" );
     DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
 
-    if( mbNewFont )
-        if( !(const_cast<OutputDevice*>(this)->ImplNewFont()) )
+    if ( mbNewFont )
+    {
+        if ( !((OutputDevice*)this)->ImplNewFont() )
             return 0;
+    }
 
-    long nHeight = mpFontEntry->mnLineHeight + mnEmphasisAscent + mnEmphasisDescent;
+    long nHeight = mpFontEntry->mnLineHeight+mnEmphasisAscent+mnEmphasisDescent;
 
     if ( mbMap )
         nHeight = ImplDevicePixelToLogicHeight( nHeight );
@@ -5440,7 +6735,7 @@ long OutputDevice::GetTextHeight() const
 
 // -----------------------------------------------------------------------
 
-void OutputDevice::DrawTextArray( const Point& rStartPt, const String& rStr,
+void OutputDevice::DrawTextArray( const Point& rStartPt, const String& rOrigStr,
                                   const long* pDXAry,
                                   xub_StrLen nIndex, xub_StrLen nLen )
 {
@@ -5448,82 +6743,144 @@ void OutputDevice::DrawTextArray( const Point& rStartPt, const String& rStr,
     DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
 
     if ( mpMetaFile )
-        mpMetaFile->AddAction( new MetaTextArrayAction( rStartPt, rStr, pDXAry, nIndex, nLen ) );
+        mpMetaFile->AddAction( new MetaTextArrayAction( rStartPt, rOrigStr, pDXAry, nIndex, nLen ) );
 
     if ( !IsDeviceOutputNecessary() )
         return;
 
-#if defined UNX && !defined USE_JAVA
-    String aStr( rStr );
-    if( meOutDevType == OUTDEV_PRINTER )
+    // get string length for calculating text extents
+    if ( (ULONG)nLen+nIndex > rOrigStr.Len() )
     {
-        if( !mpGraphics )
-            if( !ImplGetGraphics() )
-                return;
-        xub_StrLen nCutStart, nCutStop, nOrgLen = nLen;
-        aStr = mpGraphics->maGraphicsData.FaxPhoneComment( rStr, nIndex, nLen, nCutStart, nCutStop );
-        if( nCutStop != nCutStart )
-        {
-            long* pAry = (long*)alloca(sizeof(long)*nLen );
-            if( nCutStart > nIndex )
-                memcpy( pAry, pDXAry, sizeof(long)*(nCutStart-nIndex) );
-            memcpy( pAry+nCutStart-nIndex, pDXAry + nOrgLen - (nCutStop-nIndex), nLen - (nCutStop-nIndex) );
-            pDXAry = pAry;
-        }
+        if ( nIndex < rOrigStr.Len() )
+            nLen = rOrigStr.Len() - nIndex;
+        else
+            nLen = 0;
     }
-    SalLayout* pSalLayout = ImplLayout( aStr, nIndex, nLen, rStartPt, 0, pDXAry );
+
+    // don't bother if there is nothing to do
+    if ( !nLen )
+        return;
+
+    // use DrawText when there is no position array
+    if ( !pDXAry || (nLen < 2) )
+    {
+        // calls here to prevent double recording in metafile
+        DrawText( rStartPt, rOrigStr, nIndex, nLen );
+        return;
+    }
+
+#ifndef REMOTE_APPSERVER
+    // we need a graphics
+    if ( !mpGraphics )
+    {
+        if ( !ImplGetGraphics() )
+            return;
+    }
+
+    if ( mbInitClipRegion )
+        ImplInitClipRegion();
+    if ( mbOutputClipped )
+        return;
 #else
-    SalLayout* pSalLayout = ImplLayout( rStr, nIndex, nLen, rStartPt, 0, pDXAry );
+    if ( !ImplGetServerGraphics() )
+        return;
 #endif
-    if( pSalLayout )
+
+    if ( mbNewFont )
     {
-        ImplDrawText( *pSalLayout );
-        pSalLayout->Release();
+        if ( !ImplNewFont() )
+            return;
     }
+    if ( mbInitFont )
+        ImplInitFont();
+    if ( mbInitTextColor )
+        ImplInitTextColor();
+
+    String aStr = rOrigStr;
+    if( mpFontEntry->mpConversion )
+        ImplRecodeString( mpFontEntry->mpConversion, aStr, nIndex, nLen );
+
+    // Pointer auf den String-Buffer setzen und um den Index korrigieren
+    const sal_Unicode* pStr = aStr.GetBuffer() + nIndex;
+
+    Point aStartPt = ImplLogicToDevicePixel( rStartPt );
+    if ( mbMap )
+    {
+        long    nLogStartX = rStartPt.X();
+        long    nPixStartX = aStartPt.X();
+        long    aStackAry[128];
+        long*   pPixDXAry = (long*)ImplGetStackBuffer( sizeof(long)*(nLen-1), aStackAry, sizeof( aStackAry ) );
+        for ( xub_StrLen i = 0; i < (nLen-1); i++ )
+            pPixDXAry[i] = ImplLogicXToDevicePixel( nLogStartX+pDXAry[i] )-nPixStartX;
+        ImplDrawText( aStartPt.X(), aStartPt.Y(), pStr, nLen, pPixDXAry );
+        ImplReleaseStackBuffer( pPixDXAry, aStackAry );
+    }
+    else
+        ImplDrawText( aStartPt.X(), aStartPt.Y(), pStr, nLen, pDXAry );
 }
 
 // -----------------------------------------------------------------------
 
-long OutputDevice::GetTextArray( const String& rStr, long* pDXAry,
+long OutputDevice::GetTextArray( const String& rOrigStr, long* pDXAry,
                                  xub_StrLen nIndex, xub_StrLen nLen ) const
 {
     DBG_TRACE( "OutputDevice::GetTextArray()" );
     DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
 
-    if( nIndex >= rStr.Len() )
-        return 0;
-    if( (ULONG)nIndex+nLen >= rStr.Len() )
-        nLen = rStr.Len() - nIndex;
+    if ( !pDXAry )
+        return GetTextWidth( rOrigStr, nIndex, nLen );
 
-    // do layout
-    SalLayout* pSalLayout = ImplLayout( rStr, nIndex, nLen );
-    if( !pSalLayout )
-        return 0;
-
-    long nWidth = pSalLayout->FillDXArray( pDXAry );
-    int nWidthFactor = pSalLayout->GetUnitsPerPixel();
-    pSalLayout->Release();
-
-    // convert virtual char widths to virtual absolute positions
-    if( pDXAry )
-        for( int i = 1; i < nLen; ++i )
-            pDXAry[ i ] += pDXAry[ i-1 ];
-
-    // convert from font units to logical units
-    if( mbMap )
+    // get string length for calculating text extents
+    if ( (ULONG)nLen+nIndex > rOrigStr.Len() )
     {
-        if( pDXAry )
-            for( int i = 0; i < nLen; ++i )
-                pDXAry[i] = ImplDevicePixelToLogicWidth( pDXAry[i] );
-        nWidth = ImplDevicePixelToLogicWidth( nWidth );
+        if ( nIndex < rOrigStr.Len() )
+            nLen = rOrigStr.Len() - nIndex;
+        else
+            nLen = 0;
     }
 
-    if( nWidthFactor > 1 )
+    if ( !nLen )
+        return 0;
+
+    if ( mbNewFont )
     {
-        if( pDXAry )
-            for( int i = 0; i < nLen; ++i )
-                pDXAry[i] /= nWidthFactor;
-        nWidth /= nWidthFactor;
+        if ( !((OutputDevice*)this)->ImplNewFont() )
+            return 0;
+    }
+
+    ImplFontEntry* pFontEntry = mpFontEntry;
+
+    String aStr = rOrigStr;
+    if( pFontEntry->mpConversion )
+        ImplRecodeString( pFontEntry->mpConversion, aStr, nIndex, nLen );
+
+    const sal_Unicode*  pStr = aStr.GetBuffer() + nIndex;
+    const sal_Unicode*  pTempStr = pStr;
+    long                nOffset = 0;
+    xub_StrLen          i;
+
+    // Breiten ermitteln
+    for ( i = 0; i < nLen; i++ )
+    {
+        nOffset += ImplGetCharWidth( *pTempStr );
+        pDXAry[i] = nOffset / mpFontEntry->mnWidthFactor;
+        pTempStr++;
+    }
+
+    // Kerning beruecksichtigen
+    if ( mbKerning )
+        ImplCalcKerning( pStr, nLen, pDXAry, nLen );
+
+    // Breite und Hoehe ermitteln
+    long nWidth = pDXAry[nLen-1];
+
+    // Wenn MapMode gesetzt, dann Werte umrechnen
+    if ( mbMap )
+    {
+        for ( i = 0; i < nLen; i++ )
+            pDXAry[i] = ImplDevicePixelToLogicWidth( pDXAry[i] );
+
+        nWidth = ImplDevicePixelToLogicWidth( nWidth );
     }
 
     return nWidth;
@@ -5531,505 +6888,298 @@ long OutputDevice::GetTextArray( const String& rStr, long* pDXAry,
 
 // -----------------------------------------------------------------------
 
-bool OutputDevice::GetCaretPositions( const XubString& rStr, long* pCaretXArray,
-    xub_StrLen nIndex, xub_StrLen nLen,
-    long* pDXAry, long nLayoutWidth,
-    BOOL bCellBreaking ) const
-{
-    DBG_TRACE( "OutputDevice::GetCaretPositions()" );
-    DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
-
-    if( nIndex >= rStr.Len() )
-        return false;
-    if( (ULONG)nIndex+nLen >= rStr.Len() )
-        nLen = rStr.Len() - nIndex;
-
-    // layout complex text
-    SalLayout* pSalLayout = ImplLayout( rStr, nIndex, nLen,
-        Point(0,0), nLayoutWidth, pDXAry );
-    if( !pSalLayout )
-        return false;
-
-    int nWidthFactor = pSalLayout->GetUnitsPerPixel();
-    pSalLayout->GetCaretPositions( 2*nLen, pCaretXArray );
-    long nWidth = pSalLayout->GetTextWidth();
-    pSalLayout->Release();
-
-    // fixup unknown caret positions
-    int i;
-    for( i = 0; i < 2 * nLen; ++i )
-        if( pCaretXArray[ i ] >= 0 )
-            break;
-    long nXPos = pCaretXArray[ i ];
-    for( i = 0; i < 2 * nLen; ++i )
-    {
-        if( pCaretXArray[ i ] >= 0 )
-            nXPos = pCaretXArray[ i ];
-        else
-            pCaretXArray[ i ] = nXPos;
-    }
-
-    // handle window mirroring
-    if( ((OutputDevice*)this)->ImplHasMirroredGraphics() && IsRTLEnabled() )
-    {
-        for( i = 0; i < 2 * nLen; ++i )
-            pCaretXArray[i] = nWidth - pCaretXArray[i] - 1;
-    }
-
-    // convert from font units to logical units
-    if( mbMap )
-    {
-        for( i = 0; i < 2*nLen; ++i )
-            pCaretXArray[i] = ImplDevicePixelToLogicWidth( pCaretXArray[i] );
-    }
-
-    if( nWidthFactor != 1 )
-    {
-        for( i = 0; i < 2*nLen; ++i )
-            pCaretXArray[i] /= nWidthFactor;
-    }
-
-    // if requested move caret position to cell limits
-    if( bCellBreaking )
-    {
-        ; // TODO
-    }
-
-    return true;
-}
-
-// -----------------------------------------------------------------------
-
 void OutputDevice::DrawStretchText( const Point& rStartPt, ULONG nWidth,
-                                    const String& rStr,
+                                    const String& rOrigStr,
                                     xub_StrLen nIndex, xub_StrLen nLen )
 {
     DBG_TRACE( "OutputDevice::DrawStretchText()" );
     DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
 
     if ( mpMetaFile )
-        mpMetaFile->AddAction( new MetaStretchTextAction( rStartPt, nWidth, rStr, nIndex, nLen ) );
+        mpMetaFile->AddAction( new MetaStretchTextAction( rStartPt, nWidth, rOrigStr, nIndex, nLen ) );
 
     if ( !IsDeviceOutputNecessary() )
         return;
 
-#if defined UNX && !defined USE_JAVA
-    String aStr( rStr );
-    if( meOutDevType == OUTDEV_PRINTER )
+    // get string string length
+    if ( (ULONG)nLen+nIndex > rOrigStr.Len() )
     {
-        if( !mpGraphics )
-            if( !ImplGetGraphics() )
-                return;
-        xub_StrLen nCutStart, nCutStop;
-        aStr = mpGraphics->maGraphicsData.FaxPhoneComment( rStr, nIndex, nLen, nCutStart, nCutStop );
+        if ( nIndex < rOrigStr.Len() )
+            nLen = rOrigStr.Len() - nIndex;
+        else
+            nLen = 0;
     }
-    SalLayout* pSalLayout = ImplLayout( aStr, nIndex, nLen, rStartPt, nWidth );
-#else
-    SalLayout* pSalLayout = ImplLayout( rStr, nIndex, nLen, rStartPt, nWidth );
-#endif
-    if( pSalLayout )
-    {
-        ImplDrawText( *pSalLayout );
-        pSalLayout->Release();
-    }
-}
 
-// -----------------------------------------------------------------------
-
-SalLayout* OutputDevice::ImplLayout( const String& rOrigStr,
-    xub_StrLen nMinIndex, xub_StrLen nLen,
-    const Point& rLogicalPos, long nLogicalWidth, const long* pDXArray ) const
-{
-    SalLayout* pSalLayout = NULL;
+    // Ist die Ausgabe leer, dann mache nichts
+    if ( !nLen )
+        return;
 
 #ifndef REMOTE_APPSERVER
     // we need a graphics
-    if( !mpGraphics )
-        if( !ImplGetGraphics() )
-            return NULL;
+    if ( !mpGraphics )
+    {
+        if ( !ImplGetGraphics() )
+            return;
+    }
+
+    if ( mbInitClipRegion )
+        ImplInitClipRegion();
+    if ( mbOutputClipped )
+        return;
 #else
-    // due to clipping we may get NULL, so don't use return value
-    ImplGetServerGraphics();
+    if ( !ImplGetServerGraphics() )
+        return;
 #endif
 
-    // initialize font if needed
-    if( mbNewFont )
-        if( !(const_cast<OutputDevice&>(*this).ImplNewFont()) )
-            return NULL;
-    if( mbInitFont )
-        const_cast<OutputDevice&>(*this).ImplInitFont();
+    if ( mbNewFont )
+    {
+        if ( !ImplNewFont() )
+            return;
+    }
+    if ( mbInitFont )
+        ImplInitFont();
+    if ( mbInitTextColor )
+        ImplInitTextColor();
 
-    // get string length for calculating extents
-    xub_StrLen nEndIndex = rOrigStr.Len();
-    if( (ULONG)nMinIndex + nLen < nEndIndex )
-        nEndIndex = nMinIndex + nLen;
-
-    // don't bother if there is nothing to do
-    if( nMinIndex >= nEndIndex )
-        return NULL;
-
-    // recode string if needed
     String aStr = rOrigStr;
     if( mpFontEntry->mpConversion )
-        ImplRecodeString( mpFontEntry->mpConversion, aStr, 0, aStr.Len() );
+        ImplRecodeString( mpFontEntry->mpConversion, aStr, nIndex, nLen );
 
-    int nLayoutFlags = 0;
-    if( mnTextLayoutMode & TEXT_LAYOUT_BIDI_RTL )
-        nLayoutFlags |= SAL_LAYOUT_BIDI_RTL;
-    if( mnTextLayoutMode & TEXT_LAYOUT_BIDI_STRONG )
-        nLayoutFlags |= SAL_LAYOUT_BIDI_STRONG;
-    else if( 0 == (mnTextLayoutMode & TEXT_LAYOUT_BIDI_RTL) )
-    {
-        // disable Bidi if no RTL hint and no RTL codes used
-        const xub_Unicode* pStr = aStr.GetBuffer() + nMinIndex;
-        const xub_Unicode* pEnd = aStr.GetBuffer() + nEndIndex;
-        for( ; pStr < pEnd; ++pStr )
-            if( ((*pStr >= 0x0580) && (*pStr < 0x0800))   // middle eastern scripts
-            ||  ((*pStr >= 0xFB18) && (*pStr < 0xFE00))   // hebrew + arabic A presentation forms
-            ||  ((*pStr >= 0xFE70) && (*pStr < 0xFEFF)) ) // arabic presentation forms B
-                break;
-        if( pStr >= pEnd )
-            nLayoutFlags |= SAL_LAYOUT_BIDI_STRONG;
-    }
+    Point aStartPt = ImplLogicToDevicePixel( rStartPt );
+    nWidth = ImplLogicWidthToDevicePixel( nWidth );
 
-    if( mbKerning )
-        nLayoutFlags |= SAL_LAYOUT_KERNING_PAIRS;
-    if( maFont.GetKerning() & KERNING_ASIAN )
-        nLayoutFlags |= SAL_LAYOUT_KERNING_ASIAN;
-    if( maFont.IsVertical() )
-        nLayoutFlags |= SAL_LAYOUT_VERTICAL;
+    // Pointer auf den String-Buffer setzen und um den Index korrigieren
+    const sal_Unicode* pStr = aStr.GetBuffer() + nIndex;
 
-    if( mnTextLayoutMode & TEXT_LAYOUT_ENABLE_LIGATURES )
-        nLayoutFlags |= SAL_LAYOUT_ENABLE_LIGATURES;
-    else if( mnTextLayoutMode & TEXT_LAYOUT_COMPLEX_DISABLED )
-        nLayoutFlags |= SAL_LAYOUT_COMPLEX_DISABLED;
-    else
-    {
-        // disable CTL for non-CTL text
-        const sal_Unicode* pStr = aStr.GetBuffer() + nMinIndex;
-        const sal_Unicode* pEnd = aStr.GetBuffer() + nEndIndex;
-        for( ; pStr < pEnd; ++pStr )
-            if( ((*pStr >= 0x0590) && (*pStr < 0x10A0))
-            ||  ((*pStr >= 0x1100) && (*pStr < 0x1200))   // hangul jamo
-            ||  ((*pStr >= 0x1700) && (*pStr < 0x1900))
-            ||  ((*pStr >= 0xFB1D) && (*pStr < 0xFE00))   // middle east presentation
-            ||  ((*pStr >= 0xFE70) && (*pStr < 0xFEFF)) ) // arabic presentation B
-                break;
-        if( pStr >= pEnd )
-            nLayoutFlags |= SAL_LAYOUT_COMPLEX_DISABLED;
-    }
-
-    if( meTextLanguage ) //TODO: (mnTextLayoutMode & TEXT_LAYOUT_SUBSTITUTE_DIGITS)
-    {
-        // disable character localization when no digits used
-        const sal_Unicode* pBase = aStr.GetBuffer();
-        const sal_Unicode* pStr = pBase + nMinIndex;
-        const sal_Unicode* pEnd = pBase + nEndIndex;
-        for( ; pStr < pEnd; ++pStr )
-        {
-            // TODO: are there non-digit localizations?
-            if( (*pStr >= '0') && (*pStr <= '9') )
-            {
-                // translate characters to local preference
-                sal_Unicode cChar = GetLocalizedChar( *pStr, meTextLanguage );
-                if( cChar != *pStr )
-                    aStr.SetChar( (pStr - pBase), cChar );
-            }
-        }
-    }
-
-    // right align for RTL text, DRAWPOS_REVERSED, RTL window style
-    bool bRightAlign = ((mnTextLayoutMode & TEXT_LAYOUT_BIDI_RTL) != 0);
-    if( mnTextLayoutMode & TEXT_LAYOUT_TEXTORIGIN_LEFT )
-        bRightAlign = false;
-    else if ( mnTextLayoutMode & TEXT_LAYOUT_TEXTORIGIN_RIGHT )
-        bRightAlign = true;
-    // SSA: hack for western office, ie text get right aligned
-    //      for debugging purposes of mirrored UI
-    //static const char* pEnv = getenv( "SAL_RTL_MIRRORTEXT" );    
-    bool bRTLWindow = (((OutputDevice*)this)->ImplHasMirroredGraphics() && IsRTLEnabled());
-    bRightAlign ^= bRTLWindow;
-    if( bRightAlign )
-        nLayoutFlags |= SAL_LAYOUT_RIGHT_ALIGN;
-
-    // set layout options
-    ImplLayoutArgs aLayoutArgs( aStr.GetBuffer(), aStr.Len(), nMinIndex, nEndIndex, nLayoutFlags );
-
-    int nOrientation = mpFontEntry ? mpFontEntry->mnOrientation : 0;
-    aLayoutArgs.SetOrientation( nOrientation );
-
-    Point aPixelPos = ImplLogicToDevicePixel( rLogicalPos );
-
-    long nPixelWidth = 0;
-    if( nLogicalWidth )
-    {
-        nPixelWidth = ImplLogicWidthToDevicePixel( nLogicalWidth );
-        aLayoutArgs.SetLayoutWidth( nPixelWidth );
-    }
-
-    int nLength = nEndIndex - nMinIndex;
-    if( pDXArray && mbMap )
-    {
-        // convert from logical units to font units using a temporary array
-        long* pTempDXAry = (long*)alloca( nLength * sizeof(long) );
-        // using base position for better rounding a.k.a. "dancing characters"
-        int nPixelXOfs = ImplLogicWidthToDevicePixel( rLogicalPos.X() );
-        for( int i = 0; i < nLength; ++i )
-            pTempDXAry[i] = ImplLogicWidthToDevicePixel( rLogicalPos.X() + pDXArray[i] ) - nPixelXOfs;
-
-        pDXArray = pTempDXAry;
-    }
-    aLayoutArgs.SetDXArray( pDXArray );
-
-    // get matching layout object for base font
-    if( mpPDFWriter )
-        pSalLayout = mpPDFWriter->GetTextLayout( aLayoutArgs, &mpFontEntry->maFontSelData );
-
-    if( !pSalLayout )
-        pSalLayout = mpGraphics->GetTextLayout( aLayoutArgs, 0 );
-
-    // layout text
-    if( pSalLayout && !pSalLayout->LayoutText( aLayoutArgs ) )
-    {
-        pSalLayout->Release();
-        pSalLayout = NULL;
-    }
-
-    ImplLayoutRuns aLayoutRuns = aLayoutArgs.maRuns;
-    // do glyph fallback if needed
-    // #105768# avoid fallback for very small font sizes
-    if( mpFontEntry && (mpFontEntry->maFontSelData.mnHeight >= 6)
-    && (pSalLayout && aLayoutArgs.PrepareFallback()) )
-    {
-        // prepare multi level glyph fallback
-        MultiSalLayout* pMultiSalLayout = NULL;
-        aLayoutArgs.mnFlags |= SAL_LAYOUT_FOR_FALLBACK;
-
-        ImplFontSelectData aFontSelData = mpFontEntry->maFontSelData;
-        Size aFontSize( mpFontEntry->maFontSelData.mnWidth, mpFontEntry->maFontSelData.mnHeight );
-
-        for( int nLevel = 1; nLevel < MAX_FALLBACK; ++nLevel )
-        {
-            // find font family suited for this fallback
-            ImplFontEntry* pFallbackFont = mpFontCache->GetFallback( mpFontList,
-                maFont, aFontSize, nLevel, mpOutDevData ? mpOutDevData->mpFirstFontSubstEntry : NULL );
-            if( !pFallbackFont )
-                break;
-
-            // set up fallback font to match the original font
-            // don't fallback to itself
-            aFontSelData.mpFontData = pFallbackFont->maFontSelData.mpFontData;
-            if( mpFontEntry
-             && mpFontEntry->maFontSelData.mpFontData == aFontSelData.mpFontData )
-            {
-                mpFontCache->Release( pFallbackFont );
-                continue;
-            }
-
-            pFallbackFont->mnSetFontFlags = mpGraphics->SetFont( &aFontSelData, nLevel );
-
-            // create and add fallback layout to multilayout
-            aLayoutArgs.ResetPos();
-            SalLayout* pFallback = mpGraphics->GetTextLayout( aLayoutArgs, nLevel );
-            if( pFallback )
-            {
-                if( pFallback->LayoutText( aLayoutArgs ) )
-                {
-                    if( !pMultiSalLayout )
-                        pMultiSalLayout = new MultiSalLayout( *pSalLayout );
-                    pMultiSalLayout->AddFallback( *pFallback,
-                        aLayoutArgs.maRuns, aFontSelData.mpFontData );
-                }
-                else
-                    pFallback->Release();
-            }
-
-            mpFontCache->Release( pFallbackFont );
-
-            // break when this fallback was sufficient
-            if( !aLayoutArgs.PrepareFallback() )
-                break;
-        }
-
-        if( pMultiSalLayout && pMultiSalLayout->LayoutText( aLayoutArgs ) )
-            pSalLayout = pMultiSalLayout;
-
-        // restore orig font settings
-        pSalLayout->InitFont();
-    }
-
-    if( pSalLayout )
-    {
-        // position, justify, etc. the layout
-        aLayoutArgs.maRuns = aLayoutRuns;
-        pSalLayout->AdjustLayout( aLayoutArgs );
-        pSalLayout->DrawBase() = aPixelPos;
-        // adjust to right alignment if necessary
-        if( bRightAlign )
-        {
-            long nRTLOffset;
-            if( pDXArray )
-                nRTLOffset = pDXArray[ nLength-1 ];
-            else if( nPixelWidth )
-                nRTLOffset = nPixelWidth;
-            else
-                nRTLOffset = pSalLayout->GetTextWidth() / pSalLayout->GetUnitsPerPixel();
-            pSalLayout->DrawOffset().X() = -nRTLOffset;
-        }
-    }
-
-    return pSalLayout;
+    // Breiten-Array fuer errechnete Werte allocieren und
+    // mit den Breiten der einzelnen Character fuellen lassen
+    long  aStackAry[128];
+    long* pDXAry = (long*)ImplGetStackBuffer( sizeof(long)*nLen, aStackAry, sizeof( aStackAry ) );
+    ImplFillDXAry( pDXAry, pStr, nLen, (long)nWidth );
+    ImplDrawText( aStartPt.X(), aStartPt.Y(), pStr, nLen, pDXAry );
+    ImplReleaseStackBuffer( pDXAry, aStackAry );
 }
 
 // -----------------------------------------------------------------------
 
-xub_StrLen OutputDevice::GetTextBreak( const String& rStr, long nTextWidth,
-                                       xub_StrLen nIndex, xub_StrLen nLen,
-                                       long nCharExtra, BOOL /*TODO: bCellBreaking*/ ) const
-{
-    DBG_TRACE( "OutputDevice::GetTextBreak()" );
-    DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
-
-    SalLayout* pSalLayout = ImplLayout( rStr, nIndex, nLen );
-    xub_StrLen nRetVal = STRING_LEN;
-    if( pSalLayout )
-    {
-        // convert logical widths into layout units
-        // NOTE: be very careful to avoid rounding errors for nCharExtra case
-        // problem with rounding errors especially for small nCharExtras
-        // TODO: remove when layout units have subpixel granularity
-        long nWidthFactor = pSalLayout->GetUnitsPerPixel();
-        long nSubPixelFactor = (nWidthFactor < 64 ) ? 64 : 1;
-        nTextWidth *= nWidthFactor * nSubPixelFactor;
-        long nTextPixelWidth = ImplLogicWidthToDevicePixel( nTextWidth );
-        long nExtraPixelWidth = 0;
-        if( nCharExtra != 0 )
-        {
-            nCharExtra *= nWidthFactor * nSubPixelFactor;
-            nExtraPixelWidth = ImplLogicWidthToDevicePixel( nCharExtra );
-        }
-        nRetVal = pSalLayout->GetTextBreak( nTextPixelWidth, nExtraPixelWidth, nSubPixelFactor );
-
-        pSalLayout->Release();
-    }
-
-    return nRetVal;
-}
-
-// -----------------------------------------------------------------------
-
-xub_StrLen OutputDevice::GetTextBreak( const String& rStr, long nTextWidth,
-                                       sal_Unicode nHyphenatorChar, xub_StrLen& rHyphenatorPos,
+xub_StrLen OutputDevice::GetTextBreak( const String& rOrigStr, long nTextWidth,
                                        xub_StrLen nIndex, xub_StrLen nLen,
                                        long nCharExtra ) const
 {
     DBG_TRACE( "OutputDevice::GetTextBreak()" );
     DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
 
-    rHyphenatorPos = STRING_LEN;
+    if ( nIndex > rOrigStr.Len() )
+        return 0;
 
-    SalLayout* pSalLayout = ImplLayout( rStr, nIndex, nLen );
-    if( !pSalLayout )
-        return STRING_LEN;
-
-    // convert logical widths into layout units
-    // NOTE: be very careful to avoid rounding errors for nCharExtra case
-    // problem with rounding errors especially for small nCharExtras
-    // TODO: remove when layout units have subpixel granularity
-    long nWidthFactor = pSalLayout->GetUnitsPerPixel();
-    long nSubPixelFactor = (nWidthFactor < 64 ) ? 64 : 1;
-
-    nTextWidth *= nWidthFactor * nSubPixelFactor;
-    long nTextPixelWidth = ImplLogicWidthToDevicePixel( nTextWidth );
-    long nExtraPixelWidth = 0;
-    if( nCharExtra != 0 )
+    if ( mbNewFont )
     {
-        nCharExtra *= nWidthFactor * nSubPixelFactor;
-        nExtraPixelWidth = ImplLogicWidthToDevicePixel( nCharExtra );
+        if ( !((OutputDevice*)this)->ImplNewFont() )
+            return 0;
     }
 
-    // calculate un-hyphenated break position
-    xub_StrLen nRetVal = pSalLayout->GetTextBreak( nTextPixelWidth, nExtraPixelWidth, nSubPixelFactor );
+    long nWidthFactor = 1000;
+    if ( nWidthFactor < mpFontEntry->mnWidthFactor )
+        nWidthFactor = mpFontEntry->mnWidthFactor;
 
-    // calculate hyphenated break position
-    String aHyphenatorStr( &nHyphenatorChar, 1 );
-    xub_StrLen nTempLen = 1;
-    SalLayout* pHyphenatorLayout = ImplLayout( aHyphenatorStr, 0, nTempLen );
-    if( pHyphenatorLayout )
+    nCharExtra *= nWidthFactor;
+
+    if ( mbMap )
     {
-        // calculate subpixel width of hyphenation character
-        long nHyphenatorPixelWidth = pHyphenatorLayout->GetTextWidth() * nSubPixelFactor;
-        pHyphenatorLayout->Release();
+        nTextWidth = ImplLogicWidthToDevicePixel( nTextWidth * 8 );
+        nTextWidth *= (nWidthFactor + 4) / 8;
+        if ( nCharExtra )
+            nCharExtra = ImplLogicWidthToDevicePixel( nCharExtra );
+    }
+    else
+        nTextWidth *= nWidthFactor;
 
-        // calculate hyphenated break position
-        nTextPixelWidth -= nHyphenatorPixelWidth;
-        if( nExtraPixelWidth > 0 )
-            nTextPixelWidth -= nExtraPixelWidth;
+    String aStr = rOrigStr;
+    if( mpFontEntry->mpConversion )
+        ImplRecodeString( mpFontEntry->mpConversion, aStr, nIndex, nLen );
 
-        rHyphenatorPos = pSalLayout->GetTextBreak( nTextPixelWidth, nExtraPixelWidth, nSubPixelFactor );
+    // calc last index position
+    ULONG nLastIndex = (ULONG)nIndex + nLen;
+    if ( nLastIndex > aStr.Len() )
+        nLastIndex = aStr.Len();
 
-        if( rHyphenatorPos > nRetVal )
-            rHyphenatorPos = nRetVal;
+    long nCalcWidth = 0;
+    const sal_Unicode* pStr = aStr.GetBuffer() + nIndex;
+    for(; nIndex < nLastIndex; ++nIndex, ++pStr )
+    {
+        nCalcWidth += (ImplGetCharWidth(*pStr) * nWidthFactor) / mpFontEntry->mnWidthFactor;
+
+        if ( nCalcWidth > nTextWidth )
+            return nIndex;
+
+        // apply kerning
+        if ( mbKerning )
+            nCalcWidth += ImplCalcKerning( pStr, 2, NULL, 0 ) * nWidthFactor;
+        nCalcWidth += nCharExtra;
     }
 
-    pSalLayout->Release();
-    return nRetVal;
+    return STRING_LEN;
+}
+
+// -----------------------------------------------------------------------
+
+xub_StrLen OutputDevice::GetTextBreak( const String& rOrigStr, long nTextWidth,
+                                       sal_Unicode nExtraChar, xub_StrLen& rExtraCharPos,
+                                       xub_StrLen nIndex, xub_StrLen nLen,
+                                       long nCharExtra ) const
+{
+    DBG_TRACE( "OutputDevice::GetTextBreak()" );
+    DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
+
+    if ( nIndex > rOrigStr.Len() )
+        return 0;
+
+    if ( mbNewFont )
+    {
+        if ( !((OutputDevice*)this)->ImplNewFont() )
+            return 0;
+    }
+
+    long nWidthFactor = 1000;
+    if ( mpFontEntry->mnWidthFactor > nWidthFactor )
+        nWidthFactor = mpFontEntry->mnWidthFactor;
+
+    nCharExtra *= nWidthFactor;
+
+    if ( mbMap )
+    {
+        nTextWidth = ImplLogicWidthToDevicePixel( nTextWidth * 8 );
+        nTextWidth *= (nWidthFactor + 4) / 8;
+        if ( nCharExtra )
+            nCharExtra = ImplLogicWidthToDevicePixel( nCharExtra );
+    }
+    else
+        nTextWidth *= nWidthFactor;
+
+    String aStr = rOrigStr;
+    if( mpFontEntry->mpConversion )
+        ImplRecodeString( mpFontEntry->mpConversion, aStr, nIndex, nLen );
+
+    // calc last index position
+    ULONG nLastIndex = (ULONG)nIndex + nLen;
+    if ( nLastIndex > aStr.Len() )
+        nLastIndex = aStr.Len();
+
+    xub_StrLen nIndex2 = STRING_LEN;
+    long nTextWidth2 = nTextWidth;
+    nTextWidth2 -= (ImplGetCharWidth(nExtraChar) * nWidthFactor) / mpFontEntry->mnWidthFactor;
+    nTextWidth2 -= nCharExtra;
+    if ( nTextWidth2 < 0 )
+        nIndex2 = 0;
+
+    long nCalcWidth = 0;
+    const sal_Unicode* pStr = aStr.GetBuffer() + nIndex;
+    for(; nIndex < nLastIndex; ++nIndex, ++pStr )
+    {
+        nCalcWidth += (ImplGetCharWidth(*pStr) * nWidthFactor) / mpFontEntry->mnWidthFactor;
+
+        if ( nCalcWidth > nTextWidth2 )
+        {
+            if ( nIndex2 == STRING_LEN )
+                nIndex2 = nIndex;
+        }
+        if ( nCalcWidth > nTextWidth )
+        {
+            rExtraCharPos = (nIndex2 == STRING_LEN) ? nIndex : nIndex2;
+            return nIndex;
+        }
+
+        // apply kerning
+        if ( mbKerning )
+            nCalcWidth += ImplCalcKerning( pStr, 2, NULL, 0 ) * nWidthFactor;
+        nCalcWidth += nCharExtra;
+    }
+
+    rExtraCharPos = nIndex2;
+    return STRING_LEN;
+}
+
+// -----------------------------------------------------------------------
+
+void OutputDevice::GetCharWidth( sal_Unicode nFirstChar, sal_Unicode nLastChar,
+                                 long* pWidthAry ) const
+{
+    DBG_TRACE( "OutputDevice::GetCharWidth()" );
+    DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
+    DBG_ASSERT( nFirstChar <= nLastChar, "OutputDevice::GetCharWidth(): nFirst > nLast" );
+
+    if ( mbNewFont )
+    {
+        if ( !((OutputDevice*)this)->ImplNewFont() )
+            return;
+    }
+
+    sal_Unicode nCharCount = nLastChar-nFirstChar+1;
+    if ( mbMap )
+    {
+        while ( nCharCount )
+        {
+            sal_Unicode c = nFirstChar;
+            if( mpFontEntry->mpConversion )
+                c = ImplRecodeChar( mpFontEntry->mpConversion, c );
+            *pWidthAry = ImplDevicePixelToLogicWidth( ImplGetCharWidth( c ) ) / mpFontEntry->mnWidthFactor;
+            pWidthAry++;
+            nFirstChar++;
+            nCharCount--;
+        }
+    }
+    else
+    {
+        while ( nCharCount )
+        {
+            sal_Unicode c = nFirstChar;
+            if( mpFontEntry->mpConversion )
+                c = ImplRecodeChar( mpFontEntry->mpConversion, c );
+            *pWidthAry = ImplGetCharWidth( c ) / mpFontEntry->mnWidthFactor;
+            pWidthAry++;
+            nFirstChar++;
+            nCharCount--;
+        }
+    }
 }
 
 // -----------------------------------------------------------------------
 
 void OutputDevice::DrawText( const Rectangle& rRect,
-                             const String& rOrigStr, USHORT nStyle,
-                             MetricVector* pVector, String* pDisplayText )
-
+                             const String& rOrigStr, USHORT nStyle )
 {
-    if( mpOutDevData && mpOutDevData->mpRecordLayout )
-    {
-        pVector = &mpOutDevData->mpRecordLayout->m_aUnicodeBoundRects;
-        pDisplayText = &mpOutDevData->mpRecordLayout->m_aDisplayText;
-    }
-
     DBG_TRACE( "OutputDevice::DrawText( const Rectangle& )" );
     DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
 
     if ( mpMetaFile )
         mpMetaFile->AddAction( new MetaTextRectAction( rRect, rOrigStr, nStyle ) );
 
-    if ( ( !IsDeviceOutputNecessary() && ! pVector ) || !rOrigStr.Len() || rRect.IsEmpty() )
+    if ( !IsDeviceOutputNecessary() || !rOrigStr.Len() || rRect.IsEmpty() )
         return;
 
+    // better call it here because ImplDrawMnemonicLine() won't
 #ifndef REMOTE_APPSERVER
     // we need a graphics
-    if( !mpGraphics && !ImplGetGraphics() )
-        return;
-    if( mbInitClipRegion )
+    if ( !mpGraphics )
+    {
+        if ( !ImplGetGraphics() )
+            return;
+    }
+
+    if ( mbInitClipRegion )
         ImplInitClipRegion();
-    if( mbOutputClipped )
+    if ( mbOutputClipped )
         return;
 #else
-    if( !ImplGetServerGraphics() )
+    if ( !ImplGetServerGraphics() )
         return;
 #endif
 
     Color aOldTextColor;
     Color aOldTextFillColor;
     BOOL  bRestoreFillColor;
-    if ( (nStyle & TEXT_DRAW_DISABLE) && ! pVector )
+    if ( nStyle & TEXT_DRAW_DISABLE )
     {
-        BOOL  bHighContrastBlack = FALSE;
-        BOOL  bHighContrastWhite = FALSE;
-		Color aCol;
-		if( IsBackground() )
-			aCol = GetBackground().GetColor();
-		else
-			// best guess is the face color here
-			// but it may be totally wrong. the background color
-			// was typically already reset
-			aCol = GetSettings().GetStyleSettings().GetFaceColor();
-
-		bHighContrastBlack = aCol.IsDark();
-		bHighContrastWhite = aCol.IsBright() && GetSettings().GetStyleSettings().GetHighContrastMode();
-
         aOldTextColor = GetTextColor();
         if ( IsTextFillColor() )
         {
@@ -6038,18 +7188,11 @@ void OutputDevice::DrawText( const Rectangle& rRect,
         }
         else
             bRestoreFillColor = FALSE;
-        if( bHighContrastBlack )
-            SetTextColor( COL_GREEN );
-        else if( bHighContrastWhite )
-            SetTextColor( COL_LIGHTGREEN );
-        else
-        {
-            SetTextColor( GetSettings().GetStyleSettings().GetLightColor() );
-            Rectangle aRect = rRect;
-            aRect.Move( 1, 1 );
-            DrawText( aRect, rOrigStr, nStyle & ~TEXT_DRAW_DISABLE );
-            SetTextColor( GetSettings().GetStyleSettings().GetShadowColor() );
-        }
+        SetTextColor( GetSettings().GetStyleSettings().GetLightColor() );
+        Rectangle aRect = rRect;
+        aRect.Move( 1, 1 );
+        DrawText( aRect, rOrigStr, nStyle & ~TEXT_DRAW_DISABLE );
+        SetTextColor( GetSettings().GetStyleSettings().GetShadowColor() );
     }
 
     long        nWidth          = rRect.GetWidth();
@@ -6059,7 +7202,6 @@ void OutputDevice::DrawText( const Rectangle& rRect,
         return;
 
     Point       aPos            = rRect.TopLeft();
-
     long        nTextHeight     = GetTextHeight();
     TextAlign   eAlign          = GetTextAlign();
     xub_StrLen  nMnemonicPos    = STRING_NOTFOUND;
@@ -6071,7 +7213,6 @@ void OutputDevice::DrawText( const Rectangle& rRect,
     // Mehrzeiligen Text behandeln wir anders
     if ( nStyle & TEXT_DRAW_MULTILINE )
     {
-
         XubString               aLastLine;
         ImplMultiTextLineInfo   aMultiLineInfo;
         ImplTextLineInfo*       pLineInfo;
@@ -6093,7 +7234,6 @@ void OutputDevice::DrawText( const Rectangle& rRect,
                 {
                     // Letzte Zeile zusammenbauen und kuerzen
                     nFormatLines = nLines-1;
-
                     pLineInfo = aMultiLineInfo.GetLine( nFormatLines );
                     aLastLine = aStr.Copy( pLineInfo->GetIndex() );
                     aLastLine.ConvertLineEnd( LINEEND_LF );
@@ -6148,41 +7288,31 @@ void OutputDevice::DrawText( const Rectangle& rRect,
                     aPos.X() += (nWidth-pLineInfo->GetWidth())/2;
                 xub_StrLen nIndex   = pLineInfo->GetIndex();
                 xub_StrLen nLineLen = pLineInfo->GetLen();
-                DrawText( aPos, aStr, nIndex, nLineLen, pVector, pDisplayText );
-                if ( !(GetSettings().GetStyleSettings().GetOptions() & STYLE_OPTION_NOMNEMONICS) && !pVector )
+                DrawText( aPos, aStr, nIndex, nLineLen );
+                if ( !(GetSettings().GetStyleSettings().GetOptions() & STYLE_OPTION_NOMNEMONICS) )
                 {
                     if ( (nMnemonicPos >= nIndex) && (nMnemonicPos < nIndex+nLineLen) )
                     {
                         long        nMnemonicX;
                         long        nMnemonicY;
-                        long        nMnemonicWidth;
-
-                        long *pCaretXArray = (long*) alloca( 2 * sizeof(long) * nLineLen );
-                        BOOL bRet = GetCaretPositions( aStr, pCaretXArray,
-                                                nIndex, nLineLen);
-                        long lc_x1 = pCaretXArray[2*(nMnemonicPos - nIndex)];
-                        long lc_x2 = pCaretXArray[2*(nMnemonicPos - nIndex)+1];
-                        nMnemonicWidth = ::abs((int)(lc_x1 - lc_x2));
-
+                        xub_Unicode cMnemonic;
                         Point       aTempPos = LogicToPixel( aPos );
-#if (_MSC_VER < 1300)
-                        nMnemonicX = mnOutOffX + aTempPos.X() + ImplLogicWidthToDevicePixel( std::min( lc_x1, lc_x2 ) );
-#else
-                        nMnemonicX = mnOutOffX + aTempPos.X() + ImplLogicWidthToDevicePixel( min( lc_x1, lc_x2 ) );
-#endif
+                        cMnemonic  = aStr.GetChar( nMnemonicPos );
+                        if( mpFontEntry->mpConversion )
+                            cMnemonic = ImplRecodeChar( mpFontEntry->mpConversion, cMnemonic );
+                        nMnemonicX = mnOutOffX + aTempPos.X() + ImplLogicWidthToDevicePixel( GetTextWidth( aStr, nIndex, nMnemonicPos-nIndex ) );
                         nMnemonicY = mnOutOffY + aTempPos.Y() + ImplLogicWidthToDevicePixel( GetFontMetric().GetAscent() );
-                        ImplDrawMnemonicLine( nMnemonicX, nMnemonicY, nMnemonicWidth );
+                        ImplDrawMnemonicLine( nMnemonicX, nMnemonicY, cMnemonic );
                     }
                 }
                 aPos.Y() += nTextHeight;
                 aPos.X() = rRect.Left();
             }
 
-
             // Gibt es noch eine letzte Zeile, dann diese linksbuendig ausgeben,
             // da die Zeile gekuerzt wurde
             if ( aLastLine.Len() )
-                DrawText( aPos, aLastLine, 0, STRING_LEN, pVector, pDisplayText );
+                DrawText( aPos, aLastLine );
 
             // Clipping zuruecksetzen
             if ( nStyle & TEXT_DRAW_CLIP )
@@ -6229,48 +7359,41 @@ void OutputDevice::DrawText( const Rectangle& rRect,
 
         long        nMnemonicX;
         long        nMnemonicY;
-        long        nMnemonicWidth;
+        xub_Unicode cMnemonic;
         if ( nMnemonicPos != STRING_NOTFOUND )
         {
-            long *pCaretXArray = (long*) alloca( 2 * sizeof(long) * aStr.Len() );
-            BOOL bRet = GetCaretPositions( aStr, pCaretXArray, 0, aStr.Len() );
-            long lc_x1 = pCaretXArray[2*(nMnemonicPos)];
-            long lc_x2 = pCaretXArray[2*(nMnemonicPos)+1];
-            nMnemonicWidth = ::abs((int)(lc_x1 - lc_x2));
-
             Point aTempPos = LogicToPixel( aPos );
-#if (_MSC_VER < 1300)
-            nMnemonicX = mnOutOffX + aTempPos.X() + ImplLogicWidthToDevicePixel( std::min(lc_x1, lc_x2) );
-#else
-            nMnemonicX = mnOutOffX + aTempPos.X() + ImplLogicWidthToDevicePixel( min(lc_x1, lc_x2) );
-#endif
+            nMnemonicX = mnOutOffX + aTempPos.X() + ImplLogicWidthToDevicePixel( GetTextWidth( aStr, 0, nMnemonicPos ) );
             nMnemonicY = mnOutOffY + aTempPos.Y() + ImplLogicWidthToDevicePixel( GetFontMetric().GetAscent() );
+            cMnemonic  = aStr.GetChar( nMnemonicPos );
+            if( mpFontEntry->mpConversion )
+                cMnemonic = ImplRecodeChar( mpFontEntry->mpConversion, cMnemonic );
         }
 
         if ( nStyle & TEXT_DRAW_CLIP )
         {
             Push( PUSH_CLIPREGION );
             IntersectClipRegion( rRect );
-            DrawText( aPos, aStr, 0, STRING_LEN, pVector, pDisplayText );
-            if ( !(GetSettings().GetStyleSettings().GetOptions() & STYLE_OPTION_NOMNEMONICS) && !pVector )
+            DrawText( aPos, aStr );
+            if ( !(GetSettings().GetStyleSettings().GetOptions() & STYLE_OPTION_NOMNEMONICS) )
             {
                 if ( nMnemonicPos != STRING_NOTFOUND )
-                    ImplDrawMnemonicLine( nMnemonicX, nMnemonicY, nMnemonicWidth );
+                    ImplDrawMnemonicLine( nMnemonicX, nMnemonicY, cMnemonic );
             }
             Pop();
         }
         else
         {
-            DrawText( aPos, aStr, 0, STRING_LEN, pVector, pDisplayText );
-            if ( !(GetSettings().GetStyleSettings().GetOptions() & STYLE_OPTION_NOMNEMONICS) && !pVector )
+            DrawText( aPos, aStr );
+            if ( !(GetSettings().GetStyleSettings().GetOptions() & STYLE_OPTION_NOMNEMONICS) )
             {
                 if ( nMnemonicPos != STRING_NOTFOUND )
-                    ImplDrawMnemonicLine( nMnemonicX, nMnemonicY, nMnemonicWidth );
+                    ImplDrawMnemonicLine( nMnemonicX, nMnemonicY, cMnemonic );
             }
         }
     }
 
-    if ( nStyle & TEXT_DRAW_DISABLE && !pVector )
+    if ( nStyle & TEXT_DRAW_DISABLE )
     {
         SetTextColor( aOldTextColor );
         if ( bRestoreFillColor )
@@ -6389,7 +7512,6 @@ Rectangle OutputDevice::GetTextRect( const Rectangle& rRect,
     else
         aRect.Bottom() = aRect.Top()+(nTextHeight*nLines)-1;
 
-    aRect.Right()++; // #99188# get rid of rounding problems when using this rect later
     return aRect;
 }
 
@@ -6417,7 +7539,6 @@ String OutputDevice::GetEllipsisString( const String& rOrigStr, long nMaxWidth,
 
     String aStr = rOrigStr;
     xub_StrLen nIndex = GetTextBreak( aStr, nMaxWidth );
-
 
     if ( nIndex != STRING_LEN )
     {
@@ -6502,7 +7623,6 @@ String OutputDevice::GetEllipsisString( const String& rOrigStr, long nMaxWidth,
                                 nLastContent--;
                                 if ( ImplIsCharIn( aStr.GetChar( nLastContent ), pSepChars ) )
                                     break;
-
                             }
                             while ( (nFirstContent < nLastContent) &&
                                     ImplIsCharIn( aStr.GetChar( nLastContent-1 ), pSepChars ) )
@@ -6531,7 +7651,7 @@ String OutputDevice::GetEllipsisString( const String& rOrigStr, long nMaxWidth,
 
 void OutputDevice::DrawCtrlText( const Point& rPos, const XubString& rStr,
                                  xub_StrLen nIndex, xub_StrLen nLen,
-                                 USHORT nStyle, MetricVector* pVector, String* pDisplayText )
+                                 USHORT nStyle )
 {
     DBG_TRACE( "OutputDevice::DrawCtrlText()" );
     DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
@@ -6539,92 +7659,52 @@ void OutputDevice::DrawCtrlText( const Point& rPos, const XubString& rStr,
     if ( !IsDeviceOutputNecessary() || (nIndex >= rStr.Len()) )
         return;
 
-    // better get graphics here because ImplDrawMnemonicLine() will not
+    // Vorsichtshalber hier auch schon Aufrufen, da ImplDrawMnemonicLine()
+    // dies nicht macht
 #ifndef REMOTE_APPSERVER
     // we need a graphics
-    if( !mpGraphics && !ImplGetGraphics() )
-        return;
-    if( mbInitClipRegion )
+    if ( !mpGraphics )
+    {
+        if ( !ImplGetGraphics() )
+            return;
+    }
+
+    if ( mbInitClipRegion )
         ImplInitClipRegion();
     if ( mbOutputClipped )
         return;
 #else
-    if( !ImplGetServerGraphics() )
+    if ( !ImplGetServerGraphics() )
         return;
 #endif
 
-    if( nIndex >= rStr.Len() )
-        return;
-    if( (ULONG)nIndex+nLen >= rStr.Len() )
-        nLen = rStr.Len() - nIndex;
-
     XubString   aStr = rStr;
     xub_StrLen  nMnemonicPos = STRING_NOTFOUND;
-
     long        nMnemonicX;
     long        nMnemonicY;
-    long        nMnemonicWidth;
+    xub_Unicode cMnemonic;
     if ( nStyle & TEXT_DRAW_MNEMONIC )
     {
         aStr = GetNonMnemonicString( aStr, nMnemonicPos );
         if ( nMnemonicPos != STRING_NOTFOUND )
         {
-            if( nMnemonicPos < nIndex )
-                --nIndex;
-            else if( nLen < STRING_LEN )
-            {
-                if( nMnemonicPos < (nIndex+nLen) )
-                    --nLen;
-                DBG_ASSERT( nMnemonicPos < (nIndex+nLen), "Mnemonic underline marker after last character" );
-            }
-            BOOL bInvalidPos = FALSE;
-
-            if( nMnemonicPos >= nLen )
-            {
-                // #106952#
-                // may occur in BiDi-Strings: the '~' is sometimes found behind the last char
-                // due to some strange BiDi text editors
-                // ->place the underline behind the string to indicate a failure
-                bInvalidPos = TRUE;
-                nMnemonicPos = nLen-1;
-            }
-
-            long *pCaretXArray = (long*)alloca( 2 * sizeof(long) * nLen );
-            BOOL bRet = GetCaretPositions( aStr, pCaretXArray, nIndex, nLen );
-            long lc_x1 = pCaretXArray[ 2*(nMnemonicPos - nIndex) ];
-            long lc_x2 = pCaretXArray[ 2*(nMnemonicPos - nIndex)+1 ];
-            nMnemonicWidth = ::abs((int)(lc_x1 - lc_x2));
-
-#if (_MSC_VER < 1300)
-            Point aTempPos( std::min(lc_x1,lc_x2), GetFontMetric().GetAscent() );
-            if( bInvalidPos )  // #106952#, place behind the (last) character
-                aTempPos = Point( std::max(lc_x1,lc_x2), GetFontMetric().GetAscent() );
-#else
-            Point aTempPos( min(lc_x1,lc_x2), GetFontMetric().GetAscent() );
-            if( bInvalidPos )  // #106952#, place behind the (last) character
-                aTempPos = Point( max(lc_x1,lc_x2), GetFontMetric().GetAscent() );
-#endif
-            aTempPos += rPos;
-            aTempPos = LogicToPixel( aTempPos );
-            nMnemonicX = mnOutOffX + aTempPos.X();
-            nMnemonicY = mnOutOffY + aTempPos.Y();
+            if ( nMnemonicPos < nIndex )
+                nIndex--;
+            else if ( (nLen < STRING_LEN) &&
+                      (nMnemonicPos >= nIndex) && (nMnemonicPos < (ULONG)(nIndex+nLen)) )
+                nLen--;
+            Point aTempPos = LogicToPixel( rPos );
+            cMnemonic  = aStr.GetChar( nMnemonicPos );
+            nMnemonicX = mnOutOffX + aTempPos.X() + ImplLogicWidthToDevicePixel( GetTextWidth( aStr, 0, nMnemonicPos ) );
+            nMnemonicY = mnOutOffY + aTempPos.Y() + ImplLogicWidthToDevicePixel( GetFontMetric().GetAscent() );
         }
     }
 
-    if ( nStyle & TEXT_DRAW_DISABLE && ! pVector )
+    if ( nStyle & TEXT_DRAW_DISABLE )
     {
         Color aOldTextColor;
         Color aOldTextFillColor;
         BOOL  bRestoreFillColor;
-        BOOL  bHighContrastBlack = FALSE;
-        BOOL  bHighContrastWhite = FALSE;
-		if( IsBackground() )
-		{
-			Wallpaper aWall = GetBackground();
-			Color aCol = aWall.GetColor();
-			bHighContrastBlack = aCol.IsDark();
-			bHighContrastWhite = aCol.IsBright() && GetSettings().GetStyleSettings().GetHighContrastMode();
-		}
         aOldTextColor = GetTextColor();
         if ( IsTextFillColor() )
         {
@@ -6633,28 +7713,19 @@ void OutputDevice::DrawCtrlText( const Point& rPos, const XubString& rStr,
         }
         else
             bRestoreFillColor = FALSE;
-
-        if( bHighContrastBlack )
-            SetTextColor( COL_GREEN );
-        else if( bHighContrastWhite )
-            SetTextColor( COL_LIGHTGREEN );
-        else
-        {
-            SetTextColor( GetSettings().GetStyleSettings().GetLightColor() );
-            DrawText( Point( rPos.X()+1, rPos.Y()+1 ), aStr, nIndex, nLen );
-            if ( !(GetSettings().GetStyleSettings().GetOptions() & STYLE_OPTION_NOMNEMONICS) )
-            {
-                if ( nMnemonicPos != STRING_NOTFOUND )
-                    ImplDrawMnemonicLine( nMnemonicX+1, nMnemonicY+1, nMnemonicWidth );
-            }
-            SetTextColor( GetSettings().GetStyleSettings().GetShadowColor() );
-        }
-
-        DrawText( rPos, aStr, nIndex, nLen, pVector, pDisplayText );
-        if ( !(GetSettings().GetStyleSettings().GetOptions() & STYLE_OPTION_NOMNEMONICS) && !pVector )
+        SetTextColor( GetSettings().GetStyleSettings().GetLightColor() );
+        DrawText( Point( rPos.X()+1, rPos.Y()+1 ), aStr, nIndex, nLen );
+        if ( !(GetSettings().GetStyleSettings().GetOptions() & STYLE_OPTION_NOMNEMONICS) )
         {
             if ( nMnemonicPos != STRING_NOTFOUND )
-                ImplDrawMnemonicLine( nMnemonicX, nMnemonicY, nMnemonicWidth );
+                ImplDrawMnemonicLine( nMnemonicX+1, nMnemonicY+1, cMnemonic );
+        }
+        SetTextColor( GetSettings().GetStyleSettings().GetShadowColor() );
+        DrawText( rPos, aStr, nIndex, nLen );
+        if ( !(GetSettings().GetStyleSettings().GetOptions() & STYLE_OPTION_NOMNEMONICS) )
+        {
+            if ( nMnemonicPos != STRING_NOTFOUND )
+                ImplDrawMnemonicLine( nMnemonicX, nMnemonicY, cMnemonic );
         }
         SetTextColor( aOldTextColor );
         if ( bRestoreFillColor )
@@ -6662,11 +7733,11 @@ void OutputDevice::DrawCtrlText( const Point& rPos, const XubString& rStr,
     }
     else
     {
-        DrawText( rPos, aStr, nIndex, nLen, pVector, pDisplayText );
-        if ( !(GetSettings().GetStyleSettings().GetOptions() & STYLE_OPTION_NOMNEMONICS) && !pVector )
+        DrawText( rPos, aStr, nIndex, nLen );
+        if ( !(GetSettings().GetStyleSettings().GetOptions() & STYLE_OPTION_NOMNEMONICS) )
         {
             if ( nMnemonicPos != STRING_NOTFOUND )
-                ImplDrawMnemonicLine( nMnemonicX, nMnemonicY, nMnemonicWidth );
+                ImplDrawMnemonicLine( nMnemonicX, nMnemonicY, cMnemonic );
         }
     }
 }
@@ -6739,13 +7810,13 @@ USHORT OutputDevice::GetDevFontCount() const
     DBG_TRACE( "OutputDevice::GetDevFontCount()" );
     DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
 
-    // if we already have a font list we know enough
-    if( mpGetDevFontList )
+    // Wenn wir schon eine Liste der Fonts haben, dann nicht iterieren
+    if ( mpGetDevFontList )
         return (USHORT)mpGetDevFontList->Count();
 
     ((OutputDevice*)this)->mpGetDevFontList = new ImplGetDevFontList;
 
-    // fill font list
+    // Fill Fontlist
     ImplDevFontListData* pFontListData = mpFontList->First();
     while ( pFontListData )
     {
@@ -6777,8 +7848,6 @@ FontInfo OutputDevice::GetDevFont( USHORT nDevFont ) const
     DBG_TRACE( "OutputDevice::GetDevFont()" );
     DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
 
-    ImplInitFontList();
-
     FontInfo    aFontInfo;
     USHORT      nCount = GetDevFontCount();
 
@@ -6802,25 +7871,6 @@ FontInfo OutputDevice::GetDevFont( USHORT nDevFont ) const
 
 // -----------------------------------------------------------------------
 
-BOOL OutputDevice::AddTempDevFont( const String& rFileURL, const String& rFontName )
-{
-    DBG_TRACE( "OutputDevice::AddTempDevFont()" );
-    DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
-
-    ImplInitFontList();
-
-    if( !mpGraphics && !ImplGetGraphics() )
-        return FALSE;
-
-    ImplFontData* pFontData = mpGraphics->AddTempDevFont( rFileURL, rFontName );
-    if( !pFontData )
-        return FALSE;
-    mpFontList->Add( pFontData );
-    return TRUE;
-}
-
-// -----------------------------------------------------------------------
-
 USHORT OutputDevice::GetDevFontSizeCount( const Font& rFont ) const
 {
     DBG_TRACE( "OutputDevice::GetDevFontSizeCount()" );
@@ -6828,7 +7878,8 @@ USHORT OutputDevice::GetDevFontSizeCount( const Font& rFont ) const
 
     XubString aFontName = rFont.GetName();
 
-    // create size list if it doesn't exists yet or the font name differs
+    // Wenn die Liste schon existiert und der FontName sich nicht
+    // unterscheidet, dann brauchen wir Sie nicht neu erzeugen
     if ( mpGetDevSizeList )
     {
         if ( mpGetDevSizeList->GetFontName() == aFontName )
@@ -6842,8 +7893,7 @@ USHORT OutputDevice::GetDevFontSizeCount( const Font& rFont ) const
     else
         ((OutputDevice*)this)->mpGetDevSizeList = new ImplGetDevSizeList( aFontName );
 
-    ImplInitFontList();
-    // add fonts from the font list to the size list
+    // Fonts aus unserer Fontliste in die GetDevFontSizeListe eintragen
     ImplDevFontListData* pFontListData = mpFontList->FindFont( aFontName );
     if ( pFontListData )
     {
@@ -6913,17 +7963,21 @@ FontMetric OutputDevice::GetFontMetric() const
     DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
 
     FontMetric aMetric;
-    if( mbNewFont && !(const_cast<OutputDevice&>(*this).ImplNewFont()) )
-        return aMetric;
+
+    if ( mbNewFont )
+    {
+        if ( !((OutputDevice*)this)->ImplNewFont() )
+            return aMetric;
+    }
 
     ImplFontEntry*      pEntry = mpFontEntry;
     ImplFontMetricData* pMetric = &(pEntry->maMetric);
 
-    // prepare metric
+    // Mappen und StarView Struktur fuellen
     aMetric.Font::operator=( maFont );
 
-    // set aMetric with info from font
-    aMetric.SetName( maFont.GetName() );
+    // Fontdaten ermitteln und setzen
+    aMetric.SetName( pMetric->maName );
     aMetric.SetStyleName( pMetric->maStyleName );
     aMetric.SetSize( PixelToLogic( Size( pMetric->mnWidth, pMetric->mnAscent+pMetric->mnDescent-pMetric->mnLeading ) ) );
     aMetric.SetCharSet( pMetric->meCharSet );
@@ -6938,14 +7992,12 @@ FontMetric OutputDevice::GetFontMetric() const
     if ( !pEntry->mnKernPairs )
         aMetric.SetKerning( aMetric.GetKerning() & ~KERNING_FONTSPECIFIC );
 
-    // we want set correct family and pitch data, if we can't query the
+    // We want set correct Family and Pitch data, if we can't query the
     // data from the system
     if ( (aMetric.GetFamily() == FAMILY_DONTKNOW) ||
          (aMetric.GetPitch() == PITCH_DONTKNOW) )
     {
-        const FontSubstConfigItem::FontNameAttr* pTempFontAttr;
-        const FontSubstConfigItem* pFontSubst = FontSubstConfigItem::get();
-
+        const ImplFontNameAttr* pTempFontAttr;
         String                  aTempName = pMetric->maName;
         String                  aTempShortName;
         String                  aTempFamilyName;
@@ -6953,12 +8005,12 @@ FontMetric OutputDevice::GetFontMetric() const
         FontWeight              eTempWeight = WEIGHT_DONTKNOW;
         FontWidth               eTempWidth = WIDTH_DONTKNOW;
         ImplGetEnglishSearchFontName( aTempName );
-        FontSubstConfigItem::getMapName( aTempName, aTempShortName, aTempFamilyName,
-                                         eTempWeight, eTempWidth, nTempType );
-        pTempFontAttr = pFontSubst->getSubstInfo( aTempName );
+        ImplGetMapName( aTempName, aTempShortName, aTempFamilyName,
+                        eTempWeight, eTempWidth, nTempType );
+        pTempFontAttr = ImplGetFontNameAttr( aTempName );
         if ( !pTempFontAttr && (aTempShortName != aTempName) )
-            pTempFontAttr = pFontSubst->getSubstInfo( aTempShortName );
-        if ( pTempFontAttr && pTempFontAttr->HTMLSubstitutions.size() )
+            pTempFontAttr = ImplGetFontNameAttr( aTempShortName );
+        if ( pTempFontAttr && pTempFontAttr->mpHTMLSubstitution )
         {
             // We use the HTML-Substitution string to overwrite these only
             // for standard fonts - other fonts should be the default, because
@@ -6966,26 +8018,26 @@ FontMetric OutputDevice::GetFontMetric() const
             // for none latin fonts or special fonts).
             if ( aMetric.GetFamily() == FAMILY_DONTKNOW )
             {
-                if ( pTempFontAttr->Type & IMPL_FONT_ATTR_SERIF )
+                if ( pTempFontAttr->mpHTMLSubstitution == aImplHTMLSubsSerif )
                     aMetric.SetFamily( FAMILY_ROMAN );
-                else if ( pTempFontAttr->Type & IMPL_FONT_ATTR_SANSSERIF )
+                else if ( pTempFontAttr->mpHTMLSubstitution == aImplHTMLSubsSansSerif )
                     aMetric.SetFamily( FAMILY_SWISS );
-                else if ( pTempFontAttr->Type & IMPL_FONT_ATTR_TYPEWRITER )
+                else if ( pTempFontAttr->mpHTMLSubstitution == aImplHTMLSubsMonospace )
                     aMetric.SetFamily( FAMILY_MODERN );
-                else if ( pTempFontAttr->Type & IMPL_FONT_ATTR_ITALIC )
+                else if ( pTempFontAttr->mpHTMLSubstitution == aImplHTMLSubsCursive )
                     aMetric.SetFamily( FAMILY_SCRIPT );
-                else if ( pTempFontAttr->Type & IMPL_FONT_ATTR_DECORATIVE )
+                else if ( pTempFontAttr->mpHTMLSubstitution == aImplHTMLSubsFantasy )
                     aMetric.SetFamily( FAMILY_DECORATIVE );
             }
             if ( aMetric.GetPitch() == PITCH_DONTKNOW )
             {
-                if ( pTempFontAttr->Type & IMPL_FONT_ATTR_FIXED )
+                if ( pTempFontAttr->mpHTMLSubstitution == aImplHTMLSubsMonospace )
                     aMetric.SetPitch( PITCH_FIXED );
             }
         }
     }
 
-    // set remaining metric fields
+    // restliche Metricen setzen
     aMetric.mpImplMetric->meType        = pMetric->meType;
     aMetric.mpImplMetric->mbDevice      = pMetric->mbDevice;
     aMetric.mpImplMetric->mnAscent      = ImplDevicePixelToLogicHeight( pMetric->mnAscent+mnEmphasisAscent );
@@ -7003,11 +8055,12 @@ FontMetric OutputDevice::GetFontMetric() const
 
 FontMetric OutputDevice::GetFontMetric( const Font& rFont ) const
 {
-    // select font, query metrics, select original font again
+    // Uebergebenen Font selektieren, Metric abfragen und alten wieder
+    // selektieren
     Font aOldFont = GetFont();
-    const_cast<OutputDevice*>(this)->SetFont( rFont );
+    ((OutputDevice*)this)->SetFont( rFont );
     FontMetric aMetric( GetFontMetric() );
-    const_cast<OutputDevice*>(this)->SetFont( aOldFont );
+    ((OutputDevice*)this)->SetFont( aOldFont );
     return aMetric;
 }
 
@@ -7018,22 +8071,18 @@ ULONG OutputDevice::GetKerningPairCount() const
     DBG_TRACE( "OutputDevice::GetKerningPairCount()" );
     DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
 
-    const_cast<OutputDevice*>(this)->ImplInitKerningPairs();
+    ((OutputDevice*)this)->ImplInitKerningPairs();
     return mpFontEntry->mnKernPairs;
 }
 
 // -----------------------------------------------------------------------
 
-// TODO: best is to get rid of this method completely
 void OutputDevice::GetKerningPairs( ULONG nPairs, KerningPair* pKernPairs ) const
 {
     DBG_TRACE( "OutputDevice::GetKerningPairs()" );
     DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
 
-    // TODO: kerning pairs are no longer used by anybody else in this layer
-    // TODO: remove it from FontEntry and from ImplInitFont()
-    // NOTE: beware that OutputDevice owns the kern array
-    const_cast<OutputDevice*>(this)->ImplInitKerningPairs();
+    ((OutputDevice*)this)->ImplInitKerningPairs();
     if ( nPairs > mpFontEntry->mnKernPairs )
         nPairs = mpFontEntry->mnKernPairs;
     if ( nPairs )
@@ -7042,434 +8091,457 @@ void OutputDevice::GetKerningPairs( ULONG nPairs, KerningPair* pKernPairs ) cons
 
 // -----------------------------------------------------------------------
 
-BOOL OutputDevice::GetGlyphBoundRects( const Point& rOrigin, const String& rStr,
-    int nIndex, int nLen, int nBase, MetricVector& rVector )
+BOOL OutputDevice::GetGlyphBoundRect( xub_Unicode cChar, Rectangle& rRect, BOOL bOptimize )
 {
-    DBG_TRACE( "OutputDevice::GetGlyphBoundRect_CTL()" );
-    DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
-
-    rVector.clear();
-
-    if( nLen == STRING_LEN )
-        nLen = rStr.Len() - nIndex;
-
-    Rectangle aRect;
-    for( int i = 0; i < nLen; i++ )
-    {
-        if( !GetTextBoundRect( aRect, rStr, nBase, nIndex+i, 1 ) )
-            break;
-        aRect.Move( rOrigin.X(), rOrigin.Y() );
-        rVector.push_back( aRect );
-    }
-
-    return (nLen == (int)rVector.size());
-}
-
-// -----------------------------------------------------------------------
-
-BOOL OutputDevice::GetTextBoundRect( Rectangle& rRect,
-    const String& rStr, xub_StrLen nBase, xub_StrLen nIndex,
-    xub_StrLen nLen ) const
-{
-    DBG_TRACE( "OutputDevice::GetTextBoundRect()" );
+    DBG_TRACE( "OutputDevice::GetGlyphBoundRect()" );
     DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
 
     BOOL bRet = FALSE;
-    rRect.SetEmpty();
 
-    SalLayout* pSalLayout = NULL;
-    // calculate offset when nBase!=nIndex
-    long nXOffset = 0;
-    if( nBase != nIndex )
+    // #83068#
+    if( GetFont().GetOrientation() )
     {
-#if (_MSC_VER < 1300)
-        xub_StrLen nStart = std::min( nBase, nIndex );
-        xub_StrLen nOfsLen = std::max( nBase, nIndex ) - nStart;
-#else
-        xub_StrLen nStart = min( nBase, nIndex );
-        xub_StrLen nOfsLen = max( nBase, nIndex ) - nStart;
-#endif
-        pSalLayout = ImplLayout( rStr, nStart, nOfsLen );
-        if( pSalLayout )
+        PolyPolygon aPolyPoly;
+
+        if( GetGlyphOutline( cChar, aPolyPoly, bOptimize ) )
         {
-            nXOffset = pSalLayout->GetTextWidth();
-            nXOffset /= pSalLayout->GetUnitsPerPixel();
-            pSalLayout->Release();
-            // TODO: fix offset calculation for Bidi case
-            if( nBase < nIndex)
-                nXOffset = -nXOffset;
-        }
-    }
-
-    pSalLayout = ImplLayout( rStr, nIndex, nLen );
-    Rectangle aPixelRect;
-    if( pSalLayout )
-    {
-        bRet = pSalLayout->GetBoundRect( *mpGraphics, aPixelRect );
-
-        if( bRet )
-        {
-            int nWidthFactor = pSalLayout->GetUnitsPerPixel();
-
-            if( nWidthFactor > 1 )
-            {
-                double fFactor = 1.0 / nWidthFactor;
-                aPixelRect.Left()
-                    = static_cast< long >(aPixelRect.Left() * fFactor);
-                aPixelRect.Right()
-                    = static_cast< long >(aPixelRect.Right() * fFactor);
-                aPixelRect.Top()
-                    = static_cast< long >(aPixelRect.Top() * fFactor);
-                aPixelRect.Bottom()
-                    = static_cast< long >(aPixelRect.Bottom() * fFactor);
-            }
-
-            Point aRotatedOfs( mnTextOffX, mnTextOffY );
-            aRotatedOfs -= pSalLayout->GetDrawPosition( Point( nXOffset, 0 ) );
-            aPixelRect += aRotatedOfs;
-            rRect = PixelToLogic( aPixelRect );
-            if( mbMap )
-                rRect += Point( maMapRes.mnMapOfsX, maMapRes.mnMapOfsY );
+            rRect = aPolyPoly.GetBoundRect();
+            bRet = TRUE;
         }
 
-        pSalLayout->Release();
-    }
-
-    if( bRet || (OUTDEV_PRINTER == meOutDevType) )
         return bRet;
-
-    // fall back to bitmap method to get the bounding rectangle,
-    // so we need a monochrome virtual device with matching font
-    VirtualDevice aVDev( 1 );
-    Font aFont( GetFont() );
-    aFont.SetShadow( FALSE );
-    aFont.SetOutline( FALSE );
-    aFont.SetRelief( RELIEF_NONE );
-    aFont.SetOrientation( 0 );
-    aFont.SetSize( Size( mpFontEntry->maFontSelData.mnWidth, mpFontEntry->maFontSelData.mnHeight ) );
-    aVDev.SetFont( aFont );
-    aVDev.SetTextAlign( ALIGN_TOP );
-
-    // layout the text on the virtual device
-    pSalLayout = aVDev.ImplLayout( rStr, nIndex, nLen );
-    if( !pSalLayout )
-        return false;
-
-    // make the bitmap big enough
-    // TODO: use factors when it would get too big
-    long nWidth = pSalLayout->GetTextWidth();
-    long nHeight = mpFontEntry->mnLineHeight + mnEmphasisAscent + mnEmphasisDescent;
-    Point aOffset( nWidth/2, 8 );
-    Size aSize( nWidth + 2*aOffset.X(), nHeight + 2*aOffset.Y() );
-    if( !nWidth || !aVDev.SetOutputSizePixel( aSize ) )
-        return false;
-
-    // draw text in black
-    pSalLayout->DrawBase() = aOffset;
-    aVDev.SetTextColor( Color( COL_BLACK ) );
-    aVDev.SetTextFillColor();
-    aVDev.ImplInitTextColor();
-    aVDev.ImplDrawText( *pSalLayout );
-    pSalLayout->Release();
-
-    // find extents using the bitmap
-    Bitmap aBmp = aVDev.GetBitmap( Point(), aSize );
-    BitmapReadAccess* pAcc = aBmp.AcquireReadAccess();
-    if( !pAcc )
-        return FALSE;
-    const BitmapColor aBlack( pAcc->GetBestMatchingColor( Color( COL_BLACK ) ) );
-    const long nW = pAcc->Width();
-    const long nH = pAcc->Height();
-    long nLeft, nRight;
-
-    // find top left point
-    long nTop = 0;
-    for(; nTop < nH; ++nTop )
-    {
-        for( nLeft = 0; nLeft < nW; ++nLeft )
-            if( pAcc->GetPixel( nTop, nLeft ) == aBlack )
-                break;
-        if( nLeft < nW )
-            break;
     }
 
-    // find bottom right point
-    long nBottom = nH;
-    while( --nBottom >= nTop )
+#ifndef REMOTE_APPSERVER
+    if ( mpGraphics || ImplGetGraphics() )
     {
-        for( nRight = nW; --nRight >= 0; )
-            if( pAcc->GetPixel( nBottom, nRight ) == aBlack )
-                break;
-        if( nRight >= 0 )
-            break;
-    }
-    if( nRight < nLeft )
-    {
-        long nX = nRight;
-        nRight = nLeft;
-        nLeft  = nX;
-    }
+        Font    aOldFont( GetFont() );
+        Font    aFont( aOldFont );
+        long    nLeft, nTop, nWidth, nHeight;
+        long    nFontWidth, nFontHeight;
+        long    nOrgWidth, nOrgHeight;
 
-    for( long nY = nTop; nY <= nBottom; ++nY )
-    {
-        // find leftmost point
-        long nX;
-        for( nX = 0; nX < nLeft; ++nX )
-            if( pAcc->GetPixel( nY, nX ) == aBlack )
-                break;
-        nLeft = nX;
-
-        // find rightmost point
-        for( nX = nW; --nX > nRight; )
-            if( pAcc->GetPixel( nY, nX ) == aBlack )
-                break;
-        nRight = nX;
-    }
-
-    aBmp.ReleaseAccess( pAcc );
-
-    if( nTop <= nBottom )
-    {
-        Size aSize( nRight - nLeft + 1, nBottom - nTop + 1 );
-        Point aTopLeft( nLeft, nTop );
-        aTopLeft -= aOffset;
-        // adjust to text alignment
-        aTopLeft.Y()+= mnTextOffY - (mpFontEntry->maMetric.mnAscent + mnEmphasisAscent);
-        // convert to logical coordinates
-        aSize = PixelToLogic( aSize );
-        aTopLeft.X() = ImplDevicePixelToLogicWidth( aTopLeft.X() );
-        aTopLeft.Y() = ImplDevicePixelToLogicHeight( aTopLeft.Y() );
-        rRect = Rectangle( aTopLeft, aSize );
-        return TRUE;
-    }
-
-    return FALSE;
-}
-
-// -----------------------------------------------------------------------
-
-BOOL OutputDevice::GetTextOutline( PolyPolygon& rPolyPoly,
-    const String& rStr, xub_StrLen nBase, xub_StrLen nIndex, xub_StrLen nLen,
-    BOOL bOptimize, const ULONG nTWidth, const long* pDXArray ) const
-{
-    rPolyPoly.Clear();
-    PolyPolyVector aVector;
-    if (!GetTextOutlines(aVector, rStr, nBase, nIndex, nLen, bOptimize, nTWidth, pDXArray ))
-        return false;
-    for (PolyPolyVector::iterator aIt(aVector.begin()); aIt != aVector.end();
-         ++aIt)
-        for (USHORT i = 0; i < aIt->Count(); ++i)
-            rPolyPoly.Insert((*aIt)[i]);
-    return true;
-}
-
-// -----------------------------------------------------------------------
-
-BOOL OutputDevice::GetTextOutlines( PolyPolyVector& rVector,
-    const String& rStr, xub_StrLen nBase, xub_StrLen nIndex,
-    xub_StrLen nLen, BOOL bOptimize, const ULONG nTWidth, const long* pDXArray ) const
-{
-    BOOL bRet = FALSE;
-    rVector.clear();
-    if( nLen == STRING_LEN )
-        nLen = rStr.Len() - nIndex;
-    rVector.reserve( nLen );
-
-    // we want to get the Rectangle in logical units, so to
-    // avoid rounding errors we just size the font in logical units
-    BOOL bOldMap = mbMap;
-    if( bOldMap )
-    {
-        const_cast<OutputDevice&>(*this).mbMap = FALSE;
-        const_cast<OutputDevice&>(*this).mbNewFont = TRUE;
-    }
-
-    SalLayout* pSalLayout = NULL;
-
-    // calculate offset when nBase!=nIndex
-    long nXOffset = 0;
-    if( nBase != nIndex )
-    {
-#if (_MSC_VER < 1300)
-        xub_StrLen nStart = std::min( nBase, nIndex );
-        xub_StrLen nOfsLen = std::max( nBase, nIndex ) - nStart;
-#else
-        xub_StrLen nStart = min( nBase, nIndex );
-        xub_StrLen nOfsLen = max( nBase, nIndex ) - nStart;
-#endif
-        pSalLayout = ImplLayout( rStr, nStart, nOfsLen, Point( 0,0 ), nTWidth, pDXArray );
-        if( pSalLayout )
+        if ( bOptimize )
         {
-            nXOffset = pSalLayout->GetTextWidth();
-            pSalLayout->Release();
-            // TODO: fix offset calculation for Bidi case
-            if( nBase > nIndex)
-                nXOffset = -nXOffset;
-        }
-    }
+            Size aFontSize( LogicToPixel( aFont.GetSize() ) );
 
-    pSalLayout = ImplLayout( rStr, nIndex, nLen, Point( 0,0 ), nTWidth, pDXArray );
-    if( pSalLayout )
-    {
-        int nWidthFactor = pSalLayout->GetUnitsPerPixel();
-        bRet = pSalLayout->GetOutline( *mpGraphics, rVector );
-        pSalLayout->Release();
-
-        if( bRet )
-        {
-            PolyPolyVector::iterator aIt;
-
-            if( nXOffset | mnTextOffX | mnTextOffY )
+            if ( aFontSize.Width() && aFontSize.Height() )
             {
-                Point aRotatedOfs( mnTextOffX*nWidthFactor, mnTextOffY*nWidthFactor );
-                aRotatedOfs -= pSalLayout->GetDrawPosition( Point( nXOffset, 0 ) );
-                for( aIt = rVector.begin(); aIt != rVector.end(); ++aIt )
-                    aIt->Move( aRotatedOfs.X(), aRotatedOfs.Y() );
+                const double fFactor = (double) aFontSize.Width() / aFontSize.Height();
+
+                if ( fFactor < 1.0 )
+                {
+                    aFontSize.Width() = FRound( fFactor * 500. );
+                    aFontSize.Height() = 500;
+                }
+                else
+                {
+                    aFontSize.Width() = 500;
+                    aFontSize.Height() = FRound( 500. / fFactor );
+                }
+
+                aFont.SetSize( PixelToLogic( aFontSize ) );
+                ((OutputDevice*)this)->SetFont( aFont );
+                nFontWidth = aFont.GetSize().Width();
+                nFontHeight = aFont.GetSize().Height();
+                nOrgWidth = aOldFont.GetSize().Width();
+                nOrgHeight = aOldFont.GetSize().Height();
             }
-
-            if( nWidthFactor > 1 )
-            {
-                double fFactor = 1.0 / nWidthFactor;
-                for( aIt = rVector.begin(); aIt != rVector.end(); ++aIt )
-                    aIt->Scale( fFactor, fFactor );
-            }
-        }
-    }
-
-    if( bOldMap )
-    {
-        // restore original font size and map mode
-        const_cast<OutputDevice&>(*this).mbMap = bOldMap;
-        const_cast<OutputDevice&>(*this).mbNewFont = TRUE;
-    }
-
-    if( bRet || (OUTDEV_PRINTER == meOutDevType) )
-        return bRet;
-
-    // fall back to bitmap conversion ------------------------------------------
-
-    // Here, we can savely assume that the mapping between characters and glyphs
-    // is one-to-one.
-
-    // fall back to bitmap method to get the bounding rectangle,
-    // so we need a monochrome virtual device with matching font
-    pSalLayout = ImplLayout(rStr, nIndex, nLen, Point( 0,0 ), nTWidth, pDXArray );
-    if (pSalLayout == 0)
-        return false;
-    long nOrgWidth = pSalLayout->GetTextWidth();
-    long nOrgHeight = mpFontEntry->mnLineHeight + mnEmphasisAscent
-        + mnEmphasisDescent;
-    pSalLayout->Release();
-
-    VirtualDevice aVDev(1);
-
-    Font aFont(GetFont());
-    aFont.SetShadow(false);
-    aFont.SetOutline(false);
-    aFont.SetRelief(RELIEF_NONE);
-    aFont.SetOrientation(0);
-    if( bOptimize )
-    {
-        aFont.SetSize( Size( 0, GLYPH_FONT_HEIGHT ) );
-        aVDev.SetMapMode( MAP_PIXEL );
-    }
-    aVDev.SetFont( aFont );
-    aVDev.SetTextAlign( ALIGN_TOP );
-    aVDev.SetTextColor( Color(COL_BLACK) );
-    aVDev.SetTextFillColor();
-
-    pSalLayout = aVDev.ImplLayout( rStr, nIndex, nLen, Point( 0,0 ), nTWidth, pDXArray );
-    if (pSalLayout == 0)
-        return false;
-    long nWidth = pSalLayout->GetTextWidth();
-    long nHeight = aVDev.mpFontEntry->mnLineHeight + aVDev.mnEmphasisAscent
-        + aVDev.mnEmphasisDescent;
-    pSalLayout->Release();
-
-    if( !nWidth || !nHeight )
-        return TRUE;
-    double fScaleX = static_cast< double >(nOrgWidth) / nWidth;
-    double fScaleY = static_cast< double >(nOrgHeight) / nHeight;
-
-    // calculate offset when nBase!=nIndex
-    // TODO: fix offset calculation for Bidi case
-    nXOffset = 0;
-    if( nBase != nIndex )
-    {
-        xub_StrLen nStart  = ((nBase < nIndex) ? nBase : nIndex);
-        xub_StrLen nLength = ((nBase > nIndex) ? nBase : nIndex) - nStart;
-        pSalLayout = aVDev.ImplLayout( rStr, nStart, nLength, Point( 0,0 ), nTWidth, pDXArray );
-        if( pSalLayout )
-        {
-            nXOffset = pSalLayout->GetTextWidth();
-            pSalLayout->Release();
-            if( nBase > nIndex)
-                nXOffset = -nXOffset;
-        }
-    }
-
-    bRet = true;
-    for (xub_StrLen i = nIndex; i < nIndex + nLen; ++i)
-    {
-        bool bSuccess = false;
-
-        // draw character into virtual device
-        pSalLayout = aVDev.ImplLayout(rStr, i, 1, Point( 0,0 ), nTWidth, pDXArray );
-        if (pSalLayout == 0)
-            return false;
-        long nCharWidth = pSalLayout->GetTextWidth();
-
-        Point aOffset(nCharWidth / 2, 8);
-        Size aSize(nCharWidth + 2 * aOffset.X(), nHeight + 2 * aOffset.Y());
-        bSuccess = (bool)aVDev.SetOutputSizePixel(aSize);
-        if( bSuccess )
-        {
-            // draw glyph into virtual device
-            aVDev.Erase();
-            pSalLayout->DrawBase() += aOffset;
-            pSalLayout->DrawBase() += Point( aVDev.mnTextOffX, aVDev.mnTextOffY );
-            pSalLayout->DrawText( *aVDev.mpGraphics );
-            pSalLayout->Release();
-
-            // convert character image into outline
-            Bitmap aBmp( aVDev.GetBitmap(Point(0, 0), aSize));
-
-            PolyPolygon aPolyPoly;
-            if( !aBmp.Vectorize(aPolyPoly, BMP_VECTORIZE_OUTER | BMP_VECTORIZE_REDUCE_EDGES) )
-                bSuccess = false;
             else
             {
-                // convert units to logical width
-                for (USHORT j = 0; j < aPolyPoly.Count(); ++j)
+                aFont.SetSize( PixelToLogic( Size( 0, 500 ) ) );
+                nFontWidth = nFontHeight = aFont.GetSize().Height();
+                nOrgWidth = nOrgHeight = aOldFont.GetSize().Height();
+            }
+        }
+
+        ((OutputDevice*)this)->SetFont( aFont );
+
+        if ( mbNewFont )
+            ImplNewFont();
+
+        if ( mbInitFont )
+            ImplInitFont();
+
+        if( mpFontEntry->mpConversion )
+            cChar = ImplRecodeChar( mpFontEntry->mpConversion, cChar );
+
+        if ( mpGraphics->GetGlyphBoundRect( cChar, &nLeft, &nTop, &nWidth, &nHeight ) )
+        {
+            if ( bOptimize )
+            {
+                nLeft = ImplDevicePixelToLogicWidth( nLeft ) * nOrgWidth / nFontWidth;
+                nTop = ImplDevicePixelToLogicHeight( nTop ) * nOrgHeight / nFontHeight;
+                nWidth = ImplDevicePixelToLogicWidth( nWidth ) * nOrgWidth / nFontWidth;
+                nHeight = ImplDevicePixelToLogicHeight( nHeight ) * nOrgHeight / nFontHeight;
+            }
+            else
+            {
+                nLeft = ImplDevicePixelToLogicWidth( nLeft );
+                nTop = ImplDevicePixelToLogicHeight( nTop );
+                nWidth = ImplDevicePixelToLogicWidth( nWidth );
+                nHeight = ImplDevicePixelToLogicHeight( nHeight );
+            }
+
+            rRect = Rectangle( Point( nLeft, nTop ), Size( nWidth, nHeight ) );
+            bRet = TRUE;
+        }
+
+        ((OutputDevice*)this)->SetFont( aOldFont );
+    }
+#else
+    if ( mbNewFont )
+        ImplNewFont();
+    if ( mbInitFont )
+        ImplInitFont();
+
+    if( mpFontEntry->mpConversion )
+        cChar = ImplRecodeChar( mpFontEntry->mpConversion, cChar );
+
+    bRet = mpGraphics->GetGlyphBoundRect( cChar, rRect, bOptimize );
+
+    if ( bRet )
+    {
+        rRect = Rectangle( Point( ImplDevicePixelToLogicWidth( rRect.Left() ),
+                                  ImplDevicePixelToLogicHeight( rRect.Top() ) ),
+                           Size( ImplDevicePixelToLogicWidth( rRect.GetWidth() ),
+                                 ImplDevicePixelToLogicHeight( rRect.GetHeight() ) ) );
+    }
+#endif
+    if ( !bRet && (OUTDEV_PRINTER != meOutDevType) )
+    {
+        if ( bOptimize )
+        {
+            if ( mbNewFont )
+                ImplNewFont();
+
+            if ( mbInitFont )
+                ImplInitFont();
+        }
+
+        VirtualDevice*  pVDev = new VirtualDevice( 1 );
+        long            nWidth = ImplGetTextWidth( &cChar, 1, NULL );
+        long            nHeight = mpFontEntry->mnLineHeight+mnEmphasisAscent+mnEmphasisDescent;
+        Point           aOffset( nWidth >> 1, 8 );
+        Size            aSize( nWidth + ( aOffset.X() << 1 ), nHeight + ( aOffset.Y() << 1 ) );
+
+        if ( pVDev->SetOutputSizePixel( aSize ) )
+        {
+            Font    aFont( GetFont() );
+            Bitmap  aBmp;
+
+            aFont.SetShadow( FALSE );
+            aFont.SetOutline( FALSE );
+            aFont.SetRelief( RELIEF_NONE );
+            aFont.SetOrientation( 0 );
+            aFont.SetSize( Size( mpFontEntry->maFontSelData.mnWidth, mpFontEntry->maFontSelData.mnHeight ) );
+
+            pVDev->SetFont( aFont );
+            pVDev->SetTextAlign( ALIGN_TOP );
+            pVDev->SetTextColor( Color( COL_BLACK ) );
+            pVDev->SetTextFillColor();
+            pVDev->ImplNewFont();
+            pVDev->ImplInitFont();
+            pVDev->ImplInitTextColor();
+            pVDev->ImplDrawText( aOffset.X(), aOffset.Y(), &cChar, 1, NULL );
+            aBmp = pVDev->GetBitmap( Point(), aSize );
+            delete pVDev;
+
+            BitmapReadAccess* pAcc = aBmp.AcquireReadAccess();
+
+            if ( pAcc )
+            {
+                const long          nW = pAcc->Width();
+                const long          nW1 = nW - 1L;
+                const long          nH = pAcc->Height();
+                long                nLeft, nTop, nRight, nBottom;
+                const BitmapColor   aBlack( pAcc->GetBestMatchingColor( Color( COL_BLACK ) ) );
+                BOOL                bLineDone;
+
+                nLeft = nW;
+                nTop = nH;
+                nRight = nBottom = -1L;
+
+                for( long nY = 0L; nY < nH; nY++ )
                 {
-                    Polygon& rPoly = aPolyPoly[j];
-                    for (USHORT k = 0; k < rPoly.GetSize(); ++k)
+                    bLineDone = FALSE;
+
+                    for( long nX = 0L; ( nX < nW ) && !bLineDone; nX++ )
                     {
-                        Point& rPt = rPoly[k];
-                        rPt.X() = FRound(ImplDevicePixelToLogicWidth(
-                                             nXOffset + rPt.X() - aOffset.X()
-                                             - aVDev.mnTextOffX)
-                                         * fScaleX);
-                        rPt.Y() = FRound(ImplDevicePixelToLogicHeight(
-                                             rPt.Y() - aOffset.Y()
-                                             - aVDev.mnTextOffY)
-                                         * fScaleY);
+                        if( pAcc->GetPixel( nY, nX ) == aBlack )
+                        {
+                            // find y minimum
+                            if( nY < nTop )
+                                nTop = nY;
+
+                            // find y maximum
+                            if( nY > nBottom )
+                                nBottom = nY;
+
+                            // find x minimum
+                            if( nX < nLeft )
+                                nLeft = nX;
+
+                            // find x maximum (last pixel in line)
+                            for( long nX2 = nW1; nX2 >= nX; nX2-- )
+                            {
+                                if( pAcc->GetPixel( nY, nX2 ) == aBlack )
+                                {
+                                    if( nX2 > nRight )
+                                        nRight = nX2;
+
+                                    bLineDone = TRUE;
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
 
-                if (GetFont().GetOrientation() != 0)
-                    aPolyPoly.Rotate(Point(0, 0),
-                                     GetFont().GetOrientation());
+                if( nLeft < nW && nTop < nH && nRight > -1L && nBottom > -1L )
+                {
+                    nLeft -= aOffset.X(), nTop -= aOffset.Y();
+                    nRight -= aOffset.X(), nBottom -= aOffset.Y();
 
-                // Ignore "empty" glyphs:
-                if (aPolyPoly.Count() > 0)
-                    rVector.push_back(aPolyPoly);
+                    nWidth = ImplDevicePixelToLogicWidth( nRight - nLeft + 1L );
+                    nHeight = ImplDevicePixelToLogicHeight( nBottom - nTop + 1L );
+                    nLeft = ImplDevicePixelToLogicWidth( nLeft );
+                    nTop = ImplDevicePixelToLogicHeight( nTop );
+                    rRect = Rectangle( Point( nLeft, nTop ), Size( nWidth, nHeight ) );
+                    bRet = TRUE;
+                }
+
+                aBmp.ReleaseAccess( pAcc );
+            }
+        }
+        else
+            delete pVDev;
+    }
+
+    if ( !bRet )
+        rRect.SetEmpty();
+
+    return bRet;
+}
+
+// -----------------------------------------------------------------------
+
+BOOL OutputDevice::GetGlyphOutline( xub_Unicode cChar, PolyPolygon& rPolyPoly, BOOL bOptimize )
+{
+    DBG_TRACE( "OutputDevice::GetGlyphOutline()" );
+    DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
+
+    BOOL bRet = FALSE;
+
+#ifndef REMOTE_APPSERVER
+   if ( mpGraphics || ImplGetGraphics() )
+   {
+        Font        aOldFont( GetFont() );
+        Font        aFont( aOldFont );
+        USHORT*     pPolySizes = NULL;
+        SalPoint*   pPoints = NULL;
+        BYTE*       pFlags = NULL;
+        long        nFontWidth, nFontHeight;
+        long        nOrgWidth, nOrgHeight;
+        ULONG       nPolyCount;
+
+        // #83068#
+        aFont.SetOrientation( 0 );
+
+        if( bOptimize )
+        {
+            Size aFontSize( LogicToPixel( aFont.GetSize() ) );
+
+            if( aFontSize.Width() && aFontSize.Height() )
+            {
+                const double fFactor = (double) aFontSize.Width() / aFontSize.Height();
+
+                if ( fFactor < 1.0 )
+                {
+                    aFontSize.Width() = FRound( fFactor * 500. );
+                    aFontSize.Height() = 500;
+                }
+                else
+                {
+                    aFontSize.Width() = 500;
+                    aFontSize.Height() = FRound( 500. / fFactor );
+                }
+
+                aFont.SetSize( PixelToLogic( aFontSize ) );
+                nFontWidth = aFont.GetSize().Width();
+                nFontHeight = aFont.GetSize().Height();
+                nOrgWidth = aOldFont.GetSize().Width();
+                nOrgHeight = aOldFont.GetSize().Height();
+            }
+            else
+            {
+                aFont.SetSize( PixelToLogic( Size( 0, 500 ) ) );
+                nFontWidth = nFontHeight = aFont.GetSize().Height();
+                nOrgWidth = nOrgHeight = aOldFont.GetSize().Height();
             }
         }
 
-        nXOffset += nCharWidth;
-        bRet = bRet && bSuccess;
+        ((OutputDevice*)this)->SetFont( aFont );
+
+        if ( mbNewFont )
+            ImplNewFont();
+
+        if ( mbInitFont )
+            ImplInitFont();
+
+        if( mpFontEntry->mpConversion )
+            cChar = ImplRecodeChar( mpFontEntry->mpConversion, cChar );
+
+        nPolyCount = mpGraphics->GetGlyphOutline( cChar, &pPolySizes, &pPoints, &pFlags );
+        if ( nPolyCount && pPolySizes && pPoints && pFlags )
+        {
+            ULONG nTotalPos = 0UL;
+
+            rPolyPoly.Clear();
+
+            for( ULONG i = 0UL; i < nPolyCount; i++ )
+            {
+                const USHORT nSize = pPolySizes[ i ];
+
+                if( nSize )
+                {
+                    Polygon aPoly( nSize );
+                    Point*  pPt = aPoly.ImplGetPointAry();
+                    BYTE*   pFl = aPoly.ImplGetFlagAry();
+
+                    memcpy( pFl, pFlags + nTotalPos, nSize );
+
+                    for( USHORT n = 0; n < nSize; n++ )
+                    {
+                        const SalPoint& rSalPt = pPoints[ nTotalPos++ ];
+                        Point&          rPt = pPt[ n ];
+
+                        if( bOptimize )
+                        {
+                            rPt.X() = ImplDevicePixelToLogicWidth( rSalPt.mnX ) *
+                                      nOrgWidth / nFontWidth;
+                            rPt.Y() = ImplDevicePixelToLogicHeight( rSalPt.mnY ) *
+                                      nOrgHeight / nFontHeight;
+                        }
+                        else
+                        {
+                            rPt.X() = ImplDevicePixelToLogicWidth( rSalPt.mnX );
+                            rPt.Y() = ImplDevicePixelToLogicHeight( rSalPt.mnY );
+                        }
+                    }
+
+                    rPolyPoly.Insert( aPoly );
+                }
+            }
+
+            bRet = TRUE;
+        }
+
+        delete[] pPolySizes;
+        delete[] pPoints;
+        delete[] pFlags;
+
+        ((OutputDevice*)this)->SetFont( aOldFont );
     }
+#else
+    if ( mbNewFont )
+        ImplNewFont();
+    if ( mbInitFont )
+        ImplInitFont();
+
+    if( mpFontEntry->mpConversion )
+        cChar = ImplRecodeChar( mpFontEntry->mpConversion, cChar );
+
+    bRet = mpGraphics->GetGlyphOutline( cChar, rPolyPoly, bOptimize );
+
+    if ( bRet )
+    {
+        for( USHORT i = 0UL, nCount = rPolyPoly.Count(); i < nCount; i++ )
+        {
+            Polygon& rPoly = rPolyPoly[i];
+
+            for( USHORT n = 0, nSize = rPoly.GetSize(); n < nSize; n++ )
+            {
+                Point& rPt = rPoly[ n ];
+                rPt.X() = ImplDevicePixelToLogicWidth( rPt.X() );
+                rPt.Y() = ImplDevicePixelToLogicHeight( rPt.Y() );
+            }
+        }
+    }
+#endif
+
+    if ( !bRet && (OUTDEV_PRINTER != meOutDevType) )
+    {
+        if ( bOptimize )
+        {
+            if ( mbNewFont )
+                ImplNewFont();
+            if ( mbInitFont )
+                ImplInitFont();
+        }
+
+        Font            aFont( GetFont() );
+        VirtualDevice*  pVDev = new VirtualDevice( 1 );
+        const Size      aFontSize( pVDev->LogicToPixel( Size( 0, GLYPH_FONT_HEIGHT ), MAP_POINT ) );
+        const long      nOrgWidth = ImplGetTextWidth( &cChar, 1, NULL );
+        const long      nOrgHeight = mpFontEntry->mnLineHeight+mnEmphasisAscent+mnEmphasisDescent;
+
+        aFont.SetShadow( FALSE );
+        aFont.SetOutline( FALSE );
+        aFont.SetRelief( RELIEF_NONE );
+        aFont.SetOrientation( 0 );
+        aFont.SetSize( aFontSize );
+        pVDev->SetFont( aFont );
+        pVDev->SetTextAlign( ALIGN_TOP );
+        pVDev->SetTextColor( Color( COL_BLACK ) );
+        pVDev->SetTextFillColor();
+        pVDev->ImplNewFont();
+        pVDev->ImplInitFont();
+        pVDev->ImplInitTextColor();
+
+        const long      nWidth = pVDev->ImplGetTextWidth( &cChar, 1, NULL );
+        const long      nHeight = pVDev->mpFontEntry->mnLineHeight+mnEmphasisAscent+mnEmphasisDescent;
+        const Point     aOffset( nWidth >> 1, 8 );
+        const Size      aSize( nWidth + ( aOffset.X() << 1 ), nHeight + ( aOffset.Y() << 1 ) );
+        const double    fScaleX = ( nOrgWidth && nWidth )  ? ( (double) nOrgWidth / nWidth ) : 0.0;
+        const double    fScaleY = ( nOrgHeight && nHeight ) ?  ( (double) nOrgHeight / nHeight ) : 0.0;
+
+        if ( pVDev->SetOutputSizePixel( aSize ) )
+        {
+            Bitmap  aBmp;
+
+            pVDev->ImplDrawText( aOffset.X(), aOffset.Y(), &cChar, 1, NULL );
+            aBmp = pVDev->GetBitmap( Point(), aSize );
+            delete pVDev;
+
+            if( aBmp.Vectorize( rPolyPoly, BMP_VECTORIZE_OUTER | BMP_VECTORIZE_REDUCE_EDGES ) )
+            {
+                const long nOffX = aOffset.X(), nOffY = aOffset.Y();
+
+                for( USHORT i = 0UL, nCount = rPolyPoly.Count(); i < nCount; i++ )
+                {
+                    Polygon& rPoly = rPolyPoly[ i ];
+
+                    for( USHORT n = 0, nSize = rPoly.GetSize(); n < nSize; n++ )
+                    {
+                        Point& rPt = rPoly[ n ];
+                        rPt.X() = FRound( ImplDevicePixelToLogicWidth( rPt.X() - nOffX  ) * fScaleX );
+                        rPt.Y() = FRound( ImplDevicePixelToLogicHeight( rPt.Y() - nOffY ) * fScaleY );
+                    }
+                }
+
+                bRet = TRUE;
+            }
+        }
+        else
+            delete pVDev;
+    }
+
+    if( !bRet )
+        rPolyPoly = PolyPolygon();
+    // #83068#
+    else if( GetFont().GetOrientation() )
+        rPolyPoly.Rotate( Point(), GetFont().GetOrientation() );
 
     return bRet;
 }
@@ -7482,16 +8554,22 @@ BOOL OutputDevice::GetFontCharMap( FontCharMap& rFontCharMap ) const
 
 #ifndef REMOTE_APPSERVER
     // we need a graphics
-    if( !mpGraphics && !ImplGetGraphics() )
-        return FALSE;
+    if ( !mpGraphics )
+    {
+        if ( !(const_cast<OutputDevice&>(*this).ImplGetGraphics()) )
+            return FALSE;
+    }
 #else
-    ImplGetServerGraphics();
+    // Da wegen Clipping hier NULL zurueckkommen kann, koennen wir nicht
+    // den Rueckgabewert nehmen
+    const_cast<OutputDevice&>(*this).ImplGetServerGraphics();
 #endif
 
-    if( mbNewFont )
+    if ( mbNewFont )
         const_cast<OutputDevice&>(*this).ImplNewFont();
-    if( mbInitFont )
+    if ( mbInitFont )
         const_cast<OutputDevice&>(*this).ImplInitFont();
+
     if( !mpFontEntry )
         return FALSE;
 

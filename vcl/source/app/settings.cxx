@@ -33,7 +33,7 @@
  *  MA  02111-1307  USA
  *  
  *  =================================================
- *  Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
+ *  Modified June 2003 by Patrick Luby. SISSL Removed. NeoOffice is
  *  distributed under GPL only under modification term 3 of the LGPL.
  *
  *  Contributor(s): _______________________________________
@@ -63,10 +63,6 @@
 #include <i18nhelp.hxx>
 #endif
 
-#ifndef _VCL_FONTCFG_HXX
-#include <fontcfg.hxx>
-#endif
-
 #include <unohelp.hxx>
 #ifndef _UNOTOOLS_LOCALEDATAWRAPPER_HXX
 #include <unotools/localedatawrapper.hxx>
@@ -74,24 +70,6 @@
 #ifndef _UNOTOOLS_COLLATORWRAPPER_HXX
 #include <unotools/collatorwrapper.hxx>
 #endif
-#ifndef _UNOTOOLS_CONFIGNODE_HXX_
-#include <unotools/confignode.hxx>
-#endif
-
-#if defined UNX && !defined USE_JAVA
-#include <prex.h>
-#include <postx.h>
-#include <dtint.hxx>
-#include <stdio.h>
-#endif
-
-#ifdef WNT
-#include <tools/prewin.h>
-#include <windows.h>
-#include <tools/postwin.h>
-#endif
-
-using namespace rtl;
 
 #pragma hdrstop
 
@@ -471,8 +449,6 @@ ImplStyleData::ImplStyleData()
     mnSelectionOptions          = 0;
     mnDisplayOptions            = 0;
     mnOptions                   = 0;
-    mnAutoMnemonic				= 1;
-    mnToolbarIconSize			= STYLE_TOOLBAR_ICONSIZE_UNKNOWN;
 
     SetStandardStyles();
 }
@@ -508,7 +484,6 @@ ImplStyleData::ImplStyleData( const ImplStyleData& rData ) :
     maDeactiveBorderColor( rData.maDeactiveBorderColor ),
     maMenuColor( rData.maMenuColor ),
     maMenuBarColor( rData.maMenuBarColor ),
-    maMenuBorderColor( rData.maMenuBorderColor ),
     maMenuTextColor( rData.maMenuTextColor ),
     maMenuHighlightColor( rData.maMenuHighlightColor ),
     maMenuHighlightTextColor( rData.maMenuHighlightTextColor ),
@@ -532,8 +507,7 @@ ImplStyleData::ImplStyleData( const ImplStyleData& rData ) :
     maRadioCheckFont( rData.maRadioCheckFont ),
     maPushButtonFont( rData.maPushButtonFont ),
     maFieldFont( rData.maFieldFont ),
-    maIconFont( rData.maIconFont ),
-	maFontColor( rData.maFontColor )
+    maIconFont( rData.maIconFont )
 {
     mnRefCount                  = 1;
     mnBorderSize                = rData.mnBorderSize;
@@ -561,12 +535,6 @@ ImplStyleData::ImplStyleData( const ImplStyleData& rData ) :
     mnSelectionOptions          = rData.mnSelectionOptions;
     mnDisplayOptions            = rData.mnDisplayOptions;
     mnOptions                   = rData.mnOptions;
-	mnHighContrast				= rData.mnHighContrast;
-	mnUseSystemUIFonts			= rData.mnUseSystemUIFonts;
-	mnUseFlatMenues 			= rData.mnUseFlatMenues;
-    mnAutoMnemonic				= rData.mnAutoMnemonic;
-    mnUseImagesInMenus			= rData.mnUseImagesInMenus;
-    mnToolbarIconSize			= rData.mnToolbarIconSize;
 }
 
 // -----------------------------------------------------------------------
@@ -575,12 +543,18 @@ void ImplStyleData::SetStandardStyles()
 {
 #ifdef USE_JAVA
     Font aStdFont( FAMILY_SWISS, Size( 0, 12 ) );
-#else	// USE_JAVA
+#else
     Font aStdFont( FAMILY_SWISS, Size( 0, 8 ) );
-#endif	// USE_JAVA
+#endif
     aStdFont.SetCharSet( gsl_getSystemTextEncoding() );
     aStdFont.SetWeight( WEIGHT_NORMAL );
-    aStdFont.SetName( vcl::DefaultFontConfigItem::get()->getUserInterfaceFont(LANGUAGE_ENGLISH) );
+#ifdef USE_JAVA 
+    // Use Dialog font as it is in every Java implementation and should be
+    // able to handle Asian characters
+    aStdFont.SetName( XubString( RTL_CONSTASCII_USTRINGPARAM( "Dialog" ) ) );
+#else
+    aStdFont.SetName( XubString( RTL_CONSTASCII_USTRINGPARAM( "Andale Sans UI;Tahoma;Arial Unicode MS;Interface User;Geneva;WarpSans;Dialog;Swiss;Lucida;Helvetica;Charcoal;Chicago;Arial;MS Sans Serif;Helv;Times;Times New Roman;Interface System" ) ) );
+#endif
     maAppFont                   = aStdFont;
     maHelpFont                  = aStdFont;
     maMenuFont                  = aStdFont;
@@ -594,7 +568,11 @@ void ImplStyleData::SetStandardStyles()
     maIconFont                  = aStdFont;
     maFloatTitleFont            = aStdFont;
     aStdFont.SetWeight( WEIGHT_BOLD );
-    aStdFont.SetName( vcl::DefaultFontConfigItem::get()->getUserInterfaceFont(LANGUAGE_ENGLISH) );
+#ifdef USE_JAVA
+    aStdFont.SetName( XubString( RTL_CONSTASCII_USTRINGPARAM( "Andale Sans UI;Lucida Grande;Tahoma;Arial Unicode MS;Interface User;Charcoal;Chicago;Geneva;WarpSans;Dialog;Swiss;Lucida;Helvetica;Arial;MS Sans Serif;Helv;Times;Times New Roman;Interface System" ) ) );
+#else
+    aStdFont.SetName( XubString( RTL_CONSTASCII_USTRINGPARAM( "Andale Sans UI;Tahoma;Arial Unicode MS;Interface User;Charcoal;Chicago;Geneva;WarpSans;Dialog;Swiss;Lucida;Helvetica;Arial;MS Sans Serif;Helv;Times;Times New Roman;Interface System" ) ) );
+#endif
     maTitleFont                 = aStdFont;
 
     maFaceColor                 = Color( COL_LIGHTGRAY );
@@ -625,7 +603,6 @@ void ImplStyleData::SetStandardStyles()
     maDeactiveBorderColor       = Color( COL_LIGHTGRAY );
     maMenuColor                 = Color( COL_LIGHTGRAY );
     maMenuBarColor              = Color( COL_LIGHTGRAY );
-    maMenuBorderColor           = Color( COL_LIGHTGRAY );
     maMenuTextColor             = Color( COL_BLACK );
     maMenuHighlightColor        = Color( COL_BLUE );
     maMenuHighlightTextColor    = Color( COL_WHITE );
@@ -637,7 +614,6 @@ void ImplStyleData::SetStandardStyles()
     maLinkColor                 = Color( COL_BLUE );
     maVisitedLinkColor          = Color( COL_RED );
     maHighlightLinkColor        = Color( COL_LIGHTBLUE );
-	maFontColor					= Color( COL_BLACK );
 
     mnRadioButtonStyle         &= ~STYLE_RADIOBUTTON_STYLE;
     mnCheckBoxStyle            &= ~STYLE_CHECKBOX_STYLE;
@@ -650,10 +626,6 @@ void ImplStyleData::SetStandardStyles()
     mnFloatTitleHeight          = 13;
     mnTearOffTitleHeight        = 8;
     mnMenuBarHeight             = 14;
-	mnHighContrast				= 0;
-	mnUseSystemUIFonts			= 0;
-	mnUseFlatMenues 			= 0;
-	mnUseImagesInMenus			= (USHORT)TRUE;
 }
 
 // -----------------------------------------------------------------------
@@ -679,13 +651,12 @@ void ImplStyleData::SetStandardWinStyles()
 void ImplStyleData::SetStandardOS2Styles()
 {
 #ifdef USE_JAVA 
-    Font aStdFont( FAMILY_SWISS, Size( 0, 12 ) );
+    SetStandardStyles();
 #else	// USE_JAVA
     Font aStdFont( FAMILY_SWISS, Size( 0, 9 ) );
-#endif	// USE_JAVA
     aStdFont.SetCharSet( gsl_getSystemTextEncoding() );
     aStdFont.SetWeight( WEIGHT_NORMAL );
-    aStdFont.SetName( vcl::DefaultFontConfigItem::get()->getUserInterfaceFont(LANGUAGE_ENGLISH) );
+    aStdFont.SetName( XubString( RTL_CONSTASCII_USTRINGPARAM( "Andale Sans UI;Tahoma;Arial Unicode MS;Interface User;WarpSans;Geneva;Dialog;Swiss;Lucida;Helvetica;Charcoal;Chicago;Arial;MS Sans Serif;Helv;Times;Times New Roman;Interface System" ) ) );
     maAppFont                   = aStdFont;
     maHelpFont                  = aStdFont;
     maToolFont                  = aStdFont;
@@ -698,9 +669,10 @@ void ImplStyleData::SetStandardOS2Styles()
     maIconFont                  = aStdFont;
     maFloatTitleFont            = aStdFont;
     aStdFont.SetWeight( WEIGHT_BOLD );
-    aStdFont.SetName( vcl::DefaultFontConfigItem::get()->getUserInterfaceFont(LANGUAGE_ENGLISH) );
+    aStdFont.SetName( XubString( RTL_CONSTASCII_USTRINGPARAM( "Andale Sans UI;Tahoma;Arial Unicode MS;Interface User;WarpSans;Charcoal;Chicago;Geneva;Dialog;Swiss;Lucida;Helvetica;Arial;MS Sans Serif;Helv;Times;Times New Roman;Interface System" ) ) );
     maMenuFont                  = aStdFont;
     maTitleFont                 = aStdFont;
+#endif	// USE_JAVA
 
     maFaceColor                 = Color( COL_LIGHTGRAY );
     maCheckedColor              = Color( 0xCC, 0xCC, 0xCC );
@@ -730,7 +702,6 @@ void ImplStyleData::SetStandardOS2Styles()
     maDeactiveBorderColor       = Color( COL_LIGHTGRAY );
     maMenuColor                 = Color( COL_LIGHTGRAY );
     maMenuBarColor              = Color( COL_LIGHTGRAY );
-    maMenuBorderColor           = Color( COL_LIGHTGRAY );
     maMenuTextColor             = Color( COL_BLACK );
     maMenuHighlightColor        = Color( COL_BLUE );
     maMenuHighlightTextColor    = Color( COL_WHITE );
@@ -756,10 +727,6 @@ void ImplStyleData::SetStandardOS2Styles()
     mnFloatTitleHeight          = 13;
     mnTearOffTitleHeight        = 8;
     mnMenuBarHeight             = 14;
-	mnHighContrast				= 0;
-	mnUseSystemUIFonts			= 0;
-	mnUseFlatMenues 			= 0;
-	mnUseImagesInMenus			= (USHORT)TRUE;	
 }
 
 // -----------------------------------------------------------------------
@@ -767,13 +734,12 @@ void ImplStyleData::SetStandardOS2Styles()
 void ImplStyleData::SetStandardMacStyles()
 {
 #ifdef USE_JAVA 
-    Font aStdFont( FAMILY_SWISS, Size( 0, 12 ) );
+    SetStandardStyles();
 #else	// USE_JAVA
     Font aStdFont( FAMILY_SWISS, Size( 0, 8 ) );
-#endif	// USE_JAVA
     aStdFont.SetCharSet( gsl_getSystemTextEncoding() );
     aStdFont.SetWeight( WEIGHT_NORMAL );
-    aStdFont.SetName( vcl::DefaultFontConfigItem::get()->getUserInterfaceFont(LANGUAGE_ENGLISH) );
+    aStdFont.SetName( XubString( RTL_CONSTASCII_USTRINGPARAM( "Andale Sans UI;Tahoma;Arial Unicode MS;Interface User;Geneva;WarpSans;Dialog;Swiss;Lucida;Helvetica;Charcoal;Chicago;Arial;MS Sans Serif;Helv;Times;Times New Roman;Interface System" ) ) );
     maAppFont                   = aStdFont;
     maHelpFont                  = aStdFont;
     maToolFont                  = aStdFont;
@@ -785,13 +751,14 @@ void ImplStyleData::SetStandardMacStyles()
     maFieldFont                 = aStdFont;
     maIconFont                  = aStdFont;
     maFloatTitleFont            = aStdFont;
-    aStdFont.SetName( vcl::DefaultFontConfigItem::get()->getUserInterfaceFont(LANGUAGE_ENGLISH) );
+    aStdFont.SetName( XubString( RTL_CONSTASCII_USTRINGPARAM( "Andale Sans UI;Tahoma;Arial Unicode MS;Interface User;Charcoal;Chicago;Geneva;WarpSans;Dialog;Swiss;Lucida;Helvetica;Arial;MS Sans Serif;Helv;Times;Times New Roman;Interface System" ) ) );
 //    aStdFont.SetWeight( WEIGHT_BOLD );
     maMenuFont                  = aStdFont;
     maTitleFont                 = aStdFont;
 //    maPushButtonFont            = aStdFont;
 //    maGroupFont                 = aStdFont;
 //    maLabelFont                 = aStdFont;
+#endif	// USE_JAVA
 
     maFaceColor                 = Color( COL_LIGHTGRAY );
     maCheckedColor              = Color( 0x99, 0x99, 0x99 );
@@ -821,7 +788,6 @@ void ImplStyleData::SetStandardMacStyles()
     maDeactiveBorderColor       = Color( COL_LIGHTGRAY );
     maMenuColor                 = Color( COL_LIGHTGRAY );
     maMenuBarColor              = Color( COL_LIGHTGRAY );
-    maMenuBorderColor           = Color( COL_LIGHTGRAY );
     maMenuTextColor             = Color( COL_BLACK );
     maMenuHighlightColor        = Color( COL_BLUE );
     maMenuHighlightTextColor    = Color( COL_WHITE );
@@ -846,10 +812,6 @@ void ImplStyleData::SetStandardMacStyles()
     mnFloatTitleHeight          = 12;
     mnTearOffTitleHeight        = 7;
     mnMenuBarHeight             = 14;
-	mnHighContrast				= 0;
-	mnUseSystemUIFonts			= 0;
-	mnUseFlatMenues 			= 0;
-	mnUseImagesInMenus			= (USHORT)TRUE;
 }
 
 // -----------------------------------------------------------------------
@@ -917,7 +879,6 @@ void StyleSettings::Set3DColors( const Color& rColor )
     CopyData();
     mpData->maFaceColor         = rColor;
     mpData->maLightBorderColor  = rColor;
-    mpData->maMenuBorderColor   = rColor;
     mpData->maDarkShadowColor   = Color( COL_BLACK );
     if ( rColor != Color( COL_LIGHTGRAY ) )
     {
@@ -981,7 +942,6 @@ void StyleSettings::SetStandardUnixStyles()
     mpData->SetStandardUnixStyles();
 }
 
-
 // -----------------------------------------------------------------------
 
 const StyleSettings& StyleSettings::operator =( const StyleSettings& rSet )
@@ -1022,7 +982,6 @@ BOOL StyleSettings::operator ==( const StyleSettings& rSet ) const
         return TRUE;
 
     if ( (mpData->mnOptions                 == rSet.mpData->mnOptions)                  &&
-         (mpData->mnAutoMnemonic			== rSet.mpData->mnAutoMnemonic)				&&
          (mpData->mnLogoDisplayTime         == rSet.mpData->mnLogoDisplayTime)          &&
          (mpData->mnDragFullOptions         == rSet.mpData->mnDragFullOptions)          &&
          (mpData->mnAnimationOptions        == rSet.mpData->mnAnimationOptions)         &&
@@ -1047,9 +1006,6 @@ BOOL StyleSettings::operator ==( const StyleSettings& rSet ) const
          (mpData->mnCheckBoxStyle           == rSet.mpData->mnCheckBoxStyle)            &&
          (mpData->mnPushButtonStyle         == rSet.mpData->mnPushButtonStyle)          &&
          (mpData->mnTabControlStyle         == rSet.mpData->mnTabControlStyle)          &&
-         (mpData->mnHighContrast			== rSet.mpData->mnHighContrast)             &&
-         (mpData->mnUseSystemUIFonts		== rSet.mpData->mnUseSystemUIFonts)         &&
-         (mpData->mnUseFlatMenues   		== rSet.mpData->mnUseFlatMenues)            &&
          (mpData->maFaceColor               == rSet.mpData->maFaceColor)                &&
          (mpData->maCheckedColor            == rSet.mpData->maCheckedColor)             &&
          (mpData->maLightColor              == rSet.mpData->maLightColor)               &&
@@ -1078,7 +1034,6 @@ BOOL StyleSettings::operator ==( const StyleSettings& rSet ) const
          (mpData->maDeactiveBorderColor     == rSet.mpData->maDeactiveBorderColor)      &&
          (mpData->maMenuColor               == rSet.mpData->maMenuColor)                &&
          (mpData->maMenuBarColor            == rSet.mpData->maMenuBarColor)             &&
-         (mpData->maMenuBorderColor         == rSet.mpData->maMenuBorderColor)          &&
          (mpData->maMenuTextColor           == rSet.mpData->maMenuTextColor)            &&
          (mpData->maMenuHighlightColor      == rSet.mpData->maMenuHighlightColor)       &&
          (mpData->maMenuHighlightTextColor  == rSet.mpData->maMenuHighlightTextColor)   &&
@@ -1102,9 +1057,7 @@ BOOL StyleSettings::operator ==( const StyleSettings& rSet ) const
          (mpData->maRadioCheckFont          == rSet.mpData->maRadioCheckFont)           &&
          (mpData->maPushButtonFont          == rSet.mpData->maPushButtonFont)           &&
          (mpData->maFieldFont               == rSet.mpData->maFieldFont)                &&
-         (mpData->maIconFont                == rSet.mpData->maIconFont)					&&
-         (mpData->mnUseImagesInMenus		== rSet.mpData->mnUseImagesInMenus)			&&
-		 (mpData->maFontColor				== rSet.mpData->maFontColor ))
+         (mpData->maIconFont                == rSet.mpData->maIconFont) )
         return TRUE;
     else
         return FALSE;
@@ -1116,7 +1069,6 @@ ImplMiscData::ImplMiscData()
 {
     mnRefCount                  = 1;
     mnTwoDigitYearStart         = 1930;
-    mnEnableATT					= ~0;
 }
 
 // -----------------------------------------------------------------------
@@ -1125,7 +1077,6 @@ ImplMiscData::ImplMiscData( const ImplMiscData& rData )
 {
     mnRefCount                  = 1;
     mnTwoDigitYearStart         = rData.mnTwoDigitYearStart;
-    mnEnableATT					= rData.mnEnableATT;
 }
 
 // -----------------------------------------------------------------------
@@ -1196,162 +1147,10 @@ BOOL MiscSettings::operator ==( const MiscSettings& rSet ) const
     if ( mpData == rSet.mpData )
         return TRUE;
 
-    if ( (mpData->mnTwoDigitYearStart   == rSet.mpData->mnTwoDigitYearStart ) &&
-         (mpData->mnEnableATT			== rSet.mpData->mnEnableATT ) )
+    if ( (mpData->mnTwoDigitYearStart   == rSet.mpData->mnTwoDigitYearStart ) )
         return TRUE;
     else
         return FALSE;
-}
-
-// -----------------------------------------------------------------------
-
-BOOL MiscSettings::GetEnableATToolSupport() const
-{
-#ifndef REMOTE_APPSERVER
-    if( mpData->mnEnableATT == (USHORT)~0 )
-    {
-#if defined UNX && !defined USE_JAVA
-        mpData->mnEnableATT = 0;
-
-        DtIntegrator* pIntegrator = DtIntegrator::CreateDtIntegrator( NULL );
-        static const char* pEnv = getenv("SAL_ACCESSIBILITY_ENABLED" );
-        if( ( pIntegrator && pIntegrator->GetDtType() == DtGNOME ) ||
-            ( pEnv && *pEnv ) )
-        {
-            char buf[16];
-            // use 2 shells to suppress the eventual "gcontool-2 not found" message
-            // of the shell trying to execute the command
-            FILE* fp = popen( "/bin/sh 2>/dev/null -c \"gconftool-2 -g /desktop/gnome/interface/accessibility\"", "r" );
-            if( fp )
-            {
-                if( fgets( buf, sizeof(buf), fp ) )
-                {
-                    int nCompare = strncasecmp( buf, "true", 4 );
-                    mpData->mnEnableATT = (nCompare == 0 ? 1 : 0);
-                }
-                pclose( fp );
-            }
-        }
-#else
-        static const char* pEnv = getenv("SAL_ACCESSIBILITY_ENABLED" );
-        if( !pEnv || !*pEnv )
-        {
-#ifdef WNT
-            // Check in the Windows registry if an AT tool wants Accessibility support to 
-            // be activated ..
-            HKEY hkey;
-
-			if( ERROR_SUCCESS == RegOpenKey(HKEY_CURRENT_USER, 
-				"Software\\OpenOffice.org\\Accessibility\\AtToolSupport", 
-				&hkey) )
-			{
-				DWORD dwType;
-				WIN_BYTE Data[6]; // possible values: "true", "false", "1", "0", DWORD
-				DWORD cbData = sizeof(Data);
-
-	            if( ERROR_SUCCESS == RegQueryValueEx(hkey, "SupportAssistiveTechnology", 
-					NULL, &dwType, Data, &cbData) )
-				{
-					switch (dwType)
-					{
-						case REG_SZ:
-							mpData->mnEnableATT = ((0 == stricmp((const char *) Data, "1")) || (0 == stricmp((const char *) Data, "true")));
-							break;
-						case REG_DWORD:
-							mpData->mnEnableATT = (USHORT) (((DWORD *) Data)[0]);
-							break;
-						default:
-							// Unsupported registry type
-							mpData->mnEnableATT = 0;
-							break;
-					}
-				}
-
-				RegCloseKey(hkey);
-            }
-
-			// Registry does not exist ..
-			if( mpData->mnEnableATT == (USHORT)~0 )
-            {
-                rtl::OUString aEnable =
-                    vcl::SettingsConfigItem::get()->
-                    getValue( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "Accessibility" ) ),
-                              rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "EnableATToolSupport" ) ) );
-                mpData->mnEnableATT = aEnable.equalsIgnoreAsciiCaseAscii( "true" ) ? 1 : 0;
-            }
-#else
-            rtl::OUString aEnable =
-                vcl::SettingsConfigItem::get()->
-                getValue( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "Accessibility" ) ),
-                          rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "EnableATToolSupport" ) ) );
-            mpData->mnEnableATT = aEnable.equalsIgnoreAsciiCaseAscii( "true" ) ? 1 : 0;
-#endif            
-        }
-        else
-            mpData->mnEnableATT = 1;
-#endif
-    }
-    return (BOOL)mpData->mnEnableATT;
-    
-#else // REMOTE_APPSERVER
-    return FALSE;
-#endif
-}
-
-// -----------------------------------------------------------------------
-
-void MiscSettings::SetEnableATToolSupport( BOOL bEnable )
-{
-    if ( bEnable != mpData->mnEnableATT )
-    {
-        BOOL bDummy;
-        if( bEnable && !ImplInitAccessBridge(false, bDummy) )
-            return;
-
-#ifdef WNT
-		HKEY hkey;
-            
-        // If the accessibility key in the Windows registry exists, change it synchronously
-		if( ERROR_SUCCESS == RegOpenKey(HKEY_CURRENT_USER, 
-			"Software\\OpenOffice.org\\Accessibility\\AtToolSupport", 
-			&hkey) )
-		{
-			DWORD dwType;
-			WIN_BYTE Data[6]; // possible values: "true", "false", 1, 0
-			DWORD cbData = sizeof(Data);
-
-			if( ERROR_SUCCESS == RegQueryValueEx(hkey, "SupportAssistiveTechnology", 
-				NULL,	&dwType, Data, &cbData) )
-			{
-				switch (dwType)
-				{
-					case REG_SZ:
-						RegSetValueEx(hkey, "SupportAssistiveTechnology", 
-							NULL, dwType,
-							bEnable ? (WIN_BYTE *) "true" : (WIN_BYTE *) "false",
-							bEnable ? sizeof("true") : sizeof("false"));
-						break;
-					case REG_DWORD:
-						((DWORD *) Data)[0] = bEnable ? 1 : 0;
-						RegSetValueEx(hkey, "SupportAssistiveTechnology", 
-							NULL, dwType, Data,	sizeof(DWORD));
-						break;
-					default:
-						// Unsupported registry type
-						break;
-				}
-			}
-
-			RegCloseKey(hkey);
-        }
-        
-#endif
-        vcl::SettingsConfigItem::get()->
-            setValue( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "Accessibility" ) ),
-                      rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "EnableATToolSupport" ) ),
-                      rtl::OUString::createFromAscii( bEnable ? "true" : "false" ) );
-        mpData->mnEnableATT = bEnable ? 1 : 0;
-    }
 }
 
 // =======================================================================
@@ -1540,9 +1339,9 @@ ImplHelpData::ImplHelpData()
 {
     mnRefCount                  = 1;
     mnOptions                   = 0;
-    mnTipDelay                  = 200;  // #112193# faster tooltips  
+    mnTipDelay                  = 500;
     mnTipTimeout                = 3000;
-    mnBalloonDelay              = 1000; // #112193# faster tooltips  
+    mnBalloonDelay              = 1500;
 }
 
 // -----------------------------------------------------------------------
@@ -2100,78 +1899,6 @@ void AllSettings::SetUILanguage( LanguageType eLang  )
 
 // -----------------------------------------------------------------------
 
-BOOL AllSettings::GetLayoutRTL() const
-{
-    static const char* pEnv = getenv("SAL_RTL_ENABLED" );
-    static int  nUIMirroring = -1;   // -1: undef, 0: auto, 1: on 2: off 
-
-    // environment always overrides
-    if( pEnv )
-        return true;
-
-    BOOL bRTL = FALSE;
-
-    if( nUIMirroring == -1 )
-    {
-        nUIMirroring = 0; // ask configuration only once
-        utl::OConfigurationNode aNode = utl::OConfigurationTreeRoot::tryCreateWithServiceFactory( 
-            vcl::unohelper::GetMultiServiceFactory(),
-            OUString::createFromAscii( "org.openoffice.Office.Common/I18N/CTL" ) );    // note: case sensisitive !
-        if ( aNode.isValid() )
-        {
-            BOOL bTmp;
-            ::com::sun::star::uno::Any aValue = aNode.getNodeValue( OUString::createFromAscii( "UIMirroring" ) );
-            if( aValue >>= bTmp )
-            {
-                // found true or false; if it was nil, nothing is changed
-                nUIMirroring = bTmp ? 1 : 2;
-            }
-        }
-    }
-
-    if( nUIMirroring == 0 )  // no config found (eg, setup) or default (nil) was set: check language
-    {
-        LanguageType aLang = LANGUAGE_DONTKNOW;
-        ImplSVData* pSVData = ImplGetSVData();
-        if ( pSVData->maAppData.mpSettings )
-            aLang = pSVData->maAppData.mpSettings->GetUILanguage();
-
-        switch( aLang )
-        {
-            // languages with right-to-left UI
-            case LANGUAGE_ARABIC:
-            case LANGUAGE_ARABIC_SAUDI_ARABIA:
-            case LANGUAGE_ARABIC_IRAQ:
-            case LANGUAGE_ARABIC_EGYPT:
-            case LANGUAGE_ARABIC_LIBYA:
-            case LANGUAGE_ARABIC_ALGERIA:
-            case LANGUAGE_ARABIC_MOROCCO:
-            case LANGUAGE_ARABIC_TUNISIA:
-            case LANGUAGE_ARABIC_OMAN:
-            case LANGUAGE_ARABIC_YEMEN:
-            case LANGUAGE_ARABIC_SYRIA:
-            case LANGUAGE_ARABIC_JORDAN:
-            case LANGUAGE_ARABIC_LEBANON:
-            case LANGUAGE_ARABIC_KUWAIT:
-            case LANGUAGE_ARABIC_UAE:
-            case LANGUAGE_ARABIC_BAHRAIN:
-            case LANGUAGE_ARABIC_QATAR:
-            case LANGUAGE_HEBREW:
-                bRTL = TRUE;
-                break;
-
-            default:
-                break;
-        }
-    }
-    else
-        bRTL = (nUIMirroring == 1);
-
-    return bRTL;
-}
-
-// -----------------------------------------------------------------------
-
 const ::com::sun::star::lang::Locale& AllSettings::GetLocale() const
 {
     if ( !mpData->maLocale.Language.getLength() )
@@ -2190,13 +1917,13 @@ const ::com::sun::star::lang::Locale& AllSettings::GetLocale() const
 
 const ::com::sun::star::lang::Locale& AllSettings::GetUILocale() const
 {
-    if ( !mpData->maUILocale.Language.getLength() )
+    if ( !mpData->maLocale.Language.getLength() )
     {
         String  aLanguage;
         String  aCountry;
         ConvertLanguageToIsoNames( GetUILanguage(), aLanguage, aCountry );
-        ((AllSettings*)this)->mpData->maUILocale.Language = aLanguage;
-        ((AllSettings*)this)->mpData->maUILocale.Country = aCountry;
+        ((AllSettings*)this)->mpData->maLocale.Language = aLanguage;
+        ((AllSettings*)this)->mpData->maLocale.Country = aCountry;
     }
 
     return mpData->maUILocale;
@@ -2217,7 +1944,7 @@ LanguageType AllSettings::GetLanguage() const
 LanguageType AllSettings::GetUILanguage() const
 {
     if ( mpData->meUILanguage == LANGUAGE_SYSTEM )
-        return GetSystemUILanguage();
+        return GetSystemLanguage();
 
     return mpData->meUILanguage;
 }

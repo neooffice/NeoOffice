@@ -60,7 +60,6 @@ JAVAFILES = \
 	VCLEventQueue.java \
 	VCLFont.java \
 	VCLFrame.java \
-	VCLGlyphVector.java \
 	VCLGraphics.java \
 	VCLImage.java \
 	VCLPageFormat.java \

@@ -33,7 +33,7 @@
 #   MA  02111-1307  USA
 #   
 #   =================================================
-#   Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
+#   Modified June 2003 by Patrick Luby. SISSL Removed. NeoOffice is
 #   distributed under GPL only under modification term 3 of the LGPL.
 # 
 #   Contributor(s): _______________________________________
@@ -45,7 +45,6 @@ PRJ=..
 PRJNAME=vcl
 TARGET=vcl
 VERSION=$(UPD)
-USE_DEFFILE=TRUE
 
 # --- Settings -----------------------------------------------------------
 
@@ -173,36 +172,41 @@ LIB1FILES+= \
 
 .IF "$(GUI)" == "UNX"
 .IF "$(GUIBASE)"=="java"
-    LIB1FILES += $(SLB)$/saljava.lib
+    LIB1FILES +=    $(SLB)$/saljava.lib
 .ELSE
 .IF "$(USE_XPRINT)" != "TRUE"
     SHL1STDLIBS=-lpsp$(VERSION)$(DLLPOSTFIX)
-.ENDIF # ! USE_XPRINT
-.ENDIF # java
-.ENDIF # UNX
-
-SHL1TARGET= vcl$(VERSION)$(DLLPOSTFIX)
-SHL1IMPLIB= ivcl
-SHL1STDLIBS+=\
-            $(SOTLIB)           \
-            $(UNOTOOLSLIB)      \
-            $(TOOLSLIB)         \
-            $(COMPHELPERLIB)	\
-            $(UCBHELPERLIB)     \
-            $(CPPUHELPERLIB)    \
-            $(CPPULIB)          \
-            $(VOSLIB)           \
-            $(SALLIB)
-
-.IF "$(ENABLE_CTL)"!=""
-    SHL1STDLIBS+= $(ICUUCLIB) $(ICULELIB)
-.ENDIF # ENABLE_CTL
+.ENDIF
+.ENDIF
+.ENDIF
 
 .IF "$(USE_BUILTIN_RASTERIZER)"!=""
     LIB1FILES +=    $(SLB)$/glyphs.lib
-    SHL1STDLIBS+=   $(FREETYPELIB)
-.ENDIF # USE_BUILTIN_RASTERIZER
+    SHL1STDLIBS+=   $(FREETYPELIBST)
+.ENDIF
 
+.IF "$(remote)" == ""
+SHL1TARGET= vcl$(VERSION)$(DLLPOSTFIX)
+.ENDIF
+SHL1IMPLIB= ivcl
+SHL1STDLIBS+=\
+            $(TOOLSLIB)         \
+            $(SOTLIB)           \
+            $(VOSLIB)           \
+            $(SALLIB)           \
+            $(CPPUHELPERLIB)    \
+            $(UCBHELPERLIB)     \
+            $(CPPULIB)          \
+            $(UNOTOOLSLIB)      \
+            $(COMPHELPERLIB)    \
+            $(GPC3RDLIB)
+
+.IF "$(OS)$(CPU)"=="SOLARISS"
+SHL1VERSIONMAP=libvcl641ss.so.mapfile
+.ENDIF
+.IF "$(remote)" != ""
+SHL1STDLIBS+=   $(UNOLIB)
+.ENDIF
 
 .IF "$(GUI)"!="MAC"
 SHL1DEPN=   $(L)$/itools.lib $(L)$/sot.lib
@@ -226,22 +230,16 @@ DEF1DEPN    =   $(MISC)$/$(SHL1TARGET).flt \
                 $(LIB1TARGET)
 DEF1DES     =VCL
 DEFLIB1NAME =vcl
-DEF1EXPORT1=component_getFactory
-DEF1EXPORT2=component_getImplementationEnvironment
-DEF1EXPORT3=component_writeInfo
-
 
 # --- W32 ----------------------------------------------------------------
 
 .IF "$(GUI)" == "WNT"
 
-SHL1STDLIBS += uwinapi.lib      \
-               gdi32.lib        \
+SHL1STDLIBS += gdi32.lib        \
                winspool.lib     \
                ole32.lib        \
                shell32.lib      \
                advapi32.lib     \
-               apsp.lib         \
                imm32.lib
 
 .IF "$(GUI)$(COM)$(CPU)" == "WNTMSCI"
@@ -254,6 +252,10 @@ LINKFLAGSSHL += /ENTRY:LibMain@12
 
 .IF "$(GUI)"=="UNX"
 
+.IF "$(OS)"=="MACOSX"
+SHL1STDLIBS += -lstdc++ -lstlport_gcc
+.ENDIF
+
 .IF "$(GUIBASE)"=="aqua"
 SHL1STDLIBS += -framework Cocoa
 .ENDIF
@@ -265,20 +267,15 @@ SHL1STDLIBS += -framework ApplicationServices -framework Carbon -framework Audio
 .ENDIF
 
 .IF "$(GUIBASE)"=="unx"
-
 .IF "$(OS)"=="MACOSX"
-SHL1STDLIBS += -ldl
-.ENDIF
-
-.IF "$(WITH_LIBSN)"=="YES"
-SHL1STDLIBS+=$(LIBSN_LIBS)
+SHL1STDLIBS += -lXext
 .ENDIF
 
 # Solaris
 .IF "$(OS)"=="SOLARIS"
 
 .IF "$(USE_XPRINT)" == "TRUE"
-SHL1STDLIBS += -lXp -lXext -lSM -lICE -lX11
+SHL1STDLIBS += -lXp Xext -lSM -lICE -lX11
 .ELSE
 SHL1STDLIBS += -lXext -lSM -lICE -lX11
 .ENDIF          # "$(USE_XPRINT)" == "TRUE"
@@ -288,25 +285,14 @@ SHL1STDLIBS += -lXext -lSM -lICE -lX11
 .IF "$(USE_XPRINT)" == "TRUE"
 SHL1STDLIBS += -lXp -lXext -lSM -lICE -lX11
 .ELSE
-.IF "$(CPU)" == "I"
-SHL1STDLIBS += -Wl,-Bstatic -lXinerama -Wl,-Bdynamic 
-.ENDIF
 SHL1STDLIBS += -lXext -lSM -lICE -lX11
 .ENDIF          # "$(USE_XPRINT)" == "TRUE"
 .ENDIF          # "$(OS)"=="SOLARIS"
 .ENDIF          # "$(GUIBASE)"=="unx"
 
-.IF "$(OS)"=="MACOSX"
-SHL1STDLIBS += -lXinerama
-.ENDIF
-
-.IF "$(OS)"=="LINUX" || "$(OS)"=="SOLARIS" || "$(OS)"=="FREEBSD"
+.IF "$(OS)"=="LINUX" || "$(OS)"=="SOLARIS"
 SHL1STDLIBS += -laudio
-.IF "$(OS)"=="SOLARIS"
-# needed by libaudio.a
-SHL1STDLIBS += -ldl -lnsl -lsocket
-.ENDIF # SOLARIS
-.ENDIF          # "$(OS)"=="LINUX" || "$(OS)"=="SOLARIS" || "$(OS)"=="FREEBSD"
+.ENDIF          # "$(OS)"=="LINUX" || "$(OS)"=="SOLARIS"
 
 .ENDIF          # "$(GUI)"=="UNX"
 
@@ -314,7 +300,7 @@ SHL1STDLIBS += -ldl -lnsl -lsocket
 JARCLASSDIRS = com
 JARTARGET = $(TARGET).jar
 JARCOMPRESS = TRUE
-.ENDIF
+.ENDIF          # "$(GUIBASE)"=="java"
 
 # --- Allgemein ----------------------------------------------------------
 
@@ -344,16 +330,7 @@ $(MISC)$/$(SHL1TARGET).flt: makefile.mk
     @echo RmBitmap>> $@
     @echo RmSound>> $@
     @echo __CT>> $@
-    @echo _TI2>> $@
-    @echo _TI3>> $@
-    @echo _real@ >> $@
-    @echo xMonitorFrom >> $@
-    @echo xEnumDisplay >> $@
-    @echo xGetSystemMetrics >> $@
-    @echo xGetMonitorInfo >> $@
-    @echo WIN_ >> $@
-    @echo component_ >> $@
     @echo DNDEventDispatcher>> $@
     @echo DNDListenerContainer>> $@
-    @echo vcl\ >> $@
+
 

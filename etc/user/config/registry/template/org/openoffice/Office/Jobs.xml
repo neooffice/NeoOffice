@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Jobs state="modified" cfg:package="org.openoffice.Office" xmlns="http://openoffice.org/2000/registry/components/Jobs" xmlns:cfg="http://openoffice.org/2000/registry/instance" xmlns:xsi="http://www.w3.org/1999/XMLSchema-instance">
+ <Jobs cfg:element-type="Job">
+  <Job cfg:name="AddressBookSourcePilot">
+   <UserTime cfg:type="string">CURRENT_DATE</UserTime>
+  </Job>
+  <Job cfg:name="RegistrationRequest">
+   <UserTime cfg:type="string">CURRENT_DATE</UserTime>
+  </Job>
+ </Jobs>
+</Jobs>

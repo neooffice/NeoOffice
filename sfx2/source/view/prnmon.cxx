@@ -33,32 +33,12 @@
  *  MA  02111-1307  USA
  *  
  *  =================================================
- *  Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
+ *  Modified June 2003 by Patrick Luby. SISSL Removed. NeoOffice is
  *  distributed under GPL only under modification term 3 of the LGPL.
  *
  *  Contributor(s): _______________________________________
  *
  ************************************************************************/
-
-#ifndef _COM_SUN_STAR_VIEW_PRINTABLESTATE_HPP_
-#include <com/sun/star/view/PrintableState.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_UTIL_XCLOSEABLE_HPP_
-#include <com/sun/star/util/XCloseable.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_UTIL_XCLOSEBROADCASTER_HPP_
-#include <com/sun/star/util/XCloseBroadcaster.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_UTIL_XCLOSELISTENER_HPP_
-#include <com/sun/star/util/XCloseListener.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_UTIL_CLOSEVETOEXCEPTION_HPP_
-#include <com/sun/star/util/CloseVetoException.hpp>
-#endif
 
 #ifndef _SV_FIXED_HXX
 #include <vcl/fixed.hxx>
@@ -85,7 +65,6 @@
 #include "desrupt.hxx"
 #include "bindings.hxx"
 #include "sfxresid.hxx"
-#include "event.hxx"
 
 #include "view.hrc"
 
@@ -97,11 +76,8 @@
 
 struct SfxPrintMonitor_Impl: public ModelessDialog
 {
+	SfxPrintMonitor_Impl( Window *pParent );
 
-    SfxPrintMonitor_Impl( Window *pParent, SfxViewShell *rpViewShell );
-    virtual BOOL Close();
-
-    SfxViewShell*           pViewShell;
 	FixedText				aDocName;
 	FixedText				aPrinting;
 	FixedText				aPrinter;
@@ -111,7 +87,7 @@ struct SfxPrintMonitor_Impl: public ModelessDialog
 
 //-------------------------------------------------------------------------
 
-struct SfxPrintProgress_Impl : public SfxListener
+struct SfxPrintProgress_Impl
 {
 	SfxPrintMonitor_Impl* 	pMonitor;
 	SfxViewShell*			pViewShell;
@@ -126,9 +102,7 @@ struct SfxPrintProgress_Impl : public SfxListener
 	BOOL					bOldEnablePrintFile;
     BOOL                    bOldFlag;
     BOOL                    bRestoreFlag;
-	BOOL					bAborted;
     svtools::AsynchronLink  aDeleteLink;
-    Link					aCancelHdl;
 
 private:
 	DECL_LINK( CancelHdl, Button * );
@@ -141,28 +115,11 @@ public:
 	void            		Delete( SfxPrintProgress* pAntiImpl ) { aDeleteLink.Call( pAntiImpl ); }
 	SfxViewShell*			GetViewShell() const { return pViewShell; }
 	BOOL					SetPage( USHORT nPage, const String &rPage );
-	virtual void            SFX_NOTIFY( SfxBroadcaster& rBC,
-										const TypeId& rBCType,
-										const SfxHint& rHint,
-										const TypeId& rHintType );
 };
-
-void SfxPrintProgress_Impl::SFX_NOTIFY( SfxBroadcaster& rBC,
-							const TypeId& rBCType,
-							const SfxHint& rHint,
-							const TypeId& rHintType )
-{
-	SfxPrintingHint* pPrintHint = PTR_CAST( SfxPrintingHint, &rHint );
-	if ( pPrintHint )
-	{
-		if ( pPrintHint->GetWhich() == -2 )
-			CancelHdl(0);
-	}
-}
 
 //------------------------------------------------------------------------
 
-SfxPrintMonitor_Impl::SfxPrintMonitor_Impl( Window* pParent, SfxViewShell* rpViewShell ) :
+SfxPrintMonitor_Impl::SfxPrintMonitor_Impl( Window* pParent ) :
 
 	ModelessDialog( pParent, SfxResId( DLG_PRINTMONITOR ) ),
 
@@ -170,8 +127,7 @@ SfxPrintMonitor_Impl::SfxPrintMonitor_Impl( Window* pParent, SfxViewShell* rpVie
 	aPrinting	( this, ResId( FT_PRINTING ) ),
 	aPrinter	( this, ResId( FT_PRINTER ) ),
 	aPrintInfo	( this, ResId( FT_PRINTINFO ) ),
-    aCancel     ( this, ResId( PB_CANCELPRNMON ) ),
-    pViewShell  ( rpViewShell )
+	aCancel		( this, ResId( PB_CANCELPRNMON ) )
 
 {
 	FreeResource();
@@ -183,18 +139,6 @@ IMPL_STATIC_LINK( SfxPrintProgress_Impl, DeleteHdl, SfxPrintProgress*, pAntiImpl
 {
 	delete pAntiImpl;
 	return 0;
-}
-
-void actualizePrintCancelState(CancelButton& rButton, const SfxObjectShell* pShell)
-{
-    sal_Bool bEnableCancelButton = sal_True;
-    if (pShell)
-        bEnableCancelButton = pShell->Stamp_GetPrintCancelState();
-
-    if (!bEnableCancelButton)
-        rButton.Disable();
-    else
-        rButton.Enable();
 }
 
 //------------------------------------------------------------------------
@@ -212,31 +156,23 @@ SfxPrintProgress_Impl::SfxPrintProgress_Impl( SfxViewShell* pTheViewShell,
 	bOldEnablePrintFile	( FALSE ),
     bOldFlag            ( TRUE ),
     bRestoreFlag        ( FALSE ),
-	bAborted			( FALSE ),
 	nLastPage			( 0 ),
 	aDeleteLink			( STATIC_LINK( this, SfxPrintProgress_Impl, DeleteHdl ) )
 
 {
 	Window* pParent =
 		pTheViewShell->GetWindow()->IsReallyVisible() ? pTheViewShell->GetWindow() : NULL;
-    pMonitor = new SfxPrintMonitor_Impl( pParent, pViewShell );
+	pMonitor = new SfxPrintMonitor_Impl( pParent );
 	pMonitor->aDocName.SetText(
 		pViewShell->GetViewFrame()->GetObjectShell()->GetTitle( SFX_TITLE_MAXLEN_PRINTMONITOR ) );
 	pMonitor->aPrinter.SetText( pViewShell->GetPrinter()->GetName() );
-
-    // Stampit enable/dsiable cancel button
-    actualizePrintCancelState(pMonitor->aCancel, pViewShell->GetObjectShell());
-
-    pMonitor->aCancel.SetClickHdl( LINK( this, SfxPrintProgress_Impl, CancelHdl ) );
-
-	StartListening( *pViewShell->GetObjectShell() );
+	pMonitor->aCancel.SetClickHdl( LINK( this, SfxPrintProgress_Impl, CancelHdl ) );
 }
 
 //------------------------------------------------------------------------
 
 SfxPrintProgress_Impl::~SfxPrintProgress_Impl()
 {
-	EndListening( *pViewShell->GetObjectShell() );
 	if ( pMonitor )
 	{
 		pMonitor->Hide(); // sieht optisch besser aus, wenn alles auf einmal verschwindet
@@ -252,9 +188,6 @@ BOOL SfxPrintProgress_Impl::SetPage( USHORT nPage, const String &rPage )
 	if ( bCancel || !pMonitor )
 		return FALSE;
 
-    // Stampit enable/dsiable cancel button
-    actualizePrintCancelState(pMonitor->aCancel, pViewShell->GetObjectShell());
-
 	nLastPage = nPage;
 	String aStrPrintInfo = String( SfxResId( STR_PAGE ) );
 	if ( !rPage.Len() )
@@ -268,30 +201,15 @@ BOOL SfxPrintProgress_Impl::SetPage( USHORT nPage, const String &rPage )
 
 //------------------------------------------------------------------------
 
-IMPL_LINK( SfxPrintProgress_Impl, CancelHdl, Button *, pButton )
+IMPL_LINK_INLINE_START( SfxPrintProgress_Impl, CancelHdl, Button *, pButton )
 {
 	if ( pMonitor )
 		pMonitor->Hide();
-
-	pViewShell->GetObjectShell()->Broadcast( SfxPrintingHint( com::sun::star::view::PrintableState_JOB_ABORTED, NULL, NULL ) );
-    pViewShell->GetPrinter()->AbortJob();
+	pViewShell->GetPrinter()->AbortJob();
 	bCancel = TRUE;
-
-	if ( aCancelHdl.IsSet() )
-		aCancelHdl.Call( this );
-
-	bAborted = TRUE;
 	return 0;
 }
-
-BOOL SfxPrintMonitor_Impl::Close()
-{
-    BOOL bAgree = pViewShell ? pViewShell->GetObjectShell()->Stamp_GetPrintCancelState() : TRUE;
-    if (!bAgree)
-        return FALSE;
-    else
-        return ModelessDialog::Close();
-}
+IMPL_LINK_INLINE_END( SfxPrintProgress_Impl, CancelHdl, Button *, pButton )
 
 //--------------------------------------------------------------------
 
@@ -307,7 +225,7 @@ SfxPrintProgress::SfxPrintProgress( SfxViewShell* pViewSh, FASTBOOL bShow )
 				LINK( this, SfxPrintProgress, PrintErrorNotify ));
 	pImp->bCallbacks = TRUE;
 
-	//pImp->pViewShell->GetViewFrame()->GetFrame()->Lock_Impl(TRUE);
+	pImp->pViewShell->GetViewFrame()->GetFrame()->Lock_Impl(TRUE);
 	pImp->bShow = bShow;
 	Lock();
     if ( !SvtPrintWarningOptions().IsModifyDocumentOnPrintingAllowed() )
@@ -343,21 +261,7 @@ SfxPrintProgress::~SfxPrintProgress()
 				pImp->bOldEnablePrintFile );
 
 	// EndPrint-Notification an Frame
-	//pImp->pViewShell->GetViewFrame()->GetFrame()->Lock_Impl(FALSE);
-	if ( pImp->pViewShell->GotOwnerShip_Impl() )
-	{
-        com::sun::star::uno::Reference < com::sun::star::util::XCloseable > xModel( pImp->pViewShell->GetObjectShell()->GetModel(), com::sun::star::uno::UNO_QUERY );
-		if ( xModel.is() )
-		{
-			try
-			{
-				xModel->close( sal_True );
-			}
-			catch ( com::sun::star::util::CloseVetoException& )
-			{
-			}
-		}
-	}
+	pImp->pViewShell->GetViewFrame()->GetFrame()->Lock_Impl(FALSE);
 
 	delete pImp;
 }
@@ -405,7 +309,6 @@ IMPL_LINK_INLINE_START( SfxPrintProgress, PrintErrorNotify, void *, pvoid )
 			 String( SfxResId(STR_ERROR_PRINT) ) ).Execute();
     if ( pImp->bRestoreFlag && pImp->pViewShell->GetObjectShell()->IsEnableSetModified() != pImp->bOldFlag )
         pImp->pViewShell->GetObjectShell()->EnableSetModified( pImp->bOldFlag );
-	pImp->GetViewShell()->GetObjectShell()->Broadcast( SfxPrintingHint( com::sun::star::view::PrintableState_JOB_FAILED, NULL, NULL ) );
 	return 0;
 }
 IMPL_LINK_INLINE_END( SfxPrintProgress, PrintErrorNotify, void *, pvoid )
@@ -417,12 +320,10 @@ IMPL_LINK( SfxPrintProgress, EndPrintNotify, void *, pvoid )
 	if ( pImp->pMonitor )
 		pImp->pMonitor->Hide();
 
-	SfxViewShell* pViewShell = pImp->pViewShell;
-
 	// Slots enablen
-	pViewShell->Invalidate( SID_PRINTDOC );
-	pViewShell->Invalidate( SID_PRINTDOCDIRECT );
-	pViewShell->Invalidate( SID_SETUPPRINTER );
+	pImp->pViewShell->Invalidate( SID_PRINTDOC );
+	pImp->pViewShell->Invalidate( SID_PRINTDOCDIRECT );
+	pImp->pViewShell->Invalidate( SID_SETUPPRINTER );
 
 	// . . . falls der Printer im System umgestellt wurde, hier Aenderung
 	// nachziehen.
@@ -447,26 +348,25 @@ IMPL_LINK( SfxPrintProgress, EndPrintNotify, void *, pvoid )
 	}
 	else
 		// ggf. vorherigen Print-To-File-Status zuruecksetzen
-		pViewShell->GetPrinter()->EnablePrintFile( pImp->bOldEnablePrintFile );
+		pImp->pViewShell->GetPrinter()->EnablePrintFile( pImp->bOldEnablePrintFile );
 
-	// printing in thread will kill force us to kill this instance, so get necessary data before
-	BOOL bRestoreFlag = pImp->bRestoreFlag;
-	BOOL bOldFlag = pImp->bOldFlag;
+	// lief der Drucker im Thread?
 	if ( pImp->bDeleteOnEndPrint )
 	{
+		// Dialog sofort l"oschen sonst wird ggf. das MDI vorher geschlossen
 		DELETEZ(pImp->pMonitor);
-		delete this;
+
+		// Progress per PostMessage zerst"oren, nicht sofort sonst GPF
+		pImp->Delete( this );
 	}
 	else
 	{
-		DBG_ASSERT( !pImp->pOldPrinter, "Unable to restore printer!" );
+		DBG_ASSERT( !pImp->pOldPrinter, "Printer konnte nicht korrekt restauriert werden!" );
 		pImp->bRunning = FALSE;
 	}
 
-    if ( bRestoreFlag && pViewShell->GetObjectShell()->IsEnableSetModified() != bOldFlag )
-        pViewShell->GetObjectShell()->EnableSetModified( TRUE );
-
-	pViewShell->GetObjectShell()->Broadcast( SfxPrintingHint( com::sun::star::view::PrintableState_JOB_COMPLETED, NULL, NULL ) );
+    if ( pImp->bRestoreFlag && pImp->pViewShell->GetObjectShell()->IsEnableSetModified() != pImp->bOldFlag )
+        pImp->pViewShell->GetObjectShell()->EnableSetModified( TRUE );
 	return 0;
 }
 
@@ -503,14 +403,4 @@ void SfxPrintProgress::RestoreOnEndPrint( SfxPrinter *pOldPrinter )
 	RestoreOnEndPrint( pOldPrinter, FALSE );
 }
 
-//------------------------------------------------------------------------
 
-void SfxPrintProgress::SetCancelHdl( const Link& aCancelHdl )
-{
-	pImp->aCancelHdl = aCancelHdl;
-}
-
-BOOL SfxPrintProgress::IsAborted() const
-{
-	return pImp->bAborted;
-}

@@ -52,7 +52,6 @@ class com_sun_star_vcl_VCLGraphics;
 
 class SalGraphicsData
 {
-	friend class	JavaLayout;
 	friend class	SalBitmap;
 	friend class	SalFrame;
 	friend class	SalGraphics;

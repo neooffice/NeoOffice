@@ -413,22 +413,3 @@ SalInfoPrinterData::~SalInfoPrinterData()
 		delete mpVCLPageFormat;
 	}
 }
-
-// -----------------------------------------------------------------------
-
-int SalInfoPrinter::GetLandscapeAngle( const ImplJobSetup* pSetupData )
-{
-#ifdef DEBUG
-	fprintf( stderr, "SalInfoPrinter::GetLandscapeAngle not implemented\n" );
-#endif
-	return 900;
-}
-
-// -----------------------------------------------------------------------
-
-void SalInfoPrinter::InitPaperFormats( const ImplJobSetup* pSetupData )
-{
-#ifdef DEBUG
-	fprintf( stderr, "SalInfoPrinter::InitPaperFormats not implemented\n" );
-#endif
-}

@@ -33,7 +33,7 @@
  *  MA  02111-1307  USA
  *  
  *  =================================================
- *  Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
+ *  Modified June 2003 by Patrick Luby. SISSL Removed. NeoOffice is
  *  distributed under GPL only under modification term 3 of the LGPL.
  *
  *  Contributor(s): _______________________________________
@@ -68,19 +68,6 @@
 #include <com/sun/star/i18n/XCollator.hpp>
 #endif
 
-#ifndef _COM_SUN_STAR_AWT_XEXTENDEDTOOLKIT_HPP_
-#include <com/sun/star/awt/XExtendedToolkit.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_ACCESSIBILITY_ACCESSIBLEEVENTOBJECT_HPP_
-#include <com/sun/star/accessibility/AccessibleEventObject.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_ACCESSIBILITY_ACCESSIBLESTATETYPE_HPP_
-#include <com/sun/star/accessibility/AccessibleStateType.hpp>
-#endif
-
-
 #include <com/sun/star/registry/XImplementationRegistration.hpp>
 
 #include <cppuhelper/servicefactory.hxx>
@@ -89,14 +76,12 @@
 #include <osl/file.hxx>
 
 #include <svdata.hxx>
-#include <svapp.hxx>
 
 using namespace ::com::sun::star;
 using namespace ::rtl;
 
 #define DOSTRING( x )			   			#x
 #define STRING( x )				   			DOSTRING( x )
-#define UNOSUFFIX							.uno
 
 struct VCLRegServiceInfo
 {
@@ -122,9 +107,16 @@ static VCLRegServiceInfo aVCLComponentsArray[] =
 #ifdef WNT
 	{"sysdtrans", sal_False},
 #endif
+	{"dtrans", sal_False},
 	{"mcnttype", sal_False},
+	{"ftransl", sal_False},
+	{"dnd", sal_False},
 #ifdef USE_JAVA
-	{"javavm" STRING(UNOSUFFIX), sal_False},
+    {"jen", sal_False},
+    {"cfgmgr2", sal_False},
+    {"sax", sal_False},
+    {"tcv", sal_False},
+    {"imr", sal_True},
 #endif
 	{NULL, sal_False}
 };
@@ -167,6 +159,7 @@ uno::Reference< lang::XMultiServiceFactory > vcl::unohelper::GetMultiServiceFact
 			}
 			nCompCount++;
 		}
+		::comphelper::setProcessServiceFactory( pSVData->maAppData.mxMSF );
 	}
 	return pSVData->maAppData.mxMSF;
 }
@@ -225,29 +218,24 @@ uno::Reference < i18n::XCollator > vcl::unohelper::CreateCollator()
 	// create variable library name suffixes
 	OUString aSUPDString( OUString::valueOf( (sal_Int32)SUPD, 10 ));
 	OUString aDLLSuffix = OUString::createFromAscii( STRING(DLLSUFFIX) );
-	OUString aUNOString = OUString::createFromAscii( STRING(UNOSUFFIX) );
 
-	OUString aLibName = OUString::createFromAscii( pModName );
-
-	sal_Int32 nIndex = aLibName.getLength() - aUNOString.getLength();
-	BOOL bUNO = ( nIndex > 0 && aLibName.lastIndexOf( aUNOString ) == nIndex );
+	OUString aLibName;
 
 #ifdef WNT
-	if ( !bUNO && bSUPD )
+	aLibName = OUString::createFromAscii( pModName );
+	if ( bSUPD )
 	{
 		aLibName += aSUPDString;
 		aLibName += aDLLSuffix;
 	}
 	aLibName += rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dll" ));
 #else
-	if ( !bUNO )
+	aLibName = OUString( RTL_CONSTASCII_USTRINGPARAM( "lib" ));
+	aLibName += OUString::createFromAscii( pModName );
+	if ( bSUPD )
 	{
-		aLibName = OUString( RTL_CONSTASCII_USTRINGPARAM( "lib" )) + aLibName;
-		if ( bSUPD )
-		{
-			aLibName += aSUPDString;
-			aLibName += aDLLSuffix;
-		}
+		aLibName += aSUPDString;
+		aLibName += aDLLSuffix;
 	}
 #ifdef MACOSX
 	aLibName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ));
@@ -259,22 +247,3 @@ uno::Reference < i18n::XCollator > vcl::unohelper::CreateCollator()
 	return aLibName;
 }
 
-void vcl::unohelper::NotifyAccessibleStateEventGlobally( const ::com::sun::star::accessibility::AccessibleEventObject& rEventObject )
-{
-    ::com::sun::star::uno::Reference< ::com::sun::star::awt::XExtendedToolkit > xExtToolkit( Application::GetVCLToolkit(), uno::UNO_QUERY );
-    if ( xExtToolkit.is() )
-    {
-        // Only for focus events
-        sal_Int16 nType;
-        rEventObject.NewValue >>= nType;
-        if ( nType == ::com::sun::star::accessibility::AccessibleStateType::FOCUSED )
-            xExtToolkit->fireFocusGained( rEventObject.Source );
-        else
-        {
-            rEventObject.OldValue >>= nType;
-            if ( nType == ::com::sun::star::accessibility::AccessibleStateType::FOCUSED )
-                xExtToolkit->fireFocusLost( rEventObject.Source );
-        }
-        
-    }
-}

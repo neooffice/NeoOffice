@@ -58,10 +58,7 @@ using namespace vcl;
 
 // =======================================================================
 
-void SalGraphics::CopyBits( const SalTwoRect* pPosAry,
-                            SalGraphics* pSrcGraphics,
-                            const OutputDevice *pOutDev,
-                            const OutputDevice *pSrcOutDev )
+void SalGraphics::CopyBits( const SalTwoRect* pPosAry, SalGraphics* pSrcGraphics )
 {
 	if ( !pSrcGraphics )
 		pSrcGraphics = this;
@@ -74,7 +71,7 @@ void SalGraphics::CopyBits( const SalTwoRect* pPosAry,
 void SalGraphics::CopyArea( long nDestX, long nDestY,
 							long nSrcX, long nSrcY,
 							long nSrcWidth, long nSrcHeight,
-							USHORT nFlags, const OutputDevice *pOutDev )
+							USHORT nFlags )
 {
 	maGraphicsData.mpVCLGraphics->copyBits( maGraphicsData.mpVCLGraphics, nSrcX, nSrcY, nSrcWidth, nSrcHeight, nDestX, nDestY, nSrcWidth, nSrcHeight );
 }
@@ -82,8 +79,7 @@ void SalGraphics::CopyArea( long nDestX, long nDestY,
 // -----------------------------------------------------------------------
 
 void SalGraphics::DrawBitmap( const SalTwoRect* pPosAry,
-							  const SalBitmap& rSalBitmap,
-                              const OutputDevice *pOutDev )
+							  const SalBitmap& rSalBitmap )
 {
 	maGraphicsData.mpVCLGraphics->drawBitmap( rSalBitmap.mpVCLBitmap, pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight, pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight );
 }
@@ -92,8 +88,7 @@ void SalGraphics::DrawBitmap( const SalTwoRect* pPosAry,
 
 void SalGraphics::DrawBitmap( const SalTwoRect* pPosAry,
 							  const SalBitmap& rSalBitmap,
-							  SalColor nTransparentColor,
-                              const OutputDevice *pOutDev )
+							  SalColor nTransparentColor )
 {
 #ifdef DEBUG
 	fprintf( stderr, "SalGraphics::DrawBitmap #2 not implemented\n" );
@@ -104,8 +99,7 @@ void SalGraphics::DrawBitmap( const SalTwoRect* pPosAry,
 
 void SalGraphics::DrawBitmap( const SalTwoRect* pPosAry,
 							  const SalBitmap& rSalBitmap,
-							  const SalBitmap& rTransparentBitmap,
-                              const OutputDevice *pOutDev )
+							  const SalBitmap& rTransparentBitmap )
 {
 	maGraphicsData.mpVCLGraphics->drawBitmap( rSalBitmap.mpVCLBitmap, rTransparentBitmap.mpVCLBitmap, pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight, pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight );
 }
@@ -114,16 +108,14 @@ void SalGraphics::DrawBitmap( const SalTwoRect* pPosAry,
 
 void SalGraphics::DrawMask( const SalTwoRect* pPosAry,
 							const SalBitmap& rSalBitmap,
-							SalColor nMaskColor,
-                            const OutputDevice *pOutDev )
+							SalColor nMaskColor )
 {
 	maGraphicsData.mpVCLGraphics->drawMask( rSalBitmap.mpVCLBitmap, nMaskColor, pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight, pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight );
 }
 
 // -----------------------------------------------------------------------
 
-SalBitmap* SalGraphics::GetBitmap( long nX, long nY, long nDX, long nDY,
-                                   const OutputDevice *pOutDev )
+SalBitmap* SalGraphics::GetBitmap( long nX, long nY, long nDX, long nDY )
 {
 	// Don't do anything if this is a printer
 	if ( maGraphicsData.mpPrinter )
@@ -149,23 +141,21 @@ SalBitmap* SalGraphics::GetBitmap( long nX, long nY, long nDX, long nDY,
 
 // -----------------------------------------------------------------------
 
-SalColor SalGraphics::GetPixel( long nX, long nY, const OutputDevice *pOutDev )
+SalColor SalGraphics::GetPixel( long nX, long nY )
 {
 	return maGraphicsData.mpVCLGraphics->getPixel( nX, nY );
 }
 
 // -----------------------------------------------------------------------
 
-void SalGraphics::Invert( long nX, long nY, long nWidth, long nHeight,
-                          SalInvert nFlags, const OutputDevice *pOutDev )
+void SalGraphics::Invert( long nX, long nY, long nWidth, long nHeight, SalInvert nFlags )
 {
 	maGraphicsData.mpVCLGraphics->invert( nX, nY, nWidth, nHeight, nFlags );
 }
 
 // -----------------------------------------------------------------------
 
-void SalGraphics::Invert( ULONG nPoints, const SalPoint* pPtAry,
-                          SalInvert nFlags, const OutputDevice *pOutDev )
+void SalGraphics::Invert( ULONG nPoints, const SalPoint* pPtAry, SalInvert nFlags )
 {
 	long pXPoints[ nPoints + 1 ];
 	long pYPoints[ nPoints + 1 ];

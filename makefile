@@ -48,26 +48,23 @@ OO_LANGUAGES=ALL
 OO_DIC_URL:=http://ftp.services.openoffice.org/pub/OpenOffice.org/contrib/dictionaries
 
 # Product information
-OO_VERSION=1.1
-OO_PRODUCT_NAME=OpenOffice.org
-OO_PRODUCT_VERSION=1.1.2
 PRODUCT_NAME=NeoOffice/J
 PRODUCT_DIR_NAME=NeoOfficeJ
 # Important: Note that there are escape characters in the PRODUCT_NAME for the
 # UTF-8 trademark symbol. Don't replace these with "\x##" literal strings!
 PRODUCT_TRADEMARKED_NAME=NeoOffice®/J
-PRODUCT_VERSION=0.9
+PRODUCT_VERSION=0.8.4
 PRODUCT_FILETYPE=NO%F
 PRODUCT_INSTALL_URL=http://www.planamesa.com/neojava/download.php\\\#install
 PRODUCT_BUILD_URL=http://www.planamesa.com/neojava/build.php
 
 # CVS macros
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
-OO_PACKAGES:=OpenOffice
-OO_TAG:=cws_srx645_ooo112fix2
+OO_PACKAGES:=MathMLDTD UnoControls XmlSearch apiwww autodoc automation basctl basic berkeleydb bridges chaos codemaker comphelper config_office configmgr connectivity cosv cppu cppuhelper cpputools dbaccess desktop dmake dtrans eventattacher expat ext_log4j extensions external extras fileaccess forms fpicker framework freetype goodies helpcontent i18n i18n_simple i18npool idl idlc inet instsetoo io javaunohelper jtools jurt jut ldapber lingu lingucomponent linguistic moz nas neon netbeans_integration odk offapi officecfg offmgr offuh package padmin product psprint rdbmaker readlicense readlicense_oo registry remotebridges res ridljar rsc sablot sal salhelper sandbox sax sc scaddins sch scp scptools sd setup2 sfx2 shell sj2 so3 solenv soltools sot starmath stlport stoc store svtools svx sw sysui toolkit tools transex3 ucb ucbhelper udkapi udkwww udm unoil unotools unzip uui vcl vos wizards xml2cmp xmlhelp xmloff xmlscript xmlwww zlib
+OO_TAG:=OOO_STABLE_1_PORTS
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOfficeJ
-NEO_TAG:=HEAD
+NEO_TAG:=NeoOfficeJ-0_8_4
 
 all: build.all
 
@@ -86,24 +83,24 @@ build.oo_checkout:
 	touch "$@"
 
 build.oo_patches: build.oo_checkout \
-	build.oo_extensions_patch \
-	build.oo_external_patch \
-	build.oo_scp_patch \
-	build.oo_solenv_patch
+	build.oo_external_patch
 	touch "$@"
 
 build.oo_odk_patches: build.oo_checkout \
-	build.oo_sdk_oo_patch
+	build.oo_odk_patch \
+	build.oo_product_patch
 	touch "$@"
 
-build.oo_external_patch: build.oo_checkout
+build.oo_external_patch: $(OO_PATCHES_HOME)/external.patch build.oo_checkout
 	chmod -Rf u+w "$(BUILD_HOME)/external/gpc"
 	gnutar zxf "$(OO_PATCHES_HOME)/gpc231.tar.Z" -C "$(BUILD_HOME)/external/gpc"
 	chmod -Rf u+w "$(BUILD_HOME)/external/gpc"
 	mv -f "$(BUILD_HOME)/external/gpc/gpc231"/* "$(BUILD_HOME)/external/gpc"
 	rm -Rf "$(BUILD_HOME)/external/gpc/gpc231"
-	-( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -R -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
-	( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+	-( cd "$(BUILD_HOME)/external" ; patch -R -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+	cp "$(OO_PATCHES_HOME)/dlcompat-20020709.tar.gz" "$(BUILD_HOME)/external/download"
+	cp "$(OO_PATCHES_HOME)/dlcompat.pat.tar.gz" "$(BUILD_HOME)/external/dlcompat"
+	( cd "$(BUILD_HOME)/external" ; patch -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	touch "$@"
 
 build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.oo_checkout
@@ -113,19 +110,18 @@ build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.oo_checkout
 
 build.configure: build.oo_patches
 	cd "$(BUILD_HOME)/config_office" ; autoconf
-	( cd "$(BUILD_HOME)/config_office" ; ./configure CC=cc CXX=c++ --with-x --with-lang="$(OO_LANGUAGES)" )
-	echo "unsetenv LD_SEG_ADDR_TABLE" >> "$(OO_ENV_X11)"
-	echo "unsetenv LD_PREBIND" >> "$(OO_ENV_X11)"
-	echo "unsetenv LD_PREBIND_ALLOW_OVERLAP" >> "$(OO_ENV_X11)"
+	( cd "$(BUILD_HOME)/config_office" ; ./configure CC=cc --with-x --with-lang="$(OO_LANGUAGES)" )
 	( cd "$(BUILD_HOME)" ; ./bootstrap )
 	touch "$@"
 
 build.oo_all: build.configure
-	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/instsetoo" ; `alias build` --all $(OO_BUILD_ARGS)
+	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/instsetoo" ; `alias build` -all $(OO_BUILD_ARGS)
 	touch "$@"
 
 build.oo_odk_all: build.configure build.oo_all build.oo_odk_patches
-	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/sdk_oo" ; `alias build` $(OO_BUILD_ARGS)
+# Building odk will fail unless we rebuild product and its dependencies first
+	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/product" ; `alias build` -all $(OO_BUILD_ARGS)
+	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/odk" ; `alias build` -all $(OO_BUILD_ARGS)
 	touch "$@"
 
 build.neo_configure: build.oo_all
@@ -136,6 +132,8 @@ build.neo_configure: build.oo_all
 	echo "setenv PRODUCT_TRADEMARKED_NAME '$(PRODUCT_TRADEMARKED_NAME)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_VERSION '$(PRODUCT_VERSION)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_FILETYPE '$(PRODUCT_FILETYPE)'" >> "$(OO_ENV_JAVA)"
+# OOo 1.0.x cannot support RTL languages properly
+	echo "unsetenv RES_ARAB" >> "$(OO_ENV_JAVA)"
 	touch "$@"
 
 build.neo_%_patch: % build.neo_configure
@@ -149,17 +147,14 @@ build.neo_%_patch: % build.neo_configure
 	touch "$@"
 
 build.neo_patches: build.oo_all \
-	build.neo_automation_patch \
 	build.neo_desktop_patch \
 	build.neo_dtrans_patch \
-	build.neo_extensions_patch \
 	build.neo_forms_patch \
-	build.neo_readlicense_oo_patch \
+	build.neo_readlicense_patch \
 	build.neo_offmgr_patch \
 	build.neo_sal_patch \
 	build.neo_setup2_patch \
 	build.neo_sfx2_patch \
-	build.neo_sj2_patch \
 	build.neo_svtools_patch \
 	build.neo_sysui_patch \
 	build.neo_toolkit_patch \
@@ -197,17 +192,14 @@ build.package: build.neo_patches build.oo_download_dics build.source_zip
 	echo "JavaSupport=preinstalled_or_none" >> "$(INSTALL_HOME)/response"
 # Eliminate duplicate help directories since only English is available
 	mkdir -p "$(INSTALL_HOME)/package/Contents/help/en"
-	cd "$(INSTALL_HOME)/package/Contents/help" ; sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/language_names"` ; do ln -sf "en" "$${i}" ; done'
-	echo "A" > "$(INSTALL_HOME)/setupinput"
-	source "$(OO_ENV_JAVA)" ; "$(BUILD_HOME)/instsetoo/unxmacxp.pro/"`cat "$(INSTALL_HOME)/language_numbers"`"/normal/setup" -nogui -v "-r:$(PWD)/$(INSTALL_HOME)/response" < "$(INSTALL_HOME)/setupinput"
-	chmod -Rf u+w,a+r "$(INSTALL_HOME)/package"
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/automation/unxmacxp.pro/lib/libsts$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/dtrans/unxmacxp.pro/lib/libdtransjava$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/extensions/unxmacxp.pro/lib/libpl$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/forms/unxmacxp.pro/lib/libfrm$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/sal/unxmacxp.pro/lib/libsal.dylib.3.1.0" "$(PWD)/$(BUILD_HOME)/sal/unxmacxp.pro/lib/libsalextra_x11osx_mxp.dylib" "$(PWD)/$(BUILD_HOME)/setup2/unxmacxp.pro/lib/libset$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/sfx2/unxmacxp.pro/lib/libsfx$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/sj2/unxmacxp.pro/lib/libj$${UPD}$${DLLSUFFIX}_g.dylib" "$(PWD)/$(BUILD_HOME)/svtools/unxmacxp.pro/lib/libsvt$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/toolkit/unxmacxp.pro/lib/libtk$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/vcl/unxmacxp.pro/lib/libvcl$${UPD}$${DLLSUFFIX}.dylib" "program"
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/desktop/unxmacxp.pro/bin/pkgchk" "program/pkgchk.bin" ; chmod a+x "program/pkgchk.bin"
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/desktop/unxmacxp.pro/bin/soffice" "program/soffice.bin" ; chmod a+x "program/soffice.bin"
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/readlicense_oo/source/license/unx/LICENSE" "$(PWD)/readlicense_oo/source/readme/unxmacxp/README" "."
+	cd "$(INSTALL_HOME)/package/Contents/help" ; sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/language_names"` ; do ln -s "en" "$${i}" ; done'
+	source "$(OO_ENV_JAVA)" ; "$(BUILD_HOME)/instsetoo/unxmacxp.pro/"`cat "$(INSTALL_HOME)/language_numbers"`"/normal/setup" -v "-r:$(PWD)/$(INSTALL_HOME)/response"
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/dtrans/unxmacxp.pro/lib/libdtransjava$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/forms/unxmacxp.pro/lib/libfrm$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/sal/unxmacxp.pro/lib/libsal.dylib.3.0.1" "$(PWD)/$(BUILD_HOME)/sal/unxmacxp.pro/lib/libsalextra_x11osx_mxp.dylib" "$(PWD)/$(BUILD_HOME)/sfx2/unxmacxp.pro/lib/libsfx$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/svtools/unxmacxp.pro/lib/libsvt$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/toolkit/unxmacxp.pro/lib/libtk$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/vcl/unxmacxp.pro/lib/libvcl$${UPD}$${DLLSUFFIX}.dylib" "program"
+	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/readlicense/source/license/unx/LICENSE" "$(PWD)/readlicense/source/readme/unxmacxp/README" "."
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/language_numbers" | sed "s#,# #g"` ; do cp "$(PWD)/$(BUILD_HOME)/offmgr/unxmacxp.pro/bin/neojava$${UPD}$${i}.res" "program/resource/iso$${UPD}$${i}.res" ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' "$(PWD)/$(BUILD_HOME)/setup2/unxmacxp.pro/misc/setup.sh" | sed 's#$$(OO_VERSION)#$(OO_VERSION)#g' > "program/setup" ; chmod a+x "program/setup"
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/desktop/unxmacxp.pro/misc/nswrapper.sh" "program/nswrapper" ; chmod a+x "program/nswrapper"
+	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/desktop/unxmacxp.pro/bin/soffice" "program/soffice.bin" ; chmod a+x "program/soffice.bin"
+	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#$$(LANGUAGE_NAMES)#$(shell cat "$(PWD)/$(INSTALL_HOME)/language_names")#g' "$(PWD)/$(BUILD_HOME)/setup2/unxmacxp.pro/misc/setup.sh"  > "program/setup" ; chmod a+x "program/setup"
+	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/nswrapper.sh" "program/nswrapper" ; chmod a+x "program/nswrapper"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/Info.plist" "."
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/PkgInfo" "."
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/vcl/unxmacxp.pro/bin/salapp"*.res "program/resource"
@@ -216,18 +208,19 @@ build.package: build.neo_patches build.oo_download_dics build.source_zip
 	mkdir -p "$(INSTALL_HOME)/package/Contents/Resources"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/License" "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/Readme" "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/"*.icns "Resources"
 	cd "$(INSTALL_HOME)/package/Contents/Resources" ; sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/language_names" | sed "s#-#_#g"` ; do mkdir -p "$${i}.lproj" ; mkdir -p `echo "$${i}" | sed "s#_.*\\$$##"`".lproj" ;  done'
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/program" ; regcomp -revoke -r services.rdb -c "libdtransX11$${UPD}$${DLLSUFFIX}.dylib"
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/program" ; regcomp -register -r services.rdb -c "libdtransjava$${UPD}$${DLLSUFFIX}.dylib"
-	cd "$(INSTALL_HOME)/package/Contents/program" ; ln -sf "libjava_uno.dylib" "libjava_uno.jnilib" ; ln -sf "libdb_java-3.2.dylib" "libdb_java-3.2.jnilib" ; ln -sf "libjpipe.dylib" "libjpipe.jnilib" ; ln -sf "libjuh.dylib" "libjuh.jnilib" ; ln -sf "libjuhx.dylib" "libjuhx.jnilib"
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "LICENSE.html" "README.html" "setup" "spadmin" "program/libdtransX11$${UPD}$${DLLSUFFIX}.dylib" "program/libpsp$${UPD}$${DLLSUFFIX}.dylib" "program/libspa$${UPD}$${DLLSUFFIX}.dylib" "program/instdb.ins" "program/jvmsetup" "program/jvmsetup.bin" "program/pluginapp.bin" "program/setup.bin" "program/setup.log" "program/setofficelang.bin" "program/soffice" "program/spadmin" "program/spadmin.bin" "share/kde" "share/psprint" "share/gnome" "share/config/javarc"
-	cd "$(INSTALL_HOME)/package/Contents/program" ; ln -sf "soffice.bin" "soffice"
-	cd "$(INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/Library/$(PRODUCT_DIR_NAME)-$(OO_VERSION)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' > "../../../out" ; mv -f "../../../out" "program/bootstraprc"
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in "share/registry/data/org/openoffice/Setup.xcu" "share/registry/data/org/openoffice/Office/Common.xcu" ; do sed "s#>$(OO_PRODUCT_NAME) $(OO_PRODUCT_VERSION)<#>$(PRODUCT_NAME) $(PRODUCT_VERSION)<#g" "$${i}" | sed "s#>$(OO_PRODUCT_NAME)<#>$(PRODUCT_NAME)<#g" | sed "s#>$(OO_PRODUCT_VERSION)<#>$(PRODUCT_VERSION)<#g" | sed "s#>UNIX<#>MAC<#g" > "../../../out" ; mv -f "../../../out" "$${i}" ; done'
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/program" ; regcomp -revoke -r applicat.rdb -c "libdtransX11$${UPD}$${DLLSUFFIX}.dylib"
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/program" ; regcomp -register -r applicat.rdb -c "libdtransjava$${UPD}$${DLLSUFFIX}.dylib"
+	cd "$(INSTALL_HOME)/package/Contents/program" ; ln -s "libjava_uno.dylib" "libjava_uno.jnilib" ; ln -s "libdb_java-3.2.dylib" "libdb_java-3.2.jnilib"
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "license.html" "readme.html" "spadmin" "setup" "program/libdtransX11$${UPD}$${DLLSUFFIX}.dylib" "program/libpsp$${UPD}$${DLLSUFFIX}.dylib" "program/libspa$${UPD}$${DLLSUFFIX}.dylib" "program/setup.bin" "program/soffice" "program/spadmin" "program/spadmin.bin" "share/kde" "share/psprint"
+	cd "$(INSTALL_HOME)/package/Contents/program" ; ln -s "soffice.bin" "soffice"
+	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#ProductPatch=.*$$#ProductPatch=($(PRODUCT_VERSION))#' "program/bootstraprc" | sed '/Location=.*$$/d' | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/Library/$(PRODUCT_DIR_NAME)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' > "../../../out" ; mv -f "../../../out" "program/bootstraprc"
+	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "share/config/registry/cache" ; sh -e -c 'for i in "share/config/registry/instance/org/openoffice/Setup.xml" "share/config/registry/instance/org/openoffice/Office/Common.xml" ; do sed "s#\"string\">.*</ooName>#\"string\">$(PRODUCT_NAME)</ooName>#g" "$${i}" | sed "s#\"string\">.*</ooSetupVersion>#\"string\">$(PRODUCT_VERSION)</ooSetupVersion>#g" | sed "s#$(PWD)/$(INSTALL_HOME)/package/Contents#\$$\(insturl\)#g" | sed "s#>OpenOffice\.org [0-9\.]* #>$(PRODUCT_NAME) $(PRODUCT_VERSION) #g" | sed "s#/work#/../../../Documents#g" | sed "s#>UNIX<#>MAC<#g" > "../../../out" ; mv -f "../../../out" "$${i}" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.dylib*" -o -name "*.bin"` ; do strip -S -x "$$i" ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'if [ ! -d "MacOS" ] ; then rm -Rf "MacOS" ; mv -f "program" "MacOS" ; ln -sf "MacOS" "program" ; fi'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'if [ ! -d "MacOS" ] ; then rm -Rf "MacOS" ; mv -f "program" "MacOS" ; ln -s "MacOS" "program" ; fi'
 	cd "$(INSTALL_HOME)/package/Contents/share/dict/ooo" ; sh -c 'for i in `sed "s#-[a-zA-Z0-9]* # #g" "$(PWD)/$(INSTALL_HOME)/language_names"` ; do for j in "$(PWD)/$(DIC_HOME)"/*.zip ; do unzip -o "$$j" "$$i*.aff" "$$i*.dic" "hyph_$$i*.dic" "th_$$i*.dat" "th_$$i*.idx" ; if [ $$? != 0 -a $$? != 11 ] ; then exit $$? ; fi ; done ; done'
 	cd "$(INSTALL_HOME)/package/Contents/share/dict/ooo" ; rm -f "dictionary.lst" ; sh -c 'for i in `ls -1 *.dic *.dat | sort -u | sed "s#\\.dic\\$$##" | sed "s#\\.dat\\$$##"`; do grep " $$i\$$" "$(PWD)/$(DIC_HOME)/dictionary.lst" >> "dictionary.lst" ; if [ $$? != 0 -a $$? != 1 ] ; then exit $$? ; fi ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share user ! -type d | grep -v /CVS/` ; do mkdir -p `dirname "$i"` ; cp "$(PWD)/etc/$${i}" "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find user -type d | grep -v /CVS$$` ; do mkdir -p "$$i" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share user ! -type d | grep -v /CVS/` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find "." -name ".DS_Store"` ; do rm "$${i}" ; done'
 	chmod -Rf a-w,a+r "$(INSTALL_HOME)/package"
 	echo "Running sudo to chown installation files..."

@@ -693,13 +693,6 @@ void SalInstance::DestroyVirtualDevice( SalVirtualDevice* pDevice )
 		delete pDevice;
 }
 
-// -----------------------------------------------------------------------
-
-SalSession* SalInstance::CreateSalSession()
-{
-	return NULL;
-}
-
 // =======================================================================
 
 SalInstanceData::SalInstanceData()

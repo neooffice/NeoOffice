@@ -61,11 +61,10 @@ SLOFILES = \
 	$(SLO)/String.obj \
 	$(SLO)/Throwable.obj \
 	$(SLO)/VCLBitmap.obj \
+	$(SLO)/VCLEvent.obj \
 	$(SLO)/VCLEventQueue.obj \
-	$(SLO)/VCLEventQueueEvent.obj \
 	$(SLO)/VCLFont.obj \
 	$(SLO)/VCLFrame.obj \
-	$(SLO)/VCLGlyphVector.obj \
 	$(SLO)/VCLGraphics.obj \
 	$(SLO)/VCLImage.obj \
 	$(SLO)/VCLPageFormat.obj \
