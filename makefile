@@ -57,6 +57,7 @@ PRODUCT_DIR_NAME=NeoOfficeJ
 # UTF-8 trademark symbol. Don't replace these with "\x##" literal strings!
 PRODUCT_TRADEMARKED_NAME=NeoOffice®/J
 PRODUCT_VERSION=1.1 Alpha 1
+PRODUCT_DIR_VERSION:=1.1_Alpha_1
 PRODUCT_FILETYPE=NO%F
 PRODUCT_INSTALL_URL=http://www.planamesa.com/neojava/download.php\\\#install
 PRODUCT_BUILD_URL=http://www.planamesa.com/neojava/build.php
@@ -67,7 +68,7 @@ OO_PACKAGES:=OpenOffice
 OO_TAG:=cws_srx645_ooo112fix2
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOfficeJ
-NEO_TAG:=NeoOfficeJ-1_1_Alpha_1
+NEO_TAG:=$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)
 
 all: build.all
 
@@ -136,6 +137,17 @@ build.neo_configure: build.oo_all
 	echo "setenv PRODUCT_TRADEMARKED_NAME '$(PRODUCT_TRADEMARKED_NAME)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_VERSION '$(PRODUCT_VERSION)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_FILETYPE '$(PRODUCT_FILETYPE)'" >> "$(OO_ENV_JAVA)"
+# Don't package non-core languages. It would be nice to have them all
+# but download size just gets too big
+	echo "unsetenv RES_AFRIK" >> "$(OO_ENV_JAVA)"
+	echo "unsetenv RES_ESTONIAN" >> "$(OO_ENV_JAVA)"
+	echo "unsetenv RES_NORNYN " >> "$(OO_ENV_JAVA)"
+	echo "unsetenv RES_NSOTHO" >> "$(OO_ENV_JAVA)"
+	echo "unsetenv RES_PORT" >> "$(OO_ENV_JAVA)"
+	echo "unsetenv RES_SLOVAK" >> "$(OO_ENV_JAVA)"
+	echo "unsetenv RES_SLOVENIAN" >> "$(OO_ENV_JAVA)"
+	echo "unsetenv RES_WELSH" >> "$(OO_ENV_JAVA)"
+	echo "unsetenv RES_ZULU" >> "$(OO_ENV_JAVA)"
 	touch "$@"
 
 build.neo_%_patch: % build.neo_configure
@@ -174,12 +186,13 @@ build.neo_odk_patches: \
 	touch "$@"
 
 build.oo_download_dics:
+	rm -Rf "$(DIC_HOME)"
 	mkdir -p "$(DIC_HOME)"
 	rm -f "$(DIC_HOME)/dictionary.lst"
 	curl -L "$(OO_DIC_URL)/available.lst" | awk -F, '{ print "DICT " $$1 " " $$2 " " $$3 }' >> "$(DIC_HOME)/dictionary.lst"
 	curl -L "$(OO_DIC_URL)/hyphavail.lst" | awk -F, '{ print "HYPH " $$1 " " $$2 " " $$3 }' >> "$(DIC_HOME)/dictionary.lst"
 	curl -L "$(OO_DIC_URL)/thesavail.lst" | awk -F, '{ print "THES " $$1 " " $$2 " " $$3 }' >> "$(DIC_HOME)/dictionary.lst"
-	cd "$(DIC_HOME)" ; sh -e -c 'for i in `curl -L -l "$(OO_DIC_URL)" | grep "\.zip<" | sed "s#<\/A>.*\\$$##" | sed "s#^.*>##"` ; do curl -L -O "$(OO_DIC_URL)/$$i" ; done'
+	cd "$(DIC_HOME)" ; sh -e -c 'for i in `curl -L -l "$(OO_DIC_URL)" | grep "\.zip<" | grep -v -- "-pack\.zip" | sed "s#<\/a>.*\\$$##" | sed "s#^.*>##"` ; do curl -L -O "$(OO_DIC_URL)/$$i" ; done'
 	touch "$@"
 
 build.package: build.neo_patches build.oo_download_dics build.source_zip
@@ -249,13 +262,13 @@ build.package: build.neo_patches build.oo_download_dics build.source_zip
 # Mac OS X 10.2.8 cannot handle a postflight script
 	cp "bin/postflight" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_install" ; chmod a+x "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_install"
 	cp "bin/postflight" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_upgrade" ; chmod a+x "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_upgrade"
-	mkdir -p "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)"
-	mv -f "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)"
-	mkdir -p "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)/src"
-	cp -f "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION).src.tar.gz" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)/src"
-	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/Install.html" | sed 's#$$(PRODUCT_INSTALL_URL)#$(PRODUCT_INSTALL_URL)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)/Install.html"
-	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/Build.html" | sed 's#$$(PRODUCT_BUILD_URL)#$(PRODUCT_BUILD_URL)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)/src/Build.html"
-	chmod -Rf a-w,a+r "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)"
+	mkdir -p "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
+	mv -f "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
+	mkdir -p "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)/src"
+	cp -f "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION).src.tar.gz" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)/src"
+	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/Install.html" | sed 's#$$(PRODUCT_INSTALL_URL)#$(PRODUCT_INSTALL_URL)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)/Install.html"
+	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/Build.html" | sed 's#$$(PRODUCT_BUILD_URL)#$(PRODUCT_BUILD_URL)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)/src/Build.html"
+	chmod -Rf a-w,a+r "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
 	touch "$@"
 
 build.odk_package: build.neo_odk_patches
@@ -263,13 +276,13 @@ build.odk_package: build.neo_odk_patches
 
 build.source_zip:
 	rm -Rf "$(SOURCE_HOME)"
-	mkdir -p "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)"
-	cd "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)" ; cvs -d "$(NEO_CVSROOT)" co -r "$(NEO_TAG)" "$(NEO_PACKAGE)"
+	mkdir -p "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
+	cd "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)" ; cvs -d "$(NEO_CVSROOT)" co -r "$(NEO_TAG)" "$(NEO_PACKAGE)"
 # Prune out empty directories
-	cd "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)" ; sh -e -c 'for i in `ls -1`; do cd "$${i}" ; cvs update -P -d ; done'
-	cp "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)/neojava/etc/gpl.html" "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)/LICENSE.html"
-	chmod -Rf u+w,og-w,a+r "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)"
-	cd "$(SOURCE_HOME)" ; gnutar zcf "$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION).src.tar.gz" "$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)"
+	cd "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)" ; sh -e -c 'for i in `ls -1`; do cd "$${i}" ; cvs update -P -d ; done'
+	cp "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)/neojava/etc/gpl.html" "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)/LICENSE.html"
+	chmod -Rf u+w,og-w,a+r "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
+	cd "$(SOURCE_HOME)" ; gnutar zcf "$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION).src.tar.gz" "$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
 	touch "$@"
 
 build.all: build.package
