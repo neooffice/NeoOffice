@@ -1295,6 +1295,9 @@ public final class VCLEvent extends AWTEvent {
 				case KeyEvent.VK_ALT:
 					outCode = VCLEvent.KEY_MOD2;
 					break;
+				case KeyEvent.VK_META:
+					outCode = VCLEvent.KEY_CONTROLMOD;
+					break;
 				case KeyEvent.VK_ESCAPE:
 					outCode = VCLEvent.KEY_ESCAPE;
 					break;
@@ -1593,6 +1596,8 @@ public final class VCLEvent extends AWTEvent {
 				outModifiers |= VCLEvent.KEY_MOD1;
 			if ((keyModifiers & InputEvent.ALT_MASK) == InputEvent.ALT_MASK)
 				outModifiers |= VCLEvent.KEY_MOD2;
+			if ((keyModifiers & InputEvent.META_MASK) == InputEvent.META_MASK)
+				outModifiers |= VCLEvent.KEY_CONTROLMOD;
 		}
 		else if (source instanceof KeyEvent) {
 			if ((inModifiers & InputEvent.SHIFT_MASK) == InputEvent.SHIFT_MASK)
@@ -1601,6 +1606,8 @@ public final class VCLEvent extends AWTEvent {
 				outModifiers |= VCLEvent.KEY_MOD1;
 			if ((inModifiers & InputEvent.ALT_MASK) == InputEvent.ALT_MASK)
 				outModifiers |= VCLEvent.KEY_MOD2;
+			if ((inModifiers & InputEvent.META_MASK) == InputEvent.META_MASK)
+				outModifiers |= VCLEvent.KEY_CONTROLMOD;
 		}
 		return outModifiers;
 

@@ -1148,6 +1148,15 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public String getKeyName(int keyCode) {
 
 		StringBuffer buf = new StringBuffer();
+		if ((keyCode & VCLEvent.KEY_CONTROLMOD) == VCLEvent.KEY_CONTROLMOD) {
+			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+				buf.append("\u2303");
+			}
+			else {
+				buf.append(KeyEvent.getKeyText(KeyEvent.VK_META));
+				buf.append("+");
+			}
+		}
 		if ((keyCode & VCLEvent.KEY_MOD1) == VCLEvent.KEY_MOD1) {
 			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 				buf.append("\u2318");
@@ -1163,15 +1172,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			}
 			else {
 				buf.append(KeyEvent.getKeyText(KeyEvent.VK_ALT));
-				buf.append("+");
-			}
-		}
-		if ((keyCode & VCLEvent.KEY_SHIFT) == VCLEvent.KEY_SHIFT) {
-			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-				buf.append("\u21e7");
-			}
-			else {
-				buf.append(KeyEvent.getKeyText(KeyEvent.VK_SHIFT));
 				buf.append("+");
 			}
 		}
@@ -1729,18 +1729,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (VCLFrame.lastMenuShortcutPressed != null) {
 			VCLFrame.lastMenuShortcutPressed = null;
 			return;
-		}
-
-		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-			// If a modifier is used to set the character (e.g. the "Alt-c"
-			// generates a "c-cedilla" in the Mac OS X U.S. keyboard, we must
-			// strip off the modifiers so that the C++ code does not get
-			// confused.
-			int modifiers = e.getModifiers();
-			if (VCLFrame.lastKeyPressed != null && (modifiers & InputEvent.ALT_MASK) != 0) {
-				modifiers &= ~InputEvent.ALT_MASK;
-				e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), modifiers, e.getKeyCode(), e.getKeyChar());
-			}
 		}
 
 		VCLFrame.lastKeyPressed = e;

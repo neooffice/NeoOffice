@@ -763,7 +763,8 @@ USHORT com_sun_star_vcl_VCLEvent::getModifiers()
 			// Fix bug 200 by preventing all Alt key modifiers from passing
 			// through to the OOo code. On Mac OS X, the Alt key is used solely
 			// as a dead key.
-			out &= ~KEY_MOD2;
+			if ( ! ( out & ~( KEY_MOD2 | KEY_SHIFT ) ) )
+				out &= ~KEY_MOD2;
 #endif	// MACOSX
 		}
 	}
