@@ -1001,7 +1001,8 @@ public final class VCLEvent extends AWTEvent {
 		awtEvent = true;
 
 		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-			switch (id) {
+			int eid = event.getID();
+			switch (eid) {
 				case KeyEvent.KEY_PRESSED:
 				case KeyEvent.KEY_RELEASED:
 				case KeyEvent.KEY_TYPED:
@@ -1018,14 +1019,14 @@ public final class VCLEvent extends AWTEvent {
 						int keyCode = e.getKeyCode();
 						if (keyCode == KeyEvent.VK_CONTROL)
 							keyCode = KeyEvent.VK_META;
-						event = e = new KeyEvent(e.getComponent(), id, e.getWhen(), modifiers, keyCode, e.getKeyChar());
+						event = e = new KeyEvent(e.getComponent(), eid, e.getWhen(), modifiers, keyCode, e.getKeyChar());
 					}
 					else if ((modifiers & InputEvent.META_MASK) == InputEvent.META_MASK) {
 						modifiers = (modifiers & ~InputEvent.META_MASK) | InputEvent.CTRL_MASK;
 						int keyCode = e.getKeyCode();
 						if (keyCode == KeyEvent.VK_META)
 							keyCode = KeyEvent.VK_CONTROL;
-						event = e = new KeyEvent(e.getComponent(), id, e.getWhen(), modifiers, keyCode, e.getKeyChar());
+						event = e = new KeyEvent(e.getComponent(), eid, e.getWhen(), modifiers, keyCode, e.getKeyChar());
 					}
 					break;
 				}
@@ -1690,7 +1691,7 @@ public final class VCLEvent extends AWTEvent {
 	 */
 	boolean isAWTEvent() {
 
-		return (awtEvent || id == SALEVENT_YIELDEVENTQUEUE);
+		return (awtEvent || getID() == SALEVENT_YIELDEVENTQUEUE);
 
 	}
 
