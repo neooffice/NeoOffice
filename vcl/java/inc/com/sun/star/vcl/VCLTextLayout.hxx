@@ -66,6 +66,7 @@ public:
 	void				drawText( long _par0, long _par1, int _par2, SalColor _par3 );
 	long				fillDXArray( long *_par0 );
 	void				getCaretPositions( int _par0, long *_par1 );
+	int					getTextBreak( long _par0, long _par1, int _par2 );
 	void				layoutText( ImplLayoutArgs& _par0 );
 };
 

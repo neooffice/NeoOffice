@@ -76,17 +76,15 @@ bool JavaLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 void JavaLayout::DrawText( SalGraphics& rGraphics ) const
 {
-	mpVCLTextLayout->drawText( maDrawBase.X() + maDrawOffset.X(), maDrawBase.Y() + maDrawOffset.Y(), GetOrientation(), rGraphics.maGraphicsData.mnTextColor );
+	Point aPoint( GetDrawPosition() );
+	mpVCLTextLayout->drawText( aPoint.X(), aPoint.Y(), GetOrientation(), rGraphics.maGraphicsData.mnTextColor );
 }
 
 // -----------------------------------------------------------------------
 
 int JavaLayout::GetTextBreak( long nMaxWidth, long nCharExtra, int nFactor ) const
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaLayout::GetTextBreak not implemented\n" );
-#endif
-	return STRING_LEN;
+	return mpVCLTextLayout->getTextBreak( nMaxWidth, nCharExtra, nFactor );
 }
 
 // -----------------------------------------------------------------------

@@ -88,6 +88,7 @@ com_sun_star_vcl_VCLTextLayout::com_sun_star_vcl_VCLTextLayout( com_sun_star_vcl
 	tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
 	saveRef( tempObj );
 }
+
 // ----------------------------------------------------------------------------
 
 void com_sun_star_vcl_VCLTextLayout::drawText( long _par0, long _par1, int _par2, SalColor _par3 )
@@ -162,30 +163,54 @@ void com_sun_star_vcl_VCLTextLayout::getCaretPositions( int _par0, long *_par1 )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(I)[I";
+			char *cSignature = "()[I";
 			mID = t.pEnv->GetMethodID( getMyClass(), "getCaretPositions", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[1];
-			args[0].i = jint( _par0 );
-			jintArray tempObj = (jintArray)t.pEnv->CallNonvirtualObjectMethodA( object, getMyClass(), mID, args );
+			jintArray tempObj = (jintArray)t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			if ( tempObj )
 			{
 				jsize nElements = t.pEnv->GetArrayLength( tempObj );
 				if ( nElements )
 				{
-					long nSize = ( nElements > _par0 ? _par0 : nElements ) * sizeof( jint );
 					jboolean bCopy( sal_False );
 					jint *pPosBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( tempObj, &bCopy );
 					if ( _par1 )
-						memcpy( _par1, pPosBits, nSize );
+						memcpy( _par1, pPosBits, _par0 * sizeof( jint* ) );
 					t.pEnv->ReleasePrimitiveArrayCritical( tempObj, (void *)pPosBits, JNI_ABORT );
 				}
 			}
 		}
 	}
+}
+
+// ----------------------------------------------------------------------------
+
+int com_sun_star_vcl_VCLTextLayout::getTextBreak( long _par0, long _par1, int _par2 )
+{
+	static jmethodID mID = NULL;
+	int out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(III)I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getTextBreak", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[3];
+			args[0].i = jint( _par0 );
+			args[1].i = jint( _par1 );
+			args[2].i = jint( _par2 );
+			out = (int)t.pEnv->CallNonvirtualIntMethodA( object, getMyClass(), mID, args );
+		}
+	}
+	return out;
 }
 
 // ----------------------------------------------------------------------------

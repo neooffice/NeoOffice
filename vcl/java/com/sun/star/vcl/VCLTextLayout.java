@@ -56,6 +56,21 @@ public final class VCLTextLayout {
 	private VCLFont font = null;
 
 	/**
+	 * The caret positions.
+	 */
+	private int[] caretPositions = null;
+
+	/**
+	 * The character advances.
+	 */
+	private int[] charAdvances = null;
+
+	/**
+	 * The number of characters.
+	 */
+	private int count = 0;
+
+	/**
 	 * The graphics.
 	 */
 	private VCLGraphics graphics = null;
@@ -63,17 +78,17 @@ public final class VCLTextLayout {
 	/**
 	 * The text layout.
 	 */
-	private TextLayout textLayout = null;
-
-	/**
-	 * The text length.
-	 */
-	private int textLength = 0;
+	private TextLayout layout = null;
 
 	/**
 	 * The text measurer.
 	 */
-	private TextMeasurer textMeasurer = null;
+	private TextMeasurer measurer = null;
+
+	/**
+	 * The width.
+	 */
+	private int width = 0;
 
 	/**
 	 * Constructs a new <code>VCLTextLayout</code> instance.
@@ -97,7 +112,7 @@ public final class VCLTextLayout {
 	 */
 	public void drawText(int x, int y, int orientation, int color) {
 
-		graphics.drawTextArray(textLayout, x, y, orientation, color, font.isAntialiased());
+		graphics.drawTextArray(layout, x, y, orientation, color, font.isAntialiased());
 
 	}
 
@@ -108,38 +123,44 @@ public final class VCLTextLayout {
 	 */
 	public int[] fillDXArray() {
 
-		int[] offsets = new int[textLength];
-
-		int currentOffset = 0;
-		int previousOffset = 0;
-		for (int i = 0; i < offsets.length; i++) {
-			currentOffset = (int)textMeasurer.getAdvanceBetween(0, i + 1);
-			offsets[i] = currentOffset - previousOffset;
-			previousOffset = currentOffset;
-		}
-
-		return offsets;
+		return charAdvances;
 
 	}
 
 	/**
 	 * Returns an array of the cursor offsets for each character.
 	 *
-	 * @param n number of characters to return
 	 * @return an array of the cursor offsets for each character
 	 */
-	public int[] getCaretPositions(int n) {
+	public int[] getCaretPositions() {
 
-		int[] offsets = new int[n];
+		return caretPositions;
 
-		int currentChar = 0;
-		for (int i = 0; i < offsets.length; i += 2) {
-			offsets[i] = textLayout.getCaretShape(TextHitInfo.leading(currentChar)).getBounds().x;
-			offsets[i + 1] = textLayout.getCaretShape(TextHitInfo.trailing(currentChar)).getBounds().x;
-			currentChar++;
+	}
+
+	/**
+	 * Returns the text break character.
+	 *
+	 * @param the maximum width
+	 * @param the number of extra characters
+	 * @param the factor to apply to the maximum width
+	 * @return the text break character
+	 */
+	public int getTextBreak(int maxWidth, int charExtra, int factor) {
+
+		if (((width * factor) + (count * charExtra)) <= maxWidth)
+			return Integer.MAX_VALUE;
+
+		// Iterate through char widths until the maximum width is reached
+		int currentWidth = 0;
+		for ( int i = 0; i < count; i++ )
+		{
+			currentWidth += (charAdvances[i] * factor);
+			if (currentWidth >= maxWidth)
+				return i;
 		}
 
-		return offsets;
+		return Integer.MAX_VALUE;
 
 	}
 
@@ -150,14 +171,36 @@ public final class VCLTextLayout {
 	 */
 	public void layoutText(String s) {
 
-		textLength = s.length();
+		count = s.length();
 
 		// Create the attributed string
 		AttributedString as = new AttributedString(s);
 		as.addAttribute(TextAttribute.FONT, font.getFont());
 
-		textMeasurer = new TextMeasurer(as.getIterator(), graphics.getFontRenderContext());
-		textLayout = textMeasurer.getLayout(0, textLength);
+		measurer = new TextMeasurer(as.getIterator(), graphics.getFontRenderContext());
+		layout = measurer.getLayout(0, count);
+
+		// Cache the character advances
+		charAdvances = new int[count];
+		int currentAdvance = 0;
+		int previousAdvance = 0;
+		for (int i = 0; i < charAdvances.length; i++) {
+			currentAdvance = (int)measurer.getAdvanceBetween(0, i + 1);
+			charAdvances[i] = currentAdvance - previousAdvance;
+			previousAdvance = currentAdvance;
+		}
+
+		// Cache the width
+		width = currentAdvance;
+
+		// Cache the caret positions
+		caretPositions = new int[count * 2];
+		int currentPosition = 0;
+		for (int i = 0; i < caretPositions.length; i += 2) {
+			caretPositions[i] = currentPosition;
+			currentPosition += charAdvances[i / 2];
+			caretPositions[i + 1] = currentPosition;
+		}
 
 	}
 
