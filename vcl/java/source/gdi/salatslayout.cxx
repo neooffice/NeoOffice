@@ -279,14 +279,6 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			{
 				int j = i - rArgs.mnMinCharPos + 1;
 				aStr[ j ] = rArgs.mpStr[ i ];
-
-				// Mirror RTL characters
-				if ( bRTL && bRunRTL )
-				{
-					sal_Unicode nChar = GetMirroredChar( aStr[ j ] );
-					if ( nChar )
-						aStr[ j ] = nChar;
-				}
 			}
 		}
 
