@@ -133,7 +133,8 @@ com_sun_star_vcl_VCLEvent::com_sun_star_vcl_VCLEvent( USHORT nID, const SalFrame
 	args[0].i = jint( nID );
 	args[1].l = pFrame ? pFrame->maFrameData.mpVCLFrame->getJavaObject() : NULL;
 	args[2].i = jint( pData );
-        args[3].l = t.pEnv->NewStringUTF( str );
+	args[3].l = t.pEnv->NewStringUTF( str );
+
 	jobject tempObj;
 	tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
 	saveRef( tempObj );

@@ -164,7 +164,6 @@ void SVMainThread::run()
 		pSalData->maNativeFontMapping[ pNativeFont ] = pFontData->mpFirst;
 	}
 
-#ifndef NO_NATIVE_MENUS
 #ifdef MACOSX
 	VCLThreadAttach t;
 	if ( t.pEnv )
@@ -186,12 +185,12 @@ void SVMainThread::run()
 				aTypes[2].eventKind = kEventMenuBeginTracking;
 				InstallApplicationEventHandler( pEventHandlerUPP, 3, aTypes, NULL, NULL );
 			}
-                        
-                        // install AppleEvent handlers for processing open and print events.  Bug 209
-                        
-                        AEInstallEventHandler( kCoreEventClass, kAEOpenDocuments, NewAEEventHandlerUPP( DoAEOpenPrintDocuments ), 0, FALSE );
-                        AEInstallEventHandler( kCoreEventClass, kAEPrintDocuments, NewAEEventHandlerUPP( DoAEOpenPrintDocuments ), 0, FALSE );
 		}
+
+		// Install AppleEvent handlers for processing open and print events
+		// to fix bug 209 
+		AEInstallEventHandler( kCoreEventClass, kAEOpenDocuments, NewAEEventHandlerUPP( DoAEOpenPrintDocuments ), 0, FALSE );
+		AEInstallEventHandler( kCoreEventClass, kAEPrintDocuments, NewAEEventHandlerUPP( DoAEOpenPrintDocuments ), 0, FALSE );
 
 		// Fix bug 223 by registering a display manager notification callback
 		ProcessSerialNumber nProc;
@@ -203,7 +202,6 @@ void SVMainThread::run()
 		}
 	}
 #endif	// MACOSX
-#endif	// !NO_NATIVE_MENUS
 
 	mpApp->Main();
 }
@@ -350,16 +348,12 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 			}
 			else if ( nType == 'odoc' || nType == 'pdoc' )
 			{
-				// note that we can't actually get the
-                                // appleevent from the carbon event.  We must
-                                // dispatch it to registered appleevent
-                                // handlers
-                                
-                                EventRecord eventRec;
-                                if ( ConvertEventRefToEventRecord( aEvent, &eventRec ) )
-                                {
-                                	AEProcessAppleEvent( &eventRec );
-                                }
+				// note that we can't actually get the Apple event from the
+				// carbon event. We must dispatch it to registered appleevent
+				// handlers
+				EventRecord eventRec;
+				if ( ConvertEventRefToEventRecord( aEvent, &eventRec ) )
+					AEProcessAppleEvent( &eventRec );
 			}
 		}
 
@@ -498,64 +492,66 @@ void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void
 #ifdef MACOSX
 static OSErr DoAEOpenPrintDocuments( const AppleEvent *message, AppleEvent *reply, long refcon )
 {
-        OSErr err;
-        AEDesc theDesc;
-        OSType eventID;
-        DescType ignoreType;
-        MacOSSize ignoreSize;
-        
-        AEGetAttributePtr( message, keyEventIDAttr, typeType, &ignoreType, &eventID, sizeof( OSType ), &ignoreSize );
-        
-        err = AEGetParamDesc( message, keyDirectObject, typeAEList, &theDesc );
-        if ( err == noErr )
-        {
-                long numFiles;
-                err = AECountItems( &theDesc, &numFiles );
-                if ( err == noErr )
-                {
-                        for ( long i = 1; i <= numFiles; i++ )
-                        {
-                                FSSpec fileSpec;
-                                AEKeyword ignoreKeyword;
-                                
-                                err = AEGetNthPtr( &theDesc, i, typeFSS, &ignoreKeyword, &ignoreType, (void *)&fileSpec, sizeof(FSSpec), &ignoreSize );
-                                if ( err == noErr )
-                                {
-                                        // convert to a full path for our VCL event
-                                        
-                                        FSRef fileRef;
-                                        err = FSpMakeFSRef( &fileSpec, &fileRef );
-                                        if ( err == noErr )
-                                        {
-                                                char posixPath[PATH_MAX];
-                                                memset( posixPath, '\0', PATH_MAX );
-                                                err = FSRefMakePath( &fileRef, (UInt8 *)posixPath, sizeof(posixPath) );
-                                                if ( err == noErr )
-                                                {
-                                                        SalData *pSalData = GetSalData();
-                                                        if ( pSalData && pSalData->mpEventQueue )
-                                                        {
-                                                                com_sun_star_vcl_VCLEvent aEvent( ( ( eventID == kAEOpenDocuments ) ? SALEVENT_OPENDOCUMENT : SALEVENT_PRINTDOCUMENT ), NULL, NULL, posixPath );
-                                                                pSalData->mpEventQueue->postCachedEvent( &aEvent );
-                                                        }
-                                                }
-                                        }
-                                }
-                                
-                                // don't continue processing if we have an error
-                                
-                                if ( err != noErr )
-                                        break;
-                        }
-                }
-        }
-        
-        AEDisposeDesc( &theDesc );
-        
-        // insert a reply containing any error code
-        
-        AEPutParamPtr( reply, 'errn', typeShortInteger, (void *)&err, sizeof(short) );
-        return ( err );
+	OSErr err = noErr;
+	AEDesc theDesc;
+	OSType eventID;
+	DescType ignoreType;
+	MacOSSize ignoreSize;
+
+	if ( !Application::IsShutDown() )
+	{
+		SalData *pSalData = GetSalData();
+		if ( pSalData && pSalData->mpEventQueue )
+		{
+			AEGetAttributePtr( message, keyEventIDAttr, typeType, &ignoreType, &eventID, sizeof( OSType ), &ignoreSize );
+
+			err = AEGetParamDesc( message, keyDirectObject, typeAEList, &theDesc );
+			if ( err == noErr )
+			{
+				long numFiles;
+				err = AECountItems( &theDesc, &numFiles );
+				if ( err == noErr )
+				{
+					for ( long i = 1; i <= numFiles; i++ )
+					{
+						FSSpec fileSpec;
+						AEKeyword ignoreKeyword;
+
+						err = AEGetNthPtr( &theDesc, i, typeFSS, &ignoreKeyword, &ignoreType, (void *)&fileSpec, sizeof(FSSpec), &ignoreSize );
+						if ( err == noErr )
+						{
+							// Convert to a full path for our VCL event
+							FSRef fileRef;
+							err = FSpMakeFSRef( &fileSpec, &fileRef );
+							if ( err == noErr )
+							{
+								char posixPath[PATH_MAX];
+								memset( posixPath, '\0', PATH_MAX );
+								err = FSRefMakePath( &fileRef, (UInt8 *)posixPath, sizeof(posixPath) );
+								if ( err == noErr )
+								{
+									com_sun_star_vcl_VCLEvent aEvent( ( ( eventID == kAEOpenDocuments ) ? SALEVENT_OPENDOCUMENT : SALEVENT_PRINTDOCUMENT ), NULL, NULL, posixPath );
+									pSalData->mpEventQueue->postCachedEvent( &aEvent );
+								}
+							}
+						}
+
+						// Don't continue processing if we have an error
+						if ( err != noErr )
+							break;
+					}
+				}
+
+				AEDisposeDesc( &theDesc );
+			}
+		}
+
+	}
+
+	// Insert a reply containing any error code
+	AEPutParamPtr( reply, 'errn', typeShortInteger, (void *)&err, sizeof(short) );
+
+	return ( err );
 }
 #endif // MACOSX
 
