@@ -53,11 +53,6 @@ import java.awt.print.PrinterJob;
 public final class VCLPrintJob implements Printable, Runnable {
 
 	/**
-	 * The cached <code>VCLPageFormat</code>.
-	 */
-	private VCLPageFormat pageFormat = null;
-
-	/**
 	 * The current <code>VCLGraphics</code>
 	 */
 	private VCLGraphics currentGraphics = null;
@@ -66,6 +61,11 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 * The current page.
 	 */
 	private int currentPage = 0;
+
+	/**
+	 * The dialogAccepted flag.
+	 */
+	private boolean dialogAccepted = false;
 
 	/**
 	 * The end job flag.
@@ -81,6 +81,11 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 * The cached printer job.
 	 */
 	private PrinterJob job = PrinterJob.getPrinterJob();
+
+	/**
+	 * The cached <code>VCLPageFormat</code>.
+	 */
+	private VCLPageFormat pageFormat = null;
 
 	/**
 	 * The print thread.
@@ -277,20 +282,27 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 * Initialize the print job.
 	 *
 	 * @param p the <code>VCLPageFormat</code>
+	 * @param b <code>true</code> to show the print dialog or
+	 *  <code>false</code> to not show the print dialog
 	 * @return <code>true</code> if a print job was successfully created or
 	 *  <code>false</code> if the user cancelled the print dialog
 	 */
-	public boolean startJob(VCLPageFormat p) {
+	public boolean startJob(VCLPageFormat p, boolean b) {
+
+		pageFormat = p;
+		job.setPrintable(this, pageFormat.getPageFormat());
 
 		// Detect if the user cancelled the print dialog
-		job.setPrintable(this, p.getPageFormat());
-		if (job.printDialog()) {
-			pageFormat = p;
-			return true;
+		if (b) {
+			if (job.printDialog()) {
+				dialogAccepted = true;
+			}
+			else {
+				dialogAccepted = false;
+			}
 		}
-		else {
-			return false;
-		}
+
+		return dialogAccepted;
 
 	}
 

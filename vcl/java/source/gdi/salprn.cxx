@@ -215,7 +215,6 @@ void SalInfoPrinter::GetPageInfo( const ImplJobSetup* pSetupData,
 
 SalPrinter::SalPrinter()
 {
-	maPrinterData.mpGraphics->maGraphicsData.mpPrinter = this;
 }
 
 // -----------------------------------------------------------------------
@@ -236,11 +235,9 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 	// Set but don't update values
 	maPrinterData.mpPrinter->SetPrinterData( pSetupData );
 
-	if ( bShowDialog )
-	{
-		maPrinterData.mbStarted = maPrinterData.mpVCLPrintJob->startJob( maPrinterData.mpPrinter->maPrinterData.mpVCLPageFormat );
-	}
-	else if ( maPrinterData.mbStarted )
+	maPrinterData.mbStarted = maPrinterData.mpVCLPrintJob->startJob( maPrinterData.mpPrinter->maPrinterData.mpVCLPageFormat, bShowDialog );
+
+	if ( !bShowDialog && maPrinterData.mbStarted )
 	{
 #ifdef MACOSX
 		// Test the JVM version and if it is below 1.4, use Carbon printing APIs
