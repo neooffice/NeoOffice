@@ -74,12 +74,13 @@ namespace java {
 
 class JavaDragSource : public ::cppu::WeakComponentImplHelper3< ::com::sun::star::datatransfer::dnd::XDragSource, ::com::sun::star::lang::XInitialization, ::com::sun::star::lang::XServiceInfo >
 {
+	friend class			JavaDropTarget;
 private:
+	sal_Int8				mnActions;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	maContents;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDragSourceListener >	maListener;
     ::osl::Mutex			maMutex;
-	void*					mpNativeDragHandler;
-	void*					mpNativeDragReference;
+	void*					mpNativeWindow;
 
 public:
 							JavaDragSource();
@@ -92,6 +93,8 @@ public:
 	virtual sal_Bool		SAL_CALL isDragImageSupported() throw();
 	virtual sal_Int32		SAL_CALL getDefaultCursor( sal_Int8 dragAction ) throw();
 	virtual void			SAL_CALL startDrag( const ::com::sun::star::datatransfer::dnd::DragGestureEvent& trigger, sal_Int8 sourceActions, sal_Int32 cursor, sal_Int32 image, const Reference< ::com::sun::star::datatransfer::XTransferable >& transferable, const Reference< ::com::sun::star::datatransfer::dnd::XDragSourceListener >& listener ) throw();
+
+	void					handleDrag( sal_Int32 nX, sal_Int32 nY );
 	void					runDragExecute();
 };
 
@@ -105,7 +108,7 @@ private:
 	sal_Int8				mnDefaultActions;
 	::std::list< ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDropTargetListener > >	maListeners;
     ::osl::Mutex			maMutex; 
-	void*					mpNativeDropHandler;
+	void*					mpNativeWindow;
 
 public:
 							JavaDropTarget();
@@ -122,6 +125,11 @@ public:
 	virtual ::rtl::OUString	SAL_CALL getImplementationName() throw();
 	virtual sal_Bool		SAL_CALL supportsService( const ::rtl::OUString& serviceName ) throw();
 	virtual ::com::sun::star::uno::Sequence< ::rtl::OUString >	SAL_CALL getSupportedServiceNames() throw();
+
+	void					handleDragEnter( sal_Int32 nX, sal_Int32 nY );
+	void					handleDragExit( sal_Int32 nX, sal_Int32 nY );
+	void					handleDragOver( sal_Int32 nX, sal_Int32 nY );
+	bool					handleDrop( sal_Int32 nX, sal_Int32 nY );
 };
 
 ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL JavaDropTarget_getSupportedServiceNames();

@@ -34,6 +34,7 @@
  ************************************************************************/
 
 #include <stdio.h>
+#include <unistd.h>
 
 #include <java_dndcontext.hxx>
 

@@ -56,9 +56,11 @@
 #include <postmac.h>
 
 static ::osl::Mutex aEventHandlerMutex;
-static ULONG nEventHandlerCount = 0;
-static EventHandlerUPP pEventHandlerUPP  = NULL;
+static EventHandlerUPP pEventHandlerUPP = NULL;
 static EventHandlerRef pEventHandler = NULL;
+static DragTrackingHandlerUPP pDragTrackingHandlerUPP = NULL;
+static DragTrackingHandlerUPP pDropTrackingHandlerUPP = NULL;
+static DragReceiveHandlerUPP pDragReceiveHandlerUPP = NULL;
 static EventRef aLastMouseDraggedEvent = NULL;
 static EventLoopTimerUPP pEventLoopTimerUPP = NULL;
 static EventLoopTimerRef pEventLoopTimer = NULL;
@@ -78,35 +80,21 @@ using namespace java;
 using namespace java::dtrans;
 using namespace osl;
 using namespace rtl;
+using namespace std;
 
 // ========================================================================
 
 #ifdef MACOSX
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData )
 {
-	EventClass nClass = GetEventClass( aEvent );
-	if ( nClass == kEventClassMouse )
+	if ( GetEventClass( aEvent ) == kEventClassMouse && GetEventKind( aEvent ) == kEventMouseDragged )
 	{
-		EventKind nKind = GetEventKind( aEvent );
-		if ( nKind == kEventMouseDragged )
-		{
-			ClearableMutexGuard aEventHandlerGuard( aEventHandlerMutex );
+		ClearableMutexGuard aEventHandlerGuard( aEventHandlerMutex );
 
-			if ( !aLastMouseDraggedEvent )
-				aLastMouseDraggedEvent = RetainEvent( aEvent );
+		if ( !aLastMouseDraggedEvent )
+			aLastMouseDraggedEvent = RetainEvent( aEvent );
 
-			aEventHandlerGuard.clear();
-		}
- 		else if ( nKind == kEventMouseUp )
-		{
-			ClearableMutexGuard aEventHandlerGuard( aEventHandlerMutex );
-
-			if ( aLastMouseDraggedEvent )
-				ReleaseEvent( aLastMouseDraggedEvent );
-			aLastMouseDraggedEvent = NULL;
-
-			aEventHandlerGuard.clear();
-		}
+		aEventHandlerGuard.clear();
 	}
 
 	// Always execute the next registered handler
@@ -126,11 +114,45 @@ static void CarbonEventLoopTimer( EventLoopTimerRef aTimer, void *pData )
 // ------------------------------------------------------------------------
 
 #ifdef MACOSX
-static OSErr ImplTrackingHandlerCallback( DragTrackingMessage nMessage, WindowRef aWindow, void *pData, DragRef aDrag )
+static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, WindowRef aWindow, void *pData, DragRef aDrag )
 {
-#ifdef DEBUG
-	fprintf( stderr, "ImplTrackingHandlerCallback not implemented\n" );
-#endif
+	MacOSPoint aPoint;
+	Rect aRect;
+	if ( pData && GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
+		((JavaDragSource *)pData)->handleDrag( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) );
+
+	return noErr;
+}
+#endif	// MACOSX
+
+// ------------------------------------------------------------------------
+
+#ifdef MACOSX
+static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, WindowRef aWindow, void *pData, DragRef aDrag )
+{
+	MacOSPoint aPoint;
+	Rect aRect;
+	if ( pData && GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
+	{
+		sal_Int32 nX = (sal_Int32)( aPoint.h - aRect.left );
+		sal_Int32 nY = (sal_Int32)( aPoint.v - aRect.top );
+
+		switch ( nMessage )
+		{
+			case kDragTrackingEnterWindow:
+				((JavaDropTarget *)pData)->handleDragEnter( nX, nY );
+				break;
+			case kDragTrackingInWindow:
+				((JavaDropTarget *)pData)->handleDragOver( nX, nY );
+				break;
+			case kDragTrackingLeaveWindow:
+				((JavaDropTarget *)pData)->handleDragExit( nX, nY );
+				break;
+			default:
+				break;
+		}
+	}
+
 	return noErr;
 }
 #endif	// MACOSX
@@ -140,9 +162,11 @@ static OSErr ImplTrackingHandlerCallback( DragTrackingMessage nMessage, WindowRe
 #ifdef MACOSX
 static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, DragRef aDrag )
 {
-#ifdef DEBUG
-	fprintf( stderr, "ImplDragReceiveHandlerCallback not implemented\n" );
-#endif
+	MacOSPoint aPoint;
+	Rect aRect;
+	if ( pData && GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr && ((JavaDropTarget *)pData)->handleDrop( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) ) )
+		return noErr;
+
 	return dragNotAcceptedErr;
 }
 #endif	// MACOSX
@@ -190,16 +214,57 @@ XMultiServiceFactory >& xMultiServiceFactory )
 
 JavaDragSource::JavaDragSource() :
 	WeakComponentImplHelper3< XDragSource, XInitialization, XServiceInfo >( maMutex ),
-	mpNativeDragHandler( NULL ),
-	mpNativeDragReference( NULL )
+	mnActions( DNDConstants::ACTION_NONE ),
+	mpNativeWindow( NULL )
+{
+}
+
+// ------------------------------------------------------------------------
+
+JavaDragSource::~JavaDragSource()
 {
 #ifdef MACOSX
-	ClearableMutexGuard aEventHandlerGuard( aEventHandlerMutex );
+	MutexGuard aEventHandlerGuard( aEventHandlerMutex );
 
-	if ( !nEventHandlerCount )
+	// If we own the event loop timer, clean up event loop timer
+	if ( pEventLoopTimerOwner == this )
 	{
-		// Test the JVM version and if it is 1.4 or higher use Cocoa, otherwise
-		// use Carbon
+		if ( pEventLoopTimer )
+		{
+			RemoveEventLoopTimer( pEventLoopTimer );
+			pEventLoopTimer = NULL;
+		}
+
+		pEventLoopTimerOwner = NULL;
+	}
+#endif	// MACOSX
+}
+
+// ------------------------------------------------------------------------
+
+void SAL_CALL JavaDragSource::initialize( const Sequence< Any >& arguments ) throw( Exception )
+{
+	if ( arguments.getLength() > 1 )
+	{
+		sal_Int32 nWindow;
+		arguments.getConstArray()[1] >>= nWindow;
+		if ( nWindow )
+			mpNativeWindow = (void *)nWindow;
+	}
+
+#ifdef MACOSX
+	if ( !mpNativeWindow || !IsValidWindowPtr( (WindowRef)mpNativeWindow ) )
+	{
+		mpNativeWindow = NULL;
+		throw RuntimeException();
+	}
+
+	MutexGuard aEventHandlerGuard( aEventHandlerMutex );
+
+	if ( !pEventHandlerUPP )
+	{
+		// Test the JVM version and if it is 1.4 or higher use Cocoa,
+		// otherwise use Carbon
 		DTransThreadAttach t;
 		if ( t.pEnv )
 		{
@@ -211,86 +276,15 @@ JavaDragSource::JavaDragSource() :
 				if ( pEventHandlerUPP )
 				{
 					// Set up native event handler
-					EventTypeSpec aTypes[2];
-					aTypes[0].eventClass = kEventClassMouse;
-					aTypes[0].eventKind = kEventMouseDragged;
-					aTypes[1].eventClass = kEventClassMouse;
-					aTypes[1].eventKind = kEventMouseUp;
-					InstallApplicationEventHandler( pEventHandlerUPP, 2, aTypes, NULL, &pEventHandler );
+					EventTypeSpec aType;
+					aType.eventClass = kEventClassMouse;
+					aType.eventKind = kEventMouseDragged;
+					InstallApplicationEventHandler( pEventHandlerUPP, 1, &aType, NULL, &pEventHandler );
 				}
 			}
 		}
 	}
-
-	if ( pEventHandler )
-		nEventHandlerCount++;
-
-	aEventHandlerGuard.clear();
-
-	mpNativeDragHandler = (void *)NewDragTrackingHandlerUPP( ImplTrackingHandlerCallback );
-	if ( mpNativeDragHandler )
-		InstallTrackingHandler( (DragTrackingHandlerUPP)mpNativeDragHandler, NULL, this );
 #endif	// MACOSX
-}
-
-// ------------------------------------------------------------------------
-
-JavaDragSource::~JavaDragSource()
-{
-#ifdef MACOSX
-	if ( mpNativeDragHandler )
-	{
-		RemoveTrackingHandler( (DragTrackingHandlerUPP)mpNativeDragHandler, NULL );
-		DisposeDragTrackingHandlerUPP( (DragTrackingHandlerUPP)mpNativeDragHandler );
-	}
-
-	if ( mpNativeDragReference )
-		DisposeDrag( (DragRef)mpNativeDragReference );
-
-	ClearableMutexGuard aEventHandlerGuard( aEventHandlerMutex );
-
-	// If we are the last instance, clean up event handlers
-	if ( !--nEventHandlerCount )
-	{
-		if ( pEventHandler )
-			RemoveEventHandler( pEventHandler );
-
-		if ( pEventHandlerUPP )
-			DisposeEventHandlerUPP( pEventHandlerUPP );
-
-		if ( aLastMouseDraggedEvent )
-		{
-			ReleaseEvent( aLastMouseDraggedEvent );
-			aLastMouseDraggedEvent = NULL;
-		}
-	}
-
-	// If we own the event loop timer, clean up event loop timer
-	if ( pEventLoopTimerOwner == this )
-	{
-		if ( pEventLoopTimer )
-		{
-			RemoveEventLoopTimer( pEventLoopTimer );
-			pEventLoopTimer = NULL;
-		}
-
-		if ( pEventLoopTimerUPP )
-		{
-			DisposeEventLoopTimerUPP( pEventLoopTimerUPP );
-			pEventLoopTimerUPP = NULL;
-		}
-
-		pEventLoopTimerOwner = NULL;
-	}
-
-	aEventHandlerGuard.clear();
-#endif	// MACOSX
-}
-
-// ------------------------------------------------------------------------
-
-void SAL_CALL JavaDragSource::initialize( const Sequence< Any >& arguments ) throw( Exception )
-{
 }
 
 // ------------------------------------------------------------------------
@@ -332,6 +326,7 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 		return;
 	}
 
+	mnActions = sourceActions;
 	maContents = transferable;
 	maListener = listener;
 
@@ -351,6 +346,7 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 			{
 				DisposeEventLoopTimerUPP( pEventLoopTimerUPP );
 
+				mnActions = DNDConstants::ACTION_NONE;
 				maContents.clear();
 				maListener.clear();
 
@@ -401,6 +397,27 @@ Sequence< OUString > SAL_CALL JavaDragSource::getSupportedServiceNames() throw()
 
 // ------------------------------------------------------------------------
 
+void JavaDragSource::handleDrag( sal_Int32 nX, sal_Int32 nY )
+{
+	DragSourceDragEvent aSourceDragEvent;
+	aSourceDragEvent.Source = static_cast< OWeakObject* >(this);
+	aSourceDragEvent.DragSource = static_cast< XDragSource* >(this);
+	aSourceDragEvent.DropAction = ~0;
+	aSourceDragEvent.UserAction = mnActions;
+
+	ClearableMutexGuard aGuard( maMutex );
+
+	Reference< XDragSourceListener > xListener( maListener );
+
+	aGuard.clear();
+
+	// Send source drag event
+	if ( xListener.is() )
+		xListener->dragOver( aSourceDragEvent );
+}
+
+// ------------------------------------------------------------------------
+
 void JavaDragSource::runDragExecute()
 {
 	DragSourceDropEvent aDragEvent;
@@ -428,8 +445,21 @@ void JavaDragSource::runDragExecute()
 				RgnHandle aRegion = NewRgn();
 				if ( aRegion )
 				{
+					if ( !pDragTrackingHandlerUPP )
+						pDragTrackingHandlerUPP = NewDragTrackingHandlerUPP( ImplDragTrackingHandlerCallback );
+
+					if ( pDragTrackingHandlerUPP && mpNativeWindow )
+						InstallTrackingHandler( pDragTrackingHandlerUPP, (WindowRef)mpNativeWindow, this );
+
 					if ( TrackDrag( aDrag, &aEventRecord, aRegion ) == noErr )
-						;
+					{
+						aDragEvent.DropAction = ~0;
+						aDragEvent.DropSuccess = sal_True;
+					}
+
+					if ( pDragTrackingHandlerUPP && mpNativeWindow )
+						RemoveTrackingHandler( pDragTrackingHandlerUPP, (WindowRef)mpNativeWindow );
+
 					DisposeRgn( aRegion );
 				}
 			}
@@ -467,25 +497,17 @@ void JavaDragSource::runDragExecute()
 	aGuard.clear();
 
 	if ( xListener.is() )
-	{
-		xContents.clear();
 		xListener->dragDropEnd( aDragEvent );
-	}
 }
 
 // ========================================================================
 
 JavaDropTarget::JavaDropTarget() :
 	WeakComponentImplHelper3< XDropTarget, XInitialization, XServiceInfo >( maMutex ),
-	mbActive( sal_False ),
+	mbActive( sal_True ),
 	mnDefaultActions( 0 ),
-	mpNativeDropHandler( NULL )
+	mpNativeWindow( NULL )
 {
-#ifdef MACOSX
-	mpNativeDropHandler = (void *)NewDragReceiveHandlerUPP( ImplDragReceiveHandlerCallback );
-	if ( mpNativeDropHandler )
-		InstallReceiveHandler( (DragReceiveHandlerUPP)mpNativeDropHandler, NULL, this );
-#endif	// MACOSX
 }
 
 // ------------------------------------------------------------------------
@@ -493,11 +515,13 @@ JavaDropTarget::JavaDropTarget() :
 JavaDropTarget::~JavaDropTarget()
 {
 #ifdef MACOSX
-	if ( mpNativeDropHandler )
-	{
-		RemoveReceiveHandler( (DragReceiveHandlerUPP)mpNativeDropHandler, NULL );
-		DisposeDragReceiveHandlerUPP( (DragReceiveHandlerUPP)mpNativeDropHandler );
-	}
+	MutexGuard aEventHandlerGuard( aEventHandlerMutex );
+
+	if ( pDropTrackingHandlerUPP && mpNativeWindow )
+		RemoveTrackingHandler( pDropTrackingHandlerUPP, (WindowRef)mpNativeWindow );
+
+	if ( pDragReceiveHandlerUPP && mpNativeWindow )
+		RemoveReceiveHandler( pDragReceiveHandlerUPP, (WindowRef)mpNativeWindow );
 #endif	// MACOSX
 }
 
@@ -505,6 +529,35 @@ JavaDropTarget::~JavaDropTarget()
 
 void SAL_CALL JavaDropTarget::initialize( const Sequence< Any >& arguments ) throw( Exception )
 {
+	if ( arguments.getLength() > 0 )
+	{
+		sal_Int32 nWindow;
+		arguments.getConstArray()[0] >>= nWindow;
+		if ( nWindow )
+			mpNativeWindow = (void *)nWindow;
+	}
+
+#ifdef MACOSX
+	if ( !mpNativeWindow || !IsValidWindowPtr( (WindowRef)mpNativeWindow ) )
+	{
+		mpNativeWindow = NULL;
+		throw RuntimeException();
+	}
+
+	MutexGuard aEventHandlerGuard( aEventHandlerMutex );
+
+	if ( !pDropTrackingHandlerUPP )
+		pDropTrackingHandlerUPP = NewDragTrackingHandlerUPP( ImplDropTrackingHandlerCallback );
+
+	if ( pDropTrackingHandlerUPP )
+		InstallTrackingHandler( pDropTrackingHandlerUPP, (WindowRef)mpNativeWindow, this );
+
+	if ( !pDragReceiveHandlerUPP )
+		pDragReceiveHandlerUPP = NewDragReceiveHandlerUPP( ImplDragReceiveHandlerCallback );
+
+	if ( pDragReceiveHandlerUPP )
+		InstallReceiveHandler( pDragReceiveHandlerUPP, (WindowRef)mpNativeWindow, this );
+#endif	// MACOSX
 }
 
 // --------------------------------------------------------------------------
@@ -578,4 +631,190 @@ sal_Bool SAL_CALL JavaDropTarget::supportsService( const OUString& ServiceName )
 Sequence< OUString > SAL_CALL JavaDropTarget::getSupportedServiceNames() throw()
 {
 	return JavaDropTarget_getSupportedServiceNames();
+}
+
+// ------------------------------------------------------------------------
+
+void JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY )
+{
+	DropTargetDragEnterEvent aDragEnterEvent;
+	aDragEnterEvent.Source = static_cast< XDropTarget* >(this);
+	aDragEnterEvent.Context = new DropTargetDragContext();
+	aDragEnterEvent.LocationX = nX;
+	aDragEnterEvent.LocationY = nY;
+	aDragEnterEvent.SourceActions = DNDConstants::ACTION_NONE;
+	aDragEnterEvent.DropAction = DNDConstants::ACTION_NONE;
+
+#ifdef MACOSX
+	ClearableMutexGuard aEventHandlerGuard( aEventHandlerMutex );
+
+	if ( pEventLoopTimerOwner )
+	{
+		ClearableMutexGuard aDragSourceGuard( pEventLoopTimerOwner->maMutex );
+
+		aDragEnterEvent.SourceActions = pEventLoopTimerOwner->mnActions;
+		aDragEnterEvent.DropAction = ~0;
+		aDragEnterEvent.SupportedDataFlavors = pEventLoopTimerOwner->maContents->getTransferDataFlavors();
+
+		aDragSourceGuard.clear();
+	}
+
+	aEventHandlerGuard.clear();
+#else // MACOSX
+#ifdef DEBUG
+	fprintf( stderr, "JavaDropTarget::handleDragEnter not implemented\n" );
+#endif
+#endif	// MACOSX
+
+	ClearableMutexGuard aGuard( maMutex );
+
+	list< Reference< XDropTargetListener > > listeners( maListeners );
+
+	aGuard.clear();
+
+	for ( list< Reference< XDropTargetListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
+	{
+		if ( (*it).is() )
+			(*it)->dragEnter( aDragEnterEvent );
+	}
+}
+
+// ------------------------------------------------------------------------
+
+void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY )
+{
+	DropTargetDragEvent aDragEvent;
+	aDragEvent.Source = static_cast< XDropTarget* >(this);
+	aDragEvent.Context = new DropTargetDragContext();
+	aDragEvent.LocationX = nX;
+	aDragEvent.LocationY = nY;
+	aDragEvent.SourceActions = DNDConstants::ACTION_NONE;
+	aDragEvent.DropAction = DNDConstants::ACTION_NONE;
+
+#ifdef MACOSX
+	ClearableMutexGuard aEventHandlerGuard( aEventHandlerMutex );
+
+	if ( pEventLoopTimerOwner )
+	{
+		ClearableMutexGuard aDragSourceGuard( pEventLoopTimerOwner->maMutex );
+
+		aDragEvent.SourceActions = pEventLoopTimerOwner->mnActions;
+		aDragEvent.DropAction = ~0;
+
+		aDragSourceGuard.clear();
+	}
+
+	aEventHandlerGuard.clear();
+#else // MACOSX
+#ifdef DEBUG
+	fprintf( stderr, "JavaDropTarget::handleDragExit not implemented\n" );
+#endif
+#endif	// MACOSX
+
+	ClearableMutexGuard aGuard( maMutex );
+
+	list< Reference< XDropTargetListener > > listeners( maListeners );
+
+	aGuard.clear();
+
+	for ( list< Reference< XDropTargetListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
+	{
+		if ( (*it).is() )
+			(*it)->dragOver( aDragEvent );
+	}
+}
+
+// ------------------------------------------------------------------------
+
+void JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY )
+{
+	DropTargetDragEvent aDragEvent;
+	aDragEvent.Source = static_cast< XDropTarget* >(this);
+	aDragEvent.Context = new DropTargetDragContext();
+	aDragEvent.LocationX = nX;
+	aDragEvent.LocationY = nY;
+	aDragEvent.SourceActions = DNDConstants::ACTION_NONE;
+	aDragEvent.DropAction = DNDConstants::ACTION_NONE;
+
+#ifdef MACOSX
+	ClearableMutexGuard aEventHandlerGuard( aEventHandlerMutex );
+
+	if ( pEventLoopTimerOwner )
+	{
+		ClearableMutexGuard aDragSourceGuard( pEventLoopTimerOwner->maMutex );
+
+		aDragEvent.SourceActions = pEventLoopTimerOwner->mnActions;
+		aDragEvent.DropAction = ~0;
+
+		aDragSourceGuard.clear();
+	}
+
+	aEventHandlerGuard.clear();
+#else // MACOSX
+#ifdef DEBUG
+	fprintf( stderr, "JavaDropTarget::handleDragOver not implemented\n" );
+#endif
+#endif	// MACOSX
+
+	ClearableMutexGuard aGuard( maMutex );
+
+	list< Reference< XDropTargetListener > > listeners( maListeners );
+
+	aGuard.clear();
+
+	for ( list< Reference< XDropTargetListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
+	{
+		if ( (*it).is() )
+			(*it)->dragOver( aDragEvent );
+	}
+}
+
+// ------------------------------------------------------------------------
+
+bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY )
+{
+	DropTargetDropEvent aDropEvent;
+	aDropEvent.Source = static_cast< OWeakObject* >(this);
+	aDropEvent.Context = new DropTargetDropContext();
+	aDropEvent.LocationX = nX;
+	aDropEvent.LocationY = nY;
+	aDropEvent.SourceActions = DNDConstants::ACTION_NONE;
+	aDropEvent.DropAction = DNDConstants::ACTION_NONE;
+
+#ifdef MACOSX
+	ClearableMutexGuard aEventHandlerGuard( aEventHandlerMutex );
+
+	if ( pEventLoopTimerOwner )
+	{
+		ClearableMutexGuard aDragSourceGuard( pEventLoopTimerOwner->maMutex );
+
+		aDropEvent.SourceActions = pEventLoopTimerOwner->mnActions;
+		aDropEvent.DropAction = ~0;
+		aDropEvent.Transferable = pEventLoopTimerOwner->maContents;
+
+		aDragSourceGuard.clear();
+	}
+
+	aEventHandlerGuard.clear();
+#else // MACOSX
+#ifdef DEBUG
+	fprintf( stderr, "JavaDropTarget::handleDrop not implemented\n" );
+#endif
+#endif	// MACOSX
+
+	ClearableMutexGuard aGuard( maMutex );
+
+	list< Reference< XDropTargetListener > > listeners( maListeners );
+
+	aGuard.clear();
+
+	for ( list< Reference< XDropTargetListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
+	{
+		if ( (*it).is() )
+			(*it)->drop( aDropEvent );
+	}
+
+	// TODO: return false if one of the drop() methods causes the event's
+	// DropTargetDropContext.rejectDrop() method to be called
+	return true;
 }
