@@ -1848,8 +1848,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			// Register listeners
 			window.addComponentListener(this);
 			panel.addFocusListener(this);
-			panel.addKeyListener(this);
-			panel.addInputMethodListener(this);
+			if (fullScreenMode || window instanceof Frame) {
+				panel.addKeyListener(this);
+				panel.addInputMethodListener(this);
+			}
 			panel.addMouseListener(this);
 			panel.addMouseMotionListener(this);
 			window.addWindowListener(this);
@@ -1865,8 +1867,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			// Unregister listeners
 			window.removeComponentListener(this);
 			panel.removeFocusListener(this);
-			panel.removeKeyListener(this);
-			panel.removeInputMethodListener(this);
+			if (fullScreenMode || window instanceof Frame) {
+				panel.removeKeyListener(this);
+				panel.removeInputMethodListener(this);
+			}
 			panel.removeMouseListener(this);
 			panel.removeMouseMotionListener(this);
 			window.removeWindowListener(this);

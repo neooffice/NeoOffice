@@ -39,6 +39,7 @@ import java.awt.AWTEvent;
 import java.awt.Component;
 import java.awt.EventQueue;
 import java.awt.Frame;
+import java.awt.Panel;
 import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.event.ComponentEvent;
@@ -47,6 +48,7 @@ import java.awt.event.InputMethodEvent;
 import java.awt.event.KeyEvent;
 import java.awt.im.InputContext;
 import java.lang.reflect.Constructor;
+import java.text.AttributedString;
 
 /**
  * An class that subclass that intercepts Java events and caches them for
@@ -347,20 +349,6 @@ public final class VCLEventQueue {
 				if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 					int id = event.getID();
 					switch (id ) {
-						case FocusEvent.COMPONENT_HIDDEN:
-						{
-							Component c = ((ComponentEvent)event).getComponent();
-							if (c instanceof Frame && ((Frame)c).getComponent(0) == keyComponent)
-								keyComponent = null;
-							break;
-						}
-						case FocusEvent.COMPONENT_SHOWN:
-						{
-							Component c = ((ComponentEvent)event).getComponent();
-							if (c instanceof Frame)
-								keyComponent = ((Frame)c).getComponent(0);
-							break;
-						}
 						case FocusEvent.FOCUS_GAINED:
 						{
 							Frame[] frames = Frame.getFrames();
