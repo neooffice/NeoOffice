@@ -117,6 +117,8 @@ build.oo_all: build.configure
 	touch "$@"
 
 build.oo_odk_all: build.configure build.oo_all build.oo_odk_patches
+# Building odk will fail unless we rebuild product and its dependencies first
+	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/product" ; `alias build` -all $(OO_BUILD_ARGS)
 	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/odk" ; `alias build` -all $(OO_BUILD_ARGS)
 	touch "$@"
 
