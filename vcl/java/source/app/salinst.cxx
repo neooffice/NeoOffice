@@ -80,6 +80,9 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLIMAGE_HXX
 #include <com/sun/star/vcl/VCLImage.hxx>
 #endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX
+#include <com/sun/star/vcl/VCLPageFormat.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLSCREEN_HXX
 #include <com/sun/star/vcl/VCLScreen.hxx>
 #endif
@@ -476,21 +479,29 @@ SalInfoPrinter* SalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
 	// Create a dummy printer configuration for our dummy printer
 	SalInfoPrinter *pPrinter = new SalInfoPrinter();
 
-	// Set data
-	com_sun_star_vcl_VCLPrintJob::setOrientation( com_sun_star_vcl_VCLPrintJob::getOrientation() );
+	// Set values
+	pPrinter->maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat();
+	if ( !pSetupData->mpDriverData )
+	{
+		pPrinter->maPrinterData.mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
+		SalDriverData aDriverData;
+		aDriverData.meOrientation = pSetupData->meOrientation;
+		BYTE *pDriverData = (BYTE *)rtl_allocateMemory( sizeof( SalDriverData ) );
+		memcpy( pDriverData, &aDriverData, sizeof( SalDriverData ) );
+		pSetupData->mpDriverData = pDriverData;
+		pSetupData->mnDriverDataLen = sizeof( SalDriverData );
+	}
 
 	// Populate the job setup
 	pSetupData->mnSystem = JOBSETUP_SYSTEM_JAVA;
 	pSetupData->maPrinterName = pQueueInfo->maPrinterName;
 	pSetupData->maDriver = pQueueInfo->maDriver;
-	pSetupData->meOrientation = com_sun_star_vcl_VCLPrintJob::getOrientation();
+	pSetupData->meOrientation = pPrinter->maPrinterData.mpVCLPageFormat->getOrientation();
 	pSetupData->mnPaperBin = 0;
 	pSetupData->mePaperFormat = PAPER_USER;
-	Size aSize( com_sun_star_vcl_VCLPrintJob::getPageSize() );
+	Size aSize( pPrinter->maPrinterData.mpVCLPageFormat->getPageSize() );
 	pSetupData->mnPaperWidth = aSize.Width();
 	pSetupData->mnPaperHeight = aSize.Height();
-	pSetupData->mnDriverDataLen = 0;
-	pSetupData->mpDriverData = NULL;
 
     return pPrinter;
 }
@@ -525,6 +536,7 @@ XubString SalInstance::GetDefaultPrinter()
 SalPrinter* SalInstance::CreatePrinter( SalInfoPrinter* pInfoPrinter )
 {
 	SalPrinter *pPrinter = new SalPrinter();
+	pPrinter->maPrinterData.mpPrinter = pInfoPrinter;
 	return pPrinter;
 }
 

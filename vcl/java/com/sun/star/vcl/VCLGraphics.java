@@ -197,6 +197,11 @@ public final class VCLGraphics {
 	private VCLImage image = null;
 
 	/**
+	 * The printer page format.
+	 */
+	private VCLPageFormat pageFormat = null;
+
+	/**
 	 * The printer page image.
 	 */
 	private VCLImage pageImage = null;
@@ -272,12 +277,14 @@ public final class VCLGraphics {
 	 *
 	 * @param g the <code>Graphics2D</code> instance
 	 * @param b the bounds of the drawable area
+	 * @param p the <code>VCLPageFormat</code> instance
 	 */
-	VCLGraphics(Graphics2D g, Rectangle b) {
+	VCLGraphics(Graphics2D g, Rectangle b, VCLPageFormat p) {
 
 		graphics = g;
 		graphicsBounds = b;
 		bitCount = graphics.getDeviceConfiguration().getColorModel().getPixelSize();
+		pageFormat = p;
 		pageImage = new VCLImage(graphicsBounds.width, graphicsBounds.height, bitCount);
 
 	}
@@ -334,8 +341,10 @@ public final class VCLGraphics {
 			image.dispose();
 		image = null;
 		frame = null;
+		pageFormat = null;
 		if (pageImage != null)
 			pageImage.dispose();
+		pageImage = null;
 		update = null;
 		userClip = null;
 
@@ -1119,8 +1128,8 @@ public final class VCLGraphics {
 	 */
 	public Dimension getResolution() {
 
-		if (image == null)
-			return VCLPrintJob.getPageResolution();
+		if (pageFormat != null)
+			return pageFormat.getPageResolution();
 		else
 			return new Dimension(VCLGraphics.screenResolution, VCLGraphics.screenResolution);
 

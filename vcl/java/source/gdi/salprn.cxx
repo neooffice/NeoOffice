@@ -49,6 +49,12 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX
+#include <com/sun/star/vcl/VCLPageFormat.hxx>
+#endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX
+#include <com/sun/star/vcl/VCLPrintJob.hxx>
+#endif
 
 #ifdef MACOSX
 
@@ -92,7 +98,7 @@ SalGraphics* SalInfoPrinter::GetGraphics()
 	if ( maPrinterData.mbGraphics )
 		return NULL;
 
-	maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics = com_sun_star_vcl_VCLPrintJob::getGraphics();
+	maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics = maPrinterData.mpVCLPageFormat->getGraphics();
 	maPrinterData.mbGraphics = TRUE;
 
 	return maPrinterData.mpGraphics;
@@ -115,27 +121,30 @@ void SalInfoPrinter::ReleaseGraphics( SalGraphics* pGraphics )
 
 BOOL SalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 {
-
 	// Display a native page setup dialog
-	Orientation nOrientation = com_sun_star_vcl_VCLPrintJob::getOrientation();
-	com_sun_star_vcl_VCLPrintJob::setOrientation( pSetupData->meOrientation );
-	if ( !com_sun_star_vcl_VCLPrintJob::setup() )
+	Orientation nOrientation = maPrinterData.mpVCLPageFormat->getOrientation();
+	maPrinterData.mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
+	if ( !maPrinterData.mpVCLPageFormat->setup() )
 	{
-		com_sun_star_vcl_VCLPrintJob::setOrientation( nOrientation );
+		maPrinterData.mpVCLPageFormat->setOrientation( nOrientation );
 		return FALSE;
 	}
 
 	// Update values
-	pSetupData->meOrientation = com_sun_star_vcl_VCLPrintJob::getOrientation();
-	return SetPrinterData( pSetupData );
+	SetData( 0, pSetupData );
+
+	return TRUE;
 }
 
 // -----------------------------------------------------------------------
 
 BOOL SalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
 {
-	// Set incoming values
-	return SetData( SAL_JOBSET_ORIENTATION, pSetupData );
+	// Set but don't update values
+	ImplJobSetup aSetupData( *pSetupData );
+	SetData( SAL_JOBSET_ALL, &aSetupData );
+
+	return TRUE;
 }
 
 // -----------------------------------------------------------------------
@@ -143,18 +152,20 @@ BOOL SalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
 BOOL SalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 {
 	// Set and update values
-	if ( nFlags == SAL_JOBSET_ORIENTATION )
-	{
-		pSetupData->mePaperFormat = PAPER_USER;
-		com_sun_star_vcl_VCLPrintJob::setOrientation( pSetupData->meOrientation );
-		pSetupData->meOrientation = com_sun_star_vcl_VCLPrintJob::getOrientation();
-		Size aSize( com_sun_star_vcl_VCLPrintJob::getPageSize() );
-    	pSetupData->mnPaperWidth = aSize.Width();
-   		pSetupData->mnPaperHeight = aSize.Height();
-		return TRUE;
-	}
+	if ( nFlags & SAL_JOBSET_ORIENTATION )
+		maPrinterData.mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
 
-	return FALSE;
+	// Populate the job setup
+	pSetupData->meOrientation = maPrinterData.mpVCLPageFormat->getOrientation();
+	pSetupData->mnPaperBin = 0;
+	pSetupData->mePaperFormat = PAPER_USER;
+	Size aSize( maPrinterData.mpVCLPageFormat->getPageSize() );
+	pSetupData->mnPaperWidth = aSize.Width();
+	pSetupData->mnPaperHeight = aSize.Height();
+	if ( pSetupData->mpDriverData )
+		((SalDriverData *)pSetupData->mpDriverData)->meOrientation = pSetupData->meOrientation;
+
+	return TRUE;
 }
 
 // -----------------------------------------------------------------------
@@ -162,7 +173,7 @@ BOOL SalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 ULONG SalInfoPrinter::GetPaperBinCount( const ImplJobSetup* pSetupData )
 {
 	// Return a dummy value
-	return 0;
+	return 1;
 }
 
 // -----------------------------------------------------------------------
@@ -190,8 +201,8 @@ void SalInfoPrinter::GetPageInfo( const ImplJobSetup* pSetupData,
 								  long& rPageOffX, long& rPageOffY,
 								  long& rPageWidth, long& rPageHeight )
 {
-	Size aSize( com_sun_star_vcl_VCLPrintJob::getPageSize() );
-	Rectangle aRect( com_sun_star_vcl_VCLPrintJob::getImageableBounds() );
+	Size aSize( maPrinterData.mpVCLPageFormat->getPageSize() );
+	Rectangle aRect( maPrinterData.mpVCLPageFormat->getImageableBounds() );
 	rPageWidth = aSize.Width();
 	rPageHeight = aSize.Height();
 	rPageOffX = aRect.nLeft;
@@ -221,7 +232,11 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 						   ULONG nCopies, BOOL bCollate,
 						   ImplJobSetup* pSetupData )
 {
-	maPrinterData.mbStarted = maPrinterData.mpVCLPrintJob->startJob();
+	// Set but don't update values
+	maPrinterData.mpPrinter->SetPrinterData( pSetupData );
+
+	maPrinterData.mbStarted = maPrinterData.mpVCLPrintJob->startJob( maPrinterData.mpPrinter->maPrinterData.mpVCLPageFormat );
+
 	if ( maPrinterData.mbStarted )
 	{
 #ifdef MACOSX
@@ -245,7 +260,7 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 					{
 						PMResolution aResolution;
 						if ( pSessionDefaultPageFormat( pSession, aPageFormat ) == kPMNoError && pGetResolution( aPageFormat, &aResolution ) == kPMNoError )
-							com_sun_star_vcl_VCLPrintJob::setPageResolution( (long)aResolution.hRes, (long)aResolution.vRes );
+							maPrinterData.mpPrinter->maPrinterData.mpVCLPageFormat->setPageResolution( (long)aResolution.hRes, (long)aResolution.vRes );
 					}
 				}
 				aModule.unload();
@@ -254,6 +269,7 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 	}
 #endif	// MACOSX
 	}
+
 	return maPrinterData.mbStarted;
 }
 
@@ -314,6 +330,7 @@ ULONG SalPrinter::GetErrorCode()
 
 SalPrinterData::SalPrinterData()
 {
+	mpPrinter = NULL;
 	mbStarted = FALSE;
 	mpGraphics = new SalGraphics();
 	mbGraphics = FALSE;
@@ -340,6 +357,7 @@ SalInfoPrinterData::SalInfoPrinterData()
 {
 	mpGraphics = new SalGraphics();
 	mbGraphics = FALSE;
+	mpVCLPageFormat = NULL;
 }
 
 // -----------------------------------------------------------------------
@@ -348,4 +366,6 @@ SalInfoPrinterData::~SalInfoPrinterData()
 {
 	if ( mpGraphics )
 		delete mpGraphics;
+	if ( mpVCLPageFormat )
+		delete mpVCLPageFormat;
 }

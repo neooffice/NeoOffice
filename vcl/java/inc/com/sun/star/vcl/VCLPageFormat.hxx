@@ -33,19 +33,27 @@
  *
  ************************************************************************/
 
-#ifndef _SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX
-#define	_SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX
+#ifndef _SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX
+#define	_SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX
 
 #ifndef _SV_JAVA_LANG_OBJECT_HXX
 #include <java/lang/Object.hxx>
+#endif
+#ifndef _SV_SV_H    
+#include <sv.h>     
+#endif
+#ifndef _SV_GEN_HXX
+#include <tools/gen.hxx>
+#endif
+#ifndef _SV_PRNTYPES_HXX
+#include <prntypes.hxx>
 #endif
 
 namespace vcl {
 
 class com_sun_star_vcl_VCLGraphics;
-class com_sun_star_vcl_VCLPageFormat;
 
-class com_sun_star_vcl_VCLPrintJob : public java_lang_Object
+class com_sun_star_vcl_VCLPageFormat : public java_lang_Object
 {
 protected:
 	static jclass		theClass;
@@ -53,20 +61,20 @@ protected:
 public:
 	static jclass		getMyClass();
 
-						com_sun_star_vcl_VCLPrintJob( jobject myObj ) : java_lang_Object( myObj ) {}
-						com_sun_star_vcl_VCLPrintJob();
-	virtual				~com_sun_star_vcl_VCLPrintJob() {};
+						com_sun_star_vcl_VCLPageFormat( jobject myObj ) : java_lang_Object( myObj ) {}
+						com_sun_star_vcl_VCLPageFormat();
+	virtual				~com_sun_star_vcl_VCLPageFormat() {};
 
-	void				abortJob();
 	void				dispose();
-	void				endJob();
-	void				endPage();
-	void*				getNativePrintJob();
-	sal_Bool			isFinished();
-	sal_Bool			startJob(const com_sun_star_vcl_VCLPageFormat *_par0 );
-	com_sun_star_vcl_VCLGraphics*	startPage();
+	com_sun_star_vcl_VCLGraphics*	getGraphics();
+	const Rectangle		getImageableBounds();
+	Orientation			getOrientation();
+	const Size			getPageSize();
+	void				setOrientation( Orientation _par0 );
+	void				setPageResolution( long _par0, long _par1 );
+	sal_Bool			setup();
 };
 
 } // namespace vcl
 
-#endif // _SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX
+#endif // _SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX

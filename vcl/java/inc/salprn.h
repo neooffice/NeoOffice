@@ -42,9 +42,15 @@
 #ifndef _SV_SALGDI_HXX
 #include <salgdi.hxx>
 #endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX
-#include <com/sun/star/vcl/VCLPrintJob.hxx>
+#ifndef _SV_PRNTYPES_HXX
+#include <prntypes.hxx>
 #endif
+
+namespace vcl
+{
+class com_sun_star_vcl_VCLPageFormat;
+class com_sun_star_vcl_VCLPrintJob;
+}
 
 // ----------------------
 // - SalInfoPrinterData -
@@ -54,12 +60,14 @@ class SalInfoPrinterData
 {
 	friend class	SalInfoPrinter;
 	friend class	SalInstance;
+	friend class	SalPrinter;
 
 					SalInfoPrinterData();
 					~SalInfoPrinterData();
 
 	SalGraphics*	mpGraphics;
 	BOOL			mbGraphics;
+	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
 };
 
 // ------------------
@@ -69,15 +77,26 @@ class SalInfoPrinterData
 class SalPrinterData
 {
 	friend class	SalGraphics;
+	friend class	SalInstance;
 	friend class	SalPrinter;
 
 					SalPrinterData();
 					~SalPrinterData();
 
+	SalInfoPrinter*	mpPrinter;
 	BOOL			mbStarted;
 	SalGraphics*	mpGraphics;
 	BOOL			mbGraphics;
 	::vcl::com_sun_star_vcl_VCLPrintJob*	mpVCLPrintJob;
+};
+
+// -----------------
+// - SalDriverData -
+// -----------------
+
+struct SalDriverData
+{
+	Orientation meOrientation;
 };
 
 #endif // _SV_SALPRN_H

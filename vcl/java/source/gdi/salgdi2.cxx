@@ -60,10 +60,28 @@ using namespace vcl;
 
 void SalGraphics::CopyBits( const SalTwoRect* pPosAry, SalGraphics* pSrcGraphics )
 {
+	if ( pPosAry->mnSrcX + pPosAry->mnSrcWidth <= 0 || pPosAry->mnSrcY + pPosAry->mnSrcHeight <= 0 || pPosAry->mnSrcWidth <= 0 || pPosAry->mnSrcHeight <= 0 || pPosAry->mnDestX + pPosAry->mnDestWidth <= 0 || pPosAry->mnDestY + pPosAry->mnDestHeight <= 0 || pPosAry->mnDestWidth <= 0 || pPosAry->mnDestHeight <= 0 )
+		return;
+
 	if ( !pSrcGraphics )
 		pSrcGraphics = this;
 
-	maGraphicsData.mpVCLGraphics->copyBits( pSrcGraphics->maGraphicsData.mpVCLGraphics, pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight, pPosAry->mnDestX, pPosAry->mnDestY );
+	if ( pPosAry->mnSrcWidth != pPosAry->mnDestWidth || pPosAry->mnSrcHeight != pPosAry->mnDestHeight )
+	{
+		SalBitmap *pBitmap = GetBitmap( pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight );
+		if ( pBitmap )
+		{
+			SalTwoRect aPosAry( *pPosAry );
+			aPosAry.mnSrcX = 0;
+			aPosAry.mnSrcY = 0;
+			DrawBitmap( &aPosAry, *pBitmap );
+			delete pBitmap;
+		}
+	}
+	else
+	{
+		maGraphicsData.mpVCLGraphics->copyBits( pSrcGraphics->maGraphicsData.mpVCLGraphics, pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight, pPosAry->mnDestX, pPosAry->mnDestY );
+	}
 }
 
 // -----------------------------------------------------------------------
@@ -81,6 +99,9 @@ void SalGraphics::CopyArea( long nDestX, long nDestY,
 void SalGraphics::DrawBitmap( const SalTwoRect* pPosAry,
 							  const SalBitmap& rSalBitmap )
 {
+	if ( pPosAry->mnSrcX + pPosAry->mnSrcWidth <= 0 || pPosAry->mnSrcY + pPosAry->mnSrcHeight <= 0 || pPosAry->mnSrcWidth <= 0 || pPosAry->mnSrcHeight <= 0 || pPosAry->mnDestX + pPosAry->mnDestWidth <= 0 || pPosAry->mnDestY + pPosAry->mnDestHeight <= 0 || pPosAry->mnDestWidth <= 0 || pPosAry->mnDestHeight <= 0 )
+		return;
+
 	if ( pPosAry->mnSrcWidth != pPosAry->mnDestWidth || pPosAry->mnSrcHeight != pPosAry->mnDestHeight )
 	{
 		SalBitmap aBitmap;
@@ -114,6 +135,9 @@ void SalGraphics::DrawBitmap( const SalTwoRect* pPosAry,
 							  const SalBitmap& rSalBitmap,
 							  const SalBitmap& rTransparentBitmap )
 {
+	if ( pPosAry->mnSrcX + pPosAry->mnSrcWidth <= 0 || pPosAry->mnSrcY + pPosAry->mnSrcHeight <= 0 || pPosAry->mnSrcWidth <= 0 || pPosAry->mnSrcHeight <= 0 || pPosAry->mnDestX + pPosAry->mnDestWidth <= 0 || pPosAry->mnDestY + pPosAry->mnDestHeight <= 0 || pPosAry->mnDestWidth <= 0 || pPosAry->mnDestHeight <= 0 )
+		return;
+
 	if ( pPosAry->mnSrcWidth != pPosAry->mnDestWidth || pPosAry->mnSrcHeight != pPosAry->mnDestHeight )
 	{
 		SalBitmap aBitmap;
@@ -139,6 +163,9 @@ void SalGraphics::DrawMask( const SalTwoRect* pPosAry,
 							const SalBitmap& rSalBitmap,
 							SalColor nMaskColor )
 {
+	if ( pPosAry->mnSrcX + pPosAry->mnSrcWidth <= 0 || pPosAry->mnSrcY + pPosAry->mnSrcHeight <= 0 || pPosAry->mnSrcWidth <= 0 || pPosAry->mnSrcHeight <= 0 || pPosAry->mnDestX + pPosAry->mnDestWidth <= 0 || pPosAry->mnDestY + pPosAry->mnDestHeight <= 0 || pPosAry->mnDestWidth <= 0 || pPosAry->mnDestHeight <= 0 )
+		return;
+
 	if ( pPosAry->mnSrcWidth != pPosAry->mnDestWidth || pPosAry->mnSrcHeight != pPosAry->mnDestHeight )
 	{
 		SalBitmap aBitmap;
@@ -163,6 +190,30 @@ SalBitmap* SalGraphics::GetBitmap( long nX, long nY, long nDX, long nDY )
 	if ( maGraphicsData.mpPrinter )
 		return NULL;
 
+	// Normalize rectangle
+	if ( nDX < 0 )
+	{
+		nX += nDX;
+		nDX = nDX * -1;
+	}
+	if ( nDY < 0 )
+	{
+		nY += nDY;
+		nDY = nDY * -1;
+	}
+	if ( nX < 0 )
+	{
+		nDX += nX;
+		nX = 0;
+	}
+	if ( nY < 0 )
+	{
+		nDY += nY;
+		nY = 0;
+	}
+	if ( !nDX || !nDY )
+		return NULL;
+	
 	SalBitmap *pBitmap = new SalBitmap();
 
 	if ( !pBitmap->Create( Size( nDX, nDY ), GetBitCount(), BitmapPalette() ) )

@@ -67,6 +67,7 @@ SLOFILES = \
 	$(SLO)/VCLFrame.obj \
 	$(SLO)/VCLGraphics.obj \
 	$(SLO)/VCLImage.obj \
+	$(SLO)/VCLPageFormat.obj \
 	$(SLO)/VCLPrintJob.obj \
 	$(SLO)/VCLScreen.obj \
 	$(SLO)/tools.obj

@@ -62,6 +62,7 @@ JAVAFILES = \
 	VCLFrame.java \
 	VCLGraphics.java \
 	VCLImage.java \
+	VCLPageFormat.java \
 	VCLPlatform.java \
 	VCLPrintJob.java \
 	VCLScreen.java

@@ -554,7 +554,7 @@ const Size com_sun_star_vcl_VCLGraphics::getResolution()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jobject tempObj = t.pEnv->CallObjectMethod( getMyClass(), mID );
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			if ( tempObj )
 			{
 				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
@@ -596,7 +596,7 @@ const Size com_sun_star_vcl_VCLGraphics::getScreenFontResolution()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jobject tempObj = t.pEnv->CallObjectMethod( getMyClass(), mID );
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			if ( tempObj )
 			{
 				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );

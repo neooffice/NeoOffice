@@ -39,10 +39,7 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
-import java.awt.geom.AffineTransform;
-import java.awt.image.BufferedImage;
 import java.awt.print.PageFormat;
-import java.awt.print.Paper;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
@@ -55,146 +52,10 @@ import java.awt.print.PrinterJob;
  */
 public final class VCLPrintJob implements Printable, Runnable {
 
-	/** 
-	 * ORIENTATION_PORTRAIT constant.
-	 */
-	public final static int ORIENTATION_PORTRAIT = 0x0; 
-
-	/** 
-	 * ORIENTATION_LANDSCAPE constant.
-	 */
-	public final static int ORIENTATION_LANDSCAPE = 0x1; 
-
 	/**
-	 * Cached native graphics.
+	 * The cached <code>VCLPageFormat</code>.
 	 */
-	private static Graphics2D graphics = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB_PRE).createGraphics();
-
-	/**
-	 * The page format.
-	 */
-	private static PageFormat pageFormat = null;
-
-	/**
-	 * The page resolution.
-	 */
-	private static Dimension pageResolution = new Dimension(72, 72);
-
-	/**
-	 * Creates a graphics context for this component.
-	 *
-	 * @return a graphics context for this component
-	 */
-	public synchronized static VCLGraphics getGraphics() {
-
-		return new VCLGraphics(graphics, graphics.getDeviceConfiguration().getBounds());
-
-	}
-
-	/**
-	 * Get the imageable bounds of the page in pixels.
-	 *
-	 * @return the imageable bounds of the page in pixels
-	 */
-	public synchronized static Rectangle getImageableBounds() {
-
-		return new Rectangle((int)(pageFormat.getImageableX() * pageResolution.width / 72), (int)(pageFormat.getImageableY() * pageResolution.height / 72), (int)(pageFormat.getImageableWidth() * pageResolution.width / 72), (int)(pageFormat.getImageableHeight() * pageResolution.height / 72));
-
-	}
-
-	/**
-	 * Get the page orientation.
-	 *
-	 * @return the page orientation
-	 */
-	public synchronized static int getOrientation() {
-
-		if (pageFormat.getOrientation() == PageFormat.PORTRAIT)
-			return ORIENTATION_PORTRAIT;
-		else
-			return ORIENTATION_LANDSCAPE;
-
-	}
-
-	/**
-	 * Get the page size in pixels.
-	 *
-	 * @return the page size in pixels
-	 */
-	public synchronized static Dimension getPageSize() {
-
-		return new Dimension((int)(pageFormat.getWidth() * pageResolution.width / 72), (int)(pageFormat.getHeight() * pageResolution.height / 72));
-
-	}
-
-	/**
-	 * Get the page resolution.
-	 *
-	 * @return the page resolution.
-	 */
-	public synchronized static Dimension getPageResolution() {
-
-		if (pageFormat.getOrientation() == PageFormat.PORTRAIT)
-			return new Dimension(pageResolution.width, pageResolution.height);
-		else
-			return new Dimension(pageResolution.height, pageResolution.width);
-
-	}
-
-	/**
-	 * Set the page orientation.
-	 *
-	 * @param o the page orientation
-	 */
-	public synchronized static void setOrientation(int o) {
-
-		if (o == ORIENTATION_PORTRAIT)
-			pageFormat.setOrientation(PageFormat.PORTRAIT);
-		else if (pageFormat.getOrientation() != PageFormat.REVERSE_LANDSCAPE)
-			pageFormat.setOrientation(PageFormat.LANDSCAPE);
-
-	}
-
-	/**
-	 * Set the page resolution.
-	 *
-	 * @param h the horizontal page resolution
-	 * @param v the vertical page resolution
-	 */
-	public synchronized static void setPageResolution(int h, int v) {
-
-		pageResolution = new Dimension(h, v);
-
-	}
-
-	/**
-	 * Setup the page configuration. This method displays a native page setup
-	 * dialog and saves any changes made by the user.
-	 *
-	 * @return <code>false</code> if the user pressed the page dialog's
-	 *  cancel button or else <code>true</code>
-	 */
-	public synchronized static boolean setup() {
-
-		PageFormat p = PrinterJob.getPrinterJob().pageDialog(pageFormat);
-		if (p != pageFormat) {
-			pageFormat = p;
-			return true;
-		}
-		else {
-			return false;
-		}
-
-	}
-
-	/**
-	 * Initialize default printer settings.
-	 */
-	static {
-
-		pageFormat = PrinterJob.getPrinterJob().defaultPage();
-
-	}
+	private VCLPageFormat pageFormat = null;
 
 	/**
 	 * The current <code>VCLGraphics</code>
@@ -348,16 +209,19 @@ public final class VCLPrintJob implements Printable, Runnable {
 		// Set the origin to the origin of the printable area
 		graphics.translate((int)f.getImageableX(), (int)f.getImageableY());
 
-		graphics.scale((double)72 / VCLPrintJob.pageResolution.width, (double)72 / VCLPrintJob.pageResolution.height);
+		Dimension pageResolution = pageFormat.getPageResolution();
+		graphics.scale((double)72 / pageResolution.width, (double)72 / pageResolution.height);
 
 		graphicsInfo.graphics = graphics;
 		graphicsInfo.pageFormat = f;
 
 		// Wait until painting is finished
+		Thread.yield();
 		try {
 			graphicsInfo.wait();
 		}
 		catch (Throwable t) {}
+		Thread.yield();
 
 		if (job.isCancelled())
 			throw new PrinterException();
@@ -413,17 +277,21 @@ public final class VCLPrintJob implements Printable, Runnable {
 	/**
 	 * Initialize the print job.
 	 *
+	 * @param p the <code>VCLPageFormat</code>
 	 * @return <code>true</code> if a print job was successfully created or
 	 *  <code>false</code> if the user cancelled the print dialog
 	 */
-	public boolean startJob() {
+	public boolean startJob(VCLPageFormat p) {
 
 		// Detect if the user cancelled the print dialog
-		job.setPrintable(this, VCLPrintJob.pageFormat);
-		if (job.printDialog())
+		job.setPrintable(this, p.getPageFormat());
+		if (job.printDialog()) {
+			pageFormat = p;
 			return true;
-		else
+		}
+		else {
 			return false;
+		}
 
 	}
 
@@ -438,7 +306,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 			// Start the printing thread if it has not yet been started
 			if (!printThreadStarted) {
 				printThread = new Thread(this);
-				printThread.setPriority(Thread.MAX_PRIORITY);
+				printThread.setPriority(Thread.MIN_PRIORITY);
 				printThread.start();
 				// Wait for the printing thread to gain the lock on the
 				// graphics queue
@@ -458,7 +326,8 @@ public final class VCLPrintJob implements Printable, Runnable {
 			}
 			else {
 				// Limit printing to only the printable area
-				currentGraphics = new VCLGraphics(graphicsInfo.graphics, new Rectangle(0, 0, (int)(graphicsInfo.pageFormat.getImageableWidth() * VCLPrintJob.pageResolution.width / 72), (int)(graphicsInfo.pageFormat.getImageableHeight() * VCLPrintJob.pageResolution.height / 72)));
+				Dimension pageResolution = pageFormat.getPageResolution();
+				currentGraphics = new VCLGraphics(graphicsInfo.graphics, new Rectangle(0, 0, (int)(graphicsInfo.pageFormat.getImageableWidth() * pageResolution.width / 72), (int)(graphicsInfo.pageFormat.getImageableHeight() * pageResolution.height / 72)), pageFormat);
 				graphicsInfo.graphics = null;
 				graphicsInfo.pageFormat = null;
 			}

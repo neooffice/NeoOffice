@@ -44,6 +44,9 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
 #include <com/sun/star/vcl/VCLFont.hxx>
 #endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX
+#include <com/sun/star/vcl/VCLPrintJob.hxx>
+#endif
 
 #ifdef MACOSX
 
