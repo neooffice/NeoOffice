@@ -314,7 +314,8 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 	// Let the VCL event handlers handle menu shortcuts
 	if ( GetEventClass( aEvent ) == kEventClassMenu )
 	{
-		if ( GetEventKind( aEvent ) == kEventMenuBeginTracking )
+		SalData *pSalData = GetSalData();
+		if ( !pSalData->mbInNativeDialog && GetEventKind( aEvent ) == kEventMenuBeginTracking )
 		{
 			// Ignore key matching context
 			MenuTrackingMode nMode;
@@ -324,7 +325,6 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 			if ( ImplGetSVData()->maAppData.mbInAppExecute )
 			{
 				// Post a yield event and wait the VCL event queue to block
-				SalData *pSalData = GetSalData();
 				pSalData->maNativeEventStartCondition.reset();
 				com_sun_star_vcl_VCLEvent aYieldEvent( SALEVENT_YIELDEVENTQUEUE, NULL, NULL );
 				pSalData->mpEventQueue->postCachedEvent( &aYieldEvent );

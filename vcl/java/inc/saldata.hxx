@@ -89,8 +89,9 @@ public:
 	SalFrame*				mpPresentationFrame;
 	::std::list< SalFrame* >	maPresentationFrameList;
 	::std::list< ::vcl::com_sun_star_vcl_VCLPageFormat* >	maVCLPageFormats;
-	::osl::Condition			maNativeEventStartCondition; 
-	::osl::Condition			maNativeEventEndCondition; 
+	::osl::Condition		maNativeEventStartCondition; 
+	::osl::Condition		maNativeEventEndCondition; 
+	BOOL					mbInNativeDialog;
 
 							SalData();
 							~SalData();
