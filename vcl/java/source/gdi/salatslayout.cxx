@@ -492,6 +492,8 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			long nGlyph = mpGlyphInfoArray->glyphs[ i ].glyphID;
 			long nCharWidth = 0;
 
+			// Always use screen metrics as ideal metrics can cause incorrect
+			// layout behavior of RTL text
 			if ( mpGlyphTranslations && mpVerticalFlags && mpVerticalFlags[ mpGlyphInfoArray->glyphs[ i ].charIndex ] & GF_ROTMASK )
 			{
 				nGlyph |= mpVerticalFlags[ mpGlyphInfoArray->glyphs[ i ].charIndex ] & GF_ROTMASK;
@@ -502,7 +504,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			}
 			else
 			{
-				nCharWidth = Float32ToLong( ( mpGlyphInfoArray->glyphs[ i + 1 ].idealX - mpGlyphInfoArray->glyphs[ i ].idealX ) * mnUnitsPerPixel );
+				nCharWidth = Float32ToLong( ( mpGlyphInfoArray->glyphs[ i + 1 ].screenX - mpGlyphInfoArray->glyphs[ i ].screenX ) * mnUnitsPerPixel );
 			}
 
 			// Mark whitespace glyphs
