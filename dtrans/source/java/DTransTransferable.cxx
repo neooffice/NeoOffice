@@ -500,10 +500,6 @@ com_sun_star_dtrans_DTransTransferable::~com_sun_star_dtrans_DTransTransferable(
 	aTransferableList.remove( this );
 
 #ifdef MACOSX
-	// Clear the native clipboard if this object has ownership
-	if ( hasOwnership() )
-		ClearCurrentScrap();
-
 	if ( mpScrapPromiseKeeperUPP )
 		DisposeScrapPromiseKeeperUPP( (ScrapPromiseKeeperUPP)mpScrapPromiseKeeperUPP );
 #endif	// MACOSX
