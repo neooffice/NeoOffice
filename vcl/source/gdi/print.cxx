@@ -1666,7 +1666,6 @@ BOOL Printer::StartJob( const XubString& rJobName )
 
 		// The resolution of the printer may have changed
 		ImplUpdatePageData();
-		ImplUpdateFontList();
 #endif	// USE_JAVA
 
 		mbNewJobSetup	= FALSE;
@@ -1777,7 +1776,6 @@ BOOL Printer::EndJob()
 			mpPrinter->EndJob();
 #ifdef USE_JAVA
 			ImplUpdatePageData();
-			ImplUpdateFontList();
 #endif	// USE_JAVA
 			// Hier den Drucker nicht asyncron zerstoeren, da es
 			// W95 nicht verkraftet, wenn gleichzeitig gedruckt wird

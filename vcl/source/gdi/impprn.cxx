@@ -354,7 +354,6 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 		{
 			mpPrinter->SetResolution( nMaxBmpDPIX, nMaxBmpDPIY );
 			ImplUpdatePageData();
-			ImplUpdateFontList();
 		}
 #endif	// USE_JAVA
 
@@ -477,7 +476,6 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 		{
 			mpPrinter->SetResolution( nMaxBmpDPIX, nMaxBmpDPIY );
 			ImplUpdatePageData();
-			ImplUpdateFontList();
 		}
 #endif	// USE_JAVA
 
@@ -517,7 +515,6 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 		{
 			mpPrinter->SetResolution( nOldDPIX, nOldDPIY );
 			ImplUpdatePageData();
-			ImplUpdateFontList();
 		}
 #endif	// USE_JAVA
 

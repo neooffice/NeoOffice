@@ -362,9 +362,11 @@ SalGraphics* SalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobData )
 	if ( maPrinterData.mbGraphics )
 		return NULL;
 
-	maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics = maPrinterData.mpVCLPrintJob->startPage();
-	if ( !maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics )
+	com_sun_star_vcl_VCLGraphics *pVCLGraphics = maPrinterData.mpVCLPrintJob->startPage();
+	if ( !pVCLGraphics )
 		return NULL;
+	maPrinterData.mpGraphics = new SalGraphics();
+	maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics = pVCLGraphics;
 	maPrinterData.mpGraphics->maGraphicsData.mpPrinter = this;
 	maPrinterData.mbGraphics = TRUE;
 
@@ -377,7 +379,9 @@ BOOL SalPrinter::EndPage()
 {
 	if ( maPrinterData.mpGraphics && maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics )
 		delete maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics;
-	maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics = NULL;
+	if ( maPrinterData.mpGraphics )
+		delete maPrinterData.mpGraphics;
+	maPrinterData.mpGraphics = NULL;
 	maPrinterData.mbGraphics = FALSE;
 	maPrinterData.mpVCLPrintJob->endPage();
 	return TRUE;
@@ -413,7 +417,7 @@ void SalPrinter::SetResolution( long nDPIX, long nDPIY )
 SalPrinterData::SalPrinterData()
 {
 	mbStarted = FALSE;
-	mpGraphics = new SalGraphics();
+	mpGraphics = NULL;
 	mbGraphics = FALSE;
 	mpVCLPrintJob = new com_sun_star_vcl_VCLPrintJob();
 	mpVCLPageFormat = NULL;
