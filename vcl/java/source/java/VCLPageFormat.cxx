@@ -82,7 +82,7 @@ static jint JNICALL Java_com_apple_mrj_internal_awt_printing_MacPageFormat_creat
 	}
 	return nRet;
 }
-#endif MACOSX
+#endif	// MACOSX
 
 // ============================================================================
 
