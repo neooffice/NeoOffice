@@ -183,10 +183,10 @@ void SalFrame::Show( BOOL bVisible )
 		SalPaintEvent *pPaintEvent = new SalPaintEvent();
 		pPaintEvent->mnBoundX = 0;
 		pPaintEvent->mnBoundY = 0;
-		pPaintEvent->mnBoundWidth = maGeometry.nWidth + maGeometry.nLeftDecoration;
-		pPaintEvent->mnBoundHeight = maGeometry.nHeight + maGeometry.nTopDecoration;
+		pPaintEvent->mnBoundWidth = maGeometry.nWidth;      
+		pPaintEvent->mnBoundHeight = maGeometry.nHeight;    
 		com_sun_star_vcl_VCLEvent aVCLPaintEvent( SALEVENT_PAINT, this, (void *)pPaintEvent );
-		aVCLPaintEvent.dispatch();
+		GetSalData()->mpEventQueue->postCachedEvent( &aVCLPaintEvent );
 	}
 	else
 	{

@@ -300,10 +300,10 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					SalPaintEvent *pPaintEvent = new SalPaintEvent();
 					pPaintEvent->mnBoundX = 0;
 					pPaintEvent->mnBoundY = 0;
-					pPaintEvent->mnBoundWidth = pFrame->maGeometry.nWidth + pFrame->maGeometry.nLeftDecoration;
-					pPaintEvent->mnBoundHeight = pFrame->maGeometry.nHeight + pFrame->maGeometry.nTopDecoration;
-					dispatchEvent( SALEVENT_PAINT, pFrame, pPaintEvent );
-					delete pPaintEvent;
+					pPaintEvent->mnBoundWidth = pFrame->maGeometry.nWidth;
+					pPaintEvent->mnBoundHeight = pFrame->maGeometry.nHeight;
+					com_sun_star_vcl_VCLEvent aVCLPaintEvent( SALEVENT_PAINT, pFrame, (void *)pPaintEvent );
+					GetSalData()->mpEventQueue->postCachedEvent( &aVCLPaintEvent );
 				}
 			}
 			return;
@@ -318,10 +318,10 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pPaintEvent = new SalPaintEvent();
 				if ( pFrame )
 				{
-					pPaintEvent->mnBoundX = aUpdateRect.nLeft - pFrame->maGeometry.nLeftDecoration;
-					pPaintEvent->mnBoundY = aUpdateRect.nTop - pFrame->maGeometry.nTopDecoration;
-					pPaintEvent->mnBoundWidth = aUpdateRect.GetWidth() + pFrame->maGeometry.nLeftDecoration;
-					pPaintEvent->mnBoundHeight = aUpdateRect.GetHeight() + pFrame->maGeometry.nTopDecoration;
+					pPaintEvent->mnBoundX = aUpdateRect.nLeft;
+					pPaintEvent->mnBoundY = aUpdateRect.nTop;
+					pPaintEvent->mnBoundWidth = aUpdateRect.GetWidth();
+					pPaintEvent->mnBoundHeight = aUpdateRect.GetHeight();
 				}
 			}
 			dispatchEvent( nID, pFrame, pPaintEvent );
