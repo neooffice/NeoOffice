@@ -41,6 +41,7 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.print.PageFormat;
 import java.awt.print.Printable;
+import java.awt.print.PrinterAbortException;
 import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
 
@@ -209,7 +210,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 	public int print(Graphics g, PageFormat f, int i) throws PrinterException {
 
 		if (job.isCancelled())
-			throw new PrinterException();
+			throw new PrinterAbortException();
 		else if (endJob)
 			return Printable.NO_SUCH_PAGE;
 
@@ -241,7 +242,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 		}
 
 		if (job.isCancelled())
-			throw new PrinterException();
+			throw new PrinterAbortException();
 		else if (endJob)
 			return Printable.NO_SUCH_PAGE;
 		else
@@ -258,6 +259,9 @@ public final class VCLPrintJob implements Printable, Runnable {
 
 		try {
 			job.print();
+		}
+		catch (PrinterAbortException pae) {
+			// Don't print anything since the user pressed the cancel button
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
