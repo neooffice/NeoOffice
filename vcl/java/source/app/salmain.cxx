@@ -390,6 +390,35 @@ int main( int argc, char *argv[] )
 		ATSFontIteratorRelease( &aIterator );
 	}
 
+	// Determine if we were launched from the Finder. If not, force the
+	// application to run as a background application.
+	if ( argc < 2 || strncmp( argv[1], "-psn_", 5 ) )
+	{
+		VCLThreadAttach t;
+		if ( t.pEnv )
+		{
+			jclass systemClass = t.pEnv->FindClass( "java/lang/System" );
+			if ( systemClass )
+			{
+				jmethodID mID = NULL;
+				OUString aJDirectPath;
+				if ( !mID )
+				{
+					char *cSignature = "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;";
+					mID = t.pEnv->GetStaticMethodID( systemClass, "setProperty", cSignature );
+				}
+				OSL_ENSURE( mID, "Unknown method id!" );
+				if ( mID )
+				{
+					jvalue args[2];
+					args[0].l = StringToJavaString( t.pEnv, OUString::createFromAscii( "com.apple.backgroundOnly" ) );
+						args[1].l = StringToJavaString( t.pEnv, OUString::createFromAscii( "true" ) );
+					(jstring)t.pEnv->CallStaticObjectMethodA( systemClass, mID, args );
+				}
+			}
+		}
+	}
+
 	// Test the JVM version and if it is 1.4 or higher, run SVMain() in a
 	// high priority thread
 	java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
