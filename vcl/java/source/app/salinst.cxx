@@ -895,8 +895,6 @@ void SalInstance::Yield( BOOL bWait )
 
 	nRecursionLevel++;
 
-	ULONG nCount = ReleaseYieldMutex();
-
 	// Dispatch pending non-AWT events
 	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( 0, FALSE ) ) != NULL )
 	{
@@ -929,10 +927,18 @@ void SalInstance::Yield( BOOL bWait )
 		}
 		delete pEvent;
 
+		ULONG nCount = ReleaseYieldMutex();
+		if ( bWait )
+			OThread::yield();
 		AcquireYieldMutex( nCount );
 		nRecursionLevel--;
 		return;
 	}
+
+    ULONG nCount = ReleaseYieldMutex();
+    if ( !bWait )   
+        OThread::yield();
+    AcquireYieldMutex( nCount );
 
 	// Check timer
 	if ( pSalData->mnTimerInterval )
@@ -1004,8 +1010,6 @@ void SalInstance::Yield( BOOL bWait )
 		if ( nID == SALEVENT_MOUSEMOVE )
 			break;
 	}
-
-	AcquireYieldMutex( nCount );
 
 	nRecursionLevel--;
 }
