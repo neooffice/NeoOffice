@@ -513,6 +513,6 @@
 	<key>CFBundleVersion</key>
 	<string>$(PRODUCT_VERSION) Build $(RSCVERSION)</string>
 	<key>CFBundleGetInfoString</key>
-	<string>$(PRODUCT_TRADEMARKED_NAME) copyright 2003 Patrick Luby with portions copyright 2001 Sun Microsystems, Inc.</string>
+	<string>$(PRODUCT_TRADEMARKED_NAME) copyright 2004 Patrick Luby with portions copyright 2004 Sun Microsystems, Inc.</string>
 </dict>
 </plist>
