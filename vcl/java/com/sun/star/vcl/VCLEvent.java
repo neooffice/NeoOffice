@@ -1010,10 +1010,11 @@ public final class VCLEvent extends AWTEvent {
 					int attribute = 0;
 					InputMethodHighlight hl = (InputMethodHighlight)i.getAttribute(TextAttribute.INPUT_METHOD_HIGHLIGHT);
 					if (hl != null) {
-						if (hl.getState() == InputMethodHighlight.RAW_TEXT)
+						if (hl.isSelected())
 							attribute |= SAL_EXTTEXTINPUT_ATTR_BOLDUNDERLINE;
 						else
 							attribute |= SAL_EXTTEXTINPUT_ATTR_UNDERLINE;
+						System.out.println(hl.getState() + " " + hl.isSelected());
 					}
 					textAttributes[count++] = attribute;
 				}
