@@ -47,7 +47,7 @@
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 
-static ::std::map< ::rtl::OUString, sal_uInt32 > aNativeFontMap;
+static ::std::map< ::rtl::OUString, sal_uInt64 > aNativeFontMap;
 
 #endif	// MACOSX
 
@@ -57,12 +57,12 @@ using namespace vcl;
 // ============================================================================
 
 #ifdef MACOSX
-static sal_uInt32 GetMacFontFace( com_sun_star_vcl_VCLFont *pVCLFont )
+static sal_uInt64 GetMacFontFace( com_sun_star_vcl_VCLFont *pVCLFont )
 {
-	sal_uInt32 out = 0;
+	sal_uInt64 out = 0;
 
 	OUString aFontName( pVCLFont->getName() );
-	::std::map< OUString, sal_uInt32 >::iterator it = aNativeFontMap.find( aFontName );
+	::std::map< OUString, sal_uInt64 >::iterator it = aNativeFontMap.find( aFontName );
 	if ( it != aNativeFontMap.end() )
 		out = it->second;
 
@@ -107,28 +107,42 @@ static sal_uInt32 GetMacFontFace( com_sun_star_vcl_VCLFont *pVCLFont )
 										if ( aFont && ATSFontGetName( aFont, kATSOptionFlagsDefault, &aFontNameRef ) == noErr )
 										{
 											sal_Int32 nBufSize = CFStringGetLength( aFontNameRef );
-											sal_Unicode aBuf[ nBufSize + 1 ];
+											sal_Unicode aBuf[ nBufSize ];
 											CFRange aRange;
 
 											aRange.location = 0;
 											aRange.length = nBufSize;
 											CFStringGetCharacters( aFontNameRef, aRange, aBuf );
-											aBuf[ nBufSize ] = 0;
 											CFRelease( aFontNameRef );
 
-											sal_uInt32 nFontFace = ( nFamily << 16 ) | nStyle;
-											OUString aName( aBuf );
+											sal_uInt64 nFontFace = ( ( nFamily & 0x000000000000ffff ) << 16 ) | ( nStyle & 0x000000000000ffff );
+											OUString aName( aBuf, nBufSize );
 											aNativeFontMap[ aName ] = nFontFace;
 											if ( aFontName == aName )
 												out = nFontFace;
 										}
 									}
+									FMDisposeFontFamilyInstanceIterator( &aIterator );
 								}
 
 								// Handle Java's font alias names
 								if ( !out )
 								{
-									sal_uInt32 nFontFace = ( nFamily << 16 );
+									sal_uInt64 nFontFace = ( nFamily & 0x000000000000ffff ) << 16;
+
+									// Handle fonts that have no font family
+									if ( nFamily == -1 )
+									{
+										CFStringRef aFontNameRef = CFStringCreateWithCharactersNoCopy( NULL, aFontName.getStr(), aFontName.getLength(), kCFAllocatorNull );
+										if ( aFontNameRef )
+										{
+											ATSFontRef aFontRef = ATSFontFindFromName( aFontNameRef, kATSOptionFlagsDefault );
+											if ( aFontRef )
+												nFontFace = (sal_uInt64)aFontRef << 32;
+											CFRelease( aFontNameRef );
+										}
+									}
+
 									aNativeFontMap[ aFontName ] = nFontFace;
 									out = nFontFace;
 								}
@@ -459,7 +473,7 @@ void *com_sun_star_vcl_VCLFont::getNativeFont()
 	void *out = NULL;
 
 #ifdef MACOSX
-	sal_uInt32 nFontFace;
+	sal_uInt64 nFontFace;
 	if ( com_sun_star_vcl_VCLFont::useDefaultFont )
 	{
 		com_sun_star_vcl_VCLFont *pDefaultFont = getDefaultFont();
@@ -473,11 +487,18 @@ void *com_sun_star_vcl_VCLFont::getNativeFont()
 
 	if ( nFontFace )
 	{
-		FMFontFamily nFont = (FMFontFamily)( nFontFace >> 16 );
-		FMFontStyle nStyle = (FMFontStyle)( nFontFace & 0x00ff );
-		FMFont aFont;
-		if ( FMGetFontFromFontFamilyInstance( nFont, nStyle, &aFont, NULL ) == noErr )
-			out = (void *)FMGetATSFontRefFromFont( aFont );
+		if ( nFontFace & 0x00000000ffffffff )
+		{
+			FMFontFamily nFont = (FMFontFamily)( ( nFontFace & 0x00000000ffff0000 ) >> 16 );
+			FMFontStyle nStyle = (FMFontStyle)( nFontFace & 0x000000000000ffff );
+			FMFont aFont;
+			if ( FMGetFontFromFontFamilyInstance( nFont, nStyle, &aFont, NULL ) == noErr )
+				out = (void *)aFont;
+		}
+		else
+		{
+			out = (void *)( (sal_uInt32)( nFontFace >> 32 ) );
+		}
 	}
 #endif	// MACOSX
 
@@ -491,7 +512,7 @@ void *com_sun_star_vcl_VCLFont::getNativeFont( sal_Bool _par0, sal_Bool _par1 )
 	void *out = NULL;
 
 #ifdef MACOSX
-	sal_uInt32 nFontFace;
+	sal_uInt64 nFontFace;
 	if ( com_sun_star_vcl_VCLFont::useDefaultFont )
 	{
 		com_sun_star_vcl_VCLFont *pDefaultFont = getDefaultFont();
@@ -505,23 +526,30 @@ void *com_sun_star_vcl_VCLFont::getNativeFont( sal_Bool _par0, sal_Bool _par1 )
 
 	if ( nFontFace )
 	{
-		FMFontFamily nFont = (FMFontFamily)( nFontFace >> 16 );
-		FMFontStyle nStyle = (FMFontStyle)( nFontFace & 0x00ff );
-		if ( !_par0 && !_par1 )
+		if ( nFontFace & 0x00000000ffffffff )
 		{
-			nStyle &= ~( bold | italic );
+			FMFontFamily nFont = (FMFontFamily)( ( nFontFace & 0x00000000ffff0000 ) >> 16 );
+			FMFontStyle nStyle = (FMFontStyle)( nFontFace & 0x000000000000ffff );
+			if ( !_par0 && !_par1 )
+			{
+				nStyle &= ~( bold | italic );
+			}
+			else
+			{
+				if ( _par0 )
+					nStyle |= bold;
+				if ( _par1 )
+					nStyle |= italic;
+			}
+
+			FMFont aFont;
+			if ( FMGetFontFromFontFamilyInstance( nFont, nStyle, &aFont, NULL ) == noErr )
+				out = (void *)aFont;
 		}
 		else
 		{
-			if ( _par0 )
-				nStyle |= bold;
-			if ( _par1 )
-				nStyle |= italic;
+			out = (void *)( (sal_uInt32)( nFontFace >> 32 ) );
 		}
-
-		FMFont aFont;
-		if ( FMGetFontFromFontFamilyInstance( nFont, nStyle, &aFont, NULL ) == noErr )
-			out = (void *)FMGetATSFontRefFromFont( aFont );
 	}
 #endif	// MACOSX
 

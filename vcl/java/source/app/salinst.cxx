@@ -442,6 +442,7 @@ void ExecuteApplicationMain( Application *pApp )
 				{
 					static jfieldID fIDFonts = NULL;
 					static jfieldID fIDNumFonts = NULL;
+					static jmethodID mIDPutNativeQuartzFontIntoCache = NULL;
 					if ( !fIDFonts )
 					{
 						char *cSignature = "[I";
@@ -454,21 +455,60 @@ void ExecuteApplicationMain( Application *pApp )
 						fIDNumFonts = t.pEnv->GetStaticFieldID( nativeFontWrapperClass, "sNumFonts", cSignature );
 					}
 					OSL_ENSURE( fIDNumFonts, "Unknown field id!" );
-					if ( fIDFonts && fIDNumFonts )
+					if ( !mIDPutNativeQuartzFontIntoCache )
+					{
+						char *cSignature = "(Ljava/lang/String;[I)V";
+						mIDPutNativeQuartzFontIntoCache = t.pEnv->GetStaticMethodID( nativeFontWrapperClass, "putNativeQuartzFontIntoCache", cSignature );
+					}
+					OSL_ENSURE( mIDPutNativeQuartzFontIntoCache, "Unknown method id!" );
+					if ( fIDFonts && fIDNumFonts && mIDPutNativeQuartzFontIntoCache )
 					{
 						ClearableMutexGuard aGuard( aMutex );
 
 						// Create the font array and add the fonts in reverse
 						// order since we originally stored them that way
 						jsize nFonts  = aNativeFontList.size();
-						jintArray pFonts = t.pEnv->NewIntArray( nFonts );
+						jintArray pFonts = t.pEnv->NewIntArray( nFonts * 4 );
+						jintArray pFontTypes = t.pEnv->NewIntArray( 4 );
 						jboolean bCopy( sal_False );
 						jint *pData = t.pEnv->GetIntArrayElements( pFonts, &bCopy );
 						jsize i = 0;
 						for ( ::std::list< ATSFontRef >::const_iterator it = aNativeFontList.begin(); it != aNativeFontList.end(); ++it )
 						{
 							ATSFontRef aFontRef = *it;
-							pData[i++] = (jint)CGFontCreateWithPlatformFont( (void *)&aFontRef );
+
+							jint nCGFont = (jint)CGFontCreateWithPlatformFont( (void *)&aFontRef );
+							pData[i++] = nCGFont;
+
+							CFStringRef aFontNameRef;
+							if ( ATSFontGetName( aFontRef, kATSOptionFlagsDefault, &aFontNameRef ) == noErr )
+							{
+								sal_Int32 nBufSize = CFStringGetLength( aFontNameRef );
+								sal_Unicode aBuf[ nBufSize ];
+								CFRange aRange;
+
+								aRange.location = 0;
+								aRange.length = nBufSize; 
+								CFStringGetCharacters( aFontNameRef, aRange, aBuf );
+								CFRelease( aFontNameRef );
+
+								jstring fontName = t.pEnv->NewString( aBuf, nBufSize );
+								if ( fontName )
+								{
+									jboolean bCopy( sal_False );
+									jint *pDataTypes = t.pEnv->GetIntArrayElements( pFontTypes, &bCopy );
+									pDataTypes[ 0 ] = nCGFont;
+									pDataTypes[ 1 ] = nCGFont;
+									pDataTypes[ 2 ] = nCGFont;
+									pDataTypes[ 3 ] = nCGFont;
+									t.pEnv->ReleaseIntArrayElements( pFontTypes, pDataTypes, 0 );
+
+									jvalue args[2];
+									args[0].l = fontName;
+									args[1].l = pFontTypes;
+									t.pEnv->CallStaticVoidMethodA( nativeFontWrapperClass, mIDPutNativeQuartzFontIntoCache, args );
+								}
+							}
 						}
 						t.pEnv->ReleaseIntArrayElements( pFonts, pData, 0 );
 
