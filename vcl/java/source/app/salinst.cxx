@@ -280,9 +280,10 @@ void ExecuteApplicationMain( Application *pApp )
 	// fonts since Panther does not automatically add fonts in the user's
 	// Library/Fonts directory until they reboot or relogin
 	rtl_uString *pStr;
-	if ( osl_getExecutableFile( &pStr ) == osl_Process_E_None )
+	rtl_uString *pExecPath;
+	if ( osl_getExecutableFile( &pStr ) == osl_Process_E_None && osl_getSystemPathFromFileURL( pStr, &pExecPath ) == osl_File_E_None )
 	{
-		ByteString aFontDir( rtl_uString_getStr( pStr ), RTL_TEXTENCODING_UTF8 );
+		ByteString aFontDir( rtl_uString_getStr( pExecPath ), RTL_TEXTENCODING_UTF8 );
 		if ( aFontDir.Len() )
 		{
 			aFontDir += ByteString( "/../share/fonts/truetype", RTL_TEXTENCODING_UTF8 );
