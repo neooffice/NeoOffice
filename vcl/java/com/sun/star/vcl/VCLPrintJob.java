@@ -169,7 +169,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 				currentGraphics = null;
 			}
 
- 			if (printThreadFinished)
+ 			if (!printThreadStarted || printThreadFinished)
 				return;
 
 			// Allow the printer thread to move to the next page
