@@ -57,32 +57,6 @@
 #include <com/sun/star/vcl/VCLPrintJob.hxx>
 #endif
 
-#ifdef MACOSX
-
-#ifndef _SV_JAVA_LANG_CLASS_HXX
-#include <java/lang/Class.hxx>
-#endif
-#ifndef _VOS_MODULE_HXX_
-#include <vos/module.hxx>
-#endif
-
-#include <premac.h>
-#include <Carbon/Carbon.h>
-#include <postmac.h>
-typedef OSStatus PMCreatePageFormat_Type( PMPageFormat* );
-typedef OSStatus PMGetResolution_Type( PMPageFormat, PMResolution* );
-typedef OSStatus PMPrinterGetIndexedPrinterResolution_Type( PMPrinter, UInt32, PMResolution* );
-typedef OSStatus PMPrinterGetPrinterResolutionCount_Type( PMPrinter, UInt32* );
-typedef OSStatus PMRelease_Type( PMObject );
-typedef OSStatus PMSessionDefaultPageFormat_Type( PMPrintSession, PMPageFormat );
-typedef OSStatus PMSessionGetCurrentPrinter_Type( PMPrintSession, PMPrinter* );
-typedef OSStatus PMSetResolution_Type( PMPageFormat, const PMResolution* );
-
-using namespace rtl;
-using namespace vos;
-
-#endif	// MACOSX
-
 using namespace vcl;
 
 // =======================================================================
@@ -309,74 +283,6 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 	pSalData->maVCLPageFormats.push_back( maPrinterData.mpVCLPageFormat );
 
 	maPrinterData.mbStarted = maPrinterData.mpVCLPrintJob->startJob( maPrinterData.mpVCLPageFormat, bShowDialog );
-
-	if ( !bShowDialog && maPrinterData.mbStarted )
-	{
-#ifdef MACOSX
-		// Test the JVM version and if it is below 1.4, use Carbon printing APIs
-		java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
-		if ( !pClass )
-		{
-			PMPrintSession pSession = (PMPrintSession)maPrinterData.mpVCLPrintJob->getNativePrintJob();
-			if ( pSession )
-			{
-				OModule aModule;
-				if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
-				{
-					PMCreatePageFormat_Type *pCreatePageFormat = (PMCreatePageFormat_Type *)aModule.getSymbol( OUString::createFromAscii( "PMCreatePageFormat" ) );
-					PMGetResolution_Type *pGetResolution = (PMGetResolution_Type *)aModule.getSymbol( OUString::createFromAscii( "PMGetResolution" ) );
-					PMPrinterGetIndexedPrinterResolution_Type *pPrinterGetIndexedPrinterResolution = (PMPrinterGetIndexedPrinterResolution_Type *)aModule.getSymbol( OUString::createFromAscii( "PMPrinterGetIndexedPrinterResolution" ) );
-					PMPrinterGetPrinterResolutionCount_Type *pPrinterGetPrinterResolutionCount = (PMPrinterGetPrinterResolutionCount_Type *)aModule.getSymbol( OUString::createFromAscii( "PMPrinterGetPrinterResolutionCount" ) );
-					PMRelease_Type *pRelease = (PMRelease_Type *)aModule.getSymbol( OUString::createFromAscii( "PMRelease" ) );
-					PMSessionDefaultPageFormat_Type *pSessionDefaultPageFormat = (PMSessionDefaultPageFormat_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionDefaultPageFormat" ) );
-					PMSessionGetCurrentPrinter_Type *pSessionGetCurrentPrinter = (PMSessionGetCurrentPrinter_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionGetCurrentPrinter" ) );
-					PMSetResolution_Type *pSetResolution = (PMSetResolution_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSetResolution" ) );
-
-					if ( pCreatePageFormat && pGetResolution && pPrinterGetIndexedPrinterResolution && pPrinterGetPrinterResolutionCount && pRelease && pSessionDefaultPageFormat && pSessionGetCurrentPrinter && pSetResolution )
-					{
-						// Create page format
-						PMPageFormat aPageFormat;
-						if ( pCreatePageFormat( &aPageFormat ) == kPMNoError )
-						{
-							// Get the current resolution
-							PMResolution aMaxResolution;
-							if ( pSessionDefaultPageFormat( pSession, aPageFormat ) == kPMNoError && pGetResolution( aPageFormat, &aMaxResolution ) == kPMNoError )
-				 			{
-								// Check if there are any resolutions to choose
-								// from that are higher than the the current
-								//  resolution
-								PMPrinter aPrinter;
-								UInt32 nCount;
-								if ( pSessionGetCurrentPrinter( pSession, &aPrinter ) == kPMNoError && pPrinterGetPrinterResolutionCount( aPrinter, &nCount ) == kPMNoError )
-								{
-									for ( UInt32 i = 1; i <= nCount; i++ )
-									{
-										PMResolution aResolution;
-										if ( pPrinterGetIndexedPrinterResolution( aPrinter, i, &aResolution ) == kPMNoError && aResolution.hRes >= aMaxResolution.hRes && aResolution.vRes >= aMaxResolution.vRes && aResolution.hRes <= 300 && aResolution.vRes <= 300 )
-										{
-											aMaxResolution.hRes = aResolution.hRes;
-											aMaxResolution.vRes = aResolution.vRes;
-										}
-									}
-								}
-
-								// Set the page resolution
-								if ( pSetResolution( aPageFormat, &aMaxResolution )  == kPMNoError )
-									maPrinterData.mpVCLPageFormat->setPageResolution( aMaxResolution.hRes, aMaxResolution.vRes );
-							}
-							pRelease( aPageFormat );
-						}
-					}
-					aModule.unload();
-				}
-			}
-		}
-		else
-		{
-			delete pClass;
-		}
-#endif	// MACOSX
-	}
 
 	return maPrinterData.mbStarted;
 }

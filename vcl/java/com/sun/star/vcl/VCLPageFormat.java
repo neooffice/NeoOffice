@@ -138,7 +138,7 @@ public final class VCLPageFormat implements Cloneable {
 
 		job = PrinterJob.getPrinterJob();
 		pageFormat = job.defaultPage();
-		pageResolution = new Dimension(VCLScreen.MIN_PRINTER_RESOLUTION, VCLScreen.MIN_PRINTER_RESOLUTION);
+		pageResolution = new Dimension(VCLScreen.MAX_PRINTER_RESOLUTION, VCLScreen.MAX_PRINTER_RESOLUTION);
 		image = new VCLImage(1, 1, 32, this);
 
 	}
@@ -279,7 +279,7 @@ public final class VCLPageFormat implements Cloneable {
 	 */
 	public void resetPageResolution() {
 
-		pageResolution = new Dimension(VCLScreen.MIN_PRINTER_RESOLUTION, VCLScreen.MIN_PRINTER_RESOLUTION);
+		pageResolution = new Dimension(VCLScreen.MAX_PRINTER_RESOLUTION, VCLScreen.MAX_PRINTER_RESOLUTION);
 
 	}
 
