@@ -43,7 +43,6 @@ error()
     if [ ! -z "$@" ] ; then
         echo "Error: $@"
     fi
-    echo "Usage: $0 [-h] [-locale <locale>] [-repair]"
     exit 1
 }
 
@@ -71,16 +70,15 @@ while [ ! -z "$1" ] ; do
     case "$1" in
     -locale)
         shift
-        locale="$1"
-        shift;;
+        locale="$1";;
     -repair)
-        repair="true"
-        shift;;
+        repair="true";;
     -h)
-        error;;
+        echo "Usage: $0 [-h] [-locale <locale>] [-repair]";;
     *)
-        shift;;
+        ;;
     esac
+    shift
 done
 
 # Create user installation directory
@@ -92,27 +90,34 @@ if [ ! -d "$configdir" -o ! -d "$registrydir" -o ! -d "$wordbookdir" ] ; then
     mkdir -p "$userinstall"
 fi
 if [ ! -z "$repair" ] ; then
+    find "$userinstall" -type d -exec chmod u+rwx {} \;
     chmod -Rf u+rw "$userinstall"
-    rm -Rf "$userinstall"
+    # Make backup copy
+    if [ -d "$userinstall" ] ; then
+        if [ ! -z "`ls "$userinstall"`" ] ; then
+            userinstallbak="$userinstall.backup.`date +%Y%M%d%H%M`"
+            mkdir -p "$userinstallbak"
+            ( cd "$userinstall" ; tar cf - * ) | ( cd "$userinstallbak" ; tar xf - )
+        fi
+    else
+        rm -f "$userinstall"
+    fi
     mkdir -p "$userinstall"
     ( cd "$userbase" ; tar cf - * ) | ( cd "$userinstall" ; tar xf - )
     chmod -Rf u+rw "$userinstall"
     if [ ! -d "$configdir" -o ! -d "$registrydir" -o ! -d "$wordbookdir" ] ; then
-        rm -Rf "$userinstall"
         error "Installation of files in the $userinstall directory failed"
     fi
 fi
 
 # Set the locale
 setupxml="$registrydir/Setup.xcu"
-if [ ! -f "$setupxml" ] ; then
-    error
-fi
 setupxmlbak="$setupxml.bak"
 rm -f "$setupxmlbak"
+if [ ! -f "$setupxml" ] ; then
+    error "$setupxml file not found"
+fi
 if [ ! -f "$setupxmlbak" ] ; then
-    cat /dev/null "$setupxml" > "$setupxmlbak"
-
     # Begin multi-line pattern
     localepattern='/<prop oor:name="ooLocale" oor:type="xs:string">/{
 N
@@ -120,8 +125,8 @@ s#<value.*$#<value>'"$locale"'</value>#
 }'
     # End multi-line pattern
 
-    sed -e "$localepattern" "$setupxmlbak" > "$setupxml"
-    if [ $? != 0 ] ; then
+    sed -e "$localepattern" "$setupxml" > "$setupxmlbak"
+    if [ $? -eq 0 -a -s "$setupxmlbak" ] ; then
         mv -f "$setupxmlbak" "$setupxml"
     else
         rm -f "$setupxmlbak"
@@ -130,19 +135,17 @@ fi
 
 # Force registration dialog to appear at least once
 commonxml="$registrydir/Office/Common.xcu"
-if [ ! -f "$commonxml" ] ; then
-    error
-fi
 commonxmlset="$commonxml.set.1"
 commonxmlbak="$commonxml.bak"
 rm -f "$commonxmlbak"
+if [ ! -f "$commonxml" ] ; then
+    error "$commonxml file not found"
+fi
 if [ ! -f "$commonxmlset" -a ! -f "$commonxmlbak" ] ; then
     jobsxml="$registrydir/Office/Jobs.xcu"
     jobsxmlbak="$jobsxml.bak"
     rm -f "$jobsxmlbak"
     if [ -f "$jobsxml" -a ! -f "$jobsxmlbak" ] ; then
-        cat /dev/null "$jobsxml" > "$jobsxmlbak"
-
         # Begin multi-line pattern
         defregpattern='/<node oor:name="RegistrationRequest">/{
 :addline
@@ -153,15 +156,13 @@ b addline
 }'
         # End multi-line pattern
 
-        sed -e "$defregpattern" "$jobsxmlbak" > "$jobsxml"
-        if [ $? != 0 ] ; then
+        sed -e "$defregpattern" "$jobsxml" > "$jobsxmlbak"
+        if [ $? -eq 0 -a -s "$jobsxmlbak" ] ; then
             mv -f "$jobsxmlbak" "$jobsxml"
         else
             rm -f "$jobsxmlbak"
         fi
     fi
-
-    cat /dev/null "$commonxml" > "$commonxmlbak"
 
     # Begin multi-line pattern
     defregpattern='/<prop oor:name="RequestDialog" oor:type="xs:int">/{
@@ -170,24 +171,24 @@ s#<value.*$#<value>1</value>#
 }'
     # End multi-line pattern
 
-    sed -e "$defregpattern" "$commonxmlbak" > "$commonxml"
-    if [ $? != 0 ] ; then
+    sed -e "$defregpattern" "$commonxml" > "$commonxmlbak"
+    if [ $? -eq 0 -a -s "$commonxmlbak" ] ; then
         mv -f "$commonxmlbak" "$commonxml"
+        touch -f "$commonxmlset"
     else
         rm -f "$commonxmlbak"
-        touch -f "$commonxmlset"
     fi
 fi
 
 # Make locale the default document language
 lang=`echo "$locale" | awk -F- '{ print $1 }'`
 linguxml="$registrydir/Office/Linguistic.xcu"
-if [ ! -f "$linguxml" ] ; then
-    error
-fi
 linguxmlset="$linguxml.set"
 linguxmlbak="$linguxml.bak"
 rm -f "$linguxmlbak"
+if [ ! -f "$linguxml" ] ; then
+    error "$linguxml file not found"
+fi
 if [ ! -f "$linguxmlset" -a ! -f "$linguxmlbak" ] ; then
     # Match the locale to one of the installed locales
     locales='$(LANGUAGE_NAMES)'
@@ -217,8 +218,6 @@ if [ ! -f "$linguxmlset" -a ! -f "$linguxmlbak" ] ; then
         locale="$matchedlocale"
     fi
 
-    cat /dev/null "$linguxml" > "$linguxmlbak"
-
     # Begin multi-line pattern
     deflocalepattern='/<prop oor:name="DefaultLocale" oor:type="xs:string">/{
 N
@@ -226,12 +225,12 @@ s#<value.*$#<value>'"$locale"'</value>#
 }'
     # End multi-line pattern
 
-    sed -e "$deflocalepattern" "$linguxmlbak" > "$linguxml"
-    if [ $? != 0 ] ; then
+    sed -e "$deflocalepattern" "$linguxml" > "$linguxmlbak"
+    if [ $? -eq 0 -a -s "$linguxmlbak" ] ; then
         mv -f "$linguxmlbak" "$linguxml"
+        touch -f "$linguxmlset"
     else
         rm -f "$linguxmlbak"
-        touch -f "$linguxmlset"
     fi
 fi
 
@@ -242,7 +241,9 @@ if [ -d "$sharedictdir" ] ; then
     sharedictlst="$sharedictdir/dictionary.lst"
     if [ -r "$sharedictlst" ] ; then
         ( cat /dev/null "$userdictlst" ; grep -E '[^][#:space:]*(DICT|HYPH|THES)[[:space:]]*'"$lang"'[[:space:]]' "$sharedictlst" ) 2>/dev/null | sed 's#^[#[:space:]]*##' > "$userdictlst.tmp"
-        sort -u "$userdictlst.tmp" > "$userdictlst"
+        if [ -s "$userdictlst.tmp" ] ; then
+            sort -u "$userdictlst.tmp" > "$userdictlst"
+        fi
         rm -f "$userdictlst.tmp"
     fi
     for i in `cd "$sharedictdir" ; find . -name "*$lang*"` ; do
@@ -268,7 +269,7 @@ else
     printf "[Java]\n" > "$configdir/javarc"
 fi
 printf "SystemClasspath=$sysclasspath\nJava=1\nJavaScript=1\nApplets=1\n-Xrs\n-Xmx512m\n" >> "$configdir/javarc"
-if [ ! -f "$configdir/javarc" ] ; then
+if [ ! -f "$configdir/javarc" -o ! -s "$configdir/javarc" ] ; then
     error "$configdir/javarc file could not be created"
 fi
 
@@ -313,7 +314,7 @@ shareautocorrdir="$sharebase/autocorr"
 userautocorrdir="$userinstall/autocorr"
 mkdir -p "$userautocorrdir"
 if [ -d "$shareautocorrdir" -a -d "$userautocorrdir" ] ; then
-    chmod -Rf u+rw "$userautocorrdir"
+    chmod -Rf u+rwx "$userautocorrdir"
     for i in `cd "$shareautocorrdir" ; find . -name '*.dat'` ; do
         if [ -z "$i" ] ; then
             continue;
