@@ -136,6 +136,8 @@ static pascal OSErr DoAEReopen( const AppleEvent *message, AppleEvent *reply, lo
 
 #endif // MACOSX
 
+static void RunAppMain( Application* pApp );
+
 class SVMainThread : public ::vos::OThread
 {
 	Application*			mpApp;
@@ -143,13 +145,13 @@ class SVMainThread : public ::vos::OThread
 public:
 							SVMainThread( Application* pApp ) : ::vos::OThread(), mpApp( pApp ) {}
 
-	virtual void			run();
+	virtual void			run() { RunAppMain( mpApp ); }
 };
 
 
 // ============================================================================
 
-void SVMainThread::run()
+static void RunAppMain( Application *pApp )
 {
 	SalData *pSalData = GetSalData();
 
@@ -209,10 +211,10 @@ void SVMainThread::run()
 	}
 #endif	// MACOSX
 
-	mpApp->Main();
+	pApp->Main();
 }
 
-// ============================================================================
+// ----------------------------------------------------------------------------
 
 #ifdef MACOSX
 static void ImplFontListChangedCallback( ATSFontNotificationInfoRef, void* )
@@ -710,8 +712,6 @@ void ExecuteApplicationMain( Application *pApp )
 		aFontNameList.clear();
 	}
 
-	SVMainThread aSVMainThread( pApp );
-
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
@@ -727,6 +727,7 @@ void ExecuteApplicationMain( Application *pApp )
 				ULONG nCount = pSalInstance->ReleaseYieldMutex();
 
 				// Create the thread to run the Main() method in
+				SVMainThread aSVMainThread( pApp );
 				aSVMainThread.create();
 
 				// Start the Cocoa event loop
@@ -892,8 +893,7 @@ void ExecuteApplicationMain( Application *pApp )
 #endif	// MACOSX
 
 	// Now that Java is properly initialized, run the application's Main()
-	aSVMainThread.run();
-	aSVMainThread.join();
+	RunAppMain( pApp );
 }
 
 // =======================================================================
