@@ -332,7 +332,7 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 {
 	SalFrame *pFrame = new SalFrame();
 
-	pFrame->maFrameData.mpVCLFrame = new com_sun_star_vcl_VCLFrame( nSalFrameStyle, pFrame );
+	pFrame->maFrameData.mpVCLFrame = new com_sun_star_vcl_VCLFrame( nSalFrameStyle, pFrame, pParent );
 	pFrame->maFrameData.maSysData.pVCLFrame = pFrame->maFrameData.mpVCLFrame;
 	pFrame->maFrameData.mnStyle = nSalFrameStyle;
 

@@ -290,7 +290,7 @@ public final class VCLGraphics {
 	VCLGraphics(VCLFrame f) {
 
 		frame = f;
-		if (frame.getWindow().isVisible()) {
+		if (frame.getWindow().isShowing()) {
 			Panel p = frame.getPanel();
 			panelGraphics = (Graphics2D)p.getGraphics();
 			Rectangle bounds = p.getBounds();
@@ -1397,7 +1397,7 @@ public final class VCLGraphics {
 			if (panelGraphics != null)
 				panelGraphics.dispose();
 			image.dispose();
-			if (frame.getWindow().isVisible()) {
+			if (frame.getWindow().isShowing()) {
 				Panel p = frame.getPanel();
 				panelGraphics = (Graphics2D)p.getGraphics();
 				Rectangle bounds = p.getBounds();

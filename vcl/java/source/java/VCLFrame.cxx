@@ -71,7 +71,7 @@ jclass com_sun_star_vcl_VCLFrame::getMyClass()
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, const SalFrame *pFrame ) : java_lang_Object( (jobject)NULL )
+com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, const SalFrame *pFrame, const SalFrame *pParent ) : java_lang_Object( (jobject)NULL )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -87,8 +87,8 @@ com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, cons
 	args[0].j = jlong( nSalFrameStyle );
 	args[1].l = GetSalData()->mpEventQueue->getJavaObject();
 	args[2].j = jlong( pFrame );
-	if ( pFrame->maFrameData.mpParent )
-		args[3].l = pFrame->maFrameData.mpParent->maFrameData.mpVCLFrame->getJavaObject();
+	if ( pParent )
+		args[3].l = pParent->maFrameData.mpVCLFrame->getJavaObject();
 	else
 		args[3].l = NULL;
 	jobject tempObj;
