@@ -129,6 +129,7 @@ static Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *pCarbonLockInit = N
 
 static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( JNIEnv *pEnv, jobject object );
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData );
+static pascal OSErr DoAEQuit( const AppleEvent *message, AppleEvent *reply, long refcon );
 static pascal OSErr DoAEOpenPrintDocuments( const AppleEvent *message, AppleEvent *reply, long refcon );
 
 #endif // MACOSX
@@ -189,6 +190,7 @@ void SVMainThread::run()
 
 		// Install AppleEvent handlers for processing open and print events
 		// to fix bug 209 
+		AEInstallEventHandler( kCoreEventClass, kAEQuitApplication, NewAEEventHandlerUPP( DoAEQuit ), 0, FALSE );
 		AEInstallEventHandler( kCoreEventClass, kAEOpenDocuments, NewAEEventHandlerUPP( DoAEOpenPrintDocuments ), 0, FALSE );
 		AEInstallEventHandler( kCoreEventClass, kAEPrintDocuments, NewAEEventHandlerUPP( DoAEOpenPrintDocuments ), 0, FALSE );
 
@@ -337,16 +339,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 		OSType nType;
 		if ( nKind == kEventAppleEvent && GetEventParameter( aEvent, kEventParamAEEventID, typeType, NULL, sizeof( OSType ), NULL, &nType ) == noErr && !Application::IsShutDown() )
 		{
-			if ( nType == 'quit' )
-			{
-				SalData *pSalData = GetSalData();
-				if ( pSalData && pSalData->mpEventQueue )
-				{
-					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_SHUTDOWN, NULL, NULL );
-					pSalData->mpEventQueue->postCachedEvent( &aEvent );
-				}
-			}
-			else if ( nType == 'odoc' || nType == 'pdoc' )
+			if ( nType == 'quit' || nType == 'odoc' || nType == 'pdoc' )
 			{
 				// note that we can't actually get the Apple event from the
 				// carbon event. We must dispatch it to registered appleevent
@@ -492,6 +485,25 @@ void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void
 			pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->release();
 		}
 	}
+}
+#endif	// MACOSX
+
+// ----------------------------------------------------------------------------
+
+#ifdef MACOSX
+static OSErr DoAEQuit( const AppleEvent *message, AppleEvent *reply, long refcon )
+{
+	if ( !Application::IsShutDown() )
+	{
+		SalData *pSalData = GetSalData();
+		if ( pSalData && pSalData->mpEventQueue )
+		{
+			com_sun_star_vcl_VCLEvent aEvent( SALEVENT_SHUTDOWN, NULL, NULL );
+			pSalData->mpEventQueue->postCachedEvent( &aEvent );
+		}
+	}
+
+	return noErr;
 }
 #endif	// MACOSX
 
