@@ -88,6 +88,11 @@ public final class VCLGraphics {
 	private static boolean autoFlush = true;
 
 	/**
+	 * The drawImage method.
+	 */
+	private static Method drawImageMethod = null;
+
+	/**
 	 * The drawLine method.
 	 */
 	private static Method drawLineMethod = null;
@@ -208,6 +213,10 @@ public final class VCLGraphics {
 			screenResolution = 96;
 
 		// Set the method references
+		try {
+			drawImageMethod = VCLGraphics.class.getMethod("drawImage", new Class[]{ Image.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class });
+		}
+		catch (Throwable t) {}
 		try {
 			drawLineMethod = VCLGraphics.class.getMethod("drawLine", new Class[]{ int.class, int.class, int.class, int.class, int.class });
 		}
@@ -352,7 +361,7 @@ public final class VCLGraphics {
 		graphicsBounds = new Rectangle(pageFormat.getImageableBounds());
 		graphicsBounds.x = 0;
 		graphicsBounds.y = 0;
-		graphics = (Graphics2D)g.create(graphicsBounds.x, graphicsBounds.y, graphicsBounds.width, graphicsBounds.height);;
+		graphics = (Graphics2D)g.create(graphicsBounds.x, graphicsBounds.y, graphicsBounds.width, graphicsBounds.height);
 		bitCount = graphics.getDeviceConfiguration().getColorModel().getPixelSize();
 		resetClipRegion();
 
@@ -557,7 +566,13 @@ public final class VCLGraphics {
 	 * @param destWidth the width of the graphics to copy to
 	 * @param destHeight the height of the graphics to copy to
 	 */
-	void drawImage(Image img, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight) {
+	public void drawImage(Image img, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight) {
+
+		if (pageQueue != null) {
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawImageMethod, new Object[]{ img, new Integer(srcX), new Integer(srcY), new Integer(srcWidth), new Integer(srcHeight), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight) });
+			pageQueue.postImageOperation(pqi, new Rectangle(destX, destY, destWidth, destHeight));
+			return;
+		}
 
 		Rectangle destBounds = new Rectangle(destX, destY, destWidth, destHeight).intersection(graphicsBounds);
 		if (destBounds.isEmpty())
@@ -565,19 +580,7 @@ public final class VCLGraphics {
 		Shape clip = graphics.getClip();
 		if (clip != null && !clip.intersects(destBounds))
 			return;
-		if (pageQueue != null) {
-			if (pageQueue.pageImage == null)
-				pageQueue.pageImage = new VCLImage(graphicsBounds.width, graphicsBounds.height, bitCount);
-			Graphics2D pageGraphics = pageQueue.pageImage.getImage().createGraphics();
-			VCLGraphics.setDefaultRenderingAttributes(pageGraphics);
-			pageGraphics.setClip(clip);
-			pageGraphics.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
-			pageGraphics.dispose();
-			pageQueue.updateImageClip(destBounds);
-		}
-		else {
-			graphics.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
-		}
+		graphics.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
 		addToFlush(destBounds);
 
 	}
@@ -1464,13 +1467,15 @@ public final class VCLGraphics {
 
 		VCLGraphics graphics = null;
 
-		VCLGraphics.PageQueueItem head = null;
+		VCLGraphics.PageQueueItem drawingHead = null;
 
-		VCLImage pageImage = null;
+		VCLGraphics.PageQueueItem drawingTail = null;
+
+		VCLGraphics.PageQueueItem imageHead = null;
+
+		VCLGraphics.PageQueueItem imageTail = null;
 
 		Area pageImageClip = null;
-
-		VCLGraphics.PageQueueItem tail = null;
 
 		PageQueue(VCLGraphics g) {
 
@@ -1484,31 +1489,53 @@ public final class VCLGraphics {
 			Graphics2D g = graphics.graphics;
 
 			// Draw the combined image
-			if (pageImage != null) {
-				if (pageImageClip != null) {
+			if (imageHead != null && pageImageClip != null) {
+				if (imageHead != imageTail) {
+					Rectangle pageBounds = pageImageClip.getBounds();
+					Rectangle destBounds = pageBounds.intersection(graphicsBounds);
+					if (destBounds.isEmpty())
+						return;
+					VCLImage pageImage = new VCLImage(destBounds.width, destBounds.height, graphics.getBitCount());
+					VCLGraphics pageGraphics = pageImage.getGraphics();
+					pageGraphics.graphics.translate(destBounds.x * -1, destBounds.y * -1);
+					while (imageHead != null) {
+						pageGraphics.graphics.setClip(imageHead.clip);
+						try {
+							imageHead.method.invoke(pageGraphics, imageHead.params);
+						}
+						catch (Throwable t) {}
+						imageHead = imageHead.next;
+					}
+					pageGraphics.dispose();
 					g.setClip(pageImageClip);
-					g.drawRenderedImage(pageImage.getImage(), null);
+					g.drawImage(pageImage.getImage(), destBounds.x, destBounds.y, null);
+					pageImage.dispose();
 				}
-				pageImage.dispose();
+				else {
+					g.setClip(imageHead.clip);
+					try {
+						imageHead.method.invoke(graphics, imageHead.params);
+					}
+					catch (Throwable t) {}
+				}
 			}
-			pageImage = null;
 
 			// Invoke all of the queued drawing operations
-			while (head != null) {
+			while (drawingHead != null) {
 				if (pageImageClip != null) {
 					Area area = new Area(pageImageClip);
-					if (head.imageClip != null)
-						area.subtract(head.imageClip);
-					head.clip.subtract(area);
+					if (drawingHead.imageClip != null)
+						area.subtract(drawingHead.imageClip);
+					drawingHead.clip.subtract(area);
 				}
-				g.setClip(head.clip);
+				g.setClip(drawingHead.clip);
 				try {
-					head.method.invoke(graphics, head.params);
+					drawingHead.method.invoke(graphics, drawingHead.params);
 				}
 				catch (Throwable t) {}
-				head = head.next;
+				drawingHead = drawingHead.next;
 			}
-			tail = null;
+			drawingTail = null;
 			graphics = null;
 			pageImageClip = null;
 
@@ -1525,37 +1552,52 @@ public final class VCLGraphics {
 				i.clip = new Area(graphics.graphicsBounds);
 			if (pageImageClip != null)
 				i.imageClip = new Area(pageImageClip);
-			if (head != null) {
-				tail.next = i;
-				tail = i;
+			if (drawingHead != null) {
+				drawingTail.next = i;
+				drawingTail = i;
 			}
 			else {
-				head = tail = i;
+				drawingHead = drawingTail = i;
 			}
 
 		}
 
-		void updateImageClip(Rectangle b) {
+		void postImageOperation(VCLGraphics.PageQueueItem i, Rectangle b) {
 
 			if (b == null || b.isEmpty())
 				return;
 
-			Area area = new Area(b);
 			Graphics2D g = graphics.graphics;
+			Area area = new Area(b);
 			Shape clip = g.getClip();
 			if (clip != null)
 				area.intersect(new Area(clip));
+			if (area.isEmpty())
+				return;
 			if (pageImageClip != null)
 				pageImageClip.add(area);
 			else
 				pageImageClip = area;
 
 			// Update the image clip for all queue items
-			VCLGraphics.PageQueueItem pqi = head;
+			VCLGraphics.PageQueueItem pqi = drawingHead;
 			while (pqi != null) {
 				if (pageImageClip != null && pqi.imageClip != null)
 					pqi.imageClip.subtract(pageImageClip);
 				pqi = pqi.next;
+			}
+
+			// Add the image operation to the queue
+			if (clip != null)
+				i.clip = new Area(clip);
+			else
+				i.clip = new Area(graphics.graphicsBounds);
+			if (imageHead != null) {
+				imageTail.next = i;
+				imageTail = i;
+			}
+			else {
+				imageHead = imageTail = i;
 			}
 
 		}

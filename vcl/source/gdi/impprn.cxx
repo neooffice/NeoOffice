@@ -318,6 +318,13 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 		EndJob();
 		mpParent->ImplEndPrint();
 	}
+#ifdef USE_JAVA
+	else if ( mbAborted )
+	{
+		delete pActPage;
+		return 0;
+	}
+#endif	// USE_JAVA
 	else
 	{
 		GDIMetaFile		        aMtf;
