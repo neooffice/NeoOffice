@@ -805,7 +805,7 @@ public final class VCLEvent extends AWTEvent {
 	public final static int SAL_EXTTEXTINPUT_ATTR_BOLDUNDERLINE = 0x400;
 
 	/**
-	 * SAL_EXTTEXTINPUT_ATTR_BOLDUNDERLINE constant.
+	 * SAL_EXTTEXTINPUT_ATTR_DOTTEDUNDERLINE constant.
 	 */
 	public final static int SAL_EXTTEXTINPUT_ATTR_DOTTEDUNDERLINE = 0x800;
 
