@@ -77,15 +77,18 @@ static Reference< XJavaThreadRegister_11 > xRG11Ref;
 VCLThreadAttach::VCLThreadAttach()
 {
 	pEnv = NULL;
-	StartJava();
-	AttachThread();
-	if ( pEnv && pEnv->PushLocalFrame( 16 ) < 0 )
+	if ( !Application::IsShutDown() )
 	{
+		StartJava();
+		AttachThread();
+		if ( pEnv && pEnv->PushLocalFrame( 16 ) < 0 )
+		{
+			ThrowException();
+			DetachThread();
+			pEnv = NULL;
+		}
 		ThrowException();
-		DetachThread();
-		pEnv = NULL;
 	}
-	ThrowException();
 }
 
 // ----------------------------------------------------------------------------
@@ -102,7 +105,7 @@ VCLThreadAttach::~VCLThreadAttach()
 
 void VCLThreadAttach::AttachThread()
 {
-	if ( !Application::IsShutDown() && xVM.is() && pJVM && pJVM->GetEnv( (void**)&pEnv, JNI_VERSION_1_2 ) != JNI_OK && xRG11Ref.is() )
+	if ( xRG11Ref.is() && pJVM && pJVM->GetEnv( (void**)&pEnv, JNI_VERSION_1_2 ) != JNI_OK )
 	{
 		pJVM->AttachCurrentThread( (void**)&pEnv, NULL );
 		xRG11Ref->registerThread();
@@ -119,10 +122,10 @@ void VCLThreadAttach::DetachThread()
 
 sal_Bool VCLThreadAttach::StartJava()
 {
-	if ( !xVM.is() && !Application::IsShutDown() )
+	if ( !xVM.is() )
 	{
 		OGuard aGuard( OMutex::getGlobalMutex() );
-		if ( !xVM.is() && !Application::IsShutDown() )
+		if ( !xVM.is() )
 		{
 			pJVM = NULL;
 
