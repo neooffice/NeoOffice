@@ -58,7 +58,6 @@
 #ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
 #endif
-#include <crt_externs.h>
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
@@ -256,24 +255,6 @@ int main( int argc, char *argv[] )
 	char *pCmdPath = argv[ 0 ];
 
 #ifdef MACOSX
-	// We need to use _NSGetEnviron() here to get the path of this executable
-	// because argv[0] does not have any directory when the executable is
-	// found in the user's PATH environment variable
-	char **ppEnviron = NULL;
-	if(_NSGetEnviron())
-		ppEnviron = *_NSGetEnviron();
-
-	// Get full executable path. We can't use __progname as that only holds
-	// the name of the executable and not the path. The full executable path
-	// is listed after the first NULL in *environ.
-	if ( ppEnviron ) {
-		char **ppTmp;
-		ppTmp = ppEnviron;
-		while ( *ppTmp++ )
-			;
-		pCmdPath = *ppTmp;
-	}
-
 	// Get absolute path of command's directory
 	ByteString aCmdPath( pCmdPath );
 	if ( aCmdPath.Len() )
