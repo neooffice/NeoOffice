@@ -1214,12 +1214,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// If a modifier is used to set the character (e.g. the "Alt-c"
 		// generates a "c-cedilla" in the Mac OS X U.S. keyboard, we must strip
 		// of the modifiers so that the C++ code does not get confused.
-		if (lastKeyPressed != null && e.getModifiers() != 0) {
-			int keyCode = lastKeyPressed.getKeyCode();
-			char keyChar = lastKeyPressed.getKeyChar();
-			if ((int)Character.toUpperCase(keyChar) != keyCode)
-				e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), 0, e.getKeyCode(), keyChar);
-		}
+		int modifiers = e.getModifiers();
+		if (lastKeyPressed != null && (modifiers & InputEvent.ALT_MASK) != 0)
+			e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), modifiers & ~InputEvent.ALT_MASK, e.getKeyCode(), e.getKeyChar());
 		lastKeyPressed = null;
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
 
