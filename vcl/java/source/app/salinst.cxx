@@ -125,6 +125,7 @@ static Mutex aMutex;
 static OModule aJDirectModule;
 static Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type *pCarbonLockGetInstance = NULL;
 static Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *pCarbonLockInit = NULL;
+static DMExtendedNotificationUPP pExtendedNotificationUPP = NULL;
 
 static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( JNIEnv *pEnv, jobject object );
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData );
@@ -744,12 +745,27 @@ void ExecuteApplicationMain( Application *pApp )
 		// Fix bug 223 by registering a display manager notification callback
 		ProcessSerialNumber nProc;
 		if ( GetCurrentProcess( &nProc ) == noErr )
-			DMRegisterExtendedNotifyProc( NewDMExtendedNotificationUPP( CarbonDMExtendedNotificationCallback ), NULL, NULL, &nProc );
+		{
+			pExtendedNotificationUPP = NewDMExtendedNotificationUPP( CarbonDMExtendedNotificationCallback );
+			if ( pExtendedNotificationUPP )
+				DMRegisterExtendedNotifyProc( pExtendedNotificationUPP, NULL, NULL, &nProc );
+		}
 	}
 #endif	// MACOSX
 
 	// Now that Java is properly initialized, run the application's Main()
 	aSVMainThread.run();
+
+#ifdef MACOSX
+	if ( pExtendedNotificationUPP )
+	{
+		ProcessSerialNumber nProc;
+		if ( GetCurrentProcess( &nProc ) == noErr )
+			DMRemoveExtendedNotifyProc( pExtendedNotificationUPP, NULL, &nProc, NULL );
+		DisposeDMExtendedNotificationUPP( pExtendedNotificationUPP );
+		pExtendedNotificationUPP = NULL;
+	}
+#endif	// MACOSX
 }
 
 // =======================================================================
