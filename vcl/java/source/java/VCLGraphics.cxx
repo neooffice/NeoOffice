@@ -336,6 +336,50 @@ void com_sun_star_vcl_VCLGraphics::drawPolyline( ULONG _par0, const long *_par1,
 
 // ----------------------------------------------------------------------------
 
+void com_sun_star_vcl_VCLGraphics::drawPolyPolygon( ULONG _par0, const ULONG *_par1, long **_par2, long **_par3, SalColor _par4, sal_Bool _par5 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(I[I[[I[[IIZ)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "drawPolyPolygon", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jsize elements( _par0 );
+			jintArray ptsarray = t.pEnv->NewIntArray( elements );
+			t.pEnv->SetIntArrayRegion( ptsarray, 0, elements, (jint *)_par1 );
+			java_lang_Object tempObj( NULL );
+			jobjectArray xptsarray = t.pEnv->NewObjectArray( elements, tempObj.getMyClass(), tempObj.getJavaObject() );
+			jobjectArray yptsarray = t.pEnv->NewObjectArray( elements, tempObj.getMyClass(), tempObj.getJavaObject() );
+			for ( jsize i = 0; i < elements; i++ )
+			{
+				jsize points = _par1[ i ];
+				jintArray xarray = t.pEnv->NewIntArray( points );
+				t.pEnv->SetIntArrayRegion( xarray, 0, points, (jint *)_par2[ i ] );
+				t.pEnv->SetObjectArrayElement( xptsarray, i, xarray );
+				jintArray yarray = t.pEnv->NewIntArray( points );
+				t.pEnv->SetIntArrayRegion( yarray, 0, points, (jint *)_par3[ i ] );
+				t.pEnv->SetObjectArrayElement( yptsarray, i, yarray );
+			}
+			jvalue args[6];
+			args[0].i = jint( _par0 );
+			args[1].l = ptsarray;
+			args[2].l = xptsarray;
+			args[3].l = yptsarray;
+			args[4].i = jint( _par4 );
+			args[5].z = jboolean( _par4 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLGraphics::drawRect( long _par0, long _par1, long _par2, long _par3, SalColor _par4, sal_Bool _par5 )
 {
 	static jmethodID mID = NULL;

@@ -69,6 +69,7 @@ public:
 	void				drawMask( const com_sun_star_vcl_VCLBitmap *_par0, SalColor _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7 );
 	void				drawPolygon( ULONG _par0, const long *_par1, const long *_par2, SalColor _par3, sal_Bool _par4 );
 	void				drawPolyline( ULONG _par0, const long *_par1, const long *_par2, SalColor _par3 );
+	void				drawPolyPolygon( ULONG _par0, const ULONG *_par1, long **_par2, long **_par3, SalColor _par4, sal_Bool _par5 );
 	void				drawRect( long _par0, long _par1, long _par2, long _par3, SalColor _par4, sal_Bool _par5 );
 	void				drawText( long _par0, long _par1, const sal_Unicode *_par2, USHORT _par3, const com_sun_star_vcl_VCLFont *_par4, SalColor _par5 );
 	void				drawTextArray( long _par0, long _par1, const sal_Unicode *_par2, USHORT _par3, const com_sun_star_vcl_VCLFont *_par4, SalColor _par5, const long *_par6 );

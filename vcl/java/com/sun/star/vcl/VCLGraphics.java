@@ -800,6 +800,61 @@ public final class VCLGraphics {
 	}
 
 	/**
+	 * Draws or fills the specified set of polygons with the specified color.
+	 *
+	 * @param npoly the number of polygons
+	 * @param npoints the array of the total number of points in each polygon
+	 * @param xpoints the array of arrays of x coordinates
+	 * @param ypoints the array of arrays of y coordinates
+	 * @param color the color of the polygons
+	 * @param fill <code>true</code> to fill the polygons and <code>false</code>
+	 *  to draw just the outline
+	 */
+	public void drawPolyPolygon(int npoly, int[] npoints, int[][] xpoints, int[][] ypoints, int color, boolean fill) {
+
+		Area area = new Area(new Polygon(xpoints[0], ypoints[0], npoints[0]));
+		for (int i = 1; i < npoly; i++) {
+			Area a = new Area(new Polygon(xpoints[i], ypoints[i], npoints[i]));
+			if (fill)
+				area.exclusiveOr(a);
+			else
+				area.add(a);
+		}
+
+		Rectangle bounds = area.getBounds();
+		if (fill) {
+			if (xor)
+				graphics.setXORMode(Color.black);
+			graphics.setColor(new Color(color));
+			graphics.fill(area);
+			if (xor)
+				graphics.setPaintMode();
+			addToFlush(bounds);
+		}
+		else {
+			if (xor) {
+				VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
+				Graphics2D srcGraphics = srcImage.getImage().createGraphics();
+				VCLGraphics.setDefaultRenderingAttributes(srcGraphics);
+				srcGraphics.setColor(new Color(color));
+				srcGraphics.translate(bounds.x * -1, bounds.y * -1);
+				for (int i = 0; i < npoly; i++)
+					graphics.drawPolygon(xpoints[i], ypoints[i], npoints[i]);
+				srcGraphics.dispose();
+				drawImageXOR(srcImage, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y);
+				srcImage.dispose();
+			}
+			else {
+				graphics.setColor(new Color(color));
+				for (int i = 0; i < npoly; i++)
+					graphics.drawPolygon(xpoints[i], ypoints[i], npoints[i]);
+				addToFlush(bounds);
+			}
+		}
+
+	}
+
+	/**
 	 * Draws or fills the specified rectangle with the specified color.
 	 *
 	 * @param x the x coordinate of the rectangle
@@ -958,6 +1013,12 @@ public final class VCLGraphics {
 	void flush() {
 
 		if (panelGraphics != null && image != null && update != null) {
+			// Add a little extra area so that we don't miss any antialiased
+			// pixels
+			update.x -= 1;
+			update.y -= 1;
+			update.width += 2;
+			update.height += 2;
 			panelGraphics.setClip(update);
 			panelGraphics.drawImage(image.getImage(), 0, 0, null);
 			Toolkit.getDefaultToolkit().sync();
