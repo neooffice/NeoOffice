@@ -65,6 +65,7 @@ public:
 	static Orientation	getOrientation();
 	static const Size	getPageSize();
 	static void			setOrientation( Orientation _par0 );
+	static void			setPageResolution( long _par0, long _par1 );
 	static sal_Bool		setup();
 
 						com_sun_star_vcl_VCLPrintJob( jobject myObj ) : java_lang_Object( myObj ) {}

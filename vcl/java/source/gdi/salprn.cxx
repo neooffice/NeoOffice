@@ -50,6 +50,27 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
 
+#ifdef MACOSX
+
+#ifndef _SV_JAVA_LANG_CLASS_HXX
+#include <java/lang/Class.hxx>
+#endif
+#ifndef _VOS_MODULE_HXX_
+#include <vos/module.hxx>
+#endif
+
+#include <premac.h>
+#include <Carbon/Carbon.h>
+typedef OSStatus PMCreatePageFormat_Type( PMPageFormat* );
+typedef OSStatus PMGetResolution_Type( PMPageFormat, PMResolution* );
+typedef OSStatus PMSessionDefaultPageFormat_Type( PMPrintSession, PMPageFormat );
+#include <postmac.h>
+
+using namespace rtl;
+using namespace vos;
+
+#endif	// MACOSX
+
 using namespace vcl;
 
 // =======================================================================
@@ -213,6 +234,38 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 						   ImplJobSetup* pSetupData )
 {
 	maPrinterData.mbStarted = maPrinterData.mpVCLPrintJob->startJob();
+	if ( maPrinterData.mbStarted )
+	{
+#ifdef MACOSX
+	// Test the JVM version and if it is below 1.4, use Carbon printing APIs
+	java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
+	if ( !pClass )
+	{
+		PMPrintSession pSession = (PMPrintSession)maPrinterData.mpVCLPrintJob->getNativePrintJob();
+		if ( pSession )
+		{
+			OModule aModule;
+			if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
+			{
+				PMCreatePageFormat_Type *pCreatePageFormat = (PMCreatePageFormat_Type *)aModule.getSymbol( OUString::createFromAscii( "PMCreatePageFormat" ) );
+				PMGetResolution_Type *pGetResolution = (PMGetResolution_Type *)aModule.getSymbol( OUString::createFromAscii( "PMGetResolution" ) );
+				PMSessionDefaultPageFormat_Type *pSessionDefaultPageFormat = (PMSessionDefaultPageFormat_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionDefaultPageFormat" ) );
+				if ( pCreatePageFormat && pGetResolution && pSessionDefaultPageFormat )
+				{
+					PMPageFormat aPageFormat;
+					if ( pCreatePageFormat( &aPageFormat ) == kPMNoError )
+					{
+						PMResolution aResolution;
+						if ( pSessionDefaultPageFormat( pSession, aPageFormat ) == kPMNoError && pGetResolution( aPageFormat, &aResolution ) == kPMNoError )
+							com_sun_star_vcl_VCLPrintJob::setPageResolution( (long)aResolution.hRes, (long)aResolution.vRes );
+					}
+				}
+				aModule.unload();
+			}
+		}
+	}
+#endif	// MACOSX
+	}
 	return maPrinterData.mbStarted;
 }
 

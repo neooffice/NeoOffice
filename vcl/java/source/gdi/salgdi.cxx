@@ -320,9 +320,11 @@ BOOL SalGraphics::DrawEPS( long nX, long nY, long nWidth, long nHeight, void* pP
 				PMSessionPostScriptEnd_Type *pPSEnd = (PMSessionPostScriptEnd_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionPostScriptEnd" ) );
 				if ( pPSBegin && pPSData && pPSEnd )
 				{
-					pPSBegin( pSession );
-					pPSData( pSession, pPtr, nSize );
-					pPSEnd( pSession );
+					if ( pPSBegin( pSession ) == kPMNoError )
+					{
+						pPSData( pSession, (MacOSPtr)pPtr, nSize );
+						pPSEnd( pSession );
+					}
 				}
 				aModule.unload();
 				return TRUE;
