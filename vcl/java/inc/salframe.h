@@ -66,6 +66,7 @@ class SalFrameData
 	friend class	SalGraphics;
 	friend class	SalInstance;
 	friend class	::vcl::com_sun_star_vcl_VCLEvent;
+	friend class	::vcl::com_sun_star_vcl_VCLFrame;
 
 	::vcl::com_sun_star_vcl_VCLFrame*	mpVCLFrame;
 	SalGraphics*	mpGraphics;

@@ -589,6 +589,11 @@ public class VCLFrame implements ComponentListener, FocusListener, KeyListener, 
 	private Panel panel = null;
 
 	/**
+	 * The parent frame.
+	 */
+	private VCLFrame parent = null;
+
+	/**
 	 * The event queue.
 	 */
 	private VCLEventQueue queue = null;
@@ -610,10 +615,11 @@ public class VCLFrame implements ComponentListener, FocusListener, KeyListener, 
 	 * @param q the event queue to post events to
 	 * @param f the frame pointer
 	 */
-	public VCLFrame(long styleFlags, VCLEventQueue q, long f) {
+	public VCLFrame(long styleFlags, VCLEventQueue q, long f, VCLFrame p) {
 
 		queue = q;
 		frame = f;
+		parent = p;
 
 		// Create the native window
 		if ((styleFlags & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) != 0)
@@ -716,7 +722,7 @@ public class VCLFrame implements ComponentListener, FocusListener, KeyListener, 
 	public void dispose() {
 
 		if (window != null) {
-			window.setVisible(false);
+			setVisible(false);
 			if (fullScreenMode)
 				setFullScreenMode(false);
 		}
@@ -733,6 +739,7 @@ public class VCLFrame implements ComponentListener, FocusListener, KeyListener, 
 		insets = null;
 		queue = null;
 		panel = null;
+		parent = null;
 		if (graphics != null)
 			graphics.dispose();
 		graphics = null;
@@ -1538,6 +1545,10 @@ public class VCLFrame implements ComponentListener, FocusListener, KeyListener, 
 			panel.requestFocus();
 
 		if (!b) {
+			// Move focus to parent
+			if (parent != null)
+				parent.getPanel().requestFocus();
+
 			// Unregister listeners
 			window.removeComponentListener(this);
 			window.removeFocusListener(this);
