@@ -96,6 +96,7 @@ using namespace ::rtl;
 
 #define DOSTRING( x )			   			#x
 #define STRING( x )				   			DOSTRING( x )
+#define UNOSUFFIX							.uno
 
 struct VCLRegServiceInfo
 {
@@ -126,11 +127,8 @@ static VCLRegServiceInfo aVCLComponentsArray[] =
 	{"ftransl", sal_False},
 	{"dnd", sal_False},
 #ifdef USE_JAVA
-    {"jen", sal_False},
-    {"cfgmgr2", sal_False},
-    {"sax", sal_False},
-    {"tcv", sal_False},
-    {"imr", sal_True},
+	{"javavm" STRING(UNOSUFFIX), sal_False},
+	{"cfgmgr2", sal_False},
 #endif
 	{NULL, sal_False}
 };
@@ -232,24 +230,29 @@ uno::Reference < i18n::XCollator > vcl::unohelper::CreateCollator()
 	// create variable library name suffixes
 	OUString aSUPDString( OUString::valueOf( (sal_Int32)SUPD, 10 ));
 	OUString aDLLSuffix = OUString::createFromAscii( STRING(DLLSUFFIX) );
+	OUString aUNOString = OUString::createFromAscii( STRING(UNOSUFFIX) );
 
-	OUString aLibName;
+	OUString aLibName = OUString::createFromAscii( pModName );
+
+	sal_Int32 nIndex = aLibName.getLength() - aUNOString.getLength();
+	BOOL bUNO = ( nIndex > 0 && aLibName.lastIndexOf( aUNOString ) == nIndex );
 
 #ifdef WNT
-	aLibName = OUString::createFromAscii( pModName );
-	if ( bSUPD )
+	if ( !bUNO && bSUPD )
 	{
 		aLibName += aSUPDString;
 		aLibName += aDLLSuffix;
 	}
 	aLibName += rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dll" ));
 #else
-	aLibName = OUString( RTL_CONSTASCII_USTRINGPARAM( "lib" ));
-	aLibName += OUString::createFromAscii( pModName );
-	if ( bSUPD )
+	if ( !bUNO )
 	{
-		aLibName += aSUPDString;
-		aLibName += aDLLSuffix;
+		aLibName = OUString( RTL_CONSTASCII_USTRINGPARAM( "lib" )) + aLibName;
+		if ( bSUPD )
+		{
+			aLibName += aSUPDString;
+			aLibName += aDLLSuffix;
+		}
 	}
 #ifdef MACOSX
 	aLibName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ));
