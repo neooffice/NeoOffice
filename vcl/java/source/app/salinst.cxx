@@ -324,8 +324,9 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 	bool bYieldForMenuEvent = ( nClass == kEventClassMenu && nKind == kEventMenuBeginTracking );
 	bool bYieldForAppleEvent = ( nClass == kEventClassAppleEvent && nKind == kEventAppleEvent );
+	bool bYield = ( ImplGetSVData()->maAppData.mbInAppExecute && ( bYieldForMenuEvent || bYieldForAppleEvent ) );
 
-	if ( bYieldForMenuEvent || bYieldForAppleEvent )
+	if ( bYield )
 	{
 		// Post a yield event and wait the VCL event queue to block
 		SalData *pSalData = GetSalData();
@@ -347,7 +348,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 	// Always execute the next registered handler
 	OSStatus nRet = CallNextEventHandler( aNextHandler, aEvent );
 
-	if ( bYieldForMenuEvent || bYieldForAppleEvent )
+	if ( bYield )
 	{
 		// Execute menu updates while the VCL event queue is blocked
 		SalData *pSalData = GetSalData();
