@@ -179,9 +179,8 @@ for i in `cd "$apphome/classes" ; find . -name "*.jar"` ; do
 done
 sysclasspath=`printf "$sysclasspath" | sed 's#^:##'`
 if [ "$os" = "Darwin" ] ; then
-    # Turn off graphics acceleration, suppress grow box, and make the app a
-    # background app when not launched from the Finder
-    printf "[Java]\nRuntimeLib=/System/Library/Frameworks/JavaVM.framework/JavaVM\ncom.apple.hwaccel=false\ncom.apple.hwaccellist=\ncom.apple.mrj.application.growbox.windowshidden=true\ncom.apple.backgroundOnly=true\n" > "$configdir/javarc"
+    # Turn off graphics acceleration and suppress grow box
+    printf "[Java]\nRuntimeLib=/System/Library/Frameworks/JavaVM.framework/JavaVM\ncom.apple.hwaccel=false\ncom.apple.hwaccellist=\ncom.apple.mrj.application.growbox.windowshidden=true\n" > "$configdir/javarc"
 else
     printf "[Java]\n" > "$configdir/javarc"
 fi
