@@ -99,19 +99,20 @@ Reference< XTransferable > SAL_CALL JavaClipboard::getContents() throw( RuntimeE
 
 		if ( !pTransferable || !pTransferable->hasOwnership() )
 		{
-			Reference< XTransferable > aOldContents;
+			// Reference< XTransferable > aOldContents;
+			Reference< XTransferable > aOldContents( maContents );
 			if ( pTransferable )
 				aOldContents = pTransferable->getTransferable();
 			pTransferable = com_sun_star_dtrans_DTransClipboard::getContents();
 			if ( pTransferable )
 				maContents = Reference< XTransferable >( pTransferable );
 			else
-				maContents.clear();
+				maContents = Reference< XTransferable >();
 
 			Reference< XClipboardOwner > aOldOwner( maOwner );
-			maOwner.clear();
+			maOwner = Reference< XClipboardOwner >();
 
-			aContents = Reference< XTransferable >( maContents );
+			aContents = maContents;
 
 			list< Reference< XClipboardListener > > listeners( maListeners );
 
@@ -153,13 +154,12 @@ void SAL_CALL JavaClipboard::setContents( const Reference< XTransferable >& xTra
 		if ( pTransferable )
 			aOldContents = pTransferable->getTransferable();
 		else
-			aOldContents.clear();
+			aOldContents = Reference< XTransferable >();
 		pTransferable = com_sun_star_dtrans_DTransClipboard::setContents( xTransferable );
 		if ( pTransferable )
 			maContents = Reference< XTransferable >( pTransferable );
 		else
-			maContents.clear();
-		maOwner.clear();
+			maContents = Reference< XTransferable >();
 	}
 
 	list< Reference< XClipboardListener > > listeners( maListeners );
