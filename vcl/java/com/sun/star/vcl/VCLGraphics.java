@@ -671,7 +671,7 @@ public final class VCLGraphics {
 		graphics.setColor(new Color(color));
 		if (xor)
 			graphics.setXORMode(Color.black);
-		graphics.drawPolygon(xpoints, ypoints, npoints);
+		graphics.drawPolyline(xpoints, ypoints, npoints);
 		if (xor)
 			graphics.setPaintMode();
 		addToFlush(new Polygon(xpoints, ypoints, npoints).getBounds());
