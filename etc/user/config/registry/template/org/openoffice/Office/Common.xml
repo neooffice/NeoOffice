@@ -8,6 +8,13 @@ ffice.org/2000/registry/components/Common" xmlns:cfg="http://openoffice.org/2000
    <RequestDialog cfg:type="int">0</RequestDialog>
   </Registration>
  </Help>
+ <ExternalApps cfg:element-type="cfg:any" cfg:component="cfg:value">
+  <cfg:any cfg:type="string" state="replaced" cfg:name="file"/>
+  <cfg:any cfg:type="string" state="replaced" cfg:name="ftp">NSWRAPPER_PATH</cfg:any>
+  <cfg:any cfg:type="string" state="replaced" cfg:name="http">NSWRAPPER_PATH</cfg:any>
+  <cfg:any cfg:type="string" state="replaced" cfg:name="https">NSWRAPPER_PATH</cfg:any>
+  <cfg:any cfg:type="string" state="replaced" cfg:name="mailto">NSWRAPPER_PATH</cfg:any>
+ </ExternalApps>
  <Misc>
   <FirstRun cfg:type="boolean">false</FirstRun>
  </Misc>

@@ -116,7 +116,7 @@ if [ ! -d "$xmltemplatedir" ] ; then
 fi
 for i in `cd "$xmltemplatedir" ; find . ! -type d` ; do
     if [ ! -z "$repair" -o "$i" = "./Setup.xml" ] ; then
-        sed 's#>USER_INSTALL_DIR<#>'"$userinstall"'<#g' "$xmltemplatedir/$i" | sed 's#>LOCALE<#>'"$locale"'<#g' | sed 's#>CURRENT_DATE<#>'`date +%d.%m.%Y/%H.%M.%S`'<#g' > "$xmldir/$i"
+        sed 's#>USER_INSTALL_DIR<#>'"$userinstall"'<#g' "$xmltemplatedir/$i" | sed 's#>LOCALE<#>'"$locale"'<#g' | sed 's#>NSWRAPPER_PATH<#>'"$apphome/nswrapper"'<#g' | sed 's#>CURRENT_DATE<#>'`date +%d.%m.%Y/%H.%M.%S`'<#g' > "$xmldir/$i"
         if [ $? != 0 ]; then
             error
         fi
