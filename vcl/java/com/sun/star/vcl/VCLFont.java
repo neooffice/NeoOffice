@@ -388,7 +388,8 @@ public final class VCLFont {
 	 */
 	public int getLeading() {
 
-		return fontMetrics.getLeading();
+		int leading = fontMetrics.getLeading();
+		return (leading > 0 ? leading : 0);
 
 	}
 
