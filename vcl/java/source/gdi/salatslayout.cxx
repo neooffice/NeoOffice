@@ -61,7 +61,7 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
 
-#define UNITS_PER_PIXEL 1000
+#define UNITS_PER_PIXEL 1024
 
 inline int Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
@@ -137,7 +137,6 @@ SalATSLayout::SalATSLayout( SalGraphics *pGraphics, int nFallbackLevel ) :
 	mnFallbackLevel( nFallbackLevel ),
 	mpVCLFont( NULL ),
 	maFontStyle( NULL ),
-	mbUseScreenMetrics( !pGraphics->maGraphicsData.mpPrinter ),
 	mnGlyphCount( 0 ),
 	mpGlyphInfoArray( NULL ),
 	mpGlyphTranslations( NULL ),
@@ -500,10 +499,6 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				ATSGlyphScreenMetrics aScreenMetrics;
 				if ( ATSUGlyphGetScreenMetrics( mpGlyphInfoArray->glyphs[ i ].style, 1, &mpGlyphInfoArray->glyphs[ i ].glyphID, sizeof( GlyphID ), true, true, &aScreenMetrics ) == noErr )
 					nCharWidth = Float32ToLong( ( aScreenMetrics.height + nDoubleAdjust ) * mnUnitsPerPixel );
-			}
-			else if ( mbUseScreenMetrics )
-			{
-				nCharWidth = Float32ToLong( ( mpGlyphInfoArray->glyphs[ i + 1 ].screenX - mpGlyphInfoArray->glyphs[ i ].screenX ) * mnUnitsPerPixel );
 			}
 			else
 			{

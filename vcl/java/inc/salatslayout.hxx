@@ -58,7 +58,6 @@ class SalATSLayout : public GenericSalLayout
 	SalGraphics*		mpGraphics;
 	int					mnFallbackLevel;
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
-	bool				mbUseScreenMetrics;
 	ATSUStyle			maFontStyle;
 	int					mnGlyphCount;
 	ATSUGlyphInfoArray*	mpGlyphInfoArray;
