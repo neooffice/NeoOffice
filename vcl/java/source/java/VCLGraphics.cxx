@@ -69,6 +69,21 @@ jclass com_sun_star_vcl_VCLGraphics::theClass = NULL;
 
 // ----------------------------------------------------------------------------
 
+jclass com_sun_star_vcl_VCLGraphics::getMyClass()
+{
+	if ( !theClass )
+	{
+		VCLThreadAttach t;
+		if ( !t.pEnv ) return (jclass)NULL;
+		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLGraphics" );
+		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
+		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
+	}
+	return theClass;
+}
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLGraphics::beep()
 {
 	static jmethodID mID = NULL;
@@ -93,32 +108,6 @@ void com_sun_star_vcl_VCLGraphics::beep()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 			t.pEnv->CallStaticVoidMethod( getMyClass(), mID );
-	}
-}
-
-// ----------------------------------------------------------------------------
-
-void com_sun_star_vcl_VCLGraphics::addToFlush( long _par0, long _par1, long _par2, long _par3 )
-{
-	static jmethodID mID = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "(IIII)V";
-			mID = t.pEnv->GetMethodID( getMyClass(), "addToFlush", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jvalue args[4];
-			args[0].i = jint( _par0 );
-			args[1].i = jint( _par1 );
-			args[2].i = jint( _par2 );
-			args[3].i = jint( _par3 );
-			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
-		}
 	}
 }
 
@@ -231,6 +220,48 @@ void com_sun_star_vcl_VCLGraphics::drawBitmap( const com_sun_star_vcl_VCLBitmap 
 			args[8].i = jint( _par8 );
 			args[9].i = jint( _par9 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2, long *_par3, long *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, long _par8, long _par9 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(II[I[ILcom/sun/star/vcl/VCLFont;IIII)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "drawGlyphs", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jsize elements( _par2 );
+			jintArray glypharray = t.pEnv->NewIntArray( elements );
+			jintArray advancearray = t.pEnv->NewIntArray( elements );
+			t.pEnv->SetIntArrayRegion( glypharray, 0, elements, (jint *)_par3 );
+			t.pEnv->SetIntArrayRegion( advancearray, 0, elements, (jint *)_par4 );
+
+			com_sun_star_vcl_VCLFont *pFont = NULL;
+			if ( com_sun_star_vcl_VCLFont::useDefaultFont )
+				pFont = _par5->getDefaultFont();
+			jvalue args[9];
+			args[0].i = jint( _par0 );
+			args[1].i = jint( _par1 );
+			args[2].l = glypharray;
+			args[3].l = advancearray;
+			args[4].l = pFont ? pFont->getJavaObject() : _par5->getJavaObject();
+			args[5].i = jint( _par6 );
+			args[6].i = jint( _par7 );
+			args[7].i = jint( _par8 );
+			args[8].i = jint( _par9 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+			if ( pFont )
+				delete pFont;
 		}
 	}
 }
@@ -432,30 +463,6 @@ void com_sun_star_vcl_VCLGraphics::drawRect( long _par0, long _par1, long _par2,
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawTextLayout( void *_par0, SalColor _par1 )
-{
-	static jmethodID mID = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "(II)V";
-			mID = t.pEnv->GetMethodID( getMyClass(), "drawTextLayout", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jvalue args[2];
-			args[0].i = jint( _par0 );
-			args[1].i = jint( _par1 );
-			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
-		}
-	}
-}
-
-// ----------------------------------------------------------------------------
-
 void com_sun_star_vcl_VCLGraphics::endSetClipRegion()
 {
 	static jmethodID mID = NULL;
@@ -546,31 +553,6 @@ const Size com_sun_star_vcl_VCLGraphics::getGlyphSize( const sal_Unicode _par0, 
 
 // ----------------------------------------------------------------------------
 
-java_lang_Object *com_sun_star_vcl_VCLGraphics::getGraphics()
-{
-	static jmethodID mID = NULL;
-	java_lang_Object *out = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()Ljava/awt/Graphics2D;";
-			mID = t.pEnv->GetMethodID( getMyClass(), "getGraphics", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
-			if ( tempObj )
-				out = new java_lang_Object( tempObj );
-		}
-	}
-	return out;
-}
-
-// ----------------------------------------------------------------------------
-
 com_sun_star_vcl_VCLImage *com_sun_star_vcl_VCLGraphics::getImage()
 {
 	static jmethodID mID = NULL;
@@ -589,89 +571,6 @@ com_sun_star_vcl_VCLImage *com_sun_star_vcl_VCLGraphics::getImage()
 			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			if ( tempObj )
 				out = new com_sun_star_vcl_VCLImage( tempObj );
-		}
-	}
-	return out;
-}
-
-// ----------------------------------------------------------------------------
-
-void *com_sun_star_vcl_VCLGraphics::getNativeGraphics()
-{
-	void *out = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		java_lang_Object *graphics = getGraphics();
-		if ( graphics )
-		{
-			jobject tempObj = graphics->getJavaObject();
-			if ( tempObj )
-			{
-#ifdef MACOSX
-				// Test the JVM version and if it is below 1.4, use Carbon APIs
-				if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
-				{
-					jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/graphics/PenGraphics" );
-					if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
-					{
-						static jfieldID fIDPen = NULL;
-						static jfieldID fIDGraphicsState = NULL;
-						if ( !fIDPen )
-						{
-							char *cSignature = "Lcom/apple/mrj/internal/awt/graphics/Pen;";
-							fIDPen = t.pEnv->GetFieldID( tempClass, "fPen", cSignature );
-						}
-						OSL_ENSURE( fIDPen, "Unknown field id!" );
-						if ( !fIDGraphicsState )
-						{
-							char *cSignature = "Lcom/apple/mrj/internal/awt/graphics/ClientGraphicsState;";
-							fIDGraphicsState = t.pEnv->GetFieldID( tempClass, "fGraphicsState", cSignature );
-						}
-						OSL_ENSURE( fIDGraphicsState, "Unknown field id!" );
-						if ( fIDPen && fIDGraphicsState )
-						{
-							jobject pen = t.pEnv->GetObjectField( tempObj, fIDPen );
-							jobject graphicsState = t.pEnv->GetObjectField( tempObj, fIDGraphicsState );
-							if ( pen && graphicsState )
-							{
-								jclass penClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/graphics/CGPen" );
-								if ( penClass && t.pEnv->IsInstanceOf( pen, penClass ) )
-								{
-									static jmethodID mIDBeginDraw = NULL;
-									static jfieldID fIDCGContext = NULL;
-									if ( !mIDBeginDraw )
-									{
-										char *cSignature = "(Lcom/apple/mrj/internal/awt/graphics/ClientGraphicsState;ZZ)Z";
-										mIDBeginDraw = t.pEnv->GetMethodID( penClass, "beginDraw", cSignature );
-									}
-									OSL_ENSURE( mIDBeginDraw, "Unknown method id!" );
-									if ( !fIDCGContext )
-									{
-										char *cSignature = "I";
-										fIDCGContext = t.pEnv->GetFieldID( penClass, "fCGContext", cSignature );
-									}
-									OSL_ENSURE( fIDCGContext, "Unknown field id!" );
-									if ( mIDBeginDraw && fIDCGContext && t.pEnv->MonitorEnter( pen ) == JNI_OK )
-									{
-										jvalue args[3];
-										args[0].l = graphicsState;
-										args[1].z = jboolean( JNI_FALSE );
-										args[2].z = jboolean( JNI_TRUE );
-										if ( t.pEnv->CallNonvirtualBooleanMethodA( pen, penClass, mIDBeginDraw, args ) )
-											out = (void *)t.pEnv->GetIntField( pen, fIDCGContext );
-
-										if ( !out )
-											t.pEnv->MonitorExit( pen );
-									}
-								}
-							}
-						}
-					}
-				}
-#endif	// MACOSX
-			}
-			delete graphics;
 		}
 	}
 	return out;
@@ -861,65 +760,6 @@ void com_sun_star_vcl_VCLGraphics::resetClipRegion()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
-	}
-}
-
-// ----------------------------------------------------------------------------
-
-void com_sun_star_vcl_VCLGraphics::releaseNativeGraphics( void *_par0 )
-{
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		java_lang_Object *graphics = getGraphics();
-		if ( graphics )
-		{
-			jobject tempObj = graphics->getJavaObject();
-			if ( tempObj )
-			{
-#ifdef MACOSX
-				// Test the JVM version and if it is below 1.4, use Carbon APIs
-				if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
-				{
-					jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/graphics/PenGraphics" );
-					if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
-					{
-						static jfieldID fIDPen = NULL;
-						if ( !fIDPen )
-						{
-							char *cSignature = "Lcom/apple/mrj/internal/awt/graphics/Pen;";
-							fIDPen = t.pEnv->GetFieldID( tempClass, "fPen", cSignature );
-						}
-						OSL_ENSURE( fIDPen, "Unknown field id!" );
-						if ( fIDPen )
-						{
-							jobject pen = t.pEnv->GetObjectField( tempObj, fIDPen );
-							if ( pen )
-							{
-								jclass penClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/graphics/CGPen" );
-								if ( penClass && t.pEnv->IsInstanceOf( pen, penClass ) )
-								{
-									static jmethodID mIDEndDraw = NULL;
-									if ( !mIDEndDraw )
-									{
-										char *cSignature = "()V";
-										mIDEndDraw = t.pEnv->GetMethodID( penClass, "endDraw", cSignature );
-									}
-									OSL_ENSURE( mIDEndDraw, "Unknown method id!" );
-									if ( mIDEndDraw )
-									{
-										t.pEnv->CallNonvirtualVoidMethod( pen, penClass, mIDEndDraw );
-										t.pEnv->MonitorExit( pen );
-									}
-								}
-							}
-						}
-					}
-				}
-#endif	// MACOSX
-			}
-			delete graphics;
-		}
 	}
 }
 

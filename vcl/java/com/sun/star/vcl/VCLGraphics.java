@@ -56,6 +56,7 @@ import java.awt.font.GlyphVector;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
 import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.Method;
 
@@ -83,6 +84,11 @@ public final class VCLGraphics {
 	public final static int SAL_INVERT_TRACKFRAME = 0x0004;
 
 	/**
+	 * The drawGlyphs method.
+	 */
+	private static Method drawGlyphsMethod = null;
+
+	/**
 	 * The drawImage method.
 	 */
 	private static Method drawImageMethod = null;
@@ -91,11 +97,6 @@ public final class VCLGraphics {
 	 * The drawLine method.
 	 */
 	private static Method drawLineMethod = null;
-
-	/**
-	 * The drawRect method.
-	 */
-	private static Method drawRectMethod = null;
 
 	/**
 	 * The drawPolygon method.
@@ -113,9 +114,9 @@ public final class VCLGraphics {
 	private static Method drawPolyPolygonMethod = null;
 
 	/**
-	 * The drawTextLayout method.
+	 * The drawRect method.
 	 */
-	private static Method drawTextLayoutMethod = null;
+	private static Method drawRectMethod = null;
 
 	/**
 	 * The image50 image.
@@ -173,10 +174,14 @@ public final class VCLGraphics {
 
 		// Set the screen and font resolutions
 		screenResolution = screenFontResolution = Toolkit.getDefaultToolkit().getScreenResolution();
-		if (screenResolution < VCLScreen.MIN_SCREEN_RESOLUTION)
-			screenResolution = VCLScreen.MIN_SCREEN_RESOLUTION;
 
 		// Set the method references
+		try {
+			drawGlyphsMethod = VCLGraphics.class.getMethod("drawGlyphs", new Class[]{ int.class, int.class, int[].class, int[].class, VCLFont.class, int.class, int.class, int.class, int.class });
+		}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
 		try {
 			drawImageMethod = VCLGraphics.class.getMethod("drawImage", new Class[]{ Image.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class });
 		}
@@ -185,12 +190,6 @@ public final class VCLGraphics {
 		}
 		try {
 			drawLineMethod = VCLGraphics.class.getMethod("drawLine", new Class[]{ int.class, int.class, int.class, int.class, int.class });
-		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-		try {
-			drawRectMethod = VCLGraphics.class.getMethod("drawRect", new Class[]{ int.class, int.class, int.class, int.class, int.class, boolean.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -214,7 +213,7 @@ public final class VCLGraphics {
 			t.printStackTrace();
 		}
 		try {
-			drawTextLayoutMethod = VCLGraphics.class.getMethod("drawTextLayout", new Class[]{ int.class, int.class });
+			drawRectMethod = VCLGraphics.class.getMethod("drawRect", new Class[]{ int.class, int.class, int.class, int.class, int.class, boolean.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -363,30 +362,6 @@ public final class VCLGraphics {
 
 		if (autoFlush)
 			flush();
-
-	}
-
-	/**
-	 * Unions the specified rectangle to the rectangle that requires flushing.
-	 *
-	 * @param x the x coordinate to flush
-	 * @param y the y coordinate to flush
-	 * @param width the width to flush
-	 * @param height the height to flush
-	 */
-	public void addToFlush(int x, int y, int width, int height) {
-
-		Rectangle bounds = new Rectangle(x, y, width, height);
-		if (bounds.width < 0) {
-			bounds.x += bounds.width;
-			bounds.width *= -1;
-		}
-		if (bounds.height < 0) {
-			bounds.y += bounds.height;
-			bounds.height *= -1;
-		}
-
-		addToFlush(bounds);
 
 	}
 
@@ -564,6 +539,91 @@ public final class VCLGraphics {
 			}
 			addToFlush(destBounds);
 		}
+
+	}
+
+	/**
+	 * Draws the specified glyph codes using the specified font and color.
+	 *
+	 * @param x the x coordinate
+	 * @param y the y coordinate
+	 * @param glyphs the array of glyph codes to be drawn
+	 * @param advances the advances for each character
+	 * @param font the font of the text
+	 * @param color the color of the text
+	 * @param orientation the tenth of degrees to rotate the text
+	 * @param translateX the x coordinate to translate after rotation
+	 * @param translateY the y coordinate to translate after rotation
+	 * @param y the y coordinate
+	 */
+	public void drawGlyphs(int x, int y, int[] glyphs, int[] advances, VCLFont font, int color, int orientation, int translateX, int translateY) {
+
+		if (pageQueue != null) {
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawGlyphsMethod, new Object[]{ new Integer(x), new Integer(y), glyphs, advances, font, new Integer(color), new Integer(orientation), new Integer(translateX), new Integer(translateY) });
+			pageQueue.postDrawingOperation(pqi);
+			return;
+		}
+
+		// The graphics may adjust the font
+		Font f = font.getFont();
+		FontMetrics fm = null;
+
+		// Exceptions can be thrown if a font is disabled or removed
+		try {
+			fm = graphics.getFontMetrics(f);
+		}
+		catch (Throwable t) {
+			f = font.getDefaultFont().getFont();
+			fm = graphics.getFontMetrics(f);
+		}
+
+		graphics.setFont(f);
+
+		RenderingHints hints = graphics.getRenderingHints();
+		if (font.isAntialiased())
+			hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+		else
+			hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
+		graphics.setRenderingHints(hints);
+		graphics.setColor(new Color(color));
+
+		// Set rotation
+		Point2D origin = new Point2D.Float((float)x, (float)y);
+		AffineTransform transform = null;
+		AffineTransform rotateTransform = null;
+		if (orientation != 0 || translateX != 0 || translateY != 0) {
+			transform = graphics.getTransform();
+			double radians = Math.toRadians((double)orientation/ 10);
+			graphics.rotate(radians * -1);
+			rotateTransform = AffineTransform.getRotateInstance(radians);
+			// Adjust drawing origin so that it is not transformed
+			origin = AffineTransform.getRotateInstance(radians).transform(origin, null);
+			origin.setLocation(origin.getX() + translateX, origin.getY() + translateY);
+		}
+
+		GlyphVector gv = f.createGlyphVector(graphics.getFontRenderContext(), glyphs);
+		double nAdvance = 0;
+		for ( int i = 0; i < glyphs.length; i++ ) {
+			Point2D p = gv.getGlyphPosition(i);
+			p.setLocation(nAdvance, p.getY());
+			gv.setGlyphPosition(i, p);
+			nAdvance += advances[ i ];
+		}
+		graphics.drawGlyphVector(gv, (float)origin.getX(), (float)origin.getY());
+		Rectangle bounds = gv.getLogicalBounds().getBounds();
+
+		// Reverse rotation
+		if (transform != null)
+			graphics.setTransform(transform);
+
+		// Estimate bounds
+		if (rotateTransform != null)
+			bounds = rotateTransform.createTransformedShape(bounds).getBounds();
+		bounds.x += x - 1;
+		bounds.y += y - 1;
+		bounds.width += 2;
+		bounds.height += 2;
+		addToFlush(bounds);
 
 	}
 
@@ -1027,35 +1087,6 @@ public final class VCLGraphics {
 	}
 
 	/**
-	 * Draws the native text layout using the text layout's font with the
-	 * specified color.
-	 *
-	 * @param layout the text layout pointer
-	 * @param color the color of the text
-	 */
-	public void drawTextLayout(int layout, int color) {
-
-		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawTextLayoutMethod, new Object[]{ new Integer(layout), new Integer( color ) });
-			pageQueue.postDrawingOperation(pqi);
-			return;
-		}
-
-		// Draw the text layout
-		drawTextLayout0(layout, color);
-
-	}
-
-	/**
-	 * Draws the native text layout using the text layout's font with the
-	 * specified color.
-	 *
-	 * @param layout the text layout pointer
-	 * @param color the color of the text
-	 */
-	native void drawTextLayout0(int layout, int color);
-
-	/**
 	 * Applies the cached clipping area. The cached clipping area is set using
 	 * the {@link #beginSetClipRegion()} and the
 	 * {@link #unionClipRegion(long, long, long, long)} methods.
@@ -1127,17 +1158,6 @@ public final class VCLGraphics {
 		GlyphVector glyphs = font.getFont().createGlyphVector(graphics.getFontRenderContext(), new char[]{ c });
 		Rectangle bounds = glyphs.getLogicalBounds().getBounds();
 		return new Dimension(bounds.width, bounds.height);
-
-	}
-
-	/**
-	 * Returns the graphics context.
-	 *
-	 * @return the graphics context
-	 */
-	public Graphics2D getGraphics() {
-
-		return graphics;
 
 	}
 
