@@ -66,8 +66,13 @@ class ATSLayout : public GenericSalLayout
 {
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
 	ATSUStyle			maFontStyle;
+	bool				mbLayoutText;
+	int					mnAdjustedMinCharPos;
 	int					mnGlyphCount;
+	ATSUGlyphInfoArray*	mpGlyphInfoArray;
 	long*				mpGlyphTranslations;
+	int*				mpCharsToGlyphs;
+	int*				mpVerticalFlags;
 
 public:
 						ATSLayout( ::vcl::com_sun_star_vcl_VCLFont *pVCLFont );
@@ -90,8 +95,13 @@ SalLayout *SalGraphics::GetTextLayout( ImplLayoutArgs& rArgs, int nFallbackLevel
 
 ATSLayout::ATSLayout( com_sun_star_vcl_VCLFont *pVCLFont ) :
 	maFontStyle( NULL ),
+	mbLayoutText( true ),
+	mnAdjustedMinCharPos( 0 ),
 	mnGlyphCount( 0 ),
-	mpGlyphTranslations( NULL )
+	mpGlyphInfoArray( NULL ),
+	mpGlyphTranslations( NULL ),
+	mpCharsToGlyphs( NULL ),
+	mpVerticalFlags( NULL )
 {
 	mpVCLFont = new com_sun_star_vcl_VCLFont( pVCLFont->getJavaObject() );
 
@@ -148,8 +158,17 @@ ATSLayout::~ATSLayout()
 	if ( maFontStyle )
 		ATSUDisposeStyle( maFontStyle );
 
+	if ( mpGlyphInfoArray )
+		rtl_freeMemory( mpGlyphInfoArray );
+
 	if ( mpGlyphTranslations )
 		rtl_freeMemory( mpGlyphTranslations );
+
+	if ( mpCharsToGlyphs )
+		rtl_freeMemory( mpCharsToGlyphs );
+
+	if ( mpVerticalFlags )
+		rtl_freeMemory( mpVerticalFlags );
 }
 
 // ----------------------------------------------------------------------------
@@ -159,124 +178,191 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	if ( !maFontStyle )
 		return false;
 
+	int nLen = rArgs.mnEndCharPos - rArgs.mnMinCharPos;
+	if ( !nLen )
+		return false;
+
 	bool bRTL = ( rArgs.mnFlags & SAL_LAYOUT_BIDI_STRONG && rArgs.mnFlags & SAL_LAYOUT_BIDI_RTL );
 	bool bVertical = ( rArgs.mnFlags & SAL_LAYOUT_VERTICAL );
 
-	// Create a copy of the string so that we can perform mirroring
-	sal_Unicode aStr[ rArgs.mnLength ];
-
-	// Copy characters
-	int nRunStart;
-	int nRunEnd;
-	bool bRunRTL;
-	rArgs.ResetPos();
-	while ( rArgs.GetNextRun( &nRunStart, &nRunEnd, &bRunRTL ) )
+	if ( mbLayoutText )
 	{
-		for ( int i = nRunStart; i < nRunEnd; i++ )
-		{
-			int j = i - rArgs.mnMinCharPos;
-			aStr[ j ] = rArgs.mpStr[ i ];
+		mnAdjustedMinCharPos = rArgs.mnMinCharPos;
 
-			// Mirror RTL characters
-			if ( bRTL && bRunRTL )
+		// Create a copy of the string so that we can perform mirroring. Note
+		// that we add the leading and/or trailing characters if this is a
+		// substring to ensure that we get the correct layout of glyphs.
+		bool bLeadingChar = false;
+		bool bTrailingChar = false;
+		if ( rArgs.mnMinCharPos )
+		{
+			bLeadingChar = true;
+			nLen++;
+			mnAdjustedMinCharPos--;
+		}
+		if ( rArgs.mnEndCharPos < rArgs.mnLength )
+		{
+			bTrailingChar = true;
+			nLen++;
+		}
+		sal_Unicode aStr[ nLen ];
+
+		// Copy characters
+		int nRunStart;
+		int nRunEnd;
+		bool bRunRTL;
+		while ( rArgs.GetNextRun( &nRunStart, &nRunEnd, &bRunRTL ) )
+		{
+			for ( int i = nRunStart; i < nRunEnd; i++ )
 			{
-				sal_Unicode nChar = GetMirroredChar( aStr[ j ] );
-				if ( nChar )
-					aStr[ j ] = nChar;
+				int j = i - mnAdjustedMinCharPos;
+				aStr[ j ] = rArgs.mpStr[ i ];
+
+				// Mirror RTL characters
+				if ( bRTL && bRunRTL )
+				{
+					sal_Unicode nChar = GetMirroredChar( aStr[ j ] );
+					if ( nChar )
+						aStr[ j ] = nChar;
+				}
 			}
 		}
-	}
 
-	ATSUTextLayout aLayout;
-	if ( ATSUCreateTextLayoutWithTextPtr( aStr, kATSUFromTextBeginning, kATSUToTextEnd, rArgs.mnLength, 1, (const UniCharCount *)&rArgs.mnLength, &maFontStyle, &aLayout ) != noErr )
-		return false;
+		// Copy any leading and/or trailing characters
+		if ( bLeadingChar )
+			aStr[ 0 ] = rArgs.mpStr[ mnAdjustedMinCharPos ];
+		if ( bTrailingChar )
+			aStr[ nLen - 1 ] = rArgs.mpStr[ rArgs.mnEndCharPos ];
 
-	MacOSBoolean nDirection;
-	if ( bRTL )
-		nDirection = kATSURightToLeftBaseDirection;
-	else
-		nDirection = kATSULeftToRightBaseDirection;
-	ATSUAttributeTag nTag = kATSULineDirectionTag;
-	ByteCount nBytes = sizeof( MacOSBoolean );
-	ATSUAttributeValuePtr nVal = &nDirection;
-	if ( ATSUSetLayoutControls( aLayout, 1, &nTag, &nBytes, &nVal ) != noErr )
-	{
-		ATSUDisposeTextLayout( aLayout );
-		return false;
-	}
+		ATSUTextLayout aLayout;
+		if ( ATSUCreateTextLayoutWithTextPtr( aStr, kATSUFromTextBeginning, kATSUToTextEnd, nLen, 1, (const UniCharCount *)&nLen, &maFontStyle, &aLayout ) != noErr )
+			return false;
 
-	ByteCount nBufSize;
-	if ( ATSUGetGlyphInfo( aLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nBufSize, NULL ) != noErr )
-	{
-		ATSUDisposeTextLayout( aLayout );
-		return false;
-	}
+		MacOSBoolean nDirection;
+		if ( bRTL )
+			nDirection = kATSURightToLeftBaseDirection;
+		else
+			nDirection = kATSULeftToRightBaseDirection;
+		ATSUAttributeTag nTag = kATSULineDirectionTag;
+		ByteCount nBytes = sizeof( MacOSBoolean );
+		ATSUAttributeValuePtr nVal = &nDirection;
 
-	ATSUGlyphInfoArray *pGlyphInfoArray = (ATSUGlyphInfoArray *)rtl_allocateMemory( nBufSize );
-
-	ByteCount nRetSize = nBufSize;
-	if ( ATSUGetGlyphInfo( aLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nRetSize, pGlyphInfoArray ) != noErr || nRetSize != nBufSize )
-	{
-		rtl_freeMemory( pGlyphInfoArray );
-		ATSUDisposeTextLayout( aLayout );
-		return false;
-	}
-
-	// Cache number of glyphs and the glyph tranforms
-	mnGlyphCount = pGlyphInfoArray->numGlyphs;
-	nBufSize = rArgs.mnLength * sizeof( int );
-	if ( mpGlyphTranslations )
-		rtl_freeMemory( mpGlyphTranslations );
-	nBufSize = rArgs.mnLength * 2 * sizeof( long );
-	mpGlyphTranslations = (long *)rtl_allocateMemory( nBufSize );
-	memset( mpGlyphTranslations, 0, nBufSize );
-
-	// Calculate and cache glyph advances
-	bool bPosRTL;
-	long nAscent = bVertical ? mpVCLFont->getAscent() : 0;
-	long nDescent = bVertical ? mpVCLFont->getDescent() : 0;
-	long nAdjust = bVertical ? Float32ToLong( mpVCLFont->getLeading() / 2 ) : 0;
-	Point aPos( 0, 0 );
-	rArgs.ResetPos();
-	int nCharPos = -1;
-	while ( rArgs.GetNextPos( &nCharPos, &bPosRTL ) )
-	{
-		for ( int i = 0; i < mnGlyphCount; i++ )
+		if ( ATSUSetLayoutControls( aLayout, 1, &nTag, &nBytes, &nVal ) != noErr )
 		{
-			if ( nCharPos != pGlyphInfoArray->glyphs[ i ].charIndex + rArgs.mnMinCharPos )
-				continue;
+			ATSUDisposeTextLayout( aLayout );
+			return false;
+		}
 
-			int nGlyph = pGlyphInfoArray->glyphs[ i ].glyphID;
-			long nCharWidth = 0;
-			ATSGlyphScreenMetrics aScreenMetrics;
-			if ( ATSUGlyphGetScreenMetrics( pGlyphInfoArray->glyphs[ i ].style, 1, &pGlyphInfoArray->glyphs[ i ].glyphID, sizeof( GlyphID ), true, true, &aScreenMetrics ) == noErr )
+		ByteCount nBufSize;
+		if ( ATSUGetGlyphInfo( aLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nBufSize, NULL ) != noErr )
+		{
+			ATSUDisposeTextLayout( aLayout );
+			return false;
+		}
+
+		if ( mpGlyphInfoArray )
+			rtl_freeMemory( mpGlyphInfoArray );
+		mpGlyphInfoArray = (ATSUGlyphInfoArray *)rtl_allocateMemory( nBufSize );
+
+		ByteCount nRetSize = nBufSize;
+		OSStatus nErr;
+		nErr = ATSUGetGlyphInfo( aLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nRetSize, mpGlyphInfoArray );
+
+		ATSUDisposeTextLayout( aLayout );
+
+		if ( nErr != noErr || nRetSize != nBufSize )
+		{
+			rtl_freeMemory( mpGlyphInfoArray );
+			mpGlyphInfoArray = NULL;
+			return false;
+		}
+
+		mnGlyphCount = mpGlyphInfoArray->numGlyphs;
+
+		if ( bVertical )
+		{
+			// Cache vertical flags and glyph translations
+			nBufSize = nLen * sizeof( int );
+			if ( mpVerticalFlags )
+				rtl_freeMemory( mpVerticalFlags );
+			mpVerticalFlags = (int *)rtl_allocateMemory( nBufSize );
+
+			nBufSize = nLen * 2 * sizeof( long );
+			if ( mpGlyphTranslations )
+				rtl_freeMemory( mpGlyphTranslations );
+			mpGlyphTranslations = (long *)rtl_allocateMemory( nBufSize );
+			memset( mpGlyphTranslations, 0, nBufSize );
+
+			long nAscent = bVertical ? mpVCLFont->getAscent() : 0;
+			long nDescent = bVertical ? mpVCLFont->getDescent() : 0;
+			int i;
+			int j;
+			for ( i = 0, j = 0; i < nLen; i++, j += 2 )
 			{
-				if ( bVertical )
-					nGlyph |= GetVerticalFlags( aStr[ pGlyphInfoArray->glyphs[ i ].charIndex ] );
+				int nVerticalFlags = GetVerticalFlags( aStr[ i ] );
 
-				if ( nGlyph & ( GF_ROTL | GF_ROTR ) )
+				ATSGlyphScreenMetrics aScreenMetrics;
+				if ( ATSUGlyphGetScreenMetrics( mpGlyphInfoArray->glyphs[ i ].style, 1, &mpGlyphInfoArray->glyphs[ i ].glyphID, sizeof( GlyphID ), true, true, &aScreenMetrics ) == noErr )
 				{
-					nCharWidth = Float32ToLong( aScreenMetrics.height ) + nAdjust;
+					mpVerticalFlags[ i ] = nVerticalFlags;
 
-					int j = nCharPos * 2;
-					if ( nGlyph & GF_ROTL )
+					if ( nVerticalFlags & GF_ROTL )
 					{
 						mpGlyphTranslations[ j ] = Float32ToLong( ( nAscent + nDescent - aScreenMetrics.width ) / 2 ) - nDescent;
 						mpGlyphTranslations[ j + 1 ] = Float32ToLong( aScreenMetrics.topLeft.y );
 					}
-					else
+					else if ( nVerticalFlags & GF_ROTR )
 					{
 						mpGlyphTranslations[ j ] = nAscent - Float32ToLong( ( nAscent + nDescent - aScreenMetrics.width ) / 2 );
 						mpGlyphTranslations[ j + 1 ] = Float32ToLong( aScreenMetrics.height - aScreenMetrics.topLeft.y );
 					}
 				}
+			}
+		}
+
+		// Cache mapping of characters to glyphs
+		nBufSize = nLen * sizeof( int );
+		if ( mpCharsToGlyphs )
+			rtl_freeMemory( mpCharsToGlyphs );
+		mpCharsToGlyphs = (int *)rtl_allocateMemory( nBufSize );
+
+		int i;
+		for ( i = 0; i < nLen; i++ )
+			mpCharsToGlyphs[ i ] = -1;
+		for ( i = 0; i < mnGlyphCount; i++ )
+		{
+			int nIndex = mpGlyphInfoArray->glyphs[ i ].charIndex;
+			if ( mpCharsToGlyphs[ nIndex ] < 0 || i < mpCharsToGlyphs[ nIndex ] )
+				mpCharsToGlyphs[ nIndex ] = i;
+		}
+	}
+
+	if ( !mnGlyphCount || !mpGlyphInfoArray || !mpCharsToGlyphs )
+		return false;
+
+	// Calculate and cache glyph advances
+	bool bPosRTL;
+	long nAdjust = bVertical ? Float32ToLong( mpVCLFont->getLeading() / 2 ) : 0;
+	Point aPos( 0, 0 );
+	int nCharPos = -1;
+	while ( rArgs.GetNextPos( &nCharPos, &bPosRTL ) )
+	{
+		int nIndex = nCharPos - mnAdjustedMinCharPos;
+		for ( int i = mpCharsToGlyphs[ nIndex ]; i < mnGlyphCount && mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
+		{
+			int nGlyph = mpGlyphInfoArray->glyphs[ i ].glyphID;
+			long nCharWidth = 0;
+			ATSGlyphScreenMetrics aScreenMetrics;
+			if ( ATSUGlyphGetScreenMetrics( mpGlyphInfoArray->glyphs[ i ].style, 1, &mpGlyphInfoArray->glyphs[ i ].glyphID, sizeof( GlyphID ), true, true, &aScreenMetrics ) == noErr )
+			{
+				if ( mpGlyphTranslations && mpVerticalFlags && mpVerticalFlags[ mpGlyphInfoArray->glyphs[ i ].charIndex ] & ( GF_ROTL | GF_ROTR ) )
+					nCharWidth = Float32ToLong( aScreenMetrics.height ) + nAdjust;
 				else
-				{
 					nCharWidth = Float32ToLong( aScreenMetrics.deviceAdvance.x );
-				}
 			}
 
-			int nGlyphFlags = ( nCharWidth > 0 ) ? 0 : GlyphItem::IS_IN_CLUSTER;
+			int nGlyphFlags = nCharWidth ? 0 : GlyphItem::IS_IN_CLUSTER;
+
 			if ( bPosRTL )
 				nGlyphFlags |= GlyphItem::IS_RTL_GLYPH;
 
@@ -287,10 +373,6 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			aPos.X() += nCharWidth;
 		}
 	}
-	SortGlyphItems();
-
-	rtl_freeMemory( pGlyphInfoArray );
-	ATSUDisposeTextLayout( aLayout );
 
 	return ( nCharPos >= 0 );
 }
@@ -317,20 +399,21 @@ void ATSLayout::DrawText( SalGraphics& rGraphics ) const
 
 		int nOrientation = GetOrientation();
 
-		int j = aCharPosArray[ 0 ] * 2;
-		if ( aGlyphArray[ 0 ] & ( GF_ROTL | GF_ROTR ) )
+		int j = aCharPosArray[ 0 ] - mnAdjustedMinCharPos;
+		if ( mpGlyphTranslations && mpVerticalFlags && mpVerticalFlags[ j ] & ( GF_ROTL | GF_ROTR ) )
 		{
 			// Draw rotated glyphs one at a time. Note that we rotated the
 			// coordinates when the glyphs were added.
 			int nGlyphRotation;
-			if ( aGlyphArray[ 0 ] & GF_ROTL )
+			if ( mpVerticalFlags[ j ] & GF_ROTL )
 				nGlyphRotation = 900;
 			else
 				nGlyphRotation = -900;
 
 			aGlyphArray[ 0 ] &= GF_IDXMASK;
 
-			rGraphics.maGraphicsData.mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), 1, aGlyphArray, aDXArray, mpVCLFont, rGraphics.maGraphicsData.mnTextColor, nOrientation + nGlyphRotation, mpGlyphTranslations[ j ], mpGlyphTranslations[ j + 1 ]);
+			int k = j * 2;
+			rGraphics.maGraphicsData.mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), 1, aGlyphArray, aDXArray, mpVCLFont, rGraphics.maGraphicsData.mnTextColor, nOrientation + nGlyphRotation, mpGlyphTranslations[ k ], mpGlyphTranslations[ k + 1 ]);
 
 			nStart -= nGlyphCount - 1;
 			continue;
@@ -340,7 +423,7 @@ void ATSLayout::DrawText( SalGraphics& rGraphics ) const
 			for ( int i = 0; i < nGlyphCount; i++ )
 				aGlyphArray[ i ] &= GF_IDXMASK;
 
-			rGraphics.maGraphicsData.mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), nGlyphCount, aGlyphArray, aDXArray, mpVCLFont, rGraphics.maGraphicsData.mnTextColor, nOrientation, mpGlyphTranslations[ j ], mpGlyphTranslations[ j + 1 ] );
+			rGraphics.maGraphicsData.mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), nGlyphCount, aGlyphArray, aDXArray, mpVCLFont, rGraphics.maGraphicsData.mnTextColor, nOrientation, 0, 0 );
 		}
 	}
 }
