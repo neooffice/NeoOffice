@@ -651,10 +651,21 @@ void ImplStyleData::SetStandardWinStyles()
 
 void ImplStyleData::SetStandardOS2Styles()
 {
+#if defined MACOSX && defined USE_JAVA 
+    // Make the font a little larger since Java fonts are small on Mac OS X
+    Font aStdFont( FAMILY_SWISS, Size( 0, 12 ) );
+#else
     Font aStdFont( FAMILY_SWISS, Size( 0, 9 ) );
+#endif
     aStdFont.SetCharSet( gsl_getSystemTextEncoding() );
     aStdFont.SetWeight( WEIGHT_NORMAL );
+#if defined MACOSX && defined USE_JAVA 
+    // Use Dialog font as it is in every Java implementation and should be
+    // able to handle Asian characters
+    aStdFont.SetName( XubString( RTL_CONSTASCII_USTRINGPARAM( "Dialog" ) ) );
+#else
     aStdFont.SetName( XubString( RTL_CONSTASCII_USTRINGPARAM( "Andale Sans UI;Tahoma;Arial Unicode MS;Interface User;WarpSans;Geneva;Dialog;Swiss;Lucida;Helvetica;Charcoal;Chicago;Arial;MS Sans Serif;Helv;Times;Times New Roman;Interface System" ) ) );
+#endif
     maAppFont                   = aStdFont;
     maHelpFont                  = aStdFont;
     maToolFont                  = aStdFont;
@@ -730,10 +741,21 @@ void ImplStyleData::SetStandardOS2Styles()
 
 void ImplStyleData::SetStandardMacStyles()
 {
+#if defined MACOSX && defined USE_JAVA 
+    // Make the font a little larger since Java fonts are small on Mac OS X
+    Font aStdFont( FAMILY_SWISS, Size( 0, 12 ) );
+#else
     Font aStdFont( FAMILY_SWISS, Size( 0, 8 ) );
+#endif
     aStdFont.SetCharSet( gsl_getSystemTextEncoding() );
     aStdFont.SetWeight( WEIGHT_NORMAL );
+#if defined MACOSX && defined USE_JAVA 
+    // Use Dialog font as it is in every Java implementation and should be
+    // able to handle Asian characters
+    aStdFont.SetName( XubString( RTL_CONSTASCII_USTRINGPARAM( "Dialog" ) ) );
+#else
     aStdFont.SetName( XubString( RTL_CONSTASCII_USTRINGPARAM( "Andale Sans UI;Tahoma;Arial Unicode MS;Interface User;Geneva;WarpSans;Dialog;Swiss;Lucida;Helvetica;Charcoal;Chicago;Arial;MS Sans Serif;Helv;Times;Times New Roman;Interface System" ) ) );
+#endif
     maAppFont                   = aStdFont;
     maHelpFont                  = aStdFont;
     maToolFont                  = aStdFont;
