@@ -117,6 +117,30 @@ com_sun_star_vcl_VCLEvent::com_sun_star_vcl_VCLEvent( USHORT nID, const SalFrame
 
 // ----------------------------------------------------------------------------
 
+com_sun_star_vcl_VCLEvent::com_sun_star_vcl_VCLEvent( USHORT nID, const SalFrame *pFrame, void *pData, const char *str ) : java_lang_Object( (jobject)NULL )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( !t.pEnv )
+		return;
+	if ( !mID )
+	{
+		char *cSignature = "(ILcom/sun/star/vcl/VCLFrame;ILjava/lang/String;)V";
+		mID = t.pEnv->GetMethodID( getMyClass(), "<init>", cSignature );
+	}
+	OSL_ENSURE( mID, "Unknown method id!" );
+	jvalue args[4];
+	args[0].i = jint( nID );
+	args[1].l = pFrame ? pFrame->maFrameData.mpVCLFrame->getJavaObject() : NULL;
+	args[2].i = jint( pData );
+        args[3].l = t.pEnv->NewStringUTF( str );
+	jobject tempObj;
+	tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
+	saveRef( tempObj );
+}
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLEvent::dispatch()
 {
 	USHORT nID = getID();

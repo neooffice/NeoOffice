@@ -66,6 +66,7 @@ public:
 
 						com_sun_star_vcl_VCLEvent( jobject myObj ) : java_lang_Object( myObj ) {};
 						com_sun_star_vcl_VCLEvent( USHORT nID, const SalFrame *pFrame, void *pData );
+						com_sun_star_vcl_VCLEvent( USHORT nID, const SalFrame *pFrame, void *pData, const char *str );
 	virtual				~com_sun_star_vcl_VCLEvent() {};
 
 	void				dispatch();

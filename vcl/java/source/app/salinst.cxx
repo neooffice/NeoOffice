@@ -111,6 +111,7 @@
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
+#include <sys/syslimits.h>
 
 typedef jobject Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type( JNIEnv *, jobject );
 typedef void Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type( JNIEnv *, jobject );
@@ -128,6 +129,7 @@ static Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *pCarbonLockInit = N
 
 static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( JNIEnv *pEnv, jobject object );
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData );
+static pascal OSErr DoAEOpenPrintDocuments( const AppleEvent *message, AppleEvent *reply, long refcon );
 
 #endif // MACOSX
 
@@ -184,6 +186,11 @@ void SVMainThread::run()
 				aTypes[2].eventKind = kEventMenuBeginTracking;
 				InstallApplicationEventHandler( pEventHandlerUPP, 3, aTypes, NULL, NULL );
 			}
+                        
+                        // install AppleEvent handlers for processing open and print events.  Bug 209
+                        
+                        AEInstallEventHandler( kCoreEventClass, kAEOpenDocuments, NewAEEventHandlerUPP( DoAEOpenPrintDocuments ), 0, FALSE );
+                        AEInstallEventHandler( kCoreEventClass, kAEPrintDocuments, NewAEEventHandlerUPP( DoAEOpenPrintDocuments ), 0, FALSE );
 		}
 
 		// Fix bug 223 by registering a display manager notification callback
@@ -330,7 +337,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 		// Fix bug 209 by ignoring all Apple events that have not already been
 		// handled by the JVM's handler
 		OSType nType;
-		if ( nKind = kEventAppleEvent && GetEventParameter( aEvent, kEventParamAEEventID, typeType, NULL, sizeof( OSType ), NULL, &nType ) == noErr && !Application::IsShutDown() )
+		if ( nKind == kEventAppleEvent && GetEventParameter( aEvent, kEventParamAEEventID, typeType, NULL, sizeof( OSType ), NULL, &nType ) == noErr && !Application::IsShutDown() )
 		{
 			if ( nType == 'quit' )
 			{
@@ -343,7 +350,16 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 			}
 			else if ( nType == 'odoc' || nType == 'pdoc' )
 			{
-				CallNextEventHandler( aNextHandler, aEvent );
+				// note that we can't actually get the
+                                // appleevent from the carbon event.  We must
+                                // dispatch it to registered appleevent
+                                // handlers
+                                
+                                EventRecord eventRec;
+                                if ( ConvertEventRefToEventRecord( aEvent, &eventRec ) )
+                                {
+                                	AEProcessAppleEvent( &eventRec );
+                                }
 			}
 		}
 
@@ -476,6 +492,72 @@ void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void
 	}
 }
 #endif	// MACOSX
+
+// ----------------------------------------------------------------------------
+
+#ifdef MACOSX
+static OSErr DoAEOpenPrintDocuments( const AppleEvent *message, AppleEvent *reply, long refcon )
+{
+        OSErr err;
+        AEDesc theDesc;
+        OSType eventID;
+        DescType ignoreType;
+        MacOSSize ignoreSize;
+        
+        AEGetAttributePtr( message, keyEventIDAttr, typeType, &ignoreType, &eventID, sizeof( OSType ), &ignoreSize );
+        
+        err = AEGetParamDesc( message, keyDirectObject, typeAEList, &theDesc );
+        if ( err == noErr )
+        {
+                long numFiles;
+                err = AECountItems( &theDesc, &numFiles );
+                if ( err == noErr )
+                {
+                        for ( long i = 1; i <= numFiles; i++ )
+                        {
+                                FSSpec fileSpec;
+                                AEKeyword ignoreKeyword;
+                                
+                                err = AEGetNthPtr( &theDesc, i, typeFSS, &ignoreKeyword, &ignoreType, (void *)&fileSpec, sizeof(FSSpec), &ignoreSize );
+                                if ( err == noErr )
+                                {
+                                        // convert to a full path for our VCL event
+                                        
+                                        FSRef fileRef;
+                                        err = FSpMakeFSRef( &fileSpec, &fileRef );
+                                        if ( err == noErr )
+                                        {
+                                                char posixPath[PATH_MAX];
+                                                memset( posixPath, '\0', PATH_MAX );
+                                                err = FSRefMakePath( &fileRef, (UInt8 *)posixPath, sizeof(posixPath) );
+                                                if ( err == noErr )
+                                                {
+                                                        SalData *pSalData = GetSalData();
+                                                        if ( pSalData && pSalData->mpEventQueue )
+                                                        {
+                                                                com_sun_star_vcl_VCLEvent aEvent( ( ( eventID == kAEOpenDocuments ) ? SALEVENT_OPENDOCUMENT : SALEVENT_PRINTDOCUMENT ), NULL, NULL, posixPath );
+                                                                pSalData->mpEventQueue->postCachedEvent( &aEvent );
+                                                        }
+                                                }
+                                        }
+                                }
+                                
+                                // don't continue processing if we have an error
+                                
+                                if ( err != noErr )
+                                        break;
+                        }
+                }
+        }
+        
+        AEDisposeDesc( &theDesc );
+        
+        // insert a reply containing any error code
+        
+        AEPutParamPtr( reply, 'errn', typeShortInteger, (void *)&err, sizeof(short) );
+        return ( err );
+}
+#endif // MACOSX
 
 // ----------------------------------------------------------------------------
 
