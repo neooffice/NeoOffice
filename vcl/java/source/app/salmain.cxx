@@ -316,15 +316,17 @@ int main( int argc, char *argv[] )
 
 		// Load Cocoa
 		OModule aModule;
-		aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/AppKit.framework/AppKit" ) );
+		if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/AppKit.framework/AppKit" ) ) )
+		{
+			// Create the SVMain() thread
+			SVMainThread aThread;
+			aThread.create();
 
-		// Create the SVMain() thread
-		SVMainThread aThread;
-		aThread.create();
+			// Start the Cocoa event loop
+			RunCocoaEventLoop();
+			aThread.join();
+		}
 
-		// Start the Cocoa event loop
-		RunCocoaEventLoop();
-		aThread.join();
 		return( 0 );
 	}
 	else
@@ -361,9 +363,11 @@ int main( int argc, char *argv[] )
 				if ( aJDirectPath.getLength() )
 				{
 					aJDirectPath += OUString::createFromAscii( "/../Libraries/libJDirect.jnilib" );
-					aJDirectModule.load( aJDirectPath );
-					pCarbonLockGetInstance = (Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type *)aJDirectModule.getSymbol( OUString::createFromAscii( "Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance" ) );
-					pCarbonLockInit = (Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *)aJDirectModule.getSymbol( OUString::createFromAscii( "Java_com_apple_mrj_macos_carbon_CarbonLock_init" ) );
+					if ( aJDirectModule.load( aJDirectPath ) )
+					{
+						pCarbonLockGetInstance = (Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type *)aJDirectModule.getSymbol( OUString::createFromAscii( "Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance" ) );
+						pCarbonLockInit = (Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *)aJDirectModule.getSymbol( OUString::createFromAscii( "Java_com_apple_mrj_macos_carbon_CarbonLock_init" ) );
+					}
 				}
 
 			}
@@ -389,17 +393,18 @@ int main( int argc, char *argv[] )
 
 				// Load Carbon
 				OModule aModule;
-				aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) );
+				if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
+				{
+					// Run a Carbon event loop but have it block until the Java
+					// event loop is started. Having an event loop in this
+					// blocked state is enough to solve the keyboard layout
+					// switching problem on Panther.
+					ReceiveNextEvent_Type *pReceiveNextEvent = (ReceiveNextEvent_Type *)aModule.getSymbol( OUString::createFromAscii( "ReceiveNextEvent" ) );
+					if ( pReceiveNextEvent )
+						pReceiveNextEvent( 0, NULL, 0, false, NULL );
 
-				// Run a Carbon event loop but have it block until the Java
-				// event loop is started. Having an event loop in this
-				// blocked state is enough to solve the keyboard layout
-				// switching problem on Panther.
-				ReceiveNextEvent_Type *pReceiveNextEvent = (ReceiveNextEvent_Type *)aModule.getSymbol( OUString::createFromAscii( "ReceiveNextEvent" ) );
-				if ( pReceiveNextEvent )
-					pReceiveNextEvent( 0, NULL, 0, false, NULL );
-
-				aModule.unload();
+					aModule.unload();
+				}
 
 				// We need to be fill in the static sFonts and sNumFonts fields 
 				// in the NativeFontWrapper class as the JVM's implementation
