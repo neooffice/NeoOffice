@@ -169,6 +169,26 @@ if [ ! -f "$linguxmlbak" ] ; then
     sed 's#<DefaultLocale cfg:type="string"/>#<DefaultLocale cfg:type="string">'"$locale"'</DefaultLocale>#g' "$linguxmlbak" > "$linguxml"
 fi
 
+if [ "$os" = "Darwin" ] ; then
+    # Make Mac look and feel the default if none is set
+    commonxml="$xmldir/Office/Common.xml"
+    if [ ! -f "$commonxml" ] ; then
+        error
+    fi
+    grep -q '</LookAndFeel>' "$commonxml"
+    if [ "$?" != "0" ] ; then
+        commonxmlbak="$commonxml.bak"
+        cp -f "$commonxml" "$commonxmlbak"
+        grep -q '</View>' "$commonxml"
+        if [ "$?" != "0" ] ; then
+            sed 's#</Common>#<View><LookAndFeel cfg:type="short">4</LookAndFeel></View></Common>#g' "$commonxmlbak" > "$commonxml"
+        else
+            sed 's#</View>#<LookAndFeel cfg:type="short">4</LookAndFeel></View>#g' "$commonxmlbak" > "$commonxml"
+        fi
+        rm -f "$commonxmlbak"
+    fi
+fi
+
 # Create javarc file
 sysclasspath=""
 if [ ! -d "$apphome/classes" ] ; then
