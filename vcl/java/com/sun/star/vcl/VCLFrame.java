@@ -754,7 +754,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if ((styleFlags & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) != 0)
 			window = new VCLFrame.NoPaintFrame(this);
 		else
-			window = new VCLFrame.NoPaintWindow(this);
+			window = new VCLFrame.NoPaintWindow(this, p);
 
 		// Process remaining style flags
 		if ((styleFlags & SAL_FRAME_STYLE_SIZEABLE) != 0)
@@ -1588,7 +1588,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public boolean isFloatingWindow() {
 
-		return !(window instanceof Frame);
+		return !(fullScreenMode || window instanceof Frame);
 
 	}
 
@@ -1771,8 +1771,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			// Find the capture window
 			VCLFrame f = VCLFrame.captureFrame;
 			while (f != null && f != this) {
-				Window w = f.getWindow();
-				if (w instanceof Frame) {
+				if (!isFloatingWindow()) {
 					f = null;
 					break;
 				}
@@ -1814,12 +1813,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			srcPoint.x += e.getX();
 			srcPoint.y += e.getY();
 			while (f != null && !f.getFullScreenMode()) {
-				Window w = f.getWindow();
-				if (w instanceof Frame) {
+				if (!isFloatingWindow()) {
 					f = null;
 					break;
 				}
 
+				Window w = f.getWindow();
 				Panel p = f.getPanel();
 				if (w != null && w.isShowing() && p != null) {
 					Point destPoint = p.getLocationOnScreen();
@@ -1839,13 +1838,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			if (VCLFrame.mouseModifiersPressed == 0 && VCLFrame.lastCaptureFrame != null && VCLFrame.lastCaptureFrame != f) {
 				Window w = VCLFrame.lastCaptureFrame.getWindow();
 				Panel p = VCLFrame.lastCaptureFrame.getPanel();
-				if (w != null && !(w instanceof Frame) && w.isShowing() && p != null) {
+				if (w != null && isFloatingWindow() && w.isShowing() && p != null) {
 					VCLFrame.lastCaptureFrame.focusGained(new FocusEvent(p, FocusEvent.FOCUS_GAINED));
 					VCLFrame.lastCaptureFrame.focusLost(new FocusEvent(p, FocusEvent.FOCUS_LOST));
 				}
 				w = f.getWindow();
 				p = f.getPanel();
-				if (w != null && w instanceof Frame && w.isShowing() && p != null)
+				if (!isFloatingWindow() && w.isShowing() && p != null)
 					f.focusGained(new FocusEvent(p, FocusEvent.FOCUS_GAINED));
 			}
 		}
@@ -1884,12 +1883,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			srcPoint.x += e.getX();
 			srcPoint.y += e.getY();
 			while (f != null && f != parent && !f.getFullScreenMode()) {
-				Window w = f.getWindow();
-				if (w instanceof Frame) {
+				if (!isFloatingWindow()) {
 					f = null;
 					break;
 				}
 
+				Window w = f.getWindow();
 				Panel p = f.getPanel();
 				if (w != null && w.isShowing() && p != null) {
 					Point destPoint = p.getLocationOnScreen();
@@ -1917,8 +1916,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			}
 			VCLFrame.lastDragFrame = f;
 
-			Window w = f.getWindow();
-			if (w != null && !(w instanceof Frame))
+			if (!isFloatingWindow());
 				VCLFrame.lastCaptureFrame = f;
 		}
 
@@ -2004,7 +2002,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			return;
 
 		// Request keyboard focus
-		if (fullScreenMode || window instanceof Frame)
+		if (!isFloatingWindow())
 			panel.requestFocus();
 
 	}
@@ -2609,10 +2607,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 * Constructs a new <code>VCLFrame.NoPaintWindow</code> instance.
 		 *
 		 * @param f the <code>VCLFrame</code>
+		 * @param p the parent <code>VCLFrame</code>
 		 */
-		NoPaintWindow(VCLFrame f) {
+		NoPaintWindow(VCLFrame f, VCLFrame p) {
 
-			super(VCLScreen.getSharedFrame());
+			super(p.getWindow());
 			frame = f;
 			enableInputMethods(false);
 			setMinimumSize(1, 1);

@@ -55,15 +55,14 @@
 #endif
 
 #include <premac.h>
-#undef ShowWindow
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 
 using namespace osl;
 
 static Rect aRealBounds;
-static bool bNoActivate = false;
-static bool bNoSelectWindow = false;
+static bool bActivate = false;
+static bool bBringToFront = false;
 static Mutex aMutex;
 static EventLoopTimerUPP pEventLoopTimerUPP = NULL;
 
@@ -78,15 +77,12 @@ static void JNICALL Java_com_apple_mrj_macos_generated_MacWindowFunctions_Select
 {
 	MutexGuard aGuard( aMutex );
 
-	if ( bNoActivate )
-		return;
-	
-	if ( bNoSelectWindow )
-		BringToFront( (WindowRef)pWindowRef );
-	else if ( GetSalData()->mpPresentationFrame )
-		ActivateWindow( (WindowRef)pWindowRef, true );
-	else 
-		SelectWindow( (WindowRef)pWindowRef );
+	WindowRef aWindow = (WindowRef)pWindowRef;
+
+	if ( bBringToFront )
+		BringToFront( aWindow );
+	if ( bActivate )
+		ActivateWindow( aWindow, true );
 }
 #endif	// MACOSX
 
@@ -104,10 +100,8 @@ static void JNICALL Java_com_apple_mrj_macos_generated_MacWindowFunctions_ShowWi
 	// addNotify() method before it is first shown
 	SetWindowBounds( aWindow, kWindowContentRgn, &aRealBounds );
 
-	if ( bNoActivate )
-		ShowHide( aWindow, true );
-	else
-		MacShowWindow( aWindow );
+	ShowHide( aWindow, true );
+	Java_com_apple_mrj_macos_generated_MacWindowFunctions_SelectWindow( pEnv, object, pWindowRef );
 }
 #endif	// MACOSX
 
@@ -174,7 +168,7 @@ jclass com_sun_star_vcl_VCLFrame::getMyClass()
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, const SalFrame *pFrame, const SalFrame *pParent ) : java_lang_Object( (jobject)NULL )
+com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, const SalFrame *pFrame, const SalFrame *pParent ) : java_lang_Object( (jobject)NULL ), parentFrame( NULL )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -186,17 +180,43 @@ com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, cons
 		mID = t.pEnv->GetMethodID( getMyClass(), "<init>", cSignature );
 	}
 	OSL_ENSURE( mID, "Unknown method id!" );
+
+	// Fix bug 377 by providing a parent frame if one isn't passed in
+	if ( !pParent )
+	{
+		jvalue args[4];
+		args[0].j = jlong( SAL_FRAME_STYLE_DEFAULT );
+		args[1].l = GetSalData()->mpEventQueue->getJavaObject();
+		args[2].i = jint( 0 );
+		args[3].l = NULL;
+		jobject frameObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
+		parentFrame = new com_sun_star_vcl_VCLFrame( frameObj );
+	}
+
 	jvalue args[4];
 	args[0].j = jlong( nSalFrameStyle );
 	args[1].l = GetSalData()->mpEventQueue->getJavaObject();
 	args[2].i = jint( pFrame );
 	if ( pParent )
 		args[3].l = pParent->maFrameData.mpVCLFrame->getJavaObject();
+	else if ( parentFrame )
+		args[3].l = parentFrame->getJavaObject();
 	else
 		args[3].l = NULL;
 	jobject tempObj;
 	tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
 	saveRef( tempObj );
+}
+
+// ----------------------------------------------------------------------------
+
+com_sun_star_vcl_VCLFrame::~com_sun_star_vcl_VCLFrame()
+{
+	if ( parentFrame )
+	{
+		parentFrame->dispose();
+		delete parentFrame;
+	}
 }
 
 // ----------------------------------------------------------------------------
@@ -606,7 +626,18 @@ void com_sun_star_vcl_VCLFrame::requestFocus()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
+		{
+#ifdef MACOSX
+			MutexGuard aGuard( aMutex );
+			bActivate = true;
+#endif	// MACOSX
+
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+
+#ifdef MACOSX
+			bActivate = false;
+#endif	// MACOSX
+		}
 	}
 }
 
@@ -819,7 +850,8 @@ void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0, sal_Bool _par1, SalF
 		{
 #ifdef MACOSX
 			MutexGuard aGuard( aMutex );
-			bNoActivate = _par1;
+			bActivate = !_par1;
+			bBringToFront = true;
 
 			// Make the real bounds accessible to the native methods
 			SetRect( &aRealBounds, _par2->maGeometry.nX, _par2->maGeometry.nY, _par2->maGeometry.nX + _par2->maGeometry.nWidth, _par2->maGeometry.nY + _par2->maGeometry.nHeight );
@@ -830,7 +862,8 @@ void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0, sal_Bool _par1, SalF
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 
 #ifdef MACOSX
-			bNoActivate = false;
+			bActivate = false;
+			bBringToFront = false;
 #endif	// MACOSX
 		}
 	}
@@ -854,13 +887,13 @@ void com_sun_star_vcl_VCLFrame::toFront()
 		{
 #ifdef MACOSX
 			MutexGuard aGuard( aMutex );
-			bNoSelectWindow = true;
+			bBringToFront = true;
 #endif	// MACOSX
 
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 
 #ifdef MACOSX
-			bNoSelectWindow = false;
+			bBringToFront = false;
 #endif	// MACOSX
 		}
 	}

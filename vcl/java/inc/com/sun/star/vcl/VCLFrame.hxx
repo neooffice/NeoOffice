@@ -56,10 +56,11 @@ protected:
 
 public:
 	static jclass		getMyClass();
+	com_sun_star_vcl_VCLFrame*	parentFrame;
 
-						com_sun_star_vcl_VCLFrame( jobject myObj ) : java_lang_Object( myObj ) {}
+						com_sun_star_vcl_VCLFrame( jobject myObj ) : java_lang_Object( myObj ), parentFrame( NULL ) {}
 						com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, const SalFrame *pFrame, const SalFrame *pParent );
-	virtual				~com_sun_star_vcl_VCLFrame() {}
+	virtual				~com_sun_star_vcl_VCLFrame();
 
 	void				dispose();
 	void				endComposition();

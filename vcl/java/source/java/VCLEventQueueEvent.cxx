@@ -245,19 +245,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		{
 			if ( pSalData->mpFocusFrame != pFrame )
 			{
-				// When in presentation mode, only allow focus to be set to
-				// windows that were shown after presentation mode was entered
-				if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame != pFrame )
-				{
-					for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maPresentationFrameList.begin(); it != pSalData->maPresentationFrameList.end() && *it != pFrame; ++it )
-						;
-					if ( it == pSalData->maPresentationFrameList.end() )
-					{
-						pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
-						return;
-					}
-				}
-
 				pSalData->mpFocusFrame = pFrame;
 				dispatchEvent( nID, pFrame, NULL );
 			}
@@ -272,11 +259,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			{
 				pSalData->mpFocusFrame = NULL;
 				dispatchEvent( nID, pFrame, NULL );
-
-				// When in presentation mode, explicitly set the focus to the
-				// presentation frame
-				if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame != pFrame )
-					pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
 			}
 			return;
 		}
