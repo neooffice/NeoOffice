@@ -53,21 +53,24 @@
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 
-inline int Float32ToInt( Float32 f ) { return (int)( f+0.5 ); }
+inline int Float32ToInt( Float32 f ) { return (int)( f + 0.5 ); }
 
 class ATSLayout : public SalLayout
 {
-private:
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
 	ATSUTextLayout		maLayout;
-	int					mnRuns;
+	ItemCount			mnRuns;
 	ATSUStyle*			mpStyles;
 	UniCharArrayOffset	mnStart;
 	UniCharCount		mnLen;
+	mutable long		mnWidth;
+	mutable long*		mpAdvances;
 	mutable ATSUGlyphInfoArray*	mpGlyphInfoArray;
 
+protected:
+	void				Destroy();
+	bool				InitAdvances() const;
 	bool				InitGlyphInfoArray() const;
-	void				DestroyGlyphInfoArray();
 
 public:
 						ATSLayout( ::vcl::com_sun_star_vcl_VCLFont *pVCLFont );
@@ -78,7 +81,6 @@ public:
 	virtual void		DrawText( SalGraphics& rGraphics ) const;
 	virtual int			GetTextBreak( long nMaxWidth, long nCharExtra, int nFactor ) const;
 	virtual long		FillDXArray( long *pDXArray ) const;
-	virtual long		GetTextWidth() const;
 	virtual void		GetCaretPositions( int nArraySize, long *pCaretXArray ) const;
 	virtual int			GetNextGlyphs( int nLen, long *pGlyphs, Point& rPos, int& nStart, long *pGlyphAdvances, int *pCharIndexes ) const;
 	virtual bool		GetOutline( SalGraphics& rGraphics, PolyPolyVector& rPPV ) const;
@@ -162,6 +164,8 @@ ATSLayout::ATSLayout( com_sun_star_vcl_VCLFont *pVCLFont ) :
 	mnRuns( 0 ),
 	mnStart( 0 ),
 	mnLen( 0 ),
+	mnWidth( 0 ),
+	mpAdvances( NULL ),
 	mpGlyphInfoArray( NULL )
 {
 	mpVCLFont = new com_sun_star_vcl_VCLFont( pVCLFont->getJavaObject() );
@@ -171,24 +175,11 @@ ATSLayout::ATSLayout( com_sun_star_vcl_VCLFont *pVCLFont ) :
 
 ATSLayout::~ATSLayout()
 {
+	Destroy();
+
 	if ( mpVCLFont )
 		delete mpVCLFont;
-
-	if ( mpGlyphInfoArray )
-		DestroyGlyphInfoArray();
-
-	if ( maLayout )
-		ATSUDisposeTextLayout( maLayout );
-
-	if ( mpStyles )
-	{
-		for ( int i = 0 ; i < mnRuns ; i++ )
-		{
-			if ( mpStyles[ i ] )
-				ATSUDisposeStyle( mpStyles[ i ] );
-		}
-	}
-	rtl_freeMemory( mpStyles );
+	mpVCLFont = NULL;
 }
 
 // ----------------------------------------------------------------------------
@@ -197,26 +188,15 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 {
 	OSStatus		theErr;
 
-	if ( mpGlyphInfoArray )
-		DestroyGlyphInfoArray();
+	Destroy();
 
-	if( maLayout )
-		ATSUDisposeTextLayout( maLayout );
-
-	if ( mpStyles )
-	{
-		for ( int i = 0 ; i < mnRuns ; i++ )
-		{
-			if ( mpStyles[ i ] )
-				ATSUDisposeStyle( mpStyles[ i ] );
-		}
-	}
-	rtl_freeMemory( mpStyles );
+	mnLen = rArgs.mnEndCharPos - rArgs.mnMinCharPos;
+	if ( !mnLen )
+		return false;
 
 	mnStart = rArgs.mnMinCharPos;
-	mnLen = rArgs.mnEndCharPos - rArgs.mnMinCharPos;
-
 	mnRuns = 0;
+
 	bool bRTL;
 	int i, j;
 
@@ -230,16 +210,16 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	// Populate run lengths and style arrays
 	bool bVertical = ( ( rArgs.mnFlags & SAL_LAYOUT_VERTICAL ) != 0 );
 	UniCharCount aRunLengths[ mnRuns ];
-	int nRunsProcessed = 0;
+	ItemCount nRunsProcessed = 0;
 	rArgs.ResetPos();
 	while ( rArgs.GetNextRun( &i, &j, &bRTL ) && nRunsProcessed < mnRuns )
 	{
 		ATSUStyle aStyle;
 		if ( ATSUCreateStyle( &aStyle ) == noErr )
 		{
-			ATSUAttributeTag nTags[4];
-			ATSUAttributeValuePtr nVals[4];
-			ByteCount nBytes[4];
+			ATSUAttributeTag nTags[5];
+			ByteCount nBytes[5];
+			ATSUAttributeValuePtr nVals[5];
 
 			// Set font
 			// TODO: Don't hardcode Geneva
@@ -252,6 +232,7 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			nBytes[1] = sizeof( Fixed );
 			nVals[1] = &nSize;
 
+			// Set vertical or horizontal
 			UInt16 nVerticalDirection;
 			nTags[2] = kATSUVerticalCharacterTag;
 			nBytes[2] = sizeof( UInt16 );
@@ -261,6 +242,7 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				nVerticalDirection = kATSUStronglyHorizontal;
 			nVals[2] = &nVerticalDirection;
 
+			// Set LTR or RTL
 			UInt16 nLineDirection;
 			nTags[3] = kATSULineDirectionTag;
 			nBytes[3] = sizeof( UInt16 );
@@ -270,7 +252,17 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				nLineDirection = kATSULeftToRightBaseDirection;
 			nVals[3] = &nLineDirection;
 
-			ATSUSetAttributes( aStyle, 4, nTags, nBytes, nVals );
+			// Set antialiasing
+			ATSStyleRenderingOptions nOptions;
+			if ( mpVCLFont->isAntialiased() )
+				nOptions = kATSStyleApplyAntiAliasing;
+			else
+				nOptions = kATSStyleNoAntiAliasing;
+			nTags[4] = kATSUStyleRenderingOptionsTag;
+			nBytes[4] = sizeof( ATSStyleRenderingOptions );
+			nVals[4] = &nOptions;
+
+			ATSUSetAttributes( aStyle, 5, nTags, nBytes, nVals );
 		}
 		else
 		{
@@ -282,8 +274,11 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		nRunsProcessed++;	
 	}
 
-	if ( ATSUCreateTextLayoutWithTextPtr( rArgs.mpStr, mnStart, mnLen, rArgs.mnLength, mnRuns, aRunLengths, mpStyles, &maLayout ) != noErr )
+	if ( ATSUCreateTextLayoutWithTextPtr( rArgs.mpStr + mnStart, kATSUFromTextBeginning, kATSUToTextEnd, mnLen, mnRuns, aRunLengths, mpStyles, &maLayout ) != noErr )
+	{
+		Destroy();
 		return false;
+	}
 
 	// Set automatic font matching for missing glyphs
 	ATSUSetTransientFontMatching( maLayout, true );
@@ -295,6 +290,7 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 void ATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 {
+/*
 	int nPixelWidth = rArgs.mnLayoutWidth;
 	if( !nPixelWidth && rArgs.mpDXArray )
 	{
@@ -319,39 +315,32 @@ void ATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 	nBytes[1] = sizeof( Fixed );
 	nVals[1] = &nFixedOne;
 	ATSUSetLayoutControls( maLayout, 2, nTags, nBytes, nVals );
+*/
 }
 
 // ----------------------------------------------------------------------------
 
 void ATSLayout::DrawText( SalGraphics& rGraphics ) const
 {
-	if( mnLen <= 0 )
+	if ( !maLayout )
 		return;
 
 	Point aPos = GetDrawPosition();
 	CGContextRef aCGContext = (CGContextRef)rGraphics.maGraphicsData.mpVCLGraphics->getNativeGraphics();
 	if ( aCGContext )
 	{
-		ATSUAttributeTag		cgTag = kATSUCGContextTag;
-		ByteCount				cgSize = sizeof( CGContextRef );
-		ATSUAttributeValuePtr	cgValPtr = &aCGContext;
-/*
-		CGRect				viewRect;
-
-		// [ed] 9/21 If we're not in a standard rotation, draw the rotated text
-		if( mpGraphicsData->mnATSUIRotation != 0 )
-		{
-			Fixed				theAngle = Long2Fix( mpGraphicsData->mnATSUIRotation );
-			ATSUAttributeTag		theTag = kATSULineRotationTag;
-			ByteCount				valSize = sizeof( Fixed );
-			ATSUAttributeValuePtr	valPtr = &theAngle;
-			OSStatus				theErr;
-
-			theErr = ATSUSetLayoutControls( maLayout, 1, &theTag, &valSize, &valPtr );
-			if( theErr != noErr )
-				fprintf( stderr, "ATSLayout::DrawText(0x%X) : Unable to set layout font rotation\n", this );
-		}
-*/
+		// Set the layout's CGContext and orientation
+		ATSUAttributeTag nTags[2];
+		ByteCount nBytes[2];
+		ATSUAttributeValuePtr nVals[2];
+		nTags[0] = kATSUCGContextTag;
+		nBytes[0] = sizeof( CGContextRef );
+		nVals[0] = &aCGContext;
+		Fixed nOrientation = Long2Fix( mpVCLFont->getOrientation() / 10 );
+		nTags[1] = kATSULineRotationTag;
+		nBytes[1] = sizeof( Fixed );
+		nVals[1] = &nOrientation;
+		ATSUSetLayoutControls( maLayout, 2, nTags, nBytes, nVals );
 
 		// Since there is no CGrafPtr associated with the CGContext, we need
 		// to set the font size, color, etc. ourselves
@@ -359,14 +348,21 @@ void ATSLayout::DrawText( SalGraphics& rGraphics ) const
 		CGContextTranslateCTM( aCGContext, aPos.X(), aPos.Y() * -1 );
 		float nScaleFactor = (float)mpVCLFont->getSize() / 12;
 		CGContextScaleCTM( aCGContext, nScaleFactor, nScaleFactor );
-		ATSUSetLayoutControls( maLayout, 1, &cgTag, &cgSize, &cgValPtr );
 		SalColor nColor = rGraphics.maGraphicsData.mnTextColor;
-		CGContextSetRGBFillColor( aCGContext, SALCOLOR_RED( nColor), SALCOLOR_GREEN( nColor ), SALCOLOR_BLUE( nColor), 1.0 );
+		CGContextSetRGBFillColor( aCGContext, (float)SALCOLOR_RED( nColor ) / 256, (float)SALCOLOR_GREEN( nColor ) / 256, (float)SALCOLOR_BLUE( nColor ) / 256, 1.0 );
+		CGContextSetShouldAntialias( aCGContext, mpVCLFont->isAntialiased() );
 
 		// Draw the text
-		ATSUDrawText( maLayout, mnStart, mnLen, 0, 0 );
+		ATSUDrawText( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, 0, 0 );
+		Rectangle aRect;
+		if ( GetBoundRect( rGraphics, aRect ) )
+			rGraphics.maGraphicsData.mpVCLGraphics->addToFlush( aPos.X() + aRect.nLeft - 1, aPos.Y() + aRect.nTop - 1, aRect.GetWidth() + 2, aRect.GetHeight() + 2 );
+
+		// Restore the CGContext state
 		CGContextRestoreGState( aCGContext );
-		rGraphics.maGraphicsData.mpVCLGraphics->addToFlush( 0, 0, 1000, 1000);
+
+		// Reset layout controls
+		ATSUClearLayoutControls( maLayout, 2, nTags );
 
 		rGraphics.maGraphicsData.mpVCLGraphics->releaseNativeGraphics( aCGContext );
 	}
@@ -376,85 +372,57 @@ void ATSLayout::DrawText( SalGraphics& rGraphics ) const
 
 int ATSLayout::GetTextBreak( long nMaxWidth, long nCharExtra, int nFactor ) const
 {
-	// TODO: account for nCharExtra
-	ATSUTextMeasurement nATSUMaxWidth = Long2Fix( nMaxWidth / nFactor );
-
-	// TODO: massage ATSUBreakLine to like inword breaks:
-	//   we prefer BreakInWord instead of ATSUBreakLine trying to be smart
-	//   and moving the soft break inbetween words, as the ATSUI API says
-	UniCharArrayOffset nBreakPos = mnStart;
-	OSStatus nStatus = ATSUBreakLine( maLayout, mnStart, nATSUMaxWidth, false, &nBreakPos );
-	if( ( nStatus != noErr && nStatus != kATSULineBreakInWord ) || nBreakPos == mnStart )
+	if ( !InitAdvances() )
 		return STRING_LEN;
-	else
-		return mnStart + nBreakPos;
+
+	if ( ( ( mnWidth * nFactor ) + ( mnLen * nCharExtra ) ) <= nMaxWidth )
+		return -1;
+
+	// Iterate through advances until the maximum width is reached
+	long nCurrentWidth = 0;
+	for ( int i = 0; i < mnLen; i++ )
+	{
+		nCurrentWidth += ( mpAdvances[ i ] * nFactor );
+		if ( nCurrentWidth >= nMaxWidth )
+			return mnStart + 1;
+		nCurrentWidth += nCharExtra;
+	}
+
+	return -1;
 }
 
 // ----------------------------------------------------------------------------
 
 long ATSLayout::FillDXArray( long* pDXArray ) const
 {
-	long nWidth = GetTextWidth();
-
-	if ( pDXArray && mnLen )
-	{
-		// For now we split the whole width to fake the virtual charwidths
-		// TODO: calculate the virtual character widths exactly
-		for ( int i = 0 ; i < mnLen ; i++ )
-			pDXArray[ i ] = ( ( i + 1 ) * nWidth ) / mnLen;
-	}
-
-	return nWidth;
-}
-
-// ----------------------------------------------------------------------------
-
-long ATSLayout::GetTextWidth() const
-{
-	Rect aMacRect;
-
-	if ( ATSUMeasureTextImage( maLayout, mnStart, mnLen, 0, 0, &aMacRect ) == noErr )
-		return aMacRect.right - aMacRect.left;
-	else
+	if ( !InitAdvances() )
 		return 0;
+
+	if ( pDXArray )
+	{
+		for ( int i = 0; i < mnLen; i++ )
+			pDXArray[ i ] = mpAdvances[ i ];
+	}
+
+	return mnWidth;
 }
 
 // ----------------------------------------------------------------------------
 
-void ATSLayout::GetCaretPositions( int nMaxIndex, long *pCaretXArray ) const
+void ATSLayout::GetCaretPositions( int nArraySize, long *pCaretXArray ) const
 {
-	if ( !pCaretXArray )
+	if ( !InitAdvances() )
 		return;
 
-	// Prepare caret array
-	int n;
-	for ( n = 0 ; n < nMaxIndex ; n++ )
-		pCaretXArray[n] = -1;
-
-	if ( !InitGlyphInfoArray() )
-		return;
-
-	// Use glyph index array to fill the caret positions
-	const ATSUGlyphInfo *pG = mpGlyphInfoArray->glyphs;
-	for ( int i = 0 ; i < mpGlyphInfoArray->numGlyphs ; ++i )
+	if ( pCaretXArray )
 	{
-		n = 2 * pG->charIndex;
-		if ( n > nMaxIndex + 1 )
-			continue;
-		// TODO: recognize and deal with RTL glyphs
-		// is it one the pG->layputFlags?
-		bool bRTL = false;
-		// TODO: pCaretXArray[ n + 0 ] = ???;
-		pCaretXArray[ n + 1 ] = pG->caretX;
-	}
-
-	long nXPos = 0;
-	for ( n = 0 ; n < nMaxIndex ; n++ )
-	{
-		if ( pCaretXArray[n] >= 0 )
-			nXPos = pCaretXArray[n];
-		else
-			pCaretXArray[n] = nXPos;
+		long nPreviousX = 0;
+		for ( int i = 0; i < nArraySize; i += 2)
+		{
+			pCaretXArray[ i ] = nPreviousX;
+			nPreviousX += mpAdvances[ i / 2 ];
+			pCaretXArray[ i + 1 ] = nPreviousX;
+		}
 	}
 }
 
@@ -477,7 +445,7 @@ int ATSLayout::GetNextGlyphs( int nLen, long *pGlyphs, Point& rPos, int& nStart,
 	rPos.Y() = Float32ToInt( pG->deltaY );
 
 	int nCount = 0;
-	for ( ; ++nCount <= nLen ; ++pG )
+	for (; ++nCount <= nLen; ++pG )
 	{
 		*pGlyphs++ = pG->glyphID;
 		if ( pCharIndexes )
@@ -504,7 +472,7 @@ bool ATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rPPV ) const
 	rPPV.resize( mpGlyphInfoArray->numGlyphs );
 	PolyArgs aPolyArgs;
 	const ATSUGlyphInfo *pG = mpGlyphInfoArray->glyphs;
-	for ( int i = 0 ; i < mpGlyphInfoArray->numGlyphs ; ++i, ++pG )
+	for ( int i = 0; i < mpGlyphInfoArray->numGlyphs; ++i, ++pG )
 	{
 		// Convert glyph ID at glyph position to outline
 		GlyphID nGlyphId = pG->glyphID;
@@ -529,9 +497,10 @@ bool ATSLayout::GetBoundRect( SalGraphics& rGraphics, Rectangle& rRect ) const
 {
 	Rect aMacRect;
 
-	if ( ATSUMeasureTextImage( maLayout, mnStart, mnLen, 0, 0, &aMacRect ) == noErr )
+	if ( ATSUMeasureTextImage( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, 0, 0, &aMacRect ) == noErr )
 	{
-		rRect = Rectangle( Point( aMacRect.left, aMacRect.top ), Size( aMacRect.right - aMacRect.left, aMacRect.bottom - aMacRect.top ) );
+		float nScaleFactor = (float)mpVCLFont->getSize() / 12;
+		rRect = Rectangle( 0, (long)( nScaleFactor * aMacRect.top), (long)( nScaleFactor * ( aMacRect.right - aMacRect.left ) ), (long)( nScaleFactor * aMacRect.bottom ) );
 		return true;
 	}
 	else
@@ -569,33 +538,96 @@ void ATSLayout::Simplify( bool bIsBase )
 
 // ----------------------------------------------------------------------------
 
+void ATSLayout::Destroy()
+{
+	if ( maLayout )
+		ATSUDisposeTextLayout( maLayout );
+	maLayout = NULL;
+
+	mnRuns = 0;
+
+	if ( mpStyles )
+	{
+		for ( ItemCount i = 0; i < mnRuns; i++ )
+		{
+			if ( mpStyles[ i ] )
+				ATSUDisposeStyle( mpStyles[ i ] );
+		}
+		rtl_freeMemory( mpStyles );
+	}
+	mpStyles = NULL;
+
+	mnStart = 0;
+	mnLen = 0;
+	mnWidth = 0;
+
+	if ( mpAdvances )
+		rtl_freeMemory( mpAdvances );
+	mpAdvances = NULL;
+
+	if ( mpGlyphInfoArray )
+		rtl_freeMemory( mpGlyphInfoArray );
+	mpGlyphInfoArray = NULL;
+}
+
+// ----------------------------------------------------------------------------
+
+bool ATSLayout::InitAdvances() const
+{
+	if ( mpAdvances && mnWidth )
+		return true;
+
+	if ( !maLayout )
+		return false;
+
+	if ( mpAdvances )
+		rtl_freeMemory( mpAdvances );
+	mpAdvances = (long *)rtl_allocateMemory( mnLen * sizeof( long ) );
+
+	Fixed nScaleFactor = FixDiv( Long2Fix( mpVCLFont->getSize() ), Long2Fix( 12 ) );
+
+	long nPreviousX = 0;
+	for ( int i = 0; i < mnLen; i++ )
+	{
+		ATSUCaret aCaret;
+		if ( ATSUOffsetToCursorPosition( maLayout, i + 1, true, kATSUByCharacter, &aCaret, NULL, NULL ) == noErr )
+		{
+			mpAdvances[ i ] = Fix2Long( FixMul( aCaret.fX, nScaleFactor ) ) - nPreviousX;
+			nPreviousX += mpAdvances[ i ];
+		}
+		else
+		{
+			mpAdvances[ i ] = 0;
+		}
+			
+	}
+
+	mnWidth = nPreviousX;
+
+	return true;
+}
+
+// ----------------------------------------------------------------------------
+
 bool ATSLayout::InitGlyphInfoArray() const
 {
 	if ( mpGlyphInfoArray )
 		return true;
 
 	// TODO: is there a good way to predict the maximum glyph count?
-	ByteCount nBufSize = sizeof( ATSUGlyphInfoArray );
-	nBufSize += 3 * ( mnLen + 16) * sizeof( ATSUGlyphInfo );
-	char* pBuffer = new char[ nBufSize ];
+	ByteCount nBufSize = 3 * ( mnLen + 16 ) * sizeof( ATSUGlyphInfo );
+	mpGlyphInfoArray = (ATSUGlyphInfoArray *)rtl_allocateMemory( nBufSize );
 
-	OSStatus theErr = ATSUGetGlyphInfo( maLayout, mnStart, mnLen, &nBufSize, (ATSUGlyphInfoArray *)pBuffer );
-	if ( theErr == noErr )
-		mpGlyphInfoArray = reinterpret_cast<ATSUGlyphInfoArray*>( pBuffer );
-	else
-		delete[] pBuffer;
-
-	return ( mpGlyphInfoArray != NULL );
-}
-
-// ----------------------------------------------------------------------------
-
-void ATSLayout::DestroyGlyphInfoArray()
-{
-	if ( mpGlyphInfoArray )
+	if ( ATSUGetGlyphInfo( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nBufSize, mpGlyphInfoArray ) != noErr )
 	{
-		delete[] mpGlyphInfoArray;
+		if ( mpGlyphInfoArray )
+			rtl_freeMemory( mpGlyphInfoArray );
 		mpGlyphInfoArray = NULL;
+		return false;
+	}
+	else
+	{
+		return true;
 	}
 }
 
