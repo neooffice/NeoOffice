@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -e
 ##########################################################################
 #
 #   $RCSfile$
@@ -127,17 +127,8 @@ if [ ! -d "$userinstall" ] ; then
     mkdir -p "$userinstall"
 fi
 chmod -Rf u+rw "$userinstall"
-if [ $? != 0 ]; then
-    error
-fi
 cp -Rf "$userbase"/* "$userinstall"
-if [ $? != 0 ]; then
-    error
-fi
 chmod -Rf u+rw "$userinstall"
-if [ $? != 0 ]; then
-    error
-fi
 
 # Copy and edit required files
 if [ ! -d "$xmldir" ] ; then
@@ -147,13 +138,23 @@ if [ ! -d "$xmltemplatedir" ] ; then
     error
 fi
 for i in `cd "$xmltemplatedir" ; find . ! -type d` ; do
-    if [ ! -z "$repair" -o "$i" = "./Setup.xml" ] ; then
+    if [ ! -z "$repair" -o ! -f "$xmldir/$i" -o "$i" = "./Setup.xml" ] ; then
         sed 's#>USER_INSTALL_DIR<#>'"$userinstall"'<#g' "$xmltemplatedir/$i" | sed 's#>LOCALE<#>'"$locale"'<#g' | sed 's#>NSWRAPPER_PATH<#>'"$apphome/nswrapper"'<#g' | sed 's#>CURRENT_DATE<#>'`date +%d.%m.%Y/%H.%M.%S`'<#g' > "$xmldir/$i"
-        if [ $? != 0 ]; then
-            error
-        fi
     fi
 done
+
+# Make locale the default document language
+linguxml="$xmldir/Office/Linguistic.xml"
+if [ ! "$linguxml" ] ; then
+    error
+fi
+linguxmlbak="$linguxml.bak"
+if [ ! -f "$linguxmlbak" ] ; then
+    cp -f "$linguxml" "$linguxmlbak"
+    sed 's#<DefaultLocale cfg:type="string"/>#<DefaultLocale cfg:type="string">'"$locale"'</DefaultLocale>#g' "$linguxmlbak" > "$linguxml"
+fi
+
+# Create javarc file
 sysclasspath=""
 if [ ! -d "$apphome/classes" ] ; then
     error
@@ -162,18 +163,12 @@ for i in `cd "$apphome/classes" ; find . -name "*.jar"` ; do
     sysclasspath="$sysclasspath:$apphome/classes/$i"
 done
 sysclasspath=`printf "$sysclasspath" | sed 's#^:##'`
-if [ $? != 0 ]; then
-    error
-fi
 if [ "$os" = "Darwin" ] ; then
     printf "[Java]\nRuntimeLib=/System/Library/Frameworks/JavaVM.framework/JavaVM\ncom.apple.hwaccel=false\ncom.apple.hwaccellist=\n" > "$configdir/javarc"
 else
     printf "[Java]\n" > "$configdir/javarc"
 fi
 printf "SystemClasspath=$sysclasspath\nJava=1\nJavaScript=1\nApplets=1\n-Xmx256m\n" >> "$configdir/javarc"
-if [ $? != 0 ]; then
-    error
-fi
 
 # Install application fonts
 if [ "$os" = "Darwin" ] ; then
@@ -186,9 +181,6 @@ if [ "$os" = "Darwin" ] ; then
     for i in `cd "$appfontdir" ; find . -name '*.ttf'` ; do
         if [ ! -f "$userfontdir/$i" ] ; then
             ln -sf "$appfontdir/$i" "$userfontdir/$i"
-            if [ $? != 0 ]; then
-                error
-            fi
         fi
     done
 fi
