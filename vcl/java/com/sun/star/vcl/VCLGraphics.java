@@ -113,9 +113,9 @@ public final class VCLGraphics {
 	private static Method drawPolyPolygonMethod = null;
 
 	/**
-	 * The drawTextArray method.
+	 * The drawTextLayout method.
 	 */
-	private static Method drawTextArrayMethod = null;
+	private static Method drawTextLayoutMethod = null;
 
 	/**
 	 * The image50 image.
@@ -214,7 +214,7 @@ public final class VCLGraphics {
 			t.printStackTrace();
 		}
 		try {
-			drawTextArrayMethod = VCLGraphics.class.getMethod("drawTextArray", new Class[]{ GlyphVector.class, int.class, int.class, int.class, int.class, boolean.class });
+			drawTextLayoutMethod = VCLGraphics.class.getMethod("drawTextLayout", new Class[]{ int.class, int.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -1027,63 +1027,37 @@ public final class VCLGraphics {
 	}
 
 	/**
-	 * Draws the text given by the specified glyph vector using the glyph
-	 * vector's font with the specified color.
+	 * Draws the native text layout using the text layout's font with the
+	 * specified color.
 	 *
-	 * @param glyphs the <code>GlyphVector</code> instance to draw
-	 * @param x the x coordinate
-	 * @param y the y coordinate
-	 * @param orientation the orientation
+	 * @param layout the text layout pointer
 	 * @param color the color of the text
-	 * @param antialias <code>true</code> to enable antialiasing and
-	 *  <code>false</code> to disable antialiasing
 	 */
-	public void drawTextArray(GlyphVector glyphs, int x, int y, int orientation, int color, boolean antialias) {
+	public void drawTextLayout(int layout, int color) {
 
 		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawTextArrayMethod, new Object[]{ glyphs, new Integer(x), new Integer(y), new Integer(orientation), new Integer(color), new Boolean(antialias) });
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawTextLayoutMethod, new Object[]{ new Integer(layout), new Integer( color ) });
 			pageQueue.postDrawingOperation(pqi);
 			return;
 		}
 
-		RenderingHints hints = graphics.getRenderingHints();
-		if (antialias)
-			hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-		else
-			hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
-		graphics.setRenderingHints(hints);
+		// Set the color to keep the graphics context's color in sync with the
+		// text layout's color
 		graphics.setColor(new Color(color));
 
-		// Set rotation
-		Point2D origin = new Point2D.Float((float)x, (float)y);
-		AffineTransform transform = null;
-		AffineTransform rotateTransform = null;
-		if (orientation != 0) {
-			transform = graphics.getTransform();
-			double radians = Math.toRadians((double)orientation / 10);
-			graphics.rotate(radians * -1);
-			rotateTransform = AffineTransform.getRotateInstance(radians);
-			// Adjust drawing origin so that it is not transformed
-			origin = AffineTransform.getRotateInstance(radians).transform(origin, null);
-		}
-
-		Rectangle bounds = glyphs.getLogicalBounds().getBounds();
-		graphics.drawGlyphVector(glyphs, (float)origin.getX(), (float)origin.getY());
-
-		// Reverse rotation
-		if (transform != null)
-			graphics.setTransform(transform);
-
-		// Estimate bounds
-		if (orientation != 0)
-			bounds = rotateTransform.createTransformedShape(bounds).getBounds();
-		bounds.x += x - 1;
-		bounds.y += y - 1;
-		bounds.width += 2;
-		bounds.height += 2;
-		addToFlush(bounds);
+		// Draw the text layout
+		drawTextLayout0(layout, color);
 
 	}
+
+	/**
+	 * Draws the native text layout using the text layout's font with the
+	 * specified color.
+	 *
+	 * @param layout the text layout pointer
+	 * @param color the color of the text
+	 */
+	native void drawTextLayout0(int layout, int color);
 
 	/**
 	 * Applies the cached clipping area. The cached clipping area is set using

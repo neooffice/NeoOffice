@@ -67,14 +67,13 @@ class ATSLayout : public SalLayout
 	mutable long*		mpAdvances;
 	mutable ATSUGlyphInfoArray*	mpGlyphInfoArray;
 
-protected:
 	void				Destroy();
 	bool				InitAdvances() const;
 	bool				InitGlyphInfoArray() const;
 
 public:
 						ATSLayout( ::vcl::com_sun_star_vcl_VCLFont *pVCLFont );
-						~ATSLayout();
+	virtual				~ATSLayout();
 
 	virtual bool		LayoutText( ImplLayoutArgs& rArgs );
 	virtual void		AdjustLayout( ImplLayoutArgs& rArgs );
@@ -88,6 +87,8 @@ public:
 	virtual void		MoveGlyph( int nStart, long nNewXPos );
 	virtual void		DropGlyph( int nStart );
 	virtual void		Simplify( bool bIsBase );
+
+	void				DrawText( ::vcl::com_sun_star_vcl_VCLGraphics *pGraphics, SalColor nColor ) const;
 };
 
 class PolyArgs
@@ -112,11 +113,27 @@ public:
 };
 
 using namespace vcl;
-using namespace vos;
 
 // ============================================================================
 
-OSStatus MyATSCubicMoveToCallback( const Float32Point *pt1, void* pData )
+static void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawTextLayout0( JNIEnv *pEnv, jobject object, jint pLayout, jint nColor )
+{
+	ATSLayout *pATSLayout = (ATSLayout *)pLayout;
+	if ( pATSLayout )
+	{
+		com_sun_star_vcl_VCLGraphics *pGraphics = new com_sun_star_vcl_VCLGraphics( object );
+		if ( pGraphics )
+		{
+			pATSLayout->DrawText( pGraphics, (SalColor)nColor );
+			delete pGraphics;
+		}
+		pATSLayout->Release();
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+static OSStatus MyATSCubicMoveToCallback( const Float32Point *pt1, void* pData )
 {
 	PolyArgs& rA = *reinterpret_cast<PolyArgs*>(pData);
 	// MoveTo implies a new polygon => finish old polygon first
@@ -126,7 +143,7 @@ OSStatus MyATSCubicMoveToCallback( const Float32Point *pt1, void* pData )
 
 // ----------------------------------------------------------------------------
 
-OSStatus MyATSCubicLineToCallback( const Float32Point* pt1, void* pData )
+static OSStatus MyATSCubicLineToCallback( const Float32Point* pt1, void* pData )
 {
 	PolyArgs& rA = *reinterpret_cast<PolyArgs*>(pData);
 	rA.AddPoint( *pt1, POLY_NORMAL );
@@ -134,7 +151,7 @@ OSStatus MyATSCubicLineToCallback( const Float32Point* pt1, void* pData )
 
 // ----------------------------------------------------------------------------
 
-OSStatus MyATSCubicCurveToCallback( const Float32Point* pt1, const Float32Point* pt2, const Float32Point* pt3, void* pData )
+static OSStatus MyATSCubicCurveToCallback( const Float32Point* pt1, const Float32Point* pt2, const Float32Point* pt3, void* pData )
 {
 	PolyArgs& rA = *reinterpret_cast<PolyArgs*>(pData);
 	rA.AddPoint( *pt1, POLY_CONTROL );
@@ -144,10 +161,34 @@ OSStatus MyATSCubicCurveToCallback( const Float32Point* pt1, const Float32Point*
 
 // ----------------------------------------------------------------------------
 
-OSStatus MyATSCubicClosePathCallback( void *pData )
+static OSStatus MyATSCubicClosePathCallback( void *pData )
 {
 	PolyArgs& rA = *reinterpret_cast<PolyArgs*>(pData);
 	rA.ClosePolygon();
+}
+
+// ============================================================================
+
+jclass com_sun_star_vcl_VCLGraphics::getMyClass()
+{
+	if ( !theClass )
+	{
+		VCLThreadAttach t;
+		if ( !t.pEnv ) return (jclass)NULL;
+		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLGraphics" );
+		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
+		// Register the VCLGraphics.drawTextLayout0 native method
+		if ( t.pEnv && tempClass )
+		{
+			JNINativeMethod aMethod;
+			aMethod.name = "drawTextLayout0";
+			aMethod.signature = "(II)V";
+			aMethod.fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawTextLayout0;
+			t.pEnv->RegisterNatives( tempClass, &aMethod, 1 );
+		}
+		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
+	}
+	return theClass;
 }
 
 // ============================================================================
@@ -225,9 +266,6 @@ ATSLayout::ATSLayout( com_sun_star_vcl_VCLFont *pVCLFont ) :
 ATSLayout::~ATSLayout()
 {
 	Destroy();
-
-	if ( mpVCLFont )
-		delete mpVCLFont;
 
 	if ( maFontStyle )
 		ATSUDisposeStyle( maFontStyle );
@@ -318,13 +356,13 @@ void ATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 
 // ----------------------------------------------------------------------------
 
-void ATSLayout::DrawText( SalGraphics& rGraphics ) const
+void ATSLayout::DrawText( com_sun_star_vcl_VCLGraphics *pGraphics, SalColor nColor ) const
 {
 	if ( !maLayout )
 		return;
 
 	Point aPos = GetDrawPosition();
-	CGContextRef aCGContext = (CGContextRef)rGraphics.maGraphicsData.mpVCLGraphics->getNativeGraphics();
+	CGContextRef aCGContext = (CGContextRef)pGraphics->getNativeGraphics();
 	if ( aCGContext )
 	{
 		// Set the layout's CGContext and orientation
@@ -343,7 +381,6 @@ void ATSLayout::DrawText( SalGraphics& rGraphics ) const
 		// Update color
 		if ( maFontStyle )
 		{
-			SalColor nColor = rGraphics.maGraphicsData.mnTextColor;
 			RGBColor aColor;
 			aColor.red = SALCOLOR_RED( nColor ) & 0xff;
 			aColor.red |= ( aColor.red << 8 );
@@ -359,17 +396,30 @@ void ATSLayout::DrawText( SalGraphics& rGraphics ) const
 		}
 	
 		// Draw the text
-		Rectangle aRect;
-		if ( GetBoundRect( rGraphics, aRect ) )
-			rGraphics.maGraphicsData.mpVCLGraphics->addToFlush( aPos.X() + aRect.nLeft - 1, aPos.Y() + aRect.nTop - 1, aRect.GetWidth() + 2, aRect.GetHeight() + 2 );
-
 		ATSUDrawText( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, Long2Fix( aPos.X() ), Long2Fix( aPos.Y() * - 1 ) );
+
+		// Add rotated text bounds (plus a little extra) to flush
+		Rect aRect;
+		if ( ATSUMeasureTextImage( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, 0, 0, &aRect ) == noErr )
+			pGraphics->addToFlush( aPos.X() + aRect.left - 5, aPos.Y() + aRect.top - 5, aRect.right - aRect.left + 11, aRect.bottom - aRect.top + 11 );
 
 		// Reset layout controls
 		ATSUClearLayoutControls( maLayout, 2, nTags );
 
-		rGraphics.maGraphicsData.mpVCLGraphics->releaseNativeGraphics( aCGContext );
+		pGraphics->releaseNativeGraphics( aCGContext );
 	}
+}
+
+// ----------------------------------------------------------------------------
+
+void ATSLayout::DrawText( SalGraphics& rGraphics ) const
+{
+	// Route call through Java so that when the VCLGraphics is using a drawing
+	// queue, text can be drawn when this operation is dispatched from the
+	// drawing queue. Note that the reference added here will be released
+	// in the VCLGraphics native method.
+	Reference();
+	rGraphics.maGraphicsData.mpVCLGraphics->drawTextLayout( (void *)this, rGraphics.maGraphicsData.mnTextColor );
 }
 
 // ----------------------------------------------------------------------------
@@ -499,11 +549,11 @@ bool ATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rPPV ) const
 
 bool ATSLayout::GetBoundRect( SalGraphics& rGraphics, Rectangle& rRect ) const
 {
-	Rect aMacRect;
+	Rect aRect;
 
-	if ( ATSUMeasureTextImage( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, 0, 0, &aMacRect ) == noErr )
+	if ( ATSUMeasureTextImage( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, 0, 0, &aRect ) == noErr )
 	{
-		rRect = Rectangle( aMacRect.left, aMacRect.top, aMacRect.right, aMacRect.bottom );
+		rRect = Rectangle( aRect.left, aRect.top, aRect.right, aRect.bottom );
 		return true;
 	}
 	else

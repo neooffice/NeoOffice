@@ -69,21 +69,6 @@ jclass com_sun_star_vcl_VCLGraphics::theClass = NULL;
 
 // ----------------------------------------------------------------------------
 
-jclass com_sun_star_vcl_VCLGraphics::getMyClass()
-{
-	if ( !theClass )
-	{
-		VCLThreadAttach t;
-		if ( !t.pEnv ) return (jclass)NULL;
-		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLGraphics" );
-		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
-		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
-	}
-	return theClass;
-}
-
-// ----------------------------------------------------------------------------
-
 void com_sun_star_vcl_VCLGraphics::beep()
 {
 	static jmethodID mID = NULL;
@@ -440,6 +425,30 @@ void com_sun_star_vcl_VCLGraphics::drawRect( long _par0, long _par1, long _par2,
 			args[3].i = jint( _par3 );
 			args[4].i = jint( _par4 );
 			args[5].z = jboolean( _par5 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLGraphics::drawTextLayout( void *_par0, SalColor _par1 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(II)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "drawTextLayout", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[2];
+			args[0].i = jint( _par0 );
+			args[1].i = jint( _par1 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
