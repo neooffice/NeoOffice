@@ -38,6 +38,7 @@ SHELL:=/bin/tcsh
 
 # Build location macros
 BUILD_HOME:=build
+INSTALL_HOME:=install
 OO_PATCHES_HOME:=patches/openoffice
 OO_ENV_X11:=$(BUILD_HOME)/MacosxEnv.Set
 OO_ENV_JAVA:=$(BUILD_HOME)/MacosxEnvJava.Set
@@ -102,7 +103,7 @@ build.oo_all: build.configure
 	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/instsetoo" ; `alias build` -all $(BUILD_ARGS)
 	touch "$@"
 
-build.neo_%_patch: % build.oo_patches
+build.neo_%_patch: % build.oo_all
 	cd "$<" ; sh -c 'for i in `cd "$(PWD)/$(BUILD_HOME)/$<" ; find . -type d | grep -v /CVS$$ | grep -v /unxmacxp.pro` ; do mkdir -p "$$i" ; done'
 	cd "$<" ; sh -c 'for i in `cd "$(PWD)/$(BUILD_HOME)/$<" ; find . ! -type d | grep -v /CVS/ | grep -v /unxmacxp.pro` ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
 	sh -c 'if [ ! -d "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro.oo" -a -d "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro" ] ; then rm -Rf "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro.oo" ; mv -f "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro" "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro.oo" ; fi'
@@ -123,5 +124,29 @@ build.neo_patches: \
 	build.neo_vcl_patch
 	touch "$@"
 
-build.all: build.oo_all build.neo_patches
+build.installation: build.neo_patches
+	rm -Rf "$(INSTALL_HOME)"
+	mkdir -p "$(INSTALL_HOME)"
+	echo "[ENVIRONMENT]" > "$(INSTALL_HOME)/response"
+	echo "INSTALLATIONMODE=INSTALL_NETWORK" >> "$(INSTALL_HOME)/response"
+	echo "INSTALLATIONTYPE=STANDARD" >> "$(INSTALL_HOME)/response"
+	echo "DESTINATIONPATH=$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" >> "$(INSTALL_HOME)/response"
+	echo "OUTERPATH=" >> "$(INSTALL_HOME)/response"
+	echo "LOGFILE=" >> "$(INSTALL_HOME)/response"
+	echo "LANGUAGELIST=<LANGUAGE>" >> "$(INSTALL_HOME)/response"
+	echo "[JAVA]" >> "$(INSTALL_HOME)/response"
+	echo "JavaSupport=preinstalled_or_none" >> "$(INSTALL_HOME)/response"
+	source "$(OO_ENV_JAVA)" ; "$(PWD)/$(BUILD_HOME)/instsetoo/unxmacxp.pro/01/normal/setup" -v "-r:$(PWD)/$(INSTALL_HOME)/response"
+	touch $@
+
+# This target must be run manually since it launches the GUI PackageMaker tool
+build.package: build.installation
+	rm -Rf "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)"
+	mkdir -p "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)"
+	cp -f etc/gpl.html "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)/License.html"
+	rm -f "$(INSTALL_HOME)/neojava.pmsp"
+	sed 's#$$(INSTALL_HOME)#$(PWD)/$(INSTALL_HOME)#g' etc/neojava.pmsp | sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' > "$(INSTALL_HOME)/neojava.pmsp"
+	open "$(PWD)/$(INSTALL_HOME)/neojava.pmsp"
+
+build.all: build.oo_all build.installation
 	touch "$@"
