@@ -827,11 +827,6 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector )
 
 			aPolyPolygon.Move( aPos.X(), aPos.Y() );
 
-			// Sync coordinates to glyph metrics
-			ATSGlyphScreenMetrics aScreenMetrics;
-			if ( ATSUGlyphGetScreenMetrics( mpLayoutData->mpGlyphInfoArray->glyphs[ i ].style, 1, &mpLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID, sizeof( GlyphID ), false, false, &aScreenMetrics ) == noErr )
-				aPolyPolygon.Move( Float32ToLong( aScreenMetrics.topLeft.x ) - aPolyPolygon.GetBoundRect().nLeft, ( Float32ToLong( aScreenMetrics.topLeft.y ) + aPolyPolygon.GetBoundRect().nTop ) * -1 );
-
 			if ( mpLayoutData->maVerticalFontStyle )
 			{
 				long nGlyphOrientation = aGlyphArray[ 0 ] & GF_ROTMASK;
