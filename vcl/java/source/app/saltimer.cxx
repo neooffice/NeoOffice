@@ -44,9 +44,6 @@
 #ifndef _SALJAVA_H
 #include <saljava.h>
 #endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
-#include <com/sun/star/vcl/VCLEvent.hxx>
-#endif
 
 using namespace vcl;
 
@@ -65,13 +62,6 @@ void SalTimer::Start( ULONG nMS )
 	gettimeofday( &pSalData->maTimeout, NULL );
 	pSalData->maTimeout += nMS;
 	pSalData->mnTimerInterval = nMS;
-
-	// Wakeup the event queue by sending it a dummy event
-	if ( pSalData->mpEventQueue )
-	{
-		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
-		pSalData->mpEventQueue->postCachedEvent( &aEvent );
-	}
 } 
 
 // -----------------------------------------------------------------------
@@ -82,11 +72,4 @@ void SalTimer::Stop()
 	pSalData->mnTimerInterval = 0;
 	pSalData->maTimeout.tv_sec = 0;
 	pSalData->maTimeout.tv_usec = 0;
-
-	// Wakeup the event queue by sending it a dummy event
-	if ( pSalData->mpEventQueue )
-	{
-		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
-		pSalData->mpEventQueue->postCachedEvent( &aEvent );
-	}
 }
