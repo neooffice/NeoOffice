@@ -334,8 +334,12 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	nTags[0] = kATSULineDirectionTag;
 	nBytes[0] = sizeof( MacOSBoolean );
 	nVals[0] = &nDirection;
+	ATSLineLayoutOptions nLineOptions = kATSLineKeepSpacesOutOfMargin;
+	nTags[1] = kATSULineLayoutOptionsTag;
+	nBytes[1] = sizeof( ATSLineLayoutOptions );
+	nVals[1] = &nLineOptions;
 
-	if ( ATSUSetLayoutControls( maLayout, 1, nTags, nBytes, nVals ) != noErr )
+	if ( ATSUSetLayoutControls( maLayout, 2, nTags, nBytes, nVals ) != noErr )
 	{
 		Destroy();
 		return;
@@ -378,15 +382,19 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	mpCharAdvances = (long *)rtl_allocateMemory( nBufSize );
 	memset( mpCharAdvances, 0, nBufSize );
 
-	ATSUTextMeasurement nBefore;
-	ATSUTextMeasurement nAfter;
-	ATSUTextMeasurement nAscent;
-	ATSUTextMeasurement nDescent;
+	Fixed fCurrentX = 0;
+	ATSUTextMeasurement fBefore;
+	ATSUTextMeasurement fAfter;
+	ATSUTextMeasurement fAscent;
+	ATSUTextMeasurement fDescent;
 	for ( i = 0; i < mpHash->mnLen; i++ )
 	{
 		// Fix bug 448 by eliminating subpixel advances
-		if ( ATSUGetUnjustifiedBounds( maLayout, i, 1, &nBefore, &nAfter, &nAscent, &nDescent ) == noErr )
-			mpCharAdvances[ i ] = Float32ToLong( Fix2X( nAfter - nBefore ) * mpHash->mfFontScaleX );
+		if ( ATSUGetUnjustifiedBounds( maLayout, 0, i + 1, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
+		{
+			mpCharAdvances[ i ] = Float32ToLong( Fix2X( fAfter - fCurrentX ) * mpHash->mfFontScaleX );
+			fCurrentX = fAfter;
+		}
 	}
 
 	// Find positions that require fallback fonts
