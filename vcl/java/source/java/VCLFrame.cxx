@@ -111,9 +111,7 @@ void com_sun_star_vcl_VCLFrame::dispose()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
-		}
 	}
 }
 
@@ -132,9 +130,7 @@ void com_sun_star_vcl_VCLFrame::flush()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
-		}
 	}
 }
 
@@ -312,6 +308,27 @@ const Rectangle com_sun_star_vcl_VCLFrame::getInsets()
 
 // ----------------------------------------------------------------------------
 
+ULONG com_sun_star_vcl_VCLFrame::getState()
+{
+	static jmethodID mID = NULL;
+	ULONG out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()J";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getState", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (ULONG)t.pEnv->CallNonvirtualLongMethod( object, getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLFrame::setBounds( long _par0, long _par1, long _par2, long _par3 )
 {
 	static jmethodID mID = NULL;
@@ -377,6 +394,29 @@ void com_sun_star_vcl_VCLFrame::setPointer( USHORT _par0 )
 		{
 			jvalue args[1];
 			args[0].i = jint( _par0 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLFrame::setState( ULONG _par0 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(J)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "setState", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[1];
+			args[0].j = jlong( _par0 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}

@@ -104,6 +104,21 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public final static long SAL_FRAME_STYLE_FLOAT = 0x20000000;
 
 	/**
+	 * SAL_FRAMESTATE_NORMAL constant.
+	 */
+	public final static long SAL_FRAMESTATE_NORMAL = 0x00000001;
+
+	/**
+	 * SAL_FRAMESTATE_MINIMIZED constant.
+	 */
+	public final static long SAL_FRAMESTATE_MINIMIZED = 0x00000002;
+
+	/**
+	 * SAL_FRAMESTATE_MAXIMIZED constant.
+	 */
+	public final static long SAL_FRAMESTATE_MAXIMIZED = 0x00000004;
+
+	/**
 	 * POINTER_ARROW constant.
 	 */
 	public final static int POINTER_ARROW = 0;
@@ -1209,6 +1224,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * Returns the state of the native window.
+	 *
+	 * @return the state of the native window
+	 */
+	public long getState() {
+
+		if (window instanceof Frame)
+			return (long)((Frame)window).getState();
+		else
+			return (long)Frame.NORMAL;
+
+	}
+
+	/**
 	 * Returns the native window.
 	 *
 	 * @return the native window
@@ -1603,6 +1632,22 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (cursor != window.getCursor().getType()) {
 			window.setCursor(Cursor.getPredefinedCursor(cursor));
 			Toolkit.getDefaultToolkit().sync();
+		}
+
+	}
+
+	/**
+	 * Sets the state of the native window.
+	 *
+	 * @param state the state of the native window
+	 */
+	public void setState(long state) {
+
+		if (window instanceof Frame) {
+			if (state == SAL_FRAMESTATE_MINIMIZED)
+				((Frame)window).setState(Frame.ICONIFIED);
+			else
+				((Frame)window).setState(Frame.NORMAL);
 		}
 
 	}

@@ -206,7 +206,7 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 							USHORT nFlags )
 {
 	if ( maFrameData.mnStyle & SAL_FRAME_STYLE_CHILD )
-		return;
+		; // return;
 
 	Rectangle aPosSize( Point( maGeometry.nX, maGeometry.nY ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
 	aPosSize.Justify();
@@ -275,19 +275,39 @@ void SalFrame::GetClientSize( long& rWidth, long& rHeight )
 
 void SalFrame::SetWindowState( const SalFrameState* pState )
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalFrame::SetWindowState not implemented\n" );
-#endif
+	USHORT nFlags = 0;
+	if ( pState->mnMask & SAL_FRAMESTATE_MASK_X )
+		nFlags |= SAL_FRAME_POSSIZE_X;
+	if ( pState->mnMask & SAL_FRAMESTATE_MASK_Y )
+		nFlags |= SAL_FRAME_POSSIZE_Y;
+	if ( pState->mnMask & SAL_FRAMESTATE_MASK_WIDTH )
+		nFlags |= SAL_FRAME_POSSIZE_WIDTH;
+	if ( pState->mnMask & SAL_FRAMESTATE_MASK_HEIGHT )
+		nFlags |= SAL_FRAME_POSSIZE_HEIGHT;
+	if ( nFlags )
+		SetPosSize( pState->mnX, pState->mnY, pState->mnWidth, pState->mnHeight, nFlags );
+
+	if ( pState->mnMask & SAL_FRAMESTATE_MASK_STATE )
+	{
+		if ( pState->mnState & SAL_FRAMESTATE_MINIMIZED )
+			maFrameData.mpVCLFrame->setState( SAL_FRAMESTATE_MINIMIZED );
+		else
+			maFrameData.mpVCLFrame->setState( SAL_FRAMESTATE_NORMAL );
+	}
 }
 
 // -----------------------------------------------------------------------
 
 BOOL SalFrame::GetWindowState( SalFrameState* pState )
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalFrame::GetWindowState not implemented\n" );
-#endif
-	return FALSE;
+	Rectangle aBounds( maFrameData.mpVCLFrame->getBounds() );
+	pState->mnMask = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT | SAL_FRAMESTATE_MASK_STATE;
+	pState->mnX = aBounds.Left();
+	pState->mnY = aBounds.Top();
+	pState->mnWidth = aBounds.GetWidth();
+	pState->mnHeight = aBounds.GetHeight();
+	pState->mnState = maFrameData.mpVCLFrame->getState();
+	return TRUE;
 }
 
 // -----------------------------------------------------------------------
