@@ -380,7 +380,7 @@ void com_sun_star_vcl_VCLGraphics::drawPolyPolygon( ULONG _par0, const ULONG *_p
 			args[2].l = xptsarray;
 			args[3].l = yptsarray;
 			args[4].i = jint( _par4 );
-			args[5].z = jboolean( _par4 );
+			args[5].z = jboolean( _par5 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
