@@ -649,11 +649,7 @@ void ImplStyleData::SetStandardStyles()
     mnTitleHeight               = 18;
     mnFloatTitleHeight          = 13;
     mnTearOffTitleHeight        = 8;
-#ifdef USE_JAVA
-    mnMenuBarHeight             = 16;
-#else	// USE_JAVA
     mnMenuBarHeight             = 14;
-#endif	// USE_JAVA
 	mnHighContrast				= 0;
 	mnUseSystemUIFonts			= 0;
 	mnUseFlatMenues 			= 0;
@@ -759,11 +755,7 @@ void ImplStyleData::SetStandardOS2Styles()
     mnTitleHeight               = 18;
     mnFloatTitleHeight          = 13;
     mnTearOffTitleHeight        = 8;
-#ifdef USE_JAVA
-    mnMenuBarHeight             = 16;
-#else	// USE_JAVA
     mnMenuBarHeight             = 14;
-#endif	// USE_JAVA
 	mnHighContrast				= 0;
 	mnUseSystemUIFonts			= 0;
 	mnUseFlatMenues 			= 0;
@@ -853,11 +845,7 @@ void ImplStyleData::SetStandardMacStyles()
     mnTitleHeight               = 16;
     mnFloatTitleHeight          = 12;
     mnTearOffTitleHeight        = 7;
-#ifdef USE_JAVA
-    mnMenuBarHeight             = 16;
-#else	// USE_JAVA
     mnMenuBarHeight             = 14;
-#endif	// USE_JAVA
 	mnHighContrast				= 0;
 	mnUseSystemUIFonts			= 0;
 	mnUseFlatMenues 			= 0;

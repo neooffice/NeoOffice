@@ -174,6 +174,8 @@ public final class VCLGraphics {
 
 		// Set the screen and font resolutions
 		screenResolution = screenFontResolution = Toolkit.getDefaultToolkit().getScreenResolution();
+		if (screenResolution < VCLScreen.MIN_SCREEN_RESOLUTION)
+			screenResolution = VCLScreen.MIN_SCREEN_RESOLUTION;
 		if (screenFontResolution < VCLScreen.MIN_SCREEN_RESOLUTION)
 			screenFontResolution = VCLScreen.MIN_SCREEN_RESOLUTION;
 
