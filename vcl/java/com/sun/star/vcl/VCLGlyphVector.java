@@ -11,11 +11,11 @@
  *
  *         - GNU General Public License Version 2.1
  *
- *  Patrick Luby, June 2003
+ *  Patrick Luby, June 2004
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2003 by Patrick Luby (patrick.luby@planamesa.com)
+ *  Copyright 2004 by Patrick Luby (patrick.luby@planamesa.com)
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
@@ -33,46 +33,36 @@
  *
  ************************************************************************/
 
-#ifndef _SV_SALGDI_H
-#define _SV_SALGDI_H
+package com.sun.star.vcl;
 
-#ifndef _SV_SV_H
-#include <sv.h>
-#endif 
+/**
+ * The Java class that implements the JavaLayout C++ class methods.
+ * <p>
+ * @version 	$Revision$ $Date$
+ * @author 	    $Author$
+ */
+public final class VCLGlyphVector {
 
-namespace vcl
-{
-class com_sun_star_vcl_VCLFont;
-class com_sun_star_vcl_VCLGraphics;
+	/**
+	 * The font.
+	 */
+	private VCLFont font = null;
+
+	/**
+	 * The graphics.
+	 */
+	private VCLGraphics graphics = null;
+
+	/**
+	 * Constructs a new <code>VCLGlyphVector</code> instance.
+	 *
+	 * @param g the <code>VCLGraphics</code> instance
+	 * @param f the <code>VCLFont</code> instance
+	 */
+	public VCLGlyphVector(VCLGraphics g, VCLFont f) {
+
+		graphics = g;
+		font = f;
+	}
+
 }
-
-// -------------------
-// - SalGraphicsData -
-// ------------------- 
-
-class SalGraphicsData
-{
-	friend class	JavaLayout;
-	friend class	SalBitmap;
-	friend class	SalFrame;
-	friend class	SalGraphics;
-	friend class	SalInfoPrinter;
-	friend class	SalInstance;
-	friend class	SalOpenGL;
-	friend class	SalPrinter;
-	friend class	SalVirtualDevice;
-
-	SalColor		mnFillColor;
-	SalColor		mnLineColor;
-	SalColor		mnTextColor;
-	SalFrame*		mpFrame;
-	SalPrinter*		mpPrinter;
-	SalVirtualDevice*	mpVirDev;
-	::vcl::com_sun_star_vcl_VCLGraphics*	mpVCLGraphics;
-	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
-
-					SalGraphicsData();
-					~SalGraphicsData();
-};
-
-#endif // _SV_SALGDI_H

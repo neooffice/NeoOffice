@@ -11,11 +11,11 @@
  *
  *         - GNU General Public License Version 2.1
  *
- *  Patrick Luby, June 2003
+ *  Patrick Luby, June 2004
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2003 by Patrick Luby (patrick.luby@planamesa.com)
+ *  Copyright 2004 by Patrick Luby (patrick.luby@planamesa.com)
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
@@ -33,46 +33,41 @@
  *
  ************************************************************************/
 
-#ifndef _SV_SALGDI_H
-#define _SV_SALGDI_H
+#ifndef _SV_JAVALAYOUT_HXX
+#define _SV_JAVALAYOUT_HXX
 
-#ifndef _SV_SV_H
-#include <sv.h>
+#ifndef _SV_SALLAYOUT_HXX
+#include <sallayout.hxx>
 #endif 
 
 namespace vcl
 {
-class com_sun_star_vcl_VCLFont;
-class com_sun_star_vcl_VCLGraphics;
+class com_sun_star_vcl_VCLGlyphVector;
 }
 
-// -------------------
-// - SalGraphicsData -
-// ------------------- 
+class SalGraphics;
 
-class SalGraphicsData
+// --------------
+// - JavaLayout -
+// --------------
+
+class JavaLayout : public SalLayout
 {
-	friend class	JavaLayout;
-	friend class	SalBitmap;
-	friend class	SalFrame;
-	friend class	SalGraphics;
-	friend class	SalInfoPrinter;
-	friend class	SalInstance;
-	friend class	SalOpenGL;
-	friend class	SalPrinter;
-	friend class	SalVirtualDevice;
+	::vcl::com_sun_star_vcl_VCLGlyphVector* mpVCLGlyphVector;
 
-	SalColor		mnFillColor;
-	SalColor		mnLineColor;
-	SalColor		mnTextColor;
-	SalFrame*		mpFrame;
-	SalPrinter*		mpPrinter;
-	SalVirtualDevice*	mpVirDev;
-	::vcl::com_sun_star_vcl_VCLGraphics*	mpVCLGraphics;
-	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
+public:
+					JavaLayout( const SalGraphics *pGraphics );
+	virtual			~JavaLayout();
 
-					SalGraphicsData();
-					~SalGraphicsData();
+	virtual bool	LayoutText( ImplLayoutArgs& rArgs );
+	virtual void	DrawText( SalGraphics& rGraphics ) const;
+	virtual int		GetTextBreak( long nMaxWidth, long nCharExtra, int nFactor ) const;
+	virtual long	FillDXArray( long *pDXArray ) const;
+	virtual void	GetCaretPositions( int nArraySize, long *pCaretXArray ) const;
+	virtual int		GetNextGlyphs( int nLen, long *pGlyphs, Point& rPos, int& nStart, long *pGlyphAdvances, int *pCharIndexes ) const;
+	virtual void	MoveGlyph( int nStart, long nNewXPos );
+	virtual void	DropGlyph( int nStart );
+	virtual void	Simplify( bool bIsBase );
 };
 
-#endif // _SV_SALGDI_H
+#endif // _SV_JAVALAYOUT_HXX

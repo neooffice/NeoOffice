@@ -65,6 +65,7 @@ SLOFILES = \
 	$(SLO)/VCLEventQueueEvent.obj \
 	$(SLO)/VCLFont.obj \
 	$(SLO)/VCLFrame.obj \
+	$(SLO)/VCLGlyphVector.obj \
 	$(SLO)/VCLGraphics.obj \
 	$(SLO)/VCLImage.obj \
 	$(SLO)/VCLPageFormat.obj \

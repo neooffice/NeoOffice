@@ -11,11 +11,11 @@
  *
  *         - GNU General Public License Version 2.1
  *
- *  Patrick Luby, June 2003
+ *  Patrick Luby, June 2004
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2003 by Patrick Luby (patrick.luby@planamesa.com)
+ *  Copyright 2004 by Patrick Luby (patrick.luby@planamesa.com)
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
@@ -33,46 +33,31 @@
  *
  ************************************************************************/
 
-#ifndef _SV_SALGDI_H
-#define _SV_SALGDI_H
+#ifndef _SV_COM_SUN_STAR_VCL_VCLGLYPHVECTOR_HXX
+#define	_SV_COM_SUN_STAR_VCL_VCLGLYPHVECTOR_HXX
 
-#ifndef _SV_SV_H
-#include <sv.h>
-#endif 
+#ifndef _SV_JAVA_LANG_OBJECT_HXX
+#include <java/lang/Object.hxx>
+#endif
 
-namespace vcl
-{
+namespace vcl {
+
 class com_sun_star_vcl_VCLFont;
 class com_sun_star_vcl_VCLGraphics;
-}
 
-// -------------------
-// - SalGraphicsData -
-// ------------------- 
-
-class SalGraphicsData
+class com_sun_star_vcl_VCLGlyphVector : public java_lang_Object
 {
-	friend class	JavaLayout;
-	friend class	SalBitmap;
-	friend class	SalFrame;
-	friend class	SalGraphics;
-	friend class	SalInfoPrinter;
-	friend class	SalInstance;
-	friend class	SalOpenGL;
-	friend class	SalPrinter;
-	friend class	SalVirtualDevice;
+protected:
+	static jclass		theClass;
 
-	SalColor		mnFillColor;
-	SalColor		mnLineColor;
-	SalColor		mnTextColor;
-	SalFrame*		mpFrame;
-	SalPrinter*		mpPrinter;
-	SalVirtualDevice*	mpVirDev;
-	::vcl::com_sun_star_vcl_VCLGraphics*	mpVCLGraphics;
-	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
+public:
+	static jclass		getMyClass();
 
-					SalGraphicsData();
-					~SalGraphicsData();
+						com_sun_star_vcl_VCLGlyphVector( jobject myObj ) : java_lang_Object( myObj ) {};
+						com_sun_star_vcl_VCLGlyphVector( ::vcl::com_sun_star_vcl_VCLGraphics *pGraphics, ::vcl::com_sun_star_vcl_VCLFont *pFont );
+	virtual				~com_sun_star_vcl_VCLGlyphVector() {};
 };
 
-#endif // _SV_SALGDI_H
+} // namespace vcl
+
+#endif // _SV_COM_SUN_STAR_VCL_VCLGLYPHVECTOR_HXX

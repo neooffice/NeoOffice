@@ -35,6 +35,9 @@
 
 #define _SV_SALGDI3_CXX
 
+#ifndef _SV_JAVALAYOUT_HXX
+#include <javalayout.hxx>
+#endif
 #ifndef _SV_SALGDI_HXX
 #include <salgdi.hxx>
 #endif
@@ -266,16 +269,16 @@ BOOL SalGraphics::GetGlyphOutline( long nIndex, PolyPolygon& rPolyPoly,
 SalLayout* SalGraphics::GetTextLayout( ImplLayoutArgs& rArgs,
                                        int nFallbackLevel )
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalGraphics::GetTextLayout not implemented\n" );
-#endif
-	return NULL;
+	return new JavaLayout( this );
 }
 
 // -----------------------------------------------------------------------
 
 void SalGraphics::GetDevFontSubstList( OutputDevice* pOutDev )
 {
+#ifdef DEBUG
+	fprintf( stderr, "SalGraphics::GetDevFontSubstList not implemented\n" );
+#endif
 }
 
 // -----------------------------------------------------------------------

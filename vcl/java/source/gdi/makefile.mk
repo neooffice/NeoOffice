@@ -53,6 +53,7 @@ dummy:
 
 .IF "$(remote)"==""
 SLOFILES= \
+	$(SLO)$/javalayout.obj \
 	$(SLO)$/salbmp.obj \
 	$(SLO)$/salgdi.obj \
 	$(SLO)$/salgdi2.obj \
