@@ -51,14 +51,12 @@ import java.awt.RenderingHints;
 import java.awt.Shape;
 import java.awt.TexturePaint;
 import java.awt.Toolkit;
-import java.awt.event.PaintEvent;
 import java.awt.font.GlyphVector;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.Method;
-import java.util.LinkedList;
 
 /**
  * The Java class that implements the SalGraphics C++ class methods.
