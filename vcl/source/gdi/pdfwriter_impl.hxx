@@ -248,12 +248,32 @@ public:
         sal_Unicode		m_aUnicode;
     };
     typedef std::map< long, GlyphEmit > FontEmitMapping;
+#if defined USE_JAVA && defined MACOSX
+    struct FontEmitObject
+    {
+        sal_Int32		m_nID;
+        sal_uInt64		m_nPos;
+        sal_uInt64		m_nLen;
+        rtl::OUString	m_aFile;
+
+        FontEmitObject() : m_nID( 0 ), m_nPos( 0 ), m_nLen( 0 ) {}
+    };
+    typedef std::list< FontEmitObject > FontObjectList;
+#endif	// USE_JAVA && MACOSX
     struct FontEmit
     {
         sal_Int32			m_nFontID;
         FontEmitMapping		m_aMapping;
+#if defined USE_JAVA && defined MACOSX
+        std::map< long, sal_uInt8 >	m_aGlyphEncoding;
+        FontObjectList		m_aObjectList;
+        rtl::OUString		m_aEmitFile;
+#endif	// USE_JAVA && MACOSX
 
         FontEmit( sal_Int32 nID ) : m_nFontID( nID ) {}
+#if defined USE_JAVA && defined MACOSX
+        ~FontEmit() { if ( m_aEmitFile.getLength() ) osl_removeFile( m_aEmitFile.pData ); }
+#endif	// USE_JAVA && MACOSX
     };
     typedef std::list< FontEmit > FontEmitList;
     struct Glyph

@@ -70,6 +70,18 @@
 #define M_PI 3.14159265
 #endif
 
+#if defined USE_JAVA && defined MACOSX
+
+#ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
+#include <com/sun/star/vcl/VCLFont.hxx>
+#endif
+
+#include <premac.h>
+#include <Carbon/Carbon.h>
+#include <postmac.h>
+
+#endif	// USE_JAVA && MACOSX
+
 #define ENABLE_COMPRESSION
 #if OSL_DEBUG_LEVEL < 2
 #define COMPRESS_PAGES
@@ -2478,6 +2490,9 @@ void PDFWriterImpl::registerGlyphs(
             {
                 // create new subset if necessary
                 if( rSubset.m_aSubsets.begin() == rSubset.m_aSubsets.end() ||
+#if defined USE_JAVA && defined MACOSX
+                    rSubset.m_aSubsets.back().m_aGlyphEncoding.size() ||
+#endif	// USE_JAVA && MACOSX
                     rSubset.m_aSubsets.back().m_aMapping.size() > 254 )
                 {
                     rSubset.m_aSubsets.push_back( FontEmit( m_nNextFID++ ) );
@@ -2486,7 +2501,11 @@ void PDFWriterImpl::registerGlyphs(
                 // copy font id
                 pMappedFontObjects[i] = rSubset.m_aSubsets.back().m_nFontID;
                 // create new glyph in subset
+#if defined USE_JAVA && defined MACOSX
+                sal_uInt8 nNewId = rSubset.m_aSubsets.back().m_aGlyphEncoding.size() ? rSubset.m_aSubsets.back().m_aGlyphEncoding[ pGlyphs[i] ] : 0;
+#else	// USE_JAVA && MACOSX
                 sal_uInt8 nNewId = rSubset.m_aSubsets.back().m_aMapping.size()+1;
+#endif	// USE_JAVA && MACOSX
                 pMappedGlyphs[i] = nNewId;
 
                 // add new glyph to emitted font subset
@@ -2587,6 +2606,82 @@ void PDFWriterImpl::registerGlyphs(
             pMappedFontObjects[ i ] = nCurFontID;
         }
     }
+
+#if defined USE_JAVA && defined MACOSX
+    // Create font objects using Mac OS X's PDF rendering APIs
+    for ( i = 0; i < nGlyphs; i++ )
+    {
+        ImplFontData *pCurrentFont = pFallbackFonts[i] ? pFallbackFonts[i] : pDevFont;
+
+        FontSubset& rSubset = m_aSubsets[ pCurrentFont ];
+        FontEmit& rEmit = rSubset.m_aSubsets.back();
+        if ( rEmit.m_aGlyphEncoding.size() )
+            continue;
+
+        com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)pCurrentFont->mpSysData;
+        ATSFontRef aATSFont = FMGetATSFontRefFromFont( (FMFont)pVCLFont->getNativeFont() );
+        CGFontRef aFont = CGFontCreateWithPlatformFont( (void *)&aATSFont );
+        if ( !aFont )
+            continue;
+
+        OUString aTmpName;
+        osl_createTempFile( NULL, NULL, &aTmpName.pData );
+
+        CFStringRef aPath = CFStringCreateWithCharactersNoCopy( NULL, aTmpName.getStr(), aTmpName.getLength(), kCFAllocatorNull );
+        if ( aPath )
+        {
+            CFURLRef aURL = CFURLCreateWithString( NULL, aPath, NULL );
+            if ( aURL )
+            {
+                CGContextRef aContext = CGPDFContextCreateWithURL( aURL, NULL, NULL );
+                if ( aContext )
+                {
+                    CGGlyph aGlyphs[ 256 ];
+                    int nGlyphs = 0;
+
+                    for ( FontEmitMapping::iterator fit = rEmit.m_aMapping.begin(); fit != rEmit.m_aMapping.end(); ++fit )
+                    {
+                        if ( fit->first );
+                            aGlyphs[ nGlyphs++ ] = (CGGlyph)fit->first;
+                    }
+
+                    CGContextBeginPage( aContext, NULL );
+                    CGContextSetFont( aContext, aFont );
+                    CGContextSetFontSize( aContext, pVCLFont->getSize() );
+                    sal_Bool bAntialias = pVCLFont->isAntialiased();
+                    CGContextSetShouldAntialias( aContext, bAntialias );
+                    CGContextSetShouldSmoothFonts( aContext, bAntialias );
+                    CGContextShowGlyphs( aContext, aGlyphs, nGlyphs );
+                    CGContextEndPage( aContext );
+                    CGContextRelease( aContext );
+
+                    // TODO: extract glyphs and font objects from PDF file
+                    for ( int j = 0; j < nGlyphs; j++ )
+                    {
+                        long nGlyph = (long)aGlyphs[j];
+                        sal_uInt8 nEncodedGlyph = (sal_uInt8)aGlyphs[j];
+                        FontEmitMapping::iterator it = rEmit.m_aMapping.find( nGlyph );
+                        if( it != rSubset.m_aMapping.end() )
+                        {
+                            // Cache encoding
+                            rEmit.m_aGlyphEncoding[ nGlyph ] = nEncodedGlyph;
+
+                            // Update glyph mappings
+                            rEmit.m_aMapping[ nGlyph ].m_nSubsetGlyphID = nEncodedGlyph;
+                            rSubset.m_aMapping[ nGlyphs ].m_nSubsetGlyphID = nEncodedGlyph;
+                        }
+                    }
+                }
+
+                CFRelease( aURL );
+            }
+
+            CFRelease( aPath );
+        }
+
+        osl_removeFile( aTmpName.pData );
+    }
+#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bTextLines )
@@ -2739,6 +2834,58 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
     double fSin = sin( fAngle );
     double fCos = cos( fAngle );
     
+#if defined USE_JAVA && defined MACOSX
+    // Try to register as many glyphs at one time as possible to keep the
+    // font subset size as small as possible
+    int nTmpOffset = 0;
+    long *pTmpGlyphs = pGlyphs;
+    Point aTmpPos;
+    int nTmpIndex = 0;
+    long *pTmpAdvanceWidths = pAdvanceWidths ? pAdvanceWidths : NULL;
+    int *pTmpCharPosAry = pCharPosAry;
+    ImplFontData **pTmpFallbackFonts = pFallbackFonts;
+    sal_Unicode *pTmpUnicodes = pUnicodes;
+    while( ( nGlyphs = rLayout.GetNextGlyphs( nMaxGlyphs - nTmpOffset, pTmpGlyphs, aTmpPos, nTmpIndex, pTmpAdvanceWidths, pTmpCharPosAry ) ) )
+    {
+        for( int i = 0; i < nGlyphs; i++ )
+        {
+            if( pTmpGlyphs[i] & GF_FONTMASK )
+                pTmpFallbackFonts[i] = ( (MultiSalLayout&)rLayout).GetFallbackFontData( ( pTmpGlyphs[i] & GF_FONTMASK ) >> GF_FONTSHIFT );
+            else
+                pTmpFallbackFonts[i] = NULL;
+
+            if( pTmpCharPosAry[i] >= nMinCharPos && pTmpCharPosAry[i] <= nMaxCharPos )
+                pTmpUnicodes[i] = rText.GetChar( pTmpCharPosAry[i] );
+            else
+                pTmpUnicodes[i] = 0;
+        }
+
+        if ( nTmpOffset + nGlyphs < nMaxGlyphs )
+        {
+            nTmpOffset += nGlyphs;
+            pTmpGlyphs += nGlyphs;
+            if ( pTmpAdvanceWidths )
+                pTmpAdvanceWidths += nGlyphs;
+            pTmpCharPosAry += nGlyphs;
+            pTmpFallbackFonts += nGlyphs;
+            pTmpUnicodes += nGlyphs;
+            continue;
+        }
+        else
+        {
+            pTmpGlyphs = pGlyphs;
+            pTmpAdvanceWidths = pAdvanceWidths ? pAdvanceWidths : NULL;
+            pTmpCharPosAry = pCharPosAry;
+            pTmpFallbackFonts = pFallbackFonts;
+            pTmpUnicodes = pUnicodes;
+            registerGlyphs( nTmpOffset + nGlyphs, pTmpGlyphs, pTmpUnicodes, pMappedGlyphs, pMappedFontObjects, pTmpFallbackFonts );
+            nTmpOffset = 0;
+        }
+    }
+    if ( nTmpOffset )
+        registerGlyphs( nTmpOffset, pGlyphs, pUnicodes, pMappedGlyphs, pMappedFontObjects, pFallbackFonts );
+#endif	// USE_JAVA && MACOSX
+
     sal_Int32 nLastMappedFont = -1;
     while( (nGlyphs = rLayout.GetNextGlyphs( nMaxGlyphs, pGlyphs, aPos, nIndex, pAdvanceWidths, pCharPosAry )) )
     {
