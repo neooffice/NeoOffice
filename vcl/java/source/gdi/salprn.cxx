@@ -74,7 +74,6 @@ typedef OSStatus PMPrinterGetPrinterResolutionCount_Type( PMPrinter, UInt32* );
 typedef OSStatus PMRelease_Type( PMObject );
 typedef OSStatus PMSessionDefaultPageFormat_Type( PMPrintSession, PMPageFormat );
 typedef OSStatus PMSessionGetCurrentPrinter_Type( PMPrintSession, PMPrinter* );
-typedef OSStatus PMSetResolution_Type( PMPageFormat, const PMResolution* );
 #include <postmac.h>
 
 using namespace rtl;
@@ -260,9 +259,8 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 					PMRelease_Type *pRelease = (PMRelease_Type *)aModule.getSymbol( OUString::createFromAscii( "PMRelease" ) );
 					PMSessionDefaultPageFormat_Type *pSessionDefaultPageFormat = (PMSessionDefaultPageFormat_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionDefaultPageFormat" ) );
 					PMSessionGetCurrentPrinter_Type *pSessionGetCurrentPrinter = (PMSessionGetCurrentPrinter_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionGetCurrentPrinter" ) );
-					PMSetResolution_Type *pSetResolution = (PMSetResolution_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSetResolution" ) );
 
-					if ( pCreatePageFormat && pGetResolution && pPrinterGetIndexedPrinterResolution && pPrinterGetPrinterResolutionCount && pRelease && pSessionDefaultPageFormat && pSessionGetCurrentPrinter && pSetResolution )
+					if ( pCreatePageFormat && pGetResolution && pPrinterGetIndexedPrinterResolution && pPrinterGetPrinterResolutionCount && pRelease && pSessionDefaultPageFormat && pSessionGetCurrentPrinter )
 					{
 						// Get the current resolution
 						PMResolution aMaxResolution;
@@ -295,8 +293,7 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 								aMaxResolution.vRes = 300;
 
 							// Set the page resolution
-							if ( pSetResolution( aPageFormat, &aMaxResolution ) == kPMNoError )
-								maPrinterData.mpPrinter->maPrinterData.mpVCLPageFormat->setPageResolution( aMaxResolution.hRes, aMaxResolution.vRes );
+							maPrinterData.mpPrinter->maPrinterData.mpVCLPageFormat->setPageResolution( aMaxResolution.hRes, aMaxResolution.vRes );
 
 							// Release the page format object
 							pRelease( aPageFormat );
