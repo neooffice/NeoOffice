@@ -209,6 +209,9 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	SalData *pSalData = GetSalData();
 	if ( maFrameData.mbVisible )
 	{
+		// Cache the native window pointer
+		maFrameData.maSysData.aWindow = (long)maFrameData.mpVCLFrame->getNativeWindow();
+
 		// Update the cached position
 		Rectangle *pBounds = new Rectangle( maFrameData.mpVCLFrame->getBounds() );
 		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pBounds );

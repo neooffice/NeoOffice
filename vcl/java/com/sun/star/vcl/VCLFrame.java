@@ -775,9 +775,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 		graphics = new VCLGraphics(this);
 
-		// Create the native window so that we can access it in the C++ code
-		window.addNotify();
-
 	}
 
 	/**
