@@ -550,9 +550,9 @@ void ImplStyleData::SetStandardStyles()
     aStdFont.SetCharSet( gsl_getSystemTextEncoding() );
     aStdFont.SetWeight( WEIGHT_NORMAL );
 #if defined MACOSX && defined USE_JAVA 
-    // Put Interface User font at the front since it is most likely to be
+    // Use Dialog font as it is in every Java implementation and should be
     // able to handle Asian characters
-    aStdFont.SetName( XubString( RTL_CONSTASCII_USTRINGPARAM( "Interface User;Andale Sans UI;Tahoma;Arial Unicode MS;Geneva;WarpSans;Dialog;Swiss;Lucida;Helvetica;Charcoal;Chicago;Arial;MS Sans Serif;Helv;Times;Times New Roman;Interface System" ) ) );
+    aStdFont.SetName( XubString( RTL_CONSTASCII_USTRINGPARAM( "Dialog" ) ) );
 #else
     aStdFont.SetName( XubString( RTL_CONSTASCII_USTRINGPARAM( "Andale Sans UI;Tahoma;Arial Unicode MS;Interface User;Geneva;WarpSans;Dialog;Swiss;Lucida;Helvetica;Charcoal;Chicago;Arial;MS Sans Serif;Helv;Times;Times New Roman;Interface System" ) ) );
 #endif
