@@ -699,13 +699,7 @@ void SalInstance::Yield( BOOL bWait )
 		// Ignore SALEVENT_SHUTDOWN events when recursing into this method or
 		// when in presentation mode
 		if ( ( nRecursionLevel == 1 && !pSalData->mpPresentationFrame ) || pEvent->getID() != SALEVENT_SHUTDOWN )
-		{
-			if ( pSalData->mpPresentationFrame )
-				pSalData->mpPresentationFrame->maFrameData.mpVCLFrame->setAutoFlush( TRUE );
 			pEvent->dispatch();
-			if ( pSalData->mpPresentationFrame )
-				pSalData->mpPresentationFrame->maFrameData.mpVCLFrame->setAutoFlush( FALSE );
-		}
 		delete pEvent;
 
 		ULONG nCount = ReleaseYieldMutex();
@@ -729,7 +723,11 @@ void SalInstance::Yield( BOOL bWait )
 		if ( pSalData->mpTimerProc && aCurrentTime >= pSalData->maTimeout )
 		{
 			if ( pSalData->mpPresentationFrame )
+			{
 				pSalData->mpPresentationFrame->maFrameData.mpVCLFrame->setAutoFlush( TRUE );
+				for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maPresentationFrameList.begin(); it != pSalData->maPresentationFrameList.end(); ++it )
+					(*it)->maFrameData.mpVCLFrame->setAutoFlush( TRUE );
+			}
 
 			gettimeofday( &pSalData->maTimeout, NULL );
 			pSalData->maTimeout += pSalData->mnTimerInterval;
@@ -738,6 +736,8 @@ void SalInstance::Yield( BOOL bWait )
 			if ( pSalData->mpPresentationFrame )
 			{
 				pSalData->mpPresentationFrame->maFrameData.mpVCLFrame->setAutoFlush( FALSE );
+				for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maPresentationFrameList.begin(); it != pSalData->maPresentationFrameList.end(); ++it )
+					(*it)->maFrameData.mpVCLFrame->setAutoFlush( FALSE );
 			}
 			else
 			{
@@ -776,12 +776,7 @@ void SalInstance::Yield( BOOL bWait )
 		nTimeout = 0;
 
 		USHORT nID = pEvent->getID();
-
-		if ( pSalData->mpPresentationFrame )
-			pSalData->mpPresentationFrame->maFrameData.mpVCLFrame->setAutoFlush( TRUE );
 		pEvent->dispatch();
-		if ( pSalData->mpPresentationFrame )
-			pSalData->mpPresentationFrame->maFrameData.mpVCLFrame->setAutoFlush( FALSE );
 		delete pEvent;
 
 		// If this is not a mouse move event, make another pass through
@@ -924,8 +919,14 @@ void SalInstance::DestroyFrame( SalFrame* pFrame )
 	// Remove this window from the window list
 	if ( pFrame )
 	{
-		GetSalData()->maFrameList.remove( pFrame );
 		pFrame->SetParent( NULL );
+
+		if ( pFrame->maFrameData.mbVisible )
+			pFrame->Show( FALSE );
+
+		SalData *pSalData = GetSalData();
+		pSalData->maFrameList.remove( pFrame );
+
 		delete pFrame;
 	}
 }

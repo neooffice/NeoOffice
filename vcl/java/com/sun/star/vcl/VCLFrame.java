@@ -1473,6 +1473,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * Returns whether or not the native window is a floating window.
+	 *
+	 * @return <code>true</code> if the native window is a floating window
+	 *  otherwise <code>false</code>
+	 */
+	public boolean isFloatingWindow() {
+
+		return !(window instanceof Frame);
+
+	}
+
+	/**
 	 * Invoked when a key has been pressed.
 	 *
 	 * @param e the <code>KeyEvent</code>
@@ -1786,6 +1798,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * Sets the focus to this.
+	 */
+	public void requestFocus() {
+
+		if (!window.isShowing())
+			return;
+
+		// Request keyboard focus
+		if (fullScreenMode || window instanceof Frame)
+			panel.requestFocus();
+
+	}
+
+	/**
 	 * Set the auto flush flag.
 	 *
 	 * @param b the auto flush flag 
@@ -2032,8 +2058,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	/**
 	 * Shows or hides the native window.
 	 *
-	 * @param b <code>true</code> shows this component otherwise and
-	 *  <code>false</code> hides this component
+	 * @param b <code>true</code> shows this component and <code>false</code>
+	 *  hides this component
 	 */
 	public void setVisible(boolean b) {
 
@@ -2065,7 +2091,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
-	 * Brings this window to the front.
+	 * Brings this window to the front without changing focus.
 	 */
 	public void toFront() {
 
@@ -2073,10 +2099,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			return;
 
 		window.toFront();
-
-		// Request keyboard focus
-		if (fullScreenMode || window instanceof Frame)
-			panel.requestFocus();
 
 	}
 

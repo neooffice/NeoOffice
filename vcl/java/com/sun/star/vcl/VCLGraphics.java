@@ -69,6 +69,11 @@ import java.lang.reflect.Method;
 public final class VCLGraphics {
 
 	/**
+	 * The AUTO_FLUSH_INTERVAL constant.
+	 */
+	public final static long AUTO_FLUSH_INTERVAL = 100;
+
+	/**
 	 * The SAL_INVERT_HIGHLIGHT constant.
 	 */
 	public final static int SAL_INVERT_HIGHLIGHT = 0x0001;
@@ -255,6 +260,11 @@ public final class VCLGraphics {
 	private VCLImage image = null;
 
 	/**
+	 * The next auto flush.
+	 */
+	private long nextAutoFlush = 0;
+
+	/**
 	 * The printer page format.
 	 */
 	private VCLPageFormat pageFormat = null;
@@ -365,7 +375,7 @@ public final class VCLGraphics {
 			update = new Rectangle(graphicsBounds);
 
 		if (autoFlush)
-			flush();
+			autoFlush();
 
 	}
 
@@ -383,7 +393,20 @@ public final class VCLGraphics {
 				update = b;
 
 			if (autoFlush)
-				flush();
+				autoFlush();
+		}
+
+	}
+
+	/**
+	 * Flushes if the auto flush timer has expired.
+	 */
+	void autoFlush() {
+
+		long currentTime = System.currentTimeMillis();
+		if (currentTime >= nextAutoFlush) {
+			flush();
+			nextAutoFlush = System.currentTimeMillis() + VCLGraphics.AUTO_FLUSH_INTERVAL;
 		}
 
 	}
@@ -1452,7 +1475,16 @@ public final class VCLGraphics {
 	 */
 	void setAutoFlush(boolean b) {
 
+		if (b == autoFlush)
+			return;
+
 		autoFlush = b;
+		nextAutoFlush = 0;
+
+		if (autoFlush)
+			autoFlush();
+		else
+			flush();
 
 	}
 

@@ -48,7 +48,57 @@
 #include <salframe.hxx>
 #endif
 
+#ifdef MACOSX
+
+#ifndef _OSL_MUTEX_HXX_
+#include <osl/mutex.hxx>
+#endif
+
+#include <premac.h>
+#undef ShowWindow
+#include <Carbon/Carbon.h>
+#include <postmac.h>
+
+using namespace osl;
+
+static bool bNoActivate = false;
+static bool bNoSelectWindow = false;
+static Mutex aMutex;
+
+#endif	// MACOSX
+
 using namespace vcl;
+
+// ============================================================================
+
+#ifdef MACOSX
+static void JNICALL Java_com_apple_mrj_macos_generated_MacWindowFunctions_SelectWindow( JNIEnv *pEnv, jobject object, jint pWindowRef )
+{
+	MutexGuard aGuard( aMutex );
+
+	if ( bNoActivate )
+		return;
+	
+	if ( bNoSelectWindow )
+		BringToFront( (WindowRef)pWindowRef );
+	else 
+		ActivateWindow( (WindowRef)pWindowRef, true );
+}
+#endif	// MACOSX
+
+// ----------------------------------------------------------------------------
+
+#ifdef MACOSX
+static void JNICALL Java_com_apple_mrj_macos_generated_MacWindowFunctions_ShowWindow( JNIEnv *pEnv, jobject object, jint pWindowRef )
+{
+	MutexGuard aGuard( aMutex );
+
+	if ( bNoActivate )
+		ShowHide( (WindowRef)pWindowRef, true );
+	else
+		MacShowWindow( (WindowRef)pWindowRef );
+}
+#endif	// MACOSX
 
 // ============================================================================
 
@@ -62,9 +112,32 @@ jclass com_sun_star_vcl_VCLFrame::getMyClass()
 	{
 		VCLThreadAttach t;
 		if ( !t.pEnv ) return (jclass)NULL;
+
+#ifdef MACOSX
+		// Test the JVM version and if it is below 1.4, use Carbon window APIs
+		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+		{
+			// We need to replace the native MacWindowFunctions.SelectWindow()
+			// method so that it will not change window focus when invoked
+			jclass macWindowFunctionsClass = t.pEnv->FindClass( "com/apple/mrj/macos/generated/MacWindowFunctions" );
+			if ( macWindowFunctionsClass )
+			{
+				JNINativeMethod pMethods[2];
+				pMethods[0].name = "SelectWindow";
+				pMethods[0].signature = "(I)V";
+				pMethods[0].fnPtr = (void *)Java_com_apple_mrj_macos_generated_MacWindowFunctions_SelectWindow;
+				pMethods[1].name = "ShowWindow";
+				pMethods[1].signature = "(I)V";
+				pMethods[1].fnPtr = (void *)Java_com_apple_mrj_macos_generated_MacWindowFunctions_ShowWindow;
+				t.pEnv->RegisterNatives( macWindowFunctionsClass, pMethods, 2 );
+			}
+		}
+#endif	// MACOSX
+
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLFrame" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
+
 	}
 	return theClass;
 }
@@ -369,6 +442,46 @@ ULONG com_sun_star_vcl_VCLFrame::getState()
 
 // ----------------------------------------------------------------------------
 
+sal_Bool com_sun_star_vcl_VCLFrame::isFloatingWindow()
+{
+	static jmethodID mID = NULL;
+	sal_Bool out = sal_False;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Z";
+			mID = t.pEnv->GetMethodID( getMyClass(), "isFloatingWindow", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethod( object, getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLFrame::requestFocus()
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "requestFocus", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+	}
+}
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLFrame::setAutoFlush( sal_Bool _par0 )
 {
 	static jmethodID mID = NULL;
@@ -560,7 +673,7 @@ void com_sun_star_vcl_VCLFrame::setTitle( ::rtl::OUString _par0 )
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0 )
+void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0, sal_Bool _par1 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -574,9 +687,18 @@ void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0 )
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
+#ifdef MACOSX
+			MutexGuard aGuard( aMutex );
+			bNoActivate = _par1;
+#endif	// MACOSX
+
 			jvalue args[1];
 			args[0].z = jboolean( _par0 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+
+#ifdef MACOSX
+			bNoActivate = false;
+#endif	// MACOSX
 		}
 	}
 }
@@ -596,6 +718,17 @@ void com_sun_star_vcl_VCLFrame::toFront()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
+		{
+#ifdef MACOSX
+			MutexGuard aGuard( aMutex );
+			bNoSelectWindow = true;
+#endif	// MACOSX
+
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+
+#ifdef MACOSX
+			bNoSelectWindow = false;
+#endif	// MACOSX
+		}
 	}
 }

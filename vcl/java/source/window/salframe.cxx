@@ -190,8 +190,11 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	if ( bVisible == maFrameData.mbVisible )
 		return;
 
+	if ( bNoActivate && maFrameData.mpVCLFrame->isFloatingWindow() )
+		bNoActivate = FALSE;
+
 	maFrameData.mbVisible = bVisible;
-	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible );
+	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible, bNoActivate );
 
 	// Reset graphics
 	com_sun_star_vcl_VCLGraphics *pVCLGraphics = maFrameData.mpVCLFrame->getGraphics();
@@ -213,15 +216,25 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		com_sun_star_vcl_VCLEvent aVCLPaintEvent( SALEVENT_PAINT, this, NULL );
 		pSalData->mpEventQueue->postCachedEvent( &aVCLPaintEvent );
 
-		if ( pSalData->mpPresentationFrame )
+		if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame != this )
+		{
+			pSalData->maPresentationFrameList.remove( this );
 			pSalData->maPresentationFrameList.push_back( this );
+		}
 	}
 	else
 	{
 		if ( pSalData->mpFocusFrame == this )
+		{
 			pSalData->mpFocusFrame = NULL;
 
-		if ( pSalData->mpPresentationFrame )
+			// When in presentation mode, explicitly set the focus to the
+			// presentation frame
+			if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame != this )
+				pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
+		}
+
+		if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame != this )
 			pSalData->maPresentationFrameList.remove( this );
 	}
 }
@@ -509,14 +522,32 @@ void SalFrame::ToTop( USHORT nFlags )
 	if ( nFlags & SAL_FRAME_TOTOP_RESTOREWHENMIN && maFrameData.mpVCLFrame->getState() == SAL_FRAMESTATE_MINIMIZED )
 		maFrameData.mpVCLFrame->setState( SAL_FRAMESTATE_NORMAL );
 
+	SalData *pSalData = GetSalData();
+
 	if ( ! ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) )
 	{
+		if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame != this && maFrameData.mbVisible )
+		{
+			pSalData->maPresentationFrameList.remove( this );
+			pSalData->maPresentationFrameList.push_back( this );
+		}
+
+		maFrameData.mpVCLFrame->toFront();
+
 		for ( ::std::list< SalFrame* >::const_iterator it = maFrameData.maChildren.begin(); it != maFrameData.maChildren.end(); ++it )
-			(*it)->ToTop( nFlags );
+			(*it)->ToTop( nFlags & ~SAL_FRAME_TOTOP_GRABFOCUS );
 	}
 
 	if ( nFlags & ( SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) )
-		maFrameData.mpVCLFrame->toFront();
+	{
+		if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame != this && maFrameData.mbVisible )
+		{
+			pSalData->maPresentationFrameList.remove( this );
+			pSalData->maPresentationFrameList.push_back( this );
+		}
+
+		maFrameData.mpVCLFrame->requestFocus();
+	}
 }
 
 // -----------------------------------------------------------------------
@@ -682,7 +713,7 @@ void SalFrame::SetParent( SalFrame* pNewParent )
 bool SalFrame::SetPluginParent( SystemParentData* pNewParent )
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalFrame::SetPluginParentnot implemented\n" );
+	fprintf( stderr, "SalFrame::SetPluginParent not implemented\n" );
 #endif
 	return false;
 }

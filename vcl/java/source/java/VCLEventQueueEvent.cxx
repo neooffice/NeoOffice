@@ -225,15 +225,10 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pSalData->mpFocusFrame = NULL;
 				dispatchEvent( nID, pFrame, NULL );
 
-				// When in presentation mode, set the focus to the last window
-				// that was shown after presentation mode was entered
+				// When in presentation mode, explicitly set the focus to the
+				// presentation frame
 				if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame != pFrame )
-				{
-					if ( pSalData->maPresentationFrameList.size() )
-						pSalData->maPresentationFrameList.back()->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
-					else
-						pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
-				}
+					pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
 			}
 			return;
 		}
