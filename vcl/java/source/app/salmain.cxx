@@ -65,7 +65,7 @@ using namespace vos;
 class SVMainThread : public OThread
 {
 protected:
-	virtual void run() { SVMain(); }
+	virtual void run() { SVMain(); _exit( 0 ); }
 };
 
 #endif
