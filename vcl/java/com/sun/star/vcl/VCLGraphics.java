@@ -1173,14 +1173,12 @@ public final class VCLGraphics {
 				BufferedImage i = image.getImage();
 				Panel p = frame.getPanel();
 				if (i != null && p != null) {
-					synchronized (p.getTreeLock()) {
-						Graphics2D g = (Graphics2D)p.getGraphics();
-						if (g != null) {
-							g.setClip(update);
-							g.drawRenderedImage(i, null);
-							g.dispose();
-							update = null;
-						}
+					Graphics2D g = (Graphics2D)p.getGraphics();
+					if (g != null) {
+						g.setClip(update);
+						g.drawRenderedImage(i, null);
+						g.dispose();
+						update = null;
 					}
 				}
 			}

@@ -68,8 +68,10 @@ import java.awt.event.WindowListener;
 import java.awt.font.TextHitInfo;
 import java.awt.im.InputContext;
 import java.awt.im.InputMethodRequests;
+import java.awt.image.BufferedImage;
 import java.text.AttributedCharacterIterator;
 import java.text.AttributedString;
+import java.util.HashMap;
 
 /**
  * The Java class that implements the SalFrame C++ class methods.
@@ -569,6 +571,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private static boolean capture = false;
 
+	/** 
+	 * The custom cursors.
+	 */
+	private static HashMap customCursors = null;
+
 	/**
 	 * The shared input context.
 	 */
@@ -608,6 +615,14 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// input contexts cause strange behavior on Mac OS X
 		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
 			inputContext = InputContext.getInstance();
+
+		// Load pointer images
+		Toolkit t = Toolkit.getDefaultToolkit();
+		customCursors = new HashMap();
+		BufferedImage img = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB_PRE);
+		Cursor c = t.createCustomCursor(img, new Point(0, 0), "POINTER_NULL");
+		if (c != null)
+			customCursors.put(new Integer(POINTER_NULL), c);
 
 	}
 	
@@ -1764,128 +1779,136 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void setPointer(int style) {
 
-		int cursor = Cursor.DEFAULT_CURSOR;
-		switch (style) {
-			case POINTER_WAIT:
-				cursor = Cursor.WAIT_CURSOR;
-				break;
-			case POINTER_TEXT:
-				cursor = Cursor.TEXT_CURSOR;
-				break;
-			case POINTER_CROSS:
-				cursor = Cursor.CROSSHAIR_CURSOR;
-				break;
-			case POINTER_MOVE:
-				cursor = Cursor.MOVE_CURSOR;
-				break;
-			case POINTER_NSIZE:
-			case POINTER_WINDOW_NSIZE:
-				cursor = Cursor.N_RESIZE_CURSOR;
-				break;
-			case POINTER_SSIZE:
-			case POINTER_WINDOW_SSIZE:
-				cursor = Cursor.S_RESIZE_CURSOR;
-				break;
-			case POINTER_WSIZE:
-			case POINTER_WINDOW_WSIZE:
-				cursor = Cursor.W_RESIZE_CURSOR;
-				break;
-			case POINTER_ESIZE:
-			case POINTER_WINDOW_ESIZE:
-				cursor = Cursor.E_RESIZE_CURSOR;
-				break;
-			case POINTER_NWSIZE:
-			case POINTER_WINDOW_NWSIZE:
-				cursor = Cursor.NW_RESIZE_CURSOR;
-				break;
-			case POINTER_NESIZE:
-			case POINTER_WINDOW_NESIZE:
-				cursor = Cursor.NE_RESIZE_CURSOR;
-				break;
-			case POINTER_SWSIZE:
-			case POINTER_WINDOW_SWSIZE:
-				cursor = Cursor.SW_RESIZE_CURSOR;
-				break;
-			case POINTER_SESIZE:
-			case POINTER_WINDOW_SESIZE:
-				cursor = Cursor.SE_RESIZE_CURSOR;
-				break;
-			case POINTER_HAND:
-				cursor = Cursor.HAND_CURSOR;
-				break;
-			case POINTER_TEXT_VERTICAL:
-				cursor = Cursor.TEXT_CURSOR;
-				break;
-			case POINTER_ARROW:
-			case POINTER_NULL:
-			case POINTER_HELP:
-			case POINTER_HSPLIT:
-			case POINTER_VSPLIT:
-			case POINTER_HSIZEBAR:
-			case POINTER_VSIZEBAR:
-			case POINTER_REFHAND:
-			case POINTER_PEN:
-			case POINTER_MAGNIFY:
-			case POINTER_FILL:
-			case POINTER_ROTATE:
-			case POINTER_HSHEAR:
-			case POINTER_VSHEAR:
-			case POINTER_MIRROR:
-			case POINTER_CROOK:
-			case POINTER_CROP:
-			case POINTER_MOVEPOINT:
-			case POINTER_MOVEBEZIERWEIGHT:
-			case POINTER_MOVEDATA:
-			case POINTER_COPYDATA:
-			case POINTER_LINKDATA:
-			case POINTER_MOVEDATALINK:
-			case POINTER_COPYDATALINK:
-			case POINTER_MOVEFILE:
-			case POINTER_COPYFILE:
-			case POINTER_LINKFILE:
-			case POINTER_MOVEFILELINK:
-			case POINTER_COPYFILELINK:
-			case POINTER_MOVEFILES:
-			case POINTER_COPYFILES:
-			case POINTER_NOTALLOWED:
-			case POINTER_DRAW_LINE:
-			case POINTER_DRAW_RECT:
-			case POINTER_DRAW_POLYGON:
-			case POINTER_DRAW_BEZIER:
-			case POINTER_DRAW_ARC:
-			case POINTER_DRAW_PIE:
-			case POINTER_DRAW_CIRCLECUT:
-			case POINTER_DRAW_ELLIPSE:
-			case POINTER_DRAW_FREEHAND:
-			case POINTER_DRAW_CONNECT:
-			case POINTER_DRAW_TEXT:
-			case POINTER_DRAW_CAPTION:
-			case POINTER_CHART:
-			case POINTER_DETECTIVE:
-			case POINTER_PIVOT_COL:
-			case POINTER_PIVOT_ROW:
-			case POINTER_PIVOT_FIELD:
-			case POINTER_CHAIN:
-			case POINTER_CHAIN_NOTALLOWED:
-			case POINTER_TIMEEVENT_MOVE:
-			case POINTER_TIMEEVENT_SIZE:
-			case POINTER_AUTOSCROLL_N:
-			case POINTER_AUTOSCROLL_S:
-			case POINTER_AUTOSCROLL_W:
-			case POINTER_AUTOSCROLL_E:
-			case POINTER_AUTOSCROLL_NW:
-			case POINTER_AUTOSCROLL_NE:
-			case POINTER_AUTOSCROLL_SW:
-			case POINTER_AUTOSCROLL_SE:
-			case POINTER_AUTOSCROLL_NS:
-			case POINTER_AUTOSCROLL_WE:
-			case POINTER_AUTOSCROLL_NSWE:
-			case POINTER_AIRBRUSH:
-				break;
+		Cursor c = (Cursor)VCLFrame.customCursors.get(new Integer(style));
+
+		if (c == null)
+		{
+			int cursor = Cursor.DEFAULT_CURSOR;
+			switch (style) {
+				case POINTER_WAIT:
+					cursor = Cursor.WAIT_CURSOR;
+					break;
+				case POINTER_TEXT:
+					cursor = Cursor.TEXT_CURSOR;
+					break;
+				case POINTER_CROSS:
+					cursor = Cursor.CROSSHAIR_CURSOR;
+					break;
+				case POINTER_MOVE:
+					cursor = Cursor.MOVE_CURSOR;
+					break;
+				case POINTER_NSIZE:
+				case POINTER_WINDOW_NSIZE:
+					cursor = Cursor.N_RESIZE_CURSOR;
+					break;
+				case POINTER_SSIZE:
+				case POINTER_VSPLIT:
+				case POINTER_VSIZEBAR:
+				case POINTER_WINDOW_SSIZE:
+					cursor = Cursor.S_RESIZE_CURSOR;
+					break;
+				case POINTER_WSIZE:
+				case POINTER_WINDOW_WSIZE:
+					cursor = Cursor.W_RESIZE_CURSOR;
+					break;
+				case POINTER_ESIZE:
+				case POINTER_HSPLIT:
+				case POINTER_HSIZEBAR:
+				case POINTER_WINDOW_ESIZE:
+					cursor = Cursor.E_RESIZE_CURSOR;
+					break;
+				case POINTER_NWSIZE:
+				case POINTER_WINDOW_NWSIZE:
+					cursor = Cursor.NW_RESIZE_CURSOR;
+					break;
+				case POINTER_NESIZE:
+				case POINTER_WINDOW_NESIZE:
+					cursor = Cursor.NE_RESIZE_CURSOR;
+					break;
+				case POINTER_SWSIZE:
+				case POINTER_WINDOW_SWSIZE:
+					cursor = Cursor.SW_RESIZE_CURSOR;
+					break;
+				case POINTER_SESIZE:
+				case POINTER_WINDOW_SESIZE:
+					cursor = Cursor.SE_RESIZE_CURSOR;
+					break;
+				case POINTER_HAND:
+				case POINTER_REFHAND:
+					cursor = Cursor.HAND_CURSOR;
+					break;
+				case POINTER_TEXT_VERTICAL:
+				case POINTER_NULL:
+					cursor = Cursor.TEXT_CURSOR;
+					break;
+				case POINTER_ARROW:
+				case POINTER_HELP:
+				case POINTER_PEN:
+				case POINTER_MAGNIFY:
+				case POINTER_FILL:
+				case POINTER_ROTATE:
+				case POINTER_HSHEAR:
+				case POINTER_VSHEAR:
+				case POINTER_MIRROR:
+				case POINTER_CROOK:
+				case POINTER_CROP:
+				case POINTER_MOVEPOINT:
+				case POINTER_MOVEBEZIERWEIGHT:
+				case POINTER_MOVEDATA:
+				case POINTER_COPYDATA:
+				case POINTER_LINKDATA:
+				case POINTER_MOVEDATALINK:
+				case POINTER_COPYDATALINK:
+				case POINTER_MOVEFILE:
+				case POINTER_COPYFILE:
+				case POINTER_LINKFILE:
+				case POINTER_MOVEFILELINK:
+				case POINTER_COPYFILELINK:
+				case POINTER_MOVEFILES:
+				case POINTER_COPYFILES:
+				case POINTER_NOTALLOWED:
+				case POINTER_DRAW_LINE:
+				case POINTER_DRAW_RECT:
+				case POINTER_DRAW_POLYGON:
+				case POINTER_DRAW_BEZIER:
+				case POINTER_DRAW_ARC:
+				case POINTER_DRAW_PIE:
+				case POINTER_DRAW_CIRCLECUT:
+				case POINTER_DRAW_ELLIPSE:
+				case POINTER_DRAW_FREEHAND:
+				case POINTER_DRAW_CONNECT:
+				case POINTER_DRAW_TEXT:
+				case POINTER_DRAW_CAPTION:
+				case POINTER_CHART:
+				case POINTER_DETECTIVE:
+				case POINTER_PIVOT_COL:
+				case POINTER_PIVOT_ROW:
+				case POINTER_PIVOT_FIELD:
+				case POINTER_CHAIN:
+				case POINTER_CHAIN_NOTALLOWED:
+				case POINTER_TIMEEVENT_MOVE:
+				case POINTER_TIMEEVENT_SIZE:
+				case POINTER_AUTOSCROLL_N:
+				case POINTER_AUTOSCROLL_S:
+				case POINTER_AUTOSCROLL_W:
+				case POINTER_AUTOSCROLL_E:
+				case POINTER_AUTOSCROLL_NW:
+				case POINTER_AUTOSCROLL_NE:
+				case POINTER_AUTOSCROLL_SW:
+				case POINTER_AUTOSCROLL_SE:
+				case POINTER_AUTOSCROLL_NS:
+				case POINTER_AUTOSCROLL_WE:
+				case POINTER_AUTOSCROLL_NSWE:
+				case POINTER_AIRBRUSH:
+					cursor = Cursor.DEFAULT_CURSOR;
+					break;
+			}
+
+			c = Cursor.getPredefinedCursor(cursor);
 		}
 
-		if (window != null) {
-			window.setCursor(Cursor.getPredefinedCursor(cursor));
+		if (c != null && window != null) {
+			window.setCursor(c);
 			Toolkit.getDefaultToolkit().sync();
 		}
 
