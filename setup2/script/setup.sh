@@ -43,7 +43,7 @@ error()
     if [ ! -z "$@" ] ; then
         echo "Error: $@"
     fi
-    echo "Usage: $0 [-h] [-repair]"
+    echo "Usage: $0 [-h] [-locale <locale>] [-repair]"
     exit 1
 }
 
@@ -69,21 +69,61 @@ locale=""
 repair=""
 while [ ! -z "$1" ] ; do
     case "$1" in
+    -locale)
+        shift
+        locale="$1"
+        shift;;
     -repair)
         repair="true"
         shift;;
     -h)
         error;;
     *)
-        error "$1 argument is not recognized";;
+        shift;;
     esac
 done
 
+# Match the locale to one of the installed locales
+lang=`echo "$locale" | awk -F- '{ print $1 }'`
+country=`echo "$locale" | awk -F- '{ print $2 }'`
+locales="de en-US it es"
+matchedlocale=""
+for i in $locales ; do
+    if [ "$locale" = "$i" ] ; then
+        matchedlocale="$i"
+        break
+    fi
+done
+if [ -z "$matchedlocale" ] ; then
+    if [ -z "$country" ] ; then
+        for i in $locales ; do
+            ilang=`echo "$i" | awk -F- '{ print $1 }'`
+            if [ "$lang" = "$ilang" ] ; then
+                matchedlocale="$i"
+                break
+            fi
+        done
+    else
+        for i in $locales ; do
+            if [ "$lang" = "$i" ] ; then
+                matchedlocale="$i"
+                break
+            fi
+        done
+    fi
+fi
+if [ -z "$matchedlocale" ] ; then
+    locale="en-US"
+else
+    locale="$matchedlocale"
+fi
+
 # Create user installation directory
 configdir="$userinstall/config"
-registrydir="$userinstall/registry"
-if [ ! -d "$configdir" -o ! -d "$registrydir" ]; then
+registrydir="$userinstall/registry/data/org/openoffice"
+if [ ! -d "$configdir" -o ! -d "$registrydir" ] ; then
     repair="true"
+    mkdir -p "$userinstall"
 fi
 if [ ! -z "$repair" ] ; then
     chmod -Rf u+rw "$userinstall"
@@ -91,10 +131,52 @@ if [ ! -z "$repair" ] ; then
     mkdir -p "$userinstall"
     cp -Rf "$userbase"/* "$userinstall"
     chmod -Rf u+rw "$userinstall"
-    if [ ! -d "$configdir" -o ! -d "$registrydir" ]; then
+    if [ ! -d "$configdir" -o ! -d "$registrydir" ] ; then
         rm -Rf "$userinstall"
         error "Installation of files in the $userinstall directory failed"
     fi
+fi
+
+# Set the locale
+setupxml="$registrydir/Setup.xcu"
+if [ ! -f "$setupxml" ] ; then
+    error
+fi
+setupxmlbak="$setupxml.bak"
+rm -f "$setupxmlbak"
+if [ ! -f "$setupxmlbak" ] ; then
+    cp -f "$setupxml" "$setupxmlbak"
+
+    # Begin multi-line pattern
+    localepattern='/<prop oor:name="ooLocale" oor:type="xs:string">/{
+N
+s#<value.*$#<value>'"$locale"'</value>#
+}'
+    # End multi-line pattern
+
+    sed -e "$localepattern" "$setupxmlbak" > "$setupxml"
+    rm -f "$setupxmlbak"
+fi
+
+# Make locale the default document language
+linguxml="$registrydir/Office/Linguistic.xcu"
+if [ ! -f "$linguxml" ] ; then
+    error
+fi
+linguxmlbak="$linguxml.bak"
+rm -f "$linguxmlbak"
+if [ ! -f "$linguxmlbak" ] ; then
+    cp -f "$linguxml" "$linguxmlbak"
+
+    # Begin multi-line pattern
+    deflocalepattern='/<prop oor:name="DefaultLocale" oor:type="xs:string">/{
+N
+s#<value/>#<value>'"$locale"'</value>#
+}'
+    # End multi-line pattern
+
+    sed -e "$deflocalepattern" "$linguxmlbak" > "$linguxml"
+    rm -f "$linguxmlbak"
 fi
 
 # Create javarc file
