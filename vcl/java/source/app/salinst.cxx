@@ -172,12 +172,14 @@ void SVMainThread::run()
 		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
 		{
 			// Set up native menu event handler
-			EventTypeSpec aTypes[ 2 ];
+			EventTypeSpec aTypes[ 3 ];
 			aTypes[ 0 ].eventClass = kEventClassMenu;
 			aTypes[ 0 ].eventKind = kEventMenuBeginTracking;
-			aTypes[ 1 ].eventClass = kEventClassAppleEvent;
-			aTypes[ 1 ].eventKind = kEventAppleEvent;
-			InstallApplicationEventHandler( CarbonEventHandler, 2, aTypes, NULL, NULL );
+			aTypes[ 1 ].eventClass = kEventClassMenu;
+			aTypes[ 1 ].eventKind = kEventMenuMatchKey;
+			aTypes[ 2 ].eventClass = kEventClassAppleEvent;
+			aTypes[ 2 ].eventKind = kEventAppleEvent;
+			InstallApplicationEventHandler( CarbonEventHandler, 3, aTypes, NULL, NULL );
 		}
 	}
 #endif	// MACOSX
@@ -315,6 +317,11 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 {
 	UInt32 nClass = GetEventClass( aEvent );
 	UInt32 nKind = GetEventKind( aEvent );
+
+	// Let the VCL event handlers handle menu shortcuts
+	if ( nClass == kEventClassMenu && nKind == kEventMenuMatchKey )
+		return menuItemNotFoundErr;
+
 	bool bYieldForMenuEvent = ( nClass == kEventClassMenu && nKind == kEventMenuBeginTracking );
 	bool bYieldForAppleEvent = ( nClass == kEventClassAppleEvent && nKind == kEventAppleEvent );
 
