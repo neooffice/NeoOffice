@@ -127,6 +127,8 @@ using namespace vcl;
 
 bool ImplHashEquality::operator()( const ImplATSLayoutDataHash *p1, const ImplATSLayoutDataHash *p2 ) const
 {
+	// HACK: Don't compare leading and trailing spaces as they might not be
+	// valid memory
 	return ( p1->mnFallbackLevel == p2->mnFallbackLevel &&
 		p1->mnLen == p2->mnLen &&
 		p1->mnFontID == p2->mnFontID &&
@@ -135,7 +137,7 @@ bool ImplHashEquality::operator()( const ImplATSLayoutDataHash *p1, const ImplAT
 		p1->mbAntialiased == p2->mbAntialiased &&
 		p1->mbRTL == p2->mbRTL &&
 		p1->mbVertical == p2->mbVertical &&
-		rtl_ustr_compare_WithLength( p1->mpStr, p1->mnLen, p2->mpStr, p2->mnLen ) == 0 );
+		rtl_ustr_compare_WithLength( p1->mpStr + 1, p1->mnLen - 2, p2->mpStr + 1, p2->mnLen - 2 ) == 0 );
 }
 
 // ============================================================================
@@ -154,15 +156,15 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 
 	ImplATSLayoutDataHash *pLayoutHash = new ImplATSLayoutDataHash();
 	pLayoutHash->mnFallbackLevel = nFallbackLevel;
-	pLayoutHash->mnLen = rArgs.mnLength;
+	pLayoutHash->mnLen = rArgs.mnLength + 2;
 	pLayoutHash->mnFontID = (ATSUFontID)pVCLFont->getNativeFont();
 	pLayoutHash->mnFontSize = pVCLFont->getSize();
 	pLayoutHash->mfFontScaleX = pVCLFont->getScaleX();
 	pLayoutHash->mbAntialiased = pVCLFont->isAntialiased();
 	pLayoutHash->mbRTL = ( rArgs.mnFlags & SAL_LAYOUT_BIDI_RTL );
 	pLayoutHash->mbVertical = ( rArgs.mnFlags & SAL_LAYOUT_VERTICAL );
-	pLayoutHash->mpStr = (sal_Unicode *)rArgs.mpStr;
-	pLayoutHash->mnStrHash = rtl_ustr_hashCode_WithLength( pLayoutHash->mpStr, pLayoutHash->mnLen );
+	pLayoutHash->mpStr = (sal_Unicode *)( rArgs.mpStr - 1 );
+	pLayoutHash->mnStrHash = rtl_ustr_hashCode_WithLength( rArgs.mpStr, rArgs.mnLength );
 
 	// Search cache for matching layout
 	::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplHash, ImplHashEquality >::const_iterator it = maLayoutCache.find( pLayoutHash );
@@ -171,9 +173,13 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 
 	if ( !pLayoutData )
 	{
-		// Copy the string so that we can cache it
+		// Copy the string so that we can cache it and add leading and trailing
+		// spaces so that ATSUGetGlyphInfo() will not fail as described in
+		// bug 554
 		pLayoutHash->mpStr = (sal_Unicode *)rtl_allocateMemory( pLayoutHash->mnLen * sizeof( sal_Unicode ) );
-		memcpy( pLayoutHash->mpStr, rArgs.mpStr, pLayoutHash->mnLen * sizeof( sal_Unicode ) );
+		pLayoutHash->mpStr[ 0 ] = 0x0020;
+		memcpy( pLayoutHash->mpStr + 1, rArgs.mpStr, rArgs.mnLength * sizeof( sal_Unicode ) );
+		pLayoutHash->mpStr[ pLayoutHash->mnLen - 1 ] = 0x0020;
 
 		pLayoutData = new ImplATSLayoutData( rArgs, pLayoutHash, nFallbackLevel, pVCLFont );
 
@@ -400,6 +406,10 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 					fCurrentX = 0;
 				mpCharAdvances[ i ] = Float32ToLong( Fix2X( fCurrentX ) * mpHash->mfFontScaleX );
 			}
+			else if ( ATSUGetUnjustifiedBounds( maLayout, i, 1, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
+			{
+				mpCharAdvances[ i ] = Float32ToLong( Fix2X( fAfter ) * mpHash->mfFontScaleX );
+			}
 		}
 	
 		if ( ATSUGetUnjustifiedBounds( maLayout, i, 1, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
@@ -417,6 +427,10 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 				if ( fCurrentX < 0 )
 					fCurrentX = 0;
 				mpCharAdvances[ i ] = Float32ToLong( Fix2X( fCurrentX ) * mpHash->mfFontScaleX );
+			}
+			else if ( ATSUGetUnjustifiedBounds( maLayout, i, 1, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
+			{
+				mpCharAdvances[ i ] = Float32ToLong( Fix2X( fAfter ) * mpHash->mfFontScaleX );
 			}
 		}
 	
@@ -678,7 +692,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		rArgs.ResetPos();
 		while ( rArgs.GetNextPos( &nCharPos, &bPosRTL ) )
 		{
-			if ( mpLayoutData->mpNeedFallback[ nCharPos ] )
+			if ( mpLayoutData->mpNeedFallback[ nCharPos + 1 ] )
 				rArgs.NeedFallback( nCharPos, bPosRTL );
 		}
 
@@ -702,8 +716,9 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	rArgs.ResetPos();
 	while ( rArgs.GetNextPos( &nCharPos, &bPosRTL ) )
 	{
-		sal_Unicode nChar = mpLayoutData->mpHash->mpStr[ nCharPos ];
-		long nCharWidth = mpLayoutData->mpCharAdvances[ nCharPos ];
+		int nIndex = nCharPos + 1;
+		sal_Unicode nChar = mpLayoutData->mpHash->mpStr[ nIndex ];
+		long nCharWidth = mpLayoutData->mpCharAdvances[ nIndex ];
 
 		// Zero width and overlapping characters can cause problems in the OOo
 		// code
@@ -730,7 +745,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		}
 
 		bool bFirstGlyph = true;
-		for ( int i = mpLayoutData->mpCharsToGlyphs[ nCharPos ]; i < mpLayoutData->mnGlyphCount && mpLayoutData->mpGlyphInfoArray->glyphs[ i ].charIndex == nCharPos; i++ )
+		for ( int i = mpLayoutData->mpCharsToGlyphs[ nIndex ]; i < mpLayoutData->mnGlyphCount && mpLayoutData->mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
 		{
 			long nGlyph = mpLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID;
 
@@ -781,12 +796,11 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 	int nMaxGlyphs( mpLayoutData->mnGlyphCount );
 	long aGlyphArray[ nMaxGlyphs ];
 	long aDXArray[ nMaxGlyphs ];
-	int aCharPosArray[ nMaxGlyphs ];
 
 	Point aPos;
 	for ( int nStart = 0; ; )
 	{
-		int nGlyphCount = GetNextGlyphs( nMaxGlyphs, aGlyphArray, aPos, nStart, aDXArray, aCharPosArray );
+		int nGlyphCount = GetNextGlyphs( nMaxGlyphs, aGlyphArray, aPos, nStart, aDXArray, NULL );
 
 		if ( !nGlyphCount )
 			break;
@@ -866,7 +880,8 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector )
 			continue;
 		}
 
-		for ( int i = mpLayoutData->mpCharsToGlyphs[ aCharPosArray[ 0 ] ]; i < mpLayoutData->mnGlyphCount && mpLayoutData->mpGlyphInfoArray->glyphs[ i ].charIndex == aCharPosArray[ 0 ]; i++ )
+		int nIndex = aCharPosArray[ 0 ] + 1;
+		for ( int i = mpLayoutData->mpCharsToGlyphs[ nIndex ]; i < mpLayoutData->mnGlyphCount && mpLayoutData->mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
 		{
 			long nGlyph = mpLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID;
 			if ( ( aGlyphArray[ 0 ] & GF_IDXMASK ) != nGlyph )
