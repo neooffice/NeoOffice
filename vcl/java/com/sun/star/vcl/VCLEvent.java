@@ -1103,7 +1103,6 @@ public final class VCLEvent extends AWTEvent {
 	 */
 	public int getKeyCode() {
 
-
 		int outCode = 0;
 		if (source instanceof KeyEvent) {
 			switch (((KeyEvent)source).getKeyCode()) {
@@ -1119,12 +1118,14 @@ public final class VCLEvent extends AWTEvent {
 						outCode = VCLEvent.KEY_BACKSPACE;
 					else if (keyChar == 0x09)
 						outCode = VCLEvent.KEY_TAB;
-					else if (keyChar == 0x0A || keyChar == 0x0D)
+					else if (keyChar == 0x03 || keyChar == 0x0A || keyChar == 0x0D)
 						outCode = VCLEvent.KEY_RETURN;
 					else if (keyChar == 0x1B)
 						outCode = VCLEvent.KEY_ESCAPE;
 					else if (keyChar == 0x20)
 						outCode = VCLEvent.KEY_SPACE;
+					else if (keyChar == 0x7f)
+						outCode = VCLEvent.KEY_DELETE;
 					else
 						outCode = 0;
 					break;

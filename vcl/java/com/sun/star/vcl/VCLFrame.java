@@ -1524,10 +1524,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (queue == null)
 			return;
 
-		// Treat an "Enter" key as a "Return" key
-		if (e.getKeyChar() == (char)3)
-			e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers(), e.getKeyCode(), (char)10);
-			
 		// If a modifier is used to set the character (e.g. the "Alt-c"
 		// generates a "c-cedilla" in the Mac OS X U.S. keyboard, we must strip
 		// off the modifiers so that the C++ code does not get confused.
