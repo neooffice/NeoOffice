@@ -181,7 +181,7 @@ build.package: build.neo_patches
 	/usr/bin/package "$(INSTALL_HOME)/package" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).info" -d "$(INSTALL_HOME)"
 	sh -e -c 'if [ ! -d "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources" ] ; then mv "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg" "$(INSTALL_HOME)/Resources" ; mkdir -p "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents" ; mv "$(INSTALL_HOME)/Resources" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents" ; fi'
 	cp "etc/gpl.html" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/License.html"
-	cd "bin" ; sh -e -c 'for i in preflight postflight ; do sed "s#\$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g" "$${i}" > "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$${i}" ; chmod 755 "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$${i}" ; done'
+	cd "bin" ; sh -e -c 'for i in InstallationCheck preflight postflight ; do sed "s#\$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g" "$${i}" > "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$${i}" ; chmod 755 "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$${i}" ; done'
 	chmod -Rf u+w,og-w,a+r "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg"
 	touch "$@"
 
