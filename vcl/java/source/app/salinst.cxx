@@ -396,11 +396,6 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 			MenuRef trackingRef;
 			if ( GetEventKind( aEvent ) == kEventMenuBeginTracking && GetEventParameter( aEvent, kEventParamDirectObject, typeMenuRef, NULL, sizeof( MenuRef ), NULL, &trackingRef ) == noErr )
 			{
-				// Ignore key matching context
-				MenuTrackingMode nMode;
-				if ( GetEventParameter( aEvent, kEventParamCurrentMenuTrackingMode, typeMenuTrackingMode, NULL, sizeof( MenuTrackingMode ), NULL, &nMode ) != noErr || nMode == kMenuTrackingModeKeyboard )
-					return userCanceledErr;
-
 				// According to Carbon documentation, the direct object
 				// parameter should be NULL when tracking is beginning
 				// in the menubar.  In reality, however, the direct
