@@ -101,16 +101,10 @@ void SalInfoPrinter::ReleaseGraphics( SalGraphics* pGraphics )
 
 BOOL SalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 {
-	// Flag that we are in a native dialog
-	GetSalData()->mbInNativeDialog = TRUE;
-
 	// Display a native page setup dialog
 	Orientation nOrientation = maPrinterData.mpVCLPageFormat->getOrientation();
 	maPrinterData.mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
 	BOOL bOK = maPrinterData.mpVCLPageFormat->setup();
-
-	// Flag that we are no longer in a native dialog
-	GetSalData()->mbInNativeDialog = FALSE;
 
 	if ( !bOK )
 	{
@@ -290,13 +284,7 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 	maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pDriverData->mpVCLPageFormat->getJavaObject() );
 	pSalData->maVCLPageFormats.push_back( maPrinterData.mpVCLPageFormat );
 
-	// Flag that we are in a native dialog
-	pSalData->mbInNativeDialog = TRUE;
-
 	maPrinterData.mbStarted = maPrinterData.mpVCLPrintJob->startJob( maPrinterData.mpVCLPageFormat, bShowDialog );
-
-	// Flag that we are no longer in a native dialog
-	pSalData->mbInNativeDialog = FALSE;
 
 	return maPrinterData.mbStarted;
 }

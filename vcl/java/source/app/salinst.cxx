@@ -315,7 +315,10 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 	if ( GetEventClass( aEvent ) == kEventClassMenu )
 	{
 		SalData *pSalData = GetSalData();
-		if ( !pSalData->mbInNativeDialog && GetEventKind( aEvent ) == kEventMenuBeginTracking )
+                MenuRef trackingRef;
+                EventParamType outRefType;
+                UInt32 outSize;
+		if ( ( GetEventKind( aEvent ) == kEventMenuBeginTracking ) && ( GetEventParameter( aEvent, kEventParamDirectObject, typeMenuRef, NULL, sizeof(MenuRef), &outSize, &trackingRef ) == noErr ) && ( trackingRef == NULL ) ) 
 		{
 			// Ignore key matching context
 			MenuTrackingMode nMode;
