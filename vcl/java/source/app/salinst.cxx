@@ -648,7 +648,7 @@ void SalInstance::AcquireYieldMutex( ULONG nCount )
 	{
 		pYieldMutex->acquire();
 		nCount--;
-    }
+	}
 }
 
 // -----------------------------------------------------------------------
@@ -832,8 +832,7 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 	long nWidth = aWorkArea.GetWidth();
 	long nHeight = aWorkArea.GetHeight();
 	if ( nSalFrameStyle & SAL_FRAME_STYLE_FLOAT )
-    {
-		pFrame->maFrameData.mbCenter = FALSE;
+	{
 		nWidth = 10;
 		nHeight = 10;
 	}
@@ -841,8 +840,8 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 	{
 		if ( nSalFrameStyle & SAL_FRAME_STYLE_SIZEABLE && nSalFrameStyle & SAL_FRAME_STYLE_MOVEABLE )
 		{
-			nWidth -= 100;
-			nHeight -= 100;
+			nWidth = (long)( nWidth * 0.8 );
+			nHeight = (long)( nHeight * 0.8 );
 		}
 		if ( !pFrame->maFrameData.mpParent )
 		{
@@ -863,8 +862,8 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 			{
 				// Set screen to same screen as next frame
 				pNextFrame->GetWorkArea( aWorkArea );
-				const SalFrameGeometry& rGeom( pNextFrame->GetGeometry() );
 				pFrame->maFrameData.mbCenter = FALSE;
+				const SalFrameGeometry& rGeom( pNextFrame->GetGeometry() );
 				nX = rGeom.nX - rGeom.nLeftDecoration;
 				nY = rGeom.nY - rGeom.nTopDecoration;
 				nWidth = rGeom.nWidth + rGeom.nLeftDecoration + rGeom.nRightDecoration;
@@ -873,14 +872,13 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 		}
 	}
 
-	// Center the window by default
-	if ( pFrame->maFrameData.mbCenter )
-	{
-		nX = aWorkArea.nLeft + ( ( aWorkArea.GetWidth() - nWidth ) / 2 );
-		nY = aWorkArea.nTop + ( ( aWorkArea.GetHeight() - nHeight ) / 2 );
-	}
+	long nFlags = SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT;
+	if ( !pFrame->maFrameData.mbCenter )
+		nFlags |= SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y;
+	pFrame->SetPosSize( nX, nY, nWidth, nHeight, nFlags );
 
-    pFrame->SetPosSize( nX, nY, nWidth, nHeight, SAL_FRAMESTATE_MASK_X | SAL_FRAME_POSSIZE_Y | SAL_FRAMESTATE_MASK_WIDTH | SAL_FRAMESTATE_MASK_HEIGHT );
+	// Reset mbCenter flag to default value
+	pFrame->maFrameData.mbCenter = TRUE;
 
 	return pFrame;
 }
@@ -1027,7 +1025,7 @@ SalInfoPrinter* SalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
 	// Update values
 	pPrinter->SetData( 0, pSetupData );
 
-    return pPrinter;
+	return pPrinter;
 }
 
 // -----------------------------------------------------------------------
@@ -1046,10 +1044,10 @@ XubString SalInstance::GetDefaultPrinter()
 	SalData *pSalData = GetSalData();
 	if ( !pSalData->maDefaultPrinter.Len() )
 	{
-        SimpleResMgr *pResMgr = SimpleResMgr::Create( CREATEVERSIONRESMGR_NAME( salapp ) );
+		SimpleResMgr *pResMgr = SimpleResMgr::Create( CREATEVERSIONRESMGR_NAME( salapp ) );
 		if ( pResMgr )
 		{
-        	pSalData->maDefaultPrinter = XubString( pResMgr->ReadString( DEFAULT_PRINTER ) );
+			pSalData->maDefaultPrinter = XubString( pResMgr->ReadString( DEFAULT_PRINTER ) );
 			delete pResMgr;
 		}
 	}

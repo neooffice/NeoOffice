@@ -278,7 +278,7 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 
 	Rectangle aWorkArea;
 
-	if ( maFrameData.mbCenter && ! ( nFlags & SAL_FRAME_POSSIZE_X ) && ! ( nFlags & SAL_FRAME_POSSIZE_Y ) )
+	if ( maFrameData.mbCenter && ! ( nFlags & ( SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y ) ) )
 	{
 		if ( maFrameData.mpParent )
 			maFrameData.mpParent->GetWorkArea( aWorkArea );
@@ -346,6 +346,8 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	Rectangle *pBounds = new Rectangle( maFrameData.mpVCLFrame->getBounds() );
 	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pBounds );
 	aEvent.dispatch();
+
+	maFrameData.mbCenter = FALSE;
 }
 
 // -----------------------------------------------------------------------
@@ -513,6 +515,9 @@ void SalFrame::ToTop( USHORT nFlags )
     if ( nFlags & SAL_FRAME_TOTOP_RESTOREWHENMIN && maFrameData.mpVCLFrame->getState() == SAL_FRAMESTATE_MINIMIZED )
 		maFrameData.mpVCLFrame->setState( SAL_FRAMESTATE_NORMAL );
 
+	if ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS_ONLY )
+		return;
+
 	maFrameData.mpVCLFrame->toFront();
 	for( ::std::list< SalFrame* >::const_iterator it = maFrameData.maChildren.begin(); it != maFrameData.maChildren.end(); ++it )
 		(*it)->ToTop( nFlags );
@@ -668,9 +673,7 @@ ULONG SalFrame::GetCurrentModButtons()
 
 void SalFrame::SetParent( SalFrame* pNewParent )
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalFrame::SetParent not implemented\n" );
-#endif
+	maFrameData.mpVCLFrame->setParent( pNewParent );
 }
 
 // -----------------------------------------------------------------------

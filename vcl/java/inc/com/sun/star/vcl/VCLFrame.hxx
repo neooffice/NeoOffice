@@ -73,6 +73,7 @@ public:
 	void				setAutoFlush( sal_Bool _par0 );
 	void				setBounds( long _par0, long _par1, long _par2, long _par3 );
 	void				setFullScreenMode( sal_Bool _par0 );
+	void				setParent( SalFrame *_par0 );
 	void				setPointer( USHORT _par0 );
 	void				setState( ULONG _par0 );
 	void				setTitle( ::rtl::OUString _par0 );

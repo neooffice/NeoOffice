@@ -1825,6 +1825,17 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * Sets the parent frame.
+	 *
+	 * @param the parent frame
+	 */
+	public void setParent(VCLFrame p) {
+
+		parent = p;
+
+	}
+
+	/**
 	 * Sets the cursor.
 	 *
 	 * @param style the cursor style constant

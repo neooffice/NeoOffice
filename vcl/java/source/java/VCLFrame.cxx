@@ -441,6 +441,29 @@ void com_sun_star_vcl_VCLFrame::setFullScreenMode( sal_Bool _par0 )
 
 // ----------------------------------------------------------------------------
 
+void com_sun_star_vcl_VCLFrame::setParent( SalFrame *_par0 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(Lcom/sun/star/vcl/VCLFrame;)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "setParent", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[1];
+			args[0].l = _par0->maFrameData.mpVCLFrame->getJavaObject();
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLFrame::setPointer( USHORT _par0 )
 {
 	static jmethodID mID = NULL;
