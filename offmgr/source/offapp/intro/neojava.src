@@ -75,7 +75,7 @@ Bitmap RID_DEFAULTINTRO_PORTAL
 
 String RID_APPTITLE
 {
-    Text = "%PRODUCT_NAME %PRODUCT_VERSION" ;
+    Text = "%PRODUCTNAME %PRODUCTVERSION %PRODUCTEXTENSION" ;
 };
 
 // der String wird fuer die Registrierung gebraucht: 01 Voll, 02 OEM, 03 Vobis
@@ -113,7 +113,7 @@ ModalDialog RID_DEFAULTABOUT
 		Pos = MAP_APPFONT ( 54 , 6 ) ;
 		Size = MAP_APPFONT ( 118 , 16 ) ;
 		WordBreak = TRUE ;
-		Text = "%PRODUCT_NAME %PRODUCT_VERSION" ;
+		Text = "%PRODUCTNAME %PRODUCTVERSION %PRODUCTEXTENSION" ;
 
    	};
 	FixedText ABOUT_FTXT_COPYRIGHT
