@@ -61,6 +61,7 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
+import java.awt.im.InputContext;
 
 /**
  * The Java class that implements the SalFrame C++ class methods.
@@ -636,7 +637,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// Add a panel as the only component
 		panel = new VCLFrame.NoPaintPanel(this);
 		panel.setBackground(Color.white);
-		panel.enableInputMethods(false);
 		window.add(panel);
 		bitCount = panel.getColorModel().getPixelSize();
 		if (bitCount <= 1)
@@ -742,15 +742,24 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		bitCount = 0;
 		frame = 0;
 		fullScreenMode = true;
-		insets = null;
-		queue = null;
-		panel = null;
-		parent = null;
 		if (graphics != null)
 			graphics.dispose();
+		insets = null;
+		queue = null;
+		if (panel != null) {
+			panel.removeNotify();
+			InputContext ic = panel.getInputContext();
+			if (ic != null)
+				ic.removeNotify(panel);
+		}
+		panel = null;
+		parent = null;
 		graphics = null;
 		if (window != null) {
 			window.removeNotify();
+			InputContext ic = window.getInputContext();
+			if (ic != null)
+				ic.removeNotify(window);
 			window.dispose();
 		}
 		window = null;
