@@ -34,12 +34,12 @@
 # 
 ##########################################################################
 
-receiptdir="/Library/Receipts/$(PRODUCT_DIR_NAME).pkg"
+if [ -d "$2/$(PRODUCT_DIR_NAME).app" ] ; then
 
-if [ -d "$receiptdir" ]; then
-
-	# Delete receipt directory so that all files are installed
-    rm -Rf "$receiptdir"
+    rm -Rf "$2/$(PRODUCT_DIR_NAME).app"
+    if [ $? != 0 ] ; then
+        exit 1
+    fi
 
 fi
 

@@ -46,8 +46,13 @@ if [ -d "$2" ]; then
 			rm -f "$tempfile"
 			cp -p "$i" "$tempfile"
 			sed 's#/Applications/$(PRODUCT_DIR_NAME).app#'"$2/$(PRODUCT_DIR_NAME).app"'#g' "$tempfile" > "$i"
+            if [ $? != 0 ] ; then
+                exit 1;
+            fi
 			touch -r "$tempfile" "$i"
 		done
 	fi
 
 fi
+
+exit 0
