@@ -88,7 +88,8 @@ build.oo_patches: build.oo_checkout \
 	build.oo_scp_patch
 	touch "$@"
 
-build.oo_odk_patches: build.oo_checkout
+build.oo_odk_patches: build.oo_checkout \
+	build.oo_sdk_oo_patch
 	touch "$@"
 
 build.oo_external_patch: $(OO_PATCHES_HOME)/external.patch build.oo_checkout
@@ -120,7 +121,7 @@ build.oo_all: build.configure
 	touch "$@"
 
 build.oo_odk_all: build.configure build.oo_all build.oo_odk_patches
-	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/sdk_oo" ; `alias build` --all $(OO_BUILD_ARGS)
+	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/sdk_oo" ; `alias build` $(OO_BUILD_ARGS)
 	touch "$@"
 
 build.neo_configure: build.oo_all
