@@ -71,13 +71,12 @@ class ATSLayout : public SalLayout
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
 	ATSUStyle			maFontStyle;
 	ATSUTextLayout		maLayout;
-	int					mnRuns;
-	UniCharCount*		mpRunLengths;
-	bool*				mpRunDirections;
 	sal_Unicode*		mpStr;
 	UniCharArrayOffset	mnStart;
 	UniCharCount		mnLen;
+	bool				mbRTL;
 	bool				mbVertical;
+	mutable long		mnBaseAdvance;
 	mutable long		mnWidth;
 	mutable long*		mpAdvances;
 	mutable ATSUGlyphInfoArray*	mpGlyphInfoArray;
@@ -87,6 +86,7 @@ class ATSLayout : public SalLayout
 	bool				InitAdvances() const;
 	bool				InitGlyphInfoArray() const;
 	void				Justify( long nNewWidth ) const;
+
 
 public:
 						ATSLayout( ::vcl::com_sun_star_vcl_VCLFont *pVCLFont );
@@ -220,13 +220,12 @@ SalLayout *SalGraphics::GetTextLayout( ImplLayoutArgs& rArgs, int nFallbackLevel
 ATSLayout::ATSLayout( com_sun_star_vcl_VCLFont *pVCLFont ) :
 	maLayout( NULL ),
 	maFontStyle( NULL ),
-	mnRuns( 0 ),
-	mpRunLengths( NULL ),
-	mpRunDirections( NULL ),
 	mpStr( NULL ),
 	mnStart( 0 ),
 	mnLen( 0 ),
+	mbRTL( false ),
 	mbVertical( false ),
+	mnBaseAdvance( 0 ),
 	mnWidth( 0 ),
 	mpAdvances( NULL ),
 	mpGlyphInfoArray( NULL )
@@ -306,42 +305,35 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		return false;
 
 	mnStart = rArgs.mnMinCharPos;
-	mnRuns = 0;
+	mbRTL = ( mnLayoutFlags & SAL_LAYOUT_BIDI_STRONG && mnLayoutFlags & SAL_LAYOUT_BIDI_RTL );
 
-	bool bRTL;
-	int i;
-	int nRunStart, nRunEnd;
-	int nBufSize;
-
-	// Count the number of runs
-	rArgs.ResetPos();
-	while ( rArgs.GetNextRun( &nRunStart, &nRunEnd, &bRTL ) )
-		mnRuns++;
-
-	// Create a copy of the string so that we can reorder any RTL runs
-	nBufSize = mnLen * sizeof( sal_Unicode );
+	// Create a copy of the string. Note that we add an extra character as we
+	// need it for RTL strings.
+	int nBufSize = ( mnLen + 1 ) * sizeof( sal_Unicode );
 	mpStr = (sal_Unicode *)rtl_allocateMemory( nBufSize );
 	memcpy( mpStr, rArgs.mpStr + mnStart, nBufSize );
+	mpStr[ mnLen ] = 0;
 
-	// Populate run lengths and style arrays
-	nBufSize = mnRuns * sizeof( UniCharCount );
-	mpRunLengths = (UniCharCount *)rtl_allocateMemory( nBufSize );
-	memset( mpRunLengths, 0, nBufSize );
-	nBufSize = mnRuns * sizeof( UniCharCount );
-	mpRunDirections = (bool *)rtl_allocateMemory( nBufSize );
-	memset( mpRunDirections, 0, nBufSize );
-	ATSUStyle aStyles[ mnRuns ];
-
-	bool bForceRTL = ( mnLayoutFlags & SAL_LAYOUT_BIDI_STRONG && mnLayoutFlags & SAL_LAYOUT_BIDI_RTL );
+	// Swap characters in RTL runs
+	int nRunStart;
+	int nRunEnd;
+	bool bRunRTL;
 	rArgs.ResetPos();
-	for ( i = 0; rArgs.GetNextRun( &nRunStart, &nRunEnd, &bRTL ) && i < mnRuns; i++ )
+	while ( rArgs.GetNextRun( &nRunStart, &nRunEnd, &bRunRTL ) )
 	{
-		mpRunLengths[ i ] = nRunEnd - nRunStart;
-		mpRunDirections[ i ] = ( bForceRTL || bRTL );
-		aStyles[ i ] = maFontStyle;
+		if ( mbRTL && bRunRTL )
+		{
+			nRunEnd -= mnStart;
+			for ( int i = nRunStart - mnStart; i < nRunEnd; i++ )
+			{
+				sal_Unicode nChar = GetMirroredChar( mpStr[ i ] );
+				if ( nChar )
+					mpStr[ i ] = nChar;
+			}
+		}
 	}
 
-	if ( ATSUCreateTextLayoutWithTextPtr( mpStr, kATSUFromTextBeginning, kATSUToTextEnd, mnLen, mnRuns, mpRunLengths, aStyles, &maLayout ) != noErr )
+	if ( ATSUCreateTextLayoutWithTextPtr( mpStr, kATSUFromTextBeginning, kATSUToTextEnd, mnLen, 1, &mnLen, &maFontStyle, &maLayout ) != noErr )
 	{
 		Destroy();
 		return false;
@@ -356,45 +348,70 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		ATSUAttributeValuePtr nVal = &nVertical;
 
 		if ( ATSUSetAttributes( maFontStyle, 1, &nTag, &nBytes, &nVal ) == noErr )
-		{
 			mbVertical = true;
-			for ( i = 0; i < mnLen; i++ )
-			{
-				sal_Unicode nChar = GetVerticalChar( mpStr[ i ] );
-				if ( nChar )
-					mpStr[ i ] = nChar;
-			}
-		}
 	}
 
-	int nPreviousChar = 0;
-	for ( i = 0; i < mnRuns; i++ )
+	if ( mbRTL )
 	{
-		ATSUVerticalCharacterType nDirection;
-		if ( mpRunDirections[ i ] )
- 			nDirection = kATSURightToLeftBaseDirection;
-		else
- 			nDirection = kATSULeftToRightBaseDirection;
+		ATSUVerticalCharacterType nDirection = kATSURightToLeftBaseDirection;
 		ATSUAttributeTag nTag = kATSULineDirectionTag;
 		ByteCount nBytes = sizeof( MacOSBoolean );
 		ATSUAttributeValuePtr nVal = &nDirection;
-
-		if ( ATSUSetLineControls( maLayout, nPreviousChar, mpRunLengths[ i ], &nTag, &nBytes, &nVal ) )
-		{
-			int nEndingChar = nPreviousChar + mpRunLengths[ i ];
-			for ( int j = nPreviousChar; j < nEndingChar; j++ )
-			{
-				sal_Unicode nChar = GetMirroredChar( mpStr[ i ] );
-				if ( nChar )
-					mpStr[ i ] = nChar;
-			}
-		}
-
-		nPreviousChar += mpRunLengths[ i ];
+		ATSUSetLayoutControls( maLayout, 1, &nTag, &nBytes, &nVal );
 	}
+
+	ATSLineLayoutOptions nLayoutOptions = kATSLineKeepSpacesOutOfMargin;
+	ATSUAttributeTag nTag = kATSULineLayoutOptionsTag;
+	ByteCount nBytes = sizeof( ATSLineLayoutOptions );
+	ATSUAttributeValuePtr nVal = &nLayoutOptions;
+	ATSUSetLayoutControls( maLayout, 1, &nTag, &nBytes, &nVal );
 
 	// Set automatic font matching for missing glyphs
 	ATSUSetTransientFontMatching( maLayout, true );
+
+	ATSUTextMeasurement nStart;
+	ATSUTextMeasurement nEnd;
+	if ( ATSUGetUnjustifiedBounds( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nStart, &nEnd, NULL, NULL ) == noErr )
+		Justify( Fix2Pixel( nEnd - nStart ) );
+
+	if ( !mnWidth )
+	{
+		Destroy();
+		return false;
+	}
+
+	if ( mbRTL )
+	{
+		// The OOo code does not like the trailing kashida on the last
+		// logical character to be included in the character advances as it
+		// messed up their caret position tracking so we need to calculate
+		// and save the trailing kashida width
+		mpStr[ mnLen ] = mpStr[ mnLen - 1 ];
+		if ( ATSUTextInserted( maLayout, mnLen, 1 ) == noErr )
+		{
+			ATSUCaret aLastCaret;
+			ATSUCaret aNextToLastCaret;
+			if ( ATSUOffsetToCursorPosition( maLayout, mnLen, true, kATSUByCharacter, &aLastCaret, NULL, NULL ) == noErr )
+			{
+				if ( mnLen > 1 )
+				{
+					if ( ATSUOffsetToCursorPosition( maLayout, mnLen - 1, true, kATSUByCharacter, &aNextToLastCaret, NULL, NULL ) == noErr )
+						mnBaseAdvance = Fix2Pixel( ( aLastCaret.fX * 2 ) - aNextToLastCaret.fX );
+				}
+				else
+				{
+					if ( ATSUOffsetToCursorPosition( maLayout, mnLen + 1, true, kATSUByCharacter, &aNextToLastCaret, NULL, NULL ) == noErr )
+						mnBaseAdvance = Fix2Pixel( ( aLastCaret.fX * 2 ) - aNextToLastCaret.fX );
+				}
+
+				if ( ATSUTextDeleted( maLayout, mnLen, 1 ) != noErr )
+				{
+					Destroy();
+					return false;
+				}
+			}
+		}
+	}
 
 	return true;
 }
@@ -408,11 +425,11 @@ void ATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 	if ( rArgs.mpDXArray )
 	{
 		// TODO: actually position individual glyphs instead of justifying it
-		Justify( rArgs.mpDXArray[ mnLen - 1 ] * UNITS_PER_PIXEL );
+		Justify( mnBaseAdvance + ( rArgs.mpDXArray[ mnLen - 1 ] * UNITS_PER_PIXEL ) );
 	}
 	else if ( rArgs.mnLayoutWidth )
 	{
-		Justify( rArgs.mnLayoutWidth * UNITS_PER_PIXEL );
+		Justify( mnBaseAdvance + ( rArgs.mnLayoutWidth * UNITS_PER_PIXEL ) );
 	}
 }
 
@@ -452,7 +469,7 @@ void ATSLayout::DrawText( com_sun_star_vcl_VCLGraphics *pGraphics, SalColor nCol
 		}
 
 		// Draw the text
-		Point aPos( GetDrawPosition() );
+		Point aPos = GetDrawPosition( Point( ( mnBaseAdvance * -1 / UNITS_PER_PIXEL ), 0 ) );
 		if ( mbVertical )
 		{
 			// Center text and round towards the top of the font
@@ -542,31 +559,22 @@ void ATSLayout::GetCaretPositions( int nArraySize, long *pCaretXArray ) const
 
 	if ( pCaretXArray )
 	{
-		int nCurrentElement = 0;
-		long nPreviousX = 0;
-		for ( int i = 0; i < mnRuns && nCurrentElement < nArraySize; i++ )
+		long nPreviousX = mnBaseAdvance;
+		for ( int i = 0; i < nArraySize; i += 2 )
 		{
-			int j;
-			for ( j = nCurrentElement, nCurrentElement += mpRunLengths[ i ] * 2; j < nCurrentElement && j < nArraySize; j += 2 )
+			if ( mbRTL )
 			{
-				long nAdvance = mpAdvances[ j / 2 ];
-				if ( !nAdvance )
-					continue;
-
-				if ( mpRunDirections[ i ] )
-				{
-					// Handle RTL carets
-					pCaretXArray[ j + 1 ] = nPreviousX;
-					nPreviousX += nAdvance;
-					pCaretXArray[ j ] = nPreviousX;
-				}
-				else
-				{
-					// Handle LTR carets
-					pCaretXArray[ j ] = nPreviousX;
-					nPreviousX += nAdvance;
-					pCaretXArray[ j + 1 ] = nPreviousX;
-				}
+				// Handle RTL carets
+				pCaretXArray[ i + 1 ] = nPreviousX;
+				nPreviousX += mpAdvances[ i / 2 ];
+				pCaretXArray[ i ] = nPreviousX;
+			}
+			else
+			{
+				// Handle LTR carets
+				pCaretXArray[ i ] = nPreviousX;
+				nPreviousX += mpAdvances[ i / 2 ];
+				pCaretXArray[ i + 1 ] = nPreviousX;
 			}
 		}
 	}
@@ -714,18 +722,11 @@ void ATSLayout::Destroy()
 		rtl_freeMemory( mpStr );
 	mpStr = NULL;
 
-	if ( mpRunLengths )
-		rtl_freeMemory( mpRunLengths );
-	mpRunLengths = NULL;
-
-	if ( mpRunDirections )
-		rtl_freeMemory( mpRunDirections );
-	mpRunDirections = NULL;
-
-	mnRuns = 0;
 	mnStart = 0;
 	mnLen = 0;
+	mbRTL = false;
 	mbVertical = false;
+	mnBaseAdvance = 0;
 	mnWidth = 0;
 
 	if ( mpAdvances )
@@ -744,17 +745,7 @@ bool ATSLayout::InitAdvances() const
 	if ( mpAdvances )
 		return true;
 
-	if ( !maLayout )
-		return false;
-
-	// Force width to an integer since the OOo code cannot handle a fractional
-	// layout width
-	ATSUTextMeasurement nStart;
-	ATSUTextMeasurement nEnd;
-	if ( ATSUGetUnjustifiedBounds( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nStart, &nEnd, NULL, NULL ) == noErr )
-		Justify( Fix2Pixel( nEnd - nStart ) );
-
-	if ( !mnWidth )
+	if ( !maLayout || !mnWidth )
 		return false;
 
 	int nBufSize = mnLen * sizeof( long );
@@ -763,41 +754,31 @@ bool ATSLayout::InitAdvances() const
 
 	// Calculate positions in logical order
 	ATSUCaret aCaret;
-	int nCurrentChar = 0;
 	long nPreviousX = 0;
-	for ( int i = 0; i < mnRuns; i++ )
+	if ( mbRTL )
 	{
-		int j;
-		if ( mpRunDirections[ i ] )
+		for ( int i = mnLen - 1; i > 0; i-- )
 		{
-			// Get the advance from end of the run
-			long nRunAdvance = mnWidth;
-			int nRunEnd = nCurrentChar + mpRunLengths[ i ];
-			if ( nRunEnd < mnLen && ATSUOffsetToCursorPosition( maLayout, nRunEnd, true, kATSUByCharacter, &aCaret, NULL, NULL ) == noErr )
-				nRunAdvance = Fix2Pixel( aCaret.fX );
+			if ( ATSUOffsetToCursorPosition( maLayout, i + 1, true, kATSUByCharacter, &aCaret, NULL, NULL ) == noErr )
+				mpAdvances[ i ] = Fix2Pixel( aCaret.fX ) - nPreviousX;
+			nPreviousX += mpAdvances[ i ];
+		}
 
-			for ( j = nCurrentChar, nCurrentChar += mpRunLengths[ i ]; j < nCurrentChar - 1; j++ )
-			{
-				if ( ATSUOffsetToCursorPosition( maLayout, j + 1, true, kATSUByCharacter, &aCaret, NULL, NULL ) == noErr )
-					mpAdvances[ j ] = nRunAdvance - Fix2Pixel( aCaret.fX ) - nPreviousX;
-				nPreviousX += mpAdvances[ j ];
-			}
-			mpAdvances[ j ] = nRunAdvance - nPreviousX;
-			nPreviousX += mpAdvances[ j ];
-		}
-		else
-		{
-			for ( j = nCurrentChar, nCurrentChar += mpRunLengths[ i ]; j < nCurrentChar; j++ )
-			{
-				if ( ATSUOffsetToCursorPosition( maLayout, j + 1, true, kATSUByCharacter, &aCaret, NULL, NULL ) == noErr )
-					mpAdvances[ j ] = Fix2Pixel( aCaret.fX ) - nPreviousX;
-				nPreviousX += mpAdvances[ j ];
-			}
-		}
+		// Force any remaining advance into the first character
+		mpAdvances[ 0 ] = mnWidth - nPreviousX - mnBaseAdvance;
 	}
+	else
+	{
+		for ( int i = 0; i < mnLen - 1; i++ )
+		{
+			if ( ATSUOffsetToCursorPosition( maLayout, i + 1, true, kATSUByCharacter, &aCaret, NULL, NULL ) == noErr )
+				mpAdvances[ i ] = Fix2Pixel( aCaret.fX ) - nPreviousX;
+			nPreviousX += mpAdvances[ i ];
+		}
 
-	// Force any remaining advance into the last character
-	mpAdvances[ mnLen - 1 ] += mnWidth - nPreviousX;
+		// Force any remaining advance into the last character
+		mpAdvances[ mnLen - 1 ] = mnWidth - nPreviousX - mnBaseAdvance;
+	}
 
 	return true;
 }
@@ -809,15 +790,8 @@ bool ATSLayout::InitGlyphInfoArray() const
 	if ( mpGlyphInfoArray )
 		return true;
 
-	if ( !maLayout )
+	if ( !maLayout || !mnWidth )
 		return false;
-
-	// Force width to an integer since the OOo code cannot handle a fractional
-	// layout width
-	ATSUTextMeasurement nStart;
-	ATSUTextMeasurement nEnd;
-	if ( ATSUGetUnjustifiedBounds( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nStart, &nEnd, NULL, NULL ) == noErr )
-		Justify( Fix2Pixel( nEnd - nStart ) );
 
 	// TODO: is there a good way to predict the maximum glyph count?
 	ByteCount nBufSize = 3 * ( mnLen + 16 ) * sizeof( ATSUGlyphInfo );
@@ -844,19 +818,9 @@ void ATSLayout::Justify( long nNewWidth ) const
 	if ( nNewWidth == mnWidth )
 		return;
 
-	mnWidth = 0;
-
-	if ( mpAdvances )
-		rtl_freeMemory( mpAdvances );
-	mpAdvances = NULL;
-
-	if ( mpGlyphInfoArray )
-		rtl_freeMemory( mpGlyphInfoArray );
-	mpGlyphInfoArray = NULL;
-
-	ATSUAttributeTag nTags[3];
-	ByteCount nBytes[3];
-	ATSUAttributeValuePtr nVals[3];
+	ATSUAttributeTag nTags[2];
+	ByteCount nBytes[2];
+	ATSUAttributeValuePtr nVals[2];
 
 	ATSUTextMeasurement nWidth = Long2Fix( nNewWidth / UNITS_PER_PIXEL );
 	nTags[0] = kATSULineWidthTag;
@@ -866,19 +830,18 @@ void ATSLayout::Justify( long nNewWidth ) const
 	nTags[1] = kATSULineJustificationFactorTag;
 	nBytes[1] = sizeof( Fract );
 	nVals[1] = &nJustification;
-	ATSLineLayoutOptions nLayoutOptions = kATSLineKeepSpacesOutOfMargin;
-	nTags[2] = kATSULineLayoutOptionsTag;
-	nBytes[2] = sizeof( ATSLineLayoutOptions );
-	nVals[2] = &nLayoutOptions;
 
-	if ( ATSUSetLayoutControls( maLayout, 3, nTags, nBytes, nVals ) == noErr )
+	if ( ATSUSetLayoutControls( maLayout, 2, nTags, nBytes, nVals ) == noErr )
 	{
-		ATSUTextMeasurement nStart;
-		ATSUTextMeasurement nEnd;
-		if ( ATSUGetUnjustifiedBounds( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nStart, &nEnd, NULL, NULL ) == noErr )
-			mnWidth = Fix2Pixel( nEnd - nStart );
-		else
-			mnWidth = nNewWidth;
+		mnWidth = nNewWidth;
+
+		if ( mpAdvances )
+			rtl_freeMemory( mpAdvances );
+		mpAdvances = NULL;
+
+		if ( mpGlyphInfoArray )
+			rtl_freeMemory( mpGlyphInfoArray );
+		mpGlyphInfoArray = NULL;
 	}
 }
 
