@@ -666,7 +666,7 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector )
 			{
 				aPolyPolygon.Scale( fScaleX, 1.0 );
 			}
-			aPolyPolygon.Move( aPos.X(), aPos.Y() );
+			aPolyPolygon.Move( aPos.X() * mnUnitsPerPixel, aPos.Y() * mnUnitsPerPixel );
 
 			rVector.push_back( aPolyPolygon );
 			bRet = true;
