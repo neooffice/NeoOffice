@@ -1679,14 +1679,6 @@ public final class VCLGraphics {
 			if (scaleY < pageImageScaleY)
 				pageImageScaleY = scaleY;
 
-			// Update the image clip for all queue items
-			VCLGraphics.PageQueueItem pqi = drawingHead;
-			while (pqi != null) {
-				if (pageImageClip != null && pqi.imageClip != null)
-					pqi.imageClip.subtract(pageImageClip);
-				pqi = pqi.next;
-			}
-
 			// Add the image operation to the queue
 			if (clip != null)
 				i.clip = new Area(clip);
