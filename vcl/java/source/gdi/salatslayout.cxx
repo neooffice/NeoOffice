@@ -43,50 +43,17 @@
  *
  ************************************************************************/
 
+#ifndef _SV_SALATSLAYOUT_HXX
+#include <salatslayout.hxx>
+#endif
 #ifndef _SV_SALGDI_HXX
 #include <salgdi.hxx>
-#endif
-#ifndef _SV_OUTFONT_HXX
-#include <outfont.hxx>
-#endif
-#ifndef _SV_SALLAYOUT_HXX
-#include <sallayout.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
-#include <com/sun/star/vcl/VCLFont.hxx>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
 
-#include <premac.h>
-#include <Carbon/Carbon.h>
-#include <postmac.h>
-
 inline int Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
-
-class ATSLayout : public GenericSalLayout
-{
-	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
-	bool				mbUseScreenMetrics;
-	ATSUStyle			maFontStyle;
-	int					mnGlyphCount;
-	ATSUGlyphInfoArray*	mpGlyphInfoArray;
-	long*				mpGlyphTranslations;
-	int*				mpCharsToGlyphs;
-	int*				mpVerticalFlags;
-
-	void				Destroy();
-
-public:
-						ATSLayout( ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, bool bUseScreenMetrics );
-	virtual				~ATSLayout();
-
-	virtual bool		LayoutText( ImplLayoutArgs& rArgs );
-	virtual void		AdjustLayout( ImplLayoutArgs& rArgs );
-	virtual void		DrawText( SalGraphics& rGraphics ) const;
-	virtual int			GetNextGlyphs( int nLen, long *pGlyphIdxAry, Point& rPos, int& rStart, long *pGlyphAdvAry = NULL, int *pCharPosAry = NULL ) const;
-};
 
 using namespace osl;
 using namespace rtl;
@@ -96,12 +63,12 @@ using namespace vcl;
 
 SalLayout *SalGraphics::GetTextLayout( ImplLayoutArgs& rArgs, int nFallbackLevel )
 {
-	return new ATSLayout( maGraphicsData.mpVCLFont, !maGraphicsData.mpPrinter );
+	return new SalATSLayout( maGraphicsData.mpVCLFont, !maGraphicsData.mpPrinter );
 }
 
 // ============================================================================
 
-ATSLayout::ATSLayout( com_sun_star_vcl_VCLFont *pVCLFont, bool bUseScreenMetrics ) :
+SalATSLayout::SalATSLayout( com_sun_star_vcl_VCLFont *pVCLFont, bool bUseScreenMetrics ) :
 	maFontStyle( NULL ),
 	mbUseScreenMetrics( bUseScreenMetrics ),
 	mnGlyphCount( 0 ),
@@ -171,7 +138,7 @@ ATSLayout::ATSLayout( com_sun_star_vcl_VCLFont *pVCLFont, bool bUseScreenMetrics
 
 // ----------------------------------------------------------------------------
 
-ATSLayout::~ATSLayout()
+SalATSLayout::~SalATSLayout()
 {
 	Destroy();
 
@@ -184,7 +151,7 @@ ATSLayout::~ATSLayout()
 
 // ----------------------------------------------------------------------------
 
-void ATSLayout::Destroy()
+void SalATSLayout::Destroy()
 {
 	mnGlyphCount = 0;
 
@@ -207,7 +174,7 @@ void ATSLayout::Destroy()
 
 // ----------------------------------------------------------------------------
 
-bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
+bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 {
 	if ( !maFontStyle )
 		return false;
@@ -429,7 +396,7 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 // ----------------------------------------------------------------------------
 
-void ATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
+void SalATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 {
 	GenericSalLayout::AdjustLayout( rArgs );
 
@@ -440,7 +407,7 @@ void ATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 
 // ----------------------------------------------------------------------------
 
-void ATSLayout::DrawText( SalGraphics& rGraphics ) const
+void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 {
 	if ( !mnGlyphCount )
 		return;
@@ -491,7 +458,7 @@ void ATSLayout::DrawText( SalGraphics& rGraphics ) const
 
 // ----------------------------------------------------------------------------
 
-int ATSLayout::GetNextGlyphs( int nLen, long *pGlyphIdxAry, Point& rPos, int& rStart, long *pGlyphAdvAry, int *pCharPosAry ) const
+int SalATSLayout::GetNextGlyphs( int nLen, long *pGlyphIdxAry, Point& rPos, int& rStart, long *pGlyphAdvAry, int *pCharPosAry ) const
 {
 	int nGlyphCount;
 
