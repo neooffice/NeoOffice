@@ -414,6 +414,50 @@
 			<string>txt.icns</string>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>TEXT</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<false/>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>slk</string>
+				<string>sylk</string>
+				<string>tsv</string>
+				<string>wk1</string>
+				<string>wks</string>
+				<string>xl</string>
+				<string>xlc</string>
+				<string>xlm</string>
+				<string>xls</string>
+				<string>xlw</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>sxc_sdc_slk_xls.icns</string>
+			<key>CFBundleTypeMIMETypes</key>
+			<array>
+				<string>application/excel</string>
+				<string>application/msexcel</string>
+				<string>application/vnd.ms-excel</string>
+				<string>application/x-msexcel</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>XLS8</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<false/>
+		</dict>
+		<dict>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSIsAppleDefaultForType</key>
