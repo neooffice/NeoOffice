@@ -1768,6 +1768,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		public void paint(Graphics g) {
 
+			super.paint(g);
+
 			VCLGraphics graphics = frame.getGraphics();
 			if (graphics != null) {
 				Rectangle clip = g.getClipBounds();
@@ -1778,18 +1780,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 						graphics.addToFlush(((Graphics2D)g).getDeviceConfiguration().getBounds());
 				}
 			}
-
-		}
-
-		/**
-		 * This method performs no painting of the panel. This method is used
-		 * to prevent Java from painting over what VCL has painted.
-		 *
-		 * @param g the <code>Graphics</code>
-		 */
-		public void update(Graphics g) {
-
-			paint(g);
 
 		}
 
