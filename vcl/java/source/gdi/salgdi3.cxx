@@ -35,9 +35,6 @@
 
 #define _SV_SALGDI3_CXX
 
-#ifndef _SV_JAVALAYOUT_HXX
-#include <javalayout.hxx>
-#endif
 #ifndef _SV_SALGDI_HXX
 #include <salgdi.hxx>
 #endif
