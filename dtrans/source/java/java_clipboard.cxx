@@ -97,9 +97,16 @@ Reference< XTransferable > SAL_CALL JavaClipboard::getContents() throw( RuntimeE
 		if ( maContents.is() )
 			pTransferable = (com_sun_star_dtrans_DTransTransferable *)maContents.get();
 
-		if ( !pTransferable || !pTransferable->hasOwnership() )
+		if ( pTransferable && pTransferable->hasOwnership() )
 		{
-			// Reference< XTransferable > aOldContents;
+			Reference< XTransferable > aLocalContents( pTransferable->getTransferable() );
+			if ( aLocalContents.is() )
+				aContents = aLocalContents;
+			else
+				maContents = Reference< XTransferable >( pTransferable );
+		}
+		else
+		{
 			Reference< XTransferable > aOldContents( maContents );
 			if ( pTransferable )
 				aOldContents = pTransferable->getTransferable();
