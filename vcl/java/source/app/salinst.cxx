@@ -425,7 +425,8 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 					MacOSPoint aPoint;
 					SInt32 nDelta;
 					WindowRef aWindow;
-					if ( GetEventParameter( aEvent, kEventParamWindowMouseLocation, typeQDPoint, NULL, sizeof( MacOSPoint ), NULL, &aPoint ) == noErr && GetEventParameter( aEvent, kEventParamMouseWheelDelta, typeSInt32, NULL, sizeof( SInt32 ), NULL, &nDelta ) == noErr && GetEventParameter( aEvent, kEventParamWindowRef, typeWindowRef, NULL, sizeof( WindowRef ), NULL, &aWindow ) == noErr )
+					UInt32 nKeyModifiers;
+					if ( GetEventParameter( aEvent, kEventParamWindowMouseLocation, typeQDPoint, NULL, sizeof( MacOSPoint ), NULL, &aPoint ) == noErr && GetEventParameter( aEvent, kEventParamMouseWheelDelta, typeSInt32, NULL, sizeof( SInt32 ), NULL, &nDelta ) == noErr && GetEventParameter( aEvent, kEventParamWindowRef, typeWindowRef, NULL, sizeof( WindowRef ), NULL, &aWindow ) == noErr && GetEventParameter( aEvent, kEventParamKeyModifiers, typeUInt32, NULL, sizeof( UInt32 ), NULL, &nKeyModifiers ) == noErr )
 					{
 						// Unlock the Java lock
 						ReleaseJavaLock();
@@ -444,7 +445,16 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 						{
 							if ( (*it)->GetSystemData()->aWindow == (long)aWindow )
 							{
-								pSalData->mpEventQueue->postMouseWheelEvent( *it, 0, aPoint.h, aPoint.v, 1, nDelta * -1 );
+								USHORT nModifiers = 0;
+								if ( nKeyModifiers & controlKey )
+									nModifiers |= KEY_MOD1;
+								if ( nKeyModifiers & optionKey )
+									nModifiers |= KEY_MOD2;
+								if ( nKeyModifiers & shiftKey )
+									nModifiers |= KEY_SHIFT;
+								if ( nKeyModifiers & cmdKey )
+									nModifiers |= KEY_CONTROLMOD;
+								pSalData->mpEventQueue->postMouseWheelEvent( *it, 0, aPoint.h, aPoint.v, 1, nDelta * -1, nModifiers );
 								break;
 							}
 						}

@@ -640,17 +640,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
-	 * Gets the mouse modifiers pressed.
-	 *
-	 * @return the mouse modifiers pressed
-	 */
-	static int getMouseModifiersPressed() {
-
-		return mouseModifiersPressed;
-
-	}
-
-	/**
 	 * Cache the last menu shortcut pressed.
 	 *
 	 * @return the last menu shortcut pressed
@@ -1969,7 +1958,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (queue == null || window == null || !window.isShowing())
 			return;
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_WHEELMOUSE, this, s, r, false));
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_WHEELMOUSE, this, s, r, false, e.getModifiers() & (InputEvent.CTRL_MASK | InputEvent.ALT_MASK | InputEvent.SHIFT_MASK | InputEvent.META_MASK)));
 
     }
 

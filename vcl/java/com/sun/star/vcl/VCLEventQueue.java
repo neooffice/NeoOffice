@@ -44,6 +44,7 @@ import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.event.ComponentEvent;
 import java.awt.event.FocusEvent;
+import java.awt.event.InputEvent;
 import java.awt.event.InputMethodEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
@@ -377,14 +378,24 @@ public final class VCLEventQueue {
      * @param y the y coordinate
      * @param s the scroll amount
      * @param r the wheel rotation
+     * @param k the key modifiers pressed
 	 */
-	public void postMouseWheelEvent(VCLFrame f, long m, int x, int y, int s, int r) {
+	public void postMouseWheelEvent(VCLFrame f, long m, int x, int y, int s, int r, int k) {
 
 		if (f == null)
 			return;
 
 		try {
-			MouseEvent e = new MouseEvent(f.getPanel(), MouseEvent.MOUSE_MOVED, m, VCLFrame.getMouseModifiersPressed(), x, y, 0, false);
+			int modifiers = 0;
+			if ((k & VCLEvent.KEY_MOD1) != 0)
+				modifiers |= InputEvent.CTRL_MASK;
+			if ((k & VCLEvent.KEY_MOD2) != 0)
+				modifiers |= InputEvent.ALT_MASK;
+			if ((k & VCLEvent.KEY_SHIFT) != 0)
+				modifiers |= InputEvent.SHIFT_MASK;
+			if ((k & VCLEvent.KEY_CONTROLMOD) != 0)
+				modifiers |= InputEvent.META_MASK;
+			MouseEvent e = new MouseEvent(f.getPanel(), MouseEvent.MOUSE_MOVED, m, modifiers, x, y, 0, false);
 			EventQueue.invokeAndWait(new VCLEventQueue.MouseWheelEventPoster(f, e, s, r));
 		}
 		catch (Throwable t) {

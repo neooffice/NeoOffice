@@ -1112,10 +1112,11 @@ public final class VCLEvent extends AWTEvent {
 	 * @param h <code>true</code> if the wheel rotation is horizontal or
 	 *  <code>false</code> if it is vertical. Since Java does not yet support
 	 *  horizontal mouse wheel events, this parameter is ignored.
+	 * @param k the key modifiers pressed
 	 */
-	VCLEvent(AWTEvent event, int id, VCLFrame f, int s, int r, boolean h) {
+	VCLEvent(AWTEvent event, int id, VCLFrame f, int s, int r, boolean h, int k) {
 
-		this(event, id, f, 0, 0);
+		this(event, id, f, 0, k);
 		scrollAmount = s;
 		wheelRotation = r * -1;
 
