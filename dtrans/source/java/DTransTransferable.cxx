@@ -57,15 +57,22 @@
 #endif
 #include <premac.h>
 #include <Carbon/Carbon.h>
+#include <QuickTime/QuickTime.h>
 #include <postmac.h>
 
 typedef OSStatus ClearCurrentScrap_Type( void );
+typedef OSErr CloseComponent_Type( ComponentInstance );
+typedef void DisposeHandle_Type( Handle );
 typedef OSStatus GetCurrentScrap_Type( ScrapRef * );
 typedef OSStatus GetScrapFlavorData_Type( ScrapRef, ScrapFlavorType, MacOSSize *, void * );
 typedef OSStatus GetScrapFlavorSize_Type( ScrapRef, ScrapFlavorType, MacOSSize * );
 typedef OSStatus GetScrapFlavorCount_Type( ScrapRef, UInt32 * );
 typedef OSStatus GetScrapFlavorInfoList_Type( ScrapRef, UInt32 *, ScrapFlavorInfo[] );
+typedef void KillPicture_Type( PicHandle );
+typedef Handle NewHandle_Type( MacOSSize );
 typedef ScrapPromiseKeeperUPP NewScrapPromiseKeeperUPP_Type( ScrapPromiseKeeperProcPtr );
+typedef OSErr OpenADefaultComponent_Type( OSType, OSType, ComponentInstance * );
+typedef OSErr PtrToHand_Type( const void *, Handle *, long );
 typedef OSStatus PutScrapFlavor_Type( ScrapRef, ScrapFlavorType, ScrapFlavorFlags, MacOSSize, const void * );
 typedef OSStatus SetScrapPromiseKeeper_Type( ScrapRef, ScrapPromiseKeeperUPP, const void * );
 
@@ -76,24 +83,30 @@ using namespace vos;
 // most Cocoa applications (e.g. TextEdit) produce RTF that the OOo code
 // cannot parse properly and so we end up with garbage.
 
-static UInt32 nSupportedTypes = 2;
+static UInt32 nSupportedTypes = 3;
 
 // List of support native types in priority order
 static FourCharCode aSupportedNativeTypes[] = {
 	'utxt',
-	'TEXT'
+	'TEXT',
+	'TIFF',
+	'PICT'
 };
 
 // List of support mime types in priority order
 static OUString aSupportedMimeTypes[] = {
 	OUString::createFromAscii( "text/plain;charset=utf-16" ),
-	OUString::createFromAscii( "text/plain;charset=utf-16" )
+	OUString::createFromAscii( "text/plain;charset=utf-16" ),
+	OUString::createFromAscii( "application/x-openoffice;windows_formatname=\"Bitmap\"" ),
+	OUString::createFromAscii( "application/x-openoffice;windows_formatname=\"Bitmap\"" )
 };
 
 // List of support data types in priority order
 static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
 	getCppuType( ( OUString* )0 ),
-	getCppuType( ( OUString* )0 )
+	getCppuType( ( OUString* )0 ),
+	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
+	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 )
 };
 
 static ScrapPromiseKeeperUPP pScrapPromiseKeeperUPP = NULL;
@@ -139,8 +152,14 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 		OModule aModule;
 		if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
 		{
+			CloseComponent_Type *pCloseComponent = (CloseComponent_Type *)aModule.getSymbol( OUString::createFromAscii( "CloseComponent" ) );
+			DisposeHandle_Type *pDisposeHandle = (DisposeHandle_Type *)aModule.getSymbol( OUString::createFromAscii( "DisposeHandle" ) );
+			KillPicture_Type *pKillPicture = (KillPicture_Type *)aModule.getSymbol( OUString::createFromAscii( "KillPicture" ) );
+			NewHandle_Type *pNewHandle = (NewHandle_Type *)aModule.getSymbol( OUString::createFromAscii( "NewHandle" ) );
+			OpenADefaultComponent_Type *pOpenADefaultComponent = (OpenADefaultComponent_Type *)aModule.getSymbol( OUString::createFromAscii( "OpenADefaultComponent" ) );
+			PtrToHand_Type *pPtrToHand = (PtrToHand_Type *)aModule.getSymbol( OUString::createFromAscii( "PtrToHand" ) );
 			PutScrapFlavor_Type *pPutScrapFlavor = (PutScrapFlavor_Type *)aModule.getSymbol( OUString::createFromAscii( "PutScrapFlavor" ) );
-			if ( pPutScrapFlavor )
+			if ( pCloseComponent && pDisposeHandle && pKillPicture && pNewHandle && pOpenADefaultComponent && pPtrToHand && pPutScrapFlavor )
 			{
 				BOOL bFlavorFound = FALSE;
 				DataFlavor aFlavor;
@@ -160,35 +179,85 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 				if ( bFlavorFound )
 				{
 					Any aValue( pTransferable->getTransferData( aFlavor ) );
-					sal_Int8 *pData = NULL;
-					MacOSSize nDataLen = 0;
 
        	    		if ( aValue.getValueType().equals( getCppuType( ( OUString* )0 ) ) )
 					{
 						OUString aString;
 						aValue >>= aString;
+
 						if ( nType == 'TEXT' )
 						{
 							OString aEncodedString = OUStringToOString( aString, gsl_getSystemTextEncoding() );
-							pData = (sal_Int8 *)aEncodedString.getStr();
-							nDataLen = aEncodedString.getLength();
+							sal_Int8 *pData = (sal_Int8 *)aEncodedString.getStr();
+							MacOSSize nDataLen = aEncodedString.getLength();
+
+							if ( pData && nDataLen )
+								nErr = pPutScrapFlavor( (ScrapRef)pTransferable->getNativeTransferable(), nType, kScrapFlavorMaskNone, nDataLen, (const void *)pData );
 						}
 						else
 						{
-							pData = (sal_Int8 *)aString.getStr();
-							nDataLen = aString.getLength() * sizeof( sal_Unicode );
+							sal_Int8 *pData = (sal_Int8 *)aString.getStr();
+							MacOSSize nDataLen = aString.getLength() * sizeof( sal_Unicode );
+
+							if ( pData && nDataLen )
+								nErr = pPutScrapFlavor( (ScrapRef)pTransferable->getNativeTransferable(), nType, kScrapFlavorMaskNone, nDataLen, (const void *)pData );
 						}
 					}
 					else if ( aValue.getValueType().equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
 					{
 						Sequence< sal_Int8 > aData;
 						aValue >>= aData;
-						pData = aData.getArray();
-						nDataLen = aData.getLength();
-					}
 
-					if ( pData && nDataLen )
-						nErr = pPutScrapFlavor( (ScrapRef)pTransferable->getNativeTransferable(), nType, kScrapFlavorMaskNone, nDataLen, (const void *)pData );
+						if ( nType == 'PICT' || nType == 'TIFF' )
+						{
+							// Convert to PICT or TIFF from our BMP data
+							ComponentInstance aImporter;
+							if ( pOpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
+							{
+								Handle hData;
+								if ( pPtrToHand( aData.getArray(), &hData, aData.getLength() ) == noErr )
+								{
+									// Free the source data
+									aData = Sequence< sal_Int8 >();
+
+									if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr )
+									{
+										PicHandle hPict;
+										if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
+										{
+											ComponentInstance aExporter;
+											if ( pOpenADefaultComponent( GraphicsExporterComponentType, nType, &aExporter ) == noErr );
+											{
+												if ( GraphicsExportSetInputPicture( aExporter, hPict ) == noErr )
+												{
+													Handle hExportData = pNewHandle( 0 );
+													if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
+													{
+														unsigned long nDataLen;
+														if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
+															nErr = pPutScrapFlavor( (ScrapRef)pTransferable->getNativeTransferable(), nType, kScrapFlavorMaskNone, nDataLen, (const void *)*hExportData );
+														pDisposeHandle( hExportData );
+													}
+												}
+												pCloseComponent( aExporter );
+											}
+											pKillPicture( hPict );
+										}
+										pDisposeHandle( hData );
+									}
+									pCloseComponent( aImporter );
+								}
+							}
+						}
+						else
+						{
+							sal_Int8 *pData = aData.getArray();
+							MacOSSize nDataLen = aData.getLength();
+
+							if ( pData && nDataLen )
+								nErr = pPutScrapFlavor( (ScrapRef)pTransferable->getNativeTransferable(), nType, kScrapFlavorMaskNone, nDataLen, (const void *)pData );
+						}
+					}
 				}
 			}
 	
@@ -251,9 +320,15 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 			OModule aModule;
 			if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
 			{
+				CloseComponent_Type *pCloseComponent = (CloseComponent_Type *)aModule.getSymbol( OUString::createFromAscii( "CloseComponent" ) );
+				DisposeHandle_Type *pDisposeHandle = (DisposeHandle_Type *)aModule.getSymbol( OUString::createFromAscii( "DisposeHandle" ) );
 				GetScrapFlavorData_Type *pGetScrapFlavorData = (GetScrapFlavorData_Type *)aModule.getSymbol( OUString::createFromAscii( "GetScrapFlavorData" ) );
 				GetScrapFlavorSize_Type *pGetScrapFlavorSize = (GetScrapFlavorSize_Type *)aModule.getSymbol( OUString::createFromAscii( "GetScrapFlavorSize" ) );
-				if ( pGetScrapFlavorData && pGetScrapFlavorSize )
+				KillPicture_Type *pKillPicture = (KillPicture_Type *)aModule.getSymbol( OUString::createFromAscii( "KillPicture" ) );
+				NewHandle_Type *pNewHandle = (NewHandle_Type *)aModule.getSymbol( OUString::createFromAscii( "NewHandle" ) );
+				OpenADefaultComponent_Type *pOpenADefaultComponent = (OpenADefaultComponent_Type *)aModule.getSymbol( OUString::createFromAscii( "OpenADefaultComponent" ) );
+				PtrToHand_Type *pPtrToHand = (PtrToHand_Type *)aModule.getSymbol( OUString::createFromAscii( "PtrToHand" ) );
+				if ( pCloseComponent && pDisposeHandle && pGetScrapFlavorData && pGetScrapFlavorSize && pKillPicture && pNewHandle && pOpenADefaultComponent && pPtrToHand )
 				{
 					MacOSSize aSize;
 
@@ -282,7 +357,55 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 							}
 							else if ( aFlavor.DataType.equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
 							{
-								out <<= aData;
+								if ( nRequestedType == 'PICT' || nRequestedType == 'TIFF' )
+								{
+									// Convert to BMP format
+									ComponentInstance aImporter;
+									if ( pOpenADefaultComponent( GraphicsImporterComponentType, nRequestedType, &aImporter ) == noErr )
+									{
+										Handle hData;
+										if ( pPtrToHand( aData.getArray(), &hData, aData.getLength() ) == noErr )
+										{
+											// Free the source data
+											aData = Sequence< sal_Int8 >();
+
+											if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr )
+											{
+												PicHandle hPict;
+												if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
+												{
+													ComponentInstance aExporter;
+													if ( pOpenADefaultComponent( GraphicsExporterComponentType, 'BMPf', &aExporter ) == noErr );
+													{
+														if ( GraphicsExportSetInputPicture( aExporter, hPict ) == noErr )
+														{
+															Handle hExportData = pNewHandle( 0 );
+															if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
+															{
+																unsigned long nDataLen;
+																if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
+																{
+																	Sequence< sal_Int8 > aExportData( nDataLen );
+																	memcpy( aExportData.getArray(), *hExportData, aExportData.getLength() );
+																	out <<= aExportData;
+																}
+																pDisposeHandle( hExportData );
+															}
+														}
+														pCloseComponent( aExporter );
+													}
+													pKillPicture( hPict );
+												}
+											}
+											pDisposeHandle( hData );
+										}
+										pCloseComponent( aImporter );
+									}
+								}
+								else
+								{
+									out <<= aData;
+								}
 							}
 
 							// Force a break from the loop
