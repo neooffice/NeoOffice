@@ -2916,7 +2916,22 @@ void PDFWriterImpl::registerGlyphs(
 
         if( pCurrentFont->mbSubsettable )
         {
-            
+#if defined USE_JAVA && defined MACOSX
+            // Fix bug 250 by finding fonts that are the same but are different
+            // pointers
+            if ( m_bUsingMtf )
+            {
+                for ( FontSubsetData::iterator sit = m_aSubsets.begin(); sit != m_aSubsets.end(); ++sit )
+                {
+                    if ( pCurrentFont->mpSysData == sit->first->mpSysData )
+                    {
+                        pCurrentFont = sit->first;
+                        break;
+                    }
+                }
+            }
+#endif	// USE_JAVA && MACOSX
+
             FontSubset& rSubset = m_aSubsets[ pCurrentFont ];
             // search for glyphID
             FontMapping::iterator it = rSubset.m_aMapping.find( pGlyphs[i] );
