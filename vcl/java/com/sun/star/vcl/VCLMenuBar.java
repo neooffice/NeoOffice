@@ -42,7 +42,7 @@ import java.awt.Frame;
 import java.awt.Window;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.Stack;
+import java.util.LinkedList;
 
 /**
  * The Java class that implements methods for SalMenu C++ objects that are
@@ -288,7 +288,7 @@ public final class VCLMenuBar {
 	 */
 	public void addMenuItem(VCLMenuItemData menuItem, int nPos) {
 
-		Stack menusToReinsert=null;
+		LinkedList menusToReinsert=null;
 
 		if((nPos < 0) || (nPos == 65535))
 			nPos=menus.size();
@@ -297,9 +297,9 @@ public final class VCLMenuBar {
 			// we can't insert menus in the middle of a menubar, so we have to
 			// remove the tail ones first and then reinsert them after we add
 			// the new Menu
-			menusToReinsert=new Stack();
+			menusToReinsert=new LinkedList();
 			for(int i=menus.size()-1; i >= nPos; i--) {
-				menusToReinsert.push(awtMenuBar.getMenu(i));
+				menusToReinsert.addLast(awtMenuBar.getMenu(i));
 				awtMenuBar.remove(i);
 			}
 		}
@@ -318,8 +318,8 @@ public final class VCLMenuBar {
 		// reinsert any menus we need to add
 
 		if(menusToReinsert!=null) {
-			while(!menusToReinsert.empty())
-				awtMenuBar.add((Menu)menusToReinsert.pop());
+			while(menusToReinsert.size() > 0)
+				awtMenuBar.add((Menu)menusToReinsert.removeLast());
 		}
 
 	}
