@@ -277,21 +277,13 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 									for ( UInt32 i = 1; i <= nCount; i++ )
 									{
 										PMResolution aResolution;
-										if ( pPrinterGetIndexedPrinterResolution( aPrinter, i, &aResolution ) == kPMNoError && aResolution.hRes >= aMaxResolution.hRes && aResolution.vRes >= aMaxResolution.vRes )
+										if ( pPrinterGetIndexedPrinterResolution( aPrinter, i, &aResolution ) == kPMNoError && aResolution.hRes >= aMaxResolution.hRes && aResolution.vRes >= aMaxResolution.vRes && aResolution.hRes <= 300 && aResolution.vRes <= 300 )
 										{
 											aMaxResolution.hRes = aResolution.hRes;
 											aMaxResolution.vRes = aResolution.vRes;
 										}
 									}
 								}
-
-								// Limit the resolution to 300 dpi as VCL will
-								// scale entire images before passing them to
-								// the SalGraphics for rendering
-								if ( aMaxResolution.hRes > 300 )
-									aMaxResolution.hRes = 300;
-								if ( aMaxResolution.vRes > 300 )
-									aMaxResolution.hRes = 300;
 
 								// Set the page resolution
 								maPrinterData.mpPrinter->maPrinterData.mpVCLPageFormat->setPageResolution( aMaxResolution.hRes, aMaxResolution.vRes );
@@ -319,6 +311,8 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 BOOL SalPrinter::EndJob()
 {
 	maPrinterData.mpVCLPrintJob->endJob();
+	maPrinterData.mpPrinter->maPrinterData.mpVCLPageFormat->resetPageResolution();
+	maPrinterData.mbStarted = FALSE;
 	return TRUE;
 }
 

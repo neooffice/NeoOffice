@@ -264,6 +264,15 @@ public final class VCLPageFormat {
 	}
 
 	/**
+	 * Reset the page resolution to the default resolution.
+	 */
+	public void resetPageResolution() {
+
+		pageResolution = new Dimension(VCLScreen.MIN_PRINTER_RESOLUTION, VCLScreen.MIN_PRINTER_RESOLUTION);
+
+	}
+
+	/**
 	 * Set the page orientation.
 	 *
 	 * @param o the page orientation

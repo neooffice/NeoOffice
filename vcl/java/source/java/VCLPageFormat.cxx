@@ -393,6 +393,25 @@ Paper com_sun_star_vcl_VCLPageFormat::getPaperType()
 
 // ----------------------------------------------------------------------------
 
+void com_sun_star_vcl_VCLPageFormat::resetPageResolution()
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "resetPageResolution", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+	}
+}
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLPageFormat::setOrientation( Orientation _par0 )
 {
 	static jmethodID mID = NULL;

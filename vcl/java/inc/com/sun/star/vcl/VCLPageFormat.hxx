@@ -70,6 +70,7 @@ public:
 	const Rectangle		getImageableBounds();
 	Orientation			getOrientation();
 	const Size			getPageSize();
+	void				resetPageResolution();
 	void				setOrientation( Orientation _par0 );
 	void				setPageResolution( long _par0, long _par1 );
 	Paper				getPaperType();

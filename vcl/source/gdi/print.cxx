@@ -1769,6 +1769,10 @@ BOOL Printer::EndJob()
 
 			mbDevOutput = FALSE;
 			mpPrinter->EndJob();
+#ifdef USE_JAVA
+			ImplUpdatePageData();
+			ImplUpdateFontList();
+#endif	// USE_JAVA
 			// Hier den Drucker nicht asyncron zerstoeren, da es
 			// W95 nicht verkraftet, wenn gleichzeitig gedruckt wird
 			// und ein Druckerobjekt zerstoert wird
