@@ -516,7 +516,7 @@ const Rectangle com_sun_star_vcl_VCLGraphics::getGlyphBounds( int _par0, com_sun
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(ILcom/sun/star/vcl/VCLFont;Z)Ljava/awt/Rectangle;";
+			char *cSignature = "(ILcom/sun/star/vcl/VCLFont;I)Ljava/awt/Rectangle;";
 			mID = t.pEnv->GetMethodID( getMyClass(), "getGlyphBounds", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
