@@ -167,14 +167,12 @@ public final class VCLFont {
 
 				// Get family type
 				int type;
-				if (fontFamilies[i].indexOf("Monospaced") >= 0)
+				if (fontFamilies[i].indexOf("Mono") >= 0)
 					type = VCLFont.FAMILY_MODERN;
-				else if (fontFamilies[i].indexOf("Sans") >= 0)
-					type = VCLFont.FAMILY_SWISS;
-				else if (fontFamilies[i].indexOf("Serif") >= 0)
+				else if (fontFamilies[i].indexOf("Serif") >= 0 || fontFamilies[i].indexOf("Times") >= 0 || fontFamilies[i].indexOf("Roman") >= 0)
 					type = VCLFont.FAMILY_ROMAN;
 				else
-					type = VCLFont.FAMILY_DONTKNOW;
+					type = VCLFont.FAMILY_SWISS;
 
 				array.add(new VCLFont(fontFamilies[i], type, 1, (short)0, false, false, true, false));
 			}
