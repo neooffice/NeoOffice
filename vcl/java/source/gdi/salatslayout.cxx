@@ -359,14 +359,6 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 
 	mnGlyphCount = mpGlyphInfoArray->numGlyphs;
 
-	// Break lines that are more than 32K pixels long to avoid messing up
-	// the metrics that ATSUGetGlyphBounds() returns
-	if ( ATSUBatchBreakLines( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, Long2Fix( 32768 ), NULL ) != noErr )
-	{
-		Destroy();
-		return;
-	}
-
 	// Cache mapping of characters to glyphs
 	nBufSize = mpHash->mnLen * sizeof( int );
 	mpCharsToGlyphs = (int *)rtl_allocateMemory( nBufSize );
@@ -386,43 +378,15 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	mpCharAdvances = (long *)rtl_allocateMemory( nBufSize );
 	memset( mpCharAdvances, 0, nBufSize );
 
-	ATSTrapezoid aTrapezoid;
-	ATSGlyphScreenMetrics aScreenMetrics;
+	ATSUTextMeasurement nBefore;
+	ATSUTextMeasurement nAfter;
+	ATSUTextMeasurement nAscent;
+	ATSUTextMeasurement nDescent;
 	for ( i = 0; i < mpHash->mnLen; i++ )
 	{
 		// Fix bug 448 by eliminating subpixel advances
-		if ( ATSUGetGlyphBounds( maLayout, 0, 0, i, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
-		{
-			mpCharAdvances[ i ] = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX );
-
-			// Fix bug 516 by detecting non-spacing characters
-			if ( !maVerticalFontStyle )
-			{
-				int j;
-				bool bAdjust = true;
-				for ( j = mpCharsToGlyphs[ i ]; j < mnGlyphCount && mpGlyphInfoArray->glyphs[ j ].charIndex == i; j++ )
-				{
-					if ( ATSUGlyphGetScreenMetrics( mpGlyphInfoArray->glyphs[ j ].style, 1, &mpGlyphInfoArray->glyphs[ j ].glyphID, sizeof( GlyphID ), mpHash->mbAntialiased, mpHash->mbAntialiased, &aScreenMetrics ) == noErr && aScreenMetrics.deviceAdvance.x )
-					{
-						bAdjust = false;
-						break;
-					}
-				}
-
-				if ( bAdjust )
-				{
-					for ( j = i - 1; j >= 0 && mpCharAdvances[ i ]; j-- )
-					{
-						if ( mpCharAdvances[ j ] )
-						{
-							long nAdjust = mpCharAdvances[ i ] > mpCharAdvances[ j ] ? mpCharAdvances[ j ] : mpCharAdvances[ i ];
-							mpCharAdvances[ j ] += nAdjust;
-							mpCharAdvances[ i ] -= nAdjust;
-						}
-					}
-				}
-			}
-		}
+		if ( ATSUGetUnjustifiedBounds( maLayout, i, 1, &nBefore, &nAfter, &nAscent, &nDescent ) == noErr )
+			mpCharAdvances[ i ] = Float32ToLong( Fix2X( nAfter - nBefore ) * mpHash->mfFontScaleX );
 	}
 
 	// Find positions that require fallback fonts
