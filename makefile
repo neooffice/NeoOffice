@@ -94,6 +94,7 @@ build.configure: build.oo_patches
 	sed 's#^setenv GUIBASE .*$$#setenv GUIBASE "java"#' "$(OO_ENV_X11)" | sed 's#^setenv ENVCDEFS "#&-DUSE_JAVA#' | sed 's#^setenv CLASSPATH .*$$#setenv CLASSPATH "$$SOLARVER/$$UPD/$$INPATH/bin/vcl.jar"#' > "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_NAME '$(PRODUCT_NAME)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_DIR_NAME '$(PRODUCT_DIR_NAME)'" >> "$(OO_ENV_JAVA)"
+	echo "setenv PRODUCT_TRADEMARKED_NAME '$(PRODUCT_TRADEMARKED_NAME)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_VERSION '$(PRODUCT_VERSION)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_FILETYPE '$(PRODUCT_FILETYPE)'" >> "$(OO_ENV_JAVA)"
 	( cd "$(BUILD_HOME)" ; ./bootstrap )
@@ -128,7 +129,7 @@ build.installation: build.neo_patches
 	rm -Rf "$(INSTALL_HOME)"
 	mkdir -p "$(INSTALL_HOME)"
 	echo "[ENVIRONMENT]" > "$(INSTALL_HOME)/response"
-	echo "INSTALLATIONMODE=INSTALL_NETWORK" >> "$(INSTALL_HOME)/response"
+	echo "INSTALLATIONMODE=INSTALL_NORMAL" >> "$(INSTALL_HOME)/response"
 	echo "INSTALLATIONTYPE=STANDARD" >> "$(INSTALL_HOME)/response"
 	echo "DESTINATIONPATH=$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" >> "$(INSTALL_HOME)/response"
 	echo "OUTERPATH=" >> "$(INSTALL_HOME)/response"
@@ -136,7 +137,26 @@ build.installation: build.neo_patches
 	echo "LANGUAGELIST=<LANGUAGE>" >> "$(INSTALL_HOME)/response"
 	echo "[JAVA]" >> "$(INSTALL_HOME)/response"
 	echo "JavaSupport=preinstalled_or_none" >> "$(INSTALL_HOME)/response"
-	source "$(OO_ENV_JAVA)" ; "$(PWD)/$(BUILD_HOME)/instsetoo/unxmacxp.pro/01/normal/setup" -v "-r:$(PWD)/$(INSTALL_HOME)/response"
+	source "$(OO_ENV_JAVA)" ; "$(BUILD_HOME)/instsetoo/unxmacxp.pro/01/normal/setup" -v "-r:$(PWD)/$(INSTALL_HOME)/response"
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" ; cp -f "$(PWD)/$(BUILD_HOME)/dtrans/unxmacxp.pro/lib/libdtransjava$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/forms/unxmacxp.pro/lib/libfrm$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/toolkit/unxmacxp.pro/lib/libtk$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/vcl/unxmacxp.pro/lib/libvcl$${UPD}$${DLLSUFFIX}.dylib" "program"
+	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" ; cp -f "$(PWD)/$(BUILD_HOME)/readlicense/source/license/unx/LICENSE" "$(PWD)/$(BUILD_HOME)/readlicense/source/readme/unxmacxp/README" "."
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" ; cp -f "$(PWD)/$(BUILD_HOME)/offmgr/unxmacxp.pro/bin/neojava$${UPD}01.res" "program/resource/iso$${UPD}01.res"
+	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" ; cp -f "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/nswrapper.sh" "program/nswrapper"
+	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" ; cp -f "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/soffice.sh" "program/soffice"
+	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" ; cp -f "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/Info.plist" "."
+	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" ; cp -f "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/PkgInfo" "."
+	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" ; cp -f "$(PWD)/$(BUILD_HOME)/vcl/unxmacxp.pro/class/vcl.jar" "program/classes"
+	rm -Rf "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents/Resources"
+	mkdir -p "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents/Resources"
+	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" ; cp -f "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/ship.icns" "Resources"
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents/program" ; regcomp -revoke -r applicat.rdb -c "libdtransX11$${UPD}$${DLLSUFFIX}.dylib"
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents/program" ; regcomp -register -r applicat.rdb -c "libdtransjava$${UPD}$${DLLSUFFIX}.dylib"
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" ; rm -Rf "license.html" "readme.html" "setup" "spadmin" "program/libdtransX11$${UPD}$${DLLSUFFIX}.dylib" "program/setup" "program/setup.bin" "program/spadmin" "program/spadmin.bin" "share/config/registry/cache" "user"
+	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" ; sed 's#ProductPatch=.*$$#ProductPatch=($(PRODUCT_VERSION))#' "program/bootstraprc" | sed 's#Location=.*$$#Location=$$SYSUSERCONFIG/.neojavarc#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' > "../../out" ; mv -f "../../out" "program/bootstraprc"
+	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" ; sed 's#"string">.*</ooName>#"string">$(PRODUCT_NAME)</ooName>#g' "share/config/registry/instance/org/openoffice/Setup.xml" | sed 's#"string">.*</ooSetupVersion>#"string">$(PRODUCT_VERSION)</ooSetupVersion>#g'> "../../out" ; mv -f "../../out" "share/config/registry/instance/org/openoffice/Setup.xml"
+	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" ; sed 's#"string">.*</OfficeInstall>#"string">/Applications/$(PRODUCT_DIR_NAME).app/Contents</OfficeInstall>#g' "share/config/registry/instance/org/openoffice/Office/Common.xml" | sed 's#>OpenOffice\.org [0-9\.]* #>$(PRODUCT_NAME) $(PRODUCT_VERSION) #g'> "../../out" ; mv -f "../../out" "share/config/registry/instance/org/openoffice/Setup.xml"
+	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" ; sh -c 'if [ ! -d "MacOS" ] ; then rm -Rf "MacOS" ; mv -f "program" "MacOS" ; ln -s "MacOS" "program" ; fi'
+	chmod -Rf u+w,go-w,a+r "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app"
 	touch $@
 
 # This target must be run manually since it launches the GUI PackageMaker tool
