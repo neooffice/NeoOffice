@@ -1720,8 +1720,7 @@ public final class VCLEvent extends AWTEvent {
 	 */
 	boolean isAWTEvent() {
 
-		int id = getID();
-		return (awtEvent || id == SALEVENT_YIELDEVENTQUEUE || id == SALEVENT_ACTIVATE_APPLICATION );
+		return (awtEvent || getID() >= SALEVENT_OPENDOCUMENT);
 
 	}
 
@@ -1846,6 +1845,14 @@ public final class VCLEvent extends AWTEvent {
 			case SALEVENT_OPENDOCUMENT:
 				typeStr = "SALEVENT_OPENDOCUMENT";
 				break;
+			case SALEVENT_PRINTDOCUMENT:
+				typeStr = "SALEVENT_PRINTDOCUMENT";
+				break;
+			case SALEVENT_YIELDEVENTQUEUE:
+				typeStr = "SALEVENT_YIELDEVENTQUEUE";
+				break;
+			case SALEVENT_ACTIVATE_APPLICATION:
+				typeStr = "SALEVENT_ACTIVATE_APPLICATION";
 			default:
 				typeStr = "unknown type";
 		}

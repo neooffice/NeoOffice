@@ -1034,7 +1034,6 @@ void SalInstance::AcquireYieldMutex( ULONG nCount )
 void SalInstance::Yield( BOOL bWait )
 {
 	static USHORT nRecursionLevel = 0;
-	static bool bInOpenDocEvent = false;
 
 	SalData *pSalData = GetSalData();
 	com_sun_star_vcl_VCLEvent *pEvent;
@@ -1045,33 +1044,16 @@ void SalInstance::Yield( BOOL bWait )
 	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( 0, FALSE ) ) != NULL )
 	{
 		USHORT nID = pEvent->getID();
-		switch ( nID )
+		if ( nID == SALEVENT_SHUTDOWN )
 		{
-			case SALEVENT_SHUTDOWN:
-				// Ignore SALEVENT_SHUTDOWN events when recursing into this
-				// method or when in presentation mode
-				if ( nRecursionLevel == 1 && !pSalData->mpPresentationFrame )
-					pEvent->dispatch();
-				break;
-			case SALEVENT_OPENDOCUMENT:
-			case SALEVENT_PRINTDOCUMENT:
-				// Fix bug 168 by reposting SALEVENT_*DOCUMENT events when
-				// recursing into this method while opening a document
-				if ( !bInOpenDocEvent )
-				{
-					bInOpenDocEvent = true;
-					pEvent->dispatch();
-					bInOpenDocEvent = false;
-				}
-				else
-				{
-					com_sun_star_vcl_VCLEvent aEvent( pEvent->getJavaObject() );
-					pSalData->mpEventQueue->postCachedEvent( &aEvent );
-				}
-				break;
-			default:
+			// Ignore SALEVENT_SHUTDOWN events when recursing into this
+			// method or when in presentation mode
+			if ( nRecursionLevel == 1 && !pSalData->mpPresentationFrame )
 				pEvent->dispatch();
-				break;
+		}
+		else
+		{
+			pEvent->dispatch();
 		}
 		delete pEvent;
 
@@ -1148,7 +1130,24 @@ void SalInstance::Yield( BOOL bWait )
 		nTimeout = 0;
 
 		USHORT nID = pEvent->getID();
-		pEvent->dispatch();
+		if ( nID == SALEVENT_OPENDOCUMENT || nID == SALEVENT_PRINTDOCUMENT )
+		{
+			// Fix bug 168 by reposting SALEVENT_*DOCUMENT events when
+			// recursing into this method while opening a document
+			if ( nRecursionLevel == 1 && !pSalData->mpPresentationFrame )
+			{
+				pEvent->dispatch();
+			}
+			else
+			{
+				com_sun_star_vcl_VCLEvent aEvent( pEvent->getJavaObject() );
+				pSalData->mpEventQueue->postCachedEvent( &aEvent );
+			}
+		}
+		else
+		{
+			pEvent->dispatch();
+		}
 		delete pEvent;
 	}
 
