@@ -377,12 +377,28 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	memset( mpCharAdvances, 0, nBufSize );
 
 	int i;
+	int nLastAdjustedPos = 0;
 	ATSTrapezoid aTrapezoid;
 	for ( i = 0; i < mpHash->mnLen; i++ )
 	{
 		// Fix bug 448 by eliminating subpixel advances
 		if ( ATSUGetGlyphBounds( maLayout, 0, 0, i, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
 			mpCharAdvances[ i ] = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX );
+
+		// Zero width characters can confuse the OOo code
+		if ( !mpCharAdvances[ i ] )
+		{
+			mpCharAdvances[ i ] = 1;
+			for ( int j = i - 1; j >= nLastAdjustedPos; j-- )
+			{
+				if ( mpCharAdvances[ j ] > 1 )
+				{
+					mpCharAdvances[ j ] -= 1;
+					nLastAdjustedPos = j;
+					break;
+				}
+			}
+		}
 	}
 
 	// Cache mapping of characters to glyphs
@@ -688,8 +704,6 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			// Mark whitespace glyphs
 			if ( IsSpacingGlyph( nChar | GF_ISCHAR ) || mpLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID == 0xffff || mpLayoutData->mpGlyphInfoArray->glyphs[ i ].layoutFlags & kATSGlyphInfoTerminatorGlyph )
 				nGlyph = 0x0020 | GF_ISCHAR;
-			else if ( bFirstGlyph && ( nChar >= 0x0300 && nChar < 0x0370 ) )
-				aPos.X() -= nCharWidth;
 
 			int nGlyphFlags = bFirstGlyph ? 0 : GlyphItem::IS_IN_CLUSTER;
 			if ( bPosRTL )
