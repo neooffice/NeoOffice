@@ -36,6 +36,7 @@
 package com.sun.star.vcl;
 
 import java.awt.Menu;
+import java.awt.peer.MenuPeer;
 import com.sun.star.vcl.VCLMenuItemData;
 import com.sun.star.vcl.VCLMenuBar;
 import java.lang.IllegalArgumentException;
@@ -98,7 +99,20 @@ public final class VCLMenu {
 	    System.err.println("getMenuItemDataObject() invoked on disposed menu!");
      	return(menuData);
     }
-    
+   
+	/**
+	 * Returns the <code>MenuPeer</code>.
+	 *
+	 * @return the <code>MenuPeer</code>
+	 */
+	public MenuPeer getPeer() {
+
+		// TODO: Need to get access to the AWT Menu instance so that we can
+		// invoke Menu.getPeer()
+		return null;
+
+	}
+ 
     /**
      * Add a new menu item into the menu
      *

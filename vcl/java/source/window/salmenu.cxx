@@ -68,9 +68,6 @@
 #include <com/sun/star/vcl/VCLMenu.hxx>
 #endif
 
-// Uncomment the following line to suppress native menus
-// #define NO_NATIVE_MENUS
-
 /*
  * SalMenu stub implementations
  */

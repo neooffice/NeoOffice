@@ -109,6 +109,71 @@ com_sun_star_vcl_VCLMenuItemData * com_sun_star_vcl_VCLMenu::getMenuItemDataObje
 
 // ----------------------------------------------------------------------------
 
+void * com_sun_star_vcl_VCLMenu::getNativeMenu( )
+{
+	void *out = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		java_lang_Object *peer = getPeer();
+		if ( peer )
+		{
+			jobject tempObj = peer->getJavaObject();
+			if ( tempObj )
+			{
+#ifdef MACOSX
+				// Test the JVM version and if it is below 1.4, use Carbon APIs
+				if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+				{
+					jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/publicpeers/VMenuPeer" );
+					if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
+					{
+						static jmethodID mIDGetMenuID = NULL;
+						if ( !mIDGetMenuID )
+						{
+							char *cSignature = "()I";
+							mIDGetMenuID = t.pEnv->GetMethodID( tempClass, "getMenuID", cSignature );
+						}
+						OSL_ENSURE( mIDGetMenuID, "Unknown method id!" );
+						if ( mIDGetMenuID )
+							out = (void *)t.pEnv->CallIntMethod( tempObj, mIDGetMenuID );
+					}
+				}
+#endif	// MACOSX
+			}
+			delete peer;
+		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+java_lang_Object * com_sun_star_vcl_VCLMenu::getPeer( )
+{
+	static jmethodID mID = NULL;
+	java_lang_Object *out = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Ljava/awt/peer/MenuPeer;";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getPeer", cSignature );  
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
+			if ( tempObj )
+				out = new java_lang_Object( tempObj );
+		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLMenu::insertItem( com_sun_star_vcl_VCLMenuItemData *_par0, int _par1 )
 {
         static jmethodID mID = NULL;
