@@ -286,14 +286,14 @@ public final class VCLMenuBar {
 	 * @param menuItem menu item to be inserted
 	 * @param nPos position in the menubar where the menu should be added
 	 */
-	public void addMenuItem(VCLMenuItemData menuItem, int nPos) {
+	public void addMenuItem(VCLMenuItemData menuItem, short nPos) {
 
 		LinkedList menusToReinsert=null;
 
-		if((nPos < 0) || (nPos == 65535))
-			nPos=menus.size();
+		if(nPos < 0)
+			nPos=(short)menus.size();
 
-		if(!menus.isEmpty() && (nPos < menus.size())) {
+		if(!menus.isEmpty() && nPos < menus.size()) {
 			// we can't insert menus in the middle of a menubar, so we have to
 			// remove the tail ones first and then reinsert them after we add
 			// the new Menu
@@ -329,7 +329,7 @@ public final class VCLMenuBar {
 	 *
 	 * @param nPos index of menu to remove
 	 */
-	public void removeMenu(int nPos) {
+	public void removeMenu(short nPos) {
 
 		Menu m=awtMenuBar.getMenu(nPos);
 		awtMenuBar.remove(nPos);
@@ -346,7 +346,7 @@ public final class VCLMenuBar {
 	 * @param nPos position in the menu ordering where the new menu should be
 	 *  added
 	 */
-	public void changeMenu(VCLMenuItemData newMenu, int nPos) {
+	public void changeMenu(VCLMenuItemData newMenu, short nPos) {
 
 		if(nPos < menus.size()) {
 			VCLMenuItemData oldMenu=(VCLMenuItemData)menus.get(nPos);
@@ -364,7 +364,7 @@ public final class VCLMenuBar {
 	 *
 	 * @param nPos position to enable
 	 */
-	public void enableMenu(int nPos, boolean enable) {
+	public void enableMenu(short nPos, boolean enable) {
 
 		if(nPos < menus.size()) {
 			VCLMenuItemData menu=(VCLMenuItemData)menus.get(nPos);
