@@ -169,7 +169,6 @@ private:
 
 	ULONG				nEventId;
 	ULONG				nDummy;
-	USHORT				mnHighlightedItemPos; // for native menues: keeps track of the highlighted item 
 	USHORT				nMenuFlags;
 	USHORT				nDefaultItem;		// Id vom Default-Item
 	USHORT				nSelectedId;
@@ -187,7 +186,7 @@ private:
     ::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessible > mxAccessible;
 	mutable vcl::MenuLayoutData* mpLayoutData;
 	SalMenu*			mpSalMenu;
-	long				mnDummy;
+	ULONG				mnHighlightedItemPos; // for native menues: keeps track of the highlighted item 
 	BOOL				mbDummy;
 
 protected:

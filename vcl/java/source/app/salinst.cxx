@@ -295,11 +295,11 @@ void ExecuteApplicationMain( Application *pApp )
 	// If there is a "share/fonts/truetype" directory, explicitly activate the
 	// fonts since Panther does not automatically add fonts in the user's
 	// Library/Fonts directory until they reboot or relogin
-	rtl_uString *pStr;
-	rtl_uString *pExecPath;
-	if ( osl_getExecutableFile( &pStr ) == osl_Process_E_None && osl_getSystemPathFromFileURL( pStr, &pExecPath ) == osl_File_E_None )
+	OUString aStr;
+	OUString aExecPath;
+	if ( osl_getExecutableFile( &aStr.pData ) == osl_Process_E_None && osl_getSystemPathFromFileURL( aStr.pData, &aExecPath.pData ) == osl_File_E_None )
 	{
-		ByteString aFontDir( rtl_uString_getStr( pExecPath ), RTL_TEXTENCODING_UTF8 );
+		ByteString aFontDir( aExecPath.getStr(), RTL_TEXTENCODING_UTF8 );
 		if ( aFontDir.Len() )
 		{
 			aFontDir += ByteString( "/../share/fonts/truetype", RTL_TEXTENCODING_UTF8 );

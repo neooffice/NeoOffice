@@ -43,6 +43,8 @@
  *
  ************************************************************************/
 
+#include <list>
+
 #ifndef _SV_SALATSLAYOUT_HXX
 #include <salatslayout.hxx>
 #endif
@@ -59,11 +61,67 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
 
+#define UNITS_PER_PIXEL 1000
+
 inline int Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 using namespace osl;
 using namespace rtl;
 using namespace vcl;
+
+// ============================================================================
+
+static OSStatus SalATSCubicMoveToCallback( const Float32Point *pPoint, void *pData )
+{
+	::std::list< Polygon > *pPolygonList = (::std::list< Polygon > *)pData;
+
+	Point aPoint( Float32ToLong( pPoint->x * UNITS_PER_PIXEL ), Float32ToLong( pPoint->y * UNITS_PER_PIXEL ) );
+	pPolygonList->push_back( Polygon( 1, &aPoint ) );
+
+	return noErr;
+}
+
+// ----------------------------------------------------------------------------
+
+static OSStatus SalATSCubicLineToCallback( const Float32Point *pPoint, void *pData )
+{
+	::std::list< Polygon > *pPolygonList = (::std::list< Polygon > *)pData;
+
+	pPolygonList->back().Insert( pPolygonList->back().GetSize(), Point( Float32ToLong( pPoint->x * UNITS_PER_PIXEL ), Float32ToLong( pPoint->y * UNITS_PER_PIXEL ) ) );
+
+	return noErr;
+}
+
+// ----------------------------------------------------------------------------
+
+static OSStatus SalATSCubicCurveToCallback( const Float32Point *pStart, const Float32Point *pOffCurve, const Float32Point *pEnd, void *pData )
+{
+	::std::list< Polygon > *pPolygonList = (::std::list< Polygon > *)pData;
+
+	Point aStart( Float32ToLong( pStart->x * UNITS_PER_PIXEL ), Float32ToLong( pStart->y * UNITS_PER_PIXEL ) );
+	Point aOffCurve( Float32ToLong( pOffCurve->x * UNITS_PER_PIXEL ), Float32ToLong( pOffCurve->y * UNITS_PER_PIXEL ) );
+	Point aEnd( Float32ToLong( pEnd->x * UNITS_PER_PIXEL ), Float32ToLong( pEnd->y * UNITS_PER_PIXEL ) );
+
+	USHORT nSize = pPolygonList->back().GetSize();
+	pPolygonList->back().Insert( nSize++, aStart, POLY_CONTROL );
+	pPolygonList->back().Insert( nSize++, aOffCurve, POLY_CONTROL );
+	pPolygonList->back().Insert( nSize, aEnd );
+
+	return noErr;
+}
+
+// ----------------------------------------------------------------------------
+
+static OSStatus SalATSCubicClosePathCallback( void *pData )
+{
+	::std::list< Polygon > *pPolygonList = (::std::list< Polygon > *)pData;
+
+	USHORT nSize = pPolygonList->back().GetSize();
+	if ( nSize > 1 )
+		pPolygonList->back().Insert( nSize, Point( pPolygonList->back().GetPoint( 0 ) ) );
+
+	return noErr;
+}
 
 // ============================================================================
 
@@ -86,7 +144,7 @@ SalATSLayout::SalATSLayout( SalGraphics *pGraphics, int nFallbackLevel ) :
 	mpCharsToGlyphs( NULL ),
 	mpVerticalFlags( NULL )
 {
-	SetUnitsPerPixel( 1000 );
+	SetUnitsPerPixel( UNITS_PER_PIXEL );
 
 	if ( mnFallbackLevel )
 	{
@@ -440,7 +498,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		int nIndex = nCharPos - rArgs.mnMinCharPos + 1;
 		for ( int i = mpCharsToGlyphs[ nIndex ]; i < mnGlyphCount && mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
 		{
-			int nGlyph = mpGlyphInfoArray->glyphs[ i ].glyphID;
+			long nGlyph = mpGlyphInfoArray->glyphs[ i ].glyphID;
 			long nCharWidth = 0;
 
 			if ( mpGlyphTranslations && mpVerticalFlags && mpVerticalFlags[ mpGlyphInfoArray->glyphs[ i ].charIndex ] & GF_ROTMASK )
@@ -460,8 +518,9 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				nCharWidth = Float32ToLong( ( mpGlyphInfoArray->glyphs[ i + 1 ].idealX - mpGlyphInfoArray->glyphs[ i ].idealX ) * mnUnitsPerPixel );
 			}
 
-			if ( nGlyph >= 0xffff )
-				nGlyph = 3;
+			// Mark whitespace glyphs
+			if ( mpGlyphInfoArray->glyphs[ i ].glyphID == 0xffff || ( mpGlyphInfoArray->glyphs[ i ].glyphID > 0 && mpGlyphInfoArray->glyphs[ i ].glyphID <= 3 ) || mpGlyphInfoArray->glyphs[ i ].layoutFlags & kATSGlyphInfoTerminatorGlyph )
+				nGlyph = 0x0020 | GF_ISCHAR;
 
 			int nGlyphFlags = nCharWidth ? 0 : GlyphItem::IS_IN_CLUSTER;
 			if ( bPosRTL )
@@ -470,6 +529,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			AppendGlyph( GlyphItem( nCharPos, nGlyph, aPos, nGlyphFlags, nCharWidth ) );
 
 			aPos.X() += nCharWidth;
+			break;
 		}
 	}
 
@@ -495,6 +555,19 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 
 		if ( !nGlyphCount )
 			break;
+
+		int i;
+		for ( i = 0; i < nGlyphCount && IsSpacingGlyph( aGlyphArray[ i ] ); i++ )
+			;
+		if ( i )
+		{
+			nStart -= nGlyphCount - i;
+			continue;
+		}
+
+		for ( i = 0; i < nGlyphCount && !IsSpacingGlyph( aGlyphArray[ i ] ); i++ )
+			;
+		nGlyphCount = i;
 
 		int nOrientation = GetOrientation();
 
@@ -549,42 +622,58 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector )
 		if ( !nGlyphCount )
 			break;
 
+		if ( IsSpacingGlyph( aGlyphArray[ 0 ] ) )
+		{
+			bRet = true;
+			continue;
+		}
+
 		int nIndex = aCharPosArray[ 0 ] - mnMinCharPos + 1;
 		for ( int i = mpCharsToGlyphs[ nIndex ]; i < mnGlyphCount && mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
 		{
-			int nGlyph = mpGlyphInfoArray->glyphs[ i ].glyphID;
-			if ( aGlyphArray[ 0 ] & GF_IDXMASK != nGlyph )
+			long nGlyph = mpGlyphInfoArray->glyphs[ i ].glyphID;
+			if ( ( aGlyphArray[ 0 ] & GF_IDXMASK ) != nGlyph )
 				continue;
 
-			// Only calculate the minimum rectangular bounds as that is what
-			// this method is usually used for
-			ATSGlyphScreenMetrics aScreenMetrics;
-			if ( ATSUGlyphGetScreenMetrics( mpGlyphInfoArray->glyphs[ i ].style, 1, &mpGlyphInfoArray->glyphs[ i ].glyphID, sizeof( GlyphID ), true, true, &aScreenMetrics ) != noErr )
+			::std::list< Polygon > aPolygonList;
+			OSStatus nErr;
+			if ( ATSUGlyphGetCubicPaths( mpGlyphInfoArray->glyphs[ i ].style, mpGlyphInfoArray->glyphs[ i ].glyphID, SalATSCubicMoveToCallback, SalATSCubicLineToCallback, SalATSCubicCurveToCallback, SalATSCubicClosePathCallback, (void *)&aPolygonList, &nErr ) != noErr )
 				continue;
 
-			Rectangle aRect;
+			PolyPolygon aPolyPolygon;
+			while ( aPolygonList.size() )
+			{
+				aPolyPolygon.Insert( aPolygonList.front() );
+				aPolygonList.pop_front();
+			}
+
 			if ( mpGlyphTranslations && aGlyphArray[ 0 ] & GF_ROTMASK )
 			{
 				int j = i * 2;
-				aRect.SetPos( Point( aPos.X() + mpGlyphTranslations[ j ], aPos.Y() + mpGlyphTranslations[ j + 1 ] ) );
+				int nOrientation;
+				Point aOrigin;
 				if ( aGlyphArray[ 0 ] & GF_ROTL )
-					aRect.Move( Float32ToLong( aScreenMetrics.topLeft.y * -1 ), Float32ToLong( ( aScreenMetrics.topLeft.x + aScreenMetrics.width ) * -1 ) );
+				{
+					nOrientation = 900;
+					aOrigin = Point( mpGlyphTranslations[ j + 1 ] * mnUnitsPerPixel, mpGlyphTranslations[ j ] * mnUnitsPerPixel * -1 );
+				}
 				else
-					aRect.Move( Float32ToLong( aScreenMetrics.topLeft.y - aScreenMetrics.height ), Float32ToLong( aScreenMetrics.topLeft.x ) );
-				aRect.SetSize( Size( aScreenMetrics.height, aScreenMetrics.width) );
+				{
+					nOrientation = -900;
+					aOrigin = Point( mpGlyphTranslations[ j + 1 ] * mnUnitsPerPixel * -1, mpGlyphTranslations[ j ] * mnUnitsPerPixel );
+				}
+
+				aPolyPolygon.Rotate( Point( 0, 0 ), nOrientation );
+				aPolyPolygon.Move( aPos.X() + aOrigin.X(), aPos.Y() + aOrigin.Y() );
 			}
 			else
 			{
-				aRect.SetPos( Point( aPos.X(), aPos.Y() ) );
-				aRect.Move( Float32ToLong( aScreenMetrics.topLeft.x ), Float32ToLong( aScreenMetrics.topLeft.y ) );
-				aRect.SetSize( Size( aScreenMetrics.width, aScreenMetrics.height ) );
+				aPolyPolygon.Move( aPos.X(), aPos.Y() );
 			}
 
-			if ( !aRect.IsEmpty() )
-			{
-				rVector.push_back( PolyPolygon( Polygon( aRect ) ) );
-				bRet = true;
-			}
+			rVector.push_back( aPolyPolygon );
+			bRet = true;
+			break;
 		}
 	}
 

@@ -1410,7 +1410,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		return parent;
 
 	}
-
+        
 	/**
 	 * Gets the currently selected text from the text editing component.
 	 *
@@ -1482,6 +1482,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void keyPressed(KeyEvent e) {
 
+		if (VCLFrame.lastKeyPressed != null && VCLFrame.lastKeyPressed.getID() != KeyEvent.KEY_PRESSED)
+			VCLFrame.lastKeyPressed = null;
+
 		if (queue == null || window == null || !window.isShowing())
 			return;
 
@@ -1521,8 +1524,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			// we need to generate it ourselves.
 			int modifiers = e.getModifiers();
 			if (VCLFrame.lastKeyPressed == null && modifiers == (InputEvent.SHIFT_MASK | InputEvent.META_MASK) && keyCode >= KeyEvent.VK_A && keyCode <= KeyEvent.VK_Z && keyCode != KeyEvent.VK_Q) {
-				e = new KeyEvent(e.getComponent(), KeyEvent.KEY_TYPED, e.getWhen(), modifiers, KeyEvent.VK_UNDEFINED, (char)keyCode);
+				e = new KeyEvent(e.getComponent(), KeyEvent.KEY_TYPED, e.getWhen(), modifiers, KeyEvent.VK_UNDEFINED, Character.toLowerCase((char)keyCode));
 				keyTyped(e);
+				VCLFrame.lastKeyPressed = null;
 			}
 		}
 
@@ -1552,7 +1556,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			}
 		}
 
-		VCLFrame.lastKeyPressed = null;
+		VCLFrame.lastKeyPressed = e;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0));

@@ -3273,7 +3273,10 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                 pTmpFallbackFonts[i] = NULL;
 
             nGlyphFlags[i] = (pTmpGlyphs[i] & GF_FLAGMASK);
-            pTmpGlyphs[i] &= GF_IDXMASK;
+            if ( rLayout.IsSpacingGlyph( pTmpGlyphs[i] ) )
+                pTmpGlyphs[i] = 0;
+            else
+                pTmpGlyphs[i] &= GF_IDXMASK;
 
             if( pTmpCharPosAry[i] >= nMinCharPos && pTmpCharPosAry[i] <= nMaxCharPos )
                 pTmpUnicodes[i] = rText.GetChar( pTmpCharPosAry[i] );
@@ -3342,6 +3345,12 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
 
             nGlyphFlags[i] = (pGlyphs[i] & GF_FLAGMASK);
 #ifndef WNT
+#if defined USE_JAVA && defined MACOSX
+            if ( rLayout.IsSpacingGlyph( pGlyphs[i] ) )
+                pGlyphs[i] = 0;
+            else
+                pGlyphs[i] &= GF_IDXMASK;
+#else	// USE_JAVA && MACOSX
             // #104930# workaround for Win32 bug: the glyph ids are actually
             // Unicodes for vertical fonts because Win32 does not return
             // the correct glyph ids; this is indicated by GF_ISCHAR which is
@@ -3349,10 +3358,8 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
             // to vertical glyph ids. Doing this here on a per character
             // basis would be a major performance hit.
             pGlyphs[i] &= GF_IDXMASK;
-#endif
-#if defined USE_JAVA && defined MACOSX
-            pGlyphs[i] &= GF_IDXMASK;
 #endif	// USE_JAVA && MACOSX
+#endif
             if( pCharPosAry[i] >= nMinCharPos && pCharPosAry[i] <= nMaxCharPos )
                 pUnicodes[i] = rText.GetChar( pCharPosAry[i] );
             else
