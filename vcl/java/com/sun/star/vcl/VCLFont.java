@@ -282,18 +282,19 @@ public final class VCLFont {
 			type = VCLFont.FAMILY_ROMAN;
 
 		// Get size metrics
-		leading = fontMetrics.getLeading();
+		ascent = fontMetrics.getMaxAscent();
 		descent = fontMetrics.getMaxDescent();
-		if (leading < 0)
-			leading *= -1;
+		leading = fontMetrics.getLeading();
+		if (ascent < 0)
+			ascent *= -1;
 		if (descent < 0)
 			descent *= -1;
-		if (descent < leading) {
-			int adjust = (leading - descent) / 2;
-			leading -= adjust;
-			descent += adjust;
-		}
-		ascent = fontMetrics.getMaxAscent() + leading;
+		if (leading < 0)
+			leading *= -1;
+
+		// Mac OS X seems to understate the actual advance
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
+			ascent++;
 
 	}
 
