@@ -546,6 +546,16 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private static boolean capture = false;
 
 	/**
+	 * The first capture event.
+	 */
+	private static MouseEvent firstCaptureEvent = null;
+
+	/**
+	 * The first capture frame.
+	 */
+	private static VCLFrame firstCaptureFrame = null;
+
+	/**
 	 * The last capture frame.
 	 */
 	private static VCLFrame lastCaptureFrame = null;
@@ -702,6 +712,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			VCLFrame.captureFrame = parent;
 		if (VCLFrame.lastCaptureFrame == this)
 			VCLFrame.lastCaptureFrame = null;
+		if (VCLFrame.firstCaptureFrame == this && VCLFrame.firstCaptureEvent != null)
+			mouseReleased(new MouseEvent(panel, MouseEvent.MOUSE_RELEASED, System.currentTimeMillis(), VCLFrame.firstCaptureEvent.getModifiers(), VCLFrame.firstCaptureEvent.getX(), VCLFrame.firstCaptureEvent.getY(), VCLFrame.firstCaptureEvent.getClickCount(), VCLFrame.firstCaptureEvent.isPopupTrigger()));
 
 	}
 
@@ -1279,6 +1291,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void mousePressed(MouseEvent e) {
 
+		VCLFrame.firstCaptureEvent = e;
+		VCLFrame.firstCaptureFrame = this;
+
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONDOWN, this, 0));
 
 	}
@@ -1309,18 +1324,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				f = f.getParent();
 			}
 
-			// Send a focus lost event if we release on a borderless window
-			if (VCLFrame.lastCaptureFrame != null && VCLFrame.lastCaptureFrame != f && VCLFrame.lastCaptureFrame.getWindow() instanceof Frame && VCLFrame.lastCaptureFrame.getWindow().isShowing()) {
-				Panel p = VCLFrame.lastCaptureFrame.getPanel();
-				VCLFrame.lastCaptureFrame.focusLost(new FocusEvent(p, FocusEvent.FOCUS_LOST));
-			}
-
 			if (f == null)
 				f = this;
 		}
 
+		// Send a focus lost event if we release on a borderless window
+		if (VCLFrame.lastCaptureFrame != null && VCLFrame.lastCaptureFrame != f && VCLFrame.lastCaptureFrame.getWindow() instanceof Frame && VCLFrame.lastCaptureFrame.getWindow().isShowing()) {
+			Panel p = VCLFrame.lastCaptureFrame.getPanel();
+			VCLFrame.lastCaptureFrame.focusLost(new FocusEvent(p, FocusEvent.FOCUS_LOST));
+		}
+
 		// Disable mouse capture
 		VCLFrame.capture = false;
+		VCLFrame.firstCaptureEvent = null;
+		VCLFrame.firstCaptureFrame = null;
 		VCLFrame.lastCaptureFrame = null;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONUP, f, 0));
