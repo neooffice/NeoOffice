@@ -141,7 +141,7 @@ public final class VCLPageFormat {
 	public VCLPageFormat() {
 
 		pageFormat = (PageFormat)VCLPageFormat.defaultPageFormat.clone();
-		pageResolution = new Dimension(72, 72);
+		pageResolution = new Dimension(VCLScreen.MIN_SCREEN_RESOLUTION, VCLScreen.MIN_SCREEN_RESOLUTION);
 		image = new VCLImage(1, 1, 32, this);
 
 	}

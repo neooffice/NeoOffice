@@ -50,6 +50,11 @@ import java.awt.Toolkit;
 public final class VCLScreen {
 
 	/**
+	 * The minimum screen resolution
+	 */
+	public final static int MIN_SCREEN_RESOLUTION = 96;
+
+	/**
 	 * The cached frame insets.
 	 */
 	private static Insets frameInsets = null;

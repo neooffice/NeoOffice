@@ -318,13 +318,6 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 		EndJob();
 		mpParent->ImplEndPrint();
 	}
-#ifdef USE_JAVA
-	else if ( mbAborted )
-	{
-		delete pActPage;
-		return 0;
-	}
-#endif	// USE_JAVA
 	else
 	{
 		GDIMetaFile		        aMtf;
@@ -334,6 +327,61 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
         long                    nMaxBmpDPIY = mnDPIY;
 		USHORT			        nCopyCount = 1;
 
+        if( rPrinterOptions.IsReduceBitmaps() )
+        {
+            // calculate maximum resolution for bitmap graphics
+            if( PRINTER_BITMAP_OPTIMAL == rPrinterOptions.GetReducedBitmapMode() )
+            {
+                nMaxBmpDPIX = Min( (long) OPTIMAL_BMP_RESOLUTION, nMaxBmpDPIX );
+                nMaxBmpDPIY = Min( (long) OPTIMAL_BMP_RESOLUTION, nMaxBmpDPIY );
+            }
+            else if( PRINTER_BITMAP_NORMAL == rPrinterOptions.GetReducedBitmapMode() )
+            {
+                nMaxBmpDPIX = Min( (long) NORMAL_BMP_RESOLUTION, nMaxBmpDPIX );
+                nMaxBmpDPIY = Min( (long) NORMAL_BMP_RESOLUTION, nMaxBmpDPIY );
+            }
+            else
+            {
+                nMaxBmpDPIX = Min( (long) rPrinterOptions.GetReducedBitmapResolution(), nMaxBmpDPIX );
+                nMaxBmpDPIY = Min( (long) rPrinterOptions.GetReducedBitmapResolution(), nMaxBmpDPIY );
+            }
+        }
+
+#ifdef USE_JAVA
+		long nOldDPIX = mnDPIX;
+		long nOldDPIY = mnDPIY;
+		if ( nMaxBmpDPIX && nMaxBmpDPIY && nMaxBmpDPIX < mnDPIX && nMaxBmpDPIY < mnDPIY )
+		{
+			mpPrinter->SetResolution( nMaxBmpDPIX, nMaxBmpDPIY );
+			ImplUpdatePageData();
+			ImplUpdateFontList();
+		}
+#endif	// USE_JAVA
+
+        // convert to greysacles
+        if( rPrinterOptions.IsConvertToGreyscales() )
+        {
+            SetDrawMode( GetDrawMode() | ( DRAWMODE_GRAYLINE | DRAWMODE_GRAYFILL | DRAWMODE_GRAYTEXT | 
+                                           DRAWMODE_GRAYBITMAP | DRAWMODE_GRAYGRADIENT ) );
+        }
+
+        // disable transparency output
+		if( rPrinterOptions.IsReduceTransparency() && ( PRINTER_TRANSPARENCY_NONE == rPrinterOptions.GetReducedTransparencyMode() ) )
+		{
+			SetDrawMode( GetDrawMode() | DRAWMODE_NOTRANSPARENCY );
+		}
+
+		mbDestroyAllowed = FALSE;
+	    GetPreparedMetaFile( *pActPage->mpMtf, aMtf, nMaxBmpDPIX, nMaxBmpDPIY );
+		
+		if( mbUserCopy && !mbCollateCopy )
+			nCopyCount = mnCopyCount;
+
+#if defined USE_JAVA && defined MACOSX
+		// Java on Mac OS X expects each page to be printed twice
+		nCopyCount *= 2;
+#endif	// USE_JAVA && MACOSX
+
 #ifdef USE_JAVA
 		// The Java implementation requires that we push the resolution to the
 		// printer instead of vice versa so we need to set resolution to the
@@ -342,7 +390,7 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 		long nDPIY = 0;
 		MetaAction *pAct;
 
-        for ( pAct = pActPage->mpMtf->FirstAction(); pAct; pAct = pActPage->mpMtf->NextAction() )
+        for ( pAct = aMtf.FirstAction(); pAct; pAct = aMtf.NextAction() )
 		{
 			Size aSrcSize;
 			Size aDestSize;
@@ -359,7 +407,7 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 					nDPIY = 0;
 					aDestSize = Size( 0, 0 );
 					while ( pAct )
-						pActPage->mpMtf->NextAction();
+						aMtf.NextAction();
 					break;
 				}
 				case ( META_BMPSCALE_ACTION ):
@@ -424,44 +472,7 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 			nMaxBmpDPIX = nDPIX;
 		if ( nDPIY && nDPIY < nMaxBmpDPIY )
 			nMaxBmpDPIY = nDPIY;
-#endif	// USE_JAVA
 
-        if( rPrinterOptions.IsReduceBitmaps() )
-        {
-            // calculate maximum resolution for bitmap graphics
-            if( PRINTER_BITMAP_OPTIMAL == rPrinterOptions.GetReducedBitmapMode() )
-            {
-                nMaxBmpDPIX = Min( (long) OPTIMAL_BMP_RESOLUTION, nMaxBmpDPIX );
-                nMaxBmpDPIY = Min( (long) OPTIMAL_BMP_RESOLUTION, nMaxBmpDPIY );
-            }
-            else if( PRINTER_BITMAP_NORMAL == rPrinterOptions.GetReducedBitmapMode() )
-            {
-                nMaxBmpDPIX = Min( (long) NORMAL_BMP_RESOLUTION, nMaxBmpDPIX );
-                nMaxBmpDPIY = Min( (long) NORMAL_BMP_RESOLUTION, nMaxBmpDPIY );
-            }
-            else
-            {
-                nMaxBmpDPIX = Min( (long) rPrinterOptions.GetReducedBitmapResolution(), nMaxBmpDPIX );
-                nMaxBmpDPIY = Min( (long) rPrinterOptions.GetReducedBitmapResolution(), nMaxBmpDPIY );
-            }
-        }
-
-        // convert to greysacles
-        if( rPrinterOptions.IsConvertToGreyscales() )
-        {
-            SetDrawMode( GetDrawMode() | ( DRAWMODE_GRAYLINE | DRAWMODE_GRAYFILL | DRAWMODE_GRAYTEXT | 
-                                           DRAWMODE_GRAYBITMAP | DRAWMODE_GRAYGRADIENT ) );
-        }
-
-        // disable transparency output
-		if( rPrinterOptions.IsReduceTransparency() && ( PRINTER_TRANSPARENCY_NONE == rPrinterOptions.GetReducedTransparencyMode() ) )
-		{
-			SetDrawMode( GetDrawMode() | DRAWMODE_NOTRANSPARENCY );
-		}
-
-#ifdef USE_JAVA
-		long nOldDPIX = mnDPIX;
-		long nOldDPIY = mnDPIY;
 		if ( nMaxBmpDPIX && nMaxBmpDPIY && nMaxBmpDPIX < mnDPIX && nMaxBmpDPIY < mnDPIY )
 		{
 			mpPrinter->SetResolution( nMaxBmpDPIX, nMaxBmpDPIY );
@@ -469,17 +480,6 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 			ImplUpdateFontList();
 		}
 #endif	// USE_JAVA
-
-		mbDestroyAllowed = FALSE;
-	    GetPreparedMetaFile( *pActPage->mpMtf, aMtf, nMaxBmpDPIX, nMaxBmpDPIY );
-		
-		if( mbUserCopy && !mbCollateCopy )
-			nCopyCount = mnCopyCount;
-
-#if defined USE_JAVA && defined MACOSX
-		// Java on Mac OS X expects each page to be printed twice
-		nCopyCount *= 2;
-#endif	// USE_JAVA && MACOSX
 
 		for ( USHORT i = 0; i < nCopyCount; i++ )
 		{
@@ -508,10 +508,7 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 #ifdef USE_JAVA
 			// If the native print job ended or aborted, abort the parent job
 			if ( mnError == PRINTER_ABORT )
-			{
 				mpParent->AbortJob();
-				AbortJob();
-			}
 #endif	// USE_JAVA
 		}
 
@@ -567,6 +564,14 @@ void ImplQPrinter::AbortQueuePrint()
 
 void ImplQPrinter::AddQueuePage( GDIMetaFile* pPage, USHORT nPage, BOOL bNewJobSetup )
 {
+#ifdef USE_JAVA
+	if ( mbAborted )
+	{
+		EndQueuePrint();
+		return;
+	}
+#endif	// USE_JAVA
+
 	QueuePage* pQueuePage	= new QueuePage;
 	pQueuePage->mpMtf		= pPage;
 	pQueuePage->mnPage		= nPage;
