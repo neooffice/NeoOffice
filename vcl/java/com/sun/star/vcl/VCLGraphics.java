@@ -721,6 +721,7 @@ public final class VCLGraphics {
 		if (xor) {
 			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
 			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
+			VCLGraphics.setDefaultRenderingAttributes(srcGraphics);
 			srcGraphics.setColor(new Color(color));
 			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 			srcGraphics.drawLine(x1, y1, x2, y2);
@@ -835,6 +836,7 @@ public final class VCLGraphics {
 			if (xor) {
 				VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
 				Graphics2D srcGraphics = srcImage.getImage().createGraphics();
+				VCLGraphics.setDefaultRenderingAttributes(srcGraphics);
 				srcGraphics.setColor(new Color(color));
 				srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 				srcGraphics.drawPolygon(polygon);
@@ -914,10 +916,10 @@ public final class VCLGraphics {
 			else
 				area.add(a);
 		}
-		if (area.isEmpty())
+		Rectangle bounds = area.getBounds();
+		if (bounds.isEmpty())
 			return;
 
-		Rectangle bounds = area.getBounds();
 		if (fill) {
 			if (xor)
 				graphics.setXORMode(Color.black);
@@ -935,7 +937,7 @@ public final class VCLGraphics {
 				srcGraphics.setColor(new Color(color));
 				srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 				for (int i = 0; i < npoly; i++)
-					graphics.drawPolygon(xpoints[i], ypoints[i], npoints[i]);
+					srcGraphics.drawPolygon(xpoints[i], ypoints[i], npoints[i]);
 				srcGraphics.dispose();
 				drawImageXOR(srcImage, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y, bounds.width, bounds.height);
 				srcImage.dispose();
