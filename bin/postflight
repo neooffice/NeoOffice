@@ -41,7 +41,7 @@ if [ -d "$2" ]; then
 	touch "$tempfile"
 	if [ -f "$tempfile" ]; then
 		cd "$2"
-		for i in `find "$(PRODUCT_DIR_NAME).app/Contents/share/config/registry" -type f` "$(PRODUCT_DIR_NAME).app/Contents/user/config/javarc"; do
+		for i in `find "$(PRODUCT_DIR_NAME).app/Contents/share/config/registry" -type f` ; do
 		    chmod u+rw "$i"
 			rm -f "$tempfile"
 			cp -p "$i" "$tempfile"
