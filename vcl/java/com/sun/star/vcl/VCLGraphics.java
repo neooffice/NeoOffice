@@ -1469,11 +1469,6 @@ public final class VCLGraphics {
 			graphics.dispose();
 			image.dispose();
 			if (frame.getWindow().isShowing()) {
-				// Mac OS X delays the initial background painting so force
-				// it to be painted before VCL does any painting
-				if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
-					frame.getWindow().repaint();
-
 				Panel p = frame.getPanel();
 				Rectangle bounds = p.getBounds();
 				graphicsBounds = new Rectangle(0, 0, bounds.width, bounds.height);
