@@ -1352,7 +1352,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (lastMousePressed != null) {
 			// On Mac OS X, if the mouse has been held down on a regular window
 			// without moving it for a short time, treat it as a "right-click"
-			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && window instanceof Frame && (lastMousePressed.getModifiers() & (InputEvent.BUTTON2_MASK | InputEvent.BUTTON3_MASK)) == 0 && e.getWhen() >= lastMousePressed.getWhen() + 1000) {
+			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && window instanceof Frame && lastMousePressed.getModifiers() == InputEvent.BUTTON1_MASK && e.getWhen() >= lastMousePressed.getWhen() + 1000) {
 				ignoreMouseReleased = true;	
 				int mouseModifiers = InputEvent.BUTTON2_MASK;
 				// Post the cached mouse pressed event

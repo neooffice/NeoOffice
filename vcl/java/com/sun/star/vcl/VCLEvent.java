@@ -866,6 +866,31 @@ public final class VCLEvent extends AWTEvent {
 					}
 					break;
 				}
+				case MouseEvent.MOUSE_CLICKED:
+				case MouseEvent.MOUSE_DRAGGED:
+				case MouseEvent.MOUSE_ENTERED:
+				case MouseEvent.MOUSE_EXITED:
+				case MouseEvent.MOUSE_MOVED:
+				case MouseEvent.MOUSE_PRESSED:
+				case MouseEvent.MOUSE_RELEASED:
+				{
+					// Mac OS X does not aggregate the modifiers when a
+					// right or middle mouse click is emulated by a Ctrl-click
+					// or an Alt-click. Note that BUTTON2_MASK is checked
+					// first since Mac OS X always sets the BUTTON3_MASK when
+					// BUTTON2_MASK is present.
+					MouseEvent e = (MouseEvent)event;
+					int modifiers = e.getModifiers();
+					if ((modifiers & InputEvent.BUTTON2_MASK) == InputEvent.BUTTON2_MASK) {
+						modifiers &= ~(InputEvent.BUTTON1_MASK | InputEvent.BUTTON3_MASK);
+						event = e = new MouseEvent(e.getComponent(), eid, e.getWhen(), modifiers, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
+					}
+					else if ((modifiers & InputEvent.BUTTON3_MASK) == InputEvent.BUTTON3_MASK) {
+						modifiers &= ~(InputEvent.BUTTON1_MASK | InputEvent.BUTTON2_MASK);
+						event = e = new MouseEvent(e.getComponent(), eid, e.getWhen(), modifiers, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
+					}
+					break;
+				}
 			}
 		}
 
