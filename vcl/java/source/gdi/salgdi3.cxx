@@ -230,10 +230,17 @@ void SalGraphics::DrawTextArray( long nX, long nY,
 BOOL SalGraphics::GetGlyphBoundRect( xub_Unicode cChar, long* pX, long* pY,
                                      long* pWidth, long* pHeight )
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalGraphics::GetGlyphBoundRect not implemented\n" );
-#endif
-	return FALSE;
+	if ( maGraphicsData.mpVCLFont )
+	{
+		Size aSize( maGraphicsData.mpVCLGraphics->getGlyphSize( cChar, maGraphicsData.mpVCLFont ) );
+		*pX = 0;
+		*pY = 0;
+		*pWidth = aSize.Width();
+		*pHeight = aSize.Height();
+		return TRUE;
+	}
+	else
+		return FALSE;
 }
 
 // -----------------------------------------------------------------------

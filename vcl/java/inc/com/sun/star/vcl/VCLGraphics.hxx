@@ -78,6 +78,7 @@ public:
 	void				drawTextArray( long _par0, long _par1, const sal_Unicode *_par2, USHORT _par3, com_sun_star_vcl_VCLFont *_par4, SalColor _par5, const long *_par6 );
 	void				endSetClipRegion();
 	USHORT				getBitCount();
+	const Size			getGlyphSize( const sal_Unicode _par0, com_sun_star_vcl_VCLFont *_par1 );
 	com_sun_star_vcl_VCLImage *getImage();
 	SalColor			getPixel( long _par0, long _par1 );
 	const Size			getResolution();

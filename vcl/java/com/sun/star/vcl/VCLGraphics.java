@@ -293,6 +293,7 @@ public final class VCLGraphics {
 		}
 		image = new VCLImage(graphicsBounds.width, graphicsBounds.height, frame.getBitCount());
 		graphics = image.getImage().createGraphics();
+		graphics.dispose();
 		bitCount = image.getBitCount();
 		resetClipRegion();
 
@@ -309,6 +310,7 @@ public final class VCLGraphics {
 
 		image = i;
 		graphics = image.getImage().createGraphics();
+		graphics.dispose();
 		graphicsBounds = new Rectangle(0, 0, image.getWidth(), image.getHeight());
 		pageFormat = p;
 		bitCount = image.getBitCount();
@@ -1159,6 +1161,36 @@ public final class VCLGraphics {
 	public int getBitCount() {
 
 		return bitCount;
+
+	}
+
+	/**
+	 * Get the size of the bounding rectangle of the glyph associated with the
+	 * specified character and font.
+	 *
+	 * @param c the character
+	 * @param font the font
+	 */
+	public Dimension getGlyphSize(char c, VCLFont font) {
+
+		// The graphics may adjust the font
+		Font f = font.getFont();
+		FontMetrics fm = null;
+
+		// Exceptions can be thrown if a font is disabled or removed
+		try {
+			fm = graphics.getFontMetrics(f);
+		}
+		catch (Throwable t) {
+			f = font.getDefaultFont().getFont();
+			fm = graphics.getFontMetrics(f);
+		}
+
+		graphics.setFont(f);
+
+		GlyphVector glyphs = f.createGlyphVector(graphics.getFontRenderContext(), new char[]{ c });
+		Rectangle bounds = glyphs.getLogicalBounds().getBounds();
+		return new Dimension(bounds.width, bounds.height);
 
 	}
 
