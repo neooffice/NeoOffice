@@ -61,10 +61,13 @@ class String;
 class SalOpenGL
 {
 private:
+	static BYTE*		mpBits;
+	static ::vcl::java_lang_Object*	mpData;
+	static SalGraphics*	mpLastGraphics;
+	static SalOpenGL*	mpLastOpenGL;
 	static void*		mpNativeContext;
 	static ULONG        mnOGLState;
-	BYTE*				mpBits;
-	::vcl::java_lang_Object*	mpData;
+	SalGraphics*		mpGraphics;
 
 public:					
 						SalOpenGL( SalGraphics* pGraphics );
