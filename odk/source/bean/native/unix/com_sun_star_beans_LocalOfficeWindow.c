@@ -44,13 +44,11 @@
 #include <config.h>
 #endif
 
+#ifndef MACOSX
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Intrinsic.h>
 
-#ifdef USE_JAVA
-#include "jni.h"
-#else	// USE_JAVA
 #include "jawt.h"
 #include "jawt_md.h"
 #endif	// USE_JAVA
@@ -93,9 +91,10 @@ JNIEXPORT jint JNICALL Java_com_sun_star_beans_LocalOfficeWindow_getNativeWindow
 JNIEXPORT jlong JNICALL Java_com_sun_star_beans_LocalOfficeWindow_getNativeWindow
   (JNIEnv * env, jobject obj_this)
 {
-#ifdef USE_JAVA
-	return (jlong)obj_this;
-#else	// USE_JAVA
+#ifdef MACOSX
+	// Need to implement
+	return NULL;
+#else	// MACOSX
 	jboolean result;
 	jint lock;
 
@@ -137,5 +136,5 @@ JNIEXPORT jlong JNICALL Java_com_sun_star_beans_LocalOfficeWindow_getNativeWindo
 	awt.FreeDrawingSurface(ds);
 
 	return ((jlong)drawable);
-#endif	// USE_JAVA
+#endif	// MACOSX
 }
