@@ -98,5 +98,9 @@ language_numbers:
 language_names:
 	@echo $(foreach,i,$(alllangext) $(iso_$i))
 
+# Special target to echo the $(alllangext) macro to external scripts
+language_longnames:
+	@echo $(foreach,i,$(alllangext) $(longlang_$i))
+
 .ENDIF          # "$(BSCLIENT)"==""
 	
