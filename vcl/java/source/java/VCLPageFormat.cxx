@@ -55,7 +55,7 @@
 
 using namespace rtl;
 
-#endif  // MACOSX
+#endif	// MACOSX
 
 using namespace vcl;
 
