@@ -66,7 +66,6 @@
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
-typedef OSStatus SetSystemUIMode_Type( SystemUIMode, SystemUIOptions );
 
 using namespace rtl;
 using namespace vos;
@@ -392,21 +391,10 @@ void SalFrame::StartPresentation( BOOL bStart )
 		return;
 
 #ifdef MACOSX
-	OModule aModule;
-	if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
-	{
-		SetSystemUIMode_Type *pSetSystemUIMode = (SetSystemUIMode_Type *)aModule.getSymbol( OUString::createFromAscii( "SetSystemUIMode" ) );
-
-		if ( pSetSystemUIMode )
-		{
-			if ( bStart )
-				pSetSystemUIMode( kUIModeAllHidden, kUIOptionDisableAppleMenu | kUIOptionDisableProcessSwitch );
-			else
-				pSetSystemUIMode( kUIModeNormal, 0 );
-
-		}
-		aModule.unload();
-	}
+	if ( bStart )
+		SetSystemUIMode( kUIModeAllHidden, kUIOptionDisableAppleMenu | kUIOptionDisableProcessSwitch );
+	else
+		SetSystemUIMode( kUIModeNormal, 0 );
 
 	maFrameData.mbPresentation = bStart;
 	pSalData->mpPresentationFrame = this;

@@ -63,9 +63,6 @@
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
-typedef OSStatus PMSessionPostScriptBegin_Type( PMPrintSession );
-typedef OSStatus PMSessionPostScriptData_Type( PMPrintSession, MacOSPtr, MacOSSize );
-typedef OSStatus PMSessionPostScriptEnd_Type( PMPrintSession );
 
 using namespace rtl;
 using namespace vos;
@@ -315,23 +312,12 @@ BOOL SalGraphics::DrawEPS( long nX, long nY, long nWidth, long nHeight, void* pP
 		PMPrintSession pSession = (PMPrintSession)maGraphicsData.mpPrinter->maPrinterData.mpVCLPrintJob->getNativePrintJob();
 		if ( pSession )
 		{
-			OModule aModule;
-			if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
+			if ( PMSessionPostScriptBegin( pSession ) == kPMNoError )
 			{
-				PMSessionPostScriptBegin_Type *pPSBegin = (PMSessionPostScriptBegin_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionPostScriptBegin" ) );
-				PMSessionPostScriptData_Type *pPSData = (PMSessionPostScriptData_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionPostScriptData" ) );
-				PMSessionPostScriptEnd_Type *pPSEnd = (PMSessionPostScriptEnd_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionPostScriptEnd" ) );
-				if ( pPSBegin && pPSData && pPSEnd )
-				{
-					if ( pPSBegin( pSession ) == kPMNoError )
-					{
-						pPSData( pSession, (MacOSPtr)pPtr, nSize );
-						pPSEnd( pSession );
-					}
-				}
-				aModule.unload();
-				return TRUE;
+				PMSessionPostScriptData( pSession, (MacOSPtr)pPtr, nSize );
+				PMSessionPostScriptEnd( pSession );
 			}
+			return TRUE;
 		}
 		else
 		{

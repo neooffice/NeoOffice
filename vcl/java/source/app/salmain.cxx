@@ -65,7 +65,6 @@
 
 typedef jobject Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type( JNIEnv *, jobject );
 typedef void Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type( JNIEnv *, jobject );
-typedef OSStatus ReceiveNextEvent_Type( UInt32, const EventTypeSpec *, EventTimeout, MacOSBoolean, EventRef * );
 
 struct SVNativeFontList
 {
@@ -182,7 +181,7 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( JNIEnv 
 {
 	jobject lockObject = Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( pEnv, object );
 	if ( lockObject )
-		return pEnv->MonitorEnter( lockObject );
+		return pEnv->MonitorEnter( lockObject ) == JNI_OK ? 0 : 1;
 	else
 		return 1;
 }
@@ -217,7 +216,7 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv 
 {
 	jobject lockObject = Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( pEnv, object );
 	if ( lockObject )
-		return pEnv->MonitorExit( lockObject );
+		return pEnv->MonitorExit( lockObject ) == JNI_OK ? 0 : 1;
 	else
 		return 1;
 }
@@ -391,20 +390,11 @@ int main( int argc, char *argv[] )
 				pMethods[3].fnPtr = Java_com_apple_mrj_macos_carbon_CarbonLock_release0;
 				t.pEnv->RegisterNatives( carbonLockClass, pMethods, 4 );
 
-				// Load Carbon
-				OModule aModule;
-				if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
-				{
-					// Run a Carbon event loop but have it block until the Java
-					// event loop is started. Having an event loop in this
-					// blocked state is enough to solve the keyboard layout
-					// switching problem on Panther.
-					ReceiveNextEvent_Type *pReceiveNextEvent = (ReceiveNextEvent_Type *)aModule.getSymbol( OUString::createFromAscii( "ReceiveNextEvent" ) );
-					if ( pReceiveNextEvent )
-						pReceiveNextEvent( 0, NULL, 0, false, NULL );
-
-					aModule.unload();
-				}
+				// Run a Carbon event loop but have it block until the Java
+				// event loop is started. Having an event loop in this
+				// blocked state is enough to solve the keyboard layout
+				// switching problem on Panther.
+				ReceiveNextEvent( 0, NULL, 0, false, NULL );
 
 				jint nFonts = 0;
 				ATSFontIterator aIterator;
