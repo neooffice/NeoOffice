@@ -269,15 +269,11 @@ public final class VCLFont {
 
 		// Get size metrics
 		leading = fontMetrics.getLeading();
-		ascent = fontMetrics.getAscent() + leading;
+		ascent = fontMetrics.getAscent();
 		descent = fontMetrics.getDescent();
 		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 			// The Asian fonts return strange values so we adjust them here
-			if (leading == 0 && descent < 0) {
-				leading = ascent / 2;
-				descent = leading;
-			}
- 			if (fontName.startsWith("hiragino") || fontName.startsWith("osaka")) {
+			if (leading == descent && leading > 0) {
 				leading /= 2;
 				ascent -= leading;
 				descent += leading;
