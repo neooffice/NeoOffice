@@ -246,15 +246,12 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 						   ImplJobSetup* pSetupData,
 						   BOOL bShowDialog )
 {
-	if ( bShowDialog && !maPrinterData.mbStarted )
-	{
-		if ( maPrinterData.mpVCLPageFormat )
-			delete maPrinterData.mpVCLPageFormat;
-		// Create a new page format instance that points to the same Java
-		// object
-		SalDriverData *pDriverData = (SalDriverData *)pSetupData->mpDriverData;
-		maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pDriverData->mpVCLPageFormat->getJavaObject() );
-	}
+	if ( maPrinterData.mpVCLPageFormat )
+		delete maPrinterData.mpVCLPageFormat;
+	// Create a new page format instance that points to the same Java
+	// object
+	SalDriverData *pDriverData = (SalDriverData *)pSetupData->mpDriverData;
+	maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pDriverData->mpVCLPageFormat->getJavaObject() );
 
 	maPrinterData.mbStarted = maPrinterData.mpVCLPrintJob->startJob( maPrinterData.mpVCLPageFormat, bShowDialog );
 
