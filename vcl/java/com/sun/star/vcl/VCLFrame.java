@@ -707,6 +707,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private Insets insets = null;
 
 	/**
+	 * The owner frame.
+	 */
+	private VCLFrame owner = null;
+
+	/**
 	 * The native window's panel.
 	 */
 	private VCLFrame.NoPaintPanel panel = null;
@@ -744,10 +749,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		frame = f;
 
 		// Create the native window
-		if ((styleFlags & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) != 0)
+		if ((styleFlags & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) != 0) {
 			window = new VCLFrame.NoPaintFrame(this);
-		else
+		}
+		else {
+			owner = new VCLFrame(~styleFlags, q, 0, null);
 			window = new VCLFrame.NoPaintWindow(this);
+		}
 
 		// Process remaining style flags
 		if ((styleFlags & SAL_FRAME_STYLE_SIZEABLE) != 0)
@@ -923,6 +931,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			window.dispose();
 		}
 		window = null;
+		if (owner != null)
+			owner.dispose();
+		owner = null;
 
 	}
 
@@ -1472,6 +1483,17 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			return ((Frame)window).getMenuBar();
 		else
 			return null;
+
+	}
+
+	/**
+	 * Returns the owner frame.
+	 *
+	 * @return the owner frame
+	 */
+	VCLFrame getOwner() {
+
+		return owner;
 
 	}
 
@@ -2617,7 +2639,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		NoPaintWindow(VCLFrame f) {
 
-			super(new Frame());
+			super(f.getOwner().getWindow());
 			frame = f;
 			enableInputMethods(false);
 			setMinimumSize(1, 1);
