@@ -45,6 +45,7 @@
 #endif
 
 class SalFrame;
+class SalSoundNativeData;
 
 // ------------
 // - SalSound -
@@ -52,14 +53,22 @@ class SalFrame;
 
 class SalSound
 {
+private:
+	static ULONG	mnSoundState;
+	void*			mpInst;
+	void*			mpNativeContext;
+	SalSoundNativeData*	mpNativeData;
+	BOOL			mbPlaying;
+	SALSOUNDPROC	mpProc;
+
 public:
+	static void		Release();
+	static BOOL		IsValid() { return ( SOUND_STATE_VALID == SalSound::mnSoundState ); }
+
 					SalSound();
 					~SalSound();
 
 	BOOL			Create();
-	static void		Release();
-	static BOOL		IsValid();
-	
 	BOOL			Init( SalFrame*		pFrame,
 						  const String&	rSoundName,
 						  ULONG&		rSoundLen );
