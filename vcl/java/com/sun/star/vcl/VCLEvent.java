@@ -936,7 +936,10 @@ public final class VCLEvent extends AWTEvent {
 	 */
 	public long getFrame() {
 
-		return frame.getFrame();
+		if (frame != null)
+			return frame.getFrame();
+		else
+			return 0;
 
 	}
 
