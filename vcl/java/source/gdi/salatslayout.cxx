@@ -333,7 +333,7 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		ByteCount nBytes = sizeof( ATSUVerticalCharacterType );
 		ATSUAttributeValuePtr nVal = &nVertical;
 
-		if ( ATSUSetAttributes( maFontStyle, 1, &nTag, &nBytes, &nVal ) != noErr )
+		if ( ATSUSetAttributes( maFontStyle, 1, &nTag, &nBytes, &nVal ) == noErr )
 			mbVertical = true;
 	}
 	else if ( rArgs.mnFlags & ( SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_BIDI_RTL ) )
@@ -370,7 +370,6 @@ void ATSLayout::DrawText( com_sun_star_vcl_VCLGraphics *pGraphics, SalColor nCol
 	if ( !maLayout )
 		return;
 
-	Point aPos = GetDrawPosition();
 	CGContextRef aCGContext = (CGContextRef)pGraphics->getNativeGraphics();
 	if ( aCGContext )
 	{
@@ -400,6 +399,14 @@ void ATSLayout::DrawText( com_sun_star_vcl_VCLGraphics *pGraphics, SalColor nCol
 		}
 
 		// Draw the text
+		Point aPos( GetDrawPosition() );
+		if ( mbVertical )
+		{
+			// Center text and round towards the top of the font
+			long nDescent = mpVCLFont->getDescent();
+			long nHeight = nDescent + mpVCLFont->getAscent() + 1;
+			aPos.X() += ( nHeight / 2 ) - nDescent;
+		}
 		ATSUDrawText( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, Long2Fix( aPos.X() ), Long2Fix( aPos.Y() * - 1 ) );
 
 		// Add rotated text bounds (plus a little extra) to flush
@@ -757,7 +764,6 @@ void ATSLayout::Justify( long nNewWidth ) const
 
 	if ( ATSUSetLayoutControls( maLayout, 2, nTags, nBytes, nVals ) == noErr )
 		mnWidth = nNewWidth;
-
 }
 
 // ============================================================================

@@ -61,7 +61,7 @@ public:
 
 						com_sun_star_vcl_VCLFont( jobject myObj ) : java_lang_Object( myObj ) {};
 
-	com_sun_star_vcl_VCLFont*	deriveFont( long _par0, sal_Bool _par1, sal_Bool _par2, short _par3, sal_Bool _par4 );
+	com_sun_star_vcl_VCLFont*	deriveFont( long _par0, sal_Bool _par1, sal_Bool _par2, short _par3, sal_Bool _par4, sal_Bool _par5 );
 	long				getAscent();
 	long				getDescent();
 	com_sun_star_vcl_VCLFont*	getDefaultFont();
@@ -76,6 +76,7 @@ public:
 	sal_Bool			isAntialiased();
 	sal_Bool			isBold();
 	sal_Bool			isItalic();
+	sal_Bool			isVertical();
 };
 
 class com_sun_star_vcl_VCLFontList

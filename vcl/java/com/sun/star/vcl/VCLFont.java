@@ -116,15 +116,16 @@ public final class VCLFont {
 	 * @param o the orientation of the font in degrees
 	 * @param a <code>true</code> to enable antialiasing and <code>false</code>
 	 *  to disable antialiasing
+	 * @param b <code>true</code> if the font is vertical
 	 * @return the default font adjusted to the specified size and style
 	 */
-	static VCLFont getDefaultFont(int s, boolean b, boolean i, short o, boolean a) {
+	static VCLFont getDefaultFont(int s, boolean b, boolean i, short o, boolean a, boolean v) {
 
 		// Set default font
 		if (defaultFont == null)
-			defaultFont = new VCLFont("Dialog", 1, o, false, false, true);
+			defaultFont = new VCLFont("Dialog", 1, o, false, false, true, false);
 
-		return new VCLFont(VCLFont.defaultFont.getName(), s, o, b, i, a);
+		return new VCLFont(VCLFont.defaultFont.getName(), s, o, b, i, a, v);
 
 	}
 
@@ -150,7 +151,7 @@ public final class VCLFont {
 				// Get rid of hidden, bold, and italic Mac OS X fonts
 				if (macosx && name.startsWith("."))
 					continue;
-				array.add(new VCLFont(fontFamilies[i], 1, (short)0, false, false, true));
+				array.add(new VCLFont(fontFamilies[i], 1, (short)0, false, false, true, false));
 			}
 	
 			fonts = (VCLFont[])array.toArray(new VCLFont[array.size()]);
@@ -226,6 +227,11 @@ public final class VCLFont {
 	private int type = VCLFont.FAMILY_SWISS;
 
 	/**
+	 * The vertical flag.
+	 */
+	private boolean vertical = false;
+
+	/**
 	 * Constructs a new <code>VCLFont</code> instance.
 	 *
 	 * @param n the name of the font
@@ -235,8 +241,9 @@ public final class VCLFont {
 	 * @param i <code>true</code> if the font is italic
 	 * @param a <code>true</code> to enable antialiasing and <code>false</code>
 	 *  to disable antialiasing
+	 * @param v <code>true</code> if the font is vertical 
 	 */
-	VCLFont(String n, int s, short o, boolean b, boolean i, boolean a) {
+	VCLFont(String n, int s, short o, boolean b, boolean i, boolean a, boolean v) {
 
 		antialiased = a;
 		bold = b;
@@ -244,6 +251,7 @@ public final class VCLFont {
 		name = n;
 		orientation = o;
 		size = s;
+		vertical = v;
 
 		// Cache style
 		style = Font.PLAIN;
@@ -280,6 +288,7 @@ public final class VCLFont {
 		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 			// The Asian fonts return strange values so we adjust them here
 			if (leading == descent && leading > 0) {
+				leading++;
 				leading /= 2;
 				ascent -= leading;
 				descent += leading;
@@ -298,9 +307,10 @@ public final class VCLFont {
 	 * @param o the orientation of the new <code>VCLFont</code> in degrees
 	 * @param a <code>true</code> to enable antialiasing and <code>false</code>
 	 *  to disable antialiasing
+	 * @param v <code>true</code> if the font is vertical 
 	 * @return a new <code>VCLFont</code> object
 	 */
-	public VCLFont deriveFont(int s, boolean b, boolean i, short o, boolean a) {
+	public VCLFont deriveFont(int s, boolean b, boolean i, short o, boolean a, boolean v) {
 
 		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 			String fontName = name.toLowerCase();
@@ -312,17 +322,17 @@ public final class VCLFont {
 				if (!fontFamilyName.startsWith(fontName))
 					continue;
 				if (b && i && fontFamilyName.endsWith(" bold italic"))
-					return new VCLFont(fontFamilies[j], s, o, false, false, a);
+					return new VCLFont(fontFamilies[j], s, o, false, false, a, v);
 				else if (b && !i && fontFamilyName.endsWith(" bold"))
-					return new VCLFont(fontFamilies[j], s, o, false, false, a);
+					return new VCLFont(fontFamilies[j], s, o, false, false, a, v);
 				else if (!b && i && fontFamilyName.endsWith(" italic") && !fontFamilyName.endsWith(" bold italic"))
-					return new VCLFont(fontFamilies[j], s, o, false, false, a);
+					return new VCLFont(fontFamilies[j], s, o, false, false, a, v);
 				else if (!b && !i && fontFamilyName.endsWith(" regular"))
-					return new VCLFont(fontFamilies[j], s, o, false, false, a);
+					return new VCLFont(fontFamilies[j], s, o, false, false, a, v);
 			}
 		}
 
-		return new VCLFont(name, s, o, b, i, a);
+		return new VCLFont(name, s, o, b, i, a, v);
 
 	}
 
@@ -334,26 +344,6 @@ public final class VCLFont {
 	public int getAscent() {
 
 		return ascent;
-
-	}
-
-	/**
-	 * Returns the advance width of the specified character.
-	 *
-	 * @param start the starting character
-	 * @param end the ending character
-	 * @return the array of advance widths of the specified characters
-	 */
-	public int[] getCharWidth(char start, char end) {
-
-		int[] widths = new int[end - start + 1];
-		for (char i = start; i <= end; i++) {
-			if (Character.getType(i) == Character.NON_SPACING_MARK && font.canDisplay(i))
-				widths[i - start] = 0;
-			else
-				widths[i - start] = fontMetrics.charWidth(i);
-		}
-		return widths;
 
 	}
 
@@ -375,7 +365,7 @@ public final class VCLFont {
 	 */
 	public VCLFont getDefaultFont() {
 
-		return VCLFont.getDefaultFont(size, bold, italic, orientation, antialiased);
+		return VCLFont.getDefaultFont(size, bold, italic, orientation, antialiased, vertical);
 
 	}
 
@@ -520,6 +510,17 @@ public final class VCLFont {
 	public boolean isItalic() {
 
 		return italic;
+
+	}
+
+	/**
+	 * Indicates whether or not the <code>Font</code> is vertical.
+	 *
+	 * @return <code>true</code> if the <code>Font</code> is vertical
+	 */
+	public boolean isVertical() {
+
+		return vertical;
 
 	}
 
