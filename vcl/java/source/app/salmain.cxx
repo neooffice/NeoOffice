@@ -278,20 +278,6 @@ int main( int argc, char *argv[] )
 		putenv( aTmpPath.GetBuffer() );
 	}
 
-	// Assign command's directory to STAR_RESOURCEPATH environment variable
-	ByteString aResPath( getenv( "STAR_RESOURCEPATH" ) );
-	if ( aCmdPath.Len() )
-	{
-		ByteString aTmpPath( "STAR_RESOURCEPATH=" );
-		aTmpPath += aCmdPath;
-		if ( aResPath.Len() )
-		{
-			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
-			aTmpPath += aResPath;
-		}
-		putenv( aTmpPath.GetBuffer() );
-	}
-
 	// Assign command's directory to DYLD_LIBRARY_PATH environment variable
 	ByteString aLibPath( getenv( "DYLD_LIBRARY_PATH" ) );
 	if ( aCmdPath.Len() )
