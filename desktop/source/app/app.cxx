@@ -2220,14 +2220,14 @@ void Desktop::OpenDefault()
         OUString aMsg = OUString::createFromAscii(
             "Desktop::OpenDefault() IllegalArgumentException while calling loadComponentFromURL: ") 
             + iae.Message;
-        OSL_ENSURE( sal_False, aMsg);
+        OSL_ENSURE( sal_False, U2S( aMsg ) );
     }
     catch (com::sun::star::io::IOException& ioe)
     {
         OUString aMsg = OUString::createFromAscii(
             "Desktop::OpenDefault() IOException while calling loadComponentFromURL: ") 
             + ioe.Message;
-        OSL_ENSURE( sal_False, aMsg);
+        OSL_ENSURE( sal_False, U2S( aMsg ) );
     }
 
     // shut down again if no component could be loaded
@@ -2378,14 +2378,14 @@ void Desktop::HandleAppEvent( const ApplicationEvent& rAppEvent )
                     OUString aMsg = OUString::createFromAscii(
                         "handle app event IllegalArgumentException while calling loadComponentFromURL: ") 
                         + iae.Message;
-                    OSL_ENSURE( sal_False, aMsg);
+                    OSL_ENSURE( sal_False, U2S( aMsg ) );
                 }
                 catch (com::sun::star::io::IOException& ioe)
                 {
                     OUString aMsg = OUString::createFromAscii(
                         "handle app event IOException while calling loadComponentFromURL: ") 
                         + ioe.Message;
-                    OSL_ENSURE( sal_False, aMsg);
+                    OSL_ENSURE( sal_False, U2S( aMsg ) );
                 }
 
                 if ( !xDoc.is() )
