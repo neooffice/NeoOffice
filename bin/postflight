@@ -86,18 +86,6 @@ if [ -d "$2" ]; then
 		rm -Rf "$2/classes" || exit 1
 	fi
 
-	# Replace the default installation path with the actual installation path
-	cd "$2"
-	chmod -Rf u+rw "Contents/share/config/registry" || exit 1
-	for i in `find "Contents/share/config/registry" -type f` ; do
-		rm -f "$tempfile" || exit 1
-		cp -p "$i" "$tempfile" || exit 1
-		sed 's#/Applications#'"$2"'#g' "$tempfile" > "$i" || exit 1
-		touch -r "$tempfile" "$i" || exit 1
-	done
-	chown -Rf root:admin "Contents/share/config/registry" || exit 1
-	chmod -Rf u-w,u+r "Contents/share/config/registry" || exit 1
-
 fi
 
 exit 0
