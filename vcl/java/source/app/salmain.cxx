@@ -78,10 +78,12 @@ protected:
 	virtual void			run() { SVMain(); _exit( 0 ); }
 };
 
+using namespace osl;
 using namespace rtl;
 using namespace vcl;
 using namespace vos;
 
+static Mutex aMutex;
 static OModule aJDirectModule;
 static Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type *pCarbonLockGetInstance = NULL;
 static Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *pCarbonLockInit = NULL;
@@ -96,6 +98,8 @@ static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( J
 #ifdef MACOSX
 static void ImplFontListChangedCallback( ATSFontNotificationInfoRef, void* )
 {
+	MutexGuard aGuard( aMutex );
+
 	// Get the array of fonts
 	SVNativeFontList *pNewFontList = NULL;
 	BOOL bContinue = TRUE;
@@ -306,6 +310,50 @@ int main( int argc, char *argv[] )
 			execv( pCmdPath, argv );
 	}
 
+	jint nFonts = 0;
+	ATSFontIterator aIterator;
+	ATSFontRef aFont;
+
+	// Get the array of fonts
+	BOOL bContinue = TRUE;
+	while ( bContinue )
+	{
+		MutexGuard aGuard( aMutex );
+
+		ATSFontIteratorCreate( kATSFontContextLocal, NULL, NULL, kATSOptionFlagsUnRestrictedScope, &aIterator );
+		for ( ; ; )
+		{
+			OSStatus nErr = ATSFontIteratorNext( aIterator, &aFont );
+			if ( nErr == kATSIterationCompleted )
+			{
+				// Register notification callback
+				ATSFontNotificationSubscribe( (ATSNotificationCallback)ImplFontListChangedCallback, kATSFontNotifyOptionReceiveWhileSuspended, NULL, NULL );
+				bContinue = FALSE;
+				break;
+			}
+			else if ( nErr == kATSIterationScopeModified )
+			{
+				nFonts = 0;
+				while ( pNativeFontList )
+				{
+					SVNativeFontList *pFont = pNativeFontList;
+					pNativeFontList = pFont->mpNext;
+					delete pFont;
+				}
+				break;
+			}
+			else
+			{
+				SVNativeFontList *pFont = new SVNativeFontList();
+				pFont->maFont = aFont;
+				pFont->mpNext = pNativeFontList;
+				pNativeFontList = pFont;
+				nFonts++;
+			}
+		}
+		ATSFontIteratorRelease( &aIterator );
+	}
+
 	// Test the JVM version and if it is 1.4 or higher, run SVMain() in a
 	// high priority thread
 	java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
@@ -396,48 +444,6 @@ int main( int argc, char *argv[] )
 				// switching problem on Panther.
 				ReceiveNextEvent( 0, NULL, 0, false, NULL );
 
-				jint nFonts = 0;
-				ATSFontIterator aIterator;
-				ATSFontRef aFont;
-
-				// Get the array of fonts
-				BOOL bContinue = TRUE;
-				while ( bContinue )
-				{
-					ATSFontIteratorCreate( kATSFontContextLocal, NULL, NULL, kATSOptionFlagsUnRestrictedScope, &aIterator );
-					for ( ; ; )
-					{
-						OSStatus nErr = ATSFontIteratorNext( aIterator, &aFont );
-						if ( nErr == kATSIterationCompleted )
-						{
-							// Register notification callback
-							ATSFontNotificationSubscribe( (ATSNotificationCallback)ImplFontListChangedCallback, kATSFontNotifyOptionReceiveWhileSuspended, NULL, NULL );
-							bContinue = FALSE;
-							break;
-						}
-						else if ( nErr == kATSIterationScopeModified )
-						{
-							nFonts = 0;
-							while ( pNativeFontList )
-							{
-								SVNativeFontList *pFont = pNativeFontList;
-								pNativeFontList = pFont->mpNext;
-								delete pFont;
-							}
-							break;
-						}
-						else
-						{
-							SVNativeFontList *pFont = new SVNativeFontList();
-							pFont->maFont = aFont;
-							pFont->mpNext = pNativeFontList;
-							pNativeFontList = pFont;
-							nFonts++;
-						}
-					}
-					ATSFontIteratorRelease( &aIterator );
-				}
-
 				// We need to be fill in the static sFonts and sNumFonts fields 
 				// in the NativeFontWrapper class as the JVM's implementation
 				// will include disabled fonts will can crash the application
@@ -465,6 +471,8 @@ int main( int argc, char *argv[] )
 						jsize i = 0;
 						jboolean bCopy( sal_False );
 						jint *pData = t.pEnv->GetIntArrayElements( pFonts, &bCopy );
+						ClearableMutexGuard aGuard( aMutex );
+
 						SVNativeFontList *pFont = pNativeFontList;
 						while ( pFont )
 						{
@@ -472,6 +480,8 @@ int main( int argc, char *argv[] )
 							pFont = pFont->mpNext;
 						}
 						t.pEnv->ReleaseIntArrayElements( pFonts, pData, 0 );
+
+						aGuard.clear();
 
 						// Save the font data
 						t.pEnv->SetStaticObjectField( nativeFontWrapperClass, fIDFonts, pFonts );
