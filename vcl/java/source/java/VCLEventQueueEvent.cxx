@@ -513,7 +513,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pMenuEvent->mnId = getMenuID();
 				pMenuEvent->mpMenu = (void *)getMenuCookie();
 			}
-			dispatchEvent( nID, pFrame, pMenuEvent );
+			if ( pFrame && pSalData->mpFocusFrame == pFrame )
+				dispatchEvent( nID, pFrame, pMenuEvent );
 			delete pMenuEvent;
 			return;
 		}
