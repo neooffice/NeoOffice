@@ -286,6 +286,14 @@ JavaDragSource::~JavaDragSource()
 
 		pDragThreadOwner = NULL;
 	}
+
+#ifdef MACOSX
+	if ( pDropTrackingHandlerUPP )
+		RemoveTrackingHandler( pDropTrackingHandlerUPP, (WindowRef)mpNativeWindow );
+
+	if ( pDragReceiveHandlerUPP )
+		RemoveReceiveHandler( pDragReceiveHandlerUPP, (WindowRef)mpNativeWindow );
+#endif	// MACOSX
 }
 
 // ------------------------------------------------------------------------
