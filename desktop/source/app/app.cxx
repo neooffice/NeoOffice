@@ -649,8 +649,14 @@ void Desktop::Init()
 			aBaseUserDataURL += OUString::createFromAscii( "/user" );
 			DirEntry aBaseUserDataEntry( aBaseUserDataURL, FSYS_STYLE_URL );
 			aBaseUserDataEntry.CopyTo( aUserDataEntry, FSYS_ACTION_COPYFILE | FSYS_ACTION_RECURSIVE | FSYS_ACTION_KEEP_EXISTING );
-
 		}
+
+		// Create the user's work directory
+   		aPathStatus = utl::Bootstrap::locateUserInstallation( aUserDataURL );
+		aUserDataURL += OUString::createFromAscii( "/work" );
+		DirEntry aUserDataEntry( aUserDataURL, FSYS_STYLE_URL );
+		aUserDataEntry.MakeDir();
+
 		// Exit gracefully so that the parent process knows we are done
 		_exit( 0 );
 	}

@@ -155,7 +155,7 @@ build.installation: build.neo_patches
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; rm -Rf "license.html" "readme.html" "setup" "spadmin" "program/libdtransX11$${UPD}$${DLLSUFFIX}.dylib" "program/setup" "program/setup.bin" "program/spadmin" "program/spadmin.bin"
 	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; sed 's#ProductPatch=.*$$#ProductPatch=($(PRODUCT_VERSION))#' "program/bootstraprc" | sed 's#Location=.*$$#UserDataDir=$$SYSUSERCONFIG/Library/$(PRODUCT_DIR_NAME)/user#' | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/Library/$(PRODUCT_DIR_NAME)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' > "../../../out" ; mv -f "../../../out" "program/bootstraprc"
 	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; sh -e -c 'for i in "share/config/registry/instance/org/openoffice/Setup.xml" "share/config/registry/cache/instance/org/openoffice/Setup.dat" ; do sed "s#\"string\">.*</ooName>#\"string\">$(PRODUCT_NAME)</ooName>#g" "$${i}" | sed "s#\"string\">.*</ooSetupVersion>#\"string\">$(PRODUCT_VERSION)</ooSetupVersion>#g" > "../../../out" ; mv -f "../../../out" "$${i}" ; done'
-	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; sh -e -c 'for i in "share/config/registry/instance/org/openoffice/Office/Common.xml" "share/config/registry/cache/instance/org/openoffice/Office/Common.dat" ; do sed "s#$(PWD)/$(INSTALL_HOME)/package#/Applications#g" "$${i}" | sed "s#>OpenOffice\.org [0-9\.]* #$(PRODUCT_NAME) $(PRODUCT_VERSION) #g" | sed "s#/work#/Documents#g" > "../../../out" ; mv -f "../../../out" "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; sh -e -c 'for i in "share/config/registry/instance/org/openoffice/Office/Common.xml" "share/config/registry/cache/instance/org/openoffice/Office/Common.dat" ; do sed "s#$(PWD)/$(INSTALL_HOME)/package#/Applications#g" "$${i}" | sed "s#>OpenOffice\.org [0-9\.]* #>$(PRODUCT_NAME) $(PRODUCT_VERSION) #g" > "../../../out" ; mv -f "../../../out" "$${i}" ; done'
 	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; sh -e -c 'if [ ! -d "MacOS" ] ; then rm -Rf "MacOS" ; mv -f "program" "MacOS" ; ln -s "MacOS" "program" ; fi'
 	chmod -Rf u+w,og-w,a+r "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app"
 	touch $@
@@ -187,7 +187,7 @@ build.package: build.installation
 	@echo "This make target will sleep until the PackageMaker tool creates the"
 	@echo "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg"
 	@echo ""
-	sh -e -c 'while [ ! -f "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).bom" ] ; do sleep 10 ; done'
+	sh -e -c 'while [ ! -f "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).sizes" ] ; do sleep 10 ; done'
 	touch "$@"
 
 build.all: build.oo_all build.package
