@@ -185,32 +185,23 @@ public final class VCLMenuItemData {
 		// "owns" the peers, not the delegate.
 		//
 		// Bug 332
-		if(delegateForObject==null) {	    
 		// Clear out any orphaned peers
-			if (!awtPeers.isEmpty()) {
-				Iterator peers=awtPeers.iterator();
-				while(peers.hasNext()) {
-					MenuItem mi=(MenuItem)peers.next();
-					MenuContainer mc = mi.getParent();
-					if (mc != null) {
-						if (mc instanceof Menu) {
-							Menu m = (Menu)mc;
-							synchronized (m) {
-								m.remove(mi);
-							}
-						}
-						else if (mc instanceof MenuBar) {
-							MenuBar mb = (MenuBar)mc;
-							synchronized (mb) {
-								mb.remove(mi);
-							}
+		if (!awtPeers.isEmpty()) {
+			Iterator peers=awtPeers.iterator();
+			while(peers.hasNext()) {
+				MenuItem mi=(MenuItem)peers.next();
+				MenuContainer mc = mi.getParent();
+				if (mc != null) {
+					if (mc instanceof Menu) {
+						Menu m = (Menu)mc;
+						synchronized (m) {
+							m.remove(mi);
 						}
 					}
 				}
 			}
-
-			unregisterAllAWTPeers();
 		}
+		unregisterAllAWTPeers();
 
 		keyboardShortcut=null;
 		menuItems=null;
