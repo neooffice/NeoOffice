@@ -36,10 +36,20 @@
 package com.sun.star.vcl;
 
 import java.awt.Point;
-import java.awt.Rectangle;
+import java.awt.Transparency;
+import java.awt.color.ColorSpace;
 import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
+import java.awt.image.ComponentColorModel;
 import java.awt.image.DataBuffer;
+import java.awt.image.DataBufferByte;
 import java.awt.image.IndexColorModel;
+import java.awt.image.MultiPixelPackedSampleModel;
+import java.awt.image.PixelInterleavedSampleModel;
+import java.awt.image.Raster;
+import java.awt.image.SampleModel;
+import java.awt.image.SinglePixelPackedSampleModel;
+import java.awt.image.WritableRaster;
 
 /**
  * The Java class that implements the SalFrame C++ class methods.
@@ -48,6 +58,66 @@ import java.awt.image.IndexColorModel;
  * @author 	    $Author$
  */
 public final class VCLBitmap {
+
+	/**
+	 * The default 1 bit palette.
+	 */
+	private static int[] default1BitPalette = null;
+
+	/**
+	 * The default 1 bit color model.
+	 */
+	private static IndexColorModel default1BitColorModel = null;
+
+	/**
+	 * The default 4 bit palette.
+	 */
+	private static int[] default4BitPalette = null;
+
+	/**
+	 * The default 4 bit color model.
+	 */
+	private static IndexColorModel default4BitColorModel = null;
+
+	/**
+	 * The default 8 bit palette.
+	 */
+	private static int[] default8BitPalette = null;
+
+	/**
+	 * The default 8 bit color model.
+	 */
+	private static IndexColorModel default8BitColorModel = null;
+
+	/**
+	 * The default 24  bit color model.
+	 */
+	private static ComponentColorModel default24BitColorModel = null;
+
+	/**
+	 * Initialize the default palettes and color models.
+	 */
+	static {
+
+		default1BitPalette = new int[2];
+		default1BitPalette[0] = 0xff000000;
+		default1BitPalette[1] = 0xffffffff;
+		default1BitColorModel = new IndexColorModel(1, default1BitPalette.length, default1BitPalette, 0, false, -1, DataBuffer.TYPE_BYTE);
+
+		default4BitPalette = new int[16];
+		for (int i = 0; i < default4BitPalette.length; i++) {
+			int j = i * 17;
+			default4BitPalette[i] = 0xff000000 | ((j << 16) & 0x00ff0000) | ((j << 8) & 0x0000ff00) | (j & 0x000000ff);
+		}
+		default4BitColorModel = new IndexColorModel(4, default4BitPalette.length, default4BitPalette, 0, false, -1, DataBuffer.TYPE_BYTE);
+
+		BufferedImage img = new BufferedImage(1, 1, BufferedImage.TYPE_BYTE_INDEXED);
+		default8BitColorModel = (IndexColorModel)img.getColorModel();
+		default8BitPalette = new int[default8BitColorModel.getMapSize()];
+		default8BitColorModel.getRGBs(default8BitPalette);
+
+		default24BitColorModel = new ComponentColorModel(ColorSpace.getInstance(ColorSpace.CS_sRGB), new int[]{ 8, 8, 8 }, false, true, Transparency.OPAQUE, DataBuffer.TYPE_BYTE);
+	}
 
 	/**
 	 * The bit count.
@@ -65,14 +135,24 @@ public final class VCLBitmap {
 	private int height = 0;
 
 	/**
+	 * The image.
+	 */
+	private BufferedImage image = null;
+
+	/**
 	 * The color model.
 	 */
-	private IndexColorModel model = null;
+	private ColorModel model = null;
 
 	/**
 	 * The color palette.
 	 */
 	private int[] palette = null;
+
+	/**
+	 * The writable raster.
+	 */
+	private WritableRaster raster = null;
 
 	/**
 	 * The scanline.
@@ -110,32 +190,34 @@ public final class VCLBitmap {
 			bitCount = 24;
 
 		// Create the color model
-		if (bitCount <= 8) {
-			int[] p = null;
-			if (bitCount == 1) {
-				p = new int[2];
-				p[0] = 0xff000000;
-				p[1] = 0xffffffff;
-			}
-			else if (bitCount == 4) {
-				p = new int[16];
-				for (int i = 0; i < p.length; i++) {
-					int j = i * 17;
-					p[i] = 0xff000000 | ((j << 16) & 0x00ff0000) | ((j << 8) & 0x0000ff00) | (j & 0x000000ff);
-				}
-			}
-			else {
-				BufferedImage img = new BufferedImage(1, 1, BufferedImage.TYPE_BYTE_INDEXED);
-				IndexColorModel m = (IndexColorModel)img.getColorModel();
-				p = new int[m.getMapSize()];
-				m.getRGBs(p);
-			}
-			setPalette(p);
+		if (bitCount == 1) {
+			palette = VCLBitmap.default1BitPalette;
+			model = VCLBitmap.default1BitColorModel;
+		}
+		else if (bitCount == 4) {
+			palette = VCLBitmap.default4BitPalette;
+			model = VCLBitmap.default4BitColorModel;
+		}
+		else if (bitCount == 8) {
+			palette = VCLBitmap.default8BitPalette;
+			model = VCLBitmap.default8BitColorModel;
+		}
+		else {
+			model = default24BitColorModel;
 		}
 
 		// Align buffer size to 4 bytes and create the the buffer
 		scanline = (((bitCount * width) + 31) >> 5) << 2;
-		data = new byte[scanline * height];
+		SampleModel sampleModel = null;
+		if (bitCount < 8)
+			sampleModel = new MultiPixelPackedSampleModel(DataBuffer.TYPE_BYTE, width, height, bitCount, scanline, 0);
+		else if (bitCount == 8)
+			sampleModel = new SinglePixelPackedSampleModel(DataBuffer.TYPE_BYTE, width, height, scanline, new int[]{ 0xff });
+		else
+			sampleModel = new PixelInterleavedSampleModel(DataBuffer.TYPE_BYTE, width, height, bitCount / 8, scanline, new int[]{ 0, 1, 2 });
+		raster = Raster.createWritableRaster(sampleModel, new DataBufferByte(scanline * height), null);
+		image = new BufferedImage(model, raster, true, null);
+		data = ((DataBufferByte)raster.getDataBuffer()).getData();
 
 	}
 
@@ -154,40 +236,11 @@ public final class VCLBitmap {
 	public void copyBits(VCLGraphics g, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY) {
 
 		VCLImage srcImage = g.getImage();
-		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, srcImage.getWidth(), srcImage.getHeight()));
-		if (srcBounds.isEmpty())
+		if (srcImage == null)
 			return;
-		if (srcX < 0)
-			destX -= srcX;
-		if (srcY < 0)
-			destY -= srcY;
-		Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, width, height));
-		if (destBounds.isEmpty())
-			return;
-		srcBounds.x += destBounds.x - destX;
-		srcBounds.y += destBounds.y - destY;
-		int[] srcData = srcImage.getData();
-		int srcDataWidth = srcImage.getWidth();
-		Point srcPoint = new Point(srcBounds.x, srcBounds.y);
-		Point destPoint = new Point(destBounds.x, destBounds.y);
-		int totalPixels = destBounds.width * destBounds.height;
 
-		for (int i = 0; i < totalPixels; i++) {
-			// Copy pixel
-			setPixel(destPoint, srcData[(srcPoint.y * srcDataWidth) + srcPoint.x]);
-
-			// Update current points
-			srcPoint.x++;
-			if (srcPoint.x >= srcBounds.x + destBounds.width) {
-				srcPoint.x = srcBounds.x;
-				srcPoint.y++;
-			}
-			destPoint.x++;
-			if (destPoint.x >= destBounds.x + destBounds.width) {
-				destPoint.x = destBounds.x;
-				destPoint.y++;
-			}
-		}
+		VCLImage destImage = new VCLImage(this);
+		destImage.getGraphics().drawImage(srcImage, srcX, srcY, srcWidth, srcHeight, destX, destY, srcWidth, srcHeight);
 
 	}
 
@@ -225,6 +278,17 @@ public final class VCLBitmap {
 	}
 
 	/**
+	 * Returns the underlying image.
+	 *
+	 * @return the underlying image
+	 */
+	BufferedImage getImage() {
+
+		return image;
+
+	}
+
+	/**
 	 * Returns the bitmap's palette.
 	 *
 	 * @return the palette 
@@ -243,24 +307,7 @@ public final class VCLBitmap {
 	 */
 	int getPixel(Point p) {
 
-		int pixel = 0;
-		if (bitCount <= 8) {
-			int i = 0;
-			if (bitCount <= 1)
-				i = (data[(p.y * scanline) + (p.x >> 3)] & (1 << (7 - (p.x & 7)))) == 0 ? 0 : 1;
-			else if (bitCount <= 4)
-				i = (data[(p.y * scanline) + (p.x >> 1)] >> ((p.x & 1) == 0 ? 4 : 0)) & 0x0f;
-			else
-				i = data[(p.y * scanline) + p.x];
-			if (i < 0)
-				i += 256;
-			pixel = palette[i];
-		}
-		else if (bitCount <= 24) {
-			int i = (p.y * scanline) + (p.x * 3);
-			pixel = 0xff000000 | ((data[i++] << 16) & 0x00ff0000) | ((data[i++] << 8) & 0x0000ff00) | (data[i++] & 0x000000ff);
-		}
-		return pixel;
+		return image.getRGB(p.x, p.y);
 
 	}
 
@@ -286,10 +333,8 @@ public final class VCLBitmap {
 		if (palette != null) {
 			for (int i = 0; i < palette.length; i++)
 				palette[i] |= 0xff000000;
-			model = new IndexColorModel(bitCount, palette.length, p, 0, false, -1, DataBuffer.TYPE_BYTE);
-		}
-		else {
-			model = null;
+			model = new IndexColorModel(bitCount, palette.length, palette, 0, false, -1, DataBuffer.TYPE_BYTE);
+			image = new BufferedImage(model, raster, true, null);
 		}
 
 	}
@@ -302,35 +347,7 @@ public final class VCLBitmap {
 	 */
 	void setPixel(Point p, int c) {
 
-		c |= 0xff000000;
-		if (bitCount <= 1) {
-			int i = (p.y * scanline) + (p.x >> 3);
-			if (c == 0xff000000)
-				data[i] &= ~(1 << (7 - (p.x & 7)));
-			else
-				data[i] |= 1 << (7 - (p.x & 7));
-		}
-		else if (bitCount <= 4) {
-			int i = (p.y * scanline) + (p.x >> 3);
-			byte b = ((byte[])model.getDataElements(c, null))[0];
-			if ((p.x & 1) == 0) {
-				data[i] &= 0x0f;
-				data[i] |= b << 4;
-			}
-			else {
-				data[i] &= 0xf0;
-				data[i] |= b & 0x0f;
-			}
-		}
-		else if (bitCount <= 8) {
-			data[(p.y * scanline) + p.x] = ((byte[])model.getDataElements(c, null))[0];
-		}
-		else if (bitCount <= 24) {
-			int i = (p.y * scanline) + (p.x * 3);
-			data[i++] = (byte)((c & 0x00ff0000) >> 16);
-			data[i++] = (byte)((c & 0x0000ff00) >> 8);
-			data[i++] = (byte)(c & 0x000000ff);
-		}
+		image.setRGB(p.x, p.y, c);
 
 	}
 
