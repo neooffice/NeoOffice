@@ -191,14 +191,16 @@ static void RunAppMain( Application *pApp )
 			if ( pEventHandlerUPP )
 			{
 				// Set up native event handler
-				EventTypeSpec aTypes[3];
+				EventTypeSpec aTypes[4];
 				aTypes[0].eventClass = kEventClassAppleEvent;
 				aTypes[0].eventKind = kEventAppleEvent;
 				aTypes[1].eventClass = kEventClassMouse;
 				aTypes[1].eventKind = kEventMouseWheelMoved;
 				aTypes[2].eventClass = kEventClassMenu;
 				aTypes[2].eventKind = kEventMenuBeginTracking;
-				InstallApplicationEventHandler( pEventHandlerUPP, 3, aTypes, NULL, NULL );
+				aTypes[3].eventClass = kEventClassMenu;
+				aTypes[3].eventKind = kEventMenuPopulate;
+				InstallApplicationEventHandler( pEventHandlerUPP, 4, aTypes, NULL, NULL );
 			}
 		}
 
@@ -499,6 +501,11 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 						pSalData->maNativeEventEndCondition.set();
 					}
 				}
+			}
+			else if ( nClass == kEventClassMenu && nKind == kEventMenuPopulate )
+			{
+				// Fix bug 221 by explicitly reenabling all keyboards
+				KeyScript( smKeyEnableKybds );
 			}
 		}
 	}
