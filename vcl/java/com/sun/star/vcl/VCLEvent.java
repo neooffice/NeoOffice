@@ -1088,9 +1088,16 @@ public final class VCLEvent extends AWTEvent {
 
 		char keyChar = 0;
 		if (source instanceof KeyEvent) {
-			keyChar = ((KeyEvent)source).getKeyChar();
+			KeyEvent e = (KeyEvent)source;
+			keyChar = e.getKeyChar();
 			if (keyChar == KeyEvent.CHAR_UNDEFINED)
 				keyChar = 0;
+			// The C++ code expects that Ctrl-key events will have the key char
+			// resolved to their respective ASCII equivalents. Since we convert
+			// Mac OS X Meta-key events into Ctrl-key events, we need to do the
+			// resolving manually.
+			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && (e.getModifiers() & InputEvent.CTRL_MASK) != 0 && keyChar >= 'a' && keyChar <= 0x7d )
+				keyChar -= 0x60;
 		}
 		return keyChar;
 

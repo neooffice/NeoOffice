@@ -1525,13 +1525,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (queue == null)
 			return;
 
-		// If a modifier is used to set the character (e.g. the "Alt-c"
-		// generates a "c-cedilla" in the Mac OS X U.S. keyboard, we must strip
-		// off the modifiers so that the C++ code does not get confused.
-		int modifiers = e.getModifiers();
-		char keyChar = e.getKeyChar();
-		if (VCLFrame.lastKeyPressed != null && (modifiers & InputEvent.ALT_MASK) != 0)
-			e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), modifiers & ~InputEvent.ALT_MASK, e.getKeyCode(), e.getKeyChar());
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+			// If a modifier is used to set the character (e.g. the "Alt-c"
+			// generates a "c-cedilla" in the Mac OS X U.S. keyboard, we must
+			// strip off the modifiers so that the C++ code does not get
+			// confused.
+			int modifiers = e.getModifiers();
+			if (VCLFrame.lastKeyPressed != null && (modifiers & InputEvent.ALT_MASK) != 0) {
+				modifiers &= ~InputEvent.ALT_MASK;
+				e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), modifiers, e.getKeyCode(), e.getKeyChar());
+			}
+		}
+
 		VCLFrame.lastKeyPressed = null;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
@@ -1662,7 +1667,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			if (f == null || f == parent)
 				f = this;
 
-			if (VCLFrame.lastDragFrame != f && VCLFrame.lastDragFrame.getWindow().isShowing()) {
+			if (VCLFrame.lastDragFrame != f && VCLFrame.lastDragFrame != null && VCLFrame.lastDragFrame.getWindow() != null && VCLFrame.lastDragFrame.getWindow().isShowing()) {
 				Panel p = VCLFrame.lastDragFrame.getPanel();
 				Point destPoint = p.getLocationOnScreen();
 				MouseEvent mouseExited = new MouseEvent(p, MouseEvent.MOUSE_EXITED, e.getWhen(), e.getModifiers(), srcPoint.x - destPoint.x, srcPoint.y - destPoint.y, e.getClickCount(), e.isPopupTrigger());

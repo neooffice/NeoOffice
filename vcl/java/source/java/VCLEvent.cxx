@@ -243,17 +243,15 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_KEYMODCHANGE:
 		{
-			SalKeyEvent *pKeyEvent = (SalKeyEvent *)pData;
-			if ( !pKeyEvent )
+			SalKeyModEvent *pKeyModEvent = (SalKeyModEvent *)pData;
+			if ( !pKeyModEvent )
 			{
-				pKeyEvent = new SalKeyEvent();
-				pKeyEvent->mnTime = getWhen();
-				pKeyEvent->mnCode = getModifiers();
-				pKeyEvent->mnCharCode = 0;
-				pKeyEvent->mnRepeat = 0;
+				pKeyModEvent = new SalKeyModEvent();
+				pKeyModEvent->mnTime = getWhen();
+				pKeyModEvent->mnCode = getModifiers();
 			}
-			dispatchEvent( nID, pFrame, pKeyEvent );
-			delete pKeyEvent;
+			dispatchEvent( nID, pFrame, pKeyModEvent );
+			delete pKeyModEvent;
 			return;
 		}
 		case SALEVENT_MOUSEBUTTONDOWN:
