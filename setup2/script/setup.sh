@@ -268,11 +268,7 @@ checkforpatches()
     patchfileurl="$(PRODUCT_PATCH_CHECK_URL)"
     patchdownloadurl="$(PRODUCT_PATCH_DOWNLOAD_URL)"
     lastcheckfile="$userinstall/.lastpatchcheck"
-    status=
-    if [ ! -r "$lastcheckfile" ] ; then
-        touch -r "$apphome" "$lastcheckfile"
-    fi
-    if [ -r "$lastcheckfile" -a -z "`find "$lastcheckfile" -mtime -7 -o -mtime -6 -o -mtime -5 -o -mtime -4 -o -mtime -3 -o -mtime -2 -o -mtime -1 -o -mtime 0`" ] ; then
+    if [ ! -r "$lastcheckfile" -o -z "`find "$lastcheckfile" -mtime -7 -o -mtime -6 -o -mtime -5 -o -mtime -4 -o -mtime -3 -o -mtime -2 -o -mtime -1 -o -mtime 0`" ] ; then
         proxies=`scutil << !
 open
 get "State:/Network/Global/Proxies"
@@ -287,20 +283,26 @@ quit
                 httpproxy="$httpproxy:$httpport"
             fi
         fi
+
+        content=
         if [ -z "$httpproxy" ] ; then
-            status=`curl --connect-timeout 30 --time-cond "$lastcheckfile" --head "$patchfileurl" 2>/dev/null | head -1 | awk '{ print $2 }'`
+            content=`curl --connect-timeout 30 "$patchfileurl" 2>/dev/null`
         else
-            status=`curl --proxy "$httpproxy" --connect-timeout 30 --time-cond "$lastcheckfile" --head "$patchfileurl" 2>/dev/null | head -1 | awk '{ print $2 }'`
+            content=`curl --proxy "$httpproxy" --connect-timeout 30 "$patchfileurl" 2>/dev/null`
+        fi
+
+        # Show patch download URL
+        newproductkey=`echo "$content" | grep "^ProductKey=" | awk -F= '{ print $2 }'`
+        newproductpatch=`echo "$content" | grep "^ProductPatch=" | awk -F= '{ print $2 }'`
+        oldproductkey=`grep "^ProductKey=" "$apphome/bootstraprc" | awk -F= '{ print $2 }'`
+        oldproductpatch=`grep "^ProductPatch=" "$apphome/bootstraprc" | awk -F= '{ print $2 }'`
+        if [ "$newproductkey" != "$oldproductkey" -o "$newproductpatch" != "$oldproductpatch" ] ; then 
+            sleep 15
+            open "$patchdownloadurl"
         fi
 
         # Cache the last check date
         touch -f "$lastcheckfile"
-    fi
-
-    # Show patch download URL
-    if [ -w "$lastcheckfile" -a "$status" = "200" ] ; then
-        sleep 15
-        open "$patchdownloadurl"
     fi
 }
 
