@@ -1291,17 +1291,18 @@ public final class VCLEvent extends AWTEvent {
 	public int getModifiers() {
 
 		int outModifiers = 0;
+		int inModifiers = ((InputEvent)source).getModifiers();
 		if (source instanceof MouseEvent) {
-			int inModifiers = ((MouseEvent)source).getModifiers();
 			if ((inModifiers & InputEvent.BUTTON1_MASK) == InputEvent.BUTTON1_MASK)
 				outModifiers |= VCLEvent.MOUSE_LEFT;
 			if ((inModifiers & InputEvent.BUTTON2_MASK) == InputEvent.BUTTON2_MASK)
 				outModifiers |= VCLEvent.MOUSE_RIGHT;
 			if ((inModifiers & InputEvent.BUTTON3_MASK) == InputEvent.BUTTON3_MASK)
 				outModifiers |= VCLEvent.MOUSE_MIDDLE;
+			if ((inModifiers & InputEvent.SHIFT_MASK) == InputEvent.SHIFT_MASK)
+				outModifiers |= VCLEvent.KEY_SHIFT;
 		}
 		else if (source instanceof KeyEvent) {
-			int inModifiers = ((KeyEvent)source).getModifiers();
 			if ((inModifiers & InputEvent.SHIFT_MASK) == InputEvent.SHIFT_MASK)
 				outModifiers |= VCLEvent.KEY_SHIFT;
 			if ((inModifiers & InputEvent.CTRL_MASK) == InputEvent.CTRL_MASK)
