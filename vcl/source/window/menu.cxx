@@ -2633,6 +2633,7 @@ MenuBar::MenuBar() : Menu( TRUE )
     mbCloserVisible     = FALSE;
     mbFloatBtnVisible   = FALSE;
     mbHideBtnVisible    = FALSE;
+	mbDisplayable		= TRUE;
 }
 
 MenuBar::MenuBar( const MenuBar& rMenu ) : Menu( TRUE )
@@ -2641,8 +2642,8 @@ MenuBar::MenuBar( const MenuBar& rMenu ) : Menu( TRUE )
     mbCloserVisible     = FALSE;
     mbFloatBtnVisible   = FALSE;
     mbHideBtnVisible    = FALSE;
+	mbDisplayable		= TRUE;
     *this               = rMenu;
-    bIsMenuBar          = TRUE;
 }
 
 MenuBar::MenuBar( const ResId& rResId ) : Menu( TRUE )
@@ -2651,6 +2652,7 @@ MenuBar::MenuBar( const ResId& rResId ) : Menu( TRUE )
     mbCloserVisible     = FALSE;
     mbFloatBtnVisible   = FALSE;
     mbHideBtnVisible    = FALSE;
+	mbDisplayable		= TRUE;
     ImplLoadRes( rResId );
 }
 
