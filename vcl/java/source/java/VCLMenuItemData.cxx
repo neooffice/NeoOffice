@@ -129,3 +129,24 @@ void com_sun_star_vcl_VCLMenuItemData::setKeyboardShortcut( int _par0 )
                 }
         }
 }
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLMenuItemData::dispose( )
+{
+        static jmethodID mID = NULL;
+        VCLThreadAttach t;
+        if ( t.pEnv )
+        {
+                if ( !mID )
+                {
+                        char *cSignature = "()V";
+                        mID = t.pEnv->GetMethodID( getMyClass(), "dos[pse", cSignature );
+                }
+                OSL_ENSURE( mID, "Unknown method id!" );
+                if ( mID )
+                {
+                        t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, NULL );
+                }
+        }
+}

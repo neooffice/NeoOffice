@@ -158,6 +158,19 @@ public final class VCLMenuItemData {
     }
     
     /**
+     * Clean up as many references to this item and its peers as we can to allow
+     * garbage collection and destruction of their heavyweight peers.
+     *
+     * Note that this does not instruct an item's delegate object to be
+     * disposed;  delegates must manually be disposed.
+     */
+    public void dispose() {
+	unregisterAllAWTPeers();
+	menuItems=null;
+	title=null;
+    }
+    
+    /**
      * Exception thrown by any of the methods when the method results in a change that invalidates any
      * AWT mirror objects generated from this menu item data are invalid and must be regenerated.
      */
@@ -654,7 +667,7 @@ public final class VCLMenuItemData {
      *
      * @param o		peer object to stop managing
      */
-    public void unregisterAWTPeer(Object o) {
+    synchronized public void unregisterAWTPeer(Object o) {
         if(delegate!=null) {
             delegate.unregisterAWTPeer(o);
             return;
@@ -667,12 +680,24 @@ public final class VCLMenuItemData {
      * Unregister all AWT peer objects that have been created from the menu item data.  If the
      * item data corresponds to a submenu, all of the submenu peers will also be unregistered.
      */
-    public void unregisterAllAWTPeers() {
+    synchronized public void unregisterAllAWTPeers() {
         if(delegate!=null) {
             delegate.unregisterAllAWTPeers();
             return;
         }
         
+	// remove notifiers to allow GC to reclaim these objects quicker
+	
+	Enumeration peers=awtPeers.elements();
+	while(peers.hasMoreElements()) {
+	    MenuItem mi=(MenuItem)peers.nextElement();
+	    if(mi instanceof VCLAWTMenuItem) {
+		mi.removeActionListener((VCLAWTMenuItem)mi);
+	    } else if(mi instanceof VCLAWTCheckboxMenuItem) {
+		mi.removeActionListener((VCLAWTCheckboxMenuItem)mi);
+	    }
+	}
+	
         awtPeers.removeAllElements();
         if(isSubmenu) {
             Enumeration e=menuItems.elements();

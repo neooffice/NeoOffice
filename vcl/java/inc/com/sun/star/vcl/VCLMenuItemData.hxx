@@ -60,6 +60,8 @@ public:
                                 com_sun_star_vcl_VCLMenuItemData( ::rtl::OUString newTitle, sal_Bool separator, USHORT id, Menu *m);
                                 
         virtual			~com_sun_star_vcl_VCLMenuItemData() { };
+	
+	void			dispose();
         
         void			setTitle( ::rtl::OUString _par0 );
         void			setKeyboardShortcut( int _par0 );

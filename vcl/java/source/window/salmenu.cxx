@@ -88,6 +88,7 @@ SalMenu::~SalMenu()
     }
     else if( maData.mpVCLMenu )
     {
+	maData.mpVCLMenu->dispose();
         delete maData.mpVCLMenu;
     }
 }
@@ -219,7 +220,10 @@ SalMenuItem::SalMenuItem()
 SalMenuItem::~SalMenuItem()
 {
     if( maData.mpVCLMenuItemData )
+    {
+	maData.mpVCLMenuItemData->dispose();
         delete maData.mpVCLMenuItemData;
+    }
 }
 
 // -------------------------------------------------------------------

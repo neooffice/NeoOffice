@@ -93,8 +93,11 @@ public final class VCLMenuBar {
       * any AWT objects and set references to NULL to allow garbage collection to cleanup at a later time.
       */
      public void dispose() {
-     	awtMenuBar=null;
         removeMenuBar(this);
+     	awtMenuBar=null;
+	menus=null;
+	queue=null;
+	frame=null;
      }
      
     /**

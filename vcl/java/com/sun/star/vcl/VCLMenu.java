@@ -74,6 +74,16 @@ public final class VCLMenu {
             // no peers yet
         }
     }
+    
+    /**
+     * Free up any information used by the VCLMenu object to allow it to be
+     * garbage collected faster.  Note that disposing the object invalidates
+     * any reference previously returned by getMenuItemDataObject.
+     */
+    public void dispose( ) {
+	menuData.dispose();
+	menuData=null;
+    }
      
     /**
      * Return the VCLMenuItemData object associate with the menu.

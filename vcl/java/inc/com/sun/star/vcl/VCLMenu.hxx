@@ -59,6 +59,8 @@ public:
                                 
                                                 com_sun_star_vcl_VCLMenu( );
         virtual					~com_sun_star_vcl_VCLMenu() { };
+	
+	void					dispose( );
         
         com_sun_star_vcl_VCLMenuItemData *	getMenuItemDataObject();
         

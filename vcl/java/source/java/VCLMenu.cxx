@@ -231,3 +231,24 @@ void com_sun_star_vcl_VCLMenu::attachSubmenu( com_sun_star_vcl_VCLMenuItemData *
                 }
         }
 }
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLMenu::dispose( )
+{
+        static jmethodID mID = NULL;
+        VCLThreadAttach t;
+        if ( t.pEnv )
+        {
+                if ( !mID )
+                {
+                        char *cSignature = "()V";
+                        mID = t.pEnv->GetMethodID( getMyClass(), "dispose", cSignature );
+                }
+                OSL_ENSURE( mID, "Unknown method id!" );
+                if ( mID )
+                {
+                        t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, NULL );
+                }
+        }
+}
