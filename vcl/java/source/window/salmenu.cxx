@@ -68,6 +68,8 @@
 #include <com/sun/star/vcl/VCLMenu.hxx>
 #endif
 
+// Uncomment the following line to suppress native menus
+// #define NO_NATIVE_MENUS
 
 /*
  * SalMenu stub implementations
@@ -245,6 +247,7 @@ SalMenuItem::~SalMenuItem()
 
 SalMenu* SalInstance::CreateMenu( BOOL bMenuBar, Menu* pVCLMenu )
 {
+#ifndef NO_NATIVE_MENUS
     SalMenu *	pSalMenu = new SalMenu();
     pSalMenu->maData.mbIsMenuBarMenu = bMenuBar;
     pSalMenu->maData.mpVCLMenuBar=NULL;
@@ -265,19 +268,25 @@ SalMenu* SalInstance::CreateMenu( BOOL bMenuBar, Menu* pVCLMenu )
     }
     
     return( pSalMenu );
+#else	// !NO_NATIVE_MENUS
+	return NULL;
+#endif	// !NO_NATIVE_MENUS
 }
 
 // -----------------------------------------------------------------------
 
 void SalInstance::DestroyMenu( SalMenu* pMenu )
 {
+#ifndef NO_NATIVE_MENUS
     delete pMenu;
+#endif	// !NO_NATIVE_MENUS
 }
 
 // -----------------------------------------------------------------------
 
 SalMenuItem* SalInstance::CreateMenuItem( const SalItemParams* pItemData )
 {
+#ifndef NO_NATIVE_MENUS
     if(!pItemData)
         return NULL;
     
@@ -286,13 +295,18 @@ SalMenuItem* SalInstance::CreateMenuItem( const SalItemParams* pItemData )
     title.EraseAllChars('~');
     pSalMenuItem->maData.mpVCLMenuItemData=new ::vcl::com_sun_star_vcl_VCLMenuItemData( title, ( pItemData->eType == MENUITEM_SEPARATOR ), pItemData->nId, pItemData->pMenu );
     return( pSalMenuItem );
+#else	// !NO_NATIVE_MENUS
+	return NULL;
+#endif	// !NO_NATIVE_MENUS
 }
 
 // -----------------------------------------------------------------------
 
 void SalInstance::DestroyMenuItem( SalMenuItem* pItem )
 {
+#ifndef NO_NATIVE_MENUS
     delete pItem;
+#endif	// !NO_NATIVE_MENUS
 }
 
 // ----------------------------------------------------------------------------
@@ -307,6 +321,7 @@ void SalInstance::DestroyMenuItem( SalMenuItem* pItem )
  */
 void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu )
 {
+#ifndef NO_NATIVE_MENUS
     if(!pMenu) {
         // locate the menubar for the frame
         
@@ -338,4 +353,5 @@ void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu )
 			}
 		}
 	}
+#endif	// !NO_NATIVE_MENUS
 }
