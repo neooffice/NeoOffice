@@ -1720,7 +1720,8 @@ public final class VCLEvent extends AWTEvent {
 	 */
 	boolean isAWTEvent() {
 
-		return (awtEvent || getID() >= SALEVENT_OPENDOCUMENT);
+		int id = getID();
+		return (awtEvent || id == SALEVENT_YIELDEVENTQUEUE || id == SALEVENT_ACTIVATE_APPLICATION );
 
 	}
 

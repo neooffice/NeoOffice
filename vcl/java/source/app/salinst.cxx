@@ -1043,6 +1043,7 @@ void SalInstance::Yield( BOOL bWait )
 	// Dispatch pending non-AWT events
 	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( 0, FALSE ) ) != NULL )
 	{
+		bool bReturn = true;
 		USHORT nID = pEvent->getID();
 		if ( nID == SALEVENT_SHUTDOWN )
 		{
@@ -1050,6 +1051,21 @@ void SalInstance::Yield( BOOL bWait )
 			// method or when in presentation mode
 			if ( nRecursionLevel == 1 && !pSalData->mpPresentationFrame )
 				pEvent->dispatch();
+		}
+		else if ( nID == SALEVENT_OPENDOCUMENT || nID == SALEVENT_PRINTDOCUMENT )
+		{
+			// Fix bug 168 by reposting SALEVENT_*DOCUMENT events when
+			// recursing into this method while opening a document
+			if ( nRecursionLevel == 1 && !pSalData->mpPresentationFrame )
+			{
+				pEvent->dispatch();
+			}
+			else
+			{
+				com_sun_star_vcl_VCLEvent aEvent( pEvent->getJavaObject() );
+				pSalData->mpEventQueue->postCachedEvent( &aEvent );
+				bReturn = false;
+			}
 		}
 		else
 		{
@@ -1061,8 +1077,11 @@ void SalInstance::Yield( BOOL bWait )
 		if ( bWait )
 			OThread::yield();
 		AcquireYieldMutex( nCount );
-		nRecursionLevel--;
-		return;
+		if ( bReturn )
+		{
+			nRecursionLevel--;
+			return;
+		}
 	}
 
 	ULONG nCount = ReleaseYieldMutex();
@@ -1129,25 +1148,7 @@ void SalInstance::Yield( BOOL bWait )
 		// Reset timeout
 		nTimeout = 0;
 
-		USHORT nID = pEvent->getID();
-		if ( nID == SALEVENT_OPENDOCUMENT || nID == SALEVENT_PRINTDOCUMENT )
-		{
-			// Fix bug 168 by reposting SALEVENT_*DOCUMENT events when
-			// recursing into this method while opening a document
-			if ( nRecursionLevel == 1 && !pSalData->mpPresentationFrame )
-			{
-				pEvent->dispatch();
-			}
-			else
-			{
-				com_sun_star_vcl_VCLEvent aEvent( pEvent->getJavaObject() );
-				pSalData->mpEventQueue->postCachedEvent( &aEvent );
-			}
-		}
-		else
-		{
-			pEvent->dispatch();
-		}
+		pEvent->dispatch();
 		delete pEvent;
 	}
 
