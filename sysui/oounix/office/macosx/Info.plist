@@ -254,6 +254,8 @@
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>doc</string>
+				<string>wp</string>
+				<string>wpd</string>
 				<string>wri</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
