@@ -173,12 +173,12 @@ void SVMainThread::run()
 		{
 			// Set up native menu event handler
 			EventTypeSpec aTypes[3];
-			aTypes[0].eventClass = kEventClassMenu;
-			aTypes[0].eventKind = kEventMenuBeginTracking;
-			aTypes[1].eventClass = kEventClassAppleEvent;
-			aTypes[1].eventKind = kEventAppleEvent;
-			aTypes[2].eventClass = kEventClassMouse;
-			aTypes[2].eventKind = kEventMouseWheelMoved;
+			aTypes[0].eventClass = kEventClassAppleEvent;
+			aTypes[0].eventKind = kEventAppleEvent;
+			aTypes[1].eventClass = kEventClassMouse;
+			aTypes[1].eventKind = kEventMouseWheelMoved;
+			aTypes[2].eventClass = kEventClassMenu;
+			aTypes[2].eventKind = kEventMenuBeginTracking;
 			InstallApplicationEventHandler( CarbonEventHandler, 3, aTypes, NULL, NULL );
 		}
 	}
@@ -385,7 +385,6 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 		else if ( nClass == kEventClassMenu )
 		{
 			MenuRef trackingRef;
-			EventParamType outRefType;
 			UInt32 outSize;
 			if ( GetEventKind( aEvent ) == kEventMenuBeginTracking && GetEventParameter( aEvent, kEventParamDirectObject, typeMenuRef, NULL, sizeof( MenuRef ), &outSize, &trackingRef ) == noErr )
 			{
