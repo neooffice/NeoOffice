@@ -759,44 +759,23 @@ void Desktop::StartSetup( const OUString& aParameters )
 #endif
     }
 
+    OUString                aArgListArray[1];
     ::vos::OSecurity        aSecurity;
     ::vos::OEnvironment        aEnv;
     ::vos::OArgumentList    aArgList;
-    ::vos::OProcess    aProcess( aProgName, aDir );
 
+    aArgListArray[0] = aParameters;
+    OArgumentList aArgumentList( aArgListArray, 1 );
+
+    ::vos::OProcess    aProcess( aProgName, aDir );
 #ifdef USE_JAVA
     // Wait for execution to finish since Java is so dependent on it
-    OUString aArgListArray[3];
-    rtl_Locale *pLocale;
-    if ( osl_getProcessLocale( &pLocale ) == osl_Process_E_None )
-    {
-        aArgListArray[0] = OUString( RTL_CONSTASCII_USTRINGPARAM( "-locale" ) );
-        aArgListArray[1] = OUString( rtl_locale_getLanguage( pLocale ) );
-        OUString aCountry = OUString( rtl_locale_getCountry( pLocale ) );
-        if ( aCountry.getLength() )
-        {
-            aArgListArray[1] += OUString( RTL_CONSTASCII_USTRINGPARAM( "-" ) );
-            aArgListArray[1] += OUString( aCountry );
-        }
-        aArgListArray[2] = aParameters;
-    }
-    else
-    {
-        aArgListArray[0] = aParameters;
-        aArgListArray[1] = OUString();
-        aArgListArray[2] = OUString();
-    }
-    OArgumentList aArgumentList( aArgListArray, 3 );
     ::vos::OProcess::TProcessError aProcessError =
         aProcess.execute( OProcess::TOption_Wait,
                           aSecurity,
                           aArgumentList,
                           aEnv );
 #else	// USE_JAVA
-    OUString                aArgListArray[1];
-    aArgListArray[0] = aParameters;
-    OArgumentList aArgumentList( aArgListArray, 1 );
-
     ::vos::OProcess::TProcessError aProcessError =
         aProcess.execute( OProcess::TOption_Detached,
                           aSecurity,

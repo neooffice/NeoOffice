@@ -43,13 +43,12 @@ error()
     if [ ! -z "$1" ] ; then
         echo "Error: $1"
     fi
-    echo "Usage: $0 [-h] -locale <locale> [-repair]"
+    echo "Usage: $0 [-h] [-repair]"
     exit 1
 }
 
 os=`uname`
 apphome=`dirname "$0"`
-userbase="$apphome/../user"
 sharebase="$apphome/../share"
 userinstall="$HOME/Library/$(PRODUCT_DIR_NAME)-$(OO_VERSION)/user"
 
@@ -57,21 +56,12 @@ userinstall="$HOME/Library/$(PRODUCT_DIR_NAME)-$(OO_VERSION)/user"
 if [ ! -d "$apphome" ] ; then
     error "$apphome directory does not exist"
 fi
-if [ ! -d "$userbase" ] ; then
-    error "$userbase directory does not exist"
-fi
 
 # Parse arguments
 locale=""
 repair=""
 while [ ! -z "$1" ] ; do
     case "$1" in
-    -locale)
-        if [ -z "$2" ] ; then
-            error "-locale argument must be followed by a locale"
-        fi
-        locale="$2"
-        shift 2;;
     -repair)
         repair="true"
         shift;;
@@ -82,95 +72,21 @@ while [ ! -z "$1" ] ; do
     esac
 done
 
-# Match the locale to one of the installed locales
-lang=`echo "$locale" | awk -F- '{ print $1 }'`
-country=`echo "$locale" | awk -F- '{ print $2 }'`
-locales="$(LANGUAGE_NAMES)"
-matchedlocale=""
-for i in $locales ; do
-    if [ "$locale" = "$i" ] ; then
-        matchedlocale="$i"
-        break
-    fi
-done
-if [ -z "$matchedlocale" ] ; then
-    if [ -z "$country" ] ; then
-        for i in $locales ; do
-            ilang=`echo "$i" | awk -F- '{ print $1 }'`
-            if [ "$lang" = "$ilang" ] ; then
-                matchedlocale="$i"
-                break
-            fi
-        done
-    else
-        for i in $locales ; do
-            if [ "$lang" = "$i" ] ; then
-                matchedlocale="$i"
-                break
-            fi
-        done
-    fi
-fi
-if [ -z "$matchedlocale" ] ; then
-    locale="en-US"
-else
-    locale="$matchedlocale"
-fi
-
-configdir="$userinstall/config"
-xmldir="$configdir/registry/instance/org/openoffice"
-xmltemplatedir="$configdir/registry/template/org/openoffice"
-
 # Create user installation directory
-if [ ! -d "$userinstall" ] ; then
-    repair="true"
-    mkdir -p "$userinstall"
-fi
 if [ ! -z "$repair" ] ; then
     chmod -Rf u+rw "$userinstall"
-    cp -Rf "$userbase"/* "$userinstall"
-    chmod -Rf u+rw "$userinstall"
+    rm -Rf "$userinstall"
+fi
+if [ ! -d "$userinstall" ] ; then
+    mkdir -p "$userinstall"
 fi
 
-# # Copy and edit required files
-# if [ ! -d "$xmldir" ] ; then
-#     error
-# fi
-# if [ ! -d "$xmltemplatedir" ] ; then
-#     error
-# fi
-# for i in `cd "$xmltemplatedir" ; find . ! -type d` ; do
-#     if [ ! -z "$repair" -o ! -f "$xmldir/$i" ] ; then
-#         sed 's#>USER_INSTALL_DIR<#>'"$userinstall"'<#g' "$xmltemplatedir/$i" | sed 's#>LOCALE<#>'"$locale"'<#g' | sed 's#>NSWRAPPER_PATH<#>'"$apphome/nswrapper"'<#g' | sed 's#>CURRENT_DATE<#>'`date +%d.%m.%Y/%H.%M.%S`'<#g' > "$xmldir/$i"
-#     fi
-# done
-
-# # Set the locale
-# setupxml="$xmldir/Setup.xml"
-# if [ ! -f "$setupxml" ] ; then
-#     error
-# fi
-# setupxmlbak="$setupxml.bak"
-# rm -f "$setupxmlbak"
-# if [ ! -f "$setupxmlbak" ] ; then
-#     cp -f "$setupxml" "$setupxmlbak"
-#     sed 's#>.*</ooSetupInstallPath>#>'"$userinstall"'</ooSetupInstallPath>#g' "$setupxmlbak" | sed 's#>.*</ooLocale>#>'"$locale"'</ooLocale>#g' > "$setupxml"
-#     rm -f "$setupxmlbak"
-# fi
-
-# # Make locale the default document language
-# linguxml="$xmldir/Office/Linguistic.xml"
-# if [ ! -f "$linguxml" ] ; then
-#     error
-# fi
-# linguxmlbak="$linguxml.bak"
-# if [ ! -f "$linguxmlbak" ] ; then
-#     cp -f "$linguxml" "$linguxmlbak"
-#     sed 's#<DefaultLocale cfg:type="string"/>#<DefaultLocale cfg:type="string">'"$locale"'</DefaultLocale>#g' "$linguxmlbak" > "$linguxml"
-# fi
-
 # Create javarc file
+configdir="$userinstall/config"
 sysclasspath=""
+if [ ! -d "$configdir" ] ; then
+    mkdir -p "$configdir"
+fi
 if [ ! -d "$apphome/classes" ] ; then
     error
 fi
