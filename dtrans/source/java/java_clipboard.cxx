@@ -93,41 +93,52 @@ Reference< XTransferable > SAL_CALL JavaClipboard::getContents() throw( RuntimeE
 
 	if ( mbSystemClipboard )
 	{
+		Reference< XTransferable > aOldContents( maContents );
+		Reference< XClipboardOwner > aOldOwner( maOwner );
+
 		com_sun_star_dtrans_DTransTransferable *pTransferable = NULL;
 		if ( maContents.is() )
 			pTransferable = (com_sun_star_dtrans_DTransTransferable *)maContents.get();
+
+		if ( pTransferable )
+			aOldContents = pTransferable->getTransferable();
 
 		if ( pTransferable && pTransferable->hasOwnership() )
 		{
 			Reference< XTransferable > aLocalContents( pTransferable->getTransferable() );
 			if ( aLocalContents.is() )
+			{
+				aOldContents = Reference< XTransferable >();
+				aOldOwner = Reference< XClipboardOwner >();
 				aContents = aLocalContents;
+			}
 			else
+			{
 				maContents = Reference< XTransferable >( pTransferable );
+				maOwner = Reference< XClipboardOwner >();
+				aContents = maContents;
+			}
 		}
 		else
 		{
-			Reference< XTransferable > aOldContents( maContents );
-			if ( pTransferable )
-				aOldContents = pTransferable->getTransferable();
 			pTransferable = com_sun_star_dtrans_DTransClipboard::getContents();
 			if ( pTransferable )
 				maContents = Reference< XTransferable >( pTransferable );
 			else
 				maContents = Reference< XTransferable >();
-
-			Reference< XClipboardOwner > aOldOwner( maOwner );
 			maOwner = Reference< XClipboardOwner >();
-
 			aContents = maContents;
+		}
 
-			list< Reference< XClipboardListener > > listeners( maListeners );
+		list< Reference< XClipboardListener > > listeners( maListeners );
 
-			aGuard.clear();
+		aGuard.clear();
 
-			if ( aOldOwner.is() )
-				aOldOwner->lostOwnership( static_cast< XClipboard* >( this ), aOldContents );
+		if ( aOldOwner.is() )
+			aOldOwner->lostOwnership( static_cast< XClipboard* >( this ), aOldContents );
 
+		if ( aOldContents.is() )
+		{
 			ClipboardEvent aEvent( static_cast< OWeakObject* >( this ), aContents );
 			while ( listeners.begin() != listeners.end() )
 			{
