@@ -250,7 +250,7 @@ jclass com_sun_star_vcl_VCLFont::getMyClass()
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLFont *com_sun_star_vcl_VCLFont::deriveFont( long _par0, sal_Bool _par1, sal_Bool _par2, short _par3, sal_Bool _par4, sal_Bool _par5 )
+com_sun_star_vcl_VCLFont *com_sun_star_vcl_VCLFont::deriveFont( long _par0, sal_Bool _par1, sal_Bool _par2, short _par3, sal_Bool _par4, sal_Bool _par5, double _par6 )
 {
 	static jmethodID mID = NULL;
 	com_sun_star_vcl_VCLFont *out = NULL;
@@ -259,7 +259,7 @@ com_sun_star_vcl_VCLFont *com_sun_star_vcl_VCLFont::deriveFont( long _par0, sal_
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(IZZSZZ)Lcom/sun/star/vcl/VCLFont;";
+			char *cSignature = "(IZZSZZD)Lcom/sun/star/vcl/VCLFont;";
 			mID = t.pEnv->GetMethodID( getMyClass(), "deriveFont", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -272,6 +272,7 @@ com_sun_star_vcl_VCLFont *com_sun_star_vcl_VCLFont::deriveFont( long _par0, sal_
 			args[3].s = jshort( _par3 );
 			args[4].z = jboolean( _par4 );
 			args[5].z = jboolean( _par5 );
+			args[6].d = jdouble( _par6 );
 			jobject tempObj = t.pEnv->CallNonvirtualObjectMethodA( object, getMyClass(), mID, args );
 			if ( tempObj )
 				out = new com_sun_star_vcl_VCLFont( tempObj );
@@ -642,6 +643,27 @@ java_lang_Object *com_sun_star_vcl_VCLFont::getPeer()
 			if ( tempObj )
 				out = new java_lang_Object( tempObj );
 		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+double com_sun_star_vcl_VCLFont::getScaleX()
+{
+	static jmethodID mID = NULL;
+	double out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()D";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getScaleX", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (double)t.pEnv->CallNonvirtualDoubleMethod( object, getMyClass(), mID );
 	}
 	return out;
 }

@@ -68,7 +68,7 @@ public:
 	void				copyBits( const com_sun_star_vcl_VCLGraphics *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8 );
 	void				drawBitmap( const com_sun_star_vcl_VCLBitmap *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8 );
 	void				drawBitmap( const com_sun_star_vcl_VCLBitmap *_par0, const com_sun_star_vcl_VCLBitmap *_par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8, long _par9 );
-	void				drawGlyphs( long _par0, long _par1, int _par2, long *_par3, long *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, long _par8, long _par9, int _par10 );
+	void				drawGlyphs( long _par0, long _par1, int _par2, long *_par3, long *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, long _par8, long _par9, int _par10, sal_Bool _par11 );
 	void				drawLine( long _par0, long _par1, long _par2, long _par3, SalColor _par4 );
 	void				drawMask( const com_sun_star_vcl_VCLBitmap *_par0, SalColor _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8, long _par9 );
 	void				drawPolygon( ULONG _par0, const long *_par1, const long *_par2, SalColor _par3, sal_Bool _par4 );
@@ -77,7 +77,7 @@ public:
 	void				drawRect( long _par0, long _par1, long _par2, long _par3, SalColor _par4, sal_Bool _par5 );
 	void				endSetClipRegion();
 	USHORT				getBitCount();
-	const Rectangle		getGlyphBounds( int _par0, com_sun_star_vcl_VCLFont *_par1 );
+	const Rectangle		getGlyphBounds( int _par0, com_sun_star_vcl_VCLFont *_par1, sal_Bool _par2 );
 	com_sun_star_vcl_VCLImage *getImage();
 	SalColor			getPixel( long _par0, long _par1 );
 	const Size			getResolution();

@@ -44,6 +44,9 @@
 #ifndef _SV_SALINST_HXX
 #include <salinst.hxx>
 #endif
+#ifndef _SV_SALLAYOUT_HXX
+#include <sallayout.hxx>
+#endif
 #ifndef _SV_OUTDEV_H
 #include <outdev.h>
 #endif
@@ -125,7 +128,7 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		// Set font for graphics device
 		if ( maGraphicsData.mpVCLFont )
 			delete maGraphicsData.mpVCLFont;
-		maGraphicsData.mpVCLFont = pVCLFont->deriveFont( pFont->mnHeight, bBold, bItalic, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical );
+		maGraphicsData.mpVCLFont = pVCLFont->deriveFont( pFont->mnHeight, bBold, bItalic, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical, pFont->mnWidth ? (double)pFont->mnWidth / (double)pFont->mnHeight : 1.0 );
 	}
 
 	if ( maGraphicsData.mpPrinter )
@@ -272,7 +275,7 @@ BOOL SalGraphics::GetGlyphBoundRect( long nIndex, Rectangle& rRect,
 {
 	if ( maGraphicsData.mpVCLFont )
 	{
-		rRect = maGraphicsData.mpVCLGraphics->getGlyphBounds( nIndex, maGraphicsData.mpVCLFont );
+		rRect = maGraphicsData.mpVCLGraphics->getGlyphBounds( nIndex & GF_IDXMASK, maGraphicsData.mpVCLFont, nIndex & GF_ROTMASK );
 		return TRUE;
 	}
 	else

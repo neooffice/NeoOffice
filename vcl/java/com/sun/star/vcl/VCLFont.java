@@ -116,16 +116,17 @@ public final class VCLFont {
 	 * @param o the orientation of the font in degrees
 	 * @param a <code>true</code> to enable antialiasing and <code>false</code>
 	 *  to disable antialiasing
-	 * @param b <code>true</code> if the font is vertical
+	 * @param v <code>true</code> if the font is vertical
+	 * @param x the X axis scale factor
 	 * @return the default font adjusted to the specified size and style
 	 */
-	static VCLFont getDefaultFont(int s, boolean b, boolean i, short o, boolean a, boolean v) {
+	static VCLFont getDefaultFont(int s, boolean b, boolean i, short o, boolean a, boolean v, double x) {
 
 		// Set default font
 		if (defaultFont == null)
-			defaultFont = new VCLFont("Dialog", VCLFont.FAMILY_DONTKNOW, 1, o, false, false, true, false);
+			defaultFont = new VCLFont("Dialog", VCLFont.FAMILY_DONTKNOW, 1, o, false, false, true, false, x);
 
-		return new VCLFont(VCLFont.defaultFont.getName(), VCLFont.defaultFont.getFamilyType(), s, o, b, i, a, v);
+		return new VCLFont(VCLFont.defaultFont.getName(), VCLFont.defaultFont.getFamilyType(), s, o, b, i, a, v, x);
 
 	}
 
@@ -174,7 +175,7 @@ public final class VCLFont {
 				else
 					type = VCLFont.FAMILY_SWISS;
 
-				array.add(new VCLFont(fontFamilies[i], type, 1, (short)0, false, false, true, false));
+				array.add(new VCLFont(fontFamilies[i], type, 1, (short)0, false, false, true, false, 1.0));
 			}
 	
 			fonts = (VCLFont[])array.toArray(new VCLFont[array.size()]);
@@ -235,6 +236,11 @@ public final class VCLFont {
 	private short orientation = 0;
 
 	/**
+	 * The cached X axis scale factor.
+	 */
+	private double scaleX = 0.0;
+
+	/**
 	 * The cached size.
 	 */
 	private int size = 0;
@@ -261,8 +267,9 @@ public final class VCLFont {
 	 * @param a <code>true</code> to enable antialiasing and <code>false</code>
 	 *  to disable antialiasing
 	 * @param v <code>true</code> if the font is vertical 
+	 * @param x the X axis scale factor
 	 */
-	VCLFont(String n, int ft, int s, short o, boolean b, boolean i, boolean a, boolean v) {
+	VCLFont(String n, int ft, int s, short o, boolean b, boolean i, boolean a, boolean v, double x) {
 
 		antialiased = a;
 		// Mac OS X applications and printing can't handle artificial bold and
@@ -277,6 +284,7 @@ public final class VCLFont {
 		}
 		name = n;
 		orientation = o;
+		scaleX = x;
 		size = s;
 		type = ft;
 		vertical = v;
@@ -326,11 +334,12 @@ public final class VCLFont {
 	 * @param a <code>true</code> to enable antialiasing and <code>false</code>
 	 *  to disable antialiasing
 	 * @param v <code>true</code> if the font is vertical 
+	 * @param x the X axis scale factor
 	 * @return a new <code>VCLFont</code> object
 	 */
-	public VCLFont deriveFont(int s, boolean b, boolean i, short o, boolean a, boolean v) {
+	public VCLFont deriveFont(int s, boolean b, boolean i, short o, boolean a, boolean v, double x) {
 
-		return new VCLFont(name, type, s, o, b, i, a, v);
+		return new VCLFont(name, type, s, o, b, i, a, v, x);
 
 	}
 
@@ -363,7 +372,7 @@ public final class VCLFont {
 	 */
 	public VCLFont getDefaultFont() {
 
-		return VCLFont.getDefaultFont(size, bold, italic, orientation, antialiased, vertical);
+		return VCLFont.getDefaultFont(size, bold, italic, orientation, antialiased, vertical, scaleX);
 
 	}
 
@@ -457,7 +466,18 @@ public final class VCLFont {
 	}
 
 	/**
-	 * Determines the point size of the <code>Font</code>.
+	 * Returns the X axis scale factor.
+	 *
+	 * @return the X axis scale factor
+	 */
+	public double getScaleX() {
+
+		return scaleX;
+
+	}
+
+	/**
+	 * Returns the point size of the <code>Font</code>.
 	 *
 	 * @return the point size of the <code>Font</code>
 	 */
