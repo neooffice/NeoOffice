@@ -7116,6 +7116,10 @@ BOOL OutputDevice::GetTextBoundRect( Rectangle& rRect,
 
         if( bRet )
         {
+#ifndef USE_JAVA
+			// Fix for bug 188. The following code does not work correctly
+			// and will cause characters to incorrectly offset downward and to
+			// the right
             int nWidthFactor = pSalLayout->GetUnitsPerPixel();
 
             if( nWidthFactor > 1 )
@@ -7130,6 +7134,7 @@ BOOL OutputDevice::GetTextBoundRect( Rectangle& rRect,
                 aPixelRect.Bottom()
                     = static_cast< long >(aPixelRect.Bottom() * fFactor);
             }
+#endif	// !USE_JAVA
 
             Point aRotatedOfs( mnTextOffX, mnTextOffY );
             aRotatedOfs -= pSalLayout->GetDrawPosition( Point( nXOffset, 0 ) );
