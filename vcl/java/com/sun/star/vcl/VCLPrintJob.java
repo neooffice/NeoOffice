@@ -279,7 +279,15 @@ public final class VCLPrintJob extends Thread implements Printable {
 			currentJobPage = i;
 		}
 
-		graphicsInfo.graphics = (Graphics2D)g;
+		Graphics2D graphics = (Graphics2D)g;
+
+		// Normalize graphics to 72 dpi
+		graphics.transform(graphics.getDeviceConfiguration().getNormalizingTransform());
+
+		// Set the origin to the origin of the printable area
+		graphics.translate((int)pageFormat.getImageableX(), (int)pageFormat.getImageableY());
+
+		graphicsInfo.graphics = graphics;
 		graphicsInfo.pageFormat = pageFormat;
 
 		// Wait until painting is finished

@@ -261,9 +261,6 @@ public final class VCLGraphics {
 		graphics = g;
 		pageFormat = p;
 
-		// Normalize graphics to 72 dpi
-		graphics.transform(graphics.getDeviceConfiguration().getNormalizingTransform());
-
 	}
 
 	/**
@@ -1040,8 +1037,6 @@ public final class VCLGraphics {
 				Panel p = frame.getPanel();
 				bounds = p.getBounds();
 				panelGraphics = (Graphics2D)p.getGraphics();
-				// Normalize graphics to 72 dpi
-				panelGraphics.transform(panelGraphics.getDeviceConfiguration().getNormalizingTransform());
 			}
 			else {
 				bounds = new Rectangle(0, 0, 1, 1);
