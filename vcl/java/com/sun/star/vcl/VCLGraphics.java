@@ -84,11 +84,6 @@ public final class VCLGraphics {
 	public final static int SAL_INVERT_TRACKFRAME = 0x0004;
 
 	/**
-	 * The auto flush flag.
-	 */
-	private static boolean autoFlush = true;
-
-	/**
 	 * The drawImage method.
 	 */
 	private static Method drawImageMethod = null;
@@ -124,11 +119,6 @@ public final class VCLGraphics {
 	private static Method drawTextArrayMethod = null;
 
 	/**
-	 * The graphics list.
-	 */
-	private static LinkedList graphicsList = new LinkedList();
-
-	/**
 	 * The image50 image.
 	 */
 	private static VCLImage image50 = null;
@@ -154,47 +144,6 @@ public final class VCLGraphics {
 	public static void beep() {
 
 		Toolkit.getDefaultToolkit().beep();
-
-	}
-
-	/**
-	 * Flushes all native drawing buffers to their native windows.
-	 */
-	public static void flushAll() {
-
-		int elements = graphicsList.size();
-		for (int i = 0; i < elements; i++) {
-			VCLGraphics g = (VCLGraphics)graphicsList.get(i);
-			g.flush();
-		}
-
-	}
-
-	/**
-	 * Set the auto flush flag.
-	 *
-	 * @param b the auto flush flag
-	 */
-	static void setAutoFlush(boolean b) {
-
-		autoFlush = b;
-
-	}
-
-	/**
-	 * Set default rendering attributes.
-	 *
-	 * @param g the <code>Graphics2D</code> instance
-	 */
-	static void setDefaultRenderingAttributes(Graphics2D g) {
-
-		// Set rendering hints
-		RenderingHints hints = g.getRenderingHints();
-		hints.put(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		g.setRenderingHints(hints);
-
-		// Set stroke
-		g.setStroke(new BasicStroke(1.0f));
 
 	}
 
@@ -274,6 +223,11 @@ public final class VCLGraphics {
 	}
 
 	/**
+	 * The auto flush flag.
+	 */
+	private boolean autoFlush = false;
+
+	/**
 	 * The cached bit count.
 	 */
 	private int bitCount = 0;
@@ -341,13 +295,8 @@ public final class VCLGraphics {
 		}
 		image = new VCLImage(graphicsBounds.width, graphicsBounds.height, frame.getBitCount());
 		graphics = image.getImage().createGraphics();
-		VCLGraphics.setDefaultRenderingAttributes(graphics);
 		bitCount = image.getBitCount();
 		resetClipRegion();
-
-		synchronized (graphicsList) {
-			graphicsList.add(this);
-		}
 
 	}
 
@@ -364,7 +313,6 @@ public final class VCLGraphics {
 		graphics = image.getImage().createGraphics();
 		graphicsBounds = new Rectangle(0, 0, image.getWidth(), image.getHeight());
 		pageFormat = p;
-		VCLGraphics.setDefaultRenderingAttributes(graphics);
 		bitCount = image.getBitCount();
 		resetClipRegion();
 
@@ -384,7 +332,6 @@ public final class VCLGraphics {
 		graphicsBounds.x = 0;
 		graphicsBounds.y = 0;
 		graphics = (Graphics2D)g.create(graphicsBounds.x, graphicsBounds.y, graphicsBounds.width, graphicsBounds.height);
-		VCLGraphics.setDefaultRenderingAttributes(graphics);
 		bitCount = graphics.getDeviceConfiguration().getColorModel().getPixelSize();
 		resetClipRegion();
 
@@ -402,12 +349,11 @@ public final class VCLGraphics {
 	 */
 	void addToFlush() {
 
-		if (frame != null) {
+		if (frame != null)
 			update = new Rectangle(graphicsBounds);
 
-			if (autoFlush)
-				flush();
-		}
+		if (autoFlush)
+			flush();
 
 	}
 
@@ -450,9 +396,6 @@ public final class VCLGraphics {
 		if (pageQueue != null)
 			pageQueue.dispose();
 		pageQueue = null;
-		synchronized (graphicsList) {
-			graphicsList.remove(this);
-		}
 		bitCount = 0;
 		if (graphics != null)
 			graphics.dispose();
@@ -742,7 +685,6 @@ public final class VCLGraphics {
 		if (xor) {
 			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
 			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
-			VCLGraphics.setDefaultRenderingAttributes(srcGraphics);
 			srcGraphics.setColor(new Color(color));
 			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 			srcGraphics.drawLine(x1, y1, x2, y2);
@@ -871,7 +813,6 @@ public final class VCLGraphics {
 			if (xor) {
 				VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
 				Graphics2D srcGraphics = srcImage.getImage().createGraphics();
-				VCLGraphics.setDefaultRenderingAttributes(srcGraphics);
 				srcGraphics.setColor(new Color(color));
 				srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 				srcGraphics.drawPolygon(polygon);
@@ -967,7 +908,6 @@ public final class VCLGraphics {
 			if (xor) {
 				VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
 				Graphics2D srcGraphics = srcImage.getImage().createGraphics();
-				VCLGraphics.setDefaultRenderingAttributes(srcGraphics);
 				srcGraphics.setColor(new Color(color));
 				srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 				for (int i = 0; i < npoly; i++)
@@ -1035,7 +975,6 @@ public final class VCLGraphics {
 			if (xor) {
 				VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
 				Graphics2D srcGraphics = srcImage.getImage().createGraphics();
-				VCLGraphics.setDefaultRenderingAttributes(srcGraphics);
 				srcGraphics.setColor(new Color(color));
 				srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 				srcGraphics.drawRect(x, y, width - 1, height - 1);
@@ -1291,7 +1230,6 @@ public final class VCLGraphics {
 		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME) {
 			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
 			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
-			VCLGraphics.setDefaultRenderingAttributes(srcGraphics);
 			BasicStroke stroke = (BasicStroke)srcGraphics.getStroke();
 			srcGraphics.setStroke(new BasicStroke(1.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 1.0f, new float[]{ 2.0f, 2.0f }, 0.0f));
 			srcGraphics.setColor(Color.white);
@@ -1304,7 +1242,6 @@ public final class VCLGraphics {
 		else if ((options & VCLGraphics.SAL_INVERT_50) == VCLGraphics.SAL_INVERT_50) {
 			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, VCLGraphics.image50.getBitCount());
 			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
-			VCLGraphics.setDefaultRenderingAttributes(srcGraphics);
 			srcGraphics.setPaint(new TexturePaint(VCLGraphics.image50.getImage(), new Rectangle(0, 0, VCLGraphics.image50.getWidth(), VCLGraphics.image50.getHeight()).getBounds2D()));
 			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 			srcGraphics.fillRect(x, y, width, height);
@@ -1387,7 +1324,6 @@ public final class VCLGraphics {
 		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME) {
 			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
 			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
-			VCLGraphics.setDefaultRenderingAttributes(srcGraphics);
 			BasicStroke stroke = (BasicStroke)srcGraphics.getStroke();
 			srcGraphics.setStroke(new BasicStroke(1.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 1.0f, new float[]{ 2.0f, 2.0f }, 0.0f));
 			srcGraphics.setColor(Color.white);
@@ -1400,7 +1336,6 @@ public final class VCLGraphics {
 		else if ((options & VCLGraphics.SAL_INVERT_50) == VCLGraphics.SAL_INVERT_50) {
 			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, VCLGraphics.image50.getBitCount());
 			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
-			VCLGraphics.setDefaultRenderingAttributes(srcGraphics);
 			srcGraphics.setPaint(new TexturePaint(VCLGraphics.image50.getImage(), new Rectangle(0, 0, VCLGraphics.image50.getWidth(), VCLGraphics.image50.getHeight()).getBounds2D()));
 			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 			srcGraphics.fillPolygon(polygon);
@@ -1469,7 +1404,6 @@ public final class VCLGraphics {
 			}
 			image = new VCLImage(graphicsBounds.width, graphicsBounds.height, frame.getBitCount());
 			graphics = image.getImage().createGraphics();
-			VCLGraphics.setDefaultRenderingAttributes(graphics);
 			bitCount = image.getBitCount();
 			userClip = null;
 			update = null;
@@ -1490,6 +1424,17 @@ public final class VCLGraphics {
 		else
 			hints.put(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
 		graphics.setRenderingHints(hints);
+
+	}
+
+	/**
+	 * Set the auto flush flag.
+	 *
+	 * @param b the auto flush flag 
+	 */
+	void setAutoFlush(boolean b) {
+
+		autoFlush = b;
 
 	}
 

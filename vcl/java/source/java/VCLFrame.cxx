@@ -348,6 +348,29 @@ ULONG com_sun_star_vcl_VCLFrame::getState()
 
 // ----------------------------------------------------------------------------
 
+void com_sun_star_vcl_VCLFrame::setAutoFlush( sal_Bool _par0 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(Z)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "setAutoFlush", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[1];
+			args[0].z = jboolean( _par0 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLFrame::setBounds( long _par0, long _par1, long _par2, long _par3 )
 {
 	static jmethodID mID = NULL;

@@ -1759,6 +1759,17 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * Set the auto flush flag.
+	 *
+	 * @param b the auto flush flag 
+	 */
+	public void setAutoFlush(boolean b) {
+
+		graphics.setAutoFlush(b);
+
+	}
+
+	/**
 	 * Moves and resizes this native window.
 	 *
 	 * @param x the new x-coordinate
@@ -1983,9 +1994,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			((Frame)window).setResizable(resizable);
 
 		if (b) {
-			if (fullScreenMode)
-				VCLGraphics.setAutoFlush(true);
-
 			// Show the window
 			window.show();
 			toFront();
@@ -1993,9 +2001,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else {
 			// Hide the window
 			window.hide();
-
-			if (fullScreenMode)
-				VCLGraphics.setAutoFlush(false);
 		}
 
 	}
@@ -2200,6 +2205,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			if (graphics != null) {
 				synchronized (graphics) {
 					graphics.addToFlush();
+					graphics.flush();
 				}
 			}
 

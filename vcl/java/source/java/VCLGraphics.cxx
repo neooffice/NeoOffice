@@ -118,25 +118,6 @@ void com_sun_star_vcl_VCLGraphics::beep()
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::flushAll()
-{
-	static jmethodID mID = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()V";
-			mID = t.pEnv->GetStaticMethodID( getMyClass(), "flushAll", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-			t.pEnv->CallStaticVoidMethod( getMyClass(), mID );
-	}
-}
-
-// ----------------------------------------------------------------------------
-
 void com_sun_star_vcl_VCLGraphics::beginSetClipRegion()
 {
 	static jmethodID mID = NULL;

@@ -70,7 +70,6 @@ typedef CGLError CGLDestroyContext_Type( CGLContextObj );
 typedef CGLError CGLDestroyPixelFormat_Type( CGLPixelFormatObj );
 typedef CGLError CGLSetCurrentContext_Type( CGLContextObj );
 typedef CGLError CGLSetOffScreen_Type( CGLContextObj, long, long, long, void * );
-typedef void glFinish_Type( void );
 
 static CGLChoosePixelFormat_Type *pChoosePixelFormat = NULL;
 static CGLClearDrawable_Type *pClearDrawable = NULL;

@@ -59,7 +59,6 @@ protected:
 
 public:
 	static void			beep();
-	static void			flushAll();
 	static jclass		getMyClass();
 
 						com_sun_star_vcl_VCLGraphics( jobject myObj ) : java_lang_Object( myObj ) {};

@@ -350,6 +350,8 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 			if ( pFrame == *it )
 			{
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
+				// Flush the window's buffer to the native window
+				pFrame->Flush();
 				break;
 			}
 		}

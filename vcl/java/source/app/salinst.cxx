@@ -255,8 +255,11 @@ void SalInstance::Yield( BOOL bWait )
 		// when in presentation mode
 		if ( ( nRecursionLevel == 1 && !pSalData->mpPresentationFrame ) || pEvent->getID() != SALEVENT_SHUTDOWN )
 		{
+			if ( pSalData->mpPresentationFrame )
+				pSalData->mpPresentationFrame->maFrameData.mpVCLFrame->setAutoFlush( TRUE );
 			pEvent->dispatch();
-			com_sun_star_vcl_VCLGraphics::flushAll();
+			if ( pSalData->mpPresentationFrame )
+				pSalData->mpPresentationFrame->maFrameData.mpVCLFrame->setAutoFlush( FALSE );
 		}
 		delete pEvent;
 
@@ -280,10 +283,23 @@ void SalInstance::Yield( BOOL bWait )
 		gettimeofday( &aCurrentTime, NULL );
 		if ( pSalData->mpTimerProc && aCurrentTime >= pSalData->maTimeout )
 		{
+			if ( pSalData->mpPresentationFrame )
+				pSalData->mpPresentationFrame->maFrameData.mpVCLFrame->setAutoFlush( TRUE );
+
 			gettimeofday( &pSalData->maTimeout, NULL );
 			pSalData->maTimeout += pSalData->mnTimerInterval;
 			pSalData->mpTimerProc();
-			com_sun_star_vcl_VCLGraphics::flushAll();
+
+			if ( pSalData->mpPresentationFrame )
+			{
+				pSalData->mpPresentationFrame->maFrameData.mpVCLFrame->setAutoFlush( FALSE );
+			}
+			else
+			{
+				// Flush all of the window buffers to the native windows
+				for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+					(*it)->Flush();
+			}
 		}
 	}
 
@@ -318,10 +334,13 @@ void SalInstance::Yield( BOOL bWait )
 		// the application acts is if two mouse clicks have been made instead
 		// of one.
 		USHORT nID = pEvent->getID();
-		if ( nID != SALEVENT_MOUSEBUTTONDOWN && nID != SALEVENT_KEYINPUT )
+		if ( nID == SALEVENT_MOUSEMOVE )
 			bContinue = FALSE;
+		if ( pSalData->mpPresentationFrame )
+			pSalData->mpPresentationFrame->maFrameData.mpVCLFrame->setAutoFlush( TRUE );
 		pEvent->dispatch();
-		com_sun_star_vcl_VCLGraphics::flushAll();
+		if ( pSalData->mpPresentationFrame )
+			pSalData->mpPresentationFrame->maFrameData.mpVCLFrame->setAutoFlush( FALSE );
 		delete pEvent;
 	}
 
@@ -412,20 +431,20 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 		if ( !pFrame->maFrameData.mpParent )
 		{
 			// Find the next document window if any exist
-			::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin();
-			SalFrame* pNextFrame = *it;
-			while ( pNextFrame &&
-				( pNextFrame->maFrameData.mpParent ||
-					pNextFrame->maFrameData.mnStyle == SAL_FRAME_STYLE_DEFAULT ||
-					! ( pNextFrame->maFrameData.mnStyle & SAL_FRAME_STYLE_SIZEABLE ) ||
-					! pNextFrame->GetGeometry().nWidth ||
-					! pNextFrame->GetGeometry().nHeight )
-				)
+			SalFrame* pNextFrame = NULL;
+			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
-				if ( ++it != pSalData->maFrameList.end() )
-					pNextFrame = *it;
-				else
-					pNextFrame = NULL;
+				if ( (*it) &&
+					( (*it)->maFrameData.mpParent ||
+						(*it)->maFrameData.mnStyle == SAL_FRAME_STYLE_DEFAULT ||
+						! ( (*it)->maFrameData.mnStyle & SAL_FRAME_STYLE_SIZEABLE ) ||
+						! (*it)->GetGeometry().nWidth ||
+						! (*it)->GetGeometry().nHeight )
+					)
+				{
+					if ( (*it) != pFrame )
+						pNextFrame = *it;
+				}
 			}
 
 			if ( pNextFrame )

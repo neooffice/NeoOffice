@@ -62,8 +62,8 @@ struct SystemEnvData
 #elif defined( UNX )
 	void*				pDisplay;		// the relevant display connection
 	long				aWindow;		// the window of the object
-#ifndef USE_JAVA
 	void*				pSalFrame;		// contains a salframe, if object has one
+#ifndef USE_JAVA
 	void*				pWidget;		// the corresponding widget
 	void*				pVisual;		// the visual in use
 	int					nDepth; 		// depth of said visual

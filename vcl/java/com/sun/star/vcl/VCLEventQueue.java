@@ -95,11 +95,6 @@ public final class VCLEventQueue {
 	public final static int INPUT_ANY = VCLEventQueue.INPUT_MOUSE | VCLEventQueue.INPUT_KEYBOARD | VCLEventQueue.INPUT_PAINT | VCLEventQueue.INPUT_TIMER | VCLEventQueue.INPUT_OTHER;
 
 	/**
-	 * The auto flush flag.
-	 */
-	private boolean autoFlush = true;
-
-	/**
 	 * The list of queues.
 	 */
 	private VCLEventQueue.Queue[] queueList = new VCLEventQueue.Queue[2];
@@ -108,8 +103,6 @@ public final class VCLEventQueue {
 	 * Construct a VCLEventQueue and make it the system queue.
 	 */
 	public VCLEventQueue() {
-
-		VCLGraphics.setAutoFlush(true);
 
 		// Swap in our own event queue
 		Toolkit.getDefaultToolkit().getSystemEventQueue().push(new VCLEventQueue.NoExceptionsEventQueue());
@@ -138,6 +131,14 @@ public final class VCLEventQueue {
 			}
 			try {
 				Class c = Class.forName("com.sun.star.vcl.macosx.VCLPrintDocumentHandler");
+				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
+				ctor.newInstance(new Object[]{ this });
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			try {
+				Class c = Class.forName("com.sun.star.vcl.macosx.VCLQuitHandler");
 				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
 				ctor.newInstance(new Object[]{ this });
 			}
@@ -189,24 +190,6 @@ public final class VCLEventQueue {
 	 * @return the next cached <code>VCLEvent</code> instance
 	 */
 	public VCLEvent getNextCachedEvent(long wait, boolean awtEvents) {
-
-		if (autoFlush) {
-			// Turn off auto flushing
-			autoFlush = false;
-			VCLGraphics.setAutoFlush(false);
-			
-			// Load platform specific event handlers
-			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-				try {
-					Class c = Class.forName("com.sun.star.vcl.macosx.VCLQuitHandler");
-					Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-					ctor.newInstance(new Object[]{ this });
-				}
-				catch (Throwable t) {
-					t.printStackTrace();
-				}
-			}
-		}
 
 		VCLEventQueue.Queue queue = (awtEvents ? queueList[0] : queueList[1]);
 

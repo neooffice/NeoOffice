@@ -69,6 +69,7 @@ public:
 	const Rectangle		getInsets();
 	::rtl::OUString		getKeyName( USHORT _par0 );
 	ULONG				getState();
+	void				setAutoFlush( sal_Bool _par0 );
 	void				setBounds( long _par0, long _par1, long _par2, long _par3 );
 	void				setFullScreenMode( sal_Bool _par0 );
 	void				setPointer( USHORT _par0 );
