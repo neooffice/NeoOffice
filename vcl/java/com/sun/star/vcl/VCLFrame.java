@@ -965,7 +965,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public void flush() {
 
 		graphics.flush();
-		Toolkit.getDefaultToolkit().sync();
+		synchronized (window.getTreeLock()) {
+			Toolkit.getDefaultToolkit().sync();
+		}
 
 	}
 
@@ -2235,7 +2237,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (c != null && window != null) {
 			window.setCursor(c);
-			Toolkit.getDefaultToolkit().sync();
+			synchronized (window.getTreeLock()) {
+				Toolkit.getDefaultToolkit().sync();
+			}
 		}
 
 	}
