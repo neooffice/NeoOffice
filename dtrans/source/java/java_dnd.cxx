@@ -79,8 +79,6 @@ static DragReceiveHandlerUPP pDragReceiveHandlerUPP = NULL;
 static EventQueueRef aTrackingEventQueue = NULL;
 static EventRef aLastMouseDraggedEvent = NULL;
 
-static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData );
-
 #endif	// MACOSX
 
 static ::osl::Mutex aDragMutex;
@@ -151,6 +149,34 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 // ------------------------------------------------------------------------
 
 #ifdef MACOSX
+static void ImplSetThemeCursor( sal_Int8 nAction, bool bPointInWindow )
+{
+	MutexGuard aDragGuard( aDragMutex );
+
+	if ( bPointInWindow )
+	{
+		if ( !bNoRejectCursor )
+		{
+			if ( nAction & DNDConstants::ACTION_MOVE )
+				SetThemeCursor( kThemeClosedHandCursor );
+			else if ( nAction & DNDConstants::ACTION_COPY )
+				SetThemeCursor( kThemeCopyArrowCursor );
+			else if ( nAction & DNDConstants::ACTION_LINK )
+				SetThemeCursor( kThemeAliasArrowCursor );
+			else
+				SetThemeCursor( kThemeArrowCursor );
+		}
+	}
+	else
+	{
+		SetThemeCursor( kThemeArrowCursor );
+	}
+}
+#endif	// MACOSX
+
+// ------------------------------------------------------------------------
+
+#ifdef MACOSX
 static sal_Int8 ImplGetDragDropAction( DragRef aDrag )
 {
 	sal_Int8 nActions = DNDConstants::ACTION_NONE;
@@ -158,11 +184,11 @@ static sal_Int8 ImplGetDragDropAction( DragRef aDrag )
 	DragActions nDragActions;
 	if ( GetDragDropAction( aDrag, &nDragActions ) == noErr )
 	{
-		if ( nDragActions & ( kDragActionMove | kDragActionGeneric ) )
+		if ( nDragActions & kDragActionMove )
 			nActions = DNDConstants::ACTION_MOVE;
 		else if ( nDragActions & ( kDragActionCopy | kDragActionGeneric ) )
 			nActions = DNDConstants::ACTION_COPY;
-		else if ( nDragActions & ( kDragActionAlias | kDragActionGeneric ) )
+		else if ( nDragActions & kDragActionAlias )
 			nActions = DNDConstants::ACTION_LINK;
 	}
 
@@ -265,19 +291,8 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 	Rect aRect;
 	if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
 	{
-		if ( !bNoRejectCursor )
-		{
-			if ( nCurrentAction & DNDConstants::ACTION_MOVE )
-				SetThemeCursor( kThemeClosedHandCursor );
-			else if ( nCurrentAction & DNDConstants::ACTION_COPY )
-				SetThemeCursor( kThemeCopyArrowCursor );
-			else if ( nCurrentAction & DNDConstants::ACTION_LINK )
-				SetThemeCursor( kThemeAliasArrowCursor );
-			else
-				SetThemeCursor( kThemeArrowCursor );
-		}
-
 		pSource->handleDrag( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) );
+
 	}
 
 	return noErr;
@@ -331,6 +346,8 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 			default:
 				break;
 		}
+
+		ImplSetThemeCursor( nCurrentAction, PtInRect( aPoint, &aRect ) );
 	}
 
 	return noErr;
@@ -369,6 +386,7 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 	{
 		// Update actions
 		ImplSetDragDropAction( aDrag, nCurrentAction );
+		ImplSetThemeCursor( nCurrentAction, PtInRect( aPoint, &aRect ) );
 		return noErr;
 	}
 
@@ -702,6 +720,7 @@ void JavaDragSource::runDragExecute( void *pData )
 					aCarbonEventQueueMutex.release();
 
 					ImplSetDragAllowableActions( aDrag, nCurrentAction );
+					ImplSetThemeCursor( nCurrentAction, true );
 
 					aDragSources.push_back( pSource );
 
@@ -1077,23 +1096,6 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, void *pNativeTransf
 		aDropEvent.DropAction = nCurrentAction;
 		aDropEvent.Transferable = pDragThreadOwner->maContents;
 
-	
-		// Don't set the cursor to the reject cursor since a drop has occurred
-		bNoRejectCursor = true;
-
-		// Reset the pointer to the last pointer set in VCL window
-		if ( mpWindow )
-		{
-			// We need to toggle the style to make sure that VCL resets the
-			// pointer
-			PointerStyle nStyle = mpWindow->GetPointer().GetStyle();
-			if ( nStyle == POINTER_ARROW )
-				mpWindow->SetPointer( Pointer( POINTER_NULL ) );
-			else
-				mpWindow->SetPointer( Pointer( POINTER_ARROW ) );
-			mpWindow->SetPointer( Pointer( nStyle ) );
-		}
-
 		aDragSourceGuard.clear();
 	}
 	else if ( pNativeTransferable )
@@ -1106,13 +1108,26 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, void *pNativeTransf
 		com_sun_star_dtrans_DTransTransferable *pTransferable = new com_sun_star_dtrans_DTransTransferable( pNativeTransferable, JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG );
 		if ( pTransferable )
 			aDropEvent.Transferable = Reference< XTransferable >( pTransferable );
-
-		// Don't set the cursor to the reject cursor since a drop has occurred
-		bNoRejectCursor = true;
 	}
 
 	DropTargetDropContext *pContext = new DropTargetDropContext( aDropEvent.DropAction );
 	aDropEvent.Context = Reference< XDropTargetDropContext >( pContext );
+
+	// Don't set the cursor to the reject cursor since a drop has occurred
+	bNoRejectCursor = true;
+
+	// Reset the pointer to the last pointer set in VCL window
+	if ( mpWindow )
+	{
+		// We need to toggle the style to make sure that VCL resets the
+		// pointer
+		PointerStyle nStyle = mpWindow->GetPointer().GetStyle();
+		if ( nStyle == POINTER_ARROW )
+			mpWindow->SetPointer( Pointer( POINTER_NULL ) );
+		else
+			mpWindow->SetPointer( Pointer( POINTER_ARROW ) );
+		mpWindow->SetPointer( Pointer( nStyle ) );
+	}
 
 	ClearableMutexGuard aGuard( maMutex );
 
