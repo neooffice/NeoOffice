@@ -46,6 +46,9 @@
 #ifndef _SV_SALGDI_HXX
 #include <salgdi.hxx>
 #endif
+#ifndef _SV_OUTFONT_HXX
+#include <outfont.hxx>
+#endif
 #ifndef _SV_SALLAYOUT_HXX
 #include <sallayout.hxx>
 #endif
@@ -54,6 +57,12 @@
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
+#endif
+#ifndef _OSL_FILE_HXX_
+#include <osl/file.hxx>
+#endif
+#ifndef _RTL_STRBUF_HXX_
+#include <rtl/strbuf.hxx>
 #endif
 
 #include <premac.h>
@@ -84,13 +93,402 @@ public:
 	virtual void		DrawText( SalGraphics& rGraphics ) const;
 };
 
+using namespace osl;
+using namespace rtl;
 using namespace vcl;
 
 // ============================================================================
 
+static size_t DataConsumerPutBytes( void *info, const void *buffer, size_t count )
+{
+	sal_uInt64 nBytesWritten = 0;
+
+	if ( info )
+		((File *)info)->write( buffer, count, nBytesWritten );
+
+	return nBytesWritten;
+}
+
+// ----------------------------------------------------------------------------
+
 SalLayout *SalGraphics::GetTextLayout( ImplLayoutArgs& rArgs, int nFallbackLevel )
 {
 	return new ATSLayout( maGraphicsData.mpVCLFont, !maGraphicsData.mpPrinter );
+}
+
+// ----------------------------------------------------------------------------
+
+BOOL SalGraphics::CreateFontSubset( const OUString& rToFile,
+                                    ImplFontData* pFont, long* pGlyphIDs,
+                                    sal_uInt8* pEncoding, sal_Int32* pWidths,
+                                    int nGlyphs, FontSubsetInfo& rInfo )
+{
+	BOOL bRet = FALSE;
+
+	com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)pFont->mpSysData;
+	ATSFontRef aATSFont = FMGetATSFontRefFromFont( (FMFont)pVCLFont->getNativeFont() );
+	CGFontRef aFont = CGFontCreateWithPlatformFont( (void *)&aATSFont );
+	if ( !aFont )
+		return bRet;
+
+	OUString aTmpName;
+	osl_createTempFile( NULL, NULL, &aTmpName.pData );
+	File aTmpFile( aTmpName );
+
+	if ( aTmpFile.open( OpenFlag_Write ) == FileBase::E_None )
+	{
+		CGDataConsumerCallbacks aCallbacks;
+		memset( &aCallbacks, 0, sizeof( CGDataConsumerCallbacks ) );
+		aCallbacks.putBytes = DataConsumerPutBytes;
+
+		CGDataConsumerRef aDataConsumer = CGDataConsumerCreate( &aTmpFile, &aCallbacks );
+		if ( aDataConsumer )
+		{
+			CGContextRef aContext = CGPDFContextCreate( aDataConsumer, NULL, NULL );
+			if ( aContext )
+			{
+				CGContextBeginPage( aContext, NULL );
+				CGContextSetFont( aContext, aFont );
+				CGContextSetFontSize( aContext, pVCLFont->getSize() );
+				CGContextShowGlyphs( aContext, (CGGlyph *)pGlyphIDs, nGlyphs );
+				CGContextEndPage( aContext );
+
+				CGContextRelease( aContext );
+			}
+
+			CGDataConsumerRelease( aDataConsumer );
+		}
+
+		aTmpFile.close();
+	}
+
+	OString aFontDescriptor;
+
+	if ( aTmpFile.open( OpenFlag_Read ) == FileBase::E_None )
+	{
+		static const char *pFontDescStart = "<< /Type /FontDescriptor";
+		static const char *pFontDescEnd = ">>";
+
+		OStringBuffer aBuffer;
+		bool bFontDescStartFound = false;
+		bool bFontDescEndFound = false;
+		sal_uInt64 nBufSize = 1024;
+		sal_Char aBuf[ 1024 ];
+		sal_uInt64 nBytesRead;
+		sal_uInt64 nOffset = 0;
+		while ( !bFontDescEndFound && aTmpFile.read( aBuf + nOffset, nBufSize - nOffset, nBytesRead ) == FileBase::E_None  )
+		{
+			sal_Bool bEOF = false;
+			if ( aTmpFile.isEndOfFile( &bEOF ) != FileBase::E_None )
+				bEOF = true;
+
+			if ( !nBytesRead )
+			{
+				if ( bEOF )
+					break;
+				else
+					continue;
+			}
+
+			if ( !bFontDescStartFound )
+			{
+				// Look for beginning token
+				sal_uInt32 nLen = strlen( pFontDescStart );
+				if ( nBytesRead < nLen )
+				{
+					if ( bEOF )
+					{
+						break;
+					}
+					else
+					{
+						nOffset += nBytesRead;
+						continue;
+					}
+				}
+
+				// Skip bytes at the end so that split tokens are handled in
+				// the next pass
+				sal_uInt64 nSkippedBytes = nLen;
+				nBytesRead += nOffset - nSkippedBytes;
+
+				sal_Char *pBuf = aBuf;
+				for ( sal_uInt64 i = 0; i < nBytesRead; i++, pBuf++ )
+				{
+					if ( *pBuf == *pFontDescStart && !strncmp( pBuf, pFontDescStart, nLen ) )
+					{
+						// Adjust skipped bytes to skip over matched token
+						nSkippedBytes += nBytesRead - i - nLen;
+						nBytesRead = i + nLen;
+						bFontDescStartFound = true;
+						break;
+					}
+				}
+
+				// Move skipped bytes to beginning of buffer
+				memmove( aBuf, aBuf + nBytesRead, nSkippedBytes );
+				nOffset = nSkippedBytes;
+			}
+			else
+			{
+				// Look for the ending token
+				sal_uInt32 nLen = strlen( pFontDescEnd );
+				if ( nBytesRead < nLen )
+				{
+					if ( bEOF )
+					{
+						break;
+					}
+					else
+					{
+						nOffset += nBytesRead;
+						continue;
+					}
+				}
+
+				// Skip bytes at the end so that split tokens are handled in
+				// the next pass
+				sal_uInt64 nSkippedBytes = nLen;
+				nBytesRead += nOffset - nSkippedBytes;
+
+				sal_Char *pBuf = aBuf;
+				for ( sal_uInt64 i = 0; i < nBytesRead; i++, pBuf++ )
+				{
+					if ( *pBuf == *pFontDescEnd && !strncmp( pBuf, pFontDescEnd, nLen ) )
+					{
+						// Adjust skipped bytes to start of ending token
+						nSkippedBytes += nBytesRead - i;
+						nBytesRead = i;
+						bFontDescEndFound = true;
+						break;
+					}
+				}
+
+				// Save all bytes up to the ending token
+				aBuffer.append( aBuf, nBytesRead );
+
+				// Move skipped bytes to beginning of buffer
+				memmove( aBuf, aBuf + nBytesRead, nSkippedBytes );
+				nOffset = nSkippedBytes;
+			}
+		}
+
+		aTmpFile.close();
+
+		if ( aBuffer.getLength() )
+		{
+			// Replace all whitespace with spaces for ease of parsing
+			for ( sal_Char *pBuf = (sal_Char *)aBuffer.getStr(); *pBuf; pBuf++ )
+			{
+				switch ( *pBuf )
+				{
+					case 0x09:
+					case 0x0A:
+					case 0x0C:
+					case 0x0D:
+						*pBuf = 0x20;
+						break;
+					default:
+						break;
+				}
+			}
+
+			aFontDescriptor = aBuffer.makeStringAndClear();
+		}
+	}
+
+	if ( aFontDescriptor.getLength() )
+	{
+		static OString aFontAscentTag( "/Ascent " );
+		static OString aFontBBoxTag( "/FontBBox [ " );
+		static OString aFontCapHeightTag( "/CapHeight " );
+		static OString aFontDescentTag( "/Descent " );
+		static OString aFontFileTag( "/FontFile " );
+		static OString aFontFile2Tag( "/FontFile2 " );
+		static OString aFontNameTag( "/FontName /" );
+
+		bool bContinue = true;
+
+		// Get font type
+		sal_Int32 nValuePos;
+		if ( ( nValuePos = aFontDescriptor.indexOf( aFontFile2Tag ) ) >= 0 )
+		{
+			rInfo.m_nFontType = SAL_FONTSUBSETINFO_TYPE_TRUETYPE;
+			nValuePos += aFontFile2Tag.getLength();
+		}
+		else if ( ( nValuePos = aFontDescriptor.indexOf( aFontFileTag ) ) >= 0 )
+		{
+			rInfo.m_nFontType = SAL_FONTSUBSETINFO_TYPE_TYPE1;
+			nValuePos += aFontFileTag.getLength();
+		}
+		else
+		{
+			bContinue = false;
+		}
+
+		// Get font file object reference
+		sal_Int32 nFontFileObj = 0;
+		if ( bContinue )
+		{
+			sal_Int32 nLen = 0;
+			const char *pBuf = aFontDescriptor.getStr() + nValuePos;
+			for ( ; *pBuf; pBuf++, nLen++ )
+			{
+				if ( *pBuf == 0x20 )
+					break;
+			}
+
+			if ( nLen )
+				nFontFileObj = OString( pBuf - nLen, nLen ).toInt32();
+		}
+
+		if ( nFontFileObj <= 0 )
+			bContinue = false;
+
+		// Get PostScript name
+		if ( bContinue && ( nValuePos = aFontDescriptor.indexOf( aFontNameTag ) ) >= 0 )
+		{
+			nValuePos += aFontNameTag.getLength();
+
+			sal_Int32 nLen = 0;
+			const sal_Char *pBuf = aFontDescriptor.getStr() + nValuePos;
+			for ( ; *pBuf; pBuf++, nLen++ )
+			{
+				if ( *pBuf == 0x20 )
+					break;
+				else if ( nLen == 6 && *pBuf == '+' )
+					nLen = -1;
+			}
+
+			if ( nLen )
+				rInfo.m_aPSName = OUString( pBuf - nLen, nLen, RTL_TEXTENCODING_UTF8 );
+		}
+
+		if ( !rInfo.m_aPSName.Len() )
+			bContinue = false;
+
+		// Get ascent
+		rInfo.m_nAscent = 0;
+		if ( bContinue && ( nValuePos = aFontDescriptor.indexOf( aFontAscentTag ) ) >= 0 )
+		{
+			nValuePos += aFontAscentTag.getLength();
+
+			sal_Int32 nLen = 0;
+			const sal_Char *pBuf = aFontDescriptor.getStr() + nValuePos;
+			for ( ; *pBuf; pBuf++, nLen++ )
+			{
+				if ( *pBuf == 0x20 )
+					break;
+			}
+
+			if ( nLen )
+				rInfo.m_nAscent = OString( pBuf - nLen, nLen ).toInt32();
+		}
+
+		if ( !rInfo.m_nAscent )
+			bContinue = false;
+
+		// Get descent
+		rInfo.m_nDescent = 0;
+		if ( bContinue && ( nValuePos = aFontDescriptor.indexOf( aFontDescentTag ) ) >= 0 )
+		{
+			nValuePos += aFontDescentTag.getLength();
+
+			sal_Int32 nLen = 0;
+			const sal_Char *pBuf = aFontDescriptor.getStr() + nValuePos;
+			for ( ; *pBuf; pBuf++, nLen++ )
+			{
+				if ( *pBuf == 0x20 )
+					break;
+			}
+
+			if ( nLen )
+				rInfo.m_nDescent = OString( pBuf - nLen, nLen ).toInt32();
+		}
+
+		if ( !rInfo.m_nDescent )
+			bContinue = false;
+
+		// Get cap height. Note that cap height can be zero.
+		rInfo.m_nCapHeight = 0;
+		if ( bContinue && ( nValuePos = aFontDescriptor.indexOf( aFontCapHeightTag ) ) >= 0 )
+		{
+			nValuePos += aFontCapHeightTag.getLength();
+
+			sal_Int32 nLen = 0;
+			const sal_Char *pBuf = aFontDescriptor.getStr() + nValuePos;
+			for ( ; *pBuf; pBuf++, nLen++ )
+			{
+				if ( *pBuf == 0x20 )
+					break;
+			}
+
+			if ( nLen )
+				rInfo.m_nCapHeight = OString( pBuf - nLen, nLen ).toInt32();
+		}
+
+		// Get bounding box
+		rInfo.m_aFontBBox.SetEmpty();
+		if ( bContinue && ( nValuePos = aFontDescriptor.indexOf( aFontBBoxTag ) ) >= 0 )
+		{
+			nValuePos += aFontBBoxTag.getLength();
+
+			sal_Int32 nLen = 0;
+			const sal_Char *pBuf = aFontDescriptor.getStr() + nValuePos;
+
+			// Get X coordinate
+			for ( ; *pBuf; pBuf++, nLen++ )
+			{
+				if ( *pBuf == 0x20 )
+					break;
+			}
+
+			if ( nLen )
+				rInfo.m_aFontBBox.setX( OString( pBuf - nLen, nLen ).toInt32() );
+
+			// Get Y coordinate
+			nLen = 0;
+			for ( pBuf++; *pBuf; pBuf++, nLen++ )
+			{
+				if ( *pBuf == 0x20 )
+					break;
+			}
+
+			if ( nLen )
+				rInfo.m_aFontBBox.setY( OString( pBuf - nLen, nLen ).toInt32() );
+
+			// Get width
+			nLen = 0;
+			for ( pBuf++; *pBuf; pBuf++, nLen++ )
+			{
+				if ( *pBuf == 0x20 )
+					break;
+			}
+
+			if ( nLen )
+				rInfo.m_aFontBBox.setWidth( OString( pBuf - nLen, nLen ).toInt32() );
+
+			// Get height
+			nLen = 0;
+			for ( pBuf++; *pBuf; pBuf++, nLen++ )
+			{
+				if ( *pBuf == 0x20 )
+					break;
+			}
+
+			if ( nLen )
+				rInfo.m_aFontBBox.setHeight( OString( pBuf - nLen, nLen ).toInt32() );
+		}
+
+		if ( rInfo.m_aFontBBox.IsEmpty() )
+			bContinue = false;
+
+		bRet = bContinue;
+	}
+
+	osl_removeFile( aTmpName.pData );
+
+	return bRet;
 }
 
 // ============================================================================

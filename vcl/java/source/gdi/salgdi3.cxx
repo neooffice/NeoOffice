@@ -197,7 +197,7 @@ void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 		pFontData->mbDevice = FALSE;
 		pFontData->mnQuality = 0;
 		pFontData->mbSubsettable = TRUE;
-		pFontData->mbEmbeddable = TRUE;
+		pFontData->mbEmbeddable = FALSE;
 
 		// Add to list
 		pList->Add( pFontData );
@@ -266,19 +266,6 @@ void SalGraphics::RemovingFont( ImplFontData* )
 
 // -----------------------------------------------------------------------
 
-BOOL SalGraphics::CreateFontSubset( const rtl::OUString& rToFile,
-                                    ImplFontData* pFont, long* pGlyphIDs,
-                                    sal_uInt8* pEncoding, sal_Int32* pWidths,
-                                    int nGlyphs, FontSubsetInfo& rInfo )
-{
-#ifdef DEBUG
-	fprintf( stderr, "SalGraphics::CreateFontSubset not implemented\n" );
-#endif
-	return FALSE;
-}
-
-// -----------------------------------------------------------------------
-
 const void* SalGraphics::GetEmbedFontData( ImplFontData* pFont,
                                            const sal_Unicode* pUnicodes,
                                            sal_Int32* pWidths,
@@ -295,8 +282,9 @@ const void* SalGraphics::GetEmbedFontData( ImplFontData* pFont,
 
 void SalGraphics::FreeEmbedFontData( const void* pData, long nLen )
 {
-	if ( pData )
-		free( (void*)pData );
+#ifdef DEBUG
+	fprintf( stderr, "SalGraphics::FreeEmbedFontData not implemented\n" );
+#endif
 }
 
 // -----------------------------------------------------------------------
@@ -308,5 +296,7 @@ const std::map< sal_Unicode, sal_Int32 >* SalGraphics::GetFontEncodingVector(
 #ifdef DEBUG
 	fprintf( stderr, "SalGraphics::GetFontEncodingVector not implemented\n" );
 #endif
+	if ( pNonEncoded )
+		*pNonEncoded = NULL;
 	return NULL;
 }
