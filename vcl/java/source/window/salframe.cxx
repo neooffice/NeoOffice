@@ -680,8 +680,12 @@ ULONG SalFrame::GetCurrentModButtons()
 
 void SalFrame::SetParent( SalFrame* pNewParent )
 {
+	if ( maFrameData.mpParent )
+		maFrameData.mpParent->maFrameData.maChildren.remove( this );
 	maFrameData.mpParent = pNewParent;
 	maFrameData.mpVCLFrame->setParent( maFrameData.mpParent );
+	if ( maFrameData.mpParent )
+		maFrameData.mpParent->maFrameData.maChildren.push_back( this );
 }
 
 // -----------------------------------------------------------------------

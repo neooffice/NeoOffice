@@ -806,9 +806,7 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 	pFrame->maFrameData.maSysData.pSalFrame = pFrame;
 	pFrame->maFrameData.mnStyle = nSalFrameStyle;
 
-	pFrame->maFrameData.mpParent = pParent;
-	if ( pParent )
-		pFrame->maFrameData.mpParent->maFrameData.maChildren.push_back( pFrame );
+	pFrame->SetParent( pParent );
 
 	// Insert this window into the window list
 	SalData *pSalData = GetSalData();
@@ -891,10 +889,7 @@ void SalInstance::DestroyFrame( SalFrame* pFrame )
 	if ( pFrame )
 	{
 		GetSalData()->maFrameList.remove( pFrame);
-
-		if ( pFrame->maFrameData.mpParent )
-			pFrame->maFrameData.mpParent->maFrameData.maChildren.remove( pFrame );
-
+		pFrame->SetParent( NULL );
 		delete pFrame;
 	}
 }

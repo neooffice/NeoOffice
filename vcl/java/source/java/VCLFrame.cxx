@@ -456,7 +456,10 @@ void com_sun_star_vcl_VCLFrame::setParent( SalFrame *_par0 )
 		if ( mID )
 		{
 			jvalue args[1];
-			args[0].l = _par0->maFrameData.mpVCLFrame->getJavaObject();
+			if ( _par0 )
+				args[0].l = _par0->maFrameData.mpVCLFrame->getJavaObject();
+			else
+				args[0].l = NULL;
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
