@@ -2040,7 +2040,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>WindowEvent</code>
 	 */
-	public void windowIconified(WindowEvent e) {}
+	public void windowIconified(WindowEvent e) {
+
+		// Force the C++ code to hide all child frames by posting a resize event
+		if (queue != null && window != null && window.isShowing())
+			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVERESIZE, this, 0));
+
+	}
 
 	/**
 	 * Invoked when a window is changed from a minimized to a normal state.
