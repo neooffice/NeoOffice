@@ -384,21 +384,6 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 		// Fix bug 448 by eliminating subpixel advances
 		if ( ATSUGetGlyphBounds( maLayout, 0, 0, i, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
 			mpCharAdvances[ i ] = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX );
-
-		// Zero width characters can confuse the OOo code
-		if ( !mpCharAdvances[ i ] )
-		{
-			mpCharAdvances[ i ] = 1;
-			for ( int j = i - 1; j >= nLastAdjustedPos; j-- )
-			{
-				if ( mpCharAdvances[ j ] > 1 )
-				{
-					mpCharAdvances[ j ] -= 1;
-					nLastAdjustedPos = j;
-					break;
-				}
-			}
-		}
 	}
 
 	// Cache mapping of characters to glyphs
@@ -687,11 +672,36 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	bool bPosRTL;
 	Point aPos( 0, 0 );
 	int nCharPos = -1;
+	int nLastAdjustedPos = 0;
+	::std::list< GlyphItem > aGlyphItems;
 	rArgs.ResetPos();
 	while ( rArgs.GetNextPos( &nCharPos, &bPosRTL ) )
 	{
 		sal_Unicode nChar = mpLayoutData->mpHash->mpStr[ nCharPos ];
 		long nCharWidth = mpLayoutData->mpCharAdvances[ nCharPos ];
+
+		// Zero width and overlapping characters can cause problems in the OOo
+		// code
+		if ( nCharWidth <= 0 )
+		{
+			nCharWidth = 1;
+
+			for ( ::std::list< GlyphItem >::reverse_iterator it = aGlyphItems.rbegin(); it != aGlyphItems.rend() && (*it).mnCharPos >= nLastAdjustedPos; ++it )
+			{
+				if ( (*it).mnOrigWidth > 1 )
+				{
+					(*it).mnOrigWidth -= 1;
+					(*it).mnNewWidth -= 1;
+					nLastAdjustedPos = (*it).mnCharPos;
+
+					// Move following glyphs back one pixel
+					for ( ::std::list< GlyphItem >::reverse_iterator ait = aGlyphItems.rbegin(); ait != aGlyphItems.rend() && ait != it; ++ait )
+						(*ait).maLinearPos.X() -= 1;
+
+					break;
+				}
+			}
+		}
 
 		bool bFirstGlyph = true;
 		for ( int i = mpLayoutData->mpCharsToGlyphs[ nCharPos ]; i < mpLayoutData->mnGlyphCount && mpLayoutData->mpGlyphInfoArray->glyphs[ i ].charIndex == nCharPos; i++ )
@@ -709,7 +719,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			if ( bPosRTL )
 				nGlyphFlags |= GlyphItem::IS_RTL_GLYPH;
 
-			AppendGlyph( GlyphItem( nCharPos, nGlyph, aPos, nGlyphFlags, nCharWidth ) );
+			aGlyphItems.push_back( GlyphItem( nCharPos, nGlyph, aPos, nGlyphFlags, nCharWidth ) );
 
 			if ( bFirstGlyph )
 			{
@@ -721,9 +731,15 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 		if ( bFirstGlyph )
 		{
-			AppendGlyph( GlyphItem( nCharPos, 0x0020 | GF_ISCHAR, aPos, bPosRTL ? GlyphItem::IS_RTL_GLYPH : 0, nCharWidth ) );
+			aGlyphItems.push_back( GlyphItem( nCharPos, 0x0020 | GF_ISCHAR, aPos, bPosRTL ? GlyphItem::IS_RTL_GLYPH : 0, nCharWidth ) );
 			aPos.X() += nCharWidth;
 		}
+	}
+
+	while ( aGlyphItems.size() )
+	{
+		AppendGlyph( aGlyphItems.front() );
+		aGlyphItems.pop_front();
 	}
 
 	return ( nCharPos >= 0 );
