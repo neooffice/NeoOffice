@@ -283,35 +283,31 @@ void SalInstance::Yield( BOOL bWait )
 	// Dispatch pending AWT events
 	if ( bWait && !ImplGetSVData()->maAppData.mbAppQuit )
 	{
-		for ( ; ; )
+		ULONG nTimeout = 0;
+
+		// Determine timeout
+		if ( pSalData->mnTimerInterval )
 		{
-			ULONG nTimeout = 0;
+			timeval aTimeout;
 
-			// Determine timeout
-			if ( pSalData->mnTimerInterval )
+			gettimeofday( &aTimeout, NULL );
+			if ( pSalData->maTimeout > aTimeout )
 			{
-				timeval aTimeout;
-	
-				gettimeofday( &aTimeout, NULL );
-				if ( pSalData->maTimeout > aTimeout )
-				{
-					aTimeout = pSalData->maTimeout - aTimeout;
-					nTimeout = aTimeout.tv_sec * 1000 + aTimeout.tv_usec / 1000;
-				}
-				if ( nTimeout < 10 )
-					nTimeout = 10;
+				aTimeout = pSalData->maTimeout - aTimeout;
+				nTimeout = aTimeout.tv_sec * 1000 + aTimeout.tv_usec / 1000;
 			}
+			if ( nTimeout < 10 )
+				nTimeout = 10;
+		}
 
-			if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
-			{
-				pEvent->dispatch();
-				com_sun_star_vcl_VCLGraphics::flushAll();
-				delete pEvent;
-			}
-			else
-			{
-				break;
-			}
+		while ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
+		{
+			// Reset timeout
+			nTimeout = 0;
+
+			pEvent->dispatch();
+			com_sun_star_vcl_VCLGraphics::flushAll();
+			delete pEvent;
 		}
 
 		// Check timer
