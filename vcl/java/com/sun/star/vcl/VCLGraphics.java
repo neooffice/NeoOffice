@@ -1339,7 +1339,12 @@ public final class VCLGraphics {
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 
 		// Clip any area outside of the image
-		Rectangle bounds = polygon.getBounds().intersection(graphicsBounds);
+		Rectangle bounds = polygon.getBounds();
+		bounds.x -= 1;
+		bounds.y -= 1;
+		bounds.width += 2;
+		bounds.height += 2;
+		bounds = bounds.intersection(graphicsBounds);
 		if (bounds.isEmpty())
 			return;
 
