@@ -68,9 +68,9 @@ SalData::~SalData()
 	if ( mpEventQueue )
 		delete mpEventQueue;
 
-	for ( ::std::map< OUString, com_sun_star_vcl_VCLFont* >::iterator it = maFontMapping.begin(); it != maFontMapping.end(); ++it )
+	for ( ::std::map< OUString, com_sun_star_vcl_VCLFont* >::const_iterator it = maFontMapping.begin(); it != maFontMapping.end(); ++it )
 		delete it->second;
 
-	for ( ::std::map< void*, ImplFontData* >::iterator fit = maNativeFontMapping.begin(); fit != maNativeFontMapping.end(); ++fit )
+	for ( ::std::map< void*, ImplFontData* >::const_iterator fit = maNativeFontMapping.begin(); fit != maNativeFontMapping.end(); ++fit )
 		delete fit->second;
 }

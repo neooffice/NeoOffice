@@ -405,7 +405,7 @@ SalGraphicsData::~SalGraphicsData()
 	if ( mpVCLFont )
 		delete mpVCLFont;
 
-	for ( ::std::map< int, com_sun_star_vcl_VCLFont* >::iterator it = maFallbackFonts.begin(); it != maFallbackFonts.end(); ++it )
+	for ( ::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = maFallbackFonts.begin(); it != maFallbackFonts.end(); ++it )
 		delete it->second;
 }
 

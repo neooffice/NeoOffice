@@ -148,7 +148,7 @@ SalATSLayout::SalATSLayout( SalGraphics *pGraphics, int nFallbackLevel ) :
 
 	if ( mnFallbackLevel )
 	{
-		::std::map< int, com_sun_star_vcl_VCLFont* >::iterator it = mpGraphics->maGraphicsData.maFallbackFonts.find( mnFallbackLevel );
+		::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = mpGraphics->maGraphicsData.maFallbackFonts.find( mnFallbackLevel );
 		if ( it != mpGraphics->maGraphicsData.maFallbackFonts.end() )
 			mpVCLFont = new com_sun_star_vcl_VCLFont( it->second->getJavaObject() );
 	}
@@ -388,12 +388,12 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				if ( !bFontSet )
 				{
 					SalData *pSalData = GetSalData();
-					::std::map< void*, ImplFontData* >::iterator it = pSalData->maNativeFontMapping.find( (void *)nFontID );
+					::std::map< void*, ImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( (void *)nFontID );
 					if ( it != pSalData->maNativeFontMapping.end() )
 					{
 						int nNextLevel = mnFallbackLevel + 1;
 						com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)it->second->mpSysData;
-						::std::map< int, com_sun_star_vcl_VCLFont* >::iterator ffit = mpGraphics->maGraphicsData.maFallbackFonts.find( nNextLevel );
+						::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = mpGraphics->maGraphicsData.maFallbackFonts.find( nNextLevel );
 						if ( ffit != mpGraphics->maGraphicsData.maFallbackFonts.end() )
 							delete ffit->second;
 						mpGraphics->maGraphicsData.maFallbackFonts[ nNextLevel ] = pVCLFont->deriveFont( mpVCLFont->getSize(), mpVCLFont->isBold(), mpVCLFont->isItalic(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical() );

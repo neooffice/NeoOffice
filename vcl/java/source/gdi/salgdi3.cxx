@@ -87,7 +87,7 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		if ( bBold || bItalic || aName != pFont->maFoundName )
 		{
 			ATSUFontID nFontID = (ATSUFontID)pVCLFont->getNativeFont( bBold, bItalic );
-			::std::map< void*, ImplFontData* >::iterator it = pSalData->maNativeFontMapping.find( (void *)nFontID );
+			::std::map< void*, ImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( (void *)nFontID );
 			if ( it != pSalData->maNativeFontMapping.end() )
 				aName = it->second->maName;
 		}
@@ -95,7 +95,7 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	else
 	{
 		// Retrieve the fallback font if one has been set by a text layout
-		::std::map< int, com_sun_star_vcl_VCLFont* >::iterator ffit = maGraphicsData.maFallbackFonts.find( nFallbackLevel );
+		::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = maGraphicsData.maFallbackFonts.find( nFallbackLevel );
 		if ( ffit != maGraphicsData.maFallbackFonts.end() )
 			pVCLFont = ffit->second;
 		aName = XubString( pVCLFont->getName() );
@@ -104,12 +104,12 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 #endif	// MACOSX
 
 	// Find the matching font
-	::std::map< OUString, com_sun_star_vcl_VCLFont* >::iterator it = pSalData->maFontMapping.find( aName );
+	::std::map< OUString, com_sun_star_vcl_VCLFont* >::const_iterator it = pSalData->maFontMapping.find( aName );
 	if ( it != pSalData->maFontMapping.end() )
 		pVCLFont = it->second;
 
 	// Update font in upper layers
-	::std::map< void*, ImplFontData* >::iterator fit = pSalData->maNativeFontMapping.find( pVCLFont->getNativeFont() );
+	::std::map< void*, ImplFontData* >::const_iterator fit = pSalData->maNativeFontMapping.find( pVCLFont->getNativeFont() );
 	if ( fit != pSalData->maNativeFontMapping.end() )
 		pFont->mpFontData = fit->second;
 
@@ -218,7 +218,7 @@ void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 	SalData *pSalData = GetSalData();
 
 	// Iterate through fonts and add each to the font list
-    for ( ::std::map< OUString, com_sun_star_vcl_VCLFont* >::iterator it = pSalData->maFontMapping.begin(); it != pSalData->maFontMapping.end(); ++it )
+    for ( ::std::map< OUString, com_sun_star_vcl_VCLFont* >::const_iterator it = pSalData->maFontMapping.begin(); it != pSalData->maFontMapping.end(); ++it )
 	{
 		com_sun_star_vcl_VCLFont *pVCLFont = it->second;
 		void *pNativeFont = pVCLFont->getNativeFont();

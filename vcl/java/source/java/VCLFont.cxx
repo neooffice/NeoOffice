@@ -62,7 +62,7 @@ static sal_uInt64 GetMacFontFace( com_sun_star_vcl_VCLFont *pVCLFont )
 	sal_uInt64 out = 0;
 
 	OUString aFontName( pVCLFont->getName() );
-	::std::map< OUString, sal_uInt64 >::iterator it = aNativeFontMap.find( aFontName );
+	::std::map< OUString, sal_uInt64 >::const_iterator it = aNativeFontMap.find( aFontName );
 	if ( it != aNativeFontMap.end() )
 		out = it->second;
 
@@ -237,7 +237,7 @@ jclass com_sun_star_vcl_VCLFont::getMyClass()
 					}
 #endif	// MACOSX
 					OUString aFontName( pVCLFont->getName() );
-					::std::map< OUString, com_sun_star_vcl_VCLFont* >::iterator it = out.find( aFontName );
+					::std::map< OUString, com_sun_star_vcl_VCLFont* >::const_iterator it = out.find( aFontName );
 					if ( it != out.end() )
 						delete it->second;
 					out[ aFontName ] = pVCLFont;
