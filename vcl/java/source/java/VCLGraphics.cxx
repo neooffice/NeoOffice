@@ -547,6 +547,37 @@ void com_sun_star_vcl_VCLGraphics::invert( long _par0, long _par1, long _par2, l
 
 // ----------------------------------------------------------------------------
 
+void com_sun_star_vcl_VCLGraphics::invert( ULONG _par0, const long *_par1, const long *_par2, SalInvert _par3 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(I[I[II)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "invert", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jsize elements( _par0 );
+			jintArray xarray = t.pEnv->NewIntArray( elements );
+			t.pEnv->SetIntArrayRegion( xarray, 0, elements, (jint *)_par1 );
+			jintArray yarray = t.pEnv->NewIntArray( elements );
+			t.pEnv->SetIntArrayRegion( yarray, 0, elements, (jint *)_par2 );
+			jvalue args[4];
+			args[0].i = jint( _par0 );
+			args[1].l = xarray;
+			args[2].l = yarray;
+			args[3].i = jint( _par3 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLGraphics::resetClipRegion()
 {
 	static jmethodID mID = NULL;

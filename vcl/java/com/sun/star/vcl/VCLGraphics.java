@@ -714,9 +714,9 @@ public final class VCLGraphics {
 	/**
 	 * Draws or fills the specified polygon with the specified color.
 	 *
+	 * @param npoints the total number of points in the polygon
 	 * @param xpoints the array of x coordinates
 	 * @param ypoints the array of y coordinates
-	 * @param npoints the total number of points in the polygon
 	 * @param color the color of the polygon
 	 * @param fill <code>true</code> to fill the polygon and <code>false</code>
 	 *  to draw just the outline
@@ -758,9 +758,9 @@ public final class VCLGraphics {
 	/**
 	 * Draws the specified polyline with the specified color.
 	 *
+	 * @param npoints the total number of points in the polyline
 	 * @param xpoints the array of x coordinates
 	 * @param ypoints the array of y coordinates
-	 * @param npoints the total number of points in the polyline
 	 * @param color the color of the polyline
 	 */
 	public void drawPolyline(int npoints, int[] xpoints, int[] ypoints, int color) {
@@ -1010,8 +1010,8 @@ public final class VCLGraphics {
 		// height
 		int destDataWidth = image.getWidth();
 		int destDataHeight = image.getHeight();
-		Rectangle bounds = new Rectangle(0, 0, image.getWidth(), image.getHeight()).intersection(new Rectangle(x, y, width, height));
-		if (bounds.isEmpty())
+		Rectangle imageBounds = new Rectangle(0, 0, image.getWidth(), image.getHeight()).intersection(new Rectangle(x, y, width, height));
+		if (imageBounds.isEmpty())
 			return;
 
 		// Invert the image 
@@ -1119,6 +1119,84 @@ public final class VCLGraphics {
 			}
 		}
 		addToFlush(new Rectangle(x, y, width, height));
+
+	}
+
+	/**
+	 * Inverts the specified polyline depending on the specified options.
+	 *
+	 * @param npoints the total number of points in the polyline
+	 * @param xpoints the array of x coordinates
+	 * @param ypoints the array of y coordinates
+	 * @param options the invert options
+	 */
+	public void invert(int npoints, int[] xpoints, int[] ypoints, int options) {
+
+		if (image == null)
+			return;
+
+		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
+
+		// Clip any area outside of the image
+		Rectangle bounds = polygon.getBounds();
+		bounds = new Rectangle(0, 0, image.getWidth(), image.getHeight()).intersection(bounds);
+		if (bounds.isEmpty())
+			return;
+
+		// Invert the image 
+		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME) {
+			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
+			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
+			VCLGraphics.setDefaultRenderingAttributes(srcGraphics);
+			BasicStroke stroke = (BasicStroke)srcGraphics.getStroke();
+			srcGraphics.setStroke(new BasicStroke(1.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 1.0f, new float[]{ 2.0f, 2.0f }, 0.0f));
+			srcGraphics.setColor(Color.white);
+			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
+			srcGraphics.drawPolyline(xpoints, ypoints, npoints);
+			srcGraphics.dispose();
+			drawImageXOR(srcImage, bounds.x, bounds.y, bounds.width, bounds.height, 0, 0, bounds.width, bounds.height);
+			srcImage.dispose();
+		}
+		else if ((options & VCLGraphics.SAL_INVERT_50) == VCLGraphics.SAL_INVERT_50) {
+			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, VCLGraphics.image50.getBitCount());
+			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
+			VCLGraphics.setDefaultRenderingAttributes(srcGraphics);
+			BufferedImage textureImage = VCLGraphics.image50.getImage();
+			srcGraphics.setPaint(new TexturePaint(textureImage, new Rectangle(0, 0, textureImage.getWidth(), textureImage.getHeight()).getBounds2D()));
+			srcGraphics.setPaint(new TexturePaint(textureImage, new Rectangle(0, 0, textureImage.getWidth(), textureImage.getHeight()).getBounds2D()));
+			srcGraphics.fillPolygon(polygon);
+			srcGraphics.dispose();
+			drawImageXOR(srcImage, bounds.x, bounds.y, bounds.width, bounds.height, 0, 0, bounds.width, bounds.height);
+			srcImage.dispose();
+		}
+		else {
+			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
+			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
+			VCLGraphics.setDefaultRenderingAttributes(srcGraphics);
+			srcGraphics.drawImage(image.getImage(), 0, 0, bounds.x + bounds.width, bounds.y + bounds.height, bounds.x, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height, null);
+			srcGraphics.dispose();
+
+			int[] destData = srcImage.getData();
+			int destDataWidth = srcImage.getWidth();
+			Point destPoint = new Point(bounds.x, bounds.y);
+			int totalPixels = bounds.width * bounds.height;
+
+			for (int i = 0; i < totalPixels; i++) {
+				// Invert pixel
+				int j = (destPoint.y * destDataWidth) + destPoint.x;
+				destData[j] = ~destData[j] | 0xff000000;
+				// Update current points
+				destPoint.x++;
+				if (destPoint.x >= bounds.x + bounds.width) {
+					destPoint.x = bounds.x;
+					destPoint.y++;
+				}
+			}
+
+			graphics.drawImage(srcImage.getImage(), bounds.x, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height, 0, 0, bounds.x + bounds.width, bounds.y + bounds.height, null);
+			srcImage.dispose();
+		}
+		addToFlush(bounds);
 
 	}
 
