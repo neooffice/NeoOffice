@@ -806,6 +806,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// Set capture frame
 		VCLFrame.captureFrame = this;
 
+		if (queue == null || window == null || !window.isShowing())
+			return;
+
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_PAINT, this, 0));
 	}
 
 	/**
@@ -2088,10 +2092,14 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public void setState(long state) {
 
 		if (window instanceof Frame) {
+			// Only invoke Frame.setState() if the state needs to be changed
+			// as this method can cause a deadlock with the native menu handler
+			// on Mac OS X
+			int s = Frame.NORMAL;
 			if (state == SAL_FRAMESTATE_MINIMIZED)
-				((Frame)window).setState(Frame.ICONIFIED);
-			else
-				((Frame)window).setState(Frame.NORMAL);
+				s = Frame.ICONIFIED;
+ 			if (((Frame)window).getState() != s)
+				((Frame)window).setState(s);
 		}
 
 	}
