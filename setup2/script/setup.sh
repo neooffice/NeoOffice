@@ -51,7 +51,7 @@ os=`uname`
 apphome=`dirname "$0"`
 sharebase="$apphome/../share"
 userbase="$apphome/../user"
-userinstall="$HOME/Library/$(PRODUCT_DIR_NAME)-$(OO_VERSION)"
+userinstall="$HOME/Library/$(PRODUCT_DIR_NAME)-$(OO_VERSION)/user"
 
 # Make sure that this is not a botched installation
 if [ ! -d "$apphome" ] ; then
@@ -119,8 +119,8 @@ else
 fi
 
 # Create user installation directory
-configdir="$userinstall/user/config"
-registrydir="$userinstall/user/registry/data/org/openoffice"
+configdir="$userinstall/config"
+registrydir="$userinstall/registry/data/org/openoffice"
 if [ ! -d "$configdir" -o ! -d "$registrydir" ] ; then
     repair="true"
     mkdir -p "$userinstall"
@@ -129,7 +129,7 @@ if [ ! -z "$repair" ] ; then
     chmod -Rf u+rw "$userinstall"
     rm -Rf "$userinstall"
     mkdir -p "$userinstall"
-    cp -Rf "$userbase" "$userinstall"
+    ( cd "$userbase" ; tar cf - * ) | ( cd "$userinstall" ; tar xf - )
     chmod -Rf u+rw "$userinstall"
     if [ ! -d "$configdir" -o ! -d "$registrydir" ] ; then
         rm -Rf "$userinstall"
@@ -145,7 +145,7 @@ fi
 setupxmlbak="$setupxml.bak"
 rm -f "$setupxmlbak"
 if [ ! -f "$setupxmlbak" ] ; then
-    cp -f "$setupxml" "$setupxmlbak"
+    cat /dev/null "$setupxml" > "$setupxmlbak"
 
     # Begin multi-line pattern
     localepattern='/<prop oor:name="ooLocale" oor:type="xs:string">/{
@@ -166,7 +166,7 @@ fi
 linguxmlbak="$linguxml.bak"
 rm -f "$linguxmlbak"
 if [ ! -f "$linguxmlbak" ] ; then
-    cp -f "$linguxml" "$linguxmlbak"
+    cat /dev/null "$linguxml" > "$linguxmlbak"
 
     # Begin multi-line pattern
     deflocalepattern='/<prop oor:name="DefaultLocale" oor:type="xs:string">/{
@@ -210,7 +210,7 @@ if [ "$os" = "Darwin" ] ; then
                 rm -f "$userfontdir/$i"
             fi
             if [ ! -f "$userfontdir/$i" ] ; then
-                cp -f "$appfontdir/$i" "$userfontdir/$i"
+                cat /dev/null "$appfontdir/$i" > "$userfontdir/$i"
             fi
         done
     fi
