@@ -60,7 +60,10 @@ public:
 	virtual				~com_sun_star_vcl_VCLImage() {};
 
 	void				dispose();
+	java_lang_Object*	getData();
 	com_sun_star_vcl_VCLGraphics*	getGraphics();
+	long				getHeight();
+	long				getWidth();
 };
 
 } // namespace vcl

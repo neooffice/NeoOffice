@@ -558,6 +558,31 @@ USHORT com_sun_star_vcl_VCLGraphics::getBitCount()
 
 // ----------------------------------------------------------------------------
 
+com_sun_star_vcl_VCLImage *com_sun_star_vcl_VCLGraphics::getImage()
+{
+	static jmethodID mID = NULL;
+	com_sun_star_vcl_VCLImage *out = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Lcom/sun/star/vcl/VCLImage;";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getImage", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
+			if ( tempObj )
+				out = new com_sun_star_vcl_VCLImage( tempObj );
+		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
 SalColor com_sun_star_vcl_VCLGraphics::getPixel( long _par0, long _par1 )
 {
 	static jmethodID mID = NULL;

@@ -50,6 +50,7 @@ namespace vcl {
 
 class com_sun_star_vcl_VCLFont;
 class com_sun_star_vcl_VCLBitmap;
+class com_sun_star_vcl_VCLImage;
 
 class com_sun_star_vcl_VCLGraphics : public java_lang_Object
 {
@@ -78,6 +79,7 @@ public:
 	void				drawTextArray( long _par0, long _par1, const sal_Unicode *_par2, USHORT _par3, com_sun_star_vcl_VCLFont *_par4, SalColor _par5, const long *_par6 );
 	void				endSetClipRegion();
 	USHORT				getBitCount();
+	com_sun_star_vcl_VCLImage *getImage();
 	SalColor			getPixel( long _par0, long _par1 );
 	const Size			getResolution();
 	const Size			getScreenFontResolution();

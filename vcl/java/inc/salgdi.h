@@ -57,6 +57,7 @@ class SalGraphicsData
 	friend class	SalGraphics;
 	friend class	SalInfoPrinter;
 	friend class	SalInstance;
+	friend class	SalOpenGL;
 	friend class	SalPrinter;
 	friend class	SalVirtualDevice;
 

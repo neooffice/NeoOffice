@@ -2162,9 +2162,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			VCLGraphics graphics = frame.getGraphics();
 			if (graphics != null) {
 				synchronized (graphics) {
-					VCLImage image = graphics.getImage();
-					if (image != null)
-						graphics.addToFlush(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
+					graphics.addToFlush();
 				}
 			}
 

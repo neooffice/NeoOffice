@@ -56,16 +56,10 @@
 #ifndef _SV_JAVA_LANG_CLASS_HXX
 #include <java/lang/Class.hxx>
 #endif
-#ifndef _VOS_MODULE_HXX_
-#include <vos/module.hxx>
-#endif
 
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
-
-using namespace rtl;
-using namespace vos;
 
 #endif	// MACOSX
 

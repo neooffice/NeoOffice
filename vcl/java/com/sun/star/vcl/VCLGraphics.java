@@ -398,6 +398,20 @@ public final class VCLGraphics {
 	}
 
 	/**
+	 * Marks the entire graphics bounds as requiring flushing.
+	 */
+	void addToFlush() {
+
+		if (frame != null) {
+			update = new Rectangle(graphicsBounds);
+
+			if (autoFlush)
+				flush();
+		}
+
+	}
+
+	/**
 	 * Unions the specified rectangle to the rectangle that requires flushing.
 	 *
 	 * @param b the rectangle to flush
@@ -1190,7 +1204,7 @@ public final class VCLGraphics {
 	 *
 	 * @return the <code>VCLImage</code>
 	 */
-	VCLImage getImage() {
+	public VCLImage getImage() {
 
 		return image;
 

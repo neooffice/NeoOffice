@@ -107,6 +107,32 @@ void com_sun_star_vcl_VCLImage::dispose()
 
 // ----------------------------------------------------------------------------
 
+java_lang_Object *com_sun_star_vcl_VCLImage::getData()
+{
+	static jmethodID mID = NULL;
+	java_lang_Object *out = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()[I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getData", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jintArray tempObj;
+			tempObj = (jintArray)t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
+			if ( tempObj )
+				out = new java_lang_Object( tempObj );
+		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
 com_sun_star_vcl_VCLGraphics *com_sun_star_vcl_VCLImage::getGraphics()
 {
 	static jmethodID mID = NULL;
@@ -126,6 +152,48 @@ com_sun_star_vcl_VCLGraphics *com_sun_star_vcl_VCLImage::getGraphics()
 			if ( tempObj )
 				out = new com_sun_star_vcl_VCLGraphics( tempObj );
 		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+long com_sun_star_vcl_VCLImage::getHeight()
+{
+	static jmethodID mID = NULL;
+	long out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getHeight", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+long com_sun_star_vcl_VCLImage::getWidth()
+{
+	static jmethodID mID = NULL;
+	long out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getWidth", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
 }

@@ -653,14 +653,14 @@ USHORT *com_sun_star_vcl_VCLEvent::getTextAttributes()
 				if ( nAttributes )
 				{
 					jboolean bCopy( sal_False );
-					jint *pAttributes = t.pEnv->GetIntArrayElements( tempObj, &bCopy );
+					jint *pAttributes = (jint *)t.pEnv->GetPrimitiveArrayCritical( tempObj, &bCopy );
 					out = (USHORT *)rtl_allocateMemory( sizeof( USHORT* ) * nAttributes );
 					if ( out )
 					{
 						for ( jsize i = 0; i < nAttributes; i++)
 							out[i] = pAttributes[i];
 					}
-					t.pEnv->ReleaseIntArrayElements( tempObj, pAttributes, JNI_ABORT );
+					t.pEnv->ReleasePrimitiveArrayCritical( tempObj, (void *)pAttributes, JNI_ABORT );
 				}
 			}
 		}

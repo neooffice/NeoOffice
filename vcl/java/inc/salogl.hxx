@@ -36,6 +36,9 @@
 #ifndef _SV_SALOGL_HXX
 #define _SV_SALOGL_HXX
 
+#ifndef _SV_JAVA_LANG_OBJECT_HXX
+#include <java/lang/Object.hxx>
+#endif
 #ifndef _SV_SV_H
 #include <sv.h>
 #endif
@@ -58,7 +61,10 @@ class String;
 class SalOpenGL
 {
 private:
+	static void*		mpNativeContext;
 	static ULONG        mnOGLState;
+	BYTE*				mpBits;
+	::vcl::java_lang_Object*	mpData;
 
 public:					
 						SalOpenGL( SalGraphics* pGraphics );
