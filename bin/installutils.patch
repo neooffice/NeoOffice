@@ -56,7 +56,7 @@ check_installation() {
 			fi
 		elif [ "$productkey" = "$(PRODUCT_NAME) $(PRODUCT_PREVIOUS_VERSION)" ] ; then
 			if [ -z "$productpatch" ] ; then
-				return 0
+				return 1
 			elif [ "$productpatch" -ge "$product_previous_patch_version" ] ; then
 				return 0
 			fi
