@@ -143,12 +143,24 @@ BOOL SalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 BOOL SalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
 {
 	// Set driver data
-	if ( maPrinterData.mpVCLPageFormat )
-		delete maPrinterData.mpVCLPageFormat;
-	// Create a new page format instance that points to the same Java
-	// object
-	SalDriverData *pDriverData = (SalDriverData *)pSetupData->mpDriverData;
-	maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pDriverData->mpVCLPageFormat->getJavaObject() );
+	if ( !pSetupData->mpDriverData )
+	{
+		SalDriverData aDriverData;
+		aDriverData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( maPrinterData.mpVCLPageFormat->getJavaObject() );
+		BYTE *pDriverData = (BYTE *)rtl_allocateMemory( sizeof( SalDriverData ) );
+		memcpy( pDriverData, &aDriverData, sizeof( SalDriverData ) );
+		pSetupData->mpDriverData = pDriverData;
+		pSetupData->mnDriverDataLen = sizeof( SalDriverData );
+	}
+	else
+	{
+		if ( maPrinterData.mpVCLPageFormat )
+			delete maPrinterData.mpVCLPageFormat;
+		// Create a new page format instance that points to the same Java
+		// object
+		SalDriverData *pDriverData = (SalDriverData *)pSetupData->mpDriverData;
+		maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pDriverData->mpVCLPageFormat->getJavaObject() );
+	}
 
 	// Set but don't update values
 	SetData( SAL_JOBSET_ALL, pSetupData );
