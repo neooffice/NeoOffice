@@ -52,6 +52,7 @@ using namespace vcl;
 SalBitmap::SalBitmap() :
 	maSize( 0, 0 )
 {
+	mnAcquired = 0;
 	mnBitCount = 0;
 	mpData = NULL;
 	mpBits = NULL;
@@ -99,24 +100,14 @@ BOOL SalBitmap::Create( const Size& rSize, USHORT nBitCount, const BitmapPalette
 		if ( rPal.GetEntryCount() )
 			mpVCLBitmap->setPalette( rPal );
 
-		// Fill the buffer with pointers to the Java buffer
-		mpData = mpVCLBitmap->getData();
-		VCLThreadAttach t;
-		if ( t.pEnv )
-		{
-			jboolean bCopy( sal_False );
-			mpBits = (BYTE *)t.pEnv->GetByteArrayElements( (jbyteArray)mpData->getJavaObject(), &bCopy );
-		}
-
+		return TRUE;
 	}
-
-	if ( !mpVCLBitmap || !mpData || !mpBits )
+	else
 	{
 		Destroy();
 		return FALSE;
 	}
 
-	return TRUE;
 }
 
 // ------------------------------------------------------------------
@@ -204,6 +195,7 @@ void SalBitmap::Destroy()
 		delete mpData;
 	}
 	mpData = NULL;
+	mnAcquired = 0;
 
 	if ( mpVCLBitmap )
 		delete mpVCLBitmap;
@@ -241,7 +233,21 @@ BitmapBuffer* SalBitmap::AcquireBuffer( BOOL bReadOnly )
 	pBuffer->mnHeight = maSize.Height();
 	pBuffer->mnScanlineSize = AlignedWidth4Bytes( mnBitCount * maSize.Width() );
 	mpVCLBitmap->getPalette( pBuffer->maPalette );
+
+	// Fill the buffer with pointers to the Java buffer
+	if ( !mpData )
+		mpData = mpVCLBitmap->getData();
+	if ( !mpBits )
+	{
+		VCLThreadAttach t;
+		if ( t.pEnv )
+		{
+			jboolean bCopy( sal_False );
+			mpBits = (BYTE *)t.pEnv->GetByteArrayElements( (jbyteArray)mpData->getJavaObject(), &bCopy );
+		}
+	}
 	pBuffer->mpBits = mpBits;
+	mnAcquired++;
 
 	return pBuffer;
 }
@@ -252,7 +258,7 @@ void SalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, BOOL bReadOnly )
 {
 	if ( pBuffer )
 	{
-		if ( mpData && mpBits )
+		if ( mpData && mpBits && pBuffer->mpBits == mpBits )
 		{
 			VCLThreadAttach t;
 			if ( t.pEnv )
@@ -263,6 +269,13 @@ void SalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, BOOL bReadOnly )
 					t.pEnv->ReleaseByteArrayElements( pArray, (jbyte *)mpBits, JNI_COMMIT );
 					// Save the palette
 					mpVCLBitmap->setPalette( pBuffer->maPalette );
+				}
+				if ( --mnAcquired == 0 )
+				{
+					t.pEnv->ReleaseByteArrayElements( pArray, (jbyte *)mpBits, JNI_ABORT );
+					mpBits = NULL;
+					delete mpData;
+					mpData = NULL;
 				}
 			}
 		}
