@@ -518,8 +518,9 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				nCharWidth = Float32ToLong( ( mpGlyphInfoArray->glyphs[ i + 1 ].idealX - mpGlyphInfoArray->glyphs[ i ].idealX ) * mnUnitsPerPixel );
 			}
 
-			if ( ( nGlyph & 0x0000ffff ) == 0x0000ffff || mpGlyphInfoArray->glyphs[ i ].layoutFlags & kATSGlyphInfoTerminatorGlyph )
-				nGlyph = 3;
+			// Mark whitespace glyphs
+			if ( mpGlyphInfoArray->glyphs[ i ].glyphID == 0xffff || mpGlyphInfoArray->glyphs[ i ].layoutFlags & ( kATSGlyphInfoIsWhiteSpace | kATSGlyphInfoTerminatorGlyph ) )
+				nGlyph = 0x0020 | GF_ISCHAR;
 
 			int nGlyphFlags = nCharWidth ? 0 : GlyphItem::IS_IN_CLUSTER;
 			if ( bPosRTL )
@@ -528,6 +529,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			AppendGlyph( GlyphItem( nCharPos, nGlyph, aPos, nGlyphFlags, nCharWidth ) );
 
 			aPos.X() += nCharWidth;
+			break;
 		}
 	}
 
@@ -553,6 +555,19 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 
 		if ( !nGlyphCount )
 			break;
+
+		int i;
+		for ( i = 0; i < nGlyphCount && IsSpacingGlyph( aGlyphArray[ i ] ); i++ )
+			;
+		if ( i )
+		{
+			nStart -= nGlyphCount - i;
+			continue;
+		}
+
+		for ( i = 0; i < nGlyphCount && !IsSpacingGlyph( aGlyphArray[ i ] ); i++ )
+			;
+		nGlyphCount = i;
 
 		int nOrientation = GetOrientation();
 
@@ -606,6 +621,12 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector )
 
 		if ( !nGlyphCount )
 			break;
+
+		if ( IsSpacingGlyph( aGlyphArray[ 0 ] ) )
+		{
+			bRet = true;
+			continue;
+		}
 
 		int nIndex = aCharPosArray[ 0 ] - mnMinCharPos + 1;
 		for ( int i = mpCharsToGlyphs[ nIndex ]; i < mnGlyphCount && mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
