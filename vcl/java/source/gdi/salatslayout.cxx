@@ -526,3 +526,67 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 		}
 	}
 }
+
+// ----------------------------------------------------------------------------
+
+bool SalATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector ) const
+{
+	bool bRet = false;
+
+	if ( !mnGlyphCount )
+		return bRet;
+
+	int nMaxGlyphs( 1 );
+	long aGlyphArray[ nMaxGlyphs ];
+	long aDXArray[ nMaxGlyphs ];
+	int aCharPosArray[ nMaxGlyphs ];
+
+	Point aPos;
+	for ( int nStart = 0; ; )
+	{
+		int nGlyphCount = GetNextGlyphs( nMaxGlyphs, aGlyphArray, aPos, nStart, aDXArray, aCharPosArray );
+
+		if ( !nGlyphCount )
+			break;
+
+		int nIndex = aCharPosArray[ 0 ] - mnMinCharPos + 1;
+		for ( int i = mpCharsToGlyphs[ nIndex ]; i < mnGlyphCount && mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
+		{
+			int nGlyph = mpGlyphInfoArray->glyphs[ i ].glyphID;
+			if ( aGlyphArray[ 0 ] & GF_IDXMASK != nGlyph )
+				continue;
+
+			// Only calculate the minimum rectangular bounds as that is what
+			// this method is usually used for
+			ATSGlyphScreenMetrics aScreenMetrics;
+			if ( ATSUGlyphGetScreenMetrics( mpGlyphInfoArray->glyphs[ i ].style, 1, &mpGlyphInfoArray->glyphs[ i ].glyphID, sizeof( GlyphID ), true, true, &aScreenMetrics ) != noErr )
+				continue;
+
+			Rectangle aRect;
+			if ( mpGlyphTranslations && aGlyphArray[ 0 ] & GF_ROTMASK )
+			{
+				int j = i * 2;
+				aRect.SetPos( Point( aPos.X() + mpGlyphTranslations[ j ], aPos.Y() + mpGlyphTranslations[ j + 1 ] ) );
+				if ( aGlyphArray[ 0 ] & GF_ROTL )
+					aRect.Move( Float32ToLong( aScreenMetrics.topLeft.y * -1 ), Float32ToLong( ( aScreenMetrics.topLeft.x + aScreenMetrics.width ) * -1 ) );
+				else
+					aRect.Move( Float32ToLong( aScreenMetrics.topLeft.y - aScreenMetrics.height ), Float32ToLong( aScreenMetrics.topLeft.x ) );
+				aRect.SetSize( Size( aScreenMetrics.height, aScreenMetrics.width) );
+			}
+			else
+			{
+				aRect.SetPos( Point( aPos.X(), aPos.Y() ) );
+				aRect.Move( Float32ToLong( aScreenMetrics.topLeft.x ), Float32ToLong( aScreenMetrics.topLeft.y ) );
+				aRect.SetSize( Size( aScreenMetrics.width, aScreenMetrics.height ) );
+			}
+
+			if ( !aRect.IsEmpty() )
+			{
+				rVector.push_back( PolyPolygon( Polygon( aRect ) ) );
+				bRet = true;
+			}
+		}
+	}
+
+	return bRet;
+}
