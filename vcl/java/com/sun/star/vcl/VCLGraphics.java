@@ -268,8 +268,10 @@ public class VCLGraphics {
 			else
 				update = b;
 
-			if (autoFlush)
+			if (autoFlush) {
 				Toolkit.getDefaultToolkit().getSystemEventQueue().postEvent(new PaintEvent(frame.getPanel(), PaintEvent.UPDATE, update));
+				Thread.yield();
+			}
 		}
 
 	}
