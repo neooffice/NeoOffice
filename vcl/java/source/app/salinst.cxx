@@ -175,14 +175,12 @@ void SVMainThread::run()
 			if ( pEventHandlerUPP )
 			{
 				// Set up native event handler
-				EventTypeSpec aTypes[3];
-				aTypes[0].eventClass = kEventClassAppleEvent;
-				aTypes[0].eventKind = kEventAppleEvent;
-				aTypes[1].eventClass = kEventClassMouse;
-				aTypes[1].eventKind = kEventMouseWheelMoved;
-				aTypes[2].eventClass = kEventClassMenu;
-				aTypes[2].eventKind = kEventMenuBeginTracking;
-				InstallApplicationEventHandler( pEventHandlerUPP, 3, aTypes, NULL, NULL );
+				EventTypeSpec aTypes[2];
+				aTypes[0].eventClass = kEventClassMouse;
+				aTypes[0].eventKind = kEventMouseWheelMoved;
+				aTypes[1].eventClass = kEventClassMenu;
+				aTypes[1].eventKind = kEventMenuBeginTracking;
+				InstallApplicationEventHandler( pEventHandlerUPP, 2, aTypes, NULL, NULL );
 			}
 		}
 
@@ -322,22 +320,15 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv 
 #ifdef MACOSX
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData )
 {
-	EventClass nClass = GetEventClass( aEvent );
-	EventKind nKind = GetEventKind( aEvent );
-
-	if ( nClass == kEventClassAppleEvent )
-	{
-		// Fix bug 209 by ignoring all 'rapp' events
-		OSType nType;
-		if ( nKind = kEventAppleEvent && GetEventParameter( aEvent, kEventParamAEEventID, typeType, NULL, sizeof( OSType ), NULL, &nType ) == noErr && nType == 'rapp' )
-			return noErr;
-	}
-	else if ( !Application::IsShutDown() )
+	if ( !Application::IsShutDown() )
 	{
 		SalData *pSalData = GetSalData();
 
 		if ( pSalData )
 		{
+			EventClass nClass = GetEventClass( aEvent );
+			EventKind nKind = GetEventKind( aEvent );
+
 			if ( nClass == kEventClassMouse && nKind == kEventMouseWheelMoved )
 			{
 				EventMouseWheelAxis nAxis;
