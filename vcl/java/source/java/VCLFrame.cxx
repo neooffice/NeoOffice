@@ -69,6 +69,7 @@ static EventLoopTimerUPP pEventLoopTimerUPP = NULL;
 #endif	// MACOSX
 
 using namespace vcl;
+using namespace vos;
 
 // ============================================================================
 
@@ -263,6 +264,13 @@ void com_sun_star_vcl_VCLFrame::dispose()
 				aOwnerWindow = (WindowRef)pOwner->getNativeWindow();
 				delete pOwner;
 			}
+
+			// Allow native evevt thread to catch up to prevent deadlocking
+			// while dragging data into our application
+			SalData *pSalData = GetSalData();
+			ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
+			OThread::yield();
+			pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
 		}
 #endif	// MACOSX
 
