@@ -105,6 +105,9 @@
 #ifndef _OSL_PROCESS_H_
 #include <rtl/process.h>
 #endif
+#ifndef _UTL_BOOTSTRAP_HXX
+#include <unotools/bootstrap.hxx>
+#endif
 #ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
 #endif
@@ -120,6 +123,7 @@ using namespace osl;
 using namespace rtl;
 using namespace vcl;
 using namespace vos;
+using namespace utl;
 using namespace com::sun::star::uno;
 
 static Mutex aMutex;
@@ -637,12 +641,30 @@ void ExecuteApplicationMain( Application *pApp )
 {
 #ifdef MACOSX
 
+	// If there is a "user/fonts" directory, explicitly activate the
+	// fonts since Panther does not automatically add fonts in the user's
+	// Library/Fonts directory until they reboot or relogin
+	OUString aUserStr;
+	OUString aUserPath;
+	if ( Bootstrap::locateUserInstallation( aUserStr ) == Bootstrap::PATH_EXISTS && osl_getSystemPathFromFileURL( aUserStr.pData, &aUserPath.pData ) == osl_File_E_None )
+	{
+		ByteString aFontDir( aUserPath.getStr(), RTL_TEXTENCODING_UTF8 );
+		if ( aFontDir.Len() )
+		{
+			aFontDir += ByteString( "/user/fonts", RTL_TEXTENCODING_UTF8 );
+			FSRef aFontPath;
+			FSSpec aFontSpec;
+			if ( FSPathMakeRef( (const UInt8 *)aFontDir.GetBuffer(), &aFontPath, 0 ) == noErr && FSGetCatalogInfo( &aFontPath, kFSCatInfoNone, NULL, NULL, &aFontSpec, NULL) == noErr )
+				ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextLocal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDefault, NULL );
+		}
+	}
+
 	// If there is a "share/fonts/truetype" directory, explicitly activate the
 	// fonts since Panther does not automatically add fonts in the user's
 	// Library/Fonts directory until they reboot or relogin
-	OUString aStr;
+	OUString aExecStr;
 	OUString aExecPath;
-	if ( osl_getExecutableFile( &aStr.pData ) == osl_Process_E_None && osl_getSystemPathFromFileURL( aStr.pData, &aExecPath.pData ) == osl_File_E_None )
+	if ( osl_getExecutableFile( &aExecStr.pData ) == osl_Process_E_None && osl_getSystemPathFromFileURL( aExecStr.pData, &aExecPath.pData ) == osl_File_E_None )
 	{
 		ByteString aFontDir( aExecPath.getStr(), RTL_TEXTENCODING_UTF8 );
 		if ( aFontDir.Len() )
