@@ -315,7 +315,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pInputEvent->mnTime = getWhen();
 				pInputEvent->maText = aText;
 				pInputEvent->mpTextAttr = pAttributes;
-				pInputEvent->mnCursorPos = getCursorPos();
+				pInputEvent->mnCursorPos = nLen;
 				pInputEvent->mnDeltaStart = 0;
 				pInputEvent->mbOnlyCursor = FALSE;
 				pInputEvent->mnCursorFlags = 0;
@@ -694,27 +694,6 @@ ULONG com_sun_star_vcl_VCLEvent::getCommittedCharacterCount()
 		{
 			char *cSignature = "()I";
 			mID = t.pEnv->GetMethodID( getMyClass(), "getCommittedCharacterCount", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-			out = (ULONG)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
-	}
-	return out;
-}
-
-// ----------------------------------------------------------------------------
-
-ULONG com_sun_star_vcl_VCLEvent::getCursorPos()
-{
-	static jmethodID mID = NULL;
-	ULONG out = 0;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()I";
-			mID = t.pEnv->GetMethodID( getMyClass(), "getCursorPos", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )

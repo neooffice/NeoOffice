@@ -61,9 +61,8 @@ class SalATSLayout : public GenericSalLayout
 	ATSUStyle			maFontStyle;
 	int					mnGlyphCount;
 	ATSUGlyphInfoArray*	mpGlyphInfoArray;
-	long*				mpGlyphTranslations;
 	int*				mpCharsToGlyphs;
-	int*				mpVerticalFlags;
+	ATSUStyle			maVerticalFontStyle;
 
 	void				Destroy();
 

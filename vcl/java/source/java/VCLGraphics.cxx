@@ -226,7 +226,7 @@ void com_sun_star_vcl_VCLGraphics::drawBitmap( const com_sun_star_vcl_VCLBitmap 
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2, long *_par3, long *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, long _par8, long _par9, int _par10, sal_Bool _par11 )
+void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2, long *_par3, long *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, int _par8, int _par9 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -234,7 +234,7 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(II[I[ILcom/sun/star/vcl/VCLFont;IIIIIZ)V";
+			char *cSignature = "(II[I[ILcom/sun/star/vcl/VCLFont;IIII)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "drawGlyphs", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -259,8 +259,6 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2
 			args[6].i = jint( _par7 );
 			args[7].i = jint( _par8 );
 			args[8].i = jint( _par9 );
-			args[9].i = jint( _par10 );
-			args[10].z = jboolean( _par11 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 			if ( pFont )
 				delete pFont;
@@ -505,7 +503,7 @@ USHORT com_sun_star_vcl_VCLGraphics::getBitCount()
 
 // ----------------------------------------------------------------------------
 
-const Rectangle com_sun_star_vcl_VCLGraphics::getGlyphBounds( int _par0, com_sun_star_vcl_VCLFont *_par1, sal_Bool _par2 )
+const Rectangle com_sun_star_vcl_VCLGraphics::getGlyphBounds( int _par0, com_sun_star_vcl_VCLFont *_par1, int _par2 )
 {
 	static jmethodID mID = NULL;
 	static jfieldID fIDX = NULL;
@@ -530,7 +528,7 @@ const Rectangle com_sun_star_vcl_VCLGraphics::getGlyphBounds( int _par0, com_sun
 			jvalue args[3];
 			args[0].i = jint( _par0 );
 			args[1].l = pFont ? pFont->getJavaObject() : _par1->getJavaObject();
-			args[2].z = jboolean( _par2 );
+			args[2].i = jint( _par2 );
 			jobject tempObj = t.pEnv->CallNonvirtualObjectMethodA( object, getMyClass(), mID, args );
 			if ( pFont )
 				delete pFont;

@@ -89,9 +89,6 @@ int GetVerticalFlags( sal_Unicode nChar )
 {
     if( (nChar >= 0x1100 && nChar <= 0x11f9)    // Hangul Jamo
      || (nChar == 0x2030 || nChar == 0x2031)    // per mille sign
-#ifdef USE_JAVA
-     || (nChar == 0x2212)                       // Fix bug 321
-#endif	// USE_JAVA
      || (nChar >= 0x3000 && nChar <= 0xfaff)    // unified CJK
      || (nChar >= 0xfe20 && nChar <= 0xfe6f)    // CJK compatibility
      || (nChar >= 0xff00 && nChar <= 0xfffd) )  // other CJK

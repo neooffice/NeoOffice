@@ -75,7 +75,6 @@ public:
 	void				dispatch();
 	const Rectangle		getBounds();
 	ULONG				getCommittedCharacterCount();
-	ULONG				getCursorPos();
 	void*				getData();
 	SalFrame*			getFrame();
 	USHORT				getKeyChar();

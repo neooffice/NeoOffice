@@ -1175,26 +1175,6 @@ public final class VCLEvent extends AWTEvent {
 	}
 
 	/**
-	 * Returns the cursor position in the text associated with this event.
-	 *
-	 * @return the cursor position
-	 */
-	public int getCursorPos() {
-
-		if (source instanceof InputMethodEvent) {
-			TextHitInfo hi = ((InputMethodEvent)source).getCaret();
-			if (hi != null)
-				return hi.getInsertionIndex();
-			else
-				return 0;
-		}
-		else {
-			return 0;
-		}
-
-	}
-
-	/**
 	 * Gets the data pointer.
 	 *
 	 * @return the data pointer.
