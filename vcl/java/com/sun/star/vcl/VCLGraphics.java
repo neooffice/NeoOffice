@@ -342,8 +342,9 @@ public class VCLGraphics {
 	 */
 	public void copyBits(VCLGraphics g, int destX, int destY, int destWidth, int destHeight, int srcX, int srcY, int srcWidth, int srcHeight) {
 
-		if (image != null)
-			drawImage(g.getImage(), destX, destY, destWidth, destHeight, srcX, srcY, srcWidth, srcHeight);
+		VCLImage i = g.getImage();
+		if (i != null)
+			drawImage(i, destX, destY, destWidth, destHeight, srcX, srcY, srcWidth, srcHeight);
 
 	}
 
@@ -363,13 +364,10 @@ public class VCLGraphics {
 	 */
 	public void drawBitmap(VCLBitmap bmp, int destX, int destY, int destWidth, int destHeight, int srcX, int srcY, int srcWidth, int srcHeight) {
 
-		if (image == null)
-			return;
-
 		Shape clip = graphics.getClip();
 		if (clip != null && clip.contains((double)destX, (double)destY, (double)destWidth, (double)destHeight))
 			clip = null;
-		if (clip != null || destWidth != srcWidth || destHeight != srcHeight) {
+		if (image == null || clip != null || destWidth != srcWidth || destHeight != srcHeight) {
 			// Convert to an image and scale it
 			VCLImage bmpImage = new VCLImage(bmp, srcX, srcY, srcWidth, srcHeight);
 			graphics.drawImage(bmpImage.getImage(), destX, destY, destX + destWidth, destY + destHeight, 0, 0, srcWidth, srcHeight, null);
@@ -432,13 +430,10 @@ public class VCLGraphics {
 	 */
 	public void drawBitmap(VCLBitmap bmp, VCLBitmap transBmp, int destX, int destY, int destWidth, int destHeight, int srcX, int srcY, int srcWidth, int srcHeight) {
 
-		if (image == null)
-			return;
-
 		Shape clip = graphics.getClip();
 		if (clip != null && clip.contains((double)destX, (double)destY, (double)destWidth, (double)destHeight))
 			clip = null;
-		if (clip != null || destWidth != srcWidth || destHeight != srcHeight) {
+		if (image == null || clip != null || destWidth != srcWidth || destHeight != srcHeight) {
 			// Draw to a temporary image and scale it
 			VCLImage mergedImage = new VCLImage(srcWidth, srcHeight, bmp.getBitCount());
 			mergedImage.getGraphics().drawBitmap(bmp, transBmp, 0, 0, srcWidth, srcHeight, srcX, srcY, srcWidth, srcHeight);
@@ -548,13 +543,10 @@ public class VCLGraphics {
 	 */
 	public void drawMask(VCLBitmap bmp, int color, int destX, int destY, int destWidth, int destHeight, int srcX, int srcY, int srcWidth, int srcHeight) {
 
-		if (image == null)
-			return;
-
 		Shape clip = graphics.getClip();
 		if (clip != null && clip.contains((double)destX, (double)destY, (double)destWidth, (double)destHeight))
 			clip = null;
-		if (clip != null || destWidth != srcWidth || destHeight != srcHeight) {
+		if (image == null || clip != null || destWidth != srcWidth || destHeight != srcHeight) {
 			// Draw to a temporary image and scale it
 			VCLImage maskImage = new VCLImage(srcWidth, srcHeight, bmp.getBitCount());
 			maskImage.getGraphics().drawMask(bmp, color, 0, 0, srcWidth, srcHeight, srcX, srcY, srcWidth, srcHeight);
