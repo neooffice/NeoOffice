@@ -59,7 +59,7 @@ if [ -d "$scriptdir" -a -f "$scriptdir/installutils" ] ; then
 		while read i ; do
 			update_installation "$i" "$1" || exit 1
 		done << !
-`find "$volume/Applications" -type d -name "*.app" -prune`
+`find -L "$volume/Applications" -type d -name "*.app" -prune`
 !
 
 	fi
