@@ -363,7 +363,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 	{
 		SalData *pSalData = GetSalData();
 
-		if ( pSalData )
+		if ( pSalData && pSalData->mpEventQueue )
 		{
 			if ( nClass == kEventClassMouse && nKind == kEventMouseWheelMoved )
 			{
@@ -379,6 +379,10 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 						VCLThreadAttach t;
 						if ( t.pEnv )
 							Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
+
+						// Wakeup the event queue by sending it a dummy event
+						com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
+						pSalData->mpEventQueue->postCachedEvent( &aEvent );
 
 						// Block the VCL event loop while checking mapping
 						pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->acquire();
@@ -467,8 +471,12 @@ void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void
 	if ( !Application::IsShutDown() && ( nMessage == kDMNotifyEvent || nMessage == kDMNotifyDisplayDidWake ) )
 	{
 		SalData *pSalData = GetSalData();
-		if ( pSalData )
+		if ( pSalData && pSalData->mpEventQueue )
 		{
+			// Wakeup the event queue by sending it a dummy event
+			com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
+			pSalData->mpEventQueue->postCachedEvent( &aEvent );
+
 			// Block the VCL event loop while checking mapping
 			pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->acquire();
 
