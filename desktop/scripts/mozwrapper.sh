@@ -1,7 +1,10 @@
 #!/bin/sh
 
 while [ "$1" != "" ] ; do
-	/usr/bin/open "$1"
+	URL=`echo "$1" | sed 's#^/#file:///#'`
+	if [ "$1" != "" ] ; then
+		/usr/bin/open "$URL"
+	fi
 	shift
 fi
 
