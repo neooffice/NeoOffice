@@ -122,13 +122,12 @@ static VCLRegServiceInfo aVCLComponentsArray[] =
 #ifdef WNT
 	{"sysdtrans", sal_False},
 #endif
-	{"dtrans", sal_False},
 	{"mcnttype", sal_False},
-	{"ftransl", sal_False},
-	{"dnd", sal_False},
 #ifdef USE_JAVA
 	{"javavm" STRING(UNOSUFFIX), sal_False},
 	{"cfgmgr2", sal_False},
+	{"typeconverter" STRING(UNOSUFFIX), sal_False},
+	{"sax" STRING(UNOSUFFIX), sal_False},
 #endif
 	{NULL, sal_False}
 };
