@@ -65,7 +65,7 @@ using namespace vos;
 
 static UInt32 nSupportedTypes = 5;
 
-// List of support native types in priority order
+// List of supported native types in priority order
 static FourCharCode aSupportedNativeTypes[] = {
 	'RTF ',
 	'utxt',
@@ -74,7 +74,16 @@ static FourCharCode aSupportedNativeTypes[] = {
 	'PICT'
 };
 
-// List of support mime types in priority order
+// List of supported types that are text
+static BOOL aSupportedTextTypes[] = {
+	TRUE,
+	TRUE,
+	TRUE,
+	FALSE,
+	FALSE
+};
+
+// List of supported mime types in priority order
 static OUString aSupportedMimeTypes[] = {
 	OUString::createFromAscii( "text/richtext" ),
 	OUString::createFromAscii( "text/plain;charset=utf-16" ),
@@ -83,7 +92,7 @@ static OUString aSupportedMimeTypes[] = {
 	OUString::createFromAscii( "application/x-openoffice;windows_formatname=\"Bitmap\"" )
 };
 
-// List of support data types in priority order
+// List of supported data types in priority order
 static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( OUString* )0 ),
@@ -154,7 +163,9 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 				aValue = pTransferable->getTransferData( aFlavor );
 				bDataFound = TRUE;
 			}
-			catch ( ... ) {}
+			catch ( ... )
+			{
+			}
 
 			if ( bDataFound )
 			{
@@ -560,7 +571,7 @@ Sequence< DataFlavor > SAL_CALL com_sun_star_dtrans_DTransTransferable::getTrans
 
 sal_Bool com_sun_star_dtrans_DTransTransferable::hasOwnership()
 {
-	sal_Bool out = FALSE;
+	sal_Bool out = sal_False;
 
 #ifdef MACOSX
 	// Test the JVM version and if it is below 1.4, use Carbon APIs or else
@@ -571,7 +582,7 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::hasOwnership()
 		ScrapRef aScrap;
 
 		if ( GetCurrentScrap( &aScrap ) == noErr && aScrap == (ScrapRef)mpNativeTransferable )
-			out = TRUE;
+			out = sal_True;
 	}
 	else
 	{
@@ -596,7 +607,7 @@ sal_Bool SAL_CALL com_sun_star_dtrans_DTransTransferable::isDataFlavorSupported(
 	if ( mxTransferable.is() )
 		return mxTransferable->isDataFlavorSupported( aFlavor );
 
-	sal_Bool out = FALSE;
+	sal_Bool out = sal_False;
 
 #ifdef MACOSX
 	FourCharCode nRequestedType = NULL;
@@ -630,7 +641,7 @@ sal_Bool SAL_CALL com_sun_star_dtrans_DTransTransferable::isDataFlavorSupported(
 					{
 						if ( pInfo[ i ].flavorType == nRequestedType && aFlavor.DataType.equals( aRequestedDataType ) )
 						{
-							out = TRUE;
+							out = sal_True;
 							break;
 						}
 					}
@@ -660,7 +671,7 @@ sal_Bool SAL_CALL com_sun_star_dtrans_DTransTransferable::isDataFlavorSupported(
 
 sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< XTransferable > &xTransferable )
 {
-	sal_Bool out = FALSE;
+	sal_Bool out = sal_False;
 
 	MutexGuard aGuard( aMutex );
 
@@ -678,7 +689,7 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< X
 			{
 				// We have now cleared the scrap so we now own it
 				mpNativeTransferable = aScrap;
-				out = TRUE;
+				out = sal_True;
 
 				if ( !pScrapPromiseKeeperUPP )
 					pScrapPromiseKeeperUPP = NewScrapPromiseKeeperUPP( (ScrapPromiseKeeperProcPtr)ImplScrapPromiseKeeperCallback );
@@ -690,16 +701,38 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< X
 					{
 						xFlavors = mxTransferable->getTransferDataFlavors();
 					}
-					catch ( Exception )
+					catch ( ... )
 					{
 					}
 
-					for ( sal_Int32 i = 0; i < xFlavors.getLength(); i++ )
+					// Check if text flavors are supported, if so, exclude any
+					// image flavors since we would be just passing a picture
+					// of text
+					sal_Int32 nLen = xFlavors.getLength();
+					BOOL bTextOnly = FALSE;
+					sal_Int32 i;
+					for ( i = 0; i < nLen; i++ )
+					{
+						for ( USHORT j = 0; j < nSupportedTypes; j++ )
+						{
+							if ( xFlavors[ i ].MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ j ] ) && aSupportedTextTypes[ j ] )
+							{
+								bTextOnly = TRUE;
+								break;
+							}
+						}
+					}
+
+					for ( i = 0; i < nLen; i++ )
 					{ 
 						for ( USHORT j = 0; j < nSupportedTypes; j++ )
 						{
 							if ( xFlavors[ i ].MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ j ] ) )
+							{
+								if ( bTextOnly && !aSupportedTextTypes[ j ] )
+									continue;
 								PutScrapFlavor( (ScrapRef)mpNativeTransferable, aSupportedNativeTypes[ j ], kScrapFlavorMaskNone, kScrapFlavorSizeUnknown, NULL );
+							}
 						}
 					}
 
