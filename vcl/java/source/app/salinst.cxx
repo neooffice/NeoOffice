@@ -372,8 +372,8 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 	pFrame->maFrameData.mpVCLFrame->setBounds( nX, nY, nWidth, nHeight );
 
  	// Update the cached position
- 	Rectangle aBounds = pFrame->maFrameData.mpVCLFrame->getBounds();
-	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, pFrame, (void *)( new Rectangle( aBounds ) ) );
+ 	Rectangle *pBounds = new Rectangle( pFrame->maFrameData.mpVCLFrame->getBounds() );
+	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, pFrame, (void *)pBounds );
 	aEvent.dispatch();
 
 	return pFrame;

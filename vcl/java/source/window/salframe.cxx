@@ -139,17 +139,17 @@ void SalFrame::Show( BOOL bVisible )
 	if ( bVisible )
 	{
 		// Update the cached position
-		Rectangle aBounds = maFrameData.mpVCLFrame->getBounds();
-		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)( new Rectangle( aBounds ) ) );
+		Rectangle *pBounds = new Rectangle( maFrameData.mpVCLFrame->getBounds() );
+		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pBounds );
 		aEvent.dispatch();
 
 		// Post a paint event
-		SalPaintEvent aPaintEvent;
-		aPaintEvent.mnBoundX = 0;
-		aPaintEvent.mnBoundY = 0;
-		aPaintEvent.mnBoundWidth = maGeometry.nWidth + maGeometry.nLeftDecoration;
-		aPaintEvent.mnBoundHeight = maGeometry.nHeight + maGeometry.nTopDecoration;
-		com_sun_star_vcl_VCLEvent aVCLPaintEvent( SALEVENT_PAINT, this, (void *)&aPaintEvent );
+		SalPaintEvent *pPaintEvent = new SalPaintEvent();
+		pPaintEvent->mnBoundX = 0;
+		pPaintEvent->mnBoundY = 0;
+		pPaintEvent->mnBoundWidth = maGeometry.nWidth + maGeometry.nLeftDecoration;
+		pPaintEvent->mnBoundHeight = maGeometry.nHeight + maGeometry.nTopDecoration;
+		com_sun_star_vcl_VCLEvent aVCLPaintEvent( SALEVENT_PAINT, this, (void *)pPaintEvent );
 		aVCLPaintEvent.dispatch();
 	}
 }
@@ -209,8 +209,8 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	maFrameData.mpVCLFrame->setBounds( nX, nY, nWidth + maGeometry.nLeftDecoration + maGeometry.nRightDecoration, nHeight + maGeometry.nTopDecoration + maGeometry.nBottomDecoration );
 
 	// Update the cached position
-	Rectangle aBounds = maFrameData.mpVCLFrame->getBounds();
-	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)( new Rectangle( aBounds ) ) );
+	Rectangle *pBounds = new Rectangle( maFrameData.mpVCLFrame->getBounds() );
+	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pBounds );
 	aEvent.dispatch();
 }
 
@@ -266,8 +266,8 @@ void SalFrame::ShowFullScreen( BOOL bFullScreen )
 	maGeometry.nBottomDecoration = aRect.nBottom;
 
 	// Update the cached position
-	Rectangle aBounds = maFrameData.mpVCLFrame->getBounds();
-	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)( new Rectangle( aBounds ) ) );
+	Rectangle *pBounds = new Rectangle( maFrameData.mpVCLFrame->getBounds() );
+	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pBounds );
 	aEvent.dispatch();
 }
 
