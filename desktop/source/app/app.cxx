@@ -1321,6 +1321,25 @@ USHORT Desktop::Exception(USHORT nError)
 
 void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
 {
+#ifdef USE_JAVA
+    if ( rAppEvent.IsOpenEvent() || rAppEvent.IsPrintEvent() )
+    {
+        ProcessDocumentsRequest aRequest;
+		aRequest.pcProcessed = NULL;
+        OUString aData( rAppEvent.GetData() );
+        if ( aData.getLength() )
+        {
+            if ( rAppEvent.IsPrintEvent() )
+                aRequest.aPrintList = aData;
+            else
+                aRequest.aOpenList = aData;
+            ::desktop::Desktop::bSuppressOpenDefault = sal_True;
+            OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
+        }
+        return;
+    }
+#endif	// USE_JAVA
+
     HandleAppEvent( rAppEvent );
 }
 
@@ -2252,12 +2271,6 @@ void Desktop::HandleAppEvent( const ApplicationEvent& rAppEvent )
             aArgs[3].Name = ::rtl::OUString::createFromAscii("Hidden");
             aArgs[4].Name = ::rtl::OUString::createFromAscii("Silent");
         }
-#ifdef USE_JAVA
-        else
-        {
-            ::desktop::Desktop::bSuppressOpenDefault = sal_True;
-        }
-#endif	// USE_JAVA
 
         // mark request as user interaction from outside
         aArgs[0].Value <<= ::rtl::OUString::createFromAscii("private:OpenEvent");
