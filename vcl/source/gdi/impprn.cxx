@@ -413,9 +413,9 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 		}
 
 		// Update the resolution
-		if ( nDPIX && nDPIX < nMaxBmpDPIX )
+		if ( nDPIX )
 			nMaxBmpDPIX = nDPIX;
-		if ( nDPIY && nDPIY < nMaxBmpDPIY )
+		if ( nDPIY )
 			nMaxBmpDPIY = nDPIY;
 #endif	// USE_JAVA
 
@@ -455,7 +455,7 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 #ifdef USE_JAVA
 		long nOldDPIX = mnDPIX;
 		long nOldDPIY = mnDPIY;
-		if ( nMaxBmpDPIX && nMaxBmpDPIY && nMaxBmpDPIX < mnDPIX && nMaxBmpDPIY < mnDPIY )
+		if ( nMaxBmpDPIX && nMaxBmpDPIY )
 		{
 			mpPrinter->SetResolution( nMaxBmpDPIX, nMaxBmpDPIY );
 			ImplUpdatePageData();
