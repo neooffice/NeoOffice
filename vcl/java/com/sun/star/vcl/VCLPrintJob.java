@@ -313,7 +313,6 @@ public final class VCLPrintJob extends Thread implements Printable {
 		graphics.transform(graphics.getDeviceConfiguration().getNormalizingTransform());
 
 		// Set the origin to the origin of the printable area
-		Rectangle bounds = VCLPrintJob.getImageableBounds();
 		graphics.translate((int)f.getImageableX(), (int)f.getImageableY());
 
 		graphics.scale((double)1.0 / VCLPrintJob.SCALE_FACTOR, (double)1.0 / VCLPrintJob.SCALE_FACTOR);
