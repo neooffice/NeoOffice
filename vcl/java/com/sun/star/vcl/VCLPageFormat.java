@@ -49,7 +49,7 @@ import java.awt.print.PrinterJob;
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public final class VCLPageFormat implements Cloneable {
+public final class VCLPageFormat {
 
 	/** 
 	 * ORIENTATION_PORTRAIT constant.
@@ -106,10 +106,26 @@ public final class VCLPageFormat implements Cloneable {
 	 */
 	public final static int PAPER_USER = 8;
 
-	/**
+	/** 
 	 * The editable flag.
 	 */
 	private boolean editable = true;
+
+	/**
+	 * The printer orientation.
+	 */
+	private static int printerOrientation = PageFormat.PORTRAIT;
+
+	/**
+	 * Returns the printer orientation.
+	 *
+	 * @return the printer orientation
+	 */
+	static int getPrinterOrientation() {
+
+		return printerOrientation;
+
+	}
 
 	/**
 	 * Cached <code>VCLImage</code>.
@@ -138,24 +154,9 @@ public final class VCLPageFormat implements Cloneable {
 
 		job = PrinterJob.getPrinterJob();
 		pageFormat = job.defaultPage();
+		pageFormat.setOrientation(VCLPageFormat.printerOrientation);
 		pageResolution = new Dimension(VCLScreen.MAX_PRINTER_RESOLUTION, VCLScreen.MAX_PRINTER_RESOLUTION);
 		image = new VCLImage(1, 1, 32, this);
-
-	}
-
-	/**
-	 * Creates a new <code>VCLPageFormat</code> instance that has the same page
-	 * format settings.
-	 *
-	 * @return the new <code>VCLPageFormat</code> instance
-	 */
-	public Object clone() {
-
-		VCLPageFormat f = new VCLPageFormat();
-		f.setOrientation( getOrientation() );
-		Dimension r = getPageResolution();
-		f.setPageResolution( r.width, r.height );
-		return f;
 
 	}
 
@@ -296,7 +297,6 @@ public final class VCLPageFormat implements Cloneable {
 	}
 
 	/**
-	/**
 	 * Set the page orientation.
 	 *
 	 * @param o the page orientation
@@ -306,10 +306,12 @@ public final class VCLPageFormat implements Cloneable {
 		if (!editable)
 			return;
 
-		if (o == ORIENTATION_PORTRAIT)
+		if (o == ORIENTATION_PORTRAIT && VCLPageFormat.printerOrientation == PageFormat.PORTRAIT)
 			pageFormat.setOrientation(PageFormat.PORTRAIT);
-		else if (pageFormat.getOrientation() != PageFormat.REVERSE_LANDSCAPE)
+		else if (o != ORIENTATION_PORTRAIT && VCLPageFormat.printerOrientation != PageFormat.REVERSE_LANDSCAPE)
 			pageFormat.setOrientation(PageFormat.LANDSCAPE);
+		else
+			pageFormat.setOrientation(VCLPageFormat.printerOrientation);
 
 	}
 
@@ -337,13 +339,18 @@ public final class VCLPageFormat implements Cloneable {
 		if (!editable)
 			return false;
 
-		PageFormat p = job.pageDialog(pageFormat);
-		if (p != pageFormat) {
-			pageFormat = p;
-			return true;
-		}
-		else {
-			return false;
+		synchronized (VCLPageFormat.class) {
+			PageFormat pClone = (PageFormat)pageFormat.clone();
+			pClone.setOrientation(VCLPageFormat.printerOrientation);
+			PageFormat p = job.pageDialog(pClone);
+			if (p != pageFormat) {
+				pageFormat = p;
+				VCLPageFormat.printerOrientation = pageFormat.getOrientation();
+				return true;
+			}
+			else {
+				return false;
+			}
 		}
 
 	}

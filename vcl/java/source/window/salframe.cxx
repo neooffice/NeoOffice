@@ -161,6 +161,25 @@ void SalFrame::Show( BOOL bVisible )
 		return;
 
 	maFrameData.mbVisible = bVisible;
+
+	if ( maFrameData.mbVisible )
+	{
+		// Enable disabled event handler
+		if ( !maFrameData.mpInst && !maFrameData.mpProc )
+		{
+			maFrameData.mpInst = maFrameData.mpDisabledInst;
+			maFrameData.mpProc = maFrameData.mpDisabledProc;
+		}
+	}
+	else
+	{
+		// Disable event handler
+		maFrameData.mpDisabledInst = maFrameData.mpInst;
+		maFrameData.mpDisabledProc = maFrameData.mpProc;
+		maFrameData.mpInst = NULL;
+		maFrameData.mpProc = NULL;
+	}
+
 	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible );
 
 	// Reset graphics
@@ -174,13 +193,6 @@ void SalFrame::Show( BOOL bVisible )
 	SalData *pSalData = GetSalData();
 	if ( maFrameData.mbVisible )
 	{
-		// Enable disabled event handler
-		if ( !maFrameData.mpInst && !maFrameData.mpProc )
-		{
-			maFrameData.mpInst = maFrameData.mpDisabledInst;
-			maFrameData.mpProc = maFrameData.mpDisabledProc;
-		}
-
 		// Update the cached position
 		Rectangle *pBounds = new Rectangle( maFrameData.mpVCLFrame->getBounds() );
 		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pBounds );
@@ -199,12 +211,6 @@ void SalFrame::Show( BOOL bVisible )
 	{
 		if ( pSalData->mpFocusFrame == this )
 			pSalData->mpFocusFrame = NULL;
-
-		// Disable event handler
-		maFrameData.mpDisabledInst = maFrameData.mpInst;
-		maFrameData.mpDisabledProc = maFrameData.mpProc;
-		maFrameData.mpInst = NULL;
-		maFrameData.mpProc = NULL;
 	}
 }
 

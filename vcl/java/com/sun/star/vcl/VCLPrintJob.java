@@ -309,12 +309,11 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 */
 	public boolean startJob(VCLPageFormat p, boolean b) {
 
-		pageFormat = p;
-		job = pageFormat.getPrinterJob();
-		job.setPrintable(this, pageFormat.getPageFormat());
-
 		// Detect if the user cancelled the print dialog
 		if (b) {
+			pageFormat = p;
+			job = pageFormat.getPrinterJob();
+			job.setPrintable(this, pageFormat.getPageFormat());
 			if (job.printDialog()) {
 				dialogAccepted = true;
 			}
