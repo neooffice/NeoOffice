@@ -53,6 +53,7 @@ import java.awt.Toolkit;
 import java.awt.event.PaintEvent;
 import java.awt.font.GlyphVector;
 import java.awt.geom.Area;
+import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.util.LinkedList;
@@ -724,6 +725,22 @@ public class VCLGraphics {
 			char[] word = new char[currentChar - startChar];
 			System.arraycopy(chars, startChar, word, 0, word.length);
 			GlyphVector glyphs = f.createGlyphVector(graphics.getFontRenderContext(), word);
+			float adjust = 0;
+			int numGlyphs = glyphs.getNumGlyphs();
+			for (int i = 0; i < numGlyphs; i++) {
+				int type = Character.getType(word[i]);
+				if (type == Character.NON_SPACING_MARK && i > 0) {
+					Point2D glyphPosition = glyphs.getGlyphPosition(i);
+					adjust -= glyphs.getGlyphMetrics(i - 1).getAdvance();
+					glyphPosition.setLocation(glyphPosition.getX() + adjust, glyphPosition.getY());
+					glyphs.setGlyphPosition(i, glyphPosition);
+				}
+				else if (adjust != 0) {
+					Point2D glyphPosition = glyphs.getGlyphPosition(i);
+					glyphPosition.setLocation(glyphPosition.getX() + adjust, glyphPosition.getY());
+					glyphs.setGlyphPosition(i, glyphPosition);
+				}
+			}
 			if (offsets != null) {
 				int startOffset = 0;
 				if (startChar > 0)
@@ -739,6 +756,8 @@ public class VCLGraphics {
 				bounds = glyphs.getLogicalBounds();
 			else
 				bounds.add(glyphs.getLogicalBounds());
+			if (adjust != 0)
+				bounds.setRect(bounds.getX(), bounds.getY(), bounds.getWidth() + adjust, bounds.getHeight());
 
 			startChar = currentChar;
 

@@ -195,8 +195,13 @@ public class VCLFont {
 	public int[] getCharWidth(char start, char end) {
 
 		int[] widths = new int[end - start + 1];
-		for (char i = start; i <= end; i++)
-			widths[i - start] = fontMetrics.charWidth(i);
+		for (char i = start; i <= end; i++) {
+			int type = Character.getType(i);
+			if (type == Character.NON_SPACING_MARK)
+				widths[i - start] = 0;
+			else
+				widths[i - start] = fontMetrics.charWidth(i);
+		}
 		return widths;
 
 	}
