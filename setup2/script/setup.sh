@@ -121,7 +121,62 @@ s#<value.*$#<value>'"$locale"'</value>#
     # End multi-line pattern
 
     sed -e "$localepattern" "$setupxmlbak" > "$setupxml"
-    rm -f "$setupxmlbak"
+    if [ $? != 0 ] ; then
+        mv -f "$setupxmlbak" "$setupxml"
+    else
+        rm -f "$setupxmlbak"
+    fi
+fi
+
+# Force registration dialog to appear at least once
+commonxml="$registrydir/Office/Common.xcu"
+if [ ! -f "$commonxml" ] ; then
+    error
+fi
+commonxmlset="$commonxml.set"
+commonxmlbak="$commonxml.bak"
+rm -f "$commonxmlbak"
+if [ ! -f "$commonxmlset" -a ! -f "$commonxmlbak" ] ; then
+    jobsxml="$registrydir/Office/Jobs.xcu"
+    jobsxmlbak="$jobsxml.bak"
+    rm -f "$jobsxmlbak"
+    if [ -f "$jobsxml" -a ! -f "$jobsxmlbak" ] ; then
+        cat /dev/null "$jobsxml" > "$jobsxmlbak"
+
+        # Begin multi-line pattern
+        defregpattern='/<node oor:name="RegistrationRequest">/{
+:addline
+N
+s#<node .*</node>##
+t
+b addline
+}'
+        # End multi-line pattern
+
+        sed -e "$defregpattern" "$jobsxmlbak" > "$jobsxml"
+        if [ $? != 0 ] ; then
+            mv -f "$jobsxmlbak" "$jobsxml"
+        else
+            rm -f "$jobsxmlbak"
+        fi
+    fi
+
+    cat /dev/null "$commonxml" > "$commonxmlbak"
+
+    # Begin multi-line pattern
+    defregpattern='/<prop oor:name="RequestDialog" oor:type="xs:int">/{
+N
+s#<value.*$#<value>1</value>#
+}'
+    # End multi-line pattern
+
+    sed -e "$defregpattern" "$commonxmlbak" > "$commonxml"
+    if [ $? != 0 ] ; then
+        mv -f "$commonxmlbak" "$commonxml"
+    else
+        rm -f "$commonxmlbak"
+        touch -f "$commonxmlset"
+    fi
 fi
 
 # Make locale the default document language
@@ -172,8 +227,12 @@ s#<value.*$#<value>'"$locale"'</value>#
     # End multi-line pattern
 
     sed -e "$deflocalepattern" "$linguxmlbak" > "$linguxml"
-    rm -f "$linguxmlbak"
-    touch -f "$linguxmlset"
+    if [ $? != 0 ] ; then
+        mv -f "$linguxmlbak" "$linguxml"
+    else
+        rm -f "$linguxmlbak"
+        touch -f "$linguxmlset"
+    fi
 fi
 
 # Create user dictionary.lst file
