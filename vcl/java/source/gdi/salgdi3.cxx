@@ -218,7 +218,7 @@ void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 	SalData *pSalData = GetSalData();
 
 	// Iterate through fonts and add each to the font list
-    for ( ::std::map< OUString, com_sun_star_vcl_VCLFont* >::const_iterator it = pSalData->maFontMapping.begin(); it != pSalData->maFontMapping.end(); ++it )
+	for ( ::std::map< OUString, com_sun_star_vcl_VCLFont* >::const_iterator it = pSalData->maFontMapping.begin(); it != pSalData->maFontMapping.end(); ++it )
 	{
 		com_sun_star_vcl_VCLFont *pVCLFont = it->second;
 		void *pNativeFont = pVCLFont->getNativeFont();
@@ -235,13 +235,8 @@ void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 		// higher-level font elements to treat fonts as infinitely
 		// scalable and provide lists of default font sizes.  The
 		// size of zero matches the unx implementation.  Bug 196.
-		/*** OLD CODE ***
-		pFontData->mnWidth = pVCLFont->getSize();
-		pFontData->mnHeight = pVCLFont->getSize();
-		 *** END OLD CODE.  NEW CODE: ***/
 		pFontData->mnWidth = 0;
 		pFontData->mnHeight = 0;
-		/*** END NEW CODE ***/
 		pFontData->meFamily = pVCLFont->getFamilyType();
 		pFontData->meCharSet = RTL_TEXTENCODING_UNICODE;
 		if ( pFontData->meFamily == FAMILY_MODERN )
@@ -274,7 +269,6 @@ void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 
 BOOL SalGraphics::GetGlyphBoundRect( long nIndex, Rectangle& rRect,
                                      const OutputDevice *pOutDev )
-
 {
 	if ( maGraphicsData.mpVCLFont )
 	{
