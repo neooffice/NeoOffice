@@ -65,6 +65,7 @@ static Rect aRealBounds;
 static bool bNoActivate = false;
 static bool bNoSelectWindow = false;
 static Mutex aMutex;
+static EventLoopTimerUPP pEventLoopTimerUPP = NULL;
 
 #endif	// MACOSX
 
@@ -110,6 +111,15 @@ static void JNICALL Java_com_apple_mrj_macos_generated_MacWindowFunctions_ShowWi
 }
 #endif	// MACOSX
 
+// ----------------------------------------------------------------------------
+
+#ifdef MACOSX
+static void DisposeNativeWindowTimerCallback( EventLoopTimerRef aTimer, void *pData )
+{
+	ReleaseWindow( (WindowRef)pData );
+}
+#endif	// MACOSX
+
 // ============================================================================
 
 jclass com_sun_star_vcl_VCLFrame::theClass = NULL;
@@ -142,6 +152,9 @@ jclass com_sun_star_vcl_VCLFrame::getMyClass()
 				t.pEnv->RegisterNatives( macWindowFunctionsClass, pMethods, 2 );
 			}
 		}
+
+		if ( !pEventLoopTimerUPP )
+			pEventLoopTimerUPP = NewEventLoopTimerUPP( DisposeNativeWindowTimerCallback );
 #endif	// MACOSX
 
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLFrame" );
@@ -214,12 +227,14 @@ void com_sun_star_vcl_VCLFrame::dispose()
 		OSL_ENSURE( mID, "Unknown method id!" );
 
 #ifdef MACOSX
+		WindowRef aWindow = NULL;
+
 		// Test the JVM version and if it is below 1.4, use Carbon APIs
 		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
 		{
 			// Fix bug 261 by explicitly flushing the window's buffer before
 			// destroying it
-			WindowRef aWindow = (WindowRef)getNativeWindow();
+			aWindow = (WindowRef)getNativeWindow();
 			if ( aWindow )
 				QDFlushPortBuffer( GetWindowPort( aWindow ), NULL );
 		}
@@ -227,6 +242,16 @@ void com_sun_star_vcl_VCLFrame::dispose()
 
 		if ( mID )
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+
+#ifdef MACOSX
+		if ( aWindow )
+		{
+			// Java 1.3.1 does not ever release the native window so we need
+			// to explicitly release it
+			if ( pEventLoopTimerUPP )
+				InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pEventLoopTimerUPP, aWindow, NULL );
+		}
+#endif	// MACOSX
 	}
 }
 
