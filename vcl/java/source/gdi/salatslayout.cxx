@@ -137,7 +137,7 @@ bool ImplHashEquality::operator()( const ImplATSLayoutDataHash *p1, const ImplAT
 		p1->mbAntialiased == p2->mbAntialiased &&
 		p1->mbRTL == p2->mbRTL &&
 		p1->mbVertical == p2->mbVertical &&
-		rtl_ustr_compare_WithLength( p1->mpStr + 1, p1->mnLen - 2, p2->mpStr + 1, p2->mnLen - 2 ) == 0 );
+		rtl_ustr_compare_WithLength( p1->mpStr, p1->mnLen, p2->mpStr, p2->mnLen ) == 0 );
 }
 
 // ============================================================================
@@ -156,31 +156,35 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 
 	ImplATSLayoutDataHash *pLayoutHash = new ImplATSLayoutDataHash();
 	pLayoutHash->mnFallbackLevel = nFallbackLevel;
-	pLayoutHash->mnLen = rArgs.mnLength + 2;
+	pLayoutHash->mnLen = rArgs.mnEndCharPos - rArgs.mnMinCharPos + 2;
 	pLayoutHash->mnFontID = (ATSUFontID)pVCLFont->getNativeFont();
 	pLayoutHash->mnFontSize = pVCLFont->getSize();
 	pLayoutHash->mfFontScaleX = pVCLFont->getScaleX();
 	pLayoutHash->mbAntialiased = pVCLFont->isAntialiased();
 	pLayoutHash->mbRTL = ( rArgs.mnFlags & SAL_LAYOUT_BIDI_RTL );
 	pLayoutHash->mbVertical = ( rArgs.mnFlags & SAL_LAYOUT_VERTICAL );
-	pLayoutHash->mpStr = (sal_Unicode *)( rArgs.mpStr - 1 );
-	pLayoutHash->mnStrHash = rtl_ustr_hashCode_WithLength( rArgs.mpStr, rArgs.mnLength );
+
+	// Copy the string so that we can cache it and add leading and trailing
+	// spaces so that ATSUGetGlyphInfo() will not fail as described in
+	// bug 554
+	pLayoutHash->mpStr = (sal_Unicode *)rtl_allocateMemory( pLayoutHash->mnLen * sizeof( sal_Unicode ) );
+	pLayoutHash->mpStr[ 0 ] = 0x0020;
+	memcpy( pLayoutHash->mpStr + 1, rArgs.mpStr + rArgs.mnMinCharPos, ( rArgs.mnEndCharPos - rArgs.mnMinCharPos ) * sizeof( sal_Unicode ) );
+	pLayoutHash->mpStr[ pLayoutHash->mnLen - 1 ] = 0x0020;
+	pLayoutHash->mnStrHash = rtl_ustr_hashCode_WithLength( rArgs.mpStr + rArgs.mnMinCharPos, rArgs.mnEndCharPos - rArgs.mnMinCharPos );
 
 	// Search cache for matching layout
 	::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplHash, ImplHashEquality >::const_iterator it = maLayoutCache.find( pLayoutHash );
 	if ( it != maLayoutCache.end() )
+	{
 		pLayoutData = it->second;
+		rtl_freeMemory( pLayoutHash->mpStr );
+		delete pLayoutHash;
+		pLayoutHash = NULL;
+	}
 
 	if ( !pLayoutData )
 	{
-		// Copy the string so that we can cache it and add leading and trailing
-		// spaces so that ATSUGetGlyphInfo() will not fail as described in
-		// bug 554
-		pLayoutHash->mpStr = (sal_Unicode *)rtl_allocateMemory( pLayoutHash->mnLen * sizeof( sal_Unicode ) );
-		pLayoutHash->mpStr[ 0 ] = 0x0020;
-		memcpy( pLayoutHash->mpStr + 1, rArgs.mpStr, rArgs.mnLength * sizeof( sal_Unicode ) );
-		pLayoutHash->mpStr[ pLayoutHash->mnLen - 1 ] = 0x0020;
-
 		pLayoutData = new ImplATSLayoutData( rArgs, pLayoutHash, nFallbackLevel, pVCLFont );
 
 		if ( !pLayoutData->IsValid() )
@@ -381,14 +385,6 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 		int nCharPos = mpGlyphInfoArray->glyphs[ i ].charIndex;
 		if ( mpCharsToGlyphs[ nCharPos ] < 0 || i < mpCharsToGlyphs[ nCharPos ] )
 			mpCharsToGlyphs[ nCharPos ] = i;
-	}
-
-	// Break lines that are more than 32K pixels long to avoid messing up
-	// the metrics that ATSUGetGlyphBounds() returns
-	if ( ATSUBatchBreakLines( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, Long2Fix( 32768 ), NULL ) != noErr )
-	{
-		Destroy();
-		return;
 	}
 
 	// Cache glyph widths
@@ -707,7 +703,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		rArgs.ResetPos();
 		while ( rArgs.GetNextPos( &nCharPos, &bPosRTL ) )
 		{
-			if ( mpLayoutData->mpNeedFallback[ nCharPos + 1 ] )
+			if ( mpLayoutData->mpNeedFallback[ nCharPos - rArgs.mnMinCharPos + 1 ] )
 				rArgs.NeedFallback( nCharPos, bPosRTL );
 		}
 
@@ -730,7 +726,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	rArgs.ResetPos();
 	while ( rArgs.GetNextPos( &nCharPos, &bPosRTL ) )
 	{
-		int nIndex = nCharPos + 1;
+		int nIndex = nCharPos - rArgs.mnMinCharPos + 1;
 		sal_Unicode nChar = mpLayoutData->mpHash->mpStr[ nIndex ];
 		long nCharWidth = mpLayoutData->mpCharAdvances[ nIndex ];
 
@@ -864,7 +860,7 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector )
 			continue;
 		}
 
-		int nIndex = aCharPosArray[ 0 ] + 1;
+		int nIndex = aCharPosArray[ 0 ] - mnMinCharPos + 1;
 		for ( int i = mpLayoutData->mpCharsToGlyphs[ nIndex ]; i < mpLayoutData->mnGlyphCount && mpLayoutData->mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
 		{
 			long nGlyph = mpLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID;
