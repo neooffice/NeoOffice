@@ -69,6 +69,7 @@ import java.awt.font.TextHitInfo;
 import java.awt.im.InputContext;
 import java.awt.im.InputMethodRequests;
 import java.awt.image.BufferedImage;
+import java.awt.peer.ComponentPeer;
 import java.text.AttributedCharacterIterator;
 import java.text.AttributedString;
 import java.util.HashMap;
@@ -774,6 +775,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 		graphics = new VCLGraphics(this);
 
+		// Create the native window so that we can access it in the C++ code
+		window.addNotify();
+
 	}
 
 	/**
@@ -1471,6 +1475,17 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	VCLFrame getParent() {
 
 		return parent;
+
+	}
+
+	/**
+	 * Returns the <code>ComponentPeer</code>.
+	 *
+	 * @return the <code>ComponentPeer</code>
+	 */
+	public ComponentPeer getPeer() {
+
+		return window.getPeer();
 
 	}
 

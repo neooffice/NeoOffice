@@ -92,7 +92,6 @@ public:
 	::std::list< ::vcl::com_sun_star_vcl_VCLPageFormat* >	maVCLPageFormats;
 	::osl::Condition		maNativeEventStartCondition; 
 	::osl::Condition		maNativeEventEndCondition; 
-	::std::map< SalFrame*, void* >	maNativeFrameMapping;
 
 							SalData();
 							~SalData();

@@ -392,11 +392,11 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				if ( t.pEnv )
 					Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
 
-				for ( ::std::map< SalFrame*, void* >::const_iterator it = pSalData->maNativeFrameMapping.begin(); it != pSalData->maNativeFrameMapping.end(); ++it )
+				for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 				{
-					if ( it->second == (void *)aWindow )
+					if ( (*it)->GetSystemData()->aWindow == (long)aWindow )
 					{
-						pSalData->mpEventQueue->postMouseWheelEvent( it->first, 0, aPoint.h, aPoint.v, 1, nDelta * -1 );
+						pSalData->mpEventQueue->postMouseWheelEvent( *it, 0, aPoint.h, aPoint.v, 1, nDelta * -1 );
 						break;
 					}
 				}
@@ -490,10 +490,11 @@ void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void
 			Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
 
 		Rect aRect;
-		for ( ::std::map< SalFrame*, void* >::const_iterator it = pSalData->maNativeFrameMapping.begin(); it != pSalData->maNativeFrameMapping.end(); ++it )
+		for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 		{
-			if ( GetWindowBounds( (WindowRef)it->second, kWindowStructureRgn, &aRect ) == noErr )
-				it->first->maFrameData.mpVCLFrame->setBounds( (long)aRect.left, (long)aRect.top, (long)( aRect.right - aRect.left + 1 ), (long)( aRect.bottom - aRect.top + 1 ), sal_False );
+			WindowRef aWindow = (WindowRef)( (*it)->GetSystemData()->aWindow );
+			if ( aWindow && GetWindowBounds( aWindow, kWindowStructureRgn, &aRect ) == noErr )
+				(*it)->maFrameData.mpVCLFrame->setBounds( (long)aRect.left, (long)aRect.top, (long)( aRect.right - aRect.left + 1 ), (long)( aRect.bottom - aRect.top + 1 ), sal_False );
 		}
 
 		// Unblock the VCL event loop
@@ -1072,7 +1073,7 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 	SalFrame *pFrame = new SalFrame();
 
 	pFrame->maFrameData.mpVCLFrame = new com_sun_star_vcl_VCLFrame( nSalFrameStyle, pFrame, pParent );
-	pFrame->maFrameData.maSysData.aWindow = 0;
+	pFrame->maFrameData.maSysData.aWindow = (long)pFrame->maFrameData.mpVCLFrame->getNativeWindow();
 	pFrame->maFrameData.maSysData.pSalFrame = pFrame;
 	pFrame->maFrameData.mnStyle = nSalFrameStyle;
 

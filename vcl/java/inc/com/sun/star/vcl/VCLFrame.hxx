@@ -69,6 +69,8 @@ public:
 	com_sun_star_vcl_VCLGraphics*	getGraphics();
 	const Rectangle		getInsets();
 	::rtl::OUString		getKeyName( USHORT _par0 );
+	void*				getNativeWindow();
+	java_lang_Object*	getPeer();
 	ULONG				getState();
 	sal_Bool			isFloatingWindow();
 	void				requestFocus();
