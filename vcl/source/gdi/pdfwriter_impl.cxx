@@ -6674,33 +6674,65 @@ void PDFWriterImpl::encodeGlyphs()
                             }
 
                             OString aFontTag( " Tf " );
+                            OString aAltFontTag( " Tm " );
                             OString aTextTag( " Tj " );
                             int nFontTagLen = aFontTag.getLength();
+                            int nAltFontTagLen = aAltFontTag.getLength();
                             int nTextTagLen = aTextTag.getLength();
                             int nCurrentGlyph = 0;
                             sal_Int32 nCurrentPos = 0;
+                            OString aCurrentFontID;
+                            sal_Int32 nCurrentFontSubID = 0;
                             sal_Int32 nFontIDPos;
+                            sal_Int32 nNextFontIDPos;
                             sal_Int32 nFontPos;
+                            sal_Int32 nNextFontPos;
+                            sal_Int32 nAltFontPos;
+                            sal_Int32 nNextAltFontPos;
                             sal_Int32 nTextPos;
+                            sal_Int32 nNextTextPos;
                             while ( nCurrentGlyph < nGlyphIDs )
                             {
-                                if ( ( nFontIDPos = aPageContent.indexOf( aFontIDTag, nCurrentPos ) ) < 0 )
-                                    break;
-                                nCurrentPos = nFontIDPos + nFontIDTagLen;
-                                if ( ( nFontIDPos = aPageContent.indexOf( ' ', nCurrentPos ) ) < 0 )
-                                    continue;
+                                nNextFontIDPos = aPageContent.indexOf( aFontIDTag, nCurrentPos );
+                                if ( aCurrentFontID.getLength() )
+                                {
+                                    nNextFontPos = aPageContent.indexOf( aFontTag, nCurrentPos );
+                                    nNextAltFontPos = aPageContent.indexOf( aAltFontTag, nCurrentPos );
+                                }
+                                else
+                                {
+                                    nNextFontPos = -1;
+                                    nNextAltFontPos = -1;
+                                }
 
                                 const sal_Char *pBuf = aPageContent.getStr();
-                                sal_Int32 nFontSubID = 0;
-                                std::map< OString, sal_Int32 >::iterator it = rEmit.m_aFontSubIDMapping.find( OString( pBuf + nCurrentPos, nFontIDPos - nCurrentPos ) );
-                                if ( it != rEmit.m_aFontSubIDMapping.end() )
-                                    nFontSubID = it->second;
-                                else
-                                    continue;
 
-                                if ( ( nFontPos = aPageContent.indexOf( aFontTag, nCurrentPos ) ) < 0 )
+                                if ( nNextFontIDPos >= 0 && ( nNextFontPos < 0 || nNextFontIDPos < nNextFontPos ) && ( nNextAltFontPos < 0 || nNextFontIDPos < nNextAltFontPos ) )
+                                {
+                                    nCurrentPos = nNextFontIDPos + nFontIDTagLen;
+                                    if ( ( nFontIDPos = aPageContent.indexOf( ' ', nCurrentPos ) ) < 0 )
+                                        continue;
+
+                                    nCurrentFontSubID = 0;
+                                    aCurrentFontID = OString( pBuf + nCurrentPos, nFontIDPos - nCurrentPos );
+                                    std::map< OString, sal_Int32 >::iterator it = rEmit.m_aFontSubIDMapping.find( aCurrentFontID );
+                                    if ( it != rEmit.m_aFontSubIDMapping.end() )
+                                        nCurrentFontSubID = it->second;
+
+                                    continue;
+                                }
+                                else if ( nNextFontPos >= 0 && ( nNextAltFontPos < 0 || nNextFontPos < nNextAltFontPos ) )
+                                {
+                                    nCurrentPos = nNextFontPos + nFontTagLen;
+                                }
+                                else if ( nNextAltFontPos >= 0 && ( nNextFontPos < 0 || nNextAltFontPos < nNextFontPos ) )
+                                {
+                                    nCurrentPos = nNextAltFontPos + nAltFontTagLen;
+                                }
+                                else
+                                {
                                     break;
-                                nCurrentPos = nFontPos + nFontTagLen;
+                                }
 
                                 sal_Int32 nTextStart = nCurrentPos;
 
@@ -6810,7 +6842,7 @@ void PDFWriterImpl::encodeGlyphs()
 
                                     // Update glyph mappings
                                     rEmit.m_aMapping[ nGlyph ].m_nSubsetGlyphID = nEncodedGlyph;
-                                    rSubset.m_aMapping[ nGlyph ].m_nFontSubID = nFontSubID;
+                                    rSubset.m_aMapping[ nGlyph ].m_nFontSubID = nCurrentFontSubID;
                                     rSubset.m_aMapping[ nGlyph ].m_bIdentityGlyph = bTextIsHex;
                                     rSubset.m_aMapping[ nGlyph ].m_nSubsetGlyphID = nEncodedGlyph;
                                 }
