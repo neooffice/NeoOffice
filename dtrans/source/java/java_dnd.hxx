@@ -82,6 +82,8 @@ private:
     ::osl::Mutex			maMutex;
 	void*					mpNativeWindow;
 
+	static void				runDragExecute( void *pData );
+
 public:
 							JavaDragSource();
 	virtual					~JavaDragSource();
@@ -95,7 +97,6 @@ public:
 	virtual void			SAL_CALL startDrag( const ::com::sun::star::datatransfer::dnd::DragGestureEvent& trigger, sal_Int8 sourceActions, sal_Int32 cursor, sal_Int32 image, const Reference< ::com::sun::star::datatransfer::XTransferable >& transferable, const Reference< ::com::sun::star::datatransfer::dnd::XDragSourceListener >& listener ) throw();
 
 	void					handleDrag( sal_Int32 nX, sal_Int32 nY );
-	void					runDragExecute();
 };
 
 ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL JavaDragSource_getSupportedServiceNames();
