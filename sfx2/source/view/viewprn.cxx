@@ -464,13 +464,16 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 		const SfxFilter* pFilter = pMedium ? pMedium->GetFilter() : NULL;
 		sal_Bool bPrintOnHelp = ( pFilter && pFilter->GetFilterName() == aHelpFilterName );
 
-		// need a dialog?
-		if ( ( !rReq.GetArgs() || !rReq.GetArgs()->Count() ) && !bSilent && !rReq.IsAPI() )
-		{
 #ifdef USE_JAVA
+		// We always need a dialog when using Java
+		if ( TRUE )
+		{
 			// Don't make a copy as we need to run StartJob() multiple times
 			SfxPrinter* pDlgPrinter = pPrinter;
 #else	// USE_JAVA
+		// need a dialog?
+		if ( ( !rReq.GetArgs() || !rReq.GetArgs()->Count() ) && !bSilent && !rReq.IsAPI() )
+		{
 			// Printer-Dialog braucht tempor"aren Printer
 			SfxPrinter* pDlgPrinter = pPrinter->Clone();
 #endif	// USE_JAVA
