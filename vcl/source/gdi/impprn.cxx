@@ -33,7 +33,7 @@
  *  MA  02111-1307  USA
  *  
  *  =================================================
- *  Modified September 2003 by Patrick Luby. SISSL Removed. NeoOffice is
+ *  Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
  *  distributed under GPL only under modification term 3 of the LGPL.
  *
  *  Contributor(s): _______________________________________
@@ -256,7 +256,33 @@ void ImplQPrinter::ImplPrintMtf( GDIMetaFile& rMtf, long nMaxBmpDPIX, long nMaxB
         }
         else if( nType == META_TRANSPARENT_ACTION )
 		{
-			DrawPolyPolygon( ( (MetaTransparentAction*) pAct )->GetPolyPolygon() );
+            MetaTransparentAction* 	pTransAct = static_cast<MetaTransparentAction*>(pAct);
+            USHORT					nTransparency( pTransAct->GetTransparence() );
+
+            // #i10613# Respect transparency for draw color
+            if( nTransparency )
+            {
+                Push( PUSH_LINECOLOR|PUSH_FILLCOLOR );
+
+                // assume white background for alpha blending
+                Color aLineColor( GetLineColor() );
+                aLineColor.SetRed( static_cast<UINT8>( (255L*nTransparency + (100L - nTransparency)*aLineColor.GetRed()) / 100L ) );
+                aLineColor.SetGreen( static_cast<UINT8>( (255L*nTransparency + (100L - nTransparency)*aLineColor.GetGreen()) / 100L ) );
+                aLineColor.SetBlue( static_cast<UINT8>( (255L*nTransparency + (100L - nTransparency)*aLineColor.GetBlue()) / 100L ) );
+                SetLineColor( aLineColor );
+
+                Color aFillColor( GetFillColor() );
+                aFillColor.SetRed( static_cast<UINT8>( (255L*nTransparency + (100L - nTransparency)*aFillColor.GetRed()) / 100L ) );
+                aFillColor.SetGreen( static_cast<UINT8>( (255L*nTransparency + (100L - nTransparency)*aFillColor.GetGreen()) / 100L ) );
+                aFillColor.SetBlue( static_cast<UINT8>( (255L*nTransparency + (100L - nTransparency)*aFillColor.GetBlue()) / 100L ) );
+                SetFillColor( aFillColor );
+            }
+
+			DrawPolyPolygon( pTransAct->GetPolyPolygon() );
+
+            if( nTransparency )
+                Pop();
+
 			bExecuted = sal_True;
 		}
 		else if( nType == META_FLOATTRANSPARENT_ACTION )
@@ -495,8 +521,7 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 			if ( mbAborted )
 				break;
 
-			if ( mpJobGraphics )
-				ImplPrintMtf( aMtf, nMaxBmpDPIX, nMaxBmpDPIY );
+			ImplPrintMtf( aMtf, nMaxBmpDPIX, nMaxBmpDPIY );
 
 			if( !mbAborted )
 				EndPage();
