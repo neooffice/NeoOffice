@@ -37,18 +37,23 @@
 PATH=/usr/bin:/bin:/usr/sbin:/sbin
 export PATH
 
-# Check that the BSD tools are installed
-if [ ! -d "/Library/Receipts/BSD.pkg" ] ; then
-	exit 99;
-fi
+commands="awk cat chmod chown find grep ln mkdir mv open pax printf rm sed sort touch uname"
+
+# Check that the required BSD command are installed
+for i in $commands ; do
+	if [ ! -x "/usr/bin/$i" -a ! -x "/bin/$i" -a ! -x "/usr/sbin/$i" -a ! -x "/sbin/$i" ] ; then
+	    	# Return 96 + 16 if a command is not found
+		exit 112;
+	fi
+done
 
 # Check that the user is running Mac OS X 10.2 or higher
 if [ -x "/usr/bin/sw_vers" ] ; then
-    # Return 96 + 3 if it is a bad version
+    # Return 96 + 17 if it is a bad version
     version=`/usr/bin/sw_vers | grep '^ProductVersion:' | awk '{ print $2 }'`
     case "$version" in
-        10.[01]) exit 99;;
-        10.[01].*) exit 99;;
+        10.[01]) exit 113;;
+        10.[01].*) exit 113;;
     esac
 fi
 

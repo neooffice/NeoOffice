@@ -1,0 +1,1859 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<oor:component-data xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" oor:name="Common" oor:package="org.openoffice.Office">
+ <node oor:name="View">
+  <node oor:name="Localisation">
+   <prop oor:name="AutoMnemonic">
+    <value xml:lang="en-US">true</value>
+   </prop>
+   <prop oor:name="DialogScale">
+    <value xml:lang="en-US">10</value>
+   </prop>
+  </node>
+  <node oor:name="Dialog">
+   <prop oor:name="MiddleMouseButton" oor:type="xs:short">
+    <value>2</value>
+   </prop>
+  </node>
+ </node>
+ <node oor:name="ExternalApps">
+  <prop oor:name="http" oor:op="replace" oor:type="xs:string">
+   <value>/usr/bin/open</value>
+  </prop>
+  <prop oor:name="https" oor:op="replace" oor:type="xs:string">
+   <value>/usr/bin/open</value>
+  </prop>
+  <prop oor:name="ftp" oor:op="replace" oor:type="xs:string">
+   <value>/usr/bin/open</value>
+  </prop>
+  <prop oor:name="file" oor:op="replace" oor:type="xs:string">
+   <value>/usr/bin/open</value>
+  </prop>
+  <prop oor:name="mailto" oor:op="replace" oor:type="xs:string">
+   <value>/usr/bin/open</value>
+  </prop>
+ </node>
+ <node oor:name="ExternalMailer">
+  <node oor:name="Profiles">
+   <node oor:name="Mail" oor:op="replace">
+    <node oor:name="FormatStrings">
+     <prop oor:name="base">
+      <value>-a Mail %s</value>
+     </prop>
+     <prop oor:name="from">
+      <value/>
+     </prop>
+     <prop oor:name="to">
+      <value/>
+     </prop>
+     <prop oor:name="cc">
+      <value/>
+     </prop>
+     <prop oor:name="bcc">
+      <value/>
+     </prop>
+     <prop oor:name="subject">
+      <value/>
+     </prop>
+     <prop oor:name="attachment">
+      <value>%s</value>
+     </prop>
+     <prop oor:name="body">
+      <value/>
+     </prop>
+    </node>
+    <node oor:name="EnumDelimiters">
+     <prop oor:name="base">
+      <value/>
+     </prop>
+     <prop oor:name="cc">
+      <value/>
+     </prop>
+     <prop oor:name="bcc">
+      <value/>
+     </prop>
+     <prop oor:name="attachment">
+      <value> --attach </value>
+     </prop>
+    </node>
+   </node>
+   <node oor:name="Entourage" oor:op="replace">
+    <node oor:name="FormatStrings">
+     <prop oor:name="base">
+      <value>-a 'Microsoft Entourage' %s</value>
+     </prop>
+     <prop oor:name="from">
+      <value/>
+     </prop>
+     <prop oor:name="to">
+      <value/>
+     </prop>
+     <prop oor:name="cc">
+      <value/>
+     </prop>
+     <prop oor:name="bcc">
+      <value/>
+     </prop>
+     <prop oor:name="subject">
+      <value/>
+     </prop>
+     <prop oor:name="attachment">
+      <value>%s</value>
+     </prop>
+     <prop oor:name="body">
+      <value/>
+     </prop>
+    </node>
+    <node oor:name="EnumDelimiters">
+     <prop oor:name="base">
+      <value/>
+     </prop>
+     <prop oor:name="cc">
+      <value/>
+     </prop>
+     <prop oor:name="bcc">
+      <value/>
+     </prop>
+     <prop oor:name="attachment">
+      <value> --attach </value>
+     </prop>
+    </node>
+   </node>
+   <node oor:name="Eudora" oor:op="replace">
+    <node oor:name="FormatStrings">
+     <prop oor:name="base">
+      <value>-a Eudora %s</value>
+     </prop>
+     <prop oor:name="from">
+      <value/>
+     </prop>
+     <prop oor:name="to">
+      <value/>
+     </prop>
+     <prop oor:name="cc">
+      <value/>
+     </prop>
+     <prop oor:name="bcc">
+      <value/>
+     </prop>
+     <prop oor:name="subject">
+      <value/>
+     </prop>
+     <prop oor:name="attachment">
+      <value>%s</value>
+     </prop>
+     <prop oor:name="body">
+      <value/>
+     </prop>
+    </node>
+    <node oor:name="EnumDelimiters">
+     <prop oor:name="base">
+      <value/>
+     </prop>
+     <prop oor:name="cc">
+      <value/>
+     </prop>
+     <prop oor:name="bcc">
+      <value/>
+     </prop>
+     <prop oor:name="attachment">
+      <value> --attach </value>
+     </prop>
+    </node>
+   </node>
+  </node>
+  <prop oor:name="CommandProfile" oor:type="xs:string">
+   <value>Mail</value>
+  </prop>
+  <prop oor:name="Program" oor:type="xs:string">
+   <value>/usr/bin/open</value>
+  </prop>
+  <prop oor:name="UseDefaultMailer" oor:type="xs:boolean">
+   <value>false</value>
+  </prop>
+ </node>
+ <node oor:name="Startup">
+  <node oor:name="RunOnce">
+   <node oor:name="AddressSourcePilot" oor:op="replace">
+    <prop oor:name="ServiceName">
+     <value>com.sun.star.ui.dialogs.AddressBookSourcePilot</value>
+    </prop>
+    <prop oor:name="UserInteraction">
+     <value>true</value>
+    </prop>
+    <prop oor:name="AllowAsync">
+     <value>false</value>
+    </prop>
+   </node>
+  </node>
+ </node>
+ <node oor:name="Menus">
+  <node oor:name="New">
+   <node oor:name="m11" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value xsi:nil="true"/>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_default</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>private:separator</value>
+    </prop>
+   </node>
+   <node oor:name="m12" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value>private:image/3242</value>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_self</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="af">Sjablone e~n dokumente</value>
+     <value xml:lang="ar">القوالب والمستندات</value>
+     <value xml:lang="ca">P~lantilla de document</value>
+     <value xml:lang="cs">Šablony a dokumenty</value>
+     <value xml:lang="cy">~Templedi a Dogfennau</value>
+     <value xml:lang="da">~Skabeloner og dokumenter</value>
+     <value xml:lang="de">Vorl~agen und Dokumente</value>
+     <value xml:lang="el">Πρότυπα ~και έγγραφα</value>
+     <value xml:lang="en-US">Templates a~nd Documents</value>
+     <value xml:lang="es">~Plantillas y documentos</value>
+     <value xml:lang="et">Mallid ja dokume~ndid</value>
+     <value xml:lang="eu">Txa~ntiloiak eta dokumentuak</value>
+     <value xml:lang="fi">~Mallit ja asiakirjat</value>
+     <value xml:lang="fr">Modè~les et documents</value>
+     <value xml:lang="gl">Documentos-~modelo e documentos</value>
+     <value xml:lang="he">מסמכים ותבניות</value>
+     <value xml:lang="hi-IN">Templates a~nd Documents</value>
+     <value xml:lang="hu">Sab~lonok és dokumentumok</value>
+     <value xml:lang="it">Mode~lli e documenti</value>
+     <value xml:lang="ja">テンプレートとドキュメント(~N)</value>
+     <value xml:lang="kn-IN">ಸಿದ್ಧವಿನ್ಯಾಸ ಪುಟಗಳು ಮತ್ತು ದಸ್ತಾವೇಜುಗಳು</value>
+     <value xml:lang="ko">서식 파일 및 문서(~N)</value>
+     <value xml:lang="lt">(arba atverti) ~dokumentą</value>
+     <value xml:lang="nb">~Maler og dokumenter</value>
+     <value xml:lang="nl">~Sjablonen en documenten</value>
+     <value xml:lang="nn">~Malar og dokument</value>
+     <value xml:lang="ns">Di-template l~e Ditokumente</value>
+     <value xml:lang="pl">Szablo~ny i dokumenty</value>
+     <value xml:lang="pt-BR">Modelos e Docume~ntos</value>
+     <value xml:lang="ru">Шаблоны и документы</value>
+     <value xml:lang="sk">Šablóny a Dokume~nty</value>
+     <value xml:lang="sl">Predloge i~n dokumenti</value>
+     <value xml:lang="sv">M~allar och dokument</value>
+     <value xml:lang="th">แม่แบบแ~ละเอกสาร</value>
+     <value xml:lang="tn">Templates l~e Ditlankana</value>
+     <value xml:lang="tr">~Şablonlar ve Belgeler...</value>
+     <value xml:lang="zh-CN">样式和文挡(~N)</value>
+     <value xml:lang="zh-TW">樣式和文件(~N)</value>
+     <value xml:lang="zu">Izigqwembe ka~nye Noshicilelo</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>slot:5500</value>
+    </prop>
+   </node>
+   <node oor:name="m4" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value xsi:nil="true"/>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_default</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>private:separator</value>
+    </prop>
+   </node>
+   <node oor:name="m7" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value xsi:nil="true"/>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_default</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>private:separator</value>
+    </prop>
+   </node>
+   <node oor:name="m0" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value xsi:nil="true"/>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_default</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="af">~Teksdokument</value>
+     <value xml:lang="ar">مستند نص</value>
+     <value xml:lang="ca">Document de ~text</value>
+     <value xml:lang="cs">Textový dokument</value>
+     <value xml:lang="cy">~Dogfen Testun</value>
+     <value xml:lang="da">~Tekstdokument</value>
+     <value xml:lang="de">~Textdokument</value>
+     <value xml:lang="el">Έ~γγραφο κειμένου</value>
+     <value xml:lang="en-US">~Text Document</value>
+     <value xml:lang="es">~Documento de texto</value>
+     <value xml:lang="et">~Tekstidokument</value>
+     <value xml:lang="eu">~Testu-dokumentua</value>
+     <value xml:lang="fi">~Tekstiasiakirja</value>
+     <value xml:lang="fr">Texte</value>
+     <value xml:lang="gl">~Documento de texto</value>
+     <value xml:lang="he">מסמך כיתוב</value>
+     <value xml:lang="hi-IN">~Text Document</value>
+     <value xml:lang="hu">~Szöveges dokumentum</value>
+     <value xml:lang="it">~Documento di testo</value>
+     <value xml:lang="ja">文書ドキュメント(~T)</value>
+     <value xml:lang="kn-IN">ಪಠ್ಯ ದಸ್ತಾವೇಜು</value>
+     <value xml:lang="ko">텍스트 문서(~T)</value>
+     <value xml:lang="lt">~tekstinį dokumentą</value>
+     <value xml:lang="nb">~Tekstdokument</value>
+     <value xml:lang="nl">~Tekstdocument</value>
+     <value xml:lang="nn">~Tekstdokument</value>
+     <value xml:lang="ns">~Tokumente ya Sengwalwa</value>
+     <value xml:lang="pl">Dokument ~tekstowy</value>
+     <value xml:lang="pt-BR">Documento de ~Texto</value>
+     <value xml:lang="ru">Текстовый документ</value>
+     <value xml:lang="sk">~Textový dokument</value>
+     <value xml:lang="sl">Dokument z ~besedilom</value>
+     <value xml:lang="sv">~Textdokument</value>
+     <value xml:lang="th">เอกสาร~ข้อความ</value>
+     <value xml:lang="tn">~Kago Setlankana</value>
+     <value xml:lang="tr">~Metin Belgesi</value>
+     <value xml:lang="zh-CN">文本文档(~T)</value>
+     <value xml:lang="zh-TW">文字文件(~T)</value>
+     <value xml:lang="zu">~Ushicilelo Lombhalo</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>private:factory/swriter</value>
+    </prop>
+   </node>
+   <node oor:name="m5" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value xsi:nil="true"/>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_default</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="af">~HTML-dokument</value>
+     <value xml:lang="ar">~مستند HTML</value>
+     <value xml:lang="ca">Document ~HTML</value>
+     <value xml:lang="cs">HTML dokument</value>
+     <value xml:lang="cy">Dogfen ~HTML</value>
+     <value xml:lang="da">~HTML-dokument</value>
+     <value xml:lang="de">~HTML-Dokument</value>
+     <value xml:lang="el">Έγγραφο ~HTML</value>
+     <value xml:lang="en-US">~HTML Document</value>
+     <value xml:lang="es">Documento ~HTML</value>
+     <value xml:lang="et">~HTML-dokument</value>
+     <value xml:lang="eu">~HTML dokumentua</value>
+     <value xml:lang="fi">~HTML-asiakirja</value>
+     <value xml:lang="fr">Document ~HTML</value>
+     <value xml:lang="gl">Documento ~HTML</value>
+     <value xml:lang="he">מסמך HTML</value>
+     <value xml:lang="hi-IN">~HTML Document</value>
+     <value xml:lang="hu">~HTML-dokumentum</value>
+     <value xml:lang="it">Documento ~HTML</value>
+     <value xml:lang="ja">~HTML 形式ドキュメント</value>
+     <value xml:lang="kn-IN">HTML ದಸ್ತಾವೇಜು</value>
+     <value xml:lang="ko">HTML 문서(~H)</value>
+     <value xml:lang="lt">~tinklalapį</value>
+     <value xml:lang="nb">~HTML-dokument</value>
+     <value xml:lang="nl">~HTML-Document</value>
+     <value xml:lang="nn">~HTML-dokument</value>
+     <value xml:lang="ns">~Tokumente ya HTML</value>
+     <value xml:lang="pl">Dokument ~HTML</value>
+     <value xml:lang="pt-BR">Documento ~HTML</value>
+     <value xml:lang="ru">Документ ~HTML</value>
+     <value xml:lang="sk">~HTML dokument</value>
+     <value xml:lang="sl">Dokument ~HTML</value>
+     <value xml:lang="sv">~HTML-dokument</value>
+     <value xml:lang="th">เอกสาร ~HTML</value>
+     <value xml:lang="tn">~HTML Setlankana</value>
+     <value xml:lang="tr">~HTML Belgesi</value>
+     <value xml:lang="zh-CN">~HTML 文档</value>
+     <value xml:lang="zh-TW">~HTML 文件</value>
+     <value xml:lang="zu">~Ushicilelo lwe-HTML</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>private:factory/swriter/web</value>
+    </prop>
+   </node>
+   <node oor:name="m6" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value xsi:nil="true"/>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_default</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="af">M~eesterdokument</value>
+     <value xml:lang="cs">Hlavní dokument</value>
+     <value xml:lang="cy">~Prif Ddogfen</value>
+     <value xml:lang="et">~Põhidokument</value>
+     <value xml:lang="he">מסמך אב</value>
+     <value xml:lang="kn-IN">ಮುಖ್ಯ ದಸ್ತಾವೇಜು</value>
+     <value xml:lang="lt">~ryšių dokumentą</value>
+     <value xml:lang="nb">~Hoveddokument</value>
+     <value xml:lang="nn">~Hovuddokument</value>
+     <value xml:lang="ns">T~okumente e Kgolo</value>
+     <value xml:lang="sk">Hl~avný­ dokument</value>
+     <value xml:lang="sl">Gl~avni dokument</value>
+     <value xml:lang="tn">Kg~olo Setlankana</value>
+     <value xml:lang="zu">Ushicilelo Olukhu~lu</value>
+     <value xml:lang="ar">م~ستند رئيسى</value>
+     <value xml:lang="ca">Document ~mestre</value>
+     <value xml:lang="da">Hoved~dokument</value>
+     <value xml:lang="de">~Globaldokument</value>
+     <value xml:lang="el">~Πρωτεύον έγγραφο</value>
+     <value xml:lang="en-US">M~aster Document</value>
+     <value xml:lang="es">Documento ma~estro</value>
+     <value xml:lang="eu">Dokumentu m~aisua</value>
+     <value xml:lang="fi">Pe~rusasiakirja</value>
+     <value xml:lang="fr">~Document maître</value>
+     <value xml:lang="gl">Documento m~estre</value>
+     <value xml:lang="hi-IN">M~aster Document</value>
+     <value xml:lang="hu">~Fődokumentum</value>
+     <value xml:lang="it">Documento ~master</value>
+     <value xml:lang="ja">マスタードキュメント(~A)</value>
+     <value xml:lang="ko">마스터 문서(~A)</value>
+     <value xml:lang="nl">~Masterdocument</value>
+     <value xml:lang="pl">Dokument ~główny</value>
+     <value xml:lang="pt-BR">Documento M~estre</value>
+     <value xml:lang="ru">Составной документ</value>
+     <value xml:lang="sv">~Samlingsdokument</value>
+     <value xml:lang="th">เอกสารห~ลัก</value>
+     <value xml:lang="tr">~Ana Belge</value>
+     <value xml:lang="zh-CN">主控文档(~A)</value>
+     <value xml:lang="zh-TW">主控文件(~A)</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>private:factory/swriter/GlobalDocument</value>
+    </prop>
+   </node>
+   <node oor:name="m10" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value>private:image/3163</value>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_default</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="af">V~isitekaartjies</value>
+     <value xml:lang="ar">ك~رت العمل</value>
+     <value xml:lang="ca">Targeta de ~visita</value>
+     <value xml:lang="cs">Vizitky</value>
+     <value xml:lang="cy">C~ardiau Busnes</value>
+     <value xml:lang="da">~Visitkort</value>
+     <value xml:lang="de">~Visitenkarten</value>
+     <value xml:lang="el">Επ~αγγελματικές κάρτες</value>
+     <value xml:lang="en-US">B~usiness Cards</value>
+     <value xml:lang="es">~Tarjetas de visita</value>
+     <value xml:lang="et">~Visiitkaardid</value>
+     <value xml:lang="eu">Bisita-t~xartelak</value>
+     <value xml:lang="fi">Käynti~kortit</value>
+     <value xml:lang="fr">Cartes de ~visite</value>
+     <value xml:lang="gl">~Tarxetas de visita</value>
+     <value xml:lang="he">כרטיסי ביקור</value>
+     <value xml:lang="hi-IN">B~usiness Cards</value>
+     <value xml:lang="hu">~Névjegykártyák</value>
+     <value xml:lang="it">Biglietti da ~visita</value>
+     <value xml:lang="ja">名刺(~U)</value>
+     <value xml:lang="kn-IN">ವ್ಯಾಪಾರ ಕಾರ್ಡ್‌ಗಳು</value>
+     <value xml:lang="ko">명함(~U)</value>
+     <value xml:lang="lt">~vizitinę kortelę</value>
+     <value xml:lang="nb">~Visittkort</value>
+     <value xml:lang="nl">~Visitekaartjes</value>
+     <value xml:lang="nn">~Visittkort</value>
+     <value xml:lang="ns">D~ikarata tša Kgwebo</value>
+     <value xml:lang="pl">~Wizytówki</value>
+     <value xml:lang="pt-BR">Cartões de ~Visita</value>
+     <value xml:lang="ru">Визитные карточки</value>
+     <value xml:lang="sk">~Vizitky</value>
+     <value xml:lang="sl">V~izitke</value>
+     <value xml:lang="sv">~Visitkort</value>
+     <value xml:lang="th">~นามบัตร</value>
+     <value xml:lang="tn">K~gwebo Dikarata</value>
+     <value xml:lang="tr">~Kartvizitler</value>
+     <value xml:lang="zh-CN">名片(~U)</value>
+     <value xml:lang="zh-TW">名片(~U)</value>
+     <value xml:lang="zu">Amakhadi ~Ebhizinisi</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>private:factory/swriter?slot=21052</value>
+    </prop>
+   </node>
+   <node oor:name="m9" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value>private:image/3163</value>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_default</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="af">~Etikette</value>
+     <value xml:lang="ar">~تسميات توضيحية</value>
+     <value xml:lang="ca">Et~iquetes</value>
+     <value xml:lang="cs">Štítky</value>
+     <value xml:lang="cy">~Labeli</value>
+     <value xml:lang="da">Et~iketter</value>
+     <value xml:lang="de">Et~iketten</value>
+     <value xml:lang="el">Ε~τικέτες</value>
+     <value xml:lang="en-US">~Labels</value>
+     <value xml:lang="es">Etiqu~etas</value>
+     <value xml:lang="et">~Sildid</value>
+     <value xml:lang="eu">~Etiketak</value>
+     <value xml:lang="fi">~Osoitetarrat</value>
+     <value xml:lang="fr">Éti~quettes</value>
+     <value xml:lang="gl">Etiqu~etas</value>
+     <value xml:lang="he">תוויות</value>
+     <value xml:lang="hi-IN">~Labels</value>
+     <value xml:lang="hu">~Címkék</value>
+     <value xml:lang="it">Et~ichette</value>
+     <value xml:lang="ja">ラベル書き(~L)</value>
+     <value xml:lang="kn-IN">ಗುರುತುಪಟ್ಟಿಗಳು</value>
+     <value xml:lang="ko">레이블(~L)</value>
+     <value xml:lang="lt">~etiketę</value>
+     <value xml:lang="nb">~Etiketter</value>
+     <value xml:lang="nl">~Etiketten</value>
+     <value xml:lang="nn">~Etikettar</value>
+     <value xml:lang="ns">~Maina</value>
+     <value xml:lang="pl">~Etykiety</value>
+     <value xml:lang="pt-BR">~Etiquetas</value>
+     <value xml:lang="ru">Этикетки...</value>
+     <value xml:lang="sk">Š~títky</value>
+     <value xml:lang="sl">~Nalepke</value>
+     <value xml:lang="sv">Et~iketter</value>
+     <value xml:lang="th">~ป้ายชื่อ</value>
+     <value xml:lang="tn">~Dileible</value>
+     <value xml:lang="tr">~Etiketler</value>
+     <value xml:lang="zh-CN">标签(~L)</value>
+     <value xml:lang="zh-TW">貼標(~L)</value>
+     <value xml:lang="zu">~Amalebula</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>private:factory/swriter?slot=21051</value>
+    </prop>
+   </node>
+   <node oor:name="m1" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value xsi:nil="true"/>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_default</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="af">~Ontledingstaat</value>
+     <value xml:lang="ar">~جدول بيانات</value>
+     <value xml:lang="ca">Full de ~càlcul</value>
+     <value xml:lang="cs">Tabulka</value>
+     <value xml:lang="cy">~Taenlen</value>
+     <value xml:lang="da">~Regneark</value>
+     <value xml:lang="de">Tab~ellendokument</value>
+     <value xml:lang="el">Υπολογιστικό ~φύλλο</value>
+     <value xml:lang="en-US">~Spreadsheet</value>
+     <value xml:lang="es">Hoja de ~cálculo</value>
+     <value xml:lang="et">Arvutu~stabel</value>
+     <value xml:lang="eu">~Kalkulu-orria</value>
+     <value xml:lang="fi">~Laskentataulukko</value>
+     <value xml:lang="fr">~Classeur</value>
+     <value xml:lang="gl">Folla de ~cálculo</value>
+     <value xml:lang="he">גליון עבודה</value>
+     <value xml:lang="hi-IN">~Spreadsheet</value>
+     <value xml:lang="hu">~Munkafüzet</value>
+     <value xml:lang="it">~Foglio elettronico</value>
+     <value xml:lang="ja">表計算ドキュメント(~S)</value>
+     <value xml:lang="kn-IN">ಲೆಕ್ಕಪತ್ರಹಾಳೆ</value>
+     <value xml:lang="ko">스프레드시트(~S)</value>
+     <value xml:lang="lt">~skaičiuoklės dokumentą</value>
+     <value xml:lang="nb">~Regneark</value>
+     <value xml:lang="nl">~Werkbladdocument</value>
+     <value xml:lang="nn">~Rekneark</value>
+     <value xml:lang="ns">~Pampiri ya go anega</value>
+     <value xml:lang="pl">~Arkusz kalkulacyjny</value>
+     <value xml:lang="pt-BR">~Planilha</value>
+     <value xml:lang="ru">Электронную таблицу</value>
+     <value xml:lang="sk">Tabuľ~ka</value>
+     <value xml:lang="sl">P~reglednica</value>
+     <value xml:lang="sv">Tab~elldokument</value>
+     <value xml:lang="th">~Spreadsheet</value>
+     <value xml:lang="tn">~Letlharephatlalalo</value>
+     <value xml:lang="tr">~Hesap Tablosu</value>
+     <value xml:lang="zh-CN">工作表文档(~S)</value>
+     <value xml:lang="zh-TW">工作表文件(~S)</value>
+     <value xml:lang="zu">~Ikhasi lokubala</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>private:factory/scalc</value>
+    </prop>
+   </node>
+   <node oor:name="m2" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value xsi:nil="true"/>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_default</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="af">~Voorlegging</value>
+     <value xml:lang="ar">عرض ت~قديمي</value>
+     <value xml:lang="ca">~Presentació</value>
+     <value xml:lang="cs">Prezentace</value>
+     <value xml:lang="cy">~Cyflwyniad</value>
+     <value xml:lang="da">~Præsentation</value>
+     <value xml:lang="de">~Präsentation</value>
+     <value xml:lang="el">Πα~ρουσίαση</value>
+     <value xml:lang="en-US">~Presentation</value>
+     <value xml:lang="es">~Presentación</value>
+     <value xml:lang="et">~Esitlus</value>
+     <value xml:lang="eu">~Aurkezpena</value>
+     <value xml:lang="fi">~Esitys</value>
+     <value xml:lang="fr">~Présentation</value>
+     <value xml:lang="gl">~Presentación</value>
+     <value xml:lang="he">מצגת</value>
+     <value xml:lang="hi-IN">~Presentation</value>
+     <value xml:lang="hu">~Bemutató</value>
+     <value xml:lang="it">~Presentazione</value>
+     <value xml:lang="ja">プレゼンテーション(~P)</value>
+     <value xml:lang="kn-IN">ಪ್ರಸ್ತುತಿ</value>
+     <value xml:lang="ko">프레젠테이션(~P)</value>
+     <value xml:lang="lt">~pateiktį</value>
+     <value xml:lang="nb">~Presentasjon</value>
+     <value xml:lang="nl">~Presentatie</value>
+     <value xml:lang="nn">~Presentasjon</value>
+     <value xml:lang="ns">~Tlhagišo</value>
+     <value xml:lang="pl">~Prezentacja</value>
+     <value xml:lang="pt-BR">A~presentação</value>
+     <value xml:lang="ru">Презентацию...</value>
+     <value xml:lang="sk">~Prezentácia</value>
+     <value xml:lang="sl">~Predstavitev</value>
+     <value xml:lang="sv">~Presentation</value>
+     <value xml:lang="th">โปรแกรม~การนำเสนอ</value>
+     <value xml:lang="tn">~Pontsho</value>
+     <value xml:lang="tr">~Sunu</value>
+     <value xml:lang="zh-CN">演示文稿(~P)</value>
+     <value xml:lang="zh-TW">簡報(~P)</value>
+     <value xml:lang="zu">~Ukunikezwa kolwazi</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>private:factory/simpress?slot=10425</value>
+    </prop>
+   </node>
+   <node oor:name="m3" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value xsi:nil="true"/>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_default</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="af">~Tekening</value>
+     <value xml:lang="ca">~Dibuix</value>
+     <value xml:lang="cs">Kresba</value>
+     <value xml:lang="cy">Ll~uniadu</value>
+     <value xml:lang="et">~Joonistus</value>
+     <value xml:lang="eu">~Marrazkia</value>
+     <value xml:lang="fi">~Piirros</value>
+     <value xml:lang="gl">Deb~uxo</value>
+     <value xml:lang="he">ציור</value>
+     <value xml:lang="hi-IN">~Drawing</value>
+     <value xml:lang="hu">~Rajz</value>
+     <value xml:lang="kn-IN">ಚಿತ್ರ ರಚನೆ</value>
+     <value xml:lang="lt">~grafikos dokumentą</value>
+     <value xml:lang="nb">~Tegning</value>
+     <value xml:lang="nn">~Teikning</value>
+     <value xml:lang="ns">~Go thala</value>
+     <value xml:lang="pt-BR">~Desenho</value>
+     <value xml:lang="sk">Kres~ba</value>
+     <value xml:lang="sl">~Risba</value>
+     <value xml:lang="th">~วาด</value>
+     <value xml:lang="tn">~Moralo</value>
+     <value xml:lang="zu">~Ukudweba</value>
+     <value xml:lang="ar">رسم</value>
+     <value xml:lang="da">Te~gning</value>
+     <value xml:lang="de">~Zeichnung</value>
+     <value xml:lang="el">Σ~χέδιο</value>
+     <value xml:lang="en-US">~Drawing</value>
+     <value xml:lang="es">Dib~ujo</value>
+     <value xml:lang="fr">D~essin</value>
+     <value xml:lang="it">Dis~egno</value>
+     <value xml:lang="ja">図形描画(~D)</value>
+     <value xml:lang="ko">그리기(~D)</value>
+     <value xml:lang="nl">Te~kening</value>
+     <value xml:lang="pl">~Rysunek</value>
+     <value xml:lang="ru">Рисунок</value>
+     <value xml:lang="sv">Te~ckning</value>
+     <value xml:lang="tr">~Çizim</value>
+     <value xml:lang="zh-CN">绘图(~D)</value>
+     <value xml:lang="zh-TW">繪圖(~D)</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>private:factory/sdraw</value>
+    </prop>
+   </node>
+   <node oor:name="m8" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value xsi:nil="true"/>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_default</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="af">F~ormule</value>
+     <value xml:lang="ar">صيغة</value>
+     <value xml:lang="ca">Fór~mula</value>
+     <value xml:lang="cs">Vzorec</value>
+     <value xml:lang="cy">~Fformiwla</value>
+     <value xml:lang="da">~Formel</value>
+     <value xml:lang="de">F~ormel</value>
+     <value xml:lang="el">Τύπ~ος</value>
+     <value xml:lang="et">V~alem</value>
+     <value xml:lang="eu">F~ormula</value>
+     <value xml:lang="fi">K~aava</value>
+     <value xml:lang="fr">F~ormule</value>
+     <value xml:lang="gl">~Fórmula</value>
+     <value xml:lang="he">נוסחה</value>
+     <value xml:lang="hi-IN">F~ormula</value>
+     <value xml:lang="hu">~Képlet</value>
+     <value xml:lang="ja">数式(~O)</value>
+     <value xml:lang="kn-IN">ಸೂತ್ರ</value>
+     <value xml:lang="ko">수식(~O)</value>
+     <value xml:lang="lt">~matematinį dokumentą</value>
+     <value xml:lang="nb">~Formel</value>
+     <value xml:lang="nl">~Formule</value>
+     <value xml:lang="nn">~Formel</value>
+     <value xml:lang="ns">F~omula</value>
+     <value xml:lang="pl">F~ormuła</value>
+     <value xml:lang="pt-BR">~Fórmula</value>
+     <value xml:lang="ru">Формулу</value>
+     <value xml:lang="sk">Vz~orec</value>
+     <value xml:lang="sl">F~ormula</value>
+     <value xml:lang="sv">F~ormel</value>
+     <value xml:lang="th">สู~ตร</value>
+     <value xml:lang="tn">Mo~tswako</value>
+     <value xml:lang="tr">F~ormül</value>
+     <value xml:lang="zh-CN">公式(~O)</value>
+     <value xml:lang="zh-TW">公式(~O)</value>
+     <value xml:lang="zu">Indlela yokwe~nza</value>
+     <value xml:lang="en-US">F~ormula</value>
+     <value xml:lang="es">~Fórmula</value>
+     <value xml:lang="it">F~ormula</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>private:factory/smath</value>
+    </prop>
+   </node>
+  </node>
+  <node oor:name="Wizard">
+   <node oor:name="m10" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value xsi:nil="true"/>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_self</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>private:separator</value>
+    </prop>
+   </node>
+   <node oor:name="m11" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value>private:image/3216</value>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_self</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="af">Dokument~omskakelaar...</value>
+     <value xml:lang="ar">~محول المستند...</value>
+     <value xml:lang="ca">Conversor de documents...</value>
+     <value xml:lang="cs">Konvertor dokumentů...</value>
+     <value xml:lang="cy">T~roswr Dogfennau...</value>
+     <value xml:lang="da">Dokument~konvertering...</value>
+     <value xml:lang="de">Dokumenten-~Konverter...</value>
+     <value xml:lang="el">Μ~ετατροπέας εγγράφων...</value>
+     <value xml:lang="en-US">Document ~Converter...</value>
+     <value xml:lang="es">~Convertidor de documentos...</value>
+     <value xml:lang="et">Dokumendi ~teisendaja...</value>
+     <value xml:lang="eu">Dokumentu-~bihurtzailea...</value>
+     <value xml:lang="fi">~Asiakirjamuunnin...</value>
+     <value xml:lang="fr">Converti~sseur de documents...</value>
+     <value xml:lang="gl">~Convertedor de documentos...</value>
+     <value xml:lang="he">המרת מסמכים...</value>
+     <value xml:lang="hi-IN">Document ~Converter...</value>
+     <value xml:lang="hu">Dokumentum~konvertáló...</value>
+     <value xml:lang="it">Co~nvertitore di documenti...</value>
+     <value xml:lang="ja">ドキュメント変換(~C)...</value>
+     <value xml:lang="kn-IN">ದಸ್ತಾವೇಜು ಪರಿವರ್ತಕ</value>
+     <value xml:lang="ko">문서 변환기(~C)...</value>
+     <value xml:lang="lt">dokumentų ~konvertavimo...</value>
+     <value xml:lang="nb">~Dokumentkonvertering ...</value>
+     <value xml:lang="nl">~Documenten-converter...</value>
+     <value xml:lang="nn">~Dokumentkonvertering ...</value>
+     <value xml:lang="ns">Mofetodi wa ~Tokumente...</value>
+     <value xml:lang="pl">~Konwerter dokumentów...</value>
+     <value xml:lang="pt-BR">~Conversor de Documento...</value>
+     <value xml:lang="ru">Конвертор документов...</value>
+     <value xml:lang="sk">~Konvertor dokumentov...</value>
+     <value xml:lang="sl">Pre~tvornik dokumentov...</value>
+     <value xml:lang="sv">Dokument~konverterare...</value>
+     <value xml:lang="th">ตัวแ~ปลงเอกสาร...</value>
+     <value xml:lang="tn">Setlankana ~Sefetoledi...</value>
+     <value xml:lang="tr">Belge ~Dönüştürücüsü...</value>
+     <value xml:lang="zh-CN">文档转换器(~C)...</value>
+     <value xml:lang="zh-TW">文件轉換器(~C)...</value>
+     <value xml:lang="zu">Umguquli ~Woshicilelo...</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>macro:///ImportWizard.Main.Main</value>
+    </prop>
+   </node>
+   <node oor:name="m13" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value xsi:nil="true"/>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_self</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>private:separator</value>
+    </prop>
+   </node>
+   <node oor:name="m14" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value>private:image/3216</value>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_self</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="af">StarOffice 5.2-databasisintrek...</value>
+     <value xml:lang="ar">استيراد قاعدة بيانات StarOffice 5.2...</value>
+     <value xml:lang="ca">Importa base de dades d&apos;StarOffice 5.2...</value>
+     <value xml:lang="cs">Import databáze StarOffice 5.2...</value>
+     <value xml:lang="cy">Mewnforio Cronfa Ddata StarOffice</value>
+     <value xml:lang="da">StarOffice 5.2-databaseimport...</value>
+     <value xml:lang="de">StarOffice 5.2 Datenbanken-Import...</value>
+     <value xml:lang="el">Εισαγωγή βάσης δεδομένων του StarOffice 5.2...</value>
+     <value xml:lang="en-US">StarOffice 5.2 Database Import...</value>
+     <value xml:lang="es">Importe de bases de datos de StarOffice 5.2...</value>
+     <value xml:lang="et">StarOffice 5.2 andmebaasi importimine...</value>
+     <value xml:lang="eu">StarOffice 5.2 datu-baseen inportazioa...</value>
+     <value xml:lang="fi">Tuo StarOffice 5.2 -tietokanta...</value>
+     <value xml:lang="fr">Import de BD StarOffice 5.2...</value>
+     <value xml:lang="gl">Importación de bases de datos de StarOffice 5.2...</value>
+     <value xml:lang="he">יבוא מסד נתונים Star Office 5.2  </value>
+     <value xml:lang="hi-IN">StarOffice 5.2 Database Import...</value>
+     <value xml:lang="hu">StarOffice 5.2-adatbázis importálása...</value>
+     <value xml:lang="it">Importa database StarOffice 5.2...</value>
+     <value xml:lang="ja">StarOffice 5.2 データベースのインポート...</value>
+     <value xml:lang="kn-IN">ಸ್ಟಾರ್ ಆಫೀಸ್ ೫.೨ ದತ್ತಸಂಚಯ ಆಮದು</value>
+     <value xml:lang="ko">StarOffice 5.2 데이터베이스 가져오기...</value>
+     <value xml:lang="lt">„~StarOffice 5.2“ duomenų bazės importavimo...</value>
+     <value xml:lang="nb">Import av StarOffice 5.2-database ...</value>
+     <value xml:lang="nl">StarOffice 5.2 database-import...</value>
+     <value xml:lang="nn">Import av StarOffice 5.2-database ...</value>
+     <value xml:lang="ns">StarOffice 5.2 Go romelwa ga Database...</value>
+     <value xml:lang="pl">Import bazy danych StarOffice 5.2...</value>
+     <value xml:lang="pt-BR">Importação do Banco de Dados do StarOffice 5.2...</value>
+     <value xml:lang="ru">Импорт базы данных StarOffice 5.2...</value>
+     <value xml:lang="sk">Import Databázy StarOffice 5.2...</value>
+     <value xml:lang="sl">Uvoz zbirke podatkov StarOffice 5.2...</value>
+     <value xml:lang="sv">StarOffice 5.2 databasimport...</value>
+     <value xml:lang="th">นำเข้าฐานข้อมูล StarOffice 5.2...</value>
+     <value xml:lang="tn">NalediOfisi 5.2 Mokwalo Thomelogare...</value>
+     <value xml:lang="tr">StarOfis 5.2 Veritabanı içe aktarım...</value>
+     <value xml:lang="zh-CN">输入 StarOffice 5.2 数据库...</value>
+     <value xml:lang="zh-TW">匯入 StarOffice 5.2 資料庫...</value>
+     <value xml:lang="zu">Hweba ngaphakathi Isiqu solwazi se-StarOffice 5.2...</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>slot:10909</value>
+    </prop>
+   </node>
+   <node oor:name="m4" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value xsi:nil="true"/>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_self</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>private:separator</value>
+    </prop>
+   </node>
+   <node oor:name="m6" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value xsi:nil="true"/>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_self</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>private:separator</value>
+    </prop>
+   </node>
+   <node oor:name="m0" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value>private:image/3216</value>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_self</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="af">~Brief...</value>
+     <value xml:lang="kn-IN">ಪತ್ರ</value>
+     <value xml:lang="ns">~Lengwalo...</value>
+     <value xml:lang="tn">~Lekwalo...</value>
+     <value xml:lang="zu">~Incwadi...</value>
+     <value xml:lang="ar">~رسالة...</value>
+     <value xml:lang="ca">~Carta...</value>
+     <value xml:lang="cs">Dopis...</value>
+     <value xml:lang="cy">~Llythyr...</value>
+     <value xml:lang="da">~Brev...</value>
+     <value xml:lang="de">~Brief...</value>
+     <value xml:lang="el">Επιστο~λή...</value>
+     <value xml:lang="en-US">~Letter...</value>
+     <value xml:lang="es">~Carta...</value>
+     <value xml:lang="et">~Kiri...</value>
+     <value xml:lang="eu">~Gutuna...</value>
+     <value xml:lang="fi">Luo ~kirje...</value>
+     <value xml:lang="fr">~Lettre...</value>
+     <value xml:lang="gl">~Carta...</value>
+     <value xml:lang="he">מכתב...</value>
+     <value xml:lang="hi-IN">~Letter...</value>
+     <value xml:lang="hu">~Levél...</value>
+     <value xml:lang="it">~Lettera...</value>
+     <value xml:lang="ja">レター(~L)...</value>
+     <value xml:lang="ko">편지(~L)...</value>
+     <value xml:lang="lt">~laiško...</value>
+     <value xml:lang="nb">~Brev ...</value>
+     <value xml:lang="nl">~Brief...</value>
+     <value xml:lang="nn">~Brev ...</value>
+     <value xml:lang="pl">~List...</value>
+     <value xml:lang="pt-BR">~Carta...</value>
+     <value xml:lang="ru">~Письмо...</value>
+     <value xml:lang="sk">~List...</value>
+     <value xml:lang="sl">~Pismo...</value>
+     <value xml:lang="sv">~Brev...</value>
+     <value xml:lang="th">~จดหมาย...</value>
+     <value xml:lang="tr">~Mektup...</value>
+     <value xml:lang="zh-CN">信函(~L)...</value>
+     <value xml:lang="zh-TW">信函(~L)...</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>slot:10428</value>
+    </prop>
+   </node>
+   <node oor:name="m1" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value>private:image/3216</value>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_self</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="af">~Faks...</value>
+     <value xml:lang="ar">~فاكس...</value>
+     <value xml:lang="ca">~Fax...</value>
+     <value xml:lang="cs">Fax...</value>
+     <value xml:lang="cy">~Ffacs...</value>
+     <value xml:lang="da">~Fax...</value>
+     <value xml:lang="de">~Fax...</value>
+     <value xml:lang="el">Φα~ξ...</value>
+     <value xml:lang="en-US">~Fax...</value>
+     <value xml:lang="es">~Fax...</value>
+     <value xml:lang="et">~Faks...</value>
+     <value xml:lang="eu">~Faxa...</value>
+     <value xml:lang="fi">Luo ~faksi...</value>
+     <value xml:lang="fr">~Fax...</value>
+     <value xml:lang="gl">~Fax...</value>
+     <value xml:lang="he">פקס...</value>
+     <value xml:lang="hi-IN">~Fax...</value>
+     <value xml:lang="hu">~Fax...</value>
+     <value xml:lang="it">~Fax...</value>
+     <value xml:lang="ja">~Fax 送付状...</value>
+     <value xml:lang="kn-IN">~Fax...</value>
+     <value xml:lang="ko">팩스(~F)...</value>
+     <value xml:lang="lt">~faksimilės...</value>
+     <value xml:lang="nb">~Faks ...</value>
+     <value xml:lang="nl">~Fax...</value>
+     <value xml:lang="nn">~Faks ...</value>
+     <value xml:lang="ns">~Fekse...</value>
+     <value xml:lang="pl">~Faks...</value>
+     <value xml:lang="pt-BR">~Fax...</value>
+     <value xml:lang="ru">~Факс...</value>
+     <value xml:lang="sk">~Fax...</value>
+     <value xml:lang="sl">~Faks...</value>
+     <value xml:lang="sv">~Fax...</value>
+     <value xml:lang="th">~โทรสาร...</value>
+     <value xml:lang="tn">~Fax...</value>
+     <value xml:lang="tr">~Faks...</value>
+     <value xml:lang="zh-CN">传真(~F)...</value>
+     <value xml:lang="zh-TW">傳真(~F)...</value>
+     <value xml:lang="zu">~Isikhahlamezi...</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>slot:10427</value>
+    </prop>
+   </node>
+   <node oor:name="m2" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value>private:image/3216</value>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_self</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="af">~Agenda...</value>
+     <value xml:lang="ar">~اجندة...</value>
+     <value xml:lang="ca">~Acta de reunió...</value>
+     <value xml:lang="cs">Porada...</value>
+     <value xml:lang="cy">~Agenda...</value>
+     <value xml:lang="da">~Dagsorden...</value>
+     <value xml:lang="de">~Agenda...</value>
+     <value xml:lang="el">Πρόγρα~μμα εργασίας...</value>
+     <value xml:lang="en-US">~Agenda...</value>
+     <value xml:lang="es">~Agenda...</value>
+     <value xml:lang="et">~Agenda...</value>
+     <value xml:lang="eu">Gai-zerren~da...</value>
+     <value xml:lang="fi">Luo ~esityslista...</value>
+     <value xml:lang="fr">~Agenda...</value>
+     <value xml:lang="gl">~Axenda...</value>
+     <value xml:lang="he">סדר יום</value>
+     <value xml:lang="hi-IN">~Agenda...</value>
+     <value xml:lang="hu">~Napirend...</value>
+     <value xml:lang="it">~Agenda...</value>
+     <value xml:lang="ja">会議録(~A)...</value>
+     <value xml:lang="kn-IN">ಕಾರ್ಯಸೂಚಿ</value>
+     <value xml:lang="ko">일정(~A)...</value>
+     <value xml:lang="lt">~darbotvarkės...</value>
+     <value xml:lang="nb">~Tidsplan ...</value>
+     <value xml:lang="nl">~Agenda...</value>
+     <value xml:lang="nn">~Tidsplan ...</value>
+     <value xml:lang="ns">~Lenaneothero...</value>
+     <value xml:lang="pl">P~orządek dzienny...</value>
+     <value xml:lang="pt-BR">~Agenda...</value>
+     <value xml:lang="ru">Пов~естка дня...</value>
+     <value xml:lang="sk">Por~ada...</value>
+     <value xml:lang="sl">~Dnevni red...</value>
+     <value xml:lang="sv">~Agenda...</value>
+     <value xml:lang="th">~กำหนดการ...</value>
+     <value xml:lang="tn">~Thulaganyo...</value>
+     <value xml:lang="tr">~Ajanda...</value>
+     <value xml:lang="zh-CN">会议议程(~A)...</value>
+     <value xml:lang="zh-TW">會議議程(~A)...</value>
+     <value xml:lang="zu">~Amaphuzu engxoxiswano...</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>slot:10426</value>
+    </prop>
+   </node>
+   <node oor:name="m3" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value>private:image/3216</value>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_self</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="kn-IN">ಜ್ಞಾಪಕ ಪತ್ರ</value>
+     <value xml:lang="tn">~Segopotso...</value>
+     <value xml:lang="zu">~Memo...</value>
+     <value xml:lang="af">~Memo...</value>
+     <value xml:lang="ar">~مذكرة...</value>
+     <value xml:lang="ca">~Memoràndum...</value>
+     <value xml:lang="cs">Oběžník...</value>
+     <value xml:lang="cy">~Memo...</value>
+     <value xml:lang="da">~Notat...</value>
+     <value xml:lang="de">~Memo...</value>
+     <value xml:lang="el">~Σημείωμα...</value>
+     <value xml:lang="en-US">~Memo...</value>
+     <value xml:lang="es">~Memorándum...</value>
+     <value xml:lang="et">~Memo...</value>
+     <value xml:lang="eu">~Zirkularra...</value>
+     <value xml:lang="fi">Luo ~muistio...</value>
+     <value xml:lang="fr">~Mémo...</value>
+     <value xml:lang="gl">~Memorando...</value>
+     <value xml:lang="he">מיזכר...</value>
+     <value xml:lang="hi-IN">~Memo...</value>
+     <value xml:lang="hu">~Feljegyzés...</value>
+     <value xml:lang="it">~Memo...</value>
+     <value xml:lang="ja">メモ帳(~M)...</value>
+     <value xml:lang="ko">메모(~M)...</value>
+     <value xml:lang="lt">~atmenos...</value>
+     <value xml:lang="nb">~Notat ...</value>
+     <value xml:lang="nl">~Memo...</value>
+     <value xml:lang="nn">~Notat ...</value>
+     <value xml:lang="ns">~Memorantamo...</value>
+     <value xml:lang="pl">~Memorandum...</value>
+     <value xml:lang="pt-BR">~Memorando...</value>
+     <value xml:lang="ru">Па~мятка...</value>
+     <value xml:lang="sk">Pozná~mka...</value>
+     <value xml:lang="sl">~Okrožnica...</value>
+     <value xml:lang="sv">P~M...</value>
+     <value xml:lang="th">~บันทึกช่วยจำ...</value>
+     <value xml:lang="tr">~Yazışma...</value>
+     <value xml:lang="zh-CN">备忘录(~M)...</value>
+     <value xml:lang="zh-TW">備忘錄(~M)...</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>slot:10429</value>
+    </prop>
+   </node>
+   <node oor:name="m7" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value>private:image/3216</value>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_self</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="af">~Webbladsy...</value>
+     <value xml:lang="ar">~صفحة ويب...</value>
+     <value xml:lang="ca">Pàgina ~web...</value>
+     <value xml:lang="cs">WWW stránka...</value>
+     <value xml:lang="cy">Tudalen ~Gwe</value>
+     <value xml:lang="da">~Webside...</value>
+     <value xml:lang="de">~Web-Seite...</value>
+     <value xml:lang="el">~Ιστοσελίδα...</value>
+     <value xml:lang="en-US">~Web Page...</value>
+     <value xml:lang="es">Página ~Web...</value>
+     <value xml:lang="et">~Veebileht...</value>
+     <value xml:lang="eu">~Web orria...</value>
+     <value xml:lang="fi">Luo ~web-sivu...</value>
+     <value xml:lang="fr">Page ~Web...</value>
+     <value xml:lang="gl">Páxina ~Web...</value>
+     <value xml:lang="he">דף אינטרנט...</value>
+     <value xml:lang="hi-IN">~Web Page...</value>
+     <value xml:lang="hu">~Weboldal...</value>
+     <value xml:lang="it">Pagina ~Web...</value>
+     <value xml:lang="ja">~Webページ...</value>
+     <value xml:lang="kn-IN">ಗಣಕ ಜಾಲಪುಟ</value>
+     <value xml:lang="ko">웹 페이지(~W)...</value>
+     <value xml:lang="lt">~tinklalapio...</value>
+     <value xml:lang="nb">~Nettside ...</value>
+     <value xml:lang="nl">~Webpagina...</value>
+     <value xml:lang="nn">~Nettside ...</value>
+     <value xml:lang="ns">~Letlakala la Web...</value>
+     <value xml:lang="pl">Strona ~WWW...</value>
+     <value xml:lang="pt-BR">Página da ~Web...</value>
+     <value xml:lang="ru">~Веб-страница...</value>
+     <value xml:lang="sk">~Webová stránka...</value>
+     <value xml:lang="sl">S~pletna stran...</value>
+     <value xml:lang="sv">~Webbsida...</value>
+     <value xml:lang="th">หน้าเ~วบ...</value>
+     <value xml:lang="tn">~Bobi Tsebe...</value>
+     <value xml:lang="tr">~Web Sayfası...</value>
+     <value xml:lang="zh-CN">网页(~W)...</value>
+     <value xml:lang="zh-TW">網頁(~W)...</value>
+     <value xml:lang="zu">~Ikhasi Le-web...</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>macro:///WebWizard.HtmlAutoPilotBasic.Main</value>
+    </prop>
+   </node>
+   <node oor:name="m8" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value>private:image/3216</value>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_self</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="af">Vo~rm...</value>
+     <value xml:lang="ar">نم~وذج...</value>
+     <value xml:lang="ca">F~ormulari...</value>
+     <value xml:lang="cs">Formulář...</value>
+     <value xml:lang="cy">Ffu~rflen...</value>
+     <value xml:lang="da">F~ormular...</value>
+     <value xml:lang="de">F~ormular...</value>
+     <value xml:lang="el">~Φόρμα...</value>
+     <value xml:lang="en-US">Fo~rm...</value>
+     <value xml:lang="es">Formulario...</value>
+     <value xml:lang="et">Vo~rm...</value>
+     <value xml:lang="eu">Inp~rimakia...</value>
+     <value xml:lang="fi">Luo ~lomake...</value>
+     <value xml:lang="fr">Form~ulaire...</value>
+     <value xml:lang="gl">Formulario...</value>
+     <value xml:lang="he">טופס</value>
+     <value xml:lang="hi-IN">Fo~rm...</value>
+     <value xml:lang="hu">Ű~rlap...</value>
+     <value xml:lang="it">~Formulario...</value>
+     <value xml:lang="ja">フォーム(~R)...</value>
+     <value xml:lang="kn-IN">ನಮೂನೆ</value>
+     <value xml:lang="ko">양식(~R)...</value>
+     <value xml:lang="lt">f~ormos...</value>
+     <value xml:lang="nb">~Skjema ...</value>
+     <value xml:lang="nl">F~ormulier...</value>
+     <value xml:lang="nn">~Skjema ...</value>
+     <value xml:lang="ns">Fo~mo...</value>
+     <value xml:lang="pl">Fo~rmularz...</value>
+     <value xml:lang="pt-BR">~Formulário...</value>
+     <value xml:lang="ru">Форма...</value>
+     <value xml:lang="sk">Fo~rmulár...</value>
+     <value xml:lang="sl">~Obrazec...</value>
+     <value xml:lang="sv">F~ormulär...</value>
+     <value xml:lang="th">แบบ~ฟอร์ม...</value>
+     <value xml:lang="tn">Ka~go...</value>
+     <value xml:lang="tr">~Form...</value>
+     <value xml:lang="zh-CN">表单(~R)...</value>
+     <value xml:lang="zh-TW">表單(~R)...</value>
+     <value xml:lang="zu">Ifo~mu...</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>macro:///FormWizard.FormWizard.MainWithDefault</value>
+    </prop>
+   </node>
+   <node oor:name="m9" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value>private:image/3216</value>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_self</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="af">Versla~g...</value>
+     <value xml:lang="cs">Sestava...</value>
+     <value xml:lang="cy">~Adroddiad...</value>
+     <value xml:lang="et">A~ruanne...</value>
+     <value xml:lang="eu">~Txostena...</value>
+     <value xml:lang="he">דו&quot;ח</value>
+     <value xml:lang="hi-IN">Repor~t...</value>
+     <value xml:lang="kn-IN">ವರದಿ</value>
+     <value xml:lang="lt">ataskai~tos...</value>
+     <value xml:lang="nb">~Rapport ...</value>
+     <value xml:lang="nn">~Rapport ...</value>
+     <value xml:lang="ns">Peg~o...</value>
+     <value xml:lang="pt-BR">~Relatório...</value>
+     <value xml:lang="sk">H~lásenie...</value>
+     <value xml:lang="sl">Po~ročilo...</value>
+     <value xml:lang="tn">Pe~go...</value>
+     <value xml:lang="zu">Umbi~ko...</value>
+     <value xml:lang="ar">ت~قرير...</value>
+     <value xml:lang="ca">Informe...</value>
+     <value xml:lang="da">~Rapport...</value>
+     <value xml:lang="de">Be~richt...</value>
+     <value xml:lang="el">Αναφ~ορά...</value>
+     <value xml:lang="en-US">Repor~t...</value>
+     <value xml:lang="es">~Informe...</value>
+     <value xml:lang="fi">~Report...</value>
+     <value xml:lang="fr">État...</value>
+     <value xml:lang="gl">Info~rme...</value>
+     <value xml:lang="hu">~Jelentés...</value>
+     <value xml:lang="it">Rapporto...</value>
+     <value xml:lang="ja">レポート(~T)...</value>
+     <value xml:lang="ko">보고서(~T)...</value>
+     <value xml:lang="nl">~Rapport...</value>
+     <value xml:lang="pl">~Report...</value>
+     <value xml:lang="ru">От~чёт...</value>
+     <value xml:lang="sv">~Rapport...</value>
+     <value xml:lang="th">~รายงาน...</value>
+     <value xml:lang="tr">Rapor...</value>
+     <value xml:lang="zh-CN">报表(~T)...</value>
+     <value xml:lang="zh-TW">報表(~T)...</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>service:com.sun.star.wizards.report.CallReportWizard?start</value>
+    </prop>
+   </node>
+   <node oor:name="m12" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value>private:image/3216</value>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_self</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="af">~Euro-omskakelaar...</value>
+     <value xml:lang="ar">~محول اليورو...</value>
+     <value xml:lang="ca">~Euroconversor...</value>
+     <value xml:lang="cs">Eurokonvertor...</value>
+     <value xml:lang="cy">Troswr ~Ewro...</value>
+     <value xml:lang="da">~Euro-omregner...</value>
+     <value xml:lang="de">~Euro-Konverter...</value>
+     <value xml:lang="el">Μετατροπέα~ς Ευρώ...</value>
+     <value xml:lang="en-US">~Euro Converter...</value>
+     <value xml:lang="es">Convertidor de ~euros...</value>
+     <value xml:lang="et">~Euro konvertija...</value>
+     <value xml:lang="eu">Euro-bihurtzai~lea...</value>
+     <value xml:lang="fi">E~uromuunnin...</value>
+     <value xml:lang="fr">Euro-~Convertisseur...</value>
+     <value xml:lang="gl">Convertedor de ~euros...</value>
+     <value xml:lang="he"> המרה ליורו...</value>
+     <value xml:lang="hi-IN">~Euro Converter...</value>
+     <value xml:lang="hu">~Euróátváltó...</value>
+     <value xml:lang="it">Convertitore ~Euro...</value>
+     <value xml:lang="ja">ユーロ通貨換算(~E)...</value>
+     <value xml:lang="kn-IN">ಇಡಿ ಪರಿವರ್ತಕ</value>
+     <value xml:lang="ko">유로 변환기(~E)...</value>
+     <value xml:lang="lt">~euro konvertavimo...</value>
+     <value xml:lang="nb">~Eurokonvertering ...</value>
+     <value xml:lang="nl">~Euro-converter...</value>
+     <value xml:lang="nn">~Eurokonvertering ...</value>
+     <value xml:lang="ns">~Sefetodi sa Euro...</value>
+     <value xml:lang="pl">Konwerter ~Euro...</value>
+     <value xml:lang="pt-BR">Conversor de ~Euro...</value>
+     <value xml:lang="ru">Конвертор Евро...</value>
+     <value xml:lang="sk">~Eurokonvertor...</value>
+     <value xml:lang="sl">~Evro pretvornik...</value>
+     <value xml:lang="sv">~Eurokonverterare...</value>
+     <value xml:lang="th">ตัวแปลง~ยูโร...</value>
+     <value xml:lang="tn">~Euro Phetolelo...</value>
+     <value xml:lang="tr">~Euro Dönüştürücüsü...</value>
+     <value xml:lang="zh-CN">欧元换算器(~E)...</value>
+     <value xml:lang="zh-TW">歐元轉換器(~E)...</value>
+     <value xml:lang="zu">~Umguquli we-Euro...</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>macro:///Euro.AutoPilotRun.StartAutoPilot</value>
+    </prop>
+   </node>
+   <node oor:name="m15" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value>private:image/3216</value>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_self</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="af">Databron vir addresse...</value>
+     <value xml:lang="ar">مصدر بيانات العنوان...</value>
+     <value xml:lang="ca">Base de dades d&apos;adreces...</value>
+     <value xml:lang="cs">Datový zdroj adres...</value>
+     <value xml:lang="cy">Ffynhonnell Data Cyfeiriad </value>
+     <value xml:lang="da">Adressedatakilde...</value>
+     <value xml:lang="de">Adress-Datenquelle...</value>
+     <value xml:lang="el">Προέλευση δεδομένων για διευθύνσεις...</value>
+     <value xml:lang="en-US">Address Data Source...</value>
+     <value xml:lang="es">Fuente de datos de direcciones...</value>
+     <value xml:lang="et">Aadressandmete allikas...</value>
+     <value xml:lang="eu">Helbideen datu-iturburua...</value>
+     <value xml:lang="fi">Tuo yhteystiedot...</value>
+     <value xml:lang="fr">Source de données des adresses...</value>
+     <value xml:lang="gl">Fonte de datos de enderezos...</value>
+     <value xml:lang="he">מקור נתוני כתובות...</value>
+     <value xml:lang="hi-IN">Address Data Source...</value>
+     <value xml:lang="hu">Címjegyzék-adatforrás...</value>
+     <value xml:lang="it">Sorgente dati Rubrica...</value>
+     <value xml:lang="ja">アドレス帳データソース...</value>
+     <value xml:lang="kn-IN">ವಿಳಾಸ ದತ್ತಆಕರ</value>
+     <value xml:lang="ko">주소 데이터 원본...</value>
+     <value xml:lang="lt">ad~resų duomenų...</value>
+     <value xml:lang="nb">Kilde for adressedata ...</value>
+     <value xml:lang="nl">Adresgegevensbron...</value>
+     <value xml:lang="nn">Kjelde for adressedata ...</value>
+     <value xml:lang="ns">Bolela Mothopo wa Tsebišo...</value>
+     <value xml:lang="pl">Źródło danych adresowych...</value>
+     <value xml:lang="pt-BR">Fonte de Dados de Endereço...</value>
+     <value xml:lang="ru">Источники данных адресов...</value>
+     <value xml:lang="sk">Zdroj dát adries...</value>
+     <value xml:lang="sl">Vir podatkov adresarja...</value>
+     <value xml:lang="sv">Adressdatakälla...</value>
+     <value xml:lang="th">แหล่งข้อมูลที่อยู่...</value>
+     <value xml:lang="tn">Aterese Mokwalo Setlhagiso...</value>
+     <value xml:lang="tr">Adres Veri Kaynağı...</value>
+     <value xml:lang="zh-CN">地址数据源...</value>
+     <value xml:lang="zh-TW">地址資料源...</value>
+     <value xml:lang="zu">Imvelaphi Yolwazi Lwekheli...</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>slot:10934</value>
+    </prop>
+   </node>
+   <node oor:name="m16" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value>private:image/3216</value>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_self</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="af">STR_DIR_MENU_WIZARD_DICOOO</value>
+     <value xml:lang="et">Weitere W�rterb�cher installieren...</value>
+     <value xml:lang="he">DicOOo...</value>
+     <value xml:lang="kn-IN">STR_DIR_MENU_WIZARD_DICOOO</value>
+     <value xml:lang="lt">STR_DIR_MENU_WIZARD_DICOOO</value>
+     <value xml:lang="nb">STR_DIR_MENU_WIZARD_DICOOO</value>
+     <value xml:lang="nn">STR_DIR_MENU_WIZARD_DICOOO</value>
+     <value xml:lang="ns">STR_DIR_MENU_WIZARD_DICOOO</value>
+     <value xml:lang="tn">STR_DIR_MENU_WIZARD_DICOOO</value>
+     <value xml:lang="zu">STR_DIR_MENU_WIZARD_DICOOO</value>
+     <value xml:lang="ar">DicOOo...</value>
+     <value xml:lang="ca">Instal.la nous diccionaris</value>
+     <value xml:lang="cs">DicOOo...</value>
+     <value xml:lang="cy">STR_DIR_MENU_WIZARD_DICOOO</value>
+     <value xml:lang="da">Installer flere ordbøger...</value>
+     <value xml:lang="de">Weitere Wörterbücher installieren...</value>
+     <value xml:lang="el">Ξ•Ξ³ΞΊΞ±Ο„Ξ¬ΟƒΟ„Ξ±ΟƒΞ· Ξ½Ξ­Ο‰Ξ½ Ξ»ΞµΞΎΞΉΞΊΟΞ½ ...</value>
+     <value xml:lang="en-US">Install new dictionaries...</value>
+     <value xml:lang="es">Instalar nuevos diccionarios</value>
+     <value xml:lang="eu">STR_DIR_MENU_WIZARD_DICOOO</value>
+     <value xml:lang="fi">DicOOo...</value>
+     <value xml:lang="fr">Installation de nouveaux dictionnaires...</value>
+     <value xml:lang="gl">STR_DIR_MENU_WIZARD_DICOOO</value>
+     <value xml:lang="hi-IN">नये शब्दकोश स्थापित करें...</value>
+     <value xml:lang="hu">DicOOo...</value>
+     <value xml:lang="it">Installa nuovi dizionari...</value>
+     <value xml:lang="ja">新しい辞書をインストールします ...</value>
+     <value xml:lang="ko">새 사전 설치...</value>
+     <value xml:lang="nl">Nieuwe woordenlijsten installeren...</value>
+     <value xml:lang="pl">DicOOo...</value>
+     <value xml:lang="pt-BR">Instalar novos dicionários...</value>
+     <value xml:lang="ru">Установить новые словари...</value>
+     <value xml:lang="sk">Inštalovať nové slovníky...</value>
+     <value xml:lang="sl">Namesti nove slovarje...</value>
+     <value xml:lang="sv">Installera nya ordlistor...</value>
+     <value xml:lang="th">DicOOo...</value>
+     <value xml:lang="tr">Yeni sÃ¶zlÃ¼k ekle...</value>
+     <value xml:lang="zh-CN">安装新目录...</value>
+     <value xml:lang="zh-TW">安裝新字典 ...</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>macro:///Launcher.DicOOo.StartDicOOo</value>
+    </prop>
+   </node>
+   <node oor:name="m17" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value>private:image/3216</value>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_self</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="af">STR_DIR_MENU_WIZARD_FONTOOO</value>
+     <value xml:lang="ar">FontOOo Wizard...</value>
+     <value xml:lang="ca">InstalÂ·la tipus de lletra des d&apos;Internet...</value>
+     <value xml:lang="cs">FontOOo Wizard...</value>
+     <value xml:lang="cy">STR_DIR_MENU_WIZARD_FONTOOO</value>
+     <value xml:lang="da">Installer skrifttyper fra internettet...</value>
+     <value xml:lang="de">Schriftarten aus dem Internet installieren...</value>
+     <value xml:lang="el">Ξ•Ξ³ΞΊΞ±Ο„Ξ±ΟƒΟ„Ξ®ΟƒΟ„Ξµ Ξ³ΟΞ±ΞΌΞΌΞ±Ο„ΞΏΟƒΞµΞΉΟΞ­Ο‚ Ξ±Ο€Ο Ο„ΞΏ Ξ΄ΞΉΞ±Ξ΄Ξ―ΞΊΟ„Ο…ΞΏ...</value>
+     <value xml:lang="en-US">Install fonts from the web...</value>
+     <value xml:lang="es">FontOOo Wizard...</value>
+     <value xml:lang="et">STR_DIR_MENU_WIZARD_FONTOOO</value>
+     <value xml:lang="eu">STR_DIR_MENU_WIZARD_FONTOOO</value>
+     <value xml:lang="fi">FontOOo Wizard...</value>
+     <value xml:lang="fr">Installer des polices en ligne...</value>
+     <value xml:lang="gl">STR_DIR_MENU_WIZARD_FONTOOO</value>
+     <value xml:lang="he">התקנת גופנים מהאינטרנט...</value>
+     <value xml:lang="hi-IN">FontOOo Wizard...</value>
+     <value xml:lang="hu">Betűkészletek telepítése az internetről...</value>
+     <value xml:lang="it">FontOOo Wizard...</value>
+     <value xml:lang="ja">FontOOo Wizard...</value>
+     <value xml:lang="kn-IN">STR_DIR_MENU_WIZARD_FONTOOO</value>
+     <value xml:lang="ko">FontOOo Wizard...</value>
+     <value xml:lang="lt">STR_DIR_MENU_WIZARD_FONTOOO</value>
+     <value xml:lang="nb">STR_DIR_MENU_WIZARD_FONTOOO</value>
+     <value xml:lang="nl">Lettertypen installeren vanaf het internet...</value>
+     <value xml:lang="nn">STR_DIR_MENU_WIZARD_FONTOOO</value>
+     <value xml:lang="ns">STR_DIR_MENU_WIZARD_FONTOOO</value>
+     <value xml:lang="pl">FontOOo Wizard...</value>
+     <value xml:lang="pt-BR">FontOOo Wizard...</value>
+     <value xml:lang="ru">FontOOo Wizard...</value>
+     <value xml:lang="sk">Inštalovať nové písma z internetu...</value>
+     <value xml:lang="sl">FontOOo Wizard...</value>
+     <value xml:lang="sv">FontOOo Wizard...</value>
+     <value xml:lang="th">FontOOo Wizard...</value>
+     <value xml:lang="tn">STR_DIR_MENU_WIZARD_FONTOOO</value>
+     <value xml:lang="tr">FontOOo Wizard...</value>
+     <value xml:lang="zh-CN">FontOOo Wizard...</value>
+     <value xml:lang="zh-TW">FontOOo Wizard...</value>
+     <value xml:lang="zu">STR_DIR_MENU_WIZARD_FONTOOO</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>macro:///Launcher.FontOOo.StartFontOOo</value>
+    </prop>
+   </node>
+   <node oor:name="m5" oor:op="replace">
+    <prop oor:name="ImageIdentifier" oor:type="xs:string">
+     <value>private:image/3216</value>
+    </prop>
+    <prop oor:name="TargetName" oor:type="xs:string">
+     <value>_self</value>
+    </prop>
+    <prop oor:name="Title">
+     <value xml:lang="af">~Voorlegging...</value>
+     <value xml:lang="ar">~عرض تقديمى...</value>
+     <value xml:lang="ca">~Presentació...</value>
+     <value xml:lang="cs">Prezentace...</value>
+     <value xml:lang="cy">~Cyflwyno...</value>
+     <value xml:lang="da">~Præsentation...</value>
+     <value xml:lang="de">~Präsentation...</value>
+     <value xml:lang="el">Πα~ρουσίαση...</value>
+     <value xml:lang="en-US">~Presentation...</value>
+     <value xml:lang="es">~Presentación...</value>
+     <value xml:lang="et">~Esitlus...</value>
+     <value xml:lang="eu">~Aurkezpena...</value>
+     <value xml:lang="fi">Luo ~diaesitys...</value>
+     <value xml:lang="fr">~Présentation...</value>
+     <value xml:lang="gl">~Presentación...</value>
+     <value xml:lang="he">מצגת...</value>
+     <value xml:lang="hi-IN">~Presentation...</value>
+     <value xml:lang="hu">~Bemutató...</value>
+     <value xml:lang="it">~Presentazione...</value>
+     <value xml:lang="ja">プレゼンテーション(~P)...</value>
+     <value xml:lang="kn-IN">ಪ್ರಸ್ತುತಿ</value>
+     <value xml:lang="ko">프레젠테이션(~P)...</value>
+     <value xml:lang="lt">~pateikties...</value>
+     <value xml:lang="nb">~Presentasjon ...</value>
+     <value xml:lang="nl">~Presentatie...</value>
+     <value xml:lang="nn">~Presentasjon ...</value>
+     <value xml:lang="ns">~Tlhagišo...</value>
+     <value xml:lang="pl">~Prezentacja...</value>
+     <value xml:lang="pt-BR">A~presentação...</value>
+     <value xml:lang="ru">Презентация...</value>
+     <value xml:lang="sk">~Prezentácia...</value>
+     <value xml:lang="sl">~Predstavitev...</value>
+     <value xml:lang="sv">~Presentation...</value>
+     <value xml:lang="th">~การนำเสนอ...</value>
+     <value xml:lang="tn">~Pontsho...</value>
+     <value xml:lang="tr">~Sunu...</value>
+     <value xml:lang="zh-CN">演示文稿(~P)...</value>
+     <value xml:lang="zh-TW">簡報(~P)...</value>
+     <value xml:lang="zu">~Ukunikezwa kolwazi...</value>
+    </prop>
+    <prop oor:name="URL" oor:type="xs:string">
+     <value>slot:10425</value>
+    </prop>
+   </node>
+  </node>
+ </node>
+ <node oor:name="Help">
+  <prop oor:name="Locale" oor:type="xs:string">
+   <value>en</value>
+  </prop>
+  <prop oor:name="System" oor:type="xs:string">
+   <value>MAC</value>
+  </prop>
+  <node oor:name="Registration">
+   <prop oor:name="URL" oor:type="xs:string">
+    <value>$(PRODUCT_REGISTRATION_URL)</value>
+   </prop>
+  </node>
+ </node>
+ <node oor:name="I18N">
+  <node oor:name="CJK">
+   <prop oor:name="CJKFont" oor:type="xs:boolean">
+    <value>false</value>
+   </prop>
+   <prop oor:name="AsianTypography" oor:type="xs:boolean">
+    <value>false</value>
+   </prop>
+   <prop oor:name="ChangeCaseMap" oor:type="xs:boolean">
+    <value>false</value>
+   </prop>
+   <prop oor:name="JapaneseFind" oor:type="xs:boolean">
+    <value>false</value>
+   </prop>
+   <prop oor:name="Ruby" oor:type="xs:boolean">
+    <value>false</value>
+   </prop>
+   <prop oor:name="VerticalText" oor:type="xs:boolean">
+    <value>false</value>
+   </prop>
+   <prop oor:name="DoubleLines" oor:type="xs:boolean">
+    <value>false</value>
+   </prop>
+   <prop oor:name="EmphasisMarks" oor:type="xs:boolean">
+    <value>false</value>
+   </prop>
+   <prop oor:name="VerticalCallOut" oor:type="xs:boolean">
+    <value>false</value>
+   </prop>
+  </node>
+  <node oor:name="CTL">
+   <prop oor:name="CTLFont" oor:type="xs:boolean">
+    <value>false</value>
+   </prop>
+  </node>
+ </node>
+ <node oor:name="AutoCorrect">
+  <prop oor:name="ReplaceSingleQuote" oor:type="xs:boolean">
+   <value>false</value>
+  </prop>
+ </node>
+ <node oor:name="OfficeObjects">
+  <node oor:name="Chart" oor:op="replace">
+   <prop oor:name="Key" oor:type="xs:string">
+    <value>12DCAE26-281F-416F-A234-C3086127382E</value>
+   </prop>
+   <prop oor:name="Name">
+    <value xml:lang="af">$(PRODUCT_NAME) $(PRODUCT_VERSION)-grafiek</value>
+    <value xml:lang="ar">StarOffice 6.0 ط±ط³ظ… ط¨ظ?ط§ظ†ظ?</value>
+    <value xml:lang="ca">$(PRODUCT_NAME) $(PRODUCT_VERSION) Chart</value>
+    <value xml:lang="cs">Graf $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="cy">$(PRODUCT_NAME) $(PRODUCT_VERSION) Chart</value>
+    <value xml:lang="da">$(PRODUCT_NAME) $(PRODUCT_VERSION)-diagram</value>
+    <value xml:lang="de">$(PRODUCT_NAME) $(PRODUCT_VERSION) Diagramm</value>
+    <value xml:lang="el">Διάγραμμα $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="en-US">$(PRODUCT_NAME) $(PRODUCT_VERSION) Chart</value>
+    <value xml:lang="es">$(PRODUCT_NAME) $(PRODUCT_VERSION) Diagrama</value>
+    <value xml:lang="et">$(PRODUCT_NAME) $(PRODUCT_VERSION) diagramm</value>
+    <value xml:lang="eu">$(PRODUCT_NAME) $(PRODUCT_VERSION) Chart</value>
+    <value xml:lang="fi">$(PRODUCT_NAME) $(PRODUCT_VERSION) Chart</value>
+    <value xml:lang="fr">$(PRODUCT_NAME) $(PRODUCT_VERSION) Diagramme</value>
+    <value xml:lang="gl">$(PRODUCT_NAME) $(PRODUCT_VERSION) Diagrama</value>
+    <value xml:lang="he">$(PRODUCT_NAME) $(PRODUCT_VERSION) תרשים </value>
+    <value xml:lang="hi-IN">$(PRODUCT_NAME) $(PRODUCT_VERSION) Chart</value>
+    <value xml:lang="hu">$(PRODUCT_NAME) $(PRODUCT_VERSION)-diagram</value>
+    <value xml:lang="it">$(PRODUCT_NAME) $(PRODUCT_VERSION) Diagramma</value>
+    <value xml:lang="ja">$(PRODUCT_NAME) $(PRODUCT_VERSION) グラフ</value>
+    <value xml:lang="kn-IN">$(PRODUCT_NAME) $(PRODUCT_VERSION) ನಕ್ಷೆ</value>
+    <value xml:lang="ko">$(PRODUCT_NAME) $(PRODUCT_VERSION) 차트</value>
+    <value xml:lang="lt">„$(PRODUCT_NAME) $(PRODUCT_VERSION)“ diagrama</value>
+    <value xml:lang="nb">$(PRODUCT_NAME) $(PRODUCT_VERSION) Chart</value>
+    <value xml:lang="nl">$(PRODUCT_NAME) $(PRODUCT_VERSION) Diagram</value>
+    <value xml:lang="nn">$(PRODUCT_NAME) $(PRODUCT_VERSION) Chart</value>
+    <value xml:lang="ns">Tšhate ya $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="pl">$(PRODUCT_NAME) $(PRODUCT_VERSION) Chart</value>
+    <value xml:lang="pt-BR">Gráfico do $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="ru">Диаграмма $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="sk">$(PRODUCT_NAME) $(PRODUCT_VERSION) Graf</value>
+    <value xml:lang="sl">$(PRODUCT_NAME) $(PRODUCT_VERSION) grafikon</value>
+    <value xml:lang="sv">$(PRODUCT_NAME) $(PRODUCT_VERSION)-diagram</value>
+    <value xml:lang="th">$(PRODUCT_NAME) $(PRODUCT_VERSION) Chart</value>
+    <value xml:lang="tn">$(PRODUCT_NAME) $(PRODUCT_VERSION) cHATE</value>
+    <value xml:lang="tr">StarOffice 6.0 Şema</value>
+    <value xml:lang="zh-CN">$(PRODUCT_NAME) $(PRODUCT_VERSION) 图表</value>
+    <value xml:lang="zh-TW">$(PRODUCT_NAME) $(PRODUCT_VERSION) 圖表</value>
+    <value xml:lang="zu">Ishathi le-$(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+   </prop>
+  </node>
+  <node oor:name="Writer" oor:op="replace">
+   <prop oor:name="Key" oor:type="xs:string">
+    <value>8BC6B165-B1B2-4EDD-AA47-DAE2EE689DD6</value>
+   </prop>
+   <prop oor:name="Name">
+    <value xml:lang="af">$(PRODUCT_NAME) $(PRODUCT_VERSION)-teks</value>
+    <value xml:lang="ar">StarOffice 6.0 ظ†طµ</value>
+    <value xml:lang="ca">$(PRODUCT_NAME) $(PRODUCT_VERSION) Text</value>
+    <value xml:lang="cs">$(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="cy">Testun $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="el">Κείμενο $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="et">$(PRODUCT_NAME) $(PRODUCT_VERSION) tekst</value>
+    <value xml:lang="eu">$(PRODUCT_NAME) $(PRODUCT_VERSION) testua</value>
+    <value xml:lang="fi">$(PRODUCT_NAME) $(PRODUCT_VERSION) -teksti</value>
+    <value xml:lang="gl">$(PRODUCT_NAME) $(PRODUCT_VERSION) Texto</value>
+    <value xml:lang="he">כיתוב $(PRODUCT_NAME) $(PRODUCT_VERSION) </value>
+    <value xml:lang="hi-IN">$(PRODUCT_NAME) $(PRODUCT_VERSION) Text</value>
+    <value xml:lang="hu">$(PRODUCT_NAME) $(PRODUCT_VERSION)-szöveg</value>
+    <value xml:lang="kn-IN">$(PRODUCT_NAME) $(PRODUCT_VERSION) ಪಠ್ಯ</value>
+    <value xml:lang="ko">$(PRODUCT_NAME) $(PRODUCT_VERSION) 텍스트</value>
+    <value xml:lang="lt">„$(PRODUCT_NAME) $(PRODUCT_VERSION)“ tekstinis dokumentas</value>
+    <value xml:lang="nb">$(PRODUCT_NAME) $(PRODUCT_VERSION)-tekst</value>
+    <value xml:lang="nn">$(PRODUCT_NAME) $(PRODUCT_VERSION)-tekst</value>
+    <value xml:lang="ns">Sengwalwa sa $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="pl">$(PRODUCT_NAME) $(PRODUCT_VERSION) - Tekst</value>
+    <value xml:lang="pt-BR">Texto do $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="ru">Текст $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="sk">$(PRODUCT_NAME) $(PRODUCT_VERSION) Text</value>
+    <value xml:lang="sl">Besedilo programa $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="th">ข้อความ $(PRODUCT_NAME) $(PRODUCT_VERSION) </value>
+    <value xml:lang="tn">$(PRODUCT_NAME) $(PRODUCT_VERSION) Kago</value>
+    <value xml:lang="tr">$(PRODUCT_NAME) $(PRODUCT_VERSION) Metin</value>
+    <value xml:lang="zh-CN">$(PRODUCT_NAME) $(PRODUCT_VERSION) 文本文档</value>
+    <value xml:lang="zh-TW">$(PRODUCT_NAME) $(PRODUCT_VERSION) 文字</value>
+    <value xml:lang="zu">Umbhalo we-$(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="da">$(PRODUCT_NAME) $(PRODUCT_VERSION)-tekst</value>
+    <value xml:lang="de">$(PRODUCT_NAME) $(PRODUCT_VERSION) Text</value>
+    <value xml:lang="en-US">$(PRODUCT_NAME) $(PRODUCT_VERSION) Text</value>
+    <value xml:lang="es">$(PRODUCT_NAME) $(PRODUCT_VERSION) - Texto</value>
+    <value xml:lang="fr">$(PRODUCT_NAME) $(PRODUCT_VERSION) Texte</value>
+    <value xml:lang="it">$(PRODUCT_NAME) $(PRODUCT_VERSION) Testo</value>
+    <value xml:lang="ja">$(PRODUCT_NAME) $(PRODUCT_VERSION) 文書</value>
+    <value xml:lang="nl">$(PRODUCT_NAME) $(PRODUCT_VERSION) Tekst</value>
+    <value xml:lang="sv">$(PRODUCT_NAME) $(PRODUCT_VERSION)-text</value>
+   </prop>
+  </node>
+  <node oor:name="Calc" oor:op="replace">
+   <prop oor:name="Key" oor:type="xs:string">
+    <value>47BBB4CB-CE4C-4E80-A591-42D9AE74950F</value>
+   </prop>
+   <prop oor:name="Name">
+    <value xml:lang="af">$(PRODUCT_NAME) $(PRODUCT_VERSION) sigblad</value>
+    <value xml:lang="ar">StarOffice 6.0 ط¬ط¯ظˆظ„</value>
+    <value xml:lang="ca">$(PRODUCT_NAME) $(PRODUCT_VERSION) Full de càlcul</value>
+    <value xml:lang="cs">Tabulka $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="cy">Taenlen $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="da">$(PRODUCT_NAME) $(PRODUCT_VERSION)-regneark</value>
+    <value xml:lang="de">$(PRODUCT_NAME) $(PRODUCT_VERSION) Tabelle</value>
+    <value xml:lang="el">Υπολογιστικό φύλλο $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="en-US">$(PRODUCT_NAME) $(PRODUCT_VERSION) Spreadsheet</value>
+    <value xml:lang="es">$(PRODUCT_NAME) $(PRODUCT_VERSION) Hoja de cálculo</value>
+    <value xml:lang="et">$(PRODUCT_NAME) $(PRODUCT_VERSION) arvutustabel</value>
+    <value xml:lang="eu">$(PRODUCT_NAME) $(PRODUCT_VERSION) kalkulu-orria</value>
+    <value xml:lang="fi">$(PRODUCT_NAME) $(PRODUCT_VERSION) -laskentataulukko</value>
+    <value xml:lang="fr">$(PRODUCT_NAME) $(PRODUCT_VERSION) Classeur</value>
+    <value xml:lang="gl">$(PRODUCT_NAME) $(PRODUCT_VERSION) Folla de cálculo</value>
+    <value xml:lang="he">גליון עבודה $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="hi-IN">$(PRODUCT_NAME) $(PRODUCT_VERSION) Spreadsheet</value>
+    <value xml:lang="hu">$(PRODUCT_NAME) $(PRODUCT_VERSION)-munkafüzet</value>
+    <value xml:lang="it">$(PRODUCT_NAME) $(PRODUCT_VERSION) Tabella</value>
+    <value xml:lang="ja">$(PRODUCT_NAME) $(PRODUCT_VERSION) 表計算</value>
+    <value xml:lang="kn-IN">$(PRODUCT_NAME) $(PRODUCT_VERSION) ಲೆಕ್ಕಪತ್ರಹಾಳೆ</value>
+    <value xml:lang="ko">$(PRODUCT_NAME) $(PRODUCT_VERSION) 스프레드시트</value>
+    <value xml:lang="lt">„$(PRODUCT_NAME) $(PRODUCT_VERSION)“ skaičiuoklės dokumentas</value>
+    <value xml:lang="nb">$(PRODUCT_NAME) $(PRODUCT_VERSION)-regneark</value>
+    <value xml:lang="nl">$(PRODUCT_NAME) $(PRODUCT_VERSION) Werkblad</value>
+    <value xml:lang="nn">$(PRODUCT_NAME) $(PRODUCT_VERSION)-rekneark</value>
+    <value xml:lang="ns">Pampiri ya go anega ya $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="pl">$(PRODUCT_NAME) $(PRODUCT_VERSION) - Arkusz kalkulacyjny</value>
+    <value xml:lang="pt-BR">Planilha do $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="ru">Электронная таблица $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="sk">Tabuľka $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="sl">Preglednica programa $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="sv">$(PRODUCT_NAME) $(PRODUCT_VERSION)-tabell</value>
+    <value xml:lang="th">ตารางคำนวณ $(PRODUCT_NAME) $(PRODUCT_VERSION) </value>
+    <value xml:lang="tn">$(PRODUCT_NAME) $(PRODUCT_VERSION) Letlharephatlalalo</value>
+    <value xml:lang="tr">StarOffice 6.0 Hesap tablosu</value>
+    <value xml:lang="zh-CN">$(PRODUCT_NAME) $(PRODUCT_VERSION) 工作表</value>
+    <value xml:lang="zh-TW">$(PRODUCT_NAME) $(PRODUCT_VERSION) 工作表</value>
+    <value xml:lang="zu">Ikhasi lokubala le-$(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+   </prop>
+  </node>
+  <node oor:name="Impress" oor:op="replace">
+   <prop oor:name="Key" oor:type="xs:string">
+    <value>9176E48A-637A-4D1F-803B-99D9BFAC1047</value>
+   </prop>
+   <prop oor:name="Name">
+    <value xml:lang="af">$(PRODUCT_NAME) $(PRODUCT_VERSION) Aanbieding</value>
+    <value xml:lang="ar">StarOffice 6.0 ط¹ط±ط¶ طھظ‚ط¯ظ?ظ…ظ?</value>
+    <value xml:lang="ca">$(PRODUCT_NAME) $(PRODUCT_VERSION) Presentació</value>
+    <value xml:lang="cs">Prezentace $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="cy">Cyflwyniad $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="da">$(PRODUCT_NAME) $(PRODUCT_VERSION)-præsentation</value>
+    <value xml:lang="de">$(PRODUCT_NAME) $(PRODUCT_VERSION) Präsentation</value>
+    <value xml:lang="el">Παρουσίαση $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="en-US">$(PRODUCT_NAME) $(PRODUCT_VERSION) Presentation</value>
+    <value xml:lang="es">$(PRODUCT_NAME) $(PRODUCT_VERSION) Presentación</value>
+    <value xml:lang="et">$(PRODUCT_NAME) $(PRODUCT_VERSION) esitlus</value>
+    <value xml:lang="eu">$(PRODUCT_NAME) $(PRODUCT_VERSION) aurkezpena</value>
+    <value xml:lang="fi">$(PRODUCT_NAME) $(PRODUCT_VERSION) -esitys</value>
+    <value xml:lang="fr">$(PRODUCT_NAME) $(PRODUCT_VERSION) Présentation</value>
+    <value xml:lang="gl">$(PRODUCT_NAME) $(PRODUCT_VERSION) Presentación</value>
+    <value xml:lang="he">תבנית $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="hi-IN">$(PRODUCT_NAME) $(PRODUCT_VERSION) Presentation</value>
+    <value xml:lang="hu">$(PRODUCT_NAME) $(PRODUCT_VERSION)-bemutató</value>
+    <value xml:lang="it">$(PRODUCT_NAME) $(PRODUCT_VERSION) Presentazione</value>
+    <value xml:lang="ja">$(PRODUCT_NAME) $(PRODUCT_VERSION) プレゼンテーション</value>
+    <value xml:lang="kn-IN">$(PRODUCT_NAME) $(PRODUCT_VERSION) ಪ್ರಸ್ತುತಿ</value>
+    <value xml:lang="ko">$(PRODUCT_NAME) $(PRODUCT_VERSION) 프레젠테이션</value>
+    <value xml:lang="lt">„$(PRODUCT_NAME) $(PRODUCT_VERSION)“ pateiktis</value>
+    <value xml:lang="nb">$(PRODUCT_NAME) $(PRODUCT_VERSION)-presentasjon</value>
+    <value xml:lang="nl">$(PRODUCT_NAME) $(PRODUCT_VERSION) Presentatie</value>
+    <value xml:lang="nn">$(PRODUCT_NAME) $(PRODUCT_VERSION)-presentasjon</value>
+    <value xml:lang="ns">Tlhagišo ya $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="pl">$(PRODUCT_NAME) $(PRODUCT_VERSION) - Prezentacja</value>
+    <value xml:lang="pt-BR">Apresentação do $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="ru">Презентация $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="sk">Prezentácia $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="sl">Predstavitev programa $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="sv">$(PRODUCT_NAME) $(PRODUCT_VERSION)-presentation</value>
+    <value xml:lang="th">การนำเสนอ $(PRODUCT_NAME) $(PRODUCT_VERSION) </value>
+    <value xml:lang="tn">$(PRODUCT_NAME) $(PRODUCT_VERSION) Kemedi</value>
+    <value xml:lang="tr">$(PRODUCT_NAME) $(PRODUCT_VERSION) Sunu</value>
+    <value xml:lang="zh-CN">$(PRODUCT_NAME) $(PRODUCT_VERSION) 演示文稿</value>
+    <value xml:lang="zh-TW">$(PRODUCT_NAME) $(PRODUCT_VERSION) 簡報</value>
+    <value xml:lang="zu">Ukukhonjiswa kwe-$(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+   </prop>
+  </node>
+  <node oor:name="Draw" oor:op="replace">
+   <prop oor:name="Key" oor:type="xs:string">
+    <value>4BAB8970-8A3B-45B3-991C-CBEEAC6BD5E3</value>
+   </prop>
+   <prop oor:name="Name">
+    <value xml:lang="af">$(PRODUCT_NAME) $(PRODUCT_VERSION) Teken</value>
+    <value xml:lang="ar">StarOffice 6.0 ط±ط³ظ…ط©</value>
+    <value xml:lang="ca">$(PRODUCT_NAME) $(PRODUCT_VERSION) Dibuix</value>
+    <value xml:lang="cs">Kresba $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="cy">Lluniadu $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="da">$(PRODUCT_NAME) $(PRODUCT_VERSION)-tegning</value>
+    <value xml:lang="de">$(PRODUCT_NAME) $(PRODUCT_VERSION) Zeichnung</value>
+    <value xml:lang="el">Σχέδιο $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="en-US">$(PRODUCT_NAME) $(PRODUCT_VERSION) Drawing</value>
+    <value xml:lang="es">$(PRODUCT_NAME) $(PRODUCT_VERSION) Dibujo</value>
+    <value xml:lang="et">$(PRODUCT_NAME) $(PRODUCT_VERSION) joonistus</value>
+    <value xml:lang="eu">$(PRODUCT_NAME) $(PRODUCT_VERSION) marrazkia</value>
+    <value xml:lang="fi">$(PRODUCT_NAME) $(PRODUCT_VERSION) -piirros</value>
+    <value xml:lang="fr">$(PRODUCT_NAME) $(PRODUCT_VERSION) Dessin</value>
+    <value xml:lang="gl">$(PRODUCT_NAME) $(PRODUCT_VERSION) Debuxo</value>
+    <value xml:lang="he">ציור $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="hi-IN">$(PRODUCT_NAME) $(PRODUCT_VERSION) Drawing</value>
+    <value xml:lang="hu">$(PRODUCT_NAME) $(PRODUCT_VERSION)-rajz</value>
+    <value xml:lang="it">$(PRODUCT_NAME) $(PRODUCT_VERSION) Disegno</value>
+    <value xml:lang="ja">$(PRODUCT_NAME) $(PRODUCT_VERSION) 図形描画</value>
+    <value xml:lang="kn-IN"> </value>
+    <value xml:lang="ko">$(PRODUCT_NAME) $(PRODUCT_VERSION) 그리기</value>
+    <value xml:lang="lt">„$(PRODUCT_NAME) $(PRODUCT_VERSION)“ grafikos dokumentas</value>
+    <value xml:lang="nb">$(PRODUCT_NAME) $(PRODUCT_VERSION)-tegning</value>
+    <value xml:lang="nl">$(PRODUCT_NAME) $(PRODUCT_VERSION) Tekening</value>
+    <value xml:lang="nn">$(PRODUCT_NAME) $(PRODUCT_VERSION)-teikning</value>
+    <value xml:lang="ns">Go thala ga $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="pl">$(PRODUCT_NAME) $(PRODUCT_VERSION) - Rysunek</value>
+    <value xml:lang="pt-BR">Desenho do $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="ru">Рисунок $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="sk">Kresba $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="sl">Risba programa $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="sv">$(PRODUCT_NAME) $(PRODUCT_VERSION)-teckning</value>
+    <value xml:lang="th">วาดรูป $(PRODUCT_NAME) $(PRODUCT_VERSION) </value>
+    <value xml:lang="tn">$(PRODUCT_NAME) $(PRODUCT_VERSION) Moralo</value>
+    <value xml:lang="tr">$(PRODUCT_NAME) $(PRODUCT_VERSION) Çizim</value>
+    <value xml:lang="zh-CN">$(PRODUCT_NAME) $(PRODUCT_VERSION) 绘图</value>
+    <value xml:lang="zh-TW">$(PRODUCT_NAME) $(PRODUCT_VERSION) 繪圖</value>
+    <value xml:lang="zu">Umdwebo we-$(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+   </prop>
+  </node>
+  <node oor:name="Math" oor:op="replace">
+   <prop oor:name="Key" oor:type="xs:string">
+    <value>078B7ABA-54FC-457F-8551-6147E776A997</value>
+   </prop>
+   <prop oor:name="Name">
+    <value xml:lang="af">$(PRODUCT_NAME) $(PRODUCT_VERSION) Formula</value>
+    <value xml:lang="ar">StarOffice 6.0 طµظ?ط؛ط©</value>
+    <value xml:lang="ca">$(PRODUCT_NAME) $(PRODUCT_VERSION) Fórmula</value>
+    <value xml:lang="cs">Vzorec $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="cy">Fformiwla $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="da">$(PRODUCT_NAME) $(PRODUCT_VERSION)-formel</value>
+    <value xml:lang="de">$(PRODUCT_NAME) $(PRODUCT_VERSION) Formel</value>
+    <value xml:lang="el">Τύπος $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="en-US">$(PRODUCT_NAME) $(PRODUCT_VERSION) Formula</value>
+    <value xml:lang="es">$(PRODUCT_NAME) $(PRODUCT_VERSION) Fórmula</value>
+    <value xml:lang="et">$(PRODUCT_NAME) $(PRODUCT_VERSION) valem</value>
+    <value xml:lang="eu">$(PRODUCT_NAME) $(PRODUCT_VERSION) formula</value>
+    <value xml:lang="fi">$(PRODUCT_NAME) $(PRODUCT_VERSION) - Kaava</value>
+    <value xml:lang="fr">$(PRODUCT_NAME) $(PRODUCT_VERSION) Formule</value>
+    <value xml:lang="gl">$(PRODUCT_NAME) $(PRODUCT_VERSION) Fórmula</value>
+    <value xml:lang="he">נוסחת $(PRODUCT_NAME) $(PRODUCT_VERSION) </value>
+    <value xml:lang="hi-IN">$(PRODUCT_NAME) $(PRODUCT_VERSION) Formula</value>
+    <value xml:lang="hu">$(PRODUCT_NAME) $(PRODUCT_VERSION)-képlet</value>
+    <value xml:lang="it">$(PRODUCT_NAME) $(PRODUCT_VERSION) Formula</value>
+    <value xml:lang="ja">$(PRODUCT_NAME) $(PRODUCT_VERSION) 数式</value>
+    <value xml:lang="kn-IN">$(PRODUCT_NAME) $(PRODUCT_VERSION) ಸೂತ್ರ</value>
+    <value xml:lang="ko">$(PRODUCT_NAME) $(PRODUCT_VERSION) 수식</value>
+    <value xml:lang="lt">„$(PRODUCT_NAME) $(PRODUCT_VERSION)“ matematinis dokumentas</value>
+    <value xml:lang="nb">$(PRODUCT_NAME) $(PRODUCT_VERSION)-formel</value>
+    <value xml:lang="nl">$(PRODUCT_NAME) $(PRODUCT_VERSION) Formule</value>
+    <value xml:lang="nn">$(PRODUCT_NAME) $(PRODUCT_VERSION)-formel</value>
+    <value xml:lang="ns">Fomula ya $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="pl">$(PRODUCT_NAME) $(PRODUCT_VERSION) Formula</value>
+    <value xml:lang="pt-BR">Fórmula do $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="ru">Формула $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="sk">Vzorec $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="sl">Formula programa $(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+    <value xml:lang="sv">$(PRODUCT_NAME) $(PRODUCT_VERSION)-formel</value>
+    <value xml:lang="th">สมการ $(PRODUCT_NAME) $(PRODUCT_VERSION) </value>
+    <value xml:lang="tn">$(PRODUCT_NAME) $(PRODUCT_VERSION) Motswako</value>
+    <value xml:lang="tr">$(PRODUCT_NAME) $(PRODUCT_VERSION) Formül</value>
+    <value xml:lang="zh-CN">$(PRODUCT_NAME) $(PRODUCT_VERSION) 公式</value>
+    <value xml:lang="zh-TW">$(PRODUCT_NAME) $(PRODUCT_VERSION) 公式</value>
+    <value xml:lang="zu">Ifomula ye-$(PRODUCT_NAME) $(PRODUCT_VERSION)</value>
+   </prop>
+  </node>
+ </node>
+ <node oor:name="Path">
+  <node oor:name="Current">
+   <prop oor:name="AutoText" oor:type="oor:string-list">
+    <value>$(inst)/share/autotext/$(vlang) $(user)/autotext/$(vlang)</value>
+   </prop>
+  </node>
+ </node>
+</oor:component-data>
