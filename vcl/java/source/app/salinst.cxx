@@ -328,8 +328,12 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 	if ( nClass == kEventClassAppleEvent )
 	{
 		// Fix bug 209 by ignoring all Apple events that have not already been
-		// handled by the JVMs handler
-		return eventNotHandledErr;
+		// handled by the JVM's handler
+		OSType nType;
+		if ( nKind = kEventAppleEvent && GetEventParameter( aEvent, kEventParamAEEventID, typeType, NULL, sizeof( OSType ), NULL, &nType ) == noErr && ( nType == 'odoc' || nType == 'pdoc' ) )
+			CallNextEventHandler( aNextHandler, aEvent );
+
+		return noErr;
 	}
 	else if ( !Application::IsShutDown() )
 	{
