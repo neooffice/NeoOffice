@@ -1935,8 +1935,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param y the new y-coordinate
 	 * @param width the new width
 	 * @param height the new height
+	 * @param hide <code>true</code> hides the native window during resizing
+	 *  and <code>false</code> does nothing
 	 */
-	public void setBounds(int x, int y, int width, int height) {
+	public void setBounds(int x, int y, int width, int height, boolean hide) {
 
 		Dimension size = window.getMinimumSize();
 		if (width < size.width)
@@ -1945,7 +1947,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			height = size.height;
 
 		// Fix bug 169 by hiding window during resizing
-		boolean hide = (window.isVisible() && (width != window.getWidth() || height != window.getHeight()));
+		hide = (hide && window.isVisible() && (width != window.getWidth() || height != window.getHeight()));
 		if (hide)
 			setVisible(false);
 		window.setBounds(x, y, width, height);

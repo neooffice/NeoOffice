@@ -129,7 +129,7 @@ static Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *pCarbonLockInit = N
 static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( JNIEnv *pEnv, jobject object );
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData );
 
-#endif
+#endif // MACOSX
 
 class SVMainThread : public ::vos::OThread
 {
@@ -263,7 +263,7 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( JNIEnv 
 		return 1;
 	}
 }
-#endif
+#endif // MACOSX
 
 // ----------------------------------------------------------------------------
 
@@ -275,7 +275,7 @@ static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( J
 	else
 		return NULL;
 }
-#endif
+#endif // MACOSX
 
 // ----------------------------------------------------------------------------
 
@@ -285,7 +285,7 @@ static void JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_init( JNIEnv *pEn
 	if ( pCarbonLockInit )
 		pCarbonLockInit( pEnv, object );
 }
-#endif
+#endif // MACOSX
 
 // ----------------------------------------------------------------------------
 
@@ -308,7 +308,7 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv 
 		return 1;
 	}
 }
-#endif
+#endif // MACOSX
 
 // ----------------------------------------------------------------------------
 
@@ -443,7 +443,43 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 	// Always execute the next registered handler
 	return CallNextEventHandler( aNextHandler, aEvent );
 }
-#endif
+#endif // MACOSX
+
+// ----------------------------------------------------------------------------
+
+#ifdef MACOSX
+static void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void *pNotifyData )
+{
+	if ( nMessage != kDMNotifyEvent )
+		return;
+
+	SalData *pSalData = GetSalData();
+	if ( pSalData && !ImplGetSVData()->maAppData.mbAppQuit )
+	{
+		// Unlock the Carbon lock
+		VCLThreadAttach t;
+		if ( t.pEnv )
+			Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
+
+		// Block the VCL event loop while checking mapping
+		pSalData->mpFirstInstance->AcquireYieldMutex( 1 );
+
+		// Relock the Carbon lock
+		if ( t.pEnv )
+			Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
+
+		Rect aRect;
+		for ( ::std::map< SalFrame*, void* >::const_iterator it = pSalData->maNativeFrameMapping.begin(); it != pSalData->maNativeFrameMapping.end(); ++it )
+		{
+			if ( GetWindowBounds( (WindowRef)it->second, kWindowStructureRgn, &aRect ) == noErr )
+			it->first->SetPosSize( (long)aRect.left, (long)aRect.top, (long)( aRect.right - aRect.left + 1 ), (long)( aRect.bottom - aRect.top + 1 ), SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
+		}
+
+		// Unblock the VCL event loop
+		pSalData->mpFirstInstance->ReleaseYieldMutex();
+	}
+}
+#endif	// MACOSX
 
 // ----------------------------------------------------------------------------
 
@@ -704,6 +740,11 @@ void ExecuteApplicationMain( Application *pApp )
 				}
 			}
 		}
+
+		// Fix bug 223 by registering a display manager notification callback
+		ProcessSerialNumber nProc;
+		if ( GetCurrentProcess( &nProc ) == noErr )
+			DMRegisterExtendedNotifyProc( NewDMExtendedNotificationUPP( CarbonDMExtendedNotificationCallback ), NULL, NULL, &nProc );
 	}
 #endif	// MACOSX
 

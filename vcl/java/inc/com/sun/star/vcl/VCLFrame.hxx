@@ -73,7 +73,7 @@ public:
 	sal_Bool			isFloatingWindow();
 	void				requestFocus();
 	void				setAutoFlush( sal_Bool _par0 );
-	void				setBounds( long _par0, long _par1, long _par2, long _par3 );
+	void				setBounds( long _par0, long _par1, long _par2, long _par3, sal_Bool _par4 = sal_True ); // Fix bug 169 by hiding window during resizing by default
 	void				setFullScreenMode( sal_Bool _par0 );
 	void				setMinClientSize( long _par0, long _par1 );
 	void				setParent( SalFrame *_par0 );

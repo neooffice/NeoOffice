@@ -510,7 +510,7 @@ void com_sun_star_vcl_VCLFrame::setAutoFlush( sal_Bool _par0 )
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLFrame::setBounds( long _par0, long _par1, long _par2, long _par3 )
+void com_sun_star_vcl_VCLFrame::setBounds( long _par0, long _par1, long _par2, long _par3, sal_Bool _par4 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -518,17 +518,18 @@ void com_sun_star_vcl_VCLFrame::setBounds( long _par0, long _par1, long _par2, l
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(IIII)V";
+			char *cSignature = "(IIIIZ)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "setBounds", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[4];
+			jvalue args[5];
 			args[0].i = jint( _par0 );
 			args[1].i = jint( _par1 );
 			args[2].i = jint( _par2 );
 			args[3].i = jint( _par3 );
+			args[4].i = jboolean( _par4 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
