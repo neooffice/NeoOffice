@@ -2065,26 +2065,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	void setMenuBar(MenuBar menubar) {
 
-		if (window instanceof Frame) {
-			Object peer = null;
-			MenuBar mb = ((Frame)window).getMenuBar();
-			if (mb != null) {
-				peer = mb.getPeer();
-				if (peer == null)
-					peer = mb;
-				synchronized (peer) {
-					((Frame)window).setMenuBar(null);
-				}
-			}
-			if (menubar != null) {
-				peer = menubar.getPeer();
-				if (peer == null)
-					peer = menubar;
-				synchronized (peer) {
-					((Frame)window).setMenuBar(menubar);
-				}
-			}
-		}
+		if (window instanceof Frame)
+			((Frame)window).setMenuBar(menubar);
 
 	}
 
