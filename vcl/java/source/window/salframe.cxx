@@ -232,9 +232,8 @@ void SalFrame::Enable( BOOL bEnable )
 
 void SalFrame::SetMinClientSize( long nWidth, long nHeight )
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalFrame::SetMinClientSize not implemented\n" );
-#endif
+	nWidth = 1;
+	nHeight = 1;
 }
 
 // -----------------------------------------------------------------------
