@@ -1306,14 +1306,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void mousePressed(MouseEvent e) {
 
+		MouseEvent mouseEntered = new MouseEvent(e.getComponent(), MouseEvent.MOUSE_ENTERED, e.getWhen(), e.getModifiers(), e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
+		mouseEntered(mouseEntered);
+
 		// Enable mouse capture
 		VCLFrame.capture = true;
-
-		VCLFrame f = VCLFrame.captureFrame;
-		while (f != null && f != this)
-			f = f.getParent();
-		if (f == null)
-			VCLFrame.captureFrame = this;
+		VCLFrame.captureFrame = this;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONDOWN, this, 0));
 
