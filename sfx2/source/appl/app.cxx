@@ -49,6 +49,9 @@
 
 #include "app.hxx"
 #include "frame.hxx"
+#ifdef MACOSX
+#include "about.hxx"
+#endif
 
 #ifndef _VOS_PROCESS_HXX_
 #include <vos/process.hxx>
@@ -442,10 +445,13 @@ void SfxApplication::SetApp( SfxApplication* pSfxApp )
 #ifdef MACOSX
 static OSErr DoAEAbout( const AppleEvent *message, AppleEvent *reply, long refcon )
 {
-    SfxApplication *theApp=(SfxApplication *)refcon;
-    ModalDialog *pDlg = theApp->CreateAboutDialog();
-    pDlg->Execute();
-    delete pDlg;
+    if ( ! AboutDialog::DialogIsActive() )
+    {
+	SfxApplication *theApp=(SfxApplication *)refcon;
+	ModalDialog *pDlg = theApp->CreateAboutDialog();
+	pDlg->Execute();
+	delete pDlg;
+    }
 }
 #endif
 
