@@ -145,11 +145,11 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 
 			if ( nMessage == kDragTrackingLeaveHandler )
 				SetThemeCursor( kThemeArrowCursor );
-			else if ( nCurrentAction == DNDConstants::ACTION_MOVE )
+			else if ( nCurrentAction & DNDConstants::ACTION_MOVE )
 				SetThemeCursor( kThemeClosedHandCursor );
-			else if ( nCurrentAction == DNDConstants::ACTION_COPY )
+			else if ( nCurrentAction & DNDConstants::ACTION_COPY )
 				SetThemeCursor( kThemeCopyArrowCursor );
-			else if ( nCurrentAction == DNDConstants::ACTION_LINK )
+			else if ( nCurrentAction & DNDConstants::ACTION_LINK )
 				SetThemeCursor( kThemeAliasArrowCursor );
 			else
 				SetThemeCursor( kThemeArrowCursor );
