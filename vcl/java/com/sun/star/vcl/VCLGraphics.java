@@ -721,7 +721,7 @@ public final class VCLGraphics {
 			g.scale((double)destWidth / srcWidth, (double)destHeight / srcHeight);
 		// Fix bug 625 by not reading outside of the source image's bounds
 		g.translate(srcBounds.x - srcX, srcBounds.y - srcY);
-		g.drawImage(img, 0, 0, srcWidth, srcHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
+		g.drawImage(img, 0, 0, srcBounds.width, srcBounds.height, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
 		g.dispose();
 		addToFlush(destBounds);
 

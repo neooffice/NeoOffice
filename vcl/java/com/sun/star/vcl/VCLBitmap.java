@@ -232,15 +232,8 @@ public final class VCLBitmap {
 		raster = Raster.createWritableRaster(sampleModel, new DataBufferByte(data, data.length), null);
 		image = new BufferedImage(model, raster, true, null);
 
-		// We need to wrap the buffered image in a filter for images that
-		// have pixels that occupy more than on byte
-		if (bitCount > 8 && VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-			FilteredImageSource filter = new FilteredImageSource(image.getSource(), new ImageFilter());
-			filteredImage = Toolkit.getDefaultToolkit().createImage(filter);
-		}
-		else {
-			filteredImage = image;
-		}
+		// Fix bug 639 by wrapping the buffered image in a filter
+		filteredImage = Toolkit.getDefaultToolkit().createImage(new FilteredImageSource(image.getSource(), new ImageFilter()));
 
 	}
 
@@ -390,7 +383,7 @@ public final class VCLBitmap {
 				palette[i] |= 0xff000000;
 			model = new IndexColorModel(bitCount, palette.length, palette, 0, false, -1, DataBuffer.TYPE_BYTE);
 			image = new BufferedImage(model, raster, true, null);
-			filteredImage = image;
+			filteredImage = Toolkit.getDefaultToolkit().createImage(new FilteredImageSource(image.getSource(), new ImageFilter()));
 		}
 
 	}
