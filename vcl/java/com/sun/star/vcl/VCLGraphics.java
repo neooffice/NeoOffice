@@ -369,6 +369,30 @@ public final class VCLGraphics {
 	/**
 	 * Unions the specified rectangle to the rectangle that requires flushing.
 	 *
+	 * @param x the x coordinate to flush
+	 * @param y the y coordinate to flush
+	 * @param width the width to flush
+	 * @param height the height to flush
+	 */
+	public void addToFlush(int x, int y, int width, int height) {
+
+		Rectangle bounds = new Rectangle(x, y, width, height);
+		if (bounds.width < 0) {
+			bounds.x += bounds.width;
+			bounds.width *= -1;
+		}
+		if (bounds.height < 0) {
+			bounds.y += bounds.height;
+			bounds.height *= -1;
+		}
+
+		addToFlush(bounds);
+
+	}
+
+	/**
+	 * Unions the specified rectangle to the rectangle that requires flushing.
+	 *
 	 * @param b the rectangle to flush
 	 */
 	void addToFlush(Rectangle b) {
@@ -1133,6 +1157,17 @@ public final class VCLGraphics {
 		GlyphVector glyphs = font.getFont().createGlyphVector(graphics.getFontRenderContext(), new char[]{ c });
 		Rectangle bounds = glyphs.getLogicalBounds().getBounds();
 		return new Dimension(bounds.width, bounds.height);
+
+	}
+
+	/**
+	 * Returns the graphics context.
+	 *
+	 * @return the graphics context
+	 */
+	public Graphics2D getGraphics() {
+
+		return graphics;
 
 	}
 

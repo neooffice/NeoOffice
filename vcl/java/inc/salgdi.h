@@ -40,6 +40,10 @@
 #include <sv.h>
 #endif 
 
+#ifdef MACOSX
+class ATSLayout;
+#endif	// MACOSX
+
 namespace vcl
 {
 class com_sun_star_vcl_VCLFont;
@@ -52,7 +56,9 @@ class com_sun_star_vcl_VCLGraphics;
 
 class SalGraphicsData
 {
-	friend class	JavaLayout;
+#ifdef MACOSX
+	friend class	ATSLayout;
+#endif	// MACOSX
 	friend class	SalBitmap;
 	friend class	SalFrame;
 	friend class	SalGraphics;

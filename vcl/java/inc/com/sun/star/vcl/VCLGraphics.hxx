@@ -64,6 +64,7 @@ public:
 						com_sun_star_vcl_VCLGraphics( jobject myObj ) : java_lang_Object( myObj ) {};
 	virtual				~com_sun_star_vcl_VCLGraphics() {};
 
+	void				addToFlush( long _par0, long _par1, long _par2, long _par3 );
 	void				beginSetClipRegion();
 	void				copyBits( const com_sun_star_vcl_VCLGraphics *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8 );
 	void				drawBitmap( const com_sun_star_vcl_VCLBitmap *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8 );
@@ -78,11 +79,14 @@ public:
 	USHORT				getBitCount();
 	const Size			getGlyphSize( const sal_Unicode _par0, com_sun_star_vcl_VCLFont *_par1 );
 	com_sun_star_vcl_VCLImage *getImage();
+	java_lang_Object*	getGraphics();
+	void*				getNativeGraphics();
 	SalColor			getPixel( long _par0, long _par1 );
 	const Size			getResolution();
 	const Size			getScreenFontResolution();
 	void				invert( long _par0, long _par1, long _par2, long _par3, SalInvert _par4 );
 	void				invert( ULONG _par0, const long *_par1, const long *_par2, SalInvert _par3 );
+	void				releaseNativeGraphics( void *_par0 );
 	void				resetClipRegion();
 	void				resetGraphics();
 	void				setLineAntialiasing( sal_Bool _par0 );

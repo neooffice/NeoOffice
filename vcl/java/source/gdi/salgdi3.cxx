@@ -235,11 +235,13 @@ BOOL SalGraphics::GetGlyphOutline( long nIndex, PolyPolygon& rPolyPoly,
 
 // -----------------------------------------------------------------------
 
+/*
 SalLayout* SalGraphics::GetTextLayout( ImplLayoutArgs& rArgs,
                                        int nFallbackLevel )
 {
 	return new JavaLayout( this );
 }
+*/
 
 // -----------------------------------------------------------------------
 

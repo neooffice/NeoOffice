@@ -260,7 +260,6 @@ const Rectangle com_sun_star_vcl_VCLPageFormat::getImageableBounds()
 
 void *com_sun_star_vcl_VCLPageFormat::getNativePrintJob()
 {
-	static jmethodID mID = NULL;
 	void *out = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
