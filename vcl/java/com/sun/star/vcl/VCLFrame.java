@@ -1715,10 +1715,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			lastKeyPressed = null;
 		}
 		else {
-			// Mac OS X delays the initial background painting so force
-			// it to be painted before VCL does any painting
-			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
-				window.repaint();
 			toFront();
 		}
 
