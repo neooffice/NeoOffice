@@ -202,7 +202,7 @@ public final class VCLFont {
 			type = VCLFont.FAMILY_ROMAN;
 
 		// Get the font metrics
-		fontMetrics = VCLFont.graphics.getFontMetrics(f);
+		fontMetrics = VCLFont.graphics.getFontMetrics(font);
 
 	}
 
