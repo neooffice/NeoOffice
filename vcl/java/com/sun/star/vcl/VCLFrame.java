@@ -1326,7 +1326,7 @@ public class VCLFrame implements ComponentListener, FocusListener, KeyListener, 
 
 		Rectangle bounds = null;
 		if (b) {
-			window = new Window(VCLFrame.owner);
+			window = new Window(window);
 			panel = new VCLFrame.NoPaintPanel();
 			panel.setBackground(Color.white);
 			panel.enableInputMethods(false);
