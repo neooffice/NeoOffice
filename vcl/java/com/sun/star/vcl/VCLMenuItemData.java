@@ -188,6 +188,7 @@ public final class VCLMenuItemData {
      */
     public void dispose() {
 	unregisterAllAWTPeers();
+	keyboardShortcut=null;
 	menuItems=null;
 	title=null;
     if(delegateForObject!=null)
