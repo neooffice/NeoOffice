@@ -198,27 +198,43 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_GETFOCUS:
 		{
-			// In presentation mode, don't let presentation window lose focus
-			if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame != pFrame )
+			if ( pSalData->mpFocusFrame != pFrame )
 			{
-				pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
-				return;
+				// When in presentation mode, only allow focus to be set to
+				// windows that were shown after presentation mode was entered
+				if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame != pFrame )
+				{
+					for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maPresentationFrameList.begin(); it != pSalData->maPresentationFrameList.end() && *it != pFrame; ++it )
+						;
+					if ( it == pSalData->maPresentationFrameList.end() )
+					{
+						pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
+						return;
+					}
+				}
+
+				pSalData->mpFocusFrame = pFrame;
+				dispatchEvent( nID, pFrame, NULL );
 			}
-			pSalData->mpFocusFrame = pFrame;
-			dispatchEvent( nID, pFrame, NULL );
 			return;
 		}
 		case SALEVENT_LOSEFOCUS:
 		{
-			// In presentation mode, don't let presentation window lose focus
-			if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame != pFrame )
-			{
-				pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
-				return;
-			}
 			if ( pSalData->mpFocusFrame == pFrame )
+			{
 				pSalData->mpFocusFrame = NULL;
-			dispatchEvent( nID, pFrame, NULL );
+				dispatchEvent( nID, pFrame, NULL );
+
+				// When in presentation mode, set the focus to the last window
+				// that was shown after presentation mode was entered
+				if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame != pFrame )
+				{
+					if ( pSalData->maPresentationFrameList.size() )
+						pSalData->maPresentationFrameList.back()->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
+					else
+						pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
+				}
+			}
 			return;
 		}
 		case SALEVENT_KEYINPUT:

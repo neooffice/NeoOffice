@@ -5880,9 +5880,7 @@ void Window::SetParent( Window* pNewParent )
         return;
 
     BOOL bVisible = IsVisible();
-#ifndef USE_JAVA
     Show( FALSE, SHOW_NOFOCUSCHANGE );
-#endif	// !USE_JAVA
 
     // Testen, ob sich das Overlap-Window aendert
     Window* pOldOverlapWindow;
@@ -5995,10 +5993,8 @@ void Window::SetParent( Window* pNewParent )
             GetDropTarget();
     }
 
-#ifndef USE_JAVA
     if ( bVisible )
         Show( TRUE, SHOW_NOFOCUSCHANGE | SHOW_NOACTIVATE );
-#endif	// !USE_JAVA
 }
 
 // -----------------------------------------------------------------------

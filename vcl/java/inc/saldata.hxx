@@ -81,6 +81,7 @@ public:
 	::std::map< ::rtl::OUString, ::vcl::com_sun_star_vcl_VCLFont* >	maFontMapping;
 	::std::map< void*, ImplFontData* >	maNativeFontMapping;
 	SalFrame*				mpPresentationFrame;
+	::std::list< SalFrame* >	maPresentationFrameList;
 	::std::list< ::vcl::com_sun_star_vcl_VCLPageFormat* >	maVCLPageFormats;
 
 							SalData();
