@@ -41,6 +41,9 @@
 #ifndef _DTRANS_JAVA_DNDCONTEXT_HXX
 #include <java_dndcontext.hxx>
 #endif
+#ifndef _JAVA_DTRANS_COM_SUN_STAR_DTRANS_DTRANSTRANSFERABLE_HXX
+#include <com/sun/star/dtrans/DTransTransferable.hxx>
+#endif
 #ifndef _COM_SUN_STAR_DATATRANSFER_DND_DNDCONSTANTS_HPP_
 #include <com/sun/star/datatransfer/dnd/DNDConstants.hpp>
 #endif
@@ -86,6 +89,7 @@ static ::std::list< ::java::JavaDropTarget* > aDropTargets;
 static oslThread pDragThread = NULL;
 static ::java::JavaDragSource *pDragThreadOwner = NULL;
 static sal_Int8 nCurrentAction = ::com::sun::star::datatransfer::dnd::DNDConstants::ACTION_NONE;
+static sal_Int8 nStartingAction = ::com::sun::star::datatransfer::dnd::DNDConstants::ACTION_NONE;
 static bool bNoRejectCursor = false;
 
 using namespace com::sun::star::datatransfer;
@@ -147,6 +151,90 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 // ------------------------------------------------------------------------
 
 #ifdef MACOSX
+static sal_Int8 ImplGetDragDropAction( DragRef aDrag )
+{
+	sal_Int8 nActions = DNDConstants::ACTION_NONE;
+
+	DragActions nDragActions;
+	if ( GetDragDropAction( aDrag, &nDragActions ) == noErr )
+	{
+		if ( nDragActions & kDragActionMove )
+			nActions = DNDConstants::ACTION_MOVE;
+		else if ( nDragActions & kDragActionCopy )
+			nActions = DNDConstants::ACTION_COPY;
+		else if ( nDragActions & kDragActionAlias )
+			nActions = DNDConstants::ACTION_LINK;
+	}
+
+	SInt16 nKeyModifiers;
+	if ( GetDragModifiers( aDrag, &nKeyModifiers, NULL, NULL ) != noErr || ! ( nKeyModifiers & ( shiftKey | cmdKey ) ) )
+		nActions |= DNDConstants::ACTION_DEFAULT;
+
+	return nActions;
+}
+#endif	// MACOSX
+
+// ------------------------------------------------------------------------
+
+#ifdef MACOSX
+static void ImplSetDragDropAction( DragRef aDrag, sal_Int8 nActions )
+{
+	if ( nActions & DNDConstants::ACTION_MOVE )
+		SetDragDropAction( aDrag, kDragActionMove );
+	else if ( nActions & DNDConstants::ACTION_COPY )
+		SetDragDropAction( aDrag, kDragActionCopy );
+	else if ( nActions & DNDConstants::ACTION_LINK )
+		SetDragDropAction( aDrag, kDragActionAlias );
+	else
+		SetDragDropAction( aDrag, kDragActionNothing );
+}
+#endif	// MACOSX
+
+// ------------------------------------------------------------------------
+
+#ifdef MACOSX
+static sal_Int8 ImplGetDragAllowableAction( DragRef aDrag )
+{
+	sal_Int8 nActions = DNDConstants::ACTION_NONE;
+
+	DragActions nDragActions;
+	if ( GetDragAllowableActions( aDrag, &nDragActions ) == noErr )
+	{
+		if ( nDragActions & kDragActionMove )
+			nActions = DNDConstants::ACTION_MOVE;
+		else if ( nDragActions & kDragActionCopy )
+			nActions = DNDConstants::ACTION_COPY;
+		else if ( nDragActions & kDragActionAlias )
+			nActions = DNDConstants::ACTION_LINK;
+	}
+
+	SInt16 nKeyModifiers;
+	if ( GetDragModifiers( aDrag, &nKeyModifiers, NULL, NULL ) != noErr || ! ( nKeyModifiers & ( shiftKey | cmdKey ) ) )
+		nActions |= DNDConstants::ACTION_DEFAULT;
+
+	return nActions;
+}
+#endif	// MACOSX
+
+// ------------------------------------------------------------------------
+
+#ifdef MACOSX
+static void ImplSetDragAllowableActions( DragRef aDrag, sal_Int8 nActions )
+{
+	DragActions nDragActions = kDragActionGeneric;
+	if ( nActions & DNDConstants::ACTION_MOVE )
+		nDragActions |= kDragActionMove;
+	if ( nActions & DNDConstants::ACTION_COPY )
+		nDragActions |= kDragActionCopy;
+	if ( nActions & DNDConstants::ACTION_LINK )
+		nDragActions |= kDragActionAlias;
+	SetDragAllowableActions( aDrag, nDragActions, false );
+}
+#endif	// MACOSX
+
+// ------------------------------------------------------------------------
+
+#ifdef MACOSX
 static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, WindowRef aWindow, void *pData, DragRef aDrag )
 {
 	MutexGuard aDragGuard( aDragMutex );
@@ -179,9 +267,7 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 	{
 		if ( !bNoRejectCursor )
 		{
-			if ( nMessage == kDragTrackingLeaveHandler )
-				SetThemeCursor( kThemeArrowCursor );
-			else if ( nCurrentAction & DNDConstants::ACTION_MOVE )
+			if ( nCurrentAction & DNDConstants::ACTION_MOVE )
 				SetThemeCursor( kThemeClosedHandCursor );
 			else if ( nCurrentAction & DNDConstants::ACTION_COPY )
 				SetThemeCursor( kThemeCopyArrowCursor );
@@ -286,7 +372,11 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 	MacOSPoint aPoint;
 	Rect aRect;
 	if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr && pTarget->handleDrop( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) ) )
+	{
+		// Update actions
+		ImplSetDragDropAction( aDrag, nCurrentAction );
 		return noErr;
+	}
 
 	return dragNotAcceptedErr;
 }
@@ -477,7 +567,8 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 	maContents = transferable;
 	maListener = listener;
 
-	pDragThread = osl_createSuspendedThread( runDragExecute, this );
+	if ( maContents.is() )
+		pDragThread = osl_createSuspendedThread( runDragExecute, this );
 	if ( pDragThread )
 	{
 		pDragThreadOwner = this;
@@ -599,6 +690,8 @@ void JavaDragSource::runDragExecute( void *pData )
 			if ( ! ( nKeyModifiers & ( shiftKey | cmdKey ) ) )
 				nCurrentAction |= DNDConstants::ACTION_DEFAULT;
 
+			nStartingAction = nCurrentAction;
+
 			if ( aEventRecord.what != nullEvent )
 			{
 				RgnHandle aRegion = NewRgn();
@@ -614,15 +707,18 @@ void JavaDragSource::runDragExecute( void *pData )
 					aTrackingEventQueue = GetCurrentEventQueue();
 					aCarbonEventQueueMutex.release();
 
-					// Fix bug 249 by preventing drags to other applications
-					SetDragAllowableActions( aDrag, kDragActionNothing, false );
+					ImplSetDragAllowableActions( aDrag, nCurrentAction );
 
 					aDragSources.push_back( pSource );
 
-					if ( TrackDrag( aDrag, &aEventRecord, aRegion ) == noErr )
+					// Set the drag's transferable
+					com_sun_star_dtrans_DTransTransferable *pTransferable = new com_sun_star_dtrans_DTransTransferable( aDrag, JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG );
+
+					if ( pSource->maContents.is() && pTransferable->setContents( pSource->maContents ) && TrackDrag( aDrag, &aEventRecord, aRegion ) == noErr )
 					{
 						aDragMutex.acquire();
 
+						nCurrentAction = ImplGetDragDropAction( aDrag );
 						if ( nCurrentAction != DNDConstants::ACTION_NONE )
 						{
 							aDragEvent.DropAction = nCurrentAction;
@@ -631,6 +727,8 @@ void JavaDragSource::runDragExecute( void *pData )
 
 						aDragMutex.release();
 					}
+
+					delete pTransferable;
 
 					aDragSources.remove( pSource );
 
@@ -895,7 +993,8 @@ void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY )
 			(*it)->dragExit( aDragEvent );
 	}
 
-	nCurrentAction = pContext->getDragAction();
+	// Reset action
+	nCurrentAction = nStartingAction;
 }
 
 // ------------------------------------------------------------------------
