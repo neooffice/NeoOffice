@@ -208,7 +208,7 @@ if [ "$os" = "Darwin" ] ; then
 else
     printf "[Java]\n" > "$configdir/javarc"
 fi
-printf "SystemClasspath=$sysclasspath\nJava=1\nJavaScript=1\nApplets=1\n-Xmx512m\n" >> "$configdir/javarc"
+printf "SystemClasspath=$sysclasspath\nJava=1\nJavaScript=1\nApplets=1\n-Xrs\n-Xmx512m\n" >> "$configdir/javarc"
 if [ ! -f "$configdir/javarc" ] ; then
     error "$configdir/javarc file could not be created"
 fi
