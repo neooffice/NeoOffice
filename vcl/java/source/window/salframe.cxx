@@ -384,16 +384,10 @@ void SalFrame::UpdateSettings( AllSettings& rSettings )
 
 SalBitmap* SalFrame::SnapShot()
 {
-	SalBitmap *pBitmap = NULL;
-	SalGraphics *pGraphics = GetGraphics();
-
-	if ( pGraphics )
-	{
-		pBitmap = pGraphics->GetBitmap( 0, 0, maGeometry.nWidth, maGeometry.nHeight );	
-		ReleaseGraphics( pGraphics );
-	}
-
-	return pBitmap;
+#ifdef DEBUG
+	fprintf( stderr, "SalFrame::Snapshot not implemented\n" );
+#endif
+	return NULL;
 }
 
 // -----------------------------------------------------------------------
