@@ -703,8 +703,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void dispose() {
 
-		if (window != null)
+		boolean runGC = false;
+		if (window != null) {
 			setVisible(false);
+			if (window instanceof Frame)
+				runGC = true;
+		}
 		if (queue != null && frame != 0)
 			queue.removeCachedEvents(frame);
 		bitCount = 0;
@@ -724,6 +728,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		window = null;
 		lastKeyPressed = null;
 		originalBounds = null;
+		if (runGC)
+			System.gc();
 
 	}
 
@@ -1529,6 +1535,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			lastKeyPressed = null;
 		}
 		else {
+			// Some JVMs delay the initial background painting so force
+			// it to be painted before VCL does any painting
+			window.getPeer().repaint(0, 0, 0, window.getWidth(), window.getHeight());
 			toFront();
 		}
 

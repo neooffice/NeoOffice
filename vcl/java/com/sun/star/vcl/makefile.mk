@@ -54,9 +54,6 @@ dummy:
 
 .ELSE		# "$(GUIBASE)"!="java"
 
-IMGFILES = \
-	$(CLASSDIR)$/$(PACKAGE)$/50.jpg
-
 JAVAFILES = \
 	VCLBitmap.java \
 	VCLEvent.java \
@@ -74,10 +71,5 @@ JAVAFILES = \
 # --- Targets ------------------------------------------------------
 
 .INCLUDE :  target.mk
-
-ALLTAR : $(IMGFILES)
-
-$(IMGFILES) :
-	$(GNUCOPY) $(@:f) $@
 
 .INCLUDE :  $(PRJ)$/util$/target.pmk

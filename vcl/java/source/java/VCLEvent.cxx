@@ -127,6 +127,14 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 
 			return;
 		}
+		case SALEVENT_PRINTDOCUMENT:
+		{
+			String aEmptyStr;
+			ApplicationEvent aAppEvt( aEmptyStr, aEmptyStr, APPEVENT_PRINT_STRING, getPath() );
+			ImplGetSVData()->mpApp->AppEvent( aAppEvt );
+
+			return;
+		}
 	}
 	
 	// Handle events that require a SalFrame pointer

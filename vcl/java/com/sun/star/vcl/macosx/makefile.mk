@@ -57,6 +57,7 @@ dummy:
 JAVAFILES = \
 	VCLOpenApplicationHandler.java \
 	VCLOpenDocumentHandler.java \
+	VCLPrintDocumentHandler.java \
 	VCLQuitHandler.java
 
 .ENDIF		# "$(GUIBASE)$(OS)"!="javaMACOSX"

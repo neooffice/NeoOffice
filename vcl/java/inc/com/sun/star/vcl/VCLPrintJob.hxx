@@ -63,7 +63,8 @@ public:
 	static jclass		getMyClass();
 	static Orientation	getOrientation();
 	static const Size	getPageSize();
-	static void			setup();
+	static void			setOrientation( Orientation _par0 );
+	static sal_Bool		setup();
 
 						com_sun_star_vcl_VCLPrintJob( jobject myObj ) : java_lang_Object( myObj ) {}
 						com_sun_star_vcl_VCLPrintJob();
@@ -73,6 +74,7 @@ public:
 	void				dispose();
 	void				endJob();
 	void				endPage();
+	sal_Bool			isFinished();
 	sal_Bool			startJob();
 	com_sun_star_vcl_VCLGraphics*	startPage();
 };

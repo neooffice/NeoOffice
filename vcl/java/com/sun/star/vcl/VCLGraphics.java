@@ -56,6 +56,7 @@ import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
+import java.awt.image.ImageObserver;
 import java.awt.print.PageFormat;
 import java.util.LinkedList;
 
@@ -65,7 +66,7 @@ import java.util.LinkedList;
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public final class VCLGraphics {
+public final class VCLGraphics implements ImageObserver {
 
 	/**
 	 * The SAL_INVERT_HIGHLIGHT constant.
@@ -95,7 +96,7 @@ public final class VCLGraphics {
 	/**
 	 * The image50 image.
 	 */
-	private static VCLImage image50 = VCLImage.loadImageFromResource("com/sun/star/vcl/50.jpg");
+	private static VCLImage image50 = null;
 
 	/**
 	 * Emits an audio beep.
@@ -157,6 +158,21 @@ public final class VCLGraphics {
 
 		// Set stroke
 		g.setStroke(new BasicStroke(1.0f));
+
+	}
+
+	/**
+	 * Initialize the image50 image.
+	 */
+	static {
+
+		VCLImage textureImage = new VCLImage(2, 2, 1);
+		int[] textureData = textureImage.getData();
+		textureData[0] = 0xff000000;
+		textureData[1] = 0xffffffff;
+		textureData[2] = 0xffffffff;
+		textureData[3] = 0xff000000;
+		image50 = textureImage;
 
 	}
 
@@ -304,8 +320,7 @@ public final class VCLGraphics {
 			graphicsList.remove(this);
 		}
 		bitCount = 0;
-		frame = null;
-		if (graphics != null)
+		if (image != null && graphics != null)
 			graphics.dispose();
 		graphics = null;
 		if (panelGraphics != null)
@@ -361,29 +376,22 @@ public final class VCLGraphics {
 		Shape clip = graphics.getClip();
 		if (clip != null && clip.contains((double)destX, (double)destY, (double)destWidth, (double)destHeight))
 			clip = null;
-		if (image == null) {
-			// Convert to an image and scale it
-			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+		if (image == null || clip != null || destWidth != srcWidth || destHeight != srcHeight) {
+			// Draw to a temporary image and scale it
+			VCLImage bmpImage = new VCLImage(srcWidth, srcHeight, bmp.getBitCount());
+			bmpImage.getGraphics().drawBitmap(bmp, 0, 0, srcWidth, srcHeight, srcX, srcY, srcWidth, srcHeight);
+			if (image == null && VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 				// Mac OS X will render only PDF 1.3 (which is not supported by
 				// the Mac OS X Preview application) if we draw images that are
 				// smaller than the page
-				VCLImage bmpImage = new VCLImage((int)pageFormat.getWidth() + 1, (int)pageFormat.getHeight() + 1, bitCount);
-				VCLGraphics bmpGraphics = bmpImage.getGraphics();
-				bmpGraphics.drawBitmap(bmp, destX, destY, destWidth, destHeight, srcX, srcY, srcWidth, srcHeight);
-				bmpGraphics.dispose();
-				graphics.drawImage(bmpImage.getImage(), 0, 0, null);
-				bmpImage.dispose();
+				VCLImage pageImage = new VCLImage((int)pageFormat.getWidth() + 1, (int)pageFormat.getHeight() + 1, bmp.getBitCount());
+				pageImage.getGraphics().drawImage(bmpImage, destX, destY, destWidth, destHeight, 0, 0, srcWidth, srcHeight);
+				drawImage(pageImage, 0, 0, pageImage.getWidth(), pageImage.getHeight(), 0, 0, pageImage.getWidth(), pageImage.getHeight());
+				pageImage.dispose();
 			}
 			else {
-				VCLImage bmpImage = new VCLImage(bmp, srcX, srcY, srcWidth, srcHeight);
-				graphics.drawImage(bmpImage.getImage(), destX, destY, destX + destWidth, destY + destHeight, 0, 0, srcWidth, srcHeight, null);
-				bmpImage.dispose();
+				drawImage(bmpImage, destX, destY, destWidth, destHeight, 0, 0, srcWidth, srcHeight);
 			}
-		}
-		else if (clip != null || destWidth != srcWidth || destHeight != srcHeight) {
-			// Convert to an image and scale it
-			VCLImage bmpImage = new VCLImage(bmp, srcX, srcY, srcWidth, srcHeight);
-			graphics.drawImage(bmpImage.getImage(), destX, destY, destX + destWidth, destY + destHeight, 0, 0, srcWidth, srcHeight, null);
 			bmpImage.dispose();
 		}
 		else {
@@ -446,24 +454,22 @@ public final class VCLGraphics {
 		Shape clip = graphics.getClip();
 		if (clip != null && clip.contains((double)destX, (double)destY, (double)destWidth, (double)destHeight))
 			clip = null;
-		if (image == null) {
-			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+		if (image == null || clip != null || destWidth != srcWidth || destHeight != srcHeight) {
+			VCLImage mergedImage = new VCLImage(srcWidth, srcHeight, bmp.getBitCount());
+			mergedImage.getGraphics().drawBitmap(bmp, transBmp, 0, 0, srcWidth, srcHeight, srcX, srcY, srcWidth, srcHeight);
+			// Draw to a temporary image and scale it
+			if (image == null && VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 				// Mac OS X will render only PDF 1.3 (which is not supported by
 				// the Mac OS X Preview application) if we draw images that are
 				// smaller than the page
-				VCLImage bmpImage = new VCLImage((int)pageFormat.getWidth() + 1, (int)pageFormat.getHeight() + 1, bitCount);
-				VCLGraphics bmpGraphics = bmpImage.getGraphics();
-				bmpGraphics.drawBitmap(bmp, destX, destY, destWidth, destHeight, srcX, srcY, srcWidth, srcHeight);
-				bmpGraphics.dispose();
-				graphics.drawImage(bmpImage.getImage(), 0, 0, null);
-				bmpImage.dispose();
+				VCLImage pageImage = new VCLImage((int)pageFormat.getWidth() + 1, (int)pageFormat.getHeight() + 1, bmp.getBitCount());
+				pageImage.getGraphics().drawImage(mergedImage, destX, destY, destWidth, destHeight, 0, 0, srcWidth, srcHeight);
+				drawImage(pageImage, 0, 0, pageImage.getWidth(), pageImage.getHeight(), 0, 0, pageImage.getWidth(), pageImage.getHeight());
+				pageImage.dispose();
 			}
-		}
-		else if (clip != null || destWidth != srcWidth || destHeight != srcHeight) {
-			// Draw to a temporary image and scale it
-			VCLImage mergedImage = new VCLImage(srcWidth, srcHeight, bmp.getBitCount());
-			mergedImage.getGraphics().drawBitmap(bmp, transBmp, 0, 0, srcWidth, srcHeight, srcX, srcY, srcWidth, srcHeight);
-			graphics.drawImage(mergedImage.getImage(), destX, destY, destX + destWidth, destY + destHeight, 0, 0, srcWidth, srcHeight, null);
+			else {
+				drawImage(mergedImage, destX, destY, destWidth, destHeight, 0, 0, srcWidth, srcHeight);
+			}
 			mergedImage.dispose();
 		}
 		else {
@@ -488,7 +494,7 @@ public final class VCLGraphics {
 			for (int i = 0; i < totalPixels; i++) {
 				// Copy pixel
 				if (transBmp.getPixel(srcPoint) == 0xff000000)
-					destData[(destPoint.y * destDataWidth) + destPoint.x] = bmp.getPixel(srcPoint);
+					destData[(destPoint.y * destDataWidth) + destPoint.x] = bmp.getPixel(srcPoint) | 0xff000000;
 
 				// Update current points
 				srcPoint.x++;
@@ -523,7 +529,16 @@ public final class VCLGraphics {
 	 */
 	void drawImage(VCLImage img, int destX, int destY, int destWidth, int destHeight, int srcX, int srcY, int srcWidth, int srcHeight) {
 
-		graphics.drawImage(img.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+		BufferedImage i = img.getImage();
+		synchronized (i) {
+			if (!graphics.drawImage(img.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, this)) {
+				try {
+					i.wait();
+				}
+				catch (Throwable t) {}
+			}
+		}
+
 		addToFlush(new Rectangle(destX, destY, destWidth, destHeight));
 
 	}
@@ -545,7 +560,7 @@ public final class VCLGraphics {
 	void drawImageXOR(VCLImage img, int destX, int destY, int destWidth, int destHeight, int srcX, int srcY, int srcWidth, int srcHeight) {
 
 		if (image == null) {
-			drawImageXOR(img, destX, destY, destWidth, destHeight, srcX, srcY, srcWidth, srcHeight);
+			drawImage(img, destX, destY, destWidth, destHeight, srcX, srcY, srcWidth, srcHeight);
 			return;
 		}
 		else if (destWidth != srcWidth || destHeight != srcHeight) {
@@ -564,8 +579,8 @@ public final class VCLGraphics {
 			// Draw to a temporary image to handle clipping
 			VCLImage destImage = new VCLImage(destWidth, destHeight, bitCount);
 			destImage.getGraphics().drawImage(image, 0, 0, destWidth, destHeight, destX, destY, destWidth, destHeight);
-			destImage.getGraphics().drawImageXOR(img, destX, destY, destWidth, destHeight, srcX, srcY, srcWidth, srcHeight);
-			graphics.drawImage(destImage.getImage(), destX, destY, destX + destWidth, destY + destHeight, 0, 0, destWidth, destHeight, null);
+			destImage.getGraphics().drawImageXOR(img, 0, 0, destWidth, destHeight, srcX, srcY, srcWidth, srcHeight);
+			drawImage(destImage, destX, destY, destWidth, destHeight, 0, 0, destWidth, destHeight);
 			destImage.dispose();
 		}
 		else {
@@ -623,12 +638,20 @@ public final class VCLGraphics {
 	public void drawLine(int x1, int y1, int x2, int y2, int color) {
 
 		Rectangle bounds = new Rectangle(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
+		if (bounds.width < 0) {
+			bounds.x += bounds.width;
+			bounds.width *= -1;
+		}
+		if (bounds.height < 0) {
+			bounds.y += bounds.height;
+			bounds.height *= -1;
+		}
 		if (xor) {
 			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
 			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
 			VCLGraphics.setDefaultRenderingAttributes(srcGraphics);
 			srcGraphics.setColor(new Color(color));
-			srcGraphics.translate(x1 * -1, y1 * -1);
+			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 			srcGraphics.drawLine(x1, y1, x2, y2);
 			srcGraphics.dispose();
 			drawImageXOR(srcImage, bounds.x, bounds.y, bounds.width, bounds.height, 0, 0, bounds.width, bounds.height);
@@ -667,7 +690,7 @@ public final class VCLGraphics {
 			// Draw to a temporary image and scale it
 			VCLImage maskImage = new VCLImage(srcWidth, srcHeight, bmp.getBitCount());
 			maskImage.getGraphics().drawMask(bmp, color, 0, 0, srcWidth, srcHeight, srcX, srcY, srcWidth, srcHeight);
-			graphics.drawImage(maskImage.getImage(), destX, destY, destX + destWidth, destY + destHeight, 0, 0, srcWidth, srcHeight, null);
+			drawImage(maskImage, destX, destY, destWidth, destHeight, 0, 0, srcWidth, srcHeight);
 			maskImage.dispose();
 		}
 		else {
@@ -817,7 +840,7 @@ public final class VCLGraphics {
 				srcGraphics.translate(x * -1, y * -1);
 				srcGraphics.drawRect(x, y, width - 1, height - 1);
 				srcGraphics.dispose();
-				drawImageXOR(srcImage, x, y, width, height, 0, 0, width, height);
+				drawImageXOR(srcImage, x, y, width - 1, height - 1, 0, 0, width - 1, height - 1);
 				srcImage.dispose();
 			}
 			else {
@@ -945,7 +968,14 @@ public final class VCLGraphics {
 
 		if (panelGraphics != null && image != null && update != null) {
 			panelGraphics.setClip(update);
-			panelGraphics.drawImage(image.getImage(), 0, 0, null);
+			synchronized (image) {
+			 	if (!panelGraphics.drawImage(image.getImage(), 0, 0, this)) {
+					try {
+						image.wait();
+					}
+					catch (Throwable t) {}
+				}
+			}	
 			Toolkit.getDefaultToolkit().sync();
 			update = null;
 			panelGraphics.setClip(null);
@@ -993,6 +1023,33 @@ public final class VCLGraphics {
 	}
 
 	/**
+	 * This method is called when information about an image which was
+	 * previously requested using an asynchronous interface becomes available.
+	 *
+	 * @param img the image being observed
+	 * @param infoflags the <code>ImageObserver</code> flags
+	 * @param x the x coordinate  
+	 * @param y the y coordinate
+	 * @param w the width
+	 * @param h the height
+	 * @return <code>false</code> if the infoflags indicate that the image is
+	 *  completely loaded or else <code>true</code>
+	 */
+	public boolean imageUpdate(Image img, int infoflags, int x, int y, int width, int height) {
+
+		if ((infoflags & (ImageObserver.ALLBITS | ImageObserver.ABORT)) != 0) {
+			// Notify the methods that are drawing that rendering is complete
+			synchronized (img) {
+				img.notifyAll();
+			}
+			return false;
+		}
+
+		return true;
+
+	}
+
+	/**
 	 * Inverts the specified rectangle depending on the specified options.
 	 *
 	 * @param x the x coordinate of the rectangle
@@ -1003,122 +1060,14 @@ public final class VCLGraphics {
 	 */
 	public void invert(int x, int y, int width, int height, int options) {
 
-		if (image == null)
-			return;
-
-		// Don't do anything if x or y is outside of the image's width or
-		// height
-		int destDataWidth = image.getWidth();
-		int destDataHeight = image.getHeight();
-		Rectangle imageBounds = new Rectangle(0, 0, image.getWidth(), image.getHeight()).intersection(new Rectangle(x, y, width, height));
-		if (imageBounds.isEmpty())
-			return;
-
-		// Invert the image 
-		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME) {
-			int[] destData = image.getData();
-			Shape clip = graphics.getClip();
-			if (clip == null)
-				clip = new Rectangle(0, 0, destDataWidth, destDataHeight);
-
-			// Draw horizontal lines
-			Point topPoint = new Point(x, y);
-			Point bottomPoint = new Point(topPoint.x, y + height - 1);
-			while (topPoint.x < x + width && bottomPoint.x < x + width) {
-				if (clip == null || clip.contains((double)topPoint.x, (double)topPoint.y)) {
-					int i = (topPoint.y * destDataWidth) + topPoint.x;
-					destData[i] = destData[i] ^ 0xff000000 ^ 0xffffffff;
-				}
-				if (clip == null || clip.contains((double)bottomPoint.x, (double)bottomPoint.y)) {
-					int i = (bottomPoint.y * destDataWidth) + bottomPoint.x;
-					destData[i] = destData[i] ^ 0xff000000 ^ 0xffffffff;
-				}
-				// Update current points
-				topPoint.x += 2;
-				bottomPoint.x += 2;
-			}
-
-			// Draw vertical lines
-			Point leftPoint = new Point(x, y + 2);
-			Point rightPoint = new Point(x + width - 1, leftPoint.y);
-			while (leftPoint.y < y + height - 1 && rightPoint.y < y + height - 1) {
-				if (clip == null || clip.contains((double)leftPoint.x, (double)leftPoint.y)) {
-					int i = (leftPoint.y * destDataWidth) + leftPoint.x;
-					destData[i] = destData[i] ^ 0xff000000 ^ 0xffffffff;
-				}
-				if (clip == null || clip.contains((double)rightPoint.x, (double)rightPoint.y)) {
-					int i = (rightPoint.y * destDataWidth) + rightPoint.x;
-					destData[i] = destData[i] ^ 0xff000000 ^ 0xffffffff;
-				}
-				// Update current points
-				leftPoint.y += 2;
-				rightPoint.y += 2;
-			}
-		}
-		else if ((options & VCLGraphics.SAL_INVERT_50) == VCLGraphics.SAL_INVERT_50) {
-			Shape clip = graphics.getClip();
-			if (clip != null && clip.contains((double)x, (double)y, (double)width, (double)height))
-				clip = null;
-			if (clip != null) {
-				// Draw to a temporary image to handle clipping
-				VCLImage destImage = new VCLImage(width, height, bitCount);
-				destImage.getGraphics().drawImage(image, 0, 0, width, height, x, y, width, height);
-				destImage.getGraphics().invert(0, 0, width, height, options);
-				graphics.drawImage(destImage.getImage(), x, y, x + width, y + height, 0, 0, width, height, null);
-				destImage.dispose();
-			}
-			else {
-				VCLImage srcImage = new VCLImage(width, height, VCLGraphics.image50.getBitCount());
-				Graphics2D srcGraphics = srcImage.getImage().createGraphics();
-				VCLGraphics.setDefaultRenderingAttributes(srcGraphics);
-				BufferedImage textureImage = VCLGraphics.image50.getImage();
-				srcGraphics.setPaint(new TexturePaint(textureImage, new Rectangle(0, 0, textureImage.getWidth(), textureImage.getHeight()).getBounds2D()));
-				srcGraphics.setPaint(new TexturePaint(textureImage, new Rectangle(0, 0, textureImage.getWidth(), textureImage.getHeight()).getBounds2D()));
-				srcGraphics.fillRect(0, 0, width, height);
-				srcGraphics.dispose();
-				drawImageXOR(srcImage, x, y, width, height, 0, 0, width, height);
-				srcImage.dispose();
-			}
-		}
-		else {
-			if (x < 0) {
-				width += x;
-				x = 0;
-			}
-			if (y < 0) {
-				height += y;
-				y = 0;
-			}
-			Shape clip = graphics.getClip();
-			if (clip != null && clip.contains((double)x, (double)y, (double)width, (double)height))
-				clip = null;
-			if (clip != null) {
-				// Draw to a temporary image to handle clipping
-				VCLImage destImage = new VCLImage(width, height, bitCount);
-				destImage.getGraphics().drawImage(image, 0, 0, width, height, x, y, width, height);
-				destImage.getGraphics().invert(0, 0, width, height, options);
-				graphics.drawImage(destImage.getImage(), x, y, x + width, y + height, 0, 0, width, height, null);
-				destImage.dispose();
-			}
-			else {
-				int[] destData = image.getData();
-				Point destPoint = new Point(x, y);
-				int totalPixels = width * height;
-
-				for (int i = 0; i < totalPixels; i++) {
-					// Invert pixel
-					int j = (destPoint.y * destDataWidth) + destPoint.x;
-					destData[j] = ~destData[j] | 0xff000000;
-					// Update current points
-					destPoint.x++;
-					if (destPoint.x >= x + width) {
-						destPoint.x = x;
-						destPoint.y++;
-					}
-				}
-			}
-		}
-		addToFlush(new Rectangle(x, y, width, height));
+		Polygon polygon = new Polygon();
+		polygon.addPoint(x, y);
+		polygon.addPoint(x + width, y);
+		polygon.addPoint(x + width, y + height);
+		polygon.addPoint(x, y + height);
+		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME)
+			polygon.addPoint(x, y);
+		invert(polygon.npoints, polygon.xpoints, polygon.ypoints, options);
 
 	}
 
@@ -1161,9 +1110,8 @@ public final class VCLGraphics {
 			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, VCLGraphics.image50.getBitCount());
 			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
 			VCLGraphics.setDefaultRenderingAttributes(srcGraphics);
-			BufferedImage textureImage = VCLGraphics.image50.getImage();
-			srcGraphics.setPaint(new TexturePaint(textureImage, new Rectangle(0, 0, textureImage.getWidth(), textureImage.getHeight()).getBounds2D()));
-			srcGraphics.setPaint(new TexturePaint(textureImage, new Rectangle(0, 0, textureImage.getWidth(), textureImage.getHeight()).getBounds2D()));
+			srcGraphics.setPaint(new TexturePaint(VCLGraphics.image50.getImage(), new Rectangle(0, 0, VCLGraphics.image50.getWidth(), VCLGraphics.image50.getHeight()).getBounds2D()));
+			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 			srcGraphics.fillPolygon(polygon);
 			srcGraphics.dispose();
 			drawImageXOR(srcImage, bounds.x, bounds.y, bounds.width, bounds.height, 0, 0, bounds.width, bounds.height);
@@ -1171,29 +1119,27 @@ public final class VCLGraphics {
 		}
 		else {
 			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
-			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
-			VCLGraphics.setDefaultRenderingAttributes(srcGraphics);
-			srcGraphics.drawImage(image.getImage(), 0, 0, bounds.x + bounds.width, bounds.y + bounds.height, bounds.x, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height, null);
-			srcGraphics.dispose();
+			srcImage.getGraphics().drawImage(image, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y, bounds.width, bounds.height);
 
 			int[] destData = srcImage.getData();
-			int destDataWidth = srcImage.getWidth();
-			Point destPoint = new Point(bounds.x, bounds.y);
 			int totalPixels = bounds.width * bounds.height;
 
-			for (int i = 0; i < totalPixels; i++) {
-				// Invert pixel
-				int j = (destPoint.y * destDataWidth) + destPoint.x;
-				destData[j] = ~destData[j] | 0xff000000;
-				// Update current points
-				destPoint.x++;
-				if (destPoint.x >= bounds.x + bounds.width) {
-					destPoint.x = bounds.x;
-					destPoint.y++;
-				}
-			}
+			// Invert pixel
+			for (int i = 0; i < totalPixels; i++)
+				destData[i] = ~destData[i] | 0xff000000;
 
-			graphics.drawImage(srcImage.getImage(), bounds.x, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height, 0, 0, bounds.x + bounds.width, bounds.y + bounds.height, null);
+			Shape clip = graphics.getClip();
+			Area polygonClip = new Area(polygon);
+			if (clip != null) {
+				Area area = new Area(clip);
+				area.add(polygonClip);
+				graphics.setClip(area);
+			}
+			else {
+				graphics.setClip(polygonClip);
+			}
+			drawImage(srcImage, bounds.x, bounds.y, bounds.width, bounds.height, 0, 0, bounds.width, bounds.height);
+			graphics.setClip(clip);
 			srcImage.dispose();
 		}
 		addToFlush(bounds);
@@ -1269,8 +1215,15 @@ public final class VCLGraphics {
 	public void setPixel(int x, int y, int color) {
 
 		if (image != null) {
+			Shape clip = graphics.getClip();
+			if (clip != null && !clip.contains((double)x, (double)y))
+				return;
 			int[] pixels = image.getData();
-			pixels[(image.getWidth() * y) + x] = 0xff000000 | color;
+			int i = (image.getWidth() * y) + x;
+			color |= 0xff000000;
+			if (xor)
+				color = pixels[i] ^ 0xff000000 ^ color;
+			pixels[i] = color;
 		}
 		else {
 			drawRect(x, y, 1, 1, color, true);

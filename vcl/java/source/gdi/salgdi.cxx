@@ -172,8 +172,8 @@ void SalGraphics::SetROPFillColor( SalROPColor nROPColor )
 
 void SalGraphics::DrawPixel( long nX, long nY )
 {
-	if ( maGraphicsData.mnFillColor != 0xffffffff )
-		maGraphicsData.mpVCLGraphics->setPixel( nX, nY, maGraphicsData.mnFillColor );
+	if ( maGraphicsData.mnLineColor != 0xffffffff )
+		maGraphicsData.mpVCLGraphics->setPixel( nX, nY, maGraphicsData.mnLineColor );
 }
 
 // -----------------------------------------------------------------------

@@ -35,13 +35,10 @@
 
 package com.sun.star.vcl;
 
-import java.awt.Container;
 import java.awt.Graphics2D;
 import java.awt.Image;
-import java.awt.MediaTracker;
 import java.awt.Point;
 import java.awt.Rectangle;
-import java.awt.Toolkit;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 
@@ -52,34 +49,6 @@ import java.awt.image.DataBufferInt;
  * @author 	    $Author$
  */
 public final class VCLImage {
-
-	/**
-	 * Load an image from a resource.
-	 *
-	 * @param resource the resource name
-	 * @return a <code>VCLImage</code> instance
-	 */
-	static VCLImage loadImageFromResource(String resource) {
-
-		Image i = Toolkit.getDefaultToolkit().createImage(VCLImage.class.getClassLoader().getResource(resource));
-		MediaTracker m = new MediaTracker(new Container());
-		m.addImage(i, 0);
-		try {
-			m.waitForID(0);
-		}
-		catch (InterruptedException t) {
-			return null;
-		}
-		int width = i.getWidth(null);
-		int height = i.getWidth(null);
-		VCLImage image = new VCLImage(width, height, 0);
-		Graphics2D g = image.getImage().createGraphics();
-		g.drawImage(i, 0, 0, null);
-		g.dispose();
-		Toolkit.getDefaultToolkit().sync();
-		return image;
-
-	}
 
 	/**
 	 * The bit count.

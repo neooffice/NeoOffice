@@ -407,8 +407,7 @@ short PrinterSetupDialog::Execute()
 	}
 
 #ifdef USE_JAVA
-	mpPrinter->Setup();
-	return TRUE;
+	return mpPrinter->Setup();
 #else	// USE_JAVA
 	ImplFillPrnDlgListBox( mpPrinter, &maLbName, &maBtnProperties );
 	ImplSetInfo();

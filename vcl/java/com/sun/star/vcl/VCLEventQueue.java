@@ -112,6 +112,14 @@ public final class VCLEventQueue {
 				t.printStackTrace();
 			}
 			try {
+				Class c = Class.forName("com.sun.star.vcl.macosx.VCLPrintDocumentHandler");
+				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
+				ctor.newInstance(new Object[]{ this });
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			try {
 				Class c = Class.forName("com.sun.star.vcl.macosx.VCLQuitHandler");
 				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
 				ctor.newInstance(new Object[]{ this });
@@ -158,14 +166,16 @@ public final class VCLEventQueue {
 	 */
 	public VCLEvent getNextCachedEvent(boolean wait) {
 
-		// Allow the Java event queue to dispatch pending events first
-		Thread.currentThread().yield();
-
-		// if (!wait && queue.head == null)
-		if (queue.head == null)
+		if (!wait && queue.head == null)
 			return null;
 
 		synchronized (queue) {
+			if (wait && queue.head == null) {
+				try {
+					queue.wait(100);
+				}
+				catch (Throwable t) {}
+			}
 			VCLEventQueue.QueueItem eqi = null;
 			eqi = queue.head;
 			if (eqi != null) {
@@ -215,8 +225,8 @@ public final class VCLEventQueue {
 					break;
 				case VCLEvent.SALEVENT_MOUSEMOVE:
 				case VCLEvent.SALEVENT_MOUSELEAVE:
-				case VCLEvent.SALEVENT_MOUSEBUTTONDOWN:
 				case VCLEvent.SALEVENT_MOUSEBUTTONUP:
+				case VCLEvent.SALEVENT_MOUSEBUTTONDOWN:
 					newItem.type = VCLEventQueue.INPUT_MOUSE;
 					break;
 				case VCLEvent.SALEVENT_PAINT:

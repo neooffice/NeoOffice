@@ -33,58 +33,52 @@
  *
  ************************************************************************/
 
-#ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
-#define	_SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
+package com.sun.star.vcl.macosx;
 
-#ifndef _SV_JAVA_LANG_OBJECT_HXX
-#include <java/lang/Object.hxx>
-#endif
-#ifndef _SV_SV_H
-#include <sv.h>
-#endif
-#ifndef _SV_GEN_HXX
-#include <tools/gen.hxx>
-#endif
+import com.apple.mrj.MRJApplicationUtils;
+import com.apple.mrj.MRJPrintDocumentHandler;
+import com.sun.star.vcl.VCLEvent;
+import com.sun.star.vcl.VCLEventQueue;
+import java.io.File;
 
-// Custom event types
-#define SALEVENT_OPENDOCUMENT	((USHORT)100)
-#define SALEVENT_PRINTDOCUMENT	((USHORT)101)
+/** 
+ * A Java class that implements the <code>MRJPrintDocumentHandler</code>
+ * interface.
+ * <p>
+ * @version 	$Revision$ $Date$
+ * @author 	    $Author$
+ */
+public class VCLPrintDocumentHandler implements MRJPrintDocumentHandler {
 
-class SalFrame;
+	/**
+	 * The event queue.
+	 */
+	private VCLEventQueue queue = null;
 
-namespace vcl {
+	/**
+	 * Constructs a new <code>VCLPrintDocumentHandler</code> instance.
+	 * 
+	 * @param q the event queue to post events to
+	 */
+	public VCLPrintDocumentHandler(VCLEventQueue q) {
 
-class com_sun_star_vcl_VCLFrame;
+		queue = q;
 
-class com_sun_star_vcl_VCLEvent: public java_lang_Object
-{
-	void				dispatchEvent( USHORT nID, SalFrame *pFrame, void *pData );
+		// Register an instance of this class as the print document handler
+		MRJApplicationUtils.registerPrintDocumentHandler(this);
 
-protected:
-	static jclass		theClass;
+	}
 
-public:
-	static jclass		getMyClass();
+	/**
+	 * Called when an a file is printed from the Finder.
+	 *
+	 * @param file the file to be printed 
+	 */
+	public void handlePrintFile(File file) {
 
-						com_sun_star_vcl_VCLEvent( jobject myObj ) : java_lang_Object( myObj ) {};
-						com_sun_star_vcl_VCLEvent( USHORT nID, const SalFrame *pFrame, void *pData );
-	virtual				~com_sun_star_vcl_VCLEvent() {};
+		queue.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_PRINTDOCUMENT, null, 0, file.getAbsolutePath()));
 
-	void				dispatch();
-	const Rectangle		getBounds();
-	void*				getData();
-	SalFrame*			getFrame();
-	USHORT				getKeyChar();
-	USHORT				getKeyCode();
-	USHORT				getID();
-	USHORT				getModifiers();
-	::rtl::OUString		getPath();
-	const Rectangle		getUpdateRect();
-	ULONG				getWhen();
-	long				getX();
-	long				getY();
-};
 
-} // namespace vcl
+	}
 
-#endif // _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
+}

@@ -569,13 +569,6 @@ short PrintDialog::Execute()
 		return FALSE;
 	}
 
-#ifdef USE_JAVA
-	// Display the Java page dialog and the OOo print options dialog and
-	mpPrinter->Setup();
-	ClickOptionsHdl();
-	// Always return TRUE so that the print dialog is displayed
-	return TRUE;
-#else	// USE_JAVA
 	// Controls initialisieren
 	ImplFillPrnDlgListBox( mpPrinter, &maLbName, &maBtnProperties );
 	ImplSetInfo();
@@ -583,8 +576,13 @@ short PrintDialog::Execute()
 	ImplInitControls();
 	ImplModifyControlHdl( NULL );
 
+#ifdef USE_JAVA
+	ClickOptionsHdl();
+	short nRet = TRUE;
+#else	// USE_JAVA
 	// Dialog starten
 	short nRet = ModalDialog::Execute();
+#endif	// USE_JAVA
 
 	// Wenn Dialog mit OK beendet wurde, dann die Daten updaten
 	if( nRet == TRUE )
@@ -597,7 +595,6 @@ short PrintDialog::Execute()
 	maStatusTimer.Stop();
 
 	return nRet;
-#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------

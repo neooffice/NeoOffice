@@ -41,10 +41,10 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
 import java.awt.print.PageFormat;
+import java.awt.print.Paper;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
-import java.util.LinkedList;
 
 /**
  * The Java class that implements the SalPrinter C++ class methods.
@@ -70,11 +70,10 @@ public final class VCLPrintJob extends Thread implements Printable {
 	private static PageFormat pageFormat = null;
 
 	/**
-	 * Get the imageable bounds of the page using a resolution of 72 dpi.
-	 * Conversion to the real resolution is done in the <code>VCLGraphics</code>
-	 * class.
+	 * Get the imageable bounds of the page in 72 dpi. Conversion to the
+	 * real resolution is done in the <code>VCLGraphics</code> class.
 	 *
-	 * @return the imageable bounds of the page using a resolution of 72 dpi
+	 * @return the imageable bounds of the page using 72 dpi
 	 */
 	public synchronized static Rectangle getImageableBounds() {
 
@@ -109,12 +108,36 @@ public final class VCLPrintJob extends Thread implements Printable {
 	}
 
 	/**
+	 * Set the page orientation.
+	 *
+	 * @param o the page orientation
+	 */
+	public synchronized static void setOrientation(int o) {
+
+		if (o == ORIENTATION_PORTRAIT)
+			pageFormat.setOrientation(PageFormat.PORTRAIT);
+		else if (pageFormat.getOrientation() != PageFormat.REVERSE_LANDSCAPE)
+			pageFormat.setOrientation(PageFormat.LANDSCAPE);
+
+	}
+
+	/**
 	 * Setup the page configuration. This method displays a native page setup
 	 * dialog and saves any changes made by the user.
+	 *
+	 * @return <code>false</code> if the user pressed the page dialog's
+	 *  cancel button or else <code>true</code>
 	 */
-	public synchronized static void setup() {
+	public synchronized static boolean setup() {
 
-		pageFormat = PrinterJob.getPrinterJob().pageDialog(pageFormat);
+		PageFormat p = PrinterJob.getPrinterJob().pageDialog(pageFormat);
+		if (p != pageFormat) {
+			pageFormat = p;
+			return true;
+		}
+		else {
+			return false;
+		}
 
 	}
 
@@ -158,9 +181,9 @@ public final class VCLPrintJob extends Thread implements Printable {
 	private PrinterJob job = PrinterJob.getPrinterJob();
 
 	/**
-	 * The current page's image.
+	 * The print thread finished flag.
 	 */
-	private VCLImage pageImage = null;
+	private boolean printThreadFinished = false;
 
 	/**
 	 * The print thread started flag.
@@ -170,12 +193,7 @@ public final class VCLPrintJob extends Thread implements Printable {
 	/**
 	 * Constructs a new <code>VCLPrintJob</code> instance.
 	 */
-	public VCLPrintJob() {
-
-		// Copy the cached page format to this printer job
-		job.setPrintable(this, VCLPrintJob.pageFormat);
-
-	}
+	public VCLPrintJob() {}
 
 	/**
 	 * Abort the printer job.
@@ -184,12 +202,7 @@ public final class VCLPrintJob extends Thread implements Printable {
 
 		// End the job before disposing of the graphics
 		job.cancel();
-		endPage();
-		try {
-			join();
-		}
-		catch (Throwable t) {}
-		dispose();
+		endJob();
 
 	}
 
@@ -204,17 +217,15 @@ public final class VCLPrintJob extends Thread implements Printable {
 		currentGraphics = null;
 		currentJobPage = -1;
 		currentPage = 0;
-		endJob = false;
 		if (graphicsInfo != null) {
 			graphicsInfo.graphics = null;
 			graphicsInfo.pageFormat = null;
 		}
+		endJob = true;
 		graphicsInfo = null;
 		job = null;
-		if (pageImage != null)
-			pageImage.dispose();
-		pageImage = null;
 		printThreadStarted = true;
+		printThreadFinished = true;
 
 	}
 
@@ -230,7 +241,6 @@ public final class VCLPrintJob extends Thread implements Printable {
 			join();
 		}
 		catch (Throwable t) {}
-		dispose();
 
 	}
 
@@ -240,14 +250,15 @@ public final class VCLPrintJob extends Thread implements Printable {
 	public void endPage() {
 
 		synchronized (graphicsInfo) {
-			if (currentGraphics != null)
-				currentGraphics.dispose();
-			currentGraphics = null;
-			if (pageImage != null) {
-				pageImage.dispose();
-				pageImage = null;
-				return;
+			if (currentGraphics == null) {
+ 				if (!endJob && !job.isCancelled())
+					return;
 			}
+			else {
+				currentGraphics.dispose();
+				currentGraphics = null;
+			}
+
 			// Allow the printer thread to move to the next page
 			graphicsInfo.notifyAll();
 		}
@@ -262,18 +273,19 @@ public final class VCLPrintJob extends Thread implements Printable {
 	 */
 	public int print(Graphics g, PageFormat f, int i) throws PrinterException {
 
-		if (endJob)
-			return Printable.NO_SUCH_PAGE;
-		else if (job.isCancelled())
+		if (job.isCancelled())
 			throw new PrinterException();
+		else if (endJob)
+			return Printable.NO_SUCH_PAGE;
 
 		// Mac OS X creates two graphics for each page so we need to create
 		// separate page numbers for each page.
 		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-			if (currentJobPage == i * 2) 
+			if (currentJobPage == i * 2)
 				currentJobPage++;
 			else
 				currentJobPage = i * 2;
+
 		}
 		else {
 			currentJobPage = i;
@@ -296,10 +308,10 @@ public final class VCLPrintJob extends Thread implements Printable {
 		}
 		catch (Throwable t) {}
 	
-		if (endJob)
-			return Printable.NO_SUCH_PAGE;
-		else if (job.isCancelled())
+		if (job.isCancelled())
 			throw new PrinterException();
+		else if (endJob)
+			return Printable.NO_SUCH_PAGE;
 		else
 			return Printable.PAGE_EXISTS;
 
@@ -319,8 +331,21 @@ public final class VCLPrintJob extends Thread implements Printable {
 				job.print();
 			}
 			catch (Throwable t) {}
+			printThreadFinished = true;
 		}
 		
+	}
+
+	/**
+	 * Return the status of th print job.
+	 *
+	 * @return <code>true</code> if a print job has ended or aborted or
+	 *  <code>false</code> if the print job is still running
+	 */
+	public boolean isFinished() {
+
+		return (printThreadFinished || job.isCancelled());
+
 	}
 
 	/**
@@ -330,6 +355,9 @@ public final class VCLPrintJob extends Thread implements Printable {
 	 *  <code>false</code> if the user cancelled the print dialog
 	 */
 	public boolean startJob() {
+
+		// Copy the cached page format to this printer job
+		job.setPrintable(this, (PageFormat)VCLPrintJob.pageFormat.clone());
 
 		// Detect if the user cancelled the print dialog
 		if (job.printDialog())
@@ -364,8 +392,7 @@ public final class VCLPrintJob extends Thread implements Printable {
 			if (currentPage++ != currentJobPage || !isAlive()) {
 				// Return a dummy graphics if this page is not in the selected
 				// page range
-				pageImage = new VCLImage(1, 1, 0);
-				currentGraphics = pageImage.getGraphics();
+				currentGraphics = null;
 			}
 			else {
 				currentGraphics = new VCLGraphics(graphicsInfo.graphics, graphicsInfo.pageFormat);

@@ -144,7 +144,7 @@ Orientation com_sun_star_vcl_VCLPrintJob::getOrientation()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (Orientation)t.pEnv->CallStaticBooleanMethod( getMyClass(), mID );
+			out = (Orientation)t.pEnv->CallStaticIntMethod( getMyClass(), mID );
 	}
 	return out;
 }
@@ -194,7 +194,7 @@ const Size com_sun_star_vcl_VCLPrintJob::getPageSize()
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLPrintJob::setup()
+void com_sun_star_vcl_VCLPrintJob::setOrientation( Orientation _par0 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -202,13 +202,38 @@ void com_sun_star_vcl_VCLPrintJob::setup()
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()V";
+			char *cSignature = "(I)V";
+			mID = t.pEnv->GetStaticMethodID( getMyClass(), "setOrientation", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[1];
+			args[0].i = jint( _par0 );
+			t.pEnv->CallStaticVoidMethodA( getMyClass(), mID, args );
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+sal_Bool com_sun_star_vcl_VCLPrintJob::setup()
+{
+	static jmethodID mID = NULL;
+	sal_Bool out = sal_False;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Z";
 			mID = t.pEnv->GetStaticMethodID( getMyClass(), "setup", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			t.pEnv->CallStaticVoidMethod( getMyClass(), mID );
+			out = (sal_Bool)t.pEnv->CallStaticBooleanMethod( getMyClass(), mID );
 	}
+	return out;
 }
 
 // ----------------------------------------------------------------------------
@@ -304,6 +329,27 @@ void com_sun_star_vcl_VCLPrintJob::endPage()
 		if ( mID )
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 	}
+}
+
+// ----------------------------------------------------------------------------
+
+sal_Bool com_sun_star_vcl_VCLPrintJob::isFinished()
+{
+	static jmethodID mID = NULL;
+	sal_Bool out = sal_False;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Z";
+			mID = t.pEnv->GetMethodID( getMyClass(), "isFinished", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethod( object, getMyClass(), mID );
+	}
+	return out;
 }
 
 // ----------------------------------------------------------------------------

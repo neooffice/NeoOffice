@@ -74,6 +74,7 @@ class SalPrinterData
 					SalPrinterData();
 					~SalPrinterData();
 
+	BOOL			mbStarted;
 	SalGraphics*	mpGraphics;
 	BOOL			mbGraphics;
 	::vcl::com_sun_star_vcl_VCLPrintJob*	mpVCLPrintJob;

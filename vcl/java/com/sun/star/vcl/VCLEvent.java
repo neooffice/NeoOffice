@@ -780,6 +780,11 @@ public final class VCLEvent extends AWTEvent {
 	public final static int SALEVENT_OPENDOCUMENT = 100;
 
 	/**
+	 * SALEVENT_PRINTDOCUMENT constant.
+	 */
+	public final static int SALEVENT_PRINTDOCUMENT = 101;
+
+	/**
 	 * The data pointer.
 	 */
 	private long data = 0;
