@@ -53,18 +53,18 @@ PRODUCT_DIR_NAME=NeoOfficeJ
 # Important: Note that there are escape characters in the PRODUCT_NAME for the
 # UTF-8 trademark symbol. Don't replace these with "\x##" literal strings!
 PRODUCT_TRADEMARKED_NAME=NeoOffice®/J
-PRODUCT_VERSION=0.8.3
+PRODUCT_VERSION=0.9
 PRODUCT_FILETYPE=NO%F
 PRODUCT_INSTALL_URL=http://www.planamesa.com/neojava/download.php\\\#install
 PRODUCT_BUILD_URL=http://www.planamesa.com/neojava/build.php
 
 # CVS macros
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
-OO_PACKAGES:=MathMLDTD UnoControls XmlSearch apiwww autodoc automation basctl basic berkeleydb bridges chaos codemaker comphelper config_office configmgr connectivity cosv cppu cppuhelper cpputools dbaccess desktop dmake dtrans eventattacher expat ext_log4j extensions external extras fileaccess forms fpicker framework freetype goodies helpcontent i18n i18n_simple i18npool idl idlc inet instsetoo io javaunohelper jtools jurt jut ldapber lingu lingucomponent linguistic moz nas neon netbeans_integration odk offapi officecfg offmgr offuh package padmin product psprint rdbmaker readlicense readlicense_oo registry remotebridges res ridljar rsc sablot sal salhelper sandbox sax sc scaddins sch scp scptools sd setup2 sfx2 shell sj2 so3 solenv soltools sot starmath stlport stoc store svtools svx sw sysui toolkit tools transex3 ucb ucbhelper udkapi udkwww udm unoil unotools unzip uui vcl vos wizards xml2cmp xmlhelp xmloff xmlscript xmlwww zlib
-OO_TAG:=OOO_STABLE_1_PORTS
+OO_PACKAGES:=OpenOffice
+OO_TAG:=cws_srx645_ooo112fix2
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOfficeJ
-NEO_TAG:=NeoOfficeJ-0_8_3
+NEO_TAG:=HEAD
 
 all: build.all
 
@@ -83,12 +83,12 @@ build.oo_checkout:
 	touch "$@"
 
 build.oo_patches: build.oo_checkout \
-	build.oo_external_patch
+	build.oo_dlcompat_patch \
+	build.oo_external_patch \
+	build.oo_scp_patch
 	touch "$@"
 
-build.oo_odk_patches: build.oo_checkout \
-	build.oo_odk_patch \
-	build.oo_product_patch
+build.oo_odk_patches: build.oo_checkout
 	touch "$@"
 
 build.oo_external_patch: $(OO_PATCHES_HOME)/external.patch build.oo_checkout
@@ -97,10 +97,8 @@ build.oo_external_patch: $(OO_PATCHES_HOME)/external.patch build.oo_checkout
 	chmod -Rf u+w "$(BUILD_HOME)/external/gpc"
 	mv -f "$(BUILD_HOME)/external/gpc/gpc231"/* "$(BUILD_HOME)/external/gpc"
 	rm -Rf "$(BUILD_HOME)/external/gpc/gpc231"
-	-( cd "$(BUILD_HOME)/external" ; patch -R -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
-	cp "$(OO_PATCHES_HOME)/dlcompat-20020709.tar.gz" "$(BUILD_HOME)/external/download"
-	cp "$(OO_PATCHES_HOME)/dlcompat.pat.tar.gz" "$(BUILD_HOME)/external/dlcompat"
-	( cd "$(BUILD_HOME)/external" ; patch -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+	-( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -R -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+	( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	touch "$@"
 
 build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.oo_checkout
@@ -110,18 +108,19 @@ build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.oo_checkout
 
 build.configure: build.oo_patches
 	cd "$(BUILD_HOME)/config_office" ; autoconf
-	( cd "$(BUILD_HOME)/config_office" ; ./configure CC=cc --with-x --with-lang="$(OO_LANGUAGES)" )
+	( cd "$(BUILD_HOME)/config_office" ; ./configure CC=cc CXX=c++ --with-x --with-lang="$(OO_LANGUAGES)" )
+	echo "unsetenv LD_SEG_ADDR_TABLE" >> "$(OO_ENV_X11)"
+	echo "unsetenv LD_PREBIND" >> "$(OO_ENV_X11)"
+	echo "unsetenv LD_PREBIND_ALLOW_OVERLAP" >> "$(OO_ENV_X11)"
 	( cd "$(BUILD_HOME)" ; ./bootstrap )
 	touch "$@"
 
 build.oo_all: build.configure
-	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/instsetoo" ; `alias build` -all $(OO_BUILD_ARGS)
+	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/instsetoo" ; `alias build` --all $(OO_BUILD_ARGS)
 	touch "$@"
 
 build.oo_odk_all: build.configure build.oo_all build.oo_odk_patches
-# Building odk will fail unless we rebuild product and its dependencies first
-	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/product" ; `alias build` -all $(OO_BUILD_ARGS)
-	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/odk" ; `alias build` -all $(OO_BUILD_ARGS)
+	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/sdk_oo" ; `alias build` --all $(OO_BUILD_ARGS)
 	touch "$@"
 
 build.neo_configure: build.oo_all
@@ -132,8 +131,6 @@ build.neo_configure: build.oo_all
 	echo "setenv PRODUCT_TRADEMARKED_NAME '$(PRODUCT_TRADEMARKED_NAME)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_VERSION '$(PRODUCT_VERSION)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_FILETYPE '$(PRODUCT_FILETYPE)'" >> "$(OO_ENV_JAVA)"
-# OOo 1.0.x cannot support RTL languages properly
-	echo "unsetenv RES_ARAB" >> "$(OO_ENV_JAVA)"
 	touch "$@"
 
 build.neo_%_patch: % build.neo_configure
