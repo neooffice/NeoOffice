@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -x
 ##########################################################################
 # 
 #   $RCSfile$
@@ -10,7 +10,7 @@
 #   The Contents of this file are made available subject to the terms of
 #   either of the following licenses
 # 
-#          - GNU General Public License Version 2.1
+#         - GNU General Public License Version 2.1
 # 
 #   Patrick Luby, June 2003
 # 
@@ -36,28 +36,36 @@
 
 if [ -d "$2" ]; then
 
+	# Put back user's custom dictionary files
+	if [ -d "$2/ooo" ]; then
+		rm -Rf "$2/ooo" || exit 1
+	fi
+
+	# Put back user's custom help files
+	if [ -d "$2/help" ]; then
+		for i in `cd "$2/help" ; find . -type d -maxdepth 1`; do
+			if [ -h "$2/Contents/help/$i" ]; then
+				rm -f "$2/Contents/help/$i" || exit 1
+				mv -f "$2/help/$i" "$2/Contents/help" || exit 1
+			fi
+		done
+		chmod -Rf u-w,u+r "$2/Contents/help" || exit 1
+		rm -Rf "$2/help" || exit 1
+	fi
+
 	# Replace the default installation path with the actual installation path
 	tempfile="$INSTALLER_TEMP/out"
 	touch "$tempfile"
 	if [ -f "$tempfile" ]; then
 		cd "$2"
-		chmod -Rf u+rw "Contents/share/config/registry"
-        if [ $? != 0 ] ; then
-            exit 1
-        fi
+		chmod -Rf u+rw "Contents/share/config/registry" || exit 1
 		for i in `find "Contents/share/config/registry" -type f` ; do
 			rm -f "$tempfile"
 			cp -p "$i" "$tempfile"
-			sed 's#/Applications#'"$2"'#g' "$tempfile" > "$i"
-            if [ $? != 0 ] ; then
-                exit 1
-            fi
+			sed 's#/Applications#'"$2"'#g' "$tempfile" > "$i" || exit 1
 			touch -r "$tempfile" "$i"
 		done
-		chmod -Rf u-w,u+r "Contents/share/config/registry"
-        if [ $? != 0 ] ; then
-            exit 1
-        fi
+		chmod -Rf u-w,u+r "Contents/share/config/registry" || exit 1
 	fi
 
 fi

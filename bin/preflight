@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -x
 ##########################################################################
 # 
 #   $RCSfile$
@@ -10,7 +10,7 @@
 #   The Contents of this file are made available subject to the terms of
 #   either of the following licenses
 # 
-#          - GNU General Public License Version 2.1
+#         - GNU General Public License Version 2.1
 # 
 #   Patrick Luby, June 2003
 # 
@@ -36,10 +36,17 @@
 
 if [ -d "$2/Contents" ] ; then
 
-    rm -Rf "$2/Contents"
-    if [ $? != 0 ] ; then
-        exit 1
-    fi
+	# Save dictionary files for postflight scripts
+	if [ -d "$2/Contents/share/dict/ooo" ]; then
+		mv -f "$2/Contents/share/dict/ooo" "$2" || exit 1
+	fi
+
+	# Save help files for postflight scripts
+	if [ -d "$2/Contents/help" ]; then
+		mv -f "$2/Contents/help" "$2" || exit 1
+	fi
+
+	rm -Rf "$2/Contents" || exit 1
 
 fi
 
