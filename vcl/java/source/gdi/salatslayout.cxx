@@ -460,7 +460,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				nCharWidth = Float32ToLong( ( mpGlyphInfoArray->glyphs[ i + 1 ].idealX - mpGlyphInfoArray->glyphs[ i ].idealX ) * mnUnitsPerPixel );
 			}
 
-			if ( nGlyph >= 0xffff )
+			if ( nGlyph >= 0xffff || mpGlyphInfoArray->glyphs[ i ].layoutFlags & kATSGlyphInfoTerminatorGlyph )
 				nGlyph = 3;
 
 			int nGlyphFlags = nCharWidth ? 0 : GlyphItem::IS_IN_CLUSTER;
