@@ -605,7 +605,11 @@ void PDFWriterImpl::PDFPage::appendWaveLine( sal_Int32 nWidth, sal_Int32 nY, sal
  *  class PDFWriterImpl
  */
 
+#if defined USE_JAVA && defined MACOSX
+PDFWriterImpl::PDFWriterImpl( const OUString& rFilename, PDFWriter::PDFVersion eVersion, PDFWriter::Compression eCompression, FontSubsetData *pSubsets )
+#else	// USE_JAVA && MACOSX
 PDFWriterImpl::PDFWriterImpl( const OUString& rFilename, PDFWriter::PDFVersion eVersion, PDFWriter::Compression eCompression )
+#endif	// USE_JAVA && MACOSX
         :
         m_pReferenceDevice( NULL ),
         m_aMapMode( MAP_POINT, Point(), Fraction( 1L, 10L ), Fraction( 1L, 10L ) ),
@@ -620,6 +624,19 @@ PDFWriterImpl::PDFWriterImpl( const OUString& rFilename, PDFWriter::PDFVersion e
         m_aFileName( rFilename ),
         m_pCodec( NULL )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( pSubsets )
+    {
+        m_bUsingMtf = true;
+        m_aSubsets = *pSubsets;
+        m_nNextFID += m_aSubsets.size();
+    }
+    else
+    {
+        m_bUsingMtf = false;
+    }
+#endif	// USE_JAVA && MACOSX
+
     Font aFont;
     aFont.SetName( String( RTL_CONSTASCII_USTRINGPARAM( "Times" ) ) );
     aFont.SetSize( Size( 0, 12 ) );
@@ -715,6 +732,11 @@ void PDFWriterImpl::endCompression()
 
 bool PDFWriterImpl::writeBuffer( const void* pBuffer, sal_uInt64 nBytes )
 {
+#if defined USE_JAVA && defined MACOSX
+    if( ! m_bUsingMtf )
+        return true;
+#endif	// USE_JAVA && MACOSX
+
     if( ! m_bOpen ) // we are already down the drain
         return false;
 
@@ -1003,6 +1025,11 @@ SalLayout* PDFWriterImpl::GetTextLayout( ImplLayoutArgs& rArgs, ImplFontSelectDa
 
 sal_Int32 PDFWriterImpl::newPage( sal_Int32 nPageWidth, sal_Int32 nPageHeight, PDFWriter::Orientation eOrientation )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaNewPagePDFAction( nPageWidth, nPageHeight, eOrientation ) );
+#endif	// USE_JAVA && MACOSX
+
     endPage();
     m_aPages.push_back( PDFPage(this, nPageWidth, nPageHeight, eOrientation ) );
     m_aPages.back().beginStream();
@@ -2518,6 +2545,344 @@ bool PDFWriterImpl::emit()
     osl_closeFile( m_aFile );
     m_bOpen = false;
 
+#if defined USE_JAVA && defined MACOSX
+    // Replay meta actions
+    if ( !m_bUsingMtf )
+    {
+        // Encode the glyphs using the native font encoding
+        encodeGlyphs();
+
+        PDFWriterImpl aWriter( m_aFileName, m_eVersion, m_eCompression, &m_aSubsets );
+        for ( ULONG i = 0, nCount = m_aMtf.GetActionCount(); i < nCount; i++ )
+        {
+            const MetaAction *pAction = m_aMtf.GetAction( i );
+            const USHORT nType = pAction->GetType();
+
+            switch( nType )
+            {
+                case( META_NEW_PAGE_PDF_ACTION ):
+                {
+                    const MetaNewPagePDFAction* pA = (const MetaNewPagePDFAction*) pAction;
+                    aWriter.newPage( pA->GetPageWidth(), pA->GetPageHeight(), pA->GetOrientation() );
+                }
+                break;
+
+                case( META_FONT_ACTION ):
+                {
+                    const MetaFontAction* pA = (const MetaFontAction*) pAction;
+                    aWriter.setFont( pA->GetFont() );
+                }
+                break;
+
+                case( META_TEXT_PDF_ACTION ):
+                {
+                    const MetaTextPDFAction* pA = (const MetaTextPDFAction*) pAction;
+                    aWriter.drawText( pA->GetPoint(), String( pA->GetText(), pA->GetIndex(), pA->GetLen() ), pA->IsTextLines() );
+                }
+                break;
+
+                case( META_TEXTLINE_PDF_ACTION ):
+                {
+                    const MetaTextLinePDFAction* pA = (const MetaTextLinePDFAction*) pAction;
+                    aWriter.drawTextLine( pA->GetStartPoint(), pA->GetWidth(), pA->GetStrikeout(), pA->GetUnderline(), pA->IsUnderlineAbove() );
+                }
+                break;
+
+                case( META_TEXTARRAY_PDF_ACTION ):
+                {
+                    const MetaTextArrayPDFAction* pA = (const MetaTextArrayPDFAction*) pAction;
+                    aWriter.drawTextArray( pA->GetPoint(), pA->GetText(), pA->GetDXArray(), pA->GetIndex(), pA->GetLen(), pA->IsTextLines() );
+                }
+                break;
+
+                case( META_STRETCHTEXT_PDF_ACTION ):
+                {
+                    const MetaStretchTextPDFAction* pA = (const MetaStretchTextPDFAction*) pAction;
+                    aWriter.drawStretchText( pA->GetPoint(), pA->GetWidth(), pA->GetText(), pA->GetIndex(), pA->GetLen(), pA->IsTextLines() );
+                }
+                break;
+
+                case( META_TEXTRECT_PDF_ACTION ):
+                {
+                    const MetaTextRectPDFAction* pA = (const MetaTextRectPDFAction*) pAction;
+                    aWriter.drawText( pA->GetRect(), pA->GetText(), pA->GetStyle(), pA->IsTextLines() );
+                }
+                break;
+
+                case( META_LINE_ACTION ):
+                {
+                    const MetaLineAction* pA = (const MetaLineAction*) pAction;
+                    aWriter.drawLine( pA->GetStartPoint(), pA->GetEndPoint(), pA->GetLineInfo() );
+                }
+                break;
+
+                case( META_POLYGON_ACTION ):
+                {
+                    const MetaPolygonAction* pA = (const MetaPolygonAction*) pAction;
+                    aWriter.drawPolygon( pA->GetPolygon() );
+                }
+                break;
+
+                case( META_POLYLINE_ACTION ):
+                {
+                    const MetaPolyLineAction* pA = (const MetaPolyLineAction*) pAction;
+                    aWriter.drawPolyLine( pA->GetPolygon(), pA->GetLineInfo() );
+                }
+                break;
+
+                case( META_RECT_ACTION ):
+                {
+                    const MetaRectAction* pA = (const MetaRectAction*) pAction;
+                    aWriter.drawRectangle( pA->GetRect() );
+                }
+                break;
+
+                case( META_ROUNDRECT_ACTION ):
+                {
+                    const MetaRoundRectAction* pA = (const MetaRoundRectAction*) pAction;
+                    aWriter.drawRectangle( pA->GetRect(), pA->GetHorzRound(), pA->GetVertRound() );
+                }
+                break;
+
+                case( META_ELLIPSE_ACTION ):
+                {
+                    const MetaEllipseAction* pA = (const MetaEllipseAction*) pAction;
+                    aWriter.drawEllipse( pA->GetRect() );
+                }
+                break;
+
+                case( META_PIE_ACTION ):
+                {
+                    const MetaArcAction* pA = (const MetaArcAction*) pAction;
+                    aWriter.drawArc( pA->GetRect(), pA->GetStartPoint(), pA->GetEndPoint(), true, false );
+                }
+                break;
+
+                case( META_CHORD_ACTION ):
+                {
+                    const MetaChordAction* pA = (const MetaChordAction*) pAction;
+                    aWriter.drawArc( pA->GetRect(), pA->GetStartPoint(), pA->GetEndPoint(), false, true );
+                }
+                break;
+
+                case( META_ARC_ACTION ):
+                {
+                    const MetaArcAction* pA = (const MetaArcAction*) pAction;
+                    aWriter.drawArc( pA->GetRect(), pA->GetStartPoint(), pA->GetEndPoint(), false, false );
+                }
+                break;
+
+                case( META_POLYPOLYGON_ACTION ):
+                {
+                    const MetaPolyPolygonAction* pA = (const MetaPolyPolygonAction*) pAction;
+                    aWriter.drawPolyPolygon( pA->GetPolyPolygon() );
+                }
+                break;
+
+                case( META_PIXEL_ACTION ):
+                {
+                    const MetaPixelAction* pA = (const MetaPixelAction*) pAction;
+                    aWriter.drawPixel( pA->GetPoint(), pA->GetColor() );
+                }
+                break;
+
+                case( META_PIXEL_PDF_ACTION ):
+                {
+                    const MetaPixelPDFAction* pA = (const MetaPixelPDFAction*) pAction;
+                    aWriter.drawPixel( pA->GetPoints(), pA->GetColors() );
+                }
+                break;
+
+                case( META_BMPSCALE_ACTION ):
+                {
+                    const MetaBmpScaleAction* pA = (const MetaBmpScaleAction*) pAction;
+                    aWriter.drawBitmap( pA->GetPoint(), pA->GetSize(), pA->GetBitmap() );
+                }
+                break;
+
+                case( META_BMPEXSCALE_ACTION ):
+                {
+                    const MetaBmpExScaleAction* pA = (const MetaBmpExScaleAction*) pAction;
+                    aWriter.drawBitmap( pA->GetPoint(), pA->GetSize(), pA->GetBitmapEx() );
+                }
+                break;
+
+                case( META_MASKSCALE_ACTION ):
+                {
+                    const MetaMaskScaleAction* pA = (const MetaMaskScaleAction*) pAction;
+                    aWriter.drawMask( pA->GetPoint(), pA->GetSize(), pA->GetBitmap(), pA->GetColor() );
+                }
+                break;
+
+                case( META_GRADIENT_ACTION ):
+                {
+                    const MetaGradientAction* pA = (const MetaGradientAction*) pAction;
+                    aWriter.drawGradient( pA->GetRect(), pA->GetGradient() );
+                }
+                break;
+
+                case( META_GRADIENTEX_ACTION ):
+                {
+                    const MetaGradientExAction* pA = (const MetaGradientExAction*) pAction;
+                    aWriter.drawGradient( pA->GetPolyPolygon(), pA->GetGradient() );
+                }
+                break;
+
+                case META_HATCH_ACTION:
+                {
+                    const MetaHatchAction* pA = (const MetaHatchAction*) pAction;
+                    aWriter.drawHatch( pA->GetPolyPolygon(), pA->GetHatch() );
+                }
+                break;
+
+                case( META_WALLPAPER_ACTION ):
+                {
+                    const MetaWallpaperAction* pA = (const MetaWallpaperAction*) pAction;
+                    aWriter.drawWallpaper( pA->GetRect(), pA->GetWallpaper() );
+                }
+                break;
+
+                case( META_TRANSPARENT_ACTION ):
+                {
+                    const MetaTransparentAction* pA = (const MetaTransparentAction*) pAction;
+                    aWriter.drawTransparent( pA->GetPolyPolygon(), pA->GetTransparence() );
+                }
+                break;
+
+                case( META_PUSH_ACTION ):
+                {
+                    const MetaPushAction* pA = (const MetaPushAction*) pAction;
+
+                    aWriter.push( pA->GetFlags() );
+                }
+                break;
+
+                case( META_POP_ACTION ):
+                {
+                    aWriter.pop();
+                }
+                break;
+
+                case( META_MAPMODE_ACTION ):
+                {
+                    const MetaMapModeAction* pA = (const MetaMapModeAction*) pAction;
+                    aWriter.setMapMode( pA->GetMapMode() );
+                }
+                break;
+
+                case( META_LINECOLOR_ACTION ):
+                {
+                    const MetaLineColorAction* pA = (const MetaLineColorAction*) pAction;
+                    aWriter.setLineColor( pA->GetColor() );
+                }
+                break;
+
+                case( META_FILLCOLOR_ACTION ):
+                {
+                    const MetaFillColorAction* pA = (const MetaFillColorAction*) pAction;
+                    aWriter.setFillColor( pA->GetColor() );
+                }
+                break;
+
+                case( META_CLIPREGION_ACTION ):
+                {
+                    const MetaClipRegionAction* pA = (const MetaClipRegionAction*) pAction;
+                    if( pA->IsClipping() )
+                        aWriter.setClipRegion( pA->GetRegion() );
+                    else
+                        aWriter.clearClipRegion();
+                }
+                break;
+
+                case( META_MOVECLIPREGION_ACTION ):
+                {
+                    const MetaMoveClipRegionAction* pA = (const MetaMoveClipRegionAction*) pAction;
+                    aWriter.moveClipRegion( pA->GetHorzMove(), pA->GetVertMove() );
+                }
+                break;
+
+                case( META_ISECTRECTCLIPREGION_ACTION ):
+                {
+                    const MetaISectRectClipRegionAction* pA = (const MetaISectRectClipRegionAction*) pAction;
+                    aWriter.intersectClipRegion( pA->GetRect() );
+                }
+                break;
+
+                case( META_ISECTREGIONCLIPREGION_ACTION ):
+                {
+                   const MetaISectRegionClipRegionAction* pA = (const MetaISectRegionClipRegionAction*) pAction;
+                   aWriter.intersectClipRegion( pA->GetRegion() );
+                }
+                break;
+
+                case( META_ANTIALIAS_PDF_ACTION ):
+                {
+                    const MetaAntiAliasPDFAction* pA = (const MetaAntiAliasPDFAction*) pAction;
+                    aWriter.setAntiAlias( pA->GetAntiAlias() );
+                }
+                break;
+
+                case( META_LAYOUTMODE_ACTION ):
+                {
+                    const MetaLayoutModeAction* pA = (const MetaLayoutModeAction*) pAction;
+                    aWriter.setLayoutMode( pA->GetLayoutMode() );
+                }
+                break;
+
+                case( META_TEXTCOLOR_ACTION ):
+                {
+                    const MetaTextColorAction* pA = (const MetaTextColorAction*) pAction;
+                    aWriter.setTextColor( pA->GetColor() );
+                }
+                break;
+
+                case( META_TEXTFILLCOLOR_ACTION ):
+                {
+                    const MetaTextFillColorAction* pA = (const MetaTextFillColorAction*) pAction;
+                    if ( pA->IsSetting() )
+                        aWriter.setTextFillColor( pA->GetColor() );
+                    else
+                        aWriter.setTextFillColor();
+                }
+                break;
+
+                case( META_TEXTLINECOLOR_ACTION ):
+                {
+                    const MetaTextLineColorAction* pA = (const MetaTextLineColorAction*) pAction;
+                    if ( pA->IsSetting() )
+                        aWriter.setTextLineColor( pA->GetColor() );
+                    else
+                        aWriter.setTextLineColor();
+                }
+                break;
+
+                case( META_TEXTALIGN_ACTION ):
+                {
+                    const MetaTextAlignAction* pA = (const MetaTextAlignAction*) pAction;
+                    aWriter.setTextAlign( pA->GetTextAlign() );
+                }
+                break;
+
+                case( META_JPG_PDF_ACTION ):
+                {
+                    const MetaJpgPDFAction* pA = (const MetaJpgPDFAction*) pAction;
+                    aWriter.drawJPGBitmap( (SvStream&)pA->GetStream(), pA->GetSize(), pA->GetRect(), pA->GetMask() );
+                }
+                break;
+
+                default:
+                    DBG_ERROR( "PDFWriterImpl::emit: unsupported MetaAction #" );
+                break;
+            }
+
+        }
+
+        m_aMtf.Clear();
+
+        aWriter.emit();
+    }
+#endif	// USE_JAVA && MACOSX
+
     return true;
 }
 
@@ -2558,17 +2923,16 @@ void PDFWriterImpl::registerGlyphs(
             if( it != rSubset.m_aMapping.end() )
             {
                 pMappedFontObjects[i] = it->second.m_nFontID;
-#if !defined USE_JAVA || !defined MACOSX
                 pMappedGlyphs[i] = it->second.m_nSubsetGlyphID;
-#endif	// !USE_JAVA || !MACOSX
+#if defined USE_JAVA && defined MACOSX
+                pMappedFontSubObjects[i] = it->second.m_nFontSubID;
+                pMappedIdentityGlyphs[i] = it->second.m_bIdentityGlyph;
+#endif	// USE_JAVA && MACOSX
             }
             else
             {
                 // create new subset if necessary
                 if( rSubset.m_aSubsets.begin() == rSubset.m_aSubsets.end() ||
-#if defined USE_JAVA && defined MACOSX
-                    rSubset.m_aSubsets.back().m_aGlyphEncoding.size() ||
-#endif	// USE_JAVA && MACOSX
                     rSubset.m_aSubsets.back().m_aMapping.size() > 254 )
                 {
                     rSubset.m_aSubsets.push_back( FontEmit( m_nNextFID++ ) );
@@ -2596,14 +2960,10 @@ void PDFWriterImpl::registerGlyphs(
 #if defined USE_JAVA && defined MACOSX
                 rNewGlyph.m_nFontSubID = nNewId;
                 rNewGlyph.m_bIdentityGlyph = false;
+                pMappedFontSubObjects[i] = rNewGlyph.m_nFontSubID;
+                pMappedIdentityGlyphs[i] = rNewGlyph.m_bIdentityGlyph;
 #endif	// USE_JAVA && MACOSX
             }
-
-#if defined USE_JAVA && defined MACOSX
-            pMappedGlyphs[i] = 0;
-            pMappedIdentityGlyphs[i] = 0;
-            pMappedFontSubObjects[i] = 0;
-#endif	// USE_JAVA && MACOSX
         }
         else
         {
@@ -2692,406 +3052,6 @@ void PDFWriterImpl::registerGlyphs(
             pMappedFontObjects[ i ] = nCurFontID;
         }
     }
-
-#if defined USE_JAVA && defined MACOSX
-    // Create font objects using Mac OS X's PDF rendering APIs
-    for ( i = 0; i < nGlyphs; i++ )
-    {
-        if ( !pGlyphs[0] )
-            continue;
-
-        ImplFontData *pCurrentFont = pFallbackFonts[i] ? pFallbackFonts[i] : pDevFont;
-        if ( !pCurrentFont->mbSubsettable )
-            continue;
-
-        FontSubset& rSubset = m_aSubsets[ pCurrentFont ];
-        FontMapping::iterator it = rSubset.m_aMapping.find( pGlyphs[i] );
-        if ( it == rSubset.m_aMapping.end() )
-            continue;
-
-        if ( it->second.m_nSubsetGlyphID )
-        {
-            pMappedGlyphs[i] = it->second.m_nSubsetGlyphID;
-            pMappedIdentityGlyphs[i] = it->second.m_bIdentityGlyph;
-            pMappedFontSubObjects[i] = it->second.m_nFontSubID;
-            continue;
-        }
-
-        for ( FontEmitList::iterator lit = rSubset.m_aSubsets.begin(); lit != rSubset.m_aSubsets.end() && lit->m_nFontID != it->second.m_nFontID; ++lit )
-            ;
-        if ( lit == rSubset.m_aSubsets.end() )
-            continue;
-
-        FontEmit& rEmit = *lit;
-
-        com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)pCurrentFont->mpSysData;
-        ATSUFontID nFontID = (ATSUFontID)( pVCLFont->getNativeFont() );
-        ATSFontRef aATSFont = FMGetATSFontRefFromFont( nFontID );
-        CGFontRef aFont = CGFontCreateWithPlatformFont( (void *)&aATSFont );
-        if ( !aFont )
-            continue;
-
-        CGGlyph aGlyphIDs[ 256 ];
-        int nGlyphIDs = 0;
-        for ( FontEmitMapping::iterator fit = rEmit.m_aMapping.begin(); fit != rEmit.m_aMapping.end(); ++fit )
-        {
-            if ( fit->first )
-                aGlyphIDs[ nGlyphIDs++ ] = (CGGlyph)fit->first;
-        }
-
-        if ( !nGlyphIDs )
-            continue;
-
-        OUString aTmpName( utl::TempFile::CreateTempName() );
-
-        CFStringRef aPath = CFStringCreateWithCharactersNoCopy( NULL, aTmpName.getStr(), aTmpName.getLength(), kCFAllocatorNull );
-        if ( aPath )
-        {
-            CFURLRef aURL = CFURLCreateWithFileSystemPath( NULL, aPath, kCFURLPOSIXPathStyle, false );
-            if ( aURL )
-            {
-                CGContextRef aContext = CGPDFContextCreateWithURL( aURL, NULL, NULL );
-                if ( aContext )
-                {
-                    CGContextBeginPage( aContext, NULL );
-                    CGContextSetFont( aContext, aFont );
-                    CGContextSetFontSize( aContext, 12 );
-                    CGContextShowGlyphs( aContext, aGlyphIDs, nGlyphIDs );
-                    CGContextEndPage( aContext );
-                    CGContextRelease( aContext );
-                }
-
-                CFRelease( aURL );
-            }
-
-            CFRelease( aPath );
-        }
-
-        osl_getFileURLFromSystemPath( aTmpName.pData, &rEmit.m_aFontFileName.pData );
-
-        oslFileHandle aFile;
-        if ( osl_openFile( rEmit.m_aFontFileName.pData, &aFile, osl_File_OpenFlag_Read ) == osl_File_E_None )
-        {
-            // Get the PDF objects from the file and parse the page content
-            // and font objects
-            OString aPageObjTag( "<< /Type /Page " );
-            OString aPageContentTag( " /Contents " );
-            OString aProcSetObjTag( "<< /ProcSet " );
-            sal_Int32 nPageContentObjID = 0;
-            sal_Int32 nProcSetObjID = 0;
-            sal_Int32 nObjID = 0;
-            while ( ( nObjID = getNextPDFObject( aFile, rEmit.m_aObjectMapping ) ) > 0 )
-            {
-                PDFEmitObject& rObj = rEmit.m_aObjectMapping[ nObjID ];
-                if ( !nPageContentObjID && rObj.m_aContent.match( aPageObjTag ) )
-                {
-                    if ( !rObj.m_bStream )
-                    {
-                        sal_Int32 nContentPos = rObj.m_aContent.indexOf( aPageContentTag );
-                        if ( nContentPos >= 0 )
-                        {
-                            // Find object reference
-                            OStringBuffer aIDBuf;
-                            nContentPos += aPageContentTag .getLength();
-                            const sal_Char *pBuf = rObj.m_aContent.getStr();
-                            for ( pBuf += nContentPos; *pBuf && *pBuf != ' '; pBuf++ )
-                                aIDBuf.append( *pBuf );
-                            nPageContentObjID = aIDBuf.makeStringAndClear().toInt32();
-                        }
-                    }
-                    else
-                    {
-                        nPageContentObjID = nObjID;
-                    }
-                }
-                else if ( !nProcSetObjID && rObj.m_aContent.match( aProcSetObjTag ) )
-                {
-                    nProcSetObjID = nObjID;
-                }
-            }
-
-            // Update stream lengths
-            OString aStreamLengthTag( "<< /Length " );
-            OString aRef( " 0 R " );
-            for ( PDFObjectMapping::iterator it = rEmit.m_aObjectMapping.begin(); it != rEmit.m_aObjectMapping.end(); ++it )
-            {
-                PDFEmitObject& rObj = it->second;
-                if ( rObj.m_bStream )
-                {
-                    // Find stream length
-                    sal_Int32 nLenPos = rObj.m_aContent.indexOf( aStreamLengthTag );
-                    if ( nLenPos >= 0 )
-                    {
-                        OStringBuffer aLenBuf;
-                        nLenPos += aStreamLengthTag.getLength();
-                        const sal_Char *pBuf = rObj.m_aContent.getStr();
-                        for ( pBuf += nLenPos; *pBuf && *pBuf != ' '; pBuf++ )
-                            aLenBuf.append( *pBuf );
-                        sal_Int32 nStreamLen = aLenBuf.makeStringAndClear().toInt32();
-                        if ( nStreamLen && !OString( pBuf ).compareTo( aRef, aRef.getLength() ) )
-                            rObj.m_nStreamLen = rEmit.m_aObjectMapping[ nStreamLen ].m_aContent.toInt32();
-                        else
-                            rObj.m_nStreamLen = nStreamLen;
-                    }
-                }
-            }
-
-            // Map font IDs to objects
-            OString aFontIDTag( "/F" );
-            sal_Int32 nFontIDTagLen = aFontIDTag.getLength();
-            if ( nProcSetObjID )
-            {
-                PDFEmitObject& rObj = rEmit.m_aObjectMapping[ nProcSetObjID ];
-                OString aFontStartTag( " /Font << " );
-                sal_Int32 nFontStartTagLen = aFontStartTag.getLength();
-                OString aFontEndTag( " >> " );
-                sal_Int32 nCurrentPos = 0;
-                sal_Int32 nFontStartPos;
-                if ( ( nFontStartPos = rObj.m_aContent.indexOf( aFontStartTag, nCurrentPos ) ) >= 0 )
-                {
-                    nCurrentPos = nFontStartPos + nFontStartTagLen;
-
-                    sal_Int32 nFontEndPos;
-                    if ( ( nFontEndPos = rObj.m_aContent.indexOf( aFontEndTag, nCurrentPos ) ) >= 0 )
-                    {
-                        nCurrentPos = nFontStartPos + nFontStartTagLen;
-
-                        while ( ( nCurrentPos = rObj.m_aContent.indexOf( aFontIDTag, nCurrentPos ) ) >= 0 && nCurrentPos < nFontEndPos )
-                        {
-                            nCurrentPos += nFontIDTagLen;
-
-                            sal_Int32 nNextPos = rObj.m_aContent.indexOf( ' ', nCurrentPos );
-                            if ( nNextPos < 0 )
-                                continue;
-
-                            sal_Int32 nNextNextPos = rObj.m_aContent.indexOf( aRef, nCurrentPos );
-                            if ( nNextNextPos < 0 )
-                                continue;
-
-                            const sal_Char *pBuf = rObj.m_aContent.getStr();
-                            OString aFontSubID( pBuf + nCurrentPos, nNextPos - nCurrentPos );
-                            sal_Int32 nFontSubID = OString( pBuf + nNextPos, nNextNextPos - nNextPos ).toInt32();
-                            if ( nFontSubID && aFontSubID.getLength() )
-                                rEmit.m_aFontSubIDMapping[ aFontSubID ] = nFontSubID;
-                        }
-                    }
-                }
-            }
-
-            // Inflate page content stream and get encoding
-            if ( nPageContentObjID )
-            {
-                PDFEmitObject& rObj = rEmit.m_aObjectMapping[ nPageContentObjID ];
-                if ( rObj.m_bStream && rObj.m_nStreamLen && osl_setFilePos( aFile, osl_Pos_Absolut, rObj.m_nStreamPos ) == osl_File_E_None )
-                {
-                    ZCodec aInflater( 0x4000, 0x4000 );
-                    SvMemoryStream aDeflatedStream;
-                    SvMemoryStream aInflatedStream;
-
-                    // Read object into memory stream
-                    sal_uInt64 nBufSize = 4096;
-                    sal_Char aBuf[ nBufSize ];
-                    sal_uInt64 nBytesRead;
-                    sal_uInt64 nBytesLeft = rObj.m_nStreamLen;
-                    while ( nBytesLeft && osl_readFile( aFile, aBuf, nBufSize, &nBytesRead ) == osl_File_E_None )
-                    {
-                        if ( nBytesLeft < nBytesRead )
-                            nBytesRead = nBytesLeft;
-
-                        if ( aDeflatedStream.Write( aBuf, nBytesRead ) != nBytesRead )
-                            break;
-
-                        nBytesLeft -= nBytesRead;
-
-                        sal_Bool bEOF = sal_False;
-                        if ( osl_isEndOfFile( aFile, &bEOF ) != osl_File_E_None || bEOF )
-                            break;
-                    }
-
-                    sal_uInt64 nContentLen = aDeflatedStream.Tell();
-                    if ( !nBytesLeft && nContentLen )
-                    {
-                        aDeflatedStream.Seek( 0 );
-                        aInflater.BeginCompression();
-                        while ( aDeflatedStream.Tell() < nContentLen && aInflater.Decompress( aDeflatedStream, aInflatedStream ) >= 0 )
-                            ;
-                        aInflater.EndCompression();
-                    }
-
-                    nContentLen = aInflatedStream.Tell();
-                    if ( nContentLen )
-                    {
-                        aInflatedStream.Seek( 0 );
-                        OString aPageContent( (sal_Char *)aInflatedStream.GetData(), nContentLen );
-
-                        // Replace all whitespace with spaces for ease of
-                        // parsing
-                        for ( sal_Char *pPageContentBuf = (sal_Char *)aPageContent.getStr(); *pPageContentBuf; pPageContentBuf++ )
-                        {
-                            switch ( *pPageContentBuf )
-                            {
-                                case 0x09:
-                                case 0x0A:
-                                case 0x0C:
-                                case 0x0D:
-                                    *pPageContentBuf = 0x20;
-                            }
-                        }
-
-                        OString aFontTag( " Tf " );
-                        OString aTextTag( " Tj " );
-                        int nFontTagLen = aFontTag.getLength();
-                        int nTextTagLen = aTextTag.getLength();
-                        int nCurrentGlyph = 0;
-                        sal_Int32 nCurrentPos = 0;
-                        sal_Int32 nFontIDPos;
-                        sal_Int32 nFontPos;
-                        sal_Int32 nTextPos;
-                        while ( nCurrentGlyph < nGlyphIDs )
-                        {
-                            if ( ( nFontIDPos = aPageContent.indexOf( aFontIDTag, nCurrentPos ) ) < 0 )
-                                break;
-                            nCurrentPos = nFontIDPos + nFontIDTagLen;
-                            if ( ( nFontIDPos = aPageContent.indexOf( ' ', nCurrentPos ) ) < 0 )
-                                continue;
-
-                            const sal_Char *pBuf = aPageContent.getStr();
-                            sal_Int32 nFontSubID = 0;
-                            std::map< OString, sal_Int32 >::iterator it = rEmit.m_aFontSubIDMapping.find( OString( pBuf + nCurrentPos, nFontIDPos - nCurrentPos ) );
-                            if ( it != rEmit.m_aFontSubIDMapping.end() )
-                                nFontSubID = it->second;
-                            else
-                                continue;
-
-                            if ( ( nFontPos = aPageContent.indexOf( aFontTag, nCurrentPos ) ) < 0 )
-                                break;
-                            nCurrentPos = nFontPos + nFontTagLen;
-
-                            sal_Int32 nTextStart = nCurrentPos;
-
-                            if ( ( nTextPos = aPageContent.indexOf( aTextTag, nCurrentPos ) ) < 0 )
-                                break;
-                            nCurrentPos = nTextPos + nTextTagLen;
-
-                            sal_Int32 nTextEnd = nTextPos - 1;
-
-                            bool bTextIsHex;
-                            if ( pBuf[ nTextStart ] == '<' )
-                                bTextIsHex = true;
-                            else if ( pBuf[ nTextStart ] == '(' )
-                                bTextIsHex = false;
-                            else
-                                continue;
-                            nTextStart++;
-
-                            sal_Int32 nTextLen = nTextEnd - nTextStart;
-                            if ( nTextLen <= 0 )
-                                continue;
-
-                            // Note: we assume that Mac OS X only generates
-                            // hexadecimal strings when the font encoding
-                            // is Identity-H or Identity-V
-                            OStringBuffer aGlyphBuf;
-                            pBuf = aPageContent.getStr() + nTextStart;
-                            if ( bTextIsHex )
-                            {
-                                for ( sal_Int32 j = 0; j < nTextLen; j += 2, pBuf += 2 )
-                                    aGlyphBuf.append( (sal_Char)OString( pBuf, nTextLen - j == 1 ? 1 : 2 ).toInt32( 16 ) );
-                            }
-                            else
-                            {
-                                OStringBuffer aOctalBuf;
-                                bool bLastSlash = false;
-                                for ( sal_Int32 j = 0; j < nTextLen; j++, pBuf++ )
-                                {
-                                    sal_Int32 nOctalBufLen = aOctalBuf.getLength();
-                                    if ( nOctalBufLen && ( nOctalBufLen > 3 || *pBuf < '0' || *pBuf > '9' ) )
-                                        aGlyphBuf.append( (sal_Char)aOctalBuf.makeStringAndClear().toInt32( 8 ) );
-
-                                    if ( !bLastSlash && *pBuf == '\\' )
-                                    {
-                                        bLastSlash = true;
-                                    }
-                                    else if ( *pBuf >= '0' && *pBuf <= '9' && ( bLastSlash || aOctalBuf.getLength() ) )
-                                    {
-                                        bLastSlash = false;
-                                        aOctalBuf.append( *pBuf );
-                                    }
-                                    else if ( bLastSlash )
-                                    {
-                                        bLastSlash = false;
-                                        switch ( *pBuf )
-                                        {
-                                            case 'n':
-                                                aGlyphBuf.append( (sal_Char)0x0a );
-                                                break;
-                                            case 'r':
-                                                aGlyphBuf.append( (sal_Char)0x0d );
-                                                break;
-                                            case 't':
-                                                aGlyphBuf.append( (sal_Char)0x09 );
-                                                break;
-                                            case 'b':
-                                                aGlyphBuf.append( (sal_Char)0x09 );
-                                                break;
-                                            case 'f':
-                                                aGlyphBuf.append( (sal_Char)0x0c );
-                                                break;
-                                            default:
-                                                aGlyphBuf.append( *pBuf );
-                                                break;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        aGlyphBuf.append( *pBuf );
-                                    }
-                                }
-
-                                if ( aOctalBuf.getLength() )
-                                    aGlyphBuf.append( (sal_Char)aOctalBuf.makeStringAndClear().toInt32( 8 ) );
-                            }
-
-                            pBuf = aGlyphBuf.getStr();
-                            nTextLen = aGlyphBuf.getLength();
-                            for ( sal_Int32 j = 0; j < nTextLen && nCurrentGlyph < nGlyphIDs; j++, nCurrentGlyph++, pBuf++ )
-                            {
-                                long nGlyph = (long)aGlyphIDs[ nCurrentGlyph ];
-
-                                sal_uInt16 nEncodedGlyph;
-                                if ( bTextIsHex )
-                                {
-                                    nEncodedGlyph = (sal_uInt8)( *pBuf ) << 8;
-                                    if ( ++pBuf && ++j < nTextLen )
-                                        nEncodedGlyph |= (sal_uInt8)( *pBuf );
-                                }
-                                else
-                                {
-                                    nEncodedGlyph = (sal_uInt16)( *pBuf & 0x00ff );
-                                }
-
-                                // Cache encoding
-                                rEmit.m_aGlyphEncoding[ nGlyph ] = nEncodedGlyph;
-
-                                // Update glyph mappings
-                                rEmit.m_aMapping[ nGlyph ].m_nSubsetGlyphID = nEncodedGlyph;
-                                rSubset.m_aMapping[ nGlyph ].m_nFontSubID = nFontSubID;
-                                rSubset.m_aMapping[ nGlyph ].m_bIdentityGlyph = bTextIsHex;
-                                rSubset.m_aMapping[ nGlyph ].m_nSubsetGlyphID = nEncodedGlyph;
-                            }
-                        }
-                    }
-                }
-            }
-
-            osl_closeFile( aFile );
-        }
-
-        pMappedGlyphs[i] = rSubset.m_aMapping[ pGlyphs[i] ].m_nSubsetGlyphID;
-        pMappedIdentityGlyphs[i] = rSubset.m_aMapping[ pGlyphs[i] ].m_bIdentityGlyph;
-        pMappedFontSubObjects[i] = rSubset.m_aMapping[ pGlyphs[i] ].m_nFontSubID;
-    }
-#endif	// USE_JAVA && MACOSX
 }
 
 void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bTextLines )
@@ -3252,66 +3212,6 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
     double fSin = sin( fAngle );
     double fCos = cos( fAngle );
     
-#if defined USE_JAVA && defined MACOSX
-    // Try to register as many glyphs at one time as possible to keep the
-    // font subset size as small as possible
-    int nTmpOffset = 0;
-    long *pTmpGlyphs = pGlyphs;
-    Point aTmpPos;
-    int nTmpIndex = 0;
-    long *pTmpAdvanceWidths = pAdvanceWidths ? pAdvanceWidths : NULL;
-    int *pTmpCharPosAry = pCharPosAry;
-    ImplFontData **pTmpFallbackFonts = pFallbackFonts;
-    sal_Unicode *pTmpUnicodes = pUnicodes;
-    while( ( nGlyphs = rLayout.GetNextGlyphs( nMaxGlyphs - nTmpOffset, pTmpGlyphs, aTmpPos, nTmpIndex, pTmpAdvanceWidths, pTmpCharPosAry ) ) || nTmpOffset )
-    {
-        for( int i = 0; i < nGlyphs; i++ )
-        {
-            if( pTmpGlyphs[i] & GF_FONTMASK )
-                pTmpFallbackFonts[i] = ( (MultiSalLayout&)rLayout).GetFallbackFontData( ( pTmpGlyphs[i] & GF_FONTMASK ) >> GF_FONTSHIFT );
-            else
-                pTmpFallbackFonts[i] = NULL;
-
-            nGlyphFlags[i] = (pTmpGlyphs[i] & GF_FLAGMASK);
-            if ( rLayout.IsSpacingGlyph( pTmpGlyphs[i] ) )
-                pTmpGlyphs[i] = 0;
-            else
-                pTmpGlyphs[i] &= GF_IDXMASK;
-
-            if( pTmpCharPosAry[i] >= nMinCharPos && pTmpCharPosAry[i] <= nMaxCharPos )
-                pTmpUnicodes[i] = rText.GetChar( pTmpCharPosAry[i] );
-            else
-                pTmpUnicodes[i] = 0;
-        }
-
-        if ( nGlyphs && nTmpOffset + nGlyphs < nMaxGlyphs )
-        {
-            nTmpOffset += nGlyphs;
-            pTmpGlyphs += nGlyphs;
-            if ( pTmpAdvanceWidths )
-                pTmpAdvanceWidths += nGlyphs;
-            pTmpCharPosAry += nGlyphs;
-            pTmpFallbackFonts += nGlyphs;
-            pTmpUnicodes += nGlyphs;
-            continue;
-        }
-        else
-        {
-            registerGlyphs( nTmpOffset + nGlyphs, pGlyphs, pUnicodes, pMappedGlyphs, pMappedIdentityGlyphs, pMappedFontObjects, pMappedFontSubObjects, pFallbackFonts );
-
-			if ( !nGlyphs )
-				break;
-
-            nTmpOffset = 0;
-            pTmpGlyphs = pGlyphs;
-            pTmpAdvanceWidths = pAdvanceWidths ? pAdvanceWidths : NULL;
-            pTmpCharPosAry = pCharPosAry;
-            pTmpFallbackFonts = pFallbackFonts;
-            pTmpUnicodes = pUnicodes;
-        }
-    }
-#endif	// USE_JAVA && MACOSX
-
     sal_Int32 nLastMappedFont = -1;
 #if defined USE_JAVA && defined MACOSX
     sal_Int32 nLastMappedFontSub = -1;
@@ -3371,6 +3271,8 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
         }
 #if defined USE_JAVA && defined MACOSX
         registerGlyphs( nGlyphs, pGlyphs, pUnicodes, pMappedGlyphs, pMappedIdentityGlyphs, pMappedFontObjects, pMappedFontSubObjects, pFallbackFonts );
+        if ( !m_bUsingMtf )
+            continue;
 #else	// USE_JAVA && MACOSX
         registerGlyphs( nGlyphs, pGlyphs, pUnicodes, pMappedGlyphs, pMappedFontObjects, pFallbackFonts );
 #endif	// USE_JAVA && MACOSX
@@ -3763,6 +3665,11 @@ void PDFWriterImpl::drawEmphasisMark( long nX, long nY,
 
 void PDFWriterImpl::drawText( const Point& rPos, const String& rText, xub_StrLen nIndex, xub_StrLen nLen, bool bTextLines )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaTextPDFAction( rPos, rText, nIndex, nLen, bTextLines ) );
+#endif	// USE_JAVA && MACOSX
+
     MARK( "drawText" );
 
     updateGraphicsState();
@@ -3779,6 +3686,11 @@ void PDFWriterImpl::drawText( const Point& rPos, const String& rText, xub_StrLen
 
 void PDFWriterImpl::drawTextArray( const Point& rPos, const String& rText, const long* pDXArray, xub_StrLen nIndex, xub_StrLen nLen, bool bTextLines )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaTextArrayPDFAction( rPos, rText, pDXArray, nIndex, nLen, bTextLines ) );
+#endif	// USE_JAVA && MACOSX
+
     MARK( "drawText with array" );
 
     updateGraphicsState();
@@ -3795,6 +3707,11 @@ void PDFWriterImpl::drawTextArray( const Point& rPos, const String& rText, const
 
 void PDFWriterImpl::drawStretchText( const Point& rPos, ULONG nWidth, const String& rText, xub_StrLen nIndex, xub_StrLen nLen, bool bTextLines )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaStretchTextPDFAction( rPos, nWidth, rText, nIndex, nLen, bTextLines ) );
+#endif	// USE_JAVA && MACOSX
+
     MARK( "drawStretchText" );
 
     updateGraphicsState();
@@ -3811,6 +3728,11 @@ void PDFWriterImpl::drawStretchText( const Point& rPos, ULONG nWidth, const Stri
 
 void PDFWriterImpl::drawText( const Rectangle& rRect, const String& rOrigStr, USHORT nStyle, bool bTextLines )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaTextRectPDFAction( rRect, rOrigStr, nStyle, bTextLines ) );
+#endif	// USE_JAVA && MACOSX
+
     long        nWidth          = rRect.GetWidth();
     long        nHeight         = rRect.GetHeight();
 
@@ -3951,6 +3873,11 @@ void PDFWriterImpl::drawText( const Rectangle& rRect, const String& rOrigStr, US
 
 void PDFWriterImpl::drawLine( const Point& rStart, const Point& rStop )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaLineAction( rStart, rStop ) );
+#endif	// USE_JAVA && MACOSX
+
     MARK( "drawLine" );
 
     updateGraphicsState();
@@ -3969,6 +3896,11 @@ void PDFWriterImpl::drawLine( const Point& rStart, const Point& rStop )
 
 void PDFWriterImpl::drawLine( const Point& rStart, const Point& rStop, const LineInfo& rInfo )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaLineAction( rStart, rStop, rInfo ) );
+#endif	// USE_JAVA && MACOSX
+
     MARK( "drawLine with LineInfo" );
     updateGraphicsState();
 
@@ -4031,6 +3963,11 @@ void PDFWriterImpl::drawWaveLine( const Point& rStart, const Point& rStop, sal_I
 
 void PDFWriterImpl::drawTextLine( const Point& rPos, long nWidth, FontStrikeout eStrikeout, FontUnderline eUnderline, bool bUnderlineAbove )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaTextLinePDFAction( rPos, nWidth, eStrikeout, eUnderline, bUnderlineAbove ) );
+#endif	// USE_JAVA && MACOSX
+
     if ( !nWidth ||
          ( ((eStrikeout == STRIKEOUT_NONE)||(eStrikeout == STRIKEOUT_DONTKNOW)) &&
            ((eUnderline == UNDERLINE_NONE)||(eUnderline == UNDERLINE_DONTKNOW)) ) )
@@ -4415,6 +4352,11 @@ void PDFWriterImpl::drawTextLine( const Point& rPos, long nWidth, FontStrikeout 
 
 void PDFWriterImpl::drawPolygon( const Polygon& rPoly )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaPolygonAction( rPoly ) );
+#endif	// USE_JAVA && MACOSX
+
     MARK( "drawPolygon" );
 
     updateGraphicsState();
@@ -4439,6 +4381,11 @@ void PDFWriterImpl::drawPolygon( const Polygon& rPoly )
 
 void PDFWriterImpl::drawPolyPolygon( const PolyPolygon& rPolyPoly )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaPolyPolygonAction( rPolyPoly ) );
+#endif	// USE_JAVA && MACOSX
+
     MARK( "drawPolyPolygon" );
 
     updateGraphicsState();
@@ -4464,6 +4411,11 @@ void PDFWriterImpl::drawPolyPolygon( const PolyPolygon& rPolyPoly )
 
 void PDFWriterImpl::drawTransparent( const PolyPolygon& rPolyPoly, sal_uInt32 nTransparentPercent )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaTransparentAction( rPolyPoly, nTransparentPercent ) );
+#endif	// USE_JAVA && MACOSX
+
     MARK( "drawTransparent" );
 
     updateGraphicsState();
@@ -4505,6 +4457,11 @@ void PDFWriterImpl::drawTransparent( const PolyPolygon& rPolyPoly, sal_uInt32 nT
 
 void PDFWriterImpl::drawRectangle( const Rectangle& rRect )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaRectAction( rRect ) );
+#endif	// USE_JAVA && MACOSX
+
     MARK( "drawRectangle" );
 
     updateGraphicsState();
@@ -4529,6 +4486,11 @@ void PDFWriterImpl::drawRectangle( const Rectangle& rRect )
 
 void PDFWriterImpl::drawRectangle( const Rectangle& rRect, sal_uInt32 nHorzRound, sal_uInt32 nVertRound )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaRoundRectAction( rRect, nHorzRound, nVertRound ) );
+#endif	// USE_JAVA && MACOSX
+
     MARK( "drawRectangle with rounded edges" );
 
     if( !nHorzRound && !nVertRound )
@@ -4620,6 +4582,11 @@ void PDFWriterImpl::drawRectangle( const Rectangle& rRect, sal_uInt32 nHorzRound
 
 void PDFWriterImpl::drawEllipse( const Rectangle& rRect )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaEllipseAction( rRect ) );
+#endif	// USE_JAVA && MACOSX
+
     MARK( "drawEllipse" );
 
     updateGraphicsState();
@@ -4706,6 +4673,18 @@ static double calcAngle( const Rectangle& rRect, const Point& rPoint )
 
 void PDFWriterImpl::drawArc( const Rectangle& rRect, const Point& rStart, const Point& rStop, bool bWithPie, bool bWithChord )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+    {
+        if ( bWithPie )
+            m_aMtf.AddAction( new MetaPieAction( rRect, rStart, rStop ) );
+        else if ( bWithChord )
+            m_aMtf.AddAction( new MetaChordAction( rRect, rStart, rStop ) );
+        else
+            m_aMtf.AddAction( new MetaArcAction( rRect, rStart, rStop ) );
+    }
+#endif	// USE_JAVA && MACOSX
+
     MARK( "drawArc" );
 
     updateGraphicsState();
@@ -4780,6 +4759,11 @@ void PDFWriterImpl::drawArc( const Rectangle& rRect, const Point& rStart, const 
 
 void PDFWriterImpl::drawPolyLine( const Polygon& rPoly )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaPolyLineAction( rPoly ) );
+#endif	// USE_JAVA && MACOSX
+
     MARK( "drawPolyLine" );
 
     int nPoints = rPoly.GetSize();
@@ -4800,6 +4784,12 @@ void PDFWriterImpl::drawPolyLine( const Polygon& rPoly )
 
 void PDFWriterImpl::drawPolyLine( const Polygon& rPoly, const LineInfo& rInfo )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaPolyLineAction( rPoly, rInfo ) );
+#endif	// USE_JAVA && MACOSX
+
+    MARK( "drawPolyLine" );
     MARK( "drawPolyLine with LineInfo" );
 
     updateGraphicsState();
@@ -4817,6 +4807,11 @@ void PDFWriterImpl::drawPolyLine( const Polygon& rPoly, const LineInfo& rInfo )
 
 void PDFWriterImpl::drawPixel( const Point& rPoint, const Color& rColor )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaPixelAction( rPoint, rColor ) );
+#endif	// USE_JAVA && MACOSX
+
     MARK( "drawPixel" );
 
     Color aColor = ( rColor == Color( COL_TRANSPARENT ) ? m_aGraphicsStack.front().m_aLineColor : rColor );
@@ -4841,6 +4836,11 @@ void PDFWriterImpl::drawPixel( const Point& rPoint, const Color& rColor )
 
 void PDFWriterImpl::drawPixel( const Polygon& rPoints, const Color* pColors )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaPixelPDFAction( rPoints, pColors ) );
+#endif	// USE_JAVA && MACOSX
+
     MARK( "drawPixel with Polygon" );
 
     updateGraphicsState();
@@ -5345,10 +5345,22 @@ bool PDFWriterImpl::writeBitmapObject( BitmapEmit& rObject, bool bMask )
 
 void PDFWriterImpl::drawJPGBitmap( SvStream& rDCTData, const Size& rSizePixel, const Rectangle& rTargetArea, const Bitmap& rMask )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+    {
+        m_aMtf.AddAction( new MetaJpgPDFAction( rDCTData, rSizePixel, rTargetArea, rMask ) );
+    }
+#endif	// USE_JAVA && MACOSX
+
     MARK( "drawJPGBitmap" );
 
     OStringBuffer aLine( 80 );
     updateGraphicsState();
+
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        return;
+#endif	// USE_JAVA && MACOSX
 
     SvMemoryStream* pStream = new SvMemoryStream;
     rDCTData.Seek( 0 );
@@ -5446,6 +5458,11 @@ const PDFWriterImpl::BitmapEmit& PDFWriterImpl::createBitmapEmit( const BitmapEx
 
 void PDFWriterImpl::drawBitmap( const Point& rDestPoint, const Size& rDestSize, const Bitmap& rBitmap )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaBmpScaleAction( rDestPoint, rDestSize, rBitmap ) );
+#endif	// USE_JAVA && MACOSX
+
     MARK( "drawBitmap (Bitmap)" );
 
     const BitmapEmit& rEmit = createBitmapEmit( BitmapEx( rBitmap ) );
@@ -5454,6 +5471,11 @@ void PDFWriterImpl::drawBitmap( const Point& rDestPoint, const Size& rDestSize, 
 
 void PDFWriterImpl::drawBitmap( const Point& rDestPoint, const Size& rDestSize, const BitmapEx& rBitmap )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaBmpExScaleAction( rDestPoint, rDestSize, rBitmap ) );
+#endif	// USE_JAVA && MACOSX
+
     MARK( "drawBitmap (BitmapEx)" );
 
     const BitmapEmit& rEmit = createBitmapEmit( rBitmap );
@@ -5462,6 +5484,11 @@ void PDFWriterImpl::drawBitmap( const Point& rDestPoint, const Size& rDestSize, 
 
 void PDFWriterImpl::drawMask( const Point& rDestPoint, const Size& rDestSize, const Bitmap& rBitmap, const Color& rFillColor )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaMaskScaleAction( rDestPoint, rDestSize, rBitmap, rFillColor ) );
+#endif	// USE_JAVA && MACOSX
+
     MARK( "drawMask" );
 
     Bitmap aBitmap( rBitmap );
@@ -5501,6 +5528,11 @@ sal_Int32 PDFWriterImpl::createGradient( const Gradient& rGradient, const Size& 
 
 void PDFWriterImpl::drawGradient( const Rectangle& rRect, const Gradient& rGradient )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaGradientAction( rRect, rGradient ) );
+#endif	// USE_JAVA && MACOSX
+
     MARK( "drawGradient (Rectangle)" );
 
     if( m_eVersion == PDFWriter::PDF_1_2 )
@@ -5546,6 +5578,11 @@ void PDFWriterImpl::drawGradient( const Rectangle& rRect, const Gradient& rGradi
 
 void PDFWriterImpl::drawGradient( const PolyPolygon& rPolyPoly, const Gradient& rGradient )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaGradientExAction( rPolyPoly, rGradient ) );
+#endif	// USE_JAVA && MACOSX
+
     MARK( "drawGradient (PolyPolygon)" );
 
     if( m_eVersion == PDFWriter::PDF_1_2 )
@@ -5584,6 +5621,11 @@ void PDFWriterImpl::drawGradient( const PolyPolygon& rPolyPoly, const Gradient& 
 
 void PDFWriterImpl::drawHatch( const PolyPolygon& rPolyPoly, const Hatch& rHatch )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaHatchAction( rPolyPoly, rHatch ) );
+#endif	// USE_JAVA && MACOSX
+
     MARK( "drawHatch" );
 
     updateGraphicsState();
@@ -5606,6 +5648,11 @@ void PDFWriterImpl::drawHatch( const PolyPolygon& rPolyPoly, const Hatch& rHatch
 
 void PDFWriterImpl::drawWallpaper( const Rectangle& rRect, const Wallpaper& rWall )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaWallpaperAction( rRect, rWall ) );
+#endif	// USE_JAVA && MACOSX
+
     MARK( "drawWallpaper" );
 
     bool bDrawColor			= false;
@@ -5854,12 +5901,22 @@ void PDFWriterImpl::updateGraphicsState()
 
 void PDFWriterImpl::push( sal_uInt16 nFlags )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaPushAction( nFlags ) );
+#endif	// USE_JAVA && MACOSX
+
     m_aGraphicsStack.push_front( m_aGraphicsStack.front() );
     m_aGraphicsStack.front().m_nFlags = nFlags;
 }
 
 void PDFWriterImpl::pop()
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaPopAction() );
+#endif	// USE_JAVA && MACOSX
+
     GraphicsState aState = m_aGraphicsStack.front();
     m_aGraphicsStack.pop_front();
 
@@ -5889,6 +5946,11 @@ void PDFWriterImpl::pop()
 
 void PDFWriterImpl::setMapMode( const MapMode& rMapMode )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaMapModeAction( rMapMode ) );
+#endif	// USE_JAVA && MACOSX
+
     m_aGraphicsStack.front().m_aMapMode = rMapMode;
     getReferenceDevice()->SetMapMode( rMapMode );
     m_aCurrentPDFState.m_aMapMode = rMapMode;
@@ -5896,6 +5958,11 @@ void PDFWriterImpl::setMapMode( const MapMode& rMapMode )
 
 void PDFWriterImpl::setClipRegion( const Region& rRegion )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaClipRegionAction( rRegion, TRUE ) );
+#endif	// USE_JAVA && MACOSX
+
     Region aRegion = getReferenceDevice()->LogicToPixel( rRegion, m_aGraphicsStack.front().m_aMapMode );
     aRegion = getReferenceDevice()->PixelToLogic( aRegion, m_aMapMode );
     m_aGraphicsStack.front().m_aClipRegion = aRegion;
@@ -5903,6 +5970,11 @@ void PDFWriterImpl::setClipRegion( const Region& rRegion )
 
 void PDFWriterImpl::moveClipRegion( sal_Int32 nX, sal_Int32 nY )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaMoveClipRegionAction( nX, nY ) );
+#endif	// USE_JAVA && MACOSX
+
     Point aPoint( lcl_convert( m_aGraphicsStack.front().m_aMapMode,
                                m_aMapMode,
                                getReferenceDevice(),
@@ -5916,6 +5988,11 @@ void PDFWriterImpl::moveClipRegion( sal_Int32 nX, sal_Int32 nY )
 
 bool PDFWriterImpl::intersectClipRegion( const Rectangle& rRect )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaISectRectClipRegionAction( rRect ) );
+#endif	// USE_JAVA && MACOSX
+
     Rectangle aRect( lcl_convert( m_aGraphicsStack.front().m_aMapMode,
                                   m_aMapMode,
                                   getReferenceDevice(),
@@ -5927,6 +6004,11 @@ bool PDFWriterImpl::intersectClipRegion( const Rectangle& rRect )
 
 bool PDFWriterImpl::intersectClipRegion( const Region& rRegion )
 {
+#if defined USE_JAVA && defined MACOSX
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaISectRegionClipRegionAction( rRegion ) );
+#endif	// USE_JAVA && MACOSX
+
     Region aRegion = getReferenceDevice()->LogicToPixel( rRegion, m_aGraphicsStack.front().m_aMapMode );
     aRegion = getReferenceDevice()->PixelToLogic( aRegion, m_aMapMode );
     return m_aGraphicsStack.front().m_aClipRegion.Intersect( aRegion );
@@ -6344,5 +6426,387 @@ sal_Int32 PDFWriterImpl::writePDFObjectTree( PDFEmitObject& rObj, oslFileHandle 
     CHECK_RETURN( writeBuffer( aLine.getStr(), aLine.getLength() ) );
 
     return nNewID;
+}
+#endif	// USE_JAVA && MACOSX
+
+#if defined USE_JAVA && defined MACOSX
+void PDFWriterImpl::encodeGlyphs()
+{
+    // Create font objects using Mac OS X's PDF rendering APIs
+    for ( FontSubsetData::iterator it = m_aSubsets.begin(); it != m_aSubsets.end(); ++it )
+    {
+        ImplFontData *pCurrentFont = it->first;
+        if ( !pCurrentFont->mbSubsettable )
+            continue;
+
+        FontSubset& rSubset = it->second;
+        for ( FontEmitList::iterator lit = rSubset.m_aSubsets.begin(); lit != rSubset.m_aSubsets.end(); ++lit )
+        {
+            FontEmit& rEmit = *lit;
+
+            com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)pCurrentFont->mpSysData;
+            ATSUFontID nFontID = (ATSUFontID)( pVCLFont->getNativeFont() );
+            ATSFontRef aATSFont = FMGetATSFontRefFromFont( nFontID );
+            CGFontRef aFont = CGFontCreateWithPlatformFont( (void *)&aATSFont );
+            if ( !aFont )
+                continue;
+
+            CGGlyph aGlyphIDs[ 256 ];
+            int nGlyphIDs = 0;
+            for ( FontEmitMapping::iterator fit = rEmit.m_aMapping.begin(); fit != rEmit.m_aMapping.end(); ++fit )
+            {
+                if ( fit->first )
+                    aGlyphIDs[ nGlyphIDs++ ] = (CGGlyph)fit->first;
+            }
+
+            if ( !nGlyphIDs )
+                continue;
+
+            OUString aTmpName( utl::TempFile::CreateTempName() );
+
+            CFStringRef aPath = CFStringCreateWithCharactersNoCopy( NULL, aTmpName.getStr(), aTmpName.getLength(), kCFAllocatorNull );
+            if ( aPath )
+            {
+                CFURLRef aURL = CFURLCreateWithFileSystemPath( NULL, aPath, kCFURLPOSIXPathStyle, false );
+                if ( aURL )
+                {
+                    CGContextRef aContext = CGPDFContextCreateWithURL( aURL, NULL, NULL );
+                    if ( aContext )
+                    {
+                        CGContextBeginPage( aContext, NULL );
+                        CGContextSetFont( aContext, aFont );
+                        CGContextSetFontSize( aContext, 12 );
+                        CGContextShowGlyphs( aContext, aGlyphIDs, nGlyphIDs );
+                        CGContextEndPage( aContext );
+                        CGContextRelease( aContext );
+                    }
+
+                    CFRelease( aURL );
+                }
+
+                CFRelease( aPath );
+            }
+
+            osl_getFileURLFromSystemPath( aTmpName.pData, &rEmit.m_aFontFileName.pData );
+
+            oslFileHandle aFile;
+            if ( osl_openFile( rEmit.m_aFontFileName.pData, &aFile, osl_File_OpenFlag_Read ) == osl_File_E_None )
+            {
+                // Get the PDF objects from the file and parse the page content
+                // and font objects
+                OString aPageObjTag( "<< /Type /Page " );
+                OString aPageContentTag( " /Contents " );
+                OString aProcSetObjTag( "<< /ProcSet " );
+                sal_Int32 nPageContentObjID = 0;
+                sal_Int32 nProcSetObjID = 0;
+                sal_Int32 nObjID = 0;
+                while ( ( nObjID = getNextPDFObject( aFile, rEmit.m_aObjectMapping ) ) > 0 )
+                {
+                    PDFEmitObject& rObj = rEmit.m_aObjectMapping[ nObjID ];
+                    if ( !nPageContentObjID && rObj.m_aContent.match( aPageObjTag ) )
+                    {
+                        if ( !rObj.m_bStream )
+                        {
+                            sal_Int32 nContentPos = rObj.m_aContent.indexOf( aPageContentTag );
+                            if ( nContentPos >= 0 )
+                            {
+                                // Find object reference
+                                OStringBuffer aIDBuf;
+                                nContentPos += aPageContentTag .getLength();
+                                const sal_Char *pBuf = rObj.m_aContent.getStr();
+                                for ( pBuf += nContentPos; *pBuf && *pBuf != ' '; pBuf++ )
+                                    aIDBuf.append( *pBuf );
+                                nPageContentObjID = aIDBuf.makeStringAndClear().toInt32();
+                            }
+                        }
+                        else
+                        {
+                            nPageContentObjID = nObjID;
+                        }
+                    }
+                    else if ( !nProcSetObjID && rObj.m_aContent.match( aProcSetObjTag ) )
+                    {
+                        nProcSetObjID = nObjID;
+                    }
+                }
+
+                // Update stream lengths
+                OString aStreamLengthTag( "<< /Length " );
+                OString aRef( " 0 R " );
+                for ( PDFObjectMapping::iterator it = rEmit.m_aObjectMapping.begin(); it != rEmit.m_aObjectMapping.end(); ++it )
+                {
+                    PDFEmitObject& rObj = it->second;
+                    if ( rObj.m_bStream )
+                    {
+                        // Find stream length
+                        sal_Int32 nLenPos = rObj.m_aContent.indexOf( aStreamLengthTag );
+                        if ( nLenPos >= 0 )
+                        {
+                            OStringBuffer aLenBuf;
+                            nLenPos += aStreamLengthTag.getLength();
+                            const sal_Char *pBuf = rObj.m_aContent.getStr();
+                            for ( pBuf += nLenPos; *pBuf && *pBuf != ' '; pBuf++ )
+                                aLenBuf.append( *pBuf );
+                            sal_Int32 nStreamLen = aLenBuf.makeStringAndClear().toInt32();
+                            if ( nStreamLen && !OString( pBuf ).compareTo( aRef, aRef.getLength() ) )
+                                rObj.m_nStreamLen = rEmit.m_aObjectMapping[ nStreamLen ].m_aContent.toInt32();
+                            else
+                                rObj.m_nStreamLen = nStreamLen;
+                        }
+                    }
+                }
+
+                // Map font IDs to objects
+                OString aFontIDTag( "/F" );
+                sal_Int32 nFontIDTagLen = aFontIDTag.getLength();
+                if ( nProcSetObjID )
+                {
+                    PDFEmitObject& rObj = rEmit.m_aObjectMapping[ nProcSetObjID ];
+                    OString aFontStartTag( " /Font << " );
+                    sal_Int32 nFontStartTagLen = aFontStartTag.getLength();
+                    OString aFontEndTag( " >> " );
+                    sal_Int32 nCurrentPos = 0;
+                    sal_Int32 nFontStartPos;
+                    if ( ( nFontStartPos = rObj.m_aContent.indexOf( aFontStartTag, nCurrentPos ) ) >= 0 )
+                    {
+                        nCurrentPos = nFontStartPos + nFontStartTagLen;
+
+                        sal_Int32 nFontEndPos;
+                        if ( ( nFontEndPos = rObj.m_aContent.indexOf( aFontEndTag, nCurrentPos ) ) >= 0 )
+                        {
+                            nCurrentPos = nFontStartPos + nFontStartTagLen;
+
+                            while ( ( nCurrentPos = rObj.m_aContent.indexOf( aFontIDTag, nCurrentPos ) ) >= 0 && nCurrentPos < nFontEndPos )
+                            {
+                                nCurrentPos += nFontIDTagLen;
+
+                                sal_Int32 nNextPos = rObj.m_aContent.indexOf( ' ', nCurrentPos );
+                                if ( nNextPos < 0 )
+                                    continue;
+
+                                sal_Int32 nNextNextPos = rObj.m_aContent.indexOf( aRef, nCurrentPos );
+                                if ( nNextNextPos < 0 )
+                                    continue;
+
+                                const sal_Char *pBuf = rObj.m_aContent.getStr();
+                                OString aFontSubID( pBuf + nCurrentPos, nNextPos - nCurrentPos );
+                                sal_Int32 nFontSubID = OString( pBuf + nNextPos, nNextNextPos - nNextPos ).toInt32();
+                                if ( nFontSubID && aFontSubID.getLength() )
+                                    rEmit.m_aFontSubIDMapping[ aFontSubID ] = nFontSubID;
+                            }
+                        }
+                    }
+                }
+
+                // Inflate page content stream and get encoding
+                if ( nPageContentObjID )
+                {
+                    PDFEmitObject& rObj = rEmit.m_aObjectMapping[ nPageContentObjID ];
+                    if ( rObj.m_bStream && rObj.m_nStreamLen && osl_setFilePos( aFile, osl_Pos_Absolut, rObj.m_nStreamPos ) == osl_File_E_None )
+                    {
+                        ZCodec aInflater( 0x4000, 0x4000 );
+                        SvMemoryStream aDeflatedStream;
+                        SvMemoryStream aInflatedStream;
+
+                        // Read object into memory stream
+                        sal_uInt64 nBufSize = 4096;
+                        sal_Char aBuf[ nBufSize ];
+                        sal_uInt64 nBytesRead;
+                        sal_uInt64 nBytesLeft = rObj.m_nStreamLen;
+                        while ( nBytesLeft && osl_readFile( aFile, aBuf, nBufSize, &nBytesRead ) == osl_File_E_None )
+                        {
+                            if ( nBytesLeft < nBytesRead )
+                                nBytesRead = nBytesLeft;
+
+                            if ( aDeflatedStream.Write( aBuf, nBytesRead ) != nBytesRead )
+                                break;
+
+                            nBytesLeft -= nBytesRead;
+
+                            sal_Bool bEOF = sal_False;
+                            if ( osl_isEndOfFile( aFile, &bEOF ) != osl_File_E_None || bEOF )
+                                break;
+                        }
+
+                        sal_uInt64 nContentLen = aDeflatedStream.Tell();
+                        if ( !nBytesLeft && nContentLen )
+                        {
+                            aDeflatedStream.Seek( 0 );
+                            aInflater.BeginCompression();
+                            while ( aDeflatedStream.Tell() < nContentLen && aInflater.Decompress( aDeflatedStream, aInflatedStream ) >= 0 )
+                                ;
+                            aInflater.EndCompression();
+                        }
+
+                        nContentLen = aInflatedStream.Tell();
+                        if ( nContentLen )
+                        {
+                            aInflatedStream.Seek( 0 );
+                            OString aPageContent( (sal_Char *)aInflatedStream.GetData(), nContentLen );
+
+                            // Replace all whitespace with spaces for ease of
+                            // parsing
+                            for ( sal_Char *pPageContentBuf = (sal_Char *)aPageContent.getStr(); *pPageContentBuf; pPageContentBuf++ )
+                            {
+                                switch ( *pPageContentBuf )
+                                {
+                                    case 0x09:
+                                    case 0x0A:
+                                    case 0x0C:
+                                    case 0x0D:
+                                        *pPageContentBuf = 0x20;
+                                }
+                            }
+
+                            OString aFontTag( " Tf " );
+                            OString aTextTag( " Tj " );
+                            int nFontTagLen = aFontTag.getLength();
+                            int nTextTagLen = aTextTag.getLength();
+                            int nCurrentGlyph = 0;
+                            sal_Int32 nCurrentPos = 0;
+                            sal_Int32 nFontIDPos;
+                            sal_Int32 nFontPos;
+                            sal_Int32 nTextPos;
+                            while ( nCurrentGlyph < nGlyphIDs )
+                            {
+                                if ( ( nFontIDPos = aPageContent.indexOf( aFontIDTag, nCurrentPos ) ) < 0 )
+                                    break;
+                                nCurrentPos = nFontIDPos + nFontIDTagLen;
+                                if ( ( nFontIDPos = aPageContent.indexOf( ' ', nCurrentPos ) ) < 0 )
+                                    continue;
+
+                                const sal_Char *pBuf = aPageContent.getStr();
+                                sal_Int32 nFontSubID = 0;
+                                std::map< OString, sal_Int32 >::iterator it = rEmit.m_aFontSubIDMapping.find( OString( pBuf + nCurrentPos, nFontIDPos - nCurrentPos ) );
+                                if ( it != rEmit.m_aFontSubIDMapping.end() )
+                                    nFontSubID = it->second;
+                                else
+                                    continue;
+
+                                if ( ( nFontPos = aPageContent.indexOf( aFontTag, nCurrentPos ) ) < 0 )
+                                    break;
+                                nCurrentPos = nFontPos + nFontTagLen;
+
+                                sal_Int32 nTextStart = nCurrentPos;
+
+                                if ( ( nTextPos = aPageContent.indexOf( aTextTag, nCurrentPos ) ) < 0 )
+                                    break;
+                                nCurrentPos = nTextPos + nTextTagLen;
+
+                                sal_Int32 nTextEnd = nTextPos - 1;
+
+                                bool bTextIsHex;
+                                if ( pBuf[ nTextStart ] == '<' )
+                                    bTextIsHex = true;
+                                else if ( pBuf[ nTextStart ] == '(' )
+                                    bTextIsHex = false;
+                                else
+                                    continue;
+                                nTextStart++;
+
+                                sal_Int32 nTextLen = nTextEnd - nTextStart;
+                                if ( nTextLen <= 0 )
+                                    continue;
+
+                                // Note: we assume that Mac OS X only generates
+                                // hexadecimal strings when the font encoding
+                                // is Identity-H or Identity-V
+                                OStringBuffer aGlyphBuf;
+                                pBuf = aPageContent.getStr() + nTextStart;
+                                if ( bTextIsHex )
+                                {
+                                    for ( sal_Int32 j = 0; j < nTextLen; j += 2, pBuf += 2 )
+                                        aGlyphBuf.append( (sal_Char)OString( pBuf, nTextLen - j == 1 ? 1 : 2 ).toInt32( 16 ) );
+                                }
+                                else
+                                {
+                                    OStringBuffer aOctalBuf;
+                                    bool bLastSlash = false;
+                                    for ( sal_Int32 j = 0; j < nTextLen; j++, pBuf++ )
+                                    {
+                                        sal_Int32 nOctalBufLen = aOctalBuf.getLength();
+                                        if ( nOctalBufLen && ( nOctalBufLen > 3 || *pBuf < '0' || *pBuf > '9' ) )
+                                            aGlyphBuf.append( (sal_Char)aOctalBuf.makeStringAndClear().toInt32( 8 ) );
+
+                                        if ( !bLastSlash && *pBuf == '\\' )
+                                        {
+                                            bLastSlash = true;
+                                        }
+                                        else if ( *pBuf >= '0' && *pBuf <= '9' && ( bLastSlash || aOctalBuf.getLength() ) )
+                                        {
+                                            bLastSlash = false;
+                                            aOctalBuf.append( *pBuf );
+                                        }
+                                        else if ( bLastSlash )
+                                        {
+                                            bLastSlash = false;
+                                            switch ( *pBuf )
+                                            {
+                                                case 'n':
+                                                    aGlyphBuf.append( (sal_Char)0x0a );
+                                                    break;
+                                                case 'r':
+                                                    aGlyphBuf.append( (sal_Char)0x0d );
+                                                    break;
+                                                case 't':
+                                                    aGlyphBuf.append( (sal_Char)0x09 );
+                                                    break;
+                                                case 'b':
+                                                    aGlyphBuf.append( (sal_Char)0x09 );
+                                                    break;
+                                                case 'f':
+                                                    aGlyphBuf.append( (sal_Char)0x0c );
+                                                    break;
+                                                default:
+                                                    aGlyphBuf.append( *pBuf );
+                                                    break;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            aGlyphBuf.append( *pBuf );
+                                        }
+                                    }
+
+                                    if ( aOctalBuf.getLength() )
+                                        aGlyphBuf.append( (sal_Char)aOctalBuf.makeStringAndClear().toInt32( 8 ) );
+                                }
+
+                                pBuf = aGlyphBuf.getStr();
+                                nTextLen = aGlyphBuf.getLength();
+                                for ( sal_Int32 j = 0; j < nTextLen && nCurrentGlyph < nGlyphIDs; j++, nCurrentGlyph++, pBuf++ )
+                                {
+                                    long nGlyph = (long)aGlyphIDs[ nCurrentGlyph ];
+
+                                    sal_uInt16 nEncodedGlyph;
+                                    if ( bTextIsHex )
+                                    {
+                                        nEncodedGlyph = (sal_uInt8)( *pBuf ) << 8;
+                                        if ( ++pBuf && ++j < nTextLen )
+                                            nEncodedGlyph |= (sal_uInt8)( *pBuf );
+                                    }
+                                    else
+                                    {
+                                        nEncodedGlyph = (sal_uInt16)( *pBuf & 0x00ff );
+                                    }
+
+                                    // Cache encoding
+                                    rEmit.m_aGlyphEncoding[ nGlyph ] = nEncodedGlyph;
+
+                                    // Update glyph mappings
+                                    rEmit.m_aMapping[ nGlyph ].m_nSubsetGlyphID = nEncodedGlyph;
+                                    rSubset.m_aMapping[ nGlyph ].m_nFontSubID = nFontSubID;
+                                    rSubset.m_aMapping[ nGlyph ].m_bIdentityGlyph = bTextIsHex;
+                                    rSubset.m_aMapping[ nGlyph ].m_nSubsetGlyphID = nEncodedGlyph;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                osl_closeFile( aFile );
+            }
+        }
+    }
 }
 #endif	// USE_JAVA && MACOSX

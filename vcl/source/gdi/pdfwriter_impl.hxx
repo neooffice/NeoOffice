@@ -81,6 +81,156 @@
 #include <rtl/strbuf.hxx>
 #endif
 
+#if defined USE_JAVA && defined MACOSX
+
+#ifndef _SV_GDIMTF_HXX
+#include <gdimtf.hxx>
+#endif
+#ifndef _SV_METAACT_HXX
+#include <metaact.hxx>
+#endif
+
+#define META_TEXT_PDF_ACTION             META_TEXT_ACTION
+#define META_TEXTLINE_PDF_ACTION         META_TEXTLINE_ACTION
+#define META_TEXTARRAY_PDF_ACTION        META_TEXTARRAY_ACTION
+#define META_STRETCHTEXT_PDF_ACTION      META_STRETCHTEXT_ACTION
+#define META_TEXTRECT_PDF_ACTION         META_TEXTRECT_ACTION
+#define META_NEW_PAGE_PDF_ACTION         (10000)
+#define META_PIXEL_PDF_ACTION            (10001)
+#define META_JPG_PDF_ACTION              (10002)
+#define META_ANTIALIAS_PDF_ACTION        (10003)
+
+class MetaTextPDFAction : public MetaTextAction
+{
+private:
+
+    bool                mbTextLines;
+
+public:
+                        MetaTextPDFAction( const Point& rPt, const XubString& rStr, USHORT nIndex, USHORT nLen, bool bTextLines ) : MetaTextAction( rPt, rStr, nIndex, nLen ), mbTextLines( bTextLines ) {}
+    virtual             ~MetaTextPDFAction() {}
+
+    bool                IsTextLines() const { return mbTextLines; }
+};
+
+class MetaTextLinePDFAction : public MetaTextLineAction
+{
+private:
+
+    bool                mbUnderlineAbove;
+
+public:
+                        MetaTextLinePDFAction( const Point& rPos, long nWidth, FontStrikeout eStrikeout, FontUnderline eUnderline, bool bUnderlineAbove ) : MetaTextLineAction( rPos, nWidth, eStrikeout, eUnderline ), mbUnderlineAbove( bUnderlineAbove ) {}
+    virtual             ~MetaTextLinePDFAction() {}
+
+    bool                IsUnderlineAbove() const { return mbUnderlineAbove; }
+};
+
+class MetaTextArrayPDFAction : public MetaTextArrayAction
+{
+private:
+
+    bool                mbTextLines;
+
+public:
+                        MetaTextArrayPDFAction( const Point& rPt, const XubString& rStr, const long* pDXAry, USHORT nIndex, USHORT nLen, bool bTextLines ) : MetaTextArrayAction( rPt, rStr, pDXAry, nIndex, nLen ), mbTextLines( bTextLines ) {}
+    virtual             ~MetaTextArrayPDFAction() {}
+
+    bool                IsTextLines() const { return mbTextLines; }
+};
+
+class MetaStretchTextPDFAction : public MetaStretchTextAction
+{
+private:
+
+    bool                mbTextLines;
+
+public:
+                        MetaStretchTextPDFAction( const Point& rPt, ULONG nWidth, const XubString& rStr, USHORT nIndex, USHORT nLen, bool bTextLines ) : MetaStretchTextAction( rPt, nWidth, rStr, nIndex, nLen ), mbTextLines( bTextLines ) {}
+    virtual             ~MetaStretchTextPDFAction() {}
+
+    bool                IsTextLines() const { return mbTextLines; }
+};
+
+class MetaTextRectPDFAction : public MetaTextRectAction
+{
+private:
+
+    bool                mbTextLines;
+
+public:
+                        MetaTextRectPDFAction( const Rectangle& rRect, const XubString& rStr, USHORT nStyle, bool bTextLines ) : MetaTextRectAction( rRect, rStr, nStyle ), mbTextLines( bTextLines ) {}
+    virtual             ~MetaTextRectPDFAction() {}
+
+    bool                IsTextLines() const { return mbTextLines; }
+};
+
+class MetaNewPagePDFAction : public MetaAction
+{
+private:
+
+    sal_Int32           mnPageWidth;
+    sal_Int32           mnPageHeight;
+    ::vcl::PDFWriter::Orientation   meOrientation;
+
+public:
+                        MetaNewPagePDFAction( sal_Int32 nPageWidth, sal_Int32 nPageHeight, ::vcl::PDFWriter::Orientation eOrientation ) : MetaAction( META_NEW_PAGE_PDF_ACTION ), mnPageWidth( nPageWidth ), mnPageHeight( nPageHeight ), meOrientation( eOrientation ) {}
+    virtual             ~MetaNewPagePDFAction() {}
+
+    sal_Int32           GetPageWidth() const { return mnPageWidth; }
+    sal_Int32           GetPageHeight() const { return mnPageHeight; }
+    ::vcl::PDFWriter::Orientation   GetOrientation() const { return meOrientation; }
+};
+
+class MetaPixelPDFAction : public MetaAction
+{
+private:
+
+    const Polygon&      mrPoints;
+    const Color*        mpColors;
+
+public:
+                        MetaPixelPDFAction( const Polygon& rPoints, const Color* pColors ) : MetaAction( META_PIXEL_PDF_ACTION ), mrPoints( rPoints ), mpColors( pColors ) {}
+    virtual             ~MetaPixelPDFAction() {}
+
+    const Polygon&      GetPoints() const { return mrPoints; }
+    const Color*        GetColors() const { return mpColors; }
+};
+
+class MetaJpgPDFAction : public MetaAction
+{
+private:
+
+    SvMemoryStream      maStream;
+    Size                maSize;
+    Rectangle           maRect;
+    Bitmap              maMask;
+
+public:
+                        MetaJpgPDFAction( SvStream& rStream, const Size& rSize, const Rectangle& rRect, const Bitmap& rMask ) : MetaAction( META_JPG_PDF_ACTION ), maSize( rSize ), maRect( rRect ), maMask( rMask ) { rStream.Seek( 0 ); maStream << rStream; }
+    virtual             ~MetaJpgPDFAction() {}
+
+    const SvStream&     GetStream() const { return maStream; }
+    const Size&         GetSize() const { return maSize; }
+    const Rectangle&    GetRect() const { return maRect; }
+    const Bitmap&       GetMask() const { return maMask; }
+};
+
+class MetaAntiAliasPDFAction : public MetaAction
+{
+private:
+
+    sal_Int32           mnAntiAlias;
+
+public:
+                        MetaAntiAliasPDFAction( sal_Int32 nAntiAlias ) : MetaAction( META_ANTIALIAS_PDF_ACTION ), mnAntiAlias( nAntiAlias ) {}
+    virtual             ~MetaAntiAliasPDFAction() {}
+
+    sal_Int32           GetAntiAlias() const { return mnAntiAlias; }
+};
+
+#endif	// USE_JAVA && MACOSX
+
 #include <vector>
 #include <map>
 #include <list>
@@ -416,6 +566,11 @@ private:
     std::list< GraphicsState >			m_aGraphicsStack;
     GraphicsState						m_aCurrentPDFState;
 
+#if defined USE_JAVA && defined MACOSX
+	GDIMetaFile							m_aMtf;
+	bool								m_bUsingMtf;
+#endif	// USE_JAVA && MACOSX
+
     ZCodec*								m_pCodec;
     SvMemoryStream*						m_pMemStream;
 
@@ -499,12 +654,17 @@ private:
 #if defined USE_JAVA && defined MACOSX
     sal_Int32 getNextPDFObject( oslFileHandle aFile, PDFObjectMapping& rObjectMapping );
     sal_Int32 writePDFObjectTree( PDFEmitObject& rObj, oslFileHandle aFile, PDFObjectMapping& rObjMapping, sal_Int32 nFontID, std::map< sal_Int32, sal_Int32 >& rIDMapping );
+    void encodeGlyphs();
 #endif  // USE_JAVA && MACOSX
 
     /* draws an emphasis mark */
     void drawEmphasisMark(  long nX, long nY, const PolyPolygon& rPolyPoly, BOOL bPolyLine, const Rectangle& rRect1, const Rectangle& rRect2 );
+#if defined USE_JAVA && defined MACOSX
 public:
+    PDFWriterImpl( const rtl::OUString& rTargetFile, PDFWriter::PDFVersion eVersion = PDFWriter::PDF_1_4, PDFWriter::Compression eCompression = PDFWriter::Screen, FontSubsetData *pSubsets = NULL );
+#else	// USE_JAVA && MACOSX
     PDFWriterImpl( const rtl::OUString& rTargetFile, PDFWriter::PDFVersion eVersion = PDFWriter::PDF_1_4, PDFWriter::Compression eCompression = PDFWriter::Screen );
+#endif  // USE_JAVA && MACOSX
     ~PDFWriterImpl();
 
     /*	for OutputDevice so the reference device can have a list
@@ -537,7 +697,13 @@ public:
     void pop();
 
     void setFont( const Font& rFont )
-    { m_aGraphicsStack.front().m_aFont = rFont; }
+    {
+#if defined USE_JAVA && defined MACOSX
+        if ( !m_bUsingMtf )
+            m_aMtf.AddAction( new MetaFontAction( rFont ) );
+#endif	// USE_JAVA && MACOSX
+        m_aGraphicsStack.front().m_aFont = rFont;
+    }
 
     void setMapMode( const MapMode& rMapMode );
     void setMapMode() { setMapMode( m_aMapMode ); }
@@ -546,32 +712,78 @@ public:
     const MapMode& getMapMode() { return m_aGraphicsStack.front().m_aMapMode; }
 
     void setLineColor( const Color& rColor )
-    { m_aGraphicsStack.front().m_aLineColor = rColor; }
+    {
+#if defined USE_JAVA && defined MACOSX
+        if ( !m_bUsingMtf )
+            m_aMtf.AddAction( new MetaLineColorAction( rColor, TRUE ) );
+#endif	// USE_JAVA && MACOSX
+        m_aGraphicsStack.front().m_aLineColor = rColor;
+    }
 
     void setFillColor( const Color& rColor )
-    { m_aGraphicsStack.front().m_aFillColor = rColor; }
+    {
+#if defined USE_JAVA && defined MACOSX
+        if ( !m_bUsingMtf )
+            m_aMtf.AddAction( new MetaFillColorAction( rColor, TRUE ) );
+#endif	// USE_JAVA && MACOSX
+        m_aGraphicsStack.front().m_aFillColor = rColor;
+    }
 
     void setTextLineColor()
-    { m_aGraphicsStack.front().m_aTextLineColor = Color( COL_TRANSPARENT ); }
+    {
+#if defined USE_JAVA && defined MACOSX
+        if ( !m_bUsingMtf )
+            m_aMtf.AddAction( new MetaTextLineColorAction( Color( COL_TRANSPARENT ), FALSE ) );
+#endif	// USE_JAVA && MACOSX
+        m_aGraphicsStack.front().m_aTextLineColor = Color( COL_TRANSPARENT );
+    }
 
     void setTextLineColor( const Color& rColor )
-    { m_aGraphicsStack.front().m_aTextLineColor = rColor; }
+    {
+#if defined USE_JAVA && defined MACOSX
+        if ( !m_bUsingMtf )
+            m_aMtf.AddAction( new MetaTextLineColorAction( rColor, TRUE ) );
+#endif	// USE_JAVA && MACOSX
+        m_aGraphicsStack.front().m_aTextLineColor = rColor;
+    }
 
     void setTextFillColor( const Color& rColor )
     {
+#if defined USE_JAVA && defined MACOSX
+        if ( !m_bUsingMtf )
+            m_aMtf.AddAction( new MetaTextFillColorAction( rColor, TRUE ) );
+#endif	// USE_JAVA && MACOSX
         m_aGraphicsStack.front().m_aFont.SetFillColor( rColor );
         m_aGraphicsStack.front().m_aFont.SetTransparent( ImplIsColorTransparent( rColor ) );
     }
+
     void setTextFillColor()
     {
+#if defined USE_JAVA && defined MACOSX
+        if ( !m_bUsingMtf )
+            m_aMtf.AddAction( new MetaTextFillColorAction( Color( COL_TRANSPARENT ), FALSE ) );
+#endif	// USE_JAVA && MACOSX
         m_aGraphicsStack.front().m_aFont.SetFillColor( Color( COL_TRANSPARENT ) );
         m_aGraphicsStack.front().m_aFont.SetTransparent( TRUE );
     }
+
     void setTextColor( const Color& rColor )
-    { m_aGraphicsStack.front().m_aFont.SetColor( rColor ); }
+    {
+#if defined USE_JAVA && defined MACOSX
+        if ( !m_bUsingMtf )
+            m_aMtf.AddAction( new MetaTextColorAction( rColor ) );
+#endif	// USE_JAVA && MACOSX
+        m_aGraphicsStack.front().m_aFont.SetColor( rColor );
+    }
 
     void clearClipRegion()
-    { m_aGraphicsStack.front().m_aClipRegion.SetNull(); }
+    {
+#if defined USE_JAVA && defined MACOSX
+        if ( !m_bUsingMtf )
+            m_aMtf.AddAction( new MetaClipRegionAction( Region(), FALSE ) );
+#endif	// USE_JAVA && MACOSX
+        m_aGraphicsStack.front().m_aClipRegion.SetNull();
+    }
 
     void setClipRegion( const Region& rRegion );
 
@@ -582,13 +794,31 @@ public:
     bool intersectClipRegion( const Region& rRegion );
 
     void setLayoutMode( sal_Int32 nLayoutMode )
-    { m_aGraphicsStack.front().m_nLayoutMode = nLayoutMode; }
+    {
+#if defined USE_JAVA && defined MACOSX
+        if ( !m_bUsingMtf )
+            m_aMtf.AddAction( new MetaLayoutModeAction( nLayoutMode ) );
+#endif	// USE_JAVA && MACOSX
+        m_aGraphicsStack.front().m_nLayoutMode = nLayoutMode;
+    }
 
     void setTextAlign( TextAlign eAlign )
-    { m_aGraphicsStack.front().m_aFont.SetAlign( eAlign ); }
+    {
+#if defined USE_JAVA && defined MACOSX
+        if ( !m_bUsingMtf )
+            m_aMtf.AddAction( new MetaTextAlignAction( eAlign ) );
+#endif	// USE_JAVA && MACOSX
+        m_aGraphicsStack.front().m_aFont.SetAlign( eAlign );
+    }
 
     void setAntiAlias( sal_Int32 nAntiAlias )
-    { m_aGraphicsStack.front().m_nAntiAlias = nAntiAlias; }
+    {
+#if defined USE_JAVA && defined MACOSX
+        if ( !m_bUsingMtf )
+            m_aMtf.AddAction( new MetaAntiAliasPDFAction( nAntiAlias ) );
+#endif	// USE_JAVA && MACOSX
+        m_aGraphicsStack.front().m_nAntiAlias = nAntiAlias;
+    }
 
     /* actual drawing functions */
     void drawText( const Point& rPos, const String& rText, xub_StrLen nIndex = 0, xub_StrLen nLen = STRING_LEN, bool bTextLines = true );
