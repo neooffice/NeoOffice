@@ -247,8 +247,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	bool bVertical = ( rArgs.mnFlags & SAL_LAYOUT_VERTICAL );
 	long nAscent = bVertical ? mpVCLFont->getAscent() : 0;
 	long nDescent = bVertical ? mpVCLFont->getDescent() : 0;
-	long nAdjust = bVertical ? Float32ToLong( ( nAscent + nDescent ) * 0.05 ) : 0;
-	long nDoubleAdjust = bVertical ? nAdjust * 2 : 0;
+	long nHeight = nAscent + nDescent;
 
 	if ( ! ( rArgs.mnFlags & SAL_LAYOUT_DISABLE_GLYPH_PROCESSING ) )
 	{
@@ -453,8 +452,8 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					ATSGlyphScreenMetrics aScreenMetrics;
 					if ( ATSUGlyphGetScreenMetrics( mpGlyphInfoArray->glyphs[ i ].style, 1, &mpGlyphInfoArray->glyphs[ i ].glyphID, sizeof( GlyphID ), true, true, &aScreenMetrics ) == noErr )
 					{
-						mpGlyphTranslations[ j ] = Float32ToLong( ( nAscent + nDescent - aScreenMetrics.deviceAdvance.x + aScreenMetrics.sideBearing.x + aScreenMetrics.otherSideBearing.x ) / 2 ) - nDescent;
-						mpGlyphTranslations[ j + 1 ] = Float32ToLong( aScreenMetrics.topLeft.y ) + nAdjust;
+						mpGlyphTranslations[ j ] = Float32ToLong( ( nHeight - aScreenMetrics.deviceAdvance.x + aScreenMetrics.sideBearing.x + aScreenMetrics.otherSideBearing.x ) / 2 ) - nDescent;
+						mpGlyphTranslations[ j + 1 ] = Float32ToLong( aScreenMetrics.topLeft.y + ( ( nHeight - aScreenMetrics.height ) / 2 ) );
 					}
 				}
 				else if ( mpVerticalFlags[ i ] & GF_ROTR )
@@ -462,8 +461,8 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					ATSGlyphScreenMetrics aScreenMetrics;
 					if ( ATSUGlyphGetScreenMetrics( mpGlyphInfoArray->glyphs[ i ].style, 1, &mpGlyphInfoArray->glyphs[ i ].glyphID, sizeof( GlyphID ), true, true, &aScreenMetrics ) == noErr )
 					{
-						mpGlyphTranslations[ j ] = nAscent - Float32ToLong( ( nAscent + nDescent - aScreenMetrics.deviceAdvance.x + aScreenMetrics.sideBearing.x + aScreenMetrics.otherSideBearing.x ) / 2 );
-						mpGlyphTranslations[ j + 1 ] = Float32ToLong( aScreenMetrics.height - aScreenMetrics.topLeft.y ) + nAdjust;
+						mpGlyphTranslations[ j ] = nAscent - Float32ToLong( ( nHeight - aScreenMetrics.deviceAdvance.x + aScreenMetrics.sideBearing.x + aScreenMetrics.otherSideBearing.x ) / 2 );
+						mpGlyphTranslations[ j + 1 ] = Float32ToLong( aScreenMetrics.height - aScreenMetrics.topLeft.y + ( ( nHeight - aScreenMetrics.height ) / 2 ) );
 					}
 				}
 			}
@@ -503,7 +502,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 				ATSGlyphScreenMetrics aScreenMetrics;
 				if ( ATSUGlyphGetScreenMetrics( mpGlyphInfoArray->glyphs[ i ].style, 1, &mpGlyphInfoArray->glyphs[ i ].glyphID, sizeof( GlyphID ), true, true, &aScreenMetrics ) == noErr )
-					nCharWidth = Float32ToLong( ( aScreenMetrics.height + nDoubleAdjust ) * fUnitsPerPixel );
+					nCharWidth = Float32ToLong( nHeight * fUnitsPerPixel );
 			}
 			else
 			{

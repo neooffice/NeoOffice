@@ -59,14 +59,88 @@
 #ifndef _SV_JAVA_LANG_CLASS_HXX
 #include <java/lang/Class.hxx>
 #endif
+#ifndef _OSL_CONDITN_HXX_
+#include <osl/conditn.hxx>
+#endif
 
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 
+struct EPSData
+{
+	PMPrintSession		maSession;
+	MacOSPtr			mpPtr;
+	ULONG				mnSize;
+	::osl::Condition	maCondition;
+};
+
+static EventLoopTimerUPP pEventLoopTimerUPP = NULL;
+
 #endif	// MACOSX
 
 using namespace vcl;
+
+// =======================================================================
+
+#ifdef MACOSX
+static void ImplDrawEPS( EPSData *pData )
+{
+	CFArrayRef aFormats;
+	if ( PMSessionGetDocumentFormatGeneration( pData->maSession, &aFormats ) == kPMNoError && aFormats )
+	{
+		// Check if the PICT + PS is a supported format
+		bool bPS = false;
+		CFIndex nCount = CFArrayGetCount( aFormats );
+		for ( CFIndex i = 0; i < nCount; i++ )
+		{
+			CFStringRef aFormat = (CFStringRef)CFArrayGetValueAtIndex( aFormats, i );
+			if ( CFStringCompare( aFormat, kPMDocumentFormatPICTPS, 0 ) == kCFCompareEqualTo )
+			{
+				bPS = true;
+				break;
+			}
+		}
+
+		CFRelease( aFormats );
+
+		if ( bPS )
+		{
+			CFStringRef aContexts[ 1 ];
+			aContexts[ 0 ] = kPMGraphicsContextCoreGraphics;
+			CFArrayRef aContextArray = CFArrayCreate( kCFAllocatorDefault, (const void **)aContexts, 1, &kCFTypeArrayCallBacks );
+			if ( aContextArray )
+			{
+				if ( PMSessionSetDocumentFormatGeneration( pData->maSession, kPMDocumentFormatPICTPS, aContextArray, NULL ) == kPMNoError )
+				{
+					if ( PMSessionPostScriptBegin( pData->maSession ) == kPMNoError )
+					{
+						PMSessionPostScriptData( pData->maSession, pData->mpPtr, pData->mnSize );
+						PMSessionPostScriptEnd( pData->maSession );
+					}
+
+					PMSessionSetDocumentFormatGeneration( pData->maSession, kPMDocumentFormatPDF, aContextArray, NULL );
+				}
+
+				CFRelease( aContextArray );
+			}
+		}
+	}
+}
+#endif  // MACOSX
+
+// -----------------------------------------------------------------------
+
+#ifdef MACOSX
+static void DrawEPSTimerCallback( EventLoopTimerRef aTimer, void *pData )
+{
+	EPSData *pEPSData = (EPSData *)pData;
+
+	ImplDrawEPS( pEPSData );
+
+	pEPSData->maCondition.set();
+}
+#endif  // MACOSX
 
 // =======================================================================
 
@@ -345,25 +419,42 @@ BOOL SalGraphics::DrawEPS( long nX, long nY, long nWidth, long nHeight,
                            void* pPtr, ULONG nSize,
                            const OutputDevice *pOutDev )
 {
+	BOOL bRet = FALSE;
+
 	if ( !maGraphicsData.mpPrinter )
-		return FALSE;
+		return bRet;
 
 #ifdef MACOSX
 	PMPrintSession pSession = (PMPrintSession)maGraphicsData.mpPrinter->maPrinterData.mpVCLPrintJob->getNativePrintJob();
-	if ( pSession )
+	if ( pSession && pPtr && nSize )
 	{
-		if ( PMSessionPostScriptBegin( pSession ) == kPMNoError )
+		EPSData aData;
+		aData.maSession = pSession;
+		aData.mpPtr = (MacOSPtr)pPtr;
+		aData.mnSize = nSize;
+
+		VCLThreadAttach t;
+		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 && !pEventLoopTimerUPP )
+			pEventLoopTimerUPP = NewEventLoopTimerUPP( DrawEPSTimerCallback );
+
+		if ( pEventLoopTimerUPP )
 		{
-			PMSessionPostScriptData( pSession, (MacOSPtr)pPtr, nSize );
-			PMSessionPostScriptEnd( pSession );
+			// For Java 1.3.1, draw EPS in the Carbon event thread
+			InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pEventLoopTimerUPP, &aData, NULL );
+			aData.maCondition.wait();
 		}
-		return TRUE;
+		else
+		{
+			ImplDrawEPS( &aData );
+		}
+
+		bRet = TRUE;
 	}
 #else	// MACOSX
 #ifdef DEBUG
 	fprintf( stderr, "SalGraphics::DrawEPS not implemented\n" );
 #endif
-	return FALSE;
+	return bRet;
 #endif	// MACOSX
 }
 
