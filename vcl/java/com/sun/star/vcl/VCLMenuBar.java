@@ -231,15 +231,12 @@ public final class VCLMenuBar {
 				((Frame)win).setMenuBar(null);
 		}
 		removeMenuBar(this);
-	 	awtMenuBar.removeNotify();
 	 	awtMenuBar=null;
 		menus=null;
 		queue=null;
 		frame=null;
-		if (hiddenMenuBar != null) {
-			hiddenMenuBar.removeNotify();
+		if (hiddenMenuBar != null)
 			hiddenMenuBar = null;
-		}
 
 	}
 	
@@ -349,7 +346,6 @@ public final class VCLMenuBar {
 		Menu m=awtMenuBar.getMenu(nPos);
 		awtMenuBar.remove(nPos);
 		menus.remove(nPos);
-		m.removeNotify();
 
 	}
 
@@ -423,10 +419,8 @@ public final class VCLMenuBar {
 
 	  	if(getFrame()!=null) {
 			Frame f = (Frame)getFrame().getWindow();
-			if (f.getMenuBar() == hiddenMenuBar) {
-				hiddenMenuBar.removeNotify();
+			if (f.getMenuBar() == hiddenMenuBar)
 				hiddenMenuBar = null;
-			}
 			f.setMenuBar(getAWTMenuBar());
 		}
 
@@ -442,7 +436,6 @@ public final class VCLMenuBar {
 		for(int i=awtMenuBar.countMenus()-1; i>=0; i--) {
 			Menu m=awtMenuBar.getMenu(i);
 			awtMenuBar.remove(i);
-			m.removeNotify();
 		}
 
 		Iterator e=menus.iterator();

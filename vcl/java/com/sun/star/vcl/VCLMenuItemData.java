@@ -512,7 +512,6 @@ public final class VCLMenuItemData {
 				Menu m=(Menu)e.next();
 				MenuItem obj=m.getItem(nPos);
 				m.remove(nPos);
-				obj.removeNotify();
 			}
 		}
 
@@ -844,7 +843,6 @@ public final class VCLMenuItemData {
 
 		MenuItem mi=(MenuItem)o;
 		awtPeers.remove(awtPeers.indexOf(o));
-		mi.removeNotify();
 
 	}
 
@@ -870,7 +868,6 @@ public final class VCLMenuItemData {
 					mi.removeActionListener((VCLAWTMenuItem)mi);
 				else if(mi instanceof VCLAWTCheckboxMenuItem)
 					mi.removeActionListener((VCLAWTCheckboxMenuItem)mi);
-				mi.removeNotify();
 			}
 
 			awtPeers.clear();
