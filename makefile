@@ -171,7 +171,6 @@ build.package: build.neo_patches build.oo_download_dics
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/readlicense/source/license/unx/LICENSE" "$(PWD)/readlicense/source/readme/unxmacxp/README" "."
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/language_numbers" | sed "s#,# #g"` ; do cp "$(PWD)/$(BUILD_HOME)/offmgr/unxmacxp.pro/bin/neojava$${UPD}$${i}.res" "program/resource/iso$${UPD}$${i}.res" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/desktop/unxmacxp.pro/bin/soffice" "program/soffice.bin" ; chmod a+x "program/soffice.bin"
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/dtrans/unxmacxp.pro/class/dtransjava.jar" "program/classes"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/soffice.sh" "program/soffice" ; chmod a+x "program/soffice"
 	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#$$(LANGUAGE_NAMES)#$(shell cat "$(PWD)/$(INSTALL_HOME)/language_names")#g' "$(PWD)/$(BUILD_HOME)/setup2/unxmacxp.pro/misc/setup.sh"  > "program/setup" ; chmod a+x "program/setup"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/nswrapper.sh" "program/nswrapper" ; chmod a+x "program/nswrapper"
