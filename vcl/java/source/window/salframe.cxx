@@ -208,15 +208,8 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	if ( maFrameData.mnStyle & SAL_FRAME_STYLE_CHILD )
 		return;
 
-	Rectangle aPosSize( Point( maGeometry.nX, maGeometry.nY ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
+	Rectangle aPosSize( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
 	aPosSize.Justify();
-
-	// If there is a parent frame, add back its X and Y coordinates as the
-	// new X and Y coordinates are relative to the parent frame
-	if ( maFrameData.mpParent )
-		nX += maFrameData.mpParent->maGeometry.nX;
-	if ( maFrameData.mpParent )
-		nY += maFrameData.mpParent->maGeometry.nY;
 
 	if ( ! ( nFlags & SAL_FRAME_POSSIZE_X ) )
 		nX = aPosSize.nLeft;
@@ -227,13 +220,50 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	if ( ! ( nFlags & SAL_FRAME_POSSIZE_HEIGHT ) )
 		nHeight = aPosSize.GetHeight();
 
+	Rectangle aWorkArea;
+	GetWorkArea( aWorkArea );
+
 	if ( maFrameData.mbCenter && ! ( nFlags & SAL_FRAME_POSSIZE_X ) && ! ( nFlags & SAL_FRAME_POSSIZE_Y ) && !maFrameData.mbVisible )
 	{
-		Rectangle aWorkArea;
-		GetWorkArea( aWorkArea );
-		nX = ( aWorkArea.GetWidth() - nWidth ) / 2;
-		nY = ( aWorkArea.GetHeight() - nHeight ) / 2;
+		if ( maFrameData.mpParent )
+		{
+			nX = maFrameData.mpParent->maGeometry.nX + ( ( maFrameData.mpParent->maGeometry.nWidth - nWidth ) / 2 );
+			nY = maFrameData.mpParent->maGeometry.nY + ( ( maFrameData.mpParent->maGeometry.nHeight - nHeight ) / 2 );
+		}
+		else
+		{
+			nX = ( aWorkArea.GetWidth() - nWidth ) / 2;
+			nY = ( aWorkArea.GetHeight() - nHeight ) / 2;
+		}
 	}
+	else if ( maFrameData.mpParent )
+	{
+		nX += maFrameData.mpParent->maGeometry.nX;
+		nY += maFrameData.mpParent->maGeometry.nY;
+	}
+
+	// Make sure window does not spill off of the screen
+	long nMinX = 0;
+	long nMinY = 0;
+#ifdef MACOSX
+	if ( maFrameData.mbPresentation )
+	{
+		nMinX = -1;
+		nMinY = -1;
+	}
+#endif	// MACOSX
+	if ( nMinX + nWidth > aWorkArea.GetWidth() )
+		nWidth = aWorkArea.GetWidth() - nMinX;
+	if ( nMinY + nHeight > aWorkArea.GetHeight() )
+		nHeight = aWorkArea.GetHeight() - nMinY;
+	if ( nX < nMinX )
+		nX = nMinX;
+	if ( nY < nMinY )
+		nY = nMinY;
+	if ( nX + nWidth > aWorkArea.GetWidth() )
+		nX = aWorkArea.GetWidth() - nWidth;
+	if ( nY + nHeight > aWorkArea.GetHeight() )
+		nY = aWorkArea.GetHeight() - nHeight;
 
 	maFrameData.mpVCLFrame->setBounds( nX, nY, nWidth + maGeometry.nLeftDecoration + maGeometry.nRightDecoration, nHeight + maGeometry.nTopDecoration + maGeometry.nBottomDecoration );
 
@@ -300,13 +330,19 @@ void SalFrame::SetWindowState( const SalFrameState* pState )
 
 BOOL SalFrame::GetWindowState( SalFrameState* pState )
 {
-	Rectangle aBounds( maFrameData.mpVCLFrame->getBounds() );
 	pState->mnMask = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT | SAL_FRAMESTATE_MASK_STATE;
-	pState->mnX = aBounds.Left();
-	pState->mnY = aBounds.Top();
-	pState->mnWidth = aBounds.GetWidth();
-	pState->mnHeight = aBounds.GetHeight();
+	pState->mnX = maGeometry.nX - maGeometry.nLeftDecoration;
+	pState->mnY = maGeometry.nY- maGeometry.nTopDecoration;
+	pState->mnWidth = maGeometry.nWidth;
+	pState->mnHeight = maGeometry.nHeight;
 	pState->mnState = maFrameData.mpVCLFrame->getState();
+
+	if ( maFrameData.mpParent )
+	{
+		pState->mnX -= maFrameData.mpParent->maGeometry.nX;
+		pState->mnY -= maFrameData.mpParent->maGeometry.nY;
+	}
+
 	return TRUE;
 }
 
