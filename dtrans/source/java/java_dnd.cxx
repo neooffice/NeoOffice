@@ -244,6 +244,7 @@ XMultiServiceFactory >& xMultiServiceFactory )
 JavaDragSource::JavaDragSource() :
 	WeakComponentImplHelper3< XDragSource, XInitialization, XServiceInfo >( maMutex ),
 	mnActions( DNDConstants::ACTION_NONE ),
+	mnDragAction( DNDConstants::ACTION_NONE ),
 	mpNativeWindow( NULL )
 {
 }
@@ -367,6 +368,7 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 
 	mnActions = sourceActions;
 	maContents = transferable;
+	mnDragAction = trigger.DragAction;
 	maListener = listener;
 
 	// Test the JVM version and if it is 1.4 or higher use Cocoa, otherwise
@@ -381,6 +383,7 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 	{
 		mnActions = DNDConstants::ACTION_NONE;
 		maContents.clear();
+		mnDragAction = DNDConstants::ACTION_NONE;
 		maListener.clear();
 
 		aGuard.clear();
@@ -475,14 +478,8 @@ void JavaDragSource::runDragExecute( void *pData )
 				RgnHandle aRegion = NewRgn();
 				if ( aRegion )
 				{
-					if ( pSource->mnActions & DNDConstants::ACTION_MOVE )
-						nCurrentAction = DNDConstants::ACTION_MOVE;
-					else if ( pSource->mnActions & DNDConstants::ACTION_COPY )
-						nCurrentAction = DNDConstants::ACTION_COPY;
-					else if ( pSource->mnActions & DNDConstants::ACTION_LINK )
-						nCurrentAction = DNDConstants::ACTION_LINK;
-					else
-						nCurrentAction = DNDConstants::ACTION_NONE;
+					if ( pSource->mnActions & pSource->mnDragAction )
+						nCurrentAction = pSource->mnDragAction;
 
 					bNoRejectCursor = false;
 
