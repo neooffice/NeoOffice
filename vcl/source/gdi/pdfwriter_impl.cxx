@@ -2718,7 +2718,7 @@ void PDFWriterImpl::registerGlyphs(
         {
             // Get the PDF objects from the file and look for the page content
             OString aPageObjTag( "<< /Type /Page " );
-            OString aPageContentAttr( " /Contents " );
+            OString aPageContentTag( " /Contents " );
             sal_Int32 nPageContentObjID = 0;
             sal_Int32 nObjID = 0;
             while ( ( nObjID = getNextPDFObject( aFile, rEmit.m_aObjectMapping ) ) > 0 )
@@ -2728,12 +2728,12 @@ void PDFWriterImpl::registerGlyphs(
                 {
                     if ( !rObj.m_bStream )
                     {
-                        sal_Int32 nContentPos = rObj.m_aContent.indexOf( aPageContentAttr );
+                        sal_Int32 nContentPos = rObj.m_aContent.indexOf( aPageContentTag );
                         if ( nContentPos >= 0 )
                         {
                             // Find object reference
                             OStringBuffer aIDBuf;
-                            nContentPos += aPageContentAttr.getLength();
+                            nContentPos += aPageContentTag .getLength();
                             const sal_Char *pBuf = rObj.m_aContent.getStr();
                             for ( pBuf += nContentPos; *pBuf && *pBuf != ' '; pBuf++ )
                                 aIDBuf.append( *pBuf );
@@ -2796,11 +2796,11 @@ void PDFWriterImpl::registerGlyphs(
                         if ( aDeflatedStream.Write( aBuf, nBytesRead ) != nBytesRead )
                             break;
 
+                        nBytesLeft -= nBytesRead;
+
                         sal_Bool bEOF = sal_False;
                         if ( osl_isEndOfFile( aFile, &bEOF ) != osl_File_E_None || bEOF )
                             break;
-
-                        nBytesLeft -= nBytesRead;
                     }
 
                     sal_uInt64 nContentLen = aDeflatedStream.Tell();
@@ -2817,29 +2817,134 @@ void PDFWriterImpl::registerGlyphs(
                     if ( nContentLen )
                     {
                         aInflatedStream.Seek( 0 );
-                        const sal_Char *pBuf = (const sal_Char *)aInflatedStream.GetData();
-                        bool bTextFound = false;
-                        ULONG i;
-                        for ( i = 0; !bTextFound && i < nContentLen; i++, pBuf++ )
+                        OString aPageContent( (sal_Char *)aInflatedStream.GetData(), nContentLen );
+
+                        // Replace all whitespace with spaces for ease of
+                        // parsing
+                        for ( sal_Char *pPageContentBuf = (sal_Char *)aPageContent.getStr(); *pPageContentBuf; pPageContentBuf++ )
                         {
-                            if ( *pBuf == '(' )
-                                bTextFound = true;
+                            switch ( *pPageContentBuf )
+                            {
+                                case 0x09:
+                                case 0x0A:
+                                case 0x0C:
+                                case 0x0D:
+                                    *pPageContentBuf = 0x20;
+                            }
                         }
-                        for ( int j = 0 ; bTextFound && i < nContentLen && j < nGlyphs; i++, j++, pBuf++ )
+
+                        OString aFontTag( " Tf " );
+                        OString aTextTag( " Tj " );
+                        int nFontTagLen = aFontTag.getLength();
+                        int nTextTagLen = aTextTag.getLength();
+                        int nCurrentGlyph = 0;
+                        sal_Int32 nCurrentPos = 0;
+                        sal_Int32 nFontPos;
+                        sal_Int32 nTextPos;
+                        while ( nCurrentGlyph < nGlyphs )
                         {
-                            if ( *pBuf == ')' )
+                            if ( ( nFontPos = aPageContent.indexOf( aFontTag, nCurrentPos ) ) < 0 )
                                 break;
+                            nCurrentPos = nFontPos + nFontTagLen;
 
-                            long nGlyph = (long)aGlyphs[j];
-                            sal_uInt8 nEncodedGlyph = (sal_uInt8)(*pBuf);
-                            rEmit.m_aGlyphEncoding[ nGlyph ] = nEncodedGlyph;
+                            sal_Int32 nTextStart = nCurrentPos;
 
-                            // Cache encoding
-                            rEmit.m_aGlyphEncoding[ nGlyph ] = nEncodedGlyph;
+                            if ( ( nTextPos = aPageContent.indexOf( aTextTag, nCurrentPos ) ) < 0 )
+                                break;
+                            nCurrentPos = nTextPos + nTextTagLen;
 
-                            // Update glyph mappings
-                            rEmit.m_aMapping[ nGlyph ].m_nSubsetGlyphID = nEncodedGlyph;
-                            rSubset.m_aMapping[ nGlyph ].m_nSubsetGlyphID = nEncodedGlyph;
+                            sal_Int32 nTextEnd = nTextPos - 1;
+
+                            const sal_Char *pBuf = aPageContent.getStr();
+                            bool bTextIsHex;
+                            if ( pBuf[ nTextStart ] == '<' )
+                                bTextIsHex = true;
+                            else if ( pBuf[ nTextStart ] == '(' )
+                                bTextIsHex = false;
+                            else
+                                continue;
+                            nTextStart++;
+
+                            sal_Int32 nTextLen = nTextEnd - nTextStart;
+                            if ( nTextLen <= 0 )
+                                continue;
+
+                            OStringBuffer aGlyphBuf;
+                            pBuf = aPageContent.getStr() + nTextStart;
+                            if ( bTextIsHex )
+                            {
+                                for ( sal_Int32 j = 0; j < nTextLen; j += 2, pBuf += 2 )
+                                    aGlyphBuf.append( OString( pBuf, nTextLen - j == 1 ? 1 : 2 ).toInt32( 16 ) );
+                            }
+                            else
+                            {
+                                OStringBuffer aOctalBuf;
+                                bool bLastSlash = false;
+                                for ( sal_Int32 j = 0; j < nTextLen; j++, pBuf++ )
+                                {
+                                    sal_Int32 nOctalBufLen = aOctalBuf.getLength();
+                                    if ( nOctalBufLen && ( nOctalBufLen > 3 || *pBuf < '0' || *pBuf > '9' ) )
+                                        aGlyphBuf.append( aOctalBuf.makeStringAndClear().toInt32( 8 ) );
+
+                                    if ( !bLastSlash && *pBuf == '\\' )
+                                    {
+                                        bLastSlash = true;
+                                    }
+                                    else if ( *pBuf >= '0' && *pBuf <= '9' && ( bLastSlash || aOctalBuf.getLength() ) )
+                                    {
+                                        bLastSlash = false;
+                                        aOctalBuf.append( *pBuf );
+                                    }
+                                    else if ( bLastSlash )
+                                    {
+                                        bLastSlash = false;
+                                        switch ( *pBuf )
+                                        {
+                                            case 'n':
+                                                aGlyphBuf.append( (sal_Char)0x0a );
+                                                break;
+                                            case 'r':
+                                                aGlyphBuf.append( (sal_Char)0x0d );
+                                                break;
+                                            case 't':
+                                                aGlyphBuf.append( (sal_Char)0x09 );
+                                                break;
+                                            case 'b':
+                                                aGlyphBuf.append( (sal_Char)0x09 );
+                                                break;
+                                            case 'f':
+                                                aGlyphBuf.append( (sal_Char)0x0c );
+                                                break;
+                                            default:
+                                                aGlyphBuf.append( *pBuf );
+                                                break;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        aGlyphBuf.append( *pBuf );
+                                    }
+                                }
+
+                                if ( aOctalBuf.getLength() )
+                                    aGlyphBuf.append( (sal_Char)aOctalBuf.makeStringAndClear().toInt32( 8 ) );
+                            }
+
+                            pBuf = aGlyphBuf.getStr();
+                            nTextLen = aGlyphBuf.getLength();
+                            for ( sal_Int32 j = 0; j < nTextLen && nCurrentGlyph < nGlyphs; j++, nCurrentGlyph++, pBuf++ )
+                            {
+                                long nGlyph = (long)aGlyphs[ nCurrentGlyph ];
+                                sal_uInt8 nEncodedGlyph = (sal_uInt8)( *pBuf );
+                                rEmit.m_aGlyphEncoding[ nGlyph ] = nEncodedGlyph;
+
+                                // Cache encoding
+                                rEmit.m_aGlyphEncoding[ nGlyph ] = nEncodedGlyph;
+
+                                // Update glyph mappings
+                                rEmit.m_aMapping[ nGlyph ].m_nSubsetGlyphID = nEncodedGlyph;
+                                rSubset.m_aMapping[ nGlyph ].m_nSubsetGlyphID = nEncodedGlyph;
+                            }
                         }
                     }
                 }
