@@ -330,8 +330,22 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 		// Fix bug 209 by ignoring all Apple events that have not already been
 		// handled by the JVM's handler
 		OSType nType;
-		if ( nKind = kEventAppleEvent && GetEventParameter( aEvent, kEventParamAEEventID, typeType, NULL, sizeof( OSType ), NULL, &nType ) == noErr && ( nType == 'quit' || nType == 'oapp' || nType == 'odoc' || nType == 'pdoc' ) )
-			CallNextEventHandler( aNextHandler, aEvent );
+		if ( nKind = kEventAppleEvent && GetEventParameter( aEvent, kEventParamAEEventID, typeType, NULL, sizeof( OSType ), NULL, &nType ) == noErr && !Application::IsShutDown() )
+		{
+			if ( nType == 'quit' )
+			{
+				SalData *pSalData = GetSalData();
+				if ( pSalData && pSalData->mpEventQueue )
+				{
+					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_SHUTDOWN, NULL, NULL );
+					pSalData->mpEventQueue->postCachedEvent( &aEvent );
+				}
+			}
+			else if ( nType == 'odoc' || nType == 'pdoc' )
+			{
+				CallNextEventHandler( aNextHandler, aEvent );
+			}
+		}
 
 		return noErr;
 	}
