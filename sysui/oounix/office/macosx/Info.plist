@@ -79,6 +79,22 @@
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
+				<string>sds</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>sds.icns</string>
+			<key>CFBundleTypeName</key>
+			<string>NeoOffice/J Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>no%f</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
 				<string>sdw</string>
 				<string>sxw</string>
 			</array>
@@ -206,36 +222,256 @@
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
+				<string>bmp</string>
+				<string>emf</string>
+				<string>gif</string>
+				<string>jpeg</string>
+				<string>jpg</string>
+				<string>met</string>
+				<string>pbm</string>
+				<string>pct</string>
+				<string>pict</string>
+				<string>pgm</string>
+				<string>psd</string>
+				<string>png</string>
+				<string>ppm</string>
+				<string>ras</string>
+				<string>svg</string>
+				<string>svm</string>
+				<string>tif</string>
+				<string>tiff</string>
+				<string>wmf</string>
+				<string>xpm</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>sxd_sda.icns</string>
+			<key>CFBundleTypeMIMETypes</key>
+			<array>
+				<string>image/gif</string>
+				<string>image/jpeg</string>
+				<string>image/png</string>
+				<string>image/tiff</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>$(PRODUCT_FILETYPE)</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<false/>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
 				<string>csv</string>
-				<string>dbf</string>
-				<string>dif</string>
-				<string>doc</string>
-				<string>html</string>
-				<string>mml</string>
-				<string>pot</string>
-				<string>ppt</string>
-				<string>rtf</string>
-				<string>slk</string>
-				<string>smf</string>
-				<string>txt</string>
 				<string>vor</string>
-				<string>xls</string>
-				<string>xlt</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>generic.icns</string>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>$(PRODUCT_FILETYPE)</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<false/>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>dbf</string>
+				<string>dif</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>dbf_dif.icns</string>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>$(PRODUCT_FILETYPE)</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<false/>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>doc</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>sxw_sdw_doc_Option_1.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>application/msword</string>
-				<string>application/excel</string>
-				<string>application/msexcel</string>
-				<string>application/vnd.ms-excel</string>
-				<string>application/x-msexcel</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>$(PRODUCT_FILETYPE)</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<false/>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>html</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>html.icns</string>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>$(PRODUCT_FILETYPE)</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<false/>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>mml</string>
+				<string>smf</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>sxm_smf_mml.icns</string>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>$(PRODUCT_FILETYPE)</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<false/>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>pot</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>sti_pot.icns</string>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>$(PRODUCT_FILETYPE)</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<false/>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>ppt</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>sxi_sdd_ppt.icns</string>
+			<key>CFBundleTypeMIMETypes</key>
+			<array>
 				<string>application/powerpoint</string>
 				<string>application/mspowerpoint</string>
 				<string>application/vnd.ms-powerpoint</string>
 				<string>application/x-mspowerpoint</string>
 			</array>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>$(PRODUCT_FILETYPE)</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<false/>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>rtf</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>rtf.icns</string>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>$(PRODUCT_FILETYPE)</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<false/>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>slk</string>
+				<string>xls</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>sxc_sdc_slk_xls.icns</string>
+			<key>CFBundleTypeMIMETypes</key>
+			<array>
+				<string>application/excel</string>
+				<string>application/msexcel</string>
+				<string>application/vnd.ms-excel</string>
+				<string>application/x-msexcel</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>$(PRODUCT_FILETYPE)</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<false/>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>txt</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>txt.icns</string>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>$(PRODUCT_FILETYPE)</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<false/>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>xlt</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>stc_xlt.icns</string>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
 			<key>CFBundleTypeOSTypes</key>

@@ -56,15 +56,17 @@ COPYFILES = \
 
 .INCLUDE :  target.mk
 
+.PHONY : $(MISC)$/PkgInfo
+
 ALLTAR : $(MISC)$/PkgInfo $(MISC)$/Info.plist $(COPYFILES)
 
 $(MISC)$/PkgInfo :
 	printf '%s' 'APPL$(PRODUCT_FILETYPE)' > $@
 
-$(MISC)$/Info.plist :
+$(MISC)$/Info.plist : Info.plist
 	cat /dev/null $(@:f) | $(SED) 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | $(SED) 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' | $(SED) 's#$$(PRODUCT_TRADEMARKED_NAME)#$(PRODUCT_TRADEMARKED_NAME)#g' | $(SED) 's#$$(RSCVERSION)#$(RSCVERSION)#g' | $(SED) 's#$$(PRODUCT_FILETYPE)#$(PRODUCT_FILETYPE)#g' > $@
 
-$(COPYFILES) :
+$(MISC)/% : %
 	$(COPY) $(@:f) $@
 
 .ENDIF			# "$(OS)"!="MACOSX"

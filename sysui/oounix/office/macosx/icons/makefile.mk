@@ -55,34 +55,27 @@ COPYFILES = \
 	$(MISC)/License \
 	$(MISC)/Readme \
 	$(MISC)/dbf_dif.icns \
-	$(MISC)/generic-inside.icns \
 	$(MISC)/generic.icns \
 	$(MISC)/html.icns \
 	$(MISC)/rtf.icns \
 	$(MISC)/sds.icns \
-	$(MISC)/stationery-generic-inside.icns \
-	$(MISC)/stationery-generic.icns \
-	$(MISC)/stationery-plain_text.icns \
-	$(MISC)/stationery-rich_text.icns \
 	$(MISC)/stc_xlt.icns \
 	$(MISC)/std.icns \
 	$(MISC)/sti_pot.icns \
 	$(MISC)/stw_dot_Option_1.icns \
-	$(MISC)/stw_dot_Option_2.icns \
 	$(MISC)/sxc_sdc_slk_xls.icns \
 	$(MISC)/sxd_sda.icns \
 	$(MISC)/sxi_sdd_ppt.icns \
 	$(MISC)/sxm_smf_mml.icns \
 	$(MISC)/sxw_sdw_doc_Option_1.icns \
-	$(MISC)/sxw_sdw_doc_Option_2.icns \
 	$(MISC)/txt.icns
 
 .INCLUDE :  target.mk
 
 ALLTAR : $(COPYFILES)
 
-$(COPYFILES) :
-	$(COPY) $(@:f) $@
+$(MISC)/% : %
+	$(COPY) $< $@
 
 .ENDIF			# "$(OS)"!="MACOSX"
 
