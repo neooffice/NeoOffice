@@ -385,8 +385,7 @@ public final class VCLMenuItemData {
 				Iterator e=awtPeers.iterator();
 				while(e.hasNext()) {
 					CheckboxMenuItem cMI=(CheckboxMenuItem)e.next();
-					if(cMI.getPeer()!=null)
-						cMI.setState(isChecked);
+					cMI.setState(isChecked);
 				}
 			}
 		}
@@ -678,12 +677,7 @@ public final class VCLMenuItemData {
 			super(title);
 			d=data;
 			addActionListener(this);
-
-			// postpone call to setState until peer is created to work around
-			// bugs in Apple Java 1.3.1 VM preventing peer state from being
-			// properly set.  Bug 182.
-			if(getPeer()!=null)
-				setState(state);
+			setState(state);
 
 		}
 
@@ -705,6 +699,21 @@ public final class VCLMenuItemData {
 				mb.getEventQueue().postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUCOMMAND, mb.getFrame(), d.getVCLID(), d.getVCLCookie()));
 				mb.getEventQueue().postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUDEACTIVATE, mb.getFrame(), d.getVCLID(), d.getVCLCookie()));
 			}
+
+		}
+
+		/**
+		 * Sets this check box menu item to the specifed state.
+		 *
+		 * @param b the state of the check box menu item
+		 */
+		public void setState(boolean b) {
+
+			// We can't invoked setState(true) on a CheckboxMenuItem on the
+			// 1.3.1 Mac OS X VM until it has its peer instantiated or else
+			// it may get displayed as empty. (Bug 182).
+			if (getPeer()!=null)
+				super.setState(b);
 
 		}
 
