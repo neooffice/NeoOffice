@@ -51,7 +51,7 @@ os=`uname`
 apphome=`dirname "$0"`
 userbase="$apphome/../user"
 sharebase="$apphome/../share"
-userinstall="$HOME/Library/NeoOfficeJ/user"
+userinstall="$HOME/Library/$(PRODUCT_DIR_NAME)-$(OO_VERSION)/user"
 
 # Make sure that this is not a botched installation
 if [ ! -d "$apphome" ] ; then
@@ -132,59 +132,59 @@ if [ ! -z "$repair" ] ; then
     chmod -Rf u+rw "$userinstall"
 fi
 
-# Copy and edit required files
-if [ ! -d "$xmldir" ] ; then
-    error
-fi
-if [ ! -d "$xmltemplatedir" ] ; then
-    error
-fi
-for i in `cd "$xmltemplatedir" ; find . ! -type d` ; do
-    if [ ! -z "$repair" -o ! -f "$xmldir/$i" ] ; then
-        sed 's#>USER_INSTALL_DIR<#>'"$userinstall"'<#g' "$xmltemplatedir/$i" | sed 's#>LOCALE<#>'"$locale"'<#g' | sed 's#>NSWRAPPER_PATH<#>'"$apphome/nswrapper"'<#g' | sed 's#>CURRENT_DATE<#>'`date +%d.%m.%Y/%H.%M.%S`'<#g' > "$xmldir/$i"
-    fi
-done
+# # Copy and edit required files
+# if [ ! -d "$xmldir" ] ; then
+#     error
+# fi
+# if [ ! -d "$xmltemplatedir" ] ; then
+#     error
+# fi
+# for i in `cd "$xmltemplatedir" ; find . ! -type d` ; do
+#     if [ ! -z "$repair" -o ! -f "$xmldir/$i" ] ; then
+#         sed 's#>USER_INSTALL_DIR<#>'"$userinstall"'<#g' "$xmltemplatedir/$i" | sed 's#>LOCALE<#>'"$locale"'<#g' | sed 's#>NSWRAPPER_PATH<#>'"$apphome/nswrapper"'<#g' | sed 's#>CURRENT_DATE<#>'`date +%d.%m.%Y/%H.%M.%S`'<#g' > "$xmldir/$i"
+#     fi
+# done
 
-# Set the locale
-setupxml="$xmldir/Setup.xml"
-if [ ! -f "$setupxml" ] ; then
-    error
-fi
-setupxmlbak="$setupxml.bak"
-rm -f "$setupxmlbak"
-if [ ! -f "$setupxmlbak" ] ; then
-    cp -f "$setupxml" "$setupxmlbak"
-    sed 's#>.*</ooSetupInstallPath>#>'"$userinstall"'</ooSetupInstallPath>#g' "$setupxmlbak" | sed 's#>.*</ooLocale>#>'"$locale"'</ooLocale>#g' > "$setupxml"
-    rm -f "$setupxmlbak"
-fi
+# # Set the locale
+# setupxml="$xmldir/Setup.xml"
+# if [ ! -f "$setupxml" ] ; then
+#     error
+# fi
+# setupxmlbak="$setupxml.bak"
+# rm -f "$setupxmlbak"
+# if [ ! -f "$setupxmlbak" ] ; then
+#     cp -f "$setupxml" "$setupxmlbak"
+#     sed 's#>.*</ooSetupInstallPath>#>'"$userinstall"'</ooSetupInstallPath>#g' "$setupxmlbak" | sed 's#>.*</ooLocale>#>'"$locale"'</ooLocale>#g' > "$setupxml"
+#     rm -f "$setupxmlbak"
+# fi
 
-# Make locale the default document language
-linguxml="$xmldir/Office/Linguistic.xml"
-if [ ! -f "$linguxml" ] ; then
-    error
-fi
-linguxmlbak="$linguxml.bak"
-if [ ! -f "$linguxmlbak" ] ; then
-    cp -f "$linguxml" "$linguxmlbak"
-    sed 's#<DefaultLocale cfg:type="string"/>#<DefaultLocale cfg:type="string">'"$locale"'</DefaultLocale>#g' "$linguxmlbak" > "$linguxml"
-fi
+# # Make locale the default document language
+# linguxml="$xmldir/Office/Linguistic.xml"
+# if [ ! -f "$linguxml" ] ; then
+#     error
+# fi
+# linguxmlbak="$linguxml.bak"
+# if [ ! -f "$linguxmlbak" ] ; then
+#     cp -f "$linguxml" "$linguxmlbak"
+#     sed 's#<DefaultLocale cfg:type="string"/>#<DefaultLocale cfg:type="string">'"$locale"'</DefaultLocale>#g' "$linguxmlbak" > "$linguxml"
+# fi
 
-# Create javarc file
-sysclasspath=""
-if [ ! -d "$apphome/classes" ] ; then
-    error
-fi
-for i in `cd "$apphome/classes" ; find . -name "*.jar"` ; do
-    sysclasspath="$sysclasspath:$apphome/classes/$i"
-done
-sysclasspath=`printf "$sysclasspath" | sed 's#^:##'`
-if [ "$os" = "Darwin" ] ; then
-    # Turn off graphics acceleration
-    printf "[Java]\nRuntimeLib=/System/Library/Frameworks/JavaVM.framework/JavaVM\ncom.apple.hwaccel=false\ncom.apple.hwaccellist=\n" > "$configdir/javarc"
-else
-    printf "[Java]\n" > "$configdir/javarc"
-fi
-printf "SystemClasspath=$sysclasspath\nJava=1\nJavaScript=1\nApplets=1\n-Xmx512m\n" >> "$configdir/javarc"
+# # Create javarc file
+# sysclasspath=""
+# if [ ! -d "$apphome/classes" ] ; then
+#     error
+# fi
+# for i in `cd "$apphome/classes" ; find . -name "*.jar"` ; do
+#     sysclasspath="$sysclasspath:$apphome/classes/$i"
+# done
+# sysclasspath=`printf "$sysclasspath" | sed 's#^:##'`
+# if [ "$os" = "Darwin" ] ; then
+#     # Turn off graphics acceleration
+#     printf "[Java]\nRuntimeLib=/System/Library/Frameworks/JavaVM.framework/JavaVM\ncom.apple.hwaccel=false\ncom.apple.hwaccellist=\n" > "$configdir/javarc"
+# else
+#     printf "[Java]\n" > "$configdir/javarc"
+# fi
+# printf "SystemClasspath=$sysclasspath\nJava=1\nJavaScript=1\nApplets=1\n-Xmx512m\n" >> "$configdir/javarc"
 
 # Install application fonts
 if [ "$os" = "Darwin" ] ; then
