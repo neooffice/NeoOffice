@@ -132,10 +132,10 @@ public:
 	virtual sal_Bool		SAL_CALL supportsService( const ::rtl::OUString& serviceName ) throw();
 	virtual ::com::sun::star::uno::Sequence< ::rtl::OUString >	SAL_CALL getSupportedServiceNames() throw();
 
-	void					handleDragEnter( sal_Int32 nX, sal_Int32 nY );
-	void					handleDragExit( sal_Int32 nX, sal_Int32 nY );
-	void					handleDragOver( sal_Int32 nX, sal_Int32 nY );
-	bool					handleDrop( sal_Int32 nX, sal_Int32 nY );
+	void					handleDragEnter( sal_Int32 nX, sal_Int32 nY, void *pNativeTransferable );
+	void					handleDragExit( sal_Int32 nX, sal_Int32 nY, void *pNativeTransferable );
+	void					handleDragOver( sal_Int32 nX, sal_Int32 nY, void *pNativeTransferable );
+	bool					handleDrop( sal_Int32 nX, sal_Int32 nY, void *pNativeTransferable );
 };
 
 ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL JavaDropTarget_getSupportedServiceNames();
