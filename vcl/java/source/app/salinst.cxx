@@ -172,14 +172,10 @@ void SVMainThread::run()
 		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
 		{
 			// Set up native menu event handler
-			EventTypeSpec aTypes[ 3 ];
-			aTypes[ 0 ].eventClass = kEventClassMenu;
-			aTypes[ 0 ].eventKind = kEventMenuBeginTracking;
-			aTypes[ 1 ].eventClass = kEventClassMenu;
-			aTypes[ 1 ].eventKind = kEventMenuEndTracking;
-			aTypes[ 2 ].eventClass = kEventClassMenu;
-			aTypes[ 2 ].eventKind = kEventMenuMatchKey;
-			InstallApplicationEventHandler( CarbonEventHandler, 3, aTypes, NULL, NULL );
+			EventTypeSpec aType;
+			aType.eventClass = kEventClassMenu;
+			aType.eventKind = kEventMenuBeginTracking;
+			InstallApplicationEventHandler( CarbonEventHandler, 1, &aType, NULL, NULL );
 		}
 	}
 #endif	// MACOSX
@@ -316,16 +312,17 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv 
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData )
 {
 	UInt32 nClass = GetEventClass( aEvent );
-	UInt32 nKind = GetEventKind( aEvent );
 
 	// Let the VCL event handlers handle menu shortcuts
 	if ( nClass == kEventClassMenu )
 	{
-		if ( nKind == kEventMenuMatchKey )
-			return menuItemNotFoundErr;
-
-		if ( nKind == kEventMenuBeginTracking || nKind == kEventMenuEndTracking )
+		if ( GetEventKind( aEvent ) == kEventMenuBeginTracking )
 		{
+			// Ignore key matching context
+			MenuTrackingMode nMode;
+			if ( GetEventParameter( aEvent, kEventParamCurrentMenuTrackingMode, typeMenuTrackingMode, NULL, sizeof( MenuTrackingMode ), NULL, &nMode ) != noErr || nMode == kMenuTrackingModeKeyboard )
+				return userCanceledErr;
+
 			// Post a yield event and wait the VCL event queue to block
 			SalData *pSalData = GetSalData();
 			pSalData->maNativeEventStartCondition.reset();
