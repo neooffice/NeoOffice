@@ -47,8 +47,10 @@ error()
     exit 1
 }
 
+os=`uname`
 apphome=`dirname "$0"`
 userbase="$apphome/../user"
+sharebase="$apphome/../share"
 userinstall="$HOME/Library/NeoOfficeJ/user"
 
 # Make sure that this is not a botched installation
@@ -133,7 +135,7 @@ sysclasspath=`printf "$sysclasspath" | sed 's#^:##'`
 if [ $? != 0 ]; then
     error
 fi
-if [ `uname` = "Darwin" ] ; then
+if [ "$os" = "Darwin" ] ; then
     printf "[Java]\nRuntimeLib=/System/Library/Frameworks/JavaVM.framework/JavaVM\ncom.apple.hwaccel=false\ncom.apple.hwaccellist=\n" > "$configdir/javarc"
 else
     printf "[Java]\n" > "$configdir/javarc"
@@ -141,6 +143,24 @@ fi
 printf "SystemClasspath=$sysclasspath\nJava=1\nJavaScript=1\nApplets=1\n-Xmx1024m\n" >> "$configdir/javarc"
 if [ $? != 0 ]; then
     error
+fi
+
+# Install application fonts
+if [ "$os" = "Darwin" ] ; then
+    appfontdir="$sharebase/fonts/truetype"
+    userfontdir="$HOME/Library/Fonts"
+    mkdir -p "$userfontdir"
+    if [ ! -d "$appfontdir" -o ! -d "$userfontdir" ] ; then
+        error
+    fi
+    for i in `cd "$appfontdir" ; find . -name '*.ttf'` ; do
+        if [ ! -f "$userfontdir/$i" ] ; then
+            ln -sf "$appfontdir/$i" "$userfontdir/$i"
+            if [ $? != 0 ]; then
+                error
+            fi
+        fi
+    done
 fi
 
 exit 0
