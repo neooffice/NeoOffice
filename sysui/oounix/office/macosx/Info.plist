@@ -362,6 +362,10 @@
 			<string>rtf.icns</string>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>RTF </string>
+			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSIsAppleDefaultForType</key>
