@@ -676,7 +676,7 @@ void macxp_resolveAlias(char *path, int buflen)
         if ( unprocessedPath )
         	*unprocessedPath = '\0';
 
-        if ( FSPathMakeRef( (const UInt8 *)path, &aFSRef, 0 ) == noErr && FSResolveAliasFile( &aFSRef, TRUE, &bFolder, &bAliased ) == noErr && bAliased )
+        if ( FSPathMakeRef( (const UInt8 *)path, &aFSRef, 0 ) == noErr && FSResolveAliasFileWithMountFlags( &aFSRef, TRUE, &bFolder, &bAliased, kResolveAliasFileNoUI ) == noErr && bAliased )
         {
             char tmpPath[ PATH_MAX ];
             if ( FSRefMakePath( &aFSRef, (UInt8 *)tmpPath, PATH_MAX ) == noErr )
