@@ -435,6 +435,8 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 						pSalData->maNativeEventStartCondition.wait();
 
+						pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->acquire();
+
 						// Execute menu updates while the VCL event queue is
 						// blocked
 						for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
@@ -443,6 +445,8 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 						// Relock the Carbon lock
 						if ( t.pEnv )
 							Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
+
+						pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->release();
 
 						pSalData->maNativeEventEndCondition.set();
 					}
@@ -478,6 +482,8 @@ void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void
 
 			pSalData->maNativeEventStartCondition.wait();
 
+			pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->acquire();
+
 			Rect aRect;
 			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
@@ -489,6 +495,8 @@ void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void
 			// Relock the Carbon lock
 			if ( t.pEnv )
 				Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
+
+			pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->release();
 
 			pSalData->maNativeEventEndCondition.set();
 		}
