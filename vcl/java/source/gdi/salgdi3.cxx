@@ -176,27 +176,27 @@ void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 	com_sun_star_vcl_VCLFontList *pFontList = GetSalData()->mpFontList;
 
 	// Iterate through fonts and add each to the font list
-	for ( jsize i = 0; i < pFontList->nCount; i++ )
+	for ( jsize i = 0; i < pFontList->mnCount; i++ )
 	{
 		// Set default values
 		ImplFontData *pFontData = new ImplFontData();
 		pFontData->mpNext = NULL;
-		pFontData->mpSysData = (void *)&pFontList->pFonts[ i ];
-		pFontData->maName = XubString( pFontList->pFonts[ i ].getName() );
+		pFontData->mpSysData = (void *)pFontList->mpFonts[ i ];
+		pFontData->maName = XubString( pFontList->mpFonts[ i ]->getName() );
 		pFontData->mnWidth = 0;
 		pFontData->mnHeight = 0;
-		pFontData->meFamily = pFontList->pFonts[ i ].getFamilyType();
+		pFontData->meFamily = pFontList->mpFonts[ i ]->getFamilyType();
 		pFontData->meCharSet = gsl_getSystemTextEncoding();
 		if ( pFontData->meFamily == FAMILY_MODERN )
 			pFontData->mePitch = PITCH_FIXED;
 		else
 			pFontData->mePitch = PITCH_VARIABLE;
 		pFontData->meWidthType = WIDTH_DONTKNOW;
-		if ( pFontList->pFonts[ i ].isBold() )
+		if ( pFontList->mpFonts[ i ]->isBold() )
 			pFontData->meWeight = WEIGHT_BOLD;
 		else
 			pFontData->meWeight = WEIGHT_NORMAL;
-		if ( pFontList->pFonts[ i ].isItalic() )
+		if ( pFontList->mpFonts[ i ]->isItalic() )
 			pFontData->meItalic = ITALIC_NORMAL;
 		else
 			pFontData->meItalic = ITALIC_NONE;

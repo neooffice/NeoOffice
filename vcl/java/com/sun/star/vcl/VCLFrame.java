@@ -633,7 +633,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	/**
 	 * The frame pointer.
 	 */
-	private long frame = 0;
+	private int frame = 0;
 
 	/**
 	 * The full screen mode.
@@ -682,7 +682,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param q the event queue to post events to
 	 * @param f the frame pointer
 	 */
-	public VCLFrame(long styleFlags, VCLEventQueue q, long f, VCLFrame p) {
+	public VCLFrame(long styleFlags, VCLEventQueue q, int f, VCLFrame p) {
 
 		queue = q;
 		frame = f;
@@ -977,7 +977,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @return the frame pointer for this component
 	 */
-	long getFrame() {
+	int getFrame() {
 
 		return frame;
 

@@ -53,9 +53,6 @@ class com_sun_star_vcl_VCLFont : public java_lang_Object
 protected:
 	static jclass		theClass;
 
-private:
-						com_sun_star_vcl_VCLFont() : java_lang_Object( NULL ) {};
-
 public:
 	static jboolean		useDefaultFont;
 
@@ -82,11 +79,11 @@ public:
 class com_sun_star_vcl_VCLFontList
 {
 public:
-	jsize				nCount;
-	com_sun_star_vcl_VCLFont*	pFonts;
+	jsize				mnCount;
+	com_sun_star_vcl_VCLFont**	mpFonts;
 
-						com_sun_star_vcl_VCLFontList() : nCount(0), pFonts(NULL) {};
-	virtual				~com_sun_star_vcl_VCLFontList() { if ( pFonts ) delete pFonts; };
+						com_sun_star_vcl_VCLFontList() : mnCount(0), mpFonts(NULL) {};
+	virtual				~com_sun_star_vcl_VCLFontList();
 };
 
 } // namespace vcl

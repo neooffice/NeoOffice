@@ -43,6 +43,18 @@ using namespace vcl;
 
 // ============================================================================
 
+com_sun_star_vcl_VCLFontList::~com_sun_star_vcl_VCLFontList()
+{
+	if ( mpFonts )
+	{
+		for ( int i = 0; i < mnCount; i++ )
+			delete mpFonts[ i ];
+		rtl_freeMemory( mpFonts );
+	}
+}
+
+// ============================================================================
+
 jclass com_sun_star_vcl_VCLFont::theClass = NULL;
 
 // ----------------------------------------------------------------------------
@@ -86,12 +98,12 @@ com_sun_star_vcl_VCLFontList *com_sun_star_vcl_VCLFont::getAllFonts()
 			if ( tempArray )
 			{
 				out = new com_sun_star_vcl_VCLFontList();
-				out->nCount = t.pEnv->GetArrayLength( tempArray );
-				out->pFonts = new com_sun_star_vcl_VCLFont[ out->nCount ];
-				for ( jsize i = 0; i < out->nCount; i++ )
+				out->mnCount = t.pEnv->GetArrayLength( tempArray );
+				out->mpFonts = (com_sun_star_vcl_VCLFont **)rtl_allocateMemory( out->mnCount * sizeof( com_sun_star_vcl_VCLFont* ) );
+				for ( jsize i = 0; i < out->mnCount; i++ )
 				{
 					jobject tempObj = t.pEnv->GetObjectArrayElement( tempArray, i );
-					out->pFonts[i].saveRef( tempObj );
+					out->mpFonts[ i ] = new com_sun_star_vcl_VCLFont( tempObj );
 				}
 			}
 		}

@@ -79,14 +79,14 @@ com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, cons
 		return;
 	if ( !mID )
 	{
-		char *cSignature = "(JLcom/sun/star/vcl/VCLEventQueue;JLcom/sun/star/vcl/VCLFrame;)V";
+		char *cSignature = "(JLcom/sun/star/vcl/VCLEventQueue;ILcom/sun/star/vcl/VCLFrame;)V";
 		mID = t.pEnv->GetMethodID( getMyClass(), "<init>", cSignature );
 	}
 	OSL_ENSURE( mID, "Unknown method id!" );
 	jvalue args[4];
 	args[0].j = jlong( nSalFrameStyle );
 	args[1].l = GetSalData()->mpEventQueue->getJavaObject();
-	args[2].j = jlong( pFrame );
+	args[2].i = jint( pFrame );
 	if ( pParent )
 		args[3].l = pParent->maFrameData.mpVCLFrame->getJavaObject();
 	else

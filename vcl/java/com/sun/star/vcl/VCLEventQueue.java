@@ -285,7 +285,7 @@ public final class VCLEventQueue {
 	 *
      * @param frame the frame pointer
 	 */
-	void removeCachedEvents(long frame) {
+	void removeCachedEvents(int frame) {
 
 		synchronized (queueList) {
 			for (int i = 0; i < queueList.length; i++) {

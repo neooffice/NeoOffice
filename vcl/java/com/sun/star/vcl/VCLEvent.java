@@ -837,7 +837,7 @@ public final class VCLEvent extends AWTEvent {
 	/**
 	 * The data pointer.
 	 */
-	private long data = 0;
+	private int data = 0;
 
 	/**
 	 * The frame.
@@ -871,7 +871,7 @@ public final class VCLEvent extends AWTEvent {
 	 * @param f the <code>VCLFrame</code> instance
 	 * @param d the data pointer
 	 */
-	public VCLEvent(int id, VCLFrame f, long d) {
+	public VCLEvent(int id, VCLFrame f, int d) {
 
 		super(new Object(), id);
 		frame = f;
@@ -887,7 +887,7 @@ public final class VCLEvent extends AWTEvent {
 	 * @param d the data pointer
 	 * @param p the document path
 	 */
-	public VCLEvent(int id, VCLFrame f, long d, String p) {
+	public VCLEvent(int id, VCLFrame f, int d, String p) {
 
 		this(id, f, d);
 		path = p;
@@ -902,7 +902,7 @@ public final class VCLEvent extends AWTEvent {
 	 * @param f the <code>VCLFrame</code> instance
 	 * @param d the data pointer
 	 */
-	VCLEvent(AWTEvent event, int id, VCLFrame f, long d) {
+	VCLEvent(AWTEvent event, int id, VCLFrame f, int d) {
 
 		this(event, id, f, d, 0);
 
@@ -917,7 +917,7 @@ public final class VCLEvent extends AWTEvent {
 	 * @param d the data pointer
 	 * @param k the key modifiers pressed
 	 */
-	VCLEvent(AWTEvent event, int id, VCLFrame f, long d, int k) {
+	VCLEvent(AWTEvent event, int id, VCLFrame f, int d, int k) {
 
 		this(id, f, d);
 
@@ -1042,7 +1042,7 @@ public final class VCLEvent extends AWTEvent {
 	 *
 	 * @return the data pointer.
 	 */
-	public long getData() {
+	public int getData() {
 
 		return data;
 
@@ -1053,7 +1053,7 @@ public final class VCLEvent extends AWTEvent {
 	 *
 	 * @return the frame pointer.
 	 */
-	public long getFrame() {
+	public int getFrame() {
 
 		if (frame != null)
 			return frame.getFrame();
