@@ -83,7 +83,10 @@ SHL1STDLIBS= \
 		$(COMPHELPERLIB)
 
 .IF "$(OS)"=="MACOSX"
-SHL1STDLIBS += -framework Carbon -framework QuickTime
+SHL1STDLIBS += \
+	-framework Carbon	\
+	-framework QuickTime \
+	$(SOLARLIBDIR)$/libstlport_gcc.a
 .ENDIF
 
 SHL1DEPN=

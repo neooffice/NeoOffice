@@ -1,4 +1,4 @@
-..\%__SRC%\lib\*.so %_DEST%\lib%_EXT%\*.so
+..\%__SRC%\lib\lib*.so %_DEST%\lib%_EXT%
 ..\%__SRC%\bin\*.dll %_DEST%\bin%_EXT%\*.dll
 ..\%__SRC%\lib\*.dylib %_DEST%\lib%_EXT%\*.dylib
 
@@ -9,10 +9,3 @@
 ..\source\X11\dtransjava.xml %_DEST%\xml%_EXT%\dtransjava.xml
 ..\source\cnttype\mcnttype.xml %_DEST%\xml%_EXT%\mcnttype.xml
 ..\source\generic\dtrans.xml %_DEST%\xml%_EXT%\dtrans.xml
-
-..\%__SRC%\lib\lib*static*.dylib %_DEST%\lib%_EXT%\lib*static*.dylib
-..\%__SRC%\misc\*staticdatamembers.cxx %_DEST%\inc%_EXT%\*staticdatamembers.cxx
-..\%__SRC%\misc\*staticdatamembers.h* %_DEST%\inc%_EXT%\*staticdatamembers.h*
-
-dos: sh -c "if test %OS% = MACOSX; then create-bundle %_DEST%\lib%_EXT%\*.dylib; fi"
-dos: sh -c "if test %OS% = MACOSX; then create-libstatic-link %_DEST%\lib%_EXT%; fi"
