@@ -797,7 +797,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param event the input method event
 	 */
-	public void caretPositionChanged(InputMethodEvent e) {}
+	public void caretPositionChanged(InputMethodEvent e) {
+
+		e.consume();
+
+	}
 
 	/**
 	 * Invoked when the the native window's size changes.
@@ -1543,6 +1547,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void inputMethodTextChanged(InputMethodEvent e) {
 
+		e.consume();
+
 		if (queue == null || window == null || !window.isShowing())
 			return;
 
@@ -1568,6 +1574,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param e the <code>KeyEvent</code>
 	 */
 	public void keyPressed(KeyEvent e) {
+
+		e.consume();
 
 		if (VCLFrame.lastKeyPressed != null && VCLFrame.lastKeyPressed.getID() != KeyEvent.KEY_PRESSED)
 			VCLFrame.lastKeyPressed = null;
@@ -1596,6 +1604,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param e the <code>KeyEvent</code>
 	 */
 	public void keyReleased(KeyEvent e) {
+
+		e.consume();
 
 		if (queue == null || window == null || !window.isShowing())
 			return;
@@ -1631,6 +1641,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void keyTyped(KeyEvent e) {
 
+		e.consume();
+
 		if (queue == null || window == null || !window.isShowing())
 			return;
 
@@ -1664,7 +1676,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>MouseEvent</code>
 	 */
-	public void mouseClicked(MouseEvent e) {}
+	public void mouseClicked(MouseEvent e) {
+
+		e.consume();
+
+	}
+
 
 	/**
 	 * Invoked when a mouse button has been pressed on a component.
@@ -1672,6 +1689,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param e the <code>MouseEvent</code>
 	 */
 	public void mousePressed(MouseEvent e) {
+
+		e.consume();
 
 		if (queue == null || window == null || !window.isShowing())
 			return;
@@ -1728,6 +1747,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param e the <code>MouseEvent</code>
 	 */
 	public void mouseReleased(MouseEvent e) {
+
+		e.consume();
 
 		if (queue == null || window == null || !window.isShowing())
 			return;
@@ -1799,6 +1820,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void mouseDragged(MouseEvent e) {
 
+		e.consume();
+
 		if (queue == null || window == null || !window.isShowing())
 			return;
 
@@ -1863,6 +1886,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void mouseEntered(MouseEvent e) {
 
+		e.consume();
+
 		if (VCLFrame.capture || queue == null || window == null || !window.isShowing())
 			return;
 
@@ -1876,6 +1901,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param e the <code>MouseEvent</code>
 	 */
 	public void mouseExited(MouseEvent e) {
+
+		e.consume();
 
 		if (VCLFrame.capture || queue == null || window == null || !window.isShowing())
 			return;
@@ -1892,6 +1919,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void mouseMoved(MouseEvent e) {
 
+		e.consume();
+
 		if (VCLFrame.capture || queue == null || window == null || !window.isShowing())
 			return;
 
@@ -1907,6 +1936,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param r the wheel rotation
 	 */
     void mouseWheelMoved(MouseEvent e, int s, int r) {
+
+		e.consume();
 
 		if (queue == null || window == null || !window.isShowing())
 			return;
@@ -2407,6 +2438,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			
 		}
 
+		/**
+		 * This method performs no painting of the frame. This method is used
+		 * to prevent Java from painting over what VCL has painted.
+		 *
+		 * @param g the <code>Graphics</code>
+		 */
+		public void update(Graphics g) {
+
+			paint(g);
+
+		}
+
 	}
 
 	/**
@@ -2476,6 +2519,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		}
 
+		/**
+		 * This method performs no painting of the panel. This method is used
+		 * to prevent Java from painting over what VCL has painted.
+		 *
+		 * @param g the <code>Graphics</code>
+		 */
+		public void update(Graphics g) {
+
+			paint(g);
+
+		}
+
 	}
 
 	/**
@@ -2541,6 +2596,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		public void paint(Graphics g) {
 
 			paintComponents(g);
+
+		}
+
+		/**
+		 * This method performs no painting of the window. This method is used
+		 * to prevent Java from painting over what VCL has painted.
+		 *
+		 * @param g the <code>Graphics</code>
+		 */
+		public void update(Graphics g) {
+
+			paint(g);
 
 		}
 
