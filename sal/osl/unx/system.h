@@ -399,7 +399,7 @@ void macxp_getSystemVersion( unsigned int *isDarwin, unsigned int *majorVersion,
 #ifdef __cplusplus
 extern "C" {
 #endif
-void macxp_resolveAlias(char *path, int buflen);
+int macxp_resolveAlias(char *path, int buflen);
 #ifdef __cplusplus
 }
 #endif

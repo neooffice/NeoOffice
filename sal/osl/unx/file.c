@@ -321,12 +321,12 @@ oslFileError SAL_CALL osl_openDirectory(rtl_uString* ustrDirectoryURL, oslDirect
 	osl_systemPathRemoveSeparator(ustrSystemPath);
 
     /* convert unicode path to text */
-    if ( UnicodeToText( path, PATH_MAX, ustrSystemPath->buffer, ustrSystemPath->length ) )
-    {
 #ifdef MACOSX
-        macxp_resolveAlias( path, PATH_MAX );
+    if ( UnicodeToText( path, PATH_MAX, ustrSystemPath->buffer, ustrSystemPath->length ) && macxp_resolveAlias( path, PATH_MAX ) == 0 )
+#else	/* MACOSX */
+    if ( UnicodeToText( path, PATH_MAX, ustrSystemPath->buffer, ustrSystemPath->length ) )
 #endif	/* MACOSX */
-
+    {
         /* open directory */
         DIR *pdir = opendir( path );
 
@@ -588,11 +588,12 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
 	osl_systemPathRemoveSeparator(ustrFilePath);
 
     /* convert unicode path to text */
-    if( UnicodeToText( buffer, PATH_MAX, ustrFilePath->buffer, ustrFilePath->length ) )
-    {
 #ifdef MACOSX
-        macxp_resolveAlias( buffer, PATH_MAX );
+    if( UnicodeToText( buffer, PATH_MAX, ustrFilePath->buffer, ustrFilePath->length ) && macxp_resolveAlias( buffer, PATH_MAX ) == 0 )
+#else	/* MACOSX */
+    if( UnicodeToText( buffer, PATH_MAX, ustrFilePath->buffer, ustrFilePath->length ) )
 #endif	/* MACOSX */
+    {
 
         /* we do not open devices or such here */
         if( !( uFlags & osl_File_OpenFlag_Create ) )
@@ -679,6 +680,10 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
             eRet = oslTranslateFileError(OSL_FET_ERROR, errno );
         }
     }
+#ifdef MACOSX
+    else if( errno )
+        eRet = oslTranslateFileError(OSL_FET_ERROR, errno );
+#endif	/* MACOSX */
     else
         eRet = osl_File_E_INVAL;
 
@@ -793,8 +798,8 @@ oslFileError osl_moveFile( rtl_uString* ustrFileURL, rtl_uString* ustrDestURL )
         return eRet;
 
 #ifdef MACOSX
-    macxp_resolveAlias( srcPath, PATH_MAX );
-    macxp_resolveAlias( destPath, PATH_MAX );
+    if ( macxp_resolveAlias( srcPath, PATH_MAX ) != 0 || macxp_resolveAlias( destPath, PATH_MAX ) != 0 )
+        return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif	/* MACOSX */
 
     return oslDoMoveFile( srcPath, destPath );
@@ -824,8 +829,8 @@ oslFileError osl_copyFile( rtl_uString* ustrFileURL, rtl_uString* ustrDestURL )
         return eRet;
 
 #ifdef MACOSX
-    macxp_resolveAlias( srcPath, PATH_MAX );
-    macxp_resolveAlias( destPath, PATH_MAX );
+    if ( macxp_resolveAlias( srcPath, PATH_MAX ) != 0 || macxp_resolveAlias( destPath, PATH_MAX ) != 0 )
+        return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif	/* MACOSX */
 
     return osl_psz_copyFile( srcPath, destPath );
@@ -848,7 +853,8 @@ oslFileError osl_removeFile( rtl_uString* ustrFileURL )
         return eRet;
 
 #ifdef MACOSX
-    macxp_resolveAlias( path, PATH_MAX );
+    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+        return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif	/* MACOSX */
 
     return osl_psz_removeFile( path );
@@ -872,7 +878,8 @@ oslFileError osl_getVolumeInformation( rtl_uString* ustrDirectoryURL, oslVolumeI
         return eRet;
 
 #ifdef MACOSX
-    macxp_resolveAlias( path, PATH_MAX );
+    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+        return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif	/* MACOSX */
 
     return osl_psz_getVolumeInformation( path, pInfo, uFieldMask);
@@ -895,7 +902,8 @@ oslFileError osl_createDirectory( rtl_uString* ustrDirectoryURL )
         return eRet;
 
 #ifdef MACOSX
-    macxp_resolveAlias( path, PATH_MAX );
+    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+        return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif	/* MACOSX */
 
     return osl_psz_createDirectory( path );
@@ -918,7 +926,8 @@ oslFileError osl_removeDirectory( rtl_uString* ustrDirectoryURL )
         return eRet;
 
 #ifdef MACOSX
-    macxp_resolveAlias( path, PATH_MAX );
+    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+        return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif	/* MACOSX */
 
     return osl_psz_removeDirectory( path );
@@ -954,7 +963,8 @@ oslFileError osl_setFileAttributes( rtl_uString* ustrFileURL, sal_uInt64 uAttrib
         return eRet;
 
 #ifdef MACOSX
-    macxp_resolveAlias( path, PATH_MAX );
+    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+        return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif	/* MACOSX */
 
     return osl_psz_setFileAttributes( path, uAttributes );
@@ -978,7 +988,8 @@ oslFileError osl_setFileTime( rtl_uString* ustrFileURL, const TimeValue* pCreati
         return eRet;
 
 #ifdef MACOSX
-    macxp_resolveAlias( path, PATH_MAX );
+    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+        return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif	/* MACOSX */
 
     return osl_psz_setFileTime( path, pCreationTime, pLastAccessTime, pLastWriteTime );
