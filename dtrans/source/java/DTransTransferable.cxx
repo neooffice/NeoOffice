@@ -216,154 +216,160 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 				{
 					OUString aString;
 					aValue >>= aString;
-
-					// Replace line feeds with carriage returns
 					sal_Unicode *pArray = (sal_Unicode *)aString.getStr();
 					sal_Int32 nLen = aString.getLength() * sizeof( sal_Unicode );
-					sal_Int32 j = 0;
-					for ( j = 0; j < nLen; j++ )
+					if ( pArray && nLen )
 					{
-						if ( pArray[ j ] == (sal_Unicode)'\n' )
-							pArray[ j ] = (sal_Unicode)'\r';
-					}
-
-					if ( nType == 'RTF ' )
-					{
-						OString aEncodedString = OUStringToOString( aString, RTL_TEXTENCODING_ASCII_US );
-
-						if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
-							nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, aEncodedString.getLength(), (const void *)aEncodedString.getStr() );
-						else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
-							nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aEncodedString.getStr(), aEncodedString.getLength(), 0 );
-					}
-					else if ( nType == 'TEXT' )
-					{
-						CFStringRef aCFString = CFStringCreateWithCharactersNoCopy( kCFAllocatorDefault, aString.getStr(), aString.getLength(), kCFAllocatorNull );
-						if ( aCFString )
+						// Replace line feeds with carriage returns
+						sal_Int32 j = 0;
+						for ( j = 0; j < nLen; j++ )
 						{
-							CFIndex nBufLen;
-							CFRange aRange;
-							aRange.location = 0;
-							aRange.length = CFStringGetLength( aCFString );
-							if ( CFStringGetBytes( aCFString, aRange, CFStringGetSystemEncoding(), '?', false, NULL, 0, &nBufLen ) )
-							{
-								CFIndex nRealLen = nBufLen;
-								UInt8 aBuf[ nBufLen + 1 ];
-								if ( CFStringGetBytes( aCFString, aRange, CFStringGetSystemEncoding(), '?', false, NULL, 0, &nRealLen ) && nRealLen == nBufLen )
-								{
-									if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
-										nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nBufLen, (const void *)aBuf );
-									else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
-										nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aBuf, nBufLen, 0 );
-								}
-							}
-
-							CFRelease( aCFString );
+							if ( pArray[ j ] == (sal_Unicode)'\n' )
+								pArray[ j ] = (sal_Unicode)'\r';
 						}
-					}
-					else
-					{
-						if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
-							nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nLen, (const void *)aString.getStr() );
-						else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
-							nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aString.getStr(), nLen, 0 );
+
+						if ( nType == 'RTF ' )
+						{
+							OString aEncodedString = OUStringToOString( aString, RTL_TEXTENCODING_ASCII_US );
+
+							if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+								nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, aEncodedString.getLength(), (const void *)aEncodedString.getStr() );
+							else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+								nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aEncodedString.getStr(), aEncodedString.getLength(), 0 );
+						}
+						else if ( nType == 'TEXT' )
+						{
+							CFStringRef aCFString = CFStringCreateWithCharactersNoCopy( kCFAllocatorDefault, pArray, nLen / 2, kCFAllocatorNull );
+							if ( aCFString )
+							{
+								CFIndex nBufLen;
+								CFRange aRange;
+								aRange.location = 0;
+								aRange.length = CFStringGetLength( aCFString );
+								if ( CFStringGetBytes( aCFString, aRange, CFStringGetSystemEncoding(), '?', false, NULL, 0, &nBufLen ) )
+								{
+									CFIndex nRealLen = nBufLen;
+									UInt8 aBuf[ nBufLen + 1 ];
+									if ( CFStringGetBytes( aCFString, aRange, CFStringGetSystemEncoding(), '?', false, aBuf, nBufLen, &nRealLen ) && nRealLen == nBufLen )
+									{
+										aBuf[ nBufLen ] = '\0';
+										if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+											nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nBufLen, (const void *)aBuf );
+										else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+											nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aBuf, nBufLen, 0 );
+									}
+								}
+
+								CFRelease( aCFString );
+							}
+						}
+						else
+						{
+							if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+								nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nLen, (const void *)aString.getStr() );
+							else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+								nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aString.getStr(), nLen, 0 );
+						}
 					}
 				}
 				else if ( aValue.getValueType().equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
 				{
 					Sequence< sal_Int8 > aData;
 					aValue >>= aData;
-
-					if ( nType == 'PICT' )
+					sal_Int8 *pArray = aData.getArray();
+					sal_Int32 nLen = aData.getLength();
+					if ( pArray && nLen )
 					{
-						// Convert to PICT from our BMP data
-						ComponentInstance aImporter;
-						if ( OpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
+						if ( nType == 'PICT' )
 						{
-							Handle hData;
-							if ( PtrToHand( aData.getArray(), &hData, aData.getLength() ) == noErr )
+							// Convert to PICT from our BMP data
+							ComponentInstance aImporter;
+							if ( OpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
 							{
-								// Free the source data
-								aData = Sequence< sal_Int8 >();
-
-								if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr )
+								Handle hData;
+								if ( PtrToHand( pArray, &hData, nLen ) == noErr )
 								{
-									PicHandle hPict;
-									if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
-									{
-										HLock( (Handle)hPict );
-										if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
-											nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, GetHandleSize( (Handle)hPict ), (const void *)*hPict );
-										else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
-											nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)*hPict, GetHandleSize( (Handle)hPict ), 0 );
-										HUnlock( (Handle)hPict );
-										KillPicture( hPict );
-									}
-									HUnlock( hData );
-									DisposeHandle( hData );
-								}
-								CloseComponent( aImporter );
-							}
-						}
-					}
-					else if ( nType == 'TIFF' )
-					{
-						// Convert to TIFF from our BMP data
-						ComponentInstance aImporter;
-						if ( OpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
-						{
-							Handle hData;
-							if ( PtrToHand( aData.getArray(), &hData, aData.getLength() ) == noErr )
-							{
-								// Free the source data
-								aData = Sequence< sal_Int8 >();
+									// Free the source data
+									aData = Sequence< sal_Int8 >();
 
-								if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr )
-								{
-									PicHandle hPict;
-									if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
+									if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr )
 									{
-										ComponentInstance aExporter;
-										if ( OpenADefaultComponent( GraphicsExporterComponentType, nType, &aExporter ) == noErr );
+										PicHandle hPict;
+										if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
 										{
-											if ( GraphicsExportSetInputPicture( aExporter, hPict ) == noErr )
-											{
-												Handle hExportData = NewHandle( 0 );
-												if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
-												{
-													unsigned long nDataLen;
-													if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
-													{
-														HLock( hExportData );
-														if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
-															nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nDataLen, (const void *)*hExportData );
-														else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
-															nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)*hExportData, nDataLen, 0 );
-														HUnlock( hExportData );
-													}
-													DisposeHandle( hExportData );
-												}
-											}
-											CloseComponent( aExporter );
+											HLock( (Handle)hPict );
+											if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+												nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, GetHandleSize( (Handle)hPict ), (const void *)*hPict );
+											else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+												nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)*hPict, GetHandleSize( (Handle)hPict ), 0 );
+											HUnlock( (Handle)hPict );
+											KillPicture( hPict );
 										}
-										KillPicture( hPict );
+										HUnlock( hData );
+										DisposeHandle( hData );
 									}
-									DisposeHandle( hData );
+									CloseComponent( aImporter );
 								}
-								CloseComponent( aImporter );
 							}
 						}
-					}
-					else
-					{
-						sal_Int8 *pData = aData.getArray();
-						MacOSSize nDataLen = aData.getLength();
+						else if ( nType == 'TIFF' )
+						{
+							// Convert to TIFF from our BMP data
+							ComponentInstance aImporter;
+							if ( OpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
+							{
+								Handle hData;
+								if ( PtrToHand( pArray, &hData, nLen ) == noErr )
+								{
+									// Free the source data
+									aData = Sequence< sal_Int8 >();
 
-						if ( pData && nDataLen )
-						if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
-							nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, aData.getLength(), (const void *)aData.getArray() );
-						else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
-							nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aData.getArray(), aData.getLength(), 0 );
+									if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr )
+									{
+										PicHandle hPict;
+										if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
+										{
+											ComponentInstance aExporter;
+											if ( OpenADefaultComponent( GraphicsExporterComponentType, nType, &aExporter ) == noErr );
+											{
+												if ( GraphicsExportSetInputPicture( aExporter, hPict ) == noErr )
+												{
+													Handle hExportData = NewHandle( 0 );
+													if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
+													{
+														unsigned long nDataLen;
+														if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
+														{
+															HLock( hExportData );
+															if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+																nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nDataLen, (const void *)*hExportData );
+															else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+																nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)*hExportData, nDataLen, 0 );
+															HUnlock( hExportData );
+														}
+														DisposeHandle( hExportData );
+													}
+												}
+												CloseComponent( aExporter );
+											}
+											KillPicture( hPict );
+										}
+										DisposeHandle( hData );
+									}
+									CloseComponent( aImporter );
+								}
+							}
+						}
+						else
+						{
+							if ( pArray && nLen )
+							{
+								if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+									nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nLen, (const void *)pArray );
+								else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+									nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)pArray, nLen, 0 );
+							}
+						}
 					}
 				}
 			}
