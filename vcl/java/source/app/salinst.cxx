@@ -641,6 +641,9 @@ static OSErr DoAEOpenPrintDocuments( const AppleEvent *message, AppleEvent *repl
 #ifdef MACOSX
 static OSErr DoAEOpen( const AppleEvent *message, AppleEvent *reply, long refcon )
 {
+	// Fix bug 221 by explicitly reenabling all keyboards
+	KeyScript( smKeyEnableKybds );
+
 	return noErr;
 }
 #endif	// MACOSX
@@ -650,6 +653,9 @@ static OSErr DoAEOpen( const AppleEvent *message, AppleEvent *reply, long refcon
 #ifdef MACOSX
 static OSErr DoAEReopen( const AppleEvent *message, AppleEvent *reply, long refcon )
 {
+	// Fix bug 221 by explicitly reenabling all keyboards
+	KeyScript( smKeyEnableKybds );
+
 	if ( !Application::IsShutDown() )
 	{
 		SalData *pSalData = GetSalData();

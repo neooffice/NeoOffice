@@ -73,26 +73,12 @@
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 
-static EventHandlerUPP pEventHandlerUPP = NULL;
-
 using namespace rtl;
 using namespace vos;
 
 #endif	// MACOSX
 
 using namespace vcl;
-
-// =======================================================================
-
-#ifdef MACOSX
-static OSStatus CarbonWindowEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData )
-{
-	// Fix bug 221 by explicitly reenabling all keyboards
-	KeyScript( smKeyEnableKybds );
-
-	return CallNextEventHandler( aNextHandler, aEvent );
-}
-#endif	// MACOSX
 
 // =======================================================================
 
@@ -203,13 +189,15 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	if ( bVisible == maFrameData.mbVisible )
 		return;
 
-	if ( bNoActivate && maFrameData.mpVCLFrame->isFloatingWindow() )
-		bNoActivate = FALSE;
+	SalData *pSalData = GetSalData();
 
 	maFrameData.mbVisible = bVisible;
 
-	if ( !maFrameData.mbVisible && GetSalData()->mpFocusFrame == this && maFrameData.mpParent )
-		maFrameData.mpParent->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+	if ( bNoActivate && maFrameData.mpVCLFrame->isFloatingWindow() )
+		bNoActivate = FALSE;
+
+	if ( !maFrameData.mbVisible && maFrameData.mpParent && pSalData->mpFocusFrame == this)
+		maFrameData.mpParent->ToTop( SAL_FRAME_TOTOP_GRABFOCUS );
 
 	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible, bNoActivate, this );
 
@@ -230,6 +218,12 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 		// Make a pass through the native menus
 		UpdateMenusForFrame( this, NULL );
+	}
+	else
+	{
+		if ( pSalData->mpFocusFrame == this )
+			pSalData->mpFocusFrame = NULL;
+
 	}
 }
 
@@ -345,29 +339,7 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	// Cache the native window pointer since setBounds() will call the Java
 	// window's addNotify() method
 	if ( !maFrameData.maSysData.aWindow )
-	{
 		maFrameData.maSysData.aWindow = (long)maFrameData.mpVCLFrame->getNativeWindow();
-
-#ifdef MACOSX
-		// Test the JVM version and if it is earlier than 1.4, use Carbon
-		VCLThreadAttach t;
-		if ( maFrameData.maSysData.aWindow && t.pEnv && t.pEnv->GetVersion() < JNI_VERSION_1_4 )
-		{
-			if ( !pEventHandlerUPP )
-				pEventHandlerUPP = NewEventHandlerUPP( CarbonWindowEventHandler );
-
-			if ( pEventHandlerUPP )
-			{
-				// Set up native event handler
-				EventTypeSpec aType;
-				aType.eventClass = kEventClassWindow;
-				aType.eventKind = kEventWindowActivated;
-				InstallWindowEventHandler( (WindowRef)maFrameData.maSysData.aWindow, pEventHandlerUPP, 1, &aType, NULL, NULL );
-			}
-
-		}
-#endif	// MACOSX
-	}
 
 	// Fix bugs 169 and 283 by giving the Java event thread a chance
 	// to update the native window
