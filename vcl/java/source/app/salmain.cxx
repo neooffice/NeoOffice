@@ -326,8 +326,11 @@ int main( int argc, char *argv[] )
 				if ( pReceiveNextEvent )
 				{
 					EventRef aEvent;
-					while ( pReceiveNextEvent( 0, NULL, kEventDurationForever, false, &aEvent ) != eventLoopQuitErr )
+					for ( ; ; )
+					{
+						pReceiveNextEvent( 0, NULL, kEventDurationForever, false, &aEvent );
 						OThread::yield();
+					}
 				}
 
 				aModule.unload();
