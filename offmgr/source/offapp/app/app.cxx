@@ -11,11 +11,12 @@
  *
  *         - GNU General Public License Version 2.1
  *
- *  Edward Peterlin, January 2005
+ *  Sun Microsystems Inc., October, 2000
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2005 by Edward Peterlin (OPENSTEP@neooffice.org)
+ *  Copyright 2000 by Sun Microsystems, Inc.
+ *  901 San Antonio Road, Palo Alto, CA 94303, USA
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
@@ -30,6 +31,12 @@
  *  License along with this library; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
  *  MA  02111-1307  USA
+ *  
+ *  =================================================
+ *  Modified January 2005 by Edward Peterlin. SISSL Removed. NeoOffice is
+ *  distributed under GPL only under modification term 3 of the LGPL.
+ *
+ *  Contributor(s): _______________________________________
  *
  ************************************************************************/
 
