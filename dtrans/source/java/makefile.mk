@@ -83,7 +83,7 @@ SHL1STDLIBS= \
 		$(COMPHELPERLIB)
 
 .IF "$(OS)"=="MACOSX"
-SHL1STDLIBS += -framework QuickTime
+SHL1STDLIBS += -framework Carbon -framework QuickTime
 .ENDIF
 
 SHL1DEPN=

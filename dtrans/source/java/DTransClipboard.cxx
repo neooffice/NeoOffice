@@ -54,8 +54,6 @@
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 
-typedef OSStatus GetCurrentScrap_Type( ScrapRef * );
-
 using namespace rtl;
 using namespace vos;
 
@@ -98,20 +96,9 @@ com_sun_star_dtrans_DTransTransferable *com_sun_star_dtrans_DTransClipboard::get
 	java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
 	if ( !pClass )
 	{
-		// Load Carbon
-		OModule aModule;
-		if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
-		{
-			GetCurrentScrap_Type *pGetCurrentScrap = (GetCurrentScrap_Type *)aModule.getSymbol( OUString::createFromAscii( "GetCurrentScrap" ) );
-			if ( pGetCurrentScrap )
-			{
-				ScrapRef aScrap;
-				if ( pGetCurrentScrap( &aScrap ) == noErr )
-					out = new com_sun_star_dtrans_DTransTransferable( aScrap );
-			}
-
-			aModule.unload();
-		}
+		ScrapRef aScrap;
+		if ( GetCurrentScrap( &aScrap ) == noErr )
+			out = new com_sun_star_dtrans_DTransTransferable( aScrap );
 	}
 	else
 	{
