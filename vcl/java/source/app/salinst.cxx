@@ -329,7 +329,7 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv 
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData )
 {
 	SalData *pSalData = GetSalData();
-	if ( pSalData && !ImplGetSVData()->maAppData.mbAppQuit )
+	if ( pSalData && !Application::IsShutDown() )
 	{
 		EventClass nClass = GetEventClass( aEvent );
 		if ( nClass == kEventClassAppleEvent )
@@ -428,7 +428,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 					// Execute menu updates while the VCL event queue is blocked
 					for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-					UpdateMenusForFrame( *it, NULL );
+						UpdateMenusForFrame( *it, NULL );
 
 					// Relock the Carbon lock
 					if ( t.pEnv )
@@ -454,7 +454,7 @@ void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void
 		return;
 
 	SalData *pSalData = GetSalData();
-	if ( pSalData && !ImplGetSVData()->maAppData.mbAppQuit )
+	if ( pSalData && !Application::IsShutDown() )
 	{
 		// Unlock the Carbon lock
 		VCLThreadAttach t;
