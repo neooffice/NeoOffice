@@ -74,9 +74,11 @@ public final class VCLScreen {
 	static {
 
 		Frame f = new Frame();
+		f.setSize(100, 100);
 		f.addNotify();
 		frameInsets = f.getInsets();
 		f.removeNotify();
+		f.dispose();
 
 	}
 

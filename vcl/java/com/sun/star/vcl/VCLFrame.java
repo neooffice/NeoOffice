@@ -594,6 +594,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private static int keyModifiersPressed = 0;
 
+	/** 
+	 * The key modifiers unpressed.
+	 */
+	private static int keyModifiersUnpressed = 0;
+
 	/**
 	 * The last capture frame.
 	 */
@@ -1598,7 +1603,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else
 			VCLFrame.lastKeyPressed = e;
 
-		VCLFrame.keyModifiersPressed = e.getModifiers();
+		VCLFrame.keyModifiersPressed = e.getModifiers() & ~VCLFrame.keyModifiersUnpressed;
 
 	}
 
@@ -1653,6 +1658,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		VCLFrame.keyModifiersPressed = e.getModifiers();
+		VCLFrame.keyModifiersUnpressed &= VCLFrame.keyModifiersPressed;
 
 	}
 
@@ -1718,26 +1724,29 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			return;
 
 		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+			int keyModifiers = VCLFrame.keyModifiersPressed | VCLFrame.keyModifiersUnpressed;
 			if (VCLFrame.keyModifiersPressed != 0) {
 				// Remove button modifiers that are really key modifiers
 				int modifiers = e.getModifiers();
-				if ((VCLFrame.keyModifiersPressed & InputEvent.CTRL_MASK) == InputEvent.CTRL_MASK && (modifiers & (InputEvent.BUTTON1_MASK | InputEvent.BUTTON2_MASK | InputEvent.CTRL_MASK)) == (InputEvent.BUTTON1_MASK | InputEvent.BUTTON2_MASK | InputEvent.CTRL_MASK)) {
+				if ((keyModifiers & InputEvent.CTRL_MASK) == InputEvent.CTRL_MASK && (modifiers & (InputEvent.BUTTON1_MASK | InputEvent.BUTTON2_MASK | InputEvent.CTRL_MASK)) == (InputEvent.BUTTON1_MASK | InputEvent.BUTTON2_MASK | InputEvent.CTRL_MASK)) {
 					VCLFrame.keyModifiersPressed &= ~InputEvent.CTRL_MASK;
+					VCLFrame.keyModifiersUnpressed |= InputEvent.CTRL_MASK;
 					modifiers &= ~(InputEvent.BUTTON1_MASK | InputEvent.CTRL_MASK);
 				}
-				if ((VCLFrame.keyModifiersPressed & InputEvent.ALT_MASK) == InputEvent.ALT_MASK && (modifiers & (InputEvent.BUTTON1_MASK | InputEvent.BUTTON2_MASK)) == (InputEvent.BUTTON1_MASK | InputEvent.BUTTON2_MASK)) {
+				if ((keyModifiers & InputEvent.ALT_MASK) == InputEvent.ALT_MASK && (modifiers & (InputEvent.BUTTON1_MASK | InputEvent.BUTTON2_MASK)) == (InputEvent.BUTTON1_MASK | InputEvent.BUTTON2_MASK)) {
 					VCLFrame.keyModifiersPressed &= ~InputEvent.ALT_MASK;
+					VCLFrame.keyModifiersUnpressed |= InputEvent.ALT_MASK;
 					modifiers = (modifiers & ~(InputEvent.BUTTON1_MASK | InputEvent.BUTTON2_MASK)) | InputEvent.BUTTON3_MASK;
 				}
-				if ((VCLFrame.keyModifiersPressed & InputEvent.META_MASK) == InputEvent.META_MASK && (modifiers & (InputEvent.BUTTON1_MASK | InputEvent.BUTTON3_MASK)) == (InputEvent.BUTTON1_MASK | InputEvent.BUTTON3_MASK))
+				if ((keyModifiers & InputEvent.META_MASK) == InputEvent.META_MASK && (modifiers & (InputEvent.BUTTON1_MASK | InputEvent.BUTTON3_MASK)) == (InputEvent.BUTTON1_MASK | InputEvent.BUTTON3_MASK))
 					modifiers &= ~InputEvent.BUTTON3_MASK;
-				if ((VCLFrame.keyModifiersPressed & InputEvent.SHIFT_MASK) == InputEvent.SHIFT_MASK)
+				if ((keyModifiers & InputEvent.SHIFT_MASK) == InputEvent.SHIFT_MASK)
 					modifiers &= ~InputEvent.SHIFT_MASK;
 				e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), modifiers, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
 			}
 		}
 
-		VCLFrame.mouseModifiersPressed = e.getModifiers();
+		VCLFrame.mouseModifiersPressed |= e.getModifiers();
 
 		// Enable mouse capture
 		VCLFrame.capture = true;
@@ -1775,9 +1784,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (queue == null || window == null || !window.isShowing())
 			return;
 
-		// Check if we changed the modifiers in the mouse pressed event
-		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && (e.getModifiers() & VCLFrame.mouseModifiersPressed) == 0)
-			e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), InputEvent.BUTTON1_MASK, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
+		// Mac OS X only returns a single mouse released event
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
+			e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), VCLFrame.mouseModifiersPressed, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
 
 		VCLFrame.mouseModifiersPressed &= ~(e.getModifiers());
 
@@ -1847,10 +1856,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (queue == null || window == null || !window.isShowing())
 			return;
 
-		VCLFrame f = this;
+		// Use adjusted mouse modifiers
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && e.getModifiers() != VCLFrame.mouseModifiersPressed)
+			e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), VCLFrame.mouseModifiersPressed, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
 
-		if (VCLFrame.lastDragFrame == null)
-			VCLFrame.lastDragFrame = this;
+		VCLFrame f = this;
 
 		if (VCLFrame.captureFrame != null && e.getComponent().isShowing()) {
 			// Find the capture window
@@ -1897,7 +1907,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				VCLFrame.lastCaptureFrame = f;
 		}
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, f, 0, VCLFrame.keyModifiersPressed));
+		// Don't pass key modifiers to mouse drag events
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, f, 0, 0));
 
 	}
 
@@ -1946,7 +1957,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (VCLFrame.capture || queue == null || window == null || !window.isShowing())
 			return;
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, this, 0, VCLFrame.keyModifiersPressed));
+		// Don't pass key modifiers to mouse move events
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, this, 0, 0));
 
 	}
 
