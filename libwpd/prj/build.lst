@@ -1,0 +1,2 @@
+wp	libwpd	: sfx2 NULL
+wp	libwpd	nmake	-	all	libpwd_mkout NULL
