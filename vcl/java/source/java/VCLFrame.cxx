@@ -70,6 +70,68 @@ static EventLoopTimerUPP pEventLoopTimerUPP = NULL;
 
 using namespace vcl;
 
+#ifdef MACOSX
+/**
+ * Parameter block for window selection timer
+ */
+struct SelectWindowParamBlk {
+	WindowRef aWindow;
+	bool bBringToFront;
+	bool bActivate;
+};
+#endif
+
+// ----------------------------------------------------------------------------
+
+#ifdef MACOSX
+static void SelectWindowTimerCallback( EventLoopTimerRef aTimer, void *pData )
+{
+	SelectWindowParamBlk * p = (SelectWindowParamBlk *)pData;
+	if ( p )
+	{
+		// some of our borderless windows are not in the document group
+		// which can cause Z ordering problems with respect to other
+		// windows in the group.  VCL does not have a concept of groups,
+		// so all VCL windows need to be in the same group.
+		//
+		// Bug 427
+		
+		WindowGroupRef docGroup = GetWindowGroupOfClass( kDocumentWindowClass );
+		if ( GetWindowGroup( p->aWindow ) != docGroup )
+			SetWindowGroup( p->aWindow, docGroup );
+			
+		if ( p->bBringToFront )
+		{
+			if ( p->bActivate )
+				SelectWindow( p->aWindow );
+			else
+				BringToFront( p->aWindow );
+		}
+		else if ( p->bActivate )
+		{
+			// we want to focus a window but not change its Z ordering.
+			// we need SelectWindow() for side-effects (?), so let's issue
+			// SelectWindow() followed by successive BringToFronts() to
+			// re-establish the Z ordering.
+			//
+			// Bug 436
+			
+			std::list< WindowRef > topWindows;
+			WindowRef iter = GetPreviousWindow( p->aWindow );
+			while ( iter )
+			{
+				topWindows.push_back( iter );
+				iter = GetPreviousWindow( iter );
+			}
+			SelectWindow( p->aWindow );
+			for( std::list< WindowRef >::iterator i = topWindows.begin(); i != topWindows.end(); i++ )
+				BringToFront( ( *i ) );
+		}
+		delete p;
+	}
+}
+#endif	// MACOSX
+
 // ============================================================================
 
 #ifdef MACOSX
@@ -79,19 +141,25 @@ static void JNICALL Java_com_apple_mrj_macos_generated_MacWindowFunctions_Select
 
 	WindowRef aWindow = (WindowRef)pWindowRef;
 
-	if ( bBringToFront && bActivate )
-		SelectWindow( aWindow );
-	else if ( bBringToFront )
-		BringToFront( aWindow );
-	else if ( bActivate )
-	{
-		// we want to focus a window but not change its Z ordering.
-		// Issue a SelectWindow() and then restore the Z ordering.
-		
-		WindowRef whosOnTop = GetPreviousWindow( aWindow );
-		SelectWindow( aWindow );
-		SendBehind( aWindow, whosOnTop );
-	}
+	// when debugging some of the various window selection issues, it was
+	// thought that there may possibly be race conditions between
+	// selectwindow being invoked from a VCL thread and the Java VM
+	// processing events on the Carbon thread, similar to window destruction
+	// To eliminate this possibility we'll issue this as a timer call that
+	// will get processed on the main Carbon thread.
+	//
+	// Bug 436
+	
+	SelectWindowParamBlk * p = new SelectWindowParamBlk;
+	p->aWindow = aWindow;
+	p->bBringToFront = bBringToFront;
+	p->bActivate = bActivate;
+	
+	static EventLoopTimerUPP pSelectWindowTimer = NULL; // our calls are mutex guarded so we can safely do static variable creation in this fashion
+	if ( ! pSelectWindowTimer )
+		pSelectWindowTimer = NewEventLoopTimerUPP( SelectWindowTimerCallback );
+	
+	InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pSelectWindowTimer, p, NULL );
 }
 #endif	// MACOSX
 
