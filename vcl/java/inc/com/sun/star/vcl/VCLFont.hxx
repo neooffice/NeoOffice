@@ -36,6 +36,8 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
 #define	_SV_COM_SUN_STAR_VCL_VCLFONT_HXX
 
+#include <map>
+
 #ifndef _SV_JAVA_LANG_OBJECT_HXX
 #include <java/lang/Object.hxx>
 #endif
@@ -45,7 +47,6 @@
 
 namespace vcl {
 
-class com_sun_star_vcl_VCLFontList;
 class com_sun_star_vcl_VCLGraphics;
 
 class com_sun_star_vcl_VCLFont : public java_lang_Object
@@ -57,7 +58,7 @@ public:
 	static jboolean		useDefaultFont;
 
 	static jclass		getMyClass();
-	static com_sun_star_vcl_VCLFontList*	getAllFonts();
+	static ::std::map< ::rtl::OUString, com_sun_star_vcl_VCLFont* >	getAllFonts();
 
 						com_sun_star_vcl_VCLFont( jobject myObj ) : java_lang_Object( myObj ) {};
 
@@ -78,16 +79,6 @@ public:
 	sal_Bool			isBold();
 	sal_Bool			isItalic();
 	sal_Bool			isVertical();
-};
-
-class com_sun_star_vcl_VCLFontList
-{
-public:
-	jsize				mnCount;
-	com_sun_star_vcl_VCLFont**	mpFonts;
-
-						com_sun_star_vcl_VCLFontList() : mnCount(0), mpFonts(NULL) {};
-	virtual				~com_sun_star_vcl_VCLFontList();
 };
 
 } // namespace vcl

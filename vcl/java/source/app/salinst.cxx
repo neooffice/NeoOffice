@@ -496,17 +496,7 @@ void InitSalData()
 
 void DeInitSalData()
 {
-	SalData *pSalData = GetSalData();
-
-	if ( pSalData )
-	{
-		if ( pSalData->mpEventQueue )
-			delete pSalData->mpEventQueue;
-		if ( pSalData->mpFontList )
-			delete pSalData->mpFontList;
-		delete pSalData;
-	}
-
+	delete GetSalData();
 	SetSalData( NULL );
 }
 
@@ -851,7 +841,7 @@ void SalInstance::DestroyFrame( SalFrame* pFrame )
 	// Remove this window from the window list
 	if ( pFrame )
 	{
-		GetSalData()->maFrameList.remove( pFrame);
+		GetSalData()->maFrameList.remove( pFrame );
 		pFrame->SetParent( NULL );
 		delete pFrame;
 	}

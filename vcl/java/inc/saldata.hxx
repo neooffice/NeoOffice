@@ -37,6 +37,7 @@
 #define _SV_SALDATA_HXX
 
 #include <list>
+#include <map>
 
 #ifndef _SV_SVDATA_HXX
 #include <svdata.hxx>
@@ -75,7 +76,7 @@ public:
 	ULONG					mnTimerInterval;
 	XubString				maDefaultPrinter;
 	::vcl::com_sun_star_vcl_VCLEventQueue*	mpEventQueue;
-	::vcl::com_sun_star_vcl_VCLFontList*	mpFontList;
+	::std::map< ::rtl::OUString, ::vcl::com_sun_star_vcl_VCLFont* >	maFontMapping;
 	SalFrame*				mpPresentationFrame;
 	::std::list< ::vcl::com_sun_star_vcl_VCLPageFormat* >	maVCLPageFormats;
 

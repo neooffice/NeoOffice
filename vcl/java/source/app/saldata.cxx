@@ -42,6 +42,7 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
 
+using namespace rtl;
 using namespace vcl;
 
 // ========================================================================
@@ -54,7 +55,6 @@ SalData::SalData()
 	maTimeout.tv_usec = 0;
 	mpTimerProc = NULL;
 	mpEventQueue = NULL;
-	mpFontList = NULL;
 	mpPresentationFrame = NULL;
 }
 
@@ -62,4 +62,10 @@ SalData::SalData()
 
 SalData::~SalData()
 {
+	if ( mpEventQueue )
+		delete mpEventQueue;
+
+	for ( ::std::map< OUString, com_sun_star_vcl_VCLFont* >::iterator it = maFontMapping.begin(); it != maFontMapping.end(); ++it )
+		delete it->second;
+	maFontMapping.clear();
 }

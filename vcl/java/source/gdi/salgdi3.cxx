@@ -106,20 +106,13 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	{
 		SalData *pSalData = GetSalData();
 
-		if ( !pSalData->mpFontList )
-			pSalData->mpFontList = com_sun_star_vcl_VCLFont::getAllFonts();
+		if ( !pSalData->maFontMapping.size() )
+			pSalData->maFontMapping = com_sun_star_vcl_VCLFont::getAllFonts();
 
-		com_sun_star_vcl_VCLFontList *pFontList = GetSalData()->mpFontList;
-
-		// Iterate through fonts and find a font a matching font
-		for ( jsize i = 0; i < pFontList->mnCount; i++ )
-		{
-			if ( aName == pFontList->mpFonts[ i ]->getName() )
-			{
-				pVCLFont = pFontList->mpFonts[ i ];
-				break;
-			}
-		}
+		// Find the matching font
+		::std::map< OUString, com_sun_star_vcl_VCLFont* >::iterator it = pSalData->maFontMapping.find( aName );
+		if ( it != pSalData->maFontMapping.end() )
+			pVCLFont = it->second;
 	}
 
 	pFont->maFoundName = aName;
@@ -213,33 +206,33 @@ void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 {
 	SalData *pSalData = GetSalData();
 
-	if ( !pSalData->mpFontList )
-		pSalData->mpFontList = com_sun_star_vcl_VCLFont::getAllFonts();
-
-	com_sun_star_vcl_VCLFontList *pFontList = GetSalData()->mpFontList;
+	if ( !pSalData->maFontMapping.size() )
+		pSalData->maFontMapping = com_sun_star_vcl_VCLFont::getAllFonts();
 
 	// Iterate through fonts and add each to the font list
-	for ( jsize i = 0; i < pFontList->mnCount; i++ )
+    for ( ::std::map< OUString, com_sun_star_vcl_VCLFont* >::iterator it = pSalData->maFontMapping.begin(); it != pSalData->maFontMapping.end(); ++it )
 	{
+		com_sun_star_vcl_VCLFont *pVCLFont = it->second;
+
 		// Set default values
 		ImplFontData *pFontData = new ImplFontData();
 		pFontData->mpNext = NULL;
-		pFontData->mpSysData = (void *)pFontList->mpFonts[ i ];
-		pFontData->maName = XubString( pFontList->mpFonts[ i ]->getName() );
+		pFontData->mpSysData = (void *)pVCLFont;
+		pFontData->maName = XubString( it->first );
 		pFontData->mnWidth = 0;
 		pFontData->mnHeight = 0;
-		pFontData->meFamily = pFontList->mpFonts[ i ]->getFamilyType();
+		pFontData->meFamily = pVCLFont->getFamilyType();
 		pFontData->meCharSet = RTL_TEXTENCODING_UNICODE;
 		if ( pFontData->meFamily == FAMILY_MODERN )
 			pFontData->mePitch = PITCH_FIXED;
 		else
 			pFontData->mePitch = PITCH_VARIABLE;
 		pFontData->meWidthType = WIDTH_DONTKNOW;
-		if ( pFontList->mpFonts[ i ]->isBold() )
+		if ( pVCLFont->isBold() )
 			pFontData->meWeight = WEIGHT_BOLD;
 		else
 			pFontData->meWeight = WEIGHT_NORMAL;
-		if ( pFontList->mpFonts[ i ]->isItalic() )
+		if ( pVCLFont->isItalic() )
 			pFontData->meItalic = ITALIC_NORMAL;
 		else
 			pFontData->meItalic = ITALIC_NONE;

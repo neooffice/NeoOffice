@@ -123,9 +123,9 @@ public final class VCLFont {
 
 		// Set default font
 		if (defaultFont == null)
-			defaultFont = new VCLFont("Dialog", 1, o, false, false, true, false);
+			defaultFont = new VCLFont("Dialog", VCLFont.FAMILY_DONTKNOW, 1, o, false, false, true, false);
 
-		return new VCLFont(VCLFont.defaultFont.getName(), s, o, b, i, a, v);
+		return new VCLFont(VCLFont.defaultFont.getName(), VCLFont.defaultFont.getFamilyType(), s, o, b, i, a, v);
 
 	}
 
@@ -139,19 +139,26 @@ public final class VCLFont {
 
 		// Initialize the cached fonts
 		if (fonts == null) {
-			boolean macosx = false;
-			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
-				macosx = true;
-
 			// Get all of the fonts and screen out duplicates
 			fontFamilies = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
 			ArrayList array = new ArrayList();
 			for (int i = 0; i < fontFamilies.length; i++) {
-				String name = fontFamilies[i].toLowerCase();
-				// Get rid of hidden, bold, and italic Mac OS X fonts
-				if (macosx && name.startsWith("."))
+				// Get rid of hidden Mac OS X fonts
+				if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && (fontFamilies[i].startsWith(".") || fontFamilies[i].equals("LastResort")))
 					continue;
-				array.add(new VCLFont(fontFamilies[i], 1, (short)0, false, false, true, false));
+
+				// Get family type
+				int type;
+				if (fontFamilies[i].indexOf("Monospaced") >= 0)
+					type = VCLFont.FAMILY_MODERN;
+				else if (fontFamilies[i].indexOf("Sans") >= 0)
+					type = VCLFont.FAMILY_SWISS;
+				else if (fontFamilies[i].indexOf("Serif") >= 0)
+					type = VCLFont.FAMILY_ROMAN;
+				else
+					type = VCLFont.FAMILY_DONTKNOW;
+
+				array.add(new VCLFont(fontFamilies[i], type, 1, (short)0, false, false, true, false));
 			}
 	
 			fonts = (VCLFont[])array.toArray(new VCLFont[array.size()]);
@@ -230,6 +237,7 @@ public final class VCLFont {
 	 * Constructs a new <code>VCLFont</code> instance.
 	 *
 	 * @param n the name of the font
+	 * @param ft the family type of the font
 	 * @param s the size of the font
 	 * @param o the orientation of the new <code>VCLFont</code> in degrees
 	 * @param b <code>true</code> if the font is bold
@@ -238,7 +246,7 @@ public final class VCLFont {
 	 *  to disable antialiasing
 	 * @param v <code>true</code> if the font is vertical 
 	 */
-	VCLFont(String n, int s, short o, boolean b, boolean i, boolean a, boolean v) {
+	VCLFont(String n, int ft, int s, short o, boolean b, boolean i, boolean a, boolean v) {
 
 		antialiased = a;
 		// Mac OS X applications and printing can't handle artificial bold and
@@ -254,6 +262,7 @@ public final class VCLFont {
 		name = n;
 		orientation = o;
 		size = s;
+		type = ft;
 		vertical = v;
 
 		// Cache font and font metrics
@@ -272,15 +281,6 @@ public final class VCLFont {
 			font = getDefaultFont().getFont();
 			fontMetrics = VCLFont.graphics.getFontMetrics(font);
 		}
-
-		// Get family type
-		String fontName = name.toLowerCase();
-		if (fontName.startsWith("monospaced"))
-			type = VCLFont.FAMILY_MODERN;
-		else if (fontName.startsWith("sansserif"))
-			type = VCLFont.FAMILY_SWISS;
-		else if (fontName.startsWith("serif"))
-			type = VCLFont.FAMILY_ROMAN;
 
 		// Get size metrics
 		ascent = fontMetrics.getMaxAscent();
@@ -314,7 +314,7 @@ public final class VCLFont {
 	 */
 	public VCLFont deriveFont(int s, boolean b, boolean i, short o, boolean a, boolean v) {
 
-		return new VCLFont(name, s, o, b, i, a, v);
+		return new VCLFont(name, type, s, o, b, i, a, v);
 
 	}
 

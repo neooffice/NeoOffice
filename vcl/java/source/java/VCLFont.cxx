@@ -47,7 +47,7 @@
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 
-static std::map< ::rtl::OUString, sal_uInt32 > aNativeFontMap;
+static ::std::map< ::rtl::OUString, sal_uInt32 > aNativeFontMap;
 
 #endif	// MACOSX
 
@@ -62,7 +62,7 @@ static sal_uInt32 GetMacFontFace( com_sun_star_vcl_VCLFont *pVCLFont )
 	sal_uInt32 out = 0;
 
 	OUString aFontName( pVCLFont->getName() );
-	std::map< OUString, sal_uInt32 >::iterator it = aNativeFontMap.find( aFontName );
+	::std::map< OUString, sal_uInt32 >::iterator it = aNativeFontMap.find( aFontName );
 	if ( it != aNativeFontMap.end() )
 		out = it->second;
 
@@ -124,6 +124,14 @@ static sal_uInt32 GetMacFontFace( com_sun_star_vcl_VCLFont *pVCLFont )
 										}
 									}
 								}
+
+								// Handle Java's font alias names
+								if ( !out )
+								{
+									sal_uInt32 nFontFace = ( nFamily << 16 );
+									aNativeFontMap[ aFontName ] = nFontFace;
+									out = nFontFace;
+								}
 							}
 						}
 					}
@@ -136,18 +144,6 @@ static sal_uInt32 GetMacFontFace( com_sun_star_vcl_VCLFont *pVCLFont )
 	return out;
 }
 #endif	// MACOSX
-
-// ============================================================================
-
-com_sun_star_vcl_VCLFontList::~com_sun_star_vcl_VCLFontList()
-{
-	if ( mpFonts )
-	{
-		for ( int i = 0; i < mnCount; i++ )
-			delete mpFonts[ i ];
-		rtl_freeMemory( mpFonts );
-	}
-}
 
 // ============================================================================
 
@@ -174,13 +170,13 @@ jclass com_sun_star_vcl_VCLFont::getMyClass()
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLFontList *com_sun_star_vcl_VCLFont::getAllFonts()
+::std::map< OUString, com_sun_star_vcl_VCLFont* > com_sun_star_vcl_VCLFont::getAllFonts()
 {
-	static jmethodID mID = NULL;
-	com_sun_star_vcl_VCLFontList *out = NULL;
+	::std::map< OUString, com_sun_star_vcl_VCLFont* > out;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
+		static jmethodID mID = NULL;
 		if ( !mID )
 		{
 			char *cSignature = "()[Lcom/sun/star/vcl/VCLFont;";
@@ -193,13 +189,26 @@ com_sun_star_vcl_VCLFontList *com_sun_star_vcl_VCLFont::getAllFonts()
 			tempArray = (jobjectArray)t.pEnv->CallStaticObjectMethod( getMyClass(), mID );
 			if ( tempArray )
 			{
-				out = new com_sun_star_vcl_VCLFontList();
-				out->mnCount = t.pEnv->GetArrayLength( tempArray );
-				out->mpFonts = (com_sun_star_vcl_VCLFont **)rtl_allocateMemory( out->mnCount * sizeof( com_sun_star_vcl_VCLFont* ) );
-				for ( jsize i = 0; i < out->mnCount; i++ )
+				jsize nSize = t.pEnv->GetArrayLength( tempArray );
+				for ( jsize i = 0; i < nSize; i++ )
 				{
 					jobject tempObj = t.pEnv->GetObjectArrayElement( tempArray, i );
-					out->mpFonts[ i ] = new com_sun_star_vcl_VCLFont( tempObj );
+					if ( !tempObj )
+						continue;
+
+					com_sun_star_vcl_VCLFont *pVCLFont = new com_sun_star_vcl_VCLFont( tempObj );
+#ifdef MACOSX
+					if ( kATSUInvalidFontID == (ATSUFontID)pVCLFont->getNativeFont() )
+					{
+						delete pVCLFont;
+						continue;
+					}
+#endif	// MACOSX
+					OUString aFontName( pVCLFont->getName() );
+					::std::map< OUString, com_sun_star_vcl_VCLFont* >::iterator it = out.find( aFontName );
+					if ( it != out.end() )
+						delete it->second;
+					out[ aFontName ] = pVCLFont;
 				}
 			}
 		}
@@ -464,8 +473,8 @@ void *com_sun_star_vcl_VCLFont::getNativeFont()
 
 	if ( nFontFace )
 	{
-        FMFontFamily nFont = (FMFontFamily)( nFontFace >> 16 );
-        FMFontStyle nStyle = (FMFontStyle)( nFontFace & 0x00ff );
+		FMFontFamily nFont = (FMFontFamily)( nFontFace >> 16 );
+		FMFontStyle nStyle = (FMFontStyle)( nFontFace & 0x00ff );
 		FMFont aFont;
 		if ( FMGetFontFromFontFamilyInstance( nFont, nStyle, &aFont, NULL ) == noErr )
 			out = (void *)FMGetATSFontRefFromFont( aFont );
@@ -496,8 +505,8 @@ void *com_sun_star_vcl_VCLFont::getNativeFont( sal_Bool _par0, sal_Bool _par1 )
 
 	if ( nFontFace )
 	{
-        FMFontFamily nFont = (FMFontFamily)( nFontFace >> 16 );
-        FMFontStyle nStyle = (FMFontStyle)( nFontFace & 0x00ff );
+		FMFontFamily nFont = (FMFontFamily)( nFontFace >> 16 );
+		FMFontStyle nStyle = (FMFontStyle)( nFontFace & 0x00ff );
 		if ( !_par0 && !_par1 )
 		{
 			nStyle &= ~( bold | italic );
