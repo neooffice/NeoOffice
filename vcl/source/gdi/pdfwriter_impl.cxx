@@ -2705,8 +2705,8 @@ void PDFWriterImpl::registerGlyphs(
         int nGlyphIDs = 0;
         for ( FontEmitMapping::iterator fit = rEmit.m_aMapping.begin(); fit != rEmit.m_aMapping.end(); ++fit )
         {
-            if ( fit->first );
-                aGlyphIDs[ nGlyphIDs++ ] = (CGGlyph)( fit->first & GF_IDXMASK );
+            if ( fit->first )
+                aGlyphIDs[ nGlyphIDs++ ] = (CGGlyph)fit->first;
         }
 
         if ( !nGlyphIDs )
@@ -2920,7 +2920,7 @@ void PDFWriterImpl::registerGlyphs(
                         sal_Int32 nFontIDPos;
                         sal_Int32 nFontPos;
                         sal_Int32 nTextPos;
-                        while ( nCurrentGlyph < nGlyphs )
+                        while ( nCurrentGlyph < nGlyphIDs )
                         {
                             if ( ( nFontIDPos = aPageContent.indexOf( aFontIDTag, nCurrentPos ) ) < 0 )
                                 break;
@@ -3027,7 +3027,7 @@ void PDFWriterImpl::registerGlyphs(
 
                             pBuf = aGlyphBuf.getStr();
                             nTextLen = aGlyphBuf.getLength();
-                            for ( sal_Int32 j = 0; j < nTextLen && nCurrentGlyph < nGlyphs; j++, nCurrentGlyph++, pBuf++ )
+                            for ( sal_Int32 j = 0; j < nTextLen && nCurrentGlyph < nGlyphIDs; j++, nCurrentGlyph++, pBuf++ )
                             {
                                 long nGlyph = (long)aGlyphIDs[ nCurrentGlyph ];
 

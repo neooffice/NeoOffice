@@ -85,6 +85,7 @@ public:
 	virtual bool		LayoutText( ImplLayoutArgs& rArgs );
 	virtual void		AdjustLayout( ImplLayoutArgs& rArgs );
 	virtual void		DrawText( SalGraphics& rGraphics ) const;
+	virtual int			GetNextGlyphs( int nLen, long *pGlyphIdxAry, Point& rPos, int& rStart, long *pGlyphAdvAry = NULL, int *pCharPosAry = NULL ) const;
 };
 
 using namespace osl;
@@ -457,25 +458,6 @@ void ATSLayout::DrawText( SalGraphics& rGraphics ) const
 		if ( !nGlyphCount )
 			break;
 
-		// Don't paint glyph ID 0
-		for ( int i = 0; i < nGlyphCount && !aGlyphArray[ i ]; i++ )
-			;
-
-		if ( i )
-		{
-			nStart -= nGlyphCount - i;
-			continue;
-		}
-
-		for ( i = 0; i < nGlyphCount && aGlyphArray[ i ]; i++ )
-			;
-
-		if ( i )
-		{
-			nStart -= nGlyphCount - i;
-			nGlyphCount = i;
-		}
-
 		int nOrientation = GetOrientation();
 
 		int j = aCharPosArray[ 0 ] - mnMinCharPos + 1;
@@ -499,10 +481,43 @@ void ATSLayout::DrawText( SalGraphics& rGraphics ) const
 		}
 		else
 		{
-			for ( i = 0; i < nGlyphCount; i++ )
+			for ( int i = 0; i < nGlyphCount; i++ )
 				aGlyphArray[ i ] &= GF_IDXMASK;
 
 			rGraphics.maGraphicsData.mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), nGlyphCount, aGlyphArray, aDXArray, mpVCLFont, rGraphics.maGraphicsData.mnTextColor, nOrientation, 0, 0, mnUnitsPerPixel );
 		}
 	}
+}
+
+// ----------------------------------------------------------------------------
+
+int ATSLayout::GetNextGlyphs( int nLen, long *pGlyphIdxAry, Point& rPos, int& rStart, long *pGlyphAdvAry, int *pCharPosAry ) const
+{
+	int nGlyphCount;
+
+	while ( ( nGlyphCount = GenericSalLayout::GetNextGlyphs( nLen, pGlyphIdxAry, rPos, rStart, pGlyphAdvAry, pCharPosAry ) ) )
+	{
+		// Don't pass on glyph ID 0 or GF_DROPPED as we don't want the upper
+		//  layers to paint it
+		for ( int i = 0; i < nGlyphCount && !pGlyphIdxAry[ i ]; i++ )
+			;
+
+		if ( i )
+		{
+			rStart -= nGlyphCount - i;
+			continue;
+		}
+
+		for ( i = 0; i < nGlyphCount && pGlyphIdxAry[ i ]; i++ )
+			;
+
+		if ( i )
+		{
+			rStart -= nGlyphCount - i;
+			nGlyphCount = i;
+			break;
+		}
+	}
+
+	return nGlyphCount;
 }
