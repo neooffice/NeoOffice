@@ -62,11 +62,14 @@ class ATSLayout : public SalLayout
 	ItemCount			mnRuns;
 	UniCharArrayOffset	mnStart;
 	UniCharCount		mnLen;
+	bool				mbRTL;
+	bool				mbVertical;
 	mutable long		mnWidth;
 	mutable long*		mpAdvances;
 	mutable ATSUGlyphInfoArray*	mpGlyphInfoArray;
 
 	void				Destroy();
+	bool				GetBoundRect( Rectangle& rRect ) const;
 	bool				InitAdvances() const;
 	bool				InitGlyphInfoArray() const;
 	void				Justify( long nNewWidth ) const;
@@ -206,6 +209,8 @@ ATSLayout::ATSLayout( com_sun_star_vcl_VCLFont *pVCLFont ) :
 	mnRuns( 0 ),
 	mnStart( 0 ),
 	mnLen( 0 ),
+	mbRTL( false ),
+	mbVertical( false ),
 	mnWidth( 0 ),
 	mpAdvances( NULL ),
 	mpGlyphInfoArray( NULL )
@@ -292,13 +297,15 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		mnRuns++;
 
 	// Populate run lengths and style arrays
-	bool bVertical = ( ( rArgs.mnFlags & SAL_LAYOUT_VERTICAL ) != 0 );
 	UniCharCount aRunLengths[ mnRuns ];
 	ATSUStyle aStyles[ mnRuns ];
 	ItemCount nRunsProcessed = 0;
+	bool bRTLRequested = false;
 	rArgs.ResetPos();
 	while ( rArgs.GetNextRun( &i, &j, &bRTL ) && nRunsProcessed < mnRuns )
 	{
+		if ( bRTL )
+			bRTLRequested = true;
 		aRunLengths[ nRunsProcessed ] = j - i;
 		aStyles[ nRunsProcessed ] = maFontStyle;
 		nRunsProcessed++;
@@ -308,6 +315,23 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	{
 		Destroy();
 		return false;
+	}
+
+	if ( rArgs.mnFlags & SAL_LAYOUT_VERTICAL )
+	{
+		// Set vertical
+		ATSUVerticalCharacterType nVertical = kATSUStronglyVertical;
+		ATSUAttributeTag nTag = kATSUVerticalCharacterTag;
+		ByteCount nBytes = sizeof( ATSUVerticalCharacterType );
+		ATSUAttributeValuePtr nVal = &nVertical;
+
+		if ( ATSUSetAttributes( maFontStyle, 1, &nTag, &nBytes, &nVal ) != noErr )
+			mbVertical = true;
+	}
+	else if ( rArgs.mnFlags & ( SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_BIDI_RTL ) )
+	{
+		if ( bRTLRequested )
+			mbRTL = true;
 	}
 
 	// Set automatic font matching for missing glyphs
@@ -371,9 +395,9 @@ void ATSLayout::DrawText( com_sun_star_vcl_VCLGraphics *pGraphics, SalColor nCol
 		ATSUDrawText( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, Long2Fix( aPos.X() ), Long2Fix( aPos.Y() * - 1 ) );
 
 		// Add rotated text bounds (plus a little extra) to flush
-		Rect aRect;
-		if ( ATSUMeasureTextImage( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, 0, 0, &aRect ) == noErr )
-			pGraphics->addToFlush( aPos.X() + aRect.left - 5, aPos.Y() + aRect.top - 5, aRect.right - aRect.left + 11, aRect.bottom - aRect.top + 11 );
+		Rectangle aRect;
+		if ( GetBoundRect( aRect ) )
+			pGraphics->addToFlush( aPos.X() + aRect.nLeft - 5, aPos.Y() + aRect.nTop - 5, aRect.GetWidth() + 11, aRect.GetHeight() + 11 );
 
 		// Reset layout controls
 		ATSUClearLayoutControls( maLayout, 2, nTags );
@@ -406,12 +430,15 @@ int ATSLayout::GetTextBreak( long nMaxWidth, long nCharExtra, int nFactor ) cons
 	if ( ( ( mnWidth * nFactor ) + ( mnLen * nCharExtra ) ) <= nMaxWidth )
 		return STRING_LEN;
 
+	// RTL text will have negative advances so also check for negative values
+	long nMaxRTLWidth = nMaxWidth * -1;
+
 	// Iterate through advances until the maximum width is reached
 	long nCurrentWidth = 0;
 	for ( int i = 0; i < mnLen; i++ )
 	{
 		nCurrentWidth += ( mpAdvances[ i ] * nFactor );
-		if ( nCurrentWidth >= nMaxWidth )
+		if ( nCurrentWidth >= nMaxWidth || nCurrentWidth <= nMaxRTLWidth )
 			return mnStart + i;
 		nCurrentWidth += nCharExtra;
 	}
@@ -523,11 +550,19 @@ bool ATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rPPV ) const
 
 bool ATSLayout::GetBoundRect( SalGraphics& rGraphics, Rectangle& rRect ) const
 {
+	GetBoundRect( rRect );
+}
+
+// ----------------------------------------------------------------------------
+
+bool ATSLayout::GetBoundRect( Rectangle& rRect ) const
+{
 	Rect aRect;
 
 	if ( ATSUMeasureTextImage( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, 0, 0, &aRect ) == noErr )
 	{
 		rRect = Rectangle( aRect.left, aRect.top, aRect.right, aRect.bottom );
+		rRect.Justify();
 		return true;
 	}
 	else
@@ -567,6 +602,13 @@ void ATSLayout::Simplify( bool bIsBase )
 
 void ATSLayout::Destroy()
 {
+	if ( maFontStyle )
+	{
+		// Clear any special styles
+		ATSUAttributeTag nTag = kATSUStronglyVertical;
+		ATSUClearAttributes( maFontStyle, 1, &nTag );
+	}
+
 	if ( maLayout )
 		ATSUDisposeTextLayout( maLayout );
 	maLayout = NULL;
@@ -574,6 +616,8 @@ void ATSLayout::Destroy()
 	mnRuns = 0;
 	mnStart = 0;
 	mnLen = 0;
+	mbRTL = false;
+	mbVertical = false;
 	mnWidth = 0;
 
 	if ( mpAdvances )
@@ -604,12 +648,22 @@ bool ATSLayout::InitAdvances() const
 	if ( ATSUGetUnjustifiedBounds( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nStart, &nEnd, &nAscent, &nDescent ) == noErr )
 		Justify( Fix2Long( nEnd - nStart + 1 ) );
 
+	if ( !mnWidth )
+		return false;
+
 	mpAdvances = (long *)rtl_allocateMemory( mnLen * sizeof( long ) );
 
-	long nPreviousX = 0;
-	for ( int i = 0; i < mnLen; i++ )
+	// RTL has negative advances so we need to set the beginning caret to the
+	// layout width
+	long nStartX = 0;
+	if ( mbRTL )
+		nStartX = mnWidth;
+
+	ATSUCaret aCaret;
+	long nPreviousX = nStartX;
+	int nLen = mnLen - 1;
+	for ( int i = 0; i < nLen; i++ )
 	{
-		ATSUCaret aCaret;
 		if ( ATSUOffsetToCursorPosition( maLayout, i + 1, true, kATSUByCharacter, &aCaret, NULL, NULL ) == noErr )
 		{
 			mpAdvances[ i ] = Fix2Long( aCaret.fX ) - nPreviousX;
@@ -621,12 +675,8 @@ bool ATSLayout::InitAdvances() const
 		}
 	}
 
-	// This should only happen in rare cases
-	if ( !mnWidth )
-		mnWidth = nPreviousX;
-
-	// Adjust for rounding errors
-	mpAdvances[ mnLen - 1 ] += mnWidth - nPreviousX;
+	// Force any remaining advance into the last character
+	mpAdvances[ mnLen - 1 ] = mnWidth - ( nPreviousX - nStartX );
 
 	return true;
 }
