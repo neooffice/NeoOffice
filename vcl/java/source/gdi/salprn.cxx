@@ -135,7 +135,7 @@ XubString SalInfoPrinter::GetPaperBinName( const ImplJobSetup* pSetupData, ULONG
 
 ULONG SalInfoPrinter::GetCapabilities( const ImplJobSetup* pSetupData, USHORT nType )
 {
-	return 0;
+	return TRUE;
 }
 
 // -----------------------------------------------------------------------

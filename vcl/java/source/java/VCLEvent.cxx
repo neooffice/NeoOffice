@@ -41,9 +41,6 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
 #include <com/sun/star/vcl/VCLFrame.hxx>
 #endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
-#include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
@@ -265,7 +262,6 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 	SalYieldMutex *pSalYieldMutex = GetSalData()->mpFirstInstance->maInstData.mpSalYieldMutex;
 	pSalYieldMutex->acquire();
 	pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
-	com_sun_star_vcl_VCLGraphics::flushAll();
 	pSalYieldMutex->release();
 
 }

@@ -267,6 +267,8 @@ SalGraphicsData::SalGraphicsData()
 	mnFillColor = MAKE_SALCOLOR( 0xff, 0xff, 0xff );
 	mnLineColor = MAKE_SALCOLOR( 0, 0, 0 );
 	mnTextColor = MAKE_SALCOLOR( 0, 0, 0 );
+	mpFrame = NULL;
+	mpPrinter = NULL;
 	mpVirDev = NULL;
 	mpVCLGraphics = NULL;
 	mpVCLFont = NULL;

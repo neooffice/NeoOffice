@@ -62,6 +62,12 @@
 #ifndef _SV_JOBSET_H
 #include <jobset.h>
 #endif
+#ifndef _TOOLS_RESMGR_HXX
+#include <tools/resmgr.hxx>
+#endif
+#ifndef _TOOLS_SIMPLERESMGR_HXX_
+#include <tools/simplerm.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 #include <com/sun/star/vcl/VCLEvent.hxx>
 #endif
@@ -77,6 +83,8 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLSCREEN_HXX
 #include <com/sun/star/vcl/VCLScreen.hxx>
 #endif
+
+#include "salinst.hrc"
 
 using namespace vcl;
 using namespace vos;
@@ -498,7 +506,17 @@ void SalInstance::DestroyInfoPrinter( SalInfoPrinter* pPrinter )
 XubString SalInstance::GetDefaultPrinter()
 {
 	// Create a dummy default printer
-    return XubString( RTL_CONSTASCII_USTRINGPARAM( "DEFAULT" ) );
+	SalData *pSalData = GetSalData();
+	if ( !pSalData->maDefaultPrinter.Len() )
+	{
+        SimpleResMgr *pResMgr = SimpleResMgr::Create( CREATEVERSIONRESMGR_NAME( salapp ) );
+		if ( pResMgr )
+		{
+        	pSalData->maDefaultPrinter = XubString( pResMgr->ReadString( DEFAULT_PRINTER ) );
+			delete pResMgr;
+		}
+	}
+	return pSalData->maDefaultPrinter;
 }
 
 // -----------------------------------------------------------------------

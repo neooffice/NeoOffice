@@ -37,6 +37,7 @@ PRJ=..$/..$/..
 
 PRJNAME=vcl
 TARGET=salapp
+RESTARGET=$(TARGET)
 
 # --- Settings -----------------------------------------------------
 
@@ -81,6 +82,12 @@ SLOFILES += $(SLO)$/salmain_cocoa.obj
 .ENDIF
 
 .ENDIF
+
+SRCFILES=\
+	salinst.src
+
+RESLIB1NAME=$(RESTARGET)
+RESLIB1SRSFILES=$(SRS)$/salapp.srs
 
 .ENDIF		# "$(GUIBASE)"!="java"
 

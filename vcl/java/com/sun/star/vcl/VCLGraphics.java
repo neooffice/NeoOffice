@@ -36,7 +36,6 @@
 package com.sun.star.vcl;
 
 import java.awt.Color;
-import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
@@ -119,7 +118,7 @@ public class VCLGraphics {
 		for (int i = 0; i < elements; i++) {
 			VCLGraphics g = (VCLGraphics)graphicsList.get(i);
 			if (g.frame != null && g.update != null)
-				Toolkit.getDefaultToolkit().getSystemEventQueue().postEvent(new PaintEvent(g.frame.getPanel(), PaintEvent.UPDATE, g.update));
+				g.flush();
 		}
 
 	}
@@ -281,10 +280,8 @@ public class VCLGraphics {
 			else
 				update = b;
 
-			if (autoFlush) {
-				Toolkit.getDefaultToolkit().getSystemEventQueue().postEvent(new PaintEvent(frame.getPanel(), PaintEvent.UPDATE, update));
-				Thread.yield();
-			}
+			if (autoFlush)
+				flush();
 		}
 
 	}
@@ -775,7 +772,9 @@ public class VCLGraphics {
 	 */
 	synchronized void flush() {
 
-		if (panelGraphics != null && image != null && update != null && EventQueue.isDispatchThread()) {
+		if (panelGraphics != null && image != null && update != null) {
+			// Allow the Java event queue to dispatch pending events first
+			Thread.currentThread().yield();
 			panelGraphics.setClip(update);
 			panelGraphics.drawImage(image.getImage(), 0, 0, null);
 			Toolkit.getDefaultToolkit().sync();

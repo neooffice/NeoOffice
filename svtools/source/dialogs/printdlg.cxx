@@ -570,7 +570,10 @@ short PrintDialog::Execute()
 	}
 
 #ifdef USE_JAVA
+	// Display the Java page dialog and the OOo print options dialog and
 	mpPrinter->Setup();
+	ClickOptionsHdl();
+	// Always return TRUE so that the print dialog is displayed
 	return TRUE;
 #else	// USE_JAVA
 	// Controls initialisieren

@@ -337,7 +337,6 @@ public class VCLPrintJob extends Thread implements Printable {
 		synchronized (graphicsQueue) {
 			// Start the printing thread if it has not yet been started
 			if (!printThreadStarted) {
-				setPriority(Thread.MAX_PRIORITY);
 				start();
 				// Wait for the printing thread to gain the lock on the
 				// graphics queue
@@ -347,6 +346,9 @@ public class VCLPrintJob extends Thread implements Printable {
 				catch (Throwable t) {}
 				printThreadStarted = true;
 			}
+		}
+		Thread.currentThread().yield();
+		synchronized (graphicsQueue) {
 			if (currentPage++ != currentJobPage || !isAlive()) {
 				// Return a dummy graphics if this page is not in the selected
 				// page range

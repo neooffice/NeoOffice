@@ -520,11 +520,8 @@ public class VCLEventQueue {
 			if (id == PaintEvent.PAINT || id == PaintEvent.UPDATE) {
 				PaintEvent e = (PaintEvent)event;
 				VCLFrame frame = VCLFrame.getVCLFrame(e.getComponent());
-				if (frame != null) {
-					VCLGraphics g = frame.getGraphics();
-					g.addToFlush(e.getUpdateRect());
-					g.flush();
-				}
+				if (frame != null)
+					frame.getGraphics().addToFlush(e.getUpdateRect());
             }
 
 		}
