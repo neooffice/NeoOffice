@@ -148,9 +148,9 @@ public final class VCLPrintJob extends Thread implements Printable {
 	private boolean endJob = false;
 
 	/**
-	 * The cached queue of graphics.
+	 * The cached graphics info.
 	 */
-	private LinkedList graphicsQueue = new LinkedList();
+	private VCLPrintJob.GraphicsInfo graphicsInfo = new VCLPrintJob.GraphicsInfo();
 
 	/**
 	 * The cached printer job.
@@ -205,8 +205,11 @@ public final class VCLPrintJob extends Thread implements Printable {
 		currentJobPage = -1;
 		currentPage = 0;
 		endJob = false;
-		while (graphicsQueue.size() > 0)
-			graphicsQueue.removeFirst();
+		if (graphicsInfo != null) {
+			graphicsInfo.graphics = null;
+			graphicsInfo.pageFormat = null;
+		}
+		graphicsInfo = null;
 		job = null;
 		if (pageImage != null)
 			pageImage.dispose();
@@ -236,7 +239,7 @@ public final class VCLPrintJob extends Thread implements Printable {
 	 */
 	public void endPage() {
 
-		synchronized (graphicsQueue) {
+		synchronized (graphicsInfo) {
 			if (currentGraphics != null)
 				currentGraphics.dispose();
 			currentGraphics = null;
@@ -246,7 +249,7 @@ public final class VCLPrintJob extends Thread implements Printable {
 				return;
 			}
 			// Allow the printer thread to move to the next page
-			graphicsQueue.notifyAll();
+			graphicsInfo.notifyAll();
 		}
 		Thread.currentThread().yield();
 
@@ -276,11 +279,12 @@ public final class VCLPrintJob extends Thread implements Printable {
 			currentJobPage = i;
 		}
 
-		graphicsQueue.add(g);
+		graphicsInfo.graphics = (Graphics2D)g;
+		graphicsInfo.pageFormat = pageFormat;
 
 		// Wait until painting is finished
 		try {
-			graphicsQueue.wait();
+			graphicsInfo.wait();
 		}
 		catch (Throwable t) {}
 	
@@ -300,9 +304,9 @@ public final class VCLPrintJob extends Thread implements Printable {
 	 */
 	public void run() {
 
-		synchronized (graphicsQueue) {
+		synchronized (graphicsInfo) {
 			// Notify the thread that started this thread that it can proceed
-			graphicsQueue.notifyAll();
+			graphicsInfo.notifyAll();
 			try {
 				job.print();
 			}
@@ -334,21 +338,21 @@ public final class VCLPrintJob extends Thread implements Printable {
 	 */
 	public VCLGraphics startPage() {
 
-		synchronized (graphicsQueue) {
+		synchronized (graphicsInfo) {
 			// Start the printing thread if it has not yet been started
 			if (!printThreadStarted) {
 				start();
 				// Wait for the printing thread to gain the lock on the
 				// graphics queue
 				try {
-					graphicsQueue.wait();
+					graphicsInfo.wait();
 				}
 				catch (Throwable t) {}
 				printThreadStarted = true;
 			}
 		}
 		Thread.currentThread().yield();
-		synchronized (graphicsQueue) {
+		synchronized (graphicsInfo) {
 			if (currentPage++ != currentJobPage || !isAlive()) {
 				// Return a dummy graphics if this page is not in the selected
 				// page range
@@ -356,12 +360,21 @@ public final class VCLPrintJob extends Thread implements Printable {
 				currentGraphics = pageImage.getGraphics();
 			}
 			else {
-				currentGraphics = new VCLGraphics((Graphics2D)graphicsQueue.getFirst());
-				graphicsQueue.removeFirst();
+				currentGraphics = new VCLGraphics(graphicsInfo.graphics, graphicsInfo.pageFormat);
+				graphicsInfo.graphics = null;
+				graphicsInfo.pageFormat = null;
 			}
 		}
 
 		return currentGraphics;
+
+	}
+
+	class GraphicsInfo {
+
+		Graphics2D graphics = null;
+
+		PageFormat pageFormat = null;
 
 	}
 

@@ -55,6 +55,7 @@ import java.awt.geom.Area;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
+import java.awt.print.PageFormat;
 import java.util.LinkedList;
 
 /**
@@ -186,6 +187,11 @@ public final class VCLGraphics {
 	private VCLImage image = null;
 
 	/**
+	 * The page format.
+	 */
+	private PageFormat pageFormat = null;
+
+	/**
 	 * The panel's graphics context.
 	 */
 	private Graphics2D panelGraphics = null;
@@ -257,10 +263,13 @@ public final class VCLGraphics {
 	 * <code>Graphics2D</code> instance.
 	 *
 	 * @param g the <code>Graphics2D</code> instance
+	 * @param p the <code>PageFormat</code> instance
 	 */
-	VCLGraphics(Graphics2D g) {
+	VCLGraphics(Graphics2D g, PageFormat p) {
 
 		graphics = g;
+		pageFormat = p;
+
 		// Normalize graphics to 72 dpi
 		graphics.transform(graphics.getDeviceConfiguration().getNormalizingTransform());
 
@@ -364,7 +373,26 @@ public final class VCLGraphics {
 		Shape clip = graphics.getClip();
 		if (clip != null && clip.contains((double)destX, (double)destY, (double)destWidth, (double)destHeight))
 			clip = null;
-		if (image == null || clip != null || destWidth != srcWidth || destHeight != srcHeight) {
+		if (image == null) {
+			// Convert to an image and scale it
+			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+				// Mac OS X will render only PDF 1.3 (which is not supported by
+				// the Mac OS X Preview application) if we draw images that are
+				// smaller than the page
+				VCLImage bmpImage = new VCLImage((int)pageFormat.getWidth() + 1, (int)pageFormat.getHeight() + 1, bitCount);
+				VCLGraphics bmpGraphics = bmpImage.getGraphics();
+				bmpGraphics.drawBitmap(bmp, destX, destY, destWidth, destHeight, srcX, srcY, srcWidth, srcHeight);
+				bmpGraphics.dispose();
+				graphics.drawImage(bmpImage.getImage(), 0, 0, null);
+				bmpImage.dispose();
+			}
+			else {
+				VCLImage bmpImage = new VCLImage(bmp, srcX, srcY, srcWidth, srcHeight);
+				graphics.drawImage(bmpImage.getImage(), destX, destY, destX + destWidth, destY + destHeight, 0, 0, srcWidth, srcHeight, null);
+				bmpImage.dispose();
+			}
+		}
+		else if (clip != null || destWidth != srcWidth || destHeight != srcHeight) {
 			// Convert to an image and scale it
 			VCLImage bmpImage = new VCLImage(bmp, srcX, srcY, srcWidth, srcHeight);
 			graphics.drawImage(bmpImage.getImage(), destX, destY, destX + destWidth, destY + destHeight, 0, 0, srcWidth, srcHeight, null);
@@ -430,7 +458,20 @@ public final class VCLGraphics {
 		Shape clip = graphics.getClip();
 		if (clip != null && clip.contains((double)destX, (double)destY, (double)destWidth, (double)destHeight))
 			clip = null;
-		if (image == null || clip != null || destWidth != srcWidth || destHeight != srcHeight) {
+		if (image == null) {
+			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+				// Mac OS X will render only PDF 1.3 (which is not supported by
+				// the Mac OS X Preview application) if we draw images that are
+				// smaller than the page
+				VCLImage bmpImage = new VCLImage((int)pageFormat.getWidth() + 1, (int)pageFormat.getHeight() + 1, bitCount);
+				VCLGraphics bmpGraphics = bmpImage.getGraphics();
+				bmpGraphics.drawBitmap(bmp, destX, destY, destWidth, destHeight, srcX, srcY, srcWidth, srcHeight);
+				bmpGraphics.dispose();
+				graphics.drawImage(bmpImage.getImage(), 0, 0, null);
+				bmpImage.dispose();
+			}
+		}
+		else if (clip != null || destWidth != srcWidth || destHeight != srcHeight) {
 			// Draw to a temporary image and scale it
 			VCLImage mergedImage = new VCLImage(srcWidth, srcHeight, bmp.getBitCount());
 			mergedImage.getGraphics().drawBitmap(bmp, transBmp, 0, 0, srcWidth, srcHeight, srcX, srcY, srcWidth, srcHeight);
