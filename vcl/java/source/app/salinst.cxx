@@ -281,7 +281,7 @@ void SalInstance::Yield( BOOL bWait )
 	}
 
 	// Dispatch pending AWT events
-	if ( bWait )
+	if ( bWait && !ImplGetSVData()->maAppData.mbAppQuit )
 	{
 		ULONG nTimeout = 0;
 

@@ -629,6 +629,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			window = new Frame();
 		else
 			window = new Window(new Frame());
+		window.enableInputMethods(true);
 
 		// Process remaining style flags
 		if ((styleFlags & SAL_FRAME_STYLE_SIZEABLE) != 0)
@@ -637,6 +638,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// Add a panel as the only component
 		panel = new VCLFrame.NoPaintPanel(this);
 		panel.setBackground(Color.white);
+		panel.enableInputMethods(true);
 		window.add(panel);
 		bitCount = panel.getColorModel().getPixelSize();
 		if (bitCount <= 1)
