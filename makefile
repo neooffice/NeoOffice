@@ -126,7 +126,8 @@ build.neo_patches: \
 	build.neo_offmgr_patch \
 	build.neo_sysui_patch \
 	build.neo_toolkit_patch \
-	build.neo_vcl_patch
+	build.neo_vcl_patch \
+	build.neo_instsetoo_patch
 	touch "$@"
 
 build.package: build.neo_patches
@@ -138,14 +139,14 @@ build.package: build.neo_patches
 	echo "DESTINATIONPATH=$(PWD)/$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" >> "$(INSTALL_HOME)/response"
 	echo "OUTERPATH=" >> "$(INSTALL_HOME)/response"
 	echo "LOGFILE=" >> "$(INSTALL_HOME)/response"
-	echo "LANGUAGELIST=01" >> "$(INSTALL_HOME)/response"
+	echo "LANGUAGELIST="`source "$(OO_ENV_JAVA)" ; cd "instsetoo/util" ; dmake languages` >> "$(INSTALL_HOME)/response"
 	echo "[JAVA]" >> "$(INSTALL_HOME)/response"
 	echo "JavaSupport=preinstalled_or_none" >> "$(INSTALL_HOME)/response"
-	source "$(OO_ENV_JAVA)" ; "$(BUILD_HOME)/instsetoo/unxmacxp.pro/01/normal/setup" -v "-r:$(PWD)/$(INSTALL_HOME)/response"
+	source "$(OO_ENV_JAVA)" ; "$(BUILD_HOME)/instsetoo/unxmacxp.pro/"`cd "instsetoo/util" ; dmake languages`"/normal/setup" -v "-r:$(PWD)/$(INSTALL_HOME)/response"
 	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; cp "$(PWD)/$(BUILD_HOME)/desktop/unxmacxp.pro/bin/soffice" "program/soffice.bin"
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; cp "$(PWD)/$(BUILD_HOME)/dtrans/unxmacxp.pro/lib/libdtransjava$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/forms/unxmacxp.pro/lib/libfrm$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/toolkit/unxmacxp.pro/lib/libtk$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/vcl/unxmacxp.pro/lib/libvcl$${UPD}$${DLLSUFFIX}.dylib" "program"
 	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; cp "$(PWD)/$(BUILD_HOME)/readlicense/source/license/unx/LICENSE" "$(PWD)/$(BUILD_HOME)/readlicense/source/readme/unxmacxp/README" "."
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; cp "$(PWD)/$(BUILD_HOME)/offmgr/unxmacxp.pro/bin/neojava$${UPD}01.res" "program/resource/iso$${UPD}01.res"
+	source "$(OO_ENV_JAVA)" ; setenv languages `cd "instsetoo/util" ; dmake languages | sed "s#,# #g"` ; cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; sh -e -c 'for i in $$languages ; do cp "$(PWD)/$(BUILD_HOME)/offmgr/unxmacxp.pro/bin/neojava$${UPD}$${i}.res" "program/resource/iso$${UPD}$${i}.res" ; done'
 	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/nswrapper.sh" "program/nswrapper"
 	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/soffice.sh" "program/soffice"
 	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/Info.plist" "."
@@ -179,5 +180,5 @@ build.source_zip:
 	cd "$(SOURCE_HOME)" ; gnutar zcf "$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION).src.tar.gz" "$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)"
 	touch "$@"
 
-build.all: build.oo_all build.package
+build.all: build.oo_all build.package build.source_zip
 	touch "$@"
