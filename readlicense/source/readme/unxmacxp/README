@@ -1,0 +1,208 @@
+
+Welcome
+
+Last updated 2002 April 24
+
+OpenOffice.org 1.0 ReadMe
+
+For latest updates to this readme file, see www.openoffice.org/welcome/readme.html
+
+Dear User
+
+This file contains important information about the OpenOffice.org 1.0 office suite. Please read this information very carefully before starting work.
+The OpenOffice.org community, responsible for the development of this product, would like to invite you to participate as a community member. As a new user, you can check out the OpenOffice.org site with helpful user information at http://www.openoffice.org/about_us/introduction.html Also read the sections below of getting involved the OpenOffice.org project.
+
+Contents
+
+  System Requirements
+      Linux Intel
+      Windows
+      Solaris Sparc
+      Solaris Intel
+      Linux PowerPC
+
+  Common Notes
+      Network Installation: Error when calling the OpenOffice.org QuickStarter (Windows)
+      Changing the User Interface Font
+      Deinstalling a Network Installation Under Common Desktop Environment (CDE) (Solaris only)
+      Mozilla Address Book Driver (Solaris only)
+      File System ReiserFS: OpenOffice.org Will Not Start for User IDs Larger Than 65536
+      File Locking
+      Using Info-ZIP
+      Used/Modified Source Code
+
+  Getting Involved
+      Registration
+      User Survey
+      Report Bugs & Issues
+      Subscribe
+      Join one or more Projects
+      User Support
+      Way to start
+
+
+System Requirements 
+
+
+Linux Intel 
+
+
+* Linux Kernel version 2.2.13 or higher
+* glibc2 version 2.1.3 or higher
+* - Pentium compatible PC
+* 64 MB RAM
+* 250 MB available hard disk space
+* X Server with 800x600 or higher resolution, with at least 256 colors
+* Window Manager
+
+
+Windows
+
+
+* Microsoft Windows 95, 98, ME, NT (Service Pack 6 or higher), 2000 or XP (Please note: Windows 95 requires a DCOM95 update. For further information, visit http://www.microsoft.com/com/dcom/dcom95/dcom1_3.asp)
+* Pentium compatible PC
+* 64 MB RAM
+* 250 MB available hard disk space
+* 800x600 DPI resolution or higher, at least 256 colors
+
+Note: Please be aware that administrator rights are needed for the installation process.
+Make sure you have enough free memory in your temporary directory.
+
+Solaris Sparc 
+
+
+* Solaris 7 operating system (SPARC platform) or higher (Solaris 8 recommended)
+* 128 MB RAM
+* 250 MB available hard disk space
+* X Server with 800x600 or higher resolution, with at least 256 colors
+* Window Manager
+
+Important information about the installation of OpenOffice.org on the Sun Solaris platform:
+Before installing OpenOffice.org, one or more operating system patches from Sun Microsystems must be installed. You can download them at http://sunsolve.sun.com
+Operating system patches required:
+
+* for Solaris 7: 106327-08, 106300-09 (only 64 bit)
+* for Solaris 8: 108434-01, 108773-12, 108435-01 (only 64 bit)
+
+The versions mentioned above are the minimum requirements, newer (higher) version numbers are also allowed.
+
+Solaris Intel 
+
+
+* Solaris 7 operating system (Intel platform) or higher (Solaris 8 recommended)
+* 64 MB RAM
+* 250 MB available hard disk space
+* X Server with 800x600 or higher resolution, with at least 256 colors
+* Window Manager
+
+Important information about the installation of OpenOffice.org on the Sun Solaris platform:
+Before installing OpenOffice.org, one or more operating system patches from Sun Microsystems must be installed. You can download them at http://sunsolve.sun.com
+Operating system patches required:
+
+* for Solaris 7: 106328-08
+* for Solaris 8: 108436-01, 108774-12
+
+The versions mentioned above are the minimum requirements, newer (higher) version numbers are also allowed.
+
+Linux PowerPC
+
+
+* Linux Kernel version 2.2.13 or higher
+* glibc2 version 2.2 or higher
+* Macintosh PowerPC, IBM RS/6000, Motorola PreP or other Linux compatible PowerPC based hardware
+* 96 MB RAM
+* 250 MB available hard disk space
+* X Server with 800x600 or higher resolution, with at least 256 colors
+* Window Manager
+
+
+Common Notes
+
+You can install OpenOffice.org 1.0 along side of an older version of OpenOffice.org. If you later choose to deinstall a previous version of OpenOffice.org, you must call the setup program of the newer version and run the Repair option. This makes sure that the new version is correctly registered in your system.
+Make sure you have enough free memory in your temporary directory.
+
+Network Installation: Error When Calling the OpenOffice.org Quickstarter (Windows)
+
+If, when starting the system, problems should occur in calling the OpenOffice.org Quickstarter (e.g. invalid link), this is probably due to the fact that the network drive on which the network installation is installed is not or not yet available.
+In most cases, this happens when the network drives are logged in via a login script, thereby establishing the connection for the network drives parallel to running the programs of the autostart group from which the Quickstarter is also started.
+To avoid this problem, the network drive should be connected via the system's services. If this is not possible, the link used to call the Quickstarter can be removed from the autostart group of the system, or the Quickstarter can already be disabled when installing the workstation installation. If the system administrator already disabled the Quickstarter during installation of the network installation, then the Quickstarter cannot be selected by the user in a later workstation installation.
+
+Changing the User Interface Font
+
+In OpenOffice.org you can change the font used for screen display and printing by replacing it with a different font installed on your system. This can be done using the font replacement function. Choose Tools - Options - OpenOffice.org - Font Replacement to access this function.
+To change the font of the OpenOffice.org user interface, you have to replace the default font "Andale Sans UI" with another font and mark the "always" setting for this replacement.
+Refer to the OpenOffice.org Help for a detailed explanation of the dialog.
+
+Deinstalling a Network Installation Under Common Desktop Environment (CDE) (Solaris)
+
+The shortcuts set in the CDE in a network installation are not automatically removed during deinstallation. Before deinstallation, enter as Administrator (root) the following command line to remove the shortcuts from the CDE: /usr/dt/bin/dtappintegrate -u -s [path to OpenOffice.org].
+Example: /usr/dt/bin/dtappintegrate -u -s /usr/local/openoffice.org1.0
+
+Mozilla Address Book Driver (Solaris only)
+
+The Mozilla address book driver requires the SUNWzlib package. This package is not part of the minimum Solaris operating system installation. If you require access to the Mozilla address book, then add this package to your Solaris operating system using the command "pkgadd" from the installation CD.
+
+File System ReiserFS: OpenOffice.org Will Not Start for User IDs Larger Than 65535
+
+In versions lower than 3.6, the file system ReiserFS causes a problem as soon as the user ID is larger than 65535. The problem is that files temporarily saved by OpenOffice.org can no longer be removed by the program itself, but rather only by the system administrator (e.g. /tmp/OSL_PIPE_xxx ). The result is that OpenOffice.org cannot be started. The problem is in the ReiserFS file system and has been fixed in version 3.6 and higher.
+
+File Locking
+
+In the default setting, file locking is turned off in OpenOffice.org. To activate it, you have to set the appropriate environment variables SAL_ENABLE_FILE_LOCKING=1 and export SAL_ENABLE_FILE_LOCKING. These entries are already in disabled form in the soffice script file.
+Warning: The activated file locking feature can cause problems with Solaris 2.5.1 and 2.7 used in conjunction with Linux NFS 2.0. If your system environment has these parameters, we strongly recommend that you avoid using the file locking feature. Otherwise, OpenOffice.org will hang when you try to open a file from a NFS mounted directory from a Linux computer.
+
+Using Info-ZIP
+
+OpenOffice.org uses Info-ZIP to create and unpack the OpenOffice.org installation, as well as for packing and unpacking the OpenOffice.org XML file format. Info-ZIP programs (ZIP, UnZip and other utilities) are available free of charge and can be used in the source code and as an executable program. They can be attained by visiting Anonymous FTP sites such as ftp.uu.net:/pub/archiving/zip/*.
+
+Used / Modified Source Code
+
+Portions Copyright 1998, 1999 James Clark. Portions Copyright 1996, 1998 Netscape Communications Corporation.
+
+
+Getting Involved
+
+The OpenOffice.org Community would very much benefit from your active participation in the development of this important open source project.
+As a User, you are already a valuable part of the suite's development process and we would like to encourage you to take an even more active role with a view to being a long-term contributor to the Community. Please join and checkout the user page at: openoffice.org
+
+Registration
+
+Please take a little time to complete the minimal Product Registration process when you install the software. While registration is optional, we encourage you to register, since the information enables the Community to make an even better software suite and address User needs directly. Through its Privacy Policy, the OpenOffice.org Community takes every precaution to safeguard your personal data. If you missed the registration at installation, you can return and register at any time at www.openoffice.org/welcome/registration-site.html
+
+User Survey
+
+There is also a User Survey located online which we encourage you to fill out. The User Survey results will help OpenOffice.org move more rapidly in setting new standards for the creation of the next-generation office suite. Through its Privacy Policy, the OpenOffice.org Community takes every precaution to safeguard your personal data.
+
+Report Bugs & Issues
+
+The OpenOffice.org Web site hosts IssueZilla, our mechanism for reporting, tracking and solving bugs and issues. We encourage all Users to feel entitled and welcome to report issues that may arise on your particular platform. Energetic reporting of issues is one of the most important contributions that the User Community can make to the ongoing development and improvement of the suite.
+
+Subscribe
+
+Here are a few of the Project mailing lists to which you can subscribe at www.openoffice.org/mail_list.html
+
+* News: announce@openoffice.org *recommended to all users* (light traffic)
+* User support: users@openoffice.org *recommended to new users* (moderate traffic)
+* Main user forum: discuss@openoffice.org *Easy way to lurk on discussions* (heavy)
+* Marketing project: dev@marketing.openoffice.org*beyond development* (getting heavy)
+* General code contributor list: dev@openoffice.org (moderate/heavy)
+* Groupware: groupware@whiteboard.openoffice.org (moderate)
+
+
+Join one or more Projects
+
+You can make major contributions to this important open source project even if you have limited software design or coding experience. Yes, you!
+At http://projects.openoffice.org/index.html you will find projects ranging from Localization, Porting and Groupware to some real core coding projects. If you are not a developer, try the Documentation or the Marketing Project. The OpenOffice.org Marketing Project is applying both guerrilla and traditional commercial techniques to marketing open source software, and we are doing it across language and cultural barriers, so you can help just be spreading the word and telling a friend about this office suite.
+You can help by joining the Marketing Communications & Information Network here: http://marketing.openoffice.org/contacts.html
+where you can provide point communication contact with press, media, government agencies, consultants, schools, Linux Users Groups and developers in your country and local community.
+
+User Support
+
+For help with the OpenOffice.org 1.0 office suite, take a look at the archieves to questions already answered on the 'users@openoffice.org' mailing list at http://www.openoffice.org/mail_list.html. Alternativeely, you can send in your questions to users@openoffice.org. Remember to subscribe to the list to get an email response.
+Also check the FAQ section, found on left hand navigation bar of the OpenOffice.org homepage. Frequently asked questions are posted here.
+
+Way to Start
+
+The best way to start contributing is to subscribe to one or more of the mailing lists, lurk for a while, and gradually use the mail archives to familiarize yourself with many of the topics covered since the OpenOffice.org source code was released back in October 2000. When you're comfortable, all you need to do is make an email self-introduction and jump right in. If you are familiar with Open Source Projects, check out our To-Dos list and see if there is anything you would like to help with at http://www.openoffice.org/dev_docs/todos.html.
+We hope you enjoy working with the new OpenOffice.org 1.0 office suite and join us online.
+The OpenOffice.org community
