@@ -36,8 +36,16 @@
 package com.sun.star.vcl;
 
 import java.awt.AWTEvent;
+import java.awt.Component;
 import java.awt.EventQueue;
+import java.awt.Frame;
 import java.awt.Toolkit;
+import java.awt.Window;
+import java.awt.event.ComponentEvent;
+import java.awt.event.FocusEvent;
+import java.awt.event.InputMethodEvent;
+import java.awt.event.KeyEvent;
+import java.awt.im.InputContext;
 import java.lang.reflect.Constructor;
 
 /**
@@ -321,6 +329,11 @@ public final class VCLEventQueue {
 	final class NoExceptionsEventQueue extends EventQueue {
 
 		/**
+		 * The key component.
+		 */
+		private Component keyComponent = null;
+
+		/**
 		 * Dispatch an event.
 		 *
 		 * @param event the event to dispatch
@@ -328,6 +341,79 @@ public final class VCLEventQueue {
 		protected void dispatchEvent(AWTEvent event) {
 
 			try {
+				// When using Asian keyboards focus gets stuck on the last
+				// panel displayed so we need to reroute key events to the
+				// correct window
+				if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+					int id = event.getID();
+					switch (id ) {
+						case FocusEvent.COMPONENT_HIDDEN:
+						{
+							Component c = ((ComponentEvent)event).getComponent();
+							if (c instanceof Frame && ((Frame)c).getComponent(0) == keyComponent)
+								keyComponent = null;
+							break;
+						}
+						case FocusEvent.COMPONENT_SHOWN:
+						{
+							Component c = ((ComponentEvent)event).getComponent();
+							if (c instanceof Frame)
+								keyComponent = ((Frame)c).getComponent(0);
+							break;
+						}
+						case FocusEvent.FOCUS_GAINED:
+						{
+							Frame[] frames = Frame.getFrames();
+							for (int i = 0; i < frames.length; i++) {
+								frames[i].repaint();
+								Window[] windows = frames[i].getOwnedWindows();
+								for (int j = 0; j < windows.length; j++)
+									windows[j].repaint();
+							}
+							keyComponent = ((FocusEvent)event).getComponent();
+							break;
+						}
+						case FocusEvent.FOCUS_LOST:
+						{
+							Frame[] frames = Frame.getFrames();
+							for (int i = 0; i < frames.length; i++) {
+								InputContext ic = frames[i].getInputContext();
+								if (ic != null)
+									ic.endComposition();
+								Window[] windows = frames[i].getOwnedWindows();
+								for (int j = 0; j < windows.length; j++) {
+									ic = windows[j].getInputContext();
+									if (ic != null)
+										ic.endComposition();
+								}
+							}
+							Component c = ((FocusEvent)event).getComponent();
+							if (c == keyComponent)
+								keyComponent = null;
+							break;
+						}
+						case InputMethodEvent.CARET_POSITION_CHANGED:
+						case InputMethodEvent.INPUT_METHOD_TEXT_CHANGED:
+						{
+							if (keyComponent != null) {
+								InputMethodEvent e = (InputMethodEvent)event;
+								event = new InputMethodEvent(keyComponent, id, e.getText(), e.getCommittedCharacterCount(), e.getCaret(), e.getVisiblePosition());
+							}
+							break;
+						}
+						case KeyEvent.KEY_PRESSED:
+						case KeyEvent.KEY_RELEASED:
+						case KeyEvent.KEY_TYPED:
+						{
+							if (keyComponent != null) {
+								KeyEvent e = (KeyEvent)event;
+								event = new KeyEvent(keyComponent, id, e.getWhen(), e.getModifiers(), e.getKeyCode(), e.getKeyChar());
+							}
+							break;
+						}
+					}
+				}
+	
 				super.dispatchEvent(event);
 			}
 			catch (Throwable t) {

@@ -798,10 +798,25 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void endComposition() {
 
-		InputContext ic = panel.getInputContext();
-		if (ic != null)
-			ic.endComposition();
-		Toolkit.getDefaultToolkit().sync();
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+			Frame[] frames = Frame.getFrames();
+			for (int i = 0; i < frames.length; i++) {
+				InputContext ic = frames[i].getInputContext();
+				if (ic != null)
+					ic.endComposition();
+				Window[] windows = frames[i].getOwnedWindows();
+				for (int j = 0; j < windows.length; j++) {
+					ic = windows[j].getInputContext();
+					if (ic != null)
+						ic.endComposition();
+				}
+			}
+		}
+		else {
+			InputContext ic = window.getInputContext();
+			if (ic != null)
+				ic.endComposition();
+		}
 
 	}
 
@@ -821,16 +836,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void focusGained(FocusEvent e) {
 
-		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-			Frame[] frames = Frame.getFrames();
-			for (int i = 0; i < frames.length; i++) {
-				frames[i].repaint();
-				Window[] windows = frames[i].getOwnedWindows();
-				for (int j = 0; j < windows.length; j++)
-					windows[j].repaint();
-			}
-		}
-
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_GETFOCUS, this, 0));
 
 	}
@@ -841,8 +846,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param e the <code>FocusEvent</code>
 	 */
 	public void focusLost(FocusEvent e) {
-
-		endComposition();
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
 
@@ -1307,7 +1310,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public TextHitInfo getLocationOffset(int x, int y) {
 
-		return TextHitInfo.leading(0);
+		return null;
 
 	}
 
@@ -1368,15 +1371,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public Rectangle getTextLocation(TextHitInfo offset) {
 
-		Rectangle r = new Rectangle(0, 0, 0, 0);
-
-		if (panel.isShowing()) {
-			Point location = panel.getLocationOnScreen();
-			r.x = location.x;
-			r.y = location.y;
-		}
-
-		return r;
+		return null;
 
 	}
 
@@ -1795,11 +1790,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		if (window != null) {
-			Cursor c = window.getCursor();
-			if (c == null || c.getType() != cursor) {
-				window.setCursor(Cursor.getPredefinedCursor(cursor));
-				Toolkit.getDefaultToolkit().sync();
-			}
+			window.setCursor(Cursor.getPredefinedCursor(cursor));
+			Toolkit.getDefaultToolkit().sync();
 		}
 
 	}
