@@ -212,7 +212,7 @@ Orientation com_sun_star_vcl_VCLPageFormat::getOrientation()
 }
 
 // ----------------------------------------------------------------------------
-  
+
 const Size com_sun_star_vcl_VCLPageFormat::getPageSize()
 { 
 	static jmethodID mID = NULL;
@@ -250,6 +250,27 @@ const Size com_sun_star_vcl_VCLPageFormat::getPageSize()
 					out = Size( (long)t.pEnv->GetIntField( tempObj, fIDWidth ), (long)t.pEnv->GetIntField( tempObj, fIDHeight ) );
 			}
 		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+Paper com_sun_star_vcl_VCLPageFormat::getPaperType()
+{
+	static jmethodID mID = NULL;
+	Paper out = PAPER_USER;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getPaperType", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (Paper)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
 }

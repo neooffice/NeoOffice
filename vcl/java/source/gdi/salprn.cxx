@@ -158,7 +158,7 @@ BOOL SalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 	// Populate the job setup
 	pSetupData->meOrientation = maPrinterData.mpVCLPageFormat->getOrientation();
 	pSetupData->mnPaperBin = 0;
-	pSetupData->mePaperFormat = PAPER_USER;
+	pSetupData->mePaperFormat =  maPrinterData.mpVCLPageFormat->getPaperType();
 	Size aSize( maPrinterData.mpVCLPageFormat->getPageSize() );
 	pSetupData->mnPaperWidth = aSize.Width();
 	pSetupData->mnPaperHeight = aSize.Height();

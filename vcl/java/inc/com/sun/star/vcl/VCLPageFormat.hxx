@@ -72,6 +72,7 @@ public:
 	const Size			getPageSize();
 	void				setOrientation( Orientation _par0 );
 	void				setPageResolution( long _par0, long _par1 );
+	Paper				getPaperType();
 	sal_Bool			setup();
 };
 

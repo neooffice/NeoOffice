@@ -498,7 +498,7 @@ SalInfoPrinter* SalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
 	pSetupData->maDriver = pQueueInfo->maDriver;
 	pSetupData->meOrientation = pPrinter->maPrinterData.mpVCLPageFormat->getOrientation();
 	pSetupData->mnPaperBin = 0;
-	pSetupData->mePaperFormat = PAPER_USER;
+	pSetupData->mePaperFormat = pPrinter->maPrinterData.mpVCLPageFormat->getPaperType();
 	Size aSize( pPrinter->maPrinterData.mpVCLPageFormat->getPageSize() );
 	pSetupData->mnPaperWidth = aSize.Width();
 	pSetupData->mnPaperHeight = aSize.Height();
