@@ -56,7 +56,8 @@ dummy:
 .IF "$(remote)"
 SLOFILES= \
 	$(SLO)/salframe.obj \
-	$(SLO)/salobj.obj
+	$(SLO)/salobj.obj \
+	$(SLO)/salmenu.obj
 .ENDIF
 
 .ENDIF		# "$(GUIBASE)"!="java"

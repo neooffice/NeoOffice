@@ -89,7 +89,9 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX
 #include <com/sun/star/vcl/VCLPageFormat.hxx>
 #endif
-
+#ifndef _SV_MENU_HXX
+#include <menu.hxx>
+#endif
 #include "salinst.hrc"
 
 #ifdef MACOSX
@@ -1060,6 +1062,32 @@ void SalInstance::DestroyPrinter( SalPrinter* pPrinter )
 {
 	if ( pPrinter )
 		delete pPrinter;
+}
+
+// -----------------------------------------------------------------------
+
+SalMenu* SalInstance::CreateMenu( BOOL bMenuBar, Menu* pVCLMenu )
+{
+    return NULL;
+}
+
+// -----------------------------------------------------------------------
+
+void SalInstance::DestroyMenu( SalMenu* pMenu )
+{
+}
+
+// -----------------------------------------------------------------------
+
+SalMenuItem* SalInstance::CreateMenuItem( const SalItemParams* pItemData )
+{
+    return NULL;
+}
+
+// -----------------------------------------------------------------------
+
+void SalInstance::DestroyMenuItem( SalMenuItem* pItem )
+{
 }
 
 // -----------------------------------------------------------------------

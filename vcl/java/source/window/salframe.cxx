@@ -699,6 +699,18 @@ bool SalFrame::SetPluginParent( SystemParentData* pNewParent )
 	return false;
 }
 
+// -----------------------------------------------------------------------
+
+void SalFrame::SetMenu( SalMenu* pSalMenu )
+{
+}
+
+// -----------------------------------------------------------------------
+
+void SalFrame::DrawMenuBar()
+{
+}
+
 // =======================================================================
 
 SalFrameData::SalFrameData()
