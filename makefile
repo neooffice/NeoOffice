@@ -162,11 +162,12 @@ build.package: build.neo_patches
 	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; sh -e -c 'for i in "share/config/registry/instance/org/openoffice/Office/Common.xml" "share/config/registry/cache/instance/org/openoffice/Office/Common.dat" ; do sed "s#$(PWD)/$(INSTALL_HOME)/package#/Applications#g" "$${i}" | sed "s#>OpenOffice\.org [0-9\.]* #>$(PRODUCT_NAME) $(PRODUCT_VERSION) #g" > "../../../out" ; mv -f "../../../out" "$${i}" ; done'
 	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; sh -e -c 'if [ ! -d "MacOS" ] ; then rm -Rf "MacOS" ; mv -f "program" "MacOS" ; ln -s "MacOS" "program" ; fi'
 	chmod -Rf u+w,og-w,a+r "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app"
-	mkdir -p "$(INSTALL_HOME)/resources"
-	cp etc/gpl.html "$(INSTALL_HOME)/resources/License.html"
-	cd "bin" ; sh -e -c 'for i in post_install post_upgrade ; do sed "s#\$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g" "$${i}" > "$(PWD)/$(INSTALL_HOME)/resources/$(PRODUCT_DIR_NAME).$${i}" ; chmod 755 "$(PWD)/$(INSTALL_HOME)/resources/$(PRODUCT_DIR_NAME).$${i}" ; done'
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' etc/neojava.info | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).info"
-	/usr/bin/package "$(INSTALL_HOME)/package" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).info" -d "$(INSTALL_HOME)" -r "$(INSTALL_HOME)/resources"
+	/usr/bin/package "$(INSTALL_HOME)/package" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).info" -d "$(INSTALL_HOME)"
+	sh -e -c 'if [ ! -d "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources" ] ; then mv "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg" "$(INSTALL_HOME)/Resources" ; mkdir -p "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents" ; mv "$(INSTALL_HOME)/Resources" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents" ; fi'
+	cp etc/gpl.html "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/License.html"
+	cd "bin" ; sh -e -c 'for i in post_install post_upgrade ; do sed "s#\$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g" "$${i}" > "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).$${i}" ; chmod 755 "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).$${i}" ; done'
+	chmod -Rf u+w,og-w,a+r "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg"
 	touch "$@"
 
 build.source_zip:
