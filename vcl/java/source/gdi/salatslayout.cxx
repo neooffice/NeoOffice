@@ -11,13 +11,12 @@
  *
  *         - GNU General Public License Version 2.1
  *
- *  Dan Williams, October 2003
- *  Patrick Luby, July 2004
+ *  Sun Microsystems Inc., December, 2003
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2003 by Dan Williams (danw@neooffice.org)
- *  Copyright 2004 by Patrick Luby (patrick.luby@planamesa.com)
+ *  Copyright 2003 by Sun Microsystems, Inc.
+ *  901 San Antonio Road, Palo Alto, CA 94303, USA
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
@@ -32,6 +31,15 @@
  *  License along with this library; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
  *  MA  02111-1307  USA
+ *  
+ *  =================================================
+ *  Modified July 2004 by Patrick Luby. SISSL Removed. NeoOffice is
+ *  distributed under GPL only under modification term 3 of the LGPL.
+ *
+ *  Original source obtained from patch submitted to OpenOffice.org in issue
+ *  23283 (see http://qa.openoffice.org/issues/show_bug.cgi?id=23283).
+ *
+ *  Contributor(s): _______________________________________
  *
  ************************************************************************/
 
