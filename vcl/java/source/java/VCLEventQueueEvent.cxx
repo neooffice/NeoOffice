@@ -178,16 +178,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 
 			return;
 		}
-		case SALEVENT_YIELDEVENTQUEUE:
-		{
-			// Unlock mutexes and block event queue so that the native event
-			// handler can proceed
-			pSalData->maNativeEventCondition.set();
-			ULONG nCount = Application::ReleaseSolarMutex();
-			OThread::yield();
-			Application::AcquireSolarMutex( nCount );
-			return;
-		}
 		case SALEVENT_ACTIVATE_APPLICATION:
 		{
 			// Make sure that the current document window is showing

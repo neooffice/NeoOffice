@@ -118,6 +118,7 @@
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 #include <sys/syslimits.h>
+#undef check
 
 typedef jobject Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type( JNIEnv *, jobject );
 typedef void Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type( JNIEnv *, jobject );
@@ -485,16 +486,18 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 					
 					if ( isMenubar )
 					{
-						// Post a yield event and wait the VCL event queue to
-						// block
-						pSalData->maNativeEventCondition.set();
-						pSalData->maNativeEventCondition.reset();
-						com_sun_star_vcl_VCLEvent aYieldEvent( SALEVENT_YIELDEVENTQUEUE, NULL, NULL );
-						pSalData->mpEventQueue->postCachedEvent( &aYieldEvent );
-
 						// Unlock the Java lock
 						ReleaseJavaLock();
 
+						// Make sure condition is not already waiting
+						if ( !pSalData->maNativeEventCondition.check() )
+						{
+							pSalData->maNativeEventCondition.wait();
+							pSalData->maNativeEventCondition.set();
+						}
+
+						// Wait for all pending AWT events to be dispatched
+						pSalData->maNativeEventCondition.reset();
 						pSalData->maNativeEventCondition.wait();
 						pSalData->maNativeEventCondition.set();
 
@@ -1221,7 +1224,7 @@ void SalInstance::Yield( BOOL bWait )
 
 	// Determine timeout
 	ULONG nTimeout = 0;
-	if ( bWait && pSalData->mnTimerInterval )
+	if ( bWait && pSalData->mnTimerInterval && pSalData->maNativeEventCondition.check() )
 	{
 		timeval aTimeout;
 
@@ -1250,6 +1253,13 @@ void SalInstance::Yield( BOOL bWait )
 	}
 	else
 	{
+		// Allow Carbon event loop to proceed
+		if ( !pSalData->maNativeEventCondition.check() )
+		{
+			pSalData->maNativeEventCondition.set();
+			OThread::yield();
+		}
+	
 		AcquireYieldMutex( nCount );
 	}
 

@@ -826,11 +826,6 @@ public final class VCLEvent extends AWTEvent {
 	public final static int SALEVENT_PRINTDOCUMENT = 101;
 
 	/**
-	 * SALEVENT_YIELDEVENTQUEUE constant.
-	 */
-	public final static int SALEVENT_YIELDEVENTQUEUE = 110;
-
-	/**
 	 * SALEVENT_ACTIVATE_APPLICATION constant.
 	 */
 	public final static int SALEVENT_ACTIVATE_APPLICATION = 120;
@@ -1776,8 +1771,7 @@ public final class VCLEvent extends AWTEvent {
 	 */
 	boolean isAWTEvent() {
 
-		int id = getID();
-		return (awtEvent || id == SALEVENT_YIELDEVENTQUEUE || id == SALEVENT_ACTIVATE_APPLICATION );
+		return (awtEvent || getID() == SALEVENT_ACTIVATE_APPLICATION);
 
 	}
 
@@ -1905,11 +1899,15 @@ public final class VCLEvent extends AWTEvent {
 			case SALEVENT_PRINTDOCUMENT:
 				typeStr = "SALEVENT_PRINTDOCUMENT";
 				break;
-			case SALEVENT_YIELDEVENTQUEUE:
-				typeStr = "SALEVENT_YIELDEVENTQUEUE";
-				break;
 			case SALEVENT_ACTIVATE_APPLICATION:
 				typeStr = "SALEVENT_ACTIVATE_APPLICATION";
+				break;
+			case SALEVENT_ABOUT:
+				typeStr = "SALEVENT_ABOUT";
+				break;
+			case SALEVENT_PREFS:
+				typeStr = "SALEVENT_PREFS";
+				break;
 			default:
 				typeStr = "unknown type";
 		}
