@@ -1324,7 +1324,10 @@ void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
 #ifdef USE_JAVA
     if ( rAppEvent.IsOpenEvent() || rAppEvent.IsPrintEvent() )
     {
-        if ( !::desktop::Desktop::bSuppressOpenDefault && !GetCommandLineArgs()->IsInvisible() )
+ 		if ( GetCommandLineArgs()->IsInvisible() )
+			return;
+
+        if ( !::desktop::Desktop::bSuppressOpenDefault )
         {
             ::desktop::Desktop::bSuppressOpenDefault = sal_True;
             Reference< XMultiServiceFactory > xSMgr = ::comphelper::getProcessServiceFactory();
