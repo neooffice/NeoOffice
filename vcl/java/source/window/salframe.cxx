@@ -276,6 +276,13 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	if ( ! ( nFlags & SAL_FRAME_POSSIZE_HEIGHT ) )
 		nHeight = aPosSize.GetHeight();
 
+	// Adjust position for RTL layout
+	if ( maFrameData.mpParent && ! ( nFlags & ( SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT ) ) && Application::GetSettings().GetLayoutRTL() )
+	{
+		Rectangle aParentPosSize( Point( maFrameData.mpParent->maGeometry.nX - maFrameData.mpParent->maGeometry.nLeftDecoration, maFrameData.mpParent->maGeometry.nY - maFrameData.mpParent->maGeometry.nTopDecoration ), Size( maFrameData.mpParent->maGeometry.nWidth, maFrameData.mpParent->maGeometry.nHeight ) );
+		nX = aParentPosSize.GetWidth() - nWidth - nX - 1;
+	}
+
 	Rectangle aWorkArea;
 
 	if ( maFrameData.mbCenter && ! ( nFlags & ( SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y ) ) )
@@ -673,7 +680,8 @@ ULONG SalFrame::GetCurrentModButtons()
 
 void SalFrame::SetParent( SalFrame* pNewParent )
 {
-	maFrameData.mpVCLFrame->setParent( pNewParent );
+	maFrameData.mpParent = pNewParent;
+	maFrameData.mpVCLFrame->setParent( maFrameData.mpParent );
 }
 
 // -----------------------------------------------------------------------
@@ -691,7 +699,7 @@ bool SalFrame::SetPluginParent( SystemParentData* pNewParent )
 SalFrameData::SalFrameData()
 {
 	mpVCLFrame = NULL;
-	mpGraphics = new SalGraphics();
+	mpGraphics = new SalGraphicsLayout();
 	mnStyle = 0;
 	mpParent = NULL;
 	mbGraphics = FALSE;

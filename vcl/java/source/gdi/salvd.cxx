@@ -114,8 +114,12 @@ SalVirDevData::SalVirDevData()
 {
 	mpVCLImage = NULL;
 	mnBitCount = 0;
-	mpGraphics = new SalGraphics();
+	mpGraphics = new SalGraphicsLayout();
 	mbGraphics = FALSE;
+
+	// By default no mirroring for VirtualDevices
+	mpGraphics->SetLayout( 0 );
+
 }
 
 // -----------------------------------------------------------------------

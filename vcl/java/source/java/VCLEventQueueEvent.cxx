@@ -257,6 +257,9 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				else
 					pMouseEvent->mnButton = nModifiers & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
 			}
+			// Adjust position for RTL layout
+			if ( pFrame && Application::GetSettings().GetLayoutRTL() )
+				pMouseEvent->mnX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pMouseEvent->mnX - 1;
 			dispatchEvent( nID, pFrame, pMouseEvent );
 			delete pMouseEvent;
 			return;
@@ -324,6 +327,9 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					pPaintEvent->mnBoundHeight = aUpdateRect.GetHeight();
 				}
 			}
+			// Adjust position for RTL layout
+			if ( pFrame && Application::GetSettings().GetLayoutRTL() )
+				pPaintEvent->mnBoundX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pPaintEvent->mnBoundWidth - pPaintEvent->mnBoundX;
 			dispatchEvent( nID, pFrame, pPaintEvent );
 			delete pPaintEvent;
 			return;
