@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<oor:component-data xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" oor:name="Common" oor:package="org.openoffice.Office">
+ <node oor:name="Path">
+  <node oor:name="Current">
+   <prop oor:name="OfficeInstall" oor:type="xs:string">
+    <value>$(sysbindir)/..</value>
+   </prop>
+  </node>
+ </node>
+ <node oor:name="Misc">
+  <prop oor:name="FirstRun" oor:type="xs:boolean">
+   <value>false</value>
+  </prop>
+ </node>
+ <node oor:name="View">
+  <prop oor:name="LookAndFeel" oor:type="xs:short">
+   <value>4</value>
+  </prop>
+ </node>
+</oor:component-data>
