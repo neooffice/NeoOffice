@@ -51,7 +51,7 @@ os=`uname`
 apphome=`dirname "$0"`
 userbase="$apphome/../user"
 sharebase="$apphome/../share"
-userinstall="$HOME/Library/NeoOfficeJ"
+userinstall="$HOME/Library/$(PRODUCT_DIR_NAME)/user"
 
 # Make sure that this is not a botched installation
 if [ ! -d "$apphome" ] ; then
@@ -117,7 +117,7 @@ else
     locale="$matchedlocale"
 fi
 
-configdir="$userinstall/user/config"
+configdir="$userinstall/config"
 xmldir="$configdir/registry/instance/org/openoffice"
 xmltemplatedir="$configdir/registry/template/org/openoffice"
 
@@ -128,7 +128,7 @@ if [ ! -d "$userinstall" ] ; then
 fi
 if [ ! -z "$repair" ] ; then
     chmod -Rf u+rw "$userinstall"
-    cp -Rf "$userbase" "$userinstall"
+    ( cd "$userbase" ; tar cf - * ) | ( cd "$userinstall" ; tar xf - )
     chmod -Rf u+rw "$userinstall"
 fi
 
@@ -141,7 +141,7 @@ if [ ! -d "$xmltemplatedir" ] ; then
 fi
 for i in `cd "$xmltemplatedir" ; find . ! -type d` ; do
     if [ ! -z "$repair" -o ! -f "$xmldir/$i" ] ; then
-        sed 's#>USER_INSTALL_DIR<#>'"$userinstall/user"'<#g' "$xmltemplatedir/$i" | sed 's#>LOCALE<#>'"$locale"'<#g' | sed 's#>NSWRAPPER_PATH<#>'"$apphome/nswrapper"'<#g' | sed 's#>CURRENT_DATE<#>'`date +%d.%m.%Y/%H.%M.%S`'<#g' > "$xmldir/$i"
+        sed 's#>USER_INSTALL_DIR<#>'"$userinstall"'<#g' "$xmltemplatedir/$i" | sed 's#>LOCALE<#>'"$locale"'<#g' | sed 's#>NSWRAPPER_PATH<#>'"$apphome/nswrapper"'<#g' | sed 's#>CURRENT_DATE<#>'`date +%d.%m.%Y/%H.%M.%S`'<#g' > "$xmldir/$i"
     fi
 done
 
@@ -153,8 +153,8 @@ fi
 setupxmlbak="$setupxml.bak"
 rm -f "$setupxmlbak"
 if [ ! -f "$setupxmlbak" ] ; then
-    cp -f "$setupxml" "$setupxmlbak"
-    sed 's#>.*</ooSetupInstallPath>#>'"$userinstall/user"'</ooSetupInstallPath>#g' "$setupxmlbak" | sed 's#>.*</ooLocale>#>'"$locale"'</ooLocale>#g' > "$setupxml"
+    cat /dev/null "$setupxml" > "$setupxmlbak"
+    sed 's#>.*</ooSetupInstallPath>#>'"$userinstall"'</ooSetupInstallPath>#g' "$setupxmlbak" | sed 's#>.*</ooLocale>#>'"$locale"'</ooLocale>#g' > "$setupxml"
     rm -f "$setupxmlbak"
 fi
 
@@ -165,7 +165,7 @@ if [ ! -f "$linguxml" ] ; then
 fi
 linguxmlbak="$linguxml.bak"
 if [ ! -f "$linguxmlbak" ] ; then
-    cp -f "$linguxml" "$linguxmlbak"
+    cat /dev/null "$linguxml" > "$linguxmlbak"
     sed 's#<DefaultLocale cfg:type="string"/>#<DefaultLocale cfg:type="string">'"$locale"'</DefaultLocale>#g' "$linguxmlbak" > "$linguxml"
 fi
 
@@ -178,7 +178,7 @@ if [ "$os" = "Darwin" ] ; then
     grep -q '</LookAndFeel>' "$commonxml"
     if [ "$?" != "0" ] ; then
         commonxmlbak="$commonxml.bak"
-        cp -f "$commonxml" "$commonxmlbak"
+        cat /dev/null "$commonxml" > "$commonxmlbak"
         grep -q '</View>' "$commonxml"
         if [ "$?" != "0" ] ; then
             sed 's#</Common>#<View><LookAndFeel cfg:type="short">4</LookAndFeel></View></Common>#g' "$commonxmlbak" > "$commonxml"
@@ -219,7 +219,7 @@ if [ "$os" = "Darwin" ] ; then
             rm -f "$userfontdir/$i"
         fi
         if [ ! -f "$userfontdir/$i" ] ; then
-            cp -f "$appfontdir/$i" "$userfontdir/$i"
+            cat /dev/null "$appfontdir/$i" > "$userfontdir/$i"
         fi
     done
 fi
