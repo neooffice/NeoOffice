@@ -233,15 +233,19 @@ public final class VCLMenuBar {
 		}
 
 		synchronized (awtMenuBar) {
-			for(int i=awtMenuBar.countMenus()-1; i>=0; i--)
-				awtMenuBar.remove(i);
-
-			Iterator e=menus.iterator();
-			while(e.hasNext()) {
-				VCLMenuItemData m=(VCLMenuItemData)e.next();
-				m.unregisterAllAWTPeers();
+			if(awtMenuBar.countMenus() > 0) {
+				Iterator e=menus.iterator();
+				int i = 0;
+				while(e.hasNext()) {
+					VCLMenuItemData m=(VCLMenuItemData)e.next();
+					m.unregisterAWTPeer(awtMenuBar.getMenu(i));
+					i++;
+				}
+	
+				for(i=awtMenuBar.countMenus()-1; i>=0; i--)
+					awtMenuBar.remove(i);
 			}
-
+			
 			awtMenuBar.removeNotify();
 		}
 
@@ -365,8 +369,8 @@ public final class VCLMenuBar {
 	public void removeMenu(short nPos) {
 
 		synchronized (awtMenuBar) {
+			((VCLMenuItemData)menus.get(nPos)).unregisterAWTPeer(awtMenuBar.getMenu(nPos));
 			awtMenuBar.remove(nPos);
-			((VCLMenuItemData)menus.get(nPos)).unregisterAllAWTPeers();
 			menus.remove(nPos);
 		}
 
@@ -450,13 +454,20 @@ public final class VCLMenuBar {
 	void regenerateMenuBar() {
 
 		synchronized (awtMenuBar) {
-			for(int i=awtMenuBar.countMenus()-1; i>=0; i--)
-				awtMenuBar.remove(i);
-
+			int i=0;
 			Iterator e=menus.iterator();
 			while(e.hasNext()) {
 				VCLMenuItemData m=(VCLMenuItemData)e.next();
-				m.unregisterAllAWTPeers();
+				m.unregisterAWTPeer(awtMenuBar.getMenu(i));
+				i++;
+			}
+			
+			for(i=awtMenuBar.countMenus()-1; i>=0; i--)
+				awtMenuBar.remove(i);
+
+			e=menus.iterator();
+			while(e.hasNext()) {
+				VCLMenuItemData m=(VCLMenuItemData)e.next();
 				if(m.isMenu())
 					awtMenuBar.add((Menu)m.createAWTPeer());
 				else

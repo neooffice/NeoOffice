@@ -166,8 +166,11 @@ public final class VCLMenuItemData {
 	 * disposed. Delegates must manually be disposed.
 	 */
 	public void dispose() {
-
-		unregisterAllAWTPeers();
+		
+		// [ed] 1/8/05 Set the delegate to NULL here so we make sure
+		// to leave active the peers for any delegate objects that may
+		// be inserted into other menus or menubars.  Bug #308
+		
 		if(delegate!=null)
 			setDelegate(null);
 
@@ -861,7 +864,71 @@ public final class VCLMenuItemData {
 		}
 
 	}
+	
+	/**
+	 * Unregister a single AWT peer for an item.  Because menu items may
+	 * be inserted in multiple menus or multiple menubars not all the peers
+	 * may become invalid at once.  This will remove the awtPeer from the
+	 * internal tracking, free any underlying heavyweight peers for it,
+	 * and iterate through any submenus to free their peers as well.
+	 *
+	 * @param awtMI	AWT peer object that is about to be destroyed
+	 */
+	void unregisterAWTPeer(MenuItem awtMI) {
+		
+		if(delegate!=null) {
+			delegate.unregisterAWTPeer(awtMI);
+			return;
+		}
+		
+		if(awtPeers.indexOf(awtMI) < 0)
+			return;
+			
+		if(isSubmenu && (awtMI instanceof Menu)) {
+			Iterator e=menuItems.iterator();
+			while(e.hasNext())
+				((VCLMenuItemData)e.next()).unregisterAWTPeer(((Menu)awtMI).getItem(0));
+		}
+		
+		synchronized (awtMI) {
+			if(awtMI instanceof VCLAWTMenuItem)
+				awtMI.removeActionListener((VCLAWTMenuItem)awtMI);
+			else if(awtMI instanceof VCLAWTCheckboxMenuItem)
+				awtMI.removeActionListener((VCLAWTCheckboxMenuItem)awtMI);
+			awtMI.setShortcut(null);
+			
+			// remove the item from whatever menus may be holding
+			// references to it
+			
+			if(!parentMenus.isEmpty()) {
+				Iterator parents=parentMenus.iterator();
+				while(parents.hasNext()) {
+					VCLMenuItemData parent=(VCLMenuItemData)parents.next();
+					if(!parent.awtPeers.isEmpty()) {
+						Iterator parentPeers=parent.awtPeers.iterator();
+						while(parentPeers.hasNext()) {
+							Menu m=(Menu)parentPeers.next();
+							synchronized (m) {
+								m.remove(awtMI);
+							}
+						}
+					}
+				}
+			}
+			
+			// Detach any orphaned menu items
+			if (awtMI instanceof Menu) {
+				Menu m = (Menu)awtMI;
+				synchronized (m) {
+					m.removeAll();
+				}
+			}
 
+			awtMI.removeNotify();
+			awtPeers.remove(awtPeers.indexOf(awtMI));
+		}
+	}
+					
 	/**
 	 * Unregister all AWT peer objects that have been created from the menu
 	 * item data. If the item data corresponds to a submenu, all of the submenu
