@@ -106,6 +106,7 @@ if [ -d "$2" ]; then
 	chmod -Rf ug+w "$2/Contents/share/dict/ooo" || exit 1
 
 	# Touch and reload shared libraries to fix bug 280
+	DYLD_LIBRARY_PATH="$2/Contents/MacOS"; export DYLD_LIBRARY_PATH
 	for i in `cd "$2/Contents/MacOS" ; find . -type f -name "*.dylib*" ; find . -type f -name "*.bin"`; do
 		touch -f "$2/Contents/MacOS/$i"
 		"$1/Contents/Resources/reload_file" "$2/Contents/MacOS/$i"
