@@ -352,9 +352,13 @@ public final class VCLMenuBar {
 			VCLMenuItemData oldMenu=(VCLMenuItemData)menus.get(nPos);
 			newMenu.setTitle(oldMenu.getTitle());
 			newMenu.setEnabled(oldMenu.getEnabled());
-
+			
+			// let new menu provide contents, but retain reference
+			// to old menu in the actual menubar.  Bug #175
+			
+			oldMenu.setDelegate(newMenu);
 			removeMenu(nPos);
-			addMenuItem(newMenu, nPos);
+			addMenuItem(oldMenu, nPos);
 		}
 
 	}
