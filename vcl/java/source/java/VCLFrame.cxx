@@ -257,7 +257,7 @@ void com_sun_star_vcl_VCLFrame::dispose()
 			com_sun_star_vcl_VCLFrame *pOwner = getOwner();
 			if ( pOwner )
 			{
-				aOwnerWindow = pOwner->getNativeWindow();
+				aOwnerWindow = (WindowRef)pOwner->getNativeWindow();
 				delete pOwner;
 			}
 		}
