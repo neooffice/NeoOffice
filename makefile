@@ -209,6 +209,7 @@ build.package: build.neo_patches build.oo_download_dics build.source_zip
 	mkdir -p "$(INSTALL_HOME)/package"
 	echo `source "$(OO_ENV_JAVA)" ; cd "instsetoo/util" ; dmake language_numbers` > "$(INSTALL_HOME)/language_numbers"
 	echo `source "$(OO_ENV_JAVA)" ; cd "instsetoo/util" ; dmake language_names` > "$(INSTALL_HOME)/language_names"
+	echo `source "$(OO_ENV_JAVA)" ; cd "instsetoo/util" ; dmake give_me_all_languages=TRUE language_names ; awk '{ print $$3 "-" $$4 }' "$(PWD)/$(DIC_HOME)/dictionary.lst"` | sort -u > "$(INSTALL_HOME)/all_language_names"
 	echo "[ENVIRONMENT]" > "$(INSTALL_HOME)/response"
 	echo "INSTALLATIONMODE=INSTALL_NETWORK" >> "$(INSTALL_HOME)/response"
 	echo "INSTALLATIONTYPE=STANDARD" >> "$(INSTALL_HOME)/response"
@@ -220,7 +221,7 @@ build.package: build.neo_patches build.oo_download_dics build.source_zip
 	echo "JavaSupport=preinstalled_or_none" >> "$(INSTALL_HOME)/response"
 # Eliminate duplicate help directories since only English is available
 	mkdir -p "$(INSTALL_HOME)/package/Contents/help/en"
-	cd "$(INSTALL_HOME)/package/Contents/help" ; sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/language_names"` ; do ln -sf "en" "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package/Contents/help" ; sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/all_language_names"` ; do ln -sf "en" "$${i}" ; done'
 	echo "A" > "$(INSTALL_HOME)/setupinput"
 	source "$(OO_ENV_JAVA)" ; "$(BUILD_HOME)/instsetoo/unxmacxp.pro/"`cat "$(INSTALL_HOME)/language_numbers"`"/normal/setup" -nogui -v "-r:$(PWD)/$(INSTALL_HOME)/response" < "$(INSTALL_HOME)/setupinput"
 	chmod -Rf u+w,a+r "$(INSTALL_HOME)/package"
@@ -229,7 +230,7 @@ build.package: build.neo_patches build.oo_download_dics build.source_zip
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/desktop/unxmacxp.pro/bin/soffice" "program/soffice.bin" ; chmod a+x "program/soffice.bin"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/readlicense_oo/source/license/unx/LICENSE" "$(PWD)/readlicense_oo/source/readme/unxmacxp/README" "."
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/language_numbers" | sed "s#,# #g"` ; do cp "$(PWD)/$(BUILD_HOME)/offmgr/unxmacxp.pro/bin/neojava$${UPD}$${i}.res" "program/resource/iso$${UPD}$${i}.res" ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' "$(PWD)/$(BUILD_HOME)/setup2/unxmacxp.pro/misc/setup.sh" | sed 's#$$(OO_VERSION)#$(OO_VERSION)#g' | sed 's#$$(LANGUAGE_NAMES)#'"`cat "$(PWD)/$(INSTALL_HOME)/language_names"`"'#g' > "program/setup" ; chmod a+x "program/setup"
+	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' "$(PWD)/$(BUILD_HOME)/setup2/unxmacxp.pro/misc/setup.sh" | sed 's#$$(OO_VERSION)#$(OO_VERSION)#g' > "program/setup" ; chmod a+x "program/setup"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/desktop/unxmacxp.pro/misc/nswrapper.sh" "program/nswrapper" ; chmod a+x "program/nswrapper"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/Info.plist" "."
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/PkgInfo" "."
@@ -238,7 +239,7 @@ build.package: build.neo_patches build.oo_download_dics build.source_zip
 	rm -Rf "$(INSTALL_HOME)/package/Contents/Resources"
 	mkdir -p "$(INSTALL_HOME)/package/Contents/Resources"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/License" "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/Readme" "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/"*.icns "Resources"
-	cd "$(INSTALL_HOME)/package/Contents/Resources" ; sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/language_names" | sed "s#-#_#g"` ; do mkdir -p "$${i}.lproj" ; mkdir -p `echo "$${i}" | sed "s#_.*\\$$##"`".lproj" ;  done'
+	cd "$(INSTALL_HOME)/package/Contents/Resources" ; sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/all_language_names" | sed "s#-#_#g"` ; do mkdir -p "$${i}.lproj" ; mkdir -p `echo "$${i}" | sed "s#_.*\\$$##"`".lproj" ;  done'
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/program" ; regcomp -revoke -r services.rdb -c "libdtransX11$${UPD}$${DLLSUFFIX}.dylib"
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/program" ; regcomp -register -r services.rdb -c "libdtransjava$${UPD}$${DLLSUFFIX}.dylib"
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "LICENSE.html" "README.html" "setup" "spadmin" "program/libdtransX11$${UPD}$${DLLSUFFIX}.dylib" "program/libpsp$${UPD}$${DLLSUFFIX}.dylib" "program/libspa$${UPD}$${DLLSUFFIX}.dylib" "program/instdb.ins" "program/jvmsetup" "program/jvmsetup.bin" "program/pluginapp.bin" "program/setup.bin" "program/setup.log" "program/setofficelang.bin" "program/soffice" "program/sopatchlevel.sh" "program/spadmin" "program/spadmin.bin" "share/kde" "share/psprint" "share/gnome" "share/config/javarc"
