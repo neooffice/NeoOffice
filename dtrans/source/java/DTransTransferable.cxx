@@ -63,13 +63,14 @@
 using namespace rtl;
 using namespace vos;
 
-static UInt32 nSupportedTypes = 4;
+static UInt32 nSupportedTypes = 5;
 
 // List of supported native types in priority order
 static FourCharCode aSupportedNativeTypes[] = {
 	'RTF ',
 	'utxt',
 	'TEXT',
+	'TIFF',
 	'PICT'
 };
 
@@ -78,6 +79,7 @@ static BOOL aSupportedTextTypes[] = {
 	TRUE,
 	TRUE,
 	TRUE,
+	FALSE,
 	FALSE
 };
 
@@ -86,6 +88,7 @@ static OUString aSupportedMimeTypes[] = {
 	OUString::createFromAscii( "text/richtext" ),
 	OUString::createFromAscii( "text/plain;charset=utf-16" ),
 	OUString::createFromAscii( "text/plain;charset=utf-16" ),
+	OUString::createFromAscii( "image/bmp" ),
 	OUString::createFromAscii( "image/bmp" )
 };
 
@@ -666,9 +669,6 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< X
 			// next AEEvent is dispatched so we can't risk using delayed
 			// rendering
 			BOOL bRenderImmediately = FALSE;
-			DTransThreadAttach t;
-			if ( t.pEnv && t.pEnv->GetVersion() < JNI_VERSION_1_4 )
-				bRenderImmediately = TRUE;
 			if ( !pScrapPromiseKeeperUPP )
 				pScrapPromiseKeeperUPP = NewScrapPromiseKeeperUPP( (ScrapPromiseKeeperProcPtr)ImplScrapPromiseKeeperCallback );
 			if ( !pScrapPromiseKeeperUPP || SetScrapPromiseKeeper( (ScrapRef)mpNativeTransferable, pScrapPromiseKeeperUPP, (const void *)this ) != noErr )

@@ -172,10 +172,12 @@ void SVMainThread::run()
 		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
 		{
 			// Set up native menu event handler
-			EventTypeSpec aType;
-			aType.eventClass = kEventClassMenu;
-			aType.eventKind = kEventMenuBeginTracking;
-			InstallApplicationEventHandler( CarbonEventHandler, 1, &aType, NULL, NULL );
+			EventTypeSpec aTypes[2];
+			aTypes[0].eventClass = kEventClassMenu;
+			aTypes[0].eventKind = kEventMenuBeginTracking;
+			aTypes[1].eventClass = kEventClassAppleEvent;
+			aTypes[1].eventKind = kEventAppleEvent;
+			InstallApplicationEventHandler( CarbonEventHandler, 2, aTypes, NULL, NULL );
 		}
 	}
 #endif	// MACOSX
@@ -312,7 +314,17 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv 
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData )
 {
 	// Let the VCL event handlers handle menu shortcuts
-	if ( GetEventClass( aEvent ) == kEventClassMenu )
+	EventClass nClass = GetEventClass( aEvent );
+	if ( nClass == kEventClassAppleEvent )
+	{
+		// We need to block the VCL event loop while process Apple Events
+		SalInstance *pSalInstance = GetSalData()->mpFirstInstance;
+		pSalInstance->AcquireYieldMutex( 1 );
+		OSStatus nErr = CallNextEventHandler( aNextHandler, aEvent );
+		pSalInstance->ReleaseYieldMutex();
+		return nErr;
+	}
+	else if ( nClass == kEventClassMenu )
 	{
 		SalData *pSalData = GetSalData();
 		MenuRef trackingRef;
