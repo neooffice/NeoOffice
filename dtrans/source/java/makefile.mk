@@ -37,7 +37,7 @@ PRJ=..$/..
 
 PRJNAME=dtrans
 TARGET=dtransjava
-TARGETTYPE=GUI
+TARGETTYPE=CUI
 
 ENABLE_EXCEPTIONS=TRUE
 COMP1TYPELIST=$(TARGET)
@@ -85,8 +85,7 @@ SHL1STDLIBS= \
 .IF "$(OS)"=="MACOSX"
 SHL1STDLIBS += \
 	-framework Carbon	\
-	-framework QuickTime \
-	$(SOLARLIBDIR)$/libstlport_gcc.a
+	-framework QuickTime
 .ENDIF
 
 SHL1DEPN=
