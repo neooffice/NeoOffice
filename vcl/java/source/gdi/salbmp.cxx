@@ -125,10 +125,26 @@ BOOL SalBitmap::Create( const SalBitmap& rSalBmp )
 	if ( bRet )
 	{
 		BitmapBuffer *pSrcBuffer = rSalBmp.AcquireBuffer( TRUE );
-		BitmapBuffer *pDestBuffer = AcquireBuffer( FALSE );
-		memcpy( pDestBuffer->mpBits, pSrcBuffer->mpBits, sizeof( BYTE ) * pDestBuffer->mnScanlineSize * pDestBuffer->mnHeight );
-		ReleaseBuffer( pDestBuffer, FALSE );
-		rSalBmp.ReleaseBuffer( pSrcBuffer, TRUE );
+		if ( pSrcBuffer )
+		{
+			BitmapBuffer *pDestBuffer = AcquireBuffer( FALSE );
+			if ( pDestBuffer )
+			{
+				memcpy( pDestBuffer->mpBits, pSrcBuffer->mpBits, sizeof( BYTE ) * pDestBuffer->mnScanlineSize * pDestBuffer->mnHeight );
+				ReleaseBuffer( pDestBuffer, FALSE );
+			}
+			else
+			{
+				Destroy();
+				bRet = FALSE;
+			}
+			rSalBmp.ReleaseBuffer( pSrcBuffer, TRUE );
+		}
+		else
+		{
+			Destroy();
+			bRet = FALSE;
+		}
 	}
 
 	return bRet;
@@ -214,6 +230,11 @@ BitmapBuffer* SalBitmap::AcquireBuffer( BOOL bReadOnly )
 	// Fill the buffer with pointers to the Java buffer
 	if ( !mpData )
 		mpData = mpVCLBitmap->getData();
+	if ( !mpData )
+	{
+		delete pBuffer;
+		return NULL;
+	}
 	if ( !mpBits )
 	{
 		VCLThreadAttach t;
