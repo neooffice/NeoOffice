@@ -43,7 +43,7 @@
 #include <saldata.hxx>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGLYPHVECTOR_HXX
-#include <com/sun/star/vcl/VCLGlyphVector.hxx>
+#include <com/sun/star/vcl/VCLTextLayout.hxx>
 #endif
 
 using namespace vcl;
@@ -52,22 +52,22 @@ using namespace vcl;
 
 JavaLayout::JavaLayout( const SalGraphics *pGraphics )
 {
-	mpVCLGlyphVector = new com_sun_star_vcl_VCLGlyphVector( pGraphics->maGraphicsData.mpVCLGraphics, pGraphics->maGraphicsData.mpVCLFont );
+	mpVCLTextLayout = new com_sun_star_vcl_VCLTextLayout( pGraphics->maGraphicsData.mpVCLGraphics, pGraphics->maGraphicsData.mpVCLFont );
 }
 
 // -----------------------------------------------------------------------
 
 JavaLayout::~JavaLayout()
 {
-	if ( mpVCLGlyphVector )
-		delete mpVCLGlyphVector;
+	if ( mpVCLTextLayout )
+		delete mpVCLTextLayout;
 }
 
 // -----------------------------------------------------------------------
 
 bool JavaLayout::LayoutText( ImplLayoutArgs& rArgs )
 {
-	mpVCLGlyphVector->layoutText( rArgs );
+	mpVCLTextLayout->layoutText( rArgs );
 
 	return true;
 }
@@ -76,7 +76,7 @@ bool JavaLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 void JavaLayout::DrawText( SalGraphics& rGraphics ) const
 {
-	mpVCLGlyphVector->drawText( maDrawBase.X() + maDrawOffset.X(), maDrawBase.Y() + maDrawOffset.Y(), GetOrientation(), rGraphics.maGraphicsData.mnTextColor );
+	mpVCLTextLayout->drawText( maDrawBase.X() + maDrawOffset.X(), maDrawBase.Y() + maDrawOffset.Y(), GetOrientation(), rGraphics.maGraphicsData.mnTextColor );
 }
 
 // -----------------------------------------------------------------------
@@ -93,19 +93,14 @@ int JavaLayout::GetTextBreak( long nMaxWidth, long nCharExtra, int nFactor ) con
 
 long JavaLayout::FillDXArray( long *pDXArray ) const
 {
-	return mpVCLGlyphVector->fillDXArray( pDXArray );
+	return mpVCLTextLayout->fillDXArray( pDXArray );
 }
 
 // -----------------------------------------------------------------------
 
 void JavaLayout::GetCaretPositions( int nArraySize, long *pCaretXArray ) const
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaLayout::GetCaretPositions not implemented\n" );
-#endif
-	int i;
-	for ( i = 0; i < nArraySize; i++ )
-		pCaretXArray[i] = 0;
+	mpVCLTextLayout->getCaretPositions( nArraySize, pCaretXArray );
 }
 
 // -----------------------------------------------------------------------

@@ -33,8 +33,8 @@
  *
  ************************************************************************/
 
-#ifndef _SV_COM_SUN_STAR_VCL_VCLGLYPHVECTOR_HXX
-#define	_SV_COM_SUN_STAR_VCL_VCLGLYPHVECTOR_HXX
+#ifndef _SV_COM_SUN_STAR_VCL_VCLTEXTLAYOUT_HXX
+#define	_SV_COM_SUN_STAR_VCL_VCLTEXTLAYOUT_HXX
 
 #ifndef _SV_SALGTYPE_HXX
 #include <salgtype.hxx>
@@ -51,7 +51,7 @@ namespace vcl {
 class com_sun_star_vcl_VCLFont;
 class com_sun_star_vcl_VCLGraphics;
 
-class com_sun_star_vcl_VCLGlyphVector : public java_lang_Object
+class com_sun_star_vcl_VCLTextLayout : public java_lang_Object
 {
 protected:
 	static jclass		theClass;
@@ -59,15 +59,16 @@ protected:
 public:
 	static jclass		getMyClass();
 
-						com_sun_star_vcl_VCLGlyphVector( jobject myObj ) : java_lang_Object( myObj ) {};
-						com_sun_star_vcl_VCLGlyphVector( ::vcl::com_sun_star_vcl_VCLGraphics *pGraphics, ::vcl::com_sun_star_vcl_VCLFont *pFont );
-	virtual				~com_sun_star_vcl_VCLGlyphVector() {};
+						com_sun_star_vcl_VCLTextLayout( jobject myObj ) : java_lang_Object( myObj ) {};
+						com_sun_star_vcl_VCLTextLayout( ::vcl::com_sun_star_vcl_VCLGraphics *pGraphics, ::vcl::com_sun_star_vcl_VCLFont *pFont );
+	virtual				~com_sun_star_vcl_VCLTextLayout() {};
 
-	void				layoutText( ImplLayoutArgs& rArgs );
 	void				drawText( long _par0, long _par1, int _par2, SalColor _par3 );
 	long				fillDXArray( long *_par0 );
+	void				getCaretPositions( int _par0, long *_par1 );
+	void				layoutText( ImplLayoutArgs& _par0 );
 };
 
 } // namespace vcl
 
-#endif // _SV_COM_SUN_STAR_VCL_VCLGLYPHVECTOR_HXX
+#endif // _SV_COM_SUN_STAR_VCL_VCLTEXTLAYOUT_HXX

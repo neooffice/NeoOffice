@@ -33,10 +33,10 @@
  *
  ************************************************************************/
 
-#define _SV_COM_SUN_STAR_VCL_VCLGLYPHVECTOR_CXX
+#define _SV_COM_SUN_STAR_VCL_VCLTEXTLAYOUT_CXX
 
-#ifndef _SV_COM_SUN_STAR_VCL_VCLGLYPHVECTOR_HXX
-#include <com/sun/star/vcl/VCLGlyphVector.hxx>
+#ifndef _SV_COM_SUN_STAR_VCL_VCLTEXTLAYOUT_HXX
+#include <com/sun/star/vcl/VCLTextLayout.hxx>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
 #include <com/sun/star/vcl/VCLFont.hxx>
@@ -45,21 +45,22 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
 
+using namespace rtl;
 using namespace vcl;
 
 // ============================================================================
 
-jclass com_sun_star_vcl_VCLGlyphVector::theClass = NULL;
+jclass com_sun_star_vcl_VCLTextLayout::theClass = NULL;
 
 // ----------------------------------------------------------------------------
 
-jclass com_sun_star_vcl_VCLGlyphVector::getMyClass()
+jclass com_sun_star_vcl_VCLTextLayout::getMyClass()
 {
 	if ( !theClass )
 	{
 		VCLThreadAttach t;
 		if ( !t.pEnv ) return (jclass)NULL;
-		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLGlyphVector" );
+		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLTextLayout" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
 	}
@@ -68,7 +69,7 @@ jclass com_sun_star_vcl_VCLGlyphVector::getMyClass()
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLGlyphVector::com_sun_star_vcl_VCLGlyphVector( com_sun_star_vcl_VCLGraphics *pGraphics, com_sun_star_vcl_VCLFont *pFont ) : java_lang_Object( (jobject)NULL )
+com_sun_star_vcl_VCLTextLayout::com_sun_star_vcl_VCLTextLayout( com_sun_star_vcl_VCLGraphics *pGraphics, com_sun_star_vcl_VCLFont *pFont ) : java_lang_Object( (jobject)NULL )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -87,36 +88,9 @@ com_sun_star_vcl_VCLGlyphVector::com_sun_star_vcl_VCLGlyphVector( com_sun_star_v
 	tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
 	saveRef( tempObj );
 }
-
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGlyphVector::layoutText( ImplLayoutArgs& rArgs )
-{
-	static jmethodID mID = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "([C)V";
-			mID = t.pEnv->GetMethodID( getMyClass(), "layoutText", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jsize elements( rArgs.mnEndCharPos - rArgs.mnMinCharPos );
-			jcharArray chars = t.pEnv->NewCharArray( elements );
-			t.pEnv->SetCharArrayRegion( chars, 0, elements, (jchar *)rArgs.mpStr + rArgs.mnMinCharPos );
-			jvalue args[1];
-			args[0].l = chars;
-			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
-		}
-	}
-}
-
-// ----------------------------------------------------------------------------
-
-void com_sun_star_vcl_VCLGlyphVector::drawText( long _par0, long _par1, int _par2, SalColor _par3 )
+void com_sun_star_vcl_VCLTextLayout::drawText( long _par0, long _par1, int _par2, SalColor _par3 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -141,7 +115,7 @@ void com_sun_star_vcl_VCLGlyphVector::drawText( long _par0, long _par1, int _par
 }
 // ----------------------------------------------------------------------------
 
-long com_sun_star_vcl_VCLGlyphVector::fillDXArray( long *_par0 )
+long com_sun_star_vcl_VCLTextLayout::fillDXArray( long *_par0 )
 {
 	static jmethodID mID = NULL;
 	long out = 0;
@@ -176,4 +150,63 @@ long com_sun_star_vcl_VCLGlyphVector::fillDXArray( long *_par0 )
 		}
 	}
 	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLTextLayout::getCaretPositions( int _par0, long *_par1 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(I)[I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getCaretPositions", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[1];
+			args[0].i = jint( _par0 );
+			jintArray tempObj = (jintArray)t.pEnv->CallNonvirtualObjectMethodA( object, getMyClass(), mID, args );
+			if ( tempObj )
+			{
+				jsize nElements = t.pEnv->GetArrayLength( tempObj );
+				if ( nElements )
+				{
+					long nSize = ( nElements > _par0 ? _par0 : nElements ) * sizeof( jint );
+					jboolean bCopy( sal_False );
+					jint *pPosBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( tempObj, &bCopy );
+					if ( _par1 )
+						memcpy( _par1, pPosBits, nSize );
+					t.pEnv->ReleasePrimitiveArrayCritical( tempObj, (void *)pPosBits, JNI_ABORT );
+				}
+			}
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLTextLayout::layoutText( ImplLayoutArgs& _par0 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(Ljava/lang/String;)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "layoutText", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[1];
+			args[0].l = StringToJavaString( t.pEnv, OUString( _par0.mpStr + _par0.mnMinCharPos, _par0.mnEndCharPos - _par0.mnMinCharPos ) );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
 }

@@ -60,13 +60,13 @@ JAVAFILES = \
 	VCLEventQueue.java \
 	VCLFont.java \
 	VCLFrame.java \
-	VCLGlyphVector.java \
 	VCLGraphics.java \
 	VCLImage.java \
 	VCLPageFormat.java \
 	VCLPlatform.java \
 	VCLPrintJob.java \
-	VCLScreen.java
+	VCLScreen.java \
+	VCLTextLayout.java
 
 .ENDIF		# "$(GUIBASE)"!="java"
 

@@ -65,12 +65,12 @@ SLOFILES = \
 	$(SLO)/VCLEventQueueEvent.obj \
 	$(SLO)/VCLFont.obj \
 	$(SLO)/VCLFrame.obj \
-	$(SLO)/VCLGlyphVector.obj \
 	$(SLO)/VCLGraphics.obj \
 	$(SLO)/VCLImage.obj \
 	$(SLO)/VCLPageFormat.obj \
 	$(SLO)/VCLPrintJob.obj \
 	$(SLO)/VCLScreen.obj \
+	$(SLO)/VCLTextLayout.obj \
 	$(SLO)/tools.obj
 
 .ENDIF

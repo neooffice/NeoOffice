@@ -42,7 +42,7 @@
 
 namespace vcl
 {
-class com_sun_star_vcl_VCLGlyphVector;
+class com_sun_star_vcl_VCLTextLayout;
 }
 
 class SalGraphics;
@@ -53,7 +53,7 @@ class SalGraphics;
 
 class JavaLayout : public SalLayout
 {
-	::vcl::com_sun_star_vcl_VCLGlyphVector* mpVCLGlyphVector;
+	::vcl::com_sun_star_vcl_VCLTextLayout* mpVCLTextLayout;
 
 public:
 					JavaLayout( const SalGraphics *pGraphics );
