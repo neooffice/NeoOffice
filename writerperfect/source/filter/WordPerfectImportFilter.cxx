@@ -14,7 +14,9 @@
  *  GNU General Public License Version 2.1
  *  =============================================
  *  Portions of this Copyright 2000 by Sun Microsystems, Inc.
- *  Rest is Copyright 2002-2003 William Lachance (william.lachance@sympatico.ca)
+ *  Rest is Copyright 2002-2003 William Lachance (william.lachance@sympatico.ca),
+ *  Copyright (C) 2004 Net Integration Technologies (http://www.net-itech.com),
+ *  and Copyright (C) 2004 Fridrich Strba <fridrich.strba@bluewin.ch>
  *  http://libwpd.sourceforge.net
  *
  *  This library is free software; you can redistribute it and/or
@@ -35,10 +37,13 @@
  *  Modified November 2004 by Patrick Luby. SISSL Removed. NeoOffice is
  *  distributed under GPL only under modification term 3 of the LGPL.
  *
- *  Contributor(s): _______________________________________
+ *  Contributor(s): Martin Gallwey (gallwey@sun.com)
  *
  ************************************************************************/
 
+/* "This product is not manufactured, approved, or supported by 
+ * Corel Corporation or Corel Corporation Limited."
+ */
 
 #ifndef _OSL_DIAGNOSE_H_
 #include <osl/diagnose.h>
@@ -69,22 +74,23 @@
 #include <com/sun/star/ucb/XCommandEnvironment.hpp>
 #endif
 
-#ifndef _UCBHELPER_CONTENT_HXX
-#include <ucbhelper/content.hxx>
-#endif
-
-#include "stream/WPXSvStream.h"
-#include <libwpd/WPDocument.h>
-#include "FilterInternal.hxx" // for debugging
-#include "WordPerfectCollector.hxx"
-#include "WordPerfectImportFilter.hxx"
-
 #ifndef _ATTRLIST_HPP_
 #include <xmloff/attrlist.hxx>
 #endif
 #ifndef _XMLKYWD_HPP
 #include <xmloff/xmlkywd.hxx>
 #endif
+
+#ifndef _UCBHELPER_CONTENT_HXX
+#include <ucbhelper/content.hxx>
+#endif
+
+#include <libwpd/WPDocument.h>
+#include "FilterInternal.hxx"
+#include "OODocumentHandler.hxx"
+#include "WordPerfectCollector.hxx"
+#include "WordPerfectImportFilter.hxx"
+#include "stream/WPXSvStream.h"
 
 using namespace ::rtl;
 using rtl::OString;
@@ -100,6 +106,7 @@ using com::sun::star::lang::XMultiServiceFactory;
 using com::sun::star::beans::PropertyValue;
 using com::sun::star::document::XFilter;
 using com::sun::star::document::XExtendedFilterDetection;
+using com::sun::star::ucb::XCommandEnvironment;
 
 using com::sun::star::io::XInputStream;
 using com::sun::star::document::XImporter;
@@ -117,39 +124,42 @@ sal_Bool SAL_CALL WordPerfectImportFilter::importImpl( const Sequence< ::com::su
 	
 	sal_Int32 nLength = aDescriptor.getLength();
 	const PropertyValue * pValue = aDescriptor.getConstArray();
-	OUString suFileName;
+	OUString sURL;
 	Reference < XInputStream > xInputStream;
 	for ( sal_Int32 i = 0 ; i < nLength; i++)
-	 	{
-	 		if ( pValue[i].Name.equalsAsciiL ( RTL_CONSTASCII_STRINGPARAM ( "InputStream" ) ) )
-	 			pValue[i].Value >>= xInputStream;
-	 		else if ( pValue[i].Name.equalsAsciiL ( RTL_CONSTASCII_STRINGPARAM ( "URL" ) ) )
-	 			pValue[i].Value >>= suFileName;
-			rtl_TextEncoding encoding = RTL_TEXTENCODING_INFO_ASCII;
-	 	}
+	{
+	    if ( pValue[i].Name.equalsAsciiL ( RTL_CONSTASCII_STRINGPARAM ( "InputStream" ) ) )
+		pValue[i].Value >>= xInputStream;
+	    else if ( pValue[i].Name.equalsAsciiL ( RTL_CONSTASCII_STRINGPARAM ( "URL" ) ) )
+		pValue[i].Value >>= sURL;
+	    rtl_TextEncoding encoding = RTL_TEXTENCODING_INFO_ASCII;
+	}
 	if ( !xInputStream.is() )
-	 	{
-	 		OSL_ASSERT( 0 );
-	 		return sal_False;
-	 	}
+	{
+	    OSL_ASSERT( 0 );
+	    return sal_False;
+	}
 	OString sFileName;
-	sFileName = OUStringToOString(suFileName, RTL_TEXTENCODING_INFO_ASCII);
+	sFileName = OUStringToOString(sURL, RTL_TEXTENCODING_INFO_ASCII);
 	
-	// WL: an XML import service -- I assume that this is what we want to write to..
+	// An XML import service: what we push sax messages to..
 	OUString sXMLImportService ( RTL_CONSTASCII_USTRINGPARAM ( "com.sun.star.comp.Writer.XMLImporter" ) );
-	Reference < XDocumentHandler > xHandler( mxMSF->createInstance( sXMLImportService ), UNO_QUERY );
-	mxHandler = xHandler;
+	Reference < XDocumentHandler > xInternalHandler( mxMSF->createInstance( sXMLImportService ), UNO_QUERY );
 
-	// WL: the XImporter. according to the documentation at xml.openoffice.org, it's supposed to set up
-	// an empty target document for XDocumentHandler to write to.. 
-	Reference < XImporter > xImporter( xHandler, UNO_QUERY );
-	xImporter->setTargetDocument ( mxDoc );
+	// The XImporter sets up an empty target document for XDocumentHandler to write to.. 
+	Reference < XImporter > xImporter(xInternalHandler, UNO_QUERY);
+	xImporter->setTargetDocument(mxDoc);
+
+        // OO Document Handler: abstract class to handle document SAX messages, concrete implementation here
+        // writes to in-memory target doc
+        OODocumentHandler xHandler(xInternalHandler);
 
 	WPXSvInputStream input( xInputStream );
-	WordPerfectCollector collector;
-	collector.filter(input, xHandler);
 
-	return true; //bRet;
+	WordPerfectCollector collector(&input, &xHandler);
+	collector.filter();
+
+	return true; 
 }
 
 sal_Bool SAL_CALL WordPerfectImportFilter::filter( const Sequence< ::com::sun::star::beans::PropertyValue >& aDescriptor ) 
@@ -174,8 +184,8 @@ void SAL_CALL WordPerfectImportFilter::setTargetDocument( const Reference< ::com
 }
 
 // XExtendedFilterDetection
-OUString SAL_CALL WordPerfectImportFilter::detect( ::com::sun::star::uno::Sequence< PropertyValue >& Descriptor )
-        throw (RuntimeException)
+OUString SAL_CALL WordPerfectImportFilter::detect( com::sun::star::uno::Sequence< PropertyValue >& Descriptor )
+	throw( com::sun::star::uno::RuntimeException )
 {
 	WRITER_DEBUG_MSG(("WordPerfectImportFilter::detect: Got here!\n"));
 	
@@ -195,7 +205,7 @@ OUString SAL_CALL WordPerfectImportFilter::detect( ::com::sun::star::uno::Sequen
 		else if ( pValue[i].Name.equalsAsciiL ( RTL_CONSTASCII_STRINGPARAM ( "URL" ) ) )
 			pValue[i].Value >>= sURL;
 
-		rtl_TextEncoding encoding = RTL_TEXTENCODING_INFO_ASCII;
+	    rtl_TextEncoding encoding = RTL_TEXTENCODING_INFO_ASCII;
 	}
 
         Reference< com::sun::star::ucb::XCommandEnvironment > xEnv;
@@ -207,14 +217,13 @@ OUString SAL_CALL WordPerfectImportFilter::detect( ::com::sun::star::uno::Sequen
                         return sTypeName;
         }
 		
-
 	WPXSvInputStream input( xInputStream );
 
 	confidence = WPDocument::isFileFormatSupported(&input, false);
-	
+
 	if (confidence == WPD_CONFIDENCE_EXCELLENT)
 		sTypeName = OUString( RTL_CONSTASCII_USTRINGPARAM ( "writer_WordPerfect_Document" ) );
-	
+
         if (!sTypeName.equalsAscii(""))
 	{
 		if ( location == Descriptor.getLength() )
@@ -226,7 +235,9 @@ OUString SAL_CALL WordPerfectImportFilter::detect( ::com::sun::star::uno::Sequen
         	Descriptor[location].Value <<=sTypeName;
         }
 	return sTypeName;	
+	
 }
+
 
 // XInitialization
 void SAL_CALL WordPerfectImportFilter::initialize( const Sequence< Any >& aArguments ) 
@@ -254,25 +265,27 @@ OUString WordPerfectImportFilter_getImplementationName ()
 {
 	return OUString ( RTL_CONSTASCII_USTRINGPARAM ( "com.sun.star.comp.Writer.WordPerfectImportFilter" ) );
 }
+
 #define SERVICE_NAME1 "com.sun.star.document.ImportFilter"
 #define SERVICE_NAME2 "com.sun.star.document.ExtendedTypeDetection"
 sal_Bool SAL_CALL WordPerfectImportFilter_supportsService( const OUString& ServiceName ) 
 	throw (RuntimeException)
 {
-	return ServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( SERVICE_NAME1 ) ) ||
-    	   ServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( SERVICE_NAME2 ) );
+	return (ServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( SERVICE_NAME1 ) ) ||
+		ServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( SERVICE_NAME2 ) ) );
 }
 Sequence< OUString > SAL_CALL WordPerfectImportFilter_getSupportedServiceNames(  ) 
 	throw (RuntimeException)
 {
 	Sequence < OUString > aRet(2);
-    OUString* pArray = aRet.getArray();
-    pArray[0] =  OUString ( RTL_CONSTASCII_USTRINGPARAM ( SERVICE_NAME1 ) );
-    pArray[1] =  OUString ( RTL_CONSTASCII_USTRINGPARAM ( SERVICE_NAME2 ) );
-    return aRet;
+//	Sequence < OUString > aRet(1);
+        OUString* pArray = aRet.getArray();
+        pArray[0] =  OUString ( RTL_CONSTASCII_USTRINGPARAM ( SERVICE_NAME1 ) );
+	pArray[1] =  OUString ( RTL_CONSTASCII_USTRINGPARAM ( SERVICE_NAME2 ) ); 
+        return aRet;
 }
-#undef SERVICE_NAME1
 #undef SERVICE_NAME2
+#undef SERVICE_NAME1
 
 Reference< XInterface > SAL_CALL WordPerfectImportFilter_createInstance( const Reference< XMultiServiceFactory > & rSMgr)
 	throw( Exception )
@@ -286,7 +299,6 @@ OUString SAL_CALL WordPerfectImportFilter::getImplementationName(  )
 {
 	return WordPerfectImportFilter_getImplementationName();
 }
-
 sal_Bool SAL_CALL WordPerfectImportFilter::supportsService( const OUString& rServiceName ) 
 	throw (RuntimeException)
 {

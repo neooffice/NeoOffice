@@ -38,31 +38,24 @@
  *
  ************************************************************************/
 
+/* "This product is not manufactured, approved, or supported by 
+ * Corel Corporation or Corel Corporation Limited."
+ */
 
 #ifndef _DOCUMENTELEMENT_H
 #define _DOCUMENTELEMENT_H
 #include <libwpd/libwpd.h>
-#include <libwpd/libwpd_support.h>
+#include <libwpd/WPXProperty.h>
+#include <libwpd/WPXString.h>
 #include <vector>
 
-using namespace std;
-
-#include "WordPerfectCollector.hxx"
-#include "TextRunStyle.hxx"
-#include "SectionStyle.hxx"
-#include "TableStyle.hxx"
-
-#ifndef _COM_SUN_STAR_XML_SAX_XDOCUMENTHANDLER_HPP_
-#include <com/sun/star/xml/sax/XDocumentHandler.hpp>
-#endif
-
-#include <xmloff/attrlist.hxx>
+#include "DocumentHandler.hxx"
 
 class DocumentElement
 {
 public:	
 	virtual ~DocumentElement() {}
-	virtual void write(Reference < XDocumentHandler > &xHandler) const = 0;
+	virtual void write(DocumentHandler &xHandler) const = 0;
 	virtual void print() const {}
 };
 
@@ -70,10 +63,10 @@ class TagElement : public DocumentElement
 {
 public:
 	TagElement(const char *szTagName) : msTagName(szTagName) {}
-	const UTF8String & getTagName() const { return msTagName; }
+	const WPXString & getTagName() const { return msTagName; }
 	virtual void print() const;
 private:
-	UTF8String msTagName;
+	WPXString msTagName;
 };
 
 class TagOpenElement : public TagElement
@@ -81,37 +74,37 @@ class TagOpenElement : public TagElement
 public:
 	TagOpenElement(const char *szTagName) : TagElement(szTagName) {}
 	~TagOpenElement() {}
-	void addAttribute(const char *szAttributeName, const char *szAttributeValue);
-	virtual void write(Reference < XDocumentHandler > &xHandler) const;
+	void addAttribute(const char *szAttributeName, const WPXString &sAttributeValue);
+	virtual void write(DocumentHandler &xHandler) const;
 	virtual void print () const;
 private:
-	SvXMLAttributeList maAttrList;
+	WPXPropertyList maAttrList;
 };
 
 class TagCloseElement : public TagElement
 {
 public:
 	TagCloseElement(const char *szTagName) : TagElement(szTagName) {}
-	virtual void write(Reference < XDocumentHandler > &xHandler) const;
+	virtual void write(DocumentHandler &xHandler) const;
 };
 
 class CharDataElement : public DocumentElement
 {
 public:
 	CharDataElement(const char *sData) : DocumentElement(), msData(sData) {}
-	virtual void write(Reference < XDocumentHandler > &xHandler) const;
+	virtual void write(DocumentHandler &xHandler) const;
 private:
-	UTF8String msData;
+	WPXString msData;
 };
 
 class TextElement : public DocumentElement
 {
 public:
-	TextElement(const UCSString & sTextBuf);
-	virtual void write(Reference < XDocumentHandler > &xHandler) const;
+	TextElement(const WPXString & sTextBuf);
+	virtual void write(DocumentHandler &xHandler) const;
 
 private:
-	UCSString msTextBuf;
+	WPXString msTextBuf;
 };
  
 #endif

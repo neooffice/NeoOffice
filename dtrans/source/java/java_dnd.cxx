@@ -135,26 +135,27 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 #ifdef MACOSX
 static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, WindowRef aWindow, void *pData, DragRef aDrag )
 {
+	MutexGuard aDragGuard( aDragMutex );
+
+	if ( !pDragThreadOwner )
+		return noErr;
+
 	MacOSPoint aPoint;
 	Rect aRect;
 	if ( pData && GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
 	{
 		if ( !bNoRejectCursor )
 		{
-			ClearableMutexGuard aDragGuard( aDragMutex );
-
 			if ( nMessage == kDragTrackingLeaveHandler )
 				SetThemeCursor( kThemeArrowCursor );
-			else if ( nCurrentAction == DNDConstants::ACTION_MOVE )
+			else if ( nCurrentAction & DNDConstants::ACTION_MOVE )
 				SetThemeCursor( kThemeClosedHandCursor );
-			else if ( nCurrentAction == DNDConstants::ACTION_COPY )
+			else if ( nCurrentAction & DNDConstants::ACTION_COPY )
 				SetThemeCursor( kThemeCopyArrowCursor );
-			else if ( nCurrentAction == DNDConstants::ACTION_LINK )
+			else if ( nCurrentAction & DNDConstants::ACTION_LINK )
 				SetThemeCursor( kThemeAliasArrowCursor );
 			else
 				SetThemeCursor( kThemeArrowCursor );
-
-			aDragGuard.clear();
 		}
 
 		((JavaDragSource *)pData)->handleDrag( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) );
@@ -169,6 +170,11 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 #ifdef MACOSX
 static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, WindowRef aWindow, void *pData, DragRef aDrag )
 {
+	MutexGuard aDragGuard( aDragMutex );
+
+	if ( !pDragThreadOwner )
+		return noErr;
+
 	MacOSPoint aPoint;
 	Rect aRect;
 	if ( pData && GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
@@ -201,6 +207,11 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 #ifdef MACOSX
 static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, DragRef aDrag )
 {
+	MutexGuard aDragGuard( aDragMutex );
+
+	if ( !pDragThreadOwner )
+		return dragNotAcceptedErr;
+
 	MacOSPoint aPoint;
 	Rect aRect;
 	if ( pData && GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr && ((JavaDropTarget *)pData)->handleDrop( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) ) )
@@ -502,6 +513,9 @@ void JavaDragSource::runDragExecute( void *pData )
 						nCurrentAction = DNDConstants::ACTION_LINK;
 					else
 						nCurrentAction = DNDConstants::ACTION_NONE;
+
+					if ( ! ( nKeyModifiers & ( shiftKey | cmdKey ) ) )
+						nCurrentAction |= DNDConstants::ACTION_DEFAULT;
 
 					bNoRejectCursor = false;
 

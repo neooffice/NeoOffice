@@ -39,7 +39,9 @@
  *
  ************************************************************************/
 
-
+/* "This product is not manufactured, approved, or supported by 
+ * Corel Corporation or Corel Corporation Limited."
+ */
 #ifndef _TABLESTYLE_H
 #define _TABLESTYLE_H
 #include <libwpd/libwpd.h>
@@ -48,64 +50,42 @@
 #include "Style.hxx"
 #include "WriterProperties.hxx"
 
-using com::sun::star::uno::Reference;
-using com::sun::star::xml::sax::XDocumentHandler;
-
 class DocumentElement;
+class DocumentHandler;
 
 class TableCellStyle : public Style
 {
 public:
-	TableCellStyle(const float fLeftBorderThickness, const float fRightBorderThickness, 
-		       const float fTopBorderThickness, const float fBottomBorderThickness, 
-		       const RGBSColor *pFgColor, const RGBSColor *pBgColor, const RGBSColor * pBorderColor,
-		       const WPXVerticalAlignment cellVerticalAlignment, const char *psName);
-	virtual void write(Reference < XDocumentHandler > &xHandler) const;
+	TableCellStyle(const WPXPropertyList &xPropList, const char *psName);
+	virtual void write(DocumentHandler &xHandler) const;
 private:
-	float mfLeftBorderThickness;
-	float mfRightBorderThickness;
-	float mfTopBorderThickness;
-	float mfBottomBorderThickness;
-	WPXVerticalAlignment mCellVerticalAlignment;
-	RGBSColor m_fgColor;
-	RGBSColor m_bgColor;
-	RGBSColor m_borderColor;
+        WPXPropertyList mPropList;
 };
 
 class TableRowStyle : public Style
 {
 public:
-	TableRowStyle(const float fHeight, const bool bIsMinimumHeight, const bool bIsHeaderRow, const char *psName);
-	virtual void write(Reference < XDocumentHandler > &xHandler) const;
+	TableRowStyle(const WPXPropertyList &propList, const char *psName);
+	virtual void write(DocumentHandler &xHandler) const;
 private:
-	bool mbIsHeaderRow, mbIsMinimumHeight;
-	float mfHeight;
+        WPXPropertyList mPropList;
 };
 
 class TableStyle : public Style, public TopLevelElementStyle
 {
- public:
-	TableStyle(const float fDocumentMarginLeft, const float fDocumentMarginRight, 
-		   const float fMarginLeftOffset, const float fMarginRightOffset,
-		   const uint8_t iTablePositionBits, const float fLeftOffset, 
-		   const vector < WPXColumnDefinition > &columns, 
-		   const char *psName);
+public:
+	TableStyle(const WPXPropertyList &xPropList, const WPXPropertyListVector &columns, const char *psName);
 	~TableStyle();
-	virtual void write(Reference < XDocumentHandler > &xHandler) const;
-	const int getNumColumns() const { return miNumColumns; }
+	virtual void write(DocumentHandler &xHandler) const;
+	const int getNumColumns() const { return mColumns.count(); }
 	void addTableCellStyle(TableCellStyle *pTableCellStyle) { mTableCellStyles.push_back(pTableCellStyle); }
 	int getNumTableCellStyles() { return mTableCellStyles.size(); }
 	void addTableRowStyle(TableRowStyle *pTableRowStyle) { mTableRowStyles.push_back(pTableRowStyle); }
 	int getNumTableRowStyles() { return mTableRowStyles.size(); }
 private:	
-	float mfDocumentMarginLeft, mfDocumentMarginRight;
-	float mfMarginLeftOffset, mfMarginRightOffset;
-	vector< WPXColumnDefinition > mColumns;
-	unsigned int miTablePositionBits;
-	float mfLeftOffset;
-	vector<TableCellStyle *> mTableCellStyles;
-	vector<TableRowStyle *> mTableRowStyles;
-	int miNumColumns;
+        WPXPropertyList mPropList;
+	WPXPropertyListVector mColumns;
+	std::vector<TableCellStyle *> mTableCellStyles;
+	std::vector<TableRowStyle *> mTableRowStyles;
 };
-
 #endif

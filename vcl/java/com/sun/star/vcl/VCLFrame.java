@@ -72,9 +72,12 @@ import java.awt.im.InputContext;
 import java.awt.im.InputMethodRequests;
 import java.awt.image.BufferedImage;
 import java.awt.peer.ComponentPeer;
+import java.text.CharacterIterator;
 import java.text.AttributedCharacterIterator;
 import java.text.AttributedString;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 
 /**
  * The Java class that implements the SalFrame C++ class methods.
@@ -564,16 +567,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public final static int POINTER_TEXT_VERTICAL = 86;
 
-	/**
-	 * The capture frame.
-	 */
-	private static VCLFrame captureFrame = null;
-
-	/**
-	 * The capture flag.
-	 */
-	private static boolean capture = false;
-
 	/** 
 	 * The component to <code>VCLFrame</code> mapping.
 	 */
@@ -599,16 +592,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private static int keyModifiersUnpressed = 0;
 
-	/**
-	 * The last capture frame.
-	 */
-	private static VCLFrame lastCaptureFrame = null;
-
-	/**
-	 * The last drag frame.
-	 */
-	private static VCLFrame lastDragFrame = null;
-
 	/** 
 	 * The last key pressed for which a key typed event has not been received.
 	 */
@@ -618,6 +601,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * The menu modifier.
 	 */
 	private static MenuShortcut lastMenuShortcutPressed = null;
+
+	/**
+	 * The last mouse drag event.
+	 */
+	private static MouseEvent lastMouseDragEvent = null;
 
 	/** 
 	 * The menu modifier.
@@ -693,6 +681,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private int bitCount = 0;
 
+	/** 
+	 * The child frames.
+	 */
+	private ArrayList children = new ArrayList();
+
 	/**
 	 * The frame pointer.
 	 */
@@ -712,6 +705,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * The native window's insets.
 	 */
 	private Insets insets = null;
+
+	/**
+	 * The owner frame.
+	 */
+	private VCLFrame owner = null;
 
 	/**
 	 * The native window's panel.
@@ -751,10 +749,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		frame = f;
 
 		// Create the native window
-		if ((styleFlags & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) != 0)
+		if ((styleFlags & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) != 0) {
 			window = new VCLFrame.NoPaintFrame(this);
-		else
+		}
+		else {
+			owner = new VCLFrame(~styleFlags, q, 0, null);
 			window = new VCLFrame.NoPaintWindow(this);
+		}
 
 		// Process remaining style flags
 		if ((styleFlags & SAL_FRAME_STYLE_SIZEABLE) != 0)
@@ -845,9 +846,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void componentShown(ComponentEvent e) {
 
-		// Set capture frame
-		VCLFrame.captureFrame = this;
-
 		// Add panel to mapping
 		if (panel != null)
 			VCLFrame.componentMap.put(panel, this);
@@ -863,14 +861,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param e the <code>ComponentEvent</code>
 	 */
 	public void componentHidden(ComponentEvent e) {
-
-		// Set mouse capture to parent frame
-		if (VCLFrame.captureFrame == this)
-			VCLFrame.captureFrame = parent;
-		if (VCLFrame.lastCaptureFrame == this)
-			VCLFrame.lastCaptureFrame = null;
-		if (VCLFrame.lastDragFrame == this)
-			VCLFrame.lastDragFrame = null;
 
 		// Remove panel from mapping
 		VCLFrame.componentMap.remove(panel);
@@ -890,6 +880,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (queue != null)
 			queue.removeCachedEvents(frame);
+
+	}
+
+	/**
+	 * Adds a child frame.
+	 *
+	 * @param f the child frame.
+	 */
+	public synchronized void addChild(VCLFrame f) {
+
+		if (f != null)
+			children.add(f);
 
 	}
 
@@ -929,6 +931,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			window.dispose();
 		}
 		window = null;
+		if (owner != null)
+			owner.dispose();
+		owner = null;
 
 	}
 
@@ -965,7 +970,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public void flush() {
 
 		graphics.flush();
-		Toolkit.getDefaultToolkit().sync();
+		synchronized (window.getTreeLock()) {
+			Toolkit.getDefaultToolkit().sync();
+		}
 
 	}
 
@@ -1480,6 +1487,17 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * Returns the owner frame.
+	 *
+	 * @return the owner frame
+	 */
+	VCLFrame getOwner() {
+
+		return owner;
+
+	}
+
+	/**
 	 * Returns the panel for the native window.
 	 *
 	 * @return the panel for the native window
@@ -1532,10 +1550,14 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public long getState() {
 
+		int s = Frame.NORMAL;
 		if (window instanceof Frame)
-			return (long)((Frame)window).getState();
+			s = ((Frame)window).getState();
+
+		if (s == Frame.ICONIFIED)
+			return SAL_FRAMESTATE_MINIMIZED;
 		else
-			return (long)Frame.NORMAL;
+			return SAL_FRAMESTATE_NORMAL;
 
 	}
 
@@ -1586,7 +1608,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public boolean isFloatingWindow() {
 
-		return !(window instanceof Frame);
+		return !(fullScreenMode || window instanceof Frame);
 
 	}
 
@@ -1646,7 +1668,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			// those that are applicable to disabled menu items.
 			int modifiers = e.getModifiers();
 			char keyChar = e.getKeyChar();
-			if ((modifiers & VCLFrame.menuModifiersMask) == VCLFrame.menuModifiersMask) {
+			if ((modifiers & VCLFrame.menuModifiersMask) == VCLFrame.menuModifiersMask && keyCode != KeyEvent.VK_SPACE && keyCode != KeyEvent.VK_Q) {
 				VCLEvent vclEvent = new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0);
 				if (VCLEvent.convertVCLKeyCode(vclEvent.getKeyCode()) > 0) {
 					// Fix bug 244 by checking if there is an active AWT menu
@@ -1761,26 +1783,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		VCLFrame.mouseModifiersPressed |= e.getModifiers();
 
-		// Enable mouse capture
-		VCLFrame.capture = true;
-
-		// Make sure capture frame is a child of this window
-		if (VCLFrame.captureFrame != null && e.getComponent().isShowing()) {
-			// Find the capture window
-			VCLFrame f = VCLFrame.captureFrame;
-			while (f != null && f != this) {
-				Window w = f.getWindow();
-				if (w instanceof Frame) {
-					f = null;
-					break;
-				}
-
-				f = f.getParent();
-			}
-			if (f == null)
-				VCLFrame.captureFrame = this;
-		}
-
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONDOWN, this, 0, VCLFrame.keyModifiersPressed));
 
 	}
@@ -1803,57 +1805,27 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		VCLFrame.mouseModifiersPressed &= ~(e.getModifiers());
 
-		VCLFrame f = this;
+		synchronized (window.getTreeLock()) {
+			e = preprocessMouseEvent(e);
 
-		if (VCLFrame.captureFrame != null && e.getComponent().isShowing()) {
-			// Find the capture window
-			f = VCLFrame.captureFrame;
-			Point srcPoint = e.getComponent().getLocationOnScreen();
-			srcPoint.x += e.getX();
-			srcPoint.y += e.getY();
-			while (f != null && !f.getFullScreenMode()) {
-				Window w = f.getWindow();
-				if (w instanceof Frame) {
-					f = null;
-					break;
+			if (VCLFrame.lastMouseDragEvent != null) {
+				// If we are releasing after dragging, send the event to the
+				// last dragged frame
+				Component currentComponent = e.getComponent();
+				Component lastComponent = VCLFrame.lastMouseDragEvent.getComponent();
+				if (lastComponent != currentComponent && lastComponent != null && currentComponent != null && lastComponent.isShowing() && currentComponent.isShowing()) {
+					Point srcPoint = currentComponent.getLocationOnScreen();
+					srcPoint.x += e.getX();
+					srcPoint.y += e.getY();
+					Point destPoint = lastComponent.getLocationOnScreen();
+					e = new MouseEvent(lastComponent, e.getID(), e.getWhen(), e.getModifiers(), srcPoint.x - destPoint.x, srcPoint.y - destPoint.y, e.getClickCount(), e.isPopupTrigger());
 				}
 
-				Panel p = f.getPanel();
-				if (w != null && w.isShowing() && p != null) {
-					Point destPoint = p.getLocationOnScreen();
-					Rectangle destRect = new Rectangle(destPoint.x, destPoint.y, p.getWidth(), p.getHeight());
-					if (destRect.contains(srcPoint)) {
-						e = new MouseEvent(p, e.getID(), e.getWhen(), e.getModifiers(), srcPoint.x - destPoint.x, srcPoint.y - destPoint.y, e.getClickCount(), e.isPopupTrigger());
-						break;
-					}
-				}
-
-				f = f.getParent();
-			}
-
-			if (f == null)
-				f = this;
-
-			if (VCLFrame.mouseModifiersPressed == 0 && VCLFrame.lastCaptureFrame != null && VCLFrame.lastCaptureFrame != f) {
-				Window w = VCLFrame.lastCaptureFrame.getWindow();
-				Panel p = VCLFrame.lastCaptureFrame.getPanel();
-				if (w != null && !(w instanceof Frame) && w.isShowing() && p != null) {
-					VCLFrame.lastCaptureFrame.focusGained(new FocusEvent(p, FocusEvent.FOCUS_GAINED));
-					VCLFrame.lastCaptureFrame.focusLost(new FocusEvent(p, FocusEvent.FOCUS_LOST));
-				}
-				w = f.getWindow();
-				p = f.getPanel();
-				if (w != null && w instanceof Frame && w.isShowing() && p != null)
-					f.focusGained(new FocusEvent(p, FocusEvent.FOCUS_GAINED));
+				VCLFrame.lastMouseDragEvent = null;
 			}
 		}
 
-		// Disable mouse capture
-		VCLFrame.capture = false;
-		VCLFrame.lastCaptureFrame = null;
-		VCLFrame.lastDragFrame = null;
-
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONUP, f, 0, VCLFrame.keyModifiersPressed));
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONUP, VCLFrame.findFrame(e.getComponent()), 0, VCLFrame.keyModifiersPressed));
 
 	}
 
@@ -1873,55 +1845,32 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && e.getModifiers() != VCLFrame.mouseModifiersPressed)
 			e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), VCLFrame.mouseModifiersPressed, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
 
-		VCLFrame f = this;
+		if (VCLFrame.lastMouseDragEvent == null)
+			VCLFrame.lastMouseDragEvent = e;
 
-		if (VCLFrame.captureFrame != null && e.getComponent().isShowing()) {
-			// Find the capture window
-			f = VCLFrame.captureFrame;
-			Point srcPoint = e.getComponent().getLocationOnScreen();
-			srcPoint.x += e.getX();
-			srcPoint.y += e.getY();
-			while (f != null && f != parent && !f.getFullScreenMode()) {
-				Window w = f.getWindow();
-				if (w instanceof Frame) {
-					f = null;
-					break;
+		synchronized (window.getTreeLock()) {
+			e = preprocessMouseEvent(e);
+
+			// Generate mouse exited events that the OOo code expects
+			Component lastComponent = VCLFrame.lastMouseDragEvent.getComponent();
+			Component currentComponent = e.getComponent();
+			if (lastComponent != currentComponent && lastComponent != null && currentComponent != null && lastComponent.isShowing() && currentComponent.isShowing()) {
+				// If dragging and there are floating windows visible, don't let
+				// the mouse fall through to a non-floating window
+				if (currentComponent == panel && currentComponent != null && panel != null && !isFloatingWindow() && lastComponent.isShowing() && currentComponent.isShowing()) {
+					Point srcPoint = currentComponent.getLocationOnScreen();
+					srcPoint.x += e.getX();
+					srcPoint.y += e.getY();
+					Point destPoint = lastComponent.getLocationOnScreen();
+					e = new MouseEvent(lastComponent, e.getID(), e.getWhen(), e.getModifiers(), srcPoint.x - destPoint.x, srcPoint.y - destPoint.y, e.getClickCount(), e.isPopupTrigger());
 				}
 
-				Panel p = f.getPanel();
-				if (w != null && w.isShowing() && p != null) {
-					Point destPoint = p.getLocationOnScreen();
-					Rectangle destRect = new Rectangle(destPoint.x, destPoint.y, p.getWidth(), p.getHeight());
-					if (destRect.contains(srcPoint)) {
-						e = new MouseEvent(p, e.getID(), e.getWhen(), e.getModifiers(), srcPoint.x - destPoint.x, srcPoint.y - destPoint.y, e.getClickCount(), e.isPopupTrigger());
-						break;
-					}
-				}
-
-				f = f.getParent();
+				VCLFrame.lastMouseDragEvent = e;
 			}
-
-			if (f == null)
-				f = this;
-
-			if (VCLFrame.lastDragFrame != f && VCLFrame.lastDragFrame != null) {
-				Window w = VCLFrame.lastDragFrame.getWindow();
-				Panel p = VCLFrame.lastDragFrame.getPanel();
-				if (w != null && w.isShowing() && p != null) {
-					Point destPoint = p.getLocationOnScreen();
-					MouseEvent mouseExited = new MouseEvent(p, MouseEvent.MOUSE_EXITED, e.getWhen(), e.getModifiers(), srcPoint.x - destPoint.x, srcPoint.y - destPoint.y, e.getClickCount(), e.isPopupTrigger());
-					queue.postCachedEvent(new VCLEvent(mouseExited, VCLEvent.SALEVENT_MOUSELEAVE, VCLFrame.lastDragFrame, 0));
-				}
-			}
-			VCLFrame.lastDragFrame = f;
-
-			Window w = f.getWindow();
-			if (w != null && !(w instanceof Frame))
-				VCLFrame.lastCaptureFrame = f;
 		}
 
 		// Don't pass key modifiers to mouse drag events
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, f, 0, 0));
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0, 0));
 
 	}
 
@@ -1934,10 +1883,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		e.consume();
 
-		if (VCLFrame.capture || queue == null || window == null || !window.isShowing())
+		if (VCLFrame.mouseModifiersPressed != 0 || queue == null || window == null || !window.isShowing())
 			return;
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, this, 0, VCLFrame.keyModifiersPressed));
+		// Use adjusted mouse modifiers
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && e.getModifiers() != VCLFrame.mouseModifiersPressed)
+			e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), VCLFrame.mouseModifiersPressed, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
+
+		synchronized (window.getTreeLock()) {
+			e = preprocessMouseEvent(e);
+		}
+
+		// Don't pass key modifiers to mouse entered events
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0, VCLFrame.keyModifiersPressed));
 
 	}
 
@@ -1950,10 +1908,15 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		e.consume();
 
-		if (VCLFrame.capture || queue == null || window == null || !window.isShowing())
+		if (VCLFrame.mouseModifiersPressed != 0 || queue == null || window == null || !window.isShowing())
 			return;
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSELEAVE, this, 0, VCLFrame.keyModifiersPressed));
+		// Use adjusted mouse modifiers
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && e.getModifiers() != VCLFrame.mouseModifiersPressed)
+			e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), VCLFrame.mouseModifiersPressed, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
+
+		// Don't pass key modifiers to mouse exited events
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSELEAVE, VCLFrame.findFrame(e.getComponent()), 0, VCLFrame.keyModifiersPressed));
 
 	}
 
@@ -1967,11 +1930,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		e.consume();
 
-		if (VCLFrame.capture || queue == null || window == null || !window.isShowing())
+		if (VCLFrame.mouseModifiersPressed != 0 || queue == null || window == null || !window.isShowing())
 			return;
 
+		// Use adjusted mouse modifiers
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && e.getModifiers() != VCLFrame.mouseModifiersPressed)
+			e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), VCLFrame.mouseModifiersPressed, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
+
+		synchronized (window.getTreeLock()) {
+			e = preprocessMouseEvent(e);
+		}
+
 		// Don't pass key modifiers to mouse move events
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, this, 0, 0));
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0, 0));
 
 	}
 
@@ -1994,6 +1965,59 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
     }
 
 	/**
+	 * Returns a <code>MouseEvent</code> for the topmost floating window above
+	 * the specified <code>MouseEvent</code>.
+	 *
+	 * @param e the <code>MouseEvent</code>
+	 * @return the <code>MouseEvent</code> for the topmost floating window
+	 *  above the specified <code>MouseEvent</code>
+	 */
+	private MouseEvent preprocessMouseEvent(MouseEvent e) {
+
+		if (queue == null || window == null || !window.isShowing())
+			return e;
+
+		Component c = e.getComponent();
+		if (c != null) {
+			// Iterate into children
+			if (children.size() > 0) {
+				Iterator frames = children.iterator();
+				while (frames.hasNext()) {
+					VCLFrame f = (VCLFrame)frames.next();
+					e = f.preprocessMouseEvent(e);
+					c = e.getComponent();
+				}
+			}
+
+			// Evaluate event
+			if (c != panel && c != null && panel != null && c.isShowing() && panel.isShowing() && isFloatingWindow()) {
+				Point srcPoint = c.getLocationOnScreen();
+				srcPoint.x += e.getX();
+				srcPoint.y += e.getY();
+				Point destPoint = panel.getLocationOnScreen();
+				Rectangle destRect = new Rectangle(destPoint.x, destPoint.y, panel.getWidth(), panel.getHeight());
+				if (destRect.contains(srcPoint))
+					return new MouseEvent(panel, e.getID(), e.getWhen(), e.getModifiers(), srcPoint.x - destPoint.x, srcPoint.y - destPoint.y, e.getClickCount(), e.isPopupTrigger());
+			}
+		}
+
+		return e;
+
+	}
+
+	/**
+	 * Removes a child frame.
+	 *
+	 * @param f the child frame.
+	 */
+	public synchronized void removeChild(VCLFrame f) {
+
+		if (f != null)
+			children.remove(f);
+
+	}
+
+	/**
 	 * Sets the focus to this.
 	 */
 	public void requestFocus() {
@@ -2002,7 +2026,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			return;
 
 		// Request keyboard focus
-		if (fullScreenMode || window instanceof Frame)
+		if (!isFloatingWindow())
 			panel.requestFocus();
 
 	}
@@ -2034,12 +2058,14 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (height < size.height)
 			height = size.height;
 
-		window.setBounds(x, y, width, height);
+		synchronized (window.getTreeLock()) {
+			window.setBounds(x, y, width, height);
 
-		// We need to create the native window handle after the first call to
-		// set bounds in order for the drag-and-drop UNO service to work
-		if (!window.isVisible())
-			window.addNotify();
+			// We need to create the native window handle after the first call
+			// to set bounds in order for the drag-and-drop UNO service to work
+			if (!window.isShowing())
+				window.addNotify();
+		}
 
 	}
 
@@ -2233,7 +2259,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (c != null && window != null) {
 			window.setCursor(c);
-			Toolkit.getDefaultToolkit().sync();
+			synchronized (window.getTreeLock()) {
+				Toolkit.getDefaultToolkit().sync();
+			}
 		}
 
 	}
@@ -2245,7 +2273,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void setState(long state) {
 
-		if (window instanceof Frame) {
+		if (window instanceof Frame && window.isShowing()) {
 			// Only invoke Frame.setState() if the state needs to be changed
 			// as this method can cause a deadlock with the native menu handler
 			// on Mac OS X
@@ -2388,6 +2416,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param e the <code>WindowEvent</code>
 	 */
 	public void windowActivated(WindowEvent e) {
+
+		// Fix bug 375 by resetting cached events and modifiers
+		VCLFrame.keyModifiersPressed = 0;
+		VCLFrame.lastMouseDragEvent = null;
+		VCLFrame.mouseModifiersPressed = 0;
 
 		if (panel != null) {
 			Graphics g = panel.getGraphics();
@@ -2606,7 +2639,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		NoPaintWindow(VCLFrame f) {
 
-			super(VCLScreen.getSharedFrame());
+			super(f.getOwner().getWindow());
 			frame = f;
 			enableInputMethods(false);
 			setMinimumSize(1, 1);

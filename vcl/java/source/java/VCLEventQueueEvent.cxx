@@ -59,8 +59,16 @@
 #ifndef _SV_SALMENU_HXX
 #include <salmenu.hxx>
 #endif
+#ifndef _SV_WINDOW_HXX
+#include <window.hxx>
+#endif
+
+#include <premac.h>
+#include <Carbon/Carbon.h>
+#include <postmac.h>
 
 using namespace vcl;
+using namespace vos;
 
 // ============================================================================
 
@@ -174,25 +182,63 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		{
 			// Unlock mutexes and block event queue so that the native event
 			// handler can proceed
-			ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
+			ULONG nCount = Application::ReleaseSolarMutex();
 			pSalData->maNativeEventEndCondition.reset();
 			pSalData->maNativeEventStartCondition.set();
 			pSalData->maNativeEventEndCondition.wait();
-			pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
+			Application::AcquireSolarMutex( nCount );
 			return;
 		}
 		case SALEVENT_ACTIVATE_APPLICATION:
 		{
-			SalFrameState aState;
-			memset( &aState, 0, sizeof( SalFrameState ) );
-			aState.mnMask = SAL_FRAMESTATE_MASK_STATE;
-			aState.mnState = SAL_FRAMESTATE_NORMAL;
-
-			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-			{
-				if ( (*it)->maFrameData.mbVisible )
-					(*it)->SetWindowState( &aState );
+			// Make sure that the current document window is showing
+			SalFrame *pParent = pSalData->mpFocusFrame;
+			while ( pParent && pParent->maFrameData.mpParent )
+				pParent = pParent->maFrameData.mpParent;
+			if ( pParent )
+				pParent->ToTop( 0 );
+			if ( pSalData->mpFocusFrame )
+				pSalData->mpFocusFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
+			// Force all "always on top" windows to the front without focus
+			for ( std::list< SalFrame* >::const_iterator it = pSalData->maAlwaysOnTopFrameList.begin(); it != pSalData->maAlwaysOnTopFrameList.end(); ++it )
+				(*it)->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
+			return;
+		}
+		case SALEVENT_ABOUT:
+		{
+			// [ed] 1/25/05 Send ourselves an about appleevent
+			// that can be handled by the sfx2 module
+			
+			AppleEvent theEvent;
+			ProcessSerialNumber    me = {0, kCurrentProcess};
+			AEDesc target;
+			AECreateDesc (typeProcessSerialNumber, &me, sizeof( ProcessSerialNumber ), &target);
+			OSErr theErr;
+			if ( AECreateAppleEvent( kCoreEventClass, kAEAbout, &target, kAutoGenerateReturnID, kAnyTransactionID, &theEvent ) == noErr ) {
+				AppleEvent  theReply = {typeNull,nil};
+				AESend( &theEvent, &theReply, kAENoReply, kAENormalPriority, kNoTimeOut, nil, nil);
+				AEDisposeDesc( &theEvent );
 			}
+			AEDisposeDesc( &target );
+			return;
+		}
+		case SALEVENT_PREFS:
+		{
+			// [ed] 1/25/05 Send ourselves a prefs appleevent
+			// that can be handled by the sfx2 module
+			
+			AppleEvent theEvent;
+			ProcessSerialNumber    me = {0, kCurrentProcess};
+			AEDesc target;
+			AECreateDesc (typeProcessSerialNumber, &me, sizeof( ProcessSerialNumber ), &target);
+			OSErr theErr;
+			if ( AECreateAppleEvent( 'NO%F', 'mPRF', &target, kAutoGenerateReturnID, kAnyTransactionID, &theEvent ) == noErr ) {
+				AppleEvent  theReply = {typeNull,nil};
+				AESend( &theEvent, &theReply, kAENoReply, kAENormalPriority, kNoTimeOut, nil, nil);
+				AEDisposeDesc( &theEvent );
+			}
+			AEDisposeDesc( &target );
+			return;
 		}
 	}
 	
@@ -216,68 +262,47 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_EXTTEXTINPUT:
 		{
-			XubString aText( getText() );
-			ULONG nLen = aText.Len();
 			ULONG nCommitted = getCommittedCharacterCount();
-			USHORT *pAttributes = getTextAttributes();
 			SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)pData;
 			if ( !pInputEvent )
 			{
+				ULONG nCursorPos = getCursorPosition();
 				pInputEvent = new SalExtTextInputEvent();
 				pInputEvent->mnTime = getWhen();
-				pInputEvent->maText = aText;
-				pInputEvent->mpTextAttr = pAttributes;
-				pInputEvent->mnCursorPos = nLen;
+				pInputEvent->maText = XubString( getText() );
+				pInputEvent->mpTextAttr = getTextAttributes();
+				pInputEvent->mnCursorPos = nCursorPos > nCommitted ? nCursorPos : nCommitted;
 				pInputEvent->mnDeltaStart = 0;
 				pInputEvent->mbOnlyCursor = FALSE;
 				pInputEvent->mnCursorFlags = 0;
 			}
 			dispatchEvent( nID, pFrame, pInputEvent );
-			delete pInputEvent;
-			if ( pAttributes )
-				rtl_freeMemory( pAttributes );
 			// If there is no text, the character is committed
-			if ( nLen == nCommitted )
+			if ( pInputEvent->maText.Len() == getCommittedCharacterCount() )
 				dispatchEvent( SALEVENT_ENDEXTTEXTINPUT, pFrame, NULL );
+			if ( pInputEvent->mpTextAttr )
+				rtl_freeMemory( (USHORT *)pInputEvent->mpTextAttr );
+			delete pInputEvent;
 			return;
 		}
 		case SALEVENT_GETFOCUS:
 		{
-			if ( pSalData->mpFocusFrame != pFrame )
-			{
-				// When in presentation mode, only allow focus to be set to
-				// windows that were shown after presentation mode was entered
-				if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame != pFrame )
-				{
-					for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maPresentationFrameList.begin(); it != pSalData->maPresentationFrameList.end() && *it != pFrame; ++it )
-						;
-					if ( it == pSalData->maPresentationFrameList.end() )
-					{
-						pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
-						return;
-					}
-				}
-
-				pSalData->mpFocusFrame = pFrame;
-				dispatchEvent( nID, pFrame, NULL );
-			}
+			if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame == pFrame )
+				dispatchEvent( SALEVENT_LOSEFOCUS, pSalData->mpFocusFrame, NULL );
+			pSalData->mpFocusFrame = pFrame;
+			dispatchEvent( nID, pFrame, NULL );
 			// Force all "always on top" windows to the front without focus
 			for ( std::list< SalFrame* >::const_iterator it = pSalData->maAlwaysOnTopFrameList.begin(); it != pSalData->maAlwaysOnTopFrameList.end(); ++it )
-				(*it)->ToTop( 0 );
+				(*it)->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
 			return;
 		}
 		case SALEVENT_LOSEFOCUS:
 		{
-			if ( pSalData->mpFocusFrame == pFrame )
-			{
-				pSalData->mpFocusFrame = NULL;
-				dispatchEvent( nID, pFrame, NULL );
-
-				// When in presentation mode, explicitly set the focus to the
-				// presentation frame
-				if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame != pFrame )
-					pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
-			}
+			pSalData->mpFocusFrame = NULL;
+			dispatchEvent( nID, pFrame, NULL );
+			// Force all "always on top" windows to the front without focus
+			for ( std::list< SalFrame* >::const_iterator it = pSalData->maAlwaysOnTopFrameList.begin(); it != pSalData->maAlwaysOnTopFrameList.end(); ++it )
+				(*it)->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
 			return;
 		}
 		case SALEVENT_KEYINPUT:
@@ -382,7 +407,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pPaintEvent->mnBoundWidth = pFrame->maGeometry.nWidth;
 				pPaintEvent->mnBoundHeight = pFrame->maGeometry.nHeight;
 				com_sun_star_vcl_VCLEvent aVCLPaintEvent( SALEVENT_PAINT, pFrame, (void *)pPaintEvent );
-				GetSalData()->mpEventQueue->postCachedEvent( &aVCLPaintEvent );
+				pSalData->mpEventQueue->postCachedEvent( &aVCLPaintEvent );
 			}
 			return;
 		}
@@ -448,7 +473,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pMenuEvent->mnId = getMenuID();
 				pMenuEvent->mpMenu = (void *)getMenuCookie();
 			}
-			dispatchEvent( nID, pFrame, pMenuEvent );
+			if ( pFrame && pSalData->mpFocusFrame == pFrame )
+				dispatchEvent( nID, pFrame, pMenuEvent );
 			delete pMenuEvent;
 			return;
 		}
@@ -472,6 +498,25 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 		{
 			if ( pFrame == *it )
 			{
+				if ( nID == SALEVENT_GETFOCUS && pSalData->mpPresentationFrame && pFrame != pSalData->mpPresentationFrame )
+				{
+					// Make sure document window does not float to front
+					SalFrame *pParent = pFrame;
+					while ( pParent )
+					{
+						if ( pParent == pSalData->mpPresentationFrame )
+							break;
+						pParent = pParent->maFrameData.mpParent;
+					}
+
+					if ( !pParent )
+					{
+						// Reset the focus and don't dispatch the event
+						pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+						return;
+					}
+				}
+
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
 				break;
 			}
@@ -567,6 +612,27 @@ ULONG com_sun_star_vcl_VCLEvent::getCommittedCharacterCount()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 			out = (ULONG)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+ULONG com_sun_star_vcl_VCLEvent::getCursorPosition()
+{
+	static jmethodID mID = NULL;
+	ULONG out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getCursorPosition", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
 }
@@ -965,6 +1031,27 @@ long com_sun_star_vcl_VCLEvent::getScrollAmount()
 		{
 			char *cSignature = "()I";
 			mID = t.pEnv->GetMethodID( getMyClass(), "getScrollAmount", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+ULONG com_sun_star_vcl_VCLEvent::getVisiblePosition()
+{
+	static jmethodID mID = NULL;
+	ULONG out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getVisiblePosition", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )

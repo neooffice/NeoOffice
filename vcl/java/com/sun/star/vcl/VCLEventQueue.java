@@ -191,6 +191,22 @@ public final class VCLEventQueue {
 			catch (Throwable t) {
 				t.printStackTrace();
 			}
+			try {
+				Class c = Class.forName("com.sun.star.vcl.macosx.VCLAboutHandler");
+				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
+				ctor.newInstance(new Object[]{ this });
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			try {
+				Class c = Class.forName("com.sun.star.vcl.macosx.VCLPrefsHandler");
+				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
+				ctor.newInstance(new Object[]{ this });
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
 		}
 
 	}
@@ -287,12 +303,12 @@ public final class VCLEventQueue {
 		synchronized (queueList) {
 			// Coalesce mouse move events
 			if (id == VCLEvent.SALEVENT_MOUSEMOVE) {
-				if (queue.mouseMove != null && queue.mouseMove.event.getFrame() == newItem.event.getFrame())
+				if (queue.mouseMove != null && !queue.mouseMove.remove && queue.mouseMove.event.getFrame() == newItem.event.getFrame())
 					queue.mouseMove.remove = true;
 				queue.mouseMove = newItem;
 			}
 			else if (id == VCLEvent.SALEVENT_WHEELMOUSE) {
-				if (queue.mouseWheelMove != null && queue.mouseWheelMove.event.getFrame() == newItem.event.getFrame()) {
+				if (queue.mouseWheelMove != null && !queue.mouseWheelMove.remove && queue.mouseWheelMove.event.getFrame() == newItem.event.getFrame()) {
 					queue.mouseWheelMove.remove = true;
 					newItem.event.addScrollAmount(queue.mouseWheelMove.event.getScrollAmount());
 					newItem.event.addWheelRotation(queue.mouseWheelMove.event.getWheelRotation());
@@ -394,6 +410,9 @@ public final class VCLEventQueue {
 				// Purge removed events from the front of the queue
 				while (queue.head != null && queue.head.remove)
 					queue.head = queue.head.next;
+				if (queue.head == null)
+					queue.tail = null;
+					
 			}
 		}
 

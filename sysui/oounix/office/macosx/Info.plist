@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist SYSTEM "file://localhost/System/Library/DTDs/PropertyList.dtd">
-<plist version="0.9">
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
 <dict>
 	<key>CFBundleDocumentTypes</key>
 	<array>
@@ -271,6 +271,7 @@
 			<string>$(PRODUCT_NAME) Document</string>
 			<key>CFBundleTypeOSTypes</key>
 			<array>
+				<string>W8BN</string>
 				<string>.WP5</string>
 				<string>.WP6</string>
 				<string>WPD3</string>
@@ -343,6 +344,10 @@
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>SLD8</string>
+			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSIsAppleDefaultForType</key>
@@ -387,6 +392,10 @@
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>XLS8</string>
+			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSIsAppleDefaultForType</key>
@@ -439,12 +448,14 @@
 	</array>
 	<key>CFBundleExecutable</key>
 	<string>soffice.bin</string>
+	<key>CFBundleGetInfoString</key>
+	<string>$(PRODUCT_TRADEMARKED_NAME) $(PRODUCT_VERSION)</string>
+	<key>CFBundleIconFile</key>
+	<string>ship.icns</string>
 	<key>CFBundleIdentifier</key>
 	<string>org.neooffice.neooffice.java</string>
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
-	<key>CFBundleIconFile</key>
-	<string>ship.icns</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -453,7 +464,5 @@
 	<string>$(PRODUCT_FILETYPE)</string>
 	<key>CFBundleVersion</key>
 	<string>$(PRODUCT_VERSION) Build $(RSCVERSION)</string>
-	<key>CFBundleGetInfoString</key>
-	<string>$(PRODUCT_TRADEMARKED_NAME) $(PRODUCT_VERSION)</string>
 </dict>
 </plist>

@@ -89,6 +89,21 @@ public final class VCLGraphics {
 	public final static int SAL_INVERT_TRACKFRAME = 0x0004;
 
 	/**
+	 * The GF_ROTMASK constant.
+	 */
+	public final static int GF_ROTMASK = 0x03000000;
+
+	/**
+	 * The GF_ROTL constant.
+	 */
+	public final static int GF_ROTL = 0x01000000;
+
+	/**
+	 * The GF_ROTR constant.
+	 */
+	public final static int GF_ROTR = 0x03000000;
+
+	/**
 	 * The drawGlyphs method.
 	 */
 	private static Method drawGlyphsMethod = null;
@@ -186,7 +201,7 @@ public final class VCLGraphics {
 
 		// Set the method references
 		try {
-			drawGlyphsMethod = VCLGraphics.class.getMethod("drawGlyphs", new Class[]{ int.class, int.class, int[].class, int[].class, VCLFont.class, int.class, int.class, int.class, int.class, int.class, boolean.class });
+			drawGlyphsMethod = VCLGraphics.class.getMethod("drawGlyphs", new Class[]{ int.class, int.class, int[].class, int[].class, VCLFont.class, int.class, int.class, int.class, int.class, int.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -570,7 +585,8 @@ public final class VCLGraphics {
 	}
 
 	/**
-	 * Draws the specified glyph codes using the specified font and color.
+	 * Draws the specified glyph codes using the specified font and color. Note
+	 * if rotating glyphs is set, only a single glyph can be handled.
 	 *
 	 * @param x the x coordinate
 	 * @param y the y coordinate
@@ -579,22 +595,20 @@ public final class VCLGraphics {
 	 * @param font the font of the text
 	 * @param color the color of the text
 	 * @param orientation the tenth of degrees to rotate the text
+	 * @param glyphOrientation the glyph rotation constant
 	 * @param translateX the x coordinate to translate after rotation
 	 * @param translateY the y coordinate to translate after rotation
-	 * @param unitsPerPixel the pixels per unit in the specified advances
-	 * @param rotateGlyph the glyph is rotated 
 	 */
-	public void drawGlyphs(int x, int y, int[] glyphs, int[] advances, VCLFont font, int color, int orientation, int translateX, int translateY, int unitsPerPixel, boolean rotateGlyph) {
+	public void drawGlyphs(int x, int y, int[] glyphs, int[] advances, VCLFont font, int color, int orientation, int glyphOrientation, int translateX, int translateY) {
 
 		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawGlyphsMethod, new Object[]{ new Integer(x), new Integer(y), glyphs, advances, font, new Integer(color), new Integer(orientation), new Integer(translateX), new Integer(translateY), new Integer(unitsPerPixel), new Boolean(rotateGlyph) });
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawGlyphsMethod, new Object[]{ new Integer(x), new Integer(y), glyphs, advances, font, new Integer(color), new Integer(orientation), new Integer(glyphOrientation), new Integer(translateX), new Integer(translateY) });
 			pageQueue.postDrawingOperation(pqi);
 			return;
 		}
 
-		// If rotating glyphs individually, we cannot handle multiple glyphs
-		if (rotateGlyph && glyphs.length > 1)
-			return;
+		Graphics2D g = (Graphics2D)graphics.create();
+		g.translate(x, y);
 
 		// The graphics may adjust the font
 		Font f = font.getFont();
@@ -602,75 +616,56 @@ public final class VCLGraphics {
 
 		// Exceptions can be thrown if a font is disabled or removed
 		try {
-			fm = graphics.getFontMetrics(f);
+			fm = g.getFontMetrics(f);
 		}
 		catch (Throwable t) {
-			f = font.getDefaultFont().getFont();
-			fm = graphics.getFontMetrics(f);
+			font = font.getDefaultFont();
+			f = font.getFont();
+			fm = g.getFontMetrics(f);
 		}
 
-		graphics.setFont(f);
+		g.setFont(f);
 
-		RenderingHints hints = graphics.getRenderingHints();
+		RenderingHints hints = g.getRenderingHints();
 		if (font.isAntialiased())
 			hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 		else
 			hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
-		graphics.setRenderingHints(hints);
-		graphics.setColor(new Color(color));
+		g.setRenderingHints(hints);
+		g.setColor(new Color(color));
 
 		// Set rotation
-		double fScaleX = font.getScaleX();
-		Point2D origin = new Point2D.Float((float)x, (float)y);
-		AffineTransform transform = null;
-		AffineTransform rotateTransform = null;
-		if (orientation != 0 || translateX != 0 || translateY != 0) {
-			transform = graphics.getTransform();
-			double radians = Math.toRadians((double)orientation / 10);
-			graphics.rotate(radians * -1);
-			rotateTransform = AffineTransform.getRotateInstance(radians);
-			// Adjust drawing origin so that it is not transformed
-			origin = AffineTransform.getRotateInstance(radians).transform(origin, null);
-			if (rotateGlyph)
-				origin.setLocation(origin.getX() + translateX, origin.getY() + (fScaleX * translateY));
-			else
-				origin.setLocation(origin.getX() + (fScaleX * translateX), origin.getY() + translateY);
-		}
+		if (orientation != 0)
+			g.rotate(Math.toRadians((double)orientation / 10) * -1);
 
-		GlyphVector gv = f.createGlyphVector(graphics.getFontRenderContext(), glyphs);
-		float fAdvance = 0;
-		double fScaledUnitsPerPixel = fScaleX * unitsPerPixel;
+		double fScaleX = font.getScaleX();
+		g.scale(fScaleX, 1.0);
+
+		GlyphVector gv = f.createGlyphVector(g.getFontRenderContext(), glyphs);
+
+		double fAdvance = 0;
 		for (int i = 0; i < glyphs.length; i++) {
 			Point2D p = gv.getGlyphPosition(i);
 			p.setLocation(fAdvance, p.getY());
 			gv.setGlyphPosition(i, p);
-			fAdvance += (float)advances[ i ] / fScaledUnitsPerPixel;
+			fAdvance += advances[i] / fScaleX;
+		}
+
+		glyphOrientation &= VCLGraphics.GF_ROTMASK;
+		if ((glyphOrientation & VCLGraphics.GF_ROTMASK) != 0) {
+			if (glyphOrientation == VCLGraphics.GF_ROTL)
+				g.rotate(Math.toRadians(-90));
+			else
+				g.rotate(Math.toRadians(90));
 		}
 
 		// Draw the text to a scaled graphics
-		if (fScaleX != 1.0) {
-			Graphics2D g = (Graphics2D)graphics.create();
-			g.translate(origin.getX(), origin.getY());
-			if (rotateGlyph)
-				g.scale(1.0, fScaleX);
-			else
-				g.scale(fScaleX, 1.0);
-			g.drawGlyphVector(gv, 0, 0);
-			g.dispose();
-		}
-		else {
-			graphics.drawGlyphVector(gv, (float)origin.getX(), (float)origin.getY());
-		}
+		g.drawGlyphVector(gv, translateX, translateY);
 
 		Rectangle bounds = gv.getLogicalBounds().getBounds();
 
-		// Reverse rotation
-		if (transform != null)
-			graphics.setTransform(transform);
-
 		// Estimate bounds
-		if (rotateTransform != null)
-			bounds = rotateTransform.createTransformedShape(bounds).getBounds();
+		bounds = g.getTransform().createTransformedShape(bounds).getBounds();
 		bounds.x += x - 1;
 		bounds.y += y - 1;
 		if (fScaleX != 1.0)
@@ -678,6 +673,8 @@ public final class VCLGraphics {
 		bounds.width += 2;
 		bounds.height += 2;
 		addToFlush(bounds);
+
+		g.dispose();
 
 	}
 
@@ -1210,19 +1207,19 @@ public final class VCLGraphics {
 	 *
 	 * @param glyph the glyph index
 	 * @param font the font
-	 * @param rotateGlyph the glyph is rotated 
+	 * @param glyphOrientation the glyph rotation constant
 	 */
-	public Rectangle getGlyphBounds(int glyph, VCLFont font, boolean rotateGlyph) {
+	public Rectangle getGlyphBounds(int glyph, VCLFont font, int glyphOrientation) {
 
 		GlyphVector glyphs = font.getFont().createGlyphVector(graphics.getFontRenderContext(), new int[]{ glyph });
-		Rectangle2D bounds = glyphs.getVisualBounds();
+		Rectangle2D bounds = glyphs.getGlyphMetrics(0).getBounds2D();
 
 		double fScaleX = font.getScaleX();
 		if (fScaleX != 1.0) {
-			if (rotateGlyph)
-				bounds = new Rectangle2D.Double(bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight() * fScaleX);
+			if ((glyphOrientation & VCLGraphics.GF_ROTMASK) != 0)
+				bounds = new Rectangle2D.Double(bounds.getX(), bounds.getY() * fScaleX, bounds.getWidth(), bounds.getHeight() * fScaleX);
 			else
-				bounds = new Rectangle2D.Double(bounds.getX(), bounds.getY(), bounds.getWidth() * fScaleX, bounds.getHeight());
+				bounds = new Rectangle2D.Double(bounds.getX() * fScaleX, bounds.getY(), bounds.getWidth() * fScaleX, bounds.getHeight());
 		}
 
 		return bounds.getBounds();

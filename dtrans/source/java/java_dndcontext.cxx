@@ -132,12 +132,14 @@ void SAL_CALL DropTargetDropContext::acceptDrop( sal_Int8 dragOperation ) throw(
 	fprintf( stderr, "DropTargetDropContext::acceptDrop not implemented\n" );
 #endif
 
+	mnAction &= DNDConstants::ACTION_DEFAULT;
+
 	if ( dragOperation & DNDConstants::ACTION_MOVE )
-		mnAction = DNDConstants::ACTION_MOVE;
+		mnAction |= DNDConstants::ACTION_MOVE;
 	else if ( dragOperation & DNDConstants::ACTION_COPY )
-		mnAction = DNDConstants::ACTION_COPY;
+		mnAction |= DNDConstants::ACTION_COPY;
 	else if ( dragOperation & DNDConstants::ACTION_LINK )
-		mnAction = DNDConstants::ACTION_LINK;
+		mnAction |= DNDConstants::ACTION_LINK;
 }
 
 // ------------------------------------------------------------------------
@@ -201,12 +203,14 @@ void SAL_CALL DropTargetDragContext::acceptDrag( sal_Int8 dragOperation ) throw(
 	fprintf( stderr, "DropTargetDragContext::acceptDrag not implemented\n" );
 #endif
 
+	mnAction &= DNDConstants::ACTION_DEFAULT;
+
 	if ( dragOperation & DNDConstants::ACTION_MOVE )
-		mnAction = DNDConstants::ACTION_MOVE;
+		mnAction |= DNDConstants::ACTION_MOVE;
 	else if ( dragOperation & DNDConstants::ACTION_COPY )
-		mnAction = DNDConstants::ACTION_COPY;
+		mnAction |= DNDConstants::ACTION_COPY;
 	else if ( dragOperation & DNDConstants::ACTION_LINK )
-		mnAction = DNDConstants::ACTION_LINK;
+		mnAction |= DNDConstants::ACTION_LINK;
 }
 
 // ------------------------------------------------------------------------

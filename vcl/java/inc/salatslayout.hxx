@@ -47,6 +47,7 @@
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 
+struct ImplATSLayoutData;
 class SalGraphics;
 
 // ----------------
@@ -58,14 +59,7 @@ class SalATSLayout : public GenericSalLayout
 	SalGraphics*		mpGraphics;
 	int					mnFallbackLevel;
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
-	ATSUStyle			maFontStyle;
-	int					mnGlyphCount;
-	ATSUGlyphInfoArray*	mpGlyphInfoArray;
-	long*				mpGlyphTranslations;
-	int*				mpCharsToGlyphs;
-	int*				mpVerticalFlags;
-
-	void				Destroy();
+	ImplATSLayoutData*	mpLayoutData;
 
 public:
 						SalATSLayout( SalGraphics *pGraphics, int nFallbackLevel );
@@ -74,6 +68,10 @@ public:
 	virtual bool		LayoutText( ImplLayoutArgs& rArgs );
 	virtual void		DrawText( SalGraphics& rGraphics ) const;
 	virtual bool		GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector ) const;
+
+	void				Destroy();
+	long				GetBaselineDelta() const;
+	void				GetVerticalGlyphTranslation( long nGlyph, long& nX, long& nY ) const;
 };
 
 #endif // _SV_SALATSLAYOUT_HXX

@@ -48,6 +48,8 @@
 #define SALEVENT_PRINTDOCUMENT		((USHORT)101)
 #define SALEVENT_YIELDEVENTQUEUE	((USHORT)110)
 #define SALEVENT_ACTIVATE_APPLICATION	((USHORT)120)
+#define SALEVENT_ABOUT			((USHORT)130)
+#define SALEVENT_PREFS			((USHORT)140)
 
 class SalFrame;
 
@@ -73,6 +75,7 @@ public:
 	void				dispatch();
 	const Rectangle		getBounds();
 	ULONG				getCommittedCharacterCount();
+	ULONG				getCursorPosition();
 	void*				getData();
 	SalFrame*			getFrame();
 	USHORT				getKeyChar();
@@ -89,6 +92,7 @@ public:
 	short				getMenuID();
 	int					getMenuCookie();
 	long				getScrollAmount();
+	ULONG				getVisiblePosition();
 	long				getWheelRotation();
 };
 

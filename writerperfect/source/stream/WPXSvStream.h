@@ -14,6 +14,7 @@
  *  GNU General Public License Version 2.1
  *  =============================================
  *  Copyright 2002-2003 William Lachance (william.lachance@sympatico.ca)
+ *  Copyright 2004-2005 Michael Meeks (mmeeks@novell.com)
  *  http://libwpd.sourceforge.net
  *
  *  This library is free software; you can redistribute it and/or
@@ -56,7 +57,7 @@ public:
 	virtual bool isOLEStream();
 	virtual WPXInputStream * getDocumentOLEStream();
 
-	virtual const uint8_t *read(size_t numBytes);
+	virtual const uint8_t *read(size_t numBytes, size_t &numBytesRead);
 	virtual int seek(long offset, WPX_SEEK_TYPE seekType);
 	virtual long tell();
 	virtual bool atEOS();

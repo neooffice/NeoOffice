@@ -105,6 +105,12 @@
 #ifndef _OSL_PROCESS_H_
 #include <rtl/process.h>
 #endif
+#ifndef _FSYS_HXX
+#include <tools/fsys.hxx>
+#endif
+#ifndef _UTL_BOOTSTRAP_HXX
+#include <unotools/bootstrap.hxx>
+#endif
 #ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
 #endif
@@ -115,17 +121,21 @@
 
 typedef jobject Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type( JNIEnv *, jobject );
 typedef void Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type( JNIEnv *, jobject );
+typedef jint Java_com_apple_mrj_internal_awt_graphics_CGJavaPixelsPen_UpdateContext_Type( JNIEnv *, jobject, jint, jint, jint, jint, jint );
 
 using namespace osl;
 using namespace rtl;
 using namespace vcl;
 using namespace vos;
+using namespace utl;
 using namespace com::sun::star::uno;
 
 static Mutex aMutex;
 static OModule aJDirectModule;
+static OModule aRealAWTModule;
 static Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type *pCarbonLockGetInstance = NULL;
 static Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *pCarbonLockInit = NULL;
+static Java_com_apple_mrj_internal_awt_graphics_CGJavaPixelsPen_UpdateContext_Type *pUpdateContext = NULL;
 
 static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( JNIEnv *pEnv, jobject object );
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData );
@@ -181,14 +191,16 @@ static void RunAppMain( Application *pApp )
 			if ( pEventHandlerUPP )
 			{
 				// Set up native event handler
-				EventTypeSpec aTypes[3];
+				EventTypeSpec aTypes[4];
 				aTypes[0].eventClass = kEventClassAppleEvent;
 				aTypes[0].eventKind = kEventAppleEvent;
 				aTypes[1].eventClass = kEventClassMouse;
 				aTypes[1].eventKind = kEventMouseWheelMoved;
 				aTypes[2].eventClass = kEventClassMenu;
 				aTypes[2].eventKind = kEventMenuBeginTracking;
-				InstallApplicationEventHandler( pEventHandlerUPP, 3, aTypes, NULL, NULL );
+				aTypes[3].eventClass = kEventClassMenu;
+				aTypes[3].eventKind = kEventMenuPopulate;
+				InstallApplicationEventHandler( pEventHandlerUPP, 4, aTypes, NULL, NULL );
 			}
 		}
 
@@ -333,6 +345,38 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv 
 // ----------------------------------------------------------------------------
 
 #ifdef MACOSX
+static jint JNICALL Java_com_apple_mrj_internal_awt_graphics_CGJavaPixelsPen_UpdateContext( JNIEnv *pEnv, jobject object, jint pContextRef, jint nX, jint nY, jint nWidth, jint nHeight )
+{
+	jint nRet = pUpdateContext( pEnv, object, pContextRef, nX, nY, nWidth, nHeight );
+
+	CGContextRetain( (CGContextRef)nRet );
+
+	return nRet;
+}
+#endif	// MACOSX
+
+// ----------------------------------------------------------------------------
+
+#ifdef MACOSX
+static jint JNICALL Java_com_apple_mrj_internal_awt_graphics_CGSGraphics_CGContextRelease( JNIEnv *pEnv, jobject object, jint pContextRef )
+{
+	CGContextRef aContext = (CGContextRef)pContextRef;
+
+	CFIndex nCount = CFGetRetainCount( aContext );
+	jint nRet = ( nCount > 2 ? pContextRef : 0 );
+
+	if ( nCount > 2 )
+		nCount = 2;
+	while ( nCount-- );
+		CGContextRelease( aContext );
+
+	return nRet;
+}
+#endif	// MACOSX
+
+// ----------------------------------------------------------------------------
+
+#ifdef MACOSX
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData )
 {
 	EventClass nClass = GetEventClass( aEvent );
@@ -352,6 +396,8 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				case kAEPrintDocuments:
 				case kAEOpenApplication:
 				case kAEReopenApplication:
+				case kAEAbout:
+				case 'mPRF':
 					// Note that we can't actually get the Apple event from the
 					// Carbon event. We must dispatch it to registered Apple
 					// event handlers
@@ -380,21 +426,18 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 					WindowRef aWindow;
 					if ( GetEventParameter( aEvent, kEventParamWindowMouseLocation, typeQDPoint, NULL, sizeof( MacOSPoint ), NULL, &aPoint ) == noErr && GetEventParameter( aEvent, kEventParamMouseWheelDelta, typeSInt32, NULL, sizeof( SInt32 ), NULL, &nDelta ) == noErr && GetEventParameter( aEvent, kEventParamWindowRef, typeWindowRef, NULL, sizeof( WindowRef ), NULL, &aWindow ) == noErr )
 					{
-						// Unlock the Carbon lock
-						VCLThreadAttach t;
-						if ( t.pEnv )
-							Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
+						// Unlock the Java lock
+						ReleaseJavaLock();
 
 						// Wakeup the event queue by sending it a dummy event
 						com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
 						pSalData->mpEventQueue->postCachedEvent( &aEvent );
 
 						// Block the VCL event loop while checking mapping
-						pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->acquire();
+						Application::GetSolarMutex().acquire();
 
-						// Relock the Carbon lock
-						if ( t.pEnv )
-							Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
+						// Relock the Java lock
+						AcquireJavaLock();
 
 						for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 						{
@@ -406,7 +449,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 						}
 
 						// Unblock the VCL event loop
-						pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->release();
+						Application::GetSolarMutex().release();
 					}
 				}
 
@@ -433,6 +476,13 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 					if ( rootMenu != NULL )
 						ReleaseMenu( rootMenu );
 
+					// Check if the front window is a native modal window as
+					// we will deadlock when a native modal window is showing
+					WindowRef aWindow = FrontWindow();
+					WindowModality nModality;
+					if ( isMenubar && aWindow && GetWindowModality( aWindow, &nModality, NULL ) == noErr && ( nModality == kWindowModalitySystemModal || nModality == kWindowModalityAppModal ) )
+						isMenubar = false;
+					
 					if ( isMenubar )
 					{
 						// Post a yield event and wait the VCL event queue to block
@@ -440,29 +490,31 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 						com_sun_star_vcl_VCLEvent aYieldEvent( SALEVENT_YIELDEVENTQUEUE, NULL, NULL );
 						pSalData->mpEventQueue->postCachedEvent( &aYieldEvent );
 
-						// Unlock the Carbon lock
-						VCLThreadAttach t;
-						if ( t.pEnv )
-							Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
+						// Unlock the Java lock
+						ReleaseJavaLock();
 
 						pSalData->maNativeEventStartCondition.wait();
 
-						pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->acquire();
+						Application::GetSolarMutex().acquire();
 
 						// Execute menu updates while the VCL event queue is
 						// blocked
 						for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 							UpdateMenusForFrame( *it, NULL );
 
-						// Relock the Carbon lock
-						if ( t.pEnv )
-							Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
+						// Relock the Java lock
+						AcquireJavaLock();
 
-						pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->release();
+						Application::GetSolarMutex().release();
 
 						pSalData->maNativeEventEndCondition.set();
 					}
 				}
+			}
+			else if ( nClass == kEventClassMenu && nKind == kEventMenuPopulate )
+			{
+				// Fix bug 221 by explicitly reenabling all keyboards
+				KeyScript( smKeyEnableKybds );
 			}
 		}
 	}
@@ -487,14 +539,12 @@ void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void
 			com_sun_star_vcl_VCLEvent aYieldEvent( SALEVENT_YIELDEVENTQUEUE, NULL, NULL );
 			pSalData->mpEventQueue->postCachedEvent( &aYieldEvent );
 
-			// Unlock the Carbon lock
-			VCLThreadAttach t;
-			if ( t.pEnv )
-				Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
+			// Unlock the Java lock
+			ReleaseJavaLock();
 
 			pSalData->maNativeEventStartCondition.wait();
 
-			pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->acquire();
+			Application::GetSolarMutex().acquire();
 
 			Rect aRect;
 			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
@@ -504,11 +554,10 @@ void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void
 					(*it)->SetPosSize( (long)aRect.left, (long)aRect.top, (long)( aRect.right - aRect.left + 1 ) - (*it)->maGeometry.nLeftDecoration - (*it)->maGeometry.nRightDecoration, (long)( aRect.bottom - aRect.top + 1 ) - (*it)->maGeometry.nTopDecoration - (*it)->maGeometry.nBottomDecoration, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
 			}
 
-			// Relock the Carbon lock
-			if ( t.pEnv )
-				Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
+			// Relock the Java lock
+			AcquireJavaLock();
 
-			pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->release();
+			Application::GetSolarMutex().release();
 
 			pSalData->maNativeEventEndCondition.set();
 		}
@@ -608,6 +657,9 @@ static OSErr DoAEOpenPrintDocuments( const AppleEvent *message, AppleEvent *repl
 #ifdef MACOSX
 static OSErr DoAEOpen( const AppleEvent *message, AppleEvent *reply, long refcon )
 {
+	// Fix bug 221 by explicitly reenabling all keyboards
+	KeyScript( smKeyEnableKybds );
+
 	return noErr;
 }
 #endif	// MACOSX
@@ -617,6 +669,9 @@ static OSErr DoAEOpen( const AppleEvent *message, AppleEvent *reply, long refcon
 #ifdef MACOSX
 static OSErr DoAEReopen( const AppleEvent *message, AppleEvent *reply, long refcon )
 {
+	// Fix bug 221 by explicitly reenabling all keyboards
+	KeyScript( smKeyEnableKybds );
+
 	if ( !Application::IsShutDown() )
 	{
 		SalData *pSalData = GetSalData();
@@ -637,16 +692,37 @@ void ExecuteApplicationMain( Application *pApp )
 {
 #ifdef MACOSX
 
+	// If there is a "user/fonts" directory, explicitly activate the
+	// fonts since Panther does not automatically add fonts in the user's
+	// Library/Fonts directory until they reboot or relogin
+	OUString aUserStr;
+	OUString aUserPath;
+	if ( Bootstrap::locateUserInstallation( aUserStr ) == Bootstrap::PATH_EXISTS && osl_getSystemPathFromFileURL( aUserStr.pData, &aUserPath.pData ) == osl_File_E_None )
+	{
+		ByteString aFontDir( aUserPath.getStr(), RTL_TEXTENCODING_UTF8 );
+		if ( aFontDir.Len() )
+		{
+			aFontDir += ByteString( "/user/fonts", RTL_TEXTENCODING_UTF8 );
+			FSRef aFontPath;
+			FSSpec aFontSpec;
+			if ( FSPathMakeRef( (const UInt8 *)aFontDir.GetBuffer(), &aFontPath, 0 ) == noErr && FSGetCatalogInfo( &aFontPath, kFSCatInfoNone, NULL, NULL, &aFontSpec, NULL) == noErr )
+				ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextLocal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDefault, NULL );
+		}
+	}
+
 	// If there is a "share/fonts/truetype" directory, explicitly activate the
 	// fonts since Panther does not automatically add fonts in the user's
 	// Library/Fonts directory until they reboot or relogin
-	OUString aStr;
+	OUString aExecStr;
 	OUString aExecPath;
-	if ( osl_getExecutableFile( &aStr.pData ) == osl_Process_E_None && osl_getSystemPathFromFileURL( aStr.pData, &aExecPath.pData ) == osl_File_E_None )
+	if ( osl_getExecutableFile( &aExecStr.pData ) == osl_Process_E_None && osl_getSystemPathFromFileURL( aExecStr.pData, &aExecPath.pData ) == osl_File_E_None )
 	{
 		ByteString aFontDir( aExecPath.getStr(), RTL_TEXTENCODING_UTF8 );
 		if ( aFontDir.Len() )
 		{
+			DirEntry aFontDirEntry( aFontDir );
+			aFontDirEntry.ToAbs();
+			aFontDir = ByteString( aFontDirEntry.GetPath().GetFull(), RTL_TEXTENCODING_UTF8 );
 			aFontDir += ByteString( "/../share/fonts/truetype", RTL_TEXTENCODING_UTF8 );
 			FSRef aFontPath;
 			FSSpec aFontSpec;
@@ -723,8 +799,7 @@ void ExecuteApplicationMain( Application *pApp )
 			OModule aModule;
 			if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/AppKit.framework/AppKit" ) ) )
 			{
-				SalInstance *pSalInstance = GetSalData()->mpFirstInstance;
-				ULONG nCount = pSalInstance->ReleaseYieldMutex();
+				ULONG nCount = Application::ReleaseSolarMutex();
 
 				// Create the thread to run the Main() method in
 				SVMainThread aSVMainThread( pApp );
@@ -734,7 +809,7 @@ void ExecuteApplicationMain( Application *pApp )
 				RunCocoaEventLoop();
 				aSVMainThread.join();
 
-				pSalInstance->AcquireYieldMutex( nCount );
+				Application::AcquireSolarMutex( nCount );
 			}
 
 			return;
@@ -749,7 +824,7 @@ void ExecuteApplicationMain( Application *pApp )
 			{
 				// Find libJDirect.jnilib
 				jmethodID mID = NULL;
-				OUString aJDirectPath;
+				OUString aJavaHomePath;
 				if ( !mID )
 				{
 					char *cSignature = "(Ljava/lang/String;)Ljava/lang/String;";
@@ -763,24 +838,33 @@ void ExecuteApplicationMain( Application *pApp )
 					jstring out;
 					out = (jstring)t.pEnv->CallStaticObjectMethodA( systemClass, mID, args );
 					if ( out )
-						aJDirectPath = JavaString2String( t.pEnv, out );
+						aJavaHomePath = JavaString2String( t.pEnv, out );
 				}
 
-				// Load libJDirect.jnilib and cache symbols
-				if ( aJDirectPath.getLength() )
+				// Load libJDirect.jnilib and librealawt.jnilib and cache
+				// symbols
+				if ( aJavaHomePath.getLength() )
 				{
+					OUString aJDirectPath( aJavaHomePath );
 					aJDirectPath += OUString::createFromAscii( "/../Libraries/libJDirect.jnilib" );
 					if ( aJDirectModule.load( aJDirectPath ) )
 					{
 						pCarbonLockGetInstance = (Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type *)aJDirectModule.getSymbol( OUString::createFromAscii( "Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance" ) );
 						pCarbonLockInit = (Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *)aJDirectModule.getSymbol( OUString::createFromAscii( "Java_com_apple_mrj_macos_carbon_CarbonLock_init" ) );
 					}
+
+					OUString aRealAWTPath( aJavaHomePath );
+					aRealAWTPath += OUString::createFromAscii( "/../Libraries/librealawt.jnilib" );
+					if ( aRealAWTModule.load( aRealAWTPath ) )
+						pUpdateContext = (Java_com_apple_mrj_internal_awt_graphics_CGJavaPixelsPen_UpdateContext_Type *)aRealAWTModule.getSymbol( OUString::createFromAscii( "Java_com_apple_mrj_internal_awt_graphics_CGJavaPixelsPen_UpdateContext" ) );
 				}
 
 			}
 
 			jclass carbonLockClass = t.pEnv->FindClass( "com/apple/mrj/macos/carbon/CarbonLock" );
-			if ( carbonLockClass && pCarbonLockGetInstance && pCarbonLockInit )
+			jclass cgJavaPixelsPenClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/graphics/CGJavaPixelsPen" );
+			jclass cgsGraphicsClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/graphics/CGSGraphics" );
+			if ( carbonLockClass && pCarbonLockGetInstance && pCarbonLockInit && cgJavaPixelsPenClass && pUpdateContext && cgsGraphicsClass )
 			{
 				// Reregister the native methods
 				JNINativeMethod pMethods[4];
@@ -797,6 +881,16 @@ void ExecuteApplicationMain( Application *pApp )
 				pMethods[3].signature = "()I";
 				pMethods[3].fnPtr = (void *)Java_com_apple_mrj_macos_carbon_CarbonLock_release0;
 				t.pEnv->RegisterNatives( carbonLockClass, pMethods, 4 );
+
+				pMethods[0].name = "UpdateContext";
+				pMethods[0].signature = "(IIIII)I";
+				pMethods[0].fnPtr = (void *)Java_com_apple_mrj_internal_awt_graphics_CGJavaPixelsPen_UpdateContext;
+				t.pEnv->RegisterNatives( cgJavaPixelsPenClass, pMethods, 1 );
+
+				pMethods[0].name = "CGContextRelease";
+				pMethods[0].signature = "(I)I";
+				pMethods[0].fnPtr = (void *)Java_com_apple_mrj_internal_awt_graphics_CGSGraphics_CGContextRelease;
+				t.pEnv->RegisterNatives( cgsGraphicsClass, pMethods, 1 );
 
 				// Peek for a Carbon event. This is enough to solve the
 				// keyboard layout switching problem on Panther.
@@ -894,6 +988,30 @@ void ExecuteApplicationMain( Application *pApp )
 
 	// Now that Java is properly initialized, run the application's Main()
 	RunAppMain( pApp );
+}
+
+// -----------------------------------------------------------------------
+
+void AcquireJavaLock()
+{
+#ifdef MACOSX
+	// Lock the Carbon lock
+	VCLThreadAttach t;
+	if ( t.pEnv && t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+		Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
+#endif	// MACOSX
+}
+
+// -----------------------------------------------------------------------
+
+void ReleaseJavaLock()
+{
+#ifdef MACOSX
+	// Unlock the Carbon lock
+	VCLThreadAttach t;
+	if ( t.pEnv && t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+		Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
+#endif	// MACOSX
 }
 
 // =======================================================================
@@ -1034,7 +1152,6 @@ void SalInstance::AcquireYieldMutex( ULONG nCount )
 void SalInstance::Yield( BOOL bWait )
 {
 	static USHORT nRecursionLevel = 0;
-	static bool bInOpenDocEvent = false;
 
 	SalData *pSalData = GetSalData();
 	com_sun_star_vcl_VCLEvent *pEvent;
@@ -1044,43 +1161,41 @@ void SalInstance::Yield( BOOL bWait )
 	// Dispatch pending non-AWT events
 	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( 0, FALSE ) ) != NULL )
 	{
+		bool bReturn = true;
 		USHORT nID = pEvent->getID();
-		switch ( nID )
+		if ( nID == SALEVENT_SHUTDOWN )
 		{
-			case SALEVENT_SHUTDOWN:
-				// Ignore SALEVENT_SHUTDOWN events when recursing into this
-				// method or when in presentation mode
-				if ( nRecursionLevel == 1 && !pSalData->mpPresentationFrame )
-					pEvent->dispatch();
-				break;
-			case SALEVENT_OPENDOCUMENT:
-			case SALEVENT_PRINTDOCUMENT:
-				// Fix bug 168 by reposting SALEVENT_*DOCUMENT events when
-				// recursing into this method while opening a document
-				if ( !bInOpenDocEvent )
-				{
-					bInOpenDocEvent = true;
-					pEvent->dispatch();
-					bInOpenDocEvent = false;
-				}
-				else
-				{
-					com_sun_star_vcl_VCLEvent aEvent( pEvent->getJavaObject() );
-					pSalData->mpEventQueue->postCachedEvent( &aEvent );
-				}
-				break;
-			default:
+			// Ignore SALEVENT_SHUTDOWN events when recursing into this
+			// method or when in presentation mode
+			if ( nRecursionLevel == 1 && !pSalData->mpPresentationFrame )
 				pEvent->dispatch();
-				break;
+		}
+		else if ( nID == SALEVENT_OPENDOCUMENT || nID == SALEVENT_PRINTDOCUMENT )
+		{
+			// Fix bug 168 by reposting SALEVENT_*DOCUMENT events when
+			// recursing into this method while opening a document
+			if ( nRecursionLevel == 1 && !pSalData->mpPresentationFrame )
+			{
+				pEvent->dispatch();
+			}
+			else
+			{
+				com_sun_star_vcl_VCLEvent aEvent( pEvent->getJavaObject() );
+				pSalData->mpEventQueue->postCachedEvent( &aEvent );
+				bReturn = false;
+			}
+		}
+		else
+		{
+			pEvent->dispatch();
 		}
 		delete pEvent;
 
-		ULONG nCount = ReleaseYieldMutex();
-		if ( bWait )
-			OThread::yield();
-		AcquireYieldMutex( nCount );
-		nRecursionLevel--;
-		return;
+		if ( bReturn )
+		{
+			nRecursionLevel--;
+			return;
+		}
 	}
 
 	ULONG nCount = ReleaseYieldMutex();
@@ -1096,29 +1211,19 @@ void SalInstance::Yield( BOOL bWait )
 		if ( pSalData->mpTimerProc && aCurrentTime >= pSalData->maTimeout )
 		{
 			if ( pSalData->mpPresentationFrame )
-			{
 				pSalData->mpPresentationFrame->maFrameData.mpVCLFrame->setAutoFlush( TRUE );
-				for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maPresentationFrameList.begin(); it != pSalData->maPresentationFrameList.end(); ++it )
-					(*it)->maFrameData.mpVCLFrame->setAutoFlush( TRUE );
-			}
 
 			gettimeofday( &pSalData->maTimeout, NULL );
 			pSalData->maTimeout += pSalData->mnTimerInterval;
 			pSalData->mpTimerProc();
 
 			if ( pSalData->mpPresentationFrame )
-			{
 				pSalData->mpPresentationFrame->maFrameData.mpVCLFrame->setAutoFlush( FALSE );
-				for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maPresentationFrameList.begin(); it != pSalData->maPresentationFrameList.end(); ++it )
-					(*it)->maFrameData.mpVCLFrame->setAutoFlush( FALSE );
-			}
-			else
-			{
-				// Flush all of the window buffers to the native windows and
-				// synchronize native menus
-				for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-					(*it)->Flush();
-			}
+
+			// Flush all of the window buffers to the native windows and
+			// synchronize native menus
+			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+				(*it)->Flush();
 		}
 	}
 
@@ -1141,24 +1246,35 @@ void SalInstance::Yield( BOOL bWait )
 	}
 
 	// Dispatch pending AWT events
+	nCount = ReleaseYieldMutex();
 	while ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
 	{
-		// Reset timeout
+		AcquireYieldMutex( nCount );
+		nCount = 0;
+
 		nTimeout = 0;
 
 		USHORT nID = pEvent->getID();
+		bool bMouseEvent= ( nID == SALEVENT_MOUSEBUTTONDOWN || nID == SALEVENT_MOUSEBUTTONDOWN || nID == SALEVENT_MOUSELEAVE || nID == SALEVENT_MOUSEMOVE );
+
+		if ( bMouseEvent )
+		{
+			// Give drag handler threads a chance to run
+			nCount = ReleaseYieldMutex();
+			OThread::yield();
+			AcquireYieldMutex( nCount );
+			nCount = 0;
+		}
+
 		pEvent->dispatch();
 		delete pEvent;
 
-		// If this is not a mouse move event, make another pass through
-		// the loop in case the next event is a mouse released event. If the
-		// timer is run between continguous mouse or key pressed and released
-		// the application acts is if two mouse clicks have been made instead
-		// of one.
-		if ( nID == SALEVENT_MOUSEMOVE )
+		// Fix for bug 416 and 428 without causing bug 380
+		if ( !bMouseEvent )
 			break;
 	}
 
+	AcquireYieldMutex( nCount );
 	nRecursionLevel--;
 }
 
@@ -1385,25 +1501,7 @@ SalInfoPrinter* SalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
 	// Check driver data
 	if ( pSetupData->mpDriverData )
 	{
-		BOOL bDelete = FALSE;
-
 		if ( pSetupData->mnSystem != JOBSETUP_SYSTEM_JAVA || pSetupData->mnDriverDataLen != sizeof( SalDriverData ) )
-			bDelete = TRUE;
-
-		if ( !bDelete )
-		{
-			bDelete = TRUE;
-			for ( ::std::list< com_sun_star_vcl_VCLPageFormat* >::const_iterator it = pSalData->maVCLPageFormats.begin(); it != pSalData->maVCLPageFormats.end(); ++it )
-			{
-				if ( ((SalDriverData *)pSetupData->mpDriverData)->mpVCLPageFormat == *it && ((SalDriverData *)pSetupData->mpDriverData)->mpVCLPageFormat->getJavaObject() == (*it)->getJavaObject() )
-				{
-					bDelete = FALSE;
-					break;
-				}
-			}
-		}
-
-		if ( bDelete )
 		{
 			rtl_freeMemory( pSetupData->mpDriverData );
 			pSetupData->mpDriverData = NULL;
@@ -1414,16 +1512,14 @@ SalInfoPrinter* SalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
 	// Set driver data
 	if ( !pSetupData->mpDriverData )
 	{
-		SalDriverData *pDriverData = (SalDriverData *)rtl_allocateMemory( sizeof( SalDriverData ) );
+		SalDriverData *pDriverData = new SalDriverData();
 		pDriverData->mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat();
-		pSalData->maVCLPageFormats.push_back( pDriverData->mpVCLPageFormat );
 		pSetupData->mpDriverData = (BYTE *)pDriverData;
 		pSetupData->mnDriverDataLen = sizeof( SalDriverData );
 	}
 
 	// Create a new page format instance that points to the same Java object
 	pPrinter->maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( ((SalDriverData *)pSetupData->mpDriverData)->mpVCLPageFormat->getJavaObject() );
-	pSalData->maVCLPageFormats.push_back( pPrinter->maPrinterData.mpVCLPageFormat );
 
 	// Update values
 	pPrinter->SetData( 0, pSetupData );

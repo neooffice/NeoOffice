@@ -45,6 +45,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.PaintEvent;
 import java.awt.font.TextAttribute;
+import java.awt.font.TextHitInfo;
 import java.awt.im.InputMethodHighlight;
 import java.text.CharacterIterator;
 import java.text.AttributedCharacterIterator;
@@ -835,6 +836,16 @@ public final class VCLEvent extends AWTEvent {
 	public final static int SALEVENT_ACTIVATE_APPLICATION = 120;
 
 	/**
+	 * SALEVENT_ABOUT constant.
+	 */
+	public final static int SALEVENT_ABOUT = 130;
+	
+	/**
+	 * SALEEVENT_PREFS constant
+	 */
+	public final static int SALEVENT_PREFS = 140;
+
+	/**
 	 * SAL_EXTTEXTINPUT_ATTR_GRAYWAVELINE constant.
 	 */
 	public final static int SAL_EXTTEXTINPUT_ATTR_GRAYWAVELINE = 0x100;
@@ -1069,18 +1080,22 @@ public final class VCLEvent extends AWTEvent {
 					count++;
 				}
 				text = buf.toString();
-				textAttributes = new int[count];
-				count = 0;
-				for (char c = i.first(); c != CharacterIterator.DONE; c = i.next()) {
-					int attribute = 0;
-					InputMethodHighlight hl = (InputMethodHighlight)i.getAttribute(TextAttribute.INPUT_METHOD_HIGHLIGHT);
-					if (hl != null) {
-						if (hl.isSelected())
-							attribute |= SAL_EXTTEXTINPUT_ATTR_BOLDUNDERLINE;
-						else
-							attribute |= SAL_EXTTEXTINPUT_ATTR_UNDERLINE;
+
+				if (getCommittedCharacterCount() < count)
+				{
+					textAttributes = new int[count];
+					count = 0;
+					for (char c = i.first(); c != CharacterIterator.DONE; c = i.next()) {
+						int attribute = 0;
+						InputMethodHighlight hl = (InputMethodHighlight)i.getAttribute(TextAttribute.INPUT_METHOD_HIGHLIGHT);
+						if (hl != null) {
+							if (hl.isSelected())
+								attribute |= SAL_EXTTEXTINPUT_ATTR_HIGHLIGHT;
+							else
+								attribute |= SAL_EXTTEXTINPUT_ATTR_UNDERLINE;
+						}
+						textAttributes[count++] = attribute;
 					}
-					textAttributes[count++] = attribute;
 				}
 			}
 		}
@@ -1160,6 +1175,23 @@ public final class VCLEvent extends AWTEvent {
 			return ((InputMethodEvent)source).getCommittedCharacterCount();
 		else
 			return 0;
+
+	}
+
+	/**
+	 * Gets the cursor position for input method events.
+	 *
+	 * @return the cursor position for input method events
+	 */
+	public int getCursorPosition() {
+
+		if (source instanceof InputMethodEvent) {
+			TextHitInfo hi = ((InputMethodEvent)source).getCaret();
+			return (hi != null ? hi.getInsertionIndex() : 0);
+		}
+		else {
+			return 0;
+		}
 
 	}
 
@@ -1657,6 +1689,23 @@ public final class VCLEvent extends AWTEvent {
 	}
 
 	/**
+	 * Gets the visible position for input method events.
+	 *
+	 * @return the visible position for input method events
+	 */
+	public int getVisiblePosition() {
+
+		if (source instanceof InputMethodEvent) {
+			TextHitInfo hi = ((InputMethodEvent)source).getVisiblePosition();
+			return (hi != null ? hi.getInsertionIndex() : 0);
+		}
+		else {
+			return 0;
+		}
+
+	}
+
+	/**
 	 * Gets the mouse wheel rotation.
 	 *
 	 * @return the mouse wheel rotation
@@ -1846,6 +1895,14 @@ public final class VCLEvent extends AWTEvent {
 			case SALEVENT_OPENDOCUMENT:
 				typeStr = "SALEVENT_OPENDOCUMENT";
 				break;
+			case SALEVENT_PRINTDOCUMENT:
+				typeStr = "SALEVENT_PRINTDOCUMENT";
+				break;
+			case SALEVENT_YIELDEVENTQUEUE:
+				typeStr = "SALEVENT_YIELDEVENTQUEUE";
+				break;
+			case SALEVENT_ACTIVATE_APPLICATION:
+				typeStr = "SALEVENT_ACTIVATE_APPLICATION";
 			default:
 				typeStr = "unknown type";
 		}

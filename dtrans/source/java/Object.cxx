@@ -215,21 +215,14 @@ jclass java_lang_Object::getMyClass()
 
 java_lang_Object::java_lang_Object( jobject myObj ) : object( NULL )
 {
-	DTransThreadAttach t;
-	if ( t.pEnv && myObj )
-		saveRef( myObj );
+	saveRef( myObj );
 }
 
 // ----------------------------------------------------------------------------
 
 java_lang_Object::~java_lang_Object()
 {
-	if ( object )
-	{
-		DTransThreadAttach t;
-		if ( t.pEnv )
-			t.pEnv->DeleteGlobalRef( object );
-	}
+	saveRef( NULL );
 }
 
 // ----------------------------------------------------------------------------
@@ -244,6 +237,8 @@ void java_lang_Object::saveRef( jobject myObj )
 			t.pEnv->DeleteGlobalRef( object );
 		if ( myObj )
 			object = t.pEnv->NewGlobalRef( myObj );
+		else
+			object = NULL;
 	}
 }
 

@@ -149,6 +149,9 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 
 	com_sun_star_dtrans_DTransTransferable *pTransferable = (com_sun_star_dtrans_DTransTransferable *)pData;
 
+	if ( carbonLockClass && mIDRelease0 && mIDRelease0 )
+		t.pEnv->CallStaticIntMethod( carbonLockClass, mIDRelease0 );
+
 	BOOL bTransferableFound = FALSE;
 	if ( pTransferable )
 	{
@@ -181,9 +184,6 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 
 		if ( bFlavorFound )
 		{
-			if ( carbonLockClass && mIDRelease0 && mIDRelease0 )
-				t.pEnv->CallStaticIntMethod( carbonLockClass, mIDRelease0 );
-
 			BOOL bDataFound = FALSE;
 			Any aValue;
 			try {
@@ -193,10 +193,6 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 			catch ( ... )
 			{
 			}
-
-			if ( carbonLockClass && mIDRelease0 && mIDAcquire0 )
-				t.pEnv->CallStaticIntMethod( carbonLockClass, mIDAcquire0 );
-
 
 			if ( bDataFound )
 			{
@@ -324,6 +320,9 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 			}
 		}
 	}
+
+	if ( carbonLockClass && mIDRelease0 && mIDAcquire0 )
+		t.pEnv->CallStaticIntMethod( carbonLockClass, mIDAcquire0 );
 
 	return nErr;
 }

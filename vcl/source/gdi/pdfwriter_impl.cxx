@@ -72,15 +72,14 @@
 
 #if defined USE_JAVA && defined MACOSX
 
+#ifndef _SV_SALATSLAYOUT_HXX
+#include <salatslayout.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
 #include <com/sun/star/vcl/VCLFont.hxx>
 #endif
 
 #include <unotools/tempfile.hxx>
-
-#include <premac.h>
-#include <Carbon/Carbon.h>
-#include <postmac.h>
 
 #endif	// USE_JAVA && MACOSX
 
@@ -3306,16 +3305,52 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                 if( ( nGlyphFlags[n] & GF_ROTMASK ) == GF_ROTL )
                 {
                     fDeltaAngle = M_PI/2.0;
+#if defined USE_JAVA && defined MACOSX
+                    SalATSLayout *pATSLayout = dynamic_cast<SalATSLayout*>( &rLayout );
+                    if ( pATSLayout )
+                    {
+                        long nX;
+                        long nY;
+                        pATSLayout->GetVerticalGlyphTranslation( pGlyphs[n] | nGlyphFlags[n], nX, nY );
+                        aDeltaPos.X() = nY;
+                        aDeltaPos.Y() = (int)( ( (double)( pATSLayout->GetBaselineDelta() + nX ) * fXScale * -1 ) + 0.5 );
+						aDeltaPos = m_pReferenceDevice->PixelToLogic( aDeltaPos );
+                    }
+                    else
+                    {
+                        aDeltaPos.X() = m_pReferenceDevice->GetFontMetric().GetAscent();
+                        aDeltaPos.Y() = (int)((double)m_pReferenceDevice->GetFontMetric().GetDescent() * fXScale);
+                    }
+#else	// USE_JAVA && MACOSX
                     aDeltaPos.X() = m_pReferenceDevice->GetFontMetric().GetAscent();
                     aDeltaPos.Y() = (int)((double)m_pReferenceDevice->GetFontMetric().GetDescent() * fXScale);
+#endif	// USE_JAVA && MACOSX
                     fYScale = fXScale;
                     fTempXScale = 1.0;
                 }
                 else if( ( nGlyphFlags[n] & GF_ROTMASK ) == GF_ROTR )
                 {
                     fDeltaAngle = -M_PI/2.0;
+#if defined USE_JAVA && defined MACOSX
+                    SalATSLayout *pATSLayout = dynamic_cast<SalATSLayout*>( &rLayout );
+                    if ( pATSLayout )
+                    {
+                        long nX;
+                        long nY;
+                        pATSLayout->GetVerticalGlyphTranslation( pGlyphs[n] | nGlyphFlags[n], nX, nY );
+                        aDeltaPos.X() = (int)( ( (double)pAdvanceWidths[n] / rLayout.GetUnitsPerPixel() ) - nY + 0.5 );
+                        aDeltaPos.Y() = (int)( ( (double)( pATSLayout->GetBaselineDelta() - nX ) * fXScale * -1 ) + 0.5 );
+						aDeltaPos = m_pReferenceDevice->PixelToLogic( aDeltaPos );
+                    }
+                    else
+                    {
+                        aDeltaPos.X() = (int)((double)m_pReferenceDevice->GetFontMetric().GetDescent()*fXScale);
+                        aDeltaPos.Y() = -m_pReferenceDevice->GetFontMetric().GetAscent();
+                    }
+#else	// USE_JAVA && MACOSX
                     aDeltaPos.X() = (int)((double)m_pReferenceDevice->GetFontMetric().GetDescent()*fXScale);
                     aDeltaPos.Y() = -m_pReferenceDevice->GetFontMetric().GetAscent();
+#endif	// USE_JAVA && MACOSX
                     fYScale = fXScale;
                     fTempXScale = 1.0;
                 }

@@ -69,6 +69,10 @@
 #include <vos/module.hxx>
 #endif
 
+#ifndef _OSL_MUTEX_HXX_
+#include <osl/mutex.hxx>
+#endif
+
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
@@ -140,10 +144,7 @@ SalFrame::~SalFrame()
 		pSalData->mpFocusFrame = NULL;
 
 	if ( pSalData->mpPresentationFrame == this )
-	{
 		pSalData->mpPresentationFrame = NULL;
-		pSalData->maPresentationFrameList.clear();
-	}
 
 	pSalData->maAlwaysOnTopFrameList.remove( this );
 }
@@ -206,11 +207,11 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	if ( bVisible == maFrameData.mbVisible )
 		return;
 
-	if ( bNoActivate && maFrameData.mpVCLFrame->isFloatingWindow() )
-		bNoActivate = FALSE;
+	SalData *pSalData = GetSalData();
 
 	maFrameData.mbVisible = bVisible;
-	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible, bNoActivate, this );
+
+	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible, bNoActivate );
 
 	// Reset graphics
 	com_sun_star_vcl_VCLGraphics *pVCLGraphics = maFrameData.mpVCLFrame->getGraphics();
@@ -220,7 +221,6 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		delete pVCLGraphics;
 	}
 
-	SalData *pSalData = GetSalData();
 	if ( maFrameData.mbVisible )
 	{
 		// Update the cached position
@@ -237,14 +237,9 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		{
 			pSalData->mpFocusFrame = NULL;
 
-			// When in presentation mode, explicitly set the focus to the
-			// presentation frame
-			if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame != this )
-				pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
+			if ( maFrameData.mpParent )
+				maFrameData.mpParent->ToTop( SAL_FRAME_TOTOP_GRABFOCUS );
 		}
-
-		if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame != this )
-			pSalData->maPresentationFrameList.remove( this );
 	}
 }
 
@@ -309,6 +304,8 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 			nX = aWorkArea.nLeft + ( ( aWorkArea.GetWidth() - nWidth ) / 2 );
 			nY = aWorkArea.nTop + ( ( aWorkArea.GetHeight() - nHeight ) / 2 );
 		}
+
+		maFrameData.mbCenter = FALSE;
 	}
 	else if ( maFrameData.mpParent )
 	{
@@ -374,10 +371,14 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 			if ( pEventHandlerUPP )
 			{
 				// Set up native event handler
-				EventTypeSpec aType;
-				aType.eventClass = kEventClassWindow;
-				aType.eventKind = kEventWindowActivated;
-				InstallWindowEventHandler( (WindowRef)maFrameData.maSysData.aWindow, pEventHandlerUPP, 1, &aType, NULL, NULL );
+				EventTypeSpec aTypes[3];
+				aTypes[0].eventClass = kEventClassMouse;
+				aTypes[0].eventKind = kEventMouseUp;
+				aTypes[1].eventClass = kEventClassMouse;
+				aTypes[1].eventKind = kEventMouseEntered;
+				aTypes[2].eventClass = kEventClassMouse;
+				aTypes[2].eventKind = kEventMouseExited;
+				InstallWindowEventHandler( (WindowRef)maFrameData.maSysData.aWindow, pEventHandlerUPP, 3, aTypes, NULL, NULL );
 			}
 
 		}
@@ -386,17 +387,14 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 
 	// Fix bugs 169 and 283 by giving the Java event thread a chance
 	// to update the native window
-	SalData *pSalData = GetSalData();
-	ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
+	ULONG nCount = Application::ReleaseSolarMutex();
 	OThread::yield();
-	pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
+	Application::AcquireSolarMutex( nCount );
 
 	// Update the cached position
 	Rectangle *pBounds = new Rectangle( maFrameData.mpVCLFrame->getBounds() );
 	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pBounds );
 	aEvent.dispatch();
-
-	maFrameData.mbCenter = FALSE;
 }
 
 // -----------------------------------------------------------------------
@@ -504,6 +502,62 @@ void SalFrame::ShowFullScreen( BOOL bFullScreen )
 
 // -----------------------------------------------------------------------
 
+#ifdef MACOSX
+/**
+ * (static) Timer routine to toggle the system user interface mode on the
+ * thread that is hosting our main runloop.  Starting with 10.3.8, it appears
+ * that there is some type of contention that is causing SetSystemUIMode
+ * to crash if it is invoked from a thread that is not the carbon runloop.
+ *
+ * @param aTimer	timer reference structure
+ * @param pData		cookie passed to timer;  treated as a boolean value
+ *			set to TRUE if we're entering fullscreen presentation
+ *			mode, FALSE if we're returning to normal usage mode.
+ */
+static void SetSystemUIModeTimerCallback( EventLoopTimerRef aTimer, void *pData )
+{
+	bool enterFullscreen = (bool)pData;
+	
+	if ( enterFullscreen )
+		SetSystemUIMode( kUIModeAllHidden, kUIOptionDisableAppleMenu | kUIOptionDisableProcessSwitch );
+	else
+		SetSystemUIMode( kUIModeNormal, 0 );
+}
+#endif
+
+// -----------------------------------------------------------------------
+
+#ifdef MACOSX
+/**
+ * (static) Trigger a timer invocation to change our system user interface
+ * mode to show/hide the dock, menubar, and other applications in preparation
+ * for presentation mode.
+ *
+ * @param bStart	TRUE to enter fullscreen mode, FALSE to restore
+ *			normal mode
+ */
+static void InstallSetSystemUIModeTimer( BOOL bStart )
+{
+	static EventLoopTimerUPP pSystemUIModeTimerUPP = NULL;
+	static ::osl::Mutex aMutex;
+	
+	::osl::MutexGuard aGuard( aMutex );
+	if ( !pSystemUIModeTimerUPP )
+		pSystemUIModeTimerUPP = NewEventLoopTimerUPP( SetSystemUIModeTimerCallback );
+	if ( pSystemUIModeTimerUPP )
+	{
+		InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pSystemUIModeTimerUPP, (void *)( bStart ? true : false ), NULL );
+
+		// Let the native event thread run
+		ULONG nCount = Application::ReleaseSolarMutex();
+		OThread::yield();
+		Application::AcquireSolarMutex( nCount );
+	}
+}
+#endif
+
+// -----------------------------------------------------------------------
+
 void SalFrame::StartPresentation( BOOL bStart )
 {
 	if ( bStart == maFrameData.mbPresentation )
@@ -518,14 +572,12 @@ void SalFrame::StartPresentation( BOOL bStart )
 		return;
 
 #ifdef MACOSX
-	if ( bStart )
-		SetSystemUIMode( kUIModeAllHidden, kUIOptionDisableAppleMenu | kUIOptionDisableProcessSwitch );
-	else
-		SetSystemUIMode( kUIModeNormal, 0 );
+	// [ed] 2/15/05 Change the SystemUIMode via timers so we can trigger
+	// it on the main runloop thread.  Bug 484
+	InstallSetSystemUIModeTimer( bStart );
 
 	maFrameData.mbPresentation = bStart;
 	pSalData->mpPresentationFrame = this;
-	pSalData->maPresentationFrameList.clear();
 
 	// Adjust window size if in full screen mode
 	if ( maFrameData.mbFullScreen )
@@ -564,35 +616,18 @@ void SalFrame::SetAlwaysOnTop( BOOL bOnTop )
 
 void SalFrame::ToTop( USHORT nFlags )
 {
-	if ( nFlags & SAL_FRAME_TOTOP_RESTOREWHENMIN && maFrameData.mpVCLFrame->getState() == SAL_FRAMESTATE_MINIMIZED )
+	if ( nFlags & ( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) )
 		maFrameData.mpVCLFrame->setState( SAL_FRAMESTATE_NORMAL );
-
-	SalData *pSalData = GetSalData();
 
 	if ( ! ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) )
 	{
-		if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame != this && maFrameData.mbVisible )
-		{
-			pSalData->maPresentationFrameList.remove( this );
-			pSalData->maPresentationFrameList.push_back( this );
-		}
-
 		maFrameData.mpVCLFrame->toFront();
-
 		for ( ::std::list< SalFrame* >::const_iterator it = maFrameData.maChildren.begin(); it != maFrameData.maChildren.end(); ++it )
 			(*it)->ToTop( nFlags & ~SAL_FRAME_TOTOP_GRABFOCUS );
 	}
 
 	if ( nFlags & ( SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) )
-	{
-		if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame != this && maFrameData.mbVisible )
-		{
-			pSalData->maPresentationFrameList.remove( this );
-			pSalData->maPresentationFrameList.push_back( this );
-		}
-
 		maFrameData.mpVCLFrame->requestFocus();
-	}
 }
 
 // -----------------------------------------------------------------------
@@ -746,11 +781,17 @@ ULONG SalFrame::GetCurrentModButtons()
 void SalFrame::SetParent( SalFrame* pNewParent )
 {
 	if ( maFrameData.mpParent )
+	{
 		maFrameData.mpParent->maFrameData.maChildren.remove( this );
+		maFrameData.mpParent->maFrameData.mpVCLFrame->removeChild( this );
+	}
 	maFrameData.mpParent = pNewParent;
 	maFrameData.mpVCLFrame->setParent( maFrameData.mpParent );
 	if ( maFrameData.mpParent )
+	{
 		maFrameData.mpParent->maFrameData.maChildren.push_back( this );
+		maFrameData.mpParent->maFrameData.mpVCLFrame->addChild( this );
+	}
 }
 
 // -----------------------------------------------------------------------

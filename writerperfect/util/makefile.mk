@@ -46,9 +46,9 @@ VERSION=$(UPD)
 .INCLUDE :  settings.mk
 
 .IF "$(GUI)"=="UNX" || "$(GUI)"=="MAC"
-LIBWPDSTATIC=-lwpdlib
+LIBWPD=-lwpdlib
 .ELSE
-LIBWPDSTATIC=$(LIBPRE) wpdlib.lib
+LIBWPD=$(LIBPRE) wpdlib.lib
 .ENDIF
 
 LIB1TARGET= $(SLB)$/$(TARGET).lib
@@ -70,7 +70,7 @@ SHL1STDLIBS+= \
 	$(CPPULIB) \
 	$(SALLIB) \
 	$(XMLOFFLIB) \
-	$(LIBWPDSTATIC)
+	$(LIBWPD)
 
 SHL1TARGET = $(TARGET)$(UPD)$(DLLPOSTFIX)
 SHL1IMPLIB = i$(SHL1TARGET)

@@ -38,50 +38,46 @@
  *
  ************************************************************************/
 
-
+/* "This product is not manufactured, approved, or supported by
+ * Corel Corporation or Corel Corporation Limited."
+ */
 #ifndef _PAGESPAN_H
 #define _PAGESPAN_H
 #include <libwpd/libwpd.h>
-
-#ifndef _COM_SUN_STAR_XML_SAX_XDOCUMENTHANDLER_HPP_
-#include <com/sun/star/xml/sax/XDocumentHandler.hpp>
-#endif
-
-using com::sun::star::uno::Reference;
-using com::sun::star::xml::sax::XDocumentHandler;
+#include <vector>
 
 class DocumentElement;
+class DocumentHandler;
 
 class PageSpan
 {
 public:
-	PageSpan(const int iSpan, const float fFormLength, const float fFormWidth, const WPXFormOrientation fFormOrientation,
-			 const float fLeftMargin, const float fRightMargin, const float fTopMargin, const float fBottomMargin);
+	PageSpan(const WPXPropertyList &xPropList);
 	virtual ~PageSpan();
-	void writePageMaster(const int iNum, Reference < XDocumentHandler > &xHandler) const;
-	void writeMasterPages(const int iStartingNum, const int iPageMasterNum, const bool bLastPageSpan, Reference < XDocumentHandler > &xHandler) const;
-	const int getSpan() const { return miSpan; }
+	void writePageMaster(const int iNum, DocumentHandler &xHandler) const;
+	void writeMasterPages(const int iStartingNum, const int iPageMasterNum, const bool bLastPageSpan, DocumentHandler &xHandler) const;
+	int getSpan() const;
+#if 0
 	float getFormLength() { return mfFormLength; }
 	float getFormWidth() { return mfFormWidth; }
 	WPXFormOrientation getFormOrientation() { return mfFormOrientation; }
-	float getMarginLeft() { return mfMarginLeft; }
-	float getMarginRight() { return mfMarginRight; }
+#endif
+	float getMarginLeft() const;
+	float getMarginRight() const;
 
-	const vector<DocumentElement *> * getHeaderContent() const { return mpHeaderContent; }
-	void setHeaderContent(vector<DocumentElement *> * pHeaderContent) { mpHeaderContent = pHeaderContent; }
-	void setFooterContent(vector<DocumentElement *> * pFooterContent) { mpFooterContent = pFooterContent; }
-	void setHeaderLeftContent(vector<DocumentElement *> * pHeaderContent) { mpHeaderLeftContent = pHeaderContent; }
-	void setFooterLeftContent(vector<DocumentElement *> * pFooterContent) { mpFooterLeftContent = pFooterContent; }
+	const std::vector<DocumentElement *> * getHeaderContent() const { return mpHeaderContent; }
+	void setHeaderContent(std::vector<DocumentElement *> * pHeaderContent) { mpHeaderContent = pHeaderContent; }
+	void setFooterContent(std::vector<DocumentElement *> * pFooterContent) { mpFooterContent = pFooterContent; }
+	void setHeaderLeftContent(std::vector<DocumentElement *> * pHeaderContent) { mpHeaderLeftContent = pHeaderContent; }
+	void setFooterLeftContent(std::vector<DocumentElement *> * pFooterContent) { mpFooterLeftContent = pFooterContent; }
 protected:
-	void _writeHeaderFooter(const char *headerFooterTagName, const vector<DocumentElement *> & headerFooterContent,
-				Reference < XDocumentHandler > &xHandler) const;
+	void _writeHeaderFooter(const char *headerFooterTagName, const std::vector<DocumentElement *> & headerFooterContent,
+				DocumentHandler &xHandler) const;
 private:
-	int miSpan;
-	float mfFormLength, mfFormWidth, mfMarginLeft, mfMarginRight, mfMarginTop, mfMarginBottom;
-	WPXFormOrientation mfFormOrientation;
-	vector<DocumentElement *> * mpHeaderContent;
-	vector<DocumentElement *> * mpFooterContent;
-	vector<DocumentElement *> * mpHeaderLeftContent;
-	vector<DocumentElement *> * mpFooterLeftContent;
+        WPXPropertyList mxPropList;
+	std::vector<DocumentElement *> * mpHeaderContent;
+	std::vector<DocumentElement *> * mpFooterContent;
+	std::vector<DocumentElement *> * mpHeaderLeftContent;
+	std::vector<DocumentElement *> * mpFooterLeftContent;
 };
 #endif
