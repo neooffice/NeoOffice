@@ -127,6 +127,7 @@ static Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type *pCarbonLockG
 static Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *pCarbonLockInit = NULL;
 
 static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( JNIEnv *pEnv, jobject object );
+static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData );
 
 #endif
 
@@ -160,6 +161,25 @@ void SVMainThread::run()
 		void *pNativeFont = ((com_sun_star_vcl_VCLFont *)pFontData->mpFirst->mpSysData)->getNativeFont();
 		pSalData->maNativeFontMapping[ pNativeFont ] = pFontData->mpFirst;
 	}
+
+#ifndef NO_NATIVE_MENUS
+#ifdef MACOSX
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		// Test the JVM version and if it is 1.4 or higher use Cocoa, otherwise
+		// use Carbon
+		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+		{
+			// Set up native menu event handler
+			EventTypeSpec aType;
+			aType.eventClass = kEventClassMenu;
+			aType.eventKind = kEventMenuBeginTracking;
+			InstallApplicationEventHandler( CarbonEventHandler, 1, &aType, NULL, NULL );
+		}
+	}
+#endif	// MACOSX
+#endif	// NO_NATIVE_MENUS
 
 	mpApp->Main();
 }
@@ -291,7 +311,7 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv 
 #ifdef MACOSX
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData )
 {
-	bool bYieldEventQueue = ( GetEventClass( aEvent ) == kEventClassMenu && GetEventKind( aEvent ) == kEventMenuBeginTracking );
+	bool bYieldEventQueue = ( GetEventClass( aEvent ) == kEventClassMenu && GetEventKind( aEvent ) == kEventMenuBeginTracking && ImplGetSVData()->maAppData.mbInAppExecute );
 
 	if ( bYieldEventQueue )
 	{
@@ -305,7 +325,6 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 	// Always execute the next registered handler
 	OSStatus nRet = CallNextEventHandler( aNextHandler, aEvent );
-
 
 	if ( bYieldEventQueue )
 	{
@@ -406,8 +425,8 @@ void ExecuteApplicationMain( Application *pApp )
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
-		// Test the JVM version and if it is 1.4 or higher use Cocoa,
-		// other use Carbon
+		// Test the JVM version and if it is 1.4 or higher use Cocoa, otherwise
+		// use Carbon
 		if ( t.pEnv->GetVersion() >= JNI_VERSION_1_4 )
 		{
 			// Load Cocoa
@@ -431,14 +450,6 @@ void ExecuteApplicationMain( Application *pApp )
 		}
 		else
 		{
-#ifndef NO_NATIVE_MENUS
-			// Set up native menu event handler
-			EventTypeSpec aType;
-			aType.eventClass = kEventClassMenu;
-			aType.eventKind = kEventMenuBeginTracking;
-			InstallApplicationEventHandler( CarbonEventHandler, 1, &aType, NULL, NULL );
-#endif	// NO_NATIVE_MENUS
-
 			// Panther expects applications to run their event loop in main
 			// thread and Java 1.3.1 runs its event loop in a separate thread.
 			// So, we need to disable the lock that Java 1.3.1 uses.
