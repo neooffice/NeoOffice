@@ -276,7 +276,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_GETFOCUS:
 		{
-			if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame == pFrame )
+			if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame != pFrame )
 				dispatchEvent( SALEVENT_LOSEFOCUS, pSalData->mpFocusFrame, NULL );
 			pSalData->mpFocusFrame = pFrame;
 			dispatchEvent( nID, pFrame, NULL );
@@ -487,23 +487,37 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 		{
 			if ( pFrame == *it )
 			{
-				if ( nID == SALEVENT_GETFOCUS && pSalData->mpPresentationFrame && pFrame != pSalData->mpPresentationFrame )
+				if ( nID == SALEVENT_GETFOCUS )
 				{
-					// Make sure document window does not float to front
-					SalFrame *pParent = pFrame;
-					while ( pParent )
+					if ( pSalData->mpPresentationFrame && pFrame != pSalData->mpPresentationFrame )
 					{
-						if ( pParent == pSalData->mpPresentationFrame )
-							break;
-						pParent = pParent->maFrameData.mpParent;
-					}
+						// Make sure document window does not float to front
+						SalFrame *pParent = pFrame;
+						while ( pParent )
+						{
+							if ( pParent == pSalData->mpPresentationFrame )
+								break;
+							pParent = pParent->maFrameData.mpParent;
+						}
 
-					if ( !pParent )
-					{
-						// Reset the focus and don't dispatch the event
-						pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
-						return;
+						if ( !pParent )
+						{
+							// Reset the focus and don't dispatch the event
+							pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+							return;
+						}
 					}
+					else
+					{
+						pFrame->ToTop( 0 );
+					}
+				}
+				else if ( nID == SALEVENT_MOUSEBUTTONDOWN && pSalData->mpFocusFrame == pFrame )
+				{
+					// Make sure child frames are in front of frame as clicking
+					// on the title bar may have moved this frame to the front
+					for ( ::std::list< SalFrame* >::const_iterator cit = pFrame->maFrameData.maChildren.begin(); cit != pFrame->maFrameData.maChildren.end(); ++cit )
+						(*cit)->ToTop( 0 );
 				}
 
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
