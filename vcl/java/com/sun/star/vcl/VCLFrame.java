@@ -1585,6 +1585,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// Enable mouse capture
 		VCLFrame.capture = true;
 
+		// Make sure capture frame is a child of this window
 		if (VCLFrame.captureFrame != null && e.getComponent().isShowing()) {
 			// Find the capture window
 			VCLFrame f = VCLFrame.captureFrame;
@@ -1618,7 +1619,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			Point srcPoint = e.getComponent().getLocationOnScreen();
 			srcPoint.x += e.getX();
 			srcPoint.y += e.getY();
-			while (f != null && f.getWindow() != null && !(f.getWindow() instanceof Frame)) {
+			while (f != null && f.getWindow() != null) {
 				if (f.getWindow().isShowing()) {
 					Panel p = f.getPanel();
 					Point destPoint = p.getLocationOnScreen();
@@ -1634,9 +1635,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			if (f == null)
 				f = this;
 
-			if (mouseModifiersPressed == 0 && VCLFrame.lastCaptureFrame != null && VCLFrame.lastCaptureFrame != f && VCLFrame.lastCaptureFrame.getWindow() != null && VCLFrame.lastCaptureFrame.getWindow().isShowing()) {
-				VCLFrame.lastCaptureFrame.focusGained(new FocusEvent(VCLFrame.lastCaptureFrame.getPanel(), FocusEvent.FOCUS_GAINED));
-				VCLFrame.lastCaptureFrame.focusLost(new FocusEvent(VCLFrame.lastCaptureFrame.getPanel(), FocusEvent.FOCUS_LOST));
+			if (mouseModifiersPressed == 0 && VCLFrame.lastCaptureFrame != null && VCLFrame.lastCaptureFrame != f) {
+				Window w = VCLFrame.lastCaptureFrame.getWindow();
+				if (w != null && !(w instanceof Frame) && w.isShowing()) {
+					VCLFrame.lastCaptureFrame.focusGained(new FocusEvent(VCLFrame.lastCaptureFrame.getPanel(), FocusEvent.FOCUS_GAINED));
+					VCLFrame.lastCaptureFrame.focusLost(new FocusEvent(VCLFrame.lastCaptureFrame.getPanel(), FocusEvent.FOCUS_LOST));
+				}
 			}
 		}
 
@@ -1683,7 +1687,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				f = f.getParent();
 			}
 
-			if (f == null || f == parent)
+			if (f == null)
 				f = this;
 
 			if (VCLFrame.lastDragFrame != f && VCLFrame.lastDragFrame != null && VCLFrame.lastDragFrame.getWindow() != null && VCLFrame.lastDragFrame.getWindow().isShowing()) {
