@@ -41,12 +41,11 @@
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
-#ifndef _SV_SALFRAME_HXX
-#include <salframe.hxx>
-#endif
 #ifndef _SALJAVA_H
 #include <saljava.h>
 #endif
+
+using namespace vcl;
 
 // =======================================================================
 
@@ -64,11 +63,6 @@ void SalTimer::Start( ULONG nMS )
 	gettimeofday( &pSalData->maTimeout, NULL );
 	pSalData->maTimeout += nMS;
 	pSalData->mnTimerInterval = nMS;
-
-	// Wakeup the event queue by sending it a dummy event
-	SalFrame *pFrame = pSalData->maFrameList.front();
-	if ( pFrame )
-		pFrame->PostEvent( NULL );
 } 
 
 // -----------------------------------------------------------------------
@@ -79,9 +73,4 @@ void SalTimer::Stop()
 	pSalData->mnTimerInterval = 0;
 	pSalData->maTimeout.tv_sec = 0;
 	pSalData->maTimeout.tv_usec = 0;
-
-	// Wakeup the event queue by sending it a dummy event
-	SalFrame *pFrame = pSalData->maFrameList.front();
-	if ( pFrame )
-		pFrame->PostEvent( NULL );
 }

@@ -164,6 +164,7 @@ void SVMainThread::run()
 
 #ifndef NO_NATIVE_MENUS
 #ifdef MACOSX
+	EventHandlerUPP pEventHandlerUPP = NULL;
 	EventHandlerRef pEventHandler = NULL;
 	DMExtendedNotificationUPP pExtendedNotificationUPP = NULL;
 	ProcessSerialNumber nProc;
@@ -174,15 +175,19 @@ void SVMainThread::run()
 		// use Carbon
 		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
 		{
-			// Set up native menu event handler
-			EventTypeSpec aTypes[3];
-			aTypes[0].eventClass = kEventClassAppleEvent;
-			aTypes[0].eventKind = kEventAppleEvent;
-			aTypes[1].eventClass = kEventClassMouse;
-			aTypes[1].eventKind = kEventMouseWheelMoved;
-			aTypes[2].eventClass = kEventClassMenu;
-			aTypes[2].eventKind = kEventMenuBeginTracking;
-			pEventHandler = InstallApplicationEventHandler( CarbonEventHandler, 3, aTypes, NULL, NULL );
+			pEventHandlerUPP = NewEventHandlerUPP( CarbonEventHandler );
+			if ( pEventHandlerUPP )
+			{
+				// Set up native event handler
+				EventTypeSpec aTypes[3];
+				aTypes[0].eventClass = kEventClassAppleEvent;
+				aTypes[0].eventKind = kEventAppleEvent;
+				aTypes[1].eventClass = kEventClassMouse;
+				aTypes[1].eventKind = kEventMouseWheelMoved;
+				aTypes[2].eventClass = kEventClassMenu;
+				aTypes[2].eventKind = kEventMenuBeginTracking;
+				InstallApplicationEventHandler( pEventHandlerUPP, 3, aTypes, NULL, &pEventHandler );
+			}
 		}
 
 		// Fix bug 223 by registering a display manager notification callback
@@ -208,6 +213,9 @@ void SVMainThread::run()
 
 	if ( pEventHandler )
 		RemoveEventHandler( pEventHandler );
+
+	if ( pEventHandlerUPP )
+		DisposeEventHandlerUPP( pEventHandlerUPP );
 #endif	// MACOSX
 #endif	// !NO_NATIVE_MENUS
 }
@@ -343,27 +351,24 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 	EventClass nClass = GetEventClass( aEvent );
 	if ( nClass == kEventClassAppleEvent )
 	{
-		if ( pSalData->mpFirstInstance )
-		{
-			// Unlock the Carbon lock
-			VCLThreadAttach t;
-			if ( t.pEnv )
-				Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
+		// Unlock the Carbon lock
+		VCLThreadAttach t;
+		if ( t.pEnv )
+			Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
 
-			// Block the VCL event loop while processing Apple Events
-			pSalData->mpFirstInstance->AcquireYieldMutex( 1 );
+		// Block the VCL event loop while processing Apple Events
+		pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->acquire();
 
-			// Relock the Carbon lock
-			if ( t.pEnv )
-				Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
+		// Relock the Carbon lock
+		if ( t.pEnv )
+			Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
 
-			OSStatus nErr = CallNextEventHandler( aNextHandler, aEvent );
+		OSStatus nErr = CallNextEventHandler( aNextHandler, aEvent );
 
-			// Unblock the VCL event loop
-			pSalData->mpFirstInstance->ReleaseYieldMutex();
+		// Unblock the VCL event loop
+		pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->release();
 
-			return nErr;
-		}
+		return nErr;
 	}
 	else if ( nClass == kEventClassMouse && GetEventKind( aEvent ) == kEventMouseWheelMoved )
 	{
@@ -381,7 +386,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 					Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
 
 				// Block the VCL event loop while checking mapping
-				pSalData->mpFirstInstance->AcquireYieldMutex( 1 );
+				pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->acquire();
 
 				// Relock the Carbon lock
 				if ( t.pEnv )
@@ -397,7 +402,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				}
 
 				// Unblock the VCL event loop
-				pSalData->mpFirstInstance->ReleaseYieldMutex();
+				pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->release();
 			}
 		}
 
@@ -478,7 +483,7 @@ void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void
 			Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
 
 		// Block the VCL event loop while checking mapping
-		pSalData->mpFirstInstance->AcquireYieldMutex( 1 );
+		pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->acquire();
 
 		// Relock the Carbon lock
 		if ( t.pEnv )
@@ -492,7 +497,7 @@ void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void
 		}
 
 		// Unblock the VCL event loop
-		pSalData->mpFirstInstance->ReleaseYieldMutex();
+		pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->release();
 	}
 }
 #endif	// MACOSX
@@ -946,10 +951,10 @@ void SalInstance::Yield( BOOL bWait )
 		return;
 	}
 
-    ULONG nCount = ReleaseYieldMutex();
-    if ( !bWait )   
-        OThread::yield();
-    AcquireYieldMutex( nCount );
+	ULONG nCount = ReleaseYieldMutex();
+	if ( !bWait )
+		OThread::yield();
+	AcquireYieldMutex( nCount );
 
 	// Check timer
 	if ( pSalData->mnTimerInterval )
