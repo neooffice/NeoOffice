@@ -98,6 +98,34 @@ public final class VCLEventQueue {
 
 		VCLGraphics.setAutoFlush(true);
 
+		// Load platform specific event handlers
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+			try {
+				Class c = Class.forName("com.sun.star.vcl.macosx.VCLOpenApplicationHandler");
+				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
+				ctor.newInstance(new Object[]{ this });
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			try {
+				Class c = Class.forName("com.sun.star.vcl.macosx.VCLOpenDocumentHandler");
+				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
+				ctor.newInstance(new Object[]{ this });
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			try {
+				Class c = Class.forName("com.sun.star.vcl.macosx.VCLPrintDocumentHandler");
+				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
+				ctor.newInstance(new Object[]{ this });
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+		}
+
 	}
 
 	/**
@@ -142,30 +170,6 @@ public final class VCLEventQueue {
 			
 			// Load platform specific event handlers
 			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-				try {
-					Class c = Class.forName("com.sun.star.vcl.macosx.VCLOpenApplicationHandler");
-					Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-					ctor.newInstance(new Object[]{ this });
-				}
-				catch (Throwable t) {
-					t.printStackTrace();
-				}
-				try {
-					Class c = Class.forName("com.sun.star.vcl.macosx.VCLOpenDocumentHandler");
-					Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-					ctor.newInstance(new Object[]{ this });
-				}
-				catch (Throwable t) {
-					t.printStackTrace();
-				}
-				try {
-					Class c = Class.forName("com.sun.star.vcl.macosx.VCLPrintDocumentHandler");
-					Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-					ctor.newInstance(new Object[]{ this });
-				}
-				catch (Throwable t) {
-					t.printStackTrace();
-				}
 				try {
 					Class c = Class.forName("com.sun.star.vcl.macosx.VCLQuitHandler");
 					Constructor ctor = c.getConstructor(new Class[]{ getClass() });
