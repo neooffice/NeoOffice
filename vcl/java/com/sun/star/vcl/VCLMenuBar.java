@@ -45,6 +45,7 @@ import java.awt.Menu;
 import java.awt.MenuItem;
 import com.sun.star.vcl.VCLMenuItemData;
 import java.util.Stack;
+import com.sun.star.vcl.VCLEventQueue;
 
 /**
  * The Java class that implements methods for SalMenu C++ objects that are functioning as
@@ -63,6 +64,11 @@ public final class VCLMenuBar {
      * VCLFrame with which this menubar is associated
      */
     private VCLFrame frame = null;
+    
+    /**
+     * Queue to which all menu events for this menubar should be posted.
+     */
+    private VCLEventQueue queue = null;
     
     /**
      * Vector of internal VCLMenuItemData objects.  Each menu is managed by an individual VCLMenuItemData
@@ -94,9 +100,11 @@ public final class VCLMenuBar {
      * to the user.
      *
      * @param f	VCLFrame with which the menubar is to be associated
+     * @param q	VCLEventQueue to which events for this menu and frame should be posted
      */
-    synchronized public void setFrame(VCLFrame f) {
+    synchronized public void setFrame(VCLFrame f, VCLEventQueue q) {
       	frame=f;
+        queue=q;
         Window win=frame.getWindow();
         if(win instanceof Frame)
             ((Frame)win).setMenuBar(awtMenuBar);
@@ -109,6 +117,15 @@ public final class VCLMenuBar {
      */
     public VCLFrame getFrame() {
         return(frame);
+    }
+    
+    /** 
+     * Return the queue to which events should be posted for this menubar
+     *
+     * @return VCLEventQueue that should receive events
+     */
+    protected VCLEventQueue getEventQueue() {
+        return(queue);
     }
     
     /**
@@ -251,17 +268,17 @@ public final class VCLMenuBar {
     }
     
     /**
-     * Given an AWT MenuItem or subclass, locate the VCLFrame whose menubar contains that item
+     * Given an AWT MenuItem or subclass, locate the specific VCLMenuBar object that contains that item
      *
      * @param item	item to be searched for
      * @return VCLFrame whose menubar is associated with the item, or null if the item could not
      *	be located in any menubar associated with a VCLFrame.
      */
-    public static synchronized VCLFrame findVCLFrame(MenuItem item) {
+    public static synchronized VCLMenuBar findVCLMenuBar(MenuItem item) {
         Enumeration menuBars=activeMenubars.elements();
         while(menuBars.hasMoreElements()) {
             VCLMenuBar vmb=(VCLMenuBar)menuBars.nextElement();
-            if((vmb.getFrame()==null) || (vmb.getAWTMenuBar()==null))
+            if(vmb.getAWTMenuBar()==null)
                 continue;
             
             // we'll locate the item by checking object references directliy.  We don't want equivalence
@@ -272,7 +289,7 @@ public final class VCLMenuBar {
             {
                 Menu m=mb.getMenu(i);
                 if((m==item) || menuContainsItem(m, item))
-                    return(vmb.getFrame());
+                    return(vmb);
             }
         }
         return(null);

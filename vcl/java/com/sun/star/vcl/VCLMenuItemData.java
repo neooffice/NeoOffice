@@ -529,9 +529,9 @@ public final class VCLMenuItemData {
          * @param e	event spawning this action.  Ignored.
          */
         public void actionPerformed(ActionEvent e) {
-            VCLFrame f=VCLMenuBar.findVCLFrame(this);
-            if(f!=null) {
-                f.getQueue().postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUCOMMAND, f, d.getVCLID(), d.getVCLCookie()));
+            VCLMenuBar mb=VCLMenuBar.findVCLMenuBar(this);
+            if(mb!=null) {
+                mb.getEventQueue().postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUCOMMAND, mb.getFrame(), d.getVCLID(), d.getVCLCookie()));
             }
             else
             {
@@ -571,9 +571,9 @@ public final class VCLMenuItemData {
          * @param e	event spawning this action.  Ignored.
          */
         public void actionPerformed(ActionEvent e) {
-            VCLFrame f=VCLMenuBar.findVCLFrame(this);
-            if(f!=null) {
-                f.getQueue().postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUCOMMAND, f, d.getVCLID(), d.getVCLCookie()));
+            VCLMenuBar mb=VCLMenuBar.findVCLMenuBar(this);
+            if(mb!=null) {
+                mb.getEventQueue().postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUCOMMAND, mb.getFrame(), d.getVCLID(), d.getVCLCookie()));
             }
             else
             {
