@@ -174,10 +174,10 @@ long com_sun_star_vcl_VCLTextLayout::fillDXArray( long *_par0 )
 bool com_sun_star_vcl_VCLTextLayout::getBounds( Rectangle& _par0 )
 {
 	static jmethodID mID = NULL;
-	static jfieldID fIDLeft = NULL;
-	static jfieldID fIDTop = NULL;
-	static jfieldID fIDRight = NULL;
-	static jfieldID fIDBottom = NULL;
+	static jfieldID fIDX = NULL;
+	static jfieldID fIDY = NULL;
+	static jfieldID fIDWidth = NULL;
+	static jfieldID fIDHeight = NULL;
 	bool out = false;
 	VCLThreadAttach t;
 	if ( t.pEnv )
@@ -194,33 +194,33 @@ bool com_sun_star_vcl_VCLTextLayout::getBounds( Rectangle& _par0 )
 			if ( tempObj )
 			{
 				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
-				if ( !fIDLeft )
+				if ( !fIDX )
 				{
 					char *cSignature = "I";
-					fIDLeft = t.pEnv->GetFieldID( tempObjClass, "left", cSignature );
+					fIDX = t.pEnv->GetFieldID( tempObjClass, "x", cSignature );
 				}
-				OSL_ENSURE( fIDLeft, "Unknown field id!" );
-				if ( !fIDTop )
+				OSL_ENSURE( fIDX, "Unknown field id!" );
+				if ( !fIDY )
 				{
 					char *cSignature = "I";
-					fIDTop  = t.pEnv->GetFieldID( tempObjClass, "top", cSignature );
+					fIDY  = t.pEnv->GetFieldID( tempObjClass, "y", cSignature );
 				}
-				OSL_ENSURE( fIDTop, "Unknown field id!" );
-				if ( !fIDRight )
+				OSL_ENSURE( fIDY, "Unknown field id!" );
+				if ( !fIDWidth )
 				{
 					char *cSignature = "I";
-					fIDRight = t.pEnv->GetFieldID( tempObjClass, "right", cSignature );
+					fIDWidth = t.pEnv->GetFieldID( tempObjClass, "width", cSignature );
 				}
-				OSL_ENSURE( fIDRight, "Unknown field id!" );
-				if ( !fIDBottom )
+				OSL_ENSURE( fIDWidth, "Unknown field id!" );
+				if ( !fIDHeight )
 				{
 					char *cSignature = "I";
-					fIDBottom = t.pEnv->GetFieldID( tempObjClass, "bottom", cSignature );
+					fIDHeight = t.pEnv->GetFieldID( tempObjClass, "height", cSignature );
 				}
-				OSL_ENSURE( fIDBottom, "Unknown field id!" );
-				if ( fIDLeft && fIDTop && fIDRight && fIDBottom )
+				OSL_ENSURE( fIDHeight, "Unknown field id!" );
+				if ( fIDX && fIDY && fIDWidth && fIDHeight )
 				{
-					_par0 = Rectangle( (long)t.pEnv->GetIntField( tempObj, fIDLeft ), (long)t.pEnv->GetIntField( tempObj, fIDTop ), (long)t.pEnv->GetIntField( tempObj, fIDRight ), (long)t.pEnv->GetIntField( tempObj, fIDBottom ) );
+					_par0 = Rectangle( Point( (long)t.pEnv->GetIntField( tempObj, fIDX ), (long)t.pEnv->GetIntField( tempObj, fIDY ) ), Size( (long)t.pEnv->GetIntField( tempObj, fIDWidth ), (long)t.pEnv->GetIntField( tempObj, fIDHeight ) ) );
 					out = true;
 				}
 			}
