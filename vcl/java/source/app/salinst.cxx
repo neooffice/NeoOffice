@@ -475,6 +475,13 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 					if ( rootMenu != NULL )
 						ReleaseMenu( rootMenu );
 
+					// Check if the front window is a native modal window as
+					// we will deadlock when a native modal window is showing
+					WindowRef aWindow = FrontWindow();
+					WindowModality nModality;
+					if ( isMenubar && aWindow && GetWindowModality( aWindow, &nModality, NULL ) == noErr && ( nModality == kWindowModalitySystemModal || nModality == kWindowModalityAppModal ) )
+						isMenubar = false;
+					
 					if ( isMenubar )
 					{
 						// Post a yield event and wait the VCL event queue to block
