@@ -44,7 +44,7 @@ OO_ENV_JAVA:=$(BUILD_HOME)/MacosxEnvJava.Set
 
 # Product information
 PRODUCT_NAME=NeoOffice\/J\\(TM\\)
-PRODUCT_VERSION=0.1
+PRODUCT_VERSION=0.0
 PRODUCT_FILETYPE=no%f
 
 # CVS macros
