@@ -63,6 +63,7 @@ class SalATSLayout : public GenericSalLayout
 	ATSUGlyphInfoArray*	mpGlyphInfoArray;
 	int*				mpCharsToGlyphs;
 	ATSUStyle			maVerticalFontStyle;
+	long				mnBaselineDelta;
 
 	void				Destroy();
 
@@ -73,6 +74,9 @@ public:
 	virtual bool		LayoutText( ImplLayoutArgs& rArgs );
 	virtual void		DrawText( SalGraphics& rGraphics ) const;
 	virtual bool		GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector ) const;
+
+	long				GetBaselineDelta() const { return mnBaselineDelta; }
+	void				GetVerticalGlyphTranslation( long nGlyph, double& fX, double& fY ) const;
 };
 
 #endif // _SV_SALATSLAYOUT_HXX

@@ -201,7 +201,7 @@ public final class VCLGraphics {
 
 		// Set the method references
 		try {
-			drawGlyphsMethod = VCLGraphics.class.getMethod("drawGlyphs", new Class[]{ int.class, int.class, int[].class, int[].class, VCLFont.class, int.class, int.class, int.class, int.class });
+			drawGlyphsMethod = VCLGraphics.class.getMethod("drawGlyphs", new Class[]{ int.class, int.class, int[].class, int[].class, VCLFont.class, int.class, int.class, int.class, int.class, int.class, int.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -597,11 +597,13 @@ public final class VCLGraphics {
 	 * @param orientation the tenth of degrees to rotate the text
 	 * @param unitsPerPixel the pixels per unit in the specified advances
 	 * @param glyphOrientation the glyph rotation constant
+	 * @param translateX the x coordinate to translate after rotation
+	 * @param translateY the y coordinate to translate after rotation
 	 */
-	public void drawGlyphs(int x, int y, int[] glyphs, int[] advances, VCLFont font, int color, int orientation, int unitsPerPixel, int glyphOrientation) {
+	public void drawGlyphs(int x, int y, int[] glyphs, int[] advances, VCLFont font, int color, int orientation, int unitsPerPixel, int glyphOrientation, int translateX, int translateY) {
 
 		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawGlyphsMethod, new Object[]{ new Integer(x), new Integer(y), glyphs, advances, font, new Integer(color), new Integer(orientation), new Integer(unitsPerPixel), new Integer(glyphOrientation) });
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawGlyphsMethod, new Object[]{ new Integer(x), new Integer(y), glyphs, advances, font, new Integer(color), new Integer(orientation), new Integer(unitsPerPixel), new Integer(glyphOrientation), new Integer(translateX), new Integer(translateY) });
 			pageQueue.postDrawingOperation(pqi);
 			return;
 		}
@@ -653,19 +655,14 @@ public final class VCLGraphics {
 
 		glyphOrientation &= VCLGraphics.GF_ROTMASK;
 		if ((glyphOrientation & VCLGraphics.GF_ROTMASK) != 0) {
-			Rectangle2D b = (Rectangle2D)gv.getGlyphLogicalBounds(0);
-			if (glyphOrientation == VCLGraphics.GF_ROTL) {
-				g.translate(b.getY() * fScaleX * -1, 0);
+			if (glyphOrientation == VCLGraphics.GF_ROTL)
 				g.rotate(Math.toRadians(-90));
-			}
-			else {
-				g.translate(((advances[0] / unitsPerPixel) + b.getY()) * fScaleX, font.getAscent() * -1);
+			else
 				g.rotate(Math.toRadians(90));
-			}
 		}
 
 		// Draw the text to a scaled graphics
-		g.drawGlyphVector(gv, 0, 0);
+		g.drawGlyphVector(gv, translateX, translateY);
 
 		Rectangle bounds = gv.getLogicalBounds().getBounds();
 
@@ -1217,7 +1214,7 @@ public final class VCLGraphics {
 	public Rectangle getGlyphBounds(int glyph, VCLFont font, int glyphOrientation) {
 
 		GlyphVector glyphs = font.getFont().createGlyphVector(graphics.getFontRenderContext(), new int[]{ glyph });
-		Rectangle2D bounds = (Rectangle2D)glyphs.getGlyphLogicalBounds(0);
+		Rectangle2D bounds = glyphs.getGlyphMetrics(0).getBounds2D();
 
 		double fScaleX = font.getScaleX();
 		if (fScaleX != 1.0) {
