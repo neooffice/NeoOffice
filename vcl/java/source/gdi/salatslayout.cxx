@@ -553,11 +553,12 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector )
 		for ( int i = mpCharsToGlyphs[ nIndex ]; i < mnGlyphCount && mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
 		{
 			int nGlyph = mpGlyphInfoArray->glyphs[ i ].glyphID;
-			if ( aGlyphArray[ 0 ] & GF_IDXMASK != nGlyph )
+			if ( ( aGlyphArray[ 0 ] & GF_IDXMASK ) != nGlyph )
 				continue;
 
 			// Only calculate the minimum rectangular bounds as that is what
 			// this method is usually used for
+			// TODO: Calculate real glyph polygons
 			ATSGlyphScreenMetrics aScreenMetrics;
 			if ( ATSUGlyphGetScreenMetrics( mpGlyphInfoArray->glyphs[ i ].style, 1, &mpGlyphInfoArray->glyphs[ i ].glyphID, sizeof( GlyphID ), true, true, &aScreenMetrics ) != noErr )
 				continue;
@@ -568,23 +569,25 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector )
 				int j = i * 2;
 				aRect.SetPos( Point( aPos.X() + mpGlyphTranslations[ j ], aPos.Y() + mpGlyphTranslations[ j + 1 ] ) );
 				if ( aGlyphArray[ 0 ] & GF_ROTL )
-					aRect.Move( Float32ToLong( aScreenMetrics.topLeft.y * -1 ), Float32ToLong( ( aScreenMetrics.topLeft.x + aScreenMetrics.width ) * -1 ) );
+					aRect.Move( Float32ToLong( aScreenMetrics.topLeft.y * -mnUnitsPerPixel ), Float32ToLong( ( aScreenMetrics.topLeft.x + aScreenMetrics.width ) * -mnUnitsPerPixel ) );
 				else
-					aRect.Move( Float32ToLong( aScreenMetrics.topLeft.y - aScreenMetrics.height ), Float32ToLong( aScreenMetrics.topLeft.x ) );
-				aRect.SetSize( Size( aScreenMetrics.height, aScreenMetrics.width) );
+					aRect.Move( Float32ToLong( ( aScreenMetrics.topLeft.y - aScreenMetrics.height ) * mnUnitsPerPixel ), Float32ToLong( aScreenMetrics.topLeft.x * mnUnitsPerPixel ) );
+				aRect.SetSize( Size( aScreenMetrics.height * mnUnitsPerPixel, aScreenMetrics.width * mnUnitsPerPixel ) );
 			}
 			else
 			{
-				aRect.SetPos( Point( aPos.X(), aPos.Y() ) );
-				aRect.Move( Float32ToLong( aScreenMetrics.topLeft.x ), Float32ToLong( aScreenMetrics.topLeft.y ) );
-				aRect.SetSize( Size( aScreenMetrics.width, aScreenMetrics.height ) );
+				aRect.Move( Float32ToLong( aScreenMetrics.topLeft.x * mnUnitsPerPixel ), Float32ToLong( aScreenMetrics.topLeft.y * -mnUnitsPerPixel ) );
+				aRect.SetSize( Size( aScreenMetrics.width * mnUnitsPerPixel, aScreenMetrics.height * mnUnitsPerPixel ) );
 			}
 
 			if ( !aRect.IsEmpty() )
 			{
 				rVector.push_back( PolyPolygon( Polygon( aRect ) ) );
-				bRet = true;
+				rVector.back().Move( aPos.X(), aPos.Y() );
 			}
+
+			bRet = true;
+			break;
 		}
 	}
 
