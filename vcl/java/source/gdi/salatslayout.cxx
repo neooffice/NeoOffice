@@ -240,6 +240,21 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 		return;
 	}
 
+	// Fix bug 449 by turning off Unicode composition
+	ATSUFontFeatureType aTypes[3];
+	ATSUFontFeatureSelector aSelectors[3];
+	aTypes[0] = kUnicodeDecompositionType;
+	aTypes[1] = kUnicodeDecompositionType;
+	aTypes[2] = kUnicodeDecompositionType;
+	aSelectors[0] = kCanonicalCompositionOffSelector;
+	aSelectors[1] = kCompatibilityCompositionOffSelector;
+	aSelectors[2] = kTranscodingCompositionOffSelector;
+	if ( ATSUSetFontFeatures( maFontStyle, 3, aTypes, aSelectors ) != noErr )
+	{
+		Destroy();
+		return;
+	}
+
 	ATSUAttributeTag nTags[3];
 	ByteCount nBytes[3];
 	ATSUAttributeValuePtr nVals[3];
