@@ -393,50 +393,26 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	ATSUTextMeasurement fAfter;
 	ATSUTextMeasurement fAscent;
 	ATSUTextMeasurement fDescent;
-	if ( mpHash->mbRTL )
+	for ( i = 0; i < mpHash->mnLen - 1; i++ )
 	{
-		for ( i = 0; i < mpHash->mnLen - 1; i++ )
+		if ( ATSUGetUnjustifiedBounds( maLayout, i, 2, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
 		{
-			if ( ATSUGetUnjustifiedBounds( maLayout, i, 2, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
-			{
-				Fixed fCurrentX = fAfter;
-				if ( ATSUGetUnjustifiedBounds( maLayout, i + 1, 1, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
-					fCurrentX -= fAfter;
-				if ( fCurrentX < 0 )
-					fCurrentX = 0;
+			Fixed fCurrentX = fAfter;
+			if ( ATSUGetUnjustifiedBounds( maLayout, i + 1, 1, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
+				fCurrentX -= fAfter;
+			if ( fCurrentX < 0 && i )
+				mpCharAdvances[ i - 1 ] += Float32ToLong( Fix2X( fCurrentX ) * mpHash->mfFontScaleX );
+			else
 				mpCharAdvances[ i ] = Float32ToLong( Fix2X( fCurrentX ) * mpHash->mfFontScaleX );
-			}
-			else if ( ATSUGetUnjustifiedBounds( maLayout, i, 1, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
-			{
-				mpCharAdvances[ i ] = Float32ToLong( Fix2X( fAfter ) * mpHash->mfFontScaleX );
-			}
 		}
-	
-		if ( ATSUGetUnjustifiedBounds( maLayout, i, 1, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
-			mpCharAdvances[ i ] = Float32ToLong( Fix2X( fAfter ) * mpHash->mfFontScaleX );
-	}
-	else
-	{
-		for ( i = mpHash->mnLen - 1; i > 0; i-- )
+		else if ( ATSUGetUnjustifiedBounds( maLayout, i, 1, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
 		{
-			if ( ATSUGetUnjustifiedBounds( maLayout, i - 1, 2, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
-			{
-				Fixed fCurrentX = fAfter;
-				if ( ATSUGetUnjustifiedBounds( maLayout, i - 1, 1, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
-					fCurrentX -= fAfter;
-				if ( fCurrentX < 0 )
-					fCurrentX = 0;
-				mpCharAdvances[ i ] = Float32ToLong( Fix2X( fCurrentX ) * mpHash->mfFontScaleX );
-			}
-			else if ( ATSUGetUnjustifiedBounds( maLayout, i, 1, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
-			{
-				mpCharAdvances[ i ] = Float32ToLong( Fix2X( fAfter ) * mpHash->mfFontScaleX );
-			}
-		}
-	
-		if ( ATSUGetUnjustifiedBounds( maLayout, i, 1, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
 			mpCharAdvances[ i ] = Float32ToLong( Fix2X( fAfter ) * mpHash->mfFontScaleX );
+		}
 	}
+	
+	if ( ATSUGetUnjustifiedBounds( maLayout, i, 1, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
+		mpCharAdvances[ i ] = Float32ToLong( Fix2X( fAfter ) * mpHash->mfFontScaleX );
 
 	// Find positions that require fallback fonts
 	mpNeedFallback = NULL;
