@@ -127,7 +127,6 @@ static Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type *pCarbonLockG
 static Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *pCarbonLockInit = NULL;
 
 static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( JNIEnv *pEnv, jobject object );
-static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData );
 
 #endif
 
@@ -147,11 +146,6 @@ public:
 void SVMainThread::run()
 {
 	SalData *pSalData = GetSalData();
-
-#ifndef NO_NATIVE_MENUS
-	// Set up native menu event handler
-	InstallApplicationEventHandler( CarbonEventHandler, 0, NULL, NULL, NULL );
-#endif	// NO_NATIVE_MENUS
 
 	// Cache event queue
 	pSalData->mpEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
@@ -312,6 +306,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 	// Always execute the next registered handler
 	OSStatus nRet = CallNextEventHandler( aNextHandler, aEvent );
 
+
 	if ( bYieldEventQueue )
 	{
 		// Execute menu updates while the VCL event queue is blocked
@@ -436,6 +431,14 @@ void ExecuteApplicationMain( Application *pApp )
 		}
 		else
 		{
+#ifndef NO_NATIVE_MENUS
+			// Set up native menu event handler
+			EventTypeSpec aType;
+			aType.eventClass = kEventClassMenu;
+			aType.eventKind = kEventMenuBeginTracking;
+			InstallApplicationEventHandler( CarbonEventHandler, 1, &aType, NULL, NULL );
+#endif	// NO_NATIVE_MENUS
+
 			// Panther expects applications to run their event loop in main
 			// thread and Java 1.3.1 runs its event loop in a separate thread.
 			// So, we need to disable the lock that Java 1.3.1 uses.
