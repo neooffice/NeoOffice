@@ -873,6 +873,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void flush() {
 
+		graphics.flush();
 		Toolkit.getDefaultToolkit().sync();
 
 	}
@@ -1931,6 +1932,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			((Frame)window).setResizable(resizable);
 
 		if (b) {
+			if (fullScreenMode)
+				VCLGraphics.setAutoFlush(true);
+
 			// Show the window
 			window.show();
 			toFront();
@@ -1938,6 +1942,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else {
 			// Hide the window
 			window.hide();
+
+			if (fullScreenMode)
+				VCLGraphics.setAutoFlush(false);
 		}
 
 	}
