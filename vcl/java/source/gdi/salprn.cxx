@@ -104,7 +104,17 @@ BOOL SalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 	// Display a native page setup dialog
 	Orientation nOrientation = maPrinterData.mpVCLPageFormat->getOrientation();
 	maPrinterData.mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
+
+	SalInstance *pSalInstance = GetSalData()->mpFirstInstance;
+
+	// Unlock the SalYieldMutex so that the native event loop can do work
+	// while the native modal dialog is open
+	ULONG nCount = pSalInstance->ReleaseYieldMutex();
+
 	BOOL bOK = maPrinterData.mpVCLPageFormat->setup();
+
+	// Relock the SalYieldMutex
+	pSalInstance->AcquireYieldMutex( nCount );
 
 	if ( !bOK )
 	{
@@ -284,7 +294,16 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 	maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pDriverData->mpVCLPageFormat->getJavaObject() );
 	pSalData->maVCLPageFormats.push_back( maPrinterData.mpVCLPageFormat );
 
+	SalInstance *pSalInstance = GetSalData()->mpFirstInstance;
+
+	// Unlock the SalYieldMutex so that the native event loop can do work
+	// while the native modal dialog is open
+	ULONG nCount = pSalInstance->ReleaseYieldMutex();
+
 	maPrinterData.mbStarted = maPrinterData.mpVCLPrintJob->startJob( maPrinterData.mpVCLPageFormat, bShowDialog );
+
+	// Relock the SalYieldMutex
+	pSalInstance->AcquireYieldMutex( nCount );
 
 	return maPrinterData.mbStarted;
 }
