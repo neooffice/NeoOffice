@@ -34,6 +34,9 @@
 # 
 ##########################################################################
 
+PATH=/usr/bin:/bin:/usr/sbin:/sbin
+export PATH
+
 if [ -d "$2" ]; then
 
 	tempfile="$INSTALLER_TEMP/out"

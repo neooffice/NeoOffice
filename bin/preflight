@@ -34,6 +34,9 @@
 # 
 ##########################################################################
 
+PATH=/usr/bin:/bin:/usr/sbin:/sbin
+export PATH
+
 if [ -d "$2/Contents" ] ; then
 
 	# Save dictionary files for postflight scripts
