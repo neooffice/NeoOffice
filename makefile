@@ -69,6 +69,13 @@ all: build.all
 # Create the build directory and checkout the OpenOffice.org sources
 build.oo_checkout:
 	mkdir -p "$(BUILD_HOME)"
+# The OOo cvs server gets messed up with tags so we need to do a little trick
+# to get the checkout to work
+	rm -Rf "$(BUILD_HOME)/tmp"
+	mkdir -p "$(BUILD_HOME)/tmp"
+	cd "$(BUILD_HOME)/tmp" ; cvs -d "$(OO_CVSROOT)" co MathMLDTD ; cd MathMLDTD ; cvs update -d -r "$(OO_TAG)"
+	rm -Rf "$(BUILD_HOME)/tmp"
+# Do the real checkout
 	cd "$(BUILD_HOME)" ; cvs -d "$(OO_CVSROOT)" co -r "$(OO_TAG)" $(OO_PACKAGES)
 	chmod -Rf u+w "$(BUILD_HOME)"
 	touch "$@"
