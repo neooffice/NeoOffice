@@ -200,7 +200,7 @@ public final class VCLEventQueue {
 		synchronized (queueList) {
 			if (wait > 0 && queue.head == null) {
 				try {
-					queueList.wait(wait);
+					queueList.wait(wait < 1000 ? wait : 1000);
 				}
 				catch (Throwable t) {}
 			}
