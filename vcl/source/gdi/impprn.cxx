@@ -406,7 +406,7 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 					nDPIY = 0;
 					aDestSize = Size( 0, 0 );
 					while ( pAct )
-						aMtf.NextAction();
+						pAct = aMtf.NextAction();
 					break;
 				}
 				case ( META_BMPSCALE_ACTION ):
