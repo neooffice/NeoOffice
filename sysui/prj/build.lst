@@ -1,0 +1,11 @@
+su	sysui	:	offapi xml2cmp rdbmaker NULL
+su	sysui\oowin32\office\icons		nmake	-	w	su_iconsw NULL
+su	sysui\java\office\icons			nmake	-	all	su_iconsj NULL
+su	sysui\tools\lngconv				nmake	-	u	su_lngconv NULL
+su	sysui\oounix\office 				nmake	-	u	su_iconsu NULL
+su	sysui\oounix\office\cde 			nmake	-	u	su_cdezips su_lngconv.u NULL
+su	sysui\oounix\office\gnome			nmake	-	u	su_gnomezips su_lngconv.u NULL
+su	sysui\oounix\office\kde2			nmake	-	u	su_kdezips su_lngconv.u NULL
+su	sysui\oounix\office\macosx			nmake	-	u	su_macosxu NULL
+su	sysui\oounix\office\scripts       nmake	-	u	su_scripts NULL
+su	sysui\source\win32\QuickStart	nmake	-	w	su_win32_quickstart NULL

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist SYSTEM "file://localhost/System/Library/DTDs/PropertyList.dtd">
+<plist version="0.9">
+<dict>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>doc</string>
+				<string>xls</string>
+				<string>ppt</string>
+				<string>sxi</string>
+				<string>sxc</string>
+				<string>sxw</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>$(PRODUCT_FILETYPE)</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSIsAppleDefaultForType</key>
+			<true/>
+		</dict>
+	</array>
+	<key>CFBundleExecutable</key>
+	<string>soffice.bin</string>
+	<key>CFBundleIdentifier</key>
+	<string>org.neooffice.neooffice.java</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(PRODUCT_VERSION)</string>
+	<key>CFBundleSignature</key>
+	<string>$(PRODUCT_FILETYPE)</string>
+	<key>CFBundleVersion</key>
+	<string>$(PRODUCT_VERSION) Build $(RSCVERSION)</string>
+	<key>CFBundleGetInfoString</key>
+	<string>$(PRODUCT_NAME) Copyright 2003 Patrick Luby (patrick.luby@planamesa.com), Portions Copright 2001 Sun Microsystems, Inc.</string>
+</dict>
+</plist>
