@@ -448,7 +448,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 // ----------------------------------------------------------------------------
 
 #ifdef MACOSX
-static void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void *pNotifyData )
+void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void *pNotifyData )
 {
 	if ( nMessage != kDMNotifyEvent )
 		return;
@@ -472,7 +472,7 @@ static void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessag
 		for ( ::std::map< SalFrame*, void* >::const_iterator it = pSalData->maNativeFrameMapping.begin(); it != pSalData->maNativeFrameMapping.end(); ++it )
 		{
 			if ( GetWindowBounds( (WindowRef)it->second, kWindowStructureRgn, &aRect ) == noErr )
-			it->first->SetPosSize( (long)aRect.left, (long)aRect.top, (long)( aRect.right - aRect.left + 1 ), (long)( aRect.bottom - aRect.top + 1 ), SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
+				it->first->maFrameData.mpVCLFrame->setBounds( (long)aRect.left, (long)aRect.top, (long)( aRect.right - aRect.left + 1 ), (long)( aRect.bottom - aRect.top + 1 ), sal_False );
 		}
 
 		// Unblock the VCL event loop

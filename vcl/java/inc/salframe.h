@@ -73,7 +73,10 @@ class SalFrameData
 	friend class	::vcl::com_sun_star_vcl_VCLEvent;
 	friend class	::vcl::com_sun_star_vcl_VCLEventQueue;
 	friend class	::vcl::com_sun_star_vcl_VCLFrame;
-	friend void 	UpdateMenusForFrame( SalFrame *, SalMenu * );
+	friend void 	UpdateMenusForFrame( SalFrame*, SalMenu* );
+#ifdef MACOSX
+	friend void 	CarbonDMExtendedNotificationCallback( void*, short, void* );
+#endif	// MACOSX
 
 	::vcl::com_sun_star_vcl_VCLFrame*	mpVCLFrame;
 	::vcl::java_lang_Object*	mpPanel;
