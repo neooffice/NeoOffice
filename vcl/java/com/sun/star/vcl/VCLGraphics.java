@@ -824,14 +824,16 @@ public final class VCLGraphics {
 				Graphics2D srcGraphics = srcImage.getImage().createGraphics();
 				srcGraphics.setColor(new Color(color));
 				srcGraphics.translate(bounds.x * -1, bounds.y * -1);
-				srcGraphics.drawPolygon(polygon);
+				for (int i = 1; i < npoints; i++)
+					srcGraphics.drawLine(xpoints[i - 1], ypoints[i - 1], xpoints[i], ypoints[i]);
 				srcGraphics.dispose();
 				drawImageXOR(srcImage, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y, bounds.width, bounds.height);
 				srcImage.dispose();
 			}
 			else {
 				graphics.setColor(new Color(color));
-				graphics.drawPolygon(polygon);
+				for (int i = 1; i < npoints; i++)
+					graphics.drawLine(xpoints[i - 1], ypoints[i - 1], xpoints[i], ypoints[i]);
 				addToFlush(bounds);
 			}
 		}
@@ -854,16 +856,11 @@ public final class VCLGraphics {
 			return;
 		}
 
-		if (npoints == 0) {
+		if (npoints == 0)
 			return;
-		}
-		else if (npoints == 1) {
-			setPixel(xpoints[0], ypoints[0], color);
-		}
-		else {
-			for (int i = 1; i < npoints; i++)
-				drawLine(xpoints[i - 1], ypoints[i - 1], xpoints[i], ypoints[i], color);
-		}
+
+		for (int i = 1; i < npoints; i++)
+			drawLine(xpoints[i - 1], ypoints[i - 1], xpoints[i], ypoints[i], color);
 
 	}
 
@@ -919,16 +916,20 @@ public final class VCLGraphics {
 				Graphics2D srcGraphics = srcImage.getImage().createGraphics();
 				srcGraphics.setColor(new Color(color));
 				srcGraphics.translate(bounds.x * -1, bounds.y * -1);
-				for (int i = 0; i < npoly; i++)
-					srcGraphics.drawPolygon(xpoints[i], ypoints[i], npoints[i]);
+				for (int i = 0; i < npoly; i++) {
+					for (int j = 1; j < npoints[i]; j++)
+						srcGraphics.drawLine(xpoints[i][j - 1], ypoints[i][j - 1], xpoints[i][j], ypoints[i][j]);
+				}
 				srcGraphics.dispose();
 				drawImageXOR(srcImage, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y, bounds.width, bounds.height);
 				srcImage.dispose();
 			}
 			else {
 				graphics.setColor(new Color(color));
-				for (int i = 0; i < npoly; i++)
-					graphics.drawPolygon(xpoints[i], ypoints[i], npoints[i]);
+				for (int i = 0; i < npoly; i++) {
+					for (int j = 1; j < npoints[i]; j++)
+						graphics.drawLine(xpoints[i][j - 1], ypoints[i][j - 1], xpoints[i][j], ypoints[i][j]);
+				}
 				addToFlush(bounds);
 			}
 		}
