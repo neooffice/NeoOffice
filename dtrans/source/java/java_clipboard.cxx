@@ -40,6 +40,8 @@
 #include <com/sun/star/datatransfer/clipboard/RenderingCapabilities.hpp>
 #endif
 
+#include <tools/string.hxx>
+
 using namespace com::sun::star::datatransfer;
 using namespace com::sun::star::datatransfer::clipboard;
 using namespace com::sun::star::lang;
@@ -66,22 +68,6 @@ Sequence< OUString > SAL_CALL JavaClipboard_getSupportedServiceNames()
 
 // ========================================================================
 
-Reference< XTransferable > *JavaClipboard::mpContents = NULL;
-
-// ------------------------------------------------------------------------
-
-Reference< XClipboardOwner > *JavaClipboard::mpOwner = NULL;
-
-// ------------------------------------------------------------------------
-
-JavaClipboard *JavaClipboard::mpLastSetter = NULL;
-
-// ------------------------------------------------------------------------
-
-Mutex JavaClipboard::maClipboardMutex;
-
-// ========================================================================
-
 JavaClipboard::JavaClipboard() : WeakComponentImplHelper4< XClipboardEx, XClipboardNotifier, XServiceInfo, XInitialization >( maMutex )
 {
 }
@@ -90,71 +76,28 @@ JavaClipboard::JavaClipboard() : WeakComponentImplHelper4< XClipboardEx, XClipbo
 
 JavaClipboard::~JavaClipboard()
 {
-	ClearableMutexGuard aGuard( maClipboardMutex );
-	if ( mpLastSetter == this )
-	{
-		Reference< XTransferable > aOldContents;
-		if ( mpContents )
-		{
-			aOldContents = Reference< XTransferable >( *mpContents );
-			delete mpContents;
-			mpContents = NULL;
-		}
-
-		Reference< XClipboardOwner > aOldOwner;
-		if ( mpOwner )
-		{
-			aOldOwner = Reference< XClipboardOwner >( *mpOwner );
-			delete mpOwner;
-			mpOwner = NULL;
-		}
-    
-		list< Reference< XClipboardListener > > listeners( maListeners );
-
-		aGuard.clear();
-
-		if ( aOldOwner.is() )
-			aOldOwner->lostOwnership( static_cast< XClipboard* >( this ), aOldContents );
-
-		mpLastSetter = NULL;
-	}
 }
 
 // ------------------------------------------------------------------------
 
 Reference< XTransferable > SAL_CALL JavaClipboard::getContents() throw( RuntimeException )
 {
-	MutexGuard aGuard( maClipboardMutex );
-	Reference< XTransferable > aContents;
-	if ( mpContents )
-		aContents = Reference< XTransferable >( *mpContents );
-	return aContents;
+	MutexGuard aGuard( maMutex );
+	return maContents;
 }
 
 // ------------------------------------------------------------------------
 
 void SAL_CALL JavaClipboard::setContents( const Reference< XTransferable >& xTransferable, const Reference< XClipboardOwner >& xClipboardOwner ) throw( RuntimeException )
 {
-	ClearableMutexGuard aGuard( maClipboardMutex );
+	ClearableMutexGuard aGuard( maMutex );
 
-	mpLastSetter = this;
+	Reference< XTransferable > aOldContents( maContents );
+	maContents = xTransferable;
 
-	Reference< XTransferable > aOldContents;
-	if ( mpContents )
-	{
-		aOldContents = Reference< XTransferable >( *mpContents );
-		delete mpContents;
-	}
-	mpContents = new Reference< XTransferable >( xTransferable );
+	Reference< XClipboardOwner > aOldOwner( maOwner );
+	maOwner = xClipboardOwner;
 
-	Reference< XClipboardOwner > aOldOwner;
-	if ( mpOwner )
-	{
-		aOldOwner = Reference< XClipboardOwner >( *mpOwner );
-		delete mpOwner;
-	}
-	mpOwner = new Reference< XClipboardOwner >( xClipboardOwner );
-    
 	list< Reference< XClipboardListener > > listeners( maListeners );
 
 	aGuard.clear();
@@ -163,7 +106,7 @@ void SAL_CALL JavaClipboard::setContents( const Reference< XTransferable >& xTra
 		aOldOwner->lostOwnership( static_cast< XClipboard* >( this ), aOldContents );
 
 	ClipboardEvent aEvent( static_cast< OWeakObject* >( this ), xTransferable );
-	while( listeners.begin() != listeners.end() )
+	while ( listeners.begin() != listeners.end() )
 	{
 		if( listeners.front().is() )
 			listeners.front()->changedContents( aEvent );
@@ -250,12 +193,27 @@ JavaClipboardFactory::~JavaClipboardFactory()
 
 Reference< XInterface > JavaClipboardFactory::createInstance() throw()
 {
-	return Reference< XInterface >( static_cast< OWeakObject* >( new JavaClipboard() ) );
+	return createInstanceWithArguments( Sequence< Any >() );
 }
 
 // ------------------------------------------------------------------------
 
 Reference< XInterface > JavaClipboardFactory::createInstanceWithArguments( const Sequence< Any >& arguments ) throw()
 {
-	return createInstance();
+	OUString aClipboardName;
+	if ( arguments.getLength() > 1 )
+		arguments.getConstArray()[1] >>= aClipboardName;
+	else
+		aClipboardName = OUString::createFromAscii( "CLIPBOARD" );
+
+	MutexGuard aGuard( maMutex );
+
+	Reference< XInterface > xClipboard = maInstances[ aClipboardName ];
+	if ( !xClipboard.is() )
+	{
+		xClipboard = Reference< XInterface >( static_cast< OWeakObject* >( new JavaClipboard() ) );
+		maInstances[ aClipboardName ] = xClipboard;
+	}
+
+	return xClipboard;
 }

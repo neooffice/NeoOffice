@@ -72,6 +72,9 @@
 #ifndef _COM_SUN_STAR_LANG_XINITIALIZATION_HPP_
 #include <com/sun/star/lang/XInitialization.hpp>
 #endif
+#ifndef __SGI_STL_HASHMAP
+#include <hash_map>
+#endif
 #ifndef __SGI_STL_LIST
 #include <list>
 #endif
@@ -84,15 +87,12 @@ namespace java {
 
 class JavaClipboard : public ::cppu::WeakComponentImplHelper4< ::com::sun::star::datatransfer::clipboard::XClipboardEx, ::com::sun::star::datatransfer::clipboard::XClipboardNotifier, ::com::sun::star::lang::XServiceInfo, ::com::sun::star::lang::XInitialization >
 {
-	static ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >*	mpContents;
-	static ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::clipboard::XClipboardOwner >*	mpOwner;
-	static JavaClipboard*	mpLastSetter;
-	static ::osl::Mutex		maClipboardMutex;
-
-public:
+	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	maContents;
+	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::clipboard::XClipboardOwner >	maOwner;
 	::std::list< ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::clipboard::XClipboardListener > >	maListeners;
 	::osl::Mutex			maMutex;
 
+public:
 							JavaClipboard();
 	virtual					~JavaClipboard();
 	
@@ -111,6 +111,7 @@ public:
 
 class JavaClipboardFactory : public ::cppu::WeakComponentImplHelper1< ::com::sun::star::lang::XSingleServiceFactory >
 {
+	::std::hash_map< ::rtl::OUString, ::com::sun::star::uno::Reference< XInterface >, ::rtl::OUStringHash >	maInstances;
 	::osl::Mutex maMutex;
 
 public:
