@@ -97,10 +97,11 @@ using namespace com::sun::star::uno;
 
 void SalAbort( const XubString& rErrorText )
 {
-	if( !rErrorText.Len() )
+	if ( !rErrorText.Len() )
 		fprintf( stderr, "Application Error" );
 	else
 		fprintf( stderr, ByteString( rErrorText, gsl_getSystemTextEncoding() ).GetBuffer() );
+	fprintf( stderr, "\n" );
 	abort();
 }
 
