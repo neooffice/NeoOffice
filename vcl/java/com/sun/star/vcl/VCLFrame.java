@@ -2025,11 +2025,23 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (b) {
 			// Show the window
 			window.show();
+			while (!window.isVisible()) {
+				try {
+					Thread.currentThread().sleep(100);
+				}
+				catch (Throwable t) {}
+			}
 			toFront();
 		}
 		else {
 			// Hide the window
 			window.hide();
+			while (window.isVisible()) {
+				try {
+					Thread.currentThread().sleep(100);
+				}
+				catch (Throwable t) {}
+			}
 			queue.removeCachedEvents(frame);
 		}
 
