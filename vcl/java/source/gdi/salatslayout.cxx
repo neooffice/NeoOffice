@@ -65,6 +65,7 @@ inline int Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 class ATSLayout : public GenericSalLayout
 {
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
+	bool				mbUseScreenMetrics;
 	ATSUStyle			maFontStyle;
 	int					mnGlyphCount;
 	ATSUGlyphInfoArray*	mpGlyphInfoArray;
@@ -75,10 +76,11 @@ class ATSLayout : public GenericSalLayout
 	void				Destroy();
 
 public:
-						ATSLayout( ::vcl::com_sun_star_vcl_VCLFont *pVCLFont );
+						ATSLayout( ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, bool bUseScreenMetrics );
 	virtual				~ATSLayout();
 
 	virtual bool		LayoutText( ImplLayoutArgs& rArgs );
+	virtual void		AdjustLayout( ImplLayoutArgs& rArgs );
 	virtual void		DrawText( SalGraphics& rGraphics ) const;
 };
 
@@ -88,13 +90,14 @@ using namespace vcl;
 
 SalLayout *SalGraphics::GetTextLayout( ImplLayoutArgs& rArgs, int nFallbackLevel )
 {
-	return new ATSLayout( maGraphicsData.mpVCLFont );
+	return new ATSLayout( maGraphicsData.mpVCLFont, !maGraphicsData.mpPrinter );
 }
 
 // ============================================================================
 
-ATSLayout::ATSLayout( com_sun_star_vcl_VCLFont *pVCLFont ) :
+ATSLayout::ATSLayout( com_sun_star_vcl_VCLFont *pVCLFont, bool bUseScreenMetrics ) :
 	maFontStyle( NULL ),
+	mbUseScreenMetrics( bUseScreenMetrics ),
 	mnGlyphCount( 0 ),
 	mpGlyphInfoArray( NULL ),
 	mpGlyphTranslations( NULL ),
@@ -284,18 +287,16 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		mpGlyphInfoArray = (ATSUGlyphInfoArray *)rtl_allocateMemory( nBufSize );
 
 		ByteCount nRetSize = nBufSize;
-		OSStatus nErr;
-		nErr = ATSUGetGlyphInfo( aLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nRetSize, mpGlyphInfoArray );
-
-		ATSUDisposeTextLayout( aLayout );
-
-		if ( nErr != noErr || nRetSize != nBufSize )
+		if ( ATSUGetGlyphInfo( aLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nRetSize, mpGlyphInfoArray ) != noErr || nRetSize != nBufSize )
 		{
+			ATSUDisposeTextLayout( aLayout );
 			Destroy();
 			return false;
 		}
 
 		mnGlyphCount = mpGlyphInfoArray->numGlyphs;
+
+		ATSUDisposeTextLayout( aLayout );
 
 		if ( bVertical )
 		{
@@ -380,6 +381,10 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				if ( ATSUGlyphGetScreenMetrics( mpGlyphInfoArray->glyphs[ i ].style, 1, &mpGlyphInfoArray->glyphs[ i ].glyphID, sizeof( GlyphID ), true, true, &aScreenMetrics ) == noErr )
 					nCharWidth = Float32ToLong( ( aScreenMetrics.height + nDoubleAdjust ) * mnUnitsPerPixel );
 			}
+			else if ( mbUseScreenMetrics )
+			{
+				nCharWidth = Float32ToLong( ( mpGlyphInfoArray->glyphs[ i + 1 ].screenX - mpGlyphInfoArray->glyphs[ i ].screenX ) * mnUnitsPerPixel );
+			}
 			else
 			{
 				nCharWidth = Float32ToLong( ( mpGlyphInfoArray->glyphs[ i + 1 ].idealX - mpGlyphInfoArray->glyphs[ i ].idealX ) * mnUnitsPerPixel );
@@ -399,6 +404,17 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	}
 
 	return ( nCharPos >= 0 );
+}
+
+// ----------------------------------------------------------------------------
+
+void ATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
+{
+	GenericSalLayout::AdjustLayout( rArgs );
+
+	// Asian kerning
+	if ( rArgs.mnFlags & SAL_LAYOUT_KERNING_ASIAN && ! ( rArgs.mnFlags & SAL_LAYOUT_VERTICAL ) )
+		ApplyAsianKerning( rArgs.mpStr, rArgs.mnLength );
 }
 
 // ----------------------------------------------------------------------------
