@@ -1648,7 +1648,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			// those that are applicable to disabled menu items.
 			int modifiers = e.getModifiers();
 			char keyChar = e.getKeyChar();
-			if ((modifiers & VCLFrame.menuModifiersMask) == VCLFrame.menuModifiersMask) {
+			if ((modifiers & VCLFrame.menuModifiersMask) == VCLFrame.menuModifiersMask && keyChar != ' ') {
 				VCLEvent vclEvent = new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0);
 				if (VCLEvent.convertVCLKeyCode(vclEvent.getKeyCode()) > 0) {
 					// Fix bug 244 by checking if there is an active AWT menu
@@ -1659,7 +1659,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 						MenuBar mb = ((Frame)window).getMenuBar();
 						if (mb != null) {
 							MenuItem mi = mb.getShortcutMenuItem(shortcut);
-							if (mi != null && mi.isEnabled())
+							if (mi != null & mi.isEnabled())
 								ignoreShortcut = true;
 						}
 					}
@@ -1771,7 +1771,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			// Find the capture window
 			VCLFrame f = VCLFrame.captureFrame;
 			while (f != null && f != this) {
-				if (!isFloatingWindow()) {
+				if (!f.isFloatingWindow()) {
 					f = null;
 					break;
 				}
@@ -1813,7 +1813,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			srcPoint.x += e.getX();
 			srcPoint.y += e.getY();
 			while (f != null && !f.getFullScreenMode()) {
-				if (!isFloatingWindow()) {
+				if (!f.isFloatingWindow()) {
 					f = null;
 					break;
 				}
@@ -1838,13 +1838,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			if (VCLFrame.mouseModifiersPressed == 0 && VCLFrame.lastCaptureFrame != null && VCLFrame.lastCaptureFrame != f) {
 				Window w = VCLFrame.lastCaptureFrame.getWindow();
 				Panel p = VCLFrame.lastCaptureFrame.getPanel();
-				if (w != null && isFloatingWindow() && w.isShowing() && p != null) {
+				if (w != null && VCLFrame.lastCaptureFrame.isFloatingWindow() && w.isShowing() && p != null) {
 					VCLFrame.lastCaptureFrame.focusGained(new FocusEvent(p, FocusEvent.FOCUS_GAINED));
 					VCLFrame.lastCaptureFrame.focusLost(new FocusEvent(p, FocusEvent.FOCUS_LOST));
 				}
 				w = f.getWindow();
 				p = f.getPanel();
-				if (!isFloatingWindow() && w.isShowing() && p != null)
+				if (!f.isFloatingWindow() && w.isShowing() && p != null)
 					f.focusGained(new FocusEvent(p, FocusEvent.FOCUS_GAINED));
 			}
 		}
@@ -1883,7 +1883,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			srcPoint.x += e.getX();
 			srcPoint.y += e.getY();
 			while (f != null && f != parent && !f.getFullScreenMode()) {
-				if (!isFloatingWindow()) {
+				if (!f.isFloatingWindow()) {
 					f = null;
 					break;
 				}
@@ -1916,7 +1916,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			}
 			VCLFrame.lastDragFrame = f;
 
-			if (!isFloatingWindow());
+			if (!f.isFloatingWindow());
 				VCLFrame.lastCaptureFrame = f;
 		}
 
@@ -2392,6 +2392,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param e the <code>WindowEvent</code>
 	 */
 	public void windowActivated(WindowEvent e) {
+
+		// Fix bug 375 by disabling capture and resetting cached modifiers
+		VCLFrame.capture = false;
+		VCLFrame.lastCaptureFrame = null;
+		VCLFrame.lastDragFrame = null;
+		VCLFrame.keyModifiersPressed = 0;
+		VCLFrame.mouseModifiersPressed = 0;
 
 		if (panel != null) {
 			Graphics g = panel.getGraphics();
