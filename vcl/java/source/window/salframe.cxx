@@ -227,9 +227,9 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	Rectangle aWorkArea;
 	GetWorkArea( aWorkArea );
 
-	if ( maFrameData.mbCenter && ! ( nFlags & SAL_FRAME_POSSIZE_X ) && ! ( nFlags & SAL_FRAME_POSSIZE_Y ) && !maFrameData.mbVisible )
+	if ( maFrameData.mbCenter && ! ( nFlags & SAL_FRAME_POSSIZE_X ) && ! ( nFlags & SAL_FRAME_POSSIZE_Y ) )
 	{
-		if ( maFrameData.mpParent )
+		if ( maFrameData.mpParent && maFrameData.mpParent->maGeometry.nWidth >= nWidth && maFrameData.mpParent->maGeometry.nHeight > nHeight)
 		{
 			nX = maFrameData.mpParent->maGeometry.nX + ( ( maFrameData.mpParent->maGeometry.nWidth - nWidth ) / 2 );
 			nY = maFrameData.mpParent->maGeometry.nY + ( ( maFrameData.mpParent->maGeometry.nHeight - nHeight ) / 2 );
