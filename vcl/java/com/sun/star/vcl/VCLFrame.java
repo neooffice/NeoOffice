@@ -2059,6 +2059,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			height = size.height;
 
 		synchronized (window.getTreeLock()) {
+			// Fix bug 509 by temporarily moving the window
+			window.setBounds(x + 1, y, width, height);
 			window.setBounds(x, y, width, height);
 
 			// We need to create the native window handle after the first call
@@ -2399,10 +2401,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void windowDeiconified(WindowEvent e) {
 
-		if (panel != null) {
-			Graphics g = panel.getGraphics();
-			panel.paint(g);
-			g.dispose();
+		if (graphics != null) {
+			synchronized (graphics) {
+				graphics.addToFlush();
+			}
 		}
 
 	}
@@ -2422,10 +2424,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		VCLFrame.lastMouseDragEvent = null;
 		VCLFrame.mouseModifiersPressed = 0;
 
-		if (panel != null) {
-			Graphics g = panel.getGraphics();
-			panel.paint(g);
-			g.dispose();
+		if (graphics != null) {
+			synchronized (graphics) {
+				graphics.addToFlush();
+			}
 		}
 
 	}
@@ -2500,7 +2502,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		public void paint(Graphics g) {
 
-			paintComponents(g);
+			VCLGraphics graphics = frame.getGraphics();
+			if (graphics != null) {
+				synchronized (graphics) {
+					graphics.addToFlush();
+				}
+			}
 
 		}
 
@@ -2597,7 +2604,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			if (graphics != null) {
 				synchronized (graphics) {
 					graphics.addToFlush();
-					graphics.flush();
 				}
 			}
 
@@ -2679,7 +2685,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		public void paint(Graphics g) {
 
-			paintComponents(g);
+			VCLGraphics graphics = frame.getGraphics();
+			if (graphics != null) {
+				synchronized (graphics) {
+					graphics.addToFlush();
+				}
+			}
 
 		}
 
