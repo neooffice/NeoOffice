@@ -638,6 +638,11 @@ public final class VCLMenuItemData {
          * @param e	event spawning this action.  Ignored.
          */
         public void actionPerformed(ActionEvent e) {
+
+			// Cache the shortcut if there is one
+			if (d.keyboardShortcut!=null)
+				VCLFrame.setLastMenuShortcutPressed(d.keyboardShortcut);
+
             VCLMenuBar mb=VCLMenuBar.findVCLMenuBar(this);
             if(mb!=null) {
                 mb.getEventQueue().postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUCOMMAND, mb.getFrame(), d.getVCLID(), d.getVCLCookie()));
