@@ -1,0 +1,17 @@
+Index: source/office/files.scp
+===================================================================
+RCS file: /cvs/installation/scp/source/office/Attic/files.scp,v
+retrieving revision 1.369.16.14.2.2
+diff -u -r1.369.16.14.2.2 files.scp
+--- source/office/files.scp	12 May 2004 15:46:28 -0000	1.369.16.14.2.2
++++ source/office/files.scp	2 Jun 2004 18:52:54 -0000
+@@ -853,9 +853,7 @@
+ 
+ //STD_UNO_LIB_FILE( GID_FILE_LIB_OIC, oic)
+ STD_UNO_LIB_FILE( GID_FILE_LIB_RES, res)
+-#ifndef MACOSX
+ STD_UNO_LIB_FILE( GID_FILE_LIB_SCN, scn)
+-#endif
+ STD_UNO_LIB_FILE( GID_FILE_LIB_SVX, svx)
+ STD_UNO_LIB_FILE( GID_FILE_LIB_LNG, lng)
+ 
