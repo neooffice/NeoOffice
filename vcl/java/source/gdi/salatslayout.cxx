@@ -355,12 +355,22 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		{
 			bool bPosRTL;
 			int nCharPos = -1;
+			int nLastIndex = 0;
 			rArgs.ResetPos();
 			while ( rArgs.GetNextPos( &nCharPos, &bPosRTL ) )
 			{
 				int nIndex = nCharPos - rArgs.mnMinCharPos + 1;
-				if ( pNeedFallback[ nIndex ] || IsSpacingGlyph( aStr[ nIndex ] | GF_ISCHAR ) )
+				if ( pNeedFallback[ nIndex ] )
+				{
 					rArgs.NeedFallback( nCharPos, bPosRTL );
+				}
+				else if ( IsSpacingGlyph( aStr[ nIndex ] | GF_ISCHAR ) && pNeedFallback[ nLastIndex ] )
+				{
+					rArgs.NeedFallback( nCharPos, bPosRTL );
+					pNeedFallback[ nIndex ] = true;
+				}
+
+				nLastIndex = nIndex;
 			}
 
 			rtl_freeMemory( pNeedFallback );
@@ -456,7 +466,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				nGlyphFlags |= GlyphItem::IS_RTL_GLYPH;
 				if ( ! ( nGlyphFlags & GlyphItem::IS_IN_CLUSTER ) )
 				{
-					AppendGlyph( GlyphItem( nCharPos, 3, aPos, nGlyphFlags, 0 ) );
+					AppendGlyph( GlyphItem( nCharPos, GF_IDXMASK, aPos, nGlyphFlags, 0 ) );
 					nGlyphFlags |= GlyphItem::IS_IN_CLUSTER;
 				}
 			}
