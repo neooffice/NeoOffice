@@ -137,35 +137,10 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 
 	MutexGuard aGuard( aMutex );
 
-	static jclass carbonLockClass = NULL;
-	static jmethodID mIDRelease0 = NULL;
-	static jmethodID mIDAcquire0 = NULL;
-	DTransThreadAttach t;
-	if ( t.pEnv && t.pEnv->GetVersion() < JNI_VERSION_1_4 )
-	{
-		carbonLockClass = t.pEnv->FindClass( "com/apple/mrj/macos/carbon/CarbonLock" );
-		if ( carbonLockClass )
-		{
-			if ( !mIDRelease0 )
-			{
-				char *cSignature = "()I";
-				mIDRelease0 = t.pEnv->GetStaticMethodID( carbonLockClass, "release0", cSignature );
-			}
-			OSL_ENSURE( mIDRelease0, "Unknown method id!" );
-			if ( !mIDAcquire0 )
-			{
-				char *cSignature = "()I";
-				mIDAcquire0 = t.pEnv->GetStaticMethodID( carbonLockClass, "acquire0", cSignature );
-			}
-			OSL_ENSURE( mIDAcquire0, "Unknown method id!" );
-		}
-	}
-
 	com_sun_star_dtrans_DTransTransferable *pTransferable = (com_sun_star_dtrans_DTransTransferable *)pData;
 
-	jint nReleased;
-	if ( carbonLockClass && mIDRelease0 && mIDAcquire0 )
-		nReleased = t.pEnv->CallStaticIntMethod( carbonLockClass, mIDRelease0 );
+	// Unlock Java lock
+	jboolean nReleased = ReleaseJavaLock();
 
 	OGuard aSolarGuard( Application::GetSolarMutex() );
 
@@ -378,8 +353,9 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 		}
 	}
 
-	if ( carbonLockClass && mIDRelease0 && mIDAcquire0 && !nReleased )
-		t.pEnv->CallStaticIntMethod( carbonLockClass, mIDAcquire0 );
+	// Relock Java lock
+	if ( nReleased )
+		AcquireJavaLock();
 
 	return nErr;
 }

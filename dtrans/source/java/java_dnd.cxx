@@ -268,7 +268,14 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 	if ( !pDragThreadOwner )
 		return noErr;
 
+	// Unlock Java lock
+	jboolean nReleased = ReleaseJavaLock();
+
 	OGuard aSolarGuard( Application::GetSolarMutex() );
+
+	// Relock Java lock
+	if ( nReleased )
+		AcquireJavaLock();
 
 	JavaDragSource *pSource = (JavaDragSource *)pData;
 	bool bFound = false;
@@ -306,7 +313,14 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 {
 	MutexGuard aDragGuard( aDragMutex );
 
+	// Unlock Java lock
+	jboolean nReleased = ReleaseJavaLock();
+
 	OGuard aSolarGuard( Application::GetSolarMutex() );
+
+	// Relock Java lock
+	if ( nReleased )
+		AcquireJavaLock();
 
 	JavaDropTarget *pTarget = (JavaDropTarget *)pData;
 	bool bFound = false;
@@ -361,7 +375,14 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 {
 	MutexGuard aDragGuard( aDragMutex );
 
+	// Unlock Java lock
+	jboolean nReleased = ReleaseJavaLock();
+
 	OGuard aSolarGuard( Application::GetSolarMutex() );
+
+	// Relock Java lock
+	if ( nReleased )
+		AcquireJavaLock();
 
 	JavaDropTarget *pTarget = (JavaDropTarget *)pData;
 	bool bFound = false;

@@ -52,6 +52,8 @@ namespace dtrans {
 
 	jstring					StringToJavaString( JNIEnv *pEnv,const ::rtl::OUString& _Temp );
 	::rtl::OUString			JavaString2String( JNIEnv *pEnv,jstring _Str );
+	jboolean				AcquireJavaLock();
+	jboolean				ReleaseJavaLock();
 
 	    template< class T, class JT > ::com::sun::star::uno::Sequence< T > copyArrayAndDelete( JNIEnv *pEnv, jobjectArray _Array, const T& _rD1, const JT& _rD2 )
 	{
