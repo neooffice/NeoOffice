@@ -72,9 +72,6 @@ SLOFILES = \
 	$(SLO)/VCLScreen.obj \
 	$(SLO)/tools.obj
 
-EXCEPTIONSFILES = \
-	$(SLO)/Object.obj
-
 .ENDIF
 
 .ENDIF		# "$(GUIBASE)"!="java"

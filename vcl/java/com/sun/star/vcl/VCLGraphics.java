@@ -792,6 +792,13 @@ public final class VCLGraphics {
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle bounds = polygon.getBounds();
+
+		// Some polylines can be simply a vertical or horizontal line
+		if (bounds.width == 0)
+			bounds.width = 1;
+		if (bounds.height == 0)
+			bounds.height = 1;
+
 		if (fill) {
 			if (xor)
 				graphics.setXORMode(Color.black);
@@ -839,6 +846,13 @@ public final class VCLGraphics {
 		}
 
 		Rectangle bounds = new Polygon(xpoints, ypoints, npoints).getBounds();
+
+		// Some polylines can be simply a vertical or horizontal line
+		if (bounds.width == 0)
+			bounds.width = 1;
+		if (bounds.height == 0)
+			bounds.height = 1;
+
 		if (xor) {
 			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
 			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
