@@ -210,17 +210,16 @@ BOOL SalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
 BOOL SalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 {
 	// Set or update values
-	if ( nFlags & SAL_JOBSET_ORIENTATION )
-		maPrinterData.mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
-	else
+	if ( nFlags & SAL_JOBSET_ORIENTATION == 0 )
 		pSetupData->meOrientation = maPrinterData.mpVCLPageFormat->getOrientation();
-
-	if ( nFlags & SAL_JOBSET_PAPERBIN )
-		;
 	else
+		maPrinterData.mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
+
+	if ( nFlags & SAL_JOBSET_PAPERBIN == 0 )
 		pSetupData->mnPaperBin = 0;
 
-	if ( nFlags & SAL_JOBSET_PAPERSIZE )
+
+	if ( nFlags & SAL_JOBSET_PAPERSIZE == 0 )
 	{
 		pSetupData->mePaperFormat = maPrinterData.mpVCLPageFormat->getPaperType();
 		Size aSize( maPrinterData.mpVCLPageFormat->getPageSize() );
