@@ -63,6 +63,9 @@ void SalTimer::Start( ULONG nMS )
 	gettimeofday( &pSalData->maTimeout, NULL );
 	pSalData->maTimeout += nMS;
 	pSalData->mnTimerInterval = nMS;
+
+	// Wakeup the event queue by sending it a dummy event
+	Application::PostUserEvent( NULL );
 } 
 
 // -----------------------------------------------------------------------
@@ -73,4 +76,7 @@ void SalTimer::Stop()
 	pSalData->mnTimerInterval = 0;
 	pSalData->maTimeout.tv_sec = 0;
 	pSalData->maTimeout.tv_usec = 0;
+
+	// Wakeup the event queue by sending it a dummy event
+	Application::PostUserEvent( NULL );
 }
