@@ -107,6 +107,20 @@ public final class VCLPageFormat {
 	public final static int PAPER_USER = 8;
 
 	/**
+	 * Cached default page format.
+	 */
+	private static PageFormat defaultPageFormat = null;
+
+	/**
+	 * Initialize default page format.
+	 */
+	static {
+
+		defaultPageFormat = PrinterJob.getPrinterJob().defaultPage();
+
+	}
+
+	/**
 	 * Cached <code>VCLImage</code>.
 	 */
 	private VCLImage image = null;
@@ -126,7 +140,7 @@ public final class VCLPageFormat {
 	 */
 	public VCLPageFormat() {
 
-		pageFormat = PrinterJob.getPrinterJob().defaultPage();
+		pageFormat = (PageFormat)VCLPageFormat.defaultPageFormat.clone();
 		pageResolution = new Dimension(72, 72);
 		image = new VCLImage(1, 1, 32, this);
 
@@ -287,6 +301,9 @@ public final class VCLPageFormat {
 		PageFormat p = PrinterJob.getPrinterJob().pageDialog(pageFormat);
 		if (p != pageFormat) {
 			pageFormat = p;
+			synchronized (VCLPageFormat.class) {
+				VCLPageFormat.defaultPageFormat = (PageFormat)pageFormat.clone();
+			}
 			return true;
 		}
 		else {
