@@ -77,7 +77,8 @@ public final class VCLMenuItemData {
      */
     public void setDelegate(VCLMenuItemData d) {
         delegate=d;
-        d.delegateForObject=this;
+        if (d != null)
+            d.delegateForObject=this;
     }
     
     /**
