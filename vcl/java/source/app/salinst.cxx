@@ -172,10 +172,12 @@ void SVMainThread::run()
 		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
 		{
 			// Set up native menu event handler
-			EventTypeSpec aType;
-			aType.eventClass = kEventClassMenu;
-			aType.eventKind = kEventMenuBeginTracking;
-			InstallApplicationEventHandler( CarbonEventHandler, 1, &aType, NULL, NULL );
+			EventTypeSpec aTypes[ 2 ];
+			aTypes[ 0 ].eventClass = kEventClassMenu;
+			aTypes[ 0 ].eventKind = kEventMenuBeginTracking;
+			aTypes[ 1 ].eventClass = kEventClassAppleEvent;
+			aTypes[ 1 ].eventKind = kEventAppleEvent;
+			InstallApplicationEventHandler( CarbonEventHandler, 2, aTypes, NULL, NULL );
 		}
 	}
 #endif	// MACOSX
@@ -311,27 +313,49 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv 
 #ifdef MACOSX
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData )
 {
-	bool bYieldEventQueue = ( GetEventClass( aEvent ) == kEventClassMenu && GetEventKind( aEvent ) == kEventMenuBeginTracking && ImplGetSVData()->maAppData.mbInAppExecute );
+	UInt32 nClass = GetEventClass( aEvent );
+	UInt32 nKind = GetEventKind( aEvent );
+	bool bYieldForMenuEvent = ( nClass == kEventClassMenu && nKind == kEventMenuBeginTracking );
+	bool bYieldForAppleEvent = ( nClass == kEventClassAppleEvent && nKind == kEventAppleEvent );
+	bool bYield = ( ImplGetSVData()->maAppData.mbInAppExecute && ( bYieldForMenuEvent || bYieldForAppleEvent ) );
 
-	if ( bYieldEventQueue )
+	if ( bYield )
 	{
 		// Post a yield event and wait the VCL event queue to block
 		SalData *pSalData = GetSalData();
 		pSalData->maNativeEventStartCondition.reset();
 		com_sun_star_vcl_VCLEvent aYieldEvent( SALEVENT_YIELDEVENTQUEUE, NULL, NULL );
 		pSalData->mpEventQueue->postCachedEvent( &aYieldEvent );
+
+		if ( bYieldForMenuEvent )
+		{
+			// Unlock the Carbon lock
+			VCLThreadAttach t;
+			if ( t.pEnv )
+				Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
+		}
+
 		pSalData->maNativeEventStartCondition.wait();
 	}
 
 	// Always execute the next registered handler
 	OSStatus nRet = CallNextEventHandler( aNextHandler, aEvent );
 
-	if ( bYieldEventQueue )
+	if ( bYield )
 	{
 		// Execute menu updates while the VCL event queue is blocked
 		SalData *pSalData = GetSalData();
 		for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			UpdateMenusForFrame( (*it), NULL );
+
+		if ( bYieldForMenuEvent )
+		{
+			// Relock the Carbon lock
+			VCLThreadAttach t;
+			if ( t.pEnv )
+				Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
+		}
+
 		pSalData->maNativeEventEndCondition.set();
 	}
 
