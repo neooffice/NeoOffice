@@ -154,20 +154,42 @@ build.installation: build.neo_patches
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents/program" ; regcomp -register -r applicat.rdb -c "libdtransjava$${UPD}$${DLLSUFFIX}.dylib"
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" ; rm -Rf "license.html" "readme.html" "setup" "spadmin" "program/libdtransX11$${UPD}$${DLLSUFFIX}.dylib" "program/setup" "program/setup.bin" "program/spadmin" "program/spadmin.bin" "share/config/registry/cache" "user"
 	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" ; sed 's#ProductPatch=.*$$#ProductPatch=($(PRODUCT_VERSION))#' "program/bootstraprc" | sed 's#Location=.*$$#Location=$$SYSUSERCONFIG/.neojavarc#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' > "../../out" ; mv -f "../../out" "program/bootstraprc"
-	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" ; sed 's#"string">.*</ooName>#"string">$(PRODUCT_NAME)</ooName>#g' "share/config/registry/instance/org/openoffice/Setup.xml" | sed 's#"string">.*</ooSetupVersion>#"string">$(PRODUCT_VERSION)</ooSetupVersion>#g'> "../../out" ; mv -f "../../out" "share/config/registry/instance/org/openoffice/Setup.xml"
-	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" ; sed 's#"string">.*</OfficeInstall>#"string">/Applications/$(PRODUCT_DIR_NAME).app/Contents</OfficeInstall>#g' "share/config/registry/instance/org/openoffice/Office/Common.xml" | sed 's#>OpenOffice\.org [0-9\.]* #>$(PRODUCT_NAME) $(PRODUCT_VERSION) #g'> "../../out" ; mv -f "../../out" "share/config/registry/instance/org/openoffice/Setup.xml"
+	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" ; sed 's#"string">.*</ooName>#"string">$(PRODUCT_NAME)</ooName>#g' "share/config/registry/instance/org/openoffice/Setup.xml" | sed 's#"string">.*</ooSetupVersion>#"string">$(PRODUCT_VERSION)</ooSetupVersion>#g' > "../../out" ; mv -f "../../out" "share/config/registry/instance/org/openoffice/Setup.xml"
+	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" ; sed 's#>OpenOffice\.org [0-9\.]* #>$(PRODUCT_NAME) $(PRODUCT_VERSION) #g' "share/config/registry/instance/org/openoffice/Office/Common.xml" > "../../out" ; mv -f "../../out" "share/config/registry/instance/org/openoffice/Office/Common.xml"
+	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" ; sh -c 'for i in `find "share/config/registry" -type f` ; do sed "s#$(PWD)/$(INSTALL_HOME)#/Applications#g" "$${i}" | sed "s#'$$HOME'#/Users#g" > "../../out" ; mv -f "../../out" "$${i}" ; done'
 	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app/Contents" ; sh -c 'if [ ! -d "MacOS" ] ; then rm -Rf "MacOS" ; mv -f "program" "MacOS" ; ln -s "MacOS" "program" ; fi'
 	chmod -Rf u+w,go-w,a+r "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app"
 	touch $@
 
 # This target must be run manually since it launches the GUI PackageMaker tool
 build.package: build.installation
+	rm -Rf "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg"
 	rm -Rf "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)"
 	mkdir -p "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)"
 	cp -f etc/gpl.html "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)/License.html"
+	cd "bin" ; sh -c 'for i in post_install post_upgrade ; do sed "s#\$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g" "$${i}" > "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)/$(PRODUCT_DIR_NAME).$${i}" ; chmod 755 "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)/$(PRODUCT_DIR_NAME).$${i}" ; done'
 	rm -f "$(INSTALL_HOME)/neojava.pmsp"
 	sed 's#$$(INSTALL_HOME)#$(PWD)/$(INSTALL_HOME)#g' etc/neojava.pmsp | sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' > "$(INSTALL_HOME)/neojava.pmsp"
 	open "$(PWD)/$(INSTALL_HOME)/neojava.pmsp"
+	@echo ""
+	@echo "Opening PackageMaker application"
+	@echo ""
+	@echo "When the PackageMaker application opens, make sure the following settings are"
+	@echo "showing and, if so, press the Create Package button to build the installable"
+	@echo "package and make absolutely sure that you save the package to"
+	@echo "$(PWD)/$(INSTALL_ROOT)/$(PRODUCT_DIR_NAME).pkg:"
+	@echo ""
+	@echo "Package Root Directory: $(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).app"
+	@echo "Package Resources Directory: $(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)"
+	@echo "Package Title: $(PRODUCT_NAME)"
+	@echo "Package Version: $(PRODUCT_VERSION)"
+	@echo "Default Location: /Applications/$(PRODUCT_DIR_NAME).app"
+	@echo ""
+	@echo "This make target will sleep until the PackageMaker tool creates the"
+	@echo "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg"
+	@echo ""
+	sh -c 'while [ ! -f "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).bom" ] ; do sleep 10 ; done'
+	touch "$@"
 
-build.all: build.oo_all build.installation
+build.all: build.oo_all build.package
 	touch "$@"

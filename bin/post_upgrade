@@ -1,0 +1,15 @@
+#!/bin/sh
+
+# Replace the default installation path with the actual installation path
+if [ -d "$2" ]; then
+	tempfile="$INSTALLER_TEMP/out"
+	touch "$tempfile"
+	if [ -f "$tempfile" ]; then
+   		cd "$2/Contents/share/config/registry/instance"
+		for i in `find . -type f`; do
+			sed 's#/Applications/$(PRODUCT_DIR_NAME).app#'"$2"'#g' "$i" > "$tempfile"
+			mv -f "$tempfile" "$i"
+		done
+		rm -f "$tempfile"
+	fi
+fi
