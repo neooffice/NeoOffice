@@ -605,8 +605,11 @@ public final class VCLMenuItemData {
 				VCLFrame.setLastMenuShortcutPressed(d.keyboardShortcut);
 
 			VCLMenuBar mb=VCLMenuBar.findVCLMenuBar(this);
-			if (mb!=null)
+			if (mb!=null) {
+				mb.getEventQueue().postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUACTIVATE, mb.getFrame(), d.getVCLID(), d.getVCLCookie()));
 				mb.getEventQueue().postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUCOMMAND, mb.getFrame(), d.getVCLID(), d.getVCLCookie()));
+				mb.getEventQueue().postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUDEACTIVATE, mb.getFrame(), d.getVCLID(), d.getVCLCookie()));
+            }
 
 		}
 
@@ -651,7 +654,9 @@ public final class VCLMenuItemData {
 
             VCLMenuBar mb=VCLMenuBar.findVCLMenuBar(this);
             if(mb!=null) {
+				mb.getEventQueue().postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUACTIVATE, mb.getFrame(), d.getVCLID(), d.getVCLCookie()));
                 mb.getEventQueue().postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUCOMMAND, mb.getFrame(), d.getVCLID(), d.getVCLCookie()));
+				mb.getEventQueue().postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUDEACTIVATE, mb.getFrame(), d.getVCLID(), d.getVCLCookie()));
             }
         }
     }
