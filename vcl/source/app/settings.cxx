@@ -701,7 +701,6 @@ void ImplStyleData::SetStandardOS2Styles()
     aStdFont.SetName( vcl::DefaultFontConfigItem::get()->getUserInterfaceFont(LANGUAGE_ENGLISH) );
     maMenuFont                  = aStdFont;
     maTitleFont                 = aStdFont;
-#endif	// USE_JAVA
 
     maFaceColor                 = Color( COL_LIGHTGRAY );
     maCheckedColor              = Color( 0xCC, 0xCC, 0xCC );
@@ -793,7 +792,6 @@ void ImplStyleData::SetStandardMacStyles()
 //    maPushButtonFont            = aStdFont;
 //    maGroupFont                 = aStdFont;
 //    maLabelFont                 = aStdFont;
-#endif	// USE_JAVA
 
     maFaceColor                 = Color( COL_LIGHTGRAY );
     maCheckedColor              = Color( 0x99, 0x99, 0x99 );
