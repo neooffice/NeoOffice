@@ -33,7 +33,7 @@
  *  MA  02111-1307  USA
  *  
  *  =================================================
- *  Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
+ *  Modified December 2004 by Patrick Luby. SISSL Removed. NeoOffice is
  *  distributed under GPL only under modification term 3 of the LGPL.
  *
  *  Contributor(s): _______________________________________
@@ -75,6 +75,10 @@ using namespace com::sun::star::beans;
 using namespace com::sun::star::plugin;
 using namespace rtl;
 using namespace osl;
+
+#include <osl/file.h>
+#include <osl/thread.h>
+#define OU2ENC(rtlOUString)     ::rtl::OString((rtlOUString).getStr(), (rtlOUString).getLength(), osl_getThreadTextEncoding()).getStr()
 
 class PluginDisposer : public vos::OTimer
 {
@@ -464,7 +468,7 @@ void XPlugin_Impl::loadPlugin()
 #ifdef UNX
 #ifndef USE_JAVA
     XSync( (Display*)pEnvData->pDisplay, False );
-#endif	// !USE_JAVA
+#endif	// USE_JAVA
 #endif
     if( ! getPluginComm() )
     {
@@ -505,7 +509,7 @@ void XPlugin_Impl::loadPlugin()
 #ifdef UNX
 #ifndef USE_JAVA
     XSync( (Display*)pEnvData->pDisplay, False );
-#endif	// !USE_JAVA
+#endif	// USE_JAVA
 #endif
 #ifdef UNX
     m_aNPWindow.window      = (void*)pEnvData->aWindow;
@@ -702,13 +706,17 @@ sal_Bool XPlugin_Impl::provideNewStream(const OUString& mimetype,
         }
         fprintf( stderr, "Plugin wants it in Mode %s\n", pType );
 #endif
-        if( isfile && stype == NP_ASFILEONLY )
+
+        if( (isfile || (strncmp(pStream->getStream()->url,"file://",7)==0)) && stype == NP_ASFILEONLY ) {
+
+	    OUString aSyspath;
+            OUString aURL = OUString::createFromAscii(pStream->getStream()->url);
+            osl_getSystemPathFromFileURL(aURL.pData,&aSyspath.pData);
             m_pPluginComm->
                 NPP_StreamAsFile( &m_aInstance,
                                   pStream->getStream(),
-                                  pStream->getStream()->url );
-        else
-        {
+                                  OU2ENC(aSyspath));
+        } else {
             pStream->setMode( stype );
 
             if( ! stream.is() )
