@@ -84,6 +84,11 @@ public final class VCLEventQueue {
 	/**
 	 * The queue of cached events.
 	 */
+	private boolean autoFlush = true;
+
+	/**
+	 * The queue of cached events.
+	 */
 	private VCLEventQueue.Queue queue = new VCLEventQueue.Queue();
 
 	/**
@@ -92,42 +97,6 @@ public final class VCLEventQueue {
 	public VCLEventQueue() {
 
 		VCLGraphics.setAutoFlush(true);
-
-		// Load platform specific event handlers
-		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-			try {
-				Class c = Class.forName("com.sun.star.vcl.macosx.VCLOpenApplicationHandler");
-				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-				ctor.newInstance(new Object[]{ this });
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			try {
-				Class c = Class.forName("com.sun.star.vcl.macosx.VCLOpenDocumentHandler");
-				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-				ctor.newInstance(new Object[]{ this });
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			try {
-				Class c = Class.forName("com.sun.star.vcl.macosx.VCLPrintDocumentHandler");
-				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-				ctor.newInstance(new Object[]{ this });
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			try {
-				Class c = Class.forName("com.sun.star.vcl.macosx.VCLQuitHandler");
-				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-				ctor.newInstance(new Object[]{ this });
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-		}
 
 	}
 
@@ -166,6 +135,48 @@ public final class VCLEventQueue {
 	 */
 	public VCLEvent getNextCachedEvent(boolean wait) {
 
+		if (autoFlush) {
+			// Turn off auto flushing
+			autoFlush = false;
+			VCLGraphics.setAutoFlush(false);
+			
+			// Load platform specific event handlers
+			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+				try {
+					Class c = Class.forName("com.sun.star.vcl.macosx.VCLOpenApplicationHandler");
+					Constructor ctor = c.getConstructor(new Class[]{ getClass() });
+					ctor.newInstance(new Object[]{ this });
+				}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
+				try {
+					Class c = Class.forName("com.sun.star.vcl.macosx.VCLOpenDocumentHandler");
+					Constructor ctor = c.getConstructor(new Class[]{ getClass() });
+					ctor.newInstance(new Object[]{ this });
+				}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
+				try {
+					Class c = Class.forName("com.sun.star.vcl.macosx.VCLPrintDocumentHandler");
+					Constructor ctor = c.getConstructor(new Class[]{ getClass() });
+					ctor.newInstance(new Object[]{ this });
+				}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
+				try {
+					Class c = Class.forName("com.sun.star.vcl.macosx.VCLQuitHandler");
+					Constructor ctor = c.getConstructor(new Class[]{ getClass() });
+					ctor.newInstance(new Object[]{ this });
+				}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
+			}
+		}
+			
 		if (!wait && queue.head == null)
 			return null;
 
@@ -198,7 +209,6 @@ public final class VCLEventQueue {
 	public void postCachedEvent(VCLEvent event) {
 
 		// Add the event to the cache
-		VCLGraphics.setAutoFlush(false);
 		VCLEventQueue.QueueItem newItem = new VCLEventQueue.QueueItem(event);
 		int id = newItem.event.getID();
 		synchronized (queue) {
