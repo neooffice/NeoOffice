@@ -79,11 +79,13 @@ public final class VCLMenuBar {
     /**
      * Construct a new VCLMenuBar instance.  Before the menubar can be displayed it must be attached to a frame.
      *
+	 * @param q event queue into which VCL menu events for this menubar's menu items should be placed
      * @see setFrame
      */
-     public VCLMenuBar() {
+     public VCLMenuBar(VCLEventQueue q) {
         awtMenuBar=new MenuBar();
         addNewMenuBar(this);
+		queue=q;
      }
      
      /**
@@ -100,11 +102,9 @@ public final class VCLMenuBar {
      * to the user.
      *
      * @param f	VCLFrame with which the menubar is to be associated
-     * @param q	VCLEventQueue to which events for this menu and frame should be posted
      */
-    synchronized public void setFrame(VCLFrame f, VCLEventQueue q) {
+    synchronized public void setFrame(VCLFrame f) {
       	frame=f;
-        queue=q;
         Window win=frame.getWindow();
         if(win instanceof Frame)
             ((Frame)win).setMenuBar(awtMenuBar);

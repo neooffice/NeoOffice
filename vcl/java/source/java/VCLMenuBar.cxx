@@ -82,12 +82,18 @@ com_sun_star_vcl_VCLMenuBar::com_sun_star_vcl_VCLMenuBar( ) : java_lang_Object( 
 		return;
 	if ( !mID )
 	{
-		char *cSignature = "()V";
+		char *cSignature = "(Lcom/sun/star/vcl/VCLEventQueue;)V";
 		mID = t.pEnv->GetMethodID( getMyClass(), "<init>", cSignature );
 	}
 	OSL_ENSURE( mID, "Unknown method id!" );
 	jobject tempObj;
-	tempObj = t.pEnv->NewObjectA( getMyClass(), mID, NULL );
+	jvalue args[1];
+	com_sun_star_vcl_VCLEventQueue * q = GetSalData()->mpEventQueue;
+	if ( q )
+			args[0].l = q->getJavaObject();
+	else
+			args[0].l = NULL;
+	tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
 	saveRef( tempObj );
 }
 
@@ -120,22 +126,17 @@ void com_sun_star_vcl_VCLMenuBar::setFrame( com_sun_star_vcl_VCLFrame *_par0 )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(Lcom/sun/star/vcl/VCLFrame;Lcom/sun/star/vcl/VCLEventQueue;)V";
+			char *cSignature = "(Lcom/sun/star/vcl/VCLFrame;)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "setFrame", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[2];
+			jvalue args[1];
 			if ( _par0 )
 				args[0].l = _par0->getJavaObject();
 			else
 				args[0].l = NULL;
-                        com_sun_star_vcl_VCLEventQueue * q = GetSalData()->mpEventQueue;
-                        if ( q )
-                                args[1].l = q->getJavaObject();
-                        else
-                                args[1].l = NULL;
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
