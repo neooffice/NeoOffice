@@ -573,7 +573,11 @@ ImplStyleData::ImplStyleData( const ImplStyleData& rData ) :
 
 void ImplStyleData::SetStandardStyles()
 {
+#ifdef USE_JAVA
+    Font aStdFont( FAMILY_SWISS, Size( 0, 10 ) );
+#else	// USE_JAVA
     Font aStdFont( FAMILY_SWISS, Size( 0, 8 ) );
+#endif	// USE_JAVA
     aStdFont.SetCharSet( gsl_getSystemTextEncoding() );
     aStdFont.SetWeight( WEIGHT_NORMAL );
     aStdFont.SetName( vcl::DefaultFontConfigItem::get()->getUserInterfaceFont(LANGUAGE_ENGLISH) );
@@ -645,7 +649,11 @@ void ImplStyleData::SetStandardStyles()
     mnTitleHeight               = 18;
     mnFloatTitleHeight          = 13;
     mnTearOffTitleHeight        = 8;
+#ifdef USE_JAVA
+    mnMenuBarHeight             = 16;
+#else	// USE_JAVA
     mnMenuBarHeight             = 14;
+#endif	// USE_JAVA
 	mnHighContrast				= 0;
 	mnUseSystemUIFonts			= 0;
 	mnUseFlatMenues 			= 0;
@@ -674,7 +682,11 @@ void ImplStyleData::SetStandardWinStyles()
 
 void ImplStyleData::SetStandardOS2Styles()
 {
+#ifdef USE_JAVA
+    Font aStdFont( FAMILY_SWISS, Size( 0, 10 ) );
+#else	// USE_JAVA
     Font aStdFont( FAMILY_SWISS, Size( 0, 9 ) );
+#endif	// USE_JAVA
     aStdFont.SetCharSet( gsl_getSystemTextEncoding() );
     aStdFont.SetWeight( WEIGHT_NORMAL );
     aStdFont.SetName( vcl::DefaultFontConfigItem::get()->getUserInterfaceFont(LANGUAGE_ENGLISH) );
@@ -747,7 +759,11 @@ void ImplStyleData::SetStandardOS2Styles()
     mnTitleHeight               = 18;
     mnFloatTitleHeight          = 13;
     mnTearOffTitleHeight        = 8;
+#ifdef USE_JAVA
+    mnMenuBarHeight             = 16;
+#else	// USE_JAVA
     mnMenuBarHeight             = 14;
+#endif	// USE_JAVA
 	mnHighContrast				= 0;
 	mnUseSystemUIFonts			= 0;
 	mnUseFlatMenues 			= 0;
@@ -758,7 +774,11 @@ void ImplStyleData::SetStandardOS2Styles()
 
 void ImplStyleData::SetStandardMacStyles()
 {
+#ifdef USE_JAVA
+    Font aStdFont( FAMILY_SWISS, Size( 0, 10 ) );
+#else	// USE_JAVA
     Font aStdFont( FAMILY_SWISS, Size( 0, 8 ) );
+#endif	// USE_JAVA
     aStdFont.SetCharSet( gsl_getSystemTextEncoding() );
     aStdFont.SetWeight( WEIGHT_NORMAL );
     aStdFont.SetName( vcl::DefaultFontConfigItem::get()->getUserInterfaceFont(LANGUAGE_ENGLISH) );
@@ -833,7 +853,11 @@ void ImplStyleData::SetStandardMacStyles()
     mnTitleHeight               = 16;
     mnFloatTitleHeight          = 12;
     mnTearOffTitleHeight        = 7;
+#ifdef USE_JAVA
+    mnMenuBarHeight             = 16;
+#else	// USE_JAVA
     mnMenuBarHeight             = 14;
+#endif	// USE_JAVA
 	mnHighContrast				= 0;
 	mnUseSystemUIFonts			= 0;
 	mnUseFlatMenues 			= 0;
