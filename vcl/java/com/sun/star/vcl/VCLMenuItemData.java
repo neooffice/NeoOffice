@@ -36,6 +36,8 @@
 package com.sun.star.vcl;
 
 import java.awt.Menu;
+import java.awt.MenuBar;
+import java.awt.MenuContainer;
 import java.awt.MenuItem;
 import java.awt.MenuShortcut;
 import java.awt.CheckboxMenuItem;
@@ -166,11 +168,43 @@ public final class VCLMenuItemData {
 	public void dispose() {
 
 		unregisterAllAWTPeers();
+		if(delegate!=null)
+			setDelegate(null);
+
+		// Clear out any orphaned peers
+		if (!awtPeers.isEmpty()) {
+			Iterator peers=awtPeers.iterator();
+			while(peers.hasNext()) {
+				MenuItem mi=(MenuItem)peers.next();
+				MenuContainer mc = mi.getParent();
+				if (mc != null) {
+					if (mc instanceof Menu) {
+						Menu m = (Menu)mc;
+						Object peer = m.getPeer();
+						if (peer == null)
+							peer = m;
+						synchronized (peer) {
+							m.remove(mi);
+						}
+					}
+					else if (mc instanceof MenuBar) {
+						MenuBar mb = (MenuBar)mc;
+						Object peer = mb.getPeer();
+						if (peer == null)
+							peer = mb;
+						synchronized (peer) {
+							mb.remove(mi);
+						}
+					}
+				}
+			}
+
+			unregisterAllAWTPeers();
+		}
+
 		keyboardShortcut=null;
 		menuItems=null;
 		title=null;
-		if(delegateForObject!=null)
-			delegateForObject.setDelegate(null);
 
 	}
 
@@ -504,16 +538,10 @@ public final class VCLMenuItemData {
 		if(nPos < 0)
 			nPos=(short)menuItems.size();
 
-		((VCLMenuItemData)menuItems.get(nPos)).parentMenus.remove(this);
+		VCLMenuItemData i = (VCLMenuItemData)menuItems.get(nPos);
+		i.unregisterAllAWTPeers();
+		i.parentMenus.remove(this);
 		menuItems.remove(nPos);
-		if(!awtPeers.isEmpty()) {
-			Iterator e=awtPeers.iterator();
-			while(e.hasNext()) {
-				Menu m=(Menu)e.next();
-				MenuItem obj=m.getItem(nPos);
-				m.remove(nPos);
-			}
-		}
 
 	}
 
@@ -580,9 +608,13 @@ public final class VCLMenuItemData {
 	 */
 	void setDelegate(VCLMenuItemData d) {
 
+		if (delegate != null)
+			delegate.delegateForObject=null;
+
 		delegate=d;
-		if (d != null)
-			d.delegateForObject=this;
+
+		if (delegate != null)
+			delegate.delegateForObject=this;
 
 	}
 
@@ -829,24 +861,6 @@ public final class VCLMenuItemData {
 	}
 
 	/**
-	 * Unregister a single AWT peer. This indicates that the AWT object is no
-	 * longer being used and does not need to be tracked any longer.
-	 *
-	 * @param o peer object to stop managing
-	 */
-	void unregisterAWTPeer(Object o) {
-
-		if(delegate!=null) {
-			delegate.unregisterAWTPeer(o);
-			return;
-		}
-
-		MenuItem mi=(MenuItem)o;
-		awtPeers.remove(awtPeers.indexOf(o));
-
-	}
-
-	/**
 	 * Unregister all AWT peer objects that have been created from the menu
 	 * item data. If the item data corresponds to a submenu, all of the submenu
 	 * peers will also be unregistered.
@@ -858,25 +872,72 @@ public final class VCLMenuItemData {
 			return;
 		}
 
-		// remove notifiers to allow GC to reclaim these objects quicker
-
-		if(!awtPeers.isEmpty()) {
-			Iterator peers=awtPeers.iterator();
-			while(peers.hasNext()) {
-				MenuItem mi=(MenuItem)peers.next();
-				if(mi instanceof VCLAWTMenuItem)
-					mi.removeActionListener((VCLAWTMenuItem)mi);
-				else if(mi instanceof VCLAWTCheckboxMenuItem)
-					mi.removeActionListener((VCLAWTCheckboxMenuItem)mi);
-			}
-
-			awtPeers.clear();
-		}
-
 		if(isSubmenu && (menuItems!=null) && !menuItems.isEmpty()) {
 			Iterator e=menuItems.iterator();
 			while(e.hasNext())
 				((VCLMenuItemData)e.next()).unregisterAllAWTPeers();
+		}
+
+		if(!awtPeers.isEmpty()) {
+			ArrayList savedPeers = new ArrayList(awtPeers);
+			Iterator peers=awtPeers.iterator();
+			while(peers.hasNext()) {
+				MenuItem mi=(MenuItem)peers.next();
+
+				Object peer = mi.getPeer();
+				if (peer == null)
+					peer = mi;
+
+				synchronized (peer) {
+					if(mi instanceof VCLAWTMenuItem)
+						mi.removeActionListener((VCLAWTMenuItem)mi);
+					else if(mi instanceof VCLAWTCheckboxMenuItem)
+						mi.removeActionListener((VCLAWTCheckboxMenuItem)mi);
+					mi.setShortcut(null);
+
+					if(!parentMenus.isEmpty()) {
+						Iterator parents=parentMenus.iterator();
+						while(parents.hasNext()) {
+							VCLMenuItemData parent=(VCLMenuItemData)parents.next();
+							if (!parent.awtPeers.isEmpty()) {
+								Iterator parentPeers=parent.awtPeers.iterator();
+								while(parentPeers.hasNext()) {
+									Menu m=(Menu)parentPeers.next();
+
+									Object menuPeer = m.getPeer();
+									if (menuPeer == null)
+										menuPeer = m;
+
+									synchronized (menuPeer) {
+										m.remove(mi);
+									}
+								}
+							}
+						}
+					}
+
+					// Detach any orphaned menu items
+					if (mi instanceof Menu) {
+						Menu m = (Menu)mi;
+
+						Object menuPeer = m.getPeer();
+						if (menuPeer == null)
+							menuPeer = m;
+
+						synchronized (menuPeer) {
+							m.removeAll();
+						}
+					}
+
+					if (mi.getParent() == null) {
+						mi.removeNotify();
+						savedPeers.remove(mi);
+					}
+				}
+			}
+
+			awtPeers.clear();
+			awtPeers.addAll(savedPeers);
 		}
 
 	}

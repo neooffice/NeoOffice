@@ -901,8 +901,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (window != null) {
 			setVisible(false);
-			if (window instanceof Frame)
-				((Frame)window).setMenuBar(null);
+			setMenuBar(null);
 		}
 		if (queue != null)
 			queue.removeCachedEvents(frame);
@@ -1463,6 +1462,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public TextHitInfo getLocationOffset(int x, int y) {
 
 		return null;
+
+	}
+
+	/**
+	 * Returns the menubar for this native window.
+	 *
+	 * @return the <code>MenuBar</code> instance
+	 */
+	MenuBar getMenuBar() {
+
+		if (window instanceof Frame)
+			return ((Frame)window).getMenuBar();
+		else
+			return null;
 
 	}
 
@@ -2042,6 +2055,36 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			return;
 
 		fullScreenMode = b;
+
+	}
+
+	/**
+	 * Sets the menubar for this native window.
+	 *
+	 * @param menubar the <code>MenuBar</code> instance of <code>null</code>
+	 */
+	void setMenuBar(MenuBar menubar) {
+
+		if (window instanceof Frame) {
+			Object peer = null;
+			MenuBar mb = ((Frame)window).getMenuBar();
+			if (mb != null) {
+				peer = mb.getPeer();
+				if (peer == null)
+					peer = mb;
+				synchronized (peer) {
+					((Frame)window).setMenuBar(null);
+				}
+			}
+			if (menubar != null) {
+				peer = menubar.getPeer();
+				if (peer == null)
+					peer = menubar;
+				synchronized (peer) {
+					((Frame)window).setMenuBar(menubar);
+				}
+			}
+		}
 
 	}
 

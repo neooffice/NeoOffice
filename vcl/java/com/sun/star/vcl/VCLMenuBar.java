@@ -225,18 +225,47 @@ public final class VCLMenuBar {
 	 */
 	public void dispose() {
 
-		if(frame!=null) {
-			Window win=frame.getWindow();
-			if(win instanceof Frame && ((Frame)win).getMenuBar() == awtMenuBar )
-				((Frame)win).setMenuBar(null);
-		}
 		removeMenuBar(this);
+
+		if(frame!=null) {
+			MenuBar mb = frame.getMenuBar();
+			if (mb != null && (mb == awtMenuBar || mb == hiddenMenuBar))
+				frame.setMenuBar(null);
+		}
+
+		Object peer = awtMenuBar.getPeer();
+		if (peer == null)
+			peer = awtMenuBar;
+
+		synchronized (peer) {
+			for(int i=awtMenuBar.countMenus()-1; i>=0; i--)
+				awtMenuBar.remove(i);
+
+			Iterator e=menus.iterator();
+			while(e.hasNext()) {
+				VCLMenuItemData m=(VCLMenuItemData)e.next();
+				m.unregisterAllAWTPeers();
+			}
+
+			awtMenuBar.removeNotify();
+		}
+
 	 	awtMenuBar=null;
 		menus=null;
 		queue=null;
 		frame=null;
-		if (hiddenMenuBar != null)
-			hiddenMenuBar = null;
+
+		if (hiddenMenuBar != null) {
+			peer = hiddenMenuBar.getPeer();
+			if (peer == null)
+				peer = hiddenMenuBar;
+
+			synchronized (peer) {
+				hiddenMenuBar.removeNotify();
+			}
+
+		 	hiddenMenuBar=null;
+		}
 
 	}
 	
@@ -248,10 +277,11 @@ public final class VCLMenuBar {
 	 */
 	public void setFrame(VCLFrame f) {
 
+		if(frame!=null)
+			frame.setMenuBar(null);
 	  	frame=f;
-		Window win=frame.getWindow();
-		if(win instanceof Frame)
-			((Frame)win).setMenuBar(awtMenuBar);
+		if(frame!=null)
+			frame.setMenuBar(awtMenuBar);
 
 	}
 
@@ -352,8 +382,8 @@ public final class VCLMenuBar {
 			peer = awtMenuBar;
 
 		synchronized (peer) {
-			Menu m=awtMenuBar.getMenu(nPos);
 			awtMenuBar.remove(nPos);
+			((VCLMenuItemData)menus.get(nPos)).unregisterAllAWTPeers();
 			menus.remove(nPos);
 		}
 
@@ -376,7 +406,6 @@ public final class VCLMenuBar {
 			
 			// let new menu provide contents, but retain reference
 			// to old menu in the actual menubar.  Bug #175
-			
 			oldMenu.setDelegate(newMenu);
 			removeMenu(nPos);
 			addMenuItem(oldMenu, nPos);
@@ -418,11 +447,8 @@ public final class VCLMenuBar {
 	 */
 	public void hide() {
 
-	  	if(getFrame()!=null) {
-			if(hiddenMenuBar==null)
-				hiddenMenuBar = new MenuBar();
-			((Frame)getFrame().getWindow()).setMenuBar(hiddenMenuBar);
-		}
+	  	if(frame!=null)
+			frame.setMenuBar(hiddenMenuBar);
 
 	}
 	
@@ -432,12 +458,8 @@ public final class VCLMenuBar {
 	 */
 	public void show() {
 
-	  	if(getFrame()!=null) {
-			Frame f = (Frame)getFrame().getWindow();
-			if (f.getMenuBar() == hiddenMenuBar)
-				hiddenMenuBar = null;
-			f.setMenuBar(getAWTMenuBar());
-		}
+	  	if(frame!=null)
+			frame.setMenuBar(getAWTMenuBar());
 
 	}
 
@@ -453,14 +475,13 @@ public final class VCLMenuBar {
 			peer = awtMenuBar;
 
 		synchronized (peer) {
-			for(int i=awtMenuBar.countMenus()-1; i>=0; i--) {
-				Menu m=awtMenuBar.getMenu(i);
+			for(int i=awtMenuBar.countMenus()-1; i>=0; i--)
 				awtMenuBar.remove(i);
-			}
 
 			Iterator e=menus.iterator();
 			while(e.hasNext()) {
 				VCLMenuItemData m=(VCLMenuItemData)e.next();
+				m.unregisterAllAWTPeers();
 				if(m.isMenu())
 					awtMenuBar.add((Menu)m.createAWTPeer());
 				else
