@@ -126,9 +126,11 @@ if [ ! -d "$userinstall" ] ; then
     repair="true"
     mkdir -p "$userinstall"
 fi
-chmod -Rf u+rw "$userinstall"
-cp -Rf "$userbase"/* "$userinstall"
-chmod -Rf u+rw "$userinstall"
+if [ ! -z "$repair" ] ; then
+    chmod -Rf u+rw "$userinstall"
+    cp -Rf "$userbase"/* "$userinstall"
+    chmod -Rf u+rw "$userinstall"
+fi
 
 # Copy and edit required files
 if [ ! -d "$xmldir" ] ; then
