@@ -40,6 +40,7 @@ import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Frame;
+import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.Panel;
@@ -627,7 +628,7 @@ public class VCLFrame implements ComponentListener, FocusListener, KeyListener, 
 			resizable = true;
 
 		// Add a panel as the only component
-		panel = new Panel();
+		panel = new VCLFrame.NoPaintPanel();
 		panel.setBackground(Color.white);
 		panel.enableInputMethods(false);
 		window.add(panel);
@@ -1318,8 +1319,8 @@ public class VCLFrame implements ComponentListener, FocusListener, KeyListener, 
 
 		Rectangle bounds = null;
 		if (b) {
-			window = new Window(window);
-			panel = new Panel();
+			window = new Window(VCLFrame.owner);
+			panel = new VCLFrame.NoPaintPanel();
 			panel.setBackground(Color.white);
 			panel.enableInputMethods(false);
 			window.add(panel);
@@ -1633,5 +1634,28 @@ public class VCLFrame implements ComponentListener, FocusListener, KeyListener, 
 	 * @param e the <code>WindowEvent</code>
 	 */
 	public void windowDeactivated(WindowEvent e) {}
+
+	/**
+	 * A class that has painting methods that perform no painting.
+	 */
+	class NoPaintPanel extends Panel {
+
+		/**
+		 * This method performs no painting of the panel. This method is used
+		 * to prevent Java from painting over what VCL has painted.
+		 *
+		 * @param g the <code>Graphics</code>
+		 */
+		public void paint(Graphics g) {}
+
+		/**
+		 * This method performs no painting of the panel. This method is used
+		 * to prevent Java from painting over what VCL has painted.
+		 *
+		 * @param g the <code>Graphics</code>
+		 */
+		public void update(Graphics g) {}
+
+	}
 
 }

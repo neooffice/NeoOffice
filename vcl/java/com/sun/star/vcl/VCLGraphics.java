@@ -36,6 +36,7 @@
 package com.sun.star.vcl;
 
 import java.awt.Color;
+import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
@@ -49,6 +50,7 @@ import java.awt.RenderingHints;
 import java.awt.Shape;
 import java.awt.TexturePaint;
 import java.awt.Toolkit;
+import java.awt.event.PaintEvent;
 import java.awt.font.GlyphVector;
 import java.awt.geom.Area;
 import java.awt.geom.Point2D;
@@ -114,8 +116,11 @@ public class VCLGraphics {
 
 		try {
 			int elements = graphicsList.size();
-			for (int i = 0; i < elements; i++)
-				((VCLGraphics)graphicsList.get(i)).flush();
+			for (int i = 0; i < elements; i++) {
+				VCLGraphics g = (VCLGraphics)graphicsList.get(i);
+				if (g.frame != null && g.update != null)
+					Toolkit.getDefaultToolkit().getSystemEventQueue().postEvent(new PaintEvent(g.frame.getPanel(), PaintEvent.UPDATE, g.update));
+			}
 		}
 		catch (Throwable t) {}
 
@@ -192,7 +197,7 @@ public class VCLGraphics {
 	/**
 	 * The cached update area.
 	 */
-	private Area update = null;
+	private Rectangle update = null;
 
 	/**
 	 * The cached clipping area.
@@ -256,15 +261,16 @@ public class VCLGraphics {
 	 */
 	void addToFlush(Rectangle b) {
 
-		Toolkit.getDefaultToolkit().sync();
-		Area area = new Area(b);
-		if (update != null)
-			update.add(area);
-		else
-			update = area;
+		if (frame != null) {
+			Toolkit.getDefaultToolkit().sync();
+			if (update != null)
+				update.add(b);
+			else
+				update = b;
 
-		if (autoFlush)
-			flush();
+			if (autoFlush)
+				Toolkit.getDefaultToolkit().getSystemEventQueue().postEvent(new PaintEvent(frame.getPanel(), PaintEvent.UPDATE, update));
+		}
 
 	}
 
@@ -729,9 +735,9 @@ public class VCLGraphics {
 	 * Flushes any pixels in the underlying <code>VCLImage</code> to the
 	 * underlying <code>VCLFrame</code>.
 	 */
-	void flush() {
+	synchronized void flush() {
 
-		if (panelGraphics != null && update != null) {
+		if (EventQueue.isDispatchThread() && panelGraphics != null && update != null) {
 			panelGraphics.setClip(update);
 			panelGraphics.drawImage(image.getImage(), 0, 0, null);
 			Toolkit.getDefaultToolkit().sync();
