@@ -43,7 +43,7 @@ OO_ENV_X11:=$(BUILD_HOME)/MacosxEnv.Set
 OO_ENV_JAVA:=$(BUILD_HOME)/MacosxEnvJava.Set
 
 # Product information
-PRODUCT_NAME=NeoOffice\\\\xe2\\\\x84\\\\xa2\/J
+PRODUCT_NAME=NeoOffice\/J\\(TM\\)
 PRODUCT_VERSION=0.1
 PRODUCT_FILETYPE=no%f
 
