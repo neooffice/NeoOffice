@@ -403,9 +403,13 @@ SvStream& operator>>( SvStream& rIStream, JobSetup& rJobSetup )
 				pJobData->mnPaperHeight 			= (long)SVBT32ToLong( pOldJobData->nPaperHeight );
 				if ( pJobData->mnDriverDataLen )
 				{
+#ifdef USE_JAVA
+					pJobData->mnDriverDataLen			= 0;
+#else	// USE_JAVA
 					BYTE* pDriverData = ((BYTE*)pOldJobData) + nOldJobDataSize;
 					pJobData->mpDriverData = (BYTE*)rtl_allocateMemory( pJobData->mnDriverDataLen );
 					memcpy( pJobData->mpDriverData, pDriverData, pJobData->mnDriverDataLen );
+#endif	// USE_JAVA
 				}
 				if( nSystem == JOBSET_FILE605_SYSTEM )
 				{

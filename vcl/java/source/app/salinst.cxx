@@ -1464,27 +1464,9 @@ SalInfoPrinter* SalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
 	// Check driver data
 	if ( pSetupData->mpDriverData )
 	{
-		BOOL bDelete = FALSE;
-
 		if ( pSetupData->mnSystem != JOBSETUP_SYSTEM_JAVA || pSetupData->mnDriverDataLen != sizeof( SalDriverData ) )
-			bDelete = TRUE;
-
-		if ( !bDelete )
 		{
-			bDelete = TRUE;
-			for ( ::std::list< com_sun_star_vcl_VCLPageFormat* >::const_iterator it = pSalData->maVCLPageFormats.begin(); it != pSalData->maVCLPageFormats.end(); ++it )
-			{
-				if ( ((SalDriverData *)pSetupData->mpDriverData)->mpVCLPageFormat == *it && ((SalDriverData *)pSetupData->mpDriverData)->mpVCLPageFormat->getJavaObject() == (*it)->getJavaObject() )
-				{
-					bDelete = FALSE;
-					break;
-				}
-			}
-		}
-
-		if ( bDelete )
-		{
-			delete (SalDriverData *)pSetupData->mpDriverData;
+			rtl_freeMemory( pSetupData->mpDriverData );
 			pSetupData->mpDriverData = NULL;
 			pSetupData->mnDriverDataLen = 0;
 		}
