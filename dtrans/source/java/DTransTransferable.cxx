@@ -191,7 +191,7 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 						for ( j = 0; j < nLen; j++ )
 						{
 							if ( pArray[ j ] == (sal_Unicode)'\n' )
-								pArray[ j ] = (sal_Unicode)13;
+								pArray[ j ] = (sal_Unicode)'\r';
 						}
 
 						if ( nType == 'TEXT' )
@@ -371,7 +371,7 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 								sal_Int32 j = 0;
 								for ( j = 0; j < nLen; j++ )
 								{
-									if ( pArray[ j ] == (sal_Unicode)13 )
+									if ( pArray[ j ] == (sal_Unicode)'\r' )
 										pArray[ j ] = (sal_Unicode)'\n';
 								}
 
