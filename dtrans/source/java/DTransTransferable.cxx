@@ -52,8 +52,14 @@
 #ifndef _JAVA_DTRANS_JAVA_LANG_CLASS_HXX
 #include <java/lang/Class.hxx>
 #endif
+#ifndef _SV_SVAPP_HXX
+#include <vcl/svapp.hxx>
+#endif
 #ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
+#endif
+#ifndef _VOS_MUTEX_HXX_
+#include <vos/mutex.hxx>
 #endif
 #include <premac.h>
 #include <Carbon/Carbon.h>
@@ -61,6 +67,7 @@
 #include <postmac.h>
 
 using namespace rtl;
+using namespace vcl;
 using namespace vos;
 
 static UInt32 nSupportedTypes = 5;
@@ -101,6 +108,7 @@ static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 )
 };
 
+static DragSendDataUPP pDragSendDataUPP = NULL;
 static ScrapPromiseKeeperUPP pScrapPromiseKeeperUPP = NULL;
 
 #endif	// MACOSX
@@ -117,9 +125,15 @@ static ::std::list< com_sun_star_dtrans_DTransTransferable* > aTransferableList;
 // ============================================================================
 
 #ifdef MACOSX
-static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType nType, void *pData )
+static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransferableType, FlavorType nType, void *pData )
 {
-	OSStatus nErr = noTypeErr;
+	OSStatus nErr;
+	if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+		nErr = noTypeErr;
+	else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+		nErr = cantGetFlavorErr;
+	else
+		nErr = noTypeErr;
 
 	MutexGuard aGuard( aMutex );
 
@@ -151,6 +165,8 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 
 	if ( carbonLockClass && mIDRelease0 && mIDRelease0 )
 		t.pEnv->CallStaticIntMethod( carbonLockClass, mIDRelease0 );
+
+	OGuard aSolarGuard( Application::GetSolarMutex() );
 
 	BOOL bTransferableFound = FALSE;
 	if ( pTransferable )
@@ -203,7 +219,7 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 
 					// Replace line feeds with carriage returns
 					sal_Unicode *pArray = (sal_Unicode *)aString.getStr();
-					sal_Int32 nLen = aString.getLength();
+					sal_Int32 nLen = aString.getLength() * sizeof( sal_Unicode );
 					sal_Int32 j = 0;
 					for ( j = 0; j < nLen; j++ )
 					{
@@ -211,22 +227,46 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 							pArray[ j ] = (sal_Unicode)'\r';
 					}
 
-					if ( nType != 'utxt' )
+					if ( nType == 'RTF ' )
 					{
-						OString aEncodedString = OUStringToOString( aString, gsl_getSystemTextEncoding() );
-						sal_Int8 *pData = (sal_Int8 *)aEncodedString.getStr();
-						MacOSSize nDataLen = aEncodedString.getLength();
+						OString aEncodedString = OUStringToOString( aString, RTL_TEXTENCODING_ASCII_US );
 
-						if ( pData && nDataLen )
-							nErr = PutScrapFlavor( (ScrapRef)pTransferable->getNativeTransferable(), nType, kScrapFlavorMaskNone, nDataLen, (const void *)pData );
+						if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+							nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, aEncodedString.getLength(), (const void *)aEncodedString.getStr() );
+						else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+							nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aEncodedString.getStr(), aEncodedString.getLength(), 0 );
+					}
+					else if ( nType == 'TEXT' )
+					{
+						CFStringRef aCFString = CFStringCreateWithCharactersNoCopy( kCFAllocatorDefault, aString.getStr(), aString.getLength(), kCFAllocatorNull );
+						if ( aCFString )
+						{
+							CFIndex nBufLen;
+							CFRange aRange;
+							aRange.location = 0;
+							aRange.length = CFStringGetLength( aCFString );
+							if ( CFStringGetBytes( aCFString, aRange, CFStringGetSystemEncoding(), '?', false, NULL, 0, &nBufLen ) )
+							{
+								CFIndex nRealLen = nBufLen;
+								UInt8 aBuf[ nBufLen + 1 ];
+								if ( CFStringGetBytes( aCFString, aRange, CFStringGetSystemEncoding(), '?', false, NULL, 0, &nRealLen ) && nRealLen == nBufLen )
+								{
+									if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+										nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nBufLen, (const void *)aBuf );
+									else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+										nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aBuf, nBufLen, 0 );
+								}
+							}
+
+							CFRelease( aCFString );
+						}
 					}
 					else
 					{
-						sal_Int8 *pData = (sal_Int8 *)aString.getStr();
-						MacOSSize nDataLen = aString.getLength() * sizeof( sal_Unicode );
-
-						if ( pData && nDataLen )
-							nErr = PutScrapFlavor( (ScrapRef)pTransferable->getNativeTransferable(), nType, kScrapFlavorMaskNone, nDataLen, (const void *)pData );
+						if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+							nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nLen, (const void *)aString.getStr() );
+						else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+							nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aString.getStr(), nLen, 0 );
 					}
 				}
 				else if ( aValue.getValueType().equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
@@ -252,7 +292,10 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 									if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
 									{
 										HLock( (Handle)hPict );
-										nErr = PutScrapFlavor( (ScrapRef)pTransferable->getNativeTransferable(), nType, kScrapFlavorMaskNone, GetHandleSize( (Handle)hPict ), (const void *)*hPict );
+										if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+											nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, GetHandleSize( (Handle)hPict ), (const void *)*hPict );
+										else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+											nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)*hPict, GetHandleSize( (Handle)hPict ), 0 );
 										HUnlock( (Handle)hPict );
 										KillPicture( hPict );
 									}
@@ -292,7 +335,10 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 													if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
 													{
 														HLock( hExportData );
-														nErr = PutScrapFlavor( (ScrapRef)pTransferable->getNativeTransferable(), nType, kScrapFlavorMaskNone, nDataLen, (const void *)*hExportData );
+														if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+															nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nDataLen, (const void *)*hExportData );
+														else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+															nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)*hExportData, nDataLen, 0 );
 														HUnlock( hExportData );
 													}
 													DisposeHandle( hExportData );
@@ -314,7 +360,10 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 						MacOSSize nDataLen = aData.getLength();
 
 						if ( pData && nDataLen )
-							nErr = PutScrapFlavor( (ScrapRef)pTransferable->getNativeTransferable(), nType, kScrapFlavorMaskNone, nDataLen, (const void *)pData );
+						if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+							nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, aData.getLength(), (const void *)aData.getArray() );
+						else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+							nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aData.getArray(), aData.getLength(), 0 );
 					}
 				}
 			}
@@ -325,6 +374,24 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 		t.pEnv->CallStaticIntMethod( carbonLockClass, mIDAcquire0 );
 
 	return nErr;
+}
+#endif	// MACOSX
+
+// ----------------------------------------------------------------------------
+
+#ifdef MACOSX
+static OSErr ImplDragSendDataCallback( FlavorType nType, void *pData, DragItemRef aItem, DragRef aDrag )
+{
+	return ImplSetTransferableData( (void *)aDrag, JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG, nType, pData );
+}
+#endif	// MACOSX
+
+// ----------------------------------------------------------------------------
+
+#ifdef MACOSX
+static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType nType, void *pData )
+{
+	return ImplSetTransferableData( (void *)aScrap, JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD, nType, pData );
 }
 #endif	// MACOSX
 
@@ -370,28 +437,64 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 		else
 			continue;
 
-		MacOSSize aSize;
-
-		nErr = GetScrapFlavorSize( (ScrapRef)mpNativeTransferable, nRequestedType, &aSize );
-		if ( nErr == noErr )
+		MacOSSize nSize;
+		if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
 		{
-			Sequence< sal_Int8 > aData( aSize );
-			if ( GetScrapFlavorData( (ScrapRef)mpNativeTransferable, nRequestedType, &aSize, aData.getArray() ) == noErr )
+			nErr = GetScrapFlavorSize( (ScrapRef)mpNativeTransferable, nRequestedType, &nSize );
+		}
+		else if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+		{
+			nErr = GetFlavorDataSize( (DragRef)mpNativeTransferable, (DragItemRef)this, nRequestedType, &nSize );
+		}
+		else
+		{
+			nErr = noTypeErr;
+			nSize = 0;
+		}
+
+		if ( nErr == noErr && nSize > 0 )
+		{
+			Sequence< sal_Int8 > aData( nSize );
+			bool bDataFound = false;
+			if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+				bDataFound = ( GetScrapFlavorData( (ScrapRef)mpNativeTransferable, nRequestedType, &nSize, aData.getArray() ) == noErr );
+			else if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+				bDataFound = ( GetFlavorData( (DragRef)mpNativeTransferable, (DragItemRef)this, nRequestedType, aData.getArray(), &nSize, 0 ) == noErr );
+
+			if ( bDataFound )
 			{
 				if ( aFlavor.DataType.equals( getCppuType( ( OUString* )0 ) ) )
 				{
 					OUString aString;
 					sal_Int32 nLen;
-					if ( nRequestedType != 'utxt' )
+					if ( nRequestedType == 'RTF ' )
 					{
 						nLen = aData.getLength();
 						if ( ( (sal_Char *)aData.getArray() )[ nLen - 1 ] == 0 )
 							nLen--;
-						aString = OUString( (sal_Char *)aData.getArray(), nLen, gsl_getSystemTextEncoding() );
+						aString = OUString( (sal_Char *)aData.getArray(), nLen, RTL_TEXTENCODING_ASCII_US );
+					}
+					else if ( nRequestedType == 'TEXT' )
+					{
+						nLen = aData.getLength();
+						if ( ( (sal_Char *)aData.getArray() )[ nLen - 1 ] == 0 )
+							nLen--;
+						CFStringRef aCFString = CFStringCreateWithBytes( kCFAllocatorDefault, (const UInt8 *)aData.getArray(), nLen, CFStringGetSystemEncoding(), false );
+						if ( aCFString )
+						{
+							
+							CFRange aRange;
+							aRange.location = 0;
+							aRange.length = CFStringGetLength( aCFString );
+							UniChar aBuf[ aRange.length ];
+							CFStringGetCharacters( aCFString, aRange, aBuf );
+							aString = OUString( (sal_Unicode *)aBuf, aRange.length );
+							CFRelease( aCFString );
+						}
 					}
 					else
 					{
-						nLen = aData.getLength() / 2; 
+						nLen = aData.getLength() / 2;
 						if ( ( (sal_Unicode *)aData.getArray() )[ nLen - 1 ] == 0 )
 							nLen--;
 						aString = OUString( (sal_Unicode *)aData.getArray(), nLen );
@@ -502,7 +605,7 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 
 	if ( !nRequestedType )
 	{
-		if ( nErr == noTypeErr )
+		if ( nErr == noTypeErr || nErr == cantGetFlavorErr )
 			throw UnsupportedFlavorException( aFlavor.MimeType, static_cast< XTransferable * >( this ) );
 		else
 			throw IOException( aFlavor.MimeType, static_cast< XTransferable * >( this ) );
@@ -535,19 +638,46 @@ Sequence< DataFlavor > SAL_CALL com_sun_star_dtrans_DTransTransferable::getTrans
 	Sequence< DataFlavor > out;
 
 #ifdef MACOSX
-	UInt32 nCount;
-
-	if ( GetScrapFlavorCount( (ScrapRef)mpNativeTransferable, &nCount ) == noErr && nCount > 0 )
+	if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
 	{
-		ScrapFlavorInfo *pInfo = new ScrapFlavorInfo[ nCount ];
+		UInt32 nCount;
+		if ( GetScrapFlavorCount( (ScrapRef)mpNativeTransferable, &nCount ) == noErr && nCount > 0 )
+		{
+			ScrapFlavorInfo *pInfo = new ScrapFlavorInfo[ nCount ];
 
-		if ( GetScrapFlavorInfoList( (ScrapRef)mpNativeTransferable, &nCount, pInfo ) == noErr )
+			if ( GetScrapFlavorInfoList( (ScrapRef)mpNativeTransferable, &nCount, pInfo ) == noErr )
+			{
+				for ( USHORT i = 0; i < nSupportedTypes; i++ )
+				{
+					for ( UInt32 j = 0; j < nCount; j++ )
+					{
+						if ( aSupportedNativeTypes[ i ] == pInfo[ j ].flavorType )
+						{
+							DataFlavor aFlavor;
+							aFlavor.MimeType = aSupportedMimeTypes[ i ];
+							aFlavor.DataType = aSupportedDataTypes[ i ];
+							sal_Int32 nLen = out.getLength();
+							out.realloc( nLen + 1 );
+							out[ nLen ] = aFlavor;
+						}
+					}
+				}
+			}
+
+			delete[] pInfo;
+		}
+	}
+	else if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+	{
+		UInt16 nCount;
+		if ( CountDragItemFlavors( (DragRef)mpNativeTransferable, (DragItemRef)this, &nCount ) == noErr && nCount > 0 )
 		{
 			for ( USHORT i = 0; i < nSupportedTypes; i++ )
 			{
-				for ( UInt32 j = 0; j < nCount; j++ )
+				for ( UInt16 j = 0; j < nCount; j++ )
 				{
-					if ( aSupportedNativeTypes[ i ] == pInfo[ j ].flavorType )
+					FlavorType nFlavor;
+					if ( GetFlavorType( (DragRef)mpNativeTransferable, (DragItemRef)this, j, &nFlavor ) == noErr && aSupportedNativeTypes[ i ] == nFlavor )
 					{
 						DataFlavor aFlavor;
 						aFlavor.MimeType = aSupportedMimeTypes[ i ];
@@ -559,8 +689,6 @@ Sequence< DataFlavor > SAL_CALL com_sun_star_dtrans_DTransTransferable::getTrans
 				}
 			}
 		}
-
-		delete[] pInfo;
 	}
 #else // MACOSX
 #ifdef DEBUG
@@ -578,10 +706,13 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::hasOwnership()
 	sal_Bool out = sal_False;
 
 #ifdef MACOSX
-	ScrapRef aScrap;
+	if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+	{
+		ScrapRef aScrap;
 
-	if ( GetCurrentScrap( &aScrap ) == noErr && aScrap == (ScrapRef)mpNativeTransferable )
-		out = sal_True;
+		if ( GetCurrentScrap( &aScrap ) == noErr && aScrap == (ScrapRef)mpNativeTransferable )
+			out = sal_True;
+	}
 #else // MACOSX
 #ifdef DEBUG
 	fprintf( stderr, "DTransTransferable::transferToClipboard not implemented\n" );
@@ -615,25 +746,43 @@ sal_Bool SAL_CALL com_sun_star_dtrans_DTransTransferable::isDataFlavorSupported(
 
 	if ( nRequestedType )
 	{
-		UInt32 nCount;
-
-		if ( GetScrapFlavorCount( (ScrapRef)mpNativeTransferable, &nCount ) == noErr && nCount > 0 )
+		if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
 		{
-			ScrapFlavorInfo *pInfo = new ScrapFlavorInfo[ nCount ];
-
-			if ( GetScrapFlavorInfoList( (ScrapRef)mpNativeTransferable, &nCount, pInfo ) == noErr )
+			UInt32 nCount;
+			if ( GetScrapFlavorCount( (ScrapRef)mpNativeTransferable, &nCount ) == noErr && nCount > 0 )
 			{
-				for ( UInt32 i = 0; i < nCount; i++ )
+				ScrapFlavorInfo *pInfo = new ScrapFlavorInfo[ nCount ];
+
+				if ( GetScrapFlavorInfoList( (ScrapRef)mpNativeTransferable, &nCount, pInfo ) == noErr )
 				{
-					if ( pInfo[ i ].flavorType == nRequestedType && aFlavor.DataType.equals( aRequestedDataType ) )
+					for ( UInt32 i = 0; i < nCount; i++ )
+					{
+						if ( pInfo[ i ].flavorType == nRequestedType && aFlavor.DataType.equals( aRequestedDataType ) )
+						{
+							out = sal_True;
+							break;
+						}
+					}
+				}
+
+				delete[] pInfo;
+			}
+		}
+		else if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+		{
+			UInt16 nCount;
+			if ( CountDragItemFlavors( (DragRef)mpNativeTransferable, (DragItemRef)this, &nCount ) == noErr && nCount > 0 )
+			{
+				for ( UInt16 i = 0; i < nCount; i++ )
+				{
+					FlavorType nFlavor;
+					if ( GetFlavorType( (DragRef)mpNativeTransferable, (DragItemRef)this, i, &nFlavor ) == noErr && nFlavor == nRequestedType && aFlavor.DataType.equals( aRequestedDataType ) )
 					{
 						out = sal_True;
 						break;
 					}
 				}
 			}
-
-			delete[] pInfo;
 		}
 	}
 #else // MACOSX
@@ -657,11 +806,70 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< X
 	if ( mxTransferable.is() )
 	{
 #ifdef MACOSX
-		ScrapRef aScrap;
-		if ( ClearCurrentScrap() == noErr && GetCurrentScrap( &aScrap ) == noErr )
+		if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
 		{
-			// We have now cleared the scrap so we now own it
-			mpNativeTransferable = aScrap;
+			ScrapRef aScrap;
+			if ( ClearCurrentScrap() == noErr && GetCurrentScrap( &aScrap ) == noErr )
+			{
+				// We have now cleared the scrap so we now own it
+				mpNativeTransferable = aScrap;
+				out = sal_True;
+
+				Sequence< DataFlavor > xFlavors;
+				try
+				{
+					xFlavors = mxTransferable->getTransferDataFlavors();
+				}
+				catch ( ... )
+				{
+				}
+
+				// Check if text flavors are supported, if so, exclude any
+				// image flavors since we would be just passing a picture
+				// of text
+				sal_Int32 nLen = xFlavors.getLength();
+				BOOL bTextOnly = FALSE;
+				sal_Int32 i;
+				for ( i = 0; i < nLen; i++ )
+				{
+					for ( USHORT j = 0; j < nSupportedTypes; j++ )
+					{
+						if ( xFlavors[ i ].MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ j ] ) && aSupportedTextTypes[ j ] )
+						{
+							bTextOnly = TRUE;
+							break;
+						}
+					}
+				}
+
+				aTransferableList.push_back( this );
+
+				BOOL bRenderImmediately = FALSE;
+				if ( !pScrapPromiseKeeperUPP )
+					pScrapPromiseKeeperUPP = NewScrapPromiseKeeperUPP( (ScrapPromiseKeeperProcPtr)ImplScrapPromiseKeeperCallback );
+				if ( !pScrapPromiseKeeperUPP || SetScrapPromiseKeeper( (ScrapRef)mpNativeTransferable, pScrapPromiseKeeperUPP, (const void *)this ) != noErr )
+					bRenderImmediately = TRUE;
+
+				for ( i = 0; i < nLen; i++ )
+				{ 
+					for ( USHORT j = 0; j < nSupportedTypes; j++ )
+					{
+						if ( xFlavors[ i ].MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ j ] ) )
+						{
+							if ( bTextOnly && !aSupportedTextTypes[ j ] )
+								continue;
+
+							if ( bRenderImmediately )
+								ImplScrapPromiseKeeperCallback( (ScrapRef)mpNativeTransferable, aSupportedNativeTypes[ j ], (void *)this );
+							else
+								 PutScrapFlavor( (ScrapRef)mpNativeTransferable, aSupportedNativeTypes[ j ], kScrapFlavorMaskNone, kScrapFlavorSizeUnknown, NULL );
+						}
+					}
+				}
+			}
+		}
+		else if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+		{
 			out = sal_True;
 
 			Sequence< DataFlavor > xFlavors;
@@ -693,15 +901,10 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< X
 
 			aTransferableList.push_back( this );
 
-			// Test the JVM version and if it is below 1.4, render immediately
-			// since some data flavors require Java to render which, if done
-			// in the callback, will cause the application to crash when the
-			// next AEEvent is dispatched so we can't risk using delayed
-			// rendering
 			BOOL bRenderImmediately = FALSE;
-			if ( !pScrapPromiseKeeperUPP )
-				pScrapPromiseKeeperUPP = NewScrapPromiseKeeperUPP( (ScrapPromiseKeeperProcPtr)ImplScrapPromiseKeeperCallback );
-			if ( !pScrapPromiseKeeperUPP || SetScrapPromiseKeeper( (ScrapRef)mpNativeTransferable, pScrapPromiseKeeperUPP, (const void *)this ) != noErr )
+			if ( !pDragSendDataUPP )
+				pDragSendDataUPP = NewDragSendDataUPP( (DragSendDataProcPtr)ImplDragSendDataCallback );
+			if ( !pDragSendDataUPP || SetDragSendProc( (DragRef)mpNativeTransferable, pDragSendDataUPP, (void *)this ) != noErr )
 				bRenderImmediately = TRUE;
 
 			for ( i = 0; i < nLen; i++ )
@@ -714,9 +917,9 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< X
 							continue;
 
 						if ( bRenderImmediately )
-							ImplScrapPromiseKeeperCallback( (ScrapRef)mpNativeTransferable, aSupportedNativeTypes[ j ], (void *)this );
+							ImplDragSendDataCallback( aSupportedNativeTypes[ j ], (void *)this, (DragItemRef)this, (DragRef)mpNativeTransferable );
 						else
-							 PutScrapFlavor( (ScrapRef)mpNativeTransferable, aSupportedNativeTypes[ j ], kScrapFlavorMaskNone, kScrapFlavorSizeUnknown, NULL );
+							AddDragItemFlavor( (DragRef)mpNativeTransferable, (DragItemRef)this, aSupportedNativeTypes[ j ], NULL, 0, 0 );
 					}
 				}
 			}

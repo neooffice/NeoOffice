@@ -49,6 +49,9 @@
 #include <com/sun/star/datatransfer/XTransferable.hpp>
 #endif
 
+#define JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD		0x0
+#define JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG			0x1
+
 namespace java {
 
 namespace dtrans {
@@ -63,16 +66,15 @@ protected:
 private:
 	void*				mpNativeTransferable;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	mxTransferable;
-
+	int					mnTransferableType;
 
 public:
 	static jclass		getMyClass();
 
-						com_sun_star_dtrans_DTransTransferable() : java_lang_Object( NULL ), mpNativeTransferable( NULL ) {};
 #ifdef MACOSX
-						com_sun_star_dtrans_DTransTransferable( void *myNativeTransferable ) : java_lang_Object( NULL ), mpNativeTransferable( myNativeTransferable ) {}
+						com_sun_star_dtrans_DTransTransferable( void *myNativeTransferable, int nTransferableType ) : java_lang_Object( NULL ), mpNativeTransferable( myNativeTransferable ), mnTransferableType( nTransferableType ) {}
 #else	// MACOSX
-						com_sun_star_dtrans_DTransTransferable( jobject myObj ) : java_lang_Object( myObj ), mpNativeTransferable( NULL ) {}
+						com_sun_star_dtrans_DTransTransferable( jobject myObj, int nTransferableType ) : java_lang_Object( myObj ), mpNativeTransferable( NULL ), mnTransferableType( nTransferableType ) {}
 #endif	// MACOSX
 	virtual				~com_sun_star_dtrans_DTransTransferable();
 
@@ -80,6 +82,7 @@ public:
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	getTransferable() { return mxTransferable; }
 	virtual ::com::sun::star::uno::Any SAL_CALL	getTransferData( const ::com::sun::star::datatransfer::DataFlavor& aFlavor ) throw ( ::com::sun::star::datatransfer::UnsupportedFlavorException, ::com::sun::star::io::IOException, ::com::sun::star::uno::RuntimeException );
 	virtual ::com::sun::star::uno::Sequence< ::com::sun::star::datatransfer::DataFlavor > SAL_CALL	getTransferDataFlavors() throw ( ::com::sun::star::uno::RuntimeException );
+	int					getType() { return mnTransferableType; }
 	sal_Bool			hasOwnership();
 	virtual sal_Bool SAL_CALL	isDataFlavorSupported( const ::com::sun::star::datatransfer::DataFlavor& aFlavor ) throw ( ::com::sun::star::uno::RuntimeException );
 	sal_Bool			setContents( const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable > &xTransferable );

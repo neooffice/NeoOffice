@@ -53,6 +53,9 @@
 #ifndef _OSL_THREAD_H_
 #include <osl/thread.h>
 #endif
+#ifndef _VOS_MUTEX_HXX_
+#include <vos/mutex.hxx>
+#endif
 
 #ifdef MACOSX
 
@@ -78,6 +81,8 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 #endif	// MACOSX
 
 static ::osl::Mutex aDragMutex;
+static ::std::list< ::java::JavaDragSource* > aDragSources;
+static ::std::list< ::java::JavaDropTarget* > aDropTargets;
 static oslThread pDragThread = NULL;
 static ::java::JavaDragSource *pDragThreadOwner = NULL;
 static sal_Int8 nCurrentAction = ::com::sun::star::datatransfer::dnd::DNDConstants::ACTION_NONE;
@@ -93,6 +98,7 @@ using namespace java::dtrans;
 using namespace osl;
 using namespace rtl;
 using namespace std;
+using namespace vos;
 
 // ========================================================================
 
@@ -106,12 +112,12 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 	{
 		ClearableMutexGuard aGuard( aCarbonEventQueueMutex );
 
-		if ( GetEventKind( aEvent ) == kEventMouseDragged )
+		EventKind nKind = GetEventKind( aEvent );
+		if ( nKind == kEventMouseDragged )
 		{
 			if ( aLastMouseDraggedEvent )
 				ReleaseEvent( aLastMouseDraggedEvent );
 			aLastMouseDraggedEvent = RetainEvent( aEvent );
-
 		}
 
 		// Since we are running the TrackDrag() function outside of the main
@@ -119,6 +125,14 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 		if ( aTrackingEventQueue )
 		{
 			EventRef aNewEvent = CopyEvent( aEvent );
+
+			// OOo cannot handle key modifiers during dragging
+			if ( nKind == kEventMouseDragged || nKind == kEventMouseEntered || nKind == kEventMouseExited )
+			{
+				UInt32 nKeyModifiers = 0;
+				SetEventParameter( aNewEvent, kEventParamKeyModifiers, typeUInt32, sizeof( UInt32 ), &nKeyModifiers );
+			}
+
 			PostEventToQueue( aTrackingEventQueue, aNewEvent, kEventPriorityStandard );
 		}
 
@@ -140,9 +154,28 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 	if ( !pDragThreadOwner )
 		return noErr;
 
+	OGuard aSolarGuard( Application::GetSolarMutex() );
+
+	JavaDragSource *pSource = (JavaDragSource *)pData;
+	bool bFound = false;
+	if ( pSource )
+	{
+		for ( ::std::list< JavaDragSource* >::const_iterator it = aDragSources.begin(); it != aDragSources.end(); ++it )
+		{
+			if ( *it == pData )
+			{
+				bFound = true;
+				break;
+			}
+		}
+	}
+
+	if ( !bFound )
+		return noErr;
+
 	MacOSPoint aPoint;
 	Rect aRect;
-	if ( pData && GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
+	if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
 	{
 		if ( !bNoRejectCursor )
 		{
@@ -158,7 +191,7 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 				SetThemeCursor( kThemeArrowCursor );
 		}
 
-		((JavaDragSource *)pData)->handleDrag( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) );
+		pSource->handleDrag( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) );
 	}
 
 	return noErr;
@@ -175,9 +208,28 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 	if ( !pDragThreadOwner )
 		return noErr;
 
+	OGuard aSolarGuard( Application::GetSolarMutex() );
+
+	JavaDropTarget *pTarget = (JavaDropTarget *)pData;
+	bool bFound = false;
+	if ( pTarget )
+	{
+		for ( ::std::list< JavaDropTarget* >::const_iterator it = aDropTargets.begin(); it != aDropTargets.end(); ++it )
+		{
+			if ( *it == pData )
+			{
+				bFound = true;
+				break;
+			}
+		}
+	}
+
+	if ( !bFound )
+		return noErr;
+
 	MacOSPoint aPoint;
 	Rect aRect;
-	if ( pData && GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
+	if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
 	{
 		sal_Int32 nX = (sal_Int32)( aPoint.h - aRect.left );
 		sal_Int32 nY = (sal_Int32)( aPoint.v - aRect.top );
@@ -185,13 +237,13 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 		switch ( nMessage )
 		{
 			case kDragTrackingEnterWindow:
-				((JavaDropTarget *)pData)->handleDragEnter( nX, nY );
+				pTarget->handleDragEnter( nX, nY );
 				break;
 			case kDragTrackingInWindow:
-				((JavaDropTarget *)pData)->handleDragOver( nX, nY );
+				pTarget->handleDragOver( nX, nY );
 				break;
 			case kDragTrackingLeaveWindow:
-				((JavaDropTarget *)pData)->handleDragExit( nX, nY );
+				pTarget->handleDragExit( nX, nY );
 				break;
 			default:
 				break;
@@ -212,9 +264,28 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 	if ( !pDragThreadOwner )
 		return dragNotAcceptedErr;
 
+	OGuard aSolarGuard( Application::GetSolarMutex() );
+
+	JavaDropTarget *pTarget = (JavaDropTarget *)pData;
+	bool bFound = false;
+	if ( pTarget )
+	{
+		for ( ::std::list< JavaDropTarget* >::const_iterator it = aDropTargets.begin(); it != aDropTargets.end(); ++it )
+		{
+			if ( *it == pData )
+			{
+				bFound = true;
+				break;
+			}
+		}
+	}
+
+	if ( !bFound )
+		return dragNotAcceptedErr;
+
 	MacOSPoint aPoint;
 	Rect aRect;
-	if ( pData && GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr && ((JavaDropTarget *)pData)->handleDrop( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) ) )
+	if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr && pTarget->handleDrop( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) ) )
 		return noErr;
 
 	return dragNotAcceptedErr;
@@ -265,6 +336,7 @@ XMultiServiceFactory >& xMultiServiceFactory )
 JavaDragSource::JavaDragSource() :
 	WeakComponentImplHelper3< XDragSource, XInitialization, XServiceInfo >( maMutex ),
 	mnActions( DNDConstants::ACTION_NONE ),
+	mpInNativeDrag( NULL ),
 	mpNativeWindow( NULL )
 {
 }
@@ -280,6 +352,7 @@ JavaDragSource::~JavaDragSource()
 	{
 		if ( pDragThread )
 		{
+			maListener.clear();
 			osl_joinWithThread( pDragThread );
 			pDragThread = NULL;
 		}
@@ -298,6 +371,14 @@ void SAL_CALL JavaDragSource::initialize( const Sequence< Any >& arguments ) thr
 		arguments.getConstArray()[1] >>= nWindow;
 		if ( nWindow )
 			mpNativeWindow = (void *)nWindow;
+	}
+
+	if ( arguments.getLength() > 3 )
+	{
+		sal_Int32 nInNativeDrag;
+		arguments.getConstArray()[3] >>= nInNativeDrag;
+		if ( nInNativeDrag )
+			mpInNativeDrag = (bool *)nInNativeDrag;
 	}
 
 #ifdef MACOSX
@@ -344,6 +425,12 @@ void SAL_CALL JavaDragSource::initialize( const Sequence< Any >& arguments ) thr
 			}
 		}
 	}
+
+	if ( !pDragTrackingHandlerUPP )
+		pDragTrackingHandlerUPP = NewDragTrackingHandlerUPP( ImplDragTrackingHandlerCallback );
+
+	if ( pDragTrackingHandlerUPP && mpNativeWindow )
+		InstallTrackingHandler( pDragTrackingHandlerUPP, (WindowRef)mpNativeWindow, this );
 #endif	// MACOSX
 }
 
@@ -390,12 +477,12 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 	maContents = transferable;
 	maListener = listener;
 
-	// Test the JVM version and if it is 1.4 or higher use Cocoa, otherwise
-	// use Carbon
 	pDragThread = osl_createSuspendedThread( runDragExecute, this );
 	if ( pDragThread )
 	{
 		pDragThreadOwner = this;
+		if ( mpInNativeDrag )
+			*mpInNativeDrag = true;
 		osl_resumeThread( pDragThread );
 	}
 	else
@@ -494,36 +581,30 @@ void JavaDragSource::runDragExecute( void *pData )
 			}
 			aCarbonEventQueueMutex.release();
 
+			if ( ( nKeyModifiers & shiftKey ) && ! ( nKeyModifiers & cmdKey ) )
+				nCurrentAction = DNDConstants::ACTION_MOVE;
+			else if ( ! ( nKeyModifiers & shiftKey ) && ( nKeyModifiers & cmdKey ) )
+				nCurrentAction = DNDConstants::ACTION_COPY;
+			else if ( nKeyModifiers & ( shiftKey | cmdKey ) )
+				nCurrentAction = DNDConstants::ACTION_LINK;
+			else if ( pSource->mnActions & DNDConstants::ACTION_MOVE )
+				nCurrentAction = DNDConstants::ACTION_MOVE;
+			else if ( pSource->mnActions & DNDConstants::ACTION_COPY )
+				nCurrentAction = DNDConstants::ACTION_COPY;
+			else if ( pSource->mnActions & DNDConstants::ACTION_LINK )
+				nCurrentAction = DNDConstants::ACTION_LINK;
+			else
+				nCurrentAction = DNDConstants::ACTION_NONE;
+
+			if ( ! ( nKeyModifiers & ( shiftKey | cmdKey ) ) )
+				nCurrentAction |= DNDConstants::ACTION_DEFAULT;
+
 			if ( aEventRecord.what != nullEvent )
 			{
 				RgnHandle aRegion = NewRgn();
 				if ( aRegion )
 				{
-					if ( ( nKeyModifiers & shiftKey ) && ! ( nKeyModifiers & cmdKey ) )
-						nCurrentAction = DNDConstants::ACTION_MOVE;
-					else if ( ! ( nKeyModifiers & shiftKey ) && ( nKeyModifiers & cmdKey ) )
-						nCurrentAction = DNDConstants::ACTION_COPY;
-					else if ( nKeyModifiers & ( shiftKey | cmdKey ) )
-						nCurrentAction = DNDConstants::ACTION_LINK;
-					else if ( pSource->mnActions & DNDConstants::ACTION_MOVE )
-						nCurrentAction = DNDConstants::ACTION_MOVE;
-					else if ( pSource->mnActions & DNDConstants::ACTION_COPY )
-						nCurrentAction = DNDConstants::ACTION_COPY;
-					else if ( pSource->mnActions & DNDConstants::ACTION_LINK )
-						nCurrentAction = DNDConstants::ACTION_LINK;
-					else
-						nCurrentAction = DNDConstants::ACTION_NONE;
-
-					if ( ! ( nKeyModifiers & ( shiftKey | cmdKey ) ) )
-						nCurrentAction |= DNDConstants::ACTION_DEFAULT;
-
 					bNoRejectCursor = false;
-
-					if ( !pDragTrackingHandlerUPP )
-						pDragTrackingHandlerUPP = NewDragTrackingHandlerUPP( ImplDragTrackingHandlerCallback );
-
-					if ( pDragTrackingHandlerUPP && pSource->mpNativeWindow )
-						InstallTrackingHandler( pDragTrackingHandlerUPP, (WindowRef)pSource->mpNativeWindow, pSource );
 
 					// Release mutex while we are in drag
 					aDragMutex.release();
@@ -535,6 +616,8 @@ void JavaDragSource::runDragExecute( void *pData )
 
 					// Fix bug 249 by preventing drags to other applications
 					SetDragAllowableActions( aDrag, kDragActionNothing, false );
+
+					aDragSources.push_back( pSource );
 
 					if ( TrackDrag( aDrag, &aEventRecord, aRegion ) == noErr )
 					{
@@ -549,15 +632,14 @@ void JavaDragSource::runDragExecute( void *pData )
 						aDragMutex.release();
 					}
 
+					aDragSources.remove( pSource );
+
 					aCarbonEventQueueMutex.acquire();
 					aTrackingEventQueue = NULL;
 					aCarbonEventQueueMutex.release();
 
 					// Relock mutex after drag
 					aDragMutex.acquire();
-
-					if ( pDragTrackingHandlerUPP && pSource->mpNativeWindow )
-						RemoveTrackingHandler( pDragTrackingHandlerUPP, (WindowRef)pSource->mpNativeWindow );
 
 					bNoRejectCursor = false;
 					nCurrentAction = DNDConstants::ACTION_NONE;
@@ -576,6 +658,8 @@ void JavaDragSource::runDragExecute( void *pData )
 	}
 
 	pDragThreadOwner = NULL;
+	if ( pSource->mpInNativeDrag )
+		*pSource->mpInNativeDrag = false;
 
 	if ( pDragThread )
 		osl_destroyThread( pDragThread );
@@ -606,6 +690,8 @@ JavaDropTarget::JavaDropTarget() :
 JavaDropTarget::~JavaDropTarget()
 {
 	MutexGuard aDragGuard( aDragMutex );
+
+	aDropTargets.remove( this );
 }
 
 // --------------------------------------------------------------------------
@@ -640,14 +726,19 @@ void SAL_CALL JavaDropTarget::initialize( const Sequence< Any >& arguments ) thr
 	if ( !pDropTrackingHandlerUPP )
 		pDropTrackingHandlerUPP = NewDragTrackingHandlerUPP( ImplDropTrackingHandlerCallback );
 
-	if ( pDropTrackingHandlerUPP )
-		InstallTrackingHandler( pDropTrackingHandlerUPP, (WindowRef)mpNativeWindow, this );
-
 	if ( !pDragReceiveHandlerUPP )
 		pDragReceiveHandlerUPP = NewDragReceiveHandlerUPP( ImplDragReceiveHandlerCallback );
 
-	if ( pDragReceiveHandlerUPP )
-		InstallReceiveHandler( pDragReceiveHandlerUPP, (WindowRef)mpNativeWindow, this );
+	if ( pDropTrackingHandlerUPP || pDragReceiveHandlerUPP )
+	{
+		aDropTargets.push_back( this );
+
+		if ( pDropTrackingHandlerUPP )
+			InstallTrackingHandler( pDropTrackingHandlerUPP, (WindowRef)mpNativeWindow, this );
+
+		if ( pDragReceiveHandlerUPP )
+			InstallReceiveHandler( pDragReceiveHandlerUPP, (WindowRef)mpNativeWindow, this );
+	}
 #endif	// MACOSX
 }
 

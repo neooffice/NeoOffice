@@ -93,7 +93,7 @@ com_sun_star_dtrans_DTransTransferable *com_sun_star_dtrans_DTransClipboard::get
 #ifdef MACOSX
 	ScrapRef aScrap;
 	if ( GetCurrentScrap( &aScrap ) == noErr )
-		out = new com_sun_star_dtrans_DTransTransferable( aScrap );
+		out = new com_sun_star_dtrans_DTransTransferable( aScrap, JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD );
 #else	// MACOSX
 #ifdef DEBUG
 	fprintf( stderr, "DTransClipboard::getContents not implemented\n" );
@@ -107,7 +107,7 @@ com_sun_star_dtrans_DTransTransferable *com_sun_star_dtrans_DTransClipboard::get
 
 com_sun_star_dtrans_DTransTransferable *com_sun_star_dtrans_DTransClipboard::setContents( const Reference< XTransferable > &xTransferable )
 {
-	com_sun_star_dtrans_DTransTransferable *out = new com_sun_star_dtrans_DTransTransferable();
+	com_sun_star_dtrans_DTransTransferable *out = new com_sun_star_dtrans_DTransTransferable( NULL, JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD );
 
 	if ( !xTransferable.is() || !out->setContents( xTransferable ) )
 	{

@@ -121,7 +121,62 @@ s#<value.*$#<value>'"$locale"'</value>#
     # End multi-line pattern
 
     sed -e "$localepattern" "$setupxmlbak" > "$setupxml"
-    rm -f "$setupxmlbak"
+    if [ $? != 0 ] ; then
+        mv -f "$setupxmlbak" "$setupxml"
+    else
+        rm -f "$setupxmlbak"
+    fi
+fi
+
+# Force registration dialog to appear at least once
+commonxml="$registrydir/Office/Common.xcu"
+if [ ! -f "$commonxml" ] ; then
+    error
+fi
+commonxmlset="$commonxml.set"
+commonxmlbak="$commonxml.bak"
+rm -f "$commonxmlbak"
+if [ ! -f "$commonxmlset" -a ! -f "$commonxmlbak" ] ; then
+    jobsxml="$registrydir/Office/Jobs.xcu"
+    jobsxmlbak="$jobsxml.bak"
+    rm -f "$jobsxmlbak"
+    if [ -f "$jobsxml" -a ! -f "$jobsxmlbak" ] ; then
+        cat /dev/null "$jobsxml" > "$jobsxmlbak"
+
+        # Begin multi-line pattern
+        defregpattern='/<node oor:name="RegistrationRequest">/{
+:addline
+N
+s#<node .*</node>##
+t
+b addline
+}'
+        # End multi-line pattern
+
+        sed -e "$defregpattern" "$jobsxmlbak" > "$jobsxml"
+        if [ $? != 0 ] ; then
+            mv -f "$jobsxmlbak" "$jobsxml"
+        else
+            rm -f "$jobsxmlbak"
+        fi
+    fi
+
+    cat /dev/null "$commonxml" > "$commonxmlbak"
+
+    # Begin multi-line pattern
+    defregpattern='/<prop oor:name="RequestDialog" oor:type="xs:int">/{
+N
+s#<value.*$#<value>1</value>#
+}'
+    # End multi-line pattern
+
+    sed -e "$defregpattern" "$commonxmlbak" > "$commonxml"
+    if [ $? != 0 ] ; then
+        mv -f "$commonxmlbak" "$commonxml"
+    else
+        rm -f "$commonxmlbak"
+        touch -f "$commonxmlset"
+    fi
 fi
 
 # Make locale the default document language
@@ -172,8 +227,12 @@ s#<value.*$#<value>'"$locale"'</value>#
     # End multi-line pattern
 
     sed -e "$deflocalepattern" "$linguxmlbak" > "$linguxml"
-    rm -f "$linguxmlbak"
-    touch -f "$linguxmlset"
+    if [ $? != 0 ] ; then
+        mv -f "$linguxmlbak" "$linguxml"
+    else
+        rm -f "$linguxmlbak"
+        touch -f "$linguxmlset"
+    fi
 fi
 
 # Create user dictionary.lst file
@@ -203,8 +262,8 @@ for i in `cd "$apphome/classes" ; find . -name "*.jar"` ; do
 done
 sysclasspath=`printf "$sysclasspath" | sed 's#^:##'`
 if [ "$os" = "Darwin" ] ; then
-    # Turn off graphics acceleration
-    printf "[Java]\nRuntimeLib=/System/Library/Frameworks/JavaVM.framework/JavaVM\ncom.apple.hwaccel=false\ncom.apple.hwaccellist=\n" > "$configdir/javarc"
+    # Turn off graphics acceleration and force vcl.jar into bootstrap classpath
+    printf "[Java]\nRuntimeLib=/System/Library/Frameworks/JavaVM.framework/JavaVM\ncom.apple.hwaccel=false\ncom.apple.hwaccellist=\n-Xbootclasspath/a:$apphome/classes/vcl.jar\n" > "$configdir/javarc"
 else
     printf "[Java]\n" > "$configdir/javarc"
 fi
@@ -215,18 +274,60 @@ fi
 
 # Install application fonts
 if [ "$os" = "Darwin" ] ; then
-    appfontdir="$sharebase/fonts/truetype"
     userfontdir="$HOME/Library/Fonts"
     mkdir -p "$userfontdir"
-    if [ -d "$appfontdir" -a -d "$userfontdir" ] ; then
-        for i in `cd "$appfontdir" ; find . -name '*.ttf'` ; do
-            if [ -L "$userfontdir/$i" ] ; then
-                rm -f "$userfontdir/$i"
-            fi
-            if [ ! -f "$userfontdir/$i" ] ; then
-                cat /dev/null "$appfontdir/$i" > "$userfontdir/$i"
-            fi
-        done
+    if [ -d "$userfontdir" ] ; then
+        appfontdir="$userinstall/fonts"
+        if [ -d "$appfontdir" ] ; then
+            for i in `cd "$appfontdir" ; find . -name '*.ttf' -o -name '*.TTF'` ; do
+                if [ -z "$i" ] ; then
+                    continue;
+                fi
+                if [ -L "$userfontdir/$i" ] ; then
+                    rm -f "$userfontdir/$i"
+                fi
+                if [ ! -f "$userfontdir/$i" ] ; then
+                    cat /dev/null "$appfontdir/$i" > "$userfontdir/$i"
+                fi
+            done
+        fi
+        appfontdir="$sharebase/fonts/truetype"
+        if [ -d "$appfontdir" ] ; then
+            for i in `cd "$appfontdir" ; find . -name '*.ttf' -o -name '*.TTF'` ; do
+                if [ -z "$i" ] ; then
+                    continue;
+                fi
+                if [ -L "$userfontdir/$i" ] ; then
+                    rm -f "$userfontdir/$i"
+                fi
+                if [ ! -f "$userfontdir/$i" ] ; then
+                    cat /dev/null "$appfontdir/$i" > "$userfontdir/$i"
+                fi
+            done
+        fi
+    fi
+fi
+
+# Make autocorrect files available
+shareautocorrdir="$sharebase/autocorr"
+userautocorrdir="$userinstall/autocorr"
+mkdir -p "$userautocorrdir"
+if [ -d "$shareautocorrdir" -a -d "$userautocorrdir" ] ; then
+    chmod -Rf u+rw "$userautocorrdir"
+    for i in `cd "$shareautocorrdir" ; find . -name '*.dat'` ; do
+        if [ -z "$i" ] ; then
+            continue;
+        fi
+        if [ ! -f "$userautocorrdir/$i" ] ; then
+            cat /dev/null "$shareautocorrdir/$i" > "$userautocorrdir/$i"
+        fi
+    done
+fi
+
+# Make sure that there is a /tmp directory
+if [ "$os" = "Darwin" ] ; then
+    if [ ! -d "/tmp" -a -d "/private/tmp" ] ; then
+        ln -sf "private/tmp" "/tmp"
     fi
 fi
 
@@ -242,11 +343,7 @@ checkforpatches()
     patchfileurl="$(PRODUCT_PATCH_CHECK_URL)"
     patchdownloadurl="$(PRODUCT_PATCH_DOWNLOAD_URL)"
     lastcheckfile="$userinstall/.lastpatchcheck"
-    status=
-    if [ ! -r "$lastcheckfile" ] ; then
-        touch -r "$apphome" "$lastcheckfile"
-    fi
-    if [ -r "$lastcheckfile" -a -z "`find "$lastcheckfile" -mtime -7 -o -mtime -6 -o -mtime -5 -o -mtime -4 -o -mtime -3 -o -mtime -2 -o -mtime -1 -o -mtime 0`" ] ; then
+    if [ ! -r "$lastcheckfile" -o -z "`find "$lastcheckfile" -mtime -2 -o -mtime -1 -o -mtime 0`" ] ; then
         proxies=`scutil << !
 open
 get "State:/Network/Global/Proxies"
@@ -261,20 +358,26 @@ quit
                 httpproxy="$httpproxy:$httpport"
             fi
         fi
+
+        content=
         if [ -z "$httpproxy" ] ; then
-            status=`curl --connect-timeout 30 --time-cond "$lastcheckfile" --head "$patchfileurl" 2>/dev/null | head -1 | awk '{ print $2 }'`
+            content=`curl --connect-timeout 30 "$patchfileurl" 2>/dev/null`
         else
-            status=`curl --proxy "$httpproxy" --connect-timeout 30 --time-cond "$lastcheckfile" --head "$patchfileurl" 2>/dev/null | head -1 | awk '{ print $2 }'`
+            content=`curl --proxy "$httpproxy" --connect-timeout 30 "$patchfileurl" 2>/dev/null`
+        fi
+
+        # Show patch download URL
+        newproductkey=`echo "$content" | grep "^ProductKey=" | awk -F= '{ print $2 }'`
+        newproductpatch=`echo "$content" | grep "^ProductPatch=" | awk -F= '{ print $2 }'`
+        oldproductkey=`grep "^ProductKey=" "$apphome/bootstraprc" | awk -F= '{ print $2 }'`
+        oldproductpatch=`grep "^ProductPatch=" "$apphome/bootstraprc" | awk -F= '{ print $2 }'`
+        if [ "$newproductkey" != "$oldproductkey" -o "$newproductpatch" != "$oldproductpatch" ] ; then 
+            sleep 15
+            open "$patchdownloadurl"
         fi
 
         # Cache the last check date
         touch -f "$lastcheckfile"
-    fi
-
-    # Show patch download URL
-    if [ -w "$lastcheckfile" -a "$status" = "200" ] ; then
-        sleep 15
-        open "$patchdownloadurl"
     fi
 }
 
