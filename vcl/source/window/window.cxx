@@ -4613,12 +4613,6 @@ Window::~Window()
             pSysWin->mpFrameData->mpNextFrame = mpFrameData->mpNextFrame;
         }
 #ifndef REMOTE_APPSERVER
-#ifdef USE_JAVA
-		// Make sure that drag and drop handlers are cleaned before the frame
-		// is destroyed as they depend on a valid native window
-        mpFrameData->mxDropTarget.clear();
-        mpFrameData->mxDragSource.clear();
-#endif	// USE_JAVA
         mpFrame->SetCallback( NULL, NULL );
         pSVData->mpDefInst->DestroyFrame( mpFrame );
 #else
