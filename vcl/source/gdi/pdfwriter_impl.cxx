@@ -3241,6 +3241,9 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
             else
                 pTmpFallbackFonts[i] = NULL;
 
+            nGlyphFlags[i] = (pGlyphs[i] & GF_FLAGMASK);
+            pGlyphs[i] &= GF_IDXMASK;
+
             if( pTmpCharPosAry[i] >= nMinCharPos && pTmpCharPosAry[i] <= nMaxCharPos )
                 pTmpUnicodes[i] = rText.GetChar( pTmpCharPosAry[i] );
             else
@@ -3312,6 +3315,9 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
             // basis would be a major performance hit.
             pGlyphs[i] &= GF_IDXMASK;
 #endif
+#if defined USE_JAVA && defined MACOSX
+            pGlyphs[i] &= GF_IDXMASK;
+#endif	// USE_JAVA && MACOSX
             if( pCharPosAry[i] >= nMinCharPos && pCharPosAry[i] <= nMaxCharPos )
                 pUnicodes[i] = rText.GetChar( pCharPosAry[i] );
             else

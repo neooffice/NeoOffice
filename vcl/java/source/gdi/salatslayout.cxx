@@ -156,7 +156,10 @@ void SalATSLayout::Destroy()
 	mnGlyphCount = 0;
 
 	if ( mpGlyphInfoArray )
+	{
+		ATSUDisposeTextLayout( mpGlyphInfoArray->layout );
 		rtl_freeMemory( mpGlyphInfoArray );
+	}
 	mpGlyphInfoArray = NULL;
 
 	if ( mpGlyphTranslations )
@@ -281,8 +284,6 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 		mnGlyphCount = mpGlyphInfoArray->numGlyphs;
 
-		ATSUDisposeTextLayout( aLayout );
-
 		if ( bVertical )
 		{
 			// Cache vertical flags and glyph translations
@@ -360,8 +361,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		{
 			int nGlyph = mpGlyphInfoArray->glyphs[ i ].glyphID;
 			long nCharWidth = 0;
-			if ( mpGlyphTranslations && mpVerticalFlags && mpVerticalFlags[ mpGlyphInfoArray->glyphs[ i ].charIndex ] & ( GF_ROTL | GF_ROTR ) )
+			if ( mpGlyphTranslations && mpVerticalFlags && mpVerticalFlags[ mpGlyphInfoArray->glyphs[ i ].charIndex ] & GF_ROTMASK )
 			{
+				nGlyph |= mpVerticalFlags[ mpGlyphInfoArray->glyphs[ i ].charIndex ] & GF_ROTMASK;
+
 				ATSGlyphScreenMetrics aScreenMetrics;
 				if ( ATSUGlyphGetScreenMetrics( mpGlyphInfoArray->glyphs[ i ].style, 1, &mpGlyphInfoArray->glyphs[ i ].glyphID, sizeof( GlyphID ), true, true, &aScreenMetrics ) == noErr )
 					nCharWidth = Float32ToLong( ( aScreenMetrics.height + nDoubleAdjust ) * mnUnitsPerPixel );
@@ -427,13 +430,13 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 
 		int nOrientation = GetOrientation();
 
-		int j = aCharPosArray[ 0 ] - mnMinCharPos + 1;
-		if ( mpGlyphTranslations && mpVerticalFlags && mpVerticalFlags[ j ] & ( GF_ROTL | GF_ROTR ) )
+		if ( mpGlyphTranslations && aGlyphArray[ 0 ] & GF_ROTMASK )
 		{
 			// Draw rotated glyphs one at a time. Note that we rotated the
 			// coordinates when the glyphs were added.
+			int j = aCharPosArray[ 0 ] - mnMinCharPos + 1;
 			int nGlyphRotation;
-			if ( mpVerticalFlags[ j ] & GF_ROTL )
+			if ( aGlyphArray[ 0 ] & GF_ROTL )
 				nGlyphRotation = 900;
 			else
 				nGlyphRotation = -900;
