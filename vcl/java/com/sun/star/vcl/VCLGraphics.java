@@ -707,6 +707,9 @@ public final class VCLGraphics {
 			return;
 		}
 
+		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, img.getWidth(null), img.getHeight(null)));
+		if (srcBounds.isEmpty())
+			return;
 		Rectangle destBounds = new Rectangle(destX, destY, destWidth, destHeight).intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
@@ -716,7 +719,9 @@ public final class VCLGraphics {
 		Graphics2D g = (Graphics2D)graphics.create(destX, destY, destWidth, destHeight);
 		if (destWidth != srcWidth || destHeight != srcHeight)
 			g.scale((double)destWidth / srcWidth, (double)destHeight / srcHeight);
-		g.drawImage(img, 0, 0, srcWidth, srcHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+		// Fix bug 625 by not reading outside of the source image's bounds
+		g.translate(srcBounds.x - srcX, srcBounds.y - srcY);
+		g.drawImage(img, 0, 0, srcWidth, srcHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
 		g.dispose();
 		addToFlush(destBounds);
 
@@ -1175,12 +1180,20 @@ public final class VCLGraphics {
 				BufferedImage i = image.getImage();
 				Panel p = frame.getPanel();
 				if (i != null && p != null) {
-					Graphics2D g = (Graphics2D)p.getGraphics();
-					if (g != null) {
-						g.setClip(update);
-						g.drawRenderedImage(i, null);
-						g.dispose();
-						update = null;
+					synchronized(p) {
+						Graphics2D g = (Graphics2D)p.getGraphics();
+						if (g != null) {
+							// Fix bug 553 by limiting clip to the graphics
+							// bounds since the window may have been resized
+							// since the graphics bounds were last calculated
+							update = update.intersection(g.getDeviceConfiguration().getBounds());
+							if (update != null && !update.isEmpty()) {
+								g.setClip(update);
+								g.drawRenderedImage(i, null);
+								g.dispose();
+								update = null;
+							}
+						}
 					}
 				}
 			}
