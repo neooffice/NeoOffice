@@ -69,6 +69,8 @@ public:
 	void				changeMenu( com_sun_star_vcl_VCLMenuItemData *_par0, USHORT _par1 );
 	void				enableMenu( USHORT _par0, bool _par1 );
 	void				syncCheckboxMenuItemState( void );
+	void				show( void );
+	void				hide( void );
 };
 
 } // namespace vcl

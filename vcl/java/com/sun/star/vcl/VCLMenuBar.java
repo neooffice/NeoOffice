@@ -385,6 +385,26 @@ public final class VCLMenuBar {
 		}
 
 	}
+	
+	/**
+	 * Hide the menubar associated with a frame.  This is accomplished
+	 * by creating a new empty menubar and attaching it to the frame.
+	 */
+	public void hide() {
+
+	  	if(getFrame()!=null)
+			((Frame)getFrame().getWindow()).setMenuBar(new MenuBar());
+	}
+	
+	/**
+	 * Re-associate the underlying menubar, if created, with the frame to
+	 * redisplay the native menus.
+	 */
+	public void show() {
+
+	  	if(getFrame()!=null)
+			((Frame)getFrame().getWindow()).setMenuBar(getAWTMenuBar());
+	}
 
 	/**
 	 * Regenerate all of the menubars and recreate the peers of the menus. We

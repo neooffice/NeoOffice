@@ -248,3 +248,41 @@ void com_sun_star_vcl_VCLMenuBar::syncCheckboxMenuItemState( void )
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 	}
 }
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLMenuBar::show( void )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "show", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLMenuBar::hide( void )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "hide", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+	}
+}

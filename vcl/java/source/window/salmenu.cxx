@@ -234,6 +234,19 @@ void SalMenu::GetSystemMenuData( SystemMenuData* pData )
 {
 }
 
+//-----------------------------------------------------------------------------
+
+void SalMenu::SetDisplayed( BOOL bDisplay )
+{
+	if( maData.mbIsMenuBarMenu && maData.mpVCLMenuBar )
+	{
+		if( bDisplay )
+			maData.mpVCLMenuBar->show();
+		else
+			maData.mpVCLMenuBar->hide();
+	}
+}
+
 // =======================================================================
 
 SalMenuItem::SalMenuItem()

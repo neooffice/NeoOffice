@@ -2834,6 +2834,12 @@ BOOL MenuBar::HandleMenuCommandEvent( Menu *pMenu, USHORT nEventId ) const
         return FALSE;
 }
 
+void MenuBar::MenuBarModeChange( USHORT newMode )
+{
+    if( ImplGetSalMenu() )
+	ImplGetSalMenu()->SetDisplayed( ( newMode != MENUBAR_MODE_HIDE ) );
+}
+
 // -----------------------------------------------------------------------
 
 // BOOL PopupMenu::bAnyPopupInExecute = FALSE;
