@@ -315,100 +315,103 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv 
 #ifdef MACOSX
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData )
 {
-	// Let the VCL event handlers handle menu shortcuts
-	EventClass nClass = GetEventClass( aEvent );
-	if ( nClass == kEventClassAppleEvent )
+	SalData *pSalData = GetSalData();
+	if ( pSalData && !ImplGetSVData()->maAppData.mbAppQuit )
 	{
-		SalInstance *pSalInstance = GetSalData()->mpFirstInstance;
-
-		// Unlock the Carbon lock
-		VCLThreadAttach t;
-		if ( t.pEnv )
-			Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
-
-		// Block the VCL event loop while processing Apple Events
-		pSalInstance->AcquireYieldMutex( 1 );
-
-		// Relock the Carbon lock
-		if ( t.pEnv )
-			Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
-
-		OSStatus nErr = CallNextEventHandler( aNextHandler, aEvent );
-
-		// Unblock the VCL event loop
-		pSalInstance->ReleaseYieldMutex();
-
-		return nErr;
-	}
-	else if ( nClass == kEventClassMouse && GetEventKind( aEvent ) == kEventMouseWheelMoved )
-	{
-		EventMouseWheelAxis nAxis;
-		UInt32 outSize;
-		if ( GetEventParameter( aEvent, kEventParamMouseWheelAxis, typeMouseWheelAxis, NULL, sizeof( EventMouseWheelAxis ), &outSize, &nAxis ) == noErr && nAxis == kEventMouseWheelAxisY )
+		EventClass nClass = GetEventClass( aEvent );
+		if ( nClass == kEventClassAppleEvent )
 		{
-			MacOSPoint aPoint;
-			SInt32 nDelta;
-			if ( GetEventParameter( aEvent, kEventParamWindowMouseLocation, typeQDPoint, NULL, sizeof( MacOSPoint ), &outSize, &aPoint ) == noErr && GetEventParameter( aEvent, kEventParamMouseWheelDelta, typeSInt32, NULL, sizeof( SInt32 ), &outSize, &nDelta ) == noErr )
+			if ( pSalData->mpFirstInstance )
 			{
-				GetSalData()->mpEventQueue->postMouseWheelEvent( 0, aPoint.h, aPoint.v, 3, nDelta * -1 );
-				return noErr;
+				// Unlock the Carbon lock
+				VCLThreadAttach t;
+				if ( t.pEnv )
+					Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
+
+				// Block the VCL event loop while processing Apple Events
+				pSalData->mpFirstInstance->AcquireYieldMutex( 1 );
+
+				// Relock the Carbon lock
+				if ( t.pEnv )
+					Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
+
+				OSStatus nErr = CallNextEventHandler( aNextHandler, aEvent );
+
+				// Unblock the VCL event loop
+				pSalData->mpFirstInstance->ReleaseYieldMutex();
+
+				return nErr;
 			}
 		}
-	}
-	else if ( nClass == kEventClassMenu )
-	{
-		SalData *pSalData = GetSalData();
-		MenuRef trackingRef;
-		EventParamType outRefType;
-		UInt32 outSize;
-		if ( GetEventKind( aEvent ) == kEventMenuBeginTracking && GetEventParameter( aEvent, kEventParamDirectObject, typeMenuRef, NULL, sizeof( MenuRef ), &outSize, &trackingRef ) == noErr )
+		else if ( nClass == kEventClassMouse && GetEventKind( aEvent ) == kEventMouseWheelMoved )
 		{
-			// According to Carbon documentation, the direct object
-			// parameter should be NULL when tracking is beginning
-			// in the menubar.  In reality, however, the direct
-			// object is in fact a menu reference to the root
-			// menu.  To determine if we're a menubar tracking
-			// event, we need to to compare against both NULL and
-			// the root menu.
-			MenuRef rootMenu = AcquireRootMenu(); // increments ref count
-			bool isMenubar = false;
-			
-			if ( ( trackingRef == NULL ) || ( trackingRef == rootMenu ) )
-				isMenubar = true;
-			
-			if ( rootMenu != NULL )
-				ReleaseMenu( rootMenu );
-			
-			if ( isMenubar )
+			EventMouseWheelAxis nAxis;
+			UInt32 outSize;
+			if ( GetEventParameter( aEvent, kEventParamMouseWheelAxis, typeMouseWheelAxis, NULL, sizeof( EventMouseWheelAxis ), &outSize, &nAxis ) == noErr && nAxis == kEventMouseWheelAxisY )
 			{
-				// Ignore key matching context
-				MenuTrackingMode nMode;
-				if ( GetEventParameter( aEvent, kEventParamCurrentMenuTrackingMode, typeMenuTrackingMode, NULL, sizeof( MenuTrackingMode ), NULL, &nMode ) != noErr || nMode == kMenuTrackingModeKeyboard )
-					return userCanceledErr;
-
-				if ( ImplGetSVData()->maAppData.mbInAppExecute )
+				MacOSPoint aPoint;
+				SInt32 nDelta;
+				if ( GetEventParameter( aEvent, kEventParamWindowMouseLocation, typeQDPoint, NULL, sizeof( MacOSPoint ), &outSize, &aPoint ) == noErr && GetEventParameter( aEvent, kEventParamMouseWheelDelta, typeSInt32, NULL, sizeof( SInt32 ), &outSize, &nDelta ) == noErr )
 				{
-					// Post a yield event and wait the VCL event queue to block
-					pSalData->maNativeEventStartCondition.reset();
-					com_sun_star_vcl_VCLEvent aYieldEvent( SALEVENT_YIELDEVENTQUEUE, NULL, NULL );
-					pSalData->mpEventQueue->postCachedEvent( &aYieldEvent );
+					GetSalData()->mpEventQueue->postMouseWheelEvent( 0, aPoint.h, aPoint.v, 3, nDelta * -1 );
+					return noErr;
+				}
+			}
+		}
+		else if ( nClass == kEventClassMenu )
+		{
+			MenuRef trackingRef;
+			EventParamType outRefType;
+			UInt32 outSize;
+			if ( GetEventKind( aEvent ) == kEventMenuBeginTracking && GetEventParameter( aEvent, kEventParamDirectObject, typeMenuRef, NULL, sizeof( MenuRef ), &outSize, &trackingRef ) == noErr )
+			{
+				// According to Carbon documentation, the direct object
+				// parameter should be NULL when tracking is beginning
+				// in the menubar.  In reality, however, the direct
+				// object is in fact a menu reference to the root
+				// menu. To determine if we're a menubar tracking
+				// event, we need to to compare against both NULL and
+				// the root menu.
+				MenuRef rootMenu = AcquireRootMenu(); // increments ref count
+				bool isMenubar = false;
+			
+				if ( ( trackingRef == NULL ) || ( trackingRef == rootMenu ) )
+					isMenubar = true;
+			
+				if ( rootMenu != NULL )
+					ReleaseMenu( rootMenu );
+			
+				if ( isMenubar )
+				{
+					// Ignore key matching context
+					MenuTrackingMode nMode;
+					if ( GetEventParameter( aEvent, kEventParamCurrentMenuTrackingMode, typeMenuTrackingMode, NULL, sizeof( MenuTrackingMode ), NULL, &nMode ) != noErr || nMode == kMenuTrackingModeKeyboard )
+						return userCanceledErr;
 
-					// Unlock the Carbon lock
-					VCLThreadAttach t;
-					if ( t.pEnv )
-						Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
+					if ( ImplGetSVData()->maAppData.mbInAppExecute )
+					{
+						// Post a yield event and wait the VCL event queue to block
+						pSalData->maNativeEventStartCondition.reset();
+						com_sun_star_vcl_VCLEvent aYieldEvent( SALEVENT_YIELDEVENTQUEUE, NULL, NULL );
+						pSalData->mpEventQueue->postCachedEvent( &aYieldEvent );
 
-					pSalData->maNativeEventStartCondition.wait();
+						// Unlock the Carbon lock
+						VCLThreadAttach t;
+						if ( t.pEnv )
+							Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
 
-					// Execute menu updates while the VCL event queue is blocked
-					for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+						pSalData->maNativeEventStartCondition.wait();
+
+						// Execute menu updates while the VCL event queue is blocked
+						for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 						UpdateMenusForFrame( *it, NULL );
 
-					// Relock the Carbon lock
-					if ( t.pEnv )
-						Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
+						// Relock the Carbon lock
+						if ( t.pEnv )
+							Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
 
-					pSalData->maNativeEventEndCondition.set();
+						pSalData->maNativeEventEndCondition.set();
+					}
 				}
 			}
 		}
@@ -709,8 +712,9 @@ void InitSalData()
 
 void DeInitSalData()
 {
-	delete GetSalData();
+	SalData *pSalData = GetSalData();
 	SetSalData( NULL );
+	delete pSalData;
 }
 
 // -----------------------------------------------------------------------
