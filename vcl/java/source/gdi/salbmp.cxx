@@ -70,15 +70,12 @@ BOOL SalBitmap::Create( const Size& rSize, USHORT nBitCount, const BitmapPalette
 {
 	Destroy();
 
-	// Check and save size
-	Size aSize( rSize.Width(), rSize.Height() );
-	if ( aSize.Width() <= 0 )
-		aSize.setWidth( 1 );
-	if ( aSize.Height() <= 0 )
-		aSize.setHeight( 1 );
-	maSize = aSize;
-
-	mpVCLBitmap = new com_sun_star_vcl_VCLBitmap( maSize.Width(), maSize.Height(), nBitCount );
+	// Check size and save size
+	if ( rSize.Width() > 0 && rSize.Height() > 0 )
+	{
+		maSize = Size( rSize.Width(), rSize.Height() );
+		mpVCLBitmap = new com_sun_star_vcl_VCLBitmap( maSize.Width(), maSize.Height(), nBitCount );
+	}
 
 	if ( mpVCLBitmap ) {
 		// Cache the bit count

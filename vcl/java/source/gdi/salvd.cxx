@@ -87,22 +87,23 @@ void SalVirtualDevice::ReleaseGraphics( SalGraphics* pGraphics )
 
 BOOL SalVirtualDevice::SetSize( long nDX, long nDY )
 {
-	if ( nDX <= 0 )
-		nDX = 1;
-	if ( nDY <= 0 )
-		nDY = 1;
-
 	if ( maVirDevData.mpGraphics->maGraphicsData.mpVCLGraphics )
 		delete maVirDevData.mpGraphics->maGraphicsData.mpVCLGraphics;
 	maVirDevData.mpGraphics->maGraphicsData.mpVCLGraphics = NULL;
 
 	if ( maVirDevData.mpVCLImage )
+	{
+		maVirDevData.mpVCLImage->dispose();
 		delete maVirDevData.mpVCLImage;
+	}
 	maVirDevData.mpVCLImage = NULL;
 
-	maVirDevData.mpVCLImage = new com_sun_star_vcl_VCLImage( nDX, nDY, maVirDevData.mnBitCount );
-	if ( maVirDevData.mpVCLImage && maVirDevData.mbGraphics )
-		maVirDevData.mpGraphics->maGraphicsData.mpVCLGraphics = maVirDevData.mpVCLImage->getGraphics();
+	if ( nDX > 0 && nDY > 0 )
+	{
+		maVirDevData.mpVCLImage = new com_sun_star_vcl_VCLImage( nDX, nDY, maVirDevData.mnBitCount );
+		if ( maVirDevData.mpVCLImage && maVirDevData.mbGraphics )
+			maVirDevData.mpGraphics->maGraphicsData.mpVCLGraphics = maVirDevData.mpVCLImage->getGraphics();
+	}
 
 	return maVirDevData.mpVCLImage ? TRUE : FALSE;
 }

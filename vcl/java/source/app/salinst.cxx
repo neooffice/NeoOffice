@@ -688,16 +688,21 @@ SalVirtualDevice* SalInstance::CreateVirtualDevice( SalGraphics* pGraphics,
                                                     long nDX, long nDY,
                                                     USHORT nBitCount )
 {
-	SalVirtualDevice *pDevice = new SalVirtualDevice();
+	SalVirtualDevice *pDevice = NULL;
 
-	if ( pGraphics )
-		nBitCount = pGraphics->GetBitCount();
-	pDevice->maVirDevData.mnBitCount = nBitCount;
-
-	if ( !pDevice->SetSize( nDX, nDY ) )
+	if ( nDX > 0 && nDY > 0 )
 	{
-		delete pDevice;
-		pDevice = NULL;
+		pDevice = new SalVirtualDevice();
+
+		if ( pGraphics )
+			nBitCount = pGraphics->GetBitCount();
+		pDevice->maVirDevData.mnBitCount = nBitCount;
+
+		if ( !pDevice->SetSize( nDX, nDY ) )
+		{
+			delete pDevice;
+			pDevice = NULL;
+		}
 	}
 
    	return pDevice;
