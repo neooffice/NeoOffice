@@ -42,6 +42,10 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
 
+#ifdef MACOSX
+#include <math.h>
+#endif
+
 using namespace vcl;
 
 // ============================================================================
@@ -224,6 +228,82 @@ com_sun_star_vcl_VCLPrintJob::com_sun_star_vcl_VCLPrintJob() : java_lang_Object(
 	jobject tempObj;
 	tempObj = t.pEnv->NewObject( getMyClass(), mID );
 	saveRef( tempObj );
+
+#ifdef MACOSX
+	// Mac OS X does not update the JobAttributes that we pass to the print
+	// job so we need to update it ourselves
+	static jfieldID fIDPrintJob = NULL;
+	static jfieldID fIDPrinterJob = NULL;
+	static jmethodID mIDGetFirstPage = NULL;
+	static jmethodID mIDGetLastPage = NULL;
+	static jfieldID fIDPageRanges = NULL;
+	jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
+	if ( !fIDPrintJob )
+	{
+		char *cSignature = "Ljava/awt/PrintJob;";
+		fIDPrintJob = t.pEnv->GetFieldID( tempObjClass, "printJob", cSignature );
+	}
+	OSL_ENSURE( fIDPrintJob, "Unknown field id!" );
+	if ( fIDPrintJob )
+	{
+		jobject printJob = t.pEnv->GetObjectField( tempObj, fIDPrintJob );
+		if ( printJob )
+		{
+			jclass printJobClass = t.pEnv->GetObjectClass( printJob );
+			if ( !fIDPrinterJob )
+			{
+				char *cSignature = "Ljava/awt/print/PrinterJob;";
+				fIDPrinterJob = t.pEnv->GetFieldID( printJobClass, "printerJob", cSignature );
+			}
+			OSL_ENSURE( fIDPrinterJob, "Unknown field id!" );
+			if ( fIDPrinterJob )
+			{
+				jobject printerJob = t.pEnv->GetObjectField( printJob, fIDPrinterJob );
+				if ( printerJob )
+				{
+					jclass printerJobClass = t.pEnv->GetObjectClass( printerJob );
+					if ( !mIDGetFirstPage )
+					{
+						char *cSignature = "()I";
+						mIDGetFirstPage = t.pEnv->GetMethodID( printerJobClass, "getFirstPage", cSignature );
+					}
+					OSL_ENSURE( mIDGetFirstPage, "Unknown method id!" );
+					if ( !mIDGetLastPage )
+					{
+						char *cSignature = "()I";
+						mIDGetLastPage = t.pEnv->GetMethodID( printerJobClass, "getLastPage", cSignature );
+					}
+					OSL_ENSURE( mIDGetLastPage, "Unknown method id!" );
+					if ( mIDGetFirstPage && mIDGetLastPage )
+					{
+						jint pageNumbers[2];
+						pageNumbers[0] = t.pEnv->CallIntMethod( printerJob, mIDGetFirstPage );
+						if ( pageNumbers[0] < pow( 2, 31 ) )
+							pageNumbers[0]++;
+						pageNumbers[1] = t.pEnv->CallIntMethod( printerJob, mIDGetLastPage );
+						if ( pageNumbers[1] < pow( 2, 31 ) )
+							pageNumbers[1]++;
+						if ( !fIDPageRanges )
+						{
+							char *cSignature = "[[I";
+							fIDPageRanges = t.pEnv->GetFieldID( tempObjClass, "pageRanges", cSignature );
+						}
+						OSL_ENSURE( fIDPageRanges, "Unknown field id!" );
+						if ( fIDPageRanges )
+						{
+							jintArray pages = t.pEnv->NewIntArray( 2 );
+							t.pEnv->SetIntArrayRegion( pages, 0, 2, pageNumbers );
+							jobjectArray pageRanges = t.pEnv->NewObjectArray( 1, t.pEnv->GetObjectClass( pages ), NULL );
+							t.pEnv->SetObjectArrayElement( pageRanges, 0, pages );
+							t.pEnv->SetObjectField( tempObj, fIDPageRanges, pageRanges );
+						}
+					}
+				}
+			}
+		}
+	}
+#endif	// MACOSX
+
 }
 
 // ----------------------------------------------------------------------------
@@ -300,48 +380,6 @@ void com_sun_star_vcl_VCLPrintJob::endPage()
 		if ( mID )
 			t.pEnv->CallVoidMethod( object, mID );
 	}
-}
-
-// ----------------------------------------------------------------------------
-
-ULONG com_sun_star_vcl_VCLPrintJob::getCopies()
-{
-	static jmethodID mID = NULL;
-	ULONG out = 0;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()I";
-			mID = t.pEnv->GetMethodID( getMyClass(), "getCopies", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-			out = (ULONG)t.pEnv->CallIntMethod( object, mID );
-	}
-	return out;
-}
-
-// ----------------------------------------------------------------------------
-
-sal_Bool com_sun_star_vcl_VCLPrintJob::isCollate()
-{
-	static jmethodID mID = NULL;
-	sal_Bool out = sal_False;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()Z";
-			mID = t.pEnv->GetMethodID( getMyClass(), "isCollate", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-			out = (sal_Bool)t.pEnv->CallBooleanMethod( object, mID );
-	}
-	return out;
 }
 
 // ----------------------------------------------------------------------------

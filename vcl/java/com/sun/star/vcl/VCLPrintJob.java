@@ -148,6 +148,11 @@ public class VCLPrintJob {
 	}
 
 	/**
+	 * The current page.
+	 */
+	private int currentPage = 0;
+
+	/**
 	 * The cached job attributes.
 	 */
 	private JobAttributes jobAttributes = new JobAttributes();
@@ -161,6 +166,16 @@ public class VCLPrintJob {
 	 * The current page's graphics.
 	 */
 	private VCLGraphics pageGraphics = null;
+
+	/**
+	 * The current page's image.
+	 */
+	private VCLImage pageImage = null;
+
+	/**
+	 * The page ranges to print.
+	 */
+	private int[][] pageRanges = null;
 
 	/**
 	 * The print job.
@@ -178,6 +193,14 @@ public class VCLPrintJob {
 			pageAttributes.setOrientationRequested(PageAttributes.OrientationRequestedType.LANDSCAPE);
 		pageAttributes.setOrigin(PageAttributes.OriginType.PRINTABLE);
 
+		// Create the print job
+		printJob = Toolkit.getDefaultToolkit().getPrintJob(frame, "", jobAttributes, pageAttributes);
+
+		// Note: this does not work on Mac OS X and is implemented in the
+		// C++ class that calls this constructor
+		if (jobAttributes.getDefaultSelection() == JobAttributes.DefaultSelectionType.RANGE)
+			pageRanges = jobAttributes.getPageRanges();
+
 	}
 
 	/**
@@ -186,10 +209,10 @@ public class VCLPrintJob {
 	public void abortJob() {
 
 		// End the job before disposing of the graphics
-		printJob.end();
-		if (pageGraphics != null)
-			pageGraphics.dispose();
-		pageGraphics = null;
+		if (printJob != null)
+			printJob.end();
+		endPage();
+		dispose();
 
 	}
 
@@ -199,15 +222,20 @@ public class VCLPrintJob {
 	 */
 	public void dispose() {
 
-		// Make sure that the print job is ended
+		currentPage = 0;
 		jobAttributes = null;
 		pageAttributes = null;
+		// Make sure that the print job is ended
 		if (printJob != null)
 			printJob.end();
+		printJob = null;
 		if (pageGraphics != null)
 			pageGraphics.dispose();
 		pageGraphics = null;
-		printJob = null;
+		if (pageImage != null)
+			pageImage.dispose();
+		pageImage = null;
+		pageRanges = null;
 
 	}
 
@@ -217,10 +245,10 @@ public class VCLPrintJob {
 	public void endJob() {
 
 		// End the job after disposing of the graphics
-		if (pageGraphics != null)
-			pageGraphics.dispose();
-		pageGraphics = null;
-		printJob.end();
+		endPage();
+		if (printJob != null)
+			printJob.end();
+		dispose();
 
 	}
 
@@ -229,34 +257,12 @@ public class VCLPrintJob {
 	 */
 	public void endPage() {
 
-		pageGraphics.dispose();
+		if (pageGraphics != null)	
+			pageGraphics.dispose();
 		pageGraphics = null;
-
-	}
-
-	/**
-	 * Get the number of copies to print.
-	 *
-	 * @return the number of copies to print
-	 */
-	public int getCopies() {
-
-		return jobAttributes.getCopies();
-
-	}
-
-	/**
-	 * Get whether collation is requested.
-	 *
-	 * @return <code>true</code> if collation is requested or otherwise
-	 *  <code>false</code>
-	 */
-	public boolean isCollate() {
-
-		if (jobAttributes.getMultipleDocumentHandling() == JobAttributes.MultipleDocumentHandlingType.SEPARATE_DOCUMENTS_COLLATED_COPIES)
-			return true;
-		else
-			return false;
+		if (pageImage != null)
+			pageImage.dispose();
+		pageImage = null;
 
 	}
 
@@ -268,14 +274,11 @@ public class VCLPrintJob {
 	 */
 	public boolean startJob() {
 
-		// Create the print job
-		printJob = Toolkit.getDefaultToolkit().getPrintJob(frame, "", jobAttributes, pageAttributes);
-
 		// Detect if the user cancelled the print dialog
 		if (printJob == null)
 			return false;
-
-		return true;
+		else
+			return true;
 
 	}
 
@@ -286,10 +289,37 @@ public class VCLPrintJob {
 	 */
 	public VCLGraphics startPage() {
 
-		Graphics2D g = (Graphics2D)printJob.getGraphics();
-		// Set the transform in case we are printing landscape
-		g.transform(new AffineTransform(pageFormat.getMatrix()));
-		pageGraphics = new VCLGraphics(g);
+		// Increment the current page
+		currentPage++;
+
+		// Determine if this page is in the printable range
+		boolean printPage = true;
+		if (pageRanges != null) {
+			printPage = false;
+			for (int i = 0; i < pageRanges.length; i++) {
+				if (currentPage >= pageRanges[i][0] && currentPage <= pageRanges[i][1]) {
+					printPage = true;
+					break;
+				}
+			}
+		}
+
+		// Get print graphics
+		if (printPage && printJob != null) {
+			Graphics2D g = (Graphics2D)printJob.getGraphics();
+			if (g != null) {
+				// Set the transform in case we are printing landscape
+				g.transform(new AffineTransform(pageFormat.getMatrix()));
+				pageGraphics = new VCLGraphics(g);
+			}
+		}
+
+		// Fall back to a dummy graphics
+		if (pageGraphics == null) {
+			pageImage = new VCLImage(1, 1, 0);
+			pageGraphics = pageImage.getGraphics();
+		}
+
 		return pageGraphics;
 
 	}

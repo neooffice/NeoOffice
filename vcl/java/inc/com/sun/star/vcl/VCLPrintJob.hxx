@@ -73,8 +73,6 @@ public:
 	void				dispose();
 	void				endJob();
 	void				endPage();
-	ULONG				getCopies();
-	sal_Bool			isCollate();
 	sal_Bool			startJob();
 	com_sun_star_vcl_VCLGraphics*	startPage();
 };

@@ -43,6 +43,9 @@
 #ifndef _SV_SALVD_HXX
 #include <salvd.hxx>
 #endif
+#ifndef _SV_SALPTYPE_HXX
+#include <salptype.hxx>
+#endif
 #ifndef _SV_JOBSET_H
 #include <jobset.h>
 #endif
@@ -102,9 +105,6 @@ BOOL SalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 
 BOOL SalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalInfoPrinter::SetPrinterData not implemented\n" );
-#endif
 	return TRUE;
 }
 
@@ -112,19 +112,14 @@ BOOL SalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
 
 BOOL SalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalInfoPrinter::SetData not implemented\n" );
-#endif
-	return FALSE;
+	return TRUE;
 }
 
 // -----------------------------------------------------------------------
 
 ULONG SalInfoPrinter::GetPaperBinCount( const ImplJobSetup* pSetupData )
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalInfoPrinter::GetPaperBinCount not implemented\n" );
-#endif
+	// Return a dummy value
 	return 0;
 }
 
@@ -132,9 +127,7 @@ ULONG SalInfoPrinter::GetPaperBinCount( const ImplJobSetup* pSetupData )
 
 XubString SalInfoPrinter::GetPaperBinName( const ImplJobSetup* pSetupData, ULONG nPaperBin )
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalInfoPrinter::GetPaperBinName not implemented\n" );
-#endif
+	// Return a dummy value
 	return XubString();
 }
 
@@ -231,24 +224,7 @@ BOOL SalPrinter::EndPage()
 
 ULONG SalPrinter::GetErrorCode()
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalPrinter::GetErrorCode not implemented\n" );
-#endif
-	return 0;
-}
-
-// -----------------------------------------------------------------------
-
-ULONG SalPrinter::GetCopies()
-{
-	return maPrinterData.mpVCLPrintJob->getCopies();
-}
-
-// -----------------------------------------------------------------------
-
-BOOL SalPrinter::IsCollate()
-{
-	return maPrinterData.mpVCLPrintJob->isCollate();
+	return SAL_PRINTER_ERROR_ABORT;
 }
 
 // =======================================================================
