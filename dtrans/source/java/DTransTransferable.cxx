@@ -65,6 +65,7 @@ using namespace vos;
 
 using namespace com::sun::star::datatransfer;
 using namespace com::sun::star::io;
+
 using namespace com::sun::star::uno;
 using namespace java::dtrans;
 

@@ -35,14 +35,21 @@
 
 #define _JAVA_DTRANS_JAVA_LANG_OBJECT_CXX
 
-#ifndef _VCL_UNOHELP_HXX
-#include <vcl/unohelp.hxx>
-#endif
 #ifndef _JAVA_DTRANS_JAVA_LANG_CLASS_HXX
 #include <java/lang/Class.hxx>
 #endif
 #ifndef _JAVA_DTRANS_JAVA_LANG_THROWABLE_HXX
 #include <java/lang/Throwable.hxx>
+#endif
+#ifndef _COMPHELPER_PROCESSFACTORY_HXX_
+#include <comphelper/processfactory.hxx>
+#endif
+#ifndef _CPPUHELPER_SERVICEFACTORY_HXX_
+#include <cppuhelper/servicefactory.hxx>
+#endif
+#include <com/sun/star/registry/XImplementationRegistration.hpp>
+#ifndef _COM_SUN_STAR_LANG_XMULTISERVICEFACTORY_HPP_
+#include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #endif
 #ifndef _COM_SUN_STAR_JAVA_XJAVATHREADREGISTER_11_HPP_
 #include <com/sun/star/java/XJavaThreadRegister_11.hpp>
@@ -56,11 +63,19 @@
 #ifndef _RTL_PROCESS_H_
 #include <rtl/process.h>
 #endif
+#ifndef _TOOLS_TEMPFILE_HXX
+#include <tools/tempfile.hxx>
+#endif
+#ifndef _OSL_FILE_HXX_
+#include <osl/file.hxx>
+#endif
 
 using namespace java::dtrans;
-using namespace vcl;
+using namespace osl;
+using namespace rtl;
 using namespace vos;
 using namespace com::sun::star::java;
+using namespace com::sun::star::registry;
 using namespace com::sun::star::uno;
 using namespace com::sun::star::lang;
 
@@ -128,10 +143,41 @@ sal_Bool DTransThreadAttach::StartJava()
 		OGuard aGuard( OMutex::getGlobalMutex() );
 		if ( !bStarted )
 		{
-			Reference<XMultiServiceFactory> xFactory = unohelper::GetMultiServiceFactory();
-			OSL_ENSURE( xFactory.is(), "No XMultiServiceFactory available!" );
+
+			Reference<XMultiServiceFactory> xFactory = ::comphelper::getProcessServiceFactory();
+
 			if ( !xFactory.is() )
-				return sal_False;
+			{
+				TempFile aTempFile;
+				OUString aTempFileName;
+				FileBase::getSystemPathFromFileURL( aTempFile.GetName(), aTempFileName );
+				xFactory = ::cppu::createRegistryServiceFactory( aTempFileName, rtl::OUString(), sal_False );
+
+				Reference < XImplementationRegistration > xReg( xFactory->createInstance( OUString::createFromAscii( "com.sun.star.registry.ImplementationRegistration" ) ), UNO_QUERY );
+
+#ifdef WNT
+				OUString aComponentPathString = OUString::createFromAscii( "jen" );
+				aComponentPathString += rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dll" ));
+#else
+				OUString aComponentPathString = OUString( RTL_CONSTASCII_USTRINGPARAM( "libjen" ));
+#ifdef MACOSX
+				aComponentPathString += OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ));
+#else
+				aComponentPathString += OUString( RTL_CONSTASCII_USTRINGPARAM( ".so" ));
+#endif
+#endif
+				if ( aComponentPathString.getLength() )
+				{
+					try
+					{
+						xReg->registerImplementation( OUString::createFromAscii( "com.sun.star.loader.SharedLibrary" ), aComponentPathString, NULL );
+					}
+					catch( Exception & )
+					{
+					}
+				}
+				::comphelper::setProcessServiceFactory( xFactory );
+			}
 
 		    JNIEnv *pEnv = NULL;
 
