@@ -1,4 +1,4 @@
-#*************************************************************************
+##########################################################################
 #
 #   $RCSfile$
 #
@@ -10,7 +10,6 @@
 #   either of the following licenses
 #
 #          - GNU General Public License Version 2.1
-#          
 #
 #   Sun Microsystems Inc., October, 2000
 #
@@ -32,23 +31,14 @@
 #   License along with this library; if not, write to the Free Software
 #   Foundation, Inc., 59 Temple Place, Suite 330, Boston,
 #   MA  02111-1307  USA
-#
-#
 #   
 #   =================================================
-#   Modified September 2002 by Edward Peterlin. SISSL Removed. NeoOffice is distributed under GPL only under modification term 3 of the LGPL.
+#   Modified June 2003 by Patrick Luby. SISSL Removed. NeoOffice is
+#   distributed under GPL only under modification term 3 of the LGPL.
 #
 #   Contributor(s): _______________________________________
 #
-#
-#
-#*************************************************************************
-
-#/************************************************************************
-#
-#  Modified September 2002 Edward Peterlin, Dan Williams for NeoOffice support.
-#
-#***********************************************************************/
+##########################################################################
 
 PRJ=..$/..$/..
 
