@@ -36,6 +36,40 @@
 				<string>xls</string>
 				<string>xlt</string>
 			</array>
+			<key>CFBundleTypeMIMETypes</key>
+			<array>
+				<string>application/vnd.sun.xml.writer</string>
+				<string>application/vnd.sun.xml.writer.global</string>
+				<string>application/vnd.stardivision.writer</string>
+				<string>application/vnd.stardivision.writer-global</string>
+				<string>application/x-starwriter</string>
+				<string>application/vnd.sun.xml.writer.template</string>
+				<string>application/msword</string>
+				<string>application/vnd.sun.xml.calc</string>
+				<string>application/vnd.stardivision.calc</string>
+				<string>application/x-starcalc</string>
+				<string>application/vnd.sun.xml.calc.template</string>
+				<string>application/excel</string>
+				<string>application/msexcel</string>
+				<string>application/vnd.ms-excel</string>
+				<string>application/x-msexcel</string>
+				<string>application/vnd.sun.xml.impress</string>
+				<string>application/vnd.stardivision.impress</string>
+				<string>application/vnd.stardivision.impress-packed</string>
+				<string>application/x-starimpress</string>
+				<string>application/vnd.sun.xml.impress.template</string>
+				<string>application/powerpoint</string>
+				<string>application/mspowerpoint</string>
+				<string>application/vnd.ms-powerpoint</string>
+				<string>application/x-mspowerpoint</string>
+				<string>application/vnd.sun.xml.draw</string>
+				<string>application/vnd.stardivision.draw</string>
+				<string>application/x-stardraw</string>
+				<string>application/vnd.sun.xml.draw.template</string>
+				<string>application/vnd.sun.xml.math</string>
+				<string>application/vnd.stardivision.math</string>
+				<string>application/x-starmath</string>
+			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
 			<key>CFBundleTypeOSTypes</key>
@@ -44,8 +78,6 @@
 			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
-			<key>LSIsAppleDefaultForType</key>
-			<true/>
 		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
