@@ -1589,7 +1589,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			}
 		}
 
-		mouseModifiersPressed = e.getModifiers();
+		VCLFrame.mouseModifiersPressed = e.getModifiers();
+
+		// Just to be safe, post a mouse entered event
+		MouseEvent mouseEntered = new MouseEvent(e.getComponent(), MouseEvent.MOUSE_ENTERED, e.getWhen(), VCLFrame.mouseModifiersPressed, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
+		mouseEntered(mouseEntered);
 
 		// Enable mouse capture
 		VCLFrame.capture = true;
@@ -1619,10 +1623,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			return;
 
 		// Check if we changed the modifiers in the mouse pressed event
-		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && (e.getModifiers() & mouseModifiersPressed) == 0)
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && (e.getModifiers() & VCLFrame.mouseModifiersPressed) == 0)
 			e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), InputEvent.BUTTON1_MASK, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
 
-		mouseModifiersPressed &= ~(e.getModifiers());
+		VCLFrame.mouseModifiersPressed &= ~(e.getModifiers());
 
 		VCLFrame f = this;
 
@@ -1649,13 +1653,17 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			if (f == null)
 				f = this;
 
-			if (mouseModifiersPressed == 0 && VCLFrame.lastCaptureFrame != null && VCLFrame.lastCaptureFrame != f) {
+			if (VCLFrame.mouseModifiersPressed == 0 && VCLFrame.lastCaptureFrame != null && VCLFrame.lastCaptureFrame != f) {
 				Window w = VCLFrame.lastCaptureFrame.getWindow();
 				Panel p = VCLFrame.lastCaptureFrame.getPanel();
 				if (w != null && !(w instanceof Frame) && w.isShowing() && p != null) {
 					VCLFrame.lastCaptureFrame.focusGained(new FocusEvent(p, FocusEvent.FOCUS_GAINED));
 					VCLFrame.lastCaptureFrame.focusLost(new FocusEvent(p, FocusEvent.FOCUS_LOST));
 				}
+				w = f.getWindow();
+				p = f.getPanel();
+				if (w != null && w instanceof Frame && w.isShowing() && p != null)
+					f.focusGained(new FocusEvent(p, FocusEvent.FOCUS_GAINED));
 			}
 		}
 
