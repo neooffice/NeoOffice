@@ -338,24 +338,28 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			return;
 		}
 		case SALEVENT_USEREVENT:
+		{
 			dispatchEvent( nID, pFrame, pData );
 			return;
-                case SALEVENT_MENUCOMMAND:
-                {
-                        SalMenuEvent *pMenuEvent = (SalMenuEvent *)pData;
-                        if( !pMenuEvent )
-                        {
-                                pMenuEvent = new SalMenuEvent();
-                                pMenuEvent->mnId = getMenuID();
-                                pMenuEvent->mpMenu = (void *)getMenuCookie();
-                        }
-                        dispatchEvent( nID, pFrame, pMenuEvent);
-                        delete pMenuEvent;
-                        return;
-                }
+		}
+		case SALEVENT_MENUCOMMAND:
+		{
+			SalMenuEvent *pMenuEvent = (SalMenuEvent *)pData;
+			if ( !pMenuEvent )
+			{
+				pMenuEvent = new SalMenuEvent();
+				pMenuEvent->mnId = getMenuID();
+				pMenuEvent->mpMenu = (void *)getMenuCookie();
+			}
+			dispatchEvent( nID, pFrame, pMenuEvent);
+			delete pMenuEvent;
+			return;
+		}
 		default:
+		{
 			dispatchEvent( nID, pFrame, pData );
 			return;
+		}
 	}
 }
 
@@ -382,12 +386,13 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 			if ( pFrame == *it )
 			{
 				pFrame->Flush();
+
+				// Update the menu structure so the native menus will reflect
+				// the frame's menu structure
+				UpdateMenusForFrame( pFrame, NULL );
 				break;
 			}
 		}
-                
-                // Update the menu structure so the native menus will reflect the frame's menu structure
-                UpdateMenusForFrame(pFrame, NULL);
 	}
 }
 
