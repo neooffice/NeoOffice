@@ -1253,16 +1253,25 @@ void SalInstance::Yield( BOOL bWait )
 	if ( nTimeout )
 		nCount = Application::ReleaseSolarMutex();
 
-	// Dispatch next pending AWT event. Only dispatch one event as dispatching
+	// Dispatch pending AWT events
 	// multiple events can cause crashing in the next SALEVENT_USEREVENT.
-	if ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
+	while ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
 	{
 		if ( nCount )
 			Application::AcquireSolarMutex( nCount );
 		nCount = 0;
 
+		USHORT nID = pEvent->getID();
 		pEvent->dispatch();
 		delete pEvent;
+
+		// If this is not a mouse move event, make another pass through
+		// the loop in case the next event is a mouse released event. If the
+		// timer is run between continguous mouse or key pressed and released
+		// the application acts is if two mouse clicks have been made instead
+		// of one.
+		if ( nID == SALEVENT_MOUSEMOVE )
+			break;
 	}
 
 	if ( nCount )
