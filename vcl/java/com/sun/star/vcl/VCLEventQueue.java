@@ -237,6 +237,15 @@ public final class VCLEventQueue {
 					queue.mouseMove.remove = true;
 				queue.mouseMove = newItem;
 			}
+			// Ignore duplicate window close events
+			if (id == VCLEvent.SALEVENT_CLOSE) {
+				VCLEventQueue.QueueItem eqi = queue.head;
+				while (eqi != null) {
+					if (eqi.event.getID() == VCLEvent.SALEVENT_CLOSE && eqi.event.getFrame() == newItem.event.getFrame())
+						return;
+					eqi = eqi.next;
+				}
+			}
 			// Purge removed events from the front of the queue
 			while (queue.head != null && queue.head.remove)
 				queue.head = queue.head.next;
