@@ -371,25 +371,11 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 		return;
 	}
 
-	// Cache glyph widths
-	nBufSize = mpHash->mnLen * sizeof( long );
-	mpCharAdvances = (long *)rtl_allocateMemory( nBufSize );
-	memset( mpCharAdvances, 0, nBufSize );
-
-	int i;
-	int nLastAdjustedPos = 0;
-	ATSTrapezoid aTrapezoid;
-	for ( i = 0; i < mpHash->mnLen; i++ )
-	{
-		// Fix bug 448 by eliminating subpixel advances
-		if ( ATSUGetGlyphBounds( maLayout, 0, 0, i, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
-			mpCharAdvances[ i ] = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX );
-	}
-
 	// Cache mapping of characters to glyphs
 	nBufSize = mpHash->mnLen * sizeof( int );
 	mpCharsToGlyphs = (int *)rtl_allocateMemory( nBufSize );
 
+	int i;
 	for ( i = 0; i < mpHash->mnLen; i++ )
 		mpCharsToGlyphs[ i ] = -1;
 	for ( i = 0; i < mnGlyphCount; i++ )
@@ -397,6 +383,50 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 		int nCharPos = mpGlyphInfoArray->glyphs[ i ].charIndex;
 		if ( mpCharsToGlyphs[ nCharPos ] < 0 || i < mpCharsToGlyphs[ nCharPos ] )
 			mpCharsToGlyphs[ nCharPos ] = i;
+	}
+
+	// Cache glyph widths
+	nBufSize = mpHash->mnLen * sizeof( long );
+	mpCharAdvances = (long *)rtl_allocateMemory( nBufSize );
+	memset( mpCharAdvances, 0, nBufSize );
+
+	ATSTrapezoid aTrapezoid;
+	ATSGlyphScreenMetrics aScreenMetrics;
+	for ( i = 0; i < mpHash->mnLen; i++ )
+	{
+		// Fix bug 448 by eliminating subpixel advances
+		if ( ATSUGetGlyphBounds( maLayout, 0, 0, i, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
+		{
+			mpCharAdvances[ i ] = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX );
+
+			// Fix bug 516 by detecting non-spacing characters
+			if ( !maVerticalFontStyle )
+			{
+				int j;
+				bool bAdjust = true;
+				for ( j = mpCharsToGlyphs[ i ]; j < mnGlyphCount && mpGlyphInfoArray->glyphs[ j ].charIndex == i; j++ )
+				{
+					if ( ATSUGlyphGetScreenMetrics( mpGlyphInfoArray->glyphs[ j ].style, 1, &mpGlyphInfoArray->glyphs[ j ].glyphID, sizeof( GlyphID ), mpHash->mbAntialiased, mpHash->mbAntialiased, &aScreenMetrics ) == noErr && aScreenMetrics.deviceAdvance.x )
+					{
+						bAdjust = false;
+						break;
+					}
+				}
+
+				if ( bAdjust )
+				{
+					for ( j = i - 1; j >= 0 && mpCharAdvances[ i ]; j-- )
+					{
+						if ( mpCharAdvances[ j ] )
+						{
+							long nAdjust = mpCharAdvances[ i ] > mpCharAdvances[ j ] ? mpCharAdvances[ j ] : mpCharAdvances[ i ];
+							mpCharAdvances[ j ] += nAdjust;
+							mpCharAdvances[ i ] -= nAdjust;
+						}
+					}
+				}
+			}
+		}
 	}
 
 	// Find positions that require fallback fonts
