@@ -128,9 +128,16 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 	{
 		case SALEVENT_SHUTDOWN:
 		{
-			SalFrame *pFrame = pSalData->maFrameList.front();
-			if ( pFrame )
-				dispatchEvent( nID, pFrame, NULL );
+			// If a bordered window is found, dispatch the SALEVENT_SHUTDOWN
+			// event
+			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+			{
+				if ( (*it)->maFrameData.mbVisible && (*it)->maGeometry.nTopDecoration )
+				{
+					dispatchEvent( nID, *it, NULL );
+					break;
+				}
+			}
 			return;
 		}
 		case SALEVENT_OPENDOCUMENT:
