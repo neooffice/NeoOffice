@@ -50,24 +50,24 @@ PRODUCT_NAME=NeoOffice/J
 PRODUCT_DIR_NAME=NeoOfficeJ
 # Important: Note that there are escape characters in the PRODUCT_NAME for the
 # UTF-8 trademark symbol. Don't replace these with "\x##" literal strings!
-PRODUCT_TRADEMARKED_NAME=NeoOffice™/J
-PRODUCT_VERSION=0.7
+PRODUCT_TRADEMARKED_NAME=NeoOffice®/J
+PRODUCT_VERSION=0.7.1
 PRODUCT_FILETYPE=no%f
 
 # CVS macros
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
-OO_PACKAGE:=all
+OO_PACKAGES:=MathMLDTD UnoControls XmlSearch apiwww autodoc automation basctl basic berkeleydb bridges chaos codemaker comphelper config_office configmgr connectivity cosv cppu cppuhelper cpputools dbaccess desktop dmake dtrans eventattacher expat ext_log4j extensions external extras fileaccess forms fpicker framework freetype goodies helpcontent i18n i18n_simple i18npool idl idlc inet instsetoo io javaunohelper jtools jurt jut ldapber lingu lingucomponent linguistic moz nas neon netbeans_integration odk offapi officecfg offmgr offuh package padmin product psprint rdbmaker readlicense readlicense_oo registry remotebridges res ridljar rsc sablot sal salhelper sandbox sax sc scaddins sch scp scptools sd setup2 sfx2 shell sj2 so3 solenv soltools sot starmath stlport stoc store svtools svx sw sysui toolkit tools transex3 ucb ucbhelper udkapi udkwww udm unoil unotools unzip uui vcl vos wizards xml2cmp xmlhelp xmloff xmlscript xmlwww zlib
 OO_TAG:=OOO_STABLE_1_PORTS
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOfficeJ
-NEO_TAG:=NeoOfficeJ-0_7
+NEO_TAG:=NeoOfficeJ-0_7_1
 
 all: build.all
 
 # Create the build directory and checkout the OpenOffice.org sources
 build.oo_checkout:
 	mkdir -p "$(BUILD_HOME)"
-	cd "$(BUILD_HOME)" ; cvs -d "$(OO_CVSROOT)" co -r "$(OO_TAG)" "$(OO_PACKAGE)"
+	cd "$(BUILD_HOME)" ; cvs -d "$(OO_CVSROOT)" co -r "$(OO_TAG)" $(OO_PACKAGES)
 	chmod -Rf u+w "$(BUILD_HOME)"
 	touch "$@"
 
@@ -173,6 +173,7 @@ build.package: build.neo_patches
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "license.html" "readme.html" "spadmin" "setup" "program/libdtransX11$${UPD}$${DLLSUFFIX}.dylib" "program/libpsp$${UPD}$${DLLSUFFIX}.dylib" "program/libspa$${UPD}$${DLLSUFFIX}.dylib" "program/setup.bin" "program/spadmin" "program/spadmin.bin"
 	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#ProductPatch=.*$$#ProductPatch=($(PRODUCT_VERSION))#' "program/bootstraprc" | sed '/Location=.*$$/d' | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/Library/$(PRODUCT_DIR_NAME)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' > "../../../out" ; mv -f "../../../out" "program/bootstraprc"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "share/config/registry/cache" ; sh -e -c 'for i in "share/config/registry/instance/org/openoffice/Setup.xml" "share/config/registry/instance/org/openoffice/Office/Common.xml" ; do sed "s#\"string\">.*</ooName>#\"string\">$(PRODUCT_NAME)</ooName>#g" "$${i}" | sed "s#\"string\">.*</ooSetupVersion>#\"string\">$(PRODUCT_VERSION)</ooSetupVersion>#g" | sed "s#$(PWD)/$(INSTALL_HOME)/package#/Applications#g" | sed "s#>OpenOffice\.org [0-9\.]* #>$(PRODUCT_NAME) $(PRODUCT_VERSION) #g" | sed "s#/work#/../../../Documents#g" | sed "s#>UNIX<#>MAC<#g" > "../../../out" ; mv -f "../../../out" "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -name "*.dylib*" -o -name "*.bin"` ; do strip -S -x "$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'if [ ! -d "MacOS" ] ; then rm -Rf "MacOS" ; mv -f "program" "MacOS" ; ln -s "MacOS" "program" ; fi'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find . -type d | grep -v /CVS$$` ; do mkdir -p "$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find . ! -type d | grep -v /CVS/` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
