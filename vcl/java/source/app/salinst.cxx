@@ -1039,32 +1039,6 @@ void SalInstance::DestroyPrinter( SalPrinter* pPrinter )
 
 // -----------------------------------------------------------------------
 
-SalMenu* SalInstance::CreateMenu( BOOL bMenuBar, Menu* pVCLMenu )
-{
-    return NULL;
-}
-
-// -----------------------------------------------------------------------
-
-void SalInstance::DestroyMenu( SalMenu* pMenu )
-{
-}
-
-// -----------------------------------------------------------------------
-
-SalMenuItem* SalInstance::CreateMenuItem( const SalItemParams* pItemData )
-{
-    return NULL;
-}
-
-// -----------------------------------------------------------------------
-
-void SalInstance::DestroyMenuItem( SalMenuItem* pItem )
-{
-}
-
-// -----------------------------------------------------------------------
-
 SalVirtualDevice* SalInstance::CreateVirtualDevice( SalGraphics* pGraphics,
                                                     long nDX, long nDY,
                                                     USHORT nBitCount )

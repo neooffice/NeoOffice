@@ -1410,6 +1410,17 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		return parent;
 
 	}
+        
+        /**
+         * Returns the queue to which the frame is posting events.
+         *
+         * @return the event queue
+         */
+        VCLEventQueue getQueue() {
+            
+                return queue;
+        
+        }
 
 	/**
 	 * Gets the currently selected text from the text editing component.

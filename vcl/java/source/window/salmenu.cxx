@@ -55,6 +55,18 @@
 #ifndef _SV_SALMENU_HXX
 #include <salmenu.hxx>
 #endif
+#ifndef _SV_SALFRAME_HXX
+#include <salframe.hxx>
+#endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLMENUBAR_HXX
+#include <com/sun/star/vcl/VCLMenuBar.hxx>
+#endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLMENUITEMDATA_HXX
+#include <com/sun/star/vcl/VCLMenuItemData.hxx>
+#endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLMENU_HXX
+#include <com/sun/star/vcl/VCLMenu.hxx>
+#endif
 
 
 /*
@@ -63,10 +75,20 @@
 
 SalMenu::SalMenu()
 {
+    memset( &maData, 0, sizeof(maData) );
 }
 
 SalMenu::~SalMenu()
 {
+    if( maData.mbIsMenuBarMenu && maData.mpVCLMenuBar )
+    {
+        maData.mpVCLMenuBar->dispose();
+        delete maData.mpVCLMenuBar;
+    }
+    else if( maData.mpVCLMenu )
+    {
+        delete maData.mpVCLMenu;
+    }
 }
 
 BOOL SalMenu::VisibleMenuBar()
@@ -76,38 +98,102 @@ BOOL SalMenu::VisibleMenuBar()
 
 void SalMenu::SetFrame( const SalFrame *pFrame )
 {
+    if( maData.mbIsMenuBarMenu && maData.mpVCLMenuBar )
+    {
+        maData.mpVCLMenuBar->setFrame( pFrame->maFrameData.mpVCLFrame );
+    }
 }
 
 void SalMenu::InsertItem( SalMenuItem* pSalMenuItem, unsigned nPos )
 {
+    if( maData.mbIsMenuBarMenu && maData.mpVCLMenuBar )
+    {
+        maData.mpVCLMenuBar->addMenuItem( pSalMenuItem->maData.mpVCLMenuItemData, nPos );
+    }
+    else if( maData.mpVCLMenu )
+    {
+        maData.mpVCLMenu->insertItem( pSalMenuItem->maData.mpVCLMenuItemData, nPos );
+    }
 }
 
 void SalMenu::RemoveItem( unsigned nPos )
 {
+    if( maData.mbIsMenuBarMenu && maData.mpVCLMenuBar )
+    {
+        maData.mpVCLMenuBar->removeMenu( nPos );
+    }
+    else if( maData.mpVCLMenu )
+    {
+        maData.mpVCLMenu->removeItem( nPos );
+    }
 }
 
+/**
+ * Attach a new submenu to a menu item
+ *
+ * @param pSalMenuItem		? (? pointer to the item already at nPos ?)
+ * @param pSubMenu		new menu to provide the contents of the submenu
+ * @param nPos			position of the submenu in the menu item list
+ */
 void SalMenu::SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsigned nPos )
 {
+    if( maData.mbIsMenuBarMenu && maData.mpVCLMenuBar && pSubMenu && pSubMenu->maData.mpVCLMenu )
+    {
+        maData.mpVCLMenuBar->changeMenu( pSubMenu->maData.mpVCLMenu->getMenuItemDataObject(), nPos );
+    }
+    else if( maData.mpVCLMenu )
+    {
+        maData.mpVCLMenu->attachSubmenu( pSubMenu->maData.mpVCLMenu->getMenuItemDataObject(), nPos );
+    }
 }
 
 void SalMenu::CheckItem( unsigned nPos, BOOL bCheck )
 {
+    if( maData.mbIsMenuBarMenu )
+    {
+        // doesn't make sense to check top level menus!
+    }
+    else if( maData.mpVCLMenu )
+    {
+        maData.mpVCLMenu->checkItem(nPos, bCheck);
+    }
 }
 
 void SalMenu::EnableItem( unsigned nPos, BOOL bEnable )
 {
+    if( maData.mbIsMenuBarMenu && maData.mpVCLMenuBar )
+    {
+        maData.mpVCLMenuBar->enableMenu( nPos, bEnable );
+    }
+    else if( maData.mpVCLMenu )
+    {
+        maData.mpVCLMenu->enableItem(nPos, bEnable);
+    }
 }
 
 void SalMenu::SetItemImage( unsigned nPos, SalMenuItem* pSalMenuItem, const Image& rImage )
 {
+    // for now we'll ignore putting icons in AWT menus.  Most Mac apps don't have them, so they're
+    // kind of extraneous on the platform anyhow.
 }
 
 void SalMenu::SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const XubString& rText )
 {
+    // assume pSalMenuItem is a pointer to the menu item object already at nPos
+    if( pSalMenuItem && pSalMenuItem->maData.mpVCLMenuItemData )
+    {
+        // remove accelerator character
+        XubString theText(rText);
+        theText.EraseAllChars('~');
+        pSalMenuItem->maData.mpVCLMenuItemData->setTitle( rText );
+    }
 }
 
 void SalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, const KeyCode& rKeyCode, const XubString& rKeyName )
 {
+    // assume pSalMenuItem is a pointer to the item to be associated with the new shortcut
+    if( pSalMenuItem && pSalMenuItem->maData.mpVCLMenuItemData )
+        pSalMenuItem->maData.mpVCLMenuItemData->setKeyboardShortcut(rKeyCode.GetFullKeyCode() & 0x0FFF);
 }
 
 void SalMenu::GetSystemMenuData( SystemMenuData* pData )
@@ -123,11 +209,66 @@ void SalMenu::GetSystemMenuData( SystemMenuData* pData )
 
 SalMenuItem::SalMenuItem()
 {
+    maData.mpVCLMenuItemData = NULL;
 }
 
 SalMenuItem::~SalMenuItem()
 {
+    if( maData.mpVCLMenuItemData )
+        delete maData.mpVCLMenuItemData;
 }
 
 // -------------------------------------------------------------------
 
+// -----------------------------------------------------------------------
+
+SalMenu* SalInstance::CreateMenu( BOOL bMenuBar, Menu* pVCLMenu )
+{
+    SalMenu *	pSalMenu = new SalMenu();
+    pSalMenu->maData.mbIsMenuBarMenu = bMenuBar;
+    pSalMenu->maData.mpVCLMenuBar=NULL;
+    pSalMenu->maData.mpVCLMenu=NULL;
+    
+    if( bMenuBar )
+    {
+        // create a menubar java object
+        
+        pSalMenu->maData.mpVCLMenuBar=new ::vcl::com_sun_star_vcl_VCLMenuBar();
+    }
+    else
+    {
+        // create a regular menu instance
+        
+        pSalMenu->maData.mpVCLMenu=new ::vcl::com_sun_star_vcl_VCLMenu();
+    }
+    
+    return( pSalMenu );
+}
+
+// -----------------------------------------------------------------------
+
+void SalInstance::DestroyMenu( SalMenu* pMenu )
+{
+    delete pMenu;
+}
+
+// -----------------------------------------------------------------------
+
+SalMenuItem* SalInstance::CreateMenuItem( const SalItemParams* pItemData )
+{
+    if(!pItemData)
+        return NULL;
+    
+    SalMenuItem *	pSalMenuItem = new SalMenuItem();
+    XubString title(pItemData->aText);
+    title.EraseAllChars('~');
+    pSalMenuItem->maData.mpVCLMenuItemData=new ::vcl::com_sun_star_vcl_VCLMenuItemData( title, ( pItemData->eType == MENUITEM_SEPARATOR ), pItemData->nId, pItemData->pMenu );
+    return( pSalMenuItem );
+}
+
+// -----------------------------------------------------------------------
+
+void SalInstance::DestroyMenuItem( SalMenuItem* pItem )
+{
+    delete pItem;
+}

@@ -67,6 +67,9 @@ SLOFILES = \
 	$(SLO)/VCLFrame.obj \
 	$(SLO)/VCLGraphics.obj \
 	$(SLO)/VCLImage.obj \
+        $(SLO)/VCLMenu.obj \
+	$(SLO)/VCLMenuBar.obj \
+        $(SLO)/VCLMenuItemData.obj \
 	$(SLO)/VCLPageFormat.obj \
 	$(SLO)/VCLPrintJob.obj \
 	$(SLO)/VCLScreen.obj \

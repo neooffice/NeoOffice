@@ -336,6 +336,19 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_USEREVENT:
 			dispatchEvent( nID, pFrame, pData );
 			return;
+                case SALEVENT_MENUCOMMAND:
+                {
+                        SalMenuEvent *pMenuEvent = (SalMenuEvent *)pData;
+                        if( !pMenuEvent )
+                        {
+                                pMenuEvent = new SalMenuEvent();
+                                pMenuEvent->mnId = getMenuID();
+                                pMenuEvent->mpMenu = (void *)getMenuCookie();
+                        }
+                        dispatchEvent( nID, pFrame, pMenuEvent);
+                        delete pMenuEvent;
+                        return;
+                }
 		default:
 			dispatchEvent( nID, pFrame, pData );
 			return;
@@ -788,6 +801,48 @@ long com_sun_star_vcl_VCLEvent::getY()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+short com_sun_star_vcl_VCLEvent::getMenuID()
+{
+	static jmethodID mID = NULL;
+	short out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()S";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getMenuID", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (short)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+int com_sun_star_vcl_VCLEvent::getMenuCookie()
+{
+	static jmethodID mID = NULL;
+	int out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getMenuCookie", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (int)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
 }

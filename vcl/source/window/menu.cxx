@@ -334,6 +334,17 @@ void MenuItemList::InsertSeparator( USHORT nPos )
     pData->bIsTemporary 	= FALSE;
     pData->bMirrorMode		= FALSE;
     pData->nItemImageAngle	= 0;
+    
+    SalItemParams aSalMIData;
+    aSalMIData.nId = pData->nId;
+    aSalMIData.eType = pData->eType;
+    aSalMIData.nBits = pData->nBits;
+    aSalMIData.pMenu = NULL;
+    aSalMIData.aText = "";
+    
+    // Native-support: returns NULL if not supported
+    pData->pSalMenuItem = ImplGetSVData()->mpDefInst->CreateMenuItem( &aSalMIData );
+    
     List::Insert( (void*)pData, nPos );
 }
 

@@ -33,63 +33,44 @@
  *
  ************************************************************************/
 
-#ifndef _SV_SALFRAME_H
-#define _SV_SALFRAME_H
+#ifndef _SV_COM_SUN_STAR_VCL_VCLMENUBAR_HXX
+#define	_SV_COM_SUN_STAR_VCL_VCLMENUBAR_HXX
 
-#include <list>
-
-#ifndef _SV_SV_H
-#include <sv.h>
-#endif
-#ifndef _SV_SYSDATA_HXX 
-#include <sysdata.hxx>
-#endif
-#ifndef _SV_SALGEOM_HXX
-#include <salgeom.hxx>
+#ifndef _SV_JAVA_LANG_OBJECT_HXX
+#include <java/lang/Object.hxx>
 #endif
 
-namespace vcl
-{
-class com_sun_star_vcl_VCLEvent;
+class SalMenu;
+
+namespace vcl {
+
 class com_sun_star_vcl_VCLFrame;
-class com_sun_star_vcl_VCLMenuBar;
-class java_lang_Object;
-}
+class com_sun_star_vcl_VCLMenuItemData;
 
-class SalBitmap;
-
-// ----------------
-// - SalFrameData -
-// ----------------
-
-class SalFrameData
+class com_sun_star_vcl_VCLMenuBar : public java_lang_Object
 {
-	friend class	SalFrame;
-	friend class	SalGraphics;
-	friend class	SalInstance;
-        friend class	SalMenu;
-        friend class	::vcl::com_sun_star_vcl_VCLMenuBar;
-	friend class	::vcl::com_sun_star_vcl_VCLEvent;
-	friend class	::vcl::com_sun_star_vcl_VCLFrame;
+protected:
+	static jclass		theClass;
 
-	::vcl::com_sun_star_vcl_VCLFrame*	mpVCLFrame;
-	::vcl::java_lang_Object*	mpPanel;
-	SalGraphics*	mpGraphics;
-	ULONG			mnStyle;
-	SalFrame*		mpParent;
-	BOOL			mbGraphics;
-	BOOL			mbVisible;
-	::std::list< SalFrame* > maChildren;
-	void*			mpInst;
-	SALFRAMEPROC	mpProc;
-	SystemEnvData	maSysData;
-	BOOL			mbCenter;
-	SalFrameGeometry	maOriginalGeometry;
-	BOOL			mbFullScreen;
-	BOOL			mbPresentation;
-
-					SalFrameData();
-					~SalFrameData();
+public:
+        friend class SalMenu;
+        
+	static jclass		getMyClass();
+                                
+                                com_sun_star_vcl_VCLMenuBar( jobject myObj ) : java_lang_Object( myObj ) {}
+                                
+                                com_sun_star_vcl_VCLMenuBar( );
+        virtual			~com_sun_star_vcl_VCLMenuBar() { }
+        
+        void			setFrame( com_sun_star_vcl_VCLFrame *_par0 );
+        void			dispose();
+        
+        void			addMenuItem( com_sun_star_vcl_VCLMenuItemData *_par0, int _par1 );
+        void			removeMenu( int _par0 );
+        void			changeMenu( com_sun_star_vcl_VCLMenuItemData *_par0, int _par1 );
+        void			enableMenu( int _par0, bool _par1 );
 };
 
-#endif // _SV_SALFRAME_H
+} // namespace vcl
+
+#endif // _SV_COM_SUN_STAR_VCL_VCLMENUBAR_HXX

@@ -58,12 +58,31 @@ class SalMenuItem;
 class SalFrame;
 class Menu;
 
+namespace vcl
+{
+class com_sun_star_vcl_VCLMenuBar;
+class com_sun_star_vcl_VCLMenu;
+class com_sun_star_vcl_VCLMenuItemData;
+}
+
 // =======================================================================
 
 class SalMenuData
 {
 public:
+        // Java VCL specific data
+        
+        // used for menubars only
+        
+        ::vcl::com_sun_star_vcl_VCLMenuBar *mpVCLMenuBar;
+        
+        // used for menus
+        
+        ::vcl::com_sun_star_vcl_VCLMenu *mpVCLMenu;
+        
         // +++ ADD IN POINTER TO NATIVE MENU DATA
+        
+        // Generic data
         
 	SalFrame *	mpParentFrame;		// pointer to the parent frame
 	BOOL			mbIsMenuBarMenu;	// true for menu bars
@@ -78,7 +97,7 @@ public:
 	Bitmap			maBitmap;			// item image
 	int				mnId;			// item id
 
-        // +++ ADD IN NATIVE DATA NECESSARY
+        ::vcl::com_sun_star_vcl_VCLMenuItemData *mpVCLMenuItemData;
         
 	SalMenu *			mpSalMenu;		// SalMenu into which this item is inserted
 	SalMenu *			mpSalSubmenu;		// Submenu SalMenu if this item has a submenu
