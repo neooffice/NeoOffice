@@ -61,9 +61,20 @@ WPXSvInputStream::WPXSvInputStream( Reference< XInputStream > xStream ) :
 {
 	Reference < XSeekable> xSeekable = Reference < XSeekable > (xStream, UNO_QUERY);
 	if (!xSeekable.is())
+	{
 		mnLength = 0;
+	}
 	else
-		mnLength = xSeekable->getLength(); // exception
+	{
+		try
+		{
+			mnLength = xSeekable->getLength(); // exception
+		}
+		catch ( ... )
+		{
+			mnLength = 0;
+		}
+	}
 }
 
 WPXSvInputStream::~WPXSvInputStream()
