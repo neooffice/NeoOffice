@@ -343,16 +343,32 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 								if ( nRequestedType == 'TEXT' )
 								{
 									MacOSSize nLen = aData.getLength();
-									if ( ( (sal_Char *)aData.getConstArray() )[ nLen - 1 ] == 0 )
+									sal_Char *pArray = (sal_Char *)aData.getArray();
+									if ( pArray[ nLen - 1 ] == 0 )
 										nLen--;
-									out <<= OUString( (sal_Char *)aData.getConstArray(), nLen, gsl_getSystemTextEncoding() );
+									// Replace carriage returns with line feeds
+									MacOSSize j = 0;
+									for ( j = 0; j < nLen; j++ )
+									{
+										if ( pArray[ j ] == (sal_Char)13 )
+											pArray[ j ] = (sal_Char)'\n';
+									}
+									out <<= OUString( pArray, nLen, gsl_getSystemTextEncoding() );
 								}
 								else
 								{
 									MacOSSize nLen = aData.getLength() / 2; 
-									if ( ( (sal_Unicode *)aData.getConstArray() )[ nLen - 1 ] == 0 )
+									sal_Unicode *pArray = (sal_Unicode *)aData.getArray();
+									if ( pArray[ nLen - 1 ] == 0 )
 										nLen--;
-									out <<= OUString( (sal_Unicode *)aData.getConstArray(), nLen );
+									// Replace carriage returns with line feeds
+									MacOSSize j = 0;
+									for ( j = 0; j < nLen; j++ )
+									{
+										if ( pArray[ j ] == (sal_Unicode)13 )
+											pArray[ j ] = (sal_Unicode)'\n';
+									}
+									out <<= OUString( pArray, nLen );
 								}
 							}
 							else if ( aFlavor.DataType.equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
