@@ -187,7 +187,7 @@ public final class VCLEventQueue {
 		synchronized (queue) {
 			if (wait && queue.head == null) {
 				try {
-					queue.wait(10);
+					queue.wait(100);
 				}
 				catch (Throwable t) {}
 			}
