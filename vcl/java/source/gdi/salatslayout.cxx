@@ -41,6 +41,9 @@
 #ifndef _SV_SALLAYOUT_HXX
 #include <sallayout.hxx>
 #endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
+#include <com/sun/star/vcl/VCLFont.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
@@ -55,6 +58,7 @@ inline int Float32ToInt( Float32 f ) { return (int)( f+0.5 ); }
 class ATSLayout : public SalLayout
 {
 private:
+	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
 	ATSUTextLayout		maLayout;
 	int					mnRuns;
 	ATSUStyle*			mpStyles;
@@ -66,7 +70,7 @@ private:
 	void				DestroyGlyphInfoArray();
 
 public:
-						ATSLayout();
+						ATSLayout( ::vcl::com_sun_star_vcl_VCLFont *pVCLFont );
 						~ATSLayout();
 
 	virtual bool		LayoutText( ImplLayoutArgs& rArgs );
@@ -104,6 +108,8 @@ public:
 	void				AddPoint( const Float32Point& rPoint, PolyFlags eFlags );
 	void				ClosePolygon();
 };
+
+using namespace vcl;
 
 // ============================================================================
 
@@ -145,12 +151,12 @@ OSStatus MyATSCubicClosePathCallback( void *pData )
 
 SalLayout *SalGraphics::GetTextLayout( ImplLayoutArgs& rArgs, int nFallbackLevel )
 {
-	return new ATSLayout();
+	return new ATSLayout( maGraphicsData.mpVCLFont );
 }
 
 // ============================================================================
 
-ATSLayout::ATSLayout() :
+ATSLayout::ATSLayout( com_sun_star_vcl_VCLFont *pVCLFont ) :
 	maLayout( NULL ),
 	mpStyles( NULL ),
 	mnRuns( 0 ),
@@ -158,12 +164,16 @@ ATSLayout::ATSLayout() :
 	mnLen( 0 ),
 	mpGlyphInfoArray( NULL )
 {
+	mpVCLFont = new com_sun_star_vcl_VCLFont( pVCLFont->getJavaObject() );
 }
 
 // ----------------------------------------------------------------------------
 
 ATSLayout::~ATSLayout()
 {
+	if ( mpVCLFont )
+		delete mpVCLFont;
+
 	if ( mpGlyphInfoArray )
 		DestroyGlyphInfoArray();
 
@@ -237,7 +247,7 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			nTags[0] = kATSUFontTag;
 			nBytes[0] = sizeof( ATSUFontID );
 			nVals[0] = &nFontID;
-			Fixed nSize = Long2Fix( 12 );
+			Fixed nSize = Long2Fix( mpVCLFont->getSize() );
 			nTags[1] = kATSUSizeTag;
 			nBytes[1] = sizeof( Fixed );
 			nVals[1] = &nSize;
@@ -343,11 +353,19 @@ void ATSLayout::DrawText( SalGraphics& rGraphics ) const
 		}
 */
 
-		// Draw the text
+		// Since there is no CGrafPtr associated with the CGContext, we need
+		// to set the font size, color, etc. ourselves
+		CGContextSaveGState( aCGContext );
+		CGContextTranslateCTM( aCGContext, aPos.X(), aPos.Y() * -1 );
+		float nScaleFactor = (float)mpVCLFont->getSize() / 12;
+		CGContextScaleCTM( aCGContext, nScaleFactor, nScaleFactor );
 		ATSUSetLayoutControls( maLayout, 1, &cgTag, &cgSize, &cgValPtr );
 		SalColor nColor = rGraphics.maGraphicsData.mnTextColor;
 		CGContextSetRGBFillColor( aCGContext, SALCOLOR_RED( nColor), SALCOLOR_GREEN( nColor ), SALCOLOR_BLUE( nColor), 1.0 );
-		ATSUDrawText( maLayout, mnStart, mnLen, Long2Fix( aPos.X() ), Long2Fix( aPos.Y() * -1 ) );
+
+		// Draw the text
+		ATSUDrawText( maLayout, mnStart, mnLen, 0, 0 );
+		CGContextRestoreGState( aCGContext );
 		rGraphics.maGraphicsData.mpVCLGraphics->addToFlush( 0, 0, 1000, 1000);
 
 		rGraphics.maGraphicsData.mpVCLGraphics->releaseNativeGraphics( aCGContext );
