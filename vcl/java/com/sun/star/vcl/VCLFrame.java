@@ -1292,7 +1292,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		VCLFrame f = this;
 
-		if (VCLFrame.captureFrame != null && e.getComponent().isShowing()) {
+		if (VCLFrame.capture && VCLFrame.captureFrame != null && e.getComponent().isShowing()) {
 			// Find the capture window
 			f = VCLFrame.captureFrame;
 			Point srcPoint = e.getComponent().getLocationOnScreen();
