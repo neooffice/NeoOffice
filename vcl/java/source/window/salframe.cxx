@@ -238,7 +238,7 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 			pSalData->mpFocusFrame = NULL;
 
 			if ( maFrameData.mpParent )
-				maFrameData.mpParent->ToTop( 0 );
+				maFrameData.mpParent->ToTop( SAL_FRAME_TOTOP_GRABFOCUS );
 		}
 	}
 }
@@ -304,6 +304,8 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 			nX = aWorkArea.nLeft + ( ( aWorkArea.GetWidth() - nWidth ) / 2 );
 			nY = aWorkArea.nTop + ( ( aWorkArea.GetHeight() - nHeight ) / 2 );
 		}
+
+		maFrameData.mbCenter = FALSE;
 	}
 	else if ( maFrameData.mpParent )
 	{
@@ -393,8 +395,6 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	Rectangle *pBounds = new Rectangle( maFrameData.mpVCLFrame->getBounds() );
 	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pBounds );
 	aEvent.dispatch();
-
-	maFrameData.mbCenter = FALSE;
 }
 
 // -----------------------------------------------------------------------
