@@ -17,6 +17,8 @@
 				<string>sxp</string>
 				<string>sxw</string>
 			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>ship.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>application/vnd.sun.xml.writer</string>
@@ -75,6 +77,8 @@
 				<string>xls</string>
 				<string>xlt</string>
 			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>ship.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>application/msword</string>

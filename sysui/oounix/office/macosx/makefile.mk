@@ -51,20 +51,17 @@ dummy:
 
 .ELSE			# "$(OS)"!="MACOSX"
 
-PRODUCTFILES = \
-	$(MISC)$/PkgInfo \
-	$(MISC)$/Info.plist
-
 COPYFILES = \
 	$(MISC)$/ship.icns
 
 .INCLUDE :  target.mk
 
-.PHONY : $(PRODUCTFILES) $(COPYFILES)
+ALLTAR : $(MISC)$/PkgInfo $(MISC)$/Info.plist $(COPYFILES)
 
-ALLTAR : $(PRODUCTFILES) $(COPYFILES)
+$(MISC)$/PkgInfo :
+	printf '%s' 'APPL$(PRODUCT_FILETYPE)' > $@
 
-$(PRODUCTFILES) :
+$(MISC)$/Info.plist :
 	cat /dev/null $(@:f) | $(SED) 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | $(SED) 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' | $(SED) 's#$$(PRODUCT_TRADEMARKED_NAME)#$(PRODUCT_TRADEMARKED_NAME)#g' | $(SED) 's#$$(RSCVERSION)#$(RSCVERSION)#g' | $(SED) 's#$$(PRODUCT_FILETYPE)#$(PRODUCT_FILETYPE)#g' > $@
 
 $(COPYFILES) :
