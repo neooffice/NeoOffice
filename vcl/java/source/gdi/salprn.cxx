@@ -290,7 +290,7 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 						if ( aMaxResolution.hRes > 300 )
 							aMaxResolution.hRes = 300;
 						if ( aMaxResolution.vRes > 300 )
-							aMaxResolution.hRes = 300;
+							aMaxResolution.vRes = 300;
 
 						// Set the page resolution
 						if ( pSetResolution( aPageFormat, &aMaxResolution ) == kPMNoError )
