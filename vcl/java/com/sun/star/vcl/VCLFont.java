@@ -51,6 +51,16 @@ import java.util.ArrayList;
  */
 public class VCLFont {
 
+    /** 
+     * INTERFACE_SYSTEM constant.
+     */
+    public final static String INTERFACE_SYSTEM = "Interface System";
+
+    /** 
+     * INTERFACE_USER constant.
+     */
+    public final static String INTERFACE_USER = "Interface User";
+
 	/**
 	 * Cached fonts.
 	 */
@@ -66,6 +76,10 @@ public class VCLFont {
 	 */
 	static {
 
+		boolean macosx = false;
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
+			macosx = true;
+
 		// Get all of the fonts and screen out duplicates
 		Font[] inFonts = GraphicsEnvironment.getLocalGraphicsEnvironment().getAllFonts();
 		ArrayList array = new ArrayList();
@@ -79,7 +93,22 @@ public class VCLFont {
 				continue;
 			if (!inFonts[i].isPlain())
 				continue;
+			if (macosx && name.startsWith("."))
+				continue;
 			array.add(new VCLFont(inFonts[i]));
+		}
+		// Add in the INTERFACE_SYSTEM and INTERFACE_USER virtual fonts
+		if (macosx) {
+			// Mac OS X has some predefined font names that we can use
+			array.add(new VCLFont(new Font("System", Font.PLAIN, 1), INTERFACE_SYSTEM));
+			array.add(new VCLFont(new Font("Application", Font.PLAIN, 1), INTERFACE_USER));
+		}
+		else {
+			Graphics2D g = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB_PRE).createGraphics();
+			Font f = g.getFont();
+			array.add(new VCLFont(f, INTERFACE_SYSTEM));
+			array.add(new VCLFont(f, INTERFACE_USER));
+			g.dispose();
 		}
 		VCLFont.fonts = (VCLFont[])array.toArray(new VCLFont[array.size()]);
 
@@ -108,6 +137,11 @@ public class VCLFont {
 	private FontMetrics fontMetrics = null;
 
 	/**
+	 * The font name.
+	 */
+	private String name = null;
+
+	/**
 	 * Constructs a new <code>VCLFont</code> instance.
 	 *
 	 * @param f a <code>Font</code> instance
@@ -118,6 +152,19 @@ public class VCLFont {
 
 		// Get the font metrics
 		fontMetrics = VCLFont.graphics.getFontMetrics(f);
+
+	}
+
+	/**
+	 * Constructs a new <code>VCLFont</code> instance.
+	 *
+	 * @param f a <code>Font</code> instance
+	 * @param n the name to use for this font
+	 */
+	VCLFont(Font f, String n) {
+
+		this(f);
+		name = n;
 
 	}
 
@@ -209,7 +256,10 @@ public class VCLFont {
 	 */
 	public String getName() {
 
-		return font.getName();
+		if (name != null)
+			return name;
+		else
+			return font.getName();
 
 	}
 

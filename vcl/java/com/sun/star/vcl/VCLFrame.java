@@ -821,19 +821,31 @@ public class VCLFrame implements ComponentListener, FocusListener, KeyListener, 
 
 		StringBuffer buf = new StringBuffer();
 		if ((keyCode & VCLEvent.KEY_MOD1) == VCLEvent.KEY_MOD1) {
-			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
-				buf.append(KeyEvent.getKeyText(KeyEvent.VK_META));
-			else
+			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+				buf.append("\u2318");
+            }
+			else {
 				buf.append(KeyEvent.getKeyText(KeyEvent.VK_CONTROL));
-			buf.append("+");
+			    buf.append("+");
+            }
 		}
 		if ((keyCode & VCLEvent.KEY_MOD2) == VCLEvent.KEY_MOD2) {
-			buf.append(KeyEvent.getKeyText(KeyEvent.VK_ALT));
-			buf.append("+");
+			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+				buf.append("\u2325");
+            }
+			else {
+				buf.append(KeyEvent.getKeyText(KeyEvent.VK_ALT));
+			    buf.append("+");
+            }
 		}
 		if ((keyCode & VCLEvent.KEY_SHIFT) == VCLEvent.KEY_SHIFT) {
-			buf.append(KeyEvent.getKeyText(KeyEvent.VK_SHIFT));
-			buf.append("+");
+			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+				buf.append("\u21e7");
+            }
+			else {
+				buf.append(KeyEvent.getKeyText(KeyEvent.VK_SHIFT));
+			    buf.append("+");
+            }
 		}
 
 		int outCode = 0;
