@@ -702,15 +702,6 @@ void Desktop::StartSetup( const OUString& aParameters )
 	::vos::OProcess	aProcess( aProgName, aDir );
 
 #ifdef USE_JAVA
-#ifdef MACOSX
-	pid_t pid = fork();
-
-	// We need to execute the osl_getProcessLocale function in a separate
-	// process as it loads libraries that cause all sorts of window focus
-	// problems in Java on Mac OS X 10.1
-	if (pid == 0)
-	{
-#endif	// MACOSX
 	// Wait for execution to finish since Java is so dependent on it
 	OUString aArgListArray[3];
 	rtl_Locale *pLocale;
@@ -758,21 +749,6 @@ void Desktop::StartSetup( const OUString& aParameters )
 		ErrorBox aBootstrapFailedBox( NULL, WB_OK, aMessage );
 		aBootstrapFailedBox.Execute();
 	}
-
-#ifdef USE_JAVA
-#ifdef MACOSX
-		_exit(0);
-	}
-	else
-	{
-		if (pid > 0)
-		{
-			int status;
-			waitpid(pid, &status, 0);
-		}
-	}
-#endif	// MACOSX
-#endif	// USE_JAVA
 }
 
 void Desktop::HandleBootstrapPathErrors( ::utl::Bootstrap::Status aBootstrapStatus, const OUString& aDiagnosticMessage )
