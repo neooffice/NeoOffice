@@ -598,6 +598,8 @@ public final class VCLGraphics {
 		if (clip != null && !clip.intersects(destBounds))
 			return;
 		if (pageQueue != null) {
+			if (pageQueue.pageImage == null)
+				pageQueue.pageImage = new VCLImage(graphicsBounds.width, graphicsBounds.height, bitCount);
 			Graphics2D pageGraphics = pageQueue.pageImage.getImage().createGraphics();
 			VCLGraphics.setDefaultRenderingAttributes(pageGraphics);
 			pageGraphics.setClip(clip);
@@ -1512,7 +1514,6 @@ public final class VCLGraphics {
 		PageQueue(VCLGraphics g) {
 
 			graphics = g;
-			pageImage = new VCLImage(graphics.graphicsBounds.width, graphics.graphicsBounds.height, graphics.getBitCount());
 
 		}
 
@@ -1522,11 +1523,13 @@ public final class VCLGraphics {
 			Graphics2D g = graphics.graphics;
 
 			// Draw the combined image
-			if (pageImageClip != null) {
-				g.setClip(pageImageClip);
-				g.drawRenderedImage(pageImage.getImage(), null);
+			if (pageImage != null) {
+				if (pageImageClip != null) {
+					g.setClip(pageImageClip);
+					g.drawRenderedImage(pageImage.getImage(), null);
+				}
+				pageImage.dispose();
 			}
-			pageImage.dispose();
 			pageImage = null;
 
 			// Invoke all of the queued drawing operations

@@ -81,6 +81,8 @@ using namespace vos;
 
 #endif	// MACOSX
 
+#define MAX_RESOLUTION_DPI 300
+
 using namespace vcl;
 
 // =======================================================================
@@ -284,13 +286,13 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 								}
 							}
 
-							// Limit the resolution to 300 dpi as VCL will scale
-							// entire images before passing them to the
-							// SalGraphics for rendering
-							if ( aMaxResolution.hRes > 300 )
-								aMaxResolution.hRes = 300;
-							if ( aMaxResolution.vRes > 300 )
-								aMaxResolution.vRes = 300;
+							// Limit the resolution to MAX_RESOLUTION_DPI as
+							// VCL will scale entire images before passing
+							// them to theSalGraphics for rendering
+							if ( aMaxResolution.hRes > MAX_RESOLUTION_DPI )
+								aMaxResolution.hRes = MAX_RESOLUTION_DPI;
+							if ( aMaxResolution.vRes > MAX_RESOLUTION_DPI )
+								aMaxResolution.vRes = MAX_RESOLUTION_DPI;
 
 							// Set the page resolution
 							maPrinterData.mpPrinter->maPrinterData.mpVCLPageFormat->setPageResolution( aMaxResolution.hRes, aMaxResolution.vRes );
@@ -360,6 +362,13 @@ ULONG SalPrinter::GetErrorCode()
 		return SAL_PRINTER_ERROR_ABORT;
 	else
 		return 0;
+}
+
+// -----------------------------------------------------------------------
+
+void SalPrinter::SetResolution( long nDPIX, long nDPIY )
+{
+	maPrinterData.mpPrinter->maPrinterData.mpVCLPageFormat->setPageResolution( nDPIX, nDPIY );
 }
 
 // =======================================================================

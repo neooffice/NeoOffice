@@ -65,6 +65,12 @@
 #include <impprn.hxx>
 #endif
 
+#ifdef USE_JAVA
+#ifndef _SV_SALPRN_HXX
+#include <salprn.hxx>
+#endif
+#endif	// USE_JAVA
+
 // -----------
 // - Defines -
 // -----------
@@ -355,10 +361,15 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 		
 		if( mbUserCopy && !mbCollateCopy )
 			nCopyCount = mnCopyCount;
-#if defined USE_JAVA && defined MACOSX
+#if defined USE_JAVA
+#ifdef MACOSX
 		// Java on Mac OS X expects each page to be printed twice
 		nCopyCount *= 2;
-#endif
+#endif	// MACOSX
+		// Java requires that we push the resolution to the printer instead
+		// of vice versa
+		mpPrinter->SetResolution( nMaxBmpDPIX, nMaxBmpDPIY );
+#endif	// USE_JAVA
 
 		for ( USHORT i = 0; i < nCopyCount; i++ )
 		{

@@ -113,13 +113,6 @@ public final class VCLFont {
 			// Get rid of hidden Mac OS X fonts
 			if (macosx && name.startsWith("."))
 				continue;
-			// Chop off redundant portions of the family name
-			int j = name.indexOf(" regular");
-			if (j >= 0)
-				fontFamilies[i] = fontFamilies[i].substring(0, j);
-			j = name.indexOf(" medium");
-			if (j >= 0)
-				fontFamilies[i] = fontFamilies[i].substring(0, j);
 			Font font = new Font(fontFamilies[i], Font.PLAIN, 1);
 			if (font.isPlain())
 				array.add(new VCLFont(font, (short)0, true));
