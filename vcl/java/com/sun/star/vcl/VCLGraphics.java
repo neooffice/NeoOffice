@@ -1413,7 +1413,7 @@ public final class VCLGraphics {
 	public void resetClipRegion() {
 
 		userClip = null;
-		graphics.setClip(userClip);
+		graphics.setClip(new Area(graphicsBounds));
 
 	}
 
@@ -1588,7 +1588,7 @@ public final class VCLGraphics {
 			Graphics2D g = graphics.graphics;
 			Shape clip = g.getClip();
 			if (clip != null)
-				i.clip = new Area(g.getClip());
+				i.clip = new Area(clip);
 			else
 				i.clip = new Area(graphics.graphicsBounds);
 			if (pageImageClip != null)
