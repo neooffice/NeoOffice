@@ -514,17 +514,12 @@ public class VCLEventQueue {
 			}
 
 			// Flush to any areas the Java has painted
-			if (id == PaintEvent.PAINT) {
-				PaintEvent e = (PaintEvent)event;
-				VCLFrame frame = VCLFrame.getVCLFrame(e.getComponent());
-				queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_PAINT, frame, 0));
-            }
-			else if (id == PaintEvent.UPDATE) {
+			if (id == PaintEvent.PAINT || id == PaintEvent.UPDATE) {
 				PaintEvent e = (PaintEvent)event;
 				VCLFrame frame = VCLFrame.getVCLFrame(e.getComponent());
 				if (frame != null)
 					frame.getGraphics().addToFlush(e.getUpdateRect());
-			}
+            }
 
 		}
 
