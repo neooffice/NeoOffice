@@ -444,7 +444,7 @@ void SalInstance::DestroyFrame( SalFrame* pFrame )
 	else
 	{
 		SalFrame* pNextFrame = pSalData->mpFirstFrame;
-		while ( pFrame != pNextFrame->maFrameData.mpNextFrame )
+		while ( pNextFrame && pFrame != pNextFrame->maFrameData.mpNextFrame )
 			pNextFrame = pNextFrame->maFrameData.mpNextFrame;
 		pNextFrame->maFrameData.mpNextFrame = pFrame->maFrameData.mpNextFrame;
 	}
