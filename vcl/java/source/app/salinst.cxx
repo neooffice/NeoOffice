@@ -232,7 +232,9 @@ void SalInstance::AcquireYieldMutex( ULONG nCount )
 
 void SalInstance::Yield( BOOL bWait )
 {
+	static int nRecursionLevel = 0;
 	SalData *pSalData = GetSalData();
+	nRecursionLevel++;
 	ULONG nCount = ReleaseYieldMutex();
 
 	if ( bWait )
@@ -259,11 +261,14 @@ void SalInstance::Yield( BOOL bWait )
 	com_sun_star_vcl_VCLEvent *pEvent = GetSalData()->mpEventQueue->getNextCachedEvent( bWait );
 	if ( pEvent )
 	{
-		pEvent->dispatch();
+		// Ignore SALEVENT_SHUTDOWN events when recursing into this method
+		if ( nRecursionLevel == 1 || pEvent->getID() != SALEVENT_SHUTDOWN )
+			pEvent->dispatch();
 		delete pEvent;
 	}
 
 	AcquireYieldMutex( nCount );
+	nRecursionLevel--;
 }
 
 // -----------------------------------------------------------------------
