@@ -199,7 +199,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 
 			// In presentation mode, don't let presentation window lose focus
 			if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame != pFrame )
-				pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_FOREGROUNDTASK );
+				pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
 			return;
 		}
 		case SALEVENT_LOSEFOCUS:
