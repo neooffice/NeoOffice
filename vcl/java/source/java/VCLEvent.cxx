@@ -620,26 +620,3 @@ long com_sun_star_vcl_VCLEvent::getY()
 	}
 	return out;
 }
-
-// ----------------------------------------------------------------------------
-
-sal_Bool com_sun_star_vcl_VCLEvent::isAWTEvent()
-{
-	static jmethodID mID = NULL;
-	sal_Bool out = sal_False;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()Z";
-			mID = t.pEnv->GetMethodID( getMyClass(), "isAWTEvent", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethod( object, getMyClass(), mID );
-		}
-	}
-	return out;
-}

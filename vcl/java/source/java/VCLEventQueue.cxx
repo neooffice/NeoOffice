@@ -109,7 +109,7 @@ sal_Bool com_sun_star_vcl_VCLEventQueue::anyCachedEvent( USHORT _par0 )
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLEvent *com_sun_star_vcl_VCLEventQueue::getNextCachedEvent( sal_Bool bWait )
+com_sun_star_vcl_VCLEvent *com_sun_star_vcl_VCLEventQueue::getNextCachedEvent( ULONG _par0, sal_Bool _par1 )
 {
 	static jmethodID mID = NULL;
 	com_sun_star_vcl_VCLEvent *out = NULL;
@@ -118,14 +118,15 @@ com_sun_star_vcl_VCLEvent *com_sun_star_vcl_VCLEventQueue::getNextCachedEvent( s
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(Z)Lcom/sun/star/vcl/VCLEvent;";
+			char *cSignature = "(JZ)Lcom/sun/star/vcl/VCLEvent;";
 			mID = t.pEnv->GetMethodID( getMyClass(), "getNextCachedEvent", cSignature );	
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[1];
-			args[0].z = jboolean( bWait );
+			jvalue args[2];
+			args[0].j = jlong( _par0 );
+			args[1].z = jlong( _par1 );
 			jobject tempObj;
 			tempObj = t.pEnv->CallNonvirtualObjectMethodA( object, getMyClass(), mID, args );
 			if ( tempObj )

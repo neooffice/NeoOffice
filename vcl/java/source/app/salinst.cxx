@@ -235,9 +235,36 @@ void SalInstance::AcquireYieldMutex( ULONG nCount )
 
 void SalInstance::Yield( BOOL bWait )
 {
-	static int nRecursionLevel = 0;
+	static USHORT nRecursionLevel = 0;
 	SalData *pSalData = GetSalData();
+	com_sun_star_vcl_VCLEvent *pEvent;
+	ULONG nTimeout = 0;
+
 	nRecursionLevel++;
+
+	// Dispatch pending non-AWT events
+	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, FALSE ) ) != NULL )
+	{
+		// Ignore SALEVENT_SHUTDOWN events when recursing into this method
+		if ( nRecursionLevel == 1 || pEvent->getID() != SALEVENT_SHUTDOWN )
+		{
+			pEvent->dispatch();
+			com_sun_star_vcl_VCLGraphics::flushAll();
+		}
+		delete pEvent;
+
+		ULONG nCount = ReleaseYieldMutex();
+		if ( bWait )
+			OThread::yield();
+		AcquireYieldMutex( nCount );
+		nRecursionLevel--;
+		return;
+	}
+
+	ULONG nCount = ReleaseYieldMutex();
+	if ( !bWait )
+		OThread::yield();
+	AcquireYieldMutex( nCount );
 
 	// Check timer
 	if ( pSalData->mnTimerInterval )
@@ -255,33 +282,30 @@ void SalInstance::Yield( BOOL bWait )
 			}
 		}
 	}
-		
-	BOOL bContinue = TRUE;
-	while ( bContinue )
+
+	// Determine timeout
+	if ( bWait && pSalData->mnTimerInterval )
 	{
-		// Dispatch the next event
-		ULONG nCount = ReleaseYieldMutex();
-		OThread::yield();
-		com_sun_star_vcl_VCLEvent *pEvent = pSalData->mpEventQueue->getNextCachedEvent( bWait );
-		AcquireYieldMutex( nCount );
-		if ( pEvent )
+		timeval aTimeout;
+		gettimeofday( &aTimeout, NULL );
+		if ( pSalData->maTimeout > aTimeout )
 		{
-			// Keep dispatching if this is an AWTEvent
-			bContinue = pEvent->isAWTEvent();
-
-			// Ignore SALEVENT_SHUTDOWN events when recursing into this method
-			if ( nRecursionLevel == 1 || pEvent->getID() != SALEVENT_SHUTDOWN )
-			{
-				pEvent->dispatch();
-				com_sun_star_vcl_VCLGraphics::flushAll();
-			}
-
-			delete pEvent;
+			aTimeout = pSalData->maTimeout - aTimeout;
+			nTimeout = aTimeout.tv_sec * 1000 + aTimeout.tv_usec / 1000;
 		}
-		else
-		{
-			bContinue = FALSE;
-		}
+		if ( nTimeout < 10 )
+			nTimeout = 10;
+	}
+
+	// Dispatch pending AWT events
+	while ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
+	{
+		// Reset timeout
+		nTimeout = 0;
+
+		pEvent->dispatch();
+		com_sun_star_vcl_VCLGraphics::flushAll();
+		delete pEvent;
 	}
 
 	nRecursionLevel--;

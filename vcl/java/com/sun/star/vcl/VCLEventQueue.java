@@ -82,14 +82,24 @@ public final class VCLEventQueue {
 	public final static int INPUT_ANY = VCLEventQueue.INPUT_MOUSE | VCLEventQueue.INPUT_KEYBOARD | VCLEventQueue.INPUT_PAINT | VCLEventQueue.INPUT_TIMER | VCLEventQueue.INPUT_OTHER;
 
 	/**
-	 * The queue of cached events.
+	 * The auto flush flag.
 	 */
 	private boolean autoFlush = true;
 
 	/**
-	 * The queue of cached events.
+	 * The queue of cached AWT events.
 	 */
-	private VCLEventQueue.Queue queue = new VCLEventQueue.Queue();
+	private VCLEventQueue.Queue awtQueue = new VCLEventQueue.Queue();
+
+	/**
+	 * The queue of cached non-AWT events.
+	 */
+	private VCLEventQueue.Queue nonAWTQueue = new VCLEventQueue.Queue();
+
+	/**
+	 * The list of queues.
+	 */
+	private VCLEventQueue.Queue[] queueList = new VCLEventQueue.Queue[2];
 
 	/**
 	 * Construct a VCLEventQueue and make it the system queue.
@@ -97,6 +107,10 @@ public final class VCLEventQueue {
 	public VCLEventQueue() {
 
 		VCLGraphics.setAutoFlush(true);
+
+		// Create the list of queues
+		queueList[0] = awtQueue;
+		queueList[1] = nonAWTQueue;
 
 		// Load platform specific event handlers
 		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
@@ -137,18 +151,23 @@ public final class VCLEventQueue {
 	 */
 	public boolean anyCachedEvent(int type) {
 
-		if (queue.head == null)
-			return false;
+		for (int i = 0; i < queueList.length; i++) {
+			VCLEventQueue.Queue queue = queueList[i];
 
-		synchronized (queue) {
-			VCLEventQueue.QueueItem eqi = queue.head;
-			while (eqi != null) {
-				if (!eqi.remove && (type & eqi.type) != 0)
-					return true;
-				eqi = eqi.next;
+			if (queue.head == null)
+				continue;
+
+			synchronized (queue) {
+				VCLEventQueue.QueueItem eqi = queue.head;
+				while (eqi != null) {
+					if (!eqi.remove && (type & eqi.type) != 0)
+						return true;
+					eqi = eqi.next;
+				}
 			}
-			return false;
 		}
+
+		return false;
 
 	}
 
@@ -157,11 +176,13 @@ public final class VCLEventQueue {
 	 * <code>wait</code> parameter is <code>true</code>, this method waits
 	 * a short time to allow an event to become available in the cache.
 	 *
-	 * @param wait if <code>true</code>, wait a short time to allow an event
-	 *  to be added to the queue
+	 * @param wait the number of milliseconds to wait for an event to be added
+	 *  to the queue
+	 * @param awtEvents <code>true</code> to use to the <code>AWTEvent</code>
+	 *  queue and <code>false</code> to use the non-<code>AWTEvent</code> queue
 	 * @return the next cached <code>VCLEvent</code> instance
 	 */
-	public VCLEvent getNextCachedEvent(boolean wait) {
+	public VCLEvent getNextCachedEvent(long wait, boolean awtEvents ) {
 
 		if (autoFlush) {
 			// Turn off auto flushing
@@ -181,15 +202,19 @@ public final class VCLEventQueue {
 			}
 		}
 
-		if (!wait && queue.head == null)
+		VCLEventQueue.Queue queue = (awtEvents ? awtQueue : nonAWTQueue);
+
+		if (wait <= 0 && queue.head == null)
 			return null;
 
 		synchronized (queue) {
-			if (wait && queue.head == null) {
-				try {
-					queue.wait(100);
+			if (wait > 0 && queue.head == null) {
+				synchronized (queueList) {
+					try {
+						queueList.wait(wait);
+					}
+					catch (Throwable t) {}
 				}
-				catch (Throwable t) {}
 			}
 			VCLEventQueue.QueueItem eqi = null;
 			eqi = queue.head;
@@ -211,6 +236,8 @@ public final class VCLEventQueue {
      * @param event the event to add to the cache
 	 */
 	public void postCachedEvent(VCLEvent event) {
+
+		VCLEventQueue.Queue queue = (event.isAWTEvent() ? awtQueue : nonAWTQueue);
 
 		// Add the event to the cache
 		VCLEventQueue.QueueItem newItem = new VCLEventQueue.QueueItem(event);
@@ -250,7 +277,9 @@ public final class VCLEventQueue {
 					newItem.type = VCLEventQueue.INPUT_OTHER;
 					break;
 			}
-			queue.notifyAll();
+			synchronized (queueList) {
+				queueList.notifyAll();
+			}
 		}
 
 	}
@@ -263,19 +292,23 @@ public final class VCLEventQueue {
 	 */
 	void removeCachedEvents(long frame) {
 
-		if (queue.head == null)
-			return;
+		for (int i = 0; i < queueList.length; i++) {
+			VCLEventQueue.Queue queue = queueList[i];
 
-		synchronized (queue) {
-			VCLEventQueue.QueueItem eqi = queue.head;
-			while (eqi != null) {
-				if (eqi.event.getFrame() == frame)
-					eqi.remove = true;
-				eqi = eqi.next;
+			if (queue.head == null)
+				continue;
+
+			synchronized (queue) {
+				VCLEventQueue.QueueItem eqi = queue.head;
+				while (eqi != null) {
+					if (eqi.event.getFrame() == frame)
+						eqi.remove = true;
+					eqi = eqi.next;
+				}
+				// Purge removed events from the front of the queue
+				while (queue.head != null && queue.head.remove)
+					queue.head = queue.head.next;
 			}
-			// Purge removed events from the front of the queue
-			while (queue.head != null && queue.head.remove)
-				queue.head = queue.head.next;
 		}
 
 	}
