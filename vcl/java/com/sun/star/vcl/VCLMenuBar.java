@@ -191,8 +191,10 @@ public final class VCLMenuBar {
      * @param nPos	index of menu to remove
      */
     public void removeMenu( int nPos ) {
+        Menu m=awtMenuBar.getMenu(nPos);
         awtMenuBar.remove(nPos);
         menus.remove(nPos);
+        m.removeNotify();
     }
     
     /**
@@ -239,8 +241,11 @@ public final class VCLMenuBar {
      * the set of peers that's currently in the menubar becomes invalid.
      */
     public void regenerateMenuBar() {
-        for(int i=awtMenuBar.countMenus()-1; i>=0; i--)
+        for(int i=awtMenuBar.countMenus()-1; i>=0; i--) {
+            Menu m=awtMenuBar.getMenu(i);
             awtMenuBar.remove(i);
+            m.removeNotify();
+        }
         Iterator e=menus.iterator();
         while(e.hasNext()) {
             VCLMenuItemData m=(VCLMenuItemData)e.next();

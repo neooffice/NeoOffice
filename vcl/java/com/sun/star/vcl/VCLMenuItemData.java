@@ -368,7 +368,7 @@ public final class VCLMenuItemData {
                 
                 if(!awtPeers.isEmpty())
                 {
-                    awtPeers.clear();
+                    unregisterAllAWTPeers();
                     peersInvalidated=true;
                 }
             }
@@ -418,7 +418,7 @@ public final class VCLMenuItemData {
         isSubmenu=true;
         if(!awtPeers.isEmpty())
         {
-            awtPeers.clear();
+            unregisterAllAWTPeers();
                 peersInvalidated=true;
         }
         return(peersInvalidated);
@@ -452,7 +452,7 @@ public final class VCLMenuItemData {
                 isSubmenu=true;
             if(!awtPeers.isEmpty())
             {
-                awtPeers.clear();
+                unregisterAllAWTPeers();
                 peersInvalidated=true;
             }
         }
@@ -502,7 +502,9 @@ public final class VCLMenuItemData {
             while(e.hasNext())
             {
                 Menu m=(Menu)e.next();
+                MenuItem obj=m.getItem(nPos);
                 m.remove(nPos);
+                obj.removeNotify();
             }
         }
     }
@@ -739,7 +741,9 @@ public final class VCLMenuItemData {
             return;
         }
         
+        MenuItem mi=(MenuItem)o;
         awtPeers.remove(awtPeers.indexOf(o));
+        mi.removeNotify();
     }
     
     /**
@@ -763,6 +767,7 @@ public final class VCLMenuItemData {
 		} else if(mi instanceof VCLAWTCheckboxMenuItem) {
 		    mi.removeActionListener((VCLAWTCheckboxMenuItem)mi);
 		}
+                mi.removeNotify();
 	    }
 	    
 	    awtPeers.clear();
