@@ -137,26 +137,6 @@ public final class VCLImage {
 	 * <code>VCLBitmap</code>.
 	 *
 	 * @param bmp the bitmap
-	 */
-	VCLImage(VCLBitmap bmp) {
-
-		bitCount = bmp.getBitCount();
-
-		// Cache the buffered image
-		image = bmp.getImage();
-		width = bmp.getWidth();
-		height = bmp.getHeight();
-
-		// Cache the graphics
-		graphics = new VCLGraphics(this, null);
-
-	}
-
-	/**
-	 * Constructs a new <code>VCLImage</code> instance from a
-	 * <code>VCLBitmap</code>.
-	 *
-	 * @param bmp the bitmap
 	 * @param x the x coordinate of the bitmap
 	 * @param y the y coordinate of the bitmap
 	 * @param w the width to copy from

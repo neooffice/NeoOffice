@@ -35,7 +35,10 @@
 
 package com.sun.star.vcl;
 
+import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.Point;
+import java.awt.Toolkit;
 import java.awt.Transparency;
 import java.awt.color.ColorSpace;
 import java.awt.image.BufferedImage;
@@ -43,6 +46,8 @@ import java.awt.image.ColorModel;
 import java.awt.image.ComponentColorModel;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
+import java.awt.image.FilteredImageSource;
+import java.awt.image.ImageFilter;
 import java.awt.image.IndexColorModel;
 import java.awt.image.MultiPixelPackedSampleModel;
 import java.awt.image.PixelInterleavedSampleModel;
@@ -90,7 +95,7 @@ public final class VCLBitmap {
 	private static IndexColorModel default8BitColorModel = null;
 
 	/**
-	 * The default 24  bit color model.
+	 * The default 24 bit color model.
 	 */
 	private static ComponentColorModel default24BitColorModel = null;
 
@@ -138,6 +143,11 @@ public final class VCLBitmap {
 	 * The image.
 	 */
 	private BufferedImage image = null;
+
+	/**
+	 * The filtered image.
+	 */
+	private Image filteredImage = null;
 
 	/**
 	 * The color model.
@@ -206,7 +216,7 @@ public final class VCLBitmap {
 			model = default24BitColorModel;
 		}
 
-		// Align buffer size to 4 bytes and create the the buffer
+		// Align buffer size to 4 bytes and create the sample model
 		scanline = (((bitCount * width) + 31) >> 5) << 2;
 		SampleModel sampleModel = null;
 		if (bitCount < 8)
@@ -215,9 +225,21 @@ public final class VCLBitmap {
 			sampleModel = new SinglePixelPackedSampleModel(DataBuffer.TYPE_BYTE, width, height, scanline, new int[]{ 0xff });
 		else
 			sampleModel = new PixelInterleavedSampleModel(DataBuffer.TYPE_BYTE, width, height, bitCount / 8, scanline, new int[]{ 0, 1, 2 });
-		raster = Raster.createWritableRaster(sampleModel, new DataBufferByte(scanline * height), null);
+
+		// Create the raster
+		data = new byte[scanline * height];
+		raster = Raster.createWritableRaster(sampleModel, new DataBufferByte(data, data.length), null);
 		image = new BufferedImage(model, raster, true, null);
-		data = ((DataBufferByte)raster.getDataBuffer()).getData();
+
+		// We need to wrap the buffered image in a filter for images that
+		// have pixels that occupy more than on byte
+		if (bitCount > 8 && VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+			FilteredImageSource filter = new FilteredImageSource(image.getSource(), new ImageFilter());
+			filteredImage = Toolkit.getDefaultToolkit().createImage(filter);
+		}
+		else {
+			filteredImage = image;
+		}
 
 	}
 
@@ -239,8 +261,9 @@ public final class VCLBitmap {
 		if (srcImage == null)
 			return;
 
-		VCLImage destImage = new VCLImage(this);
-		destImage.getGraphics().drawImage(srcImage, srcX, srcY, srcWidth, srcHeight, destX, destY, srcWidth, srcHeight);
+		Graphics2D destGraphics = image.createGraphics();
+		destGraphics.drawImage(srcImage.getImage(), destX, destY, destX + srcWidth, destY + srcHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+		destGraphics.dispose();
 
 	}
 
@@ -282,9 +305,9 @@ public final class VCLBitmap {
 	 *
 	 * @return the underlying image
 	 */
-	BufferedImage getImage() {
+	Image getImage() {
 
-		return image;
+		return filteredImage;
 
 	}
 
@@ -335,6 +358,7 @@ public final class VCLBitmap {
 				palette[i] |= 0xff000000;
 			model = new IndexColorModel(bitCount, palette.length, palette, 0, false, -1, DataBuffer.TYPE_BYTE);
 			image = new BufferedImage(model, raster, true, null);
+			filteredImage = image;
 		}
 
 	}
