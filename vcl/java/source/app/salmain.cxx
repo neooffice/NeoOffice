@@ -61,7 +61,7 @@
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 
-typedef void RunApplicationEventLoop_Type( void );
+typedef OSStatus ReceiveNextEvent_Type( UInt32, const EventTypeSpec *, EventTimeout, MacOSBoolean, EventRef * );
 
 class SVMainThread : public ::vos::OThread
 {
@@ -82,7 +82,7 @@ using namespace vos;
 #ifdef MACOSX
 static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( JNIEnv *pEnv, jobject object )
 {
-	return !aCarbonLock.tryToAcquire();
+	return ( aCarbonLock.tryToAcquire() ? 0 : 1 );
 }
 #endif
 
@@ -99,15 +99,15 @@ static void JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_init( JNIEnv *pEn
 #ifdef MACOSX
 static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv *pEnv, jobject object )
 {
-	jint nRet = !aCarbonLock.tryToAcquire();
+	BOOL bAcquired = aCarbonLock.tryToAcquire();
 
-	if ( !nRet )
+	if ( bAcquired )
 	{
 		aCarbonLock.release();
 		aCarbonLock.release();
 	}
 
-	return nRet;
+	return ( bAcquired ? 0 : 1 );
 }
 #endif
 
@@ -249,9 +249,12 @@ int main( int argc, char *argv[] )
 		aThread.create();
 
 		// Start the Carbon event loop
-		RunApplicationEventLoop_Type *pRunApplicationEventLoop = (RunApplicationEventLoop_Type *)aModule.getSymbol( OUString::createFromAscii( "RunApplicationEventLoop" ) );
-		if ( pRunApplicationEventLoop )
-			pRunApplicationEventLoop();
+		ReceiveNextEvent_Type *pReceiveNextEvent = (ReceiveNextEvent_Type *)aModule.getSymbol( OUString::createFromAscii( "ReceiveNextEvent" ) );
+		if ( pReceiveNextEvent )
+		{
+			while ( pReceiveNextEvent( 0, NULL, kEventDurationForever, false, NULL ) != eventLoopQuitErr )
+				;
+		}
 
 		aModule.unload();
 		aThread.join();
