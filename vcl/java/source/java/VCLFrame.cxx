@@ -649,7 +649,7 @@ void com_sun_star_vcl_VCLFrame::setBounds( long _par0, long _par1, long _par2, l
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[5];
+			jvalue args[4];
 			args[0].i = jint( _par0 );
 			args[1].i = jint( _par1 );
 			args[2].i = jint( _par2 );
