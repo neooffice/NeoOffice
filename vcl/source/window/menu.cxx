@@ -4930,6 +4930,10 @@ void MenuBarWindow::DataChanged( const DataChangedEvent& rDCEvt )
 {
     Window::DataChanged( rDCEvt );
 
+    // Don't resize native menubar
+    if ( pMenu->ImplGetSalMenu() && SalMenu::VisibleMenuBar() )
+        return;
+
     if ( (rDCEvt.GetType() == DATACHANGED_FONTS) ||
          (rDCEvt.GetType() == DATACHANGED_FONTSUBSTITUTION) ||
          ((rDCEvt.GetType() == DATACHANGED_SETTINGS) &&
