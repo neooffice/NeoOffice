@@ -639,17 +639,27 @@ void *com_sun_star_vcl_VCLGraphics::getNativeGraphics()
 								if ( penClass && t.pEnv->IsInstanceOf( pen, penClass ) )
 								{
 									static jmethodID mIDBeginDraw = NULL;
+									static jfieldID fIDCGContext = NULL;
 									if ( !mIDBeginDraw )
 									{
-										char *cSignature = "(Lcom/apple/mrj/internal/awt/graphics/ClientGraphicsState;)I";
-										mIDBeginDraw = t.pEnv->GetMethodID( penClass, "clientBeginDrawGetContext", cSignature );
+										char *cSignature = "(Lcom/apple/mrj/internal/awt/graphics/ClientGraphicsState;ZZ)Z";
+										mIDBeginDraw = t.pEnv->GetMethodID( penClass, "beginDraw", cSignature );
 									}
 									OSL_ENSURE( mIDBeginDraw, "Unknown method id!" );
-									if ( mIDBeginDraw )
+									if ( !fIDCGContext )
 									{
-										jvalue args[1];
+										char *cSignature = "I";
+										fIDCGContext = t.pEnv->GetFieldID( penClass, "fCGContext", cSignature );
+									}
+									OSL_ENSURE( fIDCGContext, "Unknown field id!" );
+									if ( mIDBeginDraw && fIDCGContext )
+									{
+										jvalue args[3];
 										args[0].l = graphicsState;
-										out = (void *)t.pEnv->CallNonvirtualIntMethodA( pen, penClass, mIDBeginDraw, args );
+										args[1].z = jboolean( JNI_TRUE );
+										args[2].z = jboolean( JNI_TRUE );
+										if ( t.pEnv->CallNonvirtualBooleanMethodA( pen, penClass, mIDBeginDraw, args ) )
+											out = (void *)t.pEnv->GetIntField( pen, fIDCGContext );
 									}
 								}
 							}
@@ -872,24 +882,16 @@ void com_sun_star_vcl_VCLGraphics::releaseNativeGraphics( void *_par0 )
 					if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
 					{
 						static jfieldID fIDPen = NULL;
-						static jfieldID fIDGraphicsState = NULL;
 						if ( !fIDPen )
 						{
 							char *cSignature = "Lcom/apple/mrj/internal/awt/graphics/Pen;";
 							fIDPen = t.pEnv->GetFieldID( tempClass, "fPen", cSignature );
 						}
 						OSL_ENSURE( fIDPen, "Unknown field id!" );
-						if ( !fIDGraphicsState )
-						{
-							char *cSignature = "Lcom/apple/mrj/internal/awt/graphics/ClientGraphicsState;";
-							fIDGraphicsState = t.pEnv->GetFieldID( tempClass, "fGraphicsState", cSignature );
-						}
-						OSL_ENSURE( fIDGraphicsState, "Unknown field id!" );
-						if ( fIDPen && fIDGraphicsState )
+						if ( fIDPen )
 						{
 							jobject pen = t.pEnv->GetObjectField( tempObj, fIDPen );
-							jobject graphicsState = t.pEnv->GetObjectField( tempObj, fIDGraphicsState );
-							if ( pen && graphicsState )
+							if ( pen )
 							{
 								jclass penClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/graphics/CGPen" );
 								if ( penClass && t.pEnv->IsInstanceOf( pen, penClass ) )
@@ -897,16 +899,12 @@ void com_sun_star_vcl_VCLGraphics::releaseNativeGraphics( void *_par0 )
 									static jmethodID mIDEndDraw = NULL;
 									if ( !mIDEndDraw )
 									{
-										char *cSignature = "(Lcom/apple/mrj/internal/awt/graphics/ClientGraphicsState;)V";
-										mIDEndDraw = t.pEnv->GetMethodID( penClass, "clientEndDraw", cSignature );
+										char *cSignature = "()V";
+										mIDEndDraw = t.pEnv->GetMethodID( penClass, "endDraw", cSignature );
 									}
 									OSL_ENSURE( mIDEndDraw, "Unknown method id!" );
 									if ( mIDEndDraw )
-									{
-										jvalue args[1];
-										args[0].l = graphicsState;
-										t.pEnv->CallNonvirtualVoidMethodA( pen, penClass, mIDEndDraw, args );
-									}
+										t.pEnv->CallNonvirtualVoidMethod( pen, penClass, mIDEndDraw );
 								}
 							}
 						}
