@@ -1484,8 +1484,8 @@ public final class VCLGraphics {
 			image = new VCLImage(graphicsBounds.width, graphicsBounds.height, frame.getBitCount());
 			graphics = image.getImage().createGraphics();
 			bitCount = image.getBitCount();
-			userClip = null;
 			update = null;
+			resetClipRegion();
 		}
 
 	}

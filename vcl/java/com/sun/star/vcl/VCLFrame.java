@@ -1983,10 +1983,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param y the new y-coordinate
 	 * @param width the new width
 	 * @param height the new height
-	 * @param hide <code>true</code> hides the native window during resizing
-	 *  and <code>false</code> does nothing
 	 */
-	public void setBounds(int x, int y, int width, int height, boolean hide) {
+	public void setBounds(int x, int y, int width, int height) {
 
 		Dimension size = window.getMinimumSize();
 		if (width < size.width)
@@ -1994,17 +1992,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (height < size.height)
 			height = size.height;
 
-		// Fix bug 169 by hiding window during resizing
-		hide = (hide && window.isVisible() && (width != window.getWidth() || height != window.getHeight()));
-		if (hide)
-			setVisible(false);
 		window.setBounds(x, y, width, height);
-		if (hide)
-			setVisible(true);
 
 		// We need to create the native window handle after the first call to
 		// set bounds in order for the drag-and-drop UNO service to work
-		if (!hide)
+		if (!window.isVisible())
 			window.addNotify();
 
 	}

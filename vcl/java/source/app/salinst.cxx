@@ -466,32 +466,31 @@ void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void
 		SalData *pSalData = GetSalData();
 		if ( pSalData && pSalData->mpEventQueue )
 		{
+			// Post a yield event and wait the VCL event queue to block
+			pSalData->maNativeEventStartCondition.reset();
+			com_sun_star_vcl_VCLEvent aYieldEvent( SALEVENT_YIELDEVENTQUEUE, NULL, NULL );
+			pSalData->mpEventQueue->postCachedEvent( &aYieldEvent );
+
 			// Unlock the Carbon lock
 			VCLThreadAttach t;
-			if ( t.pEnv && t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+			if ( t.pEnv )
 				Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
 
-			// Wakeup the event queue by sending it a dummy event
-			com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
-			pSalData->mpEventQueue->postCachedEvent( &aEvent );
-
-			// Block the VCL event loop while checking mapping
-			pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->acquire();
-
-			// Relock the Carbon lock
-			if ( t.pEnv && t.pEnv->GetVersion() < JNI_VERSION_1_4 )
-				Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
+			pSalData->maNativeEventStartCondition.wait();
 
 			Rect aRect;
 			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
 				WindowRef aWindow = (WindowRef)( (*it)->GetSystemData()->aWindow );
 				if ( aWindow && GetWindowBounds( aWindow, kWindowStructureRgn, &aRect ) == noErr )
-					(*it)->maFrameData.mpVCLFrame->setBounds( (long)aRect.left, (long)aRect.top, (long)( aRect.right - aRect.left + 1 ), (long)( aRect.bottom - aRect.top + 1 ), sal_False );
+					(*it)->SetPosSize( (long)aRect.left, (long)aRect.top, (long)( aRect.right - aRect.left + 1 ) - (*it)->maGeometry.nLeftDecoration - (*it)->maGeometry.nRightDecoration, (long)( aRect.bottom - aRect.top + 1 ) - (*it)->maGeometry.nTopDecoration - (*it)->maGeometry.nBottomDecoration, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
 			}
 
-			// Unblock the VCL event loop
-			pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->release();
+			// Relock the Carbon lock
+			if ( t.pEnv )
+				Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
+
+			pSalData->maNativeEventEndCondition.set();
 		}
 	}
 }

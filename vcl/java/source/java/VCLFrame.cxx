@@ -233,21 +233,24 @@ void com_sun_star_vcl_VCLFrame::dispose()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 
+#ifdef MACOSX
+		WindowRef aWindow = NULL;
+
+		// Test the JVM version and if it is below 1.4, use Carbon APIs
+		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+			aWindow = (WindowRef)getNativeWindow();
+#endif	// MACOSX
+
 		if ( mID )
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 
 #ifdef MACOSX
-		// Test the JVM version and if it is below 1.4, use Carbon APIs
-		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+		if ( aWindow )
 		{
-			WindowRef aWindow = (WindowRef)getNativeWindow();
-			if ( aWindow )
-			{
-				// Java 1.3.1 does not ever release the native window so we
-				// need to explicitly release it
-				if ( pEventLoopTimerUPP )
-					InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pEventLoopTimerUPP, aWindow, NULL );
-			}
+			// Java 1.3.1 does not ever release the native window so we
+			// need to explicitly release it
+			if ( pEventLoopTimerUPP )
+				InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pEventLoopTimerUPP, aWindow, NULL );
 		}
 #endif	// MACOSX
 	}
@@ -632,7 +635,7 @@ void com_sun_star_vcl_VCLFrame::setAutoFlush( sal_Bool _par0 )
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLFrame::setBounds( long _par0, long _par1, long _par2, long _par3, sal_Bool _par4 )
+void com_sun_star_vcl_VCLFrame::setBounds( long _par0, long _par1, long _par2, long _par3 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -640,7 +643,7 @@ void com_sun_star_vcl_VCLFrame::setBounds( long _par0, long _par1, long _par2, l
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(IIIIZ)V";
+			char *cSignature = "(IIII)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "setBounds", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -651,7 +654,6 @@ void com_sun_star_vcl_VCLFrame::setBounds( long _par0, long _par1, long _par2, l
 			args[1].i = jint( _par1 );
 			args[2].i = jint( _par2 );
 			args[3].i = jint( _par3 );
-			args[4].i = jboolean( _par4 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}

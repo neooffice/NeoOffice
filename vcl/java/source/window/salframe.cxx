@@ -228,15 +228,6 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pBounds );
 		aEvent.dispatch();
 
-		// Post a paint event
-		SalPaintEvent *pPaintEvent = new SalPaintEvent();
-		pPaintEvent->mnBoundX = 0;
-		pPaintEvent->mnBoundY = 0;
-		pPaintEvent->mnBoundWidth = maGeometry.nWidth;
-		pPaintEvent->mnBoundHeight = maGeometry.nHeight;
-		com_sun_star_vcl_VCLEvent aVCLPaintEvent( SALEVENT_PAINT, this, (void *)pPaintEvent );
-		pSalData->mpEventQueue->postCachedEvent( &aVCLPaintEvent );
-
 		// Make a pass through the native menus
 		UpdateMenusForFrame( this, NULL );
 	}
@@ -388,9 +379,17 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 				aType.eventKind = kEventWindowActivated;
 				InstallWindowEventHandler( (WindowRef)maFrameData.maSysData.aWindow, pEventHandlerUPP, 1, &aType, NULL, NULL );
 			}
+
 		}
 #endif	// MACOSX
 	}
+
+	// Fix bugs 169 and 283 by giving the Java event thread a chance
+	// to update the native window
+	SalData *pSalData = GetSalData();
+	ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
+	OThread::yield();
+	pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
 
 	// Update the cached position
 	Rectangle *pBounds = new Rectangle( maFrameData.mpVCLFrame->getBounds() );
