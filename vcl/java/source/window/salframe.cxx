@@ -73,12 +73,26 @@
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 
+static EventHandlerUPP pEventHandlerUPP = NULL;
+
 using namespace rtl;
 using namespace vos;
 
 #endif	// MACOSX
 
 using namespace vcl;
+
+// =======================================================================
+
+#ifdef MACOSX
+static OSStatus CarbonWindowEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData )
+{
+	// Fix bug 221 by explicitly reenabling all keyboards
+	KeyScript( smKeyEnableKybds );
+
+	return CallNextEventHandler( aNextHandler, aEvent );
+}
+#endif	// MACOSX
 
 // =======================================================================
 
@@ -355,7 +369,28 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	// Cache the native window pointer since setBounds() will call the Java
 	// window's addNotify() method
 	if ( !maFrameData.maSysData.aWindow )
+	{
 		maFrameData.maSysData.aWindow = (long)maFrameData.mpVCLFrame->getNativeWindow();
+
+#ifdef MACOSX
+		// Test the JVM version and if it is earlier than 1.4, use Carbon
+		VCLThreadAttach t;
+		if ( maFrameData.maSysData.aWindow && t.pEnv && t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+		{
+			if ( !pEventHandlerUPP )
+				pEventHandlerUPP = NewEventHandlerUPP( CarbonWindowEventHandler );
+
+			if ( pEventHandlerUPP )
+			{
+				// Set up native event handler
+				EventTypeSpec aType;
+				aType.eventClass = kEventClassWindow;
+				aType.eventKind = kEventWindowActivated;
+				InstallWindowEventHandler( (WindowRef)maFrameData.maSysData.aWindow, pEventHandlerUPP, 1, &aType, NULL, NULL );
+			}
+		}
+#endif	// MACOSX
+	}
 
 	// Update the cached position
 	Rectangle *pBounds = new Rectangle( maFrameData.mpVCLFrame->getBounds() );
