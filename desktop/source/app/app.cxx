@@ -40,6 +40,10 @@
  *
  ************************************************************************/
 
+#ifdef USE_JAVA
+#include <sys/wait.h>
+#endif
+
 #include <unistd.h>
 #include "app.hxx"
 #include "desktop.hrc"
@@ -248,6 +252,12 @@
 #endif
 #ifndef _VOS_PROFILE_HXX_
 #include <vos/profile.hxx>
+#endif
+
+#ifdef USE_JAVA
+#ifndef _FSYS_HXX
+#include <tools/fsys.hxx>
+#endif
 #endif
 
 #define DEFINE_CONST_UNICODE(CONSTASCII)        UniString(RTL_CONSTASCII_USTRINGPARAM(CONSTASCII##))
@@ -600,6 +610,60 @@ void Desktop::Init()
 
 	::comphelper::setProcessServiceFactory( rSMgr );
 
+#ifdef USE_JAVA
+	int pid;
+
+	// Make sure the user's data directory exists and has all of the
+	// necessary files before loading the configuration tree since the
+	// directory will not exist when the user first runs the program.
+	// Note that we do this code in a child process for the simple reason
+	// that we cannot reload the bootstap data after we fix any errors.
+    if ((pid = fork()) == 0)
+	{
+		// Child process
+		OUString aUserDataURL;
+		OUString aMsg;
+
+   		::utl::Bootstrap::PathStatus aPathStatus = utl::Bootstrap::locateUserData( aUserDataURL );
+		if ( aPathStatus != utl::Bootstrap::PATH_EXISTS )
+		{
+			OUString aBaseUserDataURL;
+			utl::Bootstrap::PathStatus aPathStatus = utl::Bootstrap::locateBaseInstallation( aBaseUserDataURL );
+			if ( aPathStatus != utl::Bootstrap::PATH_EXISTS )
+			{
+				aMsg = CreateErrorMsgString( utl::Bootstrap::INVALID_BOOTSTRAP_FILE_ENTRY, aBaseUserDataURL );
+				HandleBootstrapPathErrors( ::utl::Bootstrap::INVALID_BASE_INSTALL, aMsg );
+			}
+
+			// Create the user's data directory
+			DirEntry aUserDataEntry( aUserDataURL, FSYS_STYLE_URL );
+			aUserDataEntry.MakeDir();
+			if ( !aUserDataEntry.Exists() )
+			{
+				aMsg = CreateErrorMsgString( utl::Bootstrap::MISSING_USER_DIRECTORY, aUserDataURL );
+				HandleBootstrapPathErrors( ::utl::Bootstrap::INVALID_USER_INSTALL, aMsg );
+			}
+
+			// Copy all of the files from the base installation's "user"
+			// directory
+			aBaseUserDataURL += OUString::createFromAscii( "/user" );
+			DirEntry aBaseUserDataEntry( aBaseUserDataURL, FSYS_STYLE_URL );
+			aBaseUserDataEntry.CopyTo( aUserDataEntry, FSYS_ACTION_COPYFILE | FSYS_ACTION_RECURSIVE | FSYS_ACTION_KEEP_EXISTING );
+
+		}
+		// Exit gracefully so that the parent process knows we are done
+		_exit( 0 );
+	}
+	else
+	{
+		if (pid > 0)
+		{
+			int status;
+			waitpid(pid, &status, 0);
+		}
+	}
+#endif	// USE_JAVA
+
     if ( !Application::IsRemoteServer() )
 	{
 		// start ipc thread only for non-remote offices
@@ -664,6 +728,10 @@ BOOL Desktop::QueryExit()
 
 void Desktop::StartSetup( const OUString& aParameters )
 {
+#ifdef USE_JAVA
+	// Quietly exit as there is no "setup" program
+	_exit( 0 );
+#else	// USE_JAVA
     OUString aProgName;
 	OUString aSysPathFileName;
 	OUString aDir;
@@ -707,6 +775,7 @@ void Desktop::StartSetup( const OUString& aParameters )
 		ErrorBox aBootstrapFailedBox( NULL, WB_OK, aMessage );
 		aBootstrapFailedBox.Execute();
 	}
+#endif	// USE_JAVA
 }
 
 void Desktop::HandleBootstrapPathErrors( ::utl::Bootstrap::Status aBootstrapStatus, const OUString& aDiagnosticMessage )
