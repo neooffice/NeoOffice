@@ -130,7 +130,7 @@ public final class VCLPageFormat {
 	/**
 	 * Cached <code>VCLImage</code>.
 	 */
-	private VCLImage image = new VCLImage(1, 1, 32, this);
+	private VCLImage image = null;
 
 	/**
 	 * Cached printer job.
@@ -156,6 +156,7 @@ public final class VCLPageFormat {
 		pageFormat = job.defaultPage();
 		pageFormat.setOrientation(VCLPageFormat.printerOrientation);
 		pageResolution = new Dimension(VCLScreen.MAX_PRINTER_RESOLUTION, VCLScreen.MAX_PRINTER_RESOLUTION);
+		image = new VCLImage(1, 1, 32, this);
 
 	}
 

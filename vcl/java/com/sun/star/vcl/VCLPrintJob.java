@@ -356,8 +356,12 @@ public final class VCLPrintJob implements Printable, Runnable {
 				// Set the origin to the origin of the printable area
 				graphicsInfo.graphics.translate((int)graphicsInfo.pageFormat.getImageableX(), (int)graphicsInfo.pageFormat.getImageableY());
 
-				// Rotate page if necessary
+				// Rotate the page if necessary
 				int orientation = graphicsInfo.pageFormat.getOrientation();
+				Dimension pageResolution = pageFormat.getPageResolution();
+				Rectangle imageableBounds = new Rectangle(pageFormat.getImageableBounds());
+				imageableBounds.x = 0;
+				imageableBounds.y = 0;
 				if (o == VCLPageFormat.ORIENTATION_PORTRAIT && orientation != PageFormat.PORTRAIT) {
 					if (orientation == PageFormat.REVERSE_LANDSCAPE) {
 						graphicsInfo.graphics.translate(0, (int)graphicsInfo.pageFormat.getImageableHeight());
@@ -367,17 +371,20 @@ public final class VCLPrintJob implements Printable, Runnable {
 						graphicsInfo.graphics.translate((int)graphicsInfo.pageFormat.getImageableWidth(), 0);
 						graphicsInfo.graphics.rotate(Math.toRadians(90));
 					}
+					pageResolution = new Dimension(pageResolution.height, pageResolution.width);
+					imageableBounds = new Rectangle(imageableBounds.y, imageableBounds.x, imageableBounds.height, imageableBounds.width);
 				}
 				else if (o != VCLPageFormat.ORIENTATION_PORTRAIT && orientation == PageFormat.PORTRAIT ) {
 					graphicsInfo.graphics.translate(0, (int)graphicsInfo.pageFormat.getImageableHeight());
 					graphicsInfo.graphics.rotate(Math.toRadians(-90));
+					pageResolution = new Dimension(pageResolution.height, pageResolution.width);
+					imageableBounds = new Rectangle(imageableBounds.y, imageableBounds.x, imageableBounds.height, imageableBounds.width);
 				}
 
 				// Scale to printer resolution
-				Dimension pageResolution = pageFormat.getPageResolution();
 				graphicsInfo.graphics.scale((double)72 / pageResolution.width, (double)72 / pageResolution.height);
 
-				currentGraphics = new VCLGraphics(graphicsInfo.graphics, pageFormat);
+				currentGraphics = new VCLGraphics(graphicsInfo.graphics, pageResolution, imageableBounds);
 			}
 			else {
 				currentGraphics = null;
