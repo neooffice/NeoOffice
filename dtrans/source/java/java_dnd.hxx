@@ -56,6 +56,9 @@
 #ifndef _COM_SUN_STAR_LANG_XSERVICEINFO_HPP_
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #endif
+#ifndef _SV_WINDOW_HXX
+#include <vcl/window.hxx>
+#endif
 #ifndef _OSL_THREAD_H_
 #include <osl/thread.h>
 #endif
@@ -110,6 +113,7 @@ private:
 	::std::list< ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDropTargetListener > >	maListeners;
     ::osl::Mutex			maMutex; 
 	void*					mpNativeWindow;
+	Window*					mpWindow;
 
 public:
 							JavaDropTarget();

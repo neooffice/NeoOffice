@@ -44,6 +44,9 @@
 #ifndef _COM_SUN_STAR_DATATRANSFER_DND_DNDCONSTANTS_HPP_
 #include <com/sun/star/datatransfer/dnd/DNDConstants.hpp>
 #endif
+#ifndef _VCL_POINTR_HXX
+#include <vcl/pointr.hxx>
+#endif
 #ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
 #endif
@@ -69,7 +72,6 @@ static DragTrackingHandlerUPP pDropTrackingHandlerUPP = NULL;
 static DragReceiveHandlerUPP pDragReceiveHandlerUPP = NULL;
 static EventQueueRef aTrackingEventQueue = NULL;
 static EventRef aLastMouseDraggedEvent = NULL;
-static bool bNoDropCursor = false;
 
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData );
 
@@ -140,15 +142,10 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 		if ( !bNoRejectCursor )
 		{
 			if ( nMessage == kDragTrackingLeaveHandler )
-				SetThemeCursor( kThemeNotAllowedCursor );
+				SetThemeCursor( kThemeArrowCursor );
 			else
 				SetThemeCursor( kThemeClosedHandCursor );
 		}
-
-		if ( nMessage == kDragTrackingEnterHandler )
-			bNoDropCursor = true;
-		else if ( nMessage == kDragTrackingLeaveHandler )
-			bNoDropCursor = false;
 
 		((JavaDragSource *)pData)->handleDrag( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) );
 	}
@@ -518,13 +515,6 @@ void JavaDragSource::runDragExecute( void *pData )
 
 						aDragMutex.release();
 					}
-#ifdef MACOSX
-					else if ( !bNoDropCursor )
-					{
-						SetThemeCursor( kThemeArrowCursor );
-					}
-#endif	// MACOSX
-
 
 					aCarbonEventQueueMutex.acquire();
 					aTrackingEventQueue = NULL;
@@ -573,7 +563,8 @@ JavaDropTarget::JavaDropTarget() :
 	WeakComponentImplHelper3< XDropTarget, XInitialization, XServiceInfo >( maMutex ),
 	mbActive( sal_True ),
 	mnDefaultActions( DNDConstants::ACTION_NONE ),
-	mpNativeWindow( NULL )
+	mpNativeWindow( NULL ),
+	mpWindow( NULL )
 {
 }
 
@@ -594,6 +585,14 @@ void SAL_CALL JavaDropTarget::initialize( const Sequence< Any >& arguments ) thr
 		arguments.getConstArray()[0] >>= nWindow;
 		if ( nWindow )
 			mpNativeWindow = (void *)nWindow;
+	}
+
+	if ( arguments.getLength() > 2 )
+	{
+		sal_Int32 nWindow;
+		arguments.getConstArray()[2] >>= nWindow;
+		if ( nWindow )
+			mpWindow = (Window *)nWindow;
 	}
 
 #ifdef MACOSX
@@ -842,6 +841,19 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY )
 
 		// Don't set the cursor to the reject cursor since a drop has occurred
 		bNoRejectCursor = true;
+
+		// Reset the pointer to the last pointer set in VCL window
+		if ( mpWindow )
+		{
+			// We need to toggle the style to make sure that VCL resets the
+			// pointer
+			PointerStyle nStyle = mpWindow->GetPointer().GetStyle();
+			if ( nStyle == POINTER_ARROW )
+				mpWindow->SetPointer( Pointer( POINTER_NULL ) );
+			else
+				mpWindow->SetPointer( Pointer( POINTER_ARROW ) );
+			mpWindow->SetPointer( Pointer( nStyle ) );
+		}
 
 		aDragSourceGuard.clear();
 	}
