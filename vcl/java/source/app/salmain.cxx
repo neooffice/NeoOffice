@@ -85,7 +85,6 @@ using namespace vos;
 
 static OModule aJDirectModule;
 static OThread::TThreadIdentifier nCarbonLockThread = 0;
-static Condition aCarbonLockCondition;
 static Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0_Type *pCarbonLockAcquire = NULL;
 static Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type *pCarbonLockGetInstance = NULL;
 static Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *pCarbonLockInit = NULL;
@@ -100,17 +99,10 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( JNIEnv 
 {
 	// Don't lock if this is the main thread
 	if ( OThread::getCurrentIdentifier() == nCarbonLockThread )
-	{
-		aCarbonLockCondition.wait();
-		aCarbonLockCondition.reset();
 		return 0;
-	}
 
 	if ( pCarbonLockAcquire )
-	{
-		aCarbonLockCondition.set();
 		return pCarbonLockAcquire( pEnv, object );
-	}
 
 	return 1;
 }
@@ -306,7 +298,6 @@ int main( int argc, char *argv[] )
 			if ( carbonLockClass && pCarbonLockAcquire && pCarbonLockGetInstance && pCarbonLockInit && pCarbonLockRelease )
 			{
 				nCarbonLockThread = OThread::getCurrentIdentifier();
-				aCarbonLockCondition.reset();
 
 				// Reregister the native methods
 				JNINativeMethod pMethods[4];
@@ -324,10 +315,6 @@ int main( int argc, char *argv[] )
 				pMethods[3].fnPtr = Java_com_apple_mrj_macos_carbon_CarbonLock_release0;
 				t.pEnv->RegisterNatives( carbonLockClass, pMethods, 4 );
 
-				// Create the SVMain() thread
-				SVMainThread aThread;
-				aThread.create();
-
 				// Load Carbon
 				OModule aModule;
 				aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) );
@@ -338,10 +325,14 @@ int main( int argc, char *argv[] )
 				// switching problem on Panther.
 				ReceiveNextEvent_Type *pReceiveNextEvent = (ReceiveNextEvent_Type *)aModule.getSymbol( OUString::createFromAscii( "ReceiveNextEvent" ) );
 				if ( pReceiveNextEvent )
-					pReceiveNextEvent( 0, NULL, kEventDurationForever, false, NULL );
+					pReceiveNextEvent( 0, NULL, 0, false, NULL );
 
-				aModule.unload();
+				// Create the SVMain() thread
+				SVMainThread aThread;
+				aThread.create();
+
 				aThread.join();
+				aModule.unload();
 				return( 0 );
 			}
 		}
