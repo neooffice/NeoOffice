@@ -45,10 +45,12 @@
 #ifndef _SV_PRNTYPES_HXX
 #include <prntypes.hxx>
 #endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX
+#include <com/sun/star/vcl/VCLPageFormat.hxx>
+#endif
 
 namespace vcl
 {
-class com_sun_star_vcl_VCLPageFormat;
 class com_sun_star_vcl_VCLPrintJob;
 }
 
@@ -93,9 +95,18 @@ class SalPrinterData
 // - SalPrinterData -
 // ------------------
 
-struct SalDriverData
+class SalDriverData
 {
+	friend class	SalInfoPrinter;
+	friend class	SalInstance;
+	friend class	SalPrinter;
+
 	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
+
+public:
+					SalDriverData() : mpVCLPageFormat( NULL ) {}
+					SalDriverData( SalDriverData *pData );
+					~SalDriverData();
 };
 
 #endif // _SV_SALPRN_H

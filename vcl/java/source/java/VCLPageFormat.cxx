@@ -35,6 +35,9 @@
 
 #define _SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_CXX
 
+#ifndef _SV_SALDATA_HXX
+#include <saldata.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX
 #include <com/sun/star/vcl/VCLPageFormat.hxx>
 #endif
@@ -168,6 +171,8 @@ void com_sun_star_vcl_VCLPageFormat::destroyNativePrintJob()
 		mbInitialized = FALSE;
 	}
 #endif	// MACOSX
+
+	GetSalData()->maVCLPageFormats.remove( this );
 }
 
 // ----------------------------------------------------------------------------
@@ -486,6 +491,10 @@ void com_sun_star_vcl_VCLPageFormat::initializeNativePrintJob()
 			mbInitialized = TRUE;
 	}
 #endif	// MACOSX
+
+	SalData *pSalData = GetSalData();
+	pSalData->maVCLPageFormats.remove( this );
+	pSalData->maVCLPageFormats.push_back( this );
 }
 
 // ----------------------------------------------------------------------------

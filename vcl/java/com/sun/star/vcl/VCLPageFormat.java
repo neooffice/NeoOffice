@@ -130,7 +130,7 @@ public final class VCLPageFormat {
 	/**
 	 * Cached <code>VCLImage</code>.
 	 */
-	private VCLImage image = null;
+	private VCLImage image = new VCLImage(1, 1, 32, this);
 
 	/**
 	 * Cached printer job.
@@ -163,7 +163,7 @@ public final class VCLPageFormat {
 	 * Disposes the page format and releases any system resources that it is
 	 * using.
 	 */
-	public void dispose() {
+	protected void finalize() throws Throwable {
 
 		if (image != null)
 			image.dispose();
@@ -181,8 +181,6 @@ public final class VCLPageFormat {
 	 */
 	public VCLGraphics getGraphics() {
 
-		if (image == null)
-			image = new VCLImage(1, 1, 32, this);
 		return image.getGraphics();
 
 	}

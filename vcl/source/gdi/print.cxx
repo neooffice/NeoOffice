@@ -152,15 +152,6 @@ using namespace com::sun::star::portal::client;
 
 #include <comphelper/processfactory.hxx>
 
-#ifdef USE_JAVA
-#ifndef _SV_SALDATA_HXX
-#include <saldata.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX
-#include <com/sun/star/vcl/VCLPageFormat.hxx>
-#endif
-#endif	// USE_JAVA
-
 using namespace com::sun::star::uno;
 using namespace com::sun::star::lang;
 
@@ -536,12 +527,10 @@ void Printer::ImplInit( SalPrinterQueueInfo* pInfo )
 			 (pJobSetup->maDriver != pInfo->maDriver) )
 		{
 #ifdef USE_JAVA
-			SalDriverData *pDriverData = (SalDriverData *)pJobSetup->mpDriverData;
-			{
-				GetSalData()->maVCLPageFormats.remove( pDriverData->mpVCLPageFormat );
-				delete pDriverData->mpVCLPageFormat;
-			}
-			rtl_freeMemory( pJobSetup->mpDriverData );
+			if ( pJobSetup->mnSystem == JOBSETUP_SYSTEM_JAVA && pJobSetup->mnDriverDataLen == sizeof( SalDriverData ) )
+				delete (SalDriverData *)pJobSetup->mpDriverData;
+			else
+				rtl_freeMemory( pJobSetup->mpDriverData );
 #else	// USE_JAVA
 			delete[] pJobSetup->mpDriverData;
 #endif	// USE_JAVA

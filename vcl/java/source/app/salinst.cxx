@@ -1484,7 +1484,7 @@ SalInfoPrinter* SalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
 
 		if ( bDelete )
 		{
-			rtl_freeMemory( pSetupData->mpDriverData );
+			delete (SalDriverData *)pSetupData->mpDriverData;
 			pSetupData->mpDriverData = NULL;
 			pSetupData->mnDriverDataLen = 0;
 		}
@@ -1493,16 +1493,14 @@ SalInfoPrinter* SalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
 	// Set driver data
 	if ( !pSetupData->mpDriverData )
 	{
-		SalDriverData *pDriverData = (SalDriverData *)rtl_allocateMemory( sizeof( SalDriverData ) );
+		SalDriverData *pDriverData = new SalDriverData();
 		pDriverData->mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat();
-		pSalData->maVCLPageFormats.push_back( pDriverData->mpVCLPageFormat );
 		pSetupData->mpDriverData = (BYTE *)pDriverData;
 		pSetupData->mnDriverDataLen = sizeof( SalDriverData );
 	}
 
 	// Create a new page format instance that points to the same Java object
 	pPrinter->maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( ((SalDriverData *)pSetupData->mpDriverData)->mpVCLPageFormat->getJavaObject() );
-	pSalData->maVCLPageFormats.push_back( pPrinter->maPrinterData.mpVCLPageFormat );
 
 	// Update values
 	pPrinter->SetData( 0, pSetupData );
