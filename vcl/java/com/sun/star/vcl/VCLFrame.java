@@ -1645,10 +1645,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		VCLFrame.mouseModifiersPressed = e.getModifiers();
 
-		// Just to be safe, post a mouse entered event
-		MouseEvent mouseEntered = new MouseEvent(e.getComponent(), MouseEvent.MOUSE_ENTERED, e.getWhen(), VCLFrame.mouseModifiersPressed, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
-		mouseEntered(mouseEntered);
-
 		// Enable mouse capture
 		VCLFrame.capture = true;
 
