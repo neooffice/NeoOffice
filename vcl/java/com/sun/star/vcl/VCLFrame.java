@@ -36,6 +36,7 @@
 package com.sun.star.vcl;
 
 import java.awt.ActiveEvent;
+import java.awt.Canvas;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
@@ -686,7 +687,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		// Add a panel as the only component
 		panel = new VCLFrame.NoPaintPanel(this);
-		panel.setBackground(Color.white);
 		window.add(panel);
 		bitCount = panel.getColorModel().getPixelSize();
 		if (bitCount <= 1)
@@ -921,6 +921,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public Rectangle getBounds() {
 
 		return window.getBounds();
+
+	}
+
+	/**
+	 * Returns the canvas for the native window.
+	 *
+	 * @return the canvas for the native window
+	 */
+	Canvas getCanvas() {
+
+		if (panel != null)
+			return panel.getCanvas();
+		else
+			return null;
 
 	}
 
@@ -2060,17 +2074,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		public void paint(Graphics g) {
 
 			if (isShowing())
-				super.paint(g);
+				super.paintAll(g);
 			g.setClip(null);
-
-			VCLGraphics graphics = frame.getGraphics();
-			if (graphics != null) {
-				synchronized (graphics) {
-					VCLImage image = graphics.getImage();
-					if (image != null)
-						graphics.addToFlush(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
-				}
-			}
 
 		}
 
@@ -2080,6 +2085,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * A class that has painting methods that perform no painting.
 	 */
 	final class NoPaintPanel extends Panel {
+
+		/**
+		 * The panel's native canvas.
+		 */
+		private Canvas canvas = null;
 
 		/**
 		 * The <code>VCLFrame</code>.
@@ -2094,7 +2104,23 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		NoPaintPanel(VCLFrame f) {
 
 			frame = f;
+			setBackground(Color.white);
 			enableInputMethods(true);
+
+			// Add a canvas as the only component
+			canvas = new Canvas();
+			add(canvas);
+
+		}
+
+		/**
+		 * Returns the canvas for the panel.
+		 *
+		 * @return the canvas for the panel 
+		 */
+		Canvas getCanvas() {
+
+			return canvas;
 
 		}
 
@@ -2132,8 +2158,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		public void paint(Graphics g) {
 
-			if (isShowing())
-				super.paint(g);
 			g.setClip(null);
 
 			VCLGraphics graphics = frame.getGraphics();
@@ -2195,17 +2219,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		public void paint(Graphics g) {
 
 			if (isShowing())
-				super.paint(g);
+				super.paintAll(g);
 			g.setClip(null);
-
-			VCLGraphics graphics = frame.getGraphics();
-			if (graphics != null) {
-				synchronized (graphics) {
-					VCLImage image = graphics.getImage();
-					if (image != null)
-						graphics.addToFlush(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
-				}
-			}
 
 		}
 
