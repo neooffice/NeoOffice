@@ -12,11 +12,6 @@
    <value>false</value>
   </prop>
  </node>
- <node oor:name="View">
-  <prop oor:name="LookAndFeel" oor:type="xs:short">
-   <value>4</value>
-  </prop>
- </node>
  <node oor:name="Help">
   <node oor:name="Registration">
    <prop oor:name="ReminderDate" oor:type="xs:string">
