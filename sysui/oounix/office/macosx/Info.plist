@@ -97,6 +97,6 @@
 	<key>CFBundleVersion</key>
 	<string>$(PRODUCT_VERSION) Build $(RSCVERSION)</string>
 	<key>CFBundleGetInfoString</key>
-	<string>$(PRODUCT_TRADEMARKED_NAME) Copyright 2003 Patrick Luby, Portions Copyright 2001 Sun Microsystems, Inc.</string>
+	<string>$(PRODUCT_TRADEMARKED_NAME) Copyright 2003 Patrick Luby. Portions Copyright 2001 Sun Microsystems, Inc.</string>
 </dict>
 </plist>
