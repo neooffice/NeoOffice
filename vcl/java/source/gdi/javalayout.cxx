@@ -74,6 +74,16 @@ bool JavaLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 // -----------------------------------------------------------------------
 
+void JavaLayout::AdjustLayout( ImplLayoutArgs& rArgs )
+{
+	if ( rArgs.mpDXArray )
+		mpVCLTextLayout->setDXArray( rArgs.mpDXArray, rArgs.mnEndCharPos - rArgs.mnMinCharPos );
+	else if ( rArgs.mnLayoutWidth )
+		mpVCLTextLayout->justify( rArgs.mnLayoutWidth );
+}
+
+// -----------------------------------------------------------------------
+
 void JavaLayout::DrawText( SalGraphics& rGraphics ) const
 {
 	Point aPoint( GetDrawPosition() );
@@ -84,7 +94,8 @@ void JavaLayout::DrawText( SalGraphics& rGraphics ) const
 
 int JavaLayout::GetTextBreak( long nMaxWidth, long nCharExtra, int nFactor ) const
 {
-	return mpVCLTextLayout->getTextBreak( nMaxWidth, nCharExtra, nFactor );
+	int nRet = mpVCLTextLayout->getTextBreak( nMaxWidth, nCharExtra, nFactor );
+	return ( nRet < 0 ? STRING_LEN : nRet );
 }
 
 // -----------------------------------------------------------------------
@@ -109,6 +120,13 @@ int JavaLayout::GetNextGlyphs( int nLen, long *pGlyphs, Point& rPos, int& nStart
 	fprintf( stderr, "JavaLayout::GetNextGlyphs not implemented\n" );
 #endif
 	return 0;
+}
+
+// -----------------------------------------------------------------------
+
+bool JavaLayout::GetBoundRect( SalGraphics& rGraphics, Rectangle& rRect ) const
+{
+	return mpVCLTextLayout->getBounds( rRect );
 }
 
 // -----------------------------------------------------------------------

@@ -36,7 +36,10 @@
 package com.sun.star.vcl;
 
 import java.awt.Font;
+import java.awt.Rectangle;
 import java.awt.font.GlyphVector;
+import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 import java.text.AttributedString;
 
 /**
@@ -46,6 +49,16 @@ import java.text.AttributedString;
  * @author 	    $Author$
  */
 public final class VCLTextLayout {
+
+	/**
+	 * The bounds.
+	 */
+	private Rectangle bounds = null;
+
+	/*
+	 * The beginning index of the substring that this glyph vector applies to.
+	 */
+	private int beginIndex = 0;
 
 	/*
 	 * The number of characters.
@@ -67,6 +80,11 @@ public final class VCLTextLayout {
 	 */
 	private int[] charAdvances = null;
 
+	/*
+	 * The ending index of the substring that this glyph vector applies to.
+	 */
+	private int endIndex = 0;
+
 	/**
 	 * The glyph vector.
 	 */
@@ -76,11 +94,6 @@ public final class VCLTextLayout {
 	 * The graphics.
 	 */
 	private VCLGraphics graphics = null;
-
-	/**
-	 * The width.
-	 */
-	private int width = -1;
 
 	/**
 	 * Constructs a new <code>VCLTextLayout</code> instance.
@@ -104,50 +117,37 @@ public final class VCLTextLayout {
 	 */
 	public void drawText(int x, int y, int orientation, int color) {
 
+		// Force glyph layout to match current width
+		justify(getWidth());
+
 		graphics.drawTextArray(glyphs, x, y, orientation, color, font.isAntialiased());
 
 	}
 
 	/**
-	 * Returns an array of the offsets for each character.
+	 * Returns the bounds of the glyph vector.
 	 *
-	 * @return an array of the offsets for each character
+	 * @return the bounds of the glyph vector
 	 */
-	public int[] fillDXArray() {
+	public Rectangle getBounds() {
 
-		// Cache the glyph vector width
-		if (width < 0)
-			width = glyphs.getLogicalBounds().getBounds().width;
+		// Cache the bounds
+		if (bounds == null)
+			bounds = glyphs.getLogicalBounds().getBounds();
 
-		// Cache the character advances
-		if (charAdvances == null) {
-			charAdvances = new int[count];
-			int currentAdvance = 0;
-			int previousAdvance = 0;
-			int i;
-			for (i = 0; i < charAdvances.length - 1; i++) {
-				currentAdvance = (int)glyphs.getGlyphPosition(i + 1).getX();
-				charAdvances[i] = currentAdvance - previousAdvance;
-				previousAdvance = currentAdvance;
-			}
-			// Compute the advance of the last glyph
-			charAdvances[i] = width - currentAdvance;
-		}
-
-		return charAdvances;
-
+		return bounds;
 	}
 
 	/**
-	 * Returns an array of the cursor offsets for each character.
+	 * Returns an array of the cursor advances for each character.
 	 *
-	 * @return an array of the cursor offsets for each character
+	 * @return an array of the cursor advances for each character
 	 */
 	public int[] getCaretPositions() {
 
 		// Cache the caret positions
 		if (caretPositions == null) {
-			int[] advances = fillDXArray();
+			int[] advances = getDXArray();
 			caretPositions = new int[count * 2];
 			int currentPosition = 0;
 			for (int i = 0; i < caretPositions.length; i += 2) {
@@ -162,6 +162,20 @@ public final class VCLTextLayout {
 	}
 
 	/**
+	 * Returns an array of the advances for each character.
+	 *
+	 * @return an array of the advances for each character
+	 */
+	public int[] getDXArray() {
+
+		// Force glyph layout to match current width
+		justify(getWidth());
+
+		return charAdvances;
+
+	}
+
+	/**
 	 * Returns the text break character.
 	 *
 	 * @param the maximum width
@@ -171,10 +185,10 @@ public final class VCLTextLayout {
 	 */
 	public int getTextBreak(int maxWidth, int charExtra, int factor) {
 
-		int[] advances = fillDXArray();
+		int[] advances = getDXArray();
 
-		if (((width * factor) + (count * charExtra)) <= maxWidth)
-			return Integer.MAX_VALUE;
+		if (((getBounds().width * factor) + (count * charExtra)) <= maxWidth)
+			return -1;
 
 		// Iterate through char widths until the maximum width is reached
 		int currentWidth = 0;
@@ -182,10 +196,65 @@ public final class VCLTextLayout {
 		{
 			currentWidth += (advances[i] * factor);
 			if (currentWidth >= maxWidth)
-				return i;
+				return i + beginIndex;
+			currentWidth += charExtra;
 		}
 
-		return Integer.MAX_VALUE;
+		return -1;
+
+	}
+
+	/**
+	 * Returns the width of the glyph vector.
+	 *
+	 * @return the width of the glyph vector
+	 */
+	public int getWidth() {
+
+		// Cache the bounds
+		if (bounds == null) {
+			Rectangle2D r = glyphs.getLogicalBounds();
+			bounds = r.getBounds();
+			// If Java rounds the width up by more than half a pixel, round
+			// down instead
+			if (bounds.width - r.getWidth() > 0.5)
+				bounds.width--;
+		}
+
+		return bounds.width;
+	}
+
+	/**
+	 * Justifies the glyph vector to fit within the specified width.
+	 *
+	 * @param the desired width of the glyph vector
+	 */
+	public void justify(int width) {
+
+		double totalAdjust = width - glyphs.getGlyphPosition(count).getX();
+		if (totalAdjust == 0 && charAdvances != null)
+			return;
+
+		bounds = null;
+
+		// Adjust and cache the character advances
+		double charAdjust = totalAdjust / count;
+		charAdvances = new int[count];
+		int previousAdvance = 0;
+		Point2D currentAdvance;
+		int i;
+		int n = charAdvances.length - 1;
+		for (i = 0; i < n; i++) {
+			currentAdvance = glyphs.getGlyphPosition(i + 1);
+			currentAdvance.setLocation(currentAdvance.getX() + charAdjust, currentAdvance.getY());
+			glyphs.setGlyphPosition(i + 1, currentAdvance);
+			charAdvances[i] = (int)(currentAdvance.getX() - previousAdvance);
+			previousAdvance += charAdvances[i];
+		}
+		currentAdvance = glyphs.getGlyphPosition(i + 1);
+		currentAdvance.setLocation((double)width, currentAdvance.getY());
+		glyphs.setGlyphPosition(i + 1, currentAdvance);
+		charAdvances[i] = width - previousAdvance;
 
 	}
 
@@ -193,17 +262,43 @@ public final class VCLTextLayout {
 	 * Layout text.
 	 *
 	 * @param s the string to layout
+	 * @param b the beginning index
+	 * @param e the ending index
+	 * @param f the layout flags
 	 */
-	public void layoutText(String s) {
+	public void layoutText(String s, int b, int e, int f) {
 
-		count = s.length();
+		beginIndex = b;
+		endIndex = e;
+		count = endIndex - beginIndex;
+
+		bounds = null;
 		charAdvances = null;
 		caretPositions = null;
-		width = -1;
 
 		// Create the attributed string and the glyph vector
 		AttributedString as = new AttributedString(s);
 		glyphs = font.getFont().createGlyphVector(graphics.getFontRenderContext(), as.getIterator());
+
+	}
+
+	/**
+	 * Sets the advances for each character.
+	 *
+	 * @param advances an array of the advances for each character
+	 */
+	public void setDXArray(int[] advances) {
+
+		bounds = null;
+
+		// Adjust and cache the character advances
+		charAdvances = advances;
+		Point2D currentAdvance;
+		for (int i = 0; i < charAdvances.length; i++) {
+			currentAdvance = glyphs.getGlyphPosition(i + 1);
+			currentAdvance.setLocation((double)charAdvances[i], currentAdvance.getY());
+			glyphs.setGlyphPosition(i + 1, currentAdvance);
+		}
 
 	}
 

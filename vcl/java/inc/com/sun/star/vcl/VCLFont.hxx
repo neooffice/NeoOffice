@@ -63,7 +63,6 @@ public:
 
 	com_sun_star_vcl_VCLFont*	deriveFont( long _par0, sal_Bool _par1, sal_Bool _par2, sal_Bool _par3 );
 	long				getAscent();
-	void				getCharWidth( sal_Unicode _par0, sal_Unicode _par1, long *_par2 );
 	long				getDescent();
 	com_sun_star_vcl_VCLFont*	getDefaultFont();
 	FontFamily			getFamilyType();

@@ -114,38 +114,114 @@ void com_sun_star_vcl_VCLTextLayout::drawText( long _par0, long _par1, int _par2
 		}
 	}
 }
+
 // ----------------------------------------------------------------------------
 
 long com_sun_star_vcl_VCLTextLayout::fillDXArray( long *_par0 )
 {
-	static jmethodID mID = NULL;
+	static jmethodID mIDGetWidth = NULL;
 	long out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mIDGetWidth )
+		{
+			char *cSignature = "()I";
+			mIDGetWidth = t.pEnv->GetMethodID( getMyClass(), "getWidth", cSignature );
+		}
+		OSL_ENSURE( mIDGetWidth, "Unknown method id!" );
+		if ( mIDGetWidth )
+		{
+			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mIDGetWidth );
+			if ( out && _par0 )
+			{
+				static jmethodID mIDGetDXArray = NULL;
+				if ( !mIDGetDXArray )
+				{
+					char *cSignature = "()[I";
+					mIDGetDXArray = t.pEnv->GetMethodID( getMyClass(), "getDXArray", cSignature );
+				}
+				OSL_ENSURE( mIDGetDXArray, "Unknown method id!" );
+				if ( mIDGetDXArray )
+				{
+					BOOL bDXArray = FALSE;
+					jintArray tempObj = (jintArray)t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mIDGetDXArray );
+					if ( tempObj )
+					{
+						jsize nElements = t.pEnv->GetArrayLength( tempObj );
+						if ( nElements )
+						{
+							bDXArray = TRUE;	
+							long nSize = nElements * sizeof( jint );
+							jboolean bCopy( sal_False );
+							jint *pPosBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( tempObj, &bCopy );
+							memcpy( _par0, pPosBits, nSize );
+							t.pEnv->ReleasePrimitiveArrayCritical( tempObj, (void *)pPosBits, JNI_ABORT );
+						}
+					}
+
+					if ( !bDXArray )
+						out = 0;
+				}
+			}
+		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+bool com_sun_star_vcl_VCLTextLayout::getBounds( Rectangle& _par0 )
+{
+	static jmethodID mID = NULL;
+	static jfieldID fIDLeft = NULL;
+	static jfieldID fIDTop = NULL;
+	static jfieldID fIDRight = NULL;
+	static jfieldID fIDBottom = NULL;
+	bool out = false;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()[I";
-			mID = t.pEnv->GetMethodID( getMyClass(), "fillDXArray", cSignature );
+			char *cSignature = "()Ljava/awt/Rectangle;";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getBounds", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jintArray tempObj = (jintArray)t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			if ( tempObj )
 			{
-				jsize nElements = t.pEnv->GetArrayLength( tempObj );
-				if ( nElements )
+				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
+				if ( !fIDLeft )
 				{
-					long nSize = nElements * sizeof( jint );
-					jboolean bCopy( sal_False );
-					jint *pPosBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( tempObj, &bCopy );
-					int i;
-					for ( i = 0; i < nElements; i++)
-						out += (long)pPosBits[ i ];
-					if ( _par0 )
-						memcpy( _par0, pPosBits, nSize );
-					t.pEnv->ReleasePrimitiveArrayCritical( tempObj, (void *)pPosBits, JNI_ABORT );
+					char *cSignature = "I";
+					fIDLeft = t.pEnv->GetFieldID( tempObjClass, "left", cSignature );
+				}
+				OSL_ENSURE( fIDLeft, "Unknown field id!" );
+				if ( !fIDTop )
+				{
+					char *cSignature = "I";
+					fIDTop  = t.pEnv->GetFieldID( tempObjClass, "top", cSignature );
+				}
+				OSL_ENSURE( fIDTop, "Unknown field id!" );
+				if ( !fIDRight )
+				{
+					char *cSignature = "I";
+					fIDRight = t.pEnv->GetFieldID( tempObjClass, "right", cSignature );
+				}
+				OSL_ENSURE( fIDRight, "Unknown field id!" );
+				if ( !fIDBottom )
+				{
+					char *cSignature = "I";
+					fIDBottom = t.pEnv->GetFieldID( tempObjClass, "bottom", cSignature );
+				}
+				OSL_ENSURE( fIDBottom, "Unknown field id!" );
+				if ( fIDLeft && fIDTop && fIDRight && fIDBottom )
+				{
+					_par0 = Rectangle( (long)t.pEnv->GetIntField( tempObj, fIDLeft ), (long)t.pEnv->GetIntField( tempObj, fIDTop ), (long)t.pEnv->GetIntField( tempObj, fIDRight ), (long)t.pEnv->GetIntField( tempObj, fIDBottom ) );
+					out = true;
 				}
 			}
 		}
@@ -215,6 +291,29 @@ int com_sun_star_vcl_VCLTextLayout::getTextBreak( long _par0, long _par1, int _p
 
 // ----------------------------------------------------------------------------
 
+void com_sun_star_vcl_VCLTextLayout::justify( long _par0 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(I)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "justify", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[1];
+			args[0].i = jint( _par0 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLTextLayout::layoutText( ImplLayoutArgs& _par0 )
 {
 	static jmethodID mID = NULL;
@@ -223,15 +322,50 @@ void com_sun_star_vcl_VCLTextLayout::layoutText( ImplLayoutArgs& _par0 )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(Ljava/lang/String;)V";
+			char *cSignature = "(Ljava/lang/String;III)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "layoutText", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[1];
+			jvalue args[4];
 			args[0].l = StringToJavaString( t.pEnv, OUString( _par0.mpStr + _par0.mnMinCharPos, _par0.mnEndCharPos - _par0.mnMinCharPos ) );
+			args[1].i = _par0.mnMinCharPos;
+			args[2].i = _par0.mnEndCharPos;
+			args[3].i = _par0.mnFlags;
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLTextLayout::setDXArray( const long *_par0, int _par1 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "([I)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "setDXArray", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			if ( _par0 && _par1 )
+			{
+				jintArray pAdvances = t.pEnv->NewIntArray( _par1 );
+				jboolean bCopy( sal_False );
+				long *pAdvanceBits = (long *)t.pEnv->GetPrimitiveArrayCritical( pAdvances, &bCopy );
+				for ( int i = 0 ; i < _par1; i++ )
+					memcpy( pAdvanceBits, _par0, _par1 * sizeof( long ) );
+				t.pEnv->ReleasePrimitiveArrayCritical( pAdvances, (void *)pAdvanceBits, 0 );
+				jvalue args[1];
+				args[0].l = pAdvances;
+				t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+			}
 		}
 	}
 }

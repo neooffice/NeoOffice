@@ -81,20 +81,6 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 
 // -----------------------------------------------------------------------
 
-/*
-long SalGraphics::GetCharWidth( sal_Unicode nChar1, sal_Unicode nChar2, long* pWidthAry )
-{
-	if ( maGraphicsData.mpVCLFont )
-		maGraphicsData.mpVCLFont->getCharWidth( nChar1, nChar2, pWidthAry );
-	else
-		memset( pWidthAry, 0, ( nChar2 - nChar1 + 1 ) * sizeof( sal_Unicode ) );
-
-	return 1;
-}
-*/
-
-// -----------------------------------------------------------------------
-
 void SalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 {
 	pMetric->mnWidth = 0;

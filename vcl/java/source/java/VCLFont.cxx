@@ -175,45 +175,6 @@ long com_sun_star_vcl_VCLFont::getAscent()
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLFont::getCharWidth( sal_Unicode _par0, sal_Unicode _par1, long *_par2 )
-{
-	static jmethodID mID = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "(CC)[I";
-			mID = t.pEnv->GetMethodID( getMyClass(), "getCharWidth", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jvalue args[2];
-			args[0].c = jchar( _par0 );
-			args[1].c = jchar( _par1 );
-			jintArray tempObj;
-			if ( com_sun_star_vcl_VCLFont::useDefaultFont )
-			{
-				com_sun_star_vcl_VCLFont *pDefaultFont = getDefaultFont();
-				tempObj = (jintArray)t.pEnv->CallNonvirtualObjectMethodA( pDefaultFont->getJavaObject(), getMyClass(), mID, args );
-				delete pDefaultFont;
-			}
-			else
-			{
-				tempObj = (jintArray)t.pEnv->CallNonvirtualObjectMethodA( object, getMyClass(), mID, args );
-			}
-			if ( tempObj )
-			{
-				jsize elements( _par1 - _par0 + 1 );
-				t.pEnv->GetIntArrayRegion( tempObj, 0, elements, (jint *)_par2 );
-			}
-		}
-	}
-}
-
-// ----------------------------------------------------------------------------
-
 com_sun_star_vcl_VCLFont *com_sun_star_vcl_VCLFont::getDefaultFont()
 {
 	static jmethodID mID = NULL;

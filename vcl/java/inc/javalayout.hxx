@@ -60,11 +60,14 @@ public:
 	virtual			~JavaLayout();
 
 	virtual bool	LayoutText( ImplLayoutArgs& rArgs );
+	virtual void	AdjustLayout( ImplLayoutArgs& rArgs );
 	virtual void	DrawText( SalGraphics& rGraphics ) const;
 	virtual int		GetTextBreak( long nMaxWidth, long nCharExtra, int nFactor ) const;
 	virtual long	FillDXArray( long *pDXArray ) const;
 	virtual void	GetCaretPositions( int nArraySize, long *pCaretXArray ) const;
 	virtual int		GetNextGlyphs( int nLen, long *pGlyphs, Point& rPos, int& nStart, long *pGlyphAdvances, int *pCharIndexes ) const;
+	virtual bool	GetBoundRect( SalGraphics& rGraphics, Rectangle& rRect ) const;
+
 	virtual void	MoveGlyph( int nStart, long nNewXPos );
 	virtual void	DropGlyph( int nStart );
 	virtual void	Simplify( bool bIsBase );
