@@ -65,12 +65,19 @@ public final class VCLMenuItemData {
     private VCLMenuItemData delegate = null;
     
     /**
+     * Object that uses this menu item as its delegate.  Used to synchronize
+     * data changes back to parent objects.
+     */
+    private VCLMenuItemData delegateForObject = null;
+    
+    /**
      * Set the delegate object for this instance
      *
      * @param d	new delegate
      */
     public void setDelegate(VCLMenuItemData d) {
         delegate=d;
+        d.delegateForObject=this;
     }
     
     /**
@@ -193,6 +200,8 @@ public final class VCLMenuItemData {
 	unregisterAllAWTPeers();
 	menuItems=null;
 	title=null;
+    if(delegateForObject!=null)
+        delegateForObject.setDelegate(null);
     }
     
     /**
@@ -224,10 +233,18 @@ public final class VCLMenuItemData {
         
         if(!isSeparator) {
             if(newTitle!=null)
-		title=new String(newTitle);
-	    else
-		title=new String();
-	    if(awtPeers==null)
+                title=new String(newTitle);
+            else
+                title=new String();
+            
+            // if we're a delegate for an object, set the title for our
+            // parent object so if the delegate gets switched the new delegate
+            // can retain the title.
+            
+            if(delegateForObject!=null)
+                delegateForObject.title=new String(title);
+            
+            if(awtPeers==null)
 		System.err.println("NULL peers array!");
 	    if(!awtPeers.isEmpty()) {
 		Enumeration e=awtPeers.elements();
@@ -292,6 +309,14 @@ public final class VCLMenuItemData {
         }
         
         isEnabled=newEnabled;
+        
+        // if we're the delegate for an object, make that underlying object's
+        // state change as well so if the delegate gets switched the enabled
+        // state can get retained
+        
+        if(delegateForObject!=null)
+            delegateForObject.isEnabled=newEnabled;
+        
 	if(!awtPeers.isEmpty()) {
 	    Enumeration e=awtPeers.elements();
 	    while(e.hasMoreElements()) {
