@@ -329,17 +329,8 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 	{
 		if ( nClass == kEventClassAppleEvent )
 		{
-			// Unlock the Carbon lock
-			VCLThreadAttach t;
-			if ( t.pEnv )
-				Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
-
 			// Block the VCL event loop while processing Apple Events
 			pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->acquire();
-
-			// Relock the Carbon lock
-			if ( t.pEnv )
-				Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
 
 			OSStatus nErr = CallNextEventHandler( aNextHandler, aEvent );
 
@@ -358,17 +349,8 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				WindowRef aWindow;
 				if ( GetEventParameter( aEvent, kEventParamWindowMouseLocation, typeQDPoint, NULL, sizeof( MacOSPoint ), NULL, &aPoint ) == noErr && GetEventParameter( aEvent, kEventParamMouseWheelDelta, typeSInt32, NULL, sizeof( SInt32 ), NULL, &nDelta ) == noErr && GetEventParameter( aEvent, kEventParamWindowRef, typeWindowRef, NULL, sizeof( WindowRef ), NULL, &aWindow ) == noErr )
 				{
-					// Unlock the Carbon lock
-					VCLThreadAttach t;
-					if ( t.pEnv )
-						Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
-
 					// Block the VCL event loop while checking mapping
 					pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->acquire();
-
-					// Relock the Carbon lock
-					if ( t.pEnv )
-						Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
 
 					for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 					{
@@ -457,17 +439,8 @@ void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void
 	SalData *pSalData = GetSalData();
 	if ( pSalData && !Application::IsShutDown() )
 	{
-		// Unlock the Carbon lock
-		VCLThreadAttach t;
-		if ( t.pEnv )
-			Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
-
 		// Block the VCL event loop while checking mapping
 		pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->acquire();
-
-		// Relock the Carbon lock
-		if ( t.pEnv )
-			Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
 
 		Rect aRect;
 		for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
