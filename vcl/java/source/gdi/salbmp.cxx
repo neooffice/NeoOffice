@@ -225,7 +225,11 @@ BitmapBuffer* SalBitmap::AcquireBuffer( BOOL bReadOnly )
 	// Set buffer values
 	pBuffer->mnBitCount = mnBitCount;
 	pBuffer->mnFormat = BMP_FORMAT_TOP_DOWN;
-	if ( mnBitCount <= 8 )
+	if ( mnBitCount <= 1 )
+		pBuffer->mnFormat |= BMP_FORMAT_1BIT_MSB_PAL;
+	else if ( mnBitCount <= 4 )
+		pBuffer->mnFormat |= BMP_FORMAT_4BIT_MSN_PAL;
+	else if ( mnBitCount <= 8 )
 		pBuffer->mnFormat |= BMP_FORMAT_8BIT_PAL;
 	else
 		pBuffer->mnFormat |= BMP_FORMAT_24BIT_TC_RGB;

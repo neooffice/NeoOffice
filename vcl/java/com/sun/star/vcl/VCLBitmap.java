@@ -99,19 +99,41 @@ public final class VCLBitmap {
 		width = w;
 		height = h;
 
-		// Create the data buffer
-		if (b <= 8) {
+		// Adjust the bit count
+		if (b <= 1)
+			bitCount = 1;
+		else if (b <= 4)
+			bitCount = 4;
+		else if (b <= 8)
 			bitCount = 8;
-			BufferedImage img = new BufferedImage(1, 1, BufferedImage.TYPE_BYTE_INDEXED);
-			model = (IndexColorModel)img.getColorModel();
-			palette = new int[model.getMapSize()];
-			model.getRGBs(palette);
-		}
-		else {
+		else
 			bitCount = 24;
+
+		// Create the color model
+		if (bitCount <= 8) {
+			int[] p = null;
+			if (bitCount == 1) {
+				p = new int[2];
+				p[0] = 0xff000000;
+				p[1] = 0xffffffff;
+			}
+			else if (bitCount == 4) {
+				p = new int[16];
+				for (int i = 0; i < p.length; i++) {
+					int j = i * 17;
+					p[i] = 0xff000000 | ((j << 16) & 0x00ff0000) | ((j << 8) & 0x0000ff00) | (j & 0x000000ff);
+				}
+			}
+			else {
+				BufferedImage img = new BufferedImage(1, 1, BufferedImage.TYPE_BYTE_INDEXED);
+				IndexColorModel m = (IndexColorModel)img.getColorModel();
+				p = new int[m.getMapSize()];
+				m.getRGBs(p);
+			}
+			setPalette(p);
 		}
 
-		// Align buffer to 4 bytes
+		// Align buffer size to 4 bytes and create the the buffer
 		scanline = (((bitCount * width) + 31) >> 5) << 2;
 		data = new byte[scanline * height];
 
@@ -222,8 +244,14 @@ public final class VCLBitmap {
 	int getPixel(Point p) {
 
 		int pixel = 0;
-		if (bitCount <= 8) { 
-			int i = data[(p.y * scanline) + p.x];
+		if (bitCount <= 8) {
+			int i = 0;
+			if (bitCount <= 1)
+				i = (data[(p.y * scanline) + (p.x >> 3)] & (1 << (7 - (p.x & 7)))) == 0 ? 0 : 1;
+			else if (bitCount <= 4)
+				i = (data[(p.y * scanline) + (p.x >> 1)] >> ((p.x & 1) == 0 ? 4 : 0)) & 0x0f;
+			else
+				i = data[(p.y * scanline) + p.x];
 			if (i < 0)
 				i += 256;
 			pixel = palette[i];
@@ -258,7 +286,7 @@ public final class VCLBitmap {
 		if (palette != null) {
 			for (int i = 0; i < palette.length; i++)
 				palette[i] |= 0xff000000;
-			model = new IndexColorModel(8, palette.length, p, 0, false, -1, DataBuffer.TYPE_BYTE);
+			model = new IndexColorModel(bitCount, palette.length, p, 0, false, -1, DataBuffer.TYPE_BYTE);
 		}
 		else {
 			model = null;
@@ -274,7 +302,27 @@ public final class VCLBitmap {
 	 */
 	void setPixel(Point p, int c) {
 
-		if (bitCount <= 8) {
+		c |= 0xff000000;
+		if (bitCount <= 1) {
+			int i = (p.y * scanline) + (p.x >> 3);
+			if (c == 0xff000000)
+				data[i] &= ~(1 << (7 - (p.x & 7)));
+			else
+				data[i] |= 1 << (7 - (p.x & 7));
+		}
+		else if (bitCount <= 4) {
+			int i = (p.y * scanline) + (p.x >> 3);
+			byte b = ((byte[])model.getDataElements(c, null))[0];
+			if ((p.x & 1) == 0) {
+				data[i] &= 0x0f;
+				data[i] |= b << 4;
+			}
+			else {
+				data[i] &= 0xf0;
+				data[i] |= b & 0x0f;
+			}
+		}
+		else if (bitCount <= 8) {
 			data[(p.y * scanline) + p.x] = ((byte[])model.getDataElements(c, null))[0];
 		}
 		else if (bitCount <= 24) {
