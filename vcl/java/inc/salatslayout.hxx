@@ -69,6 +69,7 @@ public:
 	virtual void		DrawText( SalGraphics& rGraphics ) const;
 	virtual bool		GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector ) const;
 
+	void				Destroy();
 	long				GetBaselineDelta() const;
 	void				GetVerticalGlyphTranslation( long nGlyph, long& nX, long& nY ) const;
 };
