@@ -36,43 +36,52 @@
 
 if [ -d "$2" ]; then
 
+	tempfile="$INSTALLER_TEMP/out"
+	touch "$tempfile" || exit 1
+
 	# Put back user's custom dictionary files
 	if [ -d "$2/ooo" ]; then
-		for i in `cd "$2/ooo" ; find . -type f -name "*.aff" -o -name "*.dat" -o -name "*.dic" -o -name "*.idx" -maxdepth 1`; do
+		for i in `cd "$2/ooo" ; find . -name "*.aff" -o -name "*.dat" -o -name "*.dic" -o -name "*.idx" -maxdepth 1`; do
 			if [ ! -e "$2/Contents/share/dict/ooo/$i" ]; then
 				mv -f "$2/ooo/$i" "$2/Contents/share/dict/ooo" || exit 1
+				if [ -e "$2/ooo/dictionary.lst" ]; then
+					base=`basename "$i" | awk -F. '{ print $1 }'`
+					grep -E '[^][\W#]*(DICT|HYPH|THES)\W[[:alpha:]]*\W[[:alpha:]]*\W'"$base"'\W*$' "$2/ooo/dictionary.lst" >> "$tempfile"
+				fi
 			fi
 		done
+		if [ -s "$tempfile" ]; then
+			sort -u "$tempfile" >> "$2/Contents/share/dict/ooo/dictionary.lst"
+		fi
+		chown -Rf root:admin "$2/Contents/share/dict/ooo" || exit 1
 		chmod -Rf u-w,u+r "$2/Contents/share/dict/ooo" || exit 1
 		rm -Rf "$2/ooo" || exit 1
 	fi
 
 	# Put back user's custom help files
 	if [ -d "$2/help" ]; then
-		for i in `cd "$2/help" ; find . -type d -maxdepth 1`; do
+		for i in `cd "$2/help" ; find . -maxdepth 1`; do
 			if [ -h "$2/Contents/help/$i" ]; then
 				rm -f "$2/Contents/help/$i" || exit 1
 				mv -f "$2/help/$i" "$2/Contents/help" || exit 1
 			fi
 		done
+		chown -Rf root:admin "$2/Contents/help" || exit 1
 		chmod -Rf u-w,u+r "$2/Contents/help" || exit 1
 		rm -Rf "$2/help" || exit 1
 	fi
 
 	# Replace the default installation path with the actual installation path
-	tempfile="$INSTALLER_TEMP/out"
-	touch "$tempfile"
-	if [ -f "$tempfile" ]; then
-		cd "$2"
-		chmod -Rf u+rw "Contents/share/config/registry" || exit 1
-		for i in `find "Contents/share/config/registry" -type f` ; do
-			rm -f "$tempfile"
-			cp -p "$i" "$tempfile"
-			sed 's#/Applications#'"$2"'#g' "$tempfile" > "$i" || exit 1
-			touch -r "$tempfile" "$i"
-		done
-		chmod -Rf u-w,u+r "Contents/share/config/registry" || exit 1
-	fi
+	cd "$2"
+	chmod -Rf u+rw "Contents/share/config/registry" || exit 1
+	for i in `find "Contents/share/config/registry" -type f` ; do
+		rm -f "$tempfile" || exit 1
+		cp -p "$i" "$tempfile" || exit 1
+		sed 's#/Applications#'"$2"'#g' "$tempfile" > "$i" || exit 1
+		touch -r "$tempfile" "$i" || exit 1
+	done
+	chown -Rf root:admin "Contents/share/config/registry" || exit 1
+	chmod -Rf u-w,u+r "Contents/share/config/registry" || exit 1
 
 fi
 
