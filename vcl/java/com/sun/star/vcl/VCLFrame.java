@@ -590,9 +590,14 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private static KeyEvent lastKeyPressed = null;
 
 	/** 
-	 * The modifiers pressed.
+	 * The key modifiers pressed.
 	 */
 	private static int keyModifiersPressed = 0;
+
+	/** 
+	 * The mouse modifiers pressed.
+	 */
+	private static int mouseModifiersPressed = 0;
 
 	/**
 	 * Initialize input context.
@@ -1541,8 +1546,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (queue == null)
 			return;
 
-		MouseEvent mouseEntered = new MouseEvent(e.getComponent(), MouseEvent.MOUSE_ENTERED, e.getWhen(), e.getModifiers(), e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
-		mouseEntered(mouseEntered);
+		mouseModifiersPressed = e.getModifiers();
 
 		// Enable mouse capture
 		VCLFrame.capture = true;
@@ -1570,6 +1574,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (queue == null)
 			return;
 
+		mouseModifiersPressed &= ~(e.getModifiers());
+
 		VCLFrame f = this;
 
 		if (VCLFrame.captureFrame != null && e.getComponent().isShowing()) {
@@ -1594,7 +1600,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			if (f == null)
 				f = this;
 
-			if (VCLFrame.lastCaptureFrame != null && VCLFrame.lastCaptureFrame != f) {
+			if (mouseModifiersPressed == 0 && VCLFrame.lastCaptureFrame != null && VCLFrame.lastCaptureFrame != f) {
 				VCLFrame.lastCaptureFrame.focusGained(new FocusEvent(VCLFrame.lastCaptureFrame.getPanel(), FocusEvent.FOCUS_GAINED));
 				VCLFrame.lastCaptureFrame.focusLost(new FocusEvent(VCLFrame.lastCaptureFrame.getPanel(), FocusEvent.FOCUS_LOST));
 			}
