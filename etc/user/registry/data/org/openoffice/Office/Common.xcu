@@ -7,21 +7,6 @@
    </prop>
   </node>
  </node>
- <node oor:name="Misc">
-  <prop oor:name="FirstRun" oor:type="xs:boolean">
-   <value>false</value>
-  </prop>
- </node>
- <node oor:name="Help">
-  <node oor:name="Registration">
-   <prop oor:name="ReminderDate" oor:type="xs:string">
-    <value xsi:nil="true"/>
-   </prop>
-   <prop oor:name="RequestDialog" oor:type="xs:int">
-    <value>0</value>
-   </prop>
-  </node>
- </node>
  <node oor:name="I18N">
   <node oor:name="CJK">
    <prop oor:name="AsianTypography" oor:type="xs:boolean">

@@ -86,6 +86,7 @@ update_installation() {
 	chmod -Rf ug+w "$1/Contents/share/dict/ooo" || return 1
 
     # Touch and reload shared libraries to fix bug 280
+	DYLD_LIBRARY_PATH="$1/Contents/MacOS"; export DYLD_LIBRARY_PATH
 	for i in `cd "$1/Contents/MacOS" ; find . -type f -name "*.dylib*"`; do
 		touch -f "$1/Contents/MacOS/$i"   
 		"$2/Contents/Resources/reload_file" "$1/Contents/MacOS/$i"
