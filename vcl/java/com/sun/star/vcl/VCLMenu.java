@@ -86,8 +86,6 @@ public final class VCLMenu {
      * @return VCLMenuItemData reference
      */
     public VCLMenuItemData getMenuItemDataObject( ) {
-	if(disposed)
-	    System.err.println("getMenuItemDataObject() invoked on disposed menu!");
      	return(menuData);
     }
    
