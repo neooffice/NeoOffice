@@ -64,11 +64,13 @@ protected:
 	virtual void run() { SVMain(); _exit( 0 ); }
 };
 
-static ::vos::OMutex aCarbonLock;
-
+using namespace osl;
 using namespace rtl;
 using namespace vcl;
 using namespace vos;
+
+static Mutex aCarbonLock;
+static java_lang_Object *pCarbonLockObject = NULL;
 
 #endif
 
@@ -78,6 +80,15 @@ using namespace vos;
 static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( JNIEnv *pEnv, jobject object )
 {
 	return ( aCarbonLock.tryToAcquire() ? 0 : 1 );
+}
+#endif
+
+// ----------------------------------------------------------------------------
+
+#ifdef MACOSX
+static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( JNIEnv *pEnv, jobject object )
+{
+	return pCarbonLockObject->getJavaObject();
 }
 #endif
 
@@ -94,8 +105,7 @@ static void JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_init( JNIEnv *pEn
 #ifdef MACOSX
 static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv *pEnv, jobject object )
 {
-	aCarbonLock.release();
-	return 0;
+	return ( aCarbonLock.release() ? 0 : 1 );
 }
 #endif
 
@@ -214,17 +224,26 @@ int main( int argc, char *argv[] )
 			jclass carbonLockClass = t.pEnv->FindClass( "com/apple/mrj/macos/carbon/CarbonLock" );
 			if ( carbonLockClass )
 			{
-				JNINativeMethod pMethods[3];
+				// Create the lock object
+				pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/Object" ) );
+				pCarbonLockObject = new java_lang_Object( pClass->newInstanceObject() );
+				delete pClass;
+
+				// Reregister the native methods
+				JNINativeMethod pMethods[4];
 				pMethods[0].name = "acquire0";
 				pMethods[0].signature = "()I";
 				pMethods[0].fnPtr = Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0;
-				pMethods[1].name = "init";
-				pMethods[1].signature = "()V";
-				pMethods[1].fnPtr = Java_com_apple_mrj_macos_carbon_CarbonLock_init;
-				pMethods[2].name = "release0";
-				pMethods[2].signature = "()I";
-				pMethods[2].fnPtr = Java_com_apple_mrj_macos_carbon_CarbonLock_release0;
-				t.pEnv->RegisterNatives( carbonLockClass, pMethods, sizeof( pMethods ) / sizeof( JNINativeMethod* ) );
+				pMethods[1].name = "getInstance";
+				pMethods[1].signature = "()Ljava/lang/Object;";
+				pMethods[1].fnPtr = Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance;
+				pMethods[2].name = "init";
+				pMethods[2].signature = "()V";
+				pMethods[2].fnPtr = Java_com_apple_mrj_macos_carbon_CarbonLock_init;
+				pMethods[3].name = "release0";
+				pMethods[3].signature = "()I";
+				pMethods[3].fnPtr = Java_com_apple_mrj_macos_carbon_CarbonLock_release0;
+				t.pEnv->RegisterNatives( carbonLockClass, pMethods, 4 );
 			}
 		}
 
