@@ -45,6 +45,8 @@ import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
+import java.awt.MenuBar;
+import java.awt.MenuItem;
 import java.awt.MenuShortcut;
 import java.awt.Panel;
 import java.awt.Point;
@@ -1629,8 +1631,23 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			if ((modifiers & VCLFrame.menuModifiersMask) == VCLFrame.menuModifiersMask) {
 				VCLEvent vclEvent = new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0);
 				if (VCLEvent.convertVCLKeyCode(vclEvent.getKeyCode()) > 0) {
-					keyTyped(new KeyEvent(e.getComponent(), KeyEvent.KEY_TYPED, e.getWhen(), modifiers, KeyEvent.VK_UNDEFINED, keyChar));
-					VCLFrame.lastMenuShortcutPressed = new MenuShortcut(keyChar, (modifiers & InputEvent.SHIFT_MASK) == InputEvent.SHIFT_MASK ? true : false);
+					// Fix bug 244 by checking if there is an active AWT menu
+					// with the same shortcut
+					boolean ignoreShortcut = false;
+					MenuShortcut shortcut = new MenuShortcut(keyChar, (modifiers & InputEvent.SHIFT_MASK) == InputEvent.SHIFT_MASK ? true : false);
+ 					if (window instanceof Frame) {
+						MenuBar mb = ((Frame)window).getMenuBar();
+						if (mb != null) {
+							MenuItem mi = mb.getShortcutMenuItem(shortcut);
+							if (mi != null && mi.isEnabled())
+								ignoreShortcut = true;
+						}
+					}
+
+					if (!ignoreShortcut) {
+						keyTyped(new KeyEvent(e.getComponent(), KeyEvent.KEY_TYPED, e.getWhen(), modifiers, KeyEvent.VK_UNDEFINED, keyChar));
+						VCLFrame.lastMenuShortcutPressed = shortcut;
+					}
 				}
 			}
 		}
