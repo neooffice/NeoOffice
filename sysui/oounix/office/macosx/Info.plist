@@ -8,11 +8,12 @@
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>doc</string>
-				<string>xls</string>
 				<string>ppt</string>
-				<string>sxi</string>
 				<string>sxc</string>
+				<string>sxd</string>
+				<string>sxi</string>
 				<string>sxw</string>
+				<string>xls</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
