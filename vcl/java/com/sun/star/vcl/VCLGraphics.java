@@ -1041,10 +1041,6 @@ public final class VCLGraphics {
 			return;
 		}
 
-		// Set the color to keep the graphics context's color in sync with the
-		// text layout's color
-		graphics.setColor(new Color(color));
-
 		// Draw the text layout
 		drawTextLayout0(layout, color);
 
