@@ -328,6 +328,7 @@
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
+				<string>htm</string>
 				<string>html</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
