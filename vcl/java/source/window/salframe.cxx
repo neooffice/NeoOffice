@@ -460,7 +460,7 @@ void SalFrame::ShowFullScreen( BOOL bFullScreen )
 	}
 	else
 	{
-		SetPosSize( maFrameData.maOriginalGeometry.nX, maFrameData.maOriginalGeometry.nY, maFrameData.maOriginalGeometry.nWidth, maFrameData.maOriginalGeometry.nHeight, nFlags );
+		SetPosSize( maFrameData.maOriginalGeometry.nX - maFrameData.maOriginalGeometry.nLeftDecoration, maFrameData.maOriginalGeometry.nY - maFrameData.maOriginalGeometry.nTopDecoration, maFrameData.maOriginalGeometry.nWidth, maFrameData.maOriginalGeometry.nHeight, nFlags );
 		memset( &maFrameData.maOriginalGeometry, 0, sizeof( SalFrameGeometry ) );
 	}
 
