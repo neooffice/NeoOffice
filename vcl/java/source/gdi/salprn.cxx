@@ -284,7 +284,15 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 										}
 									}
 								}
-	
+
+								// Limit the resolution to 300 dpi as VCL will
+								// scale entire images before passing them to
+								// the SalGraphics for rendering
+								if ( aMaxResolution.hRes > 300 )
+									aMaxResolution.hRes = 300;
+								if ( aMaxResolution.vRes > 300 )
+									aMaxResolution.hRes = 300;
+
 								// Set the page resolution
 								maPrinterData.mpPrinter->maPrinterData.mpVCLPageFormat->setPageResolution( aMaxResolution.hRes, aMaxResolution.vRes );
 							}
