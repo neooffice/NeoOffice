@@ -62,7 +62,7 @@ OO_PACKAGES:=MathMLDTD UnoControls XmlSearch apiwww autodoc automation basctl ba
 OO_TAG:=OOO_STABLE_1_PORTS
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOfficeJ
-NEO_TAG:=HEAD
+NEO_TAG:=NeoOfficeJ-0_8_3
 
 all: build.all
 
