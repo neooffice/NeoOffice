@@ -1147,17 +1147,15 @@ public final class VCLGraphics {
 	}
 
 	/**
-	 * Get the size of the bounding rectangle of the glyph associated with the
-	 * specified character and font.
+	 * Get the bounding rectangle of the specified glyph and font.
 	 *
-	 * @param c the character
+	 * @param glyph the glyph index
 	 * @param font the font
 	 */
-	public Dimension getGlyphSize(char c, VCLFont font) {
+	public Rectangle getGlyphBounds(int glyph, VCLFont font ) {
 
-		GlyphVector glyphs = font.getFont().createGlyphVector(graphics.getFontRenderContext(), new char[]{ c });
-		Rectangle bounds = glyphs.getLogicalBounds().getBounds();
-		return new Dimension(bounds.width, bounds.height);
+		GlyphVector glyphs = font.getFont().createGlyphVector(graphics.getFontRenderContext(), new int[]{ glyph });
+		return glyphs.getLogicalBounds().getBounds();
 
 	}
 

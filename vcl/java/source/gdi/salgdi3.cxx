@@ -212,13 +212,12 @@ BOOL SalGraphics::GetGlyphBoundRect( long nIndex, Rectangle& rRect,
 {
 	if ( maGraphicsData.mpVCLFont )
 	{
-		Size aSize( maGraphicsData.mpVCLGraphics->getGlyphSize( nIndex, maGraphicsData.mpVCLFont ) );
-		rRect = Rectangle( Point( 0, 0 ), aSize );
+		rRect = maGraphicsData.mpVCLGraphics->getGlyphBounds( nIndex, maGraphicsData.mpVCLFont );
 		return TRUE;
 	}
 	else
 	{
-		rRect = Rectangle();
+		rRect.SetEmpty();
 		return FALSE;
 	}
 }
@@ -262,6 +261,19 @@ void SalGraphics::RemovingFont( ImplFontData* )
 #ifdef DEBUG
 	fprintf( stderr, "SalGraphics::RemovingFont not implemented\n" );
 #endif
+}
+
+// -----------------------------------------------------------------------
+
+BOOL SalGraphics::CreateFontSubset( const rtl::OUString& rToFile,
+                                    ImplFontData* pFont, long* pGlyphIDs,
+                                    sal_uInt8* pEncoding, sal_Int32* pWidths,
+                                    int nGlyphs, FontSubsetInfo& rInfo )
+{
+#ifdef DEBUG
+	fprintf( stderr, "SalGraphics::CreateFontSubset not implemented\n" );
+#endif
+	return FALSE;
 }
 
 // -----------------------------------------------------------------------

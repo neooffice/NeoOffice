@@ -77,7 +77,7 @@ public:
 	void				drawRect( long _par0, long _par1, long _par2, long _par3, SalColor _par4, sal_Bool _par5 );
 	void				endSetClipRegion();
 	USHORT				getBitCount();
-	const Size			getGlyphSize( const sal_Unicode _par0, com_sun_star_vcl_VCLFont *_par1 );
+	const Rectangle		getGlyphBounds( int _par0, com_sun_star_vcl_VCLFont *_par1 );
 	com_sun_star_vcl_VCLImage *getImage();
 	SalColor			getPixel( long _par0, long _par1 );
 	const Size			getResolution();
