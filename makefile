@@ -55,6 +55,8 @@ PRODUCT_DIR_NAME=NeoOfficeJ
 PRODUCT_TRADEMARKED_NAME=NeoOffice®/J
 PRODUCT_VERSION=0.8.3
 PRODUCT_FILETYPE=NO%F
+PRODUCT_INSTALL_URL=http://www.planamesa.com/neojava/download.php\\\#install
+PRODUCT_BUILD_URL=http://www.planamesa.com/neojava/build.php
 
 # CVS macros
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
@@ -174,7 +176,7 @@ build.oo_download_dics:
 	cd "$(DIC_HOME)" ; sh -e -c 'for i in `curl -L -l "$(OO_DIC_URL)" | grep "\.zip<" | sed "s#<\/A>.*\\$$##" | sed "s#^.*>##"` ; do curl -L -O "$(OO_DIC_URL)/$$i" ; done'
 	touch "$@"
 
-build.package: build.neo_patches build.oo_download_dics
+build.package: build.neo_patches build.oo_download_dics build.source_zip
 	sh -e -c 'if [ -d "$(INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(INSTALL_HOME)" ; fi'
 	mkdir -p "$(INSTALL_HOME)/package"
 	echo `source "$(OO_ENV_JAVA)" ; cd "instsetoo/util" ; dmake language_numbers` > "$(INSTALL_HOME)/language_numbers"
@@ -231,14 +233,20 @@ build.package: build.neo_patches build.oo_download_dics
 # Mac OS X 10.2.8 cannot handle a postflight script
 	cp "bin/postflight" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_install" ; chmod a+x "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_install"
 	cp "bin/postflight" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_upgrade" ; chmod a+x "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_upgrade"
-	chmod -Rf a-w,a+r "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg"
+	mkdir -p "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)"
+	mv -f "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)"
+	mkdir -p "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)/src"
+	cp -f "$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION).src.tar.gz" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)/src"
+	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/Install.html" | sed 's#$$(PRODUCT_INSTALL_URL)#$(PRODUCT_INSTALL_URL)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)/Install.html"
+	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/Build.html" | sed 's#$$(PRODUCT_BUILD_URL)#$(PRODUCT_BUILD_URL)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)/src/Build.html"
+	chmod -Rf a-w,a+r "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)"
 	touch "$@"
 
 build.odk_package: build.neo_odk_patches
 	touch "$@"
 
 build.source_zip:
-	$(RM) -Rf "$(SOURCE_HOME)"
+	rm -Rf "$(SOURCE_HOME)"
 	mkdir -p "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)"
 	cd "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)" ; cvs -d "$(NEO_CVSROOT)" co -r "$(NEO_TAG)" "$(NEO_PACKAGE)"
 # Prune out empty directories
@@ -248,5 +256,5 @@ build.source_zip:
 	cd "$(SOURCE_HOME)" ; gnutar zcf "$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION).src.tar.gz" "$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)"
 	touch "$@"
 
-build.all: build.package build.source_zip
+build.all: build.package
 	touch "$@"
