@@ -324,11 +324,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 				int nOffsetPos = nCurrentPos + nOffset;
 				for ( ; nCurrentPos < nOffsetPos; nCurrentPos++ )
-				{
 					pNeedFallback[ nCurrentPos ] = true;
-					for ( int j = mpCharsToGlyphs[ nCurrentPos ]; j < mnGlyphCount && mpGlyphInfoArray->glyphs[ j ].charIndex == nCurrentPos; j++ )
-						mpGlyphInfoArray->glyphs[ j ].glyphID = 0;
-				}
 
 				// Update font for next pass through
 				if ( !bFontSet )
@@ -362,7 +358,8 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			rArgs.ResetPos();
 			while ( rArgs.GetNextPos( &nCharPos, &bPosRTL ) )
 			{
-				if ( pNeedFallback[ nCharPos - rArgs.mnMinCharPos + 1 ] )
+				int nIndex = nCharPos - rArgs.mnMinCharPos + 1;
+				if ( pNeedFallback[ nIndex ] || IsSpacingGlyph( aStr[ nIndex ] | GF_ISCHAR ) )
 					rArgs.NeedFallback( nCharPos, bPosRTL );
 			}
 
@@ -435,6 +432,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		{
 			int nGlyph = mpGlyphInfoArray->glyphs[ i ].glyphID;
 			long nCharWidth = 0;
+
 			if ( mpGlyphTranslations && mpVerticalFlags && mpVerticalFlags[ mpGlyphInfoArray->glyphs[ i ].charIndex ] & GF_ROTMASK )
 			{
 				nGlyph |= mpVerticalFlags[ mpGlyphInfoArray->glyphs[ i ].charIndex ] & GF_ROTMASK;
@@ -453,13 +451,17 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			}
 
 			int nGlyphFlags = nCharWidth ? 0 : GlyphItem::IS_IN_CLUSTER;
-
 			if ( bPosRTL )
+			{
 				nGlyphFlags |= GlyphItem::IS_RTL_GLYPH;
+				if ( ! ( nGlyphFlags & GlyphItem::IS_IN_CLUSTER ) )
+				{
+					AppendGlyph( GlyphItem( nCharPos, 3, aPos, nGlyphFlags, 0 ) );
+					nGlyphFlags |= GlyphItem::IS_IN_CLUSTER;
+				}
+			}
 
-			GlyphItem aGI( nCharPos, nGlyph, aPos, nGlyphFlags, nCharWidth );
-			aGI.mnNewWidth = nCharWidth;
-			AppendGlyph( aGI );
+			AppendGlyph( GlyphItem( nCharPos, nGlyph, aPos, nGlyphFlags, nCharWidth ) );
 
 			aPos.X() += nCharWidth;
 		}
