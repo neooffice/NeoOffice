@@ -165,11 +165,7 @@ public final class VCLGraphics {
 		textureData[3] = 0xff000000;
 		image50 = textureImage;
 
-		// Set the screen resolution but make sure it is not less than 96
-		// since VCL has trouble with smaller screen resolutions
 		screenResolution = Toolkit.getDefaultToolkit().getScreenResolution();
-		if (screenResolution < 96)
-			screenResolution = 96;
 
 	}
 
@@ -330,7 +326,7 @@ public final class VCLGraphics {
 			graphicsList.remove(this);
 		}
 		bitCount = 0;
-		if (graphics != null)
+		if (image != null && graphics != null)
 			graphics.dispose();
 		graphics = null;
 		if (panelGraphics != null)
@@ -1129,10 +1125,76 @@ public final class VCLGraphics {
 	 */
 	public void invert(int x, int y, int width, int height, int options) {
 
-		int npoints = 5;
-		int[] xpoints = new int[]{ x, x + width, x + width, x, x };
-		int[] ypoints = new int[]{ y, y, y + height, y + height, y };
-		invert(npoints, xpoints, ypoints, options);
+		if (image == null)
+			return;
+
+		// Clip any area outside of the image
+		Rectangle bounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
+		if (bounds.isEmpty())
+			return;
+
+		// Invert the image 
+		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME) {
+			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
+			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
+			VCLGraphics.setDefaultRenderingAttributes(srcGraphics);
+			BasicStroke stroke = (BasicStroke)srcGraphics.getStroke();
+			srcGraphics.setStroke(new BasicStroke(1.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 1.0f, new float[]{ 2.0f, 2.0f }, 0.0f));
+			srcGraphics.setColor(Color.white);
+			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
+			srcGraphics.drawRect(x, y, width, height);
+			srcGraphics.dispose();
+			drawImageXOR(srcImage, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y);
+			srcImage.dispose();
+		}
+		else if ((options & VCLGraphics.SAL_INVERT_50) == VCLGraphics.SAL_INVERT_50) {
+			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, VCLGraphics.image50.getBitCount());
+			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
+			VCLGraphics.setDefaultRenderingAttributes(srcGraphics);
+			srcGraphics.setPaint(new TexturePaint(VCLGraphics.image50.getImage(), new Rectangle(0, 0, VCLGraphics.image50.getWidth(), VCLGraphics.image50.getHeight()).getBounds2D()));
+			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
+			srcGraphics.fillRect(x, y, width, height);
+			srcGraphics.dispose();
+			drawImageXOR(srcImage, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y);
+			srcImage.dispose();
+		}
+		else {
+			Shape clip = graphics.getClip();
+			if (clip != null) {
+				if (!clip.intersects(bounds))
+					return;
+				else if (clip.contains((double)bounds.x, (double)bounds.y, (double)bounds.width, (double)bounds.height))
+					clip = null;
+			}
+			if (clip != null) {
+				// Draw to a temporary image
+				VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
+				srcImage.getGraphics().drawImage(image, bounds.x, bounds.y, bounds.width, bounds.height, 0, 0);
+				srcImage.getGraphics().invert(0, 0, bounds.width, bounds.height, options);
+				drawImage(srcImage, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y);
+				srcImage.dispose();
+			}
+			else {
+				int[] destData = image.getData();
+				int destDataWidth = image.getWidth();
+				Point destPoint = new Point(bounds.x, bounds.y);
+				int totalPixels = bounds.width * bounds.height;
+
+				for (int i = 0; i < totalPixels; i++) {
+					// Invert pixel
+					int j = (destPoint.y * destDataWidth) + destPoint.x;
+					destData[j] = ~destData[j] | 0xff000000;
+
+					// Update current point
+					destPoint.x++;
+					if (destPoint.x >= bounds.x + bounds.width) {
+						destPoint.x = bounds.x;
+						destPoint.y++;
+					}
+				}
+				addToFlush(bounds);
+			}
+		}
 
 	}
 

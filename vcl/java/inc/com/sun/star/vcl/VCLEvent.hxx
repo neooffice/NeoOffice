@@ -83,6 +83,7 @@ public:
 	ULONG				getWhen();
 	long				getX();
 	long				getY();
+	sal_Bool			isAWTEvent();
 };
 
 } // namespace vcl

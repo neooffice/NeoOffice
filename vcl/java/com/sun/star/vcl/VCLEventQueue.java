@@ -212,7 +212,7 @@ public final class VCLEventQueue {
 		synchronized (queue) {
 			// Coalesce mouse move events
 			if (id == VCLEvent.SALEVENT_MOUSEMOVE) {
-				if (queue.mouseMove != null)
+				if (queue.mouseMove != null && queue.mouseMove.next == null)
 					queue.mouseMove.remove = true;
 				queue.mouseMove = newItem;
 			}

@@ -179,10 +179,12 @@ public final class VCLImage {
 	public void dispose() {
 
 		bitCount = 0;
+		data = null;
 		if (graphics != null)
 			graphics.dispose();
 		graphics = null;
 		image = null;
+		pageFormat = null;
 
 	}
 

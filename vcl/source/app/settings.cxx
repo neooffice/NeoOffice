@@ -542,7 +542,7 @@ ImplStyleData::ImplStyleData( const ImplStyleData& rData ) :
 void ImplStyleData::SetStandardStyles()
 {
 #ifdef USE_JAVA
-    Font aStdFont( FAMILY_SWISS, Size( 0, 10 ) );
+    Font aStdFont( FAMILY_SWISS, Size( 0, 12 ) );
 #else
     Font aStdFont( FAMILY_SWISS, Size( 0, 8 ) );
 #endif
