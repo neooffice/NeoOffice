@@ -51,16 +51,22 @@ dummy:
 
 .ELSE			# "$(OS)"!="MACOSX"
 
-VERSIONFILES= \
+PRODUCTFILES = \
 	$(MISC)$/PkgInfo \
 	$(MISC)$/Info.plist
+
+COPYFILES = \
+	$(MISC)$/ship.icns
 
 .INCLUDE :  target.mk
 
 ALLTAR : $(VERSIONFILES)
 
-$(VERSIONFILES) :
+$(PRODUCTFILES) :
 	cat /dev/null $(@:f) | $(SED) s#\$$\(PRODUCT_VERSION\)#$(PRODUCT_VERSION)#g | $(SED) s#\$$\(PRODUCT_NAME\)#$(PRODUCT_NAME)#g | $(SED) s#\$$\(RSCVERSION\)#$(RSCVERSION)#g | $(SED) s#\$$\(PRODUCT_FILETYPE\)#$(PRODUCT_FILETYPE)#g > $@
+
+$(COPYFILES) :
+	$(COPY) $(@:f) $@
 
 .ENDIF			# "$(OS)"!="MACOSX"
 

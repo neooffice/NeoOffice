@@ -43,7 +43,7 @@ OO_ENV_X11:=$(BUILD_HOME)/MacosxEnv.Set
 OO_ENV_JAVA:=$(BUILD_HOME)/MacosxEnvJava.Set
 
 # Product information
-PRODUCT_NAME=NeoOffice\/J\\(TM\\)
+PRODUCT_NAME=NeoOffice/J(TM)
 PRODUCT_VERSION=0.0
 PRODUCT_FILETYPE=no%f
 
@@ -83,14 +83,14 @@ build.oo_%_patch: $(BUILD_HOME)/% build.oo_checkout
 	touch "$@"
 
 build.configure: build.oo_patches
-	cd "$(BUILD_HOME)/config_office" ; autoconf
-	( cd "$(BUILD_HOME)/config_office" ; ./configure CC=cc --with-x )
+#	cd "$(BUILD_HOME)/config_office" ; autoconf
+#	( cd "$(BUILD_HOME)/config_office" ; ./configure CC=cc --with-x )
 	rm -f "$(OO_ENV_JAVA)"
-	sed 's/^setenv GUIBASE .*$$/setenv GUIBASE "java"/' "$(OO_ENV_X11)" | sed 's/^setenv ENVCDEFS "/&-DUSE_JAVA/' | sed 's/^setenv CLASSPATH .*$$/setenv CLASSPATH "$$SOLARVER\/$$UPD\/$$INPATH\/bin\/vcl.jar"/' > "$(OO_ENV_JAVA)"
+	sed 's#^setenv GUIBASE .*$$#setenv GUIBASE "java"#' "$(OO_ENV_X11)" | sed 's#^setenv ENVCDEFS "#&-DUSE_JAVA#' | sed 's#^setenv CLASSPATH .*$$#setenv CLASSPATH "$$SOLARVER/$$UPD/$$INPATH/bin/vcl.jar"#' > "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_NAME '$(PRODUCT_NAME)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_VERSION '$(PRODUCT_VERSION)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_FILETYPE '$(PRODUCT_FILETYPE)'" >> "$(OO_ENV_JAVA)"
-	( cd "$(BUILD_HOME)" ; ./bootstrap )
+#	( cd "$(BUILD_HOME)" ; ./bootstrap )
 	touch "$@"
 
 build.oo_all: build.configure
