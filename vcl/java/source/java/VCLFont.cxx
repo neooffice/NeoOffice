@@ -95,7 +95,7 @@ static sal_uInt64 GetMacFontFace( com_sun_star_vcl_VCLFont *pVCLFont )
 							{
 								FMFontFamily nFamily = (FMFontFamily)t.pEnv->GetShortField( tempObj, fIDMacFont );
 								FMFontFamilyInstanceIterator aIterator;
-								if ( FMCreateFontFamilyInstanceIterator( nFamily, &aIterator ) == noErr )
+								if ( nFamily && FMCreateFontFamilyInstanceIterator( nFamily, &aIterator ) == noErr )
 								{
 									FMFont nFont;
 									FMFontStyle nStyle;
@@ -135,7 +135,7 @@ static sal_uInt64 GetMacFontFace( com_sun_star_vcl_VCLFont *pVCLFont )
 								}
 
 								// Handle Java's font alias names
-								if ( !out )
+								if ( !out && nFamily )
 								{
 									FMFont nFont = 0;
 
