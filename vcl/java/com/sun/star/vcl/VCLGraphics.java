@@ -207,16 +207,6 @@ public final class VCLGraphics {
 	private Graphics2D panelGraphics = null;
 
 	/**
-	 * The cached graphics device resolution.
-	 */
-	private Dimension resolution = null;
-
-	/**
-	 * The cached font resolution.
-	 */
-	private Dimension screenFontResolution = new Dimension(VCLGraphics.screenResolution, VCLGraphics.screenResolution);;
-
-	/**
 	 * The cached update area.
 	 */
 	private Rectangle update = null;
@@ -346,8 +336,6 @@ public final class VCLGraphics {
 		frame = null;
 		if (pageImage != null)
 			pageImage.dispose();
-		resolution = null;
-		screenFontResolution = null;
 		update = null;
 		userClip = null;
 
@@ -1134,7 +1122,7 @@ public final class VCLGraphics {
 		if (image == null)
 			return VCLPrintJob.getPageResolution();
 		else
-			return resolution;
+			return new Dimension(VCLGraphics.screenResolution, VCLGraphics.screenResolution);
 
 	}
 
@@ -1145,7 +1133,7 @@ public final class VCLGraphics {
 	 */
 	public Dimension getScreenFontResolution() {
 
-		return screenFontResolution;
+		return new Dimension(VCLGraphics.screenResolution, VCLGraphics.screenResolution);
 
 	}
 
