@@ -743,10 +743,10 @@ void SalInstance::Yield( BOOL bWait )
 			{
 				// Flush all of the window buffers to the native windows and synchronize native menus
 				for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-                                {
+				{
 					(*it)->Flush();
-                                        UpdateMenusForFrame( (*it), NULL );
-                                }
+					UpdateMenusForFrame( (*it), NULL );
+				}
 			}
 		}
 	}
@@ -784,14 +784,12 @@ void SalInstance::Yield( BOOL bWait )
 			pSalData->mpPresentationFrame->maFrameData.mpVCLFrame->setAutoFlush( FALSE );
 		delete pEvent;
 
-		// If this is a mouse or key pressed event, make another pass through
+		// If this is not a mouse move event, make another pass through
 		// the loop in case the next event is a mouse released event. If the
 		// timer is run between continguous mouse or key pressed and released
 		// the application acts is if two mouse clicks have been made instead
 		// of one.
-		if ( nID == SALEVENT_KEYINPUT || nID == SALEVENT_MOUSEBUTTONDOWN )
-			continue;
-		else
+		if ( nID == SALEVENT_MOUSEMOVE )
 			break;
 	}
 
