@@ -1618,6 +1618,12 @@ BOOL Printer::StartJob( const XubString& rJobName )
 			return FALSE;
 		}
 
+#ifdef USE_JAVA
+		// The resolution of the printer may have changed
+		ImplUpdatePageData();
+		ImplUpdateFontList();
+#endif
+
 		mbNewJobSetup	= FALSE;
 		maJobName		= rJobName;
 		mnCurPage		= 1;
