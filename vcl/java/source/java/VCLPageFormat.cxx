@@ -286,33 +286,43 @@ void *com_sun_star_vcl_VCLPageFormat::getNativePrintJob()
 			if ( tempObj )
 			{
 #ifdef MACOSX
-				jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/printing/MacPrinterJob" );
-				if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
+				// Test the JVM version and if it is below 1.4, use Carbon
+				// printing APIs
+				java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
+				if ( !pClass )
 				{
-					static jfieldID fIDSession = NULL;
-					if ( !fIDSession )
+					jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/printing/MacPrinterJob" );
+					if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
 					{
-						char *cSignature = "Lcom/apple/mrj/macos/generated/PMPrintSessionOpaque;";
-						fIDSession = t.pEnv->GetFieldID( tempClass, "fPrintSession", cSignature );
-					}
-					OSL_ENSURE( fIDSession, "Unknown field id!" );
-					if ( fIDSession )
-					{
-						jobject session = t.pEnv->GetObjectField( tempObj, fIDSession );
-						if ( session )
+						static jfieldID fIDSession = NULL;
+						if ( !fIDSession )
 						{
-							static jmethodID mIDGetPointer = NULL;
-							jclass sessionClass = t.pEnv->GetObjectClass( session );
-							if ( !mIDGetPointer )
+							char *cSignature = "Lcom/apple/mrj/macos/generated/PMPrintSessionOpaque;";
+							fIDSession = t.pEnv->GetFieldID( tempClass, "fPrintSession", cSignature );
+						}
+						OSL_ENSURE( fIDSession, "Unknown field id!" );
+						if ( fIDSession )
+						{
+							jobject session = t.pEnv->GetObjectField( tempObj, fIDSession );
+							if ( session )
 							{
-								char *cSignature = "()I";
-								mIDGetPointer = t.pEnv->GetMethodID( sessionClass, "getPointer", cSignature );
+								static jmethodID mIDGetPointer = NULL;
+								jclass sessionClass = t.pEnv->GetObjectClass( session );
+								if ( !mIDGetPointer )
+								{
+									char *cSignature = "()I";
+									mIDGetPointer = t.pEnv->GetMethodID( sessionClass, "getPointer", cSignature );
+								}
+								OSL_ENSURE( mIDGetPointer, "Unknown method id!" );
+								if ( mIDGetPointer )
+									out = (void *)t.pEnv->CallIntMethod( session, mIDGetPointer );
 							}
-							OSL_ENSURE( mIDGetPointer, "Unknown method id!" );
-							if ( mIDGetPointer )
-								out = (void *)t.pEnv->CallNonvirtualIntMethod( session, sessionClass, mIDGetPointer );
 						}
 					}
+				}
+				else
+				{
+					delete pClass;
 				}
 #endif	// MACOSX
 			}

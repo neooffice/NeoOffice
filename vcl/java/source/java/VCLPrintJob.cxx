@@ -51,7 +51,16 @@
 #include <tools/string.hxx>
 #endif
 
+#ifdef MACOSX
+
+#include <premac.h>
+#include <ApplicationServices/ApplicationServices.h>
+#include <postmac.h>
+
 using namespace rtl;
+
+#endif	// MACOSX
+
 using namespace vcl;
 
 // ============================================================================
@@ -184,33 +193,43 @@ void *com_sun_star_vcl_VCLPrintJob::getNativePrintJob()
 			if ( tempObj )
 			{
 #ifdef MACOSX
-				jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/printing/MacPrinterJob" );
-				if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
+				// Test the JVM version and if it is below 1.4, use Carbon
+				// printing APIs
+				java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
+				if ( !pClass )
 				{
-					static jfieldID fIDSession = NULL;
-					if ( !fIDSession )
+					jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/printing/MacPrinterJob" );
+					if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
 					{
-						char *cSignature = "Lcom/apple/mrj/macos/generated/PMPrintSessionOpaque;";
-						fIDSession = t.pEnv->GetFieldID( tempClass, "fPrintSession", cSignature );
-					}
-					OSL_ENSURE( fIDSession, "Unknown field id!" );
-					if ( fIDSession )
-					{
-						jobject session = t.pEnv->GetObjectField( tempObj, fIDSession );
-						if ( session )
+						static jfieldID fIDSession = NULL;
+						if ( !fIDSession )
 						{
-							static jmethodID mIDGetPointer = NULL;
-							jclass sessionClass = t.pEnv->GetObjectClass( session );
-							if ( !mIDGetPointer )
+							char *cSignature = "Lcom/apple/mrj/macos/generated/PMPrintSessionOpaque;";
+							fIDSession = t.pEnv->GetFieldID( tempClass, "fPrintSession", cSignature );
+						}
+						OSL_ENSURE( fIDSession, "Unknown field id!" );
+						if ( fIDSession )
+						{
+							jobject session = t.pEnv->GetObjectField( tempObj, fIDSession );
+							if ( session )
 							{
-								char *cSignature = "()I";
-								mIDGetPointer = t.pEnv->GetMethodID( sessionClass, "getPointer", cSignature );
+								static jmethodID mIDGetPointer = NULL;
+								jclass sessionClass = t.pEnv->GetObjectClass( session );
+								if ( !mIDGetPointer )
+								{
+									char *cSignature = "()I";
+									mIDGetPointer = t.pEnv->GetMethodID( sessionClass, "getPointer", cSignature );
+								}
+								OSL_ENSURE( mIDGetPointer, "Unknown method id!" );
+								if ( mIDGetPointer )
+									out = (void *)t.pEnv->CallIntMethod( session, mIDGetPointer );
 							}
-							OSL_ENSURE( mIDGetPointer, "Unknown method id!" );
-							if ( mIDGetPointer )
-								out = (void *)t.pEnv->CallNonvirtualIntMethod( session, sessionClass, mIDGetPointer );
 						}
 					}
+				}
+				else
+				{
+					delete pClass;
 				}
 #endif	// MACOSX
 			}
@@ -236,35 +255,46 @@ XubString com_sun_star_vcl_VCLPrintJob::getPageRange()
 			if ( tempObj )
 			{
 #ifdef MACOSX
-				jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/printing/MacPrinterJob" );
-				if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
+				// Test the JVM version and if it is below 1.4, use Carbon
+				// printing APIs
+				java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
+				if ( !pClass )
 				{
-					jint firstPage = 0;
-					jint lastPage = 0;
-					static jfieldID fIDFirstPage = NULL;
-					static jfieldID fIDLastPage = NULL;
-					if ( !fIDFirstPage )
+					jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/printing/MacPrinterJob" );
+					if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
 					{
-						char *cSignature = "I";
-						fIDFirstPage = t.pEnv->GetFieldID( tempClass, "mFirstPage", cSignature );
+						jint firstPage = 0;
+						jint lastPage = 0;
+						static jfieldID fIDFirstPage = NULL;
+						static jfieldID fIDLastPage = NULL;
+						if ( !fIDFirstPage )
+						{
+							char *cSignature = "I";
+							fIDFirstPage = t.pEnv->GetFieldID( tempClass, "mFirstPage", cSignature );
+						}
+						OSL_ENSURE( fIDFirstPage, "Unknown field id!" );
+						if ( !fIDLastPage )
+						{
+							char *cSignature = "I";
+							fIDLastPage = t.pEnv->GetFieldID( tempClass, "mLastPage", cSignature );
+						}
+						OSL_ENSURE( fIDLastPage, "Unknown field id!" );
+						if ( fIDFirstPage && fIDLastPage )
+						{
+							firstPage = t.pEnv->GetIntField( tempObj, fIDFirstPage ) + 1;
+							lastPage = t.pEnv->GetIntField( tempObj, fIDLastPage ) + 1;
+						}
+						if ( firstPage > 0 && lastPage > 0 && firstPage <= lastPage && lastPage < 0x7fffffff )
+						{
+							out = XubString::CreateFromInt32( firstPage );
+							out += '-';
+							out += XubString::CreateFromInt32( lastPage );
+						}
 					}
-					OSL_ENSURE( fIDFirstPage, "Unknown field id!" );
-					if ( fIDFirstPage )
-						firstPage = t.pEnv->GetIntField( tempObj, fIDFirstPage ) + 1;
-					if ( !fIDLastPage )
-					{
-						char *cSignature = "I";
-						fIDLastPage = t.pEnv->GetFieldID( tempClass, "mLastPage", cSignature );
-					}
-					OSL_ENSURE( fIDLastPage, "Unknown field id!" );
-					if ( fIDLastPage )
-						lastPage = t.pEnv->GetIntField( tempObj, fIDLastPage ) + 1;
-					if ( firstPage > 0 && lastPage > 0 && firstPage <= lastPage && lastPage < 0x7fffffff )
-					{
-						out = XubString::CreateFromInt32( firstPage );
-						out += '-';
-						out += XubString::CreateFromInt32( lastPage );
-					}
+				}
+				else
+				{
+					delete pClass;
 				}
 #endif	// MACOSX
 			}
@@ -322,13 +352,68 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::isFinished()
 
 // ----------------------------------------------------------------------------
 
-sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( const com_sun_star_vcl_VCLPageFormat *_par0, sal_Bool _par1 ) 
+sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat *_par0, sal_Bool _par1 ) 
 {
 	static jmethodID mID = NULL;
 	sal_Bool out = sal_False;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
+#ifdef MACOSX
+		// Test the JVM version and if it is below 1.4, use Carbon
+		// printing APIs
+		java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
+		if ( !pClass )
+		{
+			// Reset the print dialog to print all pages
+			java_lang_Object *printerJob = _par0->getPrinterJob();
+			if ( printerJob )
+			{
+				jobject tempObj = printerJob->getJavaObject();
+				if ( tempObj )
+				{
+					jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/printing/MacPrinterJob" );
+					if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
+					{
+						static jfieldID fIDPrintSettings = NULL;
+						if ( !fIDPrintSettings )
+						{
+							char *cSignature = "Lcom/apple/mrj/macos/generated/PMPrintSettingsOpaque;";
+							fIDPrintSettings = t.pEnv->GetFieldID( tempClass, "fPrintSettings", cSignature );
+						}
+						OSL_ENSURE( fIDPrintSettings, "Unknown field id!" );
+						if ( fIDPrintSettings )
+						{
+							jobject settings = t.pEnv->GetObjectField( tempObj, fIDPrintSettings );
+							if ( settings )
+							{
+								static jmethodID mIDGetPointer = NULL;
+								jclass settingsClass = t.pEnv->GetObjectClass( settings );
+								if ( !mIDGetPointer )
+								{
+									char *cSignature = "()I";
+									mIDGetPointer = t.pEnv->GetMethodID( settingsClass, "getPointer", cSignature );
+								}
+								OSL_ENSURE( mIDGetPointer, "Unknown method id!" );
+								if ( mIDGetPointer )
+								{
+									PMPrintSettings pSettings = (PMPrintSettings)t.pEnv->CallIntMethod( settings, mIDGetPointer );
+									if ( pSettings )
+										PMSetPageRange( pSettings, 1, kPMPrintAllPages );
+								}
+							}
+						}
+					}
+				}
+			}
+			delete printerJob;
+		}
+		else
+		{
+			delete pClass;
+		}
+#endif	// MACOSX
+
 		if ( !mID )
 		{
 			char *cSignature = "(Lcom/sun/star/vcl/VCLPageFormat;Z)Z";
