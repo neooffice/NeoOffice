@@ -71,6 +71,18 @@ if [ -d "$2" ]; then
 		rm -Rf "$2/help" || exit 1
 	fi
 
+	# Put back user's custom jar files
+	if [ -d "$2/classes" ]; then
+		for i in `cd "$2/classes" ; find . -maxdepth 1`; do
+			if [ ! -e "$2/Contents/MacOS/classes/$i" ]; then
+				mv -f "$2/classes/$i" "$2/Contents/MacOS/classes" || exit 1
+			fi
+		done
+		chown -Rf root:admin "$2/Contents/MacOS/classes" || exit 1
+		chmod -Rf u-w,u+r "$2/Contents/MacOS/classes" || exit 1
+		rm -Rf "$2/classes" || exit 1
+	fi
+
 	# Replace the default installation path with the actual installation path
 	cd "$2"
 	chmod -Rf u+rw "Contents/share/config/registry" || exit 1
