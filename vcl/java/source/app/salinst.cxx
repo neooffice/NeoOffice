@@ -485,15 +485,18 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 					
 					if ( isMenubar )
 					{
-						// Post a yield event and wait the VCL event queue to block
-						pSalData->maNativeEventStartCondition.reset();
+						// Post a yield event and wait the VCL event queue to
+						// block
+						pSalData->maNativeEventCondition.set();
+						pSalData->maNativeEventCondition.reset();
 						com_sun_star_vcl_VCLEvent aYieldEvent( SALEVENT_YIELDEVENTQUEUE, NULL, NULL );
 						pSalData->mpEventQueue->postCachedEvent( &aYieldEvent );
 
 						// Unlock the Java lock
 						ReleaseJavaLock();
 
-						pSalData->maNativeEventStartCondition.wait();
+						pSalData->maNativeEventCondition.wait();
+						pSalData->maNativeEventCondition.set();
 
 						Application::GetSolarMutex().acquire();
 
@@ -506,8 +509,6 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 						AcquireJavaLock();
 
 						Application::GetSolarMutex().release();
-
-						pSalData->maNativeEventEndCondition.set();
 					}
 				}
 			}
@@ -534,15 +535,8 @@ void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void
 		SalData *pSalData = GetSalData();
 		if ( pSalData && pSalData->mpEventQueue )
 		{
-			// Post a yield event and wait the VCL event queue to block
-			pSalData->maNativeEventStartCondition.reset();
-			com_sun_star_vcl_VCLEvent aYieldEvent( SALEVENT_YIELDEVENTQUEUE, NULL, NULL );
-			pSalData->mpEventQueue->postCachedEvent( &aYieldEvent );
-
 			// Unlock the Java lock
 			ReleaseJavaLock();
-
-			pSalData->maNativeEventStartCondition.wait();
 
 			Application::GetSolarMutex().acquire();
 
@@ -551,15 +545,13 @@ void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void
 			{
 				WindowRef aWindow = (WindowRef)( (*it)->GetSystemData()->aWindow );
 				if ( aWindow && GetWindowBounds( aWindow, kWindowStructureRgn, &aRect ) == noErr )
-					(*it)->SetPosSize( (long)aRect.left, (long)aRect.top, (long)( aRect.right - aRect.left + 1 ) - (*it)->maGeometry.nLeftDecoration - (*it)->maGeometry.nRightDecoration, (long)( aRect.bottom - aRect.top + 1 ) - (*it)->maGeometry.nTopDecoration - (*it)->maGeometry.nBottomDecoration, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
+					(*it)->maFrameData.mpVCLFrame->setBounds( (long)aRect.left, (long)aRect.top, (long)( aRect.right - aRect.left + 1 ), (long)( aRect.bottom - aRect.top + 1 ) );
 			}
 
 			// Relock the Java lock
 			AcquireJavaLock();
 
 			Application::GetSolarMutex().release();
-
-			pSalData->maNativeEventEndCondition.set();
 		}
 	}
 }
