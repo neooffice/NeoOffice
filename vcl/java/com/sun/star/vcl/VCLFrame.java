@@ -108,6 +108,16 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public final static long SAL_FRAME_STYLE_CLOSEABLE = 0x00000008;
 
 	/**
+	 * SAL_FRAME_STYLE_NOSHADOW constant.
+	 */
+	public final static long SAL_FRAME_STYLE_NOSHADOW = 0x00000010;
+
+	/**
+	 * SAL_FRAME_STYLE_TOOLTIP constant.
+	 */
+	public final static long SAL_FRAME_STYLE_TOOLTIP = 0x00000020;
+
+	/**
 	 * SAL_FRAME_STYLE_CHILD constant.
 	 */
 	public final static long SAL_FRAME_STYLE_CHILD = 0x10000000;
@@ -732,6 +742,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private boolean resizable = false;
 
 	/**
+	 * The style flags.
+	 */
+	private long style = 0;
+
+	/**
 	 * The native window.
 	 */
 	private Window window = null;
@@ -739,26 +754,27 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	/**
 	 * Constructs a new <code>VCLFrame</code> instance.
 	 *
-	 * @param styleFlags the SAL_FRAME_STYLE flags
+	 * @param s the SAL_FRAME_STYLE flags
 	 * @param q the event queue to post events to
 	 * @param f the frame pointer
 	 */
-	public VCLFrame(long styleFlags, VCLEventQueue q, int f, VCLFrame p) {
+	public VCLFrame(long s, VCLEventQueue q, int f, VCLFrame p) {
 
 		queue = q;
 		frame = f;
+		style = s;
 
 		// Create the native window
-		if ((styleFlags & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) != 0) {
+		if ((style & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) != 0) {
 			window = new VCLFrame.NoPaintFrame(this);
 		}
 		else {
-			owner = new VCLFrame(~styleFlags, q, 0, null);
+			owner = new VCLFrame(SAL_FRAME_STYLE_DEFAULT, q, 0, null);
 			window = new VCLFrame.NoPaintWindow(this);
 		}
 
 		// Process remaining style flags
-		if ((styleFlags & SAL_FRAME_STYLE_SIZEABLE) != 0)
+		if ((style & SAL_FRAME_STYLE_SIZEABLE) != 0)
 			resizable = true;
 
 		// Add a panel as the only component
@@ -1990,7 +2006,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			}
 
 			// Evaluate event
-			if (c != panel && c != null && panel != null && c.isShowing() && panel.isShowing() && isFloatingWindow()) {
+			if (c != panel && c != null && panel != null && c.isShowing() && panel.isShowing() && isFloatingWindow() && (style & SAL_FRAME_STYLE_TOOLTIP) == 0) {
 				Point srcPoint = c.getLocationOnScreen();
 				srcPoint.x += e.getX();
 				srcPoint.y += e.getY();
