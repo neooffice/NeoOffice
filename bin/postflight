@@ -49,7 +49,7 @@ if [ -d "$2" ]; then
 				mv -f "$2/ooo/$i" "$2/Contents/share/dict/ooo" || exit 1
 				if [ -e "$2/ooo/dictionary.lst" ]; then
 					base=`basename "$i" | awk -F. '{ print $1 }'`
-					grep -E '[^][\W#]*(DICT|HYPH|THES)\W[[:alpha:]]*\W[[:alpha:]]*\W'"$base"'\W*$' "$2/ooo/dictionary.lst" >> "$tempfile"
+					grep -E '[^][#:space:]*(DICT|HYPH|THES)[[:space:]]*[[:alpha:]]*[[:space:]]*[[:alpha:]]*[[:space:]]*'"$base"'[[:space:]]*$' "$2/ooo/dictionary.lst" >> "$tempfile"
 				fi
 			fi
 		done

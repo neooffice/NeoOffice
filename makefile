@@ -198,10 +198,10 @@ build.oo_download_dics:
 	rm -Rf "$(DIC_HOME)"
 	mkdir -p "$(DIC_HOME)"
 	rm -f "$(DIC_HOME)/dictionary.lst"
-	curl -L "$(OO_DIC_URL)/available.lst" | awk -F, '{ print "DICT " $$1 " " $$2 " " $$3 }' >> "$(DIC_HOME)/dictionary.lst"
-	curl -L "$(OO_DIC_URL)/hyphavail.lst" | awk -F, '{ print "HYPH " $$1 " " $$2 " " $$3 }' >> "$(DIC_HOME)/dictionary.lst"
-	curl -L "$(OO_DIC_URL)/thesavail.lst" | awk -F, '{ print "THES " $$1 " " $$2 " " $$3 }' >> "$(DIC_HOME)/dictionary.lst"
-	cd "$(DIC_HOME)" ; sh -e -c 'for i in `curl -L -l "$(OO_DIC_URL)" | grep "\.zip<" | grep -v -- "-pack\.zip" | sed "s#<\/a>.*\\$$##" | sed "s#^.*>##"` ; do curl -L -O "$(OO_DIC_URL)/$$i" ; done'
+	curl -L "$(OO_DIC_URL)/available.lst" | awk -F, '{ print "# DICT " $$1 " " $$2 " " $$3 }' >> "$(DIC_HOME)/dictionary.lst"
+	curl -L "$(OO_DIC_URL)/hyphavail.lst" | awk -F, '{ print "# HYPH " $$1 " " $$2 " " $$3 }' >> "$(DIC_HOME)/dictionary.lst"
+	curl -L "$(OO_DIC_URL)/thesavail.lst" | awk -F, '{ print "# THES " $$1 " " $$2 " " $$3 }' >> "$(DIC_HOME)/dictionary.lst"
+	cd "$(DIC_HOME)" ; sh -e -c 'for i in `curl -L -l "$(OO_DIC_URL)" | grep "\.zip<" | grep -v -- "-pack\.zip" | sed "s#<\/[aA]>.*\\$$##" | sed "s#^.*>##"` ; do curl -L -O "$(OO_DIC_URL)/$$i" ; done'
 	touch "$@"
 
 build.package: build.neo_patches build.oo_download_dics build.source_zip

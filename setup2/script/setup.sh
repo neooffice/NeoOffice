@@ -95,25 +95,19 @@ for i in $locales ; do
     fi
 done
 if [ -z "$matchedlocale" ] ; then
-    if [ -z "$country" ] ; then
-        for i in $locales ; do
-            ilang=`echo "$i" | awk -F- '{ print $1 }'`
-            if [ "$lang" = "$ilang" ] ; then
-                matchedlocale="$i"
-                break
-            fi
-        done
-    else
-        for i in $locales ; do
-            if [ "$lang" = "$i" ] ; then
-                matchedlocale="$i"
-                break
-            fi
-        done
-    fi
+    country=""
+    for i in $locales ; do
+        ilang=`echo "$i" | awk -F- '{ print $1 }'`
+        if [ "$lang" = "$ilang" ] ; then
+            matchedlocale="$i"
+            break
+        fi
+    done
 fi
 if [ -z "$matchedlocale" ] ; then
-    locale="en-US"
+    lang="en"
+    country="US"
+    locale="$lang-$country"
 else
     locale="$matchedlocale"
 fi
@@ -121,7 +115,8 @@ fi
 # Create user installation directory
 configdir="$userinstall/config"
 registrydir="$userinstall/registry/data/org/openoffice"
-if [ ! -d "$configdir" -o ! -d "$registrydir" ] ; then
+wordbookdir="$userinstall/wordbook"
+if [ ! -d "$configdir" -o ! -d "$registrydir" -o ! -d "$workbookdir" ] ; then
     repair="true"
     mkdir -p "$userinstall"
 fi
@@ -131,7 +126,7 @@ if [ ! -z "$repair" ] ; then
     mkdir -p "$userinstall"
     ( cd "$userbase" ; tar cf - * ) | ( cd "$userinstall" ; tar xf - )
     chmod -Rf u+rw "$userinstall"
-    if [ ! -d "$configdir" -o ! -d "$registrydir" ] ; then
+    if [ ! -d "$configdir" -o ! -d "$registrydir" -o ! -d "$wordbookdir" ] ; then
         rm -Rf "$userinstall"
         error "Installation of files in the $userinstall directory failed"
     fi
@@ -177,6 +172,13 @@ s#<value/>#<value>'"$locale"'</value>#
 
     sed -e "$deflocalepattern" "$linguxmlbak" > "$linguxml"
     rm -f "$linguxmlbak"
+fi
+
+# Create user dictionary.lst file
+userdictlst="$wordbookdir/dictionary.lst"
+sharedictlst="$sharebase/dict/ooo/dictionary.lst"
+if [ ! -f "$userdictlst" -a -r "$sharedictlst" ] ; then
+    grep -E '[^][#:space:]*(DICT|HYPH|THES)[[:space:]]*'"$lang"'[[:space:]]' "$sharedictlst" | sed 's#^[#[:space:]]*##' > "$userdictlst"
 fi
 
 # Create javarc file
