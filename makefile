@@ -59,8 +59,8 @@ PRODUCT_DIR_NAME=NeoOfficeJ
 PRODUCT_TRADEMARKED_NAME=NeoOffice®/J
 PRODUCT_VERSION=1.1 Alpha 2
 PRODUCT_DIR_VERSION=1.1_Alpha_2
-PRODUCT_PATCH_VERSION=Patch 1
-PRODUCT_DIR_PATCH_VERSION=Patch-1
+PRODUCT_PATCH_VERSION=Patch 2
+PRODUCT_DIR_PATCH_VERSION=Patch-2
 PRODUCT_PREVIOUS_VERSION=1.1 Alpha 1
 PRODUCT_PREVIOUS_PATCH_VERSION=Patch 6
 PRODUCT_FILETYPE=NO%F
@@ -293,9 +293,12 @@ build.odk_package: build.neo_odk_patches
 build.patch_package: build.package
 	sh -e -c 'if [ -d "$(PATCH_INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(PATCH_INSTALL_HOME)" ; fi'
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/program/classes"
+	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/share/registry/data/org/openoffice"
 	chmod -Rf u+w,a+r "$(PATCH_INSTALL_HOME)/package"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' "$(PWD)/$(INSTALL_HOME)/package/Contents/program/bootstraprc" | sed 's#ProductPatch=.*$$#ProductPatch=$(PRODUCT_PATCH_VERSION)#' > "program/bootstraprc"
+	cp "$(INSTALL_HOME)/package/Contents/share/registry/data/org/openoffice/Setup.xcu" "$(PATCH_INSTALL_HOME)/package/Contents/share/registry/data/org/openoffice/Setup.xcu"
 	source "$(OO_ENV_JAVA)" ; cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sal/unxmacxp.pro/lib/libsal.dylib.3.1.0" "$(PWD)/$(BUILD_HOME)/stoc/unxmacxp.pro/lib/javavm.uno.dylib" "$(PWD)/$(BUILD_HOME)/vcl/unxmacxp.pro/lib/libvcl$${UPD}$${DLLSUFFIX}.dylib" "program"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/desktop/unxmacxp.pro/bin/soffice" "program/soffice.bin" ; chmod a+x "program/soffice.bin"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/Info.plist" "."
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/vcl/unxmacxp.pro/class/vcl.jar" "program/classes"
 	rm -Rf "$(PATCH_INSTALL_HOME)/package/Contents/Resources"
