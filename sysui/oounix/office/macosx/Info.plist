@@ -216,7 +216,7 @@
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
 			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
+			<string>Viewer</string>
 			<key>LSIsAppleDefaultForType</key>
 			<false/>
 		</dict>
@@ -231,7 +231,7 @@
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
 			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
+			<string>Viewer</string>
 			<key>LSIsAppleDefaultForType</key>
 			<false/>
 		</dict>
@@ -246,7 +246,7 @@
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
 			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
+			<string>Viewer</string>
 			<key>LSIsAppleDefaultForType</key>
 			<false/>
 		</dict>
@@ -279,7 +279,7 @@
 				<string>WPPC</string>
 			</array>
 			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
+			<string>Viewer</string>
 			<key>LSIsAppleDefaultForType</key>
 			<false/>
 		</dict>
@@ -294,7 +294,7 @@
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
 			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
+			<string>Viewer</string>
 			<key>LSIsAppleDefaultForType</key>
 			<false/>
 		</dict>
@@ -309,7 +309,7 @@
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
 			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
+			<string>Viewer</string>
 			<key>LSIsAppleDefaultForType</key>
 			<false/>
 		</dict>
@@ -323,7 +323,7 @@
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
 			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
+			<string>Viewer</string>
 			<key>LSIsAppleDefaultForType</key>
 			<false/>
 		</dict>
@@ -349,7 +349,7 @@
 				<string>SLD8</string>
 			</array>
 			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
+			<string>Viewer</string>
 			<key>LSIsAppleDefaultForType</key>
 			<false/>
 		</dict>
@@ -367,7 +367,7 @@
 				<string>RTF </string>
 			</array>
 			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
+			<string>Viewer</string>
 			<key>LSIsAppleDefaultForType</key>
 			<false/>
 		</dict>
@@ -401,7 +401,7 @@
 				<string>XLS8</string>
 			</array>
 			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
+			<string>Viewer</string>
 			<key>LSIsAppleDefaultForType</key>
 			<false/>
 		</dict>
@@ -419,7 +419,7 @@
 				<string>TEXT</string>
 			</array>
 			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
+			<string>Viewer</string>
 			<key>LSIsAppleDefaultForType</key>
 			<false/>
 		</dict>
@@ -453,13 +453,13 @@
 				<string>XLS8</string>
 			</array>
 			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
+			<string>Viewer</string>
 			<key>LSIsAppleDefaultForType</key>
 			<false/>
 		</dict>
 		<dict>
 			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
+			<string>Viewer</string>
 			<key>LSIsAppleDefaultForType</key>
 			<false/>
 		</dict>
@@ -473,7 +473,7 @@
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
 			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
+			<string>Viewer</string>
 			<key>LSIsAppleDefaultForType</key>
 			<false/>
 		</dict>
@@ -491,7 +491,9 @@
 				<string>$(PRODUCT_FILETYPE)</string>
 			</array>
 			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
+			<string>Viewer</string>
+			<key>LSIsAppleDefaultForType</key>
+			<false/>
 		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
