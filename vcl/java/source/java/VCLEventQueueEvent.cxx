@@ -336,7 +336,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			}
 			dispatchEvent( nID, pFrame, NULL );
 			delete pPosSize;
-			if ( pFrame )
+			if ( pFrame && pFrame->maFrameData.mbVisible )
 			{
 				// Invoke a paint event. Note that we repaint even if the size
 				// is the same as it may be due to the window being reset to

@@ -214,16 +214,6 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 		// Make a pass through the native menus
 		UpdateMenusForFrame( this, NULL );
-
-		// Post a paint event
-		com_sun_star_vcl_VCLEvent aPaintEvent( SALEVENT_PAINT, this, NULL );
-		pSalData->mpEventQueue->postCachedEvent( &aPaintEvent );
-
-		if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame != this )
-		{
-			pSalData->maPresentationFrameList.remove( this );
-			pSalData->maPresentationFrameList.push_back( this );
-		}
 	}
 	else
 	{
