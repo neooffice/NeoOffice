@@ -51,7 +51,7 @@ import java.awt.event.PaintEvent;
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public class VCLEvent extends AWTEvent {
+public final class VCLEvent extends AWTEvent {
 
 	/**
 	 * KEYGROUP_NUM constant.

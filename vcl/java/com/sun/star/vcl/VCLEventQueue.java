@@ -51,7 +51,7 @@ import java.lang.reflect.Constructor;
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public class VCLEventQueue {
+public final class VCLEventQueue {
 
     /** 
      * INPUT_MOUSE constant.
@@ -279,7 +279,7 @@ public class VCLEventQueue {
 	 * The <code>Queue</code> object holds pointers to the beginning and end of
 	 * one internal queue.
 	 */
-	class Queue {
+	final class Queue {
 
 		VCLEventQueue.QueueItem head = null;
 
@@ -293,7 +293,7 @@ public class VCLEventQueue {
 	 * The <code>QueueItem</code> object is a wrapper for <code>VCLEvent</code>
 	 * instances.
 	 */
-	class QueueItem {
+	final class QueueItem {
 
 		VCLEvent event = null;
 
@@ -316,7 +316,7 @@ public class VCLEventQueue {
 	 * <code>EventQueue</code> class that filters and modifies events at
 	 * dispatch time.
 	 */
-	class FilteredEventQueue extends EventQueue {
+	final class FilteredEventQueue extends EventQueue {
 
 		/**
 		 * The mouse drag flag.

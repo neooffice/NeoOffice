@@ -68,7 +68,7 @@ import java.util.HashMap;
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public class VCLFrame implements ComponentListener, FocusListener, KeyListener, MouseListener, MouseMotionListener, WindowListener {
+public final class VCLFrame implements ComponentListener, FocusListener, KeyListener, MouseListener, MouseMotionListener, WindowListener {
 
 	/**
 	 * SAL_FRAME_STYLE_DEFAULT constant.
@@ -1649,7 +1649,7 @@ public class VCLFrame implements ComponentListener, FocusListener, KeyListener, 
 	/**
 	 * A class that has painting methods that perform no painting.
 	 */
-	class NoPaintPanel extends Panel {
+	final class NoPaintPanel extends Panel {
 
 		/**
 		 * This method performs no painting of the panel. This method is used

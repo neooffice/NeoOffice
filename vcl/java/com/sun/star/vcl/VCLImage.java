@@ -51,7 +51,7 @@ import java.awt.image.DataBufferInt;
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public class VCLImage {
+public final class VCLImage {
 
 	/**
 	 * Load an image from a resource.

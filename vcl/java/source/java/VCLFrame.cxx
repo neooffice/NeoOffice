@@ -112,7 +112,7 @@ void com_sun_star_vcl_VCLFrame::dispose()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			t.pEnv->CallVoidMethod( object, mID );
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 		}
 	}
 }
@@ -133,7 +133,7 @@ void com_sun_star_vcl_VCLFrame::flush()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			t.pEnv->CallVoidMethod( object, mID );
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 		}
 	}
 }
@@ -159,7 +159,7 @@ const Rectangle com_sun_star_vcl_VCLFrame::getBounds()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jobject tempObj = t.pEnv->CallObjectMethod( object, mID );
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			if ( tempObj )
 			{
 				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
@@ -216,7 +216,7 @@ com_sun_star_vcl_VCLGraphics *com_sun_star_vcl_VCLFrame::getGraphics()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jobject tempObj = t.pEnv->CallObjectMethod( object, mID );
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			if ( tempObj )
 				out = new com_sun_star_vcl_VCLGraphics( tempObj );
 		}
@@ -245,7 +245,7 @@ const Rectangle com_sun_star_vcl_VCLFrame::getInsets()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jobject tempObj = t.pEnv->CallObjectMethod( object, mID );
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			if ( tempObj )
 			{
 				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
@@ -302,7 +302,7 @@ const Rectangle com_sun_star_vcl_VCLFrame::getInsets()
 		{
 			jvalue args[1];
 			args[0].i = jint( _par0 );
-			jstring tempObj = (jstring)t.pEnv->CallObjectMethodA( object, mID, args );
+			jstring tempObj = (jstring)t.pEnv->CallNonvirtualObjectMethodA( object, getMyClass(), mID, args );
 			if ( tempObj )
 				out = JavaString2String( t.pEnv, tempObj );
 		}
@@ -331,7 +331,7 @@ void com_sun_star_vcl_VCLFrame::setBounds( long _par0, long _par1, long _par2, l
 			args[1].i = jint( _par1 );
 			args[2].i = jint( _par2 );
 			args[3].i = jint( _par3 );
-			t.pEnv->CallVoidMethodA( object, mID, args );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
 }
@@ -354,7 +354,7 @@ void com_sun_star_vcl_VCLFrame::setFullScreenMode( sal_Bool _par0 )
 		{
 			jvalue args[1];
 			args[0].z = jboolean( _par0 );
-			t.pEnv->CallVoidMethodA( object, mID, args );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
 }
@@ -377,7 +377,7 @@ void com_sun_star_vcl_VCLFrame::setPointer( USHORT _par0 )
 		{
 			jvalue args[1];
 			args[0].i = jint( _par0 );
-			t.pEnv->CallVoidMethodA( object, mID, args );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
 }
@@ -400,7 +400,7 @@ void com_sun_star_vcl_VCLFrame::setTitle( ::rtl::OUString _par0 )
 		{
 			jvalue args[1];
 			args[0].l = StringToJavaString( t.pEnv, _par0 );
-			t.pEnv->CallVoidMethodA( object, mID, args );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
 }
@@ -423,7 +423,7 @@ void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0 )
 		{
 			jvalue args[1];
 			args[0].z = jboolean( _par0 );
-			t.pEnv->CallVoidMethodA( object, mID, args );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
 }
@@ -443,6 +443,6 @@ void com_sun_star_vcl_VCLFrame::toFront()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			t.pEnv->CallVoidMethod( object, mID );
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 	}
 }

@@ -63,7 +63,7 @@ import java.util.LinkedList;
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public class VCLGraphics {
+public final class VCLGraphics {
 
 	/**
 	 * The SAL_INVERT_HIGHLIGHT constant.
@@ -718,13 +718,9 @@ public class VCLGraphics {
 			int numGlyphs = glyphs.getNumGlyphs();
 			for (int i = 0; i < numGlyphs; i++) {
 				int type = Character.getType(word[i]);
-				if (type == Character.NON_SPACING_MARK) {
-					Point2D glyphPosition = glyphs.getGlyphPosition(i);
+				if (type == Character.NON_SPACING_MARK)
 					adjust -= glyphs.getGlyphMetrics(i).getAdvance();
-					glyphPosition.setLocation(glyphPosition.getX() + adjust, glyphPosition.getY());
-					glyphs.setGlyphPosition(i, glyphPosition);
-				}
-				else if (adjust != 0) {
+				if (adjust != 0) {
 					Point2D glyphPosition = glyphs.getGlyphPosition(i);
 					glyphPosition.setLocation(glyphPosition.getX() + adjust, glyphPosition.getY());
 					glyphs.setGlyphPosition(i, glyphPosition);
@@ -770,7 +766,7 @@ public class VCLGraphics {
 	 * Flushes any pixels in the underlying <code>VCLImage</code> to the
 	 * underlying <code>VCLFrame</code>.
 	 */
-	synchronized void flush() {
+	void flush() {
 
 		if (panelGraphics != null && image != null && update != null) {
 			// Allow the Java event queue to dispatch pending events first

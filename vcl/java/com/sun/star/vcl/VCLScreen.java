@@ -47,7 +47,7 @@ import java.awt.Toolkit;
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public class VCLScreen {
+public final class VCLScreen {
 
 	/**
 	 * The cached frame insets.

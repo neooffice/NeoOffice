@@ -141,7 +141,7 @@ void com_sun_star_vcl_VCLGraphics::beginSetClipRegion()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			t.pEnv->CallVoidMethod( object, mID );
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 	}
 }
 
@@ -171,7 +171,7 @@ void com_sun_star_vcl_VCLGraphics::copyBits( const com_sun_star_vcl_VCLGraphics 
 			args[6].i = jint( _par6 );
 			args[7].i = jint( _par7 );
 			args[8].i = jint( _par8 );
-			t.pEnv->CallVoidMethodA( object, mID, args );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
 }
@@ -202,7 +202,7 @@ void com_sun_star_vcl_VCLGraphics::drawBitmap( const com_sun_star_vcl_VCLBitmap 
 			args[6].i = jint( _par6 );
 			args[7].i = jint( _par7 );
 			args[8].i = jint( _par8 );
-			t.pEnv->CallVoidMethodA( object, mID, args );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
 }
@@ -234,7 +234,7 @@ void com_sun_star_vcl_VCLGraphics::drawBitmap( const com_sun_star_vcl_VCLBitmap 
 			args[7].i = jint( _par7 );
 			args[8].i = jint( _par8 );
 			args[9].i = jint( _par9 );
-			t.pEnv->CallVoidMethodA( object, mID, args );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
 }
@@ -261,7 +261,7 @@ void com_sun_star_vcl_VCLGraphics::drawLine( long _par0, long _par1, long _par2,
 			args[2].i = jint( _par2 );
 			args[3].i = jint( _par3 );
 			args[4].i = jint( _par4 );
-			t.pEnv->CallVoidMethodA( object, mID, args );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
 }
@@ -293,7 +293,7 @@ void com_sun_star_vcl_VCLGraphics::drawMask( const com_sun_star_vcl_VCLBitmap *_
 			args[7].i = jint( _par7 );
 			args[8].i = jint( _par8 );
 			args[9].i = jint( _par9 );
-			t.pEnv->CallVoidMethodA( object, mID, args );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
 }
@@ -325,7 +325,7 @@ void com_sun_star_vcl_VCLGraphics::drawPolygon( ULONG _par0, const long *_par1, 
 			args[2].l = yarray;
 			args[3].i = jint( _par3 );
 			args[4].z = jboolean( _par4 );
-			t.pEnv->CallVoidMethodA( object, mID, args );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
 }
@@ -356,7 +356,7 @@ void com_sun_star_vcl_VCLGraphics::drawPolyline( ULONG _par0, const long *_par1,
 			args[1].l = xarray;
 			args[2].l = yarray;
 			args[3].i = jint( _par3 );
-			t.pEnv->CallVoidMethodA( object, mID, args );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
 }
@@ -384,7 +384,7 @@ void com_sun_star_vcl_VCLGraphics::drawRect( long _par0, long _par1, long _par2,
 			args[3].i = jint( _par3 );
 			args[4].i = jint( _par4 );
 			args[5].z = jboolean( _par5 );
-			t.pEnv->CallVoidMethodA( object, mID, args );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
 }
@@ -414,7 +414,7 @@ void com_sun_star_vcl_VCLGraphics::drawText( long _par0, long _par1, const sal_U
 			args[2].l = chars;
 			args[3].l = _par4->getJavaObject();
 			args[4].i = jint( _par5 );
-			t.pEnv->CallVoidMethodA( object, mID, args );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
 }
@@ -447,7 +447,7 @@ void com_sun_star_vcl_VCLGraphics::drawTextArray( long _par0, long _par1, const 
 			args[3].l = _par4->getJavaObject();
 			args[4].i = jint( _par5 );
 			args[5].l = offsets;
-			t.pEnv->CallVoidMethodA( object, mID, args );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
 }
@@ -467,7 +467,7 @@ void com_sun_star_vcl_VCLGraphics::endSetClipRegion()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			t.pEnv->CallVoidMethod( object, mID );
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 	}
 }
 
@@ -487,7 +487,7 @@ USHORT com_sun_star_vcl_VCLGraphics::getBitCount()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (USHORT)t.pEnv->CallIntMethod( object, mID );
+			out = (USHORT)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
 }
@@ -512,7 +512,7 @@ SalColor com_sun_star_vcl_VCLGraphics::getPixel( long _par0, long _par1 )
 			jvalue args[2];
 			args[0].i = jint( _par0 );
 			args[1].i = jint( _par1 );
-			out = (SalColor)t.pEnv->CallIntMethodA( object, mID, args );
+			out = (SalColor)t.pEnv->CallNonvirtualIntMethodA( object, getMyClass(), mID, args );
 		}
 	}
 	return out;
@@ -540,7 +540,7 @@ void com_sun_star_vcl_VCLGraphics::invert( long _par0, long _par1, long _par2, l
 			args[2].i = jint( _par2 );
 			args[3].i = jint( _par3 );
 			args[4].i = jint( _par4 );
-			t.pEnv->CallVoidMethodA( object, mID, args );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
 }
@@ -560,7 +560,7 @@ void com_sun_star_vcl_VCLGraphics::resetClipRegion()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			t.pEnv->CallVoidMethod( object, mID );
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 	}
 }
 
@@ -584,7 +584,7 @@ void com_sun_star_vcl_VCLGraphics::setPixel( long _par0, long _par1, SalColor _p
 			args[0].i = jint( _par0 );
 			args[1].i = jint( _par1 );
 			args[2].i = jint( _par2 );
-			t.pEnv->CallVoidMethodA( object, mID, args );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
 }
@@ -607,7 +607,7 @@ void com_sun_star_vcl_VCLGraphics::setXORMode( sal_Bool _par0 )
 		{
 			jvalue args[1];
 			args[0].z = jboolean( _par0 );
-			t.pEnv->CallVoidMethodA( object, mID, args );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
 }
@@ -633,7 +633,7 @@ void com_sun_star_vcl_VCLGraphics::unionClipRegion( long _par0, long _par1, long
 			args[1].i = jint( _par1 );
 			args[2].i = jint( _par2 );
 			args[3].i = jint( _par3 );
-			t.pEnv->CallVoidMethodA( object, mID, args );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
 }

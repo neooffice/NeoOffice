@@ -101,7 +101,7 @@ sal_Bool com_sun_star_vcl_VCLEventQueue::anyCachedEvent( USHORT _par0 )
 		{
 			jvalue args[1];
 			args[0].i = jint( _par0 );
-			out = (sal_Bool)t.pEnv->CallBooleanMethodA( object, mID, args );
+			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethodA( object, getMyClass(), mID, args );
 		}
 	}
 	return out;
@@ -127,7 +127,7 @@ com_sun_star_vcl_VCLEvent *com_sun_star_vcl_VCLEventQueue::getNextCachedEvent( s
 			jvalue args[1];
 			args[0].z = jboolean( bWait );
 			jobject tempObj;
-			tempObj = t.pEnv->CallObjectMethodA( object, mID, args );
+			tempObj = t.pEnv->CallNonvirtualObjectMethodA( object, getMyClass(), mID, args );
 			if ( tempObj )
 				out = new com_sun_star_vcl_VCLEvent( tempObj );
 		}
@@ -153,7 +153,7 @@ void com_sun_star_vcl_VCLEventQueue::postCachedEvent( const com_sun_star_vcl_VCL
 		{
 			jvalue args[1];
 			args[0].l = _par0->getJavaObject();
-			t.pEnv->CallVoidMethodA( object, mID, args );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
 }

@@ -46,7 +46,7 @@ import java.awt.image.IndexColorModel;
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public class VCLBitmap {
+public final class VCLBitmap {
 
 	/**
 	 * The bit count.

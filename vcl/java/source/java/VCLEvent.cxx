@@ -287,7 +287,7 @@ const Rectangle com_sun_star_vcl_VCLEvent::getBounds()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jobject tempObj = t.pEnv->CallObjectMethod( object, mID );
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			if ( tempObj )
 			{
 				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
@@ -344,7 +344,7 @@ void *com_sun_star_vcl_VCLEvent::getData()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			out = (void *)t.pEnv->CallLongMethod( object, mID );
+			out = (void *)t.pEnv->CallNonvirtualLongMethod( object, getMyClass(), mID );
 		}
 	}
 	return out;
@@ -367,7 +367,7 @@ SalFrame *com_sun_star_vcl_VCLEvent::getFrame()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			out = (SalFrame *)t.pEnv->CallLongMethod( object, mID );
+			out = (SalFrame *)t.pEnv->CallNonvirtualLongMethod( object, getMyClass(), mID );
 		}
 	}
 	return out;
@@ -390,7 +390,7 @@ USHORT com_sun_star_vcl_VCLEvent::getKeyChar()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			out = (USHORT)t.pEnv->CallCharMethod( object, mID );
+			out = (USHORT)t.pEnv->CallNonvirtualCharMethod( object, getMyClass(), mID );
 		}
 	}
 	return out;
@@ -413,7 +413,7 @@ USHORT com_sun_star_vcl_VCLEvent::getKeyCode()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			out = (USHORT)t.pEnv->CallCharMethod( object, mID );
+			out = (USHORT)t.pEnv->CallNonvirtualCharMethod( object, getMyClass(), mID );
 		}
 	}
 	return out;
@@ -436,7 +436,7 @@ USHORT com_sun_star_vcl_VCLEvent::getID()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			out = (USHORT)t.pEnv->CallIntMethod( object, mID );
+			out = (USHORT)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 		}
 	}
 	return out;
@@ -459,7 +459,7 @@ USHORT com_sun_star_vcl_VCLEvent::getModifiers()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			out = (USHORT)t.pEnv->CallIntMethod( object, mID );
+			out = (USHORT)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 		}
 	}
 	return out;
@@ -482,7 +482,7 @@ USHORT com_sun_star_vcl_VCLEvent::getModifiers()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jstring tempObj = (jstring)t.pEnv->CallObjectMethod( object, mID );
+			jstring tempObj = (jstring)t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			if ( tempObj )
 				out = JavaString2String( t.pEnv, tempObj );
 		}
@@ -511,7 +511,7 @@ const Rectangle com_sun_star_vcl_VCLEvent::getUpdateRect()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jobject tempObj = t.pEnv->CallObjectMethod( object, mID );
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			if ( tempObj )
 			{
 				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
@@ -568,7 +568,7 @@ ULONG com_sun_star_vcl_VCLEvent::getWhen()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			out = (ULONG)t.pEnv->CallIntMethod( object, mID );
+			out = (ULONG)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 		}
 	}
 	return out;
@@ -591,7 +591,7 @@ long com_sun_star_vcl_VCLEvent::getX()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			out = (long)t.pEnv->CallIntMethod( object, mID );
+			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 		}
 	}
 	return out;
@@ -614,7 +614,7 @@ long com_sun_star_vcl_VCLEvent::getY()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			out = (long)t.pEnv->CallIntMethod( object, mID );
+			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 		}
 	}
 	return out;

@@ -42,7 +42,7 @@ package com.sun.star.vcl;
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public class VCLPlatform {
+public final class VCLPlatform {
 
 	/**
 	 * The default platform.

@@ -245,7 +245,7 @@ void com_sun_star_vcl_VCLPrintJob::abortJob()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			t.pEnv->CallVoidMethod( object, mID );
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 	}
 }
 
@@ -264,7 +264,7 @@ void com_sun_star_vcl_VCLPrintJob::dispose()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			t.pEnv->CallVoidMethod( object, mID );
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 	}
 }
 
@@ -283,7 +283,7 @@ void com_sun_star_vcl_VCLPrintJob::endJob()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			t.pEnv->CallVoidMethod( object, mID );
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 	}
 }
 
@@ -302,7 +302,7 @@ void com_sun_star_vcl_VCLPrintJob::endPage()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			t.pEnv->CallVoidMethod( object, mID );
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 	}
 }
 
@@ -322,7 +322,7 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (sal_Bool)t.pEnv->CallBooleanMethod( object, mID );
+			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethod( object, getMyClass(), mID );
 	}
 	return out;
 }
@@ -347,11 +347,11 @@ com_sun_star_vcl_VCLGraphics *com_sun_star_vcl_VCLPrintJob::startPage()
 #ifdef MACOSX
 			// Mac OS X creates two graphics for each page so we discard
 			// the even numbered pages and print to the odd numbered pages
-			t.pEnv->CallObjectMethod( object, mID );
+			t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			endPage();
 			OThread::yield();
 #endif
-			jobject tempObj = t.pEnv->CallObjectMethod( object, mID );
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			if ( tempObj )
 				out = new com_sun_star_vcl_VCLGraphics( tempObj );
 		}

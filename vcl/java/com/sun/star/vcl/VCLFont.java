@@ -49,7 +49,7 @@ import java.util.ArrayList;
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public class VCLFont {
+public final class VCLFont {
 
 	/**
 	 * Cached fonts.

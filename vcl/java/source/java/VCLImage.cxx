@@ -101,7 +101,7 @@ void com_sun_star_vcl_VCLImage::dispose()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			t.pEnv->CallVoidMethod( object, mID );
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 	}
 }
 
@@ -122,7 +122,7 @@ com_sun_star_vcl_VCLGraphics *com_sun_star_vcl_VCLImage::getGraphics()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jobject tempObj = t.pEnv->CallObjectMethod( object, mID );
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			if ( tempObj )
 				out = new com_sun_star_vcl_VCLGraphics( tempObj );
 		}

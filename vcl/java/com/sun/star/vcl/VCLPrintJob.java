@@ -52,7 +52,7 @@ import java.util.LinkedList;
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public class VCLPrintJob extends Thread implements Printable {
+public final class VCLPrintJob extends Thread implements Printable {
 
 	/** 
 	 * ORIENTATION_PORTRAIT constant.

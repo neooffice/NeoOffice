@@ -115,7 +115,7 @@ void com_sun_star_vcl_VCLBitmap::copyBits( const com_sun_star_vcl_VCLGraphics *_
 			args[6].i = jint( _par6 );
 			args[7].i = jint( _par7 );
 			args[8].i = jint( _par8 );
-			t.pEnv->CallVoidMethodA( object, mID, args );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
 }
@@ -136,7 +136,7 @@ USHORT com_sun_star_vcl_VCLBitmap::getBitCount()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (USHORT)t.pEnv->CallIntMethod( object, mID );
+			out = (USHORT)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
 }
@@ -159,7 +159,7 @@ java_lang_Object *com_sun_star_vcl_VCLBitmap::getData()
 		if ( mID )
 		{
 			jbyteArray tempObj;
-			tempObj = (jbyteArray)t.pEnv->CallObjectMethod( object, mID );
+			tempObj = (jbyteArray)t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			if ( tempObj )
 				out = new java_lang_Object( tempObj );
 		}
@@ -184,7 +184,7 @@ void com_sun_star_vcl_VCLBitmap::getPalette( BitmapPalette& _par0 )
 		if ( mID )
 		{
 			jintArray tempObj;
-			tempObj = (jintArray)t.pEnv->CallObjectMethod( object, mID );
+			tempObj = (jintArray)t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			if ( tempObj )
 			{
 				jsize nColors = t.pEnv->GetArrayLength( tempObj );
@@ -240,13 +240,13 @@ void com_sun_star_vcl_VCLBitmap::setPalette( const BitmapPalette& _par0 )
 				t.pEnv->ReleaseIntArrayElements( pColors, pColorBits, 0 );
 				jvalue args[1];
 				args[0].l = pColors;
-				t.pEnv->CallVoidMethodA( object, mID, args );
+				t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 			}
 			else
 			{
 				jvalue args[1];
 				args[0].l = NULL;
-				t.pEnv->CallVoidMethodA( object, mID, args );
+				t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 			}
 		}
 	}
