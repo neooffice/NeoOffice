@@ -71,10 +71,6 @@ void SalGraphics::SetTextColor( SalColor nSalColor )
 
 USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 {
-	if ( maGraphicsData.mpVCLFont )
-		delete maGraphicsData.mpVCLFont;
-
-	com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)pFont->mpFontData->mpSysData;
 	OUString aName = pFont->maName;
 	sal_Bool bBold = ( pFont->meWeight > WEIGHT_MEDIUM );
 	sal_Bool bItalic = ( pFont->meItalic != ITALIC_NONE );
@@ -102,20 +98,23 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	}
 #endif	// MACOSX
 
-	if ( XubString( aName ) != pFont->maName )
-	{
-		SalData *pSalData = GetSalData();
+	SalData *pSalData = GetSalData();
 
-		if ( !pSalData->maFontMapping.size() )
-			pSalData->maFontMapping = com_sun_star_vcl_VCLFont::getAllFonts();
+	if ( !pSalData->maFontMapping.size() )
+		pSalData->maFontMapping = com_sun_star_vcl_VCLFont::getAllFonts();
 
-		// Find the matching font
-		::std::map< OUString, com_sun_star_vcl_VCLFont* >::iterator it = pSalData->maFontMapping.find( aName );
-		if ( it != pSalData->maFontMapping.end() )
-			pVCLFont = it->second;
-	}
+	// Find the matching font
+	com_sun_star_vcl_VCLFont *pVCLFont = NULL;
+	::std::map< OUString, com_sun_star_vcl_VCLFont* >::iterator it = pSalData->maFontMapping.find( aName );
+	if ( it != pSalData->maFontMapping.end() )
+		pVCLFont = it->second;
+
+	if ( !pVCLFont )
+		return SAL_SETFONT_BADFONT;
 
 	pFont->maFoundName = aName;
+	if ( maGraphicsData.mpVCLFont )
+		delete maGraphicsData.mpVCLFont;
 	maGraphicsData.mpVCLFont = pVCLFont->deriveFont( pFont->mnHeight, bBold, bItalic, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical );
 
 	if ( maGraphicsData.mpPrinter )
