@@ -59,6 +59,8 @@ PRODUCT_DIR_NAME=NeoOfficeJ
 PRODUCT_TRADEMARKED_NAME=NeoOffice®/J
 PRODUCT_VERSION=1.1 Beta
 PRODUCT_DIR_VERSION=1.1_Beta
+PRODUCT_LANG_PACK_VERSION=Languages
+PRODUCT_DIR_LANG_PACK_VERSION=Languages
 PRODUCT_PATCH_VERSION=Patch 0
 PRODUCT_DIR_PATCH_VERSION=Patch-0
 PRODUCT_PREVIOUS_VERSION=1.1 Alpha 2
@@ -253,6 +255,9 @@ build.package: build.neo_patches build.oo_download_dics build.source_zip
 	cd "$(INSTALL_HOME)/package/Contents/share/dict/ooo" ; rm -f "dictionary.lst" ; sh -c 'for i in `ls -1 *.dic *.dat | sort -u | sed "s#\\.dic\\$$##" | sed "s#\\.dat\\$$##"`; do grep " $$i\$$" "$(PWD)/$(DIC_HOME)/dictionary.lst" >> "dictionary.lst" ; if [ $$? != 0 -a $$? != 1 ] ; then exit $$? ; fi ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share user -type d | grep -v /CVS$$` ; do mkdir -p "$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share user ! -type d | grep -v /CVS/` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
+# Move the language pack languages out and create the language pack installers
+	sh -e -c 'while read i ; do rm -f "$(INSTALL_HOME)/no_lang.Set" ; grep -v "^setenv RES_" "$(OO_ENV_JAVA)" > "$(INSTALL_HOME)/no_lang.Set" ; for j in $$i ; do echo "setenv $${j} \"TRUE\"" >> "$(INSTALL_HOME)/no_lang.Set" ; done ; rm -rf "$(INSTALL_HOME)/no_lang_language_numbers" ; "$(SHELL)" -c "source \"$(INSTALL_HOME)/no_lang.Set\" ; cd \"instsetoo/util\" ; dmake language_numbers" | sed "s/01,//" | sed "s/49,//" > "$(INSTALL_HOME)/no_lang_language_numbers" ; rm -Rf "$(INSTALL_HOME)/no_lang_language_names" ; "$(SHELL)" -c "source \"$(INSTALL_HOME)/no_lang.Set\" ; cd \"instsetoo/util\" ; dmake language_names" | sed "s/ /,/g" | sed "s/de,//" > "$(INSTALL_HOME)/no_lang_language_names" ; mkdir -p "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"` ; for k in `cat "$(INSTALL_HOME)/no_lang_language_numbers" | sed "s/,/ /g"` ; do mkdir -p "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"`"/Contents/program/resource" ; for l in `cd "$(INSTALL_HOME)/package/Contents/program/resource" ; find . -type f -name "*$${k}.res" -maxdepth 1` ; do mv "$(INSTALL_HOME)/package/Contents/program/resource/$${l}" "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"`"/Contents/program/resource/$${l}" ; done ; done ; mkdir -p "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"`"/Contents/share/dict/ooo" ; for m in `cat "$(INSTALL_HOME)/no_lang_language_names" | sed "s/,/ /g"` ; do for n in `cd "$(INSTALL_HOME)/package/Contents/share/dict/ooo" ; find . -type f -name "$${m}_*" -maxdepth 1 ; find . -type f -name "*_$${m}_*" -maxdepth 1` ; do mv "$(INSTALL_HOME)/package/Contents/share/dict/ooo/$${n}" "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"`"/Contents/share/dict/ooo/$${n}" ; done ; done ; done < "etc/language_pack_languages"'
+	sh -e -c 'for i in `find "$(INSTALL_HOME)" -type d -name "package_*" -maxdepth 1` ; do "$(MAKE)" $(MFLAGS) build.`basename "$$i"` ; done'
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find "." -name ".DS_Store"` ; do rm "$${i}" ; done'
 	chmod -Rf a-w,a+r "$(INSTALL_HOME)/package"
 	echo "Running sudo to chown installation files..."
@@ -326,6 +331,38 @@ build.patch_package: build.package
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/Install.html.patch" | sed 's#$$(PRODUCT_INSTALL_URL)#$(PRODUCT_INSTALL_URL)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' > "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)/Install.html"
 	chmod -Rf a-w,a+r "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)"
 	touch "$@"
+
+build.package_%: $(INSTALL_HOME)/package_%
+	mkdir -p "$</Contents/program/resource"
+	mkdir -p "$</Contents/share/dict/ooo"
+	chmod -Rf u+w,a+r "$<"
+	rm -Rf "$</Contents/Resources"
+	mkdir -p "$</Contents/Resources"
+	cd "$</Contents" ; sh -e -c 'if [ ! -d "MacOS" ] ; then rm -Rf "MacOS" ; mv -f "program" "MacOS" ; ln -sf "MacOS" "program" ; fi'
+	cd "$<" ; sh -e -c 'for i in `find "." -name ".DS_Store"` ; do rm "$${i}" ; done'
+	chmod -Rf a-w,a+r "$<"
+	echo "Running sudo to chown $(@:build.package_%=%) installation files..."
+	sudo chown -Rf root:admin "$<"
+	mkdir -p "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/English.lproj"
+	printf "pmkrpkg1" > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/PkgInfo"
+	( cd "$<" ; pax -w -z -x cpio . ) > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).pax.gz"
+	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/neojava.info.langpack" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_LANG_PACK_VERSION)#$(PRODUCT_LANG_PACK_VERSION)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/English.lproj/$(PRODUCT_DIR_NAME).info"
+	mkbom "$<" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).bom" >& /dev/null
+	lsbom -s "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).bom" | wc -l | xargs echo "NumFiles " > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).sizes"
+	expr `du -sk "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources" | awk '{ print $$1 }'` + 3 | xargs echo "InstalledSize " >> "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).sizes"
+	expr `du -sk "$<" | awk '{ print $$1 }'` + `ls -s "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/English.lproj/$(PRODUCT_DIR_NAME).info" | awk '{ print $$1 }'` + `ls -s "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).bom" | awk '{ print $$1 }'` + 3 | xargs echo "CompressedSize " >> "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).sizes"
+	cp "etc/gpl.html" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/License.html"
+	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "bin/installutils.langpack" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_LANG_PACK_VERSION)#$(PRODUCT_LANG_PACK_VERSION)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/installutils"
+	cp "bin/InstallationCheck" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/InstallationCheck" ; chmod a+x "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/InstallationCheck"
+	cp "bin/VolumeCheck.langpack" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/VolumeCheck" ; chmod a+x "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/VolumeCheck"
+	cp "bin/VolumeCheck.strings.langpack" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/English.lproj/VolumeCheck.strings"
+# Mac OS X 10.2.8 cannot handle a postflight script
+	cp "bin/postflight.langpack" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_install" ; chmod a+x "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_install"
+	cp "bin/postflight.langpack" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_upgrade" ; chmod a+x "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_upgrade"
+	mkdir -p "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)_$(@:build.package_%=%)"
+	mv -f "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)_$(@:build.package_%=%)"
+	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/Install.html.langpack" | sed 's#$$(PRODUCT_INSTALL_URL)#$(PRODUCT_INSTALL_URL)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_LANG_PACK_VERSION)#$(PRODUCT_LANG_PACK_VERSION)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)_$(@:build.package_%=%)/Install.html"
+	chmod -Rf a-w,a+r "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)_$(@:build.package_%=%)"
 
 build.source_zip:
 	rm -Rf "$(SOURCE_HOME)"
