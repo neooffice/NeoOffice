@@ -433,9 +433,6 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 #ifdef MACOSX
 void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void *pNotifyData )
 {
-	if ( nMessage != kDMNotifyEvent )
-		return;
-
 	SalData *pSalData = GetSalData();
 	if ( pSalData && !Application::IsShutDown() )
 	{
