@@ -1627,9 +1627,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			int modifiers = e.getModifiers();
 			char keyChar = e.getKeyChar();
 			if ((modifiers & VCLFrame.menuModifiersMask) == VCLFrame.menuModifiersMask) {
-				e = new KeyEvent(e.getComponent(), KeyEvent.KEY_TYPED, e.getWhen(), modifiers, KeyEvent.VK_UNDEFINED, keyChar);
-				keyTyped(e);
-				VCLFrame.lastMenuShortcutPressed = new MenuShortcut(keyChar, (modifiers & InputEvent.SHIFT_MASK) == InputEvent.SHIFT_MASK ? true : false);
+				KeyEvent newEvent = new KeyEvent(e.getComponent(), KeyEvent.KEY_TYPED, e.getWhen(), modifiers, KeyEvent.VK_UNDEFINED, keyChar);
+				if (VCLEvent.convertVCLKeyCode(newEvent.getKeyCode()) > 0) {
+					keyTyped(newEvent);
+					VCLFrame.lastMenuShortcutPressed = new MenuShortcut(keyChar, (modifiers & InputEvent.SHIFT_MASK) == InputEvent.SHIFT_MASK ? true : false);
+				}
 			}
 		}
 

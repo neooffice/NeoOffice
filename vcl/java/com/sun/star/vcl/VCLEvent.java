@@ -1873,158 +1873,197 @@ public final class VCLEvent extends AWTEvent {
     
 	    switch(vclKey) {
 	    	case KEY_0:
-		    toReturn=KeyEvent.VK_0;
-		    break;
-		case KEY_1:
-		    toReturn=KeyEvent.VK_1;
-		    break;
-		case KEY_2:
-		    toReturn=KeyEvent.VK_2;
-		    break;
-		case KEY_3:
-		    toReturn=KeyEvent.VK_3;
-		    break;
-		case KEY_4:
-		    toReturn=KeyEvent.VK_4;
-		    break;
-		case KEY_5:
-		    toReturn=KeyEvent.VK_5;
-		    break;
-		case KEY_6:
-		    toReturn=KeyEvent.VK_6;
-		    break;
-		case KEY_7:
-		    toReturn=KeyEvent.VK_7;
-		    break;
-		case KEY_8:
-		    toReturn=KeyEvent.VK_8;
-		    break;
-		case KEY_9:
-		    toReturn=KeyEvent.VK_9;
-		    break;
-		case KEY_A:
-		    toReturn=KeyEvent.VK_A;
-		    break;
-		case KEY_B:
-		    toReturn=KeyEvent.VK_B;
-		    break;
-		case KEY_C:
-		    toReturn=KeyEvent.VK_C;
-		    break;
-		case KEY_D:
-		    toReturn=KeyEvent.VK_D;
-		    break;
-		case KEY_E:
-		    toReturn=KeyEvent.VK_E;
-		    break;
-		case KEY_F:
-		    toReturn=KeyEvent.VK_F;
-		    break;
-		case KEY_G:
-		    toReturn=KeyEvent.VK_G;
-		    break;
-		case KEY_H:
-		    toReturn=KeyEvent.VK_H;
-		    break;
-		case KEY_I:
-		    toReturn=KeyEvent.VK_I;
-		    break;
-		case KEY_J:
-		    toReturn=KeyEvent.VK_J;
-		    break;
-		case KEY_K:
-		    toReturn=KeyEvent.VK_K;
-		    break;
-		case KEY_L:
-		    toReturn=KeyEvent.VK_L;
-		    break;
-		case KEY_M:
-		    toReturn=KeyEvent.VK_M;
-		    break;
-		case KEY_N:
-		    toReturn=KeyEvent.VK_N;
-		    break;
-		case KEY_O:
-		    toReturn=KeyEvent.VK_O;
-		    break;
-		case KEY_P:
-		    toReturn=KeyEvent.VK_P;
-		    break;
-		case KEY_Q:
-		    toReturn=KeyEvent.VK_Q;
-		    break;
-		case KEY_R:
-		    toReturn=KeyEvent.VK_R;
-		    break;
-		case KEY_S:
-		    toReturn=KeyEvent.VK_S;
-		    break;
-		case KEY_T:
-		    toReturn=KeyEvent.VK_T;
-		    break;
-		case KEY_U:
-		    toReturn=KeyEvent.VK_U;
-		    break;
-		case KEY_V:
-		    toReturn=KeyEvent.VK_V;
-		    break;
-		case KEY_W:
-		    toReturn=KeyEvent.VK_W;
-		    break;
-		case KEY_X:
-		    toReturn=KeyEvent.VK_X;
-		    break;
-		case KEY_Y:
-		    toReturn=KeyEvent.VK_Y;
-		    break;
-		case KEY_Z:
-		    toReturn=KeyEvent.VK_Z;
-		    break;
-		case KEY_F1:
-		    toReturn=KeyEvent.VK_F1;
-		    break;
-		case KEY_F2:
-		    toReturn=KeyEvent.VK_F2;
-		    break;
-		case KEY_F3:
-		    toReturn=KeyEvent.VK_F3;
-		    break;
-		case KEY_F4:
-		    toReturn=KeyEvent.VK_F4;
-		    break;
-		case KEY_F5:
-		    toReturn=KeyEvent.VK_F5;
-		    break;
-		case KEY_F6:
-		    toReturn=KeyEvent.VK_F6;
-		    break;
-		case KEY_F7:
-		    toReturn=KeyEvent.VK_F7;
-		    break;
-		case KEY_F8:
-		    toReturn=KeyEvent.VK_F8;
-		    break;
-		case KEY_F9:
-		    toReturn=KeyEvent.VK_F9;
-		    break;
-		case KEY_F10:
-		    toReturn=KeyEvent.VK_F10;
-		    break;
-		case KEY_F11:
-		    toReturn=KeyEvent.VK_F11;
-		    break;
-		case KEY_F12:
-		    toReturn=KeyEvent.VK_F12;
-		    break;
-		case KEY_F13:
-		    toReturn=KeyEvent.VK_F13;
-		    break;
-		case KEY_F14:
-		    toReturn=KeyEvent.VK_F14;
-		    break;
-		case KEY_F15:
-		    toReturn=KeyEvent.VK_F15;
-		    break;
+			    toReturn=KeyEvent.VK_0;
+			    break;
+			case KEY_1:
+			    toReturn=KeyEvent.VK_1;
+			    break;
+			case KEY_2:
+			    toReturn=KeyEvent.VK_2;
+			    break;
+			case KEY_3:
+			    toReturn=KeyEvent.VK_3;
+			    break;
+			case KEY_4:
+			    toReturn=KeyEvent.VK_4;
+			    break;
+			case KEY_5:
+			    toReturn=KeyEvent.VK_5;
+			    break;
+			case KEY_6:
+			    toReturn=KeyEvent.VK_6;
+			    break;
+			case KEY_7:
+			    toReturn=KeyEvent.VK_7;
+			    break;
+			case KEY_8:
+			    toReturn=KeyEvent.VK_8;
+			    break;
+			case KEY_9:
+			    toReturn=KeyEvent.VK_9;
+			    break;
+			case KEY_A:
+			    toReturn=KeyEvent.VK_A;
+			    break;
+			case KEY_B:
+			    toReturn=KeyEvent.VK_B;
+			    break;
+			case KEY_C:
+			    toReturn=KeyEvent.VK_C;
+			    break;
+			case KEY_D:
+			    toReturn=KeyEvent.VK_D;
+			    break;
+			case KEY_E:
+			    toReturn=KeyEvent.VK_E;
+			    break;
+			case KEY_F:
+			    toReturn=KeyEvent.VK_F;
+			    break;
+			case KEY_G:
+			    toReturn=KeyEvent.VK_G;
+			    break;
+			case KEY_H:
+			    toReturn=KeyEvent.VK_H;
+			    break;
+			case KEY_I:
+			    toReturn=KeyEvent.VK_I;
+			    break;
+			case KEY_J:
+			    toReturn=KeyEvent.VK_J;
+			    break;
+			case KEY_K:
+			    toReturn=KeyEvent.VK_K;
+			    break;
+			case KEY_L:
+			    toReturn=KeyEvent.VK_L;
+			    break;
+			case KEY_M:
+			    toReturn=KeyEvent.VK_M;
+			    break;
+			case KEY_N:
+			    toReturn=KeyEvent.VK_N;
+			    break;
+			case KEY_O:
+			    toReturn=KeyEvent.VK_O;
+			    break;
+			case KEY_P:
+			    toReturn=KeyEvent.VK_P;
+			    break;
+			case KEY_Q:
+			    toReturn=KeyEvent.VK_Q;
+			    break;
+			case KEY_R:
+			    toReturn=KeyEvent.VK_R;
+			    break;
+			case KEY_S:
+			    toReturn=KeyEvent.VK_S;
+			    break;
+			case KEY_T:
+			    toReturn=KeyEvent.VK_T;
+			    break;
+			case KEY_U:
+			    toReturn=KeyEvent.VK_U;
+			    break;
+			case KEY_V:
+			    toReturn=KeyEvent.VK_V;
+			    break;
+			case KEY_W:
+			    toReturn=KeyEvent.VK_W;
+			    break;
+			case KEY_X:
+			    toReturn=KeyEvent.VK_X;
+			    break;
+			case KEY_Y:
+			    toReturn=KeyEvent.VK_Y;
+			    break;
+			case KEY_Z:
+			    toReturn=KeyEvent.VK_Z;
+			    break;
+			case KEY_F1:
+			    toReturn=KeyEvent.VK_F1;
+			    break;
+			case KEY_F2:
+			    toReturn=KeyEvent.VK_F2;
+			    break;
+			case KEY_F3:
+			    toReturn=KeyEvent.VK_F3;
+			    break;
+			case KEY_F4:
+			    toReturn=KeyEvent.VK_F4;
+			    break;
+			case KEY_F5:
+			    toReturn=KeyEvent.VK_F5;
+			    break;
+			case KEY_F6:
+			    toReturn=KeyEvent.VK_F6;
+			    break;
+			case KEY_F7:
+			    toReturn=KeyEvent.VK_F7;
+			    break;
+			case KEY_F8:
+			    toReturn=KeyEvent.VK_F8;
+			    break;
+			case KEY_F9:
+			    toReturn=KeyEvent.VK_F9;
+			    break;
+			case KEY_F10:
+			    toReturn=KeyEvent.VK_F10;
+			    break;
+			case KEY_F11:
+			    toReturn=KeyEvent.VK_F11;
+			    break;
+			case KEY_F12:
+			    toReturn=KeyEvent.VK_F12;
+			    break;
+			case KEY_DOWN:
+			    toReturn=KeyEvent.VK_DOWN;
+			    break;
+			case KEY_UP:
+			    toReturn=KeyEvent.VK_UP;
+			    break;
+			case KEY_LEFT:
+			    toReturn=KeyEvent.VK_LEFT;
+			    break;
+			case KEY_RIGHT:
+			    toReturn=KeyEvent.VK_RIGHT;
+			    break;
+			case KEY_HOME:
+			    toReturn=KeyEvent.VK_HOME;
+			    break;
+			case KEY_END:
+			    toReturn=KeyEvent.VK_END;
+			    break;
+			case KEY_PAGEUP:
+			    toReturn=KeyEvent.VK_PAGE_DOWN;
+			    break;
+			case KEY_PAGEDOWN:
+			    toReturn=KeyEvent.VK_PAGE_UP;
+			    break;
+			case KEY_RETURN:
+			    toReturn=KeyEvent.VK_ENTER;
+			    break;
+			case KEY_SPACE:
+			    toReturn=KeyEvent.VK_SPACE;
+			    break;
+			case KEY_BACKSPACE:
+			    toReturn=KeyEvent.VK_BACK_SPACE;
+			    break;
+			case KEY_INSERT:
+			    toReturn=KeyEvent.VK_INSERT;
+			    break;
+			case KEY_ADD:
+			    toReturn=KeyEvent.VK_ADD;
+			    break;
+			case KEY_SUBTRACT:
+			    toReturn=KeyEvent.VK_SUBTRACT;
+			    break;
+			case KEY_MULTIPLY:
+			    toReturn=KeyEvent.VK_MULTIPLY;
+			    break;
+			case KEY_DIVIDE:
+			    toReturn=KeyEvent.VK_DIVIDE;
+			    break;
 	    }
 	    
 	    return(toReturn);
