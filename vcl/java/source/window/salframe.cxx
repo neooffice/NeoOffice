@@ -82,6 +82,20 @@ using namespace vcl;
 
 // =======================================================================
 
+#ifdef MACOSX
+static void UpdateNativeWindowBounds( WindowRef aWindow, long nX, long nY, long nWidth, long nHeight )
+{
+	// Make sure that the native window size really matches the size that
+	// we expect since it can get out of sync due to our call to the Java
+	// window's addNotify() method before it is first shown
+	Rect aRect;
+	SetRect( &aRect, nX, nY, nX + nWidth, nY + nHeight );
+   	SetWindowBounds( aWindow, kWindowContentRgn, &aRect );
+}
+#endif	// MACOSX
+
+// -----------------------------------------------------------------------
+
 long ImplSalCallbackDummy( void*, SalFrame*, USHORT, const void* )
 {
 	return 0;
@@ -316,6 +330,17 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 		// screen when the parent window straddles more than one screen
 		Rectangle aBounds( Point( nX, nY ), Size( nWidth + maGeometry.nLeftDecoration + maGeometry.nRightDecoration, nHeight + maGeometry.nTopDecoration + maGeometry.nBottomDecoration ) );
 		maFrameData.mpVCLFrame->setBounds( aBounds.nLeft, aBounds.nTop, aBounds.GetWidth(), aBounds.GetHeight() );
+
+		// Cache the native window pointer since setBounds() will call the Java
+		// window's addNotify() method
+		if ( !maFrameData.maSysData.aWindow )
+			maFrameData.maSysData.aWindow = (long)maFrameData.mpVCLFrame->getNativeWindow();
+
+#ifdef MACOSX
+		if ( !maFrameData.mbVisible && maFrameData.maSysData.aWindow )
+			UpdateNativeWindowBounds( (WindowRef)maFrameData.maSysData.aWindow, aBounds.nLeft, aBounds.nTop, aBounds.GetWidth(), aBounds.getHeight() );
+#endif	// MACOSX
+
 		GetWorkArea( aWorkArea );
 		if ( aBounds.Intersection( aWorkArea ).IsEmpty() )
 			maFrameData.mpParent->GetWorkArea( aWorkArea );
@@ -356,6 +381,12 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	// window's addNotify() method
 	if ( !maFrameData.maSysData.aWindow )
 		maFrameData.maSysData.aWindow = (long)maFrameData.mpVCLFrame->getNativeWindow();
+
+#ifdef MACOSX
+	if ( !maFrameData.mbVisible && maFrameData.maSysData.aWindow )
+		UpdateNativeWindowBounds( (WindowRef)maFrameData.maSysData.aWindow, nX, nY, nWidth, nHeight );
+#endif	// MACOSX
+
 
 	// Update the cached position
 	Rectangle *pBounds = new Rectangle( maFrameData.mpVCLFrame->getBounds() );

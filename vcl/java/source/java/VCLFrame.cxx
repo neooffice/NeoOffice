@@ -61,7 +61,6 @@
 
 using namespace osl;
 
-static Rect aRealBounds;
 static bool bNoActivate = false;
 static bool bNoSelectWindow = false;
 static Mutex aMutex;
@@ -96,17 +95,10 @@ static void JNICALL Java_com_apple_mrj_macos_generated_MacWindowFunctions_ShowWi
 {
 	MutexGuard aGuard( aMutex );
 
-	WindowRef aWindow = (WindowRef)pWindowRef;
-
-	// Make sure that the native window size really matches the size that we
-	// expect since it can get out of sync due to our call to the Java window's
-	// addNotify() method before it is first shown
-	SetWindowBounds( aWindow, kWindowContentRgn, &aRealBounds );
-
 	if ( bNoActivate )
-		ShowHide( aWindow, true );
+		ShowHide( (WindowRef)pWindowRef, true );
 	else
-		MacShowWindow( aWindow );
+		MacShowWindow( (WindowRef)pWindowRef );
 }
 #endif	// MACOSX
 
@@ -782,9 +774,6 @@ void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0, sal_Bool _par1, SalF
 #ifdef MACOSX
 			MutexGuard aGuard( aMutex );
 			bNoActivate = _par1;
-
-			// Make the real bounds accessible to the native methods
-			SetRect( &aRealBounds, _par2->maGeometry.nX, _par2->maGeometry.nY, _par2->maGeometry.nX + _par2->maGeometry.nWidth, _par2->maGeometry.nY + _par2->maGeometry.nHeight );
 #endif	// MACOSX
 
 			jvalue args[1];
