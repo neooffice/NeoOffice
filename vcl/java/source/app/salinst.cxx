@@ -505,8 +505,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 						// Execute menu updates while the VCL event queue is
 						// blocked
-						for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-							UpdateMenusForFrame( *it, NULL );
+						UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
 
 						// Relock the Java lock
 						AcquireJavaLock();
@@ -1146,12 +1145,8 @@ void SalInstance::AcquireYieldMutex( ULONG nCount )
 
 void SalInstance::Yield( BOOL bWait )
 {
-	static USHORT nRecursionLevel = 0;
-
 	SalData *pSalData = GetSalData();
 	com_sun_star_vcl_VCLEvent *pEvent;
-
-	nRecursionLevel++;
 
 	// Dispatch pending non-AWT events
 	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( 0, FALSE ) ) != NULL )
@@ -1162,14 +1157,15 @@ void SalInstance::Yield( BOOL bWait )
 		{
 			// Ignore SALEVENT_SHUTDOWN events when recursing into this
 			// method or when in presentation mode
-			if ( nRecursionLevel == 1 && !pSalData->mpPresentationFrame )
+			ImplSVData *pSVData = ImplGetSVData();
+			if ( !pSVData->maWinData.mpFirstFloat && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mpPresentationFrame )
 				pEvent->dispatch();
 		}
 		else if ( nID == SALEVENT_OPENDOCUMENT || nID == SALEVENT_PRINTDOCUMENT )
 		{
 			// Fix bug 168 by reposting SALEVENT_*DOCUMENT events when
 			// recursing into this method while opening a document
-			if ( nRecursionLevel == 1 && !pSalData->mpPresentationFrame )
+			if ( !ImplGetSVData()->maWinData.mpLastExecuteDlg && !pSalData->mpPresentationFrame )
 			{
 				pEvent->dispatch();
 			}
@@ -1187,10 +1183,7 @@ void SalInstance::Yield( BOOL bWait )
 		delete pEvent;
 
 		if ( bReturn )
-		{
-			nRecursionLevel--;
 			return;
-		}
 	}
 
 	ULONG nCount = ReleaseYieldMutex();
@@ -1262,8 +1255,6 @@ void SalInstance::Yield( BOOL bWait )
 	
 		AcquireYieldMutex( nCount );
 	}
-
-	nRecursionLevel--;
 }
 
 // -----------------------------------------------------------------------
