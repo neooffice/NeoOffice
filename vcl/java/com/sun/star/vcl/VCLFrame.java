@@ -779,7 +779,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * Disposes the native window and releases any system resources that it is
 	 * using.
 	 */
-	public void dispose() {
+	public synchronized void dispose() {
 
 		if (window != null)
 			setVisible(false);
