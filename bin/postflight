@@ -86,6 +86,11 @@ if [ -d "$2" ]; then
 		rm -Rf "$2/classes" || exit 1
 	fi
 
+	# Mark certain directories writable for admin group
+	chmod -f ug+w "$2/Contents" || exit 1
+	chmod -Rf ug+w "$2/Contents/Resources" || exit 1
+	chmod -Rf ug+w "$2/Contents/share/dict/ooo" || exit 1
+
 fi
 
 exit 0

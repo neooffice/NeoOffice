@@ -78,6 +78,11 @@ update_installation() {
 	# Unzip new files
 	( cd "$1" || exit 1 ; pax -r -z -f "$2/Contents/Resources/$(PRODUCT_DIR_NAME).pax.gz" ) || return 1
 
+	# Mark certain directories writable for admin group
+	chmod -f ug+w "$1/Contents" || return 1
+	chmod -Rf ug+w "$1/Contents/Resources" || return 1
+	chmod -Rf ug+w "$1/Contents/share/dict/ooo" || return 1
+
 	return 0
 
 }
