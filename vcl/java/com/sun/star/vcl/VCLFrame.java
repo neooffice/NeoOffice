@@ -722,13 +722,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			EventQueue eventQueue = Toolkit.getDefaultToolkit().getSystemEventQueue();
 			Frame[] frames = Frame.getFrames();
 			for (int i = 0; i < frames.length; i++) {
-				if (frames[i].isShowing())
-					eventQueue.postEvent(new PaintEvent(frames[i], PaintEvent.PAINT, new Rectangle(0, 0, frames[i].getWidth(), frames[i].getHeight())));
+				eventQueue.postEvent(new PaintEvent(frames[i], PaintEvent.PAINT, new Rectangle(0, 0, frames[i].getWidth(), frames[i].getHeight())));
 				Window[] windows = frames[i].getOwnedWindows();
-				for (int j = 0; j < windows.length; j++) {
-					if (windows[j].isShowing())
-						eventQueue.postEvent(new PaintEvent(windows[j], PaintEvent.PAINT, new Rectangle(0, 0, windows[j].getWidth(), windows[j].getHeight())));
-				}
+				for (int j = 0; j < windows.length; j++)
+					eventQueue.postEvent(new PaintEvent(windows[j], PaintEvent.PAINT, new Rectangle(0, 0, windows[j].getWidth(), windows[j].getHeight())));
 			}
 		}
 
