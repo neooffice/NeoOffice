@@ -267,13 +267,13 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					int j = nCharPos * 2;
 					if ( nGlyph & GF_ROTL )
 					{
-						mpGlyphTransforms[ j ] = ( ( nAscent + nDescent - (long)aScreenMetrics.width ) / 2 ) - nDescent;
-						mpGlyphTransforms[ j + 1 ] = nCharWidth - nAdjust;
+						mpGlyphTransforms[ j ] = nDescent - ( ( nAscent + nDescent - (long)aScreenMetrics.width ) / 2 );
+						mpGlyphTransforms[ j + 1 ] = (long)aScreenMetrics.topLeft.y + nAdjust;
 					}
 					else
 					{
-						mpGlyphTransforms[ j ] = nAscent + nDescent - ( ( nAscent + nDescent - (long)aScreenMetrics.width ) / 2 );
-						mpGlyphTransforms[ j + 1 ] = nAdjust;
+						mpGlyphTransforms[ j ] = ( ( nAscent + nDescent - (long)aScreenMetrics.width ) / 2 ) - nAscent;
+						mpGlyphTransforms[ j + 1 ] = nCharWidth - (long)aScreenMetrics.topLeft.y - nAdjust;
 					}
 				}
 				else
@@ -293,6 +293,7 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			aPos.X() += nCharWidth;
 		}
 	}
+	SortGlyphItems();
 
 	rtl_freeMemory( pGlyphInfoArray );
 	ATSUDisposeTextLayout( aLayout );
