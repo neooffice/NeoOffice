@@ -1,4 +1,4 @@
- /*************************************************************************
+/*************************************************************************
  *
  *  $RCSfile$
  *
@@ -207,8 +207,8 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		SalPaintEvent *pPaintEvent = new SalPaintEvent();
 		pPaintEvent->mnBoundX = 0;
 		pPaintEvent->mnBoundY = 0;
-		pPaintEvent->mnBoundWidth = maGeometry.nWidth;      
-		pPaintEvent->mnBoundHeight = maGeometry.nHeight;    
+		pPaintEvent->mnBoundWidth = maGeometry.nWidth;
+		pPaintEvent->mnBoundHeight = maGeometry.nHeight;
 		com_sun_star_vcl_VCLEvent aVCLPaintEvent( SALEVENT_PAINT, this, (void *)pPaintEvent );
 		GetSalData()->mpEventQueue->postCachedEvent( &aVCLPaintEvent );
 	}
@@ -498,7 +498,7 @@ void SalFrame::SetAlwaysOnTop( BOOL bOnTop )
 
 void SalFrame::ToTop( USHORT nFlags )
 {
-    if ( nFlags & SAL_FRAME_TOTOP_RESTOREWHENMIN && maFrameData.mpVCLFrame->getState() == SAL_FRAMESTATE_MINIMIZED )
+	if ( nFlags & SAL_FRAME_TOTOP_RESTOREWHENMIN && maFrameData.mpVCLFrame->getState() == SAL_FRAMESTATE_MINIMIZED )
 		maFrameData.mpVCLFrame->setState( SAL_FRAMESTATE_NORMAL );
 
 	maFrameData.mpVCLFrame->toFront();
@@ -702,13 +702,13 @@ SalFrameData::SalFrameData()
 	mbVisible = FALSE;
 	mpInst = NULL;
 	mpProc = ImplSalCallbackDummy;
-    memset( &maSysData, 0, sizeof( SystemEnvData ) );
+	memset( &maSysData, 0, sizeof( SystemEnvData ) );
 	maSysData.nSize = sizeof( SystemEnvData );
 	mbCenter = TRUE;
 	memset( &maOriginalGeometry, 0, sizeof( maOriginalGeometry ) );
 	mbFullScreen = FALSE;
 	mbPresentation = FALSE;
-        mpMenuBar = NULL;
+	mpMenuBar = NULL;
 }
 
 // -----------------------------------------------------------------------
