@@ -242,8 +242,10 @@ public final class VCLMenuBar {
 					i++;
 				}
 	
-				for(i=awtMenuBar.countMenus()-1; i>=0; i--)
-					awtMenuBar.remove(i);
+				synchronized (awtMenuBar) {
+					for(i=awtMenuBar.countMenus()-1; i>=0; i--)
+						awtMenuBar.remove(i);
+				}
 			}
 			
 			awtMenuBar.removeNotify();
