@@ -1171,7 +1171,7 @@ void SalInstance::Yield( BOOL bWait )
 
 	// Dispatch next pending AWT event. Only dispatch one event as dispatching
 	// multiple events can cause crashing in the next SALEVENT_USEREVENT.
-	if ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
+	while ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
 	{
 		// Reset timeout
 		nTimeout = 0;

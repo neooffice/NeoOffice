@@ -239,7 +239,7 @@ public final class VCLEventQueue {
 
 		VCLEventQueue.Queue queue = (awtEvents ? queueList[0] : queueList[1]);
 
-		if (wait <= 0 && queue.head == null)
+		if ((wait <= 0 && queue.head == null) || (awtEvents && queueList[1].nonOpenPrint != null))
 			return null;
 
 		synchronized (queueList) {
@@ -264,9 +264,11 @@ public final class VCLEventQueue {
 					queue.mouseMove = null;
 				else if (eqi == queue.mouseWheelMove)
 					queue.mouseWheelMove = null;
+				else if (eqi == queue.nonOpenPrint)
+					queue.nonOpenPrint = null;
 			}
 			if (queue.head == null)
-				queue.mouseMove = queue.mouseWheelMove = queue.tail = null;
+				queue.mouseMove = queue.mouseWheelMove = queue.nonOpenPrint = queue.tail = null;
 			return eqi != null ? eqi.event : null;
 		}
 
@@ -299,6 +301,9 @@ public final class VCLEventQueue {
 				}
 				queue.mouseWheelMove = newItem;
 			}
+			// Mark events that are not open or print document events
+			if (id != VCLEvent.SALEVENT_OPENDOCUMENT && id != VCLEvent.SALEVENT_PRINTDOCUMENT)
+				queue.nonOpenPrint = newItem;
 			// Ignore duplicate window close events
 			if (id == VCLEvent.SALEVENT_CLOSE) {
 				VCLEventQueue.QueueItem eqi = queue.head;
@@ -526,6 +531,8 @@ public final class VCLEventQueue {
 		VCLEventQueue.QueueItem mouseMove = null;
 
 		VCLEventQueue.QueueItem mouseWheelMove = null;
+
+		VCLEventQueue.QueueItem nonOpenPrint = null;
 
 		VCLEventQueue.QueueItem tail = null;
 
