@@ -65,6 +65,7 @@ static EventRef aLastMouseDraggedEvent = NULL;
 static EventLoopTimerUPP pEventLoopTimerUPP = NULL;
 static EventLoopTimerRef pEventLoopTimer = NULL;
 static ::java::JavaDragSource *pEventLoopTimerOwner = NULL;
+static bool bNoRejectCursor = false;
 
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData );
 static void CarbonEventLoopTimer( EventLoopTimerRef aTimer, void *pData );
@@ -129,9 +130,13 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 				SetThemeCursor( kThemeClosedHandCursor );
 				break;
 			case kDragTrackingLeaveHandler:
-				SetThemeCursor( kThemeNotAllowedCursor );
+				if ( bNoRejectCursor )
+					SetThemeCursor( kThemeClosedHandCursor );
+				else
+					SetThemeCursor( kThemeNotAllowedCursor );
 				break;
 			default:
+				SetThemeCursor( kThemeNotAllowedCursor );
 				break;
 		}
 
@@ -463,6 +468,8 @@ void JavaDragSource::runDragExecute()
 				RgnHandle aRegion = NewRgn();
 				if ( aRegion )
 				{
+					bNoRejectCursor = false;
+
 					if ( !pDragTrackingHandlerUPP )
 						pDragTrackingHandlerUPP = NewDragTrackingHandlerUPP( ImplDragTrackingHandlerCallback );
 
@@ -477,6 +484,8 @@ void JavaDragSource::runDragExecute()
 
 					if ( pDragTrackingHandlerUPP && mpNativeWindow )
 						RemoveTrackingHandler( pDragTrackingHandlerUPP, (WindowRef)mpNativeWindow );
+
+					bNoRejectCursor = false;
 
 					DisposeRgn( aRegion );
 				}
@@ -811,6 +820,9 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY )
 		aDropEvent.SourceActions = pEventLoopTimerOwner->mnActions;
 		aDropEvent.DropAction = ~0;
 		aDropEvent.Transferable = pEventLoopTimerOwner->maContents;
+
+		// Don't set the cursor to the reject cursor since a drop has occurred
+		bNoRejectCursor = true;
 
 		aDragSourceGuard.clear();
 	}
