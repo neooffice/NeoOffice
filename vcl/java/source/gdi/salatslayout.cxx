@@ -484,6 +484,23 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 		if ( !nGlyphCount )
 			break;
 
+		// Don't draw undisplayable characters
+		int i;
+		for ( i = 0; i < nGlyphCount && ( aGlyphArray[ i ] & GF_IDXMASK ) == GF_IDXMASK; i++ )
+			;
+		if ( i )
+		{
+			nStart -= nGlyphCount - i;
+			continue;
+		}
+		for ( i = 0; i < nGlyphCount && ( aGlyphArray[ i ] & GF_IDXMASK ) != GF_IDXMASK; i++ )
+			;
+		if ( i )
+		{
+			nStart -= nGlyphCount - i;
+			nGlyphCount = i;
+		}
+
 		int nOrientation = GetOrientation();
 
 		if ( mpGlyphTranslations && aGlyphArray[ 0 ] & GF_ROTMASK )
@@ -507,7 +524,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 		}
 		else
 		{
-			for ( int i = 0; i < nGlyphCount; i++ )
+			for ( i = 0; i < nGlyphCount; i++ )
 				aGlyphArray[ i ] &= GF_IDXMASK;
 
 			rGraphics.maGraphicsData.mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), nGlyphCount, aGlyphArray, aDXArray, mpVCLFont, rGraphics.maGraphicsData.mnTextColor, nOrientation, 0, 0, mnUnitsPerPixel );

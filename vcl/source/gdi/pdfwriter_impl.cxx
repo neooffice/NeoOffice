@@ -2548,11 +2548,9 @@ void PDFWriterImpl::registerGlyphs(
             if( it != rSubset.m_aMapping.end() )
             {
                 pMappedFontObjects[i] = it->second.m_nFontID;
+#if !defined USE_JAVA || !defined MACOSX
                 pMappedGlyphs[i] = it->second.m_nSubsetGlyphID;
-#if defined USE_JAVA && defined MACOSX
-                pMappedFontSubObjects[i] = it->second.m_nFontSubID;
-                pMappedIdentityGlyphs[i] = it->second.m_bIdentityGlyph;
-#endif	// USE_JAVA && MACOSX
+#endif	// !USE_JAVA || !MACOSX
             }
             else
             {
@@ -2573,8 +2571,8 @@ void PDFWriterImpl::registerGlyphs(
                 sal_uInt16 nNewId = 0;
 #else	// USE_JAVA && MACOSX
                 sal_uInt8 nNewId = rSubset.m_aSubsets.back().m_aMapping.size()+1;
-#endif	// USE_JAVA && MACOSX
                 pMappedGlyphs[i] = nNewId;
+#endif	// USE_JAVA && MACOSX
 
                 // add new glyph to emitted font subset
                 GlyphEmit& rNewGlyphEmit = rSubset.m_aSubsets.back().m_aMapping[ pGlyphs[i] ];
@@ -2586,13 +2584,16 @@ void PDFWriterImpl::registerGlyphs(
                 rNewGlyph.m_nFontID = pMappedFontObjects[i];
                 rNewGlyph.m_nSubsetGlyphID = nNewId;
 #if defined USE_JAVA && defined MACOSX
-                rNewGlyph.m_nFontSubID = 0;
+                rNewGlyph.m_nFontSubID = nNewId;
                 rNewGlyph.m_bIdentityGlyph = false;
-
-                pMappedFontSubObjects[i] = rNewGlyph.m_nFontSubID;
-                pMappedIdentityGlyphs[i] = rNewGlyph.m_bIdentityGlyph;
 #endif	// USE_JAVA && MACOSX
             }
+
+#if defined USE_JAVA && defined MACOSX
+            pMappedGlyphs[i] = 0;
+            pMappedIdentityGlyphs[i] = 0;
+            pMappedFontSubObjects[i] = 0;
+#endif	// USE_JAVA && MACOSX
         }
         else
         {
@@ -2686,14 +2687,31 @@ void PDFWriterImpl::registerGlyphs(
     // Create font objects using Mac OS X's PDF rendering APIs
     for ( i = 0; i < nGlyphs; i++ )
     {
+        if ( !pGlyphs[0] )
+            continue;
+
         ImplFontData *pCurrentFont = pFallbackFonts[i] ? pFallbackFonts[i] : pDevFont;
         if ( !pCurrentFont->mbSubsettable )
             continue;
 
         FontSubset& rSubset = m_aSubsets[ pCurrentFont ];
-        FontEmit& rEmit = rSubset.m_aSubsets.back();
-        if ( rEmit.m_aGlyphEncoding.size() )
+        FontMapping::iterator it = rSubset.m_aMapping.find( pGlyphs[i] );
+        if ( it == rSubset.m_aMapping.end() )
             continue;
+
+        if ( it->second.m_nSubsetGlyphID )
+        {
+            pMappedGlyphs[i] = it->second.m_nSubsetGlyphID;
+            pMappedIdentityGlyphs[i] = it->second.m_bIdentityGlyph;
+            pMappedFontSubObjects[i] = it->second.m_nFontSubID;
+            continue;
+        }
+
+        for ( FontEmitList::iterator lit = rSubset.m_aSubsets.begin(); lit != rSubset.m_aSubsets.end() && lit->m_nFontID != it->second.m_nFontID; ++lit )
+        if ( lit == rSubset.m_aSubsets.end() )
+            continue;
+
+        FontEmit& rEmit = *lit;
 
         com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)pCurrentFont->mpSysData;
         ATSUFontID nFontID = (ATSUFontID)( pVCLFont->getNativeFont() );
@@ -2977,7 +2995,7 @@ void PDFWriterImpl::registerGlyphs(
                                 {
                                     sal_Int32 nOctalBufLen = aOctalBuf.getLength();
                                     if ( nOctalBufLen && ( nOctalBufLen > 3 || *pBuf < '0' || *pBuf > '9' ) )
-                                        aGlyphBuf.append( aOctalBuf.makeStringAndClear().toInt32( 8 ) );
+                                        aGlyphBuf.append( (sal_Char)aOctalBuf.makeStringAndClear().toInt32( 8 ) );
 
                                     if ( !bLastSlash && *pBuf == '\\' )
                                     {
@@ -3038,7 +3056,7 @@ void PDFWriterImpl::registerGlyphs(
                                 }
                                 else
                                 {
-                                    nEncodedGlyph = (sal_uInt16)( *pBuf );
+                                    nEncodedGlyph = (sal_uInt16)( *pBuf & 0x00ff );
                                 }
 
                                 // Cache encoding
@@ -3057,6 +3075,10 @@ void PDFWriterImpl::registerGlyphs(
 
             osl_closeFile( aFile );
         }
+
+        pMappedGlyphs[i] = rSubset.m_aMapping[ pGlyphs[i] ].m_nSubsetGlyphID;
+        pMappedIdentityGlyphs[i] = rSubset.m_aMapping[ pGlyphs[i] ].m_bIdentityGlyph;
+        pMappedFontSubObjects[i] = rSubset.m_aMapping[ pGlyphs[i] ].m_nFontSubID;
     }
 #endif	// USE_JAVA && MACOSX
 }
@@ -3232,6 +3254,23 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
     sal_Unicode *pTmpUnicodes = pUnicodes;
     while( ( nGlyphs = rLayout.GetNextGlyphs( nMaxGlyphs - nTmpOffset, pTmpGlyphs, aTmpPos, nTmpIndex, pTmpAdvanceWidths, pTmpCharPosAry ) ) || nTmpOffset )
     {
+		// Don't draw undisplayable characters
+		int j;
+		for ( j = 0; j < nGlyphs && ( pTmpGlyphs[ j ] & GF_IDXMASK ) == GF_IDXMASK; j++ )
+			;
+		if ( j )
+		{
+			nTmpIndex -= nGlyphs - j;
+			continue;
+		}
+		for ( j = 0; j < nGlyphs && ( pTmpGlyphs[ j ] & GF_IDXMASK ) != GF_IDXMASK; j++ )
+			;
+		if ( j )
+		{
+			nTmpIndex -= nGlyphs - j;
+			nGlyphs = j;
+		}
+
         for( int i = 0; i < nGlyphs; i++ )
         {
             if( pTmpGlyphs[i] & GF_FONTMASK )
@@ -3239,7 +3278,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
             else
                 pTmpFallbackFonts[i] = NULL;
 
-            nGlyphFlags[i] = (pGlyphs[i] & GF_FLAGMASK);
+            nGlyphFlags[i] = (pTmpGlyphs[i] & GF_FLAGMASK);
             pTmpGlyphs[i] &= GF_IDXMASK;
 
             if ( pTmpGlyphs[i] == GF_IDXMASK )
@@ -3285,6 +3324,23 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
 #endif	// USE_JAVA && MACOSX
     while( (nGlyphs = rLayout.GetNextGlyphs( nMaxGlyphs, pGlyphs, aPos, nIndex, pAdvanceWidths, pCharPosAry )) )
     {
+		// Don't draw undisplayable characters
+		int j;
+		for ( j = 0; j < nGlyphs && ( pGlyphs[ j ] & GF_IDXMASK ) == GF_IDXMASK; j++ )
+			;
+		if ( j )
+		{
+			nIndex -= nGlyphs - j;
+			continue;
+		}
+		for ( j = 0; j < nGlyphs && ( pGlyphs[ j ] & GF_IDXMASK ) != GF_IDXMASK; j++ )
+			;
+		if ( j )
+		{
+			nIndex -= nGlyphs - j;
+			nGlyphs = j;
+		}
+
         bWasYChange = (aGlyphPos.Y() != aPos.Y());
         aGlyphPos = aPos;
         // back transformation to current coordinate system
