@@ -146,12 +146,12 @@ public final class VCLGraphics {
 	/**
 	 * The cached screen resolution.
 	 */
-	private static Dimension screenResolution = null;
+	private static int screenResolution = 0;
 
 	/**
 	 * The cached screen font resolution.
 	 */
-	private static Dimension screenFontResolution = null;
+	private static int screenFontResolution = 0;
 
 	/**
 	 * The use default font flag.
@@ -193,15 +193,11 @@ public final class VCLGraphics {
 		image50 = textureImage;
 
 		// Set the screen and font resolutions
-		int resolution = Toolkit.getDefaultToolkit().getScreenResolution();
-		if (resolution < VCLScreen.MIN_SCREEN_RESOLUTION) {
-			screenResolution = new Dimension(VCLScreen.MIN_SCREEN_RESOLUTION, VCLScreen.MIN_SCREEN_RESOLUTION);
-			screenFontResolution = new Dimension(VCLScreen.MIN_SCREEN_RESOLUTION, VCLScreen.MIN_SCREEN_RESOLUTION);
-		}
-		else {
-			screenResolution = new Dimension(resolution, resolution);
-			screenFontResolution = new Dimension(resolution, resolution);
-		}
+		screenResolution = screenFontResolution = Toolkit.getDefaultToolkit().getScreenResolution();
+		if (screenResolution < VCLScreen.MIN_SCREEN_RESOLUTION)
+			screenResolution = VCLScreen.MIN_SCREEN_RESOLUTION;
+		if (screenFontResolution < VCLScreen.MIN_SCREEN_RESOLUTION)
+			screenFontResolution = VCLScreen.MIN_SCREEN_RESOLUTION;
 
 		// Set the method references
 		try {
@@ -284,14 +280,19 @@ public final class VCLGraphics {
 	private long nextAutoFlush = 0;
 
 	/**
-	 * The printer page resolution.
+	 * The printer page format.
 	 */
-	private Dimension pageResolution = null;
+	private VCLPageFormat pageFormat = null;
 
 	/**
 	 * The printer drawing queue.
 	 */
 	private VCLGraphics.PageQueue pageQueue = null;
+
+	/**
+	 * The rotated page flag.
+	 */
+	private boolean rotatedPage = false;
 
 	/**
 	 * The cached update area.
@@ -343,8 +344,7 @@ public final class VCLGraphics {
 		image = i;
 		graphics = image.getImage().createGraphics();
 		graphicsBounds = new Rectangle(0, 0, image.getWidth(), image.getHeight());
-		if (p != null)
-			pageResolution = p.getPageResolution();
+		pageFormat = p;
 		bitCount = image.getBitCount();
 		resetClipRegion();
 
@@ -355,13 +355,17 @@ public final class VCLGraphics {
 	 * <code>Graphics2D</code> instance.
 	 *
 	 * @param g the <code>Graphics2D</code> instance
-	 * @param d the page resolution
-	 * @param gb the page bounds
+	 * @param p the <code>VCLPageFormat</code> instance
+	 * @param r <code>true</code> if the page is rotated otherwise
+	 *  <code>false</code>
 	 */
-	VCLGraphics(Graphics2D g, Dimension d, Rectangle gb) {
+	VCLGraphics(Graphics2D g, VCLPageFormat p, boolean r) {
 
-		pageResolution = d;
-		graphicsBounds = gb;
+		pageFormat = p;
+		rotatedPage = r;
+		graphicsBounds = new Rectangle(pageFormat.getImageableBounds());
+		graphicsBounds.x = 0;
+		graphicsBounds.y = 0;
 		graphics = (Graphics2D)g.create(graphicsBounds.x, graphicsBounds.y, graphicsBounds.width, graphicsBounds.height);
 		int b = graphics.getDeviceConfiguration().getColorModel().getPixelSize();
 
@@ -458,7 +462,7 @@ public final class VCLGraphics {
 			image.dispose();
 		image = null;
 		frame = null;
-		pageResolution = null;
+		pageFormat = null;
 		update = null;
 		userClip = null;
 
@@ -1265,10 +1269,16 @@ public final class VCLGraphics {
 	 */
 	public Dimension getResolution() {
 
-		if (pageResolution != null)
-			return pageResolution;
-		else
-			return VCLGraphics.screenResolution;
+		if (pageFormat != null) {
+			Dimension pageResolution = pageFormat.getPageResolution();
+			if (rotatedPage)
+				return new Dimension(pageResolution.height, pageResolution.width);
+			else
+				return new Dimension(pageResolution.width, pageResolution.height);
+		}
+		else {
+			return new Dimension(VCLGraphics.screenResolution, VCLGraphics.screenResolution);
+		}
 
 	}
 
@@ -1279,7 +1289,7 @@ public final class VCLGraphics {
 	 */
 	public Dimension getScreenFontResolution() {
 
-		return VCLGraphics.screenFontResolution;
+		return new Dimension(VCLGraphics.screenFontResolution, VCLGraphics.screenFontResolution);
 
 	}
 
