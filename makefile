@@ -82,10 +82,7 @@ build.oo_checkout:
 	chmod -Rf u+w "$(BUILD_HOME)"
 	touch "$@"
 
-build.oo_patches: build.oo_checkout \
-	build.oo_dlcompat_patch \
-	build.oo_external_patch \
-	build.oo_scp_patch
+build.oo_patches: build.oo_checkout
 	touch "$@"
 
 build.oo_odk_patches: build.oo_checkout \
