@@ -191,6 +191,14 @@ public final class VCLEventQueue {
 			catch (Throwable t) {
 				t.printStackTrace();
 			}
+			try {
+				Class c = Class.forName("com.sun.star.vcl.macosx.VCLAboutHandler");
+				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
+				ctor.newInstance(new Object[]{ this });
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
 		}
 
 	}

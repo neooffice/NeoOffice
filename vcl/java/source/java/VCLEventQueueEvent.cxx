@@ -63,6 +63,10 @@
 #include <window.hxx>
 #endif
 
+#include <premac.h>
+#include <Carbon/Carbon.h>
+#include <postmac.h>
+
 using namespace vcl;
 
 // ============================================================================
@@ -239,6 +243,24 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			// Force all "always on top" windows to the front without focus
 			for ( std::list< SalFrame* >::const_iterator it = pSalData->maAlwaysOnTopFrameList.begin(); it != pSalData->maAlwaysOnTopFrameList.end(); ++it )
 				(*it)->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
+			return;
+		}
+		case SALEVENT_ABOUT:
+		{
+			// [ed] 1/25/05 Send ourselves an about appleevent
+			// that can be handled by the sfx2 module
+			
+			AppleEvent theEvent;
+			ProcessSerialNumber    me = {0, kCurrentProcess};
+			AEDesc target;
+			AECreateDesc (typeProcessSerialNumber, &me, sizeof( ProcessSerialNumber ), &target);
+			OSErr theErr;
+			if ( AECreateAppleEvent( kCoreEventClass, kAEAbout, &target, kAutoGenerateReturnID, kAnyTransactionID, &theEvent ) == noErr ) {
+				AppleEvent  theReply = {typeNull,nil};
+				AESend( &theEvent, &theReply, kAENoReply, kAENormalPriority, kNoTimeOut, nil, nil);
+				AEDisposeDesc( &theEvent );
+			}
+			AEDisposeDesc( &target );
 			return;
 		}
 	}

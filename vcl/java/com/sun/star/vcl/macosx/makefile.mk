@@ -55,6 +55,7 @@ dummy:
 .ELSE		# "$(GUIBASE)$(OS)"!="javaMACOSX"
 
 JAVAFILES = \
+	VCLAboutHandler.java \
 	VCLOpenApplicationHandler.java \
 	VCLOpenDocumentHandler.java \
 	VCLPrintDocumentHandler.java \
