@@ -243,7 +243,6 @@ public final class VCLPrintJob extends Thread implements Printable {
 		job = null;
 		printThreadStarted = true;
 		printThreadFinished = true;
-		System.gc();
 
 	}
 
@@ -282,6 +281,8 @@ public final class VCLPrintJob extends Thread implements Printable {
 		}
 		Thread.yield();
 
+		// Free previous page's print resources
+		System.gc();
 	}
 
 	/**
@@ -427,7 +428,9 @@ public final class VCLPrintJob extends Thread implements Printable {
 				currentGraphics = null;
 			}
 			else {
-				currentGraphics = new VCLGraphics(graphicsInfo.graphics, VCLPrintJob.SCALE_FACTOR * 72, new Rectangle(0, 0, (int)graphicsInfo.pageFormat.getImageableWidth() * VCLPrintJob.SCALE_FACTOR, (int)graphicsInfo.pageFormat.getImageableHeight() * VCLPrintJob.SCALE_FACTOR));
+				// Print to the edge of the page to ensure that we print all
+				// possible pixels
+				currentGraphics = new VCLGraphics(graphicsInfo.graphics, VCLPrintJob.SCALE_FACTOR * 72, new Rectangle(0, 0, (int)(graphicsInfo.pageFormat.getImageableX() + graphicsInfo.pageFormat.getImageableWidth()) * VCLPrintJob.SCALE_FACTOR, (int)(graphicsInfo.pageFormat.getImageableY() + graphicsInfo.pageFormat.getImageableHeight()) * VCLPrintJob.SCALE_FACTOR));
 				graphicsInfo.graphics = null;
 				graphicsInfo.pageFormat = null;
 			}
