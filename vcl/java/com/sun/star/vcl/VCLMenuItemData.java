@@ -381,7 +381,7 @@ public final class VCLMenuItemData {
         
         if(newCheck && (isSeparator || isSubmenu))
             throw new IllegalArgumentException();
-        
+                
         isChecked=newCheck;
         if(!isCheckbox)
         {
@@ -473,6 +473,7 @@ public final class VCLMenuItemData {
 	newItem.parentMenus.add(this);
         if(!isSubmenu)
         {
+                isSubmenu=true;
             if(!awtPeers.isEmpty())
             {
                 awtPeers.clear();
@@ -486,32 +487,16 @@ public final class VCLMenuItemData {
 		while(e.hasMoreElements())
 		{
 		    Menu m=(Menu)e.nextElement();
-		    
-		    if(nPos==menuItems.size()-1)
-		    {
-			// we can just append onto the end
-			
-			m.add((MenuItem)newItem.createAWTPeer());
-		    }
-		    else
-		    {
-			// we can't insert items in the middle of AWT menus, so we need to remove all of the
-			// existing items and reinsert them all
-			
-			Stack s=new Stack();
-			for(int i=m.countItems()-1; i>=0; i--)
-			{
-			    s.push(m.getItem(i));
-			    m.remove(i);
-			    if(i==nPos)
-				s.push(newItem.createAWTPeer());
-			}
-			
-			while(!s.empty())
-			{
-			    m.add((MenuItem)s.pop());
-			}
-		    }
+		    m.insert((MenuItem)newItem.createAWTPeer(), nPos);
+                    
+                    // Java 1.3.1 AWT has problems inserting checkmark menu
+                    // items that are already checked, so manually toggle
+                    // the checkmark after the item has been added to a menu.
+                    // When in a menu, the checkbox state can be set properly.
+                    
+                    if(newItem.getChecked()) {
+                        newItem.setChecked(true);
+                    }
 		}
 	    }
         }
@@ -673,9 +658,10 @@ public final class VCLMenuItemData {
          *
          * @param title		initial title of the menu item (may be changed later)
          * @param data		VCLMenuItemData holding the information needed to bind the AWT item to a VCL item
+         * @param state         initial checked state of the menu item
          */
-        public VCLAWTCheckboxMenuItem(String title, VCLMenuItemData data) {
-            super(title);
+        public VCLAWTCheckboxMenuItem(String title, VCLMenuItemData data, boolean state) {
+            super(title, state);
             d=data;
             addActionListener(this);
         }
@@ -713,12 +699,11 @@ public final class VCLMenuItemData {
         
         if(isCheckbox)
         {
-            VCLAWTCheckboxMenuItem cmi=new VCLAWTCheckboxMenuItem(getTitle(), this);
+            VCLAWTCheckboxMenuItem cmi=new VCLAWTCheckboxMenuItem(getTitle(), this, getChecked());
             if(getEnabled())
                 cmi.enable();
             else
                 cmi.disable();
-            cmi.setState(getChecked());
             if(keyboardShortcutSet)
                 cmi.setShortcut(new MenuShortcut(keyboardShortcut, keyboardShortcutUseShift));
             toReturn=(Object)cmi;
@@ -783,8 +768,13 @@ public final class VCLMenuItemData {
 		    } catch(Exception e) {
 			// ignore any exceptions since this function is used
 			// to respond to them
+                        System.err.println("Exception in refreshAWTPeers: "+e);
 		    }
 		}
+                else
+                {
+                        System.err.println("Menu item not found!");
+                }
 	    } catch (IllegalArgumentException e) {
 		System.err.println("Got an illegal argument while refreshing awtpeers! Parent wasn't a menu.");
 	    }
