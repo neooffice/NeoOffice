@@ -498,16 +498,7 @@ public final class VCLGraphics {
 			destX -= srcX;
 		if (srcY < 0)
 			destY -= srcY;
-		if (destX < 0) {
-			srcBounds.x -= destX;
-			srcBounds.width += destX;
-			destX = 0;
-		}
-		if (destY < 0) {
-			srcBounds.y -= destY;
-			srcBounds.height += destY;
-			destY = 0;
-		}
+		Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(graphics.getDeviceConfiguration().getBounds());
 		if (image == null && VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 			// Mac OS X has a tendency to incompletely render large images
 			// when printing to PDF so we break the image into many small
@@ -528,7 +519,7 @@ public final class VCLGraphics {
 			}
 		}
 		else {
-			Graphics2D g = (Graphics2D)graphics.create(destX, destY, srcBounds.width, srcBounds.height);
+			Graphics2D g = (Graphics2D)graphics.create(destBounds.x, destBounds.y, srcBounds.width, srcBounds.height);
 			g.drawRenderedImage(img.getImage().getSubimage(srcBounds.x, srcBounds.y, srcBounds.width, srcBounds.height), null);
 			g.dispose();
 		}
