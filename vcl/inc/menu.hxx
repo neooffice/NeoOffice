@@ -185,13 +185,9 @@ private:
 
     ::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessible > mxAccessible;
 	mutable vcl::MenuLayoutData* mpLayoutData;
-	void*				mpDummy;
-	long				mnDummy;
-	BOOL				mbDummy;
-
-	// Put all NWF members at the end to avoid alignment issues
-	USHORT				mnHighlightedItemPos; // for native menues: keeps track of the highlighted item 
 	SalMenu*			mpSalMenu;
+	ULONG				mnHighlightedItemPos; // for native menues: keeps track of the highlighted item 
+	BOOL				mbDummy;
 
 protected:
 #ifdef _SV_MENU_CXX
@@ -400,9 +396,6 @@ class MenuBar : public Menu
 	BOOL				mbCloserVisible;
 	BOOL				mbFloatBtnVisible;
 	BOOL				mbHideBtnVisible;
-	BOOL				mbDummy1;
-
-	// Put NWF members at end of class to avoid alignment issues
 	BOOL				mbDisplayable;
 
 #if _SOLAR__PRIVATE
