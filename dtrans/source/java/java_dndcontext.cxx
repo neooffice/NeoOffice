@@ -44,20 +44,30 @@ using namespace java;
 
 // ========================================================================
 
-DragSourceContext::DragSourceContext() : WeakImplHelper1< XDragSourceContext >()
+DragSourceContext::DragSourceContext() :
+	WeakImplHelper1< XDragSourceContext >()
 {
+#ifdef DEBUG
+	fprintf( stderr, "DragSourceContext::DragSourceContext not implemented\n" );
+#endif
 }
 
 // ------------------------------------------------------------------------
 
 DragSourceContext::~DragSourceContext()
 {
+#ifdef DEBUG
+	fprintf( stderr, "DragSourceContext::~DragSourceContext not implemented\n" );
+#endif
 }
 
 // ------------------------------------------------------------------------
 
 sal_Int32 SAL_CALL DragSourceContext::getCurrentCursor() throw()
 {
+#ifdef DEBUG
+	fprintf( stderr, "DragSourceContext::getCurrentCursor not implemented\n" );
+#endif
 	return 0;
 }
 
@@ -65,30 +75,47 @@ sal_Int32 SAL_CALL DragSourceContext::getCurrentCursor() throw()
 
 void SAL_CALL DragSourceContext::setCursor( sal_Int32 cursorId ) throw()
 {
+#ifdef DEBUG
+	fprintf( stderr, "DragSourceContext::setCursor not implemented\n" );
+#endif
 }
 
 // ------------------------------------------------------------------------
 
 void SAL_CALL DragSourceContext::setImage( sal_Int32 imageId ) throw()
 {
+#ifdef DEBUG
+	fprintf( stderr, "DragSourceContext::setImage not implemented\n" );
+#endif
 }
 
 // ------------------------------------------------------------------------
 
 void SAL_CALL DragSourceContext::transferablesFlavorsChanged() throw()
 {
+#ifdef DEBUG
+	fprintf( stderr, "DragSourceContext::transferablesFlavorsChanged not implemented\n" );
+#endif
 }
 
 // ========================================================================
 
-DropTargetDropContext::DropTargetDropContext() : WeakImplHelper1< XDropTargetDropContext >()
+DropTargetDropContext::DropTargetDropContext() :
+	WeakImplHelper1< XDropTargetDropContext >(),
+	mbSuccess( false )
 {
+#ifdef DEBUG
+	fprintf( stderr, "DropTargetDropContext::DropTargetDropContext not implemented\n" );
+#endif
 }
 
 // ------------------------------------------------------------------------
 
 DropTargetDropContext::~DropTargetDropContext()
 {
+#ifdef DEBUG
+	fprintf( stderr, "DropTargetDropContext::~DropTargetDropContext not implemented\n" );
+#endif
 }
 
 // ------------------------------------------------------------------------
@@ -116,11 +143,23 @@ void SAL_CALL DropTargetDropContext::dropComplete( sal_Bool success ) throw()
 #ifdef DEBUG
 	fprintf( stderr, "DropTargetDropContext::dropComplete not implemented\n" );
 #endif
+
+	// Multiple listeners may call this method so don't reset when false
+	if ( success )
+		mbSuccess = success;
+}
+
+// ------------------------------------------------------------------------
+
+bool DropTargetDropContext::getDropComplete()
+{
+	return mbSuccess;
 }
 
 // ========================================================================
 
-DropTargetDragContext::DropTargetDragContext() : WeakImplHelper1< XDropTargetDragContext >()
+DropTargetDragContext::DropTargetDragContext() :
+	WeakImplHelper1< XDropTargetDragContext >()
 {
 #ifdef DEBUG
 	fprintf( stderr, "DropTargetDragContext::DropTargetDragContext not implemented\n" );

@@ -791,9 +791,11 @@ void JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY )
 
 bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY )
 {
+	DropTargetDropContext *pContext = new DropTargetDropContext();
+
 	DropTargetDropEvent aDropEvent;
 	aDropEvent.Source = static_cast< OWeakObject* >(this);
-	aDropEvent.Context = new DropTargetDropContext();
+	aDropEvent.Context = pContext;
 	aDropEvent.LocationX = nX;
 	aDropEvent.LocationY = nY;
 	aDropEvent.SourceActions = DNDConstants::ACTION_NONE;
@@ -832,7 +834,5 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY )
 			(*it)->drop( aDropEvent );
 	}
 
-	// TODO: return false if one of the drop() methods causes the event's
-	// DropTargetDropContext.rejectDrop() method to be called
-	return true;
+	return pContext->getDropComplete();
 }
