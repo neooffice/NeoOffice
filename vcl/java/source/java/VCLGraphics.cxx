@@ -652,14 +652,17 @@ void *com_sun_star_vcl_VCLGraphics::getNativeGraphics()
 										fIDCGContext = t.pEnv->GetFieldID( penClass, "fCGContext", cSignature );
 									}
 									OSL_ENSURE( fIDCGContext, "Unknown field id!" );
-									if ( mIDBeginDraw && fIDCGContext )
+									if ( mIDBeginDraw && fIDCGContext && t.pEnv->MonitorEnter( pen ) == JNI_OK )
 									{
 										jvalue args[3];
 										args[0].l = graphicsState;
-										args[1].z = jboolean( JNI_TRUE );
+										args[1].z = jboolean( JNI_FALSE );
 										args[2].z = jboolean( JNI_TRUE );
 										if ( t.pEnv->CallNonvirtualBooleanMethodA( pen, penClass, mIDBeginDraw, args ) )
 											out = (void *)t.pEnv->GetIntField( pen, fIDCGContext );
+
+										if ( !out )
+											t.pEnv->MonitorExit( pen );
 									}
 								}
 							}
@@ -904,7 +907,10 @@ void com_sun_star_vcl_VCLGraphics::releaseNativeGraphics( void *_par0 )
 									}
 									OSL_ENSURE( mIDEndDraw, "Unknown method id!" );
 									if ( mIDEndDraw )
+									{
 										t.pEnv->CallNonvirtualVoidMethod( pen, penClass, mIDEndDraw );
+										t.pEnv->MonitorExit( pen );
+									}
 								}
 							}
 						}
