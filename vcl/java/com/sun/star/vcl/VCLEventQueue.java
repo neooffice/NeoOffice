@@ -35,13 +35,6 @@
 
 package com.sun.star.vcl;
 
-import java.awt.AWTEvent;
-import java.awt.EventQueue;
-import java.awt.Toolkit;
-import java.awt.event.InputEvent;
-import java.awt.event.KeyEvent;
-import java.awt.event.MouseEvent;
-import java.awt.event.PaintEvent;
 import java.lang.reflect.Constructor;
 
 /**
@@ -89,11 +82,6 @@ public final class VCLEventQueue {
 	public final static int INPUT_ANY = VCLEventQueue.INPUT_MOUSE | VCLEventQueue.INPUT_KEYBOARD | VCLEventQueue.INPUT_PAINT | VCLEventQueue.INPUT_TIMER | VCLEventQueue.INPUT_OTHER;
 
 	/**
-	 * The cached system event queue.
-	 */
-	private VCLEventQueue.FilteredEventQueue eventQueue = null;
-
-	/**
 	 * The queue of cached events.
 	 */
 	private VCLEventQueue.Queue queue = new VCLEventQueue.Queue();
@@ -104,8 +92,6 @@ public final class VCLEventQueue {
 	public VCLEventQueue() {
 
 		VCLGraphics.setAutoFlush(true);
-		eventQueue = new VCLEventQueue.FilteredEventQueue(this);
-		Toolkit.getDefaultToolkit().getSystemEventQueue().push(eventQueue);
 
 		// Load platform specific event handlers
 		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
@@ -175,16 +161,11 @@ public final class VCLEventQueue {
 		// Allow the Java event queue to dispatch pending events first
 		Thread.currentThread().yield();
 
-		if (!wait && queue.head == null)
+		// if (!wait && queue.head == null)
+		if (queue.head == null)
 			return null;
 
 		synchronized (queue) {
-			if (wait && queue.head == null) {
-				try {
-					queue.wait(10);
-				}
-				catch (InterruptedException ie) {}
-			}
 			VCLEventQueue.QueueItem eqi = null;
 			eqi = queue.head;
 			if (eqi != null) {
@@ -306,223 +287,6 @@ public final class VCLEventQueue {
 		QueueItem(VCLEvent event) {
 
 			this.event = event;
-
-		}
-
-	}
-
-	/**
-	 * The <code>FilteredEventQueue</code> class is a subclass of the
-	 * <code>EventQueue</code> class that filters and modifies events at
-	 * dispatch time.
-	 */
-	final class FilteredEventQueue extends EventQueue {
-
-		/**
-		 * The mouse drag flag.
-		 */
-		private boolean inMouseDrag = false;
-
-		/**
-		 * The mouse pressed dispatched flag.
-		 */
-		private boolean mousePressedDispatched = false;
-
-		/**
-		 * The cached mouse pressed event.
-		 */
-		private MouseEvent mousePressedEvent  = null;
-
-		/**
-		 * The wait for mouse released flag.
-		 */
-		private boolean waitForMouseReleased = false;
-
-		/**
-		 * The cached <code>VCLEventQueue</code>.
-		 */
-		private VCLEventQueue queue = null;
-
-		/**
-		 * Construct a FilteredEventQueue.
-		 */
-		FilteredEventQueue(VCLEventQueue q) {
-
-			super();
-			queue = q;
-
-		}
-
-		/**
-		 * Dispatch the event using Java's default dispatching process and then
-		 * cache the event for handling by the C++ code.
-		 *
-		 * @param event the AWTEvent
-		 */
-		protected void dispatchEvent(AWTEvent event) {
-
-			int id = event.getID();
-			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-				switch (id) {
-					case KeyEvent.KEY_PRESSED:
-					case KeyEvent.KEY_RELEASED:
-					case KeyEvent.KEY_TYPED:
-					{
-						KeyEvent e = (KeyEvent)event;
-						int modifiers = e.getModifiers();
-						if ((modifiers & InputEvent.CTRL_MASK) == InputEvent.CTRL_MASK) {
-							// Switch the key char back to the character that
-							// was actually pressed instead of the ASCII
-							// Ctrl+Key key char that the event has resolved to
-							char keyChar = e.getKeyChar();
-							if (keyChar >= 1 && keyChar <= 26)
-							{
-								if ((modifiers & InputEvent.SHIFT_MASK) == InputEvent.SHIFT_MASK)
-									keyChar += 64;
-								else
-									keyChar += 96;
-							}
-							int keyCode = e.getKeyCode();
-							event = e = new KeyEvent(e.getComponent(), id, e.getWhen(), modifiers, e.getKeyCode(), keyChar);
-						}
-						// Treat the Mac OS X command key as a control key and
-						// the control key as the meta key
-						if ((modifiers & (InputEvent.CTRL_MASK | InputEvent.META_MASK)) == (InputEvent.CTRL_MASK | InputEvent.META_MASK)) {
-							; // No switching is needed
-						}
-						else if ((modifiers & InputEvent.CTRL_MASK) == InputEvent.CTRL_MASK) {
-							modifiers = (modifiers & ~InputEvent.CTRL_MASK) | InputEvent.META_MASK;
-							int keyCode = e.getKeyCode();
-							if (keyCode == KeyEvent.VK_CONTROL)
-								keyCode = KeyEvent.VK_META;
-							event = e = new KeyEvent(e.getComponent(), id, e.getWhen(), modifiers, keyCode, e.getKeyChar());
-						}
-						else if ((modifiers & InputEvent.META_MASK) == InputEvent.META_MASK) {
-							modifiers = (modifiers & ~InputEvent.META_MASK) | InputEvent.CTRL_MASK;
-							int keyCode = e.getKeyCode();
-							if (keyCode == KeyEvent.VK_META)
-								keyCode = KeyEvent.VK_CONTROL;
-							event = e = new KeyEvent(e.getComponent(), id, e.getWhen(), modifiers, keyCode, e.getKeyChar());
-						}
-						if ((modifiers & (InputEvent.SHIFT_MASK | InputEvent.CTRL_MASK)) == (InputEvent.SHIFT_MASK | InputEvent.CTRL_MASK)) {
-							// It appears that Java on Mac OS X suppresses the
-							// key typed event for some unreserved
-							// Command+Shift+Key combinations so we need to
-							// ignore the key typed events and generate them
-							// when there is a key released event
-							if (id == KeyEvent.KEY_RELEASED) {
-								char keyChar = e.getKeyChar();
-								if (keyChar != KeyEvent.CHAR_UNDEFINED)
-									super.dispatchEvent(new KeyEvent(e.getComponent(), KeyEvent.KEY_TYPED, e.getWhen(), modifiers, KeyEvent.VK_UNDEFINED, keyChar));
-							}
-							else if (id == KeyEvent.KEY_TYPED) {
-								return;
-							}
-						}
-						break;
-					}
-					case MouseEvent.MOUSE_CLICKED:
-					case MouseEvent.MOUSE_DRAGGED:
-					case MouseEvent.MOUSE_ENTERED:
-					case MouseEvent.MOUSE_EXITED:
-					case MouseEvent.MOUSE_MOVED:
-					case MouseEvent.MOUSE_RELEASED:
-					{
-						MouseEvent e = (MouseEvent)event;
-						int modifiers = e.getModifiers();
-						if ((modifiers & (InputEvent.BUTTON2_MASK | InputEvent.BUTTON3_MASK)) != 0) {
-							// If button 2 or button 3 is activated by pressing
-							// the Alt or Meta keys, switch it to button 1
-							modifiers = (modifiers & ~(InputEvent.BUTTON2_MASK | InputEvent.BUTTON3_MASK)) | InputEvent.BUTTON1_MASK;
-							event = e = new MouseEvent(e.getComponent(), id, e.getWhen(), modifiers, e.getX(), e.getY(), e.getClickCount(), false);
-						}
-						if (mousePressedEvent != null) {
-							// Dispatch the cached mouse pressed event since it
-							// has not been dispatched yet
-							super.dispatchEvent(mousePressedEvent);
-							mousePressedDispatched = true;
-							mousePressedEvent = null;
-						}
-						if (id == MouseEvent.MOUSE_RELEASED) {
-							if (waitForMouseReleased) {
-								// Ignore this event since a mouse released
-								// event was dispatched with the last mouse
-								//  pressed event
-								waitForMouseReleased = false;
-								return;
-							}
-							inMouseDrag = false;
-						}
-						else {
-							// If the waitForMouseReleased flag is true, ignore
-							// all other mouse events until the next mouse
-							// released event
-							if (waitForMouseReleased)
-								return;
-							if (id == MouseEvent.MOUSE_DRAGGED)
-								inMouseDrag = true;
-							else {
-								// If the mouse is in drag mode, ignore all
-								// other mouse events until the next mouse
-								// released event
-								if (inMouseDrag)
-									return;
-							}
-						}
-						break;
-					}
-					case MouseEvent.MOUSE_PRESSED:
-					{
-						MouseEvent e = (MouseEvent)event;
-						int modifiers = e.getModifiers();
-						if ((modifiers & (InputEvent.BUTTON2_MASK | InputEvent.BUTTON3_MASK)) != 0) {
-							// If button 2 or button 3 is activated by pressing
-							// the Alt or Meta keys, switch it to button 1
-							modifiers = (modifiers & ~(InputEvent.BUTTON2_MASK | InputEvent.BUTTON3_MASK)) | InputEvent.BUTTON1_MASK;
-							event = e = new MouseEvent(e.getComponent(), id, e.getWhen(), modifiers, e.getX(), e.getY(), e.getClickCount(), false);
-						}
-						// If mouse button 1 is held down for a short time
-						// without any movement, switch this event to button 2
-						if (!mousePressedDispatched) {
-							if (System.currentTimeMillis() >= e.getWhen() + 1000) {
-								mousePressedDispatched = false;
-								mousePressedEvent = null;
-								waitForMouseReleased = true;
-								super.dispatchEvent(new MouseEvent(e.getComponent(), MouseEvent.MOUSE_PRESSED, e.getWhen(), InputEvent.BUTTON2_MASK, e.getX(), e.getY(), e.getClickCount(), true));
-								super.dispatchEvent(new MouseEvent(e.getComponent(), MouseEvent.MOUSE_RELEASED, e.getWhen(), InputEvent.BUTTON2_MASK, e.getX(), e.getY(), e.getClickCount(), true));
-							}
-							else {
-								mousePressedEvent = e;
-								waitForMouseReleased = false;
-								postEvent(event);
-							}
-						}
-						else {
-							mousePressedDispatched = false;
-						}
-						// Mouse pressed events are never dispatched here since
-						// they are dispatched with the other mouse event types
-						return;
-					}
-					default:
-						break;
-				}
-			}
-
-			try {
-				super.dispatchEvent(event);
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-
-			// Flush to any areas the Java has painted
-			if (id == PaintEvent.PAINT || id == PaintEvent.UPDATE) {
-				PaintEvent e = (PaintEvent)event;
-				VCLFrame frame = VCLFrame.getVCLFrame(e.getComponent());
-				if (frame != null)
-					frame.getGraphics().addToFlush(e.getUpdateRect());
-            }
 
 		}
 

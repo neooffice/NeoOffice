@@ -769,8 +769,6 @@ public final class VCLGraphics {
 	void flush() {
 
 		if (panelGraphics != null && image != null && update != null) {
-			// Allow the Java event queue to dispatch pending events first
-			Thread.currentThread().yield();
 			panelGraphics.setClip(update);
 			panelGraphics.drawImage(image.getImage(), 0, 0, null);
 			Toolkit.getDefaultToolkit().sync();

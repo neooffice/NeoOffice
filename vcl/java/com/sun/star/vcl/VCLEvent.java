@@ -37,6 +37,7 @@ package com.sun.star.vcl;
 
 import java.awt.AWTEvent;
 import java.awt.Rectangle;
+import java.awt.Toolkit;
 import java.awt.event.ComponentEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
@@ -831,11 +832,44 @@ public final class VCLEvent extends AWTEvent {
 	 * @param f the <code>VCLFrame</code> instance
 	 * @param d the data pointer
 	 */
-	VCLEvent(AWTEvent source, int id, VCLFrame f, long d) {
+	VCLEvent(AWTEvent event, int id, VCLFrame f, long d) {
 
-		super(source, id);
-		frame = f;
-		data = d;
+		this(id, f, d);
+
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+			int eid = event.getID();
+			switch (eid) {
+				case KeyEvent.KEY_PRESSED:
+				case KeyEvent.KEY_RELEASED:
+				case KeyEvent.KEY_TYPED:
+				{
+					KeyEvent e = (KeyEvent)event;
+					int modifiers = e.getModifiers();
+					// Treat the Mac OS X command key as a control key and
+					// the control key as the meta key
+					if ((modifiers & (InputEvent.CTRL_MASK | InputEvent.META_MASK)) == (InputEvent.CTRL_MASK | InputEvent.META_MASK)) {
+						; // No switching is needed
+					}
+					else if ((modifiers & InputEvent.CTRL_MASK) == InputEvent.CTRL_MASK) {
+						modifiers = (modifiers & ~InputEvent.CTRL_MASK) | InputEvent.META_MASK;
+						int keyCode = e.getKeyCode();
+						if (keyCode == KeyEvent.VK_CONTROL)
+							keyCode = KeyEvent.VK_META;
+						event = e = new KeyEvent(e.getComponent(), eid, e.getWhen(), modifiers, keyCode, e.getKeyChar());
+					}
+					else if ((modifiers & InputEvent.META_MASK) == InputEvent.META_MASK) {
+						modifiers = (modifiers & ~InputEvent.META_MASK) | InputEvent.CTRL_MASK;
+						int keyCode = e.getKeyCode();
+						if (keyCode == KeyEvent.VK_META)
+							keyCode = KeyEvent.VK_CONTROL;
+						event = e = new KeyEvent(e.getComponent(), eid, e.getWhen(), modifiers, keyCode, e.getKeyChar());
+					}
+					break;
+				}
+			}
+		}
+
+		source = event;
 
 	}
 

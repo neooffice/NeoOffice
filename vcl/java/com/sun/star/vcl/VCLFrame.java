@@ -35,6 +35,7 @@
 
 package com.sun.star.vcl;
 
+import java.awt.ActiveEvent;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
@@ -52,6 +53,7 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
@@ -578,15 +580,32 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private VCLGraphics graphics = null;
 
+	/** 
+	 * The last mouse pressed for which a mouse released event has not been
+	 * received.
+	 */
+	private boolean ignoreMouseReleased = false;
+
 	/**
 	 * The native window's insets.
 	 */
 	private Insets insets = null;
 
+	/** 
+	 * The last key pressed for which a key typed event has not been received.
+	 */
+	private KeyEvent lastKeyPressed = null;
+
+	/** 
+	 * The last mouse pressed for which a mouse released event has not been
+	 * received.
+	 */
+	private MouseEvent lastMousePressed = null;
+
 	/**
 	 * The native window's panel.
 	 */
-	private Panel panel = null;
+	private VCLFrame.NoPaintPanel panel = null;
 
 	/**
 	 * The parent frame.
@@ -634,7 +653,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			resizable = true;
 
 		// Add a panel as the only component
-		panel = new VCLFrame.NoPaintPanel();
+		panel = new VCLFrame.NoPaintPanel(this);
 		panel.setBackground(Color.white);
 		panel.enableInputMethods(false);
 		window.add(panel);
@@ -687,6 +706,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public void componentShown(ComponentEvent e) {}
 
 	/**
+	 * Invoked when the native window has been made invisible.
+	 *
+	 * @param e the <code>ComponentEvent</code>
+	 */
+	public void componentHidden(ComponentEvent e) {}
+
+	/**
 	 * Invoked when the native window has gained focus.
 	 *
 	 * @param e the <code>FocusEvent</code>
@@ -707,13 +733,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
 
 	}
-
-	/**
-	 * Invoked when the native window has been made invisible.
-	 *
-	 * @param e the <code>ComponentEvent</code>
-	 */
-	public void componentHidden(ComponentEvent e) {}
 
 	/**
 	 * Disposes the native window and releases any system resources that it is
@@ -748,6 +767,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			window.dispose();
 		}
 		window = null;
+		ignoreMouseReleased = false;
+		lastKeyPressed = null;
+		lastMousePressed = null;
 
 	}
 
@@ -1190,6 +1212,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYMODCHANGE, this, 0));
 		else if (e.isActionKey())
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
+		else
+			lastKeyPressed = e;
 
 	}
 
@@ -1204,6 +1228,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (keyCode == KeyEvent.VK_SHIFT || keyCode == KeyEvent.VK_CONTROL || keyCode == KeyEvent.VK_ALT)
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYMODCHANGE, this, 0));
 
+		else if (lastKeyPressed != null && VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+			// Trap the Mac OS X key combinations that are reserved for the
+			// items in the Apple Services menu. Even though we don't respond
+			// to these services, Java does not generate a key typed event so
+			// we need to generate it ourselves.
+			if (keyCode >= KeyEvent.VK_A && keyCode <= KeyEvent.VK_Z && keyCode != KeyEvent.VK_H || keyCode != KeyEvent.VK_Q) {
+				int modifiers = lastKeyPressed.getModifiers();
+				if ((modifiers & (InputEvent.SHIFT_MASK | InputEvent.CTRL_MASK)) == (InputEvent.SHIFT_MASK | InputEvent.CTRL_MASK))
+					e = new KeyEvent(e.getComponent(), KeyEvent.KEY_TYPED, e.getWhen(), modifiers, KeyEvent.VK_UNDEFINED, Character.toLowerCase((char)keyCode));
+					queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
+			}
+		}
+
+
 	}
 
 	/**
@@ -1213,6 +1251,16 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void keyTyped(KeyEvent e) {
 
+		// If a modifier is used to set the character (e.g. the "Alt-c"
+		// generates a "c-cedilla" in the Mac OS X U.S. keyboard, we must strip
+		// of the modifiers so that the C++ code does not get confused.
+		if (lastKeyPressed != null && e.getModifiers() != 0) {
+			int keyCode = lastKeyPressed.getKeyCode();
+			char keyChar = lastKeyPressed.getKeyChar();
+			if ((int)Character.toUpperCase(keyChar) != keyCode)
+				e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), 0, e.getKeyCode(), keyChar);
+		}
+		lastKeyPressed = null;
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
 
 	}
@@ -1231,7 +1279,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void mousePressed(MouseEvent e) {
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONDOWN, this, 0));
+		postMouseEvent(e);
 
 	}
 
@@ -1242,7 +1290,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void mouseReleased(MouseEvent e) {
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONUP, this, 0));
+		postMouseEvent(e);
 
 	}
 
@@ -1253,7 +1301,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void mouseDragged(MouseEvent e) {
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, this, 0));
+		postMouseEvent(e);
 
 	}
 
@@ -1264,7 +1312,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void mouseEntered(MouseEvent e) {
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, this, 0));
+		postMouseEvent(e);
 
 	}
 
@@ -1275,7 +1323,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void mouseExited(MouseEvent e) {
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSELEAVE, this, 0));
+		postMouseEvent(e);
 
 	}
 
@@ -1287,7 +1335,77 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void mouseMoved(MouseEvent e) {
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, this, 0));
+		postMouseEvent(e);
+
+	}
+
+	/**
+	 * Post a <code>MouseEvent</code>.
+	 *
+	 * @param e the <code>MouseEvent</code>
+	 */
+	void postMouseEvent(MouseEvent e) {
+
+		int id = e.getID();
+
+		// Post any pending mouse pressed event
+		if (lastMousePressed != null) {
+			// On Mac OS X, if the mouse has been held down on a regular window
+			// without moving it for a short time, treat it as a "right-click"
+			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && window instanceof Frame && (lastMousePressed.getModifiers() & (InputEvent.BUTTON2_MASK | InputEvent.BUTTON3_MASK)) == 0 && e.getWhen() >= lastMousePressed.getWhen() + 1000) {
+				ignoreMouseReleased = true;	
+				int mouseModifiers = InputEvent.BUTTON2_MASK;
+				// Post the cached mouse pressed event
+				MouseEvent mousePressed = new MouseEvent(lastMousePressed.getComponent(), lastMousePressed.getID(), lastMousePressed.getWhen(), mouseModifiers, lastMousePressed.getX(), lastMousePressed.getY(), lastMousePressed.getClickCount(), true);
+				queue.postCachedEvent(new VCLEvent(mousePressed, VCLEvent.SALEVENT_MOUSEBUTTONDOWN, this, 0));
+				// Post a dummy mouse released event
+				MouseEvent mouseReleased = new MouseEvent(lastMousePressed.getComponent(), MouseEvent.MOUSE_RELEASED, lastMousePressed.getWhen(), mouseModifiers, lastMousePressed.getX(), lastMousePressed.getY(), lastMousePressed.getClickCount(), true);
+				queue.postCachedEvent(new VCLEvent(mouseReleased, VCLEvent.SALEVENT_MOUSEBUTTONUP, this, 0));
+				lastMousePressed = null;
+			}
+			else if (!(e instanceof MouseActiveEvent)) {
+				// Post the cached mouse pressed event
+				queue.postCachedEvent(new VCLEvent(lastMousePressed, VCLEvent.SALEVENT_MOUSEBUTTONDOWN, this, 0));
+				lastMousePressed = null;
+			}
+		}
+
+		// Post the current event
+		int vclid = 0;
+		switch (id) {
+			case MouseEvent.MOUSE_DRAGGED:
+				vclid = VCLEvent.SALEVENT_MOUSEMOVE;
+				break;
+			case MouseEvent.MOUSE_ENTERED:
+				vclid = VCLEvent.SALEVENT_MOUSEMOVE;
+				break;
+			case MouseEvent.MOUSE_EXITED:
+				vclid = VCLEvent.SALEVENT_MOUSELEAVE;
+				break;
+			case MouseEvent.MOUSE_MOVED:
+				vclid = VCLEvent.SALEVENT_MOUSEMOVE;
+				break;
+			case MouseEvent.MOUSE_PRESSED:
+				if (!(e instanceof MouseActiveEvent)) {
+					lastMousePressed = e;
+					ignoreMouseReleased = false;
+				}
+				// Post an active event so that we make additional passes
+				// through this method even if no mouse events are posted
+				if (lastMousePressed != null)
+					Toolkit.getDefaultToolkit().getSystemEventQueue().postEvent(new VCLFrame.MouseActiveEvent(lastMousePressed, this));
+				break;
+			case MouseEvent.MOUSE_RELEASED:
+				if (!ignoreMouseReleased)
+					vclid = VCLEvent.SALEVENT_MOUSEBUTTONUP;
+				else
+					ignoreMouseReleased = true;
+				break;
+			default:
+				break;
+		}
+		if (vclid > 0)
+			queue.postCachedEvent(new VCLEvent(e, vclid, this, 0));
 
 	}
 
@@ -1327,7 +1445,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		Rectangle bounds = null;
 		if (b) {
 			window = new Window(window);
-			panel = new VCLFrame.NoPaintPanel();
+			panel = new VCLFrame.NoPaintPanel(this);
 			panel.setBackground(Color.white);
 			panel.enableInputMethods(false);
 			window.add(panel);
@@ -1348,7 +1466,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			window.removeNotify();
 			window.dispose();
 			window = owner;
-			panel = (Panel)window.getComponent(0);
+			panel = (VCLFrame.NoPaintPanel)window.getComponent(0);
 			if (window instanceof Frame)
 				insets = VCLScreen.getFrameInsets();
 			else
@@ -1526,6 +1644,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			((Frame)window).setResizable(resizable);
 
 		if (b) {
+			// Reset key and mouse flags
+			ignoreMouseReleased = false;
+			lastKeyPressed = null;
+			lastMousePressed = null;
+
 			// Register listeners
 			window.addComponentListener(this);
 			window.addFocusListener(this);
@@ -1557,6 +1680,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			panel.removeMouseListener(this);
 			panel.removeMouseMotionListener(this);
 			window.removeWindowListener(this);
+
+			// Reset key and mouse flags
+			ignoreMouseReleased = false;
+			lastKeyPressed = null;
+			lastMousePressed = null;
 		}
 
 	}
@@ -1647,17 +1775,60 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public void windowDeactivated(WindowEvent e) {}
 
 	/**
+	 * A class that implements the <code>ActiveEvent</code> interface.
+	 */
+	final class MouseActiveEvent extends MouseEvent implements ActiveEvent {
+
+		/**
+		 * The <code>VCLFrame</code>.
+		 */
+		private VCLFrame frame = null;
+
+		/**
+		 * Constructs a new <code>VCLFrame.MouseActiveEvent</code> instance.
+		 *
+		 * @param f the <code>VCLFrame</code>
+		 */
+		MouseActiveEvent(MouseEvent e, VCLFrame f) {
+
+			super(e.getComponent(), e.getID(), System.currentTimeMillis(), e.getModifiers(), e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
+			frame = f;
+
+		}
+
+		/**
+		 * Post a dummy mouse pressed event to force any pending mouse pressed
+		 * events to be posted.
+		 */
+		public void dispatch() {
+
+			if (frame.lastMousePressed != null)
+				postMouseEvent(this);
+
+		}
+
+	}
+
+	/**
 	 * A class that has painting methods that perform no painting.
 	 */
 	final class NoPaintPanel extends Panel {
 
 		/**
-		 * This method performs no painting of the panel. This method is used
-		 * to prevent Java from painting over what VCL has painted.
-		 *
-		 * @param g the <code>Graphics</code>
+		 * The <code>VCLFrame</code>.
 		 */
-		public void paint(Graphics g) {}
+		private VCLFrame frame = null;
+
+		/**
+		 * Constructs a new <code>VCLFrame.NoPaintPanel</code> instance.
+		 *
+		 * @param f the <code>VCLFrame</code>
+		 */
+		NoPaintPanel(VCLFrame f) {
+
+			frame = f;
+
+		}
 
 		/**
 		 * This method performs no painting of the panel. This method is used
@@ -1665,7 +1836,32 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 *
 		 * @param g the <code>Graphics</code>
 		 */
-		public void update(Graphics g) {}
+		public void paint(Graphics g) {
+
+			VCLGraphics graphics = frame.getGraphics();
+			if (graphics != null) {
+				Rectangle clip = g.getClipBounds();
+				synchronized (graphics) {
+					if (clip != null)
+						graphics.addToFlush(clip);
+					else
+						graphics.addToFlush(((Graphics2D)g).getDeviceConfiguration().getBounds());
+				}
+			}
+
+		}
+
+		/**
+		 * This method performs no painting of the panel. This method is used
+		 * to prevent Java from painting over what VCL has painted.
+		 *
+		 * @param g the <code>Graphics</code>
+		 */
+		public void update(Graphics g) {
+
+			paint(g);
+
+		}
 
 	}
 
