@@ -261,10 +261,10 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 
 		// If this is a popup window, we need to put the window on the correct
 		// screen when the parent window straddles more than one screen
-		maFrameData.mpVCLFrame->setBounds( nX, nY, nWidth + maGeometry.nLeftDecoration + maGeometry.nRightDecoration, nHeight + maGeometry.nTopDecoration + maGeometry.nBottomDecoration );
+		Rectangle aBounds( Point( nX, nY ), Size( nWidth + maGeometry.nLeftDecoration + maGeometry.nRightDecoration, nWidth + maGeometry.nTopDecoration + maGeometry.nBottomDecoration ) );
+		maFrameData.mpVCLFrame->setBounds( aBounds.nLeft, aBounds.nTop, aBounds.GetWidth(), aBounds.GetHeight() );
 		GetWorkArea( aWorkArea );
-		Rectangle aParentBounds( Point( maGeometry.nX, maGeometry.nY ), Size( maGeometry.nWidth, maGeometry.nWidth ) );
-		if ( aParentBounds.Intersection( aWorkArea ).IsEmpty() )
+		if ( aBounds.Intersection( aWorkArea ).IsEmpty() )
 			maFrameData.mpParent->GetWorkArea( aWorkArea );
 	}
 	else
