@@ -221,6 +221,7 @@ public final class VCLMenuBar {
 	public void dispose() {
 
 		removeMenuBar(this);
+	 	awtMenuBar.removeNotify();
 	 	awtMenuBar=null;
 		menus=null;
 		queue=null;
