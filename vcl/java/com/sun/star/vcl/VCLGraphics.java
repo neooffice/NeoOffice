@@ -416,7 +416,7 @@ public final class VCLGraphics {
 			else if (clip.contains((double)destBounds.x, (double)destBounds.y, (double)destBounds.width, (double)destBounds.height))
 				clip = null;
 		}
-		if (image == null || clip != null) {
+		if (clip != null) {
 			// Draw to a temporary image
 			VCLImage bmpImage = new VCLImage(destBounds.width, destBounds.height, bmp.getBitCount());
 			bmpImage.getGraphics().drawBitmap(bmp, srcBounds.x, srcBounds.y, destBounds.width, destBounds.height, 0, 0);
@@ -424,8 +424,11 @@ public final class VCLGraphics {
 			bmpImage.dispose();
 		}
 		else {
-			int[] destData = image.getData();
-			int destDataWidth = image.getWidth();
+			VCLImage destImage = image;
+			if (pageImage != null)
+				destImage = pageImage;
+			int[] destData = destImage.getData();
+			int destDataWidth = destImage.getWidth();
 			Point srcPoint = new Point(srcBounds.x, srcBounds.y);
 			Point destPoint = new Point(destBounds.x, destBounds.y);
 			int totalPixels = destBounds.width * destBounds.height;
@@ -450,6 +453,11 @@ public final class VCLGraphics {
 					destPoint.x = destBounds.x;
 					destPoint.y++;
 				}
+			}
+			if (destImage == pageImage) {
+				Graphics2D g = (Graphics2D)graphics.create(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
+				g.drawRenderedImage(pageImage.getImage().getSubimage(destBounds.x, destBounds.y, destBounds.width, destBounds.height), null);
+				g.dispose();
 			}
 			addToFlush(destBounds);
 		}
