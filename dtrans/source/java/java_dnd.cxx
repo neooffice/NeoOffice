@@ -768,7 +768,7 @@ void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY )
 	for ( list< Reference< XDropTargetListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
 	{
 		if ( (*it).is() )
-			(*it)->dragOver( aDragEvent );
+			(*it)->dragExit( aDragEvent );
 	}
 
 	aDragMutex.acquire();
