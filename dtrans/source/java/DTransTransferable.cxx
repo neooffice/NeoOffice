@@ -98,8 +98,6 @@ static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 )
 };
 
-static ScrapPromiseKeeperUPP pScrapPromiseKeeperUPP = NULL;
-
 #endif	// MACOSX
 
 using namespace com::sun::star::datatransfer;
@@ -688,59 +686,50 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< X
 				mpNativeTransferable = aScrap;
 				out = sal_True;
 
-				if ( !pScrapPromiseKeeperUPP )
-					pScrapPromiseKeeperUPP = NewScrapPromiseKeeperUPP( (ScrapPromiseKeeperProcPtr)ImplScrapPromiseKeeperCallback );
-
-				if ( pScrapPromiseKeeperUPP && SetScrapPromiseKeeper( (ScrapRef)mpNativeTransferable, pScrapPromiseKeeperUPP, (const void *)this ) == noErr )
+				Sequence< DataFlavor > xFlavors;
+				try
 				{
-					Sequence< DataFlavor > xFlavors;
-					try
-					{
-						xFlavors = mxTransferable->getTransferDataFlavors();
-					}
-					catch ( ... )
-					{
-					}
+					xFlavors = mxTransferable->getTransferDataFlavors();
+				}
+				catch ( ... )
+				{
+				}
 
-					// Check if text flavors are supported, if so, exclude any
-					// image flavors since we would be just passing a picture
-					// of text
-					sal_Int32 nLen = xFlavors.getLength();
-					BOOL bTextOnly = FALSE;
-					sal_Int32 i;
-					for ( i = 0; i < nLen; i++ )
+				// Check if text flavors are supported, if so, exclude any
+				// image flavors since we would be just passing a picture
+				// of text
+				sal_Int32 nLen = xFlavors.getLength();
+				BOOL bTextOnly = FALSE;
+				sal_Int32 i;
+				for ( i = 0; i < nLen; i++ )
+				{
+					for ( USHORT j = 0; j < nSupportedTypes; j++ )
 					{
-						for ( USHORT j = 0; j < nSupportedTypes; j++ )
+						if ( xFlavors[ i ].MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ j ] ) && aSupportedTextTypes[ j ] )
 						{
-							if ( xFlavors[ i ].MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ j ] ) && aSupportedTextTypes[ j ] )
-							{
-								bTextOnly = TRUE;
-								break;
-							}
+							bTextOnly = TRUE;
+							break;
 						}
 					}
+				}
 
-					aTransferableList.push_back( this );
+				aTransferableList.push_back( this );
 
-					for ( i = 0; i < nLen; i++ )
-					{ 
-						for ( USHORT j = 0; j < nSupportedTypes; j++ )
+				for ( i = 0; i < nLen; i++ )
+				{ 
+					for ( USHORT j = 0; j < nSupportedTypes; j++ )
+					{
+						if ( xFlavors[ i ].MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ j ] ) )
 						{
-							if ( xFlavors[ i ].MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ j ] ) )
-							{
-								if ( bTextOnly && !aSupportedTextTypes[ j ] )
-									continue;
+							if ( bTextOnly && !aSupportedTextTypes[ j ] )
+								continue;
 
-								// Image data flavors require Java to render
-								// which, if done in the callback, will cause
-								// the application to crash when the next
-								// AEEvent is dispatched so we render image
-								// flavors here
-								if ( !aSupportedTextTypes[ j ] )
-									ImplScrapPromiseKeeperCallback( (ScrapRef)mpNativeTransferable, aSupportedNativeTypes[ j ], (void *)this );
-								else
-									PutScrapFlavor( (ScrapRef)mpNativeTransferable, aSupportedNativeTypes[ j ], kScrapFlavorMaskNone, kScrapFlavorSizeUnknown, NULL );
-							}
+							// Some data flavors require Java to render
+							// which, if done in the callback, will cause
+							// the application to crash when the next
+							// AEEvent is dispatched so we can't risk using
+							// delayed rendering
+							ImplScrapPromiseKeeperCallback( (ScrapRef)mpNativeTransferable, aSupportedNativeTypes[ j ], (void *)this );
 						}
 					}
 				}
