@@ -66,13 +66,14 @@ class ATSLayout : public GenericSalLayout
 {
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
 	ATSUStyle			maFontStyle;
-	bool				mbLayoutText;
 	int					mnAdjustedMinCharPos;
 	int					mnGlyphCount;
 	ATSUGlyphInfoArray*	mpGlyphInfoArray;
 	long*				mpGlyphTranslations;
 	int*				mpCharsToGlyphs;
 	int*				mpVerticalFlags;
+
+	void				Destroy();
 
 public:
 						ATSLayout( ::vcl::com_sun_star_vcl_VCLFont *pVCLFont );
@@ -95,7 +96,6 @@ SalLayout *SalGraphics::GetTextLayout( ImplLayoutArgs& rArgs, int nFallbackLevel
 
 ATSLayout::ATSLayout( com_sun_star_vcl_VCLFont *pVCLFont ) :
 	maFontStyle( NULL ),
-	mbLayoutText( true ),
 	mnAdjustedMinCharPos( 0 ),
 	mnGlyphCount( 0 ),
 	mpGlyphInfoArray( NULL ),
@@ -152,11 +152,21 @@ ATSLayout::ATSLayout( com_sun_star_vcl_VCLFont *pVCLFont ) :
 
 ATSLayout::~ATSLayout()
 {
+	Destroy();
+
 	if ( mpVCLFont )
 		delete mpVCLFont;
 
 	if ( maFontStyle )
 		ATSUDisposeStyle( maFontStyle );
+}
+
+// ----------------------------------------------------------------------------
+
+void ATSLayout::Destroy()
+{
+	mnAdjustedMinCharPos = 0;
+	mnGlyphCount = 0;
 
 	if ( mpGlyphInfoArray )
 		rtl_freeMemory( mpGlyphInfoArray );
@@ -185,7 +195,7 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	bool bRTL = ( rArgs.mnFlags & SAL_LAYOUT_BIDI_STRONG && rArgs.mnFlags & SAL_LAYOUT_BIDI_RTL );
 	bool bVertical = ( rArgs.mnFlags & SAL_LAYOUT_VERTICAL );
 
-	if ( mbLayoutText )
+	if ( ! ( rArgs.mnFlags & SAL_LAYOUT_DISABLE_GLYPH_PROCESSING ) )
 	{
 		mnAdjustedMinCharPos = rArgs.mnMinCharPos;
 
@@ -236,7 +246,10 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 		ATSUTextLayout aLayout;
 		if ( ATSUCreateTextLayoutWithTextPtr( aStr, kATSUFromTextBeginning, kATSUToTextEnd, nLen, 1, (const UniCharCount *)&nLen, &maFontStyle, &aLayout ) != noErr )
+		{
+			Destroy();
 			return false;
+		}
 
 		MacOSBoolean nDirection;
 		if ( bRTL )
@@ -250,6 +263,7 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		if ( ATSUSetLayoutControls( aLayout, 1, &nTag, &nBytes, &nVal ) != noErr )
 		{
 			ATSUDisposeTextLayout( aLayout );
+			Destroy();
 			return false;
 		}
 
@@ -257,6 +271,7 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		if ( ATSUGetGlyphInfo( aLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nBufSize, NULL ) != noErr )
 		{
 			ATSUDisposeTextLayout( aLayout );
+			Destroy();
 			return false;
 		}
 
@@ -272,8 +287,7 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 		if ( nErr != noErr || nRetSize != nBufSize )
 		{
-			rtl_freeMemory( mpGlyphInfoArray );
-			mpGlyphInfoArray = NULL;
+			Destroy();
 			return false;
 		}
 
@@ -335,10 +349,15 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			if ( mpCharsToGlyphs[ nIndex ] < 0 || i < mpCharsToGlyphs[ nIndex ] )
 				mpCharsToGlyphs[ nIndex ] = i;
 		}
+
+		rArgs.mnFlags |= SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 	}
 
 	if ( !mnGlyphCount || !mpGlyphInfoArray || !mpCharsToGlyphs )
+	{
+		Destroy();
 		return false;
+	}
 
 	// Calculate and cache glyph advances
 	bool bPosRTL;

@@ -554,7 +554,6 @@ public final class VCLGraphics {
 	 * @param orientation the tenth of degrees to rotate the text
 	 * @param translateX the x coordinate to translate after rotation
 	 * @param translateY the y coordinate to translate after rotation
-	 * @param y the y coordinate
 	 */
 	public void drawGlyphs(int x, int y, int[] glyphs, int[] advances, VCLFont font, int color, int orientation, int translateX, int translateY) {
 
@@ -593,7 +592,7 @@ public final class VCLGraphics {
 		AffineTransform rotateTransform = null;
 		if (orientation != 0 || translateX != 0 || translateY != 0) {
 			transform = graphics.getTransform();
-			double radians = Math.toRadians((double)orientation/ 10);
+			double radians = Math.toRadians((double)orientation / 10);
 			graphics.rotate(radians * -1);
 			rotateTransform = AffineTransform.getRotateInstance(radians);
 			// Adjust drawing origin so that it is not transformed
@@ -603,7 +602,7 @@ public final class VCLGraphics {
 
 		GlyphVector gv = f.createGlyphVector(graphics.getFontRenderContext(), glyphs);
 		double nAdvance = 0;
-		for ( int i = 0; i < glyphs.length; i++ ) {
+		for (int i = 0; i < glyphs.length; i++) {
 			Point2D p = gv.getGlyphPosition(i);
 			p.setLocation(nAdvance, p.getY());
 			gv.setGlyphPosition(i, p);
