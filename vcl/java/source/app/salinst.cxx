@@ -125,7 +125,6 @@ static Mutex aMutex;
 static OModule aJDirectModule;
 static Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type *pCarbonLockGetInstance = NULL;
 static Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *pCarbonLockInit = NULL;
-static DMExtendedNotificationUPP pExtendedNotificationUPP = NULL;
 
 static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( JNIEnv *pEnv, jobject object );
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData );
@@ -165,6 +164,9 @@ void SVMainThread::run()
 
 #ifndef NO_NATIVE_MENUS
 #ifdef MACOSX
+	EventHandlerRef pEventHandler = NULL;
+	DMExtendedNotificationUPP pExtendedNotificationUPP = NULL;
+	ProcessSerialNumber nProc;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
@@ -180,13 +182,34 @@ void SVMainThread::run()
 			aTypes[1].eventKind = kEventMouseWheelMoved;
 			aTypes[2].eventClass = kEventClassMenu;
 			aTypes[2].eventKind = kEventMenuBeginTracking;
-			InstallApplicationEventHandler( CarbonEventHandler, 3, aTypes, NULL, NULL );
+			pEventHandler = InstallApplicationEventHandler( CarbonEventHandler, 3, aTypes, NULL, NULL );
+		}
+
+		// Fix bug 223 by registering a display manager notification callback
+		if ( GetCurrentProcess( &nProc ) == noErr )
+		{
+			pExtendedNotificationUPP = NewDMExtendedNotificationUPP( CarbonDMExtendedNotificationCallback );
+			if ( pExtendedNotificationUPP )
+				DMRegisterExtendedNotifyProc( pExtendedNotificationUPP, NULL, NULL, &nProc );
 		}
 	}
 #endif	// MACOSX
 #endif	// !NO_NATIVE_MENUS
 
 	mpApp->Main();
+
+#ifndef NO_NATIVE_MENUS
+#ifdef MACOSX
+	if ( pExtendedNotificationUPP )
+	{
+		DMRemoveExtendedNotifyProc( pExtendedNotificationUPP, NULL, &nProc, NULL );
+		DisposeDMExtendedNotificationUPP( pExtendedNotificationUPP );
+	}
+
+	if ( pEventHandler )
+		RemoveEventHandler( pEventHandler );
+#endif	// MACOSX
+#endif	// !NO_NATIVE_MENUS
 }
 
 // ============================================================================
@@ -317,126 +340,118 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv 
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData )
 {
 	SalData *pSalData = GetSalData();
-	if ( pSalData && !ImplGetSVData()->maAppData.mbAppQuit )
+	EventClass nClass = GetEventClass( aEvent );
+	if ( nClass == kEventClassAppleEvent )
 	{
-		EventClass nClass = GetEventClass( aEvent );
-		if ( nClass == kEventClassAppleEvent )
+		if ( pSalData->mpFirstInstance )
 		{
-			if ( pSalData->mpFirstInstance )
+			// Unlock the Carbon lock
+			VCLThreadAttach t;
+			if ( t.pEnv )
+				Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
+
+			// Block the VCL event loop while processing Apple Events
+			pSalData->mpFirstInstance->AcquireYieldMutex( 1 );
+
+			// Relock the Carbon lock
+			if ( t.pEnv )
+				Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
+
+			OSStatus nErr = CallNextEventHandler( aNextHandler, aEvent );
+
+			// Unblock the VCL event loop
+			pSalData->mpFirstInstance->ReleaseYieldMutex();
+
+			return nErr;
+		}
+	}
+	else if ( nClass == kEventClassMouse && GetEventKind( aEvent ) == kEventMouseWheelMoved )
+	{
+		EventMouseWheelAxis nAxis;
+		if ( GetEventParameter( aEvent, kEventParamMouseWheelAxis, typeMouseWheelAxis, NULL, sizeof( EventMouseWheelAxis ), NULL, &nAxis ) == noErr && nAxis == kEventMouseWheelAxisY )
+		{
+			MacOSPoint aPoint;
+			SInt32 nDelta;
+			WindowRef aWindow;
+			if ( GetEventParameter( aEvent, kEventParamWindowMouseLocation, typeQDPoint, NULL, sizeof( MacOSPoint ), NULL, &aPoint ) == noErr && GetEventParameter( aEvent, kEventParamMouseWheelDelta, typeSInt32, NULL, sizeof( SInt32 ), NULL, &nDelta ) == noErr && GetEventParameter( aEvent, kEventParamWindowRef, typeWindowRef, NULL, sizeof( WindowRef ), NULL, &aWindow ) == noErr )
 			{
 				// Unlock the Carbon lock
 				VCLThreadAttach t;
 				if ( t.pEnv )
 					Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
 
-				// Block the VCL event loop while processing Apple Events
+				// Block the VCL event loop while checking mapping
 				pSalData->mpFirstInstance->AcquireYieldMutex( 1 );
 
 				// Relock the Carbon lock
 				if ( t.pEnv )
 					Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
 
-				OSStatus nErr = CallNextEventHandler( aNextHandler, aEvent );
+				for ( ::std::map< SalFrame*, void* >::const_iterator it = pSalData->maNativeFrameMapping.begin(); it != pSalData->maNativeFrameMapping.end(); ++it )
+				{
+					if ( it->second == (void *)aWindow )
+					{
+						pSalData->mpEventQueue->postMouseWheelEvent( it->first, 0, aPoint.h, aPoint.v, 1, nDelta * -1 );
+						break;
+					}
+				}
 
 				// Unblock the VCL event loop
 				pSalData->mpFirstInstance->ReleaseYieldMutex();
-
-				return nErr;
 			}
 		}
-		else if ( nClass == kEventClassMouse && GetEventKind( aEvent ) == kEventMouseWheelMoved )
+
+		return noErr;
+	}
+	else if ( nClass == kEventClassMenu )
+	{
+		MenuRef trackingRef;
+		if ( GetEventKind( aEvent ) == kEventMenuBeginTracking && GetEventParameter( aEvent, kEventParamDirectObject, typeMenuRef, NULL, sizeof( MenuRef ), NULL, &trackingRef ) == noErr )
 		{
-			EventMouseWheelAxis nAxis;
-			UInt32 outSize;
-			if ( GetEventParameter( aEvent, kEventParamMouseWheelAxis, typeMouseWheelAxis, NULL, sizeof( EventMouseWheelAxis ), &outSize, &nAxis ) == noErr && nAxis == kEventMouseWheelAxisY )
+			// Ignore key matching context
+			MenuTrackingMode nMode;
+			if ( GetEventParameter( aEvent, kEventParamCurrentMenuTrackingMode, typeMenuTrackingMode, NULL, sizeof( MenuTrackingMode ), NULL, &nMode ) != noErr || nMode == kMenuTrackingModeKeyboard )
+				return userCanceledErr;
+
+			// According to Carbon documentation, the direct object
+			// parameter should be NULL when tracking is beginning
+			// in the menubar.  In reality, however, the direct
+			// object is in fact a menu reference to the root
+			// menu. To determine if we're a menubar tracking
+			// event, we need to to compare against both NULL and
+			// the root menu.
+			MenuRef rootMenu = AcquireRootMenu(); // increments ref count
+			bool isMenubar = false;
+
+			if ( ( trackingRef == NULL ) || ( trackingRef == rootMenu ) )
+				isMenubar = true;
+
+			if ( rootMenu != NULL )
+				ReleaseMenu( rootMenu );
+
+			if ( isMenubar )
 			{
-				MacOSPoint aPoint;
-				SInt32 nDelta;
-				WindowRef aWindow;
-				if ( GetEventParameter( aEvent, kEventParamWindowMouseLocation, typeQDPoint, NULL, sizeof( MacOSPoint ), &outSize, &aPoint ) == noErr && GetEventParameter( aEvent, kEventParamMouseWheelDelta, typeSInt32, NULL, sizeof( SInt32 ), &outSize, &nDelta ) == noErr && GetEventParameter( aEvent, kEventParamWindowRef, typeWindowRef, NULL, sizeof( WindowRef ), &outSize, &aWindow ) == noErr )
-				{
-					// Unlock the Carbon lock
-					VCLThreadAttach t;
-					if ( t.pEnv )
-						Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
+				// Post a yield event and wait the VCL event queue to block
+				pSalData->maNativeEventStartCondition.reset();
+				com_sun_star_vcl_VCLEvent aYieldEvent( SALEVENT_YIELDEVENTQUEUE, NULL, NULL );
+				pSalData->mpEventQueue->postCachedEvent( &aYieldEvent );
 
-					// Block the VCL event loop while checking mapping
-					pSalData->mpFirstInstance->AcquireYieldMutex( 1 );
+				// Unlock the Carbon lock
+				VCLThreadAttach t;
+				if ( t.pEnv )
+					Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
 
-					// Relock the Carbon lock
-					if ( t.pEnv )
-						Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
+				pSalData->maNativeEventStartCondition.wait();
 
-					for ( ::std::map< SalFrame*, void* >::const_iterator it = pSalData->maNativeFrameMapping.begin(); it != pSalData->maNativeFrameMapping.end(); ++it )
-					{
-						if ( it->second == (void *)aWindow )
-						{
-							pSalData->mpEventQueue->postMouseWheelEvent( it->first, 0, aPoint.h, aPoint.v, 1, nDelta * -1 );
-							break;
-						}
-					}
+				// Execute menu updates while the VCL event queue is blocked
+				for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+				UpdateMenusForFrame( *it, NULL );
 
-					// Unblock the VCL event loop
-					pSalData->mpFirstInstance->ReleaseYieldMutex();
-				}
-			}
+				// Relock the Carbon lock
+				if ( t.pEnv )
+					Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
 
-			return noErr;
-		}
-		else if ( nClass == kEventClassMenu )
-		{
-			MenuRef trackingRef;
-			UInt32 outSize;
-			if ( GetEventKind( aEvent ) == kEventMenuBeginTracking && GetEventParameter( aEvent, kEventParamDirectObject, typeMenuRef, NULL, sizeof( MenuRef ), &outSize, &trackingRef ) == noErr )
-			{
-				// According to Carbon documentation, the direct object
-				// parameter should be NULL when tracking is beginning
-				// in the menubar.  In reality, however, the direct
-				// object is in fact a menu reference to the root
-				// menu. To determine if we're a menubar tracking
-				// event, we need to to compare against both NULL and
-				// the root menu.
-				MenuRef rootMenu = AcquireRootMenu(); // increments ref count
-				bool isMenubar = false;
-
-				if ( ( trackingRef == NULL ) || ( trackingRef == rootMenu ) )
-					isMenubar = true;
-
-				if ( rootMenu != NULL )
-					ReleaseMenu( rootMenu );
-
-				if ( isMenubar )
-				{
-					// Ignore key matching context
-					MenuTrackingMode nMode;
-					if ( GetEventParameter( aEvent, kEventParamCurrentMenuTrackingMode, typeMenuTrackingMode, NULL, sizeof( MenuTrackingMode ), NULL, &nMode ) != noErr || nMode == kMenuTrackingModeKeyboard )
-						return userCanceledErr;
-
-					if ( ImplGetSVData()->maAppData.mbInAppExecute )
-					{
-						// Post a yield event and wait the VCL event queue to block
-						pSalData->maNativeEventStartCondition.reset();
-						com_sun_star_vcl_VCLEvent aYieldEvent( SALEVENT_YIELDEVENTQUEUE, NULL, NULL );
-						pSalData->mpEventQueue->postCachedEvent( &aYieldEvent );
-
-						// Unlock the Carbon lock
-						VCLThreadAttach t;
-						if ( t.pEnv )
-							Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
-
-						pSalData->maNativeEventStartCondition.wait();
-
-						// Execute menu updates while the VCL event queue is blocked
-						for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-						UpdateMenusForFrame( *it, NULL );
-
-						// Relock the Carbon lock
-						if ( t.pEnv )
-							Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
-
-						pSalData->maNativeEventEndCondition.set();
-					}
-				}
+				pSalData->maNativeEventEndCondition.set();
 			}
 		}
 	}
@@ -741,31 +756,11 @@ void ExecuteApplicationMain( Application *pApp )
 				}
 			}
 		}
-
-		// Fix bug 223 by registering a display manager notification callback
-		ProcessSerialNumber nProc;
-		if ( GetCurrentProcess( &nProc ) == noErr )
-		{
-			pExtendedNotificationUPP = NewDMExtendedNotificationUPP( CarbonDMExtendedNotificationCallback );
-			if ( pExtendedNotificationUPP )
-				DMRegisterExtendedNotifyProc( pExtendedNotificationUPP, NULL, NULL, &nProc );
-		}
 	}
 #endif	// MACOSX
 
 	// Now that Java is properly initialized, run the application's Main()
 	aSVMainThread.run();
-
-#ifdef MACOSX
-	if ( pExtendedNotificationUPP )
-	{
-		ProcessSerialNumber nProc;
-		if ( GetCurrentProcess( &nProc ) == noErr )
-			DMRemoveExtendedNotifyProc( pExtendedNotificationUPP, NULL, &nProc, NULL );
-		DisposeDMExtendedNotificationUPP( pExtendedNotificationUPP );
-		pExtendedNotificationUPP = NULL;
-	}
-#endif	// MACOSX
 }
 
 // =======================================================================
