@@ -252,8 +252,8 @@ int main( int argc, char *argv[] )
 		ReceiveNextEvent_Type *pReceiveNextEvent = (ReceiveNextEvent_Type *)aModule.getSymbol( OUString::createFromAscii( "ReceiveNextEvent" ) );
 		if ( pReceiveNextEvent )
 		{
-			while ( pReceiveNextEvent( 0, NULL, kEventDurationForever, false, NULL ) != eventLoopQuitErr )
-				;
+			for ( ; ; )
+				 pReceiveNextEvent( 0, NULL, kEventDurationForever, false, NULL );
 		}
 
 		aModule.unload();
