@@ -1498,6 +1498,7 @@ public final class VCLGraphics {
 					VCLImage pageImage = new VCLImage(destBounds.width, destBounds.height, graphics.getBitCount());
 					VCLGraphics pageGraphics = pageImage.getGraphics();
 					pageGraphics.graphics.translate(destBounds.x * -1, destBounds.y * -1);
+					pageGraphics.graphicsBounds = destBounds;
 					while (imageHead != null) {
 						pageGraphics.graphics.setClip(imageHead.clip);
 						try {
