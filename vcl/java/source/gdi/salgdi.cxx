@@ -87,18 +87,18 @@ SalGraphics::~SalGraphics()
 
 void SalGraphics::GetResolution( long& rDPIX, long& rDPIY )
 {
-	long nDPI = maGraphicsData.mpVCLGraphics->getResolution();
-	rDPIX = nDPI;
-	rDPIY = nDPI;
+	Size aSize( maGraphicsData.mpVCLGraphics->getResolution() );
+	rDPIX = aSize.Width();
+	rDPIY = aSize.Height();
 }
 
 // -----------------------------------------------------------------------
 
 void SalGraphics::GetScreenFontResolution( long& rDPIX, long& rDPIY )
 {
-	long nDPI = maGraphicsData.mpVCLGraphics->getScreenFontResolution();
-	rDPIX = nDPI;
-	rDPIY = nDPI;
+	Size aSize( maGraphicsData.mpVCLGraphics->getScreenFontResolution() );
+	rDPIX = aSize.Width();
+	rDPIY = aSize.Height();
 }
 
 // -----------------------------------------------------------------------

@@ -537,44 +537,86 @@ SalColor com_sun_star_vcl_VCLGraphics::getPixel( long _par0, long _par1 )
 
 // ----------------------------------------------------------------------------
 
-long com_sun_star_vcl_VCLGraphics::getResolution()
+const Size com_sun_star_vcl_VCLGraphics::getResolution()
 {
 	static jmethodID mID = NULL;
-	long out = 0;
+	static jfieldID fIDWidth = NULL;
+	static jfieldID fIDHeight = NULL;	 
+	Size out;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()I";
+			char *cSignature = "()Ljava/awt/Dimension;";
 			mID = t.pEnv->GetMethodID( getMyClass(), "getResolution", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+		{
+			jobject tempObj = t.pEnv->CallObjectMethod( getMyClass(), mID );
+			if ( tempObj )
+			{
+				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
+				OSL_ENSURE( tempObjClass, "Java : FindClass not found!" );
+				if ( !fIDWidth )
+				{
+					char *cSignature = "I";
+					fIDWidth = t.pEnv->GetFieldID( tempObjClass, "width", cSignature );
+				}
+				out.setWidth( (long)t.pEnv->GetIntField( tempObj, fIDWidth ) );
+				if ( !fIDHeight )
+				{
+					char *cSignature = "I";
+					fIDHeight = t.pEnv->GetFieldID( tempObjClass, "height", cSignature );
+				}
+				out.setHeight( (long)t.pEnv->GetIntField( tempObj, fIDHeight ) );
+			}
+		}
 	}
-	return out;
+    return out;
 }
 
 // ----------------------------------------------------------------------------
 
-long com_sun_star_vcl_VCLGraphics::getScreenFontResolution()
+const Size com_sun_star_vcl_VCLGraphics::getScreenFontResolution()
 {
 	static jmethodID mID = NULL;
-	long out = 0;
+	static jfieldID fIDWidth = NULL;
+	static jfieldID fIDHeight = NULL;	 
+	Size out;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()I";
+			char *cSignature = "()Ljava/awt/Dimension;";
 			mID = t.pEnv->GetMethodID( getMyClass(), "getScreenFontResolution", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+		{
+			jobject tempObj = t.pEnv->CallObjectMethod( getMyClass(), mID );
+			if ( tempObj )
+			{
+				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
+				OSL_ENSURE( tempObjClass, "Java : FindClass not found!" );
+				if ( !fIDWidth )
+				{
+					char *cSignature = "I";
+					fIDWidth = t.pEnv->GetFieldID( tempObjClass, "width", cSignature );
+				}
+				out.setWidth( (long)t.pEnv->GetIntField( tempObj, fIDWidth ) );
+				if ( !fIDHeight )
+				{
+					char *cSignature = "I";
+					fIDHeight = t.pEnv->GetFieldID( tempObjClass, "height", cSignature );
+				}
+				out.setHeight( (long)t.pEnv->GetIntField( tempObj, fIDHeight ) );
+			}
+		}
 	}
-	return out;
+    return out;
 }
 
 // ----------------------------------------------------------------------------

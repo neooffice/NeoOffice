@@ -37,6 +37,7 @@ package com.sun.star.vcl;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
@@ -208,12 +209,12 @@ public final class VCLGraphics {
 	/**
 	 * The cached graphics device resolution.
 	 */
-	private int resolution = 0;
+	private Dimension resolution = null;
 
 	/**
 	 * The cached font resolution.
 	 */
-	private int screenFontResolution = 0;
+	private Dimension screenFontResolution = new Dimension(VCLGraphics.screenResolution, VCLGraphics.screenResolution);;
 
 	/**
 	 * The cached update area.
@@ -252,8 +253,6 @@ public final class VCLGraphics {
 		graphics = image.getImage().createGraphics();
 		VCLGraphics.setDefaultRenderingAttributes(graphics);
 		bitCount = image.getBitCount();
-		resolution = VCLGraphics.screenResolution;
-		screenFontResolution = VCLGraphics.screenResolution;
 
 		synchronized (graphicsList) {
 			graphicsList.add(this);
@@ -274,8 +273,6 @@ public final class VCLGraphics {
 		graphicsBounds = new Rectangle(0, 0, image.getWidth(), image.getHeight());
 		VCLGraphics.setDefaultRenderingAttributes(graphics);
 		bitCount = image.getBitCount();
-		resolution = VCLGraphics.screenResolution;
-		screenFontResolution = VCLGraphics.screenResolution;
 
 	}
 
@@ -284,17 +281,14 @@ public final class VCLGraphics {
 	 * <code>Graphics2D</code> instance.
 	 *
 	 * @param g the <code>Graphics2D</code> instance
-	 * @param r the resolution in pixels per inch
 	 * @param b the bounds of the drawable area
 	 */
-	VCLGraphics(Graphics2D g, int r, Rectangle b) {
+	VCLGraphics(Graphics2D g, Rectangle b) {
 
 		graphics = g;
 		graphicsBounds = b;
 		bitCount = graphics.getDeviceConfiguration().getColorModel().getPixelSize();
 		pageImage = new VCLImage(graphicsBounds.width, graphicsBounds.height, bitCount);
-		resolution = r;
-		screenFontResolution = VCLGraphics.screenResolution;
 
 	}
 
@@ -352,8 +346,8 @@ public final class VCLGraphics {
 		frame = null;
 		if (pageImage != null)
 			pageImage.dispose();
-		resolution = 0;
-		screenFontResolution = 0;
+		resolution = null;
+		screenFontResolution = null;
 		update = null;
 		userClip = null;
 
@@ -1135,18 +1129,21 @@ public final class VCLGraphics {
 	 *
 	 * @return the resolution of the underlying graphics device.
 	 */
-	public int getResolution() {
+	public Dimension getResolution() {
 
-		return resolution;
+		if (image == null)
+			return VCLPrintJob.getPageResolution();
+		else
+			return resolution;
 
 	}
 
 	/**
-	 * Returns the resolution of the underlying graphics device.
+	 * Returns the font resolution of the underlying graphics device.
 	 *
 	 * @return the font resolution of the underlying graphics device.
 	 */
-	public int getScreenFontResolution() {
+	public Dimension getScreenFontResolution() {
 
 		return screenFontResolution;
 

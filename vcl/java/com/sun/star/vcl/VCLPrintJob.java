@@ -66,11 +66,6 @@ public final class VCLPrintJob implements Printable, Runnable {
 	public final static int ORIENTATION_LANDSCAPE = 0x1; 
 
 	/**
-	 * SCALE_FACTOR constant.
-	 */
-	public final static int SCALE_FACTOR = 1;
-
-	/**
 	 * Cached native graphics.
 	 */
 	private static Graphics2D graphics = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB_PRE).createGraphics();
@@ -81,17 +76,21 @@ public final class VCLPrintJob implements Printable, Runnable {
 	private static PageFormat pageFormat = null;
 
 	/**
+	 * The page resolution.
+	 */
+	private static Dimension pageResolution = new Dimension(72, 72);
+
+	/**
 	 * Creates a graphics context for this component.
 	 *
 	 * @return a graphics context for this component
 	 */
 	public synchronized static VCLGraphics getGraphics() {
 
-		return new VCLGraphics(graphics, SCALE_FACTOR * 72, graphics.getDeviceConfiguration().getBounds());
+		return new VCLGraphics(graphics, graphics.getDeviceConfiguration().getBounds());
 
 	}
 
-	/**
 	/**
 	 * Get the imageable bounds of the page in pixels.
 	 *
@@ -99,7 +98,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 */
 	public synchronized static Rectangle getImageableBounds() {
 
-		return new Rectangle((int)pageFormat.getImageableX() * SCALE_FACTOR, (int)pageFormat.getImageableY() * SCALE_FACTOR, (int)pageFormat.getImageableWidth() * SCALE_FACTOR, (int)pageFormat.getImageableHeight() * SCALE_FACTOR);
+		return new Rectangle((int)pageFormat.getImageableX() * pageResolution.width / 72, (int)pageFormat.getImageableY() * pageResolution.height / 72, (int)pageFormat.getImageableWidth() * pageResolution.width / 72, (int)pageFormat.getImageableHeight() * pageResolution.height / 72);
 
 	}
 
@@ -124,7 +123,18 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 */
 	public synchronized static Dimension getPageSize() {
 
-		return new Dimension((int)pageFormat.getWidth() * SCALE_FACTOR, (int)pageFormat.getHeight() * SCALE_FACTOR);
+		return new Dimension((int)pageFormat.getWidth() * pageResolution.width / 72, (int)pageFormat.getHeight() * pageResolution.height / 72);
+
+	}
+
+	/**
+	 * Get the page resolution.
+	 *
+	 * @return the page resolution.
+	 */
+	public synchronized static Dimension getPageResolution() {
+
+		return pageResolution;
 
 	}
 
@@ -139,6 +149,18 @@ public final class VCLPrintJob implements Printable, Runnable {
 			pageFormat.setOrientation(PageFormat.PORTRAIT);
 		else if (pageFormat.getOrientation() != PageFormat.REVERSE_LANDSCAPE)
 			pageFormat.setOrientation(PageFormat.LANDSCAPE);
+
+	}
+
+	/**
+	 * Set the page resolution.
+	 *
+	 * @param h the horizontal page resolution
+	 * @param v the vertical page resolution
+	 */
+	public synchronized static void setPageResolution(int h, int v) {
+
+		pageResolution = new Dimension(h, v);
 
 	}
 
@@ -323,7 +345,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 		// Set the origin to the origin of the printable area
 		graphics.translate((int)f.getImageableX(), (int)f.getImageableY());
 
-		graphics.scale((double)1.0 / VCLPrintJob.SCALE_FACTOR, (double)1.0 / VCLPrintJob.SCALE_FACTOR);
+		graphics.scale((double)72 / VCLPrintJob.pageResolution.width, (double)72 / VCLPrintJob.pageResolution.height);
 
 		graphicsInfo.graphics = graphics;
 		graphicsInfo.pageFormat = f;
@@ -436,7 +458,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 			else {
 				// Print to the edge of the page to ensure that we print all
 				// possible pixels
-				currentGraphics = new VCLGraphics(graphicsInfo.graphics, VCLPrintJob.SCALE_FACTOR * 72, new Rectangle(0, 0, (int)(graphicsInfo.pageFormat.getWidth() - graphicsInfo.pageFormat.getImageableX()) * VCLPrintJob.SCALE_FACTOR, (int)(graphicsInfo.pageFormat.getHeight() - graphicsInfo.pageFormat.getImageableY()) * VCLPrintJob.SCALE_FACTOR));
+				currentGraphics = new VCLGraphics(graphicsInfo.graphics, new Rectangle(0, 0, (int)((graphicsInfo.pageFormat.getWidth() - graphicsInfo.pageFormat.getImageableX()) * VCLPrintJob.pageResolution.width / 72), (int)((graphicsInfo.pageFormat.getHeight() - graphicsInfo.pageFormat.getImageableY()) * VCLPrintJob.pageResolution.height / 72)));
 				graphicsInfo.graphics = null;
 				graphicsInfo.pageFormat = null;
 			}
