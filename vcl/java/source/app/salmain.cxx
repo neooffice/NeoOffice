@@ -76,7 +76,6 @@ int main( int argc, char *argv[] )
 			;
 		pCmdPath = *ppTmp;
 	}
-#endif	// MACOSX
 
 	// Get absolute path of command's directory
 	ByteString aCmdPath( pCmdPath );
@@ -84,7 +83,7 @@ int main( int argc, char *argv[] )
 	{
 		DirEntry aCmdDirEntry( aCmdPath );
 		aCmdDirEntry.ToAbs();
-		aCmdPath = ByteString( aCmdDirEntry.GetPath().GetFull(), gsl_getSystemTextEncoding() );
+		aCmdPath = ByteString( aCmdDirEntry.GetPath().GetFull(), RTL_TEXTENCODING_UTF8 );
 	}
 
 	// Assign command's directory to PATH environment variable
@@ -95,7 +94,7 @@ int main( int argc, char *argv[] )
 		aTmpPath += aCmdPath;
 		if ( aPath.Len() )
 		{
-			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), gsl_getSystemTextEncoding() );
+			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
 			aTmpPath += aPath;
 		}
 		putenv( aTmpPath.GetBuffer() );
@@ -109,29 +108,21 @@ int main( int argc, char *argv[] )
 		aTmpPath += aCmdPath;
 		if ( aResPath.Len() )
 		{
-			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), gsl_getSystemTextEncoding() );
+			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
 			aTmpPath += aResPath;
 		}
 		putenv( aTmpPath.GetBuffer() );
 	}
 
 	// Assign command's directory to DYLD_LIBRARY_PATH environment variable
-#ifdef MACOSX
 	ByteString aLibPath( getenv( "DYLD_LIBRARY_PATH" ) );
-#else
-	ByteString aLibPath( getenv( "LD_LIBRARY_PATH" ) );
-#endif	// MACOSX
 	if ( aCmdPath.Len() )
 	{
-#ifdef MACOSX
 		ByteString aTmpPath( "DYLD_LIBRARY_PATH=" );
-#else
-		ByteString aTmpPath( "LD_LIBRARY_PATH=" );
-#endif	// MACOSX
 		aTmpPath += aCmdPath;
 		if ( aLibPath.Len() )
 		{
-			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), gsl_getSystemTextEncoding() );
+			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
 			aTmpPath += aLibPath;
 		}
 		putenv( aTmpPath.GetBuffer() );
@@ -141,6 +132,7 @@ int main( int argc, char *argv[] )
 		if ( aLibPath.GetToken( 0, DirEntry::GetSearchDelimiter().GetBuffer()[0] ).CompareTo( aCmdPath, aCmdPath.Len() ) != COMPARE_EQUAL )
 			execv( pCmdPath, argv );
 	}
+#endif	// MACOSX
 
 	SVMain();
 
