@@ -1224,7 +1224,7 @@ void SalInstance::Yield( BOOL bWait )
 
 	// Determine timeout
 	ULONG nTimeout = 0;
-	if ( bWait && pSalData->mnTimerInterval && pSalData->maNativeEventCondition.check() )
+	if ( bWait && pSalData->mnTimerInterval && pSalData->maNativeEventCondition.check() && !Application::IsShutDown() )
 	{
 		timeval aTimeout;
 
@@ -1242,7 +1242,7 @@ void SalInstance::Yield( BOOL bWait )
 
 	// Dispatch pending AWT events
 	nCount = ReleaseYieldMutex();
-	if ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
+	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
 	{
 		nTimeout = 0;
 
