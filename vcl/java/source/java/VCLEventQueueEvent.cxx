@@ -56,12 +56,16 @@
 #ifndef _SV_SVAPP_HXX
 #include <svapp.hxx>
 #endif
+#ifndef _SV_SALMENU_HXX
+#include <salmenu.hxx>
+#endif
 
 #ifdef MACOSX
 
 #include <premac.h>
 #include <QuickTime/QuickTime.h>
 #include <postmac.h>
+
 
 using namespace rtl;
 
@@ -381,6 +385,9 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 				break;
 			}
 		}
+                
+                // Update the menu structure so the native menus will reflect the frame's menu structure
+                UpdateMenusForFrame(pFrame, NULL);
 	}
 }
 

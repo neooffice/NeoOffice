@@ -105,7 +105,7 @@ public:
     void InsertItem( SalMenuItem* pSalMenuItem, unsigned nPos );
     void RemoveItem( unsigned nPos );
     void SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsigned nPos );
-    void SetFrame( const SalFrame* pFrame );
+    void SetFrame( SalFrame* pFrame );
     void CheckItem( unsigned nPos, BOOL bCheck );
     void EnableItem( unsigned nPos, BOOL bEnable );
     void SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const XubString& rText );

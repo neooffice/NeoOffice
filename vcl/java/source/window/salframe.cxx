@@ -708,6 +708,7 @@ SalFrameData::SalFrameData()
 	memset( &maOriginalGeometry, 0, sizeof( maOriginalGeometry ) );
 	mbFullScreen = FALSE;
 	mbPresentation = FALSE;
+        mpMenuBar = NULL;
 }
 
 // -----------------------------------------------------------------------

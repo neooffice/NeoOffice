@@ -71,6 +71,7 @@ class SalFrameData
         friend class	::vcl::com_sun_star_vcl_VCLMenuBar;
 	friend class	::vcl::com_sun_star_vcl_VCLEvent;
 	friend class	::vcl::com_sun_star_vcl_VCLFrame;
+        friend void 	UpdateMenusForFrame( SalFrame *, SalMenu * );
 
 	::vcl::com_sun_star_vcl_VCLFrame*	mpVCLFrame;
 	::vcl::java_lang_Object*	mpPanel;
@@ -87,6 +88,7 @@ class SalFrameData
 	SalFrameGeometry	maOriginalGeometry;
 	BOOL			mbFullScreen;
 	BOOL			mbPresentation;
+        SalMenu*		mpMenuBar;
 
 					SalFrameData();
 					~SalFrameData();

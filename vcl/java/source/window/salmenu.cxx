@@ -76,6 +76,7 @@
 SalMenu::SalMenu()
 {
     memset( &maData, 0, sizeof(maData) );
+    mpParentVCLMenu = NULL;
 }
 
 SalMenu::~SalMenu()
@@ -93,14 +94,15 @@ SalMenu::~SalMenu()
 
 BOOL SalMenu::VisibleMenuBar()
 {
-    return FALSE; 
+    return FALSE; // TRUE suppresses the display of VCL menu bars 
 }
 
-void SalMenu::SetFrame( const SalFrame *pFrame )
+void SalMenu::SetFrame( SalFrame *pFrame )
 {
     if( maData.mbIsMenuBarMenu && maData.mpVCLMenuBar )
     {
         maData.mpVCLMenuBar->setFrame( pFrame->maFrameData.mpVCLFrame );
+        pFrame->maFrameData.mpMenuBar=this;
     }
 }
 
@@ -141,10 +143,11 @@ void SalMenu::SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsigned
     {
         maData.mpVCLMenuBar->changeMenu( pSubMenu->maData.mpVCLMenu->getMenuItemDataObject(), nPos );
     }
-    else if( maData.mpVCLMenu )
+    else if( maData.mpVCLMenu && pSubMenu )
     {
         maData.mpVCLMenu->attachSubmenu( pSubMenu->maData.mpVCLMenu->getMenuItemDataObject(), nPos );
     }
+    pSalMenuItem->maData.mpSalSubmenu=pSubMenu;
 }
 
 void SalMenu::CheckItem( unsigned nPos, BOOL bCheck )
@@ -210,6 +213,7 @@ void SalMenu::GetSystemMenuData( SystemMenuData* pData )
 SalMenuItem::SalMenuItem()
 {
     maData.mpVCLMenuItemData = NULL;
+    maData.mpSalSubmenu = NULL;
 }
 
 SalMenuItem::~SalMenuItem()
@@ -228,6 +232,7 @@ SalMenu* SalInstance::CreateMenu( BOOL bMenuBar, Menu* pVCLMenu )
     pSalMenu->maData.mbIsMenuBarMenu = bMenuBar;
     pSalMenu->maData.mpVCLMenuBar=NULL;
     pSalMenu->maData.mpVCLMenu=NULL;
+    pSalMenu->mpParentVCLMenu=pVCLMenu;
     
     if( bMenuBar )
     {
@@ -271,4 +276,49 @@ SalMenuItem* SalInstance::CreateMenuItem( const SalItemParams* pItemData )
 void SalInstance::DestroyMenuItem( SalMenuItem* pItem )
 {
     delete pItem;
+}
+
+// ----------------------------------------------------------------------------
+
+/**
+ * Given a frame and a submenu, dispatch ACTIVATE events to all of the VCL menu objects.  The activate
+ * events are the ones which have attached actions to update the menu contents and dimmed/active state
+ * of menu items.
+ *
+ * Java AWT doesn't give us the opportunity to generate activate events before menus are displayed, so
+ * we need to call this function manually for the front frame periodically
+ */
+void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu )
+{
+    if(!pMenu) {
+        // locate the menubar for the frame
+        
+        pMenu = pFrame->maFrameData.mpMenuBar;
+        if(!pMenu)
+            return;
+    }
+    
+    {
+		Menu *		pVCLMenu = pMenu->mpParentVCLMenu;
+		USHORT		i;
+		SalMenuEvent   pEvent;
+		
+                OSL_ENSURE(pVCLMenu, "Unknown VCL menu for SalMenu!");
+                
+		pEvent.mpMenu = pVCLMenu;
+
+		pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, SALEVENT_MENUACTIVATE, &pEvent );
+
+		for( i = 0; i < pVCLMenu->GetItemCount(); i++ )
+		{
+			SalMenuItem *  pSalMenuItem = pVCLMenu->GetItemSalItem( i );
+			
+			if ( pSalMenuItem )
+			{
+				// If this menu item has a submenu, fix that submenu up
+				if ( pSalMenuItem->maData.mpSalSubmenu )
+					UpdateMenusForFrame( pFrame, pSalMenuItem->maData.mpSalSubmenu );
+			}
+		}
+	}
 }
