@@ -51,7 +51,7 @@ os=`uname`
 apphome=`dirname "$0"`
 sharebase="$apphome/../share"
 userbase="$apphome/../user"
-userinstall="$HOME/Library/$(PRODUCT_DIR_NAME)-$(OO_VERSION)/user"
+userinstall="$HOME/Library/$(PRODUCT_DIR_NAME)-$(OO_VERSION)"
 
 # Make sure that this is not a botched installation
 if [ ! -d "$apphome" ] ; then
@@ -119,8 +119,8 @@ else
 fi
 
 # Create user installation directory
-configdir="$userinstall/config"
-registrydir="$userinstall/registry/data/org/openoffice"
+configdir="$userinstall/user/config"
+registrydir="$userinstall/user/registry/data/org/openoffice"
 if [ ! -d "$configdir" -o ! -d "$registrydir" ] ; then
     repair="true"
     mkdir -p "$userinstall"
@@ -129,7 +129,7 @@ if [ ! -z "$repair" ] ; then
     chmod -Rf u+rw "$userinstall"
     rm -Rf "$userinstall"
     mkdir -p "$userinstall"
-    cp -Rf "$userbase"/* "$userinstall"
+    cp -Rf "$userbase" "$userinstall"
     chmod -Rf u+rw "$userinstall"
     if [ ! -d "$configdir" -o ! -d "$registrydir" ] ; then
         rm -Rf "$userinstall"
