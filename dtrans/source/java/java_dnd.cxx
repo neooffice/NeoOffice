@@ -60,8 +60,12 @@ static ULONG nEventHandlerCount = 0;
 static EventHandlerUPP pEventHandlerUPP  = NULL;
 static EventHandlerRef pEventHandler = NULL;
 static EventRef aLastMouseDraggedEvent = NULL;
+static EventLoopTimerUPP pEventLoopTimerUPP = NULL;
+static EventLoopTimerRef pEventLoopTimer = NULL;
+static ::java::JavaDragSource *pEventLoopTimerOwner = NULL;
 
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData );
+static void CarbonEventLoopTimer( EventLoopTimerRef aTimer, void *pData );
 
 #endif	// MACOSX
 
@@ -113,6 +117,15 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 // ------------------------------------------------------------------------
 
 #ifdef MACOSX
+static void CarbonEventLoopTimer( EventLoopTimerRef aTimer, void *pData )
+{
+	((JavaDragSource *)pData)->runDragExecute();
+}
+#endif	// MACOSX
+
+// ------------------------------------------------------------------------
+
+#ifdef MACOSX
 static OSErr ImplTrackingHandlerCallback( DragTrackingMessage nMessage, WindowRef aWindow, void *pData, DragRef aDrag )
 {
 #ifdef DEBUG
@@ -130,7 +143,7 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 #ifdef DEBUG
 	fprintf( stderr, "ImplDragReceiveHandlerCallback not implemented\n" );
 #endif
-	return noErr;
+	return dragNotAcceptedErr;
 }
 #endif	// MACOSX
 
@@ -177,7 +190,6 @@ XMultiServiceFactory >& xMultiServiceFactory )
 
 JavaDragSource::JavaDragSource() :
 	WeakComponentImplHelper3< XDragSource, XInitialization, XServiceInfo >( maMutex ),
-	maDragExecuteThread( NULL ),
 	mpNativeDragHandler( NULL ),
 	mpNativeDragReference( NULL )
 {
@@ -225,17 +237,6 @@ JavaDragSource::JavaDragSource() :
 
 JavaDragSource::~JavaDragSource()
 {
-	ClearableMutexGuard aGuard( maMutex );
-
-	if ( maDragExecuteThread )
-	{
-		osl_terminateThread( maDragExecuteThread );
-		osl_joinWithThread( maDragExecuteThread );
-		osl_destroyThread( maDragExecuteThread );
-	}
-
-	aGuard.clear();
-
 #ifdef MACOSX
 	if ( mpNativeDragHandler )
 	{
@@ -248,6 +249,7 @@ JavaDragSource::~JavaDragSource()
 
 	ClearableMutexGuard aEventHandlerGuard( aEventHandlerMutex );
 
+	// If we are the last instance, clean up event handlers
 	if ( !--nEventHandlerCount )
 	{
 		if ( pEventHandler )
@@ -261,6 +263,24 @@ JavaDragSource::~JavaDragSource()
 			ReleaseEvent( aLastMouseDraggedEvent );
 			aLastMouseDraggedEvent = NULL;
 		}
+	}
+
+	// If we own the event loop timer, clean up event loop timer
+	if ( pEventLoopTimerOwner == this )
+	{
+		if ( pEventLoopTimer )
+		{
+			RemoveEventLoopTimer( pEventLoopTimer );
+			pEventLoopTimer = NULL;
+		}
+
+		if ( pEventLoopTimerUPP )
+		{
+			DisposeEventLoopTimerUPP( pEventLoopTimerUPP );
+			pEventLoopTimerUPP = NULL;
+		}
+
+		pEventLoopTimerOwner = NULL;
 	}
 
 	aEventHandlerGuard.clear();
@@ -289,85 +309,8 @@ sal_Int32 SAL_CALL JavaDragSource::getDefaultCursor( sal_Int8 dragAction ) throw
 
 // ------------------------------------------------------------------------
 
-void JavaDragSource::runDragExecute( void *pData )
-{
-	JavaDragSource *pSource = (JavaDragSource *)pData;
-
-	DragSourceDropEvent aDragEvent;
-	aDragEvent.Source = static_cast< OWeakObject* >(pSource);
-	aDragEvent.DragSource = static_cast< XDragSource* >(pSource);
-	aDragEvent.DragSourceContext = new DragSourceContext();
-	aDragEvent.DropAction = DNDConstants::ACTION_NONE;
-	aDragEvent.DropSuccess = sal_False;
-
-#ifdef MACOSX
-	if ( !pSource->mpNativeDragReference )
-	{
-		ClearableMutexGuard aNewDragGuard( pSource->maMutex );
-
-		DragRef aDrag = (DragRef)pSource->mpNativeDragReference;
-		if ( NewDrag( &aDrag ) == noErr )
-		{
-			aNewDragGuard.clear();
-
-			EventRef aEvent = NULL;
-			ClearableMutexGuard aEventHandlerGuard( aEventHandlerMutex );
-			EventRecord aEventRecord;
-			aEventRecord.what = nullEvent;
-			if ( aLastMouseDraggedEvent )
-				ConvertEventRefToEventRecord( aLastMouseDraggedEvent, &aEventRecord );
-			aEventHandlerGuard.clear();
-
-			if ( aEventRecord.what != nullEvent )
-			{
-				RgnHandle aRegion = NewRgn();
-				if ( aRegion )
-				{
-					TrackDrag( aDrag, &aEventRecord, aRegion );
-					DisposeRgn( aRegion );
-				}
-				ReleaseEvent( aEvent );
-			}
-
-			ClearableMutexGuard aDisposeDragGuard( pSource->maMutex );
-
-			DisposeDrag( aDrag );
-			pSource->mpNativeDragReference = NULL;
-
-			aDisposeDragGuard.clear();
-		}
-	}
-#else	// MACOSX
-#ifdef DEBUG
-	fprintf( stderr, "DropTargetDropContext::acceptDrop not implemented\n" );
-#endif
-#endif	// MACOSX
-
-	ClearableMutexGuard aGuard( pSource->maMutex );
-
-	Reference< XTransferable > xContents( pSource->maContents );
-	Reference< XDragSourceListener > xListener( pSource->maListener );
-
-	oslThread aThread = pSource->maDragExecuteThread;
-	pSource->maDragExecuteThread = NULL;
-
-	aGuard.clear();
-
-	if ( xListener.is() )
-	{
-		xContents.clear();
-		xListener->dragDropEnd( aDragEvent );
-	}
-
-	osl_destroyThread( aThread );
-}
-
-// ------------------------------------------------------------------------
-
 void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_Int8 sourceActions, sal_Int32 cursor, sal_Int32 image, const Reference< XTransferable >& transferable, const Reference< XDragSourceListener >& listener ) throw()
 {
-	ClearableMutexGuard aGuard( maMutex );
-
 	DragSourceDropEvent aDragEvent;
 	aDragEvent.Source = static_cast< OWeakObject* >(this);
 	aDragEvent.DragSource = static_cast< XDragSource* >(this);
@@ -375,7 +318,12 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 	aDragEvent.DropAction = DNDConstants::ACTION_NONE;
 	aDragEvent.DropSuccess = sal_False;
 
-	if ( maDragExecuteThread )
+	ClearableMutexGuard aGuard( maMutex );
+
+#ifdef MACOSX
+	MutexGuard aEventHandlerGuard( aEventHandlerMutex );
+
+	if ( pEventLoopTimerOwner )
 	{
 		aGuard.clear();
 
@@ -387,19 +335,41 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 	maContents = transferable;
 	maListener = listener;
 
-	maDragExecuteThread = osl_createSuspendedThread( JavaDragSource::runDragExecute, this );
-	if ( !maDragExecuteThread )
+	// Test the JVM version and if it is 1.4 or higher use Cocoa, otherwise
+	// use Carbon
+	DTransThreadAttach t;
+	if ( t.pEnv )
 	{
-		maContents.clear();
-		maListener.clear();
+		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+		{
+			if ( !pEventLoopTimerUPP )
+				pEventLoopTimerUPP = NewEventLoopTimerUPP( CarbonEventLoopTimer );
+			if ( pEventLoopTimerUPP )
+				InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pEventLoopTimerUPP, this, &pEventLoopTimer );
 
-		aGuard.clear();
+			if ( !pEventLoopTimer )
+			{
+				DisposeEventLoopTimerUPP( pEventLoopTimerUPP );
 
-		if ( listener.is() )
-			listener->dragDropEnd( aDragEvent );
+				maContents.clear();
+				maListener.clear();
+
+				aGuard.clear();
+
+				if ( listener.is() )
+					listener->dragDropEnd( aDragEvent );
+			}
+			else
+			{
+				pEventLoopTimerOwner = this;
+			}
+		}
 	}
-
-	osl_resumeThread( maDragExecuteThread );
+#else	// MACOSX
+#ifdef DEBUG
+	fprintf( stderr, "JavaDragSource::startDrag not implemented\n" );
+#endif
+#endif	// MACOSX
 }
 
 // ------------------------------------------------------------------------
@@ -427,6 +397,80 @@ sal_Bool SAL_CALL JavaDragSource::supportsService( const OUString& serviceName )
 Sequence< OUString > SAL_CALL JavaDragSource::getSupportedServiceNames() throw()
 {
 	return JavaDragSource_getSupportedServiceNames();
+}
+
+// ------------------------------------------------------------------------
+
+void JavaDragSource::runDragExecute()
+{
+	DragSourceDropEvent aDragEvent;
+	aDragEvent.Source = static_cast< OWeakObject* >(this);
+	aDragEvent.DragSource = static_cast< XDragSource* >(this);
+	aDragEvent.DragSourceContext = new DragSourceContext();
+	aDragEvent.DropAction = DNDConstants::ACTION_NONE;
+	aDragEvent.DropSuccess = sal_False;
+
+#ifdef MACOSX
+	ClearableMutexGuard aTrackingGuard( aEventHandlerMutex );
+
+	if ( pEventLoopTimerOwner == this )
+	{
+		DragRef aDrag;
+		if ( NewDrag( &aDrag ) == noErr )
+		{
+			EventRecord aEventRecord;
+			aEventRecord.what = nullEvent;
+			if ( aLastMouseDraggedEvent )
+				ConvertEventRefToEventRecord( aLastMouseDraggedEvent, &aEventRecord );
+
+			if ( aEventRecord.what != nullEvent )
+			{
+				RgnHandle aRegion = NewRgn();
+				if ( aRegion )
+				{
+					if ( TrackDrag( aDrag, &aEventRecord, aRegion ) == noErr )
+						;
+					DisposeRgn( aRegion );
+				}
+			}
+
+			DisposeDrag( aDrag );
+		}
+
+		if ( pEventLoopTimer )
+		{
+			RemoveEventLoopTimer( pEventLoopTimer );
+			pEventLoopTimer = NULL;
+		}
+
+		if ( pEventLoopTimerUPP )
+		{
+			DisposeEventLoopTimerUPP( pEventLoopTimerUPP );
+			pEventLoopTimerUPP = NULL;
+		}
+
+		pEventLoopTimerOwner = NULL;
+	}
+
+	aTrackingGuard.clear();
+#else	// MACOSX
+#ifdef DEBUG
+	fprintf( stderr, "DropTargetDropContext::acceptDrop not implemented\n" );
+#endif
+#endif	// MACOSX
+
+	ClearableMutexGuard aGuard( maMutex );
+
+	Reference< XTransferable > xContents( maContents );
+	Reference< XDragSourceListener > xListener( maListener );
+
+	aGuard.clear();
+
+	if ( xListener.is() )
+	{
+		xContents.clear();
+		xListener->dragDropEnd( aDragEvent );
+	}
 }
 
 // ========================================================================

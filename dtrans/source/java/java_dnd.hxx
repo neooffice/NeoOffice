@@ -76,13 +76,10 @@ class JavaDragSource : public ::cppu::WeakComponentImplHelper3< ::com::sun::star
 {
 private:
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	maContents;
-	oslThread				maDragExecuteThread;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDragSourceListener >	maListener;
     ::osl::Mutex			maMutex;
 	void*					mpNativeDragHandler;
 	void*					mpNativeDragReference;
-
-	static void				runDragExecute( void* );
 
 public:
 							JavaDragSource();
@@ -95,6 +92,7 @@ public:
 	virtual sal_Bool		SAL_CALL isDragImageSupported() throw();
 	virtual sal_Int32		SAL_CALL getDefaultCursor( sal_Int8 dragAction ) throw();
 	virtual void			SAL_CALL startDrag( const ::com::sun::star::datatransfer::dnd::DragGestureEvent& trigger, sal_Int8 sourceActions, sal_Int32 cursor, sal_Int32 image, const Reference< ::com::sun::star::datatransfer::XTransferable >& transferable, const Reference< ::com::sun::star::datatransfer::dnd::XDragSourceListener >& listener ) throw();
+	void					runDragExecute();
 };
 
 ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL JavaDragSource_getSupportedServiceNames();
