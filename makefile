@@ -137,10 +137,17 @@ build.neo_configure: build.oo_all
 	echo "setenv PRODUCT_TRADEMARKED_NAME '$(PRODUCT_TRADEMARKED_NAME)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_VERSION '$(PRODUCT_VERSION)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_FILETYPE '$(PRODUCT_FILETYPE)'" >> "$(OO_ENV_JAVA)"
-# Don't package non-core languages. It would be nice to have them all
-# but download size just gets too big
+# Don't package languages add to OOo 1.1. It would be nice to have them all
+# but download size just gets too big. Clearly, a different solution is needed.
 	echo "unsetenv RES_AFRIK" >> "$(OO_ENV_JAVA)"
+	echo "unsetenv RES_ARAB" >> "$(OO_ENV_JAVA)"
+	echo "unsetenv RES_CAT" >> "$(OO_ENV_JAVA)"
+	echo "unsetenv RES_CZECH" >> "$(OO_ENV_JAVA)"
 	echo "unsetenv RES_ESTONIAN" >> "$(OO_ENV_JAVA)"
+	echo "unsetenv RES_FINN" >> "$(OO_ENV_JAVA)"
+	echo "unsetenv RES_HEBREW" >> "$(OO_ENV_JAVA)"
+	echo "unsetenv RES_HUNG" >> "$(OO_ENV_JAVA)"
+	echo "unsetenv RES_NORBOK" >> "$(OO_ENV_JAVA)"
 	echo "unsetenv RES_NORNYN " >> "$(OO_ENV_JAVA)"
 	echo "unsetenv RES_NSOTHO" >> "$(OO_ENV_JAVA)"
 	echo "unsetenv RES_PORT" >> "$(OO_ENV_JAVA)"
