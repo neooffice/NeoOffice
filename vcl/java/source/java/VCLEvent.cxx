@@ -152,6 +152,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			return;
 		}
 		case SALEVENT_KEYINPUT:
+		case SALEVENT_KEYUP:
 		{
 			SalKeyEvent *pKeyEvent = (SalKeyEvent *)pData;
 			if ( !pKeyEvent )
@@ -163,7 +164,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pKeyEvent->mnRepeat = 0;
 			}
 			dispatchEvent( nID, pFrame, pKeyEvent );
-			dispatchEvent( SALEVENT_KEYUP, pFrame, pKeyEvent );
 			delete pKeyEvent;
 			return;
 		}

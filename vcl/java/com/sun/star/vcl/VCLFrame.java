@@ -1179,22 +1179,26 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public void keyReleased(KeyEvent e) {
 
 		int keyCode = e.getKeyCode();
-		if (keyCode == KeyEvent.VK_SHIFT || keyCode == KeyEvent.VK_CONTROL || keyCode == KeyEvent.VK_ALT)
+		if (keyCode == KeyEvent.VK_SHIFT || keyCode == KeyEvent.VK_CONTROL || keyCode == KeyEvent.VK_ALT) {
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYMODCHANGE, this, 0));
-
-		else if (lastKeyPressed != null && VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+		}
+		else if (e.isActionKey()) {
+			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0));
+		}
+		else if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 			// Trap the Mac OS X key combinations that are reserved for the
 			// items in the Apple Services menu. Even though we don't respond
 			// to these services, Java does not generate a key typed event so
 			// we need to generate it ourselves.
-			if (keyCode >= KeyEvent.VK_A && keyCode <= KeyEvent.VK_Z && keyCode != KeyEvent.VK_H || keyCode != KeyEvent.VK_Q) {
+			if (lastKeyPressed != null && keyCode >= KeyEvent.VK_A && keyCode <= KeyEvent.VK_Z && keyCode != KeyEvent.VK_H && keyCode != KeyEvent.VK_Q) {
 				int modifiers = lastKeyPressed.getModifiers();
 				if ((modifiers & (InputEvent.SHIFT_MASK | InputEvent.CTRL_MASK)) == (InputEvent.SHIFT_MASK | InputEvent.CTRL_MASK))
 					e = new KeyEvent(e.getComponent(), KeyEvent.KEY_TYPED, e.getWhen(), modifiers, KeyEvent.VK_UNDEFINED, Character.toLowerCase((char)keyCode));
 					queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
+					queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0));
+					lastKeyPressed = null;
 			}
 		}
-
 
 	}
 
@@ -1207,12 +1211,15 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		// If a modifier is used to set the character (e.g. the "Alt-c"
 		// generates a "c-cedilla" in the Mac OS X U.S. keyboard, we must strip
-		// of the modifiers so that the C++ code does not get confused.
+		// off the modifiers so that the C++ code does not get confused.
 		int modifiers = e.getModifiers();
+		char keyChar = e.getKeyChar();
 		if (lastKeyPressed != null && (modifiers & InputEvent.ALT_MASK) != 0)
 			e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), modifiers & ~InputEvent.ALT_MASK, e.getKeyCode(), e.getKeyChar());
 		lastKeyPressed = null;
+
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0));
 
 	}
 
