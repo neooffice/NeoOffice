@@ -162,13 +162,15 @@ int main( int argc, char *argv[] )
 		delete pClass;
 		pClass = NULL;
 
+		// Load Cocoa
+		OModule aModule;
+		aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/AppKit.framework/AppKit" ) );
+
 		// Create the SVMain() thread
 		SVMainThread aThread;
 		aThread.create();
 
 		// Start the Cocoa event loop
-		OModule aModule;
-		aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/AppKit.framework/AppKit" ) );
 		RunCocoaEventLoop();
 		aThread.join();
 	}

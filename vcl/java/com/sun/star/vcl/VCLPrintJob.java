@@ -208,16 +208,18 @@ public final class VCLPrintJob implements Printable, Runnable {
 		Dimension pageResolution = pageFormat.getPageResolution();
 		graphics.scale((double)72 / pageResolution.width, (double)72 / pageResolution.height);
 
-		graphicsInfo.graphics = graphics;
+		synchronized (graphicsInfo) {
+			graphicsInfo.graphics = graphics;
 
-		// Notify other threads and wait until painting is finished
-		graphicsInfo.notifyAll();
-		try {
-			graphicsInfo.wait();
+			// Notify other threads and wait until painting is finished
+			graphicsInfo.notifyAll();
+			try {
+				graphicsInfo.wait();
+			}
+			catch (Throwable t) {}
+
+			graphicsInfo.graphics = null;
 		}
-		catch (Throwable t) {}
-
-		graphicsInfo.graphics = null;
 
 		if (job.isCancelled())
 			throw new PrinterException();
@@ -235,14 +237,14 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 */
 	public void run() {
 
-		synchronized (graphicsInfo) {
-			try {
-				job.print();
-			}
-			catch (Throwable t) {}
-			printThreadFinished = true;
+		try {
+			job.print();
+		}
+		catch (Throwable t) {}
+		printThreadFinished = true;
 
-			// Notify other threads that printing is finished
+		// Notify other threads that printing is finished
+		synchronized (graphicsInfo) {
 			graphicsInfo.notifyAll();
 		}
 
