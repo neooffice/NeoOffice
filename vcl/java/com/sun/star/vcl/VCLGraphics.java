@@ -362,6 +362,7 @@ public final class VCLGraphics {
 		graphicsBounds.x = 0;
 		graphicsBounds.y = 0;
 		graphics = (Graphics2D)g.create(graphicsBounds.x, graphicsBounds.y, graphicsBounds.width, graphicsBounds.height);
+		VCLGraphics.setDefaultRenderingAttributes(graphics);
 		bitCount = graphics.getDeviceConfiguration().getColorModel().getPixelSize();
 		resetClipRegion();
 
