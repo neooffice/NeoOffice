@@ -466,12 +466,21 @@ void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void
 		SalData *pSalData = GetSalData();
 		if ( pSalData && pSalData->mpEventQueue )
 		{
+			// Unlock the Carbon lock
+			VCLThreadAttach t;
+			if ( t.pEnv && t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+				Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
+
 			// Wakeup the event queue by sending it a dummy event
 			com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
 			pSalData->mpEventQueue->postCachedEvent( &aEvent );
 
 			// Block the VCL event loop while checking mapping
 			pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->acquire();
+
+			// Relock the Carbon lock
+			if ( t.pEnv && t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+				Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
 
 			Rect aRect;
 			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
