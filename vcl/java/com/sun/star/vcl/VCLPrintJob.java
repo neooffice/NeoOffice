@@ -53,7 +53,7 @@ import java.awt.print.PrinterJob;
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public final class VCLPrintJob extends Thread implements Printable {
+public final class VCLPrintJob implements Printable, Runnable {
 
 	/** 
 	 * ORIENTATION_PORTRAIT constant.
@@ -197,6 +197,11 @@ public final class VCLPrintJob extends Thread implements Printable {
 	private PrinterJob job = PrinterJob.getPrinterJob();
 
 	/**
+	 * The print thread.
+	 */
+	private Thread printThread = null;
+
+	/**
 	 * The print thread finished flag.
 	 */
 	private boolean printThreadFinished = false;
@@ -241,6 +246,7 @@ public final class VCLPrintJob extends Thread implements Printable {
 		endJob = true;
 		graphicsInfo = null;
 		job = null;
+		printThread = null;
 		printThreadStarted = true;
 		printThreadFinished = true;
 
@@ -254,10 +260,12 @@ public final class VCLPrintJob extends Thread implements Printable {
 		// End the job after disposing of the graphics
 		endJob = true;
 		endPage();
-		try {
-			join();
+		if (printThread != null) {
+			try {
+				printThread.join();
+			}
+			catch (Throwable t) {}
 		}
-		catch (Throwable t) {}
 
 	}
 
@@ -281,8 +289,6 @@ public final class VCLPrintJob extends Thread implements Printable {
 		}
 		Thread.yield();
 
-		// Free previous page's print resources
-		System.gc();
 	}
 
 	/**
@@ -323,12 +329,10 @@ public final class VCLPrintJob extends Thread implements Printable {
 		graphicsInfo.pageFormat = f;
 
 		// Wait until painting is finished
-		Thread.yield();
 		try {
 			graphicsInfo.wait();
 		}
 		catch (Throwable t) {}
-		Thread.yield();
 
 		if (job.isCancelled())
 			throw new PrinterException();
@@ -410,7 +414,9 @@ public final class VCLPrintJob extends Thread implements Printable {
 		synchronized (graphicsInfo) {
 			// Start the printing thread if it has not yet been started
 			if (!printThreadStarted) {
-				start();
+				printThread = new Thread(this);
+				printThread.setPriority(Thread.MAX_PRIORITY);
+				printThread.start();
 				// Wait for the printing thread to gain the lock on the
 				// graphics queue
 				try {
@@ -422,7 +428,7 @@ public final class VCLPrintJob extends Thread implements Printable {
 		}
 
 		synchronized (graphicsInfo) {
-			if (currentPage++ != graphicsInfo.pageIndex || !isAlive()) {
+			if (currentPage++ != graphicsInfo.pageIndex || printThread == null || !printThread.isAlive()) {
 				// Return a dummy graphics if this page is not in the selected
 				// page range
 				currentGraphics = null;
@@ -430,7 +436,7 @@ public final class VCLPrintJob extends Thread implements Printable {
 			else {
 				// Print to the edge of the page to ensure that we print all
 				// possible pixels
-				currentGraphics = new VCLGraphics(graphicsInfo.graphics, VCLPrintJob.SCALE_FACTOR * 72, new Rectangle(0, 0, (int)(graphicsInfo.pageFormat.getImageableX() + graphicsInfo.pageFormat.getImageableWidth()) * VCLPrintJob.SCALE_FACTOR, (int)(graphicsInfo.pageFormat.getImageableY() + graphicsInfo.pageFormat.getImageableHeight()) * VCLPrintJob.SCALE_FACTOR));
+				currentGraphics = new VCLGraphics(graphicsInfo.graphics, VCLPrintJob.SCALE_FACTOR * 72, new Rectangle(0, 0, (int)(graphicsInfo.pageFormat.getWidth() - graphicsInfo.pageFormat.getImageableX()) * VCLPrintJob.SCALE_FACTOR, (int)(graphicsInfo.pageFormat.getHeight() + graphicsInfo.pageFormat.getImageableY()) * VCLPrintJob.SCALE_FACTOR));
 				graphicsInfo.graphics = null;
 				graphicsInfo.pageFormat = null;
 			}
