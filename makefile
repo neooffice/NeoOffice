@@ -308,6 +308,9 @@ build.patch_package: build.package
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'if [ ! -d "MacOS" ] ; then rm -Rf "MacOS" ; mv -f "program" "MacOS" ; ln -sf "MacOS" "program" ; fi'
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share user -type d | grep -v /CVS$$` ; do mkdir -p "$$i" ; done'
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share user ! -type d | grep -v /CVS/` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
+# Temporary fix for bug 343
+	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/share/dict/ooo"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents/share/dict/ooo" ; sh -e -c 'for i in `find "$(PWD)/$(INSTALL_HOME)" -name "th_*" | grep "th_\(de\|es\|en\|fr\)"` ; do cp "$${i}" `basename "$${i}"` ; done'
 	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `find "." -name ".DS_Store"` ; do rm "$${i}" ; done'
 	chmod -Rf a-w,a+r "$(PATCH_INSTALL_HOME)/package"
 	echo "Running sudo to chown installation files..."
