@@ -1089,15 +1089,18 @@ public final class VCLEvent extends AWTEvent {
 	 * should be used only for injecting SALEVENT_WHEELMOUSE events into the
 	 * queue.
 	 *
-	 * @param event the <code>MouseEvent</code> that originated the event
+	 * @param event the <code>AWTEvent</code> that originated the event
 	 * @param id the event type
 	 * @param f the <code>VCLFrame</code> instance
 	 * @param s the scroll amount
 	 * @param r the wheel rotation
+	 * @param h <code>true</code> if the wheel rotation is horizontal or
+	 *  <code>false</code> if it is vertical. Since Java does not yet support
+	 *  horizontal mouse wheel events, this parameter is ignored.
 	 */
-	VCLEvent(MouseEvent event, int id, VCLFrame f, int s, int r) {
+	VCLEvent(AWTEvent event, int id, VCLFrame f, int s, int r, boolean h) {
 
-		this((AWTEvent)event, id, f, 0, 0);
+		this(event, id, f, 0, 0);
 		scrollAmount = s;
 		wheelRotation = r * -1;
 
