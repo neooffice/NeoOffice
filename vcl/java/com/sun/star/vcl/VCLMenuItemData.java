@@ -792,6 +792,10 @@ public final class VCLMenuItemData {
 	 */
 	void fixCheckboxMenuItemState() {
 
+		if(delegate!=null) {
+			delegate.fixCheckboxMenuItemState();
+			return;
+		}
 		if(isCheckbox) {
 			if(getChecked())
 				setChecked(getChecked());
