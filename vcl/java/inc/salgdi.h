@@ -36,9 +36,13 @@
 #ifndef _SV_SALGDI_H
 #define _SV_SALGDI_H
 
+#include <map>
+
 #ifndef _SV_SV_H
 #include <sv.h>
 #endif 
+
+class ImplFontSelectData;
 
 #ifdef MACOSX
 class SalATSLayout;
@@ -76,6 +80,8 @@ class SalGraphicsData
 	SalVirtualDevice*	mpVirDev;
 	::vcl::com_sun_star_vcl_VCLGraphics*	mpVCLGraphics;
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
+	::std::map< int, ::vcl::com_sun_star_vcl_VCLFont* >	maFallbackFonts;
+	::std::map< int, ImplFontSelectData* >	maFallbackFontSelectData;
 
 					SalGraphicsData();
 					~SalGraphicsData();

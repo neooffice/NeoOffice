@@ -38,6 +38,9 @@
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
+#ifndef _SV_OUTFONT_HXX
+#include <outfont.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
@@ -67,5 +70,7 @@ SalData::~SalData()
 
 	for ( ::std::map< OUString, com_sun_star_vcl_VCLFont* >::iterator it = maFontMapping.begin(); it != maFontMapping.end(); ++it )
 		delete it->second;
-	maFontMapping.clear();
+
+	for ( ::std::map< void*, ImplFontData* >::iterator fit = maNativeFontMapping.begin(); fit != maNativeFontMapping.end(); ++fit )
+		delete fit->second;
 }

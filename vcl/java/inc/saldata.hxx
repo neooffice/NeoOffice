@@ -61,6 +61,8 @@
 #include <com/sun/star/vcl/VCLPageFormat.hxx>
 #endif
 
+class ImplFontData;
+
 // -----------
 // - SalData -
 // -----------
@@ -77,6 +79,7 @@ public:
 	XubString				maDefaultPrinter;
 	::vcl::com_sun_star_vcl_VCLEventQueue*	mpEventQueue;
 	::std::map< ::rtl::OUString, ::vcl::com_sun_star_vcl_VCLFont* >	maFontMapping;
+	::std::map< void*, ImplFontData* >	maNativeFontMapping;
 	SalFrame*				mpPresentationFrame;
 	::std::list< ::vcl::com_sun_star_vcl_VCLPageFormat* >	maVCLPageFormats;
 

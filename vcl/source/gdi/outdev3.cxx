@@ -2839,25 +2839,6 @@ void OutputDevice::ImplInitFont()
         {
             // Select Font
             mpFontEntry->mnSetFontFlags = mpGraphics->SetFont( &(mpFontEntry->maFontSelData), 0 );
-
-#if defined USE_JAVA && defined MACOSX
-            // We may have switched fonts so that update font data
-            XubString& rFoundName = mpFontEntry->maFontSelData.maFoundName;
-            if ( rFoundName != mpFontEntry->maFontSelData.mpFontData->maName )
-            {
-                for ( ImplDevFontListData* pEntry = mpFontList->First(); pEntry; pEntry = mpFontList->Next() )
-                {
-                    for( ImplFontData* pFontData = pEntry->mpFirst; pFontData; pFontData = pFontData->mpNext )
-                    {
-                        if ( rFoundName == pFontData->maName )
-                        {
-                            mpFontEntry->maFontSelData.mpFontData = pFontData;
-                            break;
-                        }
-                    }
-                }
-            }
-#endif	// USE_JAVA && MACOSX
         }
         mbInitFont = FALSE;
     }
@@ -5829,6 +5810,10 @@ SalLayout* OutputDevice::ImplLayout( const String& rOrigStr,
 
         for( int nLevel = 1; nLevel < MAX_FALLBACK; ++nLevel )
         {
+#if defined USE_JAVA && defined MACOSX
+			// SetFont() will push the fallback font into aFontSelData
+            mpGraphics->SetFont( &aFontSelData, nLevel );
+#else	// USE_JAVA && MACOSX
             // find font family suited for this fallback
             ImplFontEntry* pFallbackFont = mpFontCache->GetFallback( mpFontList,
                 maFont, aFontSize, nLevel, mpOutDevData ? mpOutDevData->mpFirstFontSubstEntry : NULL );
@@ -5846,24 +5831,6 @@ SalLayout* OutputDevice::ImplLayout( const String& rOrigStr,
             }
 
             pFallbackFont->mnSetFontFlags = mpGraphics->SetFont( &aFontSelData, nLevel );
-
-#if defined USE_JAVA && defined MACOSX
-            // We may have switched fonts so that update font data
-            XubString& rFoundName = mpFontEntry->maFontSelData.maFoundName;
-            if ( rFoundName != mpFontEntry->maFontSelData.mpFontData->maName )
-            {
-                for ( ImplDevFontListData* pEntry = mpFontList->First(); pEntry; pEntry = mpFontList->Next() )
-                {
-                    for( ImplFontData* pFontData = pEntry->mpFirst; pFontData; pFontData = pFontData->mpNext )
-                    {
-                        if ( rFoundName == pFontData->maName )
-                        {
-                            mpFontEntry->maFontSelData.mpFontData = pFontData;
-                            break;
-                        }
-                    }
-                }
-            }
 #endif	// USE_JAVA && MACOSX
 
             // create and add fallback layout to multilayout
@@ -5882,7 +5849,9 @@ SalLayout* OutputDevice::ImplLayout( const String& rOrigStr,
                     pFallback->Release();
             }
 
+#if !defined USE_JAVA || !defined MACOSX
             mpFontCache->Release( pFallbackFont );
+#endif	// !USE_JAVA || !MACOSX
 
             // break when this fallback was sufficient
             if( !aLayoutArgs.PrepareFallback() )

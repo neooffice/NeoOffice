@@ -55,6 +55,8 @@ class SalGraphics;
 
 class SalATSLayout : public GenericSalLayout
 {
+	SalGraphics*		mpGraphics;
+	int					mnFallbackLevel;
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
 	bool				mbUseScreenMetrics;
 	ATSUStyle			maFontStyle;
@@ -67,11 +69,10 @@ class SalATSLayout : public GenericSalLayout
 	void				Destroy();
 
 public:
-						SalATSLayout( ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, bool bUseScreenMetrics );
+						SalATSLayout( SalGraphics *pGraphics, int nFallbackLevel );
 	virtual				~SalATSLayout();
 
 	virtual bool		LayoutText( ImplLayoutArgs& rArgs );
-	virtual void		AdjustLayout( ImplLayoutArgs& rArgs );
 	virtual void		DrawText( SalGraphics& rGraphics ) const;
 	virtual int			GetNextGlyphs( int nLen, long *pGlyphIdxAry, Point& rPos, int& rStart, long *pGlyphAdvAry = NULL, int *pCharPosAry = NULL ) const;
 };

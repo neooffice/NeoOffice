@@ -68,6 +68,9 @@
 #ifndef _SV_JOBSET_H
 #include <jobset.h>
 #endif
+#ifndef _SV_OUTDEV_H
+#include <outdev.h>
+#endif
 #ifndef _TOOLS_RESMGR_HXX
 #include <tools/resmgr.hxx>
 #endif
@@ -112,17 +115,6 @@
 typedef jobject Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type( JNIEnv *, jobject );
 typedef void Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type( JNIEnv *, jobject );
 
-class SVMainThread : public ::vos::OThread
-{
-	Application*			mpApp;
-
-public:
-							SVMainThread( Application* pApp ) : ::vos::OThread(), mpApp( pApp ) {}
-
-protected:
-	virtual void			run();
-};
-
 using namespace osl;
 using namespace rtl;
 using namespace vcl;
@@ -139,11 +131,35 @@ static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( J
 
 #endif
 
+class SVMainThread : public ::vos::OThread
+{
+	Application*			mpApp;
+
+public:
+							SVMainThread( Application* pApp ) : ::vos::OThread(), mpApp( pApp ) {}
+
+	virtual void			run();
+};
+
 // ============================================================================
 
 void SVMainThread::run()
 {
-	GetSalData()->mpEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
+	SalData *pSalData = GetSalData();
+
+	// Cache event queue
+	pSalData->mpEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
+
+	// Cache font data
+	pSalData->maFontMapping = com_sun_star_vcl_VCLFont::getAllFonts();
+	SalGraphics aGraphics;
+	ImplDevFontList aDevFontList;
+	aGraphics.GetDevFontList( &aDevFontList );
+	for ( ImplDevFontListData *pFontData = aDevFontList.First(); pFontData; pFontData = aDevFontList.Next() )
+	{
+		void *pNativeFont = ((com_sun_star_vcl_VCLFont *)pFontData->mpFirst->mpSysData)->getNativeFont();
+		pSalData->maNativeFontMapping[ pNativeFont ] = pFontData->mpFirst;
+	}
 
 	mpApp->Main();
 }
@@ -327,6 +343,8 @@ void ExecuteApplicationMain( Application *pApp )
 		ATSFontIteratorRelease( &aIterator );
 	}
 
+	SVMainThread aSVMainThread( pApp );
+
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
@@ -342,12 +360,11 @@ void ExecuteApplicationMain( Application *pApp )
 				ULONG nCount = pSalInstance->ReleaseYieldMutex();
 
 				// Create the thread to run the Main() method in
-				SVMainThread aThread( pApp );
-				aThread.create();
+				aSVMainThread.create();
 
 				// Start the Cocoa event loop
 				RunCocoaEventLoop();
-				aThread.join();
+				aSVMainThread.join();
 
 				pSalInstance->AcquireYieldMutex( nCount );
 			}
@@ -467,10 +484,8 @@ void ExecuteApplicationMain( Application *pApp )
 	}
 #endif	// MACOSX
 
-	GetSalData()->mpEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
-
 	// Now that Java is properly initialized, run the application's Main()
-	pApp->Main();
+	aSVMainThread.run();
 }
 
 // =======================================================================

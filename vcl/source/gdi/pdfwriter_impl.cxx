@@ -3265,6 +3265,10 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
         else
         {
             registerGlyphs( nTmpOffset + nGlyphs, pGlyphs, pUnicodes, pMappedGlyphs, pMappedIdentityGlyphs, pMappedFontObjects, pMappedFontSubObjects, pFallbackFonts );
+
+			if ( !nGlyphs )
+				break;
+
             nTmpOffset = 0;
             pTmpGlyphs = pGlyphs;
             pTmpAdvanceWidths = pAdvanceWidths ? pAdvanceWidths : NULL;
