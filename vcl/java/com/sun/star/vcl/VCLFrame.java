@@ -579,6 +579,16 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private static VCLFrame lastDragFrame = null;
 
+	/** 
+	 * The last key pressed for which a key typed event has not been received.
+	 */
+	private static KeyEvent lastKeyPressed = null;
+
+	/** 
+	 * The modifiers pressed.
+	 */
+	private static int keyModifiersPressed = 0;
+
 	/**
 	 * The bit count.
 	 */
@@ -603,11 +613,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * The native window's insets.
 	 */
 	private Insets insets = null;
-
-	/** 
-	 * The last key pressed for which a key typed event has not been received.
-	 */
-	private KeyEvent lastKeyPressed = null;
 
 	/**
 	 * The native window's panel.
@@ -789,7 +794,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			window.dispose();
 		}
 		window = null;
-		lastKeyPressed = null;
 
 	}
 
@@ -1412,7 +1416,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else if (e.isActionKey())
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
 		else
-			lastKeyPressed = e;
+			VCLFrame.lastKeyPressed = e;
+
+		keyModifiersPressed = e.getModifiers();
 
 	}
 
@@ -1435,15 +1441,17 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			// items in the Apple Services menu. Even though we don't respond
 			// to these services, Java does not generate a key typed event so
 			// we need to generate it ourselves.
-			if (lastKeyPressed != null && keyCode >= KeyEvent.VK_A && keyCode <= KeyEvent.VK_Z && keyCode != KeyEvent.VK_H && keyCode != KeyEvent.VK_Q) {
-				int modifiers = lastKeyPressed.getModifiers();
+			if (VCLFrame.lastKeyPressed != null && keyCode >= KeyEvent.VK_A && keyCode <= KeyEvent.VK_Z && keyCode != KeyEvent.VK_H && keyCode != KeyEvent.VK_Q) {
+				int modifiers = VCLFrame.lastKeyPressed.getModifiers();
 				if ((modifiers & (InputEvent.SHIFT_MASK | InputEvent.CTRL_MASK)) == (InputEvent.SHIFT_MASK | InputEvent.CTRL_MASK))
 					e = new KeyEvent(e.getComponent(), KeyEvent.KEY_TYPED, e.getWhen(), modifiers, KeyEvent.VK_UNDEFINED, Character.toLowerCase((char)keyCode));
 					queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
 					queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0));
-					lastKeyPressed = null;
+					VCLFrame.lastKeyPressed = null;
 			}
 		}
+
+		keyModifiersPressed = e.getModifiers();
 
 	}
 
@@ -1459,9 +1467,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// off the modifiers so that the C++ code does not get confused.
 		int modifiers = e.getModifiers();
 		char keyChar = e.getKeyChar();
-		if (lastKeyPressed != null && (modifiers & InputEvent.ALT_MASK) != 0)
+		if (VCLFrame.lastKeyPressed != null && (modifiers & InputEvent.ALT_MASK) != 0)
 			e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), modifiers & ~InputEvent.ALT_MASK, e.getKeyCode(), e.getKeyChar());
-		lastKeyPressed = null;
+		VCLFrame.lastKeyPressed = null;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0));
@@ -1497,7 +1505,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				VCLFrame.captureFrame = this;
 		}
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONDOWN, this, 0));
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONDOWN, this, 0, keyModifiersPressed));
 
 	}
 
@@ -1543,7 +1551,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		VCLFrame.lastCaptureFrame = null;
 		VCLFrame.lastDragFrame = null;
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONUP, f, 0));
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONUP, f, 0, keyModifiersPressed));
 
 	}
 
@@ -1594,7 +1602,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, f, 0));
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, f, 0, keyModifiersPressed));
 
 	}
 
@@ -1606,7 +1614,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public void mouseEntered(MouseEvent e) {
 
 		if (!VCLFrame.capture)
-			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, this, 0));
+			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, this, 0, keyModifiersPressed));
 
 	}
 
@@ -1618,7 +1626,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public void mouseExited(MouseEvent e) {
 
 		if (!VCLFrame.capture)
-			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSELEAVE, this, 0));
+			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSELEAVE, this, 0, keyModifiersPressed));
 
 	}
 
@@ -1631,7 +1639,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public void mouseMoved(MouseEvent e) {
 
 		if (!VCLFrame.capture)
-			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, this, 0));
+			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, this, 0, keyModifiersPressed));
 
 	}
 
@@ -1842,9 +1850,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			((Frame)window).setResizable(resizable);
 
 		if (b) {
-			// Reset key flags
-			lastKeyPressed = null;
-
 			// Register listeners
 			window.addComponentListener(this);
 			panel.addFocusListener(this);
@@ -1874,9 +1879,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			panel.removeMouseListener(this);
 			panel.removeMouseMotionListener(this);
 			window.removeWindowListener(this);
-
-			// Reset key flags
-			lastKeyPressed = null;
 		}
 		else {
 			toFront();
