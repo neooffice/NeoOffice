@@ -203,8 +203,8 @@ for i in `cd "$apphome/classes" ; find . -name "*.jar"` ; do
 done
 sysclasspath=`printf "$sysclasspath" | sed 's#^:##'`
 if [ "$os" = "Darwin" ] ; then
-    # Turn off graphics acceleration
-    printf "[Java]\nRuntimeLib=/System/Library/Frameworks/JavaVM.framework/JavaVM\ncom.apple.hwaccel=false\ncom.apple.hwaccellist=\n" > "$configdir/javarc"
+    # Turn off graphics acceleration and force vcl.jar into bootstrap classpath
+    printf "[Java]\nRuntimeLib=/System/Library/Frameworks/JavaVM.framework/JavaVM\ncom.apple.hwaccel=false\ncom.apple.hwaccellist=\n-Xbootclasspath/a:$apphome/classes/vcl.jar\n" > "$configdir/javarc"
 else
     printf "[Java]\n" > "$configdir/javarc"
 fi
