@@ -347,14 +347,14 @@ sal_Int32 SAL_CALL JavaDragSource::getDefaultCursor( sal_Int8 dragAction ) throw
 
 void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_Int8 sourceActions, sal_Int32 cursor, sal_Int32 image, const Reference< XTransferable >& transferable, const Reference< XDragSourceListener >& listener ) throw()
 {
+	MutexGuard aDragGuard( aDragMutex );
+
 	DragSourceDropEvent aDragEvent;
 	aDragEvent.Source = static_cast< OWeakObject* >(this);
 	aDragEvent.DragSource = static_cast< XDragSource* >(this);
 	aDragEvent.DragSourceContext = new DragSourceContext();
 	aDragEvent.DropAction = DNDConstants::ACTION_NONE;
 	aDragEvent.DropSuccess = sal_False;
-
-	MutexGuard aDragGuard( aDragMutex );
 
 	ClearableMutexGuard aGuard( maMutex );
 
@@ -424,16 +424,14 @@ Sequence< OUString > SAL_CALL JavaDragSource::getSupportedServiceNames() throw()
 
 void JavaDragSource::handleDrag( sal_Int32 nX, sal_Int32 nY )
 {
+	MutexGuard aDragGuard( aDragMutex );
+
 	DragSourceDragEvent aSourceDragEvent;
 	aSourceDragEvent.Source = static_cast< OWeakObject* >(this);
 	aSourceDragEvent.DragSource = static_cast< XDragSource* >(this);
 
-	ClearableMutexGuard aDragGuard( aDragMutex );
-
 	aSourceDragEvent.DropAction = nCurrentAction;
 	aSourceDragEvent.UserAction = nCurrentAction;
-
-	aDragGuard.clear();
 
 	ClearableMutexGuard aGuard( maMutex );
 
@@ -450,6 +448,8 @@ void JavaDragSource::handleDrag( sal_Int32 nX, sal_Int32 nY )
 
 void JavaDragSource::runDragExecute( void *pData )
 {
+	MutexGuard aDragGuard( aDragMutex );
+
 	JavaDragSource *pSource = (JavaDragSource *)pData;
 
 	DragSourceDropEvent aDragEvent;
@@ -458,8 +458,6 @@ void JavaDragSource::runDragExecute( void *pData )
 	aDragEvent.DragSourceContext = new DragSourceContext();
 	aDragEvent.DropAction = DNDConstants::ACTION_NONE;
 	aDragEvent.DropSuccess = sal_False;
-
-	aDragMutex.acquire();
 
 	if ( pDragThreadOwner == pSource )
 	{
@@ -558,8 +556,6 @@ void JavaDragSource::runDragExecute( void *pData )
 
 	if ( pDragThread )
 		osl_destroyThread( pDragThread );
-
-	aDragMutex.release();
 
 	ClearableMutexGuard aGuard( pSource->maMutex );
 
@@ -700,14 +696,14 @@ Sequence< OUString > SAL_CALL JavaDropTarget::getSupportedServiceNames() throw()
 
 void JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY )
 {
+	MutexGuard aDragGuard( aDragMutex );
+
 	DropTargetDragEnterEvent aDragEnterEvent;
 	aDragEnterEvent.Source = static_cast< XDropTarget* >(this);
 	aDragEnterEvent.LocationX = nX;
 	aDragEnterEvent.LocationY = nY;
 	aDragEnterEvent.SourceActions = DNDConstants::ACTION_NONE;
 	aDragEnterEvent.DropAction = DNDConstants::ACTION_NONE;
-
-	aDragMutex.acquire();
 
 	DropTargetDragContext *pContext = new DropTargetDragContext( nCurrentAction );
 	aDragEnterEvent.Context = pContext;
@@ -723,8 +719,6 @@ void JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY )
 		aDragSourceGuard.clear();
 	}
 
-	aDragMutex.release();
-
 	ClearableMutexGuard aGuard( maMutex );
 
 	list< Reference< XDropTargetListener > > listeners( maListeners );
@@ -737,25 +731,21 @@ void JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY )
 			(*it)->dragEnter( aDragEnterEvent );
 	}
 
-	aDragMutex.acquire();
-
 	nCurrentAction = pContext->getDragAction();
-
-	aDragMutex.release();
 }
 
 // ------------------------------------------------------------------------
 
 void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY )
 {
+	MutexGuard aDragGuard( aDragMutex );
+
 	DropTargetDragEvent aDragEvent;
 	aDragEvent.Source = static_cast< XDropTarget* >(this);
 	aDragEvent.LocationX = nX;
 	aDragEvent.LocationY = nY;
 	aDragEvent.SourceActions = DNDConstants::ACTION_NONE;
 	aDragEvent.DropAction = DNDConstants::ACTION_NONE;
-
-	aDragMutex.acquire();
 
 	DropTargetDragContext *pContext = new DropTargetDragContext( nCurrentAction );
 	aDragEvent.Context = pContext;
@@ -769,8 +759,6 @@ void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY )
 
 		aDragSourceGuard.clear();
 	}
-
-	aDragMutex.release();
 
 	ClearableMutexGuard aGuard( maMutex );
 
@@ -784,25 +772,21 @@ void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY )
 			(*it)->dragExit( aDragEvent );
 	}
 
-	aDragMutex.acquire();
-
 	nCurrentAction = pContext->getDragAction();
-
-	aDragMutex.release();
 }
 
 // ------------------------------------------------------------------------
 
 void JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY )
 {
+	MutexGuard aDragGuard( aDragMutex );
+
 	DropTargetDragEvent aDragEvent;
 	aDragEvent.Source = static_cast< XDropTarget* >(this);
 	aDragEvent.LocationX = nX;
 	aDragEvent.LocationY = nY;
 	aDragEvent.SourceActions = DNDConstants::ACTION_NONE;
 	aDragEvent.DropAction = DNDConstants::ACTION_NONE;
-
-	aDragMutex.acquire();
 
 	DropTargetDragContext *pContext = new DropTargetDragContext( nCurrentAction );
 	aDragEvent.Context = pContext;
@@ -817,8 +801,6 @@ void JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY )
 		aDragSourceGuard.clear();
 	}
 
-	aDragMutex.release();
-
 	ClearableMutexGuard aGuard( maMutex );
 
 	list< Reference< XDropTargetListener > > listeners( maListeners );
@@ -831,25 +813,21 @@ void JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY )
 			(*it)->dragOver( aDragEvent );
 	}
 
-	aDragMutex.acquire();
-
 	nCurrentAction = pContext->getDragAction();
-
-	aDragMutex.release();
 }
 
 // ------------------------------------------------------------------------
 
 bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY )
 {
+	MutexGuard aDragGuard( aDragMutex );
+
 	DropTargetDropEvent aDropEvent;
 	aDropEvent.Source = static_cast< OWeakObject* >(this);
 	aDropEvent.LocationX = nX;
 	aDropEvent.LocationY = nY;
 	aDropEvent.SourceActions = DNDConstants::ACTION_NONE;
 	aDropEvent.DropAction = DNDConstants::ACTION_NONE;
-
-	aDragMutex.acquire();
 
 	DropTargetDropContext *pContext = new DropTargetDropContext( nCurrentAction );
 	aDropEvent.Context = pContext;
@@ -868,8 +846,6 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY )
 		aDragSourceGuard.clear();
 	}
 
-	aDragMutex.release();
-
 	ClearableMutexGuard aGuard( maMutex );
 
 	list< Reference< XDropTargetListener > > listeners( maListeners );
@@ -882,11 +858,7 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY )
 			(*it)->drop( aDropEvent );
 	}
 
-	aDragMutex.acquire();
-
 	nCurrentAction = pContext->getDropAction();
-
-	aDragMutex.release();
 
 	return pContext->getDropComplete();
 }
