@@ -3,7 +3,7 @@
  <node oor:name="Path">
   <node oor:name="Current">
    <prop oor:name="OfficeInstall" oor:type="xs:string">
-    <value>$(sysbindir)/..</value>
+    <value>$(instpath)</value>
    </prop>
   </node>
  </node>

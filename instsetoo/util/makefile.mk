@@ -70,26 +70,33 @@ SEARCH_DIR=r:\solenv\inst\ooo\$(OUTPATH)
 
 .IF "$(BSCLIENT)"==""
 
-ALLTAR :
+ALLTAR : pack
+
+LANGUAGES = $(alllangext:s/ /,/)
 
 .IF "$(alllangext)"!=""
 
+pack:
+	+-$(MKDIRHIER) $(INSTALLDIR)$/$(LANGUAGES)$/normal
+	+-$(RM) $(INSTALLDIR)$/$(LANGUAGES)$/normal$/*
+	+-$(LZIP) -p ${SEARCH_DIR} $(LZIPFLAGS) -l $(LANGUAGES) -f openoffice.lst -d $(INSTALLDIR)$/$(LANGUAGES) -n OfficeOSL -e $(INSTALLDIR)$/$(LANGUAGES)$/Logfile.txt -C $(INSTALLDIR)$/$(LANGUAGES)$/checksums.txt
+
 test:
 	+-$(LZIP) $(LZIPFLAGS) -p ${SEARCH_DIR} -l 01 -f openoffice.lst -o -n OfficeOSL 
-
-# Special target to echo the $(alllangext) macro to external scripts
-language_numbers:
-	@echo $(alllangext:s/ /,/)
-
-# Special target to echo the $(alllangext) macro to external scripts
-language_names:
-	@echo $(foreach,i,$(alllangext) $(iso_$i))
 
 .ELSE			# "$(alllangext)"!=""
 pack:
 	@+echo cannot pack nothing...
 
 .ENDIF			# "$(alllangext)"!=""
+
+# Special target to echo the $(alllangext) macro to external scripts
+language_numbers:
+	@echo $(LANGUAGES)
+
+# Special target to echo the $(alllangext) macro to external scripts
+language_names:
+	@echo $(foreach,i,$(alllangext) $(iso_$i))
 
 .ENDIF          # "$(BSCLIENT)"==""
 	

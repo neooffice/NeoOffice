@@ -2,7 +2,7 @@
 <oor:component-data xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" oor:name="Setup" oor:package="org.openoffice">
  <node oor:name="Office">
   <prop oor:name="ooSetupInstallPath" oor:type="xs:string">
-   <value>$(sysuserconfig)/Library/NeoOfficeJ-1.1/user</value>
+   <value>$(userpath)/Library/NeoOfficeJ-1.1/user</value>
   </prop>
  </node>
  <node oor:name="Configuration">
@@ -12,7 +12,7 @@
  </node>
  <node oor:name="L10N">
   <prop oor:name="ooLocale" oor:type="xs:string">
-   <value>$(locale)</value>
+   <value/>
   </prop>
  </node>
 </oor:component-data>
