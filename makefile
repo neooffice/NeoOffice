@@ -51,21 +51,20 @@ OO_DIC_URL:=http://ftp.services.openoffice.org/pub/OpenOffice.org/contrib/dictio
 # Product information
 OO_VERSION=1.1
 OO_PRODUCT_NAME=OpenOffice.org
-OO_PRODUCT_VERSION=1.1.3
+OO_PRODUCT_VERSION=1.1.4
 PRODUCT_NAME=NeoOffice/J
 PRODUCT_DIR_NAME=NeoOfficeJ
 # Important: Note that there are escape characters in the PRODUCT_NAME for the
 # UTF-8 trademark symbol. Don't replace these with "\x##" literal strings!
 PRODUCT_TRADEMARKED_NAME=NeoOffice®/J
-PRODUCT_VERSION=1.1 Beta
-PRODUCT_DIR_VERSION=1.1_Beta
+PRODUCT_VERSION=1.1
+PRODUCT_DIR_VERSION=1.1
 PRODUCT_LANG_PACK_VERSION=Languages
 PRODUCT_DIR_LANG_PACK_VERSION=Languages
-PRODUCT_PATCH_VERSION=Patch 2
-PRODUCT_DIR_PATCH_VERSION=Patch-2
-PRODUCT_PREVIOUS_VERSION=1.1 Alpha 2
-# Don't allow patching of pre-Beta installations
-PRODUCT_PREVIOUS_PATCH_VERSION=Patch 99
+PRODUCT_PATCH_VERSION=Patch 0
+PRODUCT_DIR_PATCH_VERSION=Patch-0
+PRODUCT_PREVIOUS_VERSION=1.1 Beta
+PRODUCT_PREVIOUS_PATCH_VERSION=
 PRODUCT_FILETYPE=NO%F
 PRODUCT_INSTALL_URL=http://www.planamesa.com/neojava/download.php\\\#install
 PRODUCT_BUILD_URL=http://www.planamesa.com/neojava/build.php
@@ -75,10 +74,10 @@ PRODUCT_PATCH_CHECK_URL=http://www.planamesa.com/neojava/downloads/patches/lates
 # CVS macros
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
 OO_PACKAGES:=OpenOffice
-OO_TAG:=cws_srx645_ooo113fix2
+OO_TAG:=OpenOffice_1_1_4
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOfficeJ
-NEO_TAG:=NeoOfficeJ-1_1_Beta
+NEO_TAG:=HEAD
 
 all: build.all
 
@@ -97,10 +96,15 @@ build.oo_checkout:
 	touch "$@"
 
 build.oo_patches: build.oo_checkout \
+	build.oo_berkeleydb_patch \
 	build.oo_dlcompat_patch \
 	build.oo_external_patch \
+	build.oo_sc_patch \
+	build.oo_scp_patch \
 	build.oo_solenv_patch \
-	build.oo_vcl_patch
+	build.oo_ucbhelper_patch \
+	build.oo_vcl_patch \
+	build.oo_xmlhelp_patch
 	touch "$@"
 
 build.oo_odk_patches: build.oo_checkout
@@ -247,7 +251,7 @@ build.package: build.neo_patches build.oo_download_dics build.source_zip
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "LICENSE.html" "README.html" "setup" "spadmin" "program/libdtransX11$${UPD}$${DLLSUFFIX}.dylib" "program/libpsp$${UPD}$${DLLSUFFIX}.dylib" "program/libspa$${UPD}$${DLLSUFFIX}.dylib" "program/instdb.ins" "program/jvmsetup" "program/jvmsetup.bin" "program/pluginapp.bin" "program/setup.bin" "program/setup.log" "program/setofficelang.bin" "program/soffice" "program/sopatchlevel.sh" "program/spadmin" "program/spadmin.bin" "share/kde" "share/psprint" "share/gnome" "share/config/javarc"
 	cd "$(INSTALL_HOME)/package/Contents/program" ; ln -sf "pkgchk.bin" "pkgchk"
 	cd "$(INSTALL_HOME)/package/Contents/program" ; ln -sf "soffice.bin" "soffice"
-	cd "$(INSTALL_HOME)/package/Contents/program" ; sh -e -c 'for i in "libjava_uno" "libdb_java-3.2" "libjpipe" "libjuh" "libjuhx" ; do ln -sf "$${i}.dylib" "$${i}.jnilib" ; done'
+	cd "$(INSTALL_HOME)/package/Contents/program" ; sh -e -c 'for i in "libjava_uno" "libjpipe" "libjuh" "libjuhx" ; do ln -sf "$${i}.dylib" "$${i}.jnilib" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/Library/$(PRODUCT_DIR_NAME)-$(OO_VERSION)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' > "../../out" ; mv -f "../../out" "program/bootstraprc"
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in "share/registry/data/org/openoffice/Setup.xcu" "share/registry/data/org/openoffice/Office/Common.xcu" ; do sed "s#>$(OO_PRODUCT_NAME) $(OO_PRODUCT_VERSION)<#>$(PRODUCT_NAME) $(PRODUCT_VERSION)<#g" "$${i}" | sed "s#>$(OO_PRODUCT_NAME)<#>$(PRODUCT_NAME)<#g" | sed "s#>$(OO_PRODUCT_VERSION)<#>$(PRODUCT_VERSION)<#g" | sed "s#>UNIX<#>MAC<#g" > "../../../out" ; mv -f "../../../out" "$${i}" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.dylib*" -o -name "*.bin"` ; do strip -S -x "$$i" ; done'
@@ -296,7 +300,7 @@ build.patch_package: build.package
 	chmod -Rf u+w,a+r "$(PATCH_INSTALL_HOME)/package"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' "$(PWD)/$(INSTALL_HOME)/package/Contents/program/bootstraprc" | sed 's#ProductPatch=.*$$#ProductPatch=$(PRODUCT_PATCH_VERSION)#' > "program/bootstraprc"
 	cp "$(INSTALL_HOME)/package/Contents/share/registry/data/org/openoffice/Setup.xcu" "$(PATCH_INSTALL_HOME)/package/Contents/share/registry/data/org/openoffice/Setup.xcu"
-	source "$(OO_ENV_JAVA)" ; cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/dtrans/unxmacxp.pro/lib/libdtransjava$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/extensions/unxmacxp.pro/lib/libpl$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/vcl/unxmacxp.pro/lib/libvcl$${UPD}$${DLLSUFFIX}.dylib" "program"
+	source "$(OO_ENV_JAVA)" ; cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/dtrans/unxmacxp.pro/lib/libdtransjava$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/vcl/unxmacxp.pro/lib/libvcl$${UPD}$${DLLSUFFIX}.dylib" "program"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/desktop/unxmacxp.pro/bin/soffice" "program/soffice.bin" ; chmod a+x "program/soffice.bin"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' "$(PWD)/$(BUILD_HOME)/setup2/unxmacxp.pro/misc/setup.sh" | sed 's#$$(OO_VERSION)#$(OO_VERSION)#g' | sed 's#$$(LANGUAGE_NAMES)#'"`cat "$(PWD)/$(INSTALL_HOME)/language_names"`"'#g' | sed 's#$$(PRODUCT_PATCH_DOWNLOAD_URL)#$(PRODUCT_PATCH_DOWNLOAD_URL)#g' | sed 's#$$(PRODUCT_PATCH_CHECK_URL)#$(PRODUCT_PATCH_CHECK_URL)#g' > "program/setup" ; chmod a+x "program/setup"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/Info.plist" "."

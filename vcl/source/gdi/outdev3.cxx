@@ -1372,8 +1372,6 @@ static StringCompare ImplCompareFontDataWithoutSize( const ImplFontData* pEntry1
         return COMPARE_GREATER;
 
     StringCompare eCompare = pEntry1->maName.CompareTo( pEntry2->maName );
-    if ( eCompare == COMPARE_EQUAL )
-        eCompare = pEntry1->maStyleName.CompareTo( pEntry2->maStyleName );
 
     return eCompare;
 }
@@ -1405,135 +1403,139 @@ static StringCompare ImplCompareFontData( const ImplFontData* pEntry1,
 
 void ImplDevFontList::Add( ImplFontData* pNewData )
 {
-    XubString aSearchName = pNewData->maName;
-    ImplGetEnglishSearchFontName( aSearchName );
+    String aMapNames = pNewData->maMapNames;
+    pNewData->maMapNames = String();
 
-    // add font
-    ULONG                   nIndex;
-    ImplDevFontListData*    pFoundData = ImplFind( aSearchName, &nIndex );
-    BOOL                    bInsert = TRUE;
+    bool bKeepNewData = true;
+    xub_StrLen nMapNameIndex = 0;
+    for(;;)
+    {
+        String aSearchName = pNewData->maName;
+        ImplGetEnglishSearchFontName( aSearchName );
 
-    if ( !pFoundData )
-    {
-        pFoundData                  = new ImplDevFontListData;
-        pFoundData->maName          = pNewData->maName;
-        pFoundData->maSearchName    = aSearchName;
-        pFoundData->mpFirst         = pNewData;
-        pFoundData->meFamily        = pNewData->meFamily;
-        pFoundData->mePitch         = pNewData->mePitch;
-        pFoundData->mnTypeFaces     = 0;
-        pFoundData->meMatchWeight   = WEIGHT_DONTKNOW;
-        pFoundData->meMatchWidth    = WIDTH_DONTKNOW;
-        pFoundData->mnMatchType     = 0;
-        pNewData->mpNext            = NULL;
-        Insert( pFoundData, nIndex );
-        bInsert = FALSE;
-    }
-    else
-    {
-        if ( pFoundData->meFamily == FAMILY_DONTKNOW )
-            pFoundData->meFamily = pNewData->meFamily;
-        if ( pFoundData->mePitch == PITCH_DONTKNOW )
-            pFoundData->mePitch = pNewData->mePitch;
-    }
+        // add font
+        ULONG                   nIndex;
+        ImplDevFontListData*    pFoundData = ImplFind( aSearchName, &nIndex );
+        BOOL                    bInsert = TRUE;
 
-    // set match data
-    if ( (pNewData->meType == TYPE_SCALABLE) && (pNewData->mnHeight == 0) )
-        pFoundData->mnTypeFaces |= IMPL_DEVFONT_SCALABLE;
-    if ( pNewData->meCharSet == RTL_TEXTENCODING_SYMBOL )
-        pFoundData->mnTypeFaces |= IMPL_DEVFONT_SYMBOL;
-    else
-        pFoundData->mnTypeFaces |= IMPL_DEVFONT_NONESYMBOL;
-    if ( pNewData->meWeight != WEIGHT_DONTKNOW )
-    {
-        if ( pNewData->meWeight >= WEIGHT_SEMIBOLD )
-            pFoundData->mnTypeFaces |= IMPL_DEVFONT_BOLD;
-        else if ( pNewData->meWeight <= WEIGHT_SEMILIGHT )
-            pFoundData->mnTypeFaces |= IMPL_DEVFONT_LIGHT;
+        if ( !pFoundData )
+        {
+            pFoundData                  = new ImplDevFontListData;
+            pFoundData->maName          = pNewData->maName;
+            pFoundData->maSearchName    = aSearchName;
+            pFoundData->mpFirst         = pNewData;
+            pFoundData->meFamily        = pNewData->meFamily;
+            pFoundData->mePitch         = pNewData->mePitch;
+            pFoundData->mnTypeFaces     = 0;
+            pFoundData->meMatchWeight   = WEIGHT_DONTKNOW;
+            pFoundData->meMatchWidth    = WIDTH_DONTKNOW;
+            pFoundData->mnMatchType     = 0;
+            pNewData->mpNext            = NULL;
+            Insert( pFoundData, nIndex );
+            bInsert = FALSE;
+        }
         else
-            pFoundData->mnTypeFaces |= IMPL_DEVFONT_NORMAL;
-    }
-    if ( pNewData->meItalic == ITALIC_NONE )
-        pFoundData->mnTypeFaces |= IMPL_DEVFONT_NONEITALIC;
-    else if ( (pNewData->meItalic == ITALIC_NORMAL) ||
-              (pNewData->meItalic == ITALIC_OBLIQUE) )
-        pFoundData->mnTypeFaces |= IMPL_DEVFONT_ITALIC;
-
-    // TODO: is it cheaper to calc match data now or later?
-    if( (pFoundData->meMatchWeight == WEIGHT_DONTKNOW)
-    ||  (pFoundData->meMatchWidth  == WIDTH_DONTKNOW)
-    ||  (pFoundData->mnMatchType   == 0) )
-        mbMatchData = FALSE;
-
-    // add map/alias names
-    if ( pNewData->maMapNames.Len() )
-    {
-        String      aName;
-        xub_StrLen  nIndex = 0;
-        do
         {
-            aName = GetFontToken( pNewData->maMapNames, 0, nIndex );
-            ImplGetEnglishSearchFontName( aName );
-            if ( aName != aSearchName )
-            {
-                ImplAddTokenFontName( pFoundData->maMapNames, aName );
-                mbMapNames = TRUE;
-            }
+            if ( pFoundData->meFamily == FAMILY_DONTKNOW )
+                pFoundData->meFamily = pNewData->meFamily;
+            if ( pFoundData->mePitch == PITCH_DONTKNOW )
+                pFoundData->mePitch = pNewData->mePitch;
         }
-        while ( nIndex != STRING_NOTFOUND );
-    }
 
-    if ( bInsert )
-    {
-        // reassign name (sharing saves memory)
-        if ( pNewData->maName == pFoundData->maName )
-            pNewData->maName = pFoundData->maName;
-
-        ImplFontData*   pPrev = NULL;
-        ImplFontData*   pTemp = pFoundData->mpFirst;
-        do
+        // set match data
+        if ( (pNewData->meType == TYPE_SCALABLE) && (pNewData->mnHeight == 0) )
+            pFoundData->mnTypeFaces |= IMPL_DEVFONT_SCALABLE;
+        if ( pNewData->meCharSet == RTL_TEXTENCODING_SYMBOL )
+            pFoundData->mnTypeFaces |= IMPL_DEVFONT_SYMBOL;
+        else
+            pFoundData->mnTypeFaces |= IMPL_DEVFONT_NONESYMBOL;
+        if ( pNewData->meWeight != WEIGHT_DONTKNOW )
         {
-            StringCompare eComp = ImplCompareFontData( pNewData, pTemp );
-            if ( eComp != COMPARE_GREATER )
-            {
-                // prefer device font, else remove duplicate
-                if ( eComp == COMPARE_EQUAL )
-                {
-                    // prefer font with better quality
-                    // else prefer device font
-                    if ( (pNewData->mnQuality > pTemp->mnQuality) ||
-                         ((pNewData->mnQuality == pTemp->mnQuality) &&
-                          (pNewData->mbDevice && !pTemp->mbDevice)) )
-                    {
-                        pNewData->mpNext = pTemp->mpNext;
-                        if ( pPrev )
-                            pPrev->mpNext = pNewData;
-                        else
-                            pFoundData->mpFirst = pNewData;
-                        delete pTemp;
-                    }
-                    else
-                        delete pNewData;
-
-                    bInsert = FALSE;
-                }
-                break;
-            }
-
-            pPrev = pTemp;
-            pTemp = pTemp->mpNext;
+            if ( pNewData->meWeight >= WEIGHT_SEMIBOLD )
+                pFoundData->mnTypeFaces |= IMPL_DEVFONT_BOLD;
+            else if ( pNewData->meWeight <= WEIGHT_SEMILIGHT )
+                pFoundData->mnTypeFaces |= IMPL_DEVFONT_LIGHT;
+            else
+                pFoundData->mnTypeFaces |= IMPL_DEVFONT_NORMAL;
         }
-        while ( pTemp );
+        if ( pNewData->meItalic == ITALIC_NONE )
+            pFoundData->mnTypeFaces |= IMPL_DEVFONT_NONEITALIC;
+        else if ( (pNewData->meItalic == ITALIC_NORMAL) ||
+                  (pNewData->meItalic == ITALIC_OBLIQUE) )
+            pFoundData->mnTypeFaces |= IMPL_DEVFONT_ITALIC;
+
+        // TODO: is it cheaper to calc match data now or later?
+        if( (pFoundData->meMatchWeight == WEIGHT_DONTKNOW)
+        ||  (pFoundData->meMatchWidth  == WIDTH_DONTKNOW)
+        ||  (pFoundData->mnMatchType   == 0) )
+            mbMatchData = FALSE;
 
         if ( bInsert )
         {
-            pNewData->mpNext = pTemp;
-            if ( pPrev )
-                pPrev->mpNext = pNewData;
-            else
-                pFoundData->mpFirst = pNewData;
+            // reassign name (sharing saves memory)
+            if ( pNewData->maName == pFoundData->maName )
+                pNewData->maName = pFoundData->maName;
+
+            ImplFontData*   pPrev = NULL;
+            ImplFontData*   pTemp = pFoundData->mpFirst;
+            do
+            {
+                StringCompare eComp = ImplCompareFontData( pNewData, pTemp );
+                if ( eComp != COMPARE_GREATER )
+                {
+                    // prefer device font, else remove duplicate
+                    if ( eComp == COMPARE_EQUAL )
+                    {
+                        // prefer font with better quality
+                        // else prefer device font
+                        if ( (pNewData->mnQuality > pTemp->mnQuality) ||
+                             ((pNewData->mnQuality == pTemp->mnQuality) &&
+                              (pNewData->mbDevice && !pTemp->mbDevice)) )
+                        {
+                            pNewData->mpNext = pTemp->mpNext;
+                            if ( pPrev )
+                                pPrev->mpNext = pNewData;
+                            else
+                                pFoundData->mpFirst = pNewData;
+                            delete pTemp;
+                        }
+                        else
+                            bKeepNewData = false;
+
+                        bInsert = FALSE;
+                    }
+                    break;
+                }
+
+                pPrev = pTemp;
+                pTemp = pTemp->mpNext;
+            }
+            while ( pTemp );
+
+            if ( bInsert )
+            {
+                pNewData->mpNext = pTemp;
+                if ( pPrev )
+                    pPrev->mpNext = pNewData;
+                else
+                    pFoundData->mpFirst = pNewData;
+            }
         }
+
+        //#i23601# add font name aliases as first class entries
+        if( !aMapNames.Len() )
+            break;
+        aSearchName = GetFontToken( aMapNames, 0, nMapNameIndex );
+        if( !aSearchName.Len() )
+            break;
+        if( bKeepNewData )
+            pNewData = new ImplFontData( *pNewData );
+        bKeepNewData = true;
+        pNewData->maName = aSearchName;
     }
+
+    if( !bKeepNewData )
+        delete pNewData;
 }
 
 // -----------------------------------------------------------------------
@@ -2438,13 +2440,14 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
             if ( (ePitch != PITCH_DONTKNOW) && (ePitch == pCurFontData->mePitch) )
                 nMatch += 60000;
 
-            if ( (eFamily != FAMILY_DONTKNOW) && (eFamily == pCurFontData->meFamily) )
-                nMatch += 30000;
-
             // prefer NORMAL font width
             // TODO: change when the upper layers can tell their preference
             if ( pCurFontData->meWidthType == WIDTH_NORMAL )
                 nMatch += 15000;
+
+            // prefer normal weight font
+            if ( pCurFontData->meWeight == WEIGHT_NORMAL )
+                nMatch += 100;
 
             if ( eWeight != WEIGHT_DONTKNOW )
             {
@@ -2487,7 +2490,7 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
             }
 
             if ( pCurFontData->mbDevice )
-                nMatch += 40;
+                nMatch += 1;
             if ( pCurFontData->meType == TYPE_SCALABLE )
             {
                 if ( nOrientation )
@@ -2505,7 +2508,7 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
                 if ( nHeight == pCurFontData->mnHeight )
                 {
                     nMatch += 20;
-                    if ( nWidth == pCurFontData->mnWidth )
+                    if ( nWidth && nWidth == pCurFontData->mnWidth )
                         nMatch += 10;
                 }
                 else

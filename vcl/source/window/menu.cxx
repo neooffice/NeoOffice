@@ -197,6 +197,7 @@ inline BOOL ImplIsMouseFollow()
     return ( Application::GetSettings().GetMouseSettings().GetFollow() & MOUSE_FOLLOW_MENU ) ? TRUE : FALSE;
 }
 
+
 struct MenuItemData
 {
     USHORT          nId;					// SV Id
@@ -238,7 +239,7 @@ MenuItemData::~MenuItemData()
 {
     if( pAutoSubMenu )
     {
-        *(((PopupMenu*)pAutoSubMenu)->pRefAutoSubMenu) = NULL;
+        ((PopupMenu*)pAutoSubMenu)->pRefAutoSubMenu = NULL;
         delete pAutoSubMenu;
         pAutoSubMenu = NULL;
     }
@@ -1131,6 +1132,7 @@ void Menu::InsertItem( const ResId& rResId, USHORT nPos )
             {
                 PopupMenu* pSubMenu = new PopupMenu( ResId( (RSHEADER_TYPE*)GetClassRes() ) );
                 pData->pAutoSubMenu = pSubMenu;
+
                 // #111060# keep track of this pointer, may be it will be deleted from outside
                 pSubMenu->pRefAutoSubMenu = &pData->pAutoSubMenu;
                 SetPopupMenu( nItemId, pSubMenu );

@@ -806,7 +806,8 @@ bool GenericSalLayout::GetCharWidths( long* pCharWidths ) const
                 nXPosMax = nXPos;
         }
 
-        // rightmost cluster edge is leftmost edge of next cluster
+        // when the current cluster overlaps with the next one assume
+        // rightmost cluster edge is the leftmost edge of next cluster
         if( (i > 0) && (nXPosMax > pG[1].maLinearPos.X()) )
             nXPosMax = pG[1].maLinearPos.X();
 

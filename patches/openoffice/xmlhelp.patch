@@ -1,0 +1,16 @@
+Index: source/cxxhelp/provider/db.cxx
+===================================================================
+RCS file: /cvs/util/xmlhelp/source/cxxhelp/provider/Attic/db.cxx,v
+retrieving revision 1.1.4.1
+diff -u -r1.1.4.1 db.cxx
+--- source/cxxhelp/provider/db.cxx	28 Oct 2004 11:53:10 -0000	1.1.4.1
++++ source/cxxhelp/provider/db.cxx	27 Dec 2004 05:04:29 -0000
+@@ -116,7 +116,7 @@
+ }
+ 
+ 
+-Dbt::Dbt(void *data_arg, u_int32_t size_arg)
++Dbt::Dbt(void *data_arg, size_t size_arg)
+   : m_pDBT((DBT*)rtl_allocateZeroMemory(sizeof(DBT)))
+ {
+   set_data(data_arg);

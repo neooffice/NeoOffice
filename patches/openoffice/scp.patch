@@ -1,0 +1,19 @@
+Index: source/office/files.scp
+===================================================================
+RCS file: /cvs/installation/scp/source/office/Attic/files.scp,v
+retrieving revision 1.369.16.19
+diff -u -r1.369.16.19 files.scp
+--- source/office/files.scp	28 Oct 2004 11:54:26 -0000	1.369.16.19
++++ source/office/files.scp	28 Dec 2004 18:14:56 -0000
+@@ -1037,7 +1037,11 @@
+         Styles          = (PACKED);
+         Dir             = GID_DIR_PROGRAM;
+         #ifdef UNX
++        #ifdef MACOSX
++        Name            = "libdb_java-4.2.jnilib";
++        #else
+         Name            = STRING(CONCAT2(libdb_java-4.2,UNXSUFFIX));
++        #endif
+         #else
+         Name            = "libdb_java42.dll";
+         #endif

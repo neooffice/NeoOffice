@@ -308,7 +308,7 @@ SHL1STDLIBS += -lXinerama
 
 .IF "$(OS)"=="LINUX" || "$(OS)"=="SOLARIS" || "$(OS)"=="FREEBSD"
 # some nas versions need -lXt, too
-SHL1STDLIBS += -lXt
+#we must not link with Xt !!! it requires Xm which is not available on all platforms
 SHL1STDLIBS += -laudio
 .IF "$(OS)"=="SOLARIS"
 # needed by libaudio.a

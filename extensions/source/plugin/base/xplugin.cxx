@@ -52,7 +52,6 @@
 #ifndef _COM_SUN_STAR_LOADER_CANNOTACTIVATEFACTORYEXCEPTION_HPP_
 #include <com/sun/star/loader/CannotActivateFactoryException.hpp>
 #endif
-
 #include <plugin/impl.hxx>
 #include <tools/fsys.hxx>
 #include <ucbhelper/content.hxx>
@@ -60,6 +59,7 @@
 #include <tools/string.hxx>
 #include <vcl/svapp.hxx>
 #include <vos/timer.hxx>
+#include <osl/file.hxx>
 
 #ifdef UNX
 #include <sys/types.h>
@@ -299,9 +299,33 @@ void XPlugin_Impl::freeArgs()
     }
 }
 
+void XPlugin_Impl::prependArg( const char* pName, const char* pValue )
+{
+    const char** pNewNames		= new const char*[m_nArgs+1];
+    const char** pNewValues	= new const char*[m_nArgs+1];
+    
+    pNewNames[0]		= strdup( pName );
+    pNewValues[0]		= strdup( pValue );
+    for( int nIndex = 0; nIndex < m_nArgs; ++nIndex )
+    {
+        pNewNames[nIndex+1]	= m_pArgn[nIndex];
+        pNewValues[nIndex+1]= m_pArgv[nIndex];
+    }
+    // free old arrays
+    delete [] m_pArgn;
+    delete [] m_pArgv;
+    // set new arrays
+    m_pArgn = pNewNames;
+    m_pArgv = pNewValues;
+    // set new number of arguments
+    m_nArgs++;
+#if OSL_DEBUG_LEVEL > 1
+    fprintf( stderr, "inserted %s=%s\n", pNewNames[0], pNewValues[0] );
+#endif
+}
+
 void XPlugin_Impl::handleSpecialArgs()
 {
-    
     // special handling for real audio which needs a lot of parameters
     // or won't function at all
     if( ! m_aDescription.Mimetype.compareToAscii( "audio/x-pn-realaudio-plugin" ) && m_nArgs < 1 )
@@ -322,37 +346,80 @@ void XPlugin_Impl::handleSpecialArgs()
         
         if( aURL.getLength() )
         {
-            Sequence< OUString > aArgNames( 6 );
-            OUString* pNames = aArgNames.getArray();
-            Sequence< OUString > aArgValues( 6 );
-            OUString* pValues = aArgValues.getArray();
-            // SRC
-            pNames[0]		= OUString( RTL_CONSTASCII_USTRINGPARAM( "SRC" ) );
-            pValues[0]		= aURL;
-            // WIDTH
-            pNames[1]		= OUString( RTL_CONSTASCII_USTRINGPARAM( "WIDTH" ) );
-            pValues[1]		= OUString( RTL_CONSTASCII_USTRINGPARAM( "200" ) );
-            // HEIGHT
-            pNames[2]		= OUString( RTL_CONSTASCII_USTRINGPARAM( "HEIGHT" ) );
-            pValues[2]		= OUString( RTL_CONSTASCII_USTRINGPARAM( "200" ) );
-            // CONTROLS
-            pNames[3]		= OUString( RTL_CONSTASCII_USTRINGPARAM( "CONTROLS" ) );
-            pValues[3]		= OUString( RTL_CONSTASCII_USTRINGPARAM( "PlayButton,StopButton,ImageWindow" ) );
-            // AUTOSTART
-            pNames[4]		= OUString( RTL_CONSTASCII_USTRINGPARAM( "AUTOSTART" ) );
-            pValues[4]		= OUString( RTL_CONSTASCII_USTRINGPARAM( "TRUE" ) );
-            // NOJAVA
-            pNames[5]		= OUString( RTL_CONSTASCII_USTRINGPARAM( "NOJAVA" ) );
-            pValues[5]		= OUString( RTL_CONSTASCII_USTRINGPARAM( "TRUE" ) );
+            // set new args, old args need not be freed as there were none set
+            m_nArgs = 6;
+            m_pArgn = new const char*[m_nArgs];
+            m_pArgv = new const char*[m_nArgs];
 
-            // set new args
-            freeArgs();
-            initArgs( aArgNames, aArgValues, m_aPluginMode );
+            // SRC
+            m_pArgn[0]		= strdup( "SRC" );
+            m_pArgv[0]		= strdup( OUStringToOString( aURL, m_aEncoding ).getStr() );
+            // WIDTH
+            m_pArgn[1]		= strdup( "WIDTH" );
+            m_pArgv[1]		= strdup( "200" );
+            // HEIGHT
+            m_pArgn[2]		= strdup( "HEIGHT" );
+            m_pArgv[2]		= strdup( "200" );
+            // CONTROLS
+            m_pArgn[3]		= strdup( "CONTROLS" );
+            m_pArgv[3]		= strdup( "PlayButton,StopButton,ImageWindow" );
+            // AUTOSTART
+            m_pArgn[4]		= strdup( "AUTOSTART" );
+            m_pArgv[4]		= strdup( "TRUE" );
+            // NOJAVA
+            m_pArgn[5]		= strdup( "NOJAVA" );
+            m_pArgv[5]		= strdup( "TRUE" );
         }
     }
     // #69333# special for pdf
     else if( ! m_aDescription.Mimetype.compareToAscii( "application/pdf" ) )
         m_aPluginMode = PluginMode::FULL;
+
+    // see if we have a TYPE tag
+    int nIndex;    
+    for( nIndex = 0; nIndex < m_nArgs; ++nIndex )
+        if( m_pArgn[nIndex][0] == 'T' &&
+            m_pArgn[nIndex][1] == 'Y' &&
+            m_pArgn[nIndex][2] == 'P' &&
+            m_pArgn[nIndex][3] == 'E' &&
+            m_pArgn[nIndex][4] == 0 )
+            break;
+    if( nIndex >= m_nArgs )
+    {
+        // TYPE
+        prependArg( "TYPE", OUStringToOString( m_aDescription.Mimetype, m_aEncoding ).getStr() );
+    }
+
+    // see if we have a SRC tag
+    for( nIndex = 0; nIndex < m_nArgs; ++nIndex )
+        if( m_pArgn[nIndex][0] == 'S' &&
+            m_pArgn[nIndex][1] == 'R' &&
+            m_pArgn[nIndex][2] == 'C' &&
+            m_pArgn[nIndex][3] == 0 )
+            break;
+    if( nIndex >= m_nArgs )
+    {
+        // need a SRC parameter (as all browser set one on the plugin
+        OUString aURL;
+        if( m_xModel.is() )
+        {
+            try
+            {
+                Reference< XPropertySet > xProp( m_xModel, UNO_QUERY );
+                Any aProp = xProp->getPropertyValue( OUString( RTL_CONSTASCII_USTRINGPARAM( "URL" ) ) );
+                aProp >>= aURL;
+            }
+            catch( UnknownPropertyException )
+            {
+            }
+        }
+
+        if( aURL.getLength() )
+        {
+            // SRC
+            prependArg( "SRC", OUStringToOString( aURL, m_aEncoding ).getStr() );
+        }
+    }
 }
 
 void XPlugin_Impl::initInstance( const PluginDescription& rDescription,
@@ -396,10 +463,11 @@ void XPlugin_Impl::modelChanged()
         return;
     }
 
+    OUString aURL = getCreationURL();
     provideNewStream( m_aDescription.Mimetype,
                       Reference< XActiveDataSource >(),
-                      getCreationURL(),
-                      0, 0, sal_False );
+                      aURL,
+                      0, 0, (sal_Bool)(aURL.compareToAscii( "file:", 5 ) == 0) );
     m_nProvidingState = PROVIDING_NONE;
 }
 
@@ -500,7 +568,7 @@ void XPlugin_Impl::loadPlugin()
         NPP_New( (char*)OUStringToOString( m_aDescription.Mimetype,
                                                   m_aEncoding).getStr(),
                  getNPPInstance(),
-                 m_aPluginMode,
+                 m_aPluginMode == PluginMode::FULL ? NP_FULL : NP_EMBED,
                  m_nArgs,
                  (char**)(m_nArgs ? m_pArgn : NULL),
                  (char**)(m_nArgs ? m_pArgv : NULL),
@@ -536,8 +604,8 @@ void XPlugin_Impl::loadPlugin()
 
     m_aNPWindow.clipRect.top        = 0;
     m_aNPWindow.clipRect.left       = 0;
-    m_aNPWindow.clipRect.bottom     = 0;
-    m_aNPWindow.clipRect.right      = 0;
+    m_aNPWindow.clipRect.bottom     = aPosSize.Height;
+    m_aNPWindow.clipRect.right      = aPosSize.Width;
     m_aNPWindow.type = NPWindowTypeWindow;
 
     m_aNPWindow.x       = 0;
@@ -672,6 +740,25 @@ sal_Bool XPlugin_Impl::provideNewStream(const OUString& mimetype,
          }
      }
 
+     // there may be plugins that can use the file length information,
+     // but currently none are known. Since this file opening/seeking/closing
+     // is rather costly, it is #if'ed out. If there are plugins known to
+     // make use of the file length, simply put it in
+#if 0
+    if( isfile && ! length )
+    {
+        osl::File aFile( url );
+        if( aFile.open( OpenFlag_Read ) == FileBase::E_None )
+        {
+            aFile.setPos( Pos_End, 0 );
+            sal_uInt64 nPos = 0;
+            if( aFile.getPos( nPos ) == FileBase::E_None )
+                length = nPos;
+            aFile.close();
+        }
+    }
+#endif
+
      PluginInputStream* pStream = new PluginInputStream( this, aURL.getStr(),
                                                         length, lastmodified );
      Reference< com::sun::star::io::XOutputStream > xNewStream( pStream );
@@ -681,19 +768,25 @@ sal_Bool XPlugin_Impl::provideNewStream(const OUString& mimetype,
 
     uint16 stype = 0;
 
-    // sal_False in the following statement should logically be isfile
-    // but e.g. the acrobat reader plugin does not WANT a file
-    // NP_ASFILE or NP_ASFILEONLY if the new stream is seekable
-    // the reason for this behaviour is unknown
+    // special handling acrobat reader
+    // presenting a seekable stream to it does not seem to work correctly
+    if( aMIME.equals( "application/pdf" ) )
+        isfile = sal_False;
+
 #if OSL_DEBUG_LEVEL > 1
-    fprintf( stderr, "new stream \"%s\" of MIMEType \"%s\"\nfor plugin \"%s\"\n", aURL.getStr(), aMIME.getStr(), getPluginComm()->getLibName().getStr() );
+    fprintf( stderr,
+             "new stream \"%s\" of MIMEType \"%s\"\n"
+             "for plugin \"%s\"\n"
+             "seekable = %s, length = %d\n",
+             aURL.getStr(), aMIME.getStr(), getPluginComm()->getLibName().getStr(),
+             isfile ? "true" : "false", length );
 
 #endif
-    if( ! m_pPluginComm->NPP_NewStream( &m_aInstance, (char*)aMIME.getStr(),
-                                        pStream->getStream(), sal_False,
+    if( ! m_pPluginComm->NPP_NewStream( &m_aInstance,
+                                        (char*)aMIME.getStr(),
+                                        pStream->getStream(), isfile,
                                         &stype ) )
     {
-        getPluginComm()->NPP_SetWindow( getNPPInstance(), &m_aNPWindow );
 #if OSL_DEBUG_LEVEL > 1
         char* pType;
         switch( stype )
@@ -794,10 +887,14 @@ void XPlugin_Impl::setPosSize( sal_Int32 nX_, sal_Int32 nY_, sal_Int32 nWidth_, 
 
     PluginControl_Impl::setPosSize(nX_, nY_, nWidth_, nHeight_, nFlags);
 
-    m_aNPWindow.x       			= nX_;
-    m_aNPWindow.y       			= nY_;
+    m_aNPWindow.x       			= 0;
+    m_aNPWindow.y       			= 0;
     m_aNPWindow.width   			= nWidth_;
     m_aNPWindow.height  			= nHeight_;
+    m_aNPWindow.clipRect.top		= 0;
+    m_aNPWindow.clipRect.left		= 0;
+    m_aNPWindow.clipRect.right		= nWidth_;
+    m_aNPWindow.clipRect.bottom		= nHeight_;
     
     if(getPluginComm())
         getPluginComm()->NPP_SetWindow( getNPPInstance(), &m_aNPWindow );
@@ -866,9 +963,8 @@ PluginStream::~PluginStream()
         m_pPlugin->getPluginComm()->NPP_DestroyStream( m_pPlugin->getNPPInstance(),
                                                        &m_aNPStream, NPRES_DONE );
         m_pPlugin->checkListeners( m_aNPStream.url );
-        m_pPlugin->getPluginComm()->
-            NPP_SetWindow( m_pPlugin->getNPPInstance(),
-                           m_pPlugin->getNPWindow());
+        m_pPlugin->getPluginComm()->NPP_SetWindow( m_pPlugin->getNPPInstance(),
+                                                   m_pPlugin->getNPWindow());
     }
     ::free( (void*)m_aNPStream.url );
 }
@@ -906,7 +1002,10 @@ PluginInputStream::~PluginInputStream()
 {
     Guard< Mutex > aGuard( m_pPlugin->getMutex() );
 
+    m_pPlugin->getInputStreams().remove( this );
+
     String aFile( m_aFileStream.GetFileName() );
+
     m_aFileStream.Close();
     if( m_pPlugin )
     {
@@ -923,7 +1022,8 @@ PluginInputStream::~PluginInputStream()
                                       &m_aNPStream,
                                       aFileName.GetBuffer() );
             }
-            m_pPlugin->getPluginComm()->NPP_SetWindow( m_pPlugin->getNPPInstance(), m_pPlugin->getNPWindow());
+            m_pPlugin->getPluginComm()->NPP_SetWindow( m_pPlugin->getNPPInstance(),
+                                                       m_pPlugin->getNPWindow());
             m_pPlugin->getInputStreams().remove( this );
         }
         else
@@ -965,7 +1065,7 @@ void PluginInputStream::load()
     }
 }
 
-void PluginInputStream::setMode( sal_uInt32 nMode )
+void PluginInputStream::setMode( sal_Int32 nMode )
 {
     Guard< Mutex > aGuard( m_pPlugin->getMutex() );
 
@@ -983,38 +1083,40 @@ void PluginInputStream::writeBytes( const Sequence<sal_Int8>& Buffer ) throw()
 {
     Guard< Mutex > aGuard( m_pPlugin->getMutex() );
 
-    if( m_nMode == -1 || !m_pPlugin->getPluginComm() )
-        return;
-
     m_aFileStream.Seek( STREAM_SEEK_TO_END );
     m_aFileStream.Write( Buffer.getConstArray(), Buffer.getLength() );
 
+    if( m_nMode == NP_SEEK )
+        // hold reference, streem gets destroyed in NPN_DestroyStream
+        m_xSelf = this;
+
+    if( m_nMode == -1 || !m_pPlugin->getPluginComm() )
+        return;
+
     UINT32 nPos = m_aFileStream.Tell();
     UINT32 nBytes = 0;
-    while( m_nMode != NP_SEEK &&
-           m_nMode != NP_ASFILEONLY &&
+    while( m_nMode != NP_ASFILEONLY &&
            m_nWritePos < nPos &&
            (nBytes = m_pPlugin->getPluginComm()-> NPP_WriteReady(
                m_pPlugin->getNPPInstance(), &m_aNPStream )) > 0 )
     {
-        nBytes = nBytes > nPos - m_nWritePos ? nPos - m_nWritePos : nBytes;
+        nBytes = (nBytes > nPos - m_nWritePos) ? nPos - m_nWritePos : nBytes;
 
         char* pBuffer = new char[ nBytes ];
         m_aFileStream.Seek( m_nWritePos );
         nBytes = m_aFileStream.Read( pBuffer, nBytes );
 
-        UINT32 nBytesRead = 0;
+        int32 nBytesRead = 0;
         try
         {
             nBytesRead = m_pPlugin->getPluginComm()->NPP_Write(
                 m_pPlugin->getNPPInstance(), &m_aNPStream, m_nWritePos, nBytes, pBuffer );
-            delete [] pBuffer;
         }
         catch( ... )
         {
-            delete [] pBuffer;
-            return;
+            nBytesRead = 0;
         }
+        delete [] pBuffer;
 
         if( nBytesRead < 0 )
         {
@@ -1024,9 +1126,6 @@ void PluginInputStream::writeBytes( const Sequence<sal_Int8>& Buffer ) throw()
 
         m_nWritePos += nBytesRead;
     }
-
-    m_pPlugin->getPluginComm()->NPP_SetWindow( m_pPlugin->getNPPInstance(),
-                                               m_pPlugin->getNPWindow() );
 }
 
 void PluginInputStream::closeOutput() throw()
