@@ -36,7 +36,12 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#ifndef _DTRANS_JAVA_DNDCONTEXT_HXX
 #include <java_dndcontext.hxx>
+#endif
+#ifndef _COM_SUN_STAR_DATATRANSFER_DND_DNDCONSTANTS_HPP_
+#include <com/sun/star/datatransfer/dnd/DNDConstants.hpp>
+#endif
 
 using namespace com::sun::star::datatransfer::dnd;
 using namespace cppu;
@@ -100,8 +105,9 @@ void SAL_CALL DragSourceContext::transferablesFlavorsChanged() throw()
 
 // ========================================================================
 
-DropTargetDropContext::DropTargetDropContext() :
+DropTargetDropContext::DropTargetDropContext( sal_Int8 nAction ) :
 	WeakImplHelper1< XDropTargetDropContext >(),
+	mnAction( nAction ),
 	mbSuccess( false )
 {
 #ifdef DEBUG
@@ -125,6 +131,13 @@ void SAL_CALL DropTargetDropContext::acceptDrop( sal_Int8 dragOperation ) throw(
 #ifdef DEBUG
 	fprintf( stderr, "DropTargetDropContext::acceptDrop not implemented\n" );
 #endif
+
+	if ( dragOperation & DNDConstants::ACTION_MOVE )
+		mnAction = DNDConstants::ACTION_MOVE;
+	else if ( dragOperation & DNDConstants::ACTION_COPY )
+		mnAction = DNDConstants::ACTION_COPY;
+	else if ( dragOperation & DNDConstants::ACTION_LINK )
+		mnAction = DNDConstants::ACTION_LINK;
 }
 
 // ------------------------------------------------------------------------
@@ -156,10 +169,18 @@ bool DropTargetDropContext::getDropComplete()
 	return mbSuccess;
 }
 
+// ------------------------------------------------------------------------
+
+sal_Int8 DropTargetDropContext::getDropAction()
+{
+	return mnAction;
+}
+
 // ========================================================================
 
-DropTargetDragContext::DropTargetDragContext() :
-	WeakImplHelper1< XDropTargetDragContext >()
+DropTargetDragContext::DropTargetDragContext( sal_Int8 nAction ) :
+	WeakImplHelper1< XDropTargetDragContext >(),
+	mnAction( nAction )
 {
 #ifdef DEBUG
 	fprintf( stderr, "DropTargetDragContext::DropTargetDragContext not implemented\n" );
@@ -179,6 +200,13 @@ void SAL_CALL DropTargetDragContext::acceptDrag( sal_Int8 dragOperation ) throw(
 #ifdef DEBUG
 	fprintf( stderr, "DropTargetDragContext::acceptDrag not implemented\n" );
 #endif
+
+	if ( dragOperation & DNDConstants::ACTION_MOVE )
+		mnAction = DNDConstants::ACTION_MOVE;
+	else if ( dragOperation & DNDConstants::ACTION_COPY )
+		mnAction = DNDConstants::ACTION_COPY;
+	else if ( dragOperation & DNDConstants::ACTION_LINK )
+		mnAction = DNDConstants::ACTION_LINK;
 }
 
 // ------------------------------------------------------------------------
@@ -188,4 +216,11 @@ void SAL_CALL DropTargetDragContext::rejectDrag() throw()
 #ifdef DEBUG
 	fprintf( stderr, "DropTargetDragContext::rejectDrag not implemented\n" );
 #endif
+}
+
+// ------------------------------------------------------------------------
+
+sal_Int8 DropTargetDragContext::getDragAction()
+{
+	return mnAction;
 }
