@@ -241,15 +241,9 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	}
 
 	// Fix bug 449 by turning off Unicode composition
-	ATSUFontFeatureType aTypes[3];
-	ATSUFontFeatureSelector aSelectors[3];
-	aTypes[0] = kUnicodeDecompositionType;
-	aTypes[1] = kUnicodeDecompositionType;
-	aTypes[2] = kUnicodeDecompositionType;
-	aSelectors[0] = kCanonicalCompositionOffSelector;
-	aSelectors[1] = kCompatibilityCompositionOffSelector;
-	aSelectors[2] = kTranscodingCompositionOffSelector;
-	if ( ATSUSetFontFeatures( maFontStyle, 3, aTypes, aSelectors ) != noErr )
+	ATSUFontFeatureType nType = kDiacriticsType;
+	ATSUFontFeatureSelector nSelector = kDecomposeDiacriticsSelector;
+	if ( ATSUSetFontFeatures( maFontStyle, 1, &nType, &nSelector ) != noErr )
 	{
 		Destroy();
 		return;
@@ -692,8 +686,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				nGlyph |= GetVerticalFlags( nChar );
 
 			// Mark whitespace glyphs
-			if ( mpLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID == 0xffff || IsSpacingGlyph( nChar | GF_ISCHAR ) || mpLayoutData->mpGlyphInfoArray->glyphs[ i ].layoutFlags & kATSGlyphInfoTerminatorGlyph )
+			if ( IsSpacingGlyph( nChar | GF_ISCHAR ) || mpLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID == 0xffff || mpLayoutData->mpGlyphInfoArray->glyphs[ i ].layoutFlags & kATSGlyphInfoTerminatorGlyph )
 				nGlyph = 0x0020 | GF_ISCHAR;
+			else if ( bFirstGlyph && ( nChar >= 0x0300 && nChar < 0x0370 ) )
+				aPos.X() -= nCharWidth;
 
 			int nGlyphFlags = bFirstGlyph ? 0 : GlyphItem::IS_IN_CLUSTER;
 			if ( bPosRTL )
@@ -701,12 +697,19 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 			AppendGlyph( GlyphItem( nCharPos, nGlyph, aPos, nGlyphFlags, nCharWidth ) );
 
-			aPos.X() += nCharWidth;
-			bFirstGlyph = false;
+			if ( bFirstGlyph )
+			{
+				aPos.X() += nCharWidth;
+				nCharWidth = 0;
+				bFirstGlyph = false;
+			}
 		}
 
 		if ( bFirstGlyph )
-			AppendGlyph( GlyphItem( nCharPos, 0x0020 | GF_ISCHAR, aPos, bPosRTL ? GlyphItem::IS_RTL_GLYPH : 0, 0 ) );
+		{
+			AppendGlyph( GlyphItem( nCharPos, 0x0020 | GF_ISCHAR, aPos, bPosRTL ? GlyphItem::IS_RTL_GLYPH : 0, nCharWidth ) );
+			aPos.X() += nCharWidth;
+		}
 	}
 
 	return ( nCharPos >= 0 );
