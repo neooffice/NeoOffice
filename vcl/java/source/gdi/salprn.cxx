@@ -40,9 +40,6 @@
 #ifndef _SV_SALPRN_HXX
 #include <salprn.hxx>
 #endif
-#ifndef _SV_SALVD_HXX
-#include <salvd.hxx>
-#endif
 #ifndef _SV_SALPTYPE_HXX
 #include <salptype.hxx>
 #endif
@@ -71,18 +68,26 @@ SalInfoPrinter::~SalInfoPrinter()
 
 SalGraphics* SalInfoPrinter::GetGraphics()
 {
-	if ( maPrinterData.mpVirDev )
-		return maPrinterData.mpVirDev->GetGraphics();
-	else
+	if ( maPrinterData.mbGraphics )
 		return NULL;
+
+	maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics = com_sun_star_vcl_VCLPrintJob::getGraphics();
+	maPrinterData.mbGraphics = TRUE;
+
+	return maPrinterData.mpGraphics;
 }
 
 // -----------------------------------------------------------------------
 
 void SalInfoPrinter::ReleaseGraphics( SalGraphics* pGraphics )
 {
-	if ( maPrinterData.mpVirDev )
-		maPrinterData.mpVirDev->ReleaseGraphics( pGraphics );
+	if ( pGraphics != maPrinterData.mpGraphics )
+		return;
+
+	if ( maPrinterData.mpGraphics && maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics )
+		delete maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics;
+	maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics = NULL;
+	maPrinterData.mbGraphics = FALSE;
 }
 
 // -----------------------------------------------------------------------
@@ -279,6 +284,7 @@ SalPrinterData::~SalPrinterData()
 {
 	if ( mpGraphics )
 		delete mpGraphics;
+
 	if ( mpVCLPrintJob )
 	{
 		mpVCLPrintJob->dispose();
@@ -290,11 +296,14 @@ SalPrinterData::~SalPrinterData()
 
 SalInfoPrinterData::SalInfoPrinterData()
 {
-	mpVirDev = NULL;
+	mpGraphics = new SalGraphics();
+	mbGraphics = FALSE;
 }
 
 // -----------------------------------------------------------------------
 
 SalInfoPrinterData::~SalInfoPrinterData()
 {
+	if ( mpGraphics )
+		delete mpGraphics;
 }

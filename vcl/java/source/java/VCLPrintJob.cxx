@@ -53,7 +53,32 @@ using namespace vos;
 jclass com_sun_star_vcl_VCLPrintJob::theClass = NULL;
 
 // ----------------------------------------------------------------------------
-  
+
+com_sun_star_vcl_VCLGraphics *com_sun_star_vcl_VCLPrintJob::getGraphics()
+{
+	static jmethodID mID = NULL;
+	com_sun_star_vcl_VCLGraphics *out = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Lcom/sun/star/vcl/VCLGraphics;";
+			mID = t.pEnv->GetStaticMethodID( getMyClass(), "getGraphics", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jobject tempObj = t.pEnv->CallStaticObjectMethod( getMyClass(), mID );
+			if ( tempObj )
+				out = new com_sun_star_vcl_VCLGraphics( tempObj );
+		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
 const Rectangle com_sun_star_vcl_VCLPrintJob::getImageableBounds()
 { 
 	static jmethodID mID = NULL;

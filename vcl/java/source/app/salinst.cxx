@@ -475,12 +475,6 @@ SalInfoPrinter* SalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
 {
 	// Create a dummy printer configuration for our dummy printer
 	SalInfoPrinter *pPrinter = new SalInfoPrinter();
-	pPrinter->maPrinterData.mpVirDev = CreateVirtualDevice( NULL, 0, 0, 0 );
-	if ( !pPrinter->maPrinterData.mpVirDev )
-	{
-		delete pPrinter;
-		return NULL;
-	}
 
 	// Populate the job setup with default values
 	pSetupData->mnSystem = JOBSETUP_SYSTEM_JAVA;
@@ -502,7 +496,6 @@ SalInfoPrinter* SalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
 
 void SalInstance::DestroyInfoPrinter( SalInfoPrinter* pPrinter )
 {
-	DestroyVirtualDevice( pPrinter->maPrinterData.mpVirDev );
 	delete pPrinter;
 }
 

@@ -109,25 +109,6 @@ void com_sun_star_vcl_VCLGraphics::flushAll()
 
 // ----------------------------------------------------------------------------
 
-long com_sun_star_vcl_VCLGraphics::getScreenResolution()
-{
-	static jmethodID mID = NULL;
-	long out = 0;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()J";
-			mID = t.pEnv->GetStaticMethodID( getMyClass(), "getScreenResolution", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-			out = (long)t.pEnv->CallStaticLongMethod( getMyClass(), mID );
-	}
-	return out;
-}
-
 void com_sun_star_vcl_VCLGraphics::beginSetClipRegion()
 {
 	static jmethodID mID = NULL;
@@ -514,6 +495,48 @@ SalColor com_sun_star_vcl_VCLGraphics::getPixel( long _par0, long _par1 )
 			args[1].i = jint( _par1 );
 			out = (SalColor)t.pEnv->CallNonvirtualIntMethodA( object, getMyClass(), mID, args );
 		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+long com_sun_star_vcl_VCLGraphics::getResolution()
+{
+	static jmethodID mID = NULL;
+	long out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getResolution", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+long com_sun_star_vcl_VCLGraphics::getScreenFontResolution()
+{
+	static jmethodID mID = NULL;
+	long out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getScreenFontResolution", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
 }

@@ -63,7 +63,7 @@ SalGraphics::~SalGraphics()
 
 void SalGraphics::GetResolution( long& rDPIX, long& rDPIY )
 {
-	long nDPI = com_sun_star_vcl_VCLGraphics::getScreenResolution();
+	long nDPI = maGraphicsData.mpVCLGraphics->getResolution();
 	rDPIX = nDPI;
 	rDPIY = nDPI;
 }
@@ -72,7 +72,7 @@ void SalGraphics::GetResolution( long& rDPIX, long& rDPIY )
 
 void SalGraphics::GetScreenFontResolution( long& rDPIX, long& rDPIY )
 {
-	long nDPI = com_sun_star_vcl_VCLGraphics::getScreenResolution();
+	long nDPI = maGraphicsData.mpVCLGraphics->getScreenFontResolution();
 	rDPIX = nDPI;
 	rDPIY = nDPI;
 }

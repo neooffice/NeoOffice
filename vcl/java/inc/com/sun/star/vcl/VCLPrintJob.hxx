@@ -59,6 +59,7 @@ protected:
 	static jclass		theClass;
 
 public:
+	static com_sun_star_vcl_VCLGraphics*	getGraphics();
 	static const Rectangle	getImageableBounds();
 	static jclass		getMyClass();
 	static Orientation	getOrientation();

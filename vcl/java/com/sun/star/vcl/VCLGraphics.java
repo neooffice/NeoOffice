@@ -57,7 +57,6 @@ import java.awt.geom.Area;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.ImageObserver;
-import java.awt.print.PageFormat;
 import java.util.LinkedList;
 
 /**
@@ -99,6 +98,11 @@ public final class VCLGraphics implements ImageObserver {
 	private static VCLImage image50 = null;
 
 	/**
+	 * The cached screen resolution.
+	 */
+	private static int screenResolution = 0;
+
+	/**
 	 * Emits an audio beep.
 	 */
 	public static void beep() {
@@ -118,17 +122,6 @@ public final class VCLGraphics implements ImageObserver {
 			if (g.frame != null && g.update != null)
 				g.flush();
 		}
-
-	}
-
-	/**
-	 * Get the screen resolution.
-	 *
-	 * @return the screen resolution in dots per inch
-	 */
-	public static long getScreenResolution() {
-
-		return (long)Toolkit.getDefaultToolkit().getScreenResolution();
 
 	}
 
@@ -162,10 +155,11 @@ public final class VCLGraphics implements ImageObserver {
 	}
 
 	/**
-	 * Initialize the image50 image.
+	 * Initialize static data.
 	 */
 	static {
 
+		// Create the image50 image
 		VCLImage textureImage = new VCLImage(2, 2, 1);
 		int[] textureData = textureImage.getData();
 		textureData[0] = 0xff000000;
@@ -173,6 +167,9 @@ public final class VCLGraphics implements ImageObserver {
 		textureData[2] = 0xffffffff;
 		textureData[3] = 0xff000000;
 		image50 = textureImage;
+
+		// Set the screen resolution
+		screenResolution = Toolkit.getDefaultToolkit().getScreenResolution();
 
 	}
 
@@ -197,14 +194,24 @@ public final class VCLGraphics implements ImageObserver {
 	private VCLImage image = null;
 
 	/**
-	 * The page format.
+	 * The bounds of the graphics context.
 	 */
-	private PageFormat pageFormat = null;
+	private Rectangle pageBounds = null;
 
 	/**
 	 * The panel's graphics context.
 	 */
 	private Graphics2D panelGraphics = null;
+
+	/**
+	 * The cached graphics device resolution.
+	 */
+	private int resolution = 0;
+
+	/**
+	 * The cached font resolution.
+	 */
+	private int screenFontResolution = 0;
 
 	/**
 	 * The cached update area.
@@ -243,6 +250,8 @@ public final class VCLGraphics implements ImageObserver {
 		graphics = image.getImage().createGraphics();
 		VCLGraphics.setDefaultRenderingAttributes(graphics);
 		bitCount = image.getBitCount();
+		resolution = VCLGraphics.screenResolution;
+		screenFontResolution = VCLGraphics.screenResolution;
 
 		synchronized (graphicsList) {
 			graphicsList.add(this);
@@ -262,6 +271,8 @@ public final class VCLGraphics implements ImageObserver {
 		graphics = image.getImage().createGraphics();
 		VCLGraphics.setDefaultRenderingAttributes(graphics);
 		bitCount = image.getBitCount();
+		resolution = VCLGraphics.screenResolution;
+		screenFontResolution = VCLGraphics.screenResolution;
 
 	}
 
@@ -270,12 +281,15 @@ public final class VCLGraphics implements ImageObserver {
 	 * <code>Graphics2D</code> instance.
 	 *
 	 * @param g the <code>Graphics2D</code> instance
-	 * @param p the <code>PageFormat</code> instance
+	 * @param r the resolution in pixels per inch
+	 * @param b the page bounds in pixels
 	 */
-	VCLGraphics(Graphics2D g, PageFormat p) {
+	VCLGraphics(Graphics2D g, int r, Rectangle b) {
 
 		graphics = g;
-		pageFormat = p;
+		resolution = r;
+		screenFontResolution = VCLGraphics.screenResolution;
+		pageBounds = b;
 
 	}
 
@@ -330,6 +344,9 @@ public final class VCLGraphics implements ImageObserver {
 			image.dispose();
 		image = null;
 		frame = null;
+		pageBounds = null;
+		resolution = 0;
+		screenFontResolution = 0;
 		update = null;
 		userClip = null;
 
@@ -384,7 +401,7 @@ public final class VCLGraphics implements ImageObserver {
 				// Mac OS X will render only PDF 1.3 (which is not supported by
 				// the Mac OS X Preview application) if we draw images that are
 				// smaller than the page
-				VCLImage pageImage = new VCLImage((int)pageFormat.getWidth() + 1, (int)pageFormat.getHeight() + 1, bmp.getBitCount());
+				VCLImage pageImage = new VCLImage(pageBounds.width + 1, pageBounds.height + 1, bmp.getBitCount());
 				pageImage.getGraphics().drawImage(bmpImage, destX, destY, destWidth, destHeight, 0, 0, srcWidth, srcHeight);
 				drawImage(pageImage, 0, 0, pageImage.getWidth(), pageImage.getHeight(), 0, 0, pageImage.getWidth(), pageImage.getHeight());
 				pageImage.dispose();
@@ -462,7 +479,8 @@ public final class VCLGraphics implements ImageObserver {
 				// Mac OS X will render only PDF 1.3 (which is not supported by
 				// the Mac OS X Preview application) if we draw images that are
 				// smaller than the page
-				VCLImage pageImage = new VCLImage((int)pageFormat.getWidth() + 1, (int)pageFormat.getHeight() + 1, bmp.getBitCount());
+				Rectangle bounds = graphics.getDeviceConfiguration().getBounds();
+				VCLImage pageImage = new VCLImage(pageBounds.width + 1, pageBounds.height + 1, bmp.getBitCount());
 				pageImage.getGraphics().drawImage(mergedImage, destX, destY, destWidth, destHeight, 0, 0, srcWidth, srcHeight);
 				drawImage(pageImage, 0, 0, pageImage.getWidth(), pageImage.getHeight(), 0, 0, pageImage.getWidth(), pageImage.getHeight());
 				pageImage.dispose();
@@ -1002,6 +1020,18 @@ public final class VCLGraphics implements ImageObserver {
 	VCLImage getImage() {
 
 		return image;
+
+	}
+
+	/**
+	 * Returns the resolution of the underlying graphics device.
+	 *
+	 * @return the resolution of the underlying graphics device.
+	 */
+	public int getResolution() {
+
+		System.out.println("Resolution: " + resolution);
+		return resolution;
 
 	}
 

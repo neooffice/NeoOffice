@@ -57,7 +57,6 @@ public:
 	static void			beep();
 	static void			flushAll();
 	static jclass		getMyClass();
-	static long			getScreenResolution();
 
 						com_sun_star_vcl_VCLGraphics( jobject myObj ) : java_lang_Object( myObj ) {};
 	virtual				~com_sun_star_vcl_VCLGraphics() {};
@@ -76,6 +75,8 @@ public:
 	void				endSetClipRegion();
 	USHORT				getBitCount();
 	SalColor			getPixel( long _par0, long _par1 );
+	long				getResolution();
+	long				getScreenFontResolution();
 	void				invert( long _par0, long _par1, long _par2, long _par3, SalInvert _par4 );
 	void				invert( ULONG _par0, const long *_par1, const long *_par2, SalInvert _par3 );
 	void				resetClipRegion();

@@ -46,8 +46,6 @@
 #include <com/sun/star/vcl/VCLPrintJob.hxx>
 #endif
 
-class SalVirtualDevice;
-
 // ----------------------
 // - SalInfoPrinterData -
 // ----------------------
@@ -60,7 +58,8 @@ class SalInfoPrinterData
 					SalInfoPrinterData();
 					~SalInfoPrinterData();
 
-	SalVirtualDevice*	mpVirDev;
+	SalGraphics*	mpGraphics;
+	BOOL			mbGraphics;
 };
 
 // ------------------

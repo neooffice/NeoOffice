@@ -40,6 +40,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
 import java.awt.print.PageFormat;
 import java.awt.print.Paper;
 import java.awt.print.Printable;
@@ -65,19 +66,40 @@ public final class VCLPrintJob extends Thread implements Printable {
 	public final static int ORIENTATION_LANDSCAPE = 0x1; 
 
 	/**
+	 * Cached native graphics.
+	 */
+	private static Graphics2D graphics = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB_PRE).createGraphics();
+
+	/**
 	 * The page format.
 	 */
 	private static PageFormat pageFormat = null;
 
 	/**
-	 * Get the imageable bounds of the page in 72 dpi. Conversion to the
-	 * real resolution is done in the <code>VCLGraphics</code> class.
+	 * The page resolution.
+	 */
+	private static int pageResolution = 254;
+
+	/**
+	 * Creates a graphics context for this component.
 	 *
-	 * @return the imageable bounds of the page using 72 dpi
+	 * @return a graphics context for this component
+	 */
+	public synchronized static VCLGraphics getGraphics() {
+
+		return new VCLGraphics(graphics, pageResolution, new Rectangle(0, 0, (int)(pageFormat.getWidth() * pageResolution / 72), (int)(pageFormat.getHeight() * pageResolution / 72)));
+
+	}
+
+	/**
+	/**
+	 * Get the imageable bounds of the page in pixels.
+	 *
+	 * @return the imageable bounds of the page in pixels
 	 */
 	public synchronized static Rectangle getImageableBounds() {
 
-		return new Rectangle((int)pageFormat.getImageableX(), (int)pageFormat.getImageableY(), (int)pageFormat.getImageableWidth(), (int)pageFormat.getImageableHeight());
+		return new Rectangle((int)(pageFormat.getImageableX() * pageResolution / 72), (int)(pageFormat.getImageableY() * pageResolution / 72), (int)(pageFormat.getImageableWidth() * pageResolution / 72), (int)(pageFormat.getImageableHeight() * pageResolution / 72));
 
 	}
 
@@ -96,14 +118,13 @@ public final class VCLPrintJob extends Thread implements Printable {
 	}
 
 	/**
-	 * Get the page size using a resolution of 72 dpi. Conversion
-	 * to the real resolution is done in the <code>VCLGraphics</code> class.
+	 * Get the page size in pixels.
 	 *
-	 * @return the page size using a resolution of 72 dpi
+	 * @return the page size in pixels
 	 */
 	public synchronized static Dimension getPageSize() {
 
-		return new Dimension((int)pageFormat.getWidth(), (int)pageFormat.getHeight());
+		return new Dimension((int)(pageFormat.getWidth() * pageResolution / 72), (int)(pageFormat.getHeight() * pageResolution / 72));
 
 	}
 
@@ -217,7 +238,8 @@ public final class VCLPrintJob extends Thread implements Printable {
 		currentGraphics = null;
 		currentJobPage = -1;
 		currentPage = 0;
-		if (graphicsInfo != null) {
+		if (graphicsInfo != null)
+		{
 			graphicsInfo.graphics = null;
 			graphicsInfo.pageFormat = null;
 		}
@@ -293,21 +315,24 @@ public final class VCLPrintJob extends Thread implements Printable {
 
 		Graphics2D graphics = (Graphics2D)g;
 
-		// Normalize graphics to 72 dpi
+		// Normalize to device resolution
 		graphics.transform(graphics.getDeviceConfiguration().getNormalizingTransform());
 
 		// Set the origin to the origin of the printable area
-		graphics.translate((int)pageFormat.getImageableX(), (int)pageFormat.getImageableY());
+		Rectangle bounds = VCLPrintJob.getImageableBounds();
+		graphics.translate((int)f.getImageableX(), (int)f.getImageableY());
+
+		graphics.scale((double)72 / pageResolution, (double)72 / pageResolution);
 
 		graphicsInfo.graphics = graphics;
-		graphicsInfo.pageFormat = pageFormat;
+		graphicsInfo.pageFormat = f;
 
 		// Wait until painting is finished
 		try {
 			graphicsInfo.wait();
 		}
 		catch (Throwable t) {}
-	
+
 		if (job.isCancelled())
 			throw new PrinterException();
 		else if (endJob)
@@ -333,11 +358,11 @@ public final class VCLPrintJob extends Thread implements Printable {
 			catch (Throwable t) {}
 			printThreadFinished = true;
 		}
-		
+
 	}
 
 	/**
-	 * Return the status of th print job.
+	 * Return the status of the print job.
 	 *
 	 * @return <code>true</code> if a print job has ended or aborted or
 	 *  <code>false</code> if the print job is still running
@@ -395,7 +420,7 @@ public final class VCLPrintJob extends Thread implements Printable {
 				currentGraphics = null;
 			}
 			else {
-				currentGraphics = new VCLGraphics(graphicsInfo.graphics, graphicsInfo.pageFormat);
+				currentGraphics = new VCLGraphics(graphicsInfo.graphics, pageResolution, new Rectangle(0, 0, (int)(graphicsInfo.pageFormat.getWidth() * pageResolution / 72), (int)(graphicsInfo.pageFormat.getHeight() * pageResolution / 72)));
 				graphicsInfo.graphics = null;
 				graphicsInfo.pageFormat = null;
 			}
