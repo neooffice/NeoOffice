@@ -317,11 +317,25 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 	EventClass nClass = GetEventClass( aEvent );
 	if ( nClass == kEventClassAppleEvent )
 	{
-		// We need to block the VCL event loop while process Apple Events
 		SalInstance *pSalInstance = GetSalData()->mpFirstInstance;
+
+		// Unlock the Carbon lock
+		VCLThreadAttach t;
+		if ( t.pEnv )
+			Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
+
+		// Block the VCL event loop while processing Apple Events
 		pSalInstance->AcquireYieldMutex( 1 );
+
+		// Relock the Carbon lock
+		if ( t.pEnv )
+			Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
+
 		OSStatus nErr = CallNextEventHandler( aNextHandler, aEvent );
+
+		// Unblock the VCL event loop
 		pSalInstance->ReleaseYieldMutex();
+
 		return nErr;
 	}
 	else if ( nClass == kEventClassMenu )
