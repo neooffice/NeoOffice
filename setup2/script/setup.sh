@@ -16,7 +16,7 @@
 #
 #   GNU General Public License Version 2.1
 #   =============================================
-#   Copyright 2003 by Patrick Luby (patrick.luby@planamesa.com
+#   Copyright 2003 by Patrick Luby (patrick.luby@planamesa.com)
 #
 #   This library is free software; you can redistribute it and/or
 #   modify it under the terms of the GNU General Public
@@ -231,5 +231,55 @@ if [ "$os" = "Darwin" ] ; then
 fi
 
 sync
+
+checkforpatches()
+{
+    soffice=`dirname "$0"`/soffice.bin
+    if [ ! -x "$soffice" ] ; then
+        return 1
+    fi
+
+    patchfileurl="$(PRODUCT_PATCH_CHECK_URL)"
+    patchdownloadurl="$(PRODUCT_PATCH_DOWNLOAD_URL)"
+    lastcheckfile="$userinstall/.lastpatchcheck"
+    status=
+    if [ -r "$lastcheckfile" ] ; then
+        proxies=`scutil << !
+open
+get "State:/Network/Global/Proxies"
+d.show
+quit
+!`
+        httpproxy=
+        if echo "$proxies" | grep 'HTTPEnable : 1' ; then
+            httpproxy=`echo "$proxies" | grep 'HTTPProxy :' | awk '{ print $NF }'`
+            httpport=`echo "$proxies" | grep 'HTTPPort :' | awk '{ print $NF }'`
+            if [ ! -z "$httpport" ] ; then
+                httpproxy="$httpproxy:$httpport"
+            fi
+        fi
+        if [ -z "$httpproxy" ] ; then
+            status=`curl --connect-timeout 30 --time-cond "$lastcheckfile" --head "$patchfileurl" 2>/dev/null | head -1 | awk '{ print $2 }'`
+        else
+            status=`curl --proxy "$httpproxy" --connect-timeout 30 --time-cond "$lastcheckfile" --head "$patchfileurl" 2>/dev/null | head -1 | awk '{ print $2 }'`
+        fi
+    else
+        status="200"
+    fi
+
+    # Cache the last check date
+    touch -f "$lastcheckfile"
+
+    # Show patch download URL
+    if [ -w "$lastcheckfile" -a "$status" = "200" ] ; then
+        sleep 15
+        open "$patchdownloadurl"
+    fi
+}
+
+# Check for patches
+if [ "$os" = "Darwin" ] ; then
+    checkforpatches >/dev/null 2>&1 &
+fi
 
 exit 0
