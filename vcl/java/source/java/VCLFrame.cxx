@@ -250,44 +250,47 @@ void com_sun_star_vcl_VCLFrame::dispose()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 
-#ifdef MACOSX
-		WindowRef aWindow = NULL;
-		WindowRef aOwnerWindow = NULL;
-
-		// Test the JVM version and if it is below 1.4, use Carbon APIs
-		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+		if ( mID )
 		{
-			aWindow = (WindowRef)getNativeWindow();
-			com_sun_star_vcl_VCLFrame *pOwner = getOwner();
-			if ( pOwner )
-			{
-				aOwnerWindow = (WindowRef)pOwner->getNativeWindow();
-				delete pOwner;
-			}
-
-			// Allow native evevt thread to catch up to prevent deadlocking
-			// while dragging data into our application
+#ifdef MACOSX
+			// Release lock while disposing a window to avoid deadlocking in
+			// the native event queue
 			SalData *pSalData = GetSalData();
 			ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
 			OThread::yield();
-			pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
-		}
+
+			WindowRef aWindow = NULL;
+			WindowRef aOwnerWindow = NULL;
+
+			// Test the JVM version and if it is below 1.4, use Carbon APIs
+			if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+			{
+				aWindow = (WindowRef)getNativeWindow();
+				com_sun_star_vcl_VCLFrame *pOwner = getOwner();
+				if ( pOwner )
+				{
+					aOwnerWindow = (WindowRef)pOwner->getNativeWindow();
+					delete pOwner;
+				}
+			}
 #endif	// MACOSX
 
-		if ( mID )
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 
 #ifdef MACOSX
-		// Java 1.3.1 does not ever release the native window so we
-		// need to explicitly release it
-		if ( pEventLoopTimerUPP )
-		{
-			if ( aWindow )
-				InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pEventLoopTimerUPP, aWindow, NULL );
-			if ( aOwnerWindow )
-				InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pEventLoopTimerUPP, aOwnerWindow, NULL );
-		}
+			// Java 1.3.1 does not ever release the native window so we
+			// need to explicitly release it
+			if ( pEventLoopTimerUPP )
+			{
+				if ( aWindow )
+					InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pEventLoopTimerUPP, aWindow, NULL );
+				if ( aOwnerWindow )
+					InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pEventLoopTimerUPP, aOwnerWindow, NULL );
+			}
+
+			pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
 #endif	// MACOSX
+		}
 	}
 }
 
@@ -744,12 +747,24 @@ void com_sun_star_vcl_VCLFrame::setBounds( long _par0, long _par1, long _par2, l
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
+#ifdef MACOSX
+			// Release lock while resizing a window to avoid deadlocking in
+			// the native event queue
+			SalData *pSalData = GetSalData();
+			ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
+			OThread::yield();
+#endif	// MACOSX
+
 			jvalue args[4];
 			args[0].i = jint( _par0 );
 			args[1].i = jint( _par1 );
 			args[2].i = jint( _par2 );
 			args[3].i = jint( _par3 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+
+#ifdef MACOSX
+			pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
+#endif	// MACOSX
 		}
 	}
 }
@@ -866,9 +881,21 @@ void com_sun_star_vcl_VCLFrame::setState( ULONG _par0 )
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
+#ifdef MACOSX
+			// Release lock while setting window state to avoid deadlocking in
+			// the native event queue
+			SalData *pSalData = GetSalData();
+			ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
+			OThread::yield();
+#endif	// MACOSX
+
 			jvalue args[1];
 			args[0].j = jlong( _par0 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+
+#ifdef MACOSX
+			pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
+#endif	// MACOSX
 		}
 	}
 }
@@ -913,6 +940,12 @@ void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0, sal_Bool _par1 )
 		if ( mID )
 		{
 #ifdef MACOSX
+			// Release lock while showing or hiding a window to avoid
+			// deadlocking in the native event queue
+			SalData *pSalData = GetSalData();
+			ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
+			OThread::yield();
+
 			MutexGuard aGuard( aMutex );
 			bActivate = !_par1;
 			bBringToFront = true;
@@ -929,6 +962,8 @@ void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0, sal_Bool _par1 )
 #ifdef MACOSX
 			bActivate = false;
 			bBringToFront = false;
+
+			pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
 #endif	// MACOSX
 		}
 	}

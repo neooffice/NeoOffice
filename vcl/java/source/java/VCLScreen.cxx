@@ -65,6 +65,27 @@ jclass com_sun_star_vcl_VCLScreen::getMyClass()
 
 // ----------------------------------------------------------------------------
 
+SalColor com_sun_star_vcl_VCLScreen::getControlColor()
+{
+	static jmethodID mID = NULL;
+	SalColor out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()I";
+			mID = t.pEnv->GetStaticMethodID( getMyClass(), "getControlColor", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (SalColor)t.pEnv->CallStaticIntMethod( getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
 const Rectangle com_sun_star_vcl_VCLScreen::getFrameInsets()
 {
 	static jmethodID mID = NULL;
@@ -178,6 +199,69 @@ const Rectangle com_sun_star_vcl_VCLScreen::getScreenBounds( const com_sun_star_
 					out = Rectangle( Point( (long)t.pEnv->GetIntField( tempObj, fIDX ), (long)t.pEnv->GetIntField( tempObj, fIDY ) ), Size( (long)t.pEnv->GetIntField( tempObj, fIDWidth ), (long)t.pEnv->GetIntField( tempObj, fIDHeight ) ) );
 			}
 		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+SalColor com_sun_star_vcl_VCLScreen::getTextHighlightColor()
+{
+	static jmethodID mID = NULL;
+	SalColor out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()I";
+			mID = t.pEnv->GetStaticMethodID( getMyClass(), "getTextHighlightColor", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (SalColor)t.pEnv->CallStaticIntMethod( getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+SalColor com_sun_star_vcl_VCLScreen::getTextHighlightTextColor()
+{
+	static jmethodID mID = NULL;
+	SalColor out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()I";
+			mID = t.pEnv->GetStaticMethodID( getMyClass(), "getTextHighlightTextColor", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (SalColor)t.pEnv->CallStaticIntMethod( getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+SalColor com_sun_star_vcl_VCLScreen::getTextTextColor()
+{
+	static jmethodID mID = NULL;
+	SalColor out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()I";
+			mID = t.pEnv->GetStaticMethodID( getMyClass(), "getTextTextColor", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (SalColor)t.pEnv->CallStaticIntMethod( getMyClass(), mID );
 	}
 	return out;
 }

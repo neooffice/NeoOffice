@@ -717,6 +717,56 @@ void SalFrame::UpdateSettings( AllSettings& rSettings )
 	fprintf( stderr, "SalFrame::UpdateSettings not implemented\n" );
 #endif
 #endif	// MACOSX
+
+	StyleSettings aStyleSettings( rSettings.GetStyleSettings() );
+
+	SalColor nTextTextColor = com_sun_star_vcl_VCLScreen::getTextTextColor();
+	Color aTextColor( SALCOLOR_RED( nTextTextColor ), SALCOLOR_GREEN( nTextTextColor ), SALCOLOR_BLUE( nTextTextColor ) );
+	aStyleSettings.SetDialogTextColor( aTextColor );
+	aStyleSettings.SetMenuTextColor( aTextColor );
+	aStyleSettings.SetButtonTextColor( aTextColor );
+	aStyleSettings.SetRadioCheckTextColor( aTextColor );
+	aStyleSettings.SetGroupTextColor( aTextColor );
+	aStyleSettings.SetLabelTextColor( aTextColor );
+	aStyleSettings.SetInfoTextColor( aTextColor );
+	aStyleSettings.SetWindowTextColor( aTextColor );
+	aStyleSettings.SetFieldTextColor( aTextColor );
+
+	SalColor nTextHighlightColor = com_sun_star_vcl_VCLScreen::getTextHighlightColor();
+	Color aHighlightColor( SALCOLOR_RED( nTextHighlightColor ), SALCOLOR_GREEN( nTextHighlightColor ), SALCOLOR_BLUE( nTextHighlightColor ) );
+	aStyleSettings.SetActiveBorderColor( aHighlightColor );
+	aStyleSettings.SetActiveColor( aHighlightColor );
+	aStyleSettings.SetActiveTextColor( aHighlightColor );
+	aStyleSettings.SetHighlightColor( aHighlightColor );
+	aStyleSettings.SetMenuHighlightColor( aHighlightColor );
+
+	SalColor nTextHighlightTextColor = com_sun_star_vcl_VCLScreen::getTextHighlightTextColor();
+	Color aHighlightTextColor( SALCOLOR_RED( nTextHighlightTextColor ), SALCOLOR_GREEN( nTextHighlightTextColor ), SALCOLOR_BLUE( nTextHighlightTextColor ) );
+	aStyleSettings.SetHighlightTextColor( aHighlightTextColor );
+	aStyleSettings.SetMenuHighlightTextColor( aHighlightTextColor );
+
+	SalColor nControlColor = com_sun_star_vcl_VCLScreen::getControlColor();
+	Color aBackColor( SALCOLOR_RED( nControlColor ), SALCOLOR_GREEN( nControlColor ), SALCOLOR_BLUE( nControlColor ) );
+	aStyleSettings.Set3DColors( aBackColor );
+	aStyleSettings.SetDeactiveBorderColor( aBackColor );
+	aStyleSettings.SetDeactiveColor( aBackColor );
+	aStyleSettings.SetDeactiveTextColor( aBackColor );
+	aStyleSettings.SetDialogColor( aBackColor );
+	aStyleSettings.SetDisableColor( aBackColor );
+	aStyleSettings.SetFaceColor( aBackColor );
+	aStyleSettings.SetMenuColor( aBackColor );
+	aStyleSettings.SetMenuBarColor( aBackColor );
+	if( aBackColor == COL_LIGHTGRAY )
+	{
+		aStyleSettings.SetCheckedColor( Color( 0xCC, 0xCC, 0xCC ) );
+	}
+	else
+	{
+		Color aColor2 = aStyleSettings.GetLightColor();
+		aStyleSettings.SetCheckedColor( Color( (BYTE)( ( (USHORT)aBackColor.GetRed() + (USHORT)aColor2.GetRed() ) / 2 ), (BYTE)( ( (USHORT)aBackColor.GetGreen() + (USHORT)aColor2.GetGreen() ) / 2 ), (BYTE)( ( (USHORT)aBackColor.GetBlue() + (USHORT)aColor2.GetBlue() ) / 2 ) ) );
+	}
+
+	rSettings.SetStyleSettings( aStyleSettings );
 }
 
 // -----------------------------------------------------------------------

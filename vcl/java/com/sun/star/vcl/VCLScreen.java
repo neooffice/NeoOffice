@@ -41,6 +41,7 @@ import java.awt.GraphicsEnvironment;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.SystemColor;
 import java.awt.Toolkit;
 import java.awt.Window;
 
@@ -79,6 +80,17 @@ public final class VCLScreen {
 		frameInsets = f.getInsets();
 		f.removeNotify();
 		f.dispose();
+
+	}
+
+	/**
+	 * Returns the <code>System.control</code>.
+	 *
+	 * @return the <code>System.control</code>
+	 */
+	public static int getControlColor() {
+
+		return SystemColor.control.getRGB();
 
 	}
 
@@ -122,6 +134,39 @@ public final class VCLScreen {
 			bounds = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
 
 		return bounds;
+
+	}
+
+	/**
+	 * Returns the <code>System.textHighlight</code>.
+	 *
+	 * @return the <code>System.textHighlight</code>
+	 */
+	public static int getTextHighlightColor() {
+
+		return SystemColor.textHighlight.getRGB();
+
+	}
+
+	/**
+	 * Returns the <code>System.textHighlightText</code>.
+	 *
+	 * @return the <code>System.textHighlightText</code>
+	 */
+	public static int getTextHighlightTextColor() {
+
+		return SystemColor.textHighlightText.getRGB();
+
+	}
+
+	/**
+	 * Returns the <code>System.textText</code>.
+	 *
+	 * @return the <code>System.textText</code>
+	 */
+	public static int getTextTextColor() {
+
+		return SystemColor.textText.getRGB();
 
 	}
 

@@ -39,6 +39,9 @@
 #ifndef _SV_JAVA_LANG_OBJECT_HXX
 #include <java/lang/Object.hxx>
 #endif
+#ifndef _SV_SALGTYPE_HXX
+#include <salgtype.hxx>
+#endif
 #ifndef _SV_GEN_HXX
 #include <tools/gen.hxx>
 #endif
@@ -54,8 +57,12 @@ protected:
 
 public:
 	static jclass		getMyClass();
+	static SalColor		getControlColor();
 	static const Rectangle	getFrameInsets();
 	static const Rectangle	getScreenBounds( const com_sun_star_vcl_VCLFrame *_par0 );
+	static SalColor		getTextHighlightColor();
+	static SalColor		getTextHighlightTextColor();
+	static SalColor		getTextTextColor();
 
 						com_sun_star_vcl_VCLScreen( jobject myObj ) : java_lang_Object( myObj ) {};
 	virtual				~com_sun_star_vcl_VCLScreen() {};
