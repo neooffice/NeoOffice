@@ -452,31 +452,13 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 				pNextFrame->GetWorkArea( aWorkArea );
 				const SalFrameGeometry& rGeom( pNextFrame->GetGeometry() );
 				pFrame->maFrameData.mbCenter = FALSE;
-				nX = rGeom.nX - rGeom.nLeftDecoration + pFrame->maGeometry.nTopDecoration;
-				nY = rGeom.nY;
+				nX = rGeom.nX - rGeom.nLeftDecoration;
+				nY = rGeom.nY - rGeom.nTopDecoration;
 				nWidth = rGeom.nWidth + rGeom.nLeftDecoration + rGeom.nRightDecoration;
 				nHeight = rGeom.nHeight + rGeom.nTopDecoration + rGeom.nBottomDecoration;
-				// If the window spills off the screen, place it at the 
-				// top left of the screen
-				if ( ( nX + nWidth > aWorkArea.nLeft + aWorkArea.GetWidth() ) || ( nY + nHeight > aWorkArea.nTop + aWorkArea.GetHeight() ) )
-				{
-					nX = aWorkArea.nLeft;
-					nY = aWorkArea.nTop;
-				}
-				
 			}
 		}
 	}
-
-	// Adjust window size for screen bounds
-	if ( nX < aWorkArea.nLeft )
-		nX = aWorkArea.nLeft;
-	if ( nY < aWorkArea.nTop )
-		nY = aWorkArea.nTop;
-	if ( nX + nWidth > aWorkArea.nLeft + aWorkArea.GetWidth() )
-		nWidth = aWorkArea.nLeft + aWorkArea.GetWidth() - nX;
-	if ( nY + nHeight > aWorkArea.nTop + aWorkArea.GetHeight() )
-		nHeight = aWorkArea.nTop + aWorkArea.GetHeight() - nY;
 
 	// Center the window by default
 	if ( pFrame->maFrameData.mbCenter )
@@ -485,12 +467,7 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 		nY = aWorkArea.nTop + ( ( aWorkArea.GetHeight() - nHeight ) / 2 );
 	}
 
-	pFrame->maFrameData.mpVCLFrame->setBounds( nX, nY, nWidth, nHeight );
-
-	// Update the cached position
-	Rectangle *pBounds = new Rectangle( pFrame->maFrameData.mpVCLFrame->getBounds() );
-	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, pFrame, (void *)pBounds );
-	aEvent.dispatch();
+    pFrame->SetPosSize( nX, nY, nWidth, nHeight, SAL_FRAMESTATE_MASK_X | SAL_FRAME_POSSIZE_Y | SAL_FRAMESTATE_MASK_WIDTH | SAL_FRAMESTATE_MASK_HEIGHT );
 
 	return pFrame;
 }

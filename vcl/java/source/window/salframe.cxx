@@ -316,7 +316,7 @@ void SalFrame::GetWorkArea( Rectangle &rRect )
 	if ( !maFrameData.mbPresentation && !rRect.nTop )
 	{
 		const Rectangle& rFrameInsets( com_sun_star_vcl_VCLScreen::getFrameInsets() );
-		rRect.nBottom -= rFrameInsets.nTop;
+		rRect.nTop += rFrameInsets.nTop;
 	}
 #endif	// MACOSX
 }
