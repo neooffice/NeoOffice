@@ -848,7 +848,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (queue == null || window == null || !window.isShowing())
 			return;
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_PAINT, this, 0));
 	}
 
 	/**
