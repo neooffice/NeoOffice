@@ -230,8 +230,18 @@ void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 		pFontData->mpNext = NULL;
 		pFontData->mpSysData = (void *)pVCLFont;
 		pFontData->maName = XubString( it->first );
+		// [ed] 11/1/04 Scalable fonts should always report their
+		// width and height as zero.  The single size of zero causes
+		// higher-level font elements to treat fonts as infinitely
+		// scalable and provide lists of default font sizes.  The
+		// size of zero matches the unx implementation.  Bug 196.
+		/*** OLD CODE ***
 		pFontData->mnWidth = pVCLFont->getSize();
 		pFontData->mnHeight = pVCLFont->getSize();
+		 *** END OLD CODE.  NEW CODE: ***/
+		pFontData->mnWidth = 0;
+		pFontData->mnHeight = 0;
+		/*** END NEW CODE ***/
 		pFontData->meFamily = pVCLFont->getFamilyType();
 		pFontData->meCharSet = RTL_TEXTENCODING_UNICODE;
 		if ( pFontData->meFamily == FAMILY_MODERN )
