@@ -32,8 +32,8 @@
 	<string>org.neooffice.neooffice.java</string>
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
-    <key>CFBundleIconFile</key>
-    <string>ship.icns</string>
+	<key>CFBundleIconFile</key>
+	<string>ship.icns</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
