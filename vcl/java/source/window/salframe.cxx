@@ -551,8 +551,8 @@ void SalFrame::UpdateSettings( AllSettings& rSettings )
 #ifdef MACOSX
 	MouseSettings aMouseSettings = rSettings.GetMouseSettings();
 	ULONG nDblTime = (ULONG)GetDblTime();
-	if ( nDblTime < 10 )
-		nDblTime = 10;
+	if ( nDblTime < 25 )
+		nDblTime = 25;
 	aMouseSettings.SetDoubleClickTime( nDblTime * 1000 / CLK_TCK );
 	rSettings.SetMouseSettings( aMouseSettings );
 #else	// MACOSX
