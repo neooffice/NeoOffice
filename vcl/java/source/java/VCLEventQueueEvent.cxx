@@ -63,9 +63,13 @@
 #include <window.hxx>
 #endif
 
+#ifdef MACOSX
+
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
+
+#endif	// MACOSX
 
 using namespace vcl;
 using namespace vos;
