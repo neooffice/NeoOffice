@@ -57,6 +57,8 @@
  #endif
 
  #ifdef MACOSX
+ #include "system.h"
+
  /* All Mac OS X paths are UTF-8 */
  #define osl_getThreadTextEncoding() RTL_TEXTENCODING_UTF8
  #endif 
@@ -70,6 +72,16 @@
  	rtl::OString p = rtl::OUStringToOString(
 		rtl::OUString(const_cast<rtl_uString*>(pustrPath)),
 		osl_getThreadTextEncoding());
+
+ #ifdef MACOSX
+    sal_Char path[ PATH_MAX ];
+    if ( p.getLength() < PATH_MAX )
+    {
+	    strcpy( path, p.getStr() );
+        macxp_resolveAlias( path, PATH_MAX );
+        p = rtl::OString( path );
+    }
+ #endif
 		
 	return access(p.getStr(), mode);
  }
@@ -84,6 +96,16 @@
 		rtl::OUString(const_cast<rtl_uString*>(pustrFileName)),
 		osl_getThreadTextEncoding());
 		
+ #ifdef MACOSX
+    sal_Char path[ PATH_MAX ];
+    if ( fn.getLength() < PATH_MAX )
+    {
+	    strcpy( path, fn.getStr() );
+        macxp_resolveAlias( path, PATH_MAX );
+        fn = rtl::OString( path );
+    }
+ #endif
+
 	char  rp[PATH_MAX];
 	bool  bRet = realpath(fn.getStr(), rp); 
 	
@@ -107,6 +129,16 @@
  	rtl::OString p = rtl::OUStringToOString(
 		rtl::OUString(const_cast<rtl_uString*>(pustrPath)),
 		osl_getThreadTextEncoding());
+
+ #ifdef MACOSX
+    sal_Char path[ PATH_MAX ];
+    if ( p.getLength() < PATH_MAX )
+    {
+	    strcpy( path, p.getStr() );
+        macxp_resolveAlias( path, PATH_MAX );
+        p = rtl::OString( path );
+    }
+ #endif
 	
 	return lstat(p.getStr(), buf);
  } 

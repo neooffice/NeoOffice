@@ -155,11 +155,6 @@ static const sal_Char* MOUNTTAB="/etc/mtab";
 
 /* All Mac OS X paths are UTF-8 */
 #define osl_getThreadTextEncoding() RTL_TEXTENCODING_UTF8
-
-#include <premac.h>
-#define __OPENTRANSPORTPROVIDERS__
-#include <Carbon/Carbon.h>
-#include <postmac.h>
 #endif
 
 #if OSL_DEBUG_LEVEL > 1
@@ -253,7 +248,6 @@ static int           oslDoCopyLink(const sal_Char* pszSourceFileName, const sal_
 static int           oslDoCopyFile(const sal_Char* pszSourceFileName, const sal_Char* pszDestFileName, size_t nSourceSize, mode_t mode);
 static oslFileError  oslDoMoveFile(const sal_Char* pszPath, const sal_Char* pszDestPath);
 static rtl_uString*  oslMakeUStrFromPsz(const sal_Char* pszStr,rtl_uString** uStr);
-
 #if defined MACOSX && defined PRODUCT_FILETYPE
 static void          oslSetFileTypeFromPsz(const sal_Char* pszStr);
 #endif	/* MACOSX && PRODUCT_FILETYPE */
@@ -329,6 +323,10 @@ oslFileError SAL_CALL osl_openDirectory(rtl_uString* ustrDirectoryURL, oslDirect
     /* convert unicode path to text */
     if ( UnicodeToText( path, PATH_MAX, ustrSystemPath->buffer, ustrSystemPath->length ) )
     {
+#ifdef MACOSX
+        macxp_resolveAlias( path, PATH_MAX );
+#endif	/* MACOSX */
+
         /* open directory */
         DIR *pdir = opendir( path );
 
@@ -434,9 +432,22 @@ oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirect
     if (NULL == pEntry)
         return osl_File_E_NOENT;
 
+#if defined(MACOSX) && (BUILD_OS_MAJOR==10) && (BUILD_OS_MINOR>=2)
+    /* convert decomposed file name to precomposed unicode */
+    char composed_name[BUFSIZ];
+    CFMutableStringRef strRef = CFStringCreateMutable( NULL, 0 );
+    CFStringAppendCString( strRef, pEntry->d_name, kCFStringEncodingUTF8 );
+    CFStringNormalize( strRef, kCFStringNormalizationFormC );
+    CFStringGetCString( strRef, composed_name, BUFSIZ, kCFStringEncodingUTF8 );
+    CFRelease( strRef );
+
+    rtl_string2UString( &ustrFileName, composed_name, strlen( composed_name ),
+        osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
+#else
     /* convert file name to unicode */
     rtl_string2UString( &ustrFileName, pEntry->d_name, strlen( pEntry->d_name ),
         osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
+#endif
 
 	osl_systemPathMakeAbsolutePath(pDirImpl->ustrPath, ustrFileName, &ustrFilePath);
 
@@ -579,6 +590,10 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
     /* convert unicode path to text */
     if( UnicodeToText( buffer, PATH_MAX, ustrFilePath->buffer, ustrFilePath->length ) )
     {
+#ifdef MACOSX
+        macxp_resolveAlias( buffer, PATH_MAX );
+#endif	/* MACOSX */
+
         /* we do not open devices or such here */
         if( !( uFlags & osl_File_OpenFlag_Create ) )
         {
@@ -777,6 +792,11 @@ oslFileError osl_moveFile( rtl_uString* ustrFileURL, rtl_uString* ustrDestURL )
     if( eRet != osl_File_E_None )
         return eRet;
 
+#ifdef MACOSX
+    macxp_resolveAlias( srcPath, PATH_MAX );
+    macxp_resolveAlias( destPath, PATH_MAX );
+#endif	/* MACOSX */
+
     return oslDoMoveFile( srcPath, destPath );
 }
 
@@ -803,6 +823,11 @@ oslFileError osl_copyFile( rtl_uString* ustrFileURL, rtl_uString* ustrDestURL )
     if( eRet != osl_File_E_None )
         return eRet;
 
+#ifdef MACOSX
+    macxp_resolveAlias( srcPath, PATH_MAX );
+    macxp_resolveAlias( destPath, PATH_MAX );
+#endif	/* MACOSX */
+
     return osl_psz_copyFile( srcPath, destPath );
 }
 
@@ -821,6 +846,10 @@ oslFileError osl_removeFile( rtl_uString* ustrFileURL )
     eRet = FileURLToPath( path, PATH_MAX, ustrFileURL );
     if( eRet != osl_File_E_None )
         return eRet;
+
+#ifdef MACOSX
+    macxp_resolveAlias( path, PATH_MAX );
+#endif	/* MACOSX */
 
     return osl_psz_removeFile( path );
 }
@@ -842,6 +871,10 @@ oslFileError osl_getVolumeInformation( rtl_uString* ustrDirectoryURL, oslVolumeI
     if( eRet != osl_File_E_None )
         return eRet;
 
+#ifdef MACOSX
+    macxp_resolveAlias( path, PATH_MAX );
+#endif	/* MACOSX */
+
     return osl_psz_getVolumeInformation( path, pInfo, uFieldMask);
 }
 
@@ -861,6 +894,10 @@ oslFileError osl_createDirectory( rtl_uString* ustrDirectoryURL )
     if( eRet != osl_File_E_None )
         return eRet;
 
+#ifdef MACOSX
+    macxp_resolveAlias( path, PATH_MAX );
+#endif	/* MACOSX */
+
     return osl_psz_createDirectory( path );
 }
 
@@ -879,6 +916,10 @@ oslFileError osl_removeDirectory( rtl_uString* ustrDirectoryURL )
     eRet = FileURLToPath( path, PATH_MAX, ustrDirectoryURL );
     if( eRet != osl_File_E_None )
         return eRet;
+
+#ifdef MACOSX
+    macxp_resolveAlias( path, PATH_MAX );
+#endif	/* MACOSX */
 
     return osl_psz_removeDirectory( path );
 }
@@ -912,6 +953,10 @@ oslFileError osl_setFileAttributes( rtl_uString* ustrFileURL, sal_uInt64 uAttrib
     if( eRet != osl_File_E_None )
         return eRet;
 
+#ifdef MACOSX
+    macxp_resolveAlias( path, PATH_MAX );
+#endif	/* MACOSX */
+
     return osl_psz_setFileAttributes( path, uAttributes );
 }
 
@@ -931,6 +976,10 @@ oslFileError osl_setFileTime( rtl_uString* ustrFileURL, const TimeValue* pCreati
     eRet = FileURLToPath( path, PATH_MAX, ustrFileURL );
     if( eRet != osl_File_E_None )
         return eRet;
+
+#ifdef MACOSX
+    macxp_resolveAlias( path, PATH_MAX );
+#endif	/* MACOSX */
 
     return osl_psz_setFileTime( path, pCreationTime, pLastAccessTime, pLastWriteTime );
 }
@@ -1975,7 +2024,7 @@ static rtl_uString* oslMakeUStrFromPsz(const sal_Char* pszStr, rtl_uString** ust
 }
 
 /*****************************************
- *oslSetFileTypeFromPsz 
+ * oslSetFileTypeFromPsz 
  ****************************************/
 
 #if defined MACOSX && defined PRODUCT_FILETYPE

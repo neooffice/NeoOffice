@@ -660,6 +660,51 @@ void macxp_getSystemVersion( unsigned int *isDarwin, unsigned int *majorVersion,
 	*minorMinorVersion = 0;
 }
 
+void macxp_resolveAlias(char *path, int buflen)
+{
+    FSRef aFSRef;
+    MacOSBoolean bFolder;
+    MacOSBoolean bAliased;
+    char *unprocessedPath = path;
+
+    if ( *unprocessedPath == '/' )
+        unprocessedPath++;
+
+    while ( unprocessedPath && *unprocessedPath )
+    {
+        unprocessedPath = strchr( unprocessedPath, '/' );
+        if ( unprocessedPath )
+        	*unprocessedPath = '\0';
+
+        if ( FSPathMakeRef( (const UInt8 *)path, &aFSRef, 0 ) == noErr && FSResolveAliasFile( &aFSRef, TRUE, &bFolder, &bAliased ) == noErr && bAliased )
+        {
+            char tmpPath[ PATH_MAX ];
+            if ( FSRefMakePath( &aFSRef, (UInt8 *)tmpPath, PATH_MAX ) == noErr )
+            {
+                int nLen = strlen( tmpPath ) + ( unprocessedPath ? strlen( unprocessedPath + 1 ) + 1 : 0 );
+                if ( nLen < buflen )
+                {
+                    if ( unprocessedPath && nLen < PATH_MAX )
+                    {
+                        int nTmpPathLen = strlen( tmpPath );
+                        strcat( tmpPath, "/" );
+                        strcat( tmpPath, unprocessedPath + 1 );
+                        strcpy( path, tmpPath);
+                        unprocessedPath = path + nTmpPathLen;
+                    }
+                    else if ( !unprocessedPath )
+                    {
+                        strcpy( path, tmpPath);
+                    }
+                }
+            }
+        }
+
+        if ( unprocessedPath )
+            *unprocessedPath++ = '/';
+    }
+}
+
 #endif  /* defined MACOSX */
 
 #endif /* NO_PTHREAD_RTL */
