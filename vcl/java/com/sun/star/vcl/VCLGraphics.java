@@ -191,11 +191,6 @@ public final class VCLGraphics {
 	private VCLImage image = null;
 
 	/**
-	 * The bounds of the graphics context.
-	 */
-	private Rectangle pageBounds = null;
-
-	/**
 	 * The panel's graphics context.
 	 */
 	private Graphics2D panelGraphics = null;
@@ -279,14 +274,12 @@ public final class VCLGraphics {
 	 *
 	 * @param g the <code>Graphics2D</code> instance
 	 * @param r the resolution in pixels per inch
-	 * @param b the page bounds in pixels
 	 */
-	VCLGraphics(Graphics2D g, int r, Rectangle b) {
+	VCLGraphics(Graphics2D g, int r) {
 
 		graphics = g;
 		resolution = r;
 		screenFontResolution = VCLGraphics.screenResolution;
-		pageBounds = b;
 
 	}
 
@@ -341,7 +334,6 @@ public final class VCLGraphics {
 			image.dispose();
 		image = null;
 		frame = null;
-		pageBounds = null;
 		resolution = 0;
 		screenFontResolution = 0;
 		update = null;
@@ -396,18 +388,7 @@ public final class VCLGraphics {
 			// Draw to a temporary image
 			VCLImage bmpImage = new VCLImage(srcWidth, srcHeight, bmp.getBitCount());
 			bmpImage.getGraphics().drawBitmap(bmp, srcX, srcY, srcWidth, srcHeight, 0, 0);
-			if (image == null && VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-				// Mac OS X will render only PDF 1.3 (which is not supported by
-				// the Mac OS X Preview application) if we draw images that are
-				// smaller than the page
-				VCLImage pageImage = new VCLImage(pageBounds.x + pageBounds.width + 1, pageBounds.y + pageBounds.height + 1, bmp.getBitCount());
-				pageImage.getGraphics().drawImage(bmpImage, 0, 0, srcWidth, srcHeight, destX, destY);
-				drawImage(pageImage, 0, 0, pageImage.getWidth(), pageImage.getHeight(), 0, 0);
-				pageImage.dispose();
-			}
-			else {
-				drawImage(bmpImage, 0, 0, srcWidth, srcHeight, destX, destY);
-			}
+			drawImage(bmpImage, 0, 0, srcWidth, srcHeight, destX, destY);
 			bmpImage.dispose();
 		}
 		else {
@@ -472,18 +453,7 @@ public final class VCLGraphics {
 			VCLImage mergedImage = new VCLImage(srcWidth, srcHeight, bmp.getBitCount());
 			mergedImage.getGraphics().drawBitmap(bmp, transBmp, srcX, srcY, srcWidth, srcHeight, 0, 0);
 			// Draw to a temporary image
-			if (image == null && VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-				// Mac OS X will render only PDF 1.3 (which is not supported by
-				// the Mac OS X Preview application) if we draw images that are
-				// smaller than the page
-				VCLImage pageImage = new VCLImage(pageBounds.x + pageBounds.width + 1, pageBounds.y + pageBounds.height + 1, bmp.getBitCount());
-				pageImage.getGraphics().drawImage(mergedImage, 0, 0, srcWidth, srcHeight, destX, destY);
-				drawImage(pageImage, 0, 0, pageImage.getWidth(), pageImage.getHeight(), 0, 0);
-				pageImage.dispose();
-			}
-			else {
-				drawImage(mergedImage, 0, 0, srcWidth, srcHeight, destX, destY);
-			}
+			drawImage(mergedImage, 0, 0, srcWidth, srcHeight, destX, destY);
 			mergedImage.dispose();
 		}
 		else {
@@ -540,7 +510,39 @@ public final class VCLGraphics {
 	 */
 	void drawImage(VCLImage img, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY) {
 
-		graphics.drawImage(img.getImage(), destX, destY, destX + srcWidth - 1, destY + srcHeight - 1, srcX, srcY, srcX + srcWidth - 1, srcY + srcHeight - 1, null);
+		if (image == null && VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+			// Mac OS X has a tendency to incompletely render large images
+			// when printing to PDF so we break the image into many small
+			// images
+			Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, img.getWidth(), img.getHeight()));
+			if (srcX < 0) {
+				srcBounds.width += srcX;
+				destX -= srcX;
+			}
+			if (srcY < 0) {
+				srcBounds.height += srcY;
+				destY -= srcY;
+			}
+			Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(graphics.getDeviceConfiguration().getBounds());
+			int spanMax = resolution;
+			for (int i = srcBounds.x; i < srcBounds.x + srcBounds.width; i += spanMax) {
+				for (int j = srcBounds.y; j < srcBounds.y + srcBounds.height; j += spanMax) {
+					int spanX = srcBounds.x + srcBounds.width - i;
+					if (spanX > spanMax)
+						spanX = spanMax;
+					int spanY = srcBounds.y + srcBounds.height - j;
+					if (spanY > spanMax)
+						spanY = spanMax;
+					Graphics2D g = (Graphics2D)graphics.create(destBounds.x + i, destBounds.y + j, spanX, spanY);
+					g.drawRenderedImage(img.getImage().getSubimage(srcBounds.x + i, srcBounds.y + j, spanX, spanY), null);
+					g.dispose();
+					Thread.yield();
+				}
+			}
+		}
+		else {
+			graphics.drawImage(img.getImage(), destX, destY, destX + srcWidth, destY + srcHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+		}
 		addToFlush(new Rectangle(destX, destY, srcWidth, srcHeight));
 
 	}

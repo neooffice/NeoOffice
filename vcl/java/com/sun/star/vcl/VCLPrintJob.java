@@ -68,7 +68,7 @@ public final class VCLPrintJob extends Thread implements Printable {
 	/**
 	 * SCALE_FACTOR constant.
 	 */
-	private final static int SCALE_FACTOR = 1;
+	private final static int SCALE_FACTOR = 4;
 
 	/**
 	 * Cached native graphics.
@@ -87,7 +87,7 @@ public final class VCLPrintJob extends Thread implements Printable {
 	 */
 	public synchronized static VCLGraphics getGraphics() {
 
-		return new VCLGraphics(graphics, SCALE_FACTOR * 72, new Rectangle(0, 0, (int)pageFormat.getWidth() * SCALE_FACTOR, (int)pageFormat.getHeight() * SCALE_FACTOR));
+		return new VCLGraphics(graphics, SCALE_FACTOR * 72);
 
 	}
 
@@ -327,6 +327,7 @@ public final class VCLPrintJob extends Thread implements Printable {
 			graphicsInfo.wait();
 		}
 		catch (Throwable t) {}
+		Thread.yield();
 
 		if (job.isCancelled())
 			throw new PrinterException();
@@ -415,7 +416,7 @@ public final class VCLPrintJob extends Thread implements Printable {
 				currentGraphics = null;
 			}
 			else {
-				currentGraphics = new VCLGraphics(graphicsInfo.graphics, VCLPrintJob.SCALE_FACTOR * 72, new Rectangle((int)graphicsInfo.pageFormat.getImageableX() * -1, (int)graphicsInfo.pageFormat.getImageableY() * -1, (int)graphicsInfo.pageFormat.getWidth() * VCLPrintJob.SCALE_FACTOR, (int)graphicsInfo.pageFormat.getHeight() * VCLPrintJob.SCALE_FACTOR));
+				currentGraphics = new VCLGraphics(graphicsInfo.graphics, VCLPrintJob.SCALE_FACTOR * 72);
 				graphicsInfo.graphics = null;
 				graphicsInfo.pageFormat = null;
 			}
