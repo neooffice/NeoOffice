@@ -130,6 +130,16 @@ using namespace osl;
 
 namespace stoc_javavm {
 
+#ifdef MACOSX
+
+static jint JNICALL DetachCurrentThread( JavaVM *vm )
+{
+	// Don't do anything as detaching will cause Cocoa-based JVMs to crash
+	return JNI_OK;
+}
+
+#endif	// MACOSX
+
 static void getINetPropsFromConfig(JVM * pjvm,
 								   const Reference<XMultiComponentFactory> & xSMgr,
 								   const Reference<XComponentContext> &xCtx ) throw (Exception);
@@ -1407,6 +1417,13 @@ JavaVM * JavaVirtualMachine_Impl::createJavaVM(const JVM & jvm) throw(RuntimeExc
 		vm_args2.version= 0x00010002;
 		err= pCreateJavaVM(&pJavaVM, &pJNIEnv, &vm_args2);
 	}
+#ifdef MACOSX
+	// Cocoa-based JVMs need custom versions of some of the JVM functions
+	else
+	{
+		((struct JNIInvokeInterface_ *)pJavaVM->functions)->DetachCurrentThread = DetachCurrentThread;
+	}
+#endif	// MACOSX
 
 	// Necessary to make debugging work. This thread will be suspended when this function
 	// returns.

@@ -1,13 +1,13 @@
 Title $(PRODUCT_NAME)
 Version $(PRODUCT_VERSION)
 Description
-DefaultLocation /Applications
+DefaultLocation /Applications/$(PRODUCT_DIR_NAME).app
 DeleteWarning
 
 ### Package Flags ###
 NeedsAuthorization YES
 Required NO
-Relocatable YES
+Relocatable NO
 RequiresReboot NO
 UseUserMask NO
 OverwritePermissions YES

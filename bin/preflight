@@ -34,9 +34,9 @@
 # 
 ##########################################################################
 
-if [ -d "$2/$(PRODUCT_DIR_NAME).app" ] ; then
+if [ -d "$2" ] ; then
 
-    rm -Rf "$2/$(PRODUCT_DIR_NAME).app"
+    rm -Rf "$2"
     if [ $? != 0 ] ; then
         exit 1
     fi
