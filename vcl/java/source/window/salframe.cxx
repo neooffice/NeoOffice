@@ -69,6 +69,10 @@
 #include <vos/module.hxx>
 #endif
 
+#ifndef _OSL_MUTEX_HXX_
+#include <osl/mutex.hxx>
+#endif
+
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
@@ -504,6 +508,54 @@ void SalFrame::ShowFullScreen( BOOL bFullScreen )
 
 // -----------------------------------------------------------------------
 
+#ifdef MACOSX
+/**
+ * (static) Timer routine to toggle the system user interface mode on the
+ * thread that is hosting our main runloop.  Starting with 10.3.8, it appears
+ * that there is some type of contention that is causing SetSystemUIMode
+ * to crash if it is invoked from a thread that is not the carbon runloop.
+ *
+ * @param aTimer	timer reference structure
+ * @param pData		cookie passed to timer;  treated as a boolean value
+ *			set to TRUE if we're entering fullscreen presentation
+ *			mode, FALSE if we're returning to normal usage mode.
+ */
+static void SetSystemUIModeTimerCallback( EventLoopTimerRef aTimer, void *pData )
+{
+	BOOL enterFullscreen = ( BOOL ) pData;
+	
+	if ( enterFullscreen )
+		SetSystemUIMode( kUIModeAllHidden, kUIOptionDisableAppleMenu | kUIOptionDisableProcessSwitch );
+	else
+		SetSystemUIMode( kUIModeNormal, 0 );
+}
+#endif
+
+// -----------------------------------------------------------------------
+
+#ifdef MACOSX
+/**
+ * (static) Trigger a timer invocation to change our system user interface
+ * mode to show/hide the dock, menubar, and other applications in preparation
+ * for presentation mode.
+ *
+ * @param bStart	TRUE to enter fullscreen mode, FALSE to restore
+ *			normal mode
+ */
+static void InstallSetSystemUIModeTimer( BOOL bStart )
+{
+	static EventLoopTimerUPP pSystemUIModeTimerUPP = NULL;
+	static ::osl::Mutex aMutex;
+	
+	::osl::MutexGuard aGuard( aMutex );
+	if ( !pSystemUIModeTimerUPP )
+		pSystemUIModeTimerUPP = NewEventLoopTimerUPP( SetSystemUIModeTimerCallback );
+	InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pSystemUIModeTimerUPP, (void *)bStart, NULL );
+}
+#endif
+
+// -----------------------------------------------------------------------
+
 void SalFrame::StartPresentation( BOOL bStart )
 {
 	if ( bStart == maFrameData.mbPresentation )
@@ -518,10 +570,9 @@ void SalFrame::StartPresentation( BOOL bStart )
 		return;
 
 #ifdef MACOSX
-	if ( bStart )
-		SetSystemUIMode( kUIModeAllHidden, kUIOptionDisableAppleMenu | kUIOptionDisableProcessSwitch );
-	else
-		SetSystemUIMode( kUIModeNormal, 0 );
+	// [ed] 2/15/05 Change the SystemUIMode via timers so we can trigger
+	// it on the main runloop thread.  Bug 484
+	InstallSetSystemUIModeTimer( bStart );
 
 	maFrameData.mbPresentation = bStart;
 	pSalData->mpPresentationFrame = this;
