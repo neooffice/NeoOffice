@@ -1183,8 +1183,10 @@ USHORT Desktop::Exception(USHORT nError)
 			}
 		}
 
+#ifndef MACOSX
         if ( !pArgs->IsNoRestore() && ( nError & EXC_MAJORTYPE ) != EXC_DISPLAY && ( nError & EXC_MAJORTYPE ) != EXC_REMOTE )
             WarningBox( NULL, DesktopResId(STR_RECOVER_PREPARED) ).Execute();
+#endif
     }
 
 	// store configuration data
