@@ -65,7 +65,7 @@ if [ ! -d "$userbase" ] ; then
 fi
 
 # Parse arguments
-locale=""
+locale="en-US"
 repair=""
 while [ ! -z "$1" ] ; do
     case "$1" in
@@ -83,34 +83,8 @@ while [ ! -z "$1" ] ; do
     esac
 done
 
-# Match the locale to one of the installed locales
 lang=`echo "$locale" | awk -F- '{ print $1 }'`
 country=`echo "$locale" | awk -F- '{ print $2 }'`
-locales="$(LANGUAGE_NAMES)"
-matchedlocale=""
-for i in $locales ; do
-    if [ "$locale" = "$i" ] ; then
-        matchedlocale="$i"
-        break
-    fi
-done
-if [ -z "$matchedlocale" ] ; then
-    country=""
-    for i in $locales ; do
-        ilang=`echo "$i" | awk -F- '{ print $1 }'`
-        if [ "$lang" = "$ilang" ] ; then
-            matchedlocale="$i"
-            break
-        fi
-    done
-fi
-if [ -z "$matchedlocale" ] ; then
-    lang="en"
-    country="US"
-    locale="$lang-$country"
-else
-    locale="$matchedlocale"
-fi
 
 # Create user installation directory
 configdir="$userinstall/config"
