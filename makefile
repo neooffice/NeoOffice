@@ -62,8 +62,8 @@ PRODUCT_VERSION=1.1 Beta
 PRODUCT_DIR_VERSION=1.1_Beta
 PRODUCT_LANG_PACK_VERSION=Languages
 PRODUCT_DIR_LANG_PACK_VERSION=Languages
-PRODUCT_PATCH_VERSION=Patch 5
-PRODUCT_DIR_PATCH_VERSION=Patch-5
+PRODUCT_PATCH_VERSION=Patch 6
+PRODUCT_DIR_PATCH_VERSION=Patch-6
 PRODUCT_PREVIOUS_VERSION=1.1 Alpha 2
 # Don't allow patching of pre-Beta installations
 PRODUCT_PREVIOUS_PATCH_VERSION=Patch 99
@@ -251,7 +251,7 @@ build.package: build.neo_patches build.oo_download_dics build.source_zip
 	cd "$(INSTALL_HOME)/package/Contents/program" ; ln -sf "soffice.bin" "soffice"
 	cd "$(INSTALL_HOME)/package/Contents/program" ; sh -e -c 'for i in "libjava_uno" "libdb_java-3.2" "libjpipe" "libjuh" "libjuhx" ; do ln -sf "$${i}.dylib" "$${i}.jnilib" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/Library/$(PRODUCT_DIR_NAME)-$(OO_VERSION)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' > "../../out" ; mv -f "../../out" "program/bootstraprc"
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in "share/registry/data/org/openoffice/Setup.xcu" "share/registry/data/org/openoffice/Office/Common.xcu" ; do sed "s#>$(OO_PRODUCT_NAME) $(OO_PRODUCT_VERSION)<#>$(PRODUCT_NAME) $(PRODUCT_VERSION)<#g" "$${i}" | sed "s#>$(OO_PRODUCT_NAME)<#>$(PRODUCT_NAME)<#g" | sed "s#>$(OO_PRODUCT_VERSION)<#>$(PRODUCT_VERSION)<#g" | sed "s#>UNIX<#>MAC<#g" | sed "s#>$(OO_REGISTRATION_URL)<#>$(PRODUCT_REGISTRATION_URL)<#g" > "../../../out" ; mv -f "../../../out" "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in "share/registry/data/org/openoffice/Setup.xcu" "share/registry/data/org/openoffice/Office/Common.xcu" ; do sed "s#>UNIX<#>MAC<#g" "$${i}" | sed "s#>$(OO_REGISTRATION_URL)<#>$(PRODUCT_REGISTRATION_URL)<#g" | sed "s#$(OO_PRODUCT_NAME)#$(PRODUCT_NAME)#g" | sed "s#$(OO_PRODUCT_VERSION)#$(PRODUCT_VERSION)#g" > "../../../out" ; mv -f "../../../out" "$${i}" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.dylib*" -o -name "*.bin"` ; do strip -S -x "$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'if [ ! -d "MacOS" ] ; then rm -Rf "MacOS" ; mv -f "program" "MacOS" ; ln -sf "MacOS" "program" ; fi'
 	cd "$(INSTALL_HOME)/package/Contents/share/dict/ooo" ; sh -c 'for i in `sed "s#-[a-zA-Z0-9]* # #g" "$(PWD)/$(INSTALL_HOME)/language_names"` ; do for j in "$(PWD)/$(DIC_HOME)"/*.zip ; do unzip -o "$$j" "$$i*.aff" "$$i*.dic" "hyph_$$i*.dic" "th_$$i*.dat" "th_$$i*.idx" ; if [ $$? != 0 -a $$? != 11 ] ; then exit $$? ; fi ; done ; done'
