@@ -1988,6 +1988,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			if (isShowing())
 				super.paint(g);
+			g.setClip(null);
 
 			VCLGraphics graphics = frame.getGraphics();
 			if (graphics != null) {
@@ -2045,6 +2046,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			if (isShowing())
 				super.paint(g);
+			g.setClip(null);
 
 			VCLGraphics graphics = frame.getGraphics();
 			if (graphics != null) {
@@ -2103,6 +2105,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			if (isShowing())
 				super.paint(g);
+			g.setClip(null);
 
 			VCLGraphics graphics = frame.getGraphics();
 			if (graphics != null) {
