@@ -277,7 +277,7 @@ public final class VCLFont {
 				leading = ascent / 2;
 				descent = leading;
 			}
- 			if (fontName.startsWith("hiragino")) {
+ 			if (fontName.startsWith("hiragino") || fontName.startsWith("osaka")) {
 				leading /= 2;
 				ascent -= leading;
 				descent += leading;
