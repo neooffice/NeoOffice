@@ -546,16 +546,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private static boolean capture = false;
 
 	/**
-	 * The first capture event.
-	 */
-	private static MouseEvent firstCaptureEvent = null;
-
-	/**
-	 * The first capture frame.
-	 */
-	private static VCLFrame firstCaptureFrame = null;
-
-	/**
 	 * The last capture frame.
 	 */
 	private static VCLFrame lastCaptureFrame = null;
@@ -712,11 +702,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			VCLFrame.captureFrame = parent;
 		if (VCLFrame.lastCaptureFrame == this)
 			VCLFrame.lastCaptureFrame = null;
-		if (VCLFrame.firstCaptureFrame == this && VCLFrame.firstCaptureEvent != null)
-			mouseReleased(new MouseEvent(panel, MouseEvent.MOUSE_RELEASED, System.currentTimeMillis(), VCLFrame.firstCaptureEvent.getModifiers(), VCLFrame.firstCaptureEvent.getX(), VCLFrame.firstCaptureEvent.getY(), VCLFrame.firstCaptureEvent.getClickCount(), VCLFrame.firstCaptureEvent.isPopupTrigger()));
 
 	}
-
 
 	/**
 	 * Invoked when the native window has gained focus.
@@ -1291,9 +1278,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void mousePressed(MouseEvent e) {
 
-		VCLFrame.firstCaptureEvent = e;
-		VCLFrame.firstCaptureFrame = this;
-
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONDOWN, this, 0));
 
 	}
@@ -1307,56 +1291,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		VCLFrame f = this;
 
-		if (VCLFrame.capture && VCLFrame.captureFrame != null && e.getComponent().isShowing()) {
-			// Send the mouse event to the capture frame
-			f = VCLFrame.captureFrame;
-			Point srcPoint = e.getComponent().getLocationOnScreen();
-			srcPoint.x += e.getX();
-			srcPoint.y += e.getY();
-			while (f != null) {
-				if (f.getWindow().isShowing()) {
-					Panel p = f.getPanel();
-					Point destPoint = p.getLocationOnScreen();
-					Rectangle destRect = new Rectangle(destPoint.x, destPoint.y, p.getWidth(), p.getHeight());
-					e = new MouseEvent(f.getPanel(), e.getID(), e.getWhen(), e.getModifiers(), srcPoint.x - destPoint.x, srcPoint.y - destPoint.y, e.getClickCount(), e.isPopupTrigger());
-					break;
-				}
-				f = f.getParent();
-			}
-
-			if (f == null)
-				f = this;
-		}
-
-		// Send a focus lost event if we release on a borderless window
-		if (VCLFrame.lastCaptureFrame != null && VCLFrame.lastCaptureFrame != f && VCLFrame.lastCaptureFrame.getWindow() instanceof Frame && VCLFrame.lastCaptureFrame.getWindow().isShowing()) {
-			Panel p = VCLFrame.lastCaptureFrame.getPanel();
-			VCLFrame.lastCaptureFrame.focusLost(new FocusEvent(p, FocusEvent.FOCUS_LOST));
-		}
-
-		// Disable mouse capture
-		VCLFrame.capture = false;
-		VCLFrame.firstCaptureEvent = null;
-		VCLFrame.firstCaptureFrame = null;
-		VCLFrame.lastCaptureFrame = null;
-
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONUP, f, 0));
-
-	}
-
-	/**
-	 * Invoked when a mouse button is pressed on a component and then dragged.
-	 *
-	 * @param e the <code>MouseEvent</code>
-	 */
-	public void mouseDragged(MouseEvent e) {
-
-		// Enable mouse capture
-		VCLFrame.capture = true;
-
-		VCLFrame f = this;
-
-		if (VCLFrame.capture && VCLFrame.captureFrame != null && e.getComponent().isShowing()) {
+		if (VCLFrame.captureFrame != null && e.getComponent().isShowing()) {
 			// Find the capture window
 			f = VCLFrame.captureFrame;
 			Point srcPoint = e.getComponent().getLocationOnScreen();
@@ -1378,14 +1313,56 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			if (f == null)
 				f = this;
 
-			// Send a mouse exited event if the capture window has changed
-			if (VCLFrame.lastCaptureFrame != null && VCLFrame.lastCaptureFrame != f && VCLFrame.captureFrame.getWindow().isShowing()) {
-				Panel p = VCLFrame.lastCaptureFrame.getPanel();
-				Point destPoint = p.getLocationOnScreen();
-				MouseEvent mouseExited = new MouseEvent(p, MouseEvent.MOUSE_EXITED, e.getWhen(), e.getModifiers(), srcPoint.x - destPoint.x, srcPoint.y - destPoint.y, e.getClickCount(), e.isPopupTrigger());
-				queue.postCachedEvent(new VCLEvent(mouseExited, VCLEvent.SALEVENT_MOUSELEAVE, VCLFrame.lastCaptureFrame, 0));
+			if (VCLFrame.lastCaptureFrame != null && VCLFrame.lastCaptureFrame != f) {
+				VCLFrame.lastCaptureFrame.focusGained(new FocusEvent(VCLFrame.lastCaptureFrame.getPanel(), FocusEvent.FOCUS_GAINED));
+				VCLFrame.lastCaptureFrame.focusLost(new FocusEvent(VCLFrame.lastCaptureFrame.getPanel(), FocusEvent.FOCUS_LOST));
 			}
-			VCLFrame.lastCaptureFrame = f;
+		}
+
+		// Disable mouse capture
+		VCLFrame.capture = false;
+		VCLFrame.lastCaptureFrame = null;
+
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONUP, f, 0));
+
+	}
+
+	/**
+	 * Invoked when a mouse button is pressed on a component and then dragged.
+	 *
+	 * @param e the <code>MouseEvent</code>
+	 */
+	public void mouseDragged(MouseEvent e) {
+
+		VCLFrame f = this;
+
+		// Enable mouse capture
+		VCLFrame.capture = true;
+
+		if (VCLFrame.captureFrame != null && e.getComponent().isShowing()) {
+			// Find the capture window
+			f = VCLFrame.captureFrame;
+			Point srcPoint = e.getComponent().getLocationOnScreen();
+			srcPoint.x += e.getX();
+			srcPoint.y += e.getY();
+			while (f != null && f != parent) {
+				if (f.getWindow().isShowing()) {
+					Panel p = f.getPanel();
+					Point destPoint = p.getLocationOnScreen();
+					Rectangle destRect = new Rectangle(destPoint.x, destPoint.y, p.getWidth(), p.getHeight());
+					if (destRect.contains(srcPoint)) {
+						e = new MouseEvent(p, e.getID(), e.getWhen(), e.getModifiers(), srcPoint.x - destPoint.x, srcPoint.y - destPoint.y, e.getClickCount(), e.isPopupTrigger());
+						break;
+					}
+				}
+				f = f.getParent();
+			}
+
+			if (f == null || f == parent)
+				f = this;
+
+			if (!(f.getWindow() instanceof Frame))
+				VCLFrame.lastCaptureFrame = f;
 		}
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, f, 0));
