@@ -61,7 +61,7 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
 
-#define UNITS_PER_PIXEL 1024
+#define UNITS_PER_PIXEL 1000
 
 inline int Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
