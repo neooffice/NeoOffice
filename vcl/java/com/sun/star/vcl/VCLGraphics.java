@@ -391,7 +391,7 @@ public final class VCLGraphics {
 			Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
 			int[] destData = image.getData();
 			int destDataWidth = image.getWidth();
-			Point srcPoint = new Point(srcBounds.x, srcBounds.y);
+			Point srcPoint = new Point(srcBounds.x + destBounds.x - destX, srcBounds.y + destBounds.y - destY);
 			Point destPoint = new Point(destBounds.x, destBounds.y);
 			int totalPixels = destBounds.width * destBounds.height;
 
@@ -452,7 +452,7 @@ public final class VCLGraphics {
 			Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
 			int[] destData = image.getData();
 			int destDataWidth = image.getWidth();
-			Point srcPoint = new Point(srcBounds.x, srcBounds.y);
+			Point srcPoint = new Point(srcBounds.x + destBounds.x - destX, srcBounds.y + destBounds.y - destY);
 			Point destPoint = new Point(destBounds.x, destBounds.y);
 			int totalPixels = destBounds.width * destBounds.height;
 
@@ -567,7 +567,7 @@ public final class VCLGraphics {
 			int srcDataWidth = img.getWidth();
 			int[] destData = image.getData();
 			int destDataWidth = image.getWidth();
-			Point srcPoint = new Point(srcBounds.x, srcBounds.y);
+			Point srcPoint = new Point(srcBounds.x + destBounds.x - destX, srcBounds.y + destBounds.y - destY);
 			Point destPoint = new Point(destBounds.x, destBounds.y);
 			int totalPixels = destBounds.width * destBounds.height;
 
@@ -668,7 +668,7 @@ public final class VCLGraphics {
 			Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
 			int[] destData = image.getData();
 			int destDataWidth = image.getWidth();
-			Point srcPoint = new Point(srcBounds.x, srcBounds.y);
+			Point srcPoint = new Point(srcBounds.x + destBounds.x - destX, srcBounds.y + destBounds.y - destY);
 			Point destPoint = new Point(destBounds.x, destBounds.y);
 			int totalPixels = destBounds.width * destBounds.height;
 

@@ -140,7 +140,7 @@ public final class VCLBitmap {
 		Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, width, height));
 		int[] srcData = srcImage.getData();
 		int srcDataWidth = srcImage.getWidth();
-		Point srcPoint = new Point(srcBounds.x, srcBounds.y);
+		Point srcPoint = new Point(srcBounds.x + destBounds.x - destX, srcBounds.y + destBounds.y - destY);
 		Point destPoint = new Point(destBounds.x, destBounds.y);
 		int totalPixels = destBounds.width * destBounds.height;
 
