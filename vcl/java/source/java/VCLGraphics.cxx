@@ -560,7 +560,7 @@ const Size com_sun_star_vcl_VCLGraphics::getGlyphSize( const sal_Unicode _par0, 
 			if ( com_sun_star_vcl_VCLFont::useDefaultFont )
 				pFont = _par1->getDefaultFont();
 			jvalue args[2];
-			args[0].c = jint( _par0 );
+			args[0].c = jchar( _par0 );
 			args[1].l = pFont ? pFont->getJavaObject() : _par1->getJavaObject();
 			jobject tempObj = t.pEnv->CallNonvirtualObjectMethodA( object, getMyClass(), mID, args );
 			if ( pFont )
