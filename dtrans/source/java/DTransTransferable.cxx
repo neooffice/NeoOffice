@@ -148,120 +148,136 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 
 		if ( bFlavorFound )
 		{
-			Any aValue( pTransferable->getTransferData( aFlavor ) );
-
-     	    		if ( aValue.getValueType().equals( getCppuType( ( OUString* )0 ) ) )
-			{
-				OUString aString;
-				aValue >>= aString;
-
-				// Replace line feeds with carriage returns
-				sal_Unicode *pArray = (sal_Unicode *)aString.getStr();
-				sal_Int32 nLen = aString.getLength();
-				sal_Int32 j = 0;
-				for ( j = 0; j < nLen; j++ )
-				{
-					if ( pArray[ j ] == (sal_Unicode)'\n' )
-						pArray[ j ] = (sal_Unicode)'\r';
-				}
-
-				if ( nType == 'TEXT' )
-				{
-					OString aEncodedString = OUStringToOString( aString, gsl_getSystemTextEncoding() );
-					sal_Int8 *pData = (sal_Int8 *)aEncodedString.getStr();
-					MacOSSize nDataLen = aEncodedString.getLength();
-
-					if ( pData && nDataLen )
-						nErr = PutScrapFlavor( (ScrapRef)pTransferable->getNativeTransferable(), nType, kScrapFlavorMaskNone, nDataLen, (const void *)pData );
-				}
-				else
-				{
-					sal_Int8 *pData = (sal_Int8 *)aString.getStr();
-					MacOSSize nDataLen = aString.getLength() * sizeof( sal_Unicode );
-
-					if ( pData && nDataLen )
-						nErr = PutScrapFlavor( (ScrapRef)pTransferable->getNativeTransferable(), nType, kScrapFlavorMaskNone, nDataLen, (const void *)pData );
-				}
+			BOOL bDataFound = FALSE;
+			Any aValue;
+			try {
+				aValue = pTransferable->getTransferData( aFlavor );
+				bDataFound = TRUE;
 			}
-			else if ( aValue.getValueType().equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
+			catch ( ... ) {}
+
+			if ( bDataFound )
 			{
-				Sequence< sal_Int8 > aData;
-				aValue >>= aData;
-
-				if ( nType == 'PICT' )
+				if ( aValue.getValueType().equals( getCppuType( ( OUString* )0 ) ) )
 				{
-					// Convert to PICT from our BMP data
-					ComponentInstance aImporter;
-					if ( OpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
-					{
-						Handle hData;
-						if ( PtrToHand( aData.getArray(), &hData, aData.getLength() ) == noErr )
-						{
-							// Free the source data
-							aData = Sequence< sal_Int8 >();
+					OUString aString;
+					aValue >>= aString;
 
-							if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr )
-							{
-								PicHandle hPict;
-								if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
-								{
-									nErr = PutScrapFlavor( (ScrapRef)pTransferable->getNativeTransferable(), nType, kScrapFlavorMaskNone, GetHandleSize( (Handle)hPict ), (const void *)*hPict );
-									KillPicture( hPict );
-								}
-								DisposeHandle( hData );
-							}
-							CloseComponent( aImporter );
-						}
+					// Replace line feeds with carriage returns
+					sal_Unicode *pArray = (sal_Unicode *)aString.getStr();
+					sal_Int32 nLen = aString.getLength();
+					sal_Int32 j = 0;
+					for ( j = 0; j < nLen; j++ )
+					{
+						if ( pArray[ j ] == (sal_Unicode)'\n' )
+							pArray[ j ] = (sal_Unicode)'\r';
+					}
+
+					if ( nType == 'TEXT' )
+					{
+						OString aEncodedString = OUStringToOString( aString, gsl_getSystemTextEncoding() );
+						sal_Int8 *pData = (sal_Int8 *)aEncodedString.getStr();
+						MacOSSize nDataLen = aEncodedString.getLength();
+
+						if ( pData && nDataLen )
+							nErr = PutScrapFlavor( (ScrapRef)pTransferable->getNativeTransferable(), nType, kScrapFlavorMaskNone, nDataLen, (const void *)pData );
+					}
+					else
+					{
+						sal_Int8 *pData = (sal_Int8 *)aString.getStr();
+						MacOSSize nDataLen = aString.getLength() * sizeof( sal_Unicode );
+
+						if ( pData && nDataLen )
+							nErr = PutScrapFlavor( (ScrapRef)pTransferable->getNativeTransferable(), nType, kScrapFlavorMaskNone, nDataLen, (const void *)pData );
 					}
 				}
-				else if ( nType == 'TIFF' )
+				else if ( aValue.getValueType().equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
 				{
-					// Convert to TIFF from our BMP data
-					ComponentInstance aImporter;
-					if ( OpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
-					{
-						Handle hData;
-						if ( PtrToHand( aData.getArray(), &hData, aData.getLength() ) == noErr )
-						{
-							// Free the source data
-							aData = Sequence< sal_Int8 >();
+					Sequence< sal_Int8 > aData;
+					aValue >>= aData;
 
-							if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr )
+					if ( nType == 'PICT' )
+					{
+						// Convert to PICT from our BMP data
+						ComponentInstance aImporter;
+						if ( OpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
+						{
+							Handle hData;
+							if ( PtrToHand( aData.getArray(), &hData, aData.getLength() ) == noErr )
 							{
-								PicHandle hPict;
-								if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
+								// Free the source data
+								aData = Sequence< sal_Int8 >();
+
+								if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr )
 								{
-									ComponentInstance aExporter;
-									if ( OpenADefaultComponent( GraphicsExporterComponentType, nType, &aExporter ) == noErr );
+									PicHandle hPict;
+									if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
 									{
-										if ( GraphicsExportSetInputPicture( aExporter, hPict ) == noErr )
-										{
-											Handle hExportData = NewHandle( 0 );
-											if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
-											{
-												unsigned long nDataLen;
-												if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
-													nErr = PutScrapFlavor( (ScrapRef)pTransferable->getNativeTransferable(), nType, kScrapFlavorMaskNone, nDataLen, (const void *)*hExportData );
-												DisposeHandle( hExportData );
-											}
-										}
-										CloseComponent( aExporter );
+										HLock( (Handle)hPict );
+										nErr = PutScrapFlavor( (ScrapRef)pTransferable->getNativeTransferable(), nType, kScrapFlavorMaskNone, GetHandleSize( (Handle)hPict ), (const void *)*hPict );
+										HUnlock( (Handle)hPict );
+										KillPicture( hPict );
 									}
-									KillPicture( hPict );
+									HUnlock( hData );
+									DisposeHandle( hData );
 								}
-								DisposeHandle( hData );
+								CloseComponent( aImporter );
 							}
-							CloseComponent( aImporter );
 						}
 					}
-				}
-				else
-				{
-					sal_Int8 *pData = aData.getArray();
-					MacOSSize nDataLen = aData.getLength();
+					else if ( nType == 'TIFF' )
+					{
+						// Convert to TIFF from our BMP data
+						ComponentInstance aImporter;
+						if ( OpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
+						{
+							Handle hData;
+							if ( PtrToHand( aData.getArray(), &hData, aData.getLength() ) == noErr )
+							{
+								// Free the source data
+								aData = Sequence< sal_Int8 >();
 
-					if ( pData && nDataLen )
-						nErr = PutScrapFlavor( (ScrapRef)pTransferable->getNativeTransferable(), nType, kScrapFlavorMaskNone, nDataLen, (const void *)pData );
+								if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr )
+								{
+									PicHandle hPict;
+									if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
+									{
+										ComponentInstance aExporter;
+										if ( OpenADefaultComponent( GraphicsExporterComponentType, nType, &aExporter ) == noErr );
+										{
+											if ( GraphicsExportSetInputPicture( aExporter, hPict ) == noErr )
+											{
+												Handle hExportData = NewHandle( 0 );
+												if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
+												{
+													unsigned long nDataLen;
+													if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
+													{
+														HLock( hExportData );
+														nErr = PutScrapFlavor( (ScrapRef)pTransferable->getNativeTransferable(), nType, kScrapFlavorMaskNone, nDataLen, (const void *)*hExportData );
+														HUnlock( hExportData );
+													}
+													DisposeHandle( hExportData );
+												}
+											}
+											CloseComponent( aExporter );
+										}
+										KillPicture( hPict );
+									}
+									DisposeHandle( hData );
+								}
+								CloseComponent( aImporter );
+							}
+						}
+					}
+					else
+					{
+						sal_Int8 *pData = aData.getArray();
+						MacOSSize nDataLen = aData.getLength();
+
+						if ( pData && nDataLen )
+							nErr = PutScrapFlavor( (ScrapRef)pTransferable->getNativeTransferable(), nType, kScrapFlavorMaskNone, nDataLen, (const void *)pData );
+					}
 				}
 			}
 		}
@@ -376,7 +392,9 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 											if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
 											{
 												Sequence< sal_Int8 > aExportData( nDataLen );
+												HLock( hExportData );
 												memcpy( aExportData.getArray(), *hExportData, nDataLen );
+												HUnlock( hExportData );
 												out <<= aExportData;
 											}
 											DisposeHandle( hExportData );
@@ -416,7 +434,9 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 														if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
 														{
 															Sequence< sal_Int8 > aExportData( nDataLen );
+															HLock( hExportData );
 															memcpy( aExportData.getArray(), *hExportData, nDataLen );
+															HUnlock( hExportData );
 															out <<= aExportData;
 														}
 														DisposeHandle( hExportData );
