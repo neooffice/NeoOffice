@@ -888,6 +888,9 @@ public final class VCLGraphics {
 			return;
 		}
 
+		if (npoints == 0)
+			return;
+
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle bounds = polygon.getBounds();
 		bounds.x -= 1;
@@ -898,33 +901,32 @@ public final class VCLGraphics {
 		if (bounds.isEmpty())
 			return;
 
-		if (fill) {
-			if (xor)
-				graphics.setXORMode(Color.black);
-			graphics.setColor(new Color(color));
-			graphics.fillPolygon(polygon);
-			if (xor)
-				graphics.setPaintMode();
-			addToFlush(bounds);
-		}
-		else {
-			if (xor) {
-				VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
-				Graphics2D srcGraphics = srcImage.getImage().createGraphics();
-				srcGraphics.setColor(new Color(color));
-				srcGraphics.translate(bounds.x * -1, bounds.y * -1);
-				for (int i = 1; i < npoints; i++)
-					srcGraphics.drawLine(xpoints[i - 1], ypoints[i - 1], xpoints[i], ypoints[i]);
-				srcGraphics.dispose();
-				drawImageXOR(srcImage, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y, bounds.width, bounds.height);
-				srcImage.dispose();
+		if (xor) {
+			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
+			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
+			srcGraphics.setColor(new Color(color));
+			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
+			if (fill) {
+				srcGraphics.fillPolygon(polygon);
 			}
 			else {
-				graphics.setColor(new Color(color));
+				for (int i = 1; i < npoints; i++)
+					srcGraphics.drawLine(xpoints[i - 1], ypoints[i - 1], xpoints[i], ypoints[i]);
+			}
+			srcGraphics.dispose();
+			drawImageXOR(srcImage, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y, bounds.width, bounds.height);
+			srcImage.dispose();
+		}
+		else {
+			graphics.setColor(new Color(color));
+			if (fill) {
+				graphics.fillPolygon(polygon);
+			}
+			else {
 				for (int i = 1; i < npoints; i++)
 					graphics.drawLine(xpoints[i - 1], ypoints[i - 1], xpoints[i], ypoints[i]);
-				addToFlush(bounds);
 			}
+			addToFlush(bounds);
 		}
 
 	}
@@ -972,14 +974,23 @@ public final class VCLGraphics {
 			return;
 		}
 
-		Area area = new Area(new Polygon(xpoints[0], ypoints[0], npoints[0]));
-		for (int i = 1; i < npoly; i++) {
+		if (npoly == 0)
+			return;
+
+		Area area = null;
+		for (int i = 0; i < npoly; i++) {
 			Area a = new Area(new Polygon(xpoints[i], ypoints[i], npoints[i]));
+			if (area == null) {
+				area = a;
+				continue;
+			}
 			if (fill)
 				area.exclusiveOr(a);
 			else
 				area.add(a);
 		}
+		if (area == null || area.isEmpty())
+			return;
 
 		Rectangle bounds = area.getBounds();
 		bounds.x -= 1;
@@ -990,37 +1001,36 @@ public final class VCLGraphics {
 		if (bounds.isEmpty())
 			return;
 
-		if (fill) {
-			if (xor)
-				graphics.setXORMode(Color.black);
-			graphics.setColor(new Color(color));
-			graphics.fill(area);
-			if (xor)
-				graphics.setPaintMode();
-			addToFlush(bounds);
-		}
-		else {
-			if (xor) {
-				VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
-				Graphics2D srcGraphics = srcImage.getImage().createGraphics();
-				srcGraphics.setColor(new Color(color));
-				srcGraphics.translate(bounds.x * -1, bounds.y * -1);
+		if (xor) {
+			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
+			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
+			srcGraphics.setColor(new Color(color));
+			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
+			if (fill) {
+				srcGraphics.fill(area);
+			}
+			else {
 				for (int i = 0; i < npoly; i++) {
 					for (int j = 1; j < npoints[i]; j++)
 						srcGraphics.drawLine(xpoints[i][j - 1], ypoints[i][j - 1], xpoints[i][j], ypoints[i][j]);
 				}
-				srcGraphics.dispose();
-				drawImageXOR(srcImage, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y, bounds.width, bounds.height);
-				srcImage.dispose();
+			}
+			srcGraphics.dispose();
+			drawImageXOR(srcImage, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y, bounds.width, bounds.height);
+			srcImage.dispose();
+		}
+		else {
+			graphics.setColor(new Color(color));
+			if (fill) {
+				graphics.fill(area);
 			}
 			else {
-				graphics.setColor(new Color(color));
 				for (int i = 0; i < npoly; i++) {
 					for (int j = 1; j < npoints[i]; j++)
 						graphics.drawLine(xpoints[i][j - 1], ypoints[i][j - 1], xpoints[i][j], ypoints[i][j]);
 				}
-				addToFlush(bounds);
 			}
+			addToFlush(bounds);
 		}
 
 	}
@@ -1061,31 +1071,26 @@ public final class VCLGraphics {
 		if (bounds.isEmpty())
 			return;
 
-		if (fill) {
-			if (xor)
-				graphics.setXORMode(Color.black);
-			graphics.setColor(new Color(color));
-			graphics.fillRect(x, y, width, height);
-			if (xor)
-				graphics.setPaintMode();
-			addToFlush(bounds);
+		if (xor) {
+			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
+			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
+			srcGraphics.setColor(new Color(color));
+			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
+			if (fill)
+				srcGraphics.fillRect(x, y, width, height);
+			else
+				srcGraphics.drawRect(x, y, width - 1, height - 1);
+			srcGraphics.dispose();
+			drawImageXOR(srcImage, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y, bounds.width, bounds.height);
+			srcImage.dispose();
 		}
 		else {
-			if (xor) {
-				VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
-				Graphics2D srcGraphics = srcImage.getImage().createGraphics();
-				srcGraphics.setColor(new Color(color));
-				srcGraphics.translate(bounds.x * -1, bounds.y * -1);
-				srcGraphics.drawRect(x, y, width - 1, height - 1);
-				srcGraphics.dispose();
-				drawImageXOR(srcImage, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y, bounds.width, bounds.height);
-				srcImage.dispose();
-			}
-			else {
-				graphics.setColor(new Color(color));
+			graphics.setColor(new Color(color));
+			if (fill)
+				graphics.fillRect(x, y, width, height);
+			else
 				graphics.drawRect(x, y, width - 1, height - 1);
-				addToFlush(bounds);
-			}
+			addToFlush(bounds);
 		}
 
 	}
