@@ -488,7 +488,17 @@ public final class VCLEventQueue {
 					}
 				}
 
-				super.dispatchEvent(event);
+				Object src = event.getSource();
+				if (src instanceof Component) {
+					// Lock the component tree lock to avoid collisions with
+					// the VCL event loop
+					synchronized (((Component)src).getTreeLock()) {
+						super.dispatchEvent(event);
+					}
+				}
+				else {
+					super.dispatchEvent(event);
+				}
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
