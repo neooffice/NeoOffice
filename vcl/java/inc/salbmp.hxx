@@ -63,7 +63,9 @@ class SalBitmap
 	friend class	SalVirtualDevice;
 
 	Size 			maSize;
+	USHORT			mnAcquireCount;
 	USHORT			mnBitCount;
+	BYTE*			mpBits;
 	::vcl::java_lang_Object*	mpData;
 	::vcl::com_sun_star_vcl_VCLBitmap*	mpVCLBitmap;
 public:	

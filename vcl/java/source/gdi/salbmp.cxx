@@ -52,7 +52,9 @@ using namespace vcl;
 SalBitmap::SalBitmap() :
 	maSize( 0, 0 )
 {
+	mnAcquireCount = 0;
 	mnBitCount = 0;
+	mpBits = NULL;
 	mpData = NULL;
 	mpVCLBitmap = NULL;
 }
@@ -157,11 +159,20 @@ BOOL SalBitmap::Create( const SalBitmap& rSalBmp, USHORT nNewBitCount )
 void SalBitmap::Destroy()
 {
 	maSize = Size( 0, 0 );
-
+	mnAcquireCount = 0;
 	mnBitCount = 0;
 
 	if ( mpData )
+	{
+		if ( mpBits )
+		{
+			VCLThreadAttach t;
+			if ( t.pEnv )
+				t.pEnv->ReleaseByteArrayElements( (jbyteArray)mpData->getJavaObject(), (jbyte *)mpBits, 0 );
+		}
 		delete mpData;
+	}
+	mpBits = NULL;
 	mpData = NULL;
 
 	if ( mpVCLBitmap )
@@ -210,17 +221,25 @@ BitmapBuffer* SalBitmap::AcquireBuffer( BOOL bReadOnly )
 		delete pBuffer;
 		return NULL;
 	}
-	VCLThreadAttach t;
-	if ( t.pEnv )
+
+	if ( !mpBits )
 	{
-		jboolean bCopy( sal_False );
-		pBuffer->mpBits = (BYTE *)t.pEnv->GetPrimitiveArrayCritical( (jbyteArray)mpData->getJavaObject(), &bCopy );
+		VCLThreadAttach t;
+		if ( t.pEnv )
+		{
+			jboolean bCopy( sal_False );
+			mpBits = (BYTE *)t.pEnv->GetByteArrayElements( (jbyteArray)mpData->getJavaObject(), &bCopy );
+		}
 	}
-	if ( !pBuffer->mpBits )
+
+	if ( !mpBits )
 	{
 		delete pBuffer;
 		return NULL;
 	}
+
+	mnAcquireCount++;
+	pBuffer->mpBits = mpBits;
 
 	return pBuffer;
 }
@@ -231,22 +250,30 @@ void SalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, BOOL bReadOnly )
 {
 	if ( pBuffer )
 	{
-		if ( mpData && pBuffer->mpBits )
+		mnAcquireCount--;
+
+		if ( mpData && mpBits )
 		{
 			VCLThreadAttach t;
 			if ( t.pEnv )
 			{
 				jbyteArray pArray = (jbyteArray)mpData->getJavaObject();
+				if ( !mnAcquireCount )
+				{
+					if ( !bReadOnly )
+						t.pEnv->ReleaseByteArrayElements( pArray, (jbyte *)mpBits, 0 );
+					else
+						t.pEnv->ReleaseByteArrayElements( pArray, (jbyte *)mpBits, JNI_ABORT );
+					mpBits = NULL;
+				}
+				else if ( !bReadOnly )
+				{
+					t.pEnv->ReleaseByteArrayElements( pArray, (jbyte *)mpBits, JNI_COMMIT );
+				}
+
+				// Save the palette
 				if ( !bReadOnly )
-				{
-					t.pEnv->ReleasePrimitiveArrayCritical( pArray, (jbyte *)pBuffer->mpBits, 0 );
-					// Save the palette
 					mpVCLBitmap->setPalette( pBuffer->maPalette );
-				}
-				else
-				{
-					t.pEnv->ReleasePrimitiveArrayCritical( pArray, (jbyte *)pBuffer->mpBits, JNI_ABORT  );
-				}
 			}
 		}
 		delete pBuffer;
