@@ -83,6 +83,8 @@ static void JNICALL Java_com_apple_mrj_macos_generated_MacWindowFunctions_Select
 		BringToFront( aWindow );
 	if ( bActivate )
 		ActivateWindow( aWindow, true );
+	if ( !IsWindowActive( aWindow ) )
+		ActivateWindow( aWindow, false );
 }
 #endif	// MACOSX
 

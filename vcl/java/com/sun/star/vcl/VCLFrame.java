@@ -1534,10 +1534,14 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public long getState() {
 
+		int s = Frame.NORMAL;
 		if (window instanceof Frame)
-			return (long)((Frame)window).getState();
+			s = ((Frame)window).getState();
+
+		if (s == Frame.ICONIFIED)
+			return SAL_FRAMESTATE_MINIMIZED;
 		else
-			return (long)Frame.NORMAL;
+			return SAL_FRAMESTATE_NORMAL;
 
 	}
 
@@ -2249,7 +2253,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void setState(long state) {
 
-		if (window instanceof Frame) {
+		if (window instanceof Frame && window.isVisible()) {
 			// Only invoke Frame.setState() if the state needs to be changed
 			// as this method can cause a deadlock with the native menu handler
 			// on Mac OS X

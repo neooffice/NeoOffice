@@ -207,6 +207,10 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		bNoActivate = FALSE;
 
 	maFrameData.mbVisible = bVisible;
+
+	if ( !maFrameData.mbVisible && GetSalData()->mpFocusFrame == this && maFrameData.mpParent )
+		maFrameData.mpParent->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+
 	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible, bNoActivate, this );
 
 	// Reset graphics
@@ -226,12 +230,6 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 		// Make a pass through the native menus
 		UpdateMenusForFrame( this, NULL );
-	}
-	else
-	{
-		SalData *pSalData = GetSalData();
-		if ( pSalData->mpFocusFrame == this )
-			pSalData->mpFocusFrame = NULL;
 	}
 }
 
@@ -549,7 +547,7 @@ void SalFrame::SetAlwaysOnTop( BOOL bOnTop )
 
 void SalFrame::ToTop( USHORT nFlags )
 {
-	if ( nFlags & SAL_FRAME_TOTOP_RESTOREWHENMIN && maFrameData.mpVCLFrame->getState() == SAL_FRAMESTATE_MINIMIZED )
+	if ( nFlags & ( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) )
 		maFrameData.mpVCLFrame->setState( SAL_FRAMESTATE_NORMAL );
 
 	if ( ! ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) )
@@ -559,7 +557,7 @@ void SalFrame::ToTop( USHORT nFlags )
 			(*it)->ToTop( nFlags & ~SAL_FRAME_TOTOP_GRABFOCUS );
 	}
 
-	if ( nFlags & ( SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) && maFrameData.mpVCLFrame->getState() != SAL_FRAMESTATE_MINIMIZED )
+	if ( nFlags & ( SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) )
 		maFrameData.mpVCLFrame->requestFocus();
 }
 

@@ -1227,6 +1227,10 @@ void SalInstance::Yield( BOOL bWait )
 			nTimeout = 10;
 	}
 
+	nCount = 0;
+	if ( nTimeout )
+		nCount = Application::ReleaseSolarMutex();
+
 	// Dispatch next pending AWT event. Only dispatch one event as dispatching
 	// multiple events can cause crashing in the next SALEVENT_USEREVENT.
 	while ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
@@ -1234,10 +1238,16 @@ void SalInstance::Yield( BOOL bWait )
 		// Reset timeout
 		nTimeout = 0;
 
+		if ( nCount )
+			Application::AcquireSolarMutex( nCount );
+		nCount = 0;
+
 		pEvent->dispatch();
 		delete pEvent;
 	}
 
+	if ( nCount )
+		Application::AcquireSolarMutex( nCount );
 	nRecursionLevel--;
 }
 

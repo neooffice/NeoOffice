@@ -59,6 +59,9 @@
 #ifndef _SV_SALMENU_HXX
 #include <salmenu.hxx>
 #endif
+#ifndef _SV_WINDOW_HXX
+#include <window.hxx>
+#endif
 
 using namespace vcl;
 
@@ -183,16 +186,48 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_ACTIVATE_APPLICATION:
 		{
-			SalFrameState aState;
-			memset( &aState, 0, sizeof( SalFrameState ) );
-			aState.mnMask = SAL_FRAMESTATE_MASK_STATE;
-			aState.mnState = SAL_FRAMESTATE_NORMAL;
-
-			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+			if ( pSalData->mpPresentationFrame )
 			{
-				if ( (*it)->maFrameData.mbVisible )
-					(*it)->SetWindowState( &aState );
+				// Make sure document window does not float to front
+				SalFrame *pParent = pSalData->mpFocusFrame;
+				while ( pParent )
+				{
+					if ( pParent == pSalData->mpPresentationFrame )
+						break;
+					pParent = pParent->maFrameData.mpParent;
+				}
+				// Make sure that only the presentation frame and its
+				// children are visible
+				if ( !pParent )
+				{
+					pSalData->mpFocusFrame = pSalData->mpPresentationFrame;
+					pSalData->mpFocusFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+				}
 			}
+			else if ( Application::IsInModalMode() )
+			{
+				// Make sure that the modal dialog frame and its children
+				// are visible
+				Window *pWindow = (Window *)ImplGetSVData()->maWinData.mpLastExecuteDlg;
+				if ( pWindow )
+				{
+					SalFrame *pFocusFrame = pWindow->ImplGetFrame();
+					if ( pFocusFrame )
+						pFocusFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+				}
+			}
+			else if ( pSalData->mpFocusFrame )
+			{
+				// Make sure that the current document window is showing
+				SalFrame *pParent = pSalData->mpFocusFrame;
+				while ( pParent && pParent->maFrameData.mpParent )
+					pParent = pParent->maFrameData.mpParent;
+				pParent->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+			}
+			// Force all "always on top" windows to the front without focus
+			for ( std::list< SalFrame* >::const_iterator it = pSalData->maAlwaysOnTopFrameList.begin(); it != pSalData->maAlwaysOnTopFrameList.end(); ++it )
+				(*it)->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
+			return;
 		}
 	}
 	
@@ -243,23 +278,93 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_GETFOCUS:
 		{
-			if ( pSalData->mpFocusFrame != pFrame )
+			if ( pFrame && pSalData->mpFocusFrame != pFrame )
 			{
+				if ( pSalData->mpPresentationFrame )
+				{
+					// Make sure document window does not float to front
+					SalFrame *pParent = pFrame;
+					while ( pParent )
+					{
+						if ( pParent == pSalData->mpPresentationFrame )
+							break;
+						pParent = pParent->maFrameData.mpParent;
+					}
+					// Make sure that only the presentation frame and its
+					// children are visible
+					if ( !pParent )
+					{
+						pFrame = NULL;
+						pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+					}
+				}
+				else if ( Application::IsInModalMode() )
+				{
+					// Make sure that the modal dialog frame and its children
+					// are visible
+					Window *pWindow = (Window *)ImplGetSVData()->maWinData.mpLastExecuteDlg;
+					if ( pWindow )
+					{
+						SalFrame *pFocusFrame = pWindow->ImplGetFrame();
+						if ( pFocusFrame && pFocusFrame != pFrame )
+						{
+							pFrame = NULL;
+							pFocusFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+						}
+					}
+				}
 				pSalData->mpFocusFrame = pFrame;
 				dispatchEvent( nID, pFrame, NULL );
 			}
 			// Force all "always on top" windows to the front without focus
 			for ( std::list< SalFrame* >::const_iterator it = pSalData->maAlwaysOnTopFrameList.begin(); it != pSalData->maAlwaysOnTopFrameList.end(); ++it )
-				(*it)->ToTop( 0 );
+				(*it)->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
 			return;
 		}
 		case SALEVENT_LOSEFOCUS:
 		{
-			if ( pSalData->mpFocusFrame == pFrame )
+			if ( pFrame && pSalData->mpFocusFrame == pFrame )
 			{
-				pSalData->mpFocusFrame = NULL;
-				dispatchEvent( nID, pFrame, NULL );
+				if ( pSalData->mpPresentationFrame )
+				{
+					// Make sure document window does not float to front
+					SalFrame *pParent = pFrame;
+					while ( pParent )
+					{
+						if ( pParent == pSalData->mpPresentationFrame )
+							break;
+						pParent = pParent->maFrameData.mpParent;
+					}
+					// Transfer focus to parent frame
+					if ( pParent )
+					{
+						if ( pFrame != pSalData->mpPresentationFrame && pFrame->maFrameData.mpParent )
+							pParent = pFrame->maFrameData.mpParent;
+						else
+							pParent = pFrame;
+						pParent->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+					}
+				}
+				else if ( Application::IsInModalMode() )
+				{
+					// Transfer focus to parent frame
+					Window *pWindow = (Window *)ImplGetSVData()->maWinData.mpLastExecuteDlg;
+					if ( pWindow )
+					{
+						SalFrame *pFocusFrame = pWindow->ImplGetFrame();
+						if ( pFocusFrame && pFocusFrame == pFrame && pFocusFrame->maFrameData.mpParent )
+							pFocusFrame->maFrameData.mpParent->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+					}
+				}
+				if ( pFrame )
+				{
+					pSalData->mpFocusFrame = NULL;
+					dispatchEvent( nID, pFrame, NULL );
+				}
 			}
+			// Force all "always on top" windows to the front without focus
+			for ( std::list< SalFrame* >::const_iterator it = pSalData->maAlwaysOnTopFrameList.begin(); it != pSalData->maAlwaysOnTopFrameList.end(); ++it )
+				(*it)->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
 			return;
 		}
 		case SALEVENT_KEYINPUT:
@@ -364,7 +469,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pPaintEvent->mnBoundWidth = pFrame->maGeometry.nWidth;
 				pPaintEvent->mnBoundHeight = pFrame->maGeometry.nHeight;
 				com_sun_star_vcl_VCLEvent aVCLPaintEvent( SALEVENT_PAINT, pFrame, (void *)pPaintEvent );
-				GetSalData()->mpEventQueue->postCachedEvent( &aVCLPaintEvent );
+				pSalData->mpEventQueue->postCachedEvent( &aVCLPaintEvent );
 			}
 			return;
 		}
