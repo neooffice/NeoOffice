@@ -404,13 +404,11 @@ public final class VCLGraphics {
 	 */
 	void addToFlush(Rectangle b) {
 
-		if (frame != null) {
+		if (frame != null && !b.isEmpty()) {
 			if (update != null)
 				update.add(b);
 			else
 				update = b;
-			if (update.isEmpty())
-				update = null;
 
 			if (autoFlush)
 				flush();
@@ -1156,10 +1154,8 @@ public final class VCLGraphics {
 	 */
 	void flush() {
 
-		if (update != null && image != null && frame != null) {
-			update = graphicsBounds.intersection(update);
-			if (!update.isEmpty())
-			{
+		if (update != null && !update.isEmpty()) {
+			if (image != null && frame != null) {
 				BufferedImage i = image.getImage();
 				Panel p = frame.getPanel();
 				if (i != null && p != null) {
@@ -1169,11 +1165,11 @@ public final class VCLGraphics {
 							g.setClip(update);
 							g.drawRenderedImage(i, null);
 							g.dispose();
+							update = null;
 						}
 					}
 				}
 			}
-			update = null;
 		}
 
 	}
