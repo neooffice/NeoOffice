@@ -321,7 +321,7 @@ public final class VCLFont {
 	 */
 	public int getDescent() {
 
-		return fontMetrics.getDescent() + 1;
+		return fontMetrics.getDescent();
 
 	}
 
@@ -388,7 +388,7 @@ public final class VCLFont {
 	 */
 	public int getLeading() {
 
-		return fontMetrics.getLeading();
+		return fontMetrics.getLeading() + 1;
 
 	}
 
