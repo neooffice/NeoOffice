@@ -325,13 +325,14 @@ int main( int argc, char *argv[] )
 				ReceiveNextEvent_Type *pReceiveNextEvent = (ReceiveNextEvent_Type *)aModule.getSymbol( OUString::createFromAscii( "ReceiveNextEvent" ) );
 				if ( pReceiveNextEvent )
 				{
-					while ( pReceiveNextEvent( 0, NULL, kEventDurationForever, false, NULL ) != eventLoopQuitErr )
+					EventRef aEvent;
+					while ( pReceiveNextEvent( 0, NULL, kEventDurationForever, false, &aEvent ) != eventLoopQuitErr )
 						OThread::yield();
 				}
 
 				aModule.unload();
 				aThread.join();
-				exit( 0 );
+				return( 0 );
 			}
 		}
 	}
