@@ -1396,7 +1396,17 @@ SalYieldMutex::SalYieldMutex()
 
 void SalYieldMutex::acquire()
 {
-	OMutex::acquire();
+	if ( !OMutex::tryToAcquire() )
+	{
+		SalData *pSalData = GetSalData();
+		if ( pSalData && pSalData->mpEventQueue )
+		{
+			// Fix bug 244 by waking up the VCL event queue
+			com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
+			pSalData->mpEventQueue->postCachedEvent( &aEvent );
+		}
+		OMutex::acquire();
+	}
 	mnThreadId = OThread::getCurrentIdentifier();
 	mnCount++;
 }
