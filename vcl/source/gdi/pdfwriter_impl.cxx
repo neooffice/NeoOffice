@@ -6229,16 +6229,25 @@ sal_Int32 PDFWriterImpl::writePDFObjectTree( PDFEmitObject& rObj, oslFileHandle 
             {
                 nNextNextPos++;
 
+                bool bAppendSubset;
                 sal_Int32 nNextContentLen = nNextNextPos - nNextPos;
                 const sal_Char *pNextBuf = rObj.m_aContent.getStr() + nNextPos;
                 if ( nNextContentLen > 8 && pNextBuf[0] == '/' && pNextBuf[7] == '+' && pNextBuf[8] != ' ' )
                 {
                     nNextContentLen -= 8;
                     pNextBuf += 8;
+                    bAppendSubset = true;
+                }
+                else
+                {
+                    nNextContentLen -= 1;
+                    pNextBuf += 1;
+                    bAppendSubset = false;
                 }
                 OUString aFontName( pNextBuf, nNextContentLen - 1, RTL_TEXTENCODING_UTF8 );
                 aLine.append( '/' );
-                appendSubsetName( nFontID, aFontName, aLine );
+                if ( bAppendSubset )
+                    appendSubsetName( nFontID, aFontName, aLine );
                 aLine.append( ' ' );
 
                 nNextPos = nNextNextPos;
