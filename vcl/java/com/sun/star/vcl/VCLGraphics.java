@@ -177,7 +177,7 @@ public final class VCLGraphics {
 
 		// Set the method references
 		try {
-			drawGlyphsMethod = VCLGraphics.class.getMethod("drawGlyphs", new Class[]{ int.class, int.class, int[].class, int[].class, VCLFont.class, int.class, int.class, int.class, int.class });
+			drawGlyphsMethod = VCLGraphics.class.getMethod("drawGlyphs", new Class[]{ int.class, int.class, int[].class, int[].class, VCLFont.class, int.class, int.class, int.class, int.class, int.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -554,11 +554,12 @@ public final class VCLGraphics {
 	 * @param orientation the tenth of degrees to rotate the text
 	 * @param translateX the x coordinate to translate after rotation
 	 * @param translateY the y coordinate to translate after rotation
+	 * @param unitsPerPixel the pixels per unit in the specified advances
 	 */
-	public void drawGlyphs(int x, int y, int[] glyphs, int[] advances, VCLFont font, int color, int orientation, int translateX, int translateY) {
+	public void drawGlyphs(int x, int y, int[] glyphs, int[] advances, VCLFont font, int color, int orientation, int translateX, int translateY, int unitsPerPixel) {
 
 		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawGlyphsMethod, new Object[]{ new Integer(x), new Integer(y), glyphs, advances, font, new Integer(color), new Integer(orientation), new Integer(translateX), new Integer(translateY) });
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawGlyphsMethod, new Object[]{ new Integer(x), new Integer(y), glyphs, advances, font, new Integer(color), new Integer(orientation), new Integer(translateX), new Integer(translateY), new Integer(unitsPerPixel) });
 			pageQueue.postDrawingOperation(pqi);
 			return;
 		}
@@ -601,12 +602,12 @@ public final class VCLGraphics {
 		}
 
 		GlyphVector gv = f.createGlyphVector(graphics.getFontRenderContext(), glyphs);
-		double nAdvance = 0;
+		float nAdvance = 0;
 		for (int i = 0; i < glyphs.length; i++) {
 			Point2D p = gv.getGlyphPosition(i);
 			p.setLocation(nAdvance, p.getY());
 			gv.setGlyphPosition(i, p);
-			nAdvance += advances[ i ];
+			nAdvance += (float)advances[ i ] / unitsPerPixel;
 		}
 		graphics.drawGlyphVector(gv, (float)origin.getX(), (float)origin.getY());
 		Rectangle bounds = gv.getLogicalBounds().getBounds();
