@@ -198,9 +198,9 @@ public final class VCLEventQueue {
 			return null;
 
 		synchronized (queueList) {
-			if (wait > 0 && queue.head == null) {
+			if (wait > 0 && queueList[0].head == null && queueList[1].head == null) {
 				try {
-					queueList.wait(wait < 1000 ? wait : 1000);
+					queueList.wait(wait);
 				}
 				catch (Throwable t) {}
 			}

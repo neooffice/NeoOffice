@@ -41,6 +41,9 @@
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
+#ifndef _SV_SALFRAME_HXX
+#include <salframe.hxx>
+#endif
 
 // =======================================================================
 
@@ -57,6 +60,11 @@ void SalTimer::Start( ULONG nMS )
 	gettimeofday( &pSalData->maTimeout, NULL );
 	pSalData->maTimeout += nMS;
 	pSalData->mnTimerInterval = nMS;
+
+	// Wakeup the event queue by sending it a dummy event
+	SalFrame *pFrame = pSalData->mpFirstFrame;
+	if ( pFrame )
+		pFrame->PostEvent( NULL );
 } 
 
 // -----------------------------------------------------------------------
