@@ -169,7 +169,11 @@ IMPL_LINK( SfxDialogExecutor_Impl, Execute, void *, EMPTYARG )
 		_pOptions = ( (SfxPrinter*)_pParent->GetPrinter() )->GetOptions().Clone();
 
 	// Dialog ausf"uhren
+#ifdef USE_JAVA
+	SfxPrintOptionsDialog* pDlg = new SfxPrintOptionsDialog( NULL, _pViewSh, _pOptions );
+#else	// USE_JAVA
 	SfxPrintOptionsDialog* pDlg = new SfxPrintOptionsDialog( _pParent, _pViewSh, _pOptions );
+#endif	// USE_JAVA
 	if ( _bHelpDisabled )
 		pDlg->DisableHelp();
 #ifdef USE_JAVA
