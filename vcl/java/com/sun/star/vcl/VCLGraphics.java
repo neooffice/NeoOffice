@@ -733,7 +733,7 @@ public class VCLGraphics {
 
 		if (panelGraphics != null && update != null) {
 			panelGraphics.setClip(update);
-			panelGraphics.drawRenderedImage(image.getImage(), null);
+			panelGraphics.drawImage(image.getImage(), 0, 0, null);
 			Toolkit.getDefaultToolkit().sync();
 			update = null;
 			panelGraphics.setClip(null);
