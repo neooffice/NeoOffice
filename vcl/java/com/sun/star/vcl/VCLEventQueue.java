@@ -172,6 +172,9 @@ public class VCLEventQueue {
 	 */
 	public VCLEvent getNextCachedEvent(boolean wait) {
 
+		// Allow the Java event queue to dispatch pending events first
+		Thread.currentThread().yield();
+
 		if (!wait && queue.head == null)
 			return null;
 

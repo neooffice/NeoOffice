@@ -163,6 +163,11 @@ public class VCLPrintJob extends Thread implements Printable {
 	private VCLImage pageImage = null;
 
 	/**
+	 * The print thread started flag.
+	 */
+	private boolean printThreadStarted = false;
+
+	/**
 	 * Constructs a new <code>VCLPrintJob</code> instance.
 	 */
 	public VCLPrintJob() {
@@ -206,6 +211,7 @@ public class VCLPrintJob extends Thread implements Printable {
 		if (pageImage != null)
 			pageImage.dispose();
 		pageImage = null;
+		printThreadStarted = true;
 
 	}
 
@@ -314,23 +320,10 @@ public class VCLPrintJob extends Thread implements Printable {
 	public boolean startJob() {
 
 		// Detect if the user cancelled the print dialog
-		if (job.printDialog()) {
-			synchronized (graphicsQueue) {
-				// Start the printing thread
-				setPriority(Thread.MAX_PRIORITY);
-				start();
-				// Wait for the printing thread to gain the lock on the
-				// graphics queue
-				try {
-					graphicsQueue.wait();
-				}
-				catch (Throwable t) {}
-			}
+		if (job.printDialog())
 			return true;
-		}
-		else {
+		else
 			return false;
-		}
 
 	}
 
@@ -342,6 +335,18 @@ public class VCLPrintJob extends Thread implements Printable {
 	public VCLGraphics startPage() {
 
 		synchronized (graphicsQueue) {
+			// Start the printing thread if it has not yet been started
+			if (!printThreadStarted) {
+				setPriority(Thread.MAX_PRIORITY);
+				start();
+				// Wait for the printing thread to gain the lock on the
+				// graphics queue
+				try {
+					graphicsQueue.wait();
+				}
+				catch (Throwable t) {}
+				printThreadStarted = true;
+			}
 			if (currentPage++ != currentJobPage || !isAlive()) {
 				// Return a dummy graphics if this page is not in the selected
 				// page range
