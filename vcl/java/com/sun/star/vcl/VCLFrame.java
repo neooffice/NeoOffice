@@ -1873,8 +1873,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			}
 		}
 
-		// Don't pass key modifiers to mouse drag events
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0, 0));
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0, VCLFrame.keyModifiersPressed));
 
 	}
 
