@@ -133,22 +133,20 @@ public final class VCLBitmap {
 
 		VCLImage srcImage = g.getImage();
 		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, srcImage.getWidth(), srcImage.getHeight()));
-		if (srcX < 0)
+		if (srcX < 0) {
 			srcBounds.width += srcX;
-		if (srcY < 0)
+			destX -= srcX;
+		}
+		if (srcY < 0) {
 			srcBounds.height += srcY;
-		Rectangle destBounds = new Rectangle(destX, destY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, width, height));
-		if (destX < 0)
-			destBounds.width += destX;
-		if (destY < 0)
-			destBounds.height += destY;
-		srcWidth = (srcBounds.width > destBounds.width) ? destBounds.width : srcBounds.width;
-		srcHeight = (srcBounds.height > destBounds.height) ? destBounds.height : srcBounds.height;
+			destY -= srcY;
+		}
+		Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, width, height));
 		int[] srcData = srcImage.getData();
 		int srcDataWidth = srcImage.getWidth();
 		Point srcPoint = new Point(srcBounds.x, srcBounds.y);
 		Point destPoint = new Point(destBounds.x, destBounds.y);
-		int totalPixels = srcWidth * srcHeight;
+		int totalPixels = destBounds.width * destBounds.height;
 
 		for (int i = 0; i < totalPixels; i++) {
 			// Copy pixel
@@ -156,12 +154,12 @@ public final class VCLBitmap {
 
 			// Update current points
 			srcPoint.x++;
-			if (srcPoint.x >= srcX + srcWidth) {
+			if (srcPoint.x >= srcX + destBounds.width) {
 				srcPoint.x = srcX;
 				srcPoint.y++;
 			}
 			destPoint.x++;
-			if (destPoint.x >= destX + srcWidth) {
+			if (destPoint.x >= destX + destBounds.width) {
 				destPoint.x = destX;
 				destPoint.y++;
 			}

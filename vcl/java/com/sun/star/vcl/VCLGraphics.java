@@ -363,8 +363,16 @@ public final class VCLGraphics {
 	public void copyBits(VCLGraphics g, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY) {
 
 		VCLImage i = g.getImage();
-		if (i != null)
-			drawImage(i, srcX, srcY, srcWidth, srcHeight, destX, destY);
+		if (i != null) {
+			if (i == image) {
+				VCLImage srcImage = new VCLImage(srcWidth, srcHeight, i.getBitCount());
+				srcImage.getGraphics().drawImage(i, srcX, srcY, srcWidth, srcHeight, 0, 0);
+				drawImage(srcImage, 0, 0, srcWidth, srcHeight, destX, destY);
+			}
+			else {
+				drawImage(i, srcX, srcY, srcWidth, srcHeight, destX, destY);
+			}
+		}
 
 	}
 
@@ -404,22 +412,20 @@ public final class VCLGraphics {
 		}
 		else {
 			Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, bmp.getWidth(), bmp.getHeight()));
-			if (srcX < 0)
+			if (srcX < 0) {
 				srcBounds.width += srcX;
-			if (srcY < 0)
+				destX -= srcX;
+			}
+			if (srcY < 0) {
 				srcBounds.height += srcY;
-			Rectangle destBounds = new Rectangle(destX, destY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
-			if (destX < 0)
-				destBounds.width += destX;
-			if (destY < 0)
-				destBounds.height += destY;
-			srcWidth = (srcBounds.width > destBounds.width) ? destBounds.width : srcBounds.width;
-			srcHeight = (srcBounds.height > destBounds.height) ? destBounds.height: srcBounds.height;
+				destY -= srcY;
+			}
+			Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
 			int[] destData = image.getData();
 			int destDataWidth = image.getWidth();
 			Point srcPoint = new Point(srcBounds.x, srcBounds.y);
 			Point destPoint = new Point(destBounds.x, destBounds.y);
-			int totalPixels = srcWidth * srcHeight;
+			int totalPixels = destBounds.width * destBounds.height;
 
 			// Copy all pixels
 			for (int i = 0; i < totalPixels; i++) {
@@ -428,18 +434,18 @@ public final class VCLGraphics {
 
 				// Update current points
 				srcPoint.x++;
-				if (srcPoint.x >= srcX + srcWidth) {
+				if (srcPoint.x >= srcX + destBounds.width) {
 					srcPoint.x = srcX;
 					srcPoint.y++;
 				}
 				destPoint.x++;
-				if (destPoint.x >= destX + srcWidth) {
+				if (destPoint.x >= destX + destBounds.width) {
 					destPoint.x = destX;
 					destPoint.y++;
 				}
 			}
+			addToFlush(destBounds);
 		}
-		addToFlush(new Rectangle(destX, destY, srcWidth, srcHeight));
 
 	}
 
@@ -482,22 +488,20 @@ public final class VCLGraphics {
 		}
 		else {
 			Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, bmp.getWidth(), bmp.getHeight()));
-			if (srcX < 0)
+			if (srcX < 0) {
 				srcBounds.width += srcX;
-			if (srcY < 0)
+				destX -= srcX;
+			}
+			if (srcY < 0) {
 				srcBounds.height += srcY;
-			Rectangle destBounds = new Rectangle(destX, destY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
-			if (destX < 0)
-				destBounds.width += destX;
-			if (destY < 0)
-				destBounds.height += destY;
-			srcWidth = (srcBounds.width > destBounds.width) ? destBounds.width : srcBounds.width;
-			srcHeight = (srcBounds.height > destBounds.height) ? destBounds.height: srcBounds.height;
+				destY -= srcY;
+			}
+			Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
 			int[] destData = image.getData();
 			int destDataWidth = image.getWidth();
 			Point srcPoint = new Point(srcBounds.x, srcBounds.y);
 			Point destPoint = new Point(destBounds.x, destBounds.y);
-			int totalPixels = srcWidth * srcHeight;
+			int totalPixels = destBounds.width * destBounds.height;
 
 			// If the pixel in the second image is black, copy the pixel
 			// from the first image. Otherwise mark it as transparent.
@@ -508,18 +512,18 @@ public final class VCLGraphics {
 
 				// Update current points
 				srcPoint.x++;
-				if (srcPoint.x >= srcX + srcWidth) {
+				if (srcPoint.x >= srcX + destBounds.width) {
 					srcPoint.x = srcX;
 					srcPoint.y++;
 				}
 				destPoint.x++;
-				if (destPoint.x >= destX + srcWidth) {
+				if (destPoint.x >= destX + destBounds.width) {
 					destPoint.x = destX;
 					destPoint.y++;
 				}
 			}
+			addToFlush(destBounds);
 		}
-		addToFlush(new Rectangle(destX, destY, srcWidth, srcHeight));
 
 	}
 
@@ -536,10 +540,7 @@ public final class VCLGraphics {
 	 */
 	void drawImage(VCLImage img, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY) {
 
-		Graphics2D g = (Graphics2D)graphics.create(destX, destY, srcWidth, srcHeight);
-		g.drawRenderedImage(img.getImage().getSubimage(srcX, srcY, srcWidth, srcHeight), null);
-		g.dispose();
-
+		graphics.drawImage(img.getImage(), destX, destY, destX + srcWidth - 1, destY + srcHeight - 1, srcX, srcY, srcX + srcWidth - 1, srcY + srcHeight - 1, null);
 		addToFlush(new Rectangle(destX, destY, srcWidth, srcHeight));
 
 	}
@@ -576,24 +577,22 @@ public final class VCLGraphics {
 		}
 		else {
 			Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, img.getWidth(), img.getHeight()));
-			if (srcX < 0)
+			if (srcX < 0) {
 				srcBounds.width += srcX;
-			if (srcY < 0)
+				destX -= srcX;
+			}
+			if (srcY < 0) {
 				srcBounds.height += srcY;
-			Rectangle destBounds = new Rectangle(destX, destY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
-			if (destX < 0)
-				destBounds.width += destX;
-			if (destY < 0)
-				destBounds.height += destY;
-			srcWidth = (srcBounds.width > destBounds.width) ? destBounds.width : srcBounds.width;
-			srcHeight = (srcBounds.height > destBounds.height) ? destBounds.height: srcBounds.height;
+				destY -= srcY;
+			}
+			Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
 			int[] srcData = img.getData();
 			int srcDataWidth = img.getWidth();
 			int[] destData = image.getData();
 			int destDataWidth = image.getWidth();
 			Point srcPoint = new Point(srcBounds.x, srcBounds.y);
 			Point destPoint = new Point(destBounds.x, destBounds.y);
-			int totalPixels = srcWidth * srcHeight;
+			int totalPixels = destBounds.width * destBounds.height;
 
 			for (int i = 0; i < totalPixels; i++) {
 				// XOR pixel
@@ -603,18 +602,18 @@ public final class VCLGraphics {
 
 				// Update current points
 				srcPoint.x++;
-				if (srcPoint.x >= srcX + srcWidth) {
+				if (srcPoint.x >= srcX + destBounds.width) {
 					srcPoint.x = srcX;
 					srcPoint.y++;
 				}
 				destPoint.x++;
-				if (destPoint.x >= destX + srcWidth) {
+				if (destPoint.x >= destX + destBounds.width) {
 					destPoint.x = destX;
 					destPoint.y++;
 				}
+				addToFlush(destBounds);
 			}
 		}
-		addToFlush(new Rectangle(destX, destY, srcWidth, srcHeight));
 	}
 
 	/**
@@ -685,22 +684,20 @@ public final class VCLGraphics {
 		}
 		else {
 			Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, bmp.getWidth(), bmp.getHeight()));
-			if (srcX < 0)
+			if (srcX < 0) {
 				srcBounds.width += srcX;
-			if (srcY < 0)
+				destX -= srcX;
+			}
+			if (srcY < 0) {
 				srcBounds.height += srcY;
-			Rectangle destBounds = new Rectangle(destX, destY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
-			if (destX < 0)
-				destBounds.width += destX;
-			if (destY < 0)
-				destBounds.height += destY;
-			srcWidth = (srcBounds.width > destBounds.width) ? destBounds.width : srcBounds.width;
-			srcHeight = (srcBounds.height > destBounds.height) ? destBounds.height: srcBounds.height;
+				destY -= srcY;
+			}
+			Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
 			int[] destData = image.getData();
 			int destDataWidth = image.getWidth();
 			Point srcPoint = new Point(srcBounds.x, srcBounds.y);
 			Point destPoint = new Point(destBounds.x, destBounds.y);
-			int totalPixels = srcWidth * srcHeight;
+			int totalPixels = destBounds.width * destBounds.height;
 
 			// If the pixel is black, set the pixel to the mask color
 			color |= 0xff000000;
@@ -711,18 +708,18 @@ public final class VCLGraphics {
 
 				// Update current points
 				srcPoint.x++;
-				if (srcPoint.x >= srcX + srcWidth) {
+				if (srcPoint.x >= srcX + destBounds.width) {
 					srcPoint.x = srcX;
 					srcPoint.y++;
 				}
 				destPoint.x++;
-				if (destPoint.x >= destX + srcWidth) {
+				if (destPoint.x >= destX + destBounds.width) {
 					destPoint.x = destX;
 					destPoint.y++;
 				}
+				addToFlush(destBounds);
 			}
 		}
-		addToFlush(new Rectangle(destX, destY, srcWidth, srcHeight));
 
 	}
 
@@ -960,7 +957,6 @@ public final class VCLGraphics {
 
 		if (panelGraphics != null && image != null && update != null) {
 			panelGraphics.setClip(update);
-			// Asynchronous drawing is OK here
 			panelGraphics.drawImage(image.getImage(), 0, 0, null);
 			Toolkit.getDefaultToolkit().sync();
 			update = null;
@@ -1068,8 +1064,7 @@ public final class VCLGraphics {
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 
 		// Clip any area outside of the image
-		Rectangle bounds = polygon.getBounds();
-		bounds = bounds.intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
+		Rectangle bounds = polygon.getBounds().intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
 
 		// Invert the image 
 		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME) {
@@ -1121,7 +1116,6 @@ public final class VCLGraphics {
 			graphics.setClip(clip);
 			srcImage.dispose();
 		}
-		addToFlush(bounds);
 
 	}
 
@@ -1203,12 +1197,11 @@ public final class VCLGraphics {
 			if (xor)
 				color = pixels[i] ^ 0xff000000 ^ color;
 			pixels[i] = color;
+			addToFlush(new Rectangle(x, y, 1, 1));
 		}
 		else {
 			drawLine(x, y, x, y, color);
 		}
-
-		addToFlush(new Rectangle(x, y, 1, 1));
 
 	}
 
