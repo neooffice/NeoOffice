@@ -113,7 +113,7 @@ build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.oo_checkout
 
 build.configure: build.oo_patches
 	cd "$(BUILD_HOME)/config_office" ; autoconf
-	( cd "$(BUILD_HOME)/config_office" ; ./configure CC=cc CXX=c++ --with-x --with-lang="$(OO_LANGUAGES)" )
+	( cd "$(BUILD_HOME)/config_office" ; ./configure CC=cc CXX=c++ --with-x --x-includes=/usr/X11R6/include --with-lang="$(OO_LANGUAGES)" )
 	echo "unsetenv LD_SEG_ADDR_TABLE" >> "$(OO_ENV_X11)"
 	echo "unsetenv LD_PREBIND" >> "$(OO_ENV_X11)"
 	echo "unsetenv LD_PREBIND_ALLOW_OVERLAP" >> "$(OO_ENV_X11)"
