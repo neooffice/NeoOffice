@@ -206,7 +206,7 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 							USHORT nFlags )
 {
 	if ( maFrameData.mnStyle & SAL_FRAME_STYLE_CHILD )
-		; // return;
+		return;
 
 	Rectangle aPosSize( Point( maGeometry.nX, maGeometry.nY ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
 	aPosSize.Justify();
