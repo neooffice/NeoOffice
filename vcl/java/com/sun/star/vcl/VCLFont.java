@@ -115,27 +115,13 @@ public final class VCLFont {
 		ArrayList array = new ArrayList();
 		for (int j = 0; j < fontFamilies.length; j++) {
 			String name = fontFamilies[j].toLowerCase();
-			boolean b = false;
-			boolean i = false;
+			// Get rid of hidden, bold, and italic Mac OS X fonts
 			if (macosx) {
-				// Get rid of hidden Mac OS X fonts
-				if (name.startsWith("."))
+				if (name.startsWith(".") || name.endsWith(" bold italic") || name.endsWith(" bold") || name.endsWith(" italic"))
 					continue;
-				// Determine bold and italic settings
-				if (name.endsWith(" bold italic")) {
-					b = true;
-					i = true;
-				}
-				else if (name.endsWith(" bold")) {
-					b = true;
-				}
-				else if (name.endsWith(" italic")) {
-					i = true;
-				}
 			}
 			Font font = new Font(fontFamilies[j], Font.PLAIN, 1);
-			if (font.isPlain())
-				array.add(new VCLFont(font, (short)0, b, i, true));
+			array.add(new VCLFont(font, (short)0, false, false, true));
 		}
 		VCLFont.fonts = (VCLFont[])array.toArray(new VCLFont[array.size()]);
 
@@ -186,7 +172,7 @@ public final class VCLFont {
 	/**
 	 * The family type.
 	 */
-	private int type = VCLFont.FAMILY_DONTKNOW;
+	private int type = VCLFont.FAMILY_SWISS;
 
 	/**
 	 * Constructs a new <code>VCLFont</code> instance.
@@ -207,7 +193,7 @@ public final class VCLFont {
 		orientation = o;
 
 		// Get family type
-		String name = f.getFamily().toLowerCase();
+		String name = font.getFamily().toLowerCase();
 		if (name.startsWith("monospaced"))
 			type = VCLFont.FAMILY_MODERN;
 		else if (name.startsWith("sansserif"))
@@ -234,13 +220,9 @@ public final class VCLFont {
 	 */
 	public VCLFont deriveFont(int size, boolean b, boolean i, short o, boolean a) {
 
-		boolean macosx = false;
-		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
-			macosx = true;
-
 		Font f = null;
 
-		if (macosx) {
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 			String fontName = font.getFamily().toLowerCase();
 			int index = 0;
 			if ((index = fontName.lastIndexOf(" bold italic")) != -1 || (index = fontName.lastIndexOf(" bold")) != -1 || (index = fontName.lastIndexOf(" italic")) != -1 || (index = fontName.lastIndexOf(" regular")) != -1)
@@ -386,7 +368,17 @@ public final class VCLFont {
 	 */
 	public String getName() {
 
-		return font.getName();
+		String name = font.getFamily();
+
+		// Chop of bold and italic and regular strings
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+			String fontName = name.toLowerCase();
+			int index = 0;
+			if ((index = fontName.lastIndexOf(" bold italic")) != -1 || (index = fontName.lastIndexOf(" bold")) != -1 || (index = fontName.lastIndexOf(" italic")) != -1 || (index = fontName.lastIndexOf(" regular")) != -1)
+				name = name.substring(0, index);
+		}
+
+		return name;
 
 	}
 
