@@ -152,17 +152,26 @@ jclass com_sun_star_vcl_VCLPageFormat::getMyClass()
 		if ( !t.pEnv ) return (jclass)NULL;
 
 #ifdef MACOSX
-		// We need to replace the native MacPageFormat.createBestFormat()
-		// method as it will throw exceptions whenever a user selects a custom
-		// page format
-		jclass pageFormatClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/printing/MacPageFormat" );
-		if ( pageFormatClass )
+		// Test the JVM version and if it is below 1.4, use Carbon printing APIs
+		java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
+		if ( !pClass )
 		{
-			JNINativeMethod aMethod;
-			aMethod.name = "createBestFormat";
-			aMethod.signature = "(I)I";
-			aMethod.fnPtr = Java_com_apple_mrj_internal_awt_printing_MacPageFormat_createBestFormat;
-			t.pEnv->RegisterNatives( pageFormatClass, &aMethod, 1 );
+			// We need to replace the native MacPageFormat.createBestFormat()
+			// method as it will throw exceptions whenever a user selects a custom
+			// page format
+			jclass pageFormatClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/printing/MacPageFormat" );
+			if ( pageFormatClass )
+			{
+				JNINativeMethod aMethod;
+				aMethod.name = "createBestFormat";
+				aMethod.signature = "(I)I";
+				aMethod.fnPtr = Java_com_apple_mrj_internal_awt_printing_MacPageFormat_createBestFormat;
+				t.pEnv->RegisterNatives( pageFormatClass, &aMethod, 1 );
+			}
+		}
+		else
+		{
+			delete pClass;
 		}
 #endif	// MACOSX
 
