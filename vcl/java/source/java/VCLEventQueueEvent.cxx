@@ -162,46 +162,25 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			}
 			return;
 		}
-		case SALEVENT_OPENDOCUMENT:
-		{
-			String aEmptyStr;
-			ApplicationEvent aAppEvt( aEmptyStr, aEmptyStr, APPEVENT_OPEN_STRING, getPath() );
-			ImplGetSVData()->mpApp->AppEvent( aAppEvt );
-
-			return;
-		}
-		case SALEVENT_PRINTDOCUMENT:
-		{
-			String aEmptyStr;
-			ApplicationEvent aAppEvt( aEmptyStr, aEmptyStr, APPEVENT_PRINT_STRING, getPath() );
-			ImplGetSVData()->mpApp->AppEvent( aAppEvt );
-
-			return;
-		}
-		case SALEVENT_YIELDEVENTQUEUE:
-		{
-			// Unlock mutexes and block event queue so that the native event
-			// handler can proceed
-			ULONG nCount = Application::ReleaseSolarMutex();
-			pSalData->maNativeEventEndCondition.reset();
-			pSalData->maNativeEventStartCondition.set();
-			pSalData->maNativeEventEndCondition.wait();
-			Application::AcquireSolarMutex( nCount );
-			return;
-		}
 		case SALEVENT_ACTIVATE_APPLICATION:
+		case SALEVENT_OPENDOCUMENT:
+		case SALEVENT_PRINTDOCUMENT:
 		{
 			// Make sure that the current document window is showing
 			SalFrame *pParent = pSalData->mpFocusFrame;
 			while ( pParent && pParent->maFrameData.mpParent )
 				pParent = pParent->maFrameData.mpParent;
 			if ( pParent )
-				pParent->ToTop( 0 );
-			if ( pSalData->mpFocusFrame )
-				pSalData->mpFocusFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
+				pParent->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
 			// Force all "always on top" windows to the front without focus
 			for ( std::list< SalFrame* >::const_iterator it = pSalData->maAlwaysOnTopFrameList.begin(); it != pSalData->maAlwaysOnTopFrameList.end(); ++it )
 				(*it)->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
+			if ( nID == SALEVENT_OPENDOCUMENT || nID == SALEVENT_PRINTDOCUMENT )
+			{
+				String aEmptyStr;
+				ApplicationEvent aAppEvt( aEmptyStr, aEmptyStr, SALEVENT_OPENDOCUMENT ? APPEVENT_OPEN_STRING : APPEVENT_PRINT_STRING, getPath() );
+				ImplGetSVData()->mpApp->AppEvent( aAppEvt );
+			}
 			return;
 		}
 		case SALEVENT_ABOUT:
@@ -278,7 +257,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			}
 			dispatchEvent( nID, pFrame, pInputEvent );
 			// If there is no text, the character is committed
-			if ( pInputEvent->maText.Len() == getCommittedCharacterCount() )
+			if ( pInputEvent->maText.Len() == nCommitted )
 				dispatchEvent( SALEVENT_ENDEXTTEXTINPUT, pFrame, NULL );
 			if ( pInputEvent->mpTextAttr )
 				rtl_freeMemory( (USHORT *)pInputEvent->mpTextAttr );
@@ -287,7 +266,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_GETFOCUS:
 		{
-			if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame == pFrame )
+			if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame != pFrame )
 				dispatchEvent( SALEVENT_LOSEFOCUS, pSalData->mpFocusFrame, NULL );
 			pSalData->mpFocusFrame = pFrame;
 			dispatchEvent( nID, pFrame, NULL );
@@ -361,6 +340,32 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			// Adjust position for RTL layout
 			if ( pFrame && Application::GetSettings().GetLayoutRTL() )
 				pMouseEvent->mnX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pMouseEvent->mnX - 1;
+			if ( nID == SALEVENT_MOUSEBUTTONUP )
+			{
+				// Wait for drag thread to complete
+				while ( pSalData->mbInNativeDrag )
+				{
+					ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
+					OThread::yield();
+					pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
+				}
+			}
+			else if ( ( nID == SALEVENT_MOUSELEAVE || nID == SALEVENT_MOUSEMOVE ) )
+			{
+				if ( pSalData->mbInNativeDrag )
+				{
+					// In native drag mode, OOo cannot handle drag events with
+					// key modifiers
+					pMouseEvent->mnCode &= ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
+				}
+				else
+				{
+					// Let drag thread have a chance to run
+					ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
+					OThread::yield();
+					pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
+				}
+			}
 			dispatchEvent( nID, pFrame, pMouseEvent );
 			delete pMouseEvent;
 			return;
@@ -498,24 +503,45 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 		{
 			if ( pFrame == *it )
 			{
-				if ( nID == SALEVENT_GETFOCUS && pSalData->mpPresentationFrame && pFrame != pSalData->mpPresentationFrame )
+				if ( nID == SALEVENT_GETFOCUS )
 				{
-					// Make sure document window does not float to front
-					SalFrame *pParent = pFrame;
-					while ( pParent )
+					if ( pSalData->mpPresentationFrame && pFrame != pSalData->mpPresentationFrame )
 					{
-						if ( pParent == pSalData->mpPresentationFrame )
-							break;
-						pParent = pParent->maFrameData.mpParent;
-					}
+						// Make sure document window does not float to front
+						SalFrame *pParent = pFrame;
+						while ( pParent )
+						{
+							if ( pParent == pSalData->mpPresentationFrame )
+								break;
+							pParent = pParent->maFrameData.mpParent;
+						}
 
-					if ( !pParent )
-					{
-						// Reset the focus and don't dispatch the event
-						pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
-						return;
+						if ( !pParent )
+						{
+							// Reset the focus and don't dispatch the event
+							pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+							return;
+						}
 					}
+#ifdef MACOSX
+					else if ( (WindowRef)pFrame->maFrameData.mpVCLFrame->getNativeWindow() == FrontNonFloatingWindow() )
+					{
+						// Make sure child frames are in front of frame as
+						// clicking on the title bar may have moved this frame
+						// to the front
+						pFrame->ToTop( 0 );
+					}
+#endif	// MACOSX
 				}
+#ifdef MACOSX
+				else if ( nID == SALEVENT_MOUSEBUTTONDOWN && pSalData->mpFocusFrame == pFrame && (WindowRef)pFrame->maFrameData.mpVCLFrame->getNativeWindow() == FrontNonFloatingWindow() )
+				{
+					// Make sure child frames are in front of frame as
+					// clicking on the title bar may have moved this frame
+					// to the front
+					pFrame->ToTop( 0 );
+				}
+#endif	// MACOSX
 
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
 				break;
@@ -758,7 +784,16 @@ USHORT com_sun_star_vcl_VCLEvent::getModifiers()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
+		{
 			out = (USHORT)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+#ifdef MACOSX
+			// Fix bug 200 by preventing all Alt key modifiers from passing
+			// through to the OOo code. On Mac OS X, the Alt key is used solely
+			// as a dead key.
+			if ( ! ( out & ~( KEY_MOD2 | KEY_SHIFT ) ) )
+				out &= ~KEY_MOD2;
+#endif	// MACOSX
+		}
 	}
 	return out;
 }

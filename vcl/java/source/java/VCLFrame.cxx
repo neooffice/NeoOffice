@@ -124,9 +124,12 @@ static void DisposeNativeWindowTimerCallback( EventLoopTimerRef aTimer, void *pD
 	WindowRef aWindow = (WindowRef)pData;
 	if ( aWindow )
 	{
-		// Fix bug 261 by explicitly flushing the window's buffer before
-		// destroying it
-		QDFlushPortBuffer( GetWindowPort( aWindow ), NULL );
+		// Fix bug 261 and 533 by explicitly clearing the port's dirty region
+		// before destroying it
+		CGrafPtr aPort = GetWindowPort( aWindow );
+		LockPortBits( aPort );
+		QDSetDirtyRegion( aPort, NULL );
+		UnlockPortBits( aPort );
 		ReleaseWindow( aWindow );
 	}
 }
@@ -257,7 +260,7 @@ void com_sun_star_vcl_VCLFrame::dispose()
 			com_sun_star_vcl_VCLFrame *pOwner = getOwner();
 			if ( pOwner )
 			{
-				aOwnerWindow = pOwner->getNativeWindow();
+				aOwnerWindow = (WindowRef)pOwner->getNativeWindow();
 				delete pOwner;
 			}
 		}

@@ -280,9 +280,11 @@ public final class VCLEventQueue {
 					queue.mouseMove = null;
 				else if (eqi == queue.mouseWheelMove)
 					queue.mouseWheelMove = null;
+				else if (eqi == queue.moveResize)
+					queue.moveResize = null;
 			}
 			if (queue.head == null)
-				queue.mouseMove = queue.mouseWheelMove = queue.tail = null;
+				queue.mouseMove = queue.mouseWheelMove = queue.moveResize = queue.tail = null;
 			return eqi != null ? eqi.event : null;
 		}
 
@@ -314,6 +316,11 @@ public final class VCLEventQueue {
 					newItem.event.addWheelRotation(queue.mouseWheelMove.event.getWheelRotation());
 				}
 				queue.mouseWheelMove = newItem;
+			}
+			else if (id == VCLEvent.SALEVENT_MOVE || id == VCLEvent.SALEVENT_MOVERESIZE || id == VCLEvent.SALEVENT_RESIZE) {
+				if (queue.moveResize != null && !queue.moveResize.remove && queue.moveResize.event.getFrame() == newItem.event.getFrame())
+					queue.moveResize.remove = true;
+				queue.moveResize = newItem;
 			}
 			// Ignore duplicate window close events
 			if (id == VCLEvent.SALEVENT_CLOSE) {
@@ -545,6 +552,8 @@ public final class VCLEventQueue {
 		VCLEventQueue.QueueItem mouseMove = null;
 
 		VCLEventQueue.QueueItem mouseWheelMove = null;
+
+		VCLEventQueue.QueueItem moveResize = null;
 
 		VCLEventQueue.QueueItem tail = null;
 

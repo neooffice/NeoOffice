@@ -146,12 +146,12 @@ public final class VCLGraphics {
 	/**
 	 * The cached screen resolution.
 	 */
-	private static int screenResolution = 0;
+	private static Dimension screenResolution = null;
 
 	/**
 	 * The cached screen font resolution.
 	 */
-	private static int screenFontResolution = 0;
+	private static Dimension screenFontResolution = null;
 
 	/**
 	 * The use default font flag.
@@ -193,11 +193,15 @@ public final class VCLGraphics {
 		image50 = textureImage;
 
 		// Set the screen and font resolutions
-		screenResolution = screenFontResolution = Toolkit.getDefaultToolkit().getScreenResolution();
-		if (screenResolution < VCLScreen.MIN_SCREEN_RESOLUTION)
-			screenResolution = VCLScreen.MIN_SCREEN_RESOLUTION;
-		if (screenFontResolution < VCLScreen.MIN_SCREEN_RESOLUTION)
-			screenFontResolution = VCLScreen.MIN_SCREEN_RESOLUTION;
+		int resolution = Toolkit.getDefaultToolkit().getScreenResolution();
+		if (resolution < VCLScreen.MIN_SCREEN_RESOLUTION) {
+			screenResolution = new Dimension(VCLScreen.MIN_SCREEN_RESOLUTION, VCLScreen.MIN_SCREEN_RESOLUTION);
+			screenFontResolution = new Dimension(VCLScreen.MIN_SCREEN_RESOLUTION, VCLScreen.MIN_SCREEN_RESOLUTION);
+		}
+		else {
+			screenResolution = new Dimension(resolution, resolution);
+			screenFontResolution = new Dimension(resolution, resolution);
+		}
 
 		// Set the method references
 		try {
@@ -280,9 +284,9 @@ public final class VCLGraphics {
 	private long nextAutoFlush = 0;
 
 	/**
-	 * The printer page format.
+	 * The printer page resolution.
 	 */
-	private VCLPageFormat pageFormat = null;
+	private Dimension pageResolution = null;
 
 	/**
 	 * The printer drawing queue.
@@ -339,7 +343,8 @@ public final class VCLGraphics {
 		image = i;
 		graphics = image.getImage().createGraphics();
 		graphicsBounds = new Rectangle(0, 0, image.getWidth(), image.getHeight());
-		pageFormat = p;
+		if (p != null)
+			pageResolution = p.getPageResolution();
 		bitCount = image.getBitCount();
 		resetClipRegion();
 
@@ -350,14 +355,13 @@ public final class VCLGraphics {
 	 * <code>Graphics2D</code> instance.
 	 *
 	 * @param g the <code>Graphics2D</code> instance
-	 * @param p the <code>VCLPageFormat</code> instance
+	 * @param d the page resolution
+	 * @param gb the page bounds
 	 */
-	VCLGraphics(Graphics2D g, VCLPageFormat p) {
+	VCLGraphics(Graphics2D g, Dimension d, Rectangle gb) {
 
-		pageFormat = p;
-		graphicsBounds = new Rectangle(pageFormat.getImageableBounds());
-		graphicsBounds.x = 0;
-		graphicsBounds.y = 0;
+		pageResolution = d;
+		graphicsBounds = gb;
 		graphics = (Graphics2D)g.create(graphicsBounds.x, graphicsBounds.y, graphicsBounds.width, graphicsBounds.height);
 		int b = graphics.getDeviceConfiguration().getColorModel().getPixelSize();
 
@@ -454,7 +458,7 @@ public final class VCLGraphics {
 			image.dispose();
 		image = null;
 		frame = null;
-		pageFormat = null;
+		pageResolution = null;
 		update = null;
 		userClip = null;
 
@@ -1212,7 +1216,7 @@ public final class VCLGraphics {
 	public Rectangle getGlyphBounds(int glyph, VCLFont font, int glyphOrientation) {
 
 		GlyphVector glyphs = font.getFont().createGlyphVector(graphics.getFontRenderContext(), new int[]{ glyph });
-		Rectangle2D bounds = glyphs.getGlyphMetrics(0).getBounds2D();
+		Rectangle2D bounds = glyphs.getVisualBounds();
 
 		double fScaleX = font.getScaleX();
 		if (fScaleX != 1.0) {
@@ -1261,10 +1265,10 @@ public final class VCLGraphics {
 	 */
 	public Dimension getResolution() {
 
-		if (pageFormat != null)
-			return pageFormat.getPageResolution();
+		if (pageResolution != null)
+			return pageResolution;
 		else
-			return new Dimension(VCLGraphics.screenResolution, VCLGraphics.screenResolution);
+			return VCLGraphics.screenResolution;
 
 	}
 
@@ -1275,7 +1279,7 @@ public final class VCLGraphics {
 	 */
 	public Dimension getScreenFontResolution() {
 
-		return new Dimension(VCLGraphics.screenFontResolution, VCLGraphics.screenFontResolution);
+		return VCLGraphics.screenFontResolution;
 
 	}
 

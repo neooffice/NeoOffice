@@ -826,11 +826,6 @@ public final class VCLEvent extends AWTEvent {
 	public final static int SALEVENT_PRINTDOCUMENT = 101;
 
 	/**
-	 * SALEVENT_YIELDEVENTQUEUE constant.
-	 */
-	public final static int SALEVENT_YIELDEVENTQUEUE = 110;
-
-	/**
 	 * SALEVENT_ACTIVATE_APPLICATION constant.
 	 */
 	public final static int SALEVENT_ACTIVATE_APPLICATION = 120;
@@ -1295,6 +1290,9 @@ public final class VCLEvent extends AWTEvent {
 				case KeyEvent.VK_ALT:
 					outCode = VCLEvent.KEY_MOD2;
 					break;
+				case KeyEvent.VK_META:
+					outCode = VCLEvent.KEY_CONTROLMOD;
+					break;
 				case KeyEvent.VK_ESCAPE:
 					outCode = VCLEvent.KEY_ESCAPE;
 					break;
@@ -1593,6 +1591,8 @@ public final class VCLEvent extends AWTEvent {
 				outModifiers |= VCLEvent.KEY_MOD1;
 			if ((keyModifiers & InputEvent.ALT_MASK) == InputEvent.ALT_MASK)
 				outModifiers |= VCLEvent.KEY_MOD2;
+			if ((keyModifiers & InputEvent.META_MASK) == InputEvent.META_MASK)
+				outModifiers |= VCLEvent.KEY_CONTROLMOD;
 		}
 		else if (source instanceof KeyEvent) {
 			if ((inModifiers & InputEvent.SHIFT_MASK) == InputEvent.SHIFT_MASK)
@@ -1601,6 +1601,8 @@ public final class VCLEvent extends AWTEvent {
 				outModifiers |= VCLEvent.KEY_MOD1;
 			if ((inModifiers & InputEvent.ALT_MASK) == InputEvent.ALT_MASK)
 				outModifiers |= VCLEvent.KEY_MOD2;
+			if ((inModifiers & InputEvent.META_MASK) == InputEvent.META_MASK)
+				outModifiers |= VCLEvent.KEY_CONTROLMOD;
 		}
 		return outModifiers;
 
@@ -1769,8 +1771,7 @@ public final class VCLEvent extends AWTEvent {
 	 */
 	boolean isAWTEvent() {
 
-		int id = getID();
-		return (awtEvent || id == SALEVENT_YIELDEVENTQUEUE || id == SALEVENT_ACTIVATE_APPLICATION );
+		return (awtEvent || getID() == SALEVENT_ACTIVATE_APPLICATION);
 
 	}
 
@@ -1898,11 +1899,15 @@ public final class VCLEvent extends AWTEvent {
 			case SALEVENT_PRINTDOCUMENT:
 				typeStr = "SALEVENT_PRINTDOCUMENT";
 				break;
-			case SALEVENT_YIELDEVENTQUEUE:
-				typeStr = "SALEVENT_YIELDEVENTQUEUE";
-				break;
 			case SALEVENT_ACTIVATE_APPLICATION:
 				typeStr = "SALEVENT_ACTIVATE_APPLICATION";
+				break;
+			case SALEVENT_ABOUT:
+				typeStr = "SALEVENT_ABOUT";
+				break;
+			case SALEVENT_PREFS:
+				typeStr = "SALEVENT_PREFS";
+				break;
 			default:
 				typeStr = "unknown type";
 		}

@@ -952,13 +952,8 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
             }
             else
             {
-#if defined USE_JAVA && MACOSX
-                if ( pG > mpGlyphItems )
-                    pG[-1].mnNewWidth += nDiff;
-#else	// USE_JAVA && MACOSX
                 // right align cluster in new space for (RTL && !KASHIDA) case
                 pG->mnNewWidth += nDiff;
-#endif	// USE_JAVA && MACOSX
                 nDelta += nDiff;
             }
 

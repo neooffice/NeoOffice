@@ -433,7 +433,7 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLGraphics *com_sun_star_vcl_VCLPrintJob::startPage()
+com_sun_star_vcl_VCLGraphics *com_sun_star_vcl_VCLPrintJob::startPage( Orientation _par0 )
 {
 	static jmethodID mID = NULL;
 	com_sun_star_vcl_VCLGraphics *out = NULL;
@@ -442,13 +442,15 @@ com_sun_star_vcl_VCLGraphics *com_sun_star_vcl_VCLPrintJob::startPage()
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()Lcom/sun/star/vcl/VCLGraphics;";
+			char *cSignature = "(I)Lcom/sun/star/vcl/VCLGraphics;";
 			mID = t.pEnv->GetMethodID( getMyClass(), "startPage", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
+			jvalue args[1];
+			args[0].i = jint( _par0 );
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethodA( object, getMyClass(), mID, args );
 			if ( tempObj )
 				out = new com_sun_star_vcl_VCLGraphics( tempObj );
 		}

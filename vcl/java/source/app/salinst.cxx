@@ -118,6 +118,7 @@
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 #include <sys/syslimits.h>
+#undef check
 
 typedef jobject Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type( JNIEnv *, jobject );
 typedef void Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type( JNIEnv *, jobject );
@@ -485,15 +486,20 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 					
 					if ( isMenubar )
 					{
-						// Post a yield event and wait the VCL event queue to block
-						pSalData->maNativeEventStartCondition.reset();
-						com_sun_star_vcl_VCLEvent aYieldEvent( SALEVENT_YIELDEVENTQUEUE, NULL, NULL );
-						pSalData->mpEventQueue->postCachedEvent( &aYieldEvent );
-
 						// Unlock the Java lock
 						ReleaseJavaLock();
 
-						pSalData->maNativeEventStartCondition.wait();
+						// Make sure condition is not already waiting
+						if ( !pSalData->maNativeEventCondition.check() )
+						{
+							pSalData->maNativeEventCondition.wait();
+							pSalData->maNativeEventCondition.set();
+						}
+
+						// Wait for all pending AWT events to be dispatched
+						pSalData->maNativeEventCondition.reset();
+						pSalData->maNativeEventCondition.wait();
+						pSalData->maNativeEventCondition.set();
 
 						Application::GetSolarMutex().acquire();
 
@@ -506,8 +512,6 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 						AcquireJavaLock();
 
 						Application::GetSolarMutex().release();
-
-						pSalData->maNativeEventEndCondition.set();
 					}
 				}
 			}
@@ -534,15 +538,8 @@ void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void
 		SalData *pSalData = GetSalData();
 		if ( pSalData && pSalData->mpEventQueue )
 		{
-			// Post a yield event and wait the VCL event queue to block
-			pSalData->maNativeEventStartCondition.reset();
-			com_sun_star_vcl_VCLEvent aYieldEvent( SALEVENT_YIELDEVENTQUEUE, NULL, NULL );
-			pSalData->mpEventQueue->postCachedEvent( &aYieldEvent );
-
 			// Unlock the Java lock
 			ReleaseJavaLock();
-
-			pSalData->maNativeEventStartCondition.wait();
 
 			Application::GetSolarMutex().acquire();
 
@@ -551,15 +548,13 @@ void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void
 			{
 				WindowRef aWindow = (WindowRef)( (*it)->GetSystemData()->aWindow );
 				if ( aWindow && GetWindowBounds( aWindow, kWindowStructureRgn, &aRect ) == noErr )
-					(*it)->SetPosSize( (long)aRect.left, (long)aRect.top, (long)( aRect.right - aRect.left + 1 ) - (*it)->maGeometry.nLeftDecoration - (*it)->maGeometry.nRightDecoration, (long)( aRect.bottom - aRect.top + 1 ) - (*it)->maGeometry.nTopDecoration - (*it)->maGeometry.nBottomDecoration, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
+					(*it)->maFrameData.mpVCLFrame->setBounds( (long)aRect.left, (long)aRect.top, (long)( aRect.right - aRect.left + 1 ), (long)( aRect.bottom - aRect.top + 1 ) );
 			}
 
 			// Relock the Java lock
 			AcquireJavaLock();
 
 			Application::GetSolarMutex().release();
-
-			pSalData->maNativeEventEndCondition.set();
 		}
 	}
 }
@@ -1229,7 +1224,7 @@ void SalInstance::Yield( BOOL bWait )
 
 	// Determine timeout
 	ULONG nTimeout = 0;
-	if ( bWait && pSalData->mnTimerInterval )
+	if ( bWait && pSalData->mnTimerInterval && pSalData->maNativeEventCondition.check() && !Application::IsShutDown() )
 	{
 		timeval aTimeout;
 
@@ -1247,34 +1242,27 @@ void SalInstance::Yield( BOOL bWait )
 
 	// Dispatch pending AWT events
 	nCount = ReleaseYieldMutex();
-	while ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
+	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
 	{
-		AcquireYieldMutex( nCount );
-		nCount = 0;
-
 		nTimeout = 0;
 
-		USHORT nID = pEvent->getID();
-		bool bMouseEvent= ( nID == SALEVENT_MOUSEBUTTONDOWN || nID == SALEVENT_MOUSEBUTTONDOWN || nID == SALEVENT_MOUSELEAVE || nID == SALEVENT_MOUSEMOVE );
-
-		if ( bMouseEvent )
-		{
-			// Give drag handler threads a chance to run
-			nCount = ReleaseYieldMutex();
-			OThread::yield();
-			AcquireYieldMutex( nCount );
-			nCount = 0;
-		}
+		AcquireYieldMutex( nCount );
 
 		pEvent->dispatch();
 		delete pEvent;
-
-		// Fix for bug 416 and 428 without causing bug 380
-		if ( !bMouseEvent )
-			break;
+	}
+	else
+	{
+		// Allow Carbon event loop to proceed
+		if ( !pSalData->maNativeEventCondition.check() )
+		{
+			pSalData->maNativeEventCondition.set();
+			OThread::yield();
+		}
+	
+		AcquireYieldMutex( nCount );
 	}
 
-	AcquireYieldMutex( nCount );
 	nRecursionLevel--;
 }
 

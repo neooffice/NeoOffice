@@ -192,6 +192,12 @@
 #include <unotools/confignode.hxx>
 #endif
 
+#ifdef USE_JAVA
+#ifndef _SV_SALDATA_HXX
+#include <saldata.hxx>
+#endif
+#endif	// USE_JAVA
+
 #pragma hdrstop
 
 using namespace rtl;
@@ -7832,12 +7838,13 @@ Reference< XDragSource > Window::GetDragSource()
                         aDragSourceAL[ 1 ] = makeAny( (sal_uInt32) pEnvData->hWnd );
                         aDropTargetAL[ 0 ] = makeAny( (sal_uInt32) pEnvData->hWnd );
 #elif defined USE_JAVA 
+                        aDragSourceAL.realloc( 4 );
                         aDropTargetAL.realloc( 3 );
-                        aDragSourceAL.realloc( 3 );
                         aDragSourceSN = OUString::createFromAscii( "com.sun.star.datatransfer.dnd.JavaDragSource" );
                         aDropTargetSN = OUString::createFromAscii( "com.sun.star.datatransfer.dnd.JavaDropTarget" );
                         aDragSourceAL[ 1 ] = makeAny( (sal_uInt32) pEnvData->aWindow );
                         aDragSourceAL[ 2 ] = makeAny( (sal_uInt32) this );
+                        aDragSourceAL[ 3 ] = makeAny( (sal_uInt32) &( GetAppSalData()->mbInNativeDrag ) );
                         aDropTargetAL[ 0 ] = makeAny( (sal_uInt32) pEnvData->aWindow );
                         aDropTargetAL[ 2 ] = makeAny( (sal_uInt32) this );
 #elif defined UNX

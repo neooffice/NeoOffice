@@ -108,6 +108,16 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public final static long SAL_FRAME_STYLE_CLOSEABLE = 0x00000008;
 
 	/**
+	 * SAL_FRAME_STYLE_NOSHADOW constant.
+	 */
+	public final static long SAL_FRAME_STYLE_NOSHADOW = 0x00000010;
+
+	/**
+	 * SAL_FRAME_STYLE_TOOLTIP constant.
+	 */
+	public final static long SAL_FRAME_STYLE_TOOLTIP = 0x00000020;
+
+	/**
 	 * SAL_FRAME_STYLE_CHILD constant.
 	 */
 	public final static long SAL_FRAME_STYLE_CHILD = 0x10000000;
@@ -732,6 +742,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private boolean resizable = false;
 
 	/**
+	 * The style flags.
+	 */
+	private long style = 0;
+
+	/**
 	 * The native window.
 	 */
 	private Window window = null;
@@ -739,26 +754,27 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	/**
 	 * Constructs a new <code>VCLFrame</code> instance.
 	 *
-	 * @param styleFlags the SAL_FRAME_STYLE flags
+	 * @param s the SAL_FRAME_STYLE flags
 	 * @param q the event queue to post events to
 	 * @param f the frame pointer
 	 */
-	public VCLFrame(long styleFlags, VCLEventQueue q, int f, VCLFrame p) {
+	public VCLFrame(long s, VCLEventQueue q, int f, VCLFrame p) {
 
 		queue = q;
 		frame = f;
+		style = s;
 
 		// Create the native window
-		if ((styleFlags & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) != 0) {
+		if ((style & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) != 0) {
 			window = new VCLFrame.NoPaintFrame(this);
 		}
 		else {
-			owner = new VCLFrame(~styleFlags, q, 0, null);
+			owner = new VCLFrame(SAL_FRAME_STYLE_DEFAULT, q, 0, null);
 			window = new VCLFrame.NoPaintWindow(this);
 		}
 
 		// Process remaining style flags
-		if ((styleFlags & SAL_FRAME_STYLE_SIZEABLE) != 0)
+		if ((style & SAL_FRAME_STYLE_SIZEABLE) != 0)
 			resizable = true;
 
 		// Add a panel as the only component
@@ -1132,6 +1148,24 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public String getKeyName(int keyCode) {
 
 		StringBuffer buf = new StringBuffer();
+		if ((keyCode & VCLEvent.KEY_SHIFT) == VCLEvent.KEY_SHIFT) {
+			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+				buf.append("\u21e7");
+			}
+			else {
+				buf.append(KeyEvent.getKeyText(KeyEvent.VK_SHIFT));
+				buf.append("+");
+			}
+		}
+		if ((keyCode & VCLEvent.KEY_CONTROLMOD) == VCLEvent.KEY_CONTROLMOD) {
+			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+				buf.append("\u2303");
+			}
+			else {
+				buf.append(KeyEvent.getKeyText(KeyEvent.VK_META));
+				buf.append("+");
+			}
+		}
 		if ((keyCode & VCLEvent.KEY_MOD1) == VCLEvent.KEY_MOD1) {
 			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 				buf.append("\u2318");
@@ -1147,15 +1181,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			}
 			else {
 				buf.append(KeyEvent.getKeyText(KeyEvent.VK_ALT));
-				buf.append("+");
-			}
-		}
-		if ((keyCode & VCLEvent.KEY_SHIFT) == VCLEvent.KEY_SHIFT) {
-			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-				buf.append("\u21e7");
-			}
-			else {
-				buf.append(KeyEvent.getKeyText(KeyEvent.VK_SHIFT));
 				buf.append("+");
 			}
 		}
@@ -1715,18 +1740,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			return;
 		}
 
-		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-			// If a modifier is used to set the character (e.g. the "Alt-c"
-			// generates a "c-cedilla" in the Mac OS X U.S. keyboard, we must
-			// strip off the modifiers so that the C++ code does not get
-			// confused.
-			int modifiers = e.getModifiers();
-			if (VCLFrame.lastKeyPressed != null && (modifiers & InputEvent.ALT_MASK) != 0) {
-				modifiers &= ~InputEvent.ALT_MASK;
-				e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), modifiers, e.getKeyCode(), e.getKeyChar());
-			}
-		}
-
 		VCLFrame.lastKeyPressed = e;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
@@ -1869,8 +1882,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			}
 		}
 
-		// Don't pass key modifiers to mouse drag events
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0, 0));
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0, VCLFrame.keyModifiersPressed));
 
 	}
 
@@ -1894,7 +1906,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			e = preprocessMouseEvent(e);
 		}
 
-		// Don't pass key modifiers to mouse entered events
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0, VCLFrame.keyModifiersPressed));
 
 	}
@@ -1915,7 +1926,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && e.getModifiers() != VCLFrame.mouseModifiersPressed)
 			e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), VCLFrame.mouseModifiersPressed, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
 
-		// Don't pass key modifiers to mouse exited events
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSELEAVE, VCLFrame.findFrame(e.getComponent()), 0, VCLFrame.keyModifiersPressed));
 
 	}
@@ -1941,8 +1951,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			e = preprocessMouseEvent(e);
 		}
 
-		// Don't pass key modifiers to mouse move events
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0, 0));
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0, VCLFrame.keyModifiersPressed));
 
 	}
 
@@ -1990,7 +1999,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			}
 
 			// Evaluate event
-			if (c != panel && c != null && panel != null && c.isShowing() && panel.isShowing() && isFloatingWindow()) {
+			if (c != panel && c != null && panel != null && c.isShowing() && panel.isShowing() && isFloatingWindow() && (style & SAL_FRAME_STYLE_TOOLTIP) == 0) {
 				Point srcPoint = c.getLocationOnScreen();
 				srcPoint.x += e.getX();
 				srcPoint.y += e.getY();
@@ -2059,6 +2068,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			height = size.height;
 
 		synchronized (window.getTreeLock()) {
+			// Fix bug 509 by temporarily moving the window
+			window.setBounds(x + 1, y, width, height);
 			window.setBounds(x, y, width, height);
 
 			// We need to create the native window handle after the first call
@@ -2399,10 +2410,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void windowDeiconified(WindowEvent e) {
 
-		if (panel != null) {
-			Graphics g = panel.getGraphics();
-			panel.paint(g);
-			g.dispose();
+		if (graphics != null) {
+			synchronized (graphics) {
+				graphics.addToFlush();
+			}
 		}
 
 	}
@@ -2422,10 +2433,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		VCLFrame.lastMouseDragEvent = null;
 		VCLFrame.mouseModifiersPressed = 0;
 
-		if (panel != null) {
-			Graphics g = panel.getGraphics();
-			panel.paint(g);
-			g.dispose();
+		if (graphics != null) {
+			synchronized (graphics) {
+				graphics.addToFlush();
+			}
 		}
 
 	}
@@ -2500,7 +2511,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		public void paint(Graphics g) {
 
-			paintComponents(g);
+			VCLGraphics graphics = frame.getGraphics();
+			if (graphics != null) {
+				synchronized (graphics) {
+					graphics.addToFlush();
+				}
+			}
 
 		}
 
@@ -2597,7 +2613,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			if (graphics != null) {
 				synchronized (graphics) {
 					graphics.addToFlush();
-					graphics.flush();
 				}
 			}
 
@@ -2679,7 +2694,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		public void paint(Graphics g) {
 
-			paintComponents(g);
+			VCLGraphics graphics = frame.getGraphics();
+			if (graphics != null) {
+				synchronized (graphics) {
+					graphics.addToFlush();
+				}
+			}
 
 		}
 
