@@ -79,6 +79,8 @@ class SalFrameData
 	::std::list< SalFrame* > maChildren;
 	void*			mpInst;
 	SALFRAMEPROC	mpProc;
+	void*			mpDisabledInst;
+	SALFRAMEPROC	mpDisabledProc;
 	SystemEnvData	maSysData;
 	BOOL			mbCenter;
 	SalFrameGeometry	maOriginalGeometry;

@@ -235,12 +235,18 @@ void SalGraphics::DrawTextArray( long nX, long nY,
 
 BOOL SalGraphics::GetGlyphBoundRect( long nIndex, Rectangle& rRect,
                                      const OutputDevice *pOutDev )
+
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalGraphics::GetGlyphBoundRect not implemented\n" );
-#endif
-	rRect = Rectangle();
-	return FALSE;
+	if ( maGraphicsData.mpVCLFont )
+	{
+		Size aSize( maGraphicsData.mpVCLGraphics->getGlyphSize( nIndex, maGraphicsData.mpVCLFont ) );
+		rRect = Rectangle( Point( 0, 0 ), aSize );
+		return TRUE;
+	}
+	else
+	{
+		return FALSE;
+	}
 }
 
 // -----------------------------------------------------------------------

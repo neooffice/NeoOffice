@@ -539,6 +539,56 @@ USHORT com_sun_star_vcl_VCLGraphics::getBitCount()
 
 // ----------------------------------------------------------------------------
 
+const Size com_sun_star_vcl_VCLGraphics::getGlyphSize( const sal_Unicode _par0, com_sun_star_vcl_VCLFont *_par1 )
+{
+	static jmethodID mID = NULL;
+	static jfieldID fIDWidth = NULL;
+	static jfieldID fIDHeight = NULL;	 
+	Size out;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(CLcom/sun/star/vcl/VCLFont;)Ljava/awt/Dimension;";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getGlyphSize", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			com_sun_star_vcl_VCLFont *pFont = NULL;
+			if ( com_sun_star_vcl_VCLFont::useDefaultFont )
+				pFont = _par1->getDefaultFont();
+			jvalue args[2];
+			args[0].c = jchar( _par0 );
+			args[1].l = pFont ? pFont->getJavaObject() : _par1->getJavaObject();
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethodA( object, getMyClass(), mID, args );
+			if ( pFont )
+				delete pFont;
+			if ( tempObj )
+			{
+				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
+				OSL_ENSURE( tempObjClass, "Java : FindClass not found!" );
+				if ( !fIDWidth )
+				{
+					char *cSignature = "I";
+					fIDWidth = t.pEnv->GetFieldID( tempObjClass, "width", cSignature );
+				}
+				out.setWidth( (long)t.pEnv->GetIntField( tempObj, fIDWidth ) );
+				if ( !fIDHeight )
+				{
+					char *cSignature = "I";
+					fIDHeight = t.pEnv->GetFieldID( tempObjClass, "height", cSignature );
+				}
+				out.setHeight( (long)t.pEnv->GetIntField( tempObj, fIDHeight ) );
+			}
+		}
+	}
+    return out;
+}
+
+// ----------------------------------------------------------------------------
+
 com_sun_star_vcl_VCLImage *com_sun_star_vcl_VCLGraphics::getImage()
 {
 	static jmethodID mID = NULL;

@@ -1163,6 +1163,36 @@ public final class VCLGraphics {
 	}
 
 	/**
+	 * Get the size of the bounding rectangle of the glyph associated with the
+	 * specified character and font.
+	 *
+	 * @param c the character
+	 * @param font the font
+	 */
+	public Dimension getGlyphSize(char c, VCLFont font) {
+
+		// The graphics may adjust the font
+		Font f = font.getFont();
+		FontMetrics fm = null;
+
+		// Exceptions can be thrown if a font is disabled or removed
+		try {
+			fm = graphics.getFontMetrics(f);
+		}
+		catch (Throwable t) {
+			f = font.getDefaultFont().getFont();
+			fm = graphics.getFontMetrics(f);
+		}
+
+		graphics.setFont(f);
+
+		GlyphVector glyphs = f.createGlyphVector(graphics.getFontRenderContext(), new char[]{ c });
+		Rectangle bounds = glyphs.getLogicalBounds().getBounds();
+		return new Dimension(bounds.width, bounds.height);
+
+	}
+
+	/**
 	 * Returns the <code>VCLImage</code>.
 	 *
 	 * @return the <code>VCLImage</code>

@@ -110,6 +110,7 @@ OSStatus SalSoundComplexInputProc( AudioConverterRef aConverter, UInt32 *pDataPa
 					else
 					{
 						rtl_freeMemory( pNativeData->mpBuffer );
+						pNativeData->mpBuffer = NULL;
 					}
 				}
 			}
@@ -161,6 +162,8 @@ SalSound::~SalSound()
 	if ( mpNativeData )
 	{
 #ifdef MACOSX
+		if ( mbPlaying )
+			AudioOutputUnitStop( (AudioUnit)mpNativeContext );
 		if ( mpNativeData->mpBuffer )
 			rtl_freeMemory( mpNativeData->mpBuffer );
 		if ( mpNativeData->maConverter )
@@ -247,8 +250,26 @@ BOOL SalSound::Init( SalFrame* pFrame, const XubString& rSoundName, ULONG& rSoun
 #ifdef MACOSX
 	if ( mpNativeContext )
 	{
+		// If this is a new audio file then dispose of the old file first
+		if ( rSoundName.Len() )
+		{
+			if ( mbPlaying )
+			{
+				AudioOutputUnitStop( (AudioUnit)mpNativeContext );
+				mbPlaying = FALSE;
+			}
+			if ( mpNativeData->mpBuffer )
+				rtl_freeMemory( mpNativeData->mpBuffer );
+			if ( mpNativeData->maConverter )
+				AudioConverterDispose( mpNativeData->maConverter);
+			if ( mpNativeData->maAudioFile )
+				AudioFileClose( mpNativeData->maAudioFile );
+			memset( mpNativeData, 0, sizeof( SalSoundNativeData ) );
+		}
+
+		// Initialize the audio file if it has not already been done
 		FSRef aPath;
-		if ( FSPathMakeRef( (const UInt8 *)ByteString( rSoundName, RTL_TEXTENCODING_UTF8 ).GetBuffer(), &aPath, 0 ) == noErr && AudioFileOpen( &aPath, fsRdPerm, 0, &mpNativeData->maAudioFile ) == noErr )
+		if ( mpNativeData->maAudioFile || ( FSPathMakeRef( (const UInt8 *)ByteString( rSoundName, RTL_TEXTENCODING_UTF8 ).GetBuffer(), &aPath, 0 ) == noErr && AudioFileOpen( &aPath, fsRdPerm, 0, &mpNativeData->maAudioFile ) == noErr ) )
 		{
 			AudioStreamBasicDescription aOutputDesc;
 			UInt32 nSize;
@@ -260,33 +281,36 @@ BOOL SalSound::Init( SalFrame* pFrame, const XubString& rSoundName, ULONG& rSoun
 				// Get audio file properties
 				if ( ( nSize = sizeof( mpNativeData->mnPacketCount ) ) && AudioFileGetProperty( mpNativeData->maAudioFile, kAudioFilePropertyAudioDataPacketCount, &nSize, &mpNativeData->mnPacketCount ) == noErr && ( nSize = sizeof( mpNativeData->mnByteCount ) ) && AudioFileGetProperty( mpNativeData->maAudioFile, kAudioFilePropertyAudioDataByteCount, &nSize, &mpNativeData->mnByteCount ) == noErr && ( nSize = sizeof( mpNativeData->mnMaxPacketSize ) ) && AudioFileGetProperty( mpNativeData->maAudioFile, kAudioFilePropertyMaximumPacketSize, &nSize, &mpNativeData->mnMaxPacketSize ) == noErr )
 				{
-					AudioStreamBasicDescription aFileDesc;
-
-					// Create the converter
-					nSize = sizeof( AudioStreamBasicDescription );
-					memset( &aFileDesc, 0, nSize );
-					if ( AudioFileGetProperty( mpNativeData->maAudioFile, kAudioFilePropertyDataFormat, &nSize, &aFileDesc ) == noErr && AudioConverterNew( &aFileDesc, &aOutputDesc, &mpNativeData->maConverter ) == noErr )
+					if ( !mpNativeData->maConverter )
 					{
-						// Check for magic cookies and set any decompression
-						// parameters
-						if ( AudioFileGetPropertyInfo( mpNativeData->maAudioFile, kAudioFilePropertyMagicCookieData, &nSize, NULL ) == noErr )
-						{
-							void *pMagicCookie = rtl_allocateZeroMemory( nSize );
-							if ( pMagicCookie )
-							{
-								if ( AudioFileGetProperty( mpNativeData->maAudioFile, kAudioFilePropertyMagicCookieData, &nSize, pMagicCookie ) == noErr )
-									AudioConverterSetProperty( mpNativeData->maConverter, kAudioConverterDecompressionMagicCookie, nSize, pMagicCookie );
-								rtl_freeMemory( pMagicCookie );
-							}
-						}
+						AudioStreamBasicDescription aFileDesc;
 
-						// Set audio callback function
-						AURenderCallbackStruct aRenderCallback;
-						memset( &aRenderCallback, 0, sizeof( AURenderCallbackStruct ) );
-						aRenderCallback.inputProc = SalSoundFileRenderProc;
-						aRenderCallback.inputProcRefCon = (void *)mpNativeData;
-						if ( AudioUnitSetProperty( (AudioUnit)mpNativeContext, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Input, 0, &aRenderCallback, sizeof( AURenderCallbackStruct ) ) == noErr )
-							bRet = TRUE;
+						// Create the converter
+						nSize = sizeof( AudioStreamBasicDescription );
+						memset( &aFileDesc, 0, nSize );
+						if ( AudioFileGetProperty( mpNativeData->maAudioFile, kAudioFilePropertyDataFormat, &nSize, &aFileDesc ) == noErr && AudioConverterNew( &aFileDesc, &aOutputDesc, &mpNativeData->maConverter ) == noErr )
+						{
+							// Check for magic cookies and set any decompression
+							// parameters
+							if ( AudioFileGetPropertyInfo( mpNativeData->maAudioFile, kAudioFilePropertyMagicCookieData, &nSize, NULL ) == noErr )
+							{
+								void *pMagicCookie = rtl_allocateZeroMemory( nSize );
+								if ( pMagicCookie )
+								{
+									if ( AudioFileGetProperty( mpNativeData->maAudioFile, kAudioFilePropertyMagicCookieData, &nSize, pMagicCookie ) == noErr )
+										AudioConverterSetProperty( mpNativeData->maConverter, kAudioConverterDecompressionMagicCookie, nSize, pMagicCookie );
+									rtl_freeMemory( pMagicCookie );
+								}
+							}
+
+							// Set audio callback function
+							AURenderCallbackStruct aRenderCallback;
+							memset( &aRenderCallback, 0, sizeof( AURenderCallbackStruct ) );
+							aRenderCallback.inputProc = SalSoundFileRenderProc;
+							aRenderCallback.inputProcRefCon = (void *)mpNativeData;
+							if ( AudioUnitSetProperty( (AudioUnit)mpNativeContext, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Input, 0, &aRenderCallback, sizeof( AURenderCallbackStruct ) ) == noErr )
+								bRet = TRUE;
+						}
 					}
 				}
 			}

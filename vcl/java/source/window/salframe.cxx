@@ -185,6 +185,25 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		return;
 
 	maFrameData.mbVisible = bVisible;
+
+	if ( maFrameData.mbVisible )
+	{
+		// Enable disabled event handler
+		if ( !maFrameData.mpInst && !maFrameData.mpProc )
+		{
+			maFrameData.mpInst = maFrameData.mpDisabledInst;
+			maFrameData.mpProc = maFrameData.mpDisabledProc;
+		}
+	}
+	else
+	{
+		// Disable event handler
+		maFrameData.mpDisabledInst = maFrameData.mpInst;
+		maFrameData.mpDisabledProc = maFrameData.mpProc;
+		maFrameData.mpInst = NULL;
+		maFrameData.mpProc = NULL;
+	}
+
 	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible );
 
 	// Reset graphics
@@ -215,7 +234,7 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	else
 	{
 		if ( pSalData->mpFocusFrame == this )
-			pSalData->mpFocusFrame = NULL;  
+			pSalData->mpFocusFrame = NULL;
 	}
 }
 
@@ -682,6 +701,8 @@ SalFrameData::SalFrameData()
 	mbVisible = FALSE;
 	mpInst = NULL;
 	mpProc = ImplSalCallbackDummy;
+	mpDisabledInst = NULL;
+	mpDisabledProc = NULL;
     memset( &maSysData, 0, sizeof( SystemEnvData ) );
 	maSysData.nSize = sizeof( SystemEnvData );
 	mbCenter = TRUE;
