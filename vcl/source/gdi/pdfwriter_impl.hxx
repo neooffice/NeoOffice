@@ -134,7 +134,7 @@ private:
     bool                mbTextLines;
 
 public:
-                        MetaTextArrayPDFAction( const Point& rPt, const XubString& rStr, const long* pDXAry, USHORT nIndex, USHORT nLen, bool bTextLines ) : MetaTextArrayAction( rPt, rStr, pDXAry, nIndex, nLen ), mbTextLines( bTextLines )
+                        MetaTextArrayPDFAction( const Point& rPt, const XubString& rStr, const long* pDXAry, USHORT nIndex, USHORT nLen, bool bTextLines ) : MetaTextArrayAction( rPt, rStr, pDXAry, nIndex, nLen ), mpDXAry( NULL ), mbTextLines( bTextLines )
                         {
                             if ( pDXAry )
                             {
