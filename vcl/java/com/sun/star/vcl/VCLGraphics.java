@@ -159,8 +159,7 @@ public final class VCLGraphics {
 		int elements = graphicsList.size();
 		for (int i = 0; i < elements; i++) {
 			VCLGraphics g = (VCLGraphics)graphicsList.get(i);
-			if (g.frame != null && g.update != null)
-				g.flush();
+			g.flush();
 		}
 
 	}
@@ -1102,7 +1101,7 @@ public final class VCLGraphics {
 	 */
 	void flush() {
 
-		if (panelGraphics != null && update != null) {
+		if (panelGraphics != null && update != null && frame != null && frame.getWindow().isShowing()) {
 			// Add a little extra area so that we don't miss any antialiased
 			// pixels
 			update.x -= 1;

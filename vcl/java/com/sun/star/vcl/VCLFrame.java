@@ -736,10 +736,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			EventQueue eventQueue = Toolkit.getDefaultToolkit().getSystemEventQueue();
 			Frame[] frames = Frame.getFrames();
 			for (int i = 0; i < frames.length; i++) {
-				eventQueue.postEvent(new PaintEvent(frames[i], PaintEvent.PAINT, new Rectangle(0, 0, frames[i].getWidth(), frames[i].getHeight())));
+				frames[i].repaint();
 				Window[] windows = frames[i].getOwnedWindows();
 				for (int j = 0; j < windows.length; j++)
-					eventQueue.postEvent(new PaintEvent(windows[j], PaintEvent.PAINT, new Rectangle(0, 0, windows[j].getWidth(), windows[j].getHeight())));
+					windows[j].repaint();
 			}
 		}
 
@@ -1871,12 +1871,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			VCLGraphics graphics = frame.getGraphics();
 			if (graphics != null) {
-				Rectangle clip = g.getClipBounds();
 				synchronized (graphics) {
-					if (clip != null)
-						graphics.addToFlush(clip);
-					else
-						graphics.addToFlush(((Graphics2D)g).getDeviceConfiguration().getBounds());
+					graphics.addToFlush(((Graphics2D)g).getDeviceConfiguration().getBounds());
 				}
 			}
 
@@ -1918,12 +1914,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			VCLGraphics graphics = frame.getGraphics();
 			if (graphics != null) {
-				Rectangle clip = g.getClipBounds();
 				synchronized (graphics) {
-					if (clip != null)
-						graphics.addToFlush(clip);
-					else
-						graphics.addToFlush(((Graphics2D)g).getDeviceConfiguration().getBounds());
+					graphics.addToFlush(((Graphics2D)g).getDeviceConfiguration().getBounds());
 				}
 			}
 
