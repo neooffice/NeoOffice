@@ -114,7 +114,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 	{
 		case SALEVENT_SHUTDOWN:
 		{
-			SalFrame *pFrame = pSalData->mpFirstFrame;
+			SalFrame *pFrame = pSalData->maFrameList.front();
 			if ( pFrame )
 				dispatchEvent( nID, pFrame, NULL );
 			return;
@@ -146,8 +146,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 	{
 		case SALEVENT_CLOSE:
 		{
-			if ( pFrame->maFrameData.mbVisible )
-				dispatchEvent( nID, pFrame, NULL );
+			dispatchEvent( nID, pFrame, NULL );
 			return;
 		}
 		case SALEVENT_ENDEXTTEXTINPUT:
@@ -321,14 +320,17 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 
 	pMutex->acquire();
 
-	if ( pFrame && pFrame->maFrameData.mpProc )
+	if ( pFrame && pFrame->maFrameData.mpProc && ( nID != SALEVENT_CLOSE || pFrame->maFrameData.mbVisible ) )
 	{
-		SalFrame* pNextFrame = GetSalData()->mpFirstFrame;
-		while ( pFrame && pNextFrame && pFrame != pNextFrame )
-			pNextFrame = pNextFrame->maFrameData.mpNextFrame;
-
-		if ( pFrame == pNextFrame )
-			pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
+		SalData *pSalData = GetSalData();
+		for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+		{
+			if ( pFrame == *it )
+			{
+				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
+				break;
+			}
+		}
 	}
 
 	pMutex->release();

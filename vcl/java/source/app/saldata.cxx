@@ -49,7 +49,6 @@ using namespace vcl;
 SalData::SalData()
 {
 	mpFirstInstance	= NULL;
-	mpFirstFrame = NULL;
 	mnTimerInterval = 0;
 	maTimeout.tv_sec = 0;
 	maTimeout.tv_usec = 0;

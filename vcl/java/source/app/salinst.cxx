@@ -352,8 +352,7 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 
 	// Insert this window into the window list
 	SalData *pSalData = GetSalData();
-	pFrame->maFrameData.mpNextFrame = pSalData->mpFirstFrame;
-	pSalData->mpFirstFrame = pFrame;
+	pSalData->maFrameList.push_back( pFrame );
 
 	// Cache the insets
 	Rectangle aRect = pFrame->maFrameData.mpVCLFrame->getInsets();
@@ -437,17 +436,8 @@ void SalInstance::DestroyFrame( SalFrame* pFrame )
 	SalData *pSalData = GetSalData();
 
 	// Remove this window from the window list
-	if ( pFrame == pSalData->mpFirstFrame )
-	{
-		pSalData->mpFirstFrame = pFrame->maFrameData.mpNextFrame;
-	}
-	else
-	{
-		SalFrame* pNextFrame = pSalData->mpFirstFrame;
-		while ( pNextFrame && pFrame != pNextFrame->maFrameData.mpNextFrame )
-			pNextFrame = pNextFrame->maFrameData.mpNextFrame;
-		pNextFrame->maFrameData.mpNextFrame = pFrame->maFrameData.mpNextFrame;
-	}
+	if ( pFrame )
+		pSalData->maFrameList.remove( pFrame);
 
 	if ( pFrame->maFrameData.mpParent )
 		pFrame->maFrameData.mpParent->maFrameData.maChildren.remove( pFrame );

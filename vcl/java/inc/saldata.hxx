@@ -68,7 +68,7 @@ class SalData
 {
 public:
 	SalInstance*			mpFirstInstance;
-	SalFrame*				mpFirstFrame;
+	::std::list< SalFrame* >	maFrameList;
 	timeval					maTimeout;
 	SALTIMERPROC			mpTimerProc;
 	ULONG					mnTimerInterval;
