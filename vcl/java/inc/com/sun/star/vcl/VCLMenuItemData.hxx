@@ -64,7 +64,7 @@ public:
 	void			dispose();
         
         void			setTitle( ::rtl::OUString _par0 );
-        void			setKeyboardShortcut( int _par0 );
+        void			setKeyboardShortcut( int _par0, bool _par1);
 };
 
 } // namespace vcl

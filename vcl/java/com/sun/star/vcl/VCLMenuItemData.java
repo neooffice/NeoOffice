@@ -89,6 +89,12 @@ public final class VCLMenuItemData {
     private int keyboardShortcut=0;
     
     /**
+     * True if shift should be used as a modifier with the shortcut, false if
+     * not.
+     */
+    private boolean keyboardShortcutUseShift=false;
+    
+    /**
      * Identifier that is used in Sal events to identify this specific menu item in VCL events
      */
     private short vclID=0;
@@ -211,10 +217,13 @@ public final class VCLMenuItemData {
      * Change the keyboard shortcut of the menu item.  Any AWT peers will be automatically updated.
      *
      * @param key	VCL keycode of the new key to use as the shortcut
+     * @param useShift  true if the shift key should additionally be required
+     *			for the shortcut, false if just command is needed
+     *			as modifier.
      */
-    synchronized public void setKeyboardShortcut(int key) {
+    synchronized public void setKeyboardShortcut(int key, boolean useShift) {
         if(delegate!=null) {
-            delegate.setKeyboardShortcut(key);
+            delegate.setKeyboardShortcut(key, useShift);
             return;
         }
         
@@ -222,11 +231,12 @@ public final class VCLMenuItemData {
         if(newShortcut!=0) {
             keyboardShortcut=newShortcut;
             keyboardShortcutSet=true;
+	    keyboardShortcutUseShift=useShift;
             if(!awtPeers.isEmpty()) {
                 Enumeration e=awtPeers.elements();
                 while(e.hasMoreElements()) {
                     MenuItem m=(MenuItem)e.nextElement();
-                    m.setShortcut(new MenuShortcut(keyboardShortcut));
+                    m.setShortcut(new MenuShortcut(keyboardShortcut, keyboardShortcutUseShift));
                 }
             }
         }
@@ -618,7 +628,7 @@ public final class VCLMenuItemData {
                 cmi.disable();
             cmi.setState(getChecked());
             if(keyboardShortcutSet)
-                cmi.setShortcut(new MenuShortcut(keyboardShortcut));
+                cmi.setShortcut(new MenuShortcut(keyboardShortcut, keyboardShortcutUseShift));
             toReturn=(Object)cmi;
         }
         else if(isSubmenu)
@@ -649,7 +659,7 @@ public final class VCLMenuItemData {
             else
                 mi.disable();
             if(keyboardShortcutSet)
-                mi.setShortcut(new MenuShortcut(keyboardShortcut));
+                mi.setShortcut(new MenuShortcut(keyboardShortcut, keyboardShortcutUseShift));
             toReturn=(Object)mi;
         }
         

@@ -196,8 +196,21 @@ void SalMenu::SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const XubSt
 void SalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, const KeyCode& rKeyCode, const XubString& rKeyName )
 {
     // assume pSalMenuItem is a pointer to the item to be associated with the new shortcut
-    if( pSalMenuItem && pSalMenuItem->maData.mpVCLMenuItemData )
-        pSalMenuItem->maData.mpVCLMenuItemData->setKeyboardShortcut(rKeyCode.GetFullKeyCode() & 0x0FFF);
+    if( pSalMenuItem && pSalMenuItem->maData.mpVCLMenuItemData ) {
+	// only pass through keycodes that are using Mod1, the equivalent of
+	// the "control" key.  Java AWT only allows us control and shift to
+	// be used as menu accelerator modifiers.  Bugs in AWT 1.3
+	// implementaion cause function keys to be misinterpreted as letter keys
+	// so we can only allow in Mod1 Alphanumeric keys with/without shift
+	// as valid modifiers.
+	if(rKeyCode.IsMod1() && 
+	    !rKeyCode.IsMod2() && 
+	    (((rKeyCode.GetCode()>=KEY_0) && (rKeyCode.GetCode()<=KEY_9)) ||
+	     ((rKeyCode.GetCode()>=KEY_A) && (rKeyCode.GetCode()<=KEY_Z)))
+	   ) {
+	    pSalMenuItem->maData.mpVCLMenuItemData->setKeyboardShortcut(rKeyCode.GetCode(), rKeyCode.IsShift());
+	}
+    }
 }
 
 void SalMenu::GetSystemMenuData( SystemMenuData* pData )

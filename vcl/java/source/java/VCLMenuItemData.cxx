@@ -109,7 +109,7 @@ void com_sun_star_vcl_VCLMenuItemData::setTitle( ::rtl::OUString _par0 )
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLMenuItemData::setKeyboardShortcut( int _par0 )
+void com_sun_star_vcl_VCLMenuItemData::setKeyboardShortcut( int _par0, bool _par1 )
 {
         static jmethodID mID = NULL;
         VCLThreadAttach t;
@@ -117,14 +117,15 @@ void com_sun_star_vcl_VCLMenuItemData::setKeyboardShortcut( int _par0 )
         {
                 if ( !mID )
                 {
-                        char *cSignature = "(I)V";
+                        char *cSignature = "(IZ)V";
                         mID = t.pEnv->GetMethodID( getMyClass(), "setKeyboardShortcut", cSignature );
                 }
                 OSL_ENSURE( mID, "Unknown method id!" );
                 if ( mID )
                 {
-                        jvalue args[1];
+                        jvalue args[2];
                         args[0].i = jint( _par0 );
+			args[1].z = jboolean( _par1 );
                         t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
                 }
         }
