@@ -121,6 +121,7 @@
 
 typedef jobject Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type( JNIEnv *, jobject );
 typedef void Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type( JNIEnv *, jobject );
+typedef jint Java_com_apple_mrj_internal_awt_graphics_CGJavaPixelsPen_UpdateContext_Type( JNIEnv *, jobject, jint, jint, jint, jint, jint );
 
 using namespace osl;
 using namespace rtl;
@@ -131,8 +132,10 @@ using namespace com::sun::star::uno;
 
 static Mutex aMutex;
 static OModule aJDirectModule;
+static OModule aRealAWTModule;
 static Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type *pCarbonLockGetInstance = NULL;
 static Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *pCarbonLockInit = NULL;
+static Java_com_apple_mrj_internal_awt_graphics_CGJavaPixelsPen_UpdateContext_Type *pUpdateContext = NULL;
 
 static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( JNIEnv *pEnv, jobject object );
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData );
@@ -336,6 +339,38 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv 
 	}
 }
 #endif // MACOSX
+
+// ----------------------------------------------------------------------------
+
+#ifdef MACOSX
+static jint JNICALL Java_com_apple_mrj_internal_awt_graphics_CGJavaPixelsPen_UpdateContext( JNIEnv *pEnv, jobject object, jint pContextRef, jint nX, jint nY, jint nWidth, jint nHeight )
+{
+	jint nRet = pUpdateContext( pEnv, object, pContextRef, nX, nY, nWidth, nHeight );
+
+	CGContextRetain( (CGContextRef)nRet );
+
+	return nRet;
+}
+#endif	// MACOSX
+
+// ----------------------------------------------------------------------------
+
+#ifdef MACOSX
+static jint JNICALL Java_com_apple_mrj_internal_awt_graphics_CGSGraphics_CGContextRelease( JNIEnv *pEnv, jobject object, jint pContextRef )
+{
+	CGContextRef aContext = (CGContextRef)pContextRef;
+
+	CFIndex nCount = CFGetRetainCount( aContext );
+	jint nRet = ( nCount > 2 ? pContextRef : 0 );
+
+	if ( nCount > 2 )
+		nCount = 2;
+	while ( nCount-- );
+		CGContextRelease( aContext );
+
+	return nRet;
+}
+#endif	// MACOSX
 
 // ----------------------------------------------------------------------------
 
@@ -777,7 +812,7 @@ void ExecuteApplicationMain( Application *pApp )
 			{
 				// Find libJDirect.jnilib
 				jmethodID mID = NULL;
-				OUString aJDirectPath;
+				OUString aJavaHomePath;
 				if ( !mID )
 				{
 					char *cSignature = "(Ljava/lang/String;)Ljava/lang/String;";
@@ -791,24 +826,33 @@ void ExecuteApplicationMain( Application *pApp )
 					jstring out;
 					out = (jstring)t.pEnv->CallStaticObjectMethodA( systemClass, mID, args );
 					if ( out )
-						aJDirectPath = JavaString2String( t.pEnv, out );
+						aJavaHomePath = JavaString2String( t.pEnv, out );
 				}
 
-				// Load libJDirect.jnilib and cache symbols
-				if ( aJDirectPath.getLength() )
+				// Load libJDirect.jnilib and librealawt.jnilib and cache
+				// symbols
+				if ( aJavaHomePath.getLength() )
 				{
+					OUString aJDirectPath( aJavaHomePath );
 					aJDirectPath += OUString::createFromAscii( "/../Libraries/libJDirect.jnilib" );
 					if ( aJDirectModule.load( aJDirectPath ) )
 					{
 						pCarbonLockGetInstance = (Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type *)aJDirectModule.getSymbol( OUString::createFromAscii( "Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance" ) );
 						pCarbonLockInit = (Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *)aJDirectModule.getSymbol( OUString::createFromAscii( "Java_com_apple_mrj_macos_carbon_CarbonLock_init" ) );
 					}
+
+					OUString aRealAWTPath( aJavaHomePath );
+					aRealAWTPath += OUString::createFromAscii( "/../Libraries/librealawt.jnilib" );
+					if ( aRealAWTModule.load( aRealAWTPath ) )
+						pUpdateContext = (Java_com_apple_mrj_internal_awt_graphics_CGJavaPixelsPen_UpdateContext_Type *)aRealAWTModule.getSymbol( OUString::createFromAscii( "Java_com_apple_mrj_internal_awt_graphics_CGJavaPixelsPen_UpdateContext" ) );
 				}
 
 			}
 
 			jclass carbonLockClass = t.pEnv->FindClass( "com/apple/mrj/macos/carbon/CarbonLock" );
-			if ( carbonLockClass && pCarbonLockGetInstance && pCarbonLockInit )
+			jclass cgJavaPixelsPenClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/graphics/CGJavaPixelsPen" );
+			jclass cgsGraphicsClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/graphics/CGSGraphics" );
+			if ( carbonLockClass && pCarbonLockGetInstance && pCarbonLockInit && cgJavaPixelsPenClass && pUpdateContext && cgsGraphicsClass )
 			{
 				// Reregister the native methods
 				JNINativeMethod pMethods[4];
@@ -825,6 +869,16 @@ void ExecuteApplicationMain( Application *pApp )
 				pMethods[3].signature = "()I";
 				pMethods[3].fnPtr = (void *)Java_com_apple_mrj_macos_carbon_CarbonLock_release0;
 				t.pEnv->RegisterNatives( carbonLockClass, pMethods, 4 );
+
+				pMethods[0].name = "UpdateContext";
+				pMethods[0].signature = "(IIIII)I";
+				pMethods[0].fnPtr = (void *)Java_com_apple_mrj_internal_awt_graphics_CGJavaPixelsPen_UpdateContext;
+				t.pEnv->RegisterNatives( cgJavaPixelsPenClass, pMethods, 1 );
+
+				pMethods[0].name = "CGContextRelease";
+				pMethods[0].signature = "(I)I";
+				pMethods[0].fnPtr = (void *)Java_com_apple_mrj_internal_awt_graphics_CGSGraphics_CGContextRelease;
+				t.pEnv->RegisterNatives( cgsGraphicsClass, pMethods, 1 );
 
 				// Peek for a Carbon event. This is enough to solve the
 				// keyboard layout switching problem on Panther.
