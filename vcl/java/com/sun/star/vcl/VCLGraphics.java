@@ -40,7 +40,6 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
-import java.awt.Image;
 import java.awt.Insets;
 import java.awt.Panel;
 import java.awt.Point;
@@ -55,8 +54,6 @@ import java.awt.font.GlyphVector;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
 import java.awt.geom.Point2D;
-import java.awt.image.BufferedImage;
-import java.awt.image.ImageObserver;
 import java.util.LinkedList;
 
 /**
@@ -65,7 +62,7 @@ import java.util.LinkedList;
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public final class VCLGraphics implements ImageObserver {
+public final class VCLGraphics {
 
 	/**
 	 * The SAL_INVERT_HIGHLIGHT constant.
@@ -352,7 +349,7 @@ public final class VCLGraphics implements ImageObserver {
 
 	}
 
-	/*
+	/**
 	 * Draws specified <code>VCLGraphics</code> to the underlying graphics
 	 * scaled to the specified specified width and height.
 	 *
@@ -479,7 +476,6 @@ public final class VCLGraphics implements ImageObserver {
 				// Mac OS X will render only PDF 1.3 (which is not supported by
 				// the Mac OS X Preview application) if we draw images that are
 				// smaller than the page
-				Rectangle bounds = graphics.getDeviceConfiguration().getBounds();
 				VCLImage pageImage = new VCLImage(pageBounds.width + 1, pageBounds.height + 1, bmp.getBitCount());
 				pageImage.getGraphics().drawImage(mergedImage, destX, destY, destWidth, destHeight, 0, 0, srcWidth, srcHeight);
 				drawImage(pageImage, 0, 0, pageImage.getWidth(), pageImage.getHeight(), 0, 0, pageImage.getWidth(), pageImage.getHeight());
@@ -531,7 +527,7 @@ public final class VCLGraphics implements ImageObserver {
 
 	}
 
-	/*
+	/**
 	 * Draws specified <code>VCLImage</code> to the underlying graphics
 	 * scaled to the specified specified width and height.
 	 *
@@ -547,21 +543,17 @@ public final class VCLGraphics implements ImageObserver {
 	 */
 	void drawImage(VCLImage img, int destX, int destY, int destWidth, int destHeight, int srcX, int srcY, int srcWidth, int srcHeight) {
 
-		BufferedImage i = img.getImage();
-		synchronized (i) {
-			if (!graphics.drawImage(img.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, this)) {
-				try {
-					i.wait();
-				}
-				catch (Throwable t) {}
-			}
-		}
+		Graphics2D g = (Graphics2D)graphics.create(destX, destY, destWidth, destHeight);
+		if (destWidth != srcWidth || destHeight != srcHeight)
+			g.scale((double)destWidth / srcWidth, (double)destHeight / srcHeight);
+		g.drawRenderedImage(img.getImage().getSubimage(srcX, srcY, srcWidth, srcHeight), null);
+		g.dispose();
 
 		addToFlush(new Rectangle(destX, destY, destWidth, destHeight));
 
 	}
 
-	/*
+	/**
 	 * Draws specified <code>VCLImage</code> in XOR mode to the underlying
 	 * graphics scaled to the specified specified width and height.
 	 *
@@ -1046,33 +1038,6 @@ public final class VCLGraphics implements ImageObserver {
 	}
 
 	/**
-	 * This method is called when information about an image which was
-	 * previously requested using an asynchronous interface becomes available.
-	 *
-	 * @param img the image being observed
-	 * @param infoflags the <code>ImageObserver</code> flags
-	 * @param x the x coordinate  
-	 * @param y the y coordinate
-	 * @param w the width
-	 * @param h the height
-	 * @return <code>false</code> if the infoflags indicate that the image is
-	 *  completely loaded or else <code>true</code>
-	 */
-	public boolean imageUpdate(Image img, int infoflags, int x, int y, int width, int height) {
-
-		if ((infoflags & (ImageObserver.ALLBITS | ImageObserver.ABORT)) != 0) {
-			// Notify the methods that are drawing that rendering is complete
-			synchronized (img) {
-				img.notifyAll();
-			}
-			return false;
-		}
-
-		return true;
-
-	}
-
-	/**
 	 * Inverts the specified rectangle depending on the specified options.
 	 *
 	 * @param x the x coordinate of the rectangle
@@ -1249,8 +1214,9 @@ public final class VCLGraphics implements ImageObserver {
 			pixels[i] = color;
 		}
 		else {
-			drawRect(x, y, 1, 1, color, true);
+			drawLine(x, y, x, y, color);
 		}
+
 		addToFlush(new Rectangle(x, y, 1, 1));
 
 	}

@@ -66,6 +66,11 @@ public final class VCLPrintJob extends Thread implements Printable {
 	public final static int ORIENTATION_LANDSCAPE = 0x1; 
 
 	/**
+	 * SCALE_FACTOR constant.
+	 */
+	private final static int SCALE_FACTOR = 2;
+
+	/**
 	 * Cached native graphics.
 	 */
 	private static Graphics2D graphics = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB_PRE).createGraphics();
@@ -76,18 +81,13 @@ public final class VCLPrintJob extends Thread implements Printable {
 	private static PageFormat pageFormat = null;
 
 	/**
-	 * The page resolution.
-	 */
-	private static int pageResolution = 254;
-
-	/**
 	 * Creates a graphics context for this component.
 	 *
 	 * @return a graphics context for this component
 	 */
 	public synchronized static VCLGraphics getGraphics() {
 
-		return new VCLGraphics(graphics, pageResolution, new Rectangle(0, 0, (int)(pageFormat.getWidth() * pageResolution / 72), (int)(pageFormat.getHeight() * pageResolution / 72)));
+		return new VCLGraphics(graphics, SCALE_FACTOR * 72, new Rectangle(0, 0, (int)pageFormat.getWidth() * SCALE_FACTOR, (int)pageFormat.getHeight() * SCALE_FACTOR));
 
 	}
 
@@ -99,7 +99,7 @@ public final class VCLPrintJob extends Thread implements Printable {
 	 */
 	public synchronized static Rectangle getImageableBounds() {
 
-		return new Rectangle((int)(pageFormat.getImageableX() * pageResolution / 72), (int)(pageFormat.getImageableY() * pageResolution / 72), (int)(pageFormat.getImageableWidth() * pageResolution / 72), (int)(pageFormat.getImageableHeight() * pageResolution / 72));
+		return new Rectangle((int)pageFormat.getImageableX() * SCALE_FACTOR, (int)pageFormat.getImageableY() * SCALE_FACTOR, (int)pageFormat.getImageableWidth() * SCALE_FACTOR, (int)pageFormat.getImageableHeight() * SCALE_FACTOR);
 
 	}
 
@@ -124,7 +124,7 @@ public final class VCLPrintJob extends Thread implements Printable {
 	 */
 	public synchronized static Dimension getPageSize() {
 
-		return new Dimension((int)(pageFormat.getWidth() * pageResolution / 72), (int)(pageFormat.getHeight() * pageResolution / 72));
+		return new Dimension((int)pageFormat.getWidth() * SCALE_FACTOR, (int)pageFormat.getHeight() * SCALE_FACTOR);
 
 	}
 
@@ -175,11 +175,6 @@ public final class VCLPrintJob extends Thread implements Printable {
 	 * The current <code>VCLGraphics</code>
 	 */
 	private VCLGraphics currentGraphics = null;
-
-	/**
-	 * The current printer job page.
-	 */
-	private int currentJobPage = -1;
 
 	/**
 	 * The current page.
@@ -236,12 +231,12 @@ public final class VCLPrintJob extends Thread implements Printable {
 		if (currentGraphics != null)
 			currentGraphics.dispose();
 		currentGraphics = null;
-		currentJobPage = -1;
 		currentPage = 0;
 		if (graphicsInfo != null)
 		{
 			graphicsInfo.graphics = null;
 			graphicsInfo.pageFormat = null;
+			graphicsInfo.pageIndex = -1;
 		}
 		endJob = true;
 		graphicsInfo = null;
@@ -284,7 +279,7 @@ public final class VCLPrintJob extends Thread implements Printable {
 			// Allow the printer thread to move to the next page
 			graphicsInfo.notifyAll();
 		}
-		Thread.currentThread().yield();
+		Thread.yield();
 
 	}
 
@@ -303,14 +298,13 @@ public final class VCLPrintJob extends Thread implements Printable {
 		// Mac OS X creates two graphics for each page so we need to create
 		// separate page numbers for each page.
 		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-			if (currentJobPage == i * 2)
-				currentJobPage++;
+			if (graphicsInfo.pageIndex == i * 2)
+				graphicsInfo.pageIndex++;
 			else
-				currentJobPage = i * 2;
-
+				graphicsInfo.pageIndex = i * 2;
 		}
 		else {
-			currentJobPage = i;
+			graphicsInfo.pageIndex = i;
 		}
 
 		Graphics2D graphics = (Graphics2D)g;
@@ -322,12 +316,13 @@ public final class VCLPrintJob extends Thread implements Printable {
 		Rectangle bounds = VCLPrintJob.getImageableBounds();
 		graphics.translate((int)f.getImageableX(), (int)f.getImageableY());
 
-		graphics.scale((double)72 / pageResolution, (double)72 / pageResolution);
+		graphics.scale((double)1.0 / VCLPrintJob.SCALE_FACTOR, (double)1.0 / VCLPrintJob.SCALE_FACTOR);
 
 		graphicsInfo.graphics = graphics;
 		graphicsInfo.pageFormat = f;
 
 		// Wait until painting is finished
+		Thread.yield();
 		try {
 			graphicsInfo.wait();
 		}
@@ -412,15 +407,17 @@ public final class VCLPrintJob extends Thread implements Printable {
 				printThreadStarted = true;
 			}
 		}
-		Thread.currentThread().yield();
+
+		Thread.yield();
+
 		synchronized (graphicsInfo) {
-			if (currentPage++ != currentJobPage || !isAlive()) {
+			if (currentPage++ != graphicsInfo.pageIndex || !isAlive()) {
 				// Return a dummy graphics if this page is not in the selected
 				// page range
 				currentGraphics = null;
 			}
 			else {
-				currentGraphics = new VCLGraphics(graphicsInfo.graphics, pageResolution, new Rectangle(0, 0, (int)(graphicsInfo.pageFormat.getWidth() * pageResolution / 72), (int)(graphicsInfo.pageFormat.getHeight() * pageResolution / 72)));
+				currentGraphics = new VCLGraphics(graphicsInfo.graphics, VCLPrintJob.SCALE_FACTOR * 72, new Rectangle(0, 0, (int)graphicsInfo.pageFormat.getWidth() * VCLPrintJob.SCALE_FACTOR, (int)graphicsInfo.pageFormat.getHeight() * VCLPrintJob.SCALE_FACTOR));
 				graphicsInfo.graphics = null;
 				graphicsInfo.pageFormat = null;
 			}
@@ -435,6 +432,8 @@ public final class VCLPrintJob extends Thread implements Printable {
 		Graphics2D graphics = null;
 
 		PageFormat pageFormat = null;
+
+		int pageIndex = -1;
 
 	}
 
