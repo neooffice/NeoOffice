@@ -53,6 +53,14 @@ int main( int argc, char *argv[] )
 
 	char *pCmdPath = argv[ 0 ];
 
+	// Don't allow running as root as we really cannot trust that we won't
+	// do any accidental damage
+	if ( getuid() == 0 )
+	{
+		fprintf( stderr, "%s: cannot run as root user. Exiting...\n", argv[ 0 ] );
+		_exit( 1 );
+	}
+
 #ifdef MACOSX
 	// Get absolute path of command's directory
 	ByteString aCmdPath( pCmdPath );
