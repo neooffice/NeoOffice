@@ -1151,6 +1151,7 @@ void SalInstance::AcquireYieldMutex( ULONG nCount )
 void SalInstance::Yield( BOOL bWait )
 {
 	static USHORT nRecursionLevel = 0;
+	static com_sun_star_vcl_VCLEvent *pPendingEvent = NULL;
 	SalData *pSalData = GetSalData();
 	com_sun_star_vcl_VCLEvent *pEvent;
 
@@ -1245,33 +1246,50 @@ void SalInstance::Yield( BOOL bWait )
 	}
 
 	// Dispatch pending AWT events
-	nCount = ReleaseYieldMutex();
-	while ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
+	if ( pPendingEvent )
 	{
-		nTimeout = 0;
-
-		AcquireYieldMutex( nCount );
-
+		pEvent = pPendingEvent;
+		pPendingEvent = NULL;
+	}
+	nCount = ReleaseYieldMutex();
+	if ( !pEvent )
+		pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE );
+	AcquireYieldMutex( nCount );
+	if ( pEvent )
+	{
 		USHORT nID = pEvent->getID();
 		pEvent->dispatch();
 		delete pEvent;
 
-		nCount = ReleaseYieldMutex();
-
 		// We cannot avoid bug 437 if we allow the timer to run between
 		// consecutive mouse button down and up events
-		if ( nID != SALEVENT_MOUSEBUTTONDOWN )
-			break;
+		if ( nID == SALEVENT_MOUSEBUTTONDOWN )
+		{
+			pEvent = pSalData->mpEventQueue->getNextCachedEvent( 0, TRUE );
+			if ( pEvent )
+			{
+				if ( pEvent->getID() == SALEVENT_MOUSEBUTTONUP )
+				{
+					pEvent->dispatch();
+					delete pEvent;
+				}
+				else
+				{
+					// Dispatch it the next time through
+					pPendingEvent = pEvent;
+				}
+			}
+		}
 	}
 
 	// Allow Carbon event loop to proceed
 	if ( !pEvent && !pSalData->maNativeEventCondition.check() )
 	{
 		pSalData->maNativeEventCondition.set();
+		nCount = ReleaseYieldMutex();
 		OThread::yield();
+		AcquireYieldMutex( nCount );
 	}
-
-	AcquireYieldMutex( nCount );
 
 	nRecursionLevel--;
 }
