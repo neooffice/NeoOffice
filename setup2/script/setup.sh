@@ -169,22 +169,22 @@ fi
 #     sed 's#<DefaultLocale cfg:type="string"/>#<DefaultLocale cfg:type="string">'"$locale"'</DefaultLocale>#g' "$linguxmlbak" > "$linguxml"
 # fi
 
-# # Create javarc file
-# sysclasspath=""
-# if [ ! -d "$apphome/classes" ] ; then
-#     error
-# fi
-# for i in `cd "$apphome/classes" ; find . -name "*.jar"` ; do
-#     sysclasspath="$sysclasspath:$apphome/classes/$i"
-# done
-# sysclasspath=`printf "$sysclasspath" | sed 's#^:##'`
-# if [ "$os" = "Darwin" ] ; then
-#     # Turn off graphics acceleration
-#     printf "[Java]\nRuntimeLib=/System/Library/Frameworks/JavaVM.framework/JavaVM\ncom.apple.hwaccel=false\ncom.apple.hwaccellist=\n" > "$configdir/javarc"
-# else
-#     printf "[Java]\n" > "$configdir/javarc"
-# fi
-# printf "SystemClasspath=$sysclasspath\nJava=1\nJavaScript=1\nApplets=1\n-Xmx512m\n" >> "$configdir/javarc"
+# Create javarc file
+sysclasspath=""
+if [ ! -d "$apphome/classes" ] ; then
+    error
+fi
+for i in `cd "$apphome/classes" ; find . -name "*.jar"` ; do
+    sysclasspath="$sysclasspath:$apphome/classes/$i"
+done
+sysclasspath=`printf "$sysclasspath" | sed 's#^:##'`
+if [ "$os" = "Darwin" ] ; then
+    # Turn off graphics acceleration
+    printf "[Java]\nRuntimeLib=/System/Library/Frameworks/JavaVM.framework/JavaVM\ncom.apple.hwaccel=false\ncom.apple.hwaccellist=\n" > "$configdir/javarc"
+else
+    printf "[Java]\n" > "$configdir/javarc"
+fi
+printf "SystemClasspath=$sysclasspath\nJava=1\nJavaScript=1\nApplets=1\n-Xmx512m\n" >> "$configdir/javarc"
 
 # Install application fonts
 if [ "$os" = "Darwin" ] ; then
