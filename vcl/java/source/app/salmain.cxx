@@ -99,8 +99,15 @@ static void JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_init( JNIEnv *pEn
 #ifdef MACOSX
 static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv *pEnv, jobject object )
 {
-	aCarbonLock.release();
-	return 0;
+	jint nRet = !aCarbonLock.tryToAcquire();
+
+	if ( !nRet )
+	{
+		aCarbonLock.release();
+		aCarbonLock.release();
+	}
+
+	return nRet;
 }
 #endif
 
