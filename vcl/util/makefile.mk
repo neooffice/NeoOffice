@@ -297,7 +297,9 @@ SHL1STDLIBS += -lXext -lSM -lICE -lX11
 .ENDIF          # "$(GUIBASE)"=="unx"
 
 .IF "$(OS)"=="MACOSX"
+.IF "$(GUIBASE)"=="unx"
 SHL1STDLIBS += -lXinerama
+.ENDIF
 .ENDIF
 
 .IF "$(OS)"=="LINUX" || "$(OS)"=="SOLARIS" || "$(OS)"=="FREEBSD"
