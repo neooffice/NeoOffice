@@ -435,6 +435,9 @@ void SalFrame::SetAlwaysOnTop( BOOL bOnTop )
 
 void SalFrame::ToTop( USHORT nFlags )
 {
+    if ( nFlags & SAL_FRAME_TOTOP_RESTOREWHENMIN && maFrameData.mpVCLFrame->getState() == SAL_FRAMESTATE_MINIMIZED )
+		maFrameData.mpVCLFrame->setState( SAL_FRAMESTATE_NORMAL );
+
 	maFrameData.mpVCLFrame->toFront();
 	for( ::std::list< SalFrame* >::const_iterator it = maFrameData.maChildren.begin(); it != maFrameData.maChildren.end(); ++it )
 		(*it)->ToTop( nFlags );
