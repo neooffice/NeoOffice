@@ -244,7 +244,7 @@ void SalInstance::Yield( BOOL bWait )
 	{
 		// Ignore SALEVENT_SHUTDOWN events when recursing into this method or
 		// when in presentation mode
-		if ( ( nRecursionLevel == 1 && !pSalData->mbPresentation ) || pEvent->getID() != SALEVENT_SHUTDOWN )
+		if ( ( nRecursionLevel == 1 && !pSalData->mpPresentationFrame ) || pEvent->getID() != SALEVENT_SHUTDOWN )
 		{
 			pEvent->dispatch();
 			com_sun_star_vcl_VCLGraphics::flushAll();

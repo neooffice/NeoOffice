@@ -56,7 +56,7 @@ SalData::SalData()
 	mpTimerProc = NULL;
 	mpEventQueue = NULL;
 	mpFontList = NULL;
-	mbPresentation = FALSE;
+	mpPresentationFrame = NULL;
 }
 
 // ------------------------------------------------------------------------

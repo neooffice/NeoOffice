@@ -93,6 +93,10 @@ SalFrame::SalFrame()
 
 SalFrame::~SalFrame()
 {
+	SalData *pSalData = GetSalData();
+
+	if ( pSalData->mpPresentationFrame == this )
+		pSalData->mpPresentationFrame = NULL;
 }
 
 // -----------------------------------------------------------------------
@@ -320,6 +324,14 @@ void SalFrame::StartPresentation( BOOL bStart )
 	if ( bStart == maFrameData.mbPresentation )
 		return;
 
+	SalData *pSalData = GetSalData();
+
+	// Only allow one frame to be in presentation mode at any one time
+	if ( bStart && pSalData->mpPresentationFrame )
+		return;
+	else if ( !bStart && pSalData->mpPresentationFrame != this )
+		return;
+
 #ifdef MACOSX
 	OModule aModule;
 	if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
@@ -338,7 +350,7 @@ void SalFrame::StartPresentation( BOOL bStart )
 	}
 
 	maFrameData.mbPresentation = bStart;
-	GetSalData()->mbPresentation = bStart;
+	pSalData->mpPresentationFrame = this;
 
 	// Adjust window size if in full screen mode
 	if ( maFrameData.mbFullScreen )
