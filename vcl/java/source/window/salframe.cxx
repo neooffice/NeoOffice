@@ -174,6 +174,13 @@ void SalFrame::Show( BOOL bVisible )
 	SalData *pSalData = GetSalData();
 	if ( maFrameData.mbVisible )
 	{
+		// Enable disabled event handler
+		if ( !maFrameData.mpInst && !maFrameData.mpProc )
+		{
+			maFrameData.mpInst = maFrameData.mpDisabledInst;
+			maFrameData.mpProc = maFrameData.mpDisabledProc;
+		}
+
 		// Update the cached position
 		Rectangle *pBounds = new Rectangle( maFrameData.mpVCLFrame->getBounds() );
 		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pBounds );
@@ -191,7 +198,13 @@ void SalFrame::Show( BOOL bVisible )
 	else
 	{
 		if ( pSalData->mpFocusFrame == this )
-			pSalData->mpFocusFrame = NULL;  
+			pSalData->mpFocusFrame = NULL;
+
+		// Disable event handler
+		maFrameData.mpDisabledInst = maFrameData.mpInst;
+		maFrameData.mpDisabledProc = maFrameData.mpProc;
+		maFrameData.mpInst = NULL;
+		maFrameData.mpProc = NULL;
 	}
 }
 
@@ -609,6 +622,8 @@ SalFrameData::SalFrameData()
 	mbVisible = FALSE;
 	mpInst = NULL;
 	mpProc = ImplSalCallbackDummy;
+	mpDisabledInst = NULL;
+	mpDisabledProc = NULL;
     memset( &maSysData, 0, sizeof( SystemEnvData ) );
 	maSysData.nSize = sizeof( SystemEnvData );
 	mbCenter = TRUE;
