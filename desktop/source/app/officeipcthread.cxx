@@ -33,7 +33,7 @@
  *  MA  02111-1307  USA
  *  
  *  =================================================
- *  Modified June 2003 by Patrick Luby. SISSL Removed. NeoOffice is
+ *  Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
  *  distributed under GPL only under modification term 3 of the LGPL.
  *
  *  Contributor(s): _______________________________________
@@ -55,8 +55,26 @@
 #ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
 #endif
+#ifndef _SV_HELP_HXX
+#include <vcl/help.hxx>
+#endif
+#ifndef _UTL_CONFIGMGR_HXX_
+#include <unotools/configmgr.hxx>
+#endif
 #ifndef _THREAD_HXX_
 #include <osl/thread.hxx>
+#endif
+#ifndef _RTL_DIGEST_H_
+#include <rtl/digest.h>
+#endif
+#ifndef _RTL_USTRBUF_HXX_
+#include <rtl/ustrbuf.hxx>
+#endif
+#ifndef _OSL_CONDITN_HXX_
+#include <osl/conditn.hxx>
+#endif
+#ifndef INCLUDED_SVTOOLS_MODULEOPTIONS_HXX
+#include <svtools/moduleoptions.hxx>
 #endif
 
 using namespace vos;
@@ -66,12 +84,12 @@ using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::frame;
 
-
-#define TERMINATION_SEQUENCE "InternalIPC::TerminateThread"
-#define TERMINATION_LENGTH 28
-
-#define SHOW_SEQUENCE	"-show"
-#define SHOW_LENGTH		5
+const char  *OfficeIPCThread::sc_aTerminationSequence = "InternalIPC::TerminateThread";
+const int OfficeIPCThread::sc_nTSeqLength = 28;
+const char  *OfficeIPCThread::sc_aShowSequence = "-tofront";
+const int OfficeIPCThread::sc_nShSeqLength = 5;
+const char  *OfficeIPCThread::sc_aConfirmationSequence = "InternalIPC::ProcessingDone";
+const int OfficeIPCThread::sc_nCSeqLength = 27;
 
 // Type of pipe we use
 enum PipeMode
@@ -81,14 +99,45 @@ enum PipeMode
 	PIPEMODE_CONNECTED
 };
 
-String GetURL_Impl( const String& rName );
-
 namespace desktop
 {
+
+String GetURL_Impl( const String& rName );
 
 OfficeIPCThread*	OfficeIPCThread::pGlobalOfficeIPCThread = 0;
 OSecurity			OfficeIPCThread::maSecurity;
 ::osl::Mutex*		OfficeIPCThread::pOfficeIPCThreadMutex = 0;
+
+
+String CreateMD5FromString( const OUString& aMsg )
+{
+	// PRE: aStr "file"
+	// BACK: Str "ababab....0f" Hexcode String
+
+	rtlDigest handle = rtl_digest_create( rtl_Digest_AlgorithmMD5 );
+	if ( handle > 0 )
+	{
+		const sal_uInt8* pData = (const sal_uInt8*)aMsg.getStr();
+		sal_uInt32		 nSize = ( aMsg.getLength() * sizeof( sal_Unicode ));
+		sal_uInt32		 nMD5KeyLen = rtl_digest_queryLength( handle );
+		sal_uInt8*		 pMD5KeyBuffer = new sal_uInt8[ nMD5KeyLen ];
+
+		rtl_digest_init( handle, pData, nSize );
+		rtl_digest_update( handle, pData, nSize );
+		rtl_digest_get( handle, pMD5KeyBuffer, nMD5KeyLen );
+		rtl_digest_destroy( handle );
+
+		// Create hex-value string from the MD5 value to keep the string size minimal
+		OUStringBuffer aBuffer( nMD5KeyLen * 2 + 1 );
+		for ( sal_uInt32 i = 0; i < nMD5KeyLen; i++ )
+			aBuffer.append( (sal_Int32)pMD5KeyBuffer[i], 16 );
+
+		delete [] pMD5KeyBuffer;
+		return aBuffer.makeStringAndClear();
+	}
+
+	return String();
+}
 
 class ProcessEventsClass_Impl
 {
@@ -252,9 +301,7 @@ OfficeIPCThread::Status OfficeIPCThread::EnableOfficeIPCThread()
 	if( pGlobalOfficeIPCThread )
 		return IPC_STATUS_OK;
 
-    ::rtl::OUString aOfficeInstallPath;
 	::rtl::OUString aUserInstallPath;
-	::rtl::OUString aLastIniFile;
     ::rtl::OUString aDummy;
 
 	::vos::OStartupInfo aInfo;
@@ -277,12 +324,18 @@ OfficeIPCThread::Status OfficeIPCThread::EnableOfficeIPCThread()
 		return IPC_STATUS_BOOTSTRAP_ERROR;
 	}
 
-	// Try to  determine if we are the first office or not! This should prevent multiple 
+	// Try to  determine if we are the first office or not! This should prevent multiple
 	// access to the user directory !
 	// First we try to create our pipe if this fails we try to connect. We have to do this
 	// in a loop because the the other office can crash or shutdown between createPipe
 	// and connectPipe!!
-	pThread->maPipeIdent = pThread->maPipeIdent + OUString::valueOf( (sal_Int32)aDummy.hashCode() );
+	OUString aUserInstallPathHashCode = CreateMD5FromString( aDummy );
+
+	// Check result to create a hash code from the user install path
+	if ( aUserInstallPathHashCode.getLength() == 0 )
+		return IPC_STATUS_BOOTSTRAP_ERROR; // Something completely broken, we cannot create a valid hash code!
+
+	pThread->maPipeIdent = pThread->maPipeIdent + aUserInstallPathHashCode;
 
 	PipeMode nPipeMode = PIPEMODE_DONTKNOW;
 	do
@@ -322,14 +375,14 @@ OfficeIPCThread::Status OfficeIPCThread::EnableOfficeIPCThread()
 
 		sal_Bool bWaitBeforeClose = sal_False;
 		ByteString aArguments;
-        ULONG nCount = aInfo.getCommandArgCount();		
+        ULONG nCount = aInfo.getCommandArgCount();
 
         if ( nCount == 0 )
 		{
 			// Use default argument so the first office can distinguish between a real second
 			// office and another program that check the existence of the the pipe!!
-			
-			aArguments += ByteString( "-show" );
+
+			aArguments += ByteString( sc_aShowSequence );
 		}
 		else
 		{
@@ -361,28 +414,25 @@ OfficeIPCThread::Status OfficeIPCThread::EnableOfficeIPCThread()
 				aArguments += '|';
 			}
 		}
-
+		// finaly, write the string onto the pipe
 		pThread->maStreamPipe.write( aArguments.GetBuffer(), aArguments.Len() );
-		delete pThread;
+		pThread->maStreamPipe.write( "\0", 1 );
 
-#ifdef UNX
-		if ( bWaitBeforeClose )
-		{
-			// Fix for bug #95361#
-			// We are waiting before office shutdown itself. Netscape
-			// deletes temporary files after the responsible application
-			// exited. The running office must have time to open the file
-			// before Netscape can delete it!!
-			// We have to find a better way to handle this kind of problem
-			// in the future.
-			TimeValue aTimeValue;
-			aTimeValue.Seconds = 5;
-			aTimeValue.Nanosec = 0; // 5sec
-			osl::Thread::wait( aTimeValue );
+		// wait for confirmation #95361# #95425#
+		ByteString aToken(sc_aConfirmationSequence);
+		char *aReceiveBuffer = new char[aToken.Len()+1];
+		int n = pThread->maStreamPipe.read( aReceiveBuffer, aToken.Len() );
+		aReceiveBuffer[n]='\0';
+
+		delete pThread;
+		if (aToken.CompareTo(aReceiveBuffer)!= COMPARE_EQUAL) {
+			// something went wrong
+			delete aReceiveBuffer;
+			return IPC_STATUS_BOOTSTRAP_ERROR;
+		} else {
+			delete aReceiveBuffer;
+			return IPC_STATUS_2ND_OFFICE;
 		}
-#endif
-		
-		return IPC_STATUS_2ND_OFFICE;
 	}
 
 	return IPC_STATUS_OK;
@@ -392,40 +442,42 @@ void OfficeIPCThread::DisableOfficeIPCThread()
 {
 	osl::ClearableMutexGuard aMutex( GetMutex() );
 
-	if( pGlobalOfficeIPCThread && !( pGlobalOfficeIPCThread->mbShutdownInProgress ))
+	if( pGlobalOfficeIPCThread )
 	{
-		pGlobalOfficeIPCThread->mbShutdownInProgress = sal_True;
+        OfficeIPCThread *pOfficeIPCThread = pGlobalOfficeIPCThread;
+		pGlobalOfficeIPCThread = 0;
 
 		// send thread a termination message
 		// this is done so the subsequent join will not hang
 		// because the thread hangs in accept of pipe
-        OPipe Pipe( pGlobalOfficeIPCThread->maPipeIdent, OPipe::TOption_Open, maSecurity );
-		Pipe.send( TERMINATION_SEQUENCE, TERMINATION_LENGTH );
+        	OPipe Pipe( pOfficeIPCThread->maPipeIdent, OPipe::TOption_Open, maSecurity );
+		if (Pipe.isValid()) {
+		//Pipe.send( TERMINATION_SEQUENCE, TERMINATION_LENGTH );
+		Pipe.send( sc_aTerminationSequence, sc_nTSeqLength+1 ); // also send 0-byte
 
 		// close the pipe so that the streampipe on the other
 		// side produces EOF
-		Pipe.close();
+			Pipe.close();
+		}
 
 		// release mutex to avoid deadlocks
 		aMutex.clear();
 
-		// exit gracefully and join
-		pGlobalOfficeIPCThread->join();
+        // set condition in case we are still waiting for it in run
+        // with pGlobalOfficeIPCThread set to NULL we will exit the run method
+        // afterwards
+        OfficeIPCThread::SetReady(pOfficeIPCThread);
 
-		{
-			// acquire mutex again to delete and reset global pointer threadsafe!
-			osl::MutexGuard aGuard( GetMutex() );
-			delete pGlobalOfficeIPCThread;
-			pGlobalOfficeIPCThread = 0;
-		}
+		// exit gracefully and join
+		pOfficeIPCThread->join();
+        delete pOfficeIPCThread;
 	}
 }
 
 OfficeIPCThread::OfficeIPCThread() :
 	mbBlockRequests( sal_False ),
 	mnPendingRequests( 0 ),
-	mpDispatchWatcher( 0 ),
-	mbShutdownInProgress( sal_False )
+	mpDispatchWatcher( 0 )
 {
 }
 
@@ -440,100 +492,256 @@ OfficeIPCThread::~OfficeIPCThread()
 	pGlobalOfficeIPCThread = 0;
 }
 
+static void AddURLToStringList( const rtl::OUString& aURL, rtl::OUString& aStringList )
+{
+	if ( aStringList.getLength() )
+		aStringList += ::rtl::OUString::valueOf( (sal_Unicode)APPEVENT_PARAM_DELIMITER );
+	aStringList += aURL;
+}
+
+void OfficeIPCThread::SetReady(OfficeIPCThread* pIPCThread)
+{
+    osl::ClearableMutexGuard aGuard(GetMutex());
+    if (pGlobalOfficeIPCThread != NULL) 
+        pGlobalOfficeIPCThread->cReady.set();
+    else
+        if (pIPCThread != NULL)
+            pIPCThread->cReady.set();
+
+}
+
 void SAL_CALL OfficeIPCThread::run()
 {
-	while (schedule())
+    do
 	{
         OPipe::TPipeError
 			nError = maPipe.accept( maStreamPipe );
 
-		{
-			osl::ClearableMutexGuard aGuard( GetMutex() );
 
-			if( nError == OStreamPipe::E_None )
-			{
-				ByteString aArguments;
-				char pBuf[ 2049 ];
-				int nBytes;
-				do
-				{
-					nBytes = maStreamPipe.read( pBuf, 2048 );
-					pBuf[ nBytes ] = 0;
+		if( nError == OStreamPipe::E_None )
+		{			
+            ByteString aArguments;
+            // test byte by byte
+            const int nBufSz = 2048;
+            char pBuf[nBufSz];
+            int nBytes = 0;
+            int nResult = 0;
+            // read into pBuf until '\0' is read or read-error
+            while ((nResult=maStreamPipe.recv( pBuf+nBytes, nBufSz-nBytes))>0) {
+				nBytes += nResult;
+				if (pBuf[nBytes-1]=='\0') {
 					aArguments += pBuf;
-				} while( ! maStreamPipe.isEof() || nBytes > 0 );
-				maStreamPipe.close();
+			        break;
+		        }
+	        }
 
-				// #90717# Is this a lookup message from another application? if so, ignore
-				if ( aArguments.Len() == 0 )
-					continue;
+            // #111143# and others:
+            // if we receive a request while the office is displaying some dialog or error during
+            // bootstrap, that dialogs event loop might get events that are dispatched by this thread
+            // we have to wait for cReady to be set by the real main loop.
+            // only reqests that dont dispatch events may be processed before cReady is set.
+            cReady.wait();
 
-				// is this a termination message ? if so, terminate
-				if(( aArguments.CompareTo( TERMINATION_SEQUENCE,
-										  TERMINATION_LENGTH ) == COMPARE_EQUAL ) ||
-					mbBlockRequests )
-					return;
+            // we might have decided to shutdown while we were sleeping
+            if (OfficeIPCThread::pGlobalOfficeIPCThread == NULL) return;
 
-				String			aEmpty;
-				CommandLineArgs aCmdLineArgs( OUString( aArguments.GetBuffer(), aArguments.Len(), gsl_getSystemTextEncoding() ));
+            // only lock the mutex when processing starts, othewise we deadlock when the office goes
+            // down during wait
+            osl::ClearableMutexGuard aGuard( GetMutex() );
 
-				if ( aCmdLineArgs.IsQuickstart() )
+			// #90717# Is this a lookup message from another application? if so, ignore
+			if ( aArguments.Len() == 0 )
+				continue;
+            
+            
+            // is this a termination message ? if so, terminate
+            if(( aArguments.CompareTo( sc_aTerminationSequence, sc_nTSeqLength ) == COMPARE_EQUAL ) ||
+                    mbBlockRequests ) return;
+            String           aEmpty;
+            CommandLineArgs  aCmdLineArgs( OUString( aArguments.GetBuffer(),
+				aArguments.Len(), gsl_getSystemTextEncoding() ));
+            CommandLineArgs	*pCurrentCmdLineArgs = Desktop::GetCommandLineArgs();
+
+			if ( aCmdLineArgs.IsQuickstart() )
+			{
+				// we have to use application event, because we have to start quickstart service in main thread!!
+				ApplicationEvent* pAppEvent =
+					new ApplicationEvent( aEmpty, aEmpty,
+											"QUICKSTART", aEmpty );
+				ImplPostForeignAppEvent( pAppEvent );
+			}
+
+			// handle request for acceptor
+			sal_Bool bAcceptorRequest = sal_False;
+			OUString aAcceptString;
+            if ( aCmdLineArgs.GetAcceptString(aAcceptString) && Desktop::CheckOEM()) {
+				ApplicationEvent* pAppEvent =
+					new ApplicationEvent( aEmpty, aEmpty,
+										"ACCEPT", aAcceptString );
+				ImplPostForeignAppEvent( pAppEvent );
+				bAcceptorRequest = sal_True;
+			}
+			// handle acceptor removal
+			OUString aUnAcceptString;
+			if ( aCmdLineArgs.GetUnAcceptString(aUnAcceptString) ) {
+				ApplicationEvent* pAppEvent =
+					new ApplicationEvent( aEmpty, aEmpty,
+										"UNACCEPT", aUnAcceptString );
+				ImplPostForeignAppEvent( pAppEvent );
+				bAcceptorRequest = sal_True;
+			}
+
+#ifndef UNX
+			// only in non-unix version, we need to handle a -help request
+			// in a running instance in order to display  the command line help
+			if ( aCmdLineArgs.IsHelp() ) {
+				ApplicationEvent* pAppEvent =
+					new ApplicationEvent( aEmpty, aEmpty, "HELP", aEmpty );
+				ImplPostForeignAppEvent( pAppEvent );
+			}
+#endif
+
+			sal_Bool bDocRequestSent = sal_False;
+			ProcessDocumentsRequest* pRequest = new ProcessDocumentsRequest;
+            cProcessed.reset();
+            pRequest->pcProcessed = &cProcessed;
+
+			// Print requests are not dependent on the -invisible cmdline argument as they are
+			// loaded with the "hidden" flag! So they are always checked.
+			bDocRequestSent |= aCmdLineArgs.GetPrintList( pRequest->aPrintList );
+			bDocRequestSent |= ( aCmdLineArgs.GetPrintToList( pRequest->aPrintToList ) &&
+									aCmdLineArgs.GetPrinterName( pRequest->aPrinterName )		);
+
+			if ( !pCurrentCmdLineArgs->IsInvisible() )
+			{
+				// Read cmdline args that can open/create documents. As they would open a window
+				// they are only allowed if the "-invisible" is currently not used!
+				bDocRequestSent |= aCmdLineArgs.GetOpenList( pRequest->aOpenList );
+				bDocRequestSent |= aCmdLineArgs.GetViewList( pRequest->aViewList );
+                bDocRequestSent |= aCmdLineArgs.GetStartList( pRequest->aStartList );
+				bDocRequestSent |= aCmdLineArgs.GetForceOpenList( pRequest->aForceOpenList );
+				bDocRequestSent |= aCmdLineArgs.GetForceNewList( pRequest->aForceNewList );
+
+				// Special command line args to create an empty document for a given module
+                if ( aCmdLineArgs.HasModuleParam() && Desktop::CheckOEM())
 				{
-					// we have to use application event, because we have to start quickstart service in main thread!!
-					ApplicationEvent* pAppEvent =
-						new ApplicationEvent( aEmpty, aEmpty,
-											  "QUICKSTART", aEmpty );
-					ImplPostForeignAppEvent( pAppEvent );
-				}
-
-				ProcessDocumentsRequest* pRequest = new ProcessDocumentsRequest;
-
-				// Read cmdline args that can open/print documents
-				sal_Bool bDocRequestSent = sal_False;
-				if ( aCmdLineArgs.GetOpenList( pRequest->aOpenList )			|| 
-					 aCmdLineArgs.GetPrintList( pRequest->aPrintList )			||
-					 aCmdLineArgs.GetForceOpenList( pRequest->aForceOpenList )	||
-					 aCmdLineArgs.GetForceNewList( pRequest->aForceNewList )	||
-					 ( aCmdLineArgs.GetPrintToList( pRequest->aPrintToList ) && 
-					   aCmdLineArgs.GetPrinterName( pRequest->aPrinterName )) )
- 				{
-					// Send requests to dispatch watcher if we have at least one. The receiver
-					// is responsible to delete the request after processing it.
+					SvtModuleOptions aOpt;
+					SvtModuleOptions::EFactory eFactory = SvtModuleOptions::E_WRITER;
+					if ( aCmdLineArgs.IsWriter() )
+						eFactory = SvtModuleOptions::E_WRITER;
+					else if ( aCmdLineArgs.IsCalc() )
+						eFactory = SvtModuleOptions::E_CALC;
+					else if ( aCmdLineArgs.IsDraw() )
+						eFactory = SvtModuleOptions::E_DRAW;
+					else if ( aCmdLineArgs.IsImpress() )
+						eFactory = SvtModuleOptions::E_IMPRESS;
+					else if ( aCmdLineArgs.IsMath() )
+						eFactory = SvtModuleOptions::E_MATH;
+					else if ( aCmdLineArgs.IsGlobal() )
+						eFactory = SvtModuleOptions::E_WRITERGLOBAL;
+					else if ( aCmdLineArgs.IsWeb() )
+						eFactory = SvtModuleOptions::E_WRITERWEB;
+					AddURLToStringList( aOpt.GetFactoryEmptyDocumentURL( eFactory ), pRequest->aOpenList );
 					bDocRequestSent = sal_True;
-					ImplPostProcessDocumentsEvent( pRequest );
 				}
-				else
-				{
-					// delete not used request again
-					delete pRequest;
-				}
-
-				if (( aArguments.CompareTo( SHOW_SEQUENCE, SHOW_LENGTH ) == COMPARE_EQUAL ) || 
-					  !bDocRequestSent )
-				{
-					// no document was sent, just bring Office to front
-					ApplicationEvent* pAppEvent =
-						new ApplicationEvent( aEmpty, aEmpty,
-											  "APPEAR", aEmpty );
-					ImplPostForeignAppEvent( pAppEvent );
-				}
+            }
+            
+            if (!aCmdLineArgs.IsQuickstart() && Desktop::CheckOEM()) {
+                sal_Bool bShowHelp = sal_False;
+                rtl::OUStringBuffer aHelpURLBuffer;
+                if (aCmdLineArgs.IsHelpWriter()) {
+                    bShowHelp = sal_True;
+                    aHelpURLBuffer.appendAscii("vnd.sun.star.help://swriter/start");
+                } else if (aCmdLineArgs.IsHelpCalc()) {            
+                    bShowHelp = sal_True;
+                    aHelpURLBuffer.appendAscii("vnd.sun.star.help://scalc/start");
+                } else if (aCmdLineArgs.IsHelpDraw()) {
+                    bShowHelp = sal_True;
+                    aHelpURLBuffer.appendAscii("vnd.sun.star.help://sdraw/start");
+                } else if (aCmdLineArgs.IsHelpImpress()) {
+                    bShowHelp = sal_True;
+                    aHelpURLBuffer.appendAscii("vnd.sun.star.help://simpress/start");
+                } else if (aCmdLineArgs.IsHelpBasic()) {
+                    bShowHelp = sal_True;
+                    aHelpURLBuffer.appendAscii("vnd.sun.star.help://sbasic/start");
+                } else if (aCmdLineArgs.IsHelpMath()) {
+                    bShowHelp = sal_True;
+                    aHelpURLBuffer.appendAscii("vnd.sun.star.help://smath/start");
+                }
+                if (bShowHelp) {
+                    Any aRet = ::utl::ConfigManager::GetDirectConfigProperty( ::utl::ConfigManager::LOCALE );
+                    rtl::OUString aTmp;
+                    aRet >>= aTmp;            
+                    aHelpURLBuffer.appendAscii("?Language=");
+                    aHelpURLBuffer.append(aTmp);
+#if defined UNX
+                    aHelpURLBuffer.appendAscii("&System=UNX");
+#elif defined WNT
+                    aHelpURLBuffer.appendAscii("&System=WIN");
+#elif defined MAC
+                    aHelpURLBuffer.appendAscii("&System=MAC");
+#endif            
+                    ApplicationEvent* pAppEvent =
+                        new ApplicationEvent( aEmpty, aEmpty,
+                                            "OPENHELPURL", aHelpURLBuffer.makeStringAndClear());
+                    ImplPostForeignAppEvent( pAppEvent );                    
+                }
+            }
+                
+            if ( bDocRequestSent && Desktop::CheckOEM())
+ 			{
+				// Send requests to dispatch watcher if we have at least one. The receiver
+				// is responsible to delete the request after processing it.
+				ImplPostProcessDocumentsEvent( pRequest );
 			}
 			else
 			{
-#if defined DEBUG || defined DBG_UTIL
-				fprintf( stderr, "Error on accept: %d\n", (int)nError );
-#endif
-				TimeValue tval;
-				tval.Seconds = 1;
-				tval.Nanosec = 0;
-				sleep( tval );
+				// delete not used request again
+				delete pRequest;
+				pRequest = NULL;
+                // if no request was send, there is no need to wait
+                cProcessed.set();
 			}
-		}
-	}
+
+			if ((( aArguments.CompareTo( sc_aShowSequence, sc_nShSeqLength ) == COMPARE_EQUAL ) ||
+				!bDocRequestSent ) && !bAcceptorRequest )
+			{
+				// no document was sent, just bring Office to front
+				ApplicationEvent* pAppEvent =
+						new ApplicationEvent( aEmpty, aEmpty, "APPEAR", aEmpty );
+				ImplPostForeignAppEvent( pAppEvent );
+			}
+
+			// we don't need the mutex any longer...
+			aGuard.clear();
+			// wait for processing to finish if a doc request was sent
+            if (bDocRequestSent)
+			    cProcessed.wait();
+			// processing finished, inform the requesting end
+			nBytes = 0;
+			while (
+                (nResult = maStreamPipe.send(sc_aConfirmationSequence+nBytes, sc_nCSeqLength-nBytes))>0 &&
+                ((nBytes += nResult) < sc_nCSeqLength) );
+			// now we can close, don't we?
+			// maStreamPipe.close();
+            
+        }
+        else
+        {
+#if (OSL_DEBUG_LEVEL > 1) || defined DBG_UTIL
+			fprintf( stderr, "Error on accept: %d\n", (int)nError );
+#endif
+			TimeValue tval;
+			tval.Seconds = 1;
+			tval.Nanosec = 0;
+			sleep( tval );
+        }
+	} while( schedule() );
 }
 
-void AddToDispatchList( 
-	DispatchWatcher::DispatchList& rDispatchList, 
-	const OUString& aRequestList, 
+static void AddToDispatchList(
+	DispatchWatcher::DispatchList& rDispatchList,
+	const OUString& aRequestList,
 	DispatchWatcher::RequestType nType,
 	const OUString& aParam )
 {
@@ -551,13 +759,15 @@ void AddToDispatchList(
 	}
 }
 
-void OfficeIPCThread::ExecuteCmdLineRequests( const ProcessDocumentsRequest& aRequest )
+void OfficeIPCThread::ExecuteCmdLineRequests( ProcessDocumentsRequest& aRequest )
 {
 	::rtl::OUString					aEmpty;
 	DispatchWatcher::DispatchList	aDispatchList;
 
 	// Create dispatch list for dispatch watcher
 	AddToDispatchList( aDispatchList, aRequest.aOpenList, DispatchWatcher::REQUEST_OPEN, aEmpty );
+	AddToDispatchList( aDispatchList, aRequest.aViewList, DispatchWatcher::REQUEST_VIEW, aEmpty );
+    AddToDispatchList( aDispatchList, aRequest.aStartList, DispatchWatcher::REQUEST_START, aEmpty );
 	AddToDispatchList( aDispatchList, aRequest.aPrintList, DispatchWatcher::REQUEST_PRINT, aEmpty );
 	AddToDispatchList( aDispatchList, aRequest.aPrintToList, DispatchWatcher::REQUEST_PRINTTO, aRequest.aPrinterName );
 	AddToDispatchList( aDispatchList, aRequest.aForceOpenList, DispatchWatcher::REQUEST_FORCEOPEN, aEmpty );
@@ -575,9 +785,13 @@ void OfficeIPCThread::ExecuteCmdLineRequests( const ProcessDocumentsRequest& aRe
 		}
 
 		aGuard.clear();
-		
+
 		// Execute dispatch requests
 		pGlobalOfficeIPCThread->mpDispatchWatcher->executeDispatchRequests( aDispatchList );
+
+		// set processed flag
+		if (aRequest.pcProcessed != NULL)
+			aRequest.pcProcessed->set();
 	}
 }
 

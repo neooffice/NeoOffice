@@ -33,7 +33,7 @@
 #   MA  02111-1307  USA
 #   
 #   =================================================
-#   Modified June 2003 by Patrick Luby. SISSL Removed. NeoOffice is
+#   Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
 #   distributed under GPL only under modification term 3 of the LGPL.
 #
 #   Contributor(s): _______________________________________
@@ -58,29 +58,39 @@ RSCUPDVER=$(RSCREVISION)(SV$(UPD)$(UPDMINOR))
 CDEFS += -DPRODUCT_DIR_NAME='"$(PRODUCT_DIR_NAME)"'
 .ENDIF
 
-.IF "$(BUILD_SOSL)" == ""
-        CDEFS += "-DTIMEBOMB"
-.ELSE
-        CDEFS += "-DBUILD_SOSL"
-.ENDIF
-
 # --- Files --------------------------------------------------------
 
 OBJFILES = \
-        $(OBJ)$/app.obj					\
-		$(OBJ)$/intro.obj				\
-		$(OBJ)$/officeipcthread.obj		\
-		$(OBJ)$/appinit.obj				\
-		$(OBJ)$/cmdlineargs.obj			\
-		$(OBJ)$/pluginacceptthread.obj	\
-		$(OBJ)$/officeacceptthread.obj	\
-		$(OBJ)$/oinstanceprovider.obj	\
-		$(OBJ)$/opluginframefactory.obj	\
-		$(OBJ)$/appsys.obj				\
-		$(OBJ)$/desktopresid.obj		\
-		$(OBJ)$/dispatchwatcher.obj
+        $(OBJ)$/app.obj						\
+        $(OBJ)$/copyright_ascii_sun.obj		\
+        $(OBJ)$/copyright_ascii_ooo.obj		\
+        $(OBJ)$/lockfile.obj				\
+		$(OBJ)$/intro.obj					\
+		$(OBJ)$/officeipcthread.obj			\
+		$(OBJ)$/appinit.obj					\
+		$(OBJ)$/cmdlineargs.obj				\
+		$(OBJ)$/oinstanceprovider.obj		\
+		$(OBJ)$/opluginframefactory.obj		\
+		$(OBJ)$/appsys.obj					\
+		$(OBJ)$/desktopresid.obj			\
+		$(OBJ)$/dispatchwatcher.obj			\
+		$(OBJ)$/ssodlg.obj					\
+		$(OBJ)$/ssoinit.obj					\
+		$(OBJ)$/configinit.obj				\
+		$(OBJ)$/javainteractionhandler.obj	\
+		$(OBJ)$/testtool.obj				\
+		$(OBJ)$/checkinstall.obj			\
+		$(OBJ)$/cmdlinehelp.obj
 
-SRC1FILES=	desktop.src
+.IF "$(GUI)" == "UNX"
+.IF "$(OS)" != "MACOSX"
+OBJFILES+= $(OBJ)$/icon_resource_ooo.obj \
+	$(OBJ)$/icon_resource_sun.obj
+.ENDIF
+.ENDIF
+
+SRC1FILES=	desktop.src	\
+			ssodlg.src
 SRS1NAME=	desktop
 
 # --- Targets ------------------------------------------------------
