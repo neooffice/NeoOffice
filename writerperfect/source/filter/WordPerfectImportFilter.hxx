@@ -61,8 +61,11 @@
 #ifndef _COM_SUN_STAR_XML_SAX_XDOCUMENTHANDLER_HPP_
 #include <com/sun/star/xml/sax/XDocumentHandler.hpp>
 #endif
+#ifndef _COM_SUN_STAR_DOCUMENT_XEXTENDEDFILTERDETECTION_HDL_
+#include <com/sun/star/document/XExtendedFilterDetection.hpp>
+#endif
 #ifndef _CPPUHELPER_IMPLBASE5_HXX_
-#include <cppuhelper/implbase4.hxx>
+#include <cppuhelper/implbase5.hxx>
 #endif
 
 enum FilterType 
@@ -73,12 +76,13 @@ enum FilterType
 /* This component will be instantiated for both import or export. Whether it calls
  * setSourceDocument or setTargetDocument determines which Impl function the filter
  * member calls */
-class WordPerfectImportFilter : public cppu::WeakImplHelper4 
+class WordPerfectImportFilter : public cppu::WeakImplHelper5 
 < 
 	com::sun::star::document::XFilter,
 	com::sun::star::document::XImporter,
 	com::sun::star::lang::XInitialization,
-	com::sun::star::lang::XServiceInfo
+	com::sun::star::lang::XServiceInfo,
+	com::sun::star::document::XExtendedFilterDetection
 >
 {
 protected:
@@ -126,6 +130,9 @@ public:
     virtual ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL getSupportedServiceNames(  ) 
 		throw (::com::sun::star::uno::RuntimeException);
 
+	// XExtendedTypeDetection
+	virtual ::rtl::OUString SAL_CALL detect( ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >& Descriptor )
+		throw (::com::sun::star::uno::RuntimeException);
 };
 
 ::rtl::OUString WordPerfectImportFilter_getImplementationName()

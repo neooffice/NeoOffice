@@ -201,23 +201,27 @@ OUString WordPerfectImportFilter_getImplementationName ()
 }
 // #define SERVICE_NAME1 "com.sun.star.document.ExportFilter"
 #define SERVICE_NAME2 "com.sun.star.document.ImportFilter"
+#define SERVICE_NAME3 "com.sun.star.document.ExtendedTypeDetection"
 sal_Bool SAL_CALL WordPerfectImportFilter_supportsService( const OUString& ServiceName ) 
 	throw (RuntimeException)
 {
 	return //ServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( SERVICE_NAME1 ) ) ||
-    	   ServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( SERVICE_NAME2 ) );
+    	   ServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( SERVICE_NAME2 ) ) ||
+    	   ServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( SERVICE_NAME3 ) );
 }
 Sequence< OUString > SAL_CALL WordPerfectImportFilter_getSupportedServiceNames(  ) 
 	throw (RuntimeException)
 {
-	Sequence < OUString > aRet(1);
+	Sequence < OUString > aRet(2);
     OUString* pArray = aRet.getArray();
     pArray[0] =  OUString ( RTL_CONSTASCII_USTRINGPARAM ( SERVICE_NAME2 ) );
+    pArray[1] =  OUString ( RTL_CONSTASCII_USTRINGPARAM ( SERVICE_NAME3 ) );
 //     pArray[1] =  OUString ( RTL_CONSTASCII_USTRINGPARAM ( SERVICE_NAME2 ) );
     return aRet;
 }
 //#undef SERVICE_NAME1
 #undef SERVICE_NAME2
+#undef SERVICE_NAME3
 
 Reference< XInterface > SAL_CALL WordPerfectImportFilter_createInstance( const Reference< XMultiServiceFactory > & rSMgr)
 	throw( Exception )
@@ -231,6 +235,17 @@ OUString SAL_CALL WordPerfectImportFilter::getImplementationName(  )
 {
 	return WordPerfectImportFilter_getImplementationName();
 }
+
+// XExtendedTypeDetection
+OUString SAL_CALL WordPerfectImportFilter::detect( ::com::sun::star::uno::Sequence< PropertyValue >& Descriptor )
+        throw (RuntimeException)
+{
+    // TODO: Look at the beginning of the file and determine if the file is
+    // a WordPerfect file. If it is, return one of the "writer_WordPerfect_*"
+    // type names. Otherwise, return an empty string.
+    return OUString();
+}
+
 sal_Bool SAL_CALL WordPerfectImportFilter::supportsService( const OUString& rServiceName ) 
 	throw (RuntimeException)
 {
