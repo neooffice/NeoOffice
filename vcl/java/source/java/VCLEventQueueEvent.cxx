@@ -216,6 +216,10 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_GETFOCUS:
 		{
+#ifdef MACOSX
+			// Fix bug 221 by explicitly reenabling all keyboards
+			KeyScript( smKeyEnableKybds );
+#endif	// MACOSX
 			if ( pSalData->mpFocusFrame != pFrame )
 			{
 				// When in presentation mode, only allow focus to be set to
