@@ -156,30 +156,21 @@ void com_sun_star_vcl_VCLPageFormat::destroyNativePrintJob()
 		return;
 
 #ifdef MACOSX
-	// Test the JVM version and if it is below 1.4, use Carbon printing APIs
-	java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
-	if ( !pClass )
+	PMPrintSession pSession = (PMPrintSession)getNativePrintJob();
+	if ( pSession )
 	{
-		PMPrintSession pSession = (PMPrintSession)getNativePrintJob();
-		if ( pSession )
+		CFNumberRef aData = NULL;
+		if ( PMSessionGetDataFromSession( pSession, PAGEFORMAT_KEY, (CFTypeRef *)&aData ) == kPMNoError && aData )
 		{
-			CFNumberRef aData = NULL;
-			if ( PMSessionGetDataFromSession( pSession, PAGEFORMAT_KEY, (CFTypeRef *)&aData ) == kPMNoError && aData )
+			CFIndex aValue;
+			if ( CFNumberGetValue( aData, kCFNumberCFIndexType, &aValue ) )
 			{
-				CFIndex aValue;
-				if ( CFNumberGetValue( aData, kCFNumberCFIndexType, &aValue ) )
-				{
-					PMPageFormat aPageFormat = (PMPageFormat)aValue;
-					if ( aPageFormat )
-						PMRelease( aPageFormat );
-				}
+				PMPageFormat aPageFormat = (PMPageFormat)aValue;
+				if ( aPageFormat )
+					PMRelease( aPageFormat );
 			}
-			mbInitialized = FALSE;
 		}
-	}
-	else
-	{
-		delete pClass;
+		mbInitialized = FALSE;
 	}
 #endif	// MACOSX
 }
@@ -450,50 +441,41 @@ void com_sun_star_vcl_VCLPageFormat::initializeNativePrintJob()
 		return;
 
 #ifdef MACOSX
-	// Test the JVM version and if it is below 1.4, use Carbon printing APIs
-	java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
-	if ( !pClass )
+	PMPrintSession pSession = (PMPrintSession)getNativePrintJob();
+	if ( pSession )
 	{
-		PMPrintSession pSession = (PMPrintSession)getNativePrintJob();
-		if ( pSession )
+		PMPageFormat aPageFormat = NULL;
+		CFNumberRef aData = NULL;
+		if ( PMSessionGetDataFromSession( pSession, PAGEFORMAT_KEY, (CFTypeRef *)&aData ) == kPMNoError && aData )
 		{
-			PMPageFormat aPageFormat = NULL;
-			CFNumberRef aData = NULL;
-			if ( PMSessionGetDataFromSession( pSession, PAGEFORMAT_KEY, (CFTypeRef *)&aData ) == kPMNoError && aData )
+			CFIndex aValue;
+			if ( CFNumberGetValue( aData, kCFNumberCFIndexType, &aValue ) )
 			{
-				CFIndex aValue;
-				if ( CFNumberGetValue( aData, kCFNumberCFIndexType, &aValue ) )
+				aPageFormat = (PMPageFormat)aValue;
+				if ( PMRetain( aPageFormat ) != kPMNoError )
 				{
-					aPageFormat = (PMPageFormat)aValue;
-					if ( PMRetain( aPageFormat ) != kPMNoError )
-					{
-						PMRelease( aPageFormat );
-						aPageFormat = NULL;
-					}
+					PMRelease( aPageFormat );
+					aPageFormat = NULL;
 				}
 			}
-			if ( !aPageFormat )
-			{
-				if ( PMCreatePageFormat( &aPageFormat ) == kPMNoError )
-				{
-					if ( PMSessionDefaultPageFormat( pSession, aPageFormat ) == kPMNoError && ( aData = CFNumberCreate( kCFAllocatorDefault,  kCFNumberCFIndexType, &aPageFormat ) ) != NULL )
-					{
-						PMSessionSetDataInSession( pSession, PAGEFORMAT_KEY, (CFTypeRef)aData );
-					}
-					else
-					{
-						PMRelease( aPageFormat );
-						aPageFormat = NULL;
-					}
-				}
-			}
-			if ( aPageFormat )
-				mbInitialized = TRUE;
 		}
-	}
-	else
-	{
-		delete pClass;
+		if ( !aPageFormat )
+		{
+			if ( PMCreatePageFormat( &aPageFormat ) == kPMNoError )
+			{
+				if ( PMSessionDefaultPageFormat( pSession, aPageFormat ) == kPMNoError && ( aData = CFNumberCreate( kCFAllocatorDefault,  kCFNumberCFIndexType, &aPageFormat ) ) != NULL )
+				{
+					PMSessionSetDataInSession( pSession, PAGEFORMAT_KEY, (CFTypeRef)aData );
+				}
+				else
+				{
+					PMRelease( aPageFormat );
+					aPageFormat = NULL;
+				}
+			}
+		}
+		if ( aPageFormat )
+			mbInitialized = TRUE;
 	}
 #endif	// MACOSX
 }

@@ -305,24 +305,15 @@ BOOL SalGraphics::DrawEPS( long nX, long nY, long nWidth, long nHeight, void* pP
 		return FALSE;
 
 #ifdef MACOSX
-	// Test the JVM version and if it is below 1.4, use Carbon printing APIs
-	java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
-	if ( !pClass )
+	PMPrintSession pSession = (PMPrintSession)maGraphicsData.mpPrinter->maPrinterData.mpVCLPrintJob->getNativePrintJob();
+	if ( pSession )
 	{
-		PMPrintSession pSession = (PMPrintSession)maGraphicsData.mpPrinter->maPrinterData.mpVCLPrintJob->getNativePrintJob();
-		if ( pSession )
+		if ( PMSessionPostScriptBegin( pSession ) == kPMNoError )
 		{
-			if ( PMSessionPostScriptBegin( pSession ) == kPMNoError )
-			{
-				PMSessionPostScriptData( pSession, (MacOSPtr)pPtr, nSize );
-				PMSessionPostScriptEnd( pSession );
-			}
-			return TRUE;
+			PMSessionPostScriptData( pSession, (MacOSPtr)pPtr, nSize );
+			PMSessionPostScriptEnd( pSession );
 		}
-	}
-	else
-	{
-		delete pClass;
+		return TRUE;
 	}
 #else	// MACOSX
 #ifdef DEBUG
