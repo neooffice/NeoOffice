@@ -690,7 +690,7 @@ SalVirtualDevice* SalInstance::CreateVirtualDevice( SalGraphics* pGraphics,
 {
 	SalVirtualDevice *pDevice = new SalVirtualDevice();
 
-	if ( !nBitCount && pGraphics )
+	if ( pGraphics )
 		nBitCount = pGraphics->GetBitCount();
 	pDevice->maVirDevData.mnBitCount = nBitCount;
 

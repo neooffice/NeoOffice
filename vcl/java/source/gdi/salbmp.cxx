@@ -78,16 +78,6 @@ BOOL SalBitmap::Create( const Size& rSize, USHORT nBitCount, const BitmapPalette
 		aSize.setHeight( 1 );
 	maSize = aSize;
 
-	// Adjust bit count
-	if ( nBitCount <= 1)
-		nBitCount = 1;
-	else if ( nBitCount <= 4)
-		nBitCount = 4;
-	else if ( nBitCount <= 8)
-		nBitCount = 8;
-	else
-		nBitCount = 24;
-
 	mpVCLBitmap = new com_sun_star_vcl_VCLBitmap( maSize.Width(), maSize.Height(), nBitCount );
 
 	if ( mpVCLBitmap ) {

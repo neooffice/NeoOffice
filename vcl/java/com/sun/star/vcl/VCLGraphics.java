@@ -330,7 +330,17 @@ public final class VCLGraphics {
 		graphicsBounds.x = 0;
 		graphicsBounds.y = 0;
 		graphics = (Graphics2D)g.create(graphicsBounds.x, graphicsBounds.y, graphicsBounds.width, graphicsBounds.height);
-		bitCount = graphics.getDeviceConfiguration().getColorModel().getPixelSize();
+		int b = graphics.getDeviceConfiguration().getColorModel().getPixelSize();
+
+		if (b <= 1)
+			bitCount = 1;
+		else if (b <= 4)
+			bitCount = 4;
+		else if (b <= 8)
+			bitCount = 8;
+		else
+			bitCount = 24;
+
 		resetClipRegion();
 
 		// Mac OS X sometimes mangles images when multiple images are rendered
