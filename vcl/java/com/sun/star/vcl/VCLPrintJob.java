@@ -68,7 +68,7 @@ public final class VCLPrintJob extends Thread implements Printable {
 	/**
 	 * SCALE_FACTOR constant.
 	 */
-	private final static int SCALE_FACTOR = 4;
+	public final static int SCALE_FACTOR = 4;
 
 	/**
 	 * Cached native graphics.
@@ -243,6 +243,7 @@ public final class VCLPrintJob extends Thread implements Printable {
 		job = null;
 		printThreadStarted = true;
 		printThreadFinished = true;
+		System.gc();
 
 	}
 

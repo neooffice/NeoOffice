@@ -498,29 +498,39 @@ public final class VCLGraphics {
 			destX -= srcX;
 		if (srcY < 0)
 			destY -= srcY;
-		Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(graphics.getDeviceConfiguration().getBounds());
 		if (image == null && VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 			// Mac OS X has a tendency to incompletely render large images
 			// when printing to PDF so we break the image into many small
 			// images
+			Rectangle deviceBounds = graphics.getDeviceConfiguration().getBounds();
+			deviceBounds.x *= VCLPrintJob.SCALE_FACTOR;
+			deviceBounds.y *= VCLPrintJob.SCALE_FACTOR;
+			deviceBounds.width *= VCLPrintJob.SCALE_FACTOR;
+			deviceBounds.height *= VCLPrintJob.SCALE_FACTOR;
+			Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(deviceBounds);
+			srcBounds.x += destBounds.x - destX;
+			srcBounds.y += destBounds.y - destY;
 			int spanMax = resolution;
-			for (int i = srcBounds.x; i < srcBounds.x + srcBounds.width; i += spanMax) {
-				for (int j = srcBounds.y; j < srcBounds.y + srcBounds.height; j += spanMax) {
-					int spanX = srcBounds.x + srcBounds.width - i;
+			for (int i = srcBounds.x; i < srcBounds.x + destBounds.width; i += spanMax) {
+				for (int j = srcBounds.y; j < srcBounds.y + destBounds.height; j += spanMax) {
+					int spanX = srcBounds.x + destBounds.width - i;
 					if (spanX > spanMax)
 						spanX = spanMax;
-					int spanY = srcBounds.y + srcBounds.height - j;
+					int spanY = srcBounds.y + destBounds.height - j;
 					if (spanY > spanMax)
 						spanY = spanMax;
-					Graphics2D g = (Graphics2D)graphics.create(destX + i, destY + j, spanX, spanY);
+					Graphics2D g = (Graphics2D)graphics.create(destBounds.x + i, destBounds.y + j, spanX, spanY);
 					g.drawRenderedImage(img.getImage().getSubimage(srcBounds.x + i, srcBounds.y + j, spanX, spanY), null);
 					g.dispose();
 				}
 			}
 		}
 		else {
-			Graphics2D g = (Graphics2D)graphics.create(destBounds.x, destBounds.y, srcBounds.width, srcBounds.height);
-			g.drawRenderedImage(img.getImage().getSubimage(srcBounds.x, srcBounds.y, srcBounds.width, srcBounds.height), null);
+			Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
+			srcBounds.x += destBounds.x - destX;
+			srcBounds.y += destBounds.y - destY;
+			Graphics2D g = (Graphics2D)graphics.create(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
+			g.drawRenderedImage(img.getImage().getSubimage(srcBounds.x, srcBounds.y, destBounds.width, destBounds.height), null);
 			g.dispose();
 		}
 		addToFlush(new Rectangle(destX, destY, srcWidth, srcHeight));
