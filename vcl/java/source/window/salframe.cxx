@@ -654,17 +654,14 @@ LanguageType SalFrame::GetInputLanguage()
 #ifdef DEBUG
 	fprintf( stderr, "SalFrame::GetInputLanguage not implemented\n" );
 #endif
-	return 0;
+	return LANGUAGE_DONTKNOW;
 }
 
 // -----------------------------------------------------------------------
 
 ULONG SalFrame::GetCurrentModButtons()
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalFrame::GetCurrentModButtons not implemented\n" );
-#endif
-	return 0;
+	return maFrameData.mpVCLFrame->getCurrentModButtons();
 }
 
 // -----------------------------------------------------------------------

@@ -65,6 +65,7 @@ public:
 	void				endComposition();
 	void				flush();
 	const Rectangle		getBounds();
+	ULONG				getCurrentModButtons();
 	com_sun_star_vcl_VCLGraphics*	getGraphics();
 	const Rectangle		getInsets();
 	::rtl::OUString		getKeyName( USHORT _par0 );

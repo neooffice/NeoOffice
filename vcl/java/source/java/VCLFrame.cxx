@@ -216,6 +216,27 @@ const Rectangle com_sun_star_vcl_VCLFrame::getBounds()
 
 // ----------------------------------------------------------------------------
 
+ULONG com_sun_star_vcl_VCLFrame::getCurrentModButtons()
+{
+	static jmethodID mID = NULL;
+	ULONG out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getCurrentModButtons", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (ULONG)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
 com_sun_star_vcl_VCLGraphics *com_sun_star_vcl_VCLFrame::getGraphics()
 {
 	static jmethodID mID = NULL;

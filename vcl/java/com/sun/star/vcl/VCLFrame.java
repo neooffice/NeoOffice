@@ -973,6 +973,17 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * Returns the modifier keys that are currently pressed.
+	 *
+	 * @return the modifier keys that are currently pressed
+	 */
+	int getCurrentModButtons() {
+
+		return VCLFrame.keyModifiersPressed;
+
+	}
+
+	/**
 	 * Returns the frame pointer for this component.
 	 *
 	 * @return the frame pointer for this component
