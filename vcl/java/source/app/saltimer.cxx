@@ -57,14 +57,18 @@ void SalTimer::SetCallback( SALTIMERPROC pProc )
 void SalTimer::Start( ULONG nMS )
 {
 	SalData *pSalData = GetSalData();
+	timeval aTimeout( pSalData->maTimeout );
 	gettimeofday( &pSalData->maTimeout, NULL );
 	pSalData->maTimeout += nMS;
 	pSalData->mnTimerInterval = nMS;
 
 	// Wakeup the event queue by sending it a dummy event
-	SalFrame *pFrame = pSalData->mpFirstFrame;
-	if ( pFrame )
-		pFrame->PostEvent( NULL );
+	if ( aTimeout > pSalData->maTimeout )
+	{
+		SalFrame *pFrame = pSalData->mpFirstFrame;
+		if ( pFrame )
+			pFrame->PostEvent( NULL );
+	}
 } 
 
 // -----------------------------------------------------------------------
@@ -75,4 +79,9 @@ void SalTimer::Stop()
 	pSalData->mnTimerInterval = 0;
 	pSalData->maTimeout.tv_sec = 0;
 	pSalData->maTimeout.tv_usec = 0;
+
+	// Wakeup the event queue by sending it a dummy event
+	SalFrame *pFrame = pSalData->mpFirstFrame;
+	if ( pFrame )
+		pFrame->PostEvent( NULL );
 }

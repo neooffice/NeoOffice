@@ -56,6 +56,7 @@ import java.awt.font.GlyphVector;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
 import java.awt.geom.Point2D;
+import java.awt.image.BufferedImage;
 import java.lang.reflect.Method;
 import java.util.LinkedList;
 
@@ -1139,7 +1140,9 @@ public final class VCLGraphics {
 			if (!update.isEmpty())
 			{
 				panelGraphics.setClip(update);
-				panelGraphics.drawRenderedImage(image.getImage(), null);
+				BufferedImage i = image.getImage();
+				if (i != null)
+					panelGraphics.drawRenderedImage(i, null);
 				panelGraphics.setClip(null);
 			}
 			update = null;

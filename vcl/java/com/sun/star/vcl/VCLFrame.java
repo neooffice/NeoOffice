@@ -736,10 +736,14 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			EventQueue eventQueue = Toolkit.getDefaultToolkit().getSystemEventQueue();
 			Frame[] frames = Frame.getFrames();
 			for (int i = 0; i < frames.length; i++) {
-				frames[i].repaint();
+				if (frames[i].isShowing())
+					frames[i].repaint();
 				Window[] windows = frames[i].getOwnedWindows();
 				for (int j = 0; j < windows.length; j++)
-					windows[j].repaint();
+				{
+					if (windows[j].isShowing())
+						windows[j].repaint();
+				}
 			}
 		}
 
@@ -1826,11 +1830,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			VCLGraphics graphics = frame.getGraphics();
 			if (graphics != null) {
-				VCLImage image = graphics.getImage();
-				if (image != null) {
-					synchronized (graphics) {
+				synchronized (graphics) {
+					VCLImage image = graphics.getImage();
+					if (image != null)
 						graphics.addToFlush(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
-					}
 				}
 			}
 
@@ -1872,11 +1875,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			VCLGraphics graphics = frame.getGraphics();
 			if (graphics != null) {
-				VCLImage image = graphics.getImage();
-				if (image != null) {
-					synchronized (graphics) {
+				synchronized (graphics) {
+					VCLImage image = graphics.getImage();
+					if (image != null)
 						graphics.addToFlush(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
-					}
 				}
 			}
 
@@ -1919,11 +1921,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			VCLGraphics graphics = frame.getGraphics();
 			if (graphics != null) {
-				VCLImage image = graphics.getImage();
-				if (image != null) {
-					synchronized (graphics) {
+				synchronized (graphics) {
+					VCLImage image = graphics.getImage();
+					if (image != null)
 						graphics.addToFlush(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
-					}
 				}
 			}
 
