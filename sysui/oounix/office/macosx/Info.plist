@@ -180,6 +180,7 @@
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
+				<string>dot</string>
 				<string>stw</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
@@ -305,7 +306,6 @@
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>doc</string>
-				<string>dot</string>
 				<string>wri</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
