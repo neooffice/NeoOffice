@@ -503,6 +503,9 @@ void JavaDragSource::runDragExecute( void *pData )
 					else
 						nCurrentAction = DNDConstants::ACTION_NONE;
 
+					if ( ! ( nKeyModifiers & ( shiftKey | cmdKey ) ) )
+						nCurrentAction |= DNDConstants::ACTION_DEFAULT;
+
 					bNoRejectCursor = false;
 
 					if ( !pDragTrackingHandlerUPP )
