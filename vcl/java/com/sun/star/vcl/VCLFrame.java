@@ -1653,7 +1653,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			// those that are applicable to disabled menu items.
 			int modifiers = e.getModifiers();
 			char keyChar = e.getKeyChar();
-			if ((modifiers & VCLFrame.menuModifiersMask) == VCLFrame.menuModifiersMask && keyChar != ' ') {
+			if ((modifiers & VCLFrame.menuModifiersMask) == VCLFrame.menuModifiersMask && keyCode != KeyEvent.VK_SPACE && keyCode != KeyEvent.VK_Q) {
 				VCLEvent vclEvent = new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0);
 				if (VCLEvent.convertVCLKeyCode(vclEvent.getKeyCode()) > 0) {
 					// Fix bug 244 by checking if there is an active AWT menu
