@@ -129,7 +129,7 @@ int main( int argc, char *argv[] )
 		// Restart if necessary since most library path changes don't have
 		// any affect after the application has already started on most
 		// platforms
-		if ( aLibPath.GetToken( 0, DirEntry::GetSearchDelimiter().GetBuffer()[0] ).CompareTo( aCmdPath, aCmdPath.Len() ) != COMPARE_EQUAL )
+		if ( aLibPath.GetToken( 0, ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 ).GetChar( 0 ) ).CompareTo( aCmdPath, aCmdPath.Len() ) != COMPARE_EQUAL )
 			execv( pCmdPath, argv );
 	}
 #endif	// MACOSX
