@@ -320,15 +320,10 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 void ATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 {
-	SalLayout::AdjustLayout( rArgs );
-
 	if ( rArgs.mpDXArray )
 	{
 		// TODO: actually position individual glyphs instead of justifying it
-		long nWidth = 0;
-		for ( int i = 0; i < mnLen; i++ )
-			nWidth += rArgs.mpDXArray[ i ];
-		Justify( nWidth );
+		Justify( rArgs.mpDXArray[ mnLen - 1 ] );
 	}
 	else if ( rArgs.mnLayoutWidth )
 	{
@@ -602,9 +597,12 @@ bool ATSLayout::InitAdvances() const
 
 	// Force width to an integer since the OOo code cannot handle a fractional
 	// layout width
-	Rect aRect;
-	if ( ATSUMeasureTextImage( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, 0, 0, &aRect ) == noErr )
-		Justify( aRect.right - aRect.left + 1 );
+	ATSUTextMeasurement nStart;
+	ATSUTextMeasurement nEnd;
+	ATSUTextMeasurement nAscent;
+	ATSUTextMeasurement nDescent;
+	if ( ATSUGetUnjustifiedBounds( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nStart, &nEnd, &nAscent, &nDescent ) == noErr )
+		Justify( Fix2Long( nEnd - nStart + 1 ) );
 
 	mpAdvances = (long *)rtl_allocateMemory( mnLen * sizeof( long ) );
 
@@ -645,9 +643,12 @@ bool ATSLayout::InitGlyphInfoArray() const
 
 	// Force width to an integer since the OOo code cannot handle a fractional
 	// layout width
-	Rect aRect;
-	if ( ATSUMeasureTextImage( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, 0, 0, &aRect ) == noErr )
-		Justify( aRect.right - aRect.left + 1 );
+	ATSUTextMeasurement nStart;
+	ATSUTextMeasurement nEnd;
+	ATSUTextMeasurement nAscent;
+	ATSUTextMeasurement nDescent;
+	if ( ATSUGetUnjustifiedBounds( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nStart, &nEnd, &nAscent, &nDescent ) == noErr )
+		Justify( Fix2Long( nEnd - nStart + 1 ) );
 
 	// TODO: is there a good way to predict the maximum glyph count?
 	ByteCount nBufSize = 3 * ( mnLen + 16 ) * sizeof( ATSUGlyphInfo );
@@ -692,12 +693,13 @@ void ATSLayout::Justify( long nNewWidth ) const
 	nBytes[0] = sizeof( ATSUTextMeasurement );
 	nVals[0] = &nWidth;
 	Fract nJustification = kATSUFullJustification;
-	nTags[1] = Fix2Frac( Long2Fix( 1 ) );
+	nTags[1] = kATSULineJustificationFactorTag;
 	nBytes[1] = sizeof( Fract );
 	nVals[1] = &nJustification;
 
 	if ( ATSUSetLayoutControls( maLayout, 2, nTags, nBytes, nVals ) == noErr )
 		mnWidth = nNewWidth;
+
 }
 
 // ============================================================================
