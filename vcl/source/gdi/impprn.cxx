@@ -44,6 +44,10 @@
 
 #define _SV_IMPPRN_CXX
 #define _SPOOLPRINTER_EXT
+#ifdef USE_JAVA
+#define _SV_PRINT_CXX
+class SalPrinterQueueInfo;
+#endif
 
 #ifndef _QUEUE_HXX
 #include <tools/queue.hxx>
@@ -323,6 +327,98 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
         long                    nMaxBmpDPIY = mnDPIY;
 		USHORT			        nCopyCount = 1;
 
+#ifdef USE_JAVA
+		// The Java implementation requires that we push the resolution to the
+		// printer instead of vice versa so we need to set resolution to the
+		// highest resolution bitmap
+		long nDPIX = 0;
+		long nDPIY = 0;
+		MetaAction *pAct;
+
+        for ( pAct = pActPage->mpMtf->FirstAction(); pAct; pAct = pActPage->mpMtf->NextAction() )
+		{
+			Size aSrcSize;
+			Size aDestSize;
+
+			switch ( pAct->GetType() )
+			{
+				case ( META_BMP_ACTION ):
+				case ( META_BMPEX_ACTION ):
+				case ( META_MASK_ACTION ):
+				{
+					// If there is a non-scaling action, don't change the
+					// resolution
+					nDPIX = 0;
+					nDPIY = 0;
+					aDestSize = Size( 0, 0 );
+					while ( pAct )
+						pActPage->mpMtf->NextAction();
+					break;
+				}
+				case ( META_BMPSCALE_ACTION ):
+				{
+					MetaBmpScaleAction *pA = (MetaBmpScaleAction*)pAct;
+					aSrcSize =  pA->GetBitmap().GetSizePixel();
+					aDestSize = pA->GetSize();
+					break;
+				}
+				case ( META_BMPSCALEPART_ACTION ):
+				{
+					MetaBmpScalePartAction* pA = (MetaBmpScalePartAction*)pAct;
+					aSrcSize = pA->GetSrcSize();
+					aDestSize = pA->GetDestSize();
+					break;
+				}
+				case ( META_BMPEXSCALE_ACTION ):
+				{
+					MetaBmpExScaleAction *pA = (MetaBmpExScaleAction*)pAct;
+					aSrcSize = pA->GetBitmapEx().GetSizePixel();
+					aDestSize = pA->GetSize();
+					break;
+				}
+				case ( META_BMPEXSCALEPART_ACTION ):
+				{
+					MetaBmpExScalePartAction* pA = (MetaBmpExScalePartAction*)pAct;
+					aSrcSize = pA->GetSrcSize();
+					aDestSize = pA->GetDestSize();
+					break;
+				}
+				case ( META_MASKSCALE_ACTION ):
+				{
+					MetaMaskScaleAction* pA = (MetaMaskScaleAction*)pAct;
+					aSrcSize = pA->GetBitmap().GetSizePixel();
+					aDestSize = pA->GetSize();
+					break;
+				}
+				case ( META_MASKSCALEPART_ACTION ):
+				{
+					MetaMaskScalePartAction* pA = (MetaMaskScalePartAction*)pAct;
+					aSrcSize = pA->GetSrcSize();
+					aDestSize = pA->GetDestSize();
+					break;
+				}
+				default:
+					break;
+			}
+			if ( aDestSize.Width() > 0 && aDestSize.Height() > 0 )
+			{
+				long nBmpDPIX = ( aSrcSize.Width() * 2540 ) / aDestSize.Width();
+				long nBmpDPIY = ( aSrcSize.Height() * 2540 ) / aDestSize.Height();
+				long nBmpDPI = ( nBmpDPIY > nBmpDPIX ? nBmpDPIY : nBmpDPIX );
+				if ( nDPIX < nBmpDPI )
+					nDPIX = nBmpDPI;
+				if ( nDPIY < nBmpDPI )
+					nDPIY = nBmpDPI;
+			}
+		}
+
+		// Update the resolution
+		if ( nDPIX && nDPIX < nMaxBmpDPIX )
+			nMaxBmpDPIX = nDPIX;
+		if ( nDPIY && nDPIY < nMaxBmpDPIY )
+			nMaxBmpDPIY = nDPIY;
+#endif	// USE_JAVA
+
         if( rPrinterOptions.IsReduceBitmaps() )
         {
             // calculate maximum resolution for bitmap graphics
@@ -356,20 +452,27 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 			SetDrawMode( GetDrawMode() | DRAWMODE_NOTRANSPARENCY );
 		}
 
+#ifdef USE_JAVA
+		long nOldDPIX = mnDPIX;
+		long nOldDPIY = mnDPIY;
+		if ( nMaxBmpDPIX && nMaxBmpDPIY && nMaxBmpDPIX < mnDPIX && nMaxBmpDPIY < mnDPIY )
+		{
+			mpPrinter->SetResolution( nMaxBmpDPIX, nMaxBmpDPIY );
+			ImplUpdatePageData();
+			ImplUpdateFontList();
+		}
+#endif	// USE_JAVA
+
 		mbDestroyAllowed = FALSE;
 	    GetPreparedMetaFile( *pActPage->mpMtf, aMtf, nMaxBmpDPIX, nMaxBmpDPIY );
 		
 		if( mbUserCopy && !mbCollateCopy )
 			nCopyCount = mnCopyCount;
-#if defined USE_JAVA
-#ifdef MACOSX
+
+#if defined USE_JAVA && defined MACOSX
 		// Java on Mac OS X expects each page to be printed twice
 		nCopyCount *= 2;
-#endif	// MACOSX
-		// Java requires that we push the resolution to the printer instead
-		// of vice versa
-		mpPrinter->SetResolution( nMaxBmpDPIX, nMaxBmpDPIY );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 		for ( USHORT i = 0; i < nCopyCount; i++ )
 		{
@@ -397,10 +500,22 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 
 #ifdef USE_JAVA
 			// If the native print job ended or aborted, abort the parent job
-			if ( GetErrorCode() == PRINTER_ABORT )
+			if ( mnError == PRINTER_ABORT )
+			{
 				mpParent->AbortJob();
-#endif
+				AbortJob();
+			}
+#endif	// USE_JAVA
 		}
+
+#ifdef USE_JAVA
+		if ( !mbAborted )
+		{
+			mpPrinter->SetResolution( nOldDPIX, nOldDPIY );
+			ImplUpdatePageData();
+			ImplUpdateFontList();
+		}
+#endif	// USE_JAVA
 
         SetDrawMode( nOldDrawMode );
 

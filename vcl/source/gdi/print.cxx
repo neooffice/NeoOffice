@@ -1622,11 +1622,7 @@ BOOL Printer::StartJob( const XubString& rJobName )
 		// The resolution of the printer may have changed
 		ImplUpdatePageData();
 		ImplUpdateFontList();
-		if ( mpQPrinter ) {
-			mpQPrinter->ImplUpdatePageData();
-			mpQPrinter->ImplUpdateFontList();
-		}
-#endif
+#endif	// USE_JAVA
 
 		mbNewJobSetup	= FALSE;
 		maJobName		= rJobName;
@@ -1869,16 +1865,6 @@ BOOL Printer::StartPage()
 #ifndef REMOTE_APPSERVER
 	if ( mpPrinter || mpQPrinter )
 	{
-#ifdef USE_JAVA
-		// The resolution of the printer may have changed
-		ImplUpdatePageData();
-		ImplUpdateFontList();
-		if ( mpQPrinter ) {
-			mpQPrinter->ImplUpdatePageData();
-			mpQPrinter->ImplUpdateFontList();
-		}
-#endif
-
 		if ( mpPrinter )
 		{
 			SalGraphics* pGraphics = mpPrinter->StartPage( maJobSetup.ImplGetConstData(), mbNewJobSetup );
@@ -1955,7 +1941,7 @@ BOOL Printer::EndPage()
 			mnError = ImplSalPrinterErrorCodeToVCL( mpPrinter->GetErrorCode() );
 			if ( !mnError )
 				mnError = PRINTER_GENERALERROR;
-#endif
+#endif	// USE_JAVA
 		}
 		else if ( mpQPrinter )
 		{
