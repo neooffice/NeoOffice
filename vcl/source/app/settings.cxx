@@ -573,11 +573,7 @@ ImplStyleData::ImplStyleData( const ImplStyleData& rData ) :
 
 void ImplStyleData::SetStandardStyles()
 {
-#ifdef USE_JAVA
-    Font aStdFont( FAMILY_SWISS, Size( 0, 12 ) );
-#else	// USE_JAVA
     Font aStdFont( FAMILY_SWISS, Size( 0, 8 ) );
-#endif	// USE_JAVA
     aStdFont.SetCharSet( gsl_getSystemTextEncoding() );
     aStdFont.SetWeight( WEIGHT_NORMAL );
     aStdFont.SetName( vcl::DefaultFontConfigItem::get()->getUserInterfaceFont(LANGUAGE_ENGLISH) );
@@ -678,11 +674,7 @@ void ImplStyleData::SetStandardWinStyles()
 
 void ImplStyleData::SetStandardOS2Styles()
 {
-#ifdef USE_JAVA 
-    Font aStdFont( FAMILY_SWISS, Size( 0, 12 ) );
-#else	// USE_JAVA
     Font aStdFont( FAMILY_SWISS, Size( 0, 9 ) );
-#endif	// USE_JAVA
     aStdFont.SetCharSet( gsl_getSystemTextEncoding() );
     aStdFont.SetWeight( WEIGHT_NORMAL );
     aStdFont.SetName( vcl::DefaultFontConfigItem::get()->getUserInterfaceFont(LANGUAGE_ENGLISH) );
@@ -766,11 +758,7 @@ void ImplStyleData::SetStandardOS2Styles()
 
 void ImplStyleData::SetStandardMacStyles()
 {
-#ifdef USE_JAVA 
-    Font aStdFont( FAMILY_SWISS, Size( 0, 12 ) );
-#else	// USE_JAVA
     Font aStdFont( FAMILY_SWISS, Size( 0, 8 ) );
-#endif	// USE_JAVA
     aStdFont.SetCharSet( gsl_getSystemTextEncoding() );
     aStdFont.SetWeight( WEIGHT_NORMAL );
     aStdFont.SetName( vcl::DefaultFontConfigItem::get()->getUserInterfaceFont(LANGUAGE_ENGLISH) );

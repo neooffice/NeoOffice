@@ -59,6 +59,11 @@ public final class VCLScreen {
 	public final static int MAX_PRINTER_RESOLUTION = 300;
 
 	/**
+	 * The minimum screen resolution
+	 */
+	public final static int MIN_SCREEN_RESOLUTION = 96;
+
+	/**
 	 * The cached frame insets.
 	 */
 	private static Insets frameInsets = null;
