@@ -154,7 +154,7 @@ setupxmlbak="$setupxml.bak"
 rm -f "$setupxmlbak"
 if [ ! -f "$setupxmlbak" ] ; then
     cp -f "$setupxml" "$setupxmlbak"
-    sed 's#>USER_INSTALL_DIR<#>'"$userinstall"'<#g' "$setupxmlbak" | sed 's#>.*</ooLocale>#>'"$locale"'</ooLocale>#g' > "$setupxml"
+    sed 's#>.*</ooSetupInstallPath>#>'"$userinstall"'</ooSetupInstallPath>#g' "$setupxmlbak" | sed 's#>.*</ooLocale>#>'"$locale"'</ooLocale>#g' > "$setupxml"
     rm -f "$setupxmlbak"
 fi
 
