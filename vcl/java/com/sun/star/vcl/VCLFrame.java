@@ -1806,6 +1806,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 					cursor = Cursor.TEXT_CURSOR;
 					break;
 				case POINTER_CROSS:
+				case POINTER_DRAW_LINE:
+				case POINTER_DRAW_RECT:
+				case POINTER_DRAW_POLYGON:
+				case POINTER_DRAW_BEZIER:
+				case POINTER_DRAW_ARC:
+				case POINTER_DRAW_PIE:
+				case POINTER_DRAW_CIRCLECUT:
+				case POINTER_DRAW_ELLIPSE:
+				case POINTER_DRAW_FREEHAND:
+				case POINTER_DRAW_CONNECT:
+				case POINTER_DRAW_TEXT:
+				case POINTER_DRAW_CAPTION:
 					cursor = Cursor.CROSSHAIR_CURSOR;
 					break;
 				case POINTER_MOVE:
@@ -1881,18 +1893,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				case POINTER_MOVEFILES:
 				case POINTER_COPYFILES:
 				case POINTER_NOTALLOWED:
-				case POINTER_DRAW_LINE:
-				case POINTER_DRAW_RECT:
-				case POINTER_DRAW_POLYGON:
-				case POINTER_DRAW_BEZIER:
-				case POINTER_DRAW_ARC:
-				case POINTER_DRAW_PIE:
-				case POINTER_DRAW_CIRCLECUT:
-				case POINTER_DRAW_ELLIPSE:
-				case POINTER_DRAW_FREEHAND:
-				case POINTER_DRAW_CONNECT:
-				case POINTER_DRAW_TEXT:
-				case POINTER_DRAW_CAPTION:
 				case POINTER_CHART:
 				case POINTER_DETECTIVE:
 				case POINTER_PIVOT_COL:
