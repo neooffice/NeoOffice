@@ -86,9 +86,12 @@ update_installation() {
 	chmod -Rf ug+w "$1/Contents/share/dict/ooo" || return 1
 
     # Touch and reload shared libraries to fix bug 280
-	for i in `cd "$1/Contents/MacOS" ; find . -type f -name "*.dylib*" ; find . -type f -name "*.bin"`; do
+	for i in `cd "$1/Contents/MacOS" ; find . -type f -name "*.dylib*"`; do
 		touch -f "$1/Contents/MacOS/$i"   
 		"$2/Contents/Resources/reload_file" "$1/Contents/MacOS/$i"
+	done
+	for i in `cd "$1/Contents/MacOS" ; find . -type f -name "*.bin" ; find . -type f -name "*.jar"`; do
+		touch -f "$1/Contents/MacOS/$i"   
 	done
 
 	return 0
