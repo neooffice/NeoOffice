@@ -181,7 +181,7 @@ if [ "$os" = "Darwin" ] ; then
 else
     printf "[Java]\n" > "$configdir/javarc"
 fi
-printf "SystemClasspath=$sysclasspath\nJava=1\nJavaScript=1\nApplets=1\n-Xmx256m\n" >> "$configdir/javarc"
+printf "SystemClasspath=$sysclasspath\nJava=1\nJavaScript=1\nApplets=1\n-Xmx512m\n" >> "$configdir/javarc"
 
 # Install application fonts
 if [ "$os" = "Darwin" ] ; then
