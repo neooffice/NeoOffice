@@ -281,7 +281,7 @@ void SalInstance::Yield( BOOL bWait )
 
 	// Determine timeout
 	ULONG nTimeout = 0;
-	if ( pSalData->mnTimerInterval )
+	if ( bWait && pSalData->mnTimerInterval )
 	{
 		timeval aTimeout;
 
@@ -291,12 +291,13 @@ void SalInstance::Yield( BOOL bWait )
 			aTimeout = pSalData->maTimeout - aTimeout;
 			nTimeout = aTimeout.tv_sec * 1000 + aTimeout.tv_usec / 1000;
 		}
+
+		// Prevent excessively long or short timeouts
+		if ( nTimeout < 10 )
+			nTimeout = 10;
+		else if ( nTimeout > 1000 )
+			nTimeout = 1000;
 	}
-	// Prevent excessive long or short timeouts
-	if ( nTimeout < 10 )
-		nTimeout = 10;
-	else if ( nTimeout > 1000 )
-		nTimeout = 1000;
 
 	// Dispatch pending non-AWT events
 	while ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, FALSE ) ) != NULL )
