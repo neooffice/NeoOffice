@@ -76,7 +76,6 @@ public:
 	BOOL			Create( const SalBitmap& rSalBmp );
 	BOOL			Create( const SalBitmap& rSalBmp, SalGraphics *pGraphics );
 	BOOL			Create( const SalBitmap& rSalBmp, USHORT nNewBitCount );
-	BOOL			Create( const SalBitmap& rSalBmp, const SalTwoRect& rPosAry );
 
 	void			Destroy();
 
