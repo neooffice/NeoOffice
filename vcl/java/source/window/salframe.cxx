@@ -222,26 +222,33 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 
 	if ( maFrameData.mbCenter && ! ( nFlags & SAL_FRAME_POSSIZE_X ) && ! ( nFlags & SAL_FRAME_POSSIZE_Y ) )
 	{
+		if ( maFrameData.mpParent )
+			maFrameData.mpParent->GetWorkArea( aWorkArea );
+		else
+			GetWorkArea( aWorkArea );
 		if ( maFrameData.mpParent && maFrameData.mpParent->maGeometry.nWidth >= nWidth && maFrameData.mpParent->maGeometry.nHeight > nHeight)
 		{
-			// Set screen to same screen as parent frame
-			maFrameData.mpParent->GetWorkArea( aWorkArea );
 			nX = maFrameData.mpParent->maGeometry.nX + ( ( maFrameData.mpParent->maGeometry.nWidth - nWidth ) / 2 );
 			nY = maFrameData.mpParent->maGeometry.nY + ( ( maFrameData.mpParent->maGeometry.nHeight - nHeight ) / 2 );
 		}
 		else
 		{
-			GetWorkArea( aWorkArea );
 			nX = aWorkArea.nLeft + ( ( aWorkArea.GetWidth() - nWidth ) / 2 );
 			nY = aWorkArea.nTop + ( ( aWorkArea.GetHeight() - nHeight ) / 2 );
 		}
 	}
 	else if ( maFrameData.mpParent )
 	{
-		// Set screen to same screen as parent frame
-		maFrameData.mpParent->GetWorkArea( aWorkArea );
 		nX += maFrameData.mpParent->maGeometry.nX;
 		nY += maFrameData.mpParent->maGeometry.nY;
+
+		// If this is a popup window, we need to put the window on the correct
+		// screen when the parent window straddles more than one screen
+		maFrameData.mpVCLFrame->setBounds( nX, nY, nWidth + maGeometry.nLeftDecoration + maGeometry.nRightDecoration, nHeight + maGeometry.nTopDecoration + maGeometry.nBottomDecoration );
+		GetWorkArea( aWorkArea );
+		Rectangle aParentBounds( Point( maGeometry.nX, maGeometry.nY ), Size( maGeometry.nWidth, maGeometry.nWidth ) );
+		if ( aParentBounds.Intersection( aWorkArea ).IsEmpty() )
+			maFrameData.mpParent->GetWorkArea( aWorkArea );
 	}
 	else
 	{
