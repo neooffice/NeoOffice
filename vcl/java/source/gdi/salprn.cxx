@@ -35,8 +35,6 @@
 
 #define _SV_SALPRN_CXX
 
-#include <stdio.h>
-
 #ifndef _SV_SALPRN_HXX
 #include <salprn.hxx>
 #endif
@@ -67,6 +65,7 @@
 
 #include <premac.h>
 #include <Carbon/Carbon.h>
+#include <postmac.h>
 typedef OSStatus PMCreatePageFormat_Type( PMPageFormat* );
 typedef OSStatus PMGetResolution_Type( PMPageFormat, PMResolution* );
 typedef OSStatus PMPrinterGetIndexedPrinterResolution_Type( PMPrinter, UInt32, PMResolution* );
@@ -74,7 +73,6 @@ typedef OSStatus PMPrinterGetPrinterResolutionCount_Type( PMPrinter, UInt32* );
 typedef OSStatus PMRelease_Type( PMObject );
 typedef OSStatus PMSessionDefaultPageFormat_Type( PMPrintSession, PMPageFormat );
 typedef OSStatus PMSessionGetCurrentPrinter_Type( PMPrintSession, PMPrinter* );
-#include <postmac.h>
 
 using namespace rtl;
 using namespace vos;
@@ -267,43 +265,50 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 						// Get the current resolution
 						PMResolution aMaxResolution;
 						PMPageFormat aPageFormat;
-						if ( pCreatePageFormat( &aPageFormat ) == kPMNoError && pSessionDefaultPageFormat( pSession, aPageFormat ) == kPMNoError && pGetResolution( aPageFormat, &aMaxResolution ) == kPMNoError )
+						if ( pCreatePageFormat( &aPageFormat ) == kPMNoError )
 						{
-							// Check if there are any resolutions to choose from
-							// that are higher than the the current resolution.
-							PMPrinter aPrinter;
-							UInt32 nCount;
-							if ( pSessionGetCurrentPrinter( pSession, &aPrinter ) == kPMNoError && pPrinterGetPrinterResolutionCount( aPrinter, &nCount ) == kPMNoError )
+							if ( pSessionDefaultPageFormat( pSession, aPageFormat ) == kPMNoError && pGetResolution( aPageFormat, &aMaxResolution ) == kPMNoError )
 							{
-								for ( UInt32 i = 1; i <= nCount; i++ )
+								// Check if there are any resolutions to choose
+								// from that are higher than the the current
+								// resolution.
+								PMPrinter aPrinter;
+								UInt32 nCount;
+								if ( pSessionGetCurrentPrinter( pSession, &aPrinter ) == kPMNoError && pPrinterGetPrinterResolutionCount( aPrinter, &nCount ) == kPMNoError )
 								{
-									PMResolution aResolution;
-									if ( pPrinterGetIndexedPrinterResolution( aPrinter, i, &aResolution ) == kPMNoError && aResolution.hRes >= aMaxResolution.hRes && aResolution.vRes >= aMaxResolution.vRes )
+									for ( UInt32 i = 1; i <= nCount; i++ )
 									{
-										aMaxResolution.hRes = aResolution.hRes;
-										aMaxResolution.vRes = aResolution.vRes;
+										PMResolution aResolution;
+										if ( pPrinterGetIndexedPrinterResolution( aPrinter, i, &aResolution ) == kPMNoError && aResolution.hRes >= aMaxResolution.hRes && aResolution.vRes >= aMaxResolution.vRes )
+										{
+											aMaxResolution.hRes = aResolution.hRes;
+											aMaxResolution.vRes = aResolution.vRes;
+										}
 									}
 								}
+	
+								// Limit the resolution to MAX_RESOLUTION_DPI as
+								// VCL will scale entire images before passing
+								// them to theSalGraphics for rendering
+								if ( aMaxResolution.hRes > MAX_RESOLUTION_DPI )
+									aMaxResolution.hRes = MAX_RESOLUTION_DPI;
+								if ( aMaxResolution.vRes > MAX_RESOLUTION_DPI )
+									aMaxResolution.vRes = MAX_RESOLUTION_DPI;
+	
+								// Set the page resolution
+								maPrinterData.mpPrinter->maPrinterData.mpVCLPageFormat->setPageResolution( aMaxResolution.hRes, aMaxResolution.vRes );
 							}
-
-							// Limit the resolution to MAX_RESOLUTION_DPI as
-							// VCL will scale entire images before passing
-							// them to theSalGraphics for rendering
-							if ( aMaxResolution.hRes > MAX_RESOLUTION_DPI )
-								aMaxResolution.hRes = MAX_RESOLUTION_DPI;
-							if ( aMaxResolution.vRes > MAX_RESOLUTION_DPI )
-								aMaxResolution.vRes = MAX_RESOLUTION_DPI;
-
-							// Set the page resolution
-							maPrinterData.mpPrinter->maPrinterData.mpVCLPageFormat->setPageResolution( aMaxResolution.hRes, aMaxResolution.vRes );
-
 							// Release the page format object
 							pRelease( aPageFormat );
 						}
-						aModule.unload();
 					}
+					aModule.unload();
 				}
 			}
+		}
+		else
+		{
+			delete pClass;
 		}
 #endif	// MACOSX
 	}

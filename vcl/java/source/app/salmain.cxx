@@ -160,7 +160,6 @@ int main( int argc, char *argv[] )
 	if ( pClass )
 	{
 		delete pClass;
-		pClass = NULL;
 
 		// Load Cocoa
 		OModule aModule;

@@ -62,10 +62,10 @@
 
 #include <premac.h>
 #include <Carbon/Carbon.h>
-typedef OSStatus PMSessionPostScriptBegin_Type( PMPrintSession );
-typedef OSStatus PMSessionPostScriptData_Type( PMPrintSession, Ptr, Size );
-typedef OSStatus PMSessionPostScriptEnd_Type( PMPrintSession );
 #include <postmac.h>
+typedef OSStatus PMSessionPostScriptBegin_Type( PMPrintSession );
+typedef OSStatus PMSessionPostScriptData_Type( PMPrintSession, MacOSPtr, MacOSSize );
+typedef OSStatus PMSessionPostScriptEnd_Type( PMPrintSession );
 
 using namespace rtl;
 using namespace vos;
@@ -332,6 +332,10 @@ BOOL SalGraphics::DrawEPS( long nX, long nY, long nWidth, long nHeight, void* pP
 				aModule.unload();
 				return TRUE;
 			}
+		}
+		else
+		{
+			delete pClass;
 		}
 	}
 #else	// MACOSX

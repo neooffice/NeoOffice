@@ -45,7 +45,98 @@
 #include <java/lang/Class.hxx>
 #endif
 
+#ifdef MACOSX
+
+#ifndef _VOS_MODULE_HXX_
+#include <vos/module.hxx>
+#endif
+
+#include <premac.h>
+#include <Carbon/Carbon.h>
+#include <postmac.h>
+typedef OSStatus PMCopyPageFormat_Type( PMPageFormat, PMPageFormat );
+typedef OSStatus PMCreatePageFormat_Type( PMPageFormat* );
+typedef OSStatus PMGetUnadjustedPaperRect_Type( PMPageFormat, PMRect* );
+typedef OSStatus PMSessionCreatePageFormatList_Type( PMPrintSession, PMPrinter, CFArrayRef* );
+typedef OSStatus PMSessionDefaultPageFormat_Type( PMPrintSession, PMPageFormat );
+typedef OSStatus PMSessionGetCurrentPrinter_Type( PMPrintSession, PMPrinter* );
+
+using namespace rtl;
+using namespace vos;
+
+#endif  // MACOSX
+
 using namespace vcl;
+
+// ============================================================================
+
+#ifdef MACOSX
+static jint JNICALL Java_com_apple_mrj_internal_awt_printing_MacPageFormat_createBestFormat( JNIEnv *pEnv, jobject object, jint pSessionPtr )
+{
+	jint nRet = 0;
+	PMPrintSession pSession = (PMPrintSession)pSessionPtr;
+	if ( pSession )
+	{
+		OModule aModule;
+		if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
+		{
+			PMCopyPageFormat_Type *pCopyPageFormat = (PMCopyPageFormat_Type *)aModule.getSymbol( OUString::createFromAscii( "PMCopyPageFormat" ) );
+			PMCreatePageFormat_Type *pCreatePageFormat = (PMCreatePageFormat_Type *)aModule.getSymbol( OUString::createFromAscii( "PMCreatePageFormat" ) );
+			PMGetUnadjustedPaperRect_Type *pGetUnadjustedPaperRect = (PMGetUnadjustedPaperRect_Type *)aModule.getSymbol( OUString::createFromAscii( "PMGetUnadjustedPaperRect" ) );
+			PMSessionCreatePageFormatList_Type *pSessionCreatePageFormatList = (PMSessionCreatePageFormatList_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionCreatePageFormatList" ) );
+			PMSessionDefaultPageFormat_Type *pSessionDefaultPageFormat = (PMSessionDefaultPageFormat_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionDefaultPageFormat" ) );
+			PMSessionGetCurrentPrinter_Type *pSessionGetCurrentPrinter = (PMSessionGetCurrentPrinter_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionGetCurrentPrinter" ) );
+
+			if ( pCopyPageFormat && pCreatePageFormat && pGetUnadjustedPaperRect && pSessionCreatePageFormatList && pSessionDefaultPageFormat && pSessionGetCurrentPrinter )
+			{
+				PMPageFormat aPageFormat;
+				if ( pCreatePageFormat( &aPageFormat ) == kPMNoError )
+				{
+					if ( pSessionDefaultPageFormat( pSession, aPageFormat ) == kPMNoError )
+					{
+						// Get the available page formats
+						static jmethodID mGetWidthID = NULL;
+						static jmethodID mGetHeightID = NULL;
+						PMPrinter aPrinter;
+						CFArrayRef aPageFormats;
+
+						jclass objectClass = pEnv->GetObjectClass( object );
+						if ( !mGetWidthID )
+						{
+							char *cSignature = "()D";
+							mGetWidthID = pEnv->GetMethodID( objectClass, "getWidth", cSignature );
+						}
+						OSL_ENSURE( mGetWidthID, "Unknown method id!" );
+						if ( !mGetHeightID )
+						{
+							char *cSignature = "()D";
+							mGetHeightID = pEnv->GetMethodID( objectClass, "getHeight", cSignature );
+						}
+						OSL_ENSURE( mGetHeightID, "Unknown method id!" );
+						if ( mGetWidthID && mGetHeightID && pSessionGetCurrentPrinter( pSession, &aPrinter ) == kPMNoError && pSessionCreatePageFormatList( pSession, aPrinter, &aPageFormats ) == kPMNoError )
+						{
+							CFIndex nCount = CFArrayGetCount( aPageFormats );
+							CFIndex i;
+
+							for ( i = 0; i < nCount; i++ )
+							{
+								PMPageFormat pPageFormat = (PMPageFormat)CFArrayGetValueAtIndex( aPageFormats, i );
+								PMRect aRect;
+								if ( pGetUnadjustedPaperRect( pPageFormat, &aRect ) == kPMNoError && aRect.right - aRect.left == pEnv->CallNonvirtualDoubleMethod( object, objectClass, mGetWidthID ) && aRect.bottom - aRect.top == pEnv->CallNonvirtualDoubleMethod( object, objectClass, mGetHeightID ) && pCopyPageFormat( pPageFormat, aPageFormat ) == kPMNoError )
+										break;
+							}
+							CFRelease( aPageFormats );
+						}
+						nRet = (jint)aPageFormat;
+					}
+				}
+			}
+			aModule.unload();
+		}
+	}
+	return nRet;
+}
+#endif MACOSX
 
 // ============================================================================
 
@@ -59,6 +150,22 @@ jclass com_sun_star_vcl_VCLPageFormat::getMyClass()
 	{
 		VCLThreadAttach t;
 		if ( !t.pEnv ) return (jclass)NULL;
+
+#ifdef MACOSX
+		// We need to replace the native MacPageFormat.createBestFormat()
+		// method as it will throw exceptions whenever a user selects a custom
+		// page format
+		jclass pageFormatClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/printing/MacPageFormat" );
+		if ( pageFormatClass )
+		{
+			JNINativeMethod aMethod;
+			aMethod.name = "createBestFormat";
+			aMethod.signature = "(I)I";
+			aMethod.fnPtr = Java_com_apple_mrj_internal_awt_printing_MacPageFormat_createBestFormat;
+			t.pEnv->RegisterNatives( pageFormatClass, &aMethod, 1 );
+		}
+#endif	// MACOSX
+
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLPageFormat" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
