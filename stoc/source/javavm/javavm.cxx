@@ -615,12 +615,15 @@ void getJavaPropsFromSafetySettings(stoc_javavm::JVM * pjvm,
 
 	if (xRegistryRootKey.is())
 	{
+#ifndef USE_JAVA
+		// Fix bug 595 by making sure Java is never disabled
 		css::uno::Reference<css::registry::XRegistryKey> key_Enable = xRegistryRootKey->openKey(rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("VirtualMachine/Enable")));
 		if (key_Enable.is())
 		{
 			sal_Bool bEnableVal= (sal_Bool) key_Enable->getLongValue();
 			pjvm->setEnabled( bEnableVal);
 		}
+#endif	// USE_JAVA
 		css::uno::Reference<css::registry::XRegistryKey> key_UserClasspath = xRegistryRootKey->openKey(rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("VirtualMachine/UserClassPath")));
 		if (key_UserClasspath.is())
 		{
