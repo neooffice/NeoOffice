@@ -283,17 +283,17 @@ public final class VCLFont {
 
 		// Get size metrics
 		leading = fontMetrics.getLeading();
-		ascent = fontMetrics.getMaxAscent();
 		descent = fontMetrics.getMaxDescent();
-		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-			// The Asian fonts return strange values so we adjust them here
-			if (leading == descent && leading > 0) {
-				leading++;
-				leading /= 2;
-				ascent -= leading;
-				descent += leading;
-			}
+		if (leading < 0)
+			leading *= -1;
+		if (descent < 0)
+			descent *= -1;
+		if (descent < leading) {
+			int adjust = (leading - descent) / 2;
+			leading -= adjust;
+			descent += adjust;
 		}
+		ascent = fontMetrics.getMaxAscent() + leading;
 
 	}
 
