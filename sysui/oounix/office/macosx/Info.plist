@@ -20,10 +20,6 @@
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>$(PRODUCT_FILETYPE)</string>
-			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 		</dict>
@@ -43,10 +39,6 @@
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>$(PRODUCT_FILETYPE)</string>
-			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 		</dict>
@@ -69,10 +61,6 @@
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>$(PRODUCT_FILETYPE)</string>
-			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 		</dict>
@@ -85,10 +73,6 @@
 			<string>sds.icns</string>
 			<key>CFBundleTypeName</key>
 			<string>NeoOffice/J Document</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>$(PRODUCT_FILETYPE)</string>
-			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 		</dict>
@@ -110,10 +94,6 @@
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>$(PRODUCT_FILETYPE)</string>
-			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 		</dict>
@@ -130,10 +110,6 @@
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>$(PRODUCT_FILETYPE)</string>
-			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 		</dict>
@@ -150,10 +126,6 @@
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>$(PRODUCT_FILETYPE)</string>
-			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 		</dict>
@@ -170,10 +142,6 @@
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>$(PRODUCT_FILETYPE)</string>
-			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 		</dict>
@@ -191,10 +159,6 @@
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>$(PRODUCT_FILETYPE)</string>
-			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 		</dict>
@@ -213,10 +177,6 @@
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>$(PRODUCT_FILETYPE)</string>
-			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 		</dict>
@@ -255,10 +215,6 @@
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>$(PRODUCT_FILETYPE)</string>
-			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSIsAppleDefaultForType</key>
@@ -274,10 +230,6 @@
 			<string>generic.icns</string>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>$(PRODUCT_FILETYPE)</string>
-			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSIsAppleDefaultForType</key>
@@ -293,10 +245,6 @@
 			<string>dbf_dif.icns</string>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>$(PRODUCT_FILETYPE)</string>
-			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSIsAppleDefaultForType</key>
@@ -316,10 +264,6 @@
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>$(PRODUCT_FILETYPE)</string>
-			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSIsAppleDefaultForType</key>
@@ -335,10 +279,6 @@
 			<string>html.icns</string>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>$(PRODUCT_FILETYPE)</string>
-			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSIsAppleDefaultForType</key>
@@ -354,10 +294,6 @@
 			<string>sxm_smf_mml.icns</string>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>$(PRODUCT_FILETYPE)</string>
-			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSIsAppleDefaultForType</key>
@@ -372,10 +308,6 @@
 			<string>sti_pot.icns</string>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>$(PRODUCT_FILETYPE)</string>
-			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSIsAppleDefaultForType</key>
@@ -398,10 +330,6 @@
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>$(PRODUCT_FILETYPE)</string>
-			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSIsAppleDefaultForType</key>
@@ -416,10 +344,6 @@
 			<string>rtf.icns</string>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>$(PRODUCT_FILETYPE)</string>
-			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSIsAppleDefaultForType</key>
@@ -450,10 +374,6 @@
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>$(PRODUCT_FILETYPE)</string>
-			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSIsAppleDefaultForType</key>
@@ -468,10 +388,6 @@
 			<string>txt.icns</string>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>$(PRODUCT_FILETYPE)</string>
-			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSIsAppleDefaultForType</key>
@@ -486,14 +402,26 @@
 			<string>stc_xlt.icns</string>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<false/>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>*</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>generic.icns</string>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
 			<key>CFBundleTypeOSTypes</key>
 			<array>
 				<string>$(PRODUCT_FILETYPE)</string>
 			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>LSIsAppleDefaultForType</key>
-			<false/>
 		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
