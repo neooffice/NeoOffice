@@ -62,16 +62,18 @@ protected:
 
 private:
 	void*				mpNativeTransferable;
-#ifdef MACOSX
-	void*				mpScrapPromiseKeeperUPP;
-#endif	// MACOSX
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	mxTransferable;
 
 
 public:
 	static jclass		getMyClass();
 
-						com_sun_star_dtrans_DTransTransferable( void *myNativeTransferable = NULL );
+						com_sun_star_dtrans_DTransTransferable() : java_lang_Object( NULL ), mpNativeTransferable( NULL ) {};
+#ifdef MACOSX
+						com_sun_star_dtrans_DTransTransferable( void *myNativeTransferable ) : java_lang_Object( NULL ), mpNativeTransferable( myNativeTransferable ) {}
+#else	// MACOSX
+						com_sun_star_dtrans_DTransTransferable( jobject myObj ) : java_lang_Object( myObj ), mpNativeTransferable( NULL ) {}
+#endif	// MACOSX
 	virtual				~com_sun_star_dtrans_DTransTransferable();
 
 	void*				getNativeTransferable() { return mpNativeTransferable; }
