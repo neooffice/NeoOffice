@@ -180,19 +180,13 @@ public final class VCLMenuItemData {
 				if (mc != null) {
 					if (mc instanceof Menu) {
 						Menu m = (Menu)mc;
-						Object peer = m.getPeer();
-						if (peer == null)
-							peer = m;
-						synchronized (peer) {
+						synchronized (m) {
 							m.remove(mi);
 						}
 					}
 					else if (mc instanceof MenuBar) {
 						MenuBar mb = (MenuBar)mc;
-						Object peer = mb.getPeer();
-						if (peer == null)
-							peer = mb;
-						synchronized (peer) {
+						synchronized (mb) {
 							mb.remove(mi);
 						}
 					}
@@ -212,6 +206,7 @@ public final class VCLMenuItemData {
 		
 		if(delegateForObject!=null)
 			delegateForObject.delegate=null;
+
 	}
 
 	/**
@@ -890,12 +885,7 @@ public final class VCLMenuItemData {
 			Iterator peers=awtPeers.iterator();
 			while(peers.hasNext()) {
 				MenuItem mi=(MenuItem)peers.next();
-
-				Object peer = mi.getPeer();
-				if (peer == null)
-					peer = mi;
-
-				synchronized (peer) {
+				synchronized (mi) {
 					if(mi instanceof VCLAWTMenuItem)
 						mi.removeActionListener((VCLAWTMenuItem)mi);
 					else if(mi instanceof VCLAWTCheckboxMenuItem)
@@ -910,12 +900,7 @@ public final class VCLMenuItemData {
 								Iterator parentPeers=parent.awtPeers.iterator();
 								while(parentPeers.hasNext()) {
 									Menu m=(Menu)parentPeers.next();
-
-									Object menuPeer = m.getPeer();
-									if (menuPeer == null)
-										menuPeer = m;
-
-									synchronized (menuPeer) {
+									synchronized (m) {
 										m.remove(mi);
 									}
 								}
@@ -926,12 +911,7 @@ public final class VCLMenuItemData {
 					// Detach any orphaned menu items
 					if (mi instanceof Menu) {
 						Menu m = (Menu)mi;
-
-						Object menuPeer = m.getPeer();
-						if (menuPeer == null)
-							menuPeer = m;
-
-						synchronized (menuPeer) {
+						synchronized (m) {
 							m.removeAll();
 						}
 					}

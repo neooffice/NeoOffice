@@ -55,7 +55,6 @@ public final class VCLMenuBar {
 
 	/**
 	 * Used to keep track of all active menubars.
-	 * synchronized methods!
 	 */
 	private static ArrayList activeMenubars=new ArrayList();
 
@@ -233,11 +232,7 @@ public final class VCLMenuBar {
 				frame.setMenuBar(null);
 		}
 
-		Object peer = awtMenuBar.getPeer();
-		if (peer == null)
-			peer = awtMenuBar;
-
-		synchronized (peer) {
+		synchronized (awtMenuBar) {
 			for(int i=awtMenuBar.countMenus()-1; i>=0; i--)
 				awtMenuBar.remove(i);
 
@@ -256,11 +251,7 @@ public final class VCLMenuBar {
 		frame=null;
 
 		if (hiddenMenuBar != null) {
-			peer = hiddenMenuBar.getPeer();
-			if (peer == null)
-				peer = hiddenMenuBar;
-
-			synchronized (peer) {
+			synchronized (hiddenMenuBar) {
 				hiddenMenuBar.removeNotify();
 			}
 
@@ -330,11 +321,7 @@ public final class VCLMenuBar {
 	 */
 	public void addMenuItem(VCLMenuItemData menuItem, short nPos) {
 
-		Object peer = awtMenuBar.getPeer();
-		if (peer == null)
-			peer = awtMenuBar;
-
-		synchronized (peer) {
+		synchronized (awtMenuBar) {
 			LinkedList menusToReinsert=null;
 
 			if(nPos < 0)
@@ -377,11 +364,7 @@ public final class VCLMenuBar {
 	 */
 	public void removeMenu(short nPos) {
 
-		Object peer = awtMenuBar.getPeer();
-		if (peer == null)
-			peer = awtMenuBar;
-
-		synchronized (peer) {
+		synchronized (awtMenuBar) {
 			awtMenuBar.remove(nPos);
 			((VCLMenuItemData)menus.get(nPos)).unregisterAllAWTPeers();
 			menus.remove(nPos);
@@ -420,11 +403,7 @@ public final class VCLMenuBar {
 	 */
 	public void enableMenu(short nPos, boolean enable) {
 
-		Object peer = awtMenuBar.getPeer();
-		if (peer == null)
-			peer = awtMenuBar;
-
-		synchronized (peer) {
+		synchronized (awtMenuBar) {
 			if(nPos < menus.size()) {
 				VCLMenuItemData menu=(VCLMenuItemData)menus.get(nPos);
 				menu.setEnabled(enable);
@@ -470,11 +449,7 @@ public final class VCLMenuBar {
 	 */
 	void regenerateMenuBar() {
 
-		Object peer = awtMenuBar.getPeer();
-		if (peer == null)
-			peer = awtMenuBar;
-
-		synchronized (peer) {
+		synchronized (awtMenuBar) {
 			for(int i=awtMenuBar.countMenus()-1; i>=0; i--)
 				awtMenuBar.remove(i);
 
