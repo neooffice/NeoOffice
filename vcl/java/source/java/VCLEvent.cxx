@@ -271,7 +271,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				if ( nID == SALEVENT_MOUSELEAVE || nID == SALEVENT_MOUSEMOVE )
 					pMouseEvent->mnButton = 0;
 				else
-					pMouseEvent->mnButton = nModifiers;
+					pMouseEvent->mnButton = nModifiers & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
 			}
 			dispatchEvent( nID, pFrame, pMouseEvent );
 			delete pMouseEvent;

@@ -1579,6 +1579,26 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (queue == null)
 			return;
 
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+			if (keyModifiersPressed != 0) {
+				// Remove button modifiers that are really key modifiers
+				int modifiers = e.getModifiers();
+				if ((keyModifiersPressed & InputEvent.CTRL_MASK) == InputEvent.CTRL_MASK && (modifiers & (InputEvent.BUTTON1_MASK | InputEvent.BUTTON2_MASK | InputEvent.CTRL_MASK)) == (InputEvent.BUTTON1_MASK | InputEvent.BUTTON2_MASK | InputEvent.CTRL_MASK)) {
+					keyModifiersPressed &= ~InputEvent.CTRL_MASK;
+					modifiers &= ~(InputEvent.BUTTON1_MASK | InputEvent.CTRL_MASK);
+				}
+				if ((keyModifiersPressed & InputEvent.ALT_MASK) == InputEvent.ALT_MASK && (modifiers & (InputEvent.BUTTON1_MASK | InputEvent.BUTTON2_MASK)) == (InputEvent.BUTTON1_MASK | InputEvent.BUTTON2_MASK)) {
+					keyModifiersPressed &= ~InputEvent.ALT_MASK;
+					modifiers = (modifiers & ~(InputEvent.BUTTON1_MASK | InputEvent.BUTTON2_MASK)) | InputEvent.BUTTON3_MASK;
+				}
+				if ((keyModifiersPressed & InputEvent.META_MASK) == InputEvent.META_MASK && (modifiers & (InputEvent.BUTTON1_MASK | InputEvent.BUTTON3_MASK)) == (InputEvent.BUTTON1_MASK | InputEvent.BUTTON3_MASK))
+					modifiers &= ~InputEvent.BUTTON3_MASK;
+				if ((keyModifiersPressed & InputEvent.SHIFT_MASK) == InputEvent.SHIFT_MASK)
+					modifiers &= ~InputEvent.SHIFT_MASK;
+				e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), modifiers, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
+			}
+		}
+
 		mouseModifiersPressed = e.getModifiers();
 
 		// Enable mouse capture
@@ -1607,6 +1627,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (queue == null)
 			return;
+
+		// Check if we changed the modifiers in the mouse pressed event
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && (e.getModifiers() & mouseModifiersPressed) == 0)
+			e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), InputEvent.BUTTON1_MASK, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
 
 		mouseModifiersPressed &= ~(e.getModifiers());
 

@@ -962,23 +962,6 @@ public final class VCLEvent extends AWTEvent {
 				case MouseEvent.MOUSE_RELEASED:
 				{
 					if (k != 0) {
-						// Remove button modifiers that are really key modifiers
-						MouseEvent e = (MouseEvent)event;
-						int modifiers = e.getModifiers();
-						if ((k & InputEvent.CTRL_MASK) == InputEvent.CTRL_MASK && (modifiers & (InputEvent.BUTTON1_MASK | InputEvent.BUTTON2_MASK | InputEvent.CTRL_MASK)) == (InputEvent.BUTTON1_MASK | InputEvent.BUTTON2_MASK | InputEvent.CTRL_MASK)) {
-							k &= ~InputEvent.CTRL_MASK;
-							modifiers &= ~(InputEvent.BUTTON1_MASK | InputEvent.CTRL_MASK);
-						}
-						if ((k & InputEvent.ALT_MASK) == InputEvent.ALT_MASK && (modifiers & (InputEvent.BUTTON1_MASK | InputEvent.BUTTON2_MASK)) == (InputEvent.BUTTON1_MASK | InputEvent.BUTTON2_MASK)) {
-							k &= ~InputEvent.ALT_MASK;
-							modifiers = (modifiers & ~(InputEvent.BUTTON1_MASK | InputEvent.BUTTON2_MASK)) | InputEvent.BUTTON3_MASK;
-						}
-						if ((k & InputEvent.META_MASK) == InputEvent.META_MASK && (modifiers & (InputEvent.BUTTON1_MASK | InputEvent.BUTTON3_MASK)) == (InputEvent.BUTTON1_MASK | InputEvent.BUTTON3_MASK))
-							modifiers &= ~InputEvent.BUTTON3_MASK;
-						if ((k & InputEvent.SHIFT_MASK) == InputEvent.SHIFT_MASK)
-							modifiers &= ~InputEvent.SHIFT_MASK;
-						event = e = new MouseEvent(e.getComponent(), eid, e.getWhen(), modifiers, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
-
 						// Treat the Mac OS X command key as a control key and
 						// the control key as the meta key
 						if ((k & (InputEvent.CTRL_MASK | InputEvent.META_MASK)) == (InputEvent.CTRL_MASK | InputEvent.META_MASK))
@@ -987,8 +970,8 @@ public final class VCLEvent extends AWTEvent {
 							k = (k & ~InputEvent.CTRL_MASK) | InputEvent.META_MASK;
 						else if ((k & InputEvent.META_MASK) == InputEvent.META_MASK)
 							k = (k & ~InputEvent.META_MASK) | InputEvent.CTRL_MASK;
-						keyModifiers = k;
 					}
+					keyModifiers = k;
 					break;
 				}
 			}
