@@ -106,7 +106,7 @@ DTransThreadAttach::~DTransThreadAttach()
 
 void DTransThreadAttach::AttachThread()
 {
-	if ( xRG11Ref.is() && pJVM && pJVM->GetEnv( (void**)&pEnv, JNI_VERSION_1_2 ) != JNI_OK )
+	if ( xVM.is() && xRG11Ref.is() && pJVM && pJVM->GetEnv( (void**)&pEnv, JNI_VERSION_1_2 ) != JNI_OK )
 	{
 		pJVM->AttachCurrentThread( (void**)&pEnv, NULL );
 		xRG11Ref->registerThread();
