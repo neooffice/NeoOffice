@@ -39,6 +39,7 @@ SHELL:=/bin/tcsh
 # Build location macros
 BUILD_HOME:=build
 INSTALL_HOME:=install
+SOURCE_HOME:=source
 OO_PATCHES_HOME:=patches/openoffice
 OO_ENV_X11:=$(BUILD_HOME)/MacosxEnv.Set
 OO_ENV_JAVA:=$(BUILD_HOME)/MacosxEnvJava.Set
@@ -56,6 +57,9 @@ PRODUCT_FILETYPE=no%f
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.openoffice.org:/cvs
 OO_PACKAGE:=all
 OO_TAG:=OOO_STABLE_1_PORTS
+NEO_CVSROOT:=:pserver:anoncvs@cvs.neooffice.org:/cvs
+NEO_PACKAGE:=NeoOfficeJ
+NEO_TAG:=NeoOfficeJ-0_0
 
 all: build.all
 
@@ -101,7 +105,7 @@ build.configure: build.oo_patches
 	touch "$@"
 
 build.oo_all: build.configure
-	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/instsetoo" ; `alias build` -all $(BUILD_ARGS)
+	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/instsetoo" ; `alias build` -all $(OO_BUILD_ARGS)
 	touch "$@"
 
 build.neo_%_patch: % build.oo_all
@@ -111,7 +115,7 @@ build.neo_%_patch: % build.oo_all
 	rm -Rf "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro"
 	mkdir -p "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro"
 	cd "$<" ; ln -sf "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro"
-	source "$(OO_ENV_JAVA)" ; cd "$<" ; `alias build` $(BUILD_ARGS)
+	source "$(OO_ENV_JAVA)" ; cd "$<" ; `alias build` $(NEO_BUILD_ARGS)
 	touch "$@"
 
 build.neo_patches: \
@@ -188,6 +192,13 @@ build.package: build.installation
 	@echo "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg"
 	@echo ""
 	sh -e -c 'while [ ! -f "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).sizes" ] ; do sleep 10 ; done'
+	touch "$@"
+
+build.source_zip:
+	$(RM) -Rf "$(SOURCE_HOME)"
+	mkdir -p "$(SOURCE_HOME)"
+	cd "$(SOURCE_HOME)" ; cvs -d "$(NEO_CVSROOT)" co -r "$(NEO_TAG)" "$(NEO_PACKAGE)"
+	cd "$(SOURCE_HOME)" ; gnutar zcf "$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION).tar.gz" *
 	touch "$@"
 
 build.all: build.oo_all build.package
