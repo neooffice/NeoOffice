@@ -98,7 +98,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 */
 	public synchronized static Rectangle getImageableBounds() {
 
-		return new Rectangle((int)pageFormat.getImageableX() * pageResolution.width / 72, (int)pageFormat.getImageableY() * pageResolution.height / 72, (int)pageFormat.getImageableWidth() * pageResolution.width / 72, (int)pageFormat.getImageableHeight() * pageResolution.height / 72);
+		return new Rectangle((int)(pageFormat.getImageableX() * pageResolution.width / 72), (int)(pageFormat.getImageableY() * pageResolution.height / 72), (int)(pageFormat.getImageableWidth() * pageResolution.width / 72), (int)(pageFormat.getImageableHeight() * pageResolution.height / 72));
 
 	}
 
@@ -123,7 +123,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 */
 	public synchronized static Dimension getPageSize() {
 
-		return new Dimension((int)pageFormat.getWidth() * pageResolution.width / 72, (int)pageFormat.getHeight() * pageResolution.height / 72);
+		return new Dimension((int)(pageFormat.getWidth() * pageResolution.width / 72), (int)(pageFormat.getHeight() * pageResolution.height / 72));
 
 	}
 
@@ -134,7 +134,10 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 */
 	public synchronized static Dimension getPageResolution() {
 
-		return pageResolution;
+		if (pageFormat.getOrientation() == PageFormat.PORTRAIT)
+			return new Dimension(pageResolution.width, pageResolution.height);
+		else
+			return new Dimension(pageResolution.height, pageResolution.width);
 
 	}
 
