@@ -122,17 +122,18 @@ BOOL SalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
 
 BOOL SalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 {
-	// Set values
+	// Set and update values
 	if ( nFlags == SAL_JOBSET_ORIENTATION )
+	{
 		com_sun_star_vcl_VCLPrintJob::setOrientation( pSetupData->meOrientation );
+		pSetupData->meOrientation = com_sun_star_vcl_VCLPrintJob::getOrientation();
+		Size aSize( com_sun_star_vcl_VCLPrintJob::getPageSize() );
+    	pSetupData->mnPaperWidth = aSize.Width();
+   		pSetupData->mnPaperHeight = aSize.Height();
+		return TRUE;
+	}
 
-	// Update values
-	pSetupData->meOrientation = com_sun_star_vcl_VCLPrintJob::getOrientation();
-	Size aSize( com_sun_star_vcl_VCLPrintJob::getPageSize() );
-    pSetupData->mnPaperWidth = aSize.Width();
-   	pSetupData->mnPaperHeight = aSize.Height();
-
-	return TRUE;
+	return FALSE;
 }
 
 // -----------------------------------------------------------------------
