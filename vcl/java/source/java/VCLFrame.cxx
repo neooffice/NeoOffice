@@ -79,12 +79,19 @@ static void JNICALL Java_com_apple_mrj_macos_generated_MacWindowFunctions_Select
 
 	WindowRef aWindow = (WindowRef)pWindowRef;
 
-	if ( bBringToFront )
+	if ( bBringToFront && bActivate )
+		SelectWindow( aWindow );
+	else if ( bBringToFront )
 		BringToFront( aWindow );
-	if ( bActivate )
-		ActivateWindow( aWindow, true );
-	if ( !IsWindowActive( aWindow ) )
-		ActivateWindow( aWindow, false );
+	else if ( bActivate )
+	{
+		// we want to focus a window but not change its Z ordering.
+		// Issue a SelectWindow() and then restore the Z ordering.
+		
+		WindowRef whosOnTop = GetPreviousWindow( aWindow );
+		SelectWindow( aWindow );
+		SendBehind( aWindow, whosOnTop );
+	}
 }
 #endif	// MACOSX
 
