@@ -65,7 +65,8 @@ using namespace com::sun::star::lang;
 
 // ============================================================================
 
-static JavaVM *pJVM;
+static JavaVM *pJVM = NULL;
+static Reference< XJavaVM > xVM;
 static Reference< XJavaThreadRegister_11 > xRG11Ref;
 
 // ----------------------------------------------------------------------------
@@ -98,7 +99,7 @@ VCLThreadAttach::~VCLThreadAttach()
 
 void VCLThreadAttach::AttachThread()
 {
-	if ( pJVM->GetEnv( (void**)&pEnv, JNI_VERSION_1_2 ) != JNI_OK && xRG11Ref.is() )
+	if ( xVM.is() && pJVM && pJVM->GetEnv( (void**)&pEnv, JNI_VERSION_1_2 ) != JNI_OK && xRG11Ref.is() )
 	{
 		pJVM->AttachCurrentThread( (void**)&pEnv, NULL );
 		xRG11Ref->registerThread();
@@ -115,12 +116,13 @@ void VCLThreadAttach::DetachThread()
 
 sal_Bool VCLThreadAttach::StartJava()
 {
-	static sal_Bool bStarted = sal_False;
-	if ( !bStarted )
+	if ( !xVM.is() )
 	{
 		OGuard aGuard( OMutex::getGlobalMutex() );
-		if ( !bStarted )
+		if ( !xVM.is() )
 		{
+			pJVM = NULL;
+
 			Reference<XMultiServiceFactory> xFactory = unohelper::GetMultiServiceFactory();
 			OSL_ENSURE( xFactory.is(), "No XMultiServiceFactory available!" );
 			if ( !xFactory.is() )
@@ -128,9 +130,9 @@ sal_Bool VCLThreadAttach::StartJava()
 
 		    JNIEnv *pEnv = NULL;
 
-			Reference< XJavaVM > xVM( xFactory->createInstance( rtl::OUString::createFromAscii( "com.sun.star.java.JavaVirtualMachine") ), UNO_QUERY );
+			xVM = Reference< XJavaVM >( xFactory->createInstance( rtl::OUString::createFromAscii( "com.sun.star.java.JavaVirtualMachine") ), UNO_QUERY );
 
-			OSL_ENSURE( xFactory.is(), "VCLThreadAttach::StartJava: invalid factory!" );
+			OSL_ENSURE( xVM.is(), "VCLThreadAttach::StartJava: invalid java reference!" );
 			if ( !xVM.is() || !xFactory.is() )
 				return sal_False;
 
@@ -147,6 +149,7 @@ sal_Bool VCLThreadAttach::StartJava()
 			}
 			else
 			{
+				xVM.clear();
 				return sal_False;
 			}
 
@@ -165,10 +168,11 @@ sal_Bool VCLThreadAttach::StartJava()
 					pJVM->DetachCurrentThread();
 			}
 
-			bStarted = sal_True;
+			return sal_True;
 		}
 	}
-	return bStarted;
+
+	return sal_True;
 }
 
 // ----------------------------------------------------------------------------

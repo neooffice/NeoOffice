@@ -44,10 +44,6 @@
 #ifndef _JAVA_DTRANS_JAVA_LANG_THROWABLE_HXX
 #include <java/lang/Throwable.hxx>
 #endif
-#include <com/sun/star/registry/XImplementationRegistration.hpp>
-#ifndef _COM_SUN_STAR_LANG_XMULTISERVICEFACTORY_HPP_
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#endif
 #ifndef _COM_SUN_STAR_JAVA_XJAVATHREADREGISTER_11_HPP_
 #include <com/sun/star/java/XJavaThreadRegister_11.hpp>
 #endif
@@ -61,21 +57,17 @@
 #include <rtl/process.h>
 #endif
 
-#define JAVAVMDLL "javavm.uno"
-
 using namespace java::dtrans;
-using namespace osl;
-using namespace rtl;
 using namespace vcl;
 using namespace vos;
 using namespace com::sun::star::java;
-using namespace com::sun::star::registry;
 using namespace com::sun::star::uno;
 using namespace com::sun::star::lang;
 
 // ============================================================================
 
-static JavaVM *pJVM;
+static JavaVM *pJVM = NULL;
+static Reference< XJavaVM > xVM;
 static Reference< XJavaThreadRegister_11 > xRG11Ref;
 
 // ----------------------------------------------------------------------------
@@ -108,7 +100,7 @@ DTransThreadAttach::~DTransThreadAttach()
 
 void DTransThreadAttach::AttachThread()
 {
-	if ( xRG11Ref.is() )
+	if ( xVM.is() && pJVM && pJVM->GetEnv( (void**)&pEnv, JNI_VERSION_1_2 ) != JNI_OK && xRG11Ref.is() )
 	{
 		pJVM->AttachCurrentThread( (void**)&pEnv, NULL );
 		xRG11Ref->registerThread();
@@ -119,24 +111,19 @@ void DTransThreadAttach::AttachThread()
 
 void DTransThreadAttach::DetachThread()
 {
-	if ( xRG11Ref.is() )
-	{
-		xRG11Ref->revokeThread();
-		if ( !xRG11Ref->isThreadAttached() )
-			pJVM->DetachCurrentThread();
-	}
 }
 
 // ----------------------------------------------------------------------------
 
 sal_Bool DTransThreadAttach::StartJava()
 {
-	static sal_Bool bStarted = sal_False;
-	if ( !bStarted )
+	if ( !xVM.is() )
 	{
 		OGuard aGuard( OMutex::getGlobalMutex() );
-		if ( !bStarted )
+		if ( !xVM.is() )
 		{
+			pJVM = NULL;
+
 			Reference<XMultiServiceFactory> xFactory = unohelper::GetMultiServiceFactory();
 			OSL_ENSURE( xFactory.is(), "No XMultiServiceFactory available!" );
 			if ( !xFactory.is() )
@@ -144,9 +131,9 @@ sal_Bool DTransThreadAttach::StartJava()
 
 		    JNIEnv *pEnv = NULL;
 
-			Reference< XJavaVM > xVM( xFactory->createInstance( rtl::OUString::createFromAscii( "com.sun.star.java.JavaVirtualMachine") ), UNO_QUERY );
+			xVM = Reference< XJavaVM >( xFactory->createInstance( rtl::OUString::createFromAscii( "com.sun.star.java.JavaVirtualMachine") ), UNO_QUERY );
 
-			OSL_ENSURE( xFactory.is(), "DTransThreadAttach::StartJava: invalid factory!" );
+			OSL_ENSURE( xVM.is(), "DTransThreadAttach::StartJava: invalid java reference!" );
 			if ( !xVM.is() || !xFactory.is() )
 				return sal_False;
 
@@ -163,6 +150,7 @@ sal_Bool DTransThreadAttach::StartJava()
 			}
 			else
 			{
+				xVM.clear();
 				return sal_False;
 			}
 
@@ -181,10 +169,11 @@ sal_Bool DTransThreadAttach::StartJava()
 					pJVM->DetachCurrentThread();
 			}
 
-			bStarted = sal_True;
+			return sal_True;
 		}
 	}
-	return bStarted;
+
+	return sal_True;
 }
 
 // ----------------------------------------------------------------------------
