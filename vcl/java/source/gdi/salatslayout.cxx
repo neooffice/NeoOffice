@@ -489,9 +489,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			if ( maVerticalFontStyle )
 				nGlyph |= GetVerticalFlags( rArgs.mpStr[ nCharPos ] );
 
+			// Fix bug 448 by eliminating subpixel advances
 			ATSTrapezoid aTrapezoid;
 			if ( ATSUGetGlyphBounds( mpGlyphInfoArray->layout, 0, 0, nIndex, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
-				fCurrentWidth += Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * fUnitsPerPixel;
+				fCurrentWidth += Fix2Long( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * fUnitsPerPixel;
 
 			nCharWidth = Float32ToLong( fCurrentWidth ) - aPos.X();
 			if ( nCharWidth < 0 )
