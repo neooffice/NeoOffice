@@ -154,7 +154,7 @@ int main( int argc, char *argv[] )
 			execv( pCmdPath, argv );
 	}
 
-	// Test the JVM version and if it is 1.4 or higher, run Run SVMain() in a
+	// Test the JVM version and if it is 1.4 or higher, run SVMain() in a
 	// high priority thread
 	java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
 	if ( pClass )
