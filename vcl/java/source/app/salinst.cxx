@@ -1140,8 +1140,9 @@ void SalInstance::Yield( BOOL bWait )
 			nTimeout = 10;
 	}
 
-	// Dispatch pending AWT events
-	while ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
+	// Dispatch next pending AWT event. Only dispatch one event as dispatching
+	// multiple events can cause crashing in the next SALEVENT_USEREVENT.
+	if ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
 	{
 		// Reset timeout
 		nTimeout = 0;
@@ -1149,14 +1150,6 @@ void SalInstance::Yield( BOOL bWait )
 		USHORT nID = pEvent->getID();
 		pEvent->dispatch();
 		delete pEvent;
-
-		// If this is not a mouse move event, make another pass through
-		// the loop in case the next event is a mouse released event. If the
-		// timer is run between continguous mouse or key pressed and released
-		// the application acts is if two mouse clicks have been made instead
-		// of one.
-		if ( nID == SALEVENT_MOUSEMOVE )
-			break;
 	}
 
 	nRecursionLevel--;
