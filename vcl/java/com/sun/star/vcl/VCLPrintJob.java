@@ -170,10 +170,16 @@ public final class VCLPrintJob implements Printable, Runnable {
 				currentGraphics = null;
 			}
 
+ 			if (printThreadFinished)
+				return;
+
 			// Allow the printer thread to move to the next page
 			graphicsInfo.notifyAll();
+			try {
+				graphicsInfo.wait();
+			}
+			catch (Throwable t) {}
 		}
-		Thread.yield();
 
 	}
 
@@ -189,17 +195,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 		else if (endJob)
 			return Printable.NO_SUCH_PAGE;
 
-		// Mac OS X creates two graphics for each page so we need to create
-		// separate page numbers for each page.
-		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-			if (graphicsInfo.pageIndex == i * 2)
-				graphicsInfo.pageIndex++;
-			else
-				graphicsInfo.pageIndex = i * 2;
-		}
-		else {
-			graphicsInfo.pageIndex = i;
-		}
+		graphicsInfo.pageIndex = i;
 
 		Graphics2D graphics = (Graphics2D)g;
 
@@ -215,13 +211,15 @@ public final class VCLPrintJob implements Printable, Runnable {
 		graphicsInfo.graphics = graphics;
 		graphicsInfo.pageFormat = f;
 
-		// Wait until painting is finished
-		Thread.yield();
+		// Notify other threads and wait until painting is finished
+		graphicsInfo.notifyAll();
 		try {
 			graphicsInfo.wait();
 		}
 		catch (Throwable t) {}
-		Thread.yield();
+
+		graphicsInfo.graphics = null;
+		graphicsInfo.pageFormat = null;
 
 		if (job.isCancelled())
 			throw new PrinterException();
@@ -240,13 +238,14 @@ public final class VCLPrintJob implements Printable, Runnable {
 	public void run() {
 
 		synchronized (graphicsInfo) {
-			// Notify the thread that started this thread that it can proceed
-			graphicsInfo.notifyAll();
 			try {
 				job.print();
 			}
 			catch (Throwable t) {}
 			printThreadFinished = true;
+
+			// Notify other threads that printing is finished
+			graphicsInfo.notifyAll();
 		}
 
 	}
@@ -316,10 +315,14 @@ public final class VCLPrintJob implements Printable, Runnable {
 				catch (Throwable t) {}
 				printThreadStarted = true;
 			}
-		}
 
-		synchronized (graphicsInfo) {
-			if (currentPage++ != graphicsInfo.pageIndex || printThread == null || !printThread.isAlive()) {
+			// Get the current page's graphics context
+			int page = currentPage++;
+			// Mac OS X creates two graphics for each page so we need to
+			// process each page twice
+			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
+				page /= 2;
+			if (page != graphicsInfo.pageIndex || printThread == null || !printThread.isAlive()) {
 				// Return a dummy graphics if this page is not in the selected
 				// page range
 				currentGraphics = null;
@@ -327,9 +330,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 			else {
 				// Limit printing to only the printable area
 				Dimension pageResolution = pageFormat.getPageResolution();
-				currentGraphics = new VCLGraphics(graphicsInfo.graphics, new Rectangle(0, 0, (int)(graphicsInfo.pageFormat.getImageableWidth() * pageResolution.width / 72), (int)(graphicsInfo.pageFormat.getImageableHeight() * pageResolution.height / 72)), pageFormat);
-				graphicsInfo.graphics = null;
-				graphicsInfo.pageFormat = null;
+				currentGraphics = new VCLGraphics(graphicsInfo.graphics, pageFormat);
 			}
 		}
 

@@ -276,15 +276,16 @@ public final class VCLGraphics {
 	 * <code>Graphics2D</code> instance.
 	 *
 	 * @param g the <code>Graphics2D</code> instance
-	 * @param b the bounds of the drawable area
 	 * @param p the <code>VCLPageFormat</code> instance
 	 */
-	VCLGraphics(Graphics2D g, Rectangle b, VCLPageFormat p) {
+	VCLGraphics(Graphics2D g, VCLPageFormat p) {
 
 		graphics = g;
-		graphicsBounds = b;
-		bitCount = graphics.getDeviceConfiguration().getColorModel().getPixelSize();
 		pageFormat = p;
+		graphicsBounds = new Rectangle(pageFormat.getImageableBounds());
+		graphicsBounds.x = 0;
+		graphicsBounds.y = 0;
+		bitCount = graphics.getDeviceConfiguration().getColorModel().getPixelSize();
 		pageImage = new VCLImage(graphicsBounds.width, graphicsBounds.height, bitCount);
 
 	}
@@ -572,12 +573,9 @@ public final class VCLGraphics {
 				}
 			}
 
-			Area area = new Area(destBounds);
-			if (clip != null)
-				area.intersect(new Area(clip));
-			graphics.setClip(area);
-			graphics.drawRenderedImage(pageImage.getImage(), null);
-			graphics.setClip(clip);
+			Graphics2D g = (Graphics2D)graphics.create(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
+			g.drawRenderedImage(pageImage.getImage().getSubimage(destBounds.x, destBounds.y, destBounds.width, destBounds.height), null);
+			g.dispose();
 		}
 		else {
 			Graphics2D g = (Graphics2D)graphics.create(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
@@ -950,6 +948,7 @@ public final class VCLGraphics {
 				addToFlush(bounds);
 			}
 		}
+
 	}
 
 	/**

@@ -47,13 +47,9 @@
 #ifndef _SV_JAVA_LANG_CLASS_HXX
 #include <java/lang/Class.hxx>
 #endif
-#ifndef _VOS_THREAD_HXX
-#include <vos/thread.hxx>
-#endif
 
 using namespace rtl;
 using namespace vcl;
-using namespace vos;
 
 // ============================================================================
 
@@ -288,13 +284,6 @@ com_sun_star_vcl_VCLGraphics *com_sun_star_vcl_VCLPrintJob::startPage()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-#ifdef MACOSX
-			// Mac OS X creates two graphics for each page so we discard
-			// the even numbered pages and print to the odd numbered pages
-			t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
-			endPage();
-			OThread::yield();
-#endif
 			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			if ( tempObj )
 				out = new com_sun_star_vcl_VCLGraphics( tempObj );

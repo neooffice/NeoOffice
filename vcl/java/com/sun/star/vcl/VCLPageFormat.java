@@ -153,7 +153,7 @@ public final class VCLPageFormat {
 	 */
 	public VCLGraphics getGraphics() {
 
-		return new VCLGraphics(graphics, graphics.getDeviceConfiguration().getBounds(), this);
+		return new VCLGraphics(graphics, this);
 
 	}
 
