@@ -692,7 +692,9 @@ public class VCLGraphics {
 		Rectangle bounds = new Rectangle();
 		bounds.x = x;
 		bounds.y = y - fontMetrics.getMaxAscent();
-		bounds.width = offsets[chars.length - 2] + fontMetrics.charWidth(chars[chars.length - 1]);
+		bounds.width = fontMetrics.charWidth(chars[chars.length - 1]);
+		if (chars.length > 1)
+			bounds.width += offsets[chars.length - 2];
 		bounds.height = y + fontMetrics.getMaxDescent() - bounds.y;
 		addToFlush(bounds);
 
