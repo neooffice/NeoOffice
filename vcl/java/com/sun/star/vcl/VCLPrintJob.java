@@ -124,8 +124,15 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 */
 	public void dispose() {
 
-		if (currentGraphics != null)
-			currentGraphics.dispose();
+		if (currentGraphics != null) {
+			// Dispose a print graphics throws exceptions when memory is low
+			try {
+				currentGraphics.dispose();
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+		}
 		currentGraphics = null;
 		currentPage = 0;
 		if (graphicsInfo != null)
@@ -171,7 +178,13 @@ public final class VCLPrintJob implements Printable, Runnable {
 					return;
 			}
 			else {
-				currentGraphics.dispose();
+				// Dispose a print graphics throws exceptions when memory is low
+				try {
+					currentGraphics.dispose();
+				}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
 				currentGraphics = null;
 			}
 
