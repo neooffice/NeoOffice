@@ -49,7 +49,9 @@ import java.awt.RenderingHints;
 import java.awt.Shape;
 import java.awt.TexturePaint;
 import java.awt.Toolkit;
+import java.awt.font.GlyphVector;
 import java.awt.geom.Area;
+import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.util.LinkedList;
 
@@ -654,16 +656,19 @@ public class VCLGraphics {
 	 */
 	public void drawText(int x, int y, char[] chars, VCLFont font, int color) {
 
-		graphics.setFont(font.getFont());
+		Font f = font.getFont();
+		graphics.setFont(f);
 		graphics.setColor(new Color(color));
-		graphics.drawChars(chars, 0, chars.length, x, y);
-		FontMetrics fontMetrics = graphics.getFontMetrics();
+		GlyphVector glyphs = f.createGlyphVector(graphics.getFontRenderContext(), chars);
+		graphics.drawGlyphVector(glyphs, x, y);
 
+		// Estimate bounds since getting the exact bounds is very slow
+		FontMetrics fontMetrics = graphics.getFontMetrics();
 		Rectangle bounds = new Rectangle();
-		bounds.x = x;
-		bounds.y = y - fontMetrics.getMaxAscent();
-		bounds.width = fontMetrics.charsWidth(chars, 0, chars.length);
-		bounds.height = y + fontMetrics.getMaxDescent() - bounds.y;
+		bounds.x = x - 1;
+		bounds.y = y - fontMetrics.getMaxAscent() - 1; 
+		bounds.width = fontMetrics.charsWidth(chars, 0, chars.length) + 1;
+		bounds.height = y + fontMetrics.getMaxDescent() - bounds.y + 2;
 		addToFlush(bounds);
 
 	}
@@ -683,20 +688,28 @@ public class VCLGraphics {
 	 */
 	public void drawTextArray(int x, int y, char[] chars, VCLFont font, int color, int[] offsets) {
 
-		graphics.setFont(font.getFont());
+		Font f = font.getFont();
+		graphics.setFont(f);
 		graphics.setColor(new Color(color));
-		graphics.drawChars(chars, 0, 1, x, y);
+		GlyphVector glyphs = f.createGlyphVector(graphics.getFontRenderContext(), chars);
+		Point2D p = glyphs.getGlyphPosition(0);
+		double start = p.getX();
 		for (int i = 1; i < chars.length; i++)
-			graphics.drawChars(chars, i, 1, x + offsets[i - 1], y);
-		FontMetrics fontMetrics = graphics.getFontMetrics();
+		{
+			p.setLocation(start + offsets[i - 1], p.getY());
+			glyphs.setGlyphPosition(i, p);
+		}
+		graphics.drawGlyphVector(glyphs, x, y);
 
+		// Estimate bounds since getting the exact bounds is very slow
+		FontMetrics fontMetrics = graphics.getFontMetrics();
 		Rectangle bounds = new Rectangle();
-		bounds.x = x;
-		bounds.y = y - fontMetrics.getMaxAscent();
-		bounds.width = fontMetrics.charWidth(chars[chars.length - 1]);
+		bounds.x = x - 1;
+		bounds.y = y - fontMetrics.getMaxAscent() - 1; 
+		bounds.width = fontMetrics.charWidth(chars[chars.length - 1]) + 1;
 		if (chars.length > 1)
 			bounds.width += offsets[chars.length - 2];
-		bounds.height = y + fontMetrics.getMaxDescent() - bounds.y;
+		bounds.height = y + fontMetrics.getMaxDescent() - bounds.y + 2;
 		addToFlush(bounds);
 
 	}
