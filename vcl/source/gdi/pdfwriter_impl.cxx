@@ -84,9 +84,9 @@
 
 #endif	// USE_JAVA && MACOSX
 
-// #define ENABLE_COMPRESSION
+#define ENABLE_COMPRESSION
 #if OSL_DEBUG_LEVEL < 2
-// #define COMPRESS_PAGES
+#define COMPRESS_PAGES
 #endif
 
 using namespace vcl;
