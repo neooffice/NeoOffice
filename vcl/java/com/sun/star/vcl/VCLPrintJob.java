@@ -126,7 +126,6 @@ public final class VCLPrintJob implements Printable, Runnable {
 		if (graphicsInfo != null)
 		{
 			graphicsInfo.graphics = null;
-			graphicsInfo.pageFormat = null;
 			graphicsInfo.pageIndex = -1;
 		}
 		endJob = true;
@@ -209,7 +208,6 @@ public final class VCLPrintJob implements Printable, Runnable {
 		graphics.scale((double)72 / pageResolution.width, (double)72 / pageResolution.height);
 
 		graphicsInfo.graphics = graphics;
-		graphicsInfo.pageFormat = f;
 
 		// Notify other threads and wait until painting is finished
 		graphicsInfo.notifyAll();
@@ -219,7 +217,6 @@ public final class VCLPrintJob implements Printable, Runnable {
 		catch (Throwable t) {}
 
 		graphicsInfo.graphics = null;
-		graphicsInfo.pageFormat = null;
 
 		if (job.isCancelled())
 			throw new PrinterException();
@@ -341,8 +338,6 @@ public final class VCLPrintJob implements Printable, Runnable {
 	class GraphicsInfo {
 
 		Graphics2D graphics = null;
-
-		PageFormat pageFormat = null;
 
 		int pageIndex = -1;
 

@@ -1622,6 +1622,10 @@ BOOL Printer::StartJob( const XubString& rJobName )
 		// The resolution of the printer may have changed
 		ImplUpdatePageData();
 		ImplUpdateFontList();
+		if ( mpQPrinter ) {
+			mpQPrinter->ImplUpdatePageData();
+			mpQPrinter->ImplUpdateFontList();
+		}
 #endif
 
 		mbNewJobSetup	= FALSE;

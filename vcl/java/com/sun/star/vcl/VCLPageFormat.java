@@ -105,11 +105,11 @@ public final class VCLPageFormat {
 	 * PAPER_USER constant.
 	 */
 	public final static int PAPER_USER = 8;
-	
+
 	/**
-	 * Cached native graphics.
+	 * Cached <code>VCLImage</code>.
 	 */
-	private Graphics2D graphics = null;
+	private VCLImage image = null;
 
 	/**
 	 * The page format.
@@ -126,9 +126,9 @@ public final class VCLPageFormat {
 	 */
 	public VCLPageFormat() {
 
-		graphics = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB_PRE).createGraphics();
 		pageFormat = PrinterJob.getPrinterJob().defaultPage();
 		pageResolution = new Dimension(72, 72);
+		image = new VCLImage(1, 1, 32, this);
 
 	}
 
@@ -138,11 +138,10 @@ public final class VCLPageFormat {
 	 */
 	public void dispose() {
 
-		if (graphics != null)
-			graphics.dispose();
-		graphics = null;
+		if (image != null)
+			image.dispose();
+		image = null;
 		pageFormat = null;
-		pageResolution = null;
 
 	}
 
@@ -153,7 +152,7 @@ public final class VCLPageFormat {
 	 */
 	public VCLGraphics getGraphics() {
 
-		return new VCLGraphics(graphics, this);
+		return image.getGraphics();
 
 	}
 
@@ -194,20 +193,9 @@ public final class VCLPageFormat {
 	}
 
 	/**
-	 * Get the page size in pixels.
-	 *
-	 * @return the page size in pixels
-	 */
-	public Dimension getPageSize() {
-
-		return new Dimension((int)(pageFormat.getWidth() * pageResolution.width / 72), (int)(pageFormat.getHeight() * pageResolution.height / 72));
-
-	}
-
-	/**
 	 * Get the page resolution.
 	 *
-	 * @return the page resolution.
+	 * @return the <code>VCLPageFormat</code> instance
 	 */
 	Dimension getPageResolution() {
 
@@ -215,6 +203,17 @@ public final class VCLPageFormat {
 			return new Dimension(pageResolution.width, pageResolution.height);
 		else
 			return new Dimension(pageResolution.height, pageResolution.width);
+
+	}
+
+	/**
+	 * Get the page size in pixels.
+	 *
+	 * @return the page size in pixels
+	 */
+	public Dimension getPageSize() {
+
+		return new Dimension((int)(pageFormat.getWidth() * pageResolution.width / 72), (int)(pageFormat.getHeight() * pageResolution.height / 72));
 
 	}
 

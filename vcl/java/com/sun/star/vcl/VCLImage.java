@@ -76,6 +76,11 @@ public final class VCLImage {
 	private BufferedImage image = null;
 
 	/**
+	 * The <code>VCLPageFormat</code>.
+	 */
+	private VCLPageFormat pageFormat = null;
+
+	/**
 	 * The width.
 	 */
 	private int width = 0;
@@ -89,6 +94,20 @@ public final class VCLImage {
 	 */
 	public VCLImage(int w, int h, int b) {
 
+		this(w, h, b, null);
+
+	}
+
+	/**
+	 * Constructs a new <code>VCLImage</code> instance.
+	 *
+	 * @param w the width of the image
+	 * @param h the height of the image
+	 * @param b the desired bit count of the image
+	 * @param p the <code>VCLPageFormat</code> instance.
+	 */
+	VCLImage(int w, int h, int b, VCLPageFormat p) {
+
 		// Adjust bit count
 		if (b <= 8)
 			bitCount = 8;
@@ -101,7 +120,8 @@ public final class VCLImage {
 		height = h;
 
 		// Cache the graphics
-		graphics = new VCLGraphics(this);
+		pageFormat = p;
+		graphics = new VCLGraphics(this, p);
 
 		// Cache the data buffer
 		data = ((DataBufferInt)image.getRaster().getDataBuffer()).getData();

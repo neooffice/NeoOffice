@@ -256,16 +256,18 @@ public final class VCLGraphics {
 	}
 
 	/**
-	 * Constructs a new <code>VCLGraphics</code> instance from an existing
-	 * <code>VCLImage</code> instance.
+	 * Constructs a new <code>VCLGraphics</code> instance from existing
+	 * <code>VCLImage</code> and <code>VCLPageFormat,/code> instances.
 	 *
 	 * @param i the <code>VCLImage</code> instance
+	 * @param p the <code>VCLPageFormat</code> instance
 	 */
-	VCLGraphics(VCLImage i) {
+	VCLGraphics(VCLImage i, VCLPageFormat p) {
 
 		image = i;
 		graphics = image.getImage().createGraphics();
 		graphicsBounds = new Rectangle(0, 0, image.getWidth(), image.getHeight());
+		pageFormat = p;
 		VCLGraphics.setDefaultRenderingAttributes(graphics);
 		bitCount = image.getBitCount();
 
@@ -283,6 +285,14 @@ public final class VCLGraphics {
 		graphics = g;
 		pageFormat = p;
 		graphicsBounds = new Rectangle(pageFormat.getImageableBounds());
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+			// Mac OS X's print graphics implementation has trouble printing
+			// images that are the same size or smaller than the page's
+			// imageable area so we do all image drawing using an image that
+			// is equal to the imageable area plus the left and top margins
+			graphicsBounds.width += graphicsBounds.x;
+			graphicsBounds.height += graphicsBounds.y;
+		}
 		graphicsBounds.x = 0;
 		graphicsBounds.y = 0;
 		bitCount = graphics.getDeviceConfiguration().getColorModel().getPixelSize();
@@ -550,7 +560,7 @@ public final class VCLGraphics {
 		Shape clip = graphics.getClip();
 		if (clip != null && !clip.intersects(destBounds))
 			return;
-		if (image == null) {
+		if (pageImage != null) {
 			int[] srcData = img.getData();
 			int srcDataWidth = img.getWidth();
 			int[] destData = pageImage.getData();
