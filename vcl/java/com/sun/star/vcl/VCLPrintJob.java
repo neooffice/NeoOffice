@@ -87,7 +87,7 @@ public final class VCLPrintJob extends Thread implements Printable {
 	 */
 	public synchronized static VCLGraphics getGraphics() {
 
-		return new VCLGraphics(graphics, SCALE_FACTOR * 72);
+		return new VCLGraphics(graphics, SCALE_FACTOR * 72, graphics.getDeviceConfiguration().getBounds());
 
 	}
 
@@ -427,7 +427,7 @@ public final class VCLPrintJob extends Thread implements Printable {
 				currentGraphics = null;
 			}
 			else {
-				currentGraphics = new VCLGraphics(graphicsInfo.graphics, VCLPrintJob.SCALE_FACTOR * 72);
+				currentGraphics = new VCLGraphics(graphicsInfo.graphics, VCLPrintJob.SCALE_FACTOR * 72, new Rectangle(0, 0, (int)graphicsInfo.pageFormat.getImageableWidth() * VCLPrintJob.SCALE_FACTOR, (int)graphicsInfo.pageFormat.getImageableHeight() * VCLPrintJob.SCALE_FACTOR));
 				graphicsInfo.graphics = null;
 				graphicsInfo.pageFormat = null;
 			}

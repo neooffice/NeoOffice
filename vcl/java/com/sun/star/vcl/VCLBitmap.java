@@ -138,9 +138,11 @@ public final class VCLBitmap {
 		if (srcY < 0)
 			destY -= srcY;
 		Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, width, height));
+		srcBounds.x += destBounds.x - destX;
+		srcBounds.y += destBounds.y - destY;
 		int[] srcData = srcImage.getData();
 		int srcDataWidth = srcImage.getWidth();
-		Point srcPoint = new Point(srcBounds.x + destBounds.x - destX, srcBounds.y + destBounds.y - destY);
+		Point srcPoint = new Point(srcBounds.x, srcBounds.y);
 		Point destPoint = new Point(destBounds.x, destBounds.y);
 		int totalPixels = destBounds.width * destBounds.height;
 
@@ -150,13 +152,13 @@ public final class VCLBitmap {
 
 			// Update current points
 			srcPoint.x++;
-			if (srcPoint.x >= srcX + destBounds.width) {
-				srcPoint.x = srcX;
+			if (srcPoint.x >= srcBounds.x + destBounds.width) {
+				srcPoint.x = srcBounds.x;
 				srcPoint.y++;
 			}
 			destPoint.x++;
-			if (destPoint.x >= destX + destBounds.width) {
-				destPoint.x = destX;
+			if (destPoint.x >= destBounds.x + destBounds.width) {
+				destPoint.x = destBounds.x;
 				destPoint.y++;
 			}
 		}
