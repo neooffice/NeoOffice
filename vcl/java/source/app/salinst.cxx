@@ -329,9 +329,10 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv 
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData )
 {
 	SalData *pSalData = GetSalData();
+	EventClass nClass = GetEventClass( aEvent );
+
 	if ( pSalData && !Application::IsShutDown() )
 	{
-		EventClass nClass = GetEventClass( aEvent );
 		if ( nClass == kEventClassAppleEvent )
 		{
 			// Unlock the Carbon lock
@@ -391,10 +392,10 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 			return noErr;
 		}
-		else if ( nClass == kEventClassMenu )
+		else if ( nClass == kEventClassMenu && GetEventKind( aEvent ) == kEventMenuBeginTracking )
 		{
 			MenuRef trackingRef;
-			if ( GetEventKind( aEvent ) == kEventMenuBeginTracking && GetEventParameter( aEvent, kEventParamDirectObject, typeMenuRef, NULL, sizeof( MenuRef ), NULL, &trackingRef ) == noErr )
+			if ( GetEventParameter( aEvent, kEventParamDirectObject, typeMenuRef, NULL, sizeof( MenuRef ), NULL, &trackingRef ) == noErr )
 			{
 				// According to Carbon documentation, the direct object
 				// parameter should be NULL when tracking is beginning
@@ -438,6 +439,12 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				}
 			}
 		}
+	}
+	else if ( Application::IsShutDown() && nClass == kEventClassAppleEvent )
+	{
+		// Fix bug 209 by not processing any Apple events while we are shutting
+		// down
+		return noErr;
 	}
 
 	// Always execute the next registered handler
