@@ -33,13 +33,15 @@
  *
  ************************************************************************/
 
+#include <stdio.h>
+
 #include <java_dndcontext.hxx>
 
 using namespace com::sun::star::datatransfer::dnd;
 using namespace cppu;
 using namespace java;
 
-// ------------------------------------------------------------------------
+// ========================================================================
 
 DragSourceContext::DragSourceContext() : WeakImplHelper1< XDragSourceContext >()
 {
@@ -55,6 +57,7 @@ DragSourceContext::~DragSourceContext()
 
 sal_Int32 SAL_CALL DragSourceContext::getCurrentCursor() throw()
 {
+	return 0;
 }
 
 // ------------------------------------------------------------------------
@@ -75,7 +78,7 @@ void SAL_CALL DragSourceContext::transferablesFlavorsChanged() throw()
 {
 }
 
-// ------------------------------------------------------------------------
+// ========================================================================
 
 DropTargetDropContext::DropTargetDropContext() : WeakImplHelper1< XDropTargetDropContext >()
 {
@@ -91,24 +94,36 @@ DropTargetDropContext::~DropTargetDropContext()
 
 void SAL_CALL DropTargetDropContext::acceptDrop( sal_Int8 dragOperation ) throw()
 {
+#ifdef DEBUG
+	fprintf( stderr, "DropTargetDropContext::acceptDrop not implemented\n" );
+#endif
 }
 
 // ------------------------------------------------------------------------
 
 void SAL_CALL DropTargetDropContext::rejectDrop() throw()
 {
+#ifdef DEBUG
+	fprintf( stderr, "DropTargetDropContext::rejectDrop not implemented\n" );
+#endif
 }
 
 // ------------------------------------------------------------------------
 
 void SAL_CALL DropTargetDropContext::dropComplete( sal_Bool success ) throw()
 {
+#ifdef DEBUG
+	fprintf( stderr, "DropTargetDropContext::dropComplete not implemented\n" );
+#endif
 }
 
-// ------------------------------------------------------------------------
+// ========================================================================
 
 DropTargetDragContext::DropTargetDragContext() : WeakImplHelper1< XDropTargetDragContext >()
 {
+#ifdef DEBUG
+	fprintf( stderr, "DropTargetDragContext::DropTargetDragContext not implemented\n" );
+#endif
 }
 
 // ------------------------------------------------------------------------
@@ -121,10 +136,16 @@ DropTargetDragContext::~DropTargetDragContext()
 
 void SAL_CALL DropTargetDragContext::acceptDrag( sal_Int8 dragOperation ) throw()
 {
+#ifdef DEBUG
+	fprintf( stderr, "DropTargetDragContext::acceptDrag not implemented\n" );
+#endif
 }
 
 // ------------------------------------------------------------------------
 
 void SAL_CALL DropTargetDragContext::rejectDrag() throw()
 {
+#ifdef DEBUG
+	fprintf( stderr, "DropTargetDragContext::rejectDrag not implemented\n" );
+#endif
 }

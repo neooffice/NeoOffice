@@ -33,8 +33,16 @@
  *
  ************************************************************************/
 
+#include <stdio.h>
+
 #ifndef _DTRANS_JAVA_DND_HXX_
 #include <java_dnd.hxx>
+#endif
+#ifndef _DTRANS_JAVA_DNDCONTEXT_HXX
+#include <java_dndcontext.hxx>
+#endif
+#ifndef _COM_SUN_STAR_DATATRANSFER_DND_DNDCONSTANTS_HPP_
+#include <com/sun/star/datatransfer/dnd/DNDConstants.hpp>
 #endif
 
 using namespace com::sun::star::datatransfer;
@@ -42,14 +50,15 @@ using namespace com::sun::star::datatransfer::dnd;
 using namespace com::sun::star::lang;
 using namespace com::sun::star::uno;
 using namespace cppu;
-using namespace rtl;
 using namespace java;
+using namespace osl;
+using namespace rtl;
 
+// ========================================================================
+  
 namespace java
 {
 
-// ------------------------------------------------------------------------
-  
 Sequence< OUString > SAL_CALL JavaDragSource_getSupportedServiceNames()
 {
     Sequence< OUString > aRet( 1 );
@@ -82,7 +91,9 @@ XMultiServiceFactory >& xMultiServiceFactory )
 	return Reference< XInterface >( static_cast< OWeakObject* >( new JavaDropTarget() ) );
 }
 
-// ------------------------------------------------------------------------
+}
+
+// ========================================================================
 
 JavaDragSource::JavaDragSource() : WeakComponentImplHelper3< XDragSource, XInitialization, XServiceInfo >( maMutex )
 {
@@ -116,6 +127,11 @@ sal_Int32 SAL_CALL JavaDragSource::getDefaultCursor( sal_Int8 dragAction ) throw
 
 void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_Int8 sourceActions, sal_Int32 cursor, sal_Int32 image, const Reference< XTransferable >& transferable, const Reference< XDragSourceListener >& listener ) throw()
 {
+#ifdef DEBUG
+	fprintf( stderr, "JavaDragSource::startDrag not implemented\n" );
+#endif
+	maContents = transferable;
+	maListener = listener;
 }
 
 // ------------------------------------------------------------------------
@@ -145,9 +161,12 @@ Sequence< OUString > SAL_CALL JavaDragSource::getSupportedServiceNames() throw()
 	return JavaDragSource_getSupportedServiceNames();
 }
 
-// ------------------------------------------------------------------------
+// ========================================================================
 
-JavaDropTarget::JavaDropTarget() : WeakComponentImplHelper3< XDropTarget, XInitialization, XServiceInfo >( maMutex )
+JavaDropTarget::JavaDropTarget() :
+	WeakComponentImplHelper3< XDropTarget, XInitialization, XServiceInfo >( maMutex ),
+	mbActive( sal_False ),
+	mnDefaultActions( 0 )
 {
 }
 
@@ -167,36 +186,46 @@ void SAL_CALL JavaDropTarget::initialize( const Sequence< Any >& arguments ) thr
 
 void SAL_CALL JavaDropTarget::addDropTargetListener( const Reference< XDropTargetListener >& xListener ) throw()
 {
+	MutexGuard aGuard( maMutex );
+	maListeners.push_back( xListener );
 }
 
 // --------------------------------------------------------------------------
 
 void SAL_CALL JavaDropTarget::removeDropTargetListener( const Reference< XDropTargetListener >& xListener ) throw()
 {
+	MutexGuard aGuard( maMutex );
+	maListeners.remove( xListener );
 }
 
 // --------------------------------------------------------------------------
 
 sal_Bool SAL_CALL JavaDropTarget::isActive() throw()
 {
+	return mbActive;
 }
 
 // --------------------------------------------------------------------------
 
 void SAL_CALL JavaDropTarget::setActive( sal_Bool active ) throw()
 {
+	MutexGuard aGuard( maMutex );
+	mbActive = active;
 }
 
 // --------------------------------------------------------------------------
 
 sal_Int8 SAL_CALL JavaDropTarget::getDefaultActions() throw()
 {
+	return mnDefaultActions;
 }
 
 // --------------------------------------------------------------------------
 
 void SAL_CALL JavaDropTarget::setDefaultActions( sal_Int8 actions ) throw()
 {
+	MutexGuard aGuard( maMutex );
+	mnDefaultActions = actions;
 }
 
 // --------------------------------------------------------------------------
@@ -224,6 +253,4 @@ sal_Bool SAL_CALL JavaDropTarget::supportsService( const OUString& ServiceName )
 Sequence< OUString > SAL_CALL JavaDropTarget::getSupportedServiceNames() throw()
 {
 	return JavaDropTarget_getSupportedServiceNames();
-}
-
 }

@@ -92,8 +92,8 @@ void *SAL_CALL component_getFactory( const sal_Char *pImplName, uno_Interface *p
 
 	if ( pSrvManager )
 	{
-		OUString aImplName( ::rtl::OUString::createFromAscii( pImplName ) );
-		Reference< ::com::sun::star::lang::XMultiServiceFactory > xMgr( reinterpret_cast< ::com::sun::star::lang::XMultiServiceFactory* >( pSrvManager ) );
+		OUString aImplName( OUString::createFromAscii( pImplName ) );
+		Reference< XMultiServiceFactory > xMgr( reinterpret_cast< XMultiServiceFactory* >( pSrvManager ) );
 		Reference< XSingleServiceFactory > xFactory;
 		if ( OUString::createFromAscii( JAVA_CLIPBOARD_IMPL_NAME ).equals( aImplName ) )
 		{

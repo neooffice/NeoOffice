@@ -36,6 +36,8 @@
 #ifndef _DTRANS_JAVA_DND_HXX_
 #define _DTRANS_JAVA_DND_HXX_
 
+#include <list>
+
 #ifndef _CPPUHELPER_COMPBASE3_HXX_
 #include <cppuhelper/compbase3.hxx>
 #endif
@@ -63,7 +65,7 @@
 #define JAVA_DRAGSOURCE_REGKEY_NAME "/com.sun.star.datatransfer.dnd.JavaDragSource/UNO/SERVICES/com.sun.star.datatransfer.dnd.JavaDragSource"
 
 #define JAVA_DROPTARGET_SERVICE_NAME "com.sun.star.datatransfer.dnd.JavaDropTarget"
-#define JAVA_DROPTARGET_IMPL_NAME "com.sun.star.datatransfer.dnd.DropTargetDropContext"
+#define JAVA_DROPTARGET_IMPL_NAME "com.sun.star.datatransfer.dnd.JavaDropTarget"
 #define JAVA_DROPTARGET_REGKEY_NAME "/com.sun.star.datatransfer.dnd.JavaDropTarget/UNO/SERVICES/com.sun.star.datatransfer.dnd.JavaDropTarget"
 
 using namespace ::com::sun::star::uno;
@@ -73,7 +75,9 @@ namespace java {
 class JavaDragSource: public ::cppu::WeakComponentImplHelper3< ::com::sun::star::datatransfer::dnd::XDragSource, ::com::sun::star::lang::XInitialization, ::com::sun::star::lang::XServiceInfo >
 {
 private:
-    ::osl::Mutex maMutex; 
+	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	maContents;
+	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDragSourceListener >	maListener;
+    ::osl::Mutex			maMutex; 
 
 public:
 							JavaDragSource();
@@ -94,7 +98,10 @@ public:
 class JavaDropTarget : public ::cppu::WeakComponentImplHelper3< ::com::sun::star::datatransfer::dnd::XDropTarget, ::com::sun::star::lang::XInitialization, ::com::sun::star::lang::XServiceInfo >
 {
 private:
-    ::osl::Mutex maMutex; 
+    sal_Bool				mbActive;
+	sal_Int8				mnDefaultActions;
+	::std::list< ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDropTargetListener > >	maListeners;
+    ::osl::Mutex			maMutex; 
 
 public:
 							JavaDropTarget();
