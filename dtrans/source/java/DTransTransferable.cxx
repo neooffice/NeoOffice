@@ -163,8 +163,9 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 
 	com_sun_star_dtrans_DTransTransferable *pTransferable = (com_sun_star_dtrans_DTransTransferable *)pData;
 
-	if ( carbonLockClass && mIDRelease0 && mIDRelease0 )
-		t.pEnv->CallStaticIntMethod( carbonLockClass, mIDRelease0 );
+	jint nReleased;
+	if ( carbonLockClass && mIDRelease0 && mIDAcquire0 )
+		nReleased = t.pEnv->CallStaticIntMethod( carbonLockClass, mIDRelease0 );
 
 	OGuard aSolarGuard( Application::GetSolarMutex() );
 
@@ -217,7 +218,7 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 					OUString aString;
 					aValue >>= aString;
 					sal_Unicode *pArray = (sal_Unicode *)aString.getStr();
-					sal_Int32 nLen = aString.getLength() * sizeof( sal_Unicode );
+					sal_Int32 nLen = aString.getLength();
 					if ( pArray && nLen )
 					{
 						// Replace line feeds with carriage returns
@@ -235,11 +236,11 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 							if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
 								nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, aEncodedString.getLength(), (const void *)aEncodedString.getStr() );
 							else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
-								nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aEncodedString.getStr(), aEncodedString.getLength(), 0 );
+								nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aEncodedString.getStr(), aEncodedString.getLength(), 0 );
 						}
 						else if ( nType == 'TEXT' )
 						{
-							CFStringRef aCFString = CFStringCreateWithCharactersNoCopy( kCFAllocatorDefault, pArray, nLen / 2, kCFAllocatorNull );
+							CFStringRef aCFString = CFStringCreateWithCharactersNoCopy( kCFAllocatorDefault, pArray, nLen, kCFAllocatorNull );
 							if ( aCFString )
 							{
 								CFIndex nBufLen;
@@ -256,7 +257,7 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 										if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
 											nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nBufLen, (const void *)aBuf );
 										else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
-											nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aBuf, nBufLen, 0 );
+											nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aBuf, nBufLen, 0 );
 									}
 								}
 
@@ -265,10 +266,11 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 						}
 						else
 						{
+ 							nLen *= sizeof( sal_Unicode );
 							if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
 								nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nLen, (const void *)aString.getStr() );
 							else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
-								nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aString.getStr(), nLen, 0 );
+								nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aString.getStr(), nLen, 0 );
 						}
 					}
 				}
@@ -301,7 +303,7 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 											if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
 												nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, GetHandleSize( (Handle)hPict ), (const void *)*hPict );
 											else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
-												nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)*hPict, GetHandleSize( (Handle)hPict ), 0 );
+												nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)*hPict, GetHandleSize( (Handle)hPict ), 0 );
 											HUnlock( (Handle)hPict );
 											KillPicture( hPict );
 										}
@@ -344,7 +346,7 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 															if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
 																nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nDataLen, (const void *)*hExportData );
 															else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
-																nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)*hExportData, nDataLen, 0 );
+																nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)*hExportData, nDataLen, 0 );
 															HUnlock( hExportData );
 														}
 														DisposeHandle( hExportData );
@@ -367,7 +369,7 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 								if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
 									nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nLen, (const void *)pArray );
 								else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
-									nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)pArray, nLen, 0 );
+									nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)pArray, nLen, 0 );
 							}
 						}
 					}
@@ -376,7 +378,7 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 		}
 	}
 
-	if ( carbonLockClass && mIDRelease0 && mIDAcquire0 )
+	if ( carbonLockClass && mIDRelease0 && mIDAcquire0 && !nReleased )
 		t.pEnv->CallStaticIntMethod( carbonLockClass, mIDAcquire0 );
 
 	return nErr;
@@ -508,6 +510,7 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 
 					// Replace carriage returns with line feeds
 					sal_Unicode *pArray = (sal_Unicode *)aString.getStr();
+					nLen = aString.getLength();
 					sal_Int32 j = 0;
 					for ( j = 0; j < nLen; j++ )
 					{
@@ -922,10 +925,9 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< X
 						if ( bTextOnly && !aSupportedTextTypes[ j ] )
 							continue;
 
+						AddDragItemFlavor( (DragRef)mpNativeTransferable, (DragItemRef)this, aSupportedNativeTypes[ j ], NULL, 0, 0 );
 						if ( bRenderImmediately )
 							ImplDragSendDataCallback( aSupportedNativeTypes[ j ], (void *)this, (DragItemRef)this, (DragRef)mpNativeTransferable );
-						else
-							AddDragItemFlavor( (DragRef)mpNativeTransferable, (DragItemRef)this, aSupportedNativeTypes[ j ], NULL, 0, 0 );
 					}
 				}
 			}
