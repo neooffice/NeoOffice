@@ -36,10 +36,7 @@
 package com.sun.star.vcl;
 
 import java.awt.Font;
-import java.awt.font.TextAttribute;
-import java.awt.font.TextHitInfo;
-import java.awt.font.TextLayout;
-import java.awt.font.TextMeasurer;
+import java.awt.font.GlyphVector;
 import java.text.AttributedString;
 
 /**
@@ -49,6 +46,11 @@ import java.text.AttributedString;
  * @author 	    $Author$
  */
 public final class VCLTextLayout {
+
+	/*
+	 * The number of characters.
+	 */
+	private int count = 0;
 
 	/**
 	 * The font.
@@ -66,9 +68,9 @@ public final class VCLTextLayout {
 	private int[] charAdvances = null;
 
 	/**
-	 * The number of characters.
+	 * The glyph vector.
 	 */
-	private int count = 0;
+	private GlyphVector glyphs = null;
 
 	/**
 	 * The graphics.
@@ -76,19 +78,9 @@ public final class VCLTextLayout {
 	private VCLGraphics graphics = null;
 
 	/**
-	 * The text layout.
-	 */
-	private TextLayout layout = null;
-
-	/**
-	 * The text measurer.
-	 */
-	private TextMeasurer measurer = null;
-
-	/**
 	 * The width.
 	 */
-	private int width = 0;
+	private int width = -1;
 
 	/**
 	 * Constructs a new <code>VCLTextLayout</code> instance.
@@ -112,10 +104,7 @@ public final class VCLTextLayout {
 	 */
 	public void drawText(int x, int y, int orientation, int color) {
 
-		if (layout == null)
-			layout = measurer.getLayout(0, count);
-
-		graphics.drawTextArray(layout, x, y, orientation, color, font.isAntialiased());
+		graphics.drawTextArray(glyphs, x, y, orientation, color, font.isAntialiased());
 
 	}
 
@@ -126,17 +115,23 @@ public final class VCLTextLayout {
 	 */
 	public int[] fillDXArray() {
 
+		// Cache the glyph vector width
+		if (width < 0)
+			width = glyphs.getLogicalBounds().getBounds().width;
+
 		// Cache the character advances
 		if (charAdvances == null) {
 			charAdvances = new int[count];
 			int currentAdvance = 0;
 			int previousAdvance = 0;
-			for (int i = 0; i < charAdvances.length; i++) {
-				currentAdvance = (int)measurer.getAdvanceBetween(0, i + 1);
+			int i;
+			for (i = 0; i < charAdvances.length - 1; i++) {
+				currentAdvance = (int)glyphs.getGlyphPosition(i + 1).getX();
 				charAdvances[i] = currentAdvance - previousAdvance;
 				previousAdvance = currentAdvance;
 			}
-			width = currentAdvance;
+			// Compute the advance of the last glyph
+			charAdvances[i] = width - currentAdvance;
 		}
 
 		return charAdvances;
@@ -176,6 +171,8 @@ public final class VCLTextLayout {
 	 */
 	public int getTextBreak(int maxWidth, int charExtra, int factor) {
 
+		int[] advances = fillDXArray();
+
 		if (((width * factor) + (count * charExtra)) <= maxWidth)
 			return Integer.MAX_VALUE;
 
@@ -183,7 +180,7 @@ public final class VCLTextLayout {
 		int currentWidth = 0;
 		for ( int i = 0; i < count; i++ )
 		{
-			currentWidth += (charAdvances[i] * factor);
+			currentWidth += (advances[i] * factor);
 			if (currentWidth >= maxWidth)
 				return i;
 		}
@@ -199,16 +196,14 @@ public final class VCLTextLayout {
 	 */
 	public void layoutText(String s) {
 
+		count = s.length();
 		charAdvances = null;
 		caretPositions = null;
-		layout = null;
-		width = 0;
+		width = -1;
 
-		// Create the attributed string
-		count = s.length();
+		// Create the attributed string and the glyph vector
 		AttributedString as = new AttributedString(s);
-		as.addAttribute(TextAttribute.FONT, font.getFont());
-		measurer = new TextMeasurer(as.getIterator(), graphics.getFontRenderContext());
+		glyphs = font.getFont().createGlyphVector(graphics.getFontRenderContext(), as.getIterator());
 
 	}
 

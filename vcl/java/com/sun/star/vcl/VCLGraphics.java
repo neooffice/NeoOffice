@@ -52,7 +52,7 @@ import java.awt.Shape;
 import java.awt.TexturePaint;
 import java.awt.Toolkit;
 import java.awt.font.FontRenderContext;
-import java.awt.font.TextLayout;
+import java.awt.font.GlyphVector;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
 import java.awt.geom.Point2D;
@@ -214,7 +214,7 @@ public final class VCLGraphics {
 			t.printStackTrace();
 		}
 		try {
-			drawTextArrayMethod = VCLGraphics.class.getMethod("drawTextArray", new Class[]{ TextLayout.class, int.class, int.class, int.class, int.class, boolean.class });
+			drawTextArrayMethod = VCLGraphics.class.getMethod("drawTextArray", new Class[]{ GlyphVector.class, int.class, int.class, int.class, int.class, boolean.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -1005,7 +1005,7 @@ public final class VCLGraphics {
 	 * Draws the text given by the specified glyph vector using the glyph
 	 * vector's font with the specified color.
 	 *
-	 * @param t the <code>TextLayout</code> instance to draw
+	 * @param glyphs the <code>GlyphVector</code> instance to draw
 	 * @param x the x coordinate
 	 * @param y the y coordinate
 	 * @param orientation the orientation
@@ -1013,10 +1013,10 @@ public final class VCLGraphics {
 	 * @param antialias <code>true</code> to enable antialiasing and
 	 *  <code>false</code> to disable antialiasing
 	 */
-	public void drawTextArray(TextLayout t, int x, int y, int orientation, int color, boolean antialias) {
+	public void drawTextArray(GlyphVector glyphs, int x, int y, int orientation, int color, boolean antialias) {
 
 		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawTextArrayMethod, new Object[]{ t, new Integer(x), new Integer(y), new Integer(orientation), new Integer(color), new Boolean(antialias) });
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawTextArrayMethod, new Object[]{ glyphs, new Integer(x), new Integer(y), new Integer(orientation), new Integer(color), new Boolean(antialias) });
 			pageQueue.postDrawingOperation(pqi);
 			return;
 		}
@@ -1042,8 +1042,8 @@ public final class VCLGraphics {
 			origin = AffineTransform.getRotateInstance(radians).transform(origin, null);
 		}
 
-		Rectangle bounds = t.getBounds().getBounds();
-		t.draw(graphics, (float)origin.getX(), (float)origin.getY());
+		Rectangle bounds = glyphs.getLogicalBounds().getBounds();
+		graphics.drawGlyphVector(glyphs, (float)origin.getX(), (float)origin.getY());
 
 		// Reverse rotation
 		if (transform != null)
@@ -1129,8 +1129,8 @@ public final class VCLGraphics {
 	 */
 	public Dimension getGlyphSize(char c, VCLFont font) {
 
-		TextLayout t = new TextLayout(new String(new char[]{ c }), font.getFont(), graphics.getFontRenderContext());
-		Rectangle bounds = t.getBounds().getBounds();
+		GlyphVector glyphs = font.getFont().createGlyphVector(graphics.getFontRenderContext(), new char[]{ c });
+		Rectangle bounds = glyphs.getLogicalBounds().getBounds();
 		return new Dimension(bounds.width, bounds.height);
 
 	}
