@@ -79,14 +79,11 @@ typedef OSStatus SetScrapPromiseKeeper_Type( ScrapRef, ScrapPromiseKeeperUPP, co
 using namespace rtl;
 using namespace vos;
 
-// Note that we don't copy or paste RTF to the clipboard. This is because
-// most Cocoa applications (e.g. TextEdit) produce RTF that the OOo code
-// cannot parse properly and so we end up with garbage.
-
-static UInt32 nSupportedTypes = 3;
+static UInt32 nSupportedTypes = 5;
 
 // List of support native types in priority order
 static FourCharCode aSupportedNativeTypes[] = {
+	'RTF ',
 	'utxt',
 	'TEXT',
 	'TIFF',
@@ -95,6 +92,7 @@ static FourCharCode aSupportedNativeTypes[] = {
 
 // List of support mime types in priority order
 static OUString aSupportedMimeTypes[] = {
+	OUString::createFromAscii( "text/richtext" ),
 	OUString::createFromAscii( "text/plain;charset=utf-16" ),
 	OUString::createFromAscii( "text/plain;charset=utf-16" ),
 	OUString::createFromAscii( "application/x-openoffice;windows_formatname=\"Bitmap\"" ),
@@ -103,6 +101,7 @@ static OUString aSupportedMimeTypes[] = {
 
 // List of support data types in priority order
 static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
+	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( OUString* )0 ),
 	getCppuType( ( OUString* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
@@ -184,6 +183,16 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 					{
 						OUString aString;
 						aValue >>= aString;
+
+						// Replace line feeds with carriage returns
+						sal_Unicode *pArray = (sal_Unicode *)aString.getStr();
+						sal_Int32 nLen = aString.getLength();
+						sal_Int32 j = 0;
+						for ( j = 0; j < nLen; j++ )
+						{
+							if ( pArray[ j ] == (sal_Unicode)'\n' )
+								pArray[ j ] = (sal_Unicode)13;
+						}
 
 						if ( nType == 'TEXT' )
 						{
