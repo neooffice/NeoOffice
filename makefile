@@ -248,5 +248,5 @@ build.source_zip:
 	cd "$(SOURCE_HOME)" ; gnutar zcf "$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION).src.tar.gz" "$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)"
 	touch "$@"
 
-build.all: build.package build.odk_package build.source_zip
+build.all: build.package build.source_zip
 	touch "$@"
