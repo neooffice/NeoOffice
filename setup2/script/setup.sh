@@ -40,8 +40,8 @@ export PATH
 
 error()
 {
-    if [ ! -z "$1" ] ; then
-        echo "Error: $1"
+    if [ ! -z "$@" ] ; then
+        echo "Error: $@"
     fi
     echo "Usage: $0 [-h] [-repair]"
     exit 1
@@ -50,11 +50,18 @@ error()
 os=`uname`
 apphome=`dirname "$0"`
 sharebase="$apphome/../share"
+userbase="$apphome/../user"
 userinstall="$HOME/Library/$(PRODUCT_DIR_NAME)-$(OO_VERSION)/user"
 
 # Make sure that this is not a botched installation
 if [ ! -d "$apphome" ] ; then
     error "$apphome directory does not exist"
+fi
+if [ ! -d "$sharebase" ] ; then
+    error "$sharebase directory does not exist"
+fi
+if [ ! -d "$userbase" ] ; then
+    error "$userbase directory does not exist"
 fi
 
 # Parse arguments
@@ -73,22 +80,27 @@ while [ ! -z "$1" ] ; do
 done
 
 # Create user installation directory
+configdir="$userinstall/config"
+registrydir="$userinstall/registry"
+if [ ! -d "$configdir" -o ! -d "$registrydir" ]; then
+    repair="true"
+fi
 if [ ! -z "$repair" ] ; then
     chmod -Rf u+rw "$userinstall"
     rm -Rf "$userinstall"
-fi
-if [ ! -d "$userinstall" ] ; then
     mkdir -p "$userinstall"
+    cp -Rf "$userbase"/* "$userinstall"
+    chmod -Rf u+rw "$userinstall"
+    if [ ! -d "$configdir" -o ! -d "$registrydir" ]; then
+        rm -Rf "$userinstall"
+        error "Installation of files in the $userinstall directory failed"
+    fi
 fi
 
 # Create javarc file
-configdir="$userinstall/config"
 sysclasspath=""
-if [ ! -d "$configdir" ] ; then
-    mkdir -p "$configdir"
-fi
 if [ ! -d "$apphome/classes" ] ; then
-    error
+    error "$apphome/classes directory does not exist"
 fi
 for i in `cd "$apphome/classes" ; find . -name "*.jar"` ; do
     sysclasspath="$sysclasspath:$apphome/classes/$i"
@@ -101,23 +113,25 @@ else
     printf "[Java]\n" > "$configdir/javarc"
 fi
 printf "SystemClasspath=$sysclasspath\nJava=1\nJavaScript=1\nApplets=1\n-Xmx512m\n" >> "$configdir/javarc"
+if [ ! -f "$configdir/javarc" ] ; then
+    error "$configdir/javarc file could not be created"
+fi
 
 # Install application fonts
 if [ "$os" = "Darwin" ] ; then
     appfontdir="$sharebase/fonts/truetype"
     userfontdir="$HOME/Library/Fonts"
     mkdir -p "$userfontdir"
-    if [ ! -d "$appfontdir" -o ! -d "$userfontdir" ] ; then
-        error
+    if [ -d "$appfontdir" -a -d "$userfontdir" ] ; then
+        for i in `cd "$appfontdir" ; find . -name '*.ttf'` ; do
+            if [ -L "$userfontdir/$i" ] ; then
+                rm -f "$userfontdir/$i"
+            fi
+            if [ ! -f "$userfontdir/$i" ] ; then
+                cp -f "$appfontdir/$i" "$userfontdir/$i"
+            fi
+        done
     fi
-    for i in `cd "$appfontdir" ; find . -name '*.ttf'` ; do
-        if [ -L "$userfontdir/$i" ] ; then
-            rm -f "$userfontdir/$i"
-        fi
-        if [ ! -f "$userfontdir/$i" ] ; then
-            cp -f "$appfontdir/$i" "$userfontdir/$i"
-        fi
-    done
 fi
 
 exit 0
