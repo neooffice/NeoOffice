@@ -61,8 +61,6 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
-import java.awt.im.InputContext;
-import java.util.HashMap;
 
 /**
  * The Java class that implements the SalFrame C++ class methods.
@@ -538,29 +536,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public final static int POINTER_TEXT_VERTICAL = 86;
 
 	/**
-	 * The native window list.
-	 */
-	private static HashMap frames = new HashMap();
-
-	/**
-	 * The window owner.
-	 */
-	private static Frame owner = new Frame();
-
-	/**
-	 * Returns the <code>VCLFrame</code> instance that matches the specified
-	 * <code>Component</code>.
-	 *
-	 * @param the <code>Component</code>
-	 * @param the matching <code>VCLFrame</code>
-	 */
-	static VCLFrame getVCLFrame(Component c) {
-
-		return (VCLFrame)frames.get(c);
-
-	}
-
-	/**
 	 * The bit count.
 	 */
 	private int bitCount = 0;
@@ -601,6 +576,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * received.
 	 */
 	private MouseEvent lastMousePressed = null;
+
+	/**
+	 * The native window's original bounds.
+	 */
+	private Rectangle originalBounds = null;
 
 	/**
 	 * The native window's panel.
@@ -644,9 +624,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if ((styleFlags & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) != 0)
 			window = new Frame();
 		else if ((styleFlags & SAL_FRAME_STYLE_FLOAT) != 0)
-			window = new Window(VCLFrame.owner);
+			window = new Window(new Frame());
 		else
-			window = new Window(VCLFrame.owner);
+			window = new Window(new Frame());
 
 		// Process remaining style flags
 		if ((styleFlags & SAL_FRAME_STYLE_SIZEABLE) != 0)
@@ -667,11 +647,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else
 			insets = window.getInsets();
 		graphics = new VCLGraphics(this);
-
-		synchronized (frames) {
-			frames.put(window, this);
-			frames.put(panel, this);
-		}
 
 	}
 
@@ -740,21 +715,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void dispose() {
 
-		if (window != null) {
+		if (window != null)
 			setVisible(false);
-			if (fullScreenMode)
-				setFullScreenMode(false);
-		}
 		if (queue != null && frame != 0)
 			queue.removeCachedEvents(frame);
-		synchronized (frames) {
-			if (window != null)
-				frames.remove(window);
-			if (panel != null)
-				frames.remove(panel);
-		}
 		bitCount = 0;
 		frame = 0;
+		fullScreenMode = true;
 		insets = null;
 		queue = null;
 		panel = null;
@@ -1432,54 +1399,22 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param b <code>true</code> sets this component full screen mode and
 	 *  <code>false</code> sets it to normal mode
 	 */
-	public synchronized void setFullScreenMode(boolean b) {
+	public void setFullScreenMode(boolean b) {
 
 		if (b == fullScreenMode)
 			return;
 
-		boolean visible = window.isVisible();
-
-		if (visible)
-			setVisible(false);
-
-		Rectangle bounds = null;
 		if (b) {
-			window = new Window(window);
-			panel = new VCLFrame.NoPaintPanel(this);
-			panel.setBackground(Color.white);
-			panel.enableInputMethods(false);
-			window.add(panel);
-			insets = window.getInsets();
-			Dimension screenSize = VCLScreen.getScreenSize();
-			bounds = new Rectangle(0, 0, screenSize.width, screenSize.height);
-			synchronized (frames) {
-				frames.put(window, this);
-				frames.put(panel, this);
-			}
+			originalBounds = getBounds();
+			Dimension d = VCLScreen.getScreenSize();
+			setBounds(0, 0, d.width, d.height);
 		}
 		else {
-			synchronized (frames) {
-				frames.remove(window);
-				frames.remove(panel);
-			}
-			Window owner = window.getOwner();
-			window.removeNotify();
-			window.dispose();
-			window = owner;
-			panel = (VCLFrame.NoPaintPanel)window.getComponent(0);
-			if (window instanceof Frame)
-				insets = VCLScreen.getFrameInsets();
-			else
-				insets = window.getInsets();
-			bounds = window.getBounds();
+			setBounds(originalBounds.x, originalBounds.y, originalBounds.width, originalBounds.height);
+			originalBounds = null;
 		}
 
-		// Update the cached graphics
-		setBounds(bounds.x, bounds.y, bounds.width, bounds.height);
-
 		fullScreenMode = b;
-		if (visible)
-			setVisible(visible);
 
 	}
 
@@ -1625,6 +1560,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (window instanceof Frame)
 			((Frame)window).setTitle(title);
+		else
+			((Frame)window.getOwner()).setTitle(title);
 
 	}
 
@@ -1663,15 +1600,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		window.setVisible(b);
 		graphics.resetGraphics();
 
-		// Request keyboard focus
-		if (b && window instanceof Frame)
-			panel.requestFocus();
-
 		if (!b) {
-			// Move focus to parent
-			if (parent != null)
-				parent.getPanel().requestFocus();
-
 			// Unregister listeners
 			window.removeComponentListener(this);
 			window.removeFocusListener(this);
@@ -1686,6 +1615,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			lastKeyPressed = null;
 			lastMousePressed = null;
 		}
+		else {
+			toFront();
+		}
 
 	}
 
@@ -1696,22 +1628,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		window.toFront();
 
-		if (fullScreenMode) {
-			Frame[] farray = Frame.getFrames();
-			for (int i = 0; i < farray.length; i++) {
-				Component c = farray[i].getFocusOwner();
-				if (c != null) {
-					c.transferFocus();
-					break;
-				}
-			}
+		// Request keyboard focus
+		if (fullScreenMode || window instanceof Frame)
 			panel.requestFocus();
-			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-				// Mac OS X fails to post a focus gained event for a borderless
-				// window that requests focus
-				Toolkit.getDefaultToolkit().getSystemEventQueue().postEvent(new FocusEvent(panel, FocusEvent.FOCUS_GAINED));
-			}
-		}
 
 	}
 

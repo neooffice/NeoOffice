@@ -258,17 +258,19 @@ void SalFrame::ShowFullScreen( BOOL bFullScreen )
 {
 	maFrameData.mpVCLFrame->setFullScreenMode( bFullScreen );
 
-	// Cache the insets
-	Rectangle aRect = maFrameData.mpVCLFrame->getInsets();
-	maGeometry.nLeftDecoration = aRect.nLeft;
-	maGeometry.nTopDecoration = aRect.nTop;
-	maGeometry.nRightDecoration = aRect.nRight;
-	maGeometry.nBottomDecoration = aRect.nBottom;
-
 	// Update the cached position
 	Rectangle *pBounds = new Rectangle( maFrameData.mpVCLFrame->getBounds() );
 	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pBounds );
 	aEvent.dispatch();
+
+	// Post a paint event
+	SalPaintEvent *pPaintEvent = new SalPaintEvent();
+	pPaintEvent->mnBoundX = 0;
+	pPaintEvent->mnBoundY = 0;
+	pPaintEvent->mnBoundWidth = maGeometry.nWidth + maGeometry.nLeftDecoration;
+	pPaintEvent->mnBoundHeight = maGeometry.nHeight + maGeometry.nTopDecoration;
+	com_sun_star_vcl_VCLEvent aVCLPaintEvent( SALEVENT_PAINT, this, (void *)pPaintEvent );
+	aVCLPaintEvent.dispatch();
 }
 
 // -----------------------------------------------------------------------
