@@ -111,7 +111,7 @@ jclass com_sun_star_vcl_VCLPageFormat::getMyClass()
 				JNINativeMethod aMethod;
 				aMethod.name = "createBestFormat";
 				aMethod.signature = "(I)I";
-				aMethod.fnPtr = Java_com_apple_mrj_internal_awt_printing_MacPageFormat_createBestFormat;
+				aMethod.fnPtr = (void *)Java_com_apple_mrj_internal_awt_printing_MacPageFormat_createBestFormat;
 				t.pEnv->RegisterNatives( pageFormatClass, &aMethod, 1 );
 			}
 		}

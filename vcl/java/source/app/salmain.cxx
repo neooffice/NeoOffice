@@ -491,16 +491,16 @@ int main( int argc, char *argv[] )
 				JNINativeMethod pMethods[4];
 				pMethods[0].name = "acquire0";
 				pMethods[0].signature = "()I";
-				pMethods[0].fnPtr = Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0;
+				pMethods[0].fnPtr = (void *)Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0;
 				pMethods[1].name = "getInstance";
 				pMethods[1].signature = "()Ljava/lang/Object;";
-				pMethods[1].fnPtr = Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance;
+				pMethods[1].fnPtr = (void *)Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance;
 				pMethods[2].name = "init";
 				pMethods[2].signature = "()V";
-				pMethods[2].fnPtr = Java_com_apple_mrj_macos_carbon_CarbonLock_init;
+				pMethods[2].fnPtr = (void *)Java_com_apple_mrj_macos_carbon_CarbonLock_init;
 				pMethods[3].name = "release0";
 				pMethods[3].signature = "()I";
-				pMethods[3].fnPtr = Java_com_apple_mrj_macos_carbon_CarbonLock_release0;
+				pMethods[3].fnPtr = (void *)Java_com_apple_mrj_macos_carbon_CarbonLock_release0;
 				t.pEnv->RegisterNatives( carbonLockClass, pMethods, 4 );
 
 				// Peek for a Carbon event. This is enough to solve the
