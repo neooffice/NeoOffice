@@ -392,7 +392,7 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 
 #ifdef USE_JAVA
 	mpGraphics->SetLineAntialiasing( FALSE );
-#endif
+#endif	// USE_JAVA
 
 	// Schleife, um rotierten Verlauf zu fuellen
 	for ( long i = 0; i < nSteps2; i++ )
@@ -477,7 +477,7 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 
 #ifdef USE_JAVA
 	mpGraphics->SetLineAntialiasing( TRUE );
-#endif
+#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
@@ -646,7 +646,7 @@ void OutputDevice::ImplDrawComplexGradient( const Rectangle& rRect,
 
 #ifdef USE_JAVA
 	mpGraphics->SetLineAntialiasing( FALSE );
-#endif
+#endif	// USE_JAVA
 
 	// Schleife, um nacheinander die Polygone/PolyPolygone auszugeben
 	for( long i = 1; i < nSteps; i++ )
@@ -750,7 +750,7 @@ void OutputDevice::ImplDrawComplexGradient( const Rectangle& rRect,
 
 #ifdef USE_JAVA
 	mpGraphics->SetLineAntialiasing( TRUE );
-#endif
+#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
@@ -1062,6 +1062,22 @@ void OutputDevice::DrawGradient( const PolyPolygon& rPolyPoly,
 
 					mbMap = FALSE;
 
+#ifdef USE_JAVA
+					aVDev.DrawOutDev( Point(), aDstSize, aDstRect.TopLeft(), aDstSize, *this );
+					DrawGradient( aBoundRect, aGradient );
+					aVDev.SetRasterOp( ROP_XOR );
+					aVDev.DrawOutDev( Point(), aDstSize, aDstRect.TopLeft(), aDstSize, *this );
+					aVDev.SetFillColor( COL_BLACK );
+					aVDev.SetRasterOp( ROP_0 );
+					aVDevMap.SetOrigin( Point( -aDstRect.Left(), -aDstRect.Top() ) );
+					aVDev.SetMapMode( aVDevMap );
+					aVDev.DrawPolyPolygon( aPolyPoly );
+					aVDevMap.SetOrigin( Point() );
+					aVDev.SetMapMode( aVDevMap );
+					SetRasterOp( ROP_XOR );
+					DrawOutDev( aDstRect.TopLeft(), aDstSize, Point(), aDstSize, aVDev );
+					SetRasterOp( eOldROP );
+#else	// USE_JAVA
 					aVDev.DrawOutDev( Point(), aDstSize, aDstRect.TopLeft(), aDstSize, *this );
 					aVDev.SetRasterOp( ROP_XOR );
 					aVDevMap.SetOrigin( Point( -aDstRect.Left(), -aDstRect.Top() ) );
@@ -1075,6 +1091,7 @@ void OutputDevice::DrawGradient( const PolyPolygon& rPolyPoly,
 					aVDevMap.SetOrigin( Point() );
 					aVDev.SetMapMode( aVDevMap );
 					DrawOutDev( aDstRect.TopLeft(), aDstSize, Point(), aDstSize, aVDev );
+#endif	// USE_JAVA
 
 					mbMap = bOldMap;
 				}
