@@ -83,9 +83,6 @@ while [ ! -z "$1" ] ; do
     esac
 done
 
-lang=`echo "$locale" | awk -F- '{ print $1 }'`
-country=`echo "$locale" | awk -F- '{ print $2 }'`
-
 # Create user installation directory
 configdir="$userinstall/config"
 registrydir="$userinstall/registry/data/org/openoffice"
@@ -128,24 +125,55 @@ s#<value.*$#<value>'"$locale"'</value>#
 fi
 
 # Make locale the default document language
+lang=`echo "$locale" | awk -F- '{ print $1 }'`
 linguxml="$registrydir/Office/Linguistic.xcu"
 if [ ! -f "$linguxml" ] ; then
     error
 fi
+linguxmlset="$linguxml.set"
 linguxmlbak="$linguxml.bak"
 rm -f "$linguxmlbak"
-if [ ! -f "$linguxmlbak" ] ; then
+if [ ! -f "$linguxmlset" -a ! -f "$linguxmlbak" ] ; then
+    # Match the locale to one of the installed locales
+    locales='$(LANGUAGE_NAMES)'
+    country=`echo "$locale" | awk -F- '{ print $2 }'`
+    matchedlocale=""
+    for i in $locales ; do
+        if [ "$locale" = "$i" ] ; then
+            matchedlocale="$i"
+            break
+        fi
+    done
+    if [ -z "$matchedlocale" ] ; then
+        country=""
+        for i in $locales ; do
+            ilang=`echo "$i" | awk -F- '{ print $1 }'`
+            if [ "$lang" = "$ilang" ] ; then
+                matchedlocale="$i"
+                break
+            fi
+        done
+    fi
+    if [ -z "$matchedlocale" ] ; then
+        lang="en"
+        country="US"
+        locale="$lang-$country"
+    else
+        locale="$matchedlocale"
+    fi
+
     cat /dev/null "$linguxml" > "$linguxmlbak"
 
     # Begin multi-line pattern
     deflocalepattern='/<prop oor:name="DefaultLocale" oor:type="xs:string">/{
 N
-s#<value/>#<value>'"$locale"'</value>#
+s#<value.*$#<value>'"$locale"'</value>#
 }'
     # End multi-line pattern
 
     sed -e "$deflocalepattern" "$linguxmlbak" > "$linguxml"
     rm -f "$linguxmlbak"
+    touch -f "$linguxmlset"
 fi
 
 # Create user dictionary.lst file
