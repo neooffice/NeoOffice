@@ -33,7 +33,7 @@
  *  MA  02111-1307  USA
  *  
  *  =================================================
- *  Modified June 2003 by Patrick Luby. SISSL Removed. NeoOffice is
+ *  Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
  *  distributed under GPL only under modification term 3 of the LGPL.
  *
  *  Contributor(s): _______________________________________
@@ -68,6 +68,19 @@
 #include <com/sun/star/i18n/XCollator.hpp>
 #endif
 
+#ifndef _COM_SUN_STAR_AWT_XEXTENDEDTOOLKIT_HPP_
+#include <com/sun/star/awt/XExtendedToolkit.hpp>
+#endif
+
+#ifndef _COM_SUN_STAR_ACCESSIBILITY_ACCESSIBLEEVENTOBJECT_HPP_
+#include <com/sun/star/accessibility/AccessibleEventObject.hpp>
+#endif
+
+#ifndef _COM_SUN_STAR_ACCESSIBILITY_ACCESSIBLESTATETYPE_HPP_
+#include <com/sun/star/accessibility/AccessibleStateType.hpp>
+#endif
+
+
 #include <com/sun/star/registry/XImplementationRegistration.hpp>
 
 #include <cppuhelper/servicefactory.hxx>
@@ -76,6 +89,7 @@
 #include <osl/file.hxx>
 
 #include <svdata.hxx>
+#include <svapp.hxx>
 
 using namespace ::com::sun::star;
 using namespace ::rtl;
@@ -247,3 +261,22 @@ uno::Reference < i18n::XCollator > vcl::unohelper::CreateCollator()
 	return aLibName;
 }
 
+void vcl::unohelper::NotifyAccessibleStateEventGlobally( const ::com::sun::star::accessibility::AccessibleEventObject& rEventObject )
+{
+    ::com::sun::star::uno::Reference< ::com::sun::star::awt::XExtendedToolkit > xExtToolkit( Application::GetVCLToolkit(), uno::UNO_QUERY );
+    if ( xExtToolkit.is() )
+    {
+        // Only for focus events
+        sal_Int16 nType;
+        rEventObject.NewValue >>= nType;
+        if ( nType == ::com::sun::star::accessibility::AccessibleStateType::FOCUSED )
+            xExtToolkit->fireFocusGained( rEventObject.Source );
+        else
+        {
+            rEventObject.OldValue >>= nType;
+            if ( nType == ::com::sun::star::accessibility::AccessibleStateType::FOCUSED )
+                xExtToolkit->fireFocusLost( rEventObject.Source );
+        }
+        
+    }
+}
