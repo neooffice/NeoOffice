@@ -45,6 +45,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.PaintEvent;
 import java.awt.font.TextAttribute;
+import java.awt.font.TextHitInfo;
 import java.awt.im.InputMethodHighlight;
 import java.text.CharacterIterator;
 import java.text.AttributedCharacterIterator;
@@ -1160,6 +1161,26 @@ public final class VCLEvent extends AWTEvent {
 			return ((InputMethodEvent)source).getCommittedCharacterCount();
 		else
 			return 0;
+
+	}
+
+	/**
+	 * Returns the cursor position in the text associated with this event.
+	 *
+	 * @return the cursor position
+	 */
+	public int getCursorPos() {
+
+		if (source instanceof InputMethodEvent) {
+			TextHitInfo hi = ((InputMethodEvent)source).getCaret();
+			if (hi != null)
+				return hi.getInsertionIndex();
+			else
+				return 0;
+		}
+		else {
+			return 0;
+		}
 
 	}
 

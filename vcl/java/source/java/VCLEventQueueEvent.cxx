@@ -186,7 +186,35 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_ACTIVATE_APPLICATION:
 		{
-			if ( pSalData->mpPresentationFrame )
+			if ( Application::IsInModalMode() )
+			{
+				// Make sure that the modal dialog frame and its children
+				// are visible
+				Window *pWindow = (Window *)ImplGetSVData()->maWinData.mpLastExecuteDlg;
+				if ( pWindow )
+				{
+					SalFrame *pFocusFrame = pWindow->ImplGetFrame();
+					if ( pFocusFrame )
+					{
+						SalFrame *pParent = pSalData->mpFocusFrame;
+						while ( pParent )
+						{
+							if ( pParent == pFocusFrame )
+								break;
+							pParent = pParent->maFrameData.mpParent;
+						}
+						if ( !pParent )
+						{
+							pParent = pFocusFrame;
+							while ( pParent && pParent->maFrameData.mpParent )
+								pParent = pParent->maFrameData.mpParent;
+							pParent->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
+							pFocusFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
+						}
+					}
+				}
+			}
+			else if ( pSalData->mpPresentationFrame )
 			{
 				// Make sure document window does not float to front
 				SalFrame *pParent = pSalData->mpFocusFrame;
@@ -196,25 +224,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 						break;
 					pParent = pParent->maFrameData.mpParent;
 				}
-				// Make sure that only the presentation frame and its
-				// children are visible
 				if ( !pParent )
-				{
-					pSalData->mpFocusFrame = pSalData->mpPresentationFrame;
-					pSalData->mpFocusFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
-				}
-			}
-			else if ( Application::IsInModalMode() )
-			{
-				// Make sure that the modal dialog frame and its children
-				// are visible
-				Window *pWindow = (Window *)ImplGetSVData()->maWinData.mpLastExecuteDlg;
-				if ( pWindow )
-				{
-					SalFrame *pFocusFrame = pWindow->ImplGetFrame();
-					if ( pFocusFrame )
-						pFocusFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
-				}
+					pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
 			}
 			else if ( pSalData->mpFocusFrame )
 			{
@@ -222,7 +233,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				SalFrame *pParent = pSalData->mpFocusFrame;
 				while ( pParent && pParent->maFrameData.mpParent )
 					pParent = pParent->maFrameData.mpParent;
-				pParent->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+				pParent->ToTop( 0 );
+				pSalData->mpFocusFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
 			}
 			// Force all "always on top" windows to the front without focus
 			for ( std::list< SalFrame* >::const_iterator it = pSalData->maAlwaysOnTopFrameList.begin(); it != pSalData->maAlwaysOnTopFrameList.end(); ++it )
@@ -247,6 +259,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			if ( pInputEvent )
 				delete pInputEvent;
 			dispatchEvent( nID, pFrame, NULL );
+			pSalData->mnLastExtTextInputLen = 0;
 			return;
 		}
 		case SALEVENT_EXTTEXTINPUT:
@@ -262,15 +275,25 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pInputEvent->mnTime = getWhen();
 				pInputEvent->maText = aText;
 				pInputEvent->mpTextAttr = pAttributes;
-				pInputEvent->mnCursorPos = nLen;
+				pInputEvent->mnCursorPos = getCursorPos();
 				pInputEvent->mnDeltaStart = 0;
 				pInputEvent->mbOnlyCursor = FALSE;
 				pInputEvent->mnCursorFlags = 0;
+			}
+			// Fix bug 323 by sending an event with no attributes if the
+			// string is shorter than the last event
+			if ( nLen < pSalData->mnLastExtTextInputLen && pInputEvent->mpTextAttr )
+			{
+				const USHORT *pEventAttributes = pInputEvent->mpTextAttr;
+				dispatchEvent( nID, pFrame, pInputEvent );
+				pInputEvent->mpTextAttr = NULL;
+				pInputEvent->mpTextAttr = pEventAttributes;
 			}
 			dispatchEvent( nID, pFrame, pInputEvent );
 			delete pInputEvent;
 			if ( pAttributes )
 				rtl_freeMemory( pAttributes );
+			pSalData->mnLastExtTextInputLen = nLen;
 			// If there is no text, the character is committed
 			if ( nLen == nCommitted )
 				dispatchEvent( SALEVENT_ENDEXTTEXTINPUT, pFrame, NULL );
@@ -280,39 +303,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		{
 			if ( pFrame && pSalData->mpFocusFrame != pFrame )
 			{
-				if ( pSalData->mpPresentationFrame )
-				{
-					// Make sure document window does not float to front
-					SalFrame *pParent = pFrame;
-					while ( pParent )
-					{
-						if ( pParent == pSalData->mpPresentationFrame )
-							break;
-						pParent = pParent->maFrameData.mpParent;
-					}
-					// Make sure that only the presentation frame and its
-					// children are visible
-					if ( !pParent )
-					{
-						pFrame = NULL;
-						pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
-					}
-				}
-				else if ( Application::IsInModalMode() )
-				{
-					// Make sure that the modal dialog frame and its children
-					// are visible
-					Window *pWindow = (Window *)ImplGetSVData()->maWinData.mpLastExecuteDlg;
-					if ( pWindow )
-					{
-						SalFrame *pFocusFrame = pWindow->ImplGetFrame();
-						if ( pFocusFrame && pFocusFrame != pFrame )
-						{
-							pFrame = NULL;
-							pFocusFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
-						}
-					}
-				}
 				pSalData->mpFocusFrame = pFrame;
 				dispatchEvent( nID, pFrame, NULL );
 			}
@@ -325,42 +315,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		{
 			if ( pFrame && pSalData->mpFocusFrame == pFrame )
 			{
-				if ( pSalData->mpPresentationFrame )
-				{
-					// Make sure document window does not float to front
-					SalFrame *pParent = pFrame;
-					while ( pParent )
-					{
-						if ( pParent == pSalData->mpPresentationFrame )
-							break;
-						pParent = pParent->maFrameData.mpParent;
-					}
-					// Transfer focus to parent frame
-					if ( pParent )
-					{
-						if ( pFrame != pSalData->mpPresentationFrame && pFrame->maFrameData.mpParent )
-							pParent = pFrame->maFrameData.mpParent;
-						else
-							pParent = pFrame;
-						pParent->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
-					}
-				}
-				else if ( Application::IsInModalMode() )
-				{
-					// Transfer focus to parent frame
-					Window *pWindow = (Window *)ImplGetSVData()->maWinData.mpLastExecuteDlg;
-					if ( pWindow )
-					{
-						SalFrame *pFocusFrame = pWindow->ImplGetFrame();
-						if ( pFocusFrame && pFocusFrame == pFrame && pFocusFrame->maFrameData.mpParent )
-							pFocusFrame->maFrameData.mpParent->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
-					}
-				}
-				if ( pFrame )
-				{
-					pSalData->mpFocusFrame = NULL;
-					dispatchEvent( nID, pFrame, NULL );
-				}
+				pSalData->mpFocusFrame = NULL;
+				dispatchEvent( nID, pFrame, NULL );
 			}
 			// Force all "always on top" windows to the front without focus
 			for ( std::list< SalFrame* >::const_iterator it = pSalData->maAlwaysOnTopFrameList.begin(); it != pSalData->maAlwaysOnTopFrameList.end(); ++it )
@@ -569,6 +525,53 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 		{
 			if ( pFrame == *it )
 			{
+				if ( nID == SALEVENT_MOUSEBUTTONUP )
+				{
+					// Handle case where focus has changed but Java has not
+					// posted any focus change events
+					if ( Application::IsInModalMode() )
+					{
+						// Make sure that the modal dialog frame and its
+						// children are visible
+						Window *pWindow = (Window *)ImplGetSVData()->maWinData.mpLastExecuteDlg;
+						if ( pWindow )
+						{
+							SalFrame *pFocusFrame = pWindow->ImplGetFrame();
+							if ( pFocusFrame )
+							{
+								SalFrame *pParent = pFrame;
+								while ( pParent )
+								{
+									if ( pParent == pFocusFrame )
+										break;
+									pParent = pParent->maFrameData.mpParent;
+								}
+								if ( !pParent )
+								{
+									pParent = pFocusFrame;
+									while ( pParent && pParent->maFrameData.mpParent )
+										pParent = pParent->maFrameData.mpParent;
+									pParent->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
+									pFocusFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
+								}
+							}
+						}
+					}
+					else if ( pSalData->mpPresentationFrame )
+					{
+						// Make sure document window does not float to front
+						SalFrame *pParent = pFrame;
+						while ( pParent )
+						{
+							if ( pParent == pSalData->mpPresentationFrame )
+								break;
+							pParent = pParent->maFrameData.mpParent;
+						}
+						if ( !pParent )
+							pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+					}
+				}
+
 				pFrame->Flush();
 				break;
 			}
@@ -650,6 +653,27 @@ ULONG com_sun_star_vcl_VCLEvent::getCommittedCharacterCount()
 		{
 			char *cSignature = "()I";
 			mID = t.pEnv->GetMethodID( getMyClass(), "getCommittedCharacterCount", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (ULONG)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+ULONG com_sun_star_vcl_VCLEvent::getCursorPos()
+{
+	static jmethodID mID = NULL;
+	ULONG out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getCursorPos", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )

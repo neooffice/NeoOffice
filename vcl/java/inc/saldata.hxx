@@ -89,8 +89,10 @@ public:
 	SalFrame*				mpPresentationFrame;
 	::std::list< SalFrame* >	maAlwaysOnTopFrameList;
 	::std::list< ::vcl::com_sun_star_vcl_VCLPageFormat* >	maVCLPageFormats;
-	::osl::Condition		maNativeEventStartCondition; 
-	::osl::Condition		maNativeEventEndCondition; 
+	::osl::Condition		maNativeEventStartCondition;
+	::osl::Condition		maNativeEventEndCondition;
+	ULONG					mnLastExtTextInputLen;
+	
 
 							SalData();
 							~SalData();

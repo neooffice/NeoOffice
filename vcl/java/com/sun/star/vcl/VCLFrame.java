@@ -72,6 +72,7 @@ import java.awt.im.InputContext;
 import java.awt.im.InputMethodRequests;
 import java.awt.image.BufferedImage;
 import java.awt.peer.ComponentPeer;
+import java.text.CharacterIterator;
 import java.text.AttributedCharacterIterator;
 import java.text.AttributedString;
 import java.util.HashMap;
@@ -1663,7 +1664,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 						MenuBar mb = ((Frame)window).getMenuBar();
 						if (mb != null) {
 							MenuItem mi = mb.getShortcutMenuItem(shortcut);
-							if (mi != null & mi.isEnabled())
+							if (mi != null && mi.isEnabled())
 								ignoreShortcut = true;
 						}
 					}
@@ -1816,7 +1817,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			Point srcPoint = e.getComponent().getLocationOnScreen();
 			srcPoint.x += e.getX();
 			srcPoint.y += e.getY();
-			while (f != null && !f.getFullScreenMode()) {
+			while (f != null) {
 				if (!f.isFloatingWindow()) {
 					f = null;
 					break;
@@ -1886,7 +1887,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			Point srcPoint = e.getComponent().getLocationOnScreen();
 			srcPoint.x += e.getX();
 			srcPoint.y += e.getY();
-			while (f != null && f != parent && !f.getFullScreenMode()) {
+			while (f != null && f != parent) {
 				if (!f.isFloatingWindow()) {
 					f = null;
 					break;
@@ -1920,7 +1921,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			}
 			VCLFrame.lastDragFrame = f;
 
-			if (!f.isFloatingWindow());
+			Window w = f.getWindow();
+			if (w != null && f.isFloatingWindow());
 				VCLFrame.lastCaptureFrame = f;
 		}
 
@@ -2043,7 +2045,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			// We need to create the native window handle after the first call
 			// to set bounds in order for the drag-and-drop UNO service to work
-			if (!window.isVisible())
+			if (!window.isShowing())
 				window.addNotify();
 		}
 
@@ -2253,7 +2255,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void setState(long state) {
 
-		if (window instanceof Frame && window.isVisible()) {
+		if (window instanceof Frame && window.isShowing()) {
 			// Only invoke Frame.setState() if the state needs to be changed
 			// as this method can cause a deadlock with the native menu handler
 			// on Mac OS X
