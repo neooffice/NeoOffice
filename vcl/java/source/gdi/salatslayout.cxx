@@ -60,7 +60,11 @@
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 
+#define FIX2PIXEL_SHIFT 8
+#define UNITS_PER_PIXEL ( 1 << FIX2PIXEL_SHIFT )
+
 inline int Float32ToInt( Float32 f ) { return (int)( f + 0.5 ); }
+inline long Fix2Pixel( Fixed f ) { return (long)( f >> FIX2PIXEL_SHIFT ); }
 
 class ATSLayout : public SalLayout
 {
@@ -229,6 +233,8 @@ ATSLayout::ATSLayout( com_sun_star_vcl_VCLFont *pVCLFont ) :
 	mpAdvances( NULL ),
 	mpGlyphInfoArray( NULL )
 {
+	SetUnitsPerPixel( UNITS_PER_PIXEL );
+
 	mpVCLFont = new com_sun_star_vcl_VCLFont( pVCLFont->getJavaObject() );
 
 	// Create font style
@@ -405,11 +411,11 @@ void ATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 	if ( rArgs.mpDXArray )
 	{
 		// TODO: actually position individual glyphs instead of justifying it
-		Justify( rArgs.mpDXArray[ mnLen - 1 ] );
+		Justify( rArgs.mpDXArray[ mnLen - 1 ] * UNITS_PER_PIXEL );
 	}
 	else if ( rArgs.mnLayoutWidth )
 	{
-		Justify( rArgs.mnLayoutWidth );
+		Justify( rArgs.mnLayoutWidth * UNITS_PER_PIXEL );
 	}
 }
 
@@ -584,8 +590,8 @@ int ATSLayout::GetNextGlyphs( int nLen, long *pGlyphs, Point& rPos, int& nStart,
 		return 0;
 
 	const ATSUGlyphInfo *pG = mpGlyphInfoArray->glyphs + nStart;
-	rPos.X() = pG->screenX;
-	rPos.Y() = Float32ToInt( pG->deltaY );
+	rPos.X() = pG->screenX * UNITS_PER_PIXEL;
+	rPos.Y() = Float32ToInt( pG->deltaY * UNITS_PER_PIXEL );
 
 	int nCount = 0;
 	for (; ++nCount <= nLen; ++pG )
@@ -639,6 +645,12 @@ bool ATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rPPV ) const
 bool ATSLayout::GetBoundRect( SalGraphics& rGraphics, Rectangle& rRect ) const
 {
 	GetBoundRect( rRect );
+
+	// Adjust for units per pixel
+	rRect.nLeft *= UNITS_PER_PIXEL;
+	rRect.nTop *= UNITS_PER_PIXEL;
+	rRect.nRight *= UNITS_PER_PIXEL;
+	rRect.nBottom *= UNITS_PER_PIXEL;
 }
 
 // ----------------------------------------------------------------------------
@@ -744,7 +756,7 @@ bool ATSLayout::InitAdvances() const
 	ATSUTextMeasurement nStart;
 	ATSUTextMeasurement nEnd;
 	if ( ATSUGetUnjustifiedBounds( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nStart, &nEnd, NULL, NULL ) == noErr )
-		Justify( Fix2Long( nEnd - nStart ) );
+		Justify( Fix2Pixel( nEnd - nStart ) );
 
 	if ( !mnWidth )
 		return false;
@@ -763,14 +775,14 @@ bool ATSLayout::InitAdvances() const
 		if ( mpRunDirections[ i ] )
 		{
 			// Get the advance from end of the run
-			int nRunAdvance = mnWidth;
+			long nRunAdvance = mnWidth;
 			if ( ATSUOffsetToCursorPosition( maLayout, nCurrentChar + mpRunLengths[ i ], true, kATSUByCharacter, &aCaret, NULL, NULL ) == noErr )
-				nRunAdvance = Fix2Long( aCaret.fX );
+				nRunAdvance = Fix2Pixel( aCaret.fX );
 
 			for ( j = nCurrentChar, nCurrentChar += mpRunLengths[ i ]; j < nCurrentChar - 1; j++ )
 			{
 				if ( ATSUOffsetToCursorPosition( maLayout, j + 1, true, kATSUByCharacter, &aCaret, NULL, NULL ) == noErr )
-					mpAdvances[ j ] = nRunAdvance - Fix2Long( aCaret.fX ) - nPreviousX;
+					mpAdvances[ j ] = nRunAdvance - Fix2Pixel( aCaret.fX ) - nPreviousX;
 				nPreviousX += mpAdvances[ j ];
 			}
 			mpAdvances[ j ] = nPreviousX;
@@ -781,7 +793,7 @@ bool ATSLayout::InitAdvances() const
 			for ( j = nCurrentChar, nCurrentChar += mpRunLengths[ i ]; j < nCurrentChar; j++ )
 			{
 				if ( ATSUOffsetToCursorPosition( maLayout, j + 1, true, kATSUByCharacter, &aCaret, NULL, NULL ) == noErr )
-					mpAdvances[ j ] = Fix2Long( aCaret.fX ) - nPreviousX;
+					mpAdvances[ j ] = Fix2Pixel( aCaret.fX ) - nPreviousX;
 				nPreviousX += mpAdvances[ j ];
 			}
 		}
@@ -808,7 +820,7 @@ bool ATSLayout::InitGlyphInfoArray() const
 	ATSUTextMeasurement nStart;
 	ATSUTextMeasurement nEnd;
 	if ( ATSUGetUnjustifiedBounds( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nStart, &nEnd, NULL, NULL ) == noErr )
-		Justify( Fix2Long( nEnd - nStart ) );
+		Justify( Fix2Pixel( nEnd - nStart ) );
 
 	// TODO: is there a good way to predict the maximum glyph count?
 	ByteCount nBufSize = 3 * ( mnLen + 16 ) * sizeof( ATSUGlyphInfo );
@@ -845,25 +857,29 @@ void ATSLayout::Justify( long nNewWidth ) const
 		rtl_freeMemory( mpGlyphInfoArray );
 	mpGlyphInfoArray = NULL;
 
-	ATSUAttributeTag nTags[2];
-	ByteCount nBytes[2];
-	ATSUAttributeValuePtr nVals[2];
+	ATSUAttributeTag nTags[3];
+	ByteCount nBytes[3];
+	ATSUAttributeValuePtr nVals[3];
 
-	ATSUTextMeasurement nWidth = Long2Fix( nNewWidth );
+	ATSUTextMeasurement nWidth = Long2Fix( nNewWidth / UNITS_PER_PIXEL );
 	nTags[0] = kATSULineWidthTag;
 	nBytes[0] = sizeof( ATSUTextMeasurement );
 	nVals[0] = &nWidth;
-	Fract nJustification = kATSUFullJustification;
+	Fract nJustification = X2Frac( 1.0 );
 	nTags[1] = kATSULineJustificationFactorTag;
 	nBytes[1] = sizeof( Fract );
 	nVals[1] = &nJustification;
+	ATSLineLayoutOptions nLayoutOptions = kATSLineKeepSpacesOutOfMargin;
+	nTags[2] = kATSULineLayoutOptionsTag;
+	nBytes[2] = sizeof( ATSLineLayoutOptions );
+	nVals[2] = &nLayoutOptions;
 
-	if ( ATSUSetLayoutControls( maLayout, 2, nTags, nBytes, nVals ) == noErr )
+	if ( ATSUSetLayoutControls( maLayout, 3, nTags, nBytes, nVals ) == noErr )
 	{
 		ATSUTextMeasurement nStart;
 		ATSUTextMeasurement nEnd;
 		if ( ATSUGetUnjustifiedBounds( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nStart, &nEnd, NULL, NULL ) == noErr )
-			mnWidth = Fix2Long( nEnd - nStart );
+			mnWidth = Fix2Pixel( nEnd - nStart );
 		else
 			mnWidth = nNewWidth;
 	}
