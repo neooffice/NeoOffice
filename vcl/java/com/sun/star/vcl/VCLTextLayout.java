@@ -119,16 +119,6 @@ public final class VCLTextLayout {
 	 */
 	private int beginIndex = 0;
 
-	/*
-	 * The number of glyphs.
-	 */
-	private int count = 0;
-
-	/**
-	 * The font.
-	 */
-	private VCLFont font = null;
-
 	/**
 	 * The caret positions.
 	 */
@@ -140,9 +130,34 @@ public final class VCLTextLayout {
 	private int[] charAdvances = null;
 
 	/*
+	 * The number of characters.
+	 */
+	private int charCount = 0;
+
+	/**
+	 * The character run lengths.
+	 */
+	private int[] charRunLengths = null;
+
+	/*
 	 * The ending index of the substring that this glyph vector applies to.
 	 */
 	private int endIndex = 0;
+
+	/**
+	 * The font.
+	 */
+	private VCLFont font = null;
+
+	/*
+	 * The number of glyphs.
+	 */
+	private int glyphCount = 0;
+
+	/**
+	 * The glyph run lengths.
+	 */
+	private int[] glyphRunLengths = null;
 
 	/**
 	 * The glyph vector.
@@ -153,11 +168,6 @@ public final class VCLTextLayout {
 	 * The graphics.
 	 */
 	private VCLGraphics graphics = null;
-
-	/**
-	 * The layout flags.
-	 */
-	private int[] layoutFlags = null;
 
 	/**
 	 * Constructs a new <code>VCLTextLayout</code> instance.
@@ -211,7 +221,7 @@ public final class VCLTextLayout {
 		// Cache the caret positions
 		if (caretPositions == null) {
 			int[] advances = getDXArray();
-			caretPositions = new int[count * 2];
+			caretPositions = new int[charCount * 2];
 			int currentPosition = 0;
 			for (int i = 0; i < caretPositions.length; i += 2) {
 				caretPositions[i] = currentPosition;
@@ -250,12 +260,12 @@ public final class VCLTextLayout {
 
 		int[] advances = getDXArray();
 
-		if (((getBounds().width * factor) + (count * charExtra)) <= maxWidth)
+		if (((getWidth() * factor) + (charCount * charExtra)) <= maxWidth)
 			return -1;
 
 		// Iterate through char widths until the maximum width is reached
 		int currentWidth = 0;
-		for ( int i = 0; i < count; i++ )
+		for ( int i = 0; i < charCount; i++ )
 		{
 			currentWidth += (advances[i] * factor);
 			if (currentWidth >= maxWidth)
@@ -293,46 +303,61 @@ public final class VCLTextLayout {
 	 */
 	public void justify(int width) {
 
-		double totalAdjust = width - glyphs.getGlyphPosition(count).getX();
+		double totalAdjust = width - glyphs.getLogicalBounds().getWidth();
 		if (totalAdjust == 0 && charAdvances != null)
 			return;
 
 		bounds = null;
+		caretPositions = null;
 
 		// Adjust and cache the character advances
-		double charAdjust = totalAdjust / count;
-		charAdvances = new int[count];
+		double charAdjust = totalAdjust / glyphCount;
+		charAdvances = new int[charCount];
 		int previousAdvance = 0;
 		Point2D currentAdvance;
-		int i;
-		int n = charAdvances.length - 1;
-		for (i = 0; i < n; i++) {
-			currentAdvance = glyphs.getGlyphPosition(i + 1);
-			currentAdvance.setLocation((double)currentAdvance.getX() + charAdjust, currentAdvance.getY());
-			glyphs.setGlyphPosition(i + 1, currentAdvance);
-			charAdvances[i] = (int)(currentAdvance.getX() - previousAdvance);
-			previousAdvance += charAdvances[i];
+		int previousChar = 0;
+		int currentChar = 0;
+		int currentGlyph = 0;
+		for (int i = 0; i < charRunLengths.length; i++) {
+			for (int j = 0; j < charRunLengths[i] || j < glyphRunLengths[i]; j++) {
+				if (j < glyphRunLengths[i]) {
+					currentAdvance = glyphs.getGlyphPosition(currentGlyph + 1);
+					currentAdvance.setLocation((double)currentAdvance.getX() + charAdjust, currentAdvance.getY());
+					glyphs.setGlyphPosition(currentGlyph + 1, currentAdvance);
+					charAdvances[currentChar] = (int)(currentAdvance.getX() - previousAdvance);
+					previousAdvance += charAdvances[currentChar];
+					currentGlyph++;
+				}
+
+				if (j < charRunLengths[i])
+					currentChar++;
+			}
 		}
-		currentAdvance = glyphs.getGlyphPosition(i + 1);
+
+		// Adjust for any rounding errors
+		currentAdvance = glyphs.getGlyphPosition(glyphCount);
 		currentAdvance.setLocation((double)width, currentAdvance.getY());
-		glyphs.setGlyphPosition(i + 1, currentAdvance);
-		charAdvances[i] = width - previousAdvance;
+		glyphs.setGlyphPosition(glyphCount, currentAdvance);
+		charAdvances[charCount - 1] += width - previousAdvance;
 
 	}
 
 	/**
 	 * Layout text.
 	 *
-	 * @param chars the chars to be laid out
+	 * @param chars the characters to be laid out
 	 * @param b the beginning index
 	 * @param e the ending index
-	 * @param f the layout flags
+	 * @param crl the character run lengths
+	 * @param grl the glyph run lengths
 	 */
-	public void layoutText(char[] chars, int b, int e, int[] f) {
+	public void layoutText(char[] chars, int b, int e, int[] crl, int[] grl) {
 
 		beginIndex = b;
 		endIndex = e;
-		layoutFlags = f;
+		charRunLengths = crl;
+		glyphRunLengths = grl;
+		charCount = chars.length;
 
 		bounds = null;
 		charAdvances = null;
@@ -340,7 +365,7 @@ public final class VCLTextLayout {
 
 		// Create the attributed string and the glyph vector
 		glyphs = font.getFont().createGlyphVector(graphics.getFontRenderContext(), chars);
-		count = glyphs.getNumGlyphs();
+		glyphCount = glyphs.getNumGlyphs();
 
 	}
 
@@ -352,14 +377,27 @@ public final class VCLTextLayout {
 	public void setDXArray(int[] advances) {
 
 		bounds = null;
+		caretPositions = null;
+		charAdvances = null;
 
-		// Adjust and cache the character advances
-		charAdvances = advances;
+		// Set the character advances but only at the start of the run so
+		// that we don't mess up any ligatures
+		double charAdjust = 0;
 		Point2D currentAdvance;
-		for (int i = 0; i < charAdvances.length; i++) {
-			currentAdvance = glyphs.getGlyphPosition(i + 1);
-			currentAdvance.setLocation((double)charAdvances[i], currentAdvance.getY());
-			glyphs.setGlyphPosition(i + 1, currentAdvance);
+		int currentChar = 0;
+		int currentGlyph = 0;
+		for (int i = 0; i < charRunLengths.length; i++) {
+			currentAdvance = glyphs.getGlyphPosition(currentGlyph + 1);
+			charAdjust += (double)advances[currentChar] - currentAdvance.getX();
+			for (int j = 0; j < glyphRunLengths[i]; j++) {
+				if (j < glyphRunLengths[i]) {
+					currentAdvance = glyphs.getGlyphPosition(currentGlyph + 1);
+					currentAdvance.setLocation((double)currentAdvance.getX() + charAdjust, currentAdvance.getY());
+					glyphs.setGlyphPosition(currentGlyph + 1, currentAdvance);
+					currentGlyph++;
+				}
+			}
+			currentChar += charRunLengths[i];
 		}
 
 	}
