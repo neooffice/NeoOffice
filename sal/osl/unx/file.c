@@ -688,6 +688,17 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                 if( stat( buffer, &aFileStat ) >= 0 && ( aFileStat.st_flags & ( UF_IMMUTABLE | SF_IMMUTABLE ) ) )
                     errno = EACCES;
             }
+            /*
+             * Mac OS X will return ENOTSUP for mounted file systems so ignore
+             * the error for write locks
+             */
+            else if ( errno == ENOTSUP )
+            {
+                struct stat aFileStat;
+
+                if( stat( buffer, &aFileStat ) >= 0 )
+                    errno = EACCES;
+            }
 #endif	/* MACOSX */
 
             PERROR( "osl_openFile", buffer );
