@@ -227,14 +227,39 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 							pArray[ j ] = (sal_Unicode)'\r';
 					}
 
-					if ( nType != 'utxt' )
+					if ( nType == 'RTF ' )
 					{
-						OString aEncodedString = OUStringToOString( aString, nType == 'RTF' ? RTL_TEXTENCODING_ASCII_US : gsl_getSystemTextEncoding() );
+						OString aEncodedString = OUStringToOString( aString, RTL_TEXTENCODING_ASCII_US );
 
 						if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
 							nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, aEncodedString.getLength(), (const void *)aEncodedString.getStr() );
 						else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
 							nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aEncodedString.getStr(), aEncodedString.getLength(), 0 );
+					}
+					else if ( nType == 'TEXT' )
+					{
+						CFStringRef aCFString = CFStringCreateWithCharactersNoCopy( kCFAllocatorDefault, aString.getStr(), aString.getLength(), kCFAllocatorNull );
+						if ( aCFString )
+						{
+							CFIndex nBufLen;
+							CFRange aRange;
+							aRange.location = 0;
+							aRange.length = CFStringGetLength( aCFString );
+							if ( CFStringGetBytes( aCFString, aRange, CFStringGetSystemEncoding(), '?', false, NULL, 0, &nBufLen ) )
+							{
+								CFIndex nRealLen = nBufLen;
+								UInt8 aBuf[ nBufLen + 1 ];
+								if ( CFStringGetBytes( aCFString, aRange, CFStringGetSystemEncoding(), '?', false, NULL, 0, &nRealLen ) && nRealLen == nBufLen )
+								{
+									if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+										nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nBufLen, (const void *)aBuf );
+									else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+										nErr = AddDragItemFlavor( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aBuf, nBufLen, 0 );
+								}
+							}
+
+							CFRelease( aCFString );
+						}
 					}
 					else
 					{
@@ -442,12 +467,30 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 				{
 					OUString aString;
 					sal_Int32 nLen;
-					if ( nRequestedType != 'utxt' )
+					if ( nRequestedType == 'RTF ' )
 					{
 						nLen = aData.getLength();
 						if ( ( (sal_Char *)aData.getArray() )[ nLen - 1 ] == 0 )
 							nLen--;
-						aString = OUString( (sal_Char *)aData.getArray(), nLen, nRequestedType == 'RTF' ? RTL_TEXTENCODING_ASCII_US : gsl_getSystemTextEncoding() );
+						aString = OUString( (sal_Char *)aData.getArray(), nLen, RTL_TEXTENCODING_ASCII_US );
+					}
+					else if ( nRequestedType == 'TEXT' )
+					{
+						nLen = aData.getLength();
+						if ( ( (sal_Char *)aData.getArray() )[ nLen - 1 ] == 0 )
+							nLen--;
+						CFStringRef aCFString = CFStringCreateWithBytes( kCFAllocatorDefault, (const UInt8 *)aData.getArray(), nLen, CFStringGetSystemEncoding(), false );
+						if ( aCFString )
+						{
+							
+							CFRange aRange;
+							aRange.location = 0;
+							aRange.length = CFStringGetLength( aCFString );
+							UniChar aBuf[ aRange.length ];
+							CFStringGetCharacters( aCFString, aRange, aBuf );
+							aString = OUString( (sal_Unicode *)aBuf, aRange.length );
+							CFRelease( aCFString );
+						}
 					}
 					else
 					{
