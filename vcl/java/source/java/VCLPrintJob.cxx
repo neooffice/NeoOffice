@@ -195,8 +195,7 @@ void *com_sun_star_vcl_VCLPrintJob::getNativePrintJob()
 #ifdef MACOSX
 				// Test the JVM version and if it is below 1.4, use Carbon
 				// printing APIs
-				java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
-				if ( !pClass )
+				if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
 				{
 					jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/printing/MacPrinterJob" );
 					if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
@@ -227,10 +226,6 @@ void *com_sun_star_vcl_VCLPrintJob::getNativePrintJob()
 						}
 					}
 				}
-				else
-				{
-					delete pClass;
-				}
 #endif	// MACOSX
 			}
 			delete printerJob;
@@ -257,8 +252,7 @@ XubString com_sun_star_vcl_VCLPrintJob::getPageRange()
 #ifdef MACOSX
 				// Test the JVM version and if it is below 1.4, use Carbon
 				// printing APIs
-				java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
-				if ( !pClass )
+				if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
 				{
 					jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/printing/MacPrinterJob" );
 					if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
@@ -291,10 +285,6 @@ XubString com_sun_star_vcl_VCLPrintJob::getPageRange()
 							out += XubString::CreateFromInt32( lastPage );
 						}
 					}
-				}
-				else
-				{
-					delete pClass;
 				}
 #endif	// MACOSX
 			}
@@ -362,8 +352,7 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 #ifdef MACOSX
 		// Test the JVM version and if it is below 1.4, use Carbon
 		// printing APIs
-		java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
-		if ( !pClass )
+		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
 		{
 			// Reset the print dialog to print all pages
 			java_lang_Object *printerJob = _par0->getPrinterJob();
@@ -407,10 +396,6 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 				}
 			}
 			delete printerJob;
-		}
-		else
-		{
-			delete pClass;
 		}
 #endif	// MACOSX
 

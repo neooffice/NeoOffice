@@ -99,8 +99,7 @@ jclass com_sun_star_vcl_VCLPageFormat::getMyClass()
 
 #ifdef MACOSX
 		// Test the JVM version and if it is below 1.4, use Carbon printing APIs
-		java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
-		if ( !pClass )
+		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
 		{
 			// We need to replace the native MacPageFormat.createBestFormat()
 			// method as it will throw exceptions whenever a user selects a
@@ -114,10 +113,6 @@ jclass com_sun_star_vcl_VCLPageFormat::getMyClass()
 				aMethod.fnPtr = (void *)Java_com_apple_mrj_internal_awt_printing_MacPageFormat_createBestFormat;
 				t.pEnv->RegisterNatives( pageFormatClass, &aMethod, 1 );
 			}
-		}
-		else
-		{
-			delete pClass;
 		}
 #endif	// MACOSX
 
@@ -279,8 +274,7 @@ void *com_sun_star_vcl_VCLPageFormat::getNativePrintJob()
 #ifdef MACOSX
 				// Test the JVM version and if it is below 1.4, use Carbon
 				// printing APIs
-				java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
-				if ( !pClass )
+				if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
 				{
 					jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/printing/MacPrinterJob" );
 					if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
@@ -310,10 +304,6 @@ void *com_sun_star_vcl_VCLPageFormat::getNativePrintJob()
 							}
 						}
 					}
-				}
-				else
-				{
-					delete pClass;
 				}
 #endif	// MACOSX
 			}

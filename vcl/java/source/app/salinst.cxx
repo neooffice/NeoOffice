@@ -363,38 +363,35 @@ void ExecuteApplicationMain( Application *pApp )
 		ATSFontIteratorRelease( &aIterator );
 	}
 
-	// Test the JVM version and if it is 1.4 or higher, run the Main() method
-	// in a separate, high priority thread
-	java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
-	if ( pClass )
+	VCLThreadAttach t;
+	if ( t.pEnv )
 	{
-		delete pClass;
-
-		// Load Cocoa
-		OModule aModule;
-		if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/AppKit.framework/AppKit" ) ) )
+		// Test the JVM version and if it is 1.4 or higher, run the Main()
+		// method in a separate, high priority thread
+		if ( t.pEnv->GetVersion() >= JNI_VERSION_1_4 )
 		{
-			GetSalData()->mpEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
+			// Load Cocoa
+			OModule aModule;
+			if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/AppKit.framework/AppKit" ) ) )
+			{
+				GetSalData()->mpEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
 
-			// Create the thread to run the Main() method in
-			SVMainThread aThread( pApp );
-			aThread.create();
+				// Create the thread to run the Main() method in
+				SVMainThread aThread( pApp );
+				aThread.create();
 
-			// Start the Cocoa event loop
-			RunCocoaEventLoop();
-			aThread.join();
+				// Start the Cocoa event loop
+				RunCocoaEventLoop();
+				aThread.join();
+			}
+
+			return;
 		}
-
-		return;
-	}
-	else
-	{
-		// Panther expects applications to run their event loop in main thread
-		// and Java 1.3.1 runs its event loop in a separate thread. So, we need
-		// to disable the lock that Java 1.3.1 uses.
-		VCLThreadAttach t;
-		if ( t.pEnv )
+		else
 		{
+			// Panther expects applications to run their event loop in main
+			// thread and Java 1.3.1 runs its event loop in a separate thread.
+			// So, we need to disable the lock that Java 1.3.1 uses.
 			jclass systemClass = t.pEnv->FindClass( "java/lang/System" );
 			if ( systemClass )
 			{

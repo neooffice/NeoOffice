@@ -86,25 +86,20 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 
 void com_sun_star_vcl_VCLGraphics::beep()
 {
-#ifdef MACOSX
-	// Test the JVM version and if it is below 1.4, use Carbon APIs
-	java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
-	if ( !pClass )
-	{
-		// Toolkit.beep() doesn't work so call it natively
-		SysBeep( 30 );
-		return;
-	}
-	else
-	{
-		delete pClass;
-	}
-#endif	// MACOSX
-
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
+#ifdef MACOSX
+		// Test the JVM version and if it is below 1.4, use Carbon APIs
+		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+		{
+			// Toolkit.beep() doesn't work so call it natively
+			SysBeep( 30 );
+			return;
+		}
+#endif	// MACOSX
+
 		if ( !mID )
 		{
 			char *cSignature = "()V";

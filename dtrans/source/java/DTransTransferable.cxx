@@ -666,20 +666,13 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< X
 			// next AEEvent is dispatched so we can't risk using delayed
 			// rendering
 			BOOL bRenderImmediately = FALSE;
-			java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
-			if ( pClass )
-			{
-				delete pClass;
-
-				if ( !pScrapPromiseKeeperUPP )
-					pScrapPromiseKeeperUPP = NewScrapPromiseKeeperUPP( (ScrapPromiseKeeperProcPtr)ImplScrapPromiseKeeperCallback );
-				if ( !pScrapPromiseKeeperUPP || SetScrapPromiseKeeper( (ScrapRef)mpNativeTransferable, pScrapPromiseKeeperUPP, (const void *)this ) != noErr )
-					bRenderImmediately = TRUE;
-			}
-			else
-			{
+			DTransThreadAttach t;
+			if ( t.pEnv && t.pEnv->GetVersion() < JNI_VERSION_1_4 )
 				bRenderImmediately = TRUE;
-			}
+			if ( !pScrapPromiseKeeperUPP )
+				pScrapPromiseKeeperUPP = NewScrapPromiseKeeperUPP( (ScrapPromiseKeeperProcPtr)ImplScrapPromiseKeeperCallback );
+			if ( !pScrapPromiseKeeperUPP || SetScrapPromiseKeeper( (ScrapRef)mpNativeTransferable, pScrapPromiseKeeperUPP, (const void *)this ) != noErr )
+				bRenderImmediately = TRUE;
 
 			for ( i = 0; i < nLen; i++ )
 			{ 
