@@ -81,8 +81,10 @@ static void JNICALL Java_com_apple_mrj_macos_generated_MacWindowFunctions_Select
 	
 	if ( bNoSelectWindow )
 		BringToFront( (WindowRef)pWindowRef );
-	else 
+	else if ( GetSalData()->mpPresentationFrame )
 		ActivateWindow( (WindowRef)pWindowRef, true );
+	else 
+		SelectWindow( (WindowRef)pWindowRef );
 }
 #endif	// MACOSX
 
