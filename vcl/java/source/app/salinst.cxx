@@ -126,7 +126,7 @@ public:
 							SVMainThread( Application* pApp ) : ::vos::OThread(), mpApp( pApp ) {}
 
 protected:
-	virtual void			run() { mpApp->Main(); }
+	virtual void			run();
 };
 
 using namespace osl;
@@ -144,6 +144,15 @@ static SVNativeFontList *pNativeFontList = NULL;
 static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( JNIEnv *pEnv, jobject object );
 
 #endif
+
+// ============================================================================
+
+void SVMainThread::run()
+{
+	GetSalData()->mpEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
+
+	mpApp->Main();
+}
 
 // ============================================================================
 
@@ -376,7 +385,8 @@ void ExecuteApplicationMain( Application *pApp )
 			OModule aModule;
 			if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/AppKit.framework/AppKit" ) ) )
 			{
-				GetSalData()->mpEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
+				SalInstance *pSalInstance = GetSalData()->mpFirstInstance;
+				ULONG nCount = pSalInstance->ReleaseYieldMutex();
 
 				// Create the thread to run the Main() method in
 				SVMainThread aThread( pApp );
@@ -385,6 +395,8 @@ void ExecuteApplicationMain( Application *pApp )
 				// Start the Cocoa event loop
 				RunCocoaEventLoop();
 				aThread.join();
+
+				pSalInstance->AcquireYieldMutex( nCount );
 			}
 
 			return;
