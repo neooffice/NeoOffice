@@ -72,12 +72,17 @@ using namespace ::com::sun::star::uno;
 
 namespace java {
 
-class JavaDragSource: public ::cppu::WeakComponentImplHelper3< ::com::sun::star::datatransfer::dnd::XDragSource, ::com::sun::star::lang::XInitialization, ::com::sun::star::lang::XServiceInfo >
+class JavaDragSource : public ::cppu::WeakComponentImplHelper3< ::com::sun::star::datatransfer::dnd::XDragSource, ::com::sun::star::lang::XInitialization, ::com::sun::star::lang::XServiceInfo >
 {
 private:
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	maContents;
+	oslThread				maDragExecuteThread;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDragSourceListener >	maListener;
-    ::osl::Mutex			maMutex; 
+    ::osl::Mutex			maMutex;
+	void*					mpNativeDragHandler;
+	void*					mpNativeDragReference;
+
+	static void				runDragExecute( void* );
 
 public:
 							JavaDragSource();
@@ -102,6 +107,7 @@ private:
 	sal_Int8				mnDefaultActions;
 	::std::list< ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDropTargetListener > >	maListeners;
     ::osl::Mutex			maMutex; 
+	void*					mpNativeDropHandler;
 
 public:
 							JavaDropTarget();
