@@ -129,21 +129,8 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 	Rect aRect;
 	if ( pData && GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
 	{
-		if ( !bNoRejectCursor )
-		{
-			switch ( nMessage )
-			{
-				case kDragTrackingEnterHandler:
-				case kDragTrackingEnterWindow:
-				case kDragTrackingInWindow:
-				case kDragTrackingLeaveWindow:
-					SetThemeCursor( kThemeClosedHandCursor );
-					break;
-				case kDragTrackingLeaveHandler:
-					SetThemeCursor( kThemeNotAllowedCursor );
-					break;
-			}
-		}
+		if ( nMessage == kDragTrackingLeaveHandler && !bNoRejectCursor )
+			SetThemeCursor( kThemeNotAllowedCursor );
 
 		((JavaDragSource *)pData)->handleDrag( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) );
 	}
