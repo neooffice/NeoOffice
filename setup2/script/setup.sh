@@ -216,4 +216,6 @@ if [ "$os" = "Darwin" ] ; then
     fi
 fi
 
+sync
+
 exit 0
