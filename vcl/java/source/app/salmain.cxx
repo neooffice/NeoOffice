@@ -63,15 +63,17 @@
 
 typedef void RunApplicationEventLoop_Type( void );
 
-using namespace rtl;
-using namespace vcl;
-using namespace vos;
-
-class SVMainThread : public OThread
+class SVMainThread : public ::vos::OThread
 {
 protected:
 	virtual void run() { SVMain(); _exit( 0 ); }
 };
+
+static ::vos::OMutex aCarbonLock;
+
+using namespace rtl;
+using namespace vcl;
+using namespace vos;
 
 #endif
 
@@ -80,7 +82,7 @@ protected:
 #ifdef MACOSX
 static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( JNIEnv *pEnv, jobject object )
 {
-	return 0;
+	return !aCarbonLock.tryToAcquire();
 }
 #endif
 
@@ -97,6 +99,7 @@ static void JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_init( JNIEnv *pEn
 #ifdef MACOSX
 static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv *pEnv, jobject object )
 {
+	aCarbonLock.release();
 	return 0;
 }
 #endif
