@@ -97,6 +97,32 @@ com_sun_star_vcl_VCLFontList *com_sun_star_vcl_VCLFont::getAllFonts()
 
 // ----------------------------------------------------------------------------
 
+com_sun_star_vcl_VCLFont *com_sun_star_vcl_VCLFont::getDefaultFont()
+{
+	static jmethodID mID = NULL;
+	com_sun_star_vcl_VCLFont *out = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Lcom/sun/star/vcl/VCLFont;";
+			mID = t.pEnv->GetStaticMethodID( getMyClass(), "getDefaultFont", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jobject tempObj;
+			tempObj = t.pEnv->CallStaticObjectMethod( getMyClass(), mID );
+			if ( tempObj )
+				out = new com_sun_star_vcl_VCLFont( tempObj );
+		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
 com_sun_star_vcl_VCLFont *com_sun_star_vcl_VCLFont::deriveFont( long _par0, sal_Bool _par1, sal_Bool _par2, short _par3, sal_Bool _par4 )
 {
 	static jmethodID mID = NULL;
@@ -330,6 +356,27 @@ long com_sun_star_vcl_VCLFont::getSize()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+sal_Bool com_sun_star_vcl_VCLFont::isAntialiased()
+{
+	static jmethodID mID = NULL;
+	sal_Bool out = sal_False;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Z";
+			mID = t.pEnv->GetMethodID( getMyClass(), "isAntialiased", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethod( object, getMyClass(), mID );
 	}
 	return out;
 }

@@ -61,9 +61,7 @@ typedef OSStatus PMSessionDefaultPageFormat_Type( PMPrintSession, PMPageFormat )
 typedef OSStatus PMSessionGetDataFromSession_Type( PMPrintSession, CFStringRef, CFTypeRef* );
 typedef OSStatus PMSessionSetDataInSession_Type( PMPrintSession, CFStringRef, CFTypeRef );
 
-#ifdef MACOSX
 #define PAGEFORMAT_KEY CFSTR( "PAGEFORMAT" )
-#endif  // MACOSX
 
 using namespace rtl;
 using namespace vos;
@@ -127,8 +125,8 @@ jclass com_sun_star_vcl_VCLPageFormat::getMyClass()
 		if ( !pClass )
 		{
 			// We need to replace the native MacPageFormat.createBestFormat()
-			// method as it will throw exceptions whenever a user selects a custom
-			// page format
+			// method as it will throw exceptions whenever a user selects a
+			// custom page format
 			jclass pageFormatClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/printing/MacPageFormat" );
 			if ( pageFormatClass )
 			{

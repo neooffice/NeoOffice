@@ -144,6 +144,11 @@ public final class VCLGraphics {
 	private static int screenFontResolution = 0;
 
 	/**
+	 * The use default font flag.
+	 */
+	private static boolean useDefaultFont = true;
+
+	/**
 	 * Emits an audio beep.
 	 */
 	public static void beep() {
@@ -190,6 +195,17 @@ public final class VCLGraphics {
 
 		// Set stroke
 		g.setStroke(new BasicStroke(1.0f));
+
+	}
+
+	/**
+	 * Set the use default font flag.
+	 *
+	 * @param b the default font flag
+	 */
+	public static void setUseDefaultFont(boolean b) {
+
+		useDefaultFont = b;
 
 	}
 
@@ -241,7 +257,6 @@ public final class VCLGraphics {
 			drawTextArrayMethod = VCLGraphics.class.getMethod("drawTextArray", new Class[]{ int.class, int.class, char[].class, VCLFont.class, int.class, int[].class });
 		}
 		catch (Throwable t) {}
-
 	}
 
 	/**
@@ -1043,16 +1058,28 @@ public final class VCLGraphics {
 			return;
 		}
 
-		Font f = font.getFont();
-		RenderingHints hints = graphics.getRenderingHints();
+		// The graphics may adjust the font
+		Font f = new Font(font.getName(), font.getStyle(), font.getSize());
+		FontMetrics fm = null;
+
+		// Exceptions can be thrown if a font is disabled or removed
+		try {
+			fm = graphics.getFontMetrics(f);
+		}
+		catch (Throwable t) {
+			f = new Font(VCLFont.getDefaultFont().getName(), font.getStyle(), font.getSize());
+			fm = graphics.getFontMetrics(f);
+		}
+
 		graphics.setFont(f);
+
+		RenderingHints hints = graphics.getRenderingHints();
 		if (font.isAntialiased())
 			hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 		else
 			hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
 		graphics.setRenderingHints(hints);
 		graphics.setColor(new Color(color));
-		FontMetrics fontMetrics = graphics.getFontMetrics();
 
 		// Set rotation
 		Point2D origin = new Point2D.Float((float)x, (float)y);
@@ -1077,7 +1104,7 @@ public final class VCLGraphics {
 			double start = p.getX();
 			for (int i = 1; i < chars.length; i++) {
 				if (Character.getType(chars[i]) == Character.NON_SPACING_MARK && f.canDisplay(chars[i]))
-					p.setLocation(start + offsets[i - 1] - fontMetrics.charWidth(chars[i]), p.getY());
+					p.setLocation(start + offsets[i - 1] - fm.charWidth(chars[i]), p.getY());
 				else
 					p.setLocation(start + offsets[i - 1], p.getY());
 				glyphs.setGlyphPosition(i, p);
@@ -1087,7 +1114,7 @@ public final class VCLGraphics {
 			double adjust = 0;
 			for (int i = 1; i < chars.length; i++) {
 				if (Character.getType(chars[i]) == Character.NON_SPACING_MARK && f.canDisplay(chars[i]))
-					adjust += fontMetrics.charWidth(chars[i]);
+					adjust += fm.charWidth(chars[i]);
 				if (adjust != 0) {
 					p = glyphs.getGlyphPosition(i);
 					p.setLocation(p.getX() - adjust, p.getY());

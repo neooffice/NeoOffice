@@ -196,7 +196,12 @@ void SalGraphics::DrawText( long nX, long nY,
                             const xub_Unicode* pStr, xub_StrLen nLen )
 {
 	if ( maGraphicsData.mpVCLFont )
-		maGraphicsData.mpVCLGraphics->drawText( nX, nY, pStr, nLen, maGraphicsData.mpVCLFont, maGraphicsData.mnTextColor );
+	{
+		com_sun_star_vcl_VCLFont *pFont = maGraphicsData.mpVCLFont;
+		if ( GetSalData()->mbUseDefaultFont )
+			pFont = com_sun_star_vcl_VCLFont::getDefaultFont()->deriveFont( pFont->getSize(), pFont->isBold(), pFont->isItalic(), pFont->getOrientation(), pFont->isAntialiased() );
+		maGraphicsData.mpVCLGraphics->drawText( nX, nY, pStr, nLen, pFont, maGraphicsData.mnTextColor );
+	}
 }
 
 // -----------------------------------------------------------------------
@@ -206,7 +211,12 @@ void SalGraphics::DrawTextArray( long nX, long nY,
                                  const long* pDXAry )
 {
 	if ( maGraphicsData.mpVCLFont )
-		maGraphicsData.mpVCLGraphics->drawTextArray( nX, nY, pStr, nLen, maGraphicsData.mpVCLFont, maGraphicsData.mnTextColor, pDXAry );
+	{
+		com_sun_star_vcl_VCLFont *pFont = maGraphicsData.mpVCLFont;
+		if ( GetSalData()->mbUseDefaultFont )
+			pFont = com_sun_star_vcl_VCLFont::getDefaultFont()->deriveFont( pFont->getSize(), pFont->isBold(), pFont->isItalic(), pFont->getOrientation(), pFont->isAntialiased() );
+		maGraphicsData.mpVCLGraphics->drawTextArray( nX, nY, pStr, nLen, pFont, maGraphicsData.mnTextColor, pDXAry );
+	}
 }
 
 // -----------------------------------------------------------------------

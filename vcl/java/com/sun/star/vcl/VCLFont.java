@@ -92,6 +92,11 @@ public final class VCLFont {
 	private static String[] fontFamilies = null;
 
 	/**
+	 * Cached default font.
+	 */
+	private static VCLFont defaultFont = null;
+
+	/**
 	 * Cached fonts.
 	 */
 	private static VCLFont[] fonts = null;
@@ -116,14 +121,14 @@ public final class VCLFont {
 		for (int j = 0; j < fontFamilies.length; j++) {
 			String name = fontFamilies[j].toLowerCase();
 			// Get rid of hidden, bold, and italic Mac OS X fonts
-			if (macosx) {
-				if (name.startsWith(".") || name.endsWith(" bold italic") || name.endsWith(" bold") || name.endsWith(" italic"))
-					continue;
-			}
-			Font font = new Font(fontFamilies[j], Font.PLAIN, 1);
-			array.add(new VCLFont(font, (short)0, false, false, true));
+			if (macosx && name.startsWith("."))
+				continue;
+			array.add(new VCLFont(fontFamilies[j], 1, (short)0, false, false, true));
 		}
 		VCLFont.fonts = (VCLFont[])array.toArray(new VCLFont[array.size()]);
+
+		// Set default font
+		defaultFont = new VCLFont("SansSerif", 1, (short)0, false, false, true);
 
 	}
 
@@ -140,6 +145,17 @@ public final class VCLFont {
 	}
 
 	/**
+	 * Returns the default font.
+	 *
+	 * @return the default font
+	 */
+	public static VCLFont getDefaultFont() {
+
+		return defaultFont;
+
+	}
+
+	/**
 	 * The antialiased flag.
 	 */
 	private boolean antialiased = false;
@@ -150,24 +166,29 @@ public final class VCLFont {
 	private boolean bold = false;
 
 	/**
-	 * The font.
-	 */
-	private Font font = null;
-
-	/**
-	 * The font metrics.
-	 */
-	private FontMetrics fontMetrics = null;
-
-	/**
 	 * The italic flag.
 	 */
 	private boolean italic = false;
 
 	/**
+	 * The cached name.
+	 */
+	private String name = null;
+
+	/**
 	 * The cached orientation.
 	 */
 	private short orientation = 0;
+
+	/**
+	 * The cached size.
+	 */
+	private int size = 0;
+
+	/**
+	 * The cached style.
+	 */
+	private int style = 0;
 
 	/**
 	 * The family type.
@@ -177,32 +198,38 @@ public final class VCLFont {
 	/**
 	 * Constructs a new <code>VCLFont</code> instance.
 	 *
-	 * @param f a <code>Font</code> instance
+	 * @param n the name of the font
+	 * @param s the size of the font
 	 * @param o the orientation of the new <code>VCLFont</code> in degrees
 	 * @param b <code>true</code> if the font is bold
 	 * @param i <code>true</code> if the font is italic
 	 * @param a <code>true</code> to enable antialiasing and <code>false</code>
 	 *  to disable antialiasing
 	 */
-	VCLFont(Font f, short o, boolean b, boolean i, boolean a) {
+	VCLFont(String n, int s, short o, boolean b, boolean i, boolean a) {
 
 		antialiased = a;
 		bold = b;
-		font = f;
 		italic = i;
+		name = n;
 		orientation = o;
+		size = s;
+
+		// Cache style
+		style = Font.PLAIN;
+		if (b)
+			style |= Font.BOLD;
+		if (i)
+			style |= Font.ITALIC;
 
 		// Get family type
-		String name = font.getFamily().toLowerCase();
-		if (name.startsWith("monospaced"))
+		String fontName = name.toLowerCase();
+		if (fontName.startsWith("monospaced"))
 			type = VCLFont.FAMILY_MODERN;
-		else if (name.startsWith("sansserif"))
+		else if (fontName.startsWith("sansserif"))
 			type = VCLFont.FAMILY_SWISS;
-		else if (name.startsWith("serif"))
+		else if (fontName.startsWith("serif"))
 			type = VCLFont.FAMILY_ROMAN;
-
-		// Get the font metrics
-		fontMetrics = VCLFont.graphics.getFontMetrics(font);
 
 	}
 
@@ -210,7 +237,7 @@ public final class VCLFont {
 	 * Creates a new <code>VCLFont</code> object by replicating this
 	 * <code>VCLFont</code> object and applying a new size.
 	 *
-	 * @param size the size for the new <code>VCLFont</code>
+	 * @param s the size for the new <code>VCLFont</code>
 	 * @param b whether the new <code>VCLFont</code> should be bold
 	 * @param i whether the new <code>VCLFont</code> should be italic
 	 * @param o the orientation of the new <code>VCLFont</code> in degrees
@@ -218,48 +245,31 @@ public final class VCLFont {
 	 *  to disable antialiasing
 	 * @return a new <code>VCLFont</code> object
 	 */
-	public VCLFont deriveFont(int size, boolean b, boolean i, short o, boolean a) {
+	public VCLFont deriveFont(int s, boolean b, boolean i, short o, boolean a) {
 
 		Font f = null;
 
 		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-			String fontName = font.getFamily().toLowerCase();
+			String fontName = name.toLowerCase();
 			int index = 0;
 			if ((index = fontName.lastIndexOf(" bold italic")) != -1 || (index = fontName.lastIndexOf(" bold")) != -1 || (index = fontName.lastIndexOf(" italic")) != -1 || (index = fontName.lastIndexOf(" regular")) != -1)
 				fontName = fontName.substring(0, index);
 			for (int j = 0; j < fontFamilies.length; j++) {
-				String name = fontFamilies[j].toLowerCase();
-				if (!name.startsWith(fontName))
+				String fontFamilyName = fontFamilies[j].toLowerCase();
+				if (!fontFamilyName.startsWith(fontName))
 					continue;
-				if (b && i && name.endsWith(" bold italic")) {
-					f = new Font(fontFamilies[j], Font.PLAIN, size);
-					break;
-				}
-				else if (b && !i && name.endsWith(" bold")) {
-					f = new Font(fontFamilies[j], Font.PLAIN, size);
-					break;
-				}
-				else if (!b && i && name.endsWith(" italic") && !name.endsWith(" bold italic")) {
-					f = new Font(fontFamilies[j], Font.PLAIN, size);
-					break;
-				}
-				else if (!b && !i && name.endsWith(" regular")) {
-					f = new Font(fontFamilies[j], Font.PLAIN, size);
-					break;
-				}
+				if (b && i && fontFamilyName.endsWith(" bold italic"))
+					return new VCLFont(fontFamilies[j], s, o, false, false, a);
+				else if (b && !i && fontFamilyName.endsWith(" bold"))
+					return new VCLFont(fontFamilies[j], s, o, false, false, a);
+				else if (!b && i && fontFamilyName.endsWith(" italic") && !fontFamilyName.endsWith(" bold italic"))
+					return new VCLFont(fontFamilies[j], s, o, false, false, a);
+				else if (!b && !i && fontFamilyName.endsWith(" regular"))
+					return new VCLFont(fontFamilies[j], s, o, false, false, a);
 			}
 		}
-			
-		if (f == null) {
-			int style = Font.PLAIN;
-			if (b)
-				style |= Font.BOLD;
-			if (i)
-				style |= Font.ITALIC;
-			f = font.deriveFont(style, (float)size);
-		}
 
-		return new VCLFont(f, o, b, i, a);
+		return new VCLFont(name, s, o, b, i, a);
 
 	}
 
@@ -270,7 +280,19 @@ public final class VCLFont {
 	 */
 	public int getAscent() {
 
-		return fontMetrics.getAscent();
+		Font f = new Font(name, style, size);
+		FontMetrics fm = null;
+
+		// Exceptions can be thrown if a font is disabled or removed
+		try {
+			fm = VCLFont.graphics.getFontMetrics(f);
+		}
+		catch (Throwable t) {
+			f = new Font(VCLFont.getDefaultFont().getName(), style, size);
+			fm = VCLFont.graphics.getFontMetrics(f);
+		}
+
+		return fm.getAscent();
 
 	}
 
@@ -283,12 +305,24 @@ public final class VCLFont {
 	 */
 	public int[] getCharWidth(char start, char end) {
 
+		Font f = new Font(name, style, size);
+		FontMetrics fm = null;
+
+		// Exceptions can be thrown if a font is disabled or removed
+		try {
+			fm = VCLFont.graphics.getFontMetrics(f);
+		}
+		catch (Throwable t) {
+			f = new Font(VCLFont.getDefaultFont().getName(), style, size);
+			fm = VCLFont.graphics.getFontMetrics(f);
+		}
+
 		int[] widths = new int[end - start + 1];
 		for (char i = start; i <= end; i++) {
-			if (Character.getType(i) == Character.NON_SPACING_MARK && font.canDisplay(i))
+			if (Character.getType(i) == Character.NON_SPACING_MARK && f.canDisplay(i))
 				widths[i - start] = 0;
 			else
-				widths[i - start] = fontMetrics.charWidth(i);
+				widths[i - start] = fm.charWidth(i);
 		}
 		return widths;
 
@@ -301,7 +335,19 @@ public final class VCLFont {
 	 */
 	public int getDescent() {
 
-		return fontMetrics.getDescent() + 1;
+		Font f = new Font(name, style, size);
+		FontMetrics fm = null;
+
+		// Exceptions can be thrown if a font is disabled or removed
+		try {
+			fm = VCLFont.graphics.getFontMetrics(f);
+		}
+		catch (Throwable t) {
+			f = new Font(VCLFont.getDefaultFont().getName(), style, size);
+			fm = VCLFont.graphics.getFontMetrics(f);
+		}
+
+		return fm.getDescent() + 1;
 
 	}
 
@@ -317,17 +363,6 @@ public final class VCLFont {
 	}
 
 	/**
-	 * Returns the <code>Font</code>.
-	 *
-	 * @return the <code>Font</code>
-	 */
-	Font getFont() {
-
-		return font;
-
-	}
-
-	/**
 	 * Determines the kerning adjustment for the specified characters.
 	 *
 	 * @param a the first character
@@ -336,15 +371,27 @@ public final class VCLFont {
 	 */
 	public int getKerning(char a, char b) {
 
+		Font f = new Font(name, style, size);
+		FontMetrics fm = null;
+
+		// Exceptions can be thrown if a font is disabled or removed
+		try {
+			fm = VCLFont.graphics.getFontMetrics(f);
+		}
+		catch (Throwable t) {
+			f = new Font(VCLFont.getDefaultFont().getName(), style, size);
+			fm = VCLFont.graphics.getFontMetrics(f);
+		}
+
 		// Get width without kerning
 		int width = 0;
-		if (Character.getType(a) != Character.NON_SPACING_MARK || !font.canDisplay(a))
-			width += fontMetrics.charWidth(a);
-		if (Character.getType(b) != Character.NON_SPACING_MARK || !font.canDisplay(b))
-			width += fontMetrics.charWidth(b);
+		if (Character.getType(a) != Character.NON_SPACING_MARK || !f.canDisplay(a))
+			width += fm.charWidth(a);
+		if (Character.getType(b) != Character.NON_SPACING_MARK || !f.canDisplay(b))
+			width += fm.charWidth(b);
 
 		// Subtract the width with kerning
-		width -= fontMetrics.charsWidth(new char[]{ a, b }, 0, 2);
+		width -= fm.charsWidth(new char[]{ a, b }, 0, 2);
 
 		return width;
 
@@ -357,7 +404,19 @@ public final class VCLFont {
 	 */
 	public int getLeading() {
 
-		return fontMetrics.getLeading() - 1;
+		Font f = new Font(name, style, size);
+		FontMetrics fm = null;
+
+		// Exceptions can be thrown if a font is disabled or removed
+		try {
+			fm = VCLFont.graphics.getFontMetrics(f);
+		}
+		catch (Throwable t) {
+			f = new Font(VCLFont.getDefaultFont().getName(), style, size);
+			fm = VCLFont.graphics.getFontMetrics(f);
+		}
+
+		return fm.getLeading() - 1;
 
 	}
 
@@ -367,16 +426,6 @@ public final class VCLFont {
 	 * @return the logical name of the <code>Font</code>
 	 */
 	public String getName() {
-
-		String name = font.getFamily();
-
-		// Chop of bold and italic and regular strings
-		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-			String fontName = name.toLowerCase();
-			int index = 0;
-			if ((index = fontName.lastIndexOf(" bold italic")) != -1 || (index = fontName.lastIndexOf(" bold")) != -1 || (index = fontName.lastIndexOf(" italic")) != -1 || (index = fontName.lastIndexOf(" regular")) != -1)
-				name = name.substring(0, index);
-		}
 
 		return name;
 
@@ -400,7 +449,18 @@ public final class VCLFont {
 	 */
 	public int getSize() {
 
-		return font.getSize();
+		return size;
+
+	}
+
+	/**
+	 * Determines the style of the <code>Font</code>.
+	 *
+	 * @return the style of the <code>Font</code>
+	 */
+	int getStyle() {
+
+		return style;
 
 	}
 

@@ -61,6 +61,7 @@ private:
 public:
 	static jclass		getMyClass();
 	static com_sun_star_vcl_VCLFontList*	getAllFonts();
+	static com_sun_star_vcl_VCLFont*	getDefaultFont();
 
 						com_sun_star_vcl_VCLFont( jobject myObj ) : java_lang_Object( myObj ) {};
 
@@ -74,6 +75,7 @@ public:
 	::rtl::OUString		getName();
 	short				getOrientation();
 	long				getSize();
+	sal_Bool			isAntialiased();
 	sal_Bool			isBold();
 	sal_Bool			isItalic();
 };

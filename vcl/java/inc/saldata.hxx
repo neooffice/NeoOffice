@@ -77,6 +77,7 @@ public:
 	::vcl::com_sun_star_vcl_VCLFontList*	mpFontList;
 	SalFrame*				mpPresentationFrame;
 	::std::list< ::vcl::com_sun_star_vcl_VCLPageFormat* >	maVCLPageFormats;
+	BOOL					mbUseDefaultFont;
 
 							SalData();
 							~SalData();
