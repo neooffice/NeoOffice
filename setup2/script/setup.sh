@@ -116,7 +116,7 @@ fi
 configdir="$userinstall/config"
 registrydir="$userinstall/registry/data/org/openoffice"
 wordbookdir="$userinstall/wordbook"
-if [ ! -d "$configdir" -o ! -d "$registrydir" -o ! -d "$workbookdir" ] ; then
+if [ ! -d "$configdir" -o ! -d "$registrydir" -o ! -d "$wordbookdir" ] ; then
     repair="true"
     mkdir -p "$userinstall"
 fi
@@ -175,10 +175,21 @@ s#<value/>#<value>'"$locale"'</value>#
 fi
 
 # Create user dictionary.lst file
-userdictlst="$wordbookdir/dictionary.lst"
-sharedictlst="$sharebase/dict/ooo/dictionary.lst"
-if [ ! -f "$userdictlst" -a -r "$sharedictlst" ] ; then
-    grep -E '[^][#:space:]*(DICT|HYPH|THES)[[:space:]]*'"$lang"'[[:space:]]' "$sharedictlst" | sed 's#^[#[:space:]]*##' > "$userdictlst"
+sharedictdir="$sharebase/dict/ooo"
+if [ -d "$sharedictdir" ] ; then
+    userdictlst="$wordbookdir/dictionary.lst"
+    sharedictlst="$sharedictdir/dictionary.lst"
+    if [ ! -f "$userdictlst" -a -r "$sharedictlst" ] ; then
+        grep -E '[^][#:space:]*(DICT|HYPH|THES)[[:space:]]*'"$lang"'[[:space:]]' "$sharedictlst" | sed 's#^[#[:space:]]*##' > "$userdictlst"
+    fi
+    for i in `cd "$sharedictdir" ; find . -name "*$lang*"` ; do
+        if [ -L "$wordbookdir/$i" ] ; then
+            rm -f "$wordbookdir/$i"
+        fi
+        if [ ! -f "$wordbookdir/$i" ] ; then
+            ln -sf "$sharedictdir/$i" "$wordbookdir/$i"
+        fi
+    done
 fi
 
 # Create javarc file
