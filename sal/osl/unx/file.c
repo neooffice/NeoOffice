@@ -155,6 +155,11 @@ static const sal_Char* MOUNTTAB="/etc/mtab";
 
 /* All Mac OS X paths are UTF-8 */
 #define osl_getThreadTextEncoding() RTL_TEXTENCODING_UTF8
+
+#include <premac.h>
+#define __OPENTRANSPORTPROVIDERS__
+#include <Carbon/Carbon.h>
+#include <postmac.h>
 #endif
 
 #if OSL_DEBUG_LEVEL > 1
@@ -248,6 +253,10 @@ static int           oslDoCopyLink(const sal_Char* pszSourceFileName, const sal_
 static int           oslDoCopyFile(const sal_Char* pszSourceFileName, const sal_Char* pszDestFileName, size_t nSourceSize, mode_t mode);
 static oslFileError  oslDoMoveFile(const sal_Char* pszPath, const sal_Char* pszDestPath);
 static rtl_uString*  oslMakeUStrFromPsz(const sal_Char* pszStr,rtl_uString** uStr);
+
+#if defined MACOSX && defined PRODUCT_FILETYPE
+static void          oslSetFileTypeFromPsz(const sal_Char* pszStr);
+#endif	/* MACOSX && PRODUCT_FILETYPE */
 
 /******************************************************************************
  *
@@ -634,6 +643,11 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                         pHandleImpl->fd = fd;
 
                         *pHandle = (oslFileHandle) pHandleImpl;
+
+#if defined MACOSX && defined PRODUCT_FILETYPE
+                        if ( uFlags & osl_File_OpenFlag_Create )
+                            oslSetFileTypeFromPsz( buffer );
+#endif	/* MACOSX && PRODUCT_FILETYPE */
 
                         return osl_File_E_None;
                     }
@@ -1937,6 +1951,10 @@ static int oslDoCopyFile(const sal_Char* pszSourceFileName, const sal_Char* pszD
     close(SourceFileFD);
     close(DestFileFD);
 
+#if defined MACOSX && defined PRODUCT_FILETYPE
+    oslSetFileTypeFromPsz( pszDestFileName );
+#endif	/* MACOSX && PRODUCT_FILETYPE */
+
     return 0;
 }
 
@@ -1955,6 +1973,26 @@ static rtl_uString* oslMakeUStrFromPsz(const sal_Char* pszStr, rtl_uString** ust
 
     return *ustrValid;
 }
+
+/*****************************************
+ *oslSetFileTypeFromPsz 
+ ****************************************/
+
+#if defined MACOSX && defined PRODUCT_FILETYPE
+static void oslSetFileTypeFromPsz(const sal_Char* pszStr)
+{
+    FSRef aFSRef;
+    FSCatalogInfo aCatInfo;
+    if ( FSPathMakeRef( (const UInt8 *)pszStr, &aFSRef, 0 ) == noErr && FSGetCatalogInfo( &aFSRef, kFSCatInfoFinderInfo, &aCatInfo, NULL, NULL, NULL) == noErr )
+    {
+        if ( ( (FileInfo *)&aCatInfo.finderInfo )->fileType == 0x00000000 )
+        {
+            ( (FileInfo *)&aCatInfo.finderInfo )->fileType = (OSType)PRODUCT_FILETYPE;
+            FSSetCatalogInfo( &aFSRef, kFSCatInfoFinderInfo, &aCatInfo );
+        }
+    }
+}
+#endif	/* MACOSX && PRODUCT_FILETYPE */
 
 /*****************************************************************************
  * UnicodeToText
