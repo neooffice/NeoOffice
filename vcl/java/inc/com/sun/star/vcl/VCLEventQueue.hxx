@@ -61,6 +61,7 @@ public:
 	sal_Bool			anyCachedEvent( USHORT _par0 );
 	com_sun_star_vcl_VCLEvent*	getNextCachedEvent( ULONG _par0, sal_Bool _par1 );
 	void				postCachedEvent( const com_sun_star_vcl_VCLEvent *_par0 );
+	void				postMouseWheelEvent( ULONG _par0, long _par1, long _par2, ULONG _par3, long _par4 );
 };
 
 } // namespace vcl

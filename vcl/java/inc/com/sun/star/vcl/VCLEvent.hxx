@@ -84,8 +84,10 @@ public:
 	ULONG				getWhen();
 	long				getX();
 	long				getY();
-        short				getMenuID();
-        int				getMenuCookie();
+	short				getMenuID();
+	int					getMenuCookie();
+	long				getScrollAmount();
+	long				getWheelRotation();
 };
 
 } // namespace vcl

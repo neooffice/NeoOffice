@@ -172,12 +172,14 @@ void SVMainThread::run()
 		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
 		{
 			// Set up native menu event handler
-			EventTypeSpec aTypes[2];
+			EventTypeSpec aTypes[3];
 			aTypes[0].eventClass = kEventClassMenu;
 			aTypes[0].eventKind = kEventMenuBeginTracking;
 			aTypes[1].eventClass = kEventClassAppleEvent;
 			aTypes[1].eventKind = kEventAppleEvent;
-			InstallApplicationEventHandler( CarbonEventHandler, 2, aTypes, NULL, NULL );
+			aTypes[2].eventClass = kEventClassMouse;
+			aTypes[2].eventKind = kEventMouseWheelMoved;
+			InstallApplicationEventHandler( CarbonEventHandler, 3, aTypes, NULL, NULL );
 		}
 	}
 #endif	// MACOSX
@@ -338,13 +340,28 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 		return nErr;
 	}
+	else if ( nClass == kEventClassMouse && GetEventKind( aEvent ) == kEventMouseWheelMoved )
+	{
+		EventMouseWheelAxis nAxis;
+		UInt32 outSize;
+		if ( GetEventParameter( aEvent, kEventParamMouseWheelAxis, typeMouseWheelAxis, NULL, sizeof( EventMouseWheelAxis ), &outSize, &nAxis ) == noErr && nAxis == kEventMouseWheelAxisY )
+		{
+			MacOSPoint aPoint;
+			SInt32 nDelta;
+			if ( GetEventParameter( aEvent, kEventParamWindowMouseLocation, typeQDPoint, NULL, sizeof( MacOSPoint ), &outSize, &aPoint ) == noErr && GetEventParameter( aEvent, kEventParamMouseWheelDelta, typeSInt32, NULL, sizeof( SInt32 ), &outSize, &nDelta ) == noErr )
+			{
+				GetSalData()->mpEventQueue->postMouseWheelEvent( 0, aPoint.h, aPoint.v, 3, nDelta * -1 );
+				return noErr;
+			}
+		}
+	}
 	else if ( nClass == kEventClassMenu )
 	{
 		SalData *pSalData = GetSalData();
 		MenuRef trackingRef;
 		EventParamType outRefType;
 		UInt32 outSize;
-		if ( ( GetEventKind( aEvent ) == kEventMenuBeginTracking ) && ( GetEventParameter( aEvent, kEventParamDirectObject, typeMenuRef, NULL, sizeof(MenuRef), &outSize, &trackingRef ) == noErr ) )
+		if ( GetEventKind( aEvent ) == kEventMenuBeginTracking && GetEventParameter( aEvent, kEventParamDirectObject, typeMenuRef, NULL, sizeof( MenuRef ), &outSize, &trackingRef ) == noErr )
 		{
 			// According to Carbon documentation, the direct object
 			// parameter should be NULL when tracking is beginning

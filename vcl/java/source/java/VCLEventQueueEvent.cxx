@@ -379,6 +379,29 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			dispatchEvent( nID, pFrame, pData );
 			return;
 		}
+		case SALEVENT_WHEELMOUSE:
+		{
+			SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)pData;
+			if ( !pWheelMouseEvent )
+			{
+				pWheelMouseEvent = new SalWheelMouseEvent();
+				pWheelMouseEvent->mnTime = getWhen();
+				pWheelMouseEvent->mnX = getX();
+				pWheelMouseEvent->mnY = getY();
+				long nWheelRotation = getWheelRotation();
+				pWheelMouseEvent->mnDelta = nWheelRotation * 120;
+				pWheelMouseEvent->mnNotchDelta = nWheelRotation;
+				pWheelMouseEvent->mnScrollLines = getScrollAmount();
+				pWheelMouseEvent->mnCode = getModifiers();
+				pWheelMouseEvent->mbHorz = FALSE;
+			}
+			// Adjust position for RTL layout
+			if ( pFrame && Application::GetSettings().GetLayoutRTL() )
+				pWheelMouseEvent->mnX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pWheelMouseEvent->mnX - 1;
+			dispatchEvent( nID, pFrame, pWheelMouseEvent );
+			delete pWheelMouseEvent;
+			return;
+		}
 		case SALEVENT_MENUACTIVATE:
 		case SALEVENT_MENUCOMMAND:
 		case SALEVENT_MENUDEACTIVATE:
@@ -890,6 +913,48 @@ int com_sun_star_vcl_VCLEvent::getMenuCookie()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 			out = (int)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+long com_sun_star_vcl_VCLEvent::getScrollAmount()
+{
+	static jmethodID mID = NULL;
+	long out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getScrollAmount", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+long com_sun_star_vcl_VCLEvent::getWheelRotation()
+{
+	static jmethodID mID = NULL;
+	long out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getWheelRotation", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
 }

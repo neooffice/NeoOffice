@@ -577,6 +577,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private static HashMap customCursors = null;
 
 	/**
+	 * The focus frame.
+	 */
+	private static VCLFrame focusFrame = null;
+
+	/**
 	 * The shared input context.
 	 */
 	private static InputContext inputContext = null;
@@ -617,7 +622,31 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private static int mouseModifiersPressed = 0;
 
 	/**
+	 * Gets the focus frame.
+	 *
+	 * @return the focus frame
+	 */
+	static VCLFrame getFocusFrame() {
+
+		return focusFrame;
+
+	}
+
+	/**
+	 * Gets the mouse modifiers pressed.
+	 *
+	 * @return the mouse modifiers pressed
+	 */
+	static int getMouseModifiersPressed() {
+
+		return mouseModifiersPressed;
+
+	}
+
+	/**
 	 * Cache the last menu shortcut pressed.
+	 *
+	 * @return the last menu shortcut pressed
 	 */
 	static void setLastMenuShortcutPressed(MenuShortcut s) {
 
@@ -822,6 +851,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// Set mouse capture to parent frame
 		if (VCLFrame.captureFrame == this)
 			VCLFrame.captureFrame = parent;
+		if (VCLFrame.focusFrame == this)
+			VCLFrame.focusFrame = null;
 		if (VCLFrame.lastCaptureFrame == this)
 			VCLFrame.lastCaptureFrame = null;
 		if (VCLFrame.lastDragFrame == this)
@@ -926,6 +957,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void focusGained(FocusEvent e) {
 
+		VCLFrame.focusFrame = this;
+
 		if (queue == null || window == null || !window.isShowing())
 			return;
 
@@ -939,6 +972,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param e the <code>FocusEvent</code>
 	 */
 	public void focusLost(FocusEvent e) {
+
+		if (VCLFrame.focusFrame == this)
+			VCLFrame.focusFrame = null;
 
 		if (queue == null || window == null || !window.isShowing())
 			return;

@@ -158,3 +158,30 @@ void com_sun_star_vcl_VCLEventQueue::postCachedEvent( const com_sun_star_vcl_VCL
 		}
 	}
 }
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLEventQueue::postMouseWheelEvent( ULONG _par0, long _par1, long _par2, ULONG _par3, long _par4 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(JIIII)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "postMouseWheelEvent", cSignature );	
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[5];
+			args[0].j = jlong( _par0 );
+			args[1].i = jint ( _par1 );
+			args[2].i = jint ( _par2 );
+			args[3].i = jint ( _par3 );
+			args[4].i = jint ( _par4 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}

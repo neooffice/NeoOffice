@@ -895,9 +895,19 @@ public final class VCLEvent extends AWTEvent {
 	private String path = null;
 
 	/**
+	 * The mouse wheel scroll amount.
+	 */
+	private int scrollAmount = 0;
+
+	/**
 	 * The text.
 	 */
 	private String text = null;
+
+	/**
+	 * The mouse wheel rotation.
+	 */
+	private int wheelRotation = 0;
 
 	/**
 	 * The text attributes.
@@ -964,7 +974,7 @@ public final class VCLEvent extends AWTEvent {
 	/**
 	 * Constructs a new <code>VCLEvent</code> instance.
 	 *
-	 * @param source the <code>AWTEvent</code> that originated the event
+	 * @param event the <code>AWTEvent</code> that originated the event
 	 * @param id the event type
 	 * @param f the <code>VCLFrame</code> instance
 	 * @param d the data pointer
@@ -991,8 +1001,7 @@ public final class VCLEvent extends AWTEvent {
 		awtEvent = true;
 
 		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-			int eid = event.getID();
-			switch (eid) {
+			switch (id) {
 				case KeyEvent.KEY_PRESSED:
 				case KeyEvent.KEY_RELEASED:
 				case KeyEvent.KEY_TYPED:
@@ -1009,14 +1018,14 @@ public final class VCLEvent extends AWTEvent {
 						int keyCode = e.getKeyCode();
 						if (keyCode == KeyEvent.VK_CONTROL)
 							keyCode = KeyEvent.VK_META;
-						event = e = new KeyEvent(e.getComponent(), eid, e.getWhen(), modifiers, keyCode, e.getKeyChar());
+						event = e = new KeyEvent(e.getComponent(), id, e.getWhen(), modifiers, keyCode, e.getKeyChar());
 					}
 					else if ((modifiers & InputEvent.META_MASK) == InputEvent.META_MASK) {
 						modifiers = (modifiers & ~InputEvent.META_MASK) | InputEvent.CTRL_MASK;
 						int keyCode = e.getKeyCode();
 						if (keyCode == KeyEvent.VK_META)
 							keyCode = KeyEvent.VK_CONTROL;
-						event = e = new KeyEvent(e.getComponent(), eid, e.getWhen(), modifiers, keyCode, e.getKeyChar());
+						event = e = new KeyEvent(e.getComponent(), id, e.getWhen(), modifiers, keyCode, e.getKeyChar());
 					}
 					break;
 				}
@@ -1071,6 +1080,26 @@ public final class VCLEvent extends AWTEvent {
 		}
 
 		source = event;
+
+	}
+
+	/**
+	 * Constructs a new <code>VCLEvent</code> instance.  This constructor
+	 * should be used only for injecting SALEVENT_WHEELMOUSE events into the
+	 * queue.
+	 *
+	 * @param event the <code>AWTEvent</code> that originated the event
+	 * @param id the event type
+	 * @param f the <code>VCLFrame</code> instance
+	 * @param d the data pointer
+	 * @param s the scroll amount
+	 * @param w the wheel rotation
+	 */
+	VCLEvent(AWTEvent event, int id, VCLFrame f, int d, int s, int w) {
+
+		this(event, id, f, d, 0);
+		scrollAmount = s;
+		wheelRotation = w * -1;
 
 	}
 
@@ -1572,6 +1601,17 @@ public final class VCLEvent extends AWTEvent {
 	}
 
 	/**
+	 * Gets the mouse wheel scroll amount.
+	 *
+	 * @return the mouse wheel scroll amount
+	 */
+	public int getScrollAmount() {
+
+		return scrollAmount;
+
+	}
+
+	/**
 	 * Returns the rectangle representing the area which needs to be repainted
      * in response to this event.
 	 *
@@ -1583,6 +1623,17 @@ public final class VCLEvent extends AWTEvent {
 			return ((PaintEvent)source).getUpdateRect();
 		else
 			return new Rectangle();
+
+	}
+
+	/**
+	 * Gets the mouse wheel rotation.
+	 *
+	 * @return the mouse wheel rotation
+	 */
+	public int getWheelRotation() {
+
+		return wheelRotation;
 
 	}
 
@@ -1639,7 +1690,7 @@ public final class VCLEvent extends AWTEvent {
 	 */
 	boolean isAWTEvent() {
 
-		return (awtEvent || getID() == SALEVENT_YIELDEVENTQUEUE);
+		return (awtEvent || id == SALEVENT_YIELDEVENTQUEUE);
 
 	}
 

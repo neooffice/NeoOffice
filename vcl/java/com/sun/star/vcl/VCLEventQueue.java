@@ -46,8 +46,11 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.FocusEvent;
 import java.awt.event.InputMethodEvent;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
 import java.awt.im.InputContext;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.text.AttributedString;
 
 /**
@@ -95,6 +98,39 @@ public final class VCLEventQueue {
 	public final static int INPUT_ANY = VCLEventQueue.INPUT_MOUSE | VCLEventQueue.INPUT_KEYBOARD | VCLEventQueue.INPUT_PAINT | VCLEventQueue.INPUT_TIMER | VCLEventQueue.INPUT_OTHER;
 
 	/**
+	 * The mouse wheel event class.
+	 */
+	private static Class mouseWheelEventClass = null;
+
+	/**
+	 * The mouse wheel event scroll amount method.
+	 */
+	private static Method mouseWheelEventGetScrollAmountMethod = null;
+
+	/**
+	 * The mouse wheel event wheel rotation method.
+	 */
+	private static Method mouseWheelEventGetWheelRotationMethod = null;
+
+	/**
+	 * Check if the MouseWheelEvent class is available.
+	 */
+	static {
+
+		try {
+			mouseWheelEventClass = Class.forName("java.awt.event.MouseWheelEvent");
+			mouseWheelEventGetScrollAmountMethod = mouseWheelEventClass.getMethod("getScrollAmount", new Class[0]);
+			mouseWheelEventGetWheelRotationMethod = mouseWheelEventClass.getMethod("getWheelRotation", new Class[0]);
+		}
+		catch (Throwable t) {
+			mouseWheelEventClass = null;
+			mouseWheelEventGetScrollAmountMethod = null;
+			mouseWheelEventGetWheelRotationMethod = null;
+		}
+
+	}
+
+	/**
 	 * The list of queues.
 	 */
 	private VCLEventQueue.Queue[] queueList = new VCLEventQueue.Queue[2];
@@ -105,7 +141,7 @@ public final class VCLEventQueue {
 	public VCLEventQueue() {
 
 		// Swap in our own event queue
-		Toolkit.getDefaultToolkit().getSystemEventQueue().push(new VCLEventQueue.NoExceptionsEventQueue());
+		Toolkit.getDefaultToolkit().getSystemEventQueue().push(new VCLEventQueue.NoExceptionsEventQueue(this));
 
 		// Create the list of queues
 		queueList[0] = new VCLEventQueue.Queue();
@@ -280,6 +316,34 @@ public final class VCLEventQueue {
 	}
 
 	/**
+	 * Post a mouse wheel event. Note that this method will block and will
+	 * wait for the posting to be done in the Java event thread to ensure that
+	 * the mouse wheel event is posted in the proper sequence with other
+	 * Java AWT events.
+	 *
+     * @param m the time stamp of the event in milliseconds
+     * @param x the x coordinate
+     * @param y the y coordinate
+     * @param s the scroll amount
+     * @param w the wheel rotation
+	 */
+	public void postMouseWheelEvent(long m, int x, int y, int s, int w) {
+
+		VCLFrame f = VCLFrame.getFocusFrame();
+		if (f == null)
+			return;
+
+		try {
+			VCLEvent e = new VCLEvent(new MouseEvent(f.getPanel(), MouseEvent.MOUSE_MOVED, m, VCLFrame.getMouseModifiersPressed(), x, y, 0, false), VCLEvent.SALEVENT_WHEELMOUSE, f, 0, s, w);
+			EventQueue.invokeAndWait(new VCLEventQueue.MouseWheelEventPoster(e, this));
+		}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
+
+	}
+
+	/**
 	 * Remove all events in the cache associated with the specified frame
 	 * pointer.
 	 *
@@ -318,6 +382,22 @@ public final class VCLEventQueue {
 		 * The key component.
 		 */
 		private Component keyComponent = null;
+
+		/**
+		 * The <code>VCLEventQueue</code>.
+		 */
+		private VCLEventQueue queue = null;
+
+		/**
+		 * Construct a <code>NoExceptionsEventQueue</code> instance.
+		 *
+		 * @param q the <code>VCLEventQueue</code>
+		 */
+		NoExceptionsEventQueue(VCLEventQueue q) {
+
+			queue = q;
+
+		}
 
 		/**
 		 * Dispatch an event.
@@ -385,7 +465,18 @@ public final class VCLEventQueue {
 						}
 					}
 				}
-	
+
+				// In order to support JVM's before 1.4, process mouse wheel
+				// events here
+				if (VCLEventQueue.mouseWheelEventClass != null && VCLEventQueue.mouseWheelEventClass.isInstance(event)) {
+					VCLFrame f = VCLFrame.getFocusFrame();
+					if (f != null) {
+						Integer s = (Integer)mouseWheelEventGetScrollAmountMethod.invoke(event, new Object[0]);
+						Integer w = (Integer)mouseWheelEventGetWheelRotationMethod.invoke(event, new Object[0]);
+						queue.postCachedEvent(new VCLEvent(event, VCLEvent.SALEVENT_WHEELMOUSE, f, 0, s.intValue(), w.intValue()));
+					}
+				}
+
 				super.dispatchEvent(event);
 			}
 			catch (Throwable t) {
@@ -427,6 +518,47 @@ public final class VCLEventQueue {
 		QueueItem(VCLEvent event) {
 
 			this.event = event;
+
+		}
+
+	}
+
+	/**
+	 * The <code>MouseWheelEventPoster</code> class allows posting of synthetic
+	 * mouse wheel events in the Java event dispatch thread for pre-1.4 JVMs.
+	 */
+	final class MouseWheelEventPoster implements Runnable {
+
+		/**
+		 * The <code>VCLEvent</code>.
+		 */
+		private VCLEvent event = null;
+
+		/**
+		 * The <code>VCLEventQueue</code>.
+		 */
+		private VCLEventQueue queue = null;
+
+		/**
+		 * Construct a <code>MouseWheelEventPoster</code> instance.
+		 *
+		 * @param e the <code>VCLEvent</code>
+		 * @param q the <code>VCLEventQueue</code>
+		 */
+		MouseWheelEventPoster(VCLEvent e, VCLEventQueue q) {
+
+			event = e;
+			queue = q;
+
+		}
+
+		/**
+		 * This method will be invoked in the Java event dispatch thread by the
+		 * <code>EventQueue.invokeAndWait()</code> method.
+		 */
+		public void run() {
+
+			queue.postCachedEvent(event);
 
 		}
 
