@@ -101,6 +101,9 @@ int dladdr(void *address, Dl_info *dl)
 #endif
 #include <mach-o/dyld.h>
 extern oslProcessError SAL_CALL osl_searchPath(const sal_Char* pszName, const sal_Char* pszPath, sal_Char Separator, sal_Char *pszBuffer, sal_uInt32 Max);
+
+/* All Mac OS X paths are UTF-8 */
+#define osl_getThreadTextEncoding() RTL_TEXTENCODING_UTF8
 #else /* MACOSX */
 extern int _dlclose(void *handle);
 #endif /* MACOSX */
