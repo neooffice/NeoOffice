@@ -88,7 +88,7 @@ sysclasspath=`printf "$sysclasspath" | sed 's#^:##'`
 if [ $? != 0 ]; then
     exit 1;
 fi
-printf "[Java]\nRuntimeLib=/System/Library/Frameworks/JavaVM.framework/JavaVM\nSystemClasspath=$sysclasspath\n\n" > "$configdir/javarc"
+printf "[Java]\nRuntimeLib=/System/Library/Frameworks/JavaVM.framework/JavaVM\nSystemClasspath=$sysclasspath\ncom.apple.hwaccel=false\ncom.apple.hwaccellist=\n\n" > "$configdir/javarc"
 if [ $? != 0 ]; then
     exit 1;
 fi
