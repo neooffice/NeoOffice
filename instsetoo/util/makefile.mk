@@ -33,7 +33,7 @@
 #   MA  02111-1307  USA
 #   
 #   =================================================
-#   Modified June 2003 by Patrick Luby. SISSL Removed. NeoOffice is
+#   Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
 #   distributed under GPL only under modification term 3 of the LGPL.
 # 
 #   Contributor(s): _______________________________________
@@ -46,8 +46,12 @@ TARGET=util
 
 .INCLUDE:  settings.mk
 
+.IF "$(BUILD_SPECIAL)"!=""
+LZIPFLAGS*:=-S
+.ENDIF
+
 .IF "$(strip)"!=""
-LZIPFLAGS=-S
+LZIPFLAGS*:=-S
 .ENDIF
 
 .IF "$(OS)"=="WNT"
@@ -56,7 +60,21 @@ EXTRARMFLAG=/S
 EXTRARMFLAG=-r
 .ENDIF
 
+LZIPFLAGS+=-e $(MISC)$/lzip.log
+SHARED_COM_SDK_PATH*:=.
+
+INSTALLDIR=$(OUT)
+
+SEARCH_DIR:=.
+.IF "$(BUILD_SPECIAL)"!=""
+.IF "$(GUI)"=="WNT"
+SEARCH_DIR=r:\solenv\inst\ooo\$(OUTPATH)
+.ENDIF
+.ENDIF
+
 .INCLUDE: target.mk
+
+.IF "$(BSCLIENT)"==""
 
 ALLTAR : pack
 
@@ -65,23 +83,25 @@ LANGUAGES = $(alllangext:s/ /,/)
 .IF "$(alllangext)"!=""
 
 pack:
-	+-$(RM) $(EXTRARMFLAG) $(OUT)$/$(LANGUAGES)$/*
-	+-lzip $(LZIPFLAGS) -l $(LANGUAGES) -f openoffice.lst -d $(OUT)$/$(LANGUAGES) -n OfficeOSL 
+	+-$(RM) $(EXTRARMFLAG) $(INSTALLDIR)$/$(LANGUAGES)$/normal$/*
+	+-$(LZIP) -p ${SEARCH_DIR} $(LZIPFLAGS) -l $(LANGUAGES) -f openoffice.lst -d $(INSTALLDIR)$/$(LANGUAGES) -n OfficeOSL -e $(INSTALLDIR)$/$(LANGUAGES)$/Logfile.txt -C $(INSTALLDIR)$/$(LANGUAGES)$/checksums.txt
 
-# Special target to echo the LANGUAGES macro to external scripts
-language_numbers:
-	@echo $(LANGUAGES)
-
-# Special target to echo the LANGUAGES macro to external scripts
-language_names:
-	@echo $(foreach,i,$(LANGUAGES:s/,/ /) $(iso_$i))
+test:
+	+-$(LZIP) $(LZIPFLAGS) -p ${SEARCH_DIR} -l 01 -f openoffice.lst -o -n OfficeOSL 
 
 .ELSE			# "$(alllangext)"!=""
 pack:
 	@+echo cannot pack nothing...
 
-# Special target to echo the LANGUAGES macro to external scripts
-languages:
-
 .ENDIF			# "$(alllangext)"!=""
 
+# Special target to echo the $(alllangext) macro to external scripts
+language_numbers:
+	@echo $(LANGUAGES)
+
+# Special target to echo the $(alllangext) macro to external scripts
+language_names:
+	@echo $(foreach,i,$(alllangext) $(iso_$i))
+
+.ENDIF          # "$(BSCLIENT)"==""
+	
