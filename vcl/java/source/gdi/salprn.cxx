@@ -44,9 +44,6 @@
 #ifndef _SV_SALPTYPE_HXX
 #include <salptype.hxx>
 #endif
-#ifndef _SV_JOBSET_H
-#include <jobset.h>
-#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
@@ -304,7 +301,7 @@ SalGraphics* SalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobData )
 	if ( maPrinterData.mbGraphics )
 		return NULL;
 
-	com_sun_star_vcl_VCLGraphics *pVCLGraphics = maPrinterData.mpVCLPrintJob->startPage();
+	com_sun_star_vcl_VCLGraphics *pVCLGraphics = maPrinterData.mpVCLPrintJob->startPage( pSetupData->meOrientation );
 	if ( !pVCLGraphics )
 		return NULL;
 	maPrinterData.mpGraphics = new SalGraphics();

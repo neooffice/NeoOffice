@@ -39,6 +39,9 @@
 #ifndef _SV_JAVA_LANG_OBJECT_HXX
 #include <java/lang/Object.hxx>
 #endif
+#ifndef _SV_JOBSET_H
+#include <jobset.h>
+#endif
 
 namespace vcl {
 
@@ -66,7 +69,7 @@ public:
 	java_lang_Object*	getPrinterJob();
 	sal_Bool			isFinished();
 	sal_Bool			startJob( com_sun_star_vcl_VCLPageFormat *_par0, sal_Bool _par1 );
-	com_sun_star_vcl_VCLGraphics*	startPage();
+	com_sun_star_vcl_VCLGraphics*	startPage( Orientation _par0 );
 };
 
 } // namespace vcl

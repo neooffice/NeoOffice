@@ -139,6 +139,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 		if (graphicsInfo != null)
 		{
 			graphicsInfo.graphics = null;
+			graphicsInfo.pageFormat = null;
 			graphicsInfo.pageIndex = -1;
 		}
 		endJob = true;
@@ -214,19 +215,13 @@ public final class VCLPrintJob implements Printable, Runnable {
 		else if (endJob)
 			return Printable.NO_SUCH_PAGE;
 
+		graphicsInfo.pageFormat = f;
 		graphicsInfo.pageIndex = i;
 
 		Graphics2D graphics = (Graphics2D)g;
 
 		// Normalize to device resolution
 		graphics.transform(graphics.getDeviceConfiguration().getNormalizingTransform());
-
-		// Set the origin to the origin of the printable area
-		graphics.translate((int)f.getImageableX(), (int)f.getImageableY());
-
-		// Scale to printer resolution
-		Dimension pageResolution = pageFormat.getPageResolution();
-		graphics.scale((double)72 / pageResolution.width, (double)72 / pageResolution.height);
 
 		synchronized (graphicsInfo) {
 			graphicsInfo.graphics = graphics;
@@ -332,9 +327,10 @@ public final class VCLPrintJob implements Printable, Runnable {
 	/**
 	 * Get the <code>VCLGraphics</code> instance for the current page.
 	 *
+	 * @param o the page orientation
 	 * @return the <code>VCLGraphics</code> instance for the current page
 	 */
-	public VCLGraphics startPage() {
+	public VCLGraphics startPage(int o) {
 
 		synchronized (graphicsInfo) {
 			// Start the printing thread if it has not yet been started
@@ -342,21 +338,50 @@ public final class VCLPrintJob implements Printable, Runnable {
 				printThread = new Thread(this);
 				printThread.setPriority(Thread.MIN_PRIORITY);
 				printThread.start();
-				// Wait for the printing thread to gain the lock on the
-				// graphics queue
+				printThreadStarted = true;
+			}
+
+			// Wait for the printing thread to gain the lock on the
+			// graphics queue
+			if (graphicsInfo.graphics == null && printThread != null && printThread.isAlive()) {
 				try {
 					graphicsInfo.wait();
 				}
 				catch (Throwable t) {}
-				printThreadStarted = true;
 			}
 
 			// Get the current page's graphics context
 			currentPage++;
-			if (printThread == null || !printThread.isAlive())
-				currentGraphics = null;
-			else
+			if (graphicsInfo.graphics != null && printThread != null && printThread.isAlive()) {
+				// Set the origin to the origin of the printable area
+				graphicsInfo.graphics.translate((int)graphicsInfo.pageFormat.getImageableX(), (int)graphicsInfo.pageFormat.getImageableY());
+
+				// Rotate page if necessary
+				int orientation = graphicsInfo.pageFormat.getOrientation();
+				if (o == VCLPageFormat.ORIENTATION_PORTRAIT && orientation != PageFormat.PORTRAIT) {
+					if (orientation == PageFormat.REVERSE_LANDSCAPE) {
+						graphicsInfo.graphics.translate((int)graphicsInfo.pageFormat.getImageableWidth(), 0);
+						graphicsInfo.graphics.rotate(Math.toRadians(90));
+					}
+					else {
+						graphicsInfo.graphics.translate(0, (int)graphicsInfo.pageFormat.getImageableHeight());
+						graphicsInfo.graphics.rotate(Math.toRadians(-90));
+					}
+				}
+				else if (o != VCLPageFormat.ORIENTATION_PORTRAIT && orientation == PageFormat.PORTRAIT ) {
+					graphicsInfo.graphics.translate(0, (int)graphicsInfo.pageFormat.getImageableHeight());
+					graphicsInfo.graphics.rotate(Math.toRadians(-90));
+				}
+
+				// Scale to printer resolution
+				Dimension pageResolution = pageFormat.getPageResolution();
+				graphicsInfo.graphics.scale((double)72 / pageResolution.width, (double)72 / pageResolution.height);
+
 				currentGraphics = new VCLGraphics(graphicsInfo.graphics, pageFormat);
+			}
+			else {
+				currentGraphics = null;
+			}
 
 			// Mac OS X creates two graphics for each page so we need to
 			// ignore the first and only print to the second
@@ -371,6 +396,8 @@ public final class VCLPrintJob implements Printable, Runnable {
 	class GraphicsInfo {
 
 		Graphics2D graphics = null;
+
+		PageFormat pageFormat = null;
 
 		int pageIndex = -1;
 
