@@ -173,24 +173,37 @@ public final class VCLMenuItemData {
 		
 		if(delegate!=null)
 			setDelegate(null);
-
+		
+		// [ed] 1/9/05 If we have an assigned delegate object, we
+		// shouldn't actually remove ourselves from the parent menu
+		// or menubar.  If we do, this will cause the arrays for
+		// our internal VCLMenuItemData structures to become out
+		// of sync with the AWT structures;  removing a delegate must
+		// still leave a placeholder in the AWT structure in order to
+		// mirror the placeholder's mirror in our internal arrays.
+		// The underlying bug is that the parent-for object actually
+		// "owns" the peers, not the delegate.
+		//
+		// Bug 332
+		if(delegateForObject==null) {	    
 		// Clear out any orphaned peers
-		if (!awtPeers.isEmpty()) {
-			Iterator peers=awtPeers.iterator();
-			while(peers.hasNext()) {
-				MenuItem mi=(MenuItem)peers.next();
-				MenuContainer mc = mi.getParent();
-				if (mc != null) {
-					if (mc instanceof Menu) {
-						Menu m = (Menu)mc;
-						synchronized (m) {
-							m.remove(mi);
+			if (!awtPeers.isEmpty()) {
+				Iterator peers=awtPeers.iterator();
+				while(peers.hasNext()) {
+					MenuItem mi=(MenuItem)peers.next();
+					MenuContainer mc = mi.getParent();
+					if (mc != null) {
+						if (mc instanceof Menu) {
+							Menu m = (Menu)mc;
+							synchronized (m) {
+								m.remove(mi);
+							}
 						}
-					}
-					else if (mc instanceof MenuBar) {
-						MenuBar mb = (MenuBar)mc;
-						synchronized (mb) {
-							mb.remove(mi);
+						else if (mc instanceof MenuBar) {
+							MenuBar mb = (MenuBar)mc;
+							synchronized (mb) {
+								mb.remove(mi);
+							}
 						}
 					}
 				}
