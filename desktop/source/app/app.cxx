@@ -1470,6 +1470,7 @@ void Desktop::Main()
 			bExit = TRUE;
     	}
 
+#ifndef USE_JAVA
         if (!bExit && pCmdLineArgs->IsEmpty() && SvtModuleOptions().IsModuleInstalled(SvtModuleOptions::E_SSTARTMODULE))
         {
             ::desktop::Desktop::bSuppressOpenDefault = sal_True;
@@ -1511,6 +1512,7 @@ void Desktop::Main()
             }
             RTL_LOGFILE_CONTEXT_TRACE( aLog, "} create BackingComponent" );
         }
+#endif	// !USE_JAVA
 
         Reference< XTypeDetection >
             xTypeDetection( xSMgr->createInstance(
@@ -2250,6 +2252,12 @@ void Desktop::HandleAppEvent( const ApplicationEvent& rAppEvent )
             aArgs[3].Name = ::rtl::OUString::createFromAscii("Hidden");
             aArgs[4].Name = ::rtl::OUString::createFromAscii("Silent");
         }
+#ifdef USE_JAVA
+        else
+        {
+            ::desktop::Desktop::bSuppressOpenDefault = sal_True;
+        }
+#endif	// USE_JAVA
 
         // mark request as user interaction from outside
         aArgs[0].Value <<= ::rtl::OUString::createFromAscii("private:OpenEvent");
