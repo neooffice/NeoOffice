@@ -337,11 +337,10 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_USEREVENT:
 			dispatchEvent( nID, pFrame, pData );
 			return;
+		default:
+			dispatchEvent( nID, pFrame, pData );
+			return;
 	}
-
-#ifdef DEBUG
-	fprintf( stderr, "Unhandled Event: %i\n", nID );
-#endif
 }
 
 // ----------------------------------------------------------------------------
@@ -350,11 +349,19 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 {
 	if ( pFrame && pFrame->maFrameData.mpProc )
 	{
-		pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
+		SalData *pSalData = GetSalData();
+		::std::list< SalFrame* >::const_iterator it;
+		for ( it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+		{
+			if ( pFrame == *it )
+			{
+				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
+				break;
+			}
+		}
 
 		// Flush the window's buffer to the native window
-		SalData *pSalData = GetSalData();
-		for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+		for ( it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 		{
 			if ( pFrame == *it )
 			{
