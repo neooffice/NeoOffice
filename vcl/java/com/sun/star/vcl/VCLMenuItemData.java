@@ -388,7 +388,8 @@ public final class VCLMenuItemData {
 		while(e.hasNext())
 		{
 		    CheckboxMenuItem cMI=(CheckboxMenuItem)e.next();
-		    cMI.setState(isChecked);
+		    if(cMI.getPeer()!=null)
+			cMI.setState(isChecked);
 		}
 	    }
         }
@@ -636,9 +637,14 @@ public final class VCLMenuItemData {
          * @param state         initial checked state of the menu item
          */
         public VCLAWTCheckboxMenuItem(String title, VCLMenuItemData data, boolean state) {
-            super(title, state);
+            super(title);
             d=data;
             addActionListener(this);
+	    // postpone call to setState until peer is created to work around
+	    // bugs in Apple Java 1.3.1 VM preventing peer state from being
+	    // properly set.  Bug 182.
+	    if(getPeer()!=null)
+		setState(state);
         }
         
         /**
@@ -724,6 +730,26 @@ public final class VCLMenuItemData {
             awtPeers.add(toReturn);
         
         return(toReturn);
+    }
+    
+    /**
+     * Reset the checkmark state for any checkmark items in the menu or its
+     * submenus.  We can't invoked setState(true) on a CheckboxMenuItem
+     * on the 1.3.1 Mac OS X VM until it has its peer instantiated or else
+     * it may get displayed as empty.  (Bug 182)
+     */
+    public void fixCheckboxMenuItemState() {
+	if(isCheckbox) {
+	    if(getChecked()) {
+		setChecked(getChecked());
+	    }
+	} else if(isSubmenu) {
+	    Iterator menuItemIter=menuItems.iterator();
+	    while(menuItemIter.hasNext())
+	    {
+		((VCLMenuItemData)menuItemIter.next()).fixCheckboxMenuItemState();
+	    }
+	}
     }
     
     /**

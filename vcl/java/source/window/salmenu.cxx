@@ -327,11 +327,13 @@ void SalInstance::DestroyMenuItem( SalMenuItem* pItem )
 void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu )
 {
 #ifndef NO_NATIVE_MENUS
+	bool bWasMenuBarInvocation = false;
 	if(!pMenu) {
 		// locate the menubar for the frame
 		pMenu = pFrame->maFrameData.mpMenuBar;
 		if(!pMenu)
 			return;
+		bWasMenuBarInvocation = true;
 	}
 
 	Menu *pVCLMenu = pMenu->mpParentVCLMenu;
@@ -363,5 +365,18 @@ void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu )
 	pDeactivateEvent->mpMenu = pVCLMenu;
 	com_sun_star_vcl_VCLEvent aDeactivateEvent( SALEVENT_MENUDEACTIVATE, pFrame, pDeactivateEvent );
 	aDeactivateEvent.dispatch();
+	
+	// For our menubars, following insertion of all of the items dispatch
+	// a refresh for all of the checkbox menu items.  We need to refresh
+	// their state before the menus are displayed in order to work around
+	// bugs in the Apple 1.3.1 VM that prevent the state from being
+	// set properly if the setState() call is issued prior to the
+	// checkbox menu item having a peer.  Bug 182.
+	
+	if( bWasMenuBarInvocation )
+	{
+		if( pFrame->maFrameData.mpMenuBar->maData.mpVCLMenuBar )
+			pFrame->maFrameData.mpMenuBar->maData.mpVCLMenuBar->syncCheckboxMenuItemState();
+	}
 #endif	// !NO_NATIVE_MENUS
 }

@@ -229,3 +229,22 @@ void com_sun_star_vcl_VCLMenuBar::enableMenu( int _par0, bool _par1 )
 		}
 	}
 }
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLMenuBar::syncCheckboxMenuItemState( void )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "syncCheckboxMenuItemState", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+	}
+}

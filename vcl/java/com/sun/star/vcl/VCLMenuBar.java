@@ -357,4 +357,18 @@ public final class VCLMenuBar {
 	}
 	return(false);
     }
+    
+    /**
+     * Bugs in the 1.3.1 VM on Mac OS X prevent the state of a checkbox menu
+     * item from being set properly unless its peer is already instantiated.
+     * We need to periodically run through all of the checkbox menu items in
+     * the menubar and perform the initial set of the checkbox menu item
+     * states after their peers are created.  (Bug 182)
+     */
+    public void syncCheckboxMenuItemState() {
+	Iterator menuIter=menus.iterator();
+	while(menuIter.hasNext()) {
+	    ((VCLMenuItemData)menuIter.next()).fixCheckboxMenuItemState();
+	}
+    }
 }
