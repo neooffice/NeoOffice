@@ -74,8 +74,8 @@ public:
 	void				drawPolyline( ULONG _par0, const long *_par1, const long *_par2, SalColor _par3 );
 	void				drawPolyPolygon( ULONG _par0, const ULONG *_par1, long **_par2, long **_par3, SalColor _par4, sal_Bool _par5 );
 	void				drawRect( long _par0, long _par1, long _par2, long _par3, SalColor _par4, sal_Bool _par5 );
-	void				drawText( long _par0, long _par1, const sal_Unicode *_par2, USHORT _par3, const com_sun_star_vcl_VCLFont *_par4, SalColor _par5 );
-	void				drawTextArray( long _par0, long _par1, const sal_Unicode *_par2, USHORT _par3, const com_sun_star_vcl_VCLFont *_par4, SalColor _par5, const long *_par6 );
+	void				drawText( long _par0, long _par1, const sal_Unicode *_par2, USHORT _par3, com_sun_star_vcl_VCLFont *_par4, SalColor _par5 );
+	void				drawTextArray( long _par0, long _par1, const sal_Unicode *_par2, USHORT _par3, com_sun_star_vcl_VCLFont *_par4, SalColor _par5, const long *_par6 );
 	void				endSetClipRegion();
 	USHORT				getBitCount();
 	SalColor			getPixel( long _par0, long _par1 );

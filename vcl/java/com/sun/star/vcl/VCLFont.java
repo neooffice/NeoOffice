@@ -118,17 +118,18 @@ public final class VCLFont {
 		// Get all of the fonts and screen out duplicates
 		fontFamilies = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
 		ArrayList array = new ArrayList();
-		for (int j = 0; j < fontFamilies.length; j++) {
-			String name = fontFamilies[j].toLowerCase();
+		for (int i = 0; i < fontFamilies.length; i++) {
+			String name = fontFamilies[i].toLowerCase();
 			// Get rid of hidden, bold, and italic Mac OS X fonts
 			if (macosx && name.startsWith("."))
 				continue;
-			array.add(new VCLFont(fontFamilies[j], 1, (short)0, false, false, true));
+			array.add(new VCLFont(fontFamilies[i], 1, (short)0, false, false, true));
 		}
+
 		VCLFont.fonts = (VCLFont[])array.toArray(new VCLFont[array.size()]);
 
 		// Set default font
-		defaultFont = new VCLFont("SansSerif", 1, (short)0, false, false, true);
+		defaultFont = new VCLFont("Dialog", 1, (short)0, false, false, true);
 
 	}
 
@@ -145,17 +146,6 @@ public final class VCLFont {
 	}
 
 	/**
-	 * Returns the default font.
-	 *
-	 * @return the default font
-	 */
-	public static VCLFont getDefaultFont() {
-
-		return defaultFont;
-
-	}
-
-	/**
 	 * The antialiased flag.
 	 */
 	private boolean antialiased = false;
@@ -164,6 +154,16 @@ public final class VCLFont {
 	 * The bold flag.
 	 */
 	private boolean bold = false;
+
+	/**
+	 * The cached font.
+	 */
+	private Font font = null;
+
+	/**
+	 * The cached font metrics.
+	 */
+	private FontMetrics fontMetrics = null;
 
 	/**
 	 * The italic flag.
@@ -217,10 +217,22 @@ public final class VCLFont {
 
 		// Cache style
 		style = Font.PLAIN;
-		if (b)
+		if (bold)
 			style |= Font.BOLD;
-		if (i)
+		if (italic)
 			style |= Font.ITALIC;
+
+		// Cache font and font metrics
+		font = new Font(name, style, size);
+
+		// Exceptions can be thrown if a font is disabled or removed
+		try {
+			fontMetrics  = VCLFont.graphics.getFontMetrics(font);
+		}
+		catch (Throwable t) {
+			font = getDefaultFont().getFont();
+			fontMetrics = VCLFont.graphics.getFontMetrics(font);
+		}
 
 		// Get family type
 		String fontName = name.toLowerCase();
@@ -246,8 +258,6 @@ public final class VCLFont {
 	 * @return a new <code>VCLFont</code> object
 	 */
 	public VCLFont deriveFont(int s, boolean b, boolean i, short o, boolean a) {
-
-		Font f = null;
 
 		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 			String fontName = name.toLowerCase();
@@ -280,19 +290,7 @@ public final class VCLFont {
 	 */
 	public int getAscent() {
 
-		Font f = new Font(name, style, size);
-		FontMetrics fm = null;
-
-		// Exceptions can be thrown if a font is disabled or removed
-		try {
-			fm = VCLFont.graphics.getFontMetrics(f);
-		}
-		catch (Throwable t) {
-			f = new Font(VCLFont.getDefaultFont().getName(), style, size);
-			fm = VCLFont.graphics.getFontMetrics(f);
-		}
-
-		return fm.getAscent();
+		return fontMetrics.getAscent();
 
 	}
 
@@ -305,24 +303,12 @@ public final class VCLFont {
 	 */
 	public int[] getCharWidth(char start, char end) {
 
-		Font f = new Font(name, style, size);
-		FontMetrics fm = null;
-
-		// Exceptions can be thrown if a font is disabled or removed
-		try {
-			fm = VCLFont.graphics.getFontMetrics(f);
-		}
-		catch (Throwable t) {
-			f = new Font(VCLFont.getDefaultFont().getName(), style, size);
-			fm = VCLFont.graphics.getFontMetrics(f);
-		}
-
 		int[] widths = new int[end - start + 1];
 		for (char i = start; i <= end; i++) {
-			if (Character.getType(i) == Character.NON_SPACING_MARK && f.canDisplay(i))
+			if (Character.getType(i) == Character.NON_SPACING_MARK && font.canDisplay(i))
 				widths[i - start] = 0;
 			else
-				widths[i - start] = fm.charWidth(i);
+				widths[i - start] = fontMetrics.charWidth(i);
 		}
 		return widths;
 
@@ -335,19 +321,18 @@ public final class VCLFont {
 	 */
 	public int getDescent() {
 
-		Font f = new Font(name, style, size);
-		FontMetrics fm = null;
+		return fontMetrics.getDescent() + 1;
 
-		// Exceptions can be thrown if a font is disabled or removed
-		try {
-			fm = VCLFont.graphics.getFontMetrics(f);
-		}
-		catch (Throwable t) {
-			f = new Font(VCLFont.getDefaultFont().getName(), style, size);
-			fm = VCLFont.graphics.getFontMetrics(f);
-		}
+	}
 
-		return fm.getDescent() + 1;
+	/**
+	 * Returns the default font adjusted to this font's size and style.
+	 *
+	 * @return the default font adjusted to this font's size and style
+	 */
+	public VCLFont getDefaultFont() {
+
+		return new VCLFont(defaultFont.getName(), size, orientation, bold, italic, antialiased);
 
 	}
 
@@ -363,6 +348,17 @@ public final class VCLFont {
 	}
 
 	/**
+	 * Returns the <code>Font</code>.
+	 *
+	 * @return the <code>Font</code>
+	 */
+	Font getFont() {
+
+		return font;
+
+	}
+
+	/**
 	 * Determines the kerning adjustment for the specified characters.
 	 *
 	 * @param a the first character
@@ -371,27 +367,15 @@ public final class VCLFont {
 	 */
 	public int getKerning(char a, char b) {
 
-		Font f = new Font(name, style, size);
-		FontMetrics fm = null;
-
-		// Exceptions can be thrown if a font is disabled or removed
-		try {
-			fm = VCLFont.graphics.getFontMetrics(f);
-		}
-		catch (Throwable t) {
-			f = new Font(VCLFont.getDefaultFont().getName(), style, size);
-			fm = VCLFont.graphics.getFontMetrics(f);
-		}
-
 		// Get width without kerning
 		int width = 0;
-		if (Character.getType(a) != Character.NON_SPACING_MARK || !f.canDisplay(a))
-			width += fm.charWidth(a);
-		if (Character.getType(b) != Character.NON_SPACING_MARK || !f.canDisplay(b))
-			width += fm.charWidth(b);
+		if (Character.getType(a) != Character.NON_SPACING_MARK || !font.canDisplay(a))
+			width += fontMetrics.charWidth(a);
+		if (Character.getType(b) != Character.NON_SPACING_MARK || !font.canDisplay(b))
+			width += fontMetrics.charWidth(b);
 
 		// Subtract the width with kerning
-		width -= fm.charsWidth(new char[]{ a, b }, 0, 2);
+		width -= fontMetrics.charsWidth(new char[]{ a, b }, 0, 2);
 
 		return width;
 
@@ -404,19 +388,7 @@ public final class VCLFont {
 	 */
 	public int getLeading() {
 
-		Font f = new Font(name, style, size);
-		FontMetrics fm = null;
-
-		// Exceptions can be thrown if a font is disabled or removed
-		try {
-			fm = VCLFont.graphics.getFontMetrics(f);
-		}
-		catch (Throwable t) {
-			f = new Font(VCLFont.getDefaultFont().getName(), style, size);
-			fm = VCLFont.graphics.getFontMetrics(f);
-		}
-
-		return fm.getLeading() - 1;
+		return fontMetrics.getLeading() - 1;
 
 	}
 

@@ -416,7 +416,7 @@ void com_sun_star_vcl_VCLGraphics::drawRect( long _par0, long _par1, long _par2,
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawText( long _par0, long _par1, const sal_Unicode *_par2, USHORT _par3, const com_sun_star_vcl_VCLFont *_par4, SalColor _par5 )
+void com_sun_star_vcl_VCLGraphics::drawText( long _par0, long _par1, const sal_Unicode *_par2, USHORT _par3, com_sun_star_vcl_VCLFont *_par4, SalColor _par5 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -433,20 +433,25 @@ void com_sun_star_vcl_VCLGraphics::drawText( long _par0, long _par1, const sal_U
 			jsize elements( _par3 );
 			jcharArray chars = t.pEnv->NewCharArray( elements );
 			t.pEnv->SetCharArrayRegion( chars, 0, elements, (jchar *)_par2 );
+			com_sun_star_vcl_VCLFont *pFont = NULL;
+			if ( com_sun_star_vcl_VCLFont::useDefaultFont )
+				pFont = _par4->getDefaultFont();
 			jvalue args[5];
 			args[0].i = jint( _par0 );
 			args[1].i = jint( _par1 );
 			args[2].l = chars;
-			args[3].l = _par4->getJavaObject();
+			args[3].l = pFont ? pFont->getJavaObject() : _par4->getJavaObject();
 			args[4].i = jint( _par5 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+			if ( pFont )
+				delete pFont;
 		}
 	}
 }
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawTextArray( long _par0, long _par1, const sal_Unicode *_par2, USHORT _par3, const com_sun_star_vcl_VCLFont *_par4, SalColor _par5, const long *_par6 )
+void com_sun_star_vcl_VCLGraphics::drawTextArray( long _par0, long _par1, const sal_Unicode *_par2, USHORT _par3, com_sun_star_vcl_VCLFont *_par4, SalColor _par5, const long *_par6 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -465,14 +470,19 @@ void com_sun_star_vcl_VCLGraphics::drawTextArray( long _par0, long _par1, const 
 			t.pEnv->SetCharArrayRegion( chars, 0, elements, (jchar *)_par2 );
 			jintArray offsets = t.pEnv->NewIntArray( elements );
 			t.pEnv->SetIntArrayRegion( offsets, 0, elements - 1, (jint *)_par6 );
+			com_sun_star_vcl_VCLFont *pFont = NULL;
+			if ( com_sun_star_vcl_VCLFont::useDefaultFont )
+				pFont = _par4->getDefaultFont();
 			jvalue args[6];
 			args[0].i = jint( _par0 );
 			args[1].i = jint( _par1 );
 			args[2].l = chars;
-			args[3].l = _par4->getJavaObject();
+			args[3].l = pFont ? pFont->getJavaObject() : _par4->getJavaObject();
 			args[4].i = jint( _par5 );
 			args[5].l = offsets;
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+			if ( pFont )
+				delete pFont;
 		}
 	}
 }

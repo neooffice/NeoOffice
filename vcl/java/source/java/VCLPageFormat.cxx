@@ -47,24 +47,13 @@
 
 #ifdef MACOSX
 
-#ifndef _VOS_MODULE_HXX_
-#include <vos/module.hxx>
-#endif
-
 #include <premac.h>
-#include <Carbon/Carbon.h>
+#include <ApplicationServices/ApplicationServices.h>
 #include <postmac.h>
-typedef OSStatus PMCreatePageFormat_Type( PMPageFormat* );
-typedef OSStatus PMRelease_Type( PMObject );
-typedef OSStatus PMRetain_Type( PMObject );
-typedef OSStatus PMSessionDefaultPageFormat_Type( PMPrintSession, PMPageFormat );
-typedef OSStatus PMSessionGetDataFromSession_Type( PMPrintSession, CFStringRef, CFTypeRef* );
-typedef OSStatus PMSessionSetDataInSession_Type( PMPrintSession, CFStringRef, CFTypeRef );
 
 #define PAGEFORMAT_KEY CFSTR( "PAGEFORMAT" )
 
 using namespace rtl;
-using namespace vos;
 
 #endif  // MACOSX
 
@@ -79,27 +68,16 @@ static jint JNICALL Java_com_apple_mrj_internal_awt_printing_MacPageFormat_creat
 	PMPrintSession pSession = (PMPrintSession)pSessionPtr;
 	if ( pSession )
 	{
-		OModule aModule;
-		if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
+		CFNumberRef aData = NULL;
+		if ( PMSessionGetDataFromSession( pSession, PAGEFORMAT_KEY, (CFTypeRef *)&aData ) == kPMNoError && aData )
 		{
-			PMRetain_Type *pRetain = (PMRetain_Type *)aModule.getSymbol( OUString::createFromAscii( "PMRetain" ) );
-			PMSessionGetDataFromSession_Type *pSessionGetDataFromSession = (PMSessionGetDataFromSession_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionGetDataFromSession" ) );
-
-			if ( pRetain && pSessionGetDataFromSession )
+			CFIndex aValue;
+			if ( CFNumberGetValue( aData, kCFNumberCFIndexType, &aValue ) )
 			{
-				CFNumberRef aData = NULL;
-				if ( pSessionGetDataFromSession( pSession, PAGEFORMAT_KEY, (CFTypeRef *)&aData ) == kPMNoError && aData )
-				{
-					CFIndex aValue;
-					if ( CFNumberGetValue( aData, kCFNumberCFIndexType, &aValue ) )
-					{
-						PMPageFormat aPageFormat = (PMPageFormat)aValue;
-						if ( aPageFormat && pRetain( aPageFormat ) == kPMNoError )
-							nRet = (jint)aPageFormat;
-					}
-				}
+				PMPageFormat aPageFormat = (PMPageFormat)aValue;
+				if ( aPageFormat && PMRetain( aPageFormat ) == kPMNoError )
+					nRet = (jint)aPageFormat;
 			}
-			aModule.unload();
 		}
 	}
 	return nRet;
@@ -185,29 +163,18 @@ void com_sun_star_vcl_VCLPageFormat::destroyNativePrintJob()
 		PMPrintSession pSession = (PMPrintSession)getNativePrintJob();
 		if ( pSession )
 		{
-			OModule aModule;
-			if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
+			CFNumberRef aData = NULL;
+			if ( PMSessionGetDataFromSession( pSession, PAGEFORMAT_KEY, (CFTypeRef *)&aData ) == kPMNoError && aData )
 			{
-				PMRelease_Type *pRelease = (PMRelease_Type *)aModule.getSymbol( OUString::createFromAscii( "PMRelease" ) );
-				PMSessionGetDataFromSession_Type *pSessionGetDataFromSession = (PMSessionGetDataFromSession_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionGetDataFromSession" ) );
-
-				if ( pRelease && pSessionGetDataFromSession )
+				CFIndex aValue;
+				if ( CFNumberGetValue( aData, kCFNumberCFIndexType, &aValue ) )
 				{
-					CFNumberRef aData = NULL;
-					if ( pSessionGetDataFromSession( pSession, PAGEFORMAT_KEY, (CFTypeRef *)&aData ) == kPMNoError && aData )
-					{
-						CFIndex aValue;
-						if ( CFNumberGetValue( aData, kCFNumberCFIndexType, &aValue ) )
-						{
-							PMPageFormat aPageFormat = (PMPageFormat)aValue;
-							if ( aPageFormat )
-								pRelease( aPageFormat );
-						}
-					}
-					mbInitialized = FALSE;
+					PMPageFormat aPageFormat = (PMPageFormat)aValue;
+					if ( aPageFormat )
+						PMRelease( aPageFormat );
 				}
-				aModule.unload();
 			}
+			mbInitialized = FALSE;
 		}
 	}
 	else
@@ -480,53 +447,38 @@ void com_sun_star_vcl_VCLPageFormat::initializeNativePrintJob()
 		PMPrintSession pSession = (PMPrintSession)getNativePrintJob();
 		if ( pSession )
 		{
-			OModule aModule;
-			if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
+			PMPageFormat aPageFormat = NULL;
+			CFNumberRef aData = NULL;
+			if ( PMSessionGetDataFromSession( pSession, PAGEFORMAT_KEY, (CFTypeRef *)&aData ) == kPMNoError && aData )
 			{
-				PMCreatePageFormat_Type *pCreatePageFormat = (PMCreatePageFormat_Type *)aModule.getSymbol( OUString::createFromAscii( "PMCreatePageFormat" ) );
-				PMRelease_Type *pRelease = (PMRelease_Type *)aModule.getSymbol( OUString::createFromAscii( "PMRelease" ) );
-				PMRetain_Type *pRetain = (PMRetain_Type *)aModule.getSymbol( OUString::createFromAscii( "PMRetain" ) );
-				PMSessionDefaultPageFormat_Type *pSessionDefaultPageFormat = (PMSessionDefaultPageFormat_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionDefaultPageFormat" ) );
-				PMSessionGetDataFromSession_Type *pSessionGetDataFromSession = (PMSessionGetDataFromSession_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionGetDataFromSession" ) );
-				PMSessionSetDataInSession_Type *pSessionSetDataInSession = (PMSessionSetDataInSession_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionSetDataInSession" ) );
-
-				if ( pCreatePageFormat && pRelease && pRetain && pSessionDefaultPageFormat && pSessionGetDataFromSession && pSessionSetDataInSession )
+				CFIndex aValue;
+				if ( CFNumberGetValue( aData, kCFNumberCFIndexType, &aValue ) )
 				{
-					PMPageFormat aPageFormat = NULL;
-					CFNumberRef aData = NULL;
-					if ( pSessionGetDataFromSession( pSession, PAGEFORMAT_KEY, (CFTypeRef *)&aData ) == kPMNoError && aData )
+					aPageFormat = (PMPageFormat)aValue;
+					if ( PMRetain( aPageFormat ) != kPMNoError )
 					{
-						CFIndex aValue;
-						if ( CFNumberGetValue( aData, kCFNumberCFIndexType, &aValue ) )
-						{
-							aPageFormat = (PMPageFormat)aValue;
-							if ( pRetain( aPageFormat ) != kPMNoError )
-							{
-								pRelease( aPageFormat );
-								aPageFormat = NULL;
-							}
-						}
+						PMRelease( aPageFormat );
+						aPageFormat = NULL;
 					}
-					if ( !aPageFormat )
-					{
-						if ( pCreatePageFormat( &aPageFormat ) == kPMNoError )
-						{
-							if ( pSessionDefaultPageFormat( pSession, aPageFormat ) == kPMNoError && ( aData = CFNumberCreate( kCFAllocatorDefault,  kCFNumberCFIndexType, &aPageFormat ) ) != NULL )
-							{
-								pSessionSetDataInSession( pSession, PAGEFORMAT_KEY, (CFTypeRef)aData );
-							}
-							else
-							{
-								pRelease( aPageFormat );
-								aPageFormat = NULL;
-							}
-						}
-					}
-					if ( aPageFormat )
-						mbInitialized = TRUE;
 				}
-				aModule.unload();
 			}
+			if ( !aPageFormat )
+			{
+				if ( PMCreatePageFormat( &aPageFormat ) == kPMNoError )
+				{
+					if ( PMSessionDefaultPageFormat( pSession, aPageFormat ) == kPMNoError && ( aData = CFNumberCreate( kCFAllocatorDefault,  kCFNumberCFIndexType, &aPageFormat ) ) != NULL )
+					{
+						PMSessionSetDataInSession( pSession, PAGEFORMAT_KEY, (CFTypeRef)aData );
+					}
+					else
+					{
+						PMRelease( aPageFormat );
+						aPageFormat = NULL;
+					}
+				}
+			}
+			if ( aPageFormat )
+				mbInitialized = TRUE;
 		}
 	}
 	else

@@ -46,44 +46,31 @@
 
 #ifdef MACOSX
 
-#ifndef _SV_SALDATA_HXX
-#include <saldata.hxx>
-#endif
 #ifndef _SV_SALMAIN_COCOA_H
 #include <salmain_cocoa.h>
+#endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
+#include <com/sun/star/vcl/VCLFont.hxx>
 #endif
 #ifndef _SV_JAVA_LANG_CLASS_HXX 
 #include <java/lang/Class.hxx>
 #endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
-#include <com/sun/star/vcl/VCLFrame.hxx>
-#endif
 #ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
 #endif
-#ifndef _OSL_CONDITN_HXX_
-#include <osl/conditn.hxx>
-#endif
 #include <crt_externs.h>
 #include <premac.h>
-#include <ApplicationServices/ApplicationServices.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 
-typedef OSStatus ATSFontIteratorCreate_Type( ATSFontContext, const ATSFontFilter*, void*, ATSOptionFlags, ATSFontIterator* );
-typedef OSStatus ATSFontIteratorRelease_Type( ATSFontIterator* );
-typedef OSStatus ATSFontIteratorNext_Type( ATSFontIterator, ATSFontRef* );
-typedef OSStatus ATSFontNotificationSubscribe_Type( ATSNotificationCallback, ATSFontNotifyOption, void*, ATSFontNotificationRef* );
-typedef CGFontRef CGFontCreateWithPlatformFont_Type( void* );
 typedef jobject Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type( JNIEnv *, jobject );
 typedef void Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type( JNIEnv *, jobject );
 typedef OSStatus ReceiveNextEvent_Type( UInt32, const EventTypeSpec *, EventTimeout, MacOSBoolean, EventRef * );
 
-struct SVFontList
+struct SVNativeFontList
 {
-	ATSFontRef maATSFont;
-	CGFontRef maCGFont;
-	SVFontList *mpNext;
+	ATSFontRef				maFont;
+	SVNativeFontList*		mpNext;
 };
 
 class SVMainThread : public ::vos::OThread
@@ -92,7 +79,6 @@ protected:
 	virtual void			run() { SVMain(); _exit( 0 ); }
 };
 
-using namespace osl;
 using namespace rtl;
 using namespace vcl;
 using namespace vos;
@@ -100,7 +86,7 @@ using namespace vos;
 static OModule aJDirectModule;
 static Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type *pCarbonLockGetInstance = NULL;
 static Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *pCarbonLockInit = NULL;
-static SVFontList *pFontList = NULL;
+static SVNativeFontList *pNativeFontList = NULL;
 
 static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( JNIEnv *pEnv, jobject object );
 
@@ -109,93 +95,83 @@ static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( J
 // ============================================================================
 
 #ifdef MACOSX
-static void FontListChangedCallback( ATSFontNotificationInfoRef, void* )
+static void ImplFontListChangedCallback( ATSFontNotificationInfoRef, void* )
 {
-	// Load Carbon
-	OModule aModule;
-	aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) );
-
-	// Check that none of our fonts have been disabled. If so, the JVM will
-	// eventually crash so we might at well force a right now so that the
-	// user's work. If we waited until the JVM crashed on its own, there is
-	// a risk that the user's work could get corrupted.
-	ATSFontIteratorCreate_Type *pFontIteratorCreate = (ATSFontIteratorCreate_Type *)aModule.getSymbol( OUString::createFromAscii( "ATSFontIteratorCreate" ) );
-	ATSFontIteratorRelease_Type *pFontIteratorRelease = (ATSFontIteratorRelease_Type *)aModule.getSymbol( OUString::createFromAscii( "ATSFontIteratorRelease" ) );
-	ATSFontIteratorNext_Type *pFontIteratorNext = (ATSFontIteratorNext_Type *)aModule.getSymbol( OUString::createFromAscii( "ATSFontIteratorNext" ) );
-	CGFontCreateWithPlatformFont_Type *pFontCreateWithPlatformFont = (CGFontCreateWithPlatformFont_Type *)aModule.getSymbol( OUString::createFromAscii( "CGFontCreateWithPlatformFont" ) );
-
-	if ( pFontCreateWithPlatformFont && pFontIteratorCreate && pFontIteratorRelease && pFontIteratorNext )
+	// Get the array of fonts
+	SVNativeFontList *pNewFontList = NULL;
+	BOOL bContinue = TRUE;
+	while ( bContinue )
 	{
-		// Get the array of fonts
-		SVFontList *pNewFontList = NULL;
-		BOOL bContinue = TRUE;
-		while ( bContinue )
+		ATSFontIterator aIterator;
+		ATSFontRef aFont;
+		ATSFontIteratorCreate( kATSFontContextLocal, NULL, NULL, kATSOptionFlagsUnRestrictedScope, &aIterator );
+		for ( ; ; )
 		{
-			ATSFontIterator aIterator;
-			ATSFontRef aFont;
-			pFontIteratorCreate( kATSFontContextLocal, NULL, NULL, kATSOptionFlagsUnRestrictedScope, &aIterator );
-			for ( ; ; )
+			OSStatus nErr = ATSFontIteratorNext( aIterator, &aFont );
+			if ( nErr == kATSIterationCompleted )
 			{
-				OSStatus nErr = pFontIteratorNext( aIterator, &aFont );
-				if ( nErr == kATSIterationCompleted )
-				{
-					bContinue = FALSE;
-					break;
-				}
-				else if ( nErr == kATSIterationScopeModified )
-				{
-					while ( pNewFontList )
-					{
-						SVFontList *pFont = pNewFontList;
-						pNewFontList = pFont->mpNext;
-						delete pFont;
-					}
-					break;
-				}
-				else
-				{
-					SVFontList *pFont = new SVFontList();
-					pFont->maATSFont = aFont;
-					pFont->mpNext = pNewFontList;
-					pNewFontList = pFont;
-				}
-			}
-			pFontIteratorRelease( &aIterator );
-		}
-
-		SVFontList *pFont = pFontList;
-		while ( pFont )
-		{
-			SVFontList *pNewFont = pNewFontList;
-			BOOL bFound = FALSE;
-			while ( pNewFont )
-			{
-				if ( pFont->maATSFont == pNewFont->maATSFont )
-				{
-					bFound = TRUE;
-					break;
-				}
-				else
-				{
-					pNewFont = pNewFont->mpNext;
-				}
-			}
-
-			if ( !bFound )
-			{
-				GetSalData()->mbUseDefaultFont = TRUE;
+				bContinue = FALSE;
 				break;
 			}
-
-			pFont = pFont->mpNext;
+			else if ( nErr == kATSIterationScopeModified )
+			{
+				while ( pNewFontList )
+				{
+					SVNativeFontList *pFont = pNewFontList;
+					pNewFontList = pFont->mpNext;
+					delete pFont;
+				}
+				break;
+			}
+			else
+			{
+				SVNativeFontList *pFont = new SVNativeFontList();
+				pFont->maFont = aFont;
+				pFont->mpNext = pNewFontList;
+				pNewFontList = pFont;
+			}
 		}
-	}
-	else
-	{
-		GetSalData()->mbUseDefaultFont = TRUE;
+		ATSFontIteratorRelease( &aIterator );
 	}
 
-	aModule.unload();
+	// If any of the Java fonts have been disabled, use the default font
+	BOOL bUseDefaultFont = FALSE;
+	SVNativeFontList *pCurrentFont = pNativeFontList;
+	while ( pCurrentFont )
+	{
+		SVNativeFontList *pNewFont = pNewFontList;
+		BOOL bFound = FALSE;
+		while ( pNewFont )
+		{
+			if ( pCurrentFont->maFont == pNewFont->maFont )
+			{
+				bFound = TRUE;
+				break;
+			}
+			else
+			{
+				pNewFont = pNewFont->mpNext;
+			}
+		}
+
+		if ( !bFound )
+		{
+			bUseDefaultFont = TRUE;
+			break;
+		}
+
+		pCurrentFont = pCurrentFont->mpNext;
+	}
+
+	com_sun_star_vcl_VCLFont::useDefaultFont = bUseDefaultFont;
+
+	// Release the temporary font list
+	while ( pNewFontList )
+	{
+		SVNativeFontList *pFont = pNewFontList;
+		pNewFontList = pFont->mpNext;
+		delete pFont;
+	}
 }
 #endif	// MACOSX
 
@@ -415,6 +391,16 @@ int main( int argc, char *argv[] )
 				OModule aModule;
 				aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) );
 
+				// Run a Carbon event loop but have it block until the Java
+				// event loop is started. Having an event loop in this
+				// blocked state is enough to solve the keyboard layout
+				// switching problem on Panther.
+				ReceiveNextEvent_Type *pReceiveNextEvent = (ReceiveNextEvent_Type *)aModule.getSymbol( OUString::createFromAscii( "ReceiveNextEvent" ) );
+				if ( pReceiveNextEvent )
+					pReceiveNextEvent( 0, NULL, 0, false, NULL );
+
+				aModule.unload();
+
 				// We need to be fill in the static sFonts and sNumFonts fields 
 				// in the NativeFontWrapper class as the JVM's implementation
 				// will include disabled fonts will can crash the application
@@ -437,86 +423,66 @@ int main( int argc, char *argv[] )
 					OSL_ENSURE( fIDNumFonts, "Unknown field id!" );
 					if ( fIDFonts && fIDNumFonts )
 					{
-						ATSFontIteratorCreate_Type *pFontIteratorCreate = (ATSFontIteratorCreate_Type *)aModule.getSymbol( OUString::createFromAscii( "ATSFontIteratorCreate" ) );
-						ATSFontIteratorRelease_Type *pFontIteratorRelease = (ATSFontIteratorRelease_Type *)aModule.getSymbol( OUString::createFromAscii( "ATSFontIteratorRelease" ) );
-						ATSFontIteratorNext_Type *pFontIteratorNext = (ATSFontIteratorNext_Type *)aModule.getSymbol( OUString::createFromAscii( "ATSFontIteratorNext" ) );
-						ATSFontNotificationSubscribe_Type *pFontNotificationSubscribe = (ATSFontNotificationSubscribe_Type *)aModule.getSymbol( OUString::createFromAscii( "ATSFontNotificationSubscribe" ) );
-						CGFontCreateWithPlatformFont_Type *pFontCreateWithPlatformFont = (CGFontCreateWithPlatformFont_Type *)aModule.getSymbol( OUString::createFromAscii( "CGFontCreateWithPlatformFont" ) );
+						jint nFonts = 0;
+						ATSFontIterator aIterator;
+						ATSFontRef aFont;
 
-						if ( pFontCreateWithPlatformFont && pFontIteratorCreate && pFontIteratorNext && pFontIteratorRelease && pFontNotificationSubscribe )
+						// Get the array of fonts
+						BOOL bContinue = TRUE;
+						while ( bContinue )
 						{
-							jint nFonts = 0;
-							ATSFontIterator aIterator;
-							ATSFontRef aFont;
-
-							// Get the array of fonts
-							BOOL bContinue = TRUE;
-							while ( bContinue )
+							ATSFontIteratorCreate( kATSFontContextLocal, NULL, NULL, kATSOptionFlagsUnRestrictedScope, &aIterator );
+							for ( ; ; )
 							{
-								pFontIteratorCreate( kATSFontContextLocal, NULL, NULL, kATSOptionFlagsUnRestrictedScope, &aIterator );
-								for ( ; ; )
+								OSStatus nErr = ATSFontIteratorNext( aIterator, &aFont );
+								if ( nErr == kATSIterationCompleted )
 								{
-									OSStatus nErr = pFontIteratorNext( aIterator, &aFont );
-									if ( nErr == kATSIterationCompleted )
-									{
-										// Register notification callback
-										pFontNotificationSubscribe( (ATSNotificationCallback)FontListChangedCallback, kATSFontNotifyOptionReceiveWhileSuspended, NULL, NULL );
-										bContinue = FALSE;
-										break;
-									}
-									else if ( nErr == kATSIterationScopeModified )
-									{
-										nFonts = 0;
-										while ( pFontList )
-										{
-											SVFontList *pFont = pFontList;
-											pFontList = pFont->mpNext;
-											delete pFont;
-										}
-										break;
-									}
-									else
-									{
-										SVFontList *pFont = new SVFontList();
-										pFont->maATSFont = aFont;
-										pFont->maCGFont = pFontCreateWithPlatformFont( (void *)&pFont->maATSFont );
-										pFont->mpNext = pFontList;
-										pFontList = pFont;
-										nFonts++;
-									}
+									// Register notification callback
+									ATSFontNotificationSubscribe( (ATSNotificationCallback)ImplFontListChangedCallback, kATSFontNotifyOptionReceiveWhileSuspended, NULL, NULL );
+									bContinue = FALSE;
+									break;
 								}
-								pFontIteratorRelease( &aIterator );
+								else if ( nErr == kATSIterationScopeModified )
+								{
+									nFonts = 0;
+									while ( pNativeFontList )
+									{
+										SVNativeFontList *pFont = pNativeFontList;
+										pNativeFontList = pFont->mpNext;
+										delete pFont;
+									}
+									break;
+								}
+								else
+								{
+									SVNativeFontList *pFont = new SVNativeFontList();
+									pFont->maFont = aFont;
+									pFont->mpNext = pNativeFontList;
+									pNativeFontList = pFont;
+									nFonts++;
+								}
 							}
-
-							// Create the font array
-							jintArray pFonts = t.pEnv->NewIntArray( nFonts );
-							jsize i = 0;
-							jboolean bCopy( sal_False );
-							jint *pData = t.pEnv->GetIntArrayElements( pFonts, &bCopy );
-							SVFontList *pFont = pFontList;
-							while ( pFont )
-							{
-								pData[i++] = (jint)pFont->maCGFont;
-								pFont = pFont->mpNext;
-							}
-							t.pEnv->ReleaseIntArrayElements( pFonts, pData, 0 );
-
-							// Save the font data
-							t.pEnv->SetStaticObjectField( nativeFontWrapperClass, fIDFonts, pFonts );
-							t.pEnv->SetStaticIntField( nativeFontWrapperClass, fIDNumFonts, nFonts );
+							ATSFontIteratorRelease( &aIterator );
 						}
+
+						// Create the font array
+						jintArray pFonts = t.pEnv->NewIntArray( nFonts );
+						jsize i = 0;
+						jboolean bCopy( sal_False );
+						jint *pData = t.pEnv->GetIntArrayElements( pFonts, &bCopy );
+						SVNativeFontList *pFont = pNativeFontList;
+						while ( pFont )
+						{
+							pData[i++] = (jint)CGFontCreateWithPlatformFont( (void *)&pFont->maFont );
+							pFont = pFont->mpNext;
+						}
+						t.pEnv->ReleaseIntArrayElements( pFonts, pData, 0 );
+
+						// Save the font data
+						t.pEnv->SetStaticObjectField( nativeFontWrapperClass, fIDFonts, pFonts );
+						t.pEnv->SetStaticIntField( nativeFontWrapperClass, fIDNumFonts, nFonts );
 					}
 				}
-
-				// Run a Carbon event loop but have it block until the Java
-				// event loop is started. Having an event loop in this
-				// blocked state is enough to solve the keyboard layout
-				// switching problem on Panther.
-				ReceiveNextEvent_Type *pReceiveNextEvent = (ReceiveNextEvent_Type *)aModule.getSymbol( OUString::createFromAscii( "ReceiveNextEvent" ) );
-				if ( pReceiveNextEvent )
-					pReceiveNextEvent( 0, NULL, 0, false, NULL );
-
-				aModule.unload();
 			}
 		}
 

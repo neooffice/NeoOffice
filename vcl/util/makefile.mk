@@ -262,7 +262,7 @@ SHL1STDLIBS += -framework Cocoa
 
 .IF "$(GUIBASE)"=="java"
 .IF "$(OS)"=="MACOSX"
-SHL1STDLIBS += -lobjc
+SHL1STDLIBS += -framework ApplicationServices -lobjc
 .ENDIF
 .ENDIF
 

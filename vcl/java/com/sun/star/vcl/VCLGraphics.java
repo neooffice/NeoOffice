@@ -1059,7 +1059,7 @@ public final class VCLGraphics {
 		}
 
 		// The graphics may adjust the font
-		Font f = new Font(font.getName(), font.getStyle(), font.getSize());
+		Font f = font.getFont();
 		FontMetrics fm = null;
 
 		// Exceptions can be thrown if a font is disabled or removed
@@ -1067,7 +1067,7 @@ public final class VCLGraphics {
 			fm = graphics.getFontMetrics(f);
 		}
 		catch (Throwable t) {
-			f = new Font(VCLFont.getDefaultFont().getName(), font.getStyle(), font.getSize());
+			f = font.getDefaultFont().getFont();
 			fm = graphics.getFontMetrics(f);
 		}
 

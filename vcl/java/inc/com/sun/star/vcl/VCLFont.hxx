@@ -58,10 +58,12 @@ protected:
 
 private:
 						com_sun_star_vcl_VCLFont() : java_lang_Object( NULL ) {};
+
 public:
+	static jboolean		useDefaultFont;
+
 	static jclass		getMyClass();
 	static com_sun_star_vcl_VCLFontList*	getAllFonts();
-	static com_sun_star_vcl_VCLFont*	getDefaultFont();
 
 						com_sun_star_vcl_VCLFont( jobject myObj ) : java_lang_Object( myObj ) {};
 
@@ -69,6 +71,7 @@ public:
 	long				getAscent();
 	void				getCharWidth( sal_Unicode _par0, sal_Unicode _par1, long *_par2 );
 	long				getDescent();
+	com_sun_star_vcl_VCLFont*	getDefaultFont();
 	FontFamily			getFamilyType();
 	long				getKerning( USHORT _par0, USHORT _par1 );
 	long				getLeading();

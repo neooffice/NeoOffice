@@ -57,7 +57,6 @@ SalData::SalData()
 	mpEventQueue = NULL;
 	mpFontList = NULL;
 	mpPresentationFrame = NULL;
-	mbUseDefaultFont = FALSE;
 }
 
 // ------------------------------------------------------------------------

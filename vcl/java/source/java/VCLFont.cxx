@@ -47,6 +47,10 @@ jclass com_sun_star_vcl_VCLFont::theClass = NULL;
 
 // ----------------------------------------------------------------------------
 
+jboolean com_sun_star_vcl_VCLFont::useDefaultFont = FALSE;
+
+// ----------------------------------------------------------------------------
+
 jclass com_sun_star_vcl_VCLFont::getMyClass()
 {
 	if ( !theClass )
@@ -90,32 +94,6 @@ com_sun_star_vcl_VCLFontList *com_sun_star_vcl_VCLFont::getAllFonts()
 					out->pFonts[i].saveRef( tempObj );
 				}
 			}
-		}
-	}
-	return out;
-}
-
-// ----------------------------------------------------------------------------
-
-com_sun_star_vcl_VCLFont *com_sun_star_vcl_VCLFont::getDefaultFont()
-{
-	static jmethodID mID = NULL;
-	com_sun_star_vcl_VCLFont *out = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()Lcom/sun/star/vcl/VCLFont;";
-			mID = t.pEnv->GetStaticMethodID( getMyClass(), "getDefaultFont", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jobject tempObj;
-			tempObj = t.pEnv->CallStaticObjectMethod( getMyClass(), mID );
-			if ( tempObj )
-				out = new com_sun_star_vcl_VCLFont( tempObj );
 		}
 	}
 	return out;
@@ -168,7 +146,18 @@ long com_sun_star_vcl_VCLFont::getAscent()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+		{
+			if ( com_sun_star_vcl_VCLFont::useDefaultFont )
+			{
+				com_sun_star_vcl_VCLFont *pDefaultFont = getDefaultFont();
+				out = (long)t.pEnv->CallNonvirtualIntMethod( pDefaultFont->getJavaObject(), getMyClass(), mID );
+				delete pDefaultFont;
+			}
+			else
+			{
+				out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+			}
+		}
 	}
 	return out;
 }
@@ -193,7 +182,16 @@ void com_sun_star_vcl_VCLFont::getCharWidth( sal_Unicode _par0, sal_Unicode _par
 			args[0].c = jchar( _par0 );
 			args[1].c = jchar( _par1 );
 			jintArray tempObj;
-			tempObj = (jintArray)t.pEnv->CallNonvirtualObjectMethodA( object, getMyClass(), mID, args );
+			if ( com_sun_star_vcl_VCLFont::useDefaultFont )
+			{
+				com_sun_star_vcl_VCLFont *pDefaultFont = getDefaultFont();
+				tempObj = (jintArray)t.pEnv->CallNonvirtualObjectMethodA( pDefaultFont->getJavaObject(), getMyClass(), mID, args );
+				delete pDefaultFont;
+			}
+			else
+			{
+				tempObj = (jintArray)t.pEnv->CallNonvirtualObjectMethodA( object, getMyClass(), mID, args );
+			}
 			if ( tempObj )
 			{
 				jsize elements( _par1 - _par0 + 1 );
@@ -201,6 +199,32 @@ void com_sun_star_vcl_VCLFont::getCharWidth( sal_Unicode _par0, sal_Unicode _par
 			}
 		}
 	}
+}
+
+// ----------------------------------------------------------------------------
+
+com_sun_star_vcl_VCLFont *com_sun_star_vcl_VCLFont::getDefaultFont()
+{
+	static jmethodID mID = NULL;
+	com_sun_star_vcl_VCLFont *out = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Lcom/sun/star/vcl/VCLFont;";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getDefaultFont", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jobject tempObj;
+			tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
+			if ( tempObj )
+				out = new com_sun_star_vcl_VCLFont( tempObj );
+		}
+	}
+	return out;
 }
 
 // ----------------------------------------------------------------------------
@@ -219,7 +243,18 @@ long com_sun_star_vcl_VCLFont::getDescent()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+		{
+			if ( com_sun_star_vcl_VCLFont::useDefaultFont )
+			{
+				com_sun_star_vcl_VCLFont *pDefaultFont = getDefaultFont();
+				out = (long)t.pEnv->CallNonvirtualIntMethod( pDefaultFont->getJavaObject(), getMyClass(), mID );
+				delete pDefaultFont;
+			}
+			else
+			{
+				out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+			}
+		}
 	}
 	return out;
 }
@@ -265,7 +300,16 @@ long com_sun_star_vcl_VCLFont::getKerning( USHORT _par0, USHORT _par1 )
 			jvalue args[2];
 			args[0].c = jchar( _par0 );
 			args[1].c = jchar( _par1 );
-			out = (long)t.pEnv->CallNonvirtualIntMethodA( object, getMyClass(), mID, args );
+			if ( com_sun_star_vcl_VCLFont::useDefaultFont )
+			{
+				com_sun_star_vcl_VCLFont *pDefaultFont = getDefaultFont();
+				out = (long)t.pEnv->CallNonvirtualIntMethodA( pDefaultFont->getJavaObject(), getMyClass(), mID, args );
+				delete pDefaultFont;
+			}
+			else
+			{
+				out = (long)t.pEnv->CallNonvirtualIntMethodA( object, getMyClass(), mID, args );
+			}
 		}
 	}
 	return out;
@@ -287,7 +331,18 @@ long com_sun_star_vcl_VCLFont::getLeading()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+		{
+			if ( com_sun_star_vcl_VCLFont::useDefaultFont )
+			{
+				com_sun_star_vcl_VCLFont *pDefaultFont = getDefaultFont();
+				out = (long)t.pEnv->CallNonvirtualIntMethod( pDefaultFont->getJavaObject(), getMyClass(), mID );
+				delete pDefaultFont;
+			}
+			else
+			{
+				out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+			}
+		}
 	}
 	return out;
 }
