@@ -244,7 +244,11 @@ public:
     // font subsets
     struct GlyphEmit
     {
+#if defined USE_JAVA && defined MACOSX
+        sal_uInt16		m_nSubsetGlyphID;
+#else	// USE_JAVA && MACOSX
         sal_uInt8		m_nSubsetGlyphID;
+#endif	// USE_JAVA && MACOSX
         sal_Unicode		m_aUnicode;
     };
     typedef std::map< long, GlyphEmit > FontEmitMapping;
@@ -267,8 +271,9 @@ public:
         FontEmitMapping		m_aMapping;
 #if defined USE_JAVA && defined MACOSX
         rtl::OUString		m_aFontFileName;
-        std::map< long, sal_uInt8 >	m_aGlyphEncoding;
+        std::map< long, sal_uInt16 >	m_aGlyphEncoding;
         PDFObjectMapping	m_aObjectMapping;
+        std::map< rtl::OString, sal_Int32 >	m_aFontSubIDMapping;
 #endif	// USE_JAVA && MACOSX
 
         FontEmit( sal_Int32 nID ) : m_nFontID( nID ) {}
@@ -280,7 +285,13 @@ public:
     struct Glyph
     {
         sal_Int32	m_nFontID;
+#if defined USE_JAVA && defined MACOSX
+        sal_Int32	m_nFontSubID;
+        bool		m_bIdentityGlyph;
+        sal_uInt16	m_nSubsetGlyphID;
+#else	// USE_JAVA && MACOSX
         sal_uInt8	m_nSubsetGlyphID;
+#endif	// USE_JAVA && MACOSX
     };
     typedef std::map< long, Glyph > FontMapping;
 
@@ -409,7 +420,11 @@ private:
     SvMemoryStream*						m_pMemStream;
 
     /* creates fonts and subsets that will be emitted later */
+#if defined USE_JAVA && defined MACOSX
+    void registerGlyphs( int nGlyphs, long* pGlyphs, sal_Unicode* pUnicodes, sal_uInt16* pMappedGlyphs, bool* pMappedIdentityGlyphs, sal_Int32* pMappedFontObjects, sal_Int32* pMappedFontSubObjects, ImplFontData* pFallbackFonts[] );
+#else	// USE_JAVA && MACOSX
     void registerGlyphs( int nGlyphs, long* pGlyphs, sal_Unicode* pUnicodes, sal_uInt8* pMappedGlyphs, sal_Int32* pMappedFontObjects, ImplFontData* pFallbackFonts[] );
+#endif	// USE_JAVA && MACOSX
 
     /*  emits a text object according to the passed layout */
     /* TODO: remove rText as soon as SalLayout will change so that rText is not necessary anymore */

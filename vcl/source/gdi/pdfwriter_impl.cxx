@@ -1889,6 +1889,7 @@ sal_Int32 PDFWriterImpl::emitFonts()
     char buf[8192];
 
     std::map< sal_Int32, sal_Int32 > aFontIDToObject;
+    std::map< OString, sal_Int32 > aFontStrToObject;
 
 #if defined USE_JAVA && defined MACOSX
     for ( FontSubsetData::iterator it = m_aSubsets.begin(); it != m_aSubsets.end(); ++it )
@@ -1904,33 +1905,32 @@ sal_Int32 PDFWriterImpl::emitFonts()
             oslFileHandle aFontFile;
             CHECK_RETURN( ( osl_File_E_None == osl_openFile( rEmit.m_aFontFileName.pData, &aFontFile, osl_File_OpenFlag_Read ) ) );
 
-            OString aFontObjTag( "<< /Type /Font " );
-            sal_Int32 nFontObjID = 0;
-            for ( PDFObjectMapping::iterator pit = rEmit.m_aObjectMapping.begin(); !nFontObjID && pit != rEmit.m_aObjectMapping.end(); ++pit )
+            std::map< sal_Int32, sal_Int32 > aIDMapping;
+            for ( std::map< OString, sal_Int32 >::iterator pit = rEmit.m_aFontSubIDMapping.begin(); pit != rEmit.m_aFontSubIDMapping.end(); ++pit )
             {
-                PDFEmitObject& rObj = pit->second;
-                if ( rObj.m_aContent.match( aFontObjTag ) )
-                {
-                    std::map< sal_Int32, sal_Int32 > aIDMapping;
-                    nFontObjID = writePDFObjectTree( rObj, aFontFile, rEmit.m_aObjectMapping, lit->m_nFontID, aIDMapping );
+                PDFEmitObject& rObj = rEmit.m_aObjectMapping[ pit->second ];
+                sal_Int32 nFontObjID = writePDFObjectTree( rObj, aFontFile, rEmit.m_aObjectMapping, lit->m_nFontID, aIDMapping );
 
+                if ( !nFontObjID )
+                {
                     // If writePDFObjectTree() fails, truncate any data and
                     // remove any objects that were added
-                    if ( !nFontObjID )
-                    {
-                        CHECK_RETURN( ( osl_File_E_None == osl_setFilePos( m_aFile, osl_Pos_Absolut, nStartPos ) ) );
-                        CHECK_RETURN( ( osl_File_E_None == osl_setFileSize( m_aFile, nStartPos ) ) );
-                        
-                        std::vector< sal_uInt64 > aObjects;
-                        for ( int i = 0; i < nNumObjs; i++ )
-                            aObjects.push_back( m_aObjects[i] );
-                        m_aObjects = aObjects;
-                    }
-                }
-            }
+                    CHECK_RETURN( ( osl_File_E_None == osl_setFilePos( m_aFile, osl_Pos_Absolut, nStartPos ) ) );
+                    CHECK_RETURN( ( osl_File_E_None == osl_setFileSize( m_aFile, nStartPos ) ) );
 
-            if ( nFontObjID )
-                aFontIDToObject[ rEmit.m_nFontID ] = nFontObjID;
+                    std::vector< sal_uInt64 > aObjects;
+                    for ( int i = 0; i < nNumObjs; i++ )
+                        aObjects.push_back( m_aObjects[i] );
+                    m_aObjects = aObjects;
+
+                    aIDMapping.clear();
+
+                    continue;
+                }
+
+                OString aFontStr = OStringBuffer().append( rEmit.m_nFontID ).append( '.' ).append( pit->second ).makeStringAndClear();
+                aFontStrToObject[ aFontStr ] = nFontObjID;
+            }
 
             osl_closeFile( aFontFile );
         }
@@ -2101,7 +2101,11 @@ sal_Int32 PDFWriterImpl::emitFonts()
     aLine.append( nFontDict );
     aLine.append( " 0 obj\r\n"
                   "<< " );
+#if defined USE_JAVA && defined MACOSX
+    for( std::map< OString, sal_Int32 >::iterator mit = aFontStrToObject.begin(); mit != aFontStrToObject.end(); ++mit )
+#else	// USE_JAVA && MACOSX
     for( std::map< sal_Int32, sal_Int32 >::iterator mit = aFontIDToObject.begin(); mit != aFontIDToObject.end(); ++mit )
+#endif	// USE_JAVA && MACOSX
     {
         aLine.append( "/F" );
         aLine.append( mit->first );
@@ -2507,6 +2511,17 @@ bool PDFWriterImpl::emit()
     return true;
 }
 
+#if defined USE_JAVA && defined MACOSX
+void PDFWriterImpl::registerGlyphs(
+                                   int nGlyphs,
+                                   long* pGlyphs,
+                                   sal_Unicode* pUnicodes,
+                                   sal_uInt16* pMappedGlyphs,
+                                   bool* pMappedIdentityGlyphs,
+                                   sal_Int32* pMappedFontObjects,
+                                   sal_Int32* pMappedFontSubObjects,
+                                   ImplFontData* pFallbackFonts[] )
+#else	// USE_JAVA && MACOSX
 void PDFWriterImpl::registerGlyphs(
                                    int nGlyphs,
                                    long* pGlyphs,
@@ -2514,6 +2529,7 @@ void PDFWriterImpl::registerGlyphs(
                                    sal_uInt8* pMappedGlyphs,
                                    sal_Int32* pMappedFontObjects,
                                    ImplFontData* pFallbackFonts[] )
+#endif	// USE_JAVA && MACOSX
 {
     ImplFontData* pDevFont = m_pReferenceDevice->mpFontEntry->maFontSelData.mpFontData;
     for( int i = 0; i < nGlyphs; i++ )
@@ -2533,6 +2549,10 @@ void PDFWriterImpl::registerGlyphs(
             {
                 pMappedFontObjects[i] = it->second.m_nFontID;
                 pMappedGlyphs[i] = it->second.m_nSubsetGlyphID;
+#if defined USE_JAVA && defined MACOSX
+                pMappedFontSubObjects[i] = it->second.m_nFontSubID;
+                pMappedIdentityGlyphs[i] = it->second.m_bIdentityGlyph;
+#endif	// USE_JAVA && MACOSX
             }
             else
             {
@@ -2550,7 +2570,7 @@ void PDFWriterImpl::registerGlyphs(
                 pMappedFontObjects[i] = rSubset.m_aSubsets.back().m_nFontID;
                 // create new glyph in subset
 #if defined USE_JAVA && defined MACOSX
-                sal_uInt8 nNewId = rSubset.m_aSubsets.back().m_aGlyphEncoding.size() ? rSubset.m_aSubsets.back().m_aGlyphEncoding[ pGlyphs[i] ] : 0;
+                sal_uInt16 nNewId = 0;
 #else	// USE_JAVA && MACOSX
                 sal_uInt8 nNewId = rSubset.m_aSubsets.back().m_aMapping.size()+1;
 #endif	// USE_JAVA && MACOSX
@@ -2565,6 +2585,13 @@ void PDFWriterImpl::registerGlyphs(
                 Glyph& rNewGlyph = rSubset.m_aMapping[ pGlyphs[i] ];
                 rNewGlyph.m_nFontID = pMappedFontObjects[i];
                 rNewGlyph.m_nSubsetGlyphID = nNewId;
+#if defined USE_JAVA && defined MACOSX
+                rNewGlyph.m_nFontSubID = 0;
+                rNewGlyph.m_bIdentityGlyph = false;
+
+                pMappedFontSubObjects[i] = rNewGlyph.m_nFontSubID;
+                pMappedIdentityGlyphs[i] = rNewGlyph.m_bIdentityGlyph;
+#endif	// USE_JAVA && MACOSX
             }
         }
         else
@@ -2674,8 +2701,16 @@ void PDFWriterImpl::registerGlyphs(
         if ( !aFont )
             continue;
 
-        CGGlyph aGlyphs[ 256 ];
-        int nGlyphs = 0;
+        CGGlyph aGlyphIDs[ 256 ];
+        int nGlyphIDs = 0;
+        for ( FontEmitMapping::iterator fit = rEmit.m_aMapping.begin(); fit != rEmit.m_aMapping.end(); ++fit )
+        {
+            if ( fit->first );
+                aGlyphIDs[ nGlyphIDs++ ] = (CGGlyph)( fit->first & GF_IDXMASK );
+        }
+
+        if ( !nGlyphIDs )
+            continue;
 
         OUString aTmpName( utl::TempFile::CreateTempName() );
 
@@ -2688,19 +2723,13 @@ void PDFWriterImpl::registerGlyphs(
                 CGContextRef aContext = CGPDFContextCreateWithURL( aURL, NULL, NULL );
                 if ( aContext )
                 {
-                    for ( FontEmitMapping::iterator fit = rEmit.m_aMapping.begin(); fit != rEmit.m_aMapping.end(); ++fit )
-                    {
-                        if ( fit->first );
-                            aGlyphs[ nGlyphs++ ] = (CGGlyph)fit->first;
-                    }
-
                     CGContextBeginPage( aContext, NULL );
                     CGContextSetFont( aContext, aFont );
                     CGContextSetFontSize( aContext, pVCLFont->getSize() );
                     sal_Bool bAntialias = pVCLFont->isAntialiased();
                     CGContextSetShouldAntialias( aContext, bAntialias );
                     CGContextSetShouldSmoothFonts( aContext, bAntialias );
-                    CGContextShowGlyphs( aContext, aGlyphs, nGlyphs );
+                    CGContextShowGlyphs( aContext, aGlyphIDs, nGlyphIDs );
                     CGContextEndPage( aContext );
                     CGContextRelease( aContext );
                 }
@@ -2716,10 +2745,13 @@ void PDFWriterImpl::registerGlyphs(
         oslFileHandle aFile;
         if ( osl_openFile( rEmit.m_aFontFileName.pData, &aFile, osl_File_OpenFlag_Read ) == osl_File_E_None )
         {
-            // Get the PDF objects from the file and look for the page content
+            // Get the PDF objects from the file and parse the page content
+            // and font objects
             OString aPageObjTag( "<< /Type /Page " );
             OString aPageContentTag( " /Contents " );
+            OString aProcSetObjTag( "<< /ProcSet " );
             sal_Int32 nPageContentObjID = 0;
+            sal_Int32 nProcSetObjID = 0;
             sal_Int32 nObjID = 0;
             while ( ( nObjID = getNextPDFObject( aFile, rEmit.m_aObjectMapping ) ) > 0 )
             {
@@ -2745,6 +2777,10 @@ void PDFWriterImpl::registerGlyphs(
                         nPageContentObjID = nObjID;
                     }
                 }
+                else if ( !nProcSetObjID && rObj.m_aContent.match( aProcSetObjTag ) )
+                {
+                    nProcSetObjID = nObjID;
+                }
             }
 
             // Update stream lengths
@@ -2769,6 +2805,48 @@ void PDFWriterImpl::registerGlyphs(
                             rObj.m_nStreamLen = rEmit.m_aObjectMapping[ nStreamLen ].m_aContent.toInt32();
                         else
                             rObj.m_nStreamLen = nStreamLen;
+                    }
+                }
+            }
+
+            // Map font IDs to objects
+            OString aFontIDTag( "/F" );
+            sal_Int32 nFontIDTagLen = aFontIDTag.getLength();
+            if ( nProcSetObjID )
+            {
+                PDFEmitObject& rObj = rEmit.m_aObjectMapping[ nProcSetObjID ];
+                OString aFontStartTag( " /Font << " );
+                sal_Int32 nFontStartTagLen = aFontStartTag.getLength();
+                OString aFontEndTag( " >> " );
+                sal_Int32 nCurrentPos = 0;
+                sal_Int32 nFontStartPos;
+                if ( ( nFontStartPos = rObj.m_aContent.indexOf( aFontStartTag, nCurrentPos ) ) >= 0 )
+                {
+                    nCurrentPos = nFontStartPos + nFontStartTagLen;
+
+                    sal_Int32 nFontEndPos;
+                    if ( ( nFontEndPos = rObj.m_aContent.indexOf( aFontEndTag, nCurrentPos ) ) >= 0 )
+                    {
+                        nCurrentPos = nFontStartPos + nFontStartTagLen;
+
+                        while ( ( nCurrentPos = rObj.m_aContent.indexOf( aFontIDTag, nCurrentPos ) ) >= 0 && nCurrentPos < nFontEndPos )
+                        {
+                            nCurrentPos += nFontIDTagLen;
+
+                            sal_Int32 nNextPos = rObj.m_aContent.indexOf( ' ', nCurrentPos );
+                            if ( nNextPos < 0 )
+                                continue;
+
+                            sal_Int32 nNextNextPos = rObj.m_aContent.indexOf( aRef, nCurrentPos );
+                            if ( nNextNextPos < 0 )
+                                continue;
+
+                            const sal_Char *pBuf = rObj.m_aContent.getStr();
+                            OString aFontSubID( pBuf + nCurrentPos, nNextPos - nCurrentPos );
+                            sal_Int32 nFontSubID = OString( pBuf + nNextPos, nNextNextPos - nNextPos ).toInt32();
+                            if ( nFontSubID && aFontSubID.getLength() )
+                                rEmit.m_aFontSubIDMapping[ aFontSubID ] = nFontSubID;
+                        }
                     }
                 }
             }
@@ -2839,10 +2917,25 @@ void PDFWriterImpl::registerGlyphs(
                         int nTextTagLen = aTextTag.getLength();
                         int nCurrentGlyph = 0;
                         sal_Int32 nCurrentPos = 0;
+                        sal_Int32 nFontIDPos;
                         sal_Int32 nFontPos;
                         sal_Int32 nTextPos;
                         while ( nCurrentGlyph < nGlyphs )
                         {
+                            if ( ( nFontIDPos = aPageContent.indexOf( aFontIDTag, nCurrentPos ) ) < 0 )
+                                break;
+                            nCurrentPos = nFontIDPos + nFontIDTagLen;
+                            if ( ( nFontIDPos = aPageContent.indexOf( ' ', nCurrentPos ) ) < 0 )
+                                continue;
+
+                            const sal_Char *pBuf = aPageContent.getStr();
+                            sal_Int32 nFontSubID = 0;
+                            std::map< OString, sal_Int32 >::iterator it = rEmit.m_aFontSubIDMapping.find( OString( pBuf + nCurrentPos, nFontIDPos - nCurrentPos ) );
+                            if ( it != rEmit.m_aFontSubIDMapping.end() )
+                                nFontSubID = it->second;
+                            else
+                                continue;
+
                             if ( ( nFontPos = aPageContent.indexOf( aFontTag, nCurrentPos ) ) < 0 )
                                 break;
                             nCurrentPos = nFontPos + nFontTagLen;
@@ -2855,7 +2948,6 @@ void PDFWriterImpl::registerGlyphs(
 
                             sal_Int32 nTextEnd = nTextPos - 1;
 
-                            const sal_Char *pBuf = aPageContent.getStr();
                             bool bTextIsHex;
                             if ( pBuf[ nTextStart ] == '<' )
                                 bTextIsHex = true;
@@ -2869,12 +2961,15 @@ void PDFWriterImpl::registerGlyphs(
                             if ( nTextLen <= 0 )
                                 continue;
 
+                            // Note: we assume that Mac OS X only generates
+                            // hexadecimal strings when the font encoding
+                            // is Identity-H or Identity-V
                             OStringBuffer aGlyphBuf;
                             pBuf = aPageContent.getStr() + nTextStart;
                             if ( bTextIsHex )
                             {
                                 for ( sal_Int32 j = 0; j < nTextLen; j += 2, pBuf += 2 )
-                                    aGlyphBuf.append( OString( pBuf, nTextLen - j == 1 ? 1 : 2 ).toInt32( 16 ) );
+                                    aGlyphBuf.append( (sal_Char)OString( pBuf, nTextLen - j == 1 ? 1 : 2 ).toInt32( 16 ) );
                             }
                             else
                             {
@@ -2934,15 +3029,27 @@ void PDFWriterImpl::registerGlyphs(
                             nTextLen = aGlyphBuf.getLength();
                             for ( sal_Int32 j = 0; j < nTextLen && nCurrentGlyph < nGlyphs; j++, nCurrentGlyph++, pBuf++ )
                             {
-                                long nGlyph = (long)aGlyphs[ nCurrentGlyph ];
-                                sal_uInt8 nEncodedGlyph = (sal_uInt8)( *pBuf );
-                                rEmit.m_aGlyphEncoding[ nGlyph ] = nEncodedGlyph;
+                                long nGlyph = (long)aGlyphIDs[ nCurrentGlyph ];
+
+                                sal_uInt16 nEncodedGlyph;
+                                if ( bTextIsHex )
+                                {
+                                    nEncodedGlyph = (sal_uInt8)( *pBuf ) << 8;
+                                    if ( ++pBuf && ++j < nTextLen )
+                                        nEncodedGlyph |= (sal_uInt8)( *pBuf );
+                                }
+                                else
+                                {
+                                    nEncodedGlyph = (sal_uInt16)( *pBuf );
+                                }
 
                                 // Cache encoding
                                 rEmit.m_aGlyphEncoding[ nGlyph ] = nEncodedGlyph;
 
                                 // Update glyph mappings
                                 rEmit.m_aMapping[ nGlyph ].m_nSubsetGlyphID = nEncodedGlyph;
+                                rSubset.m_aMapping[ nGlyph ].m_nFontSubID = nFontSubID;
+                                rSubset.m_aMapping[ nGlyph ].m_bIdentityGlyph = bTextIsHex;
                                 rSubset.m_aMapping[ nGlyph ].m_nSubsetGlyphID = nEncodedGlyph;
                             }
                         }
@@ -3063,8 +3170,16 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
     // note: the layout calculates in outdevs device pixel !!
 
     long pGlyphs[nMaxGlyphs];
+#if defined USE_JAVA && defined MACOSX
+    sal_uInt16 pMappedGlyphs[nMaxGlyphs];
+    bool pMappedIdentityGlyphs[nMaxGlyphs];
+#else	// USE_JAVA && MACOSX
     sal_uInt8 pMappedGlyphs[nMaxGlyphs];
+#endif	// USE_JAVA && MACOSX
     sal_Int32 pMappedFontObjects[nMaxGlyphs];
+#if defined USE_JAVA && defined MACOSX
+    sal_Int32 pMappedFontSubObjects[nMaxGlyphs];
+#endif	// USE_JAVA && MACOSX
     sal_Unicode pUnicodes[nMaxGlyphs];
     int pCharPosAry[nMaxGlyphs];
     long nAdvanceWidths[nMaxGlyphs];
@@ -3117,7 +3232,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
     int *pTmpCharPosAry = pCharPosAry;
     ImplFontData **pTmpFallbackFonts = pFallbackFonts;
     sal_Unicode *pTmpUnicodes = pUnicodes;
-    while( ( nGlyphs = rLayout.GetNextGlyphs( nMaxGlyphs - nTmpOffset, pTmpGlyphs, aTmpPos, nTmpIndex, pTmpAdvanceWidths, pTmpCharPosAry ) ) )
+    while( ( nGlyphs = rLayout.GetNextGlyphs( nMaxGlyphs - nTmpOffset, pTmpGlyphs, aTmpPos, nTmpIndex, pTmpAdvanceWidths, pTmpCharPosAry ) ) || nTmpOffset )
     {
         for( int i = 0; i < nGlyphs; i++ )
         {
@@ -3132,7 +3247,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                 pTmpUnicodes[i] = 0;
         }
 
-        if ( nTmpOffset + nGlyphs < nMaxGlyphs )
+        if ( nGlyphs && nTmpOffset + nGlyphs < nMaxGlyphs )
         {
             nTmpOffset += nGlyphs;
             pTmpGlyphs += nGlyphs;
@@ -3145,20 +3260,21 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
         }
         else
         {
+            registerGlyphs( nTmpOffset + nGlyphs, pGlyphs, pUnicodes, pMappedGlyphs, pMappedIdentityGlyphs, pMappedFontObjects, pMappedFontSubObjects, pFallbackFonts );
+            nTmpOffset = 0;
             pTmpGlyphs = pGlyphs;
             pTmpAdvanceWidths = pAdvanceWidths ? pAdvanceWidths : NULL;
             pTmpCharPosAry = pCharPosAry;
             pTmpFallbackFonts = pFallbackFonts;
             pTmpUnicodes = pUnicodes;
-            registerGlyphs( nTmpOffset + nGlyphs, pTmpGlyphs, pTmpUnicodes, pMappedGlyphs, pMappedFontObjects, pTmpFallbackFonts );
-            nTmpOffset = 0;
         }
     }
-    if ( nTmpOffset )
-        registerGlyphs( nTmpOffset, pGlyphs, pUnicodes, pMappedGlyphs, pMappedFontObjects, pFallbackFonts );
 #endif	// USE_JAVA && MACOSX
 
     sal_Int32 nLastMappedFont = -1;
+#if defined USE_JAVA && defined MACOSX
+    sal_Int32 nLastMappedFontSub = -1;
+#endif	// USE_JAVA && MACOSX
     while( (nGlyphs = rLayout.GetNextGlyphs( nMaxGlyphs, pGlyphs, aPos, nIndex, pAdvanceWidths, pCharPosAry )) )
     {
         bWasYChange = (aGlyphPos.Y() != aPos.Y());
@@ -3205,7 +3321,11 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
             // implementations set -1 then to indicate that no direct
             // mapping is possible
         }
+#if defined USE_JAVA && defined MACOSX
+        registerGlyphs( nGlyphs, pGlyphs, pUnicodes, pMappedGlyphs, pMappedIdentityGlyphs, pMappedFontObjects, pMappedFontSubObjects, pFallbackFonts );
+#else	// USE_JAVA && MACOSX
         registerGlyphs( nGlyphs, pGlyphs, pUnicodes, pMappedGlyphs, pMappedFontObjects, pFallbackFonts );
+#endif	// USE_JAVA && MACOSX
 
         if( pAdvanceWidths )
         {
@@ -3256,6 +3376,25 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                 aLine.append( ' ' );
                 m_aPages.back().appendPoint( aPos+aDeltaPos, aLine );
                 aLine.append( " Tm" );
+#if defined USE_JAVA && defined MACOSX
+                if( nLastMappedFont != pMappedFontObjects[n] || nLastMappedFontSub != pMappedFontSubObjects[n] )
+                {
+                    nLastMappedFont = pMappedFontObjects[n];
+                    nLastMappedFontSub = pMappedFontSubObjects[n];
+                    aLine.append( " /F" );
+                    aLine.append( pMappedFontObjects[n] );
+                    aLine.append( '.' );
+                    aLine.append( pMappedFontSubObjects[n] );
+                    aLine.append( ' ' );
+                    m_aPages.back().appendMappedLength( nFontHeight, aLine, true );
+                    aLine.append( " Tf" );
+                }
+                aLine.append( " <" );
+                if ( pMappedIdentityGlyphs[i] )
+                    appendHex( (sal_Int8)( ( pMappedGlyphs[i] & 0xff00 ) >> 8 ), aLine );
+                appendHex( (sal_Int8)( pMappedGlyphs[i] & 0x00ff ), aLine );
+                aLine.append( "> Tj\r\n" );
+#else	// USE_JAVA && MACOSX
                 if( nLastMappedFont != pMappedFontObjects[n] )
                 {
                     nLastMappedFont = pMappedFontObjects[n];
@@ -3268,6 +3407,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                 aLine.append( " <" );
                 appendHex( (sal_Int8)pMappedGlyphs[n], aLine );
                 aLine.append( "> Tj\r\n" );
+#endif	// USE_JAVA && MACOSX
             }
         }
         else // normal case
@@ -3333,6 +3473,31 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                     break;
 
                 int nNext = nLast+1;
+#if defined USE_JAVA && defined MACOSX
+                while( nNext < nGlyphs && pMappedFontObjects[ nNext ] == pMappedFontObjects[nLast] && pMappedFontSubObjects[ nNext ] == pMappedFontSubObjects[nLast] && pGlyphs[nNext] )
+                    nNext++;
+                if( nLastMappedFont != pMappedFontObjects[nLast] || nLastMappedFontSub != pMappedFontSubObjects[nLast] )
+                {
+                    aLine.append( "/F" );
+                    aLine.append( pMappedFontObjects[nLast] );
+                    aLine.append( '.' );
+                    aLine.append( pMappedFontSubObjects[nLast] );
+                    aLine.append( ' ' );
+                    m_aPages.back().appendMappedLength( nFontHeight, aLine, true );
+                    aLine.append( " Tf " );
+                    nLastMappedFont = pMappedFontObjects[nLast];
+                    nLastMappedFontSub = pMappedFontSubObjects[nLast];
+                }
+                aLine.append( "<" );
+                for( int i = nLast; i < nNext; i++ )
+                {
+                    if ( pMappedIdentityGlyphs[i] )
+                        appendHex( (sal_Int8)( ( pMappedGlyphs[i] & 0xff00 ) >> 8 ), aLine );
+                    appendHex( (sal_Int8)( pMappedGlyphs[i] & 0x00ff ), aLine );
+                    if( i && (i % 35) == 0 )
+                        aLine.append( "\r\n" );
+                }
+#else	// USE_JAVA && MACOSX
                 while( nNext < nGlyphs && pMappedFontObjects[ nNext ] == pMappedFontObjects[nLast] && pGlyphs[nNext] )
                     nNext++;
                 if( nLastMappedFont != pMappedFontObjects[nLast] )
@@ -3351,6 +3516,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                     if( i && (i % 35) == 0 )
                         aLine.append( "\r\n" );
                 }
+#endif	// USE_JAVA && MACOSX
                 aLine.append( "> Tj\r\n" );
                 
                 nLast = nNext;
@@ -6002,7 +6168,7 @@ sal_Int32 PDFWriterImpl::writePDFObjectTree( PDFEmitObject& rObj, oslFileHandle 
     // Check if we have already handled this object
     std::map< sal_Int32, sal_Int32 >::iterator it = rIDMapping.find( rObj.m_nID );
     if ( it != rIDMapping.end() )
-        return it->first;
+        return it->second;
 
     sal_Int32 nNewID = createObject();
     rIDMapping[ rObj.m_nID ] = nNewID;

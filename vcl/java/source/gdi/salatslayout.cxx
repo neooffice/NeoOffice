@@ -116,9 +116,9 @@ ATSLayout::ATSLayout( com_sun_star_vcl_VCLFont *pVCLFont, bool bUseScreenMetrics
 	// Create font style
 	if ( ATSUCreateStyle( &maFontStyle ) == noErr )
 	{
-		ATSUAttributeTag nTags[3];
-		ByteCount nBytes[3];
-		ATSUAttributeValuePtr nVals[3];
+		ATSUAttributeTag nTags[5];
+		ByteCount nBytes[5];
+		ATSUAttributeValuePtr nVals[5];
 
 		// Set font
 		ATSUFontID nFontID = (ATSUFontID)mpVCLFont->getNativeFont();
@@ -147,6 +147,18 @@ ATSLayout::ATSLayout( com_sun_star_vcl_VCLFont *pVCLFont, bool bUseScreenMetrics
 		nTags[2] = kATSUStyleRenderingOptionsTag;
 		nBytes[2] = sizeof( ATSStyleRenderingOptions );
 		nVals[2] = &nOptions;
+
+		// Set bold
+		MacOSBoolean bBold = mpVCLFont->isBold();
+		nTags[3] = kATSUQDBoldfaceTag;
+		nBytes[3] = sizeof( MacOSBoolean );
+		nVals[3] = &bBold;
+
+		// Set italic
+		MacOSBoolean bItalic = mpVCLFont->isItalic();
+		nTags[4] = kATSUQDItalicTag;
+		nBytes[4] = sizeof( MacOSBoolean );
+		nVals[4] = &bItalic;
 
 		if ( ATSUSetAttributes( maFontStyle, 3, nTags, nBytes, nVals ) != noErr )
 		{
@@ -395,6 +407,9 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				nCharWidth = Float32ToLong( ( mpGlyphInfoArray->glyphs[ i + 1 ].idealX - mpGlyphInfoArray->glyphs[ i ].idealX ) * mnUnitsPerPixel );
 			}
 
+			if ( mpGlyphInfoArray->glyphs[ i ].layoutFlags & ( kATSGlyphInfoIsWhiteSpace | kATSGlyphInfoTerminatorGlyph ) )
+				nGlyph = 0;
+
 			int nGlyphFlags = nCharWidth ? 0 : GlyphItem::IS_IN_CLUSTER;
 
 			if ( bPosRTL )
@@ -402,7 +417,7 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 			GlyphItem aGI( nCharPos, nGlyph, aPos, nGlyphFlags, nCharWidth );
 			aGI.mnNewWidth = nCharWidth;
-			AppendGlyph( aGI );
+				AppendGlyph( aGI );
 
 			aPos.X() += nCharWidth;
 		}
@@ -442,6 +457,25 @@ void ATSLayout::DrawText( SalGraphics& rGraphics ) const
 		if ( !nGlyphCount )
 			break;
 
+		// Don't paint glyph ID 0
+		for ( int i = 0; i < nGlyphCount && !aGlyphArray[ i ]; i++ )
+			;
+
+		if ( i )
+		{
+			nStart -= nGlyphCount - i;
+			continue;
+		}
+
+		for ( i = 0; i < nGlyphCount && aGlyphArray[ i ]; i++ )
+			;
+
+		if ( i )
+		{
+			nStart -= nGlyphCount - i;
+			nGlyphCount = i;
+		}
+
 		int nOrientation = GetOrientation();
 
 		int j = aCharPosArray[ 0 ] - mnMinCharPos + 1;
@@ -465,7 +499,7 @@ void ATSLayout::DrawText( SalGraphics& rGraphics ) const
 		}
 		else
 		{
-			for ( int i = 0; i < nGlyphCount; i++ )
+			for ( i = 0; i < nGlyphCount; i++ )
 				aGlyphArray[ i ] &= GF_IDXMASK;
 
 			rGraphics.maGraphicsData.mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), nGlyphCount, aGlyphArray, aDXArray, mpVCLFont, rGraphics.maGraphicsData.mnTextColor, nOrientation, 0, 0, mnUnitsPerPixel );
