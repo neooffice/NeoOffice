@@ -208,19 +208,26 @@ OUString SAL_CALL WordPerfectImportFilter::detect( com::sun::star::uno::Sequence
 	    rtl_TextEncoding encoding = RTL_TEXTENCODING_INFO_ASCII;
 	}
 
-        Reference< com::sun::star::ucb::XCommandEnvironment > xEnv;
-        if (!xInputStream.is())
-        {
-		::ucb::Content aContent(sURL, xEnv);
-                xInputStream = aContent.openStream();
-                if (!xInputStream.is())
-                        return sTypeName;
-        }
+	Reference< com::sun::star::ucb::XCommandEnvironment > xEnv;
+	if (!xInputStream.is())
+	{
+		try
+		{
+			::ucb::Content aContent(sURL, xEnv);
+			xInputStream = aContent.openStream();
+		}
+		catch (...)
+		{
+			return ::rtl::OUString();
+		}
+		if (!xInputStream.is())
+			return ::rtl::OUString();
+	}
 		
 	WPXSvInputStream input( xInputStream );
 	
 	if (input.atEOS())
-		return sTypeName;
+		return ::rtl::OUString();
 
 	confidence = WPDocument::isFileFormatSupported(&input, false);
 	input.seek(0, WPX_SEEK_SET);
