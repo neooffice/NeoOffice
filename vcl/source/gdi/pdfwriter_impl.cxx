@@ -76,15 +76,17 @@
 #include <com/sun/star/vcl/VCLFont.hxx>
 #endif
 
+#include <unotools/tempfile.hxx>
+
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 
 #endif	// USE_JAVA && MACOSX
 
-#define ENABLE_COMPRESSION
+// #define ENABLE_COMPRESSION
 #if OSL_DEBUG_LEVEL < 2
-#define COMPRESS_PAGES
+// #define COMPRESS_PAGES
 #endif
 
 using namespace vcl;
@@ -239,6 +241,298 @@ static void appendNonStrokingColor( const Color& rColor, OStringBuffer& rBuffer 
     }
 }
 
+#if defined USE_JAVA && defined MACOSX
+static sal_Int32 getNextPDFObject( oslFileHandle aFile, PDFWriterImpl::PDFObjectMapping& rObjectMapping )
+{
+    sal_uInt64 nLastNewlinePos;
+    if ( osl_getFilePos( aFile, &nLastNewlinePos ) != osl_File_E_None )
+        return 0;
+
+    PDFWriterImpl::PDFEmitObject aObj;
+    const sal_Char *pStart = " 0 obj\n";
+    sal_uInt64 nStartLen = strlen( pStart );
+    bool bStartFound = false;   
+    sal_uInt64 nBufSize = 1024;
+    sal_Char aBuf[ nBufSize ];
+    sal_uInt64 nBytesRead;
+
+    // Find start of next object
+    while ( !bStartFound && osl_readFile( aFile, aBuf, nBufSize, &nBytesRead ) == osl_File_E_None )
+    {
+        sal_Bool bEOF = sal_False;
+        if ( osl_isEndOfFile( aFile, &bEOF ) != osl_File_E_None )
+            return 0;
+
+        if ( !nBytesRead )
+        {
+            if ( bEOF )
+                return 0;
+            else
+                continue;
+        }
+
+        // Look for beginning token
+        if ( nBytesRead < nStartLen )
+        {
+            if ( bEOF )
+                return 0;
+
+            sal_uInt64 nOffset = nBytesRead;
+            sal_uInt64 nTmpBytesRead;
+            while ( osl_readFile( aFile, aBuf + nOffset, nBufSize - nOffset, &nTmpBytesRead ) == osl_File_E_None )
+            {
+                nOffset += nTmpBytesRead;
+                if ( nOffset >= nStartLen )
+                    break;
+
+                if ( osl_isEndOfFile( aFile, &bEOF ) != osl_File_E_None )
+                    return 0;
+
+                if ( bEOF )
+                    break;
+            }
+
+            nBytesRead = nOffset;
+        }
+
+        // Skip bytes at the end so that split tokens are handled in the
+        // next pass
+        sal_uInt64 nSkippedBytes = nStartLen - 1;
+        nBytesRead -= nSkippedBytes;
+        sal_Char *pBuf = aBuf;
+        for ( sal_uInt64 i = 0; i < nBytesRead; i++, pBuf++ )
+        {
+            if ( *pBuf == *pStart && !strncmp( pBuf, pStart, nStartLen ) )
+            {
+                nSkippedBytes += nBytesRead - i - nStartLen;
+                nBytesRead = i + nStartLen;
+                bStartFound = true;
+                break;
+            }
+            else if ( *pBuf == '\n' )
+            {
+                if ( osl_getFilePos( aFile, &nLastNewlinePos ) != osl_File_E_None )
+                    return 0;
+                nLastNewlinePos -= nBytesRead + nSkippedBytes - i;
+            }
+        }
+
+        if ( osl_setFilePos( aFile, osl_Pos_Current, nSkippedBytes * -1 ) != osl_File_E_None )
+            return 0;
+    }
+
+    if ( !bStartFound )
+        return 0;
+
+    // Parse object ID
+    sal_uInt64 nEndOfStartPos;
+    if ( osl_getFilePos( aFile, &nEndOfStartPos ) != osl_File_E_None || osl_setFilePos( aFile, osl_Pos_Absolut, nLastNewlinePos ) != osl_File_E_None )
+        return 0;
+
+    OStringBuffer aIDBuf;
+    bool bSpaceFound = false;
+    sal_uInt64 nMaxBytes = nEndOfStartPos - nLastNewlinePos;
+    while ( !bSpaceFound && nMaxBytes && osl_readFile( aFile, aBuf, nBufSize, &nBytesRead ) == osl_File_E_None )
+    {
+        sal_Bool bEOF = sal_False;
+        if ( osl_isEndOfFile( aFile, &bEOF ) != osl_File_E_None )
+            return 0;
+
+        if ( !nBytesRead )
+        {
+            if ( bEOF )
+                return 0;
+            else
+                continue;
+        }
+
+        if ( nMaxBytes < nBytesRead )
+            nBytesRead = nMaxBytes;
+        sal_Char *pBuf = aBuf;
+        for ( sal_uInt64 i = 0; i < nBytesRead; i++, pBuf++ )
+        {
+            if ( *pBuf == ' ' )
+            {
+                bSpaceFound = true;
+                break;
+            }
+        }
+
+        aIDBuf.append( aBuf, i );
+        nMaxBytes -= i;
+    }
+
+    aObj.m_nID = aIDBuf.makeStringAndClear().toInt32();
+    if ( !aObj.m_nID )
+        return 0;
+    if ( osl_setFilePos( aFile, osl_Pos_Absolut, nEndOfStartPos ) != osl_File_E_None )
+        return 0;
+
+    const sal_Char *pEnd = "\nendobj\n";
+    sal_uInt64 nEndLen = strlen( pEnd );
+    bool bEndFound = false;    
+
+    // Find end of object
+    while ( !bEndFound && osl_readFile( aFile, aBuf, nBufSize, &nBytesRead ) == osl_File_E_None )
+    {
+        sal_Bool bEOF = sal_False;
+        if ( osl_isEndOfFile( aFile, &bEOF ) != osl_File_E_None )
+            return 0;
+
+        if ( !nBytesRead )
+        {
+            if ( bEOF )
+                break;
+            else
+                continue;
+        }
+
+        // Look for ending token
+        if ( nBytesRead < nEndLen )
+        {
+            if ( bEOF )
+                return 0;
+
+            sal_uInt64 nOffset = nBytesRead;
+            sal_uInt64 nTmpBytesRead;
+            while ( osl_readFile( aFile, aBuf + nOffset, nBufSize - nOffset, &nTmpBytesRead ) == osl_File_E_None )
+            {
+                nOffset += nTmpBytesRead;
+                if ( nOffset >= nEndLen )
+                    break;
+
+                if ( osl_isEndOfFile( aFile, &bEOF ) != osl_File_E_None )
+                    return 0;
+
+                if ( bEOF )
+                    break;
+            }
+
+            nBytesRead = nOffset;
+        }
+
+        // Skip bytes at the end so that split tokens are handled in the
+        // next pass
+        sal_uInt64 nSkippedBytes = nEndLen - 1;
+        nBytesRead -= nSkippedBytes;
+        sal_Char *pBuf = aBuf;
+        for ( sal_uInt64 i = 0; i < nBytesRead; i++, pBuf++ )
+        {
+            if ( *pBuf == *pEnd && !strncmp( pBuf, pEnd, nEndLen ) )
+            {
+                nSkippedBytes += nBytesRead - i;
+                nBytesRead = i;
+                bEndFound = true;
+                break;
+            }
+        }
+
+        if ( osl_setFilePos( aFile, osl_Pos_Current, nSkippedBytes * -1 ) != osl_File_E_None )
+            return 0;
+    }
+
+    if ( !bEndFound )
+        return 0;
+
+    sal_uInt64 nStartOfEndPos;
+    if ( osl_getFilePos( aFile, &nStartOfEndPos ) != osl_File_E_None || osl_setFilePos( aFile, osl_Pos_Absolut, nEndOfStartPos ) != osl_File_E_None )
+        return 0;
+
+    // Cache content and find the stream if one exists
+    OStringBuffer aContentBuf;
+    const sal_Char *pStreamStart = "\nstream\n";
+    sal_uInt64 nStreamStartLen = strlen( pStreamStart );
+    nMaxBytes = nStartOfEndPos - nEndOfStartPos;
+    while ( !aObj.m_bStream && nMaxBytes && osl_readFile( aFile, aBuf, nBufSize, &nBytesRead ) == osl_File_E_None )
+    {
+        sal_Bool bEOF = sal_False;
+        if ( osl_isEndOfFile( aFile, &bEOF ) != osl_File_E_None )
+            return 0;
+
+        if ( !nBytesRead )
+        {
+            if ( bEOF )
+                break;
+            else
+                continue;
+        }
+
+        // Look for beginning token
+        if ( nBytesRead < nStreamStartLen )
+        {
+            if ( bEOF )
+            {
+                aContentBuf.append( aBuf, nMaxBytes < nBytesRead ? nMaxBytes : nBytesRead );
+                break;
+            }
+
+            sal_uInt64 nOffset = nBytesRead;
+            sal_uInt64 nTmpBytesRead;
+            while ( osl_readFile( aFile, aBuf + nOffset, nBufSize - nOffset, &nTmpBytesRead ) == osl_File_E_None )
+            {
+                if ( nOffset >= nStreamStartLen )
+                    break;
+
+                if ( osl_isEndOfFile( aFile, &bEOF ) != osl_File_E_None )
+                    return 0;
+
+                if ( bEOF )
+                    break;
+            }
+
+            nBytesRead = nOffset;
+        }
+
+        // Skip bytes at the end so that split tokens are handled in the
+        // next pass
+        sal_uInt64 nSkippedBytes = nStreamStartLen - 1;
+        nBytesRead -= nSkippedBytes;
+        sal_Char *pBuf = aBuf;
+        for ( sal_uInt64 i = 0; i < nMaxBytes && i < nBytesRead; i++, pBuf++ )
+        {
+            if ( nStreamStartLen <= nMaxBytes - i && *pBuf == *pStreamStart && !strncmp( pBuf, pStreamStart, nStreamStartLen ) )
+            {
+                nSkippedBytes += nBytesRead - i - nStreamStartLen;
+                nBytesRead = i + nStreamStartLen;
+                if ( osl_getFilePos( aFile, &aObj.m_nStreamPos ) != osl_File_E_None )
+                    return 0;
+                aObj.m_nStreamPos -= nSkippedBytes;
+                aObj.m_bStream = true;
+                break;
+            }
+        }
+
+        aContentBuf.append( aBuf, i );
+        nMaxBytes -= i;
+
+        if ( osl_setFilePos( aFile, osl_Pos_Current, nSkippedBytes * -1 ) != osl_File_E_None )
+            return 0;
+    }
+
+    sal_uInt64 nEndPos = nStartOfEndPos + nEndLen;
+    if ( osl_setFilePos( aFile, osl_Pos_Absolut, nEndPos ) != osl_File_E_None )
+        return 0;
+
+    // Replace all whitespace with spaces for ease of parsing
+    for ( sal_Char *pBuf = (sal_Char *)aContentBuf.getStr(); *pBuf; pBuf++ )
+    {
+        switch ( *pBuf )
+        {
+            case 0x09:
+            case 0x0A:
+            case 0x0C:
+            case 0x0D:
+                *pBuf = 0x20;
+        }
+    }
+
+    aObj.m_aContent = aContentBuf.makeStringAndClear();
+
+    rObjectMapping[ aObj.m_nID ] = aObj;
+
+    return aObj.m_nID;
+}
+#endif	// USE_JAVA && MACOSX
 
 PDFWriterImpl::PDFPage::PDFPage( PDFWriterImpl* pWriter, sal_Int32 nPageWidth, sal_Int32 nPageHeight, PDFWriter::Orientation eOrientation )
         :
@@ -2612,6 +2906,8 @@ void PDFWriterImpl::registerGlyphs(
     for ( i = 0; i < nGlyphs; i++ )
     {
         ImplFontData *pCurrentFont = pFallbackFonts[i] ? pFallbackFonts[i] : pDevFont;
+        if ( !pCurrentFont->mbSubsettable )
+            continue;
 
         FontSubset& rSubset = m_aSubsets[ pCurrentFont ];
         FontEmit& rEmit = rSubset.m_aSubsets.back();
@@ -2624,21 +2920,20 @@ void PDFWriterImpl::registerGlyphs(
         if ( !aFont )
             continue;
 
-        OUString aTmpName;
-        osl_createTempFile( NULL, NULL, &aTmpName.pData );
+        CGGlyph aGlyphs[ 256 ];
+        int nGlyphs = 0;
+
+        OUString aTmpName( utl::TempFile::CreateTempName() );
 
         CFStringRef aPath = CFStringCreateWithCharactersNoCopy( NULL, aTmpName.getStr(), aTmpName.getLength(), kCFAllocatorNull );
         if ( aPath )
         {
-            CFURLRef aURL = CFURLCreateWithString( NULL, aPath, NULL );
+            CFURLRef aURL = CFURLCreateWithFileSystemPath( NULL, aPath, kCFURLPOSIXPathStyle, false );
             if ( aURL )
             {
                 CGContextRef aContext = CGPDFContextCreateWithURL( aURL, NULL, NULL );
                 if ( aContext )
                 {
-                    CGGlyph aGlyphs[ 256 ];
-                    int nGlyphs = 0;
-
                     for ( FontEmitMapping::iterator fit = rEmit.m_aMapping.begin(); fit != rEmit.m_aMapping.end(); ++fit )
                     {
                         if ( fit->first );
@@ -2654,23 +2949,6 @@ void PDFWriterImpl::registerGlyphs(
                     CGContextShowGlyphs( aContext, aGlyphs, nGlyphs );
                     CGContextEndPage( aContext );
                     CGContextRelease( aContext );
-
-                    // TODO: extract glyphs and font objects from PDF file
-                    for ( int j = 0; j < nGlyphs; j++ )
-                    {
-                        long nGlyph = (long)aGlyphs[j];
-                        sal_uInt8 nEncodedGlyph = (sal_uInt8)aGlyphs[j];
-                        FontEmitMapping::iterator it = rEmit.m_aMapping.find( nGlyph );
-                        if( it != rSubset.m_aMapping.end() )
-                        {
-                            // Cache encoding
-                            rEmit.m_aGlyphEncoding[ nGlyph ] = nEncodedGlyph;
-
-                            // Update glyph mappings
-                            rEmit.m_aMapping[ nGlyph ].m_nSubsetGlyphID = nEncodedGlyph;
-                            rSubset.m_aMapping[ nGlyphs ].m_nSubsetGlyphID = nEncodedGlyph;
-                        }
-                    }
                 }
 
                 CFRelease( aURL );
@@ -2679,7 +2957,142 @@ void PDFWriterImpl::registerGlyphs(
             CFRelease( aPath );
         }
 
-        osl_removeFile( aTmpName.pData );
+        osl_getFileURLFromSystemPath( aTmpName.pData, &rEmit.m_aFontFileName.pData );
+
+        oslFileHandle aFile;
+        if ( osl_openFile( rEmit.m_aFontFileName.pData, &aFile, osl_File_OpenFlag_Read ) == osl_File_E_None )
+        {
+            // Get the PDF objects from the file and look for the page content
+            OString aPageObjTag( "<< /Type /Page " );
+            OString aPageContentAttr( " /Contents " );
+            sal_Int32 nPageContentObjID = 0;
+            sal_Int32 nObjID = 0;
+            while ( ( nObjID = getNextPDFObject( aFile, rEmit.m_aObjectMapping ) ) > 0 )
+            {
+                PDFWriterImpl::PDFEmitObject& rObj = rEmit.m_aObjectMapping[ nObjID ];
+                if ( !nPageContentObjID && rObj.m_aContent.indexOf( aPageObjTag ) >= 0 )
+                {
+                    if ( !rObj.m_bStream )
+                    {
+                        sal_Int32 nContentPos = rObj.m_aContent.indexOf( aPageContentAttr );
+                        if ( nContentPos >= 0 )
+                        {
+                            // Find object reference
+                            OStringBuffer aIDBuf;
+                            nContentPos += aPageContentAttr.getLength();
+                            const sal_Char *pBuf = rObj.m_aContent.getStr();
+                            for ( pBuf += nContentPos; *pBuf && *pBuf != ' '; pBuf++ )
+                                aIDBuf.append( *pBuf );
+                            nPageContentObjID = aIDBuf.makeStringAndClear().toInt32();
+                        }
+                    }
+                    else
+                    {
+                        nPageContentObjID = nObjID;
+                    }
+                }
+            }
+
+            // Update stream lengths
+            OString aStreamLengthTag( "<< /Length " );
+            OString aRef( " 0 R " );
+            for ( PDFObjectMapping::iterator it = rEmit.m_aObjectMapping.begin(); it != rEmit.m_aObjectMapping.end(); ++it )
+            {
+                PDFWriterImpl::PDFEmitObject& rObj = it->second;
+                if ( rObj.m_bStream )
+                {
+                    // Find stream length
+                    sal_Int32 nLenPos = rObj.m_aContent.indexOf( aStreamLengthTag );
+                    if ( nLenPos >= 0 )
+                    {
+                        OStringBuffer aLenBuf;
+                        nLenPos += aStreamLengthTag.getLength();
+                        const sal_Char *pBuf = rObj.m_aContent.getStr();
+                        for ( pBuf += nLenPos; *pBuf && *pBuf != ' '; pBuf++ )
+                            aLenBuf.append( *pBuf );
+                        sal_Int32 nStreamLen = aLenBuf.makeStringAndClear().toInt32();
+                        if ( nStreamLen && !OString( pBuf ).compareTo( aRef, aRef.getLength() ) )
+                            rObj.m_nStreamLen = rEmit.m_aObjectMapping[ nStreamLen ].m_aContent.toInt32();
+                        else
+                            rObj.m_nStreamLen = nStreamLen;
+                    }
+                }
+            }
+
+            // Inflate page content stream and get encoding
+            if ( nPageContentObjID )
+            {
+                PDFWriterImpl::PDFEmitObject& rObj = rEmit.m_aObjectMapping[ nPageContentObjID ];
+                if ( rObj.m_bStream && rObj.m_nStreamLen && osl_setFilePos( aFile, osl_Pos_Absolut, rObj.m_nStreamPos ) == osl_File_E_None )
+                {
+                    ZCodec aInflater( 0x4000, 0x4000 );
+                    SvMemoryStream aDeflatedStream;
+                    SvMemoryStream aInflatedStream;
+
+                    // Read object into memory stream
+                    sal_uInt64 nBufSize = 4096;
+                    sal_Char aBuf[ nBufSize ];
+                    sal_uInt64 nBytesRead;
+                    sal_uInt64 nBytesLeft = rObj.m_nStreamLen;
+                    while ( nBytesLeft && osl_readFile( aFile, aBuf, nBufSize, &nBytesRead ) == osl_File_E_None )
+                    {
+                        if ( nBytesLeft < nBytesRead )
+                            nBytesRead = nBytesLeft;
+
+                        if ( aDeflatedStream.Write( aBuf, nBytesRead ) != nBytesRead )
+                            break;
+
+                        sal_Bool bEOF = sal_False;
+                        if ( osl_isEndOfFile( aFile, &bEOF ) != osl_File_E_None || bEOF )
+                            break;
+
+                        nBytesLeft -= nBytesRead;
+                    }
+
+                    sal_uInt64 nContentLen = aDeflatedStream.Tell();
+                    if ( !nBytesLeft && nContentLen )
+                    {
+                        aDeflatedStream.Seek( 0 );
+                        aInflater.BeginCompression();
+                        while ( aDeflatedStream.Tell() < nContentLen && aInflater.Decompress( aDeflatedStream, aInflatedStream ) >= 0 )
+                            ;
+                        aInflater.EndCompression();
+                    }
+
+                    nContentLen = aInflatedStream.Tell();
+                    if ( nContentLen )
+                    {
+                        aInflatedStream.Seek( 0 );
+                        const sal_Char *pBuf = (const sal_Char *)aInflatedStream.GetData();
+                        bool bTextFound = false;
+                        ULONG i;
+                        for ( i = 0; !bTextFound && i < nContentLen; i++, pBuf++ )
+                        {
+                            if ( *pBuf == '(' )
+                                bTextFound = true;
+                        }
+                        for ( int j = 0 ; bTextFound && i < nContentLen && j < nGlyphs; i++, j++, pBuf++ )
+                        {
+                            if ( *pBuf == ')' )
+                                break;
+
+                            long nGlyph = (long)aGlyphs[j];
+                            sal_uInt8 nEncodedGlyph = (sal_uInt8)(*pBuf);
+                            rEmit.m_aGlyphEncoding[ nGlyph ] = nEncodedGlyph;
+
+                            // Cache encoding
+                            rEmit.m_aGlyphEncoding[ nGlyph ] = nEncodedGlyph;
+
+                            // Update glyph mappings
+                            rEmit.m_aMapping[ nGlyph ].m_nSubsetGlyphID = nEncodedGlyph;
+                            rSubset.m_aMapping[ nGlyph ].m_nSubsetGlyphID = nEncodedGlyph;
+                        }
+                    }
+                }
+            }
+
+            osl_closeFile( aFile );
+        }
     }
 #endif	// USE_JAVA && MACOSX
 }

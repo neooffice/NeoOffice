@@ -249,31 +249,32 @@ public:
     };
     typedef std::map< long, GlyphEmit > FontEmitMapping;
 #if defined USE_JAVA && defined MACOSX
-    struct FontEmitObject
+    struct PDFEmitObject
     {
         sal_Int32		m_nID;
-        sal_uInt64		m_nPos;
-        sal_uInt64		m_nLen;
-        rtl::OUString	m_aFile;
+        rtl::OString	m_aContent;
+        bool			m_bStream;
+        sal_uInt64		m_nStreamPos;
+        sal_uInt64		m_nStreamLen;
 
-        FontEmitObject() : m_nID( 0 ), m_nPos( 0 ), m_nLen( 0 ) {}
+        PDFEmitObject() : m_nID( 0 ), m_bStream( false ), m_nStreamPos( 0 ), m_nStreamLen( 0 ) {}
     };
-    typedef std::list< FontEmitObject > FontObjectList;
+    typedef std::map< sal_Int32, PDFEmitObject > PDFObjectMapping;
 #endif	// USE_JAVA && MACOSX
     struct FontEmit
     {
         sal_Int32			m_nFontID;
         FontEmitMapping		m_aMapping;
 #if defined USE_JAVA && defined MACOSX
+        rtl::OUString		m_aFontFileName;
         std::map< long, sal_uInt8 >	m_aGlyphEncoding;
-        FontObjectList		m_aObjectList;
-        rtl::OUString		m_aEmitFile;
+        PDFObjectMapping	m_aObjectMapping;
 #endif	// USE_JAVA && MACOSX
 
         FontEmit( sal_Int32 nID ) : m_nFontID( nID ) {}
 #if defined USE_JAVA && defined MACOSX
-        ~FontEmit() { if ( m_aEmitFile.getLength() ) osl_removeFile( m_aEmitFile.pData ); }
-#endif	// USE_JAVA && MACOSX
+        ~FontEmit() { osl_removeFile( m_aFontFileName.pData ); }
+#endif  // USE_JAVA && MACOSX
     };
     typedef std::list< FontEmit > FontEmitList;
     struct Glyph
