@@ -1245,7 +1245,7 @@ void SalInstance::Yield( BOOL bWait )
 	}
 
 	// Dispatch pending AWT events
-	while ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
+	while ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
 	{
 		nTimeout = 0;
 
@@ -1254,7 +1254,7 @@ void SalInstance::Yield( BOOL bWait )
 		delete pEvent;
 
 		// Fix for bug 416 and 428 without causing bug 380
-		if ( nID != SALEVENT_MOUSEBUTTONDOWN )
+		if ( nID != SALEVENT_MOUSEBUTTONDOWN && nID != SALEVENT_MOUSEBUTTONDOWN && nID != SALEVENT_MOUSELEAVE && nID != SALEVENT_MOUSEMOVE )
 			break;
 	}
 
