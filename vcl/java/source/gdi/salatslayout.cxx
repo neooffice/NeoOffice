@@ -334,12 +334,8 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	nTags[0] = kATSULineDirectionTag;
 	nBytes[0] = sizeof( MacOSBoolean );
 	nVals[0] = &nDirection;
-	ATSLineLayoutOptions nLineOptions = kATSLineKeepSpacesOutOfMargin;
-	nTags[1] = kATSULineLayoutOptionsTag;
-	nBytes[1] = sizeof( ATSLineLayoutOptions );
-	nVals[1] = &nLineOptions;
 
-	if ( ATSUSetLayoutControls( maLayout, 2, nTags, nBytes, nVals ) != noErr )
+	if ( ATSUSetLayoutControls( maLayout, 1, nTags, nBytes, nVals ) != noErr )
 	{
 		Destroy();
 		return;
