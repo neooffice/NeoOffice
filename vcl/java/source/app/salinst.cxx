@@ -855,6 +855,7 @@ void ExecuteApplicationMain( Application *pApp )
 
 	// Now that Java is properly initialized, run the application's Main()
 	aSVMainThread.run();
+	aSVMainThread.join();
 }
 
 // =======================================================================
@@ -1353,7 +1354,7 @@ SalInfoPrinter* SalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
 
 		if ( !bDelete )
 		{
-			BOOL bDelete = TRUE;
+			bDelete = TRUE;
 			for ( ::std::list< com_sun_star_vcl_VCLPageFormat* >::const_iterator it = pSalData->maVCLPageFormats.begin(); it != pSalData->maVCLPageFormats.end(); ++it )
 			{
 				if ( ((SalDriverData *)pSetupData->mpDriverData)->mpVCLPageFormat == *it && ((SalDriverData *)pSetupData->mpDriverData)->mpVCLPageFormat->getJavaObject() == (*it)->getJavaObject() )

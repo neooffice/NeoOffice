@@ -401,11 +401,28 @@ SalPrinterData::~SalPrinterData()
 {
 	if ( mpGraphics )
 		delete mpGraphics;
+
 	if ( mpVCLPageFormat )
 	{
-		GetSalData()->maVCLPageFormats.remove( mpVCLPageFormat );
+		SalData *pSalData = GetSalData();
+		pSalData->maVCLPageFormats.remove( mpVCLPageFormat );
+
+		BOOL bDispose = TRUE;
+		for ( ::std::list< com_sun_star_vcl_VCLPageFormat* >::const_iterator it = pSalData->maVCLPageFormats.begin(); it != pSalData->maVCLPageFormats.end(); ++it )
+		{
+			if ( mpVCLPageFormat == *it && mpVCLPageFormat->getJavaObject() == (*it)->getJavaObject() )
+			{
+				bDispose = FALSE;
+				break;
+			}
+		}
+
+		if ( bDispose )
+			mpVCLPageFormat->dispose();
+		
 		delete mpVCLPageFormat;
 	}
+
 	if ( mpVCLPrintJob )
 	{
 		mpVCLPrintJob->dispose();
@@ -428,9 +445,25 @@ SalInfoPrinterData::~SalInfoPrinterData()
 {
 	if ( mpGraphics )
 		delete mpGraphics;
+
 	if ( mpVCLPageFormat )
 	{
-		GetSalData()->maVCLPageFormats.remove( mpVCLPageFormat );
+		SalData *pSalData = GetSalData();
+		pSalData->maVCLPageFormats.remove( mpVCLPageFormat );
+
+		BOOL bDispose = TRUE;
+		for ( ::std::list< com_sun_star_vcl_VCLPageFormat* >::const_iterator it = pSalData->maVCLPageFormats.begin(); it != pSalData->maVCLPageFormats.end(); ++it )
+		{
+			if ( mpVCLPageFormat == *it && mpVCLPageFormat->getJavaObject() == (*it)->getJavaObject() )
+			{
+				bDispose = FALSE;
+				break;
+			}
+		}
+
+		if ( bDispose )
+			mpVCLPageFormat->dispose();
+		
 		delete mpVCLPageFormat;
 	}
 }

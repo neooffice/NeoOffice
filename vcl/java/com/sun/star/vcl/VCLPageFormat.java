@@ -161,6 +161,21 @@ public final class VCLPageFormat {
 	}
 
 	/**
+	 * Disposes the page format and releases any system resources that it is
+	 * using.
+	 */
+	public void dispose() {
+
+		if (image != null)
+			image.dispose();
+		image = null;
+		job = null;
+		pageFormat = null;
+		pageResolution = null;
+
+	}
+
+	/**
 	 * Returns the graphics context for this component.
 	 *
 	 * @return the graphics context for this component
