@@ -1070,14 +1070,10 @@ public final class VCLGraphics {
 	 */
 	public void invert(int x, int y, int width, int height, int options) {
 
-		Polygon polygon = new Polygon();
-		polygon.addPoint(x, y);
-		polygon.addPoint(x + width, y);
-		polygon.addPoint(x + width, y + height);
-		polygon.addPoint(x, y + height);
-		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME)
-			polygon.addPoint(x, y);
-		invert(polygon.npoints, polygon.xpoints, polygon.ypoints, options);
+		int npoints = 5;
+		int[] xpoints = new int[]{ x, x + width, x + width, x, x };
+		int[] ypoints = new int[]{ y, y, y + height, y + height, y };
+		invert(npoints, xpoints, ypoints, options);
 
 	}
 
@@ -1139,7 +1135,7 @@ public final class VCLGraphics {
 			Area polygonClip = new Area(polygon);
 			if (clip != null) {
 				Area area = new Area(clip);
-				area.add(polygonClip);
+				area.intersect(polygonClip);
 				graphics.setClip(area);
 			}
 			else {
