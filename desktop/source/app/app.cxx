@@ -250,6 +250,12 @@
 #include <vos/profile.hxx>
 #endif
 
+#ifdef USE_JAVA
+#ifdef MACOSX
+#include <sys/wait.h>
+#endif
+#endif
+
 #define DEFINE_CONST_UNICODE(CONSTASCII)        UniString(RTL_CONSTASCII_USTRINGPARAM(CONSTASCII##))
 #define U2S(STRING)								::rtl::OUStringToOString(STRING, RTL_TEXTENCODING_UTF8)
 
@@ -697,8 +703,7 @@ void Desktop::StartSetup( const OUString& aParameters )
 
 #ifdef USE_JAVA
 	// Wait for execution to finish since Java is so dependent on it
-	sal_uInt32 nMaxArgs = 4;
-	OUString aArgListArray[ nMaxArgs ];
+	OUString aArgListArray[3];
 	rtl_Locale *pLocale;
 	if ( osl_getProcessLocale( &pLocale ) == osl_Process_E_None )
 	{
@@ -718,39 +723,12 @@ void Desktop::StartSetup( const OUString& aParameters )
 		aArgListArray[1] = OUString();
 		aArgListArray[2] = OUString();
 	}
-	OArgumentList aArgumentList( aArgListArray, 4 );
+	OArgumentList aArgumentList( aArgListArray, 3 );
 	::vos::OProcess::TProcessError aProcessError =
 		aProcess.execute( OProcess::TOption_Wait,
 						  aSecurity,
 						  aArgumentList,
 						  aEnv );
-
-    // Get the exit value
-    if ( aProcessError == OProcess::E_None )
-    {
-        OProcess::TProcessInfo aInfo;
-        aProcessError = aProcess.getInfo( OProcess::TData_ExitCode, &aInfo );
-        if ( aProcessError != OProcess::E_None || aInfo.Code )
-            aProcessError = OProcess::E_Unknown;
-    }
-
-    // If the setup command failed, try running it with the "-repair" argument
-    if ( aProcessError != OProcess::E_None )
-    {
-        for ( sal_uInt32 i = 0; i < nMaxArgs; i++ )
-        {
-            if ( !aArgListArray[ i ].getLength() )
-            {
-                aArgListArray[ i ] = OUString( RTL_CONSTASCII_USTRINGPARAM( "-repair" ) );
-                break;
-            }
-        }
-        aArgumentList = OArgumentList( aArgListArray, 4 );
-        aProcessError = aProcess.execute( OProcess::TOption_Wait,
-                                          aSecurity,
-                                          aArgumentList,
-                                          aEnv );
-    }
 #else	// USE_JAVA
 	OUString aArgListArray[1];
 	aArgListArray[0] = aParameters;
