@@ -347,7 +347,15 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 		pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
 
 		// Flush the window's buffer to the native window
-		pFrame->Flush();
+		SalData *pSalData = GetSalData();
+		for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+		{
+			if ( pFrame == *it )
+			{
+				pFrame->Flush();
+				break;
+			}
+		}
 	}
 }
 
