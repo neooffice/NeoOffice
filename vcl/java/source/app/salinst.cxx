@@ -131,6 +131,8 @@ static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( J
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData );
 static pascal OSErr DoAEQuit( const AppleEvent *message, AppleEvent *reply, long refcon );
 static pascal OSErr DoAEOpenPrintDocuments( const AppleEvent *message, AppleEvent *reply, long refcon );
+static pascal OSErr DoAEOpen( const AppleEvent *message, AppleEvent *reply, long refcon );
+static pascal OSErr DoAEReopen( const AppleEvent *message, AppleEvent *reply, long refcon );
 
 #endif // MACOSX
 
@@ -193,6 +195,8 @@ void SVMainThread::run()
 		AEInstallEventHandler( kCoreEventClass, kAEQuitApplication, NewAEEventHandlerUPP( DoAEQuit ), 0, FALSE );
 		AEInstallEventHandler( kCoreEventClass, kAEOpenDocuments, NewAEEventHandlerUPP( DoAEOpenPrintDocuments ), 0, FALSE );
 		AEInstallEventHandler( kCoreEventClass, kAEPrintDocuments, NewAEEventHandlerUPP( DoAEOpenPrintDocuments ), 0, FALSE );
+		AEInstallEventHandler( kCoreEventClass, kAEOpenApplication, NewAEEventHandlerUPP( DoAEOpen ), 0, FALSE );
+		AEInstallEventHandler( kCoreEventClass, kAEReopenApplication, NewAEEventHandlerUPP( DoAEReopen ), 0, FALSE );
 
 		// Fix bug 223 by registering a display manager notification callback
 		ProcessSerialNumber nProc;
@@ -339,14 +343,20 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 		OSType nType;
 		if ( nKind == kEventAppleEvent && GetEventParameter( aEvent, kEventParamAEEventID, typeType, NULL, sizeof( OSType ), NULL, &nType ) == noErr && !Application::IsShutDown() )
 		{
-			if ( nType == 'quit' || nType == 'odoc' || nType == 'pdoc' )
+			switch ( nType )
 			{
-				// note that we can't actually get the Apple event from the
-				// carbon event. We must dispatch it to registered appleevent
-				// handlers
-				EventRecord eventRec;
-				if ( ConvertEventRefToEventRecord( aEvent, &eventRec ) )
-					AEProcessAppleEvent( &eventRec );
+				case kAEQuitApplication:
+				case kAEOpenDocuments:
+				case kAEPrintDocuments:
+				case kAEOpenApplication:
+				case kAEReopenApplication:
+					// Note that we can't actually get the Apple event from the
+					// Carbon event. We must dispatch it to registered Apple
+					// event handlers
+					EventRecord eventRec;
+					if ( ConvertEventRefToEventRecord( aEvent, &eventRec ) )
+						AEProcessAppleEvent( &eventRec );
+					break;
 			}
 		}
 
@@ -590,6 +600,34 @@ static OSErr DoAEOpenPrintDocuments( const AppleEvent *message, AppleEvent *repl
 	return ( err );
 }
 #endif // MACOSX
+
+// ----------------------------------------------------------------------------
+
+#ifdef MACOSX
+static OSErr DoAEOpen( const AppleEvent *message, AppleEvent *reply, long refcon )
+{
+	return noErr;
+}
+#endif	// MACOSX
+
+// ----------------------------------------------------------------------------
+
+#ifdef MACOSX
+static OSErr DoAEReopen( const AppleEvent *message, AppleEvent *reply, long refcon )
+{
+	if ( !Application::IsShutDown() )
+	{
+		SalData *pSalData = GetSalData();
+		if ( pSalData && pSalData->mpEventQueue )
+		{
+			com_sun_star_vcl_VCLEvent aEvent( SALEVENT_ACTIVATE_APPLICATION, NULL, NULL );
+			pSalData->mpEventQueue->postCachedEvent( &aEvent );
+		}
+	}
+
+	return noErr;
+}
+#endif	// MACOSX
 
 // ----------------------------------------------------------------------------
 
