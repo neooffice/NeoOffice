@@ -466,7 +466,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				nGlyphFlags |= GlyphItem::IS_RTL_GLYPH;
 				if ( ! ( nGlyphFlags & GlyphItem::IS_IN_CLUSTER ) )
 				{
-					AppendGlyph( GlyphItem( nCharPos, GF_IDXMASK, aPos, nGlyphFlags, 0 ) );
+					AppendGlyph( GlyphItem( nCharPos, 3, aPos, nGlyphFlags, 0 ) );
 					nGlyphFlags |= GlyphItem::IS_IN_CLUSTER;
 				}
 			}
