@@ -33,15 +33,18 @@
  *  MA  02111-1307  USA
  *  
  *  =================================================
- *  Modified June 2003 by Patrick Luby. SISSL Removed. NeoOffice is
+ *  Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
  *  distributed under GPL only under modification term 3 of the LGPL.
  *
  *  Contributor(s): _______________________________________
  *
  ************************************************************************/
 
-/*
- *   to do:
+/************************************************************************
+ *   ToDo
+ *
+ *   Fix osl_getCanonicalName
+ *
  *   - Fix: check for corresponding struct sizes in exported functions
  *   - check size/use of oslDirectory
  *   - check size/use of oslDirectoryItem
@@ -49,37 +52,51 @@
  *   - check size/use of oslVolumeDeviceHandle
  *   - check size/use of oslVolumeInfo
  *   - check size/use of oslFileHandle
- */
+ ***********************************************************************/
 
+
+#ifndef __OSL_SYSTEM_H__
 #include "system.h"
+#endif
+
+#ifndef _RTL_ALLOC_H_
 #include <rtl/alloc.h>
-#include <rtl/memory.h>
-#include <rtl/byteseq.h>
-#include <rtl/uri.h>
+#endif
+
+#ifndef _OSL_FILE_H_
 #include <osl/file.h>
+#endif
 
 #ifndef _SAL_TYPES_H_
 #include <sal/types.h>
 #endif
 
-/*  #include <errno.h> */
-/*  #include <unistd.h> */
-/*  #include <sys/stat.h> */
-/*  #include <fcntl.h> */
-/*  #include <stdio.h> */
-/*  #include <string.h> */
-/*  #include <utime.h> */
-/*  #include <limits.h> */
-/*  #include <sys/types.h> */
-/*  #include <dirent.h> */
-/*  #include <rtl/string.h> */
-
-
+#ifndef _OSL_THREAD_H_
 #include <osl/thread.h>
+#endif
+
+#ifndef _OSL_DIAGNOSE_H_
 #include <osl/diagnose.h>
+#endif
+
+#ifndef _FILE_ERROR_TRANSL_H_
+#include "file_error_transl.h"
+#endif
 
 #ifndef _OSL_TIME_H_
 #include <osl/time.h>
+#endif
+
+#ifndef _FILE_URL_H_
+#include "file_url.h"
+#endif
+
+#ifndef _OSL_FILE_PATH_HELPER_H_
+#include "file_path_helper.h"
+#endif
+
+#ifndef _OSL_UUNXAPI_H_
+#include "uunxapi.h"
 #endif
 
 #include <sys/mman.h>
@@ -88,7 +105,10 @@
 #undef HAVE_STATFS_H
 #endif
 
+#ifndef	_STRING_H
 #include <string.h>
+#endif
+
 #if defined(SOLARIS)
 #include <sys/mnttab.h>
 #include <sys/statvfs.h>
@@ -124,7 +144,7 @@ static const sal_Char* MOUNTTAB="/etc/mtab";
 #include <ctype.h>
 static const sal_Char* MOUNTTAB="/etc/mtab";
 
-#elif defined(MACOSX) 
+#elif defined(MACOSX)
 #include <ufs/ufs/quota.h>
 #include <ctype.h>
 static const sal_Char* MOUNTTAB="/etc/mtab";
@@ -137,17 +157,17 @@ static const sal_Char* MOUNTTAB="/etc/mtab";
 #define osl_getThreadTextEncoding() RTL_TEXTENCODING_UTF8
 #endif
 
+#if OSL_DEBUG_LEVEL > 1
 
-#if defined(DEBUG)
-/*#define DEBUG_OSL_FILE*/
-/*#define TRACE_OSL_FILE*/
-extern void debug_ustring(rtl_uString*);
+	extern void debug_ustring(rtl_uString*);
+
 #endif
 
+
 #ifdef DEBUG_OSL_FILE
-    #define PERROR( a, b ) perror( a ); fprintf( stderr, b )
+#	define PERROR( a, b ) perror( a ); fprintf( stderr, b )
 #else
-    #define PERROR( a, b )
+#	define PERROR( a, b )
 #endif
 
 
@@ -170,7 +190,7 @@ typedef struct
 typedef struct
 {
     rtl_uString* ustrPath;           /* holds native directory path */
-    DIR*         pDirStruct;  
+    DIR*         pDirStruct;
 } oslDirectoryImpl;
 
 
@@ -199,22 +219,21 @@ typedef struct _oslVolumeDeviceHandleImpl
 
 static const char * pFileLockEnvVar = (char *) -1;
 
+
 /******************************************************************************
  *
  *                  C-String Function Declarations
  *
  *****************************************************************************/
 
-static oslFileError osl_psz_getVolumeInformation( sal_Char* , oslVolumeInfo* pInfo, sal_uInt32 uFieldMask );
-static oslFileError osl_psz_removeFile( sal_Char* pszPath );
-static oslFileError osl_psz_createDirectory( sal_Char* pszPath );
-static oslFileError osl_psz_removeDirectory( sal_Char* pszPath );
-static oslFileError osl_psz_copyFile( sal_Char* pszPath, sal_Char* pszDestPath );
-static oslFileError osl_psz_moveFile(sal_Char* pszPath, sal_Char* pszDestPath);
-static oslFileError osl_psz_getCanonicalName( sal_Char* pszRequested, sal_Char* pszValid );
-static oslFileError osl_psz_getAbsolutePath(sal_Char* pDirBase, sal_Char* pRelative, sal_Char* pszAbsolute);
-static oslFileError osl_psz_setFileAttributes( sal_Char* pszFilePath, sal_uInt64 uAttributes );
-static oslFileError osl_psz_setFileTime( sal_Char* strFilePath, TimeValue* pCreationTime, TimeValue* pLastAccessTime, TimeValue* pLastWriteTime );
+static oslFileError osl_psz_getVolumeInformation(const sal_Char* , oslVolumeInfo* pInfo, sal_uInt32 uFieldMask);
+static oslFileError osl_psz_removeFile(const sal_Char* pszPath);
+static oslFileError osl_psz_createDirectory(const sal_Char* pszPath);
+static oslFileError osl_psz_removeDirectory(const sal_Char* pszPath);
+static oslFileError osl_psz_copyFile(const sal_Char* pszPath, const sal_Char* pszDestPath);
+static oslFileError osl_psz_moveFile(const sal_Char* pszPath, const sal_Char* pszDestPath);
+static oslFileError osl_psz_setFileAttributes(const sal_Char* pszFilePath, sal_uInt64 uAttributes);
+static oslFileError osl_psz_setFileTime(const sal_Char* strFilePath, const TimeValue* pCreationTime, const TimeValue* pLastAccessTime, const TimeValue* pLastWriteTime);
 
 
 /******************************************************************************
@@ -223,44 +242,12 @@ static oslFileError osl_psz_setFileTime( sal_Char* strFilePath, TimeValue* pCrea
  *
  *****************************************************************************/
 
-static oslFileError  oslIsMountPoint( sal_Char* pszFileName, sal_Bool* bMountPoint );
-static sal_Char*     oslSeparatePathEntry( sal_Char* pszUNCPath, sal_Char cSeparator );
-
-static void          oslMakeUniqueName( sal_Char* pszRequested, sal_Char* pszUnique, sal_uInt32 nIndex );
-
-static oslFileError  osl_psz_CheckForExistence(sal_Char* pszFilePath);
-
-static oslFileError  oslDoCopy( sal_Char* pszSourceFileName, sal_Char* pszDestFileName, mode_t nMode, size_t nSourceSize, int DestFileExists );
-static oslFileError  oslChangeFileModes( sal_Char* pszFileName, mode_t nMode, time_t nAcTime, time_t nModTime, uid_t nUID, gid_t nGID );
-static int           oslDoCopyLink( sal_Char* pszSourceFileName, sal_Char* pszDestFileName );
-static int           oslDoCopyFile( sal_Char* pszSourceFileName, sal_Char* pszDestFileName, size_t nSourceSize, mode_t mode );
-
-static oslFileError  oslDoMoveFile(sal_Char* pszPath, sal_Char* pszDestPath);
-
-
-static sal_Char*     oslMakePszFromUStr(rtl_uString* uStr, sal_Char* pszStr);
-static rtl_uString*  oslMakeUStrFromPsz(sal_Char* pszStr,rtl_uString** uStr);
-
-static char * ImplSearchPath( char *, size_t, const char *, const char *, char );
-
-static oslFileError oslTranslateFileError( int nErr );
-
-static sal_Char*            oslGetBaseName( sal_Char* pszPath );
-static sal_Char*            oslGetDirName( sal_Char* pszPath );
-
-#if defined(SOLARIS)
-/* FIXME: mfe: these should be replaced */
-static sal_Char*     osl_getBaseName(sal_Char* pszPath);
-static sal_Char*     osl_getDirName(sal_Char* pszPath);
-#endif
-
-
-/* FIXME: mfe: this function is deprecated */
-static sal_Char*     oslDoGetAbsolutePath( sal_Char* pszDirBase, sal_Char* pszRelative );
-
-#if 0
-static oslFileError  oslCheckForExistence( rtl_uString* strFilePath );
-#endif
+static oslFileError  oslDoCopy(const sal_Char* pszSourceFileName, const sal_Char* pszDestFileName, mode_t nMode, size_t nSourceSize, int DestFileExists);
+static oslFileError  oslChangeFileModes(const sal_Char* pszFileName, mode_t nMode, time_t nAcTime, time_t nModTime, uid_t nUID, gid_t nGID);
+static int           oslDoCopyLink(const sal_Char* pszSourceFileName, const sal_Char* pszDestFileName);
+static int           oslDoCopyFile(const sal_Char* pszSourceFileName, const sal_Char* pszDestFileName, size_t nSourceSize, mode_t mode);
+static oslFileError  oslDoMoveFile(const sal_Char* pszPath, const sal_Char* pszDestPath);
+static rtl_uString*  oslMakeUStrFromPsz(const sal_Char* pszStr,rtl_uString** uStr);
 
 /******************************************************************************
  *
@@ -269,7 +256,6 @@ static oslFileError  oslCheckForExistence( rtl_uString* strFilePath );
  *****************************************************************************/
 
 int UnicodeToText( char *, size_t, const sal_Unicode *, sal_Int32 );
-oslFileError FileURLToPath( char *, size_t, rtl_uString* );
 
 
 /******************************************************************************
@@ -305,356 +291,48 @@ static void           osl_printFloppyHandle(oslVolumeDeviceHandleImpl* hFloppy);
 #endif
 
 
-/******************************************************************************
- *
- *                  Exported Module Functions
- *
- *****************************************************************************/
 
-/* a slightly modified version of Pchar in rtl/source/uri.c */
-static const sal_Bool const uriCharClass[128] =  
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* Pchar but without encoding slashes */
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, /* !"#$%&'()*+,-./*/
-      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, /*0123456789:;<=>?*/
-      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, /*@ABCDEFGHIJKLMNO*/
-      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, /*PQRSTUVWXYZ[\]^_*/
-      0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, /*`abcdefghijklmno*/
-      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0  /*pqrstuvwxyz{|}~ */
-    };
+/*******************************************************************
+ *	osl_openDirectory
+ ******************************************************************/
 
-
-/* check for top wrong usage strings */
-/*
-static sal_Bool findWrongUsage( const sal_Unicode *path, sal_Int32 len )
-{
-    rtl_uString *pTmp = NULL;
-    sal_Bool bRet;
-    
-    rtl_uString_newFromStr_WithLength( &pTmp, path, len );
-    
-    rtl_ustr_toAsciiLowerCase_WithLength( pTmp->buffer, pTmp->length );
-        
-    bRet = ( 0 == rtl_ustr_ascii_shortenedCompare_WithLength( pTmp->buffer, pTmp->length, "ftp://", 6 ) ) ||
-           ( 0 == rtl_ustr_ascii_shortenedCompare_WithLength( pTmp->buffer, pTmp->length, "http://", 7 ) ) ||
-           ( 0 == rtl_ustr_ascii_shortenedCompare_WithLength( pTmp->buffer, pTmp->length, "vnd.sun.star", 12 ) ) ||
-           ( 0 == rtl_ustr_ascii_shortenedCompare_WithLength( pTmp->buffer, pTmp->length, "private:", 8 ) ) ||
-           ( 0 == rtl_ustr_ascii_shortenedCompare_WithLength( pTmp->buffer, pTmp->length, "slot:", 5) );
-           
-    rtl_uString_release( pTmp );
-    return bRet;
-}
-*/
-
-/****************************************************************************/
-/*	osl_getSystemPathFromFileURL */
-/****************************************************************************/
-
-oslFileError SAL_CALL osl_getSystemPathFromFileURL( rtl_uString *ustrFileURL, rtl_uString **pustrSystemPath )
-{
-    sal_Int32 nIndex = 0;
-    rtl_uString * pTmp = NULL;
-
-    sal_Unicode encodedSlash[3] = { '%', '2', 'F' };
-
-    /* temporary hack: if already system path, return ustrFileURL */
-	/*
-    if( (sal_Unicode) '/' == ustrFileURL->buffer[0] ) 
-    {
-        OSL_ENSURE( 0, "osl_getSystemPathFromFileURL: input is already system path" );
-        rtl_uString_assign( pustrSystemPath, ustrFileURL );
-        return osl_File_E_None;
-    }
-	*/
-        
-    /* a valid file url may not start with '/' */
-    if( ( 0 == ustrFileURL->length ) || ( (sal_Unicode) '/' == ustrFileURL->buffer[0] ) )
-    {
-        return osl_File_E_INVAL;
-    }
-
-    /* search for encoded slashes (%2F) and decode every single token if we find one */
-    if( -1 != rtl_ustr_indexOfStr_WithLength( ustrFileURL->buffer, ustrFileURL->length, encodedSlash, 3 ) )
-    {
-        rtl_uString * ustrPathToken = NULL;
-        sal_Int32 nOffset = 7;
-        
-        do
-        {
-            nOffset += nIndex;
-
-            /* break url down in '/' devided tokens tokens */
-            nIndex = rtl_ustr_indexOfChar_WithLength( ustrFileURL->buffer + nOffset, ustrFileURL->length - nOffset, (sal_Unicode) '/' );
-            
-            /* copy token to new string */
-            rtl_uString_newFromStr_WithLength( &ustrPathToken, ustrFileURL->buffer + nOffset, 
-                -1 == nIndex ? ustrFileURL->length - nOffset : nIndex++ );
-
-            /* decode token */
-            rtl_uriDecode( ustrPathToken, rtl_UriDecodeWithCharset, RTL_TEXTENCODING_UTF8, &pTmp );
-            
-            /* the result should not contain any '/' */
-            if( -1 != rtl_ustr_indexOfChar_WithLength( pTmp->buffer, pTmp->length, (sal_Unicode) '/' ) )
-            {
-                rtl_uString_release( pTmp );
-                rtl_uString_release( ustrPathToken );
-
-                return osl_File_E_INVAL;
-            }
-                
-        } while( -1 != nIndex );
-
-        /* release temporary string and restore index variable */
-        rtl_uString_release( ustrPathToken );
-        nIndex = 0;        
-    }
- 
-    /* protocol and server should not be encoded, so decode the whole string */
-    rtl_uriDecode( ustrFileURL, rtl_UriDecodeWithCharset, RTL_TEXTENCODING_UTF8, &pTmp );
-    
-    /* check if file protocol specified */    
-    /* FIXME: use rtl_ustr_ascii_shortenedCompareIgnoreCase_WithLength when available */
-    if( 7 <= pTmp->length )
-    {
-        rtl_uString * pProtocol = NULL;
-        rtl_uString_newFromStr_WithLength( &pProtocol, pTmp->buffer, 7 );
-        
-        /* protocol is case insensitive */
-        rtl_ustr_toAsciiLowerCase_WithLength( pProtocol->buffer, pProtocol->length );
-        
-        if( 0 == rtl_ustr_ascii_shortenedCompare_WithLength( pProtocol->buffer, pProtocol->length,"file://", 7 ) )
-            nIndex = 7;
-            
-        rtl_uString_release( pProtocol );
-    }
-     
-    /* skip "localhost" or "127.0.0.1" if "file://" is specified */
-    /* FIXME: use rtl_ustr_ascii_shortenedCompareIgnoreCase_WithLength when available */
-    if( nIndex && ( 10 <= pTmp->length - nIndex ) )
-    {
-        rtl_uString * pServer = NULL;
-        rtl_uString_newFromStr_WithLength( &pServer, pTmp->buffer + nIndex, 10 );
-
-        /* server is case insensitive */
-        rtl_ustr_toAsciiLowerCase_WithLength( pServer->buffer, pServer->length );
-        
-        if( ( 0 == rtl_ustr_ascii_shortenedCompare_WithLength( pServer->buffer, pServer->length,"localhost/", 10 ) ) ||
-            ( 0 == rtl_ustr_ascii_shortenedCompare_WithLength( pServer->buffer, pServer->length,"127.0.0.1/", 10 ) ) )
-        {
-            /* don't exclude the '/' */
-            nIndex += 9;
-        }
-
-        rtl_uString_release( pServer );
-    }
-                
-    if( nIndex )
-        rtl_uString_newFromStr_WithLength( &pTmp, pTmp->buffer + nIndex, pTmp->length - nIndex );
-
-    /* check if system path starts with ~ or ~user and replace it with the appropriate home dir */
-    if( (sal_Unicode) '~' == pTmp->buffer[0] )
-    {
-        /* check if another user is specified */
-        if( ( 1 == pTmp->length ) || ( (sal_Unicode)'/' == pTmp->buffer[1] ) )
-        {
-            rtl_uString *pTmp2 = NULL;
-
-            /* osl_getHomeDir returns file URL */
-            osl_getHomeDir( osl_getCurrentSecurity(), &pTmp2 );
-
-            /* remove "file://" prefix */
-            rtl_uString_newFromStr_WithLength( &pTmp2, pTmp2->buffer + 7, pTmp2->length - 7 );
-
-            /* replace '~' in original string */             
-            rtl_uString_newReplaceStrAt( &pTmp, pTmp, 0, 1, pTmp2 );
-            rtl_uString_release( pTmp2 );
-        }
-
-        else
-        {
-            /* FIXME: replace ~user with users home directory */
-            return osl_File_E_INVAL;
-        }
-    }
-
-    /* temporary check for top 5 wrong usage strings (which are valid but unlikly filenames) */
-	/*
-    OSL_ASSERT( !findWrongUsage( pTmp->buffer, pTmp->length ) );
-	*/
-        
-    *pustrSystemPath = pTmp;
-    return osl_File_E_None;
-}
-
-/****************************************************************************/
-/*	osl_getFileURLFromSystemPath */
-/****************************************************************************/
-
-oslFileError SAL_CALL osl_getFileURLFromSystemPath( rtl_uString *ustrSystemPath, rtl_uString **pustrFileURL )
-{
-    static const sal_Unicode pDoubleSlash[2] = { '/', '/' };
-    
-    rtl_uString *pTmp = NULL;
-    sal_Int32 nIndex;
-
-    if( 0 == ustrSystemPath->length )
-        return osl_File_E_INVAL;
-
-    /* temporary hack: if already file url, return ustrSystemPath */
-	
-    if( 0 == rtl_ustr_ascii_shortenedCompare_WithLength( ustrSystemPath->buffer, ustrSystemPath->length,"file:", 5 ) )
-    {
-	/*
-        if( 0 == rtl_ustr_ascii_shortenedCompare_WithLength( ustrSystemPath->buffer, ustrSystemPath->length,"file://", 7 ) )
-        {
-            OSL_ENSURE( 0, "osl_getFileURLFromSystemPath: input is already file URL" );
-            rtl_uString_assign( pustrFileURL, ustrSystemPath );
-        }
-        else
-        {
-            rtl_uString *pTmp2 = NULL;
-
-            OSL_ENSURE( 0, "osl_getFileURLFromSystemPath: input is wrong file URL" );
-            rtl_uString_newFromStr_WithLength( pustrFileURL, ustrSystemPath->buffer + 5, ustrSystemPath->length - 5 );
-            rtl_uString_newFromAscii( &pTmp2, "file://" );
-            rtl_uString_newConcat( pustrFileURL, *pustrFileURL, pTmp2 );
-            rtl_uString_release( pTmp2 );
-        }
-        return osl_File_E_None;
-		*/
-		return osl_File_E_INVAL;
-    }
-	
-        
-    /* check if system path starts with ~ or ~user and replace it with the appropriate home dir */
-    if( (sal_Unicode) '~' == ustrSystemPath->buffer[0] )
-    {
-        /* check if another user is specified */
-        if( ( 1 == ustrSystemPath->length ) || ( (sal_Unicode)'/' == ustrSystemPath->buffer[1] ) )
-        {
-            /* osl_getHomeDir returns file URL */
-            osl_getHomeDir( osl_getCurrentSecurity(), &pTmp );
-
-            /* remove "file://" prefix */
-            rtl_uString_newFromStr_WithLength( &pTmp, pTmp->buffer + 7, pTmp->length - 7 );
-
-            /* replace '~' in original string */             
-            rtl_uString_newReplaceStrAt( &pTmp, ustrSystemPath, 0, 1, pTmp );
-        }
-
-        else
-        {
-            /* FIXME: replace ~user with users home directory */
-            return osl_File_E_INVAL;
-        }
-    }
-    
-    /* check if initial string contains double instances of '/' */ 
-    nIndex = rtl_ustr_indexOfStr_WithLength( ustrSystemPath->buffer, ustrSystemPath->length, pDoubleSlash, 2 );
-    if( -1 != nIndex )
-    {
-        sal_Int32 nSrcIndex;
-        sal_Int32 nDeleted = 0;
-        
-        /* if pTmp is not already allocated, copy ustrSystemPath for modification */
-        if( NULL == pTmp )
-            rtl_uString_newFromString( &pTmp, ustrSystemPath );
-        
-        /* adapt index to pTmp */
-        nIndex += pTmp->length - ustrSystemPath->length;
-        
-        /* remove all occurances of '//' */
-        for( nSrcIndex = nIndex + 1; nSrcIndex < pTmp->length; nSrcIndex++ )
-        {
-            if( ((sal_Unicode) '/' == pTmp->buffer[nSrcIndex]) && ((sal_Unicode) '/' == pTmp->buffer[nIndex]) )
-                nDeleted++;
-            else
-                pTmp->buffer[++nIndex] = pTmp->buffer[nSrcIndex];
-        }
-        
-        /* adjust length member */
-        pTmp->length -= nDeleted;
-    }               
-    
-    if( NULL == pTmp )
-        rtl_uString_assign( &pTmp, ustrSystemPath ); 
-
-    /* temporary check for top 5 wrong usage strings (which are valid but unlikly filenames) */
-	/*
-    OSL_ASSERT( !findWrongUsage( pTmp->buffer, pTmp->length ) );
-	*/
-        
-    /* file URLs must be URI encoded */
-    rtl_uriEncode( pTmp, uriCharClass, rtl_UriEncodeIgnoreEscapes, RTL_TEXTENCODING_UTF8, pustrFileURL );
-    
-    rtl_uString_release( pTmp );    
-    
-    /* absolute urls should start with 'file://' */
-    if( (sal_Unicode)'/' == (*pustrFileURL)->buffer[0] )
-    {
-        rtl_uString *pProtocol = NULL;
-        
-        rtl_uString_newFromAscii( &pProtocol, "file://" );
-        rtl_uString_newConcat( pustrFileURL, pProtocol, *pustrFileURL );
-        rtl_uString_release( pProtocol );
-    }
-
-    return osl_File_E_None;
-}
-
-
-/****************************************************************************/
-/*	osl_openDirectory */
-/****************************************************************************/
-
-oslFileError SAL_CALL osl_openDirectory( rtl_uString* ustrDirectoryURL, oslDirectory* pDirectory )
+oslFileError SAL_CALL osl_openDirectory(rtl_uString* ustrDirectoryURL, oslDirectory* pDirectory)
 {
     rtl_uString* ustrSystemPath = NULL;
     oslFileError eRet;
 
     char path[PATH_MAX];
 
-    OSL_ASSERT( ustrDirectoryURL );
-    OSL_ASSERT( pDirectory );
+    OSL_ASSERT(ustrDirectoryURL && (ustrDirectoryURL->length > 0));
+    OSL_ASSERT(pDirectory);
 
-    if( 0 == ustrDirectoryURL->length )
+    if (0 == ustrDirectoryURL->length )
         return osl_File_E_INVAL;
- 
-    /* convert file URL to system path */ 
-    eRet = osl_getSystemPathFromFileURL( ustrDirectoryURL, &ustrSystemPath );
-    if( osl_File_E_None != eRet )
+
+    /* convert file URL to system path */
+    eRet = osl_getSystemPathFromFileURL_Ex(ustrDirectoryURL, &ustrSystemPath, sal_False);
+
+	if( osl_File_E_None != eRet )
         return eRet;
 
-    /* remove trailing '/' if any */
-    if( ( 1 < ustrSystemPath->length ) && ( (sal_Unicode) '/' == ustrSystemPath->buffer[ustrSystemPath->length - 1] ) )
-    {
-        ustrSystemPath->length--;
-        ustrSystemPath->buffer[ustrSystemPath->length] = 0;
-    }
-
-    /* FIXME: should be checked in osl_getSystemPathFromFileURL */
-    if( (sal_Unicode) '/' != ustrSystemPath->buffer[0] )
-    {
-        rtl_uString_release( ustrSystemPath );
-        return osl_File_E_INVAL;
-    }
+	osl_systemPathRemoveSeparator(ustrSystemPath);
 
     /* convert unicode path to text */
-    if( UnicodeToText( path, PATH_MAX, ustrSystemPath->buffer, ustrSystemPath->length ) )
+    if ( UnicodeToText( path, PATH_MAX, ustrSystemPath->buffer, ustrSystemPath->length ) )
     {
-        /* open directory */ 
+        /* open directory */
         DIR *pdir = opendir( path );
 
         if( pdir )
         {
             /* create and initialize impl structure */
             oslDirectoryImpl* pDirImpl = (oslDirectoryImpl*) rtl_allocateMemory( sizeof(oslDirectoryImpl) );
-            
+
             if( pDirImpl )
             {
                 pDirImpl->pDirStruct = pdir;
-                pDirImpl->ustrPath = ustrSystemPath; 
-                
+                pDirImpl->ustrPath = ustrSystemPath;
+
                 *pDirectory = (oslDirectory) pDirImpl;
                 return osl_File_E_None;
             }
@@ -668,10 +346,11 @@ oslFileError SAL_CALL osl_openDirectory( rtl_uString* ustrDirectoryURL, oslDirec
             /* should be removed by optimizer in product version */
             PERROR( "osl_openDirectory", path );
     }
-            
+
     rtl_uString_release( ustrSystemPath );
-    return oslTranslateFileError(errno);
-}        
+
+    return oslTranslateFileError(OSL_FET_ERROR, errno);
+}
 
 /****************************************************************************/
 /*	osl_closeDirectory */
@@ -681,7 +360,7 @@ oslFileError SAL_CALL osl_closeDirectory( oslDirectory Directory )
 {
     oslDirectoryImpl* pDirImpl = (oslDirectoryImpl*) Directory;
     oslFileError err = osl_File_E_None;
-    
+
     OSL_ASSERT( Directory );
 
     if( NULL == pDirImpl )
@@ -690,66 +369,70 @@ oslFileError SAL_CALL osl_closeDirectory( oslDirectory Directory )
     /* close directory */
     if( closedir( pDirImpl->pDirStruct ) )
     {
-#ifdef OSL_FILE_DEBUG
-        char path[PATH_MAX];    
+        err = oslTranslateFileError(OSL_FET_ERROR, errno);
+    }
 
-        UnicodeToText( path, PATH_MAX, ustrSystemPath->buffer, ustrSystemPath->length );
-
-        perror( "osl_closeDirectory" );
-        fprintf( stderr, path );
-#endif
-        err = oslTranslateFileError( errno );
-    } 
-                    
     /* cleanup members */
     rtl_uString_release( pDirImpl->ustrPath );
+
     rtl_freeMemory( pDirImpl );
 
     return err;
 }
 
+/**********************************************
+ * osl_readdir_impl_
+ *
+ * readdir wrapper, filters out "." and ".."
+ * on request
+ *********************************************/
 
-/****************************************************************************/
-/*	osl_getNextDirectoryItem */
-/****************************************************************************/
-
-oslFileError SAL_CALL osl_getNextDirectoryItem( oslDirectory Directory, oslDirectoryItem* pItem, sal_uInt32 uHint )
+static struct dirent* osl_readdir_impl_(DIR* pdir, sal_Bool bFilterLocalAndParentDir)
 {
-    oslDirectoryImpl* pDirImpl = (oslDirectoryImpl *) Directory;
-    rtl_uString* ustrFileName  = NULL;
-    rtl_uString* ustrFilePath  = NULL;
-    sal_Int32 capacity;
+	struct dirent* pdirent;
 
-    struct dirent* pEntry;
-    
-    OSL_ASSERT( Directory );
-    OSL_ASSERT( pItem );
-    
-    if( ( NULL == Directory ) || ( NULL == pItem ) )
+	while ((pdirent = readdir(pdir)) != NULL)
+	{
+		if (bFilterLocalAndParentDir &&
+			((0 == strcmp(pdirent->d_name, ".")) || (0 == strcmp(pdirent->d_name, ".."))))
+			continue;
+		else
+			break;
+	}
+
+	return pdirent;
+}
+
+/****************************************************************************
+ *	osl_getNextDirectoryItem
+ ***************************************************************************/
+
+oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirectoryItem* pItem, sal_uInt32 uHint)
+{
+    oslDirectoryImpl* pDirImpl     = (oslDirectoryImpl*)Directory;
+    rtl_uString*      ustrFileName = NULL;
+    rtl_uString*      ustrFilePath = NULL;
+    struct dirent*    pEntry;
+
+    OSL_ASSERT(Directory);
+    OSL_ASSERT(pItem);
+
+    if ((NULL == Directory) || (NULL == pItem))
         return osl_File_E_INVAL;
- 
-    /* FIXME: use readdir_r where available */
-    pEntry = readdir( pDirImpl->pDirStruct ); 
-    while( pEntry != NULL && pEntry->d_name[0] == '.' && ( pEntry->d_name[1] == '.' || pEntry->d_name[1] == 0 ) )
-         pEntry = readdir( pDirImpl->pDirStruct );
 
-    if( NULL == pEntry )
+    pEntry = osl_readdir_impl_(pDirImpl->pDirStruct, sal_True);
+
+    if (NULL == pEntry)
         return osl_File_E_NOENT;
 
     /* convert file name to unicode */
     rtl_string2UString( &ustrFileName, pEntry->d_name, strlen( pEntry->d_name ),
         osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
-        
-    /* concatinate directory and file name */
-    capacity = pDirImpl->ustrPath->length + ustrFileName->length + 1;
-    rtl_uString_new_WithLength( &ustrFilePath, capacity );
-    
-    rtl_uStringbuffer_insert( &ustrFilePath, &capacity, 0, pDirImpl->ustrPath->buffer, pDirImpl->ustrPath->length );
-    rtl_uStringbuffer_insert_ascii( &ustrFilePath, &capacity, ustrFilePath->length, "/", 1 );
-    rtl_uStringbuffer_insert( &ustrFilePath, &capacity, ustrFilePath->length, ustrFileName->buffer, ustrFileName->length );
-    
+
+	osl_systemPathMakeAbsolutePath(pDirImpl->ustrPath, ustrFileName, &ustrFilePath);
+
     rtl_uString_release( ustrFileName );
-    
+
     /* use path as directory item */
     *pItem = (oslDirectoryItem) ustrFilePath;
 
@@ -763,51 +446,32 @@ oslFileError SAL_CALL osl_getNextDirectoryItem( oslDirectory Directory, oslDirec
 oslFileError SAL_CALL osl_getDirectoryItem( rtl_uString* ustrFileURL, oslDirectoryItem* pItem )
 {
     rtl_uString* ustrSystemPath = NULL;
-    oslFileError eRet = osl_File_E_INVAL;
-    
-    char path[PATH_MAX];
-    
-    OSL_ASSERT( ustrFileURL );
-    OSL_ASSERT( pItem );
+    oslFileError osl_error      = osl_File_E_INVAL;
 
-    if( 0 == ustrFileURL->length )
+    OSL_ASSERT(ustrFileURL);
+    OSL_ASSERT(pItem);
+
+    if (0 == ustrFileURL->length || NULL == pItem)
         return osl_File_E_INVAL;
-    
-    /* convert file URL to system path */ 
-    eRet = osl_getSystemPathFromFileURL( ustrFileURL, &ustrSystemPath );
-    if( osl_File_E_None != eRet )
-        return eRet;
 
-    /* remove trailing '/' if any */
-    if( ( 1 < ustrSystemPath->length ) && ( (sal_Unicode) '/' == ustrSystemPath->buffer[ustrSystemPath->length - 1] ) )
-    {
-        ustrSystemPath->length--;
-        ustrSystemPath->buffer[ustrSystemPath->length] = 0;
-    }
+    osl_error = osl_getSystemPathFromFileURL_Ex(ustrFileURL, &ustrSystemPath, sal_False);
 
-    /* FIXME: should be checked in osl_getSystemPathFromFileURL */
-    if( (sal_Unicode) '/' != ustrSystemPath->buffer[0] )
-    {
-        rtl_uString_release( ustrSystemPath );
-        return osl_File_E_INVAL;
-    }
-    
-    /* convert unicode path to text */
-    if( UnicodeToText( path, PATH_MAX, ustrSystemPath->buffer, ustrSystemPath->length ) )
-    {
-        if ( 0 == access( path, F_OK ) )
-        {
-            /* use system path as directory item */
-            *pItem = (oslDirectoryItem) ustrSystemPath;
+    if (osl_File_E_None != osl_error)
+        return osl_error;
 
-            return osl_File_E_None;
-        }
-        else
-            eRet = oslTranslateFileError( errno );
-    }
-    
-    rtl_uString_release( ustrSystemPath );
-    return eRet;
+	osl_systemPathRemoveSeparator(ustrSystemPath);
+
+	if (0 == access_u(ustrSystemPath, F_OK))
+	{
+		*pItem = (oslDirectoryItem)ustrSystemPath;
+		osl_error = osl_File_E_None;
+	}
+	else
+	{
+		osl_error = oslTranslateFileError(OSL_FET_ERROR, errno);
+		rtl_uString_release(ustrSystemPath);
+	}
+	return osl_error;
 }
 
 
@@ -820,13 +484,13 @@ oslFileError osl_acquireDirectoryItem( oslDirectoryItem Item )
     rtl_uString* ustrFilePath = (rtl_uString *) Item;
 
     OSL_ASSERT( Item );
-    
+
     if( ustrFilePath )
         rtl_uString_acquire( ustrFilePath );
-        
+
     return osl_File_E_None;
 }
-    
+
 /****************************************************************************/
 /*	osl_releaseDirectoryItem */
 /****************************************************************************/
@@ -836,329 +500,16 @@ oslFileError osl_releaseDirectoryItem( oslDirectoryItem Item )
     rtl_uString* ustrFilePath = (rtl_uString *) Item;
 
     OSL_ASSERT( Item );
-    
+
     if( ustrFilePath )
         rtl_uString_release( ustrFilePath );
-    
+
     return osl_File_E_None;
 }
 
-/*****************************************
- is_query_extended_file_attributes
- check if extended file attributes are
- queried that require a lstat call
- ****************************************/
- 
-static int is_query_extended_file_attributes(sal_uInt32 field_mask)
-{
-    return ((field_mask & osl_FileStatus_Mask_Type) ||
-			(field_mask & osl_FileStatus_Mask_Attributes) ||
-			(field_mask & osl_FileStatus_Mask_CreationTime) ||
-			(field_mask & osl_FileStatus_Mask_AccessTime) ||
-			(field_mask & osl_FileStatus_Mask_ModifyTime) ||
-			(field_mask & osl_FileStatus_Mask_FileSize) ||
-			(field_mask & osl_FileStatus_Mask_LinkTargetURL) ||
-			(field_mask & osl_FileStatus_Mask_Validate));                
-}
-
-/****************************************************************************/
-/*	osl_getFileStatus */
-/****************************************************************************/
-
-oslFileError SAL_CALL osl_getFileStatus( oslDirectoryItem Item, oslFileStatus* pStat, sal_uInt32 uFieldMask )
-{
-    rtl_uString* ustrFilePath = (rtl_uString *) Item;
-    
-    char path[PATH_MAX];
-
-    OSL_ASSERT( Item );
-    OSL_ASSERT( pStat );
-    
-    if( ( NULL == Item ) || ( NULL == pStat ) )
-        return osl_File_E_INVAL;
-        
-    if( 0 == ustrFilePath->length )
-        return osl_File_E_INVAL;
-    
-    /* convert unicode path to text */
-    if( ! UnicodeToText( path, PATH_MAX, ustrFilePath->buffer, ustrFilePath->length ) )
-        return osl_File_E_INVAL;
-
-    /* mark all fields as invalid */
-    pStat->uValidFields = 0;
-
-    /* urls have to be encoded */
-    if (uFieldMask & osl_FileStatus_Mask_FileURL)
-    {
-        if (osl_File_E_None == osl_getFileURLFromSystemPath(ustrFilePath, &pStat->ustrFileURL))
-            pStat->uValidFields |= osl_FileStatus_Mask_FileURL;
-    }
-
-    /* file name is the last part of the path */
-    if (uFieldMask & osl_FileStatus_Mask_FileName)
-    {
-        sal_uInt32 nIndex = rtl_ustr_lastIndexOfChar_WithLength(ustrFilePath->buffer, ustrFilePath->length, '/');
-
-        if (0 <= nIndex)
-        {
-            ++nIndex;
-            rtl_uString_newFromStr_WithLength( &pStat->ustrFileName, ustrFilePath->buffer + nIndex, ustrFilePath->length - nIndex );
-            pStat->uValidFields |= osl_FileStatus_Mask_FileName;
-        }
-    }
-       
-    if (is_query_extended_file_attributes(uFieldMask))
-    {
-       struct stat aFileStat;
-        
-       if( 0 != lstat( path, &aFileStat ) )
-       {
-           PERROR( "osl_getFileStatus", path );
-           return oslTranslateFileError(errno);
-       }
-
-       /*
-        *   File Type
-        */
-
-       /* links to directories state also to be a directory */
-       if ( S_ISLNK(aFileStat.st_mode) ) 
-       { 
-           pStat->eType=osl_File_Type_Link;
-       }
-       
-       else if ( S_ISDIR(aFileStat.st_mode) ) 
-       { 
-           sal_Bool bIsMountPoint;
-
-           oslFileError eRet = oslIsMountPoint( path, &bIsMountPoint ); 
-
-           if ( eRet != osl_File_E_None ) 
-               return eRet; 
-
-           pStat->eType = bIsMountPoint ? osl_File_Type_Volume : osl_File_Type_Directory;
-       }
-
-       else if ( S_ISREG(aFileStat.st_mode) )
-       {
-           pStat->eType=osl_File_Type_Regular;
-       }
-
-       else if ( S_ISFIFO(aFileStat.st_mode) ) 
-       { 
-           pStat->eType=osl_File_Type_Fifo;
-       }
-
-       else if ( S_ISSOCK(aFileStat.st_mode) ) 
-       { 
-           pStat->eType=osl_File_Type_Socket;
-       }
-
-       else if ( S_ISCHR(aFileStat.st_mode) || S_ISBLK(aFileStat.st_mode) ) 
-       { 
-           pStat->eType=osl_File_Type_Special;
-       }
-
-       else if ( S_ISSOCK(aFileStat.st_mode) ) 
-       { 
-           pStat->eType=osl_File_Type_Socket;
-       }
-
-       else
-       { 
-           pStat->eType=osl_File_Type_Unknown;
-       } 
-
-       pStat->uValidFields|=osl_FileStatus_Mask_Type;
-
-
-       if ( uFieldMask & osl_FileStatus_Mask_Attributes )
-       {
-           char *cp;
-           
-           pStat->uAttributes=0;        
-           pStat->uValidFields|=osl_FileStatus_Mask_Attributes;
-
-           /* set hidden flag if name starts with '.' */
-           cp = strrchr( path, '/' );
-           
-           if( NULL ==  cp )
-               cp = path;
-           else
-               cp++;
-               
-           if( '.' == cp[0] )
-               pStat->uAttributes=osl_File_Attribute_Hidden;
-           
-		   /* #97133 Use gid and uid to determine effective permission right because
-		      access() will block or timeout when trying to determine the effective
-			  access right for a mount point where the undelying device is no longer 
-			  availiable. This can result in wrong access rights because membership
-			  of the current user in his secondary group or ACLs are not checked.
-			  That's why we only do this for directories */
-			  
-           if ( S_ISDIR( aFileStat.st_mode ) )
-		   {
-		       if ( getuid() == aFileStat.st_uid )
-			   {
-                   if ( 0 == (S_IRUSR & aFileStat.st_mode) )
-                       pStat->uValidFields &= ~osl_FileStatus_Mask_Attributes;
-
-                   if ( 0 == (S_IWUSR & aFileStat.st_mode) )
-                       pStat->uAttributes|=osl_File_Attribute_ReadOnly;
-
-                   if ( S_IXUSR & aFileStat.st_mode )
-                       pStat->uAttributes|=osl_File_Attribute_Executable;
-			   }
-			   else if ( getgid() == aFileStat.st_gid )
-			   {
-                   if ( 0 == (S_IRGRP & aFileStat.st_mode) )
-                       pStat->uValidFields &= ~osl_FileStatus_Mask_Attributes;
-
-                   if ( 0 == (S_IWGRP & aFileStat.st_mode) )
-                       pStat->uAttributes|=osl_File_Attribute_ReadOnly;
-
-                   if ( S_IXGRP & aFileStat.st_mode )
-                       pStat->uAttributes|=osl_File_Attribute_Executable;
-			   }
-			   else
-			   {
-                   if ( 0 == (S_IROTH & aFileStat.st_mode) )
-                       pStat->uValidFields &= ~osl_FileStatus_Mask_Attributes;
-
-                   if ( 0 == (S_IWOTH & aFileStat.st_mode) )
-                       pStat->uAttributes|=osl_File_Attribute_ReadOnly;
-
-                   if ( S_IXOTH & aFileStat.st_mode )
-                       pStat->uAttributes|=osl_File_Attribute_Executable;
-			   }
-		   }
-		   else
-		   {
-               if ( 0 > access( path, W_OK ) )
-               {
-                   if ( errno == EACCES || errno == EROFS )
-                   {
-                       pStat->uAttributes|=osl_File_Attribute_ReadOnly;
-                   }
-                   else
-                   {
-                       pStat->uValidFields&=~osl_FileStatus_Mask_Attributes;
-                   }
-               }
-			   
-               if ( 0 == access( path, X_OK ) )
-               {
-                   pStat->uAttributes|=osl_File_Attribute_Executable;
-               }
-		   }
-
-
-           /* user permissions */        
-           if ( S_IRUSR & aFileStat.st_mode )
-           {
-               pStat->uAttributes|=osl_File_Attribute_OwnRead;
-           }
-
-           if ( S_IWUSR & aFileStat.st_mode )
-           {
-               pStat->uAttributes|=osl_File_Attribute_OwnWrite;
-           }
-
-           if ( S_IXUSR & aFileStat.st_mode )
-           {
-               pStat->uAttributes|=osl_File_Attribute_OwnExe;
-           }
-
-           /* group permissions */        
-           if ( S_IRGRP & aFileStat.st_mode )
-           {
-               pStat->uAttributes|=osl_File_Attribute_GrpRead;
-           }
-
-           if ( S_IWGRP & aFileStat.st_mode )
-           {
-               pStat->uAttributes|=osl_File_Attribute_GrpWrite;
-           }
-
-           if ( S_IXGRP & aFileStat.st_mode )
-           {
-               pStat->uAttributes|=osl_File_Attribute_GrpExe;
-           }
-
-           /* world permissions */
-           if ( S_IROTH & aFileStat.st_mode )
-           {
-               pStat->uAttributes|=osl_File_Attribute_OthRead;
-           }
-
-           if ( S_IWOTH & aFileStat.st_mode )
-           {
-               pStat->uAttributes|=osl_File_Attribute_OthWrite;
-           }
-
-           if ( S_IXOTH & aFileStat.st_mode )
-           {
-               pStat->uAttributes|=osl_File_Attribute_OthExe;
-           }
-       }
-
-/* this is the "last status change" time, not a creation time */
-#if 0
-       /* Creation.Time */
-       pStat->aCreationTime.Seconds = aFileStat.st_ctime;
-       pStat->aCreationTime.Nanosec = 0;
-       pStat->uValidFields|=osl_FileStatus_Mask_CreationTime;
-#endif
-
-       /* Access.Time */ 
-       pStat->aAccessTime.Seconds = aFileStat.st_atime;
-       pStat->aAccessTime.Nanosec = 0;
-       pStat->uValidFields|=osl_FileStatus_Mask_AccessTime;
-
-       /* Modify.Time */ 
-       pStat->aModifyTime.Seconds = aFileStat.st_mtime;
-       pStat->aModifyTime.Nanosec = 0;
-       pStat->uValidFields|=osl_FileStatus_Mask_ModifyTime;
-
-       /* FileSize */ 
-       if ( pStat->eType == osl_File_Type_Regular )
-       {
-           pStat->uFileSize = aFileStat.st_size;
-           pStat->uValidFields |= osl_FileStatus_Mask_FileSize;
-       }
-      
-        /* File Exists semantic of osl_FileStatus_Mask_Validate */
-        if ((uFieldMask & osl_FileStatus_Mask_LinkTargetURL) && (osl_File_Type_Link == pStat->eType)) 
-        {
-            char buffer[PATH_MAX];
-            
-            if (NULL != realpath(path, buffer))
-            {
-                rtl_uString* ustrLinkTarget = NULL;
-                
-                /* convert link target to unicode */
-                rtl_string2UString(&ustrLinkTarget, buffer, strlen(buffer), osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS);
-                
-                /* convert unicode path to file URL */
-                if (osl_File_E_None == osl_getFileURLFromSystemPath( ustrLinkTarget, &pStat->ustrLinkTargetURL))
-                    pStat->uValidFields |= osl_FileStatus_Mask_LinkTargetURL;
-                   
-                rtl_uString_release(ustrLinkTarget);
-            }
-            else
-            {
-                return oslTranslateFileError(errno);
-            }
-        }            
-    }        
-    
-    return osl_File_E_None;
-}
-
-/****************************************************************************/
-/*	osl_openFile */
-/****************************************************************************/
+/****************************************************************************
+ *	osl_createFileHandleFromFD
+ ***************************************************************************/
 
 oslFileHandle osl_createFileHandleFromFD( int fd )
 {
@@ -1179,19 +530,23 @@ oslFileHandle osl_createFileHandleFromFD( int fd )
 	return (oslFileHandle)pHandleImpl;
 }
 
+/****************************************************************************
+ *	osl_openFile
+ ***************************************************************************/
+
 oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal_uInt32 uFlags )
 {
     oslFileHandleImpl* pHandleImpl = NULL;
     oslFileError eRet;
     rtl_uString* ustrFilePath = NULL;
-    
+
     char buffer[PATH_MAX];
     int  fd;
     int  mode  = S_IRUSR | S_IRGRP | S_IROTH;
     int  flags = O_RDONLY;
 
     struct flock aflock;
-    
+
     /* locking the complete file */
     aflock.l_type = 0;
 	aflock.l_whence = SEEK_SET;
@@ -1204,22 +559,18 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
     if( ( 0 == ustrFileURL->length ) )
         return osl_File_E_INVAL;
 
-    /* convert file URL to system path */ 
+    /* convert file URL to system path */
     eRet = osl_getSystemPathFromFileURL( ustrFileURL, &ustrFilePath );
+
     if( osl_File_E_None != eRet )
         return eRet;
 
-    /* remove trailing '/' if any */
-    if( ( 1 < ustrFilePath->length ) && ( (sal_Unicode) '/' == ustrFilePath->buffer[ustrFilePath->length - 1] ) )
-    {
-        ustrFilePath->length--;
-        ustrFilePath->buffer[ustrFilePath->length] = 0;
-    }
-    
+	osl_systemPathRemoveSeparator(ustrFilePath);
+
     /* convert unicode path to text */
     if( UnicodeToText( buffer, PATH_MAX, ustrFilePath->buffer, ustrFilePath->length ) )
     {
-        /* we do not open devices or such here */        
+        /* we do not open devices or such here */
         if( !( uFlags & osl_File_OpenFlag_Create ) )
         {
             struct stat aFileStat;
@@ -1227,7 +578,7 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
             if( 0 > stat( buffer, &aFileStat ) )
             {
                 PERROR( "osl_openFile", buffer );
-                eRet = oslTranslateFileError( errno );
+                eRet = oslTranslateFileError(OSL_FET_ERROR, errno );
             }
 
             else if( !S_ISREG( aFileStat.st_mode ) )
@@ -1235,7 +586,7 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                 eRet = osl_File_E_INVAL;
             }
         }
-        
+
         if( osl_File_E_None == eRet )
         {
             /*
@@ -1244,17 +595,17 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
 
             if ( uFlags & osl_File_OpenFlag_Write )
             {
-                mode |= S_IWUSR | S_IWGRP | S_IWOTH;
+                mode |= S_IWUSR | S_IWGRP | S_IWOTH;                
                 flags = O_RDWR;
                 aflock.l_type = F_WRLCK;
             }
 
             if ( uFlags & osl_File_OpenFlag_Create )
             {
-                mode |= S_IWUSR | S_IWGRP | S_IWOTH;
+                mode |= S_IWUSR | S_IWGRP | S_IWOTH;        
                 flags = O_CREAT | O_EXCL | O_RDWR;
             }
-
+				
             /* open the file */
             fd = open( buffer, flags, mode );
             if ( fd >= 0 )
@@ -1264,14 +615,14 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                 {
                     /* FIXME: this is not MT safe */
                     pFileLockEnvVar = getenv("SAL_ENABLE_FILE_LOCKING");
-                    
+
                     if( NULL == pFileLockEnvVar)
                         pFileLockEnvVar = getenv("STAR_ENABLE_FILE_LOCKING");
                 }
-                
+
                 if( NULL == pFileLockEnvVar )
                     aflock.l_type = 0;
-                    
+
                 /* lock the file if flock.l_type is set */
                 if( F_WRLCK != aflock.l_type || -1 != fcntl( fd, F_SETLK, &aflock ) )
                 {
@@ -1291,17 +642,17 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                         errno = ENOMEM;
                     }
                 }
-                
+
                 close( fd );
             }
 
             PERROR( "osl_openFile", buffer );
-            eRet = oslTranslateFileError( errno );
+            eRet = oslTranslateFileError(OSL_FET_ERROR, errno );
         }
     }
     else
         eRet = osl_File_E_INVAL;
-    
+
     rtl_uString_release( ustrFilePath );
     return eRet;
 }
@@ -1309,14 +660,14 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
 /****************************************************************************/
 /*	osl_closeFile */
 /****************************************************************************/
-        
+
 oslFileError osl_closeFile( oslFileHandle Handle )
 {
     oslFileHandleImpl* pHandleImpl = (oslFileHandleImpl *) Handle;
     oslFileError eRet = osl_File_E_INVAL;
 
     OSL_ASSERT( Handle );
-    
+
     if( pHandleImpl )
     {
         rtl_uString_release( pHandleImpl->ustrFilePath );
@@ -1330,27 +681,24 @@ oslFileError osl_closeFile( oslFileHandle Handle )
             aflock.l_whence = SEEK_SET;
             aflock.l_start = 0;
             aflock.l_len = 0;
-            
+
             /* FIXME: check if file is really locked ?  */
-            
+
             /* release the file share lock on this file */
             if( -1 == fcntl( pHandleImpl->fd, F_SETLK, &aflock ) )
                 PERROR( "osl_closeFile", "unlock failed" );
         }
-        
+
         if( 0 > close( pHandleImpl->fd ) )
         {
-#ifdef DEBUG_OSL_FILE
-            perror("osl_closeFile");
-#endif
-            eRet = oslTranslateFileError( errno );
+            eRet = oslTranslateFileError(OSL_FET_ERROR, errno );
         }
         else
             eRet = osl_File_E_None;
-        
+
         rtl_freeMemory( pHandleImpl );
     }
-    
+
     return eRet;
 }
 
@@ -1362,56 +710,35 @@ oslFileError SAL_CALL osl_isEndOfFile( oslFileHandle Handle, sal_Bool *pIsEOF )
 {
     oslFileHandleImpl* pHandleImpl = (oslFileHandleImpl *) Handle;
     oslFileError eRet = osl_File_E_INVAL;
-	
+
 	if ( pHandleImpl)
 	{
 		long curPos = lseek( pHandleImpl->fd, 0, SEEK_CUR );
-		
+
 		if ( curPos >= 0 )
 		{
 			long endPos = lseek( pHandleImpl->fd, 0, SEEK_END  );
-			
+
 			if ( endPos >= 0 )
 			{
 				*pIsEOF = ( curPos == endPos );
 				curPos = lseek( pHandleImpl->fd, curPos, SEEK_SET );
-				
+
 				if ( curPos >= 0 )
 					eRet = osl_File_E_None;
 				else
-					eRet = oslTranslateFileError( errno );
+					eRet = oslTranslateFileError(OSL_FET_ERROR, errno );
 			}
 			else
-				eRet = oslTranslateFileError( errno );
+				eRet = oslTranslateFileError(OSL_FET_ERROR, errno );
 		}
 		else
-			eRet = oslTranslateFileError( errno );
+			eRet = oslTranslateFileError(OSL_FET_ERROR, errno );
 	}
 
-	return eRet;	
+	return eRet;
 }
 
-/****************************************************************************/
-/*	osl_createDirectoryItemFromHandle */
-/****************************************************************************/
-
-oslFileError osl_createDirectoryItemFromHandle( oslFileHandle Handle, oslDirectoryItem* pItem )
-{
-    oslFileHandleImpl* pHandleImpl = (oslFileHandleImpl *) Handle;
-    
-    OSL_ASSERT( Handle );
-    OSL_ASSERT( pItem );
-    
-    if( pHandleImpl )
-    {
-        rtl_uString_acquire( pHandleImpl->ustrFilePath );
-        
-        *pItem = (oslDirectoryItem) pHandleImpl->ustrFilePath;
-        return osl_File_E_None;
-    }
-
-    return osl_File_E_INVAL;
-}
 
 /****************************************************************************/
 /*	osl_moveFile */
@@ -1538,7 +865,7 @@ oslFileError osl_removeDirectory( rtl_uString* ustrDirectoryURL )
     eRet = FileURLToPath( path, PATH_MAX, ustrDirectoryURL );
     if( eRet != osl_File_E_None )
         return eRet;
-        
+
     return osl_psz_removeDirectory( path );
 }
 
@@ -1548,289 +875,10 @@ oslFileError osl_removeDirectory( rtl_uString* ustrDirectoryURL )
 
 oslFileError osl_getCanonicalName( rtl_uString* ustrFileURL, rtl_uString** pustrValidURL )
 {
-    char reqPath[PATH_MAX];
-    char valPath[PATH_MAX];
-    oslFileError eRet;
+	OSL_ENSURE(sal_False, "osl_getCanonicalName not implemented");
 
-    OSL_ASSERT( ustrFileURL );
-    OSL_ASSERT( pustrValidURL );
-
-    /* convert file url to system path */
-    eRet = FileURLToPath( reqPath, PATH_MAX, ustrFileURL );
-    if( eRet != osl_File_E_None )
-        return eRet;
-
-    eRet = osl_psz_getCanonicalName( reqPath, valPath );
-    if( osl_File_E_None == eRet )
-    {
-        rtl_uString* ustrValidPath = NULL;
-        
-        /* convert file name to unicode */
-        rtl_string2UString( &ustrValidPath, valPath, strlen( valPath ), osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
-        
-        /* file urls must be encoded */
-        osl_getFileURLFromSystemPath( ustrValidPath, pustrValidURL );
-        rtl_uString_release( ustrValidPath );
-    }
-    
-    return eRet;
-}
-
-/****************************************************************************/
-/*	osl_getAbsoluteFileURL */
-/****************************************************************************/
-static sal_Bool isLink( const char *source )
-{
-	struct stat status;
-	return
-		0 == lstat( source , &status ) && S_ISLNK(status.st_mode);
-}
-
-/** strlcpy not stdc ? I had unresolved externals on solaris */
-static size_t mystrlcpy( char *target, const char *source , int max )
-{
-	int i;
-	for( i = 0 ; source[i] && i < max ; i ++ )
-		target[i] = source[i];
-	if( i < max )
-		target[i] = 0;
-	return i;
-}
-
-static oslFileError convertPathToRealPath( const char *source, char *target )
-{
-	oslFileError eRet = osl_File_E_None;
-	sal_Int32 i = 0;
-	mystrlcpy( target , source , PATH_MAX );
-	while( target[i] )
-	{
-		if(  '/' == target[i]   &&
-			 '.' == target[i+1] &&
-			 '.' == target[i+2] &&
-			('/' == target[i+3] || ! target[i+3]) )
-		{
-			/* step one directory back */
-			char temp[PATH_MAX];
-			target[i] = 0;
-			if( isLink( target ) && realpath( target , temp) )
-			{
-				/* the parent directory was a link, resolve this ! */
-				if( target[i+3] )
-				{
-					/* store the end of the path */
-					char temp2[PATH_MAX];
-					if( mystrlcpy( temp2, &(target[i+1]) , PATH_MAX ) >= PATH_MAX)
-					{
-						eRet = osl_File_E_NAMETOOLONG;
-						break;
-					}
-
-					/* patch the new path */
-					strcpy( target , temp );
-					i = strlen( target );
-					strcat( target , "/" );
-					strcat( target, temp2 );
-				}
-				else
-				{
-					/* this is the end */
-					strcpy( target, temp );
-					i = strlen( target );
-					strcat( target , "/.." );
-				}
-			}
-			else
-			{
-				int k;
-				int j = i +3;
-				
-				/* seek the parent dir */
-				while( i >= 0 && target[i] != '/' )
-				{
-					i --;
-				}
-				if( i < 0 )
-				{
-					/* .. within root directory , this is an error */
-					eRet = osl_File_E_INVAL;
-					break;
-				}
-
-				for( k = 0; target[j+k] ; k ++ )
-				{
-					target[i+k] = target[j+k];
-				}
-				target[i+k] = 0;
-				if( 0 == i && 0 == k )
-				{
-					target[i] = '/';
-					i++;
-					target[i] = 0;
-				}
-			}
-			
-		}
-		else if(   '/' == target[i] &&
-				   ( 0 == target[i+1] || ('.' == target[i+1] && 0 == target[i+2] ) ) )
-		{
-			// "/" or "/." at the end of the string, ignore this
-			target[i] = 0;
-		}
-		else if( '/' == target[i] && '.' == target[i+1] && '/' == target[i+2] )
-		{
-			/* /./ within the path, remove it */
-			int j;
-			for( j = i ; target[j+2] ; j ++ )
-			{
-				target[j] = target[j+2];
-			}
-			target[j] = 0;
-		}
-		else
-		{
-			i++;
-		}
-	}
-
-	return eRet;	
-}
-
-oslFileError osl_getAbsoluteFileURL( rtl_uString*  ustrBaseDirURL, 
-    rtl_uString* ustrRelativeURL, rtl_uString** pustrAbsoluteURL )
-{
-    oslFileError eRet = osl_File_E_INVAL;
-    rtl_uString* ustrPath = NULL;
-    
-    char path[PATH_MAX];
-    
-    eRet = osl_getSystemPathFromFileURL( ustrRelativeURL, &ustrPath );
-    if( osl_File_E_None != eRet )
-        return eRet;
-    
-    /* if relative path is absolute, we can ignore the base path */
-    if( (sal_Unicode) '/' != ustrPath->buffer[0] )
-    {
-        rtl_uString* ustrBasePath = NULL;
-        
-        /* concatinate base and relative path */
-        eRet = osl_getSystemPathFromFileURL( ustrBaseDirURL, &ustrBasePath );
-        if( osl_File_E_None == eRet )
-        {
-            rtl_uString* ustrTmp = NULL;
-            sal_uInt32 capacity;
-            
-            capacity = ustrBasePath->length + ustrPath->length + 1;
-            rtl_uString_new_WithLength( &ustrTmp, capacity );
-
-            rtl_uStringbuffer_insert( &ustrTmp, &capacity, 0, ustrBasePath->buffer, ustrBasePath->length );
-			if( ! ustrTmp->length || ustrBasePath->buffer[ustrTmp->length-1] != '/' )
-			{
-				rtl_uStringbuffer_insert_ascii(
-					&ustrTmp, &capacity, ustrTmp->length, "/", 1 );
-			}
-            rtl_uStringbuffer_insert( &ustrTmp, &capacity, ustrTmp->length, ustrPath->buffer, ustrPath->length );
-    
-            rtl_uString_release( ustrBasePath );
-            rtl_uString_release( ustrPath );
-            ustrPath = ustrTmp;
-        }
-    }
-    
-    /* convert unicode path to text */
-    if( UnicodeToText( path, PATH_MAX, ustrPath->buffer, ustrPath->length ) )
-    {
-        char realPath[PATH_MAX];
-        
-        /* use realpath to determine absolute path */
-		if( osl_File_E_None == convertPathToRealPath( path , realPath ) )
-        {
-            rtl_uString* ustrRealPath = NULL;
-        
-            /* convert file name to unicode */
-            rtl_string2UString( &ustrRealPath, realPath, strlen( realPath ), osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
-        
-            /* file urls must be encoded */
-            osl_getFileURLFromSystemPath( ustrRealPath, pustrAbsoluteURL );
-            rtl_uString_release( ustrRealPath );
-			eRet = osl_File_E_None;
-        }
-        else
-        {
-            PERROR( "osl_getAbsolutePath", path );
-            eRet = oslTranslateFileError( errno );
-        }
-    }
-    
-    rtl_uString_release( ustrPath );
-    return eRet;
-}    
-    
-/****************************************************************************/
-/*	osl_searchFileURL */
-/****************************************************************************/
-
-oslFileError osl_searchFileURL( rtl_uString* ustrFilePath, rtl_uString* ustrSearchPath, rtl_uString** pustrURL )
-{
-    rtl_uString* ustrPath = NULL;
-    oslFileError eRet;
-
-    char searchPath[PATH_MAX];
-    char filePath[PATH_MAX];
-    char path[PATH_MAX] = "";
-
-    OSL_ASSERT( ustrFilePath );
-    OSL_ASSERT( ustrSearchPath );
-    OSL_ASSERT( pustrURL );
-
-    /* file path may also be an URL */
-    eRet = FileURLToPath( filePath, PATH_MAX, ustrFilePath );
-    if( eRet != osl_File_E_None )
-    {
-        if( eRet == osl_File_E_INVAL )
-        {
-            /* seems not to be an URL, so expect it to be a system patrh */
-            if( ! UnicodeToText( filePath, PATH_MAX, ustrFilePath->buffer, ustrFilePath->length ) )
-                return osl_File_E_INVAL;
-        }
-        else
-            return eRet;
-    }
-
-    /* if a search path is specified, it is no file URL */        
-    if( ustrSearchPath->length && UnicodeToText( searchPath, PATH_MAX, ustrSearchPath->buffer, ustrSearchPath->length )  )
-    {
-        if( NULL == ImplSearchPath( path, PATH_MAX, filePath, searchPath, ';' ) )
-           *path = '\0';
-    }
-
-    /* did we already find something ? */
-    if( '\0' == *path )
-    {
-        char * pEnvPath = getenv("PATH");
-
-        /* fallback to PATH env var */            
-        if( ( NULL == pEnvPath ) || ( NULL == ImplSearchPath( path, PATH_MAX, filePath, pEnvPath , ':' ) ) )
-        {
-            char workdir[PATH_MAX];
-                
-            /* last try: current working dir */
-            if( ( NULL == getcwd( workdir, PATH_MAX ) ) || ( NULL == ImplSearchPath( path, PATH_MAX, filePath, workdir , ':' ) ) )
-                return osl_File_E_NOENT;
-         }
-    }
-
-    /* did we find something, then convert it */        
-    if( *path )
-    {
-        /* convert file name to unicode */
-        rtl_string2UString( &ustrPath, path, strlen( path ), osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
-        
-        /* file urls must be encoded */
-        osl_getFileURLFromSystemPath( ustrPath, pustrURL );
-        rtl_uString_release( ustrPath );
-    }
-    
-    return osl_File_E_None;
+	rtl_uString_newFromString(pustrValidURL, ustrFileURL);
+	return osl_File_E_None;
 }
 
 
@@ -1857,8 +905,8 @@ oslFileError osl_setFileAttributes( rtl_uString* ustrFileURL, sal_uInt64 uAttrib
 /*	osl_setFileTime */
 /****************************************************************************/
 
-oslFileError osl_setFileTime( rtl_uString* ustrFileURL, TimeValue* pCreationTime,
-                              TimeValue* pLastAccessTime, TimeValue* pLastWriteTime )
+oslFileError osl_setFileTime( rtl_uString* ustrFileURL, const TimeValue* pCreationTime,
+                              const TimeValue* pLastAccessTime, const TimeValue* pLastWriteTime )
 {
     char path[PATH_MAX];
     oslFileError eRet;
@@ -1882,41 +930,23 @@ oslFileError osl_setFileTime( rtl_uString* ustrFileURL, TimeValue* pCreationTime
 
 
 /*******************************************
-    osl_writeFile
+    osl_readFile
 ********************************************/
 
-oslFileError osl_readFile( oslFileHandle Handle, void* pBuffer, sal_uInt64 uBytesRequested, sal_uInt64* pBytesRead )
+oslFileError osl_readFile(oslFileHandle Handle, void* pBuffer, sal_uInt64 uBytesRequested, sal_uInt64* pBytesRead)
 {
-    ssize_t nBytes = 0;
-    int     nRet   = 0;
-    oslFileHandleImpl* pHandleImpl = 0;
-
-    /* parameter checking */
-
-    OSL_ASSERT( Handle );
-    OSL_ASSERT( pBuffer );
-    OSL_ASSERT( pBytesRead );
+    ssize_t            nBytes      = 0;
+    oslFileHandleImpl* pHandleImpl = (oslFileHandleImpl*)Handle;
     
-    if ( 0 == Handle || 0 == pBuffer || 0 == pBytesRead )
+    if ((0 == pHandleImpl) || (pHandleImpl->fd < 0) || (0 == pBuffer) || (0 == pBytesRead))
         return osl_File_E_INVAL;
+    
+    nBytes = read(pHandleImpl->fd, pBuffer, uBytesRequested);
 
-    pHandleImpl = (oslFileHandleImpl*)Handle;
-    
-    OSL_ASSERT( pHandleImpl->fd >= 0 );
-    
-    if ( pHandleImpl->fd < 0 )
-        return osl_File_E_INVAL;
-
-    nBytes = read( pHandleImpl->fd, pBuffer, uBytesRequested );
-    
-    if ( nBytes < 0 )
-    {
-        nRet = errno;
-        return oslTranslateFileError( nRet );
-    }
+    if (-1 == nBytes)
+        return oslTranslateFileError(OSL_FET_ERROR, errno);
 
     *pBytesRead = nBytes;
-    
     return osl_File_E_None;
 }
 
@@ -1924,38 +954,20 @@ oslFileError osl_readFile( oslFileHandle Handle, void* pBuffer, sal_uInt64 uByte
     osl_writeFile
 ********************************************/
 
-oslFileError osl_writeFile( oslFileHandle Handle, const void* pBuffer, sal_uInt64 uBytesToWrite, sal_uInt64* pBytesWritten )
+oslFileError osl_writeFile(oslFileHandle Handle, const void* pBuffer, sal_uInt64 uBytesToWrite, sal_uInt64* pBytesWritten)
 {
-    ssize_t nBytes = 0;
-    int     nRet   = 0;
-    oslFileHandleImpl* pHandleImpl = 0;
-
-    /* parameter checking */
-
-    OSL_ASSERT( Handle );
-    OSL_ASSERT( pBuffer );
-    OSL_ASSERT( pBytesWritten );
-
-    if ( 0 == Handle || 0 == pBuffer || 0 == pBytesWritten )
-        return osl_File_E_INVAL;
-        
-    pHandleImpl = (oslFileHandleImpl*)Handle;
-
-    OSL_ASSERT( pHandleImpl->fd >= 0 );
+    ssize_t            nBytes      = 0;
+    oslFileHandleImpl* pHandleImpl = (oslFileHandleImpl*)Handle;
     
-    if ( pHandleImpl->fd < 0 )
+    if ((0 == pHandleImpl) || (pHandleImpl->fd < 0) || (0 == pBuffer) || (0 == pBytesWritten))
         return osl_File_E_INVAL;
-
-    nBytes = write( pHandleImpl->fd, pBuffer, uBytesToWrite );
     
-    if ( nBytes < 0 )
-    {
-        nRet = errno;
-        return oslTranslateFileError(nRet);
-    }
+    nBytes = write(pHandleImpl->fd, pBuffer, uBytesToWrite);
+
+    if (-1 == nBytes)
+        return oslTranslateFileError(OSL_FET_ERROR, errno);
 
     *pBytesWritten = nBytes;
-    
     return osl_File_E_None;
 }
 
@@ -1969,65 +981,40 @@ oslFileError osl_setFilePos( oslFileHandle Handle, sal_uInt32 uHow, sal_Int64 uP
     int nRet=0;
     off_t nOffset=0;
 
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"In  osl_setFilePos\n");
-#endif
-
     pHandleImpl = (oslFileHandleImpl*) Handle;
     if ( pHandleImpl == 0 )
     {
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_setFilePos [INVAL]\n");
-#endif
         return osl_File_E_INVAL;
     }
 
     if ( pHandleImpl->fd < 0 )
     {
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_setFilePos [INVAL]\n");
-#endif
         return osl_File_E_INVAL;
     }
 
     /* FIXME mfe: setFilePos: Do we have any runtime function to determine LONG_MAX? */
     if ( uPos > LONG_MAX )
     {
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_setFilePos [OVERFLOW]\n");
-#endif
         return osl_File_E_OVERFLOW;
     }
 
     nOffset=(off_t)uPos;
-    
+
     switch(uHow)
     {
         case osl_Pos_Absolut:
-            nOffset = lseek(pHandleImpl->fd,nOffset,SEEK_SET);            
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_setFilePos Absolut\n");
-#endif
+            nOffset = lseek(pHandleImpl->fd,nOffset,SEEK_SET);
             break;
 
         case osl_Pos_Current:
             nOffset = lseek(pHandleImpl->fd,nOffset,SEEK_CUR);
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_setFilePos Current\n");
-#endif
             break;
 
         case osl_Pos_End:
             nOffset = lseek(pHandleImpl->fd,nOffset,SEEK_END);
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_setFilePos End\n");
-#endif
             break;
 
         default:
-#ifdef TRACE_OSL_FILE
-            fprintf(stderr,"Out osl_setFilePos [INVAL]\n");
-#endif
             return osl_File_E_INVAL;
             break;
     }
@@ -2035,21 +1022,15 @@ oslFileError osl_setFilePos( oslFileHandle Handle, sal_uInt32 uHow, sal_Int64 uP
     if ( nOffset < 0 )
     {
         nRet=errno;
-#ifdef DEBUG_OSL_FILE
-        perror("lseek");
-#endif
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_setFilePos [lseek]\n");
-#endif
-        return oslTranslateFileError(nRet);
+        return oslTranslateFileError(OSL_FET_ERROR, nRet);
     }
 
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"Out osl_setFilePos [ok]\n");
-#endif
     return osl_File_E_None;
 }
 
+/************************************************
+ * osl_getFilePos
+ ***********************************************/
 
 oslFileError osl_getFilePos( oslFileHandle Handle, sal_uInt64* pPos )
 {
@@ -2057,81 +1038,56 @@ oslFileError osl_getFilePos( oslFileHandle Handle, sal_uInt64* pPos )
     off_t nOffset=0;
     int nRet=0;
 
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"In  osl_getFilePos\n");
-#endif
-
     pHandleImpl = (oslFileHandleImpl*) Handle;
     if ( pHandleImpl == 0 || pPos == 0)
     {
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_getFilePos [INVAL]\n");
-#endif
         return osl_File_E_INVAL;
     }
 
     if ( pHandleImpl->fd < 0 )
     {
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_getFilePos [INVAL]\n");
-#endif
         return osl_File_E_INVAL;
     }
 
-    nOffset=lseek(pHandleImpl->fd,0,SEEK_CUR);
-    if ( nOffset < 0 )
+    nOffset = lseek(pHandleImpl->fd,0,SEEK_CUR);
+
+    if (nOffset < 0)
     {
-        nRet=errno;
-#ifdef DEBUG_OSL_FILE
-        perror("lseek");
-#endif
-        *pPos=0;
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_getFilePos [lseek]\n");
-#endif
-        return oslTranslateFileError(nRet);
+        nRet  =errno;
+
+        /* *pPos =0; */
+
+        return oslTranslateFileError(OSL_FET_ERROR, nRet);
     }
 
     *pPos=nOffset;
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"Out osl_getFilePos [ok]\n");
-#endif
+
     return osl_File_E_None;
 }
 
+/************************************************
+ * osl_setFileSize
+ ***********************************************/
 
 oslFileError osl_setFileSize( oslFileHandle Handle, sal_uInt64 uSize )
 {
     oslFileHandleImpl* pHandleImpl=0;
     off_t nOffset=0;
 
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"In  osl_setFileSize\n");
-#endif
-
     pHandleImpl = (oslFileHandleImpl*) Handle;
     if ( pHandleImpl == 0 )
     {
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_setFileSize [INVAL]\n");
-#endif
         return osl_File_E_INVAL;
     }
 
     if ( pHandleImpl->fd < 0 )
     {
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_setFileSize [INVAL]\n");
-#endif
         return osl_File_E_INVAL;
     }
 
     /* FIXME: mfe: setFileSize: Do we have any runtime function to determine LONG_MAX? */
     if ( uSize > LONG_MAX )
     {
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_setFileSize [OVERFLOW]\n");
-#endif
         return osl_File_E_OVERFLOW;
     }
 
@@ -2144,7 +1100,7 @@ oslFileError osl_setFileSize( oslFileHandle Handle, sal_uInt64 uSize )
 		off_t        nCurPos;
 
 		/* Save original result */
-		result = oslTranslateFileError (errno);
+		result = oslTranslateFileError (OSL_FET_ERROR, errno);
 		PERROR("ftruncate", "Try osl_setFileSize [fallback]\n");
 
 		/* Check against current size. Fail upon 'shrink' */
@@ -2194,10 +1150,21 @@ oslFileError osl_setFileSize( oslFileHandle Handle, sal_uInt64 uSize )
 		}
 	}
 
-#ifdef TRACE_OSL_FILE
-	fprintf(stderr, "Out osl_setFileSize [ok]\n");
-#endif /* TRACE_OSL_FILE */
 	return (osl_File_E_None);
+}
+
+/*###############################################*/
+oslFileError SAL_CALL osl_syncFile(oslFileHandle Handle)
+{
+    oslFileHandleImpl* handle_impl = (oslFileHandleImpl*)Handle;
+    
+    if (handle_impl == 0)
+        return osl_File_E_INVAL;
+    
+    if (fsync(handle_impl->fd) == -1)
+        return oslTranslateFileError(OSL_FET_ERROR, errno);
+    
+    return osl_File_E_None;
 }
 
 /******************************************************************************
@@ -2209,178 +1176,140 @@ oslFileError osl_setFileSize( oslFileHandle Handle, sal_uInt64 uSize )
 #ifdef HAVE_STATFS_H
 
 #if defined(FREEBSD) || defined(NETBSD) || defined(MACOSX)
-#define __OSL_STATFS statfs
-#define __OSL_STATFS_FUNC statfs
+#   define __OSL_STATFS_STRUCT      			struct statfs
+#   define __OSL_STATFS(dir, sfs)   			statfs((dir), (sfs))
+#   define __OSL_STATFS_BLKSIZ(a)   			((sal_uInt64)((a).f_bsize))
+#   define __OSL_STATFS_TYPENAME(a) 			((a).f_fstypename)
+#   define __OSL_STATFS_ISREMOTE(a) 			(((a).f_type & MNT_LOCAL) == 0)
 
-#define __OSL_STATFS_BLKSIZ(a) ((sal_uInt64)((a).f_bsize))
-#define __OSL_STATFS_BLKFREE(a) ((sal_uInt64)((a).f_bavail))
-#define __OSL_STATFS_TYPENAME(a) ((a).f_fstypename)
-
-#define __OSL_STATFS_ISREMOTE(a) (((a).f_type & MNT_LOCAL) == 0)
-
+/* always return true if queried for the properties of
+   the file system. If you think this is wrong under any
+   of the target platforms fix it!!!! */
+#	define __OSL_STATFS_IS_CASE_SENSITIVE_FS(a)	 (1)
+#	define __OSL_STATFS_IS_CASE_PRESERVING_FS(a) (1)
 #endif /* FREEBSD || NETBSD */
 
 #if defined(LINUX)
-#define __OSL_STATFS statfs
-#define __OSL_STATFS_FUNC statfs
-
-#define __OSL_STATFS_BLKSIZ(a) ((sal_uInt64)((a).f_bsize))
-#define __OSL_STATFS_BLKFREE(a) ((sal_uInt64)((a).f_bavail))
-
-/* <linux/nfs_fs.h> */
-#define __OSL_STATFS_ISNFS(a) ((a).f_type == 0x6969) /* NFS_SUPER_MAGIC */
-
-/* <linux/smb_fs.h> */
-#define __OSL_STATFS_ISSMB(a) ((a).f_type == 0x517B) /* SMB_SUPER_MAGIC */
-
-/* MFS = Mosix file system */
-#define __OSL_STATFS_ISMFS(a) ((a).f_type ==  0xE08F018) /* MFS_SUPER_MAGIC = 235466776 */
-
-#define __OSL_STATFS_ISREMOTE(a) \
-(__OSL_STATFS_ISMFS((a)) || __OSL_STATFS_ISNFS((a)) || __OSL_STATFS_ISSMB((a)))
-
+#	define __OSL_NFS_SUPER_MAGIC				 0x6969
+#	define __OSL_SMB_SUPER_MAGIC				 0x517B
+#	define __OSL_MSDOS_SUPER_MAGIC  			 0x4d44
+#	define __OSL_NTFS_SUPER_MAGIC				 0x5346544e
+#   define __OSL_STATFS_STRUCT       		     struct statfs
+#   define __OSL_STATFS(dir, sfs)    			 statfs((dir), (sfs))
+#   define __OSL_STATFS_BLKSIZ(a)    			 ((sal_uInt64)((a).f_bsize))
+#   define __OSL_STATFS_IS_NFS(a)     			 (__OSL_NFS_SUPER_MAGIC == (a).f_type) 
+#   define __OSL_STATFS_IS_SMB(a)     			 (__OSL_SMB_SUPER_MAGIC == (a).f_type) 
+#   define __OSL_STATFS_ISREMOTE(a)  			 (__OSL_STATFS_IS_NFS((a)) || __OSL_STATFS_IS_SMB((a)))
+#	define __OSL_STATFS_IS_CASE_SENSITIVE_FS(a)  ((__OSL_MSDOS_SUPER_MAGIC != (a).f_type) && (__OSL_NTFS_SUPER_MAGIC != (a).f_type))
+#	define __OSL_STATFS_IS_CASE_PRESERVING_FS(a) ((__OSL_MSDOS_SUPER_MAGIC != (a).f_type))
 #endif /* LINUX */
 
-#if defined(IRIX)
+#if defined(SOLARIS) || defined(IRIX)
+#   define __OSL_STATFS_STRUCT          		 struct statvfs
+#   define __OSL_STATFS(dir, sfs)	    		 statvfs((dir), (sfs))
+#   define __OSL_STATFS_BLKSIZ(a)       		 ((sal_uInt64)((a).f_frsize))
+#   define __OSL_STATFS_TYPENAME(a)     		 ((a).f_basetype)
+#   define __OSL_STATFS_ISREMOTE(a)     		 (rtl_str_compare((a).f_basetype, "nfs") == 0)
 
-#define __OSL_STATFS statvfs
-#define __OSL_STATFS_FUNC statvfs
+/* always return true if queried for the properties of
+   the file system. If you think this is wrong under any
+   of the target platforms fix it!!!! */
+#	define __OSL_STATFS_IS_CASE_SENSITIVE_FS(a)	 (1)
+#	define __OSL_STATFS_IS_CASE_PRESERVING_FS(a) (1)
+#endif /* SOLARIS || IRIX*/
 
-#define __OSL_STATFS_BLKSIZ(a) ((sal_uInt64)((a).f_bsize))
-#define __OSL_STATFS_BLKFREE(a) ((sal_uInt64)((a).f_bfree))
-#define __OSL_STATFS_TYPENAME(a) ((a).f_basetype)
+#   define __OSL_STATFS_INIT(a) 	    (memset(&(a), 0, sizeof(__OSL_STATFS_STRUCT)))
 
-#define __OSL_STATFS_ISREMOTE(a) (rtl_str_compare((a).f_basetype, "nfs") == 0)
+#else /* no statfs available */
 
-#endif /* IRIX */
-
-
-#if defined(SOLARIS)
-#define __OSL_STATFS statvfs
-#define __OSL_STATFS_FUNC statvfs
-
-#define __OSL_STATFS_BLKSIZ(a) ((sal_uInt64)((a).f_frsize))
-#define __OSL_STATFS_BLKFREE(a) ((sal_uInt64)((a).f_bavail))
-#define __OSL_STATFS_TYPENAME(a) ((a).f_basetype)
-
-#define __OSL_STATFS_ISREMOTE(a) (rtl_str_compare((a).f_basetype, "nfs") == 0)
-
-#endif /* SOLARIS */
-
+#   define __OSL_STATFS_STRUCT        			 struct dummy {int i;}
+#   define __OSL_STATFS_INIT(a)       			 ((void)0)
+#   define __OSL_STATFS(dir, sfs)     		     (1)
+#   define __OSL_STATFS_ISREMOTE(sfs) 			 (0)
+#	define __OSL_STATFS_IS_CASE_SENSITIVE_FS(a)	 (1)
+#	define __OSL_STATFS_IS_CASE_PRESERVING_FS(a) (1)
 #endif /* HAVE_STATFS_H */
 
 
 static oslFileError osl_psz_getVolumeInformation (
-	sal_Char* pszDirectory, oslVolumeInfo* pInfo, sal_uInt32 uFieldMask)
+	const sal_Char* pszDirectory, oslVolumeInfo* pInfo, sal_uInt32 uFieldMask)
 {
-#if defined(__OSL_STATFS)
+    __OSL_STATFS_STRUCT sfs;
 
-	/* The 'statfs' struct */
-	struct __OSL_STATFS aStatFS;
-
-#endif /* __OSL_STATFS */
-
-
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"In  osl_psz_getVolumeInformation\n");
-#endif
-    if (!pInfo)
-    {
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_psz_getVolumeInformation [pInfo == 0]\n");
-#endif
+    if (!pInfo)   
         return osl_File_E_INVAL;
-    }
-
-
-	/* Erase valid fields */
+    
+    __OSL_STATFS_INIT(sfs);
+    
     pInfo->uValidFields = 0;
-
-#if defined(__OSL_STATFS)
-
-	/* The 'statfs' function call */
-#ifdef TRACE_OSL_FILE
-	fprintf(stderr, "statfs('%s')\n", pszDirectory);
-#endif
-
-	memset (&aStatFS, 0, sizeof(aStatFS));
-
-	if (__OSL_STATFS_FUNC (pszDirectory, &aStatFS) < 0)
-	{
-		/* Failure */
-		oslFileError result = oslTranslateFileError (errno);
-		PERROR("statfs", "Out osl_psz_getVolumeInformation [statfs]\n");
+    pInfo->uAttributes  = 0;
+    
+	if ((__OSL_STATFS(pszDirectory, &sfs)) < 0)
+	{	
+		oslFileError result = oslTranslateFileError(OSL_FET_ERROR, errno);		
 		return (result);
 	}
 
-#endif /* __OSL_STATFS */
-
-
-	/* Attributes */
-	pInfo->uAttributes = 0;
+    /* FIXME: how to detect the kind of storage (fixed, cdrom, ...) */
 	if (uFieldMask & osl_VolumeInfo_Mask_Attributes)
-	{
-		/* FIXME: how to detect the kind of storage (fixed, cdrom, ...) */
-#if defined(__OSL_STATFS_ISREMOTE)
-		if (__OSL_STATFS_ISREMOTE(aStatFS))
-		{
+	{	
+	    if (__OSL_STATFS_ISREMOTE(sfs))
 			pInfo->uAttributes  |= osl_Volume_Attribute_Remote;
-			pInfo->uValidFields |= osl_VolumeInfo_Mask_Attributes;
-		}
-#endif  /* __OSL_STATFS_ISREMOTE */
+						
+		pInfo->uValidFields |= osl_VolumeInfo_Mask_Attributes;	
 	}
 
-
-	/* TotalSpace */
-	pInfo->uTotalSpace = 0;
-	if ((uFieldMask & osl_VolumeInfo_Mask_TotalSpace) ||
-		(uFieldMask & osl_VolumeInfo_Mask_UsedSpace )    )
+	if (uFieldMask & osl_VolumeInfo_Mask_FileSystemCaseHandling)
 	{
-#if defined(__OSL_STATFS_BLKSIZ)
-		pInfo->uTotalSpace   = __OSL_STATFS_BLKSIZ(aStatFS);
-		pInfo->uTotalSpace  *= (sal_uInt64)(aStatFS.f_blocks);
-		pInfo->uValidFields |= osl_VolumeInfo_Mask_TotalSpace;
-#endif  /* __OSL_STATFS_BLKSIZ */
-	}
-
-
-	/* FreeSpace */
-	pInfo->uFreeSpace = 0;
-	if ((uFieldMask & osl_VolumeInfo_Mask_FreeSpace) ||
-		(uFieldMask & osl_VolumeInfo_Mask_UsedSpace)    )
-	{
-#if defined(__OSL_STATFS_BLKSIZ)
-		pInfo->uFreeSpace = __OSL_STATFS_BLKSIZ(aStatFS);
-		if (getuid() == 0)
-		{
-			/* free space */
-			pInfo->uFreeSpace *= (sal_uInt64)(aStatFS.f_bfree);
-		}
-		else
-		{
-			/* available space */
-			pInfo->uFreeSpace *= __OSL_STATFS_BLKFREE(aStatFS);
-		}
-		pInfo->uValidFields |= osl_VolumeInfo_Mask_FreeSpace;
-#endif  /* __OSL_STATFS_BLKSIZ */
+		if (__OSL_STATFS_IS_CASE_SENSITIVE_FS(sfs))
+			pInfo->uAttributes |= osl_Volume_Attribute_Case_Sensitive;
+		
+		if (__OSL_STATFS_IS_CASE_PRESERVING_FS(sfs))
+			pInfo->uAttributes |= osl_Volume_Attribute_Case_Is_Preserved;
+			
+		pInfo->uValidFields |= osl_VolumeInfo_Mask_Attributes;	
 	}
 	
+	pInfo->uTotalSpace = 0;
+    pInfo->uFreeSpace  = 0;
+    pInfo->uUsedSpace  = 0;
+    
+#if defined(__OSL_STATFS_BLKSIZ)
+    
+	if ((uFieldMask & osl_VolumeInfo_Mask_TotalSpace) ||
+		(uFieldMask & osl_VolumeInfo_Mask_UsedSpace))
+	{
+		pInfo->uTotalSpace   = __OSL_STATFS_BLKSIZ(sfs);
+		pInfo->uTotalSpace  *= (sal_uInt64)(sfs.f_blocks);
+		pInfo->uValidFields |= osl_VolumeInfo_Mask_TotalSpace;
+	}
+	
+	if ((uFieldMask & osl_VolumeInfo_Mask_FreeSpace) ||
+		(uFieldMask & osl_VolumeInfo_Mask_UsedSpace))
+	{
+		pInfo->uFreeSpace = __OSL_STATFS_BLKSIZ(sfs);
+		
+		if (getuid() == 0)		
+			pInfo->uFreeSpace *= (sal_uInt64)(sfs.f_bfree);
+		else			
+			pInfo->uFreeSpace *= (sal_uInt64)(sfs.f_bavail);
+	
+		pInfo->uValidFields |= osl_VolumeInfo_Mask_FreeSpace;
+	}
 
-	/* UsedSpace */
-	pInfo->uUsedSpace = 0;
+#endif  /* __OSL_STATFS_BLKSIZ */
+	
 	if ((pInfo->uValidFields & osl_VolumeInfo_Mask_TotalSpace) &&
-		(pInfo->uValidFields & osl_VolumeInfo_Mask_FreeSpace )    )
+		(pInfo->uValidFields & osl_VolumeInfo_Mask_FreeSpace ))
 	{
 		pInfo->uUsedSpace    = pInfo->uTotalSpace - pInfo->uFreeSpace;
 		pInfo->uValidFields |= osl_VolumeInfo_Mask_UsedSpace;
 	}
-
-
-    /* MaxNameLength */
+	
 	pInfo->uMaxNameLength = 0;
 	if (uFieldMask & osl_VolumeInfo_Mask_MaxNameLength)
 	{
-		long nLen = pathconf (pszDirectory, _PC_NAME_MAX);
+		long nLen = pathconf(pszDirectory, _PC_NAME_MAX);
 		if (nLen > 0)
 		{
 			pInfo->uMaxNameLength = (sal_uInt32)nLen;
@@ -2388,238 +1317,102 @@ static oslFileError osl_psz_getVolumeInformation (
 		}
 	}
 
-
-    /* MaxPathLength */
 	pInfo->uMaxPathLength = 0;
 	if (uFieldMask & osl_VolumeInfo_Mask_MaxPathLength)
 	{
 		long nLen = pathconf (pszDirectory, _PC_PATH_MAX);
 		if (nLen > 0)
 		{
-			pInfo->uMaxPathLength = (sal_uInt32)nLen;
-			pInfo->uValidFields |= osl_VolumeInfo_Mask_MaxPathLength;
+			pInfo->uMaxPathLength  = (sal_uInt32)nLen;
+			pInfo->uValidFields   |= osl_VolumeInfo_Mask_MaxPathLength;
 		}
 	}
 
+#if defined(__OSL_STATFS_TYPENAME)
 
-	/* FileSystemName */
 	if (uFieldMask & osl_VolumeInfo_Mask_FileSystemName)
 	{
-#if defined(__OSL_STATFS_TYPENAME)
     	rtl_string2UString(
         	&(pInfo->ustrFileSystemName),
-        	__OSL_STATFS_TYPENAME(aStatFS),
-        	rtl_str_getLength( __OSL_STATFS_TYPENAME(aStatFS) ),
+        	__OSL_STATFS_TYPENAME(sfs),
+        	rtl_str_getLength(__OSL_STATFS_TYPENAME(sfs)),
         	osl_getThreadTextEncoding(),
-        	OUSTRING_TO_OSTRING_CVTFLAGS );
+        	OUSTRING_TO_OSTRING_CVTFLAGS);
+        	
 		pInfo->uValidFields |= osl_VolumeInfo_Mask_FileSystemName;
-#endif /* __OSL_STATFS_TYPENAME */
 	}
-
-
-	/* DeviceHandle */
+	
+#endif /* __OSL_STATFS_TYPENAME */
+	
     if (uFieldMask & osl_VolumeInfo_Mask_DeviceHandle)
     {
         /* FIXME: check also entries in mntent for the device
 		   and fill it with correct values */
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"osl_getVolumeInformation : checking DeviceHandle\n");
-#endif
+		
+        pInfo->pDeviceHandle = osl_isFloppyDrive(pszDirectory);
 
-		OSL_ASSERT(pInfo->pDeviceHandle);
-        *(pInfo->pDeviceHandle)=osl_isFloppyDrive(pszDirectory);
-
-        if (*(pInfo->pDeviceHandle))
+        if (pInfo->pDeviceHandle)
         {
             pInfo->uValidFields |= osl_VolumeInfo_Mask_DeviceHandle;
-
             pInfo->uAttributes  |= osl_Volume_Attribute_Removeable;
 			pInfo->uValidFields |= osl_VolumeInfo_Mask_Attributes;
         }
     }
-
-	/* Finished */
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"Out osl_getVolumeInformation [ok]\n");
-#endif
     return osl_File_E_None;
 }
 
+/*************************************
+ * osl_psz_setFileAttributes
+ ************************************/
 
-
-
-oslFileError osl_psz_getCanonicalName( sal_Char* pszRequested, sal_Char* pszValid )
+static oslFileError osl_psz_setFileAttributes( const sal_Char* pszFilePath, sal_uInt64 uAttributes )
 {
-    int nFD=0;
-    int nDone=0;
-    sal_Char*  pszRequestedDir = 0;
-    sal_Char  szRequestedDir[PATH_MAX];
-    sal_Char  szUnique[PATH_MAX];
-    sal_uInt32 nIndex=1;
+	oslFileError osl_error = osl_File_E_None;
+    mode_t 		 nNewMode  = 0;
 
-    szRequestedDir[0] = '\0';
-    szUnique[0] = '\0';
-    
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"In  osl_psz_getCanonicalName\n");
-#endif
-    
-    nFD = open(pszRequested,O_RDONLY);
-    if ( nFD == -1 )
-    {
-        nFD = errno;
-        if ( nFD == ENOENT )
-        {
-            DIR* pDIR=0;
-            
-            /* mfe: one of the path entries does not exists ; maybe the file or one of the directories */
-            strcpy(szRequestedDir,pszRequested);
-            pszRequestedDir=oslGetDirName(szRequestedDir);
-            pDIR = opendir(pszRequestedDir);
-            if ( pDIR == 0 )
-            {
-                /* mfe: OK, one of the directories does not exist. Return Error */
-                nFD=errno;                
-#ifdef TRACE_OSL_FILE
-                fprintf(stderr,"Out osl_psz_getCanonicalName [no dir]\n");
-#endif
-                return oslTranslateFileError(nFD);
-            }
-            /* mfe: file does not exists, everything is OK */
-            closedir(pDIR);
+ 	OSL_ENSURE(!(osl_File_Attribute_Hidden & uAttributes), "osl_File_Attribute_Hidden doesn't work under Unix");
 
-            strcpy(pszValid,pszRequested);
-            
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"Valid File Name '%s'\n",pszValid);
-#endif
-            
-            
-#ifdef TRACE_OSL_FILE
-            fprintf(stderr,"Out osl_psz_getCanonicalName [ok]\n");
-#endif
-            return osl_File_E_None;
-        }
+    if (uAttributes & osl_File_Attribute_OwnRead)
+        nNewMode |= S_IRUSR;
 
-        /* mfe: some other error occurred */
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_psz_getCanonicalName [other error]\n");
-#endif
-        return oslTranslateFileError(nFD);
-    }
-
-    close(nFD);
-    
-    /* mfe: file exists, make new unique file name */
-    while ( nDone == 0 && nIndex < 10000 )
-    {
-        oslMakeUniqueName(pszRequested,szUnique,nIndex);
-        nFD = open(szUnique,O_RDONLY);
-        if ( nFD == -1 )
-        {
-            nFD = errno;
-            if ( nFD == ENOENT )
-            {
-                nDone=1;
-            }
-        }
-        else
-        {
-            close(nFD);
-        }
-        nIndex++;
-    }
-
-    if ( nIndex == 10000 )
-    {
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_psz_getCanonicalName [ok]\n");
-#endif
-        return osl_File_E_EXIST;
-    }
-
-    /* mfe: reuse */
-    strcat(szRequestedDir,szUnique);
-    strcpy(pszValid,szRequestedDir);
-   
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"Out osl_psz_getCanonicalName [ok]\n");
-#endif
-    return osl_File_E_None;
-}
-
-
-oslFileError osl_psz_setFileAttributes( sal_Char* pszFilePath, sal_uInt64 uAttributes )
-{
-    int nRet=0;
-    mode_t nNewMode=0;
-    
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"In  osl_psz_setFileAttributes\n");
-#endif    
-    
-    if ( uAttributes & osl_File_Attribute_OwnRead )
-    {
-        nNewMode|=S_IRUSR;
-    }
-    if ( uAttributes & osl_File_Attribute_OwnWrite )
-    {
+    if (uAttributes & osl_File_Attribute_OwnWrite)
         nNewMode|=S_IWUSR;
-    }
-    if  ( uAttributes & osl_File_Attribute_OwnExe  )
-    {
+
+    if  (uAttributes & osl_File_Attribute_OwnExe)
         nNewMode|=S_IXUSR;
-    }
-    if ( uAttributes & osl_File_Attribute_GrpRead  )
-    {
+
+    if (uAttributes & osl_File_Attribute_GrpRead)
         nNewMode|=S_IRGRP;
-    }
-    if ( uAttributes & osl_File_Attribute_GrpWrite )
-    {
+
+    if (uAttributes & osl_File_Attribute_GrpWrite)
         nNewMode|=S_IWGRP;
-    }
-    if ( uAttributes & osl_File_Attribute_GrpExe   )
-    {
+
+    if (uAttributes & osl_File_Attribute_GrpExe)
         nNewMode|=S_IXGRP;
-    }
-    if ( uAttributes & osl_File_Attribute_OthRead  )
-    {
+
+    if (uAttributes & osl_File_Attribute_OthRead)
         nNewMode|=S_IROTH;
-    }
-    if ( uAttributes & osl_File_Attribute_OthWrite )
-    {
+
+    if (uAttributes & osl_File_Attribute_OthWrite)
         nNewMode|=S_IWOTH;
-    }
-    if ( uAttributes & osl_File_Attribute_OthExe   )
-    {
-        nNewMode|=S_IXOTH;        
-    }
 
-    nRet = chmod(pszFilePath,nNewMode);
-    if ( nRet < 0 )
-    {
-        nRet=errno;
-#ifdef DEBUG_OSL_FILE
-        perror("chmod");
-#endif
+    if (uAttributes & osl_File_Attribute_OthExe)
+        nNewMode|=S_IXOTH;
 
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_psz_setFileAttributes [chmod]\n");
-#endif
-        return oslTranslateFileError(nRet);
-    }    
+    if (chmod(pszFilePath, nNewMode) < 0)
+        osl_error = oslTranslateFileError(OSL_FET_ERROR, errno);
 
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"Out osl_psz_setFileAttributes [ok]\n");
-#endif    
-    return osl_File_E_None;
+    return osl_error;
 }
 
+/******************************************
+ * osl_psz_setFileTime
+ *****************************************/
 
-oslFileError osl_psz_setFileTime( sal_Char* pszFilePath,
-                                  TimeValue* pCreationTime,
-                                  TimeValue* pLastAccessTime,
-                                  TimeValue* pLastWriteTime )
+static oslFileError osl_psz_setFileTime( const sal_Char* pszFilePath,
+                                  const TimeValue* pCreationTime,
+                                  const TimeValue* pLastAccessTime,
+                                  const TimeValue* pLastWriteTime )
 {
     int nRet=0;
     struct utimbuf aTimeBuffer;
@@ -2627,27 +1420,13 @@ oslFileError osl_psz_setFileTime( sal_Char* pszFilePath,
 #ifdef DEBUG_OSL_FILE
     struct tm* pTM=0;
 #endif
-    
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"In  osl_psz_setFileTime\n");
-#endif
 
-#ifdef DEBUG_OSL_FILE
-    fprintf(stderr,"making lstat with '%s'\n",pszFilePath);
-#endif
-    
     nRet = lstat(pszFilePath,&aFileStat);
+
     if ( nRet < 0 )
     {
         nRet=errno;
-#ifdef DEBUG_OSL_FILE
-        perror("lstat");
-#endif
-
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_psz_setFileAttributes [lstat]\n");
-#endif
-        return oslTranslateFileError(nRet);
+        return oslTranslateFileError(OSL_FET_ERROR, nRet);
     }
 
 #ifdef DEBUG_OSL_FILE
@@ -2659,283 +1438,187 @@ oslFileError osl_psz_setFileTime( sal_Char* pszFilePath,
     pTM=localtime(&aFileStat.st_mtime);
     fprintf(stderr,"Modification is '%s'\n",asctime(pTM));
 
-    fprintf(stderr,"File Times are (in UTC):\n");    
+    fprintf(stderr,"File Times are (in UTC):\n");
     fprintf(stderr,"CreationTime is '%s'\n",ctime(&aFileStat.st_ctime));
     fprintf(stderr,"AccessTime   is '%s'\n",ctime(&aTimeBuffer.actime));
     fprintf(stderr,"Modification is '%s'\n",ctime(&aTimeBuffer.modtime));
 #endif
-    
+
     if ( pLastAccessTime != 0 )
     {
-#ifdef DEBUG_OSL_FILE
-        fprintf(stderr,"Changing Access Time!\n");
-#endif
         aTimeBuffer.actime=pLastAccessTime->Seconds;
     }
     else
     {
-#ifdef DEBUG_OSL_FILE
-        fprintf(stderr,"Access Time unchanged!\n");
-#endif
         aTimeBuffer.actime=aFileStat.st_atime;
     }
-    
+
     if ( pLastWriteTime != 0 )
     {
-#ifdef DEBUG_OSL_FILE
-        fprintf(stderr,"Changing Modification Time!\n");
-#endif
         aTimeBuffer.modtime=pLastWriteTime->Seconds;
     }
     else
     {
-#ifdef DEBUG_OSL_FILE
-        fprintf(stderr,"Modification Time unchanged!\n");
-#endif
         aTimeBuffer.modtime=aFileStat.st_mtime;
     }
-    
+
     /* mfe: Creation time not used here! */
-    
+
 #ifdef DEBUG_OSL_FILE
-    fprintf(stderr,"File Times are (in localtime):\n");    
+    fprintf(stderr,"File Times are (in localtime):\n");
     pTM=localtime(&aFileStat.st_ctime);
     fprintf(stderr,"CreationTime now '%s'\n",asctime(pTM));
     pTM=localtime(&aTimeBuffer.actime);
     fprintf(stderr,"AccessTime   now '%s'\n",asctime(pTM));
     pTM=localtime(&aTimeBuffer.modtime);
-    fprintf(stderr,"Modification now '%s'\n",asctime(pTM));    
+    fprintf(stderr,"Modification now '%s'\n",asctime(pTM));
 
-    fprintf(stderr,"File Times are (in UTC):\n");    
+    fprintf(stderr,"File Times are (in UTC):\n");
     fprintf(stderr,"CreationTime now '%s'\n",ctime(&aFileStat.st_ctime));
     fprintf(stderr,"AccessTime   now '%s'\n",ctime(&aTimeBuffer.actime));
     fprintf(stderr,"Modification now '%s'\n",ctime(&aTimeBuffer.modtime));
 #endif
-    
+
     nRet=utime(pszFilePath,&aTimeBuffer);
     if ( nRet < 0 )
     {
         nRet=errno;
-#ifdef DEBUG_OSL_FILE
-        perror("utime");
-#endif
-
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_psz_setFileTime [utime]\n");
-#endif
-        return oslTranslateFileError(nRet);
+        return oslTranslateFileError(OSL_FET_ERROR, nRet);
     }
 
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_psz_setFileTime [ok]\n");
-#endif
     return osl_File_E_None;
 }
 
 
+/*****************************************
+ * osl_psz_removeFile
+ ****************************************/
 
-oslFileError osl_psz_removeFile( sal_Char* pszPath )
+static oslFileError osl_psz_removeFile( const sal_Char* pszPath )
 {
     int nRet=0;
     struct stat aStat;
-    
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"In  osl_psz_removeFile\n");
-#endif
 
     nRet = stat(pszPath,&aStat);
     if ( nRet < 0 )
     {
         nRet=errno;
-#ifdef DEBUG_OSL_FILE
-        perror("stat");
-#endif
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_psz_removeFile [stat]\n");
-#endif
-        return oslTranslateFileError(nRet);        
+        return oslTranslateFileError(OSL_FET_ERROR, nRet);
     }
-    
+
     if ( S_ISDIR(aStat.st_mode) )
     {
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_psz_removeFile [is dir]\n");
-#endif
         return osl_File_E_ISDIR;
     }
-    
+
     nRet = unlink(pszPath);
     if ( nRet < 0 )
     {
         nRet=errno;
-#ifdef DEBUG_OSL_FILE
-        perror("unlink");
-#endif
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_psz_removeFile [unlink]\n");
-#endif
-        return oslTranslateFileError(nRet);
+        return oslTranslateFileError(OSL_FET_ERROR, nRet);
     }
 
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"Out osl_psz_removeFile [ok]\n");
-#endif
     return osl_File_E_None;
 }
 
+/*****************************************
+ * osl_psz_createDirectory
+ ****************************************/
 
-static oslFileError osl_psz_createDirectory( sal_Char* pszPath )
+static oslFileError osl_psz_createDirectory( const sal_Char* pszPath )
 {
     int nRet=0;
     int mode = S_IRWXU | S_IRWXG | S_IRWXO;
 
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"In  osl_psz_createDirectory\n");
-#endif
-
-
-#ifdef DEBUG_OSL_FILE
-    fprintf(stderr,"dir to create '%s'\n",pszPath);
-#endif
-    
     nRet = mkdir(pszPath,mode);
+
     if ( nRet < 0 )
     {
         nRet=errno;
-#ifdef DEBUG_OSL_FILE
-        perror("mkdir");
-#endif
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_psz_createDirectory [mkdir]\n");
-#endif
-        return oslTranslateFileError(nRet);
+        return oslTranslateFileError(OSL_FET_ERROR, nRet);
     }
 
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"Out osl_psz_createDirectory [ok]\n");
-#endif
     return osl_File_E_None;
 }
 
+/*****************************************
+ * osl_psz_removeDirectory
+ ****************************************/
 
-static oslFileError osl_psz_removeDirectory( sal_Char* pszPath )
+static oslFileError osl_psz_removeDirectory( const sal_Char* pszPath )
 {
     int nRet=0;
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"In  osl_psz_removeDirectory\n");
-#endif
-    
-#ifdef DEBUG_OSL_FILE
-    fprintf(stderr,"removing dir '%s'\n",pszPath);
-#endif
 
     nRet = rmdir(pszPath);
+
     if ( nRet < 0 )
     {
         nRet=errno;
-#ifdef DEBUG_OSL_FILE
-        perror("rmdir");
-#endif
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_psz_removeDirectory [rmdir]\n");
-#endif
-        return oslTranslateFileError(nRet);
+        return oslTranslateFileError(OSL_FET_ERROR, nRet);
     }
 
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"Out osl_psz_removeDirectory [ok]\n");
-#endif
     return osl_File_E_None;
 }
 
+/*****************************************
+ * oslDoMoveFile
+ ****************************************/
 
-static oslFileError oslDoMoveFile(sal_Char* pszPath, sal_Char* pszDestPath)
+static oslFileError oslDoMoveFile( const sal_Char* pszPath, const sal_Char* pszDestPath)
 {
     oslFileError tErr=osl_File_E_invalidError;
 
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"In  oslDoMoveFile\n");
-#endif
-    
     tErr = osl_psz_moveFile(pszPath,pszDestPath);
     if ( tErr == osl_File_E_None )
     {
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out oslDoMoveFile [rename succeeded]\n");
-#endif
-        return tErr;
-    }    
-        
-    if ( tErr != osl_File_E_XDEV )
-    {
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out oslDoMoveFile [something went wrong]\n");
-#endif
         return tErr;
     }
-    
+
+    if ( tErr != osl_File_E_XDEV )
+    {
+        return tErr;
+    }
+
     tErr=osl_psz_copyFile(pszPath,pszDestPath);
+
     if ( tErr != osl_File_E_None )
     {
         oslFileError tErrRemove;
         tErrRemove=osl_psz_removeFile(pszDestPath);
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out oslDoMoveFile [copy failed]\n");
-#endif
         return tErr;
     }
 
     tErr=osl_psz_removeFile(pszPath);
 
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"Out oslDoMoveFile [ok]\n");
-#endif
     return tErr;
 }
 
+/*****************************************
+ * osl_psz_moveFile
+ ****************************************/
 
-oslFileError osl_psz_moveFile(sal_Char* pszPath, sal_Char* pszDestPath)
+static oslFileError osl_psz_moveFile(const sal_Char* pszPath, const sal_Char* pszDestPath)
 {
 
     int nRet = 0;
 
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"In  osl_moveFile\n");
-#endif
-    
-#ifdef DEBUG_OSL_FILE
-    fprintf(stderr,"moving '%s' to '%s'\n",pszPath,pszDestPath);
-#endif
-    
     nRet = rename(pszPath,pszDestPath);
+
     if ( nRet < 0 )
     {
         nRet=errno;
-#ifdef DEBUG_OSL_FILE
-        fprintf(stderr,"rename failed : '%s'\n",strerror(nRet));
-#endif
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_moveFile [rename]\n");
-#endif
-        return oslTranslateFileError(nRet);
+        return oslTranslateFileError(OSL_FET_ERROR, nRet);
     }
-    
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"Out osl_moveFile [ok]\n");
-#endif
-    
+
     return osl_File_E_None;
 }
 
-/*******************************************
- osl_psz_copyFile
- ******************************************/
- 
-oslFileError osl_psz_copyFile( sal_Char* pszPath, sal_Char* pszDestPath )
+/*****************************************
+ * osl_psz_copyFile
+ ****************************************/
+
+static oslFileError osl_psz_copyFile( const sal_Char* pszPath, const sal_Char* pszDestPath )
 {
-/*      sal_Char* pszSourceFileName=0; */
-/*      sal_Char* pszDestFileName=0; */
-/*      sal_Char* pszUNCPath=0; */
     time_t nAcTime=0;
     time_t nModTime=0;
     uid_t nUID=0;
@@ -2949,10 +1632,11 @@ oslFileError osl_psz_copyFile( sal_Char* pszPath, sal_Char* pszDestPath )
 
     /* mfe: does the source file really exists? */
     nRet = lstat(pszPath,&aFileStat);
+
     if ( nRet < 0 )
     {
         nRet=errno;
-        return oslTranslateFileError(nRet);
+        return oslTranslateFileError(OSL_FET_ERROR, nRet);
     }
 
     /* mfe: we do only copy files here! */
@@ -2969,33 +1653,29 @@ oslFileError osl_psz_copyFile( sal_Char* pszPath, sal_Char* pszDestPath )
     nGID=aFileStat.st_gid;
 
     nRet = stat(pszDestPath,&aFileStat);
-    if ( nRet < 0 ) 
-    { 
+    if ( nRet < 0 )
+    {
         nRet=errno;
+
         if ( nRet == ENOENT )
         {
             DestFileExists=0;
         }
 /*        return oslTranslateFileError(nRet);*/
-    } 
+    }
 
     /* mfe: the destination file must not be a directory! */
     if ( nRet == 0 && S_ISDIR(aFileStat.st_mode) )
     {
-#if 0
         return osl_File_E_ISDIR;
-#else
-		/* #98083# Targets must be files but we do not change previous behavior */
-		return osl_File_E_None;
-#endif
     }
     else
     {
         /* mfe: file does not exists or is no dir */
     }
-    
+
     tErr = oslDoCopy(pszPath,pszDestPath,nMode,nSourceSize,DestFileExists);
-    
+
     if ( tErr != osl_File_E_None )
     {
         return tErr;
@@ -3007,7 +1687,7 @@ oslFileError osl_psz_copyFile( sal_Char* pszPath, sal_Char* pszDestPath )
      *        important
      */
     oslChangeFileModes(pszDestPath,nMode,nAcTime,nModTime,nUID,nGID);
-    
+
     return tErr;
 }
 
@@ -3018,277 +1698,33 @@ oslFileError osl_psz_copyFile( sal_Char* pszPath, sal_Char* pszDestPath )
  *
  *****************************************************************************/
 
-static char * ImplSearchPath( char * buffer, size_t buflen, const char * filePath, const char * searchPath, char separator )
+/*****************************************
+ * oslDoCopy
+ ****************************************/
+
+#define TMP_DEST_FILE_EXTENSION ".osl-tmp"
+
+static oslFileError oslDoCopy(const sal_Char* pszSourceFileName, const sal_Char* pszDestFileName, mode_t nMode, size_t nSourceSize, int DestFileExists)
 {
-    char *pPathItem;
-    char *pc;
-    size_t nFilePathLen;
-    
-    pPathItem = searchPath;
-    nFilePathLen = strlen( filePath );
-    
-    do
-    {
-        char path[PATH_MAX];
-        size_t len;
-        
-        /* extract path item */
-        pc = strchr( pPathItem, separator );
-        len = pc ? pc - pPathItem : strlen( pPathItem );
-        
-        /* copy path entry to buffer and append file Path */
-        if( PATH_MAX > len + nFilePathLen + 1 )
-        {
-            strncpy( path, pPathItem, len );
-            path[len++] = '/';
-            strcpy( path + len, filePath );
-            
-            if( 0 <= access( path, F_OK ) )
-                return realpath( path, buffer );
-        }
-        
-        pPathItem = pc + 1;
-    }        
-    while( NULL != pc ); 
-    
-    return NULL;
-} 
-
-
-sal_Char* oslDoGetAbsolutePath( sal_Char* pszBaseDir, sal_Char* pszRelDir )
-{
-    sal_Char* pszAbsDir=0;
-    sal_Char* pszEntry=0;
-    sal_Char* pszEntryNext=0;
-    sal_Char* pszDirBase=0;
-    int nRet=0;
-    struct stat aFileStat;
-    
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"In  oslDoGetAbsolutePath\n");
-#endif
-
-    if ( pszBaseDir[0] == '.' && pszBaseDir[1] == '\0' )
-    {
-        sal_Char pszCWD[PATH_MAX + 1];
-        pszDirBase=getcwd(pszCWD,PATH_MAX+1);
-        pszDirBase = (sal_Char*) rtl_allocateMemory(strlen(pszCWD)+8);
-        if ( pszDirBase == 0 )
-        {
-#ifdef TRACE_OSL_FILE
-            fprintf(stderr,"Out oslDoGetAbsolutePath [nomem]\n");
-#endif
-            return 0;            
-        }
-        strcpy(pszDirBase,pszCWD);
-    }
-    else
-    {
-        pszDirBase = (sal_Char*) rtl_allocateMemory(strlen(pszBaseDir)+8);
-        if ( pszDirBase == 0 )
-        {
-#ifdef TRACE_OSL_FILE
-            fprintf(stderr,"Out oslDoGetAbsolutePath [nomem]\n");
-#endif
-            return 0;            
-        }
-        strcpy(pszDirBase,pszBaseDir);        
-    }
-    
-    
-    pszAbsDir= (sal_Char*) rtl_allocateMemory(strlen(pszDirBase) + strlen(pszRelDir) + 4 );
-
-    if ( pszAbsDir == 0 )
-    {
-        rtl_freeMemory(pszDirBase);
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out oslDoGetAbsolutePath [nomem]\n");
-#endif
-        return 0;
-    }
-    
-
-    pszAbsDir[0]=0;
-    pszEntry=pszDirBase+1;
-    pszEntryNext=strchr(pszDirBase+1,'/');
-    while ( pszEntry != 0 )
-    {
-        if ( pszEntryNext != 0 )
-        {
-            *pszEntryNext=0;
-            ++pszEntryNext;
-        }
-        strcat(pszAbsDir,"/");
-        strcat(pszAbsDir,pszEntry);
-#ifdef DEBUG_OSL_FILE
-        fprintf(stderr,"pszEntry == '%s'\n",pszEntry);
-#endif
-        if ( pszEntryNext != 0 )
-        {
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"pszEntryNext == '%s'\n",pszEntryNext);
-#endif
-        }
-#ifdef DEBUG_OSL_FILE
-        fprintf(stderr,"pszAbsDir == '%s'\n",pszAbsDir);
-#endif
-
-        nRet = stat(pszAbsDir,&aFileStat);
-        if (nRet < 0 )
-        {
-            nRet=errno;
-#ifdef DEBUG_OSL_FILE
-            perror("stat");
-#endif
-            rtl_freeMemory(pszAbsDir);
-            rtl_freeMemory(pszDirBase);
-            
-#ifdef TRACE_OSL_FILE
-            fprintf(stderr,"Out oslDoGetAbsolutePath [stat]\n");
-#endif
-            return 0;
-            
-/*            return oslTranslateFileError(nRet);*/
-        }
-
-        if ( ! S_ISDIR(aFileStat.st_mode) )
-        {
-            rtl_freeMemory(pszAbsDir);
-            rtl_freeMemory(pszDirBase);
-#ifdef TRACE_OSL_FILE
-            fprintf(stderr,"Out oslDoGetAbsolutePath [not dir]\n");
-#endif
-            return 0;
-            
-/*            return osl_File_E_NOTDIR;*/
-        }
-        pszEntry=pszEntryNext;
-        if ( pszEntry != 0 )
-        {
-            pszEntryNext=strchr(pszEntry,'/');
-        }
-    }
-
-
-    pszEntry=pszRelDir;
-    pszEntryNext=strchr(pszRelDir+1,'/');
-    while ( pszEntry != 0 )
-    {
-        if ( pszEntryNext != 0 )
-        {
-            *pszEntryNext=0;
-            ++pszEntryNext;
-        }
-#ifdef DEBUG_OSL_FILE
-        fprintf(stderr,"pszEntry == '%s'\n",pszEntry);
-#endif
-        if ( pszEntryNext != 0 )
-        {
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"pszEntryNext == '%s'\n",pszEntryNext);
-#endif
-        }
-
-        if ( strcmp(pszEntry,"..") == 0 || strcmp(pszEntry,".") == 0 || pszEntry[0] == '/' )
-        {
-            if ( strcmp(pszEntry,"..") == 0 )
-            {
-				sal_Char* pChar = strrchr(pszAbsDir,'/');
-				*pChar = 0;
-            }
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"pszAbsDir == '%s'\n",pszAbsDir);
-#endif
-            
-            pszEntry=pszEntryNext;
-            if ( pszEntry != 0 )
-            {
-                pszEntryNext=strchr(pszEntry,'/');
-            }
-            continue;
-        }
-        strcat(pszAbsDir,"/");
-        strcat(pszAbsDir,pszEntry);
-#ifdef DEBUG_OSL_FILE
-        fprintf(stderr,"pszAbsDir == '%s'\n",pszAbsDir);
-#endif
-
-        nRet = stat(pszAbsDir,&aFileStat);
-        if ( nRet < 0 )
-        {
-            nRet=errno;
-#ifdef DEBUG_OSL_FILE
-            perror("stat");
-#endif
-/*            rtl_freeMemory(pszBaseDir);*/
-            rtl_freeMemory(pszAbsDir);
-            rtl_freeMemory(pszDirBase);
-
-#ifdef TRACE_OSL_FILE
-            fprintf(stderr,"Out oslDoGetAbsolutePath [stat]\n");
-#endif
-            return 0;
-            
-/*            return oslTranslateFileError(nRet);*/
-        }
-
-        if ( ! S_ISDIR(aFileStat.st_mode) && pszEntryNext != 0 )
-        {
-/*            rtl_freeMemory(pszBaseDir);*/
-            rtl_freeMemory(pszAbsDir);
-            rtl_freeMemory(pszDirBase);
-
-#ifdef TRACE_OSL_FILE
-            fprintf(stderr,"Out oslDoGetAbsolutePath [not dir]\n");
-#endif
-            return 0;
-            
-/*            return osl_File_E_NOTDIR;*/
-        }
-
-        pszEntry=pszEntryNext;
-        if ( pszEntry != 0 )
-        {
-            pszEntryNext=strchr(pszEntry,'/');
-        }
-        
-    }
-
-#ifdef DEBUG_OSL_FILE
-    fprintf(stderr,"pszAbsDir == '%s'\n",pszAbsDir);
-#endif
-
-    rtl_freeMemory(pszDirBase);
-    
-    
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"Out oslDoGetAbsolutePath [ok]\n");
-#endif    
-    return pszAbsDir;
-
-}
-
-/****************************************
- oslDoCopy
- ***************************************/
- 
-static oslFileError oslDoCopy(
-    sal_Char* pszSourceFileName, 
-    sal_Char* pszDestFileName, 
-    mode_t nMode, 
-    size_t nSourceSize, 
-    int DestFileExists)
-{
-    int nRet=0;
+    int      nRet=0;
     sal_Char pszTmpDestFile[PATH_MAX];
-/*    sal_Char* pC;*/
+	size_t   size_tmp_dest_buff = sizeof(pszTmpDestFile);
 
-    pszTmpDestFile[0] = '\0';
-    
+	/* Quick fix for #106048, the whole copy file function seems
+	   to be erroneous anyway and needs to be rewritten.
+	   Besides osl_copyFile	is currently not used from OO/SO code.
+	*/
+	memset(pszTmpDestFile, 0, size_tmp_dest_buff);
+
     if ( DestFileExists )
     {
-        strcpy(pszTmpDestFile,pszDestFileName);
-        strcat(pszTmpDestFile,".osl-tmp");
+		strncpy(pszTmpDestFile, pszDestFileName, size_tmp_dest_buff - 1);
+
+		if ((strlen(pszTmpDestFile) + strlen(TMP_DEST_FILE_EXTENSION)) >= size_tmp_dest_buff)
+			return osl_File_E_NAMETOOLONG;
+
+		strncat(pszTmpDestFile, TMP_DEST_FILE_EXTENSION, strlen(TMP_DEST_FILE_EXTENSION));
+
         /* FIXME: what if pszTmpDestFile already exists? */
         /*        with getcanonical??? */
         nRet=rename(pszDestFileName,pszTmpDestFile);
@@ -3319,20 +1755,22 @@ static oslFileError oslDoCopy(
 
     if ( nRet > 0 )
     {
-        return oslTranslateFileError(nRet);
+        return oslTranslateFileError(OSL_FET_ERROR, nRet);
     }
-    
+
     if ( DestFileExists == 1 )
     {
         unlink(pszTmpDestFile);
     }
-    
-    return osl_File_E_None;
 
+    return osl_File_E_None;
 }
 
+/*****************************************
+ * oslChangeFileModes
+ ****************************************/
 
-static oslFileError oslChangeFileModes(sal_Char* pszFileName, mode_t nMode, time_t nAcTime, time_t nModTime, uid_t nUID, gid_t nGID)
+static oslFileError oslChangeFileModes( const sal_Char* pszFileName, mode_t nMode, time_t nAcTime, time_t nModTime, uid_t nUID, gid_t nGID)
 {
     int nRet=0;
     struct utimbuf aTimeBuffer;
@@ -3341,10 +1779,7 @@ static oslFileError oslChangeFileModes(sal_Char* pszFileName, mode_t nMode, time
     if ( nRet < 0 )
     {
         nRet=errno;
-#ifdef DEBUG_OSL_FILE
-        perror("chmod");
-#endif
-        return oslTranslateFileError(nRet);
+        return oslTranslateFileError(OSL_FET_ERROR, nRet);
     }
 
     aTimeBuffer.actime=nAcTime;
@@ -3353,10 +1788,7 @@ static oslFileError oslChangeFileModes(sal_Char* pszFileName, mode_t nMode, time
     if ( nRet < 0 )
     {
         nRet=errno;
-#ifdef DEBUG_OSL_FILE
-        perror("utime");
-#endif
-        return oslTranslateFileError(nRet);
+        return oslTranslateFileError(OSL_FET_ERROR, nRet);
     }
 
     if ( nUID != getuid() )
@@ -3368,9 +1800,7 @@ static oslFileError oslChangeFileModes(sal_Char* pszFileName, mode_t nMode, time
     if ( nRet < 0 )
     {
         nRet=errno;
-#ifdef DEBUG_OSL_FILE
-        perror("chown");
-#endif
+
         /* mfe: do not return an error here! */
         /* return oslTranslateFileError(nRet);*/
     }
@@ -3378,8 +1808,11 @@ static oslFileError oslChangeFileModes(sal_Char* pszFileName, mode_t nMode, time
     return osl_File_E_None;
 }
 
+/*****************************************
+ * oslDoCopyLink
+ ****************************************/
 
-static int oslDoCopyLink(sal_Char* pszSourceFileName, sal_Char* pszDestFileName)
+static int oslDoCopyLink(const sal_Char* pszSourceFileName, const sal_Char* pszDestFileName)
 {
     int nRet=0;
 
@@ -3390,103 +1823,46 @@ static int oslDoCopyLink(sal_Char* pszSourceFileName, sal_Char* pszDestFileName)
     pszLinkContent[0] = '\0';
 
     nRet = readlink(pszSourceFileName,pszLinkContent,PATH_MAX);
+
     if ( nRet < 0 )
     {
         nRet=errno;
-#ifdef DEBUG_OSL_FILE
-        perror("readlink");
-#endif
         return nRet;
     }
-	else pszLinkContent[ nRet ] = 0;
-    
+	else
+		pszLinkContent[ nRet ] = 0;
+
     nRet = symlink(pszLinkContent,pszDestFileName);
+
     if ( nRet < 0 )
     {
         nRet=errno;
-#ifdef DEBUG_OSL_FILE
-        perror("symlink");
-#endif
         return nRet;
     }
+
     return 0;
 }
 
-/****************************************
- oslDoCopyFile
- ***************************************/
- 
-static int oslDoCopyFile(
-    sal_Char* pszSourceFileName, 
-    sal_Char* pszDestFileName, 
-    size_t nSourceSize,
-    mode_t mode)
-{
-    oslVolumeInfo aVInfo;
-    sal_Char* pC=0;
-    rtl_uString* strVolInfo=0;
-    oslFileError tErr=osl_File_E_invalidError;
+/*****************************************
+ * oslDoCopyFile
+ ****************************************/
+
+static int oslDoCopyFile(const sal_Char* pszSourceFileName, const sal_Char* pszDestFileName, size_t nSourceSize, mode_t mode)
+{    
     int SourceFileFD=0;
     int DestFileFD=0;
     int nRet=0;
     void* pSourceFile=0;
 
-    
-    /* mfe: simple check if we have enough space on the destination */
-    memset(&aVInfo,0,sizeof(oslVolumeInfo));
-    aVInfo.uStructSize=sizeof(oslVolumeInfo);
-
-    pC = strrchr( pszDestFileName, '/' );
-    if( 1 < pC )
-    {
-        char buffer[PATH_MAX];
-        size_t len = pC - pszDestFileName;
-        strncpy( buffer, pszDestFileName, len );
-        buffer[len] = '\0';
-		
-    	rtl_string2UString(
-        	&strVolInfo,
-        	buffer,
-        	len,
-        	osl_getThreadTextEncoding(),
-        	OUSTRING_TO_OSTRING_CVTFLAGS );
-    }
-    else
-    	rtl_string2UString(
-        	&strVolInfo,
-        	pszDestFileName,
-        	rtl_str_getLength( pszDestFileName ),
-        	osl_getThreadTextEncoding(),
-        	OUSTRING_TO_OSTRING_CVTFLAGS );
-        
-    osl_getFileURLFromSystemPath( strVolInfo, &strVolInfo );
-    tErr = osl_getVolumeInformation(strVolInfo,&aVInfo,osl_VolumeInfo_Mask_FreeSpace);
-
-/* 	#104294# On Suse Linux 7.3, 8.0 there's abug that mmap on NFS mounted volumes only works with a previous statfs.
-	So we roll back the code from previous revision but do not return in case of an error. Bug in Linux kernel is fixed in Suse 8.1
-	*/
-
-/*		
-    if ( tErr != osl_File_E_None )
-    {
-        return EIO;
-    }
-    
-    if ( nSourceSize > aVInfo.uFreeSpace )
-    {
-        return ENOSPC;
-    }
-
-*/
-
     SourceFileFD=open(pszSourceFileName,O_RDONLY);
     if ( SourceFileFD < 0 )
-    {
+    {		
         nRet=errno;
         return nRet;
     }
     
-    DestFileFD=open(pszDestFileName,O_WRONLY|O_CREAT, mode);
+    DestFileFD=open(pszDestFileName, O_WRONLY | O_CREAT, mode);
+		
     if ( DestFileFD < 0 )
     {
         nRet=errno;
@@ -3494,13 +1870,10 @@ static int oslDoCopyFile(
         return nRet;
     }
 
-    /* HACK: because memory mapping fails on various 
-	   platforms if the size of the source file is 
-	   0 byte 
-	*/
+	/* HACK: because memory mapping fails on various 
+	   platforms if the size of the source file is  0 byte */
 	if (0 == nSourceSize)
-	{				
-		fsync(DestFileFD);
+	{						
 		close(SourceFileFD);
 		close(DestFileFD);
 		return 0;
@@ -3509,56 +1882,70 @@ static int oslDoCopyFile(
     /* FIXME doCopy: fall back code for systems not having mmap */
     /* mmap file -- open dest file -- write once -- fsync it */
     pSourceFile=mmap(0,nSourceSize,PROT_READ,MAP_PRIVATE,SourceFileFD,0);
+	
     if ( pSourceFile == MAP_FAILED )
-    {
-        nRet=errno;
+    {	
+        /* it's important to set nRet before the hack
+           otherwise errno may be changed by lstat */
+        nRet = errno;
         close(SourceFileFD);
         close(DestFileFD);
+        
         return nRet;
     }
 
-    nRet=write(DestFileFD,pSourceFile,nSourceSize);
-    if ( nRet < 0 )
-    {
-        nRet=errno;
+    nRet = write(DestFileFD,pSourceFile,nSourceSize);
+        
+    /* #112584# if 'write' could not write the requested number of bytes
+             we have to fail of course; because it's not exactly specified if 'write'
+            sets errno if less than requested byte could be written we set nRet
+           explicitly to ENOSPC */
+    if ((nRet < 0) || (nRet != nSourceSize))
+    {				
+        if (nRet < 0)
+            nRet = errno;
+        else 
+            nRet = ENOSPC;
+        
         close(SourceFileFD);
         close(DestFileFD);
-        nRet = munmap((char*)pSourceFile,nSourceSize);
+        munmap((char*)pSourceFile,nSourceSize);
         return nRet;
     }
-
-    nRet = fsync(DestFileFD);
-    if ( nRet < 0 )
-    {
-        nRet=errno;
-        close(SourceFileFD);
-        close(DestFileFD);
-        nRet = munmap((char*)pSourceFile,nSourceSize);
-        return nRet;
-    }
-
+    
     nRet = munmap((char*)pSourceFile,nSourceSize);
     if ( nRet < 0 )
-    {
+    {				
         nRet=errno;
         close(SourceFileFD);
+        close(DestFileFD);
         return nRet;
     }
 
+    /* #112584# ensure the data have really been written to the destination
+             file. When working over NFS, write may return another number of
+             bytes written then really arrived at the physical target medium. The
+             alternative would be to open the destimation file with the flag O_SYNC
+             which slows down the overall write performance. */
+    if (fsync(DestFileFD) == -1)
+    {        
+        close(SourceFileFD);
+        close(DestFileFD);
+        return errno;
+    }
+    
     close(SourceFileFD);
     close(DestFileFD);
 
     return 0;
 }
 
+/*****************************************
+ * oslMakeUStrFromPsz
+ ****************************************/
 
-static rtl_uString* oslMakeUStrFromPsz(sal_Char* pszStr, rtl_uString** ustrValid)
+static rtl_uString* oslMakeUStrFromPsz(const sal_Char* pszStr, rtl_uString** ustrValid)
 {
-
-#ifdef DEBUG_OSL_FILE
-    fprintf(stderr,"Enter - oslMakeUStrFromPsz\n");
-#endif
-    
     rtl_string2UString(
         ustrValid,
         pszStr,
@@ -3566,878 +1953,94 @@ static rtl_uString* oslMakeUStrFromPsz(sal_Char* pszStr, rtl_uString** ustrValid
         osl_getThreadTextEncoding(),
         OUSTRING_TO_OSTRING_CVTFLAGS );
 
-#ifdef DEBUG_OSL_FILE
-    fprintf(stderr,"oslMakeUStrFromPsz : new UString is ");
-    debug_ustring(*ustrValid);
-#endif
-
-#ifdef DEBUG_OSL_FILE
-    fprintf(stderr,"Leave - oslMakeUStrFromPsz\n");
-#endif
-    
     return *ustrValid;
 }
 
-
-static sal_Char* oslMakePszFromUStr(rtl_uString* uStr, sal_Char* pszStr)
-{
-    rtl_String* aStr=0;
-    sal_Char* pszPath=0;
-    
-    rtl_uString2String( &aStr,
-                        rtl_uString_getStr(uStr),
-                        rtl_uString_getLength(uStr),
-                        osl_getThreadTextEncoding(),
-                        OUSTRING_TO_OSTRING_CVTFLAGS );
-    if ( aStr != 0 )
-    {    
-        pszPath = rtl_string_getStr(aStr);
-        OSL_ENSURE(pszPath,"oslMakePszFromUStr : Could not convert UString to char*!!!\n");
-        strcpy(pszStr,pszPath);
-        rtl_string_release(aStr);
-        return pszStr;
-    }
-    
-    return 0;
-}
-
-
-static oslFileError oslTranslateFileError(int nErr)
-{
-    oslFileError tErr = osl_File_E_invalidError;
-#ifdef TRACE_OSL_FILE
-/*    fprintf(stderr,"In  oslTranslateFileError (err == %i [%s])\n",nErr,sys_errlist[nErr]);*/
-#endif
-    
-    switch(nErr)
-    {
-        case 0:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_None");
-#endif
-            tErr=osl_File_E_None;
-            break;
-            
-        case EPERM:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_PERM");
-#endif
-            tErr = osl_File_E_PERM;
-            break;
-
-        case ENOENT:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_NOENT");
-#endif
-            tErr = osl_File_E_NOENT;
-            break;
-
-        case ESRCH:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_SRCH");
-#endif
-            tErr = osl_File_E_SRCH;
-            break;
-
-        case EINTR:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_INTR");
-#endif
-            tErr = osl_File_E_INTR;
-            break;
-
-        case EIO:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_IO");
-#endif
-            tErr = osl_File_E_IO;
-            break;
-
-        case ENXIO:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_NXIO");
-#endif
-            tErr = osl_File_E_NXIO;
-            break;
-            
-        case E2BIG:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_2BIG");
-#endif
-            tErr = osl_File_E_2BIG;
-            break;
-            
-        case ENOEXEC:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_NOEXEC");
-#endif
-            tErr = osl_File_E_NOEXEC;
-            break;
-
-        case EBADF:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_BADF");
-#endif
-            tErr = osl_File_E_BADF;
-            break;
-
-        case ECHILD:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_CHILD");
-#endif
-            tErr = osl_File_E_CHILD;
-            break;
-
-        case EAGAIN:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_AGAIN");
-#endif
-            tErr = osl_File_E_AGAIN;
-            break;
-
-        case ENOMEM:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_NOMEM");
-#endif
-            tErr = osl_File_E_NOMEM;
-            break;
-
-        case EACCES:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_ACCES");
-#endif
-            tErr = osl_File_E_ACCES;
-            break;
-
-        case EFAULT:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_FAULT");
-#endif
-            tErr = osl_File_E_FAULT;
-            break;
-
-        case EBUSY:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_BUSY");
-#endif
-            tErr = osl_File_E_BUSY;
-            break;
-
-        case EEXIST:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_EXIST");
-#endif
-            tErr = osl_File_E_EXIST;
-            break;
-            
-        case EXDEV:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_XDEV");
-#endif
-            tErr = osl_File_E_XDEV;
-            break;
-            
-        case ENODEV:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_NODEV");
-#endif
-            tErr = osl_File_E_NODEV;
-            break;
-            
-        case ENOTDIR:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_NOTDIR");
-#endif
-            tErr = osl_File_E_NOTDIR;
-            break;
-
-        case EISDIR:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_ISDIR");
-#endif
-            tErr = osl_File_E_ISDIR;
-            break;
-
-        case EINVAL:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_INVAL");
-#endif
-            tErr = osl_File_E_INVAL;
-            break;
-            
-        case ENFILE:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_NFILE");
-#endif
-            tErr = osl_File_E_NFILE;
-            break;
-
-        case EMFILE:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_MFILE");
-#endif
-            tErr = osl_File_E_MFILE;
-            break;
-
-        case ENOTTY:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_NOTTY");
-#endif
-            tErr = osl_File_E_NOTTY;
-            break;
-
-        case EFBIG:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_FBIG");
-#endif
-            tErr = osl_File_E_FBIG;
-            break;
-
-        case ENOSPC:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_NOSPC");
-#endif
-            tErr = osl_File_E_NOSPC;
-            break;
-
-        case ESPIPE:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_SPIPE");
-#endif
-            tErr = osl_File_E_SPIPE;
-            break;
-            
-        case EROFS:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_ROFS");
-#endif
-            tErr = osl_File_E_ROFS;
-            break;
-
-        case EMLINK:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_MLINK");
-#endif
-            tErr = osl_File_E_MLINK;
-            break;
-            
-        case EPIPE:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_PIPE");
-#endif
-            tErr = osl_File_E_PIPE;
-            break;
-
-        case EDOM:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_DOM");
-#endif
-            tErr = osl_File_E_DOM;
-            break;
-
-        case ERANGE:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_RANGE");
-#endif
-            tErr = osl_File_E_RANGE;
-            break;
-
-        case EDEADLK:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_DEADLK");
-#endif
-            tErr = osl_File_E_DEADLK;
-            break;
-            
-        case ENAMETOOLONG:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_NAMETOOLONG");
-#endif
-            tErr = osl_File_E_NAMETOOLONG;
-            break;
-            
-        case ENOLCK:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_NOLCK");
-#endif
-            tErr = osl_File_E_NOLCK;
-            break;
-
-        case ENOSYS: 
-#ifdef DEBUG_OSL_FILE
-           fprintf(stderr,"osl_File_E_NOSYS");
-#endif
-           tErr = osl_File_E_NOSYS;
-            break;
-
-        case ENOTEMPTY:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_NOTEMPTY");
-#endif
-            tErr = osl_File_E_NOTEMPTY;
-            break;
-
-        case ELOOP:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_LOOP");
-#endif
-            tErr = osl_File_E_LOOP;
-            break;
-
-#if !(defined(MACOSX) || defined(NETBSD) || defined(FREEBSD))
-        case EILSEQ:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_ILSEQ");
-#endif
-            tErr = osl_File_E_ILSEQ;
-            break;
-#endif /* MACOSX */
-            
-#if !(defined(MACOSX) || defined(NETBSD) || defined(FREEBSD))
-        case ENOLINK:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_NOLINK");
-#endif
-            tErr = osl_File_E_NOLINK;
-            break;
-#endif /* MACOSX */
-            
-#if !(defined(MACOSX) || defined(NETBSD) || defined(FREEBSD))
-        case EMULTIHOP:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_MULTIHOP");
-#endif
-            tErr = osl_File_E_MULTIHOP;
-            break;
-#endif /* MACOSX */
-
-        case EUSERS:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_USERS");
-#endif
-            tErr = osl_File_E_USERS;
-            break;
-
-        case EOVERFLOW:
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_OVERFLOW");
-#endif
-            tErr = osl_File_E_OVERFLOW;
-            break;
-            
-        default:
-            /* FIXME translateFileError: is this alright? Or add a new one: osl_File_E_Unknown? */
-#ifdef DEBUG_OSL_FILE
-            fprintf(stderr,"osl_File_E_Unknown");
-#endif
-            tErr = osl_File_E_invalidError;
-            break;
-    }
-
-#ifdef DEBUG_OSL_FILE
-    fprintf(stderr,"\n");
-#endif
-    
-#ifdef TRACE_OSL_FILE
-/*    fprintf(stderr,"Out oslTranslateFileError\n");*/
-#endif
-    return tErr;
-}
-
-
-/****************************************************************************/
-/* UnicodeToText */
-/****************************************************************************/
-
-/* 
- * converting unicode to text manually saves us the penalty of a temporary 
+/*****************************************************************************
+ * UnicodeToText
+ * converting unicode to text manually saves us the penalty of a temporary
  * rtl_String object.
- */
+ ****************************************************************************/
 
 int UnicodeToText( char * buffer, size_t bufLen, const sal_Unicode * uniText, sal_Int32 uniTextLen )
 {
     rtl_UnicodeToTextConverter hConverter;
     sal_Size   nInfo;
     sal_Size   nSrcChars, nDestBytes;
-    
+
     /* stolen from rtl/string.c */
     hConverter = rtl_createUnicodeToTextConverter( osl_getThreadTextEncoding() );
-    
+
 	nDestBytes = rtl_convertUnicodeToText( hConverter, 0, uniText, uniTextLen,
                                            buffer, bufLen,
                                            OUSTRING_TO_OSTRING_CVTFLAGS | RTL_UNICODETOTEXT_FLAGS_FLUSH,
                                            &nInfo, &nSrcChars );
-    
+
     rtl_destroyUnicodeToTextConverter( hConverter );
-   
+
     if( nInfo & RTL_UNICODETOTEXT_INFO_DESTBUFFERTOSMALL )
     {
         errno = EOVERFLOW;
         return 0;
     }
-        
+
     /* ensure trailing '\0' */
     buffer[nDestBytes] = '\0';
-    
+
     return nDestBytes;
 }
 
+/*****************************************************************************
+   TextToUnicode
 
-/****************************************************************************/
-/* FileURLToPath */
-/****************************************************************************/
+   @param text
+          The text to convert.
 
-oslFileError FileURLToPath( char * buffer, size_t bufLen, rtl_uString* ustrFileURL )
+   @param text_buffer_size
+          The number of characters.
+
+   @param unic_text
+          The unicode buffer.
+
+   @param unic_text_buffer_size
+   		  The size in characters of the unicode buffer.
+
+ ****************************************************************************/
+
+int TextToUnicode(
+	const char*  text,
+	size_t       text_buffer_size,
+	sal_Unicode* unic_text,
+	sal_Int32    unic_text_buffer_size)
 {
-    rtl_uString* ustrSystemPath = NULL;
-    oslFileError eRet = osl_File_E_None;
-    
-    /* convert file URL to system path */ 
-    eRet = osl_getSystemPathFromFileURL( ustrFileURL, &ustrSystemPath );
-    if( osl_File_E_None != eRet )
-        return eRet;
+    rtl_TextToUnicodeConverter hConverter;
+    sal_Size nInfo;
+    sal_Size nSrcChars;
+	sal_Size nDestBytes;
 
-    /* remove trailing '/' if any */
-    if( ( 1 < ustrSystemPath->length ) && ( (sal_Unicode) '/' == ustrSystemPath->buffer[ustrSystemPath->length - 1] ) )
+    /* stolen from rtl/string.c */
+    hConverter = rtl_createTextToUnicodeConverter(osl_getThreadTextEncoding());
+
+	nDestBytes = rtl_convertTextToUnicode(hConverter,
+										  0,
+										  text,  text_buffer_size,
+                                          unic_text, unic_text_buffer_size,
+                                          OSTRING_TO_OUSTRING_CVTFLAGS | RTL_TEXTTOUNICODE_FLAGS_FLUSH,
+                                          &nInfo, &nSrcChars);
+
+    rtl_destroyTextToUnicodeConverter(hConverter);
+
+    if (nInfo & RTL_TEXTTOUNICODE_INFO_DESTBUFFERTOSMALL)
     {
-        ustrSystemPath->length--;
-        ustrSystemPath->buffer[ustrSystemPath->length] = 0;
-    }
-
-    /* convert unicode path to text */
-    if( ! UnicodeToText( buffer, bufLen, ustrSystemPath->buffer, ustrSystemPath->length ) )
-        eRet = osl_File_E_OVERFLOW;
-        
-    rtl_uString_release( ustrSystemPath );
-    return eRet;
-}
-
-
-#if 0
-/* mfe: this one is not used at all */
-oslFileError osl_getQuota(oslDirectoryItem Item, sal_uInt32* SoftLimit, sal_uInt32* HardLimit, sal_uInt32* TimeLeft)
-{
-    int nRet=0;
-    sal_Char* pszFileName=0;
-
-#if (defined(LINUX) || defined(NETBSD) || defined(FREEBSD))
-    struct dqblk aQuota;
-    int QuotaCommand;
-#endif /* LINUX */
-
-#if defined(SOLARIS)
-    int fd;
-    struct quotctl aQuotaCtl;
-    struct dqblk aQuota;
-#endif /* SOLARIS */
-
-#if defined(MACOSX)
-    struct dqblk aQuota;
-    int QuotaCommand;
-#endif /* MACOSX */
-
-#if defined(IRIX)
-    struct dqblk aQuota;
-    int QuotaCommand;
-#endif /* IRIX */
-
-    oslDirectoryItemImpl* pDirItemImpl = (oslDirectoryItemImpl*) Item;
-
-    if ( pDirItemImpl == 0 )
-    {
-        *SoftLimit=0;
-        *HardLimit=0;
-        *TimeLeft=0;
-        return osl_File_E_INVAL;
-    }
-
-    if ( pDirItemImpl->pszFileName == 0 )
-    {
-        *SoftLimit=0;
-        *HardLimit=0;
-        *TimeLeft=0;
-        return osl_File_E_INVAL;
-    }
-
-/*      rtl_uString_acquire(pDirItemImpl->osl_FileName); */
-/*      pszFileName=oslGetNativeName(pDirItemImpl->osl_FileName); */
-/*      if ( pszFileName == 0 ) */
-/*      { */
-/*          rtl_uString_release(pDirItemImpl->osl_FileName); */
-/*          *SoftLimit=0; */
-/*          *HardLimit=0; */
-/*          *TimeLeft=0; */
-/*          return osl_File_E_INVAL; */
-/*      } */
-
-#if defined(LINUX)
-    QuotaCommand = QCMD(Q_GETQUOTA,USRQUOTA);
-    nRet = quotactl (QuotaCommand, pszFileName, getuid(), (caddr_t)&aQuota);
-#endif /* LINUX */
-
-#if defined(FREEBSD)
-    QuotaCommand = QCMD(Q_GETQUOTA,USRQUOTA);
-    nRet = quotactl (pszFileName, QuotaCommand, getuid(), (caddr_t)&aQuota);
-#endif /* FREEBSD */
-
-#if defined(SOLARIS)
-    fd = open(pszFileName,O_RDONLY);
-    if ( fd < 0 )
-    {
-        nRet=errno;        
-#ifdef DEBUG_OSL_FILE
-        perror("open");
-#endif
-/*          rtl_uString_release(pDirItemImpl->osl_FileName); */
-        rtl_freeMemory(pszFileName);
-        
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_getQuota [open]\n");
-#endif        
-        return oslTranslateFileError(nRet);
-    }
-
-    aQuotaCtl.op=Q_GETQUOTA;
-    aQuotaCtl.uid=getuid();
-    aQuotaCtl.addr=(char*)&aQuota;
-    nRet = ioctl(fd, Q_QUOTACTL, &aQuota);
-    close(fd);
-#endif /* SOLARIS */
-
-#if defined(IRIX)
-    nRet = quotactl (Q_GETQUOTA, pszFileName, getuid(), (caddr_t)&aQuota);
-#endif /* IRIX */
-
-/*      rtl_uString_release(pDirItemImpl->osl_FileName); */
-
-    if ( nRet != 0 )
-    {
-        nRet=errno;
-#ifdef DEBUG_OSL_FILE
-        perror("quota");
-#endif
-        *SoftLimit=0;
-        *HardLimit=0;
-        *TimeLeft=0;
-        rtl_freeMemory(pszFileName);
-        
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_getQuota [quota]\n");
-#endif        
-        return oslTranslateFileError(nRet);
-    }
-
-    *SoftLimit=aQuota.dqb_bsoftlimit;
-    *HardLimit=aQuota.dqb_bhardlimit;
-#if defined(LINUX)
-    *TimeLeft=aQuota.dqb_btime;
-#endif /* LINUX */
-
-#if defined (SOLARIS)
-    *TimeLeft=aQuota.dqb_btimelimit;
-#endif /* SOLARIS */
-
-    return osl_File_E_None;
-}
-
-#endif
-
-#ifdef FREEBSD
-
-#include<fstab.h>
-
-static oslFileError oslIsMountPoint(sal_Char* pszFileName, sal_Bool* bMountPoint )
-{
- struct fstab *fs;
-		 
- setfsent();
- fs = getfsfile(pszFileName);
- endfsent();
-
- if (fs == NULL)
-     *bMountPoint=sal_False;
- else
-     *bMountPoint=sal_True;
-
- return osl_File_E_None;
-}
-
-#else
-
-#ifdef MACOSX
-#include <sys/param.h>
-#include <sys/ucred.h>
-#include <sys/mount.h>
-#endif
-
-static oslFileError oslIsMountPoint(sal_Char* pszFileName, sal_Bool* bMountPoint )
-{
-    int nRet=0;
-    FILE* mntfile=0;
-    sal_Char buffer[PATH_MAX];
-    
-#if defined(LINUX) || defined(IRIX)
-    struct mntent* pMountEnt=0;
-    mntfile = setmntent(MOUNTTAB,"r");
-#endif /* LINUX || IRIX */
-
-#if defined(SOLARIS)
-    struct mnttab MountEnt;
-    mntfile = fopen(MOUNTTAB,"r");
-#endif /* SOLARIS */
-
-#if defined(NETBSD) || defined(FREEBSD) || defined(MACOSX)
-    struct statfs *mntbufp;
-    int mntentries,i;
-    mntentries = getmntinfo(&mntbufp,MNT_WAIT);
-
-    buffer[0] = '\0';
-    
-    if(mntentries == 0)
-#else    
-
-    buffer[0] = '\0';
-
-    if ( mntfile == 0 )
-#endif
-    {
-        nRet=errno;
-#ifdef DEBUG_OSL_FILE
-        perror("mounttab");
-#endif
-        return oslTranslateFileError(nRet);
-    }
-
-    strcpy(buffer,pszFileName);
-#ifdef DEBUG_OSL_FILE
-/*    fprintf(stderr,"Checking mount of %s\n",buffer);*/
-#endif
-
-    /* FIXME isMountPoint: THIS IS NOT THREAD SAFE ! */
-#if defined(LINUX)
-    pMountEnt=getmntent(mntfile);
-    while ( pMountEnt != 0 )
-    {
-#ifdef DEBUG_OSL_FILE
-/*        fprintf(stderr,"mnt_fsname : %s\n",pMountEnt->mnt_fsname);*/
-/*        fprintf(stderr,"mnt_dir    : %s\n",pMountEnt->mnt_dir);*/
-/*        fprintf(stderr,"mnt_type   : %s\n",pMountEnt->mnt_type);*/
-#endif
-        if ( strcmp(pMountEnt->mnt_dir,buffer) == 0 )
-        {
-            fclose(mntfile);
-            *bMountPoint=sal_True;
-            return osl_File_E_None;
-        }
-#ifdef DEBUG_OSL_FILE
-/*        fprintf(stderr,"=================\n");*/
-#endif
-        pMountEnt=getmntent(mntfile);
-    }
-#endif /* LINUX */
-
-#if defined(SOLARIS)
-    nRet=getmntent(mntfile,&MountEnt);
-    while ( nRet == 0 )
-    {
-#ifdef DEBUG_OSL_FILE
-/*        fprintf(stderr,"mnt_special : %s\n",MountEnt.mnt_special);*/
-/*        fprintf(stderr,"mnt_mountp  : %s\n",MountEnt.mnt_mountp);*/
-/*        fprintf(stderr,"mnt_type    : %s\n",MountEnt.mnt_fstype);*/
-#endif
-        if ( strcmp(MountEnt.mnt_mountp,buffer) == 0 )
-        {
-            fclose(mntfile);
-            *bMountPoint=sal_True;
-            return osl_File_E_None;
-        }
-#ifdef DEBUG_OSL_FILE
-/*        fprintf(stderr,"=================\n");*/
-#endif
-        nRet=getmntent(mntfile,&MountEnt);
-    }
-#endif /* SOLARIS */
-
-#if defined(NETBSD) || defined(FREEBSD) || defined(MACOSX)
-    i=0;
-    while ( i < mntentries )
-    {
-       if ( strcmp(mntbufp[i].f_mntonname,buffer) == 0 )
-       {
-           *bMountPoint=sal_True;
-           return osl_File_E_None;
-       }
-       i++;
-    }
-#else
-    fclose(mntfile);
-#endif
-    *bMountPoint=sal_False;
-    return osl_File_E_None;
-}
-#endif
-
-static sal_Char* oslSeparatePathEntry(sal_Char* pszPath, sal_Char cSeparator)
-{
-    sal_Char* pC=0;
-    
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"In  oslSeparatePathEntry\n");
-#endif
-
-    pC=strchr(pszPath,cSeparator);
-    
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"Out oslSeparatePathEntry [ok]\n");
-#endif
-    return pC;
-}
-
-
-static oslFileError osl_psz_CheckForExistence(sal_Char* pszFilePath)
-{
-    int nRet=0;
-    
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"In  osl_psz_CheckForExistence\n");
-#endif
-
-#ifdef DEBUG_OSL_FILE
-    fprintf(stderr,"making access test with '%s'\n",pszFilePath);
-#endif
-    
-    nRet=access(pszFilePath,F_OK);
-    if ( nRet < 0 )
-    {
-        nRet=errno;
-#ifdef DEBUG_OSL_FILE
-        perror("access");
-#endif
-
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_psz_CheckForExistence [access]\n");
-#endif
-        return oslTranslateFileError(nRet);
-    }
-    
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"Out osl_psz_CheckForExistence [ok]\n");
-#endif
-    
-    return osl_File_E_None;
-}
-
-
-static void oslMakeUniqueName(sal_Char* pszRequested, sal_Char* pszUnique, sal_uInt32 nIndex)
-{
-    sal_Char pszTmpRequested[PATH_MAX];
-    sal_Char* pC=0;
-
-    pszTmpRequested[0] = '\0';
-    
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"In  oslMakeUniqueName\n");
-#endif
-    
-    if ( pszUnique == 0 )
-    {
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out oslMakeUniqueName [pszUnique==0]\n");
-#endif
-        return;
-    }
-
-    if ( pszRequested == 0 )
-    {
-        pszUnique[0]=0;
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out oslMakeUniqueName [pszRequested==0]\n");
-#endif
-        return;
-    }
-
-    strcpy(pszTmpRequested,pszRequested);
-    
-    if ( ( pC = strrchr(pszRequested,'.') ) != 0 )
-    {
-        *pC=0;
-        ++pC;
-        sprintf(pszUnique,"%s-%lu.%s",pszTmpRequested,nIndex,pC);
-    }
-    else
-    {
-        sprintf(pszUnique,"%s-%lu",pszRequested,nIndex);
-    }
-    
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"Out oslMakeUniqueName [%s]\n",pszUnique);
-#endif
-    return;
-}
-
-
-static sal_Char* oslGetDirName(sal_Char* pszPath)
-{
-    sal_Char* pC=0;
-
-    if ( (pC=strrchr(pszPath,'/')) == 0 )
-    {
+        errno = EOVERFLOW;
         return 0;
     }
-    else
-    {
-        *(pC+1)=0;
-    }
-    return pszPath;
+
+    /* ensure trailing '\0' */
+    unic_text[nDestBytes] = '\0';
+
+    return nDestBytes;
 }
-
-
-static sal_Char* oslGetBaseName(sal_Char* pszPath)
-{
-    sal_Char* pC=0;
-
-    if ( (pC=strrchr(pszPath,'/')) == 0 )
-    {
-        return 0;
-    }
-    return pC+1;
-}
-
-
-#if defined(SOLARIS)
-static sal_Char* osl_getDirName(sal_Char* pszPath)
-{
-    sal_Char* pC;
-
-    if ( (pC=strrchr(pszPath,'/')) == 0 )
-    {
-        if ( pszPath[1] == 0 )
-        {
-            *pC = 0;
-        }
-        
-        return 0;
-    }
-    else
-    {
-        *pC=0;
-    }
-    return pszPath;
-}
-
-
-static sal_Char* osl_getBaseName(sal_Char* pszPath)
-{
-    sal_Char* pC;
-
-    if ( (pC=strrchr(pszPath,'/')) == 0 )
-    {
-        return 0;
-    }
-    return (pC+1);
-}
-#endif
-
 
 /******************************************************************************
  *
@@ -4445,24 +2048,29 @@ static sal_Char* osl_getBaseName(sal_Char* pszPath)
  *
  *****************************************************************************/
 
+
+/*****************************************
+ * osl_unmountVolumeDevice
+ ****************************************/
+
 oslFileError osl_unmountVolumeDevice( oslVolumeDeviceHandle Handle )
 {
     oslFileError tErr = osl_File_E_NOSYS;
 
     tErr = osl_unmountFloppy(Handle);
-	
+
  	/* Perhaps current working directory is set to mount point */
-	
+
  	if ( tErr )
 	{
 		sal_Char *pszHomeDir = getenv("HOME");
 
 		if ( pszHomeDir && strlen( pszHomeDir ) && 0 == chdir( pszHomeDir ) )
 		{
-			/* try again */	
-			
+			/* try again */
+
     		tErr = osl_unmountFloppy(Handle);
-			
+
 			OSL_ENSURE( tErr, "osl_unmountvolumeDevice: CWD was set to volume mount point" );
 		}
 	}
@@ -4470,6 +2078,9 @@ oslFileError osl_unmountVolumeDevice( oslVolumeDeviceHandle Handle )
     return tErr;
 }
 
+/*****************************************
+ * osl_automountVolumeDevice
+ ****************************************/
 
 oslFileError osl_automountVolumeDevice( oslVolumeDeviceHandle Handle )
 {
@@ -4480,6 +2091,9 @@ oslFileError osl_automountVolumeDevice( oslVolumeDeviceHandle Handle )
     return tErr;
 }
 
+/*****************************************
+ * osl_getVolumeDeviceMountPath
+ ****************************************/
 
 oslFileError osl_getVolumeDeviceMountPath( oslVolumeDeviceHandle Handle, rtl_uString **pstrPath )
 {
@@ -4487,24 +2101,14 @@ oslFileError osl_getVolumeDeviceMountPath( oslVolumeDeviceHandle Handle, rtl_uSt
     sal_Char Buffer[PATH_MAX];
 
     Buffer[0] = '\0';
-    
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"returning mount path: %s\n", pItem->pszMountPoint);
-#endif    
-     
+
     if ( pItem == 0 || pstrPath == 0 )
     {
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_getVolumeDeviceMountPath [INVAL]\n");
-#endif     
         return osl_File_E_INVAL;
     }
 
     if ( pItem->ident[0] != 'O' || pItem->ident[1] != 'V' || pItem->ident[2] != 'D' || pItem->ident[3] != 'H' )
     {
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_getVolumeDeviceMountPath [INVAL]\n");
-#endif     
         return osl_File_E_INVAL;
     }
 
@@ -4513,110 +2117,73 @@ oslFileError osl_getVolumeDeviceMountPath( oslVolumeDeviceHandle Handle, rtl_uSt
     osl_printFloppyHandle(pItem);
 #endif
 
-    sprintf(Buffer,"file://%s",pItem->pszMountPoint);
+	snprintf(Buffer, sizeof(Buffer), "file://%s", pItem->pszMountPoint);
 
 #ifdef DEBUG_OSL_FILE
     fprintf(stderr,"Mount Point is: '%s'\n",Buffer);
 #endif
-    
+
     oslMakeUStrFromPsz(Buffer, pstrPath);
 
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"Out osl_getVolumeDeviceMountPath [ok]\n");
-#endif     
-    
     return osl_File_E_None;
 }
 
+/*****************************************
+ * osl_acquireVolumeDeviceHandle
+ ****************************************/
 
 oslFileError SAL_CALL osl_acquireVolumeDeviceHandle( oslVolumeDeviceHandle Handle )
 {
     oslVolumeDeviceHandleImpl* pItem =(oslVolumeDeviceHandleImpl*) Handle;
 
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"In  osl_acquireVolumeDeviceHandle\n");
-#endif     
-    
     if ( pItem == 0 )
     {
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_acquireVolumeDeviceHandle [INVAL]\n");
-#endif     
         return osl_File_E_INVAL;
     }
-    
+
     if ( pItem->ident[0] != 'O' || pItem->ident[1] != 'V' || pItem->ident[2] != 'D' || pItem->ident[3] != 'H' )
     {
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_acquireVolumeDeviceHandle [INVAL]\n");
-#endif        
         return osl_File_E_INVAL;
     }
 
     ++pItem->RefCount;
 
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"Out osl_acquireVolumeDeviceHandle [ok]\n");
-#endif     
-    
     return osl_File_E_None;
 }
 
+/*****************************************
+ * osl_releaseVolumeDeviceHandle
+ ****************************************/
 
 oslFileError osl_releaseVolumeDeviceHandle( oslVolumeDeviceHandle Handle )
 {
     oslVolumeDeviceHandleImpl* pItem =(oslVolumeDeviceHandleImpl*) Handle;
 
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"In  osl_releaseVolumeDeviceHandle\n");
-#endif
-    
     if ( pItem == 0 )
     {
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_releaseVolumeDeviceHandle [INVAL]\n");
-#endif
         return osl_File_E_INVAL;
     }
-    
+
     if ( pItem->ident[0] != 'O' || pItem->ident[1] != 'V' || pItem->ident[2] != 'D' || pItem->ident[3] != 'H' )
     {
-#ifdef TRACE_OSL_FILE
-        fprintf(stderr,"Out osl_releaseVolumeDeviceHandle [INVAL]\n");
-#endif
         return osl_File_E_INVAL;
     }
 
     --pItem->RefCount;
-
-    if ( pItem->RefCount < 0 )
-    {
-#ifdef DEBUG_OSL_FILE
-        fprintf(stderr,"negativ RefCount in Handle!!!\n");
-#endif
-    }
     
     if ( pItem->RefCount == 0 )
     {
-#ifdef DEBUG_OSL_FILE
-        fprintf(stderr,"freeing!!!\n");
-#endif
         rtl_freeMemory(pItem);
     }
-
-#ifdef TRACE_OSL_FILE
-    fprintf(stderr,"Out osl_releaseVolumeDeviceHandle [ok]\n");
-#endif
     
     return osl_File_E_None;
 }
 
-/*
- * ctor/dtor for oslVolumeDeviceHandleImpl
- */
-
-static oslVolumeDeviceHandleImpl*
-osl_newVolumeDeviceHandleImpl()
+/*****************************************
+ * osl_newVolumeDeviceHandleImpl
+ ****************************************/
+ 
+static oslVolumeDeviceHandleImpl* osl_newVolumeDeviceHandleImpl()
 {
     oslVolumeDeviceHandleImpl* pHandle;
     const size_t               nSizeOfHandle = sizeof(oslVolumeDeviceHandleImpl);
@@ -4636,8 +2203,11 @@ osl_newVolumeDeviceHandleImpl()
     return pHandle;   
 }
 
-static void
-osl_freeVolumeDeviceHandleImpl (oslVolumeDeviceHandleImpl* pHandle)
+/*****************************************
+ * osl_freeVolumeDeviceHandleImpl
+ ****************************************/
+ 
+static void osl_freeVolumeDeviceHandleImpl (oslVolumeDeviceHandleImpl* pHandle)
 {
     if (pHandle != NULL)
         rtl_freeMemory (pHandle);
@@ -4720,11 +2290,16 @@ osl_isFloppyDrive(const sal_Char* pszPath)
                 pHandle->pszDevice[len] = '\0';
             }
             else
-               strcpy( pHandle->pszDevice, aMountEnt.mnt_special );
-            
+			{
+				/* #106048 use save str functions to avoid buffer overflows */
+				memset(pHandle->pszDevice, 0, sizeof(pHandle->pszDevice));				
+				strncpy(pHandle->pszDevice, aMountEnt.mnt_special, sizeof(pHandle->pszDevice) - 1);				                
+            }
+			
             /* remember the mount point */
-            strcpy(pHandle->pszMountPoint, aMountEnt.mnt_mountp);
-            
+			memset(pHandle->pszMountPoint, 0, sizeof(pHandle->pszMountPoint));
+			strncpy(pHandle->pszMountPoint, aMountEnt.mnt_mountp, sizeof(pHandle->pszMountPoint) - 1);
+			            
             fclose (pMountTab);
             return pHandle;
         }
@@ -4751,7 +2326,8 @@ static oslFileError osl_mountFloppy(oslVolumeDeviceHandle hFloppy)
     if ( pHandle->ident[0] != 'O' || pHandle->ident[1] != 'V' || pHandle->ident[2] != 'D' || pHandle->ident[3] != 'H' )
         return osl_File_E_INVAL;
 
-    sprintf( pszCmd,"eject -q %s > /dev/null 2>&1", pHandle->pszDevice );
+    snprintf(pszCmd, sizeof(pszCmd), "eject -q %s > /dev/null 2>&1", pHandle->pszDevice);
+	
     nRet = system( pszCmd );
 
     switch ( WEXITSTATUS(nRet) )
@@ -4768,8 +2344,9 @@ static oslFileError osl_mountFloppy(oslVolumeDeviceHandle hFloppy)
                 const char *pDevice     = aMountEnt.mnt_special; 
                 if ( 0 == strncmp( pHandle->pszDevice, aMountEnt.mnt_special, strlen(pHandle->pszDevice) ) )
                 {
-                    strcpy (pHandle->pszMountPoint, aMountEnt.mnt_mountp);
-
+					memset(pHandle->pszMountPoint, 0, sizeof(pHandle->pszMountPoint));
+                    strncpy (pHandle->pszMountPoint, aMountEnt.mnt_mountp, sizeof(pHandle->pszMountPoint) - 1);
+										
                     fclose (pMountTab);
                     return osl_File_E_None;
                 }
@@ -4808,7 +2385,8 @@ static oslFileError osl_unmountFloppy(oslVolumeDeviceHandle hFloppy)
     if ( pHandle->ident[0] != 'O' || pHandle->ident[1] != 'V' || pHandle->ident[2] != 'D' || pHandle->ident[3] != 'H' )
         return osl_File_E_INVAL;
     
-    sprintf( pszCmd,"eject %s > /dev/null 2>&1", pHandle->pszDevice );
+    snprintf(pszCmd, sizeof(pszCmd), "eject %s > /dev/null 2>&1", pHandle->pszDevice);
+	
     nRet = system( pszCmd );
 
     switch ( WEXITSTATUS(nRet) )
@@ -4952,11 +2530,11 @@ static oslFileError osl_mountFloppy(oslVolumeDeviceHandle hFloppy)
     
     if ( pszSuDo != 0 )
     {
-        sprintf(pszCmd,"%s %s %s %s",pszSuDo,pszMountProg,pItem->pszDevice,pItem->pszMountPoint);
+        snprintf(pszCmd, sizeof(pszCmd), "%s %s %s %s",pszSuDo,pszMountProg,pItem->pszDevice,pItem->pszMountPoint);
     }
     else
     {
-        sprintf(pszCmd,"%s %s",pszMountProg,pItem->pszMountPoint);        
+        snprintf(pszCmd, sizeof(pszCmd), "%s %s",pszMountProg,pItem->pszMountPoint);        
     }
     
     
@@ -5007,7 +2585,7 @@ static oslFileError osl_mountFloppy(oslVolumeDeviceHandle hFloppy)
         break;
     }
     
-    return oslTranslateFileError(nRet);
+    return ((0 == nRet) ? oslTranslateFileError(OSL_FET_SUCCESS, nRet) : oslTranslateFileError(OSL_FET_ERROR, nRet));
 }
 #endif /* LINUX */
 
@@ -5077,11 +2655,11 @@ static oslFileError osl_unmountFloppy(oslVolumeDeviceHandle hFloppy)
 
     if ( pszSuDo != 0 )
     {    
-        sprintf(pszCmd,"%s %s %s",pszSuDo,pszUmountProg,pItem->pszMountPoint);        
+        snprintf(pszCmd, sizeof(pszCmd), "%s %s %s",pszSuDo,pszUmountProg,pItem->pszMountPoint);        
     }
     else
     {
-        sprintf(pszCmd,"%s %s",pszUmountProg,pItem->pszMountPoint);
+        snprintf(pszCmd, sizeof(pszCmd), "%s %s",pszUmountProg,pItem->pszMountPoint);
     }
     
 
@@ -5111,7 +2689,7 @@ static oslFileError osl_unmountFloppy(oslVolumeDeviceHandle hFloppy)
     fprintf(stderr,"Out osl_unmountFloppy [ok]\n");
 #endif    
 
-    return oslTranslateFileError(nRet);
+    return ((0 == nRet) ? oslTranslateFileError(OSL_FET_SUCCESS, nRet) : oslTranslateFileError(OSL_FET_ERROR, nRet));
     
 /*    return osl_File_E_None;*/
 }
@@ -5134,10 +2712,15 @@ osl_getFloppyMountEntry(const sal_Char* pszPath, oslVolumeDeviceHandleImpl* pIte
         if (   strncmp(pMountEnt->mnt_dir,    pszPath,   strlen(pMountEnt->mnt_dir)) == 0 
             && strncmp(pMountEnt->mnt_fsname, "/dev/fd", strlen("/dev/fd")) == 0)
         {
-            strcpy (pItem->pszMountPoint, pMountEnt->mnt_dir);
-            strcpy (pItem->pszFilePath,   pMountEnt->mnt_dir);
-            strcpy (pItem->pszDevice,     pMountEnt->mnt_fsname);
-           
+			memset(pItem->pszMountPoint, 0, sizeof(pItem->pszMountPoint));			
+            strncpy(pItem->pszMountPoint, pMountEnt->mnt_dir, sizeof(pItem->pszMountPoint) - 1);
+			
+			memset(pItem->pszFilePath, 0, sizeof(pItem->pszFilePath));
+            strncpy(pItem->pszFilePath, pMountEnt->mnt_dir, sizeof(pItem->pszFilePath) - 1);
+			
+			memset(pItem->pszDevice, 0, sizeof(pItem->pszDevice));
+            strncpy(pItem->pszDevice, pMountEnt->mnt_fsname, sizeof(pItem->pszDevice) - 1);
+           			
             endmntent (pMountTab);
             return sal_True; 
         }
@@ -5202,10 +2785,6 @@ static oslVolumeDeviceHandle osl_isFloppyDrive(const sal_Char* pszPath)
     return (oslVolumeDeviceHandle) pItem;
 }
 
-#endif /* IRIX */
-
-
-#if defined(IRIX)
 
 static oslFileError osl_mountFloppy(oslVolumeDeviceHandle hFloppy)
 {       
@@ -5280,11 +2859,11 @@ static oslFileError osl_mountFloppy(oslVolumeDeviceHandle hFloppy)
     
     if ( pszSuDo != 0 )
     {
-        sprintf(pszCmd,"%s %s %s %s",pszSuDo,pszMountProg,pItem->pszDevice,pItem->pszMountPoint);
+        snprintf(pszCmd, sizeof(pszCmd), "%s %s %s %s",pszSuDo,pszMountProg,pItem->pszDevice,pItem->pszMountPoint);
     }
     else
     {
-        sprintf(pszCmd,"%s %s",pszMountProg,pItem->pszMountPoint);        
+        snprintf(pszCmd, sizeof(pszCmd), "%s %s",pszMountProg,pItem->pszMountPoint);        
     }
     
     
@@ -5335,12 +2914,9 @@ static oslFileError osl_mountFloppy(oslVolumeDeviceHandle hFloppy)
         break;
     }
     
-    return oslTranslateFileError(nRet);
+    return ((0 == nRet) ? oslTranslateFileError(OSL_FET_SUCCESS, nRet) : oslTranslateFileError(OSL_FET_ERROR, nRet));
 }
-#endif /* IRIX */
 
-
-#if defined(IRIX)
 static oslFileError osl_unmountFloppy(oslVolumeDeviceHandle hFloppy)
 {
     oslVolumeDeviceHandleImpl* pItem=0;
@@ -5405,11 +2981,11 @@ static oslFileError osl_unmountFloppy(oslVolumeDeviceHandle hFloppy)
 
     if ( pszSuDo != 0 )
     {    
-        sprintf(pszCmd,"%s %s %s",pszSuDo,pszUmountProg,pItem->pszMountPoint);        
+        snprintf(pszCmd, sizeof(pszCmd), "%s %s %s",pszSuDo,pszUmountProg,pItem->pszMountPoint);        
     }
     else
     {
-        sprintf(pszCmd,"%s %s",pszUmountProg,pItem->pszMountPoint);
+        snprintf(pszCmd, sizeof(pszCmd), "%s %s",pszUmountProg,pItem->pszMountPoint);
     }
     
 
@@ -5439,14 +3015,11 @@ static oslFileError osl_unmountFloppy(oslVolumeDeviceHandle hFloppy)
     fprintf(stderr,"Out osl_unmountFloppy [ok]\n");
 #endif    
 
-    return oslTranslateFileError(nRet);
+    return ((0 == nRet) ? oslTranslateFileError(OSL_FET_SUCCESS, nRet) : oslTranslateFileError(OSL_FET_ERROR, nRet));
     
 /*    return osl_File_E_None;*/
 }
 
-#endif /* IRIX */
-
-#if defined(IRIX)
 static sal_Bool osl_getFloppyMountEntry(const sal_Char* pszPath, oslVolumeDeviceHandleImpl* pItem)
 {
     struct mntent* pMountEnt=0;
@@ -5462,7 +3035,9 @@ static sal_Bool osl_getFloppyMountEntry(const sal_Char* pszPath, oslVolumeDevice
     fprintf(stderr,"In  osl_getFloppyMountEntry\n");
 #endif
 
-    strcpy(buffer,pszPath);
+	memset(buffer, 0, sizeof(buffer));
+	strncpy(buffer, pszPath, sizeof(buffer) - 1);
+	
 #ifdef DEBUG_OSL_FILE
     fprintf(stderr,"Checking mount of %s\n",buffer);
 #endif
@@ -5491,10 +3066,16 @@ static sal_Bool osl_getFloppyMountEntry(const sal_Char* pszPath, oslVolumeDevice
         if ( strcmp(pMountEnt->mnt_dir,buffer) == 0 &&
              strncmp(pMountEnt->mnt_fsname,"/dev/fd",strlen("/dev/fd")) == 0 )
         {
-            strcpy(pItem->pszMountPoint,pMountEnt->mnt_dir);
-            strcpy(pItem->pszFilePath,pMountEnt->mnt_dir);
-            strcpy(pItem->pszDevice,pMountEnt->mnt_fsname);
-            
+			
+			memset(pItem->pszMountPoint, 0, sizeof(pItem->pszMountPoint));			
+            strncpy(pItem->pszMountPoint, pMountEnt->mnt_dir, sizeof(pItem->pszMountPoint) - 1);
+			
+			memset(pItem->pszFilePath, 0, sizeof(pItem->pszFilePath));
+            strncpy(pItem->pszFilePath, pMountEnt->mnt_dir, sizeof(pItem->pszFilePath) - 1);
+			
+			memset(pItem->pszDevice, 0, sizeof(pItem->pszDevice));
+            strncpy(pItem->pszDevice, pMountEnt->mnt_fsname, sizeof(pItem->pszDevice) - 1);
+			                        
             fclose(mntfile);
 #ifdef DEBUG_OSL_FILE
             fprintf(stderr,"Mount Point found '%s'\n",pItem->pszMountPoint);
@@ -5518,9 +3099,6 @@ static sal_Bool osl_getFloppyMountEntry(const sal_Char* pszPath, oslVolumeDevice
     return sal_False;
 }
 
-#endif /* IRIX */
-
-#if defined(IRIX)
 static sal_Bool osl_isFloppyMounted(oslVolumeDeviceHandleImpl* pDevice)
 {
     sal_Char buffer[PATH_MAX];
@@ -5537,7 +3115,8 @@ static sal_Bool osl_isFloppyMounted(oslVolumeDeviceHandleImpl* pDevice)
     if ( pItem == 0 )
         return osl_File_E_NOMEM;
     
-    strcpy(buffer,pDevice->pszMountPoint);
+	memset(buffer, 0, sizeof(buffer));	
+    strncpy(buffer, pDevice->pszMountPoint, sizeof(buffer) - 1);
 
 #ifdef DEBUG_OSL_FILE
     fprintf(stderr,"Checking mount of %s\n",buffer);

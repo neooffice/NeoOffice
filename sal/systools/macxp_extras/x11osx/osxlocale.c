@@ -33,7 +33,7 @@
  *  MA  02111-1307  USA
  *  
  *  =================================================
- *  Modified June 2003 by Patrick Luby. SISSL Removed. NeoOffice is
+ *  Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
  *  distributed under GPL only under modification term 3 of the LGPL.
  *
  *  Contributor(s): _______________________________________
@@ -81,35 +81,63 @@ int macxp_getOSXLocale( char *locale, sal_uInt32 bufferLen )
 
 	if ( !strlen( locale ) )
 	{
-		LocaleRef lref;
-		CFArrayRef aref;
+		LocaleRef		lref;
+		CFArrayRef	aref;
 		CFStringRef	sref;
+		CFStringRef    locNameRef;
 
-		aref = (CFArrayRef)CFPreferencesCopyAppValue( CFSTR( "AppleLanguages" ), kCFPreferencesCurrentUser );
-		if ( aref )
+		aref = (CFArrayRef)CFPreferencesCopyAppValue( CFSTR( "AppleLanguages" ), kCFPreferencesCurrentApplication );
+		if ( aref != NULL )
 		{
-			sref = (CFStringRef)CFArrayGetValueAtIndex( aref, 0 );
-			if ( sref )
+			if ( (CFGetTypeID(aref) == CFArrayGetTypeID()) && (CFArrayGetCount(aref) > 0) )
 			{
-				size_t len = 0;
-	
-				CFStringGetCString( sref, locale, bufferLen, kCFStringEncodingUTF8 );
-				/* Sometimes CFPref AppleLanguages gets corrupted so check for it */
-				len = strlen( locale );
-				if ( len < 2 || ( len >= 5 && locale[2] != '_' ) )
-					locale[0] = '\0';
-			}
+				sref = (CFStringRef)CFArrayGetValueAtIndex( aref, 0 );
+				if ( (sref != NULL) && (CFGetTypeID(sref) == CFStringGetTypeID()) )
+				{
+#if (BUILD_OS_MAJOR==10) && (BUILD_OS_MINOR==3)
+// Panther code
+					// This function only exists in Panther and above
+					locNameRef = CFLocaleCreateCanonicalLocaleIdentifierFromString( kCFAllocatorDefault,  sref );
 
-			if ( !strlen( locale ) )
-				fprintf( stderr, "The value of CFPref AppleLanguages is corrupted! Please remove and readd your preferred language from the list of languages in the International control panel to fix this problem.\n" );
+					if ( locNameRef != NULL )
+					{
+						CFStringGetCString( locNameRef, locale, bufferLen, kCFStringEncodingASCII );
+						CFRelease( locNameRef );
+
+						// If its just en, we want en_US.  Since all the locales are also
+						// UTF-8, we'll append UTF-8 to the end of all returned locales
+						if ( strcmp(locale, "en") == 0 )
+							strlcpy( locale, "en_US", bufferLen );
+//						else if ( strchr(locale, '.') == NULL )
+//							strlcat( locale, ".UTF-8", bufferLen );
+					}
+					else
+						fprintf( stderr, "Could not get Canonical Locale Identifier from AppleLanguages value!\n" );
+#endif
+
+#if (BUILD_OS_MAJOR == 10) && (BUILD_OS_MINOR == 2)
+// Jaguar code
+					if ( CFStringGetCString( sref, locale, bufferLen, CFStringGetSystemEncoding() ) )
+					{
+						LocaleRefFromLocaleString( locale, &lref );
+						LocaleRefGetPartString( lref, kLocaleAllPartsMask, bufferLen, locale );
+
+						/* Hack for US english locales.  OS X returns only "en", but we want
+						* "en_US".  So add it.
+						*/
+						if ( (strlen(locale) == 2) && (strncmp(locale, "en", 2) == 0) )
+							strncat( locale, "_US", bufferLen - strlen(locale) - 1 );
+					}
+#endif
+				}
+				else
+					fprintf( stderr, "Could not get array index 0 value of CFPref AppleLanguages!\n" );
+			}
 
 			CFRelease( aref );
 		}
 		else
-		{
-			fprintf( stderr, "Could not get value of CFPref AppleLanguages! Please reset your locale in the International control panel.\n" );
-			locale[0] = '\0';
-		}
+			fprintf( stderr, "Could not get value of CFPref AppleLanguages!  Please reset your locale in the International control panel.\n" );
 	}
 
 	if ( !strlen( locale ) )
@@ -133,4 +161,3 @@ int macxp_OSXConvertCFEncodingToIANACharSetName( char *buffer, unsigned int buff
 
 	return( noErr );
 }
-
