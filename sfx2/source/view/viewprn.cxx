@@ -464,16 +464,13 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 		const SfxFilter* pFilter = pMedium ? pMedium->GetFilter() : NULL;
 		sal_Bool bPrintOnHelp = ( pFilter && pFilter->GetFilterName() == aHelpFilterName );
 
-#ifdef USE_JAVA
-		// We always need a dialog when using Java
-		if ( TRUE )
-		{
-			// Don't make a copy as we need to run StartJob() multiple times
-			SfxPrinter* pDlgPrinter = pPrinter;
-#else	// USE_JAVA
 		// need a dialog?
 		if ( ( !rReq.GetArgs() || !rReq.GetArgs()->Count() ) && !bSilent && !rReq.IsAPI() )
 		{
+#ifdef USE_JAVA
+			// Don't make a copy as we need to run StartJob() multiple times
+			SfxPrinter* pDlgPrinter = pPrinter;
+#else	// USE_JAVA
 			// Printer-Dialog braucht tempor"aren Printer
 			SfxPrinter* pDlgPrinter = pPrinter->Clone();
 #endif	// USE_JAVA
@@ -571,6 +568,15 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 			if ( bPrintOnHelp )
 				pPrintDlg->DisableHelp();
 			pPrintDlg->SetPrinter( pPrinter );
+#ifdef USE_JAVA
+			nDialogRet = pPrintDlg->Execute();
+			if ( nDialogRet == RET_CANCEL )
+			{
+				DELETEZ(pPrintDlg);
+				rReq.Ignore();
+				break;
+			}
+#else	// USE_JAVA 
 			::DisableRanges( *pPrintDlg, pPrinter );
 
 			// PrintFile
@@ -631,6 +637,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 				pPrintDlg->SetFirstPage( nFrom );
 				pPrintDlg->SetLastPage( nTo );
 			}
+#endif	// USE_JAVA
 		}
 	}
 
@@ -648,17 +655,20 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 		//! ??? if( nPaperBin != USE_DEFAULT_PAPERBIN )
 		//! ???     pPrn->SetPaperBin(nPaperBin);
 
-        if ( SID_PRINTDOCDIRECT == nId )
-        {
 #ifdef USE_JAVA
-			// Redirect slot to make sure that the print dialog is shown
+		// Redirect slot to make sure that the print dialog is shown
+		if ( !pPrintDlg )
+		{
 			BOOL bPrintOptions = pImp->bHasPrintOptions;
 			pImp->bHasPrintOptions = FALSE;
 			rReq.SetSlot(SID_PRINTDOC);
 			ExecPrint_Impl( rReq );
 			pImp->bHasPrintOptions = bPrintOptions;
 			return;
+		}
 #else	// USE_JAVA
+        if ( SID_PRINTDOCDIRECT == nId )
+        {
             //redirect slot to call the print dialog if the document's printer
             //is available but not system default
             if( pPrinter->IsOriginal() &&
@@ -668,8 +678,8 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 				ExecPrint_Impl( rReq );
 				return;
             }
-#endif	// USE_JAVA
         }
+#endif	// USE_JAVA
 
 		if( bCollate )
 			pPrinter->SetCopyCount(1);
