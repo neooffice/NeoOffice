@@ -35,7 +35,6 @@
 
 #define _SV_SALMAIN_CXX
 
-#include <stdio.h>
 #include <unistd.h>
 
 #ifndef _SV_SALINST_HXX
@@ -53,10 +52,22 @@
 #ifndef _SV_JAVA_LANG_CLASS_HXX 
 #include <java/lang/Class.hxx>
 #endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
+#include <com/sun/star/vcl/VCLFrame.hxx>
+#endif
 #ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
 #endif
 #include <crt_externs.h>
+#include <premac.h>
+#include <Carbon/Carbon.h>
+#include <postmac.h>
+
+typedef jint Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0_Type( JNIEnv *, jobject );
+typedef jobject Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type( JNIEnv *, jobject );
+typedef void Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type( JNIEnv *, jobject );
+typedef jint Java_com_apple_mrj_macos_carbon_CarbonLock_release0_Type( JNIEnv *, jobject );
+typedef OSStatus ReceiveNextEvent_Type( UInt32, const EventTypeSpec *, EventTimeout, MacOSBoolean, EventRef * );
 
 class SVMainThread : public ::vos::OThread
 {
@@ -69,8 +80,12 @@ using namespace rtl;
 using namespace vcl;
 using namespace vos;
 
-static Mutex aCarbonLock;
-static java_lang_Object *pCarbonLockObject = NULL;
+static OModule aJDirectModule;
+static OThread::TThreadIdentifier nCarbonLockThread = 0;
+static Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0_Type *pCarbonLockAcquire = NULL;
+static Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type *pCarbonLockGetInstance = NULL;
+static Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *pCarbonLockInit = NULL;
+static Java_com_apple_mrj_macos_carbon_CarbonLock_release0_Type *pCarbonLockRelease = NULL;
 
 #endif
 
@@ -79,7 +94,14 @@ static java_lang_Object *pCarbonLockObject = NULL;
 #ifdef MACOSX
 static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( JNIEnv *pEnv, jobject object )
 {
-	return ( aCarbonLock.tryToAcquire() ? 0 : 1 );
+	// Don't lock if this is the main thread
+	if ( OThread::getCurrentIdentifier() == nCarbonLockThread )
+		return 0;
+
+	if ( pCarbonLockAcquire )
+		return pCarbonLockAcquire( pEnv, object );
+
+	return 1;
 }
 #endif
 
@@ -88,7 +110,10 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( JNIEnv 
 #ifdef MACOSX
 static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( JNIEnv *pEnv, jobject object )
 {
-	return pCarbonLockObject->getJavaObject();
+	if ( pCarbonLockGetInstance )
+		return pCarbonLockGetInstance( pEnv, object );
+
+	return NULL;
 }
 #endif
 
@@ -97,6 +122,8 @@ static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( J
 #ifdef MACOSX
 static void JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_init( JNIEnv *pEnv, jobject object )
 {
+	if ( pCarbonLockInit )
+		return pCarbonLockInit( pEnv, object );
 }
 #endif
 
@@ -105,7 +132,14 @@ static void JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_init( JNIEnv *pEn
 #ifdef MACOSX
 static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv *pEnv, jobject object )
 {
-	return ( aCarbonLock.release() ? 0 : 1 );
+	// Don't unlock if this is the main thread
+	if ( OThread::getCurrentIdentifier() == nCarbonLockThread )
+		return 0;
+
+	if ( pCarbonLockRelease )
+		return pCarbonLockRelease( pEnv, object );
+
+	return 1;
 }
 #endif
 
@@ -211,6 +245,7 @@ int main( int argc, char *argv[] )
 		// Start the Cocoa event loop
 		RunCocoaEventLoop();
 		aThread.join();
+		exit( 0 );
 	}
 	else
 	{
@@ -221,13 +256,45 @@ int main( int argc, char *argv[] )
 		VCLThreadAttach t;
 		if ( t.pEnv )
 		{
-			jclass carbonLockClass = t.pEnv->FindClass( "com/apple/mrj/macos/carbon/CarbonLock" );
-			if ( carbonLockClass )
+			jclass systemClass = t.pEnv->FindClass( "java/lang/System" );
+			if ( systemClass )
 			{
-				// Create the lock object
-				pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/Object" ) );
-				pCarbonLockObject = new java_lang_Object( pClass->newInstanceObject() );
-				delete pClass;
+				// Find libJDirect.jnilib
+				jmethodID mID = NULL;
+				OUString aJDirectPath;
+				if ( !mID )
+				{
+					char *cSignature = "(Ljava/lang/String;)Ljava/lang/String;";
+					mID = t.pEnv->GetStaticMethodID( systemClass, "getProperty", cSignature );
+				}
+				OSL_ENSURE( mID, "Unknown method id!" );
+				if ( mID )
+				{
+					jvalue args[1];
+					args[0].l = StringToJavaString( t.pEnv, OUString::createFromAscii( "java.home" ) );
+					jstring out;
+					out = (jstring)t.pEnv->CallStaticObjectMethodA( systemClass, mID, args );
+					if ( out )
+						aJDirectPath = JavaString2String( t.pEnv, out );
+				}
+
+				// Load libJDirect.jnilib and cache symbols
+				if ( aJDirectPath.getLength() )
+				{
+					aJDirectPath += OUString::createFromAscii( "/../Libraries/libJDirect.jnilib" );
+					aJDirectModule.load( aJDirectPath );
+					pCarbonLockAcquire = (Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0_Type *)aJDirectModule.getSymbol( OUString::createFromAscii( "Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0" ) );
+					pCarbonLockGetInstance = (Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type *)aJDirectModule.getSymbol( OUString::createFromAscii( "Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance" ) );
+					pCarbonLockInit = (Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *)aJDirectModule.getSymbol( OUString::createFromAscii( "Java_com_apple_mrj_macos_carbon_CarbonLock_init" ) );
+					pCarbonLockRelease = (Java_com_apple_mrj_macos_carbon_CarbonLock_release0_Type *)aJDirectModule.getSymbol( OUString::createFromAscii( "Java_com_apple_mrj_macos_carbon_CarbonLock_release0" ) );
+				}
+
+			}
+
+			jclass carbonLockClass = t.pEnv->FindClass( "com/apple/mrj/macos/carbon/CarbonLock" );
+			if ( carbonLockClass && pCarbonLockAcquire && pCarbonLockGetInstance && pCarbonLockInit && pCarbonLockRelease )
+			{
+				nCarbonLockThread = OThread::getCurrentIdentifier();
 
 				// Reregister the native methods
 				JNINativeMethod pMethods[4];
@@ -244,14 +311,32 @@ int main( int argc, char *argv[] )
 				pMethods[3].signature = "()I";
 				pMethods[3].fnPtr = Java_com_apple_mrj_macos_carbon_CarbonLock_release0;
 				t.pEnv->RegisterNatives( carbonLockClass, pMethods, 4 );
+
+				// Create the SVMain() thread
+				SVMainThread aThread;
+				aThread.create();
+
+				// Load Carbon
+				OModule aModule;
+				aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) );
+
+				// Run a Carbon event loop but don't dispatch any events in
+				// this thread
+				ReceiveNextEvent_Type *pReceiveNextEvent = (ReceiveNextEvent_Type *)aModule.getSymbol( OUString::createFromAscii( "ReceiveNextEvent" ) );
+				if ( pReceiveNextEvent )
+				{
+					while ( pReceiveNextEvent( 0, NULL, kEventDurationForever, false, NULL ) != eventLoopQuitErr )
+						OThread::yield();
+				}
+
+				aModule.unload();
+				aThread.join();
+				exit( 0 );
 			}
 		}
-
-		SVMain();
 	}
-#else	// MACOSX
-	SVMain();
 #endif	// MACOSX
+	SVMain();
 
 	exit( 0 );
 }

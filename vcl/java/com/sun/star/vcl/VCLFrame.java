@@ -626,9 +626,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		// Create the native window
 		if ((styleFlags & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) != 0)
-			window = new Frame();
+			window = new VCLFrame.NoPaintFrame(this);
 		else
-			window = new Window(new Frame());
+			window = new VCLFrame.NoPaintWindow(this);
 		window.enableInputMethods(true);
 
 		// Process remaining style flags
@@ -716,9 +716,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void focusGained(FocusEvent e) {
 
-		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && graphics != null) {
-			synchronized (graphics) {
-				graphics.addToFlush(panel.getBounds());
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+			Frame[] frames = Frame.getFrames();
+			for (int i = 0; i < frames.length; i++) {
+				frames[i].repaint();
+				Window[] windows = frames[i].getOwnedWindows();
+				for (int j = 0; j < windows.length; j++)
+					windows[j].repaint();
 			}
 		}
 
@@ -1649,7 +1653,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		// Show or hide the window
-		window.setVisible(b);
+		if (b)
+			window.show();
+		else
+			window.hide();
 		graphics.resetGraphics();
 
 		if (!b) {
@@ -1669,7 +1676,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			// Mac OS X delays the initial background painting so force
 			// it to be painted before VCL does any painting
 			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
-				window.getPeer().repaint(0, 0, 0, window.getWidth(), window.getHeight());
+				window.repaint();
 			toFront();
 		}
 
@@ -1750,6 +1757,52 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	/**
 	 * A class that has painting methods that perform no painting.
 	 */
+	final class NoPaintFrame extends Frame {
+
+		/**
+		 * The <code>VCLFrame</code>.
+		 */
+		private VCLFrame frame = null;
+
+		/**
+		 * Constructs a new <code>VCLFrame.NoPaintFrame</code> instance.
+		 *
+		 * @param f the <code>VCLFrame</code>
+		 */
+		NoPaintFrame(VCLFrame f) {
+
+			frame = f;
+
+		}
+
+		/**
+		 * This method performs no painting of the frame. This method is used
+		 * to prevent Java from painting over what VCL has painted.
+		 *
+		 * @param g the <code>Graphics</code>
+		 */
+		public void paint(Graphics g) {
+
+			super.paint(g);
+
+			VCLGraphics graphics = frame.getGraphics();
+			if (graphics != null) {
+				Rectangle clip = g.getClipBounds();
+				synchronized (graphics) {
+					if (clip != null)
+						graphics.addToFlush(clip);
+					else
+						graphics.addToFlush(((Graphics2D)g).getDeviceConfiguration().getBounds());
+				}
+			}
+
+		}
+
+	}
+
+	/**
+	 * A class that has painting methods that perform no painting.
+	 */
 	final class NoPaintPanel extends Panel {
 
 		/**
@@ -1770,6 +1823,53 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		/**
 		 * This method performs no painting of the panel. This method is used
+		 * to prevent Java from painting over what VCL has painted.
+		 *
+		 * @param g the <code>Graphics</code>
+		 */
+		public void paint(Graphics g) {
+
+			super.paint(g);
+
+			VCLGraphics graphics = frame.getGraphics();
+			if (graphics != null) {
+				Rectangle clip = g.getClipBounds();
+				synchronized (graphics) {
+					if (clip != null)
+						graphics.addToFlush(clip);
+					else
+						graphics.addToFlush(((Graphics2D)g).getDeviceConfiguration().getBounds());
+				}
+			}
+
+		}
+
+	}
+
+	/**
+	 * A class that has painting methods that perform no painting.
+	 */
+	final class NoPaintWindow extends Window {
+
+		/**
+		 * The <code>VCLFrame</code>.
+		 */
+		private VCLFrame frame = null;
+
+		/**
+		 * Constructs a new <code>VCLFrame.NoPaintWindow</code> instance.
+		 *
+		 * @param f the <code>VCLFrame</code>
+		 */
+		NoPaintWindow(VCLFrame f) {
+
+			super(new VCLFrame.NoPaintFrame(f));
+			frame = f;
+
+		}
+
+		/**
+		 * This method performs no painting of the window. This method is used
 		 * to prevent Java from painting over what VCL has painted.
 		 *
 		 * @param g the <code>Graphics</code>
