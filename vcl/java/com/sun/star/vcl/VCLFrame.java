@@ -1619,7 +1619,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else if (e.isActionKey()) {
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0));
 		}
-		else if (VCLFrame.lastMenuShortcutPressed == null && (VCLFrame.lastKeyPressed == null || VCLFrame.lastKeyPressed.getID() != KeyEvent.KEY_PRESSED)) {
+		else if (VCLFrame.lastMenuShortcutPressed == null && VCLFrame.lastKeyPressed == null) {
 			// Trap the key combinations that can be used for menu shortcuts.
 			// This is necessary because the VCL menu handlers expect to get
 			// keyboard shortcuts for all menu items and Java will intercept
