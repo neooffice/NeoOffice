@@ -75,6 +75,7 @@ public:
 	void				dispatch();
 	const Rectangle		getBounds();
 	ULONG				getCommittedCharacterCount();
+	ULONG				getCursorPosition();
 	void*				getData();
 	SalFrame*			getFrame();
 	USHORT				getKeyChar();
@@ -91,7 +92,7 @@ public:
 	short				getMenuID();
 	int					getMenuCookie();
 	long				getScrollAmount();
-	long				getVisiblePosition();
+	ULONG				getVisiblePosition();
 	long				getWheelRotation();
 };
 

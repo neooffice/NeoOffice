@@ -304,14 +304,16 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_EXTTEXTINPUT:
 		{
+			ULONG nCommitted = getCommittedCharacterCount();
 			SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)pData;
 			if ( !pInputEvent )
 			{
+				ULONG nCursorPos = getCursorPosition();
 				pInputEvent = new SalExtTextInputEvent();
 				pInputEvent->mnTime = getWhen();
 				pInputEvent->maText = XubString( getText() );
 				pInputEvent->mpTextAttr = getTextAttributes();
-				pInputEvent->mnCursorPos = pInputEvent->maText.Len();
+				pInputEvent->mnCursorPos = nCursorPos > nCommitted ? nCursorPos : nCommitted;
 				pInputEvent->mnDeltaStart = 0;
 				pInputEvent->mbOnlyCursor = FALSE;
 				pInputEvent->mnCursorFlags = 0;
@@ -320,8 +322,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			// or any of the characters (except for appending new characters)
 			// have changed
 			ULONG nLastTextLen = pSalData->maLastExtTextInputText.Len();
-			ULONG nVisiblePos = getVisiblePosition();
-			if ( nLastTextLen && pInputEvent->maText.Len() && pInputEvent->mpTextAttr && ( pInputEvent->maText.CompareTo( pSalData->maLastExtTextInputText, nLastTextLen ) != COMPARE_EQUAL || pInputEvent->maText.Len() != nVisiblePos ) )
+			if ( nLastTextLen && pInputEvent->maText.Len() && pInputEvent->mpTextAttr && ( pInputEvent->maText.CompareTo( pSalData->maLastExtTextInputText, nLastTextLen ) != COMPARE_EQUAL || pInputEvent->maText.Len() != getVisiblePosition() ) )
 			{
 				SalExtTextInputEvent *pCancelInputEvent = new SalExtTextInputEvent();
 				pCancelInputEvent->mnTime = pInputEvent->mnTime;
@@ -708,6 +709,27 @@ ULONG com_sun_star_vcl_VCLEvent::getCommittedCharacterCount()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 			out = (ULONG)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+ULONG com_sun_star_vcl_VCLEvent::getCursorPosition()
+{
+	static jmethodID mID = NULL;
+	ULONG out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getCursorPosition", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
 }
@@ -1116,10 +1138,10 @@ long com_sun_star_vcl_VCLEvent::getScrollAmount()
 
 // ----------------------------------------------------------------------------
 
-long com_sun_star_vcl_VCLEvent::getVisiblePosition()
+ULONG com_sun_star_vcl_VCLEvent::getVisiblePosition()
 {
 	static jmethodID mID = NULL;
-	long out = 0;
+	ULONG out = 0;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{

@@ -1179,6 +1179,23 @@ public final class VCLEvent extends AWTEvent {
 	}
 
 	/**
+	 * Gets the cursor position for input method events.
+	 *
+	 * @return the cursor position for input method events
+	 */
+	public int getCursorPosition() {
+
+		if (source instanceof InputMethodEvent) {
+			TextHitInfo hi = ((InputMethodEvent)source).getCaret();
+			return (hi != null ? hi.getInsertionIndex() : 0);
+		}
+		else {
+			return 0;
+		}
+
+	}
+
+	/**
 	 * Gets the data pointer.
 	 *
 	 * @return the data pointer.
@@ -1678,10 +1695,13 @@ public final class VCLEvent extends AWTEvent {
 	 */
 	public int getVisiblePosition() {
 
-		if (source instanceof InputMethodEvent)
-			return ((InputMethodEvent)source).getVisiblePosition().getInsertionIndex();
-		else
+		if (source instanceof InputMethodEvent) {
+			TextHitInfo hi = ((InputMethodEvent)source).getVisiblePosition();
+			return (hi != null ? hi.getInsertionIndex() : 0);
+		}
+		else {
 			return 0;
+		}
 
 	}
 
