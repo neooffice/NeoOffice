@@ -35,6 +35,7 @@
 
 #define _SV_SALMAIN_CXX
 
+#include <stdio.h>
 #include <unistd.h>
 
 #ifndef _SV_SALINST_HXX
@@ -86,33 +87,6 @@ int main( int argc, char *argv[] )
 		aCmdPath = ByteString( aCmdDirEntry.GetPath().GetFull(), gsl_getSystemTextEncoding() );
 	}
 
-	// Assign command's directory to DYLD_LIBRARY_PATH environment variable
-#ifdef MACOSX
-	ByteString aLibPath( getenv( "DYLD_LIBRARY_PATH" ) );
-#else
-	ByteString aLibPath( getenv( "LD_LIBRARY_PATH" ) );
-#endif	// MACOSX
-	if ( aCmdPath.Len() )
-	{
-#ifdef MACOSX
-		ByteString aTmpPath( "DYLD_LIBRARY_PATH=" );
-#else
-		ByteString aTmpPath( "LD_LIBRARY_PATH=" );
-#endif	// MACOSX
-		aTmpPath += aCmdPath;
-		if ( aLibPath.Len() )
-		{
-			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), gsl_getSystemTextEncoding() );
-			aTmpPath += aLibPath;
-		}
-		putenv( aTmpPath.GetBuffer() );
-		// Restart if necessary since most library path changes don't have
-		// any affect after the application has already started on most
-		// platforms
-		if ( aLibPath.GetToken( 0, DirEntry::GetSearchDelimiter().GetBuffer()[0] ).CompareTo( aCmdPath, aCmdPath.Len() ) != COMPARE_EQUAL )
-			execv( pCmdPath, argv );
-	}
-
 	// Assign command's directory to PATH environment variable
 	ByteString aPath( getenv( "PATH" ) );
 	if ( aCmdPath.Len() )
@@ -139,6 +113,33 @@ int main( int argc, char *argv[] )
 			aTmpPath += aResPath;
 		}
 		putenv( aTmpPath.GetBuffer() );
+	}
+
+	// Assign command's directory to DYLD_LIBRARY_PATH environment variable
+#ifdef MACOSX
+	ByteString aLibPath( getenv( "DYLD_LIBRARY_PATH" ) );
+#else
+	ByteString aLibPath( getenv( "LD_LIBRARY_PATH" ) );
+#endif	// MACOSX
+	if ( aCmdPath.Len() )
+	{
+#ifdef MACOSX
+		ByteString aTmpPath( "DYLD_LIBRARY_PATH=" );
+#else
+		ByteString aTmpPath( "LD_LIBRARY_PATH=" );
+#endif	// MACOSX
+		aTmpPath += aCmdPath;
+		if ( aLibPath.Len() )
+		{
+			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), gsl_getSystemTextEncoding() );
+			aTmpPath += aLibPath;
+		}
+		putenv( aTmpPath.GetBuffer() );
+		// Restart if necessary since most library path changes don't have
+		// any affect after the application has already started on most
+		// platforms
+		if ( aLibPath.GetToken( 0, DirEntry::GetSearchDelimiter().GetBuffer()[0] ).CompareTo( aCmdPath, aCmdPath.Len() ) != COMPARE_EQUAL )
+			execv( pCmdPath, argv );
 	}
 
 	SVMain();
