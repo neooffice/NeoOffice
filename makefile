@@ -78,7 +78,7 @@ OO_PACKAGES:=OpenOffice
 OO_TAG:=cws_srx645_ooo113fix2
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOfficeJ
-NEO_TAG:=HEAD
+NEO_TAG:=NeoOfficeJ-1_1_Beta
 
 all: build.all
 
