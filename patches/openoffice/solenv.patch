@@ -1,0 +1,27 @@
+Index: inc/unxmacxp.mk
+===================================================================
+RCS file: /cvs/tools/solenv/inc/unxmacxp.mk,v
+retrieving revision 1.43.8.3
+diff -u -r1.43.8.3 unxmacxp.mk
+--- inc/unxmacxp.mk	28 Jan 2004 17:32:17 -0000	1.43.8.3
++++ inc/unxmacxp.mk	5 Jun 2004 18:57:32 -0000
+@@ -214,10 +214,19 @@
+ STDSLOCUI=
+ 
+ STDLIBGUIST=-lm
++.IF "$(GUIBASE)"=="unx"
+ STDLIBCUIST=-lX11 -lpthread -lm
++.ELSE
++STDLIBCUIST=-lpthread -lm
++.ENDIF
+ STDLIBGUIMT=-lpthread -lm
++.IF "$(GUIBASE)"=="unx"
+ STDLIBCUIMT=-lX11 -lm
+ STDSHLGUIMT=-lX11 -lXext -lpthread -m
++.ELSE
++STDLIBCUIMT=-lm
++STDSHLGUIMT=-lpthread -m
++.ENDIF
+ STDSHLCUIMT=-lpthread -lm
+ 
+ LIBMGR=ar
