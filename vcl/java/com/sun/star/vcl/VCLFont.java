@@ -197,7 +197,7 @@ public final class VCLFont {
 		int[] widths = new int[end - start + 1];
 		for (char i = start; i <= end; i++) {
 			int type = Character.getType(i);
-			if (type == Character.NON_SPACING_MARK)
+			if (type == Character.NON_SPACING_MARK && font.canDisplay(i))
 				widths[i - start] = 0;
 			else
 				widths[i - start] = fontMetrics.charWidth(i);

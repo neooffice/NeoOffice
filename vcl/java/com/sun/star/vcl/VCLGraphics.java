@@ -705,49 +705,35 @@ public final class VCLGraphics {
 		// Divide the character array by whitespace
 		int startChar = 0;
 		int currentChar = 0;
-		Rectangle2D bounds = null;
-		while (currentChar < chars.length) {
-
-			while (currentChar < chars.length && !Character.isWhitespace(chars[currentChar++]))
-				;
-
-			char[] word = new char[currentChar - startChar];
-			System.arraycopy(chars, startChar, word, 0, word.length);
-			GlyphVector glyphs = f.createGlyphVector(graphics.getFontRenderContext(), word);
-			float adjust = 0;
-			int numGlyphs = glyphs.getNumGlyphs();
-			for (int i = 0; i < numGlyphs; i++) {
-				int type = Character.getType(word[i]);
-				if (type == Character.NON_SPACING_MARK)
-					adjust -= glyphs.getGlyphMetrics(i).getAdvance();
+		GlyphVector glyphs = f.createGlyphVector(graphics.getFontRenderContext(), chars);
+		Point2D p = glyphs.getGlyphPosition(0);
+		if (offsets != null) {
+			double start = p.getX();
+			for (int i = 1; i < chars.length; i++) {
+				if (Character.getType(chars[i]) == Character.NON_SPACING_MARK && f.canDisplay(chars[i]))
+					p.setLocation(start + offsets[i - 1] - fontMetrics.charWidth(chars[i]), p.getY());
+				else
+					p.setLocation(start + offsets[i - 1], p.getY());
+				glyphs.setGlyphPosition(i, p);
+			}
+		}
+		else {
+			double adjust = 0;
+			for (int i = 1; i < chars.length; i++) {
+				if (Character.getType(chars[i]) == Character.NON_SPACING_MARK && f.canDisplay(chars[i]))
+					adjust += fontMetrics.charWidth(chars[i]);
 				if (adjust != 0) {
-					Point2D glyphPosition = glyphs.getGlyphPosition(i);
-					glyphPosition.setLocation(glyphPosition.getX() + adjust, glyphPosition.getY());
-					glyphs.setGlyphPosition(i, glyphPosition);
+					p = glyphs.getGlyphPosition(i);
+					p.setLocation(p.getX() - adjust, p.getY());
+					glyphs.setGlyphPosition(i, p);
 				}
 			}
-			if (offsets != null) {
-				int startOffset = 0;
-				if (startChar > 0)
-					startOffset = offsets[startChar - 1];
-				graphics.drawGlyphVector(glyphs, x + startOffset, y);
-			}
-			else {
-				graphics.drawGlyphVector(glyphs, x + fontMetrics.charsWidth(chars, 0, startChar), y);
-			}
-
-			// Estimate bounds
-			if (bounds == null)
-				bounds = glyphs.getLogicalBounds();
-			else
-				bounds.add(glyphs.getLogicalBounds());
-			if (adjust != 0)
-				bounds.setRect(bounds.getX(), bounds.getY(), bounds.getWidth() + adjust, bounds.getHeight());
-
-			startChar = currentChar;
-
 		}
-		addToFlush(new Rectangle(x + (int)bounds.getX() - 2, y + (int)bounds.getY() - 2, (int)bounds.getWidth() + 2, (int)bounds.getHeight() + 2));
+		graphics.drawGlyphVector(glyphs, x, y);
+
+		// Estimate bounds
+		Rectangle2D bounds = glyphs.getLogicalBounds();
+		addToFlush(new Rectangle(x + (int)bounds.getX() - 1, y + (int)bounds.getY() - 1, (int)bounds.getWidth() + 1, (int)bounds.getHeight() + 1));
 
 	}
 
