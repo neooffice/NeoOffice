@@ -1891,7 +1891,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (height < size.height)
 			height = size.height;
 
+		// Fix bug 169 by hiding window during resizing
+		boolean hide = (window.isVisible() && (width != window.getWidth() || height != window.getHeight()));
+		if (hide)
+			setVisible(false);
 		window.setBounds(x, y, width, height);
+		if (hide)
+			setVisible(true);
 
 	}
 
