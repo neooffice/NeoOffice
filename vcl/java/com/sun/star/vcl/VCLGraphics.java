@@ -55,6 +55,7 @@ import java.awt.font.GlyphVector;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
 import java.awt.geom.Point2D;
+import java.lang.reflect.Method;
 import java.util.LinkedList;
 
 /**
@@ -84,6 +85,36 @@ public final class VCLGraphics {
 	 * The auto flush flag.
 	 */
 	private static boolean autoFlush = true;
+
+	/**
+	 * The drawLine method.
+	 */
+	private static Method drawLineMethod = null;
+
+	/**
+	 * The drawRect method.
+	 */
+	private static Method drawRectMethod = null;
+
+	/**
+	 * The drawPolygon method.
+	 */
+	private static Method drawPolygonMethod = null;
+
+	/**
+	 * The drawPolyline method.
+	 */
+	private static Method drawPolylineMethod = null;
+
+	/**
+	 * The drawPolyPolygon method.
+	 */
+	private static Method drawPolyPolygonMethod = null;
+
+	/**
+	 * The drawTextArray method.
+	 */
+	private static Method drawTextArrayMethod = null;
 
 	/**
 	 * The graphics list.
@@ -165,7 +196,34 @@ public final class VCLGraphics {
 		textureData[3] = 0xff000000;
 		image50 = textureImage;
 
+		// Set the screen resolution
 		screenResolution = Toolkit.getDefaultToolkit().getScreenResolution();
+
+		// Set the method references
+		try {
+			drawLineMethod = VCLGraphics.class.getMethod("drawLine", new Class[]{ int.class, int.class, int.class, int.class, int.class });
+		}
+		catch (Throwable t) {}
+		try {
+			drawRectMethod = VCLGraphics.class.getMethod("drawRect", new Class[]{ int.class, int.class, int.class, int.class, int.class, boolean.class });
+		}
+		catch (Throwable t) {}
+		try {
+			drawPolygonMethod = VCLGraphics.class.getMethod("drawPolygon", new Class[]{ int.class, int[].class, int[].class, int.class, boolean.class });
+		}
+		catch (Throwable t) {}
+		try {
+			drawPolylineMethod = VCLGraphics.class.getMethod("drawPolyline", new Class[]{ int.class, int[].class, int[].class, int.class });
+		}
+		catch (Throwable t) {}
+		try {
+			drawPolyPolygonMethod = VCLGraphics.class.getMethod("drawPolyPolygon", new Class[]{ int.class, int[].class, int[][].class, int[][].class, int.class, boolean.class });
+		}
+		catch (Throwable t) {}
+		try {
+			drawTextArrayMethod = VCLGraphics.class.getMethod("drawTextArray", new Class[]{ int.class, int.class, char[].class, VCLFont.class, int.class, int[].class });
+		}
+		catch (Throwable t) {}
 
 	}
 
@@ -198,6 +256,11 @@ public final class VCLGraphics {
 	 * The printer page format.
 	 */
 	private VCLPageFormat pageFormat = null;
+
+	/**
+	 * The printer drawing queue.
+	 */
+	private VCLGraphics.PageQueue pageQueue = null;
 
 	/**
 	 * The panel's graphics context.
@@ -282,6 +345,13 @@ public final class VCLGraphics {
 		graphicsBounds.y = 0;
 		bitCount = graphics.getDeviceConfiguration().getColorModel().getPixelSize();
 
+		// Mac OS X sometimes mangles images when multiple images are rendered
+		// to a printer so we need to combine all images into one image and
+		// defer other drawing operations until after the combined image is
+		// created
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
+			pageQueue = new VCLGraphics.PageQueue(this);
+
 	}
 
 	/**
@@ -322,6 +392,9 @@ public final class VCLGraphics {
 	 */
 	void dispose() {
 
+		if (pageQueue != null)
+			pageQueue.dispose();
+		pageQueue = null;
 		synchronized (graphicsList) {
 			graphicsList.remove(this);
 		}
@@ -472,7 +545,7 @@ public final class VCLGraphics {
 			else if (clip.contains((double)destBounds.x, (double)destBounds.y, (double)destBounds.width, (double)destBounds.height))
 				clip = null;
 		}
-		if (clip != null) {
+		if (image == null || clip != null) {
 			// Draw to a temporary image
 			VCLImage mergedImage = new VCLImage(destBounds.width, destBounds.height, bmp.getBitCount());
 			mergedImage.getGraphics().drawBitmap(bmp, transBmp, srcBounds.x, srcBounds.y, destBounds.width, destBounds.height, 0, 0);
@@ -538,9 +611,39 @@ public final class VCLGraphics {
 		Shape clip = graphics.getClip();
 		if (clip != null && !clip.intersects(destBounds))
 			return;
-		Graphics2D g = (Graphics2D)graphics.create(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
-		g.drawRenderedImage(img.getImage().getSubimage(srcBounds.x, srcBounds.y, destBounds.width, destBounds.height), null);
-		g.dispose();
+		if (pageQueue != null) {
+			int[] srcData = img.getData();
+			int srcDataWidth = img.getWidth();
+			int[] destData = pageQueue.pageImage.getData();
+			int destDataWidth = pageQueue.pageImage.getWidth();
+			Point srcPoint = new Point(srcBounds.x, srcBounds.y);
+			Point destPoint = new Point(destBounds.x, destBounds.y);
+			int totalPixels = destBounds.width * destBounds.height;
+
+			for (int i = 0; i < totalPixels; i++) {
+				// Copy pixel
+				destData[(destPoint.y * destDataWidth) + destPoint.x] = srcData[(srcPoint.y * srcDataWidth) + srcPoint.x];
+
+				// Update current points
+				srcPoint.x++;
+				if (srcPoint.x >= srcBounds.x + destBounds.width) {
+					srcPoint.x = srcBounds.x;
+					srcPoint.y++;
+				}
+				destPoint.x++;
+				if (destPoint.x >= destBounds.x + destBounds.width) {
+					destPoint.x = destBounds.x;
+					destPoint.y++;
+				}
+			}
+
+			pageQueue.updateImageClip(destBounds);
+		}
+		else {
+			Graphics2D g = (Graphics2D)graphics.create(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
+			g.drawRenderedImage(img.getImage().getSubimage(srcBounds.x, srcBounds.y, destBounds.width, destBounds.height), null);
+			g.dispose();
+		}
 
 		addToFlush(destBounds);
 
@@ -636,6 +739,12 @@ public final class VCLGraphics {
 	 */
 	public void drawLine(int x1, int y1, int x2, int y2, int color) {
 
+		if (pageQueue != null) {
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawLineMethod, new Object[]{ new Integer(x1), new Integer(y1), new Integer(x2), new Integer(y2), new Integer(color) });
+			pageQueue.postDrawingOperation(pqi);
+			return;
+		}
+
 		Rectangle bounds = new Rectangle(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
 		if (bounds.width < 0) {
 			bounds.x += bounds.width;
@@ -679,9 +788,6 @@ public final class VCLGraphics {
 	 */
 	public void drawMask(VCLBitmap bmp, int color, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY) {
 
-		if (image == null)
-			return;
-
 		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, bmp.getWidth(), bmp.getHeight()));
 		if (srcBounds.isEmpty())
 			return;
@@ -701,7 +807,7 @@ public final class VCLGraphics {
 			else if (clip.contains((double)destBounds.x, (double)destBounds.y, (double)destBounds.width, (double)destBounds.height))
 				clip = null;
 		}
-		if (clip != null) {
+		if (image == null || clip != null) {
 			// Draw to a temporary image
 			VCLImage maskImage = new VCLImage(destBounds.width, destBounds.height, bmp.getBitCount());
 			maskImage.getGraphics().drawMask(bmp, color, srcBounds.x, srcBounds.y, destBounds.width, destBounds.height, 0, 0);
@@ -751,6 +857,12 @@ public final class VCLGraphics {
 	 */
 	public void drawPolygon(int npoints, int[] xpoints, int[] ypoints, int color, boolean fill) {
 
+		if (pageQueue != null) {
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawPolygonMethod, new Object[]{ new Integer(npoints), xpoints, ypoints, new Integer(color), new Boolean(fill) });
+			pageQueue.postDrawingOperation(pqi);
+			return;
+		}
+
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle bounds = polygon.getBounds();
 		if (fill) {
@@ -793,6 +905,12 @@ public final class VCLGraphics {
 	 */
 	public void drawPolyline(int npoints, int[] xpoints, int[] ypoints, int color) {
 
+		if (pageQueue != null) {
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawPolylineMethod, new Object[]{ new Integer(npoints), xpoints, ypoints, new Integer(color) });
+			pageQueue.postDrawingOperation(pqi);
+			return;
+		}
+
 		Rectangle bounds = new Polygon(xpoints, ypoints, npoints).getBounds();
 		if (xor) {
 			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
@@ -825,6 +943,12 @@ public final class VCLGraphics {
 	 *  to draw just the outline
 	 */
 	public void drawPolyPolygon(int npoly, int[] npoints, int[][] xpoints, int[][] ypoints, int color, boolean fill) {
+
+		if (pageQueue != null) {
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawPolyPolygonMethod, new Object[]{ new Integer(npoly), npoints, xpoints, ypoints, new Integer(color), new Boolean(fill) });
+			pageQueue.postDrawingOperation(pqi);
+			return;
+		}
 
 		Area area = new Area(new Polygon(xpoints[0], ypoints[0], npoints[0]));
 		for (int i = 1; i < npoly; i++) {
@@ -882,6 +1006,12 @@ public final class VCLGraphics {
 	 *  to draw just the outline
 	 */
 	public void drawRect(int x, int y, int width, int height, int color, boolean fill) {
+
+		if (pageQueue != null) {
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawRectMethod, new Object[]{ new Integer(x), new Integer(y), new Integer(width), new Integer(height), new Integer(color), new Boolean(fill) });
+			pageQueue.postDrawingOperation(pqi);
+			return;
+		}
 
 		Rectangle bounds = new Rectangle(x, y, width, height);
 		if (fill) {
@@ -947,6 +1077,12 @@ public final class VCLGraphics {
 	 * @param offsets the x coordinate offsets for each character
 	 */
 	public void drawTextArray(int x, int y, char[] chars, VCLFont font, int color, int[] offsets) {
+
+		if (pageQueue != null) {
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawTextArrayMethod, new Object[]{ new Integer(x), new Integer(y), chars, font, new Integer(color), offsets });
+			pageQueue.postDrawingOperation(pqi);
+			return;
+		}
 
 		Font f = font.getFont();
 		RenderingHints hints = graphics.getRenderingHints();
@@ -1355,7 +1491,7 @@ public final class VCLGraphics {
 	}
 
 	/**
-	 * Enables or disables painting in XOR mode.
+	 * Enables or disables drawing in XOR mode.
 	 *
 	 * @param b <code>true</code> to enable XOR mode and <code>false</code>
 	 *  to disable it
@@ -1386,6 +1522,136 @@ public final class VCLGraphics {
 			userClip = area;
 		if (userClip.isEmpty())
 			userClip = null;
+
+	}
+
+	/**
+	 * The <code>PageQueue</code> object holds pointers to the beginning and
+	 * end of the drawing queue.
+	 */
+	final class PageQueue {
+
+		VCLGraphics graphics = null;
+
+		VCLGraphics.PageQueueItem head = null;
+
+		VCLImage pageImage = null;
+
+		Area pageImageClip = null;
+
+		VCLGraphics.PageQueueItem tail = null;
+
+		PageQueue(VCLGraphics g) {
+
+			graphics = g;
+			pageImage = new VCLImage(graphics.graphicsBounds.width, graphics.graphicsBounds.height, graphics.getBitCount());
+
+		}
+
+		void dispose() {
+
+			graphics.pageQueue = null;
+			Graphics2D g = graphics.graphics;
+
+			// Draw the combined image
+			if (pageImageClip != null) {
+				g.setClip(pageImageClip);
+				g.drawRenderedImage(pageImage.getImage(), null);
+			}
+			pageImage.dispose();
+			pageImage = null;
+
+			// Invoke all of the queued drawing operations
+			while (head != null) {
+				if (pageImageClip != null) {
+					Area area = new Area(pageImageClip);
+					if (head.imageClip != null)
+						area.subtract(head.imageClip);
+					head.clip.subtract(area);
+				}
+				g.setClip(head.clip);
+				try {
+					head.method.invoke(graphics, head.params);
+				}
+				catch (Throwable t) {}
+				head = head.next;
+			}
+			tail = null;
+			graphics = null;
+			pageImageClip = null;
+
+		}
+
+		void postDrawingOperation(VCLGraphics.PageQueueItem i) {
+
+			// Add the drawing operation to the queue
+			Graphics2D g = graphics.graphics;
+			Shape clip = g.getClip();
+			if (clip != null)
+				i.clip = new Area(g.getClip());
+			else
+				i.clip = new Area(graphics.graphicsBounds);
+			if (pageImageClip != null)
+				i.imageClip = new Area(pageImageClip);
+			if (head != null) {
+				tail.next = i;
+				tail = i;
+			}
+			else {
+				head = tail = i;
+			}
+
+		}
+
+		void updateImageClip(Rectangle b) {
+
+			if (b == null || b.isEmpty())
+				return;
+
+			Area area = new Area(b);
+			Graphics2D g = graphics.graphics;
+			Shape clip = g.getClip();
+			if (clip != null)
+				area.intersect(new Area(clip));
+			if (pageImageClip != null)
+				pageImageClip.add(area);
+			else
+				pageImageClip = area;
+
+			// Update the image clip for all queue items
+			VCLGraphics.PageQueueItem pqi = head;
+			while (pqi != null) {
+				if (pageImageClip != null && pqi.imageClip != null)
+					pqi.imageClip.subtract(pageImageClip);
+				pqi = pqi.next;
+			}
+
+		}
+
+	}
+
+	/**
+	 * The <code>QueueItem</code> object is a wrapper for queued
+	 * <code>VCLGraphics</cade> drawing calls.
+	 */
+	final class PageQueueItem {
+
+		Area clip = null;
+
+		Area imageClip = null;
+
+		Method method = null;
+
+		PageQueueItem next = null;
+
+		Object[] params = null;
+
+		PageQueueItem(Method m, Object[] p) {
+
+			method = m;
+			params = p;
+
+		}
 
 	}
 
