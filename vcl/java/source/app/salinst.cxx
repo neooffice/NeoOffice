@@ -716,7 +716,7 @@ void SalInstance::Yield( BOOL bWait )
 		// the application acts is if two mouse clicks have been made instead
 		// of one.
 		USHORT nID = pEvent->getID();
-		if ( nID == SALEVENT_MOUSEMOVE )
+		if ( nID == SALEVENT_MOUSELEAVE || nID == SALEVENT_MOUSEMOVE )
 			bContinue = FALSE;
 		if ( pSalData->mpPresentationFrame )
 			pSalData->mpPresentationFrame->maFrameData.mpVCLFrame->setAutoFlush( TRUE );
