@@ -116,7 +116,7 @@ static void JNICALL Java_com_apple_mrj_macos_generated_MacWindowFunctions_ShowWi
 #ifdef MACOSX
 static void DisposeNativeWindowTimerCallback( EventLoopTimerRef aTimer, void *pData )
 {
-	ReleaseWindow( (WindowRef)pData );
+	DisposeWindow( (WindowRef)pData );
 }
 #endif	// MACOSX
 
