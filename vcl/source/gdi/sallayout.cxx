@@ -714,8 +714,11 @@ bool SalLayout::IsSpacingGlyph( long nGlyph ) const
             || (nChar >= 0x2000 && nChar <= 0x200F) // whitespace
             || (nChar == 0x3000);                   // ideographic space
     }
+#if !defined USE_JAVA || !defined MACOSX
+	// Glyph ID 3 can be a valid glyph on Mac OS X 
     else
         bRet = ((nGlyph & GF_IDXMASK) == 3);
+#endif	// !USE_JAVA || !MACOSX
     return bRet;
 }
 
