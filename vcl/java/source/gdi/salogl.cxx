@@ -101,10 +101,6 @@ SalGraphics *SalOpenGL::mpLastGraphics = NULL;
 
 // ------------------------------------------------------------------------
 
-SalOpenGL *SalOpenGL::mpLastOpenGL = NULL;
-
-// ------------------------------------------------------------------------
-
 void *SalOpenGL::mpNativeContext = NULL;
 
 // ------------------------------------------------------------------------
@@ -121,7 +117,7 @@ SalOpenGL::SalOpenGL( SalGraphics* pGraphics ) : mpGraphics( NULL )
 
 SalOpenGL::~SalOpenGL()
 {
-	if ( mpLastOpenGL == this )
+	if ( mpGraphics && mpLastGraphics && mpGraphics->maGraphicsData.mpVCLGraphics == mpLastGraphics->maGraphicsData.mpVCLGraphics )
 	{
 #ifdef MACOSX
 		if ( mpNativeContext && pClearDrawable )
@@ -141,7 +137,6 @@ SalOpenGL::~SalOpenGL()
 		mpBits = NULL;
 		mpData = NULL;
 		mpLastGraphics = NULL;
-		mpLastOpenGL = NULL;
 	}
 }
 
@@ -236,7 +231,6 @@ void SalOpenGL::Release()
 	mpBits = NULL;
 	mpData = NULL;
 	mpLastGraphics = NULL;
-	mpLastOpenGL = NULL;
 
 	aModule.unload();
 	mnOGLState = OGL_STATE_UNLOADED;
@@ -260,7 +254,7 @@ void SalOpenGL::OGLEntry( SalGraphics* pGraphics )
 {
 	mpGraphics = pGraphics;
 
-	if ( mpLastOpenGL != this || !mpGraphics || !mpLastGraphics || mpGraphics->maGraphicsData.mpVCLGraphics != mpLastGraphics->maGraphicsData.mpVCLGraphics )
+	if ( !mpGraphics || !mpLastGraphics || mpGraphics->maGraphicsData.mpVCLGraphics != mpLastGraphics->maGraphicsData.mpVCLGraphics )
 	{
 #ifdef MACOSX
 		if ( mpNativeContext && pClearDrawable )
@@ -280,7 +274,6 @@ void SalOpenGL::OGLEntry( SalGraphics* pGraphics )
 		mpBits = NULL;
 		mpData = NULL;
 		mpLastGraphics = mpGraphics;
-		mpLastOpenGL = this;
 
 		com_sun_star_vcl_VCLImage *pImage = pGraphics->maGraphicsData.mpVCLGraphics->getImage();
 		if ( pImage )

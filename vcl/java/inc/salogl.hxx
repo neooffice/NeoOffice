@@ -64,7 +64,6 @@ private:
 	static BYTE*		mpBits;
 	static ::vcl::java_lang_Object*	mpData;
 	static SalGraphics*	mpLastGraphics;
-	static SalOpenGL*	mpLastOpenGL;
 	static void*		mpNativeContext;
 	static ULONG        mnOGLState;
 	SalGraphics*		mpGraphics;
