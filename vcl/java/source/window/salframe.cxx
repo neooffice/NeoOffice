@@ -156,8 +156,8 @@ void SalFrame::Show( BOOL bVisible )
 	if ( bVisible == maFrameData.mbVisible )
 		return;
 
-	maFrameData.mpVCLFrame->setVisible( bVisible );
 	maFrameData.mbVisible = bVisible;
+	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible );
 
 	// Reset graphics
 	com_sun_star_vcl_VCLGraphics *pVCLGraphics = maFrameData.mpVCLFrame->getGraphics();
@@ -169,19 +169,14 @@ void SalFrame::Show( BOOL bVisible )
 
 	if ( maFrameData.mbVisible )
 	{
-		// Update the cached position
-		Rectangle *pBounds = new Rectangle( maFrameData.mpVCLFrame->getBounds() );
-		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pBounds );
-		aEvent.dispatch();
-
 		// Post a paint event
 		SalPaintEvent *pPaintEvent = new SalPaintEvent();
 		pPaintEvent->mnBoundX = 0;
 		pPaintEvent->mnBoundY = 0;
 		pPaintEvent->mnBoundWidth = maGeometry.nWidth + maGeometry.nLeftDecoration;
 		pPaintEvent->mnBoundHeight = maGeometry.nHeight + maGeometry.nTopDecoration;
-		com_sun_star_vcl_VCLEvent aVCLPaintEvent( SALEVENT_PAINT, this, (void *)pPaintEvent );
-		aVCLPaintEvent.dispatch();
+		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_PAINT, this, (void *)pPaintEvent );
+		GetSalData()->mpEventQueue->postCachedEvent( &aEvent );
 	}
 }
 
@@ -263,6 +258,8 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 		nMinY -= 1;
 	}
 #endif	// MACOSX
+	nWidth = nWidth + maGeometry.nLeftDecoration + maGeometry.nRightDecoration;
+	nHeight = nHeight + maGeometry.nTopDecoration + maGeometry.nBottomDecoration;
 	if ( nMinX + nWidth > aWorkArea.nLeft + aWorkArea.GetWidth() )
 		nWidth = aWorkArea.nLeft + aWorkArea.GetWidth() - nMinX;
 	if ( nMinY + nHeight > aWorkArea.nTop + aWorkArea.GetHeight() )
@@ -276,7 +273,7 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	if ( nY + nHeight > aWorkArea.nTop + aWorkArea.GetHeight() )
 		nY = aWorkArea.nTop + aWorkArea.GetHeight() - nHeight;
 
-	maFrameData.mpVCLFrame->setBounds( nX, nY, nWidth + maGeometry.nLeftDecoration + maGeometry.nRightDecoration, nHeight + maGeometry.nTopDecoration + maGeometry.nBottomDecoration );
+	maFrameData.mpVCLFrame->setBounds( nX, nY, nWidth, nHeight );
 
 	// Update the cached position
 	Rectangle *pBounds = new Rectangle( maFrameData.mpVCLFrame->getBounds() );
@@ -339,7 +336,7 @@ BOOL SalFrame::GetWindowState( SalFrameState* pState )
 {
 	pState->mnMask = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT | SAL_FRAMESTATE_MASK_STATE;
 	pState->mnX = maGeometry.nX - maGeometry.nLeftDecoration;
-	pState->mnY = maGeometry.nY- maGeometry.nTopDecoration;
+	pState->mnY = maGeometry.nY - maGeometry.nTopDecoration;
 	pState->mnWidth = maGeometry.nWidth;
 	pState->mnHeight = maGeometry.nHeight;
 	pState->mnState = maFrameData.mpVCLFrame->getState();
@@ -367,7 +364,7 @@ void SalFrame::ShowFullScreen( BOOL bFullScreen )
 		memcpy( &maFrameData.maOriginalGeometry, &maGeometry, sizeof( SalFrameGeometry ) );
 		Rectangle aWorkArea;
 		GetWorkArea( aWorkArea );
-		SetPosSize( aWorkArea.nLeft + maGeometry.nLeftDecoration, aWorkArea.nTop + maGeometry.nTopDecoration, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
+		SetPosSize( aWorkArea.nLeft, aWorkArea.nTop, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
 	}
 	else
 	{
@@ -414,20 +411,9 @@ void SalFrame::StartPresentation( BOOL bStart )
 		// The system menu bar is a dead zone of coordinates so we need to set
 		// the top of the window at -1 and make the cached insets larger to
 		// make the window appear at the top of the screen
-		unsigned int nRealTopDecoration = 0;
 		if ( bStart )
-		{
 			aWorkArea.nTop -= 1;
-			aWorkArea.nBottom += 1;
-			nRealTopDecoration = maGeometry.nTopDecoration;
-			maGeometry.nTopDecoration += 1;
-		}
-		else
-		{
-			maGeometry.nTopDecoration -= 1;
-			nRealTopDecoration = maGeometry.nTopDecoration;
-		}
-		SetPosSize( aWorkArea.nLeft + maGeometry.nLeftDecoration, aWorkArea.nTop + nRealTopDecoration, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - nRealTopDecoration - maGeometry.nBottomDecoration, nFlags );
+		SetPosSize( aWorkArea.nLeft, aWorkArea.nTop, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
 	}
 #else	// MACOSX
 #ifdef DEBUG

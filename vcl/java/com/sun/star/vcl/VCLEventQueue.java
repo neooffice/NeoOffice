@@ -249,7 +249,7 @@ public final class VCLEventQueue {
 		synchronized (queueList) {
 			// Coalesce mouse move events
 			if (id == VCLEvent.SALEVENT_MOUSEMOVE) {
-				if (queue.mouseMove != null && queue.mouseMove.next == null)
+				if (queue.mouseMove != null && queue.mouseMove.next == null && queue.mouseMove.event.getFrame() == newItem.event.getFrame())
 					queue.mouseMove.remove = true;
 				queue.mouseMove = newItem;
 			}
@@ -274,6 +274,7 @@ public final class VCLEventQueue {
 			}
 			// Update status flags
 			switch (id) {
+				case VCLEvent.SALEVENT_EXTTEXTINPUT:
 				case VCLEvent.SALEVENT_KEYINPUT:
 					newItem.type = VCLEventQueue.INPUT_KEYBOARD;
 					break;

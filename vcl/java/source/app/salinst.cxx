@@ -248,11 +248,16 @@ void SalInstance::Yield( BOOL bWait )
 
 	nRecursionLevel++;
 
-	// Dispatch pending AWT events
-	if ( bWait && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( 0, TRUE ) ) != NULL )
+	// Dispatch pending non-AWT events
+	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( 0, FALSE) ) != NULL )
 	{
-		pEvent->dispatch();
-		com_sun_star_vcl_VCLGraphics::flushAll();
+		// Ignore SALEVENT_SHUTDOWN events when recursing into this method or
+		// when in presentation mode
+		if ( ( nRecursionLevel == 1 && !pSalData->mpPresentationFrame ) || pEvent->getID() != SALEVENT_SHUTDOWN )
+		{
+			pEvent->dispatch();
+			com_sun_star_vcl_VCLGraphics::flushAll();
+		}
 		delete pEvent;
 
 		ULONG nCount = ReleaseYieldMutex();
@@ -275,13 +280,11 @@ void SalInstance::Yield( BOOL bWait )
 		gettimeofday( &aCurrentTime, NULL );
 		if ( pSalData->mpTimerProc && aCurrentTime >= pSalData->maTimeout )
 		{
+			gettimeofday( &pSalData->maTimeout, NULL );
 			pSalData->mpTimerProc();
 			com_sun_star_vcl_VCLGraphics::flushAll();
 			if ( pSalData->mnTimerInterval )
-			{
-				gettimeofday( &aCurrentTime, NULL );
-				pSalData->maTimeout = aCurrentTime + pSalData->mnTimerInterval;
-			}
+				pSalData->maTimeout += pSalData->mnTimerInterval;
 		}
 	}
 
@@ -298,26 +301,19 @@ void SalInstance::Yield( BOOL bWait )
 			nTimeout = aTimeout.tv_sec * 1000 + aTimeout.tv_usec / 1000;
 		}
 
-		// Prevent excessively long or short timeouts
+		// Prevent excessively short timeouts
 		if ( nTimeout < 10 )
 			nTimeout = 10;
-		else if ( nTimeout > 1000 )
-			nTimeout = 1000;
 	}
 
-	// Dispatch pending non-AWT events
-	while ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, FALSE ) ) != NULL )
+	// Dispatch pending AWT events
+	while ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
 	{
 		// Reset timeout
 		nTimeout = 0;
 
-		// Ignore SALEVENT_SHUTDOWN events when recursing into this method or
-		// when in presentation mode
-		if ( ( nRecursionLevel == 1 && !pSalData->mpPresentationFrame ) || pEvent->getID() != SALEVENT_SHUTDOWN )
-		{
-			pEvent->dispatch();
-			com_sun_star_vcl_VCLGraphics::flushAll();
-		}
+		pEvent->dispatch();
+		com_sun_star_vcl_VCLGraphics::flushAll();
 		delete pEvent;
 	}
 
@@ -328,6 +324,10 @@ void SalInstance::Yield( BOOL bWait )
 
 BOOL SalInstance::AnyInput( USHORT nType )
 {
+	// We should check if the timer has expired when nType contains INPUT_TIMER
+	// but due to the time it takes to flushAll(), this returns TRUE at
+	// inappropriate times and can cause Writer documents to incorrectly
+	// calculate the number of pages in a document
 	return (BOOL)GetSalData()->mpEventQueue->anyCachedEvent( nType );
 }
 
@@ -408,7 +408,7 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 				nHeight = rGeom.nHeight + rGeom.nTopDecoration + rGeom.nBottomDecoration;
 				// If the window spills off the screen, place it at the 
 				// top left of the screen
-				if ( ( nX + nWidth ) > ( aWorkArea.nLeft + aWorkArea.GetWidth() ) || ( nY + nHeight ) > ( aWorkArea.nTop + aWorkArea.GetHeight() ) )
+				if ( ( nX + nWidth > aWorkArea.nLeft + aWorkArea.GetWidth() ) || ( nY + nHeight > aWorkArea.nTop + aWorkArea.GetHeight() ) )
 				{
 					nX = aWorkArea.nLeft;
 					nY = aWorkArea.nTop;
@@ -417,6 +417,17 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 			}
 		}
 	}
+
+	// Adjust window size for screen bounds
+	if ( nX < aWorkArea.nLeft )
+		nX = aWorkArea.nLeft;
+	if ( nY < aWorkArea.nTop )
+		nY = aWorkArea.nTop;
+	if ( nX + nWidth > aWorkArea.nLeft + aWorkArea.GetWidth() )
+		nWidth = aWorkArea.nLeft + aWorkArea.GetWidth() - nX;
+	if ( nY + nHeight > aWorkArea.nTop + aWorkArea.GetHeight() )
+		nHeight = aWorkArea.nTop + aWorkArea.GetHeight() - nY;
+
 	// Center the window by default
 	if ( pFrame->maFrameData.mbCenter )
 	{
@@ -426,8 +437,8 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 
 	pFrame->maFrameData.mpVCLFrame->setBounds( nX, nY, nWidth, nHeight );
 
- 	// Update the cached position
- 	Rectangle *pBounds = new Rectangle( pFrame->maFrameData.mpVCLFrame->getBounds() );
+	// Update the cached position
+	Rectangle *pBounds = new Rectangle( pFrame->maFrameData.mpVCLFrame->getBounds() );
 	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, pFrame, (void *)pBounds );
 	aEvent.dispatch();
 

@@ -323,12 +323,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 
 void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, void *pData )
 {
-	SalData *pSalData = GetSalData();
-	SalYieldMutex *pMutex = pSalData->mpFirstInstance->maInstData.mpSalYieldMutex;
-
-	pMutex->acquire();
-
-	if ( pFrame && pFrame->maFrameData.mpProc && ( nID != SALEVENT_CLOSE || pFrame->maFrameData.mbVisible ) )
+	if ( pFrame && pFrame->maFrameData.mpProc )
 	{
 		SalData *pSalData = GetSalData();
 		for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
@@ -340,8 +335,6 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 			}
 		}
 	}
-
-	pMutex->release();
 }
 
 // ----------------------------------------------------------------------------

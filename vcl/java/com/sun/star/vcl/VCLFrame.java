@@ -44,7 +44,6 @@ import java.awt.EventQueue;
 import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.GraphicsConfiguration;
 import java.awt.Insets;
 import java.awt.Panel;
 import java.awt.Point;
@@ -670,24 +669,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		frame = f;
 		parent = p;
 
-		// Get screen device
-		GraphicsConfiguration gc = null;
-		if (p != null && p.getWindow() != null) {
-			gc = p.getWindow().getGraphicsConfiguration().getDevice().getDefaultConfiguration();
-/*
-			System.out.println("0: " + p.getWindow().getGraphicsConfiguration().getDevice());
-			System.out.println("1: " + p.getWindow().getGraphicsConfiguration().getDevice());
-			System.out.println("2: " + java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice());
-			System.out.println("3: " + p.getWindow().getGraphicsConfiguration());
-			System.out.println("4: " + java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDefaultConfiguration());
-*/
-		}
-
 		// Create the native window
 		if ((styleFlags & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) != 0)
-			window = new VCLFrame.NoPaintFrame(this, gc);
+			window = new VCLFrame.NoPaintFrame(this);
 		else
-			window = new VCLFrame.NoPaintWindow(this, gc);
+			window = new VCLFrame.NoPaintWindow(this);
 
 		// Process remaining style flags
 		if ((styleFlags & SAL_FRAME_STYLE_SIZEABLE) != 0)
@@ -712,6 +698,16 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			insets = window.getInsets();
 		graphics = new VCLGraphics(this);
 
+		// Register listeners
+		window.addComponentListener(this);
+		panel.addFocusListener(this);
+		if (window instanceof Frame) {
+			panel.addKeyListener(this);
+			panel.addInputMethodListener(this);
+		}
+		panel.addMouseListener(this);
+		panel.addMouseMotionListener(this);
+		window.addWindowListener(this);
 	}
 
 	/**
@@ -743,7 +739,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void componentResized(ComponentEvent e) {
 
-		if (queue != null)
+		if (queue != null && window != null && window.isShowing())
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVERESIZE, this, 0));
 
 	}
@@ -755,7 +751,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void componentMoved(ComponentEvent e) {
 
-		if (queue != null)
+		if (queue != null && window != null && window.isShowing())
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVERESIZE, this, 0));
 
 	}
@@ -795,8 +791,23 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public synchronized void dispose() {
 
-		if (window != null)
+		if (window != null) {
 			setVisible(false);
+
+			// Unregister listeners
+			window.removeComponentListener(this);
+			window.removeWindowListener(this);
+		}
+		if (panel != null) {
+			// Unregister listeners
+			panel.removeFocusListener(this);
+			if (fullScreenMode || window instanceof Frame) {
+				panel.removeKeyListener(this);
+				panel.removeInputMethodListener(this);
+			}
+			panel.removeMouseListener(this);
+			panel.removeMouseMotionListener(this);
+		}
 		if (queue != null && frame != 0)
 			queue.removeCachedEvents(frame);
 		bitCount = 0;
@@ -904,13 +915,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public Rectangle getBounds() {
 
-		Rectangle bounds = window.getBounds();
-		if (window.isShowing()) {
-			Point location = window.getLocationOnScreen();
-			bounds.x = location.x;
-			bounds.y = location.y;
-		}
-		return bounds;
+		return window.getBounds();
 
 	}
 
@@ -1700,7 +1705,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void setBounds(int x, int y, int width, int height) {
 
-		Rectangle bounds = window.getBounds();
 		window.setBounds(x, y, width, height);
 
 	}
@@ -1713,7 +1717,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void setFullScreenMode(boolean b) {
 
+		if (b == fullScreenMode)
+			return;
+
 		fullScreenMode = b;
+		if (fullScreenMode) {
+			panel.addKeyListener(this);
+			panel.addInputMethodListener(this);
+		}
+		else {
+			panel.removeKeyListener(this);
+			panel.removeInputMethodListener(this);
+		}
 
 	}
 
@@ -1897,38 +1912,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			((Frame)window).setResizable(resizable);
 
 		if (b) {
-			// Register listeners
-			window.addComponentListener(this);
-			panel.addFocusListener(this);
-			if (fullScreenMode || window instanceof Frame) {
-				panel.addKeyListener(this);
-				panel.addInputMethodListener(this);
-			}
-			panel.addMouseListener(this);
-			panel.addMouseMotionListener(this);
-			window.addWindowListener(this);
-		}
-
-		// Show or hide the window
-		if (b)
+			// Show the window
 			window.show();
-		else
-			window.hide();
-
-		if (!b) {
-			// Unregister listeners
-			window.removeComponentListener(this);
-			panel.removeFocusListener(this);
-			if (fullScreenMode || window instanceof Frame) {
-				panel.removeKeyListener(this);
-				panel.removeInputMethodListener(this);
-			}
-			panel.removeMouseListener(this);
-			panel.removeMouseMotionListener(this);
-			window.removeWindowListener(this);
+			toFront();
 		}
 		else {
-			toFront();
+			// Hide the window
+			window.hide();
 		}
 
 	}
@@ -2029,11 +2019,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 * Constructs a new <code>VCLFrame.NoPaintFrame</code> instance.
 		 *
 		 * @param f the <code>VCLFrame</code>
-		 * @param gc the <code>GraphicsConfiguration</code>
 		 */
-		NoPaintFrame(VCLFrame f, GraphicsConfiguration gc) {
+		NoPaintFrame(VCLFrame f) {
 
-			super(gc);
 			frame = f;
 			enableInputMethods(false);
 
@@ -2165,11 +2153,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 * Constructs a new <code>VCLFrame.NoPaintWindow</code> instance.
 		 *
 		 * @param f the <code>VCLFrame</code>
-		 * @param gc the <code>GraphicsConfiguration</code>
 		 */
-		NoPaintWindow(VCLFrame f, GraphicsConfiguration gc) {
+		NoPaintWindow(VCLFrame f) {
 
-			super(new VCLFrame.NoPaintFrame(f, gc), gc);
+			super(new VCLFrame.NoPaintFrame(f));
 			frame = f;
 			enableInputMethods(false);
 
