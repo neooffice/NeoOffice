@@ -145,7 +145,7 @@ BOOL SalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
 
 		if ( bDelete )
 		{
-			delete[] pSetupData->mpDriverData;
+			rtl_freeMemory( pSetupData->mpDriverData );
 			pSetupData->mpDriverData = NULL;
 			pSetupData->mnDriverDataLen = 0;
 		}

@@ -121,7 +121,8 @@ void InitSalData()
 void DeInitSalData()
 {
 	SalData *pSalData = GetSalData();
-	delete pSalData;
+	if ( pSalData )
+		delete pSalData;
 	SetSalData( NULL );
 }
 
@@ -175,7 +176,8 @@ void DestroySalInstance( SalInstance* pInst )
 	if ( pSalData->mpFirstInstance == pInst )
 		pSalData->mpFirstInstance = NULL;
 
-	delete pInst;
+	if ( pInst )
+		delete pInst;
 }
 
 // =======================================================================
@@ -191,7 +193,8 @@ SalInstance::SalInstance()
 SalInstance::~SalInstance()
 {
 	maInstData.mpSalYieldMutex->release();
-	delete maInstData.mpSalYieldMutex;
+	if ( maInstData.mpSalYieldMutex )
+		delete maInstData.mpSalYieldMutex;
 }
 
 // -----------------------------------------------------------------------
@@ -433,16 +436,16 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 
 void SalInstance::DestroyFrame( SalFrame* pFrame )
 {
-	SalData *pSalData = GetSalData();
-
 	// Remove this window from the window list
 	if ( pFrame )
-		pSalData->maFrameList.remove( pFrame);
+	{
+		GetSalData()->maFrameList.remove( pFrame);
 
-	if ( pFrame->maFrameData.mpParent )
-		pFrame->maFrameData.mpParent->maFrameData.maChildren.remove( pFrame );
+		if ( pFrame->maFrameData.mpParent )
+			pFrame->maFrameData.mpParent->maFrameData.maChildren.remove( pFrame );
 
-	delete pFrame;
+		delete pFrame;
+	}
 }
 
 // -----------------------------------------------------------------------
@@ -506,7 +509,8 @@ void SalInstance::GetPrinterQueueState( SalPrinterQueueInfo* pInfo )
 
 void SalInstance::DeletePrinterQueueInfo( SalPrinterQueueInfo* pInfo )
 {
-	delete pInfo;
+	if ( pInfo )
+		delete pInfo;
 }
 
 // -----------------------------------------------------------------------
@@ -547,7 +551,7 @@ SalInfoPrinter* SalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
 
 		if ( bDelete )
 		{
-			delete[] pSetupData->mpDriverData;
+			rtl_freeMemory( pSetupData->mpDriverData );
 			pSetupData->mpDriverData = NULL;
 			pSetupData->mnDriverDataLen = 0;
 		}
@@ -577,7 +581,8 @@ SalInfoPrinter* SalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
 
 void SalInstance::DestroyInfoPrinter( SalInfoPrinter* pPrinter )
 {
-	delete pPrinter;
+	if ( pPrinter )
+		delete pPrinter;
 }
 
 // -----------------------------------------------------------------------
@@ -610,7 +615,8 @@ SalPrinter* SalInstance::CreatePrinter( SalInfoPrinter* pInfoPrinter )
 
 void SalInstance::DestroyPrinter( SalPrinter* pPrinter )
 {
-	delete pPrinter;
+	if ( pPrinter )
+		delete pPrinter;
 }
 
 // -----------------------------------------------------------------------
@@ -638,7 +644,8 @@ SalVirtualDevice* SalInstance::CreateVirtualDevice( SalGraphics* pGraphics,
 
 void SalInstance::DestroyVirtualDevice( SalVirtualDevice* pDevice )
 {
-	delete pDevice;
+	if ( pDevice )
+		delete pDevice;
 }
 
 // =======================================================================

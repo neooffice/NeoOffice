@@ -319,10 +319,10 @@ BOOL SalGraphics::DrawEPS( long nX, long nY, long nWidth, long nHeight, void* pP
 			}
 			return TRUE;
 		}
-		else
-		{
-			delete pClass;
-		}
+	}
+	else
+	{
+		delete pClass;
 	}
 #else	// MACOSX
 #ifdef DEBUG

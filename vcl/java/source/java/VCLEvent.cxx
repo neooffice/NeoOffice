@@ -139,8 +139,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 	
 	// Handle events that require a SalFrame pointer
 	SalFrame *pFrame = getFrame();
-	if ( !pFrame )
-		return;
 
 	switch ( nID )
 	{
@@ -248,39 +246,46 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_MOVERESIZE:
 		case SALEVENT_RESIZE:
 		{
-			Size aOldSize( pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight );
 			Rectangle *pPosSize = (Rectangle *)pData;
-			if ( !pPosSize )
+			Size aOldSize;
+			if ( pFrame )
 			{
-				// Update size
-				pPosSize = new Rectangle( getBounds() );
-			}
-			pFrame->maGeometry.nX = pPosSize->nLeft + pFrame->maGeometry.nLeftDecoration;
-			pFrame->maGeometry.nY = pPosSize->nTop + pFrame->maGeometry.nTopDecoration;
-			pFrame->maGeometry.nWidth = pPosSize->GetWidth() - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration;
-			pFrame->maGeometry.nHeight = pPosSize->GetHeight() - pFrame->maGeometry.nTopDecoration - pFrame->maGeometry.nBottomDecoration;
-			// Reset graphics if the size has changed before dispatching
-			if ( pFrame->maGeometry.nWidth != aOldSize.Width() || pFrame->maGeometry.nHeight != aOldSize.Height() )
-			{
-				com_sun_star_vcl_VCLGraphics *pVCLGraphics = pFrame->maFrameData.mpVCLFrame->getGraphics();
-				if ( pVCLGraphics )
+				aOldSize = Size( pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight );
+				if ( !pPosSize )
 				{
-					pVCLGraphics->resetGraphics();
-					delete pVCLGraphics;
+					// Update size
+					pPosSize = new Rectangle( getBounds() );
+				}
+				pFrame->maGeometry.nX = pPosSize->nLeft + pFrame->maGeometry.nLeftDecoration;
+				pFrame->maGeometry.nY = pPosSize->nTop + pFrame->maGeometry.nTopDecoration;
+				pFrame->maGeometry.nWidth = pPosSize->GetWidth() - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration;
+				pFrame->maGeometry.nHeight = pPosSize->GetHeight() - pFrame->maGeometry.nTopDecoration - pFrame->maGeometry.nBottomDecoration;
+				// Reset graphics if the size has changed before dispatching
+				if ( pFrame->maGeometry.nWidth != aOldSize.Width() || pFrame->maGeometry.nHeight != aOldSize.Height() )
+				{
+					com_sun_star_vcl_VCLGraphics *pVCLGraphics = pFrame->maFrameData.mpVCLFrame->getGraphics();
+					if ( pVCLGraphics )
+					{
+						pVCLGraphics->resetGraphics();
+						delete pVCLGraphics;
+					}
 				}
 			}
 			dispatchEvent( nID, pFrame, NULL );
 			delete pPosSize;
-			// Invoke a paint event if the size has changed
-			if ( pFrame->maGeometry.nWidth != aOldSize.Width() || pFrame->maGeometry.nHeight != aOldSize.Height() )
+			if ( pFrame )
 			{
-				SalPaintEvent *pPaintEvent = new SalPaintEvent();
-				pPaintEvent->mnBoundX = 0;
-				pPaintEvent->mnBoundY = 0;
-				pPaintEvent->mnBoundWidth = pFrame->maGeometry.nWidth + pFrame->maGeometry.nLeftDecoration;
-				pPaintEvent->mnBoundHeight = pFrame->maGeometry.nHeight + pFrame->maGeometry.nTopDecoration;
-				dispatchEvent( SALEVENT_PAINT, pFrame, pPaintEvent );
-				delete pPaintEvent;
+				// Invoke a paint event if the size has changed
+				if ( pFrame->maGeometry.nWidth != aOldSize.Width() || pFrame->maGeometry.nHeight != aOldSize.Height() )
+				{
+					SalPaintEvent *pPaintEvent = new SalPaintEvent();
+					pPaintEvent->mnBoundX = 0;
+					pPaintEvent->mnBoundY = 0;
+					pPaintEvent->mnBoundWidth = pFrame->maGeometry.nWidth + pFrame->maGeometry.nLeftDecoration;
+					pPaintEvent->mnBoundHeight = pFrame->maGeometry.nHeight + pFrame->maGeometry.nTopDecoration;
+					dispatchEvent( SALEVENT_PAINT, pFrame, pPaintEvent );
+					delete pPaintEvent;
+				}
 			}
 			return;
 		}
@@ -292,10 +297,13 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				// Get paint region
 				const Rectangle &aUpdateRect = getUpdateRect();
 				pPaintEvent = new SalPaintEvent();
-				pPaintEvent->mnBoundX = aUpdateRect.nLeft - pFrame->maGeometry.nLeftDecoration;
-				pPaintEvent->mnBoundY = aUpdateRect.nTop - pFrame->maGeometry.nTopDecoration;
-				pPaintEvent->mnBoundWidth = aUpdateRect.GetWidth() + pFrame->maGeometry.nLeftDecoration;
-				pPaintEvent->mnBoundHeight = aUpdateRect.GetHeight() + pFrame->maGeometry.nTopDecoration;
+				if ( pFrame )
+				{
+					pPaintEvent->mnBoundX = aUpdateRect.nLeft - pFrame->maGeometry.nLeftDecoration;
+					pPaintEvent->mnBoundY = aUpdateRect.nTop - pFrame->maGeometry.nTopDecoration;
+					pPaintEvent->mnBoundWidth = aUpdateRect.GetWidth() + pFrame->maGeometry.nLeftDecoration;
+					pPaintEvent->mnBoundHeight = aUpdateRect.GetHeight() + pFrame->maGeometry.nTopDecoration;
+				}
 			}
 			dispatchEvent( nID, pFrame, pPaintEvent );
 			delete pPaintEvent;

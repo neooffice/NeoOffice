@@ -214,8 +214,8 @@ void *com_sun_star_vcl_VCLPrintJob::getNativePrintJob()
 				}
 #endif	// MACOSX
 			}
+			delete printerJob;
 		}
-		delete printerJob;
 	}
 	return out;
 }
@@ -268,8 +268,8 @@ XubString com_sun_star_vcl_VCLPrintJob::getPageRange()
 				}
 #endif	// MACOSX
 			}
+			delete printerJob;
 		}
-		delete printerJob;
 	}
 	return out;
 }
