@@ -105,7 +105,11 @@ build.oo_all: build.configure
 build.neo_%_patch: % build.oo_patches
 	cd "$<" ; sh -c 'for i in `cd "$(PWD)/$(BUILD_HOME)/$<" ; find . -type d | grep -v /CVS$$ | grep -v /unxmacxp.pro` ; do mkdir -p "$$i" ; done'
 	cd "$<" ; sh -c 'for i in `cd "$(PWD)/$(BUILD_HOME)/$<" ; find . ! -type d | grep -v /CVS/ | grep -v /unxmacxp.pro` ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
+	sh -c 'if [ ! -d "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro.oo" -a -d "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro" ] ; then rm -Rf "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro.oo" ; mv -f "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro" "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro.oo" ; fi'
+	rm -Rf "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro"
+	mkdir -p "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro"
 	cd "$<" ; ln -sf "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro"
+	source "$(OO_ENV_JAVA)" ; cd "$<" ; `alias build` $(BUILD_ARGS)
 	touch "$@"
 
 build.neo_patches: \
@@ -120,12 +124,4 @@ build.neo_patches: \
 	touch "$@"
 
 build.all: build.oo_all build.neo_patches
-	source "$(OO_ENV_JAVA)" ; cd "desktop" ; `alias build` -u $(BUILD_ARGS)
-	source "$(OO_ENV_JAVA)" ; cd "dtrans" ; `alias build` -u $(BUILD_ARGS)
-	source "$(OO_ENV_JAVA)" ; cd "forms" ; `alias build` -u $(BUILD_ARGS)
-	source "$(OO_ENV_JAVA)" ; cd "readlicense" ; `alias build` -u $(BUILD_ARGS)
-	source "$(OO_ENV_JAVA)" ; cd "offmgr" ; `alias build` -u $(BUILD_ARGS)
-	source "$(OO_ENV_JAVA)" ; cd "sysui" ; `alias build` -u $(BUILD_ARGS)
-	source "$(OO_ENV_JAVA)" ; cd "toolkit" ; `alias build` -u $(BUILD_ARGS)
-	source "$(OO_ENV_JAVA)" ; cd "vcl" ; `alias build` -u $(BUILD_ARGS)
 	touch "$@"
