@@ -15,7 +15,7 @@
 				<string>sxw</string>
 			</array>
 			<key>CFBundleTypeName</key>
-			<string>$(PRODUCT_TRADEMARKED_NAME) Document</string>
+			<string>$(PRODUCT_NAME) Document</string>
 			<key>CFBundleTypeOSTypes</key>
 			<array>
 				<string>$(PRODUCT_FILETYPE)</string>
@@ -31,7 +31,7 @@
 	<key>CFBundleIdentifier</key>
 	<string>org.neooffice.neooffice.java</string>
 	<key>CFBundleName</key>
-	<string>$(PRODUCT_TRADEMARKED_NAME)</string>
+	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundleIconFile</key>
 	<string>ship.icns</string>
 	<key>CFBundlePackageType</key>
