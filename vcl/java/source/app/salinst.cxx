@@ -127,6 +127,7 @@ static Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type *pCarbonLockG
 static Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *pCarbonLockInit = NULL;
 
 static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( JNIEnv *pEnv, jobject object );
+static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData );
 
 #endif
 
@@ -140,11 +141,17 @@ public:
 	virtual void			run();
 };
 
+
 // ============================================================================
 
 void SVMainThread::run()
 {
 	SalData *pSalData = GetSalData();
+
+#ifndef NO_NATIVE_MENUS
+	// Set up native menu event handler
+	InstallApplicationEventHandler( CarbonEventHandler, 0, NULL, NULL, NULL );
+#endif	// NO_NATIVE_MENUS
 
 	// Cache event queue
 	pSalData->mpEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
@@ -288,31 +295,33 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv 
 // ----------------------------------------------------------------------------
 
 #ifdef MACOSX
-static OSStatus CarbonMenuEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData )
+static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData )
 {
-	if ( GetEventClass( aEvent ) == kEventClassMenu )
+	bool bYieldEventQueue = ( GetEventClass( aEvent ) == kEventClassMenu && GetEventKind( aEvent ) == kEventMenuBeginTracking );
+
+	if ( bYieldEventQueue )
 	{
-		UInt32 nKind = GetEventKind( aEvent );
-		if ( nKind == kEventMenuOpening || nKind == kEventMenuClosed )
-		{
-			UInt32 nMenuID;
-			GetEventParameter( aEvent, kEventParamMenuContext, typeUInt32, NULL, sizeof( UInt32 ), NULL, &nMenuID );
-
-			// TODO: Find matching SalMenu instance and post the appropriate
-			// VCL events
-
-/*
-			// Test code to check if Java can execute in the Carbon event
-			// thread. This code should be eventually deleted.
-			SalData *pSalData = GetSalData();
-			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-				(*it)->Flush();
-*/
-		}
+		// Post a yield event and wait the VCL event queue to block
+		SalData *pSalData = GetSalData();
+		pSalData->maNativeEventStartCondition.reset();
+		com_sun_star_vcl_VCLEvent aYieldEvent( SALEVENT_YIELDEVENTQUEUE, NULL, NULL );
+		pSalData->mpEventQueue->postCachedEvent( &aYieldEvent );
+		pSalData->maNativeEventStartCondition.wait();
 	}
 
 	// Always execute the next registered handler
-	return CallNextEventHandler( aNextHandler, aEvent );
+	OSStatus nRet = CallNextEventHandler( aNextHandler, aEvent );
+
+	if ( bYieldEventQueue )
+	{
+		// Execute menu updates while the VCL event queue is blocked
+		SalData *pSalData = GetSalData();
+		for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+			UpdateMenusForFrame( (*it), NULL );
+		pSalData->maNativeEventEndCondition.set();
+	}
+
+	return nRet;
 }
 #endif
 
@@ -427,16 +436,6 @@ void ExecuteApplicationMain( Application *pApp )
 		}
 		else
 		{
-#ifndef NO_NATIVE_MENUS
-			// Set up native menu event handler
-			EventTypeSpec aTypes[ 2 ];
-			aTypes[ 0 ].eventClass = kEventClassMenu;
-			aTypes[ 0 ].eventKind = kEventMenuOpening;
-			aTypes[ 1 ].eventClass = kEventClassMenu;
-			aTypes[ 1 ].eventKind = kEventMenuClosed;
-			InstallApplicationEventHandler( CarbonMenuEventHandler, 2, aTypes, NULL, NULL );
-#endif	// NO_NATIVE_MENUS
-
 			// Panther expects applications to run their event loop in main
 			// thread and Java 1.3.1 runs its event loop in a separate thread.
 			// So, we need to disable the lock that Java 1.3.1 uses.
@@ -782,12 +781,10 @@ void SalInstance::Yield( BOOL bWait )
 			}
 			else
 			{
-				// Flush all of the window buffers to the native windows and synchronize native menus
+				// Flush all of the window buffers to the native windows and
+				// synchronize native menus
 				for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-				{
 					(*it)->Flush();
-					UpdateMenusForFrame( (*it), NULL );
-				}
 			}
 		}
 	}

@@ -60,6 +60,12 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX
 #include <com/sun/star/vcl/VCLPageFormat.hxx>
 #endif
+#ifndef _OSL_CONDITN_HXX_
+#if defined MACOSX && defined check
+#undef check
+#endif
+#include <osl/conditn.hxx>
+#endif
 
 class ImplFontData;
 
@@ -83,6 +89,8 @@ public:
 	SalFrame*				mpPresentationFrame;
 	::std::list< SalFrame* >	maPresentationFrameList;
 	::std::list< ::vcl::com_sun_star_vcl_VCLPageFormat* >	maVCLPageFormats;
+	::osl::Condition			maNativeEventStartCondition; 
+	::osl::Condition			maNativeEventEndCondition; 
 
 							SalData();
 							~SalData();

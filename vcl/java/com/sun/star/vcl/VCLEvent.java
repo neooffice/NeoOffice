@@ -9,7 +9,7 @@
  *  The Contents of this file are made available subject to the terms of
  *  either of the following licenses
  *
- *         - GNU General Public License Version 2.1
+ *	 - GNU General Public License Version 2.1
  *
  *  Patrick Luby, June 2003
  *
@@ -773,42 +773,42 @@ public final class VCLEvent extends AWTEvent {
 	 * SALEVENT_MOVERESIZE constant.
 	 */
 	public final static int SALEVENT_MOVERESIZE = 29;
-        
-        /**
-         * SALEVENT_CLOSEPOPUPS constant.
-         */
-        public final static int SALEVENT_CLOSEPOPUPS = 30;
-        
-        /**
-         * SALEVENT_EXTERNALKEYINPUT constant.
-         */
-        public final static int SALEVENT_EXTERNALKEYINPUT = 31;
-        
-        /**
-         * SALEVENT_EXTERNALKEYUP constant.
-         */
-        public final static int SALEVENT_EXTERNALKEYUP = 32;
-        
-        /**
-         * SALEVENT_MENUCOMMAND constant.
-         */
-        public final static int SALEVENT_MENUCOMMAND = 33;
-        
-        /**
-         * SALEVENT_MENUHIGHLIGHT constant.
-         */
-        public final static int SALEVENT_MENUHIGHLIGHT = 34;
-        
-        /**
-         * SALEVENT_MENUACTIVATE constant.
-         */
-        public final static int SALEVENT_MENUACTIVATE = 35;
-        
-        /**
-         * SALEVENT_MENUDEACTIVATE constant.
-         */
-        public final static int SALEVENT_MENUDEACTIVATE = 36;
-        
+
+	/**
+	 * SALEVENT_CLOSEPOPUPS constant.
+	 */
+	public final static int SALEVENT_CLOSEPOPUPS = 30;
+
+	/**
+	 * SALEVENT_EXTERNALKEYINPUT constant.
+	 */
+	public final static int SALEVENT_EXTERNALKEYINPUT = 31;
+
+	/**
+	 * SALEVENT_EXTERNALKEYUP constant.
+	 */
+	public final static int SALEVENT_EXTERNALKEYUP = 32;
+
+	/**
+	 * SALEVENT_MENUCOMMAND constant.
+	 */
+	public final static int SALEVENT_MENUCOMMAND = 33;
+
+	/**
+	 * SALEVENT_MENUHIGHLIGHT constant.
+	 */
+	public final static int SALEVENT_MENUHIGHLIGHT = 34;
+
+	/**
+	 * SALEVENT_MENUACTIVATE constant.
+	 */
+	public final static int SALEVENT_MENUACTIVATE = 35;
+
+	/**
+	 * SALEVENT_MENUDEACTIVATE constant.
+	 */
+	public final static int SALEVENT_MENUDEACTIVATE = 36;
+
 	/**
 	 * SALEVENT_COUNT constant.
 	 */
@@ -823,6 +823,11 @@ public final class VCLEvent extends AWTEvent {
 	 * SALEVENT_PRINTDOCUMENT constant.
 	 */
 	public final static int SALEVENT_PRINTDOCUMENT = 101;
+
+	/**
+	 * SALEVENT_YIELDEVENTQUEUE constant.
+	 */
+	public final static int SALEVENT_YIELDEVENTQUEUE = 110;
 
 	/**
 	 * SAL_EXTTEXTINPUT_ATTR_GRAYWAVELINE constant.
@@ -898,17 +903,17 @@ public final class VCLEvent extends AWTEvent {
 	 * The text attributes.
 	 */
 	private int[] textAttributes = null;
-        
-        /**
-         * The menu item ID.
-         */
-        private short menuID=0;
-        
-        /**
-         * The C++ object Menu pointer
-         */
-        private int menuCookie=0;
-        
+
+	/**
+	 * The menu item ID.
+	 */
+	private short menuID=0;
+
+	/**
+	 * The C++ object Menu pointer
+	 */
+	private int menuCookie=0;
+
 	/**
 	 * Constructs a new <code>VCLEvent</code> instance.
 	 *
@@ -923,23 +928,23 @@ public final class VCLEvent extends AWTEvent {
 		data = d;
 
 	}
-        
-        /**
-         * Constructs a new <code>VCLEvent</code> instance.  This constructor should be used only for
-         * injecting SALMENU events into the queue.
-         *
-         * @param id the event type
-         * @param mID the menu id
-         * @param mCookie the menu pointer
-         */
-        public VCLEvent(int id, VCLFrame f, short mID, int mCookie) {
-            
-                super(new Object(), id);
-                frame = f;
-                menuID = mID;
-                menuCookie = mCookie;
-        
-        }
+
+	/**
+	 * Constructs a new <code>VCLEvent</code> instance.  This constructor
+	 * should be used only for injecting SALEVENT_MENU* events into the queue.
+	 *
+	 * @param id the event type
+	 * @param mID the menu id
+	 * @param mCookie the menu pointer
+	 */
+	public VCLEvent(int id, VCLFrame f, short mID, int mCookie) {
+	    
+		super(new Object(), id);
+		frame = f;
+		menuID = mID;
+		menuCookie = mCookie;
+
+	}
 
 	/**
 	 * Constructs a new <code>VCLEvent</code> instance.
@@ -1542,29 +1547,29 @@ public final class VCLEvent extends AWTEvent {
 		return textAttributes;
 
 	}
-        
-        /**
-         * Returns the menu ID associated with this event
-         *
-         * @return menu ID used on AWT menu item creation
-         */
-        public short getMenuID() {
-            
-            return menuID;
-        
-        }
-        
-        /**
-         * Returns the menu cookie associated with this event.  This should acutally be a pointer
-         * to an underlying abstract Menu C++ instance.
-         *
-         * @return cookie provided by VCL on AWT menu item creation
-         */
-        public int getMenuCookie() {
-            
-            return menuCookie;
-        
-        }
+
+	/**
+	 * Returns the menu ID associated with this event
+	 *
+	 * @return menu ID used on AWT menu item creation
+	 */
+	public short getMenuID() {
+	    
+	    return menuID;
+
+	}
+
+	/**
+	 * Returns the menu cookie associated with this event. This should acutally
+	 * be a pointer to an underlying abstract Menu C++ instance.
+	 *
+	 * @return cookie provided by VCL on AWT menu item creation
+	 */
+	public int getMenuCookie() {
+	    
+	    return menuCookie;
+
+	}
 
 	/**
 	 * Returns the rectangle representing the area which needs to be repainted
@@ -1634,7 +1639,7 @@ public final class VCLEvent extends AWTEvent {
 	 */
 	boolean isAWTEvent() {
 
-		return awtEvent;
+		return (awtEvent || getID() == SALEVENT_YIELDEVENTQUEUE);
 
 	}
 
@@ -1735,27 +1740,27 @@ public final class VCLEvent extends AWTEvent {
 			case SALEVENT_MOVERESIZE:
 				typeStr = "SALEVENT_MOVERESIZE";
 				break;
-                        case SALEVENT_CLOSEPOPUPS:
-                                typeStr = "SALEVENT_CLOSEPOPUPS";
-                                break;
-                        case SALEVENT_EXTERNALKEYINPUT:
-                                typeStr = "SALEVENT_EXTERNALKEYINPUT";
-                                break;
-                        case SALEVENT_EXTERNALKEYUP:
-                                typeStr = "SALEVENT_EXTERNALKEYUP";
-                                break;
-                        case SALEVENT_MENUCOMMAND:
-                                typeStr = "SALEVENT_MENUCOMMAND";
-                                break;
-                        case SALEVENT_MENUHIGHLIGHT:
-                                typeStr = "SALEVENT_MENUHIGHLIGHT";
-                                break;
-                        case SALEVENT_MENUACTIVATE:
-                                typeStr = "SALEVENT_MENUACTIVATE";
-                                break;
-                        case SALEVENT_MENUDEACTIVATE:
-                                typeStr = "SALEVENT_MENUDEACTIVATE";
-                                break;
+			case SALEVENT_CLOSEPOPUPS:
+				typeStr = "SALEVENT_CLOSEPOPUPS";
+				break;
+			case SALEVENT_EXTERNALKEYINPUT:
+				typeStr = "SALEVENT_EXTERNALKEYINPUT";
+				break;
+			case SALEVENT_EXTERNALKEYUP:
+				typeStr = "SALEVENT_EXTERNALKEYUP";
+				break;
+			case SALEVENT_MENUCOMMAND:
+				typeStr = "SALEVENT_MENUCOMMAND";
+				break;
+			case SALEVENT_MENUHIGHLIGHT:
+				typeStr = "SALEVENT_MENUHIGHLIGHT";
+				break;
+			case SALEVENT_MENUACTIVATE:
+				typeStr = "SALEVENT_MENUACTIVATE";
+				break;
+			case SALEVENT_MENUDEACTIVATE:
+				typeStr = "SALEVENT_MENUDEACTIVATE";
+				break;
 			case SALEVENT_OPENDOCUMENT:
 				typeStr = "SALEVENT_OPENDOCUMENT";
 				break;
@@ -1779,223 +1784,174 @@ public final class VCLEvent extends AWTEvent {
 			return super.toString();
 
 	}
-        
-        /**
-         * Convert a VCL keycode into a Java keycode.
-         *
-         * @param vclKey	VCL keycode
-         * @return Java keycode, or 0 if no keycode is corresponding.
-         */
-        static public int convertVCLKeyCode(int vclKey) {
-            int toReturn=0;
-            
-            switch(vclKey) {
-            	case KEY_0:
-                    toReturn=KeyEvent.VK_0;
-                    break;
-                
-                case KEY_1:
-                    toReturn=KeyEvent.VK_1;
-                    break;
-                
-                case KEY_2:
-                    toReturn=KeyEvent.VK_2;
-                    break;
-                
-                case KEY_3:
-                    toReturn=KeyEvent.VK_3;
-                    break;
-                
-                case KEY_4:
-                    toReturn=KeyEvent.VK_4;
-                    break;
-                
-                case KEY_5:
-                    toReturn=KeyEvent.VK_5;
-                    break;
-                
-                case KEY_6:
-                    toReturn=KeyEvent.VK_6;
-                    break;
-                
-                case KEY_7:
-                    toReturn=KeyEvent.VK_7;
-                    break;
-                
-                case KEY_8:
-                    toReturn=KeyEvent.VK_8;
-                    break;
-                
-                case KEY_9:
-                    toReturn=KeyEvent.VK_9;
-                    break;
-                
-                case KEY_A:
-                    toReturn=KeyEvent.VK_A;
-                    break;
-                
-                case KEY_B:
-                    toReturn=KeyEvent.VK_B;
-                    break;
-                
-                case KEY_C:
-                    toReturn=KeyEvent.VK_C;
-                    break;
-                    
-                case KEY_D:
-                    toReturn=KeyEvent.VK_D;
-                    break;
-                
-                case KEY_E:
-                    toReturn=KeyEvent.VK_E;
-                    break;
-                
-                case KEY_F:
-                    toReturn=KeyEvent.VK_F;
-                    break;
-                
-                case KEY_G:
-                    toReturn=KeyEvent.VK_G;
-                    break;
-                
-                case KEY_H:
-                    toReturn=KeyEvent.VK_H;
-                    break;
-                
-                case KEY_I:
-                    toReturn=KeyEvent.VK_I;
-                    break;
-                
-                case KEY_J:
-                    toReturn=KeyEvent.VK_J;
-                    break;
-                
-                case KEY_K:
-                    toReturn=KeyEvent.VK_K;
-                    break;
-                
-                case KEY_L:
-                    toReturn=KeyEvent.VK_L;
-                    break;
-                
-                case KEY_M:
-                    toReturn=KeyEvent.VK_M;
-                    break;
-                
-                case KEY_N:
-                    toReturn=KeyEvent.VK_N;
-                    break;
-                
-                case KEY_O:
-                    toReturn=KeyEvent.VK_O;
-                    break;
-                
-                case KEY_P:
-                    toReturn=KeyEvent.VK_P;
-                    break;
-                
-                case KEY_Q:
-                    toReturn=KeyEvent.VK_Q;
-                    break;
-                
-                case KEY_R:
-                    toReturn=KeyEvent.VK_R;
-                    break;
-                
-                case KEY_S:
-                    toReturn=KeyEvent.VK_S;
-                    break;
-                
-                case KEY_T:
-                    toReturn=KeyEvent.VK_T;
-                    break;
-                
-                case KEY_U:
-                    toReturn=KeyEvent.VK_U;
-                    break;
-                
-                case KEY_V:
-                    toReturn=KeyEvent.VK_V;
-                    break;
-                
-                case KEY_W:
-                    toReturn=KeyEvent.VK_W;
-                    break;
-                
-                case KEY_X:
-                    toReturn=KeyEvent.VK_X;
-                    break;
-                
-                case KEY_Y:
-                    toReturn=KeyEvent.VK_Y;
-                    break;
-                
-                case KEY_Z:
-                    toReturn=KeyEvent.VK_Z;
-                    break;
-                
-                case KEY_F1:
-                    toReturn=KeyEvent.VK_F1;
-                    break;
-                
-                case KEY_F2:
-                    toReturn=KeyEvent.VK_F2;
-                    break;
-                
-                case KEY_F3:
-                    toReturn=KeyEvent.VK_F3;
-                    break;
-                
-                case KEY_F4:
-                    toReturn=KeyEvent.VK_F4;
-                    break;
-                
-                case KEY_F5:
-                    toReturn=KeyEvent.VK_F5;
-                    break;
-                
-                case KEY_F6:
-                    toReturn=KeyEvent.VK_F6;
-                    break;
-                
-                case KEY_F7:
-                    toReturn=KeyEvent.VK_F7;
-                    break;
-                
-                case KEY_F8:
-                    toReturn=KeyEvent.VK_F8;
-                    break;
-                
-                case KEY_F9:
-                    toReturn=KeyEvent.VK_F9;
-                    break;
-                
-                case KEY_F10:
-                    toReturn=KeyEvent.VK_F10;
-                    break;
-                
-                case KEY_F11:
-                    toReturn=KeyEvent.VK_F11;
-                    break;
-                
-                case KEY_F12:
-                    toReturn=KeyEvent.VK_F12;
-                    break;
-                
-                case KEY_F13:
-                    toReturn=KeyEvent.VK_F13;
-                    break;
-                
-                case KEY_F14:
-                    toReturn=KeyEvent.VK_F14;
-                    break;
-                
-                case KEY_F15:
-                    toReturn=KeyEvent.VK_F15;
-                    break;
-            }
-            
-            return(toReturn);
-        }
+
+	/**
+	 * Convert a VCL keycode into a Java keycode.
+	 *
+	 * @param vclKey	VCL keycode
+	 * @return Java keycode, or 0 if no keycode is corresponding.
+	 */
+	static public int convertVCLKeyCode(int vclKey) {
+
+	    int toReturn=0;
+    
+	    switch(vclKey) {
+	    	case KEY_0:
+		    toReturn=KeyEvent.VK_0;
+		    break;
+		case KEY_1:
+		    toReturn=KeyEvent.VK_1;
+		    break;
+		case KEY_2:
+		    toReturn=KeyEvent.VK_2;
+		    break;
+		case KEY_3:
+		    toReturn=KeyEvent.VK_3;
+		    break;
+		case KEY_4:
+		    toReturn=KeyEvent.VK_4;
+		    break;
+		case KEY_5:
+		    toReturn=KeyEvent.VK_5;
+		    break;
+		case KEY_6:
+		    toReturn=KeyEvent.VK_6;
+		    break;
+		case KEY_7:
+		    toReturn=KeyEvent.VK_7;
+		    break;
+		case KEY_8:
+		    toReturn=KeyEvent.VK_8;
+		    break;
+		case KEY_9:
+		    toReturn=KeyEvent.VK_9;
+		    break;
+		case KEY_A:
+		    toReturn=KeyEvent.VK_A;
+		    break;
+		case KEY_B:
+		    toReturn=KeyEvent.VK_B;
+		    break;
+		case KEY_C:
+		    toReturn=KeyEvent.VK_C;
+		    break;
+		case KEY_D:
+		    toReturn=KeyEvent.VK_D;
+		    break;
+		case KEY_E:
+		    toReturn=KeyEvent.VK_E;
+		    break;
+		case KEY_F:
+		    toReturn=KeyEvent.VK_F;
+		    break;
+		case KEY_G:
+		    toReturn=KeyEvent.VK_G;
+		    break;
+		case KEY_H:
+		    toReturn=KeyEvent.VK_H;
+		    break;
+		case KEY_I:
+		    toReturn=KeyEvent.VK_I;
+		    break;
+		case KEY_J:
+		    toReturn=KeyEvent.VK_J;
+		    break;
+		case KEY_K:
+		    toReturn=KeyEvent.VK_K;
+		    break;
+		case KEY_L:
+		    toReturn=KeyEvent.VK_L;
+		    break;
+		case KEY_M:
+		    toReturn=KeyEvent.VK_M;
+		    break;
+		case KEY_N:
+		    toReturn=KeyEvent.VK_N;
+		    break;
+		case KEY_O:
+		    toReturn=KeyEvent.VK_O;
+		    break;
+		case KEY_P:
+		    toReturn=KeyEvent.VK_P;
+		    break;
+		case KEY_Q:
+		    toReturn=KeyEvent.VK_Q;
+		    break;
+		case KEY_R:
+		    toReturn=KeyEvent.VK_R;
+		    break;
+		case KEY_S:
+		    toReturn=KeyEvent.VK_S;
+		    break;
+		case KEY_T:
+		    toReturn=KeyEvent.VK_T;
+		    break;
+		case KEY_U:
+		    toReturn=KeyEvent.VK_U;
+		    break;
+		case KEY_V:
+		    toReturn=KeyEvent.VK_V;
+		    break;
+		case KEY_W:
+		    toReturn=KeyEvent.VK_W;
+		    break;
+		case KEY_X:
+		    toReturn=KeyEvent.VK_X;
+		    break;
+		case KEY_Y:
+		    toReturn=KeyEvent.VK_Y;
+		    break;
+		case KEY_Z:
+		    toReturn=KeyEvent.VK_Z;
+		    break;
+		case KEY_F1:
+		    toReturn=KeyEvent.VK_F1;
+		    break;
+		case KEY_F2:
+		    toReturn=KeyEvent.VK_F2;
+		    break;
+		case KEY_F3:
+		    toReturn=KeyEvent.VK_F3;
+		    break;
+		case KEY_F4:
+		    toReturn=KeyEvent.VK_F4;
+		    break;
+		case KEY_F5:
+		    toReturn=KeyEvent.VK_F5;
+		    break;
+		case KEY_F6:
+		    toReturn=KeyEvent.VK_F6;
+		    break;
+		case KEY_F7:
+		    toReturn=KeyEvent.VK_F7;
+		    break;
+		case KEY_F8:
+		    toReturn=KeyEvent.VK_F8;
+		    break;
+		case KEY_F9:
+		    toReturn=KeyEvent.VK_F9;
+		    break;
+		case KEY_F10:
+		    toReturn=KeyEvent.VK_F10;
+		    break;
+		case KEY_F11:
+		    toReturn=KeyEvent.VK_F11;
+		    break;
+		case KEY_F12:
+		    toReturn=KeyEvent.VK_F12;
+		    break;
+		case KEY_F13:
+		    toReturn=KeyEvent.VK_F13;
+		    break;
+		case KEY_F14:
+		    toReturn=KeyEvent.VK_F14;
+		    break;
+		case KEY_F15:
+		    toReturn=KeyEvent.VK_F15;
+		    break;
+	    }
+	    
+	    return(toReturn);
+	}
 
 }

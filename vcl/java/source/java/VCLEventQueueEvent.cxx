@@ -108,7 +108,7 @@ com_sun_star_vcl_VCLEvent::com_sun_star_vcl_VCLEvent( USHORT nID, const SalFrame
 	OSL_ENSURE( mID, "Unknown method id!" );
 	jvalue args[3];
 	args[0].i = jint( nID );
-	args[1].l = pFrame->maFrameData.mpVCLFrame->getJavaObject();
+	args[1].l = pFrame ? pFrame->maFrameData.mpVCLFrame->getJavaObject() : NULL;
 	args[2].i = jint( pData );
 	jobject tempObj;
 	tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
@@ -147,6 +147,17 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			ApplicationEvent aAppEvt( aEmptyStr, aEmptyStr, APPEVENT_PRINT_STRING, getPath() );
 			ImplGetSVData()->mpApp->AppEvent( aAppEvt );
 
+			return;
+		}
+		case SALEVENT_YIELDEVENTQUEUE:
+		{
+			// Unlock mutexes and block event queue so that the native event
+			// handler can proceed
+			ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
+			pSalData->maNativeEventEndCondition.reset();
+			pSalData->maNativeEventStartCondition.set();
+			pSalData->maNativeEventEndCondition.wait();
+			pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
 			return;
 		}
 	}
@@ -405,10 +416,6 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 			if ( pFrame == *it )
 			{
 				pFrame->Flush();
-
-				// Update the menu structure so the native menus will reflect
-				// the frame's menu structure
-				UpdateMenusForFrame( pFrame, NULL );
 				break;
 			}
 		}
