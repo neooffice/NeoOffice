@@ -133,7 +133,7 @@ build.neo_patches: \
 	touch "$@"
 
 build.package: build.neo_patches
-	chmod -Rf u+rw "$(INSTALL_HOME)"
+	if ( -d "$(INSTALL_HOME)" ) chmod -Rf u+rw "$(INSTALL_HOME)"
 	rm -Rf "$(INSTALL_HOME)"
 	mkdir -p "$(INSTALL_HOME)/package"
 	echo `source "$(OO_ENV_JAVA)" ; cd "instsetoo/util" ; dmake language_numbers` > "$(INSTALL_HOME)/language_numbers"
@@ -171,14 +171,14 @@ build.package: build.neo_patches
 	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; sh -e -c 'for i in "share/config/registry/instance/org/openoffice/Setup.xml" "share/config/registry/cache/instance/org/openoffice/Setup.dat" ; do sed "s#\"string\">.*</ooName>#\"string\">$(PRODUCT_NAME)</ooName>#g" "$${i}" | sed "s#\"string\">.*</ooSetupVersion>#\"string\">$(PRODUCT_VERSION)</ooSetupVersion>#g" > "../../../out" ; mv -f "../../../out" "$${i}" ; done'
 	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; sh -e -c 'for i in "share/config/registry/instance/org/openoffice/Office/Common.xml" "share/config/registry/cache/instance/org/openoffice/Office/Common.dat" ; do sed "s#$(PWD)/$(INSTALL_HOME)/package#/Applications#g" "$${i}" | sed "s#>OpenOffice\.org [0-9\.]* #>$(PRODUCT_NAME) $(PRODUCT_VERSION) #g" | sed "s#/work#/../../../Documents#g" > "../../../out" ; mv -f "../../../out" "$${i}" ; done'
 	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; sh -e -c 'if [ ! -d "MacOS" ] ; then rm -Rf "MacOS" ; mv -f "program" "MacOS" ; ln -s "MacOS" "program" ; fi'
-	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find . -type d | grep -v /CVS$$ ; do mkdir -p "$$i" ; done'
-	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find . ! -type d | grep -v /CVS/` ; do sed "s#>PRODUCT_NAME<#>$(PRODUCT_NAME)<#g" "$(PWD)/etc/$${i}" | sed "s#>LANGUAGES<#>`cat \"$(PWD)/$(INSTALL_HOME)/language_names\"`<#g" > "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find . -type d | grep -v /CVS$$` ; do mkdir -p "$$i" ; done'
+	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find . ! -type d | grep -v /CVS/` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
 	chmod -Rf a-w,a+r "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app"
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' etc/neojava.info | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).info"
 	/usr/bin/package "$(INSTALL_HOME)/package" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).info" -d "$(INSTALL_HOME)"
 	sh -e -c 'if [ ! -d "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources" ] ; then mv "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg" "$(INSTALL_HOME)/Resources" ; mkdir -p "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents" ; mv "$(INSTALL_HOME)/Resources" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents" ; fi'
 	cp "etc/gpl.html" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/License.html"
-	cd "bin" ; sh -e -c 'for i in InstallationCheck postflight ; do sed "s#\$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g" "$${i}" > "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$${i}" ; chmod 755 "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$${i}" ; done'
+	cd "bin" ; sh -e -c 'for i in preflight postflight ; do sed "s#\$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g" "$${i}" > "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$${i}" ; chmod 755 "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$${i}" ; done'
 	chmod -Rf u+w,og-w,a+r "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg"
 	touch "$@"
 
@@ -186,8 +186,6 @@ build.source_zip:
 	$(RM) -Rf "$(SOURCE_HOME)"
 	mkdir -p "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)"
 	cd "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)" ; cvs -d "$(NEO_CVSROOT)" co -r "$(NEO_TAG)" "$(NEO_PACKAGE)"
-# Need to do a cvs update to get the empty directories
-	cd "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)" ; sh -e -c 'for i in `ls -1`; do cd "$${i}" ; cvs update -d ; done'
 	cp "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)/neojava/etc/gpl.html" "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)/LICENSE.html"
 	chmod -Rf u+w,og-w,a+r "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)"
 	cd "$(SOURCE_HOME)" ; gnutar zcf "$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION).src.tar.gz" "$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)"

@@ -250,6 +250,12 @@
 #include <vos/profile.hxx>
 #endif
 
+#ifdef USE_JAVA
+#ifdef MACOSX
+#include <sys/wait.h>
+#endif
+#endif
+
 #define DEFINE_CONST_UNICODE(CONSTASCII)        UniString(RTL_CONSTASCII_USTRINGPARAM(CONSTASCII##))
 #define U2S(STRING)								::rtl::OUStringToOString(STRING, RTL_TEXTENCODING_UTF8)
 
@@ -689,29 +695,59 @@ void Desktop::StartSetup( const OUString& aParameters )
 #endif
 	}
 
-	OUString				aArgListArray[1];
 	::vos::OSecurity		aSecurity;
 	::vos::OEnvironment		aEnv;
 	::vos::OArgumentList	aArgList;
 
-	aArgListArray[0] = aParameters;
-	OArgumentList aArgumentList( aArgListArray, 1 );
-
 	::vos::OProcess	aProcess( aProgName, aDir );
+
 #ifdef USE_JAVA
+#ifdef MACOSX
+	pid_t pid = fork();
+
+	// We need to execute the osl_getProcessLocale function in a separate
+	// process as it loads libraries that cause all sorts of window focus
+	// problems in Java on Mac OS X 10.1
+	if (pid == 0)
+	{
+#endif	// MACOSX
 	// Wait for execution to finish since Java is so dependent on it
+	OUString aArgListArray[3];
+	rtl_Locale *pLocale;
+	if ( osl_getProcessLocale( &pLocale ) == osl_Process_E_None )
+	{
+		aArgListArray[0] = OUString( RTL_CONSTASCII_USTRINGPARAM( "-locale" ) );
+		aArgListArray[1] = OUString( rtl_locale_getLanguage( pLocale ) );
+		OUString aCountry = OUString( rtl_locale_getCountry( pLocale ) );
+		if ( aCountry.getLength() )
+		{
+			aArgListArray[1] += OUString( RTL_CONSTASCII_USTRINGPARAM( "-" ) );
+			aArgListArray[1] += OUString( aCountry );
+		} 
+		aArgListArray[2] = aParameters;
+	} 
+	else
+	{
+		aArgListArray[0] = aParameters;
+		aArgListArray[1] = OUString();
+		aArgListArray[2] = OUString();
+	}
+	OArgumentList aArgumentList( aArgListArray, 3 );
 	::vos::OProcess::TProcessError aProcessError =
 		aProcess.execute( OProcess::TOption_Wait,
 						  aSecurity,
 						  aArgumentList,
 						  aEnv );
-#else
+#else	// USE_JAVA
+	OUString aArgListArray[1];
+	aArgListArray[0] = aParameters;
+	OArgumentList aArgumentList( aArgListArray, 1 );
 	::vos::OProcess::TProcessError aProcessError =
 		aProcess.execute( OProcess::TOption_Detached,
 						  aSecurity,
 						  aArgumentList,
 						  aEnv );
-#endif
+#endif	// USE_JAVA
 
 	if ( aProcessError != OProcess::E_None )
 	{
@@ -722,6 +758,21 @@ void Desktop::StartSetup( const OUString& aParameters )
 		ErrorBox aBootstrapFailedBox( NULL, WB_OK, aMessage );
 		aBootstrapFailedBox.Execute();
 	}
+
+#ifdef USE_JAVA
+#ifdef MACOSX
+		_exit(0);
+	}
+	else
+	{
+		if (pid > 0)
+		{
+			int status;
+			waitpid(pid, &status, 0);
+		}
+	}
+#endif	// MACOSX
+#endif	// USE_JAVA
 }
 
 void Desktop::HandleBootstrapPathErrors( ::utl::Bootstrap::Status aBootstrapStatus, const OUString& aDiagnosticMessage )

@@ -16,7 +16,7 @@
 # 
 #   GNU General Public License Version 2.1
 #   =============================================
-#   Copyright 2003 by Patrick Luby (patrick.luby@planamesa.com)
+#   Copyright 2003 by Patrick Luby (patrick.luby@planamesa.com
 # 
 #   This library is free software; you can redistribute it and/or
 #   modify it under the terms of the GNU General Public
@@ -34,63 +34,108 @@
 # 
 ##########################################################################
 
+# Reset PATH
+PATH=/usr/bin:/bin:/usr/sbin:/sbin                
+export PATH
+
+error()
+{
+    if [ ! -z "$1" ] ; then
+        echo "Error: $1"
+    fi
+    echo "Usage: $0 [-h] -locale <locale> [-repair]"
+    exit 1
+}
+
 apphome=`dirname "$0"`
 userbase="$apphome/../user"
 userinstall="$HOME/Library/NeoOfficeJ/user"
 
 # Make sure that this is not a botched installation
-if [ ! -d "$apphome" -o ! -d "$userbase" ] ; then
-    exit 1;
+if [ ! -d "$apphome" ] ; then
+    error "$apphome directory does not exist"
+fi
+if [ ! -d "$userbase" ] ; then
+    error "$userbase directory does not exist"
+fi
+
+# Parse arguments
+locale=""
+repair=""
+while [ ! -z "$1" ] ; do
+    case "$1" in
+    -locale)
+        if [ -z "$2" ] ; then
+            error "-locale argument must be followed by a locale"
+        fi
+        locale="$2"
+        shift 2;;
+    -repair)
+        repair="true"
+        shift;;
+    -h)
+        error;;
+    *)
+        error "$1 argument is not recognized";;
+    esac
+done
+
+# Make sure that a locale was specified
+if [ -z "$locale" ] ; then
+     error "-locale argument missing"
 fi
 
 configdir="$userinstall/config"
 xmldir="$configdir/registry/instance/org/openoffice"
+xmltemplatedir="$configdir/registry/template/org/openoffice"
 
 # Create user installation directory
 if [ ! -d "$userinstall" ] ; then
+    repair="true"
     mkdir -p "$userinstall"
 fi
 chmod -Rf u+rw "$userinstall"
 if [ $? != 0 ]; then
-    exit 1;
+    error
 fi
 cp -Rf "$userbase"/* "$userinstall"
 if [ $? != 0 ]; then
-    exit 1;
+    error
 fi
 chmod -Rf u+rw "$userinstall"
 if [ $? != 0 ]; then
-    exit 1;
+    error
 fi
 
 # Copy and edit required files
 if [ ! -d "$xmldir" ] ; then
-    exit 1;
+    error
 fi
-for i in `cd "$xmldir" ; find . ! -type d` ; do
-    sed 's#>USER_INSTALL_DIR<#>'"$userinstall"'<#g' "$xmldir/$i" | sed 's#>CURRENT_DATE<#>'`date +%d.%m.%Y/%H.%M.%S`'<#g' > "$xmldir/$i.tmp"
-   	if [ $? != 0 ]; then
-        exit 1;
-    fi
-    mv "$xmldir/$i.tmp" "$xmldir/$i"
-   	if [ $? != 0 ]; then
-        exit 1;
+if [ ! -d "$xmltemplatedir" ] ; then
+    error
+fi
+for i in `cd "$xmltemplatedir" ; find . ! -type d` ; do
+    if [ ! -z "$repair" -o "$i" = "Setup.xml" ] ; then
+        sed 's#>USER_INSTALL_DIR<#>'"$userinstall"'<#g' "$xmltemplatedir/$i" | sed 's#>LOCALE<#>'"$locale"'<#g' | sed 's#>CURRENT_DATE<#>'`date +%d.%m.%Y/%H.%M.%S`'<#g' > "$xmldir/$i"
+        if [ $? != 0 ]; then
+            error
+        fi
     fi
 done
 sysclasspath=""
 if [ ! -d "$apphome/classes" ] ; then
-    exit 1;
+    error
 fi
 for i in `cd "$apphome/classes" ; find . -name "*.jar"` ; do
     sysclasspath="$sysclasspath:$apphome/classes/$i"
 done
 sysclasspath=`printf "$sysclasspath" | sed 's#^:##'`
 if [ $? != 0 ]; then
-    exit 1;
+    error
 fi
 printf "[Java]\nRuntimeLib=/System/Library/Frameworks/JavaVM.framework/JavaVM\nSystemClasspath=$sysclasspath\ncom.apple.hwaccel=false\ncom.apple.hwaccellist=\nJava=1\nJavaScript=1\nApplets=1\n\n" > "$configdir/javarc"
 if [ $? != 0 ]; then
-    exit 1;
+    error
 fi
 
 exit 0
