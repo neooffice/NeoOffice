@@ -1635,7 +1635,7 @@ JavaVM * JavaVirtualMachine::createJavaVM(stoc_javavm::JVM const & jvm,
     // The office sets a signal handler at startup. That causes a crash
     // with java 1.3 under Solaris. To make it work, we set back the
     // handler
-#ifdef UNX
+#if defined UNX && !defined MACOSX
     struct sigaction act;
     act.sa_handler=SIG_DFL;
     act.sa_flags= 0;
@@ -1691,7 +1691,7 @@ JavaVM * JavaVirtualMachine::createJavaVM(stoc_javavm::JVM const & jvm,
         options[x+addOpt].optionString= (char*)arProps[x].getStr();
         options[x+addOpt].extraInfo= NULL;
     }
-#ifdef MACOSX
+#if defined MACOSX && defined USE_JAVA_1_4
     vm_args.version= JNI_VERSION_1_4;
 #else	// MACOSX
     vm_args.version= JNI_VERSION_1_2;
@@ -1720,7 +1720,7 @@ JavaVM * JavaVirtualMachine::createJavaVM(stoc_javavm::JVM const & jvm,
 #ifdef MACOSX
         if (err != 0)
         {
-            vm_args.version= JNI_VERSION_1_4;
+            vm_args.version= JNI_VERSION_1_2;
             err = pCreateJavaVM(&pJavaVM, pMainThreadEnv, &vm_args);
         }
 #endif	// MACOSX
