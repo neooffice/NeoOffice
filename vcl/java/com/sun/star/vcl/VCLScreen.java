@@ -52,6 +52,11 @@ public final class VCLScreen {
 	/**
 	 * The minimum screen resolution
 	 */
+	public final static int MIN_PRINTER_RESOLUTION = 72;
+
+	/**
+	 * The minimum screen resolution
+	 */
 	public final static int MIN_SCREEN_RESOLUTION = 96;
 
 	/**
