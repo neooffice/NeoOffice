@@ -1,0 +1,157 @@
+/*************************************************************************
+ *
+ *  $RCSfile$
+ *
+ *  $Revision$
+ *
+ *  last change: $Author$ $Date$
+ *
+ *  The Contents of this file are made available subject to the terms of
+ *  either of the following licenses
+ *
+ *         - GNU General Public License Version 2.1
+ *
+ *  GNU General Public License Version 2.1
+ *  =============================================
+ *  Copyright 2002 Edward H. Peterlin
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public
+ *  License version 2.1, as published by the Free Software Foundation.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *  MA  02111-1307  USA
+ *
+ *
+ ************************************************************************/
+
+#ifndef _SFX_HRC
+#include <sfx2/sfx.hrc>
+#endif
+
+#include "app.hrc"
+#include "intro.hrc"
+
+Bitmap RID_DEFAULTINTRO
+{
+	File = "neojavaintro.bmp" ;
+};
+
+Bitmap RID_DEFAULTINTRO_PORTAL
+{
+	File = "neojavaintro.bmp" ;
+};
+
+String RID_APPTITLE
+{
+    Text = PRODUCT_NAME " " PRODUCT_VERSION ;
+};
+
+// der String wird fuer die Registrierung gebraucht: 01 Voll, 02 OEM, 03 Vobis
+String STR_VERSION_TYPE
+{
+	Text = "01";
+};
+
+// der String wird fuer die Registrierung gebraucht - hier steht die Version zweistellig!
+String STR_VERSION_ID
+{
+	Text = "50";
+};
+
+String RID_BUILDVERSION
+{
+	Text = UPDVER ;
+};
+
+ModalDialog RID_DEFAULTABOUT
+{
+	OutputSize = TRUE ;
+	Size = MAP_APPFONT ( 245 , 200 ) ;
+	Moveable = TRUE ;
+	SVLook = TRUE ;
+	TEXT_DEFAULTABOUT
+	OKButton ABOUT_BTN_OK
+	{
+		DefButton = TRUE ;
+		Pos = MAP_APPFONT ( 174 , 6 ) ;
+		Size = MAP_APPFONT ( 50 , 14 ) ;
+	};
+	Image ABOUT_BMP_LOGO
+	{
+		ImageBitmap = Bitmap { File = "neojavaabout.bmp" ; };
+	};
+	FixedText ABOUT_FTXT_VERSION
+	{
+		Pos = MAP_APPFONT ( 54 , 6 ) ;
+		Size = MAP_APPFONT ( 118 , 16 ) ;
+		WordBreak = TRUE ;
+		Text =	"Copyright 2003 Patrick Luby and other NeoOffice.org contributors;  Portions Copyright 2001 Sun Microsystems";
+		Text[ english_us ] = "Copyright 2003 Patrick Luby and other NeoOffice.org contributors;  Portions Copyright 2001 Sun Microsystems";
+		Text[ language_user1 ] = "pb: change 2000 -> 2001";
+		Text[ portuguese ] = "Copyright 2003 Patrick Luby and other NeoOffice.org contributors;  Portions Copyright 2001 Sun Microsystems";
+		Text[ russian ] = "Copyright 2003 Patrick Luby and other NeoOffice.org contributors;  Portions Copyright 2001 Sun Microsystems";
+		Text[ greek ] = "Copyright 2003 Patrick Luby and other NeoOffice.org contributors;  Portions Copyright 2001 Sun Microsystems";
+		Text[ dutch ] = "Copyright 2003 Patrick Luby and other NeoOffice.org contributors;  Portions Copyright 2001 Sun Microsystems";
+		Text[ french ] = "Copyright 2003 Patrick Luby and other NeoOffice.org contributors;  Portions Copyright 2001 Sun Microsystems";
+		Text[ spanish ] = "Copyright 2003 Patrick Luby and other NeoOffice.org contributors;  Portions Copyright 2001 Sun Microsystems";
+		Text[ italian ] = "Copyright 2003 Patrick Luby and other NeoOffice.org contributors;  Portions Copyright 2001 Sun Microsystems";
+		Text[ danish ] = "Copyright 2003 Patrick Luby and other NeoOffice.org contributors;  Portions Copyright 2001 Sun Microsystems";
+		Text[ swedish ] = "Copyright 2003 Patrick Luby and other NeoOffice.org contributors;  Portions Copyright 2001 Sun Microsystems";
+		Text[ polish ] = "Copyright 2003 Patrick Luby and other NeoOffice.org contributors;  Portions Copyright 2001 Sun Microsystems";
+		Text[ portuguese_brazilian ] = "Copyright 2003 Patrick Luby and other NeoOffice.org contributors;  Portions Copyright 2001 Sun Microsystems";
+		Text[ japanese ] = "Copyright 2003 Patrick Luby and other NeoOffice.org contributors;  Portions Copyright 2001 Sun Microsystems";
+		Text[ korean ] = "Copyright 2003 Patrick Luby and other NeoOffice.org contributors;  Portions Copyright 2001 Sun Microsystems";
+		Text[ chinese_simplified ] = "Copyright 2003 Patrick Luby and other NeoOffice.org contributors;  Portions Copyright 2001 Sun Microsystems";
+		Text[ chinese_traditional ] = "Copyright 2003 Patrick Luby and other NeoOffice.org contributors;  Portions Copyright 2001 Sun Microsystems";
+		Text[ turkish ] = "Copyright 2003 Patrick Luby and other NeoOffice.org contributors;  Portions Copyright 2001 Sun Microsystems";
+		Text[ arabic ] = "Copyright 2003 Patrick Luby and other NeoOffice.org contributors;  Portions Copyright 2001 Sun Microsystems";
+		Text[ catalan ] = "Copyright 2003 Patrick Luby and other NeoOffice.org contributors;  Portions Copyright 2001 Sun Microsystems";
+		Text[ finnish ] = "Copyright 2003 Patrick Luby and other NeoOffice.org contributors;  Portions Copyright 2001 Sun Microsystems";
+	};
+	FixedText ABOUT_FTXT_COPYRIGHT
+	{
+		Pos = MAP_APPFONT ( 54 , 25 ) ;
+		Size = MAP_APPFONT ( 168 , 51 ) ;
+		WordBreak = TRUE ;
+		Text =	"" ;
+	};
+	String ABOUT_STR_DEVELOPER
+	{
+		Text = "" ;
+	};
+	StringArray ABOUT_STR_DEVELOPER_ARY
+	{
+		ItemList =
+		{
+			< "" ; > ;
+			< "" ; > ;
+		};
+	};
+	String ABOUT_STR_COPYRIGHT_ADABAS
+	{
+		Text =	"" ;
+	};
+	String ABOUT_STR_ACCEL
+	{
+		Text = "SDT" ;
+	};
+};
+
+// ******************************************************************* EOF
+
+
+
+
+
+
+
+
+

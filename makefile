@@ -43,7 +43,11 @@ OO_ENV_X11:=$(BUILD_HOME)/MacosxEnv.Set
 OO_ENV_JAVA:=$(BUILD_HOME)/MacosxEnvJava.Set
 
 # Product information
-PRODUCT_NAME=NeoOffice/J(TM)
+PRODUCT_NAME=NeoOffice/J
+PRODUCT_DIR_NAME=NeoOfficeJ
+# Important: Note that there are escape characters in the PRODUCT_NAME for the
+# UTF-8 trademark symbol. Don't replace these with "\x##" literal strings!
+PRODUCT_TRADEMARKED_NAME=NeoOffice™/J
 PRODUCT_VERSION=0.0
 PRODUCT_FILETYPE=no%f
 
@@ -83,14 +87,15 @@ build.oo_%_patch: $(BUILD_HOME)/% build.oo_checkout
 	touch "$@"
 
 build.configure: build.oo_patches
-#	cd "$(BUILD_HOME)/config_office" ; autoconf
-#	( cd "$(BUILD_HOME)/config_office" ; ./configure CC=cc --with-x )
+	cd "$(BUILD_HOME)/config_office" ; autoconf
+	( cd "$(BUILD_HOME)/config_office" ; ./configure CC=cc --with-x )
 	rm -f "$(OO_ENV_JAVA)"
 	sed 's#^setenv GUIBASE .*$$#setenv GUIBASE "java"#' "$(OO_ENV_X11)" | sed 's#^setenv ENVCDEFS "#&-DUSE_JAVA#' | sed 's#^setenv CLASSPATH .*$$#setenv CLASSPATH "$$SOLARVER/$$UPD/$$INPATH/bin/vcl.jar"#' > "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_NAME '$(PRODUCT_NAME)'" >> "$(OO_ENV_JAVA)"
+	echo "setenv PRODUCT_DIR_NAME '$(PRODUCT_DIR_NAME)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_VERSION '$(PRODUCT_VERSION)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_FILETYPE '$(PRODUCT_FILETYPE)'" >> "$(OO_ENV_JAVA)"
-#	( cd "$(BUILD_HOME)" ; ./bootstrap )
+	( cd "$(BUILD_HOME)" ; ./bootstrap )
 	touch "$@"
 
 build.oo_all: build.configure
@@ -106,6 +111,7 @@ build.neo_%_patch: % build.oo_patches
 build.neo_patches: \
 	build.neo_dtrans_patch \
 	build.neo_forms_patch \
+	build.neo_offmgr_patch \
 	build.neo_sysui_patch \
 	build.neo_toolkit_patch \
 	build.neo_vcl_patch
@@ -114,6 +120,7 @@ build.neo_patches: \
 build.all: build.oo_all build.neo_patches
 	source "$(OO_ENV_JAVA)" ; cd "dtrans" ; `alias build` -u $(BUILD_ARGS)
 	source "$(OO_ENV_JAVA)" ; cd "forms" ; `alias build` -u $(BUILD_ARGS)
+	source "$(OO_ENV_JAVA)" ; cd "offmgr" ; `alias build` -u $(BUILD_ARGS)
 	source "$(OO_ENV_JAVA)" ; cd "sysui" ; `alias build` -u $(BUILD_ARGS)
 	source "$(OO_ENV_JAVA)" ; cd "toolkit" ; `alias build` -u $(BUILD_ARGS)
 	source "$(OO_ENV_JAVA)" ; cd "vcl" ; `alias build` -u $(BUILD_ARGS)
