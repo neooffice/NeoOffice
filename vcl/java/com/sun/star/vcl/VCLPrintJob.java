@@ -259,7 +259,9 @@ public final class VCLPrintJob implements Printable, Runnable {
 		try {
 			job.print();
 		}
-		catch (Throwable t) {}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
 		printThreadFinished = true;
 
 		// Notify other threads that printing is finished

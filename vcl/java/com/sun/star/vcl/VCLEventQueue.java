@@ -35,6 +35,9 @@
 
 package com.sun.star.vcl;
 
+import java.awt.AWTEvent;
+import java.awt.EventQueue;
+import java.awt.Toolkit;
 import java.lang.reflect.Constructor;
 
 /**
@@ -97,6 +100,9 @@ public final class VCLEventQueue {
 	public VCLEventQueue() {
 
 		VCLGraphics.setAutoFlush(true);
+
+		// Swap in our own event queue
+		Toolkit.getDefaultToolkit().getSystemEventQueue().push(new VCLEventQueue.NoExceptionsEventQueue());
 
 		// Create the list of queues
 		queueList[0] = new VCLEventQueue.Queue();
@@ -304,6 +310,30 @@ public final class VCLEventQueue {
 				while (queue.head != null && queue.head.remove)
 					queue.head = queue.head.next;
 			}
+		}
+
+	}
+
+	/**
+	 * The <code>NoExceptionEventQueue</code> class prevents unhandled
+	 * exceptions from stopping the event queue.
+	 */
+	final class NoExceptionsEventQueue extends EventQueue {
+
+		/**
+		 * Dispatch an event.
+		 *
+		 * @param event the event to dispatch
+		 */
+		protected void dispatchEvent(AWTEvent event) {
+
+			try {
+				super.dispatchEvent(event);
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+
 		}
 
 	}

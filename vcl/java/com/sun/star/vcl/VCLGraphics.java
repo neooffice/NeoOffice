@@ -232,31 +232,45 @@ public final class VCLGraphics {
 		try {
 			drawImageMethod = VCLGraphics.class.getMethod("drawImage", new Class[]{ Image.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class });
 		}
-		catch (Throwable t) {}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
 		try {
 			drawLineMethod = VCLGraphics.class.getMethod("drawLine", new Class[]{ int.class, int.class, int.class, int.class, int.class });
 		}
-		catch (Throwable t) {}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
 		try {
 			drawRectMethod = VCLGraphics.class.getMethod("drawRect", new Class[]{ int.class, int.class, int.class, int.class, int.class, boolean.class });
 		}
-		catch (Throwable t) {}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
 		try {
 			drawPolygonMethod = VCLGraphics.class.getMethod("drawPolygon", new Class[]{ int.class, int[].class, int[].class, int.class, boolean.class });
 		}
-		catch (Throwable t) {}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
 		try {
 			drawPolylineMethod = VCLGraphics.class.getMethod("drawPolyline", new Class[]{ int.class, int[].class, int[].class, int.class });
 		}
-		catch (Throwable t) {}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
 		try {
 			drawPolyPolygonMethod = VCLGraphics.class.getMethod("drawPolyPolygon", new Class[]{ int.class, int[].class, int[][].class, int[][].class, int.class, boolean.class });
 		}
-		catch (Throwable t) {}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
 		try {
 			drawTextArrayMethod = VCLGraphics.class.getMethod("drawTextArray", new Class[]{ int.class, int.class, char[].class, VCLFont.class, int.class, int[].class });
 		}
-		catch (Throwable t) {}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
 	}
 
 	/**
@@ -1576,7 +1590,9 @@ public final class VCLGraphics {
 						try {
 							imageHead.method.invoke(pageGraphics, imageHead.params);
 						}
-						catch (Throwable t) {}
+						catch (Throwable t) {
+							t.printStackTrace();
+						}
 						imageHead = imageHead.next;
 					}
 					pageGraphics.dispose();
@@ -1589,7 +1605,9 @@ public final class VCLGraphics {
 					try {
 						imageHead.method.invoke(graphics, imageHead.params);
 					}
-					catch (Throwable t) {}
+					catch (Throwable t) {
+						t.printStackTrace();
+					}
 					imageHead = null;
 				}
 				imageTail = null;
@@ -1607,7 +1625,9 @@ public final class VCLGraphics {
 				try {
 					drawingHead.method.invoke(graphics, drawingHead.params);
 				}
-				catch (Throwable t) {}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
 				drawingHead = drawingHead.next;
 			}
 			drawingTail = null;
