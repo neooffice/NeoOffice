@@ -54,29 +54,66 @@
  */
 int macxp_getOSXLocale( char *locale, sal_uInt32 bufferLen )
 {
-	LocaleRef lref;
-	CFArrayRef aref;
-	CFStringRef	sref;
-     
-	aref = (CFArrayRef)CFPreferencesCopyAppValue( CFSTR( "AppleLanguages" ), kCFPreferencesCurrentUser );
-	if ( aref != NULL && ( sref = (CFStringRef)CFArrayGetValueAtIndex( aref, 0 ) ) != NULL )
-	{
-        size_t len = 0;
+	CFBundleRef rBundle;
 
-        CFStringGetCString( sref, locale, bufferLen, CFStringGetSystemEncoding() );
-        /* Sometimes CFPref AppleLanguages gets corrupted so check for it */
-        len = strlen( locale );
-        if ( len < 2 || ( len >= 5 && locale[2] != '_' ) )
-        {
-            fprintf( stderr, "The value of CFPref AppleLanguages is corrupted! Please remove and readd your preferred language from the list of languages in the International control panel to fix this problem.\n" );
-            strcpy( locale, "en" );
-        }
-    }
-    else
-    {
-        fprintf( stderr, "Could not get value of CFPref AppleLanguages! Please reset your locale in the International control panel.\n" );
-        strcpy( locale, "en" );
-    }
+	locale[0] = '\0'; 
+	rBundle = CFBundleGetMainBundle();
+	if ( rBundle )
+	{
+		CFArrayRef rAvailableLocales = CFBundleCopyBundleLocalizations( rBundle );
+		if ( rAvailableLocales )
+		{
+			CFArrayRef rPreferredLocales = CFBundleCopyPreferredLocalizationsFromArray( rAvailableLocales );
+			if ( rPreferredLocales )
+			{
+				CFStringRef rString = (CFStringRef)CFArrayGetValueAtIndex( rPreferredLocales, 0 );
+				if ( rString )
+				{
+					if ( !CFStringGetCString( rString, locale, bufferLen, kCFStringEncodingUTF8 ) )
+						locale[0] = '\0';
+					
+				}
+				CFRelease( rPreferredLocales );
+			}
+			CFRelease( rAvailableLocales );
+		}
+	}
+
+	if ( !strlen( locale ) )
+	{
+		LocaleRef lref;
+		CFArrayRef aref;
+		CFStringRef	sref;
+
+		aref = (CFArrayRef)CFPreferencesCopyAppValue( CFSTR( "AppleLanguages" ), kCFPreferencesCurrentUser );
+		if ( aref )
+		{
+			sref = (CFStringRef)CFArrayGetValueAtIndex( aref, 0 );
+			if ( sref )
+			{
+				size_t len = 0;
+	
+				CFStringGetCString( sref, locale, bufferLen, kCFStringEncodingUTF8 );
+				/* Sometimes CFPref AppleLanguages gets corrupted so check for it */
+				len = strlen( locale );
+				if ( len < 2 || ( len >= 5 && locale[2] != '_' ) )
+					locale[0] = '\0';
+			}
+
+			if ( !strlen( locale ) )
+				fprintf( stderr, "The value of CFPref AppleLanguages is corrupted! Please remove and readd your preferred language from the list of languages in the International control panel to fix this problem.\n" );
+
+			CFRelease( aref );
+		}
+		else
+		{
+			fprintf( stderr, "Could not get value of CFPref AppleLanguages! Please reset your locale in the International control panel.\n" );
+			locale[0] = '\0';
+		}
+	}
+
+	if ( !strlen( locale ) )
+		strcpy( locale, "en" );
 
 	return( noErr );
 }
