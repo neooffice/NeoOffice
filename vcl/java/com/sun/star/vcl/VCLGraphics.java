@@ -986,14 +986,8 @@ public final class VCLGraphics implements ImageObserver {
 
 		if (panelGraphics != null && image != null && update != null) {
 			panelGraphics.setClip(update);
-			synchronized (image) {
-			 	if (!panelGraphics.drawImage(image.getImage(), 0, 0, this)) {
-					try {
-						image.wait();
-					}
-					catch (Throwable t) {}
-				}
-			}	
+			// Asynchronous drawing is OK here
+			panelGraphics.drawImage(image.getImage(), 0, 0, null);
 			Toolkit.getDefaultToolkit().sync();
 			update = null;
 			panelGraphics.setClip(null);
@@ -1030,7 +1024,6 @@ public final class VCLGraphics implements ImageObserver {
 	 */
 	public int getResolution() {
 
-		System.out.println("Resolution: " + resolution);
 		return resolution;
 
 	}
