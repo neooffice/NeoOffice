@@ -119,7 +119,24 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 	MacOSPoint aPoint;
 	Rect aRect;
 	if ( pData && GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
+	{
+		switch ( nMessage )
+		{
+			case kDragTrackingEnterHandler:
+			case kDragTrackingEnterWindow:
+			case kDragTrackingInWindow:
+			case kDragTrackingLeaveWindow:
+				SetThemeCursor( kThemeClosedHandCursor );
+				break;
+			case kDragTrackingLeaveHandler:
+				SetThemeCursor( kThemeNotAllowedCursor );
+				break;
+			default:
+				break;
+		}
+
 		((JavaDragSource *)pData)->handleDrag( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) );
+	}
 
 	return noErr;
 }
@@ -323,6 +340,7 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 
 		if ( listener.is() )
 			listener->dragDropEnd( aDragEvent );
+
 		return;
 	}
 
