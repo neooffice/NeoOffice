@@ -53,7 +53,7 @@ PRODUCT_DIR_NAME=NeoOfficeJ
 # Important: Note that there are escape characters in the PRODUCT_NAME for the
 # UTF-8 trademark symbol. Don't replace these with "\x##" literal strings!
 PRODUCT_TRADEMARKED_NAME=NeoOffice®/J
-PRODUCT_VERSION=0.8.2
+PRODUCT_VERSION=0.8.3
 PRODUCT_FILETYPE=NO%F
 
 # CVS macros
@@ -62,7 +62,7 @@ OO_PACKAGES:=MathMLDTD UnoControls XmlSearch apiwww autodoc automation basctl ba
 OO_TAG:=OOO_STABLE_1_PORTS
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOfficeJ
-NEO_TAG:=NeoOfficeJ-0_8_2
+NEO_TAG:=HEAD
 
 all: build.all
 
@@ -77,21 +77,26 @@ build.oo_patches: build.oo_checkout \
 	build.oo_external_patch
 	touch "$@"
 
-build.oo_external_patch: build.oo_checkout
+build.oo_odk_patches: build.oo_checkout \
+	build.oo_odk_patch \
+	build.oo_product_patch
+	touch "$@"
+
+build.oo_external_patch: $(OO_PATCHES_HOME)/external.patch build.oo_checkout
 	chmod -Rf u+w "$(BUILD_HOME)/external/gpc"
 	gnutar zxf "$(OO_PATCHES_HOME)/gpc231.tar.Z" -C "$(BUILD_HOME)/external/gpc"
 	chmod -Rf u+w "$(BUILD_HOME)/external/gpc"
 	mv -f "$(BUILD_HOME)/external/gpc/gpc231"/* "$(BUILD_HOME)/external/gpc"
 	rm -Rf "$(BUILD_HOME)/external/gpc/gpc231"
-	-( cd "$(BUILD_HOME)/external" ; patch -R -p0 -N -r "$(PWD)/patch.rej" ) < "$(OO_PATCHES_HOME)/external.patch"
+	-( cd "$(BUILD_HOME)/external" ; patch -R -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	cp "$(OO_PATCHES_HOME)/dlcompat-20020709.tar.gz" "$(BUILD_HOME)/external/download"
 	cp "$(OO_PATCHES_HOME)/dlcompat.pat.tar.gz" "$(BUILD_HOME)/external/dlcompat"
-	( cd "$(BUILD_HOME)/external" ; patch -p0 -N -r "$(PWD)/patch.rej" ) < "$(OO_PATCHES_HOME)/external.patch"
+	( cd "$(BUILD_HOME)/external" ; patch -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	touch "$@"
 
-build.oo_%_patch: $(BUILD_HOME)/% build.oo_checkout
-	-( cd "$<" ; patch -R -p0 -N -r "$(PWD)/patch.rej" ) < "$(OO_PATCHES_HOME)/"`basename "$<"`".patch"
-	( cd "$<" ; patch -p0 -N -r "$(PWD)/patch.rej" ) < "$(OO_PATCHES_HOME)/"`basename "$<"`".patch"
+build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.oo_checkout
+	-( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -R -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+	( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	touch "$@"
 
 build.configure: build.oo_patches
@@ -102,6 +107,10 @@ build.configure: build.oo_patches
 
 build.oo_all: build.configure
 	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/instsetoo" ; `alias build` -all $(OO_BUILD_ARGS)
+	touch "$@"
+
+build.oo_odk_all: build.configure build.oo_all build.oo_odk_patches
+	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/odk" ; `alias build` -all $(OO_BUILD_ARGS)
 	touch "$@"
 
 build.neo_configure: build.oo_all
@@ -126,7 +135,7 @@ build.neo_%_patch: % build.neo_configure
 	source "$(OO_ENV_JAVA)" ; cd "$<" ; `alias build` $(NEO_BUILD_ARGS)
 	touch "$@"
 
-build.neo_patches: \
+build.neo_patches: build.oo_all \
 	build.neo_desktop_patch \
 	build.neo_dtrans_patch \
 	build.neo_forms_patch \
@@ -140,6 +149,11 @@ build.neo_patches: \
 	build.neo_toolkit_patch \
 	build.neo_vcl_patch \
 	build.neo_instsetoo_patch
+	touch "$@"
+
+build.neo_odk_patches: \
+	build.oo_odk_all \
+	build.neo_odk_patch
 	touch "$@"
 
 build.oo_download_dics:
@@ -186,6 +200,7 @@ build.package: build.neo_patches build.oo_download_dics
 	cd "$(INSTALL_HOME)/package/Contents/Resources" ; sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/language_names" | sed "s#-#_#g"` ; do mkdir -p "$${i}.lproj" ; mkdir -p `echo "$${i}" | sed "s#_.*\\$$##"`".lproj" ;  done'
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/program" ; regcomp -revoke -r applicat.rdb -c "libdtransX11$${UPD}$${DLLSUFFIX}.dylib"
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/program" ; regcomp -register -r applicat.rdb -c "libdtransjava$${UPD}$${DLLSUFFIX}.dylib"
+	cd "$(INSTALL_HOME)/package/Contents/program" ; ln -s "libjava_uno.dylib" "libjava_uno.jnilib" ; ln -s "libdb_java-3.2.dylib" "libdb_java-3.2.jnilib"
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "license.html" "readme.html" "spadmin" "setup" "program/libdtransX11$${UPD}$${DLLSUFFIX}.dylib" "program/libpsp$${UPD}$${DLLSUFFIX}.dylib" "program/libspa$${UPD}$${DLLSUFFIX}.dylib" "program/setup.bin" "program/spadmin" "program/spadmin.bin" "share/kde" "share/psprint"
 	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#ProductPatch=.*$$#ProductPatch=($(PRODUCT_VERSION))#' "program/bootstraprc" | sed '/Location=.*$$/d' | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/Library/$(PRODUCT_DIR_NAME)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' > "../../../out" ; mv -f "../../../out" "program/bootstraprc"
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "share/config/registry/cache" ; sh -e -c 'for i in "share/config/registry/instance/org/openoffice/Setup.xml" "share/config/registry/instance/org/openoffice/Office/Common.xml" ; do sed "s#\"string\">.*</ooName>#\"string\">$(PRODUCT_NAME)</ooName>#g" "$${i}" | sed "s#\"string\">.*</ooSetupVersion>#\"string\">$(PRODUCT_VERSION)</ooSetupVersion>#g" | sed "s#$(PWD)/$(INSTALL_HOME)/package#/Applications#g" | sed "s#>OpenOffice\.org [0-9\.]* #>$(PRODUCT_NAME) $(PRODUCT_VERSION) #g" | sed "s#/work#/../../../Documents#g" | sed "s#>UNIX<#>MAC<#g" > "../../../out" ; mv -f "../../../out" "$${i}" ; done'
@@ -210,6 +225,9 @@ build.package: build.neo_patches build.oo_download_dics
 	chmod -Rf a-w,a+r "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg"
 	touch "$@"
 
+build.odk_package: build.neo_odk_patches
+	touch "$@"
+
 build.source_zip:
 	$(RM) -Rf "$(SOURCE_HOME)"
 	mkdir -p "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)"
@@ -221,5 +239,5 @@ build.source_zip:
 	cd "$(SOURCE_HOME)" ; gnutar zcf "$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION).src.tar.gz" "$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION)"
 	touch "$@"
 
-build.all: build.oo_all build.package build.source_zip
+build.all: build.package build.odk_package build.source_zip
 	touch "$@"

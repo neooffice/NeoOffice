@@ -1,0 +1,422 @@
+Index: setsdkenv_unix.in
+===================================================================
+RCS file: /cvs/api/odk/setsdkenv_unix.in,v
+retrieving revision 1.2.4.1
+diff -u -r1.2.4.1 setsdkenv_unix.in
+--- setsdkenv_unix.in	30 Apr 2003 06:29:00 -0000	1.2.4.1
++++ setsdkenv_unix.in	16 Mar 2004 19:20:13 -0000
+@@ -39,12 +39,14 @@
+ 
+ 
+ # Check installation path for the StarOffice Development Kit.
+-if [ -z "$SDK_HOME" ]
++if [ -z "$OO_SDK_HOME" ]
+ then
+-    echo Error: Please insert a correct value for the variable SDK_HOME.
++    echo Error: Please insert a correct value for the variable OO_SDK_HOME.
+     exit 0
+ fi
+ 
++export OO_SDK_HOME
++
+ # Check installation path for the office.
+ if [ -z "$OFFICE_HOME" ]
+ then
+@@ -65,26 +67,47 @@
+   SunOS)
+     directoryname=solsparc
+     exampleout=SOLARISexample.out
++    LD_LIBRARY_PATH=$OO_SDK_HOME/$directoryname/lib:$OO_SDK_HOME/$exampleout/lib:$OFFICE_PROGRAM_PATH:$LD_LIBRARY_PATH
++    # Add directory of the STLPORT library to the LD_LIBRARY_PATH, if necessary.
++    if [ -n "$OO_STLPORT_HOME" ]
++    then
++        LD_LIBRARY_PATH=$OO_STLPORT_HOME/lib:$LD_LIBRARY_PATH
++    fi
++    export LD_LIBRARY_PATH
++    ;;
++
++  Darwin)
++    directoryname=macosx
++    exampleout=MACOSXexample.out
++    DYLD_LIBRARY_PATH=$OO_SDK_HOME/$directoryname/lib:$OO_SDK_HOME/$exampleout/lib:$OFFICE_PROGRAM_PATH:$DYLD_LIBRARY_PATH
++    # Add directory of the STLPORT library to the LD_LIBRARY_PATH, if necessary.
++    if [ -n "$OO_STLPORT_HOME" ]
++    then
++        DYLD_LIBRARY_PATH=$OO_STLPORT_HOME/lib:$DYLD_LIBRARY_PATH
++    fi
++    export DYLD_LIBRARY_PATH
+     ;;
+ 
+   Linux)
+     directoryname=linux
+     exampleout=LINUXexample.out
++    LD_LIBRARY_PATH=$OO_SDK_HOME/$directoryname/lib:$OO_SDK_HOME/$exampleout/lib:$OFFICE_PROGRAM_PATH:$LD_LIBRARY_PATH
++    # Add directory of the STLPORT library to the LD_LIBRARY_PATH, if necessary.
++    if [ -n "$OO_STLPORT_HOME" ]
++    then
++        LD_LIBRARY_PATH=$OO_STLPORT_HOME/lib:$LD_LIBRARY_PATH
++    fi
++    export LD_LIBRARY_PATH
+     ;;
+ esac
+ 
+ # Add directory of the SDK tools to the path and current directory.
+ PATH=$OO_SDK_HOME/$directoryname/bin:$OFFICE_PROGRAM_PATH:.:$PATH
+-LD_LIBRARY_PATH=$OO_SDK_HOME/$directoryname/lib:$OO_SDK_HOME/$exampleout/lib:$OFFICE_PROGRAM_PATH:$LD_LIBRARY_PATH
+ 
+-# Add directory of the STLPORT library to the LD_LIBRARY_PATH, if necessary.
+ if [ -n "$OO_STLPORT_HOME" ]
+ then
+-    LD_LIBRARY_PATH=$OO_STLPORT_HOME/lib:$LD_LIBRARY_PATH
+     export OO_STLPORT_HOME
+ fi
+-
+-export LD_LIBRARY_PATH
+ 
+ # Add directory of the command make to the path, if necessary.
+ if [ -n "$OO_SDK_MAKE_HOME" ]
+Index: examples/cpp/GenericXMLFilter/GenericXMLExportFilter.cxx
+===================================================================
+RCS file: /cvs/api/odk/examples/cpp/GenericXMLFilter/GenericXMLExportFilter.cxx,v
+retrieving revision 1.2
+diff -u -r1.2 GenericXMLExportFilter.cxx
+--- examples/cpp/GenericXMLFilter/GenericXMLExportFilter.cxx	8 Nov 2001 16:59:19 -0000	1.2
++++ examples/cpp/GenericXMLFilter/GenericXMLExportFilter.cxx	16 Mar 2004 19:20:14 -0000
+@@ -187,3 +187,10 @@
+ {
+     return GenericXMLExportFilter_getSupportedServiceNames();
+ }
++
++#if defined(MACOSX) && __GNUC__ == 2
++
++// Initialize static data members
++cppu::ClassData4 cppu::WeakImplHelper4< XFilter, XExporter, com::sun::star::lang::XInitialization, com::sun::star::lang::XServiceInfo >::s_aCD = NULL;
++
++#endif  // MACOSX && __GNUC__ == 2
+Index: examples/cpp/GenericXMLFilter/GenericXMLFilter.cxx
+===================================================================
+RCS file: /cvs/api/odk/examples/cpp/GenericXMLFilter/GenericXMLFilter.cxx,v
+retrieving revision 1.3
+diff -u -r1.3 GenericXMLFilter.cxx
+--- examples/cpp/GenericXMLFilter/GenericXMLFilter.cxx	8 Nov 2001 16:59:19 -0000	1.3
++++ examples/cpp/GenericXMLFilter/GenericXMLFilter.cxx	16 Mar 2004 19:20:15 -0000
+@@ -312,3 +312,10 @@
+ {
+     return GenericXMLFilter_getSupportedServiceNames();
+ }
++
++#if defined(MACOSX) && __GNUC__ == 2
++
++// Initialize static data members
++cppu::ClassData5 cppu::WeakImplHelper5< XFilter, XExporter, XImporter, com::sun::star::lang::XInitialization, com::sun::star::lang::XServiceInfo >::s_aCD = NULL;
++
++#endif  // MACOSX && __GNUC__ == 2
+Index: examples/cpp/GenericXMLFilter/GenericXMLImportFilter.cxx
+===================================================================
+RCS file: /cvs/api/odk/examples/cpp/GenericXMLFilter/GenericXMLImportFilter.cxx,v
+retrieving revision 1.2
+diff -u -r1.2 GenericXMLImportFilter.cxx
+--- examples/cpp/GenericXMLFilter/GenericXMLImportFilter.cxx	8 Nov 2001 16:59:19 -0000	1.2
++++ examples/cpp/GenericXMLFilter/GenericXMLImportFilter.cxx	16 Mar 2004 19:20:15 -0000
+@@ -209,3 +209,10 @@
+ {
+     return GenericXMLImportFilter_getSupportedServiceNames();
+ }
++
++#if defined(MACOSX) && __GNUC__ == 2
++
++// Initialize static data members
++cppu::ClassData4 cppu::WeakImplHelper4< XFilter, XImporter, com::sun::star::lang::XInitialization, com::sun::star::lang::XServiceInfo >::s_aCD = NULL;
++
++#endif  // MACOSX && __GNUC__ == 2
+Index: examples/cpp/officeclient/officeclient.cxx
+===================================================================
+RCS file: /cvs/api/odk/examples/cpp/officeclient/officeclient.cxx,v
+retrieving revision 1.5.20.1
+diff -u -r1.5.20.1 officeclient.cxx
+--- examples/cpp/officeclient/officeclient.cxx	30 Apr 2003 06:29:08 -0000	1.5.20.1
++++ examples/cpp/officeclient/officeclient.cxx	16 Mar 2004 19:20:16 -0000
+@@ -320,3 +320,10 @@
+ 	return pRet;
+ }
+ }
++
++#if defined(MACOSX) && __GNUC__ == 2
++
++// Initialize static data members
++ClassData1 WeakImplHelper1< XMain >::s_aCD = NULL;
++
++#endif  // MACOSX && __GNUC__ == 2
+Index: pack/copying/makefile.mk
+===================================================================
+RCS file: /cvs/api/odk/pack/copying/makefile.mk,v
+retrieving revision 1.45.4.1
+diff -u -r1.45.4.1 makefile.mk
+--- pack/copying/makefile.mk	30 Apr 2003 06:29:51 -0000	1.45.4.1
++++ pack/copying/makefile.mk	16 Mar 2004 19:20:18 -0000
+@@ -622,6 +622,9 @@
+ 
+ $(DESTDIRDLL)$/$(MY_DLLPREFIX)officebean$(MY_DLLPOSTFIX) : $(MY_DLLOUT)$/$(MY_DLLPREFIX)officebean$(MY_DLLPOSTFIX)
+ 	$(GNUCOPY) -p $? $@
++.IF "$(OS)"=="MACOSX"
++	create-bundle $@
++.ENDIF
+ 
+ $(DESTDIR)$/settings$/dk.mk : $(PRJ)$/util$/dk.mk
+ 	+-rm -f $@ >& $(NULLDEV)
+Index: pack/copying/oo1.0.2_sdk_linkpatch
+===================================================================
+RCS file: /cvs/api/odk/pack/copying/Attic/oo1.0.2_sdk_linkpatch,v
+retrieving revision 1.1.2.2
+diff -u -r1.1.2.2 oo1.0.2_sdk_linkpatch
+--- pack/copying/oo1.0.2_sdk_linkpatch	24 Feb 2003 21:37:33 -0000	1.1.2.2
++++ pack/copying/oo1.0.2_sdk_linkpatch	16 Mar 2004 19:20:18 -0000
+@@ -8,48 +8,60 @@
+ platform=`uname -s`
+ 
+ case $platform in
+-     Linux) COMPID=gcc3	;;
+-     SunOS) COMPID=C52	;;
+-     *)	    COMPID=gcc3 ;;
++     Linux) COMPID=gcc3
++       DLLPOSTFIX=so
++       ;;
++     Darwin) COMPID=GCC
++       DLLPOSTFIX=dylib
++       ;;
++     SunOS) COMPID=C52
++       DLLPOSTFIX=so
++       ;;
++     *)	    COMPID=gcc3
++       DLLPOSTFIX=so
++       ;;
+ esac
+ 
+ echo "Platfrom = $platform"
+ echo "Compiler identifier = $COMPID"
+ echo 
+ 
+-echo "ln -s libcppu.so.3 libcppu.so"
+-ln -s libcppu.so.3 libcppu.so
++echo "ln -s libcppu.$DLLPOSTFIX.3 libcppu.$DLLPOSTFIX"
++ln -s libcppu.$DLLPOSTFIX.3 libcppu.$DLLPOSTFIX
+ 
+-echo "ln -s libreg.so.3 libreg.so"
+-ln -s libreg.so.3 libreg.so
++echo "ln -s libreg.$DLLPOSTFIX.3 libreg.$DLLPOSTFIX"
++ln -s libreg.$DLLPOSTFIX.3 libreg.$DLLPOSTFIX
+ 
+-echo "ln -s librmcxt.so.3 librmcxt.so"
+-ln -s librmcxt.so.3 librmcxt.so
++echo "ln -s librmcxt.$DLLPOSTFIX.3 librmcxt.$DLLPOSTFIX"
++ln -s librmcxt.$DLLPOSTFIX.3 librmcxt.$DLLPOSTFIX
+ 
+-echo "ln -s libsal.so.3 libsal.so"
+-ln -s libsal.so.3 libsal.so
++echo "ln -s libsal.$DLLPOSTFIX.3 libsal.$DLLPOSTFIX"
++ln -s libsal.$DLLPOSTFIX.3 libsal.$DLLPOSTFIX
+ 
+-echo "ln -s libstore.so.3 libstore.so"
+-ln -s libstore.so.3 libstore.so
++echo "ln -s libstore.$DLLPOSTFIX.3 libstore.$DLLPOSTFIX"
++ln -s libstore.$DLLPOSTFIX.3 libstore.$DLLPOSTFIX
+ 
+-echo "ln -s libcppuhelper3$COMPID.so libcppuhelper$COMPID.so.3.0.1"
+-ln -s libcppuhelper3$COMPID.so libcppuhelper$COMPID.so.3.0.1
++echo "ln -s libcppuhelper3$COMPID.$DLLPOSTFIX libcppuhelper$COMPID.$DLLPOSTFIX.3.0.1"
++ln -s libcppuhelper3$COMPID.$DLLPOSTFIX libcppuhelper$COMPID.$DLLPOSTFIX.3.0.1
+ 
+-echo "ln -s libcppuhelper3$COMPID.so libcppuhelper$COMPID.so"
+-ln -s libcppuhelper3$COMPID.so libcppuhelper$COMPID.so
++echo "ln -s libcppuhelper3$COMPID.$DLLPOSTFIX libcppuhelper$COMPID.$DLLPOSTFIX"
++ln -s libcppuhelper3$COMPID.$DLLPOSTFIX libcppuhelper$COMPID.$DLLPOSTFIX
+ 
+-echo "ln -s libcppuhelper3$COMPID.so libcppuhelper$COMPID.so.3"
+-ln -s libcppuhelper3$COMPID.so libcppuhelper$COMPID.so.3
++echo "ln -s libcppuhelper3$COMPID.$DLLPOSTFIX libcppuhelper$COMPID.$DLLPOSTFIX.3"
++ln -s libcppuhelper3$COMPID.$DLLPOSTFIX libcppuhelper$COMPID.$DLLPOSTFIX.3
+ 
+-echo "ln -s libsalhelper3$COMPID.so libsalhelper$COMPID.so.3.0.1"
+-ln -s libsalhelper3$COMPID.so libsalhelper$COMPID.so.3.0.1
++echo "ln -s libsalhelper3$COMPID.$DLLPOSTFIX libsalhelper$COMPID.$DLLPOSTFIX.3.0.1"
++ln -s libsalhelper3$COMPID.$DLLPOSTFIX libsalhelper$COMPID.$DLLPOSTFIX.3.0.1
+ 
+-echo "ln -s libsalhelper3$COMPID.so libsalhelper$COMPID.so"
+-ln -s libsalhelper3$COMPID.so libsalhelper$COMPID.so
++echo "ln -s libsalhelper3$COMPID.$DLLPOSTFIX libsalhelper$COMPID.$DLLPOSTFIX"
++ln -s libsalhelper3$COMPID.$DLLPOSTFIX libsalhelper$COMPID.$DLLPOSTFIX
+ 
+-echo "ln -s libsalhelper3$COMPID.so libsalhelper$COMPID.so.3"
+-ln -s libsalhelper3$COMPID.so libsalhelper$COMPID.so.3
++echo "ln -s libsalhelper3$COMPID.$DLLPOSTFIX libsalhelper$COMPID.$DLLPOSTFIX.3"
++ln -s libsalhelper3$COMPID.$DLLPOSTFIX libsalhelper$COMPID.$DLLPOSTFIX.3
+ 
+-echo "ln -s libstdc++.so.3 libstdc++.so"
+-ln -s libstdc++.so.3 libstdc++.so
++if [ "$platform" != "Darwin" ]
++then
++  echo "ln -s libstdc++.$DLLPOSTFIX.3 libstdc++.$DLLPOSTFIX"
++  ln -s libstdc++.$DLLPOSTFIX.3 libstdc++.$DLLPOSTFIX
++fi
+ 
+Index: source/OOSupport/makefile.mk
+===================================================================
+RCS file: /cvs/api/odk/source/OOSupport/makefile.mk,v
+retrieving revision 1.1.2.1
+diff -u -r1.1.2.1 makefile.mk
+--- source/OOSupport/makefile.mk	13 Jan 2003 10:58:17 -0000	1.1.2.1
++++ source/OOSupport/makefile.mk	16 Mar 2004 19:20:19 -0000
+@@ -336,5 +336,5 @@
+ 	+cp -R ParserDB $(CLASSDIR)$/netbeans$/system
+ 	+cp openoffice-nbm-license.txt $(CLASSDIR)
+ 	+-mkdir $(CLASSDIR)$/netbeans$/modules
+-	+cd $(CLASSDIR) && cp oosupport.jar netbeans$/modules && java MakeModule
++	+cd $(CLASSDIR) && cp oosupport.jar netbeans$/modules && java -classpath . MakeModule
+ 	+cd $(CLASSDIR) && jar -uvf $(TARGETNETBEANSMODULEFILE) netbeans
+Index: source/bean/native/unix/com_sun_star_beans_LocalOfficeWindow.c
+===================================================================
+RCS file: /cvs/api/odk/source/bean/native/unix/com_sun_star_beans_LocalOfficeWindow.c,v
+retrieving revision 1.1
+diff -u -r1.1 com_sun_star_beans_LocalOfficeWindow.c
+--- source/bean/native/unix/com_sun_star_beans_LocalOfficeWindow.c	25 Mar 2002 16:21:45 -0000	1.1
++++ source/bean/native/unix/com_sun_star_beans_LocalOfficeWindow.c	16 Mar 2004 19:20:21 -0000
+@@ -63,6 +63,12 @@
+ #include <config.h>
+ #endif
+ 
++#ifdef MACOSX
++
++#include "jni.h"
++
++#else	// MACOSX
++
+ #include <X11/Xlib.h>
+ #include <X11/Xutil.h>
+ #include <X11/Intrinsic.h>
+@@ -70,6 +76,8 @@
+ #include "jawt.h"
+ #include "jawt_md.h"
+ 
++#endif	// MACOSX
++
+ #include "../inc/com_sun_star_beans_LocalOfficeWindow.h"
+ 
+ #if defined assert
+@@ -108,6 +116,9 @@
+ JNIEXPORT jlong JNICALL Java_com_sun_star_beans_LocalOfficeWindow_getNativeWindow
+   (JNIEnv * env, jobject obj_this)
+ {
++#ifdef MACOSX
++	return 0;
++#else	// MACOSX
+ 	jboolean result;
+ 	jint lock;
+ 
+@@ -149,6 +160,7 @@
+ 	awt.FreeDrawingSurface(ds);
+ 
+ 	return ((jlong)drawable);
++#endif	// MACOSX
+ }
+ 
+ 
+Index: source/bean/native/unix/makefile.mk
+===================================================================
+RCS file: /cvs/api/odk/source/bean/native/unix/makefile.mk,v
+retrieving revision 1.4
+diff -u -r1.4 makefile.mk
+--- source/bean/native/unix/makefile.mk	6 May 2002 18:56:38 -0000	1.4
++++ source/bean/native/unix/makefile.mk	16 Mar 2004 19:20:21 -0000
+@@ -18,7 +18,12 @@
+ 
+ SHL1TARGET=$(TARGET)
+ SHL1LIBS=	$(SLB)$/$(TARGET).lib
+-SHL1STDLIBS=-ljawt -lsal
++.IF "$(OS)"=="MACOSX"
++SHL1STDLIBS=-framework JavaVM
++.ELSE
++SHL1STDLIBS=-ljawt
++.ENDIF
++SHL1STDLIBS+=-lsal
+ 
+ .IF "$(OS)" == "LINUX"
+ SHL1STDLIBS+=-lstdc++
+Index: util/makefile.pmk
+===================================================================
+RCS file: /cvs/api/odk/util/makefile.pmk,v
+retrieving revision 1.26.4.1
+diff -u -r1.26.4.1 makefile.pmk
+--- util/makefile.pmk	30 Apr 2003 06:29:55 -0000	1.26.4.1
++++ util/makefile.pmk	16 Mar 2004 19:20:22 -0000
+@@ -1,3 +1,45 @@
++##########################################################################
++# 
++#   $RCSfile$
++# 
++#   $Revision$
++# 
++#   last change: $Author$ $Date$
++# 
++#   The Contents of this file are made available subject to the terms of
++#   either of the following licenses
++# 
++#          - GNU General Public License Version 2.1
++# 
++#   Sun Microsystems Inc., October, 2000
++# 
++#   GNU General Public License Version 2.1
++#   =============================================
++#   Copyright 2000 by Sun Microsystems, Inc.
++#   901 San Antonio Road, Palo Alto, CA 94303, USA
++# 
++#   This library is free software; you can redistribute it and/or
++#   modify it under the terms of the GNU General Public
++#   License version 2.1, as published by the Free Software Foundation.
++# 
++#   This library is distributed in the hope that it will be useful,
++#   but WITHOUT ANY WARRANTY; without even the implied warranty of
++#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++#   General Public License for more details.
++# 
++#   You should have received a copy of the GNU General Public
++#   License along with this library; if not, write to the Free Software
++#   Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++#   MA  02111-1307  USA
++#   
++#   =================================================
++#   Modified March 2004 by Patrick Luby. SISSL Removed. NeoOffice is
++#   distributed under GPL only under modification term 3 of the LGPL.
++# 
++#   Contributor(s): _______________________________________
++# 
++##########################################################################
++
+ #ODKNAME=odk$(UDK_MAJOR).$(UDK_MINOR).$(UDK_MICRO)
+ 
+ ODK_RELEASE=1.0.2
+@@ -47,8 +89,13 @@
+ BINOUT=$(SOLARBINDIR)
+ IDLOUT=$(SOLARIDLDIR)
+ 
++.IF "$(OS)"=="MACOSX"
++MY_COPY=$(GNUCOPY)
++MY_COPY_RECURSIVE=$(GNUCOPY) -rf
++.ELSE
+ MY_COPY=$(GNUCOPY) -u
+ MY_COPY_RECURSIVE=$(GNUCOPY) -urf
++.ENDIF
+ 
+ CONVERTTAGSCRIPT=$(SOLARENV)$/bin$/converttags.pl
+ CONVERTSCRIPT=$(SOLARENV)$/bin$/convertlinks.pl
+@@ -80,7 +127,11 @@
+ #MY_COPY=cat
+ 
+ MY_DLLPREFIX=lib
++.IF "$(OS)"=="MACOSX"
++MY_DLLPOSTFIX=.dylib
++.ELSE
+ MY_DLLPOSTFIX=.so
++.ENDIF
+ MY_DLLOUT=$(OUT)$/lib
+ DLLOUT=$(SOLARLIBDIR)
+ 
