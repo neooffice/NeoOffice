@@ -357,24 +357,10 @@ BOOL SalInstance::AnyInput( USHORT nType )
 
 SalFrame* SalInstance::CreateChildFrame( SystemParentData* pSystemParentData, ULONG nSalFrameStyle )
 {
-	SalFrame *pParent = NULL;
-
-	// Java does not provide access to any windows from other processes
-	// so we can only look through our own list
-	if ( pSystemParentData && pSystemParentData->pVCLFrame )
-	{
-		SalData *pSalData = GetSalData();
-		for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-		{
-			if ( pSystemParentData->pVCLFrame == (*it)->maFrameData.mpVCLFrame )
-			{
-				pParent = *it;
-				break;
-			}
-		}
-	}
-
-	return CreateFrame( pParent, nSalFrameStyle );
+#ifdef DEBUG
+	fprintf( stderr, "SalInstance::CreateChildFrame not implemented\n" );
+#endif
+	return NULL;
 }
 
 // -----------------------------------------------------------------------
@@ -384,7 +370,11 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 	SalFrame *pFrame = new SalFrame();
 
 	pFrame->maFrameData.mpVCLFrame = new com_sun_star_vcl_VCLFrame( nSalFrameStyle, pFrame, pParent );
-	pFrame->maFrameData.maSysData.pVCLFrame = pFrame->maFrameData.mpVCLFrame;
+	pFrame->maFrameData.mpPanel = pFrame->maFrameData.mpVCLFrame->getPanel();
+	if ( pFrame->maFrameData.mpPanel )
+		pFrame->maFrameData.maSysData.aComponent = pFrame->maFrameData.mpPanel->getJavaObject();
+	else
+		pFrame->maFrameData.maSysData.aComponent = NULL;
 	pFrame->maFrameData.mnStyle = nSalFrameStyle;
 
 	pFrame->maFrameData.mpParent = pParent;

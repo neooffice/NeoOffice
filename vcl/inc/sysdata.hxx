@@ -44,7 +44,7 @@
 #define _SV_SYSDATA_HXX
 
 #ifdef USE_JAVA
-#include <com/sun/star/vcl/VCLFrame.hxx>
+#include <jni.h>
 #endif
 
 // -----------------
@@ -60,7 +60,7 @@ struct SystemEnvData
 #elif defined( OS2 )
 	HWND				hWnd;			// the client hwnd
 #elif defined( USE_JAVA )
-	::vcl::com_sun_star_vcl_VCLFrame*	pVCLFrame;	// the Java window
+	jobject				aComponent;		// the Java component
 #elif defined( UNX )
 	void*				pDisplay;		// the relevant display connection
 	long				aWindow;		// the window of the object
@@ -91,7 +91,7 @@ struct SystemParentData
 #elif defined( OS2 )
 	HWND			hWnd;			// the client hwnd
 #elif defined( USE_JAVA )
-	::vcl::com_sun_star_vcl_VCLFrame*	pVCLFrame;	// the Java window
+	jobject			aComponent;		// the Java component
 #elif defined( UNX )
 	long		    aWindow;		// the window of the object
 #endif

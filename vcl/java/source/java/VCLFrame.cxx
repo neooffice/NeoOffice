@@ -327,6 +327,31 @@ const Rectangle com_sun_star_vcl_VCLFrame::getInsets()
 
 // ----------------------------------------------------------------------------
 
+java_lang_Object *com_sun_star_vcl_VCLFrame::getPanel()
+{
+	static jmethodID mID = NULL;
+	java_lang_Object *out = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Ljava/awt/Panel;";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getPanel", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
+			if ( tempObj )
+				out = new java_lang_Object( tempObj );
+		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
 ULONG com_sun_star_vcl_VCLFrame::getState()
 {
 	static jmethodID mID = NULL;

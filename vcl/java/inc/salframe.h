@@ -52,6 +52,7 @@ namespace vcl
 {
 class com_sun_star_vcl_VCLEvent;
 class com_sun_star_vcl_VCLFrame;
+class java_lang_Object;
 }
 
 class SalBitmap;
@@ -69,6 +70,7 @@ class SalFrameData
 	friend class	::vcl::com_sun_star_vcl_VCLFrame;
 
 	::vcl::com_sun_star_vcl_VCLFrame*	mpVCLFrame;
+	::vcl::java_lang_Object*	mpPanel;
 	SalGraphics*	mpGraphics;
 	ULONG			mnStyle;
 	SalFrame*		mpParent;

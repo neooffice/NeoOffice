@@ -36,7 +36,6 @@
 package com.sun.star.vcl;
 
 import java.awt.ActiveEvent;
-import java.awt.Canvas;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
@@ -943,20 +942,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
-	 * Returns the canvas for the native window.
-	 *
-	 * @return the canvas for the native window
-	 */
-	Canvas getCanvas() {
-
-		if (panel != null)
-			return panel.getCanvas();
-		else
-			return null;
-
-	}
-
-	/**
 	 * Gets an iterator providing access to the entire text and attributes
 	 * contained in the text editing component except for uncommitted
 	 * text.
@@ -1396,7 +1381,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @return the panel for the native window
 	 */
-	Panel getPanel() {
+	public Panel getPanel() {
 
 		return panel;
 
@@ -2160,11 +2145,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	final class NoPaintPanel extends Panel {
 
 		/**
-		 * The panel's native canvas.
-		 */
-		private Canvas canvas = null;
-
-		/**
 		 * The <code>VCLFrame</code>.
 		 */
 		private VCLFrame frame = null;
@@ -2179,21 +2159,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			frame = f;
 			setBackground(Color.white);
 			enableInputMethods(true);
-
-			// Add a canvas as the only component
-			canvas = new Canvas();
-			add(canvas);
-
-		}
-
-		/**
-		 * Returns the canvas for the panel.
-		 *
-		 * @return the canvas for the panel 
-		 */
-		Canvas getCanvas() {
-
-			return canvas;
 
 		}
 
