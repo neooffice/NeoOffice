@@ -436,6 +436,8 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 
 void SalInstance::DestroyFrame( SalFrame* pFrame )
 {
+	maInstData.mpSalYieldMutex->acquire();
+
 	// Remove this window from the window list
 	if ( pFrame )
 	{
@@ -446,6 +448,8 @@ void SalInstance::DestroyFrame( SalFrame* pFrame )
 
 		delete pFrame;
 	}
+
+	maInstData.mpSalYieldMutex->release();
 }
 
 // -----------------------------------------------------------------------
