@@ -91,6 +91,7 @@ public:
 	short				getMenuID();
 	int					getMenuCookie();
 	long				getScrollAmount();
+	long				getVisiblePosition();
 	long				getWheelRotation();
 };
 

@@ -299,6 +299,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			if ( pInputEvent )
 				delete pInputEvent;
 			dispatchEvent( nID, pFrame, NULL );
+			pSalData->maLastExtTextInputText = XubString();
 			return;
 		}
 		case SALEVENT_EXTTEXTINPUT:
@@ -315,19 +316,34 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pInputEvent->mbOnlyCursor = FALSE;
 				pInputEvent->mnCursorFlags = 0;
 			}
-			// Fix bug 323 by sending an event with no attributes if there
-			// are attributes
-			if (  pInputEvent->mpTextAttr )
+			// Fix bug 323 by dispatching a zero length event if the attributes
+			// or any of the characters (except for appending new characters)
+			// have changed
+			ULONG nLastTextLen = pSalData->maLastExtTextInputText.Len();
+			ULONG nVisiblePos = getVisiblePosition();
+			if ( nLastTextLen && pInputEvent->maText.Len() && pInputEvent->mpTextAttr && ( pInputEvent->maText.CompareTo( pSalData->maLastExtTextInputText, nLastTextLen ) != COMPARE_EQUAL || pInputEvent->maText.Len() != nVisiblePos ) )
 			{
-				const USHORT *pEventAttributes = pInputEvent->mpTextAttr;
-				pInputEvent->mpTextAttr = NULL;
-				dispatchEvent( nID, pFrame, pInputEvent );
-				pInputEvent->mpTextAttr = pEventAttributes;
+				SalExtTextInputEvent *pCancelInputEvent = new SalExtTextInputEvent();
+				pCancelInputEvent->mnTime = pInputEvent->mnTime;
+				pCancelInputEvent->mpTextAttr = NULL;
+				pCancelInputEvent->mnCursorPos = 0;
+				pCancelInputEvent->mnDeltaStart = 0;
+				pCancelInputEvent->mbOnlyCursor = FALSE;
+				pCancelInputEvent->mnCursorFlags = 0;
+				dispatchEvent( nID, pFrame, pCancelInputEvent );
+				delete pCancelInputEvent;
 			}
 			dispatchEvent( nID, pFrame, pInputEvent );
 			// If there is no text, the character is committed
 			if ( pInputEvent->maText.Len() == getCommittedCharacterCount() )
+			{
 				dispatchEvent( SALEVENT_ENDEXTTEXTINPUT, pFrame, NULL );
+				pSalData->maLastExtTextInputText = XubString();
+			}
+			else
+			{
+				pSalData->maLastExtTextInputText = pInputEvent->maText;
+			}
 			if ( pInputEvent->mpTextAttr )
 				rtl_freeMemory( (USHORT *)pInputEvent->mpTextAttr );
 			delete pInputEvent;
@@ -1090,6 +1106,27 @@ long com_sun_star_vcl_VCLEvent::getScrollAmount()
 		{
 			char *cSignature = "()I";
 			mID = t.pEnv->GetMethodID( getMyClass(), "getScrollAmount", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+long com_sun_star_vcl_VCLEvent::getVisiblePosition()
+{
+	static jmethodID mID = NULL;
+	long out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getVisiblePosition", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )

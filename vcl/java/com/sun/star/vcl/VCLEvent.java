@@ -1672,6 +1672,20 @@ public final class VCLEvent extends AWTEvent {
 	}
 
 	/**
+	 * Gets the visible position for input method events.
+	 *
+	 * @return the visible position for input method events
+	 */
+	public int getVisiblePosition() {
+
+		if (source instanceof InputMethodEvent)
+			return ((InputMethodEvent)source).getVisiblePosition().getInsertionIndex();
+		else
+			return 0;
+
+	}
+
+	/**
 	 * Gets the mouse wheel rotation.
 	 *
 	 * @return the mouse wheel rotation
