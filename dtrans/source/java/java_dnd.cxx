@@ -158,11 +158,11 @@ static sal_Int8 ImplGetDragDropAction( DragRef aDrag )
 	DragActions nDragActions;
 	if ( GetDragDropAction( aDrag, &nDragActions ) == noErr )
 	{
-		if ( nDragActions & kDragActionMove )
+		if ( nDragActions & ( kDragActionMove | kDragActionGeneric ) )
 			nActions = DNDConstants::ACTION_MOVE;
-		else if ( nDragActions & kDragActionCopy )
+		else if ( nDragActions & ( kDragActionCopy | kDragActionGeneric ) )
 			nActions = DNDConstants::ACTION_COPY;
-		else if ( nDragActions & kDragActionAlias )
+		else if ( nDragActions & ( kDragActionAlias | kDragActionGeneric ) )
 			nActions = DNDConstants::ACTION_LINK;
 	}
 
@@ -193,19 +193,19 @@ static void ImplSetDragDropAction( DragRef aDrag, sal_Int8 nActions )
 // ------------------------------------------------------------------------
 
 #ifdef MACOSX
-static sal_Int8 ImplGetDragAllowableAction( DragRef aDrag )
+static sal_Int8 ImplGetDragAllowableActions( DragRef aDrag )
 {
 	sal_Int8 nActions = DNDConstants::ACTION_NONE;
 
 	DragActions nDragActions;
 	if ( GetDragAllowableActions( aDrag, &nDragActions ) == noErr )
 	{
-		if ( nDragActions & kDragActionMove )
-			nActions = DNDConstants::ACTION_MOVE;
-		else if ( nDragActions & kDragActionCopy )
-			nActions = DNDConstants::ACTION_COPY;
-		else if ( nDragActions & kDragActionAlias )
-			nActions = DNDConstants::ACTION_LINK;
+		if ( nDragActions & ( kDragActionMove | kDragActionGeneric ) )
+			nActions |= DNDConstants::ACTION_MOVE;
+		if ( nDragActions & ( kDragActionCopy | kDragActionGeneric ) )
+			nActions |= DNDConstants::ACTION_COPY;
+		if ( nDragActions & ( kDragActionAlias | kDragActionGeneric ) )
+			nActions |= DNDConstants::ACTION_LINK;
 	}
 
 	SInt16 nKeyModifiers;
@@ -291,9 +291,6 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 {
 	MutexGuard aDragGuard( aDragMutex );
 
-	if ( !pDragThreadOwner )
-		return noErr;
-
 	OGuard aSolarGuard( Application::GetSolarMutex() );
 
 	JavaDropTarget *pTarget = (JavaDropTarget *)pData;
@@ -323,13 +320,13 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 		switch ( nMessage )
 		{
 			case kDragTrackingEnterWindow:
-				pTarget->handleDragEnter( nX, nY );
+				pTarget->handleDragEnter( nX, nY, (void *)aDrag );
 				break;
 			case kDragTrackingInWindow:
-				pTarget->handleDragOver( nX, nY );
+				pTarget->handleDragOver( nX, nY, (void *)aDrag );
 				break;
 			case kDragTrackingLeaveWindow:
-				pTarget->handleDragExit( nX, nY );
+				pTarget->handleDragExit( nX, nY, (void *)aDrag );
 				break;
 			default:
 				break;
@@ -346,9 +343,6 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, DragRef aDrag )
 {
 	MutexGuard aDragGuard( aDragMutex );
-
-	if ( !pDragThreadOwner )
-		return dragNotAcceptedErr;
 
 	OGuard aSolarGuard( Application::GetSolarMutex() );
 
@@ -371,7 +365,7 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 
 	MacOSPoint aPoint;
 	Rect aRect;
-	if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr && pTarget->handleDrop( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) ) )
+	if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr && pTarget->handleDrop( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ), (void *)aDrag ) )
 	{
 		// Update actions
 		ImplSetDragDropAction( aDrag, nCurrentAction );
@@ -547,7 +541,7 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 	DragSourceDropEvent aDragEvent;
 	aDragEvent.Source = static_cast< OWeakObject* >(this);
 	aDragEvent.DragSource = static_cast< XDragSource* >(this);
-	aDragEvent.DragSourceContext = new DragSourceContext();
+	aDragEvent.DragSourceContext = Reference< XDragSourceContext >( new DragSourceContext() );
 	aDragEvent.DropAction = DNDConstants::ACTION_NONE;
 	aDragEvent.DropSuccess = sal_False;
 
@@ -915,7 +909,7 @@ Sequence< OUString > SAL_CALL JavaDropTarget::getSupportedServiceNames() throw()
 
 // ------------------------------------------------------------------------
 
-void JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY )
+void JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, void *pNativeTransferable )
 {
 	MutexGuard aDragGuard( aDragMutex );
 
@@ -926,19 +920,33 @@ void JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY )
 	aDragEnterEvent.SourceActions = DNDConstants::ACTION_NONE;
 	aDragEnterEvent.DropAction = DNDConstants::ACTION_NONE;
 
-	DropTargetDragContext *pContext = new DropTargetDragContext( nCurrentAction );
-	aDragEnterEvent.Context = pContext;
-
 	if ( pDragThreadOwner )
 	{
 		ClearableMutexGuard aDragSourceGuard( pDragThreadOwner->maMutex );
 
 		aDragEnterEvent.SourceActions = pDragThreadOwner->mnActions;
-		aDragEnterEvent.DropAction = nCurrentAction;
+		aDragEnterEvent.DropAction = nStartingAction;
 		aDragEnterEvent.SupportedDataFlavors = pDragThreadOwner->maContents->getTransferDataFlavors();
 
 		aDragSourceGuard.clear();
 	}
+	else if ( pNativeTransferable )
+	{
+#ifdef MACOSX
+		aDragEnterEvent.SourceActions = ImplGetDragAllowableActions( (DragRef)pNativeTransferable );
+		aDragEnterEvent.DropAction = ImplGetDragDropAction( (DragRef)pNativeTransferable );
+#endif	// MACOSX
+
+		com_sun_star_dtrans_DTransTransferable *pTransferable = new com_sun_star_dtrans_DTransTransferable( pNativeTransferable, JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG );
+		if ( pTransferable )
+		{
+			aDragEnterEvent.SupportedDataFlavors = pTransferable->getTransferDataFlavors();
+			delete pTransferable;
+		}
+	}
+
+	DropTargetDragContext *pContext = new DropTargetDragContext( aDragEnterEvent.DropAction );
+	aDragEnterEvent.Context = Reference< XDropTargetDragContext >( pContext );
 
 	ClearableMutexGuard aGuard( maMutex );
 
@@ -957,7 +965,7 @@ void JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY )
 
 // ------------------------------------------------------------------------
 
-void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY )
+void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY, void *pNativeTransferable )
 {
 	MutexGuard aDragGuard( aDragMutex );
 
@@ -968,9 +976,6 @@ void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY )
 	aDragEvent.SourceActions = DNDConstants::ACTION_NONE;
 	aDragEvent.DropAction = DNDConstants::ACTION_NONE;
 
-	DropTargetDragContext *pContext = new DropTargetDragContext( nCurrentAction );
-	aDragEvent.Context = pContext;
-
 	if ( pDragThreadOwner )
 	{
 		ClearableMutexGuard aDragSourceGuard( pDragThreadOwner->maMutex );
@@ -980,6 +985,15 @@ void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY )
 
 		aDragSourceGuard.clear();
 	}
+	else if ( pNativeTransferable )
+	{
+#ifdef MACOSX
+		aDragEvent.SourceActions = ImplGetDragAllowableActions( (DragRef)pNativeTransferable );
+		aDragEvent.DropAction = nCurrentAction;
+#endif	// MACOSX
+	}
+
+	aDragEvent.Context = Reference< XDropTargetDragContext >( new DropTargetDragContext( aDragEvent.DropAction ) );
 
 	ClearableMutexGuard aGuard( maMutex );
 
@@ -992,14 +1006,11 @@ void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY )
 		if ( (*it).is() )
 			(*it)->dragExit( aDragEvent );
 	}
-
-	// Reset action
-	nCurrentAction = nStartingAction;
 }
 
 // ------------------------------------------------------------------------
 
-void JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY )
+void JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY, void *pNativeTransferable )
 {
 	MutexGuard aDragGuard( aDragMutex );
 
@@ -1010,9 +1021,6 @@ void JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY )
 	aDragEvent.SourceActions = DNDConstants::ACTION_NONE;
 	aDragEvent.DropAction = DNDConstants::ACTION_NONE;
 
-	DropTargetDragContext *pContext = new DropTargetDragContext( nCurrentAction );
-	aDragEvent.Context = pContext;
-
 	if ( pDragThreadOwner )
 	{
 		ClearableMutexGuard aDragSourceGuard( pDragThreadOwner->maMutex );
@@ -1022,6 +1030,16 @@ void JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY )
 
 		aDragSourceGuard.clear();
 	}
+	else if ( pNativeTransferable )
+	{
+#ifdef MACOSX
+		aDragEvent.SourceActions = ImplGetDragAllowableActions( (DragRef)pNativeTransferable );
+		aDragEvent.DropAction = nCurrentAction;
+#endif	// MACOSX
+	}
+
+	DropTargetDragContext *pContext = new DropTargetDragContext( aDragEvent.DropAction );
+	aDragEvent.Context = Reference< XDropTargetDragContext >( pContext );
 
 	ClearableMutexGuard aGuard( maMutex );
 
@@ -1040,7 +1058,7 @@ void JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY )
 
 // ------------------------------------------------------------------------
 
-bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY )
+bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, void *pNativeTransferable )
 {
 	MutexGuard aDragGuard( aDragMutex );
 
@@ -1051,9 +1069,6 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY )
 	aDropEvent.SourceActions = DNDConstants::ACTION_NONE;
 	aDropEvent.DropAction = DNDConstants::ACTION_NONE;
 
-	DropTargetDropContext *pContext = new DropTargetDropContext( nCurrentAction );
-	aDropEvent.Context = pContext;
-
 	if ( pDragThreadOwner )
 	{
 		ClearableMutexGuard aDragSourceGuard( pDragThreadOwner->maMutex );
@@ -1062,6 +1077,7 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY )
 		aDropEvent.DropAction = nCurrentAction;
 		aDropEvent.Transferable = pDragThreadOwner->maContents;
 
+	
 		// Don't set the cursor to the reject cursor since a drop has occurred
 		bNoRejectCursor = true;
 
@@ -1080,6 +1096,23 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY )
 
 		aDragSourceGuard.clear();
 	}
+	else if ( pNativeTransferable )
+	{
+#ifdef MACOSX
+		aDropEvent.SourceActions = ImplGetDragAllowableActions( (DragRef)pNativeTransferable );
+		aDropEvent.DropAction = nCurrentAction;
+#endif	// MACOSX
+
+		com_sun_star_dtrans_DTransTransferable *pTransferable = new com_sun_star_dtrans_DTransTransferable( pNativeTransferable, JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG );
+		if ( pTransferable )
+			aDropEvent.Transferable = Reference< XTransferable >( pTransferable );
+
+		// Don't set the cursor to the reject cursor since a drop has occurred
+		bNoRejectCursor = true;
+	}
+
+	DropTargetDropContext *pContext = new DropTargetDropContext( aDropEvent.DropAction );
+	aDropEvent.Context = Reference< XDropTargetDropContext >( pContext );
 
 	ClearableMutexGuard aGuard( maMutex );
 

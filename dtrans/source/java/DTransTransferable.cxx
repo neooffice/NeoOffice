@@ -452,7 +452,9 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 		}
 		else if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
 		{
-			nErr = GetFlavorDataSize( (DragRef)mpNativeTransferable, (DragItemRef)this, nRequestedType, &nSize );
+			DragItemRef aItem;
+			if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, 1, &aItem ) == noErr )
+				nErr = GetFlavorDataSize( (DragRef)mpNativeTransferable, aItem, nRequestedType, &nSize );
 		}
 		else
 		{
@@ -465,9 +467,15 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 			Sequence< sal_Int8 > aData( nSize );
 			bool bDataFound = false;
 			if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+			{
 				bDataFound = ( GetScrapFlavorData( (ScrapRef)mpNativeTransferable, nRequestedType, &nSize, aData.getArray() ) == noErr );
+			}
 			else if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
-				bDataFound = ( GetFlavorData( (DragRef)mpNativeTransferable, (DragItemRef)this, nRequestedType, aData.getArray(), &nSize, 0 ) == noErr );
+			{
+				DragItemRef aItem;
+				if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, 1, &aItem ) == noErr )
+					bDataFound = ( GetFlavorData( (DragRef)mpNativeTransferable, aItem, nRequestedType, aData.getArray(), &nSize, 0 ) == noErr );
+			}
 
 			if ( bDataFound )
 			{
@@ -678,15 +686,16 @@ Sequence< DataFlavor > SAL_CALL com_sun_star_dtrans_DTransTransferable::getTrans
 	}
 	else if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
 	{
+		DragItemRef aItem;
 		UInt16 nCount;
-		if ( CountDragItemFlavors( (DragRef)mpNativeTransferable, (DragItemRef)this, &nCount ) == noErr && nCount > 0 )
+		if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, 1, &aItem ) == noErr && CountDragItemFlavors( (DragRef)mpNativeTransferable, aItem, &nCount ) == noErr && nCount > 0 )
 		{
 			for ( USHORT i = 0; i < nSupportedTypes; i++ )
 			{
 				for ( UInt16 j = 0; j < nCount; j++ )
 				{
 					FlavorType nFlavor;
-					if ( GetFlavorType( (DragRef)mpNativeTransferable, (DragItemRef)this, j, &nFlavor ) == noErr && aSupportedNativeTypes[ i ] == nFlavor )
+					if ( GetFlavorType( (DragRef)mpNativeTransferable, aItem, j, &nFlavor ) == noErr && aSupportedNativeTypes[ i ] == nFlavor )
 					{
 						DataFlavor aFlavor;
 						aFlavor.MimeType = aSupportedMimeTypes[ i ];
@@ -779,13 +788,14 @@ sal_Bool SAL_CALL com_sun_star_dtrans_DTransTransferable::isDataFlavorSupported(
 		}
 		else if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
 		{
+			DragItemRef aItem;
 			UInt16 nCount;
-			if ( CountDragItemFlavors( (DragRef)mpNativeTransferable, (DragItemRef)this, &nCount ) == noErr && nCount > 0 )
+			if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, 1, &aItem ) == noErr && CountDragItemFlavors( (DragRef)mpNativeTransferable, aItem, &nCount ) == noErr && nCount > 0 )
 			{
 				for ( UInt16 i = 0; i < nCount; i++ )
 				{
 					FlavorType nFlavor;
-					if ( GetFlavorType( (DragRef)mpNativeTransferable, (DragItemRef)this, i, &nFlavor ) == noErr && nFlavor == nRequestedType && aFlavor.DataType.equals( aRequestedDataType ) )
+					if ( GetFlavorType( (DragRef)mpNativeTransferable, aItem, i, &nFlavor ) == noErr && nFlavor == nRequestedType && aFlavor.DataType.equals( aRequestedDataType ) )
 					{
 						out = sal_True;
 						break;
