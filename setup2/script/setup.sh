@@ -133,7 +133,12 @@ sysclasspath=`printf "$sysclasspath" | sed 's#^:##'`
 if [ $? != 0 ]; then
     error
 fi
-printf "[Java]\nRuntimeLib=/System/Library/Frameworks/JavaVM.framework/JavaVM\nSystemClasspath=$sysclasspath\ncom.apple.hwaccel=false\ncom.apple.hwaccellist=\nJava=1\nJavaScript=1\nApplets=1\n\n" > "$configdir/javarc"
+if [ `uname` = "Darwin" ] ; then
+    printf "[Java]\nRuntimeLib=/System/Library/Frameworks/JavaVM.framework/JavaVM\ncom.apple.hwaccel=false\ncom.apple.hwaccellist=\n" > "$configdir/javarc"
+else
+    printf "[Java]\n" > "$configdir/javarc"
+fi
+printf "SystemClasspath=$sysclasspath\nJava=1\nJavaScript=1\nApplets=1\n-Xmx256m\n" >> "$configdir/javarc"
 if [ $? != 0 ]; then
     error
 fi
