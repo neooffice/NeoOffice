@@ -39,6 +39,9 @@
 #ifndef _COM_SUN_STAR_DATATRANSFER_CLIPBOARD_RENDERINGCAPABILITIES_HPP_
 #include <com/sun/star/datatransfer/clipboard/RenderingCapabilities.hpp>
 #endif
+#ifndef _JAVA_DTRANS_COM_SUN_STAR_DTRANS_DTRANSCLIPBOARD_HXX
+#include <com/sun/star/dtrans/DTransClipboard.hxx>
+#endif
 
 #include <tools/string.hxx>
 
@@ -84,8 +87,50 @@ JavaClipboard::~JavaClipboard()
 
 Reference< XTransferable > SAL_CALL JavaClipboard::getContents() throw( RuntimeException )
 {
-	MutexGuard aGuard( maMutex );
-	return maContents;
+	ClearableMutexGuard aGuard( maMutex );
+
+	Reference< XTransferable > aContents( maContents );
+
+	if ( mbSystemClipboard )
+	{
+		com_sun_star_dtrans_DTransTransferable *pTransferable = NULL;
+		if ( maContents.is() )
+			pTransferable = (com_sun_star_dtrans_DTransTransferable *)maContents.get();
+
+		if ( !pTransferable || !pTransferable->hasOwnership() )
+		{
+			Reference< XTransferable > aOldContents;
+			if ( pTransferable )
+				aOldContents = pTransferable->getTransferable();
+			pTransferable = com_sun_star_dtrans_DTransClipboard::getContents();
+			if ( pTransferable )
+				maContents = Reference< XTransferable >( pTransferable );
+			else
+				maContents.clear();
+
+			Reference< XClipboardOwner > aOldOwner( maOwner );
+			maOwner.clear();
+
+			aContents = Reference< XTransferable >( maContents );
+
+			list< Reference< XClipboardListener > > listeners( maListeners );
+
+			aGuard.clear();
+
+			if ( aOldOwner.is() )
+				aOldOwner->lostOwnership( static_cast< XClipboard* >( this ), aOldContents );
+
+			ClipboardEvent aEvent( static_cast< OWeakObject* >( this ), aContents );
+			while ( listeners.begin() != listeners.end() )
+			{
+				if( listeners.front().is() )
+					listeners.front()->changedContents( aEvent );
+				listeners.pop_front();
+			}
+		}
+	}
+
+	return aContents;
 }
 
 // ------------------------------------------------------------------------
@@ -99,6 +144,23 @@ void SAL_CALL JavaClipboard::setContents( const Reference< XTransferable >& xTra
 
 	Reference< XClipboardOwner > aOldOwner( maOwner );
 	maOwner = xClipboardOwner;
+
+	if ( mbSystemClipboard )
+	{
+		com_sun_star_dtrans_DTransTransferable *pTransferable = NULL;
+		if ( aOldContents.is() )
+			pTransferable = (com_sun_star_dtrans_DTransTransferable *)aOldContents.get();
+		if ( pTransferable )
+			aOldContents = pTransferable->getTransferable();
+		else
+			aOldContents.clear();
+		pTransferable = com_sun_star_dtrans_DTransClipboard::setContents( xTransferable );
+		if ( pTransferable )
+			maContents = Reference< XTransferable >( pTransferable );
+		else
+			maContents.clear();
+		maOwner.clear();
+	}
 
 	list< Reference< XClipboardListener > > listeners( maListeners );
 
@@ -206,7 +268,7 @@ Reference< XInterface > JavaClipboardFactory::createInstanceWithArguments( const
 	OUString aClipboardName;
 	if ( arguments.getLength() > 1 )
 	{
-		arguments.getConstArray()[1] >>= aClipboardName;
+		arguments.getConstArray()[ 1 ] >>= aClipboardName;
 	}
 	else
 	{

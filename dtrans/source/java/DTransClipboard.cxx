@@ -61,6 +61,8 @@ using namespace vos;
 
 #endif	// MACOSX
 
+using namespace com::sun::star::datatransfer;
+using namespace com::sun::star::uno;
 using namespace java::dtrans;
 
 // ============================================================================
@@ -105,7 +107,7 @@ com_sun_star_dtrans_DTransTransferable *com_sun_star_dtrans_DTransClipboard::get
 			{
 				ScrapRef aScrap;
 				if ( pGetCurrentScrap( &aScrap ) == noErr )
-					out = new com_sun_star_dtrans_DTransTransferable( &aScrap );
+					out = new com_sun_star_dtrans_DTransTransferable( aScrap );
 			}
 
 			aModule.unload();
@@ -123,6 +125,21 @@ com_sun_star_dtrans_DTransTransferable *com_sun_star_dtrans_DTransClipboard::get
 	fprintf( stderr, "DTransClipboard::getContents not implemented\n" );
 #endif
 #endif	// MACOSX
+
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+com_sun_star_dtrans_DTransTransferable *com_sun_star_dtrans_DTransClipboard::setContents( const Reference< XTransferable > &xTransferable )
+{
+	com_sun_star_dtrans_DTransTransferable *out = new com_sun_star_dtrans_DTransTransferable();
+
+	if ( !xTransferable.is() || !out->setContents( xTransferable ) )
+	{
+		delete out;
+		out = NULL;
+	}
 
 	return out;
 }

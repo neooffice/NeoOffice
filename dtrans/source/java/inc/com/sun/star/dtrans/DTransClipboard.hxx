@@ -55,6 +55,7 @@ private:
 public:
 	static jclass		getMyClass();
 	static com_sun_star_dtrans_DTransTransferable*	getContents();
+	static com_sun_star_dtrans_DTransTransferable*	setContents( const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable > &xTransferable );
 
 						com_sun_star_dtrans_DTransClipboard( jobject myObj ) : java_lang_Object( myObj ) {};
 };

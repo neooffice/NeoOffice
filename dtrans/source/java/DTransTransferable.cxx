@@ -35,11 +35,16 @@
 
 #define _JAVA_DTRANS_COM_SUN_STAR_DTRANS_DTRANSCLIPBOARD_CXX
 
+#include <list>
+
 #ifndef _JAVA_DTRANS_COM_SUN_STAR_DTRANS_DTRANSCLIPBOARD_HXX
 #include <com/sun/star/dtrans/DTransClipboard.hxx>
 #endif
 #ifndef _JAVA_DTRANS_COM_SUN_STAR_DTRANS_DTRANSTRANSFERABLE_HXX
 #include <com/sun/star/dtrans/DTransTransferable.hxx>
+#endif
+#ifndef _STRING_HXX
+#include <tools/string.hxx>
 #endif
 
 #ifdef MACOSX
@@ -54,20 +59,146 @@
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 
+typedef OSStatus ClearCurrentScrap_Type( void );
 typedef OSStatus GetCurrentScrap_Type( ScrapRef * );
 typedef OSStatus GetScrapFlavorData_Type( ScrapRef, ScrapFlavorType, MacOSSize *, void * );
 typedef OSStatus GetScrapFlavorSize_Type( ScrapRef, ScrapFlavorType, MacOSSize * );
+typedef OSStatus GetScrapFlavorCount_Type( ScrapRef, UInt32 * );
+typedef OSStatus GetScrapFlavorInfoList_Type( ScrapRef, UInt32 *, ScrapFlavorInfo[] );
+typedef ScrapPromiseKeeperUPP NewScrapPromiseKeeperUPP_Type( ScrapPromiseKeeperProcPtr );
+typedef OSStatus PutScrapFlavor_Type( ScrapRef, ScrapFlavorType, ScrapFlavorFlags, MacOSSize, const void * );
+typedef OSStatus SetScrapPromiseKeeper_Type( ScrapRef, ScrapPromiseKeeperUPP, const void * );
 
 using namespace rtl;
 using namespace vos;
+
+// Note that we don't copy or paste RTF to the clipboard. This is because
+// most Cocoa applications (e.g. TextEdit) produce RTF that the OOo code
+// cannot parse properly and so we end up with garbage.
+
+static UInt32 nSupportedTypes = 2;
+
+// List of support native types in priority order
+static FourCharCode aSupportedNativeTypes[] = {
+	'utxt',
+	'TEXT'
+};
+
+// List of support mime types in priority order
+static OUString aSupportedMimeTypes[] = {
+	OUString::createFromAscii( "text/plain;charset=utf-16" ),
+	OUString::createFromAscii( "text/plain;charset=utf-16" )
+};
+
+// List of support data types in priority order
+static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
+	getCppuType( ( OUString* )0 ),
+	getCppuType( ( OUString* )0 )
+};
+
+static ScrapPromiseKeeperUPP pScrapPromiseKeeperUPP = NULL;
 
 #endif	// MACOSX
 
 using namespace com::sun::star::datatransfer;
 using namespace com::sun::star::io;
-
 using namespace com::sun::star::uno;
 using namespace java::dtrans;
+using namespace osl;
+
+static Mutex aMutex;
+static ::std::list< com_sun_star_dtrans_DTransTransferable* > aTransferableList;
+
+// ============================================================================
+
+#ifdef MACOSX
+static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType nType, void *pData )
+{
+	OSStatus nErr = noTypeErr;
+
+	MutexGuard aGuard( aMutex );
+
+	com_sun_star_dtrans_DTransTransferable *pTransferable = (com_sun_star_dtrans_DTransTransferable *)pData;
+
+	BOOL bTransferableFound = FALSE;
+	if ( pTransferable )
+	{
+		for ( ::std::list< com_sun_star_dtrans_DTransTransferable* >::const_iterator it = aTransferableList.begin(); it != aTransferableList.end(); ++it )
+		{
+			if ( pTransferable == *it )
+			{
+				bTransferableFound = TRUE;
+				break;
+			}
+		}
+	}
+
+	if ( bTransferableFound )
+	{
+		// Load Carbon
+		OModule aModule;
+		if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
+		{
+			PutScrapFlavor_Type *pPutScrapFlavor = (PutScrapFlavor_Type *)aModule.getSymbol( OUString::createFromAscii( "PutScrapFlavor" ) );
+			if ( pPutScrapFlavor )
+			{
+				BOOL bFlavorFound = FALSE;
+				DataFlavor aFlavor;
+				for ( USHORT i = 0; i < nSupportedTypes; i++ ) {
+					if ( nType == aSupportedNativeTypes[ i ] )
+					{
+						aFlavor.MimeType = aSupportedMimeTypes[ i ];
+						aFlavor.DataType = aSupportedDataTypes[ i ];
+						if ( pTransferable->isDataFlavorSupported( aFlavor ) )
+						{
+							bFlavorFound = TRUE;
+							break;
+						}
+					}
+				}
+
+				if ( bFlavorFound )
+				{
+					Any aValue( pTransferable->getTransferData( aFlavor ) );
+					sal_Int8 *pData = NULL;
+					MacOSSize nDataLen = 0;
+
+       	    		if ( aValue.getValueType().equals( getCppuType( ( OUString* )0 ) ) )
+					{
+						OUString aString;
+						aValue >>= aString;
+						if ( nType == 'TEXT' )
+						{
+							OString aEncodedString = OUStringToOString( aString, gsl_getSystemTextEncoding() );
+							pData = (sal_Int8 *)aEncodedString.getStr();
+							nDataLen = aEncodedString.getLength();
+						}
+						else
+						{
+							pData = (sal_Int8 *)aString.getStr();
+							nDataLen = aString.getLength() * sizeof( sal_Unicode );
+						}
+					}
+					else if ( aValue.getValueType().equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
+					{
+						Sequence< sal_Int8 > aData;
+						aValue >>= aData;
+						pData = aData.getArray();
+						nDataLen = aData.getLength();
+					}
+
+					if ( pData && nDataLen )
+						nErr = pPutScrapFlavor( (ScrapRef)pTransferable->getNativeTransferable(), nType, kScrapFlavorMaskNone, nDataLen, (const void *)pData );
+				}
+			}
+	
+			aModule.unload();
+		}
+	}
+
+	return nErr;
+}
+#endif	// MACOSX
 
 // ============================================================================
 
@@ -94,7 +225,117 @@ jclass com_sun_star_dtrans_DTransTransferable::getMyClass()
 
 Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( UnsupportedFlavorException, IOException, RuntimeException )
 {
+	if ( mxTransferable.is() )
+		return mxTransferable->getTransferData( aFlavor );
+
 	Any out;
+
+#ifdef MACOSX
+	FourCharCode nRequestedType = NULL;
+	OSStatus nErr = noErr;
+
+	// Run a loop so that if data type fails, we can try another
+	for ( USHORT i = 0; i < nSupportedTypes; i++ )
+	{
+		if ( aFlavor.MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ i ] ) )
+			nRequestedType = aSupportedNativeTypes[ i ];
+		else
+			continue;
+
+		// Test the JVM version and if it is below 1.4, use Carbon APIs or else
+		// use Cocoa APIs
+		java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
+		if ( !pClass )
+		{
+			// Load Carbon
+			OModule aModule;
+			if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
+			{
+				GetScrapFlavorData_Type *pGetScrapFlavorData = (GetScrapFlavorData_Type *)aModule.getSymbol( OUString::createFromAscii( "GetScrapFlavorData" ) );
+				GetScrapFlavorSize_Type *pGetScrapFlavorSize = (GetScrapFlavorSize_Type *)aModule.getSymbol( OUString::createFromAscii( "GetScrapFlavorSize" ) );
+				if ( pGetScrapFlavorData && pGetScrapFlavorSize )
+				{
+					MacOSSize aSize;
+
+					nErr = pGetScrapFlavorSize( (ScrapRef)mpNativeTransferable, nRequestedType, &aSize );
+					if ( nErr == noErr )
+					{
+						Sequence< sal_Int8 > aData( aSize );
+						if ( pGetScrapFlavorData( (ScrapRef)mpNativeTransferable, nRequestedType, &aSize, aData.getArray() ) == noErr )
+						{
+							if ( aFlavor.DataType.equals( getCppuType( ( OUString* )0 ) ) )
+							{
+								if ( nRequestedType == 'TEXT' )
+								{
+									MacOSSize nLen = aData.getLength();
+									if ( ( (sal_Char *)aData.getConstArray() )[ nLen - 1 ] == 0 )
+										nLen--;
+									out <<= OUString( (sal_Char *)aData.getConstArray(), nLen, gsl_getSystemTextEncoding() );
+								}
+								else
+								{
+									MacOSSize nLen = aData.getLength() / 2; 
+									if ( ( (sal_Unicode *)aData.getConstArray() )[ nLen - 1 ] == 0 )
+										nLen--;
+									out <<= OUString( (sal_Unicode *)aData.getConstArray(), nLen );
+								}
+							}
+							else if ( aFlavor.DataType.equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
+							{
+								out <<= aData;
+							}
+
+							// Force a break from the loop
+							i = nSupportedTypes;
+						}
+					}
+				}
+
+				aModule.unload();
+			}
+		}
+		else
+		{
+			delete pClass;
+#ifdef DEBUG
+			fprintf( stderr, "DTransTransferable::getTransferData not implemented\n" );
+#endif
+		}
+	}
+
+	if ( !nRequestedType )
+	{
+		if ( nErr == noTypeErr )
+			throw UnsupportedFlavorException( aFlavor.MimeType, static_cast< XTransferable * >( this ) );
+		else
+			throw IOException( aFlavor.MimeType, static_cast< XTransferable * >( this ) );
+	}
+#else // MACOSX
+#ifdef DEBUG
+	fprintf( stderr, "DTransTransferable::getTransferData not implemented\n" );
+#endif
+#endif	// MACOSX
+
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+com_sun_star_dtrans_DTransTransferable::~com_sun_star_dtrans_DTransTransferable()
+{
+	MutexGuard aGuard( aMutex );
+
+	aTransferableList.remove( this );
+}
+
+// ----------------------------------------------------------------------------
+
+Sequence< DataFlavor > SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferDataFlavors() throw ( RuntimeException )
+{
+	if ( mxTransferable.is() )
+		return mxTransferable->getTransferDataFlavors();
+
+	Sequence< DataFlavor > out;
 
 #ifdef MACOSX
 	// Test the JVM version and if it is below 1.4, use Carbon APIs or else
@@ -106,21 +347,37 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 		OModule aModule;
 		if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
 		{
-			GetScrapFlavorData_Type *pGetScrapFlavorData = (GetScrapFlavorData_Type *)aModule.getSymbol( OUString::createFromAscii( "GetScrapFlavorData" ) );
-			GetScrapFlavorSize_Type *pGetScrapFlavorSize = (GetScrapFlavorSize_Type *)aModule.getSymbol( OUString::createFromAscii( "GetScrapFlavorSize" ) );
-			if ( pGetScrapFlavorData && pGetScrapFlavorSize )
+			GetScrapFlavorCount_Type *pGetScrapFlavorCount = (GetScrapFlavorCount_Type *)aModule.getSymbol( OUString::createFromAscii( "GetScrapFlavorCount" ) );
+			GetScrapFlavorInfoList_Type *pGetScrapFlavorInfoList = (GetScrapFlavorInfoList_Type *)aModule.getSymbol( OUString::createFromAscii( "GetScrapFlavorInfoList" ) );
+			if ( pGetScrapFlavorCount && pGetScrapFlavorInfoList )
 			{
-				ScrapFlavorType aType;
-				MacOSSize aSize;
+				UInt32 nCount;
 
-				OSStatus nErr = pGetScrapFlavorSize( *(ScrapRef *)mpNativeObj, aType, &aSize );
-				if ( nErr == noTypeErr )
-					throw UnsupportedFlavorException( aFlavor.MimeType, static_cast< XTransferable * >( this ) );
-				else if ( nErr != noErr )
-					throw IOException( aFlavor.MimeType, static_cast< XTransferable * >( this ) );
+				if ( pGetScrapFlavorCount( (ScrapRef)mpNativeTransferable, &nCount ) == noErr && nCount > 0 )
+				{
+					ScrapFlavorInfo *pInfo = new ScrapFlavorInfo[ nCount ];
 
-				if ( pGetScrapFlavorData( *(ScrapRef *)mpNativeObj, aType, &aSize, NULL ) != nErr )
-					throw IOException( aFlavor.MimeType, static_cast< XTransferable * >( this ) );
+					if ( pGetScrapFlavorInfoList( (ScrapRef)mpNativeTransferable, &nCount, pInfo ) == noErr )
+					{
+						for ( USHORT i = 0; i < nSupportedTypes; i++ )
+						{
+							for ( UInt32 j = 0; j < nCount; j++ )
+							{
+								if ( aSupportedNativeTypes[ i ] == pInfo[ j ].flavorType )
+								{
+									DataFlavor aFlavor;
+									aFlavor.MimeType = aSupportedMimeTypes[ i ];
+									aFlavor.DataType = aSupportedDataTypes[ i ];
+									sal_Int32 nLen = out.getLength();
+									out.realloc( nLen + 1 );
+									out[ nLen ] = aFlavor;
+								}
+							}
+						}
+					}
+
+					delete[] pInfo;
+				}
 			}
 
 			aModule.unload();
@@ -144,9 +401,44 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 
 // ----------------------------------------------------------------------------
 
-Sequence< DataFlavor > SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferDataFlavors() throw ( RuntimeException )
+sal_Bool com_sun_star_dtrans_DTransTransferable::hasOwnership()
 {
-	Sequence< DataFlavor > out;
+	sal_Bool out = FALSE;
+
+#ifdef MACOSX
+	// Test the JVM version and if it is below 1.4, use Carbon APIs or else
+	// use Cocoa APIs
+	java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
+	if ( !pClass )
+	{
+		// Load Carbon
+		OModule aModule;
+		if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
+		{
+			GetCurrentScrap_Type *pGetCurrentScrap = (GetCurrentScrap_Type *)aModule.getSymbol( OUString::createFromAscii( "GetCurrentScrap" ) );
+			if ( pGetCurrentScrap )
+			{
+				ScrapRef aScrap;
+
+				if ( pGetCurrentScrap( &aScrap ) == noErr && aScrap == (ScrapRef)mpNativeTransferable )
+					out = TRUE;
+			}
+			aModule.unload();
+		}
+	}
+	else
+	{
+		delete pClass;
+#ifdef DEBUG
+		fprintf( stderr, "DTransTransferable::transferToClipboard not implemented\n" );
+#endif
+	}
+#else // MACOSX
+#ifdef DEBUG
+	fprintf( stderr, "DTransTransferable::transferToClipboard not implemented\n" );
+#endif
+#endif	// MACOSX
+
 	return out;
 }
 
@@ -154,6 +446,160 @@ Sequence< DataFlavor > SAL_CALL com_sun_star_dtrans_DTransTransferable::getTrans
 
 sal_Bool SAL_CALL com_sun_star_dtrans_DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) throw ( RuntimeException )
 {
+	if ( mxTransferable.is() )
+		return mxTransferable->isDataFlavorSupported( aFlavor );
+
 	sal_Bool out = FALSE;
+
+#ifdef MACOSX
+	FourCharCode nRequestedType = NULL;
+	Type aRequestedDataType;
+	for ( USHORT i = 0; i < nSupportedTypes; i++ )
+	{
+		if ( aFlavor.MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ i ] ) )
+		{
+			nRequestedType = aSupportedNativeTypes[ i ];
+			aRequestedDataType = aSupportedDataTypes[ i ];
+			break;
+		}
+	}
+
+	if ( nRequestedType )
+	{
+		// Test the JVM version and if it is below 1.4, use Carbon APIs or else
+		// use Cocoa APIs
+		java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
+		if ( !pClass )
+		{
+			// Load Carbon
+			OModule aModule;
+			if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
+			{
+				GetScrapFlavorCount_Type *pGetScrapFlavorCount = (GetScrapFlavorCount_Type *)aModule.getSymbol( OUString::createFromAscii( "GetScrapFlavorCount" ) );
+				GetScrapFlavorInfoList_Type *pGetScrapFlavorInfoList = (GetScrapFlavorInfoList_Type *)aModule.getSymbol( OUString::createFromAscii( "GetScrapFlavorInfoList" ) );
+				if ( pGetScrapFlavorCount && pGetScrapFlavorInfoList )
+				{
+					UInt32 nCount;
+
+					if ( pGetScrapFlavorCount( (ScrapRef)mpNativeTransferable, &nCount ) == noErr && nCount > 0 )
+					{
+						ScrapFlavorInfo *pInfo = new ScrapFlavorInfo[ nCount ];
+
+						if ( pGetScrapFlavorInfoList( (ScrapRef)mpNativeTransferable, &nCount, pInfo ) == noErr )
+						{
+							for ( UInt32 i = 0; i < nCount; i++ )
+							{
+								if ( pInfo[ i ].flavorType == nRequestedType && aFlavor.DataType.equals( aRequestedDataType ) )
+								{
+									out = TRUE;
+									break;
+								}
+							}
+						}
+
+						delete[] pInfo;
+					}
+				}
+
+				aModule.unload();
+			}
+		}
+		else
+		{
+			delete pClass;
+#ifdef DEBUG
+			fprintf( stderr, "DTransTransferable::isDataFlavorSupported not implemented\n" );
+#endif
+		}
+	}
+#else // MACOSX
+#ifdef DEBUG
+	fprintf( stderr, "DTransTransferable::isDataFlavorSupported not implemented\n" );
+#endif
+#endif	// MACOSX
+
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< XTransferable > &xTransferable )
+{
+	sal_Bool out = FALSE;
+
+	MutexGuard aGuard( aMutex );
+
+	mxTransferable = xTransferable;
+	if ( mxTransferable.is() )
+	{
+#ifdef MACOSX
+		// Test the JVM version and if it is below 1.4, use Carbon APIs or else
+		// use Cocoa APIs
+		java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
+		if ( !pClass )
+		{
+			// Load Carbon
+			OModule aModule;
+			if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
+			{
+				ClearCurrentScrap_Type *pClearCurrentScrap = (ClearCurrentScrap_Type *)aModule.getSymbol( OUString::createFromAscii( "ClearCurrentScrap" ) );
+				GetCurrentScrap_Type *pGetCurrentScrap = (GetCurrentScrap_Type *)aModule.getSymbol( OUString::createFromAscii( "GetCurrentScrap" ) );
+				NewScrapPromiseKeeperUPP_Type *pNewScrapPromiseKeeperUPP = (NewScrapPromiseKeeperUPP_Type *)aModule.getSymbol( OUString::createFromAscii( "NewScrapPromiseKeeperUPP" ) );
+				PutScrapFlavor_Type *pPutScrapFlavor = (PutScrapFlavor_Type *)aModule.getSymbol( OUString::createFromAscii( "PutScrapFlavor" ) );
+				SetScrapPromiseKeeper_Type *pSetScrapPromiseKeeper = (SetScrapPromiseKeeper_Type *)aModule.getSymbol( OUString::createFromAscii( "SetScrapPromiseKeeper" ) );
+				if ( pClearCurrentScrap && pGetCurrentScrap && pNewScrapPromiseKeeperUPP && pPutScrapFlavor && pSetScrapPromiseKeeper )
+				{
+					ScrapRef aScrap;
+					if ( pClearCurrentScrap() == noErr && pGetCurrentScrap( &aScrap ) == noErr )
+					{
+						// We have now cleared the scrap so we now own it
+						mpNativeTransferable = aScrap;
+						out = TRUE;
+
+						if ( !pScrapPromiseKeeperUPP )
+							pScrapPromiseKeeperUPP = pNewScrapPromiseKeeperUPP( (ScrapPromiseKeeperProcPtr)ImplScrapPromiseKeeperCallback );
+
+						if ( pScrapPromiseKeeperUPP && pSetScrapPromiseKeeper( (ScrapRef)mpNativeTransferable, pScrapPromiseKeeperUPP, (const void *)this ) == noErr )
+						{
+							Sequence< DataFlavor > xFlavors;
+							try
+							{
+								xFlavors = mxTransferable->getTransferDataFlavors();
+							}
+							catch ( Exception )
+							{
+							}
+
+							for ( sal_Int32 i = 0; i < xFlavors.getLength(); i++ )
+							{ 
+								for ( USHORT j = 0; j < nSupportedTypes; j++ )
+								{
+									if ( xFlavors[ i ].MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ j ] ) )
+										pPutScrapFlavor( (ScrapRef)mpNativeTransferable, aSupportedNativeTypes[ j ], kScrapFlavorMaskNone, kScrapFlavorSizeUnknown, NULL );
+								}
+							}
+
+							aTransferableList.push_back( this );
+						}
+					}
+				}
+	
+				aModule.unload();
+			}
+		}
+		else
+		{
+			delete pClass;
+#ifdef DEBUG
+			fprintf( stderr, "DTransClipboard::setContents not implemented\n" );
+#endif
+		}
+#else	// MACOSX
+#ifdef DEBUG
+		fprintf( stderr, "DTransTransferable::setContents not implemented\n" );
+#endif
+#endif	// MACOSX
+	}
+
 	return out;
 }
