@@ -330,7 +330,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pCancelInputEvent->mnCursorPos = 0;
 				pCancelInputEvent->mnDeltaStart = 0;
 				pCancelInputEvent->mbOnlyCursor = FALSE;
-				pCancelInputEvent->mnCursorFlags = 0;
+				pCancelInputEvent->mnCursorFlags = EXTTEXTINPUT_CURSOR_INVISIBLE;
 				dispatchEvent( nID, pFrame, pCancelInputEvent );
 				delete pCancelInputEvent;
 			}
