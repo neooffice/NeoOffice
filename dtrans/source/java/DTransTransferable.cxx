@@ -181,7 +181,7 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 							pArray[ j ] = (sal_Unicode)'\r';
 					}
 
-					if ( nType == 'TEXT' )
+					if ( nType != 'utxt' )
 					{
 						OString aEncodedString = OUStringToOString( aString, gsl_getSystemTextEncoding() );
 						sal_Int8 *pData = (sal_Int8 *)aEncodedString.getStr();
@@ -349,7 +349,7 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 				{
 					OUString aString;
 					sal_Int32 nLen;
-					if ( nRequestedType == 'TEXT' )
+					if ( nRequestedType != 'utxt' )
 					{
 						nLen = aData.getLength();
 						if ( ( (sal_Char *)aData.getArray() )[ nLen - 1 ] == 0 )
