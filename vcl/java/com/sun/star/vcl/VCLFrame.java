@@ -651,16 +651,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private Insets insets = null;
 
 	/**
-	 * The minimum client height.
-	 */
-	private int minHeight = 1;
-
-	/**
-	 * The minimum client width.
-	 */
-	private int minWidth = 1;
-
-	/**
 	 * The native window's panel.
 	 */
 	private VCLFrame.NoPaintPanel panel = null;
@@ -771,21 +761,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (queue == null || window == null || !window.isShowing())
 			return;
 
-		boolean resize = false;
-		Dimension size = window.getSize();
-		if (size.width < minWidth) {
-			size.width = minWidth;
-			resize = true;
-		}
-		if (size.height < minHeight) {
-			size.height = minHeight;
-			resize = true;
-		}
-
-		if (resize)
-			window.setSize(size);
-		else
-			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVERESIZE, this, 0));
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVERESIZE, this, 0));
 
 	}
 
@@ -1829,10 +1805,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void setBounds(int x, int y, int width, int height) {
 
-		if (width < minWidth)
-			width = minWidth;
-		if (height < minHeight)
-			height = minHeight;
+		Dimension size = window.getMinimumSize();
+		if (width < size.width)
+			width = size.width;
+		if (height < size.height)
+			height = size.height;
 
 		window.setBounds(x, y, width, height);
 
@@ -1861,13 +1838,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void setMinClientSize(int width, int height) {
 
-		if (width < 1)
-			width = 1;
-		if (height < 1)
-			height = 1;
-
-		minWidth = width + insets.left + insets.right;
-		minHeight = height + insets.top + insets.bottom;
+		if (window instanceof VCLFrame.NoPaintFrame)
+			((VCLFrame.NoPaintFrame)window).setMinimumSize(width, height);
+		else
+			((VCLFrame.NoPaintWindow)window).setMinimumSize(width, height);
 
 	}
 
@@ -2208,6 +2182,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		private VCLFrame frame = null;
 
 		/**
+		 * The minimum size.
+		 */
+		private Dimension minSize = null;
+
+		/**
 		 * Constructs a new <code>VCLFrame.NoPaintFrame</code> instance.
 		 *
 		 * @param f the <code>VCLFrame</code>
@@ -2216,6 +2195,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			frame = f;
 			enableInputMethods(false);
+			setMinimumSize(1, 1);
 
 		}
 
@@ -2234,6 +2214,17 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		/**
+		 * Returns the minimum size for the frame.
+		 *
+		 * @return the minimum size for the frame
+		 */
+		public Dimension getMinimumSize() {
+
+			return minSize;
+			
+		}
+
+		/**
 		 * This method performs no painting of the frame. This method is used
 		 * to prevent Java from painting over what VCL has painted.
 		 *
@@ -2243,6 +2234,24 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			paintComponents(g);
 
+		}
+
+		/**
+		 * Set the minimum size for the frame.
+		 *
+		 * @param width the minimum width
+		 * @param height the minimum height
+		 */
+		public void setMinimumSize(int width, int height) {
+
+			if (width < 1)
+				width = 1;
+			if (height < 1)
+				height = 1;
+
+			insets = getInsets();
+			minSize = new Dimension(width + insets.left + insets.right, height + insets.top + insets.bottom);
+			
 		}
 
 	}
@@ -2327,6 +2336,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		private VCLFrame frame = null;
 
 		/**
+		 * The minimum size.
+		 */
+		private Dimension minSize = null;
+
+		/**
 		 * Constructs a new <code>VCLFrame.NoPaintWindow</code> instance.
 		 *
 		 * @param f the <code>VCLFrame</code>
@@ -2336,6 +2350,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			super(new VCLFrame.NoPaintFrame(f));
 			frame = f;
 			enableInputMethods(false);
+			setMinimumSize(1, 1);
 
 		}
 
@@ -2354,6 +2369,17 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		/**
+		 * Returns the minimum size for the window.
+		 *
+		 * @return the minimum size for the window
+		 */
+		public Dimension getMinimumSize() {
+
+			return minSize;
+			
+		}
+
+		/**
 		 * This method performs no painting of the window. This method is used
 		 * to prevent Java from painting over what VCL has painted.
 		 *
@@ -2363,6 +2389,24 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			paintComponents(g);
 
+		}
+
+		/**
+		 * Set the minimum size for the window.
+		 *
+		 * @param width the minimum width
+		 * @param height the minimum height
+		 */
+		public void setMinimumSize(int width, int height) {
+
+			if (width < 1)
+				width = 1;
+			if (height < 1)
+				height = 1;
+
+			insets = getInsets();
+			minSize = new Dimension(width + insets.left + insets.right, height + insets.top + insets.bottom);
+			
 		}
 
 	}
