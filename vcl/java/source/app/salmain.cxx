@@ -141,34 +141,6 @@ int main( int argc, char *argv[] )
 		putenv( aTmpPath.GetBuffer() );
 	}
 
-	// Assign "vcl.jar" to CLASSPATH environment variable
-	ByteString aSolarVersion( getenv( "SOLARVERSION" ) );
-	ByteString aClassPath( getenv( "CLASSPATH" ) );
-	if ( aCmdPath.Len() )
-	{
-		ByteString aTmpPath( "CLASSPATH=" );
-		aTmpPath += aCmdPath;
-		aTmpPath += ByteString( DirEntry::GetAccessDelimiter(), gsl_getSystemTextEncoding() );
-		aTmpPath += ByteString( "classes" );
-		aTmpPath += ByteString( DirEntry::GetAccessDelimiter(), gsl_getSystemTextEncoding() );
-		aTmpPath += ByteString( "vcl.jar" );
-		if ( aSolarVersion.Len() )
-		{
-			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), gsl_getSystemTextEncoding() );
-			aTmpPath += aSolarVersion;
-			aTmpPath += ByteString( DirEntry::GetAccessDelimiter(), gsl_getSystemTextEncoding() );
-			aTmpPath += ByteString( "bin" );
-			aTmpPath += ByteString( DirEntry::GetAccessDelimiter(), gsl_getSystemTextEncoding() );
-			aTmpPath += ByteString( "vcl.jar" );
-		}
-		if ( aClassPath.Len() )
-		{
-			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), gsl_getSystemTextEncoding() );
-			aTmpPath += aClassPath;
-		}
-		putenv( aTmpPath.GetBuffer() );
-	}
-
 	SVMain();
 
 	exit( 0 );

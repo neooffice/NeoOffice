@@ -40,48 +40,62 @@
 # 
 ##########################################################################
 
-PRJ=..
-PRJNAME=OpenOffice
-TARGET=util
+PRJ=..$/..
 
-.INCLUDE:  settings.mk
+PROJECTPCH=setuppch
+PROJECTPCHSOURCE=$(PRJ)$/source\pch\setuppch
 
-.IF "$(strip)"!=""
-LZIPFLAGS=-S
+PRJNAME=setup2
+TARGET=ui
+
+# --- Settings -----------------------------------------------------
+
+.INCLUDE :  svpre.mk
+.INCLUDE :  settings.mk
+.INCLUDE :  sv.mk
+
+# --- Files --------------------------------------------------------
+
+CXXFILES =           		\
+		main.cxx     		\
+		mainwnd.cxx  		\
+		mainevt.cxx  		\
+		magenda.cxx  		\
+		rspwizard.cxx  		\
+		textani.cxx
+
+SRCFILES =				\
+		error.src		\
+		app.src
+
+SRS1NAME = 				\
+		appmain
+
+SRC1FILES = 			\
+		appmain.src
+
+EXCEPTIONSFILES=\
+		$(OBJ)$/main.obj
+
+OBJFILES =				\
+		$(OBJ)$/main.obj	\
+		$(OBJ)$/mainwnd.obj	\
+		$(OBJ)$/mainevt.obj	\
+		$(OBJ)$/magenda.obj	\
+		$(OBJ)$/rspwizard.obj	\
+		$(OBJ)$/textani.obj	\
+
+.IF "$(GUI)"=="UNX"
+.IF "$(OS)"=="MACOSX"
+.IF "$(GUIBASE)"=="unx" || "$(GUIBASE)"=="java"
+OBJFILES += $(OBJ)$/unxmain.obj
 .ENDIF
-
-.IF "$(OS)"=="WNT"
-EXTRARMFLAG=/S
 .ELSE
-EXTRARMFLAG=-r
+OBJFILES += $(OBJ)$/unxmain.obj
+.ENDIF
 .ENDIF
 
-.INCLUDE: target.mk
+# --- Tagets -------------------------------------------------------
 
-ALLTAR : pack
-
-LANGUAGES = $(alllangext:s/ /,/)
-
-.IF "$(alllangext)"!=""
-
-pack:
-	+-$(RM) $(EXTRARMFLAG) $(OUT)$/$(LANGUAGES)$/*
-	+-lzip $(LZIPFLAGS) -l $(LANGUAGES) -f openoffice.lst -d $(OUT)$/$(LANGUAGES) -n OfficeOSL 
-
-# Special target to echo the LANGUAGES macro to external scripts
-language_numbers:
-	@echo $(LANGUAGES)
-
-# Special target to echo the LANGUAGES macro to external scripts
-language_names:
-	@echo $(foreach,i,$(LANGUAGES:s/,/ /) $(iso_$i))
-
-.ELSE			# "$(alllangext)"!=""
-pack:
-	@+echo cannot pack nothing...
-
-# Special target to echo the LANGUAGES macro to external scripts
-languages:
-
-.ENDIF			# "$(alllangext)"!=""
+.INCLUDE :  target.mk
 

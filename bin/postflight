@@ -50,9 +50,4 @@ if [ -d "$2" ]; then
 		done
 	fi
 
-	# Make all files read only
-	if [ -d "$2/$(PRODUCT_DIR_NAME).app" ]; then
-		chmod -Rf a-w,a+r "$2/$(PRODUCT_DIR_NAME).app"
-	fi
-
 fi

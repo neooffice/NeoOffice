@@ -9,7 +9,7 @@ NeedsAuthorization YES
 Required NO
 Relocatable YES
 RequiresReboot NO
-UseUserMask YES
+UseUserMask NO
 OverwritePermissions YES
 InstallFat NO
 RootVolumeOnly NO
