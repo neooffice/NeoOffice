@@ -86,7 +86,7 @@ done
 # Match the locale to one of the installed locales
 lang=`echo "$locale" | awk -F- '{ print $1 }'`
 country=`echo "$locale" | awk -F- '{ print $2 }'`
-locales="de en-US it es"
+locales="$(LANGUAGE_NAMES)"
 matchedlocale=""
 for i in $locales ; do
     if [ "$locale" = "$i" ] ; then
