@@ -44,6 +44,7 @@ import java.awt.EventQueue;
 import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.GraphicsConfiguration;
 import java.awt.Insets;
 import java.awt.Panel;
 import java.awt.Point;
@@ -669,11 +670,24 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		frame = f;
 		parent = p;
 
+		// Get screen device
+		GraphicsConfiguration gc = null;
+		if (p != null && p.getWindow() != null) {
+			gc = p.getWindow().getGraphicsConfiguration().getDevice().getDefaultConfiguration();
+/*
+			System.out.println("0: " + p.getWindow().getGraphicsConfiguration().getDevice());
+			System.out.println("1: " + p.getWindow().getGraphicsConfiguration().getDevice());
+			System.out.println("2: " + java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice());
+			System.out.println("3: " + p.getWindow().getGraphicsConfiguration());
+			System.out.println("4: " + java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDefaultConfiguration());
+*/
+		}
+
 		// Create the native window
 		if ((styleFlags & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) != 0)
-			window = new VCLFrame.NoPaintFrame(this);
+			window = new VCLFrame.NoPaintFrame(this, gc);
 		else
-			window = new VCLFrame.NoPaintWindow(this);
+			window = new VCLFrame.NoPaintWindow(this, gc);
 
 		// Process remaining style flags
 		if ((styleFlags & SAL_FRAME_STYLE_SIZEABLE) != 0)
@@ -2015,9 +2029,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 * Constructs a new <code>VCLFrame.NoPaintFrame</code> instance.
 		 *
 		 * @param f the <code>VCLFrame</code>
+		 * @param gc the <code>GraphicsConfiguration</code>
 		 */
-		NoPaintFrame(VCLFrame f) {
+		NoPaintFrame(VCLFrame f, GraphicsConfiguration gc) {
 
+			super(gc);
 			frame = f;
 			enableInputMethods(false);
 
@@ -2149,10 +2165,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 * Constructs a new <code>VCLFrame.NoPaintWindow</code> instance.
 		 *
 		 * @param f the <code>VCLFrame</code>
+		 * @param gc the <code>GraphicsConfiguration</code>
 		 */
-		NoPaintWindow(VCLFrame f) {
+		NoPaintWindow(VCLFrame f, GraphicsConfiguration gc) {
 
-			super(new VCLFrame.NoPaintFrame(f));
+			super(new VCLFrame.NoPaintFrame(f, gc), gc);
 			frame = f;
 			enableInputMethods(false);
 

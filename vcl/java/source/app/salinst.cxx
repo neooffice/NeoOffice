@@ -367,8 +367,8 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 	// Set default window size based on style
 	Rectangle aWorkArea;
 	pFrame->GetWorkArea( aWorkArea );
-	long nX = 0;
-	long nY = 0;
+	long nX = aWorkArea.nLeft;
+	long nY = aWorkArea.nTop;
 	long nWidth = aWorkArea.GetWidth();
 	long nHeight = aWorkArea.GetHeight();
 	if ( nSalFrameStyle & SAL_FRAME_STYLE_FLOAT )
@@ -398,6 +398,8 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 					pNextFrame = pNextFrame->maFrameData.mpNextFrame;
 			if ( pNextFrame )
 			{
+				// Set screen to same screen as next frame
+				pNextFrame->GetWorkArea( aWorkArea );
 				const SalFrameGeometry& rGeom( pNextFrame->GetGeometry() );
 				pFrame->maFrameData.mbCenter = FALSE;
 				nX = rGeom.nX - rGeom.nLeftDecoration + pFrame->maGeometry.nTopDecoration;
@@ -406,10 +408,10 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 				nHeight = rGeom.nHeight + rGeom.nTopDecoration + rGeom.nBottomDecoration;
 				// If the window spills off the screen, place it at the 
 				// top left of the screen
-				if ( ( nX + nWidth ) > aWorkArea.GetWidth() || ( nY + nHeight ) > aWorkArea.GetHeight() )
+				if ( ( nX + nWidth ) > ( aWorkArea.nLeft + aWorkArea.GetWidth() ) || ( nY + nHeight ) > ( aWorkArea.nTop + aWorkArea.GetHeight() ) )
 				{
-					nX = 0;
-					nY = 0;
+					nX = aWorkArea.nLeft;
+					nY = aWorkArea.nTop;
 				}
 				
 			}
@@ -418,8 +420,8 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 	// Center the window by default
 	if ( pFrame->maFrameData.mbCenter )
 	{
-		nX = ( aWorkArea.GetWidth() - nWidth ) / 2;
-		nY = ( aWorkArea.GetHeight() - nHeight ) / 2;
+		nX = aWorkArea.nLeft + ( ( aWorkArea.GetWidth() - nWidth ) / 2 );
+		nY = aWorkArea.nTop + ( ( aWorkArea.GetHeight() - nHeight ) / 2 );
 	}
 
 	pFrame->maFrameData.mpVCLFrame->setBounds( nX, nY, nWidth, nHeight );

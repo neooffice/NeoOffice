@@ -35,10 +35,14 @@
 
 package com.sun.star.vcl;
 
-import java.awt.Dimension;
 import java.awt.Frame;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
 import java.awt.Insets;
+import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.Toolkit;
+import java.awt.Window;
 
 /** 
  * The Java class that implements the convenience methods for accessing
@@ -65,22 +69,13 @@ public final class VCLScreen {
 	private static Insets frameInsets = null;
 
 	/**
-	 * The cached screen size.
-	 */
-	private static Dimension screenSize = null;
-
-	/**
 	 * Initialize screen size and frame insets.
 	 */
 	static {
 
-		screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-
 		Frame f = new Frame();
 		f.addNotify();
 		frameInsets = f.getInsets();
-		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
-			screenSize.height -= frameInsets.top;
 		f.removeNotify();
 
 	}
@@ -90,20 +85,41 @@ public final class VCLScreen {
 	 *
 	 * @return the <code>Frame</code> insets
 	 */
-	static Insets getFrameInsets() {
+	public static Insets getFrameInsets() {
 
 		return frameInsets;
 
 	}
 
 	/**
-	 * Gets the size of the screen.
+	 * Gets the bounds of the screen that a <code>VCLFrame</code> is located in.
 	 *
-	 * @return the size of the screen
+	 * @param f the <code>VCLFrame</code>
+	 * @return the bounds of the screen
 	 */
-	public static Dimension getScreenSize() {
+	public static Rectangle getScreenBounds(VCLFrame f) {
 
-		return screenSize;
+		Rectangle bounds = null;
+
+		// Iterate through the screen devices and find the screen that the
+		// top left corner of the frame is in
+		GraphicsDevice[] screens = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
+		Window w = f.getWindow();
+		if (w != null) {
+			Point p = w.getLocation();
+			for (int i = 0; i < screens.length; i++) {
+				Rectangle r = screens[i].getDefaultConfiguration().getBounds();
+				if (r.contains(p)) {
+					bounds = new Rectangle(r);
+					break;
+				}
+			}
+		}
+
+		if (bounds == null)
+			bounds = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
+
+		return bounds;
 
 	}
 

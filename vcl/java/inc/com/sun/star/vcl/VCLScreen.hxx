@@ -45,7 +45,9 @@
 
 namespace vcl {
 
-class com_sun_star_vcl_VCLScreen: public java_lang_Object
+class com_sun_star_vcl_VCLFrame;
+
+class com_sun_star_vcl_VCLScreen : public java_lang_Object
 {
 protected:
 	static jclass		theClass;
@@ -53,7 +55,7 @@ protected:
 public:
 	static jclass		getMyClass();
 	static const Rectangle	getFrameInsets();
-	static const Size	getScreenSize();
+	static const Rectangle	getScreenBounds( const com_sun_star_vcl_VCLFrame *_par0 );
 
 						com_sun_star_vcl_VCLScreen( jobject myObj ) : java_lang_Object( myObj ) {};
 	virtual				~com_sun_star_vcl_VCLScreen() {};

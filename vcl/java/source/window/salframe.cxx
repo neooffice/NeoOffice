@@ -224,49 +224,57 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 		nHeight = aPosSize.GetHeight();
 
 	Rectangle aWorkArea;
-	GetWorkArea( aWorkArea );
 
 	if ( maFrameData.mbCenter && ! ( nFlags & SAL_FRAME_POSSIZE_X ) && ! ( nFlags & SAL_FRAME_POSSIZE_Y ) )
 	{
 		if ( maFrameData.mpParent && maFrameData.mpParent->maGeometry.nWidth >= nWidth && maFrameData.mpParent->maGeometry.nHeight > nHeight)
 		{
+			// Set screen to same screen as parent frame
+			maFrameData.mpParent->GetWorkArea( aWorkArea );
 			nX = maFrameData.mpParent->maGeometry.nX + ( ( maFrameData.mpParent->maGeometry.nWidth - nWidth ) / 2 );
 			nY = maFrameData.mpParent->maGeometry.nY + ( ( maFrameData.mpParent->maGeometry.nHeight - nHeight ) / 2 );
 		}
 		else
 		{
-			nX = ( aWorkArea.GetWidth() - nWidth ) / 2;
-			nY = ( aWorkArea.GetHeight() - nHeight ) / 2;
+			GetWorkArea( aWorkArea );
+			nX = aWorkArea.nLeft + ( ( aWorkArea.GetWidth() - nWidth ) / 2 );
+			nY = aWorkArea.nTop + ( ( aWorkArea.GetHeight() - nHeight ) / 2 );
 		}
 	}
 	else if ( maFrameData.mpParent )
 	{
+		// Set screen to same screen as parent frame
+		maFrameData.mpParent->GetWorkArea( aWorkArea );
 		nX += maFrameData.mpParent->maGeometry.nX;
 		nY += maFrameData.mpParent->maGeometry.nY;
 	}
+	else
+	{
+		GetWorkArea( aWorkArea );
+	}
 
 	// Make sure window does not spill off of the screen
-	long nMinX = 0;
-	long nMinY = 0;
+	long nMinX = aWorkArea.nLeft;
+	long nMinY = aWorkArea.nTop;
 #ifdef MACOSX
 	if ( maFrameData.mbPresentation )
 	{
-		nMinX = -1;
-		nMinY = -1;
+		nMinX -= 1;
+		nMinY -= 1;
 	}
 #endif	// MACOSX
-	if ( nMinX + nWidth > aWorkArea.GetWidth() )
-		nWidth = aWorkArea.GetWidth() - nMinX;
-	if ( nMinY + nHeight > aWorkArea.GetHeight() )
-		nHeight = aWorkArea.GetHeight() - nMinY;
+	if ( nMinX + nWidth > aWorkArea.nLeft + aWorkArea.GetWidth() )
+		nWidth = aWorkArea.nLeft + aWorkArea.GetWidth() - nMinX;
+	if ( nMinY + nHeight > aWorkArea.nTop + aWorkArea.GetHeight() )
+		nHeight = aWorkArea.nTop + aWorkArea.GetHeight() - nMinY;
 	if ( nX < nMinX )
 		nX = nMinX;
 	if ( nY < nMinY )
 		nY = nMinY;
-	if ( nX + nWidth > aWorkArea.GetWidth() )
-		nX = aWorkArea.GetWidth() - nWidth;
-	if ( nY + nHeight > aWorkArea.GetHeight() )
-		nY = aWorkArea.GetHeight() - nHeight;
+	if ( nX + nWidth > aWorkArea.nLeft + aWorkArea.GetWidth() )
+		nX = aWorkArea.nLeft + aWorkArea.GetWidth() - nWidth;
+	if ( nY + nHeight > aWorkArea.nTop + aWorkArea.GetHeight() )
+		nY = aWorkArea.nTop + aWorkArea.GetHeight() - nHeight;
 
 	maFrameData.mpVCLFrame->setBounds( nX, nY, nWidth + maGeometry.nLeftDecoration + maGeometry.nRightDecoration, nHeight + maGeometry.nTopDecoration + maGeometry.nBottomDecoration );
 
@@ -280,18 +288,14 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 
 void SalFrame::GetWorkArea( Rectangle &rRect )
 {
-	const Size& rScreenSize( com_sun_star_vcl_VCLScreen::getScreenSize() );
-	rRect.nLeft = 0;
-	rRect.nTop = 0;
-	rRect.nRight = rScreenSize.Width() - 1;
-	rRect.nBottom = rScreenSize.Height() - 1;
+	rRect = com_sun_star_vcl_VCLScreen::getScreenBounds( maFrameData.mpVCLFrame );
 
 #ifdef MACOSX
-	// Adjust for system menu bar when in presentation mode
-	if ( maFrameData.mbPresentation )
+	// Adjust for system menu bar when not in presentation mode
+	if ( !maFrameData.mbPresentation && !rRect.nTop )
 	{
 		const Rectangle& rFrameInsets( com_sun_star_vcl_VCLScreen::getFrameInsets() );
-		rRect.nBottom += rFrameInsets.nTop;
+		rRect.nBottom -= rFrameInsets.nTop;
 	}
 #endif	// MACOSX
 }
