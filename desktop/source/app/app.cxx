@@ -1324,6 +1324,49 @@ void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
 #ifdef USE_JAVA
     if ( rAppEvent.IsOpenEvent() || rAppEvent.IsPrintEvent() )
     {
+        if ( !::desktop::Desktop::bSuppressOpenDefault && !GetCommandLineArgs()->IsInvisible() )
+        {
+            ::desktop::Desktop::bSuppressOpenDefault = sal_True;
+            Reference< XMultiServiceFactory > xSMgr = ::comphelper::getProcessServiceFactory();
+            RTL_LOGFILE_CONTEXT_TRACE( aLog, "{ create BackingComponent" );
+            Reference< XFrame > xDesktopFrame( xSMgr->createInstance(
+                OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ))), UNO_QUERY );
+            if (xDesktopFrame.is())
+            {
+                Reference< XFrame > xBackingFrame;
+                Reference< ::com::sun::star::awt::XWindow > xContainerWindow;
+
+                xBackingFrame = xDesktopFrame->findFrame(OUString( RTL_CONSTASCII_USTRINGPARAM( "_blank" )), 0);
+                if (xBackingFrame.is())
+                    xContainerWindow = xBackingFrame->getContainerWindow();
+                if (xContainerWindow.is())
+                {
+                    Sequence< Any > lArgs(1);
+                    lArgs[0] <<= xContainerWindow;
+
+                    Reference< XController > xBackingComp(
+                        xSMgr->createInstanceWithArguments(OUString( RTL_CONSTASCII_USTRINGPARAM("com.sun.star.comp.sfx2.view.BackingComp") ), lArgs),
+                        UNO_QUERY);
+
+                    if (xBackingComp.is())
+                    {
+                        Reference< ::com::sun::star::awt::XWindow > xBackingWin(xBackingComp, UNO_QUERY);
+                        // Attention: You MUST(!) call setComponent() before you call attachFrame().
+                        // Because the backing component set the property "IsBackingMode" of the frame
+                        // to true inside attachFrame(). But setComponent() reset this state everytimes ...
+                        xBackingFrame->setComponent(xBackingWin, xBackingComp);
+                        xBackingComp->attachFrame(xBackingFrame);
+                        xContainerWindow->setVisible(sal_True);
+
+                        Window* pCompWindow = VCLUnoHelper::GetWindow(xBackingFrame->getComponentWindow());
+                        if (pCompWindow)
+                            pCompWindow->Update();
+                    }
+                }
+            }
+            RTL_LOGFILE_CONTEXT_TRACE( aLog, "} create BackingComponent" );
+        }
+
         ProcessDocumentsRequest aRequest;
 		aRequest.pcProcessed = NULL;
         OUString aData( rAppEvent.GetData() );
@@ -1333,7 +1376,6 @@ void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
                 aRequest.aPrintList = aData;
             else
                 aRequest.aOpenList = aData;
-            ::desktop::Desktop::bSuppressOpenDefault = sal_True;
             OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
         }
         return;
