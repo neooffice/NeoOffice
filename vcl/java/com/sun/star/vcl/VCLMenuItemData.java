@@ -96,20 +96,9 @@ public final class VCLMenuItemData {
     private String title=new String();
     
     /**
-     * Indicates whether the keyboard shortcut has been set
-     */
-    private boolean keyboardShortcutSet=false;
-    
-    /**
      * Keyboard shortcut to use
      */
-    private int keyboardShortcut=0;
-    
-    /**
-     * True if shift should be used as a modifier with the shortcut, false if
-     * not.
-     */
-    private boolean keyboardShortcutUseShift=false;
+    private MenuShortcut keyboardShortcut=null;
     
     /**
      * Identifier that is used in Sal events to identify this specific menu item in VCL events
@@ -275,14 +264,12 @@ public final class VCLMenuItemData {
         
         int newShortcut=VCLEvent.convertVCLKeyCode(key);
         if(newShortcut!=0) {
-            keyboardShortcut=newShortcut;
-            keyboardShortcutSet=true;
-	    keyboardShortcutUseShift=useShift;
+            keyboardShortcut=new MenuShortcut(newShortcut, useShift);
             if(!awtPeers.isEmpty()) {
                 Enumeration e=awtPeers.elements();
                 while(e.hasMoreElements()) {
                     MenuItem m=(MenuItem)e.nextElement();
-                    m.setShortcut(new MenuShortcut(keyboardShortcut, keyboardShortcutUseShift));
+                    m.setShortcut(keyboardShortcut);
                 }
             }
         }
@@ -623,22 +610,25 @@ public final class VCLMenuItemData {
             addActionListener(this);
         }
         
-        /**
-         * Respond to menu item choices by posting appropriate events into the queue.
-         *
-         * @param e	event spawning this action.  Ignored.
-         */
-        public void actionPerformed(ActionEvent e) {
-            VCLMenuBar mb=VCLMenuBar.findVCLMenuBar(this);
-            if(mb!=null) {
-                mb.getEventQueue().postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUCOMMAND, mb.getFrame(), d.getVCLID(), d.getVCLCookie()));
-            }
-            else
-            {
-                System.err.println("MenuItem chosen, but no VCLFrame target found!");
-            }
-        }
-    }
+		/**
+         * Respond to menu item choices by posting appropriate events into the
+		 * event queue.
+		 *
+		 * @param e event spawning this action
+		 */
+		public void actionPerformed(ActionEvent e) {
+
+			// Cache the shortcut if there is one
+			if (d.keyboardShortcut!=null)
+				VCLFrame.setLastMenuShortcutPressed(d.keyboardShortcut);
+
+			VCLMenuBar mb=VCLMenuBar.findVCLMenuBar(this);
+			if (mb!=null)
+				mb.getEventQueue().postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUCOMMAND, mb.getFrame(), d.getVCLID(), d.getVCLCookie()));
+
+		}
+
+	}
     
     /**
      * Subclass of AWT CheckboxMenuItem that allows the item to respond to AWT menu selections by posting
@@ -704,8 +694,8 @@ public final class VCLMenuItemData {
                 cmi.enable();
             else
                 cmi.disable();
-            if(keyboardShortcutSet)
-                cmi.setShortcut(new MenuShortcut(keyboardShortcut, keyboardShortcutUseShift));
+            if(keyboardShortcut!=null)
+                cmi.setShortcut(keyboardShortcut);
             toReturn=(Object)cmi;
         }
         else if(isSubmenu)
@@ -735,8 +725,8 @@ public final class VCLMenuItemData {
                 mi.enable();
             else
                 mi.disable();
-            if(keyboardShortcutSet)
-                mi.setShortcut(new MenuShortcut(keyboardShortcut, keyboardShortcutUseShift));
+            if(keyboardShortcut!=null)
+                mi.setShortcut(keyboardShortcut);
             toReturn=(Object)mi;
         }
         

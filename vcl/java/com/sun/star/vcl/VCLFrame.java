@@ -45,6 +45,7 @@ import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
+import java.awt.MenuShortcut;
 import java.awt.Panel;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -580,6 +581,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private static InputContext inputContext = null;
 
+	/** 
+	 * The key modifiers pressed.
+	 */
+	private static int keyModifiersPressed = 0;
+
 	/**
 	 * The last capture frame.
 	 */
@@ -596,14 +602,28 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private static KeyEvent lastKeyPressed = null;
 
 	/** 
-	 * The key modifiers pressed.
+	 * The menu modifier.
 	 */
-	private static int keyModifiersPressed = 0;
+	private static MenuShortcut lastMenuShortcutPressed = null;
+
+	/** 
+	 * The menu modifier.
+	 */
+	private static int menuModifiersMask = 0;
 
 	/** 
 	 * The mouse modifiers pressed.
 	 */
 	private static int mouseModifiersPressed = 0;
+
+	/**
+	 * Cache the last menu shortcut pressed.
+	 */
+	static void setLastMenuShortcutPressed(MenuShortcut s) {
+
+		lastMenuShortcutPressed = s;
+
+	}
 
 	/**
 	 * Initialize input context.
@@ -612,8 +632,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		// We need to create a static shared input context as separate
 		// input contexts cause strange behavior on Mac OS X
-		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 			inputContext = InputContext.getInstance();
+			menuModifiersMask = InputEvent.META_MASK;
+		}
+		else {
+			menuModifiersMask = InputEvent.CTRL_MASK;
+		}
 
 		// Load pointer images
 		Toolkit t = Toolkit.getDefaultToolkit();
@@ -1494,6 +1519,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (VCLFrame.lastKeyPressed != null && VCLFrame.lastKeyPressed.getID() != KeyEvent.KEY_PRESSED)
 			VCLFrame.lastKeyPressed = null;
 
+		if (VCLFrame.lastMenuShortcutPressed != null)
+			VCLFrame.lastMenuShortcutPressed = null;
+
 		if (queue == null || window == null || !window.isShowing())
 			return;
 
@@ -1526,16 +1554,16 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else if (e.isActionKey()) {
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0));
 		}
-		else if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-			// Trap the Mac OS X key combinations that are reserved for the
-			// items in the Apple Services menu. Even though we don't respond
-			// to these services, Java does not generate a key typed event so
-			// we need to generate it ourselves.
+		else if (VCLFrame.lastMenuShortcutPressed == null) {
+			// Trap the key combinations that can be used for menu shortcuts.
+			// This is necessary because the VCL menu handlers expect to get
+			// keyboard shortcuts for all menu items and Java will intercept
+			// those that are applicable to disabled menu items.
 			int modifiers = e.getModifiers();
-			if (VCLFrame.lastKeyPressed == null && modifiers == (InputEvent.SHIFT_MASK | InputEvent.META_MASK) && keyCode >= KeyEvent.VK_A && keyCode <= KeyEvent.VK_Z && keyCode != KeyEvent.VK_Q) {
+			if (VCLFrame.lastKeyPressed == null && (modifiers & VCLFrame.menuModifiersMask) == VCLFrame.menuModifiersMask && (keyCode >= KeyEvent.VK_A && keyCode <= KeyEvent.VK_Z || keyCode >= KeyEvent.VK_0 && keyCode <= KeyEvent.VK_9)) {
 				e = new KeyEvent(e.getComponent(), KeyEvent.KEY_TYPED, e.getWhen(), modifiers, KeyEvent.VK_UNDEFINED, Character.toLowerCase((char)keyCode));
 				keyTyped(e);
-				VCLFrame.lastKeyPressed = null;
+				VCLFrame.lastMenuShortcutPressed = new MenuShortcut(keyCode, (modifiers & InputEvent.SHIFT_MASK) == InputEvent.SHIFT_MASK ? true : false);
 			}
 		}
 
@@ -1552,6 +1580,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (queue == null || window == null || !window.isShowing())
 			return;
+
+		// Avoid duplication of menu shortcuts
+		if (VCLFrame.lastMenuShortcutPressed != null) {
+			VCLFrame.lastMenuShortcutPressed = null;
+			return;
+		}
 
 		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 			// If a modifier is used to set the character (e.g. the "Alt-c"
