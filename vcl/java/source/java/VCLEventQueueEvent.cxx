@@ -372,7 +372,9 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			dispatchEvent( nID, pFrame, pData );
 			return;
 		}
+		case SALEVENT_MENUACTIVATE:
 		case SALEVENT_MENUCOMMAND:
+		case SALEVENT_MENUDEACTIVATE:
 		{
 			SalMenuEvent *pMenuEvent = (SalMenuEvent *)pData;
 			if ( !pMenuEvent )
@@ -381,7 +383,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pMenuEvent->mnId = getMenuID();
 				pMenuEvent->mpMenu = (void *)getMenuCookie();
 			}
-			dispatchEvent( nID, pFrame, pMenuEvent);
+			dispatchEvent( nID, pFrame, pMenuEvent );
 			delete pMenuEvent;
 			return;
 		}
