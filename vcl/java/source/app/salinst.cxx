@@ -476,7 +476,10 @@ SalInfoPrinter* SalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
 	// Create a dummy printer configuration for our dummy printer
 	SalInfoPrinter *pPrinter = new SalInfoPrinter();
 
-	// Populate the job setup with default values
+	// Set data
+	com_sun_star_vcl_VCLPrintJob::setOrientation( com_sun_star_vcl_VCLPrintJob::getOrientation() );
+
+	// Populate the job setup
 	pSetupData->mnSystem = JOBSETUP_SYSTEM_JAVA;
 	pSetupData->maPrinterName = pQueueInfo->maPrinterName;
 	pSetupData->maDriver = pQueueInfo->maDriver;

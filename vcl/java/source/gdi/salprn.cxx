@@ -115,13 +115,18 @@ void SalInfoPrinter::ReleaseGraphics( SalGraphics* pGraphics )
 
 BOOL SalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 {
-	// Set incoming values
-	com_sun_star_vcl_VCLPrintJob::setOrientation( pSetupData->meOrientation );
 
 	// Display a native page setup dialog
+	Orientation nOrientation = com_sun_star_vcl_VCLPrintJob::getOrientation();
+	com_sun_star_vcl_VCLPrintJob::setOrientation( pSetupData->meOrientation );
 	if ( !com_sun_star_vcl_VCLPrintJob::setup() )
+	{
+		com_sun_star_vcl_VCLPrintJob::setOrientation( nOrientation );
 		return FALSE;
+	}
 
+	// Update values
+	pSetupData->meOrientation = com_sun_star_vcl_VCLPrintJob::getOrientation();
 	return SetPrinterData( pSetupData );
 }
 
@@ -187,24 +192,12 @@ void SalInfoPrinter::GetPageInfo( const ImplJobSetup* pSetupData,
 {
 	Size aSize( com_sun_star_vcl_VCLPrintJob::getPageSize() );
 	Rectangle aRect( com_sun_star_vcl_VCLPrintJob::getImageableBounds() );
-    if ( pSetupData->meOrientation == ORIENTATION_LANDSCAPE )
-	{
-		rOutWidth = aSize.Height();
-		rOutHeight = aSize.Width();
-		rPageOffX = aRect.nTop;
-		rPageOffY = aRect.nLeft;
-		rPageWidth = aRect.nBottom - aRect.nTop;
-		rPageHeight = aRect.nRight - aRect.nLeft;
-	}
-	else
-	{
-		rOutWidth = aSize.Width();
-		rOutHeight = aSize.Height();
-		rPageOffX = aRect.nLeft;
-		rPageOffY = aRect.nTop;
-		rPageWidth = aRect.nRight - aRect.nLeft;
-		rPageHeight = aRect.nBottom - aRect.nTop;
-	}
+	rPageWidth = aSize.Width();
+	rPageHeight = aSize.Height();
+	rPageOffX = aRect.nLeft;
+	rPageOffY = aRect.nTop;
+	rOutWidth = aRect.nRight - aRect.nLeft + 1;
+	rOutHeight = aRect.nBottom - aRect.nTop + 1;
 }
 
 // =======================================================================
