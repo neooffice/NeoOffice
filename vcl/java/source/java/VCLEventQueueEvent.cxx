@@ -507,18 +507,25 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 							return;
 						}
 					}
-					else
+#ifdef MACOSX
+					else if ( (WindowRef)pFrame->maFrameData.mpVCLFrame->getNativeWindow() == FrontNonFloatingWindow() )
 					{
+						// Make sure child frames are in front of frame as
+						// clicking on the title bar may have moved this frame
+						// to the front
 						pFrame->ToTop( 0 );
 					}
+#endif	// MACOSX
 				}
-				else if ( nID == SALEVENT_MOUSEBUTTONDOWN && pSalData->mpFocusFrame == pFrame )
+#ifdef MACOSX
+				else if ( nID == SALEVENT_MOUSEBUTTONDOWN && pSalData->mpFocusFrame == pFrame && (WindowRef)pFrame->maFrameData.mpVCLFrame->getNativeWindow() == FrontNonFloatingWindow() )
 				{
-					// Make sure child frames are in front of frame as clicking
-					// on the title bar may have moved this frame to the front
-					for ( ::std::list< SalFrame* >::const_iterator cit = pFrame->maFrameData.maChildren.begin(); cit != pFrame->maFrameData.maChildren.end(); ++cit )
-						(*cit)->ToTop( 0 );
+					// Make sure child frames are in front of frame as
+					// clicking on the title bar may have moved this frame
+					// to the front
+					pFrame->ToTop( 0 );
 				}
+#endif	// MACOSX
 
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
 				break;
