@@ -77,7 +77,7 @@ import java.text.AttributedString;
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public final class VCLFrame implements ComponentListener, FocusListener, KeyListener, InputMethodListener, InputMethodRequests, MouseListener, MouseMotionListener, Runnable, WindowListener {
+public final class VCLFrame implements ComponentListener, FocusListener, KeyListener, InputMethodListener, InputMethodRequests, MouseListener, MouseMotionListener, WindowListener {
 
 	/**
 	 * SAL_FRAME_STYLE_DEFAULT constant.
@@ -652,7 +652,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			window = new VCLFrame.NoPaintFrame(this);
 		else
 			window = new VCLFrame.NoPaintWindow(this);
-		window.enableInputMethods(true);
 
 		// Process remaining style flags
 		if ((styleFlags & SAL_FRAME_STYLE_SIZEABLE) != 0)
@@ -661,7 +660,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// Add a panel as the only component
 		panel = new VCLFrame.NoPaintPanel(this);
 		panel.setBackground(Color.white);
-		panel.enableInputMethods(true);
 		window.add(panel);
 		bitCount = panel.getColorModel().getPixelSize();
 		if (bitCount <= 1)
@@ -700,7 +698,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param event the input method event
 	 */
-	public void caretPositionChanged(InputMethodEvent e) {}
+	public void caretPositionChanged(InputMethodEvent e) {
+
+		e.consume();
+
+	}
 
 	/**
 	 * Invoked when the the native window's size changes.
@@ -796,7 +798,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void endComposition() {
 
-		Toolkit.getDefaultToolkit().getSystemEventQueue().invokeLater(new Thread(this));
+		InputContext ic = panel.getInputContext();
+		if (ic != null)
+			ic.endComposition();
+		Toolkit.getDefaultToolkit().sync();
 
 	}
 
@@ -817,7 +822,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public void focusGained(FocusEvent e) {
 
 		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-			EventQueue eventQueue = Toolkit.getDefaultToolkit().getSystemEventQueue();
 			Frame[] frames = Frame.getFrames();
 			for (int i = 0; i < frames.length; i++) {
 				frames[i].repaint();
@@ -838,10 +842,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void focusLost(FocusEvent e) {
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
-
-		// End composition
 		endComposition();
+
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
 
 	}
 
@@ -910,6 +913,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	long getFrame() {
 
 		return frame;
+
+	}
+
+	/**
+	 * Returns the full screen mode.
+	 *
+	 * @return <code>true</code> if the component is in full screen mode and
+	 *  <code>false</code> if it is in normal mode
+	 */
+	boolean getFullScreenMode() {
+
+		return fullScreenMode;
 
 	}
 
@@ -1292,7 +1307,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public TextHitInfo getLocationOffset(int x, int y) {
 
-		return null;
+		return TextHitInfo.leading(0);
 
 	}
 
@@ -1353,7 +1368,15 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public Rectangle getTextLocation(TextHitInfo offset) {
 
-		return new Rectangle(0, 0, 0, 0);
+		Rectangle r = new Rectangle(0, 0, 0, 0);
+
+		if (panel.isShowing()) {
+			Point location = panel.getLocationOnScreen();
+			r.x = location.x;
+			r.y = location.y;
+		}
+
+		return r;
 
 	}
 
@@ -1374,6 +1397,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param event the input method event
 	 */
 	public void inputMethodTextChanged(InputMethodEvent e) {
+
+		e.consume();
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_EXTTEXTINPUT, this, 0));
 
@@ -1616,18 +1641,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
-	 * End any uncommitted key input in the dispatch thread.
-	 */
-	public void run() {
-
-		InputContext ic = window.getInputContext();
-		if (ic != null)
-			ic.endComposition();
-		Toolkit.getDefaultToolkit().sync();
-
-	}
-
-	/**
 	 * Moves and resizes this native window.
 	 *
 	 * @param x the new x-coordinate
@@ -1842,7 +1855,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			// Register listeners
 			window.addComponentListener(this);
-			window.addFocusListener(this);
 			panel.addFocusListener(this);
 			panel.addKeyListener(this);
 			panel.addInputMethodListener(this);
@@ -1860,7 +1872,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (!b) {
 			// Unregister listeners
 			window.removeComponentListener(this);
-			window.removeFocusListener(this);
 			panel.removeFocusListener(this);
 			panel.removeKeyListener(this);
 			panel.removeInputMethodListener(this);
@@ -1970,18 +1981,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		NoPaintFrame(VCLFrame f) {
 
 			frame = f;
-
-		}
-
-		/**
-		 * Returns the input method request handler which supports requests
-		 * from input methods for this component.
-		 *
-		 * @return the input method request handler for this component
-		 */
-		public InputMethodRequests getInputMethodRequests() {
-
-			return frame;
+			enableInputMethods(false);
 
 		}
 
@@ -2028,6 +2028,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		NoPaintPanel(VCLFrame f) {
 
 			frame = f;
+			enableInputMethods(true);
 
 		}
 
@@ -2087,18 +2088,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			super(new VCLFrame.NoPaintFrame(f));
 			frame = f;
-
-		}
-
-		/**
-		 * Returns the input method request handler which supports requests
-		 * from input methods for this component.
-		 *
-		 * @return the input method request handler for this component
-		 */
-		public InputMethodRequests getInputMethodRequests() {
-
-			return frame;
+			enableInputMethods(false);
 
 		}
 
