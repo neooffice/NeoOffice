@@ -357,8 +357,6 @@ BOOL SalInstance::AnyInput( USHORT nType )
 
 SalFrame* SalInstance::CreateChildFrame( SystemParentData* pSystemParentData, ULONG nSalFrameStyle )
 {
-	if ( pSystemParentData->aWindow )
-		fprintf( stderr, "Here: %p is a component", pSystemParentData->aWindow );
 #ifdef DEBUG
 	fprintf( stderr, "SalInstance::CreateChildFrame not implemented\n" );
 #endif
