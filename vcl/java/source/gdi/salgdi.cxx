@@ -41,6 +41,9 @@
 #ifndef _SV_SALFRAME_HXX
 #include <salframe.hxx>
 #endif
+#ifndef _SV_SALINST_HXX
+#include <salinst.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
@@ -376,9 +379,13 @@ static void ImplDrawEPS( EPSData *pData )
 			{
 				if ( PMSessionSetDocumentFormatGeneration( pData->maSession, kPMDocumentFormatPICTPS, aContextArray, NULL ) == kPMNoError )
 				{
-					if ( PMSessionPostScriptBegin( pData->maSession ) == kPMNoError )
+					OSStatus nErr = PMSessionPostScriptBegin( pData->maSession );
+#ifdef DEBUG
+					fprintf( stderr, "Print EPS Start: %i\n", nErr );
+#endif	// DEBUG
+					if ( nErr == kPMNoError )
 					{
-						// First find the bounding box iin the EPS data
+						// First find the bounding box in the EPS data
 						SvMemoryStream aStream( pData->mpPtr, pData->mnSize, STREAM_READ );
 						aStream.Seek( STREAM_SEEK_TO_BEGIN );
 						ByteString aLine;
@@ -433,8 +440,9 @@ static void ImplDrawEPS( EPSData *pData )
 
 						if ( fLeft != fRight && fTop != fBottom )
 						{
-							double fScaleX = pData->mnWidth / ( fRight - fLeft );
-							double fScaleY = pData->mnHeight / ( fTop - fBottom ) * -1;
+							double fScaleX = (double)pData->mnWidth / ( fRight - fLeft );
+							double fScaleY = (double)pData->mnHeight / ( fTop - fBottom ) * -1;
+							Point aTranslatePoint( pData->mnX - (long)( fLeft * fScaleX ), pData->mnY + pData->mnHeight - (long)( fBottom * fScaleY ) );
 
 							// Write EPS header
 							OStringBuffer aBuf( "/b4_Inc_state save def\n"
@@ -452,33 +460,74 @@ static void ImplDrawEPS( EPSData *pData )
 								"    false setstrokeadjust false setoverprint\n"
 								"  } if\n"
 								"} if\n" );
-							aBuf.append( "\n\n [" );
+							// Set clip to bounding box
+							aBuf.append( "grestore\n"
+								"gsave\n"
+								"readpath\n" );
+							aBuf.append( pData->mnX );
+							aBuf.append( " " );
+							aBuf.append( pData->mnY );
+							aBuf.append( " moveto\n" );
+							aBuf.append( pData->mnX + pData->mnWidth );
+							aBuf.append( " " );
+							aBuf.append( pData->mnY );
+							aBuf.append( " lineto\n" );
+							aBuf.append( pData->mnX + pData->mnWidth );
+							aBuf.append( " " );
+							aBuf.append( pData->mnY + pData->mnHeight );
+							aBuf.append( " lineto\n" );
+							aBuf.append( pData->mnX );
+							aBuf.append( " " );
+							aBuf.append( pData->mnY + pData->mnHeight );
+							aBuf.append( " lineto\n" );
+							aBuf.append( "closepath clip newpath\n" );
+							// Set translation
+							aBuf.append( aTranslatePoint.X() );
+							aBuf.append( " " );
+							aBuf.append( aTranslatePoint.Y() );
+							aBuf.append( " translate\n" );
+							// Set scale
 							aBuf.append( fScaleX );
-							aBuf.append( (long)0 );
-							aBuf.append( (long)0 );
+							aBuf.append( " " );
 							aBuf.append( fScaleY );
-							aBuf.append( pData->mnX - ( fScaleX * fLeft ) );
-							aBuf.append( pData->mnY - ( fScaleX * fBottom ) );
-							aBuf.append( "] concat\n" );
+							aBuf.append( " scale\n" );
 							aBuf.append( "%%BeginDocument: " );
 							aBuf.append( aDocTitle );
 							aBuf.append( "\n" );
-							PMSessionPostScriptData( pData->maSession, (MacOSPtr)aBuf.getStr(), aBuf.getLength() );
+							nErr = PMSessionPostScriptData( pData->maSession, (MacOSPtr)aBuf.getStr(), aBuf.getLength() );
+#ifdef DEBUG
+							fprintf( stderr, "Print EPS Header: %i\n%s\n", nErr, aBuf.getStr() );
+#endif	// DEBUG
 
 							// Write EPS data
-							PMSessionPostScriptData( pData->maSession, pData->mpPtr, pData->mnSize );
+							nErr = PMSessionPostScriptData( pData->maSession, pData->mpPtr, pData->mnSize );
+#ifdef DEBUG
+							fprintf( stderr, "Print EPS Data: %i\n", nErr );
+#endif	// DEBUG
 							if ( ((char*)pData->mpPtr)[ pData->mnSize - 1 ] != '\n' )
-								PMSessionPostScriptData( pData->maSession, (MacOSPtr)"\n", 1 );
+							{
+								aBuf = OStringBuffer( "\n" );
+								nErr = PMSessionPostScriptData( pData->maSession, (MacOSPtr)aBuf.getStr(), aBuf.getLength() );
+#ifdef DEBUG
+								fprintf( stderr, "Print EPS Data End: %i\n", nErr );
+#endif	// DEBUG
+							}
 
 							// Write EPS footer
 							aBuf = OStringBuffer( "%%EndDocument\n"
 								"count op_count sub {pop} repeat\n"
 								"countdictstack dict_count sub {end} repeat\n"
 								"b4_Inc_state restore\n" );
-							PMSessionPostScriptData( pData->maSession, (MacOSPtr)aBuf.getStr(), aBuf.getLength() );
+							nErr = PMSessionPostScriptData( pData->maSession, (MacOSPtr)aBuf.getStr(), aBuf.getLength() );
+#ifdef DEBUG
+							fprintf( stderr, "Print EPS Footer: %i\n%s\n", nErr, aBuf.getStr() );
+#endif	// DEBUG
 						}
 
-						PMSessionPostScriptEnd( pData->maSession );
+						nErr = PMSessionPostScriptEnd( pData->maSession );
+#ifdef DEBUG
+						fprintf( stderr, "Print EPS End: %i\n", nErr );
+#endif	// DEBUG
 
 						pData->mbSuccess = TRUE;
 					}
@@ -500,9 +549,21 @@ static void DrawEPSTimerCallback( EventLoopTimerRef aTimer, void *pData )
 {
 	EPSData *pEPSData = (EPSData *)pData;
 
+	// Unlock Java lock
+	ReleaseJavaLock();
+
+	// Block the VCL event loop
+	Application::GetSolarMutex().acquire();
+
+	// Relock Java lock
+	AcquireJavaLock();
+
 	ImplDrawEPS( pEPSData );
 
 	pEPSData->maCondition.set();
+
+	// Unblock the VCL event loop
+	Application::GetSolarMutex().release();
 }
 #endif  // MACOSX
 
@@ -808,9 +869,13 @@ BOOL SalGraphics::DrawEPS( long nX, long nY, long nWidth, long nHeight,
 
 		if ( pEventLoopTimerUPP )
 		{
+			ULONG nCount = Application::ReleaseSolarMutex();
+
 			// For Java 1.3.1, draw EPS in the Carbon event thread
 			InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pEventLoopTimerUPP, &aData, NULL );
 			aData.maCondition.wait();
+
+			Application::AcquireSolarMutex( nCount );
 		}
 		else
 		{
