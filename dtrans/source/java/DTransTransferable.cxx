@@ -63,20 +63,18 @@
 using namespace rtl;
 using namespace vos;
 
-static UInt32 nSupportedTypes = 5;
+static UInt32 nSupportedTypes = 4;
 
 // List of supported native types in priority order
 static FourCharCode aSupportedNativeTypes[] = {
 	'RTF ',
 	'utxt',
-	'TEXT',
 	'TIFF',
 	'PICT'
 };
 
 // List of supported types that are text
 static BOOL aSupportedTextTypes[] = {
-	TRUE,
 	TRUE,
 	TRUE,
 	FALSE,
@@ -87,7 +85,6 @@ static BOOL aSupportedTextTypes[] = {
 static OUString aSupportedMimeTypes[] = {
 	OUString::createFromAscii( "text/richtext" ),
 	OUString::createFromAscii( "text/plain;charset=utf-16" ),
-	OUString::createFromAscii( "text/plain;charset=utf-16" ),
 	OUString::createFromAscii( "image/bmp" ),
 	OUString::createFromAscii( "image/bmp" )
 };
@@ -95,7 +92,6 @@ static OUString aSupportedMimeTypes[] = {
 // List of supported data types in priority order
 static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
-	getCppuType( ( OUString* )0 ),
 	getCppuType( ( OUString* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 )
@@ -220,7 +216,7 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 
 					if ( nType != 'utxt' )
 					{
-						OString aEncodedString = OUStringToOString( aString, gsl_getSystemTextEncoding() );
+						OString aEncodedString = OUStringToOString( aString, RTL_TEXTENCODING_ASCII_US );
 
 						if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
 							nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, aEncodedString.getLength(), (const void *)aEncodedString.getStr() );
@@ -438,7 +434,7 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 						nLen = aData.getLength();
 						if ( ( (sal_Char *)aData.getArray() )[ nLen - 1 ] == 0 )
 							nLen--;
-						aString = OUString( (sal_Char *)aData.getArray(), nLen, gsl_getSystemTextEncoding() );
+						aString = OUString( (sal_Char *)aData.getArray(), nLen, RTL_TEXTENCODING_ASCII_US );
 					}
 					else
 					{
