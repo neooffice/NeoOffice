@@ -269,21 +269,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pKeyEvent->mnCharCode = getKeyChar();
 				pKeyEvent->mnRepeat = 0;
 			}
-			// Make a pass through the native menus before dispatching
-			if ( nID == SALEVENT_KEYINPUT && pFrame && ( pKeyEvent->mnCode & KEY_MOD1 ) )
-			{
-				UpdateMenusForFrame( pFrame, NULL );
-
-				// We need to toggle the KEY_MOD1 modifier key after updating
-				// the menus in order to ensure that bug 236 does not occur
-				SalKeyModEvent *pKeyModEvent = new SalKeyModEvent();
-				pKeyModEvent->mnTime = getWhen();
-				pKeyModEvent->mnCode = pKeyEvent->mnCode & ~KEY_MOD1;
-				dispatchEvent( SALEVENT_KEYMODCHANGE, pFrame, pKeyModEvent );
-				pKeyModEvent->mnCode = pKeyEvent->mnCode;
-				dispatchEvent( SALEVENT_KEYMODCHANGE, pFrame, pKeyModEvent );
-				delete pKeyModEvent;
-			}
 			dispatchEvent( nID, pFrame, pKeyEvent );
 			delete pKeyEvent;
 			return;
@@ -297,6 +282,11 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pKeyModEvent->mnTime = getWhen();
 				pKeyModEvent->mnCode = getModifiers();
 			}
+			// Fix bug 236 by making a pass through the native menus before
+			// dispatching. Note that this fix causes bug 229 but since bug
+			// 229 is merely an annoyance, this fix wins.
+			if ( pFrame && ( pKeyModEvent->mnCode & KEY_MOD1 ) )
+				UpdateMenusForFrame( pFrame, NULL );
 			dispatchEvent( nID, pFrame, pKeyModEvent );
 			delete pKeyModEvent;
 			return;
