@@ -301,6 +301,12 @@ void SalOpenGL::OGLEntry( SalGraphics* pGraphics )
 			delete pImage;
 		}
 	}
+
+#ifdef MACOSX
+	// Fix bug 289 by resetting the current context in each thread
+	if ( mpNativeContext )
+		pSetCurrentContext( (CGLContextObj)mpNativeContext );
+#endif	// MACOSX
 }
 
 // ------------------------------------------------------------------------
