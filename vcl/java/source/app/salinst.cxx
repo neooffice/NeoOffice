@@ -397,6 +397,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				case kAEOpenApplication:
 				case kAEReopenApplication:
 				case kAEAbout:
+				case 'mPRF':
 					// Note that we can't actually get the Apple event from the
 					// Carbon event. We must dispatch it to registered Apple
 					// event handlers

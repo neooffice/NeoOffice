@@ -263,6 +263,24 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			AEDisposeDesc( &target );
 			return;
 		}
+		case SALEVENT_PREFS:
+		{
+			// [ed] 1/25/05 Send ourselves a prefs appleevent
+			// that can be handled by the sfx2 module
+			
+			AppleEvent theEvent;
+			ProcessSerialNumber    me = {0, kCurrentProcess};
+			AEDesc target;
+			AECreateDesc (typeProcessSerialNumber, &me, sizeof( ProcessSerialNumber ), &target);
+			OSErr theErr;
+			if ( AECreateAppleEvent( 'NO%F', 'mPRF', &target, kAutoGenerateReturnID, kAnyTransactionID, &theEvent ) == noErr ) {
+				AppleEvent  theReply = {typeNull,nil};
+				AESend( &theEvent, &theReply, kAENoReply, kAENormalPriority, kNoTimeOut, nil, nil);
+				AEDisposeDesc( &theEvent );
+			}
+			AEDisposeDesc( &target );
+			return;
+		}
 	}
 	
 	// Handle events that require a SalFrame pointer

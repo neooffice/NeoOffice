@@ -839,6 +839,11 @@ public final class VCLEvent extends AWTEvent {
 	 * SALEVENT_ABOUT constant.
 	 */
 	public final static int SALEVENT_ABOUT = 130;
+	
+	/**
+	 * SALEEVENT_PREFS constant
+	 */
+	public final static int SALEVENT_PREFS = 140;
 
 	/**
 	 * SAL_EXTTEXTINPUT_ATTR_GRAYWAVELINE constant.

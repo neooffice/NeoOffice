@@ -58,6 +58,7 @@ JAVAFILES = \
 	VCLAboutHandler.java \
 	VCLOpenApplicationHandler.java \
 	VCLOpenDocumentHandler.java \
+	VCLPrefsHandler.java \
 	VCLPrintDocumentHandler.java \
 	VCLQuitHandler.java
 
