@@ -218,8 +218,12 @@ OUString SAL_CALL WordPerfectImportFilter::detect( com::sun::star::uno::Sequence
         }
 		
 	WPXSvInputStream input( xInputStream );
+	
+	if (input.atEOS())
+		return sTypeName;
 
 	confidence = WPDocument::isFileFormatSupported(&input, false);
+	input.seek(0, WPX_SEEK_SET);
 
 	if (confidence == WPD_CONFIDENCE_EXCELLENT)
 		sTypeName = OUString( RTL_CONSTASCII_USTRINGPARAM ( "writer_WordPerfect_Document" ) );
