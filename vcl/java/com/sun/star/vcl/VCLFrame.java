@@ -75,8 +75,8 @@ import java.util.HashMap;
 /**
  * The Java class that implements the SalFrame C++ class methods.
  * <p>
- * @version 	$Revision$ $Date$
- * @author 	    $Author$
+ * @version		$Revision$ $Date$
+ * @author		$Author$
  */
 public final class VCLFrame implements ComponentListener, FocusListener, KeyListener, InputMethodListener, InputMethodRequests, MouseListener, MouseMotionListener, WindowListener {
 
@@ -719,14 +719,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 		graphics = new VCLGraphics(this);
 
-		// Register listeners
-		window.addComponentListener(this);
-		panel.addFocusListener(this);
-		panel.addKeyListener(this);
-		panel.addInputMethodListener(this);
-		panel.addMouseListener(this);
-		panel.addMouseMotionListener(this);
-		window.addWindowListener(this);
 	}
 
 	/**
@@ -806,6 +798,22 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (VCLFrame.lastDragFrame == this)
 			VCLFrame.lastDragFrame = null;
 
+		// Unregister listeners
+		if (window != null) {
+			window.removeComponentListener(this);
+			window.removeWindowListener(this);
+		}
+		if (panel != null) {
+			panel.removeFocusListener(this);
+			panel.removeKeyListener(this);
+			panel.removeInputMethodListener(this);
+			panel.removeMouseListener(this);
+			panel.removeMouseMotionListener(this);
+		}
+
+		if (queue != null)
+			queue.removeCachedEvents(frame);
+
 	}
 
 	/**
@@ -814,28 +822,17 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public synchronized void dispose() {
 
-		if (window != null) {
+		if (window != null)
 			setVisible(false);
-
-			// Unregister listeners
-			window.removeComponentListener(this);
-			window.removeWindowListener(this);
-		}
-		if (panel != null) {
-			// Unregister listeners
-			panel.removeFocusListener(this);
-			panel.removeKeyListener(this);
-			panel.removeInputMethodListener(this);
-			panel.removeMouseListener(this);
-			panel.removeMouseMotionListener(this);
-		}
+		if (queue != null)
+			queue.removeCachedEvents(frame);
+		queue = null;
 		bitCount = 0;
 		frame = 0;
 		fullScreenMode = true;
 		if (graphics != null)
 			graphics.dispose();
 		insets = null;
-		queue = null;
 		if (panel != null) {
 			panel.removeNotify();
 			InputContext ic = panel.getInputContext();
@@ -1052,29 +1049,29 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if ((keyCode & VCLEvent.KEY_MOD1) == VCLEvent.KEY_MOD1) {
 			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 				buf.append("\u2318");
-            }
+			}
 			else {
 				buf.append(KeyEvent.getKeyText(KeyEvent.VK_CONTROL));
-			    buf.append("+");
-            }
+				buf.append("+");
+			}
 		}
 		if ((keyCode & VCLEvent.KEY_MOD2) == VCLEvent.KEY_MOD2) {
 			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 				buf.append("\u2325");
-            }
+			}
 			else {
 				buf.append(KeyEvent.getKeyText(KeyEvent.VK_ALT));
-			    buf.append("+");
-            }
+				buf.append("+");
+			}
 		}
 		if ((keyCode & VCLEvent.KEY_SHIFT) == VCLEvent.KEY_SHIFT) {
 			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 				buf.append("\u21e7");
-            }
+			}
 			else {
 				buf.append(KeyEvent.getKeyText(KeyEvent.VK_SHIFT));
-			    buf.append("+");
-            }
+				buf.append("+");
+			}
 		}
 
 		int outCode = 0;
@@ -1410,7 +1407,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		return parent;
 
 	}
-        
+
 	/**
 	 * Gets the currently selected text from the text editing component.
 	 *
@@ -2048,26 +2045,21 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			((Frame)window).setResizable(resizable);
 
 		if (b) {
+			// Register listeners
+			window.addComponentListener(this);
+			panel.addFocusListener(this);
+			panel.addKeyListener(this);
+			panel.addInputMethodListener(this);
+			panel.addMouseListener(this);
+			panel.addMouseMotionListener(this);
+			window.addWindowListener(this);
+
 			// Show the window
 			window.show();
-			while (!window.isVisible()) {
-				try {
-					Thread.currentThread().sleep(100);
-				}
-				catch (Throwable t) {}
-			}
-			toFront();
 		}
 		else {
 			// Hide the window
 			window.hide();
-			while (window.isVisible()) {
-				try {
-					Thread.currentThread().sleep(100);
-				}
-				catch (Throwable t) {}
-			}
-			queue.removeCachedEvents(frame);
 		}
 
 	}
