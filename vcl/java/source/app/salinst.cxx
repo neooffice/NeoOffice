@@ -267,23 +267,6 @@ void SalInstance::Yield( BOOL bWait )
 		OThread::yield();
 	AcquireYieldMutex( nCount );
 
-	// Check timer
-	if ( pSalData->mnTimerInterval )
-	{
-		timeval aCurrentTime;
-		gettimeofday( &aCurrentTime, NULL );
-		if ( pSalData->mpTimerProc && aCurrentTime >= pSalData->maTimeout )
-		{
-			pSalData->mpTimerProc();
-			com_sun_star_vcl_VCLGraphics::flushAll();
-			if ( pSalData->mnTimerInterval )
-			{
-				gettimeofday( &aCurrentTime, NULL );
-				pSalData->maTimeout = aCurrentTime + pSalData->mnTimerInterval;
-			}
-		}
-	}
-
 	// Dispatch pending AWT events
 	if ( bWait && !ImplGetSVData()->maAppData.mbAppQuit )
 	{
@@ -312,6 +295,23 @@ void SalInstance::Yield( BOOL bWait )
 			pEvent->dispatch();
 			com_sun_star_vcl_VCLGraphics::flushAll();
 			delete pEvent;
+		}
+	}
+
+	// Check timer
+	if ( pSalData->mnTimerInterval )
+	{
+		timeval aCurrentTime;
+		gettimeofday( &aCurrentTime, NULL );
+		if ( pSalData->mpTimerProc && aCurrentTime >= pSalData->maTimeout )
+		{
+			pSalData->mpTimerProc();
+			com_sun_star_vcl_VCLGraphics::flushAll();
+			if ( pSalData->mnTimerInterval )
+			{
+				gettimeofday( &aCurrentTime, NULL );
+				pSalData->maTimeout = aCurrentTime + pSalData->mnTimerInterval;
+			}
 		}
 	}
 

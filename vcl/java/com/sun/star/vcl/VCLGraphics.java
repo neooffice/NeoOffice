@@ -865,34 +865,6 @@ public final class VCLGraphics {
 				drawLine(xpoints[i - 1], ypoints[i - 1], xpoints[i], ypoints[i], color);
 		}
 
-/*
-		Rectangle bounds = new Polygon(xpoints, ypoints, npoints).getBounds();
-		bounds.x -= 1;
-		bounds.y -= 1;
-		bounds.width += 2;
-		bounds.height += 2;
-		bounds = bounds.intersection(graphicsBounds);
-		if (bounds.isEmpty())
-			return;
-
-		if (xor) {
-			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
-			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
-			VCLGraphics.setDefaultRenderingAttributes(srcGraphics);
-			srcGraphics.setColor(new Color(color));
-			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
-			srcGraphics.drawPolyline(xpoints, ypoints, npoints);
-			srcGraphics.dispose();
-			drawImageXOR(srcImage, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y, bounds.width, bounds.height);
-			srcImage.dispose();
-		}
-		else {
-			graphics.setColor(new Color(color));
-			graphics.drawPolyline(xpoints, ypoints, npoints);
-			addToFlush(bounds);
-		}
-*/
-
 	}
 
 	/**
