@@ -238,7 +238,6 @@ void SalInstance::Yield( BOOL bWait )
 	static int nRecursionLevel = 0;
 	SalData *pSalData = GetSalData();
 	nRecursionLevel++;
-	ULONG nCount = ReleaseYieldMutex();
 
 	// Check timer
 	if ( pSalData->mnTimerInterval )
@@ -261,7 +260,10 @@ void SalInstance::Yield( BOOL bWait )
 	while ( bContinue )
 	{
 		// Dispatch the next event
-		com_sun_star_vcl_VCLEvent *pEvent = GetSalData()->mpEventQueue->getNextCachedEvent( bWait );
+		ULONG nCount = ReleaseYieldMutex();
+		OThread::yield();
+		com_sun_star_vcl_VCLEvent *pEvent = pSalData->mpEventQueue->getNextCachedEvent( bWait );
+		AcquireYieldMutex( nCount );
 		if ( pEvent )
 		{
 			// Keep dispatching if this is an AWTEvent
@@ -282,7 +284,6 @@ void SalInstance::Yield( BOOL bWait )
 		}
 	}
 
-	AcquireYieldMutex( nCount );
 	nRecursionLevel--;
 }
 

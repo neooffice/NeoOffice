@@ -47,9 +47,6 @@
 #ifndef _SV_SALFRAME_HXX
 #include <salframe.hxx>
 #endif
-#ifndef _SV_SALINST_HXX
-#include <salinst.hxx>
-#endif
 #ifndef _SV_EVENT_HXX
 #include <event.hxx>
 #endif
@@ -266,12 +263,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 
 void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, void *pData )
 {
-
-	SalYieldMutex *pSalYieldMutex = GetSalData()->mpFirstInstance->maInstData.mpSalYieldMutex;
-	pSalYieldMutex->acquire();
-	pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
-	pSalYieldMutex->release();
-
+	if ( pFrame && pFrame->maFrameData.mpProc )
+		pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
 }
 
 // ----------------------------------------------------------------------------
@@ -627,6 +620,7 @@ long com_sun_star_vcl_VCLEvent::getY()
 	}
 	return out;
 }
+
 // ----------------------------------------------------------------------------
 
 sal_Bool com_sun_star_vcl_VCLEvent::isAWTEvent()
