@@ -354,8 +354,12 @@ public final class VCLGraphics {
 	public void copyBits(VCLGraphics g, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY) {
 
 		VCLImage i = g.getImage();
-		if (i != null)
-			drawImage(i, srcX, srcY, srcWidth, srcHeight, destX, destY);
+		if (i != null) {
+			if (xor)
+				drawImageXOR(i, srcX, srcY, srcWidth, srcHeight, destX, destY);
+			else
+				drawImage(i, srcX, srcY, srcWidth, srcHeight, destX, destY);
+		}
 
 	}
 
@@ -398,7 +402,11 @@ public final class VCLGraphics {
 			// Copy all pixels
 			for (int i = 0; i < totalPixels; i++) {
 				// Copy pixel
-				destData[(destPoint.y * destDataWidth) + destPoint.x] = bmp.getPixel(srcPoint);
+				int j = (destPoint.y * destDataWidth) + destPoint.x;
+				if (xor)
+					destData[j] = destData[j] ^ 0xff000000 ^ bmp.getPixel(srcPoint) | 0xff000000;
+				else
+					destData[j] = bmp.getPixel(srcPoint);
 
 				// Update current points
 				srcPoint.x++;
