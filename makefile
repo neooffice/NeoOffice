@@ -58,14 +58,14 @@ PRODUCT_DIR_NAME=NeoOfficeJ
 # Important: Note that there are escape characters in the PRODUCT_NAME for the
 # UTF-8 trademark symbol. Don't replace these with "\x##" literal strings!
 PRODUCT_TRADEMARKED_NAME=NeoOffice®/J
-PRODUCT_VERSION=1.1
-PRODUCT_DIR_VERSION=1.1
+PRODUCT_VERSION=1.1 Release Candidate
+PRODUCT_DIR_VERSION=1.1_Release_Candidate
 PRODUCT_LANG_PACK_VERSION=Languages
 PRODUCT_DIR_LANG_PACK_VERSION=Languages
 PRODUCT_PATCH_VERSION=Patch 0
 PRODUCT_DIR_PATCH_VERSION=Patch-0
 PRODUCT_PREVIOUS_VERSION=1.1 Beta
-# Don't allow patching of pre-Beta installations
+# Don't allow patching of pre-Release Candidate installations
 PRODUCT_PREVIOUS_PATCH_VERSION=Patch 99
 PRODUCT_FILETYPE=NO%F
 PRODUCT_INSTALL_URL=http://www.planamesa.com/neojava/download.php\\\#install
