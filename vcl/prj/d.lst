@@ -1,28 +1,25 @@
 mkdir: %_DEST%\bin%_EXT%\remote
+mkdir: %_DEST%\lib%_EXT%\remote
 mkdir: %_DEST%\inc%_EXT%\sv
 mkdir: %_DEST%\inc%_EXT%\tools
 mkdir: %_DEST%\inc%_EXT%\uno
 mkdir: %_DEST%\inc%_EXT%\uno\awt
 mkdir: %_DEST%\inc%_EXT%\vcl
 mkdir: %_DEST%\inc%_EXT%\vcl\unx
-mkdir: %_DEST%\ucr%_EXT%
-mkdir: %_DEST%\ucr%_EXT%\vcl
 
 ..\%__SRC%\bin\remote\vcl?????.dll %_DEST%\bin%_EXT%\remote\vcl?????.dll
 ..\%__SRC%\bin\vcl?????.res %_DEST%\bin%_EXT%\vcl?????.res
 ..\%__SRC%\bin\vcl?????.dll %_DEST%\bin%_EXT%\vcl?????.dll
 ..\%__SRC%\bin\vcl?????.sym %_DEST%\bin%_EXT%\vcl?????.sym
-..\%__SRC%\lib\*.a %_DEST%\lib%_EXT%\*.a
-..\%__SRC%\lib\*.sl %_DEST%\lib%_EXT%\*.sl
-..\%__SRC%\lib\*.so %_DEST%\lib%_EXT%\*.so
-..\%__SRC%\lib\*.so.* %_DEST%\lib%_EXT%\*.so.*
+..\%__SRC%\bin\getstyle-gnome %_DEST%\bin%_EXT%\getstyle-gnome
+..\%__SRC%\bin\msgbox-gnome %_DEST%\bin%_EXT%\msgbox-gnome
+..\%__SRC%\lib\libvcl*.so %_DEST%\lib%_EXT%\libvcl*.so
 ..\%__SRC%\lib\*.dylib %_DEST%\lib%_EXT%\*.dylib
 ..\%__SRC%\lib\app16.lib %_DEST%\lib%_EXT%\app16.lib
 ..\%__SRC%\lib\gdi16.lib %_DEST%\lib%_EXT%\gdi16.lib
 ..\%__SRC%\lib\isv.lib %_DEST%\lib%_EXT%\isv.lib
 ..\%__SRC%\lib\ivcl.lib %_DEST%\lib%_EXT%\ivcl.lib
-..\%__SRC%\lib\remote\*.so %_DEST%\bin%_EXT%\remote\*.so
-..\%__SRC%\lib\remote\*.so %_DEST%\lib%_EXT%\remote\*.so
+..\%__SRC%\lib\remote\lib*.so %_DEST%\lib%_EXT%\remote\lib*.so
 ..\%__SRC%\lib\vcl.lib %_DEST%\lib%_EXT%\vcl.lib
 ..\%__SRC%\misc\vcl?????.map %_DEST%\bin%_EXT%\vcl?????.map
 ..\%__SRC%\obj\main.obj %_DEST%\lib%_EXT%\xsvmain.obj
@@ -32,7 +29,6 @@ mkdir: %_DEST%\ucr%_EXT%\vcl
 ..\%__SRC%\slb\sv.lib %_DEST%\lib%_EXT%\xsv.lib
 ..\%__SRC%\slo\salmain.o %_DEST%\lib%_EXT%\salmain.o
 ..\%__SRC%\slo\svdll.obj %_DEST%\lib%_EXT%\xsvdll.obj
-..\%__SRC%\ucr\*.ucr %_DEST%\ucr%_EXT%\vcl\*.ucr
 ..\%__SRC%\class\vcl.jar %_DEST%\bin%_EXT%\vcl.jar
 
 hedabu: ..\%__SRC%\inc\*.h %_DEST%\inc%_EXT%\vcl\*.h
@@ -107,6 +103,7 @@ hedabu: ..\inc\menu.hxx %_DEST%\inc%_EXT%\vcl\menu.hxx
 hedabu: ..\inc\menubtn.hxx %_DEST%\inc%_EXT%\vcl\menubtn.hxx
 hedabu: ..\inc\metaact.hxx %_DEST%\inc%_EXT%\vcl\metaact.hxx
 hedabu: ..\inc\metric.hxx %_DEST%\inc%_EXT%\vcl\metric.hxx
+hedabu: ..\inc\mnemonic.hxx %_DEST%\inc%_EXT%\vcl\mnemonic.hxx
 hedabu: ..\inc\morebtn.hxx %_DEST%\inc%_EXT%\vcl\morebtn.hxx
 hedabu: ..\inc\msgbox.hxx %_DEST%\inc%_EXT%\vcl\msgbox.hxx
 hedabu: ..\inc\octree.hxx %_DEST%\inc%_EXT%\vcl\octree.hxx
@@ -116,7 +113,6 @@ hedabu: ..\inc\outdev3d.hxx %_DEST%\inc%_EXT%\vcl\outdev3d.hxx
 hedabu: ..\inc\pal.hxx %_DEST%\inc%_EXT%\vcl\pal.hxx
 hedabu: ..\inc\pointr.hxx %_DEST%\inc%_EXT%\vcl\pointr.hxx
 hedabu: ..\inc\poly.hxx %_DEST%\inc%_EXT%\vcl\poly.hxx
-hedabu: ..\inc\ppdparser.hxx %_DEST%\inc%_EXT%\vcl\ppdparser.hxx
 hedabu: ..\inc\print.hxx %_DEST%\inc%_EXT%\vcl\print.hxx
 hedabu: ..\inc\prndlg.hxx %_DEST%\inc%_EXT%\vcl\prndlg.hxx
 hedabu: ..\inc\prntypes.hxx %_DEST%\inc%_EXT%\vcl\prntypes.hxx
@@ -149,7 +145,6 @@ hedabu: ..\inc\split.hxx %_DEST%\inc%_EXT%\vcl\split.hxx
 hedabu: ..\inc\splitwin.hxx %_DEST%\inc%_EXT%\vcl\splitwin.hxx
 hedabu: ..\inc\status.hxx %_DEST%\inc%_EXT%\vcl\status.hxx
 hedabu: ..\inc\stdtext.hxx %_DEST%\inc%_EXT%\vcl\stdtext.hxx
-hedabu: ..\inc\strhelper.hxx %_DEST%\inc%_EXT%\vcl\strhelper.hxx
 hedabu: ..\inc\sv.h %_DEST%\inc%_EXT%\vcl\sv.h
 hedabu: ..\inc\svapp.hxx %_DEST%\inc%_EXT%\vcl\svapp.hxx
 hedabu: ..\inc\svsys.h %_DEST%\inc%_EXT%\vcl\svsys.h
@@ -163,11 +158,13 @@ hedabu: ..\inc\tab.hxx %_DEST%\inc%_EXT%\vcl\tab.hxx
 hedabu: ..\inc\tabctrl.hxx %_DEST%\inc%_EXT%\vcl\tabctrl.hxx
 hedabu: ..\inc\tabdlg.hxx %_DEST%\inc%_EXT%\vcl\tabdlg.hxx
 hedabu: ..\inc\tabpage.hxx %_DEST%\inc%_EXT%\vcl\tabpage.hxx
+hedabu: ..\inc\taskpanelist.hxx %_DEST%\inc%_EXT%\vcl\taskpanelist.hxx
 hedabu: ..\inc\timer.hxx %_DEST%\inc%_EXT%\vcl\timer.hxx
 hedabu: ..\inc\toolbox.hxx %_DEST%\inc%_EXT%\vcl\toolbox.hxx
 hedabu: ..\inc\uniqid.hxx %_DEST%\inc%_EXT%\vcl\uniqid.hxx
 hedabu: ..\inc\unowrap.hxx %_DEST%\inc%_EXT%\vcl\unowrap.hxx
 hedabu: ..\inc\vclenum.hxx %_DEST%\inc%_EXT%\vcl\vclenum.hxx
+hedabu: ..\inc\vclevent.hxx %_DEST%\inc%_EXT%\vcl\vclevent.hxx
 hedabu: ..\inc\vector2d.hxx %_DEST%\inc%_EXT%\vcl\vector2d.hxx
 hedabu: ..\inc\virdev.hxx %_DEST%\inc%_EXT%\vcl\virdev.hxx
 hedabu: ..\inc\waitobj.hxx %_DEST%\inc%_EXT%\vcl\waitobj.hxx
@@ -180,13 +177,11 @@ hedabu: ..\inc\atom.hxx %_DEST%\inc%_EXT%\vcl\atom.hxx
 hedabu: ..\inc\threadex.hxx %_DEST%\inc%_EXT%\vcl\threadex.hxx
 hedabu: ..\inc\evntpost.hxx %_DEST%\inc%_EXT%\vcl\evntpost.hxx
 hedabu: ..\inc\unohelp.hxx %_DEST%\inc%_EXT%\vcl\unohelp.hxx
+hedabu: ..\inc\unohelp2.hxx %_DEST%\inc%_EXT%\vcl\unohelp2.hxx
 hedabu: ..\inc\i18nhelp.hxx %_DEST%\inc%_EXT%\vcl\i18nhelp.hxx
 hedabu: ..\inc\dndhelp.hxx %_DEST%\inc%_EXT%\vcl\dndhelp.hxx
-hedabu: ..\unx\inc\salconfig.hxx %_DEST%\inc%_EXT%\vcl\unx\salconfig.hxx
-
-..\%__SRC%\lib\lib*static*.dylib %_DEST%\lib%_EXT%\lib*static*.dylib
-..\%__SRC%\misc\*staticdatamembers.cxx %_DEST%\inc%_EXT%\*staticdatamembers.cxx
-..\%__SRC%\misc\*staticdatamembers.h* %_DEST%\inc%_EXT%\*staticdatamembers.h*
+hedabu: ..\inc\pdfwriter.hxx %_DEST%\inc%_EXT%\vcl\pdfwriter.hxx
+hedabu: ..\inc\controllayout.hxx %_DEST%\inc%_EXT%\vcl\controllayout.hxx
+hedabu: ..\inc\introwin.hxx %_DEST%\inc%_EXT%\vcl\introwin.hxx
 
 dos: sh -c "if test %OS% = MACOSX; then create-bundle %_DEST%\lib%_EXT%\*.dylib; fi"
-dos: sh -c "if test %OS% = MACOSX; then create-libstatic-link %_DEST%\lib%_EXT%; fi"

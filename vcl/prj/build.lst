@@ -1,4 +1,4 @@
-vc	vcl	:	nas freetype psprint rsc sot ucbhelper unotools sysui NULL
+vc	vcl	:	nas freetype psprint rsc sot ucbhelper unotools rvpapi icu unoil ridljar x11_extensions NULL
 vc	vcl										usr1	-	all	vc_mkout NULL
 vc	vcl\source\unotypes						nmake	-	all	vc_unot NULL
 vc	vcl\source\glyphs						nmake	-	all	vc_glyphs vc_unot NULL
@@ -19,6 +19,8 @@ vc	vcl\os2\source\window					nmake	-	p	vc__winp vc_unot NULL
 vc	vcl\os2\source\src						nmake	-	p	vc__srcp vc_unot NULL
 vc	vcl\unx\source\app						nmake	-	u	vc__appu vc_unot NULL
 vc	vcl\unx\source\gdi						nmake	-	u	vc__gdiu vc_unot NULL
+vc	vcl\unx\source\gdi\getstyle				nmake	-	u	vc__gdus vc_unot NULL
+vc	vcl\unx\source\gdi\native-msgbox		nmake	-	u	vc__gdun vc_unot NULL
 vc	vcl\unx\source\window					nmake	-	u	vc__winu vc_unot NULL
 vc	vcl\unx\source\src						nmake	-	u	vc__srcu vc_unot NULL
 vc	vcl\aqua\source\app						nmake	-	u	vc__appa vc_unot NULL
@@ -36,4 +38,4 @@ vc	vcl\mac\source\gdi						nmake	-	m	vc__gdim vc_unot NULL
 vc	vcl\mac\source\window					nmake	-	m	vc__winm vc_unot NULL
 vc	vcl\mac\source\src						nmake	-	m	vc__srcm vc_unot NULL
 vc	vcl\util								nmake	-	all	vc_util vc__javavcl vc__appa.u vc__appj vc__appm.m vc__appp.p vc__appu.u vc__appw.w vc__gdij vc__gdim.m vc__gdip.p vc__gdiu.u vc__gdiw.w vc__javaj vc__srcm.m vc__srcp.p vc__srcu.u vc__srcw.w vc__wina.u vc__winj vc__winm.m vc__winp.p vc__winu.u vc__winw.w vc_app vc_ctrl vc_gdi vc_hlp vc_remo vc_src vc_win NULL
-vc	vcl\workben								nmake	-	all	vc_wrkb vc_util NULL
+#vc	vcl\workben								nmake	-	all	vc_wrkb vc_util NULL

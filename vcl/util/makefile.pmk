@@ -33,7 +33,7 @@
 #   MA  02111-1307  USA
 #   
 #   =================================================
-#   Modified June 2003 by Patrick Luby. SISSL Removed. NeoOffice is
+#   Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
 #   distributed under GPL only under modification term 3 of the LGPL.
 # 
 #   Contributor(s): _______________________________________
@@ -57,6 +57,11 @@ USE_BUILTIN_RASTERIZER=true
 .ENDIF
 
 .IF "$(USE_BUILTIN_RASTERIZER)" != ""
-ENVCFLAGS += -DUSE_BUILTIN_RASTERIZER
+ENVCDEFS += -DUSE_BUILTIN_RASTERIZER
+.ENDIF
+
+ENABLE_CTL=true
+.IF "$(ENABLE_CTL)" != ""
+ENVCDEFS += -DENABLE_CTL
 .ENDIF
 
