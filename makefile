@@ -60,7 +60,7 @@ OO_PACKAGE:=all
 OO_TAG:=OOO_STABLE_1_PORTS
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOfficeJ
-NEO_TAG:=NeoOfficeJ-0_0_1
+NEO_TAG:=NeoOfficeJ-0_7
 
 all: build.all
 
