@@ -220,6 +220,11 @@ public final class VCLMenuBar {
 	 */
 	public void dispose() {
 
+		if(frame!=null) {
+			Window win=frame.getWindow();
+			if(win instanceof Frame)
+				((Frame)win).setMenuBar(null);
+		}
 		removeMenuBar(this);
 	 	awtMenuBar.removeNotify();
 	 	awtMenuBar=null;
