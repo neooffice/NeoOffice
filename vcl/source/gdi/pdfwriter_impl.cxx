@@ -3309,11 +3309,12 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                     SalATSLayout *pATSLayout = dynamic_cast<SalATSLayout*>( &rLayout );
                     if ( pATSLayout )
                     {
-                        double fX = 0;
-                        double fY = 0;
-                        pATSLayout->GetVerticalGlyphTranslation( pGlyphs[n] | nGlyphFlags[n], fX, fY );
-                        aDeltaPos.X() = (int)( fY + 0.5 );
-                        aDeltaPos.Y() = (int)( ( ( pATSLayout->GetBaselineDelta() + fX ) * fXScale * -1 ) + 0.5 );
+                        long nX;
+                        long nY;
+                        pATSLayout->GetVerticalGlyphTranslation( pGlyphs[n] | nGlyphFlags[n], nX, nY );
+                        aDeltaPos.X() = nY;
+                        aDeltaPos.Y() = (int)( ( (double)( pATSLayout->GetBaselineDelta() + nX ) * fXScale * -1 ) + 0.5 );
+						aDeltaPos = m_pReferenceDevice->PixelToLogic( aDeltaPos );
                     }
                     else
                     {
@@ -3334,11 +3335,12 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                     SalATSLayout *pATSLayout = dynamic_cast<SalATSLayout*>( &rLayout );
                     if ( pATSLayout )
                     {
-                        double fX = 0;
-                        double fY = 0;
-                        pATSLayout->GetVerticalGlyphTranslation( pGlyphs[n] | nGlyphFlags[n], fX, fY );
-                        aDeltaPos.X() = (int)( ( (double)pAdvanceWidths[n] / rLayout.GetUnitsPerPixel() ) - fY + 0.5 );
-                        aDeltaPos.Y() = (int)( ( ( pATSLayout->GetBaselineDelta() - fX ) * fXScale * -1 ) + 0.5 );
+                        long nX;
+                        long nY;
+                        pATSLayout->GetVerticalGlyphTranslation( pGlyphs[n] | nGlyphFlags[n], nX, nY );
+                        aDeltaPos.X() = (int)( ( (double)pAdvanceWidths[n] / rLayout.GetUnitsPerPixel() ) - nY + 0.5 );
+                        aDeltaPos.Y() = (int)( ( (double)( pATSLayout->GetBaselineDelta() - nX ) * fXScale * -1 ) + 0.5 );
+						aDeltaPos = m_pReferenceDevice->PixelToLogic( aDeltaPos );
                     }
                     else
                     {
