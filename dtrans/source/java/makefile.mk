@@ -43,6 +43,8 @@ ENABLE_EXCEPTIONS=TRUE
 COMP1TYPELIST=$(TARGET)
 LIBTARGET=NO
 
+ENVCDEFS += -Iinc
+
 # --- Settings -----------------------------------------------------
 
 .INCLUDE :  settings.mk
@@ -56,8 +58,6 @@ dummy:
 	@echo "Nothing to build for GUIBASE $(GUIBASE)"
  
 .ELSE		# "$(GUIBASE)"!="java"
-
-CFLAGS += -Iinc
 
 SLOFILES=\
 	$(SLO)$/Class.obj \
