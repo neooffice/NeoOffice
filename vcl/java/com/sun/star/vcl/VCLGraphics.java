@@ -1536,9 +1536,9 @@ public final class VCLGraphics {
 
 		Area pageImageClip = null;
 
-		double pageImageScaleX = Double.MAX_VALUE;
+		double pageImageScaleX = 1.0;
 
-		double pageImageScaleY = Double.MAX_VALUE;
+		double pageImageScaleY = 1.0;
 
 		PageQueue(VCLGraphics g) {
 
@@ -1558,6 +1558,11 @@ public final class VCLGraphics {
 					Rectangle destBounds = pageBounds.intersection(graphicsBounds);
 					if (destBounds.isEmpty())
 						return;
+					Dimension maxResolution = graphics.getResolution();
+					if (pageImageScaleX > maxResolution.width)
+						pageImageScaleX = maxResolution.width;
+					if (pageImageScaleY > maxResolution.height)
+						pageImageScaleY = maxResolution.height;
 					VCLImage pageImage = new VCLImage((int)(destBounds.width * pageImageScaleX), (int)(destBounds.height * pageImageScaleY), graphics.getBitCount());
 					VCLGraphics pageGraphics = pageImage.getGraphics();
 					pageGraphics.graphics.scale(pageImageScaleX, pageImageScaleY);
@@ -1652,9 +1657,9 @@ public final class VCLGraphics {
 			else
 				pageImageClip = area;
 
-			if (scaleX < pageImageScaleX)
+			if (scaleX > pageImageScaleX)
 				pageImageScaleX = scaleX;
-			if (scaleY < pageImageScaleY)
+			if (scaleY > pageImageScaleY)
 				pageImageScaleY = scaleY;
 
 			// Add the image operation to the queue
