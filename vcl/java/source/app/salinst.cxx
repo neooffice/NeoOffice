@@ -248,6 +248,26 @@ void SalInstance::Yield( BOOL bWait )
 
 	nRecursionLevel++;
 
+	// Dispatch pending non-AWT events
+	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( 0, FALSE ) ) != NULL )
+	{
+		// Ignore SALEVENT_SHUTDOWN events when recursing into this method or
+		// when in presentation mode
+		if ( ( nRecursionLevel == 1 && !pSalData->mpPresentationFrame ) || pEvent->getID() != SALEVENT_SHUTDOWN )
+		{
+			pEvent->dispatch();
+			com_sun_star_vcl_VCLGraphics::flushAll();
+		}
+		delete pEvent;
+
+		ULONG nCount = ReleaseYieldMutex();
+		if ( bWait )
+			OThread::yield();
+		AcquireYieldMutex( nCount );
+		nRecursionLevel--;
+		return;
+	}
+
 	ULONG nCount = ReleaseYieldMutex();
 	if ( !bWait )
 		OThread::yield();
@@ -285,39 +305,12 @@ void SalInstance::Yield( BOOL bWait )
 			nTimeout = 10;
 	}
 
-	// Check timer
-	if ( pSalData->mnTimerInterval )
-	{
-		timeval aCurrentTime;
-		gettimeofday( &aCurrentTime, NULL );
-		if ( pSalData->mpTimerProc && aCurrentTime >= pSalData->maTimeout )
-		{
-			gettimeofday( &pSalData->maTimeout, NULL );
-			pSalData->maTimeout += pSalData->mnTimerInterval;
-			pSalData->mpTimerProc();
-			com_sun_star_vcl_VCLGraphics::flushAll();
-		}
-	}
-
-	// Dispatch pending non-AWT events
-	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, FALSE) ) != NULL )
+	// Dispatch pending AWT events
+	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
 	{
 		// Reset timeout
 		nTimeout = 0;
 
-		// Ignore SALEVENT_SHUTDOWN events when recursing into this method or
-		// when in presentation mode
-		if ( ( nRecursionLevel == 1 && !pSalData->mpPresentationFrame ) || pEvent->getID() != SALEVENT_SHUTDOWN )
-		{
-			pEvent->dispatch();
-			com_sun_star_vcl_VCLGraphics::flushAll();
-		}
-		delete pEvent;
-	}
-
-	// Dispatch pending AWT events
-	while ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( 0, TRUE ) ) != NULL )
-	{
 		pEvent->dispatch();
 		com_sun_star_vcl_VCLGraphics::flushAll();
 		delete pEvent;
