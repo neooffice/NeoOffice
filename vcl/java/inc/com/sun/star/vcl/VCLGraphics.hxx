@@ -78,6 +78,7 @@ public:
 	SalColor			getPixel( long _par0, long _par1 );
 	void				invert( long _par0, long _par1, long _par2, long _par3, SalInvert _par4 );
 	void				resetClipRegion();
+	void				setAntialias( sal_Bool _par0 );
 	void				setPixel( long _par0, long _par1, SalColor _par2 );
 	void				setXORMode( sal_Bool _par0 );
 	void				unionClipRegion( long _par0, long _par1, long _par2, long _par3 );

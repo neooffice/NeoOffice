@@ -260,6 +260,13 @@ BOOL SalGraphics::DrawEPS( long nX, long nY, long nWidth, long nHeight, void* pP
 	return FALSE;
 }
 
+// -----------------------------------------------------------------------
+
+void SalGraphics::SetAntialias( BOOL bAntialias )
+{
+	maGraphicsData.mpVCLGraphics->setAntialias( bAntialias );
+}
+
 // =======================================================================
 
 SalGraphicsData::SalGraphicsData()
@@ -281,3 +288,4 @@ SalGraphicsData::~SalGraphicsData()
 	if ( mpVCLFont )
 		delete mpVCLFont;
 }
+

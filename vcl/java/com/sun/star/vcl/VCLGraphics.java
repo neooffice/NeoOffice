@@ -152,7 +152,7 @@ public final class VCLGraphics {
 		// Set rendering hints
 		RenderingHints hints = g.getRenderingHints();
 		hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-		hints.put(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+		hints.put(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		g.setRenderingHints(hints);
 
 		// Set stroke
@@ -1049,6 +1049,22 @@ public final class VCLGraphics {
 			userClip = null;
 			update = null;
 		}
+
+	}
+
+	/**
+	 * Set the antialiasing drawing attributes.
+	 *
+	 * @param b the antialiasing flag
+	 */
+	public void setAntialias(boolean b) {
+
+		RenderingHints hints = graphics.getRenderingHints();
+		if (b)
+			hints.put(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		else
+			hints.put(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+		graphics.setRenderingHints(hints);
 
 	}
 
