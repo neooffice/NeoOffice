@@ -174,11 +174,11 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		{
 			// Unlock mutexes and block event queue so that the native event
 			// handler can proceed
-			ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
+			ULONG nCount = Application::ReleaseSolarMutex();
 			pSalData->maNativeEventEndCondition.reset();
 			pSalData->maNativeEventStartCondition.set();
 			pSalData->maNativeEventEndCondition.wait();
-			pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
+			Application::AcquireSolarMutex( nCount );
 			return;
 		}
 		case SALEVENT_ACTIVATE_APPLICATION:

@@ -373,10 +373,9 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 
 	// Fix bugs 169 and 283 by giving the Java event thread a chance
 	// to update the native window
-	SalData *pSalData = GetSalData();
-	ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
+	ULONG nCount = Application::ReleaseSolarMutex();
 	OThread::yield();
-	pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
+	Application::AcquireSolarMutex( nCount );
 
 	// Update the cached position
 	Rectangle *pBounds = new Rectangle( maFrameData.mpVCLFrame->getBounds() );

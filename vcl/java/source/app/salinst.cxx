@@ -422,21 +422,18 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 					WindowRef aWindow;
 					if ( GetEventParameter( aEvent, kEventParamWindowMouseLocation, typeQDPoint, NULL, sizeof( MacOSPoint ), NULL, &aPoint ) == noErr && GetEventParameter( aEvent, kEventParamMouseWheelDelta, typeSInt32, NULL, sizeof( SInt32 ), NULL, &nDelta ) == noErr && GetEventParameter( aEvent, kEventParamWindowRef, typeWindowRef, NULL, sizeof( WindowRef ), NULL, &aWindow ) == noErr )
 					{
-						// Unlock the Carbon lock
-						VCLThreadAttach t;
-						if ( t.pEnv )
-							Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
+						// Unlock the Java lock
+						ReleaseJavaLock();
 
 						// Wakeup the event queue by sending it a dummy event
 						com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
 						pSalData->mpEventQueue->postCachedEvent( &aEvent );
 
 						// Block the VCL event loop while checking mapping
-						pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->acquire();
+						Application::GetSolarMutex().acquire();
 
-						// Relock the Carbon lock
-						if ( t.pEnv )
-							Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
+						// Relock the Java lock
+						AcquireJavaLock();
 
 						for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 						{
@@ -448,7 +445,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 						}
 
 						// Unblock the VCL event loop
-						pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->release();
+						Application::GetSolarMutex().release();
 					}
 				}
 
@@ -482,25 +479,22 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 						com_sun_star_vcl_VCLEvent aYieldEvent( SALEVENT_YIELDEVENTQUEUE, NULL, NULL );
 						pSalData->mpEventQueue->postCachedEvent( &aYieldEvent );
 
-						// Unlock the Carbon lock
-						VCLThreadAttach t;
-						if ( t.pEnv )
-							Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
+						// Unlock the Java lock
+						ReleaseJavaLock();
 
 						pSalData->maNativeEventStartCondition.wait();
 
-						pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->acquire();
+						Application::GetSolarMutex().acquire();
 
 						// Execute menu updates while the VCL event queue is
 						// blocked
 						for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 							UpdateMenusForFrame( *it, NULL );
 
-						// Relock the Carbon lock
-						if ( t.pEnv )
-							Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
+						// Relock the Java lock
+						AcquireJavaLock();
 
-						pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->release();
+						Application::GetSolarMutex().release();
 
 						pSalData->maNativeEventEndCondition.set();
 					}
@@ -529,14 +523,12 @@ void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void
 			com_sun_star_vcl_VCLEvent aYieldEvent( SALEVENT_YIELDEVENTQUEUE, NULL, NULL );
 			pSalData->mpEventQueue->postCachedEvent( &aYieldEvent );
 
-			// Unlock the Carbon lock
-			VCLThreadAttach t;
-			if ( t.pEnv )
-				Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
+			// Unlock the Java lock
+			ReleaseJavaLock();
 
 			pSalData->maNativeEventStartCondition.wait();
 
-			pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->acquire();
+			Application::GetSolarMutex().acquire();
 
 			Rect aRect;
 			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
@@ -546,11 +538,10 @@ void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void
 					(*it)->SetPosSize( (long)aRect.left, (long)aRect.top, (long)( aRect.right - aRect.left + 1 ) - (*it)->maGeometry.nLeftDecoration - (*it)->maGeometry.nRightDecoration, (long)( aRect.bottom - aRect.top + 1 ) - (*it)->maGeometry.nTopDecoration - (*it)->maGeometry.nBottomDecoration, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
 			}
 
-			// Relock the Carbon lock
-			if ( t.pEnv )
-				Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
+			// Relock the Java lock
+			AcquireJavaLock();
 
-			pSalData->mpFirstInstance->maInstData.mpSalYieldMutex->release();
+			Application::GetSolarMutex().release();
 
 			pSalData->maNativeEventEndCondition.set();
 		}
@@ -786,8 +777,7 @@ void ExecuteApplicationMain( Application *pApp )
 			OModule aModule;
 			if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/AppKit.framework/AppKit" ) ) )
 			{
-				SalInstance *pSalInstance = GetSalData()->mpFirstInstance;
-				ULONG nCount = pSalInstance->ReleaseYieldMutex();
+				ULONG nCount = Application::ReleaseSolarMutex();
 
 				// Create the thread to run the Main() method in
 				SVMainThread aSVMainThread( pApp );
@@ -797,7 +787,7 @@ void ExecuteApplicationMain( Application *pApp )
 				RunCocoaEventLoop();
 				aSVMainThread.join();
 
-				pSalInstance->AcquireYieldMutex( nCount );
+				Application::AcquireSolarMutex( nCount );
 			}
 
 			return;
@@ -976,6 +966,30 @@ void ExecuteApplicationMain( Application *pApp )
 
 	// Now that Java is properly initialized, run the application's Main()
 	RunAppMain( pApp );
+}
+
+// -----------------------------------------------------------------------
+
+void AcquireJavaLock()
+{
+#ifdef MACOSX
+	// Lock the Carbon lock
+	VCLThreadAttach t;
+	if ( t.pEnv && t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+		Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
+#endif	// MACOSX
+}
+
+// -----------------------------------------------------------------------
+
+void ReleaseJavaLock()
+{
+#ifdef MACOSX
+	// Unlock the Carbon lock
+	VCLThreadAttach t;
+	if ( t.pEnv && t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+		Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
+#endif	// MACOSX
 }
 
 // =======================================================================
