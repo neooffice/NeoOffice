@@ -532,8 +532,10 @@ void Printer::ImplInit( SalPrinterQueueInfo* pInfo )
 				GetSalData()->maVCLPageFormats.remove( pDriverData->mpVCLPageFormat );
 				delete pDriverData->mpVCLPageFormat;
 			}
-#endif	// USE_JAVA
+			rtl_freeMemory( pJobSetup->mpDriverData );
+#else	// USE_JAVA
 			delete[] pJobSetup->mpDriverData;
+#endif	// USE_JAVA
 			pJobSetup->mpDriverData = NULL;
 			pJobSetup->mnDriverDataLen = 0;
 		}
