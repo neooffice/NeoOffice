@@ -350,6 +350,19 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			// Adjust position for RTL layout
 			if ( pFrame && Application::GetSettings().GetLayoutRTL() )
 				pMouseEvent->mnX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pMouseEvent->mnX - 1;
+			// Let drag thread run
+			if ( pMouseEvent->mnCode & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT ) )
+			{
+				ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
+				OThread::yield();
+				pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
+			}
+			// In native drag mode, OOo cannot handle drag events with key
+			// modifiers
+			if ( nID == SALEVENT_MOUSEBUTTONUP )
+				pSalData->mbInNativeDrag = false;
+			else if ( pSalData->mbInNativeDrag )
+				pMouseEvent->mnCode &= ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
 			dispatchEvent( nID, pFrame, pMouseEvent );
 			delete pMouseEvent;
 			return;

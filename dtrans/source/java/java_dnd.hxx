@@ -83,6 +83,7 @@ private:
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	maContents;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDragSourceListener >	maListener;
     ::osl::Mutex			maMutex;
+	bool*					mpInNativeDrag;
 	void*					mpNativeWindow;
 
 	static void				runDragExecute( void *pData );

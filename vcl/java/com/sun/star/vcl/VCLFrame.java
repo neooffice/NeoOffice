@@ -1906,7 +1906,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			e = preprocessMouseEvent(e);
 		}
 
-		// Don't pass key modifiers to mouse entered events
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0, VCLFrame.keyModifiersPressed));
 
 	}
@@ -1927,7 +1926,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && e.getModifiers() != VCLFrame.mouseModifiersPressed)
 			e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), VCLFrame.mouseModifiersPressed, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
 
-		// Don't pass key modifiers to mouse exited events
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSELEAVE, VCLFrame.findFrame(e.getComponent()), 0, VCLFrame.keyModifiersPressed));
 
 	}
@@ -1953,8 +1951,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			e = preprocessMouseEvent(e);
 		}
 
-		// Don't pass key modifiers to mouse move events
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0, 0));
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0, VCLFrame.keyModifiersPressed));
 
 	}
 
