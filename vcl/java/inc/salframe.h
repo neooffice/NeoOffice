@@ -9,7 +9,7 @@
  *  The Contents of this file are made available subject to the terms of
  *  either of the following licenses
  *
- *         - GNU General Public License Version 2.1
+ *	 - GNU General Public License Version 2.1
  *
  *  Patrick Luby, June 2003
  *
@@ -67,11 +67,11 @@ class SalFrameData
 	friend class	SalFrame;
 	friend class	SalGraphics;
 	friend class	SalInstance;
-        friend class	SalMenu;
-        friend class	::vcl::com_sun_star_vcl_VCLMenuBar;
+	friend class	SalMenu;
+	friend class	::vcl::com_sun_star_vcl_VCLMenuBar;
 	friend class	::vcl::com_sun_star_vcl_VCLEvent;
 	friend class	::vcl::com_sun_star_vcl_VCLFrame;
-        friend void 	UpdateMenusForFrame( SalFrame *, SalMenu * );
+	friend void 	UpdateMenusForFrame( SalFrame *, SalMenu * );
 
 	::vcl::com_sun_star_vcl_VCLFrame*	mpVCLFrame;
 	::vcl::java_lang_Object*	mpPanel;
@@ -88,7 +88,7 @@ class SalFrameData
 	SalFrameGeometry	maOriginalGeometry;
 	BOOL			mbFullScreen;
 	BOOL			mbPresentation;
-        SalMenu*		mpMenuBar;
+	SalMenu*		mpMenuBar;
 
 					SalFrameData();
 					~SalFrameData();

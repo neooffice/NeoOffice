@@ -179,7 +179,7 @@ void SVMainThread::run()
 		}
 	}
 #endif	// MACOSX
-#endif	// NO_NATIVE_MENUS
+#endif	// !NO_NATIVE_MENUS
 
 	mpApp->Main();
 }
