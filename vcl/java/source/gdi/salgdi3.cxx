@@ -67,7 +67,7 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont )
 	if ( maGraphicsData.mpVCLFont )
 		delete maGraphicsData.mpVCLFont;
 
-	maGraphicsData.mpVCLFont = ((com_sun_star_vcl_VCLFont *)pFont->mpFontData->mpSysData)->deriveFont( pFont->mnHeight, pFont->meWeight <= WEIGHT_MEDIUM ? FALSE : TRUE, pFont->meItalic == ITALIC_NONE ? FALSE : TRUE);
+	maGraphicsData.mpVCLFont = ((com_sun_star_vcl_VCLFont *)pFont->mpFontData->mpSysData)->deriveFont( pFont->mnHeight, pFont->meWeight <= WEIGHT_MEDIUM ? FALSE : TRUE, pFont->meItalic == ITALIC_NONE ? FALSE : TRUE, pFont->mnOrientation);
 
 	return 0;
 }
@@ -102,7 +102,7 @@ void SalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 	pMetric->mnFirstChar = 0;
 	pMetric->mnLastChar = 0;
 	pMetric->maName = maGraphicsData.mpVCLFont->getName();
-	pMetric->mnOrientation = 0;
+	pMetric->mnOrientation = maGraphicsData.mpVCLFont->getOrientation();
 	pMetric->meFamily = FAMILY_DONTKNOW;
 	pMetric->meCharSet = gsl_getSystemTextEncoding();
 	if ( maGraphicsData.mpVCLFont->isBold() )
@@ -168,7 +168,7 @@ void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 			pFontData->meItalic = ITALIC_NONE;
 		pFontData->meType = TYPE_SCALABLE;
 		pFontData->mnVerticalOrientation = 0;
-		pFontData->mbOrientation = FALSE;
+		pFontData->mbOrientation = TRUE;
 		pFontData->mbDevice = FALSE;
 		pFontData->mnQuality = 0;
 

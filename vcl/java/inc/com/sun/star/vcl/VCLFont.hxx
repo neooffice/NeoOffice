@@ -61,12 +61,13 @@ public:
 
 						com_sun_star_vcl_VCLFont( jobject myObj ) : java_lang_Object( myObj ) {};
 
-	com_sun_star_vcl_VCLFont*	deriveFont( long _par0, sal_Bool _par1, sal_Bool _par2 );
+	com_sun_star_vcl_VCLFont*	deriveFont( long _par0, sal_Bool _par1, sal_Bool _par2, short _par3 );
 	long				getAscent();
 	void				getCharWidth( sal_Unicode _par0, sal_Unicode _par1, long *_par2 );
 	long				getDescent();
 	long				getLeading();
 	::rtl::OUString		getName();
+	short				getOrientation();
 	long				getSize();
 	sal_Bool			isBold();
 	sal_Bool			isItalic();

@@ -97,7 +97,7 @@ com_sun_star_vcl_VCLFontList *com_sun_star_vcl_VCLFont::getAllFonts()
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLFont *com_sun_star_vcl_VCLFont::deriveFont( long _par0, sal_Bool _par1, sal_Bool _par2 )
+com_sun_star_vcl_VCLFont *com_sun_star_vcl_VCLFont::deriveFont( long _par0, sal_Bool _par1, sal_Bool _par2, short _par3 )
 {
 	static jmethodID mID = NULL;
 	com_sun_star_vcl_VCLFont *out = NULL;
@@ -106,16 +106,17 @@ com_sun_star_vcl_VCLFont *com_sun_star_vcl_VCLFont::deriveFont( long _par0, sal_
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(IZZ)Lcom/sun/star/vcl/VCLFont;";
+			char *cSignature = "(IZZS)Lcom/sun/star/vcl/VCLFont;";
 			mID = t.pEnv->GetMethodID( getMyClass(), "deriveFont", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[3];
+			jvalue args[4];
 			args[0].i = jint( _par0 );
 			args[1].z = jboolean( _par1 );
 			args[2].z = jboolean( _par2 );
+			args[3].s = jshort( _par3 );
 			jobject tempObj = t.pEnv->CallNonvirtualObjectMethodA( object, getMyClass(), mID, args );
 			if ( tempObj )
 				out = new com_sun_star_vcl_VCLFont( tempObj );
@@ -140,9 +141,7 @@ long com_sun_star_vcl_VCLFont::getAscent()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
 			out = (long)t.pEnv->CallNonvirtualLongMethod( object, getMyClass(), mID );
-		}
 	}
 	return out;
 }
@@ -193,9 +192,7 @@ long com_sun_star_vcl_VCLFont::getDescent()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
 			out = (long)t.pEnv->CallNonvirtualLongMethod( object, getMyClass(), mID );
-		}
 	}
 	return out;
 }
@@ -216,9 +213,7 @@ long com_sun_star_vcl_VCLFont::getLeading()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
 			out = (long)t.pEnv->CallNonvirtualLongMethod( object, getMyClass(), mID );
-		}
 	}
 	return out;
 }
@@ -251,6 +246,27 @@ long com_sun_star_vcl_VCLFont::getLeading()
 
 // ----------------------------------------------------------------------------
 
+short com_sun_star_vcl_VCLFont::getOrientation()
+{
+	static jmethodID mID = NULL;
+	short out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()S";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getOrientation", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (short)t.pEnv->CallNonvirtualShortMethod( object, getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
 long com_sun_star_vcl_VCLFont::getSize()
 {
 	static jmethodID mID = NULL;
@@ -265,9 +281,7 @@ long com_sun_star_vcl_VCLFont::getSize()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
 			out = (long)t.pEnv->CallNonvirtualLongMethod( object, getMyClass(), mID );
-		}
 	}
 	return out;
 }
@@ -288,9 +302,7 @@ sal_Bool com_sun_star_vcl_VCLFont::isBold()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
 			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethod( object, getMyClass(), mID );
-		}
 	}
 	return out;
 }

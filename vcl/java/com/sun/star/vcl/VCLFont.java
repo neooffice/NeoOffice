@@ -93,7 +93,7 @@ public final class VCLFont {
 				fontFamilies[i] = fontFamilies[i].substring(0, j);
 			Font font = new Font(fontFamilies[i], Font.PLAIN, 1);
 			if (font.isPlain())
-				array.add(new VCLFont(font));
+				array.add(new VCLFont(font, (short)0));
 		}
 		VCLFont.fonts = (VCLFont[])array.toArray(new VCLFont[array.size()]);
 
@@ -122,13 +122,20 @@ public final class VCLFont {
 	private FontMetrics fontMetrics = null;
 
 	/**
+	 * The cached orientation.
+	 */
+	private short orientation = 0;
+
+	/**
 	 * Constructs a new <code>VCLFont</code> instance.
 	 *
 	 * @param f a <code>Font</code> instance
+	 * @param o the orientation of the new <code>VCLFont</code> in degrees
 	 */
-	VCLFont(Font f) {
+	VCLFont(Font f, short o) {
 
 		font = f;
+		orientation = o;
 
 		// Get the font metrics
 		fontMetrics = VCLFont.graphics.getFontMetrics(f);
@@ -142,9 +149,10 @@ public final class VCLFont {
 	 * @param size the size for the new <code>VCLFont</code>
 	 * @param bold whether the new <code>VCLFont</code> should be bold
 	 * @param italic whether the new <code>VCLFont</code> should be italic
+	 * @param o the orientation of the new <code>VCLFont</code> in degrees
 	 * @return a new <code>VCLFont</code> object
 	 */
-	public VCLFont deriveFont(int size, boolean bold, boolean italic) {
+	public VCLFont deriveFont(int size, boolean bold, boolean italic, short o) {
 
 		int style = Font.PLAIN;
 		if (bold)
@@ -152,7 +160,7 @@ public final class VCLFont {
 		if (italic)
 			style |= Font.ITALIC;
 		Font f = font.deriveFont(style, (float)size);
-		return new VCLFont(f);
+		return new VCLFont(f, o);
 
 	}
 
@@ -229,6 +237,17 @@ public final class VCLFont {
 	public String getName() {
 
 		return font.getName();
+
+	}
+
+	/**
+	 * Returns the orientation of the <code>VCLFont</code> in degrees.
+	 *
+	 * @return the orientation of the <code>VCLFont</code>
+	 */
+	public short getOrientation() {
+
+		return orientation;
 
 	}
 

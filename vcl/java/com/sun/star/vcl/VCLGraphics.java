@@ -35,6 +35,7 @@
 
 package com.sun.star.vcl;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
@@ -51,9 +52,9 @@ import java.awt.TexturePaint;
 import java.awt.Toolkit;
 import java.awt.event.PaintEvent;
 import java.awt.font.GlyphVector;
+import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
 import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.awt.print.PageFormat;
 import java.util.LinkedList;
@@ -90,11 +91,6 @@ public final class VCLGraphics {
 	 * The graphics list.
 	 */
 	private static LinkedList graphicsList = new LinkedList();
-
-	/**
-	 * The default rendering hints.
-	 */
-	private static RenderingHints hints = VCLGraphics.loadDefaultRenderingHints();
 
 	/**
 	 * The image50 image.
@@ -136,26 +132,6 @@ public final class VCLGraphics {
 	}
 
 	/**
-	 * Load the default rendering hints.
-	 *
-	 * @return the default rendering hints
-	 */
-	static RenderingHints loadDefaultRenderingHints() {
-
-		// Set font anti-aliasing
-		RenderingHints h = new RenderingHints(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-
-		// Set defaults for speed
-		h.put(RenderingHints.KEY_ALPHA_INTERPOLATION, RenderingHints.VALUE_ALPHA_INTERPOLATION_SPEED);
-		h.put(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
-		h.put(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_SPEED);
-		h.put(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
-
-		return h;
-
-	}
-
-	/**
 	 * Set the auto flush flag.
 	 *
 	 * @param b the auto flush flag
@@ -163,6 +139,24 @@ public final class VCLGraphics {
 	static void setAutoFlush(boolean b) {
 
 		autoFlush = b;
+
+	}
+
+	/**
+	 * Set default rendering attributes.
+	 *
+	 * @param g the <code>Graphics2D</code> instance
+	 */
+	static void setDefaultRenderingAttributes(Graphics2D g) {
+
+		// Set rendering hints
+		RenderingHints hints = g.getRenderingHints();
+		hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+		hints.put(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+		g.setRenderingHints(hints);
+
+		// Set stroke
+		g.setStroke(new BasicStroke(1.0f));
 
 	}
 
@@ -224,9 +218,6 @@ public final class VCLGraphics {
 			Panel p = frame.getPanel();
 			bounds = p.getBounds();
 			panelGraphics = (Graphics2D)p.getGraphics();
-			// Normalize graphics to 72 dpi
-			panelGraphics.transform(panelGraphics.getDeviceConfiguration().getNormalizingTransform());
-			panelGraphics.addRenderingHints(VCLGraphics.hints);
 		}
 		else {
 			bounds = new Rectangle(0, 0, 1, 1);
@@ -234,7 +225,7 @@ public final class VCLGraphics {
 		}
 		image = new VCLImage(bounds.width, bounds.height, frame.getBitCount());
 		graphics = image.getImage().createGraphics();
-		graphics.addRenderingHints(VCLGraphics.hints);
+		VCLGraphics.setDefaultRenderingAttributes(graphics);
 		bitCount = image.getBitCount();
 
 		synchronized (graphicsList) {
@@ -253,7 +244,7 @@ public final class VCLGraphics {
 
 		image = i;
 		graphics = image.getImage().createGraphics();
-		graphics.addRenderingHints(VCLGraphics.hints);
+		VCLGraphics.setDefaultRenderingAttributes(graphics);
 		bitCount = image.getBitCount();
 
 	}
@@ -608,11 +599,11 @@ public final class VCLGraphics {
 			Point destPoint = new Point(destX, destY);
 			int totalPixels = destWidth * destHeight;
 
-			// If the pixel is non-white, set the pixel to the mask color
+			// If the pixel is black, set the pixel to the mask color
 			color |= 0xff000000;
 			for (int i = 0; i < totalPixels; i++) {
 				// Copy pixel
-				if (bmp.getPixel(srcPoint) != 0xffffffff)
+				if (bmp.getPixel(srcPoint) == 0xff000000)
 					destData[(destPoint.y * destDataWidth) + destPoint.x] = color;
 
 				// Update current points
@@ -743,6 +734,20 @@ public final class VCLGraphics {
 		graphics.setColor(new Color(color));
 		FontMetrics fontMetrics = graphics.getFontMetrics();
 
+		// Set rotation
+		Point2D origin = new Point2D.Float((float)x, (float)y);
+		short orientation = font.getOrientation();
+		AffineTransform transform = null;
+		AffineTransform rotateTransform = null;
+		if (orientation != 0) {
+			transform = graphics.getTransform();
+			double radians = Math.toRadians((double)orientation / 10);
+			graphics.rotate(radians * -1);
+			rotateTransform = AffineTransform.getRotateInstance(radians);
+			// Adjust drawing origin so that it is not transformed
+			origin = AffineTransform.getRotateInstance(radians).transform(origin, null);
+		}
+
 		// Divide the character array by whitespace
 		int startChar = 0;
 		int currentChar = 0;
@@ -770,11 +775,21 @@ public final class VCLGraphics {
 				}
 			}
 		}
-		graphics.drawGlyphVector(glyphs, x, y);
+		graphics.drawGlyphVector(glyphs, (float)origin.getX(), (float)origin.getY());
+
+		// Reverse rotation
+		if (transform != null)
+			graphics.setTransform(transform);
 
 		// Estimate bounds
-		Rectangle2D bounds = glyphs.getLogicalBounds();
-		addToFlush(new Rectangle(x + (int)bounds.getX() - 1, y + (int)bounds.getY() - 1, (int)bounds.getWidth() + 1, (int)bounds.getHeight() + 1));
+		Rectangle bounds = null;
+		if (orientation != 0)
+			bounds = rotateTransform.createTransformedShape(glyphs.getLogicalBounds()).getBounds();
+		else
+			bounds = glyphs.getLogicalBounds().getBounds();
+		bounds.x += x;
+		bounds.y += y;
+		addToFlush(bounds);
 
 	}
 
@@ -922,7 +937,7 @@ public final class VCLGraphics {
 			else {
 				VCLImage srcImage = new VCLImage(width, height, VCLGraphics.image50.getBitCount());
 				Graphics2D srcGraphics = srcImage.getImage().createGraphics();
-				srcGraphics.addRenderingHints(VCLGraphics.hints);
+				VCLGraphics.setDefaultRenderingAttributes(srcGraphics);
 				BufferedImage textureImage = VCLGraphics.image50.getImage();
 				srcGraphics.setPaint(new TexturePaint(textureImage, new Rectangle(0, 0, textureImage.getWidth(), textureImage.getHeight()).getBounds2D()));
 				srcGraphics.setPaint(new TexturePaint(textureImage, new Rectangle(0, 0, textureImage.getWidth(), textureImage.getHeight()).getBounds2D()));
@@ -1027,7 +1042,6 @@ public final class VCLGraphics {
 				panelGraphics = (Graphics2D)p.getGraphics();
 				// Normalize graphics to 72 dpi
 				panelGraphics.transform(panelGraphics.getDeviceConfiguration().getNormalizingTransform());
-				panelGraphics.addRenderingHints(VCLGraphics.hints);
 			}
 			else {
 				bounds = new Rectangle(0, 0, 1, 1);
@@ -1035,7 +1049,7 @@ public final class VCLGraphics {
 			}
 			image = new VCLImage(bounds.width, bounds.height, frame.getBitCount());
 			graphics = image.getImage().createGraphics();
-			graphics.addRenderingHints(VCLGraphics.hints);
+			VCLGraphics.setDefaultRenderingAttributes(graphics);
 			bitCount = image.getBitCount();
 			userClip = null;
 			update = null;
