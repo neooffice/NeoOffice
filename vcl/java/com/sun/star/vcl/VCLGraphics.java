@@ -1187,7 +1187,7 @@ public final class VCLGraphics {
 	public Rectangle getGlyphBounds(int glyph, VCLFont font ) {
 
 		GlyphVector glyphs = font.getFont().createGlyphVector(graphics.getFontRenderContext(), new int[]{ glyph });
-		return glyphs.getLogicalBounds().getBounds();
+		return glyphs.getVisualBounds().getBounds();
 
 	}
 
