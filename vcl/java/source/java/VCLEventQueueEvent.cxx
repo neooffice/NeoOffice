@@ -234,6 +234,9 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pSalData->mpFocusFrame = pFrame;
 				dispatchEvent( nID, pFrame, NULL );
 			}
+			// Force all "always on top" windows to the front without focus
+			for ( std::list< SalFrame* >::const_iterator it = pSalData->maAlwaysOnTopFrameList.begin(); it != pSalData->maAlwaysOnTopFrameList.end(); ++it )
+				(*it)->ToTop( 0 );
 			return;
 		}
 		case SALEVENT_LOSEFOCUS:

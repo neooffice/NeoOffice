@@ -130,6 +130,8 @@ SalFrame::~SalFrame()
 		pSalData->mpPresentationFrame = NULL;
 		pSalData->maPresentationFrameList.clear();
 	}
+
+	pSalData->maAlwaysOnTopFrameList.remove( this );
 }
 
 // -----------------------------------------------------------------------
@@ -503,9 +505,11 @@ void SalFrame::StartPresentation( BOOL bStart )
 
 void SalFrame::SetAlwaysOnTop( BOOL bOnTop )
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalFrame::SetAlwaysOnTop not implemented\n" );
-#endif
+	SalData *pSalData = GetSalData();
+	if ( bOnTop )
+		pSalData->maAlwaysOnTopFrameList.push_back( this );
+	else
+		pSalData->maAlwaysOnTopFrameList.remove( this );
 }
 
 // -----------------------------------------------------------------------
