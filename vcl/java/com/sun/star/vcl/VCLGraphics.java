@@ -53,7 +53,7 @@ import java.awt.Toolkit;
 import java.awt.event.PaintEvent;
 import java.awt.font.GlyphVector;
 import java.awt.geom.Area;
-import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.util.LinkedList;
 
@@ -658,24 +658,12 @@ public class VCLGraphics {
 	 * @param x the x coordinate
 	 * @param y the y coordinate
 	 * @param chars the array of characters to be drawn
+	 * @param font the font of the text
 	 * @param color the color of the text
 	 */
 	public void drawText(int x, int y, char[] chars, VCLFont font, int color) {
 
-		Font f = font.getFont();
-		graphics.setFont(f);
-		graphics.setColor(new Color(color));
-		GlyphVector glyphs = f.createGlyphVector(graphics.getFontRenderContext(), chars);
-		graphics.drawGlyphVector(glyphs, x, y);
-
-		// Estimate bounds since getting the exact bounds is very slow
-		FontMetrics fontMetrics = graphics.getFontMetrics();
-		Rectangle bounds = new Rectangle();
-		bounds.x = x - 1;
-		bounds.y = y - fontMetrics.getMaxAscent() - 1; 
-		bounds.width = fontMetrics.charsWidth(chars, 0, chars.length) + 1;
-		bounds.height = y + fontMetrics.getMaxDescent() - bounds.y + 2;
-		addToFlush(bounds);
+		drawTextArray(x, y, chars, font, color, null);
 
 	}
 
@@ -689,6 +677,7 @@ public class VCLGraphics {
 	 * @param x the x coordinate
 	 * @param y the y coordinate
 	 * @param chars the array of characters to be drawn
+	 * @param font the font of the text
 	 * @param color the color of the text
 	 * @param offsets the x coordinate offsets for each character
 	 */
@@ -697,26 +686,40 @@ public class VCLGraphics {
 		Font f = font.getFont();
 		graphics.setFont(f);
 		graphics.setColor(new Color(color));
-		GlyphVector glyphs = f.createGlyphVector(graphics.getFontRenderContext(), chars);
-		Point2D p = glyphs.getGlyphPosition(0);
-		double start = p.getX();
-		for (int i = 1; i < chars.length; i++)
-		{
-			p.setLocation(start + offsets[i - 1], p.getY());
-			glyphs.setGlyphPosition(i, p);
-		}
-		graphics.drawGlyphVector(glyphs, x, y);
-
-		// Estimate bounds since getting the exact bounds is very slow
 		FontMetrics fontMetrics = graphics.getFontMetrics();
-		Rectangle bounds = new Rectangle();
-		bounds.x = x - 1;
-		bounds.y = y - fontMetrics.getMaxAscent() - 1; 
-		bounds.width = fontMetrics.charWidth(chars[chars.length - 1]) + 1;
-		if (chars.length > 1)
-			bounds.width += offsets[chars.length - 2];
-		bounds.height = y + fontMetrics.getMaxDescent() - bounds.y + 2;
-		addToFlush(bounds);
+
+		// Divide the character array by whitespace
+		int startChar = 0;
+		int currentChar = 0;
+		Rectangle2D bounds = null;
+		while (currentChar < chars.length) {
+
+			while (currentChar < chars.length && !Character.isWhitespace(chars[currentChar++]))
+				;
+
+			char[] word = new char[currentChar - startChar];
+			System.arraycopy(chars, startChar, word, 0, word.length);
+			GlyphVector glyphs = f.createGlyphVector(graphics.getFontRenderContext(), word);
+			if (offsets != null) {
+				int startOffset = 0;
+				if (startChar > 0)
+					startOffset = offsets[startChar - 1];
+				graphics.drawGlyphVector(glyphs, x + startOffset, y);
+			}
+			else {
+				graphics.drawGlyphVector(glyphs, x + fontMetrics.charsWidth(chars, 0, startChar), y);
+			}
+
+			// Estimate bounds
+			if (bounds == null)
+				bounds = glyphs.getLogicalBounds();
+			else
+				bounds.add(glyphs.getLogicalBounds());
+
+			startChar = currentChar;
+
+		}
+		addToFlush(new Rectangle(x + (int)bounds.getX() - 2, y + (int)bounds.getY() - 2, (int)bounds.getWidth() + 2, (int)bounds.getHeight() + 2));
 
 	}
 
