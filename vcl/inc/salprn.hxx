@@ -33,7 +33,7 @@
  *  MA  02111-1307  USA
  *  
  *  =================================================
- *  Modified October 2003 by Patrick Luby. SISSL Removed. NeoOffice is
+ *  Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
  *  distributed under GPL only under modification term 3 of the LGPL.
  *
  *  Contributor(s): _______________________________________
@@ -53,6 +53,11 @@
 #ifndef _SV_SALPRN_H
 #include <salprn.h>
 #endif
+#ifndef _SV_PRNTYPES_HXX
+#include <prntypes.hxx>
+#endif
+
+#include <vector>
 
 class SalGraphics;
 class SalFrame;
@@ -85,7 +90,10 @@ class SalInfoPrinter
 {
 	friend class SalInstance;
 
-private:
+public:
+    std::vector< vcl::PaperInfo  >		m_aPaperFormats;	// all printer supported formats
+    bool								m_bPapersInit;		// set to true after InitPaperFormats
+
 							SalInfoPrinter();
 							~SalInfoPrinter();
 
@@ -119,6 +127,10 @@ public:
 	ULONG					GetCapabilities( const ImplJobSetup* pSetupData, USHORT nType );
 	ULONG					GetPaperBinCount( const ImplJobSetup* pSetupData );
 	XubString				GetPaperBinName( const ImplJobSetup* pSetupData, ULONG nPaperBin );
+	// fills m_aPaperFormats and sets m_bPapersInit to true
+    void					InitPaperFormats( const ImplJobSetup* pSetupData );
+    // returns angle that a landscape page will be turned counterclockwise wrt to portrait
+    int						GetLandscapeAngle( const ImplJobSetup* pSetupData );
 };
 
 

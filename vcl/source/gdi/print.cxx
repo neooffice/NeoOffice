@@ -33,7 +33,7 @@
  *  MA  02111-1307  USA
  *  
  *  =================================================
- *  Modified September 2003 by Patrick Luby. SISSL Removed. NeoOffice is
+ *  Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
  *  distributed under GPL only under modification term 3 of the LGPL.
  *
  *  Contributor(s): _______________________________________
@@ -66,8 +66,8 @@
 
 #include <unohelp.hxx>
 
+#else /* REMOTE_APPSERVER */
 
-#else
 #include "rvp.hxx"
 #include "rmoutdev.hxx"
 #include "rmwindow.hxx"
@@ -93,6 +93,14 @@ struct SalPrinterQueueInfo
 #endif
 
 using namespace com::sun::star::portal::client;
+
+#if OSL_DEBUG_LEVEL > 1
+#ifdef PRODUCT
+#define OSL_DEBUG_LEVEL 0
+#else
+#define OSL_DEBUG_LEVEL 1
+#endif
+#endif
 
 #endif
 
@@ -160,9 +168,10 @@ int nImplSysDialog = 0;
 
 // =======================================================================
 
-#define PAPER_SLOPPY	20
+#define PAPER_SLOPPY	50	// Bigger sloppy value as PaperInfo uses only mm accuracy!
 #define PAPER_COUNT 	9
 
+// Use more accurate metric values for Letter/Legal/Tabloid paper formats
 static long ImplPaperFormats[PAPER_COUNT*2] =
 {
 	29700, 42000,	// A3
@@ -170,9 +179,9 @@ static long ImplPaperFormats[PAPER_COUNT*2] =
 	14800, 21000,	// A5
 	25000, 35300,	// B4
 	17600, 25000,	// B5
-	21600, 27900,	// Letter
-	21600, 35600,	// Legal
-	27900, 43100,	// Tabloid
+	21590, 27940,	// Letter
+	21590, 35570,	// Legal
+	27960, 43130,	// Tabloid
 	0,	   0		// USER
 };
 
@@ -915,8 +924,8 @@ Printer::~Printer()
 			delete mpGetDevSizeList;
 			mpGetDevSizeList = NULL;
 		}
-		delete mpFontList;
 		delete mpFontCache;
+        // font list deleted by OutputDevice dtor
 	}
 
 	// Printer aus der Liste eintragen
@@ -967,6 +976,8 @@ BOOL Printer::HasSupport( PrinterSupport eFeature, BOOL bInJob ) const
 			return (BOOL)GetCapabilities( PRINTER_CAPABILITIES_SUPPORTDIALOG );
 		case SUPPORT_FAX:
 			return (BOOL) GetCapabilities( PRINTER_CAPABILITIES_FAX );
+		case SUPPORT_PDF:
+			return (BOOL) GetCapabilities( PRINTER_CAPABILITIES_PDF );
 	}
 
 	return TRUE;
@@ -1146,7 +1157,11 @@ BOOL Printer::SetPrinterProps( const Printer* pPrinter )
 				delete mpGetDevSizeList;
 				mpGetDevSizeList = NULL;
 			}
+            // clean up font list
+            mpFontList->Clear();
 			delete mpFontList;
+            mpFontList = NULL;
+
 			delete mpFontCache;
 			mbInitFont = TRUE;
 			mbNewFont = TRUE;
@@ -1333,6 +1348,70 @@ USHORT Printer::GetPaperBin() const
 
 // -----------------------------------------------------------------------
 
+static BOOL ImplPaperSizeEqual( unsigned long nPaperWidth1, unsigned long nPaperHeight1,
+								unsigned long nPaperWidth2, unsigned long nPaperHeight2 )
+{
+	const unsigned long PAPER_ACCURACY = 1; // 1.0 mm accuracy
+
+	return ( (Abs( (short)(nPaperWidth1-nPaperWidth2) ) <= PAPER_ACCURACY ) &&
+			 (Abs( (short)(nPaperHeight1-nPaperHeight2) ) <= PAPER_ACCURACY ) );
+}
+
+// -----------------------------------------------------------------------
+
+// Map user paper format to a available printer paper formats
+void Printer::ImplFindPaperFormatForUserSize( JobSetup& aJobSetup )
+{
+	ImplJobSetup*	pSetupData = aJobSetup.ImplGetData();
+
+	int		nLandscapeAngle	= GetLandscapeAngle();
+	int		nPaperCount		= GetPaperInfoCount();
+
+	unsigned long nPaperWidth	= pSetupData->mnPaperWidth/100;
+	unsigned long nPaperHeight	= pSetupData->mnPaperHeight/100;
+
+	// Alle Papierformate vergleichen und ein passendes raussuchen
+	for ( int i = 0; i < nPaperCount; i++ )
+	{
+		const vcl::PaperInfo& rPaperInfo = GetPaperInfo( i );
+
+		if ( ImplPaperSizeEqual( rPaperInfo.m_nPaperWidth,
+								 rPaperInfo.m_nPaperHeight,
+								 nPaperWidth,
+								 nPaperHeight ) )
+		{
+			pSetupData->mePaperFormat = ImplGetPaperFormat( rPaperInfo.m_nPaperWidth*100,
+															rPaperInfo.m_nPaperHeight*100 );
+			break;
+		}
+	}
+
+	// If the printer supports landscape orientation, check paper sizes again
+	// with landscape orientation. This is necessary as a printer driver provides
+	// all paper sizes with portrait orientation only!!
+	if ( pSetupData->mePaperFormat == PAPER_USER &&
+		 nLandscapeAngle != 0 &&
+		 HasSupport( SUPPORT_SET_ORIENTATION ))
+	{
+		for ( int i = 0; i < nPaperCount; i++ )
+		{
+			const vcl::PaperInfo& rPaperInfo = GetPaperInfo( i );
+
+			if ( ImplPaperSizeEqual( rPaperInfo.m_nPaperWidth,
+									 rPaperInfo.m_nPaperHeight,
+									 nPaperHeight,
+									 nPaperWidth ))
+			{
+				pSetupData->mePaperFormat = ImplGetPaperFormat( rPaperInfo.m_nPaperWidth*100,
+																rPaperInfo.m_nPaperHeight*100 );
+				break;
+			}
+		}
+	}
+}
+
+// -----------------------------------------------------------------------
+
 BOOL Printer::SetPaper( Paper ePaper )
 {
 	if ( mbInPrintPage )
@@ -1358,7 +1437,9 @@ BOOL Printer::SetPaper( Paper ePaper )
 
 #ifndef REMOTE_APPSERVER
 		ImplReleaseGraphics();
-		if ( mpInfoPrinter->SetData( SAL_JOBSET_PAPERSIZE, pSetupData ) )
+		if ( ePaper == PAPER_USER )
+			ImplFindPaperFormatForUserSize( aJobSetup );
+		if ( mpInfoPrinter->SetData( SAL_JOBSET_PAPERSIZE|SAL_JOBSET_ORIENTATION, pSetupData ) )
 		{
 			ImplUpdateJobSetupPaper( aJobSetup );
 #else
@@ -1410,7 +1491,10 @@ BOOL Printer::SetPaperSizeUser( const Size& rSize )
 
 #ifndef REMOTE_APPSERVER
 		ImplReleaseGraphics();
-		if ( mpInfoPrinter->SetData( SAL_JOBSET_PAPERSIZE, pSetupData ) )
+		ImplFindPaperFormatForUserSize( aJobSetup );
+
+		// Changing the paper size can also change the orientation!
+		if ( mpInfoPrinter->SetData( SAL_JOBSET_PAPERSIZE|SAL_JOBSET_ORIENTATION, pSetupData ) )
 		{
 			ImplUpdateJobSetupPaper( aJobSetup );
 #else
@@ -1431,6 +1515,89 @@ BOOL Printer::SetPaperSizeUser( const Size& rSize )
 	}
 
 	return TRUE;
+}
+
+
+// -----------------------------------------------------------------------
+
+static const vcl::PaperInfo& ImplGetEmptyPaper()
+{
+    static vcl::PaperInfo aInfo;
+    return aInfo;
+}
+
+// -----------------------------------------------------------------------
+
+int Printer::GetPaperInfoCount() const
+{
+    if( ! mpInfoPrinter )
+        return 0;
+    if( ! mpInfoPrinter->m_bPapersInit )
+        mpInfoPrinter->InitPaperFormats( maJobSetup.ImplGetConstData() );
+    return mpInfoPrinter->m_aPaperFormats.size();
+}
+
+// -----------------------------------------------------------------------
+
+const vcl::PaperInfo& Printer::GetPaperInfo( int nPaper ) const
+{
+    if( ! mpInfoPrinter )
+        return ImplGetEmptyPaper();
+    if( ! mpInfoPrinter->m_bPapersInit )
+        mpInfoPrinter->InitPaperFormats( maJobSetup.ImplGetConstData() );
+    if( mpInfoPrinter->m_aPaperFormats.empty() || nPaper < 0 || nPaper >= mpInfoPrinter->m_aPaperFormats.size() )
+        return ImplGetEmptyPaper();
+    return mpInfoPrinter->m_aPaperFormats[nPaper];
+}
+
+// -----------------------------------------------------------------------
+
+BOOL Printer::SetPaperFromInfo( const vcl::PaperInfo& rInfo )
+{
+    MapMode aMap( MAP_MM );
+    Size aSize( rInfo.m_nPaperWidth, rInfo.m_nPaperHeight );
+    aSize = LogicToPixel( aSize, aMap );
+    aSize = PixelToLogic( aSize );
+    return SetPaperSizeUser( aSize );
+}
+
+// -----------------------------------------------------------------------
+
+int Printer::GetLandscapeAngle() const
+{
+    return mpInfoPrinter ? mpInfoPrinter->GetLandscapeAngle( maJobSetup.ImplGetConstData() ) : 900;
+}
+
+// -----------------------------------------------------------------------
+
+const vcl::PaperInfo& Printer::GetCurrentPaperInfo() const
+{
+    if( ! mpInfoPrinter )
+        return ImplGetEmptyPaper();
+    if( ! mpInfoPrinter->m_bPapersInit )
+        mpInfoPrinter->InitPaperFormats( maJobSetup.ImplGetConstData() );
+    if( mpInfoPrinter->m_aPaperFormats.empty() )
+        return ImplGetEmptyPaper();
+
+    MapMode aMap( MAP_MM );
+    Size aSize = PixelToLogic( GetPaperSizePixel(), aMap );
+    int nMatch = -1;
+    long nDelta = 0;
+    for( int i = 0; i < mpInfoPrinter->m_aPaperFormats.size(); i++ )
+    {
+        unsigned long nW = mpInfoPrinter->m_aPaperFormats[i].m_nPaperWidth;
+        unsigned long nH = mpInfoPrinter->m_aPaperFormats[i].m_nPaperHeight;
+        if( nW >= (aSize.Width()-1) && nH >= (aSize.Height()-1) )
+        {
+            long nCurDelta = (nW - aSize.Width())*(nW - aSize.Width()) + (nH - aSize.Height() )*(nH - aSize.Height() );
+            if( nMatch == -1 || nCurDelta < nDelta )
+            {
+                nMatch = i;
+                nDelta = nCurDelta;
+            }
+        }
+    }
+    return nMatch != -1 ? mpInfoPrinter->m_aPaperFormats[nMatch] : ImplGetEmptyPaper();
 }
 
 // -----------------------------------------------------------------------
@@ -1687,6 +1854,7 @@ BOOL Printer::StartJob( const XubString& rJobName )
 	else
 	{
 		mpQPrinter = new ImplQPrinter( this );
+		mpQPrinter->SetDigitLanguage( GetDigitLanguage() );
 		mpQPrinter->SetUserCopy( bUserCopy );
         mpQPrinter->SetPrinterOptions( *mpPrinterOptions );
 #ifdef USE_JAVA
@@ -1940,7 +2108,7 @@ BOOL Printer::AbortJob()
         mpPrinter = NULL;
     }
     EndPrint();
-    
+
     return TRUE;
 #endif
 
@@ -2072,12 +2240,12 @@ void Printer::GetRemotePageSetup( ULONG nPage, RmJobSetup& rSetup )
 
 void Printer::PrintRemotePage( ULONG nPage )
 {
-#ifdef DEBUG
+#if OSL_DEBUG_LEVEL > 1
     fprintf( stderr, "printing page %d of %d\n", nPage, mpRemotePages->size() );
 #endif
 	if ( mpPrinter && mpPrinter->mxRemotePrinter.is() )
 	{
-#ifdef DEBUG
+#if OSL_DEBUG_LEVEL > 1
         fprintf( stderr, "have printer\n", nPage );
 #endif
         if( nPage >=  mpRemotePages->size() )
@@ -2108,13 +2276,13 @@ void Printer::PrintRemotePage( ULONG nPage )
         try
         {
             mpPrinter->mxRemotePrinter->StartPage();
-#ifdef DEBUG
+#if OSL_DEBUG_LEVEL > 1
             fprintf( stderr, "page started\n" );
 #endif
         }
         catch( RuntimeException &e )
         {
-#ifdef DEBUG
+#if OSL_DEBUG_LEVEL > 1
             fprintf( stderr, "page started exception\n" );
 #endif
             rvpExceptionHandler();
@@ -2132,7 +2300,7 @@ void Printer::PrintRemotePage( ULONG nPage )
         pPage->GetGDIMetaFile()->WindStart();
         pPage->GetGDIMetaFile()->Play( this );
 
-#ifdef DEBUG
+#if OSL_DEBUG_LEVEL > 1
             fprintf( stderr, "metafile played %d actions\n", pPage->GetGDIMetaFile()->GetActionCount() );
 #endif
 
@@ -2140,13 +2308,13 @@ void Printer::PrintRemotePage( ULONG nPage )
         try
         {
 		    mpPrinter->mxRemotePrinter->EndPage();
-#ifdef DEBUG
+#if OSL_DEBUG_LEVEL > 1
             fprintf( stderr, "page ended\n" );
 #endif
         }
         catch( RuntimeException &e )
         {
-#ifdef DEBUG
+#if OSL_DEBUG_LEVEL > 1
             fprintf( stderr, "page ended exception\n" );
 #endif
             rvpExceptionHandler();
