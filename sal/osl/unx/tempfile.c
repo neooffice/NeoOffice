@@ -85,6 +85,21 @@
 
 oslFileError SAL_CALL osl_getTempDirURL( rtl_uString** pustrTempDir )
 {
+#ifdef MACOSX
+    /* There are a number of temp paths to choose from...  The order
+     * from the MacOS X man page is:
+     * 1) the environment variable TMPDIR
+     * 2) tmpdir argument
+     * 3) P_tmpdir (defined in stdio.h)
+     * 4) /tmp
+     * But because /tmp gets automatically cleaned up with each reboot, we
+     * won't use P_tmpdir.
+     */
+    const char *pValue = getenv( "TMPDIR" );
+
+    if ( !pValue )
+        pValue = "/tmp";
+#else	/* MACOSX */
     const char *pValue = getenv( "TEMP" );
 
     if ( !pValue )
@@ -95,6 +110,7 @@ oslFileError SAL_CALL osl_getTempDirURL( rtl_uString** pustrTempDir )
 			pValue = P_tmpdir;
 #endif
 	}
+#endif	/* MACOSX */
 
 	if ( pValue )
 	{
