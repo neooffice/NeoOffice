@@ -194,6 +194,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_GETFOCUS:
 		{
+			pSalData->mpFocusFrame = pFrame;
 			dispatchEvent( nID, pFrame, NULL );
 
 #ifdef MACOSX
@@ -219,6 +220,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_LOSEFOCUS:
 		{
+			if ( pSalData->mpFocusFrame == pFrame )
+				pSalData->mpFocusFrame = NULL;
 			dispatchEvent( nID, pFrame, NULL );
 			return;
 		}

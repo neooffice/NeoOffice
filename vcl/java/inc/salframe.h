@@ -70,7 +70,6 @@ class SalFrameData
 
 	::vcl::com_sun_star_vcl_VCLFrame*	mpVCLFrame;
 	SalGraphics*	mpGraphics;
-	SalFrame*		mpNextFrame;
 	ULONG			mnStyle;
 	SalFrame*		mpParent;
 	BOOL			mbGraphics;

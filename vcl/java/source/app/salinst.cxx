@@ -348,8 +348,24 @@ BOOL SalInstance::AnyInput( USHORT nType )
 
 SalFrame* SalInstance::CreateChildFrame( SystemParentData* pSystemParentData, ULONG nSalFrameStyle )
 {
+	SalFrame *pParent = NULL;
+
 	// Java does not provide access to any windows from other processes
-	return CreateFrame( NULL, nSalFrameStyle );
+	// so we can only look through our own list
+	if ( pSystemParentData && pSystemParentData->pVCLFrame )
+	{
+		SalData *pSalData = GetSalData();
+		for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+		{
+			if ( pSystemParentData->pVCLFrame == (*it)->maFrameData.mpVCLFrame )
+			{
+				pParent = *it;
+				break;
+			}
+		}
+	}
+
+	return CreateFrame( pParent, nSalFrameStyle );
 }
 
 // -----------------------------------------------------------------------
@@ -368,7 +384,7 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 
 	// Insert this window into the window list
 	SalData *pSalData = GetSalData();
-	pSalData->maFrameList.push_back( pFrame );
+	pSalData->maFrameList.push_front( pFrame );
 
 	// Cache the insets
 	Rectangle aRect = pFrame->maFrameData.mpVCLFrame->getInsets();
@@ -400,7 +416,8 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 		if ( !pFrame->maFrameData.mpParent )
 		{
 			// Find the next document window if any exist
-			SalFrame* pNextFrame = pFrame->maFrameData.mpNextFrame;
+			::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin();
+			SalFrame* pNextFrame = *it;
 			while ( pNextFrame &&
 				( pNextFrame->maFrameData.mpParent ||
 					pNextFrame->maFrameData.mnStyle == SAL_FRAME_STYLE_DEFAULT ||
@@ -408,7 +425,13 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 					! pNextFrame->GetGeometry().nWidth ||
 					! pNextFrame->GetGeometry().nHeight )
 				)
-					pNextFrame = pNextFrame->maFrameData.mpNextFrame;
+			{
+				if ( ++it != pSalData->maFrameList.end() )
+					pNextFrame = *it;
+				else
+					pNextFrame = NULL;
+			}
+
 			if ( pNextFrame )
 			{
 				// Set screen to same screen as next frame
@@ -462,8 +485,6 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 
 void SalInstance::DestroyFrame( SalFrame* pFrame )
 {
-	maInstData.mpSalYieldMutex->acquire();
-
 	// Remove this window from the window list
 	if ( pFrame )
 	{
@@ -474,8 +495,6 @@ void SalInstance::DestroyFrame( SalFrame* pFrame )
 
 		delete pFrame;
 	}
-
-	maInstData.mpSalYieldMutex->release();
 }
 
 // -----------------------------------------------------------------------

@@ -1,4 +1,4 @@
-/*************************************************************************
+ /*************************************************************************
  *
  *  $RCSfile$
  *
@@ -88,6 +88,7 @@ long ImplSalCallbackDummy( void*, SalFrame*, USHORT, const void* )
 
 SalFrame::SalFrame()
 {
+	memset( &maGeometry, 0, sizeof( maGeometry ) );
 	maFrameData.mpGraphics->maGraphicsData.mpFrame = this;
 }
 
@@ -170,6 +171,7 @@ void SalFrame::Show( BOOL bVisible )
 		delete pVCLGraphics;
 	}
 
+	SalData *pSalData = GetSalData();
 	if ( maFrameData.mbVisible )
 	{
 		// Update the cached position
@@ -184,7 +186,12 @@ void SalFrame::Show( BOOL bVisible )
 		pPaintEvent->mnBoundWidth = maGeometry.nWidth + maGeometry.nLeftDecoration;
 		pPaintEvent->mnBoundHeight = maGeometry.nHeight + maGeometry.nTopDecoration;
 		com_sun_star_vcl_VCLEvent aVCLPaintEvent( SALEVENT_PAINT, this, (void *)pPaintEvent );
-		GetSalData()->mpEventQueue->postCachedEvent( &aVCLPaintEvent );
+		pSalData->mpEventQueue->postCachedEvent( &aVCLPaintEvent );
+	}
+	else
+	{
+		if ( pSalData->mpFocusFrame == this )
+			pSalData->mpFocusFrame = NULL;  
 	}
 }
 
@@ -376,9 +383,18 @@ void SalFrame::ShowFullScreen( BOOL bFullScreen )
 
 	if ( bFullScreen )
 	{
+		SalData *pSalData = GetSalData();
 		memcpy( &maFrameData.maOriginalGeometry, &maGeometry, sizeof( SalFrameGeometry ) );
 		Rectangle aWorkArea;
-		GetWorkArea( aWorkArea );
+		// If a window does not have a parent, who knows which screen the full
+		// screen window will appear on so we place it on the same screen as
+		// the focus window
+		if ( maFrameData.mpParent )
+			maFrameData.mpParent->GetWorkArea( aWorkArea );
+		else if ( pSalData->mpFocusFrame )
+			pSalData->mpFocusFrame->GetWorkArea( aWorkArea );
+		else
+			GetWorkArea( aWorkArea );
 		SetPosSize( aWorkArea.nLeft, aWorkArea.nTop, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
 	}
 	else
@@ -583,7 +599,6 @@ SalFrameData::SalFrameData()
 {
 	mpVCLFrame = NULL;
 	mpGraphics = new SalGraphics();
-	mpNextFrame = NULL;
 	mnStyle = 0;
 	mpParent = NULL;
 	mbGraphics = FALSE;
