@@ -519,7 +519,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			}
 
 			// Mark whitespace glyphs
-			if ( mpGlyphInfoArray->glyphs[ i ].glyphID == 0xffff || mpGlyphInfoArray->glyphs[ i ].layoutFlags & ( kATSGlyphInfoIsWhiteSpace | kATSGlyphInfoTerminatorGlyph ) )
+			if ( mpGlyphInfoArray->glyphs[ i ].glyphID == 0xffff || ( mpGlyphInfoArray->glyphs[ i ].glyphID > 0 && mpGlyphInfoArray->glyphs[ i ].glyphID <= 3 ) || mpGlyphInfoArray->glyphs[ i ].layoutFlags & kATSGlyphInfoTerminatorGlyph )
 				nGlyph = 0x0020 | GF_ISCHAR;
 
 			int nGlyphFlags = nCharWidth ? 0 : GlyphItem::IS_IN_CLUSTER;
