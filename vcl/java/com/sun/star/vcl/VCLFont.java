@@ -110,12 +110,6 @@ public final class VCLFont {
 		ArrayList array = new ArrayList();
 		for (int i = 0; i < fontFamilies.length; i++) {
 			String name = fontFamilies[i].toLowerCase();
-			if (name.endsWith("bold"))
-				continue;
-			else if (name.endsWith("italic"))
-				continue;
-			else if (name.endsWith("bold italic"))
-				continue;
 			// Get rid of hidden Mac OS X fonts
 			if (macosx && name.startsWith("."))
 				continue;
