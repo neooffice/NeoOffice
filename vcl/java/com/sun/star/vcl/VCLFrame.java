@@ -1821,16 +1821,16 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		public void paint(Graphics g) {
 
-			super.paint(g);
+			if (isShowing())
+				super.paint(g);
 
 			VCLGraphics graphics = frame.getGraphics();
 			if (graphics != null) {
-				Rectangle clip = g.getClipBounds();
-				synchronized (graphics) {
-					if (clip != null)
-						graphics.addToFlush(clip);
-					else
-						graphics.addToFlush(((Graphics2D)g).getDeviceConfiguration().getBounds());
+				VCLImage image = graphics.getImage();
+				if (image != null) {
+					synchronized (graphics) {
+						graphics.addToFlush(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
+					}
 				}
 			}
 

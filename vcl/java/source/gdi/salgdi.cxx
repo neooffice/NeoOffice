@@ -232,8 +232,8 @@ void SalGraphics::DrawRect( long nX, long nY, long nWidth, long nHeight )
 
 void SalGraphics::DrawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
 {
-	long pXPoints[ nPoints + 1 ];
-	long pYPoints[ nPoints + 1 ];
+	long pXPoints[ nPoints ];
+	long pYPoints[ nPoints ];
 	for ( ULONG i = 0; i < nPoints; i++ )
 	{
 		pXPoints[ i ] = pPtAry->mnX;

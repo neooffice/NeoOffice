@@ -678,7 +678,7 @@ public final class VCLGraphics {
 			return;
 		}
 
-		Rectangle bounds = new Rectangle(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
+		Rectangle bounds = new Rectangle(x1, y1, x2 - x1, y2 - y1);
 		if (bounds.width < 0) {
 			bounds.x += bounds.width;
 			bounds.width *= -1;
@@ -687,6 +687,14 @@ public final class VCLGraphics {
 			bounds.y += bounds.height;
 			bounds.height *= -1;
 		}
+		bounds.x -= 1;
+		bounds.y -= 1;
+		bounds.width += 2;
+		bounds.height += 2;
+		bounds = bounds.intersection(graphicsBounds);
+		if (bounds.isEmpty())
+			return;
+
 		if (xor) {
 			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
 			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
@@ -792,12 +800,13 @@ public final class VCLGraphics {
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle bounds = polygon.getBounds();
-
-		// Some polylines can be simply a vertical or horizontal line
-		if (bounds.width == 0)
-			bounds.width = 1;
-		if (bounds.height == 0)
-			bounds.height = 1;
+		bounds.x -= 1;
+		bounds.y -= 1;
+		bounds.width += 2;
+		bounds.height += 2;
+		bounds = bounds.intersection(graphicsBounds);
+		if (bounds.isEmpty())
+			return;
 
 		if (fill) {
 			if (xor)
@@ -845,13 +854,26 @@ public final class VCLGraphics {
 			return;
 		}
 
-		Rectangle bounds = new Polygon(xpoints, ypoints, npoints).getBounds();
+		if (npoints == 0) {
+			return;
+		}
+		else if (npoints == 1) {
+			setPixel(xpoints[0], ypoints[0], color);
+		}
+		else {
+			for (int i = 1; i < npoints; i++)
+				drawLine(xpoints[i - 1], ypoints[i - 1], xpoints[i], ypoints[i], color);
+		}
 
-		// Some polylines can be simply a vertical or horizontal line
-		if (bounds.width == 0)
-			bounds.width = 1;
-		if (bounds.height == 0)
-			bounds.height = 1;
+/*
+		Rectangle bounds = new Polygon(xpoints, ypoints, npoints).getBounds();
+		bounds.x -= 1;
+		bounds.y -= 1;
+		bounds.width += 2;
+		bounds.height += 2;
+		bounds = bounds.intersection(graphicsBounds);
+		if (bounds.isEmpty())
+			return;
 
 		if (xor) {
 			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
@@ -869,6 +891,7 @@ public final class VCLGraphics {
 			graphics.drawPolyline(xpoints, ypoints, npoints);
 			addToFlush(bounds);
 		}
+*/
 
 	}
 
@@ -899,7 +922,13 @@ public final class VCLGraphics {
 			else
 				area.add(a);
 		}
+
 		Rectangle bounds = area.getBounds();
+		bounds.x -= 1;
+		bounds.y -= 1;
+		bounds.width += 2;
+		bounds.height += 2;
+		bounds = bounds.intersection(graphicsBounds);
 		if (bounds.isEmpty())
 			return;
 
@@ -955,6 +984,22 @@ public final class VCLGraphics {
 		}
 
 		Rectangle bounds = new Rectangle(x, y, width, height);
+		if (bounds.width < 0) {
+			bounds.x += bounds.width;
+			bounds.width *= -1;
+		}
+		if (bounds.height < 0) {
+			bounds.y += bounds.height;
+			bounds.height *= -1;
+		}
+		bounds.x -= 1;
+		bounds.y -= 1;
+		bounds.width += 2;
+		bounds.height += 2;
+		bounds = bounds.intersection(graphicsBounds);
+		if (bounds.isEmpty())
+			return;
+
 		if (fill) {
 			if (xor)
 				graphics.setXORMode(Color.black);
@@ -966,14 +1011,14 @@ public final class VCLGraphics {
 		}
 		else {
 			if (xor) {
-				VCLImage srcImage = new VCLImage(width, height, bitCount);
+				VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
 				Graphics2D srcGraphics = srcImage.getImage().createGraphics();
 				VCLGraphics.setDefaultRenderingAttributes(srcGraphics);
 				srcGraphics.setColor(new Color(color));
-				srcGraphics.translate(x * -1, y * -1);
+				srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 				srcGraphics.drawRect(x, y, width - 1, height - 1);
 				srcGraphics.dispose();
-				drawImageXOR(srcImage, 0, 0, width - 1, height - 1, x, y, width - 1, height - 1);
+				drawImageXOR(srcImage, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y, bounds.width, bounds.height);
 				srcImage.dispose();
 			}
 			else {
@@ -1089,8 +1134,10 @@ public final class VCLGraphics {
 			bounds = rotateTransform.createTransformedShape(glyphs.getLogicalBounds()).getBounds();
 		else
 			bounds = glyphs.getLogicalBounds().getBounds();
-		bounds.x += x;
-		bounds.y += y;
+		bounds.x += x - 1;
+		bounds.y += y - 1;
+		bounds.width += 2;
+		bounds.height += 2;
 		addToFlush(bounds);
 
 	}
@@ -1115,15 +1162,14 @@ public final class VCLGraphics {
 	 */
 	void flush() {
 
-		if (panelGraphics != null && update != null && frame != null && frame.getWindow().isShowing()) {
-			// Add a little extra area so that we don't miss any antialiased
-			// pixels
-			update.x -= 1;
-			update.y -= 1;
-			update.width += 2;
-			update.height += 2;
+		if (panelGraphics != null && update != null && image != null && frame != null && frame.getWindow().isShowing()) {
 			update = graphicsBounds.intersection(update);
-			panelGraphics.drawImage(image.getImage().getSubimage(update.x, update.y, update.width, update.height), update.x, update.y, null);
+			if (!update.isEmpty())
+			{
+				panelGraphics.setClip(update);
+				panelGraphics.drawRenderedImage(image.getImage(), null);
+				panelGraphics.setClip(null);
+			}
 			update = null;
 		}
 
@@ -1294,13 +1340,6 @@ public final class VCLGraphics {
 
 		// Clip any area outside of the image
 		Rectangle bounds = polygon.getBounds().intersection(graphicsBounds);
-
-		// Some polylines can be simply a vertical or horizontal line
-		if (bounds.width == 0)
-			bounds.width = 1;
-		if (bounds.height == 0)
-			bounds.height = 1;
-
 		if (bounds.isEmpty())
 			return;
 
