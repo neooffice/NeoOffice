@@ -141,7 +141,7 @@ void com_sun_star_vcl_VCLMenuItemData::dispose( )
                 if ( !mID )
                 {
                         char *cSignature = "()V";
-                        mID = t.pEnv->GetMethodID( getMyClass(), "dos[pse", cSignature );
+                        mID = t.pEnv->GetMethodID( getMyClass(), "dispose", cSignature );
                 }
                 OSL_ENSURE( mID, "Unknown method id!" );
                 if ( mID )
