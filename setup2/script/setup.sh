@@ -308,6 +308,22 @@ if [ "$os" = "Darwin" ] ; then
     fi
 fi
 
+# Make autocorrect files available
+shareautocorrdir="$sharebase/autocorr"
+userautocorrdir="$userinstall/autocorr"
+mkdir -p "$userautocorrdir"
+if [ -d "$shareautocorrdir" -a -d "$userautocorrdir" ] ; then
+    chmod -Rf u+rw "$userautocorrdir"
+    for i in `cd "$shareautocorrdir" ; find . -name '*.dat'` ; do
+        if [ -z "$i" ] ; then
+            continue;
+        fi
+        if [ ! -f "$userautocorrdir/$i" ] ; then
+            cat /dev/null "$shareautocorrdir/$i" > "$userautocorrdir/$i"
+        fi
+    done
+fi
+
 # Make sure that there is a /tmp directory
 if [ "$os" = "Darwin" ] ; then
     if [ ! -d "/tmp" -a -d "/private/tmp" ] ; then
