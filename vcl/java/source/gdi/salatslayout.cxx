@@ -382,19 +382,46 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	mpCharAdvances = (long *)rtl_allocateMemory( nBufSize );
 	memset( mpCharAdvances, 0, nBufSize );
 
-	Fixed fCurrentX = 0;
+	// Fix bug 448 by eliminating subpixel advances
 	ATSUTextMeasurement fBefore;
 	ATSUTextMeasurement fAfter;
 	ATSUTextMeasurement fAscent;
 	ATSUTextMeasurement fDescent;
-	for ( i = 0; i < mpHash->mnLen; i++ )
+	if ( mpHash->mbRTL )
 	{
-		// Fix bug 448 by eliminating subpixel advances
-		if ( ATSUGetUnjustifiedBounds( maLayout, 0, i + 1, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
+		for ( i = 0; i < mpHash->mnLen - 1; i++ )
 		{
-			mpCharAdvances[ i ] = Float32ToLong( Fix2X( fAfter - fCurrentX ) * mpHash->mfFontScaleX );
-			fCurrentX = fAfter;
+			if ( ATSUGetUnjustifiedBounds( maLayout, i, 2, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
+			{
+				Fixed fCurrentX = fAfter;
+				if ( ATSUGetUnjustifiedBounds( maLayout, i + 1, 1, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
+					fCurrentX -= fAfter;
+				if ( fCurrentX < 0 )
+					fCurrentX = 0;
+				mpCharAdvances[ i ] = Float32ToLong( Fix2X( fCurrentX ) * mpHash->mfFontScaleX );
+			}
 		}
+	
+		if ( ATSUGetUnjustifiedBounds( maLayout, i, 1, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
+			mpCharAdvances[ i ] = Float32ToLong( Fix2X( fAfter ) * mpHash->mfFontScaleX );
+	}
+	else
+	{
+		for ( i = mpHash->mnLen - 1; i > 0; i-- )
+		{
+			if ( ATSUGetUnjustifiedBounds( maLayout, i - 1, 2, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
+			{
+				Fixed fCurrentX = fAfter;
+				if ( ATSUGetUnjustifiedBounds( maLayout, i - 1, 1, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
+					fCurrentX -= fAfter;
+				if ( fCurrentX < 0 )
+					fCurrentX = 0;
+				mpCharAdvances[ i ] = Float32ToLong( Fix2X( fCurrentX ) * mpHash->mfFontScaleX );
+			}
+		}
+	
+		if ( ATSUGetUnjustifiedBounds( maLayout, i, 1, &fBefore, &fAfter, &fAscent, &fDescent ) == noErr )
+			mpCharAdvances[ i ] = Float32ToLong( Fix2X( fAfter ) * mpHash->mfFontScaleX );
 	}
 
 	// Find positions that require fallback fonts
@@ -685,7 +712,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			nCharWidth = 1;
 
 			int nGlyphIndex = aGlyphItems.size() - 1;
-			for ( ::std::list< GlyphItem >::reverse_iterator it = aGlyphItems.rbegin(); it != aGlyphItems.rend() && nGlyphIndex >= nLastAdjustedGlyphIndex; ++it, --nGlyphIndex )
+			for ( ::std::list< GlyphItem >::reverse_iterator it = aGlyphItems.rbegin(); it != aGlyphItems.rend() && nGlyphIndex >= nLastAdjustedGlyphIndex && !IsSpacingGlyph( mpLayoutData->mpHash->mpStr[ (*it).mnCharPos ] | GF_ISCHAR ); ++it, --nGlyphIndex )
 			{
 				if ( (*it).mnOrigWidth > 1 )
 				{
