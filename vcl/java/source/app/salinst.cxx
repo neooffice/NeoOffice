@@ -131,8 +131,12 @@ static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( J
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData );
 static pascal OSErr DoAEQuit( const AppleEvent *message, AppleEvent *reply, long refcon );
 static pascal OSErr DoAEOpenPrintDocuments( const AppleEvent *message, AppleEvent *reply, long refcon );
+static pascal OSErr DoAEOpen( const AppleEvent *message, AppleEvent *reply, long refcon );
+static pascal OSErr DoAEReopen( const AppleEvent *message, AppleEvent *reply, long refcon );
 
 #endif // MACOSX
+
+static void RunAppMain( Application* pApp );
 
 class SVMainThread : public ::vos::OThread
 {
@@ -141,13 +145,13 @@ class SVMainThread : public ::vos::OThread
 public:
 							SVMainThread( Application* pApp ) : ::vos::OThread(), mpApp( pApp ) {}
 
-	virtual void			run();
+	virtual void			run() { RunAppMain( mpApp ); }
 };
 
 
 // ============================================================================
 
-void SVMainThread::run()
+static void RunAppMain( Application *pApp )
 {
 	SalData *pSalData = GetSalData();
 
@@ -193,6 +197,8 @@ void SVMainThread::run()
 		AEInstallEventHandler( kCoreEventClass, kAEQuitApplication, NewAEEventHandlerUPP( DoAEQuit ), 0, FALSE );
 		AEInstallEventHandler( kCoreEventClass, kAEOpenDocuments, NewAEEventHandlerUPP( DoAEOpenPrintDocuments ), 0, FALSE );
 		AEInstallEventHandler( kCoreEventClass, kAEPrintDocuments, NewAEEventHandlerUPP( DoAEOpenPrintDocuments ), 0, FALSE );
+		AEInstallEventHandler( kCoreEventClass, kAEOpenApplication, NewAEEventHandlerUPP( DoAEOpen ), 0, FALSE );
+		AEInstallEventHandler( kCoreEventClass, kAEReopenApplication, NewAEEventHandlerUPP( DoAEReopen ), 0, FALSE );
 
 		// Fix bug 223 by registering a display manager notification callback
 		ProcessSerialNumber nProc;
@@ -205,10 +211,10 @@ void SVMainThread::run()
 	}
 #endif	// MACOSX
 
-	mpApp->Main();
+	pApp->Main();
 }
 
-// ============================================================================
+// ----------------------------------------------------------------------------
 
 #ifdef MACOSX
 static void ImplFontListChangedCallback( ATSFontNotificationInfoRef, void* )
@@ -339,14 +345,20 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 		OSType nType;
 		if ( nKind == kEventAppleEvent && GetEventParameter( aEvent, kEventParamAEEventID, typeType, NULL, sizeof( OSType ), NULL, &nType ) == noErr && !Application::IsShutDown() )
 		{
-			if ( nType == 'quit' || nType == 'odoc' || nType == 'pdoc' )
+			switch ( nType )
 			{
-				// note that we can't actually get the Apple event from the
-				// carbon event. We must dispatch it to registered appleevent
-				// handlers
-				EventRecord eventRec;
-				if ( ConvertEventRefToEventRecord( aEvent, &eventRec ) )
-					AEProcessAppleEvent( &eventRec );
+				case kAEQuitApplication:
+				case kAEOpenDocuments:
+				case kAEPrintDocuments:
+				case kAEOpenApplication:
+				case kAEReopenApplication:
+					// Note that we can't actually get the Apple event from the
+					// Carbon event. We must dispatch it to registered Apple
+					// event handlers
+					EventRecord eventRec;
+					if ( ConvertEventRefToEventRecord( aEvent, &eventRec ) )
+						AEProcessAppleEvent( &eventRec );
+					break;
 			}
 		}
 
@@ -593,6 +605,34 @@ static OSErr DoAEOpenPrintDocuments( const AppleEvent *message, AppleEvent *repl
 
 // ----------------------------------------------------------------------------
 
+#ifdef MACOSX
+static OSErr DoAEOpen( const AppleEvent *message, AppleEvent *reply, long refcon )
+{
+	return noErr;
+}
+#endif	// MACOSX
+
+// ----------------------------------------------------------------------------
+
+#ifdef MACOSX
+static OSErr DoAEReopen( const AppleEvent *message, AppleEvent *reply, long refcon )
+{
+	if ( !Application::IsShutDown() )
+	{
+		SalData *pSalData = GetSalData();
+		if ( pSalData && pSalData->mpEventQueue )
+		{
+			com_sun_star_vcl_VCLEvent aEvent( SALEVENT_ACTIVATE_APPLICATION, NULL, NULL );
+			pSalData->mpEventQueue->postCachedEvent( &aEvent );
+		}
+	}
+
+	return noErr;
+}
+#endif	// MACOSX
+
+// ----------------------------------------------------------------------------
+
 void ExecuteApplicationMain( Application *pApp )
 {
 #ifdef MACOSX
@@ -672,8 +712,6 @@ void ExecuteApplicationMain( Application *pApp )
 		aFontNameList.clear();
 	}
 
-	SVMainThread aSVMainThread( pApp );
-
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
@@ -689,6 +727,7 @@ void ExecuteApplicationMain( Application *pApp )
 				ULONG nCount = pSalInstance->ReleaseYieldMutex();
 
 				// Create the thread to run the Main() method in
+				SVMainThread aSVMainThread( pApp );
 				aSVMainThread.create();
 
 				// Start the Cocoa event loop
@@ -854,7 +893,7 @@ void ExecuteApplicationMain( Application *pApp )
 #endif	// MACOSX
 
 	// Now that Java is properly initialized, run the application's Main()
-	aSVMainThread.run();
+	RunAppMain( pApp );
 }
 
 // =======================================================================
@@ -1353,7 +1392,7 @@ SalInfoPrinter* SalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
 
 		if ( !bDelete )
 		{
-			BOOL bDelete = TRUE;
+			bDelete = TRUE;
 			for ( ::std::list< com_sun_star_vcl_VCLPageFormat* >::const_iterator it = pSalData->maVCLPageFormats.begin(); it != pSalData->maVCLPageFormats.end(); ++it )
 			{
 				if ( ((SalDriverData *)pSetupData->mpDriverData)->mpVCLPageFormat == *it && ((SalDriverData *)pSetupData->mpDriverData)->mpVCLPageFormat->getJavaObject() == (*it)->getJavaObject() )

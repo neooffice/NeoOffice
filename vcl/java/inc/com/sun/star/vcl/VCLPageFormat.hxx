@@ -67,6 +67,7 @@ public:
 						com_sun_star_vcl_VCLPageFormat();
 	virtual				~com_sun_star_vcl_VCLPageFormat() { destroyNativePrintJob(); }
 
+	void				dispose();
 	com_sun_star_vcl_VCLGraphics*	getGraphics();
 	const Rectangle		getImageableBounds();
 	Orientation			getOrientation();

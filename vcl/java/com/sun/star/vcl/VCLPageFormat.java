@@ -156,7 +156,21 @@ public final class VCLPageFormat {
 		pageFormat = job.defaultPage();
 		pageFormat.setOrientation(VCLPageFormat.printerOrientation);
 		pageResolution = new Dimension(VCLScreen.MAX_PRINTER_RESOLUTION, VCLScreen.MAX_PRINTER_RESOLUTION);
-		image = new VCLImage(1, 1, 32, this);
+
+	}
+
+	/**
+	 * Disposes the page format and releases any system resources that it is
+	 * using.
+	 */
+	public void dispose() {
+
+		if (image != null)
+			image.dispose();
+		image = null;
+		job = null;
+		pageFormat = null;
+		pageResolution = null;
 
 	}
 
@@ -167,6 +181,8 @@ public final class VCLPageFormat {
 	 */
 	public VCLGraphics getGraphics() {
 
+		if (image == null)
+			image = new VCLImage(1, 1, 32, this);
 		return image.getGraphics();
 
 	}

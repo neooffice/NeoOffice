@@ -172,6 +172,25 @@ void com_sun_star_vcl_VCLPageFormat::destroyNativePrintJob()
 
 // ----------------------------------------------------------------------------
 
+void com_sun_star_vcl_VCLPageFormat::dispose()
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "dispose", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+	}
+}
+
+// ----------------------------------------------------------------------------
+
 com_sun_star_vcl_VCLGraphics *com_sun_star_vcl_VCLPageFormat::getGraphics()
 {
 	static jmethodID mID = NULL;

@@ -901,8 +901,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (window != null) {
 			setVisible(false);
-			if (window instanceof Frame)
-				((Frame)window).setMenuBar(null);
+			setMenuBar(null);
 		}
 		if (queue != null)
 			queue.removeCachedEvents(frame);
@@ -1463,6 +1462,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public TextHitInfo getLocationOffset(int x, int y) {
 
 		return null;
+
+	}
+
+	/**
+	 * Returns the menubar for this native window.
+	 *
+	 * @return the <code>MenuBar</code> instance
+	 */
+	MenuBar getMenuBar() {
+
+		if (window instanceof Frame)
+			return ((Frame)window).getMenuBar();
+		else
+			return null;
 
 	}
 
@@ -2046,6 +2059,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * Sets the menubar for this native window.
+	 *
+	 * @param menubar the <code>MenuBar</code> instance of <code>null</code>
+	 */
+	void setMenuBar(MenuBar menubar) {
+
+		if (window instanceof Frame)
+			((Frame)window).setMenuBar(menubar);
+
+	}
+
+	/**
 	 * Sets the minimum client size.
 	 *
 	 * @param width the minimum width
@@ -2581,7 +2606,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		NoPaintWindow(VCLFrame f) {
 
-			super(new VCLFrame.NoPaintFrame(f));
+			super(VCLScreen.getSharedFrame());
 			frame = f;
 			enableInputMethods(false);
 			setMinimumSize(1, 1);

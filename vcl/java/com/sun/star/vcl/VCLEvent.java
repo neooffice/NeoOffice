@@ -830,6 +830,11 @@ public final class VCLEvent extends AWTEvent {
 	public final static int SALEVENT_YIELDEVENTQUEUE = 110;
 
 	/**
+	 * SALEVENT_ACTIVATE_APPLICATION constant.
+	 */
+	public final static int SALEVENT_ACTIVATE_APPLICATION = 120;
+
+	/**
 	 * SAL_EXTTEXTINPUT_ATTR_GRAYWAVELINE constant.
 	 */
 	public final static int SAL_EXTTEXTINPUT_ATTR_GRAYWAVELINE = 0x100;
@@ -1715,7 +1720,8 @@ public final class VCLEvent extends AWTEvent {
 	 */
 	boolean isAWTEvent() {
 
-		return (awtEvent || getID() == SALEVENT_YIELDEVENTQUEUE);
+		int id = getID();
+		return (awtEvent || id == SALEVENT_YIELDEVENTQUEUE || id == SALEVENT_ACTIVATE_APPLICATION );
 
 	}
 

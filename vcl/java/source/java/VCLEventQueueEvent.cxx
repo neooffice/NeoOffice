@@ -181,6 +181,19 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
 			return;
 		}
+		case SALEVENT_ACTIVATE_APPLICATION:
+		{
+			SalFrameState aState;
+			memset( &aState, 0, sizeof( SalFrameState ) );
+			aState.mnMask = SAL_FRAMESTATE_MASK_STATE;
+			aState.mnState = SAL_FRAMESTATE_NORMAL;
+
+			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+			{
+				if ( (*it)->maFrameData.mbVisible )
+					(*it)->SetWindowState( &aState );
+			}
+		}
 	}
 	
 	// Handle events that require a SalFrame pointer
