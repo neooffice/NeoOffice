@@ -47,6 +47,9 @@
 #ifndef _SV_SALFRAME_HXX
 #include <salframe.hxx>
 #endif
+#ifndef _SV_WINDOW_HXX
+#include <window.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 #include <com/sun/star/vcl/VCLEvent.hxx>
 #endif
@@ -59,7 +62,12 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLMENU_HXX
 #include <com/sun/star/vcl/VCLMenu.hxx>
 #endif
+#ifndef _COM_SUN_STAR_DATATRANSFER_CLIPBOARD_XCLIPBOARD_HPP_
+#include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
+#endif
 
+using namespace com::sun::star::datatransfer::clipboard;
+using namespace com::sun::star::uno;
 using namespace vcl;
 
 //=============================================================================
@@ -351,6 +359,17 @@ void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu )
 
 	Menu *pVCLMenu = pMenu->mpParentVCLMenu;
 	OSL_ENSURE(pVCLMenu, "Unknown VCL menu for SalMenu!");
+
+	// Force the clipboard service to update itself before we update the
+	// menus as if the native clipboard was cleared when we last checked, we
+	// won't be notified when another application puts content.
+	Window *pWindow = pVCLMenu->GetWindow();
+	if ( pWindow )
+	{
+		Reference< XClipboard > aClipboard = pWindow->GetClipboard();
+		if ( aClipboard.is() )
+			aClipboard->getContents();
+	}
 
 	// Post the SALEVENT_MENUACTIVATE event
 	SalMenuEvent *pActivateEvent = new SalMenuEvent();
