@@ -38,18 +38,6 @@ retrieving revision 1.1.6.1
 diff -u -r1.1 -r1.1.6.1
 --- makefile.mk	22 Mar 2004 15:45:19 -0000	1.1
 +++ makefile.mk	28 May 2004 15:37:20 -0000	1.1.6.1
-@@ -2,9 +2,9 @@
- #
- #   $RCSfile$
- #
--#   $Revision$
-+#   $Revision$
- #
--#   last change: $Author$ $Date$
-+#   last change: $Author$ $Date$
- #
- #   The Contents of this file are made available subject to the terms of
- #   either of the following licenses
 @@ -77,13 +77,18 @@
  .IF "$(BUILD_OS_MINOR)" == "2" 
  
