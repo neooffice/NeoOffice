@@ -242,6 +242,7 @@ void SalInstance::Yield( BOOL bWait )
 	com_sun_star_vcl_VCLEvent *pEvent = GetSalData()->mpEventQueue->getNextCachedEvent( bWait );
 	if ( pEvent )
 	{
+		com_sun_star_vcl_VCLGraphics::flushAll();
 		pEvent->dispatch();
 		com_sun_star_vcl_VCLGraphics::flushAll();
 		delete pEvent;

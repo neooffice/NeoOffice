@@ -83,7 +83,7 @@ int main( int argc, char *argv[] )
 	{
 		DirEntry aCmdDirEntry( aCmdPath );
 		aCmdDirEntry.ToAbs();
-		aCmdPath = ByteString( aCmdDirEntry.GetPath().GetFull(), RTL_TEXTENCODING_ASCII_US );
+		aCmdPath = ByteString( aCmdDirEntry.GetPath().GetFull(), gsl_getSystemTextEncoding() );
 	}
 
 	// Assign command's directory to DYLD_LIBRARY_PATH environment variable
@@ -102,14 +102,14 @@ int main( int argc, char *argv[] )
 		aTmpPath += aCmdPath;
 		if ( aLibPath.Len() )
 		{
-			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_ASCII_US );
+			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), gsl_getSystemTextEncoding() );
 			aTmpPath += aLibPath;
 		}
 		putenv( aTmpPath.GetBuffer() );
 		// Restart if necessary since most library path changes don't have
 		// any affect after the application has already started on most
 		// platforms
-		if ( aLibPath.GetToken( 0, ':' ).CompareTo( aCmdPath, aCmdPath.Len() ) != COMPARE_EQUAL )
+		if ( aLibPath.GetToken( 0, DirEntry::GetSearchDelimiter().GetBuffer()[0] ).CompareTo( aCmdPath, aCmdPath.Len() ) != COMPARE_EQUAL )
 			execv( pCmdPath, argv );
 	}
 
@@ -121,7 +121,7 @@ int main( int argc, char *argv[] )
 		aTmpPath += aCmdPath;
 		if ( aPath.Len() )
 		{
-			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_ASCII_US );
+			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), gsl_getSystemTextEncoding() );
 			aTmpPath += aPath;
 		}
 		putenv( aTmpPath.GetBuffer() );
@@ -135,7 +135,7 @@ int main( int argc, char *argv[] )
 		aTmpPath += aCmdPath;
 		if ( aResPath.Len() )
 		{
-			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_ASCII_US );
+			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), gsl_getSystemTextEncoding() );
 			aTmpPath += aResPath;
 		}
 		putenv( aTmpPath.GetBuffer() );
@@ -148,22 +148,22 @@ int main( int argc, char *argv[] )
 	{
 		ByteString aTmpPath( "CLASSPATH=" );
 		aTmpPath += aCmdPath;
-		aTmpPath += ByteString( DirEntry::GetAccessDelimiter(), RTL_TEXTENCODING_ASCII_US );
+		aTmpPath += ByteString( DirEntry::GetAccessDelimiter(), gsl_getSystemTextEncoding() );
 		aTmpPath += ByteString( "classes" );
-		aTmpPath += ByteString( DirEntry::GetAccessDelimiter(), RTL_TEXTENCODING_ASCII_US );
+		aTmpPath += ByteString( DirEntry::GetAccessDelimiter(), gsl_getSystemTextEncoding() );
 		aTmpPath += ByteString( "vcl.jar" );
 		if ( aSolarVersion.Len() )
 		{
-			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_ASCII_US );
+			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), gsl_getSystemTextEncoding() );
 			aTmpPath += aSolarVersion;
-			aTmpPath += ByteString( DirEntry::GetAccessDelimiter(), RTL_TEXTENCODING_ASCII_US );
+			aTmpPath += ByteString( DirEntry::GetAccessDelimiter(), gsl_getSystemTextEncoding() );
 			aTmpPath += ByteString( "bin" );
-			aTmpPath += ByteString( DirEntry::GetAccessDelimiter(), RTL_TEXTENCODING_ASCII_US );
+			aTmpPath += ByteString( DirEntry::GetAccessDelimiter(), gsl_getSystemTextEncoding() );
 			aTmpPath += ByteString( "vcl.jar" );
 		}
 		if ( aClassPath.Len() )
 		{
-			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_ASCII_US );
+			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), gsl_getSystemTextEncoding() );
 			aTmpPath += aClassPath;
 		}
 		putenv( aTmpPath.GetBuffer() );
