@@ -53,8 +53,8 @@ PRODUCT_DIR_NAME=NeoOfficeJ
 # Important: Note that there are escape characters in the PRODUCT_NAME for the
 # UTF-8 trademark symbol. Don't replace these with "\x##" literal strings!
 PRODUCT_TRADEMARKED_NAME=NeoOffice®/J
-PRODUCT_VERSION=0.8.1
-PRODUCT_FILETYPE=no%f
+PRODUCT_VERSION=0.8.2
+PRODUCT_FILETYPE=NO%F
 
 # CVS macros
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
@@ -62,7 +62,7 @@ OO_PACKAGES:=MathMLDTD UnoControls XmlSearch apiwww autodoc automation basctl ba
 OO_TAG:=OOO_STABLE_1_PORTS
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOfficeJ
-NEO_TAG:=NeoOfficeJ-0_8_1
+NEO_TAG:=NeoOfficeJ-0_8_2
 
 all: build.all
 
@@ -112,6 +112,8 @@ build.neo_configure: build.oo_all
 	echo "setenv PRODUCT_TRADEMARKED_NAME '$(PRODUCT_TRADEMARKED_NAME)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_VERSION '$(PRODUCT_VERSION)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_FILETYPE '$(PRODUCT_FILETYPE)'" >> "$(OO_ENV_JAVA)"
+# OOo 1.0.x cannot support RTL languages properly
+	echo "unsetenv RES_ARAB" >> "$(OO_ENV_JAVA)"
 	touch "$@"
 
 build.neo_%_patch: % build.neo_configure
