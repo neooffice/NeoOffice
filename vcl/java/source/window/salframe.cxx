@@ -212,6 +212,9 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pBounds );
 		aEvent.dispatch();
 
+		// Make a pass through the native menus
+		UpdateMenusForFrame( this, NULL );
+
 		// Post a paint event
 		com_sun_star_vcl_VCLEvent aPaintEvent( SALEVENT_PAINT, this, NULL );
 		pSalData->mpEventQueue->postCachedEvent( &aPaintEvent );
