@@ -105,6 +105,9 @@
 #ifndef _OSL_PROCESS_H_
 #include <rtl/process.h>
 #endif
+#ifndef _FSYS_HXX
+#include <tools/fsys.hxx>
+#endif
 #ifndef _UTL_BOOTSTRAP_HXX
 #include <unotools/bootstrap.hxx>
 #endif
@@ -669,6 +672,9 @@ void ExecuteApplicationMain( Application *pApp )
 		ByteString aFontDir( aExecPath.getStr(), RTL_TEXTENCODING_UTF8 );
 		if ( aFontDir.Len() )
 		{
+			DirEntry aFontDirEntry( aFontDir );
+			aFontDirEntry.ToAbs();
+			aFontDir = ByteString( aFontDirEntry.GetPath().GetFull(), RTL_TEXTENCODING_UTF8 );
 			aFontDir += ByteString( "/../share/fonts/truetype", RTL_TEXTENCODING_UTF8 );
 			FSRef aFontPath;
 			FSSpec aFontSpec;
