@@ -135,7 +135,7 @@ public final class VCLMenuItemData {
      * Vector of AWT objects that have been generated for this set of menu item data and are being managed
      * by it.
      */
-    private java.util.Vector awtPeers=new Vector();;
+    private java.util.Vector awtPeers=new Vector();
     
     /**
      * Construct and initialize a new <b>VCLMenuItemData</b> instance
@@ -178,7 +178,7 @@ public final class VCLMenuItemData {
      *
      * @param newTitle		new title
      */
-    public void setTitle(String newTitle) {
+    synchronized public void setTitle(String newTitle) {
         if(delegate!=null) {
             delegate.setTitle(newTitle);
             return;
@@ -199,7 +199,7 @@ public final class VCLMenuItemData {
      *
      * @param key	VCL keycode of the new key to use as the shortcut
      */
-    public void setKeyboardShortcut(int key) {
+    synchronized public void setKeyboardShortcut(int key) {
         if(delegate!=null) {
             delegate.setKeyboardShortcut(key);
             return;
@@ -234,7 +234,7 @@ public final class VCLMenuItemData {
      *
      * @param newEnabled	true if the item should be enabled, false if it should be disabled
      */
-    public void setEnabled(boolean newEnabled) {
+    synchronized public void setEnabled(boolean newEnabled) {
         if(delegate!=null) {
             delegate.setEnabled(newEnabled);
             return;
@@ -294,7 +294,7 @@ public final class VCLMenuItemData {
      * @throws IllegalArgumentException to indicate that the checked state does not apply if other characteristics
      *	of the menu item make it inappropriate
      */
-    public void setChecked(boolean newCheck) throws AWTPeersInvalidatedException, IllegalArgumentException {
+    synchronized public void setChecked(boolean newCheck) throws AWTPeersInvalidatedException, IllegalArgumentException {
         if(delegate!=null) {
             delegate.setChecked(newCheck);
             return;
@@ -377,7 +377,7 @@ public final class VCLMenuItemData {
      *		be transfigured into menus
      * @throws AWTPeersInvalidatedException if any underlying peers had to be destroyed due to the change
      */
-    public void addMenuItem(VCLMenuItemData newItem, int nPos) throws IllegalArgumentException, AWTPeersInvalidatedException {
+    synchronized public void addMenuItem(VCLMenuItemData newItem, int nPos) throws IllegalArgumentException, AWTPeersInvalidatedException {
         if(delegate!=null) {
             delegate.addMenuItem(newItem, nPos);
             return;
@@ -440,7 +440,7 @@ public final class VCLMenuItemData {
      * @param nPos	position of item to delete
      * @throws IllegalArgumentException if the menu item is of the incorrect type
      */
-    public void removeMenuItem(int nPos) throws IllegalArgumentException {
+    synchronized public void removeMenuItem(int nPos) throws IllegalArgumentException {
         if(delegate!=null) {
             delegate.removeMenuItem(nPos);
             return;
@@ -590,7 +590,7 @@ public final class VCLMenuItemData {
      *
      * @return AWT MenuItem for this object
      */
-    public Object createAWTPeer() {
+    synchronized public Object createAWTPeer() {
         if(delegate!=null)
             return(delegate.createAWTPeer());
             

@@ -95,7 +95,7 @@ public final class VCLMenuBar {
      *
      * @param f	VCLFrame with which the menubar is to be associated
      */
-    public void setFrame(VCLFrame f) {
+    synchronized public void setFrame(VCLFrame f) {
       	frame=f;
         Window win=frame.getWindow();
         if(win instanceof Frame)
@@ -129,7 +129,7 @@ public final class VCLMenuBar {
      * @param menuItem	menu item to be inserted
      * @param nPos	position in the menubar where the menu should be added
      */
-    public void addMenuItem(VCLMenuItemData menuItem, int nPos) {
+    synchronized public void addMenuItem(VCLMenuItemData menuItem, int nPos) {
         Stack menusToReinsert=null;
         
         if((nPos < 0) || (nPos == 65535))
@@ -170,7 +170,7 @@ public final class VCLMenuBar {
      *
      * @param nPos	index of menu to remove
      */
-    public void removeMenu( int nPos ) {
+    synchronized public void removeMenu( int nPos ) {
         awtMenuBar.remove(nPos);
         menus.remove(nPos);
     }
@@ -198,7 +198,7 @@ public final class VCLMenuBar {
      *
      * @param nPos	position to enable
      */
-    public void enableMenu( int nPos, boolean enable ) {
+    synchronized public void enableMenu( int nPos, boolean enable ) {
         if( nPos < menus.size() ) {
             VCLMenuItemData menu=(VCLMenuItemData)menus.elementAt(nPos);
             menu.setEnabled(enable);
@@ -218,7 +218,7 @@ public final class VCLMenuBar {
      * Regenerate all of the menubars and recreate the peers of the menus.  We may need to do this if
      * the set of peers that's currently in the menubar becomes invalid.
      */
-    public void regenerateMenuBar() {
+    synchronized public void regenerateMenuBar() {
         for(int i=awtMenuBar.countMenus()-1; i>=0; i--)
             awtMenuBar.remove(i);
         Enumeration e=menus.elements();
