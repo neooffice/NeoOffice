@@ -117,6 +117,10 @@ void SalGraphics::DrawMask( const SalTwoRect* pPosAry,
 
 SalBitmap* SalGraphics::GetBitmap( long nX, long nY, long nDX, long nDY )
 {
+	// Don't do anything if this is a printer
+	if ( maGraphicsData.mpPrinter )
+		return NULL;
+
 	SalBitmap *pBitmap = new SalBitmap();
 
 	if ( !pBitmap->Create( Size( nDX, nDY ), GetBitCount(), BitmapPalette() ) )

@@ -70,6 +70,7 @@ long ImplSalCallbackDummy( void*, SalFrame*, USHORT, const void* )
 
 SalFrame::SalFrame()
 {
+	maFrameData.mpGraphics->maGraphicsData.mpFrame = this;
 }
 
 // -----------------------------------------------------------------------

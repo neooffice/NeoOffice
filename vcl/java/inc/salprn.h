@@ -38,7 +38,15 @@
 
 #ifndef _SV_SV_H
 #include <sv.h>
-#endif 
+#endif
+#ifndef _SV_SALGDI_HXX
+#include <salgdi.hxx>
+#endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX
+#include <com/sun/star/vcl/VCLPrintJob.hxx>
+#endif
+
+class SalVirtualDevice;
 
 // ----------------------
 // - SalInfoPrinterData -
@@ -47,8 +55,12 @@
 class SalInfoPrinterData
 {
 	friend class	SalInfoPrinter;
+	friend class	SalInstance;
+
 					SalInfoPrinterData();
 					~SalInfoPrinterData();
+
+	SalVirtualDevice*	mpVirDev;
 };
 
 // ------------------
@@ -58,8 +70,13 @@ class SalInfoPrinterData
 class SalPrinterData
 {
 	friend class	SalPrinter;
+
 					SalPrinterData();
 					~SalPrinterData();
+
+	SalGraphics*	mpGraphics;
+	BOOL			mbGraphics;
+	::vcl::com_sun_star_vcl_VCLPrintJob*	mpVCLPrintJob;
 };
 
 #endif // _SV_SALPRN_H

@@ -114,15 +114,12 @@ public class VCLGraphics {
 	 */
 	public static void flushAll() {
 
-		try {
-			int elements = graphicsList.size();
-			for (int i = 0; i < elements; i++) {
-				VCLGraphics g = (VCLGraphics)graphicsList.get(i);
-				if (g.frame != null && g.update != null)
-					Toolkit.getDefaultToolkit().getSystemEventQueue().postEvent(new PaintEvent(g.frame.getPanel(), PaintEvent.UPDATE, g.update));
-			}
+		int elements = graphicsList.size();
+		for (int i = 0; i < elements; i++) {
+			VCLGraphics g = (VCLGraphics)graphicsList.get(i);
+			if (g.frame != null && g.update != null)
+				Toolkit.getDefaultToolkit().getSystemEventQueue().postEvent(new PaintEvent(g.frame.getPanel(), PaintEvent.UPDATE, g.update));
 		}
-		catch (Throwable t) {}
 
 	}
 
@@ -168,7 +165,6 @@ public class VCLGraphics {
 
 	}
 
-	/**
 	/**
 	 * The cached bit count.
 	 */
@@ -222,6 +218,8 @@ public class VCLGraphics {
 			Panel p = frame.getPanel();
 			bounds = p.getBounds();
 			panelGraphics = (Graphics2D)p.getGraphics();
+			// Normalize graphics to 72 dpi
+			panelGraphics.transform(panelGraphics.getDeviceConfiguration().getNormalizingTransform());
 			panelGraphics.addRenderingHints(VCLGraphics.hints);
 		}
 		else {
@@ -251,6 +249,20 @@ public class VCLGraphics {
 		graphics = image.getImage().createGraphics();
 		graphics.addRenderingHints(VCLGraphics.hints);
 		bitCount = image.getBitCount();
+
+	}
+
+	/**
+	 * Constructs a new <code>VCLGraphics</code> instance from an existing
+	 * <code>Graphics2D</code> instance.
+	 *
+	 * @param g the <code>Graphics2D</code> instance
+	 */
+	VCLGraphics(Graphics2D g) {
+
+		graphics = g;
+		// Normalize graphics to 72 dpi
+		graphics.transform(graphics.getDeviceConfiguration().getNormalizingTransform());
 
 	}
 
@@ -329,7 +341,8 @@ public class VCLGraphics {
 	 */
 	public void copyBits(VCLGraphics g, int destX, int destY, int destWidth, int destHeight, int srcX, int srcY, int srcWidth, int srcHeight) {
 
-		drawImage(g.getImage(), destX, destY, destWidth, destHeight, srcX, srcY, srcWidth, srcHeight);
+		if (image != null)
+			drawImage(g.getImage(), destX, destY, destWidth, destHeight, srcX, srcY, srcWidth, srcHeight);
 
 	}
 
@@ -348,6 +361,9 @@ public class VCLGraphics {
 	 * @param srcHeight the height of the bitmap to be drawn
 	 */
 	public void drawBitmap(VCLBitmap bmp, int destX, int destY, int destWidth, int destHeight, int srcX, int srcY, int srcWidth, int srcHeight) {
+
+		if (image == null)
+			return;
 
 		Shape clip = graphics.getClip();
 		if (clip != null && clip.contains((double)destX, (double)destY, (double)destWidth, (double)destHeight))
@@ -414,6 +430,9 @@ public class VCLGraphics {
 	 * @param srcHeight the height of the bitmap to be drawn
 	 */
 	public void drawBitmap(VCLBitmap bmp, VCLBitmap transBmp, int destX, int destY, int destWidth, int destHeight, int srcX, int srcY, int srcWidth, int srcHeight) {
+
+		if (image == null)
+			return;
 
 		Shape clip = graphics.getClip();
 		if (clip != null && clip.contains((double)destX, (double)destY, (double)destWidth, (double)destHeight))
@@ -527,6 +546,9 @@ public class VCLGraphics {
 	 * @param srcHeight the height of the bitmap to be drawn
 	 */
 	public void drawMask(VCLBitmap bmp, int color, int destX, int destY, int destWidth, int destHeight, int srcX, int srcY, int srcWidth, int srcHeight) {
+
+		if (image == null)
+			return;
 
 		Shape clip = graphics.getClip();
 		if (clip != null && clip.contains((double)destX, (double)destY, (double)destWidth, (double)destHeight))
@@ -742,7 +764,7 @@ public class VCLGraphics {
 	 */
 	synchronized void flush() {
 
-		if (EventQueue.isDispatchThread() && panelGraphics != null && update != null) {
+		if (panelGraphics != null && image != null && update != null && EventQueue.isDispatchThread()) {
 			panelGraphics.setClip(update);
 			panelGraphics.drawImage(image.getImage(), 0, 0, null);
 			Toolkit.getDefaultToolkit().sync();
@@ -783,6 +805,9 @@ public class VCLGraphics {
 	 */
 	public int getPixel(int x, int y) {
 
+		if (image == null)
+			return 0xff000000;
+
 		int[] pixels = image.getData();
 		return pixels[(image.getWidth() * y) + x];
 
@@ -798,6 +823,9 @@ public class VCLGraphics {
 	 * @param options the invert options
 	 */
 	public void invert(int x, int y, int width, int height, int options) {
+
+		if (image == null)
+			return;
 
 		// Don't do anything if x or y is outside of the image's width or
 		// height
@@ -953,6 +981,9 @@ public class VCLGraphics {
 	 */
 	synchronized void resetGraphics() {
 
+		if (image == null)
+			return;
+
 		if (frame != null) {
 			graphics.dispose();
 			if (panelGraphics != null)
@@ -963,6 +994,8 @@ public class VCLGraphics {
 				Panel p = frame.getPanel();
 				bounds = p.getBounds();
 				panelGraphics = (Graphics2D)p.getGraphics();
+				// Normalize graphics to 72 dpi
+				panelGraphics.transform(panelGraphics.getDeviceConfiguration().getNormalizingTransform());
 				panelGraphics.addRenderingHints(VCLGraphics.hints);
 			}
 			else {
@@ -988,8 +1021,13 @@ public class VCLGraphics {
 	 */
 	public void setPixel(int x, int y, int color) {
 
-		int[] pixels = image.getData();
-		pixels[(image.getWidth() * y) + x] = 0xff000000 | color;
+		if (image != null) {
+			int[] pixels = image.getData();
+			pixels[(image.getWidth() * y) + x] = 0xff000000 | color;
+		}
+		else {
+			drawRect(x, y, 1, 1, color, true);
+		}
 		addToFlush(new Rectangle(x, y, 1, 1));
 
 	}
@@ -1002,7 +1040,8 @@ public class VCLGraphics {
 	 */
 	public void setXORMode(boolean b) {
 
-		xor = b;
+		if (image != null)
+			xor = b;
 
 	}
 

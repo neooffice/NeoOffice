@@ -33,46 +33,52 @@
  *
  ************************************************************************/
 
-#ifndef _SV_SALGDI_H
-#define _SV_SALGDI_H
+#ifndef _SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX
+#define	_SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX
 
-#ifndef _SV_SV_H
-#include <sv.h>
-#endif 
-#ifndef _SALJAVA_H
-#include <saljava.h>
+#ifndef _SV_JAVA_LANG_OBJECT_HXX
+#include <java/lang/Object.hxx>
+#endif
+#ifndef _SV_SV_H    
+#include <sv.h>     
+#endif
+#ifndef _SV_GEN_HXX
+#include <tools/gen.hxx>
+#endif
+#ifndef _SV_PRNTYPES_HXX
+#include <prntypes.hxx>
 #endif
 
-namespace vcl
-{
-class com_sun_star_vcl_VCLFont;
+namespace vcl {
+
 class com_sun_star_vcl_VCLGraphics;
-}
 
-// -------------------
-// - SalGraphicsData -
-// ------------------- 
-
-class SalGraphicsData
+class com_sun_star_vcl_VCLPrintJob : public java_lang_Object
 {
-	friend class	SalBitmap;
-	friend class	SalFrame;
-	friend class	SalGraphics;
-	friend class	SalInstance;
-	friend class	SalPrinter;
-	friend class	SalVirtualDevice;
+protected:
+	static jclass		theClass;
 
-	SalColor		mnFillColor;
-	SalColor		mnLineColor;
-	SalColor		mnTextColor;
-	SalFrame*		mpFrame;
-	SalPrinter*		mpPrinter;
-	SalVirtualDevice*	mpVirDev;
-	::vcl::com_sun_star_vcl_VCLGraphics*	mpVCLGraphics;
-	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
+public:
+	static const Rectangle	getImageableBounds();
+	static jclass		getMyClass();
+	static Orientation	getOrientation();
+	static const Size	getPageSize();
+	static void			setup();
 
-					SalGraphicsData();
-					~SalGraphicsData();
+						com_sun_star_vcl_VCLPrintJob( jobject myObj ) : java_lang_Object( myObj ) {}
+						com_sun_star_vcl_VCLPrintJob();
+	virtual				~com_sun_star_vcl_VCLPrintJob() {};
+
+	void				abortJob();
+	void				dispose();
+	void				endJob();
+	void				endPage();
+	ULONG				getCopies();
+	sal_Bool			isCollate();
+	sal_Bool			startJob();
+	com_sun_star_vcl_VCLGraphics*	startPage();
 };
 
-#endif // _SV_SALGDI_H
+} // namespace vcl
+
+#endif // _SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX

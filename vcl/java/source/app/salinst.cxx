@@ -50,8 +50,17 @@
 #ifndef _SV_SALBTYPE_HXX
 #include <salbtype.hxx>
 #endif
+#ifndef _SV_SALPRN_HXX
+#include <salprn.hxx>
+#endif
 #ifndef _VCL_APPTYPES_HXX
 #include <apptypes.hxx>
+#endif
+#ifndef _SV_PRINT_H
+#include <print.h>
+#endif
+#ifndef _SV_JOBSET_H
+#include <jobset.h>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 #include <com/sun/star/vcl/VCLEvent.hxx>
@@ -426,27 +435,24 @@ void* SalInstance::GetConnectionIdentifier( ConnectionIdentifierType& rReturnedT
 
 void SalInstance::GetPrinterQueueInfo( ImplPrnQueueList* pList )
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalInstance::GetPrinterQueueInfo not implemented\n" );
-#endif
+	// Create a dummy queue for our dummy default printer
+	SalPrinterQueueInfo *pInfo = new SalPrinterQueueInfo();
+	pInfo->maPrinterName = GetDefaultPrinter();
+	pInfo->mpSysData = NULL;
+	pList->Add( pInfo );
 }
 
 // -----------------------------------------------------------------------
 
 void SalInstance::GetPrinterQueueState( SalPrinterQueueInfo* pInfo )
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalInstance::GetPrinterQueueState not implemented\n" );
-#endif
 }
 
 // -----------------------------------------------------------------------
 
 void SalInstance::DeletePrinterQueueInfo( SalPrinterQueueInfo* pInfo )
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalInstance::DeletePrinterQueueInfo not implemented\n" );
-#endif
+	delete pInfo;
 }
 
 // -----------------------------------------------------------------------
@@ -454,48 +460,60 @@ void SalInstance::DeletePrinterQueueInfo( SalPrinterQueueInfo* pInfo )
 SalInfoPrinter* SalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
                                                 ImplJobSetup* pSetupData )
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalInstance::CreateInfoPrinter not implemented\n" );
-#endif
-    return NULL;
+	// Create a dummy printer configuration for our dummy printer
+	SalInfoPrinter *pPrinter = new SalInfoPrinter();
+	pPrinter->maPrinterData.mpVirDev = CreateVirtualDevice( NULL, 0, 0, 0 );
+	if ( !pPrinter->maPrinterData.mpVirDev )
+	{
+		delete pPrinter;
+		return NULL;
+	}
+
+	// Populate the job setup with default values
+	pSetupData->mnSystem = JOBSETUP_SYSTEM_JAVA;
+	pSetupData->maPrinterName = pQueueInfo->maPrinterName;
+	pSetupData->maDriver = pQueueInfo->maDriver;
+	pSetupData->meOrientation = com_sun_star_vcl_VCLPrintJob::getOrientation();
+	pSetupData->mnPaperBin = 0;
+	pSetupData->mePaperFormat = PAPER_USER;
+	Size aSize( com_sun_star_vcl_VCLPrintJob::getPageSize() );
+	pSetupData->mnPaperWidth = aSize.Width();
+	pSetupData->mnPaperHeight = aSize.Height();
+	pSetupData->mnDriverDataLen = 0;
+	pSetupData->mpDriverData = NULL;
+
+    return pPrinter;
 }
 
 // -----------------------------------------------------------------------
 
 void SalInstance::DestroyInfoPrinter( SalInfoPrinter* pPrinter )
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalInstance::DestroyInfoPrinter not implemented\n" );
-#endif
+	DestroyVirtualDevice( pPrinter->maPrinterData.mpVirDev );
+	delete pPrinter;
 }
 
 // -----------------------------------------------------------------------
 
 XubString SalInstance::GetDefaultPrinter()
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalInstance::GetDefaultPrinter not implemented\n" );
-#endif
-    return XubString();
+	// Create a dummy default printer
+    return XubString( RTL_CONSTASCII_USTRINGPARAM( "DEFAULT" ) );
 }
 
 // -----------------------------------------------------------------------
 
 SalPrinter* SalInstance::CreatePrinter( SalInfoPrinter* pInfoPrinter )
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalInstance::CreatePrinter not implemented\n" );
-#endif
-    return NULL;
+	SalPrinter *pPrinter = new SalPrinter();
+	return pPrinter;
 }
 
 // -----------------------------------------------------------------------
 
 void SalInstance::DestroyPrinter( SalPrinter* pPrinter )
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalInstance::DestroyPrinter not implemented\n" );
-#endif
+	delete pPrinter;
 }
 
 // -----------------------------------------------------------------------

@@ -11,11 +11,12 @@
 # 
 #          - GNU General Public License Version 2.1
 # 
-#   Patrick Luby, June 2003
+#   Sun Microsystems Inc., October, 2000
 # 
 #   GNU General Public License Version 2.1
 #   =============================================
-#   Copyright 2003 by Patrick Luby (patrick.luby@planamesa.com)
+#   Copyright 2000 by Sun Microsystems, Inc.
+#   901 San Antonio Road, Palo Alto, CA 94303, USA
 # 
 #   This library is free software; you can redistribute it and/or
 #   modify it under the terms of the GNU General Public
@@ -30,13 +31,19 @@
 #   License along with this library; if not, write to the Free Software
 #   Foundation, Inc., 59 Temple Place, Suite 330, Boston,
 #   MA  02111-1307  USA
+#   
+#   =================================================
+#   Modified June 2003 by Patrick Luby. SISSL Removed. NeoOffice is
+#   distributed under GPL only under modification term 3 of the LGPL.
+# 
+#   Contributor(s): _______________________________________
 # 
 ##########################################################################
 
 PRJ=..$/..$/..
 
-PRJNAME=vcl
-TARGET=saljava
+PRJNAME=SVTOOLS
+TARGET=impflt
 
 # --- Settings -----------------------------------------------------
 
@@ -46,37 +53,17 @@ TARGET=saljava
 
 # --- Files --------------------------------------------------------
 
-.IF "$(GUIBASE)"!="java"
+CXXFILES = \
+		impflt.cxx
 
-dummy:
-    @echo "Nothing to build for GUIBASE $(GUIBASE)"
+SLOFILES =	\
+	$(SLO)$/impflt.obj
 
-.ELSE		# "$(GUIBASE)"!="java"
-
-.IF "$(remote)"
-
-SLOFILES = \
-	$(SLO)/Class.obj \
-	$(SLO)/Object.obj \
-	$(SLO)/String.obj \
-	$(SLO)/Throwable.obj \
-	$(SLO)/VCLBitmap.obj \
-	$(SLO)/VCLEvent.obj \
-	$(SLO)/VCLEventQueue.obj \
-	$(SLO)/VCLFont.obj \
-	$(SLO)/VCLFrame.obj \
-	$(SLO)/VCLGraphics.obj \
-	$(SLO)/VCLImage.obj \
-	$(SLO)/VCLPrintJob.obj \
-	$(SLO)/VCLScreen.obj \
-	$(SLO)/tools.obj
-
+.IF "$(GUIBASE)"=="java"
+INCGUI+= -I$(PRJ)$/unx/inc
 .ENDIF
 
-.ENDIF		# "$(GUIBASE)"!="java"
-
-# --- Targets ------------------------------------------------------
+# --- Tagets -------------------------------------------------------
 
 .INCLUDE :  target.mk
 
-.INCLUDE :  $(PRJ)$/util$/target.pmk
