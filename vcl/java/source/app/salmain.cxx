@@ -330,6 +330,22 @@ int main( int argc, char *argv[] )
 			execv( pCmdPath, argv );
 	}
 
+	// If there is a "share/fonts/truetype" directory, explicitly activate the
+	// fonts since Panther does not automatically add fonts in the user's
+	// Library/Fonts directory until they reboot or relogin
+	if ( aCmdPath.Len() )
+	{
+		ByteString aFontDir( aCmdPath );
+		if ( aFontDir.Len() )
+		{
+			aFontDir += ByteString( "/../share/fonts/truetype", RTL_TEXTENCODING_UTF8 );
+			FSRef aFontPath;
+			FSSpec aFontSpec;
+			if ( FSPathMakeRef( (const UInt8 *)aFontDir.GetBuffer(), &aFontPath, 0 ) == noErr && FSGetCatalogInfo( &aFontPath, kFSCatInfoNone, NULL, NULL, &aFontSpec, NULL) == noErr )
+				ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextLocal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDefault, NULL );
+		}
+	}
+
 	jint nFonts = 0;
 	ATSFontIterator aIterator;
 	ATSFontRef aFont;
@@ -458,10 +474,8 @@ int main( int argc, char *argv[] )
 				pMethods[3].fnPtr = Java_com_apple_mrj_macos_carbon_CarbonLock_release0;
 				t.pEnv->RegisterNatives( carbonLockClass, pMethods, 4 );
 
-				// Run a Carbon event loop but have it block until the Java
-				// event loop is started. Having an event loop in this
-				// blocked state is enough to solve the keyboard layout
-				// switching problem on Panther.
+				// Peek for a Carbon event. This is enough to solve the
+				// keyboard layout switching problem on Panther.
 				ReceiveNextEvent( 0, NULL, 0, false, NULL );
 
 				// We need to be fill in the static sFonts and sNumFonts fields 
