@@ -139,11 +139,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 	
 	// Handle events that require a SalFrame pointer
 	SalFrame *pFrame = getFrame();
-	SalFrame* pNextFrame = pSalData->mpFirstFrame;
-	while ( pFrame && pNextFrame && pFrame != pNextFrame )
-		pNextFrame = pNextFrame->maFrameData.mpNextFrame;
-
-	if ( !pFrame || !pNextFrame )
+	if ( !pFrame )
 		return;
 
 	switch ( nID )
@@ -320,8 +316,22 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 
 void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, void *pData )
 {
+	SalData *pSalData = GetSalData();
+	SalYieldMutex *pMutex = pSalData->mpFirstInstance->maInstData.mpSalYieldMutex;
+
+	pMutex->acquire();
+
 	if ( pFrame && pFrame->maFrameData.mpProc )
-		pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
+	{
+		SalFrame* pNextFrame = GetSalData()->mpFirstFrame;
+		while ( pFrame && pNextFrame && pFrame != pNextFrame )
+			pNextFrame = pNextFrame->maFrameData.mpNextFrame;
+
+		if ( pFrame == pNextFrame )
+			pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
+	}
+
+	pMutex->release();
 }
 
 // ----------------------------------------------------------------------------
