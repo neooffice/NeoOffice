@@ -118,34 +118,11 @@ public final class VCLFont {
 	 */
 	static VCLFont getDefaultFont(int s, boolean b, boolean i, boolean a) {
 
-		return new VCLFont(VCLFont.defaultFont.getName(), s, b, i, a);
-
-	}
-
-	/**
-	 * Initialize the cached fonts.
-	 */
-	static {
-
-		boolean macosx = false;
-		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
-			macosx = true;
-
-		// Get all of the fonts and screen out duplicates
-		fontFamilies = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
-		ArrayList array = new ArrayList();
-		for (int i = 0; i < fontFamilies.length; i++) {
-			String name = fontFamilies[i].toLowerCase();
-			// Get rid of hidden, bold, and italic Mac OS X fonts
-			if (macosx && name.startsWith("."))
-				continue;
-			array.add(new VCLFont(fontFamilies[i], 1, false, false, true));
-		}
-
-		fonts = (VCLFont[])array.toArray(new VCLFont[array.size()]);
-
 		// Set default font
-		defaultFont = new VCLFont("Dialog", 1, false, false, true);
+		if (defaultFont == null)
+			defaultFont = new VCLFont("Dialog", 1, false, false, true);
+
+		return new VCLFont(VCLFont.defaultFont.getName(), s, b, i, a);
 
 	}
 
@@ -156,6 +133,26 @@ public final class VCLFont {
 	 * @return an array of <code>VCLFont</code> objects
 	 */
 	public static VCLFont[] getAllFonts() {
+
+		// Initialize the cached fonts
+		if (fonts == null) {
+			boolean macosx = false;
+			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
+				macosx = true;
+
+			// Get all of the fonts and screen out duplicates
+			fontFamilies = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
+			ArrayList array = new ArrayList();
+			for (int i = 0; i < fontFamilies.length; i++) {
+				String name = fontFamilies[i].toLowerCase();
+				// Get rid of hidden, bold, and italic Mac OS X fonts
+				if (macosx && name.startsWith("."))
+					continue;
+				array.add(new VCLFont(fontFamilies[i], 1, false, false, true));
+			}
+	
+			fonts = (VCLFont[])array.toArray(new VCLFont[array.size()]);
+		}
 
 		return fonts;
 

@@ -98,7 +98,7 @@ VCLThreadAttach::~VCLThreadAttach()
 
 void VCLThreadAttach::AttachThread()
 {
-	if ( xRG11Ref.is() )
+	if ( pJVM->GetEnv( (void**)&pEnv, JNI_VERSION_1_2 ) != JNI_OK && xRG11Ref.is() )
 	{
 		pJVM->AttachCurrentThread( (void**)&pEnv, NULL );
 		xRG11Ref->registerThread();
@@ -109,12 +109,6 @@ void VCLThreadAttach::AttachThread()
 
 void VCLThreadAttach::DetachThread()
 {
-	if ( xRG11Ref.is() )
-	{
-		xRG11Ref->revokeThread();
-		if ( !xRG11Ref->isThreadAttached() )
-			pJVM->DetachCurrentThread();
-	}
 }
 
 // ----------------------------------------------------------------------------

@@ -39,6 +39,9 @@
 #ifndef _SV_SV_H
 #include <sv.h>
 #endif
+#ifndef _SV_SVAPP_HXX
+#include <svapp.hxx>
+#endif
 #ifndef _VOS_MUTEX_HXX
 #include <vos/mutex.hxx>
 #endif
@@ -78,5 +81,7 @@ public:
 						SalInstanceData();
 						~SalInstanceData();
 };
+
+void ExecuteApplicationMain( Application *pApp );
 
 #endif // _SV_SALINST_H

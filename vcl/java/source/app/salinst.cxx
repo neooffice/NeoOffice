@@ -92,9 +92,422 @@
 
 #include "salinst.hrc"
 
+#ifdef MACOSX
+
+#ifndef _SV_SALMAIN_COCOA_H
+#include <salmain_cocoa.h>
+#endif
+#ifndef _OSL_PROCESS_H_
+#include <rtl/process.h>
+#endif
+#ifndef _VOS_MODULE_HXX_
+#include <vos/module.hxx>
+#endif
+#include <premac.h>
+#include <Carbon/Carbon.h>
+#include <postmac.h>
+
+typedef jobject Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type( JNIEnv *, jobject );
+typedef void Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type( JNIEnv *, jobject );
+
+struct SVNativeFontList
+{
+	ATSFontRef				maFont;
+	SVNativeFontList*		mpNext;
+};
+
+class SVMainThread : public ::vos::OThread
+{
+	Application*			mpApp;
+
+public:
+							SVMainThread( Application* pApp ) : ::vos::OThread(), mpApp( pApp ) {}
+
+protected:
+	virtual void			run() { mpApp->Main(); }
+};
+
+using namespace osl;
+using namespace rtl;
 using namespace vcl;
 using namespace vos;
 using namespace com::sun::star::uno;
+
+static Mutex aMutex;
+static OModule aJDirectModule;
+static Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type *pCarbonLockGetInstance = NULL;
+static Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *pCarbonLockInit = NULL;
+static SVNativeFontList *pNativeFontList = NULL;
+
+static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( JNIEnv *pEnv, jobject object );
+
+#endif
+
+// ============================================================================
+
+#ifdef MACOSX
+static void ImplFontListChangedCallback( ATSFontNotificationInfoRef, void* )
+{
+	MutexGuard aGuard( aMutex );
+
+	// Get the array of fonts
+	SVNativeFontList *pNewFontList = NULL;
+	BOOL bContinue = TRUE;
+	while ( bContinue )
+	{
+		ATSFontIterator aIterator;
+		ATSFontRef aFont;
+		ATSFontIteratorCreate( kATSFontContextLocal, NULL, NULL, kATSOptionFlagsUnRestrictedScope, &aIterator );
+		for ( ; ; )
+		{
+			OSStatus nErr = ATSFontIteratorNext( aIterator, &aFont );
+			if ( nErr == kATSIterationCompleted )
+			{
+				bContinue = FALSE;
+				break;
+			}
+			else if ( nErr == kATSIterationScopeModified )
+			{
+				while ( pNewFontList )
+				{
+					SVNativeFontList *pFont = pNewFontList;
+					pNewFontList = pFont->mpNext;
+					delete pFont;
+				}
+				break;
+			}
+			else
+			{
+				SVNativeFontList *pFont = new SVNativeFontList();
+				pFont->maFont = aFont;
+				pFont->mpNext = pNewFontList;
+				pNewFontList = pFont;
+			}
+		}
+		ATSFontIteratorRelease( &aIterator );
+	}
+
+	// If any of the Java fonts have been disabled, use the default font
+	BOOL bUseDefaultFont = FALSE;
+	SVNativeFontList *pCurrentFont = pNativeFontList;
+	while ( pCurrentFont )
+	{
+		SVNativeFontList *pNewFont = pNewFontList;
+		BOOL bFound = FALSE;
+		while ( pNewFont )
+		{
+			if ( pCurrentFont->maFont == pNewFont->maFont )
+			{
+				bFound = TRUE;
+				break;
+			}
+			else
+			{
+				pNewFont = pNewFont->mpNext;
+			}
+		}
+
+		if ( !bFound )
+		{
+			bUseDefaultFont = TRUE;
+			break;
+		}
+
+		pCurrentFont = pCurrentFont->mpNext;
+	}
+
+	com_sun_star_vcl_VCLFont::useDefaultFont = bUseDefaultFont;
+
+	// Release the temporary font list
+	while ( pNewFontList )
+	{
+		SVNativeFontList *pFont = pNewFontList;
+		pNewFontList = pFont->mpNext;
+		delete pFont;
+	}
+}
+#endif	// MACOSX
+
+// ----------------------------------------------------------------------------
+
+#ifdef MACOSX
+static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( JNIEnv *pEnv, jobject object )
+{
+	jobject lockObject = Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( pEnv, object );
+	if ( lockObject )
+	{
+		jint nRet = pEnv->MonitorEnter( lockObject );
+		if ( pEnv->ExceptionOccurred() )
+		{
+			pEnv->ExceptionDescribe();
+			pEnv->ExceptionClear();
+		}
+		return nRet == JNI_OK ? 0 : 1;
+	}
+	else
+	{
+		return 1;
+	}
+}
+#endif
+
+// ----------------------------------------------------------------------------
+
+#ifdef MACOSX
+static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( JNIEnv *pEnv, jobject object )
+{
+	if ( pCarbonLockGetInstance )
+		return pCarbonLockGetInstance( pEnv, object );
+	else
+		return NULL;
+}
+#endif
+
+// ----------------------------------------------------------------------------
+
+#ifdef MACOSX
+static void JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_init( JNIEnv *pEnv, jobject object )
+{
+	if ( pCarbonLockInit )
+		pCarbonLockInit( pEnv, object );
+}
+#endif
+
+// ----------------------------------------------------------------------------
+
+#ifdef MACOSX
+static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv *pEnv, jobject object )
+{
+	jobject lockObject = Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( pEnv, object );
+	if ( lockObject )
+	{
+		jint nRet = pEnv->MonitorExit( lockObject );
+		if ( pEnv->ExceptionOccurred() )
+		{
+			pEnv->ExceptionDescribe();
+			pEnv->ExceptionClear();
+		}
+		return nRet == JNI_OK ? 0 : 1;
+	}
+	else
+	{
+		return 1;
+	}
+}
+#endif
+
+// ----------------------------------------------------------------------------
+
+void ExecuteApplicationMain( Application *pApp )
+{
+#ifdef MACOSX
+
+	// If there is a "share/fonts/truetype" directory, explicitly activate the
+	// fonts since Panther does not automatically add fonts in the user's
+	// Library/Fonts directory until they reboot or relogin
+	rtl_uString *pStr;
+	if ( osl_getExecutableFile( &pStr ) == osl_Process_E_None )
+	{
+		ByteString aFontDir( rtl_uString_getStr( pStr ), RTL_TEXTENCODING_UTF8 );
+		if ( aFontDir.Len() )
+		{
+			aFontDir += ByteString( "/../share/fonts/truetype", RTL_TEXTENCODING_UTF8 );
+			FSRef aFontPath;
+			FSSpec aFontSpec;
+			if ( FSPathMakeRef( (const UInt8 *)aFontDir.GetBuffer(), &aFontPath, 0 ) == noErr && FSGetCatalogInfo( &aFontPath, kFSCatInfoNone, NULL, NULL, &aFontSpec, NULL) == noErr )
+				ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextLocal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDefault, NULL );
+		}
+	}
+
+	jint nFonts = 0;
+	ATSFontIterator aIterator;
+	ATSFontRef aFont;
+
+	// Get the array of fonts
+	BOOL bContinue = TRUE;
+	while ( bContinue )
+	{
+		MutexGuard aGuard( aMutex );
+
+		ATSFontIteratorCreate( kATSFontContextLocal, NULL, NULL, kATSOptionFlagsUnRestrictedScope, &aIterator );
+		for ( ; ; )
+		{
+			OSStatus nErr = ATSFontIteratorNext( aIterator, &aFont );
+			if ( nErr == kATSIterationCompleted )
+			{
+				// Register notification callback
+				ATSFontNotificationSubscribe( (ATSNotificationCallback)ImplFontListChangedCallback, kATSFontNotifyOptionReceiveWhileSuspended, NULL, NULL );
+				bContinue = FALSE;
+				break;
+			}
+			else if ( nErr == kATSIterationScopeModified )
+			{
+				nFonts = 0;
+				while ( pNativeFontList )
+				{
+					SVNativeFontList *pFont = pNativeFontList;
+					pNativeFontList = pFont->mpNext;
+					delete pFont;
+				}
+				break;
+			}
+			else
+			{
+				SVNativeFontList *pFont = new SVNativeFontList();
+				pFont->maFont = aFont;
+				pFont->mpNext = pNativeFontList;
+				pNativeFontList = pFont;
+				nFonts++;
+			}
+		}
+		ATSFontIteratorRelease( &aIterator );
+	}
+
+	// Test the JVM version and if it is 1.4 or higher, run the Main() method
+	// in a separate, high priority thread
+	java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
+	if ( pClass )
+	{
+		delete pClass;
+
+		// Load Cocoa
+		OModule aModule;
+		if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/AppKit.framework/AppKit" ) ) )
+		{
+			GetSalData()->mpEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
+
+			// Create the thread to run the Main() method in
+			SVMainThread aThread( pApp );
+			aThread.create();
+
+			// Start the Cocoa event loop
+			RunCocoaEventLoop();
+			aThread.join();
+		}
+
+		return;
+	}
+	else
+	{
+		// Panther expects applications to run their event loop in main thread
+		// and Java 1.3.1 runs its event loop in a separate thread. So, we need
+		// to disable the lock that Java 1.3.1 uses.
+		VCLThreadAttach t;
+		if ( t.pEnv )
+		{
+			jclass systemClass = t.pEnv->FindClass( "java/lang/System" );
+			if ( systemClass )
+			{
+				// Find libJDirect.jnilib
+				jmethodID mID = NULL;
+				OUString aJDirectPath;
+				if ( !mID )
+				{
+					char *cSignature = "(Ljava/lang/String;)Ljava/lang/String;";
+					mID = t.pEnv->GetStaticMethodID( systemClass, "getProperty", cSignature );
+				}
+				OSL_ENSURE( mID, "Unknown method id!" );
+				if ( mID )
+				{
+					jvalue args[1];
+					args[0].l = StringToJavaString( t.pEnv, OUString::createFromAscii( "java.home" ) );
+					jstring out;
+					out = (jstring)t.pEnv->CallStaticObjectMethodA( systemClass, mID, args );
+					if ( out )
+						aJDirectPath = JavaString2String( t.pEnv, out );
+				}
+
+				// Load libJDirect.jnilib and cache symbols
+				if ( aJDirectPath.getLength() )
+				{
+					aJDirectPath += OUString::createFromAscii( "/../Libraries/libJDirect.jnilib" );
+					if ( aJDirectModule.load( aJDirectPath ) )
+					{
+						pCarbonLockGetInstance = (Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type *)aJDirectModule.getSymbol( OUString::createFromAscii( "Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance" ) );
+						pCarbonLockInit = (Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *)aJDirectModule.getSymbol( OUString::createFromAscii( "Java_com_apple_mrj_macos_carbon_CarbonLock_init" ) );
+					}
+				}
+
+			}
+
+			jclass carbonLockClass = t.pEnv->FindClass( "com/apple/mrj/macos/carbon/CarbonLock" );
+			if ( carbonLockClass && pCarbonLockGetInstance && pCarbonLockInit )
+			{
+				// Reregister the native methods
+				JNINativeMethod pMethods[4];
+				pMethods[0].name = "acquire0";
+				pMethods[0].signature = "()I";
+				pMethods[0].fnPtr = (void *)Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0;
+				pMethods[1].name = "getInstance";
+				pMethods[1].signature = "()Ljava/lang/Object;";
+				pMethods[1].fnPtr = (void *)Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance;
+				pMethods[2].name = "init";
+				pMethods[2].signature = "()V";
+				pMethods[2].fnPtr = (void *)Java_com_apple_mrj_macos_carbon_CarbonLock_init;
+				pMethods[3].name = "release0";
+				pMethods[3].signature = "()I";
+				pMethods[3].fnPtr = (void *)Java_com_apple_mrj_macos_carbon_CarbonLock_release0;
+				t.pEnv->RegisterNatives( carbonLockClass, pMethods, 4 );
+
+				// Peek for a Carbon event. This is enough to solve the
+				// keyboard layout switching problem on Panther.
+				ReceiveNextEvent( 0, NULL, 0, false, NULL );
+
+				// We need to be fill in the static sFonts and sNumFonts fields 
+				// in the NativeFontWrapper class as the JVM's implementation
+				// will include disabled fonts will can crash the application
+				jclass nativeFontWrapperClass = t.pEnv->FindClass( "sun/awt/font/NativeFontWrapper" );
+				if ( nativeFontWrapperClass )
+				{
+					static jfieldID fIDFonts = NULL;
+					static jfieldID fIDNumFonts = NULL;
+					if ( !fIDFonts )
+					{
+						char *cSignature = "[I";
+						fIDFonts = t.pEnv->GetStaticFieldID( nativeFontWrapperClass, "sFonts", cSignature );
+					}
+					OSL_ENSURE( fIDFonts, "Unknown field id!" );
+					if ( !fIDNumFonts )
+					{
+						char *cSignature = "I";
+						fIDNumFonts = t.pEnv->GetStaticFieldID( nativeFontWrapperClass, "sNumFonts", cSignature );
+					}
+					OSL_ENSURE( fIDNumFonts, "Unknown field id!" );
+					if ( fIDFonts && fIDNumFonts )
+					{
+						// Create the font array and add the fonts in reverse
+						// order since we originally stored them that way
+						jintArray pFonts = t.pEnv->NewIntArray( nFonts );
+						jsize i = nFonts;
+						jboolean bCopy( sal_False );
+						jint *pData = t.pEnv->GetIntArrayElements( pFonts, &bCopy );
+						ClearableMutexGuard aGuard( aMutex );
+
+						SVNativeFontList *pFont = pNativeFontList;
+						while ( pFont )
+						{
+							pData[--i] = (jint)CGFontCreateWithPlatformFont( (void *)&pFont->maFont );
+							pFont = pFont->mpNext;
+						}
+						t.pEnv->ReleaseIntArrayElements( pFonts, pData, 0 );
+
+						aGuard.clear();
+
+						// Save the font data
+						t.pEnv->SetStaticObjectField( nativeFontWrapperClass, fIDFonts, pFonts );
+						t.pEnv->SetStaticIntField( nativeFontWrapperClass, fIDNumFonts, nFonts );
+					}
+				}
+			}
+		}
+	}
+#endif	// MACOSX
+
+	GetSalData()->mpEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
+
+	// Now that Java is properly initialized, run the application's Main()
+	pApp->Main();
+}
 
 // =======================================================================
 
@@ -121,8 +534,16 @@ void InitSalData()
 void DeInitSalData()
 {
 	SalData *pSalData = GetSalData();
+
 	if ( pSalData )
+	{
+		if ( pSalData->mpEventQueue )
+			delete pSalData->mpEventQueue;
+		if ( pSalData->mpFontList )
+			delete pSalData->mpFontList;
 		delete pSalData;
+	}
+
 	SetSalData( NULL );
 }
 
@@ -130,20 +551,12 @@ void DeInitSalData()
 
 void InitSalMain()
 {
-	SalData *pSalData = GetSalData();
-	pSalData->mpEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
-	pSalData->mpFontList = com_sun_star_vcl_VCLFont::getAllFonts();
 }
 
 // -----------------------------------------------------------------------
 
 void DeInitSalMain()
 {
-	SalData *pSalData = GetSalData();
-	if ( pSalData->mpEventQueue )
-		delete pSalData->mpEventQueue;
-	if ( pSalData->mpFontList )
-		delete pSalData->mpFontList;
 }
 
 // -----------------------------------------------------------------------

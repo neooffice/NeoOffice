@@ -173,6 +173,11 @@ ULONG SalGraphics::GetFontCodeRanges( sal_uInt32* pCodePairs ) const
 
 void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 {
+	SalData *pSalData = GetSalData();
+
+	if ( !pSalData->mpFontList )
+		pSalData->mpFontList = com_sun_star_vcl_VCLFont::getAllFonts();
+
 	com_sun_star_vcl_VCLFontList *pFontList = GetSalData()->mpFontList;
 
 	// Iterate through fonts and add each to the font list
