@@ -529,9 +529,10 @@ int main( int argc, char *argv[] )
 					OSL_ENSURE( fIDNumFonts, "Unknown field id!" );
 					if ( fIDFonts && fIDNumFonts )
 					{
-						// Create the font array
+						// Create the font array and add the fonts in reverse
+						// order since we originally stored them that way
 						jintArray pFonts = t.pEnv->NewIntArray( nFonts );
-						jsize i = 0;
+						jsize i = nFonts;
 						jboolean bCopy( sal_False );
 						jint *pData = t.pEnv->GetIntArrayElements( pFonts, &bCopy );
 						ClearableMutexGuard aGuard( aMutex );
@@ -539,7 +540,7 @@ int main( int argc, char *argv[] )
 						SVNativeFontList *pFont = pNativeFontList;
 						while ( pFont )
 						{
-							pData[i++] = (jint)CGFontCreateWithPlatformFont( (void *)&pFont->maFont );
+							pData[--i] = (jint)CGFontCreateWithPlatformFont( (void *)&pFont->maFont );
 							pFont = pFont->mpNext;
 						}
 						t.pEnv->ReleaseIntArrayElements( pFonts, pData, 0 );
