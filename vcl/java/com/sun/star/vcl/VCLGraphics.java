@@ -1109,45 +1109,35 @@ public final class VCLGraphics {
 			origin = AffineTransform.getRotateInstance(radians).transform(origin, null);
 		}
 
-		// Divide the character array by whitespace
-		int startChar = 0;
-		int currentChar = 0;
-		GlyphVector glyphs = f.createGlyphVector(graphics.getFontRenderContext(), chars);
-		Point2D p = glyphs.getGlyphPosition(0);
+		Rectangle bounds = null;
 		if (offsets != null) {
-			double start = p.getX();
-			for (int i = 1; i < chars.length; i++) {
-				if (Character.getType(chars[i]) == Character.NON_SPACING_MARK && f.canDisplay(chars[i]))
-					p.setLocation(start + offsets[i - 1] - fm.charWidth(chars[i]), p.getY());
+			char[] currentChar = new char[1];
+			for (int i = 0; i < chars.length; i++) {
+				currentChar[0] = chars[i];
+				int adjust = i > 0 ? offsets[i - 1] : 0;
+				GlyphVector glyphs = f.createGlyphVector(graphics.getFontRenderContext(), currentChar);
+				graphics.drawGlyphVector(glyphs, (float)(origin.getX() + adjust), (float)origin.getY());
+				Rectangle glyphBounds = glyphs.getLogicalBounds().getBounds();
+				glyphBounds.x += adjust;
+				if (bounds == null)
+					bounds = glyphBounds;
 				else
-					p.setLocation(start + offsets[i - 1], p.getY());
-				glyphs.setGlyphPosition(i, p);
+					bounds.add(glyphBounds);
 			}
 		}
 		else {
-			double adjust = 0;
-			for (int i = 1; i < chars.length; i++) {
-				if (Character.getType(chars[i]) == Character.NON_SPACING_MARK && f.canDisplay(chars[i]))
-					adjust += fm.charWidth(chars[i]);
-				if (adjust != 0) {
-					p = glyphs.getGlyphPosition(i);
-					p.setLocation(p.getX() - adjust, p.getY());
-					glyphs.setGlyphPosition(i, p);
-				}
-			}
+			GlyphVector glyphs = f.createGlyphVector(graphics.getFontRenderContext(), chars);
+			graphics.drawGlyphVector(glyphs, (float)origin.getX(), (float)origin.getY());
+			bounds = glyphs.getLogicalBounds().getBounds();
 		}
-		graphics.drawGlyphVector(glyphs, (float)origin.getX(), (float)origin.getY());
 
 		// Reverse rotation
 		if (transform != null)
 			graphics.setTransform(transform);
 
 		// Estimate bounds
-		Rectangle bounds = null;
 		if (orientation != 0)
-			bounds = rotateTransform.createTransformedShape(glyphs.getLogicalBounds()).getBounds();
-		else
-			bounds = glyphs.getLogicalBounds().getBounds();
+			bounds = rotateTransform.createTransformedShape(bounds).getBounds();
 		bounds.x += x - 1;
 		bounds.y += y - 1;
 		bounds.width += 2;
