@@ -51,13 +51,13 @@
 # settings
 
 # Bulgarian (Bulgaria)
-DICT bg BG bg_BG
+# DICT bg BG bg_BG
 
 # Catalan (Spain)
-DICT ca ES ca_ES
+# DICT ca ES ca_ES
 
 # Czech (Czech Republic)
-DICT cs CZ cs_CZ
+# DICT cs CZ cs_CZ
 
 # Danish (Denmark)
 DICT da DK da_DK
@@ -223,8 +223,8 @@ DICT fr MC fr_FR
 DICT fr CH fr_FR
 
 # Interlingua (no country code)
-DICT it IT ia
-DICT sv SE ia
+# DICT it IT ia
+# DICT sv SE ia
 
 # Irish (Ireland)
 # DICT ga IE ga_IE
@@ -233,31 +233,31 @@ DICT sv SE ia
 # DICT gl ES gl_ES
 
 # Croatian (Croatia) - local name Hrvatska
-DICT hr HR hr_HR
+# DICT hr HR hr_HR
 
 # Hungarian (Hungary)
-DICT hu HU hu_HU
+# DICT hu HU hu_HU
 
 # Italian (Italy)
 DICT it IT it_IT
 
 # Italian (Switzerland)
-DICT it CH it_IT
+# DICT it CH it_IT
 
 # Lithuanian (Lithuania)
-DICT lt LT lt_LT
+# DICT lt LT lt_LT
 
 # Latin (no country code)
 # DICT la ANY la
 
 # Malay (Malaysia)
-DICT ms MY ms_MY
+# DICT ms MY ms_MY
 
 # Malay (Brunei Darussalam)
-DICT ms BN ms_MY
+# DICT ms BN ms_MY
 
 # Norwegian Bokmaal (Norway)
-DICT nb NO nb_NO
+# DICT nb NO nb_NO
 
 # Dutch (Netherlands)
 DICT nl NL nl_NL
@@ -266,7 +266,7 @@ DICT nl NL nl_NL
 DICT nl BE nl_NL
 
 # Norwegian Nynorsk (Norway)
-DICT nn NO nn_NO
+# DICT nn NO nn_NO
 
 # Polish (Poland)
 DICT pl PL pl_PL
@@ -287,10 +287,10 @@ DICT ru RU ru_RU_io
 DICT ru RU ru_RU_ie
 
 # Slovak (Slovakia)
-DICT sk SK sk_SK
+# DICT sk SK sk_SK
 
 # Slovenian (Slovenia)
-DICT sl SI sl_SI
+# DICT sl SI sl_SI
 
 # Swedish (Sweden)
 DICT sv SE sv_SE
@@ -299,7 +299,7 @@ DICT sv SE sv_SE
 DICT sv FI sv_SE
 
 # Ukrainian (Ukraine)
-DICT uk UA uk_UA
+# DICT uk UA uk_UA
 
 # hyphenation
 #
@@ -323,7 +323,7 @@ DICT uk UA uk_UA
 # settings
 
 # Czech (Czech Republic)
-HYPH cs CZ hyph_cs
+# HYPH cs CZ hyph_cs
 
 # Danish (Denmark)
 HYPH da DK hyph_da
@@ -495,7 +495,7 @@ HYPH nl NL hyph_nl
 HYPH nl BE hyph_nl
 
 # Hungarian (Hungary)
-HYPH hu HU hyph_hu
+# HYPH hu HU hyph_hu
 
 # Portuguese (Portugal)
 HYPH pt PT hyph_pt
@@ -504,13 +504,13 @@ HYPH pt PT hyph_pt
 HYPH pt BR hyph_pt
 
 # Russian (Russia)
-HYPH ru RU hyph_ru
+# HYPH ru RU hyph_ru
 
 # Slovak (Slovakia)
-HYPH sk SK hyph_sk
+# HYPH sk SK hyph_sk
 
 # Slovenian (Slovenia)
-HYPH sl SI hyph_sl
+# HYPH sl SI hyph_sl
 
 # Swedish (Sweden)
 HYPH sv SE hyph_sv_SE
@@ -519,7 +519,7 @@ HYPH sv SE hyph_sv_SE
 HYPH sv FI hyph_sv_SE
 
 # Ukrainian (Ukraine)
-HYPH uk UA hyph_uk
+# HYPH uk UA hyph_uk
 
 
 
@@ -602,5 +602,5 @@ THES fr MC th_fr_FR
 THES fr CH th_fr_FR
 
 # Rumänisch (Rumänien)
-THES ro RO th_ro_RO
+# THES ro RO th_ro_RO
 
