@@ -238,7 +238,7 @@ MenuItemData::~MenuItemData()
 {
     if( pAutoSubMenu )
     {
-        *(((PopupMenu*)pAutoSubMenu)->pRefAutoSubMenu) = NULL;
+        ((PopupMenu*)pAutoSubMenu)->pRefAutoSubMenu = NULL;
         delete pAutoSubMenu;
         pAutoSubMenu = NULL;
     }
