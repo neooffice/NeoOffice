@@ -52,8 +52,8 @@ PRODUCT_NAME=NeoOffice/J
 PRODUCT_DIR_NAME=NeoOfficeJ
 # Important: Note that there are escape characters in the PRODUCT_NAME for the
 # UTF-8 trademark symbol. Don't replace these with "\x##" literal strings!
-PRODUCT_TRADEMARKED_NAME=NeoOffice™/J
-PRODUCT_VERSION=0.7.1
+PRODUCT_TRADEMARKED_NAME=NeoOffice®/J
+PRODUCT_VERSION=0.8
 PRODUCT_FILETYPE=no%f
 
 # CVS macros
@@ -62,7 +62,7 @@ OO_PACKAGES:=MathMLDTD UnoControls XmlSearch apiwww autodoc automation basctl ba
 OO_TAG:=OOO_STABLE_1_PORTS
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOfficeJ
-NEO_TAG:=NeoOfficeJ-0_7_1
+NEO_TAG:=HEAD
 
 all: build.all
 
