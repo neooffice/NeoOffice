@@ -98,6 +98,25 @@ com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, cons
 
 // ----------------------------------------------------------------------------
 
+void com_sun_star_vcl_VCLFrame::endComposition()
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "endComposition", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+	}
+}
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLFrame::dispose()
 {
 	static jmethodID mID = NULL;

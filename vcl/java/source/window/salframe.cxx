@@ -514,9 +514,7 @@ void SalFrame::SetInputContext( SalInputContext* pContext )
 
 void SalFrame::EndExtTextInput( USHORT nFlags )
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalFrame::EndExtTextInput not implemented\n" );
-#endif
+	maFrameData.mpVCLFrame->endComposition();
 }
 
 // -----------------------------------------------------------------------

@@ -65,6 +65,7 @@ public:
 	virtual				~com_sun_star_vcl_VCLFrame() {}
 
 	void				dispose();
+	void				endComposition();
 	void				flush();
 	const Rectangle		getBounds();
 	com_sun_star_vcl_VCLGraphics*	getGraphics();

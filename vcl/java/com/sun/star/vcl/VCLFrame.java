@@ -55,6 +55,8 @@ import java.awt.event.ComponentListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.InputEvent;
+import java.awt.event.InputMethodEvent;
+import java.awt.event.InputMethodListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
@@ -63,7 +65,11 @@ import java.awt.event.MouseMotionListener;
 import java.awt.event.PaintEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
+import java.awt.font.TextHitInfo;
 import java.awt.im.InputContext;
+import java.awt.im.InputMethodRequests;
+import java.text.AttributedCharacterIterator;
+import java.text.AttributedString;
 
 /**
  * The Java class that implements the SalFrame C++ class methods.
@@ -71,7 +77,7 @@ import java.awt.im.InputContext;
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public final class VCLFrame implements ComponentListener, FocusListener, KeyListener, MouseListener, MouseMotionListener, WindowListener {
+public final class VCLFrame implements ComponentListener, FocusListener, KeyListener, InputMethodListener, InputMethodRequests, MouseListener, MouseMotionListener, Runnable, WindowListener {
 
 	/**
 	 * SAL_FRAME_STYLE_DEFAULT constant.
@@ -675,6 +681,28 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * Gets the latest committed text from the text editing component and
+	 * removes it from the component's text body.
+	 *
+	 * @param attributes a list of attributes that the input method is
+	 *  interested in
+	 * @return the latest committed text, or null when the "Undo Commit"
+	 *  feature is not supported
+	 */
+	public AttributedCharacterIterator cancelLatestCommittedText(AttributedCharacterIterator.Attribute[] attributes) {
+
+		return new AttributedString("").getIterator();
+
+	}
+
+	/**
+	 * Invoked when the caret within composed text has changed.
+	 *
+	 * @param event the input method event
+	 */
+	public void caretPositionChanged(InputMethodEvent e) {}
+
+	/**
 	 * Invoked when the the native window's size changes.
 	 *
 	 * @param e the <code>ComponentEvent</code>
@@ -726,43 +754,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
-	 * Invoked when the native window has gained focus.
-	 *
-	 * @param e the <code>FocusEvent</code>
-	 */
-	public void focusGained(FocusEvent e) {
-
-		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-			EventQueue eventQueue = Toolkit.getDefaultToolkit().getSystemEventQueue();
-			Frame[] frames = Frame.getFrames();
-			for (int i = 0; i < frames.length; i++) {
-				if (frames[i].isShowing())
-					frames[i].repaint();
-				Window[] windows = frames[i].getOwnedWindows();
-				for (int j = 0; j < windows.length; j++)
-				{
-					if (windows[j].isShowing())
-						windows[j].repaint();
-				}
-			}
-		}
-
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_GETFOCUS, this, 0));
-
-	}
-
-	/**
-	 * Invoked when the native window has lost focus.
-	 *
-	 * @param e the <code>FocusEvent</code>
-	 */
-	public void focusLost(FocusEvent e) {
-
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
-
-	}
-
-	/**
 	 * Disposes the native window and releases any system resources that it is
 	 * using.
 	 */
@@ -801,11 +792,60 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * Create and post event to end any uncommitted key input.
+	 */
+	public void endComposition() {
+
+		Toolkit.getDefaultToolkit().getSystemEventQueue().invokeLater(new Thread(this));
+
+	}
+
+	/**
 	 * Flushes the native window.
 	 */
 	public void flush() {
 
 		Toolkit.getDefaultToolkit().sync();
+
+	}
+
+	/**
+	 * Invoked when the native window has gained focus.
+	 *
+	 * @param e the <code>FocusEvent</code>
+	 */
+	public void focusGained(FocusEvent e) {
+
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+			EventQueue eventQueue = Toolkit.getDefaultToolkit().getSystemEventQueue();
+			Frame[] frames = Frame.getFrames();
+			for (int i = 0; i < frames.length; i++) {
+				if (frames[i].isShowing())
+					frames[i].repaint();
+				Window[] windows = frames[i].getOwnedWindows();
+				for (int j = 0; j < windows.length; j++)
+				{
+					if (windows[j].isShowing())
+						windows[j].repaint();
+				}
+			}
+		}
+
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_GETFOCUS, this, 0));
+
+	}
+
+	/**
+	 * Invoked when the native window has lost focus.
+	 *
+	 * @param e the <code>FocusEvent</code>
+	 */
+	public void focusLost(FocusEvent e) {
+
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
+
+		// End composition
+		endComposition();
 
 	}
 
@@ -838,6 +878,35 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * Gets an iterator providing access to the entire text and attributes
+	 * contained in the text editing component except for uncommitted
+	 * text.
+	 *
+	 * @param beginIndex the index of the first character
+	 * @param endIndex the index of the character following the last character
+	 * @param attributes a list of attributes that the input method is
+	 *  interested in
+	 * @return an iterator providing access to the text and its attributes
+	 */
+	public AttributedCharacterIterator getCommittedText(int beginIndex, int endIndex, AttributedCharacterIterator.Attribute[] attributes) {
+
+		return new AttributedString("").getIterator();
+
+	}
+
+	/**
+	 * Gets the length of the entire text contained in the text editing
+	 * component except for uncommitted (composed) text.
+	 *
+	 * @return the length of the text except for uncommitted text
+	 */
+	public int getCommittedTextLength() {
+
+		return 0;
+
+	}
+
+	/**
 	 * Returns the frame pointer for this component.
 	 *
 	 * @return the frame pointer for this component
@@ -856,6 +925,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public VCLGraphics getGraphics() {
 
 		return graphics;
+
+	}
+
+	/**
+	 * Gets the offset of the insert position in the committed text contained
+	 * in the text editing component.
+	 * 
+	 * @return the offset of the insert position
+	 */
+	public int getInsertPositionOffset() {
+
+		return 0;
 
 	}
 
@@ -1206,6 +1287,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * Gets the offset within the composed text for the specified absolute x
+	 * and y coordinates on the screen.
+	 *
+	 * @param x the absolute x coordinate on screen
+	 * @param y the absolute y coordinate on screen
+	 * @return a text hit info describing the offset in the composed text
+	 */
+	public TextHitInfo getLocationOffset(int x, int y) {
+
+		return null;
+
+	}
+
+	/**
 	 * Returns the panel for the native window.
 	 *
 	 * @return the panel for the native window
@@ -1228,6 +1323,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * Gets the currently selected text from the text editing component.
+	 *
+	 * @param attributes a list of attributes that the input method is
+	 *  interested in
+	 * @return the currently selected text
+	 */
+	public AttributedCharacterIterator getSelectedText(AttributedCharacterIterator.Attribute[] attributes) {
+
+		return new AttributedString("").getIterator();
+
+	}
+
+	/**
 	 * Returns the state of the native window.
 	 *
 	 * @return the state of the native window
@@ -1242,6 +1350,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * Gets the location of a specified offset in the current composed text,
+	 * or of the selection in committed text.
+	 *
+	 * @return a rectangle representing the screen location of the offset
+	 */
+	public Rectangle getTextLocation(TextHitInfo offset) {
+
+		return new Rectangle(0, 0, 0, 0);
+
+	}
+
+	/**
 	 * Returns the native window.
 	 *
 	 * @return the native window
@@ -1249,6 +1369,17 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	Window getWindow() {
 
 		return window;
+
+	}
+
+	/**
+	 * Invoked when the text entered through an input method has changed.
+	 *
+	 * @param event the input method event
+	 */
+	public void inputMethodTextChanged(InputMethodEvent e) {
+
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_EXTTEXTINPUT, this, 0));
 
 	}
 
@@ -1489,6 +1620,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * End any uncommitted key input in the dispatch thread.
+	 */
+	public void run() {
+
+		InputContext ic = window.getInputContext();
+		if (ic != null)
+			ic.endComposition();
+		Toolkit.getDefaultToolkit().sync();
+
+	}
+
+	/**
 	 * Moves and resizes this native window.
 	 *
 	 * @param x the new x-coordinate
@@ -1702,6 +1845,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			window.addFocusListener(this);
 			panel.addFocusListener(this);
 			panel.addKeyListener(this);
+			panel.addInputMethodListener(this);
 			panel.addMouseListener(this);
 			panel.addMouseMotionListener(this);
 			window.addWindowListener(this);
@@ -1719,6 +1863,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			window.removeFocusListener(this);
 			panel.removeFocusListener(this);
 			panel.removeKeyListener(this);
+			panel.removeInputMethodListener(this);
 			panel.removeMouseListener(this);
 			panel.removeMouseMotionListener(this);
 			window.removeWindowListener(this);
@@ -1826,6 +1971,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		/**
+		 * Returns the input method request handler which supports requests
+		 * from input methods for this component.
+		 *
+		 * @return the input method request handler for this component
+		 */
+		public InputMethodRequests getInputMethodRequests() {
+
+			return frame;
+
+		}
+
+		/**
 		 * This method performs no painting of the frame. This method is used
 		 * to prevent Java from painting over what VCL has painted.
 		 *
@@ -1867,6 +2024,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		NoPaintPanel(VCLFrame f) {
 
 			frame = f;
+
+		}
+
+		/**
+		 * Returns the input method request handler which supports requests
+		 * from input methods for this component.
+		 *
+		 * @return the input method request handler for this component
+		 */
+		public InputMethodRequests getInputMethodRequests() {
+
+			return frame;
 
 		}
 
@@ -1913,6 +2082,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			super(new VCLFrame.NoPaintFrame(f));
 			frame = f;
+
+		}
+
+		/**
+		 * Returns the input method request handler which supports requests
+		 * from input methods for this component.
+		 *
+		 * @return the input method request handler for this component
+		 */
+		public InputMethodRequests getInputMethodRequests() {
+
+			return frame;
 
 		}
 

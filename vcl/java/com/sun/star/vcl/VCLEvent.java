@@ -40,9 +40,14 @@ import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.event.ComponentEvent;
 import java.awt.event.InputEvent;
+import java.awt.event.InputMethodEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.PaintEvent;
+import java.awt.font.TextAttribute;
+import java.awt.im.InputMethodHighlight;
+import java.text.CharacterIterator;
+import java.text.AttributedCharacterIterator;
 
 /**
  * The Java class that extends the <code>AWTEvent</code> class. This class is
@@ -785,6 +790,46 @@ public final class VCLEvent extends AWTEvent {
 	public final static int SALEVENT_PRINTDOCUMENT = 101;
 
 	/**
+	 * SAL_EXTTEXTINPUT_ATTR_GRAYWAVELINE constant.
+	 */
+	public final static int SAL_EXTTEXTINPUT_ATTR_GRAYWAVELINE = 0x100;
+
+	/**
+	 * SAL_EXTTEXTINPUT_ATTR_UNDERLINE constant.
+	 */
+	public final static int SAL_EXTTEXTINPUT_ATTR_UNDERLINE = 0x200;
+
+	/**
+	 * SAL_EXTTEXTINPUT_ATTR_BOLDUNDERLINE constant.
+	 */
+	public final static int SAL_EXTTEXTINPUT_ATTR_BOLDUNDERLINE = 0x400;
+
+	/**
+	 * SAL_EXTTEXTINPUT_ATTR_BOLDUNDERLINE constant.
+	 */
+	public final static int SAL_EXTTEXTINPUT_ATTR_DOTTEDUNDERLINE = 0x800;
+
+	/**
+	 * SAL_EXTTEXTINPUT_ATTR_DASHDOTUNDERLINE constant.
+	 */
+	public final static int SAL_EXTTEXTINPUT_ATTR_DASHDOTUNDERLINE = 0x1000;
+
+	/**
+	 * SAL_EXTTEXTINPUT_ATTR_HIGHLIGHT constant.
+	 */
+	public final static int SAL_EXTTEXTINPUT_ATTR_HIGHLIGHT = 0x2000;
+
+	/**
+	 * SAL_EXTTEXTINPUT_ATTR_REDTEXT constant.
+	 */
+	public final static int SAL_EXTTEXTINPUT_ATTR_REDTEXT = 0x4000;
+
+	/**
+	 * SAL_EXTTEXTINPUT_ATTR_HALFTONETEXT constant.
+	 */
+	public final static int SAL_EXTTEXTINPUT_ATTR_HALFTONETEXT = 0x8000;
+
+	/**
 	 * The AWT event flag.
 	 */
 	private boolean awtEvent = false;
@@ -803,6 +848,16 @@ public final class VCLEvent extends AWTEvent {
 	 * The document path.
 	 */
 	private String path = null;
+
+	/**
+	 * The text.
+	 */
+	private String text = null;
+
+	/**
+	 * The text attributes.
+	 */
+	private int[] textAttributes = null;
 
 	/**
 	 * Constructs a new <code>VCLEvent</code> instance.
@@ -906,6 +961,32 @@ public final class VCLEvent extends AWTEvent {
 			}
 		}
 
+		if (event instanceof InputMethodEvent) {
+			AttributedCharacterIterator i = ((InputMethodEvent)event).getText();
+			if (i != null) {
+				StringBuffer buf = new StringBuffer();
+				int count = 0;
+				for (char c = i.first(); c != CharacterIterator.DONE; c = i.next()) {
+					buf.append(c);
+					count++;
+				}
+				text = buf.toString();
+				textAttributes = new int[count];
+				count = 0;
+				for (char c = i.first(); c != CharacterIterator.DONE; c = i.next()) {
+					int attribute = 0;
+					InputMethodHighlight hl = (InputMethodHighlight)i.getAttribute(TextAttribute.INPUT_METHOD_HIGHLIGHT);
+					if (hl != null) {
+						if (hl.getState() == InputMethodHighlight.RAW_TEXT)
+							attribute |= SAL_EXTTEXTINPUT_ATTR_BOLDUNDERLINE;
+						else
+							attribute |= SAL_EXTTEXTINPUT_ATTR_UNDERLINE;
+					}
+					textAttributes[count++] = attribute;
+				}
+			}
+		}
+
 		source = event;
 
 	}
@@ -922,6 +1003,21 @@ public final class VCLEvent extends AWTEvent {
 			return ((ComponentEvent)source).getComponent().getBounds();
 		else
 			return new Rectangle();
+
+	}
+
+	/**
+	 * Returns the number of committed characters in the text associated with
+	 * this event.
+	 *
+	 * @return the number of committed characters
+	 */
+	public int getCommittedCharacterCount() {
+
+		if (source instanceof InputMethodEvent)
+			return ((InputMethodEvent)source).getCommittedCharacterCount();
+		else
+			return 0;
 
 	}
 
@@ -1332,6 +1428,28 @@ public final class VCLEvent extends AWTEvent {
 	public String getPath() {
 
 		return path;
+
+	}
+
+	/**
+	 * Returns the text associated with this event.
+	 *
+	 * @return the text to be drawn
+	 */
+	public String getText() {
+
+		return text;
+
+	}
+
+	/**
+	 * Returns the text attributes associated with this event.
+	 *
+	 * @return the text attributes to be used
+	 */
+	public int[] getTextAttributes() {
+
+		return textAttributes;
 
 	}
 

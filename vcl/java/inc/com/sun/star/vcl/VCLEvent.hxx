@@ -72,6 +72,7 @@ public:
 
 	void				dispatch();
 	const Rectangle		getBounds();
+	ULONG				getCommittedCharacterCount();
 	void*				getData();
 	SalFrame*			getFrame();
 	USHORT				getKeyChar();
@@ -79,6 +80,8 @@ public:
 	USHORT				getID();
 	USHORT				getModifiers();
 	::rtl::OUString		getPath();
+	::rtl::OUString		getText();
+	USHORT*				getTextAttributes();
 	const Rectangle		getUpdateRect();
 	ULONG				getWhen();
 	long				getX();

@@ -150,6 +150,41 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				dispatchEvent( nID, pFrame, NULL );
 			return;
 		}
+		case SALEVENT_ENDEXTTEXTINPUT:
+		{
+			SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)pData;
+			if ( pInputEvent )
+				delete pInputEvent;
+			dispatchEvent( nID, pFrame, NULL );
+			return;
+		}
+		case SALEVENT_EXTTEXTINPUT:
+		{
+			XubString aText( getText() );
+			ULONG nLen = aText.Len();
+			ULONG nCommitted = getCommittedCharacterCount();
+			USHORT *pAttributes = getTextAttributes();
+			SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)pData;
+			if ( !pInputEvent )
+			{
+				pInputEvent = new SalExtTextInputEvent();
+				pInputEvent->mnTime = getWhen();
+				pInputEvent->maText = aText;
+				pInputEvent->mpTextAttr = pAttributes;
+				pInputEvent->mnCursorPos = nLen;
+				pInputEvent->mnDeltaStart = 0;
+				pInputEvent->mbOnlyCursor = FALSE;
+				pInputEvent->mnCursorFlags = 0;
+			}
+			dispatchEvent( nID, pFrame, pInputEvent );
+			delete pInputEvent;
+			if ( pAttributes )
+				rtl_freeMemory( pAttributes );
+			// If there is no text, the character is committed
+			if ( nLen == nCommitted )
+				dispatchEvent( SALEVENT_ENDEXTTEXTINPUT, pFrame, NULL );
+			return;
+		}
 		case SALEVENT_GETFOCUS:
 		case SALEVENT_LOSEFOCUS:
 		{
@@ -348,6 +383,27 @@ const Rectangle com_sun_star_vcl_VCLEvent::getBounds()
 
 // ----------------------------------------------------------------------------
 
+ULONG com_sun_star_vcl_VCLEvent::getCommittedCharacterCount()
+{
+	static jmethodID mID = NULL;
+	ULONG out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getCommittedCharacterCount", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (ULONG)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
 void *com_sun_star_vcl_VCLEvent::getData()
 {
 	static jmethodID mID = NULL;
@@ -362,9 +418,7 @@ void *com_sun_star_vcl_VCLEvent::getData()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
 			out = (void *)t.pEnv->CallNonvirtualLongMethod( object, getMyClass(), mID );
-		}
 	}
 	return out;
 }
@@ -385,9 +439,7 @@ SalFrame *com_sun_star_vcl_VCLEvent::getFrame()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
 			out = (SalFrame *)t.pEnv->CallNonvirtualLongMethod( object, getMyClass(), mID );
-		}
 	}
 	return out;
 }
@@ -408,9 +460,7 @@ USHORT com_sun_star_vcl_VCLEvent::getKeyChar()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
 			out = (USHORT)t.pEnv->CallNonvirtualCharMethod( object, getMyClass(), mID );
-		}
 	}
 	return out;
 }
@@ -504,6 +554,70 @@ USHORT com_sun_star_vcl_VCLEvent::getModifiers()
 			jstring tempObj = (jstring)t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			if ( tempObj )
 				out = JavaString2String( t.pEnv, tempObj );
+		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+::rtl::OUString com_sun_star_vcl_VCLEvent::getText()
+{
+	static jmethodID mID = NULL;
+	::rtl::OUString out;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Ljava/lang/String;";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getText", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jstring tempObj = (jstring)t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
+			if ( tempObj )
+				out = JavaString2String( t.pEnv, tempObj );
+		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+USHORT *com_sun_star_vcl_VCLEvent::getTextAttributes()
+{
+	static jmethodID mID = NULL;
+	USHORT *out = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()[I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getTextAttributes", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jintArray tempObj = (jintArray)t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
+			if ( tempObj )
+			{
+				jsize nAttributes = t.pEnv->GetArrayLength( tempObj );
+				if ( nAttributes )
+				{
+					jboolean bCopy( sal_False );
+					jint *pAttributes = t.pEnv->GetIntArrayElements( tempObj, &bCopy );
+					out = (USHORT *)rtl_allocateMemory( sizeof( USHORT* ) * nAttributes );
+					if ( out )
+					{
+						for ( jsize i = 0; i < nAttributes; i++)
+							out[i] = pAttributes[i];
+					}
+					t.pEnv->ReleaseIntArrayElements( tempObj, pAttributes, JNI_ABORT );
+				}
+			}
 		}
 	}
 	return out;

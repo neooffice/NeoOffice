@@ -181,8 +181,7 @@ void com_sun_star_vcl_VCLBitmap::getPalette( BitmapPalette& _par0 )
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jintArray tempObj;
-			tempObj = (jintArray)t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
+			jintArray tempObj = (jintArray)t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			if ( tempObj )
 			{
 				jsize nColors = t.pEnv->GetArrayLength( tempObj );
