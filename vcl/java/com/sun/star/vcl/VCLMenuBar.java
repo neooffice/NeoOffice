@@ -106,7 +106,7 @@ public final class VCLMenuBar {
      *
      * @param f	VCLFrame with which the menubar is to be associated
      */
-    synchronized public void setFrame(VCLFrame f) {
+    public void setFrame(VCLFrame f) {
       	frame=f;
         Window win=frame.getWindow();
         if(win instanceof Frame)
@@ -149,7 +149,7 @@ public final class VCLMenuBar {
      * @param menuItem	menu item to be inserted
      * @param nPos	position in the menubar where the menu should be added
      */
-    synchronized public void addMenuItem(VCLMenuItemData menuItem, int nPos) {
+    public void addMenuItem(VCLMenuItemData menuItem, int nPos) {
         Stack menusToReinsert=null;
         
         if((nPos < 0) || (nPos == 65535))
@@ -190,7 +190,7 @@ public final class VCLMenuBar {
      *
      * @param nPos	index of menu to remove
      */
-    synchronized public void removeMenu( int nPos ) {
+    public void removeMenu( int nPos ) {
         awtMenuBar.remove(nPos);
         menus.remove(nPos);
     }
@@ -218,7 +218,7 @@ public final class VCLMenuBar {
      *
      * @param nPos	position to enable
      */
-    synchronized public void enableMenu( int nPos, boolean enable ) {
+    public void enableMenu( int nPos, boolean enable ) {
         if( nPos < menus.size() ) {
             VCLMenuItemData menu=(VCLMenuItemData)menus.elementAt(nPos);
             menu.setEnabled(enable);
@@ -238,7 +238,7 @@ public final class VCLMenuBar {
      * Regenerate all of the menubars and recreate the peers of the menus.  We may need to do this if
      * the set of peers that's currently in the menubar becomes invalid.
      */
-    synchronized public void regenerateMenuBar() {
+    public void regenerateMenuBar() {
         for(int i=awtMenuBar.countMenus()-1; i>=0; i--)
             awtMenuBar.remove(i);
         Enumeration e=menus.elements();
@@ -259,14 +259,14 @@ public final class VCLMenuBar {
     /**
      * Called when a new VCLMenuBar object is created to insert it into our tracking vector
      */
-    private static synchronized void addNewMenuBar(VCLMenuBar o) {
+    private static void addNewMenuBar(VCLMenuBar o) {
         activeMenubars.add(o);
     }
     
     /**
      * Called when a VCLMenuBar object is destroyed to remove it from our tracking vector
      */
-    private static synchronized void removeMenuBar(VCLMenuBar o) {
+    private static void removeMenuBar(VCLMenuBar o) {
         activeMenubars.removeElement(o);
     }
     
@@ -277,7 +277,7 @@ public final class VCLMenuBar {
      * @return VCLFrame whose menubar is associated with the item, or null if the item could not
      *	be located in any menubar associated with a VCLFrame.
      */
-    public static synchronized VCLMenuBar findVCLMenuBar(MenuItem item) {
+    public static VCLMenuBar findVCLMenuBar(MenuItem item) {
         Enumeration menuBars=activeMenubars.elements();
         while(menuBars.hasMoreElements()) {
             VCLMenuBar vmb=(VCLMenuBar)menuBars.nextElement();
@@ -323,7 +323,7 @@ public final class VCLMenuBar {
      * on the fly.  When this happens, we'll destroy and recreate all of the menubars to make sure each
      * menu bar contains peers of the proper classes.
      */
-    public static synchronized void regenerateAllMenuBars() {
+    public static void regenerateAllMenuBars() {
         Enumeration menuBars=activeMenubars.elements();
         while(menuBars.hasMoreElements()) {
             VCLMenuBar mb=(VCLMenuBar)menuBars.nextElement();
@@ -338,7 +338,7 @@ public final class VCLMenuBar {
      * @return true if the item is in a menubar, false if the item is either
      *	a submenu or a menu item
      */
-    public static synchronized boolean isTopLevelMenu(VCLMenuItemData item) {
+    public static boolean isTopLevelMenu(VCLMenuItemData item) {
 	Enumeration menuBars=activeMenubars.elements();
 	while(menuBars.hasMoreElements()) {
 	    VCLMenuBar mb=(VCLMenuBar)menuBars.nextElement();

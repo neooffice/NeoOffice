@@ -210,7 +210,7 @@ public final class VCLMenuItemData {
      *
      * @param newTitle		new title
      */
-    synchronized public void setTitle(String newTitle) {
+    public void setTitle(String newTitle) {
         if(delegate!=null) {
             delegate.setTitle(newTitle);
             return;
@@ -247,7 +247,7 @@ public final class VCLMenuItemData {
      *			for the shortcut, false if just command is needed
      *			as modifier.
      */
-    synchronized public void setKeyboardShortcut(int key, boolean useShift) {
+    public void setKeyboardShortcut(int key, boolean useShift) {
         if(delegate!=null) {
             delegate.setKeyboardShortcut(key, useShift);
             return;
@@ -281,7 +281,7 @@ public final class VCLMenuItemData {
      *
      * @param newEnabled	true if the item should be enabled, false if it should be disabled
      */
-    synchronized public void setEnabled(boolean newEnabled) {
+    public void setEnabled(boolean newEnabled) {
         if(delegate!=null) {
             delegate.setEnabled(newEnabled);
             return;
@@ -350,7 +350,7 @@ public final class VCLMenuItemData {
      *  to appear correctly, false if all required changes have been
      *  propogated to their peers
      */
-    synchronized public boolean setChecked(boolean newCheck) {
+    public boolean setChecked(boolean newCheck) {
         if(delegate!=null) {
             return(delegate.setChecked(newCheck));
         }
@@ -436,7 +436,7 @@ public final class VCLMenuItemData {
      *  their parents, false if the changes have already successfully propogated
      *  to any AWT peers.
      */
-    synchronized public boolean addMenuItem(VCLMenuItemData newItem, int nPos) {
+    public boolean addMenuItem(VCLMenuItemData newItem, int nPos) {
         if(delegate!=null) {
             return(delegate.addMenuItem(newItem, nPos));
         }
@@ -486,7 +486,7 @@ public final class VCLMenuItemData {
      *
      * @param nPos	position of item to delete
      */
-    synchronized public void removeMenuItem(int nPos) {
+    public void removeMenuItem(int nPos) {
         if(delegate!=null) {
             delegate.removeMenuItem(nPos);
             return;
@@ -652,7 +652,7 @@ public final class VCLMenuItemData {
      *
      * @return AWT MenuItem for this object
      */
-    synchronized public Object createAWTPeer() {
+    public Object createAWTPeer() {
         if(delegate!=null)
             return(delegate.createAWTPeer());
             
@@ -713,7 +713,7 @@ public final class VCLMenuItemData {
      * Reinsert new peer objects for the menu item into all of the registered
      * parent menus for the menu item.
      */
-    synchronized public void refreshAWTPeersInParentMenus() {
+    public void refreshAWTPeersInParentMenus() {
 	if(parentMenus.isEmpty())
 	    return;
 	
@@ -734,7 +734,7 @@ public final class VCLMenuItemData {
      *
      * @param o		peer object to stop managing
      */
-    synchronized public void unregisterAWTPeer(Object o) {
+    public void unregisterAWTPeer(Object o) {
         if(delegate!=null) {
             delegate.unregisterAWTPeer(o);
             return;
@@ -747,7 +747,7 @@ public final class VCLMenuItemData {
      * Unregister all AWT peer objects that have been created from the menu item data.  If the
      * item data corresponds to a submenu, all of the submenu peers will also be unregistered.
      */
-    synchronized public void unregisterAllAWTPeers() {
+    public void unregisterAllAWTPeers() {
         if(delegate!=null) {
             delegate.unregisterAllAWTPeers();
             return;
