@@ -808,7 +808,7 @@ bool GenericSalLayout::GetCharWidths( long* pCharWidths ) const
 
         // rightmost cluster edge is leftmost edge of next cluster
         if( (i > 0) && (nXPosMax > pG[1].maLinearPos.X()) )
-            nXPosMax = pG->maLinearPos.X();
+            nXPosMax = pG[1].maLinearPos.X();
 
         // character width is sum of glyph cluster widths
         pCharWidths[n] += nXPosMax - nXPosMin;

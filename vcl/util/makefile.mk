@@ -254,8 +254,8 @@ LINKFLAGSSHL += /ENTRY:LibMain@12
 
 .IF "$(GUI)"=="UNX"
 
-.IF "$(GUIBASE)"=="aqua"
-SHL1STDLIBS += -framework Cocoa
+.IF "$(OS)"=="MACOSX"
+SHL1STDLIBS += -ldl
 .ENDIF
 
 .IF "$(GUIBASE)"=="java"
@@ -264,11 +264,11 @@ SHL1STDLIBS += -framework ApplicationServices -framework Carbon -framework Audio
 .ENDIF
 .ENDIF
 
-.IF "$(GUIBASE)"=="unx"
-
-.IF "$(OS)"=="MACOSX"
-SHL1STDLIBS += -ldl
+.IF "$(GUIBASE)"=="aqua"
+SHL1STDLIBS += -framework Cocoa
 .ENDIF
+
+.IF "$(GUIBASE)"=="unx"
 
 .IF "$(WITH_LIBSN)"=="YES"
 SHL1STDLIBS+=$(LIBSN_LIBS)
@@ -288,9 +288,13 @@ SHL1STDLIBS += -lXext -lSM -lICE -lX11
 .IF "$(USE_XPRINT)" == "TRUE"
 SHL1STDLIBS += -lXp -lXext -lSM -lICE -lX11
 .ELSE
-.IF "$(CPU)" == "I"
+.IF "$(USE_XINERAMA)" != "NO"
+.IF "$(XINERAMA_LINK)" == "dynamic" || "$(OS)" == "MACOSX"
+SHL1STDLIBS += -lXinerama
+.ELSE
 SHL1STDLIBS += -Wl,-Bstatic -lXinerama -Wl,-Bdynamic 
-.ENDIF
+.ENDIF          # $(XINERAMA_LINK)
+.ENDIF          # $(USE_XINERAMA)
 SHL1STDLIBS += -lXext -lSM -lICE -lX11
 .ENDIF          # "$(USE_XPRINT)" == "TRUE"
 .ENDIF          # "$(OS)"=="SOLARIS"
@@ -303,6 +307,8 @@ SHL1STDLIBS += -lXinerama
 .ENDIF
 
 .IF "$(OS)"=="LINUX" || "$(OS)"=="SOLARIS" || "$(OS)"=="FREEBSD"
+# some nas versions need -lXt, too
+SHL1STDLIBS += -lXt
 SHL1STDLIBS += -laudio
 .IF "$(OS)"=="SOLARIS"
 # needed by libaudio.a

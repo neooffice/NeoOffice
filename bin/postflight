@@ -86,6 +86,18 @@ if [ -d "$2" ]; then
 		rm -Rf "$2/classes" || exit 1
 	fi
 
+	# Put back user's custom resource files
+	if [ -d "$2/resource" ]; then
+		for i in `cd "$2/resource" ; find . -maxdepth 1`; do
+			if [ ! -e "$2/Contents/MacOS/resource/$i" ]; then
+				mv -f "$2/resource/$i" "$2/Contents/MacOS/resource" || exit 1
+			fi
+		done
+		chown -Rf root:admin "$2/Contents/MacOS/resource" || exit 1
+		chmod -Rf u-w,u+r "$2/Contents/MacOS/resource" || exit 1
+		rm -Rf "$2/resource" || exit 1
+	fi
+
 	# Mark certain directories writable for admin group
 	chmod -f ug+w "$2/Contents" || exit 1
 	chmod -Rf ug+w "$2/Contents/Resources" || exit 1

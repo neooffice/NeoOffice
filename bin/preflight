@@ -54,6 +54,11 @@ if [ -d "$2/Contents" ] ; then
 		mv -f "$2/Contents/MacOS/classes" "$2" || exit 1
 	fi
 
+	# Save resource files for postflight scripts
+	if [ -d "$2/Contents/MacOS/resource" -a ! -e "$2/resource" ]; then
+		mv -f "$2/Contents/MacOS/resource" "$2" || exit 1
+	fi
+
 	rm -Rf "$2/Contents" || exit 1
 
 fi

@@ -80,67 +80,6 @@ int macxp_getOSXLocale( char *locale, sal_uInt32 bufferLen )
 	}
 
 	if ( !strlen( locale ) )
-	{
-		LocaleRef		lref;
-		CFArrayRef	aref;
-		CFStringRef	sref;
-		CFStringRef    locNameRef;
-
-		aref = (CFArrayRef)CFPreferencesCopyAppValue( CFSTR( "AppleLanguages" ), kCFPreferencesCurrentApplication );
-		if ( aref != NULL )
-		{
-			if ( (CFGetTypeID(aref) == CFArrayGetTypeID()) && (CFArrayGetCount(aref) > 0) )
-			{
-				sref = (CFStringRef)CFArrayGetValueAtIndex( aref, 0 );
-				if ( (sref != NULL) && (CFGetTypeID(sref) == CFStringGetTypeID()) )
-				{
-#if (BUILD_OS_MAJOR==10) && (BUILD_OS_MINOR==3)
-// Panther code
-					// This function only exists in Panther and above
-					locNameRef = CFLocaleCreateCanonicalLocaleIdentifierFromString( kCFAllocatorDefault,  sref );
-
-					if ( locNameRef != NULL )
-					{
-						CFStringGetCString( locNameRef, locale, bufferLen, kCFStringEncodingASCII );
-						CFRelease( locNameRef );
-
-						// If its just en, we want en_US.  Since all the locales are also
-						// UTF-8, we'll append UTF-8 to the end of all returned locales
-						if ( strcmp(locale, "en") == 0 )
-							strlcpy( locale, "en_US", bufferLen );
-//						else if ( strchr(locale, '.') == NULL )
-//							strlcat( locale, ".UTF-8", bufferLen );
-					}
-					else
-						fprintf( stderr, "Could not get Canonical Locale Identifier from AppleLanguages value!\n" );
-#endif
-
-#if (BUILD_OS_MAJOR == 10) && (BUILD_OS_MINOR == 2)
-// Jaguar code
-					if ( CFStringGetCString( sref, locale, bufferLen, CFStringGetSystemEncoding() ) )
-					{
-						LocaleRefFromLocaleString( locale, &lref );
-						LocaleRefGetPartString( lref, kLocaleAllPartsMask, bufferLen, locale );
-
-						/* Hack for US english locales.  OS X returns only "en", but we want
-						* "en_US".  So add it.
-						*/
-						if ( (strlen(locale) == 2) && (strncmp(locale, "en", 2) == 0) )
-							strncat( locale, "_US", bufferLen - strlen(locale) - 1 );
-					}
-#endif
-				}
-				else
-					fprintf( stderr, "Could not get array index 0 value of CFPref AppleLanguages!\n" );
-			}
-
-			CFRelease( aref );
-		}
-		else
-			fprintf( stderr, "Could not get value of CFPref AppleLanguages!  Please reset your locale in the International control panel.\n" );
-	}
-
-	if ( !strlen( locale ) )
 		strcpy( locale, "en" );
 
 	return( noErr );

@@ -37,28 +37,42 @@
 
 String DEFAULT_PRINTER
 {
-	Text = "Drucker";
-	Text[ ENGLISH ] = "Printer";
+	Text = "Drucker" ;
+	Text [ ENGLISH ] = "Printer" ;
 	Text[ english_us ] = "Printer";
-	Text[ portuguese_brazilian ] = "Drucker";
-	Text[ swedish ] = "Skrivare";
-	Text[ danish ] = "Printer";
-	Text[ italian ] = "Stampante";
-	Text[ spanish ] = "Impresora";
-	Text[ french ] = "Imprimante";
-	Text[ dutch ] = "Printer";
 	Text[ portuguese ] = "Impressora";
-	Text[ chinese_simplified ] = "æ‰“å°æœº";
 	Text[ russian ] = "Ïğèíòåğ";
-	Text[ polish ] = "Drukarka";
-	Text[ japanese ] = "ãƒ—ãƒªãƒ³ã‚¿";
-	Text[ chinese_traditional ] = "å°è¡¨æ©Ÿ";
-	Text[ arabic ] = "ÇáØÇÈÚÉ";
 	Text[ greek ] = "ÅêôõğùôŞò";
+	Text[ dutch ] = "Printer";
+	Text[ french ] = "Imprimante";
+	Text[ spanish ] = "Impresora";
+	Text[ italian ] = "Stampante";
+	Text[ danish ] = "Printer";
+	Text[ swedish ] = "Skrivare";
+	Text[ polish ] = "Drukarka";
+	Text[ portuguese_brazilian ] = "Impressora";
+	Text[ japanese ] = "ãƒ—ãƒªãƒ³ã‚¿";
 	Text[ korean ] = "í”„ë¦°í„°";
+	Text[ chinese_simplified ] = "æ‰“å°æœº";
+	Text[ chinese_traditional ] = "å°è¡¨æ©Ÿ";
 	Text[ turkish ] = "Yazıcı";
-	Text[ language_user1 ] = " ";
+	Text[ arabic ] = "Printer";
 	Text[ catalan ] = "Impressora";
 	Text[ finnish ] = "Tulostin";
+	Text[ thai ] = "à¹€à¸„à¸£à¸·à¹ˆà¸­à¸‡à¸à¸´à¸¡à¸à¹Œ";
+	Text[ czech ] = "TiskÃ¡rna";
+	Text[ hebrew ] = "××“×¤×¡×ª";
+	Text[ hindi ] = "à¤®à¥à¤¦à¥à¤°à¤•";
+	Text[ slovak ] = "TlaÄiareÅˆ";
+	Text[ hungarian ] = "NyomtatÃ³";
+	Text[ slovenian ] = "Tiskalnik";
+	Text[ estonian ] = "Printerile";
+	Text[ language_user1 ] = "Tiskalnik";
+	Text[ norwegian ] = "Skriver";
+	Text[ welsh ] = "Argraffydd";
+	Text[ northernsotho ] = "Segatiši";
+	Text[ afrikaans ] = "Drukker";
+	Text[ zulu ] = "Umshicileli";
+	Text[ norwegian_nynorsk ] = "Skrivar";
 };
 
