@@ -1212,7 +1212,7 @@ public final class VCLGraphics {
 	public Rectangle getGlyphBounds(int glyph, VCLFont font, int glyphOrientation) {
 
 		GlyphVector glyphs = font.getFont().createGlyphVector(graphics.getFontRenderContext(), new int[]{ glyph });
-		Rectangle2D bounds = glyphs.getGlyphMetrics(0).getBounds2D();
+		Rectangle2D bounds = glyphs.getVisualBounds();
 
 		double fScaleX = font.getScaleX();
 		if (fScaleX != 1.0) {
