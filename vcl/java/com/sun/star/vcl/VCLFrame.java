@@ -551,6 +551,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private static VCLFrame lastCaptureFrame = null;
 
 	/**
+	 * The last drag frame.
+	 */
+	private static VCLFrame lastDragFrame = null;
+
+	/**
 	 * The bit count.
 	 */
 	private int bitCount = 0;
@@ -702,6 +707,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			VCLFrame.captureFrame = parent;
 		if (VCLFrame.lastCaptureFrame == this)
 			VCLFrame.lastCaptureFrame = null;
+		if (VCLFrame.lastDragFrame == this)
+			VCLFrame.lastDragFrame = null;
 
 	}
 
@@ -1322,6 +1329,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// Disable mouse capture
 		VCLFrame.capture = false;
 		VCLFrame.lastCaptureFrame = null;
+		VCLFrame.lastDragFrame = null;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONUP, f, 0));
 
@@ -1338,6 +1346,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		// Enable mouse capture
 		VCLFrame.capture = true;
+		if (VCLFrame.lastDragFrame == null)
+			VCLFrame.lastDragFrame = this;
 
 		if (VCLFrame.captureFrame != null && e.getComponent().isShowing()) {
 			// Find the capture window
@@ -1361,9 +1371,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			if (f == null || f == parent)
 				f = this;
 
+			if (VCLFrame.lastDragFrame != f && VCLFrame.lastDragFrame.getWindow().isShowing()) {
+				Panel p = VCLFrame.lastDragFrame.getPanel();
+				Point destPoint = p.getLocationOnScreen();
+				MouseEvent mouseExited = new MouseEvent(p, MouseEvent.MOUSE_EXITED, e.getWhen(), e.getModifiers(), srcPoint.x - destPoint.x, srcPoint.y - destPoint.y, e.getClickCount(), e.isPopupTrigger());
+				queue.postCachedEvent(new VCLEvent(mouseExited, VCLEvent.SALEVENT_MOUSELEAVE, VCLFrame.lastDragFrame, 0));
+			}
+			VCLFrame.lastDragFrame = f;
+
 			if (!(f.getWindow() instanceof Frame))
 				VCLFrame.lastCaptureFrame = f;
 		}
+
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, f, 0));
 
