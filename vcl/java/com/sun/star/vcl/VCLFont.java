@@ -128,7 +128,7 @@ public final class VCLFont {
 				fontFamilies[i] = fontFamilies[i].substring(0, j);
 			Font font = new Font(fontFamilies[i], Font.PLAIN, 1);
 			if (font.isPlain())
-				array.add(new VCLFont(font, (short)0));
+				array.add(new VCLFont(font, (short)0, true));
 		}
 		VCLFont.fonts = (VCLFont[])array.toArray(new VCLFont[array.size()]);
 
@@ -145,6 +145,11 @@ public final class VCLFont {
 		return fonts;
 
 	}
+
+	/**
+	 * The antialiased flag.
+	 */
+	private boolean antialiased = false;
 
 	/**
 	 * The font.
@@ -171,9 +176,12 @@ public final class VCLFont {
 	 *
 	 * @param f a <code>Font</code> instance
 	 * @param o the orientation of the new <code>VCLFont</code> in degrees
+	 * @param b <code>true</code> to enable antialiasing and <code>false</code>
+	 *  to disable antialiasing
 	 */
-	VCLFont(Font f, short o) {
+	VCLFont(Font f, short o, boolean b) {
 
+		antialiased = b;
 		font = f;
 		orientation = o;
 
@@ -199,9 +207,11 @@ public final class VCLFont {
 	 * @param bold whether the new <code>VCLFont</code> should be bold
 	 * @param italic whether the new <code>VCLFont</code> should be italic
 	 * @param o the orientation of the new <code>VCLFont</code> in degrees
+	 * @param b <code>true</code> to enable antialiasing and <code>false</code>
+	 *  to disable antialiasing
 	 * @return a new <code>VCLFont</code> object
 	 */
-	public VCLFont deriveFont(int size, boolean bold, boolean italic, short o) {
+	public VCLFont deriveFont(int size, boolean bold, boolean italic, short o, boolean b) {
 
 		int style = Font.PLAIN;
 		if (bold)
@@ -209,7 +219,7 @@ public final class VCLFont {
 		if (italic)
 			style |= Font.ITALIC;
 		Font f = font.deriveFont(style, (float)size);
-		return new VCLFont(f, o);
+		return new VCLFont(f, o, b);
 
 	}
 
@@ -345,9 +355,20 @@ public final class VCLFont {
 	}
 
 	/**
+	 * Indicates whether or not the <code>Font</code> is antialiased.
+	 *
+	 * @return <code>true</code> if the <code>Font</code> is antialiased 
+	 */
+	public boolean isAntialiased() {
+
+		return antialiased;
+
+	}
+
+	/**
 	 * Indicates whether or not the <code>Font</code> is bold.
 	 *
-	 * @return <code> if the <code>Font</code> is bold
+	 * @return <code>true</code> if the <code>Font</code> is bold
 	 */
 	public boolean isBold() {
 
@@ -358,7 +379,7 @@ public final class VCLFont {
 	/**
 	 * Indicates whether or not the <code>Font</code> is italic.
 	 *
-	 * @return <code> if the <code>Font</code> is italic
+	 * @return <code>true</code> if the <code>Font</code> is italic
 	 */
 	public boolean isItalic() {
 

@@ -143,7 +143,6 @@ public final class VCLGraphics {
 
 		// Set rendering hints
 		RenderingHints hints = g.getRenderingHints();
-		hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 		hints.put(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		g.setRenderingHints(hints);
 
@@ -298,6 +297,7 @@ public final class VCLGraphics {
 		}
 		graphicsBounds.x = 0;
 		graphicsBounds.y = 0;
+		VCLGraphics.setDefaultRenderingAttributes(graphics);
 		bitCount = graphics.getDeviceConfiguration().getColorModel().getPixelSize();
 		pageImage = new VCLImage(graphicsBounds.width, graphicsBounds.height, bitCount);
 
@@ -1005,7 +1005,13 @@ public final class VCLGraphics {
 	public void drawTextArray(int x, int y, char[] chars, VCLFont font, int color, int[] offsets) {
 
 		Font f = font.getFont();
+		RenderingHints hints = graphics.getRenderingHints();
 		graphics.setFont(f);
+		if (font.isAntialiased())
+			hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+		else
+			hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
+		graphics.setRenderingHints(hints);
 		graphics.setColor(new Color(color));
 		FontMetrics fontMetrics = graphics.getFontMetrics();
 
