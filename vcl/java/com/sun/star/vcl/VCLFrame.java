@@ -1148,6 +1148,15 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public String getKeyName(int keyCode) {
 
 		StringBuffer buf = new StringBuffer();
+		if ((keyCode & VCLEvent.KEY_SHIFT) == VCLEvent.KEY_SHIFT) {
+			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+				buf.append("\u21e7");
+			}
+			else {
+				buf.append(KeyEvent.getKeyText(KeyEvent.VK_SHIFT));
+				buf.append("+");
+			}
+		}
 		if ((keyCode & VCLEvent.KEY_CONTROLMOD) == VCLEvent.KEY_CONTROLMOD) {
 			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 				buf.append("\u2303");
