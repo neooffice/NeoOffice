@@ -323,7 +323,7 @@ void com_sun_star_vcl_VCLTextLayout::layoutText( ImplLayoutArgs& _par0 )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "([CII[I[I)V";
+			char *cSignature = "([CII[I[I[I)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "layoutText", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -356,6 +356,7 @@ void com_sun_star_vcl_VCLTextLayout::layoutText( ImplLayoutArgs& _par0 )
 			jcharArray chars = t.pEnv->NewCharArray( nElements );
 			jintArray crl = t.pEnv->NewIntArray( nRuns );
 			jintArray grl = t.pEnv->NewIntArray( nRuns );
+			jintArray flags = t.pEnv->NewIntArray( nRuns );
 
 			jboolean bCopy( sal_False );
 			jchar *pCharBits = (jchar *)t.pEnv->GetPrimitiveArrayCritical( chars, &bCopy );
@@ -363,6 +364,8 @@ void com_sun_star_vcl_VCLTextLayout::layoutText( ImplLayoutArgs& _par0 )
 			jint *pCrlBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( crl, &bCopy );
 			bCopy = sal_False;
 			jint *pGrlBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( grl, &bCopy );
+			bCopy = sal_False;
+			jint *pFlagBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( flags, &bCopy );
 
 			int nElementsCopied = 0;
 			int nRunsCopied = 0;
@@ -375,26 +378,24 @@ void com_sun_star_vcl_VCLTextLayout::layoutText( ImplLayoutArgs& _par0 )
 				{
 					// Substitute Arabic characters
 					UErrorCode aErr = U_ZERO_ERROR;
-					nShapedChars = u_shapeArabic( _par0.mpStr + i, nRunLen, pCharBits + nElementsCopied, nElements - nElementsCopied, U_SHAPE_LETTERS_SHAPE, &aErr );
+					nShapedChars = u_shapeArabic( _par0.mpStr + i, nRunLen, NULL, 0, U_SHAPE_LETTERS_SHAPE, &aErr );
+					// Ignore the return value from the actual substitution as
+					// it appears to be flaky
+					aErr = U_ZERO_ERROR;
+					u_shapeArabic( _par0.mpStr + i, nRunLen, pCharBits + nElementsCopied, nElements - nElementsCopied, U_SHAPE_LETTERS_SHAPE, &aErr );
 
-					for ( i = 0 ; i < nShapedChars ; i++ )
+					for ( int k = 0 ; k < nShapedChars ; k++ )
 					{
-						// Reverse RTL chars
-						int k = i + nElementsCopied;
-						int l = nElementsCopied + nShapedChars - i - 1;
-						if ( k < l )
-						{
-							pCharBits[ k ] ^= pCharBits[ l ];
-							pCharBits[ l ] ^= pCharBits[ k ];
-							pCharBits[ k ] ^= pCharBits[ l ];
-						}
-						pCharBits[ k ] = ::GetMirroredChar( pCharBits[ k ] );
+						int l = nElementsCopied + k;
+						pCharBits[ l ] = ::GetMirroredChar( pCharBits[ l ] );
 					}
+					pFlagBits[ nRunsCopied ] = _par0.mnFlags | SAL_LAYOUT_BIDI_RTL;
 					nElementsCopied += nShapedChars;
 				}
 				else
 				{
-					memcpy( pCharBits + i - _par0.mnMinCharPos, _par0.mpStr + i, ( j - i ) * sizeof( jchar ) );
+					memcpy( pCharBits + i - _par0.mnMinCharPos, _par0.mpStr + i, ( nRunLen ) * sizeof( jchar ) );
+					pFlagBits[ nRunsCopied ] = _par0.mnFlags;
 					nElementsCopied += nRunLen;
 				}
 
@@ -403,16 +404,18 @@ void com_sun_star_vcl_VCLTextLayout::layoutText( ImplLayoutArgs& _par0 )
 				nRunsCopied++;
 			}
 
+			t.pEnv->ReleasePrimitiveArrayCritical( flags, (void *)pFlagBits, 0 );
 			t.pEnv->ReleasePrimitiveArrayCritical( grl, (void *)pGrlBits, 0 );
 			t.pEnv->ReleasePrimitiveArrayCritical( crl, (void *)pCrlBits, 0 );
 			t.pEnv->ReleasePrimitiveArrayCritical( chars, (void *)pCharBits, 0 );
 
-			jvalue args[5];
+			jvalue args[6];
 			args[0].l = chars;
 			args[1].i = _par0.mnMinCharPos;
 			args[2].i = _par0.mnEndCharPos;
 			args[3].l = crl;
 			args[4].l = grl;
+			args[5].l = flags;
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
@@ -420,7 +423,7 @@ void com_sun_star_vcl_VCLTextLayout::layoutText( ImplLayoutArgs& _par0 )
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLTextLayout::setDXArray( const long *_par0, int _par1 )
+void com_sun_star_vcl_VCLTextLayout::setDXArray( ImplLayoutArgs& _par0 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -434,18 +437,15 @@ void com_sun_star_vcl_VCLTextLayout::setDXArray( const long *_par0, int _par1 )
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			if ( _par0 && _par1 )
-			{
-				jintArray pAdvances = t.pEnv->NewIntArray( _par1 );
-				jboolean bCopy( sal_False );
-				long *pAdvanceBits = (long *)t.pEnv->GetPrimitiveArrayCritical( pAdvances, &bCopy );
-				for ( int i = 0 ; i < _par1; i++ )
-					memcpy( pAdvanceBits, _par0, _par1 * sizeof( long ) );
-				t.pEnv->ReleasePrimitiveArrayCritical( pAdvances, (void *)pAdvanceBits, 0 );
-				jvalue args[1];
-				args[0].l = pAdvances;
-				t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
-			}
+			jintArray pAdvances = t.pEnv->NewIntArray( _par0.mnLength );
+			jboolean bCopy( sal_False );
+			long *pAdvanceBits = (long *)t.pEnv->GetPrimitiveArrayCritical( pAdvances, &bCopy );
+			memcpy( pAdvanceBits, _par0.mpDXArray, _par0.mnLength * sizeof( long ) );
+			t.pEnv->ReleasePrimitiveArrayCritical( pAdvances, (void *)pAdvanceBits, 0 );
+
+			jvalue args[1];
+			args[0].l = pAdvances;
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
 }

@@ -70,7 +70,7 @@ public:
 	int					getTextBreak( long _par0, long _par1, int _par2 );
 	void				justify( long _par0 );
 	void				layoutText( ImplLayoutArgs& _par0 );
-	void				setDXArray( const long *_par0, int _par1 );
+	void				setDXArray( ImplLayoutArgs& _par0 );
 };
 
 } // namespace vcl

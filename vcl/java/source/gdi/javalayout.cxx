@@ -77,7 +77,7 @@ bool JavaLayout::LayoutText( ImplLayoutArgs& rArgs )
 void JavaLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 {
 	if ( rArgs.mpDXArray )
-		mpVCLTextLayout->setDXArray( rArgs.mpDXArray, rArgs.mnEndCharPos - rArgs.mnMinCharPos );
+		mpVCLTextLayout->setDXArray( rArgs );
 	else if ( rArgs.mnLayoutWidth )
 		mpVCLTextLayout->justify( rArgs.mnLayoutWidth );
 }

@@ -170,6 +170,11 @@ public final class VCLTextLayout {
 	private VCLGraphics graphics = null;
 
 	/**
+	 * The run flags.
+	 */
+	private int[] runFlags = null;
+
+	/**
 	 * Constructs a new <code>VCLTextLayout</code> instance.
 	 *
 	 * @param g the <code>VCLGraphics</code> instance
@@ -350,18 +355,39 @@ public final class VCLTextLayout {
 	 * @param e the ending index
 	 * @param crl the character run lengths
 	 * @param grl the glyph run lengths
+	 * @param f the flags for each run
 	 */
-	public void layoutText(char[] chars, int b, int e, int[] crl, int[] grl) {
+	public void layoutText(char[] chars, int b, int e, int[] crl, int[] grl, int[] f) {
 
 		beginIndex = b;
 		endIndex = e;
 		charRunLengths = crl;
 		glyphRunLengths = grl;
-		charCount = chars.length;
+		runFlags = f;
+		charCount = e - b;
 
 		bounds = null;
 		charAdvances = null;
 		caretPositions = null;
+
+		// Reverse characters in RTL runs
+		int previousChar = 0;
+		int currentChar = 0;
+		for (int i = 0; i < glyphRunLengths.length; i++) {
+			currentChar += glyphRunLengths[i];
+			if ((runFlags[i] & VCLTextLayout.SAL_LAYOUT_BIDI_RTL) != 0) {
+				for (int j = 0; j < glyphRunLengths[i]; j++) {
+					int k = previousChar + j;
+					int l = currentChar - j - 1;
+					if (k < l) {
+						chars[k] ^= chars[l];
+						chars[l] ^= chars[k];
+						chars[k] ^= chars[l];
+					}
+				}
+			}
+			previousChar = currentChar;
+		}
 
 		// Create the attributed string and the glyph vector
 		glyphs = font.getFont().createGlyphVector(graphics.getFontRenderContext(), chars);
@@ -387,17 +413,19 @@ public final class VCLTextLayout {
 		int currentChar = 0;
 		int currentGlyph = 0;
 		for (int i = 0; i < charRunLengths.length; i++) {
-			currentAdvance = glyphs.getGlyphPosition(currentGlyph + 1);
-			charAdjust += (double)advances[currentChar] - currentAdvance.getX();
-			for (int j = 0; j < glyphRunLengths[i]; j++) {
+			for (int j = 0; j < charRunLengths[i] || j < glyphRunLengths[i]; j++) {
 				if (j < glyphRunLengths[i]) {
 					currentAdvance = glyphs.getGlyphPosition(currentGlyph + 1);
+					if (j < charRunLengths[i])
+						charAdjust = (double)advances[currentChar] - currentAdvance.getX();
 					currentAdvance.setLocation((double)currentAdvance.getX() + charAdjust, currentAdvance.getY());
 					glyphs.setGlyphPosition(currentGlyph + 1, currentAdvance);
 					currentGlyph++;
 				}
+
+				if (j < charRunLengths[i])
+					currentChar++;
 			}
-			currentChar += charRunLengths[i];
 		}
 
 	}
