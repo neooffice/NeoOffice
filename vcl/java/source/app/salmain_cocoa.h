@@ -33,55 +33,17 @@
  *
  ************************************************************************/
 
-package com.sun.star.vcl;
+#ifndef _SV_SALMAIN_COCOA_H
+#define _SV_SALMAIN_COCOA_H
 
-/** 
- * A Java class that provides convenience methods for accessing runtime
- * platform information.
- * <p>
- * @version 	$Revision$ $Date$
- * @author 	    $Author$
- */
-public class VCLPlatform {
+#ifdef __cplusplus
+BEGIN_C
+#endif
 
-	/**
-	 * The default platform.
-	 */
-	public final static int PLATFORM_UNKNOWN = 0;
+void RunCocoaEventLoop(void);
 
-	/**
-	 * The Mac OS X platform.
-	 */
-	public final static int PLATFORM_MACOSX = 1;
+#ifdef __cplusplus
+END_C
+#endif
 
-	/**
-	 * Cached platform.
-	 */
-	private static int platform = VCLPlatform.PLATFORM_UNKNOWN;
-
-	/**
-	 * Initialize the platform.
-	 */
-	static {
-
-		String os = System.getProperty("os.name").toLowerCase();
-
-		if (os.startsWith("mac os x"))
-			VCLPlatform.platform = VCLPlatform.PLATFORM_MACOSX;
-		else
-			VCLPlatform.platform = VCLPlatform.PLATFORM_UNKNOWN;
-
-	}
-
-	/**
-	 * Returns the platform.
-	 *
-	 * @return the platform constant
-	 */
-	static int getPlatform() {
-
-		return platform;
-
-	}
-
-}
+#endif // _SV_SALMAIN_COCOA_H

@@ -46,7 +46,28 @@
 #endif
 
 #ifdef MACOSX
+
+#ifndef _SV_SALMAIN_COCOA_H
+#include <salmain_cocoa.h>
+#endif
+#ifndef _SV_JAVA_LANG_CLASS_HXX 
+#include <java/lang/Class.hxx>
+#endif
+#ifndef _VOS_MODULE_HXX_
+#include <vos/module.hxx>
+#endif
 #include <crt_externs.h>
+
+using namespace rtl;
+using namespace vcl;
+using namespace vos;
+
+class SVMainThread : public OThread
+{
+protected:
+	virtual void run() { SVMain(); }
+};
+
 #endif
 
 // ============================================================================
@@ -132,9 +153,32 @@ int main( int argc, char *argv[] )
 		if ( aLibPath.GetToken( 0, ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 ).GetChar( 0 ) ).CompareTo( aCmdPath, aCmdPath.Len() ) != COMPARE_EQUAL )
 			execv( pCmdPath, argv );
 	}
-#endif	// MACOSX
 
+	// Test the JVM version and if it is 1.4 or higher, run Run SVMain() in a
+	// high priority thread
+	java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
+	if ( pClass )
+	{
+		delete pClass;
+		pClass = NULL;
+
+		// Create the SVMain() thread
+		SVMainThread aThread;
+		aThread.create();
+
+		// Start the Cocoa event loop
+		OModule aModule;
+		aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/AppKit.framework/AppKit" ) );
+		RunCocoaEventLoop();
+		aThread.join();
+	}
+	else
+	{
+		SVMain();
+	}
+#else	// MACOSX
 	SVMain();
+#endif	// MACOSX
 
 	exit( 0 );
 }

@@ -35,6 +35,7 @@
 
 package com.sun.star.vcl;
 
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
@@ -627,6 +628,7 @@ public class VCLFrame implements ComponentListener, FocusListener, KeyListener, 
 
 		// Add a panel as the only component
 		panel = new Panel();
+		panel.setBackground(Color.white);
 		panel.enableInputMethods(false);
 		window.add(panel);
 		bitCount = panel.getColorModel().getPixelSize();
@@ -1318,6 +1320,7 @@ public class VCLFrame implements ComponentListener, FocusListener, KeyListener, 
 		if (b) {
 			window = new Window(window);
 			panel = new Panel();
+			panel.setBackground(Color.white);
 			panel.enableInputMethods(false);
 			window.add(panel);
 			insets = window.getInsets();

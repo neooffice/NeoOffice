@@ -33,55 +33,27 @@
  *
  ************************************************************************/
 
-package com.sun.star.vcl;
+#define _SV_SALMAIN_COCOA_M
 
-/** 
- * A Java class that provides convenience methods for accessing runtime
- * platform information.
- * <p>
- * @version 	$Revision$ $Date$
- * @author 	    $Author$
- */
-public class VCLPlatform {
+#import <salmain_cocoa.h>
+#import <objc/objc.h>
 
-	/**
-	 * The default platform.
-	 */
-	public final static int PLATFORM_UNKNOWN = 0;
+// ============================================================================
 
-	/**
-	 * The Mac OS X platform.
-	 */
-	public final static int PLATFORM_MACOSX = 1;
+void RunCocoaEventLoop()
+{
+	id nNSApplication;
+	id nNSApp;
+	SEL pSharedApplication;
+	SEL pRun;
 
-	/**
-	 * Cached platform.
-	 */
-	private static int platform = VCLPlatform.PLATFORM_UNKNOWN;
+	// Invoke [NSApplication sharedApplication]
+	nNSApplication = objc_getClass("NSApplication");
+	pSharedApplication = sel_getUid("sharedApplication");
+	nNSApp = objc_msgSend(nNSApplication, pSharedApplication);
 
-	/**
-	 * Initialize the platform.
-	 */
-	static {
-
-		String os = System.getProperty("os.name").toLowerCase();
-
-		if (os.startsWith("mac os x"))
-			VCLPlatform.platform = VCLPlatform.PLATFORM_MACOSX;
-		else
-			VCLPlatform.platform = VCLPlatform.PLATFORM_UNKNOWN;
-
-	}
-
-	/**
-	 * Returns the platform.
-	 *
-	 * @return the platform constant
-	 */
-	static int getPlatform() {
-
-		return platform;
-
-	}
-
+	// Invoke [NSApp run]
+	pRun = sel_getUid("run");
+	objc_msgSend(nNSApp, pRun);
 }
+

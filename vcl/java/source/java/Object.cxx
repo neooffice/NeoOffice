@@ -38,14 +38,14 @@
 #ifndef _VCL_UNOHELP_HXX
 #include <unohelp.hxx>
 #endif
-#ifndef _SV_JAVA_LANG_OBJECT_HXX
-#include <java/lang/Object.hxx>
-#endif
 #ifndef _SV_JAVA_LANG_CLASS_HXX
 #include <java/lang/Class.hxx>
 #endif
 #ifndef _SV_JAVA_LANG_THROWABLE_HXX
 #include <java/lang/Throwable.hxx>
+#endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
+#include <com/sun/star/vcl/VCLEvent.hxx>
 #endif
 #ifndef _COM_SUN_STAR_JAVA_XJAVATHREADREGISTER_11_HPP_
 #include <com/sun/star/java/XJavaThreadRegister_11.hpp>
@@ -53,23 +53,15 @@
 #ifndef _COM_SUN_STAR_JAVA_XJAVAVM_HPP_
 #include <com/sun/star/java/XJavaVM.hpp>
 #endif
-#ifndef _VOS_MODULE_HXX_
-#include <vos/module.hxx>
-#endif
-#ifndef _VOS_PROCESS_HXX_
-#include <vos/process.hxx>
-#endif
 #ifndef _VOS_MUTEX_HXX_
 #include <vos/mutex.hxx>
-#endif
-#ifndef _VOS_DYNLOAD_HXX_
-#include <vos/dynload.hxx>
 #endif
 #ifndef _RTL_PROCESS_H_
 #include <rtl/process.h>
 #endif
 
 using namespace vcl;
+using namespace vos;
 using namespace com::sun::star::java;
 using namespace com::sun::star::uno;
 using namespace com::sun::star::lang;
@@ -111,9 +103,7 @@ void VCLThreadAttach::AttachThread()
 {
 	if ( xRG11Ref.is() )
 	{
-		pJVM->GetEnv( (void **)&pEnv, JNI_VERSION_1_2 );
-		if ( !pEnv )
-			pJVM->AttachCurrentThread( (void**)&pEnv, NULL );
+		pJVM->AttachCurrentThread( (void**)&pEnv, NULL );
 		xRG11Ref->registerThread();
 	}
 }
@@ -137,7 +127,7 @@ sal_Bool VCLThreadAttach::StartJava()
 	static sal_Bool bStarted = sal_False;
 	if ( !bStarted )
 	{
-		vos::OGuard aGuard( vos::OMutex::getGlobalMutex() );
+		OGuard aGuard( OMutex::getGlobalMutex() );
 		if ( !bStarted )
 		{
 			Reference<XMultiServiceFactory> xFactory = unohelper::GetMultiServiceFactory();
@@ -172,7 +162,7 @@ sal_Bool VCLThreadAttach::StartJava()
 			xRG11Ref = Reference< XJavaThreadRegister_11 >( xVM, UNO_QUERY );
 			if ( xRG11Ref.is() )
 				xRG11Ref->registerThread();
-		
+
 		  	pJVM->AttachCurrentThread( (void **)&pEnv, NULL );
 
 			if ( pEnv )

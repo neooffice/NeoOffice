@@ -66,10 +66,19 @@ SLOFILES= \
 	$(SLO)$/salinst.obj \
 	$(SLO)$/salsound.obj
 
+.IF "$(OS)"=="MACOSX"
+OBJFILES += $(OBJ)$/salmain_cocoa.obj
+SLOFILES += $(SLO)$/salmain_cocoa.obj
+.ENDIF
+
 .ELSE
 
 SLOFILES=\
 	$(SLO)$/salmain.obj
+
+.IF "$(OS)"=="MACOSX"
+SLOFILES += $(SLO)$/salmain_cocoa.obj
+.ENDIF
 
 .ENDIF
 

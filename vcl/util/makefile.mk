@@ -260,6 +260,12 @@ SHL1STDLIBS += -lstdc++ -lstlport_gcc
 SHL1STDLIBS += -framework Cocoa
 .ENDIF
 
+.IF "$(GUIBASE)"=="java"
+.IF "$(OS)"=="MACOSX"
+SHL1STDLIBS += -lobjc
+.ENDIF
+.ENDIF
+
 .IF "$(GUIBASE)"=="unx"
 .IF "$(OS)"=="MACOSX"
 SHL1STDLIBS += -lXext
