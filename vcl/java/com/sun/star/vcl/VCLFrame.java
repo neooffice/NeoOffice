@@ -1975,7 +1975,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>WindowEvent</code>
 	 */
-	public void windowDeiconified(WindowEvent e) {}
+	public void windowDeiconified(WindowEvent e) {
+
+		if (window != null)
+			window.repaint();
+
+	}
+
 
 	/**
 	 * Invoked when the window is set to be the user's active window, which
