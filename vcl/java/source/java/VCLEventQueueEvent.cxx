@@ -162,35 +162,25 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			}
 			return;
 		}
-		case SALEVENT_OPENDOCUMENT:
-		{
-			String aEmptyStr;
-			ApplicationEvent aAppEvt( aEmptyStr, aEmptyStr, APPEVENT_OPEN_STRING, getPath() );
-			ImplGetSVData()->mpApp->AppEvent( aAppEvt );
-
-			return;
-		}
-		case SALEVENT_PRINTDOCUMENT:
-		{
-			String aEmptyStr;
-			ApplicationEvent aAppEvt( aEmptyStr, aEmptyStr, APPEVENT_PRINT_STRING, getPath() );
-			ImplGetSVData()->mpApp->AppEvent( aAppEvt );
-
-			return;
-		}
 		case SALEVENT_ACTIVATE_APPLICATION:
+		case SALEVENT_OPENDOCUMENT:
+		case SALEVENT_PRINTDOCUMENT:
 		{
 			// Make sure that the current document window is showing
 			SalFrame *pParent = pSalData->mpFocusFrame;
 			while ( pParent && pParent->maFrameData.mpParent )
 				pParent = pParent->maFrameData.mpParent;
 			if ( pParent )
-				pParent->ToTop( 0 );
-			if ( pSalData->mpFocusFrame )
-				pSalData->mpFocusFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
+				pParent->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
 			// Force all "always on top" windows to the front without focus
 			for ( std::list< SalFrame* >::const_iterator it = pSalData->maAlwaysOnTopFrameList.begin(); it != pSalData->maAlwaysOnTopFrameList.end(); ++it )
 				(*it)->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
+			if ( nID == SALEVENT_OPENDOCUMENT || nID == SALEVENT_PRINTDOCUMENT )
+			{
+				String aEmptyStr;
+				ApplicationEvent aAppEvt( aEmptyStr, aEmptyStr, SALEVENT_OPENDOCUMENT ? APPEVENT_OPEN_STRING : APPEVENT_PRINT_STRING, getPath() );
+				ImplGetSVData()->mpApp->AppEvent( aAppEvt );
+			}
 			return;
 		}
 		case SALEVENT_ABOUT:
@@ -350,19 +340,32 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			// Adjust position for RTL layout
 			if ( pFrame && Application::GetSettings().GetLayoutRTL() )
 				pMouseEvent->mnX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pMouseEvent->mnX - 1;
-			// Let drag thread run
-			if ( pMouseEvent->mnCode & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT ) )
-			{
-				ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
-				OThread::yield();
-				pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
-			}
-			// In native drag mode, OOo cannot handle drag events with key
-			// modifiers
 			if ( nID == SALEVENT_MOUSEBUTTONUP )
-				pSalData->mbInNativeDrag = false;
-			else if ( pSalData->mbInNativeDrag )
-				pMouseEvent->mnCode &= ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
+			{
+				// Wait for drag thread to complete
+				while ( pSalData->mbInNativeDrag )
+				{
+					ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
+					OThread::yield();
+					pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
+				}
+			}
+			else if ( ( nID == SALEVENT_MOUSELEAVE || nID == SALEVENT_MOUSEMOVE ) )
+			{
+				if ( pSalData->mbInNativeDrag )
+				{
+					// In native drag mode, OOo cannot handle drag events with
+					// key modifiers
+					pMouseEvent->mnCode &= ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
+				}
+				else
+				{
+					// Let drag thread have a chance to run
+					ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
+					OThread::yield();
+					pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
+				}
+			}
 			dispatchEvent( nID, pFrame, pMouseEvent );
 			delete pMouseEvent;
 			return;

@@ -112,7 +112,8 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 	{
 		ClearableMutexGuard aGuard( aCarbonEventQueueMutex );
 
-		if ( GetEventKind( aEvent ) == kEventMouseDragged )
+		EventKind nKind = GetEventKind( aEvent );
+		if ( nKind == kEventMouseDragged )
 		{
 			if ( aLastMouseDraggedEvent )
 				ReleaseEvent( aLastMouseDraggedEvent );
@@ -124,6 +125,14 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 		if ( aTrackingEventQueue )
 		{
 			EventRef aNewEvent = CopyEvent( aEvent );
+
+			// OOo cannot handle key modifiers during dragging
+			if ( nKind == kEventMouseDragged || nKind == kEventMouseEntered || nKind == kEventMouseExited )
+			{
+				UInt32 nKeyModifiers = 0;
+				SetEventParameter( aNewEvent, kEventParamKeyModifiers, typeUInt32, sizeof( UInt32 ), &nKeyModifiers );
+			}
+
 			PostEventToQueue( aTrackingEventQueue, aNewEvent, kEventPriorityStandard );
 		}
 
@@ -343,6 +352,7 @@ JavaDragSource::~JavaDragSource()
 	{
 		if ( pDragThread )
 		{
+			maListener.clear();
 			osl_joinWithThread( pDragThread );
 			pDragThread = NULL;
 		}
@@ -415,6 +425,12 @@ void SAL_CALL JavaDragSource::initialize( const Sequence< Any >& arguments ) thr
 			}
 		}
 	}
+
+	if ( !pDragTrackingHandlerUPP )
+		pDragTrackingHandlerUPP = NewDragTrackingHandlerUPP( ImplDragTrackingHandlerCallback );
+
+	if ( pDragTrackingHandlerUPP && mpNativeWindow )
+		InstallTrackingHandler( pDragTrackingHandlerUPP, (WindowRef)mpNativeWindow, this );
 #endif	// MACOSX
 }
 
@@ -590,15 +606,6 @@ void JavaDragSource::runDragExecute( void *pData )
 				{
 					bNoRejectCursor = false;
 
-					if ( !pDragTrackingHandlerUPP )
-						pDragTrackingHandlerUPP = NewDragTrackingHandlerUPP( ImplDragTrackingHandlerCallback );
-
-					if ( pDragTrackingHandlerUPP && pSource->mpNativeWindow )
-					{
-						aDragSources.push_back( pSource );
-						InstallTrackingHandler( pDragTrackingHandlerUPP, (WindowRef)pSource->mpNativeWindow, pSource );
-					}
-
 					// Release mutex while we are in drag
 					aDragMutex.release();
 
@@ -609,6 +616,8 @@ void JavaDragSource::runDragExecute( void *pData )
 
 					// Fix bug 249 by preventing drags to other applications
 					SetDragAllowableActions( aDrag, kDragActionNothing, false );
+
+					aDragSources.push_back( pSource );
 
 					if ( TrackDrag( aDrag, &aEventRecord, aRegion ) == noErr )
 					{
@@ -623,18 +632,14 @@ void JavaDragSource::runDragExecute( void *pData )
 						aDragMutex.release();
 					}
 
+					aDragSources.remove( pSource );
+
 					aCarbonEventQueueMutex.acquire();
 					aTrackingEventQueue = NULL;
 					aCarbonEventQueueMutex.release();
 
 					// Relock mutex after drag
 					aDragMutex.acquire();
-
-					if ( pDragTrackingHandlerUPP && pSource->mpNativeWindow )
-					{
-						RemoveTrackingHandler( pDragTrackingHandlerUPP, (WindowRef)pSource->mpNativeWindow );
-						aDragSources.remove( pSource );
-					}
 
 					bNoRejectCursor = false;
 					nCurrentAction = DNDConstants::ACTION_NONE;
@@ -653,6 +658,8 @@ void JavaDragSource::runDragExecute( void *pData )
 	}
 
 	pDragThreadOwner = NULL;
+	if ( pSource->mpInNativeDrag )
+		*pSource->mpInNativeDrag = false;
 
 	if ( pDragThread )
 		osl_destroyThread( pDragThread );
