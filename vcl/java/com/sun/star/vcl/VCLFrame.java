@@ -2581,7 +2581,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		NoPaintWindow(VCLFrame f) {
 
-			super(new VCLFrame.NoPaintFrame(f));
+			super(VCLScreen.getSharedFrame());
 			frame = f;
 			enableInputMethods(false);
 			setMinimumSize(1, 1);

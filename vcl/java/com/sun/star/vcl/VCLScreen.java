@@ -69,16 +69,19 @@ public final class VCLScreen {
 	private static Insets frameInsets = null;
 
 	/**
+	 * The cached frame insets.
+	 */
+	private static Frame sharedFrame = null;
+
+	/**
 	 * Initialize screen size and frame insets.
 	 */
 	static {
 
-		Frame f = new Frame();
-		f.setSize(100, 100);
-		f.addNotify();
-		frameInsets = f.getInsets();
-		f.removeNotify();
-		f.dispose();
+		sharedFrame = new Frame();
+		sharedFrame.setSize(100, 100);
+		sharedFrame.addNotify();
+		frameInsets = sharedFrame.getInsets();
 
 	}
 
@@ -90,6 +93,17 @@ public final class VCLScreen {
 	public static Insets getFrameInsets() {
 
 		return frameInsets;
+
+	}
+
+	/**
+	 * Gets the shared <code>Frame</code> instance.
+	 *
+	 * @return the <code>Frame</code> insets
+	 */
+	static Frame getSharedFrame() {
+
+		return sharedFrame;
 
 	}
 
