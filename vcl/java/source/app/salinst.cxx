@@ -265,10 +265,7 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( JNIEnv 
 	{
 		jint nRet = pEnv->MonitorEnter( lockObject );
 		if ( pEnv->ExceptionOccurred() )
-		{
-			pEnv->ExceptionDescribe();
 			pEnv->ExceptionClear();
-		}
 		return nRet == JNI_OK ? 0 : 1;
 	}
 	else
@@ -310,10 +307,7 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv 
 	{
 		jint nRet = pEnv->MonitorExit( lockObject );
 		if ( pEnv->ExceptionOccurred() )
-		{
-			pEnv->ExceptionDescribe();
 			pEnv->ExceptionClear();
-		}
 		return nRet == JNI_OK ? 0 : 1;
 	}
 	else
@@ -1404,8 +1398,27 @@ void SalYieldMutex::acquire()
 			// Fix bug 244 by waking up the VCL event queue
 			com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
 			pSalData->mpEventQueue->postCachedEvent( &aEvent );
+
+#ifdef MACOSX
+			// Unlock the Carbon lock
+			jint nReleased = 1;
+			VCLThreadAttach t;
+			if ( t.pEnv && t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+				nReleased = Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
+#endif	// MACOSX
+
+			OMutex::acquire();
+
+#ifdef MACOSX
+			// Relock the Carbon lock
+			if ( !nReleased && t.pEnv )
+				Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
+#endif	// MACOSX
 		}
-		OMutex::acquire();
+		else
+		{
+			OMutex::acquire();
+		}
 	}
 	mnThreadId = OThread::getCurrentIdentifier();
 	mnCount++;
