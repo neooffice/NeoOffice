@@ -268,6 +268,11 @@ JavaDragSource::~JavaDragSource()
 
 		pDragThreadOwner = NULL;
 	}
+
+#ifdef MACOSX
+	if ( mpNativeWindow )
+		ReleaseWindow( (WindowRef)mpNativeWindow );
+#endif	// MACOSX
 }
 
 // ------------------------------------------------------------------------
@@ -283,7 +288,7 @@ void SAL_CALL JavaDragSource::initialize( const Sequence< Any >& arguments ) thr
 	}
 
 #ifdef MACOSX
-	if ( !mpNativeWindow || !IsValidWindowPtr( (WindowRef)mpNativeWindow ) )
+	if ( !mpNativeWindow || !IsValidWindowPtr( (WindowRef)mpNativeWindow ) || RetainWindow( (WindowRef)mpNativeWindow ) != noErr )
 	{
 		mpNativeWindow = NULL;
 		throw RuntimeException();
@@ -593,6 +598,9 @@ JavaDropTarget::~JavaDropTarget()
 
 	if ( pDragReceiveHandlerUPP && mpNativeWindow )
 		RemoveReceiveHandler( pDragReceiveHandlerUPP, (WindowRef)mpNativeWindow );
+
+	if ( mpNativeWindow )
+		ReleaseWindow( (WindowRef)mpNativeWindow );
 #endif	// MACOSX
 }
 
@@ -609,7 +617,7 @@ void SAL_CALL JavaDropTarget::initialize( const Sequence< Any >& arguments ) thr
 	}
 
 #ifdef MACOSX
-	if ( !mpNativeWindow || !IsValidWindowPtr( (WindowRef)mpNativeWindow ) )
+	if ( !mpNativeWindow || !IsValidWindowPtr( (WindowRef)mpNativeWindow ) || RetainWindow( (WindowRef)mpNativeWindow ) != noErr )
 	{
 		mpNativeWindow = NULL;
 		throw RuntimeException();
