@@ -109,7 +109,7 @@ com_sun_star_vcl_VCLMenuItemData * com_sun_star_vcl_VCLMenu::getMenuItemDataObje
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLMenu::insertItem( com_sun_star_vcl_VCLMenuItemData *_par0, int _par1 )
+void com_sun_star_vcl_VCLMenu::insertItem( com_sun_star_vcl_VCLMenuItemData *_par0, short _par1 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -117,7 +117,7 @@ void com_sun_star_vcl_VCLMenu::insertItem( com_sun_star_vcl_VCLMenuItemData *_pa
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(Lcom/sun/star/vcl/VCLMenuItemData;I)V";
+			char *cSignature = "(Lcom/sun/star/vcl/VCLMenuItemData;S)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "insertItem", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -125,7 +125,7 @@ void com_sun_star_vcl_VCLMenu::insertItem( com_sun_star_vcl_VCLMenuItemData *_pa
 		{
 			jvalue args[2];
 			args[0].l = _par0->getJavaObject();
-			args[1].i = jint( _par1 );
+			args[1].s = jshort( _par1 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
@@ -133,7 +133,7 @@ void com_sun_star_vcl_VCLMenu::insertItem( com_sun_star_vcl_VCLMenuItemData *_pa
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLMenu::removeItem( int _par0 )
+void com_sun_star_vcl_VCLMenu::removeItem( short _par0 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -141,14 +141,14 @@ void com_sun_star_vcl_VCLMenu::removeItem( int _par0 )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(I)V";
+			char *cSignature = "(S)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "removeItem", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
 			jvalue args[1];
-			args[0].i = jint( _par0 );
+			args[0].s = jshort( _par0 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
@@ -156,7 +156,7 @@ void com_sun_star_vcl_VCLMenu::removeItem( int _par0 )
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLMenu::checkItem( int _par0, bool _par1 )
+void com_sun_star_vcl_VCLMenu::checkItem( short _par0, bool _par1 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -164,14 +164,14 @@ void com_sun_star_vcl_VCLMenu::checkItem( int _par0, bool _par1 )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(IZ)V";
+			char *cSignature = "(SZ)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "checkItem", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
 			jvalue args[2];
-			args[0].i = jint( _par0 );
+			args[0].s = jshort( _par0 );
 			args[1].z = jboolean( _par1 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
@@ -180,7 +180,7 @@ void com_sun_star_vcl_VCLMenu::checkItem( int _par0, bool _par1 )
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLMenu::enableItem( int _par0, bool _par1 )
+void com_sun_star_vcl_VCLMenu::enableItem( short _par0, bool _par1 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -188,14 +188,14 @@ void com_sun_star_vcl_VCLMenu::enableItem( int _par0, bool _par1 )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(IZ)V";
+			char *cSignature = "(SZ)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "enableItem", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
 			jvalue args[2];
-			args[0].i = jint( _par0 );
+			args[0].s = jshort( _par0 );
 			args[1].z = jboolean( _par1 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
@@ -204,7 +204,7 @@ void com_sun_star_vcl_VCLMenu::enableItem( int _par0, bool _par1 )
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLMenu::attachSubmenu( com_sun_star_vcl_VCLMenuItemData *_par0, int _par1 )
+void com_sun_star_vcl_VCLMenu::attachSubmenu( com_sun_star_vcl_VCLMenuItemData *_par0, short _par1 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -212,7 +212,7 @@ void com_sun_star_vcl_VCLMenu::attachSubmenu( com_sun_star_vcl_VCLMenuItemData *
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(Lcom/sun/star/vcl/VCLMenuItemData;I)V";
+			char *cSignature = "(Lcom/sun/star/vcl/VCLMenuItemData;S)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "attachSubmenu", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -220,7 +220,7 @@ void com_sun_star_vcl_VCLMenu::attachSubmenu( com_sun_star_vcl_VCLMenuItemData *
 		{
 			jvalue args[2];
 			args[0].l = _par0->getJavaObject();
-			args[1].i = jint( _par1 );
+			args[1].s = jshort( _par1 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}

@@ -95,8 +95,8 @@ public final class VCLMenu {
      * @param newItem	item to add
      * @param nPos	position in which the item should be added
      */
-    public void insertItem(VCLMenuItemData newItem, int nPos) {
-        if((nPos < 0) || (nPos == 65535))
+    public void insertItem(VCLMenuItemData newItem, short nPos) {
+        if(nPos < 0)
             nPos=menuData.getNumMenuItems();
         
         if(menuData.addMenuItem(newItem, nPos))
@@ -108,7 +108,7 @@ public final class VCLMenu {
      *
      * @param nPos	position of the item to remove
      */
-    public void removeItem(int nPos) {
+    public void removeItem(short nPos) {
             menuData.removeMenuItem(nPos);
     }
     
@@ -118,7 +118,7 @@ public final class VCLMenu {
      * @param nPos	position of the item to check/uncheck
      * @param bCheck	new checkmark state of the item
      */
-    public void checkItem(int nPos, boolean bCheck) {
+    public void checkItem(short nPos, boolean bCheck) {
                 VCLMenuItemData item=null;
                 item=(VCLMenuItemData)menuData.getMenuItem(nPos);
                 if((item!=null) && item.setChecked(bCheck)) {
@@ -138,7 +138,7 @@ public final class VCLMenu {
      * @param nPos	position of the item to enable or disable
      * @param bEnable	new enabled state of the item
      */
-    public void enableItem(int nPos, boolean bEnable) {
+    public void enableItem(short nPos, boolean bEnable) {
             VCLMenuItemData item=(VCLMenuItemData)menuData.getMenuItem(nPos);
             item.setEnabled(bEnable);
     }
@@ -149,7 +149,7 @@ public final class VCLMenu {
      * @param newMenu		contents of the new menu item
      * @param nPos		position where the submenu should be attached
      */
-    public void attachSubmenu(VCLMenuItemData newMenu, int nPos) {
+    public void attachSubmenu(VCLMenuItemData newMenu, short nPos) {
             VCLMenuItemData item=null;
 	    item=(VCLMenuItemData)menuData.getMenuItem(nPos);
 	    if(item==null) {

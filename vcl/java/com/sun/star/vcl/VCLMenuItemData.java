@@ -435,15 +435,15 @@ public final class VCLMenuItemData {
      *  their parents, false if the changes have already successfully propogated
      *  to any AWT peers.
      */
-    public boolean addMenuItem(VCLMenuItemData newItem, int nPos) {
+    public boolean addMenuItem(VCLMenuItemData newItem, short nPos) {
         if(delegate!=null) {
             return(delegate.addMenuItem(newItem, nPos));
         }
         
         boolean peersInvalidated=false;
         
-        if((nPos < 0) || (nPos == 65535))
-            nPos=menuItems.size();
+        if(nPos < 0)
+            nPos=(short)menuItems.size();
         
         menuItems.add(nPos, newItem);
 	newItem.parentMenus.add(this);
@@ -485,14 +485,14 @@ public final class VCLMenuItemData {
      *
      * @param nPos	position of item to delete
      */
-    public void removeMenuItem(int nPos) {
+    public void removeMenuItem(short nPos) {
         if(delegate!=null) {
             delegate.removeMenuItem(nPos);
             return;
         }
         
-        if((nPos < 0) || (nPos == 65535))
-            nPos=menuItems.size();
+        if(nPos < 0)
+            nPos=(short)menuItems.size();
         
 	((VCLMenuItemData)menuItems.get(nPos)).parentMenus.remove(this);
         menuItems.remove(nPos);
@@ -514,7 +514,7 @@ public final class VCLMenuItemData {
      *
      * @param nPos	position of item to retrieve
      */
-    public VCLMenuItemData getMenuItem(int nPos) {
+    public VCLMenuItemData getMenuItem(short nPos) {
         if(delegate!=null) {
             return(delegate.getMenuItem(nPos));
         }
@@ -532,13 +532,13 @@ public final class VCLMenuItemData {
      * @return index of the item in the menu or -1 if the item is not in the
      * menu
      */
-    public int getMenuItemIndex(VCLMenuItemData item) {
+    public short getMenuItemIndex(VCLMenuItemData item) {
 	if(delegate!=null) {
 	    return(delegate.getMenuItemIndex(item));
 	}
 		
-	int toReturn=-1;
-	for(int i=0; i<menuItems.size(); i++) {
+	short toReturn=-1;
+	for(short i=0; i<menuItems.size(); i++) {
 	    if(menuItems.get(i)==item) {
 		toReturn=i;
 		break;
@@ -553,12 +553,12 @@ public final class VCLMenuItemData {
      *
      * @return number of menu item elements
      */
-    public int getNumMenuItems() {
+    public short getNumMenuItems() {
         if(delegate!=null) {
             return(delegate.getNumMenuItems());
         }
         
-        return(menuItems.size());
+        return((short)menuItems.size());
     }
     
     /**
@@ -721,7 +721,7 @@ public final class VCLMenuItemData {
 	Iterator parents=parentMenus.iterator();
 	while(parents.hasNext()) {
 	    VCLMenuItemData parent=(VCLMenuItemData)parents.next();
-                int menuPos=parent.getMenuItemIndex(this);
+                short menuPos=parent.getMenuItemIndex(this);
                 if(menuPos >= 0) {
                     parent.removeMenuItem(menuPos);
                     parent.addMenuItem(this, menuPos); // creates a new peer

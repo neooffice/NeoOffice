@@ -64,11 +64,11 @@ public:
 	
 	com_sun_star_vcl_VCLMenuItemData *	getMenuItemDataObject();
 	
-	void				insertItem(com_sun_star_vcl_VCLMenuItemData *_par0, int _par1);
-	void				removeItem(int _par0);
-	void				checkItem(int _par0, bool _par1);
-	void				enableItem(int _par0, bool _par1);
-	void				attachSubmenu(com_sun_star_vcl_VCLMenuItemData *_par0, int par1);
+	void				insertItem(com_sun_star_vcl_VCLMenuItemData *_par0, short _par1);
+	void				removeItem(short _par0);
+	void				checkItem(short _par0, bool _par1);
+	void				enableItem(short _par0, bool _par1);
+	void				attachSubmenu(com_sun_star_vcl_VCLMenuItemData *_par0, short par1);
 };
 
 } // namespace vcl
