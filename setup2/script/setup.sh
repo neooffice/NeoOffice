@@ -249,6 +249,13 @@ if [ "$os" = "Darwin" ] ; then
     fi
 fi
 
+# Make sure that there is a /tmp directory
+if [ "$os" = "Darwin" ] ; then
+    if [ ! -d "/tmp" -a -d "/private/tmp" ] ; then
+        ln -sf "private/tmp" "/tmp"
+    fi
+fi
+
 sync
 
 checkforpatches()
