@@ -211,7 +211,7 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		bNoActivate = FALSE;
 
 	if ( !maFrameData.mbVisible && maFrameData.mpParent && pSalData->mpFocusFrame == this)
-		maFrameData.mpParent->ToTop( SAL_FRAME_TOTOP_GRABFOCUS );
+		maFrameData.mpParent->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
 
 	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible, bNoActivate, this );
 
@@ -236,8 +236,12 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	else
 	{
 		if ( pSalData->mpFocusFrame == this )
+		{
 			pSalData->mpFocusFrame = NULL;
 
+			if ( maFrameData.mpParent )
+				maFrameData.mpParent->ToTop( 0 );
+		}
 	}
 }
 
