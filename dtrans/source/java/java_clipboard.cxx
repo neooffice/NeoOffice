@@ -140,11 +140,11 @@ Reference< XTransferable > SAL_CALL JavaClipboard::getContents() throw( RuntimeE
 		if ( aOldContents.is() )
 		{
 			ClipboardEvent aEvent( static_cast< OWeakObject* >( this ), aContents );
-			while ( listeners.begin() != listeners.end() )
+
+			for ( list< Reference< XClipboardListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
 			{
-				if( listeners.front().is() )
-					listeners.front()->changedContents( aEvent );
-				listeners.pop_front();
+				if ( (*it).is() )
+					(*it)->changedContents( aEvent );
 			}
 		}
 	}
@@ -188,11 +188,11 @@ void SAL_CALL JavaClipboard::setContents( const Reference< XTransferable >& xTra
 		aOldOwner->lostOwnership( static_cast< XClipboard* >( this ), aOldContents );
 
 	ClipboardEvent aEvent( static_cast< OWeakObject* >( this ), xTransferable );
-	while ( listeners.begin() != listeners.end() )
+
+	for ( list< Reference< XClipboardListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
 	{
-		if( listeners.front().is() )
-			listeners.front()->changedContents( aEvent );
-		listeners.pop_front();
+		if ( (*it).is() )
+			(*it)->changedContents( aEvent );
 	}
 }
 
