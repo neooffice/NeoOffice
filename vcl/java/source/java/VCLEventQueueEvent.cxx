@@ -270,7 +270,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pKeyEvent->mnRepeat = 0;
 			}
 			// Make a pass through the native menus before dispatching
-			if ( nID == SALEVENT_KEYINPUT && pFrame && ( pKeyEvent->mnCode & KEY_MOD1 ) )
+			if ( pFrame && ( pKeyEvent->mnCode & KEY_MOD1 ) )
 				UpdateMenusForFrame( pFrame, NULL );
 			dispatchEvent( nID, pFrame, pKeyEvent );
 			delete pKeyEvent;
