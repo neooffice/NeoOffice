@@ -305,6 +305,7 @@
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>doc</string>
+				<string>dot</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>sxw_sdw_doc_Option_1.icns</string>
@@ -381,6 +382,7 @@
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
+				<string>pps</string>
 				<string>ppt</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
