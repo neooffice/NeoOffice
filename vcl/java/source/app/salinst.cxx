@@ -44,6 +44,9 @@
 #ifndef _SV_SALFRAME_HXX
 #include <salframe.hxx>
 #endif
+#ifndef _SV_SALPTYPE_HXX
+#include <salptype.hxx>
+#endif
 #ifndef _SV_SALVD_HXX
 #include <salvd.hxx>
 #endif
@@ -534,39 +537,61 @@ void SalInstance::DeletePrinterQueueInfo( SalPrinterQueueInfo* pInfo )
 SalInfoPrinter* SalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
                                                 ImplJobSetup* pSetupData )
 {
+	SalData *pSalData = GetSalData();
+
 	// Create a dummy printer configuration for our dummy printer
 	SalInfoPrinter *pPrinter = new SalInfoPrinter();
 
-	// Set values
-	if ( !pSetupData->mpDriverData )
-	{
-		pPrinter->maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat();
-		pPrinter->maPrinterData.mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
-		SalDriverData aDriverData;
-		aDriverData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pPrinter->maPrinterData.mpVCLPageFormat->getJavaObject() );
-		BYTE *pDriverData = (BYTE *)rtl_allocateMemory( sizeof( SalDriverData ) );
-		memcpy( pDriverData, &aDriverData, sizeof( SalDriverData ) );
-		pSetupData->mpDriverData = pDriverData;
-		pSetupData->mnDriverDataLen = sizeof( SalDriverData );
-	}
-	else
-	{
-		// Create a new page format instance that points to the same Java
-		// object
-		SalDriverData *pDriverData = (SalDriverData *)pSetupData->mpDriverData;
-		pPrinter->maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pDriverData->mpVCLPageFormat->getJavaObject() );
-	}
-
-	// Populate the job setup
+	// Populate data
 	pSetupData->mnSystem = JOBSETUP_SYSTEM_JAVA;
 	pSetupData->maPrinterName = pQueueInfo->maPrinterName;
 	pSetupData->maDriver = pQueueInfo->maDriver;
-	pSetupData->meOrientation = pPrinter->maPrinterData.mpVCLPageFormat->getOrientation();
-	pSetupData->mnPaperBin = 0;
-	pSetupData->mePaperFormat = pPrinter->maPrinterData.mpVCLPageFormat->getPaperType();
-	Size aSize( pPrinter->maPrinterData.mpVCLPageFormat->getPageSize() );
-	pSetupData->mnPaperWidth = aSize.Width();
-	pSetupData->mnPaperHeight = aSize.Height();
+
+	// Check driver data
+	if ( pSetupData->mpDriverData )
+	{
+		BOOL bDelete = FALSE;
+
+		if ( pSetupData->mnSystem != JOBSETUP_SYSTEM_JAVA || pSetupData->mnDriverDataLen != sizeof( SalDriverData ) )
+			bDelete = TRUE;
+
+		if ( !bDelete )
+		{
+			BOOL bDelete = TRUE;
+			for ( ::std::list< com_sun_star_vcl_VCLPageFormat* >::const_iterator it = pSalData->maVCLPageFormats.begin(); it != pSalData->maVCLPageFormats.end(); ++it )
+			{
+				if ( ((SalDriverData *)pSetupData->mpDriverData)->mpVCLPageFormat == *it && ((SalDriverData *)pSetupData->mpDriverData)->mpVCLPageFormat->getJavaObject() == (*it)->getJavaObject() )
+				{
+					bDelete = FALSE;
+					break;
+				}
+			}
+		}
+
+		if ( bDelete )
+		{
+			delete[] pSetupData->mpDriverData;
+			pSetupData->mpDriverData = NULL;
+			pSetupData->mnDriverDataLen = 0;
+		}
+	}
+
+	// Set driver data
+	if ( !pSetupData->mpDriverData )
+	{
+		SalDriverData *pDriverData = (SalDriverData *)rtl_allocateMemory( sizeof( SalDriverData ) );
+		pDriverData->mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat();
+		pSalData->maVCLPageFormats.push_back( pDriverData->mpVCLPageFormat );
+		pSetupData->mpDriverData = (BYTE *)pDriverData;
+		pSetupData->mnDriverDataLen = sizeof( SalDriverData );
+	}
+
+	// Create a new page format instance that points to the same Java object
+	pPrinter->maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( ((SalDriverData *)pSetupData->mpDriverData)->mpVCLPageFormat->getJavaObject() );
+	pSalData->maVCLPageFormats.push_back( pPrinter->maPrinterData.mpVCLPageFormat );
+
+	// Update values
+	pPrinter->SetData( 0, pSetupData );
 
     return pPrinter;
 }

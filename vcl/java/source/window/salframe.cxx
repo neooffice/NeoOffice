@@ -306,15 +306,6 @@ void SalFrame::ShowFullScreen( BOOL bFullScreen )
 
 	maFrameData.mpVCLFrame->setFullScreenMode( bFullScreen );
 	maFrameData.mbFullScreen = bFullScreen;
-
-	// Post a paint event
-	SalPaintEvent *pEvent = new SalPaintEvent();
-	pEvent->mnBoundX = 0;
-	pEvent->mnBoundY = 0;
-	pEvent->mnBoundWidth = maGeometry.nWidth + maGeometry.nLeftDecoration;
-	pEvent->mnBoundHeight = maGeometry.nHeight + maGeometry.nTopDecoration;
-	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_PAINT, this, (void *)pEvent );
-	GetSalData()->mpEventQueue->postCachedEvent( &aEvent );
 }
 
 // -----------------------------------------------------------------------
@@ -377,15 +368,6 @@ void SalFrame::StartPresentation( BOOL bStart )
 			nRealTopDecoration = maGeometry.nTopDecoration;
 		}
 		SetPosSize( aWorkArea.nLeft + maGeometry.nLeftDecoration, aWorkArea.nTop + nRealTopDecoration, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - nRealTopDecoration - maGeometry.nBottomDecoration, nFlags );
-
-		// Post a paint event
-		SalPaintEvent *pEvent = new SalPaintEvent();
-		pEvent->mnBoundX = 0;
-		pEvent->mnBoundY = 0;
-		pEvent->mnBoundWidth = maGeometry.nWidth + maGeometry.nLeftDecoration;
-		pEvent->mnBoundHeight = maGeometry.nHeight + maGeometry.nTopDecoration;
-		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_PAINT, this, (void *)pEvent );
-		pSalData->mpEventQueue->postCachedEvent( &aEvent );
 	}
 #else	// MACOSX
 #ifdef DEBUG

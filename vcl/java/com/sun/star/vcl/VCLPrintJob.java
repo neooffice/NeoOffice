@@ -156,6 +156,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 			}
 			catch (Throwable t) {}
 		}
+		pageFormat.setEditable(true);
 
 	}
 
@@ -301,6 +302,9 @@ public final class VCLPrintJob implements Printable, Runnable {
 			else {
 				dialogAccepted = false;
 			}
+		}
+		else if (!b && dialogAccepted) {
+			pageFormat.setEditable(false);
 		}
 
 		return dialogAccepted;

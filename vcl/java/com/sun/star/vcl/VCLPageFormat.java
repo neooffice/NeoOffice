@@ -49,7 +49,7 @@ import java.awt.print.PrinterJob;
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public final class VCLPageFormat {
+public final class VCLPageFormat implements Cloneable {
 
 	/** 
 	 * ORIENTATION_PORTRAIT constant.
@@ -107,6 +107,11 @@ public final class VCLPageFormat {
 	public final static int PAPER_USER = 8;
 
 	/**
+	 * The editable flag.
+	 */
+	private boolean editable = true;
+
+	/**
 	 * Cached <code>VCLImage</code>.
 	 */
 	private VCLImage image = null;
@@ -135,6 +140,22 @@ public final class VCLPageFormat {
 		pageFormat = job.defaultPage();
 		pageResolution = new Dimension(VCLScreen.MIN_PRINTER_RESOLUTION, VCLScreen.MIN_PRINTER_RESOLUTION);
 		image = new VCLImage(1, 1, 32, this);
+
+	}
+
+	/**
+	 * Creates a new <code>VCLPageFormat</code> instance that has the same page
+	 * format settings.
+	 *
+	 * @return the new <code>VCLPageFormat</code> instance
+	 */
+	public Object clone() {
+
+		VCLPageFormat f = new VCLPageFormat();
+		f.setOrientation( getOrientation() );
+		Dimension r = getPageResolution();
+		f.setPageResolution( r.width, r.height );
+		return f;
 
 	}
 
@@ -263,11 +284,27 @@ public final class VCLPageFormat {
 	}
 
 	/**
+	 * Set the editability of this component.
+	 *
+	 * @param b <code>true</code> to make this component editable or else
+	 *  <code>false</code>
+	 */
+	void setEditable(boolean b) {
+
+		editable = b;
+
+	}
+
+	/**
+	/**
 	 * Set the page orientation.
 	 *
 	 * @param o the page orientation
 	 */
 	public void setOrientation(int o) {
+
+		if (!editable)
+			return;
 
 		if (o == ORIENTATION_PORTRAIT)
 			pageFormat.setOrientation(PageFormat.PORTRAIT);
@@ -296,6 +333,9 @@ public final class VCLPageFormat {
 	 *  cancel button or else <code>true</code>
 	 */
 	public boolean setup() {
+
+		if (!editable)
+			return false;
 
 		PageFormat p = job.pageDialog(pageFormat);
 		if (p != pageFormat) {

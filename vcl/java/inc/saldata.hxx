@@ -36,6 +36,8 @@
 #ifndef _SV_SALDATA_HXX
 #define _SV_SALDATA_HXX
 
+#include <list>
+
 #ifndef _SV_SVDATA_HXX
 #include <svdata.hxx>
 #endif
@@ -54,6 +56,9 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
 #include <com/sun/star/vcl/VCLFont.hxx>
 #endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX
+#include <com/sun/star/vcl/VCLPageFormat.hxx>
+#endif
 
 // -----------
 // - SalData -
@@ -71,6 +76,7 @@ public:
 	::vcl::com_sun_star_vcl_VCLEventQueue*	mpEventQueue;
 	::vcl::com_sun_star_vcl_VCLFontList*	mpFontList;
 	SalFrame*				mpPresentationFrame;
+	::std::list< ::vcl::com_sun_star_vcl_VCLPageFormat* >	maVCLPageFormats;
 
 							SalData();
 							~SalData();

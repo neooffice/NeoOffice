@@ -35,6 +35,9 @@
 
 #define _SV_SALPRN_CXX
 
+#ifndef _SV_SALDATA_HXX
+#include <saldata.hxx>
+#endif
 #ifndef _SV_SALPRN_HXX
 #include <salprn.hxx>
 #endif
@@ -142,22 +145,58 @@ BOOL SalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 
 BOOL SalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
 {
+	SalData *pSalData = GetSalData();
+
+	// Check driver data
+	if ( pSetupData->mpDriverData )
+	{
+		BOOL bDelete = FALSE;
+
+		if ( pSetupData->mnSystem != JOBSETUP_SYSTEM_JAVA || pSetupData->mnDriverDataLen != sizeof( SalDriverData ) )
+			bDelete = TRUE;
+
+		if ( !bDelete )
+		{
+			bDelete = TRUE;
+			for ( ::std::list< com_sun_star_vcl_VCLPageFormat* >::const_iterator it = pSalData->maVCLPageFormats.begin(); it != pSalData->maVCLPageFormats.end(); ++it )
+			{
+				if ( ((SalDriverData *)pSetupData->mpDriverData)->mpVCLPageFormat == *it && ((SalDriverData *)pSetupData->mpDriverData)->mpVCLPageFormat->getJavaObject() == (*it)->getJavaObject() )
+				{
+					bDelete = FALSE;
+					break;
+				}
+			}
+		}
+
+		if ( bDelete )
+		{
+			delete[] pSetupData->mpDriverData;
+			pSetupData->mpDriverData = NULL;
+			pSetupData->mnDriverDataLen = 0;
+		}
+	}
+
 	// Set driver data
 	if ( !pSetupData->mpDriverData )
 	{
-		SalDriverData aDriverData;
-		aDriverData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( maPrinterData.mpVCLPageFormat->getJavaObject() );
-		BYTE *pDriverData = (BYTE *)rtl_allocateMemory( sizeof( SalDriverData ) );
-		memcpy( pDriverData, &aDriverData, sizeof( SalDriverData ) );
-		pSetupData->mpDriverData = pDriverData;
+		SalDriverData *pDriverData = (SalDriverData *)rtl_allocateMemory( sizeof( SalDriverData ) );
+		pDriverData->mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( maPrinterData.mpVCLPageFormat->getJavaObject() );
+		pSalData->maVCLPageFormats.push_back( pDriverData->mpVCLPageFormat );
+		pSetupData->mpDriverData = (BYTE *)pDriverData;
 		pSetupData->mnDriverDataLen = sizeof( SalDriverData );
 	}
 	else
 	{
+		if ( maPrinterData.mpVCLPageFormat )
+		{
+			pSalData->maVCLPageFormats.remove( maPrinterData.mpVCLPageFormat );
+			delete maPrinterData.mpVCLPageFormat;
+		}
 		// Create a new page format instance that points to the same Java
 		// object
 		SalDriverData *pDriverData = (SalDriverData *)pSetupData->mpDriverData;
-		pDriverData->mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( maPrinterData.mpVCLPageFormat->getJavaObject() );
+		maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pDriverData->mpVCLPageFormat->getJavaObject() );
+		pSalData->maVCLPageFormats.push_back( maPrinterData.mpVCLPageFormat );
 	}
 
 	// Set but don't update values
@@ -256,12 +295,18 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 						   ImplJobSetup* pSetupData,
 						   BOOL bShowDialog )
 {
+	SalData *pSalData = GetSalData();
+
 	if ( maPrinterData.mpVCLPageFormat )
+	{
+		pSalData->maVCLPageFormats.remove( maPrinterData.mpVCLPageFormat );
 		delete maPrinterData.mpVCLPageFormat;
-	// Create a new page format instance that points to the same Java
-	// object
+	}
+
+	// Create a new page format instance that points to the same Java object
 	SalDriverData *pDriverData = (SalDriverData *)pSetupData->mpDriverData;
 	maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pDriverData->mpVCLPageFormat->getJavaObject() );
+	pSalData->maVCLPageFormats.push_back( maPrinterData.mpVCLPageFormat );
 
 	maPrinterData.mbStarted = maPrinterData.mpVCLPrintJob->startJob( maPrinterData.mpVCLPageFormat, bShowDialog );
 
@@ -428,8 +473,10 @@ SalPrinterData::~SalPrinterData()
 	if ( mpGraphics )
 		delete mpGraphics;
 	if ( mpVCLPageFormat )
+	{
+		GetSalData()->maVCLPageFormats.remove( mpVCLPageFormat );
 		delete mpVCLPageFormat;
-
+	}
 	if ( mpVCLPrintJob )
 	{
 		mpVCLPrintJob->dispose();
@@ -453,5 +500,8 @@ SalInfoPrinterData::~SalInfoPrinterData()
 	if ( mpGraphics )
 		delete mpGraphics;
 	if ( mpVCLPageFormat )
+	{
+		GetSalData()->maVCLPageFormats.remove( mpVCLPageFormat );
 		delete mpVCLPageFormat;
+	}
 }
