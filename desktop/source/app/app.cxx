@@ -705,7 +705,8 @@ void Desktop::StartSetup( const OUString& aParameters )
 
 #ifdef USE_JAVA
     // Wait for execution to finish since Java is so dependent on it
-    OUString aArgListArray[4];
+    sal_uInt32 nMaxArgs = 4;
+    OUString aArgListArray[ nMaxArgs ];
     rtl_Locale *pLocale;
     if ( osl_getProcessLocale( &pLocale ) == osl_Process_E_None )
     {
@@ -716,48 +717,57 @@ void Desktop::StartSetup( const OUString& aParameters )
         {
             aArgListArray[1] += OUString( RTL_CONSTASCII_USTRINGPARAM( "-" ) );
             aArgListArray[1] += OUString( aCountry );
-        }
+        } 
         aArgListArray[2] = aParameters;
-    }
+    } 
     else
     {
         aArgListArray[0] = aParameters;
         aArgListArray[1] = OUString();
         aArgListArray[2] = OUString();
     }
-    aArgListArray[3] = OUString();
     OArgumentList aArgumentList( aArgListArray, 4 );
-
     ::vos::OProcess::TProcessError aProcessError =
         aProcess.execute( OProcess::TOption_Wait,
                           aSecurity,
                           aArgumentList,
                           aEnv );
+
+    // Get the exit value
+    if ( aProcessError == OProcess::E_None )
+    {
+        OProcess::TProcessInfo aInfo;
+        aProcessError = aProcess.getInfo( OProcess::TData_ExitCode, &aInfo );
+        if ( aProcessError != OProcess::E_None || aInfo.Code )
+            aProcessError = OProcess::E_Unknown;
+    }
+
+    // If the setup command failed, try running it with the "-repair" argument
+    if ( aProcessError != OProcess::E_None )
+    {
+        for ( sal_uInt32 i = 0; i < nMaxArgs; i++ )
+        {
+            if ( !aArgListArray[ i ].getLength() )
+            {
+                aArgListArray[ i ] = OUString( RTL_CONSTASCII_USTRINGPARAM( "-repair" ) );
+                break;
+            }
+        }
+        aArgumentList = OArgumentList( aArgListArray, 4 );
+        aProcessError = aProcess.execute( OProcess::TOption_Wait,
+                                          aSecurity,
+                                          aArgumentList,
+                                          aEnv );
+    }
 #else	// USE_JAVA
-    OUString                aArgListArray[1];
+    OUString aArgListArray[1];
     aArgListArray[0] = aParameters;
     OArgumentList aArgumentList( aArgListArray, 1 );
-
     ::vos::OProcess::TProcessError aProcessError =
         aProcess.execute( OProcess::TOption_Detached,
                           aSecurity,
                           aArgumentList,
                           aEnv );
-#endif	// USE_JAVA
-
-#ifdef USE_JAVA
-	// If the setup command failed, try running it with the "-repair" argument
-    if ( aProcessError != OProcess::E_None )
-    {
-        aArgListArray[3] = OUString( RTL_CONSTASCII_USTRINGPARAM( "-repair" ) );
-        aArgumentList = OArgumentList( aArgListArray, 4 );
-
-        ::vos::OProcess::TProcessError aProcessError =
-            aProcess.execute( OProcess::TOption_Wait,
-                              aSecurity,
-                              aArgumentList,
-                              aEnv );
-    }
 #endif	// USE_JAVA
 
     if ( aProcessError != OProcess::E_None )
