@@ -461,6 +461,19 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		return false;
 	}
 
+	long nAscent = maVerticalFontStyle ? mpVCLFont->getAscent() * mnUnitsPerPixel : 0;
+	long nBaselineDelta = 0;
+
+	if ( maVerticalFontStyle )
+	{
+		BslnBaselineRecord aBaseline;
+		memset( aBaseline, 0, sizeof( BslnBaselineRecord ) );
+		if ( ATSUCalculateBaselineDeltas( maVerticalFontStyle, kBSLNRomanBaseline, aBaseline ) == noErr )
+			nBaselineDelta = Float32ToLong( Fix2X( aBaseline[ kBSLNIdeographicCenterBaseline ] ) * mnUnitsPerPixel );
+		if ( !nBaselineDelta )
+			nBaselineDelta = ( ( ( mpVCLFont->getDescent() + mpVCLFont->getAscent() ) / 2 ) - mpVCLFont->getDescent() ) * mnUnitsPerPixel;
+	}
+
 	// Calculate and cache glyph advances
 	double fUnitsPerPixel = mpVCLFont->getScaleX() * mnUnitsPerPixel;
 	bool bPosRTL;
@@ -484,9 +497,14 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			if ( ATSUGetGlyphBounds( mpGlyphInfoArray->layout, 0, 0, nIndex, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
 			{
 				if ( nGlyph & GF_ROTMASK )
+				{
 					fCurrentWidth += Fix2X( aTrapezoid.lowerLeft.y - aTrapezoid.upperLeft.y ) * fUnitsPerPixel;
+					aPos.Y() = nBaselineDelta - Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mnUnitsPerPixel / 2 );
+				}
 				else
+				{
 					fCurrentWidth += Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * fUnitsPerPixel;
+				}
 			}
 
 			nCharWidth = Float32ToLong( fCurrentWidth ) - aPos.X();
@@ -504,6 +522,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			AppendGlyph( GlyphItem( nCharPos, nGlyph, aPos, nGlyphFlags, nCharWidth ) );
 
 			aPos.X() += nCharWidth;
+			aPos.Y() = 0;
 			break;
 		}
 	}
@@ -580,8 +599,11 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector )
 	if ( maVerticalFontStyle )
 	{
 		BslnBaselineRecord aBaseline;
+		memset( aBaseline, 0, sizeof( BslnBaselineRecord ) );
 		if ( ATSUCalculateBaselineDeltas( maVerticalFontStyle, kBSLNRomanBaseline, aBaseline ) == noErr )
 			nBaselineDelta = Float32ToLong( Fix2X( aBaseline[ kBSLNIdeographicCenterBaseline ] ) * mnUnitsPerPixel );
+		if ( !nBaselineDelta )
+			nBaselineDelta = ( ( ( mpVCLFont->getDescent() + mpVCLFont->getAscent() ) / 2 ) - mpVCLFont->getDescent() ) * mnUnitsPerPixel;
 	}
 
 	Point aPos;
@@ -610,10 +632,6 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector )
 			if ( ATSUGlyphGetCubicPaths( mpGlyphInfoArray->glyphs[ i ].style, mpGlyphInfoArray->glyphs[ i ].glyphID, SalATSCubicMoveToCallback, SalATSCubicLineToCallback, SalATSCubicCurveToCallback, SalATSCubicClosePathCallback, (void *)&aPolygonList, &nErr ) != noErr )
 				continue;
 
-			ATSGlyphIdealMetrics aIdealMetrics;
-			if ( ATSUGlyphGetIdealMetrics( mpGlyphInfoArray->glyphs[ i ].style, 1, &mpGlyphInfoArray->glyphs[ i ].glyphID, sizeof( GlyphID ), &aIdealMetrics ) != noErr )
-				continue;
-
 			PolyPolygon aPolyPolygon;
 			while ( aPolygonList.size() )
 			{
@@ -628,15 +646,19 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector )
 				long nGlyphOrientation = aGlyphArray[ 0 ] & GF_ROTMASK;
 				if ( nGlyphOrientation )
 				{
+					ATSGlyphScreenMetrics aScreenMetrics;
+					if ( ATSUGlyphGetScreenMetrics( mpGlyphInfoArray->glyphs[ i ].style, 1, &mpGlyphInfoArray->glyphs[ i ].glyphID, sizeof( GlyphID ), false, false, &aScreenMetrics ) != noErr )
+						continue;
+
 					if ( nGlyphOrientation == GF_ROTL )
 					{
 						aPolyPolygon.Rotate( Point( 0, 0 ), 900 );
-						aPolyPolygon.Move( ( Float32ToLong( aIdealMetrics.sideBearing.y * mnUnitsPerPixel ) + aPolyPolygon.GetBoundRect().nLeft ) * -1, nBaselineDelta * -1 );
+						aPolyPolygon.Move( ( Float32ToLong( aScreenMetrics.sideBearing.y * mnUnitsPerPixel ) + aPolyPolygon.GetBoundRect().nLeft ) * -1, nBaselineDelta * -1 );
 					}
 					else
 					{
 						aPolyPolygon.Rotate( Point( 0, 0 ), 2700 );
-						aPolyPolygon.Move( aDXArray[ 0 ] - Float32ToLong( aIdealMetrics.otherSideBearing.y * mnUnitsPerPixel ) - aPolyPolygon.GetBoundRect().nRight, nBaselineDelta - nAscent );
+						aPolyPolygon.Move( aDXArray[ 0 ] - Float32ToLong( aScreenMetrics.otherSideBearing.y * mnUnitsPerPixel ) - aPolyPolygon.GetBoundRect().nRight, nBaselineDelta * -1 );
 					}
 				}
 			}

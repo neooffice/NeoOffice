@@ -100,8 +100,10 @@ int GetVerticalFlags( sal_Unicode nChar )
         || (nChar >= 0xFF5B && nChar <= 0xFF9F) // halfwidth forms
         ||  nChar == 0xFFE3 )
             return GF_NONE; // not rotated
+#ifndef MACOSX
         else if( nChar == 0x30fc )
             return GF_ROTR; // right
+#endif	// MACOSX
         return GF_ROTL;     // left
     }
 
