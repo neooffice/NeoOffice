@@ -586,14 +586,6 @@ JavaDropTarget::JavaDropTarget() :
 JavaDropTarget::~JavaDropTarget()
 {
 	MutexGuard aDragGuard( aDragMutex );
-
-#ifdef MACOSX
-	if ( pDropTrackingHandlerUPP && mpNativeWindow )
-		RemoveTrackingHandler( pDropTrackingHandlerUPP, (WindowRef)mpNativeWindow );
-
-	if ( pDragReceiveHandlerUPP && mpNativeWindow )
-		RemoveReceiveHandler( pDragReceiveHandlerUPP, (WindowRef)mpNativeWindow );
-#endif	// MACOSX
 }
 
 // --------------------------------------------------------------------------
