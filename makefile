@@ -38,12 +38,14 @@ SHELL:=/bin/tcsh
 
 # Build location macros
 BUILD_HOME:=build
+DIC_HOME:=dic
 INSTALL_HOME:=install
 SOURCE_HOME:=source
 OO_PATCHES_HOME:=patches/openoffice
 OO_ENV_X11:=$(BUILD_HOME)/MacosxEnv.Set
 OO_ENV_JAVA:=$(BUILD_HOME)/MacosxEnvJava.Set
 OO_LANGUAGES=ALL
+OO_DIC_URL:=http://ftp.services.openoffice.org/pub/OpenOffice.org/contrib/dictionaries
 
 # Product information
 PRODUCT_NAME=NeoOffice/J
@@ -135,7 +137,16 @@ build.neo_patches: \
 	build.neo_instsetoo_patch
 	touch "$@"
 
-build.package: build.neo_patches
+build.oo_download_dics:
+	mkdir -p "$(DIC_HOME)"
+	rm -f "$(DIC_HOME)/dictionary.lst"
+	curl -L "$(OO_DIC_URL)/available.lst" | awk -F, '{ print "DICT " $$1 " " $$2 " " $$3 }' >> "$(DIC_HOME)/dictionary.lst"
+	curl -L "$(OO_DIC_URL)/hyphavail.lst" | awk -F, '{ print "HYPH " $$1 " " $$2 " " $$3 }' >> "$(DIC_HOME)/dictionary.lst"
+	curl -L "$(OO_DIC_URL)/thesavail.lst" | awk -F, '{ print "THES " $$1 " " $$2 " " $$3 }' >> "$(DIC_HOME)/dictionary.lst"
+	cd "$(DIC_HOME)" ; sh -e -c 'for i in `curl -L -l "$(OO_DIC_URL)" | grep "\.zip<" | sed "s#<\/A>.*\\$$##" | sed "s#^.*>##"` ; do curl -L -O "$(OO_DIC_URL)/$$i" ; done'
+	touch "$@"
+
+build.package: build.neo_patches build.oo_download_dics
 	if ( -d "$(INSTALL_HOME)" ) chmod -Rf u+rw "$(INSTALL_HOME)"
 	rm -Rf "$(INSTALL_HOME)"
 	mkdir -p "$(INSTALL_HOME)/package"
@@ -175,7 +186,8 @@ build.package: build.neo_patches
 	cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "share/config/registry/cache" ; sh -e -c 'for i in "share/config/registry/instance/org/openoffice/Setup.xml" "share/config/registry/instance/org/openoffice/Office/Common.xml" ; do sed "s#\"string\">.*</ooName>#\"string\">$(PRODUCT_NAME)</ooName>#g" "$${i}" | sed "s#\"string\">.*</ooSetupVersion>#\"string\">$(PRODUCT_VERSION)</ooSetupVersion>#g" | sed "s#$(PWD)/$(INSTALL_HOME)/package#/Applications#g" | sed "s#>OpenOffice\.org [0-9\.]* #>$(PRODUCT_NAME) $(PRODUCT_VERSION) #g" | sed "s#/work#/../../../Documents#g" | sed "s#>UNIX<#>MAC<#g" > "../../../out" ; mv -f "../../../out" "$${i}" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.dylib*" -o -name "*.bin"` ; do strip -S -x "$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'if [ ! -d "MacOS" ] ; then rm -Rf "MacOS" ; mv -f "program" "MacOS" ; ln -s "MacOS" "program" ; fi'
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/language_names" | sed "s#-[a-zA-Z0-9]* # #g"` ; do unzip -o "$(PWD)/etc/LangPack_Full.zip" "*/$$i*.aff" "*/$$i*.dic" "*/hyph_$$i*.dic" "*/th_$$i*.dat" "*/th_$$i*.idx" ; if [ $$? != 0 -a $$? != 11 ] ; then exit $$? ; fi ; done'
+	cd "$(INSTALL_HOME)/package/Contents/share/dict/ooo" ; sh -c 'for i in `sed "s#-[a-zA-Z0-9]* # #g" "$(PWD)/$(INSTALL_HOME)/language_names"` ; do for j in "$(PWD)/$(DIC_HOME)"/*.zip ; do unzip -o "$$j" "$$i*.aff" "$$i*.dic" "hyph_$$i*.dic" "th_$$i*.dat" "th_$$i*.idx" ; if [ $$? != 0 -a $$? != 11 ] ; then exit $$? ; fi ; done ; done'
+	cd "$(INSTALL_HOME)/package/Contents/share/dict/ooo" ; rm -f "dictionary.lst" ; sh -c 'for i in `ls -1 *.dic *.dat | sort -u | sed "s#\\.dic\\$$##" | sed "s#\\.dat\\$$##"`; do grep " $$i\$$" "$(PWD)/$(DIC_HOME)/dictionary.lst" >> "dictionary.lst" ; if [ $$? != 0 -a $$? != 1 ] ; then exit $$? ; fi ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share user -type d | grep -v /CVS$$` ; do mkdir -p "$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share user ! -type d | grep -v /CVS/` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
 	chmod -Rf a-w,a+r "$(INSTALL_HOME)/package"
