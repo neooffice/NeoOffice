@@ -69,7 +69,11 @@
 #include <Carbon/Carbon.h>
 typedef OSStatus PMCreatePageFormat_Type( PMPageFormat* );
 typedef OSStatus PMGetResolution_Type( PMPageFormat, PMResolution* );
+typedef OSStatus PMPrinterGetIndexedPrinterResolution_Type( PMPrinter, UInt32, PMResolution* );
+typedef OSStatus PMPrinterGetPrinterResolutionCount_Type( PMPrinter, UInt32* );
 typedef OSStatus PMSessionDefaultPageFormat_Type( PMPrintSession, PMPageFormat );
+typedef OSStatus PMSessionGetCurrentPrinter_Type( PMPrintSession, PMPrinter* );
+typedef OSStatus PMSetResolution_Type( PMPageFormat, const PMResolution* );
 #include <postmac.h>
 
 using namespace rtl;
@@ -158,12 +162,10 @@ BOOL SalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 	// Populate the job setup
 	pSetupData->meOrientation = maPrinterData.mpVCLPageFormat->getOrientation();
 	pSetupData->mnPaperBin = 0;
-	pSetupData->mePaperFormat =  maPrinterData.mpVCLPageFormat->getPaperType();
+	pSetupData->mePaperFormat = maPrinterData.mpVCLPageFormat->getPaperType();
 	Size aSize( maPrinterData.mpVCLPageFormat->getPageSize() );
 	pSetupData->mnPaperWidth = aSize.Width();
 	pSetupData->mnPaperHeight = aSize.Height();
-	if ( pSetupData->mpDriverData )
-		((SalDriverData *)pSetupData->mpDriverData)->meOrientation = pSetupData->meOrientation;
 
 	return TRUE;
 }
@@ -252,18 +254,50 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 			{
 				PMCreatePageFormat_Type *pCreatePageFormat = (PMCreatePageFormat_Type *)aModule.getSymbol( OUString::createFromAscii( "PMCreatePageFormat" ) );
 				PMGetResolution_Type *pGetResolution = (PMGetResolution_Type *)aModule.getSymbol( OUString::createFromAscii( "PMGetResolution" ) );
+				PMPrinterGetIndexedPrinterResolution_Type *pPrinterGetIndexedPrinterResolution = (PMPrinterGetIndexedPrinterResolution_Type *)aModule.getSymbol( OUString::createFromAscii( "PMPrinterGetIndexedPrinterResolution" ) );
+				PMPrinterGetPrinterResolutionCount_Type *pPrinterGetPrinterResolutionCount = (PMPrinterGetPrinterResolutionCount_Type *)aModule.getSymbol( OUString::createFromAscii( "PMPrinterGetPrinterResolutionCount" ) );
 				PMSessionDefaultPageFormat_Type *pSessionDefaultPageFormat = (PMSessionDefaultPageFormat_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionDefaultPageFormat" ) );
-				if ( pCreatePageFormat && pGetResolution && pSessionDefaultPageFormat )
+				PMSessionGetCurrentPrinter_Type *pSessionGetCurrentPrinter = (PMSessionGetCurrentPrinter_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionGetCurrentPrinter" ) );
+				PMSetResolution_Type *pSetResolution = (PMSetResolution_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSetResolution" ) );
+
+				if ( pCreatePageFormat && pGetResolution && pPrinterGetIndexedPrinterResolution && pPrinterGetPrinterResolutionCount && pSessionDefaultPageFormat && pSessionGetCurrentPrinter && pSetResolution )
 				{
+					// Get the current resolution
+					PMResolution aMaxResolution;
 					PMPageFormat aPageFormat;
-					if ( pCreatePageFormat( &aPageFormat ) == kPMNoError )
+					if ( pCreatePageFormat( &aPageFormat ) == kPMNoError && pSessionDefaultPageFormat( pSession, aPageFormat ) == kPMNoError && pGetResolution( aPageFormat, &aMaxResolution ) == kPMNoError)
 					{
-						PMResolution aResolution;
-						if ( pSessionDefaultPageFormat( pSession, aPageFormat ) == kPMNoError && pGetResolution( aPageFormat, &aResolution ) == kPMNoError )
-							maPrinterData.mpPrinter->maPrinterData.mpVCLPageFormat->setPageResolution( (long)aResolution.hRes, (long)aResolution.vRes );
+						// Check if there are any resolutions to choose from
+						// that are higher than the the current resolution.
+						PMPrinter aPrinter;
+						UInt32 nCount;
+						if ( pSessionGetCurrentPrinter( pSession, &aPrinter ) == kPMNoError && pPrinterGetPrinterResolutionCount( aPrinter, &nCount ) && nCount > 1 )
+						{
+							for ( UInt32 i = 1; i <= nCount; i++ )
+							{
+								PMResolution aResolution;
+								if (  pPrinterGetIndexedPrinterResolution( aPrinter, i, &aResolution ) == kPMNoError && aResolution.hRes >= aMaxResolution.hRes && aResolution.vRes >= aMaxResolution.vRes )
+								{
+									aMaxResolution.hRes = aResolution.hRes;
+									aMaxResolution.vRes = aResolution.vRes;
+								}
+							}
+						}
+
+						// Limit the resolution to 300 dpi as VCL will scale
+						// entire images before passing them to the SalGraphics
+						// for rendering
+						if ( aMaxResolution.hRes > 300 )
+							aMaxResolution.hRes = 300;
+						if ( aMaxResolution.vRes > 300 )
+							aMaxResolution.hRes = 300;
+
+						// Set the page resolution
+						if ( pSetResolution( aPageFormat, &aMaxResolution ) == kPMNoError )
+							maPrinterData.mpPrinter->maPrinterData.mpVCLPageFormat->setPageResolution( aMaxResolution.hRes, aMaxResolution.vRes );
 					}
+					aModule.unload();
 				}
-				aModule.unload();
 			}
 		}
 	}
@@ -308,11 +342,11 @@ SalGraphics* SalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobData )
 
 BOOL SalPrinter::EndPage()
 {
-	maPrinterData.mpVCLPrintJob->endPage();
 	if ( maPrinterData.mpGraphics && maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics )
 		delete maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics;
 	maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics = NULL;
 	maPrinterData.mbGraphics = FALSE;
+	maPrinterData.mpVCLPrintJob->endPage();
 	return TRUE;
 }
 

@@ -204,11 +204,6 @@ public final class VCLGraphics {
 	private VCLPageFormat pageFormat = null;
 
 	/**
-	 * The printer page image.
-	 */
-	private VCLImage pageImage = null;
-
-	/**
 	 * The panel's graphics context.
 	 */
 	private Graphics2D panelGraphics = null;
@@ -287,19 +282,9 @@ public final class VCLGraphics {
 		graphics = g;
 		pageFormat = p;
 		graphicsBounds = new Rectangle(pageFormat.getImageableBounds());
-		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-			// Mac OS X's print graphics implementation has trouble printing
-			// images that are the same size or smaller than the page's
-			// imageable area so we do all image drawing using an image that
-			// is equal to the imageable area plus the left and top margins
-			graphicsBounds.width += graphicsBounds.x;
-			graphicsBounds.height += graphicsBounds.y;
-		}
 		graphicsBounds.x = 0;
 		graphicsBounds.y = 0;
-		VCLGraphics.setDefaultRenderingAttributes(graphics);
 		bitCount = graphics.getDeviceConfiguration().getColorModel().getPixelSize();
-		pageImage = new VCLImage(graphicsBounds.width, graphicsBounds.height, bitCount);
 
 	}
 
@@ -345,7 +330,7 @@ public final class VCLGraphics {
 			graphicsList.remove(this);
 		}
 		bitCount = 0;
-		if (image != null && graphics != null)
+		if (graphics != null)
 			graphics.dispose();
 		graphics = null;
 		if (panelGraphics != null)
@@ -356,9 +341,6 @@ public final class VCLGraphics {
 		image = null;
 		frame = null;
 		pageFormat = null;
-		if (pageImage != null)
-			pageImage.dispose();
-		pageImage = null;
 		update = null;
 		userClip = null;
 
@@ -475,9 +457,6 @@ public final class VCLGraphics {
 	 */
 	public void drawBitmap(VCLBitmap bmp, VCLBitmap transBmp, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY ) {
 
-		if (image == null)
-			return;
-
 		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, bmp.getWidth(), bmp.getHeight()));
 		if (srcBounds.isEmpty())
 			return;
@@ -563,41 +542,10 @@ public final class VCLGraphics {
 		Shape clip = graphics.getClip();
 		if (clip != null && !clip.intersects(destBounds))
 			return;
-		if (pageImage != null) {
-			int[] srcData = img.getData();
-			int srcDataWidth = img.getWidth();
-			int[] destData = pageImage.getData();
-			int destDataWidth = pageImage.getWidth();
-			Point srcPoint = new Point(srcBounds.x, srcBounds.y);
-			Point destPoint = new Point(destBounds.x, destBounds.y);
-			int totalPixels = destBounds.width * destBounds.height;
+		Graphics2D g = (Graphics2D)graphics.create(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
+		g.drawRenderedImage(img.getImage().getSubimage(srcBounds.x, srcBounds.y, destBounds.width, destBounds.height), null);
+		g.dispose();
 
-			for (int i = 0; i < totalPixels; i++) {
-				// Copy pixel
-				destData[(destPoint.y * destDataWidth) + destPoint.x] = srcData[(srcPoint.y * srcDataWidth) + srcPoint.x];
-
-				// Update current points
-				srcPoint.x++;
-				if (srcPoint.x >= srcBounds.x + destBounds.width) {
-					srcPoint.x = srcBounds.x;
-					srcPoint.y++;
-				}
-				destPoint.x++;
-				if (destPoint.x >= destBounds.x + destBounds.width) {
-					destPoint.x = destBounds.x;
-					destPoint.y++;
-				}
-			}
-
-			Graphics2D g = (Graphics2D)graphics.create(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
-			g.drawRenderedImage(pageImage.getImage().getSubimage(destBounds.x, destBounds.y, destBounds.width, destBounds.height), null);
-			g.dispose();
-		}
-		else {
-			Graphics2D g = (Graphics2D)graphics.create(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
-			g.drawRenderedImage(img.getImage().getSubimage(srcBounds.x, srcBounds.y, destBounds.width, destBounds.height), null);
-			g.dispose();
-		}
 		addToFlush(destBounds);
 
 	}

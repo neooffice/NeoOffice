@@ -480,16 +480,20 @@ SalInfoPrinter* SalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
 	SalInfoPrinter *pPrinter = new SalInfoPrinter();
 
 	// Set values
-	pPrinter->maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat();
 	if ( !pSetupData->mpDriverData )
 	{
+		pPrinter->maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat();
 		pPrinter->maPrinterData.mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
-		SalDriverData aDriverData;
-		aDriverData.meOrientation = pSetupData->meOrientation;
-		BYTE *pDriverData = (BYTE *)rtl_allocateMemory( sizeof( SalDriverData ) );
-		memcpy( pDriverData, &aDriverData, sizeof( SalDriverData ) );
+		BYTE *pDriverData = (BYTE *)rtl_allocateMemory( sizeof( com_sun_star_vcl_VCLPageFormat* ) );
+		memcpy( pDriverData, &pPrinter->maPrinterData.mpVCLPageFormat, sizeof( com_sun_star_vcl_VCLPageFormat* ) );
 		pSetupData->mpDriverData = pDriverData;
-		pSetupData->mnDriverDataLen = sizeof( SalDriverData );
+		pSetupData->mnDriverDataLen = sizeof( com_sun_star_vcl_VCLPageFormat* );
+	}
+	else
+	{
+		// Create a new page format instance that points to the same Java
+		// object
+		pPrinter->maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( ((com_sun_star_vcl_VCLPageFormat *)pSetupData->mpDriverData)->getJavaObject() );
 	}
 
 	// Populate the job setup

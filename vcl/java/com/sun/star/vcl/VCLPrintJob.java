@@ -204,6 +204,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 		// Set the origin to the origin of the printable area
 		graphics.translate((int)f.getImageableX(), (int)f.getImageableY());
 
+		// Scale to printer resolution
 		Dimension pageResolution = pageFormat.getPageResolution();
 		graphics.scale((double)72 / pageResolution.width, (double)72 / pageResolution.height);
 
@@ -325,10 +326,11 @@ public final class VCLPrintJob implements Printable, Runnable {
 				currentGraphics = null;
 			}
 			else {
-				// Limit printing to only the printable area
-				Dimension pageResolution = pageFormat.getPageResolution();
 				currentGraphics = new VCLGraphics(graphicsInfo.graphics, pageFormat);
 			}
+			// On Mac OS X, skip the first graphics for each page
+			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && currentPage % 2 != 0)
+				return null;
 		}
 
 		return currentGraphics;
