@@ -7,13 +7,34 @@
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
+				<string>csv</string>
+				<string>dbf</string>
+				<string>dif</string>
 				<string>doc</string>
+				<string>html</string>
+				<string>mml</string>
+				<string>pot</string>
 				<string>ppt</string>
+				<string>rtf</string>
+				<string>sda</string>
+				<string>sdc</string>
+				<string>sdd</string>
+				<string>sdw</string>
+				<string>slk</string>
+				<string>smf</string>
+				<string>stc</string>
+				<string>std</string>
+				<string>sti</string>
+				<string>stw</string>
 				<string>sxc</string>
 				<string>sxd</string>
 				<string>sxi</string>
+				<string>sxm</string>
 				<string>sxw</string>
+				<string>txt</string>
+				<string>vor</string>
 				<string>xls</string>
+				<string>xlt</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
