@@ -155,7 +155,7 @@ void SalFrame::SetIcon( USHORT nIcon )
 
 // -----------------------------------------------------------------------
 
-void SalFrame::Show( BOOL bVisible )
+void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 {
 	if ( bVisible == maFrameData.mbVisible )
 		return;
