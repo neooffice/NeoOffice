@@ -35,40 +35,10 @@
 
 package com.sun.star.dtrans;
 
-import java.awt.Toolkit;
-import java.awt.datatransfer.Clipboard;
-
 /**
  * The Java class that implements the system clipboard C++ methods.
  * <p>
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public final class DTransClipboard {
-
-	/**
-	 * The system clipboard.
-	 */
-	private static Clipboard clipboard = null;
-
-	/**
-	 * Initialize the system clipboard.
-	 */
-	static {
-
-		clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-
-	}
-
-	/**
-	 * Returns the system clipboard.
-	 *
-	 * @return the system clipboard
-	 */
-	public static Clipboard getSystemClipboard() {
-
-		return clipboard;
-
-	}
-
-}
+public final class DTransClipboard {}

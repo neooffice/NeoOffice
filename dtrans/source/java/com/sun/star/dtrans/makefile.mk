@@ -55,7 +55,8 @@ dummy:
 .ELSE		# "$(GUIBASE)"!="java"
 
 JAVAFILES = \
-	DTransClipboard.java
+	DTransClipboard.java \
+	DTransTransferable.java
 
 .ENDIF		# "$(GUIBASE)"!="java"
 

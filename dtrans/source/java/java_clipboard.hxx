@@ -94,7 +94,7 @@ class JavaClipboard : public ::cppu::WeakComponentImplHelper4< ::com::sun::star:
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::clipboard::XClipboardOwner >	maOwner;
 	::std::list< ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::clipboard::XClipboardListener > >	maListeners;
 	::osl::Mutex			maMutex;
-	::java::dtrans::com_sun_star_dtrans_DTransClipboard *mpSystemClipboard;
+	BOOL					mbSystemClipboard;
 
 public:
 							JavaClipboard( BOOL bSystemClipboard );

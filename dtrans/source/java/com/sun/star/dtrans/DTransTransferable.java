@@ -33,34 +33,12 @@
  *
  ************************************************************************/
 
-#ifndef _JAVA_DTRANS_COM_SUN_STAR_DTRANS_DTRANSCLIPBOARD_HXX
-#define	_JAVA_DTRANS_COM_SUN_STAR_DTRANS_DTRANSCLIPBOARD_HXX
+package com.sun.star.dtrans;
 
-#ifndef _JAVA_DTRANS_COM_SUN_STAR_DTRANS_DTRANSTRANSFERABLE_HXX
-#include <com/sun/star/dtrans/DTransTransferable.hxx>
-#endif
-
-namespace java {
-
-namespace dtrans {
-
-class com_sun_star_dtrans_DTransClipboard : public java_lang_Object
-{
-protected:
-	static jclass		theClass;
-
-private:
-						com_sun_star_dtrans_DTransClipboard() : java_lang_Object( NULL ) {};
-
-public:
-	static jclass		getMyClass();
-	static com_sun_star_dtrans_DTransTransferable*	getContents();
-
-						com_sun_star_dtrans_DTransClipboard( jobject myObj ) : java_lang_Object( myObj ) {};
-};
-
-} // namespace dtrans
-
-} // namespace java
-
-#endif // _JAVA_DTRANS_COM_SUN_STAR_DTRANS_DTRANSCLIPBOARD_HXX
+/**
+ * The Java class that implements the transferable C++ methods.
+ * <p>
+ * @version 	$Revision$ $Date$
+ * @author 	    $Author$
+ */
+public final class DTransTransferable {}

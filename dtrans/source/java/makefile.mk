@@ -62,6 +62,7 @@ CFLAGS += -Iinc
 SLOFILES=\
 	$(SLO)$/Class.obj \
 	$(SLO)$/DTransClipboard.obj \
+	$(SLO)$/DTransTransferable.obj \
 	$(SLO)$/Object.obj \
 	$(SLO)$/String.obj \
 	$(SLO)$/Throwable.obj \

@@ -71,10 +71,7 @@ Sequence< OUString > SAL_CALL JavaClipboard_getSupportedServiceNames()
 
 JavaClipboard::JavaClipboard( BOOL bSystemClipboard ) : WeakComponentImplHelper4< XClipboardEx, XClipboardNotifier, XServiceInfo, XInitialization >( maMutex )
 {
-	if ( bSystemClipboard )
-		mpSystemClipboard = com_sun_star_dtrans_DTransClipboard::getSystemClipboard();
-	else
-		mpSystemClipboard = NULL;
+	mbSystemClipboard = bSystemClipboard;
 }
 
 // ------------------------------------------------------------------------

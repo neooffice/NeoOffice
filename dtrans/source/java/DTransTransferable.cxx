@@ -55,28 +55,33 @@
 #include <postmac.h>
 
 typedef OSStatus GetCurrentScrap_Type( ScrapRef * );
+typedef OSStatus GetScrapFlavorData_Type( ScrapRef, ScrapFlavorType, MacOSSize *, void * );
+typedef OSStatus GetScrapFlavorSize_Type( ScrapRef, ScrapFlavorType, MacOSSize * );
 
 using namespace rtl;
 using namespace vos;
 
 #endif	// MACOSX
 
+using namespace com::sun::star::datatransfer;
+using namespace com::sun::star::io;
+using namespace com::sun::star::uno;
 using namespace java::dtrans;
 
 // ============================================================================
 
-jclass com_sun_star_dtrans_DTransClipboard::theClass = NULL;
+jclass com_sun_star_dtrans_DTransTransferable::theClass = NULL;
 
 // ----------------------------------------------------------------------------
 
-jclass com_sun_star_dtrans_DTransClipboard::getMyClass()
+jclass com_sun_star_dtrans_DTransTransferable::getMyClass()
 {
 #ifndef MACOSX
 	if ( !theClass )
 	{
 		DTransThreadAttach t;
 		if ( !t.pEnv ) return (jclass)NULL;
-		jclass tempClass = t.pEnv->FindClass( "com/sun/star/dtrans/DTransClipboard" );
+		jclass tempClass = t.pEnv->FindClass( "com/sun/star/dtrans/DTransTransferable" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
 	}
@@ -86,9 +91,9 @@ jclass com_sun_star_dtrans_DTransClipboard::getMyClass()
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_dtrans_DTransTransferable *com_sun_star_dtrans_DTransClipboard::getContents()
+Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( UnsupportedFlavorException, IOException, RuntimeException )
 {
-	com_sun_star_dtrans_DTransTransferable *out = NULL;
+	Any out;
 
 #ifdef MACOSX
 	// Test the JVM version and if it is below 1.4, use Carbon APIs or else
@@ -100,12 +105,21 @@ com_sun_star_dtrans_DTransTransferable *com_sun_star_dtrans_DTransClipboard::get
 		OModule aModule;
 		if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
 		{
-			GetCurrentScrap_Type *pGetCurrentScrap = (GetCurrentScrap_Type *)aModule.getSymbol( OUString::createFromAscii( "GetCurrentScrap" ) );
-			if ( pGetCurrentScrap )
+			GetScrapFlavorData_Type *pGetScrapFlavorData = (GetScrapFlavorData_Type *)aModule.getSymbol( OUString::createFromAscii( "GetScrapFlavorData" ) );
+			GetScrapFlavorSize_Type *pGetScrapFlavorSize = (GetScrapFlavorSize_Type *)aModule.getSymbol( OUString::createFromAscii( "GetScrapFlavorSize" ) );
+			if ( pGetScrapFlavorData && pGetScrapFlavorSize )
 			{
-				ScrapRef aScrap;
-				if ( pGetCurrentScrap( &aScrap ) == noErr )
-					out = new com_sun_star_dtrans_DTransTransferable( &aScrap );
+				ScrapFlavorType aType;
+				MacOSSize aSize;
+
+				OSStatus nErr = pGetScrapFlavorSize( *(ScrapRef *)mpNativeObj, aType, &aSize );
+				if ( nErr == noTypeErr )
+					throw UnsupportedFlavorException( aFlavor.MimeType, static_cast< XTransferable * >( this ) );
+				else if ( nErr != noErr )
+					throw IOException( aFlavor.MimeType, static_cast< XTransferable * >( this ) );
+
+				if ( pGetScrapFlavorData( *(ScrapRef *)mpNativeObj, aType, &aSize, NULL ) != nErr )
+					throw IOException( aFlavor.MimeType, static_cast< XTransferable * >( this ) );
 			}
 
 			aModule.unload();
@@ -115,14 +129,30 @@ com_sun_star_dtrans_DTransTransferable *com_sun_star_dtrans_DTransClipboard::get
 	{
 		delete pClass;
 #ifdef DEBUG
-		fprintf( stderr, "DTransClipboard::getContents not implemented\n" );
+		fprintf( stderr, "DTransTransferable::getTransferData not implemented\n" );
 #endif
 	}
-#else	// MACOSX
+#else // MACOSX
 #ifdef DEBUG
-	fprintf( stderr, "DTransClipboard::getContents not implemented\n" );
+	fprintf( stderr, "DTransTransferable::getTransferData not implemented\n" );
 #endif
 #endif	// MACOSX
 
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+Sequence< DataFlavor > SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferDataFlavors() throw ( RuntimeException )
+{
+	Sequence< DataFlavor > out;
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+sal_Bool SAL_CALL com_sun_star_dtrans_DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) throw ( RuntimeException )
+{
+	sal_Bool out = FALSE;
 	return out;
 }
