@@ -672,7 +672,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	bool bPosRTL;
 	Point aPos( 0, 0 );
 	int nCharPos = -1;
-	int nLastAdjustedPos = 0;
+	int nLastAdjustedGlyphIndex = 0;
 	::std::list< GlyphItem > aGlyphItems;
 	rArgs.ResetPos();
 	while ( rArgs.GetNextPos( &nCharPos, &bPosRTL ) )
@@ -686,13 +686,14 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		{
 			nCharWidth = 1;
 
-			for ( ::std::list< GlyphItem >::reverse_iterator it = aGlyphItems.rbegin(); it != aGlyphItems.rend() && (*it).mnCharPos >= nLastAdjustedPos; ++it )
+			int nGlyphIndex = aGlyphItems.size() - 1;
+			for ( ::std::list< GlyphItem >::reverse_iterator it = aGlyphItems.rbegin(); it != aGlyphItems.rend() && nGlyphIndex >= nLastAdjustedGlyphIndex; ++it, --nGlyphIndex )
 			{
 				if ( (*it).mnOrigWidth > 1 )
 				{
 					(*it).mnOrigWidth -= 1;
 					(*it).mnNewWidth -= 1;
-					nLastAdjustedPos = (*it).mnCharPos;
+					nLastAdjustedGlyphIndex = nGlyphIndex;
 
 					// Move following glyphs back one pixel
 					for ( ::std::list< GlyphItem >::reverse_iterator ait = aGlyphItems.rbegin(); ait != aGlyphItems.rend() && ait != it; ++ait )
