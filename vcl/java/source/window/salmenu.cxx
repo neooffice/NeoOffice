@@ -90,7 +90,7 @@ SalMenu::~SalMenu()
 
 BOOL SalMenu::VisibleMenuBar()
 {
-	return FALSE; // TRUE suppresses the display of VCL menu bars
+	return TRUE;
 }
 
 //-----------------------------------------------------------------------------
