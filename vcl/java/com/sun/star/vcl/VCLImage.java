@@ -125,6 +125,8 @@ public final class VCLImage {
 		int destX = 0;
 		int destY = 0;
 		Rectangle bounds = new Rectangle(x, y, w, h).intersection(new Rectangle(0, 0, bmp.getWidth(), bmp.getHeight()));
+		if (bounds.isEmpty())
+			return;
 		if (x < 0)
 			destX -= x;
 		if (y < 0)

@@ -304,6 +304,8 @@ public final class VCLGraphics {
 				update.add(b);
 			else
 				update = b;
+			if (update.isEmpty())
+				update = null;
 
 			if (autoFlush)
 				flush();
@@ -336,7 +338,7 @@ public final class VCLGraphics {
 			graphicsList.remove(this);
 		}
 		bitCount = 0;
-		if (image != null && graphics != null)
+		if (!printer && image != null && graphics != null)
 			graphics.dispose();
 		graphics = null;
 		if (panelGraphics != null)
@@ -391,15 +393,17 @@ public final class VCLGraphics {
 	public void drawBitmap(VCLBitmap bmp, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY) {
 
 		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, bmp.getWidth(), bmp.getHeight()));
+		if (srcBounds.isEmpty())
+			return;
 		if (srcX < 0)
 			destX -= srcX;
 		if (srcY < 0)
 			destY -= srcY;
 		Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
+		if (destBounds.isEmpty())
+			return;
 		srcBounds.x += destBounds.x - destX;
 		srcBounds.y += destBounds.y - destY;
-		if (srcBounds.isEmpty() || destBounds.isEmpty())
-			return;
 		Shape clip = graphics.getClip();
 		if (clip != null) {
 			if (!clip.intersects(destBounds))
@@ -464,15 +468,17 @@ public final class VCLGraphics {
 	public void drawBitmap(VCLBitmap bmp, VCLBitmap transBmp, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY ) {
 
 		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, bmp.getWidth(), bmp.getHeight()));
+		if (srcBounds.isEmpty())
+			return;
 		if (srcX < 0)
 			destX -= srcX;
 		if (srcY < 0)
 			destY -= srcY;
 		Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
+		if (destBounds.isEmpty())
+			return;
 		srcBounds.x += destBounds.x - destX;
 		srcBounds.y += destBounds.y - destY;
-		if (srcBounds.isEmpty() || destBounds.isEmpty())
-			return;
 		Shape clip = graphics.getClip();
 		if (clip != null) {
 			if (!clip.intersects(destBounds))
@@ -532,21 +538,30 @@ public final class VCLGraphics {
 	void drawImage(VCLImage img, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY) {
 
 		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, img.getWidth(), img.getHeight()));
+		if (srcBounds.isEmpty())
+			return;
 		if (srcX < 0)
 			destX -= srcX;
 		if (srcY < 0)
 			destY -= srcY;
 		Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
+		if (destBounds.isEmpty())
+			return;
 		srcBounds.x += destBounds.x - destX;
 		srcBounds.y += destBounds.y - destY;
 		Shape clip = graphics.getClip();
 		if (clip != null && !clip.intersects(destBounds))
 			return;
-		if (srcBounds.isEmpty() || destBounds.isEmpty())
+		Area area = new Area(destBounds);
+		if (clip != null)
+			area.intersect(new Area(clip));
+		if (area.isEmpty())
 			return;
-		Graphics2D g = (Graphics2D)graphics.create(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
-		g.drawRenderedImage(img.getImage().getSubimage(srcBounds.x, srcBounds.y, destBounds.width, destBounds.height), null);
-		g.dispose();
+		graphics.setClip(area);
+		graphics.translate(destBounds.x, destBounds.y);
+		graphics.drawRenderedImage(img.getImage().getSubimage(srcBounds.x, srcBounds.y, destBounds.width, destBounds.height), null);
+		graphics.translate(destBounds.x * -1, destBounds.y * -1);
+		graphics.setClip(clip);
 		addToFlush(destBounds);
 
 	}
@@ -571,15 +586,17 @@ public final class VCLGraphics {
 		}
 
 		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, img.getWidth(), img.getHeight()));
+		if (srcBounds.isEmpty())
+			return;
 		if (srcX < 0)
 			destX -= srcX;
 		if (srcY < 0)
 			destY -= srcY;
 		Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
+		if (destBounds.isEmpty())
+			return;
 		srcBounds.x += destBounds.x - destX;
 		srcBounds.y += destBounds.y - destY;
-		if (srcBounds.isEmpty() || destBounds.isEmpty())
-			return;
 		Shape clip = graphics.getClip();
 		if (clip != null) {
 			if (!clip.intersects(destBounds))
@@ -683,15 +700,17 @@ public final class VCLGraphics {
 	public void drawMask(VCLBitmap bmp, int color, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY) {
 
 		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, bmp.getWidth(), bmp.getHeight()));
+		if (srcBounds.isEmpty())
+			return;
 		if (srcX < 0)
 			destX -= srcX;
 		if (srcY < 0)
 			destY -= srcY;
 		Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
+		if (destBounds.isEmpty())
+			return;
 		srcBounds.x += destBounds.x - destX;
 		srcBounds.y += destBounds.y - destY;
-		if (srcBounds.isEmpty() || destBounds.isEmpty())
-			return;
 		Shape clip = graphics.getClip();
 		if (clip != null) {
 			if (!clip.intersects(destBounds))
@@ -832,6 +851,8 @@ public final class VCLGraphics {
 			else
 				area.add(a);
 		}
+		if (area.isEmpty())
+			return;
 
 		Rectangle bounds = area.getBounds();
 		if (fill) {
@@ -1137,6 +1158,8 @@ public final class VCLGraphics {
 
 		// Clip any area outside of the image
 		Rectangle bounds = polygon.getBounds().intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
+		if (bounds.isEmpty())
+			return;
 
 		// Invert the image 
 		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME) {
@@ -1299,6 +1322,8 @@ public final class VCLGraphics {
 			userClip.add(area);
 		else
 			userClip = area;
+		if (userClip.isEmpty())
+			userClip = null;
 		if (printer)
 			image.getGraphics().unionClipRegion(x, y, width, height);
 

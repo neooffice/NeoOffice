@@ -703,12 +703,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void dispose() {
 
-		boolean runGC = false;
-		if (window != null) {
+		if (window != null)
 			setVisible(false);
-			if (window instanceof Frame)
-				runGC = true;
-		}
 		if (queue != null && frame != 0)
 			queue.removeCachedEvents(frame);
 		bitCount = 0;
@@ -728,8 +724,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		window = null;
 		lastKeyPressed = null;
 		originalBounds = null;
-		if (runGC)
-			System.gc();
 
 	}
 
