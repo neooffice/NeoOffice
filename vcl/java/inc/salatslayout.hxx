@@ -74,7 +74,6 @@ public:
 
 	virtual bool		LayoutText( ImplLayoutArgs& rArgs );
 	virtual void		DrawText( SalGraphics& rGraphics ) const;
-	virtual int			GetNextGlyphs( int nLen, long *pGlyphIdxAry, Point& rPos, int& rStart, long *pGlyphAdvAry = NULL, int *pCharPosAry = NULL ) const;
 };
 
 #endif // _SV_SALATSLAYOUT_HXX

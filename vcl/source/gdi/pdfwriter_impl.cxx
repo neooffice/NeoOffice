@@ -72,9 +72,6 @@
 
 #if defined USE_JAVA && defined MACOSX
 
-#ifndef _SV_SALATSLAYOUT_HXX
-#include <salatslayout.hxx>
-#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
 #include <com/sun/star/vcl/VCLFont.hxx>
 #endif
@@ -3243,7 +3240,10 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                 pTmpFallbackFonts[i] = NULL;
 
             nGlyphFlags[i] = (pGlyphs[i] & GF_FLAGMASK);
-            pGlyphs[i] &= GF_IDXMASK;
+            pTmpGlyphs[i] &= GF_IDXMASK;
+
+            if ( pTmpGlyphs[i] == GF_IDXMASK )
+                pTmpGlyphs[i] = 0;
 
             if( pTmpCharPosAry[i] >= nMinCharPos && pTmpCharPosAry[i] <= nMaxCharPos )
                 pTmpUnicodes[i] = rText.GetChar( pTmpCharPosAry[i] );
@@ -3322,6 +3322,9 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
 #endif
 #if defined USE_JAVA && defined MACOSX
             pGlyphs[i] &= GF_IDXMASK;
+
+            if ( pGlyphs[i] == GF_IDXMASK )
+                pGlyphs[i] = 0;
 #endif	// USE_JAVA && MACOSX
             if( pCharPosAry[i] >= nMinCharPos && pCharPosAry[i] <= nMaxCharPos )
                 pUnicodes[i] = rText.GetChar( pCharPosAry[i] );

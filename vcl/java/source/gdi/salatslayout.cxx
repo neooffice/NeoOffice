@@ -300,8 +300,11 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				mpCharsToGlyphs[ nIndex ] = i;
 		}
 
+		nBufSize = nLen * sizeof( bool );
+		bool *pNeedFallback = (bool *)rtl_allocateMemory( nBufSize );
+		memset( pNeedFallback, 0, nBufSize );
+
 		// Find positions that require fallback fonts
-		::std::list< int > aFallbackPositions;
 		UniCharArrayOffset nCurrentPos = 0;
 		UniCharCount nOffset;
 		ATSUFontID nFontID;
@@ -318,12 +321,9 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				int nOffsetPos = nCurrentPos + nOffset;
 				for ( ; nCurrentPos < nOffsetPos; nCurrentPos++ )
 				{
-					aFallbackPositions.push_back( rArgs.mnMinCharPos + nCurrentPos - 1 );
-					if ( rArgs.mnFlags & SAL_LAYOUT_FOR_FALLBACK )
-					{
-						for ( int j = mpCharsToGlyphs[ nCurrentPos ]; j < mnGlyphCount && mpGlyphInfoArray->glyphs[ j ].charIndex == nCurrentPos; j++ )
-							mpGlyphInfoArray->glyphs[ j ].glyphID = 0;
-					}
+					pNeedFallback[ nCurrentPos ] = true;
+					for ( int j = mpCharsToGlyphs[ nCurrentPos ]; j < mnGlyphCount && mpGlyphInfoArray->glyphs[ j ].charIndex == nCurrentPos; j++ )
+						mpGlyphInfoArray->glyphs[ j ].glyphID = 0;
 				}
 
 				// Update font for next pass through
@@ -351,30 +351,16 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		}
 
 		// Create fallback runs
+		bool bPosRTL;
+		int nCharPos = -1;
 		rArgs.ResetPos();
-		while ( aFallbackPositions.size() && rArgs.GetNextRun( &nRunStart, &nRunEnd, &bRunRTL ) )
+		while ( rArgs.GetNextPos( &nCharPos, &bPosRTL ) )
 		{
-			if ( bRunRTL )
-			{
-				for ( int j = aFallbackPositions.back(); j >= nRunStart && j < nRunEnd; j = aFallbackPositions.back() )
-				{
-					rArgs.NeedFallback( j, bRunRTL );
-					aFallbackPositions.pop_back();
-					if ( !aFallbackPositions.size() )
-						break;
-				}
-			}
-			else
-			{
-				for ( int j = aFallbackPositions.front(); j >= nRunStart && j < nRunEnd; j = aFallbackPositions.front() )
-				{
-					rArgs.NeedFallback( j, bRunRTL );
-					aFallbackPositions.pop_front();
-					if ( !aFallbackPositions.size() )
-						break;
-				}
-			}
+			if ( pNeedFallback[ nCharPos - rArgs.mnMinCharPos + 1 ] )
+				rArgs.NeedFallback( nCharPos, bPosRTL );
 		}
+
+		rtl_freeMemory( pNeedFallback );
 
 		if ( bVertical )
 		{
@@ -527,37 +513,4 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			rGraphics.maGraphicsData.mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), nGlyphCount, aGlyphArray, aDXArray, mpVCLFont, rGraphics.maGraphicsData.mnTextColor, nOrientation, 0, 0, mnUnitsPerPixel );
 		}
 	}
-}
-
-// ----------------------------------------------------------------------------
-
-int SalATSLayout::GetNextGlyphs( int nLen, long *pGlyphIdxAry, Point& rPos, int& rStart, long *pGlyphAdvAry, int *pCharPosAry ) const
-{
-	int nGlyphCount;
-
-	while ( ( nGlyphCount = GenericSalLayout::GetNextGlyphs( nLen, pGlyphIdxAry, rPos, rStart, pGlyphAdvAry, pCharPosAry ) ) )
-	{
-		// Don't pass on zero or GF_IDXMASK glyphs as we don't want the upper
-		// layers to paint them
-		for ( int i = 0; i < nGlyphCount && ( !pGlyphIdxAry[ i ] || ( pGlyphIdxAry[ i ] & GF_IDXMASK ) == GF_IDXMASK ); i++ )
-			;
-
-		if ( i )
-		{
-			rStart -= nGlyphCount - i;
-			continue;
-		}
-
-		for ( i = 0; i < nGlyphCount && ( pGlyphIdxAry[ i ] && ( pGlyphIdxAry[ i ] & GF_IDXMASK ) != GF_IDXMASK ); i++ )
-			;
-
-		if ( i )
-		{
-			rStart -= nGlyphCount - i;
-			nGlyphCount = i;
-			break;
-		}
-	}
-
-	return nGlyphCount;
 }
