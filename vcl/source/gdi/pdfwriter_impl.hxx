@@ -146,7 +146,7 @@ public:
     virtual             ~MetaTextArrayPDFAction()
                         {
                             if ( mpDXAry )
-                                delete mpDXAry;
+                                rtl_freeMemory( mpDXAry );
                         }
 
     long*               GetDXArray() const { return mpDXAry; }
