@@ -138,7 +138,7 @@ if [ `uname` = "Darwin" ] ; then
 else
     printf "[Java]\n" > "$configdir/javarc"
 fi
-printf "SystemClasspath=$sysclasspath\nJava=1\nJavaScript=1\nApplets=1\n-Xmx256m\n" >> "$configdir/javarc"
+printf "SystemClasspath=$sysclasspath\nJava=1\nJavaScript=1\nApplets=1\n-Xmx1024m\n" >> "$configdir/javarc"
 if [ $? != 0 ]; then
     error
 fi
