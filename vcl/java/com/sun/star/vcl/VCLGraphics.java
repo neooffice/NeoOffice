@@ -788,12 +788,20 @@ public class VCLGraphics {
 	 */
 	public void invert(int x, int y, int width, int height, int options) {
 
+		// Don't do anything if x or y is outside of the image's width or
+		// height
+		int destDataWidth = image.getWidth();
+		int destDataHeight = image.getHeight();
+		Rectangle bounds = new Rectangle(0, 0, image.getWidth(), image.getHeight()).intersection(new Rectangle(x, y, width, height));
+		if (bounds.isEmpty())
+			return;
+
+		// Invert the image 
 		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME) {
 			int[] destData = image.getData();
-			int destDataWidth = image.getWidth();
 			Shape clip = graphics.getClip();
 			if (clip == null)
-				clip = new Rectangle(0, 0, destDataWidth, image.getHeight());
+				clip = new Rectangle(0, 0, destDataWidth, destDataHeight);
 
 			// Draw horizontal lines
 			Point topPoint = new Point(x, y);
@@ -830,14 +838,6 @@ public class VCLGraphics {
 			}
 		}
 		else if ((options & VCLGraphics.SAL_INVERT_50) == VCLGraphics.SAL_INVERT_50) {
-			if (x < 0) {
-				width += x;
-				x = 0;
-			}
-			if (y < 0) {
-				height += y;
-				y = 0;
-			}
 			Shape clip = graphics.getClip();
 			if (clip != null && clip.contains((double)x, (double)y, (double)width, (double)height))
 				clip = null;
@@ -861,7 +861,6 @@ public class VCLGraphics {
 				int[] srcData = srcImage.getData();
 				int[] destData = image.getData();
 				int srcDataWidth = srcImage.getWidth();
-				int destDataWidth = image.getWidth();
 				Point srcPoint = new Point(0, 0);
 				Point destPoint = new Point(x, y);
 				int totalPixels = width * height;
@@ -908,7 +907,6 @@ public class VCLGraphics {
 			}
 			else {
 				int[] destData = image.getData();
-				int destDataWidth = image.getWidth();
 				Point destPoint = new Point(x, y);
 				int totalPixels = width * height;
 
