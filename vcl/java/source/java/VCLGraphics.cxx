@@ -128,8 +128,6 @@ long com_sun_star_vcl_VCLGraphics::getScreenResolution()
 	return out;
 }
 
-// ----------------------------------------------------------------------------
-
 void com_sun_star_vcl_VCLGraphics::beginSetClipRegion()
 {
 	static jmethodID mID = NULL;
@@ -571,7 +569,6 @@ void com_sun_star_vcl_VCLGraphics::resetClipRegion()
 void com_sun_star_vcl_VCLGraphics::setPixel( long _par0, long _par1, SalColor _par2 )
 {
 	static jmethodID mID = NULL;
-	SalColor out = 0;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
@@ -640,3 +637,4 @@ void com_sun_star_vcl_VCLGraphics::unionClipRegion( long _par0, long _par1, long
 		}
 	}
 }
+
