@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Setup state="modified" cfg:package="org.openoffice" xmlns="http://openoffice.org/2000/registry/components/Setup" xmlns:cfg="http://openoffice.org/2000/registry/instance" xmlns:xsi="http://www.w3.org/1999/XMLSchema-instance">
+ <L10N>
+  <ooLocale cfg:type="string">LANGUAGES</ooLocale>
+ </L10N>
+ <Office>
+  <ooSetupInstallPath cfg:type="string">USER_INSTALL_DIR</ooSetupInstallPath>
+ </Office>
+</Setup>
