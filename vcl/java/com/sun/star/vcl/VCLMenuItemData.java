@@ -418,8 +418,9 @@ public final class VCLMenuItemData {
 			if(!awtPeers.isEmpty()) {
 				Iterator e=awtPeers.iterator();
 				while(e.hasNext()) {
-					CheckboxMenuItem cMI=(CheckboxMenuItem)e.next();
-					cMI.setState(isChecked);
+					MenuItem cMI=(MenuItem)e.next();
+					if (cMI instanceof CheckboxMenuItem)
+						((CheckboxMenuItem)cMI).setState(isChecked);
 				}
 			}
 		}
