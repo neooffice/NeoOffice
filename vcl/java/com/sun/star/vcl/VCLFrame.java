@@ -1625,10 +1625,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			// keyboard shortcuts for all menu items and Java will intercept
 			// those that are applicable to disabled menu items.
 			int modifiers = e.getModifiers();
-			if (VCLFrame.lastKeyPressed == null && (modifiers & VCLFrame.menuModifiersMask) == VCLFrame.menuModifiersMask && (keyCode >= KeyEvent.VK_A && keyCode <= KeyEvent.VK_Z || keyCode >= KeyEvent.VK_0 && keyCode <= KeyEvent.VK_9)) {
-				e = new KeyEvent(e.getComponent(), KeyEvent.KEY_TYPED, e.getWhen(), modifiers, KeyEvent.VK_UNDEFINED, Character.toLowerCase((char)keyCode));
+			char keyChar = e.getKeyChar();
+			if (VCLFrame.lastKeyPressed == null && (modifiers & VCLFrame.menuModifiersMask) == VCLFrame.menuModifiersMask && (keyChar >= 'a' && keyChar <= 'z' || keyChar >= '0' && keyChar <= '9')) {
+				e = new KeyEvent(e.getComponent(), KeyEvent.KEY_TYPED, e.getWhen(), modifiers, KeyEvent.VK_UNDEFINED, keyChar);
 				keyTyped(e);
-				VCLFrame.lastMenuShortcutPressed = new MenuShortcut(keyCode, (modifiers & InputEvent.SHIFT_MASK) == InputEvent.SHIFT_MASK ? true : false);
+				VCLFrame.lastMenuShortcutPressed = new MenuShortcut(keyChar, (modifiers & InputEvent.SHIFT_MASK) == InputEvent.SHIFT_MASK ? true : false);
 			}
 		}
 
