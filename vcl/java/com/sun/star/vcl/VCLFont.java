@@ -122,11 +122,6 @@ public final class VCLFont {
 	private FontMetrics fontMetrics = null;
 
 	/**
-	 * The font name.
-	 */
-	private String name = null;
-
-	/**
 	 * Constructs a new <code>VCLFont</code> instance.
 	 *
 	 * @param f a <code>Font</code> instance
@@ -137,19 +132,6 @@ public final class VCLFont {
 
 		// Get the font metrics
 		fontMetrics = VCLFont.graphics.getFontMetrics(f);
-
-	}
-
-	/**
-	 * Constructs a new <code>VCLFont</code> instance.
-	 *
-	 * @param f a <code>Font</code> instance
-	 * @param n the name to use for this font
-	 */
-	VCLFont(Font f, String n) {
-
-		this(f);
-		name = n;
 
 	}
 
@@ -246,10 +228,7 @@ public final class VCLFont {
 	 */
 	public String getName() {
 
-		if (name != null)
-			return name;
-		else
-			return font.getName();
+		return font.getName();
 
 	}
 
