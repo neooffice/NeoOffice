@@ -324,10 +324,33 @@ public final class VCLMenuBar {
      * menu bar contains peers of the proper classes.
      */
     public static synchronized void regenerateAllMenuBars() {
+	System.err.println("regenerateAllMenuBars");
         Enumeration menuBars=activeMenubars.elements();
         while(menuBars.hasMoreElements()) {
             VCLMenuBar mb=(VCLMenuBar)menuBars.nextElement();
             mb.regenerateMenuBar();
         }
+    }
+    
+    /**
+     * Determine if a menu is one of the top-level menus of a menubar.
+     *
+     * @param item  item to check if it is a top level menu of a menubar
+     * @return true if the item is in a menubar, false if the item is either
+     *	a submenu or a menu item
+     */
+    public static synchronized boolean isTopLevelMenu(VCLMenuItemData item) {
+	Enumeration menuBars=activeMenubars.elements();
+	while(menuBars.hasMoreElements()) {
+	    VCLMenuBar mb=(VCLMenuBar)menuBars.nextElement();
+	    if(mb.menus!=null) {
+		Enumeration e=mb.menus.elements();
+		while(e.hasMoreElements()) {
+		    if(item==e.nextElement())
+			return(true);
+		}
+	    }
+	}
+	return(false);
     }
 }

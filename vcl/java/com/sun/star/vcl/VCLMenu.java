@@ -58,6 +58,8 @@ public final class VCLMenu {
      */
     private VCLMenuItemData menuData=null;
     
+    private boolean disposed=false;
+    
     /**
      * Construct a new VCLMenu instance.
      *
@@ -83,6 +85,7 @@ public final class VCLMenu {
     public void dispose( ) {
 	menuData.dispose();
 	menuData=null;
+	disposed=true;
     }
      
     /**
@@ -91,6 +94,8 @@ public final class VCLMenu {
      * @return VCLMenuItemData reference
      */
     public VCLMenuItemData getMenuItemDataObject( ) {
+	if(disposed)
+	    System.err.println("getMenuItemDataObject() invoked on disposed menu!");
      	return(menuData);
     }
     
@@ -114,8 +119,7 @@ public final class VCLMenu {
         }
         catch (AWTPeersInvalidatedException e)
         {
-            // regenerate all the menubars since they may contain invalid contents somewhere
-            VCLMenuBar.regenerateAllMenuBars();
+            menuData.refreshAWTPeersInParentMenus();
         }
     }
     
@@ -142,9 +146,10 @@ public final class VCLMenu {
      * @param bCheck	new checkmark state of the item
      */
     public void checkItem(int nPos, boolean bCheck) {
-        try
+        VCLMenuItemData item=null;
+	try
         {
-            VCLMenuItemData item=(VCLMenuItemData)menuData.getMenuItem(nPos);
+            item=(VCLMenuItemData)menuData.getMenuItem(nPos);
             item.setChecked(bCheck);
         }
         catch (IllegalArgumentException e)
@@ -153,7 +158,10 @@ public final class VCLMenu {
         }
         catch (AWTPeersInvalidatedException e)
         {
-            VCLMenuBar.regenerateAllMenuBars();
+	    // checkbox items can't be top level menus, so we only have to
+	    // worry about reinserting new peers into their parent menus
+            if(item!=null)
+		item.refreshAWTPeersInParentMenus();
         }
     }
     
@@ -182,18 +190,34 @@ public final class VCLMenu {
      * @param nPos		position where the submenu should be attached
      */
     public void attachSubmenu(VCLMenuItemData newMenu, int nPos) {
+	if(newMenu==null)
+	    System.err.println("New menu is null");
+	    
         try
         {
-            VCLMenuItemData item=(VCLMenuItemData)menuData.getMenuItem(nPos);
-            newMenu.setTitle(item.getTitle());
+            VCLMenuItemData item=null;
+	    item=(VCLMenuItemData)menuData.getMenuItem(nPos);
+	    if(item==null) {
+		System.err.println("Item is null");
+		return;
+	    }
+	    
+	    if(item.getDelegate()==newMenu) {
+		// no need to reassociate the menu if its item is already the
+		// delegate
+		return;
+	    }
+		
+	    newMenu.setTitle(item.getTitle());
             newMenu.setEnabled(item.getEnabled());
             item.unregisterAllAWTPeers();
             item.setDelegate(newMenu);
-            VCLMenuBar.regenerateAllMenuBars();
+	    
+	    item.refreshAWTPeersInParentMenus();
         }
         catch (Exception e)
         {
-            System.err.println("Error in attaching submenu");
+            System.err.println("Error in attaching submenu "+e);
         }
     }
 }

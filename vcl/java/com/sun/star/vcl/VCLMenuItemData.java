@@ -74,6 +74,15 @@ public final class VCLMenuItemData {
     }
     
     /**
+     * Fetch the delegate object for this instance
+     *
+     * @return delegate object reference or null if there is no delegate
+     */
+    public VCLMenuItemData getDelegate() {
+	return(delegate);
+    }
+    
+    /**
      * Unicode string that corresponds to the title
      */
     private String title=new String();
@@ -123,6 +132,13 @@ public final class VCLMenuItemData {
     private java.util.Vector menuItems=new Vector();
     
     /**
+     * If the item has been inserted into menus, this vector holds
+     * backreferences to the parent menus.  The backreferences are to the
+     * VCLMenuItemData objects for the parent menus.
+     */
+    private java.util.Vector parentMenus=new Vector();
+    
+    /**
      * True if this item is enabled, false if not
      */
     private boolean isEnabled=true;
@@ -157,8 +173,11 @@ public final class VCLMenuItemData {
             isSeparator=true;
             title=new String("-");
         }
-        else
+        else if(newTitle!=null)
+	{
             title=new String(newTitle);
+	}
+	
         vclID=id;
         vclMenuCookie=cookie;
     }
@@ -204,12 +223,21 @@ public final class VCLMenuItemData {
         }
         
         if(!isSeparator) {
-            title=new String(newTitle);
-            Enumeration e=awtPeers.elements();
-            while(e.hasMoreElements()) {
-                MenuItem m=(MenuItem)e.nextElement();
-                m.setLabel(title);
-            }
+            if(newTitle!=null)
+		title=new String(newTitle);
+	    else
+		title=new String();
+	    if(awtPeers==null)
+		System.err.println("NULL peers array!");
+	    if(!awtPeers.isEmpty()) {
+		Enumeration e=awtPeers.elements();
+		while(e.hasMoreElements()) {
+		    MenuItem m=(MenuItem)e.nextElement();
+		    if(m==null)
+			System.err.println("NULL menu item in our peers!");
+		    m.setLabel(title);
+		}
+	    }
         }
     }
     
@@ -264,13 +292,15 @@ public final class VCLMenuItemData {
         }
         
         isEnabled=newEnabled;
-        Enumeration e=awtPeers.elements();
-        while(e.hasMoreElements()) {
-            MenuItem m=(MenuItem)e.nextElement();
-            if(isEnabled)
-                m.enable();
-            else
-                m.disable();
+	if(!awtPeers.isEmpty()) {
+	    Enumeration e=awtPeers.elements();
+	    while(e.hasMoreElements()) {
+		MenuItem m=(MenuItem)e.nextElement();
+		if(isEnabled)
+		    m.enable();
+		else
+		    m.disable();
+	    }
         }
     }
     
@@ -347,12 +377,14 @@ public final class VCLMenuItemData {
         {
             // change state of our checkbox peers
             
-            Enumeration e=awtPeers.elements();
-            while(e.hasMoreElements())
-            {
-                CheckboxMenuItem cMI=(CheckboxMenuItem)e.nextElement();
-                cMI.setState(isChecked);
-            }
+	    if(!awtPeers.isEmpty()) {
+		Enumeration e=awtPeers.elements();
+		while(e.hasMoreElements())
+		{
+		    CheckboxMenuItem cMI=(CheckboxMenuItem)e.nextElement();
+		    cMI.setState(isChecked);
+		}
+	    }
         }
     }
     
@@ -412,6 +444,7 @@ public final class VCLMenuItemData {
             throw new IllegalArgumentException();
         
         menuItems.insertElementAt(newItem, nPos);
+	newItem.parentMenus.add(this);
         if(!isSubmenu)
         {
             if(!awtPeers.isEmpty())
@@ -422,37 +455,39 @@ public final class VCLMenuItemData {
         }
         else
         {
-            Enumeration e=awtPeers.elements();
-            while(e.hasMoreElements())
-            {
-                Menu m=(Menu)e.nextElement();
-                
-                if(nPos==menuItems.size()-1)
-                {
-                    // we can just append onto the end
-                    
-                    m.add((MenuItem)newItem.createAWTPeer());
-                }
-                else
-                {
-                    // we can't insert items in the middle of AWT menus, so we need to remove all of the
-                    // existing items and reinsert them all
-                    
-                    Stack s=new Stack();
-                    for(int i=m.countItems()-1; i>=0; i--)
-                    {
-                        s.push(m.getItem(i));
-                        m.remove(i);
-                        if(i==nPos)
-                            s.push(newItem.createAWTPeer());
-                    }
-                    
-                    while(!s.empty())
-                    {
-                        m.add((MenuItem)s.pop());
-                    }
-                }
-            }
+	    if(!awtPeers.isEmpty()) {
+		Enumeration e=awtPeers.elements();
+		while(e.hasMoreElements())
+		{
+		    Menu m=(Menu)e.nextElement();
+		    
+		    if(nPos==menuItems.size()-1)
+		    {
+			// we can just append onto the end
+			
+			m.add((MenuItem)newItem.createAWTPeer());
+		    }
+		    else
+		    {
+			// we can't insert items in the middle of AWT menus, so we need to remove all of the
+			// existing items and reinsert them all
+			
+			Stack s=new Stack();
+			for(int i=m.countItems()-1; i>=0; i--)
+			{
+			    s.push(m.getItem(i));
+			    m.remove(i);
+			    if(i==nPos)
+				s.push(newItem.createAWTPeer());
+			}
+			
+			while(!s.empty())
+			{
+			    m.add((MenuItem)s.pop());
+			}
+		    }
+		}
+	    }
         }
     }
     
@@ -474,6 +509,7 @@ public final class VCLMenuItemData {
         if(!isSubmenu || (isSubmenu && (nPos >= menuItems.size())))
             throw new IllegalArgumentException();
         
+	((VCLMenuItemData)menuItems.elementAt(nPos)).parentMenus.remove(this);
         menuItems.removeElementAt(nPos);
         if(!awtPeers.isEmpty())
         {
@@ -501,6 +537,37 @@ public final class VCLMenuItemData {
             throw new IllegalArgumentException();
         
         return((VCLMenuItemData)menuItems.elementAt(nPos));
+    }
+    
+    /**
+     * Determine the position of a specific menu item.  This only applies for
+     * menu style menu items.  Comparison is done on a reference level, *not*
+     * for items of equivalent contents.  The references must match for the
+     * item to be found.
+     *
+     * @param item  item whose position should be retrieved
+     * @return index of the item in the menu or -1 if the item is not in the
+     * menu
+     * @throws IllegalArgumentException if the menu item is of the incorrect
+     * type
+     */
+    public int getMenuItemIndex(VCLMenuItemData item) throws IllegalArgumentException {
+	if(delegate!=null) {
+	    return(delegate.getMenuItemIndex(item));
+	}
+	
+	if(!isSubmenu)
+	    throw new IllegalArgumentException();
+	
+	int toReturn=-1;
+	for(int i=0; i<menuItems.size(); i++) {
+	    if(menuItems.elementAt(i)==item) {
+		toReturn=i;
+		break;
+	    }
+	}
+	
+	return(toReturn);
     }
     
     /**
@@ -671,6 +738,34 @@ public final class VCLMenuItemData {
     }
     
     /**
+     * Reinsert new peer objects for the menu item into all of the registered
+     * parent menus for the menu item.
+     */
+    synchronized public void refreshAWTPeersInParentMenus() {
+	if(parentMenus.isEmpty())
+	    return;
+	
+	Enumeration parents=parentMenus.elements();
+	while(parents.hasMoreElements()) {
+	    VCLMenuItemData parent=(VCLMenuItemData)parents.nextElement();
+	    try {
+		int menuPos=parent.getMenuItemIndex(this);
+		if(menuPos >= 0) {
+		    parent.removeMenuItem(menuPos);
+		    try {
+			parent.addMenuItem(this, menuPos); // creates a new peer
+		    } catch(Exception e) {
+			// ignore any exceptions since this function is used
+			// to respond to them
+		    }
+		}
+	    } catch (IllegalArgumentException e) {
+		System.err.println("Got an illegal argument while refreshing awtpeers! Parent wasn't a menu.");
+	    }
+	}
+    }
+    
+    /**
      * Unregister a single AWT peer.  This indicates that the AWT object is no longer being used and
      * does not need to be tracked any longer.
      *
@@ -697,18 +792,21 @@ public final class VCLMenuItemData {
         
 	// remove notifiers to allow GC to reclaim these objects quicker
 	
-	Enumeration peers=awtPeers.elements();
-	while(peers.hasMoreElements()) {
-	    MenuItem mi=(MenuItem)peers.nextElement();
-	    if(mi instanceof VCLAWTMenuItem) {
-		mi.removeActionListener((VCLAWTMenuItem)mi);
-	    } else if(mi instanceof VCLAWTCheckboxMenuItem) {
-		mi.removeActionListener((VCLAWTCheckboxMenuItem)mi);
+	if((awtPeers!=null) && !awtPeers.isEmpty()) {
+	    Enumeration peers=awtPeers.elements();
+	    while(peers.hasMoreElements()) {
+		MenuItem mi=(MenuItem)peers.nextElement();
+		if(mi instanceof VCLAWTMenuItem) {
+		    mi.removeActionListener((VCLAWTMenuItem)mi);
+		} else if(mi instanceof VCLAWTCheckboxMenuItem) {
+		    mi.removeActionListener((VCLAWTCheckboxMenuItem)mi);
+		}
 	    }
+	    
+	    awtPeers.removeAllElements();
 	}
 	
-        awtPeers.removeAllElements();
-        if(isSubmenu) {
+        if(isSubmenu && (menuItems!=null) && !menuItems.isEmpty()) {
             Enumeration e=menuItems.elements();
             while(e.hasMoreElements()) {
                 ((VCLMenuItemData)e.nextElement()).unregisterAllAWTPeers();

@@ -191,7 +191,7 @@ void SalMenu::SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const XubSt
         // remove accelerator character
         XubString theText(rText);
         theText.EraseAllChars('~');
-        pSalMenuItem->maData.mpVCLMenuItemData->setTitle( rText );
+        pSalMenuItem->maData.mpVCLMenuItemData->setTitle( theText );
     }
 }
 
@@ -340,6 +340,7 @@ void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu )
 		pEvent.mpMenu = pVCLMenu;
 
 		pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, SALEVENT_MENUACTIVATE, &pEvent );
+		pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, SALEVENT_MENUDEACTIVATE, &pEvent);
 
 		for( i = 0; i < pVCLMenu->GetItemCount(); i++ )
 		{
