@@ -892,8 +892,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void dispose() {
 
-		if (window != null)
+		if (window != null) {
 			setVisible(false);
+			if (window instanceof Frame)
+				((Frame)window).setMenuBar(null);
+		}
 		if (queue != null)
 			queue.removeCachedEvents(frame);
 		queue = null;

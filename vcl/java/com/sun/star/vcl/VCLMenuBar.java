@@ -222,7 +222,7 @@ public final class VCLMenuBar {
 
 		if(frame!=null) {
 			Window win=frame.getWindow();
-			if(win instanceof Frame)
+			if(win instanceof Frame && ((Frame)win).getMenuBar() == awtMenuBar )
 				((Frame)win).setMenuBar(null);
 		}
 		removeMenuBar(this);
