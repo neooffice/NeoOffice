@@ -123,6 +123,30 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 
 	MutexGuard aGuard( aMutex );
 
+	static jclass carbonLockClass = NULL;
+	static jmethodID mIDRelease0 = NULL;
+	static jmethodID mIDAcquire0 = NULL;
+	DTransThreadAttach t;
+	if ( t.pEnv && t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+	{
+		carbonLockClass = t.pEnv->FindClass( "com/apple/mrj/macos/carbon/CarbonLock" );
+		if ( carbonLockClass )
+		{
+			if ( !mIDRelease0 )
+			{
+				char *cSignature = "()I";
+				mIDRelease0 = t.pEnv->GetStaticMethodID( carbonLockClass, "release0", cSignature );
+			}
+			OSL_ENSURE( mIDRelease0, "Unknown method id!" );
+			if ( !mIDAcquire0 )
+			{
+				char *cSignature = "()I";
+				mIDAcquire0 = t.pEnv->GetStaticMethodID( carbonLockClass, "release0", cSignature );
+			}
+			OSL_ENSURE( mIDAcquire0, "Unknown method id!" );
+		}
+	}
+
 	com_sun_star_dtrans_DTransTransferable *pTransferable = (com_sun_star_dtrans_DTransTransferable *)pData;
 
 	BOOL bTransferableFound = FALSE;
@@ -157,6 +181,9 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 
 		if ( bFlavorFound )
 		{
+			if ( carbonLockClass && mIDRelease0 && mIDRelease0 )
+				t.pEnv->CallStaticIntMethod( carbonLockClass, mIDRelease0 );
+
 			BOOL bDataFound = FALSE;
 			Any aValue;
 			try {
@@ -166,6 +193,10 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 			catch ( ... )
 			{
 			}
+
+			if ( carbonLockClass && mIDRelease0 && mIDAcquire0 )
+				t.pEnv->CallStaticIntMethod( carbonLockClass, mIDAcquire0 );
+
 
 			if ( bDataFound )
 			{
