@@ -415,10 +415,8 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 */
 	public boolean startJob() {
 
-		// Copy the cached page format to this printer job
-		job.setPrintable(this, (PageFormat)VCLPrintJob.pageFormat.clone());
-
 		// Detect if the user cancelled the print dialog
+		job.setPrintable(this, VCLPrintJob.pageFormat);
 		if (job.printDialog())
 			return true;
 		else
@@ -456,9 +454,8 @@ public final class VCLPrintJob implements Printable, Runnable {
 				currentGraphics = null;
 			}
 			else {
-				// Print to the edge of the page to ensure that we print all
-				// possible pixels
-				currentGraphics = new VCLGraphics(graphicsInfo.graphics, new Rectangle(0, 0, (int)((graphicsInfo.pageFormat.getWidth() - graphicsInfo.pageFormat.getImageableX()) * VCLPrintJob.pageResolution.width / 72), (int)((graphicsInfo.pageFormat.getHeight() - graphicsInfo.pageFormat.getImageableY()) * VCLPrintJob.pageResolution.height / 72)));
+				// Limit printing to only the printable area
+				currentGraphics = new VCLGraphics(graphicsInfo.graphics, new Rectangle(0, 0, (int)(graphicsInfo.pageFormat.getImageableWidth() * VCLPrintJob.pageResolution.width / 72), (int)(graphicsInfo.pageFormat.getImageableHeight() * VCLPrintJob.pageResolution.height / 72)));
 				graphicsInfo.graphics = null;
 				graphicsInfo.pageFormat = null;
 			}

@@ -122,21 +122,15 @@ BOOL SalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 	if ( !com_sun_star_vcl_VCLPrintJob::setup() )
 		return FALSE;
 
-    // Update the job setup with the new default values
-    pSetupData->meOrientation = com_sun_star_vcl_VCLPrintJob::getOrientation();
-    Size aSize( com_sun_star_vcl_VCLPrintJob::getPageSize() );
-    pSetupData->mnPaperWidth = aSize.Width();
-   	pSetupData->mnPaperHeight = aSize.Height();
-
-	return TRUE;
+	return SetPrinterData( pSetupData );
 }
 
 // -----------------------------------------------------------------------
 
 BOOL SalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
 {
-	// Always return TRUE as there is no driver data that needs updating
-	return TRUE;
+	// Set incoming values
+	return SetData( SAL_JOBSET_ORIENTATION, pSetupData );
 }
 
 // -----------------------------------------------------------------------
@@ -146,6 +140,7 @@ BOOL SalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 	// Set and update values
 	if ( nFlags == SAL_JOBSET_ORIENTATION )
 	{
+		pSetupData->mePaperFormat = PAPER_USER;
 		com_sun_star_vcl_VCLPrintJob::setOrientation( pSetupData->meOrientation );
 		pSetupData->meOrientation = com_sun_star_vcl_VCLPrintJob::getOrientation();
 		Size aSize( com_sun_star_vcl_VCLPrintJob::getPageSize() );
