@@ -132,6 +132,11 @@ public final class VCLGraphics {
 	private static int screenResolution = 0;
 
 	/**
+	 * The cached screen font resolution.
+	 */
+	private static int screenFontResolution = 0;
+
+	/**
 	 * Emits an audio beep.
 	 */
 	public static void beep() {
@@ -196,8 +201,10 @@ public final class VCLGraphics {
 		textureData[3] = 0xff000000;
 		image50 = textureImage;
 
-		// Set the screen resolution
-		screenResolution = Toolkit.getDefaultToolkit().getScreenResolution();
+		// Set the screen and font resolutions
+		screenResolution = screenFontResolution = Toolkit.getDefaultToolkit().getScreenResolution();
+		if (screenResolution < 96)
+			screenResolution = 96;
 
 		// Set the method references
 		try {
@@ -1209,7 +1216,7 @@ public final class VCLGraphics {
 	 */
 	public Dimension getScreenFontResolution() {
 
-		return new Dimension(VCLGraphics.screenResolution, VCLGraphics.screenResolution);
+		return new Dimension(VCLGraphics.screenFontResolution, VCLGraphics.screenFontResolution);
 
 	}
 
