@@ -38,6 +38,12 @@ if [ -d "$2" ]; then
 
 	# Put back user's custom dictionary files
 	if [ -d "$2/ooo" ]; then
+		for i in `cd "$2/ooo" ; find . -type f -name "*.aff" -o -name "*.dat" -o -name "*.dic" -o -name "*.idx" -maxdepth 1`; do
+			if [ ! -e "$2/Contents/share/dict/ooo/$i" ]; then
+				mv -f "$2/ooo/$i" "$2/Contents/share/dict/ooo" || exit 1
+			fi
+		done
+		chmod -Rf u-w,u+r "$2/Contents/share/dict/ooo" || exit 1
 		rm -Rf "$2/ooo" || exit 1
 	fi
 
