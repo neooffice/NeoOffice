@@ -185,9 +185,19 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( JNIEnv 
 {
 	jobject lockObject = Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( pEnv, object );
 	if ( lockObject )
-		return pEnv->MonitorEnter( lockObject ) == JNI_OK ? 0 : 1;
+	{
+		jint nRet = pEnv->MonitorEnter( lockObject );
+		if ( pEnv->ExceptionOccurred() )
+		{
+			pEnv->ExceptionDescribe();
+			pEnv->ExceptionClear();
+		}
+		return nRet == JNI_OK ? 0 : 1;
+	}
 	else
+	{
 		return 1;
+	}
 }
 #endif
 
@@ -220,9 +230,19 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv 
 {
 	jobject lockObject = Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( pEnv, object );
 	if ( lockObject )
-		return pEnv->MonitorExit( lockObject ) == JNI_OK ? 0 : 1;
+	{
+		jint nRet = pEnv->MonitorExit( lockObject );
+		if ( pEnv->ExceptionOccurred() )
+		{
+			pEnv->ExceptionDescribe();
+			pEnv->ExceptionClear();
+		}
+		return nRet == JNI_OK ? 0 : 1;
+	}
 	else
+	{
 		return 1;
+	}
 }
 #endif
 
