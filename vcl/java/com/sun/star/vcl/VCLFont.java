@@ -87,6 +87,11 @@ public final class VCLFont {
 	public final static int FAMILY_SYSTEM = 6;
 
 	/**
+	 * Cached font family names.
+	 */
+	private static String[] fontFamilies = null;
+
+	/**
 	 * Cached fonts.
 	 */
 	private static VCLFont[] fonts = null;
@@ -106,16 +111,31 @@ public final class VCLFont {
 			macosx = true;
 
 		// Get all of the fonts and screen out duplicates
-		String[] fontFamilies = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
+		fontFamilies = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
 		ArrayList array = new ArrayList();
-		for (int i = 0; i < fontFamilies.length; i++) {
-			String name = fontFamilies[i].toLowerCase();
-			// Get rid of hidden Mac OS X fonts
-			if (macosx && name.startsWith("."))
-				continue;
-			Font font = new Font(fontFamilies[i], Font.PLAIN, 1);
+		for (int j = 0; j < fontFamilies.length; j++) {
+			String name = fontFamilies[j].toLowerCase();
+			boolean b = false;
+			boolean i = false;
+			if (macosx) {
+				// Get rid of hidden Mac OS X fonts
+				if (name.startsWith("."))
+					continue;
+				// Determine bold and italic settings
+				if (name.endsWith(" bold italic")) {
+					b = true;
+					i = true;
+				}
+				else if (name.endsWith(" bold")) {
+					b = true;
+				}
+				else if (name.endsWith(" italic")) {
+					i = true;
+				}
+			}
+			Font font = new Font(fontFamilies[j], Font.PLAIN, 1);
 			if (font.isPlain())
-				array.add(new VCLFont(font, (short)0, true));
+				array.add(new VCLFont(font, (short)0, b, i, true));
 		}
 		VCLFont.fonts = (VCLFont[])array.toArray(new VCLFont[array.size()]);
 
@@ -139,6 +159,11 @@ public final class VCLFont {
 	private boolean antialiased = false;
 
 	/**
+	 * The bold flag.
+	 */
+	private boolean bold = false;
+
+	/**
 	 * The font.
 	 */
 	private Font font = null;
@@ -147,6 +172,11 @@ public final class VCLFont {
 	 * The font metrics.
 	 */
 	private FontMetrics fontMetrics = null;
+
+	/**
+	 * The italic flag.
+	 */
+	private boolean italic = false;
 
 	/**
 	 * The cached orientation.
@@ -163,13 +193,17 @@ public final class VCLFont {
 	 *
 	 * @param f a <code>Font</code> instance
 	 * @param o the orientation of the new <code>VCLFont</code> in degrees
-	 * @param b <code>true</code> to enable antialiasing and <code>false</code>
+	 * @param b <code>true</code> if the font is bold
+	 * @param i <code>true</code> if the font is italic
+	 * @param a <code>true</code> to enable antialiasing and <code>false</code>
 	 *  to disable antialiasing
 	 */
-	VCLFont(Font f, short o, boolean b) {
+	VCLFont(Font f, short o, boolean b, boolean i, boolean a) {
 
-		antialiased = b;
+		antialiased = a;
+		bold = b;
 		font = f;
+		italic = i;
 		orientation = o;
 
 		// Get family type
@@ -191,22 +225,59 @@ public final class VCLFont {
 	 * <code>VCLFont</code> object and applying a new size.
 	 *
 	 * @param size the size for the new <code>VCLFont</code>
-	 * @param bold whether the new <code>VCLFont</code> should be bold
-	 * @param italic whether the new <code>VCLFont</code> should be italic
+	 * @param b whether the new <code>VCLFont</code> should be bold
+	 * @param i whether the new <code>VCLFont</code> should be italic
 	 * @param o the orientation of the new <code>VCLFont</code> in degrees
-	 * @param b <code>true</code> to enable antialiasing and <code>false</code>
+	 * @param a <code>true</code> to enable antialiasing and <code>false</code>
 	 *  to disable antialiasing
 	 * @return a new <code>VCLFont</code> object
 	 */
-	public VCLFont deriveFont(int size, boolean bold, boolean italic, short o, boolean b) {
+	public VCLFont deriveFont(int size, boolean b, boolean i, short o, boolean a) {
 
-		int style = Font.PLAIN;
-		if (bold)
-			style |= Font.BOLD;
-		if (italic)
-			style |= Font.ITALIC;
-		Font f = font.deriveFont(style, (float)size);
-		return new VCLFont(f, o, b);
+		boolean macosx = false;
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
+			macosx = true;
+
+		Font f = null;
+
+		if (macosx) {
+			String fontName = font.getFamily().toLowerCase();
+			int index = 0;
+			if ((index = fontName.lastIndexOf(" bold italic")) != -1 || (index = fontName.lastIndexOf(" bold")) != -1 || (index = fontName.lastIndexOf(" italic")) != -1 || (index = fontName.lastIndexOf(" regular")) != -1)
+				fontName = fontName.substring(0, index);
+			for (int j = 0; j < fontFamilies.length; j++) {
+				String name = fontFamilies[j].toLowerCase();
+				if (!name.startsWith(fontName))
+					continue;
+				if (b && i && name.endsWith(" bold italic")) {
+					f = new Font(fontFamilies[j], Font.PLAIN, size);
+					break;
+				}
+				else if (b && !i && name.endsWith(" bold")) {
+					f = new Font(fontFamilies[j], Font.PLAIN, size);
+					break;
+				}
+				else if (!b && i && name.endsWith(" italic") && !name.endsWith(" bold italic")) {
+					f = new Font(fontFamilies[j], Font.PLAIN, size);
+					break;
+				}
+				else if (!b && !i && name.endsWith(" regular")) {
+					f = new Font(fontFamilies[j], Font.PLAIN, size);
+					break;
+				}
+			}
+		}
+			
+		if (f == null) {
+			int style = Font.PLAIN;
+			if (b)
+				style |= Font.BOLD;
+			if (i)
+				style |= Font.ITALIC;
+			f = font.deriveFont(style, (float)size);
+		}
+
+		return new VCLFont(f, o, b, i, a);
 
 	}
 
@@ -359,7 +430,7 @@ public final class VCLFont {
 	 */
 	public boolean isBold() {
 
-		return font.isBold();
+		return bold;
 
 	}
 
@@ -370,7 +441,7 @@ public final class VCLFont {
 	 */
 	public boolean isItalic() {
 
-		return font.isItalic();
+		return italic;
 
 	}
 
