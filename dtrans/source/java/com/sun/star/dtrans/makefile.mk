@@ -33,72 +33,32 @@
 # 
 ##########################################################################
 
-PRJ=..$/..
+PRJ=..$/..$/..$/..$/..$/..
 
+PACKAGE = com$/sun$/star$/dtrans
 PRJNAME=dtrans
-TARGET=dtransjava
-TARGETTYPE=GUI
-
-ENABLE_EXCEPTIONS=TRUE
-COMP1TYPELIST=$(TARGET)
-LIBTARGET=NO
+TARGET=com_sun_star_dtrans
 
 # --- Settings -----------------------------------------------------
 
+.INCLUDE :  svpre.mk
 .INCLUDE :  settings.mk
-.INCLUDE :  ..$/cppumaker.mk
+.INCLUDE :  sv.mk
 
-# ------------------------------------------------------------------
+# --- Files --------------------------------------------------------
 
 .IF "$(GUIBASE)"!="java"
 
 dummy:
-	@echo "Nothing to build for GUIBASE $(GUIBASE)"
- 
+    @echo "Nothing to build for GUIBASE $(GUIBASE)"
+
 .ELSE		# "$(GUIBASE)"!="java"
 
-CFLAGS += -Iinc
-
-SLOFILES=\
-	$(SLO)$/Class.obj \
-	$(SLO)$/DTransClipboard.obj \
-	$(SLO)$/Object.obj \
-	$(SLO)$/String.obj \
-	$(SLO)$/Throwable.obj \
-	$(SLO)$/java_clipboard.obj \
-	$(SLO)$/java_dnd.obj \
-	$(SLO)$/java_dndcontext.obj \
-	$(SLO)$/java_service.obj \
-	$(SLO)$/tools.obj
-
-SHL1TARGET= $(TARGET)$(UPD)$(DLLPOSTFIX)
-
-SHL1STDLIBS= \
-		$(SALLIB)	\
-		$(VOSLIB)	\
-		$(VCLLIB)	\
-		$(CPPULIB) 	\
-		$(CPPUHELPERLIB)
-
-SHL1DEPN=
-SHL1IMPLIB=		i$(SHL1TARGET) 
-SHL1OBJS=		$(SLOFILES)
-
-APP1NOSAL=TRUE
-APP1TARGET=testjavacb
-APP1OBJS=$(SLO)$/test_javacb.obj
-APP1STDLIBS=\
-		$(SALLIB)	\
-		$(VCLLIB)	\
-		$(CPPULIB)			\
-		$(CPPUHELPERLIB)
-
-JARCLASSDIRS = com
-JARTARGET = $(TARGET).jar
-JARCOMPRESS = TRUE
+JAVAFILES = \
+	DTransClipboard.java
 
 .ENDIF		# "$(GUIBASE)"!="java"
 
 # --- Targets ------------------------------------------------------
 
-.INCLUDE :	target.mk
+.INCLUDE :  target.mk

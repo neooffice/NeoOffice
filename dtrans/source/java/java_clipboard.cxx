@@ -48,6 +48,7 @@ using namespace com::sun::star::lang;
 using namespace com::sun::star::uno;
 using namespace cppu;
 using namespace java;
+using namespace java::dtrans;
 using namespace osl;
 using namespace rtl;
 using namespace std;
@@ -68,8 +69,12 @@ Sequence< OUString > SAL_CALL JavaClipboard_getSupportedServiceNames()
 
 // ========================================================================
 
-JavaClipboard::JavaClipboard() : WeakComponentImplHelper4< XClipboardEx, XClipboardNotifier, XServiceInfo, XInitialization >( maMutex )
+JavaClipboard::JavaClipboard( BOOL bSystemClipboard ) : WeakComponentImplHelper4< XClipboardEx, XClipboardNotifier, XServiceInfo, XInitialization >( maMutex )
 {
+	if ( bSystemClipboard )
+		mpSystemClipboard = com_sun_star_dtrans_DTransClipboard::getSystemClipboard();
+	else
+		mpSystemClipboard = NULL;
 }
 
 // ------------------------------------------------------------------------
@@ -200,18 +205,25 @@ Reference< XInterface > JavaClipboardFactory::createInstance() throw()
 
 Reference< XInterface > JavaClipboardFactory::createInstanceWithArguments( const Sequence< Any >& arguments ) throw()
 {
+	BOOL bSystemClipboard = FALSE;
 	OUString aClipboardName;
 	if ( arguments.getLength() > 1 )
+	{
 		arguments.getConstArray()[1] >>= aClipboardName;
+	}
 	else
+	{
 		aClipboardName = OUString::createFromAscii( "CLIPBOARD" );
+		bSystemClipboard = TRUE;
+	}
 
 	MutexGuard aGuard( maMutex );
 
 	Reference< XInterface > xClipboard = maInstances[ aClipboardName ];
 	if ( !xClipboard.is() )
 	{
-		xClipboard = Reference< XInterface >( static_cast< OWeakObject* >( new JavaClipboard() ) );
+		JavaClipboard *pClipboard = new JavaClipboard( bSystemClipboard );
+		xClipboard = Reference< XInterface >( static_cast< OWeakObject* >( pClipboard ) );
 		maInstances[ aClipboardName ] = xClipboard;
 	}
 

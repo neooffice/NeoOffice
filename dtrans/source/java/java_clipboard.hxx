@@ -42,6 +42,9 @@
 #ifndef _SAL_TYPES_H_
 #include <sal/types.h>
 #endif
+#ifndef _JAVA_DTRANS_COM_SUN_STAR_DTRANS_DTRANSCLIPBOARD_HXX
+#include <com/sun/star/dtrans/DTransClipboard.hxx>
+#endif
 #ifndef _CPPUHELPER_FACTORY_HXX_
 #include <cppuhelper/factory.hxx>
 #endif
@@ -91,9 +94,10 @@ class JavaClipboard : public ::cppu::WeakComponentImplHelper4< ::com::sun::star:
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::clipboard::XClipboardOwner >	maOwner;
 	::std::list< ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::clipboard::XClipboardListener > >	maListeners;
 	::osl::Mutex			maMutex;
+	::java::dtrans::com_sun_star_dtrans_DTransClipboard *mpSystemClipboard;
 
 public:
-							JavaClipboard();
+							JavaClipboard( BOOL bSystemClipboard );
 	virtual					~JavaClipboard();
 	
 	virtual ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	SAL_CALL getContents() throw( ::com::sun::star::uno::RuntimeException );
