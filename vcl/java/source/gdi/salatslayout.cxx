@@ -484,17 +484,19 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	bool bPosRTL;
 	Point aPos( 0, 0 );
 	int nCharPos = -1;
+	int nFirstGlyph = -1;
 	rArgs.ResetPos();
 	while ( rArgs.GetNextPos( &nCharPos, &bPosRTL ) )
 	{
 		int nIndex = nCharPos - rArgs.mnMinCharPos + 1;
 		for ( int i = mpCharsToGlyphs[ nIndex ]; i < mnGlyphCount && mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
 		{
+			if ( nFirstGlyph < 0 )
+				nFirstGlyph = i;
+
 			long nGlyph = mpGlyphInfoArray->glyphs[ i ].glyphID;
 			long nCharWidth = 0;
 
-			// Always use screen metrics as ideal metrics can cause incorrect
-			// layout behavior of RTL text
 			if ( mpGlyphTranslations && mpVerticalFlags && mpVerticalFlags[ mpGlyphInfoArray->glyphs[ i ].charIndex ] & GF_ROTMASK )
 			{
 				nGlyph |= mpVerticalFlags[ mpGlyphInfoArray->glyphs[ i ].charIndex ] & GF_ROTMASK;
@@ -505,7 +507,9 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			}
 			else
 			{
-				nCharWidth = Float32ToLong( ( mpGlyphInfoArray->glyphs[ i + 1 ].screenX - mpGlyphInfoArray->glyphs[ i ].screenX ) * fUnitsPerPixel );
+				nCharWidth = Float32ToLong( ( mpGlyphInfoArray->glyphs[ i + 1 ].idealX - mpGlyphInfoArray->glyphs[ nFirstGlyph ].idealX ) * fUnitsPerPixel ) - aPos.X();
+				if ( nCharWidth < 0 )
+					nCharWidth = 0;
 			}
 
 			// Mark whitespace glyphs
