@@ -1296,6 +1296,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void mousePressed(MouseEvent e) {
 
+		// Enable mouse capture
+		VCLFrame.capture = true;
+
 		VCLFrame f = VCLFrame.captureFrame;
 		while (f != null && f != this)
 			f = f.getParent();
@@ -1315,7 +1318,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		VCLFrame f = this;
 
-		if (VCLFrame.capture && VCLFrame.captureFrame != null && e.getComponent().isShowing()) {
+		if (VCLFrame.captureFrame != null && e.getComponent().isShowing()) {
 			// Find the capture window
 			f = VCLFrame.captureFrame;
 			Point srcPoint = e.getComponent().getLocationOnScreen();
@@ -1361,8 +1364,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		VCLFrame f = this;
 
-		// Enable mouse capture
-		VCLFrame.capture = true;
 		if (VCLFrame.lastDragFrame == null)
 			VCLFrame.lastDragFrame = this;
 
