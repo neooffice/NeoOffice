@@ -54,7 +54,7 @@ PRODUCT_VERSION=0.0
 PRODUCT_FILETYPE=no%f
 
 # CVS macros
-OO_CVSROOT:=:pserver:anoncvs@anoncvs.openoffice.org:/cvs
+OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
 OO_PACKAGE:=all
 OO_TAG:=OOO_STABLE_1_PORTS
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
@@ -129,7 +129,7 @@ build.neo_patches: \
 	build.neo_vcl_patch
 	touch "$@"
 
-build.installation: build.neo_patches
+build.package: build.neo_patches
 	rm -Rf "$(INSTALL_HOME)"
 	mkdir -p "$(INSTALL_HOME)/package"
 	echo "[ENVIRONMENT]" > "$(INSTALL_HOME)/response"
@@ -157,41 +157,16 @@ build.installation: build.neo_patches
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents/program" ; regcomp -revoke -r applicat.rdb -c "libdtransX11$${UPD}$${DLLSUFFIX}.dylib"
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents/program" ; regcomp -register -r applicat.rdb -c "libdtransjava$${UPD}$${DLLSUFFIX}.dylib"
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; rm -Rf "license.html" "readme.html" "setup" "spadmin" "program/libdtransX11$${UPD}$${DLLSUFFIX}.dylib" "program/setup" "program/setup.bin" "program/spadmin" "program/spadmin.bin"
-	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; sed 's#ProductPatch=.*$$#ProductPatch=($(PRODUCT_VERSION))#' "program/bootstraprc" | sed 's#Location=.*$$#UserDataDir=$$SYSUSERCONFIG/Library/$(PRODUCT_DIR_NAME)/user#' | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/Library/$(PRODUCT_DIR_NAME)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' > "../../../out" ; mv -f "../../../out" "program/bootstraprc"
+	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; sed 's#ProductPatch=.*$$#ProductPatch=($(PRODUCT_VERSION))#' "program/bootstraprc" | sed '/Location=.*$$/d' | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/Library/$(PRODUCT_DIR_NAME)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' > "../../../out" ; mv -f "../../../out" "program/bootstraprc"
 	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; sh -e -c 'for i in "share/config/registry/instance/org/openoffice/Setup.xml" "share/config/registry/cache/instance/org/openoffice/Setup.dat" ; do sed "s#\"string\">.*</ooName>#\"string\">$(PRODUCT_NAME)</ooName>#g" "$${i}" | sed "s#\"string\">.*</ooSetupVersion>#\"string\">$(PRODUCT_VERSION)</ooSetupVersion>#g" > "../../../out" ; mv -f "../../../out" "$${i}" ; done'
 	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; sh -e -c 'for i in "share/config/registry/instance/org/openoffice/Office/Common.xml" "share/config/registry/cache/instance/org/openoffice/Office/Common.dat" ; do sed "s#$(PWD)/$(INSTALL_HOME)/package#/Applications#g" "$${i}" | sed "s#>OpenOffice\.org [0-9\.]* #>$(PRODUCT_NAME) $(PRODUCT_VERSION) #g" > "../../../out" ; mv -f "../../../out" "$${i}" ; done'
 	cd "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app/Contents" ; sh -e -c 'if [ ! -d "MacOS" ] ; then rm -Rf "MacOS" ; mv -f "program" "MacOS" ; ln -s "MacOS" "program" ; fi'
 	chmod -Rf u+w,og-w,a+r "$(INSTALL_HOME)/package/$(PRODUCT_DIR_NAME).app"
-	touch $@
-
-# This target must be run manually since it launches the GUI PackageMaker tool
-build.package: build.installation
-	rm -f "$(INSTALL_HOME)/neojava.pmsp"
-	rm -Rf "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg"
-	rm -Rf "$(INSTALL_HOME)/resources"
 	mkdir -p "$(INSTALL_HOME)/resources"
 	cp etc/gpl.html "$(INSTALL_HOME)/resources/License.html"
 	cd "bin" ; sh -e -c 'for i in post_install post_upgrade ; do sed "s#\$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g" "$${i}" > "$(PWD)/$(INSTALL_HOME)/resources/$(PRODUCT_DIR_NAME).$${i}" ; chmod 755 "$(PWD)/$(INSTALL_HOME)/resources/$(PRODUCT_DIR_NAME).$${i}" ; done'
-	sed 's#$$(INSTALL_HOME)#$(PWD)/$(INSTALL_HOME)#g' etc/neojava.pmsp | sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' > "$(INSTALL_HOME)/neojava.pmsp"
-	open "$(PWD)/$(INSTALL_HOME)/neojava.pmsp"
-	@echo ""
-	@echo "Opening PackageMaker application"
-	@echo ""
-	@echo "When the PackageMaker application opens, make sure the following settings are"
-	@echo "showing and, if so, press the Create Package button to build the installable"
-	@echo "package and make absolutely sure that you save the package to"
-	@echo "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg:"
-	@echo ""
-	@echo "Package Root Directory: $(PWD)/$(INSTALL_HOME)/package"
-	@echo "Package Resources Directory: $(PWD)/$(INSTALL_HOME)/resources"
-	@echo "Package Title: $(PRODUCT_NAME)"
-	@echo "Package Version: $(PRODUCT_VERSION)"
-	@echo "Default Location: /Applications"
-	@echo ""
-	@echo "This make target will sleep until the PackageMaker tool creates the"
-	@echo "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg"
-	@echo ""
-	sh -e -c 'while [ ! -f "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).sizes" ] ; do sleep 10 ; done'
+	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' etc/neojava.info | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).info"
+	/usr/bin/package "$(INSTALL_HOME)/package" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).info" -d "$(INSTALL_HOME)" -r "$(INSTALL_HOME)/resources"
 	touch "$@"
 
 build.source_zip:

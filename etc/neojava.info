@@ -1,0 +1,15 @@
+Title $(PRODUCT_NAME)
+Version $(PRODUCT_VERSION)
+Description
+DefaultLocation /Applications
+DeleteWarning
+
+### Package Flags ###
+NeedsAuthorization YES
+Required NO
+Relocatable YES
+RequiresReboot NO
+UseUserMask YES
+OverwritePermissions YES
+InstallFat NO
+RootVolumeOnly NO
