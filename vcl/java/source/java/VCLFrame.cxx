@@ -212,6 +212,19 @@ void com_sun_star_vcl_VCLFrame::dispose()
 			mID = t.pEnv->GetMethodID( getMyClass(), "dispose", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
+
+#ifdef MACOSX
+		// Test the JVM version and if it is below 1.4, use Carbon APIs
+		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+		{
+			// Fix bug 261 by explicitly flushing the window's buffer before
+			// destroying it
+			WindowRef aWindow = (WindowRef)getNativeWindow();
+			if ( aWindow )
+				QDFlushPortBuffer( GetWindowPort( aWindow ), NULL );
+		}
+#endif	// MACOSX
+
 		if ( mID )
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 	}
