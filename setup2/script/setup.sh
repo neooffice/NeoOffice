@@ -195,8 +195,11 @@ if [ "$os" = "Darwin" ] ; then
         error
     fi
     for i in `cd "$appfontdir" ; find . -name '*.ttf'` ; do
+        if [ -L "$userfontdir/$i" ] ; then
+            rm -f "$userfontdir/$i"
+        fi
         if [ ! -f "$userfontdir/$i" ] ; then
-            ln -sf "$appfontdir/$i" "$userfontdir/$i"
+            cp -f "$appfontdir/$i" "$userfontdir/$i"
         fi
     done
 fi
