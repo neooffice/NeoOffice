@@ -63,14 +63,13 @@
 using namespace rtl;
 using namespace vos;
 
-static UInt32 nSupportedTypes = 5;
+static UInt32 nSupportedTypes = 4;
 
 // List of supported native types in priority order
 static FourCharCode aSupportedNativeTypes[] = {
 	'RTF ',
 	'utxt',
 	'TEXT',
-	'TIFF',
 	'PICT'
 };
 
@@ -79,7 +78,6 @@ static BOOL aSupportedTextTypes[] = {
 	TRUE,
 	TRUE,
 	TRUE,
-	FALSE,
 	FALSE
 };
 
@@ -88,7 +86,6 @@ static OUString aSupportedMimeTypes[] = {
 	OUString::createFromAscii( "text/richtext" ),
 	OUString::createFromAscii( "text/plain;charset=utf-16" ),
 	OUString::createFromAscii( "text/plain;charset=utf-16" ),
-	OUString::createFromAscii( "application/x-openoffice;windows_formatname=\"Bitmap\"" ),
 	OUString::createFromAscii( "application/x-openoffice;windows_formatname=\"Bitmap\"" )
 };
 
@@ -723,6 +720,8 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< X
 						}
 					}
 
+					aTransferableList.push_back( this );
+
 					for ( i = 0; i < nLen; i++ )
 					{ 
 						for ( USHORT j = 0; j < nSupportedTypes; j++ )
@@ -731,12 +730,19 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< X
 							{
 								if ( bTextOnly && !aSupportedTextTypes[ j ] )
 									continue;
-								PutScrapFlavor( (ScrapRef)mpNativeTransferable, aSupportedNativeTypes[ j ], kScrapFlavorMaskNone, kScrapFlavorSizeUnknown, NULL );
+
+								// Image data flavors require Java to render
+								// which, if done in the callback, will cause
+								// the application to crash when the next
+								// AEEvent is dispatched so we render image
+								// flavors here
+								if ( !aSupportedTextTypes[ j ] )
+									ImplScrapPromiseKeeperCallback( (ScrapRef)mpNativeTransferable, aSupportedNativeTypes[ j ], (void *)this );
+								else
+									PutScrapFlavor( (ScrapRef)mpNativeTransferable, aSupportedNativeTypes[ j ], kScrapFlavorMaskNone, kScrapFlavorSizeUnknown, NULL );
 							}
 						}
 					}
-
-					aTransferableList.push_back( this );
 				}
 			}
 		}
