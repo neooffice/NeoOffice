@@ -153,14 +153,13 @@ sharedictdir="$sharebase/dict/ooo"
 if [ -d "$sharedictdir" ] ; then
     userdictlst="$wordbookdir/dictionary.lst"
     sharedictlst="$sharedictdir/dictionary.lst"
-    if [ ! -f "$userdictlst" -a -r "$sharedictlst" ] ; then
-        grep -E '[^][#:space:]*(DICT|HYPH|THES)[[:space:]]*'"$lang"'[[:space:]]' "$sharedictlst" | sed 's#^[#[:space:]]*##' > "$userdictlst"
+    if [ -r "$sharedictlst" ] ; then
+        ( cat /dev/null "$userdictlst" ; grep -E '[^][#:space:]*(DICT|HYPH|THES)[[:space:]]*'"$lang"'[[:space:]]' "$sharedictlst" ) 2>/dev/null | sed 's#^[#[:space:]]*##' > "$userdictlst.tmp"
+        sort -u "$userdictlst.tmp" > "$userdictlst"
+        rm -f "$userdictlst.tmp"
     fi
     for i in `cd "$sharedictdir" ; find . -name "*$lang*"` ; do
-        if [ -L "$wordbookdir/$i" ] ; then
-            rm -f "$wordbookdir/$i"
-        fi
-        if [ ! -f "$wordbookdir/$i" ] ; then
+        if [ ! -r "$wordbookdir/$i" ] ; then
             ln -sf "$sharedictdir/$i" "$wordbookdir/$i"
         fi
     done
