@@ -496,6 +496,10 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 							pSalData->maNativeEventCondition.set();
 						}
 
+						// Wakeup the event queue by sending it a dummy event
+						com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
+						pSalData->mpEventQueue->postCachedEvent( &aEvent );
+
 						// Wait for all pending AWT events to be dispatched
 						pSalData->maNativeEventCondition.reset();
 						pSalData->maNativeEventCondition.wait();
