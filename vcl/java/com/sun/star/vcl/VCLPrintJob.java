@@ -68,7 +68,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 	/**
 	 * SCALE_FACTOR constant.
 	 */
-	public final static int SCALE_FACTOR = 4;
+	public final static int SCALE_FACTOR = 1;
 
 	/**
 	 * Cached native graphics.
@@ -436,7 +436,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 			else {
 				// Print to the edge of the page to ensure that we print all
 				// possible pixels
-				currentGraphics = new VCLGraphics(graphicsInfo.graphics, VCLPrintJob.SCALE_FACTOR * 72, new Rectangle(0, 0, (int)(graphicsInfo.pageFormat.getWidth() - graphicsInfo.pageFormat.getImageableX()) * VCLPrintJob.SCALE_FACTOR, (int)(graphicsInfo.pageFormat.getHeight() + graphicsInfo.pageFormat.getImageableY()) * VCLPrintJob.SCALE_FACTOR));
+				currentGraphics = new VCLGraphics(graphicsInfo.graphics, VCLPrintJob.SCALE_FACTOR * 72, new Rectangle(0, 0, (int)(graphicsInfo.pageFormat.getWidth() - graphicsInfo.pageFormat.getImageableX()) * VCLPrintJob.SCALE_FACTOR, (int)(graphicsInfo.pageFormat.getHeight() - graphicsInfo.pageFormat.getImageableY()) * VCLPrintJob.SCALE_FACTOR));
 				graphicsInfo.graphics = null;
 				graphicsInfo.pageFormat = null;
 			}
