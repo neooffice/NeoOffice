@@ -406,15 +406,20 @@ short PrinterSetupDialog::Execute()
 		return FALSE;
 	}
 
-#ifdef USE_JAVA
-	return mpPrinter->Setup();
-#else	// USE_JAVA
 	ImplFillPrnDlgListBox( mpPrinter, &maLbName, &maBtnProperties );
 	ImplSetInfo();
 	maStatusTimer.Start();
 
+#ifdef USE_JAVA
+	short nRet;
+	if ( mpTempPrinter )
+		nRet = mpTempPrinter->Setup();
+	else
+		nRet = mpPrinter->Setup();
+#else	// USE_JAVA
 	// Dialog starten
 	short nRet = ModalDialog::Execute();
+#endif	// USE_JAVA
 
 	// Wenn Dialog mit OK beendet wurde, dann die Daten updaten
 	if ( nRet == TRUE )
@@ -426,5 +431,4 @@ short PrinterSetupDialog::Execute()
 	maStatusTimer.Stop();
 
 	return nRet;
-#endif	// USE_JAVA
 }
