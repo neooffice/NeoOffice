@@ -125,9 +125,6 @@ static VCLRegServiceInfo aVCLComponentsArray[] =
 	{"mcnttype", sal_False},
 #ifdef USE_JAVA
 	{"javavm" STRING(UNOSUFFIX), sal_False},
-	{"cfgmgr2", sal_False},
-	{"typeconverter" STRING(UNOSUFFIX), sal_False},
-	{"sax" STRING(UNOSUFFIX), sal_False},
 #endif
 	{NULL, sal_False}
 };
@@ -170,7 +167,6 @@ uno::Reference< lang::XMultiServiceFactory > vcl::unohelper::GetMultiServiceFact
 			}
 			nCompCount++;
 		}
-		::comphelper::setProcessServiceFactory( pSVData->maAppData.mxMSF );
 	}
 	return pSVData->maAppData.mxMSF;
 }
