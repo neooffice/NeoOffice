@@ -181,16 +181,10 @@ public final class VCLEventQueue {
 			}
 		}
 			
-		if (!wait && queue.head == null)
+		if (queue.head == null)
 			return null;
 
 		synchronized (queue) {
-			if (wait && queue.head == null) {
-				try {
-					queue.wait(100);
-				}
-				catch (Throwable t) {}
-			}
 			VCLEventQueue.QueueItem eqi = null;
 			eqi = queue.head;
 			if (eqi != null) {

@@ -166,8 +166,11 @@ public final class VCLGraphics {
 		textureData[3] = 0xff000000;
 		image50 = textureImage;
 
-		// Set the screen resolution
+		// Set the screen resolution but make sure it is not less than 96
+		// since VCL has trouble with smaller screen resolutions
 		screenResolution = Toolkit.getDefaultToolkit().getScreenResolution();
+		if (screenResolution < 96)
+			screenResolution = 96;
 
 	}
 

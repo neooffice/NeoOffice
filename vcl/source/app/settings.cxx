@@ -541,15 +541,14 @@ ImplStyleData::ImplStyleData( const ImplStyleData& rData ) :
 
 void ImplStyleData::SetStandardStyles()
 {
-#if defined MACOSX && defined USE_JAVA 
-    // Make the font a little larger since Java fonts are small on Mac OS X
-    Font aStdFont( FAMILY_SWISS, Size( 0, 12 ) );
+#ifdef USE_JAVA
+    Font aStdFont( FAMILY_SWISS, Size( 0, 10 ) );
 #else
     Font aStdFont( FAMILY_SWISS, Size( 0, 8 ) );
 #endif
     aStdFont.SetCharSet( gsl_getSystemTextEncoding() );
     aStdFont.SetWeight( WEIGHT_NORMAL );
-#if defined MACOSX && defined USE_JAVA 
+#ifdef USE_JAVA 
     // Use Dialog font as it is in every Java implementation and should be
     // able to handle Asian characters
     aStdFont.SetName( XubString( RTL_CONSTASCII_USTRINGPARAM( "Dialog" ) ) );
@@ -569,7 +568,7 @@ void ImplStyleData::SetStandardStyles()
     maIconFont                  = aStdFont;
     maFloatTitleFont            = aStdFont;
     aStdFont.SetWeight( WEIGHT_BOLD );
-#ifdef MACOSX
+#ifdef USE_JAVA
     aStdFont.SetName( XubString( RTL_CONSTASCII_USTRINGPARAM( "Andale Sans UI;Lucida Grande;Tahoma;Arial Unicode MS;Interface User;Charcoal;Chicago;Geneva;WarpSans;Dialog;Swiss;Lucida;Helvetica;Arial;MS Sans Serif;Helv;Times;Times New Roman;Interface System" ) ) );
 #else
     aStdFont.SetName( XubString( RTL_CONSTASCII_USTRINGPARAM( "Andale Sans UI;Tahoma;Arial Unicode MS;Interface User;Charcoal;Chicago;Geneva;WarpSans;Dialog;Swiss;Lucida;Helvetica;Arial;MS Sans Serif;Helv;Times;Times New Roman;Interface System" ) ) );
