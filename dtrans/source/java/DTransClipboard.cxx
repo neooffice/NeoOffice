@@ -91,22 +91,9 @@ com_sun_star_dtrans_DTransTransferable *com_sun_star_dtrans_DTransClipboard::get
 	com_sun_star_dtrans_DTransTransferable *out = NULL;
 
 #ifdef MACOSX
-	// Test the JVM version and if it is below 1.4, use Carbon APIs or else
-	// use Cocoa APIs
-	java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
-	if ( !pClass )
-	{
-		ScrapRef aScrap;
-		if ( GetCurrentScrap( &aScrap ) == noErr )
-			out = new com_sun_star_dtrans_DTransTransferable( aScrap );
-	}
-	else
-	{
-		delete pClass;
-#ifdef DEBUG
-		fprintf( stderr, "DTransClipboard::getContents not implemented\n" );
-#endif
-	}
+	ScrapRef aScrap;
+	if ( GetCurrentScrap( &aScrap ) == noErr )
+		out = new com_sun_star_dtrans_DTransTransferable( aScrap );
 #else	// MACOSX
 #ifdef DEBUG
 	fprintf( stderr, "DTransClipboard::getContents not implemented\n" );

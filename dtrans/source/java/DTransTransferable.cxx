@@ -98,6 +98,8 @@ static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 )
 };
 
+static ScrapPromiseKeeperUPP pScrapPromiseKeeperUPP = NULL;
+
 #endif	// MACOSX
 
 using namespace com::sun::star::datatransfer;
@@ -335,146 +337,133 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 		else
 			continue;
 
-		// Test the JVM version and if it is below 1.4, use Carbon APIs or else
-		// use Cocoa APIs
-		java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
-		if ( !pClass )
-		{
-			MacOSSize aSize;
+		MacOSSize aSize;
 
-			nErr = GetScrapFlavorSize( (ScrapRef)mpNativeTransferable, nRequestedType, &aSize );
-			if ( nErr == noErr )
+		nErr = GetScrapFlavorSize( (ScrapRef)mpNativeTransferable, nRequestedType, &aSize );
+		if ( nErr == noErr )
+		{
+			Sequence< sal_Int8 > aData( aSize );
+			if ( GetScrapFlavorData( (ScrapRef)mpNativeTransferable, nRequestedType, &aSize, aData.getArray() ) == noErr )
 			{
-				Sequence< sal_Int8 > aData( aSize );
-				if ( GetScrapFlavorData( (ScrapRef)mpNativeTransferable, nRequestedType, &aSize, aData.getArray() ) == noErr )
+				if ( aFlavor.DataType.equals( getCppuType( ( OUString* )0 ) ) )
 				{
-					if ( aFlavor.DataType.equals( getCppuType( ( OUString* )0 ) ) )
+					OUString aString;
+					sal_Int32 nLen;
+					if ( nRequestedType == 'TEXT' )
 					{
-						OUString aString;
-						sal_Int32 nLen;
-						if ( nRequestedType == 'TEXT' )
-						{
-							nLen = aData.getLength();
-							if ( ( (sal_Char *)aData.getArray() )[ nLen - 1 ] == 0 )
-								nLen--;
-							aString = OUString( (sal_Char *)aData.getArray(), nLen, gsl_getSystemTextEncoding() );
-						}
-						else
-						{
-							nLen = aData.getLength() / 2; 
-							if ( ( (sal_Unicode *)aData.getArray() )[ nLen - 1 ] == 0 )
-								nLen--;
-							aString = OUString( (sal_Unicode *)aData.getArray(), nLen );
-						}
-
-						// Replace carriage returns with line feeds
-						sal_Unicode *pArray = (sal_Unicode *)aString.getStr();
-						sal_Int32 j = 0;
-						for ( j = 0; j < nLen; j++ )
-						{
-							if ( pArray[ j ] == (sal_Unicode)'\r' )
-								pArray[ j ] = (sal_Unicode)'\n';
-						}
-
-						out <<= aString;
+						nLen = aData.getLength();
+						if ( ( (sal_Char *)aData.getArray() )[ nLen - 1 ] == 0 )
+							nLen--;
+						aString = OUString( (sal_Char *)aData.getArray(), nLen, gsl_getSystemTextEncoding() );
 					}
-					else if ( aFlavor.DataType.equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
+					else
 					{
-						if ( nRequestedType == 'PICT' )
-						{
-							// Convert to BMP format
-							ComponentInstance aExporter;
-							if ( OpenADefaultComponent( GraphicsExporterComponentType, 'BMPf', &aExporter ) == noErr );
-							{
-								Handle hData;
-								if ( PtrToHand( aData.getArray(), &hData, aData.getLength() ) == noErr )
-								{
-									if ( GraphicsExportSetInputPicture( aExporter, (PicHandle)hData ) == noErr )
-									{
-										Handle hExportData = NewHandle( 0 );
-										if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
-										{
-											unsigned long nDataLen;
-											if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
-											{
-												Sequence< sal_Int8 > aExportData( nDataLen );
-												HLock( hExportData );
-												memcpy( aExportData.getArray(), *hExportData, nDataLen );
-												HUnlock( hExportData );
-												out <<= aExportData;
-											}
-											DisposeHandle( hExportData );
-										}
-									}
-									DisposeHandle( hData );
-								}
-								CloseComponent( aExporter );
-							}
-						}
-						else if ( nRequestedType == 'TIFF' )
-						{
-							// Convert to BMP format
-							ComponentInstance aImporter;
-							if ( OpenADefaultComponent( GraphicsImporterComponentType, nRequestedType, &aImporter ) == noErr )
-							{
-								Handle hData;
-								if ( PtrToHand( aData.getArray(), &hData, aData.getLength() ) == noErr )
-								{
-									// Free the source data
-									aData = Sequence< sal_Int8 >();
-
-									if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr )
-									{
-										PicHandle hPict;
-										if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
-										{
-											ComponentInstance aExporter;
-											if ( OpenADefaultComponent( GraphicsExporterComponentType, 'BMPf', &aExporter ) == noErr );
-											{
-												if ( GraphicsExportSetInputPicture( aExporter, hPict ) == noErr )
-												{
-													Handle hExportData = NewHandle( 0 );
-													if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
-													{
-														unsigned long nDataLen;
-														if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
-														{
-															Sequence< sal_Int8 > aExportData( nDataLen );
-															HLock( hExportData );
-															memcpy( aExportData.getArray(), *hExportData, nDataLen );
-															HUnlock( hExportData );
-															out <<= aExportData;
-														}
-														DisposeHandle( hExportData );
-													}
-												}
-												CloseComponent( aExporter );
-											}
-											KillPicture( hPict );
-										}
-									}
-									DisposeHandle( hData );
-								}
-								CloseComponent( aImporter );
-							}
-						}
-						else
-						{
-							out <<= aData;
-						}
+						nLen = aData.getLength() / 2; 
+						if ( ( (sal_Unicode *)aData.getArray() )[ nLen - 1 ] == 0 )
+							nLen--;
+						aString = OUString( (sal_Unicode *)aData.getArray(), nLen );
 					}
 
-					// Force a break from the loop
-					i = nSupportedTypes;
+					// Replace carriage returns with line feeds
+					sal_Unicode *pArray = (sal_Unicode *)aString.getStr();
+					sal_Int32 j = 0;
+					for ( j = 0; j < nLen; j++ )
+					{
+						if ( pArray[ j ] == (sal_Unicode)'\r' )
+							pArray[ j ] = (sal_Unicode)'\n';
+					}
+
+					out <<= aString;
 				}
+				else if ( aFlavor.DataType.equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
+				{
+					if ( nRequestedType == 'PICT' )
+					{
+						// Convert to BMP format
+						ComponentInstance aExporter;
+						if ( OpenADefaultComponent( GraphicsExporterComponentType, 'BMPf', &aExporter ) == noErr );
+						{
+							Handle hData;
+							if ( PtrToHand( aData.getArray(), &hData, aData.getLength() ) == noErr )
+							{
+								if ( GraphicsExportSetInputPicture( aExporter, (PicHandle)hData ) == noErr )
+								{
+									Handle hExportData = NewHandle( 0 );
+									if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
+									{
+										unsigned long nDataLen;
+										if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
+										{
+											Sequence< sal_Int8 > aExportData( nDataLen );
+											HLock( hExportData );
+											memcpy( aExportData.getArray(), *hExportData, nDataLen );
+											HUnlock( hExportData );
+											out <<= aExportData;
+										}
+										DisposeHandle( hExportData );
+									}
+								}
+								DisposeHandle( hData );
+							}
+							CloseComponent( aExporter );
+						}
+					}
+					else if ( nRequestedType == 'TIFF' )
+					{
+						// Convert to BMP format
+						ComponentInstance aImporter;
+						if ( OpenADefaultComponent( GraphicsImporterComponentType, nRequestedType, &aImporter ) == noErr )
+						{
+							Handle hData;
+							if ( PtrToHand( aData.getArray(), &hData, aData.getLength() ) == noErr )
+							{
+								// Free the source data
+								aData = Sequence< sal_Int8 >();
+
+								if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr )
+								{
+									PicHandle hPict;
+									if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
+									{
+										ComponentInstance aExporter;
+										if ( OpenADefaultComponent( GraphicsExporterComponentType, 'BMPf', &aExporter ) == noErr );
+										{
+											if ( GraphicsExportSetInputPicture( aExporter, hPict ) == noErr )
+											{
+												Handle hExportData = NewHandle( 0 );
+												if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
+												{
+													unsigned long nDataLen;
+													if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
+													{
+														Sequence< sal_Int8 > aExportData( nDataLen );
+														HLock( hExportData );
+														memcpy( aExportData.getArray(), *hExportData, nDataLen );
+														HUnlock( hExportData );
+														out <<= aExportData;
+													}
+													DisposeHandle( hExportData );
+												}
+											}
+											CloseComponent( aExporter );
+										}
+										KillPicture( hPict );
+									}
+								}
+								DisposeHandle( hData );
+							}
+							CloseComponent( aImporter );
+						}
+					}
+					else
+					{
+						out <<= aData;
+					}
+				}
+
+				// Force a break from the loop
+				i = nSupportedTypes;
 			}
-		}
-		else
-		{
-			delete pClass;
-#ifdef DEBUG
-			fprintf( stderr, "DTransTransferable::getTransferData not implemented\n" );
-#endif
 		}
 	}
 
@@ -513,45 +502,32 @@ Sequence< DataFlavor > SAL_CALL com_sun_star_dtrans_DTransTransferable::getTrans
 	Sequence< DataFlavor > out;
 
 #ifdef MACOSX
-	// Test the JVM version and if it is below 1.4, use Carbon APIs or else
-	// use Cocoa APIs
-	java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
-	if ( !pClass )
+	UInt32 nCount;
+
+	if ( GetScrapFlavorCount( (ScrapRef)mpNativeTransferable, &nCount ) == noErr && nCount > 0 )
 	{
-		UInt32 nCount;
+		ScrapFlavorInfo *pInfo = new ScrapFlavorInfo[ nCount ];
 
-		if ( GetScrapFlavorCount( (ScrapRef)mpNativeTransferable, &nCount ) == noErr && nCount > 0 )
+		if ( GetScrapFlavorInfoList( (ScrapRef)mpNativeTransferable, &nCount, pInfo ) == noErr )
 		{
-			ScrapFlavorInfo *pInfo = new ScrapFlavorInfo[ nCount ];
-
-			if ( GetScrapFlavorInfoList( (ScrapRef)mpNativeTransferable, &nCount, pInfo ) == noErr )
+			for ( USHORT i = 0; i < nSupportedTypes; i++ )
 			{
-				for ( USHORT i = 0; i < nSupportedTypes; i++ )
+				for ( UInt32 j = 0; j < nCount; j++ )
 				{
-					for ( UInt32 j = 0; j < nCount; j++ )
+					if ( aSupportedNativeTypes[ i ] == pInfo[ j ].flavorType )
 					{
-						if ( aSupportedNativeTypes[ i ] == pInfo[ j ].flavorType )
-						{
-							DataFlavor aFlavor;
-							aFlavor.MimeType = aSupportedMimeTypes[ i ];
-							aFlavor.DataType = aSupportedDataTypes[ i ];
-							sal_Int32 nLen = out.getLength();
-							out.realloc( nLen + 1 );
-							out[ nLen ] = aFlavor;
-						}
+						DataFlavor aFlavor;
+						aFlavor.MimeType = aSupportedMimeTypes[ i ];
+						aFlavor.DataType = aSupportedDataTypes[ i ];
+						sal_Int32 nLen = out.getLength();
+						out.realloc( nLen + 1 );
+						out[ nLen ] = aFlavor;
 					}
 				}
 			}
-
-			delete[] pInfo;
 		}
-	}
-	else
-	{
-		delete pClass;
-#ifdef DEBUG
-		fprintf( stderr, "DTransTransferable::getTransferData not implemented\n" );
-#endif
+
+		delete[] pInfo;
 	}
 #else // MACOSX
 #ifdef DEBUG
@@ -569,23 +545,10 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::hasOwnership()
 	sal_Bool out = sal_False;
 
 #ifdef MACOSX
-	// Test the JVM version and if it is below 1.4, use Carbon APIs or else
-	// use Cocoa APIs
-	java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
-	if ( !pClass )
-	{
-		ScrapRef aScrap;
+	ScrapRef aScrap;
 
-		if ( GetCurrentScrap( &aScrap ) == noErr && aScrap == (ScrapRef)mpNativeTransferable )
-			out = sal_True;
-	}
-	else
-	{
-		delete pClass;
-#ifdef DEBUG
-		fprintf( stderr, "DTransTransferable::transferToClipboard not implemented\n" );
-#endif
-	}
+	if ( GetCurrentScrap( &aScrap ) == noErr && aScrap == (ScrapRef)mpNativeTransferable )
+		out = sal_True;
 #else // MACOSX
 #ifdef DEBUG
 	fprintf( stderr, "DTransTransferable::transferToClipboard not implemented\n" );
@@ -619,38 +582,25 @@ sal_Bool SAL_CALL com_sun_star_dtrans_DTransTransferable::isDataFlavorSupported(
 
 	if ( nRequestedType )
 	{
-		// Test the JVM version and if it is below 1.4, use Carbon APIs or else
-		// use Cocoa APIs
-		java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
-		if ( !pClass )
+		UInt32 nCount;
+
+		if ( GetScrapFlavorCount( (ScrapRef)mpNativeTransferable, &nCount ) == noErr && nCount > 0 )
 		{
-			UInt32 nCount;
+			ScrapFlavorInfo *pInfo = new ScrapFlavorInfo[ nCount ];
 
-			if ( GetScrapFlavorCount( (ScrapRef)mpNativeTransferable, &nCount ) == noErr && nCount > 0 )
+			if ( GetScrapFlavorInfoList( (ScrapRef)mpNativeTransferable, &nCount, pInfo ) == noErr )
 			{
-				ScrapFlavorInfo *pInfo = new ScrapFlavorInfo[ nCount ];
-
-				if ( GetScrapFlavorInfoList( (ScrapRef)mpNativeTransferable, &nCount, pInfo ) == noErr )
+				for ( UInt32 i = 0; i < nCount; i++ )
 				{
-					for ( UInt32 i = 0; i < nCount; i++ )
+					if ( pInfo[ i ].flavorType == nRequestedType && aFlavor.DataType.equals( aRequestedDataType ) )
 					{
-						if ( pInfo[ i ].flavorType == nRequestedType && aFlavor.DataType.equals( aRequestedDataType ) )
-						{
-							out = sal_True;
-							break;
-						}
+						out = sal_True;
+						break;
 					}
 				}
-
-				delete[] pInfo;
 			}
-		}
-		else
-		{
-			delete pClass;
-#ifdef DEBUG
-			fprintf( stderr, "DTransTransferable::isDataFlavorSupported not implemented\n" );
-#endif
+
+			delete[] pInfo;
 		}
 	}
 #else // MACOSX
@@ -674,73 +624,79 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< X
 	if ( mxTransferable.is() )
 	{
 #ifdef MACOSX
-		// Test the JVM version and if it is below 1.4, use Carbon APIs or else
-		// use Cocoa APIs
-		java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
-		if ( !pClass )
+		ScrapRef aScrap;
+		if ( ClearCurrentScrap() == noErr && GetCurrentScrap( &aScrap ) == noErr )
 		{
-			ScrapRef aScrap;
-			if ( ClearCurrentScrap() == noErr && GetCurrentScrap( &aScrap ) == noErr )
+			// We have now cleared the scrap so we now own it
+			mpNativeTransferable = aScrap;
+			out = sal_True;
+
+			Sequence< DataFlavor > xFlavors;
+			try
 			{
-				// We have now cleared the scrap so we now own it
-				mpNativeTransferable = aScrap;
-				out = sal_True;
+				xFlavors = mxTransferable->getTransferDataFlavors();
+			}
+			catch ( ... )
+			{
+			}
 
-				Sequence< DataFlavor > xFlavors;
-				try
+			// Check if text flavors are supported, if so, exclude any
+			// image flavors since we would be just passing a picture
+			// of text
+			sal_Int32 nLen = xFlavors.getLength();
+			BOOL bTextOnly = FALSE;
+			sal_Int32 i;
+			for ( i = 0; i < nLen; i++ )
+			{
+				for ( USHORT j = 0; j < nSupportedTypes; j++ )
 				{
-					xFlavors = mxTransferable->getTransferDataFlavors();
-				}
-				catch ( ... )
-				{
-				}
-
-				// Check if text flavors are supported, if so, exclude any
-				// image flavors since we would be just passing a picture
-				// of text
-				sal_Int32 nLen = xFlavors.getLength();
-				BOOL bTextOnly = FALSE;
-				sal_Int32 i;
-				for ( i = 0; i < nLen; i++ )
-				{
-					for ( USHORT j = 0; j < nSupportedTypes; j++ )
+					if ( xFlavors[ i ].MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ j ] ) && aSupportedTextTypes[ j ] )
 					{
-						if ( xFlavors[ i ].MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ j ] ) && aSupportedTextTypes[ j ] )
-						{
-							bTextOnly = TRUE;
-							break;
-						}
-					}
-				}
-
-				aTransferableList.push_back( this );
-
-				for ( i = 0; i < nLen; i++ )
-				{ 
-					for ( USHORT j = 0; j < nSupportedTypes; j++ )
-					{
-						if ( xFlavors[ i ].MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ j ] ) )
-						{
-							if ( bTextOnly && !aSupportedTextTypes[ j ] )
-								continue;
-
-							// Some data flavors require Java to render
-							// which, if done in the callback, will cause
-							// the application to crash when the next
-							// AEEvent is dispatched so we can't risk using
-							// delayed rendering
-							ImplScrapPromiseKeeperCallback( (ScrapRef)mpNativeTransferable, aSupportedNativeTypes[ j ], (void *)this );
-						}
+						bTextOnly = TRUE;
+						break;
 					}
 				}
 			}
-		}
-		else
-		{
-			delete pClass;
-#ifdef DEBUG
-			fprintf( stderr, "DTransClipboard::setContents not implemented\n" );
-#endif
+
+			aTransferableList.push_back( this );
+
+			// Test the JVM version and if it is below 1.4, render immediately
+			// since some data flavors require Java to render which, if done
+			// in the callback, will cause the application to crash when the
+			// next AEEvent is dispatched so we can't risk using delayed
+			// rendering
+			BOOL bRenderImmediately = FALSE;
+			java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
+			if ( pClass )
+			{
+				delete pClass;
+
+				if ( !pScrapPromiseKeeperUPP )
+					pScrapPromiseKeeperUPP = NewScrapPromiseKeeperUPP( (ScrapPromiseKeeperProcPtr)ImplScrapPromiseKeeperCallback );
+				if ( !pScrapPromiseKeeperUPP || SetScrapPromiseKeeper( (ScrapRef)mpNativeTransferable, pScrapPromiseKeeperUPP, (const void *)this ) != noErr )
+					bRenderImmediately = TRUE;
+			}
+			else
+			{
+				bRenderImmediately = TRUE;
+			}
+
+			for ( i = 0; i < nLen; i++ )
+			{ 
+				for ( USHORT j = 0; j < nSupportedTypes; j++ )
+				{
+					if ( xFlavors[ i ].MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ j ] ) )
+					{
+						if ( bTextOnly && !aSupportedTextTypes[ j ] )
+							continue;
+
+						if ( bRenderImmediately )
+							ImplScrapPromiseKeeperCallback( (ScrapRef)mpNativeTransferable, aSupportedNativeTypes[ j ], (void *)this );
+						else
+							 PutScrapFlavor( (ScrapRef)mpNativeTransferable, aSupportedNativeTypes[ j ], kScrapFlavorMaskNone, kScrapFlavorSizeUnknown, NULL );
+					}
+				}
+			}
 		}
 #else	// MACOSX
 #ifdef DEBUG
