@@ -267,7 +267,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			}
 			dispatchEvent( nID, pFrame, pInputEvent );
 			// If there is no text, the character is committed
-			if ( pInputEvent->maText.Len() == getCommittedCharacterCount() )
+			if ( pInputEvent->maText.Len() == nCommitted )
 				dispatchEvent( SALEVENT_ENDEXTTEXTINPUT, pFrame, NULL );
 			if ( pInputEvent->mpTextAttr )
 				rtl_freeMemory( (USHORT *)pInputEvent->mpTextAttr );
