@@ -46,8 +46,6 @@
 #include <prntypes.hxx>
 #endif
 
-struct SalDriverData;
-
 namespace vcl
 {
 class com_sun_star_vcl_VCLPageFormat;
@@ -84,11 +82,20 @@ class SalPrinterData
 					SalPrinterData();
 					~SalPrinterData();
 
-	SalInfoPrinter*	mpPrinter;
 	BOOL			mbStarted;
 	SalGraphics*	mpGraphics;
 	BOOL			mbGraphics;
 	::vcl::com_sun_star_vcl_VCLPrintJob*	mpVCLPrintJob;
+	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
+};
+
+// ------------------
+// - SalPrinterData -
+// ------------------
+
+struct SalDriverData
+{
+	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
 };
 
 #endif // _SV_SALPRN_H

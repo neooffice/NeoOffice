@@ -163,7 +163,6 @@ public:
 	ULONG					GetErrorCode();
 #ifdef USE_JAVA
 	XubString				GetPageRange();
-	void					SetInfoPrinter( SalInfoPrinter *pInfoPrinter );
 	void					SetResolution( long nDPIX, long nDPIY );
 #endif	// USE_JAVA
 };

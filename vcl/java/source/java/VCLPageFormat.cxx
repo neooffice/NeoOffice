@@ -54,12 +54,16 @@
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
-typedef OSStatus PMCopyPageFormat_Type( PMPageFormat, PMPageFormat );
 typedef OSStatus PMCreatePageFormat_Type( PMPageFormat* );
-typedef OSStatus PMGetUnadjustedPaperRect_Type( PMPageFormat, PMRect* );
-typedef OSStatus PMSessionCreatePageFormatList_Type( PMPrintSession, PMPrinter, CFArrayRef* );
+typedef OSStatus PMRelease_Type( PMObject );
+typedef OSStatus PMRetain_Type( PMObject );
 typedef OSStatus PMSessionDefaultPageFormat_Type( PMPrintSession, PMPageFormat );
-typedef OSStatus PMSessionGetCurrentPrinter_Type( PMPrintSession, PMPrinter* );
+typedef OSStatus PMSessionGetDataFromSession_Type( PMPrintSession, CFStringRef, CFTypeRef* );
+typedef OSStatus PMSessionSetDataInSession_Type( PMPrintSession, CFStringRef, CFTypeRef );
+
+#ifdef MACOSX
+#define PAGEFORMAT_KEY CFSTR( "PAGEFORMAT" )
+#endif  // MACOSX
 
 using namespace rtl;
 using namespace vos;
@@ -80,54 +84,20 @@ static jint JNICALL Java_com_apple_mrj_internal_awt_printing_MacPageFormat_creat
 		OModule aModule;
 		if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
 		{
-			PMCopyPageFormat_Type *pCopyPageFormat = (PMCopyPageFormat_Type *)aModule.getSymbol( OUString::createFromAscii( "PMCopyPageFormat" ) );
-			PMCreatePageFormat_Type *pCreatePageFormat = (PMCreatePageFormat_Type *)aModule.getSymbol( OUString::createFromAscii( "PMCreatePageFormat" ) );
-			PMGetUnadjustedPaperRect_Type *pGetUnadjustedPaperRect = (PMGetUnadjustedPaperRect_Type *)aModule.getSymbol( OUString::createFromAscii( "PMGetUnadjustedPaperRect" ) );
-			PMSessionCreatePageFormatList_Type *pSessionCreatePageFormatList = (PMSessionCreatePageFormatList_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionCreatePageFormatList" ) );
-			PMSessionDefaultPageFormat_Type *pSessionDefaultPageFormat = (PMSessionDefaultPageFormat_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionDefaultPageFormat" ) );
-			PMSessionGetCurrentPrinter_Type *pSessionGetCurrentPrinter = (PMSessionGetCurrentPrinter_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionGetCurrentPrinter" ) );
+			PMRetain_Type *pRetain = (PMRetain_Type *)aModule.getSymbol( OUString::createFromAscii( "PMRetain" ) );
+			PMSessionGetDataFromSession_Type *pSessionGetDataFromSession = (PMSessionGetDataFromSession_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionGetDataFromSession" ) );
 
-			if ( pCopyPageFormat && pCreatePageFormat && pGetUnadjustedPaperRect && pSessionCreatePageFormatList && pSessionDefaultPageFormat && pSessionGetCurrentPrinter )
+			if ( pRetain && pSessionGetDataFromSession )
 			{
-				PMPageFormat aPageFormat;
-				if ( pCreatePageFormat( &aPageFormat ) == kPMNoError )
+				CFNumberRef aData = NULL;
+				if ( pSessionGetDataFromSession( pSession, PAGEFORMAT_KEY, (CFTypeRef *)&aData ) == kPMNoError && aData )
 				{
-					if ( pSessionDefaultPageFormat( pSession, aPageFormat ) == kPMNoError )
+					CFIndex aValue;
+					if ( CFNumberGetValue( aData, kCFNumberCFIndexType, &aValue ) )
 					{
-						// Get the available page formats
-						static jmethodID mGetWidthID = NULL;
-						static jmethodID mGetHeightID = NULL;
-						PMPrinter aPrinter;
-						CFArrayRef aPageFormats;
-
-						jclass objectClass = pEnv->GetObjectClass( object );
-						if ( !mGetWidthID )
-						{
-							char *cSignature = "()D";
-							mGetWidthID = pEnv->GetMethodID( objectClass, "getWidth", cSignature );
-						}
-						OSL_ENSURE( mGetWidthID, "Unknown method id!" );
-						if ( !mGetHeightID )
-						{
-							char *cSignature = "()D";
-							mGetHeightID = pEnv->GetMethodID( objectClass, "getHeight", cSignature );
-						}
-						OSL_ENSURE( mGetHeightID, "Unknown method id!" );
-						if ( mGetWidthID && mGetHeightID && pSessionGetCurrentPrinter( pSession, &aPrinter ) == kPMNoError && pSessionCreatePageFormatList( pSession, aPrinter, &aPageFormats ) == kPMNoError )
-						{
-							CFIndex nCount = CFArrayGetCount( aPageFormats );
-							CFIndex i;
-
-							for ( i = 0; i < nCount; i++ )
-							{
-								PMPageFormat pPageFormat = (PMPageFormat)CFArrayGetValueAtIndex( aPageFormats, i );
-								PMRect aRect;
-								if ( pGetUnadjustedPaperRect( pPageFormat, &aRect ) == kPMNoError && aRect.right - aRect.left == pEnv->CallNonvirtualDoubleMethod( object, objectClass, mGetWidthID ) && aRect.bottom - aRect.top == pEnv->CallNonvirtualDoubleMethod( object, objectClass, mGetHeightID ) && pCopyPageFormat( pPageFormat, aPageFormat ) == kPMNoError )
-										break;
-							}
-							CFRelease( aPageFormats );
-						}
-						nRet = (jint)aPageFormat;
+						PMPageFormat aPageFormat = (PMPageFormat)aValue;
+						if ( aPageFormat && pRetain( aPageFormat ) == kPMNoError )
+							nRet = (jint)aPageFormat;
 					}
 				}
 			}
@@ -184,7 +154,7 @@ jclass com_sun_star_vcl_VCLPageFormat::getMyClass()
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLPageFormat::com_sun_star_vcl_VCLPageFormat() : java_lang_Object( (jobject)NULL )
+com_sun_star_vcl_VCLPageFormat::com_sun_star_vcl_VCLPageFormat() : java_lang_Object( (jobject)NULL ), mbInitialized( FALSE )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -199,25 +169,54 @@ com_sun_star_vcl_VCLPageFormat::com_sun_star_vcl_VCLPageFormat() : java_lang_Obj
 	jobject tempObj;
 	tempObj = t.pEnv->NewObject( getMyClass(), mID );
 	saveRef( tempObj );
+	initializeNativePrintJob();
 }
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLPageFormat::dispose()
+void com_sun_star_vcl_VCLPageFormat::destroyNativePrintJob()
 {
-	static jmethodID mID = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
+	if ( !mbInitialized )
+		return;
+
+#ifdef MACOSX
+	// Test the JVM version and if it is below 1.4, use Carbon printing APIs
+	java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
+	if ( !pClass )
 	{
-		if ( !mID )
+		PMPrintSession pSession = (PMPrintSession)getNativePrintJob();
+		if ( pSession )
 		{
-			char *cSignature = "()V";
-			mID = t.pEnv->GetMethodID( getMyClass(), "dispose", cSignature );
+			OModule aModule;
+			if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
+			{
+				PMRelease_Type *pRelease = (PMRelease_Type *)aModule.getSymbol( OUString::createFromAscii( "PMRelease" ) );
+				PMSessionGetDataFromSession_Type *pSessionGetDataFromSession = (PMSessionGetDataFromSession_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionGetDataFromSession" ) );
+
+				if ( pRelease && pSessionGetDataFromSession )
+				{
+					CFNumberRef aData = NULL;
+					if ( pSessionGetDataFromSession( pSession, PAGEFORMAT_KEY, (CFTypeRef *)&aData ) == kPMNoError && aData )
+					{
+						CFIndex aValue;
+						if ( CFNumberGetValue( aData, kCFNumberCFIndexType, &aValue ) )
+						{
+							PMPageFormat aPageFormat = (PMPageFormat)aValue;
+							if ( aPageFormat )
+								pRelease( aPageFormat );
+						}
+					}
+					mbInitialized = FALSE;
+				}
+				aModule.unload();
+			}
 		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 	}
+	else
+	{
+		delete pClass;
+	}
+#endif	// MACOSX
 }
 
 // ----------------------------------------------------------------------------
@@ -308,6 +307,58 @@ const Rectangle com_sun_star_vcl_VCLPageFormat::getImageableBounds()
 
 // ----------------------------------------------------------------------------
 
+void *com_sun_star_vcl_VCLPageFormat::getNativePrintJob()
+{
+	static jmethodID mID = NULL;
+	void *out = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		java_lang_Object *printerJob = getPrinterJob();
+		if ( printerJob )
+		{
+			jobject tempObj = printerJob->getJavaObject();
+			if ( tempObj )
+			{
+#ifdef MACOSX
+				jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/printing/MacPrinterJob" );
+				if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
+				{
+					static jfieldID fIDSession = NULL;
+					if ( !fIDSession )
+					{
+						char *cSignature = "Lcom/apple/mrj/macos/generated/PMPrintSessionOpaque;";
+						fIDSession = t.pEnv->GetFieldID( tempClass, "fPrintSession", cSignature );
+					}
+					OSL_ENSURE( fIDSession, "Unknown field id!" );
+					if ( fIDSession )
+					{
+						jobject session = t.pEnv->GetObjectField( tempObj, fIDSession );
+						if ( session )
+						{
+							static jmethodID mIDGetPointer = NULL;
+							jclass sessionClass = t.pEnv->GetObjectClass( session );
+							if ( !mIDGetPointer )
+							{
+								char *cSignature = "()I";
+								mIDGetPointer = t.pEnv->GetMethodID( sessionClass, "getPointer", cSignature );
+							}
+							OSL_ENSURE( mIDGetPointer, "Unknown method id!" );
+							if ( mIDGetPointer )
+								out = (void *)t.pEnv->CallNonvirtualIntMethod( session, sessionClass, mIDGetPointer );
+						}
+					}
+				}
+#endif	// MACOSX
+			}
+		}
+		delete printerJob;
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
 Orientation com_sun_star_vcl_VCLPageFormat::getOrientation()
 {
 	static jmethodID mID = NULL;
@@ -389,6 +440,102 @@ Paper com_sun_star_vcl_VCLPageFormat::getPaperType()
 			out = (Paper)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+java_lang_Object *com_sun_star_vcl_VCLPageFormat::getPrinterJob()
+{
+	static jmethodID mID = NULL;
+	java_lang_Object *out = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Ljava/awt/print/PrinterJob;";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getPrinterJob", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
+			if ( tempObj )
+				out = new java_lang_Object( tempObj );
+		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLPageFormat::initializeNativePrintJob()
+{
+	if ( mbInitialized )
+		return;
+
+#ifdef MACOSX
+	// Test the JVM version and if it is below 1.4, use Carbon printing APIs
+	java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
+	if ( !pClass )
+	{
+		PMPrintSession pSession = (PMPrintSession)getNativePrintJob();
+		if ( pSession )
+		{
+			OModule aModule;
+			if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/Carbon.framework/Carbon" ) ) )
+			{
+				PMCreatePageFormat_Type *pCreatePageFormat = (PMCreatePageFormat_Type *)aModule.getSymbol( OUString::createFromAscii( "PMCreatePageFormat" ) );
+				PMRelease_Type *pRelease = (PMRelease_Type *)aModule.getSymbol( OUString::createFromAscii( "PMRelease" ) );
+				PMRetain_Type *pRetain = (PMRetain_Type *)aModule.getSymbol( OUString::createFromAscii( "PMRetain" ) );
+				PMSessionDefaultPageFormat_Type *pSessionDefaultPageFormat = (PMSessionDefaultPageFormat_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionDefaultPageFormat" ) );
+				PMSessionGetDataFromSession_Type *pSessionGetDataFromSession = (PMSessionGetDataFromSession_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionGetDataFromSession" ) );
+				PMSessionSetDataInSession_Type *pSessionSetDataInSession = (PMSessionSetDataInSession_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionSetDataInSession" ) );
+
+				if ( pCreatePageFormat && pRelease && pRetain && pSessionDefaultPageFormat && pSessionGetDataFromSession && pSessionSetDataInSession )
+				{
+					PMPageFormat aPageFormat = NULL;
+					CFNumberRef aData = NULL;
+					if ( pSessionGetDataFromSession( pSession, PAGEFORMAT_KEY, (CFTypeRef *)&aData ) == kPMNoError && aData )
+					{
+						CFIndex aValue;
+						if ( CFNumberGetValue( aData, kCFNumberCFIndexType, &aValue ) )
+						{
+							aPageFormat = (PMPageFormat)aValue;
+							if ( pRetain( aPageFormat ) != kPMNoError )
+							{
+								pRelease( aPageFormat );
+								aPageFormat = NULL;
+							}
+						}
+					}
+					if ( !aPageFormat )
+					{
+						if ( pCreatePageFormat( &aPageFormat ) == kPMNoError )
+						{
+							if ( pSessionDefaultPageFormat( pSession, aPageFormat ) == kPMNoError && ( aData = CFNumberCreate( kCFAllocatorDefault,  kCFNumberCFIndexType, &aPageFormat ) ) != NULL )
+							{
+								pSessionSetDataInSession( pSession, PAGEFORMAT_KEY, (CFTypeRef)aData );
+							}
+							else
+							{
+								pRelease( aPageFormat );
+								aPageFormat = NULL;
+							}
+						}
+					}
+					if ( aPageFormat )
+						mbInitialized = TRUE;
+				}
+				aModule.unload();
+			}
+		}
+	}
+	else
+	{
+		delete pClass;
+	}
+#endif	// MACOSX
 }
 
 // ----------------------------------------------------------------------------

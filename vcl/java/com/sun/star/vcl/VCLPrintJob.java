@@ -80,7 +80,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 	/**
 	 * The cached printer job.
 	 */
-	private PrinterJob job = PrinterJob.getPrinterJob();
+	private PrinterJob job = null;
 
 	/**
 	 * The cached <code>VCLPageFormat</code>.
@@ -290,6 +290,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 	public boolean startJob(VCLPageFormat p, boolean b) {
 
 		pageFormat = p;
+		job = pageFormat.getPrinterJob();
 		job.setPrintable(this, pageFormat.getPageFormat());
 
 		// Detect if the user cancelled the print dialog

@@ -144,6 +144,12 @@ using namespace com::sun::star::portal::client;
 
 #include <comphelper/processfactory.hxx>
 
+#ifdef USE_JAVA
+#ifndef _SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX
+#include <com/sun/star/vcl/VCLPageFormat.hxx>
+#endif
+#endif	// USE_JAVA
+
 using namespace com::sun::star::uno;
 using namespace com::sun::star::lang;
 
@@ -517,6 +523,10 @@ void Printer::ImplInit( SalPrinterQueueInfo* pInfo )
 		if ( (pJobSetup->maPrinterName != pInfo->maPrinterName) ||
 			 (pJobSetup->maDriver != pInfo->maDriver) )
 		{
+#ifdef USE_JAVA
+			SalDriverData *pDriverData = (SalDriverData *)pJobSetup->mpDriverData;
+			delete pDriverData->mpVCLPageFormat;
+#endif	// USE_JAVA
 			delete[] pJobSetup->mpDriverData;
 			pJobSetup->mpDriverData = NULL;
 			pJobSetup->mnDriverDataLen = 0;
@@ -1609,10 +1619,6 @@ BOOL Printer::StartJob( const XubString& rJobName )
 			if ( !mnError )
 				mnError = PRINTER_GENERALERROR;
 			return FALSE;
-		}
-		else
-		{
-			((SalPrinter *)mpDummy3)->SetInfoPrinter( mpInfoPrinter );
 		}
 		mpPrinter = (SalPrinter *)mpDummy3;
 #else	// USE_JAVA

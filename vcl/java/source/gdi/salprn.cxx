@@ -142,9 +142,16 @@ BOOL SalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 
 BOOL SalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
 {
+	// Set driver data
+	if ( maPrinterData.mpVCLPageFormat )
+		delete maPrinterData.mpVCLPageFormat;
+	// Create a new page format instance that points to the same Java
+	// object
+	SalDriverData *pDriverData = (SalDriverData *)pSetupData->mpDriverData;
+	maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pDriverData->mpVCLPageFormat->getJavaObject() );
+
 	// Set but don't update values
-	ImplJobSetup aSetupData( *pSetupData );
-	SetData( SAL_JOBSET_ALL, &aSetupData );
+	SetData( SAL_JOBSET_ALL, pSetupData );
 
 	return TRUE;
 }
@@ -153,17 +160,24 @@ BOOL SalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
 
 BOOL SalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 {
-	// Set and update values
+	// Set or update values
 	if ( nFlags & SAL_JOBSET_ORIENTATION )
 		maPrinterData.mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
+	else
+		pSetupData->meOrientation = maPrinterData.mpVCLPageFormat->getOrientation();
 
-	// Populate the job setup
-	pSetupData->meOrientation = maPrinterData.mpVCLPageFormat->getOrientation();
-	pSetupData->mnPaperBin = 0;
-	pSetupData->mePaperFormat = maPrinterData.mpVCLPageFormat->getPaperType();
-	Size aSize( maPrinterData.mpVCLPageFormat->getPageSize() );
-	pSetupData->mnPaperWidth = aSize.Width();
-	pSetupData->mnPaperHeight = aSize.Height();
+	if ( nFlags & SAL_JOBSET_PAPERBIN )
+		;
+	else
+		pSetupData->mnPaperBin = 0;
+
+	if ( nFlags & SAL_JOBSET_PAPERSIZE )
+	{
+		pSetupData->mePaperFormat = maPrinterData.mpVCLPageFormat->getPaperType();
+		Size aSize( maPrinterData.mpVCLPageFormat->getPageSize() );
+		pSetupData->mnPaperWidth = aSize.Width();
+		pSetupData->mnPaperHeight = aSize.Height();
+	}
 
 	return TRUE;
 }
@@ -232,10 +246,17 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 						   ImplJobSetup* pSetupData,
 						   BOOL bShowDialog )
 {
-	// Set but don't update values
-	maPrinterData.mpPrinter->SetPrinterData( pSetupData );
+	if ( bShowDialog && !maPrinterData.mbStarted )
+	{
+		if ( maPrinterData.mpVCLPageFormat )
+			delete maPrinterData.mpVCLPageFormat;
+		// Create a new page format instance that points to the same Java
+		// object
+		SalDriverData *pDriverData = (SalDriverData *)pSetupData->mpDriverData;
+		maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pDriverData->mpVCLPageFormat->getJavaObject() );
+	}
 
-	maPrinterData.mbStarted = maPrinterData.mpVCLPrintJob->startJob( maPrinterData.mpPrinter->maPrinterData.mpVCLPageFormat, bShowDialog );
+	maPrinterData.mbStarted = maPrinterData.mpVCLPrintJob->startJob( maPrinterData.mpVCLPageFormat, bShowDialog );
 
 	if ( !bShowDialog && maPrinterData.mbStarted )
 	{
@@ -260,16 +281,17 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 
 					if ( pCreatePageFormat && pGetResolution && pPrinterGetIndexedPrinterResolution && pPrinterGetPrinterResolutionCount && pRelease && pSessionDefaultPageFormat && pSessionGetCurrentPrinter )
 					{
-						// Get the current resolution
-						PMResolution aMaxResolution;
+						// Create page format
 						PMPageFormat aPageFormat;
 						if ( pCreatePageFormat( &aPageFormat ) == kPMNoError )
 						{
+							// Get the current resolution
+							PMResolution aMaxResolution;
 							if ( pSessionDefaultPageFormat( pSession, aPageFormat ) == kPMNoError && pGetResolution( aPageFormat, &aMaxResolution ) == kPMNoError )
-							{
+				 			{
 								// Check if there are any resolutions to choose
 								// from that are higher than the the current
-								// resolution.
+								//  resolution
 								PMPrinter aPrinter;
 								UInt32 nCount;
 								if ( pSessionGetCurrentPrinter( pSession, &aPrinter ) == kPMNoError && pPrinterGetPrinterResolutionCount( aPrinter, &nCount ) == kPMNoError )
@@ -286,9 +308,8 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 								}
 
 								// Set the page resolution
-								maPrinterData.mpPrinter->maPrinterData.mpVCLPageFormat->setPageResolution( aMaxResolution.hRes, aMaxResolution.vRes );
+								maPrinterData.mpVCLPageFormat->setPageResolution( aMaxResolution.hRes, aMaxResolution.vRes );
 							}
-							// Release the page format object
 							pRelease( aPageFormat );
 						}
 					}
@@ -311,7 +332,8 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 BOOL SalPrinter::EndJob()
 {
 	maPrinterData.mpVCLPrintJob->endJob();
-	maPrinterData.mpPrinter->maPrinterData.mpVCLPageFormat->resetPageResolution();
+	if ( maPrinterData.mpVCLPageFormat )
+		maPrinterData.mpVCLPageFormat->resetPageResolution();
 	maPrinterData.mbStarted = FALSE;
 	return TRUE;
 }
@@ -334,6 +356,7 @@ SalGraphics* SalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobData )
 	maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics = maPrinterData.mpVCLPrintJob->startPage();
 	if ( !maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics )
 		return NULL;
+	maPrinterData.mpGraphics->maGraphicsData.mpPrinter = this;
 	maPrinterData.mbGraphics = TRUE;
 
 	return maPrinterData.mpGraphics;
@@ -370,27 +393,21 @@ XubString SalPrinter::GetPageRange()
 
 // -----------------------------------------------------------------------
 
-void SalPrinter::SetInfoPrinter( SalInfoPrinter *pInfoPrinter )
-{
-	maPrinterData.mpPrinter = pInfoPrinter;
-}
-
-// -----------------------------------------------------------------------
-
 void SalPrinter::SetResolution( long nDPIX, long nDPIY )
 {
-	maPrinterData.mpPrinter->maPrinterData.mpVCLPageFormat->setPageResolution( nDPIX, nDPIY );
+	if ( maPrinterData.mpVCLPageFormat )
+		maPrinterData.mpVCLPageFormat->setPageResolution( nDPIX, nDPIY );
 }
 
 // =======================================================================
 
 SalPrinterData::SalPrinterData()
 {
-	mpPrinter = NULL;
 	mbStarted = FALSE;
 	mpGraphics = new SalGraphics();
 	mbGraphics = FALSE;
 	mpVCLPrintJob = new com_sun_star_vcl_VCLPrintJob();
+	mpVCLPageFormat = NULL;
 }
 
 // -----------------------------------------------------------------------
@@ -399,6 +416,8 @@ SalPrinterData::~SalPrinterData()
 {
 	if ( mpGraphics )
 		delete mpGraphics;
+	if ( mpVCLPageFormat )
+		delete mpVCLPageFormat;
 
 	if ( mpVCLPrintJob )
 	{

@@ -107,23 +107,14 @@ public final class VCLPageFormat {
 	public final static int PAPER_USER = 8;
 
 	/**
-	 * Cached default page format.
-	 */
-	private static PageFormat defaultPageFormat = null;
-
-	/**
-	 * Initialize default page format.
-	 */
-	static {
-
-		defaultPageFormat = PrinterJob.getPrinterJob().defaultPage();
-
-	}
-
-	/**
 	 * Cached <code>VCLImage</code>.
 	 */
 	private VCLImage image = null;
+
+	/**
+	 * Cached printer job.
+	 */
+	private PrinterJob job = null;
 
 	/**
 	 * The page format.
@@ -140,22 +131,10 @@ public final class VCLPageFormat {
 	 */
 	public VCLPageFormat() {
 
-		pageFormat = (PageFormat)VCLPageFormat.defaultPageFormat.clone();
+		job = PrinterJob.getPrinterJob();
+		pageFormat = job.defaultPage();
 		pageResolution = new Dimension(VCLScreen.MIN_PRINTER_RESOLUTION, VCLScreen.MIN_PRINTER_RESOLUTION);
 		image = new VCLImage(1, 1, 32, this);
-
-	}
-
-	/**
- 	 * Disposes the page format and releases any system resources that it is
-	 * using.
-	 */
-	public void dispose() {
-
-		if (image != null)
-			image.dispose();
-		image = null;
-		pageFormat = null;
 
 	}
 
@@ -264,6 +243,17 @@ public final class VCLPageFormat {
 	}
 
 	/**
+	 * Returns the <code>PrinterJob</code> instance.
+	 *
+	 * @return the <code>PrinterJob</code> instance
+	 */
+	public PrinterJob getPrinterJob() {
+
+		return job;
+
+	}  
+
+	/**
 	 * Reset the page resolution to the default resolution.
 	 */
 	public void resetPageResolution() {
@@ -307,12 +297,9 @@ public final class VCLPageFormat {
 	 */
 	public boolean setup() {
 
-		PageFormat p = PrinterJob.getPrinterJob().pageDialog(pageFormat);
+		PageFormat p = job.pageDialog(pageFormat);
 		if (p != pageFormat) {
 			pageFormat = p;
-			synchronized (VCLPageFormat.class) {
-				VCLPageFormat.defaultPageFormat = (PageFormat)pageFormat.clone();
-			}
 			return true;
 		}
 		else {

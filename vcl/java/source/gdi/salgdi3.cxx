@@ -100,7 +100,7 @@ void SalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 	pMetric->mnLeading = maGraphicsData.mpVCLFont->getLeading();
 	pMetric->mnSlant = 0;
 	pMetric->mnFirstChar = 0;
-	pMetric->mnLastChar = 0;
+	pMetric->mnLastChar = 255;
 	pMetric->maName = maGraphicsData.mpVCLFont->getName();
 	pMetric->mnOrientation = maGraphicsData.mpVCLFont->getOrientation();
 	pMetric->meFamily = maGraphicsData.mpVCLFont->getFamilyType();

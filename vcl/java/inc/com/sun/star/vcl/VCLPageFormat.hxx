@@ -55,21 +55,27 @@ class com_sun_star_vcl_VCLGraphics;
 
 class com_sun_star_vcl_VCLPageFormat : public java_lang_Object
 {
+	BOOL				mbInitialized;
+
+	void				initializeNativePrintJob();
+	void				destroyNativePrintJob();
+
 protected:
 	static jclass		theClass;
 
 public:
 	static jclass		getMyClass();
 
-						com_sun_star_vcl_VCLPageFormat( jobject myObj ) : java_lang_Object( myObj ) {}
+						com_sun_star_vcl_VCLPageFormat( jobject myObj ) : java_lang_Object( myObj ), mbInitialized( FALSE ) { initializeNativePrintJob(); }
 						com_sun_star_vcl_VCLPageFormat();
-	virtual				~com_sun_star_vcl_VCLPageFormat() {};
+	virtual				~com_sun_star_vcl_VCLPageFormat() { destroyNativePrintJob(); }
 
-	void				dispose();
 	com_sun_star_vcl_VCLGraphics*	getGraphics();
 	const Rectangle		getImageableBounds();
 	Orientation			getOrientation();
+	void*				getNativePrintJob();
 	const Size			getPageSize();
+	java_lang_Object*	getPrinterJob();
 	void				resetPageResolution();
 	void				setOrientation( Orientation _par0 );
 	void				setPageResolution( long _par0, long _par1 );
