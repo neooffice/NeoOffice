@@ -116,7 +116,14 @@ static void JNICALL Java_com_apple_mrj_macos_generated_MacWindowFunctions_ShowWi
 #ifdef MACOSX
 static void DisposeNativeWindowTimerCallback( EventLoopTimerRef aTimer, void *pData )
 {
-	DisposeWindow( (WindowRef)pData );
+	WindowRef aWindow = (WindowRef)pData;
+
+	// Fix bug 261 by explicitly flushing the window's buffer before
+	// destroying it
+	if ( aWindow )
+		QDFlushPortBuffer( GetWindowPort( aWindow ), NULL );
+
+	DisposeWindow( aWindow );
 }
 #endif	// MACOSX
 
@@ -226,30 +233,21 @@ void com_sun_star_vcl_VCLFrame::dispose()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 
-#ifdef MACOSX
-		WindowRef aWindow = NULL;
-
-		// Test the JVM version and if it is below 1.4, use Carbon APIs
-		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
-		{
-			// Fix bug 261 by explicitly flushing the window's buffer before
-			// destroying it
-			aWindow = (WindowRef)getNativeWindow();
-			if ( aWindow )
-				QDFlushPortBuffer( GetWindowPort( aWindow ), NULL );
-		}
-#endif	// MACOSX
-
 		if ( mID )
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 
 #ifdef MACOSX
-		if ( aWindow )
+		// Test the JVM version and if it is below 1.4, use Carbon APIs
+		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
 		{
-			// Java 1.3.1 does not ever release the native window so we need
-			// to explicitly release it
-			if ( pEventLoopTimerUPP )
-				InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pEventLoopTimerUPP, aWindow, NULL );
+			WindowRef aWindow = (WindowRef)getNativeWindow();
+			if ( aWindow )
+			{
+				// Java 1.3.1 does not ever release the native window so we
+				// need to explicitly release it
+				if ( pEventLoopTimerUPP )
+					InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pEventLoopTimerUPP, aWindow, NULL );
+			}
 		}
 #endif	// MACOSX
 	}
