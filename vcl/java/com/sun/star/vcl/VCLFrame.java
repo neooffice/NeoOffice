@@ -1622,8 +1622,15 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (VCLFrame.captureFrame != null && e.getComponent().isShowing()) {
 			// Find the capture window
 			VCLFrame f = VCLFrame.captureFrame;
-			while (f != null && f != this)
+			while (f != null && f != this) {
+				Window w = f.getWindow();
+				if (w instanceof Frame) {
+					f = null;
+					break;
+				}
+
 				f = f.getParent();
+			}
 			if (f == null)
 				VCLFrame.captureFrame = this;
 		}
@@ -1656,8 +1663,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			Point srcPoint = e.getComponent().getLocationOnScreen();
 			srcPoint.x += e.getX();
 			srcPoint.y += e.getY();
-			while (f != null) {
+			while (f != null && !f.getFullScreenMode()) {
 				Window w = f.getWindow();
+				if (w instanceof Frame) {
+					f = null;
+					break;
+				}
+
 				Panel p = f.getPanel();
 				if (w != null && w.isShowing() && p != null) {
 					Point destPoint = p.getLocationOnScreen();
@@ -1667,6 +1679,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 						break;
 					}
 				}
+
 				f = f.getParent();
 			}
 
@@ -1717,8 +1730,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			Point srcPoint = e.getComponent().getLocationOnScreen();
 			srcPoint.x += e.getX();
 			srcPoint.y += e.getY();
-			while (f != null && f != parent) {
+			while (f != null && f != parent && !f.getFullScreenMode()) {
 				Window w = f.getWindow();
+				if (w instanceof Frame) {
+					f = null;
+					break;
+				}
+
 				Panel p = f.getPanel();
 				if (w != null && w.isShowing() && p != null) {
 					Point destPoint = p.getLocationOnScreen();
@@ -1728,6 +1746,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 						break;
 					}
 				}
+
 				f = f.getParent();
 			}
 
