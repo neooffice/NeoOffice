@@ -13,8 +13,8 @@
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2002-2003 William Lachance (william.lachance@sympatico.ca)
- *  Copyright 2004-2005 Michael Meeks (mmeeks@novell.com)
+ *  Copyright (C) 2004 William Lachance (william.lachance@sympatico.ca)
+ *  Copyright (C) 2004 Net Integration Technologies (http://www.net-itech.com)
  *  http://libwpd.sourceforge.net
  *
  *  This library is free software; you can redistribute it and/or
@@ -32,44 +32,32 @@
  *  MA  02111-1307  USA
  *  
  *  =================================================
- *  Modified November 2004 by Patrick Luby. SISSL Removed. NeoOffice is
+ *  Modified February 2005 by Patrick Luby. SISSL Removed. NeoOffice is
  *  distributed under GPL only under modification term 3 of the LGPL.
  *
  *  Contributor(s): _______________________________________
  *
  ************************************************************************/
 
-#ifndef WPXSVSTREAM_H
-#define WPXSVSTREAM_H
+#ifndef _COM_SUN_STAR_XML_SAX_XDOCUMENTHANDLER_HPP_
+#include <com/sun/star/xml/sax/XDocumentHandler.hpp>
+#endif
 
-#include <sot/storage.hxx>
-#include <com/sun/star/io/XInputStream.hpp>
+#include "DocumentHandler.hxx"
 
-#include <libwpd/WPXStream.h>
+using com::sun::star::uno::Reference;
+using com::sun::star::xml::sax::XDocumentHandler;
 
-class WPXSvInputStream : public WPXInputStream
-{
+class OODocumentHandler : public DocumentHandler
+{ 
 public:
-	WPXSvInputStream( ::com::sun::star::uno::Reference<
-					  ::com::sun::star::io::XInputStream > xStream );
-	virtual ~WPXSvInputStream();
-
-	virtual bool isOLEStream();
-	virtual WPXInputStream * getDocumentOLEStream();
-
-	virtual const uint8_t *read(size_t numBytes, size_t &numBytesRead);
-	virtual int seek(long offset, WPX_SEEK_TYPE seekType);
-	virtual long tell();
-	virtual bool atEOS();
+        OODocumentHandler(Reference < XDocumentHandler > &xHandler);
+        virtual void startDocument();
+        virtual void endDocument();
+        virtual void startElement(const char *psName, const WPXPropertyList &xPropList);
+        virtual void endElement(const char *psName);
+        virtual void characters(const WPXString &sCharacters);
 
 private:
-	SotStorageRef       mxChildStorage;
-	SotStorageStreamRef mxChildStream;
-	::com::sun::star::uno::Reference<
-			  ::com::sun::star::io::XInputStream > mxStream;
-	::com::sun::star::uno::Sequence< sal_Int8 > maData;
-	sal_Int64 mnOffset;
-	sal_Int64 mnLength;
+        Reference < XDocumentHandler > mxHandler;
 };
-
-#endif

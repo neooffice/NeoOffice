@@ -39,7 +39,9 @@
  *
  ************************************************************************/
 
-
+/* "This product is not manufactured, approved, or supported by 
+ * Corel Corporation or Corel Corporation Limited."
+ */
 #include <stdio.h>
 
 #include <osl/mutex.hxx>
@@ -98,7 +100,7 @@ void * SAL_CALL component_getFactory(
 	const sal_Char * pImplName, void * pServiceManager, void * pRegistryKey )
 {
 	void * pRet = 0;
-	
+
     OUString implName = OUString::createFromAscii( pImplName );
 	if ( pServiceManager && implName.equals(WordPerfectImportFilter_getImplementationName()) )
 	{

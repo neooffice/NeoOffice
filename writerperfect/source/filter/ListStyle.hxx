@@ -38,7 +38,9 @@
  *
  ************************************************************************/
 
-
+/* "This product is not manufactured, approved, or supported by 
+ * Corel Corporation or Corel Corporation Limited."
+ */
 #ifndef _LISTSTYLE_H
 #define _LISTSTYLE_H
 #include <libwpd/libwpd.h>
@@ -48,44 +50,30 @@
 #include "Style.hxx"
 #include "WriterProperties.hxx"
 
-#ifndef _COM_SUN_STAR_XML_SAX_XDOCUMENTHANDLER_HPP_
-#include <com/sun/star/xml/sax/XDocumentHandler.hpp>
-#endif
-
-using com::sun::star::uno::Reference;
-using com::sun::star::xml::sax::XDocumentHandler;
-
 class DocumentElement;
 
 class ListLevelStyle
 {
 public:
-	virtual void write(Reference < XDocumentHandler > &xHandler, int level) const = 0;
+	virtual void write(DocumentHandler &xHandler, int iLevel) const = 0;
 };
 
 class OrderedListLevelStyle : public ListLevelStyle
 {
 public:
-	OrderedListLevelStyle(const WPXNumberingType listType, 
-			      const UCSString &sTextBeforeNumber, const UCSString &sTextAfterNumber, 
-			      const float fSpaceBefore, const int iStartingNumber);
-	virtual void write(Reference < XDocumentHandler > &xHandler, int level) const;
+	OrderedListLevelStyle(const WPXPropertyList &xPropList);
+	virtual void write(DocumentHandler &xHandler, int iLevel) const;
 private:
-	UCSString msTextBeforeNumber;
-	UCSString msTextAfterNumber;
-	float mfSpaceBefore;
-	int miStartingNumber;
-	WPXNumberingType mlistType;
+        WPXPropertyList mPropList;
 };
 
 class UnorderedListLevelStyle : public ListLevelStyle
 {
 public:
-	UnorderedListLevelStyle(const UCSString &sBullet, const float fSpaceBefore);
-	virtual void write(Reference < XDocumentHandler > &xHandler, int iLevel) const;
+	UnorderedListLevelStyle(const WPXPropertyList &xPropList);
+	virtual void write(DocumentHandler &xHandler, int iLevel) const;
 private:
-	UCSString msBullet;
-	float mfSpaceBefore;
+        WPXPropertyList mPropList;
 };
 
 class ListStyle : public Style
@@ -93,7 +81,7 @@ class ListStyle : public Style
 public:
 	ListStyle(const char *psName, const int iListID);
 	virtual ~ListStyle();
-	virtual void write(Reference < XDocumentHandler > &xHandler) const;
+	virtual void write(DocumentHandler &xHandler) const;
 	const int getListID() { return miListID; }
 	const bool isListLevelDefined(int iLevel) const;
 
@@ -110,15 +98,13 @@ class OrderedListStyle : public ListStyle
 {
 public:
 	OrderedListStyle(const char *psName, const int iListID) : ListStyle(psName, iListID) {}
-	void updateListLevel(const int iLevel, const WPXNumberingType listType, 
-			     const UCSString &sTextBeforeNumber, const UCSString &sTextAfterNumber,
-			     const int iStartingNumber);
+	void updateListLevel(const int iLevel, const WPXPropertyList &xPropList);
 };
 
 class UnorderedListStyle : public ListStyle
 {
 public:
 	UnorderedListStyle(const char *psName, const int iListID) : ListStyle(psName, iListID) {}
-	void updateListLevel(const int iLevel, const UCSString &sBullet);
+	void updateListLevel(const int iLevel, const WPXPropertyList &xPropList);
 };
 #endif

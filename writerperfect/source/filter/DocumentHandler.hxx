@@ -13,8 +13,8 @@
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2002-2003 William Lachance (william.lachance@sympatico.ca)
- *  Copyright 2004-2005 Michael Meeks (mmeeks@novell.com)
+ *  Copyright (C) 2004 William Lachance (wlach@interlog.com)
+ *  Copyright (C) 2004 Net Integration Technologies (http://www.net-itech.com)
  *  http://libwpd.sourceforge.net
  *
  *  This library is free software; you can redistribute it and/or
@@ -32,44 +32,29 @@
  *  MA  02111-1307  USA
  *  
  *  =================================================
- *  Modified November 2004 by Patrick Luby. SISSL Removed. NeoOffice is
+ *  Modified February 2005 by Patrick Luby. SISSL Removed. NeoOffice is
  *  distributed under GPL only under modification term 3 of the LGPL.
  *
  *  Contributor(s): _______________________________________
  *
  ************************************************************************/
 
-#ifndef WPXSVSTREAM_H
-#define WPXSVSTREAM_H
+/* "This product is not manufactured, approved, or supported by
+ * Corel Corporation or Corel Corporation Limited."
+ */
+#ifndef _DOCUMENTHANDLER_H
+#define _DOCUMENTHANDLER_H
+#include <libwpd/libwpd.h>
+#include <libwpd/WPXProperty.h>
+#include <libwpd/WPXString.h>
 
-#include <sot/storage.hxx>
-#include <com/sun/star/io/XInputStream.hpp>
-
-#include <libwpd/WPXStream.h>
-
-class WPXSvInputStream : public WPXInputStream
+class DocumentHandler
 {
 public:
-	WPXSvInputStream( ::com::sun::star::uno::Reference<
-					  ::com::sun::star::io::XInputStream > xStream );
-	virtual ~WPXSvInputStream();
-
-	virtual bool isOLEStream();
-	virtual WPXInputStream * getDocumentOLEStream();
-
-	virtual const uint8_t *read(size_t numBytes, size_t &numBytesRead);
-	virtual int seek(long offset, WPX_SEEK_TYPE seekType);
-	virtual long tell();
-	virtual bool atEOS();
-
-private:
-	SotStorageRef       mxChildStorage;
-	SotStorageStreamRef mxChildStream;
-	::com::sun::star::uno::Reference<
-			  ::com::sun::star::io::XInputStream > mxStream;
-	::com::sun::star::uno::Sequence< sal_Int8 > maData;
-	sal_Int64 mnOffset;
-	sal_Int64 mnLength;
+        virtual void startDocument() = 0;
+        virtual void endDocument() = 0;
+        virtual void startElement(const char *psName, const WPXPropertyList &xPropList) = 0;
+        virtual void endElement(const char *psName) = 0;
+        virtual void characters(const WPXString &sCharacters) = 0;
 };
-
 #endif

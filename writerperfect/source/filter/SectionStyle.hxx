@@ -38,25 +38,26 @@
  *
  ************************************************************************/
 
-
+/* "This product is not manufactured, approved, or supported by 
+ * Corel Corporation or Corel Corporation Limited."
+ */
 #ifndef _SECTIONSTYLE_H
 #define _SECTIONSTYLE_H
 #include <libwpd/libwpd.h>
+#include <libwpd/WPXPropertyListVector.h>
 
 #include "Style.hxx"
 #include "WriterProperties.hxx"
 
-using com::sun::star::uno::Reference;
-using com::sun::star::xml::sax::XDocumentHandler;
 
 class SectionStyle : public Style
 {
 public:
-	SectionStyle(const int iNumColumns, const vector<WPXColumnDefinition> &columns, const char *psName);
-	virtual void write(Reference < XDocumentHandler > &xHandler) const;
+	SectionStyle(const WPXPropertyList &xPropList, const WPXPropertyListVector &xColumns, const char *psName);
+	virtual void write(DocumentHandler &xHandler) const;
 
 private:
-	int miNumColumns;
-	vector <WPXColumnDefinition> mColumns;
+        WPXPropertyList mPropList;
+	WPXPropertyListVector mColumns;
 };
 #endif

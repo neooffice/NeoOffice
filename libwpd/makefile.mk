@@ -51,8 +51,8 @@ TARGET=wpd
 
 # --- Files --------------------------------------------------------
 
-TARFILE_NAME=libwpd-0.7.99
-PATCH_FILE_NAME=libwpd-wp35extended.patch
+TARFILE_NAME=libwpd-0.8.0
+#PATCH_FILE_NAME=$(TARFILE_NAME).diff
 BUILD_ACTION=dmake
 BUILD_DIR=src/lib
 

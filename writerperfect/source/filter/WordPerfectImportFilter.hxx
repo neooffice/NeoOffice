@@ -14,7 +14,9 @@
  *  GNU General Public License Version 2.1
  *  =============================================
  *  Portions of this Copyright 2000 by Sun Microsystems, Inc.    
- *  Rest is Copyright 2002-2003 William Lachance (william.lachance@sympatico.ca)
+ *  Rest is Copyright 2002-2003 William Lachance (william.lachance@sympatico.ca),
+ *  Copyright (C) 2004 Net Integration Technologies (http://www.net-itech.com)
+ *  and Copyright 2004 Fridrich Strba (fridrich.strba@bluewin.ch)
  *  http://libwpd.sourceforge.net
  *
  *  This library is free software; you can redistribute it and/or
@@ -35,22 +37,24 @@
  *  Modified November 2004 by Patrick Luby. SISSL Removed. NeoOffice is
  *  distributed under GPL only under modification term 3 of the LGPL.
  *
- *  Contributor(s): _______________________________________
+ *  Contributor(s): Martin Gallwey (gallwey@sun.com)
  *
  ************************************************************************/
 
-
+/* "This product is not manufactured, approved, or supported by 
+ * Corel Corporation or Corel Corporation Limited."
+ */
 #ifndef _WORDPERFECTIMPORTFILTER_HXX
 #define _WORDPERFECTIMPORTFILTER_HXX
 
 #ifndef _COM_SUN_STAR_DOCUMENT_XFILTER_HPP_
 #include <com/sun/star/document/XFilter.hpp>
 #endif
-// #ifndef _COM_SUN_STAR_DOCUMENT_XEXPORTER_HPP_
-// #include <com/sun/star/document/XExporter.hpp>
-// #endif
 #ifndef _COM_SUN_STAR_DOCUMENT_XIMPORTER_HPP_
 #include <com/sun/star/document/XImporter.hpp>
+#endif
+#ifndef _COM_SUN_STAR_DOCUMENT_XEXTENDEDFILTERDETECTION_HPP_
+#include <com/sun/star/document/XExtendedFilterDetection.hpp>
 #endif
 #ifndef _COM_SUN_STAR_LANG_XINITIALIZATION_HPP_
 #include <com/sun/star/lang/XInitialization.hpp>
@@ -60,9 +64,6 @@
 #endif
 #ifndef _COM_SUN_STAR_XML_SAX_XDOCUMENTHANDLER_HPP_
 #include <com/sun/star/xml/sax/XDocumentHandler.hpp>
-#endif
-#ifndef _COM_SUN_STAR_DOCUMENT_XEXTENDEDFILTERDETECTION_HDL_
-#include <com/sun/star/document/XExtendedFilterDetection.hpp>
 #endif
 #ifndef _CPPUHELPER_IMPLBASE5_HXX_
 #include <cppuhelper/implbase5.hxx>
@@ -80,9 +81,9 @@ class WordPerfectImportFilter : public cppu::WeakImplHelper5
 < 
 	com::sun::star::document::XFilter,
 	com::sun::star::document::XImporter,
+	com::sun::star::document::XExtendedFilterDetection,
 	com::sun::star::lang::XInitialization,
-	com::sun::star::lang::XServiceInfo,
-	com::sun::star::document::XExtendedFilterDetection
+	com::sun::star::lang::XServiceInfo
 >
 {
 protected:
@@ -94,8 +95,6 @@ protected:
 
 	FilterType meType;
 
-// 	sal_Bool SAL_CALL exportImpl( const ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >& aDescriptor ) 
-// 		throw (::com::sun::star::uno::RuntimeException);
 	sal_Bool SAL_CALL importImpl( const ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >& aDescriptor ) 
 		throw (::com::sun::star::uno::RuntimeException);
 
@@ -105,34 +104,31 @@ public:
 	virtual ~WordPerfectImportFilter() {}
 
 	// XFilter
-    virtual sal_Bool SAL_CALL filter( const ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >& aDescriptor ) 
+        virtual sal_Bool SAL_CALL filter( const ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >& aDescriptor ) 
 		throw (::com::sun::star::uno::RuntimeException);
-    virtual void SAL_CALL cancel(  ) 
+        virtual void SAL_CALL cancel(  ) 
 		throw (::com::sun::star::uno::RuntimeException);
-
-	// XExporter
-//     virtual void SAL_CALL setSourceDocument( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XComponent >& xDoc ) 
-// 		throw (::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::uno::RuntimeException);
 
 	// XImporter
-    virtual void SAL_CALL setTargetDocument( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XComponent >& xDoc ) 
+        virtual void SAL_CALL setTargetDocument( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XComponent >& xDoc ) 
 		throw (::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::uno::RuntimeException);
 
+ 	//XExtendedFilterDetection
+	virtual ::rtl::OUString SAL_CALL detect( com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue >& Descriptor ) 
+		throw( com::sun::star::uno::RuntimeException );
+
 	// XInitialization
-    virtual void SAL_CALL initialize( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any >& aArguments ) 
+        virtual void SAL_CALL initialize( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any >& aArguments ) 
 		throw (::com::sun::star::uno::Exception, ::com::sun::star::uno::RuntimeException);
 
 	// XServiceInfo
-    virtual ::rtl::OUString SAL_CALL getImplementationName(  ) 
+        virtual ::rtl::OUString SAL_CALL getImplementationName(  ) 
 		throw (::com::sun::star::uno::RuntimeException);
-    virtual sal_Bool SAL_CALL supportsService( const ::rtl::OUString& ServiceName ) 
+        virtual sal_Bool SAL_CALL supportsService( const ::rtl::OUString& ServiceName ) 
 		throw (::com::sun::star::uno::RuntimeException);
-    virtual ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL getSupportedServiceNames(  ) 
+        virtual ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL getSupportedServiceNames(  ) 
 		throw (::com::sun::star::uno::RuntimeException);
 
-	// XExtendedTypeDetection
-	virtual ::rtl::OUString SAL_CALL detect( ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >& Descriptor )
-		throw (::com::sun::star::uno::RuntimeException);
 };
 
 ::rtl::OUString WordPerfectImportFilter_getImplementationName()

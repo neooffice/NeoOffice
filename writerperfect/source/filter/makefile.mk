@@ -51,9 +51,9 @@ INCPRE+=$(SOLARVER)$/$(UPD)$/$(INPATH)$/inc$/libwpd -I..
 
 SLOFILES= \
 	$(SLO)$/DocumentElement.obj		\
-	$(SLO)$/FontMap.obj			\
 	$(SLO)$/FontStyle.obj			\
 	$(SLO)$/ListStyle.obj			\
+	$(SLO)$/OODocumentHandler.obj		\
 	$(SLO)$/PageSpan.obj			\
 	$(SLO)$/SectionStyle.obj		\
 	$(SLO)$/TableStyle.obj			\
