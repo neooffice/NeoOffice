@@ -57,6 +57,16 @@
 #include <svapp.hxx>
 #endif
 
+#ifdef MACOSX
+
+#include <premac.h>
+#include <QuickTime/QuickTime.h>
+#include <postmac.h>
+
+using namespace rtl;
+
+#endif	// MACOSX
+
 using namespace vcl;
 
 // ============================================================================
@@ -185,6 +195,31 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_GETFOCUS:
 		{
 			dispatchEvent( nID, pFrame, NULL );
+
+#ifdef MACOSX
+			// Test the JVM version and if it is below 1.4, use Carbon APIs
+			java_lang_Class* pClass = java_lang_Class::forName( OUString::createFromAscii( "java/lang/CharSequence" ) );
+			if ( !pClass )
+			{
+				// Mark front window as dirty so that the native buffer gets
+				// flushed to screen
+				WindowRef aWindow = FrontWindow();
+				if ( aWindow )
+				{
+					GrafPtr aGrafPort = GetWindowPort( aWindow );
+					if ( aGrafPort )
+					{
+						Rect aRect;
+						GetPortBounds( aGrafPort, &aRect );
+						QDAddRectToDirtyRegion( aGrafPort, &aRect );
+					}
+				}
+			}
+			else
+			{
+				delete pClass;
+			}
+#endif	// MACOSX
 			// In presentation mode, don't let presentation window lose focus
 			if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame != pFrame )
 				pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_FOREGROUNDTASK );

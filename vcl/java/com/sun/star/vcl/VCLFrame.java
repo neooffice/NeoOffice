@@ -63,7 +63,6 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
-import java.awt.event.PaintEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.awt.font.TextHitInfo;
@@ -1598,7 +1597,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			Point srcPoint = e.getComponent().getLocationOnScreen();
 			srcPoint.x += e.getX();
 			srcPoint.y += e.getY();
-			while (f != null && !(f.getWindow() instanceof Frame)) {
+			while (f != null && f.getWindow() != null && !(f.getWindow() instanceof Frame)) {
 				if (f.getWindow().isShowing()) {
 					Panel p = f.getPanel();
 					Point destPoint = p.getLocationOnScreen();
@@ -1614,7 +1613,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			if (f == null)
 				f = this;
 
-			if (mouseModifiersPressed == 0 && VCLFrame.lastCaptureFrame != null && VCLFrame.lastCaptureFrame != f) {
+			if (mouseModifiersPressed == 0 && VCLFrame.lastCaptureFrame != null && VCLFrame.lastCaptureFrame != f && VCLFrame.lastCaptureFrame.getWindow() != null && VCLFrame.lastCaptureFrame.getWindow().isShowing()) {
 				VCLFrame.lastCaptureFrame.focusGained(new FocusEvent(VCLFrame.lastCaptureFrame.getPanel(), FocusEvent.FOCUS_GAINED));
 				VCLFrame.lastCaptureFrame.focusLost(new FocusEvent(VCLFrame.lastCaptureFrame.getPanel(), FocusEvent.FOCUS_LOST));
 			}
@@ -1650,7 +1649,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			Point srcPoint = e.getComponent().getLocationOnScreen();
 			srcPoint.x += e.getX();
 			srcPoint.y += e.getY();
-			while (f != null && f != parent) {
+			while (f != null && f != parent && f.getWindow() != null) {
 				if (f.getWindow().isShowing()) {
 					Panel p = f.getPanel();
 					Point destPoint = p.getLocationOnScreen();
@@ -1674,7 +1673,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			}
 			VCLFrame.lastDragFrame = f;
 
-			if (!(f.getWindow() instanceof Frame))
+			if (f.getWindow() != null && !(f.getWindow() instanceof Frame))
 				VCLFrame.lastCaptureFrame = f;
 		}
 
@@ -2073,11 +2072,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		public void paint(Graphics g) {
 
-			if (isShowing())
-				super.paintAll(g);
-			g.setClip(null);
+			paintComponents(g);
 
 		}
+
 
 	}
 
@@ -2158,8 +2156,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		public void paint(Graphics g) {
 
-			g.setClip(null);
-
 			VCLGraphics graphics = frame.getGraphics();
 			if (graphics != null) {
 				synchronized (graphics) {
@@ -2218,9 +2214,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		public void paint(Graphics g) {
 
-			if (isShowing())
-				super.paintAll(g);
-			g.setClip(null);
+			paintComponents(g);
 
 		}
 

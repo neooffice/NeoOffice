@@ -309,11 +309,6 @@ public final class VCLGraphics {
 	private VCLGraphics.PageQueue pageQueue = null;
 
 	/**
-	 * The panel's graphics context.
-	 */
-	private Graphics2D panelGraphics = null;
-
-	/**
 	 * The cached update area.
 	 */
 	private Rectangle update = null;
@@ -338,12 +333,10 @@ public final class VCLGraphics {
 		frame = f;
 		if (frame.getWindow().isShowing()) {
 			Panel p = frame.getPanel();
-			panelGraphics = (Graphics2D)p.getGraphics();
 			Rectangle bounds = p.getBounds();
 			graphicsBounds = new Rectangle(0, 0, bounds.width, bounds.height);
 		}
 		else {
-			panelGraphics = null;
 			graphicsBounds = new Rectangle(0, 0, 1, 1);
 		}
 		image = new VCLImage(graphicsBounds.width, graphicsBounds.height, frame.getBitCount());
@@ -452,9 +445,6 @@ public final class VCLGraphics {
 		if (graphics != null)
 			graphics.dispose();
 		graphics = null;
-		if (panelGraphics != null)
-			panelGraphics.dispose();
-		panelGraphics = null;
 		if (image != null && frame != null)
 			image.dispose();
 		image = null;
@@ -1166,15 +1156,22 @@ public final class VCLGraphics {
 	 */
 	void flush() {
 
-		if (panelGraphics != null && update != null && image != null && frame != null && frame.getWindow().isShowing()) {
+		if (update != null && image != null && frame != null) {
 			update = graphicsBounds.intersection(update);
 			if (!update.isEmpty())
 			{
-				panelGraphics.setClip(update);
 				BufferedImage i = image.getImage();
-				if (i != null)
-					panelGraphics.drawRenderedImage(i, null);
-				panelGraphics.setClip(null);
+				Panel p = frame.getPanel();
+				if (i != null && p != null) {
+					synchronized (p.getTreeLock()) {
+						Graphics2D g = (Graphics2D)p.getGraphics();
+						if (g != null) {
+							g.setClip(update);
+							g.drawRenderedImage(i, null);
+							g.dispose();
+						}
+					}
+				}
 			}
 			update = null;
 		}
@@ -1424,8 +1421,6 @@ public final class VCLGraphics {
 
 		if (frame != null) {
 			graphics.dispose();
-			if (panelGraphics != null)
-				panelGraphics.dispose();
 			image.dispose();
 			if (frame.getWindow().isShowing()) {
 				// Mac OS X delays the initial background painting so force
@@ -1434,12 +1429,10 @@ public final class VCLGraphics {
 					frame.getWindow().repaint();
 
 				Panel p = frame.getPanel();
-				panelGraphics = (Graphics2D)p.getGraphics();
 				Rectangle bounds = p.getBounds();
 				graphicsBounds = new Rectangle(0, 0, bounds.width, bounds.height);
 			}
 			else {
-				panelGraphics = null;
 				graphicsBounds = new Rectangle(0, 0, 1, 1);
 			}
 			image = new VCLImage(graphicsBounds.width, graphicsBounds.height, frame.getBitCount());
