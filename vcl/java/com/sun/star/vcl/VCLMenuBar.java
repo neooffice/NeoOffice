@@ -39,8 +39,8 @@ import com.sun.star.vcl.VCLFrame;
 import java.awt.MenuBar;
 import java.awt.Frame;
 import java.awt.Window;
-import java.util.Vector;
-import java.util.Enumeration;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.awt.Menu;
 import java.awt.MenuItem;
 import com.sun.star.vcl.VCLMenuItemData;
@@ -71,10 +71,10 @@ public final class VCLMenuBar {
     private VCLEventQueue queue = null;
     
     /**
-     * Vector of internal VCLMenuItemData objects.  Each menu is managed by an individual VCLMenuItemData
+     * ArrayList of internal VCLMenuItemData objects.  Each menu is managed by an individual VCLMenuItemData
      * object.
      */
-    private Vector menus = new Vector();
+    private ArrayList menus = new ArrayList();
         
     /**
      * Construct a new VCLMenuBar instance.  Before the menubar can be displayed it must be attached to a frame.
@@ -166,7 +166,7 @@ public final class VCLMenuBar {
             }
         }
         
-        menus.insertElementAt(menuItem, nPos);
+        menus.add(nPos, menuItem);
         
         // if we were passed an object that isn't yet a menu, insert a dummy menu object as a placeholder.
         // if we were passed a menu, insert its peer.
@@ -204,7 +204,7 @@ public final class VCLMenuBar {
      */
     public void changeMenu( VCLMenuItemData newMenu, int nPos ) {
         if( nPos < menus.size() ) {
-            VCLMenuItemData oldMenu=(VCLMenuItemData)menus.elementAt(nPos);
+            VCLMenuItemData oldMenu=(VCLMenuItemData)menus.get(nPos);
             newMenu.setTitle(oldMenu.getTitle());
             newMenu.setEnabled(oldMenu.getEnabled());
             
@@ -220,7 +220,7 @@ public final class VCLMenuBar {
      */
     public void enableMenu( int nPos, boolean enable ) {
         if( nPos < menus.size() ) {
-            VCLMenuItemData menu=(VCLMenuItemData)menus.elementAt(nPos);
+            VCLMenuItemData menu=(VCLMenuItemData)menus.get(nPos);
             menu.setEnabled(enable);
             if(!menu.isMenu()) {
                 // we have a dummy item currently in the menubar that isn't being managed, so flip its
@@ -241,9 +241,9 @@ public final class VCLMenuBar {
     public void regenerateMenuBar() {
         for(int i=awtMenuBar.countMenus()-1; i>=0; i--)
             awtMenuBar.remove(i);
-        Enumeration e=menus.elements();
-        while(e.hasMoreElements()) {
-            VCLMenuItemData m=(VCLMenuItemData)e.nextElement();
+        Iterator e=menus.iterator();
+        while(e.hasNext()) {
+            VCLMenuItemData m=(VCLMenuItemData)e.next();
             if(m.isMenu())
                 awtMenuBar.add((Menu)m.createAWTPeer());
             else
@@ -254,20 +254,20 @@ public final class VCLMenuBar {
     /**
      * Used to keep track of all active menubars.  Must be accessed using synchronized methods!
      */
-    private static Vector activeMenubars=new Vector();
+    private static ArrayList activeMenubars=new ArrayList();
     
     /**
-     * Called when a new VCLMenuBar object is created to insert it into our tracking vector
+     * Called when a new VCLMenuBar object is created to insert it into our tracking ArrayList
      */
     private static void addNewMenuBar(VCLMenuBar o) {
         activeMenubars.add(o);
     }
     
     /**
-     * Called when a VCLMenuBar object is destroyed to remove it from our tracking vector
+     * Called when a VCLMenuBar object is destroyed to remove it from our tracking ArrayList
      */
     private static void removeMenuBar(VCLMenuBar o) {
-        activeMenubars.removeElement(o);
+        activeMenubars.remove(activeMenubars.indexOf(o));
     }
     
     /**
@@ -278,9 +278,9 @@ public final class VCLMenuBar {
      *	be located in any menubar associated with a VCLFrame.
      */
     public static VCLMenuBar findVCLMenuBar(MenuItem item) {
-        Enumeration menuBars=activeMenubars.elements();
-        while(menuBars.hasMoreElements()) {
-            VCLMenuBar vmb=(VCLMenuBar)menuBars.nextElement();
+        Iterator menuBars=activeMenubars.iterator();
+        while(menuBars.hasNext()) {
+            VCLMenuBar vmb=(VCLMenuBar)menuBars.next();
             if(vmb.getAWTMenuBar()==null)
                 continue;
             
@@ -324,9 +324,9 @@ public final class VCLMenuBar {
      * menu bar contains peers of the proper classes.
      */
     public static void regenerateAllMenuBars() {
-        Enumeration menuBars=activeMenubars.elements();
-        while(menuBars.hasMoreElements()) {
-            VCLMenuBar mb=(VCLMenuBar)menuBars.nextElement();
+        Iterator menuBars=activeMenubars.iterator();
+        while(menuBars.hasNext()) {
+            VCLMenuBar mb=(VCLMenuBar)menuBars.next();
             mb.regenerateMenuBar();
         }
     }
@@ -339,13 +339,13 @@ public final class VCLMenuBar {
      *	a submenu or a menu item
      */
     public static boolean isTopLevelMenu(VCLMenuItemData item) {
-	Enumeration menuBars=activeMenubars.elements();
-	while(menuBars.hasMoreElements()) {
-	    VCLMenuBar mb=(VCLMenuBar)menuBars.nextElement();
+	Iterator menuBars=activeMenubars.iterator();
+	while(menuBars.hasNext()) {
+	    VCLMenuBar mb=(VCLMenuBar)menuBars.next();
 	    if(mb.menus!=null) {
-		Enumeration e=mb.menus.elements();
-		while(e.hasMoreElements()) {
-		    if(item==e.nextElement())
+		Iterator e=mb.menus.iterator();
+		while(e.hasNext()) {
+		    if(item==e.next())
 			return(true);
 		}
 	    }

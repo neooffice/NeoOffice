@@ -37,9 +37,8 @@ package com.sun.star.vcl;
  
 import java.lang.String;
 import java.lang.System;
-import java.util.Vector;
-import java.util.Stack;
-import java.util.Enumeration;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.lang.Exception;
 import java.lang.IllegalArgumentException;
 import java.awt.Menu;
@@ -55,7 +54,7 @@ import com.sun.star.vcl.VCLFrame;
 
  /**
   * Instances of this class are used to hold information needed to construct a menu item
-  * or menu corresponding to VCL menu items.  Menus are considered to be Vectors of these
+  * or menu corresponding to VCL menu items.  Menus are considered to be ArrayLists of these
   * items.
   */
 public final class VCLMenuItemData {
@@ -123,17 +122,17 @@ public final class VCLMenuItemData {
     private boolean isSubmenu=false;
     
     /**
-     * If the item is a submenu, Vector containing all of the menu items comprising the menu.
+     * If the item is a submenu, ArrayList containing all of the menu items comprising the menu.
      * The items are stored as VCLMenuItemData references.
      */
-    private java.util.Vector menuItems=new Vector();
+    private java.util.ArrayList menuItems=new ArrayList();
     
     /**
-     * If the item has been inserted into menus, this vector holds
+     * If the item has been inserted into menus, this ArrayList holds
      * backreferences to the parent menus.  The backreferences are to the
      * VCLMenuItemData objects for the parent menus.
      */
-    private java.util.Vector parentMenus=new Vector();
+    private java.util.ArrayList parentMenus=new ArrayList();
     
     /**
      * True if this item is enabled, false if not
@@ -151,10 +150,10 @@ public final class VCLMenuItemData {
     private boolean isChecked=false;
     
     /**
-     * Vector of AWT objects that have been generated for this set of menu item data and are being managed
+     * ArrayList of AWT objects that have been generated for this set of menu item data and are being managed
      * by it.
      */
-    private java.util.Vector awtPeers=new Vector();
+    private java.util.ArrayList awtPeers=new ArrayList();
     
     /**
      * Construct and initialize a new <b>VCLMenuItemData</b> instance
@@ -230,9 +229,9 @@ public final class VCLMenuItemData {
                 delegateForObject.title=new String(title);
             
 	    if(!awtPeers.isEmpty()) {
-		Enumeration e=awtPeers.elements();
-		while(e.hasMoreElements()) {
-		    MenuItem m=(MenuItem)e.nextElement();
+		Iterator e=awtPeers.iterator();
+		while(e.hasNext()) {
+		    MenuItem m=(MenuItem)e.next();
 		    m.setLabel(title);
 		}
 	    }
@@ -257,9 +256,9 @@ public final class VCLMenuItemData {
         if(newShortcut!=0) {
             keyboardShortcut=new MenuShortcut(newShortcut, useShift);
             if(!awtPeers.isEmpty()) {
-                Enumeration e=awtPeers.elements();
-                while(e.hasMoreElements()) {
-                    MenuItem m=(MenuItem)e.nextElement();
+                Iterator e=awtPeers.iterator();
+                while(e.hasNext()) {
+                    MenuItem m=(MenuItem)e.next();
                     m.setShortcut(keyboardShortcut);
                 }
             }
@@ -297,9 +296,9 @@ public final class VCLMenuItemData {
             delegateForObject.isEnabled=newEnabled;
         
 	if(!awtPeers.isEmpty()) {
-	    Enumeration e=awtPeers.elements();
-	    while(e.hasMoreElements()) {
-		MenuItem m=(MenuItem)e.nextElement();
+	    Iterator e=awtPeers.iterator();
+	    while(e.hasNext()) {
+		MenuItem m=(MenuItem)e.next();
 		if(isEnabled)
 		    m.enable();
 		else
@@ -379,10 +378,10 @@ public final class VCLMenuItemData {
             // change state of our checkbox peers
             
 	    if(!awtPeers.isEmpty()) {
-		Enumeration e=awtPeers.elements();
-		while(e.hasMoreElements())
+		Iterator e=awtPeers.iterator();
+		while(e.hasNext())
 		{
-		    CheckboxMenuItem cMI=(CheckboxMenuItem)e.nextElement();
+		    CheckboxMenuItem cMI=(CheckboxMenuItem)e.next();
 		    cMI.setState(isChecked);
 		}
 	    }
@@ -446,7 +445,7 @@ public final class VCLMenuItemData {
         if((nPos < 0) || (nPos == 65535))
             nPos=menuItems.size();
         
-        menuItems.insertElementAt(newItem, nPos);
+        menuItems.add(nPos, newItem);
 	newItem.parentMenus.add(this);
         if(!isSubmenu)
         {
@@ -460,10 +459,10 @@ public final class VCLMenuItemData {
         else
         {
 	    if(!awtPeers.isEmpty()) {
-		Enumeration e=awtPeers.elements();
-		while(e.hasMoreElements())
+		Iterator e=awtPeers.iterator();
+		while(e.hasNext())
 		{
-		    Menu m=(Menu)e.nextElement();
+		    Menu m=(Menu)e.next();
 		    m.insert((MenuItem)newItem.createAWTPeer(), nPos);
                     
                     // Java 1.3.1 AWT has problems inserting checkmark menu
@@ -495,14 +494,14 @@ public final class VCLMenuItemData {
         if((nPos < 0) || (nPos == 65535))
             nPos=menuItems.size();
         
-	((VCLMenuItemData)menuItems.elementAt(nPos)).parentMenus.remove(this);
-        menuItems.removeElementAt(nPos);
+	((VCLMenuItemData)menuItems.get(nPos)).parentMenus.remove(this);
+        menuItems.remove(nPos);
         if(!awtPeers.isEmpty())
         {
-            Enumeration e=awtPeers.elements();
-            while(e.hasMoreElements())
+            Iterator e=awtPeers.iterator();
+            while(e.hasNext())
             {
-                Menu m=(Menu)e.nextElement();
+                Menu m=(Menu)e.next();
                 m.remove(nPos);
             }
         }
@@ -518,7 +517,7 @@ public final class VCLMenuItemData {
             return(delegate.getMenuItem(nPos));
         }
                 
-        return((VCLMenuItemData)menuItems.elementAt(nPos));
+        return((VCLMenuItemData)menuItems.get(nPos));
     }
     
     /**
@@ -538,7 +537,7 @@ public final class VCLMenuItemData {
 		
 	int toReturn=-1;
 	for(int i=0; i<menuItems.size(); i++) {
-	    if(menuItems.elementAt(i)==item) {
+	    if(menuItems.get(i)==item) {
 		toReturn=i;
 		break;
 	    }
@@ -676,9 +675,9 @@ public final class VCLMenuItemData {
                 mn.enable();
             else
                 mn.disable();
-            Enumeration items=menuItems.elements();
-            while(items.hasMoreElements()) {
-                VCLMenuItemData i=(VCLMenuItemData)items.nextElement();
+            Iterator items=menuItems.iterator();
+            while(items.hasNext()) {
+                VCLMenuItemData i=(VCLMenuItemData)items.next();
                 mn.add((MenuItem)i.createAWTPeer());
             }
             toReturn=(Object)mn;
@@ -717,9 +716,9 @@ public final class VCLMenuItemData {
 	if(parentMenus.isEmpty())
 	    return;
 	
-	Enumeration parents=parentMenus.elements();
-	while(parents.hasMoreElements()) {
-	    VCLMenuItemData parent=(VCLMenuItemData)parents.nextElement();
+	Iterator parents=parentMenus.iterator();
+	while(parents.hasNext()) {
+	    VCLMenuItemData parent=(VCLMenuItemData)parents.next();
                 int menuPos=parent.getMenuItemIndex(this);
                 if(menuPos >= 0) {
                     parent.removeMenuItem(menuPos);
@@ -740,7 +739,7 @@ public final class VCLMenuItemData {
             return;
         }
         
-        awtPeers.removeElement(o);
+        awtPeers.remove(awtPeers.indexOf(o));
     }
     
     /**
@@ -756,9 +755,9 @@ public final class VCLMenuItemData {
 	// remove notifiers to allow GC to reclaim these objects quicker
 	
 	if((awtPeers!=null) && !awtPeers.isEmpty()) {
-	    Enumeration peers=awtPeers.elements();
-	    while(peers.hasMoreElements()) {
-		MenuItem mi=(MenuItem)peers.nextElement();
+	    Iterator peers=awtPeers.iterator();
+	    while(peers.hasNext()) {
+		MenuItem mi=(MenuItem)peers.next();
 		if(mi instanceof VCLAWTMenuItem) {
 		    mi.removeActionListener((VCLAWTMenuItem)mi);
 		} else if(mi instanceof VCLAWTCheckboxMenuItem) {
@@ -766,13 +765,13 @@ public final class VCLMenuItemData {
 		}
 	    }
 	    
-	    awtPeers.removeAllElements();
+	    awtPeers.clear();
 	}
 	
         if(isSubmenu && (menuItems!=null) && !menuItems.isEmpty()) {
-            Enumeration e=menuItems.elements();
-            while(e.hasMoreElements()) {
-                ((VCLMenuItemData)e.nextElement()).unregisterAllAWTPeers();
+            Iterator e=menuItems.iterator();
+            while(e.hasNext()) {
+                ((VCLMenuItemData)e.next()).unregisterAllAWTPeers();
             }
         }
     }
