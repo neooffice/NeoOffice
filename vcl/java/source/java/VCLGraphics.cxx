@@ -356,14 +356,15 @@ void com_sun_star_vcl_VCLGraphics::drawPolyPolygon( ULONG _par0, const ULONG *_p
 			mID = t.pEnv->GetMethodID( getMyClass(), "drawPolyPolygon", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
+		jclass tempClass = t.pEnv->FindClass( "[I" );
+		if ( mID && tempClass )
 		{
 			jsize elements( _par0 );
 			jintArray ptsarray = t.pEnv->NewIntArray( elements );
 			t.pEnv->SetIntArrayRegion( ptsarray, 0, elements, (jint *)_par1 );
-			java_lang_Object tempObj( NULL );
-			jobjectArray xptsarray = t.pEnv->NewObjectArray( elements, tempObj.getMyClass(), tempObj.getJavaObject() );
-			jobjectArray yptsarray = t.pEnv->NewObjectArray( elements, tempObj.getMyClass(), tempObj.getJavaObject() );
+			jintArray tempArray = t.pEnv->NewIntArray( 0 );
+			jobjectArray xptsarray = t.pEnv->NewObjectArray( elements, tempClass, tempArray );
+			jobjectArray yptsarray = t.pEnv->NewObjectArray( elements, tempClass, tempArray );
 			for ( jsize i = 0; i < elements; i++ )
 			{
 				jsize points = _par1[ i ];
