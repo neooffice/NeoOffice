@@ -39,8 +39,11 @@
 #ifndef _SV_JAVA_LANG_OBJECT_HXX
 #include <java/lang/Object.hxx>
 #endif
-#ifndef _SV_SV_H    
-#include <sv.h>     
+#ifndef _VCL_VCLENUM_HXX
+#include <vclenum.hxx>
+#endif
+#ifndef _SV_SV_H
+#include <sv.h>
 #endif
 
 namespace vcl {
@@ -65,6 +68,7 @@ public:
 	long				getAscent();
 	void				getCharWidth( sal_Unicode _par0, sal_Unicode _par1, long *_par2 );
 	long				getDescent();
+	FontFamily			getFamilyType();
 	long				getKerning( USHORT _par0, USHORT _par1 );
 	long				getLeading();
 	::rtl::OUString		getName();

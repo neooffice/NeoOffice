@@ -52,6 +52,41 @@ import java.util.ArrayList;
 public final class VCLFont {
 
 	/**
+	 * FAMILY_DONTKNOW constant.
+	 */
+	public final static int FAMILY_DONTKNOW = 0;
+
+	/**
+	 * FAMILY_DECORATIVE constant.
+	 */
+	public final static int FAMILY_DECORATIVE = 1;
+
+	/**
+	 * FAMILY_MODERN constant.
+	 */
+	public final static int FAMILY_MODERN = 2;
+
+	/**
+	 * FAMILY_ROMAN constant.
+	 */
+	public final static int FAMILY_ROMAN = 3;
+
+	/**
+	 * FAMILY_SCRIPT constant.
+	 */
+	public final static int FAMILY_SCRIPT = 4;
+
+	/**
+	 * FAMILY_SWISS constant.
+	 */
+	public final static int FAMILY_SWISS = 5;
+
+	/**
+	 * FAMILY_SYSTEM constant.
+	 */
+	public final static int FAMILY_SYSTEM = 6;
+
+	/**
 	 * Cached fonts.
 	 */
 	private static VCLFont[] fonts = null;
@@ -127,6 +162,11 @@ public final class VCLFont {
 	private short orientation = 0;
 
 	/**
+	 * The family type.
+	 */
+	private int type = VCLFont.FAMILY_DONTKNOW;
+
+	/**
 	 * Constructs a new <code>VCLFont</code> instance.
 	 *
 	 * @param f a <code>Font</code> instance
@@ -136,6 +176,15 @@ public final class VCLFont {
 
 		font = f;
 		orientation = o;
+
+		// Get family type
+		String name = f.getFamily().toLowerCase();
+		if (name.startsWith("monospaced"))
+			type = VCLFont.FAMILY_MODERN;
+		else if (name.startsWith("sansserif"))
+			type = VCLFont.FAMILY_SWISS;
+		else if (name.startsWith("serif"))
+			type = VCLFont.FAMILY_ROMAN;
 
 		// Get the font metrics
 		fontMetrics = VCLFont.graphics.getFontMetrics(f);
@@ -203,6 +252,17 @@ public final class VCLFont {
 	public int getDescent() {
 
 		return fontMetrics.getDescent();
+
+	}
+
+	/**
+	 * Returns the family type.
+	 *
+	 * @return the family type
+	 */
+	public int getFamilyType() {
+
+		return type;
 
 	}
 

@@ -199,21 +199,21 @@ long com_sun_star_vcl_VCLFont::getDescent()
 
 // ----------------------------------------------------------------------------
 
-long com_sun_star_vcl_VCLFont::getLeading()
+FontFamily com_sun_star_vcl_VCLFont::getFamilyType()
 {
 	static jmethodID mID = NULL;
-	long out = 0;
+	FontFamily out = FAMILY_DONTKNOW;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
 			char *cSignature = "()I";
-			mID = t.pEnv->GetMethodID( getMyClass(), "getLeading", cSignature );
+			mID = t.pEnv->GetMethodID( getMyClass(), "getFamilyType", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+			out = (FontFamily)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
 }
@@ -240,6 +240,27 @@ long com_sun_star_vcl_VCLFont::getKerning( USHORT _par0, USHORT _par1 )
 			args[1].c = jchar( _par1 );
 			out = (long)t.pEnv->CallNonvirtualIntMethodA( object, getMyClass(), mID, args );
 		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+long com_sun_star_vcl_VCLFont::getLeading()
+{
+	static jmethodID mID = NULL;
+	long out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getLeading", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
 }

@@ -103,7 +103,7 @@ void SalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 	pMetric->mnLastChar = 0;
 	pMetric->maName = maGraphicsData.mpVCLFont->getName();
 	pMetric->mnOrientation = maGraphicsData.mpVCLFont->getOrientation();
-	pMetric->meFamily = FAMILY_DONTKNOW;
+	pMetric->meFamily = maGraphicsData.mpVCLFont->getFamilyType();
 	pMetric->meCharSet = gsl_getSystemTextEncoding();
 	if ( maGraphicsData.mpVCLFont->isBold() )
 		pMetric->meWeight = WEIGHT_BOLD;
@@ -113,7 +113,10 @@ void SalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 		pMetric->meItalic = ITALIC_NORMAL;
 	else
 		pMetric->meItalic = ITALIC_NONE;
-	pMetric->mePitch = PITCH_VARIABLE;
+	if ( pMetric->meFamily == FAMILY_MODERN )
+		pMetric->mePitch = PITCH_FIXED;
+	else
+		pMetric->mePitch = PITCH_VARIABLE;
 	pMetric->meType = TYPE_SCALABLE;
 	pMetric->mbDevice = FALSE;
 }
@@ -161,9 +164,12 @@ void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 		pFontData->maName = XubString( pFontList->pFonts[ i ].getName() );
 		pFontData->mnWidth = 0;
 		pFontData->mnHeight = 0;
-		pFontData->meFamily = FAMILY_DONTKNOW;
+		pFontData->meFamily = pFontList->pFonts[ i ].getFamilyType();
 		pFontData->meCharSet = gsl_getSystemTextEncoding();
-		pFontData->mePitch = PITCH_VARIABLE;
+		if ( pFontData->meFamily == FAMILY_MODERN )
+			pFontData->mePitch = PITCH_FIXED;
+		else
+			pFontData->mePitch = PITCH_VARIABLE;
 		pFontData->meWidthType = WIDTH_DONTKNOW;
 		if ( pFontList->pFonts[ i ].isBold() )
 			pFontData->meWeight = WEIGHT_BOLD;
