@@ -192,10 +192,12 @@ void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 		else
 			pFontData->meItalic = ITALIC_NONE;
 		pFontData->meType = TYPE_SCALABLE;
-		pFontData->mnVerticalOrientation = 0;
+		pFontData->mnVerticalOrientation = -900;
 		pFontData->mbOrientation = TRUE;
 		pFontData->mbDevice = FALSE;
 		pFontData->mnQuality = 0;
+		pFontData->mbSubsettable = TRUE;
+		pFontData->mbEmbeddable = TRUE;
 
 		// Add to list
 		pList->Add( pFontData );
