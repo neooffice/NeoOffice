@@ -63,6 +63,7 @@ using namespace osl;
 
 static bool bNoActivate = false;
 static bool bNoSelectWindow = false;
+static void *pNativeWindow = NULL;
 static Mutex aMutex;
 
 #endif	// MACOSX
@@ -99,6 +100,8 @@ static void JNICALL Java_com_apple_mrj_macos_generated_MacWindowFunctions_ShowWi
 		ShowHide( (WindowRef)pWindowRef, true );
 	else
 		MacShowWindow( (WindowRef)pWindowRef );
+
+	pNativeWindow = (void *)pWindowRef;
 }
 #endif	// MACOSX
 
@@ -675,7 +678,7 @@ void com_sun_star_vcl_VCLFrame::setTitle( ::rtl::OUString _par0 )
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0, sal_Bool _par1 )
+void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0, sal_Bool _par1, SalFrame *_par2 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -692,6 +695,7 @@ void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0, sal_Bool _par1 )
 #ifdef MACOSX
 			MutexGuard aGuard( aMutex );
 			bNoActivate = _par1;
+			pNativeWindow = NULL;
 #endif	// MACOSX
 
 			jvalue args[1];
@@ -699,7 +703,18 @@ void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0, sal_Bool _par1 )
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 
 #ifdef MACOSX
+			// Test the JVM version and less than 1.4, map native window
+			if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+			{
+				SalData *pSalData = GetSalData();
+				if ( _par0 && pNativeWindow )
+					pSalData->maNativeFrameMapping[ _par2 ] = pNativeWindow;
+				else
+					pSalData->maNativeFrameMapping.erase( _par2 );
+			}
+
 			bNoActivate = false;
+			pNativeWindow = NULL;
 #endif	// MACOSX
 		}
 	}

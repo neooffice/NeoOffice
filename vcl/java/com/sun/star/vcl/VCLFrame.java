@@ -572,14 +572,14 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private static boolean capture = false;
 
 	/** 
+	 * The component to <code>VCLFrame</code> mapping.
+	 */
+	private static HashMap componentMap = new HashMap();
+
+	/** 
 	 * The custom cursors.
 	 */
 	private static HashMap customCursors = null;
-
-	/**
-	 * The focus frame.
-	 */
-	private static VCLFrame focusFrame = null;
 
 	/**
 	 * The shared input context.
@@ -622,13 +622,14 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private static int mouseModifiersPressed = 0;
 
 	/**
-	 * Gets the focus frame.
+	 * Find the matching <code>VCLFrame</code> for the specified component.
 	 *
-	 * @return the focus frame
+	 * @param c the component
+	 * @return the matching <code>VCLFrame</code>
 	 */
-	static VCLFrame getFocusFrame() {
+	static VCLFrame findFrame(Component c) {
 
-		return focusFrame;
+		return (VCLFrame)componentMap.get(c);
 
 	}
 
@@ -835,6 +836,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// Set capture frame
 		VCLFrame.captureFrame = this;
 
+		// Add panel to mapping
+		if (panel != null)
+			VCLFrame.componentMap.put(panel, this);
+
 		if (queue == null || window == null || !window.isShowing())
 			return;
 
@@ -851,12 +856,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// Set mouse capture to parent frame
 		if (VCLFrame.captureFrame == this)
 			VCLFrame.captureFrame = parent;
-		if (VCLFrame.focusFrame == this)
-			VCLFrame.focusFrame = null;
 		if (VCLFrame.lastCaptureFrame == this)
 			VCLFrame.lastCaptureFrame = null;
 		if (VCLFrame.lastDragFrame == this)
 			VCLFrame.lastDragFrame = null;
+
+		// Remove panel from mapping
+		VCLFrame.componentMap.remove(panel);
 
 		// Unregister listeners
 		if (window != null) {
@@ -957,8 +963,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void focusGained(FocusEvent e) {
 
-		VCLFrame.focusFrame = this;
-
 		if (queue == null || window == null || !window.isShowing())
 			return;
 
@@ -972,9 +976,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param e the <code>FocusEvent</code>
 	 */
 	public void focusLost(FocusEvent e) {
-
-		if (VCLFrame.focusFrame == this)
-			VCLFrame.focusFrame = null;
 
 		if (queue == null || window == null || !window.isShowing())
 			return;
@@ -1885,6 +1886,22 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, this, 0, VCLFrame.keyModifiersPressed));
 
 	}
+
+	/**
+	 * Invoked when the mouse wheel has been moved on a component.
+	 *
+	 * @param e the <code>MouseEvent</code>
+	 * @param s the scroll amount
+	 * @param r the wheel rotation
+	 */
+    void mouseWheelMoved(MouseEvent e, int s, int r) {
+
+		if (queue == null || window == null || !window.isShowing())
+			return;
+
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_WHEELMOUSE, this, s, r));
+
+    }
 
 	/**
 	 * Sets the focus to this.

@@ -245,9 +245,11 @@ public final class VCLEventQueue {
 				queue.head = queue.head.next;
 				if (eqi == queue.mouseMove)
 					queue.mouseMove = null;
+				else if (eqi == queue.mouseWheelMove)
+					queue.mouseWheelMove = null;
 			}
 			if (queue.head == null)
-				queue.mouseMove = queue.tail = null;
+				queue.mouseMove = queue.mouseWheelMove = queue.tail = null;
 			return eqi != null ? eqi.event : null;
 		}
 
@@ -271,6 +273,14 @@ public final class VCLEventQueue {
 				if (queue.mouseMove != null && queue.mouseMove.event.getFrame() == newItem.event.getFrame())
 					queue.mouseMove.remove = true;
 				queue.mouseMove = newItem;
+			}
+			else if (id == VCLEvent.SALEVENT_WHEELMOUSE) {
+				if (queue.mouseWheelMove != null && queue.mouseWheelMove.event.getFrame() == newItem.event.getFrame()) {
+					queue.mouseWheelMove.remove = true;
+					newItem.event.addScrollAmount(queue.mouseWheelMove.event.getScrollAmount());
+					newItem.event.addWheelRotation(queue.mouseWheelMove.event.getWheelRotation());
+				}
+				queue.mouseWheelMove = newItem;
 			}
 			// Ignore duplicate window close events
 			if (id == VCLEvent.SALEVENT_CLOSE) {
@@ -321,21 +331,21 @@ public final class VCLEventQueue {
 	 * the mouse wheel event is posted in the proper sequence with other
 	 * Java AWT events.
 	 *
+     * @param f the <code>VCLFrame</code>
      * @param m the time stamp of the event in milliseconds
      * @param x the x coordinate
      * @param y the y coordinate
      * @param s the scroll amount
-     * @param w the wheel rotation
+     * @param r the wheel rotation
 	 */
-	public void postMouseWheelEvent(long m, int x, int y, int s, int w) {
+	public void postMouseWheelEvent(VCLFrame f, long m, int x, int y, int s, int r) {
 
-		VCLFrame f = VCLFrame.getFocusFrame();
 		if (f == null)
 			return;
 
 		try {
-			VCLEvent e = new VCLEvent(new MouseEvent(f.getPanel(), MouseEvent.MOUSE_MOVED, m, VCLFrame.getMouseModifiersPressed(), x, y, 0, false), VCLEvent.SALEVENT_WHEELMOUSE, f, 0, s, w);
-			EventQueue.invokeAndWait(new VCLEventQueue.MouseWheelEventPoster(e, this));
+			MouseEvent e = new MouseEvent(f.getPanel(), MouseEvent.MOUSE_MOVED, m, VCLFrame.getMouseModifiersPressed(), x, y, 0, false);
+			EventQueue.invokeAndWait(new VCLEventQueue.MouseWheelEventPoster(f, e, s, r));
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -469,11 +479,12 @@ public final class VCLEventQueue {
 				// In order to support JVM's before 1.4, process mouse wheel
 				// events here
 				if (VCLEventQueue.mouseWheelEventClass != null && VCLEventQueue.mouseWheelEventClass.isInstance(event)) {
-					VCLFrame f = VCLFrame.getFocusFrame();
+					MouseEvent e = (MouseEvent)event;
+					VCLFrame f = VCLFrame.findFrame(e.getComponent());
 					if (f != null) {
 						Integer s = (Integer)mouseWheelEventGetScrollAmountMethod.invoke(event, new Object[0]);
-						Integer w = (Integer)mouseWheelEventGetWheelRotationMethod.invoke(event, new Object[0]);
-						queue.postCachedEvent(new VCLEvent(event, VCLEvent.SALEVENT_WHEELMOUSE, f, 0, s.intValue(), w.intValue()));
+						Integer r = (Integer)mouseWheelEventGetWheelRotationMethod.invoke(event, new Object[0]);
+						new VCLEventQueue.MouseWheelEventPoster(f, e, s.intValue(), r.intValue()).run();
 					}
 				}
 
@@ -496,6 +507,8 @@ public final class VCLEventQueue {
 		VCLEventQueue.QueueItem head = null;
 
 		VCLEventQueue.QueueItem mouseMove = null;
+
+		VCLEventQueue.QueueItem mouseWheelMove = null;
 
 		VCLEventQueue.QueueItem tail = null;
 
@@ -530,25 +543,39 @@ public final class VCLEventQueue {
 	final class MouseWheelEventPoster implements Runnable {
 
 		/**
-		 * The <code>VCLEvent</code>.
+		 * The <code>MouseEvent</code>.
 		 */
-		private VCLEvent event = null;
+		private MouseEvent event = null;
 
 		/**
-		 * The <code>VCLEventQueue</code>.
+		 * The <code>VCLFrame</code>.
 		 */
-		private VCLEventQueue queue = null;
+		private VCLFrame frame = null;
+
+		/**
+		 * The mouse wheel scroll amount.
+		 */
+		private int scrollAmount = 0;
+
+		/**
+		 * The mouse wheel rotation.
+		 */
+		private int wheelRotation = 0;
 
 		/**
 		 * Construct a <code>MouseWheelEventPoster</code> instance.
 		 *
-		 * @param e the <code>VCLEvent</code>
-		 * @param q the <code>VCLEventQueue</code>
+		 * @param f the <code>VCLFrame</code> instance
+		 * @param e the <code>MouseEvent</code>
+		 * @param s the scroll amount
+		 * @param r the wheel rotation
 		 */
-		MouseWheelEventPoster(VCLEvent e, VCLEventQueue q) {
+		MouseWheelEventPoster(VCLFrame f, MouseEvent e, int s, int r) {
 
+			frame = f;
 			event = e;
-			queue = q;
+			scrollAmount = s;
+			wheelRotation = r;
 
 		}
 
@@ -558,7 +585,7 @@ public final class VCLEventQueue {
 		 */
 		public void run() {
 
-			queue.postCachedEvent(event);
+			frame.mouseWheelMoved(event, scrollAmount, wheelRotation);
 
 		}
 

@@ -351,12 +351,36 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 			{
 				MacOSPoint aPoint;
 				SInt32 nDelta;
-				if ( GetEventParameter( aEvent, kEventParamWindowMouseLocation, typeQDPoint, NULL, sizeof( MacOSPoint ), &outSize, &aPoint ) == noErr && GetEventParameter( aEvent, kEventParamMouseWheelDelta, typeSInt32, NULL, sizeof( SInt32 ), &outSize, &nDelta ) == noErr )
+				WindowRef aWindow;
+				if ( GetEventParameter( aEvent, kEventParamWindowMouseLocation, typeQDPoint, NULL, sizeof( MacOSPoint ), &outSize, &aPoint ) == noErr && GetEventParameter( aEvent, kEventParamMouseWheelDelta, typeSInt32, NULL, sizeof( SInt32 ), &outSize, &nDelta ) == noErr && GetEventParameter( aEvent, kEventParamWindowRef, typeWindowRef, NULL, sizeof( WindowRef ), &outSize, &aWindow ) == noErr )
 				{
-					GetSalData()->mpEventQueue->postMouseWheelEvent( 0, aPoint.h, aPoint.v, 3, nDelta * -1 );
-					return noErr;
+					// Unlock the Carbon lock
+					VCLThreadAttach t;
+					if ( t.pEnv )
+						Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
+
+					// Block the VCL event loop while checking mapping
+					pSalData->mpFirstInstance->AcquireYieldMutex( 1 );
+
+					// Relock the Carbon lock
+					if ( t.pEnv )
+						Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
+
+					for ( ::std::map< SalFrame*, void* >::const_iterator it = pSalData->maNativeFrameMapping.begin(); it != pSalData->maNativeFrameMapping.end(); ++it )
+					{
+						if ( it->second == (void *)aWindow )
+						{
+							pSalData->mpEventQueue->postMouseWheelEvent( it->first, 0, aPoint.h, aPoint.v, 3, nDelta * -1 );
+							break;
+						}
+					}
+
+					// Unblock the VCL event loop
+					pSalData->mpFirstInstance->ReleaseYieldMutex();
 				}
 			}
+
+			return noErr;
 		}
 		else if ( nClass == kEventClassMenu )
 		{

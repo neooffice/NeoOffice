@@ -1089,18 +1089,39 @@ public final class VCLEvent extends AWTEvent {
 	 * should be used only for injecting SALEVENT_WHEELMOUSE events into the
 	 * queue.
 	 *
-	 * @param event the <code>AWTEvent</code> that originated the event
+	 * @param event the <code>MouseEvent</code> that originated the event
 	 * @param id the event type
 	 * @param f the <code>VCLFrame</code> instance
-	 * @param d the data pointer
 	 * @param s the scroll amount
-	 * @param w the wheel rotation
+	 * @param r the wheel rotation
 	 */
-	VCLEvent(AWTEvent event, int id, VCLFrame f, int d, int s, int w) {
+	VCLEvent(MouseEvent event, int id, VCLFrame f, int s, int r) {
 
-		this(event, id, f, d, 0);
+		this((AWTEvent)event, id, f, 0, 0);
 		scrollAmount = s;
-		wheelRotation = w * -1;
+		wheelRotation = r * -1;
+
+	}
+
+	/**
+	 * Adds the specified amount to the mouse wheel scroll amount.
+	 *
+	 * @param s the mouse wheel scroll amount to add
+	 */
+	void addScrollAmount(int s) {
+
+		scrollAmount += s;
+
+	}
+
+	/**
+	 * Adds the specified amount to the mouse wheel rotation
+	 *
+	 * @param r the mouse wheel rotation to add
+	 */
+	void addWheelRotation(int r) {
+
+		wheelRotation += r;
 
 	}
 

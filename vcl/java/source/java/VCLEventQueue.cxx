@@ -35,11 +35,17 @@
 
 #define _SV_COM_SUN_STAR_VCL_VCLEVENTQUEUE_CXX
 
+#ifndef _SV_SALFRAME_HXX
+#include <salframe.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLEVENTQUEUE_HXX
 #include <com/sun/star/vcl/VCLEventQueue.hxx>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 #include <com/sun/star/vcl/VCLEvent.hxx>
+#endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
+#include <com/sun/star/vcl/VCLFrame.hxx>
 #endif
 
 using namespace vcl;
@@ -161,7 +167,7 @@ void com_sun_star_vcl_VCLEventQueue::postCachedEvent( const com_sun_star_vcl_VCL
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLEventQueue::postMouseWheelEvent( ULONG _par0, long _par1, long _par2, ULONG _par3, long _par4 )
+void com_sun_star_vcl_VCLEventQueue::postMouseWheelEvent( SalFrame *_par0, ULONG _par1, long _par2, long _par3, ULONG _par4, long _par5 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -169,18 +175,19 @@ void com_sun_star_vcl_VCLEventQueue::postMouseWheelEvent( ULONG _par0, long _par
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(JIIII)V";
+			char *cSignature = "(Lcom/sun/star/vcl/VCLFrame;JIIII)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "postMouseWheelEvent", cSignature );	
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[5];
-			args[0].j = jlong( _par0 );
-			args[1].i = jint ( _par1 );
+			jvalue args[6];
+			args[0].l = _par0->maFrameData.mpVCLFrame->getJavaObject();
+			args[1].j = jlong( _par1 );
 			args[2].i = jint ( _par2 );
 			args[3].i = jint ( _par3 );
 			args[4].i = jint ( _par4 );
+			args[5].i = jint ( _par5 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}

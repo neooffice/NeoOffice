@@ -194,7 +194,7 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		bNoActivate = FALSE;
 
 	maFrameData.mbVisible = bVisible;
-	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible, bNoActivate );
+	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible, bNoActivate, this );
 
 	// Reset graphics
 	com_sun_star_vcl_VCLGraphics *pVCLGraphics = maFrameData.mpVCLFrame->getGraphics();
