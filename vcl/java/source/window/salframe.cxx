@@ -211,9 +211,6 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 	maFrameData.mbVisible = bVisible;
 
-	if ( !maFrameData.mbVisible && maFrameData.mpParent && pSalData->mpFocusFrame == this)
-		maFrameData.mpParent->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
-
 	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible, bNoActivate );
 
 	// Reset graphics
