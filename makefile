@@ -198,7 +198,7 @@ build.source_zip:
 	$(RM) -Rf "$(SOURCE_HOME)"
 	mkdir -p "$(SOURCE_HOME)"
 	cd "$(SOURCE_HOME)" ; cvs -d "$(NEO_CVSROOT)" co -r "$(NEO_TAG)" "$(NEO_PACKAGE)"
-	cd "$(SOURCE_HOME)" ; gnutar zcf "$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION).tar.gz" *
+	cd "$(SOURCE_HOME)" ; gnutar zcf "$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION).src.tar.gz" *
 	touch "$@"
 
 build.all: build.oo_all build.package
