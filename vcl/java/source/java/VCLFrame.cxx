@@ -118,12 +118,20 @@ static void DisposeNativeWindowTimerCallback( EventLoopTimerRef aTimer, void *pD
 {
 	WindowRef aWindow = (WindowRef)pData;
 
-	// Fix bug 261 by explicitly flushing the window's buffer before
-	// destroying it
-	if ( aWindow )
-		QDFlushPortBuffer( GetWindowPort( aWindow ), NULL );
+	ItemCount nCount = GetWindowRetainCount( aWindow );
+	if ( nCount )
+	{
+		// Fix bug 261 by explicitly flushing the window's buffer before
+		// destroying it
+		if ( aWindow )
+			QDFlushPortBuffer( GetWindowPort( aWindow ), NULL );
 
-	DisposeWindow( aWindow );
+		while ( nCount )
+		{
+			nCount--;
+			ReleaseWindow( aWindow );
+		}
+	}
 }
 #endif	// MACOSX
 
