@@ -71,7 +71,7 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	if ( maGraphicsData.mpVCLFont )
 		delete maGraphicsData.mpVCLFont;
 
-	maGraphicsData.mpVCLFont = ((com_sun_star_vcl_VCLFont *)pFont->mpFontData->mpSysData)->deriveFont( pFont->mnHeight, pFont->meWeight <= WEIGHT_MEDIUM ? FALSE : TRUE, pFont->meItalic == ITALIC_NONE ? FALSE : TRUE, pFont->mnOrientation, !pFont->mbNonAntialiased );
+	maGraphicsData.mpVCLFont = ((com_sun_star_vcl_VCLFont *)pFont->mpFontData->mpSysData)->deriveFont( pFont->mnHeight, pFont->meWeight <= WEIGHT_MEDIUM ? FALSE : TRUE, pFont->meItalic == ITALIC_NONE ? FALSE : TRUE, !pFont->mbNonAntialiased );
 
 	if ( maGraphicsData.mpPrinter )
 		return SAL_SETFONT_USEDRAWTEXTARRAY;
@@ -116,7 +116,7 @@ void SalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 	if ( maGraphicsData.mpVCLFont )
 	{
 		pMetric->maName = maGraphicsData.mpVCLFont->getName();
-		pMetric->mnOrientation = maGraphicsData.mpVCLFont->getOrientation();
+		pMetric->mnOrientation = 0;
 		pMetric->meFamily = maGraphicsData.mpVCLFont->getFamilyType();
 	}
 	else
@@ -213,29 +213,6 @@ void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 
 // -----------------------------------------------------------------------
 
-/*
-void SalGraphics::DrawText( long nX, long nY,
-                            const xub_Unicode* pStr, xub_StrLen nLen )
-{
-	if ( maGraphicsData.mpVCLFont )
-		maGraphicsData.mpVCLGraphics->drawText( nX, nY, pStr, nLen, maGraphicsData.mpVCLFont, maGraphicsData.mnTextColor );
-}
-*/
-
-// -----------------------------------------------------------------------
-
-/*
-void SalGraphics::DrawTextArray( long nX, long nY,
-                                 const xub_Unicode* pStr, xub_StrLen nLen,
-                                 const long* pDXAry )
-{
-	if ( maGraphicsData.mpVCLFont )
-		maGraphicsData.mpVCLGraphics->drawTextArray( nX, nY, pStr, nLen, maGraphicsData.mpVCLFont, maGraphicsData.mnTextColor, pDXAry );
-}
-*/
-
-// -----------------------------------------------------------------------
-
 BOOL SalGraphics::GetGlyphBoundRect( long nIndex, Rectangle& rRect,
                                      const OutputDevice *pOutDev )
 
@@ -248,6 +225,7 @@ BOOL SalGraphics::GetGlyphBoundRect( long nIndex, Rectangle& rRect,
 	}
 	else
 	{
+		rRect = Rectangle();
 		return FALSE;
 	}
 }

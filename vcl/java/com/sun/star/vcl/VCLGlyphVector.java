@@ -35,6 +35,9 @@
 
 package com.sun.star.vcl;
 
+import java.awt.Font;
+import java.awt.font.GlyphVector;
+
 /**
  * The Java class that implements the JavaLayout C++ class methods.
  * <p>
@@ -47,6 +50,11 @@ public final class VCLGlyphVector {
 	 * The font.
 	 */
 	private VCLFont font = null;
+
+	/**
+	 * The glyph vector.
+	 */
+	private GlyphVector glyphs = null;
 
 	/**
 	 * The graphics.
@@ -63,6 +71,47 @@ public final class VCLGlyphVector {
 
 		graphics = g;
 		font = f;
+	}
+
+	/**
+	 * Layout text.
+	 *
+	 * @param chars the array of characters to layout
+	 */
+	public void layoutText(char[] chars) {
+
+		glyphs = font.getFont().createGlyphVector(graphics.getFontRenderContext(), chars);
+
+	}
+
+	/**
+	 * Draws all of the text.
+	 *
+	 * @param x the x coordinate
+	 * @param y the y coordinate
+	 * @param orientation the orientation to draw the text runs
+	 * @param color the color to draw the text runs
+	 */
+	public void drawText(int x, int y, int orientation, int color) {
+
+		graphics.drawTextArray(glyphs, x, y, orientation, color, font.isAntialiased());
+
+	}
+
+	/**
+	 * Returns an array of the offsets for each glyph in the glyph vector.
+	 *
+	 * @return an array of the offsets for each glyph in the glyph vector
+	 */
+	public int[] fillDXArray() {
+
+		int[] offsets = new int[glyphs.getNumGlyphs()];
+
+		for (int i = 0; i < offsets.length; i++)
+			offsets[i] = (int)glyphs.getGlyphPosition(i).getX();
+
+		return offsets;
+
 	}
 
 }

@@ -644,10 +644,7 @@ void SalFrame::SetCallback( void* pInst, SALFRAMEPROC pProc )
 
 SalFrame* SalFrame::GetParent() const
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalFrame::GetParent not implemented\n" );
-#endif
-	return NULL;
+	return maFrameData.mpParent;
 }
 
 // -----------------------------------------------------------------------

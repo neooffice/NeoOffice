@@ -87,3 +87,90 @@ com_sun_star_vcl_VCLGlyphVector::com_sun_star_vcl_VCLGlyphVector( com_sun_star_v
 	tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
 	saveRef( tempObj );
 }
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLGlyphVector::layoutText( ImplLayoutArgs& rArgs )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "([C)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "layoutText", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jsize elements( rArgs.mnEndCharPos - rArgs.mnMinCharPos );
+			jcharArray chars = t.pEnv->NewCharArray( elements );
+			t.pEnv->SetCharArrayRegion( chars, 0, elements, (jchar *)rArgs.mpStr + rArgs.mnMinCharPos );
+			jvalue args[1];
+			args[0].l = chars;
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLGlyphVector::drawText( long _par0, long _par1, int _par2, SalColor _par3 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(IIII)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "drawText", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[4];
+			args[0].i = jint( _par0 );
+			args[1].i = jint( _par1 );
+			args[2].i = jint( _par2 );
+			args[3].i = jint( _par3 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}
+// ----------------------------------------------------------------------------
+
+long com_sun_star_vcl_VCLGlyphVector::fillDXArray( long *_par0 )
+{
+	static jmethodID mID = NULL;
+	long out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()[I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "fillDXArray", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jintArray tempObj = (jintArray)t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
+			if ( tempObj )
+			{
+				out = (long)t.pEnv->GetArrayLength( tempObj );
+				if ( out )
+				{
+					long nSize = out * sizeof( jint );
+					jboolean bCopy( sal_False );
+					jint *pSrcBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( tempObj, &bCopy );
+					jint *pDestBits = (jint *)rtl_allocateMemory( nSize );
+					memcpy( pDestBits, pSrcBits, nSize );
+					t.pEnv->ReleasePrimitiveArrayCritical( tempObj, (void *)pSrcBits, JNI_ABORT );
+				}
+			}
+		}
+	}
+	return out;
+}

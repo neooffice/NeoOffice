@@ -67,19 +67,16 @@ JavaLayout::~JavaLayout()
 
 bool JavaLayout::LayoutText( ImplLayoutArgs& rArgs )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaLayout::LayoutText not implemented\n" );
-#endif
-	return false;
+	mpVCLGlyphVector->layoutText( rArgs );
+
+	return true;
 }
 
 // -----------------------------------------------------------------------
 
 void JavaLayout::DrawText( SalGraphics& rGraphics ) const
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaLayout::DrawText not implemented\n" );
-#endif
+	mpVCLGlyphVector->drawText( maDrawBase.X() + maDrawOffset.X(), maDrawBase.Y() + maDrawOffset.Y(), GetOrientation(), rGraphics.maGraphicsData.mnTextColor );
 }
 
 // -----------------------------------------------------------------------
@@ -96,10 +93,7 @@ int JavaLayout::GetTextBreak( long nMaxWidth, long nCharExtra, int nFactor ) con
 
 long JavaLayout::FillDXArray( long *pDXArray ) const
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaLayout::FillDXArray not implemented\n" );
-#endif
-	return 0;
+	return mpVCLGlyphVector->fillDXArray( pDXArray );
 }
 
 // -----------------------------------------------------------------------
@@ -109,6 +103,9 @@ void JavaLayout::GetCaretPositions( int nArraySize, long *pCaretXArray ) const
 #ifdef DEBUG
 	fprintf( stderr, "JavaLayout::GetCaretPositions not implemented\n" );
 #endif
+	int i;
+	for ( i = 0; i < nArraySize; i++ )
+		pCaretXArray[i] = 0;
 }
 
 // -----------------------------------------------------------------------

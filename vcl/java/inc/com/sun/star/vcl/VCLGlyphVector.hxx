@@ -36,6 +36,12 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGLYPHVECTOR_HXX
 #define	_SV_COM_SUN_STAR_VCL_VCLGLYPHVECTOR_HXX
 
+#ifndef _SV_SALGTYPE_HXX
+#include <salgtype.hxx>
+#endif
+#ifndef _SV_SALLAYOUT_HXX
+#include <sallayout.hxx>
+#endif
 #ifndef _SV_JAVA_LANG_OBJECT_HXX
 #include <java/lang/Object.hxx>
 #endif
@@ -56,6 +62,10 @@ public:
 						com_sun_star_vcl_VCLGlyphVector( jobject myObj ) : java_lang_Object( myObj ) {};
 						com_sun_star_vcl_VCLGlyphVector( ::vcl::com_sun_star_vcl_VCLGraphics *pGraphics, ::vcl::com_sun_star_vcl_VCLFont *pFont );
 	virtual				~com_sun_star_vcl_VCLGlyphVector() {};
+
+	void				layoutText( ImplLayoutArgs& rArgs );
+	void				drawText( long _par0, long _par1, int _par2, SalColor _par3 );
+	long				fillDXArray( long *_par0 );
 };
 
 } // namespace vcl
