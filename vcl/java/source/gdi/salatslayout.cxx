@@ -77,7 +77,6 @@ class ATSLayout : public SalLayout
 	sal_Unicode*		mpStr;
 	UniCharArrayOffset	mnStart;
 	UniCharCount		mnLen;
-	int					mnFlags;
 	bool				mbVertical;
 	mutable long		mnWidth;
 	mutable long*		mpAdvances;
@@ -227,7 +226,6 @@ ATSLayout::ATSLayout( com_sun_star_vcl_VCLFont *pVCLFont ) :
 	mpStr( NULL ),
 	mnStart( 0 ),
 	mnLen( 0 ),
-	mnFlags( 0 ),
 	mbVertical( false ),
 	mnWidth( 0 ),
 	mpAdvances( NULL ),
@@ -309,7 +307,6 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 	mnStart = rArgs.mnMinCharPos;
 	mnRuns = 0;
-	mnFlags = rArgs.mnFlags;
 
 	bool bRTL;
 	int i;
@@ -335,7 +332,7 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	memset( mpRunDirections, 0, nBufSize );
 	ATSUStyle aStyles[ mnRuns ];
 
-	bool bForceRTL = ( mnFlags & SAL_LAYOUT_BIDI_STRONG && mnFlags & SAL_LAYOUT_BIDI_RTL );
+	bool bForceRTL = ( mnLayoutFlags & SAL_LAYOUT_BIDI_STRONG && mnLayoutFlags & SAL_LAYOUT_BIDI_RTL );
 	rArgs.ResetPos();
 	for ( i = 0; rArgs.GetNextRun( &nRunStart, &nRunEnd, &bRTL ) && i < mnRuns; i++ )
 	{
@@ -350,7 +347,7 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		return false;
 	}
 
-	if ( mnFlags & SAL_LAYOUT_VERTICAL )
+	if ( mnLayoutFlags & SAL_LAYOUT_VERTICAL )
 	{
 		// Set vertical
 		ATSUVerticalCharacterType nVertical = kATSUStronglyVertical;
@@ -728,7 +725,6 @@ void ATSLayout::Destroy()
 	mnRuns = 0;
 	mnStart = 0;
 	mnLen = 0;
-	mnFlags = 0;
 	mbVertical = false;
 	mnWidth = 0;
 
@@ -776,7 +772,8 @@ bool ATSLayout::InitAdvances() const
 		{
 			// Get the advance from end of the run
 			long nRunAdvance = mnWidth;
-			if ( ATSUOffsetToCursorPosition( maLayout, nCurrentChar + mpRunLengths[ i ], true, kATSUByCharacter, &aCaret, NULL, NULL ) == noErr )
+			int nRunEnd = nCurrentChar + mpRunLengths[ i ];
+			if ( nRunEnd < mnLen && ATSUOffsetToCursorPosition( maLayout, nRunEnd, true, kATSUByCharacter, &aCaret, NULL, NULL ) == noErr )
 				nRunAdvance = Fix2Pixel( aCaret.fX );
 
 			for ( j = nCurrentChar, nCurrentChar += mpRunLengths[ i ]; j < nCurrentChar - 1; j++ )
@@ -785,7 +782,7 @@ bool ATSLayout::InitAdvances() const
 					mpAdvances[ j ] = nRunAdvance - Fix2Pixel( aCaret.fX ) - nPreviousX;
 				nPreviousX += mpAdvances[ j ];
 			}
-			mpAdvances[ j ] = nPreviousX;
+			mpAdvances[ j ] = nRunAdvance - nPreviousX;
 			nPreviousX += mpAdvances[ j ];
 		}
 		else
