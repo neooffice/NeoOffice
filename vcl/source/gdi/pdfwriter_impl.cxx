@@ -84,9 +84,9 @@
 
 #endif	// USE_JAVA && MACOSX
 
-#define ENABLE_COMPRESSION
+// #define ENABLE_COMPRESSION
 #if OSL_DEBUG_LEVEL < 2
-#define COMPRESS_PAGES
+// #define COMPRESS_PAGES
 #endif
 
 using namespace vcl;
@@ -795,6 +795,7 @@ ImplDevFontList* PDFWriterImpl::filterDevFontList( ImplDevFontList* pFontList )
         }
         pData = pFontList->Next();
     }
+#if !defined USE_JAVA || !defined MACOSX
     // append the 14 PDF builtin fonts
     for( unsigned int i = 0; i < sizeof(m_aBuiltinFonts)/sizeof(m_aBuiltinFonts[0]); i++ )
     {
@@ -820,21 +821,25 @@ ImplDevFontList* PDFWriterImpl::filterDevFontList( ImplDevFontList* pFontList )
 
         pFiltered->Add( pNewData );
     }
+#endif	// !USE_JAVA || !MACOSX
     return pFiltered;
 }
 
 bool PDFWriterImpl::isBuiltinFont( ImplFontData* pFont ) const
 {
+#if !defined USE_JAVA || !defined MACOSX
     for( unsigned int i = 0; i < sizeof(m_aBuiltinFonts)/sizeof(m_aBuiltinFonts[0]); i++ )
     {
         if( pFont->mpSysData == (void*)&m_aBuiltinFonts[i] )
             return true;
     }
+#endif	// !USE_JAVA || !MACOSX
     return false;
 }
 
 void PDFWriterImpl::getFontMetric( ImplFontSelectData* pSelect, ImplFontMetricData* pMetric ) const
 {
+#if !defined USE_JAVA || !defined MACOSX
     for( unsigned int i = 0; i < sizeof(m_aBuiltinFonts)/sizeof(m_aBuiltinFonts[0]); i++ )
     {
         if( pSelect->mpFontData->mpSysData == (void*)&m_aBuiltinFonts[i] )
@@ -856,6 +861,7 @@ void PDFWriterImpl::getFontMetric( ImplFontSelectData* pSelect, ImplFontMetricDa
             break;
         }
     }
+#endif	// !USE_JAVA || !MACOSX
 }
 
 // -----------------------------------------------------------------------
@@ -977,6 +983,7 @@ SalLayout* PDFWriterImpl::GetTextLayout( ImplLayoutArgs& rArgs, ImplFontSelectDa
     DBG_ASSERT( (pSelect->mpFontData != NULL),
         "PDFWriterImpl::GetTextLayout mpFontData is NULL" );
 
+#if !defined USE_JAVA || !defined MACOSX
     for( unsigned int n = 0; n < sizeof(m_aBuiltinFonts)/sizeof(m_aBuiltinFonts[0]); n++ )
     {
         if( pSelect->mpFontData->mpSysData != (void*)&m_aBuiltinFonts[n] )
@@ -989,6 +996,7 @@ SalLayout* PDFWriterImpl::GetTextLayout( ImplLayoutArgs& rArgs, ImplFontSelectDa
         pLayout->SetText( rArgs.mpStr );
         return pLayout;
     }
+#endif	// !USE_JAVA || !MACOSX
 
     return NULL;
 }
@@ -1166,6 +1174,7 @@ bool PDFWriterImpl::emitTilings()
 sal_Int32 PDFWriterImpl::emitBuiltinFont( ImplFontData* pFont )
 {
     sal_Int32 nFontObject = 0;
+#if !defined USE_JAVA || !defined MACOSX
     for( unsigned int i = 0; i < sizeof(m_aBuiltinFonts)/sizeof(m_aBuiltinFonts[0]); i++ )
     {
         if( pFont->mpSysData == (void*)&m_aBuiltinFonts[i] )
@@ -1189,6 +1198,7 @@ sal_Int32 PDFWriterImpl::emitBuiltinFont( ImplFontData* pFont )
             break;
         }
     }
+#endif	// !USE_JAVA || !MACOSX
     return nFontObject;
 }
 
@@ -2708,6 +2718,7 @@ void PDFWriterImpl::registerGlyphs(
         }
 
         for ( FontEmitList::iterator lit = rSubset.m_aSubsets.begin(); lit != rSubset.m_aSubsets.end() && lit->m_nFontID != it->second.m_nFontID; ++lit )
+            ;
         if ( lit == rSubset.m_aSubsets.end() )
             continue;
 
