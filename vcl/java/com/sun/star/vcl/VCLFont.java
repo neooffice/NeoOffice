@@ -262,11 +262,17 @@ public final class VCLFont {
 		leading = fontMetrics.getLeading();
 		ascent = fontMetrics.getAscent() + leading;
 		descent = fontMetrics.getDescent();
-		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && fontName.startsWith("hiragino")) {
-			// The Hiragino fonts return strange values so we adjust them here
-			leading /= 2;
-			ascent -= leading;
-			descent += leading;
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
+			// The Asian fonts return strange values so we adjust them here
+			if (leading == 0 && descent < 0) {
+				leading = ascent / 2;
+				descent = leading;
+			}
+ 			if (fontName.startsWith("hiragino")) {
+				leading /= 2;
+				ascent -= leading;
+				descent += leading;
+			}
 		}
 
 	}
