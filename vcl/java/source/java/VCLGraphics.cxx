@@ -706,6 +706,25 @@ void com_sun_star_vcl_VCLGraphics::resetClipRegion()
 
 // ----------------------------------------------------------------------------
 
+void com_sun_star_vcl_VCLGraphics::resetGraphics()
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "resetGraphics", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+	}
+}
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLGraphics::setAntialias( sal_Bool _par0 )
 {
 	static jmethodID mID = NULL;

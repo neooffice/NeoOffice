@@ -156,6 +156,14 @@ void SalFrame::Show( BOOL bVisible )
 {
 	maFrameData.mpVCLFrame->setVisible( bVisible );
 
+	// Reset graphics
+	com_sun_star_vcl_VCLGraphics *pVCLGraphics = maFrameData.mpVCLFrame->getGraphics();
+	if ( pVCLGraphics )
+	{
+		pVCLGraphics->resetGraphics();
+		delete pVCLGraphics;
+	}
+
 	if ( bVisible )
 	{
 		// Update the cached position

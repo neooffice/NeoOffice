@@ -74,8 +74,13 @@ java_lang_Class *java_lang_Class::forName( const ::rtl::OUString& _par0 )
 		::rtl::OString sClassName = ::rtl::OUStringToOString( _par0, RTL_TEXTENCODING_ASCII_US );
 		sClassName = sClassName.replace( '.', '/' );
 		out = t.pEnv->FindClass( sClassName );
+		if ( t.pEnv->ExceptionCheck() )
+		{
+			t.pEnv->ExceptionClear();
+			out = NULL;
+		}
 	}
-	return out == NULL ? NULL : new java_lang_Class( out );
+	return ( out ? new java_lang_Class( out ) : NULL );
 }
 
 // ----------------------------------------------------------------------------

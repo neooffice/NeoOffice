@@ -41,6 +41,9 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
 #include <com/sun/star/vcl/VCLFrame.hxx>
 #endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
+#include <com/sun/star/vcl/VCLGraphics.hxx>
+#endif
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
@@ -217,6 +220,16 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			pFrame->maGeometry.nY = pPosSize->nTop + pFrame->maGeometry.nTopDecoration;
 			pFrame->maGeometry.nWidth = pPosSize->GetWidth() - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration;
 			pFrame->maGeometry.nHeight = pPosSize->GetHeight() - pFrame->maGeometry.nTopDecoration - pFrame->maGeometry.nBottomDecoration;
+			// Reset graphics if the size has changed before dispatching
+			if ( pFrame->maGeometry.nWidth != aOldSize.Width() || pFrame->maGeometry.nHeight != aOldSize.Height() )
+			{
+				com_sun_star_vcl_VCLGraphics *pVCLGraphics = pFrame->maFrameData.mpVCLFrame->getGraphics();
+				if ( pVCLGraphics )
+				{
+					pVCLGraphics->resetGraphics();
+					delete pVCLGraphics;
+				}
+			}
 			dispatchEvent( nID, pFrame, NULL );
 			delete pPosSize;
 			// Invoke a paint event if the size has changed

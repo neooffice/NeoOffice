@@ -186,10 +186,9 @@ void VCLThreadAttach::ThrowException()
 {
 	if ( pEnv && pEnv->ExceptionCheck() )
 	{
-#ifdef DEBUG
 		pEnv->ExceptionDescribe();
-#endif
 		pEnv->ExceptionClear();
+		throw Exception();
 	}
 }
 

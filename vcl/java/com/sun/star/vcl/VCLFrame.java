@@ -666,7 +666,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void componentResized(ComponentEvent e) {
 
-		graphics.resetGraphics();
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVERESIZE, this, 0));
 
 	}
@@ -1460,8 +1459,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		Rectangle bounds = window.getBounds();
 		window.setBounds(x, y, width, height);
-		if (graphics != null && width != bounds.width || height != bounds.height)
-			graphics.resetGraphics();
 
 	}
 
@@ -1658,7 +1655,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			window.show();
 		else
 			window.hide();
-		graphics.resetGraphics();
 
 		if (!b) {
 			// Unregister listeners

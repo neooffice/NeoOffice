@@ -1357,7 +1357,7 @@ public final class VCLGraphics {
 	/**
 	 * Resets the underlying graphics context.
 	 */
-	synchronized void resetGraphics() {
+	public void resetGraphics() {
 
 		if (frame != null) {
 			graphics.dispose();
