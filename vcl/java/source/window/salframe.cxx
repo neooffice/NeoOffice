@@ -609,9 +609,8 @@ SalFrameData::SalFrameData()
 	mbVisible = FALSE;
 	mpInst = NULL;
 	mpProc = ImplSalCallbackDummy;
+    memset( &maSysData, 0, sizeof( SystemEnvData ) );
 	maSysData.nSize = sizeof( SystemEnvData );
-	maSysData.pDisplay = NULL;
-	maSysData.aWindow = 0;
 	mbCenter = TRUE;
 	memset( &maOriginalGeometry, 0, sizeof( maOriginalGeometry ) );
 	mbFullScreen = FALSE;
