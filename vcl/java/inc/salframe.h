@@ -44,9 +44,6 @@
 #ifndef _SV_SYSDATA_HXX 
 #include <sysdata.hxx>
 #endif
-#ifndef _SALJAVA_H
-#include <saljava.h>
-#endif
 #ifndef _SV_SALGEOM_HXX
 #include <salgeom.hxx>
 #endif

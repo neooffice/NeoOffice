@@ -42,9 +42,6 @@
 #ifndef _VCL_VCLENUM_HXX
 #include <vclenum.hxx>
 #endif
-#ifndef _SV_SV_H
-#include <sv.h>
-#endif
 
 namespace vcl {
 

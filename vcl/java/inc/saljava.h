@@ -53,10 +53,6 @@
 #include <unxmacxp_protos.h>
 #endif
 
-#ifndef _SV_SV_H
-#include <sv.h>
-#endif     
-
 #define capacityof(a)	(sizeof(a)/sizeof(*a))
 
 inline long Divide( long nDividend, long nDivisor )

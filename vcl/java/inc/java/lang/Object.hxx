@@ -45,8 +45,8 @@
 #ifndef _OSL_DIAGNOSE_H_
 #include <osl/diagnose.h>
 #endif
-#ifndef _SALJAVA_H
-#include <saljava.h>
+#ifndef _SV_SV_H
+#include <sv.h>
 #endif
 
 namespace vcl {

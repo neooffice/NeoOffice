@@ -39,9 +39,6 @@
 #ifndef _SV_SV_H
 #include <sv.h>
 #endif 
-#ifndef _SALJAVA_H
-#include <saljava.h>
-#endif
 
 namespace vcl
 {

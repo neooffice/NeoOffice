@@ -42,9 +42,6 @@
 #ifndef _SV_SALGDI_HXX
 #include <salgdi.hxx>
 #endif
-#ifndef _SALJAVA_H
-#include <saljava.h>
-#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLIMAGE_HXX
 #include <com/sun/star/vcl/VCLImage.hxx>
 #endif

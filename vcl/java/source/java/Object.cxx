@@ -44,9 +44,6 @@
 #ifndef _SV_JAVA_LANG_THROWABLE_HXX
 #include <java/lang/Throwable.hxx>
 #endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
-#include <com/sun/star/vcl/VCLEvent.hxx>
-#endif
 #ifndef _COM_SUN_STAR_JAVA_XJAVATHREADREGISTER_11_HPP_
 #include <com/sun/star/java/XJavaThreadRegister_11.hpp>
 #endif

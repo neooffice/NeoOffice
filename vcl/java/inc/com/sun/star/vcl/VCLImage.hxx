@@ -39,12 +39,6 @@
 #ifndef _SV_JAVA_LANG_OBJECT_HXX
 #include <java/lang/Object.hxx>
 #endif
-#ifndef _SV_SV_H    
-#include <sv.h>     
-#endif
-#ifndef _SV_GEN_HXX
-#include <tools/gen.hxx>
-#endif
 
 class BitmapPalette;
 class SalVirtualDevice;

@@ -44,6 +44,9 @@
 #ifndef _SV_SALFRAME_HXX
 #include <salframe.hxx>
 #endif
+#ifndef _SALJAVA_H
+#include <saljava.h>
+#endif
 
 // =======================================================================
 
