@@ -309,8 +309,8 @@ public class VCLEventQueue {
 	}
 
 	/**
-	 * The <code>FilterEventQueue</code> object is a subclass of the
-	 * <code>.EventQueue</code> class that filters and modifies events at
+	 * The <code>FilteredEventQueue</code> class is a subclass of the
+	 * <code>EventQueue</code> class that filters and modifies events at
 	 * dispatch time.
 	 */
 	class FilteredEventQueue extends EventQueue {
