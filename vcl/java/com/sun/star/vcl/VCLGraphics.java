@@ -718,9 +718,9 @@ public class VCLGraphics {
 			int numGlyphs = glyphs.getNumGlyphs();
 			for (int i = 0; i < numGlyphs; i++) {
 				int type = Character.getType(word[i]);
-				if (type == Character.NON_SPACING_MARK && i > 0) {
+				if (type == Character.NON_SPACING_MARK) {
 					Point2D glyphPosition = glyphs.getGlyphPosition(i);
-					adjust -= glyphs.getGlyphMetrics(i - 1).getAdvance();
+					adjust -= glyphs.getGlyphMetrics(i).getAdvance();
 					glyphPosition.setLocation(glyphPosition.getX() + adjust, glyphPosition.getY());
 					glyphs.setGlyphPosition(i, glyphPosition);
 				}
