@@ -87,7 +87,7 @@
 			<string>NeoOffice/J Document</string>
 			<key>CFBundleTypeOSTypes</key>
 			<array>
-				<string>no%f</string>
+				<string>$(PRODUCT_FILETYPE)</string>
 			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
@@ -306,6 +306,7 @@
 			<array>
 				<string>doc</string>
 				<string>dot</string>
+				<string>wri</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>sxw_sdw_doc_Option_1.icns</string>
@@ -427,7 +428,15 @@
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>slk</string>
+				<string>sylk</string>
+				<string>tsv</string>
+				<string>wk1</string>
+				<string>wks</string>
+				<string>xl</string>
+				<string>xlc</string>
+				<string>xlm</string>
 				<string>xls</string>
+				<string>xlw</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>sxc_sdc_slk_xls.icns</string>
