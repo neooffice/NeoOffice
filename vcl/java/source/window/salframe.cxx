@@ -209,9 +209,6 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	SalData *pSalData = GetSalData();
 	if ( maFrameData.mbVisible )
 	{
-		// Cache the native window pointer
-		maFrameData.maSysData.aWindow = (long)maFrameData.mpVCLFrame->getNativeWindow();
-
 		// Update the cached position
 		Rectangle *pBounds = new Rectangle( maFrameData.mpVCLFrame->getBounds() );
 		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pBounds );
@@ -354,6 +351,11 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 		nY = aWorkArea.nTop + aWorkArea.GetHeight() - nHeight;
 
 	maFrameData.mpVCLFrame->setBounds( nX, nY, nWidth, nHeight );
+
+	// Cache the native window pointer since setBounds() will call the Java
+	// window's addNotify() method
+	if ( !maFrameData.maSysData.aWindow )
+		maFrameData.maSysData.aWindow = (long)maFrameData.mpVCLFrame->getNativeWindow();
 
 	// Update the cached position
 	Rectangle *pBounds = new Rectangle( maFrameData.mpVCLFrame->getBounds() );
