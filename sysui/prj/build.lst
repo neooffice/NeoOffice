@@ -7,5 +7,6 @@ su	sysui\oounix\office\cde 			nmake	-	u	su_cdezips su_lngconv.u NULL
 su	sysui\oounix\office\gnome			nmake	-	u	su_gnomezips su_lngconv.u NULL
 su	sysui\oounix\office\kde2			nmake	-	u	su_kdezips su_lngconv.u NULL
 su	sysui\oounix\office\macosx			nmake	-	u	su_macosxu NULL
+su	sysui\oounix\office\macosx\icons	nmake	-	u	su_macosxiconsu NULL
 su	sysui\oounix\office\scripts       nmake	-	u	su_scripts NULL
 su	sysui\source\win32\QuickStart	nmake	-	w	su_win32_quickstart NULL

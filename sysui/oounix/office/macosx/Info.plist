@@ -7,18 +7,83 @@
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
-				<string>sdc</string>
-				<string>sdd</string>
-				<string>sdw</string>
-				<string>sxc</string>
+				<string>sda</string>
 				<string>sxd</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>sxd_sda.icns</string>
+			<key>CFBundleTypeMIMETypes</key>
+			<array>
+				<string>application/vnd.sun.xml.draw</string>
+				<string>application/vnd.stardivision.draw</string>
+				<string>application/x-stardraw</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>$(PRODUCT_FILETYPE)</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>sdc</string>
+				<string>sxc</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>sxc_sdc_slk_xls.icns</string>
+			<key>CFBundleTypeMIMETypes</key>
+			<array>
+				<string>application/vnd.sun.xml.calc</string>
+				<string>application/vnd.stardivision.calc</string>
+				<string>application/x-starcalc</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>$(PRODUCT_FILETYPE)</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>sdd</string>
+				<string>sdp</string>
 				<string>sxi</string>
-				<string>sxm</string>
 				<string>sxp</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>sxi_sdd_ppt.icns</string>
+			<key>CFBundleTypeMIMETypes</key>
+			<array>
+				<string>application/vnd.sun.xml.impress</string>
+				<string>application/vnd.stardivision.impress</string>
+				<string>application/vnd.stardivision.impress-packed</string>
+				<string>application/x-starimpress</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>$(PRODUCT_FILETYPE)</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>sdw</string>
 				<string>sxw</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
-			<string>ship.icns</string>
+			<string>sxw_sdw_doc_Option_1.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>application/vnd.sun.xml.writer</string>
@@ -26,20 +91,105 @@
 				<string>application/vnd.stardivision.writer</string>
 				<string>application/vnd.stardivision.writer-global</string>
 				<string>application/x-starwriter</string>
-				<string>application/vnd.sun.xml.writer.template</string>
-				<string>application/vnd.sun.xml.calc</string>
-				<string>application/vnd.stardivision.calc</string>
-				<string>application/x-starcalc</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>$(PRODUCT_FILETYPE)</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>stc</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>stc_xlt.icns</string>
+			<key>CFBundleTypeMIMETypes</key>
+			<array>
 				<string>application/vnd.sun.xml.calc.template</string>
-				<string>application/vnd.sun.xml.impress</string>
-				<string>application/vnd.stardivision.impress</string>
-				<string>application/vnd.stardivision.impress-packed</string>
-				<string>application/x-starimpress</string>
-				<string>application/vnd.sun.xml.impress.template</string>
-				<string>application/vnd.sun.xml.draw</string>
-				<string>application/vnd.stardivision.draw</string>
-				<string>application/x-stardraw</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>$(PRODUCT_FILETYPE)</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>std</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>std.icns</string>
+			<key>CFBundleTypeMIMETypes</key>
+			<array>
 				<string>application/vnd.sun.xml.draw.template</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>$(PRODUCT_FILETYPE)</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>sti</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>sti_pot.icns</string>
+			<key>CFBundleTypeMIMETypes</key>
+			<array>
+				<string>application/vnd.sun.xml.impress.template</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>$(PRODUCT_FILETYPE)</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>stw</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>stw_dot_Option_1.icns</string>
+			<key>CFBundleTypeMIMETypes</key>
+			<array>
+				<string>application/vnd.sun.xml.writer.template</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>$(PRODUCT_FILETYPE)</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>sxm</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>sxm_smf_mml.icns</string>
+			<key>CFBundleTypeMIMETypes</key>
+			<array>
 				<string>application/vnd.sun.xml.math</string>
 				<string>application/vnd.stardivision.math</string>
 				<string>application/x-starmath</string>
@@ -65,20 +215,15 @@
 				<string>pot</string>
 				<string>ppt</string>
 				<string>rtf</string>
-				<string>sda</string>
 				<string>slk</string>
 				<string>smf</string>
-				<string>stc</string>
-				<string>std</string>
-				<string>sti</string>
-				<string>stw</string>
 				<string>txt</string>
 				<string>vor</string>
 				<string>xls</string>
 				<string>xlt</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
-			<string>ship.icns</string>
+			<string>generic.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>application/msword</string>
