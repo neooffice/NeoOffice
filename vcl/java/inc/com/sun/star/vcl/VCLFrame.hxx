@@ -68,7 +68,6 @@ public:
 	com_sun_star_vcl_VCLGraphics*	getGraphics();
 	const Rectangle		getInsets();
 	::rtl::OUString		getKeyName( USHORT _par0 );
-	java_lang_Object*	getPanel();
 	ULONG				getState();
 	void				setBounds( long _par0, long _par1, long _par2, long _par3 );
 	void				setFullScreenMode( sal_Bool _par0 );

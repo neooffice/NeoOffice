@@ -197,22 +197,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			pSalData->mpFocusFrame = pFrame;
 			dispatchEvent( nID, pFrame, NULL );
 
-#ifdef MACOSX
-			// Mark front window as dirty so that the native buffer gets
-			// flushed to screen
-			WindowRef aWindow = FrontWindow();
-			if ( aWindow )
-			{
-				GrafPtr aGrafPort = GetWindowPort( aWindow );
-				if ( aGrafPort )
-				{
-					Rect aRect;
-					GetPortBounds( aGrafPort, &aRect );
-					QDAddRectToDirtyRegion( aGrafPort, &aRect );
-				}
-			}
-#endif	// MACOSX
-
 			// In presentation mode, don't let presentation window lose focus
 			if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame != pFrame )
 				pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_FOREGROUNDTASK );

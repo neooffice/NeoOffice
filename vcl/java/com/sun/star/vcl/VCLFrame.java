@@ -1381,7 +1381,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @return the panel for the native window
 	 */
-	public Panel getPanel() {
+	Panel getPanel() {
 
 		return panel;
 

@@ -602,7 +602,6 @@ void SalFrame::SetCallback( void* pInst, SALFRAMEPROC pProc )
 SalFrameData::SalFrameData()
 {
 	mpVCLFrame = NULL;
-	mpPanel = NULL;
 	mpGraphics = new SalGraphics();
 	mnStyle = 0;
 	mpParent = NULL;
@@ -628,8 +627,6 @@ SalFrameData::~SalFrameData()
 		mpVCLFrame->dispose();
 		delete mpVCLFrame;
 	}
-	if ( mpPanel )
-		delete mpPanel;
 
 	delete mpGraphics;
 }

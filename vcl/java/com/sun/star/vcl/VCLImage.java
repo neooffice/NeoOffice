@@ -125,7 +125,7 @@ public final class VCLImage {
 
 		// Cache the graphics
 		pageFormat = p;
-		graphics = new VCLGraphics(this, p);
+		graphics = new VCLGraphics(this, pageFormat);
 
 		// Cache the data buffer
 		data = ((DataBufferInt)image.getRaster().getDataBuffer()).getData();

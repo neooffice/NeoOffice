@@ -541,10 +541,16 @@ public final class VCLGraphics {
 			return;
 		Shape clip = graphics.getClip();
 		if (clip != null) {
-			if (!clip.intersects(destBounds))
+			if (!clip.intersects(destBounds)) {
 				return;
-			else if (clip.contains((double)destBounds.x, (double)destBounds.y, (double)destBounds.width, (double)destBounds.height))
+			}
+			else if (clip.contains((double)destBounds.x, (double)destBounds.y, (double)destBounds.width, (double)destBounds.height)) {
 				clip = null;
+			}
+			else if (clip instanceof Rectangle) {
+				destBounds = destBounds.intersection((Rectangle)clip);
+				clip = null;
+			}
 		}
 		if (image == null || clip != null || srcWidth != destWidth || srcHeight != destHeight) {
 			// Draw to a temporary image
@@ -646,10 +652,16 @@ public final class VCLGraphics {
 			return;
 		Shape clip = graphics.getClip();
 		if (clip != null) {
-			if (!clip.intersects(destBounds))
+			if (!clip.intersects(destBounds)) {
 				return;
-			else if (clip.contains((double)destBounds.x, (double)destBounds.y, (double)destBounds.width, (double)destBounds.height))
+			}
+			else if (clip.contains((double)destBounds.x, (double)destBounds.y, (double)destBounds.width, (double)destBounds.height)) {
 				clip = null;
+			}
+			else if (clip instanceof Rectangle) {
+				destBounds = destBounds.intersection((Rectangle)clip);
+				clip = null;
+			}
 		}
 		if (clip != null || srcWidth != destWidth || srcHeight != destHeight) {
 			// Draw to a temporary image
@@ -768,10 +780,16 @@ public final class VCLGraphics {
 			return;
 		Shape clip = graphics.getClip();
 		if (clip != null) {
-			if (!clip.intersects(destBounds))
+			if (!clip.intersects(destBounds)) {
 				return;
-			else if (clip.contains((double)destBounds.x, (double)destBounds.y, (double)destBounds.width, (double)destBounds.height))
+			}
+			else if (clip.contains((double)destBounds.x, (double)destBounds.y, (double)destBounds.width, (double)destBounds.height)) {
 				clip = null;
+			}
+			else if (clip instanceof Rectangle) {
+				destBounds = destBounds.intersection((Rectangle)clip);
+				clip = null;
+			}
 		}
 		if (image == null || clip != null || srcWidth != destWidth || srcHeight != destHeight) {
 			// Draw to a temporary image
@@ -1297,10 +1315,16 @@ public final class VCLGraphics {
 		else {
 			Shape clip = graphics.getClip();
 			if (clip != null) {
-				if (!clip.intersects(bounds))
+				if (!clip.intersects(bounds)) {
 					return;
-				else if (clip.contains((double)bounds.x, (double)bounds.y, (double)bounds.width, (double)bounds.height))
+				}
+				else if (clip.contains((double)bounds.x, (double)bounds.y, (double)bounds.width, (double)bounds.height)) {
 					clip = null;
+				}
+				else if (clip instanceof Rectangle) {
+					bounds = bounds.intersection((Rectangle)clip);
+					clip = null;
+				}
 			}
 			if (clip != null) {
 				// Draw to a temporary image
