@@ -121,30 +121,13 @@ SalBitmap* SalGraphics::GetBitmap( long nX, long nY, long nDX, long nDY )
 	if ( maGraphicsData.mpPrinter )
 		return NULL;
 
-	// Normalize rectangle
-	if ( nDX < 0 )
-	{
-		nX += nDX;
-		nDX = nDX * -1;
-	}
-	if ( nDY < 0 )
-	{
-		nY += nDY;
-		nDY = nDY * -1;
-	}
-	if ( nX < 0 )
-	{
-		nDX += nX;
-		nX = 0;
-	}
-	if ( nY < 0 )
-	{
-		nDY += nY;
-		nY = 0;
-	}
 	if ( !nDX || !nDY )
 		return NULL;
 	
+	// Normalize rectangle
+	nDX = abs( nDX );
+	nDY = abs( nDY );
+
 	SalBitmap *pBitmap = new SalBitmap();
 
 	if ( !pBitmap->Create( Size( nDX, nDY ), GetBitCount(), BitmapPalette() ) )
