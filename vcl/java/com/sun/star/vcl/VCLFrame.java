@@ -716,6 +716,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void focusGained(FocusEvent e) {
 
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && graphics != null) {
+			synchronized (graphics) {
+				graphics.addToFlush(panel.getBounds());
+			}
+		}
+
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_GETFOCUS, this, 0));
 
 	}
@@ -1659,9 +1665,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			lastKeyPressed = null;
 		}
 		else {
-			// Some JVMs delay the initial background painting so force
+			// Mac OS X delays the initial background painting so force
 			// it to be painted before VCL does any painting
-			window.getPeer().repaint(0, 0, 0, window.getWidth(), window.getHeight());
+			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
+				window.getPeer().repaint(0, 0, 0, window.getWidth(), window.getHeight());
 			toFront();
 		}
 
