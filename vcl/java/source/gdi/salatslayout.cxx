@@ -484,6 +484,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	Point aPos( 0, 0 );
 	int nCharPos = -1;
 	int nFirstGlyph = -1;
+	Float32 fCurrentWidth = 0;
 	rArgs.ResetPos();
 	while ( rArgs.GetNextPos( &nCharPos, &bPosRTL ) )
 	{
@@ -502,14 +503,18 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 				ATSGlyphScreenMetrics aScreenMetrics;
 				if ( ATSUGlyphGetScreenMetrics( mpGlyphInfoArray->glyphs[ i ].style, 1, &mpGlyphInfoArray->glyphs[ i ].glyphID, sizeof( GlyphID ), true, true, &aScreenMetrics ) == noErr )
-					nCharWidth = Float32ToLong( nHeight * fUnitsPerPixel );
+					fCurrentWidth += nHeight * fUnitsPerPixel;
 			}
 			else
 			{
-				nCharWidth = Float32ToLong( ( mpGlyphInfoArray->glyphs[ i + 1 ].idealX - mpGlyphInfoArray->glyphs[ nFirstGlyph ].idealX ) * fUnitsPerPixel ) - aPos.X();
-				if ( nCharWidth < 0 )
-					nCharWidth = 0;
+				ATSGlyphIdealMetrics aIdealMetrics;
+				if ( ATSUGlyphGetIdealMetrics( mpGlyphInfoArray->glyphs[ i ].style, 1, &mpGlyphInfoArray->glyphs[ i ].glyphID, sizeof( GlyphID ), &aIdealMetrics ) == noErr )
+					fCurrentWidth += aIdealMetrics.advance.x * fUnitsPerPixel;
 			}
+
+			nCharWidth = Float32ToLong( fCurrentWidth ) - aPos.X();
+			if ( nCharWidth < 0 )
+				nCharWidth = 0;
 
 			// Mark whitespace glyphs
 			if ( mpGlyphInfoArray->glyphs[ i ].glyphID == 0xffff || IsSpacingGlyph( rArgs.mpStr[ nCharPos ] | GF_ISCHAR ) || mpGlyphInfoArray->glyphs[ i ].layoutFlags & kATSGlyphInfoTerminatorGlyph )
