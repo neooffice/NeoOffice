@@ -247,6 +247,12 @@ public final class VCLMenuItemData {
      *			as modifier.
      */
     public void setKeyboardShortcut(int key, boolean useShift) {
+
+        // Don't override Mac OS X's shortcuts in the Apple or the application
+        // menus
+        if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && (key == VCLEvent.KEY_Q || (!useShift && key == VCLEvent.KEY_H)))
+            return;
+
         if(delegate!=null) {
             delegate.setKeyboardShortcut(key, useShift);
             return;
