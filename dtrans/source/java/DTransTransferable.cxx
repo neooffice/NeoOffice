@@ -340,36 +340,33 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 						{
 							if ( aFlavor.DataType.equals( getCppuType( ( OUString* )0 ) ) )
 							{
+								OUString aString;
+								sal_Int32 nLen;
 								if ( nRequestedType == 'TEXT' )
 								{
-									MacOSSize nLen = aData.getLength();
-									sal_Char *pArray = (sal_Char *)aData.getArray();
-									if ( pArray[ nLen - 1 ] == 0 )
+									nLen = aData.getLength();
+									if ( ( (sal_Char *)aData.getArray() )[ nLen - 1 ] == 0 )
 										nLen--;
-									// Replace carriage returns with line feeds
-									MacOSSize j = 0;
-									for ( j = 0; j < nLen; j++ )
-									{
-										if ( pArray[ j ] == (sal_Char)13 )
-											pArray[ j ] = (sal_Char)'\n';
-									}
-									out <<= OUString( pArray, nLen, gsl_getSystemTextEncoding() );
+									aString = OUString( (sal_Char *)aData.getArray(), nLen, gsl_getSystemTextEncoding() );
 								}
 								else
 								{
-									MacOSSize nLen = aData.getLength() / 2; 
-									sal_Unicode *pArray = (sal_Unicode *)aData.getArray();
-									if ( pArray[ nLen - 1 ] == 0 )
+									nLen = aData.getLength() / 2; 
+									if ( ( (sal_Unicode *)aData.getArray() )[ nLen - 1 ] == 0 )
 										nLen--;
-									// Replace carriage returns with line feeds
-									MacOSSize j = 0;
-									for ( j = 0; j < nLen; j++ )
-									{
-										if ( pArray[ j ] == (sal_Unicode)13 )
-											pArray[ j ] = (sal_Unicode)'\n';
-									}
-									out <<= OUString( pArray, nLen );
+									aString = OUString( (sal_Unicode *)aData.getArray(), nLen );
 								}
+
+								// Replace carriage returns with line feeds
+								sal_Unicode *pArray = (sal_Unicode *)aString.getStr();
+								sal_Int32 j = 0;
+								for ( j = 0; j < nLen; j++ )
+								{
+									if ( pArray[ j ] == (sal_Unicode)13 )
+										pArray[ j ] = (sal_Unicode)'\n';
+								}
+
+								out <<= aString;
 							}
 							else if ( aFlavor.DataType.equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
 							{
