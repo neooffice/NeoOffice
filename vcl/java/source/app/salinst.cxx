@@ -281,10 +281,9 @@ void SalInstance::Yield( BOOL bWait )
 		if ( pSalData->mpTimerProc && aCurrentTime >= pSalData->maTimeout )
 		{
 			gettimeofday( &pSalData->maTimeout, NULL );
+			pSalData->maTimeout += pSalData->mnTimerInterval;
 			pSalData->mpTimerProc();
 			com_sun_star_vcl_VCLGraphics::flushAll();
-			if ( pSalData->mnTimerInterval )
-				pSalData->maTimeout += pSalData->mnTimerInterval;
 		}
 	}
 
@@ -324,11 +323,25 @@ void SalInstance::Yield( BOOL bWait )
 
 BOOL SalInstance::AnyInput( USHORT nType )
 {
-	// We should check if the timer has expired when nType contains INPUT_TIMER
-	// but due to the time it takes to flushAll(), this returns TRUE at
-	// inappropriate times and can cause Writer documents to incorrectly
-	// calculate the number of pages in a document
-	return (BOOL)GetSalData()->mpEventQueue->anyCachedEvent( nType );
+	BOOL bRet = FALSE;
+
+	if ( nType & INPUT_TIMER )
+	{
+		// Check timer
+		SalData *pSalData = GetSalData();
+		if ( pSalData->mnTimerInterval )
+		{
+			timeval aCurrentTime;
+			gettimeofday( &aCurrentTime, NULL );
+			if ( pSalData->mpTimerProc && aCurrentTime >= pSalData->maTimeout )
+				bRet = TRUE;
+		}
+	}
+
+	if ( !bRet )
+		bRet = (BOOL)GetSalData()->mpEventQueue->anyCachedEvent( nType );
+
+	return bRet;
 }
 
 // -----------------------------------------------------------------------
