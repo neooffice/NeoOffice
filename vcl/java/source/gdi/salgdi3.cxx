@@ -138,18 +138,19 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 
 void SalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 {
-	pMetric->mnWidth = 0;
 	if ( maGraphicsData.mpVCLFont )
 	{
 		pMetric->mnAscent = maGraphicsData.mpVCLFont->getAscent();
 		pMetric->mnDescent = maGraphicsData.mpVCLFont->getDescent();
 		pMetric->mnLeading = maGraphicsData.mpVCLFont->getLeading();
+		pMetric->mnWidth = maGraphicsData.mpVCLFont->getSize();
 	}
 	else
 	{
 		pMetric->mnAscent = 0;
 		pMetric->mnDescent = 0;
 		pMetric->mnLeading = 0;
+		pMetric->mnWidth = 0;
 	}
 	pMetric->mnSlant = 0;
 	pMetric->mnFirstChar = 0;
@@ -229,8 +230,8 @@ void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 		pFontData->mpNext = NULL;
 		pFontData->mpSysData = (void *)pVCLFont;
 		pFontData->maName = XubString( it->first );
-		pFontData->mnWidth = 0;
-		pFontData->mnHeight = 0;
+		pFontData->mnWidth = pVCLFont->getSize();
+		pFontData->mnHeight = pVCLFont->getSize();
 		pFontData->meFamily = pVCLFont->getFamilyType();
 		pFontData->meCharSet = RTL_TEXTENCODING_UNICODE;
 		if ( pFontData->meFamily == FAMILY_MODERN )
