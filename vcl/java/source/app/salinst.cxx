@@ -1201,6 +1201,7 @@ void SalInstance::Yield( BOOL bWait )
 	ULONG nCount = ReleaseYieldMutex();
 	if ( !bWait )
 		OThread::yield();
+	AcquireYieldMutex( nCount );
 
 	// Check timer
 	if ( pSalData->mnTimerInterval )
@@ -1245,8 +1246,15 @@ void SalInstance::Yield( BOOL bWait )
 	}
 
 	// Dispatch pending AWT events
+	nCount = ReleaseYieldMutex();
 	while ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
 	{
+		if ( nCount )
+		{
+			AcquireYieldMutex( nCount );
+			nCount = 0;
+		}
+
 		nTimeout = 0;
 
 		USHORT nID = pEvent->getID();
@@ -1258,7 +1266,8 @@ void SalInstance::Yield( BOOL bWait )
 			break;
 	}
 
-	AcquireYieldMutex( nCount );
+	if ( nCount )
+		AcquireYieldMutex( nCount );
 	nRecursionLevel--;
 }
 
