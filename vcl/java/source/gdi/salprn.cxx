@@ -76,6 +76,7 @@ typedef OSStatus PMPrinterGetPrinterResolutionCount_Type( PMPrinter, UInt32* );
 typedef OSStatus PMRelease_Type( PMObject );
 typedef OSStatus PMSessionDefaultPageFormat_Type( PMPrintSession, PMPageFormat );
 typedef OSStatus PMSessionGetCurrentPrinter_Type( PMPrintSession, PMPrinter* );
+typedef OSStatus PMSetResolution_Type( PMPageFormat, const PMResolution* );
 
 using namespace rtl;
 using namespace vos;
@@ -329,8 +330,9 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 					PMRelease_Type *pRelease = (PMRelease_Type *)aModule.getSymbol( OUString::createFromAscii( "PMRelease" ) );
 					PMSessionDefaultPageFormat_Type *pSessionDefaultPageFormat = (PMSessionDefaultPageFormat_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionDefaultPageFormat" ) );
 					PMSessionGetCurrentPrinter_Type *pSessionGetCurrentPrinter = (PMSessionGetCurrentPrinter_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSessionGetCurrentPrinter" ) );
+					PMSetResolution_Type *pSetResolution = (PMSetResolution_Type *)aModule.getSymbol( OUString::createFromAscii( "PMSetResolution" ) );
 
-					if ( pCreatePageFormat && pGetResolution && pPrinterGetIndexedPrinterResolution && pPrinterGetPrinterResolutionCount && pRelease && pSessionDefaultPageFormat && pSessionGetCurrentPrinter )
+					if ( pCreatePageFormat && pGetResolution && pPrinterGetIndexedPrinterResolution && pPrinterGetPrinterResolutionCount && pRelease && pSessionDefaultPageFormat && pSessionGetCurrentPrinter && pSetResolution )
 					{
 						// Create page format
 						PMPageFormat aPageFormat;
@@ -359,7 +361,8 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 								}
 
 								// Set the page resolution
-								maPrinterData.mpVCLPageFormat->setPageResolution( aMaxResolution.hRes, aMaxResolution.vRes );
+								if ( pSetResolution( aPageFormat, &aMaxResolution )  == kPMNoError )
+									maPrinterData.mpVCLPageFormat->setPageResolution( aMaxResolution.hRes, aMaxResolution.vRes );
 							}
 							pRelease( aPageFormat );
 						}
