@@ -1,0 +1,5317 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<oor:component-data xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" oor:name="TypeDetection" oor:package="org.openoffice.Office">
+ <node oor:name="Types">
+  <node oor:name="writer_AportisDoc_PalmDB_File" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">AportisDoc (Palm)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,,,pdb,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_XHTML_File" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XHTML</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,,,xhtml,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Flat_XML_File" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Flat Xml</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,doctype:office:document,,xml,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_DocBook_File" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">DocBook</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,doctype:-//OASIS//DTD DocBook XML V4.1.2//EN,,xml,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MS_Word_2003" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Word 2003 XML</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,doctype:w:wordDocument,,xml,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_MS_Excel_2003" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Excel 2003 XML</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,doctype:Workbook,,xml,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_PocketWord_File" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Pocket Word</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,psw,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_MiniCalc_PalmDB_File" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MiniCalc (Palm)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,pdb,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_Pocket_Excel_File" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Pocket Excel</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,pxl,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="graphic_HTML" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">HTML</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,text/html,,,html;htm,0,</value>
+   </prop>
+  </node>
+  <node oor:name="bmp_MS_Windows" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">BMP - Windows Bitmap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,image/x-MS-bmp,,,bmp,0,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_DIF" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Data Interchange Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,dif,0,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_Lotus" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Lotus</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,,,wk1;wks,0,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_MS_Excel_40" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Excel 4.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,xls;xlw,0,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_MS_Excel_40_VorlageTemplate" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MS Excel 4.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,xlt,0,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_MS_Excel_5095" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Excel 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,Biff5,,xls;xlw,0,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_MS_Excel_5095_VorlageTemplate" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MS Excel 5.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,Biff5,,xlt,0,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_MS_Excel_95" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Excel 95</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,Biff5,,xls;xlw,0,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_MS_Excel_95_VorlageTemplate" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MS Excel 95 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,Biff5,,xlt,0,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_MS_Excel_97" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Excel 97/2000/XP</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,Biff8,,xls;xlw,0,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_MS_Excel_97_VorlageTemplate" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MS Excel 97/2000 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,Biff8,,xlt,0,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_SYLK" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">SYLK</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,slk,0,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_StarCalc_10" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarCalc 1.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,sdc,25598,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_StarCalc_30" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarCalc 3.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/x-starcalc,StarCalcDocument,,sdc,0,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_StarCalc_30_VorlageTemplate" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarCalc 3.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,StarCalcDocument,,vor,25597,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_StarCalc_40" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarCalc 4.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/x-starcalc,StarCalc%204.0,,sdc,0,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_StarCalc_40_VorlageTemplate" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarCalc 4.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,StarCalc%204.0,,vor,25597,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_StarCalc_50" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarCalc 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,application/vnd.stardivision.calc,StarCalc%205.0,,sdc,0,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_StarCalc_50_VorlageTemplate" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarCalc 5.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,StarCalc%205.0,,vor,25597,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_StarOffice_XML_Calc" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Calc 6.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,application/vnd.sun.xml.calc,Calc%206.0,private:factory/scalc*,sxc,0,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_StarOffice_XML_Calc_Template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Calc 6.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,Calc%206.0,,stc,0,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_Text_txt_csv_StarCalc" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Text - txt - csv (StarOffice Calc)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,text/plain,,,csv;txt,0,</value>
+   </prop>
+  </node>
+  <node oor:name="calc_dBase" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">dBASE</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,dbf,0,</value>
+   </prop>
+  </node>
+  <node oor:name="chart_StarChart_30" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarChart 3.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/x-starchart,StarChartDocument,,sds,20020,</value>
+   </prop>
+  </node>
+  <node oor:name="chart_StarChart_40" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarChart 4.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/x-starchart,StarChartDocument%204.0,,sds,20020,</value>
+   </prop>
+  </node>
+  <node oor:name="chart_StarChart_50" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarChart 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,application/vnd.stardivision.chart,StarChart%205.0,,sds,20020,</value>
+   </prop>
+  </node>
+  <node oor:name="chart_StarOffice_XML_Chart" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Chart 6.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/vnd.sun.xml.chart,Chart%206.0,private:factory/schart*,sxs,20020,</value>
+   </prop>
+  </node>
+  <node oor:name="component_Bibliography" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Bibliography component</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,.component:Bibliography/*,,0,</value>
+   </prop>
+  </node>
+  <node oor:name="component_DB" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">DB component</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,.component:DB*,,0,</value>
+   </prop>
+  </node>
+  <node oor:name="draw_StarDraw_30" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarDraw 3.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/x-stardraw,StarDrawDocument,,sdd,20028,</value>
+   </prop>
+  </node>
+  <node oor:name="draw_StarDraw_30_Vorlage" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarDraw 3.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,StarDrawDocument%20,,vor,20028,</value>
+   </prop>
+  </node>
+  <node oor:name="draw_StarDraw_50" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarDraw 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/vnd.stardivision.draw,StarDraw%205.0,,sda,20028,</value>
+   </prop>
+  </node>
+  <node oor:name="draw_StarDraw_50_Vorlage" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarDraw 5.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,StarDraw%205.0,,vor,20028,</value>
+   </prop>
+  </node>
+  <node oor:name="draw_StarOffice_XML_Draw" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">%productname% %formatversion% Zeichnung</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,application/vnd.sun.xml.draw,Draw%206.0,private:factory/sdraw*,sxd,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="draw_StarOffice_XML_Draw_Template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Draw 6.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,Draw%206.0,,std,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="dxf_AutoCAD_Interchange" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">DXF - AutoCAD Interchange Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/dxf,,,dxf,0,</value>
+   </prop>
+  </node>
+  <node oor:name="emf_MS_Windows_Metafile" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">EMF - Enhanced Meta File</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,emf,0,</value>
+   </prop>
+  </node>
+  <node oor:name="eps_Encapsulated_PostScript" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">EPS - Encapsulated PostScript</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/postscript,,,eps,0,</value>
+   </prop>
+  </node>
+  <node oor:name="gif_Graphics_Interchange" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">GIF - Graphics Interchange</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,image/gif,,,gif,0,</value>
+   </prop>
+  </node>
+  <node oor:name="impress_CGM_Computer_Graphics_Metafile" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">CGM - Computer Graphics Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,cgm,0,</value>
+   </prop>
+  </node>
+  <node oor:name="impress_MS_PowerPoint_97" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft PowerPoint 97/2000/XP</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,ppt;pps,0,</value>
+   </prop>
+  </node>
+  <node oor:name="impress_MS_PowerPoint_97_Vorlage" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MS PowerPoint 97/2000 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,pot,0,</value>
+   </prop>
+  </node>
+  <node oor:name="impress_StarImpress_40" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarImpress 4.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/x-starimpress,StarDrawDocument%204.0,,sdd,20004,</value>
+   </prop>
+  </node>
+  <node oor:name="impress_StarImpress_40_Vorlage" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarImpress 4.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,StarDrawDocument%204.0,,vor,20004,</value>
+   </prop>
+  </node>
+  <node oor:name="impress_StarImpress_50" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarImpress 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,application/vnd.stardivision.impress,StarImpress%205.0,,sdd,20004,</value>
+   </prop>
+  </node>
+  <node oor:name="impress_StarImpress_50_Vorlage" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarImpress 5.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,StarImpress%205.0,,vor,20004,</value>
+   </prop>
+  </node>
+  <node oor:name="impress_StarImpress_50_packed" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarImpress (packed)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/vnd.stardivision.impress-packed,,,sdp,20004,</value>
+   </prop>
+  </node>
+  <node oor:name="impress_StarOffice_XML_Impress" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">%productname% %formatversion% Präsentation</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,application/vnd.sun.xml.impress,Impress%206.0,private:factory/simpress*,sxi,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="impress_StarOffice_XML_Impress_Template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Impress 6.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,Impress%206.0,,sti,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="jpg_JPEG" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">JPEG - Joint Photographic Experts Group</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,image/jpeg,,,jpg;jpeg;jfif;jif;jpe,0,</value>
+   </prop>
+  </node>
+  <node oor:name="macro" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Macro</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,macro:*,,0,</value>
+   </prop>
+  </node>
+  <node oor:name="math_MathML_XML_Math" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MathML 1.01</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/mathml+xml,,,mml,20602,</value>
+   </prop>
+  </node>
+  <node oor:name="math_MathType_3x" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MathType3.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,DS%20Equation,,xxx,20602,</value>
+   </prop>
+  </node>
+  <node oor:name="math_StarMath_20" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarMath 2.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/x-starmath,,,smf,20602,</value>
+   </prop>
+  </node>
+  <node oor:name="math_StarMath_30" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarMath 3.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/x-starmath,StarMath,,smf,20602,</value>
+   </prop>
+  </node>
+  <node oor:name="math_StarMath_40" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarMath 4.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/x-starmath,StarMathDocument%204.0,,smf,20602,</value>
+   </prop>
+  </node>
+  <node oor:name="math_StarMath_50" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarMath 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,application/vnd.stardivision.math,StarMath%205.0,,smf,20602,</value>
+   </prop>
+  </node>
+  <node oor:name="math_StarOffice_XML_Math" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">%productname% %formatversion% Formel</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/vnd.sun.xml.math,Math%206.0,private:factory/smath*,sxm,20602,</value>
+   </prop>
+  </node>
+  <node oor:name="met_OS2_Metafile" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MET - OS/2 Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,met,0,</value>
+   </prop>
+  </node>
+  <node oor:name="pbm_Portable_Bitmap" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PBM - Portable Bitmap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,image/x-portable-bitmap,,,pbm,0,</value>
+   </prop>
+  </node>
+  <node oor:name="pcd_Photo_CD_Base" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PCD - Photo CD Base</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,pcd,0,</value>
+   </prop>
+  </node>
+  <node oor:name="pcd_Photo_CD_Base16" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PCD - Photo CD Base16</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,pcd,0,</value>
+   </prop>
+  </node>
+  <node oor:name="pcd_Photo_CD_Base4" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PCD - Photo CD Base4</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,pcd,0,</value>
+   </prop>
+  </node>
+  <node oor:name="pct_Mac_Pict" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PCT - Mac Pict</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,image/x-pict,,,pct,0,</value>
+   </prop>
+  </node>
+  <node oor:name="pcx_Zsoft_Paintbrush" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PCX - Zsoft Paintbrush</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,image/x-pcx,,,pcx,0,</value>
+   </prop>
+  </node>
+  <node oor:name="pdf_Portable_Document_Format" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PDF - Portable Document Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/pdf,,,pdf,0,</value>
+   </prop>
+  </node>
+  <node oor:name="pgm_Portable_Graymap" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PGM - Portable Graymap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,image/x-portable-graymap,,,pgm,0,</value>
+   </prop>
+  </node>
+  <node oor:name="png_Portable_Network_Graphic" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PNG - Portable Network Graphic</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,image/png,,,png,0,</value>
+   </prop>
+  </node>
+  <node oor:name="ppm_Portable_Pixelmap" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PPM - Portable Pixelmap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,image/x-portable-pixmap,,,ppm,0,</value>
+   </prop>
+  </node>
+  <node oor:name="psd_Adobe_Photoshop" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PSD - Adobe Photoshop</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,psd,0,</value>
+   </prop>
+  </node>
+  <node oor:name="ras_Sun_Rasterfile" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">RAS - Sun Raster Image</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,image/x-cmu-raster,,,ras,0,</value>
+   </prop>
+  </node>
+  <node oor:name="sgf_StarOffice_Writer_SGF" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">SGF - StarWriter SGF</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,sgf,0,</value>
+   </prop>
+  </node>
+  <node oor:name="sgv_StarDraw_20" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">SGV - StarDraw 2.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,sgv,0,</value>
+   </prop>
+  </node>
+  <node oor:name="svg_Scalable_Vector_Graphics" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">SVG - Scalable Vector Graphics</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,image/svg+xml,,,svg,0,</value>
+   </prop>
+  </node>
+  <node oor:name="graphic_SWF" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Macromedia Flash (SWF)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,swf,0</value>
+   </prop>
+  </node>
+  <node oor:name="pwp_PlaceWare" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PWP - PlaceWare</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,pwp,0,</value>
+   </prop>
+  </node>
+  <node oor:name="svm_StarView_Metafile" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">SVM - StarView Meta File</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,svm,0,</value>
+   </prop>
+  </node>
+  <node oor:name="tga_Truevision_TARGA" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">TGA - Truevision Targa</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,image/targa,,,tga,0,</value>
+   </prop>
+  </node>
+  <node oor:name="tif_Tag_Image_File" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">TIFF - Tagged Image File Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,image/tiff,,,tif;tiff,0,</value>
+   </prop>
+  </node>
+  <node oor:name="wav_Wave_Audio_File" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Wave Audio File</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,,,wav,0,</value>
+   </prop>
+  </node>
+  <node oor:name="wmf_MS_Windows_Metafile" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WMF - Windows Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wmf,0,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Ami_Pro_1x_31_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Ami Pro 1.x-3.1</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,,,sam,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_CTOS_DEF_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">CTOS DEF</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Claris_Works_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Claris Works</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,cwk,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_DCAFFT_Final_Form_Text_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">DCA/FFT-Final Form Text</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_DCA_Revisable_Form_Text_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">DCA Revisable Form Text</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_DCA_with_Display_Write_5_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">DCA with Display Write 5</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_DEC_DX_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">DEC DX</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_DEC_WPS_PLUS_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">DEC WPS-PLUS</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_DataGeneral_CEO_Write_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">DataGeneral CEO Write</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_DisplayWrite_20_4x_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">DisplayWrite 2.0-4.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_DisplayWrite_5x_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">DisplayWrite 5.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_EBCDIC_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">EBCDIC</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Enable_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Enable</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wpf,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Frame_Maker_MIF_30_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Frame Maker Melse if 3.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,mif,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Frame_Maker_MIF_40_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Frame Maker Melse if 4.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,mif,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Frame_Maker_MIF_50_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Frame Maker Melse if 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,,,mif,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Frame_Work_III_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Frame Work III</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,fw3,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Frame_Work_IV_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Frame Work IV</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,fw4,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_HP_AdvanceWrite_Plus_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">HP AdvanceWrite Plus</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,hpp,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_ICL_Office_Power_6_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">ICL Office Power 6</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_ICL_Office_Power_7_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">ICL Office Power 7</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Interleaf_5_6_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Interleaf 5 - 6</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Interleaf_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Interleaf</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_JustSystem_Ichitaro_10" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Ichitaro 8/9/10/11</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,jtd,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_JustSystem_Ichitaro_10_template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Ichitaro 8/9/10/11 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,jtt,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Legacy_Winstar_onGO_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Legacy Winstar onGO</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,,,nvo,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Lotus_1_2_3_10_DOS_StarWriter" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Lotus 1-2-3 1.0 (DOS) (%productname% %formatversion% Writer)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wk1;wks,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Lotus_1_2_3_10_WIN_StarWriter" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Lotus 1-2-3 1.0 (WIN) (%productname% %formatversion% Writer)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wk1;wks,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Lotus_Manuscript_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Lotus Manuscript</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MASS_11_Rel_80_83_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MASS 11 Rel. 8.0-8.3</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MASS_11_Rel_85_90_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MASS 11 Rel. 8.5-9.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MIZI_Hwp_97" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Hangul WP 97</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,hwp,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MS_MacWord_30_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft MacWord 3.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MS_MacWord_40_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft MacWord 4.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MS_MacWord_5x_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft MacWord 5.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MS_WinWord_1x_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft WinWord 1.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MS_WinWord_2x_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft WinWord 2.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MS_WinWord_5" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft WinWord 5</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/msword,MSWordDoc,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MS_WinWord_60" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Word 6.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/msword,MSWordDoc,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MS_Word_3x_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Word 3.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,txt,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MS_Word_4x_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Word 4.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,txt,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MS_Word_5x_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Word 5.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,txt,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MS_Word_6x_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Word 6.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,txt,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MS_Word_95" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Word 95</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/msword,MSWordDoc,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MS_Word_95_Vorlage" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MS Word 95 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/msword,MSWordDoc,,dot,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MS_Word_97" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Word 97/2000/XP</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,application/msword,MSWordDoc,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MS_Word_97_Vorlage" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MS Word 97/2000 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,application/msword,MSWordDoc,,dot,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MS_Works_20_DOS_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Works 2.0 DOS</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wks,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MS_Works_30_Win_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Works 3.0 Windows</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wps,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MS_Works_40_Mac_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Works 4.0 Mac</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wks,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Mac_Write_4x_50_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Mac Write 4.x 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Mac_Write_II_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Mac Write II</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Mac_Write_Pro_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Mac Write Pro</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MultiMate_33_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MultiMate 3.3</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MultiMate_4_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MultiMate 4</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,dox,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MultiMate_Adv_36_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MultiMate Adv. 3.6</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MultiMate_Adv_II_37_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MultiMate Adv. II 3.7</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_NAVY_DIF_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">NAVY DIF</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_OfficeWriter_40_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">OfficeWriter 4.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wp,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_OfficeWriter_50_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">OfficeWriter 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wp,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_OfficeWriter_6x_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">OfficeWriter 6.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,,,wp,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_PFS_First_Choice_10_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PFS First Choice 1.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_PFS_First_Choice_20_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PFS First Choice 2.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_PFS_First_Choice_30_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PFS First Choice 3.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_PFS_Write_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PFS Write</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Peach_Text_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Peach Text</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Professional_Write_10_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PFS Professional Write 1.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Professional_Write_2x_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PFS Professional Write 2.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Professional_Write_Plus_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PFS Professional Write Plus</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_QA_Write_10_30_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Q&amp;A Write 1.0-3.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,qw,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_QA_Write_40_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Q&amp;A Write 4.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,,,qw,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Rapid_File_10_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Rapid File 1.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Rapid_File_12_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Rapid File 1.2</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Rich_Text_Format" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Rich Text Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/rtf,,,rtf,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Samna_Word_IV_IV_Plus_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Samna Word IV-IV Plus</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,sw4,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_StarOffice_XML_Writer" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">%productname% %formatversion% Textdokument</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/vnd.sun.xml.writer,Writer%206.0,private:factory/swriter,sxw,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_StarOffice_XML_Writer_Template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Writer 6.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,Writer%206.0,,stw,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_StarWriter_10" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 1.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,sdw,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_StarWriter_20" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 2.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,sdw,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_StarWriter_30" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 3.0 (%productname% %formatversion% Globaldokument)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/x-starwriter,StarWriter%203.0,,sdw,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_StarWriter_30_VorlageTemplate" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 3.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,StarWriter%203.0,,vor,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_StarWriter_40" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 4.0 (%productname% %formatversion% Globaldokument)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/x-starwriter,StarWriter%204.0,,sdw,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_StarWriter_40_VorlageTemplate" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 4.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,StarWriter%204.0,,vor,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_StarWriter_50" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 5.0 (%productname% %formatversion% Globaldokument)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,application/vnd.stardivision.writer,StarWriter%205.0,,sdw,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_StarWriter_50_VorlageTemplate" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 5.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,StarWriter%205.0,,vor,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_StarWriter_DOS" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter DOS</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,txt,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Text" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Text</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,text/plain,,,txt,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Text_encoded" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Text - encoded</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,text/plain,,,txt,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Total_Word_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Total Word</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Uniplex_V7_V8_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Uniplex V7-V8</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Uniplex_onGO_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Uniplex onGO</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,nvo,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_VolksWriter_3_and_4_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">VolksWriter 3 and 4</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_VolksWriter_Deluxe_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">VolksWriter Deluxe</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WITA_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WITA</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WPSSystem_WPS2000_10" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WPS 2000/Office 1.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wps,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Wang_II_SWP_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Wang II SWP</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Wang_PC_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Wang PC</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Wang_WP_Plus_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Wang WP Plus</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Win_Write_3x_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Win Write 3.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wri,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WiziWord_30_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WiziWord 3.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordPerfect_Document" oor:op="replace">
+   <prop oor:name="Data" oor:type="xs:string">
+    <value>1,application/wpwin,WordPerfect%20Document,,wp;wpd,0</value>
+   </prop>
+   <prop oor:name="UIName" oor:type="xs:string">
+    <value xml:lang="en-US">WordPerfect Document</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordPerfect_41_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect 4.1</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wpd,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordPerfect_42_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect 4.2</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wpd,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordPerfect_50_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wpd,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordPerfect_51_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect 5.1</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wpd,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordPerfect_60_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect 6.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wpd,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordPerfect_61_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect 6.1</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,,,wpd,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordPerfect_Mac_1_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect Mac 1</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wpd,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordPerfect_Mac_2_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect Mac 2</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wpd,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordPerfect_Mac_3_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect Mac 3</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wpd,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordPerfect_Win_51_52_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect (Win) 5.1-5.2</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wpd,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordPerfect_Win_60_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect (Win) 6.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wpd,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordPerfect_Win_61_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect (Win) 6.1</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wpd,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordPerfect_Win_70_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect (Win) 7.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wpd,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordStar_2000_Rel_30_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordStar 2000 Rel. 3.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,ws,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordStar_2000_Rel_35_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordStar 2000 Rel. 3.5</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,,,ws,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordStar_33x_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordStar 3.3</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wsd,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordStar_345_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordStar 3.4</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wsd,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordStar_40_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordStar 4.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wsd,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordStar_50_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordStar 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wsd,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordStar_55_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordStar 5.5</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wsd,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordStar_60_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordStar 6.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wsd,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordStar_70_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordStar 7.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,,,wsd,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WordStar_Win_1x_20_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordStar (Win) 1.x-2.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,wsd,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WriteNow_30_Macintosh_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WriteNow 3.0 Macintosh</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_Writing_Assistant_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Writing Assistant</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,doc,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_XEROX_XIF_50_Illustrator_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XEROX Xelse if 5.0 Illustrator</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,xif,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_XEROX_XIF_50_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XEROX Xelse if 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,xif,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_XEROX_XIF_60_Color_Bitmap_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XEROX Xelse if 6.0 Color Bitmap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,,,xif,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_XEROX_XIF_60_Res_Graphic_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XEROX Xelse if 6.0 Res Graphic</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,xif,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_XyWrite_IIIP_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XyWrite III+</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,xyw,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_XyWrite_III_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XyWrite III</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,xyw,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_XyWrite_IV_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XyWrite IV</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,,,,xyw,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_XyWrite_Sig_Win_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XyWrite Signature</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,xyw,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_XyWrite_Signature_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XyWrite Signature</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,xyw,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_XyWrite_Win_10_W4W" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XyWrite (Win) 1.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,,xyw,20002,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_globaldocument_StarOffice_XML_Writer_GlobalDocument" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Writer 6.0 Master Document</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,application/vnd.sun.xml.writer.global,Writer/Global%206.0,private:factory/swriter/GlobalDocument*,sxg,20801,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_globaldocument_StarWriter_40GlobalDocument" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 4.0 Master Document</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,application/x-starwriter,StarWriter/Global%204.0,,sgl,20801,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_globaldocument_StarWriter_50GlobalDocument" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 5.0 Master Document</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,application/vnd.stardivision.writer-global,StarWriter/Global%205.0,,sgl,20801,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_web_HTML" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">HTML-Document</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,text/html,,private:factory/swriter/web*,html;htm,0,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_web_HTML_help" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Help content</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,,vnd.sun.star.help://*,,0,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_web_StarOffice_XML_Writer_Web_Template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Writer/Web 6.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,Writer/Web%206.0,,stw,0,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_web_StarWriterWeb_40_VorlageTemplate" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter/Web 4.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,StarWriter/Web%204.0,,vor,0,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_web_StarWriterWeb_50_VorlageTemplate" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter/Web 5.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,,StarWriter/Web%205.0,,vor,0,</value>
+   </prop>
+  </node>
+  <node oor:name="xbm_X_Consortium" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XBM - X Bitmap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,image/x-xbitmap,,,xbm,0,</value>
+   </prop>
+  </node>
+  <node oor:name="xpm_XPM" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XPM - X PixMap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,image/x-xpixmap,,,xpm,20004,</value>
+   </prop>
+  </node>
+ </node>
+ <node oor:name="Filters">
+  <node oor:name="AportisDoc Palm DB" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">AportisDoc (Palm)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_AportisDoc_PalmDB_File,com.sun.star.text.TextDocument,com.sun.star.comp.Writer.XmlFilterAdaptor,524355,com.sun.star.documentconversion.XMergeBridge;classes/aportisdoc.jar;com.sun.star.comp.Writer.XMLImporter;com.sun.star.comp.Writer.XMLExporter;staroffice/sxw;application/x-aportisdoc,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Flat XML File" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Flat XML</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Flat_XML_File,com.sun.star.text.TextDocument,com.sun.star.comp.Writer.XmlFilterAdaptor,524355,com.sun.star.documentconversion.XFlatXml; ;com.sun.star.comp.Writer.XMLImporter;com.sun.star.comp.Writer.XMLExporter,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="XHTML File" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XHTML</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_XHTML_File,com.sun.star.text.TextDocument,com.sun.star.comp.Writer.XmlFilterAdaptor,524354,com.sun.star.documentconversion.XSLTFilter;;com.sun.star.comp.Writer.XMLImporter;com.sun.star.comp.Writer.XMLExporter;;../share/xslt/xhtml/main_html.xsl;,0,</value>
+   </prop>
+  </node>
+  <node oor:name="DocBook File" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">DocBook (simplified)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_DocBook_File,com.sun.star.text.TextDocument,com.sun.star.comp.Writer.XmlFilterAdaptor,524355,com.sun.star.documentconversion.XSLTFilter;;com.sun.star.comp.Writer.XMLImporter;com.sun.star.comp.Writer.XMLExporter;../share/xslt/docbook/docbooktosoffheadings.xsl;../share/xslt/docbook/sofftodocbookheadings.xsl,0,../share/xslt/docbook/DocBookTemplate.stw,</value>
+   </prop>
+  </node>
+  <node oor:name="Microsoft Word 2003 XML" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Word 2003 XML</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_MS_Word_2003,com.sun.star.text.TextDocument,com.sun.star.comp.Writer.XmlFilterAdaptor,524353,com.sun.star.documentconversion.XSLTFilter;;com.sun.star.comp.Writer.XMLImporter;com.sun.star.comp.Writer.XMLExporter;../share/xslt/MicrosoftWord2003/MsWordXMLImport.xsl;;;,0,</value>
+   </prop>
+  </node>
+  <node oor:name="Microsoft Excel 2003 XML" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Excel 2003 XML</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,calc_MS_Excel_2003,com.sun.star.sheet.SpreadsheetDocument,com.sun.star.comp.Writer.XmlFilterAdaptor,524353,com.sun.star.documentconversion.XSLTFilter;;com.sun.star.comp.Calc.XMLImporter;com.sun.star.comp.Calc.XMLExporter;../share/xslt/MicrosoftExcel2003/MsExcelXMLImport.xsl;;;,0,</value>
+   </prop>
+  </node>
+  <node oor:name="PocketWord File" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Pocket Word</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_PocketWord_File,com.sun.star.text.TextDocument,com.sun.star.comp.Writer.XmlFilterAdaptor,524355,com.sun.star.documentconversion.XMergeBridge;classes/pocketword.jar;com.sun.star.comp.Writer.XMLImporter;com.sun.star.comp.Writer.XMLExporter;staroffice/sxw;application/x-pocket-word,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="MiniCalc (Palm)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MiniCalc (Palm)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,calc_MiniCalc_PalmDB_File,com.sun.star.sheet.SpreadsheetDocument,com.sun.star.comp.Writer.XmlFilterAdaptor,524355,com.sun.star.documentconversion.XMergeBridge;classes/minicalc.jar;com.sun.star.comp.Calc.XMLImporter;com.sun.star.comp.Calc.XMLExporter;staroffice/sxc;application/x-minicalc,1,,</value>
+   </prop>
+  </node>
+  <node oor:name="Pocket Excel" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Pocket Excel</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,calc_Pocket_Excel_File,com.sun.star.sheet.SpreadsheetDocument,com.sun.star.comp.Writer.XmlFilterAdaptor,524355,com.sun.star.documentconversion.XMergeBridge;classes/pexcel.jar;com.sun.star.comp.Calc.XMLImporter;com.sun.star.comp.Calc.XMLExporter;staroffice/sxc;application/x-pocket-excel,1,,</value>
+   </prop>
+  </node>
+  <node oor:name="draw_html_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">HTML Document (%productname% Draw)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,graphic_HTML,com.sun.star.drawing.DrawingDocument,,66,,0,,com.sun.star.comp.draw.SdHtmlOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="impress_html_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">HTML Document (%productname% Impress)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,graphic_HTML,com.sun.star.presentation.PresentationDocument,,66,,0,,com.sun.star.comp.draw.SdHtmlOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="CTOS DEF (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">CTOS DEF</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_CTOS_DEF_W4W,com.sun.star.text.TextDocument,,65,W4W36_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Claris Works (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Claris Works</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Claris_Works_W4W,com.sun.star.text.TextDocument,,65,W4W57_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="DCA/FFT-Final Form Text (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">DCA/FFT-Final Form Text</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_DCAFFT_Final_Form_Text_W4W,com.sun.star.text.TextDocument,,65,W4W32_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="DCA Revisable Form Text (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">DCA Revisable Form Text</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_DCA_Revisable_Form_Text_W4W,com.sun.star.text.TextDocument,,65,W4W15_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="DCA with Display Write 5 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">DCA with Display Write 5</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_DCA_with_Display_Write_5_W4W,com.sun.star.text.TextDocument,,65,W4W15_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="DEC DX (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">DEC DX</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_DEC_DX_W4W,com.sun.star.text.TextDocument,,65,W4W30_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="DEC WPS-PLUS (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">DEC WPS-PLUS</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_DEC_WPS_PLUS_W4W,com.sun.star.text.TextDocument,,65,W4W45_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="DataGeneral CEO Write (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">DataGeneral CEO Write</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_DataGeneral_CEO_Write_W4W,com.sun.star.text.TextDocument,,65,W4W104_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="DisplayWrite 2.0-4.x (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">DisplayWrite 2.0-4.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_DisplayWrite_20_4x_W4W,com.sun.star.text.TextDocument,,65,W4W15_2,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="DisplayWrite 5.x (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">DisplayWrite 5.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_DisplayWrite_5x_W4W,com.sun.star.text.TextDocument,,65,W4W15_3,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="EBCDIC (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">EBCDIC</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_EBCDIC_W4W,com.sun.star.text.TextDocument,,65,W4W02_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Enable (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Enable</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Enable_W4W,com.sun.star.text.TextDocument,,65,W4W28_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Frame Maker MIF 3.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Frame Maker MIF 3.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Frame_Maker_MIF_30_W4W,com.sun.star.text.TextDocument,,65,W4W42_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Frame Maker MIF 4.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Frame Maker MIF 4.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Frame_Maker_MIF_40_W4W,com.sun.star.text.TextDocument,,65,W4W42_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Frame Maker MIF 5.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Frame Maker MIF 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Frame_Maker_MIF_50_W4W,com.sun.star.text.TextDocument,,65,W4W42_2,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Frame Work III (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Frame Work III</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Frame_Work_III_W4W,com.sun.star.text.TextDocument,,65,W4W29_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Frame Work IV  (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Frame Work IV</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Frame_Work_IV_W4W,com.sun.star.text.TextDocument,,65,W4W29_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="HP AdvanceWrite Plus (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">HP AdvanceWrite Plus</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_HP_AdvanceWrite_Plus_W4W,com.sun.star.text.TextDocument,,65,W4W22_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="HTML (StarWriter)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">HTML Document (%productname% Writer)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>24,writer_web_HTML,com.sun.star.text.TextDocument,,16451,HTML,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="ICL Office Power 6 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">ICL Office Power 6</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_ICL_Office_Power_6_W4W,com.sun.star.text.TextDocument,,65,W4W102_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="ICL Office Power 7 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">ICL Office Power 7</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_ICL_Office_Power_7_W4W,com.sun.star.text.TextDocument,,65,W4W102_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Interleaf 5 - 6 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Interleaf 5 - 6</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Interleaf_5_6_W4W,com.sun.star.text.TextDocument,,65,W4W46_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Interleaf (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Interleaf</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Interleaf_W4W,com.sun.star.text.TextDocument,,65,W4W35_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_JustSystem_Ichitaro_10" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Ichitaro 8/9/10/11</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_JustSystem_Ichitaro_10,com.sun.star.text.TextDocument,com.sun.comp.jsimport.IchitaroImportFilter,524353,,0,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_JustSystem_Ichitaro_10_template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Ichitaro 8/9/10/11 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_JustSystem_Ichitaro_10_template,com.sun.star.text.TextDocument,com.sun.comp.jsimport.IchitaroImportFilter,524353,,0,</value>
+   </prop>
+  </node>
+  <node oor:name="Legacy Winstar onGO (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Legacy Winstar onGO</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Legacy_Winstar_onGO_W4W,com.sun.star.text.TextDocument,,65,W4W37_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Lotus Manuscript (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Lotus Manuscript</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Lotus_Manuscript_W4W,com.sun.star.text.TextDocument,,65,W4W24_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="MASS 11 Rel. 8.0-8.3 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MASS 11 Rel. 8.0-8.3</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_MASS_11_Rel_80_83_W4W,com.sun.star.text.TextDocument,,65,W4W31_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="MASS 11 Rel. 8.5-9.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MASS 11 Rel. 8.5-9.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_MASS_11_Rel_85_90_W4W,com.sun.star.text.TextDocument,,65,W4W31_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_MIZI_Hwp_97" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Hangul WP 97</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_MIZI_Hwp_97,com.sun.star.text.TextDocument,com.sun.comp.hwpimport.HwpImportFilter,524353,,0,</value>
+   </prop>
+  </node>
+  <node oor:name="MS MacWord 3.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft MacWord 3.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_MS_MacWord_30_W4W,com.sun.star.text.TextDocument,,65,W4W54_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="MS MacWord 4.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft MacWord 4.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_MS_MacWord_40_W4W,com.sun.star.text.TextDocument,,65,W4W54_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="MS Word 3.x (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Word 3.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_MS_Word_3x_W4W,com.sun.star.text.TextDocument,,65,W4W05_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="MS Word 4.x (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Word 4.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_MS_Word_4x_W4W,com.sun.star.text.TextDocument,,65,W4W05_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="MS WinWord 1.x (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft WinWord 1.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_MS_WinWord_1x_W4W,com.sun.star.text.TextDocument,,65,W4W44_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="MS Word 5.x (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Word 5.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_MS_Word_5x_W4W,com.sun.star.text.TextDocument,,65,W4W05_2,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="MS Works 2.0 DOS (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Works 2.0 DOS</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_MS_Works_20_DOS_W4W,com.sun.star.text.TextDocument,,65,W4W39_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="MS Works 3.0 Win (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Works 3.0 Win</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_MS_Works_30_Win_W4W,com.sun.star.text.TextDocument,,65,W4W39_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="MS Works 4.0 Mac (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Works 4.0 Mac</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_MS_Works_40_Mac_W4W,com.sun.star.text.TextDocument,,65,W4W58_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Mac Write 4.x 5.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Mac Write 4.x 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Mac_Write_4x_50_W4W,com.sun.star.text.TextDocument,,65,W4W51_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Mac Write II (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Mac Write II</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Mac_Write_II_W4W,com.sun.star.text.TextDocument,,65,W4W52_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Mac Write Pro (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Mac Write Pro</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Mac_Write_Pro_W4W,com.sun.star.text.TextDocument,,65,W4W56_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="MultiMate 3.3 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MultiMate 3.3</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_MultiMate_33_W4W,com.sun.star.text.TextDocument,,65,W4W10_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="MultiMate 4 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MultiMate 4</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_MultiMate_4_W4W,com.sun.star.text.TextDocument,,65,W4W10_3,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="MultiMate Adv. 3.6 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MultiMate Adv. 3.6</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_MultiMate_Adv_36_W4W,com.sun.star.text.TextDocument,,65,W4W10_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="MultiMate Adv. II 3.7 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MultiMate Adv. II 3.7</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_MultiMate_Adv_II_37_W4W,com.sun.star.text.TextDocument,,65,W4W10_2,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="NAVY DIF (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">NAVY DIF</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_NAVY_DIF_W4W,com.sun.star.text.TextDocument,,65,W4W18_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="OfficeWriter 4.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">OfficeWriter 4.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_OfficeWriter_40_W4W,com.sun.star.text.TextDocument,,65,W4W16_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="OfficeWriter 5.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">OfficeWriter 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_OfficeWriter_50_W4W,com.sun.star.text.TextDocument,,65,W4W16_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="OfficeWriter 6.x (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">OfficeWriter 6.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_OfficeWriter_6x_W4W,com.sun.star.text.TextDocument,,65,W4W16_2,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="PFS First Choice 1.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PFS First Choice 1.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_PFS_First_Choice_10_W4W,com.sun.star.text.TextDocument,,65,W4W08_2,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="PFS First Choice 2.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PFS First Choice 2.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_PFS_First_Choice_20_W4W,com.sun.star.text.TextDocument,,65,W4W08_3,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="PFS First Choice 3.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PFS First Choice 3.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_PFS_First_Choice_30_W4W,com.sun.star.text.TextDocument,,65,W4W08_5,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="PFS Write (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PFS Write</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_PFS_Write_W4W,com.sun.star.text.TextDocument,,65,W4W08_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Peach Text (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Peach Text</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Peach_Text_W4W,com.sun.star.text.TextDocument,,65,W4W27_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Professional Write 1.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PFS Professional Write 1.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Professional_Write_10_W4W,com.sun.star.text.TextDocument,,65,W4W08_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Professional Write 2.x (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PFS Professional Write 2.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Professional_Write_2x_W4W,com.sun.star.text.TextDocument,,65,W4W08_4,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Professional Write Plus (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PFS Professional Write Plus</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Professional_Write_Plus_W4W,com.sun.star.text.TextDocument,,65,W4W33_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Q&amp;A Write 1.0-3.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Q&amp;A Write 1.0-3.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_QA_Write_10_30_W4W,com.sun.star.text.TextDocument,,65,W4W23_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Q&amp;A Write 4.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Q&amp;A Write 4.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_QA_Write_40_W4W,com.sun.star.text.TextDocument,,65,W4W23_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Rapid File 1.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Rapid File 1.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Rapid_File_10_W4W,com.sun.star.text.TextDocument,,65,W4W25_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Rapid File 1.2 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Rapid File 1.2</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Rapid_File_12_W4W,com.sun.star.text.TextDocument,,65,W4W25_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Samna Word IV-IV Plus (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Samna Word IV-IV Plus</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Samna_Word_IV_IV_Plus_W4W,com.sun.star.text.TextDocument,,65,W4W22_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Total Word (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Total Word</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Total_Word_W4W,com.sun.star.text.TextDocument,,65,W4W14_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Uniplex V7-V8 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Uniplex V7-V8</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Uniplex_V7_V8_W4W,com.sun.star.text.TextDocument,,65,W4W101_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Uniplex onGO (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Uniplex onGO</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Uniplex_onGO_W4W,com.sun.star.text.TextDocument,,65,W4W37_2,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="VolksWriter 3 and 4 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">VolksWriter 3 and 4</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_VolksWriter_3_and_4_W4W,com.sun.star.text.TextDocument,,65,W4W14_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="VolksWriter Deluxe (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">VolksWriter Deluxe</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_VolksWriter_Deluxe_W4W,com.sun.star.text.TextDocument,,65,W4W11_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WITA (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WITA</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WITA_W4W,com.sun.star.text.TextDocument,,65,W4W34_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="writer_WPSSystem_WPS2000_10" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WPS 2000/Office 1.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WPSSystem_WPS2000_10,com.sun.star.text.TextDocument,com.sun.comp.WPSimport.IWPSImportFilter,524353,,0,</value>
+   </prop>
+  </node>
+  <node oor:name="Wang II SWP (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Wang II SWP</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Wang_II_SWP_W4W,com.sun.star.text.TextDocument,,65,W4W88_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Wang PC (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Wang PC</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Wang_PC_W4W,com.sun.star.text.TextDocument,,65,W4W26_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Wang WP Plus (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Wang WP Plus</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Wang_WP_Plus_W4W,com.sun.star.text.TextDocument,,65,W4W89_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Win Write 3.x (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Win Write 3.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Win_Write_3x_W4W,com.sun.star.text.TextDocument,,65,W4W43_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WiziWord 3.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WiziWord 3.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WiziWord_30_W4W,com.sun.star.text.TextDocument,,65,W4W47_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WordPerfect Document" oor:op="replace">
+   <prop oor:name="Data" oor:type="xs:string">
+    <value>0,writer_WordPerfect_Document,com.sun.star.text.TextDocument,com.sun.star.comp.Writer.WordPerfectImportFilter,268959809,WPD,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+   <prop oor:name="UIName" oor:type="xs:string">
+    <value xml:lang="en-US">WordPerfect Document</value>
+   </prop>
+  </node>
+  <node oor:name="WordPerfect 4.1 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect 4.1</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WordPerfect_41_W4W,com.sun.star.text.TextDocument,,65,W4W06_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WordPerfect 4.2 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect 4.2</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WordPerfect_42_W4W,com.sun.star.text.TextDocument,,65,W4W06_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WordPerfect 5.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WordPerfect_50_W4W,com.sun.star.text.TextDocument,,65,W4W07_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WordPerfect 5.1 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect 5.1</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WordPerfect_51_W4W,com.sun.star.text.TextDocument,,65,W4W07_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WordPerfect 6.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect 6.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WordPerfect_60_W4W,com.sun.star.text.TextDocument,,65,W4W48_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WordPerfect 6.1 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect 6.1</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WordPerfect_61_W4W,com.sun.star.text.TextDocument,,65,W4W48_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WordPerfect Mac 1 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect Mac 1</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WordPerfect_Mac_1_W4W,com.sun.star.text.TextDocument,,65,W4W59_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WordPerfect Mac 2 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect Mac 2</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WordPerfect_Mac_2_W4W,com.sun.star.text.TextDocument,,65,W4W60_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WordPerfect Mac 3 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect Mac 3</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WordPerfect_Mac_3_W4W,com.sun.star.text.TextDocument,,65,W4W60_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WordPerfect (Win) 5.1-5.2 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect (Win) 5.1-5.2</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WordPerfect_Win_51_52_W4W,com.sun.star.text.TextDocument,,65,W4W07_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WordPerfect (Win) 6.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect (Win) 6.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WordPerfect_Win_60_W4W,com.sun.star.text.TextDocument,,65,W4W48_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WordPerfect (Win) 6.1 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect (Win) 6.1</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WordPerfect_Win_61_W4W,com.sun.star.text.TextDocument,,65,W4W48_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WordStar 2000 Rel. 3.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordStar 2000 Rel. 3.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WordStar_2000_Rel_30_W4W,com.sun.star.text.TextDocument,,65,W4W09_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WordStar 2000 Rel. 3.5 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordStar 2000 Rel. 3.5</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WordStar_2000_Rel_35_W4W,com.sun.star.text.TextDocument,,65,W4W09_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WordStar 3.3x (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordStar 3.3x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WordStar_33x_W4W,com.sun.star.text.TextDocument,,65,W4W04_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WordStar 3.45 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordStar 3.45</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WordStar_345_W4W,com.sun.star.text.TextDocument,,65,W4W04_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WordStar 4.0  (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordStar 4.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WordStar_40_W4W,com.sun.star.text.TextDocument,,65,W4W04_2,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WordStar 5.0  (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordStar 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WordStar_50_W4W,com.sun.star.text.TextDocument,,65,W4W04_3,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WordStar 5.5  (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordStar 5.5</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WordStar_55_W4W,com.sun.star.text.TextDocument,,65,W4W04_4,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WordStar 6.0  (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordStar 6.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WordStar_60_W4W,com.sun.star.text.TextDocument,,65,W4W04_5,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WordStar 7.0  (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordStar 7.0 </value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WordStar_70_W4W,com.sun.star.text.TextDocument,,65,W4W04_6,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WordStar (Win) 1.x-2.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordStar (Win) 1.x-2.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WordStar_Win_1x_20_W4W,com.sun.star.text.TextDocument,,65,W4W37_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="WriteNow 3.0 (Macintosh) (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WriteNow 3.0 (Macintosh)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WriteNow_30_Macintosh_W4W,com.sun.star.text.TextDocument,,65,W4W62_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Writing Assistant (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Writing Assistant</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Writing_Assistant_W4W,com.sun.star.text.TextDocument,,65,W4W13_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="XEROX XIF 5.0 (Illustrator) (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XEROX XIF 5.0 (Illustrator)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_XEROX_XIF_50_Illustrator_W4W,com.sun.star.text.TextDocument,,65,W4W103_2,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="XEROX XIF 5.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XEROX XIF 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_XEROX_XIF_50_W4W,com.sun.star.text.TextDocument,,65,W4W103_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="XEROX XIF 6.0 (Color Bitmap) (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XEROX XIF 6.0 (Color Bitmap)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_XEROX_XIF_60_Color_Bitmap_W4W,com.sun.star.text.TextDocument,,65,W4W103_4,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="XEROX XIF 6.0 (Res Graphic) (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XEROX XIF 6.0 (Res Graphic)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_XEROX_XIF_60_Res_Graphic_W4W,com.sun.star.text.TextDocument,,65,W4W103_8,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="XyWrite III+ ( W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XyWrite III+</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_XyWrite_IIIP_W4W,com.sun.star.text.TextDocument,,65,W4W17_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="XyWrite III ( W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XyWrite III</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_XyWrite_III_W4W,com.sun.star.text.TextDocument,,65,W4W17_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="XyWrite IV (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XyWrite IV</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_XyWrite_IV_W4W,com.sun.star.text.TextDocument,,65,W4W17_4,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="XyWrite Sig. (Win) (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XyWrite Sig. (Win)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_XyWrite_Sig_Win_W4W,com.sun.star.text.TextDocument,,65,W4W17_3,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="XyWrite Signature (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XyWrite Signature</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_XyWrite_Signature_W4W,com.sun.star.text.TextDocument,,65,W4W17_2,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="XyWrite (Win) 1.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XyWrite (Win) 1.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_XyWrite_Win_10_W4W,com.sun.star.text.TextDocument,,65,W4W17_5,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="bmp_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">BMP - Windows Bitmap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,bmp_MS_Windows,,,2,OO;SVBMP;true,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw_bmp_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">BMP - Windows Bitmap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,bmp_MS_Windows,com.sun.star.drawing.DrawingDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="impress_bmp_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">BMP - Windows Bitmap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,bmp_MS_Windows,com.sun.star.presentation.PresentationDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="bmp_Import" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">BMP - Windows Bitmap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,bmp_MS_Windows,,,1,OO;SVBMP;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="calc_HTML_WebQuery" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Web Page Query (%productname% Calc)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_web_HTML,com.sun.star.sheet.SpreadsheetDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="calc_StarOffice_XML_Calc_Template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">%productname% %formatversion% Spreadsheet Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>2,calc_StarOffice_XML_Calc_Template,com.sun.star.sheet.SpreadsheetDocument,,55,,6200,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw_PCD_Photo_CD_Base" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PCD - Kodak Photo CD (768x512)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,pcd_Photo_CD_Base,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw_PCD_Photo_CD_Base16" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PCD - Kodak Photo CD (192x128)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,pcd_Photo_CD_Base16,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw_PCD_Photo_CD_Base4" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PCD - Kodak Photo CD (384x256)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,pcd_Photo_CD_Base4,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw_StarOffice_XML_Draw_Template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">%productname% %formatversion% Drawing Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>2,draw_StarOffice_XML_Draw_Template,com.sun.star.drawing.DrawingDocument,,55,CXMLV,6200,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="dxf_Import" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">DXF - AutoCAD Interchange Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,dxf_AutoCAD_Interchange,,,1,OO;idx;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="emf_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">EMF - Enhanced Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,emf_MS_Windows_Metafile,,,2,OO;SVEMF;true,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw_emf_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">EMF - Enhanced Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,emf_MS_Windows_Metafile,com.sun.star.drawing.DrawingDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="impress_emf_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">EMF - Enhanced Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,emf_MS_Windows_Metafile,com.sun.star.presentation.PresentationDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="emf_Import" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">EMF - Enhanced Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,emf_MS_Windows_Metafile,,,1,OO;SVEMF;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="eps_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">EPS - Encapsulated PostScript</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,eps_Encapsulated_PostScript,,,2,OO;eps;true,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw_eps_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">EPS - Encapsulated PostScript</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,eps_Encapsulated_PostScript,com.sun.star.drawing.DrawingDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="impress_eps_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">EPS - Encapsulated PostScript</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,eps_Encapsulated_PostScript,com.sun.star.presentation.PresentationDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="eps_Import" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">EPS - Encapsulated PostScript</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,eps_Encapsulated_PostScript,,,1,OO;ips;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="gif_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">GIF - Graphics Interchange Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,gif_Graphics_Interchange,,,2,OO;egi;true,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw_gif_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">GIF - Graphics Interchange Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,gif_Graphics_Interchange,com.sun.star.drawing.DrawingDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="impress_gif_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">GIF - Graphics Interchange Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,gif_Graphics_Interchange,com.sun.star.presentation.PresentationDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="gif_Import" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">GIF - Graphics Interchange Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,gif_Graphics_Interchange,,,1,OO;SVIGIF;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="impress_StarOffice_XML_Draw" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">%productname% %formatversion% Drawing (%productname% Impress)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>5,draw_StarOffice_XML_Draw,com.sun.star.presentation.PresentationDocument,,39,XML,6200,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="impress_StarOffice_XML_Impress_Template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">%productname% %formatversion% Presentation Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>2,impress_StarOffice_XML_Impress_Template,com.sun.star.presentation.PresentationDocument,,55,CXMLV,6200,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="jpg_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">JPEG - Joint Photographic Experts Group</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,jpg_JPEG,,,2,OO;SVEJPEG;true,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw_jpg_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">JPEG - Joint Photographic Experts Group</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,jpg_JPEG,com.sun.star.drawing.DrawingDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="impress_jpg_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">JPEG - Joint Photographic Experts Group</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,jpg_JPEG,com.sun.star.presentation.PresentationDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="jpg_Import" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">JPEG - Joint Photographic Experts Group</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,jpg_JPEG,,,1,OO;SVIJPEG;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="met_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MET - OS/2 Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,met_OS2_Metafile,,,2,OO;eme;true,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw_met_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MET - OS/2 Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,met_OS2_Metafile,com.sun.star.drawing.DrawingDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="impress_met_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MET - OS/2 Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,met_OS2_Metafile,com.sun.star.presentation.PresentationDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="met_Import" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MET - OS/2 Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,met_OS2_Metafile,,,1,OO;ime;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="pbm_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PBM - Portable Bitmap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,pbm_Portable_Bitmap,,,2,OO;epb;true,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw_pbm_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PBM - Portable Bitmap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,pbm_Portable_Bitmap,com.sun.star.drawing.DrawingDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="impress_pbm_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PBM - Portable Bitmap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,pbm_Portable_Bitmap,com.sun.star.presentation.PresentationDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="pbm_Import" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PBM - Portable Bitmap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,pbm_Portable_Bitmap,,,1,OO;ipb;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="pcd_Import_Base" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PCD - Kodak Photo CD (768x512)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,pcd_Photo_CD_Base,,,1,OO;icd;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="pcd_Import_Base16" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PCD - Kodak Photo CD (192x128)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,pcd_Photo_CD_Base16,,,1,OO;icd;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="pcd_Import_Base4" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PCD - Kodak Photo CD (384x256)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,pcd_Photo_CD_Base4,,,1,OO;icd;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="pct_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PCT - Mac Pict</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,pct_Mac_Pict,,,2,OO;ept;true,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw_pct_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PCT - Mac Pict</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,pct_Mac_Pict,com.sun.star.drawing.DrawingDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="impress_pct_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PCT - Mac Pict</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,pct_Mac_Pict,com.sun.star.presentation.PresentationDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="pct_Import" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PCT - Mac Pict</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,pct_Mac_Pict,,,1,OO;ipt;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="pcx_Import" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PCX - Zsoft Paintbrush</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,pcx_Zsoft_Paintbrush,,,1,OO;ipx;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="pgm_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PGM - Portable Graymap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,pgm_Portable_Graymap,,,2,OO;epg;true,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw_pgm_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PGM - Portable Graymap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,pgm_Portable_Graymap,com.sun.star.drawing.DrawingDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="impress_pgm_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PGM - Portable Graymap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,pgm_Portable_Graymap,com.sun.star.presentation.PresentationDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="pgm_Import" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PGM - Portable Graymap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,pgm_Portable_Graymap,,,1,OO;ipb;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="png_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PNG - Portable Network Graphic</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,png_Portable_Network_Graphic,,,2,OO;epn;true,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw_png_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PNG - Portable Network Graphic</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,png_Portable_Network_Graphic,com.sun.star.drawing.DrawingDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="impress_png_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PNG - Portable Network Graphic</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,png_Portable_Network_Graphic,com.sun.star.presentation.PresentationDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="png_Import" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PNG - Portable Network Graphic</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,png_Portable_Network_Graphic,,,1,OO;SVIPNG;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="ppm_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PPM - Portable Pixelmap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,ppm_Portable_Pixelmap,,,2,OO;epp;true,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw_ppm_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PPM - Portable Pixelmap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,ppm_Portable_Pixelmap,com.sun.star.drawing.DrawingDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="impress_ppm_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PPM - Portable Pixelmap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,ppm_Portable_Pixelmap,com.sun.star.presentation.PresentationDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="ppm_Import" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PPM - Portable Pixelmap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,ppm_Portable_Pixelmap,,,1,OO;ipb;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="psd_Import" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PSD - Adobe Photoshop</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,psd_Adobe_Photoshop,,,1,OO;ipd;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="ras_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">RAS - Sun Raster Image</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,ras_Sun_Rasterfile,,,2,OO;era;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw_ras_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">RAS - Sun Raster Image</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,ras_Sun_Rasterfile,com.sun.star.drawing.DrawingDocument,,1090,,0,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="impress_ras_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">RAS - Sun Raster Image</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,ras_Sun_Rasterfile,com.sun.star.presentation.PresentationDocument,,1090,,0,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="ras_Import" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">RAS - Sun Raster Image</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,ras_Sun_Rasterfile,,,1,OO;ira;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="DIF" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Data Interchange Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>3,calc_DIF,com.sun.star.sheet.SpreadsheetDocument,,195,,0,,com.sun.star.comp.Calc.FilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="HTML (StarCalc)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">HTML Document (%productname% Calc)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>23,writer_web_HTML,com.sun.star.sheet.SpreadsheetDocument,,67,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="Lotus" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Lotus 1-2-3</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,calc_Lotus,com.sun.star.sheet.SpreadsheetDocument,,268435649,,0,,com.sun.star.comp.Calc.FilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="MS Excel 4.0" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Excel 4.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>11,calc_MS_Excel_40,com.sun.star.sheet.SpreadsheetDocument,,268435521,,0,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="MS Excel 4.0 Vorlage/Template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Excel 4.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>12,calc_MS_Excel_40_VorlageTemplate,com.sun.star.sheet.SpreadsheetDocument,,85,,0,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="MS Excel 5.0/95" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Excel 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>9,calc_MS_Excel_5095,com.sun.star.sheet.SpreadsheetDocument,,268435523,,0,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="MS Excel 5.0/95 Vorlage/Template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Excel 5.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>10,calc_MS_Excel_5095_VorlageTemplate,com.sun.star.sheet.SpreadsheetDocument,,87,,0,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="MS Excel 95" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Excel 95</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>7,calc_MS_Excel_95,com.sun.star.sheet.SpreadsheetDocument,,268435523,,0,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="MS Excel 95 Vorlage/Template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Excel 95 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>8,calc_MS_Excel_95_VorlageTemplate,com.sun.star.sheet.SpreadsheetDocument,,87,,0,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="MS Excel 97" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Excel 97/2000/XP</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>5,calc_MS_Excel_97,com.sun.star.sheet.SpreadsheetDocument,,67,,0,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="MS Excel 97 Vorlage/Template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Excel 97/2000/XP Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>6,calc_MS_Excel_97_VorlageTemplate,com.sun.star.sheet.SpreadsheetDocument,,87,,0,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="Rich Text Format (StarCalc)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Rich Text Format (%productname% Calc)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>13,writer_Rich_Text_Format,com.sun.star.sheet.SpreadsheetDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="SYLK" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">SYLK</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>21,calc_SYLK,com.sun.star.sheet.SpreadsheetDocument,,67,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarCalc 1.0" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarCalc 1.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>20,calc_StarCalc_10,com.sun.star.sheet.SpreadsheetDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarCalc 3.0" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarCalc 3.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>18,calc_StarCalc_30,com.sun.star.sheet.SpreadsheetDocument,,103,,3450,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarCalc 3.0 Vorlage/Template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarCalc 3.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>19,calc_StarCalc_30_VorlageTemplate,com.sun.star.sheet.SpreadsheetDocument,,119,,3450,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarCalc 4.0" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarCalc 4.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>16,calc_StarCalc_40,com.sun.star.sheet.SpreadsheetDocument,,103,,3580,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarCalc 4.0 Vorlage/Template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarCalc 4.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>17,calc_StarCalc_40_VorlageTemplate,com.sun.star.sheet.SpreadsheetDocument,,119,,3580,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarCalc 5.0" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarCalc 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>14,calc_StarCalc_50,com.sun.star.sheet.SpreadsheetDocument,,103,,5050,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarCalc 5.0 Vorlage/Template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarCalc 5.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>15,calc_StarCalc_50_VorlageTemplate,com.sun.star.sheet.SpreadsheetDocument,,119,,5050,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarOffice XML (Calc)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">%productname% %formatversion% Spreadsheet</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,calc_StarOffice_XML_Calc,com.sun.star.sheet.SpreadsheetDocument,,295,,6200,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="Text - txt - csv (StarCalc)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Text CSV</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>22,calc_Text_txt_csv_StarCalc,com.sun.star.sheet.SpreadsheetDocument,,195,,0,,com.sun.star.comp.Calc.FilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="dBase" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">dBASE</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>4,calc_dBase,com.sun.star.sheet.SpreadsheetDocument,,195,,0,,com.sun.star.comp.Calc.FilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarChart 3.0" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarChart 3.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,chart_StarChart_30,com.sun.star.chart.ChartDocument,,2109537,,3450,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarChart 4.0" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarChart 4.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,chart_StarChart_40,com.sun.star.chart.ChartDocument,,2109537,,3580,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarChart 5.0" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarChart 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,chart_StarChart_50,com.sun.star.chart.ChartDocument,,2109537,,5050,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarOffice XML (Chart)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">%productname% %formatversion% Chart</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,chart_StarOffice_XML_Chart,com.sun.star.chart.ChartDocument,,12577,XML,6200,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="BMP - MS Windows" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">BMP - Windows Bitmap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,bmp_MS_Windows,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="DXF - AutoCAD Interchange" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">DXF - AutoCAD Interchange Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>3,dxf_AutoCAD_Interchange,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="EMF - MS Windows Metafile" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">EMF - Enhanced Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>4,emf_MS_Windows_Metafile,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="EPS - Encapsulated PostScript" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">EPS - Encapsulated PostScript</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>5,eps_Encapsulated_PostScript,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="GIF - Graphics Interchange" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">GIF - Graphics Interchange Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,gif_Graphics_Interchange,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="JPG - JPEG" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">JPEG - Joint Photographic Experts Group</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,jpg_JPEG,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="MET - OS/2 Metafile" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MET - OS/2 Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>6,met_OS2_Metafile,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="PBM - Portable Bitmap" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PBM - Portable Bitmap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,pbm_Portable_Bitmap,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="PCT - Mac Pict" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PCT - Mac Pict</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>7,pct_Mac_Pict,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="PCX - Zsoft Paintbrush" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PCX - Zsoft Paintbrush</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,pcx_Zsoft_Paintbrush,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="PGM - Portable Graymap" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PGM - Portable Graymap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,pgm_Portable_Graymap,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="PNG - Portable Network Graphic" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PNG - Portable Network Graphic</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,png_Portable_Network_Graphic,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="PPM - Portable Pixelmap" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PPM - Portable Pixelmap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,ppm_Portable_Pixelmap,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="PSD - Adobe Photoshop" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PSD - Adobe Photoshop</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,psd_Adobe_Photoshop,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="RAS - Sun Rasterfile" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">RAS - Sun Raster Image</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,ras_Sun_Rasterfile,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="SGF - StarOffice Writer SGF" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">SGF - StarWriter Graphics Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>8,sgf_StarOffice_Writer_SGF,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="SGV - StarDraw 2.0" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">SGV - StarDraw 2.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>9,sgv_StarDraw_20,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="SVM - StarView Metafile" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">SVM - StarView Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>14,svm_StarView_Metafile,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarDraw 3.0" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarDraw 3.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>12,draw_StarDraw_30,com.sun.star.drawing.DrawingDocument,,103,,3450,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarDraw 3.0 Vorlage" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarDraw 3.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>13,draw_StarDraw_30_Vorlage,com.sun.star.drawing.DrawingDocument,,119,,3450,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarDraw 5.0" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarDraw 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>10,draw_StarDraw_50,com.sun.star.drawing.DrawingDocument,,268435559,,5050,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarDraw 5.0 Vorlage" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarDraw 5.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>11,draw_StarDraw_50_Vorlage,com.sun.star.drawing.DrawingDocument,,268435575,,5050,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarOffice XML (Draw)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">%productname% %formatversion% Drawing</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,draw_StarOffice_XML_Draw,com.sun.star.drawing.DrawingDocument,,268435751,XML,6200,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="TGA - Truevision TARGA" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">TGA - Truevision Targa</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,tga_Truevision_TARGA,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="TIF - Tag Image File" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">TIFF - Tagged Image File Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,tif_Tag_Image_File,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="WMF - MS Windows Metafile" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WMF - Windows Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>15,wmf_MS_Windows_Metafile,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="XBM - X-Consortium" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XBM - X Bitmap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,xbm_X_Consortium,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="XPM" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XPM - X PixMap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,xpm_XPM,com.sun.star.drawing.DrawingDocument,,65,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="sgf_Import" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">SGF - StarWriter Graphics Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,sgf_StarOffice_Writer_SGF,,,1,OO;SVSGF;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="sgv_Import" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">SGV - StarDraw 2.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,sgv_StarDraw_20,,,1,OO;SVSGV;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="CGM - Computer Graphics Metafile" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">CGM - Computer Graphics Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,impress_CGM_Computer_Graphics_Metafile,com.sun.star.presentation.PresentationDocument,,65,icg,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="MS PowerPoint 97" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft PowerPoint 97/2000/XP</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>3,impress_MS_PowerPoint_97,com.sun.star.presentation.PresentationDocument,,67,emp,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="MS PowerPoint 97 Vorlage" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft PowerPoint 97/2000/XP Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>4,impress_MS_PowerPoint_97_Vorlage,com.sun.star.presentation.PresentationDocument,,87,emp,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarDraw 3.0 (StarImpress)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarDraw 3.0 (%productname% Impress)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>7,draw_StarDraw_30,com.sun.star.presentation.PresentationDocument,,103,,3450,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarDraw 3.0 Vorlage (StarImpress)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarDraw 3.0 Template (%productname% Impress)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,draw_StarDraw_30_Vorlage,com.sun.star.presentation.PresentationDocument,,12407,,3450,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarDraw 5.0 (StarImpress)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarDraw 5.0 (%productname% Impress)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>6,draw_StarDraw_50,com.sun.star.presentation.PresentationDocument,,103,,5050,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarDraw 5.0 Vorlage (StarImpress)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarDraw 5.0 Template (%productname% Impress)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,draw_StarDraw_50_Vorlage,com.sun.star.presentation.PresentationDocument,,12407,,5050,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarImpress 4.0" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarImpress 4.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>11,impress_StarImpress_40,com.sun.star.presentation.PresentationDocument,,268435559,,3580,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarImpress 4.0 Vorlage" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarImpress 4.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>12,impress_StarImpress_40_Vorlage,com.sun.star.presentation.PresentationDocument,,119,,3580,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarImpress 5.0" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarImpress 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>8,impress_StarImpress_50,com.sun.star.presentation.PresentationDocument,,268435559,,5050,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarImpress 5.0 (packed)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarImpress 5.0 Packed</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>10,impress_StarImpress_50_packed,com.sun.star.presentation.PresentationDocument,,1048641,,0,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarImpress 5.0 Vorlage" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarImpress 5.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>9,impress_StarImpress_50_Vorlage,com.sun.star.presentation.PresentationDocument,,119,,5050,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarOffice XML (Impress)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">%productname% %formatversion% Presentation</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,impress_StarOffice_XML_Impress,com.sun.star.presentation.PresentationDocument,,268435751,XML,6200,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="MathML XML (Math)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MathML 1.01</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>6,math_MathML_XML_Math,com.sun.star.formula.FormulaProperties,,7,,6200,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="MathType 3.x" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">MathType3.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>7,math_MathType_3x,com.sun.star.formula.FormulaProperties,,12355,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarMath 2.0" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarMath 2.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>5,math_StarMath_20,com.sun.star.formula.FormulaProperties,,65,1,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarMath 3.0" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarMath 3.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>4,math_StarMath_30,com.sun.star.formula.FormulaProperties,,99,0,3450,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarMath 4.0" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarMath 4.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>3,math_StarMath_40,com.sun.star.formula.FormulaProperties,,99,0,3580,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarMath 5.0" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarMath 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>2,math_StarMath_50,com.sun.star.formula.FormulaProperties,,99,0,5050,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarOffice XML (Math)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">%productname% %formatversion% Formula</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,math_StarOffice_XML_Math,com.sun.star.formula.FormulaProperties,,295,,6200,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="svg_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">SVG - Scalable Vector Graphics</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,svg_Scalable_Vector_Graphics,,,2,OO;SVESVG;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw_svg_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">SVG - Scalable Vector Graphics</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,svg_Scalable_Vector_Graphics,com.sun.star.drawing.DrawingDocument,,1090,,0,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="impress_svg_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">SVG - Scalable Vector Graphics</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,svg_Scalable_Vector_Graphics,com.sun.star.presentation.PresentationDocument,,1090,,0,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw_flash_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Macromedia Flash (SWF)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>3,graphic_SWF,com.sun.star.drawing.DrawingDocument,com.sun.star.comp.Impress.FlashExportFilter,524354,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="impress_flash_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Macromedia Flash (SWF)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>3,graphic_SWF,com.sun.star.presentation.PresentationDocument,com.sun.star.comp.Impress.FlashExportFilter,524354,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="placeware_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PWP - PlaceWare</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,pwp_PlaceWare,com.sun.star.presentation.PresentationDocument,com.sun.star.comp.Impress.PlaceWareExportFilter,524354,,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="svm_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">SVM - StarView Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,svm_StarView_Metafile,,,2,OO;SVMETAFILE;true,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw_svm_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">SVM - StarView Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,svm_StarView_Metafile,com.sun.star.drawing.DrawingDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="impress_svm_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">SVM - StarView Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,svm_StarView_Metafile,com.sun.star.presentation.PresentationDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="svm_Import" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">SVM - StarView Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,svm_StarView_Metafile,,,1,OO;SVMETAFILE;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarWriter 3.0 (StarWriter/GlobalDocument)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 3.0 </value>
+   </prop>
+   <prop oor:name="Data">
+    <value>7,writer_StarWriter_30,com.sun.star.text.GlobalDocument,,70,CSW3,3450,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarWriter 4.0 (StarWriter/GlobalDocument)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 4.0 </value>
+   </prop>
+   <prop oor:name="Data">
+    <value>6,writer_StarWriter_40,com.sun.star.text.GlobalDocument,,70,CSW4,3580,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarWriter 4.0/GlobalDocument" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 4.0 Master Document</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>3,writer_globaldocument_StarWriter_40GlobalDocument,com.sun.star.text.GlobalDocument,,103,CSW4,3580,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarWriter 5.0 (StarWriter/GlobalDocument)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 5.0 </value>
+   </prop>
+   <prop oor:name="Data">
+    <value>5,writer_StarWriter_50,com.sun.star.text.GlobalDocument,,70,CSW5,5050,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarWriter 5.0/GlobalDocument" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 5.0 Master Document</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>2,writer_globaldocument_StarWriter_50GlobalDocument,com.sun.star.text.GlobalDocument,,103,CSW5,5050,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="Text (encoded) (StarWriter/GlobalDocument)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Text Encoded (%productname% Master Document)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>8,writer_Text,com.sun.star.text.GlobalDocument,,67,TEXT_DLG,0,,com.sun.star.comp.Writer.FilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="HTML" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">HTML Document</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,writer_web_HTML,com.sun.star.text.WebDocument,,268452099,HTML,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarWriter 3.0 (StarWriter/Web)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 3.0 (%productname% Writer/Web)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>8,writer_StarWriter_30,com.sun.star.text.WebDocument,,70,CSW3,3450,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarWriter 4.0 (StarWriter/Web)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 4.0 (%productname% Writer/Web)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>7,writer_StarWriter_40,com.sun.star.text.WebDocument,,70,CSW4,3580,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarWriter 5.0 (StarWriter/Web)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 5.0 (%productname% Writer/Web)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>6,writer_StarWriter_50,com.sun.star.text.WebDocument,,70,CSW5,5050,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarWriter/Web 4.0 Vorlage/Template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter/Web 4.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>5,writer_web_StarWriterWeb_40_VorlageTemplate,com.sun.star.text.WebDocument,,119,CSW4VWEB,3580,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarWriter/Web 5.0 Vorlage/Template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter/Web 5.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>4,writer_web_StarWriterWeb_50_VorlageTemplate,com.sun.star.text.WebDocument,,119,CSW5VWEB,5050,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="Text (StarWriter/Web)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Text (%productname% Writer/Web)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>9,writer_Text,com.sun.star.text.WebDocument,,67,TEXT,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="Text (encoded) (StarWriter/Web)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Text Encoded (%productname% Writer/Web)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>11,writer_Text,com.sun.star.text.WebDocument,,67,TEXT_DLG,0,,com.sun.star.comp.Writer.FilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="Ami Pro 1.x-3.1 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Ami Pro 1.x-3.1</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Ami_Pro_1x_31_W4W,com.sun.star.text.TextDocument,,65,W4W33_0,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="Lotus 1-2-3 1.0 (DOS) (StarWriter)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Lotus 1-2-3 1.0 DOS (%productname% Writer)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Lotus_1_2_3_10_DOS_StarWriter,com.sun.star.text.TextDocument,,12353,LOTUSD,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="Lotus 1-2-3 1.0 (WIN) (StarWriter)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Lotus 1-2-3 1.0 WIN (%productname% Writer)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_Lotus_1_2_3_10_WIN_StarWriter,com.sun.star.text.TextDocument,,12353,LOTUSW,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="MS Excel 4.0 (StarWriter)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Excel 4.0 (%productname% Writer)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,calc_MS_Excel_40,com.sun.star.text.TextDocument,,12353,EXCEL,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="MS Excel 5.0 (StarWriter)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Excel 5.0 (%productname% Writer)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,calc_MS_Excel_5095,com.sun.star.text.TextDocument,,12353,CEXCEL,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="MS Excel 95 (StarWriter)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Excel 95 (%productname% Writer)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,calc_MS_Excel_95,com.sun.star.text.TextDocument,,12353,CEXCEL,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="MS MacWord 5.x (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft MacWord 5.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_MS_MacWord_5x_W4W,com.sun.star.text.TextDocument,,65,W4W54_2,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="MS WinWord 2.x (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft WinWord 2.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>8,writer_MS_WinWord_2x_W4W,com.sun.star.text.TextDocument,,65,W4W44_1,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="MS WinWord 5" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft WinWord 5</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_MS_WinWord_5,com.sun.star.text.TextDocument,,65,WW6,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="MS WinWord 6.0" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Word 6.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>7,writer_MS_WinWord_60,com.sun.star.text.TextDocument,,67,CWW6,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="MS Word 6.x (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Word 6.x</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_MS_Word_6x_W4W,com.sun.star.text.TextDocument,,65,W4W05_3,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="MS Word 95" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Word 95</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>5,writer_MS_Word_95,com.sun.star.text.TextDocument,,67,CWW6,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="MS Word 95 Vorlage" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Word 95 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>6,writer_MS_Word_95_Vorlage,com.sun.star.text.TextDocument,,85,CWW6,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="MS Word 97" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Word 97/2000/XP</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>3,writer_MS_Word_97,com.sun.star.text.TextDocument,,67,CWW8,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="MS Word 97 Vorlage" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Microsoft Word 97/2000/XP Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>4,writer_MS_Word_97_Vorlage,com.sun.star.text.TextDocument,,85,CWW8,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="Rich Text Format" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Rich Text Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>9,writer_Rich_Text_Format,com.sun.star.text.TextDocument,,268435523,RTF,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarOffice XML (Writer)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">%productname% %formatversion% Text Document</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,writer_StarOffice_XML_Writer,com.sun.star.text.TextDocument,,268435751,CXML,6200,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarWriter 1.0" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 1.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_StarWriter_10,com.sun.star.text.TextDocument,,65,SWG1,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarWriter 2.0" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 2.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_StarWriter_20,com.sun.star.text.TextDocument,,69,SWG,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarWriter 3.0" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 3.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>14,writer_StarWriter_30,com.sun.star.text.TextDocument,,103,CSW3,3450,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarWriter 3.0 Vorlage/Template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 3.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>15,writer_StarWriter_30_VorlageTemplate,com.sun.star.text.TextDocument,,119,CSW3V,3450,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarWriter 4.0" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 4.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>12,writer_StarWriter_40,com.sun.star.text.TextDocument,,103,CSW4,3580,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarWriter 4.0 Vorlage/Template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 4.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>13,writer_StarWriter_40_VorlageTemplate,com.sun.star.text.TextDocument,,119,CSW4V,3580,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarWriter 5.0" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 5.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>10,writer_StarWriter_50,com.sun.star.text.TextDocument,,268435559,CSW5,5050,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarWriter 5.0 Vorlage/Template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter 5.0 Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>11,writer_StarWriter_50_VorlageTemplate,com.sun.star.text.TextDocument,,119,CSW5V,5050,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="StarWriter DOS" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">StarWriter DOS</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_StarWriter_DOS,com.sun.star.text.TextDocument,,65,SW6,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="Text" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Text</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>16,writer_Text,com.sun.star.text.TextDocument,,268435523,TEXT,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="Text (encoded)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Text Encoded</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>17,writer_Text_encoded,com.sun.star.text.TextDocument,,67,TEXT_DLG,0,,com.sun.star.comp.Writer.FilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="WordPerfect (Win) 7.0 (W4W)" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WordPerfect (Win) 7.0</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_WordPerfect_Win_70_W4W,com.sun.star.text.TextDocument,,65,W4W48_2,0,,</value>
+   </prop>
+  </node>
+  <node oor:name="tga_Import" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">TGA - Truevision Targa</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,tga_Truevision_TARGA,,,1,OO;itg;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="tif_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">TIFF - Tagged Image File Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,tif_Tag_Image_File,,,2,OO;eti;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw_tif_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">TIFF - Tagged Image File Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,tif_Tag_Image_File,com.sun.star.drawing.DrawingDocument,,1090,,0,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="impress_tif_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">TIFF - Tagged Image File Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,tif_Tag_Image_File,com.sun.star.presentation.PresentationDocument,,1090,,0,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="tif_Import" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">TIFF - Tagged Image File Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,tif_Tag_Image_File,,,1,OO;iti;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="wmf_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WMF - Windows Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,wmf_MS_Windows_Metafile,,,2,OO;SVWMF;true,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw_wmf_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WMF - Windows Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,wmf_MS_Windows_Metafile,com.sun.star.drawing.DrawingDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="impress_wmf_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WMF - Windows Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,wmf_MS_Windows_Metafile,com.sun.star.presentation.PresentationDocument,,1090,,0,,com.sun.star.svtools.SvFilterOptionsDialog</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="wmf_Import" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">WMF - Windows Metafile</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,wmf_MS_Windows_Metafile,,,1,OO;SVWMF;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="writer_StarOffice_XML_Writer_Template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">%productname% %formatversion% Text Document Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>2,writer_StarOffice_XML_Writer_Template,com.sun.star.text.TextDocument,,55,CXMLV,6200,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="writer_globaldocument_StarOffice_XML_Writer" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">%productname% %formatversion% Text Document </value>
+   </prop>
+   <prop oor:name="Data">
+    <value>4,writer_StarOffice_XML_Writer,com.sun.star.text.GlobalDocument,,6,CXML,6200,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="writer_globaldocument_StarOffice_XML_Writer_GlobalDocument" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">%productname% %formatversion% Master Document</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>1,writer_globaldocument_StarOffice_XML_Writer_GlobalDocument,com.sun.star.text.GlobalDocument,,268435751,CXML,6200,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="writer_web_HTML_help" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Help content</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,writer_web_HTML_help,com.sun.star.text.WebDocument,,94217,HTML,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="writer_web_StarOffice_XML_Writer" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">%productname% Text Document (%productname% Writer/Web)</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>3,writer_StarOffice_XML_Writer,com.sun.star.text.WebDocument,,6,CXML,6200,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="writer_web_StarOffice_XML_Writer_Web_Template" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">%productname% %formatversion% HTML Template</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>2,writer_web_StarOffice_XML_Writer_Web_Template,com.sun.star.text.WebDocument,,55,CXMLVWEB,6200,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="xbm_Import" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XBM - X Bitmap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,xbm_X_Consortium,,,1,OO;SVIXBM;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="xpm_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XPM - X PixMap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,xpm_XPM,,,2,OO;exp;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw_xpm_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XPM - X PixMap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,xpm_XPM,com.sun.star.drawing.DrawingDocument,,1090,,0,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="impress_xpm_Export" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XPM - X PixMap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,xpm_XPM,com.sun.star.presentation.PresentationDocument,,1090,,0,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="xpm_Import" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">XPM - X PixMap</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>0,xpm_XPM,,,1,OO;SVIXPM;false,0,,</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw_pdf_Export" oor:op="replace">
+   <prop oor:name="Installed">
+    <value>true</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PDF - Portable Document Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>2,pdf_Portable_Document_Format,com.sun.star.drawing.DrawingDocument,com.sun.star.comp.PDF.PDFFilter,524354,,0,,com.sun.star.comp.PDF.PDFDialog</value>
+   </prop>
+  </node>
+  <node oor:name="impress_pdf_Export" oor:op="replace">
+   <prop oor:name="Installed">
+    <value>true</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PDF - Portable Document Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>2,pdf_Portable_Document_Format,com.sun.star.presentation.PresentationDocument,com.sun.star.comp.PDF.PDFFilter,524354,,0,,com.sun.star.comp.PDF.PDFDialog</value>
+   </prop>
+  </node>
+  <node oor:name="calc_pdf_Export" oor:op="replace">
+   <prop oor:name="Installed">
+    <value>true</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PDF - Portable Document Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>2,pdf_Portable_Document_Format,com.sun.star.sheet.SpreadsheetDocument,com.sun.star.comp.PDF.PDFFilter,524354,,0,,com.sun.star.comp.PDF.PDFDialog</value>
+   </prop>
+  </node>
+  <node oor:name="writer_pdf_Export" oor:op="replace">
+   <prop oor:name="Installed">
+    <value>true</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PDF - Portable Document Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>2,pdf_Portable_Document_Format,com.sun.star.text.TextDocument,com.sun.star.comp.PDF.PDFFilter,524354,,0,,com.sun.star.comp.PDF.PDFDialog</value>
+   </prop>
+  </node>
+  <node oor:name="writer_web_pdf_Export" oor:op="replace">
+   <prop oor:name="Installed">
+    <value>true</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PDF - Portable Document Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>2,pdf_Portable_Document_Format,com.sun.star.text.WebDocument,com.sun.star.comp.PDF.PDFFilter,524354,,0,,com.sun.star.comp.PDF.PDFDialog</value>
+   </prop>
+  </node>
+  <node oor:name="writer_globaldocument_pdf_Export" oor:op="replace">
+   <prop oor:name="Installed">
+    <value>true</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PDF - Portable Document Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>2,pdf_Portable_Document_Format,com.sun.star.text.GlobalDocument,com.sun.star.comp.PDF.PDFFilter,524354,,0,,com.sun.star.comp.PDF.PDFDialog</value>
+   </prop>
+  </node>
+  <node oor:name="math_pdf_Export" oor:op="replace">
+   <prop oor:name="Installed">
+    <value>true</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">PDF - Portable Document Format</value>
+   </prop>
+   <prop oor:name="Data">
+    <value>2,pdf_Portable_Document_Format,com.sun.star.formula.FormulaProperties,com.sun.star.comp.PDF.PDFFilter,524354,,0,,com.sun.star.comp.PDF.PDFDialog</value>
+   </prop>
+  </node>
+ </node>
+ <node oor:name="ContentHandlers">
+  <node oor:name="com.sun.star.comp.framework.SoundHandler" oor:op="replace">
+   <prop oor:name="Types">
+    <value>wav_Wave_Audio_File</value>
+   </prop>
+  </node>
+ </node>
+ <node oor:name="DetectServices">
+  <node oor:name="com.sun.star.comp.filters.XMLFilterDetect" oor:op="replace">
+   <prop oor:name="Types">
+    <value>writer_DocBook_File writer_Flat_XML_File writer_XHTML_File writer_MS_Word_2003 calc_MS_Excel_2003</value>
+   </prop>
+  </node>
+ </node>
+ <node oor:name="FrameLoaders">
+  <node oor:name="com.sun.star.comp.sfx2.SfxMacroLoader" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">com.sun.star.comp.sfx2.SfxMacroLoader</value>
+   </prop>
+   <prop oor:name="Types">
+    <value>macro</value>
+   </prop>
+  </node>
+  <node oor:name="com.sun.star.frame.Bibliography" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">com.sun.star.frame.Bibliography</value>
+   </prop>
+   <prop oor:name="Types">
+    <value>component_Bibliography</value>
+   </prop>
+  </node>
+  <node oor:name="com.sun.star.sdb.ContentLoader" oor:op="replace">
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">com.sun.star.sdb.ContentLoader</value>
+   </prop>
+   <prop oor:name="Types">
+    <value>component_DB</value>
+   </prop>
+  </node>
+ </node>
+</oor:component-data>
