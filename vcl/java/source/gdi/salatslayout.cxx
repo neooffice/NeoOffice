@@ -633,14 +633,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		while ( rArgs.GetNextPos( &nCharPos, &bPosRTL ) )
 		{
 			if ( mpLayoutData->mpNeedFallback[ nCharPos ] )
-			{
 				rArgs.NeedFallback( nCharPos, bPosRTL );
-			}
-			else if ( nCharPos && IsSpacingGlyph( mpLayoutData->mpHash->mpStr[ nCharPos ] | GF_ISCHAR ) && mpLayoutData->mpNeedFallback[ nCharPos - 1 ] )
-			{
-				rArgs.NeedFallback( nCharPos, bPosRTL );
-				mpLayoutData->mpNeedFallback[ nCharPos ] = true;
-			}
 		}
 
 		int nNextLevel = mnFallbackLevel + 1;
