@@ -312,12 +312,13 @@ void SalInstance::Yield( BOOL bWait )
 		// Reset timeout
 		nTimeout = 0;
 
-		// If this is a mouse button pressed event, make another pass through
+		// If this is a mouse or key pressed event, make another pass through
 		// the loop in case the next event is a mouse released event. If the
-		// timer is run between continguous mouse pressed and released events,
+		// timer is run between continguous mouse or key pressed and released
 		// the application acts is if two mouse clicks have been made instead
 		// of one.
-		if ( pEvent->getID() != SALEVENT_MOUSEBUTTONDOWN )
+		USHORT nID = pEvent->getID();
+		if ( nID != SALEVENT_MOUSEBUTTONDOWN && nID != SALEVENT_KEYINPUT )
 			bContinue = FALSE;
 		pEvent->dispatch();
 		com_sun_star_vcl_VCLGraphics::flushAll();
