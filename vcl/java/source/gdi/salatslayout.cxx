@@ -168,9 +168,15 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 	// spaces so that ATSUGetGlyphInfo() will not fail as described in
 	// bug 554
 	pLayoutHash->mpStr = (sal_Unicode *)rtl_allocateMemory( pLayoutHash->mnLen * sizeof( sal_Unicode ) );
-	pLayoutHash->mpStr[ 0 ] = 0x0020;
+	if ( rArgs.mnMinCharPos )
+		pLayoutHash->mpStr[ 0 ] = rArgs.mpStr[ rArgs.mnMinCharPos - 1 ];
+	else
+		pLayoutHash->mpStr[ 0 ] = 0x0020;
 	memcpy( pLayoutHash->mpStr + 1, rArgs.mpStr + rArgs.mnMinCharPos, ( rArgs.mnEndCharPos - rArgs.mnMinCharPos ) * sizeof( sal_Unicode ) );
-	pLayoutHash->mpStr[ pLayoutHash->mnLen - 1 ] = 0x0020;
+	if ( rArgs.mnEndCharPos < rArgs.mnLength )
+		pLayoutHash->mpStr[ pLayoutHash->mnLen - 1 ] = rArgs.mpStr[ rArgs.mnEndCharPos ];
+	else
+		pLayoutHash->mpStr[ pLayoutHash->mnLen - 1 ] = 0x0020;
 	pLayoutHash->mnStrHash = rtl_ustr_hashCode_WithLength( rArgs.mpStr + rArgs.mnMinCharPos, rArgs.mnEndCharPos - rArgs.mnMinCharPos );
 
 	// Search cache for matching layout
