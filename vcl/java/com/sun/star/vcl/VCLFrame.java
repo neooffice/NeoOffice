@@ -1780,10 +1780,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			case POINTER_AIRBRUSH:
 				break;
 		}
-		Cursor c = window.getCursor();
-		if (c == null || c.getType() != cursor) {
-			window.setCursor(Cursor.getPredefinedCursor(cursor));
-			Toolkit.getDefaultToolkit().sync();
+
+		if (window != null) {
+			Cursor c = window.getCursor();
+			if (c == null || c.getType() != cursor) {
+				window.setCursor(Cursor.getPredefinedCursor(cursor));
+				Toolkit.getDefaultToolkit().sync();
+			}
 		}
 
 	}
