@@ -498,6 +498,16 @@ public final class VCLGraphics {
 			destX -= srcX;
 		if (srcY < 0)
 			destY -= srcY;
+		if (destX < 0) {
+			srcBounds.x -= destX;
+			srcBounds.width += destX;
+			destX = 0;
+		}
+		if (destY < 0) {
+			srcBounds.y -= destY;
+			srcBounds.height += destY;
+			destY = 0;
+		}
 		if (image == null && VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 			// Mac OS X has a tendency to incompletely render large images
 			// when printing to PDF so we break the image into many small
