@@ -409,7 +409,7 @@ bool ATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			}
 
 			if ( mpGlyphInfoArray->glyphs[ i ].layoutFlags & ( kATSGlyphInfoIsWhiteSpace | kATSGlyphInfoTerminatorGlyph ) )
-				nGlyph = 0;
+				nGlyph = GF_IDXMASK;
 
 			int nGlyphFlags = nCharWidth ? 0 : GlyphItem::IS_IN_CLUSTER;
 
@@ -497,9 +497,9 @@ int ATSLayout::GetNextGlyphs( int nLen, long *pGlyphIdxAry, Point& rPos, int& rS
 
 	while ( ( nGlyphCount = GenericSalLayout::GetNextGlyphs( nLen, pGlyphIdxAry, rPos, rStart, pGlyphAdvAry, pCharPosAry ) ) )
 	{
-		// Don't pass on glyph ID 0 or GF_DROPPED as we don't want the upper
-		//  layers to paint it
-		for ( int i = 0; i < nGlyphCount && !pGlyphIdxAry[ i ]; i++ )
+		// Don't pass on GF_IDXMASK glyphs as we don't want the upper
+		// layers to paint them
+		for ( int i = 0; i < nGlyphCount && ( pGlyphIdxAry[ i ] & GF_IDXMASK ) == GF_IDXMASK; i++ )
 			;
 
 		if ( i )
@@ -508,7 +508,7 @@ int ATSLayout::GetNextGlyphs( int nLen, long *pGlyphIdxAry, Point& rPos, int& rS
 			continue;
 		}
 
-		for ( i = 0; i < nGlyphCount && pGlyphIdxAry[ i ]; i++ )
+		for ( i = 0; i < nGlyphCount && ( pGlyphIdxAry[ i ] & GF_IDXMASK ) != GF_IDXMASK; i++ )
 			;
 
 		if ( i )

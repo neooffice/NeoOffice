@@ -3390,9 +3390,9 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                     aLine.append( " Tf" );
                 }
                 aLine.append( " <" );
-                if ( pMappedIdentityGlyphs[i] )
-                    appendHex( (sal_Int8)( ( pMappedGlyphs[i] & 0xff00 ) >> 8 ), aLine );
-                appendHex( (sal_Int8)( pMappedGlyphs[i] & 0x00ff ), aLine );
+                if ( pMappedIdentityGlyphs[n] )
+                    appendHex( (sal_Int8)( ( pMappedGlyphs[n] & 0xff00 ) >> 8 ), aLine );
+                appendHex( (sal_Int8)( pMappedGlyphs[n] & 0x00ff ), aLine );
                 aLine.append( "> Tj\r\n" );
 #else	// USE_JAVA && MACOSX
                 if( nLastMappedFont != pMappedFontObjects[n] )
