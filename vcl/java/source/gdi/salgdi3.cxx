@@ -51,6 +51,7 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
 
+using namespace rtl;
 using namespace vcl;
 
 // =======================================================================
@@ -69,7 +70,10 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont )
 
 	maGraphicsData.mpVCLFont = ((com_sun_star_vcl_VCLFont *)pFont->mpFontData->mpSysData)->deriveFont( pFont->mnHeight, pFont->meWeight <= WEIGHT_MEDIUM ? FALSE : TRUE, pFont->meItalic == ITALIC_NONE ? FALSE : TRUE, pFont->mnOrientation, !pFont->mbNonAntialiased );
 
-	return 0;
+	if ( maGraphicsData.mpPrinter )
+		return SAL_SETFONT_USEDRAWTEXTARRAY;
+	else
+		return 0;
 }
 
 // -----------------------------------------------------------------------
@@ -77,39 +81,51 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont )
 long SalGraphics::GetCharWidth( sal_Unicode nChar1, sal_Unicode nChar2, long* pWidthAry )
 {
 	if ( maGraphicsData.mpVCLFont )
-	{
 		maGraphicsData.mpVCLFont->getCharWidth( nChar1, nChar2, pWidthAry );
-		return 1;
-	}
 	else
-	{
-		return 0;
-	}
+		memset( pWidthAry, 0, ( nChar2 - nChar1 + 1 ) * sizeof( sal_Unicode ) );
+
+	return 1;
 }
 
 // -----------------------------------------------------------------------
 
 void SalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 {
-	if ( !maGraphicsData.mpVCLFont )
-		return;
-
 	pMetric->mnWidth = 0;
-	pMetric->mnAscent = maGraphicsData.mpVCLFont->getAscent();
-	pMetric->mnDescent = maGraphicsData.mpVCLFont->getDescent();
-	pMetric->mnLeading = maGraphicsData.mpVCLFont->getLeading();
+	if ( maGraphicsData.mpVCLFont )
+	{
+		pMetric->mnAscent = maGraphicsData.mpVCLFont->getAscent();
+		pMetric->mnDescent = maGraphicsData.mpVCLFont->getDescent();
+		pMetric->mnLeading = maGraphicsData.mpVCLFont->getLeading();
+	}
+	else
+	{
+		pMetric->mnAscent = 0;
+		pMetric->mnDescent = 0;
+		pMetric->mnLeading = 0;
+	}
 	pMetric->mnSlant = 0;
 	pMetric->mnFirstChar = 0;
 	pMetric->mnLastChar = 255;
-	pMetric->maName = maGraphicsData.mpVCLFont->getName();
-	pMetric->mnOrientation = maGraphicsData.mpVCLFont->getOrientation();
-	pMetric->meFamily = maGraphicsData.mpVCLFont->getFamilyType();
+	if ( maGraphicsData.mpVCLFont )
+	{
+		pMetric->maName = maGraphicsData.mpVCLFont->getName();
+		pMetric->mnOrientation = maGraphicsData.mpVCLFont->getOrientation();
+		pMetric->meFamily = maGraphicsData.mpVCLFont->getFamilyType();
+	}
+	else
+	{
+		pMetric->maName = OUString();
+		pMetric->mnOrientation = 0;
+		pMetric->meFamily = FAMILY_DONTKNOW;
+	}
 	pMetric->meCharSet = gsl_getSystemTextEncoding();
-	if ( maGraphicsData.mpVCLFont->isBold() )
+	if ( maGraphicsData.mpVCLFont && maGraphicsData.mpVCLFont->isBold() )
 		pMetric->meWeight = WEIGHT_BOLD;
 	else
 		pMetric->meWeight = WEIGHT_NORMAL;
-	if ( maGraphicsData.mpVCLFont->isItalic() )
+	if ( maGraphicsData.mpVCLFont && maGraphicsData.mpVCLFont->isItalic() )
 		pMetric->meItalic = ITALIC_NORMAL;
 	else
 		pMetric->meItalic = ITALIC_NONE;
@@ -126,13 +142,13 @@ void SalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 ULONG SalGraphics::GetKernPairs( ULONG nPairs, ImplKernPairData* pKernPairs )
 {
 	if ( maGraphicsData.mpVCLFont )
+		return 0;
+	
+	ImplKernPairData *pPair = pKernPairs;
+	for ( ULONG i = 0; i < nPairs; i++ )
 	{
-		ImplKernPairData *pPair = pKernPairs;
-		for ( ULONG i = 0; i < nPairs; i++ )
-		{
-			pPair->mnKern = maGraphicsData.mpVCLFont->getKerning( pPair->mnChar1, pPair->mnChar2 );
-			pPair++;
-		}
+		pPair->mnKern = maGraphicsData.mpVCLFont->getKerning( pPair->mnChar1, pPair->mnChar2 );
+		pPair++;
 	}
 
 	return nPairs;
@@ -228,5 +244,8 @@ ULONG SalGraphics::GetGlyphOutline( xub_Unicode cChar, USHORT** ppPolySizes,
 #ifdef DEBUG
 	fprintf( stderr, "SalGraphics::GetGlyphOutline not implemented\n" );
 #endif
+	*ppPolySizes = NULL;
+	*ppPoints = NULL;
+	*ppFlags = NULL;
 	return 0;
 }

@@ -151,9 +151,19 @@ public final class VCLFont {
 	private boolean antialiased = false;
 
 	/**
+	 * The cached ascent.
+	 */
+	private int ascent = 0;
+
+	/**
 	 * The bold flag.
 	 */
 	private boolean bold = false;
+
+	/**
+	 * The cached descent.
+	 */
+	private int descent = 0;
 
 	/**
 	 * The cached font.
@@ -169,6 +179,11 @@ public final class VCLFont {
 	 * The italic flag.
 	 */
 	private boolean italic = false;
+
+	/**
+	 * The cached leading.
+	 */
+	private int leading = 0;
 
 	/**
 	 * The cached name.
@@ -227,7 +242,7 @@ public final class VCLFont {
 
 		// Exceptions can be thrown if a font is disabled or removed
 		try {
-			fontMetrics  = VCLFont.graphics.getFontMetrics(font);
+			fontMetrics = VCLFont.graphics.getFontMetrics(font);
 		}
 		catch (Throwable t) {
 			font = getDefaultFont().getFont();
@@ -242,6 +257,17 @@ public final class VCLFont {
 			type = VCLFont.FAMILY_SWISS;
 		else if (fontName.startsWith("serif"))
 			type = VCLFont.FAMILY_ROMAN;
+
+		// Get size metrics
+		leading = fontMetrics.getLeading();
+		ascent = fontMetrics.getAscent() + leading;
+		descent = fontMetrics.getDescent();
+		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && fontName.startsWith("hiragino")) {
+			// The Hiragino fonts return strange values so we adjust them here
+			leading /= 2;
+			ascent -= leading;
+			descent += leading;
+		}
 
 	}
 
@@ -290,7 +316,7 @@ public final class VCLFont {
 	 */
 	public int getAscent() {
 
-		return fontMetrics.getAscent();
+		return ascent;
 
 	}
 
@@ -321,7 +347,7 @@ public final class VCLFont {
 	 */
 	public int getDescent() {
 
-		return fontMetrics.getDescent() + 1;
+		return descent;
 
 	}
 
@@ -388,8 +414,7 @@ public final class VCLFont {
 	 */
 	public int getLeading() {
 
-		int leading = fontMetrics.getLeading();
-		return (leading > 0 ? leading : 0);
+		return leading;
 
 	}
 

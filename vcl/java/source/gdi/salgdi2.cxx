@@ -121,9 +121,6 @@ SalBitmap* SalGraphics::GetBitmap( long nX, long nY, long nDX, long nDY )
 	if ( maGraphicsData.mpPrinter )
 		return NULL;
 
-	if ( !nDX || !nDY )
-		return NULL;
-	
 	// Normalize rectangle
 	nDX = abs( nDX );
 	nDY = abs( nDY );
