@@ -291,7 +291,6 @@ public final class VCLGraphics {
 	void addToFlush(Rectangle b) {
 
 		if (frame != null) {
-			Toolkit.getDefaultToolkit().sync();
 			if (update != null)
 				update.add(b);
 			else
@@ -355,16 +354,8 @@ public final class VCLGraphics {
 	public void copyBits(VCLGraphics g, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY) {
 
 		VCLImage i = g.getImage();
-		if (i != null) {
-			if (i == image) {
-				VCLImage srcImage = new VCLImage(srcWidth, srcHeight, i.getBitCount());
-				srcImage.getGraphics().drawImage(i, srcX, srcY, srcWidth, srcHeight, 0, 0);
-				drawImage(srcImage, 0, 0, srcWidth, srcHeight, destX, destY);
-			}
-			else {
-				drawImage(i, srcX, srcY, srcWidth, srcHeight, destX, destY);
-			}
-		}
+		if (i != null)
+			drawImage(i, srcX, srcY, srcWidth, srcHeight, destX, destY);
 
 	}
 
@@ -393,14 +384,10 @@ public final class VCLGraphics {
 		}
 		else {
 			Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, bmp.getWidth(), bmp.getHeight()));
-			if (srcX < 0) {
-				srcBounds.width += srcX;
+			if (srcX < 0)
 				destX -= srcX;
-			}
-			if (srcY < 0) {
-				srcBounds.height += srcY;
+			if (srcY < 0)
 				destY -= srcY;
-			}
 			Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
 			int[] destData = image.getData();
 			int destDataWidth = image.getWidth();
@@ -458,14 +445,10 @@ public final class VCLGraphics {
 		}
 		else {
 			Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, bmp.getWidth(), bmp.getHeight()));
-			if (srcX < 0) {
-				srcBounds.width += srcX;
+			if (srcX < 0)
 				destX -= srcX;
-			}
-			if (srcY < 0) {
-				srcBounds.height += srcY;
+			if (srcY < 0)
 				destY -= srcY;
-			}
 			Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
 			int[] destData = image.getData();
 			int destDataWidth = image.getWidth();
@@ -510,20 +493,15 @@ public final class VCLGraphics {
 	 */
 	void drawImage(VCLImage img, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY) {
 
+		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, img.getWidth(), img.getHeight()));
+		if (srcX < 0)
+			destX -= srcX;
+		if (srcY < 0)
+			destY -= srcY;
 		if (image == null && VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 			// Mac OS X has a tendency to incompletely render large images
 			// when printing to PDF so we break the image into many small
 			// images
-			Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, img.getWidth(), img.getHeight()));
-			if (srcX < 0) {
-				srcBounds.width += srcX;
-				destX -= srcX;
-			}
-			if (srcY < 0) {
-				srcBounds.height += srcY;
-				destY -= srcY;
-			}
-			Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(graphics.getDeviceConfiguration().getBounds());
 			int spanMax = resolution;
 			for (int i = srcBounds.x; i < srcBounds.x + srcBounds.width; i += spanMax) {
 				for (int j = srcBounds.y; j < srcBounds.y + srcBounds.height; j += spanMax) {
@@ -533,15 +511,16 @@ public final class VCLGraphics {
 					int spanY = srcBounds.y + srcBounds.height - j;
 					if (spanY > spanMax)
 						spanY = spanMax;
-					Graphics2D g = (Graphics2D)graphics.create(destBounds.x + i, destBounds.y + j, spanX, spanY);
+					Graphics2D g = (Graphics2D)graphics.create(destX + i, destY + j, spanX, spanY);
 					g.drawRenderedImage(img.getImage().getSubimage(srcBounds.x + i, srcBounds.y + j, spanX, spanY), null);
 					g.dispose();
-					Thread.yield();
 				}
 			}
 		}
 		else {
-			graphics.drawImage(img.getImage(), destX, destY, destX + srcWidth, destY + srcHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+			Graphics2D g = (Graphics2D)graphics.create(destX, destY, srcBounds.width, srcBounds.height);
+			g.drawRenderedImage(img.getImage().getSubimage(srcBounds.x, srcBounds.y, srcBounds.width, srcBounds.height), null);
+			g.dispose();
 		}
 		addToFlush(new Rectangle(destX, destY, srcWidth, srcHeight));
 
@@ -579,14 +558,10 @@ public final class VCLGraphics {
 		}
 		else {
 			Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, img.getWidth(), img.getHeight()));
-			if (srcX < 0) {
-				srcBounds.width += srcX;
+			if (srcX < 0)
 				destX -= srcX;
-			}
-			if (srcY < 0) {
-				srcBounds.height += srcY;
+			if (srcY < 0)
 				destY -= srcY;
-			}
 			Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
 			int[] srcData = img.getData();
 			int srcDataWidth = img.getWidth();
@@ -686,14 +661,10 @@ public final class VCLGraphics {
 		}
 		else {
 			Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, bmp.getWidth(), bmp.getHeight()));
-			if (srcX < 0) {
-				srcBounds.width += srcX;
+			if (srcX < 0)
 				destX -= srcX;
-			}
-			if (srcY < 0) {
-				srcBounds.height += srcY;
+			if (srcY < 0)
 				destY -= srcY;
-			}
 			Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight()));
 			int[] destData = image.getData();
 			int destDataWidth = image.getWidth();
@@ -1020,8 +991,7 @@ public final class VCLGraphics {
 			update.width += 2;
 			update.height += 2;
 			panelGraphics.setClip(update);
-			panelGraphics.drawImage(image.getImage(), 0, 0, null);
-			Toolkit.getDefaultToolkit().sync();
+			panelGraphics.drawRenderedImage(image.getImage(), null);
 			update = null;
 			panelGraphics.setClip(null);
 		}

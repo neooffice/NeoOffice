@@ -133,14 +133,10 @@ public final class VCLBitmap {
 
 		VCLImage srcImage = g.getImage();
 		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, srcImage.getWidth(), srcImage.getHeight()));
-		if (srcX < 0) {
-			srcBounds.width += srcX;
+		if (srcX < 0)
 			destX -= srcX;
-		}
-		if (srcY < 0) {
-			srcBounds.height += srcY;
+		if (srcY < 0)
 			destY -= srcY;
-		}
 		Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, width, height));
 		int[] srcData = srcImage.getData();
 		int srcDataWidth = srcImage.getWidth();
