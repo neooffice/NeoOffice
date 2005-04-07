@@ -37,7 +37,7 @@
 PATH=/usr/bin:/bin:/usr/sbin:/sbin
 export PATH
 
-commands="awk cat chmod chown find grep ln mkdir mv open pax printf rm sed sort tar touch uname"
+commands="awk cat date chmod chown find grep ln ls mkdir mv open pax printf rm sed sort tar touch uname"
 
 # Check that the required BSD command are installed
 for i in $commands ; do
