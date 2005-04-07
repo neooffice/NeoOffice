@@ -103,6 +103,7 @@ struct ImplATSLayoutData {
 	ATSUTextLayout		maLayout;
 	int					mnGlyphCount;
 	ATSUGlyphInfoArray*	mpGlyphInfoArray;
+	int*				mpCharsToChars;
 	int*				mpCharsToGlyphs;
 	long*				mpCharAdvances;
 	ATSUStyle			maVerticalFontStyle;
@@ -225,6 +226,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	maLayout( NULL ),
 	mnGlyphCount( 0 ),
 	mpGlyphInfoArray( NULL ),
+	mpCharsToChars( NULL ),
 	mpCharsToGlyphs( NULL ),
 	mpCharAdvances( NULL ),
 	maVerticalFontStyle( NULL ),
@@ -389,18 +391,49 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 
 	mnGlyphCount = mpGlyphInfoArray->numGlyphs;
 
+	// Cache mapping of characters to glyph character indices
+	nBufSize = mpHash->mnLen * sizeof( int );
+	mpCharsToChars = (int *)rtl_allocateMemory( nBufSize );
+
+	int i;
+	for ( i = 0; i < mpHash->mnLen; i++ )
+		mpCharsToChars[ i ] = -1;
+	if ( mpHash->mbRTL )
+	{
+		i = 0;
+		int nIndex = mpGlyphInfoArray->glyphs[ i ].charIndex;
+		for ( int j = mpHash->mnLen - 1; j >= 0 && i < mnGlyphCount; j-- )
+		{
+			mpCharsToChars[ j ] = nIndex;
+			for ( ; i < mnGlyphCount && mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
+				;
+			nIndex = mpGlyphInfoArray->glyphs[ i ].charIndex;
+		}
+	}
+	else
+	{
+		i = 0;
+		int nIndex = mpGlyphInfoArray->glyphs[ i ].charIndex;
+		for ( int j = 0; j < mpHash->mnLen && i < mnGlyphCount; j++ )
+		{
+			mpCharsToChars[ j ] = nIndex;
+			for ( ; i < mnGlyphCount && mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
+				;
+			nIndex = mpGlyphInfoArray->glyphs[ i ].charIndex;
+		}
+	}
+
 	// Cache mapping of characters to glyphs
 	nBufSize = mpHash->mnLen * sizeof( int );
 	mpCharsToGlyphs = (int *)rtl_allocateMemory( nBufSize );
 
-	int i;
 	for ( i = 0; i < mpHash->mnLen; i++ )
 		mpCharsToGlyphs[ i ] = -1;
 	for ( i = 0; i < mnGlyphCount; i++ )
 	{
-		int nCharPos = mpGlyphInfoArray->glyphs[ i ].charIndex;
-		if ( mpCharsToGlyphs[ nCharPos ] < 0 || i < mpCharsToGlyphs[ nCharPos ] )
-			mpCharsToGlyphs[ nCharPos ] = i;
+		int nIndex = mpGlyphInfoArray->glyphs[ i ].charIndex;
+		if ( mpCharsToGlyphs[ nIndex ] < 0 || i < mpCharsToGlyphs[ nIndex ] )
+			mpCharsToGlyphs[ nIndex ] = i;
 	}
 
 	// Cache glyph widths
@@ -419,14 +452,13 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 			if ( mpHash->mbRTL )
 			{
 				if ( ATSUGetGlyphBounds( maLayout, 0, 0, i, nNextCaretPos - i, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
-				{
 					mpCharAdvances[ i ] += Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX );
-					if ( mpCharAdvances[ i ] < 1 )
-					{
-						mpCharAdvances[ i ] = 1;
-						if ( i < mpHash->mnLen )
-							mpCharAdvances[ i + 1 ] += 1;
-					}
+
+				if ( mpCharAdvances[ i ] < 1 )
+				{
+					mpCharAdvances[ i ] = 1;
+					if ( i < mpHash->mnLen )
+						mpCharAdvances[ i + 1 ] += 1;
 				}
 
 				for ( int j = i + 1; j < nNextCaretPos; j++ )
@@ -441,19 +473,26 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 				long nClusterWidth = 0;
 				for ( int j = nNextCaretPos - 1; j >= i; j-- )
 				{
-					if ( ATSUGetGlyphBounds( maLayout, 0, 0, j, nNextCaretPos - j, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
+					long nWidth = 0;
+					if ( j != mpCharsToChars[ j ] )
 					{
-						long nWidth = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX );
-						if ( nWidth > nClusterWidth )
-						{
-							mpCharAdvances[ j ] = nWidth - nClusterWidth;
-							nClusterWidth = nWidth;
-						}
-						else
-						{
-							mpCharAdvances[ j ] = 1;
-							nClusterWidth = nWidth + 1;
-						}
+						if ( ATSUGetGlyphBounds( maLayout, 0, 0, j, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
+							nWidth = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX ) + nClusterWidth;
+					}
+					else
+					{
+						if ( ATSUGetGlyphBounds( maLayout, 0, 0, j, nNextCaretPos - j, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
+							nWidth = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX );
+					}
+
+					if ( nWidth > nClusterWidth )
+					{
+						mpCharAdvances[ j ] = nWidth - nClusterWidth;
+						nClusterWidth = nWidth;
+					}
+					else
+					{
+						mpCharAdvances[ j ] = 1;
 					}
 				}
 			}
@@ -463,6 +502,8 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 			nNextCaretPos = i + 1;
 			if ( ATSUGetGlyphBounds( maLayout, 0, 0, i, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
 				mpCharAdvances[ i ] = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX );
+			if ( mpCharAdvances[ i ] < 1 )
+				mpCharAdvances[ i ] = 1;
 		}
 	}
 	
@@ -566,6 +607,12 @@ void ImplATSLayoutData::Destroy()
 	{
 		rtl_freeMemory( mpGlyphInfoArray );
 		mpGlyphInfoArray = NULL;
+	}
+
+	if ( mpCharsToChars )
+	{
+		rtl_freeMemory( mpCharsToChars );
+		mpCharsToChars = NULL;
 	}
 
 	if ( mpCharsToGlyphs )
@@ -739,37 +786,40 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	bool bPosRTL;
 	Point aPos( 0, 0 );
 	int nCharPos = -1;
-	int nLastAdjustedGlyphIndex = 0;
 	rArgs.ResetPos();
 	while ( rArgs.GetNextPos( &nCharPos, &bPosRTL ) )
 	{
-		int nIndex = nCharPos - rArgs.mnMinCharPos + mpLayoutData->mpHash->mnBeginChars;
-		sal_Unicode nChar = mpLayoutData->mpHash->mpStr[ nIndex ];
-		long nCharWidth = mpLayoutData->mpCharAdvances[ nIndex ];
-
 		bool bFirstGlyph = true;
-		for ( int i = mpLayoutData->mpCharsToGlyphs[ nIndex ]; i < mpLayoutData->mnGlyphCount && mpLayoutData->mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
+		long nCharWidth = 1;
+		int nIndex = mpLayoutData->mpCharsToChars[ nCharPos - rArgs.mnMinCharPos + mpLayoutData->mpHash->mnBeginChars ];
+		if ( nIndex >= 0 )
 		{
-			long nGlyph = mpLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID;
+			sal_Unicode nChar = mpLayoutData->mpHash->mpStr[ nIndex ];
+			nCharWidth = mpLayoutData->mpCharAdvances[ nIndex ];
 
-			if ( mpLayoutData->maVerticalFontStyle )
-				nGlyph |= GetVerticalFlags( nChar );
-
-			// Mark whitespace glyphs
-			if ( IsSpacingGlyph( nChar | GF_ISCHAR ) || mpLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID == 0xffff || mpLayoutData->mpGlyphInfoArray->glyphs[ i ].layoutFlags & kATSGlyphInfoTerminatorGlyph )
-				nGlyph = 0x0020 | GF_ISCHAR;
-
-			int nGlyphFlags = bFirstGlyph ? 0 : GlyphItem::IS_IN_CLUSTER;
-			if ( bPosRTL )
-				nGlyphFlags |= GlyphItem::IS_RTL_GLYPH;
-
-			AppendGlyph( GlyphItem( nCharPos, nGlyph, aPos, nGlyphFlags, nCharWidth ) );
-
-			if ( bFirstGlyph )
+			for ( int i = mpLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < mpLayoutData->mnGlyphCount && mpLayoutData->mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
 			{
-				aPos.X() += nCharWidth;
-				nCharWidth = 0;
-				bFirstGlyph = false;
+				long nGlyph = mpLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID;
+
+				if ( mpLayoutData->maVerticalFontStyle )
+					nGlyph |= GetVerticalFlags( nChar );
+
+				// Mark whitespace glyphs
+				if ( IsSpacingGlyph( nChar | GF_ISCHAR ) || mpLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID == 0xffff || mpLayoutData->mpGlyphInfoArray->glyphs[ i ].layoutFlags & kATSGlyphInfoTerminatorGlyph )
+					nGlyph = 0x0020 | GF_ISCHAR;
+
+				int nGlyphFlags = bFirstGlyph ? 0 : GlyphItem::IS_IN_CLUSTER;
+				if ( bPosRTL )
+					nGlyphFlags |= GlyphItem::IS_RTL_GLYPH;
+
+				AppendGlyph( GlyphItem( nCharPos, nGlyph, aPos, nGlyphFlags, nCharWidth ) );
+
+				if ( bFirstGlyph )
+				{
+					aPos.X() += nCharWidth;
+					nCharWidth = 0;
+					bFirstGlyph = false;
+				}
 			}
 		}
 
@@ -877,8 +927,11 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector )
 			continue;
 		}
 
-		int nIndex = aCharPosArray[ 0 ] - mnMinCharPos + mpLayoutData->mpHash->mnBeginChars;
-		for ( int i = mpLayoutData->mpCharsToGlyphs[ nIndex ]; i < mpLayoutData->mnGlyphCount && mpLayoutData->mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
+		int nIndex = mpLayoutData->mpCharsToChars[ aCharPosArray[ 0 ] - mnMinCharPos + mpLayoutData->mpHash->mnBeginChars ];
+		if ( nIndex < 0 )
+			continue;
+
+		for ( int i = mpLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < mpLayoutData->mnGlyphCount && mpLayoutData->mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
 		{
 			long nGlyph = mpLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID;
 			if ( ( aGlyphArray[ 0 ] & GF_IDXMASK ) != nGlyph )
