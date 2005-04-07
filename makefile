@@ -62,8 +62,8 @@ PRODUCT_VERSION=1.1 Release Candidate
 PRODUCT_DIR_VERSION=1.1_Release_Candidate
 PRODUCT_LANG_PACK_VERSION=Languages
 PRODUCT_DIR_LANG_PACK_VERSION=Languages
-PRODUCT_PATCH_VERSION=Patch 0
-PRODUCT_DIR_PATCH_VERSION=Patch-0
+PRODUCT_PATCH_VERSION=Patch 1
+PRODUCT_DIR_PATCH_VERSION=Patch-1
 PRODUCT_PREVIOUS_VERSION=1.1 Beta
 # Don't allow patching of pre-Release Candidate installations
 PRODUCT_PREVIOUS_PATCH_VERSION=Patch 99
@@ -273,7 +273,7 @@ build.package: build.neo_patches build.oo_download_dics build.source_zip
 	echo "Running sudo to chown installation files..."
 	sudo chown -Rf root:admin "$(INSTALL_HOME)/package"
 	mkdir -p "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources"
-	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources" ; sh -e -c 'for i in `cd "/Applications/Utilities/Installer.app/Contents/Resources" ; find . -type d -name "*.lproj"` ; do mkdir -p "$${i}" ; done'
+	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources" ; sh -e -c 'for i in `cd "/Applications/Utilities/Installer.app/Contents/Resources" ; find . -type d -name "*.lproj" -maxdepth 1` ; do mkdir -p "$${i}" ; done'
 	printf "pmkrpkg1" > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/PkgInfo"
 	( cd "$(INSTALL_HOME)/package" ; pax -w -z -x cpio . ) > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).pax.gz"
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/neojava.info" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).info"
@@ -323,7 +323,7 @@ build.patch_package: build.package
 	echo "Running sudo to chown installation files..."
 	sudo chown -Rf root:admin "$(PATCH_INSTALL_HOME)/package"
 	mkdir -p "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources"
-	cd "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources" ; sh -e -c 'for i in `cd "/Applications/Utilities/Installer.app/Contents/Resources" ; find . -type d -name "*.lproj"` ; do mkdir -p "$${i}" ; done'
+	cd "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources" ; sh -e -c 'for i in `cd "/Applications/Utilities/Installer.app/Contents/Resources" ; find . -type d -name "*.lproj" -maxdepth 1` ; do mkdir -p "$${i}" ; done'
 	printf "pmkrpkg1" > "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/PkgInfo"
 	( cd "$(PATCH_INSTALL_HOME)/package" ; pax -w -z -x cpio . ) > "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).pax.gz"
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/neojava.info.patch" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' > "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).info"
@@ -359,7 +359,7 @@ build.package_%: $(INSTALL_HOME)/package_%
 	echo "Running sudo to chown $(@:build.package_%=%) installation files..."
 	sudo chown -Rf root:admin "$<"
 	mkdir -p "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources"
-	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources" ; sh -e -c 'for i in `cd "/Applications/Utilities/Installer.app/Contents/Resources" ; find . -type d -name "*.lproj"` ; do mkdir -p "$${i}" ; done'
+	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources" ; sh -e -c 'for i in `cd "/Applications/Utilities/Installer.app/Contents/Resources" ; find . -type d -name "*.lproj" -maxdepth 1` ; do mkdir -p "$${i}" ; done'
 	printf "pmkrpkg1" > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/PkgInfo"
 	( cd "$<" ; pax -w -z -x cpio . ) > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).pax.gz"
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/neojava.info.langpack" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_LANG_PACK_VERSION)#$(PRODUCT_LANG_PACK_VERSION)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).info"
