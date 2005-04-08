@@ -396,7 +396,7 @@ public final class VCLEventQueue {
 			if ((k & VCLEvent.KEY_CONTROLMOD) != 0)
 				modifiers |= InputEvent.META_MASK;
 			MouseEvent e = new MouseEvent(f.getPanel(), MouseEvent.MOUSE_MOVED, m, modifiers, x, y, 0, false);
-			EventQueue.invokeAndWait(new VCLEventQueue.MouseWheelEventPoster(f, e, s, r));
+			EventQueue.invokeLater(new VCLEventQueue.MouseWheelEventPoster(f, e, s, r));
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
