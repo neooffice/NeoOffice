@@ -1327,44 +1327,27 @@ void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
  		if ( GetCommandLineArgs()->IsInvisible() )
 			return;
 
+        Reference< XMultiServiceFactory > xSMgr = ::comphelper::getProcessServiceFactory();
+
         if ( !::desktop::Desktop::bSuppressOpenDefault )
         {
             ::desktop::Desktop::bSuppressOpenDefault = sal_True;
-            Reference< XMultiServiceFactory > xSMgr = ::comphelper::getProcessServiceFactory();
             RTL_LOGFILE_CONTEXT_TRACE( aLog, "{ create BackingComponent" );
-            Reference< XFrame > xDesktopFrame( xSMgr->createInstance(
-                OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ))), UNO_QUERY );
-            if (xDesktopFrame.is())
+            Reference< XFrame > xDesktopFrame( xSMgr->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
+            if ( xDesktopFrame.is() )
             {
                 Reference< XFrame > xBackingFrame;
                 Reference< ::com::sun::star::awt::XWindow > xContainerWindow;
 
-                xBackingFrame = xDesktopFrame->findFrame(OUString( RTL_CONSTASCII_USTRINGPARAM( "_blank" )), 0);
-                if (xBackingFrame.is())
+                xBackingFrame = xDesktopFrame->findFrame( OUString( RTL_CONSTASCII_USTRINGPARAM( "_blank" ) ), 0 );
+                if ( xBackingFrame.is() )
                     xContainerWindow = xBackingFrame->getContainerWindow();
-                if (xContainerWindow.is())
+                if ( xContainerWindow.is() )
                 {
                     Sequence< Any > lArgs(1);
                     lArgs[0] <<= xContainerWindow;
 
-                    Reference< XController > xBackingComp(
-                        xSMgr->createInstanceWithArguments(OUString( RTL_CONSTASCII_USTRINGPARAM("com.sun.star.comp.sfx2.view.BackingComp") ), lArgs),
-                        UNO_QUERY);
-
-                    if (xBackingComp.is())
-                    {
-                        Reference< ::com::sun::star::awt::XWindow > xBackingWin(xBackingComp, UNO_QUERY);
-                        // Attention: You MUST(!) call setComponent() before you call attachFrame().
-                        // Because the backing component set the property "IsBackingMode" of the frame
-                        // to true inside attachFrame(). But setComponent() reset this state everytimes ...
-                        xBackingFrame->setComponent(xBackingWin, xBackingComp);
-                        xBackingComp->attachFrame(xBackingFrame);
-                        xContainerWindow->setVisible(sal_True);
-
-                        Window* pCompWindow = VCLUnoHelper::GetWindow(xBackingFrame->getComponentWindow());
-                        if (pCompWindow)
-                            pCompWindow->Update();
-                    }
+                    Reference< XController > xBackingComp( xSMgr->createInstanceWithArguments( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.comp.sfx2.view.BackingComp" ) ), lArgs ), UNO_QUERY);
                 }
             }
             RTL_LOGFILE_CONTEXT_TRACE( aLog, "} create BackingComponent" );
@@ -1381,6 +1364,22 @@ void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
                 aRequest.aOpenList = aData;
             OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
         }
+
+        // If no component was created, open the default window
+        ::desktop::Desktop::bSuppressOpenDefault = sal_False;
+        Reference< XDesktop > xDesktop( xSMgr->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
+        if ( xDesktop.is() )
+        {
+            Reference< XEnumerationAccess > xAccess( xDesktop->getComponents() );
+            if ( xAccess.is() )
+            {
+                Reference< XEnumeration > xEnum( xAccess->createEnumeration() );
+                if ( xEnum.is() && xEnum->hasMoreElements() )
+                    ::desktop::Desktop::bSuppressOpenDefault = sal_True;
+            }
+        }
+        OpenDefault();
+
         return;
     }
 #endif	// USE_JAVA
