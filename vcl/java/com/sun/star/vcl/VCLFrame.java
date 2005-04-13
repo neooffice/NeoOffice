@@ -1731,6 +1731,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		VCLFrame.lastKeyPressed = e;
 
+		// Fix bug 710 by stripping out the Alt modifier. Note that we do it
+		// here because we need to let the Alt modifier through for action
+		// keys.
+		int modifiers = e.getModifiers();
+		if ((modifiers & InputEvent.ALT_MASK) == InputEvent.ALT_MASK)
+			e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), modifiers & ~InputEvent.ALT_MASK, e.getKeyCode(), e.getKeyChar());
+
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0));
 
