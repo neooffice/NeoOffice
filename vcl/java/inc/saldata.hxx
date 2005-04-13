@@ -90,6 +90,7 @@ public:
 	::std::list< SalFrame* >	maAlwaysOnTopFrameList;
 	::std::list< ::vcl::com_sun_star_vcl_VCLPageFormat* >	maVCLPageFormats;
 	::osl::Condition		maNativeEventCondition;
+	bool					mbNativeEventSucceeded;
 	bool					mbInNativeDrag;
 
 							SalData();

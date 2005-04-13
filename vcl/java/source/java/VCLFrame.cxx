@@ -57,10 +57,10 @@
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
+#undef check
 
 using namespace osl;
 
-static Rect aRealBounds;
 static bool bActivate = false;
 static bool bBringToFront = false;
 static Mutex aMutex;
@@ -105,11 +105,6 @@ static void JNICALL Java_com_apple_mrj_macos_generated_MacWindowFunctions_ShowWi
 	MutexGuard aGuard( aMutex );
 
 	WindowRef aWindow = (WindowRef)pWindowRef;
-
-	// Make sure that the native window size really matches the size that we
-	// expect since it can get out of sync due to our call to the Java window's
-	// addNotify() method before it is first shown
-	SetWindowBounds( aWindow, kWindowStructureRgn, &aRealBounds );
 
 	ShowHide( aWindow, true );
 
@@ -256,6 +251,9 @@ void com_sun_star_vcl_VCLFrame::dispose()
 			// Release lock while disposing a window to avoid deadlocking in
 			// the native event queue
 			SalData *pSalData = GetSalData();
+			if ( !pSalData->maNativeEventCondition.check() )
+				pSalData->maNativeEventCondition.set();
+
 			ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
 			OThread::yield();
 
@@ -751,6 +749,9 @@ void com_sun_star_vcl_VCLFrame::setBounds( long _par0, long _par1, long _par2, l
 			// Release lock while resizing a window to avoid deadlocking in
 			// the native event queue
 			SalData *pSalData = GetSalData();
+			if ( !pSalData->maNativeEventCondition.check() )
+				pSalData->maNativeEventCondition.set();
+
 			ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
 			OThread::yield();
 #endif	// MACOSX
@@ -885,6 +886,9 @@ void com_sun_star_vcl_VCLFrame::setState( ULONG _par0 )
 			// Release lock while setting window state to avoid deadlocking in
 			// the native event queue
 			SalData *pSalData = GetSalData();
+			if ( !pSalData->maNativeEventCondition.check() )
+				pSalData->maNativeEventCondition.set();
+
 			ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
 			OThread::yield();
 #endif	// MACOSX
@@ -943,16 +947,15 @@ void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0, sal_Bool _par1 )
 			// Release lock while showing or hiding a window to avoid
 			// deadlocking in the native event queue
 			SalData *pSalData = GetSalData();
+			if ( !pSalData->maNativeEventCondition.check() )
+				pSalData->maNativeEventCondition.set();
+
 			ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
 			OThread::yield();
 
 			MutexGuard aGuard( aMutex );
 			bActivate = !_par1;
 			bBringToFront = true;
-
-			// Make the Java bounds accessible to the native methods
-			Rectangle aRect( getBounds() );
-			SetRect( &aRealBounds, aRect.nLeft, aRect.nTop, aRect.nLeft + aRect.GetWidth(), aRect.nTop + aRect.GetHeight() );
 #endif	// MACOSX
 
 			jvalue args[1];

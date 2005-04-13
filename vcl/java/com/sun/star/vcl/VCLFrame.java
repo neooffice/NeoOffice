@@ -2064,14 +2064,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			height = size.height;
 
 		synchronized (window.getTreeLock()) {
-			// Fix bug 509 by temporarily moving the window
+			// Fix bug 509 by temporarily moving the window and fix bug 378
+			// by yielding after each move
 			window.setBounds(x + 1, y, width, height);
+			Thread.yield();
 			window.setBounds(x, y, width, height);
 
 			// We need to create the native window handle after the first call
 			// to set bounds in order for the drag-and-drop UNO service to work
 			if (!window.isShowing())
 				window.addNotify();
+
+			Thread.yield();
 		}
 
 	}

@@ -511,21 +511,34 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 						pSalData->mpEventQueue->postCachedEvent( &aEvent );
 
 						// Wait for all pending AWT events to be dispatched
+						pSalData->mbNativeEventSucceeded = false;
 						pSalData->maNativeEventCondition.reset();
 						pSalData->maNativeEventCondition.wait();
 						pSalData->maNativeEventCondition.set();
 
-						Application::GetSolarMutex().acquire();
+						// Fix bug 679 by checking if the condition was
+						// released to avoid a deadlock
+						if ( pSalData->mbNativeEventSucceeded )
+                        {
+							Application::GetSolarMutex().acquire();
 
-						// Execute menu updates while the VCL event queue is
-						// blocked
-						if ( pSalData->mpFocusFrame )
-							UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
+							// Execute menu updates while the VCL event queue is
+							// blocked
+							if ( pSalData->mpFocusFrame )
+								UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
 
-						// Relock the Java lock
-						AcquireJavaLock();
+							// Relock the Java lock
+							AcquireJavaLock();
 
-						Application::GetSolarMutex().release();
+							Application::GetSolarMutex().release();
+						}
+						else
+						{
+							// Relock the Java lock
+							AcquireJavaLock();
+
+							return userCanceledErr;
+						}
 					}
 				}
 			}
@@ -1296,6 +1309,7 @@ void SalInstance::Yield( BOOL bWait )
 	// Allow Carbon event loop to proceed
 	if ( !pEvent && !pSalData->maNativeEventCondition.check() )
 	{
+		pSalData->mbNativeEventSucceeded = true;
 		pSalData->maNativeEventCondition.set();
 		nCount = ReleaseYieldMutex();
 		OThread::yield();
