@@ -325,6 +325,28 @@ if [ -d "$shareautocorrdir" -a -d "$userautocorrdir" ] ; then
     done
 fi
 
+# Fix bug 154 by checking if the installation location has changed
+lastcontentshomefile="$userinstall/.lastcontentshome"
+contentshome=`dirname "$apphome"`
+if [ -d "$contentshome" -a -r "$lastcontentshomefile" ] ; then
+    lastcontentshome=`cat /dev/null "$lastcontentshomefile"`
+    rm -f "$lastcontentshomefile"
+    if [ ! -z "$lastcontentshome" ] ; then
+        for i in `cd "$userinstall" ; find . -type f -name "*.x*"` ; do
+            rm -f "$userinstall/$i.tmp"
+            if [ ! -f "$userinstall/$i.tmp" ] ; then
+                sed -e "s#$lastcontentshome#$contentshome#g" "$userinstall/$i" > "$userinstall/$i.tmp"
+                if [ $? -eq 0 -a -s "$userinstall/$i.tmp" ] ; then
+                    mv -f "$userinstall/$i.tmp" "$userinstall/$i"
+                else
+                    rm -f "$userinstall/$i.tmp"
+                fi
+            fi
+        done
+    fi
+fi
+echo "$contentshome" > "$lastcontentshomefile"
+
 # Make sure that there is a /tmp directory
 if [ "$os" = "Darwin" ] ; then
     if [ ! -d "/tmp" -a -d "/private/tmp" ] ; then
