@@ -304,8 +304,14 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			// Fix bug 529 by manually converting KEY_MOD1-Dash into a
 			// non-breaking hyphen since Mac OS X does not normally have a
 			// key mapping for this character
-			if ( pKeyEvent->mnCharCode == 0x002d && pKeyEvent->mnCode & KEY_MOD1 )
-				pKeyEvent->mnCharCode = 0x2011;
+			if ( pKeyEvent->mnCharCode == 0x002d )
+			{
+				USHORT nModifiers = ( pKeyEvent->mnCode & ( KEY_MOD1 | KEY_MOD2 | KEY_SHIFT | KEY_CONTROLMOD ) );
+				if ( nModifiers == ( KEY_MOD1 | KEY_SHIFT ) )
+					pKeyEvent->mnCharCode = 0x2011;
+				else if ( nModifiers == KEY_MOD1 )
+					pKeyEvent->mnCharCode = 0x00AD;
+			}
 #endif	// MACOSX
 			dispatchEvent( nID, pFrame, pKeyEvent );
 			delete pKeyEvent;
