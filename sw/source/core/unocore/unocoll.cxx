@@ -42,7 +42,6 @@
 
 #pragma hdrstop
 
-#include <stdio.h>
 #include <swtypes.hxx>
 #include <cmdid.h>
 #include <hintids.hxx>
