@@ -140,10 +140,7 @@ SHL1STDLIBS= -lexc
 .ENDIF # UNX
 
 .IF "$(OS)"=="MACOSX"
-SHL1STDLIBS+=-lstlport_gcc -framework CoreFoundation
-.IF "$(PRODUCT_FILETYPE)"!=""
-SHL1STDLIBS+=-framework Carbon
-.ENDIF		# "$(PRODUCT_FILETYPE)"!=""
+SHL1STDLIBS+=-lstlport_gcc -framework CoreFoundation -framework Carbon
 .ENDIF
 
 SHL1LIBS+=$(SLB)$/$(TARGET).lib
