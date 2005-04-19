@@ -858,7 +858,7 @@ char *fcvt(double value, int ndigit, int *decpt, int *sign)
   {
     v1=strtok(buf,".");
     v2=strtok(NULL,".");
-	sctrcpy(ret,v1);
+	strcpy(ret,v1);
     strcat(ret,v2);
   }
   else
