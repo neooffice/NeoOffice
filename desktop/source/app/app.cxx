@@ -1329,6 +1329,7 @@ void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
 
         Reference< XMultiServiceFactory > xSMgr = ::comphelper::getProcessServiceFactory();
 
+        bool bWasSuppress = ::desktop::Desktop::bSuppressOpenDefault;
         if ( !::desktop::Desktop::bSuppressOpenDefault )
         {
             ::desktop::Desktop::bSuppressOpenDefault = sal_True;
@@ -1366,19 +1367,23 @@ void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
         }
 
         // If no component was created, open the default window
-        ::desktop::Desktop::bSuppressOpenDefault = sal_False;
-        Reference< XDesktop > xDesktop( xSMgr->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
-        if ( xDesktop.is() )
+        if ( !bWasSuppress )
         {
-            Reference< XEnumerationAccess > xAccess( xDesktop->getComponents() );
-            if ( xAccess.is() )
+            ::desktop::Desktop::bSuppressOpenDefault = sal_False;
+            Reference< XDesktop > xDesktop( xSMgr->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
+            if ( xDesktop.is() )
             {
-                Reference< XEnumeration > xEnum( xAccess->createEnumeration() );
-                if ( xEnum.is() && xEnum->hasMoreElements() )
-                    ::desktop::Desktop::bSuppressOpenDefault = sal_True;
+                Reference< XEnumerationAccess > xAccess( xDesktop->getComponents() );
+                if ( xAccess.is() )
+                {
+                    Reference< XEnumeration > xEnum( xAccess->createEnumeration() );
+                    if ( xEnum.is() && xEnum->hasMoreElements() )
+                        ::desktop::Desktop::bSuppressOpenDefault = sal_True;
+                }
             }
+            OpenDefault();
+            ::desktop::Desktop::bSuppressOpenDefault = sal_True;
         }
-        OpenDefault();
 
         return;
     }
