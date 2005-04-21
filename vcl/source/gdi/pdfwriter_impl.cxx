@@ -3312,9 +3312,8 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                         long nX;
                         long nY;
                         pATSLayout->GetVerticalGlyphTranslation( pGlyphs[n] | nGlyphFlags[n], nX, nY );
-                        aDeltaPos.X() = nY;
-                        aDeltaPos.Y() = (int)( ( (double)( pATSLayout->GetBaselineDelta() + nX ) * fXScale * -1 ) + 0.5 );
-						aDeltaPos = m_pReferenceDevice->PixelToLogic( aDeltaPos );
+                        aDeltaPos.X() = m_pReferenceDevice->ImplDevicePixelToLogicHeight( nY );
+                        aDeltaPos.Y() = m_pReferenceDevice->ImplDevicePixelToLogicWidth( (long)( ( fXScale * nX * -1 ) + 0.5 ) );
                     }
                     else
                     {
@@ -3338,9 +3337,8 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                         long nX;
                         long nY;
                         pATSLayout->GetVerticalGlyphTranslation( pGlyphs[n] | nGlyphFlags[n], nX, nY );
-                        aDeltaPos.X() = (int)( ( (double)pAdvanceWidths[n] / rLayout.GetUnitsPerPixel() ) - nY + 0.5 );
-                        aDeltaPos.Y() = (int)( ( (double)( pATSLayout->GetBaselineDelta() - nX ) * fXScale * -1 ) + 0.5 );
-						aDeltaPos = m_pReferenceDevice->PixelToLogic( aDeltaPos );
+                        aDeltaPos.X() = m_pReferenceDevice->ImplDevicePixelToLogicHeight( (long)( ( (double)pAdvanceWidths[n] / rLayout.GetUnitsPerPixel() ) - nY + 0.5 ) );
+                        aDeltaPos.Y() = m_pReferenceDevice->ImplDevicePixelToLogicWidth( (long)( ( fXScale * nX * -1 ) + 0.5 ) );
                     }
                     else
                     {

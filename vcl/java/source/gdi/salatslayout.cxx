@@ -407,7 +407,8 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 			mpCharsToChars[ j ] = nIndex;
 			for ( ; i < mnGlyphCount && mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
 				;
-			nIndex = mpGlyphInfoArray->glyphs[ i ].charIndex;
+			if ( i < mnGlyphCount )
+				nIndex = mpGlyphInfoArray->glyphs[ i ].charIndex;
 		}
 	}
 	else
@@ -419,7 +420,8 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 			mpCharsToChars[ j ] = nIndex;
 			for ( ; i < mnGlyphCount && mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
 				;
-			nIndex = mpGlyphInfoArray->glyphs[ i ].charIndex;
+			if ( i < mnGlyphCount )
+				nIndex = mpGlyphInfoArray->glyphs[ i ].charIndex;
 		}
 	}
 
@@ -882,12 +884,12 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			GetVerticalGlyphTranslation( aGlyphArray[ 0 ], nX, nY );
 			if ( nGlyphOrientation == GF_ROTL )
 			{
-				nTranslateX = nX + mpLayoutData->mnBaselineDelta;
+				nTranslateX = nX;
 				nTranslateY = Float32ToLong( nY * mpLayoutData->mpHash->mfFontScaleX );
 			}
 			else
 			{
-				nTranslateX = nX - mpLayoutData->mnBaselineDelta;
+				nTranslateX = nX;
 				nTranslateY = Float32ToLong( ( aDXArray[ 0 ] - nY ) * mpLayoutData->mpHash->mfFontScaleX );
 			}
 		}
@@ -1017,6 +1019,10 @@ void SalATSLayout::GetVerticalGlyphTranslation( long nGlyph, long& nX, long& nY 
 		if ( ATSUGlyphGetScreenMetrics( mpLayoutData->maVerticalFontStyle, 1, &nGlyphID, sizeof( GlyphID ), mpLayoutData->mpHash->mbAntialiased, mpLayoutData->mpHash->mbAntialiased, &aVerticalMetrics ) == noErr && ATSUGlyphGetScreenMetrics( mpLayoutData->maFontStyle, 1, &nGlyphID, sizeof( GlyphID ), mpLayoutData->mpHash->mbAntialiased, mpLayoutData->mpHash->mbAntialiased, &aHorizontalMetrics ) == noErr )
 		{
 			nX = Float32ToLong( aVerticalMetrics.topLeft.x - aHorizontalMetrics.topLeft.x );
+			if ( nGlyphOrientation == GF_ROTL )
+				nX += GetBaselineDelta();
+			else
+				nX -= GetBaselineDelta();
 			nY = Float32ToLong( aHorizontalMetrics.topLeft.y - aVerticalMetrics.topLeft.y );
 		}
 	}
