@@ -50,6 +50,12 @@ TARGET=sfx
 GEN_HID=TRUE
 GEN_HID_OTHER=TRUE
 
+.IF "$(OS)"=="MACOSX"
+.IF "$(GUIBASE)"=="java"
+SOLARLIB := -L$(PRJ)$/..$/shell$/$(INPATH)$/slb $(SOLARLIB)
+.ENDIF
+.ENDIF
+
 # --- Settings -----------------------------------------------------
 
 .INCLUDE :  settings.mk
