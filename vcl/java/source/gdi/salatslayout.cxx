@@ -65,6 +65,18 @@
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
+// This function should match the same function in sallayout.cxx
+inline bool IsControlChar( sal_Unicode cChar )
+{
+	if ( 0x200c <= cChar && cChar <= 0x200f )
+		return true;
+	if ( 0x2028 <= cChar && cChar <= 0x202e )
+		return true;
+	if ( 0xfeff == cChar || 0xfffe <= cChar )
+		return true;
+	return false;
+}
+
 struct ImplATSLayoutDataHash {
 	int					mnFallbackLevel;
 	int					mnBeginChars;
@@ -159,8 +171,8 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 
 	ImplATSLayoutDataHash *pLayoutHash = new ImplATSLayoutDataHash();
 	pLayoutHash->mnFallbackLevel = nFallbackLevel;
-	pLayoutHash->mnBeginChars = ( rArgs.mnMinCharPos ? 1 : 0 );
-	pLayoutHash->mnLen = rArgs.mnEndCharPos - rArgs.mnMinCharPos + pLayoutHash->mnBeginChars + ( rArgs.mnEndCharPos < rArgs.mnLength ? 1 : 0 );
+	pLayoutHash->mnBeginChars = ( rArgs.mnMinCharPos && !IsControlChar( rArgs.mpStr[ rArgs.mnMinCharPos - 1 ] ) ? 1 : 0 );
+	pLayoutHash->mnLen = rArgs.mnEndCharPos - rArgs.mnMinCharPos + pLayoutHash->mnBeginChars + ( rArgs.mnEndCharPos < rArgs.mnLength && !IsControlChar( rArgs.mpStr[ rArgs.mnEndCharPos ] ) ? 1 : 0 );
 	pLayoutHash->mnFontID = (ATSUFontID)pVCLFont->getNativeFont();
 	pLayoutHash->mnFontSize = pVCLFont->getSize();
 	pLayoutHash->mfFontScaleX = pVCLFont->getScaleX();
@@ -401,27 +413,23 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	if ( mpHash->mbRTL )
 	{
 		i = 0;
-		int nIndex = mpGlyphInfoArray->glyphs[ i ].charIndex;
 		for ( int j = mpHash->mnLen - 1; j >= 0 && i < mnGlyphCount; j-- )
 		{
+			int nIndex = mpGlyphInfoArray->glyphs[ i ].charIndex;
 			mpCharsToChars[ j ] = nIndex;
 			for ( ; i < mnGlyphCount && mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
 				;
-			if ( i < mnGlyphCount )
-				nIndex = mpGlyphInfoArray->glyphs[ i ].charIndex;
 		}
 	}
 	else
 	{
 		i = 0;
-		int nIndex = mpGlyphInfoArray->glyphs[ i ].charIndex;
 		for ( int j = 0; j < mpHash->mnLen && i < mnGlyphCount; j++ )
 		{
+			int nIndex = mpGlyphInfoArray->glyphs[ i ].charIndex;
 			mpCharsToChars[ j ] = nIndex;
 			for ( ; i < mnGlyphCount && mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
 				;
-			if ( i < mnGlyphCount )
-				nIndex = mpGlyphInfoArray->glyphs[ i ].charIndex;
 		}
 	}
 
@@ -723,8 +731,7 @@ SalLayout *SalGraphics::GetTextLayout( ImplLayoutArgs& rArgs, int nFallbackLevel
 SalATSLayout::SalATSLayout( SalGraphics *pGraphics, int nFallbackLevel ) :
 	mpGraphics( pGraphics ),
 	mnFallbackLevel( nFallbackLevel ),
-	mpVCLFont( NULL ),
-	mpLayoutData( NULL )
+	mpVCLFont( NULL )
 {
 	if ( mnFallbackLevel )
 	{
@@ -757,92 +764,116 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	if ( !mpVCLFont )
 		return false;
 
-	mpLayoutData = ImplATSLayoutData::GetLayoutData( rArgs, mnFallbackLevel, mpVCLFont );
-	if ( !mpLayoutData )
-		return false;
-
-	// Create fallback runs
-	if ( mpLayoutData->mpNeedFallback && mpLayoutData->mpFallbackFont )
+	int nFlags = rArgs.mnFlags | SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
+	bool bRet = false;
+	Point aPos( 0, 0 );
+	bool bRunRTL;
+	int nMinCharPos;
+	int nEndCharPos;
+	rArgs.ResetPos();
+	while ( rArgs.GetNextRun( &nMinCharPos, &nEndCharPos, &bRunRTL ) )
 	{
-		bool bPosRTL;
-		int nCharPos = -1;
-		rArgs.ResetPos();
-		while ( rArgs.GetNextPos( &nCharPos, &bPosRTL ) )
+		// Cache run
+		maRuns.AddRun( nMinCharPos, nEndCharPos, bRunRTL );
+
+		// Always set SAL_LAYOUT_BIDI_STRONG to prevent direction analysis
+		int nRunFlags = rArgs.mnFlags | SAL_LAYOUT_BIDI_STRONG;
+		if ( bRunRTL )
+			nRunFlags |= SAL_LAYOUT_BIDI_RTL;
+		else
+			nRunFlags &= ~SAL_LAYOUT_BIDI_RTL;
+		ImplLayoutArgs aArgs( rArgs.mpStr, rArgs.mnLength, nMinCharPos, nEndCharPos, nRunFlags );
+
+		ImplATSLayoutData *pLayoutData = ImplATSLayoutData::GetLayoutData( aArgs, mnFallbackLevel, mpVCLFont );
+		if ( !pLayoutData )
+			return false;
+
+		// Create fallback runs
+		if ( pLayoutData->mpNeedFallback && pLayoutData->mpFallbackFont )
 		{
-			if ( mpLayoutData->mpNeedFallback[ nCharPos - rArgs.mnMinCharPos + mpLayoutData->mpHash->mnBeginChars ] )
-				rArgs.NeedFallback( nCharPos, bPosRTL );
+			bool bPosRTL;
+			int nCharPos = -1;
+			aArgs.ResetPos();
+			while ( aArgs.GetNextPos( &nCharPos, &bPosRTL ) )
+			{
+				if ( pLayoutData->mpNeedFallback[ nCharPos - aArgs.mnMinCharPos + pLayoutData->mpHash->mnBeginChars ] )
+					rArgs.NeedFallback( nCharPos, bPosRTL );
+			}
+
+			int nNextLevel = mnFallbackLevel + 1;
+			::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = mpGraphics->maGraphicsData.maFallbackFonts.find( nNextLevel );
+			if ( it != mpGraphics->maGraphicsData.maFallbackFonts.end() )
+				delete it->second;
+			mpGraphics->maGraphicsData.maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pLayoutData->mpFallbackFont->getJavaObject() );
+			nFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 		}
 
-		int nNextLevel = mnFallbackLevel + 1;
-		::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = mpGraphics->maGraphicsData.maFallbackFonts.find( nNextLevel );
-		if ( it != mpGraphics->maGraphicsData.maFallbackFonts.end() )
-			delete it->second;
-		mpGraphics->maGraphicsData.maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( mpLayoutData->mpFallbackFont->getJavaObject() );
-	}
-	else
-	{
-		rArgs.mnFlags |= SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
-	}
-
-	// Calculate and cache glyph advances
-	bool bPosRTL;
-	Point aPos( 0, 0 );
-	int nCharPos = -1;
-	rArgs.ResetPos();
-	while ( rArgs.GetNextPos( &nCharPos, &bPosRTL ) )
-	{
-		bool bFirstGlyph = true;
-		long nCharWidth = 1;
-		int nIndex = mpLayoutData->mpCharsToChars[ nCharPos - rArgs.mnMinCharPos + mpLayoutData->mpHash->mnBeginChars ];
-		if ( nIndex >= 0 )
+		// Calculate and cache glyph advances
+		bool bPosRTL;
+		int nCharPos = -1;
+		aArgs.ResetPos();
+		while ( aArgs.GetNextPos( &nCharPos, &bPosRTL ) )
 		{
-			sal_Unicode nChar = mpLayoutData->mpHash->mpStr[ nIndex ];
-			nCharWidth = mpLayoutData->mpCharAdvances[ nIndex ];
-
-			for ( int i = mpLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < mpLayoutData->mnGlyphCount && mpLayoutData->mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
+			bool bFirstGlyph = true;
+			long nCharWidth = 1;
+			int nIndex = pLayoutData->mpCharsToChars[ nCharPos - aArgs.mnMinCharPos + pLayoutData->mpHash->mnBeginChars ];
+			if ( nIndex >= 0 )
 			{
-				long nGlyph = mpLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID;
+				sal_Unicode nChar = pLayoutData->mpHash->mpStr[ nIndex ];
+				nCharWidth = pLayoutData->mpCharAdvances[ nIndex ];
 
-				if ( mpLayoutData->maVerticalFontStyle )
-					nGlyph |= GetVerticalFlags( nChar );
-
-				// Mark whitespace glyphs
-				if ( IsSpacingGlyph( nChar | GF_ISCHAR ) || mpLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID == 0xffff || mpLayoutData->mpGlyphInfoArray->glyphs[ i ].layoutFlags & kATSGlyphInfoTerminatorGlyph )
-					nGlyph = 0x0020 | GF_ISCHAR;
-
-				int nGlyphFlags = bFirstGlyph ? 0 : GlyphItem::IS_IN_CLUSTER;
-				if ( bPosRTL )
-					nGlyphFlags |= GlyphItem::IS_RTL_GLYPH;
-
-				AppendGlyph( GlyphItem( nCharPos, nGlyph, aPos, nGlyphFlags, nCharWidth ) );
-
-				if ( bFirstGlyph )
+				for ( int i = pLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pLayoutData->mnGlyphCount && pLayoutData->mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
 				{
-					aPos.X() += nCharWidth;
-					nCharWidth = 0;
-					bFirstGlyph = false;
+					long nGlyph = pLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID;
+
+					if ( pLayoutData->maVerticalFontStyle )
+						nGlyph |= GetVerticalFlags( nChar );
+
+					// Mark whitespace glyphs
+					if ( IsSpacingGlyph( nChar | GF_ISCHAR ) || pLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID == 0xffff || pLayoutData->mpGlyphInfoArray->glyphs[ i ].layoutFlags & kATSGlyphInfoTerminatorGlyph )
+						nGlyph = 0x0020 | GF_ISCHAR;
+
+					int nGlyphFlags = bFirstGlyph ? 0 : GlyphItem::IS_IN_CLUSTER;
+					if ( bPosRTL )
+						nGlyphFlags |= GlyphItem::IS_RTL_GLYPH;
+
+					AppendGlyph( GlyphItem( nCharPos, nGlyph, aPos, nGlyphFlags, nCharWidth ) );
+
+					if ( bFirstGlyph )
+					{
+						aPos.X() += nCharWidth;
+						nCharWidth = 0;
+						bFirstGlyph = false;
+					}
 				}
+			}
+
+			if ( bFirstGlyph )
+			{
+				AppendGlyph( GlyphItem( nCharPos, 0x0020 | GF_ISCHAR, aPos, bPosRTL ? GlyphItem::IS_RTL_GLYPH : 0, nCharWidth ) );
+				aPos.X() += nCharWidth;
 			}
 		}
 
-		if ( bFirstGlyph )
-		{
-			AppendGlyph( GlyphItem( nCharPos, 0x0020 | GF_ISCHAR, aPos, bPosRTL ? GlyphItem::IS_RTL_GLYPH : 0, nCharWidth ) );
-			aPos.X() += nCharWidth;
-		}
+		if ( nCharPos >= 0 )
+			bRet = true;
+
+		maLayoutData.push_back( pLayoutData );
 	}
 
-	return ( nCharPos >= 0 );
+	rArgs.mnFlags = nFlags;
+
+	return bRet;
 }
 
 // ----------------------------------------------------------------------------
 
 void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 {
-	if ( !mpLayoutData )
+	if ( !maLayoutData.size() )
 		return;
 
-	int nMaxGlyphs( mpLayoutData->mnGlyphCount );
+	int nMaxGlyphs( maLayoutData.front()->mnGlyphCount );
 	long aGlyphArray[ nMaxGlyphs ];
 	long aDXArray[ nMaxGlyphs ];
 
@@ -885,12 +916,12 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			if ( nGlyphOrientation == GF_ROTL )
 			{
 				nTranslateX = nX;
-				nTranslateY = Float32ToLong( nY * mpLayoutData->mpHash->mfFontScaleX );
+				nTranslateY = Float32ToLong( nY * maLayoutData.front()->mpHash->mfFontScaleX );
 			}
 			else
 			{
 				nTranslateX = nX;
-				nTranslateY = Float32ToLong( ( aDXArray[ 0 ] - nY ) * mpLayoutData->mpHash->mfFontScaleX );
+				nTranslateY = Float32ToLong( ( aDXArray[ 0 ] - nY ) * maLayoutData.front()->mpHash->mfFontScaleX );
 			}
 		}
 
@@ -907,7 +938,7 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector )
 {
 	bool bRet = false;
 
-	if ( !mpLayoutData )
+	if ( !maLayoutData.size() )
 		return bRet;
 
 	int nMaxGlyphs( 1 );
@@ -916,6 +947,9 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector )
 	int aCharPosArray[ nMaxGlyphs ];
 
 	Point aPos;
+	int nRunIndex = 0;
+	ImplATSLayoutData *pLayoutData = maLayoutData[ nRunIndex ];
+	maRuns.ResetPos();
 	for ( int nStart = 0; ; )
 	{
 		int nGlyphCount = GetNextGlyphs( nMaxGlyphs, aGlyphArray, aPos, nStart, aDXArray, aCharPosArray );
@@ -929,19 +963,32 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector )
 			continue;
 		}
 
-		int nIndex = mpLayoutData->mpCharsToChars[ aCharPosArray[ 0 ] - mnMinCharPos + mpLayoutData->mpHash->mnBeginChars ];
+		if ( !maRuns.PosIsInRun( aCharPosArray[ 0 ] ) )
+		{
+			nRunIndex = 0;
+			pLayoutData = maLayoutData[ nRunIndex ];
+			maRuns.ResetPos();
+			while ( !maRuns.PosIsInRun( aCharPosArray[ 0 ] ) )
+			{
+				maRuns.NextRun();
+				nRunIndex++;
+				pLayoutData = maLayoutData[ nRunIndex ];
+			}
+		}
+
+		int nIndex = pLayoutData->mpCharsToChars[ aCharPosArray[ 0 ] - mnMinCharPos + pLayoutData->mpHash->mnBeginChars ];
 		if ( nIndex < 0 )
 			continue;
 
-		for ( int i = mpLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < mpLayoutData->mnGlyphCount && mpLayoutData->mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
+		for ( int i = pLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pLayoutData->mnGlyphCount && pLayoutData->mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
 		{
-			long nGlyph = mpLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID;
+			long nGlyph = pLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID;
 			if ( ( aGlyphArray[ 0 ] & GF_IDXMASK ) != nGlyph )
 				continue;
 
 			::std::list< Polygon > aPolygonList;
 			OSStatus nErr;
-			if ( ATSUGlyphGetCubicPaths( mpLayoutData->mpGlyphInfoArray->glyphs[ i ].style, mpLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID, SalATSCubicMoveToCallback, SalATSCubicLineToCallback, SalATSCubicCurveToCallback, SalATSCubicClosePathCallback, (void *)&aPolygonList, &nErr ) != noErr )
+			if ( ATSUGlyphGetCubicPaths( pLayoutData->mpGlyphInfoArray->glyphs[ i ].style, pLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID, SalATSCubicMoveToCallback, SalATSCubicLineToCallback, SalATSCubicCurveToCallback, SalATSCubicClosePathCallback, (void *)&aPolygonList, &nErr ) != noErr )
 				continue;
 
 			PolyPolygon aPolyPolygon;
@@ -953,7 +1000,7 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector )
 
 			aPolyPolygon.Move( aPos.X(), aPos.Y() );
 
-			if ( mpLayoutData->maVerticalFontStyle )
+			if ( pLayoutData->maVerticalFontStyle )
 			{
 				long nGlyphOrientation = aGlyphArray[ 0 ] & GF_ROTMASK;
 				if ( nGlyphOrientation )
@@ -961,12 +1008,12 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector )
 					if ( nGlyphOrientation == GF_ROTL )
 					{
 						aPolyPolygon.Rotate( Point( 0, 0 ), 900 );
-						aPolyPolygon.Move( aPolyPolygon.GetBoundRect().nLeft * -1, mpLayoutData->mnBaselineDelta * -1 );
+						aPolyPolygon.Move( aPolyPolygon.GetBoundRect().nLeft * -1, pLayoutData->mnBaselineDelta * -1 );
 					}
 					else
 					{
 						aPolyPolygon.Rotate( Point( 0, 0 ), 2700 );
-						aPolyPolygon.Move( aDXArray[ 0 ] - aPolyPolygon.GetBoundRect().nRight, mpLayoutData->mnBaselineDelta * -1 );
+						aPolyPolygon.Move( aDXArray[ 0 ] - aPolyPolygon.GetBoundRect().nRight, pLayoutData->mnBaselineDelta * -1 );
 					}
 				}
 			}
@@ -984,18 +1031,18 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector )
 
 void SalATSLayout::Destroy()
 {
-	if ( mpLayoutData )
-	{
-		mpLayoutData->Release();
-		mpLayoutData = NULL;
-	}
+	maRuns.Clear();
+
+	for ( ::std::vector< ImplATSLayoutData* >::iterator it = maLayoutData.begin(); it != maLayoutData.end(); ++it )
+		(*it)->Release();
+	maLayoutData.clear();
 }
 
 // ----------------------------------------------------------------------------
 
 long SalATSLayout::GetBaselineDelta() const
 {
-	return ( mpLayoutData ? mpLayoutData->mnBaselineDelta : 0 );
+	return ( maLayoutData.size() ? maLayoutData.front()->mnBaselineDelta : 0 );
 }
 
 // ----------------------------------------------------------------------------
@@ -1005,18 +1052,18 @@ void SalATSLayout::GetVerticalGlyphTranslation( long nGlyph, long& nX, long& nY 
 	nX = 0;
 	nY = 0;
 
-	if ( !mpLayoutData )
+	if ( !maLayoutData.size() )
 		return;
 
 	long nGlyphOrientation = nGlyph & GF_ROTMASK;
 
-	if ( mpLayoutData->maVerticalFontStyle && nGlyphOrientation & GF_ROTMASK )
+	if ( maLayoutData.front()->maVerticalFontStyle && nGlyphOrientation & GF_ROTMASK )
 	{
 		GlyphID nGlyphID = (GlyphID)( nGlyph & GF_IDXMASK );
 
 		ATSGlyphScreenMetrics aVerticalMetrics;
 		ATSGlyphScreenMetrics aHorizontalMetrics;
-		if ( ATSUGlyphGetScreenMetrics( mpLayoutData->maVerticalFontStyle, 1, &nGlyphID, sizeof( GlyphID ), mpLayoutData->mpHash->mbAntialiased, mpLayoutData->mpHash->mbAntialiased, &aVerticalMetrics ) == noErr && ATSUGlyphGetScreenMetrics( mpLayoutData->maFontStyle, 1, &nGlyphID, sizeof( GlyphID ), mpLayoutData->mpHash->mbAntialiased, mpLayoutData->mpHash->mbAntialiased, &aHorizontalMetrics ) == noErr )
+		if ( ATSUGlyphGetScreenMetrics( maLayoutData.front()->maVerticalFontStyle, 1, &nGlyphID, sizeof( GlyphID ), maLayoutData.front()->mpHash->mbAntialiased, maLayoutData.front()->mpHash->mbAntialiased, &aVerticalMetrics ) == noErr && ATSUGlyphGetScreenMetrics( maLayoutData.front()->maFontStyle, 1, &nGlyphID, sizeof( GlyphID ), maLayoutData.front()->mpHash->mbAntialiased, maLayoutData.front()->mpHash->mbAntialiased, &aHorizontalMetrics ) == noErr )
 		{
 			nX = Float32ToLong( aVerticalMetrics.topLeft.x - aHorizontalMetrics.topLeft.x );
 			if ( nGlyphOrientation == GF_ROTL )

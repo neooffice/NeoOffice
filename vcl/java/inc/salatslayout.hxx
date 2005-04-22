@@ -36,6 +36,8 @@
 #ifndef _SV_SALATSLAYOUT_HXX
 #define _SV_SALATSLAYOUT_HXX
 
+#include <vector>
+
 #ifndef _SV_SALLAYOUT_HXX
 #include <sallayout.hxx>
 #endif
@@ -59,7 +61,8 @@ class SalATSLayout : public GenericSalLayout
 	SalGraphics*		mpGraphics;
 	int					mnFallbackLevel;
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
-	ImplATSLayoutData*	mpLayoutData;
+	mutable ImplLayoutRuns	maRuns;
+	::std::vector< ImplATSLayoutData* >	maLayoutData;
 
 public:
 						SalATSLayout( SalGraphics *pGraphics, int nFallbackLevel );
