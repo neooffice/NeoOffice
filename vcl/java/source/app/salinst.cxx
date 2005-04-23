@@ -524,8 +524,8 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 							// Execute menu updates while the VCL event queue is
 							// blocked
-							if ( pSalData->mpFocusFrame )
-								UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
+							for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+								UpdateMenusForFrame( *it, NULL );
 
 							// Relock the Java lock
 							AcquireJavaLock();

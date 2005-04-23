@@ -356,7 +356,8 @@ void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu )
 	{
 		if ( *it == pFrame )
 		{
-			bFrameFound = true;
+			if ( pFrame->maFrameData.mbVisible )
+				bFrameFound = true;
 			break;
 		}
 	}
