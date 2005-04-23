@@ -61,7 +61,7 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
 
-#define LAYOUT_CACHE_MAX_SIZE 4096
+#define LAYOUT_CACHE_MAX_SIZE 256
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
@@ -200,6 +200,9 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 	if ( !pLayoutData )
 	{
 		pLayoutData = new ImplATSLayoutData( rArgs, pLayoutHash, nFallbackLevel, pVCLFont );
+
+		if ( !pLayoutData )
+			return NULL;
 
 		if ( !pLayoutData->IsValid() )
 		{
@@ -723,7 +726,10 @@ static OSStatus SalATSCubicClosePathCallback( void *pData )
 
 SalLayout *SalGraphics::GetTextLayout( ImplLayoutArgs& rArgs, int nFallbackLevel )
 {
-	return new SalATSLayout( this, nFallbackLevel );
+	if ( nFallbackLevel && rArgs.mnFlags & SAL_LAYOUT_DISABLE_GLYPH_PROCESSING )
+		return NULL;
+	else
+		return new SalATSLayout( this, nFallbackLevel );
 }
 
 // ============================================================================
@@ -761,11 +767,12 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 {
 	Destroy();
 
-	if ( !mpVCLFont )
-		return false;
-
-	int nFlags = rArgs.mnFlags | SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 	bool bRet = false;
+	rArgs.mnFlags |= SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
+
+	if ( !mpVCLFont )
+		return bRet;
+
 	Point aPos( 0, 0 );
 	bool bRunRTL;
 	int nMinCharPos;
@@ -805,7 +812,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			if ( it != mpGraphics->maGraphicsData.maFallbackFonts.end() )
 				delete it->second;
 			mpGraphics->maGraphicsData.maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pLayoutData->mpFallbackFont->getJavaObject() );
-			nFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
+			rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 		}
 
 		// Calculate and cache glyph advances
@@ -860,8 +867,6 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 		maLayoutData.push_back( pLayoutData );
 	}
-
-	rArgs.mnFlags = nFlags;
 
 	return bRet;
 }
@@ -1033,9 +1038,11 @@ void SalATSLayout::Destroy()
 {
 	maRuns.Clear();
 
-	for ( ::std::vector< ImplATSLayoutData* >::iterator it = maLayoutData.begin(); it != maLayoutData.end(); ++it )
-		(*it)->Release();
-	maLayoutData.clear();
+	while ( maLayoutData.size() )
+	{
+		maLayoutData.back()->Release();
+		maLayoutData.pop_back();
+	}
 }
 
 // ----------------------------------------------------------------------------
