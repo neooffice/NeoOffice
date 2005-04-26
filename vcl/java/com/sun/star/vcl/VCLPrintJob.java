@@ -358,9 +358,6 @@ public final class VCLPrintJob implements Printable, Runnable {
 
 				// Rotate the page if necessary
 				int orientation = graphicsInfo.pageFormat.getOrientation();
-				Rectangle imageableBounds = new Rectangle(pageFormat.getImageableBounds());
-				imageableBounds.x = 0;
-				imageableBounds.y = 0;
 				boolean rotatedPage = false;
 				if (o == VCLPageFormat.ORIENTATION_PORTRAIT && orientation != PageFormat.PORTRAIT) {
 					if (orientation == PageFormat.REVERSE_LANDSCAPE) {
@@ -372,13 +369,11 @@ public final class VCLPrintJob implements Printable, Runnable {
 						graphicsInfo.graphics.rotate(Math.toRadians(90));
 					}
 					rotatedPage = true;
-					imageableBounds = new Rectangle(imageableBounds.y, imageableBounds.x, imageableBounds.height, imageableBounds.width);
 				}
 				else if (o != VCLPageFormat.ORIENTATION_PORTRAIT && orientation == PageFormat.PORTRAIT ) {
 					graphicsInfo.graphics.translate(0, (int)graphicsInfo.pageFormat.getImageableHeight());
 					graphicsInfo.graphics.rotate(Math.toRadians(-90));
 					rotatedPage = true;
-					imageableBounds = new Rectangle(imageableBounds.y, imageableBounds.x, imageableBounds.height, imageableBounds.width);
 				}
 
 				// Scale to printer resolution

@@ -363,9 +363,11 @@ public final class VCLGraphics {
 
 		pageFormat = p;
 		rotatedPage = r;
-		graphicsBounds = new Rectangle(pageFormat.getImageableBounds());
-		graphicsBounds.x = 0;
-		graphicsBounds.y = 0;
+		Rectangle bounds = pageFormat.getImageableBounds();
+		if (rotatedPage)
+			graphicsBounds = new Rectangle(0, 0, bounds.height, bounds.width);
+		else
+			graphicsBounds = new Rectangle(0, 0, bounds.width, bounds.height);
 		graphics = (Graphics2D)g.create(graphicsBounds.x, graphicsBounds.y, graphicsBounds.width, graphicsBounds.height);
 		int b = graphics.getDeviceConfiguration().getColorModel().getPixelSize();
 
