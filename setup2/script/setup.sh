@@ -135,7 +135,7 @@ fi
 
 # Force registration dialog to appear at least once
 commonxml="$registrydir/Office/Common.xcu"
-commonxmlset="$commonxml.set.1"
+commonxmlset="$commonxml.set.2"
 commonxmlbak="$commonxml.bak"
 rm -f "$commonxmlbak"
 if [ ! -f "$commonxml" ] ; then
