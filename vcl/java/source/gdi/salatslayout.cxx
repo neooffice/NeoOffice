@@ -608,6 +608,12 @@ void ImplATSLayoutData::Destroy()
 		mpNeedFallback = NULL;
 	}
 
+	if ( mpFallbackFont )
+	{
+		delete mpFallbackFont;
+		mpFallbackFont = NULL;
+	}
+
 	if ( maLayout )
 	{
 		ATSUDisposeTextLayout( maLayout );
