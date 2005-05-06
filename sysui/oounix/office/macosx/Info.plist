@@ -464,5 +464,100 @@
 	<string>$(PRODUCT_FILETYPE)</string>
 	<key>CFBundleVersion</key>
 	<string>$(PRODUCT_VERSION) Build $(RSCVERSION)</string>
+	<key>UTExportedTypeDeclarations</key>
+        <array>
+                <dict>
+                        <key>UTTypeConformsTo</key>
+                        <array>
+                                <string>public.content</string>
+                                <string>public.data</string>
+                        </array>
+                        <key>UTTypeDescription</key>
+                        <string>$(PRODUCT_NAME) Draw</string>
+                        <key>UTTypeIdentifier</key>
+                        <string>org.neooffice.draw</string>
+                        <key>UTTypeReferenceURL</key>
+                        <string>http://xml.openoffice.org/xml_specification.pdf</string>
+                        <key>UTTypeTagSpecification</key>
+                        <dict>
+                                <key>public.filename-extension</key>
+                                <array>
+                                        <string>sxd</string>
+                                        <string>std</string>
+                                </array>
+                                <key>public.mime-type</key>
+                                <string>application/vnd.sun.xml.draw</string>
+                        </dict>
+                </dict>
+                <dict>
+                        <key>UTTypeConformsTo</key>
+                        <array>
+                                <string>public.content</string>
+                                <string>public.data</string>
+                        </array>
+                        <key>UTTypeDescription</key>
+                        <string>$(PRODUCT_NAME) Impress</string>
+                        <key>UTTypeIdentifier</key>
+                        <string>org.neooffice.impress</string>
+                        <key>UTTypeReferenceURL</key>
+                        <string>http://xml.openoffice.org/xml_specification.pdf</string>
+                        <key>UTTypeTagSpecification</key>
+                        <dict>
+                                <key>public.filename-extension</key>
+                                <array>
+                                        <string>sxi</string>
+                                        <string>sti</string>
+                                </array>
+                                <key>public.mime-type</key>
+                                <string>application/vnd.sun.xml.impress</string>
+                        </dict>
+                </dict>
+                <dict>
+                        <key>UTTypeConformsTo</key>
+                        <array>
+                                <string>public.content</string>
+                                <string>public.data</string>
+                        </array>
+                        <key>UTTypeDescription</key>
+                        <string>$(PRODUCT_NAME) Calc</string>
+                        <key>UTTypeIdentifier</key>
+                        <string>org.neooffice.calc</string>
+                        <key>UTTypeReferenceURL</key>
+                        <string>http://xml.openoffice.org/xml_specification.pdf</string>
+                        <key>UTTypeTagSpecification</key>
+                        <dict>
+                                <key>public.filename-extension</key>
+                                <array>
+                                        <string>sxc</string>
+                                        <string>stc</string>
+                                </array>
+                                <key>public.mime-type</key>
+                                <string>application/vnd.sun.xml.calc</string>
+                        </dict>
+                </dict>
+                <dict>
+                        <key>UTTypeConformsTo</key>
+                        <array>
+                                <string>public.content</string>
+                                <string>public.data</string>
+                        </array>
+                        <key>UTTypeDescription</key>
+                        <string>$(PRODUCT_NAME) Writer</string>
+                        <key>UTTypeIdentifier</key>
+                        <string>org.neooffice.writer</string>
+                        <key>UTTypeReferenceURL</key>
+                        <string>http://xml.openoffice.org/xml_specification.pdf</string>
+                        <key>UTTypeTagSpecification</key>
+                        <dict>
+                                <key>public.filename-extension</key>
+                                <array>
+                                        <string>sxw</string>
+                                        <string>stw</string>
+                                </array>
+                                <key>public.mime-type</key>
+                                <string>application/vnd.sun.xml.writer</string>
+                        </dict>
+                </dict>
+        </array>
 </dict>
 </plist>
