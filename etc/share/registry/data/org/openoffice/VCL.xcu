@@ -531,55 +531,55 @@
   </node>
   <node oor:name="ko-kr" oor:op="replace">
    <prop oor:name="LATIN_FIXED" oor:op="replace" oor:type="xs:string">
-    <value>Hiragino Mincho Pro W3;Hiragino Mincho Pro W6;Hiragino Kaku Gothic Pro W3;Hiragino Kaku Gothic Pro W6;Hiragino Maru Gothic Pro W4;Apple LiSung Light;Song Regular;Courier New;Courier;Monaco;Monospaced</value>
+    <value>AppleMyungjo Regular;AppleGothic Regular;Apple LiSung Light;Song Regular;Courier New;Courier;Monaco;Monospaced</value>
    </prop>
    <prop oor:name="LATIN_DISPLAY" oor:op="replace" oor:type="xs:string">
-    <value>Hiragino Mincho Pro W3;Hiragino Mincho Pro W6;Hiragino Kaku Gothic Pro W3;Hiragino Kaku Gothic Pro W6;Hiragino Maru Gothic Pro W4;Apple LiSung Light;Song Regular;Arial;Helvetica;Lucida Grande;Geneva;SansSerif</value>
+    <value>AppleMyungjo Regular;AppleGothic Regular;Apple LiSung Light;Song Regular;Arial;Helvetica;Lucida Grande;Geneva;SansSerif</value>
    </prop>
    <prop oor:name="LATIN_HEADING" oor:op="replace" oor:type="xs:string">
-    <value>Hiragino Mincho Pro W3;Hiragino Mincho Pro W6;Hiragino Kaku Gothic Pro W3;Hiragino Kaku Gothic Pro W6;Hiragino Maru Gothic Pro W4;Apple LiSung Light;Song Regular;Arial;Helvetica;Lucida Grande;Geneva;SansSerif</value>
+    <value>AppleMyungjo Regular;AppleGothic Regular;Apple LiSung Light;Song Regular;Arial;Helvetica;Lucida Grande;Geneva;SansSerif</value>
    </prop>
    <prop oor:name="LATIN_PRESENTATION" oor:op="replace" oor:type="xs:string">
-    <value>Hiragino Mincho Pro W3;Hiragino Mincho Pro W6;Hiragino Kaku Gothic Pro W3;Hiragino Kaku Gothic Pro W6;Hiragino Maru Gothic Pro W4;Apple LiSung Light;Song Regular;AppleMyungjo Regular;Times New Roman;Times;Serif</value>
+    <value>AppleMyungjo Regular;AppleGothic Regular;Apple LiSung Light;Song Regular;AppleMyungjo Regular;Times New Roman;Times;Serif</value>
    </prop>
    <prop oor:name="LATIN_SPREADSHEET" oor:op="replace" oor:type="xs:string">
-    <value>Hiragino Mincho Pro W3;Hiragino Mincho Pro W6;Hiragino Kaku Gothic Pro W3;Hiragino Kaku Gothic Pro W6;Hiragino Maru Gothic Pro W4;Apple LiSung Light;Song Regular;AppleMyungjo Regular;Arial;Helvetica;Lucida Grande;Geneva;SansSerif</value>
+    <value>AppleMyungjo Regular;AppleGothic Regular;Apple LiSung Light;Song Regular;AppleMyungjo Regular;Arial;Helvetica;Lucida Grande;Geneva;SansSerif</value>
    </prop>
    <prop oor:name="LATIN_TEXT" oor:op="replace" oor:type="xs:string">
-    <value>Hiragino Mincho Pro W3;Hiragino Mincho Pro W6;Hiragino Kaku Gothic Pro W3;Hiragino Kaku Gothic Pro W6;Hiragino Maru Gothic Pro W4;Apple LiSung Light;Song Regular;AppleMyungjo Regular;Times New Roman;Times;Arial</value>
+    <value>AppleMyungjo Regular;AppleGothic Regular;Apple LiSung Light;Song Regular;AppleMyungjo Regular;Times New Roman;Times;Arial</value>
    </prop>
    <prop oor:name="SANS" oor:op="replace" oor:type="xs:string">
-    <value>Hiragino Mincho Pro W3;Hiragino Mincho Pro W6;Hiragino Kaku Gothic Pro W3;Hiragino Kaku Gothic Pro W6;Hiragino Maru Gothic Pro W4;Apple LiSung Light;Song Regular;AppleMyungjo Regular;Arial;Helvetica;Lucida Grande;Geneva;SansSerif</value>
+    <value>AppleGothic Regular;AppleMyungjo Regular;Apple LiSung Light;Song Regular;AppleMyungjo Regular;Arial;Helvetica;Lucida Grande;Geneva;SansSerif</value>
    </prop>
    <prop oor:name="SANS_UNICODE" oor:op="replace" oor:type="xs:string">
-    <value>Hiragino Mincho Pro W3;Hiragino Mincho Pro W6;Hiragino Kaku Gothic Pro W3;Hiragino Kaku Gothic Pro W6;Hiragino Maru Gothic Pro W4;Apple LiSung Light;Song Regular;Arial;Lucida Grande;Helvetica;Geneva;SansSerif</value>
+    <value>AppleGothic Regular;AppleMyungjo Regular;Apple LiSung Light;Song Regular;Arial;Lucida Grande;Helvetica;Geneva;SansSerif</value>
    </prop>
    <prop oor:name="SERIF" oor:op="replace" oor:type="xs:string">
-    <value>Hiragino Mincho Pro W3;Hiragino Mincho Pro W6;Hiragino Kaku Gothic Pro W3;Hiragino Kaku Gothic Pro W6;Hiragino Maru Gothic Pro W4;Apple LiSung Light;Song Regular;AppleMyungjo Regular;Times New Roman;Times;Serif</value>
+    <value>AppleMyungjo Regular;AppleGothic Regular;Apple LiSung Light;Song Regular;AppleMyungjo Regular;Times New Roman;Times;Serif</value>
    </prop>
    <prop oor:name="CJK_DISPLAY" oor:op="replace" oor:type="xs:string">
-    <value>Hiragino Mincho Pro W3;Hiragino Mincho Pro W6;Hiragino Kaku Gothic Pro W3;Hiragino Kaku Gothic Pro W6;Hiragino Maru Gothic Pro W4;Apple LiSung Light;Song Regular;Arial;Lucida Grande</value>
+    <value>AppleMyungjo Regular;AppleGothic Regular;Apple LiSung Light;Song Regular;Arial;Lucida Grande</value>
    </prop>
    <prop oor:name="CJK_HEADING" oor:op="replace" oor:type="xs:string">
-    <value>Hiragino Mincho Pro W3;Hiragino Mincho Pro W6;Hiragino Kaku Gothic Pro W3;Hiragino Kaku Gothic Pro W6;Hiragino Maru Gothic Pro W4;Apple LiSung Light;Song Regular;Arial;Lucida Grande</value>
+    <value>AppleMyungjo Regular;AppleGothic Regular;Apple LiSung Light;Song Regular;Arial;Lucida Grande</value>
    </prop>
    <prop oor:name="CJK_PRESENTATION" oor:op="replace" oor:type="xs:string">
-    <value>Hiragino Mincho Pro W3;Hiragino Mincho Pro W6;Hiragino Kaku Gothic Pro W3;Hiragino Kaku Gothic Pro W6;Hiragino Maru Gothic Pro W4;Apple LiSung Light;Song Regular;AppleMyungjo Regular;Arial;Lucida Grande</value>
+    <value>AppleMyungjo Regular;AppleGothic Regular;Apple LiSung Light;Song Regular;AppleMyungjo Regular;Arial;Lucida Grande</value>
    </prop>
    <prop oor:name="CJK_SPREADSHEET" oor:op="replace" oor:type="xs:string">
-    <value>Hiragino Mincho Pro W3;Hiragino Mincho Pro W6;Hiragino Kaku Gothic Pro W3;Hiragino Kaku Gothic Pro W6;Hiragino Maru Gothic Pro W4;Apple LiSung Light;Song Regular;AppleMyungjo Regular;Arial;Lucida Grande</value>
+    <value>AppleMyungjo Regular;AppleGothic Regular;Apple LiSung Light;Song Regular;AppleMyungjo Regular;Arial;Lucida Grande</value>
    </prop>
    <prop oor:name="CJK_TEXT" oor:op="replace" oor:type="xs:string">
-    <value>Hiragino Mincho Pro W3;Hiragino Mincho Pro W6;Hiragino Kaku Gothic Pro W3;Hiragino Kaku Gothic Pro W6;Hiragino Maru Gothic Pro W4;Apple LiSung Light;Song Regular;AppleMyungjo Regular;Arial;Lucida Grande</value>
+    <value>AppleMyungjo Regular;AppleGothic Regular;Apple LiSung Light;Song Regular;AppleMyungjo Regular;Arial;Lucida Grande</value>
    </prop>
    <prop oor:name="UI_FIXED" oor:op="replace" oor:type="xs:string">
-    <value>Hiragino Mincho Pro W3;Hiragino Mincho Pro W6;Hiragino Kaku Gothic Pro W3;Hiragino Kaku Gothic Pro W6;Hiragino Maru Gothic Pro W4;Apple LiSung Light;Song Regular;Courier New;Courier;Monaco;Monospaced</value>
+    <value>AppleMyungjo Regular;AppleGothic Regular;;Apple LiSung Light;Song Regular;Courier New;Courier;Monaco;Monospaced</value>
    </prop>
    <prop oor:name="UI_SANS" oor:op="replace" oor:type="xs:string">
-    <value>Hiragino Mincho Pro W3;Hiragino Mincho Pro W6;Hiragino Kaku Gothic Pro W3;Hiragino Kaku Gothic Pro W6;Hiragino Maru Gothic Pro W4;Apple LiSung Light;Song Regular;Arial;Lucida Grande</value>
+    <value>AppleMyungjo Regular;AppleGothic Regular;Apple LiSung Light;Song Regular;Arial;Lucida Grande</value>
    </prop>
    <prop oor:name="FIXED" oor:op="replace" oor:type="xs:string">
-    <value>Hiragino Mincho Pro W3;Hiragino Mincho Pro W6;Hiragino Kaku Gothic Pro W3;Hiragino Kaku Gothic Pro W6;Hiragino Maru Gothic Pro W4;Apple LiSung Light;Song Regular;Courier New;Courier;Monaco;Monospaced</value>
+    <value>AppleMyungjo Regular;AppleGothic Regular;Apple LiSung Light;Song Regular;Courier New;Courier;Monaco;Monospaced</value>
    </prop>
   </node>
  </node>
