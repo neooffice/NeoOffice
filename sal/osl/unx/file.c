@@ -153,8 +153,6 @@ static const sal_Char* MOUNTTAB="/etc/mtab";
 #include <sys/mount.h>
 #define HAVE_STATFS_H
 
-/* All Mac OS X paths are UTF-8 */
-#define osl_getThreadTextEncoding() RTL_TEXTENCODING_UTF8
 #endif
 
 #if OSL_DEBUG_LEVEL > 1

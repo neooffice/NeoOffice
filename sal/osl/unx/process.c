@@ -94,11 +94,6 @@
 #include "sockimpl.h"
 #include "secimpl.h"
 
-#ifdef MACOSX
-/* All Mac OS X paths are UTF-8 */
-#define osl_getThreadTextEncoding() RTL_TEXTENCODING_UTF8
-#endif
-
 #define MAX_ARGS        255
 #define MAX_ENVS        255
 

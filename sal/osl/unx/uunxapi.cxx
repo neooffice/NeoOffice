@@ -58,9 +58,6 @@
 
  #ifdef MACOSX
  #include "system.h"
-
- /* All Mac OS X paths are UTF-8 */
- #define osl_getThreadTextEncoding() RTL_TEXTENCODING_UTF8
  #endif 
  
  /***********************************

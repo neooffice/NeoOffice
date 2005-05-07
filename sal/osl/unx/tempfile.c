@@ -74,11 +74,6 @@
 #include "file_url.h"
 #endif
 
-#ifdef MACOSX
-/* All Mac OS X paths are UTF-8 */
-#define osl_getThreadTextEncoding() RTL_TEXTENCODING_UTF8
-#endif
- 
 /*****************************************************************/
 /* osl_getTempFirURL                                             */
 /*****************************************************************/
