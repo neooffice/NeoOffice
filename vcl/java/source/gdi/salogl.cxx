@@ -242,7 +242,8 @@ void *SalOpenGL::GetOGLFnc( const char* pFncName )
 {
 	void *pRet = NULL;
 
-	if ( mnOGLState == OGL_STATE_VALID )
+	// Fix bug 765 by not returning the glBlendFunc() function
+	if ( mnOGLState == OGL_STATE_VALID && strcmp( pFncName, "glBlendFunc" ) )
 		pRet = aModule.getSymbol( OUString::createFromAscii( pFncName ) );
 
 	return pRet;
