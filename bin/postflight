@@ -112,6 +112,10 @@ if [ -d "$2" ]; then
 		"$1/Contents/Resources/reload_file" "$2/Contents/MacOS/$i"
 	done
 
+	# Touch installation directory to force activation of any bundled Spotlight
+	# plugins
+	touch -f "$2"
+
 fi
 
 exit 0

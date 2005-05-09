@@ -95,6 +95,10 @@ update_installation() {
 		touch -f "$1/Contents/MacOS/$i"   
 	done
 
+	# Touch installation directory to force activation of any bundled Spotlight
+	# plugins
+	touch -f "$1"
+
 	return 0
 
 }
