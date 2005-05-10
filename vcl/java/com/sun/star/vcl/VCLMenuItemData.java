@@ -194,9 +194,7 @@ public final class VCLMenuItemData {
 				if (mc != null) {
 					if (mc instanceof Menu) {
 						Menu m = (Menu)mc;
-						synchronized (m) {
-							m.remove(mi);
-						}
+						m.remove(mi);
 					}
 				}
 			}
@@ -894,43 +892,37 @@ public final class VCLMenuItemData {
 				((VCLMenuItemData)e.next()).unregisterAWTPeer(((Menu)awtMI).getItem(0));
 		}
 		
-		synchronized (awtMI) {
-			if(awtMI instanceof VCLAWTMenuItem)
-				awtMI.removeActionListener((VCLAWTMenuItem)awtMI);
-			else if(awtMI instanceof VCLAWTCheckboxMenuItem)
-				awtMI.removeActionListener((VCLAWTCheckboxMenuItem)awtMI);
-			awtMI.setShortcut(null);
+		if(awtMI instanceof VCLAWTMenuItem)
+			awtMI.removeActionListener((VCLAWTMenuItem)awtMI);
+		else if(awtMI instanceof VCLAWTCheckboxMenuItem)
+			awtMI.removeActionListener((VCLAWTCheckboxMenuItem)awtMI);
+		awtMI.setShortcut(null);
+
+		// remove the item from whatever menus may be holding
+		// references to it
 			
-			// remove the item from whatever menus may be holding
-			// references to it
-			
-			if(!parentMenus.isEmpty()) {
-				Iterator parents=parentMenus.iterator();
-				while(parents.hasNext()) {
-					VCLMenuItemData parent=(VCLMenuItemData)parents.next();
-					if(!parent.awtPeers.isEmpty()) {
-						Iterator parentPeers=parent.awtPeers.iterator();
-						while(parentPeers.hasNext()) {
-							Menu m=(Menu)parentPeers.next();
-							synchronized (m) {
-								m.remove(awtMI);
-							}
-						}
+		if(!parentMenus.isEmpty()) {
+			Iterator parents=parentMenus.iterator();
+			while(parents.hasNext()) {
+				VCLMenuItemData parent=(VCLMenuItemData)parents.next();
+				if(!parent.awtPeers.isEmpty()) {
+					Iterator parentPeers=parent.awtPeers.iterator();
+					while(parentPeers.hasNext()) {
+						Menu m=(Menu)parentPeers.next();
+						m.remove(awtMI);
 					}
 				}
 			}
-			
-			// Detach any orphaned menu items
-			if (awtMI instanceof Menu) {
-				Menu m = (Menu)awtMI;
-				synchronized (m) {
-					m.removeAll();
-				}
-			}
-
-			awtMI.removeNotify();
-			awtPeers.remove(awtPeers.indexOf(awtMI));
 		}
+
+		// Detach any orphaned menu items
+		if (awtMI instanceof Menu) {
+			Menu m = (Menu)awtMI;
+			m.removeAll();
+		}
+
+		awtMI.removeNotify();
+		awtPeers.remove(awtPeers.indexOf(awtMI));
 	}
 					
 	/**
@@ -956,41 +948,35 @@ public final class VCLMenuItemData {
 			Iterator peers=awtPeers.iterator();
 			while(peers.hasNext()) {
 				MenuItem mi=(MenuItem)peers.next();
-				synchronized (mi) {
-					if(mi instanceof VCLAWTMenuItem)
-						mi.removeActionListener((VCLAWTMenuItem)mi);
-					else if(mi instanceof VCLAWTCheckboxMenuItem)
-						mi.removeActionListener((VCLAWTCheckboxMenuItem)mi);
-					mi.setShortcut(null);
+				if(mi instanceof VCLAWTMenuItem)
+					mi.removeActionListener((VCLAWTMenuItem)mi);
+				else if(mi instanceof VCLAWTCheckboxMenuItem)
+					mi.removeActionListener((VCLAWTCheckboxMenuItem)mi);
+				mi.setShortcut(null);
 
-					if(!parentMenus.isEmpty()) {
-						Iterator parents=parentMenus.iterator();
-						while(parents.hasNext()) {
-							VCLMenuItemData parent=(VCLMenuItemData)parents.next();
-							if (!parent.awtPeers.isEmpty()) {
-								Iterator parentPeers=parent.awtPeers.iterator();
-								while(parentPeers.hasNext()) {
-									Menu m=(Menu)parentPeers.next();
-									synchronized (m) {
-										m.remove(mi);
-									}
-								}
+				if(!parentMenus.isEmpty()) {
+					Iterator parents=parentMenus.iterator();
+					while(parents.hasNext()) {
+						VCLMenuItemData parent=(VCLMenuItemData)parents.next();
+						if (!parent.awtPeers.isEmpty()) {
+							Iterator parentPeers=parent.awtPeers.iterator();
+							while(parentPeers.hasNext()) {
+								Menu m=(Menu)parentPeers.next();
+								m.remove(mi);
 							}
 						}
 					}
+				}
 
-					// Detach any orphaned menu items
-					if (mi instanceof Menu) {
-						Menu m = (Menu)mi;
-						synchronized (m) {
-							m.removeAll();
-						}
-					}
+				// Detach any orphaned menu items
+				if (mi instanceof Menu) {
+					Menu m = (Menu)mi;
+					m.removeAll();
+				}
 
-					if (mi.getParent() == null) {
-						mi.removeNotify();
-						savedPeers.remove(mi);
-					}
+				if (mi.getParent() == null) {
+					mi.removeNotify();
+					savedPeers.remove(mi);
 				}
 			}
 
