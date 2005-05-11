@@ -1324,35 +1324,13 @@ void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
 #ifdef USE_JAVA
     if ( rAppEvent.IsOpenEvent() || rAppEvent.IsPrintEvent() )
     {
- 		if ( GetCommandLineArgs()->IsInvisible() )
+        static bool bInTerminate = false;
+
+ 		if ( bInTerminate || GetCommandLineArgs()->IsInvisible() )
 			return;
 
-        Reference< XMultiServiceFactory > xSMgr = ::comphelper::getProcessServiceFactory();
-
-        bool bWasSuppress = ::desktop::Desktop::bSuppressOpenDefault;
         if ( !::desktop::Desktop::bSuppressOpenDefault )
-        {
             ::desktop::Desktop::bSuppressOpenDefault = sal_True;
-            RTL_LOGFILE_CONTEXT_TRACE( aLog, "{ create BackingComponent" );
-            Reference< XFrame > xDesktopFrame( xSMgr->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
-            if ( xDesktopFrame.is() )
-            {
-                Reference< XFrame > xBackingFrame;
-                Reference< ::com::sun::star::awt::XWindow > xContainerWindow;
-
-                xBackingFrame = xDesktopFrame->findFrame( OUString( RTL_CONSTASCII_USTRINGPARAM( "_blank" ) ), 0 );
-                if ( xBackingFrame.is() )
-                    xContainerWindow = xBackingFrame->getContainerWindow();
-                if ( xContainerWindow.is() )
-                {
-                    Sequence< Any > lArgs(1);
-                    lArgs[0] <<= xContainerWindow;
-
-                    Reference< XController > xBackingComp( xSMgr->createInstanceWithArguments( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.comp.sfx2.view.BackingComp" ) ), lArgs ), UNO_QUERY);
-                }
-            }
-            RTL_LOGFILE_CONTEXT_TRACE( aLog, "} create BackingComponent" );
-        }
 
         ProcessDocumentsRequest aRequest;
 		aRequest.pcProcessed = NULL;
@@ -1367,23 +1345,22 @@ void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
         }
 
         // If no component was created, open the default window
-        if ( !bWasSuppress )
+        Reference< XMultiServiceFactory > xSMgr = ::comphelper::getProcessServiceFactory();
+        Reference< XDesktop > xDesktop( xSMgr->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
+        if ( xDesktop.is() )
         {
-            ::desktop::Desktop::bSuppressOpenDefault = sal_False;
-            Reference< XDesktop > xDesktop( xSMgr->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
-            if ( xDesktop.is() )
+            Reference< XEnumerationAccess > xAccess( xDesktop->getComponents() );
+            if ( xAccess.is() )
             {
-                Reference< XEnumerationAccess > xAccess( xDesktop->getComponents() );
-                if ( xAccess.is() )
-                {
-                    Reference< XEnumeration > xEnum( xAccess->createEnumeration() );
-                    if ( xEnum.is() && xEnum->hasMoreElements() )
-                        ::desktop::Desktop::bSuppressOpenDefault = sal_True;
-                }
+                Reference< XEnumeration > xEnum( xAccess->createEnumeration() );
+                if ( xEnum.is() && xEnum->hasMoreElements() )
+                    return;
             }
-            OpenDefault();
-            ::desktop::Desktop::bSuppressOpenDefault = sal_True;
         }
+
+        bInTerminate = true;
+
+        xDesktop->terminate();
 
         return;
     }
