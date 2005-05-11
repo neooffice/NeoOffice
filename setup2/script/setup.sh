@@ -97,13 +97,13 @@ if [ ! -z "$repair" ] ; then
         if [ ! -z "`ls "$userinstall"`" ] ; then
             userinstallbak="$userinstall.backup.`date +%Y%M%d%H%M`"
             mkdir -p "$userinstallbak"
-            ( cd "$userinstall" ; tar cf - * ) | ( cd "$userinstallbak" ; tar xf - )
+            ( cd "$userinstall" ; pax -r -w "." "$userinstallbak" )
         fi
     else
         rm -f "$userinstall"
     fi
     mkdir -p "$userinstall"
-    ( cd "$userbase" ; tar cf - * ) | ( cd "$userinstall" ; tar xf - )
+    ( cd "$userbase" ; pax -r -w "." "$userinstall" )
     chmod -Rf u+rw "$userinstall"
     if [ ! -d "$configdir" -o ! -d "$registrydir" -o ! -d "$wordbookdir" ] ; then
         error "Installation of files in the $userinstall directory failed"
