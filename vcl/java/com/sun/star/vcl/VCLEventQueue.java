@@ -313,7 +313,6 @@ public final class VCLEventQueue {
 			else if (id == VCLEvent.SALEVENT_WHEELMOUSE) {
 				if (queue.mouseWheelMove != null && !queue.mouseWheelMove.remove && queue.mouseWheelMove.event.getFrame() == newItem.event.getFrame()) {
 					queue.mouseWheelMove.remove = true;
-					newItem.event.addScrollAmount(queue.mouseWheelMove.event.getScrollAmount());
 					newItem.event.addWheelRotation(queue.mouseWheelMove.event.getWheelRotation());
 				}
 				queue.mouseWheelMove = newItem;

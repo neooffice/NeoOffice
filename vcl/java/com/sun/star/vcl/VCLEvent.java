@@ -1123,17 +1123,6 @@ public final class VCLEvent extends AWTEvent {
 	}
 
 	/**
-	 * Adds the specified amount to the mouse wheel scroll amount.
-	 *
-	 * @param s the mouse wheel scroll amount to add
-	 */
-	void addScrollAmount(int s) {
-
-		scrollAmount += s;
-
-	}
-
-	/**
 	 * Adds the specified amount to the mouse wheel rotation
 	 *
 	 * @param r the mouse wheel rotation to add
