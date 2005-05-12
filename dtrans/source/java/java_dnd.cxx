@@ -164,7 +164,7 @@ static void ImplSetThemeCursor( sal_Int8 nAction, bool bPointInWindow )
 			else if ( nAction & DNDConstants::ACTION_LINK )
 				SetThemeCursor( kThemeAliasArrowCursor );
 			else
-				SetThemeCursor( kThemeArrowCursor );
+				SetThemeCursor( kThemeNotAllowedCursor );
 		}
 	}
 	else
@@ -291,7 +291,7 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 		}
 	}
 
-	if ( !bFound )
+	if ( !bFound || pSource->getNativeWindow() == aWindow )
 		return noErr;
 
 	MacOSPoint aPoint;
@@ -361,7 +361,7 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 				break;
 		}
 
-		ImplSetThemeCursor( nCurrentAction, PtInRect( aPoint, &aRect ) );
+		ImplSetThemeCursor( pTarget->isRejected() ? DNDConstants::ACTION_NONE : nCurrentAction, PtInRect( aPoint, &aRect ) );
 	}
 
 	return noErr;
@@ -407,7 +407,7 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 	{
 		// Update actions
 		ImplSetDragDropAction( aDrag, nCurrentAction );
-		ImplSetThemeCursor( nCurrentAction, PtInRect( aPoint, &aRect ) );
+		ImplSetThemeCursor( pTarget->isRejected() ? DNDConstants::ACTION_NONE : nCurrentAction, PtInRect( aPoint, &aRect ) );
 		return noErr;
 	}
 
@@ -813,6 +813,7 @@ JavaDropTarget::JavaDropTarget() :
 	mbActive( sal_True ),
 	mnDefaultActions( DNDConstants::ACTION_NONE ),
 	mpNativeWindow( NULL ),
+	mbRejected( false ),
 	mpWindow( NULL )
 {
 }
@@ -953,6 +954,8 @@ void JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, void *pNativeT
 {
 	MutexGuard aDragGuard( aDragMutex );
 
+	mbRejected = false;
+
 	DropTargetDragEnterEvent aDragEnterEvent;
 	aDragEnterEvent.Source = static_cast< XDropTarget* >(this);
 	aDragEnterEvent.LocationX = nX;
@@ -1001,6 +1004,7 @@ void JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, void *pNativeT
 	}
 
 	nCurrentAction = pContext->getDragAction();
+	mbRejected = pContext->isRejected();
 }
 
 // ------------------------------------------------------------------------
@@ -1033,7 +1037,8 @@ void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY, void *pNativeTr
 #endif	// MACOSX
 	}
 
-	aDragEvent.Context = Reference< XDropTargetDragContext >( new DropTargetDragContext( aDragEvent.DropAction ) );
+	DropTargetDragContext *pContext = new DropTargetDragContext( aDragEvent.DropAction );
+	aDragEvent.Context = Reference< XDropTargetDragContext >( pContext );
 
 	ClearableMutexGuard aGuard( maMutex );
 
@@ -1046,6 +1051,9 @@ void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY, void *pNativeTr
 		if ( (*it).is() )
 			(*it)->dragExit( aDragEvent );
 	}
+
+	nCurrentAction = pContext->getDragAction();
+	mbRejected = pContext->isRejected();
 }
 
 // ------------------------------------------------------------------------
@@ -1094,6 +1102,7 @@ void JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY, void *pNativeTr
 	}
 
 	nCurrentAction = pContext->getDragAction();
+	mbRejected = pContext->isRejected();
 }
 
 // ------------------------------------------------------------------------
@@ -1101,6 +1110,25 @@ void JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY, void *pNativeTr
 bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, void *pNativeTransferable )
 {
 	MutexGuard aDragGuard( aDragMutex );
+
+	// Don't set the cursor to the reject cursor since a drop has occurred
+	bNoRejectCursor = true;
+
+	// Reset the pointer to the last pointer set in VCL window
+	if ( mpWindow )
+	{
+		// We need to toggle the style to make sure that VCL resets the
+		// pointer
+		PointerStyle nStyle = mpWindow->GetPointer().GetStyle();
+		if ( nStyle == POINTER_ARROW )
+			mpWindow->SetPointer( Pointer( POINTER_NULL ) );
+		else
+			mpWindow->SetPointer( Pointer( POINTER_ARROW ) );
+		mpWindow->SetPointer( Pointer( nStyle ) );
+	}
+
+	if ( mbRejected )
+		return false;
 
 	DropTargetDropEvent aDropEvent;
 	aDropEvent.Source = static_cast< OWeakObject* >(this);
@@ -1133,22 +1161,6 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, void *pNativeTransf
 
 	DropTargetDropContext *pContext = new DropTargetDropContext( aDropEvent.DropAction );
 	aDropEvent.Context = Reference< XDropTargetDropContext >( pContext );
-
-	// Don't set the cursor to the reject cursor since a drop has occurred
-	bNoRejectCursor = true;
-
-	// Reset the pointer to the last pointer set in VCL window
-	if ( mpWindow )
-	{
-		// We need to toggle the style to make sure that VCL resets the
-		// pointer
-		PointerStyle nStyle = mpWindow->GetPointer().GetStyle();
-		if ( nStyle == POINTER_ARROW )
-			mpWindow->SetPointer( Pointer( POINTER_NULL ) );
-		else
-			mpWindow->SetPointer( Pointer( POINTER_ARROW ) );
-		mpWindow->SetPointer( Pointer( nStyle ) );
-	}
 
 	ClearableMutexGuard aGuard( maMutex );
 

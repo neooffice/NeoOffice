@@ -68,6 +68,7 @@ public:
 class DropTargetDropContext : public ::cppu::WeakImplHelper1< ::com::sun::star::datatransfer::dnd::XDropTargetDropContext >
 {
 	sal_Int8				mnAction;
+	bool					mbRejected;
 	bool					mbSuccess;
 
 public:
@@ -80,11 +81,13 @@ public:
 
 	sal_Int8				getDropAction();
 	bool					getDropComplete();
+	bool					isRejected();
 };
 
 class DropTargetDragContext : public ::cppu::WeakImplHelper1< ::com::sun::star::datatransfer::dnd::XDropTargetDragContext >
 {
 	sal_Int8				mnAction;
+	bool					mbRejected;
 
 public:
 							DropTargetDragContext( sal_Int8 nAction );
@@ -94,6 +97,7 @@ public:
 	virtual void			SAL_CALL rejectDrag() throw();
 
 	sal_Int8				getDragAction();
+	bool					isRejected();
 };
 
 }

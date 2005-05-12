@@ -100,6 +100,7 @@ public:
 	virtual sal_Int32		SAL_CALL getDefaultCursor( sal_Int8 dragAction ) throw();
 	virtual void			SAL_CALL startDrag( const ::com::sun::star::datatransfer::dnd::DragGestureEvent& trigger, sal_Int8 sourceActions, sal_Int32 cursor, sal_Int32 image, const Reference< ::com::sun::star::datatransfer::XTransferable >& transferable, const Reference< ::com::sun::star::datatransfer::dnd::XDragSourceListener >& listener ) throw();
 
+	void*					getNativeWindow() { return mpNativeWindow; }
 	void					handleDrag( sal_Int32 nX, sal_Int32 nY );
 };
 
@@ -114,6 +115,7 @@ private:
 	::std::list< ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDropTargetListener > >	maListeners;
     ::osl::Mutex			maMutex; 
 	void*					mpNativeWindow;
+    bool					mbRejected;
 	Window*					mpWindow;
 
 public:
@@ -136,6 +138,7 @@ public:
 	void					handleDragExit( sal_Int32 nX, sal_Int32 nY, void *pNativeTransferable );
 	void					handleDragOver( sal_Int32 nX, sal_Int32 nY, void *pNativeTransferable );
 	bool					handleDrop( sal_Int32 nX, sal_Int32 nY, void *pNativeTransferable );
+	bool					isRejected() { return mbRejected; }
 };
 
 ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL JavaDropTarget_getSupportedServiceNames();

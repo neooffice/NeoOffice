@@ -52,18 +52,12 @@ using namespace java;
 DragSourceContext::DragSourceContext() :
 	WeakImplHelper1< XDragSourceContext >()
 {
-#ifdef DEBUG
-	fprintf( stderr, "DragSourceContext::DragSourceContext not implemented\n" );
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 DragSourceContext::~DragSourceContext()
 {
-#ifdef DEBUG
-	fprintf( stderr, "DragSourceContext::~DragSourceContext not implemented\n" );
-#endif
 }
 
 // ------------------------------------------------------------------------
@@ -108,30 +102,21 @@ void SAL_CALL DragSourceContext::transferablesFlavorsChanged() throw()
 DropTargetDropContext::DropTargetDropContext( sal_Int8 nAction ) :
 	WeakImplHelper1< XDropTargetDropContext >(),
 	mnAction( nAction ),
+	mbRejected( false ),
 	mbSuccess( false )
 {
-#ifdef DEBUG
-	fprintf( stderr, "DropTargetDropContext::DropTargetDropContext not implemented\n" );
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 DropTargetDropContext::~DropTargetDropContext()
 {
-#ifdef DEBUG
-	fprintf( stderr, "DropTargetDropContext::~DropTargetDropContext not implemented\n" );
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void SAL_CALL DropTargetDropContext::acceptDrop( sal_Int8 dragOperation ) throw()
 {
-#ifdef DEBUG
-	fprintf( stderr, "DropTargetDropContext::acceptDrop not implemented\n" );
-#endif
-
 	mnAction &= DNDConstants::ACTION_DEFAULT;
 
 	if ( dragOperation & DNDConstants::ACTION_MOVE )
@@ -146,21 +131,15 @@ void SAL_CALL DropTargetDropContext::acceptDrop( sal_Int8 dragOperation ) throw(
 
 void SAL_CALL DropTargetDropContext::rejectDrop() throw()
 {
-#ifdef DEBUG
-	fprintf( stderr, "DropTargetDropContext::rejectDrop not implemented\n" );
-#endif
+	mbRejected = true;
 }
 
 // ------------------------------------------------------------------------
 
 void SAL_CALL DropTargetDropContext::dropComplete( sal_Bool success ) throw()
 {
-#ifdef DEBUG
-	fprintf( stderr, "DropTargetDropContext::dropComplete not implemented\n" );
-#endif
-
 	// Multiple listeners may call this method so don't reset when false
-	if ( success )
+	if ( !mbRejected && success )
 		mbSuccess = success;
 }
 
@@ -178,15 +157,20 @@ sal_Int8 DropTargetDropContext::getDropAction()
 	return mnAction;
 }
 
+// ------------------------------------------------------------------------
+
+bool DropTargetDropContext::isRejected()
+{
+	return mbRejected;
+}
+
 // ========================================================================
 
 DropTargetDragContext::DropTargetDragContext( sal_Int8 nAction ) :
 	WeakImplHelper1< XDropTargetDragContext >(),
-	mnAction( nAction )
+	mnAction( nAction ),
+	mbRejected( false )
 {
-#ifdef DEBUG
-	fprintf( stderr, "DropTargetDragContext::DropTargetDragContext not implemented\n" );
-#endif
 }
 
 // ------------------------------------------------------------------------
@@ -199,10 +183,6 @@ DropTargetDragContext::~DropTargetDragContext()
 
 void SAL_CALL DropTargetDragContext::acceptDrag( sal_Int8 dragOperation ) throw()
 {
-#ifdef DEBUG
-	fprintf( stderr, "DropTargetDragContext::acceptDrag not implemented\n" );
-#endif
-
 	mnAction &= DNDConstants::ACTION_DEFAULT;
 
 	if ( dragOperation & DNDConstants::ACTION_MOVE )
@@ -217,9 +197,7 @@ void SAL_CALL DropTargetDragContext::acceptDrag( sal_Int8 dragOperation ) throw(
 
 void SAL_CALL DropTargetDragContext::rejectDrag() throw()
 {
-#ifdef DEBUG
-	fprintf( stderr, "DropTargetDragContext::rejectDrag not implemented\n" );
-#endif
+	mbRejected = true;
 }
 
 // ------------------------------------------------------------------------
@@ -227,4 +205,11 @@ void SAL_CALL DropTargetDragContext::rejectDrag() throw()
 sal_Int8 DropTargetDragContext::getDragAction()
 {
 	return mnAction;
+}
+
+// ------------------------------------------------------------------------
+
+bool DropTargetDragContext::isRejected()
+{
+	return mbRejected;
 }
