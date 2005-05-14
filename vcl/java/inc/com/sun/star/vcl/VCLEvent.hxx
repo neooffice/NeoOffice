@@ -82,6 +82,7 @@ public:
 	USHORT				getID();
 	USHORT				getModifiers();
 	::rtl::OUString		getPath();
+	USHORT				getRepeatCount();
 	::rtl::OUString		getText();
 	USHORT*				getTextAttributes();
 	const Rectangle		getUpdateRect();

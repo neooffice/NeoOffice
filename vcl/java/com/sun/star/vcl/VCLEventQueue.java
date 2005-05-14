@@ -277,7 +277,9 @@ public final class VCLEventQueue {
 			eqi = queue.head;
 			if (eqi != null) {
 				queue.head = queue.head.next;
-				if (eqi == queue.mouseMove)
+				if (eqi == queue.keyInput)
+					queue.keyInput = null;
+				else if (eqi == queue.mouseMove)
 					queue.mouseMove = null;
 				else if (eqi == queue.mouseWheelMove)
 					queue.mouseWheelMove = null;
@@ -285,7 +287,7 @@ public final class VCLEventQueue {
 					queue.moveResize = null;
 			}
 			if (queue.head == null)
-				queue.mouseMove = queue.mouseWheelMove = queue.moveResize = queue.tail = null;
+				queue.keyInput = queue.mouseMove = queue.mouseWheelMove = queue.moveResize = queue.tail = null;
 			return eqi != null ? eqi.event : null;
 		}
 
@@ -304,8 +306,18 @@ public final class VCLEventQueue {
 		VCLEventQueue.QueueItem newItem = new VCLEventQueue.QueueItem(event);
 		int id = newItem.event.getID();
 		synchronized (queueList) {
-			// Coalesce mouse move events
-			if (id == VCLEvent.SALEVENT_MOUSEMOVE) {
+			// Coalesce key and mouse events
+			if (id == VCLEvent.SALEVENT_KEYINPUT) {
+				if (queue.keyInput != null && !queue.keyInput.remove && queue.keyInput.event.getFrame() == newItem.event.getFrame() && queue.keyInput.event.getKeyChar() == newItem.event.getKeyChar() && queue.keyInput.event.getKeyCode() == newItem.event.getKeyCode() && queue.keyInput.event.getModifiers() == newItem.event.getModifiers()) {
+					queue.keyInput.remove = true;
+					newItem.event.addRepeatCount((short)1);
+				}
+				queue.keyInput= newItem;
+			}
+			else if (id == VCLEvent.SALEVENT_KEYUP) {
+				queue.keyInput = null;
+			}
+			else if (id == VCLEvent.SALEVENT_MOUSEMOVE) {
 				if (queue.mouseMove != null && !queue.mouseMove.remove && queue.mouseMove.event.getFrame() == newItem.event.getFrame())
 					queue.mouseMove.remove = true;
 				queue.mouseMove = newItem;
@@ -322,6 +334,7 @@ public final class VCLEventQueue {
 					queue.moveResize.remove = true;
 				queue.moveResize = newItem;
 			}
+
 			// Ignore duplicate window close events
 			if (id == VCLEvent.SALEVENT_CLOSE) {
 				VCLEventQueue.QueueItem eqi = queue.head;
@@ -331,6 +344,7 @@ public final class VCLEventQueue {
 					eqi = eqi.next;
 				}
 			}
+
 			// Purge removed events from the front of the queue
 			while (queue.head != null && queue.head.remove)
 				queue.head = queue.head.next;
@@ -341,6 +355,7 @@ public final class VCLEventQueue {
 			else {
 				queue.head = queue.tail = newItem;
 			}
+
 			// Update status flags
 			switch (id) {
 				case VCLEvent.SALEVENT_EXTTEXTINPUT:
@@ -360,6 +375,7 @@ public final class VCLEventQueue {
 					newItem.type = VCLEventQueue.INPUT_OTHER;
 					break;
 			}
+
 			queueList.notifyAll();
 		}
 
@@ -558,6 +574,8 @@ public final class VCLEventQueue {
 	final class Queue {
 
 		VCLEventQueue.QueueItem head = null;
+
+		VCLEventQueue.QueueItem keyInput = null;
 
 		VCLEventQueue.QueueItem mouseMove = null;
 

@@ -906,6 +906,11 @@ public final class VCLEvent extends AWTEvent {
 	private String path = null;
 
 	/**
+	 * The repeat count.
+	 */
+	private short repeatCount = 0;
+
+	/**
 	 * The mouse wheel scroll amount.
 	 */
 	private int scrollAmount = 0;
@@ -1119,6 +1124,17 @@ public final class VCLEvent extends AWTEvent {
 		this(event, id, f, 0, k);
 		scrollAmount = s;
 		wheelRotation = r * -1;
+
+	}
+
+	/**
+	 * Adds the specified repeat count.
+	 *
+	 * @param r the repeat count to add
+	 */
+	void addRepeatCount(short r) {
+
+		repeatCount += r;
 
 	}
 
@@ -1606,6 +1622,17 @@ public final class VCLEvent extends AWTEvent {
 	public String getPath() {
 
 		return path;
+
+	}
+
+	/**
+	 * Returns the repeat count.
+	 *
+	 * @return the repeat count
+	 */
+	public short getRepeatCount() {
+
+		return repeatCount;
 
 	}
 

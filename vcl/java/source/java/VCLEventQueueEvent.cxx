@@ -298,7 +298,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pKeyEvent->mnTime = getWhen();
 				pKeyEvent->mnCode = getKeyCode() | getModifiers();
 				pKeyEvent->mnCharCode = getKeyChar();
-				pKeyEvent->mnRepeat = 0;
+				pKeyEvent->mnRepeat = getRepeatCount();
 			}
 #ifdef MACOSX
 			// Fix bug 529 by manually converting KEY_MOD1-Dash into a
@@ -827,6 +827,27 @@ USHORT com_sun_star_vcl_VCLEvent::getModifiers()
 			if ( tempObj )
 				out = JavaString2String( t.pEnv, tempObj );
 		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+USHORT com_sun_star_vcl_VCLEvent::getRepeatCount()
+{
+	static jmethodID mID = NULL;
+	USHORT out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()S";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getRepeatCount", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (USHORT)t.pEnv->CallNonvirtualShortMethod( object, getMyClass(), mID );
 	}
 	return out;
 }
