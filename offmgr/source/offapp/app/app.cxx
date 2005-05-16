@@ -455,7 +455,7 @@ void OfficeApplication::Init()
 
 #ifdef MACOSX
 // [ed] 1/26/05 Install preferenceshandler.
-	AEInstallEventHandler( 'NO%F', 'mPRF', NewAEEventHandlerUPP( DoAEPref ), (long)this, FALSE );
+	AEInstallEventHandler( kCoreEventClass, 'mPRF', NewAEEventHandlerUPP( DoAEPref ), (long)this, FALSE );
 #endif
 }
 

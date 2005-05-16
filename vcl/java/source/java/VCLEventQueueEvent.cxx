@@ -183,36 +183,40 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_ABOUT:
 		{
+#ifdef MACOSX
 			// [ed] 1/25/05 Send ourselves an about appleevent
 			// that can be handled by the sfx2 module
-			
 			AppleEvent theEvent;
-			ProcessSerialNumber    me = {0, kCurrentProcess};
+			ProcessSerialNumber me = { 0, kCurrentProcess };
 			AEDesc target;
-			AECreateDesc (typeProcessSerialNumber, &me, sizeof( ProcessSerialNumber ), &target);
-			if ( AECreateAppleEvent( kCoreEventClass, kAEAbout, &target, kAutoGenerateReturnID, kAnyTransactionID, &theEvent ) == noErr ) {
-				AppleEvent  theReply = {typeNull,nil};
-				AESend( &theEvent, &theReply, kAENoReply, kAENormalPriority, kNoTimeOut, nil, nil);
+			AECreateDesc( typeProcessSerialNumber, &me, sizeof( ProcessSerialNumber ), &target );
+			if ( AECreateAppleEvent( kCoreEventClass, kAEAbout, &target, kAutoGenerateReturnID, kAnyTransactionID, &theEvent ) == noErr )
+			{
+				AppleEvent theReply = { typeNull, NULL };
+				AESend( &theEvent, &theReply, kAENoReply, kAENormalPriority, kNoTimeOut, NULL, NULL );
 				AEDisposeDesc( &theEvent );
 			}
 			AEDisposeDesc( &target );
+#endif	// MACOSX
 			return;
 		}
 		case SALEVENT_PREFS:
 		{
+#ifdef MACOSX
 			// [ed] 1/25/05 Send ourselves a prefs appleevent
 			// that can be handled by the sfx2 module
-			
 			AppleEvent theEvent;
-			ProcessSerialNumber    me = {0, kCurrentProcess};
+			ProcessSerialNumber me = { 0, kCurrentProcess };
 			AEDesc target;
-			AECreateDesc (typeProcessSerialNumber, &me, sizeof( ProcessSerialNumber ), &target);
-			if ( AECreateAppleEvent( 'NO%F', 'mPRF', &target, kAutoGenerateReturnID, kAnyTransactionID, &theEvent ) == noErr ) {
-				AppleEvent  theReply = {typeNull,nil};
-				AESend( &theEvent, &theReply, kAENoReply, kAENormalPriority, kNoTimeOut, nil, nil);
+			AECreateDesc( typeProcessSerialNumber, &me, sizeof( ProcessSerialNumber ), &target );
+			if ( AECreateAppleEvent( kCoreEventClass, 'mPRF', &target, kAutoGenerateReturnID, kAnyTransactionID, &theEvent ) == noErr )
+			{
+				AppleEvent theReply = { typeNull, NULL };
+				AESend( &theEvent, &theReply, kAENoReply, kAENormalPriority, kNoTimeOut, NULL, NULL );
 				AEDisposeDesc( &theEvent );
 			}
 			AEDisposeDesc( &target );
+#endif	// MACOSX
 			return;
 		}
 	}
