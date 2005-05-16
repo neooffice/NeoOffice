@@ -154,16 +154,10 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 	{
 		case SALEVENT_SHUTDOWN:
 		{
-			// If a bordered window is found, dispatch the SALEVENT_SHUTDOWN
+			// If a window is found, dispatch the SALEVENT_SHUTDOWN
 			// event
-			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-			{
-				if ( (*it)->maFrameData.mbVisible && (*it)->maGeometry.nTopDecoration )
-				{
-					dispatchEvent( nID, *it, NULL );
-					break;
-				}
-			}
+			if ( pSalData->maFrameList.size() )
+				dispatchEvent( nID, pSalData->maFrameList.front(), NULL );
 			return;
 		}
 		case SALEVENT_ACTIVATE_APPLICATION:
@@ -196,7 +190,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			ProcessSerialNumber    me = {0, kCurrentProcess};
 			AEDesc target;
 			AECreateDesc (typeProcessSerialNumber, &me, sizeof( ProcessSerialNumber ), &target);
-			OSErr theErr;
 			if ( AECreateAppleEvent( kCoreEventClass, kAEAbout, &target, kAutoGenerateReturnID, kAnyTransactionID, &theEvent ) == noErr ) {
 				AppleEvent  theReply = {typeNull,nil};
 				AESend( &theEvent, &theReply, kAENoReply, kAENormalPriority, kNoTimeOut, nil, nil);
@@ -214,7 +207,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			ProcessSerialNumber    me = {0, kCurrentProcess};
 			AEDesc target;
 			AECreateDesc (typeProcessSerialNumber, &me, sizeof( ProcessSerialNumber ), &target);
-			OSErr theErr;
 			if ( AECreateAppleEvent( 'NO%F', 'mPRF', &target, kAutoGenerateReturnID, kAnyTransactionID, &theEvent ) == noErr ) {
 				AppleEvent  theReply = {typeNull,nil};
 				AESend( &theEvent, &theReply, kAENoReply, kAENormalPriority, kNoTimeOut, nil, nil);
