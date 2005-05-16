@@ -445,13 +445,15 @@ void SfxApplication::SetApp( SfxApplication* pSfxApp )
 #ifdef MACOSX
 static OSErr DoAEAbout( const AppleEvent *message, AppleEvent *reply, long refcon )
 {
-    if ( ! AboutDialog::DialogIsActive() )
-    {
-	SfxApplication *theApp=(SfxApplication *)refcon;
-	ModalDialog *pDlg = theApp->CreateAboutDialog();
-	pDlg->Execute();
-	delete pDlg;
-    }
+	if ( !AboutDialog::DialogIsActive() )
+	{
+		SfxApplication *theApp=(SfxApplication *)refcon;
+		ModalDialog *pDlg = theApp->CreateAboutDialog();
+		pDlg->Execute();
+		delete pDlg;
+	}
+
+	return noErr;
 }
 #endif
 
