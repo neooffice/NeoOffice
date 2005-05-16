@@ -1790,7 +1790,11 @@ sal_Bool Desktop::InitializeQuickstartMode( Reference< XMultiServiceFactory >& r
         // this will only be activated if -quickstart was specified on cmdline
         RTL_LOGFILE_CONTEXT( aLog, "desktop (cd100003) createInstance com.sun.star.office.Quickstart" );
 
+#if defined USE_JAVA && defined MACOSX
+        sal_Bool bQuickstart = sal_True;
+#else	// USE_JAVA && MACOSX
         sal_Bool bQuickstart = GetCommandLineArgs()->IsQuickstart();
+#endif	// USE_JAVA && MACOSX
         Sequence< Any > aSeq( 1 );
         aSeq[0] <<= bQuickstart;
 

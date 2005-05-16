@@ -132,8 +132,8 @@
 #define IMPRESS_COMMAND_ID			'SDI3'
 #define DRAW_COMMAND_ID				'SDI4'
 #define MATH_COMMAND_ID				'SDI5'
-#define TEMPLATE_COMMAND_ID			'SDI6'
-#define OPEN_COMMAND_ID				'SDI7'
+#define FROMTEMPLATE_COMMAND_ID		'SDI6'
+#define FILEOPEN_COMMAND_ID			'SDI7'
 
 #endif	// USE_JAVA && MACOSX
 
@@ -180,6 +180,12 @@ IMPL_LINK( ShutdownIconEvent, DispatchEvent, void*, pData )
 		case MATH_COMMAND_ID:
 			ShutdownIcon::OpenURL( OUString::createFromAscii( MATH_URL ), OUString::createFromAscii( "_default" ) );
 			break;
+		case FROMTEMPLATE_COMMAND_ID:
+			ShutdownIcon::FromTemplate();
+			break;
+		case FILEOPEN_COMMAND_ID:
+			ShutdownIcon::FileOpen();
+			break;
 		default:
 			break;
 	}
@@ -206,8 +212,8 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 					case IMPRESS_COMMAND_ID:
 					case DRAW_COMMAND_ID:
 					case MATH_COMMAND_ID:
-					case TEMPLATE_COMMAND_ID:
-					case OPEN_COMMAND_ID:
+					case FROMTEMPLATE_COMMAND_ID:
+					case FILEOPEN_COMMAND_ID:
 					{
 						ShutdownIconEvent *pEvent = new ShutdownIconEvent( nCommand );
 						Application::PostUserEvent( LINK( pEvent, ShutdownIconEvent, DispatchEvent ) );
@@ -668,6 +674,24 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 					if ( aString )
 					{
 						InsertMenuItemTextWithCFString( aAppMenu, aString, 0, 0, 0 );
+						CFRelease( aString );
+					}
+
+					aDesc = GetResString( STR_QUICKSTART_FILEOPEN );
+					aString = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+					if ( aString )
+					{
+						if ( CFStringGetLength( aString ) )
+							InsertMenuItemTextWithCFString( aAppMenu, aString, 0, 0, FILEOPEN_COMMAND_ID );
+						CFRelease( aString );
+					}
+
+					aDesc = GetResString( STR_QUICKSTART_FROMTEMPLATE );
+					aString = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+					if ( aString )
+					{
+						if ( CFStringGetLength( aString ) )
+							InsertMenuItemTextWithCFString( aAppMenu, aString, 0, 0, FROMTEMPLATE_COMMAND_ID );
 						CFRelease( aString );
 					}
 
