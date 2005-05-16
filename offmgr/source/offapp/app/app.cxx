@@ -355,7 +355,8 @@ static OSErr DoAEPref( const AppleEvent *message, AppleEvent *reply, long refcon
 {
     OfficeApplication *theApp=(OfficeApplication *)refcon;
     if ( theApp )
-	theApp->ExecuteGeneralOptionsDialog( SID_OPTIONS_TREEDIALOG );
+        theApp->ExecuteGeneralOptionsDialog( SID_OPTIONS_TREEDIALOG );
+	return noErr;
 }
 #endif
 
