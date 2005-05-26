@@ -61,7 +61,7 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
 
-#define LAYOUT_CACHE_MAX_SIZE 256
+#define LAYOUT_CACHE_MAX_SIZE 512
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
@@ -80,6 +80,7 @@ inline bool IsControlChar( sal_Unicode cChar )
 struct ImplATSLayoutDataHash {
 	int					mnFallbackLevel;
 	int					mnBeginChars;
+	int					mnEndChars;
 	int					mnLen;
 	ATSUFontID			mnFontID;
 	long				mnFontSize;
@@ -118,6 +119,7 @@ struct ImplATSLayoutData {
 	int*				mpCharsToChars;
 	int*				mpCharsToGlyphs;
 	long*				mpCharAdvances;
+	ATSUStyle			maTrimFontStyle;
 	ATSUStyle			maVerticalFontStyle;
 	long				mnBaselineDelta;
 	bool				mbValid;
@@ -145,6 +147,7 @@ bool ImplHashEquality::operator()( const ImplATSLayoutDataHash *p1, const ImplAT
 	// valid memory
 	return ( p1->mnFallbackLevel == p2->mnFallbackLevel &&
 		p1->mnBeginChars == p2->mnBeginChars &&
+		p1->mnEndChars == p2->mnEndChars &&
 		p1->mnLen == p2->mnLen &&
 		p1->mnFontID == p2->mnFontID &&
 		p1->mnFontSize == p2->mnFontSize &&
@@ -172,7 +175,8 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 	ImplATSLayoutDataHash *pLayoutHash = new ImplATSLayoutDataHash();
 	pLayoutHash->mnFallbackLevel = nFallbackLevel;
 	pLayoutHash->mnBeginChars = ( rArgs.mnMinCharPos && !IsControlChar( rArgs.mpStr[ rArgs.mnMinCharPos - 1 ] ) ? 1 : 0 );
-	pLayoutHash->mnLen = rArgs.mnEndCharPos - rArgs.mnMinCharPos + pLayoutHash->mnBeginChars + ( rArgs.mnEndCharPos < rArgs.mnLength && !IsControlChar( rArgs.mpStr[ rArgs.mnEndCharPos ] ) ? 1 : 0 );
+	pLayoutHash->mnEndChars = ( rArgs.mnEndCharPos < rArgs.mnLength && !IsControlChar( rArgs.mpStr[ rArgs.mnEndCharPos ] ) ? 1 : 0 );
+	pLayoutHash->mnLen = rArgs.mnEndCharPos - rArgs.mnMinCharPos + pLayoutHash->mnBeginChars + pLayoutHash->mnEndChars;
 	pLayoutHash->mnFontID = (ATSUFontID)pVCLFont->getNativeFont();
 	pLayoutHash->mnFontSize = pVCLFont->getSize();
 	pLayoutHash->mfFontScaleX = pVCLFont->getScaleX();
@@ -244,6 +248,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	mpCharsToChars( NULL ),
 	mpCharsToGlyphs( NULL ),
 	mpCharAdvances( NULL ),
+	maTrimFontStyle( NULL ),
 	maVerticalFontStyle( NULL ),
 	mnBaselineDelta( 0 ),
 	mbValid( false )
@@ -313,6 +318,21 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 		return;
 	}
 
+	// Fix bug 751 by disabling ligatures on trim characters
+	if ( mpHash->mnBeginChars || mpHash->mnEndChars )
+	{
+		if ( ATSUCreateAndCopyStyle( maFontStyle, &maTrimFontStyle ) == noErr )
+		{
+			aTypes[0] = kLigaturesType;
+			aSelectors[0] = kCommonLigaturesOffSelector;
+			if ( ATSUSetFontFeatures( maTrimFontStyle, 1, aTypes, aSelectors ) != noErr )
+			{
+				Destroy();
+				return;
+			}
+		}
+	}
+
 	if ( rArgs.mnFlags & SAL_LAYOUT_VERTICAL )
 	{
 		if ( ATSUCreateAndCopyStyle( maFontStyle, &maVerticalFontStyle ) == noErr )
@@ -341,7 +361,30 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 		}
 	}
 
-	if ( ATSUCreateTextLayoutWithTextPtr( mpHash->mpStr, kATSUFromTextBeginning, kATSUToTextEnd, mpHash->mnLen, 1, (const UniCharCount *)&mpHash->mnLen, &maFontStyle, &maLayout ) != noErr )
+	int nStyles = 1 + ( mpHash->mnBeginChars ? 1 : 0 ) + ( mpHash->mnEndChars ? 1 : 0 );
+	ATSUStyle aStyles[ nStyles ];
+	UniCharCount aStyleLengths[ nStyles ];
+
+	nStyles = 0;
+	if ( mpHash->mnBeginChars )
+	{
+		aStyles[ nStyles ] = maTrimFontStyle;
+		aStyleLengths[ nStyles ] = mpHash->mnBeginChars;
+		nStyles++;
+	}
+
+	aStyles[ nStyles ] = maFontStyle;
+	aStyleLengths[ nStyles ] = mpHash->mnLen - mpHash->mnBeginChars - mpHash->mnEndChars;
+	nStyles++;
+
+	if ( mpHash->mnEndChars )
+	{
+		aStyles[ nStyles ] = maTrimFontStyle;
+		aStyleLengths[ nStyles ] = mpHash->mnEndChars;
+		nStyles++;
+	}
+
+	if ( ATSUCreateTextLayoutWithTextPtr( mpHash->mpStr, kATSUFromTextBeginning, kATSUToTextEnd, mpHash->mnLen, nStyles, aStyleLengths, aStyles, &maLayout ) != noErr )
 	{
 		Destroy();
 		return;
@@ -644,6 +687,12 @@ void ImplATSLayoutData::Destroy()
 	{
 		rtl_freeMemory( mpCharAdvances );
 		mpCharAdvances = NULL;
+	}
+
+	if ( maTrimFontStyle )
+	{
+		ATSUDisposeStyle( maTrimFontStyle );
+		maTrimFontStyle = NULL;
 	}
 
 	if ( maVerticalFontStyle )
