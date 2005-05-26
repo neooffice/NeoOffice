@@ -97,6 +97,8 @@ class SalPrinterData
 
 class SalDriverData
 {
+	friend class	ImplJobSetup;
+	friend class	JobSetup;
 	friend class	SalInfoPrinter;
 	friend class	SalInstance;
 	friend class	SalPrinter;

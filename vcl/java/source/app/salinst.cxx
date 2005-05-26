@@ -1548,6 +1548,16 @@ SalInfoPrinter* SalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
 			pSetupData->mpDriverData = NULL;
 			pSetupData->mnDriverDataLen = 0;
 		}
+		else
+		{
+			SalDriverData *pDriverData = (SalDriverData *)pSetupData->mpDriverData;
+			if ( !pDriverData->mpVCLPageFormat )
+			{
+				delete (SalDriverData *)pSetupData->mpDriverData;
+				pSetupData->mpDriverData = NULL;
+				pSetupData->mnDriverDataLen = 0;
+			}
+		}
 	}
 
 	// Set driver data

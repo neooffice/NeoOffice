@@ -125,7 +125,7 @@ ImplJobSetup::ImplJobSetup( const ImplJobSetup& rJobSetup ) :
 	if ( rJobSetup.mpDriverData )
 	{
 #ifdef USE_JAVA
-		if ( rJobSetup.mnSystem == JOBSETUP_SYSTEM_JAVA && rJobSetup.mnDriverDataLen == sizeof( SalDriverData ) )
+		if ( rJobSetup.mnSystem == JOBSETUP_SYSTEM_JAVA && rJobSetup.mnDriverDataLen == sizeof( SalDriverData ) && ( (SalDriverData *)rJobSetup.mpDriverData )->mpVCLPageFormat )
 		{
 			mpDriverData = (BYTE*)( new SalDriverData( (SalDriverData *)rJobSetup.mpDriverData ) );
 		}
@@ -319,9 +319,6 @@ BOOL JobSetup::operator==( const JobSetup& rJobSetup ) const
 
 	ImplJobSetup* pData1 = mpData;
 	ImplJobSetup* pData2 = rJobSetup.mpData;
-#ifdef USE_JAVA
-	SalDriverData *pOldDriverData = NULL;
-#endif	// USE_JAVA
 	if ( (pData1->mnSystem			== pData2->mnSystem)				&&
 		 (pData1->maPrinterName 	== pData2->maPrinterName)			&&
 		 (pData1->maDriver			== pData2->maDriver)				&&
@@ -331,20 +328,27 @@ BOOL JobSetup::operator==( const JobSetup& rJobSetup ) const
 		 (pData1->mnPaperWidth		== pData2->mnPaperWidth)			&&
 		 (pData1->mnPaperHeight 	== pData2->mnPaperHeight)			&&
 		 (pData1->mnDriverDataLen	== pData2->mnDriverDataLen) 		&&
-#ifdef USE_JAVA
-		 (pData2->mnSystem == JOBSETUP_SYSTEM_JAVA && pData2->mnDriverDataLen == sizeof( SalDriverData ))	&&
-		 (pOldDriverData			= (SalDriverData *)pData2->mpDriverData)	&&
-		 (pData1->mpDriverData		= (BYTE*)( new SalDriverData( (SalDriverData *)pData2 ) ))	&&
-#else	// USE_JAVA
+#ifndef USE_JAVA
 		 (memcmp( pData1->mpDriverData, pData2->mpDriverData, pData1->mnDriverDataLen ) == 0)															&&
 #endif	// USE_JAVA
 		 (pData1->maValueMap		== pData2->maValueMap)
 		 )
 	{
 #ifdef USE_JAVA
-		delete pData1->mpDriverData;
-#endif	// USE_JAVA
+		if ( pData2->mnSystem == JOBSETUP_SYSTEM_JAVA && pData2->mnDriverDataLen == sizeof( SalDriverData ) && ( (SalDriverData *)pData2->mpDriverData )->mpVCLPageFormat )
+		{
+			if ( pData1->mnSystem == JOBSETUP_SYSTEM_JAVA && pData1->mnDriverDataLen == sizeof( SalDriverData ) && ( (SalDriverData *)pData1->mpDriverData )->mpVCLPageFormat )
+				delete (SalDriverData *)pData1->mpDriverData;
+			else
+				rtl_freeMemory( pData1->mpDriverData );
+
+			pData1->mpDriverData = (BYTE*)( new SalDriverData( (SalDriverData *)pData2->mpDriverData ) );
+
+			return TRUE;
+		}
+#else	// USE_JAVA
 		return TRUE;
+#endif	// USE_JAVA
 	}
 
 	return FALSE;

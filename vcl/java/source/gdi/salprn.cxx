@@ -112,10 +112,7 @@ BOOL SalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 	Application::AcquireSolarMutex( nCount );
 
 	if ( !bOK )
-	{
 		maPrinterData.mpVCLPageFormat->setOrientation( nOrientation );
-		return FALSE;
-	}
 
 	// Update values
 	SetData( 0, pSetupData );
@@ -134,9 +131,19 @@ BOOL SalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
 	{
 		if ( pSetupData->mnSystem != JOBSETUP_SYSTEM_JAVA || pSetupData->mnDriverDataLen != sizeof( SalDriverData ) )
 		{
-			delete (SalDriverData *)pSetupData->mpDriverData;
+			rtl_freeMemory( pSetupData->mpDriverData );
 			pSetupData->mpDriverData = NULL;
 			pSetupData->mnDriverDataLen = 0;
+		}
+		else
+		{
+			SalDriverData *pDriverData = (SalDriverData *)pSetupData->mpDriverData;
+			if ( !pDriverData->mpVCLPageFormat )
+			{
+				delete (SalDriverData *)pSetupData->mpDriverData;
+				pSetupData->mpDriverData = NULL;
+				pSetupData->mnDriverDataLen = 0;
+			}
 		}
 	}
 
@@ -147,16 +154,6 @@ BOOL SalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
 		pDriverData->mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( maPrinterData.mpVCLPageFormat->getJavaObject() );
 		pSetupData->mpDriverData = (BYTE *)pDriverData;
 		pSetupData->mnDriverDataLen = sizeof( SalDriverData );
-	}
-	else
-	{
-		if ( maPrinterData.mpVCLPageFormat )
-			delete maPrinterData.mpVCLPageFormat;
-
-		// Create a new page format instance that points to the same Java
-		// object
-		SalDriverData *pDriverData = (SalDriverData *)pSetupData->mpDriverData;
-		maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pDriverData->mpVCLPageFormat->getJavaObject() );
 	}
 
 	// Set but don't update values
@@ -170,16 +167,16 @@ BOOL SalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
 BOOL SalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 {
 	// Set or update values
-	if ( nFlags & SAL_JOBSET_ORIENTATION == 0 )
+	if ( ! ( nFlags & SAL_JOBSET_ORIENTATION ) )
 		pSetupData->meOrientation = maPrinterData.mpVCLPageFormat->getOrientation();
 	else
 		maPrinterData.mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
 
-	if ( nFlags & SAL_JOBSET_PAPERBIN == 0 )
+	if ( ! ( nFlags & SAL_JOBSET_PAPERBIN ) )
 		pSetupData->mnPaperBin = 0;
 
 
-	if ( nFlags & SAL_JOBSET_PAPERSIZE == 0 )
+	if ( ! ( nFlags & SAL_JOBSET_PAPERSIZE ) )
 	{
 		pSetupData->mePaperFormat = maPrinterData.mpVCLPageFormat->getPaperType();
 		Size aSize( maPrinterData.mpVCLPageFormat->getPageSize() );
@@ -447,7 +444,5 @@ SalDriverData::~SalDriverData()
 				break;
 			}
 		}
-
-		pSalData->maVCLPageFormats.remove( mpVCLPageFormat );
 	}
 }
