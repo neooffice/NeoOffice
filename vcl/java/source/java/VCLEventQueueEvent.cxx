@@ -266,9 +266,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_GETFOCUS:
 		{
-			if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame != pFrame )
-				dispatchEvent( SALEVENT_LOSEFOCUS, pSalData->mpFocusFrame, NULL );
-			pSalData->mpFocusFrame = pFrame;
 			dispatchEvent( nID, pFrame, NULL );
 			// Force all "always on top" windows to the front without focus
 			for ( std::list< SalFrame* >::const_iterator it = pSalData->maAlwaysOnTopFrameList.begin(); it != pSalData->maAlwaysOnTopFrameList.end(); ++it )
@@ -277,7 +274,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_LOSEFOCUS:
 		{
-			pSalData->mpFocusFrame = NULL;
 			dispatchEvent( nID, pFrame, NULL );
 			// Force all "always on top" windows to the front without focus
 			for ( std::list< SalFrame* >::const_iterator it = pSalData->maAlwaysOnTopFrameList.begin(); it != pSalData->maAlwaysOnTopFrameList.end(); ++it )
@@ -518,6 +514,9 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 			{
 				if ( nID == SALEVENT_GETFOCUS )
 				{
+					if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame != pFrame )
+						dispatchEvent( SALEVENT_LOSEFOCUS, pSalData->mpFocusFrame, NULL );
+					pSalData->mpFocusFrame = pFrame;
 					if ( pSalData->mpPresentationFrame && pFrame != pSalData->mpPresentationFrame )
 					{
 						// Make sure document window does not float to front
@@ -545,6 +544,10 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 						pFrame->ToTop( 0 );
 					}
 #endif	// MACOSX
+				}
+				else if ( nID == SALEVENT_LOSEFOCUS )
+				{
+					pSalData->mpFocusFrame = NULL;
 				}
 #ifdef MACOSX
 				else if ( nID == SALEVENT_MOUSEBUTTONDOWN && pSalData->mpFocusFrame == pFrame && (WindowRef)pFrame->maFrameData.mpVCLFrame->getNativeWindow() == FrontNonFloatingWindow() )
