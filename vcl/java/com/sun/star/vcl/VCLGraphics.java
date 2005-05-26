@@ -845,6 +845,7 @@ public final class VCLGraphics {
 		if (xor) {
 			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
 			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
+			srcGraphics.setRenderingHints(graphics.getRenderingHints());
 			srcGraphics.setColor(new Color(color));
 			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 			srcGraphics.drawLine(x1, y1, x2, y2);
@@ -966,6 +967,7 @@ public final class VCLGraphics {
 		if (xor) {
 			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
 			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
+			srcGraphics.setRenderingHints(graphics.getRenderingHints());
 			srcGraphics.setColor(new Color(color));
 			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 			if (fill) {
@@ -1039,49 +1041,36 @@ public final class VCLGraphics {
 		if (npoly == 0)
 			return;
 
-		Area area = null;
-		for (int i = 0; i < npoly; i++) {
-			Area a = new Area(new Polygon(xpoints[i], ypoints[i], npoints[i]));
-			if (area == null) {
-				area = a;
-				continue;
-			}
-			if (fill)
-				area.exclusiveOr(a);
-			else
-				area.add(a);
-		}
-		if (area == null || area.isEmpty())
-			return;
-
-		Rectangle bounds = area.getBounds();
-		bounds.x -= 1;
-		bounds.y -= 1;
-		bounds.width += 2;
-		bounds.height += 2;
-		bounds = bounds.intersection(graphicsBounds);
-		if (bounds.isEmpty())
-			return;
-
 		if (xor) {
-			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
-			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
-			srcGraphics.setColor(new Color(color));
-			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
-			if (fill) {
-				srcGraphics.fill(area);
-			}
-			else {
-				for (int i = 0; i < npoly; i++) {
-					for (int j = 1; j < npoints[i]; j++)
-						srcGraphics.drawLine(xpoints[i][j - 1], ypoints[i][j - 1], xpoints[i][j], ypoints[i][j]);
-				}
-			}
-			srcGraphics.dispose();
-			drawImageXOR(srcImage, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y, bounds.width, bounds.height);
-			srcImage.dispose();
+			// Fix bug 786 by drawing overlapping polygons in XOR mode
+			for (int i = 0; i < npoly; i++)
+				drawPolygon(npoints[i], xpoints[i], ypoints[i], color, fill);
 		}
 		else {
+			Area area = null;
+			for (int i = 0; i < npoly; i++) {
+				Area a = new Area(new Polygon(xpoints[i], ypoints[i], npoints[i]));
+				if (area == null) {
+					area = a;
+					continue;
+				}
+				if (fill)
+					area.exclusiveOr(a);
+				else
+					area.add(a);
+			}
+			if (area == null || area.isEmpty())
+				return;
+
+			Rectangle bounds = area.getBounds();
+			bounds.x -= 1;
+			bounds.y -= 1;
+			bounds.width += 2;
+			bounds.height += 2;
+			bounds = bounds.intersection(graphicsBounds);
+			if (bounds.isEmpty())
+				return;
+
 			graphics.setColor(new Color(color));
 			if (fill) {
 				graphics.fill(area);
@@ -1136,6 +1125,7 @@ public final class VCLGraphics {
 		if (xor) {
 			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
 			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
+			srcGraphics.setRenderingHints(graphics.getRenderingHints());
 			srcGraphics.setColor(new Color(color));
 			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 			if (fill)
@@ -1331,6 +1321,7 @@ public final class VCLGraphics {
 		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME) {
 			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
 			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
+			srcGraphics.setRenderingHints(graphics.getRenderingHints());
 			BasicStroke stroke = (BasicStroke)srcGraphics.getStroke();
 			srcGraphics.setStroke(new BasicStroke(1.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 1.0f, new float[]{ 2.0f, 2.0f }, 0.0f));
 			srcGraphics.setColor(Color.white);
@@ -1343,6 +1334,7 @@ public final class VCLGraphics {
 		else if ((options & VCLGraphics.SAL_INVERT_50) == VCLGraphics.SAL_INVERT_50) {
 			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, VCLGraphics.image50.getBitCount());
 			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
+			srcGraphics.setRenderingHints(graphics.getRenderingHints());
 			srcGraphics.setPaint(new TexturePaint(VCLGraphics.image50.getImage(), new Rectangle(0, 0, VCLGraphics.image50.getWidth(), VCLGraphics.image50.getHeight()).getBounds2D()));
 			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 			srcGraphics.fillRect(x, y, width, height);
@@ -1425,6 +1417,7 @@ public final class VCLGraphics {
 		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME) {
 			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
 			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
+			srcGraphics.setRenderingHints(graphics.getRenderingHints());
 			BasicStroke stroke = (BasicStroke)srcGraphics.getStroke();
 			srcGraphics.setStroke(new BasicStroke(1.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 1.0f, new float[]{ 2.0f, 2.0f }, 0.0f));
 			srcGraphics.setColor(Color.white);
@@ -1437,6 +1430,7 @@ public final class VCLGraphics {
 		else if ((options & VCLGraphics.SAL_INVERT_50) == VCLGraphics.SAL_INVERT_50) {
 			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, VCLGraphics.image50.getBitCount());
 			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
+			srcGraphics.setRenderingHints(graphics.getRenderingHints());
 			srcGraphics.setPaint(new TexturePaint(VCLGraphics.image50.getImage(), new Rectangle(0, 0, VCLGraphics.image50.getWidth(), VCLGraphics.image50.getHeight()).getBounds2D()));
 			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 			srcGraphics.fillPolygon(polygon);
@@ -1447,6 +1441,7 @@ public final class VCLGraphics {
 		else {
 			VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
 			Graphics2D srcGraphics = srcImage.getImage().createGraphics();
+			srcGraphics.setRenderingHints(graphics.getRenderingHints());
 			srcGraphics.translate(bounds.x * -1, bounds.y * -1);
 			Shape clip = graphics.getClip();
 			Area polygonClip = new Area(polygon);
