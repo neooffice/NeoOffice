@@ -547,7 +547,8 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 				}
 				else if ( nID == SALEVENT_LOSEFOCUS )
 				{
-					pSalData->mpFocusFrame = NULL;
+					if ( pSalData->mpFocusFrame == pFrame )
+						pSalData->mpFocusFrame = NULL;
 				}
 #ifdef MACOSX
 				else if ( nID == SALEVENT_MOUSEBUTTONDOWN && pSalData->mpFocusFrame == pFrame && (WindowRef)pFrame->maFrameData.mpVCLFrame->getNativeWindow() == FrontNonFloatingWindow() )

@@ -155,6 +155,16 @@ BOOL SalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
 		pSetupData->mpDriverData = (BYTE *)pDriverData;
 		pSetupData->mnDriverDataLen = sizeof( SalDriverData );
 	}
+	else
+	{
+		if ( maPrinterData.mpVCLPageFormat )
+			delete maPrinterData.mpVCLPageFormat;
+
+		// Create a new page format instance that points to the same Java
+		// object
+		SalDriverData *pDriverData = (SalDriverData *)pSetupData->mpDriverData;
+		maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pDriverData->mpVCLPageFormat->getJavaObject() );
+	}
 
 	// Set but don't update values
 	SetData( SAL_JOBSET_ALL, pSetupData );
