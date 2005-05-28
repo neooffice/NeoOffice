@@ -174,11 +174,11 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 		if ( nBeginChars > rArgs.mnMinCharPos )
 			nBeginChars = rArgs.mnMinCharPos;
 		int nFirstChar = rArgs.mnMinCharPos - nBeginChars;
-		for ( int i = rArgs.mnMinCharPos; i >= nFirstChar; i-- )
+		for ( int i = rArgs.mnMinCharPos - 1; i >= nFirstChar; i-- )
 		{
 			if ( IsControlChar( rArgs.mpStr[ i ] ) )
 			{
-				nBeginChars = rArgs.mnMinCharPos - i;
+				nBeginChars = rArgs.mnMinCharPos - i - 1;
 				break;
 			}
 		}
@@ -188,7 +188,7 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 	{
 		if ( nEndChars > rArgs.mnLength - rArgs.mnEndCharPos )
 			nEndChars = rArgs.mnLength - rArgs.mnEndCharPos;
-		int nLastChar = rArgs.mnLength - rArgs.mnEndCharPos;
+		int nLastChar = rArgs.mnEndCharPos + nEndChars;
 		for ( int i = rArgs.mnEndCharPos; i < nLastChar; i++ )
 		{
 			if ( IsControlChar( rArgs.mpStr[ i ] ) )
