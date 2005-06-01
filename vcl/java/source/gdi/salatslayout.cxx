@@ -122,7 +122,7 @@ struct ImplATSLayoutData {
 	long				mnBaselineDelta;
 	bool				mbValid;
 
-	static ImplATSLayoutData*	GetLayoutData( ImplLayoutArgs& rArgs, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, int nBeginChars, int nEndChars );
+	static ImplATSLayoutData*	GetLayoutData( ImplLayoutArgs& rArgs, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont );
 
 						ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHash *pLayoutHash, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont );
 						~ImplATSLayoutData();
@@ -165,39 +165,12 @@ bool ImplHashEquality::operator()( const ImplATSLayoutDataHash *p1, const ImplAT
 
 // ----------------------------------------------------------------------------
 
-ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int nFallbackLevel, com_sun_star_vcl_VCLFont *pVCLFont, int nBeginChars, int nEndChars )
+ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int nFallbackLevel, com_sun_star_vcl_VCLFont *pVCLFont )
 {
 	ImplATSLayoutData *pLayoutData = NULL;
 
-	if ( nBeginChars )
-	{
-		if ( nBeginChars > rArgs.mnMinCharPos )
-			nBeginChars = rArgs.mnMinCharPos;
-		int nFirstChar = rArgs.mnMinCharPos - nBeginChars;
-		for ( int i = rArgs.mnMinCharPos - 1; i >= nFirstChar; i-- )
-		{
-			if ( IsControlChar( rArgs.mpStr[ i ] ) )
-			{
-				nBeginChars = rArgs.mnMinCharPos - i - 1;
-				break;
-			}
-		}
-	}
-
-	if ( nEndChars )
-	{
-		if ( nEndChars > rArgs.mnLength - rArgs.mnEndCharPos )
-			nEndChars = rArgs.mnLength - rArgs.mnEndCharPos;
-		int nLastChar = rArgs.mnEndCharPos + nEndChars;
-		for ( int i = rArgs.mnEndCharPos; i < nLastChar; i++ )
-		{
-			if ( IsControlChar( rArgs.mpStr[ i ] ) )
-			{
-				nEndChars = i - rArgs.mnEndCharPos;
-				break;
-			}
-		}
-	}
+	int nBeginChars = ( ! ( rArgs.mnFlags & SAL_LAYOUT_COMPLEX_DISABLED ) && rArgs.mnMinCharPos && !IsControlChar( rArgs.mpStr[ rArgs.mnMinCharPos - 1 ] ) ? 1 : 0 );
+	int nEndChars = ( ! ( rArgs.mnFlags & SAL_LAYOUT_COMPLEX_DISABLED ) && rArgs.mnEndCharPos < rArgs.mnLength && !IsControlChar( rArgs.mpStr[ rArgs.mnEndCharPos ] ) ? 1 : 0 );
 
 	ImplATSLayoutDataHash *pLayoutHash = new ImplATSLayoutDataHash();
 	pLayoutHash->mnFallbackLevel = nFallbackLevel;
@@ -417,6 +390,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 		return;
 	}
 
+	long nFullWidth = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX );
 
 	ByteCount nBufSize;
 	if ( ATSUGetGlyphInfo( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nBufSize, NULL ) != noErr )
@@ -500,14 +474,14 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 				if ( mpCharAdvances[ i ] < 1 )
 				{
 					mpCharAdvances[ i ] = 1;
-					if ( i < mpHash->mnLen )
+					if ( i + 1 < mpHash->mnLen )
 						mpCharAdvances[ i + 1 ] += 1;
 				}
 
 				for ( int j = i + 1; j < nNextCaretPos; j++ )
 				{
 					mpCharAdvances[ j ] = 1;
-					if ( i < mpHash->mnLen )
+					if ( i + 1 < mpHash->mnLen )
 						mpCharAdvances[ i + 1 ] += 1;
 				}
 			}
@@ -549,7 +523,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 				mpCharAdvances[ i ] = 1;
 		}
 	}
-	
+
 	// Find positions that require fallback fonts
 	mpNeedFallback = NULL;
 	UniCharArrayOffset nCurrentPos = 0;
@@ -827,7 +801,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			nRunFlags &= ~SAL_LAYOUT_BIDI_RTL;
 		ImplLayoutArgs aArgs( rArgs.mpStr, rArgs.mnLength, nMinCharPos, nEndCharPos, nRunFlags );
 
-		ImplATSLayoutData *pLayoutData = ImplATSLayoutData::GetLayoutData( aArgs, mnFallbackLevel, mpVCLFont, nMinCharPos - rArgs.mnMinCharPos, rArgs.mnEndCharPos - nEndCharPos );
+		ImplATSLayoutData *pLayoutData = ImplATSLayoutData::GetLayoutData( aArgs, mnFallbackLevel, mpVCLFont );
 		if ( !pLayoutData )
 			return false;
 
@@ -914,7 +888,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 	if ( !maLayoutData.size() )
 		return;
 
-	int nMaxGlyphs( maLayoutData.front()->mnGlyphCount );
+	int nMaxGlyphs = maLayoutData.front()->mnGlyphCount;
 	long aGlyphArray[ nMaxGlyphs ];
 	long aDXArray[ nMaxGlyphs ];
 
