@@ -952,8 +952,17 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
             }
             else
             {
+#if defined USE_JAVA && MACOSX
+                // Fix bug 578 by right aligning glyphs that following missing
+                // character positions
+                if( pG > mpGlyphItems && pG[-1].mnCharPos - pG->mnCharPos > 1 )
+                    pG[-1].mnNewWidth += nDiff;
+                else if ( IsSpacingGlyph( pG->mnGlyphIndex ) )
+                    pG->mnNewWidth += nDiff;
+#else	// USE_JAVA && MACOSX
                 // right align cluster in new space for (RTL && !KASHIDA) case
                 pG->mnNewWidth += nDiff;
+#endif	// USE_JAVA && MACOSX
                 nDelta += nDiff;
             }
 
@@ -1225,20 +1234,6 @@ int GenericSalLayout::GetNextGlyphs( int nLen, long* pGlyphs, Point& rPos,
         long nGlyphAdvance = pG[1].maLinearPos.X() - pG->maLinearPos.X();
         if( pGlyphAdvAry )
         {
-#if defined USE_JAVA && defined MACOSX
-            // Fix bug 578 by right aligning glyphs that following missing
-            // character positions
-            if( pG->IsRTLGlyph() && pG->mnOrigWidth != nGlyphAdvance && pG > mpGlyphItems && pG[-1].mnCharPos - pG->mnCharPos > 1 )
-            {
-                int nDiff = nGlyphAdvance - pG->mnOrigWidth;
-                if( nCount == 1 )
-                    aRelativePos.X() += nDiff;
-                else
-                    pGlyphAdvAry[-1] += nDiff;
-                nGlyphAdvance -= nDiff;
-            }
-#endif	// USE_JAVA && MACOSX
-
             // override default advance with correct value
             *(pGlyphAdvAry++) = nGlyphAdvance;
         }
