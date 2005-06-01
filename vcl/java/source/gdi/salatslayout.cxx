@@ -473,16 +473,16 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 
 				if ( mpCharAdvances[ i ] < 1 )
 				{
+					if ( nNextCaretPos < mpHash->mnLen )
+						mpCharAdvances[ nNextCaretPos ] += mpCharAdvances[ i ] - 1;
 					mpCharAdvances[ i ] = 1;
-					if ( i + 1 < mpHash->mnLen )
-						mpCharAdvances[ i + 1 ] += 1;
 				}
 
 				for ( int j = i + 1; j < nNextCaretPos; j++ )
 				{
+					if ( nNextCaretPos < mpHash->mnLen )
+						mpCharAdvances[ nNextCaretPos ] += mpCharAdvances[ j ] - 1;
 					mpCharAdvances[ j ] = 1;
-					if ( i + 1 < mpHash->mnLen )
-						mpCharAdvances[ i + 1 ] += 1;
 				}
 			}
 			else
@@ -783,15 +783,41 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	if ( !mpVCLFont )
 		return bRet;
 
-	Point aPos( 0, 0 );
+	// Aggregate runs
 	bool bRunRTL;
 	int nMinCharPos;
 	int nEndCharPos;
+	bool bLastRunRTL;
+	int nLastMinCharPos;
+	int nLastEndCharPos;
 	rArgs.ResetPos();
-	while ( rArgs.GetNextRun( &nMinCharPos, &nEndCharPos, &bRunRTL ) )
+	if ( rArgs.GetNextRun( &nLastMinCharPos, &nLastEndCharPos, &bLastRunRTL ) )
 	{
-		// Cache run
-		maRuns.AddRun( nMinCharPos, nEndCharPos, bRunRTL );
+		while ( rArgs.GetNextRun( &nMinCharPos, &nEndCharPos, &bRunRTL ) )
+		{
+			if ( bRunRTL == bLastRunRTL && nMinCharPos <= nLastEndCharPos && nEndCharPos >= nLastMinCharPos )
+			{
+				if ( nMinCharPos < nLastMinCharPos )
+					nLastMinCharPos = nMinCharPos;
+				if ( nEndCharPos > nLastEndCharPos )
+					nLastEndCharPos = nEndCharPos;
+				continue;
+			}
+
+			maRuns.AddRun( nLastMinCharPos, nLastEndCharPos, bLastRunRTL );
+			bLastRunRTL = bRunRTL;
+			nLastMinCharPos = nMinCharPos;
+			nLastEndCharPos = nEndCharPos;
+		}
+
+		maRuns.AddRun( nLastMinCharPos, nLastEndCharPos, bLastRunRTL );
+	}
+
+	Point aPos;
+	maRuns.ResetPos();
+	while ( maRuns.GetRun( &nMinCharPos, &nEndCharPos, &bRunRTL ) )
+	{
+		maRuns.NextRun();
 
 		// Always set SAL_LAYOUT_BIDI_STRONG to prevent direction analysis
 		int nRunFlags = rArgs.mnFlags | SAL_LAYOUT_BIDI_STRONG;
