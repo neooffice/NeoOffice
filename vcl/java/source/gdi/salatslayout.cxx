@@ -459,68 +459,79 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	memset( mpCharAdvances, 0, nBufSize );
 
 	// Fix bug 448 by eliminating subpixel advances.
+	int nLastValidCharPos = -1;
 	UniCharArrayOffset nNextCaretPos = 0;
 	for ( i = 0; i < mpHash->mnLen; i = nNextCaretPos )
 	{
 		if ( ATSUNextCursorPosition( maLayout, i, kATSUByCharacterCluster, &nNextCaretPos ) == noErr )
+			nNextCaretPos = i + 1;
+
+		// Make sure that all characters have a width greater than zero as
+		// OOo can get confused by zero width characters
+		if ( mpHash->mbRTL )
 		{
-			// Make sure that all characters have a width greater than zero as
-			// OOo can get confused by zero width characters
-			if ( mpHash->mbRTL )
+			if ( ATSUGetGlyphBounds( maLayout, 0, 0, i, nNextCaretPos - i, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
+				mpCharAdvances[ i ] += Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX );
+
+			if ( mpCharAdvances[ i ] < 1 )
 			{
-				if ( ATSUGetGlyphBounds( maLayout, 0, 0, i, nNextCaretPos - i, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
-					mpCharAdvances[ i ] += Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX );
+				if ( nNextCaretPos < mpHash->mnLen )
+					mpCharAdvances[ nNextCaretPos ] += mpCharAdvances[ i ] - 1;
+				mpCharAdvances[ i ] = 1;
+			}
 
-				if ( mpCharAdvances[ i ] < 1 )
+			bool bValidChar = true;
+			for ( int j = mpCharsToGlyphs[ i ]; j >= 0 && j < mnGlyphCount && mpGlyphInfoArray->glyphs[ j ].charIndex == i; j++ )
+			{
+				if ( mpGlyphInfoArray->glyphs[ j ].glyphID == 0xffff || mpGlyphInfoArray->glyphs[ j ].layoutFlags & kATSGlyphInfoTerminatorGlyph )
 				{
+					bValidChar = false;
 					if ( nNextCaretPos < mpHash->mnLen )
-						mpCharAdvances[ nNextCaretPos ] += mpCharAdvances[ i ] - 1;
+						mpCharAdvances[ nNextCaretPos ]--;
+					if ( nLastValidCharPos >= 0 )
+						mpCharAdvances[ nLastValidCharPos ] += mpCharAdvances[ i ];
 					mpCharAdvances[ i ] = 1;
-				}
-
-				for ( int j = i + 1; j < nNextCaretPos; j++ )
-				{
-					if ( nNextCaretPos < mpHash->mnLen )
-						mpCharAdvances[ nNextCaretPos ] += mpCharAdvances[ j ] - 1;
-					mpCharAdvances[ j ] = 1;
+					break;
 				}
 			}
-			else
-			{
-				long nClusterWidth = 0;
-				for ( int j = nNextCaretPos - 1; j >= i; j-- )
-				{
-					long nWidth = 0;
-					if ( j != mpCharsToChars[ j ] )
-					{
-						if ( ATSUGetGlyphBounds( maLayout, 0, 0, j, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
-							nWidth = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX ) + nClusterWidth;
-					}
-					else
-					{
-						if ( ATSUGetGlyphBounds( maLayout, 0, 0, j, nNextCaretPos - j, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
-							nWidth = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX );
-					}
 
-					if ( nWidth > nClusterWidth )
-					{
-						mpCharAdvances[ j ] = nWidth - nClusterWidth;
-						nClusterWidth = nWidth;
-					}
-					else
-					{
-						mpCharAdvances[ j ] = 1;
-					}
-				}
+			if ( bValidChar )
+				nLastValidCharPos = i;
+
+			for ( j = i + 1; j < nNextCaretPos; j++ )
+			{
+				if ( nNextCaretPos < mpHash->mnLen )
+					mpCharAdvances[ nNextCaretPos ] += mpCharAdvances[ j ] - 1;
+				mpCharAdvances[ j ] = 1;
 			}
 		}
 		else
 		{
-			nNextCaretPos = i + 1;
-			if ( ATSUGetGlyphBounds( maLayout, 0, 0, i, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
-				mpCharAdvances[ i ] = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX );
-			if ( mpCharAdvances[ i ] < 1 )
-				mpCharAdvances[ i ] = 1;
+			long nClusterWidth = 0;
+			for ( int j = nNextCaretPos - 1; j >= i; j-- )
+			{
+				long nWidth = 0;
+				if ( j != mpCharsToChars[ j ] )
+				{
+					if ( ATSUGetGlyphBounds( maLayout, 0, 0, j, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
+						nWidth = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX ) + nClusterWidth;
+				}
+				else
+				{
+					if ( ATSUGetGlyphBounds( maLayout, 0, 0, j, nNextCaretPos - j, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
+						nWidth = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX );
+				}
+
+				if ( nWidth > nClusterWidth )
+				{
+					mpCharAdvances[ j ] = nWidth - nClusterWidth;
+					nClusterWidth = nWidth;
+				}
+				else
+				{
+					mpCharAdvances[ j ] = 1;
+				}
+			}
 		}
 	}
 
