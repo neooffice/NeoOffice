@@ -3189,7 +3189,13 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
     int pCharPosAry[nMaxGlyphs];
     long nAdvanceWidths[nMaxGlyphs];
     ImplFontData* pFallbackFonts[nMaxGlyphs];
+#if defined USE_JAVA && defined MACOSX
+	// Fix bug 810 by always using glyph advances. This will ensure that
+	// kerning matches the kerning used when drawing to the screen or printer.
+    long *pAdvanceWidths = nAdvanceWidths;
+#else	// USE_JAVA && MACOSX
     long *pAdvanceWidths = m_aCurrentPDFState.m_aFont.IsVertical() ? nAdvanceWidths : NULL;
+#endif	// USE_JAVA && MACOSX
     long nGlyphFlags[nMaxGlyphs];
     int nGlyphs;
     int nIndex = 0;
