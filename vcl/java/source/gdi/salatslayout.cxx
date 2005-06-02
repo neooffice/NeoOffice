@@ -169,8 +169,8 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 {
 	ImplATSLayoutData *pLayoutData = NULL;
 
-	int nBeginChars = ( ! ( rArgs.mnFlags & SAL_LAYOUT_COMPLEX_DISABLED ) && rArgs.mnMinCharPos && !IsControlChar( rArgs.mpStr[ rArgs.mnMinCharPos - 1 ] ) ? 1 : 0 );
-	int nEndChars = ( ! ( rArgs.mnFlags & SAL_LAYOUT_COMPLEX_DISABLED ) && rArgs.mnEndCharPos < rArgs.mnLength && !IsControlChar( rArgs.mpStr[ rArgs.mnEndCharPos ] ) ? 1 : 0 );
+	int nBeginChars = ( nFallbackLevel && ! ( rArgs.mnFlags & SAL_LAYOUT_COMPLEX_DISABLED ) && rArgs.mnMinCharPos && !IsControlChar( rArgs.mpStr[ rArgs.mnMinCharPos - 1 ] ) ? 1 : 0 );
+	int nEndChars = ( nFallbackLevel && ! ( rArgs.mnFlags & SAL_LAYOUT_COMPLEX_DISABLED ) && rArgs.mnEndCharPos < rArgs.mnLength && !IsControlChar( rArgs.mpStr[ rArgs.mnEndCharPos ] ) ? 1 : 0 );
 
 	ImplATSLayoutDataHash *pLayoutHash = new ImplATSLayoutDataHash();
 	pLayoutHash->mnFallbackLevel = nFallbackLevel;
