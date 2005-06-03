@@ -1,11 +1,26 @@
+? unxmacxp/bin/dmake
 Index: inc/unxmacxp.mk
 ===================================================================
 RCS file: /cvs/tools/solenv/inc/unxmacxp.mk,v
 retrieving revision 1.43.8.3
 diff -u -r1.43.8.3 unxmacxp.mk
 --- inc/unxmacxp.mk	28 Jan 2004 17:32:17 -0000	1.43.8.3
-+++ inc/unxmacxp.mk	5 Jun 2004 18:57:32 -0000
-@@ -214,10 +214,19 @@
++++ inc/unxmacxp.mk	3 Jun 2005 05:20:31 -0000
+@@ -170,6 +170,13 @@
+ 	INCGUI+= -I$(PRJ)$/unx/inc
+ .ENDIF
+ 
++# [ed] 6/2/05 Add in objc library for everything on 10.4 as it's required by
++# the runtime (ugh!)
++
++.IF "$(BUILD_OS_MINOR)"=="4"
++LINKFLAGS+=-lobjc
++.ENDIF
++
+ # Random link flags dealing with different cases of linking
+ 
+ LINKFLAGSAPPGUI=-bind_at_load
+@@ -214,10 +221,19 @@
  STDSLOCUI=
  
  STDLIBGUIST=-lm
