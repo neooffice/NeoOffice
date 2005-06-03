@@ -106,6 +106,7 @@ build.oo_patches: build.oo_checkout \
 	build.oo_sc_patch \
 	build.oo_scp_patch \
 	build.oo_solenv_patch \
+	build.oo_stlport_patch \
 	build.oo_ucbhelper_patch \
 	build.oo_vcl_patch \
 	build.oo_xmlhelp_patch
