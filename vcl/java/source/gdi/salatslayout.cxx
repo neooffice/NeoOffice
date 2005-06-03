@@ -65,18 +65,6 @@
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
-// This function should match the same function in sallayout.cxx
-inline bool IsControlChar( sal_Unicode cChar )
-{
-	if ( 0x200c <= cChar && cChar <= 0x200f )
-		return true;
-	if ( 0x2028 <= cChar && cChar <= 0x202e )
-		return true;
-	if ( 0xfeff == cChar || 0xfffe <= cChar )
-		return true;
-	return false;
-}
-
 struct ImplATSLayoutDataHash {
 	int					mnFallbackLevel;
 	int					mnBeginChars;
@@ -122,7 +110,7 @@ struct ImplATSLayoutData {
 	long				mnBaselineDelta;
 	bool				mbValid;
 
-	static ImplATSLayoutData*	GetLayoutData( ImplLayoutArgs& rArgs, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont );
+	static ImplATSLayoutData*	GetLayoutData( ImplLayoutArgs& rArgs, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, int nBeginChars, int nEndChars );
 
 						ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHash *pLayoutHash, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont );
 						~ImplATSLayoutData();
@@ -165,12 +153,9 @@ bool ImplHashEquality::operator()( const ImplATSLayoutDataHash *p1, const ImplAT
 
 // ----------------------------------------------------------------------------
 
-ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int nFallbackLevel, com_sun_star_vcl_VCLFont *pVCLFont )
+ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int nFallbackLevel, com_sun_star_vcl_VCLFont *pVCLFont, int nBeginChars, int nEndChars )
 {
 	ImplATSLayoutData *pLayoutData = NULL;
-
-	int nBeginChars = ( nFallbackLevel && ! ( rArgs.mnFlags & SAL_LAYOUT_COMPLEX_DISABLED ) && rArgs.mnMinCharPos && !IsControlChar( rArgs.mpStr[ rArgs.mnMinCharPos - 1 ] ) ? 1 : 0 );
-	int nEndChars = ( nFallbackLevel && ! ( rArgs.mnFlags & SAL_LAYOUT_COMPLEX_DISABLED ) && rArgs.mnEndCharPos < rArgs.mnLength && !IsControlChar( rArgs.mpStr[ rArgs.mnEndCharPos ] ) ? 1 : 0 );
 
 	ImplATSLayoutDataHash *pLayoutHash = new ImplATSLayoutDataHash();
 	pLayoutHash->mnFallbackLevel = nFallbackLevel;
@@ -316,7 +301,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 		return;
 	}
 
-	if ( rArgs.mnFlags & SAL_LAYOUT_VERTICAL )
+	if ( mpHash->mbVertical )
 	{
 		if ( ATSUCreateAndCopyStyle( maFontStyle, &maVerticalFontStyle ) == noErr )
 		{
@@ -794,6 +779,9 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	if ( !mpVCLFont )
 		return bRet;
 
+	if ( !mnFallbackLevel )
+		mpGraphics->maGraphicsData.maFallbackRuns.Clear();
+
 	// Aggregate runs
 	bool bRunRTL;
 	int nMinCharPos;
@@ -816,29 +804,87 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			}
 
 			maRuns.AddRun( nLastMinCharPos, nLastEndCharPos, bLastRunRTL );
+			if ( !mnFallbackLevel )
+				mpGraphics->maGraphicsData.maFallbackRuns.AddRun( nLastMinCharPos, nLastEndCharPos, bLastRunRTL );
 			bLastRunRTL = bRunRTL;
 			nLastMinCharPos = nMinCharPos;
 			nLastEndCharPos = nEndCharPos;
 		}
 
 		maRuns.AddRun( nLastMinCharPos, nLastEndCharPos, bLastRunRTL );
+		if ( !mnFallbackLevel )
+			mpGraphics->maGraphicsData.maFallbackRuns.AddRun( nLastMinCharPos, nLastEndCharPos, bLastRunRTL );
 	}
 
 	Point aPos;
+	bool bFallbackRunRTL;
+	int nMinFallbackCharPos;
+	int nEndFallbackCharPos;
 	maRuns.ResetPos();
+	mpGraphics->maGraphicsData.maFallbackRuns.ResetPos();
 	while ( maRuns.GetRun( &nMinCharPos, &nEndCharPos, &bRunRTL ) )
 	{
 		maRuns.NextRun();
 
-		// Always set SAL_LAYOUT_BIDI_STRONG to prevent direction analysis
+		if ( mnFallbackLevel )
+		{
+			// Find run that this run is a fallback of
+			bool bFallbackRunFound = true;
+			if ( !mpGraphics->maGraphicsData.maFallbackRuns.PosIsInRun( nMinCharPos ) )
+			{
+				mpGraphics->maGraphicsData.maFallbackRuns.ResetPos();
+				if ( !mpGraphics->maGraphicsData.maFallbackRuns.GetRun( &nMinFallbackCharPos, &nEndFallbackCharPos, &bFallbackRunRTL ) )
+					bFallbackRunFound = false;
+				while ( bFallbackRunFound && !mpGraphics->maGraphicsData.maFallbackRuns.PosIsInRun( nMinCharPos ) )
+				{
+					mpGraphics->maGraphicsData.maFallbackRuns.NextRun();
+					if ( !mpGraphics->maGraphicsData.maFallbackRuns.GetRun( &nMinFallbackCharPos, &nEndFallbackCharPos, &bFallbackRunRTL ) )
+						bFallbackRunFound = false;
+				}
+			}
+			else if ( !mpGraphics->maGraphicsData.maFallbackRuns.GetRun( &nMinFallbackCharPos, &nEndFallbackCharPos, &bFallbackRunRTL ) )
+				bFallbackRunFound = false;
+
+			if ( !bFallbackRunFound )
+				continue;
+		}
+		else
+		{
+			nMinFallbackCharPos = nMinCharPos;
+			nEndFallbackCharPos = nEndCharPos;
+		}
+
+		int nBeginChars = nMinCharPos - nMinFallbackCharPos;
+		int nEndChars = nEndFallbackCharPos - nEndCharPos;
+
+		// Turn off direction analysis
 		int nRunFlags = rArgs.mnFlags | SAL_LAYOUT_BIDI_STRONG;
 		if ( bRunRTL )
 			nRunFlags |= SAL_LAYOUT_BIDI_RTL;
 		else
 			nRunFlags &= ~SAL_LAYOUT_BIDI_RTL;
+
+		// The OOo code will layout substrings and when this happens for Arabic
+		// strings, the OOo code seems to expect that medial forms will be used
+		// for the last character so we need to force the use of a trailing
+		// character in such cases
+		if ( bRunRTL && !nEndChars && nEndCharPos < rArgs.mnLength )
+		{
+			ImplLayoutArgs aDirAnalysisArgs( rArgs.mpStr, rArgs.mnLength, rArgs.mnMinCharPos, rArgs.mnLength, nRunFlags & ~SAL_LAYOUT_BIDI_STRONG );
+			while ( aDirAnalysisArgs.GetNextRun( &nMinFallbackCharPos, &nEndFallbackCharPos, &bFallbackRunRTL ) )
+			{
+				if ( nMinFallbackCharPos <= nMinCharPos && nEndFallbackCharPos >= nEndCharPos )
+				{
+					nBeginChars = nMinCharPos - nMinFallbackCharPos;
+					nEndChars = nEndFallbackCharPos - nEndCharPos;
+					break;
+				}
+			}
+		}
+
 		ImplLayoutArgs aArgs( rArgs.mpStr, rArgs.mnLength, nMinCharPos, nEndCharPos, nRunFlags );
 
-		ImplATSLayoutData *pLayoutData = ImplATSLayoutData::GetLayoutData( aArgs, mnFallbackLevel, mpVCLFont );
+		ImplATSLayoutData *pLayoutData = ImplATSLayoutData::GetLayoutData( aArgs, mnFallbackLevel, mpVCLFont, nBeginChars, nEndChars );
 		if ( !pLayoutData )
 			return false;
 
