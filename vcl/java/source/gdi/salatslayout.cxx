@@ -44,6 +44,7 @@
  ************************************************************************/
 
 #include <hash_map>
+#include <unicode/uscript.h>
 
 #ifndef _SV_SALATSLAYOUT_HXX
 #include <salatslayout.hxx>
@@ -448,7 +449,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	UniCharArrayOffset nNextCaretPos = 0;
 	for ( i = 0; i < mpHash->mnLen; i = nNextCaretPos )
 	{
-		if ( ATSUNextCursorPosition( maLayout, i, kATSUByCharacterCluster, &nNextCaretPos ) == noErr )
+		if ( ATSUNextCursorPosition( maLayout, i, kATSUByCharacterCluster, &nNextCaretPos ) != noErr )
 			nNextCaretPos = i + 1;
 
 		// Make sure that all characters have a width greater than zero as
@@ -743,7 +744,8 @@ SalLayout *SalGraphics::GetTextLayout( ImplLayoutArgs& rArgs, int nFallbackLevel
 SalATSLayout::SalATSLayout( SalGraphics *pGraphics, int nFallbackLevel ) :
 	mpGraphics( pGraphics ),
 	mnFallbackLevel( nFallbackLevel ),
-	mpVCLFont( NULL )
+	mpVCLFont( NULL ),
+	mpKashidaLayoutData( NULL )
 {
 	if ( mnFallbackLevel )
 	{
@@ -765,6 +767,19 @@ SalATSLayout::~SalATSLayout()
 
 	if ( mpVCLFont )
 		delete mpVCLFont;
+}
+
+// ----------------------------------------------------------------------------
+
+void SalATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
+{
+	GenericSalLayout::AdjustLayout( rArgs );
+
+	if ( rArgs.mnFlags & SAL_LAYOUT_KERNING_ASIAN && ! ( rArgs.mnFlags & SAL_LAYOUT_VERTICAL ) )
+		ApplyAsianKerning( rArgs.mpStr, rArgs.mnLength );
+
+	if ( rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON && rArgs.mpDXArray && mpKashidaLayoutData )
+		KashidaJustify( mpKashidaLayoutData->mpGlyphInfoArray->glyphs[ 0 ].glyphID, mpKashidaLayoutData->mpCharAdvances[ 0 ] );
 }
 
 // ----------------------------------------------------------------------------
@@ -825,6 +840,33 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	while ( maRuns.GetRun( &nMinCharPos, &nEndCharPos, &bRunRTL ) )
 	{
 		maRuns.NextRun();
+
+		// Check if this run will need Kashida justification
+		if ( bLastRunRTL && ( rArgs.mpDXArray || rArgs.mnLayoutWidth ) && !mpKashidaLayoutData )
+		{
+			UErrorCode nErrorCode = U_ZERO_ERROR;
+			UScriptCode eScriptCode = uscript_getScript( rArgs.mpStr[ nMinCharPos ], &nErrorCode );
+			if ( eScriptCode == USCRIPT_ARABIC || eScriptCode == USCRIPT_SYRIAC )
+			{
+				sal_Unicode aKashida[ 1 ];
+				aKashida[ 0 ] = 0x0640;
+				ImplLayoutArgs aKashidaArgs( aKashida, 1, 0, 1, rArgs.mnFlags | SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_BIDI_RTL );
+
+				mpKashidaLayoutData = ImplATSLayoutData::GetLayoutData( aKashidaArgs, mnFallbackLevel, mpVCLFont, 0, 0 );
+				if ( mpKashidaLayoutData )
+				{
+					if ( mpKashidaLayoutData->mpNeedFallback )
+					{
+						mpKashidaLayoutData->Release();
+						mpKashidaLayoutData = NULL;
+					}
+					else
+					{
+						rArgs.mnFlags |= SAL_LAYOUT_KASHIDA_JUSTIFICATON;
+					}
+				}
+			}
+		}
 
 		if ( mnFallbackLevel )
 		{
@@ -1135,6 +1177,12 @@ void SalATSLayout::Destroy()
 	{
 		maLayoutData.back()->Release();
 		maLayoutData.pop_back();
+	}
+
+	if ( mpKashidaLayoutData )
+	{
+		mpKashidaLayoutData->Release();
+		mpKashidaLayoutData = NULL;
 	}
 }
 

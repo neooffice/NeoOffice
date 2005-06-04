@@ -63,11 +63,13 @@ class SalATSLayout : public GenericSalLayout
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
 	mutable ImplLayoutRuns	maRuns;
 	::std::vector< ImplATSLayoutData* >	maLayoutData;
+	ImplATSLayoutData*	mpKashidaLayoutData;
 
 public:
 						SalATSLayout( SalGraphics *pGraphics, int nFallbackLevel );
 	virtual				~SalATSLayout();
 
+	virtual void		AdjustLayout( ImplLayoutArgs& rArgs );
 	virtual bool		LayoutText( ImplLayoutArgs& rArgs );
 	virtual void		DrawText( SalGraphics& rGraphics ) const;
 	virtual bool		GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector ) const;
