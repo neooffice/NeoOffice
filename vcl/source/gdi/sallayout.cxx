@@ -944,12 +944,50 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
 
             // adjust cluster glyph widths and positions
             nDelta = nBasePointX + (nNewPos - pG->maLinearPos.X());
+#if defined USE_JAVA && defined MACOSX
+            if( !pG->IsRTLGlyph() )
+            {
+                // for LTR case extend rightmost glyph in cluster
+                pClusterG[-1].mnNewWidth += nDiff;
+            }
+            else if( rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON )
+            {
+                // Fix bug 823 by handling inappropriate placement of
+                // kashidas by upper layers
+                if( nDiff )
+                {
+					bool bHandled = true;
+
+                    if( pG == mpGlyphItems || !pG[-1].IsRTLGlyph() || IsSpacingGlyph( pG[-1].mnGlyphIndex ) )
+                    {
+						bHandled = false;
+                    }
+                    else
+                    {
+                        UJoiningType nTypeLeft = (UJoiningType)u_getIntPropertyValue( rArgs.mpStr[ pG[-1].mnCharPos ], UCHAR_JOINING_TYPE );
+                        UJoiningType nTypeRight = (UJoiningType)u_getIntPropertyValue( rArgs.mpStr[ pG->mnCharPos ], UCHAR_JOINING_TYPE );
+                        if( ( nTypeLeft == U_JT_RIGHT_JOINING || nTypeLeft == U_JT_DUAL_JOINING ) && ( nTypeRight == U_JT_LEFT_JOINING || nTypeRight == U_JT_DUAL_JOINING || nTypeRight == U_JT_TRANSPARENT ) )
+                            pClusterG[-1].mnNewWidth += nDiff;
+                        else
+                            bHandled = false;
+                    }
+
+                    if ( !bHandled )
+                    {
+                        nNewClusterWidth -= nDiff;
+                        if( i < mnGlyphCount )
+                            pNewGlyphWidths[i + 1] += nDiff;
+                    }
+                }
+            }
+#else	// USE_JAVA && MACOSX
             if( !pG->IsRTLGlyph()
             || (rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON) )
             {
                 // for (LTR || KASHIDA) case extend rightmost glyph in cluster
                 pClusterG[-1].mnNewWidth += nDiff;
             }
+#endif	// USE_JAVA && MACOSX
             else
             {
 #if defined USE_JAVA && defined MACOSX
@@ -957,7 +995,7 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
                 // character positions
                 if( pG > mpGlyphItems && pG[-1].mnCharPos - pG->mnCharPos > 1 )
                     pG[-1].mnNewWidth += nDiff;
-                else if ( IsSpacingGlyph( pG->mnGlyphIndex ) )
+                else if( IsSpacingGlyph( pG->mnGlyphIndex ) )
                     pG->mnNewWidth += nDiff;
 #else	// USE_JAVA && MACOSX
                 // right align cluster in new space for (RTL && !KASHIDA) case
