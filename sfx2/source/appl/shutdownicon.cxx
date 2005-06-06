@@ -664,11 +664,14 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 				// Add Quickstart menu items
 				SvtModuleOptions aModuleOptions;
 				MenuRef aAppMenu;
+				MenuRef aDockMenu;
 
 				MenuRef aRootMenu = AcquireRootMenu();
-				if ( aRootMenu && GetMenuItemHierarchicalMenu( aRootMenu, 1, &aAppMenu ) == noErr )
+                if ( CreateNewMenu( 0, 0, &aDockMenu ) != noErr )
+					aDockMenu = NULL;
+				if ( aRootMenu && aDockMenu && GetMenuItemHierarchicalMenu( aRootMenu, 1, &aAppMenu ) == noErr )
 				{
-					// Insert a spacing menu item
+					// Insert a spacing menu item (only in the application menu)
 					OUString aDesc;
 					CFStringRef aString = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
 					if ( aString )
@@ -682,7 +685,10 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 					if ( aString )
 					{
 						if ( CFStringGetLength( aString ) )
+						{
 							InsertMenuItemTextWithCFString( aAppMenu, aString, 2, 0, FILEOPEN_COMMAND_ID );
+							InsertMenuItemTextWithCFString( aDockMenu, aString, 0, 0, FILEOPEN_COMMAND_ID );
+						}
 						CFRelease( aString );
 					}
 
@@ -691,7 +697,10 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 					if ( aString )
 					{
 						if ( CFStringGetLength( aString ) )
+						{
 							InsertMenuItemTextWithCFString( aAppMenu, aString, 2, 0, FROMTEMPLATE_COMMAND_ID );
+							InsertMenuItemTextWithCFString( aDockMenu, aString, 0, 0, FROMTEMPLATE_COMMAND_ID );
+						}
 						CFRelease( aString );
 					}
 
@@ -702,7 +711,10 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 						if ( aString )
 						{
 							if ( CFStringGetLength( aString ) )
+							{
 								InsertMenuItemTextWithCFString( aAppMenu, aString, 2, 0, MATH_COMMAND_ID );
+								InsertMenuItemTextWithCFString( aDockMenu, aString, 0, 0, MATH_COMMAND_ID );
+							}
 							CFRelease( aString );
 						}
 					}
@@ -714,7 +726,10 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 						if ( aString )
 						{
 							if ( CFStringGetLength( aString ) )
+							{
 								InsertMenuItemTextWithCFString( aAppMenu, aString, 2, 0, DRAW_COMMAND_ID );
+								InsertMenuItemTextWithCFString( aDockMenu, aString, 0, 0, DRAW_COMMAND_ID );
+							}
 							CFRelease( aString );
 						}
 					}
@@ -726,7 +741,10 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 						if ( aString )
 						{
 							if ( CFStringGetLength( aString ) )
+							{
 								InsertMenuItemTextWithCFString( aAppMenu, aString, 2, 0, IMPRESS_COMMAND_ID );
+								InsertMenuItemTextWithCFString( aDockMenu, aString, 0, 0, IMPRESS_COMMAND_ID );
+							}
 							CFRelease( aString );
 						}
 					}
@@ -738,7 +756,10 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 						if ( aString )
 						{
 							if ( CFStringGetLength( aString ) )
+							{
 								InsertMenuItemTextWithCFString( aAppMenu, aString, 2, 0, CALC_COMMAND_ID );
+								InsertMenuItemTextWithCFString( aDockMenu, aString, 0, 0, CALC_COMMAND_ID );
+							}
 							CFRelease( aString );
 						}
 					}
@@ -750,10 +771,15 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 						if ( aString )
 						{
 							if ( CFStringGetLength( aString ) )
+							{
 								InsertMenuItemTextWithCFString( aAppMenu, aString, 2, 0, WRITER_COMMAND_ID );
+								InsertMenuItemTextWithCFString( aDockMenu, aString, 0, 0, WRITER_COMMAND_ID );
+							}
 							CFRelease( aString );
 						}
 					}
+
+					SetApplicationDockTileMenu( aDockMenu );
 
 					EventHandlerUPP pEventHandlerUPP = NewEventHandlerUPP( CarbonEventHandler );
 					if ( pEventHandlerUPP )
@@ -766,6 +792,9 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 
 					ReleaseMenu( aRootMenu );
 				}
+
+                if ( aDockMenu )
+					ReleaseMenu( aDockMenu );
 #endif
 			}
 			catch(const ::com::sun::star::lang::IllegalArgumentException&)
