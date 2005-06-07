@@ -1639,46 +1639,34 @@ public final class VCLGraphics {
 
 			// Draw the combined image
 			if (imageHead != null && pageImageClip != null) {
-				if (imageHead != imageTail) {
-					Rectangle pageBounds = pageImageClip.getBounds();
-					Rectangle destBounds = pageBounds.intersection(graphicsBounds);
-					if (destBounds.isEmpty())
-						return;
-					Dimension maxResolution = graphics.getResolution();
-					if (pageImageScaleX > maxResolution.width)
-						pageImageScaleX = maxResolution.width;
-					if (pageImageScaleY > maxResolution.height)
-						pageImageScaleY = maxResolution.height;
-					VCLImage pageImage = new VCLImage((int)(destBounds.width * pageImageScaleX), (int)(destBounds.height * pageImageScaleY), graphics.getBitCount());
-					VCLGraphics pageGraphics = pageImage.getGraphics();
-					pageGraphics.graphics.scale(pageImageScaleX, pageImageScaleY);
-					pageGraphics.graphics.translate(destBounds.x * -1, destBounds.y * -1);
-					pageGraphics.graphicsBounds = destBounds;
-					while (imageHead != null) {
-						pageGraphics.graphics.setClip(imageHead.clip);
-						try {
-							imageHead.method.invoke(pageGraphics, imageHead.params);
-						}
-						catch (Throwable t) {
-							t.printStackTrace();
-						}
-						imageHead = imageHead.next;
-					}
-					pageGraphics.dispose();
-					g.setClip(pageImageClip);
-					g.drawImage(pageImage.getImage(), destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, 0, 0, pageImage.getWidth(), pageImage.getHeight(), null);
-					pageImage.dispose();
-				}
-				else {
-					g.setClip(imageHead.clip);
+				Rectangle pageBounds = pageImageClip.getBounds();
+				Rectangle destBounds = pageBounds.intersection(graphicsBounds);
+				if (destBounds.isEmpty())
+					return;
+				Dimension maxResolution = graphics.getResolution();
+				if (pageImageScaleX > maxResolution.width)
+					pageImageScaleX = maxResolution.width;
+				if (pageImageScaleY > maxResolution.height)
+					pageImageScaleY = maxResolution.height;
+				VCLImage pageImage = new VCLImage((int)(destBounds.width * pageImageScaleX), (int)(destBounds.height * pageImageScaleY), graphics.getBitCount());
+				VCLGraphics pageGraphics = pageImage.getGraphics();
+				pageGraphics.graphics.scale(pageImageScaleX, pageImageScaleY);
+				pageGraphics.graphics.translate(destBounds.x * -1, destBounds.y * -1);
+				pageGraphics.graphicsBounds = destBounds;
+				while (imageHead != null) {
+					pageGraphics.graphics.setClip(imageHead.clip);
 					try {
-						imageHead.method.invoke(graphics, imageHead.params);
+						imageHead.method.invoke(pageGraphics, imageHead.params);
 					}
 					catch (Throwable t) {
 						t.printStackTrace();
 					}
-					imageHead = null;
+					imageHead = imageHead.next;
 				}
+				pageGraphics.dispose();
+				g.setClip(pageImageClip);
+				g.drawImage(pageImage.getImage(), destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, 0, 0, pageImage.getWidth(), pageImage.getHeight(), null);
+				pageImage.dispose();
 				imageTail = null;
 			}
 
