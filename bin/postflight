@@ -116,6 +116,9 @@ if [ -d "$2" ]; then
 	# plugins
 	touch -f "$2"
 
+	# Turn off patch checking by default
+	touch -f "$2/Contents/MacOS/.nocheckforpatches"
+
 fi
 
 exit 0
