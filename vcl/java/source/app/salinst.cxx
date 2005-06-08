@@ -192,7 +192,7 @@ static void RunAppMain( Application *pApp )
 			if ( pEventHandlerUPP )
 			{
 				// Set up native event handler
-				EventTypeSpec aTypes[4];
+				EventTypeSpec aTypes[5];
 				aTypes[0].eventClass = kEventClassAppleEvent;
 				aTypes[0].eventKind = kEventAppleEvent;
 				aTypes[1].eventClass = kEventClassMouse;
@@ -201,7 +201,9 @@ static void RunAppMain( Application *pApp )
 				aTypes[2].eventKind = kEventMenuBeginTracking;
 				aTypes[3].eventClass = kEventClassMenu;
 				aTypes[3].eventKind = kEventMenuPopulate;
-				InstallApplicationEventHandler( pEventHandlerUPP, 4, aTypes, NULL, NULL );
+				aTypes[4].eventClass = kEventClassApplication;
+				aTypes[4].eventKind = kEventAppShown;
+				InstallApplicationEventHandler( pEventHandlerUPP, 5, aTypes, NULL, NULL );
 			}
 		}
 
@@ -546,6 +548,29 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 			{
 				// Fix bug 221 by explicitly reenabling all keyboards
 				KeyScript( smKeyEnableKybds );
+			}
+			else if ( nClass == kEventClassApplication && nKind == kEventAppShown )
+			{
+				// Unlock the Java lock
+				ReleaseJavaLock();
+
+				Application::GetSolarMutex().acquire();
+
+				for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+				{
+					SalPaintEvent *pPaintEvent = new SalPaintEvent();
+					pPaintEvent->mnBoundX = 0;
+					pPaintEvent->mnBoundY = 0;
+					pPaintEvent->mnBoundWidth = (*it)->maGeometry.nWidth;
+					pPaintEvent->mnBoundHeight = (*it)->maGeometry.nHeight;
+					com_sun_star_vcl_VCLEvent aVCLPaintEvent( SALEVENT_PAINT, *it, (void *)pPaintEvent );
+					pSalData->mpEventQueue->postCachedEvent( &aVCLPaintEvent );
+				}
+
+				// Relock the Java lock
+				AcquireJavaLock();
+
+				Application::GetSolarMutex().release();
 			}
 		}
 	}
