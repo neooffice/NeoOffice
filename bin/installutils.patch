@@ -99,6 +99,9 @@ update_installation() {
 	# plugins
 	touch -f "$1"
 
+	# Turn off patch checking by default
+	touch -f "$1/Contents/MacOS/.nocheckforpatches"
+
 	return 0
 
 }
