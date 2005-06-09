@@ -370,7 +370,7 @@ sync
 checkforpatches()
 {
     soffice=`dirname "$0"`/soffice.bin
-    if [ ! -x "$soffice" -a ! -x "/usr/sbin/scutil" -a ! -x "/usr/bin/curl" ] ; then
+    if [ ! -x "$soffice" -o ! -x "/usr/sbin/scutil" -o ! -x "/usr/bin/curl" ] ; then
         return 1
     fi
 
