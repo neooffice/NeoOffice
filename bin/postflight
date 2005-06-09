@@ -119,6 +119,10 @@ if [ -d "$2" ]; then
 	# Turn off patch checking by default
 	touch -f "$2/Contents/MacOS/.nocheckforpatches"
 
+	# Do a full reindexing of OOo file types
+	if [ -x "/usr/bin/mdimport" ] ; then
+		/usr/bin/mdimport -r "$2/Library/Spotlight/neolight.mdimporter"
+	fi
 fi
 
 exit 0
