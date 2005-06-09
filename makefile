@@ -43,6 +43,7 @@ HELP_HOME:=help
 INSTALL_HOME:=install
 PATCH_INSTALL_HOME:=patch_install
 SOURCE_HOME:=source
+CD_INSTALL_HOME:=cd_install
 OO_PATCHES_HOME:=patches/openoffice
 OO_ENV_X11:=$(BUILD_HOME)/MacosxEnv.Set
 OO_ENV_JAVA:=$(BUILD_HOME)/MacosxEnvJava.Set
@@ -65,6 +66,8 @@ PRODUCT_VERSION=1.1
 PRODUCT_DIR_VERSION=1.1
 PRODUCT_LANG_PACK_VERSION=Languages
 PRODUCT_DIR_LANG_PACK_VERSION=Languages
+PRODUCT_HELP_PACK_VERSION=Help
+PRODUCT_DIR_HELP_PACK_VERSION=Help
 PRODUCT_PATCH_VERSION=Patch 0
 PRODUCT_DIR_PATCH_VERSION=Patch-0
 PRODUCT_PREVIOUS_VERSION=1.1 Release Candidate
@@ -83,7 +86,7 @@ OO_PACKAGES:=OpenOffice
 OO_TAG:=OpenOffice_1_1_4
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOfficeJ
-NEO_TAG:=HEAD
+NEO_TAG:=NeoOfficeJ-1_1
 
 all: build.all
 
@@ -285,7 +288,7 @@ build.package: build.neo_patches build.oo_download_dics build.oo_download_help b
 	sh -e -c 'while read i ; do rm -f "$(INSTALL_HOME)/no_lang.Set" ; grep -v "^setenv RES_" "$(OO_ENV_JAVA)" > "$(INSTALL_HOME)/no_lang.Set" ; for j in $$i ; do echo "setenv $${j} \"TRUE\"" >> "$(INSTALL_HOME)/no_lang.Set" ; done ; rm -rf "$(INSTALL_HOME)/no_lang_language_numbers" ; "$(SHELL)" -c "source \"$(INSTALL_HOME)/no_lang.Set\" ; cd \"instsetoo/util\" ; dmake language_numbers" | sed "s/01,//" | sed "s/49,//" > "$(INSTALL_HOME)/no_lang_language_numbers" ; rm -Rf "$(INSTALL_HOME)/no_lang_language_names" ; "$(SHELL)" -c "source \"$(INSTALL_HOME)/no_lang.Set\" ; cd \"instsetoo/util\" ; dmake language_names" | sed "s/ /,/g" | sed "s/de,//" > "$(INSTALL_HOME)/no_lang_language_names" ; rm -Rf "$(INSTALL_HOME)/no_lang_language_longnames" ; "$(SHELL)" -c "source \"$(INSTALL_HOME)/no_lang.Set\" ; cd \"instsetoo/util\" ; dmake language_longnames" | sed "s/ /,/g" | sed "s/german,//" > "$(INSTALL_HOME)/no_lang_language_longnames" ; mkdir -p "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"` ; for k in `cat "$(INSTALL_HOME)/no_lang_language_numbers" | sed "s/,/ /g"` ; do mkdir -p "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"`"/Contents/program/resource" ; for l in `cd "$(INSTALL_HOME)/package/Contents/program/resource" ; find . -type f -name "*$${k}.res" -maxdepth 1` ; do mv "$(INSTALL_HOME)/package/Contents/program/resource/$${l}" "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"`"/Contents/program/resource/$${l}" ; done ; done ; mkdir -p "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"`"/Contents/share/dict/ooo" ; for m in `cat "$(INSTALL_HOME)/no_lang_language_names" | sed "s/,/ /g"` ; do for n in `cd "$(INSTALL_HOME)/package/Contents/share/dict/ooo" ; find . -type f -name "$${m}_[A-Z]*" -maxdepth 1 ; find . -type f -name "*_$${m}_[A-Z]*" -maxdepth 1` ; do mv "$(INSTALL_HOME)/package/Contents/share/dict/ooo/$${n}" "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"`"/Contents/share/dict/ooo/$${n}" ; done ; done ; mkdir -p "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"`"/Contents/share/template" ; for o in `cat "$(INSTALL_HOME)/no_lang_language_longnames" | sed "s/,/ /g"` ; do for p in `cd "$(INSTALL_HOME)/package/Contents/share/template" ; find . -type d -name "$${o}" -maxdepth 1` ; do mv "$(INSTALL_HOME)/package/Contents/share/template/$${p}" "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"`"/Contents/share/template/$${p}" ; done ; done ; done < "etc/language_pack_languages"'
 	sh -e -c 'for i in `find "$(INSTALL_HOME)" -type d -name "package_*" -maxdepth 1` ; do "$(MAKE)" $(MFLAGS) build.`basename "$$i"` ; done'
 # Move the help files out and create the help content installers
-	sh -e -c 'j=1 ; for i in `cat "$(PWD)/$(INSTALL_HOME)/language_numbers" | sed "s#,# #g"` ; do k=`awk "{ print \\$$$$j }" "$(PWD)/$(INSTALL_HOME)/language_names"` ; j=`expr "$$j" + 1` ; if [ "$$k" = "en-US" ] ; then continue ; fi ; for l in `ls "$(PWD)/$(HELP_HOME)"/*\_$$i\_*` ; do mkdir -p "$(PWD)/$(INSTALL_HOME)/package_$$k/Contents/help/$$k" ; ( cd "$(PWD)/$(INSTALL_HOME)/package_$$k/Contents/help/$$k" ; pax -z -r -f "$$l" "*.zip" ; for m in `ls *.zip` ; do unzip "$$m" ; done ; rm -f *.zip ) ; done ; if [ -d "$(PWD)/$(INSTALL_HOME)/package_$$k/Contents/help/$$k" ] ; then "$(MAKE)" $(MFLAGS) "PRODUCT_LANG_PACK_VERSION=Help" "PRODUCT_DIR_LANG_PACK_VERSION=Help" "build.package_$$k" ; fi ; done'
+	sh -e -c 'j=1 ; for i in `cat "$(PWD)/$(INSTALL_HOME)/language_numbers" | sed "s#,# #g"` ; do k=`awk "{ print \\$$$$j }" "$(PWD)/$(INSTALL_HOME)/language_names"` ; j=`expr "$$j" + 1` ; if [ "$$k" = "en-US" ] ; then continue ; fi ; for l in `ls "$(PWD)/$(HELP_HOME)"/*\_$$i\_*` ; do mkdir -p "$(PWD)/$(INSTALL_HOME)/package_$$k/Contents/help/$$k" ; ( cd "$(PWD)/$(INSTALL_HOME)/package_$$k/Contents/help/$$k" ; pax -z -r -f "$$l" "*.zip" ; for m in `ls *.zip` ; do unzip "$$m" ; done ; rm -f *.zip ) ; done ; if [ -d "$(PWD)/$(INSTALL_HOME)/package_$$k/Contents/help/$$k" ] ; then "$(MAKE)" $(MFLAGS) "PRODUCT_LANG_PACK_VERSION=$(PRODUCT_HELP_PACK_VERSION)" "PRODUCT_DIR_LANG_PACK_VERSION=$(PRODUCT_DIR_HELP_PACK_VERSION)" "build.package_$$k" ; fi ; done'
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find "." -name ".DS_Store"` ; do rm "$${i}" ; done'
 	chmod -Rf a-w,a+r "$(INSTALL_HOME)/package"
 	echo "Running sudo to chown installation files..."
@@ -418,6 +421,17 @@ build.source_zip:
 	chmod -Rf u+w,og-w,a+r "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
 	cd "$(SOURCE_HOME)" ; gnutar zcf "$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION).src.tar.gz" "$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
 	touch "$@"
+
+build.cd_package: build.package
+	sh -e -c 'if [ -d "$(CD_INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(CD_INSTALL_HOME)" ; fi'
+	mkdir -p "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)/Help Packs"
+	cd "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)/Help Packs" ; sh -e -c 'for i in `cd "$(PWD)/$(INSTALL_HOME)" ; find . -type d -name "$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_HELP_PACK_VERSION)_*" -maxdepth 1` ; do ( cd "$(PWD)/$(INSTALL_HOME)" ; tar zcf - "$$i" ) | tar zxf - ; done'
+	mkdir -p "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)/Language Packs"
+	cd "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)/Language Packs" ; sh -e -c 'for i in `cd "$(PWD)/$(INSTALL_HOME)" ; find . -type d -name "$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)_*" -maxdepth 1` ; do ( cd "$(PWD)/$(INSTALL_HOME)" ; tar zcf - "$$i" ) | tar zxf - ; done'
+	cd "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)" ; ( cd "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)" ; tar zcf - * ) | tar zxf -
+	chmod -Rf a-w,a+r "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
+	echo "Running sudo to chown installation files..."
+	sudo chown -Rf root:admin "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
 
 build.all: build.package
 	touch "$@"
