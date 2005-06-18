@@ -57,3 +57,23 @@ void RunCocoaEventLoop()
 	objc_msgSend(nNSApp, pRun);
 }
 
+// ----------------------------------------------------------------------------
+
+void StopCocoaEventLoop()
+{
+	id nNSApplication;
+	id nNSApp;
+	BOOL bRunning;
+	SEL pSharedApplication;
+	SEL pStop;
+
+	// Invoke [NSApplication sharedApplication]
+	nNSApplication = objc_getClass("NSApplication");
+	pSharedApplication = sel_getUid("sharedApplication");
+	nNSApp = objc_msgSend(nNSApplication, pSharedApplication);
+
+	// Invoke [NSApp stop]
+	pStop = sel_getUid("stop:");
+	objc_msgSend(nNSApp, pStop, nNSApp);
+}
+

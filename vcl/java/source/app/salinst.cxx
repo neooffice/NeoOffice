@@ -227,6 +227,12 @@ static void RunAppMain( Application *pApp )
 #endif	// MACOSX
 
 	pApp->Main();
+
+#ifdef MACOSX
+	// Test the JVM version and if it is 1.4 or higher, stop the event loop
+	if ( t.pEnv && t.pEnv->GetVersion() >= JNI_VERSION_1_4 )
+		StopCocoaEventLoop();
+#endif	// MACOSX
 }
 
 // ----------------------------------------------------------------------------

@@ -41,6 +41,7 @@ BEGIN_C
 #endif
 
 void RunCocoaEventLoop(void);
+void StopCocoaEventLoop(void);
 
 #ifdef __cplusplus
 END_C
