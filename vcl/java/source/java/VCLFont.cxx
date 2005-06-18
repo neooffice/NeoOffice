@@ -71,15 +71,15 @@ static sal_uInt64 GetMacFontFace( com_sun_star_vcl_VCLFont *pVCLFont )
 		VCLThreadAttach t;
 		if ( t.pEnv )
 		{
-			java_lang_Object *peer = pVCLFont->getPeer();
-			if ( peer )
+			// Test the JVM version and if it is below 1.4, use
+			// Font Manager APIs
+			if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
 			{
-				jobject tempObj = peer->getJavaObject();
-				if ( tempObj )
+				java_lang_Object *peer = pVCLFont->getPeer();
+				if ( peer )
 				{
-					// Test the JVM version and if it is below 1.4, use
-					// Font Manager APIs
-					if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+					jobject tempObj = peer->getJavaObject();
+					if ( tempObj )
 					{
 						jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/graphics/VFontPeer" );
 						if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
@@ -163,8 +163,23 @@ static sal_uInt64 GetMacFontFace( com_sun_star_vcl_VCLFont *pVCLFont )
 							}
 						}
 					}
+					delete peer;
 				}
-				delete peer;
+			}
+			else
+			{
+				CFStringRef aFontNameRef = CFStringCreateWithCharactersNoCopy( NULL, aFontName.getStr(), aFontName.getLength(), kCFAllocatorNull );
+				if ( aFontNameRef )
+				{
+					ATSFontRef aFontRef = ATSFontFindFromPostScriptName( aFontNameRef, kATSOptionFlagsDefault );
+					if ( aFontRef )
+					{
+						sal_uInt64 nFontFace = ( (sal_uInt64)FMGetFontFromATSFontRef( aFontRef ) & 0x00000000ffffffff ) << 32;
+						aNativeFontMap[ aFontName ] = nFontFace;
+						out = nFontFace;
+					}
+					CFRelease( aFontNameRef );
+				}
 			}
 		}
 	}

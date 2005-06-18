@@ -88,11 +88,6 @@ public final class VCLFont {
 	public final static int FAMILY_SYSTEM = 6;
 
 	/**
-	 * Cached font family names.
-	 */
-	private static String[] fontFamilies = null;
-
-	/**
 	 * Cached default font.
 	 */
 	private static VCLFont defaultFont = null;
@@ -141,41 +136,50 @@ public final class VCLFont {
 		// Initialize the cached fonts
 		if (fonts == null) {
 			// Get all of the fonts and screen out duplicates
-			fontFamilies = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
+			String[] fontNames;
+			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && VCLPlatform.getJavaVersion() < VCLPlatform.JAVA_VERSION_1_4) {
+ 				fontNames = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
+			}
+			else {
+				Font[] fonts = GraphicsEnvironment.getLocalGraphicsEnvironment().getAllFonts();
+				fontNames = new String[fonts.length];
+				for (int i = 0; i < fonts.length; i++)
+					fontNames[i] = fonts[i].getName();
+			}
 
 			// Java sometimes sets Times to Times Roman
 			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
 				int timesRomanIndex = -1;
-				for (int i = 0; i < fontFamilies.length; i++) {
-					if (fontFamilies[i].equals("Times")) {
+				for (int i = 0; i < fontNames.length; i++) {
+					if (fontNames[i].equals("Times")) {
 						timesRomanIndex = -1;
 						break;
 					}
-					else if (fontFamilies[i].equals("Times Roman")) {
+					else if (fontNames[i].equals("Times Roman")) {
 						timesRomanIndex = i;
 					}
 				}
 
 				if (timesRomanIndex > 0)
-					fontFamilies[timesRomanIndex] = "Times";
+					fontNames[timesRomanIndex] = "Times";
 			}
 
 			ArrayList array = new ArrayList();
-			for (int i = 0; i < fontFamilies.length; i++) {
+			for (int i = 0; i < fontNames.length; i++) {
 				// Get rid of hidden Mac OS X fonts
-				if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && (fontFamilies[i].startsWith(".") || fontFamilies[i].equals("LastResort")))
+				if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && (fontNames[i].startsWith(".") || fontNames[i].equals("LastResort")))
 					continue;
 
 				// Get family type
 				int type;
-				if (fontFamilies[i].indexOf("Mono") >= 0)
+				if (fontNames[i].indexOf("Mono") >= 0)
 					type = VCLFont.FAMILY_MODERN;
-				else if (fontFamilies[i].indexOf("Serif") >= 0 || fontFamilies[i].indexOf("Times") >= 0 || fontFamilies[i].indexOf("Roman") >= 0)
+				else if (fontNames[i].indexOf("Serif") >= 0 || fontNames[i].indexOf("Times") >= 0 || fontNames[i].indexOf("Roman") >= 0)
 					type = VCLFont.FAMILY_ROMAN;
 				else
 					type = VCLFont.FAMILY_SWISS;
 
-				array.add(new VCLFont(fontFamilies[i], type, 1, (short)0, false, false, true, false, 1.0));
+				array.add(new VCLFont(fontNames[i], type, 1, (short)0, false, false, true, false, 1.0));
 			}
 	
 			fonts = (VCLFont[])array.toArray(new VCLFont[array.size()]);

@@ -55,28 +55,73 @@ public final class VCLPlatform {
 	public final static int PLATFORM_MACOSX = 1;
 
 	/**
-	 * Cached platform.
+	 * The Java 1.2 constant.
 	 */
-	private static int platform = VCLPlatform.PLATFORM_UNKNOWN;
+	public final static int JAVA_VERSION_1_2 = 0x00010002;
 
 	/**
-	 * Initialize the platform.
+	 * The Java 1.3 constant.
+	 */
+	public final static int JAVA_VERSION_1_3 = 0x00010003;
+
+	/**
+	 * The Java 1.4 constant.
+	 */
+	public final static int JAVA_VERSION_1_4 = 0x00010004;
+
+	/**
+	 * The Java 1.5 constant.
+	 */
+	public final static int JAVA_VERSION_1_5 = 0x00010005;
+
+	/**
+	 * Cached platform.
+	 */
+	private static int platform = PLATFORM_UNKNOWN;
+
+	/**
+	 * Cached Java version.
+	 */
+	private static int javaVersion = JAVA_VERSION_1_2;
+
+	/**
+	 * Initialize the platform and Java version.
 	 */
 	static {
 
 		String os = System.getProperty("os.name").toLowerCase();
-
 		if (os.startsWith("mac os x"))
 			VCLPlatform.platform = VCLPlatform.PLATFORM_MACOSX;
 		else
 			VCLPlatform.platform = VCLPlatform.PLATFORM_UNKNOWN;
+
+		try {
+			Class.forName("java.lang.StrictMath");
+			javaVersion = JAVA_VERSION_1_3;
+			Class.forName("java.lang.CharSequence");
+			javaVersion = JAVA_VERSION_1_4;
+			Class.forName("java.lang.Readable");
+			javaVersion = JAVA_VERSION_1_5;
+		}
+		catch (Throwable t) {}
+
+	}
+
+	/**
+	 * Returns the Java version.
+	 *
+	 * @return the Java version
+	 */
+	static int getJavaVersion() {
+
+		return javaVersion;
 
 	}
 
 	/**
 	 * Returns the platform.
 	 *
-	 * @return the platform constant
+	 * @return the platform
 	 */
 	static int getPlatform() {
 
