@@ -72,7 +72,7 @@ PRODUCT_PATCH_VERSION=Patch 0
 PRODUCT_DIR_PATCH_VERSION=Patch-0
 PRODUCT_PREVIOUS_VERSION=1.1 Release Candidate
 # Don't allow patching of pre-Release Candidate installations
-PRODUCT_PREVIOUS_PATCH_VERSION=Patch 7
+PRODUCT_PREVIOUS_PATCH_VERSION=Patch 8
 PRODUCT_FILETYPE=NO%F
 PRODUCT_INSTALL_URL=http://www.planamesa.com/neojava/download.php\\\#install
 PRODUCT_BUILD_URL=http://www.planamesa.com/neojava/build.php
