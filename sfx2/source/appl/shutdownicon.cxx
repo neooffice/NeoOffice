@@ -789,12 +789,11 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 						aType.eventKind = kEventCommandProcess;
 						InstallApplicationEventHandler( pEventHandlerUPP, 1, &aType, NULL, NULL );
 					}
-
-					ReleaseMenu( aRootMenu );
 				}
 
                 if ( aDockMenu )
 					ReleaseMenu( aDockMenu );
+				ReleaseMenu( aRootMenu );
 #endif
 			}
 			catch(const ::com::sun::star::lang::IllegalArgumentException&)
