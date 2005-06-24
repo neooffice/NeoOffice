@@ -92,6 +92,7 @@ public:
 	::osl::Condition		maNativeEventCondition;
 	bool					mbNativeEventSucceeded;
 	bool					mbInNativeDrag;
+	bool					mbInNativeMenuTracking;
 
 							SalData();
 							~SalData();

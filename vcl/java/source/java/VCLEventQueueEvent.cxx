@@ -63,13 +63,9 @@
 #include <window.hxx>
 #endif
 
-#ifdef MACOSX
-
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
-
-#endif	// MACOSX
 
 using namespace vcl;
 using namespace vos;
@@ -183,7 +179,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_ABOUT:
 		{
-#ifdef MACOSX
 			// [ed] 1/25/05 Send ourselves an about appleevent
 			// that can be handled by the sfx2 module
 			AppleEvent theEvent;
@@ -197,12 +192,10 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				AEDisposeDesc( &theEvent );
 			}
 			AEDisposeDesc( &target );
-#endif	// MACOSX
 			return;
 		}
 		case SALEVENT_PREFS:
 		{
-#ifdef MACOSX
 			// [ed] 1/25/05 Send ourselves a prefs appleevent
 			// that can be handled by the sfx2 module
 			AppleEvent theEvent;
@@ -216,7 +209,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				AEDisposeDesc( &theEvent );
 			}
 			AEDisposeDesc( &target );
-#endif	// MACOSX
 			return;
 		}
 	}
@@ -292,7 +284,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pKeyEvent->mnCharCode = getKeyChar();
 				pKeyEvent->mnRepeat = getRepeatCount();
 			}
-#ifdef MACOSX
 			// Fix bug 529 by manually converting KEY_MOD1-Dash into a
 			// non-breaking hyphen since Mac OS X does not normally have a
 			// key mapping for this character
@@ -304,7 +295,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				else if ( nModifiers == KEY_MOD1 )
 					pKeyEvent->mnCharCode = 0x00AD;
 			}
-#endif	// MACOSX
 			dispatchEvent( nID, pFrame, pKeyEvent );
 			delete pKeyEvent;
 			return;
@@ -318,11 +308,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pKeyModEvent->mnTime = getWhen();
 				pKeyModEvent->mnCode = getModifiers();
 			}
-			// Fix bug 236 by making a pass through the native menus before
-			// dispatching. Note that this fix causes bug 229 but since bug
-			// 229 is merely an annoyance, this fix wins.
-			if ( pFrame && ( pKeyModEvent->mnCode & KEY_MOD1 ) )
-				UpdateMenusForFrame( pFrame, NULL );
 			dispatchEvent( nID, pFrame, pKeyModEvent );
 			delete pKeyModEvent;
 			return;
@@ -487,8 +472,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pMenuEvent->mnId = getMenuID();
 				pMenuEvent->mpMenu = (void *)getMenuCookie();
 			}
-			if ( pFrame && pSalData->mpFocusFrame == pFrame )
-				dispatchEvent( nID, pFrame, pMenuEvent );
+			dispatchEvent( nID, pFrame, pMenuEvent );
 			delete pMenuEvent;
 			return;
 		}
@@ -517,6 +501,8 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 					if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame != pFrame )
 						dispatchEvent( SALEVENT_LOSEFOCUS, pSalData->mpFocusFrame, NULL );
 					pSalData->mpFocusFrame = pFrame;
+					SetActiveMenuBarForFrame( pSalData->mpFocusFrame );
+
 					if ( pSalData->mpPresentationFrame && pFrame != pSalData->mpPresentationFrame )
 					{
 						// Make sure document window does not float to front
@@ -535,7 +521,6 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 							return;
 						}
 					}
-#ifdef MACOSX
 					else if ( (WindowRef)pFrame->maFrameData.mpVCLFrame->getNativeWindow() == FrontNonFloatingWindow() )
 					{
 						// Make sure child frames are in front of frame as
@@ -543,14 +528,15 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 						// to the front
 						pFrame->ToTop( 0 );
 					}
-#endif	// MACOSX
 				}
 				else if ( nID == SALEVENT_LOSEFOCUS )
 				{
 					if ( pSalData->mpFocusFrame == pFrame )
+					{
 						pSalData->mpFocusFrame = NULL;
+						SetActiveMenuBarForFrame( pSalData->mpFocusFrame );
+					}
 				}
-#ifdef MACOSX
 				else if ( nID == SALEVENT_MOUSEBUTTONDOWN && pSalData->mpFocusFrame == pFrame && (WindowRef)pFrame->maFrameData.mpVCLFrame->getNativeWindow() == FrontNonFloatingWindow() )
 				{
 					// Make sure child frames are in front of frame as
@@ -558,7 +544,6 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 					// to the front
 					pFrame->ToTop( 0 );
 				}
-#endif	// MACOSX
 
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
 				break;

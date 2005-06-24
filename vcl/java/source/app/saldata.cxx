@@ -60,8 +60,9 @@ SalData::SalData()
 	mpTimerProc = NULL;
 	mpEventQueue = NULL;
 	mpPresentationFrame = NULL;
-	mbInNativeDrag = false;
 	mbNativeEventSucceeded = false;
+	mbInNativeDrag = false;
+	mbInNativeMenuTracking = false;
 
 	// Set condition so that they don't block
 	maNativeEventCondition.set();

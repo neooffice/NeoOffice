@@ -63,40 +63,87 @@
 #include <com/sun/star/vcl/VCLScreen.hxx>
 #endif
 
-#ifdef MACOSX
-
-#ifndef _VOS_MODULE_HXX_
-#include <vos/module.hxx>
-#endif
-
-#ifndef _OSL_MUTEX_HXX_
-#include <osl/mutex.hxx>
-#endif
-
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
+#undef check
 
 static EventHandlerUPP pEventHandlerUPP = NULL;
+static EventLoopTimerUPP pSystemUIModeTimerUPP = NULL;
 
 using namespace rtl;
 using namespace vos;
-
-#endif	// MACOSX
 
 using namespace vcl;
 
 // =======================================================================
 
-#ifdef MACOSX
 static OSStatus CarbonWindowEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData )
 {
-	// Fix bug 221 by explicitly reenabling all keyboards
-	KeyScript( smKeyEnableKybds );
+	if ( !Application::IsShutDown() )
+	{
+		SalData *pSalData = GetSalData();
+
+		if ( pSalData && pSalData->mpEventQueue )
+		{
+			EventClass nClass = GetEventClass( aEvent );
+			EventKind nKind = GetEventKind( aEvent );
+
+			if ( nClass == kEventClassKeyboard && nKind == kEventRawKeyModifiersChanged )
+			{
+				// Fix bug 236 by making a pass through the native menus before
+				// dispatching. Note that this fix causes bug 229 but since bug
+				// 229 is merely an annoyance, this fix wins.
+				UInt32 nKeyModifiers;
+				if ( GetEventParameter( aEvent, kEventParamKeyModifiers, typeUInt32, NULL, sizeof( UInt32 ), NULL, &nKeyModifiers ) == noErr && nKeyModifiers & ( cmdKey | controlKey ) )
+				{
+					// Unlock the Java lock
+					ReleaseJavaLock();
+
+					// Make sure condition is not already waiting
+					if ( !pSalData->maNativeEventCondition.check() )
+					{
+						pSalData->maNativeEventCondition.wait();
+						pSalData->maNativeEventCondition.set();
+					}
+
+					// Wakeup the event queue by sending it a dummy event
+					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
+					pSalData->mpEventQueue->postCachedEvent( &aEvent );
+
+					// Wait for all pending AWT events to be dispatched
+					pSalData->mbNativeEventSucceeded = false;
+					pSalData->maNativeEventCondition.reset();
+					pSalData->maNativeEventCondition.wait();
+					pSalData->maNativeEventCondition.set();
+
+					// Fix bug 679 by checking if the condition was
+					// released to avoid a deadlock
+					if ( pSalData->mbNativeEventSucceeded )
+					{
+						Application::GetSolarMutex().acquire();
+
+						// Execute menu updates while the VCL event queue is
+						// blocked
+						UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
+
+						// Relock the Java lock
+						AcquireJavaLock();
+
+						Application::GetSolarMutex().release();
+					}
+					else
+					{
+						// Relock the Java lock
+						AcquireJavaLock();
+					}
+				}
+			}
+		}
+	}
 
 	return CallNextEventHandler( aNextHandler, aEvent );
 }
-#endif	// MACOSX
 
 // =======================================================================
 
@@ -141,7 +188,10 @@ SalFrame::~SalFrame()
 	SalData *pSalData = GetSalData();
 
 	if ( pSalData->mpFocusFrame == this )
+	{
 		pSalData->mpFocusFrame = NULL;
+		SetActiveMenuBarForFrame( pSalData->mpFocusFrame );
+	}
 
 	if ( pSalData->mpPresentationFrame == this )
 		pSalData->mpPresentationFrame = NULL;
@@ -228,7 +278,7 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pBounds );
 		aEvent.dispatch();
 
-		// Make a pass through the native menus
+		// Make a pass through the native menus to speed up later updates
 		UpdateMenusForFrame( this, NULL );
 	}
 	else
@@ -236,6 +286,7 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		if ( pSalData->mpFocusFrame == this )
 		{
 			pSalData->mpFocusFrame = NULL;
+			SetActiveMenuBarForFrame( pSalData->mpFocusFrame );
 
 			if ( maFrameData.mpParent )
 				maFrameData.mpParent->ToTop( SAL_FRAME_TOTOP_GRABFOCUS );
@@ -330,13 +381,11 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	// Make sure window does not spill off of the screen
 	long nMinX = aWorkArea.nLeft;
 	long nMinY = aWorkArea.nTop;
-#ifdef MACOSX
 	if ( maFrameData.mbPresentation )
 	{
 		nMinX -= 1;
 		nMinY -= 1;
 	}
-#endif	// MACOSX
 	nWidth = nWidth + maGeometry.nLeftDecoration + maGeometry.nRightDecoration;
 	nHeight = nHeight + maGeometry.nTopDecoration + maGeometry.nBottomDecoration;
 	if ( nMinX + nWidth > aWorkArea.nLeft + aWorkArea.GetWidth() )
@@ -360,7 +409,6 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	{
 		maFrameData.maSysData.aWindow = (long)maFrameData.mpVCLFrame->getNativeWindow();
 
-#ifdef MACOSX
 		// Test the JVM version and if it is earlier than 1.4, use Carbon
 		VCLThreadAttach t;
 		if ( maFrameData.maSysData.aWindow && t.pEnv && t.pEnv->GetVersion() < JNI_VERSION_1_4 )
@@ -371,18 +419,13 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 			if ( pEventHandlerUPP )
 			{
 				// Set up native event handler
-				EventTypeSpec aTypes[3];
-				aTypes[0].eventClass = kEventClassMouse;
-				aTypes[0].eventKind = kEventMouseUp;
-				aTypes[1].eventClass = kEventClassMouse;
-				aTypes[1].eventKind = kEventMouseEntered;
-				aTypes[2].eventClass = kEventClassMouse;
-				aTypes[2].eventKind = kEventMouseExited;
-				InstallWindowEventHandler( (WindowRef)maFrameData.maSysData.aWindow, pEventHandlerUPP, 3, aTypes, NULL, NULL );
+				EventTypeSpec aType;
+				aType.eventClass = kEventClassKeyboard;
+				aType.eventKind = kEventRawKeyModifiersChanged;
+				InstallWindowEventHandler( (WindowRef)maFrameData.maSysData.aWindow, pEventHandlerUPP, 1, &aType, NULL, NULL );
 			}
 
 		}
-#endif	// MACOSX
 	}
 
 	// Fix bugs 169 and 283 by giving the Java event thread a chance
@@ -403,14 +446,12 @@ void SalFrame::GetWorkArea( Rectangle &rRect )
 {
 	rRect = com_sun_star_vcl_VCLScreen::getScreenBounds( maFrameData.mpVCLFrame );
 
-#ifdef MACOSX
 	// Adjust for system menu bar when not in presentation mode
 	if ( !maFrameData.mbPresentation && !rRect.nTop )
 	{
 		const Rectangle& rFrameInsets( com_sun_star_vcl_VCLScreen::getFrameInsets() );
 		rRect.nTop += rFrameInsets.nTop;
 	}
-#endif	// MACOSX
 }
 
 // -----------------------------------------------------------------------
@@ -502,7 +543,6 @@ void SalFrame::ShowFullScreen( BOOL bFullScreen )
 
 // -----------------------------------------------------------------------
 
-#ifdef MACOSX
 /**
  * (static) Timer routine to toggle the system user interface mode on the
  * thread that is hosting our main runloop.  Starting with 10.3.8, it appears
@@ -523,11 +563,9 @@ static void SetSystemUIModeTimerCallback( EventLoopTimerRef aTimer, void *pData 
 	else
 		SetSystemUIMode( kUIModeNormal, 0 );
 }
-#endif
 
 // -----------------------------------------------------------------------
 
-#ifdef MACOSX
 /**
  * (static) Trigger a timer invocation to change our system user interface
  * mode to show/hide the dock, menubar, and other applications in preparation
@@ -538,10 +576,6 @@ static void SetSystemUIModeTimerCallback( EventLoopTimerRef aTimer, void *pData 
  */
 static void InstallSetSystemUIModeTimer( BOOL bStart )
 {
-	static EventLoopTimerUPP pSystemUIModeTimerUPP = NULL;
-	static ::osl::Mutex aMutex;
-	
-	::osl::MutexGuard aGuard( aMutex );
 	if ( !pSystemUIModeTimerUPP )
 		pSystemUIModeTimerUPP = NewEventLoopTimerUPP( SetSystemUIModeTimerCallback );
 	if ( pSystemUIModeTimerUPP )
@@ -554,7 +588,6 @@ static void InstallSetSystemUIModeTimer( BOOL bStart )
 		Application::AcquireSolarMutex( nCount );
 	}
 }
-#endif
 
 // -----------------------------------------------------------------------
 
@@ -571,7 +604,6 @@ void SalFrame::StartPresentation( BOOL bStart )
 	else if ( !bStart && pSalData->mpPresentationFrame != this )
 		return;
 
-#ifdef MACOSX
 	// [ed] 2/15/05 Change the SystemUIMode via timers so we can trigger
 	// it on the main runloop thread.  Bug 484
 	InstallSetSystemUIModeTimer( bStart );
@@ -594,11 +626,6 @@ void SalFrame::StartPresentation( BOOL bStart )
 			aWorkArea.nTop -= 1;
 		SetPosSize( aWorkArea.nLeft, aWorkArea.nTop, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
 	}
-#else	// MACOSX
-#ifdef DEBUG
-	fprintf( stderr, "SalFrame::StartPresentation not implemented\n" );
-#endif
-#endif	// MACOSX
 }
 
 // -----------------------------------------------------------------------
@@ -703,7 +730,6 @@ XubString SalFrame::GetSymbolKeyName( const XubString&, USHORT nKeyCode )
 
 void SalFrame::UpdateSettings( AllSettings& rSettings )
 {
-#ifdef MACOSX
 	MouseSettings aMouseSettings = rSettings.GetMouseSettings();
 	ULONG nDblTime = (ULONG)GetDblTime();
 	if ( nDblTime < 25 )
@@ -712,11 +738,6 @@ void SalFrame::UpdateSettings( AllSettings& rSettings )
 	aMouseSettings.SetStartDragWidth( 1 );
 	aMouseSettings.SetStartDragHeight( 1 );
 	rSettings.SetMouseSettings( aMouseSettings );
-#else	// MACOSX
-#ifdef DEBUG
-	fprintf( stderr, "SalFrame::UpdateSettings not implemented\n" );
-#endif
-#endif	// MACOSX
 
 	StyleSettings aStyleSettings( rSettings.GetStyleSettings() );
 

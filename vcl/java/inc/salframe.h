@@ -76,6 +76,7 @@ class SalFrameData
 	friend class	::vcl::com_sun_star_vcl_VCLMenuBar;
 	friend class	::vcl::com_sun_star_vcl_VCLPrintJob;
 	friend void 	UpdateMenusForFrame( SalFrame*, SalMenu* );
+	friend void		SetActiveMenuBarForFrame( SalFrame *pFrame );
 #ifdef MACOSX
 	friend void 	CarbonDMExtendedNotificationCallback( void*, short, void* );
 #endif	// MACOSX

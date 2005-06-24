@@ -431,8 +431,6 @@ public:
 	BOOL                HandleMenuDeActivateEvent( Menu *pMenu ) const;
 	BOOL                HandleMenuHighlightEvent( Menu *pMenu, USHORT nEventId ) const;
 	BOOL                HandleMenuCommandEvent( Menu *pMenu, USHORT nEventId ) const;
-	
-	void		    MenuBarModeChange( USHORT newMode );
 
 	void				SetCloserHdl( const Link& rLink )			{ maCloserHdl = rLink; }
 	const Link& 		GetCloserHdl() const						{ return maCloserHdl; }

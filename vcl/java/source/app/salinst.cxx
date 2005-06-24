@@ -97,8 +97,6 @@
 #endif
 #include "salinst.hrc"
 
-#ifdef MACOSX
-
 #ifndef _SV_SALMAIN_COCOA_H
 #include <salmain_cocoa.h>
 #endif
@@ -145,8 +143,6 @@ static pascal OSErr DoAEOpenPrintDocuments( const AppleEvent *message, AppleEven
 static pascal OSErr DoAEOpen( const AppleEvent *message, AppleEvent *reply, long refcon );
 static pascal OSErr DoAEReopen( const AppleEvent *message, AppleEvent *reply, long refcon );
 
-#endif // MACOSX
-
 static void RunAppMain( Application* pApp );
 
 class SVMainThread : public ::vos::OThread
@@ -180,64 +176,51 @@ static void RunAppMain( Application *pApp )
 		pSalData->maNativeFontMapping[ pNativeFont ] = pFontData->mpFirst;
 	}
 
-#ifdef MACOSX
-	VCLThreadAttach t;
-	if ( t.pEnv )
+	EventHandlerUPP pEventHandlerUPP = NewEventHandlerUPP( CarbonEventHandler );
+	if ( pEventHandlerUPP )
 	{
-		// Test the JVM version and if it is 1.4 or higher use Cocoa, otherwise
-		// use Carbon
-		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
-		{
-			EventHandlerUPP pEventHandlerUPP = NewEventHandlerUPP( CarbonEventHandler );
-			if ( pEventHandlerUPP )
-			{
-				// Set up native event handler
-				EventTypeSpec aTypes[5];
-				aTypes[0].eventClass = kEventClassAppleEvent;
-				aTypes[0].eventKind = kEventAppleEvent;
-				aTypes[1].eventClass = kEventClassMouse;
-				aTypes[1].eventKind = kEventMouseWheelMoved;
-				aTypes[2].eventClass = kEventClassMenu;
-				aTypes[2].eventKind = kEventMenuBeginTracking;
-				aTypes[3].eventClass = kEventClassMenu;
-				aTypes[3].eventKind = kEventMenuPopulate;
-				aTypes[4].eventClass = kEventClassApplication;
-				aTypes[4].eventKind = kEventAppShown;
-				InstallApplicationEventHandler( pEventHandlerUPP, 5, aTypes, NULL, NULL );
-			}
-		}
-
-		// Install AppleEvent handlers for processing open and print events
-		// to fix bug 209 
-		AEInstallEventHandler( kCoreEventClass, kAEQuitApplication, NewAEEventHandlerUPP( DoAEQuit ), 0, FALSE );
-		AEInstallEventHandler( kCoreEventClass, kAEOpenDocuments, NewAEEventHandlerUPP( DoAEOpenPrintDocuments ), 0, FALSE );
-		AEInstallEventHandler( kCoreEventClass, kAEPrintDocuments, NewAEEventHandlerUPP( DoAEOpenPrintDocuments ), 0, FALSE );
-		AEInstallEventHandler( kCoreEventClass, kAEOpenApplication, NewAEEventHandlerUPP( DoAEOpen ), 0, FALSE );
-		AEInstallEventHandler( kCoreEventClass, kAEReopenApplication, NewAEEventHandlerUPP( DoAEReopen ), 0, FALSE );
-
-		// Fix bug 223 by registering a display manager notification callback
-		ProcessSerialNumber nProc;
-		if ( GetCurrentProcess( &nProc ) == noErr )
-		{
-			DMExtendedNotificationUPP pExtendedNotificationUPP = NewDMExtendedNotificationUPP( CarbonDMExtendedNotificationCallback );
-			if ( pExtendedNotificationUPP )
-				DMRegisterExtendedNotifyProc( pExtendedNotificationUPP, NULL, NULL, &nProc );
-		}
+		// Set up native event handler
+		EventTypeSpec aTypes[5];
+		aTypes[0].eventClass = kEventClassAppleEvent;
+		aTypes[0].eventKind = kEventAppleEvent;
+		aTypes[1].eventClass = kEventClassMouse;
+		aTypes[1].eventKind = kEventMouseWheelMoved;
+		aTypes[2].eventClass = kEventClassMenu;
+		aTypes[2].eventKind = kEventMenuBeginTracking;
+		aTypes[3].eventClass = kEventClassMenu;
+		aTypes[3].eventKind = kEventMenuEndTracking;
+		aTypes[4].eventClass = kEventClassApplication;
+		aTypes[4].eventKind = kEventAppShown;
+		InstallApplicationEventHandler( pEventHandlerUPP, 5, aTypes, NULL, NULL );
 	}
-#endif	// MACOSX
+
+	// Install AppleEvent handlers for processing open and print events
+	// to fix bug 209 
+	AEInstallEventHandler( kCoreEventClass, kAEQuitApplication, NewAEEventHandlerUPP( DoAEQuit ), 0, FALSE );
+	AEInstallEventHandler( kCoreEventClass, kAEOpenDocuments, NewAEEventHandlerUPP( DoAEOpenPrintDocuments ), 0, FALSE );
+	AEInstallEventHandler( kCoreEventClass, kAEPrintDocuments, NewAEEventHandlerUPP( DoAEOpenPrintDocuments ), 0, FALSE );
+	AEInstallEventHandler( kCoreEventClass, kAEOpenApplication, NewAEEventHandlerUPP( DoAEOpen ), 0, FALSE );
+	AEInstallEventHandler( kCoreEventClass, kAEReopenApplication, NewAEEventHandlerUPP( DoAEReopen ), 0, FALSE );
+
+	// Fix bug 223 by registering a display manager notification callback
+	ProcessSerialNumber nProc;
+	if ( GetCurrentProcess( &nProc ) == noErr )
+	{
+		DMExtendedNotificationUPP pExtendedNotificationUPP = NewDMExtendedNotificationUPP( CarbonDMExtendedNotificationCallback );
+		if ( pExtendedNotificationUPP )
+			DMRegisterExtendedNotifyProc( pExtendedNotificationUPP, NULL, NULL, &nProc );
+	}
 
 	pApp->Main();
 
-#ifdef MACOSX
 	// Test the JVM version and if it is 1.4 or higher, stop the event loop
+	VCLThreadAttach t;
 	if ( t.pEnv && t.pEnv->GetVersion() >= JNI_VERSION_1_4 )
 		StopCocoaEventLoop();
-#endif	// MACOSX
 }
 
 // ----------------------------------------------------------------------------
 
-#ifdef MACOSX
 static void ImplFontListChangedCallback( ATSFontNotificationInfoRef, void* )
 {
 	MutexGuard aGuard( aMutex );
@@ -287,11 +270,9 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef, void* )
 
 	com_sun_star_vcl_VCLFont::useDefaultFont = bUseDefaultFont;
 }
-#endif	// MACOSX
 
 // ----------------------------------------------------------------------------
 
-#ifdef MACOSX
 static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( JNIEnv *pEnv, jobject object )
 {
 	jobject lockObject = Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( pEnv, object );
@@ -307,11 +288,9 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( JNIEnv 
 		return 1;
 	}
 }
-#endif // MACOSX
 
 // ----------------------------------------------------------------------------
 
-#ifdef MACOSX
 static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( JNIEnv *pEnv, jobject object )
 {
 	if ( pCarbonLockGetInstance )
@@ -319,21 +298,17 @@ static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( J
 	else
 		return NULL;
 }
-#endif // MACOSX
 
 // ----------------------------------------------------------------------------
 
-#ifdef MACOSX
 static void JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_init( JNIEnv *pEnv, jobject object )
 {
 	if ( pCarbonLockInit )
 		pCarbonLockInit( pEnv, object );
 }
-#endif // MACOSX
 
 // ----------------------------------------------------------------------------
 
-#ifdef MACOSX
 static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv *pEnv, jobject object )
 {
 	jobject lockObject = Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( pEnv, object );
@@ -349,11 +324,9 @@ static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv 
 		return 1;
 	}
 }
-#endif // MACOSX
 
 // ----------------------------------------------------------------------------
 
-#ifdef MACOSX
 static jint JNICALL Java_com_apple_mrj_internal_awt_graphics_CGJavaPixelsPen_UpdateContext( JNIEnv *pEnv, jobject object, jint pContextRef, jint nX, jint nY, jint nWidth, jint nHeight )
 {
 	jint nRet = pUpdateContext( pEnv, object, pContextRef, nX, nY, nWidth, nHeight );
@@ -362,11 +335,9 @@ static jint JNICALL Java_com_apple_mrj_internal_awt_graphics_CGJavaPixelsPen_Upd
 
 	return nRet;
 }
-#endif	// MACOSX
 
 // ----------------------------------------------------------------------------
 
-#ifdef MACOSX
 static jint JNICALL Java_com_apple_mrj_internal_awt_graphics_CGSGraphics_CGContextRelease( JNIEnv *pEnv, jobject object, jint pContextRef )
 {
 	CGContextRef aContext = (CGContextRef)pContextRef;
@@ -381,11 +352,9 @@ static jint JNICALL Java_com_apple_mrj_internal_awt_graphics_CGSGraphics_CGConte
 
 	return nRet;
 }
-#endif	// MACOSX
 
 // ----------------------------------------------------------------------------
 
-#ifdef MACOSX
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData )
 {
 	EventClass nClass = GetEventClass( aEvent );
@@ -474,7 +443,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 				return noErr;
 			}
-			else if ( nClass == kEventClassMenu && nKind == kEventMenuBeginTracking )
+			else if ( nClass == kEventClassMenu && ( nKind == kEventMenuBeginTracking || nKind == kEventMenuEndTracking ) )
 			{
 				MenuRef trackingRef;
 				if ( GetEventParameter( aEvent, kEventParamDirectObject, typeMenuRef, NULL, sizeof( MenuRef ), NULL, &trackingRef ) == noErr )
@@ -527,18 +496,24 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 						// Fix bug 679 by checking if the condition was
 						// released to avoid a deadlock
 						if ( pSalData->mbNativeEventSucceeded )
-                        {
+						{
 							Application::GetSolarMutex().acquire();
+
+							if ( nKind == kEventMenuBeginTracking )
+								pSalData->mbInNativeMenuTracking = true;
+							else
+								pSalData->mbInNativeMenuTracking = true;
 
 							// Execute menu updates while the VCL event queue is
 							// blocked
-							for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-								UpdateMenusForFrame( *it, NULL );
+							UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
 
 							// Relock the Java lock
 							AcquireJavaLock();
 
 							Application::GetSolarMutex().release();
+
+							return noErr;
 						}
 						else
 						{
@@ -549,11 +524,6 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 						}
 					}
 				}
-			}
-			else if ( nClass == kEventClassMenu && nKind == kEventMenuPopulate )
-			{
-				// Fix bug 221 by explicitly reenabling all keyboards
-				KeyScript( smKeyEnableKybds );
 			}
 			else if ( nClass == kEventClassApplication && nKind == kEventAppShown )
 			{
@@ -584,11 +554,9 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 	// Always execute the next registered handler
 	return CallNextEventHandler( aNextHandler, aEvent );
 }
-#endif // MACOSX
 
 // ----------------------------------------------------------------------------
 
-#ifdef MACOSX
 void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void *pNotifyData )
 {
 	if ( !Application::IsShutDown() && ( nMessage == kDMNotifyEvent || nMessage == kDMNotifyDisplayDidWake ) )
@@ -616,11 +584,9 @@ void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void
 		}
 	}
 }
-#endif	// MACOSX
 
 // ----------------------------------------------------------------------------
 
-#ifdef MACOSX
 static OSErr DoAEQuit( const AppleEvent *message, AppleEvent *reply, long refcon )
 {
 	if ( !Application::IsShutDown() )
@@ -635,11 +601,9 @@ static OSErr DoAEQuit( const AppleEvent *message, AppleEvent *reply, long refcon
 
 	return noErr;
 }
-#endif	// MACOSX
 
 // ----------------------------------------------------------------------------
 
-#ifdef MACOSX
 static OSErr DoAEOpenPrintDocuments( const AppleEvent *message, AppleEvent *reply, long refcon )
 {
 	OSErr err = noErr;
@@ -703,11 +667,9 @@ static OSErr DoAEOpenPrintDocuments( const AppleEvent *message, AppleEvent *repl
 
 	return ( err );
 }
-#endif // MACOSX
 
 // ----------------------------------------------------------------------------
 
-#ifdef MACOSX
 static OSErr DoAEOpen( const AppleEvent *message, AppleEvent *reply, long refcon )
 {
 	// Fix bug 221 by explicitly reenabling all keyboards
@@ -715,11 +677,9 @@ static OSErr DoAEOpen( const AppleEvent *message, AppleEvent *reply, long refcon
 
 	return noErr;
 }
-#endif	// MACOSX
 
 // ----------------------------------------------------------------------------
 
-#ifdef MACOSX
 static OSErr DoAEReopen( const AppleEvent *message, AppleEvent *reply, long refcon )
 {
 	// Fix bug 221 by explicitly reenabling all keyboards
@@ -737,14 +697,11 @@ static OSErr DoAEReopen( const AppleEvent *message, AppleEvent *reply, long refc
 
 	return noErr;
 }
-#endif	// MACOSX
 
 // ----------------------------------------------------------------------------
 
 void ExecuteApplicationMain( Application *pApp )
 {
-#ifdef MACOSX
-
 	// If there is a "user/fonts" directory, explicitly activate the
 	// fonts since Panther does not automatically add fonts in the user's
 	// Library/Fonts directory until they reboot or relogin
@@ -1037,7 +994,6 @@ void ExecuteApplicationMain( Application *pApp )
 			}
 		}
 	}
-#endif	// MACOSX
 
 	// Now that Java is properly initialized, run the application's Main()
 	RunAppMain( pApp );
@@ -1047,24 +1003,20 @@ void ExecuteApplicationMain( Application *pApp )
 
 void AcquireJavaLock()
 {
-#ifdef MACOSX
 	// Lock the Carbon lock
 	VCLThreadAttach t;
 	if ( t.pEnv && t.pEnv->GetVersion() < JNI_VERSION_1_4 )
 		Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
-#endif	// MACOSX
 }
 
 // -----------------------------------------------------------------------
 
 void ReleaseJavaLock()
 {
-#ifdef MACOSX
 	// Unlock the Carbon lock
 	VCLThreadAttach t;
 	if ( t.pEnv && t.pEnv->GetVersion() < JNI_VERSION_1_4 )
 		Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
-#endif	// MACOSX
 }
 
 // =======================================================================

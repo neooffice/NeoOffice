@@ -45,9 +45,6 @@ import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
-import java.awt.MenuBar;
-import java.awt.MenuItem;
-import java.awt.MenuShortcut;
 import java.awt.Panel;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -607,11 +604,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private static KeyEvent lastKeyPressed = null;
 
-	/** 
-	 * The menu modifier.
-	 */
-	private static MenuShortcut lastMenuShortcutPressed = null;
-
 	/**
 	 * The last mouse drag event.
 	 */
@@ -636,17 +628,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	static VCLFrame findFrame(Component c) {
 
 		return (VCLFrame)componentMap.get(c);
-
-	}
-
-	/**
-	 * Cache the last menu shortcut pressed.
-	 *
-	 * @return the last menu shortcut pressed
-	 */
-	static void setLastMenuShortcutPressed(MenuShortcut s) {
-
-		lastMenuShortcutPressed = s;
 
 	}
 
@@ -906,10 +887,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void dispose() {
 
-		if (window != null) {
+		if (window != null)
 			setVisible(false);
-			setMenuBar(null);
-		}
 		if (queue != null)
 			queue.removeCachedEvents(frame);
 		queue = null;
@@ -1487,20 +1466,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
-	 * Returns the menubar for this native window.
-	 *
-	 * @return the <code>MenuBar</code> instance
-	 */
-	MenuBar getMenuBar() {
-
-		if (window instanceof Frame)
-			return ((Frame)window).getMenuBar();
-		else
-			return null;
-
-	}
-
-	/**
 	 * Returns the owner frame.
 	 *
 	 * @return the owner frame
@@ -1638,9 +1603,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (VCLFrame.lastKeyPressed != null && VCLFrame.lastKeyPressed.getID() != KeyEvent.KEY_PRESSED)
 			VCLFrame.lastKeyPressed = null;
 
-		if (VCLFrame.lastMenuShortcutPressed != null)
-			VCLFrame.lastMenuShortcutPressed = null;
-
 		if (queue == null || window == null || !window.isShowing())
 			return;
 
@@ -1675,36 +1637,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else if (e.isActionKey()) {
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0));
 		}
-		else if (VCLFrame.lastMenuShortcutPressed == null && VCLFrame.lastKeyPressed == null) {
-			// Trap the key combinations that can be used for menu shortcuts.
-			// This is necessary because the VCL menu handlers expect to get
-			// keyboard shortcuts for all menu items and Java will intercept
-			// those that are applicable to disabled menu items.
-			int modifiers = e.getModifiers();
-			char keyChar = e.getKeyChar();
-			if ((modifiers & VCLFrame.menuModifiersMask) == VCLFrame.menuModifiersMask && keyCode != KeyEvent.VK_SPACE && keyCode != KeyEvent.VK_Q) {
-				VCLEvent vclEvent = new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0);
-				if (VCLEvent.convertVCLKeyCode(vclEvent.getKeyCode()) > 0) {
-					// Fix bug 244 by checking if there is an active AWT menu
-					// with the same shortcut
-					boolean ignoreShortcut = false;
-					MenuShortcut shortcut = new MenuShortcut(keyChar, (modifiers & InputEvent.SHIFT_MASK) == InputEvent.SHIFT_MASK ? true : false);
- 					if (window instanceof Frame) {
-						MenuBar mb = ((Frame)window).getMenuBar();
-						if (mb != null) {
-							MenuItem mi = mb.getShortcutMenuItem(shortcut);
-							if (mi != null && mi.isEnabled())
-								ignoreShortcut = true;
-						}
-					}
-
-					if (!ignoreShortcut) {
-						keyTyped(new KeyEvent(e.getComponent(), KeyEvent.KEY_TYPED, e.getWhen(), modifiers, KeyEvent.VK_UNDEFINED, keyChar));
-						VCLFrame.lastMenuShortcutPressed = shortcut;
-					}
-				}
-			}
-		}
 
 		VCLFrame.keyModifiersPressed = e.getModifiers();
 		VCLFrame.keyModifiersUnpressed &= VCLFrame.keyModifiersPressed;
@@ -1722,12 +1654,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (queue == null || window == null || !window.isShowing())
 			return;
-
-		// Avoid duplication of menu shortcuts
-		if (VCLFrame.lastMenuShortcutPressed != null) {
-			VCLFrame.lastMenuShortcutPressed = null;
-			return;
-		}
 
 		VCLFrame.lastKeyPressed = e;
 
@@ -2092,18 +2018,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			return;
 
 		fullScreenMode = b;
-
-	}
-
-	/**
-	 * Sets the menubar for this native window.
-	 *
-	 * @param menubar the <code>MenuBar</code> instance of <code>null</code>
-	 */
-	void setMenuBar(MenuBar menubar) {
-
-		if (window instanceof Frame)
-			((Frame)window).setMenuBar(menubar);
 
 	}
 
