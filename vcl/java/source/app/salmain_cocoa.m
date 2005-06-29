@@ -36,44 +36,27 @@
 #define _SV_SALMAIN_COCOA_M
 
 #import <salmain_cocoa.h>
-#import <objc/objc.h>
+#import <AppKit/AppKit.h>
 
 // ============================================================================
 
 void RunCocoaEventLoop()
 {
-	id nNSApplication;
-	id nNSApp;
-	SEL pSharedApplication;
-	SEL pRun;
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	// Invoke [NSApplication sharedApplication]
-	nNSApplication = objc_getClass("NSApplication");
-	pSharedApplication = sel_getUid("sharedApplication");
-	nNSApp = objc_msgSend(nNSApplication, pSharedApplication);
+	[NSApplication sharedApplication];
+	[NSApp run];
 
-	// Invoke [NSApp run]
-	pRun = sel_getUid("run");
-	objc_msgSend(nNSApp, pRun);
+	[pPool release];
 }
 
 // ----------------------------------------------------------------------------
 
 void StopCocoaEventLoop()
 {
-	id nNSApplication;
-	id nNSApp;
-	BOOL bRunning;
-	SEL pSharedApplication;
-	SEL pStop;
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	// Invoke [NSApplication sharedApplication]
-	nNSApplication = objc_getClass("NSApplication");
-	pSharedApplication = sel_getUid("sharedApplication");
-	nNSApp = objc_msgSend(nNSApplication, pSharedApplication);
+	[NSApp stop:NSApp];
 
-	// Invoke [NSApp stop]
-	pStop = sel_getUid("stop:");
-	objc_msgSend(nNSApp, pStop, nNSApp);
+	[pPool release];
 }
-

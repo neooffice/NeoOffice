@@ -213,10 +213,9 @@ static void RunAppMain( Application *pApp )
 
 	pApp->Main();
 
-	// Test the JVM version and if it is 1.4 or higher, stop the event loop
-	VCLThreadAttach t;
-	if ( t.pEnv && t.pEnv->GetVersion() >= JNI_VERSION_1_4 )
-		StopCocoaEventLoop();
+	// Make sure that any Cocoa event loop is stopped even if we aren't using
+	// Cocoa
+	StopCocoaEventLoop();
 }
 
 // ----------------------------------------------------------------------------
@@ -805,22 +804,17 @@ void ExecuteApplicationMain( Application *pApp )
 		// use Carbon
 		if ( t.pEnv->GetVersion() >= JNI_VERSION_1_4 )
 		{
-			// Load Cocoa
-			OModule aModule;
-			if ( aModule.load( OUString::createFromAscii( "/System/Library/Frameworks/AppKit.framework/AppKit" ) ) )
-			{
-				ULONG nCount = Application::ReleaseSolarMutex();
+			ULONG nCount = Application::ReleaseSolarMutex();
 
-				// Create the thread to run the Main() method in
-				SVMainThread aSVMainThread( pApp );
-				aSVMainThread.create();
+			// Create the thread to run the Main() method in
+			SVMainThread aSVMainThread( pApp );
+			aSVMainThread.create();
 
-				// Start the Cocoa event loop
-				RunCocoaEventLoop();
-				aSVMainThread.join();
+			// Start the Cocoa event loop
+			RunCocoaEventLoop();
+			aSVMainThread.join();
 
-				Application::AcquireSolarMutex( nCount );
-			}
+			Application::AcquireSolarMutex( nCount );
 
 			return;
 		}

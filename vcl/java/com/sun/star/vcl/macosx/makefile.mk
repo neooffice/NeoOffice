@@ -56,6 +56,7 @@ dummy:
 
 JAVAFILES = \
 	VCLAboutHandler.java \
+	VCLApplicationListener.java \
 	VCLOpenApplicationHandler.java \
 	VCLOpenDocumentHandler.java \
 	VCLPrefsHandler.java \
