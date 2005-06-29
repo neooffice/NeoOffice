@@ -61,7 +61,6 @@ int main( int argc, char *argv[] )
 		_exit( 1 );
 	}
 
-#ifdef MACOSX
 	// Get absolute path of command's directory
 	ByteString aCmdPath( pCmdPath );
 	if ( aCmdPath.Len() )
@@ -103,7 +102,6 @@ int main( int argc, char *argv[] )
 		if ( aLibPath.GetToken( 0, ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 ).GetChar( 0 ) ).CompareTo( aCmdPath, aCmdPath.Len() ) != COMPARE_EQUAL )
 			execv( pCmdPath, argv );
 	}
-#endif	// MACOSX
 
 	SVMain();
 

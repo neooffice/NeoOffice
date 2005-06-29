@@ -51,16 +51,11 @@
 #include <com/sun/star/vcl/VCLImage.hxx>
 #endif
 
-#ifdef MACOSX
-
 #include <premac.h>
 #include <QuickTime/QuickTime.h>
 #include <postmac.h>
 
 using namespace rtl;
-
-#endif	// MACOSX
-
 using namespace vcl;
 
 // ============================================================================
@@ -90,7 +85,6 @@ void com_sun_star_vcl_VCLGraphics::beep()
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
-#ifdef MACOSX
 		// Test the JVM version and if it is below 1.4, use Carbon APIs
 		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
 		{
@@ -98,7 +92,6 @@ void com_sun_star_vcl_VCLGraphics::beep()
 			SysBeep( 30 );
 			return;
 		}
-#endif	// MACOSX
 
 		if ( !mID )
 		{

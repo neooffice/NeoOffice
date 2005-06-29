@@ -48,6 +48,7 @@
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
+#undef check
 
 struct ImplATSLayoutData;
 class SalGraphics;

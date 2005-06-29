@@ -54,8 +54,6 @@
 #include <com/sun/star/vcl/VCLPrintJob.hxx>
 #endif
 
-#ifdef MACOSX
-
 #ifndef _SV_SALPRN_HXX
 #include <salprn.hxx>
 #endif
@@ -92,8 +90,6 @@ struct EPSData
 static EventLoopTimerUPP pEventLoopTimerUPP = NULL;
 
 using namespace rtl;
-
-#endif	// MACOSX
 
 static double fExpValues[] = { 1.0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20 };
 
@@ -349,7 +345,6 @@ static double StringToDouble( const ByteString& rStr )
 
 // -----------------------------------------------------------------------
 
-#ifdef MACOSX
 static void ImplDrawEPS( EPSData *pData )
 {
 	CFArrayRef aFormats;
@@ -540,11 +535,9 @@ static void ImplDrawEPS( EPSData *pData )
 		}
 	}
 }
-#endif  // MACOSX
 
 // -----------------------------------------------------------------------
 
-#ifdef MACOSX
 static void DrawEPSTimerCallback( EventLoopTimerRef aTimer, void *pData )
 {
 	EPSData *pEPSData = (EPSData *)pData;
@@ -565,7 +558,6 @@ static void DrawEPSTimerCallback( EventLoopTimerRef aTimer, void *pData )
 	// Unblock the VCL event loop
 	Application::GetSolarMutex().release();
 }
-#endif  // MACOSX
 
 // =======================================================================
 
@@ -849,7 +841,6 @@ BOOL SalGraphics::DrawEPS( long nX, long nY, long nWidth, long nHeight,
 	if ( !maGraphicsData.mpPrinter )
 		return bRet;
 
-#ifdef MACOSX
 	PMPrintSession pSession = (PMPrintSession)maGraphicsData.mpPrinter->maPrinterData.mpVCLPrintJob->getNativePrintJob();
 	if ( pSession && pPtr && nSize )
 	{
@@ -884,12 +875,8 @@ BOOL SalGraphics::DrawEPS( long nX, long nY, long nWidth, long nHeight,
 
 		bRet = aData.mbSuccess;
 	}
-#else	// MACOSX
-#ifdef DEBUG
-	fprintf( stderr, "SalGraphics::DrawEPS not implemented\n" );
-#endif
+
 	return bRet;
-#endif	// MACOSX
 }
 
 // -----------------------------------------------------------------------

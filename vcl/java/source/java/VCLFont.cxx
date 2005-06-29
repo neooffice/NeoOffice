@@ -39,8 +39,6 @@
 #include <com/sun/star/vcl/VCLFont.hxx>
 #endif
 
-#ifdef MACOSX
-
 #include <map>
 
 #include <premac.h>
@@ -49,14 +47,11 @@
 
 static ::std::map< ::rtl::OUString, sal_uInt64 > aNativeFontMap;
 
-#endif	// MACOSX
-
 using namespace rtl;
 using namespace vcl;
 
 // ============================================================================
 
-#ifdef MACOSX
 static sal_uInt64 GetMacFontFace( com_sun_star_vcl_VCLFont *pVCLFont )
 {
 	sal_uInt64 out = 0;
@@ -186,7 +181,6 @@ static sal_uInt64 GetMacFontFace( com_sun_star_vcl_VCLFont *pVCLFont )
 
 	return out;
 }
-#endif	// MACOSX
 
 // ============================================================================
 
@@ -244,13 +238,11 @@ jclass com_sun_star_vcl_VCLFont::getMyClass()
 						continue;
 
 					com_sun_star_vcl_VCLFont *pVCLFont = new com_sun_star_vcl_VCLFont( tempObj );
-#ifdef MACOSX
 					if ( kATSUInvalidFontID == (ATSUFontID)pVCLFont->getNativeFont() )
 					{
 						delete pVCLFont;
 						continue;
 					}
-#endif	// MACOSX
 					OUString aFontName( pVCLFont->getName() );
 					::std::map< OUString, com_sun_star_vcl_VCLFont* >::const_iterator it = out.find( aFontName );
 					if ( it != out.end() )
@@ -506,7 +498,6 @@ void *com_sun_star_vcl_VCLFont::getNativeFont()
 {
 	void *out = NULL;
 
-#ifdef MACOSX
 	sal_uInt64 nFontFace;
 	if ( com_sun_star_vcl_VCLFont::useDefaultFont )
 	{
@@ -521,7 +512,6 @@ void *com_sun_star_vcl_VCLFont::getNativeFont()
 
 	if ( nFontFace )
 		out = (void *)( (sal_uInt32)( nFontFace >> 32 ) );
-#endif	// MACOSX
 
 	return out;
 }
@@ -532,7 +522,6 @@ void *com_sun_star_vcl_VCLFont::getNativeFont( sal_Bool _par0, sal_Bool _par1 )
 {
 	void *out = NULL;
 
-#ifdef MACOSX
 	sal_uInt64 nFontFace;
 	if ( com_sun_star_vcl_VCLFont::useDefaultFont )
 	{
@@ -601,7 +590,6 @@ void *com_sun_star_vcl_VCLFont::getNativeFont( sal_Bool _par0, sal_Bool _par1 )
 			FMDisposeFontFamilyInstanceIterator( &aIterator );
 		}
 	}
-#endif	// MACOSX
 
 	return out;
 }

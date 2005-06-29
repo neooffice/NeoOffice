@@ -53,11 +53,7 @@
 #include <vos/module.hxx>
 #endif
 
-#ifdef MACOSX
 #define DEF_OGLLIB "/System/Library/Frameworks/OpenGL.framework/OpenGL"
-#endif	// MACOSX
-
-#ifdef MACOSX
 
 #include <premac.h>
 #include <OpenGL/OpenGL.h>
@@ -78,8 +74,6 @@ static CGLDestroyContext_Type *pDestroyContext = NULL;
 static CGLDestroyPixelFormat_Type *pDestroyPixelFormat = NULL;
 static CGLSetCurrentContext_Type *pSetCurrentContext = NULL;
 static CGLSetOffScreen_Type *pSetOffScreen = NULL;
-
-#endif	// MACOSX
 
 static ::vos::OModule aModule;
 
@@ -119,10 +113,8 @@ SalOpenGL::~SalOpenGL()
 {
 	if ( mpGraphics && mpLastGraphics && mpGraphics->maGraphicsData.mpVCLGraphics == mpLastGraphics->maGraphicsData.mpVCLGraphics )
 	{
-#ifdef MACOSX
 		if ( mpNativeContext && pClearDrawable )
 			pClearDrawable( (CGLContextObj)mpNativeContext );
-#endif	// MACOSX
 
 		if ( mpData )
 		{
@@ -146,7 +138,6 @@ BOOL SalOpenGL::Create()
 {
 	if ( mnOGLState == OGL_STATE_UNLOADED )
 	{
-#ifdef MACOSX
 		mnOGLState = OGL_STATE_INVALID;
 		if ( aModule.load( OUString::createFromAscii( DEF_OGLLIB ) ) )
 		{
@@ -183,11 +174,6 @@ BOOL SalOpenGL::Create()
 				}
 			}
 		}
-#else	// MACOSX
-#ifdef DEBUG
-		fprintf( stderr, "SalOpenGL::Create not implemented\n" );
-#endif
-#endif	// MACOSX
 	}
 
 	return ( mnOGLState == OGL_STATE_VALID ? TRUE : FALSE );
@@ -197,7 +183,6 @@ BOOL SalOpenGL::Create()
 
 void SalOpenGL::Release()
 {
-#ifdef MACOSX
 	if ( mpNativeContext && pClearDrawable && pDestroyContext )
 	{
 		pClearDrawable( (CGLContextObj)mpNativeContext );
@@ -212,11 +197,6 @@ void SalOpenGL::Release()
 	pDestroyPixelFormat = NULL;
 	pSetCurrentContext = NULL;
 	pSetOffScreen = NULL;
-#else	// MACOSX
-#ifdef DEBUG
-	fprintf( stderr, "SalOpenGL::Release not implemented\n" );
-#endif
-#endif	// MACOSX
 
 	if ( mpData )
 	{
@@ -257,10 +237,8 @@ void SalOpenGL::OGLEntry( SalGraphics* pGraphics )
 
 	if ( !mpGraphics || !mpLastGraphics || mpGraphics->maGraphicsData.mpVCLGraphics != mpLastGraphics->maGraphicsData.mpVCLGraphics )
 	{
-#ifdef MACOSX
 		if ( mpNativeContext && pClearDrawable )
 			pClearDrawable( (CGLContextObj)mpNativeContext );
-#endif	// MACOSX
 
 		if ( mpData )
 		{
@@ -289,25 +267,17 @@ void SalOpenGL::OGLEntry( SalGraphics* pGraphics )
 					long nHeight = pImage->getHeight();
 					jboolean bCopy( sal_False );
 					mpBits = (BYTE *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), &bCopy );
-#ifdef MACOSX
 					if ( mpBits && mpNativeContext && pSetOffScreen )
 						pSetOffScreen( (CGLContextObj)mpNativeContext, nWidth, nHeight, nWidth * 4, mpBits );
-#else	// MACOSX
-#ifdef DEBUG
-	fprintf( stderr, "SalOpenGL::OGLEntry not implemented\n" );
-#endif
-#endif	// MACOSX
 				}
 			}
 			delete pImage;
 		}
 	}
 
-#ifdef MACOSX
 	// Fix bug 289 by resetting the current context in each thread
 	if ( mpNativeContext )
 		pSetCurrentContext( (CGLContextObj)mpNativeContext );
-#endif	// MACOSX
 }
 
 // ------------------------------------------------------------------------

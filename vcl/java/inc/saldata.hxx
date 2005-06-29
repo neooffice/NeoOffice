@@ -61,9 +61,6 @@
 #include <com/sun/star/vcl/VCLPageFormat.hxx>
 #endif
 #ifndef _OSL_CONDITN_HXX_
-#if defined MACOSX && defined check
-#undef check
-#endif
 #include <osl/conditn.hxx>
 #endif
 

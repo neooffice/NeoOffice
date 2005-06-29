@@ -45,8 +45,6 @@
 #include <salsound.hxx>
 #endif
 
-#ifdef MACOSX
-
 #include <premac.h>
 #include <AudioToolbox/AudioToolbox.h>
 #include <postmac.h>
@@ -66,13 +64,10 @@ struct SalSoundNativeData {
 	UInt64				mnPacketOffset;
 };
 
-#endif	// MACOSX
-
 using namespace rtl;
 
 // ========================================================================
 
-#ifdef MACOSX
 OSStatus SalSoundComplexInputProc( AudioConverterRef aConverter, UInt32 *pDataPackets, AudioBufferList *pData, AudioStreamPacketDescription **pDataPacketDescription, void *pUserData)
 {
 	OSStatus nErr = kAudioFileUnspecifiedError;
@@ -119,11 +114,9 @@ OSStatus SalSoundComplexInputProc( AudioConverterRef aConverter, UInt32 *pDataPa
 
 	return nErr;
 }
-#endif	// MACOSX
 
 // ------------------------------------------------------------------------
 
-#ifdef MACOSX
 OSStatus SalSoundFileRenderProc(void *pRefCon, AudioUnitRenderActionFlags *pActionFlags, const AudioTimeStamp *pTimeStamp, UInt32 nBusNumber, UInt32 nNumFrames, AudioBufferList *pData)
 {
 	OSStatus nErr = kAudioFileUnspecifiedError;
@@ -137,7 +130,6 @@ OSStatus SalSoundFileRenderProc(void *pRefCon, AudioUnitRenderActionFlags *pActi
 
 	return nErr;
 }
-#endif	// MACOSX
 
 // ========================================================================
 
@@ -161,7 +153,6 @@ SalSound::~SalSound()
 {
 	if ( mpNativeData )
 	{
-#ifdef MACOSX
 		if ( mbPlaying )
 			AudioOutputUnitStop( (AudioUnit)mpNativeContext );
 		if ( mpNativeData->mpBuffer )
@@ -175,11 +166,6 @@ SalSound::~SalSound()
 			AudioUnitUninitialize( (AudioUnit)mpNativeContext );
 			CloseComponent( (AudioUnit)mpNativeContext );
 		}
-#else	// MACOSX
-#ifdef DEBUG
-	fprintf( stderr, "SalSound::~SalSound not implemented\n" );
-#endif
-#endif	// MACOSX
 		delete mpNativeData;
 	}
 }
@@ -190,7 +176,6 @@ BOOL SalSound::Create()
 {
 	BOOL bRet = FALSE;
 
-#ifdef MACOSX
 	if ( !mpNativeContext )
 	{
 		ComponentDescription aDesc;
@@ -209,11 +194,6 @@ BOOL SalSound::Create()
 			mpNativeContext = NULL;
 		}
 	}
-#else	// MACOSX
-#ifdef DEBUG
-	fprintf( stderr, "SalSound::Create not implemented\n" );
-#endif
-#endif	// MACOSX
 
 	if ( mpNativeContext )
 	{
@@ -232,12 +212,6 @@ BOOL SalSound::Create()
 
 void SalSound::Release()
 {
-#ifndef MACOSX
-#ifdef DEBUG
-	fprintf( stderr, "SalSound::Release not implemented\n" );
-#endif
-#endif	// MACOSX
-
 	mnSoundState = SOUND_STATE_UNLOADED;
 }
 
@@ -247,7 +221,6 @@ BOOL SalSound::Init( SalFrame* pFrame, const XubString& rSoundName, ULONG& rSoun
 {
 	BOOL bRet = FALSE;
 
-#ifdef MACOSX
 	if ( mpNativeContext )
 	{
 		// If this is a new audio file then dispose of the old file first
@@ -316,11 +289,6 @@ BOOL SalSound::Init( SalFrame* pFrame, const XubString& rSoundName, ULONG& rSoun
 			}
 		}
 	}
-#else 	// MACOSX
-#ifdef DEBUG
-	fprintf( stderr, "SalSound::Init not implemented\n" );
-#endif
-#endif	// MACOSX
 
 	return bRet;
 }
@@ -339,7 +307,6 @@ BOOL SalSound::Init( SalFrame* pFrame, const BYTE* pSound, ULONG nDataLen, ULONG
 
 void SalSound::Play( ULONG nStartTime, ULONG nPlayLen, BOOL bLoop )
 {
-#ifdef MACOSX
 	OSStatus nErr = kAudioFileUnspecifiedError;
 	if ( mpNativeContext )
 	{
@@ -356,18 +323,12 @@ void SalSound::Play( ULONG nStartTime, ULONG nPlayLen, BOOL bLoop )
 		else
 			mpProc( mpInst, SOUND_NOTIFY_ERROR, SOUNDERR_GENERAL_ERROR );
 	}
-#else	// MACOSX
-#ifdef DEBUG
-	fprintf( stderr, "SalSound::Play not implemented\n" );
-#endif
-#endif	// MACOSX
 }
 
 // ------------------------------------------------------------------------
 
 void SalSound::Stop()
 {
-#ifdef MACOSX
 	OSStatus nErr = kAudioFileUnspecifiedError;
 	if ( mbPlaying && mpNativeContext )
 	{
@@ -382,18 +343,12 @@ void SalSound::Stop()
 		else
 			mpProc( mpInst, SOUND_NOTIFY_ERROR, SOUNDERR_GENERAL_ERROR );
 	}
-#else	// MACOSX
-#ifdef DEBUG
-	fprintf( stderr, "SalSound::Stop not implemented\n" );
-#endif
-#endif	// MACOSX
 }
 
 // ------------------------------------------------------------------------
 
 void SalSound::Pause()
 {
-#ifdef MACOSX
 	OSStatus nErr = kAudioFileUnspecifiedError;
 	if ( mbPlaying && mpNativeContext )
 	{
@@ -408,11 +363,6 @@ void SalSound::Pause()
 		else
 			mpProc( mpInst, SOUND_NOTIFY_ERROR, SOUNDERR_GENERAL_ERROR );
 	}
-#else	// MACOSX
-#ifdef DEBUG
-	fprintf( stderr, "SalSound::Pause not implemented\n" );
-#endif
-#endif	// MACOSX
 }
 
 // ------------------------------------------------------------------------

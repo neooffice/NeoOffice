@@ -38,20 +38,8 @@
 
 #ifdef UNX
 
-#if defined SCO || defined LINUX || defined HPUX || defined FREEBSD || defined NETBSD || defined MACOSX
 #include <sys/time.h>
-#elif defined AIX
-#include <time.h>
-#include <sys/time.h>
-#include <strings.h>
-#elif defined IRIX
-#include <sys/time.h>
-#include <unistd.h>
-#endif
-
-#ifdef MACOSX
 #include <unxmacxp_protos.h>
-#endif
 
 #define capacityof(a)	(sizeof(a)/sizeof(*a))
 

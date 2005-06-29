@@ -35,6 +35,8 @@
 
 #define _SV_SALINST_CXX
 
+#include <sys/syslimits.h>
+
 #ifndef _SV_SALINST_HXX
 #include <salinst.hxx>
 #endif
@@ -112,10 +114,10 @@
 #ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
 #endif
+
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
-#include <sys/syslimits.h>
 #undef check
 
 typedef jobject Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type( JNIEnv *, jobject );
@@ -800,6 +802,8 @@ void ExecuteApplicationMain( Application *pApp )
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
+		SalData *pSalData = GetSalData();
+
 		// Test the JVM version and if it is 1.4 or higher use Cocoa, otherwise
 		// use Carbon
 		if ( t.pEnv->GetVersion() >= JNI_VERSION_1_4 )

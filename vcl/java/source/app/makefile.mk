@@ -57,29 +57,23 @@ dummy:
 .IF "$(remote)"
 
 OBJFILES=\
-	$(OBJ)$/salmain.obj
+	$(OBJ)$/salmain.obj \
+	$(OBJ)$/salmain_cocoa.obj
 
 SLOFILES= \
 	$(SLO)$/saldata.obj \
 	$(SLO)$/salmain.obj \
+	$(SLO)$/salmain_cocoa.obj \
 	$(SLO)$/saltimer.obj \
 	$(SLO)$/salinfo.obj \
 	$(SLO)$/salinst.obj \
 	$(SLO)$/salsound.obj
 
-.IF "$(OS)"=="MACOSX"
-OBJFILES += $(OBJ)$/salmain_cocoa.obj
-SLOFILES += $(SLO)$/salmain_cocoa.obj
-.ENDIF
-
 .ELSE
 
 SLOFILES=\
-	$(SLO)$/salmain.obj
-
-.IF "$(OS)"=="MACOSX"
-SLOFILES += $(SLO)$/salmain_cocoa.obj
-.ENDIF
+	$(SLO)$/salmain.obj \
+	$(SLO)$/salmain_cocoa.obj
 
 .ENDIF
 

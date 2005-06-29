@@ -54,11 +54,9 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
 
-#ifdef MACOSX
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
-#endif	// MACOSX
 
 using namespace rtl;
 using namespace vcl;
@@ -81,7 +79,6 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)pFont->mpFontData->mpSysData;
 	XubString aName( pVCLFont->getName() );
 
-#ifdef MACOSX
 	// Don't change the font for fallback levels as we need the first font
 	// to properly determine the fallback font
 	if ( !nFallbackLevel )
@@ -103,8 +100,6 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 			pVCLFont = ffit->second;
 		aName = XubString( pVCLFont->getName() );
 	}
-
-#endif	// MACOSX
 
 	// Find the matching font
 	::std::map< OUString, com_sun_star_vcl_VCLFont* >::const_iterator it = pSalData->maFontMapping.find( aName );

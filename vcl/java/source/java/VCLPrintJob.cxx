@@ -60,16 +60,11 @@
 #include <tools/string.hxx>
 #endif
 
-#ifdef MACOSX
-
 #include <premac.h>
-#include <ApplicationServices/ApplicationServices.h>
+#include <Carbon/Carbon.h>
 #include <postmac.h>
 
 using namespace rtl;
-
-#endif	// MACOSX
-
 using namespace vcl;
 
 // ============================================================================
@@ -201,7 +196,6 @@ void *com_sun_star_vcl_VCLPrintJob::getNativePrintJob()
 			jobject tempObj = printerJob->getJavaObject();
 			if ( tempObj )
 			{
-#ifdef MACOSX
 				// Test the JVM version and if it is below 1.4, use Carbon
 				// printing APIs
 				if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
@@ -235,7 +229,6 @@ void *com_sun_star_vcl_VCLPrintJob::getNativePrintJob()
 						}
 					}
 				}
-#endif	// MACOSX
 			}
 			delete printerJob;
 		}
@@ -258,7 +251,6 @@ XubString com_sun_star_vcl_VCLPrintJob::getPageRange()
 			jobject tempObj = printerJob->getJavaObject();
 			if ( tempObj )
 			{
-#ifdef MACOSX
 				// Test the JVM version and if it is below 1.4, use Carbon
 				// printing APIs
 				if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
@@ -295,7 +287,6 @@ XubString com_sun_star_vcl_VCLPrintJob::getPageRange()
 						}
 					}
 				}
-#endif	// MACOSX
 			}
 			delete printerJob;
 		}
@@ -358,7 +349,6 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
-#ifdef MACOSX
 		// Test the JVM version and if it is below 1.4, use Carbon
 		// printing APIs
 		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
@@ -406,7 +396,6 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 			}
 			delete printerJob;
 		}
-#endif	// MACOSX
 
 		// Force the focus frame to the front as Java usually uses the name of
 		// the print job from the front-most window

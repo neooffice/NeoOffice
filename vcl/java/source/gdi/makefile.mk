@@ -53,6 +53,7 @@ dummy:
 
 .IF "$(remote)"==""
 SLOFILES= \
+	$(SLO)$/salatslayout.obj \
 	$(SLO)$/salbmp.obj \
 	$(SLO)$/salgdi.obj \
 	$(SLO)$/salgdi2.obj \
@@ -61,9 +62,6 @@ SLOFILES= \
 	$(SLO)$/salprn.obj \
 	$(SLO)$/salvd.obj
 
-.IF "$(OS)"=="MACOSX"
-SLOFILES += $(SLO)$/salatslayout.obj
-.ENDIF
 .ENDIF
 
 .ENDIF	# "$(GUIBASE)"!="java"

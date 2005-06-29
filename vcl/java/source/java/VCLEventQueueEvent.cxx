@@ -63,10 +63,6 @@
 #include <window.hxx>
 #endif
 
-#include <premac.h>
-#include <Carbon/Carbon.h>
-#include <postmac.h>
-
 using namespace vcl;
 using namespace vos;
 

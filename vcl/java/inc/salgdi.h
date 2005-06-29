@@ -46,10 +46,7 @@
 #endif 
 
 class ImplFontSelectData;
-
-#ifdef MACOSX
 class SalATSLayout;
-#endif	// MACOSX
 
 namespace vcl
 {
@@ -63,9 +60,7 @@ class com_sun_star_vcl_VCLGraphics;
 
 class SalGraphicsData
 {
-#ifdef MACOSX
 	friend class	SalATSLayout;
-#endif	// MACOSX
 	friend class	SalBitmap;
 	friend class	SalFrame;
 	friend class	SalGraphics;

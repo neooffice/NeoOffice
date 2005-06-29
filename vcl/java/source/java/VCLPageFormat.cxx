@@ -48,23 +48,17 @@
 #include <java/lang/Class.hxx>
 #endif
 
-#ifdef MACOSX
-
 #include <premac.h>
-#include <ApplicationServices/ApplicationServices.h>
+#include <Carbon/Carbon.h>
 #include <postmac.h>
 
 #define PAGEFORMAT_KEY CFSTR( "PAGEFORMAT" )
 
 using namespace rtl;
-
-#endif	// MACOSX
-
 using namespace vcl;
 
 // ============================================================================
 
-#ifdef MACOSX
 static jint JNICALL Java_com_apple_mrj_internal_awt_printing_MacPageFormat_createBestFormat( JNIEnv *pEnv, jobject object, jint pSessionPtr )
 {
 	jint nRet = 0;
@@ -85,7 +79,6 @@ static jint JNICALL Java_com_apple_mrj_internal_awt_printing_MacPageFormat_creat
 	}
 	return nRet;
 }
-#endif	// MACOSX
 
 // ============================================================================
 
@@ -100,7 +93,6 @@ jclass com_sun_star_vcl_VCLPageFormat::getMyClass()
 		VCLThreadAttach t;
 		if ( !t.pEnv ) return (jclass)NULL;
 
-#ifdef MACOSX
 		// Test the JVM version and if it is below 1.4, use Carbon printing APIs
 		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
 		{
@@ -117,7 +109,6 @@ jclass com_sun_star_vcl_VCLPageFormat::getMyClass()
 				t.pEnv->RegisterNatives( pageFormatClass, &aMethod, 1 );
 			}
 		}
-#endif	// MACOSX
 
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLPageFormat" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
@@ -153,7 +144,6 @@ void com_sun_star_vcl_VCLPageFormat::destroyNativePrintJob()
 	if ( !mbInitialized )
 		return;
 
-#ifdef MACOSX
 	PMPrintSession pSession = (PMPrintSession)getNativePrintJob();
 	if ( pSession )
 	{
@@ -170,7 +160,6 @@ void com_sun_star_vcl_VCLPageFormat::destroyNativePrintJob()
 		}
 		mbInitialized = FALSE;
 	}
-#endif	// MACOSX
 
 	GetSalData()->maVCLPageFormats.remove( this );
 }
@@ -294,7 +283,6 @@ void *com_sun_star_vcl_VCLPageFormat::getNativePrintJob()
 			jobject tempObj = printerJob->getJavaObject();
 			if ( tempObj )
 			{
-#ifdef MACOSX
 				// Test the JVM version and if it is below 1.4, use Carbon
 				// printing APIs
 				if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
@@ -328,7 +316,6 @@ void *com_sun_star_vcl_VCLPageFormat::getNativePrintJob()
 						}
 					}
 				}
-#endif	// MACOSX
 			}
 			delete printerJob;
 		}
@@ -453,7 +440,6 @@ void com_sun_star_vcl_VCLPageFormat::initializeNativePrintJob()
 	if ( mbInitialized )
 		return;
 
-#ifdef MACOSX
 	PMPrintSession pSession = (PMPrintSession)getNativePrintJob();
 	if ( pSession )
 	{
@@ -490,7 +476,6 @@ void com_sun_star_vcl_VCLPageFormat::initializeNativePrintJob()
 		if ( aPageFormat )
 			mbInitialized = TRUE;
 	}
-#endif	// MACOSX
 
 	SalData *pSalData = GetSalData();
 	pSalData->maVCLPageFormats.remove( this );
