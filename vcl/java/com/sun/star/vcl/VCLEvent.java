@@ -1031,57 +1031,55 @@ public final class VCLEvent extends AWTEvent {
 
 		awtEvent = true;
 
-		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-			int eid = event.getID();
-			switch (eid) {
-				case KeyEvent.KEY_PRESSED:
-				case KeyEvent.KEY_RELEASED:
-				case KeyEvent.KEY_TYPED:
-				{
-					KeyEvent e = (KeyEvent)event;
-					int modifiers = e.getModifiers();
+		int eid = event.getID();
+		switch (eid) {
+			case KeyEvent.KEY_PRESSED:
+			case KeyEvent.KEY_RELEASED:
+			case KeyEvent.KEY_TYPED:
+			{
+				KeyEvent e = (KeyEvent)event;
+				int modifiers = e.getModifiers();
+				// Treat the Mac OS X command key as a control key and
+				// the control key as the meta key
+				if ((modifiers & (InputEvent.CTRL_MASK | InputEvent.META_MASK)) == (InputEvent.CTRL_MASK | InputEvent.META_MASK)) {
+					; // No switching is needed
+				}
+				else if ((modifiers & InputEvent.CTRL_MASK) == InputEvent.CTRL_MASK) {
+					modifiers = (modifiers & ~InputEvent.CTRL_MASK) | InputEvent.META_MASK;
+					int keyCode = e.getKeyCode();
+					if (keyCode == KeyEvent.VK_CONTROL)
+						keyCode = KeyEvent.VK_META;
+					event = e = new KeyEvent(e.getComponent(), eid, e.getWhen(), modifiers, keyCode, e.getKeyChar());
+				}
+				else if ((modifiers & InputEvent.META_MASK) == InputEvent.META_MASK) {
+					modifiers = (modifiers & ~InputEvent.META_MASK) | InputEvent.CTRL_MASK;
+					int keyCode = e.getKeyCode();
+					if (keyCode == KeyEvent.VK_META)
+						keyCode = KeyEvent.VK_CONTROL;
+					event = e = new KeyEvent(e.getComponent(), eid, e.getWhen(), modifiers, keyCode, e.getKeyChar());
+				}
+				break;
+			}
+			case MouseEvent.MOUSE_CLICKED:
+			case MouseEvent.MOUSE_DRAGGED:
+			case MouseEvent.MOUSE_ENTERED:
+			case MouseEvent.MOUSE_EXITED:
+			case MouseEvent.MOUSE_MOVED:
+			case MouseEvent.MOUSE_PRESSED:
+			case MouseEvent.MOUSE_RELEASED:
+			{
+				if (k != 0) {
 					// Treat the Mac OS X command key as a control key and
 					// the control key as the meta key
-					if ((modifiers & (InputEvent.CTRL_MASK | InputEvent.META_MASK)) == (InputEvent.CTRL_MASK | InputEvent.META_MASK)) {
+					if ((k & (InputEvent.CTRL_MASK | InputEvent.META_MASK)) == (InputEvent.CTRL_MASK | InputEvent.META_MASK))
 						; // No switching is needed
-					}
-					else if ((modifiers & InputEvent.CTRL_MASK) == InputEvent.CTRL_MASK) {
-						modifiers = (modifiers & ~InputEvent.CTRL_MASK) | InputEvent.META_MASK;
-						int keyCode = e.getKeyCode();
-						if (keyCode == KeyEvent.VK_CONTROL)
-							keyCode = KeyEvent.VK_META;
-						event = e = new KeyEvent(e.getComponent(), eid, e.getWhen(), modifiers, keyCode, e.getKeyChar());
-					}
-					else if ((modifiers & InputEvent.META_MASK) == InputEvent.META_MASK) {
-						modifiers = (modifiers & ~InputEvent.META_MASK) | InputEvent.CTRL_MASK;
-						int keyCode = e.getKeyCode();
-						if (keyCode == KeyEvent.VK_META)
-							keyCode = KeyEvent.VK_CONTROL;
-						event = e = new KeyEvent(e.getComponent(), eid, e.getWhen(), modifiers, keyCode, e.getKeyChar());
-					}
-					break;
+					else if ((k & InputEvent.CTRL_MASK) == InputEvent.CTRL_MASK)
+						k = (k & ~InputEvent.CTRL_MASK) | InputEvent.META_MASK;
+					else if ((k & InputEvent.META_MASK) == InputEvent.META_MASK)
+						k = (k & ~InputEvent.META_MASK) | InputEvent.CTRL_MASK;
 				}
-				case MouseEvent.MOUSE_CLICKED:
-				case MouseEvent.MOUSE_DRAGGED:
-				case MouseEvent.MOUSE_ENTERED:
-				case MouseEvent.MOUSE_EXITED:
-				case MouseEvent.MOUSE_MOVED:
-				case MouseEvent.MOUSE_PRESSED:
-				case MouseEvent.MOUSE_RELEASED:
-				{
-					if (k != 0) {
-						// Treat the Mac OS X command key as a control key and
-						// the control key as the meta key
-						if ((k & (InputEvent.CTRL_MASK | InputEvent.META_MASK)) == (InputEvent.CTRL_MASK | InputEvent.META_MASK))
-							; // No switching is needed
-						else if ((k & InputEvent.CTRL_MASK) == InputEvent.CTRL_MASK)
-							k = (k & ~InputEvent.CTRL_MASK) | InputEvent.META_MASK;
-						else if ((k & InputEvent.META_MASK) == InputEvent.META_MASK)
-							k = (k & ~InputEvent.META_MASK) | InputEvent.CTRL_MASK;
-					}
-					keyModifiers = k;
-					break;
-				}
+				keyModifiers = k;
+				break;
 			}
 		}
 
@@ -1255,7 +1253,7 @@ public final class VCLEvent extends AWTEvent {
 				// char resolved to their respective ASCII equivalents. Since
 				// we convert Mac OS X Meta-key events into Ctrl-key events,
 				// we need to do the resolving manually.
-				if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && (e.getModifiers() & InputEvent.CTRL_MASK) != 0 && keyChar >= 'a' && keyChar <= 0x7d )
+				if ((e.getModifiers() & InputEvent.CTRL_MASK) != 0 && keyChar >= 'a' && keyChar <= 0x7d )
 					keyChar -= 0x60;
 			}
 		}

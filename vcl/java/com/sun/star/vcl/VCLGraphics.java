@@ -386,8 +386,7 @@ public final class VCLGraphics {
 		// to a printer so we need to combine all images into one image and
 		// defer other drawing operations until after the combined image is
 		// created
-		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
-			pageQueue = new VCLGraphics.PageQueue(this);
+		pageQueue = new VCLGraphics.PageQueue(this);
 
 	}
 

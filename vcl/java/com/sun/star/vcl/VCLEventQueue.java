@@ -159,66 +159,64 @@ public final class VCLEventQueue {
 		queueList[1] = new VCLEventQueue.Queue();
 
 		// Load platform specific event handlers
-		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-			if (VCLPlatform.getJavaVersion() < VCLPlatform.JAVA_VERSION_1_4) {
-				try {
-					Class c = Class.forName("com.sun.star.vcl.macosx.VCLOpenApplicationHandler");
-					Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-					ctor.newInstance(new Object[]{ this });
-				}
-				catch (Throwable t) {
-					t.printStackTrace();
-				}
-				try {
-					Class c = Class.forName("com.sun.star.vcl.macosx.VCLOpenDocumentHandler");
-					Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-					ctor.newInstance(new Object[]{ this });
-				}
-				catch (Throwable t) {
-					t.printStackTrace();
-				}
-				try {
-					Class c = Class.forName("com.sun.star.vcl.macosx.VCLPrintDocumentHandler");
-					Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-					ctor.newInstance(new Object[]{ this });
-				}
-				catch (Throwable t) {
-					t.printStackTrace();
-				}
-				try {
-					Class c = Class.forName("com.sun.star.vcl.macosx.VCLQuitHandler");
-					Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-					ctor.newInstance(new Object[]{ this });
-				}
-				catch (Throwable t) {
-					t.printStackTrace();
-				}
-				try {
-					Class c = Class.forName("com.sun.star.vcl.macosx.VCLAboutHandler");
-					Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-					ctor.newInstance(new Object[]{ this });
-				}
-				catch (Throwable t) {
-					t.printStackTrace();
-				}
-				try {
-					Class c = Class.forName("com.sun.star.vcl.macosx.VCLPrefsHandler");
-					Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-					ctor.newInstance(new Object[]{ this });
-				}
-				catch (Throwable t) {
-					t.printStackTrace();
-				}
+		if (VCLPlatform.getJavaVersion() < VCLPlatform.JAVA_VERSION_1_4) {
+			try {
+				Class c = Class.forName("com.sun.star.vcl.macosx.VCLOpenApplicationHandler");
+				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
+				ctor.newInstance(new Object[]{ this });
 			}
-			else {
-				try {
-					Class c = Class.forName("com.sun.star.vcl.macosx.VCLApplicationListener");
-					Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-					ctor.newInstance(new Object[]{ this });
-				}
-				catch (Throwable t) {
-					t.printStackTrace();
-				}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			try {
+				Class c = Class.forName("com.sun.star.vcl.macosx.VCLOpenDocumentHandler");
+				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
+				ctor.newInstance(new Object[]{ this });
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			try {
+				Class c = Class.forName("com.sun.star.vcl.macosx.VCLPrintDocumentHandler");
+				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
+				ctor.newInstance(new Object[]{ this });
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			try {
+				Class c = Class.forName("com.sun.star.vcl.macosx.VCLQuitHandler");
+				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
+				ctor.newInstance(new Object[]{ this });
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			try {
+				Class c = Class.forName("com.sun.star.vcl.macosx.VCLAboutHandler");
+				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
+				ctor.newInstance(new Object[]{ this });
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			try {
+				Class c = Class.forName("com.sun.star.vcl.macosx.VCLPrefsHandler");
+				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
+				ctor.newInstance(new Object[]{ this });
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+		}
+		else {
+			try {
+				Class c = Class.forName("com.sun.star.vcl.macosx.VCLApplicationListener");
+				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
+				ctor.newInstance(new Object[]{ this });
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
 			}
 		}
 
@@ -501,59 +499,57 @@ public final class VCLEventQueue {
 				// When using Asian keyboards focus gets stuck on the last
 				// panel displayed so we need to reroute key events to the
 				// correct window
-				if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-					int id = event.getID();
-					switch (id ) {
-						case FocusEvent.FOCUS_GAINED:
-						{
-							Frame[] frames = Frame.getFrames();
-							for (int i = 0; i < frames.length; i++) {
-								frames[i].repaint();
-								Window[] windows = frames[i].getOwnedWindows();
-								for (int j = 0; j < windows.length; j++)
-									windows[j].repaint();
-							}
-							keyComponent = ((FocusEvent)event).getComponent();
-							break;
+				int id = event.getID();
+				switch (id) {
+					case FocusEvent.FOCUS_GAINED:
+					{
+						Frame[] frames = Frame.getFrames();
+						for (int i = 0; i < frames.length; i++) {
+							frames[i].repaint();
+							Window[] windows = frames[i].getOwnedWindows();
+							for (int j = 0; j < windows.length; j++)
+								windows[j].repaint();
 						}
-						case FocusEvent.FOCUS_LOST:
-						{
-							Frame[] frames = Frame.getFrames();
-							for (int i = 0; i < frames.length; i++) {
-								InputContext ic = frames[i].getInputContext();
+						keyComponent = ((FocusEvent)event).getComponent();
+						break;
+					}
+					case FocusEvent.FOCUS_LOST:
+					{
+						Frame[] frames = Frame.getFrames();
+						for (int i = 0; i < frames.length; i++) {
+							InputContext ic = frames[i].getInputContext();
+							if (ic != null)
+								ic.endComposition();
+							Window[] windows = frames[i].getOwnedWindows();
+							for (int j = 0; j < windows.length; j++) {
+								ic = windows[j].getInputContext();
 								if (ic != null)
 									ic.endComposition();
-								Window[] windows = frames[i].getOwnedWindows();
-								for (int j = 0; j < windows.length; j++) {
-									ic = windows[j].getInputContext();
-									if (ic != null)
-										ic.endComposition();
-								}
 							}
-							Component c = ((FocusEvent)event).getComponent();
-							if (c == keyComponent)
-								keyComponent = null;
-							break;
 						}
-						case InputMethodEvent.CARET_POSITION_CHANGED:
-						case InputMethodEvent.INPUT_METHOD_TEXT_CHANGED:
-						{
-							if (keyComponent != null) {
-								InputMethodEvent e = (InputMethodEvent)event;
-								event = new InputMethodEvent(keyComponent, id, e.getText(), e.getCommittedCharacterCount(), e.getCaret(), e.getVisiblePosition());
-							}
-							break;
+						Component c = ((FocusEvent)event).getComponent();
+						if (c == keyComponent)
+							keyComponent = null;
+						break;
+					}
+					case InputMethodEvent.CARET_POSITION_CHANGED:
+					case InputMethodEvent.INPUT_METHOD_TEXT_CHANGED:
+					{
+						if (keyComponent != null) {
+							InputMethodEvent e = (InputMethodEvent)event;
+							event = new InputMethodEvent(keyComponent, id, e.getText(), e.getCommittedCharacterCount(), e.getCaret(), e.getVisiblePosition());
 						}
-						case KeyEvent.KEY_PRESSED:
-						case KeyEvent.KEY_RELEASED:
-						case KeyEvent.KEY_TYPED:
-						{
-							if (keyComponent != null) {
-								KeyEvent e = (KeyEvent)event;
-								event = new KeyEvent(keyComponent, id, e.getWhen(), e.getModifiers(), e.getKeyCode(), e.getKeyChar());
-							}
-							break;
+						break;
+					}
+					case KeyEvent.KEY_PRESSED:
+					case KeyEvent.KEY_RELEASED:
+					case KeyEvent.KEY_TYPED:
+					{
+						if (keyComponent != null) {
+							KeyEvent e = (KeyEvent)event;
+							event = new KeyEvent(keyComponent, id, e.getWhen(), e.getModifiers(), e.getKeyCode(), e.getKeyChar());
 						}
+						break;
 					}
 				}
 

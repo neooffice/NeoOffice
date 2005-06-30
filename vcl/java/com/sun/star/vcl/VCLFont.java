@@ -137,7 +137,7 @@ public final class VCLFont {
 		if (fonts == null) {
 			// Get all of the fonts and screen out duplicates
 			String[] fontNames;
-			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && VCLPlatform.getJavaVersion() < VCLPlatform.JAVA_VERSION_1_4) {
+			if (VCLPlatform.getJavaVersion() < VCLPlatform.JAVA_VERSION_1_4) {
  				fontNames = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
 			}
 			else {
@@ -148,26 +148,24 @@ public final class VCLFont {
 			}
 
 			// Java sometimes sets Times to Times Roman
-			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-				int timesRomanIndex = -1;
-				for (int i = 0; i < fontNames.length; i++) {
-					if (fontNames[i].equals("Times")) {
-						timesRomanIndex = -1;
-						break;
-					}
-					else if (fontNames[i].equals("Times Roman")) {
-						timesRomanIndex = i;
-					}
+			int timesRomanIndex = -1;
+			for (int i = 0; i < fontNames.length; i++) {
+				if (fontNames[i].equals("Times")) {
+					timesRomanIndex = -1;
+					break;
 				}
-
-				if (timesRomanIndex > 0)
-					fontNames[timesRomanIndex] = "Times";
+				else if (fontNames[i].equals("Times Roman")) {
+					timesRomanIndex = i;
+				}
 			}
+
+			if (timesRomanIndex > 0)
+				fontNames[timesRomanIndex] = "Times";
 
 			ArrayList array = new ArrayList();
 			for (int i = 0; i < fontNames.length; i++) {
 				// Get rid of hidden Mac OS X fonts
-				if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && (fontNames[i].startsWith(".") || fontNames[i].equals("LastResort")))
+				if (fontNames[i].startsWith(".") || fontNames[i].equals("LastResort"))
 					continue;
 
 				// Get family type
@@ -278,14 +276,8 @@ public final class VCLFont {
 		antialiased = a;
 		// Mac OS X applications and printing can't handle artificial bold and
 		// italics generation very well so we always use the plain version
-		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX) {
-			bold = false;
-			italic = false;
-		}
-		else {
-			bold = b;
-			italic = i;
-		}
+		bold = false;
+		italic = false;
 		name = n;
 		orientation = o;
 		scaleX = x;
@@ -322,8 +314,7 @@ public final class VCLFont {
 			leading *= -1;
 
 		// Mac OS X seems to understate the actual advance
-		if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX)
-			ascent++;
+		ascent++;
 
 	}
 

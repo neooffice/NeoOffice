@@ -391,7 +391,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 
 			// Mac OS X creates two graphics for each page so we need to
 			// ignore the first and only print to the second
-			if (VCLPlatform.getPlatform() == VCLPlatform.PLATFORM_MACOSX && currentPage % 2 != 0)
+			if (currentPage % 2 != 0)
 				return null;
 		}
 

@@ -45,16 +45,6 @@ package com.sun.star.vcl;
 public final class VCLPlatform {
 
 	/**
-	 * The default platform.
-	 */
-	public final static int PLATFORM_UNKNOWN = 0;
-
-	/**
-	 * The Mac OS X platform.
-	 */
-	public final static int PLATFORM_MACOSX = 1;
-
-	/**
 	 * The Java 1.2 constant.
 	 */
 	public final static int JAVA_VERSION_1_2 = 0x00010002;
@@ -75,11 +65,6 @@ public final class VCLPlatform {
 	public final static int JAVA_VERSION_1_5 = 0x00010005;
 
 	/**
-	 * Cached platform.
-	 */
-	private static int platform = PLATFORM_UNKNOWN;
-
-	/**
 	 * Cached Java version.
 	 */
 	private static int javaVersion = JAVA_VERSION_1_2;
@@ -88,12 +73,6 @@ public final class VCLPlatform {
 	 * Initialize the platform and Java version.
 	 */
 	static {
-
-		String os = System.getProperty("os.name").toLowerCase();
-		if (os.startsWith("mac os x"))
-			VCLPlatform.platform = VCLPlatform.PLATFORM_MACOSX;
-		else
-			VCLPlatform.platform = VCLPlatform.PLATFORM_UNKNOWN;
 
 		try {
 			Class.forName("java.lang.StrictMath");
@@ -115,17 +94,6 @@ public final class VCLPlatform {
 	static int getJavaVersion() {
 
 		return javaVersion;
-
-	}
-
-	/**
-	 * Returns the platform.
-	 *
-	 * @return the platform
-	 */
-	static int getPlatform() {
-
-		return platform;
 
 	}
 
