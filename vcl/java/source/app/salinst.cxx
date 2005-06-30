@@ -145,8 +145,6 @@ static pascal OSErr DoAEOpenPrintDocuments( const AppleEvent *message, AppleEven
 static pascal OSErr DoAEOpen( const AppleEvent *message, AppleEvent *reply, long refcon );
 static pascal OSErr DoAEReopen( const AppleEvent *message, AppleEvent *reply, long refcon );
 
-static void RunAppMain( Application* pApp );
-
 class SVMainThread : public ::vos::OThread
 {
 	Application*			mpApp;
@@ -154,9 +152,8 @@ class SVMainThread : public ::vos::OThread
 public:
 							SVMainThread( Application* pApp ) : ::vos::OThread(), mpApp( pApp ) {}
 
-	virtual void			run() { RunAppMain( mpApp ); }
+	virtual void			run();
 };
-
 
 // ============================================================================
 
@@ -182,7 +179,7 @@ static void RunAppMain( Application *pApp )
 	if ( pEventHandlerUPP )
 	{
 		// Set up native event handler
-		EventTypeSpec aTypes[5];
+		EventTypeSpec aTypes[6];
 		aTypes[0].eventClass = kEventClassAppleEvent;
 		aTypes[0].eventKind = kEventAppleEvent;
 		aTypes[1].eventClass = kEventClassMouse;
@@ -193,7 +190,9 @@ static void RunAppMain( Application *pApp )
 		aTypes[3].eventKind = kEventMenuEndTracking;
 		aTypes[4].eventClass = kEventClassApplication;
 		aTypes[4].eventKind = kEventAppShown;
-		InstallApplicationEventHandler( pEventHandlerUPP, 5, aTypes, NULL, NULL );
+		aTypes[5].eventClass = kEventClassCommand;
+		aTypes[5].eventKind = kEventProcessCommand;
+		InstallApplicationEventHandler( pEventHandlerUPP, 6, aTypes, NULL, NULL );
 	}
 
 	// Install AppleEvent handlers for processing open and print events
@@ -549,6 +548,30 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 				Application::GetSolarMutex().release();
 			}
+			else if ( nClass == kEventClassCommand && nKind == kEventProcessCommand )
+			{
+				HICommandExtended aCommand;
+				if ( GetEventParameter( aEvent, kEventParamDirectObject, typeHICommand, NULL, sizeof( HICommandExtended ), NULL, &aCommand ) == noErr )
+				{
+					USHORT nID = 0;
+					switch ( aCommand.commandID )
+					{
+						case kHICommandAbout:
+							nID = SALEVENT_ABOUT;
+							break;
+						case kHICommandPreferences:
+							nID = SALEVENT_PREFS;
+							break;
+					}
+
+					if ( nID )
+					{
+						com_sun_star_vcl_VCLEvent aEvent( nID, NULL, NULL );
+						pSalData->mpEventQueue->postCachedEvent( &aEvent );
+						return noErr;
+					}
+				}
+			}
 		}
 	}
 
@@ -660,7 +683,6 @@ static OSErr DoAEOpenPrintDocuments( const AppleEvent *message, AppleEvent *repl
 				AEDisposeDesc( &theDesc );
 			}
 		}
-
 	}
 
 	// Insert a reply containing any error code
@@ -799,6 +821,9 @@ void ExecuteApplicationMain( Application *pApp )
 		aFontNameList.clear();
 	}
 
+	// Enable the Preferences menu
+	EnableMenuCommand( NULL, kHICommandPreferences );
+
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
@@ -808,11 +833,96 @@ void ExecuteApplicationMain( Application *pApp )
 		// use Carbon
 		if ( t.pEnv->GetVersion() >= JNI_VERSION_1_4 )
 		{
-			ULONG nCount = Application::ReleaseSolarMutex();
+			InitCocoa();
+
+			IBNibRef aNib;
+			if ( CreateNibReference( CFSTR( "main" ), &aNib ) == noErr )
+				SetMenuBarFromNib( aNib, CFSTR( "MenuBar" ) );
+
+
+			CFStringRef aAbout = NULL;
+			CFStringRef aAppName = NULL;
+			CFBundleRef aBundle = CFBundleGetMainBundle();
+			if ( aBundle )
+				aAppName = (CFStringRef)CFBundleGetValueForInfoDictionaryKey( aBundle, kCFBundleNameKey );
+
+			CFURLRef aURL = CFURLCreateWithFileSystemPath( NULL, CFSTR( "/System/Library/PrivateFrameworks/JavaApplicationLauncherUI.framework" ), kCFURLPOSIXPathStyle, true );
+			if ( aURL )
+			{
+				CFBundleRef aURLBundle = CFBundleCreate( NULL, aURL );
+				if ( aURLBundle )
+				{
+					CFStringRef aLocalizedAbout = CFBundleCopyLocalizedString( aURLBundle, CFSTR( "AboutMenu" ), NULL, CFSTR( "Alert" ) );
+					if ( aLocalizedAbout )
+					{
+						if ( aAppName )
+						{
+							CFMutableStringRef aTemp = CFStringCreateMutableCopy( NULL, 0, aLocalizedAbout );
+							if ( aTemp )
+							{
+								// Replace %@... string
+								UniChar aSearchChars[] = { 0x0025, 0x0040, 0x2026 };
+								CFStringRef aSearch = CFStringCreateWithCharactersNoCopy( NULL, aSearchChars, sizeof( aSearchChars ) / sizeof( UniChar ), kCFAllocatorNull );
+								CFRange aRange;
+								aRange.location = 0;
+								aRange.length = CFStringGetLength( aTemp );
+								CFStringFindAndReplace( aTemp, aSearch, aAppName, aRange, 0 );
+								aAbout = CFStringCreateCopy( NULL, aTemp );
+
+								CFRelease( aSearch );
+								CFRelease( aTemp );
+							}
+						}
+
+						CFRelease( aLocalizedAbout );
+					}
+
+					CFRelease( aURLBundle );
+				}
+
+				CFRelease( aURL );
+			}
+
+			if ( !aAbout )
+			{
+				aAbout = CFSTR( "About" );
+				if ( aAppName )
+				{
+					CFMutableStringRef aTemp = CFStringCreateMutableCopy( NULL, 0, aAbout );
+					if ( aTemp )
+					{
+						CFStringAppend( aTemp, CFSTR( " " ) );
+						CFStringAppend( aTemp, aAppName );
+
+						aAbout = CFStringCreateCopy( NULL, aTemp );
+						CFRelease( aTemp );
+					}
+				}
+			}
+
+			if ( aAbout )
+			{
+				MenuRef aRootMenu = AcquireRootMenu();
+				if ( aRootMenu )
+				{
+					MenuRef aAppMenu;
+					if ( GetMenuItemHierarchicalMenu( aRootMenu, 1, &aAppMenu ) == noErr )
+					{
+						if ( InsertMenuItemTextWithCFString( aAppMenu, aAbout, 0, 0, 0 ) == noErr );
+							SetMenuItemCommandID( aAppMenu, 1, kHICommandAbout );
+					}
+
+					ReleaseMenu( aRootMenu );
+				}
+
+				CFRelease( aAbout );
+			}
 
 			// Create the thread to run the Main() method in
 			SVMainThread aSVMainThread( pApp );
 			aSVMainThread.create();
+
+			ULONG nCount = Application::ReleaseSolarMutex();
 
 			// Start the Cocoa event loop
 			RunCocoaEventLoop();
@@ -990,6 +1100,9 @@ void ExecuteApplicationMain( Application *pApp )
 					}
 				}
 			}
+
+			// Enable the About menu
+			EnableMenuCommand( NULL, kHICommandAbout );
 		}
 	}
 
@@ -1015,6 +1128,15 @@ void ReleaseJavaLock()
 	VCLThreadAttach t;
 	if ( t.pEnv && t.pEnv->GetVersion() < JNI_VERSION_1_4 )
 		Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
+}
+
+// ============================================================================
+
+void SVMainThread::run()
+{
+	Application::GetSolarMutex().acquire();
+	RunAppMain( mpApp );
+	Application::GetSolarMutex().release();
 }
 
 // =======================================================================

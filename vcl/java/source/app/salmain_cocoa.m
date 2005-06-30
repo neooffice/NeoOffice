@@ -40,11 +40,21 @@
 
 // ============================================================================
 
-void RunCocoaEventLoop()
+void InitCocoa()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	[NSApplication sharedApplication];
+
+	[pPool release];
+}
+
+// ----------------------------------------------------------------------------
+
+void RunCocoaEventLoop()
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	[NSApp run];
 
 	[pPool release];
@@ -56,7 +66,18 @@ void StopCocoaEventLoop()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	[NSApp stop:NSApp];
+	if ( [NSApp isRunning] )
+	{
+		[NSApp stop:NSApp];
+
+		// Post an event to wake up the event thread
+		NSPoint aPoint;
+		aPoint.x = 0;
+		aPoint.y = 0;
+		NSEvent *pEvent = [NSEvent otherEventWithType:NSApplicationDefined location:aPoint modifierFlags:0 timestamp:[[NSDate date] timeIntervalSince1970] windowNumber:0 context:nil subtype:0 data1:0 data2:0];
+		if ( pEvent )
+			[NSApp postEvent:pEvent atStart:YES];
+	}
 
 	[pPool release];
 }

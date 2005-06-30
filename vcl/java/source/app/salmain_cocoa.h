@@ -40,6 +40,7 @@
 BEGIN_C
 #endif
 
+void InitCocoa(void);
 void RunCocoaEventLoop(void);
 void StopCocoaEventLoop(void);
 
