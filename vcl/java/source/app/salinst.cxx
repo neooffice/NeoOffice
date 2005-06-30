@@ -821,9 +821,6 @@ void ExecuteApplicationMain( Application *pApp )
 		aFontNameList.clear();
 	}
 
-	// Enable the Preferences menu
-	EnableMenuCommand( NULL, kHICommandPreferences );
-
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
@@ -846,16 +843,16 @@ void ExecuteApplicationMain( Application *pApp )
 			if ( aBundle )
 				aAppName = (CFStringRef)CFBundleGetValueForInfoDictionaryKey( aBundle, kCFBundleNameKey );
 
-			CFURLRef aURL = CFURLCreateWithFileSystemPath( NULL, CFSTR( "/System/Library/PrivateFrameworks/JavaApplicationLauncherUI.framework" ), kCFURLPOSIXPathStyle, true );
+			CFURLRef aURL = CFURLCreateWithFileSystemPath( NULL, CFSTR( "/System/Library/PrivateFrameworks/JavaApplicationLauncher.framework" ), kCFURLPOSIXPathStyle, true );
 			if ( aURL )
 			{
 				CFBundleRef aURLBundle = CFBundleCreate( NULL, aURL );
 				if ( aURLBundle )
 				{
-					CFStringRef aLocalizedAbout = CFBundleCopyLocalizedString( aURLBundle, CFSTR( "AboutMenu" ), NULL, CFSTR( "Alert" ) );
+					CFStringRef aLocalizedAbout = CFBundleCopyLocalizedString( aURLBundle, CFSTR( "AboutMenu" ), CFSTR( "" ), CFSTR( "Alert" ) );
 					if ( aLocalizedAbout )
 					{
-						if ( aAppName )
+						if ( aAppName && CFStringGetLength( aLocalizedAbout ) )
 						{
 							CFMutableStringRef aTemp = CFStringCreateMutableCopy( NULL, 0, aLocalizedAbout );
 							if ( aTemp )
@@ -917,6 +914,9 @@ void ExecuteApplicationMain( Application *pApp )
 
 				CFRelease( aAbout );
 			}
+
+			// Enable the Preferences menu
+			EnableMenuCommand( NULL, kHICommandPreferences );
 
 			// Create the thread to run the Main() method in
 			SVMainThread aSVMainThread( pApp );
@@ -1100,9 +1100,6 @@ void ExecuteApplicationMain( Application *pApp )
 					}
 				}
 			}
-
-			// Enable the About menu
-			EnableMenuCommand( NULL, kHICommandAbout );
 		}
 	}
 
