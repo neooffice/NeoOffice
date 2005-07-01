@@ -60,14 +60,83 @@
 
 #define NATIVE_MENU_FRAMEWORK_CODE 'NWF '
 
+struct InsertItemTimerParams
+{
+	SalMenu*			mpSalMenu;
+	SalMenuItem*		mpSalMenuItem;
+	unsigned			mnPos;
+};
+
+struct RemoveItemTimerParams
+{
+	SalMenu*			mpSalMenu;
+	unsigned			mnPos;
+};
+
+struct SetSubMenuTimerParams
+{
+	SalMenu*			mpSalMenu;
+	SalMenuItem*		mpSalMenuItem;
+	SalMenu*			mpSubmenu;
+	unsigned			mnPos;
+};
+
+struct CheckItemTimerParams
+{
+	SalMenu*			mpSalMenu;
+	unsigned			mnPos;
+	BOOL				mbCheck;
+};
+
+struct EnableItemTimerParams
+{
+	SalMenu*			mpSalMenu;
+	unsigned			mnPos;
+	BOOL				mbEnable;
+};
+
+struct SetItemTextTimerParams
+{
+	SalMenu*			mpSalMenu;
+	unsigned			mnPos;
+	SalMenuItem*		mpSalMenuItem;
+	XubString			maText;
+};
+
+struct SetAcceleratorTimerParams
+{
+	SalMenu*			mpSalMenu;
+	unsigned			mnPos;
+	SalMenuItem*		mpSalMenuItem;
+	KeyCode				maKeyCode;
+	XubString			maKeyName;
+};
+
+struct UpdateMenusForFrameTimerParams
+{
+	SalFrame*			mpFrame;
+	SalMenu*			mpMenu;
+};
+
 using namespace osl;
+using namespace vos;
 using namespace vcl;
 
 static const bool bTrue = 1;
 static const bool bFalse = 0;
 
+static ::std::map< SalMenu*, SalMenu* > aMenuMap;
 static ::std::map< SalMenuItem*, SalMenuItem* > aMenuItemMap;
 static EventHandlerUPP pEventHandlerUPP = NULL;
+static EventLoopTimerUPP pInsertItemTimerUPP = NULL;
+static EventLoopTimerUPP pRemoveItemTimerUPP = NULL;
+static EventLoopTimerUPP pSetSubMenuTimerUPP = NULL;
+static EventLoopTimerUPP pCheckItemTimerUPP = NULL;
+static EventLoopTimerUPP pEnableItemTimerUPP = NULL;
+static EventLoopTimerUPP pSetItemTextTimerUPP = NULL;
+static EventLoopTimerUPP pSetAcceleratorTimerUPP = NULL;
+static EventLoopTimerUPP pUpdateMenusForFrameTimerUPP = NULL;
+static EventLoopTimerUPP pSetActiveMenuBarForFrameTimerUPP = NULL;
 
 //=============================================================================
 
@@ -173,6 +242,398 @@ static OSStatus CarbonMenuEventHandler( EventHandlerCallRef aNextHandler, EventR
 	return CallNextEventHandler( aNextHandler, aEvent );
 }
 
+//-----------------------------------------------------------------------------
+
+static void InsertItemCallback( EventLoopTimerRef aTimer, void *pData )
+{
+	// Unlock the Java lock
+	ReleaseJavaLock();
+
+	Application::GetSolarMutex().acquire();
+
+	// Make sure that the params are still valid
+	InsertItemTimerParams *pParams = (InsertItemTimerParams *)pData;
+	::std::map< SalMenu*, SalMenu* >::const_iterator it = aMenuMap.find( pParams->mpSalMenu );
+	if ( it != aMenuItemMap.end() )
+	{
+		::std::map< SalMenuItem*, SalMenuItem* >::const_iterator mit = aMenuItemMap.find( pParams->mpSalMenuItem );
+		if ( mit != aMenuItemMap.end() )
+			pParams->mpSalMenu->InsertItem( pParams->mpSalMenuItem, pParams->mnPos );
+	}
+
+	// Relock the Java lock
+	AcquireJavaLock();
+
+	Application::GetSolarMutex().release();
+
+	delete pParams;
+}
+ 
+//-----------------------------------------------------------------------------
+
+static void InstallInsertItemTimer( InsertItemTimerParams *pParams )
+{
+	if ( !pInsertItemTimerUPP )
+		pInsertItemTimerUPP = NewEventLoopTimerUPP( InsertItemCallback );
+	if ( pInsertItemTimerUPP )
+	{
+		InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pInsertItemTimerUPP, (void *)pParams, NULL );
+
+		// Let the native event thread run
+		ULONG nCount = Application::ReleaseSolarMutex();
+		OThread::yield();
+		Application::AcquireSolarMutex( nCount );
+	}
+}
+
+//-----------------------------------------------------------------------------
+
+static void RemoveItemCallback( EventLoopTimerRef aTimer, void *pData )
+{
+	// Unlock the Java lock
+	ReleaseJavaLock();
+
+	Application::GetSolarMutex().acquire();
+
+	// Make sure that the params are still valid
+	RemoveItemTimerParams *pParams = (RemoveItemTimerParams *)pData;
+	::std::map< SalMenu*, SalMenu* >::const_iterator it = aMenuMap.find( pParams->mpSalMenu );
+	if ( it != aMenuItemMap.end() )
+		pParams->mpSalMenu->RemoveItem( pParams->mnPos );
+
+	// Relock the Java lock
+	AcquireJavaLock();
+
+	Application::GetSolarMutex().release();
+
+	delete pParams;
+}
+ 
+//-----------------------------------------------------------------------------
+
+static void InstallRemoveItemTimer( RemoveItemTimerParams *pParams )
+{
+	if ( !pRemoveItemTimerUPP )
+		pRemoveItemTimerUPP = NewEventLoopTimerUPP( RemoveItemCallback );
+	if ( pRemoveItemTimerUPP )
+	{
+		InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pRemoveItemTimerUPP, (void *)pParams, NULL );
+
+		// Let the native event thread run
+		ULONG nCount = Application::ReleaseSolarMutex();
+		OThread::yield();
+		Application::AcquireSolarMutex( nCount );
+	}
+}
+
+//-----------------------------------------------------------------------------
+
+static void SetSubMenuCallback( EventLoopTimerRef aTimer, void *pData )
+{
+	// Unlock the Java lock
+	ReleaseJavaLock();
+
+	Application::GetSolarMutex().acquire();
+
+	// Make sure that the params are still valid
+	SetSubMenuTimerParams *pParams = (SetSubMenuTimerParams *)pData;
+	if ( pParams->mpSubmenu )
+	{
+		::std::map< SalMenu*, SalMenu* >::const_iterator smit = aMenuMap.find( pParams->mpSubmenu );
+		if ( smit == aMenuItemMap.end() )
+			pParams->mpSubmenu = NULL;
+	}
+	::std::map< SalMenu*, SalMenu* >::const_iterator it = aMenuMap.find( pParams->mpSalMenu );
+	if ( it != aMenuItemMap.end() )
+	{
+		::std::map< SalMenuItem*, SalMenuItem* >::const_iterator mit = aMenuItemMap.find( pParams->mpSalMenuItem );
+		if ( mit != aMenuItemMap.end() )
+			pParams->mpSalMenu->SetSubMenu( pParams->mpSalMenuItem, pParams->mpSubmenu, pParams->mnPos );
+	}
+
+	// Relock the Java lock
+	AcquireJavaLock();
+
+	Application::GetSolarMutex().release();
+
+	delete pParams;
+}
+ 
+//-----------------------------------------------------------------------------
+
+static void InstallSetSubMenuTimer( SetSubMenuTimerParams *pParams )
+{
+	if ( !pSetSubMenuTimerUPP )
+		pSetSubMenuTimerUPP = NewEventLoopTimerUPP( SetSubMenuCallback );
+	if ( pSetSubMenuTimerUPP )
+	{
+		InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pSetSubMenuTimerUPP, (void *)pParams, NULL );
+
+		// Let the native event thread run
+		ULONG nCount = Application::ReleaseSolarMutex();
+		OThread::yield();
+		Application::AcquireSolarMutex( nCount );
+	}
+}
+
+//-----------------------------------------------------------------------------
+
+static void CheckItemCallback( EventLoopTimerRef aTimer, void *pData )
+{
+	// Unlock the Java lock
+	ReleaseJavaLock();
+
+	Application::GetSolarMutex().acquire();
+
+	// Make sure that the params are still valid
+	CheckItemTimerParams *pParams = (CheckItemTimerParams *)pData;
+	::std::map< SalMenu*, SalMenu* >::const_iterator it = aMenuMap.find( pParams->mpSalMenu );
+	if ( it != aMenuItemMap.end() )
+		pParams->mpSalMenu->CheckItem( pParams->mnPos, pParams->mbCheck );
+
+	// Relock the Java lock
+	AcquireJavaLock();
+
+	Application::GetSolarMutex().release();
+
+	delete pParams;
+}
+ 
+//-----------------------------------------------------------------------------
+
+static void InstallCheckItemTimer( CheckItemTimerParams *pParams )
+{
+	if ( !pCheckItemTimerUPP )
+		pCheckItemTimerUPP = NewEventLoopTimerUPP( CheckItemCallback );
+	if ( pCheckItemTimerUPP )
+	{
+		InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pCheckItemTimerUPP, (void *)pParams, NULL );
+
+		// Let the native event thread run
+		ULONG nCount = Application::ReleaseSolarMutex();
+		OThread::yield();
+		Application::AcquireSolarMutex( nCount );
+	}
+}
+
+//-----------------------------------------------------------------------------
+
+static void EnableItemCallback( EventLoopTimerRef aTimer, void *pData )
+{
+	// Unlock the Java lock
+	ReleaseJavaLock();
+
+	Application::GetSolarMutex().acquire();
+
+	// Make sure that the params are still valid
+	EnableItemTimerParams *pParams = (EnableItemTimerParams *)pData;
+	::std::map< SalMenu*, SalMenu* >::const_iterator it = aMenuMap.find( pParams->mpSalMenu );
+	if ( it != aMenuItemMap.end() )
+		pParams->mpSalMenu->EnableItem( pParams->mnPos, pParams->mbEnable );
+
+	// Relock the Java lock
+	AcquireJavaLock();
+
+	Application::GetSolarMutex().release();
+
+	delete pParams;
+}
+ 
+//-----------------------------------------------------------------------------
+
+static void InstallEnableItemTimer( EnableItemTimerParams *pParams )
+{
+	if ( !pEnableItemTimerUPP )
+		pEnableItemTimerUPP = NewEventLoopTimerUPP( EnableItemCallback );
+	if ( pEnableItemTimerUPP )
+	{
+		InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pEnableItemTimerUPP, (void *)pParams, NULL );
+
+		// Let the native event thread run
+		ULONG nCount = Application::ReleaseSolarMutex();
+		OThread::yield();
+		Application::AcquireSolarMutex( nCount );
+	}
+}
+
+//-----------------------------------------------------------------------------
+
+static void SetItemTextCallback( EventLoopTimerRef aTimer, void *pData )
+{
+	// Unlock the Java lock
+	ReleaseJavaLock();
+
+	Application::GetSolarMutex().acquire();
+
+	// Make sure that the params are still valid
+	SetItemTextTimerParams *pParams = (SetItemTextTimerParams *)pData;
+	::std::map< SalMenu*, SalMenu* >::const_iterator it = aMenuMap.find( pParams->mpSalMenu );
+	if ( it != aMenuItemMap.end() )
+	{
+		::std::map< SalMenuItem*, SalMenuItem* >::const_iterator mit = aMenuItemMap.find( pParams->mpSalMenuItem );
+		if ( mit != aMenuItemMap.end() )
+			pParams->mpSalMenu->SetItemText( pParams->mnPos, pParams->mpSalMenuItem, pParams->maText );
+	}
+
+	// Relock the Java lock
+	AcquireJavaLock();
+
+	Application::GetSolarMutex().release();
+
+	delete pParams;
+}
+ 
+//-----------------------------------------------------------------------------
+
+static void InstallSetItemTextTimer( SetItemTextTimerParams *pParams )
+{
+	if ( !pSetItemTextTimerUPP )
+		pSetItemTextTimerUPP = NewEventLoopTimerUPP( SetItemTextCallback );
+	if ( pSetItemTextTimerUPP )
+	{
+		InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pSetItemTextTimerUPP, (void *)pParams, NULL );
+
+		// Let the native event thread run
+		ULONG nCount = Application::ReleaseSolarMutex();
+		OThread::yield();
+		Application::AcquireSolarMutex( nCount );
+	}
+}
+
+//-----------------------------------------------------------------------------
+
+static void SetAcceleratorCallback( EventLoopTimerRef aTimer, void *pData )
+{
+	// Unlock the Java lock
+	ReleaseJavaLock();
+
+	Application::GetSolarMutex().acquire();
+
+	// Make sure that the params are still valid
+	SetAcceleratorTimerParams *pParams = (SetAcceleratorTimerParams *)pData;
+	::std::map< SalMenu*, SalMenu* >::const_iterator it = aMenuMap.find( pParams->mpSalMenu );
+	if ( it != aMenuItemMap.end() )
+	{
+		::std::map< SalMenuItem*, SalMenuItem* >::const_iterator mit = aMenuItemMap.find( pParams->mpSalMenuItem );
+		if ( mit != aMenuItemMap.end() )
+			pParams->mpSalMenu->SetAccelerator( pParams->mnPos, pParams->mpSalMenuItem, pParams->maKeyCode, pParams->maKeyName );
+	}
+
+	// Relock the Java lock
+	AcquireJavaLock();
+
+	Application::GetSolarMutex().release();
+
+	delete pParams;
+}
+ 
+//-----------------------------------------------------------------------------
+
+static void InstallSetAcceleratorTimer( SetAcceleratorTimerParams *pParams )
+{
+	if ( !pSetAcceleratorTimerUPP )
+		pSetAcceleratorTimerUPP = NewEventLoopTimerUPP( SetAcceleratorCallback );
+	if ( pSetAcceleratorTimerUPP )
+	{
+		InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pSetAcceleratorTimerUPP, (void *)pParams, NULL );
+
+		// Let the native event thread run
+		ULONG nCount = Application::ReleaseSolarMutex();
+		OThread::yield();
+		Application::AcquireSolarMutex( nCount );
+	}
+}
+
+//-----------------------------------------------------------------------------
+
+static void UpdateMenusForFrameCallback( EventLoopTimerRef aTimer, void *pData )
+{
+	// Unlock the Java lock
+	ReleaseJavaLock();
+
+	Application::GetSolarMutex().acquire();
+
+	// Make sure that the params are still valid
+	SalData *pSalData = GetSalData();
+	UpdateMenusForFrameTimerParams *pParams = (UpdateMenusForFrameTimerParams *)pData;
+	for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+	{
+		if ( pParams->mpFrame == *it )
+		{
+			UpdateMenusForFrame( pParams->mpFrame, pParams->mpMenu );
+			break;
+		}
+	}
+
+	// Relock the Java lock
+	AcquireJavaLock();
+
+	Application::GetSolarMutex().release();
+
+	delete pParams;
+}
+ 
+//-----------------------------------------------------------------------------
+
+static void InstallUpdateMenusForFrameTimer( UpdateMenusForFrameTimerParams *pParams )
+{
+	if ( !pUpdateMenusForFrameTimerUPP )
+		pUpdateMenusForFrameTimerUPP = NewEventLoopTimerUPP( UpdateMenusForFrameCallback );
+	if ( pUpdateMenusForFrameTimerUPP )
+	{
+		InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pUpdateMenusForFrameTimerUPP, (void *)pParams, NULL );
+
+		// Let the native event thread run
+		ULONG nCount = Application::ReleaseSolarMutex();
+		OThread::yield();
+		Application::AcquireSolarMutex( nCount );
+	}
+}
+
+//-----------------------------------------------------------------------------
+
+static void SetActiveMenuBarForFrameCallback( EventLoopTimerRef aTimer, void *pData )
+{
+	// Unlock the Java lock
+	ReleaseJavaLock();
+
+	Application::GetSolarMutex().acquire();
+
+	// Make sure that the params are still valid
+	SalData *pSalData = GetSalData();
+	SalFrame *pFrame = (SalFrame *)pData;
+	for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+	{
+		if ( pFrame == *it )
+		{
+			SetActiveMenuBarForFrame( pFrame );
+			break;
+		}
+	}
+
+	// Relock the Java lock
+	AcquireJavaLock();
+
+	Application::GetSolarMutex().release();
+}
+ 
+//-----------------------------------------------------------------------------
+
+static void InstallSetActiveMenuBarForFrameTimer( SalFrame *pFrame )
+{
+	if ( !pSetActiveMenuBarForFrameTimerUPP )
+		pSetActiveMenuBarForFrameTimerUPP = NewEventLoopTimerUPP( SetActiveMenuBarForFrameCallback );
+	if ( pSetActiveMenuBarForFrameTimerUPP )
+	{
+		InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pSetActiveMenuBarForFrameTimerUPP, (void *)pFrame, NULL );
+
+		// Let the native event thread run
+		ULONG nCount = Application::ReleaseSolarMutex();
+		OThread::yield();
+		Application::AcquireSolarMutex( nCount );
+	}
+}
+
 //=============================================================================
 
 SalMenu::SalMenu()
@@ -212,6 +673,17 @@ void SalMenu::InsertItem( SalMenuItem* pSalMenuItem, unsigned nPos )
 	if ( !pSalMenuItem )
 		return;
 
+	if ( GetCurrentEventLoop() != GetMainEventLoop() )
+	{
+		InsertItemTimerParams *pParams = new InsertItemTimerParams();
+		pParams->mpSalMenu = this;
+		pParams->mpSalMenuItem = pSalMenuItem;
+		pParams->mnPos = nPos;
+
+		InstallInsertItemTimer( pParams );
+		return;
+	}
+
 	if ( InsertMenuItemTextWithCFString( maData.maMenu, pSalMenuItem->maData.maTitle, nPos - 1, pSalMenuItem->maData.mbSeparator ? kMenuItemAttrSeparator : 0, (MenuCommand)pSalMenuItem ) == noErr )
 	{
 		pSalMenuItem->maData.mpSalMenu = this;
@@ -223,6 +695,16 @@ void SalMenu::InsertItem( SalMenuItem* pSalMenuItem, unsigned nPos )
 
 void SalMenu::RemoveItem( unsigned nPos )
 {
+	if ( GetCurrentEventLoop() != GetMainEventLoop() )
+	{
+		RemoveItemTimerParams *pParams = new RemoveItemTimerParams();
+		pParams->mpSalMenu = this;
+		pParams->mnPos = nPos;
+
+		InstallRemoveItemTimer( pParams );
+		return;
+	}
+
 	SalMenuItem *pSalMenuItem = mpParentVCLMenu->GetItemSalItem( nPos );
 	if ( pSalMenuItem )
 		pSalMenuItem->maData.mpSalMenu = NULL;
@@ -242,6 +724,18 @@ void SalMenu::SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsigned
 {
 	if ( !pSalMenuItem )
 		return;
+
+	if ( GetCurrentEventLoop() != GetMainEventLoop() )
+	{
+		SetSubMenuTimerParams *pParams = new SetSubMenuTimerParams();
+		pParams->mpSalMenu = this;
+		pParams->mpSalMenuItem = pSalMenuItem;
+		pParams->mpSubmenu = pSubMenu;
+		pParams->mnPos = nPos;
+
+		InstallSetSubMenuTimer( pParams );
+		return;
+	}
 
 	if ( pSubMenu )
 	{
@@ -268,13 +762,37 @@ void SalMenu::SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsigned
 void SalMenu::CheckItem( unsigned nPos, BOOL bCheck )
 {
 	if ( maData.maMenu && !maData.mbIsMenuBarMenu )
+	{
+		if ( GetCurrentEventLoop() != GetMainEventLoop() )
+		{
+			CheckItemTimerParams *pParams = new CheckItemTimerParams();
+			pParams->mpSalMenu = this;
+			pParams->mnPos = nPos;
+			pParams->mbCheck = bCheck;
+
+			InstallCheckItemTimer( pParams );
+			return;
+		}
+
 		CheckMenuItem( maData.maMenu, nPos + 1, bCheck );
+	}
 }
 
 //-----------------------------------------------------------------------------
 
 void SalMenu::EnableItem( unsigned nPos, BOOL bEnable )
 {
+	if ( GetCurrentEventLoop() != GetMainEventLoop() )
+	{
+		EnableItemTimerParams *pParams = new EnableItemTimerParams();
+		pParams->mpSalMenu = this;
+		pParams->mnPos = nPos;
+		pParams->mbEnable = bEnable;
+
+		InstallEnableItemTimer( pParams );
+		return;
+	}
+
 	SetMenuItemProperty( maData.maMenu, nPos + 1, NATIVE_MENU_FRAMEWORK_CODE, NATIVE_MENU_FRAMEWORK_CODE, sizeof( bool ), bEnable ? &bTrue : &bFalse );
 
 	// Only disable menus when we are tracking the menubar to ensure that the
@@ -300,6 +818,18 @@ void SalMenu::SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const XubSt
 	if ( !pSalMenuItem )
 		return;
 
+	if ( GetCurrentEventLoop() != GetMainEventLoop() )
+	{
+		SetItemTextTimerParams *pParams = new SetItemTextTimerParams();
+		pParams->mpSalMenu = this;
+		pParams->mnPos = nPos;
+		pParams->mpSalMenuItem = pSalMenuItem;
+		pParams->maText = XubString( rText );
+
+		InstallSetItemTextTimer( pParams );
+		return;
+	}
+
 	if ( pSalMenuItem->maData.maTitle )
 		CFRelease( pSalMenuItem->maData.maTitle );
 	XubString aTitle( rText );
@@ -316,6 +846,19 @@ void SalMenu::SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const XubSt
 
 void SalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, const KeyCode& rKeyCode, const XubString& rKeyName )
 {
+	if ( GetCurrentEventLoop() != GetMainEventLoop() )
+	{
+		SetAcceleratorTimerParams *pParams = new SetAcceleratorTimerParams();
+		pParams->mpSalMenu = this;
+		pParams->mnPos = nPos;
+		pParams->mpSalMenuItem = pSalMenuItem;
+		pParams->maKeyCode = rKeyCode;
+		pParams->maKeyName = XubString( rKeyName );
+
+		InstallSetAcceleratorTimer( pParams );
+		return;
+	}
+
 	USHORT nCode = rKeyCode.GetCode();
 	UInt8 nKey = 0;
 	MacOSBoolean bVirtual = false;
@@ -550,6 +1093,8 @@ SalMenu* SalInstance::CreateMenu( BOOL bMenuBar, Menu* pVCLMenu )
 		return NULL;
 	}
 
+	aMenuMap[ pSalMenu ] = pSalMenu;
+
 	if ( !pEventHandlerUPP )
 		pEventHandlerUPP = NewEventHandlerUPP( CarbonMenuEventHandler );
 
@@ -570,7 +1115,10 @@ SalMenu* SalInstance::CreateMenu( BOOL bMenuBar, Menu* pVCLMenu )
 void SalInstance::DestroyMenu( SalMenu* pMenu )
 {
 	if ( pMenu )
+	{
+		aMenuMap.erase( pMenu );
 		delete pMenu;
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -658,6 +1206,16 @@ void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu )
 			return;
 	}
 
+	if ( GetCurrentEventLoop() != GetMainEventLoop() )
+	{
+		UpdateMenusForFrameTimerParams *pParams = new UpdateMenusForFrameTimerParams();
+		pParams->mpFrame = pFrame;
+		pParams->mpMenu = pMenu;
+
+		InstallUpdateMenusForFrameTimer( pParams );
+		return;
+	}
+
 	Menu *pVCLMenu = pMenu->mpParentVCLMenu;
 
 	// Post the SALEVENT_MENUACTIVATE event
@@ -713,6 +1271,12 @@ void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu )
  */
 void SetActiveMenuBarForFrame( SalFrame *pFrame )
 {
+	if ( GetCurrentEventLoop() != GetMainEventLoop() )
+	{
+		InstallSetActiveMenuBarForFrameTimer( pFrame );
+		return;
+	}
+
 	static MenuBarHandle hMenuBar = GetMenuBar();
 
 	// Restore menubar to original empty menubar
