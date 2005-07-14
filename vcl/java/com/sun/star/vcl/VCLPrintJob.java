@@ -54,11 +54,6 @@ import java.awt.print.PrinterJob;
 public final class VCLPrintJob implements Printable, Runnable {
 
 	/**
-	 * The current <code>VCLGraphics</code>
-	 */
-	private VCLGraphics currentGraphics = null;
-
-	/**
 	 * The current page.
 	 */
 	private int currentPage = 0;
@@ -125,23 +120,26 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 */
 	public void dispose() {
 
-		if (currentGraphics != null) {
-			// Dispose a print graphics throws exceptions when memory is low
-			try {
-				currentGraphics.dispose();
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-		}
-		currentGraphics = null;
-		currentPage = 0;
 		if (graphicsInfo != null)
 		{
-			graphicsInfo.graphics = null;
-			graphicsInfo.pageFormat = null;
-			graphicsInfo.pageIndex = -1;
+			synchronized (graphicsInfo) {
+				if (graphicsInfo.currentGraphics != null) {
+					// Dispose a print graphics throws exceptions when memory
+					// is low
+					try {
+						graphicsInfo.currentGraphics.dispose();
+					}
+					catch (Throwable t) {
+						t.printStackTrace();
+					}
+				}
+
+				graphicsInfo.graphics = null;
+				graphicsInfo.pageFormat = null;
+				graphicsInfo.currentGraphics = null;
+			}
 		}
+		currentPage = 0;
 		endJob = true;
 		graphicsInfo = null;
 		job = null;
@@ -175,21 +173,6 @@ public final class VCLPrintJob implements Printable, Runnable {
 	public void endPage() {
 
 		synchronized (graphicsInfo) {
-			if (currentGraphics == null) {
- 				if (!endJob && !job.isCancelled())
-					return;
-			}
-			else {
-				// Dispose a print graphics throws exceptions when memory is low
-				try {
-					currentGraphics.dispose();
-				}
-				catch (Throwable t) {
-					t.printStackTrace();
-				}
-				currentGraphics = null;
-			}
-
  			if (!printThreadStarted || printThreadFinished)
 				return;
 
@@ -215,9 +198,6 @@ public final class VCLPrintJob implements Printable, Runnable {
 		else if (endJob)
 			return Printable.NO_SUCH_PAGE;
 
-		graphicsInfo.pageFormat = f;
-		graphicsInfo.pageIndex = i;
-
 		Graphics2D graphics = (Graphics2D)g;
 
 		// Normalize to device resolution
@@ -225,6 +205,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 
 		synchronized (graphicsInfo) {
 			graphicsInfo.graphics = graphics;
+			graphicsInfo.pageFormat = f;
 
 			// Notify other threads and wait until painting is finished
 			graphicsInfo.notifyAll();
@@ -233,7 +214,19 @@ public final class VCLPrintJob implements Printable, Runnable {
 			}
 			catch (Throwable t) {}
 
+			if (graphicsInfo.currentGraphics != null) {
+				// Dispose a print graphics throws exceptions when memory is low
+				try {
+					graphicsInfo.currentGraphics.dispose();
+				}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
+			}
+
 			graphicsInfo.graphics = null;
+			graphicsInfo.pageFormat = f;
+			graphicsInfo.currentGraphics = null;
 		}
 
 		if (job.isCancelled())
@@ -261,10 +254,9 @@ public final class VCLPrintJob implements Printable, Runnable {
 		catch (Throwable t) {
 			t.printStackTrace();
 		}
-		printThreadFinished = true;
-
 		// Notify other threads that printing is finished
 		synchronized (graphicsInfo) {
+			printThreadFinished = true;
 			graphicsInfo.notifyAll();
 		}
 
@@ -337,8 +329,8 @@ public final class VCLPrintJob implements Printable, Runnable {
 			if (!printThreadStarted) {
 				printThread = new Thread(this);
 				printThread.setPriority(Thread.MIN_PRIORITY);
-				printThread.start();
 				printThreadStarted = true;
+				printThread.start();
 			}
 
 			// Wait for the printing thread to gain the lock on the
@@ -383,19 +375,14 @@ public final class VCLPrintJob implements Printable, Runnable {
 				else
 					graphicsInfo.graphics.scale((double)72 / pageResolution.width, (double)72 / pageResolution.height);
 
-				currentGraphics = new VCLGraphics(graphicsInfo.graphics, pageFormat, rotatedPage);
+				graphicsInfo.currentGraphics = new VCLGraphics(graphicsInfo.graphics, pageFormat, rotatedPage);
 			}
 			else {
-				currentGraphics = null;
+				graphicsInfo.currentGraphics = null;
 			}
 
-			// Mac OS X creates two graphics for each page so we need to
-			// ignore the first and only print to the second
-			if (currentPage % 2 != 0)
-				return null;
+			return graphicsInfo.currentGraphics;
 		}
-
-		return currentGraphics;
 
 	}
 
@@ -405,7 +392,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 
 		PageFormat pageFormat = null;
 
-		int pageIndex = -1;
+		VCLGraphics currentGraphics = null;
 
 	}
 
