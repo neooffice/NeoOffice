@@ -43,54 +43,48 @@
 #include <image.h>
 #endif
 
-#include <premac.h>
-#include <Carbon/Carbon.h>
-#include <postmac.h>
-
 class SalMenu;
 class SalMenuItem;
 class SalFrame;
 class Menu;
 
+namespace vcl
+{
+class com_sun_star_vcl_VCLMenuBar;
+class com_sun_star_vcl_VCLMenu;
+class com_sun_star_vcl_VCLMenuItemData;
+}
+
 // =======================================================================
 
 class SalMenuData
 {
-	friend class		SalInstance;
-	friend class		SalMenu;
-	friend void			UpdateMenusForFrame( SalFrame*, SalMenu* );
-	friend void			SetActiveMenuBarForFrame( SalFrame* );
-
-	MenuRef				maMenu;
-	SalFrame*			mpFrame;
-	bool				mbIsMenuBarMenu;	// true for menu bars
-	SalMenu*			mpParentMenu;		// Parent menu if this is a submenu
-
-						SalMenuData();
-						~SalMenuData();
-
 public:
-	SalFrame*			GetFrame() { return mpFrame; }
-	SalMenu*			GetParentMenu() { return mpParentMenu; }
+	// used for menubars only
+	::vcl::com_sun_star_vcl_VCLMenuBar *	mpVCLMenuBar;
+	
+	// used for menus
+	::vcl::com_sun_star_vcl_VCLMenu *	mpVCLMenu;
+	
+	// Generic data
+	SalFrame *			mpParentFrame;		// pointer to the parent frame
+	BOOL				mbIsMenuBarMenu;	// true for menu bars
+	SalMenu *			mpParentMenu;		// Parent menu if this is a submenu
 };
 
 class SalMenuItemData
 {
-	friend class		SalInstance;
-	friend class		SalMenu;
-	friend class		SalMenuItem;
-	friend void			UpdateMenusForFrame( SalFrame*, SalMenu* );
-
-	CFStringRef			maTitle;
-	bool				mbSeparator;
-	SalMenu*			mpSalMenu;		// SalMenu into which this item is inserted
-	SalMenu*			mpSalSubmenu;	// Submenu SalMenu if this item has a submenu
-
-						SalMenuItemData();
-						~SalMenuItemData();
-
 public:
-	SalMenu*			GetSalMenu() { return mpSalMenu; }
+	XubString			mText;			// the item text
+	XubString			mAccelText;		// the accelerator string
+	Bitmap				maBitmap;		// item image
+	int					mnId;			// item id
+
+	::vcl::com_sun_star_vcl_VCLMenuItemData *mpVCLMenuItemData;
+	
+	SalMenu *			mpSalMenu;		// SalMenu into which this item is inserted
+	SalMenu *			mpSalSubmenu;	// Submenu SalMenu if this item has a submenu
+	Menu *				mpVCLMenu;		// VCL menu into which this item is inserted
 };
 
 #endif // _SV_SALMENU_H

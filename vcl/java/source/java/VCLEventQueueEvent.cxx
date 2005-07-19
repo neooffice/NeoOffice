@@ -63,6 +63,14 @@
 #include <window.hxx>
 #endif
 
+#ifdef MACOSX
+
+#include <premac.h>
+#include <Carbon/Carbon.h>
+#include <postmac.h>
+
+#endif	// MACOSX
+
 using namespace vcl;
 using namespace vos;
 
@@ -497,7 +505,6 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 					if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame != pFrame )
 						dispatchEvent( SALEVENT_LOSEFOCUS, pSalData->mpFocusFrame, NULL );
 					pSalData->mpFocusFrame = pFrame;
-					SetActiveMenuBarForFrame( pSalData->mpFocusFrame );
 
 					if ( pSalData->mpPresentationFrame && pFrame != pSalData->mpPresentationFrame )
 					{
@@ -528,10 +535,7 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 				else if ( nID == SALEVENT_LOSEFOCUS )
 				{
 					if ( pSalData->mpFocusFrame == pFrame )
-					{
 						pSalData->mpFocusFrame = NULL;
-						SetActiveMenuBarForFrame( pSalData->mpFocusFrame );
-					}
 				}
 				else if ( nID == SALEVENT_MOUSEBUTTONDOWN && pSalData->mpFocusFrame == pFrame && (WindowRef)pFrame->maFrameData.mpVCLFrame->getNativeWindow() == FrontNonFloatingWindow() )
 				{

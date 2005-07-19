@@ -99,9 +99,6 @@
 #endif
 #include "salinst.hrc"
 
-#ifndef _SV_SALMAIN_COCOA_H
-#include <salmain_cocoa.h>
-#endif
 #ifndef _OSL_PROCESS_H_
 #include <rtl/process.h>
 #endif
@@ -148,9 +145,10 @@ static pascal OSErr DoAEReopen( const AppleEvent *message, AppleEvent *reply, lo
 class SVMainThread : public ::vos::OThread
 {
 	Application*			mpApp;
+	CFRunLoopRef			maRunLoop;
 
 public:
-							SVMainThread( Application* pApp ) : ::vos::OThread(), mpApp( pApp ) {}
+							SVMainThread( Application* pApp, CFRunLoopRef aRunLoop ) : ::vos::OThread(), mpApp( pApp ), maRunLoop( aRunLoop ) {}
 
 	virtual void			run();
 };
@@ -213,10 +211,6 @@ static void RunAppMain( Application *pApp )
 	}
 
 	pApp->Main();
-
-	// Make sure that any Cocoa event loop is stopped even if we aren't using
-	// Cocoa
-	StopCocoaEventLoop();
 }
 
 // ----------------------------------------------------------------------------
@@ -723,6 +717,12 @@ static OSErr DoAEReopen( const AppleEvent *message, AppleEvent *reply, long refc
 
 // ----------------------------------------------------------------------------
 
+static void SourceContextCallBack( void *pInfo )
+{
+}
+
+// ----------------------------------------------------------------------------
+
 void ExecuteApplicationMain( Application *pApp )
 {
 	// If there is a "user/fonts" directory, explicitly activate the
@@ -830,102 +830,28 @@ void ExecuteApplicationMain( Application *pApp )
 		// use Carbon
 		if ( t.pEnv->GetVersion() >= JNI_VERSION_1_4 )
 		{
-			InitCocoa();
-
-			IBNibRef aNib;
-			if ( CreateNibReference( CFSTR( "main" ), &aNib ) == noErr )
-				SetMenuBarFromNib( aNib, CFSTR( "MenuBar" ) );
-
-
-			CFStringRef aAbout = NULL;
-			CFStringRef aAppName = NULL;
-			CFBundleRef aBundle = CFBundleGetMainBundle();
-			if ( aBundle )
-				aAppName = (CFStringRef)CFBundleGetValueForInfoDictionaryKey( aBundle, kCFBundleNameKey );
-
-			CFURLRef aURL = CFURLCreateWithFileSystemPath( NULL, CFSTR( "/System/Library/PrivateFrameworks/JavaApplicationLauncher.framework" ), kCFURLPOSIXPathStyle, true );
-			if ( aURL )
-			{
-				CFBundleRef aURLBundle = CFBundleCreate( NULL, aURL );
-				if ( aURLBundle )
-				{
-					CFStringRef aLocalizedAbout = CFBundleCopyLocalizedString( aURLBundle, CFSTR( "AboutMenu" ), CFSTR( "" ), CFSTR( "Alert" ) );
-					if ( aLocalizedAbout )
-					{
-						if ( aAppName && CFStringGetLength( aLocalizedAbout ) )
-						{
-							CFMutableStringRef aTemp = CFStringCreateMutableCopy( NULL, 0, aLocalizedAbout );
-							if ( aTemp )
-							{
-								// Replace %@... string
-								UniChar aSearchChars[] = { 0x0025, 0x0040, 0x2026 };
-								CFStringRef aSearch = CFStringCreateWithCharactersNoCopy( NULL, aSearchChars, sizeof( aSearchChars ) / sizeof( UniChar ), kCFAllocatorNull );
-								CFRange aRange;
-								aRange.location = 0;
-								aRange.length = CFStringGetLength( aTemp );
-								CFStringFindAndReplace( aTemp, aSearch, aAppName, aRange, 0 );
-								aAbout = CFStringCreateCopy( NULL, aTemp );
-
-								CFRelease( aSearch );
-								CFRelease( aTemp );
-							}
-						}
-
-						CFRelease( aLocalizedAbout );
-					}
-
-					CFRelease( aURLBundle );
-				}
-
-				CFRelease( aURL );
-			}
-
-			if ( !aAbout )
-			{
-				aAbout = CFSTR( "About" );
-				if ( aAppName )
-				{
-					CFMutableStringRef aTemp = CFStringCreateMutableCopy( NULL, 0, aAbout );
-					if ( aTemp )
-					{
-						CFStringAppend( aTemp, CFSTR( " " ) );
-						CFStringAppend( aTemp, aAppName );
-
-						aAbout = CFStringCreateCopy( NULL, aTemp );
-						CFRelease( aTemp );
-					}
-				}
-			}
-
-			if ( aAbout )
-			{
-				MenuRef aRootMenu = AcquireRootMenu();
-				if ( aRootMenu )
-				{
-					MenuRef aAppMenu;
-					if ( GetMenuItemHierarchicalMenu( aRootMenu, 1, &aAppMenu ) == noErr )
-					{
-						if ( InsertMenuItemTextWithCFString( aAppMenu, aAbout, 0, 0, 0 ) == noErr );
-							SetMenuItemCommandID( aAppMenu, 1, kHICommandAbout );
-					}
-
-					ReleaseMenu( aRootMenu );
-				}
-
-				CFRelease( aAbout );
-			}
-
-			// Enable the Preferences menu
-			EnableMenuCommand( NULL, kHICommandPreferences );
-
 			// Create the thread to run the Main() method in
-			SVMainThread aSVMainThread( pApp );
+			SVMainThread aSVMainThread( pApp, CFRunLoopGetCurrent() );
 			aSVMainThread.create();
 
 			ULONG nCount = Application::ReleaseSolarMutex();
 
-			// Start the Cocoa event loop
-			RunCocoaEventLoop();
+			// Start the CFRunLoop
+			CFRunLoopSourceContext aSourceContext;
+			aSourceContext.version = 0;
+			aSourceContext.info = NULL;
+			aSourceContext.retain = NULL;
+			aSourceContext.release = NULL;
+			aSourceContext.copyDescription = NULL;
+			aSourceContext.equal = NULL;
+			aSourceContext.hash = NULL;
+			aSourceContext.schedule = NULL;
+			aSourceContext.cancel = NULL;
+			aSourceContext.perform = &SourceContextCallBack;
+			CFRunLoopSourceRef aSourceRef = CFRunLoopSourceCreate( NULL, 0, &aSourceContext );
+			CFRunLoopAddSource( CFRunLoopGetCurrent(), aSourceRef, kCFRunLoopCommonModes );
+			CFRunLoopRun();
+
 			aSVMainThread.join();
 
 			Application::AcquireSolarMutex( nCount );
@@ -1133,6 +1059,7 @@ void SVMainThread::run()
 {
 	Application::GetSolarMutex().acquire();
 	RunAppMain( mpApp );
+	CFRunLoopStop( maRunLoop );
 	Application::GetSolarMutex().release();
 }
 

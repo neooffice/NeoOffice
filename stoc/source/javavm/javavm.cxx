@@ -1694,7 +1694,8 @@ JavaVM * JavaVirtualMachine::createJavaVM(stoc_javavm::JVM const & jvm,
         options[x+addOpt].optionString= (char*)arProps[x].getStr();
         options[x+addOpt].extraInfo= NULL;
     }
-#if defined MACOSX && defined USE_JAVA_1_4
+#if defined MACOSX
+    // Apple will not load Java 1.4 unless the version is JNI_VERSION_1_4
     vm_args.version= JNI_VERSION_1_4;
 #else	// MACOSX
     vm_args.version= JNI_VERSION_1_2;
@@ -1720,13 +1721,6 @@ JavaVM * JavaVirtualMachine::createJavaVM(stoc_javavm::JVM const & jvm,
     {
         //returns negative number on failure
         err= pCreateJavaVM(&pJavaVM, pMainThreadEnv, &vm_args);
-#ifdef MACOSX
-        if (err != 0)
-        {
-            vm_args.version= JNI_VERSION_1_2;
-            err = pCreateJavaVM(&pJavaVM, pMainThreadEnv, &vm_args);
-        }
-#endif	// MACOSX
         g_bInGetJavaVM = 0;
     }
     else

@@ -57,13 +57,11 @@ dummy:
 .IF "$(remote)"
 
 OBJFILES=\
-	$(OBJ)$/salmain.obj \
-	$(OBJ)$/salmain_cocoa.obj
+	$(OBJ)$/salmain.obj
 
 SLOFILES= \
 	$(SLO)$/saldata.obj \
 	$(SLO)$/salmain.obj \
-	$(SLO)$/salmain_cocoa.obj \
 	$(SLO)$/saltimer.obj \
 	$(SLO)$/salinfo.obj \
 	$(SLO)$/salinst.obj \
@@ -72,8 +70,7 @@ SLOFILES= \
 .ELSE
 
 SLOFILES=\
-	$(SLO)$/salmain.obj \
-	$(SLO)$/salmain_cocoa.obj
+	$(SLO)$/salmain.obj
 
 .ENDIF
 

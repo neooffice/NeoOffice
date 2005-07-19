@@ -188,10 +188,7 @@ SalFrame::~SalFrame()
 	SalData *pSalData = GetSalData();
 
 	if ( pSalData->mpFocusFrame == this )
-	{
 		pSalData->mpFocusFrame = NULL;
-		SetActiveMenuBarForFrame( pSalData->mpFocusFrame );
-	}
 
 	if ( pSalData->mpPresentationFrame == this )
 		pSalData->mpPresentationFrame = NULL;
@@ -286,7 +283,6 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		if ( pSalData->mpFocusFrame == this )
 		{
 			pSalData->mpFocusFrame = NULL;
-			SetActiveMenuBarForFrame( pSalData->mpFocusFrame );
 
 			if ( maFrameData.mpParent )
 				maFrameData.mpParent->ToTop( SAL_FRAME_TOTOP_GRABFOCUS );
