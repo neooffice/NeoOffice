@@ -239,7 +239,7 @@ void com_sun_star_vcl_VCLFrame::dispose()
 			if ( !pSalData->maNativeEventCondition.check() )
 				pSalData->maNativeEventCondition.set();
 
-			ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
+			ULONG nCount = Application::ReleaseSolarMutex();
 			OThread::yield();
 
 			WindowRef aWindow = NULL;
@@ -269,7 +269,7 @@ void com_sun_star_vcl_VCLFrame::dispose()
 					InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pEventLoopTimerUPP, aOwnerWindow, NULL );
 			}
 
-			pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
+			Application::AcquireSolarMutex( nCount );
 		}
 	}
 }
@@ -727,7 +727,7 @@ void com_sun_star_vcl_VCLFrame::setBounds( long _par0, long _par1, long _par2, l
 			if ( !pSalData->maNativeEventCondition.check() )
 				pSalData->maNativeEventCondition.set();
 
-			ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
+			ULONG nCount = Application::ReleaseSolarMutex();
 			OThread::yield();
 
 			jvalue args[4];
@@ -737,7 +737,7 @@ void com_sun_star_vcl_VCLFrame::setBounds( long _par0, long _par1, long _par2, l
 			args[3].i = jint( _par3 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 
-			pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
+			Application::AcquireSolarMutex( nCount );
 		}
 	}
 }
@@ -860,14 +860,14 @@ void com_sun_star_vcl_VCLFrame::setState( ULONG _par0 )
 			if ( !pSalData->maNativeEventCondition.check() )
 				pSalData->maNativeEventCondition.set();
 
-			ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
+			ULONG nCount = Application::ReleaseSolarMutex();
 			OThread::yield();
 
 			jvalue args[1];
 			args[0].j = jlong( _par0 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 
-			pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
+			Application::AcquireSolarMutex( nCount );
 		}
 	}
 }
@@ -917,7 +917,7 @@ void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0, sal_Bool _par1 )
 			if ( !pSalData->maNativeEventCondition.check() )
 				pSalData->maNativeEventCondition.set();
 
-			ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
+			ULONG nCount = Application::ReleaseSolarMutex();
 			OThread::yield();
 
 			MutexGuard aGuard( aMutex );
@@ -931,7 +931,7 @@ void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0, sal_Bool _par1 )
 			bActivate = false;
 			bBringToFront = false;
 
-			pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
+			Application::AcquireSolarMutex( nCount );
 		}
 	}
 }

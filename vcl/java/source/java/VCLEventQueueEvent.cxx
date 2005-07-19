@@ -335,9 +335,9 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				// Wait for drag thread to complete
 				while ( pSalData->mbInNativeDrag )
 				{
-					ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
+					ULONG nCount = Application::ReleaseSolarMutex();
 					OThread::yield();
-					pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
+					Application::AcquireSolarMutex( nCount );
 				}
 			}
 			else if ( ( nID == SALEVENT_MOUSELEAVE || nID == SALEVENT_MOUSEMOVE ) )
@@ -351,9 +351,9 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				else
 				{
 					// Let drag thread have a chance to run
-					ULONG nCount = pSalData->mpFirstInstance->ReleaseYieldMutex();
+					ULONG nCount = Application::ReleaseSolarMutex();
 					OThread::yield();
-					pSalData->mpFirstInstance->AcquireYieldMutex( nCount );
+					Application::AcquireSolarMutex( nCount );
 				}
 			}
 			dispatchEvent( nID, pFrame, pMouseEvent );
