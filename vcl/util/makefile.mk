@@ -260,7 +260,7 @@ SHL1STDLIBS += -ldl
 
 .IF "$(GUIBASE)"=="java"
 .IF "$(OS)"=="MACOSX"
-SHL1STDLIBS += -framework ApplicationServices -framework Carbon -framework AudioToolbox -framework AudioUnit -framework AppKit
+SHL1STDLIBS += -framework ApplicationServices -framework Carbon -framework AudioToolbox -framework AudioUnit
 .ENDIF
 .ENDIF
 
