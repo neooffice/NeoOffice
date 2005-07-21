@@ -587,10 +587,15 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private static HashMap customCursors = null;
 
-	/**
-	 * The shared input context.
+	/** 
+	 * The default attributed character iterator.
 	 */
-	private static InputContext inputContext = null;
+	private final static AttributedCharacterIterator defaultAttributedCharacterIterator = new AttributedString("").getIterator();
+
+	/** 
+	 * The default text location.
+	 */
+	private final static Rectangle defaultTextLocation = new Rectangle();
 
 	/** 
 	 * The key modifiers pressed.
@@ -616,11 +621,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * The last mouse drag event.
 	 */
 	private static MouseEvent lastMouseDragEvent = null;
-
-	/** 
-	 * The menu modifier.
-	 */
-	private static int menuModifiersMask = 0;
 
 	/** 
 	 * The mouse modifiers pressed.
@@ -654,11 +654,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * Initialize input context.
 	 */
 	static {
-
-		// We need to create a static shared input context as separate
-		// input contexts cause strange behavior on Mac OS X
-		inputContext = InputContext.getInstance();
-		menuModifiersMask = InputEvent.META_MASK;
 
 		// Load pointer images
 		Toolkit t = Toolkit.getDefaultToolkit();
@@ -796,7 +791,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public AttributedCharacterIterator cancelLatestCommittedText(AttributedCharacterIterator.Attribute[] attributes) {
 
-		return new AttributedString("").getIterator();
+		return defaultAttributedCharacterIterator;
 
 	}
 
@@ -1032,7 +1027,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public AttributedCharacterIterator getCommittedText(int beginIndex, int endIndex, AttributedCharacterIterator.Attribute[] attributes) {
 
-		return new AttributedString("").getIterator();
+		return defaultAttributedCharacterIterator;
 
 	}
 
@@ -1513,7 +1508,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public AttributedCharacterIterator getSelectedText(AttributedCharacterIterator.Attribute[] attributes) {
 
-		return new AttributedString("").getIterator();
+		return defaultAttributedCharacterIterator;
 
 	}
 
@@ -1543,7 +1538,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public Rectangle getTextLocation(TextHitInfo offset) {
 
-		return null;
+		return defaultTextLocation;
 
 	}
 
@@ -1642,7 +1637,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			// those that are applicable to disabled menu items.
 			int modifiers = e.getModifiers();
 			char keyChar = e.getKeyChar();
-			if ((modifiers & VCLFrame.menuModifiersMask) == VCLFrame.menuModifiersMask && keyCode != KeyEvent.VK_SPACE && keyCode != KeyEvent.VK_Q) {
+			if ((modifiers & InputEvent.META_MASK) == InputEvent.META_MASK && keyCode != KeyEvent.VK_SPACE && keyCode != KeyEvent.VK_Q) {
 				VCLEvent vclEvent = new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0);
 				if (VCLEvent.convertVCLKeyCode(vclEvent.getKeyCode()) > 0) {
 					// Fix bug 244 by checking if there is an active AWT menu
@@ -2426,19 +2421,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		NoPaintFrame(VCLFrame f) {
 
 			frame = f;
-			enableInputMethods(false);
 			setMinimumSize(1, 1);
-
-		}
-
-		/**
-		 * Gets the input context used by this frame for handling the
-		 * communication with input methods when text is entered in this
-		 * frame.
-		 */
-		public InputContext getInputContext() {
-
-			return VCLFrame.inputContext;
 
 		}
 
@@ -2526,17 +2509,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		/**
-		 * Gets the input context used by this panel for handling the
-		 * communication with input methods when text is entered in this
-		 * panel.
-		 */
-		public InputContext getInputContext() {
-
-			return VCLFrame.inputContext;
-
-		}
-
-		/**
 		 * Returns the input method request handler which supports requests
 		 * from input methods for this component.
 		 *
@@ -2603,19 +2575,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			super(f.getOwner().getWindow());
 			frame = f;
-			enableInputMethods(false);
 			setMinimumSize(1, 1);
-
-		}
-
-		/**
-		 * Gets the input context used by this window for handling the
-		 * communication with input methods when text is entered in this
-		 * window.
-		 */
-		public InputContext getInputContext() {
-
-			return VCLFrame.inputContext;
 
 		}
 

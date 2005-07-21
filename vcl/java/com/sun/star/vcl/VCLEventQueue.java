@@ -468,11 +468,6 @@ public final class VCLEventQueue {
 	final class NoExceptionsEventQueue extends EventQueue {
 
 		/**
-		 * The key component.
-		 */
-		private Component keyComponent = null;
-
-		/**
 		 * The <code>VCLEventQueue</code>.
 		 */
 		private VCLEventQueue queue = null;
@@ -496,63 +491,6 @@ public final class VCLEventQueue {
 		protected void dispatchEvent(AWTEvent event) {
 
 			try {
-				// When using Asian keyboards focus gets stuck on the last
-				// panel displayed so we need to reroute key events to the
-				// correct window
-				int id = event.getID();
-				switch (id) {
-					case FocusEvent.FOCUS_GAINED:
-					{
-						Frame[] frames = Frame.getFrames();
-						for (int i = 0; i < frames.length; i++) {
-							frames[i].repaint();
-							Window[] windows = frames[i].getOwnedWindows();
-							for (int j = 0; j < windows.length; j++)
-								windows[j].repaint();
-						}
-						keyComponent = ((FocusEvent)event).getComponent();
-						break;
-					}
-					case FocusEvent.FOCUS_LOST:
-					{
-						Frame[] frames = Frame.getFrames();
-						for (int i = 0; i < frames.length; i++) {
-							InputContext ic = frames[i].getInputContext();
-							if (ic != null)
-								ic.endComposition();
-							Window[] windows = frames[i].getOwnedWindows();
-							for (int j = 0; j < windows.length; j++) {
-								ic = windows[j].getInputContext();
-								if (ic != null)
-									ic.endComposition();
-							}
-						}
-						Component c = ((FocusEvent)event).getComponent();
-						if (c == keyComponent)
-							keyComponent = null;
-						break;
-					}
-					case InputMethodEvent.CARET_POSITION_CHANGED:
-					case InputMethodEvent.INPUT_METHOD_TEXT_CHANGED:
-					{
-						if (keyComponent != null) {
-							InputMethodEvent e = (InputMethodEvent)event;
-							event = new InputMethodEvent(keyComponent, id, e.getText(), e.getCommittedCharacterCount(), e.getCaret(), e.getVisiblePosition());
-						}
-						break;
-					}
-					case KeyEvent.KEY_PRESSED:
-					case KeyEvent.KEY_RELEASED:
-					case KeyEvent.KEY_TYPED:
-					{
-						if (keyComponent != null) {
-							KeyEvent e = (KeyEvent)event;
-							event = new KeyEvent(keyComponent, id, e.getWhen(), e.getModifiers(), e.getKeyCode(), e.getKeyChar());
-						}
-						break;
-					}
-				}
-
 				// In order to support JVM's before 1.4, process mouse wheel
 				// events here
 				if (VCLEventQueue.mouseWheelEventClass != null && VCLEventQueue.mouseWheelEventClass.isInstance(event)) {
