@@ -83,7 +83,5 @@ public:
 };
 
 void ExecuteApplicationMain( Application *pApp );
-void AcquireJavaLock();
-void ReleaseJavaLock();
 
 #endif // _SV_SALINST_H

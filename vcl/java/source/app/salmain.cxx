@@ -9,7 +9,7 @@
  *  The Contents of this file are made available subject to the terms of
  *  either of the following licenses
  *
- *         - GNU General Public License Version 2.1
+ *		 - GNU General Public License Version 2.1
  *
  *  Patrick Luby, June 2003
  *
@@ -43,6 +43,26 @@
 #ifndef _FSYS_HXX
 #include <tools/fsys.hxx>
 #endif
+
+#include <premac.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <postmac.h>
+
+class SVMainThread : public ::vos::OThread
+{
+	CFRunLoopRef			maRunLoop;
+
+public:
+							SVMainThread( CFRunLoopRef aRunLoop ) : ::vos::OThread(), maRunLoop( aRunLoop ) {}
+
+	virtual void			run();
+};
+
+// ============================================================================
+ 
+static void SourceContextCallBack( void *pInfo )
+{
+}
 
 // ============================================================================
 
@@ -103,10 +123,39 @@ int main( int argc, char *argv[] )
 			execv( pCmdPath, argv );
 	}
 
-	SVMain();
+	SVMainThread aSVMainThread( CFRunLoopGetCurrent() );
+	aSVMainThread.create();
+
+	// Start the CFRunLoop
+	CFRunLoopSourceContext aSourceContext;
+	aSourceContext.version = 0;
+	aSourceContext.info = NULL;
+	aSourceContext.retain = NULL;
+	aSourceContext.release = NULL;
+	aSourceContext.copyDescription = NULL;
+	aSourceContext.equal = NULL;
+	aSourceContext.hash = NULL;
+	aSourceContext.schedule = NULL;
+	aSourceContext.cancel = NULL;
+	aSourceContext.perform = &SourceContextCallBack;
+	CFRunLoopSourceRef aSourceRef = CFRunLoopSourceCreate( NULL, 0, &aSourceContext );
+	CFRunLoopAddSource( CFRunLoopGetCurrent(), aSourceRef, kCFRunLoopCommonModes );
+	CFRunLoopRun();
+
+	aSVMainThread.join();
 
 	// Force exit since some JVMs won't shutdown when only exit() is invoked
 	_exit( 0 );
 }
 
 END_C
+
+// ============================================================================
+
+void SVMainThread::run()
+{
+	SVMain();
+
+	// Force exit since some JVMs won't shutdown when only exit() is invoked
+	_exit( 0 );
+}

@@ -73,12 +73,6 @@
 #ifndef _SV_OUTDEV_H
 #include <outdev.h>
 #endif
-#ifndef _TOOLS_RESMGR_HXX
-#include <tools/resmgr.hxx>
-#endif
-#ifndef _TOOLS_SIMPLERESMGR_HXX_
-#include <tools/simplerm.hxx>
-#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 #include <com/sun/star/vcl/VCLEvent.hxx>
 #endif
@@ -97,98 +91,40 @@
 #ifndef _SV_MENU_HXX
 #include <menu.hxx>
 #endif
-#include "salinst.hrc"
-
 #ifndef _OSL_PROCESS_H_
 #include <rtl/process.h>
 #endif
 #ifndef _FSYS_HXX
 #include <tools/fsys.hxx>
 #endif
+#ifndef _TOOLS_RESMGR_HXX
+#include <tools/resmgr.hxx>
+#endif
+#ifndef _TOOLS_SIMPLERESMGR_HXX_
+#include <tools/simplerm.hxx>
+#endif
 #ifndef _UTL_BOOTSTRAP_HXX
 #include <unotools/bootstrap.hxx>
 #endif
-#ifndef _VOS_MODULE_HXX_
-#include <vos/module.hxx>
-#endif
+
+#include "salinst.hrc"
 
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 #undef check
 
-typedef jobject Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type( JNIEnv *, jobject );
-typedef void Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type( JNIEnv *, jobject );
-typedef jint Java_com_apple_mrj_internal_awt_graphics_CGJavaPixelsPen_UpdateContext_Type( JNIEnv *, jobject, jint, jint, jint, jint, jint );
-
-using namespace osl;
 using namespace rtl;
 using namespace vcl;
 using namespace vos;
 using namespace utl;
 using namespace com::sun::star::uno;
 
-static Mutex aMutex;
-static OModule aJDirectModule;
-static OModule aRealAWTModule;
-static Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type *pCarbonLockGetInstance = NULL;
-static Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *pCarbonLockInit = NULL;
-static Java_com_apple_mrj_internal_awt_graphics_CGJavaPixelsPen_UpdateContext_Type *pUpdateContext = NULL;
-
-static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( JNIEnv *pEnv, jobject object );
-static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData );
-
-class SVMainThread : public ::vos::OThread
-{
-	Application*			mpApp;
-	CFRunLoopRef			maRunLoop;
-
-public:
-							SVMainThread( Application* pApp, CFRunLoopRef aRunLoop ) : ::vos::OThread(), mpApp( pApp ), maRunLoop( aRunLoop ) {}
-
-	virtual void			run();
-};
-
 // ============================================================================
-
-static void RunAppMain( Application *pApp )
-{
-	SalData *pSalData = GetSalData();
-
-	// Cache event queue
-	pSalData->mpEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
-
-	// Cache font data
-	pSalData->maFontMapping = com_sun_star_vcl_VCLFont::getAllFonts();
-	SalGraphics aGraphics;
-	ImplDevFontList aDevFontList;
-	aGraphics.GetDevFontList( &aDevFontList );
-	for ( ImplDevFontListData *pFontData = aDevFontList.First(); pFontData; pFontData = aDevFontList.Next() )
-	{
-		void *pNativeFont = ((com_sun_star_vcl_VCLFont *)pFontData->mpFirst->mpSysData)->getNativeFont();
-		pSalData->maNativeFontMapping[ pNativeFont ] = pFontData->mpFirst;
-	}
-
-	EventHandlerUPP pEventHandlerUPP = NewEventHandlerUPP( CarbonEventHandler );
-	if ( pEventHandlerUPP )
-	{
-		// Set up native event handler
-		EventTypeSpec aTypes[2];
-		aTypes[0].eventClass = kEventClassMenu;
-		aTypes[0].eventKind = kEventMenuBeginTracking;
-		aTypes[1].eventClass = kEventClassMenu;
-		aTypes[1].eventKind = kEventMenuEndTracking;
-		InstallApplicationEventHandler( pEventHandlerUPP, 2, aTypes, NULL, NULL );
-	}
-
-	pApp->Main();
-}
-
-// ----------------------------------------------------------------------------
 
 static void ImplFontListChangedCallback( ATSFontNotificationInfoRef, void* )
 {
-	MutexGuard aGuard( aMutex );
+	Application::GetSolarMutex().acquire();
 
 	// Get the array of fonts
 	::std::list< ATSFontRef > aNewNativeFontList;
@@ -234,88 +170,8 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef, void* )
 	}
 
 	com_sun_star_vcl_VCLFont::useDefaultFont = bUseDefaultFont;
-}
 
-// ----------------------------------------------------------------------------
-
-static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( JNIEnv *pEnv, jobject object )
-{
-	jobject lockObject = Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( pEnv, object );
-	if ( lockObject )
-	{
-		jint nRet = pEnv->MonitorEnter( lockObject );
-		if ( pEnv->ExceptionOccurred() )
-			pEnv->ExceptionClear();
-		return nRet == JNI_OK ? 0 : 1;
-	}
-	else
-	{
-		return 1;
-	}
-}
-
-// ----------------------------------------------------------------------------
-
-static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( JNIEnv *pEnv, jobject object )
-{
-	if ( pCarbonLockGetInstance )
-		return pCarbonLockGetInstance( pEnv, object );
-	else
-		return NULL;
-}
-
-// ----------------------------------------------------------------------------
-
-static void JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_init( JNIEnv *pEnv, jobject object )
-{
-	if ( pCarbonLockInit )
-		pCarbonLockInit( pEnv, object );
-}
-
-// ----------------------------------------------------------------------------
-
-static jint JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_release0( JNIEnv *pEnv, jobject object )
-{
-	jobject lockObject = Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( pEnv, object );
-	if ( lockObject )
-	{
-		jint nRet = pEnv->MonitorExit( lockObject );
-		if ( pEnv->ExceptionOccurred() )
-			pEnv->ExceptionClear();
-		return nRet == JNI_OK ? 0 : 1;
-	}
-	else
-	{
-		return 1;
-	}
-}
-
-// ----------------------------------------------------------------------------
-
-static jint JNICALL Java_com_apple_mrj_internal_awt_graphics_CGJavaPixelsPen_UpdateContext( JNIEnv *pEnv, jobject object, jint pContextRef, jint nX, jint nY, jint nWidth, jint nHeight )
-{
-	jint nRet = pUpdateContext( pEnv, object, pContextRef, nX, nY, nWidth, nHeight );
-
-	CGContextRetain( (CGContextRef)nRet );
-
-	return nRet;
-}
-
-// ----------------------------------------------------------------------------
-
-static jint JNICALL Java_com_apple_mrj_internal_awt_graphics_CGSGraphics_CGContextRelease( JNIEnv *pEnv, jobject object, jint pContextRef )
-{
-	CGContextRef aContext = (CGContextRef)pContextRef;
-
-	CFIndex nCount = CFGetRetainCount( aContext );
-	jint nRet = ( nCount > 2 ? pContextRef : 0 );
-
-	if ( nCount > 2 )
-		nCount = 2;
-	while ( nCount-- );
-		CGContextRelease( aContext );
-
-	return nRet;
+	Application::GetSolarMutex().acquire();
 }
 
 // ----------------------------------------------------------------------------
@@ -361,9 +217,6 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 					
 					if ( isMenubar )
 					{
-						// Unlock the Java lock
-						ReleaseJavaLock();
-
 						// Wakeup the event queue by sending it a dummy event
 						// and wait for all pending AWT events to be dispatched
 						pSalData->mbNativeEventSucceeded = false;
@@ -384,18 +237,12 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 							// blocked
 							UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
 
-							// Relock the Java lock
-							AcquireJavaLock();
-
 							Application::GetSolarMutex().release();
 
 							return noErr;
 						}
 						else
 						{
-							// Relock the Java lock
-							AcquireJavaLock();
-
 							return userCanceledErr;
 						}
 					}
@@ -406,12 +253,6 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 	// Always execute the next registered handler
 	return CallNextEventHandler( aNextHandler, aEvent );
-}
-
-// ----------------------------------------------------------------------------
-
-static void SourceContextCallBack( void *pInfo )
-{
 }
 
 // ----------------------------------------------------------------------------
@@ -463,8 +304,6 @@ void ExecuteApplicationMain( Application *pApp )
 	BOOL bContinue = TRUE;
 	while ( bContinue )
 	{
-		MutexGuard aGuard( aMutex );
-
 		::std::list< CFStringRef > aFontNameList;
 		ATSFontIteratorCreate( kATSFontContextLocal, NULL, NULL, kATSOptionFlagsUnRestrictedScope, &aIterator );
 		for ( ; ; )
@@ -514,246 +353,36 @@ void ExecuteApplicationMain( Application *pApp )
 		aFontNameList.clear();
 	}
 
-	VCLThreadAttach t;
-	if ( t.pEnv )
+	// Now that Java is properly initialized, run the application's Main()
+	SalData *pSalData = GetSalData();
+
+	// Cache event queue
+	pSalData->mpEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
+
+	// Cache font data
+	pSalData->maFontMapping = com_sun_star_vcl_VCLFont::getAllFonts();
+	SalGraphics aGraphics;
+	ImplDevFontList aDevFontList;
+	aGraphics.GetDevFontList( &aDevFontList );
+	for ( ImplDevFontListData *pFontData = aDevFontList.First(); pFontData; pFontData = aDevFontList.Next() )
 	{
-		SalData *pSalData = GetSalData();
-
-		// Test the JVM version and if it is 1.4 or higher use Cocoa, otherwise
-		// use Carbon
-		if ( t.pEnv->GetVersion() >= JNI_VERSION_1_4 )
-		{
-			// Create the thread to run the Main() method in
-			SVMainThread aSVMainThread( pApp, CFRunLoopGetCurrent() );
-			aSVMainThread.create();
-
-			ULONG nCount = Application::ReleaseSolarMutex();
-
-			// Start the CFRunLoop
-			CFRunLoopSourceContext aSourceContext;
-			aSourceContext.version = 0;
-			aSourceContext.info = NULL;
-			aSourceContext.retain = NULL;
-			aSourceContext.release = NULL;
-			aSourceContext.copyDescription = NULL;
-			aSourceContext.equal = NULL;
-			aSourceContext.hash = NULL;
-			aSourceContext.schedule = NULL;
-			aSourceContext.cancel = NULL;
-			aSourceContext.perform = &SourceContextCallBack;
-			CFRunLoopSourceRef aSourceRef = CFRunLoopSourceCreate( NULL, 0, &aSourceContext );
-			CFRunLoopAddSource( CFRunLoopGetCurrent(), aSourceRef, kCFRunLoopCommonModes );
-			CFRunLoopRun();
-
-			aSVMainThread.join();
-
-			Application::AcquireSolarMutex( nCount );
-
-			return;
-		}
-		else
-		{
-			// Panther expects applications to run their event loop in main
-			// thread and Java 1.3.1 runs its event loop in a separate thread.
-			// So, we need to disable the lock that Java 1.3.1 uses.
-			jclass systemClass = t.pEnv->FindClass( "java/lang/System" );
-			if ( systemClass )
-			{
-				// Find libJDirect.jnilib
-				jmethodID mID = NULL;
-				OUString aJavaHomePath;
-				if ( !mID )
-				{
-					char *cSignature = "(Ljava/lang/String;)Ljava/lang/String;";
-					mID = t.pEnv->GetStaticMethodID( systemClass, "getProperty", cSignature );
-				}
-				OSL_ENSURE( mID, "Unknown method id!" );
-				if ( mID )
-				{
-					jvalue args[1];
-					args[0].l = StringToJavaString( t.pEnv, OUString::createFromAscii( "java.home" ) );
-					jstring out;
-					out = (jstring)t.pEnv->CallStaticObjectMethodA( systemClass, mID, args );
-					if ( out )
-						aJavaHomePath = JavaString2String( t.pEnv, out );
-				}
-
-				// Load libJDirect.jnilib and librealawt.jnilib and cache
-				// symbols
-				if ( aJavaHomePath.getLength() )
-				{
-					OUString aJDirectPath( aJavaHomePath );
-					aJDirectPath += OUString::createFromAscii( "/../Libraries/libJDirect.jnilib" );
-					if ( aJDirectModule.load( aJDirectPath ) )
-					{
-						pCarbonLockGetInstance = (Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance_Type *)aJDirectModule.getSymbol( OUString::createFromAscii( "Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance" ) );
-						pCarbonLockInit = (Java_com_apple_mrj_macos_carbon_CarbonLock_init_Type *)aJDirectModule.getSymbol( OUString::createFromAscii( "Java_com_apple_mrj_macos_carbon_CarbonLock_init" ) );
-					}
-
-					OUString aRealAWTPath( aJavaHomePath );
-					aRealAWTPath += OUString::createFromAscii( "/../Libraries/librealawt.jnilib" );
-					if ( aRealAWTModule.load( aRealAWTPath ) )
-						pUpdateContext = (Java_com_apple_mrj_internal_awt_graphics_CGJavaPixelsPen_UpdateContext_Type *)aRealAWTModule.getSymbol( OUString::createFromAscii( "Java_com_apple_mrj_internal_awt_graphics_CGJavaPixelsPen_UpdateContext" ) );
-				}
-
-			}
-
-			jclass carbonLockClass = t.pEnv->FindClass( "com/apple/mrj/macos/carbon/CarbonLock" );
-			jclass cgJavaPixelsPenClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/graphics/CGJavaPixelsPen" );
-			jclass cgsGraphicsClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/graphics/CGSGraphics" );
-			if ( carbonLockClass && pCarbonLockGetInstance && pCarbonLockInit && cgJavaPixelsPenClass && pUpdateContext && cgsGraphicsClass )
-			{
-				// Reregister the native methods
-				JNINativeMethod pMethods[4];
-				pMethods[0].name = "acquire0";
-				pMethods[0].signature = "()I";
-				pMethods[0].fnPtr = (void *)Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0;
-				pMethods[1].name = "getInstance";
-				pMethods[1].signature = "()Ljava/lang/Object;";
-				pMethods[1].fnPtr = (void *)Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance;
-				pMethods[2].name = "init";
-				pMethods[2].signature = "()V";
-				pMethods[2].fnPtr = (void *)Java_com_apple_mrj_macos_carbon_CarbonLock_init;
-				pMethods[3].name = "release0";
-				pMethods[3].signature = "()I";
-				pMethods[3].fnPtr = (void *)Java_com_apple_mrj_macos_carbon_CarbonLock_release0;
-				t.pEnv->RegisterNatives( carbonLockClass, pMethods, 4 );
-
-				pMethods[0].name = "UpdateContext";
-				pMethods[0].signature = "(IIIII)I";
-				pMethods[0].fnPtr = (void *)Java_com_apple_mrj_internal_awt_graphics_CGJavaPixelsPen_UpdateContext;
-				t.pEnv->RegisterNatives( cgJavaPixelsPenClass, pMethods, 1 );
-
-				pMethods[0].name = "CGContextRelease";
-				pMethods[0].signature = "(I)I";
-				pMethods[0].fnPtr = (void *)Java_com_apple_mrj_internal_awt_graphics_CGSGraphics_CGContextRelease;
-				t.pEnv->RegisterNatives( cgsGraphicsClass, pMethods, 1 );
-
-				// Peek for a Carbon event. This is enough to solve the
-				// keyboard layout switching problem on Panther.
-				ReceiveNextEvent( 0, NULL, 0, false, NULL );
-
-				// We need to be fill in the static sFonts and sNumFonts fields
-				// in the NativeFontWrapper class as the JVM's implementation
-				// will include disabled fonts will can crash the application
-				jclass nativeFontWrapperClass = t.pEnv->FindClass( "sun/awt/font/NativeFontWrapper" );
-				if ( nativeFontWrapperClass )
-				{
-					static jfieldID fIDFonts = NULL;
-					static jfieldID fIDNumFonts = NULL;
-					static jmethodID mIDPutNativeQuartzFontIntoCache = NULL;
-					if ( !fIDFonts )
-					{
-						char *cSignature = "[I";
-						fIDFonts = t.pEnv->GetStaticFieldID( nativeFontWrapperClass, "sFonts", cSignature );
-					}
-					OSL_ENSURE( fIDFonts, "Unknown field id!" );
-					if ( !fIDNumFonts )
-					{
-						char *cSignature = "I";
-						fIDNumFonts = t.pEnv->GetStaticFieldID( nativeFontWrapperClass, "sNumFonts", cSignature );
-					}
-					OSL_ENSURE( fIDNumFonts, "Unknown field id!" );
-					if ( !mIDPutNativeQuartzFontIntoCache )
-					{
-						char *cSignature = "(Ljava/lang/String;[I)V";
-						mIDPutNativeQuartzFontIntoCache = t.pEnv->GetStaticMethodID( nativeFontWrapperClass, "putNativeQuartzFontIntoCache", cSignature );
-					}
-					OSL_ENSURE( mIDPutNativeQuartzFontIntoCache, "Unknown method id!" );
-					if ( fIDFonts && fIDNumFonts && mIDPutNativeQuartzFontIntoCache )
-					{
-						ClearableMutexGuard aGuard( aMutex );
-
-						// Create the font array and add the fonts in reverse
-						// order since we originally stored them that way
-						jsize nFonts  = com_sun_star_vcl_VCLFont::validNativeFonts.size();
-						jintArray pFonts = t.pEnv->NewIntArray( nFonts );
-						jintArray pFontTypes = t.pEnv->NewIntArray( 4 );
-						jboolean bCopy( sal_False );
-						jint *pData = t.pEnv->GetIntArrayElements( pFonts, &bCopy );
-						jsize i = 0;
-						for ( ::std::list< void* >::const_iterator it = com_sun_star_vcl_VCLFont::validNativeFonts.begin(); it != com_sun_star_vcl_VCLFont::validNativeFonts.end(); ++it )
-						{
-							ATSFontRef aFontRef = (ATSFontRef)( *it );
-
-							jint nCGFont = (jint)CGFontCreateWithPlatformFont( (void *)&aFontRef );
-							pData[i++] = nCGFont;
-
-							CFStringRef aFontNameRef;
-							if ( ATSFontGetName( aFontRef, kATSOptionFlagsDefault, &aFontNameRef ) == noErr )
-							{
-								sal_Int32 nBufSize = CFStringGetLength( aFontNameRef );
-								sal_Unicode aBuf[ nBufSize ];
-								CFRange aRange;
-
-								aRange.location = 0;
-								aRange.length = nBufSize;
-								CFStringGetCharacters( aFontNameRef, aRange, aBuf );
-								CFRelease( aFontNameRef );
-
-								jstring fontName = t.pEnv->NewString( aBuf, nBufSize );
-								if ( fontName )
-								{
-									jboolean bCopy( sal_False );
-									jint *pDataTypes = t.pEnv->GetIntArrayElements( pFontTypes, &bCopy );
-									pDataTypes[ 0 ] = nCGFont;
-									pDataTypes[ 1 ] = nCGFont;
-									pDataTypes[ 2 ] = nCGFont;
-									pDataTypes[ 3 ] = nCGFont;
-									t.pEnv->ReleaseIntArrayElements( pFontTypes, pDataTypes, 0 );
-
-									jvalue args[2];
-									args[0].l = fontName;
-									args[1].l = pFontTypes;
-									t.pEnv->CallStaticVoidMethodA( nativeFontWrapperClass, mIDPutNativeQuartzFontIntoCache, args );
-								}
-							}
-						}
-						t.pEnv->ReleaseIntArrayElements( pFonts, pData, 0 );
-
-						aGuard.clear();
-
-						// Save the font data
-						t.pEnv->SetStaticObjectField( nativeFontWrapperClass, fIDFonts, pFonts );
-						t.pEnv->SetStaticIntField( nativeFontWrapperClass, fIDNumFonts, nFonts );
-					}
-				}
-			}
-		}
+		void *pNativeFont = ((com_sun_star_vcl_VCLFont *)pFontData->mpFirst->mpSysData)->getNativeFont();
+		pSalData->maNativeFontMapping[ pNativeFont ] = pFontData->mpFirst;
 	}
 
-	// Now that Java is properly initialized, run the application's Main()
-	RunAppMain( pApp );
-}
+	EventHandlerUPP pEventHandlerUPP = NewEventHandlerUPP( CarbonEventHandler );
+	if ( pEventHandlerUPP )
+	{
+		// Set up native event handler
+		EventTypeSpec aTypes[2];
+		aTypes[0].eventClass = kEventClassMenu;
+		aTypes[0].eventKind = kEventMenuBeginTracking;
+		aTypes[1].eventClass = kEventClassMenu;
+		aTypes[1].eventKind = kEventMenuEndTracking;
+		InstallApplicationEventHandler( pEventHandlerUPP, 2, aTypes, NULL, NULL );
+	}
 
-// -----------------------------------------------------------------------
-
-void AcquireJavaLock()
-{
-	// Lock the Carbon lock
-	VCLThreadAttach t;
-	if ( t.pEnv && t.pEnv->GetVersion() < JNI_VERSION_1_4 )
-		Java_com_apple_mrj_macos_carbon_CarbonLock_acquire0( t.pEnv, NULL );
-}
-
-// -----------------------------------------------------------------------
-
-void ReleaseJavaLock()
-{
-	// Unlock the Carbon lock
-	VCLThreadAttach t;
-	if ( t.pEnv && t.pEnv->GetVersion() < JNI_VERSION_1_4 )
-		Java_com_apple_mrj_macos_carbon_CarbonLock_release0( t.pEnv, NULL );
-}
-
-// ============================================================================
-
-void SVMainThread::run()
-{
-	Application::GetSolarMutex().acquire();
-	RunAppMain( mpApp );
-	CFRunLoopStop( maRunLoop );
-	Application::GetSolarMutex().release();
+	pApp->Main();
 }
 
 // =======================================================================

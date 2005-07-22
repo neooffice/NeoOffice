@@ -542,14 +542,8 @@ static void DrawEPSTimerCallback( EventLoopTimerRef aTimer, void *pData )
 {
 	EPSData *pEPSData = (EPSData *)pData;
 
-	// Unlock Java lock
-	ReleaseJavaLock();
-
 	// Block the VCL event loop
 	Application::GetSolarMutex().acquire();
-
-	// Relock Java lock
-	AcquireJavaLock();
 
 	ImplDrawEPS( pEPSData );
 

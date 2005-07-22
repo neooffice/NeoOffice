@@ -97,9 +97,6 @@ static OSStatus CarbonWindowEventHandler( EventHandlerCallRef aNextHandler, Even
 				UInt32 nKeyModifiers;
 				if ( GetEventParameter( aEvent, kEventParamKeyModifiers, typeUInt32, NULL, sizeof( UInt32 ), NULL, &nKeyModifiers ) == noErr && nKeyModifiers & ( cmdKey | controlKey ) )
 				{
-					// Unlock the Java lock
-					ReleaseJavaLock();
-
 					// Wakeup the event queue by sending it a dummy event
 					// and wait for all pending AWT events to be dispatched
 					pSalData->mbNativeEventSucceeded = false;
@@ -118,15 +115,7 @@ static OSStatus CarbonWindowEventHandler( EventHandlerCallRef aNextHandler, Even
 						// blocked
 						UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
 
-						// Relock the Java lock
-						AcquireJavaLock();
-
 						Application::GetSolarMutex().release();
-					}
-					else
-					{
-						// Relock the Java lock
-						AcquireJavaLock();
 					}
 				}
 			}
