@@ -65,6 +65,8 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.awt.font.TextHitInfo;
@@ -85,7 +87,7 @@ import java.util.Iterator;
  * @version		$Revision$ $Date$
  * @author		$Author$
  */
-public final class VCLFrame implements ComponentListener, FocusListener, KeyListener, InputMethodListener, InputMethodRequests, MouseListener, MouseMotionListener, WindowListener {
+public final class VCLFrame implements ComponentListener, FocusListener, KeyListener, InputMethodListener, InputMethodRequests, MouseListener, MouseMotionListener, MouseWheelListener, WindowListener {
 
 	/**
 	 * SAL_FRAME_STYLE_DEFAULT constant.
@@ -871,6 +873,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			panel.removeInputMethodListener(this);
 			panel.removeMouseListener(this);
 			panel.removeMouseMotionListener(this);
+			panel.removeMouseWheelListener(this);
 		}
 
 		if (queue != null)
@@ -1902,18 +1905,16 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	/**
 	 * Invoked when the mouse wheel has been moved on a component.
 	 *
-	 * @param e the <code>MouseEvent</code>
-	 * @param s the scroll amount
-	 * @param r the wheel rotation
+	 * @param e the <code>MouseWheelEvent</code>
 	 */
-    void mouseWheelMoved(MouseEvent e, int s, int r) {
+    public void mouseWheelMoved(MouseWheelEvent e) {
 
 		e.consume();
 
 		if (queue == null || window == null || !window.isShowing())
 			return;
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_WHEELMOUSE, this, s, r, false, e.getModifiers() & (InputEvent.CTRL_MASK | InputEvent.ALT_MASK | InputEvent.SHIFT_MASK | InputEvent.META_MASK)));
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_WHEELMOUSE, VCLFrame.findFrame(e.getComponent()), 0, VCLFrame.keyModifiersPressed));
 
     }
 
@@ -2282,6 +2283,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			panel.addInputMethodListener(this);
 			panel.addMouseListener(this);
 			panel.addMouseMotionListener(this);
+			panel.addMouseWheelListener(this);
 			window.addWindowListener(this);
 
 			// Show the window
@@ -2356,15 +2358,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>WindowEvent</code>
 	 */
-	public void windowDeiconified(WindowEvent e) {
-
-		if (graphics != null) {
-			synchronized (graphics) {
-				graphics.addToFlush();
-			}
-		}
-
-	}
+	public void windowDeiconified(WindowEvent e) {}
 
 
 	/**
@@ -2380,12 +2374,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		VCLFrame.keyModifiersPressed = 0;
 		VCLFrame.lastMouseDragEvent = null;
 		VCLFrame.mouseModifiersPressed = 0;
-
-		if (graphics != null) {
-			synchronized (graphics) {
-				graphics.addToFlush();
-			}
-		}
 
 	}
 

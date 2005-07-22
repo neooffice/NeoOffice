@@ -137,10 +137,6 @@ static Java_com_apple_mrj_internal_awt_graphics_CGJavaPixelsPen_UpdateContext_Ty
 
 static jobject JNICALL Java_com_apple_mrj_macos_carbon_CarbonLock_getInstance( JNIEnv *pEnv, jobject object );
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData );
-static pascal OSErr DoAEQuit( const AppleEvent *message, AppleEvent *reply, long refcon );
-static pascal OSErr DoAEOpenPrintDocuments( const AppleEvent *message, AppleEvent *reply, long refcon );
-static pascal OSErr DoAEOpen( const AppleEvent *message, AppleEvent *reply, long refcon );
-static pascal OSErr DoAEReopen( const AppleEvent *message, AppleEvent *reply, long refcon );
 
 class SVMainThread : public ::vos::OThread
 {
@@ -177,37 +173,12 @@ static void RunAppMain( Application *pApp )
 	if ( pEventHandlerUPP )
 	{
 		// Set up native event handler
-		EventTypeSpec aTypes[6];
-		aTypes[0].eventClass = kEventClassAppleEvent;
-		aTypes[0].eventKind = kEventAppleEvent;
-		aTypes[1].eventClass = kEventClassMouse;
-		aTypes[1].eventKind = kEventMouseWheelMoved;
-		aTypes[2].eventClass = kEventClassMenu;
-		aTypes[2].eventKind = kEventMenuBeginTracking;
-		aTypes[3].eventClass = kEventClassMenu;
-		aTypes[3].eventKind = kEventMenuEndTracking;
-		aTypes[4].eventClass = kEventClassApplication;
-		aTypes[4].eventKind = kEventAppShown;
-		aTypes[5].eventClass = kEventClassCommand;
-		aTypes[5].eventKind = kEventProcessCommand;
-		InstallApplicationEventHandler( pEventHandlerUPP, 6, aTypes, NULL, NULL );
-	}
-
-	// Install AppleEvent handlers for processing open and print events
-	// to fix bug 209 
-	AEInstallEventHandler( kCoreEventClass, kAEQuitApplication, NewAEEventHandlerUPP( DoAEQuit ), 0, FALSE );
-	AEInstallEventHandler( kCoreEventClass, kAEOpenDocuments, NewAEEventHandlerUPP( DoAEOpenPrintDocuments ), 0, FALSE );
-	AEInstallEventHandler( kCoreEventClass, kAEPrintDocuments, NewAEEventHandlerUPP( DoAEOpenPrintDocuments ), 0, FALSE );
-	AEInstallEventHandler( kCoreEventClass, kAEOpenApplication, NewAEEventHandlerUPP( DoAEOpen ), 0, FALSE );
-	AEInstallEventHandler( kCoreEventClass, kAEReopenApplication, NewAEEventHandlerUPP( DoAEReopen ), 0, FALSE );
-
-	// Fix bug 223 by registering a display manager notification callback
-	ProcessSerialNumber nProc;
-	if ( GetCurrentProcess( &nProc ) == noErr )
-	{
-		DMExtendedNotificationUPP pExtendedNotificationUPP = NewDMExtendedNotificationUPP( CarbonDMExtendedNotificationCallback );
-		if ( pExtendedNotificationUPP )
-			DMRegisterExtendedNotifyProc( pExtendedNotificationUPP, NULL, NULL, &nProc );
+		EventTypeSpec aTypes[2];
+		aTypes[0].eventClass = kEventClassMenu;
+		aTypes[0].eventKind = kEventMenuBeginTracking;
+		aTypes[1].eventClass = kEventClassMenu;
+		aTypes[1].eventKind = kEventMenuEndTracking;
+		InstallApplicationEventHandler( pEventHandlerUPP, 2, aTypes, NULL, NULL );
 	}
 
 	pApp->Main();
@@ -354,90 +325,13 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 	EventClass nClass = GetEventClass( aEvent );
 	EventKind nKind = GetEventKind( aEvent );
 
-	if ( nClass == kEventClassAppleEvent )
-	{
-		// Fix bug 209 by ignoring all Apple events that have not already been
-		// handled by the JVM's handler
-		OSType nType;
-		if ( nKind == kEventAppleEvent && GetEventParameter( aEvent, kEventParamAEEventID, typeType, NULL, sizeof( OSType ), NULL, &nType ) == noErr && !Application::IsShutDown() )
-		{
-			switch ( nType )
-			{
-				case kAEQuitApplication:
-				case kAEOpenDocuments:
-				case kAEPrintDocuments:
-				case kAEOpenApplication:
-				case kAEReopenApplication:
-				case kAEAbout:
-				case 'mPRF':
-					// Note that we can't actually get the Apple event from the
-					// Carbon event. We must dispatch it to registered Apple
-					// event handlers
-					EventRecord eventRec;
-					if ( ConvertEventRefToEventRecord( aEvent, &eventRec ) )
-						AEProcessAppleEvent( &eventRec );
-					break;
-			}
-		}
-
-		return noErr;
-	}
-	else if ( !Application::IsShutDown() )
+	if ( !Application::IsShutDown() )
 	{
 		SalData *pSalData = GetSalData();
 
 		if ( pSalData && pSalData->mpEventQueue )
 		{
-			if ( nClass == kEventClassMouse && nKind == kEventMouseWheelMoved )
-			{
-				EventMouseWheelAxis nAxis;
-				if ( GetEventParameter( aEvent, kEventParamMouseWheelAxis, typeMouseWheelAxis, NULL, sizeof( EventMouseWheelAxis ), NULL, &nAxis ) == noErr && nAxis == kEventMouseWheelAxisY )
-				{
-					MacOSPoint aPoint;
-					SInt32 nDelta;
-					WindowRef aWindow;
-					UInt32 nKeyModifiers;
-					if ( GetEventParameter( aEvent, kEventParamWindowMouseLocation, typeQDPoint, NULL, sizeof( MacOSPoint ), NULL, &aPoint ) == noErr && GetEventParameter( aEvent, kEventParamMouseWheelDelta, typeSInt32, NULL, sizeof( SInt32 ), NULL, &nDelta ) == noErr && GetEventParameter( aEvent, kEventParamWindowRef, typeWindowRef, NULL, sizeof( WindowRef ), NULL, &aWindow ) == noErr && GetEventParameter( aEvent, kEventParamKeyModifiers, typeUInt32, NULL, sizeof( UInt32 ), NULL, &nKeyModifiers ) == noErr )
-					{
-						// Unlock the Java lock
-						ReleaseJavaLock();
-
-						// Wakeup the event queue by sending it a dummy event
-						com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
-						pSalData->mpEventQueue->postCachedEvent( &aEvent );
-
-						// Block the VCL event loop while checking mapping
-						Application::GetSolarMutex().acquire();
-
-						// Relock the Java lock
-						AcquireJavaLock();
-
-						for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-						{
-							if ( (*it)->GetSystemData()->aWindow == (long)aWindow )
-							{
-								USHORT nModifiers = 0;
-								if ( nKeyModifiers & controlKey )
-									nModifiers |= KEY_MOD1;
-								if ( nKeyModifiers & optionKey )
-									nModifiers |= KEY_MOD2;
-								if ( nKeyModifiers & shiftKey )
-									nModifiers |= KEY_SHIFT;
-								if ( nKeyModifiers & cmdKey )
-									nModifiers |= KEY_CONTROLMOD;
-								pSalData->mpEventQueue->postMouseWheelEvent( *it, 0, aPoint.h, aPoint.v, 1, nDelta * -1, nModifiers );
-								break;
-							}
-						}
-
-						// Unblock the VCL event loop
-						Application::GetSolarMutex().release();
-					}
-				}
-
-				return noErr;
-			}
-			else if ( nClass == kEventClassMenu && ( nKind == kEventMenuBeginTracking || nKind == kEventMenuEndTracking ) )
+			if ( nClass == kEventClassMenu && ( nKind == kEventMenuBeginTracking || nKind == kEventMenuEndTracking ) )
 			{
 				MenuRef trackingRef;
 				if ( GetEventParameter( aEvent, kEventParamDirectObject, typeMenuRef, NULL, sizeof( MenuRef ), NULL, &trackingRef ) == noErr )
@@ -470,22 +364,13 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 						// Unlock the Java lock
 						ReleaseJavaLock();
 
-						// Make sure condition is not already waiting
-						if ( !pSalData->maNativeEventCondition.check() )
-						{
-							pSalData->maNativeEventCondition.wait();
-							pSalData->maNativeEventCondition.set();
-						}
-
 						// Wakeup the event queue by sending it a dummy event
-						com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
-						pSalData->mpEventQueue->postCachedEvent( &aEvent );
-
-						// Wait for all pending AWT events to be dispatched
+						// and wait for all pending AWT events to be dispatched
 						pSalData->mbNativeEventSucceeded = false;
 						pSalData->maNativeEventCondition.reset();
+						com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
+						pSalData->mpEventQueue->postCachedEvent( &aEvent );
 						pSalData->maNativeEventCondition.wait();
-						pSalData->maNativeEventCondition.set();
 
 						// Fix bug 679 by checking if the condition was
 						// released to avoid a deadlock
@@ -493,10 +378,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 						{
 							Application::GetSolarMutex().acquire();
 
-							if ( nKind == kEventMenuBeginTracking )
-								pSalData->mbInNativeMenuTracking = true;
-							else
-								pSalData->mbInNativeMenuTracking = true;
+							pSalData->mbInNativeMenuTracking = ( nKind == kEventMenuBeginTracking );
 
 							// Execute menu updates while the VCL event queue is
 							// blocked
@@ -519,200 +401,11 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 					}
 				}
 			}
-			else if ( nClass == kEventClassApplication && nKind == kEventAppShown )
-			{
-				// Unlock the Java lock
-				ReleaseJavaLock();
-
-				Application::GetSolarMutex().acquire();
-
-				for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-				{
-					SalPaintEvent *pPaintEvent = new SalPaintEvent();
-					pPaintEvent->mnBoundX = 0;
-					pPaintEvent->mnBoundY = 0;
-					pPaintEvent->mnBoundWidth = (*it)->maGeometry.nWidth;
-					pPaintEvent->mnBoundHeight = (*it)->maGeometry.nHeight;
-					com_sun_star_vcl_VCLEvent aVCLPaintEvent( SALEVENT_PAINT, *it, (void *)pPaintEvent );
-					pSalData->mpEventQueue->postCachedEvent( &aVCLPaintEvent );
-				}
-
-				// Relock the Java lock
-				AcquireJavaLock();
-
-				Application::GetSolarMutex().release();
-			}
-			else if ( nClass == kEventClassCommand && nKind == kEventProcessCommand )
-			{
-				HICommandExtended aCommand;
-				if ( GetEventParameter( aEvent, kEventParamDirectObject, typeHICommand, NULL, sizeof( HICommandExtended ), NULL, &aCommand ) == noErr )
-				{
-					USHORT nID = 0;
-					switch ( aCommand.commandID )
-					{
-						case kHICommandAbout:
-							nID = SALEVENT_ABOUT;
-							break;
-						case kHICommandPreferences:
-							nID = SALEVENT_PREFS;
-							break;
-					}
-
-					if ( nID )
-					{
-						com_sun_star_vcl_VCLEvent aEvent( nID, NULL, NULL );
-						pSalData->mpEventQueue->postCachedEvent( &aEvent );
-						return noErr;
-					}
-				}
-			}
 		}
 	}
 
 	// Always execute the next registered handler
 	return CallNextEventHandler( aNextHandler, aEvent );
-}
-
-// ----------------------------------------------------------------------------
-
-void CarbonDMExtendedNotificationCallback( void *pUserData, short nMessage, void *pNotifyData )
-{
-	if ( !Application::IsShutDown() && ( nMessage == kDMNotifyEvent || nMessage == kDMNotifyDisplayDidWake ) )
-	{
-		SalData *pSalData = GetSalData();
-		if ( pSalData && pSalData->mpEventQueue )
-		{
-			// Unlock the Java lock
-			ReleaseJavaLock();
-
-			Application::GetSolarMutex().acquire();
-
-			Rect aRect;
-			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-			{
-				WindowRef aWindow = (WindowRef)( (*it)->GetSystemData()->aWindow );
-				if ( aWindow && GetWindowBounds( aWindow, kWindowStructureRgn, &aRect ) == noErr )
-					(*it)->maFrameData.mpVCLFrame->setBounds( (long)aRect.left, (long)aRect.top, (long)( aRect.right - aRect.left + 1 ), (long)( aRect.bottom - aRect.top + 1 ) );
-			}
-
-			// Relock the Java lock
-			AcquireJavaLock();
-
-			Application::GetSolarMutex().release();
-		}
-	}
-}
-
-// ----------------------------------------------------------------------------
-
-static OSErr DoAEQuit( const AppleEvent *message, AppleEvent *reply, long refcon )
-{
-	if ( !Application::IsShutDown() )
-	{
-		SalData *pSalData = GetSalData();
-		if ( pSalData && pSalData->mpEventQueue )
-		{
-			com_sun_star_vcl_VCLEvent aEvent( SALEVENT_SHUTDOWN, NULL, NULL );
-			pSalData->mpEventQueue->postCachedEvent( &aEvent );
-		}
-	}
-
-	return noErr;
-}
-
-// ----------------------------------------------------------------------------
-
-static OSErr DoAEOpenPrintDocuments( const AppleEvent *message, AppleEvent *reply, long refcon )
-{
-	OSErr err = noErr;
-	AEDesc theDesc;
-	OSType eventID;
-	DescType ignoreType;
-	MacOSSize ignoreSize;
-
-	if ( !Application::IsShutDown() )
-	{
-		SalData *pSalData = GetSalData();
-		if ( pSalData && pSalData->mpEventQueue )
-		{
-			AEGetAttributePtr( message, keyEventIDAttr, typeType, &ignoreType, &eventID, sizeof( OSType ), &ignoreSize );
-
-			err = AEGetParamDesc( message, keyDirectObject, typeAEList, &theDesc );
-			if ( err == noErr )
-			{
-				long numFiles;
-				err = AECountItems( &theDesc, &numFiles );
-				if ( err == noErr )
-				{
-					for ( long i = 1; i <= numFiles; i++ )
-					{
-						FSSpec fileSpec;
-						AEKeyword ignoreKeyword;
-
-						err = AEGetNthPtr( &theDesc, i, typeFSS, &ignoreKeyword, &ignoreType, (void *)&fileSpec, sizeof(FSSpec), &ignoreSize );
-						if ( err == noErr )
-						{
-							// Convert to a full path for our VCL event
-							FSRef fileRef;
-							err = FSpMakeFSRef( &fileSpec, &fileRef );
-							if ( err == noErr )
-							{
-								char posixPath[PATH_MAX];
-								memset( posixPath, '\0', PATH_MAX );
-								err = FSRefMakePath( &fileRef, (UInt8 *)posixPath, sizeof(posixPath) );
-								if ( err == noErr )
-								{
-									com_sun_star_vcl_VCLEvent aEvent( ( ( eventID == kAEOpenDocuments ) ? SALEVENT_OPENDOCUMENT : SALEVENT_PRINTDOCUMENT ), NULL, NULL, posixPath );
-									pSalData->mpEventQueue->postCachedEvent( &aEvent );
-								}
-							}
-						}
-
-						// Don't continue processing if we have an error
-						if ( err != noErr )
-							break;
-					}
-				}
-
-				AEDisposeDesc( &theDesc );
-			}
-		}
-	}
-
-	// Insert a reply containing any error code
-	AEPutParamPtr( reply, 'errn', typeShortInteger, (void *)&err, sizeof(short) );
-
-	return ( err );
-}
-
-// ----------------------------------------------------------------------------
-
-static OSErr DoAEOpen( const AppleEvent *message, AppleEvent *reply, long refcon )
-{
-	// Fix bug 221 by explicitly reenabling all keyboards
-	KeyScript( smKeyEnableKybds );
-
-	return noErr;
-}
-
-// ----------------------------------------------------------------------------
-
-static OSErr DoAEReopen( const AppleEvent *message, AppleEvent *reply, long refcon )
-{
-	// Fix bug 221 by explicitly reenabling all keyboards
-	KeyScript( smKeyEnableKybds );
-
-	if ( !Application::IsShutDown() )
-	{
-		SalData *pSalData = GetSalData();
-		if ( pSalData && pSalData->mpEventQueue )
-		{
-			com_sun_star_vcl_VCLEvent aEvent( SALEVENT_ACTIVATE_APPLICATION, NULL, NULL );
-			pSalData->mpEventQueue->postCachedEvent( &aEvent );
-		}
-	}
-
-	return noErr;
 }
 
 // ----------------------------------------------------------------------------

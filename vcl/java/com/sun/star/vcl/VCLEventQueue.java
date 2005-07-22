@@ -104,39 +104,6 @@ public final class VCLEventQueue {
 	public final static long GC_INTERVAL = 5000;
 
 	/**
-	 * The mouse wheel event class.
-	 */
-	private static Class mouseWheelEventClass = null;
-
-	/**
-	 * The mouse wheel event scroll amount method.
-	 */
-	private static Method mouseWheelEventGetScrollAmountMethod = null;
-
-	/**
-	 * The mouse wheel event wheel rotation method.
-	 */
-	private static Method mouseWheelEventGetWheelRotationMethod = null;
-
-	/**
-	 * Check if the MouseWheelEvent class is available.
-	 */
-	static {
-
-		try {
-			mouseWheelEventClass = Class.forName("java.awt.event.MouseWheelEvent");
-			mouseWheelEventGetScrollAmountMethod = mouseWheelEventClass.getMethod("getScrollAmount", new Class[0]);
-			mouseWheelEventGetWheelRotationMethod = mouseWheelEventClass.getMethod("getWheelRotation", new Class[0]);
-		}
-		catch (Throwable t) {
-			mouseWheelEventClass = null;
-			mouseWheelEventGetScrollAmountMethod = null;
-			mouseWheelEventGetWheelRotationMethod = null;
-		}
-
-	}
-
-	/**
 	 * The next garbage collection.
 	*/
 	private long nextGC = 0;
@@ -392,44 +359,6 @@ public final class VCLEventQueue {
 	}
 
 	/**
-	 * Post a mouse wheel event. Note that this method will block and will
-	 * wait for the posting to be done in the Java event thread to ensure that
-	 * the mouse wheel event is posted in the proper sequence with other
-	 * Java AWT events.
-	 *
-     * @param f the <code>VCLFrame</code>
-     * @param m the time stamp of the event in milliseconds
-     * @param x the x coordinate
-     * @param y the y coordinate
-     * @param s the scroll amount
-     * @param r the wheel rotation
-     * @param k the key modifiers pressed
-	 */
-	public void postMouseWheelEvent(VCLFrame f, long m, int x, int y, int s, int r, int k) {
-
-		if (f == null)
-			return;
-
-		try {
-			int modifiers = 0;
-			if ((k & VCLEvent.KEY_MOD1) != 0)
-				modifiers |= InputEvent.CTRL_MASK;
-			if ((k & VCLEvent.KEY_MOD2) != 0)
-				modifiers |= InputEvent.ALT_MASK;
-			if ((k & VCLEvent.KEY_SHIFT) != 0)
-				modifiers |= InputEvent.SHIFT_MASK;
-			if ((k & VCLEvent.KEY_CONTROLMOD) != 0)
-				modifiers |= InputEvent.META_MASK;
-			MouseEvent e = new MouseEvent(f.getPanel(), MouseEvent.MOUSE_MOVED, m, modifiers, x, y, 0, false);
-			EventQueue.invokeLater(new VCLEventQueue.MouseWheelEventPoster(f, e, s, r));
-		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-
-	}
-
-	/**
 	 * Remove all events in the cache associated with the specified frame
 	 * pointer.
 	 *
@@ -491,18 +420,6 @@ public final class VCLEventQueue {
 		protected void dispatchEvent(AWTEvent event) {
 
 			try {
-				// In order to support JVM's before 1.4, process mouse wheel
-				// events here
-				if (VCLEventQueue.mouseWheelEventClass != null && VCLEventQueue.mouseWheelEventClass.isInstance(event)) {
-					MouseEvent e = (MouseEvent)event;
-					VCLFrame f = VCLFrame.findFrame(e.getComponent());
-					if (f != null) {
-						Integer s = (Integer)mouseWheelEventGetScrollAmountMethod.invoke(event, new Object[0]);
-						Integer r = (Integer)mouseWheelEventGetWheelRotationMethod.invoke(event, new Object[0]);
-						new VCLEventQueue.MouseWheelEventPoster(f, e, s.intValue(), r.intValue()).run();
-					}
-				}
-
 				super.dispatchEvent(event);
 			}
 			catch (Throwable t) {
@@ -550,61 +467,6 @@ public final class VCLEventQueue {
 		QueueItem(VCLEvent event) {
 
 			this.event = event;
-
-		}
-
-	}
-
-	/**
-	 * The <code>MouseWheelEventPoster</code> class allows posting of synthetic
-	 * mouse wheel events in the Java event dispatch thread for pre-1.4 JVMs.
-	 */
-	final class MouseWheelEventPoster implements Runnable {
-
-		/**
-		 * The <code>MouseEvent</code>.
-		 */
-		private MouseEvent event = null;
-
-		/**
-		 * The <code>VCLFrame</code>.
-		 */
-		private VCLFrame frame = null;
-
-		/**
-		 * The mouse wheel scroll amount.
-		 */
-		private int scrollAmount = 0;
-
-		/**
-		 * The mouse wheel rotation.
-		 */
-		private int wheelRotation = 0;
-
-		/**
-		 * Construct a <code>MouseWheelEventPoster</code> instance.
-		 *
-		 * @param f the <code>VCLFrame</code> instance
-		 * @param e the <code>MouseEvent</code>
-		 * @param s the scroll amount
-		 * @param r the wheel rotation
-		 */
-		MouseWheelEventPoster(VCLFrame f, MouseEvent e, int s, int r) {
-
-			frame = f;
-			event = e;
-			scrollAmount = s;
-			wheelRotation = r;
-
-		}
-
-		/**
-		 * This method will be invoked in the Java event dispatch thread by the
-		 * <code>EventQueue.invokeAndWait()</code> method.
-		 */
-		public void run() {
-
-			frame.mouseWheelMoved(event, scrollAmount, wheelRotation);
 
 		}
 

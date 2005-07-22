@@ -43,6 +43,7 @@ import java.awt.event.InputEvent;
 import java.awt.event.InputMethodEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
 import java.awt.event.PaintEvent;
 import java.awt.font.TextAttribute;
 import java.awt.font.TextHitInfo;
@@ -926,19 +927,9 @@ public final class VCLEvent extends AWTEvent {
 	private short repeatCount = 0;
 
 	/**
-	 * The mouse wheel scroll amount.
-	 */
-	private int scrollAmount = 0;
-
-	/**
 	 * The text.
 	 */
 	private String text = null;
-
-	/**
-	 * The mouse wheel rotation.
-	 */
-	private int wheelRotation = 0;
 
 	/**
 	 * The text attributes.
@@ -1118,29 +1109,6 @@ public final class VCLEvent extends AWTEvent {
 	}
 
 	/**
-	 * Constructs a new <code>VCLEvent</code> instance.  This constructor
-	 * should be used only for injecting SALEVENT_WHEELMOUSE events into the
-	 * queue.
-	 *
-	 * @param event the <code>AWTEvent</code> that originated the event
-	 * @param id the event type
-	 * @param f the <code>VCLFrame</code> instance
-	 * @param s the scroll amount
-	 * @param r the wheel rotation
-	 * @param h <code>true</code> if the wheel rotation is horizontal or
-	 *  <code>false</code> if it is vertical. Since Java does not yet support
-	 *  horizontal mouse wheel events, this parameter is ignored.
-	 * @param k the key modifiers pressed
-	 */
-	VCLEvent(AWTEvent event, int id, VCLFrame f, int s, int r, boolean h, int k) {
-
-		this(event, id, f, 0, k);
-		scrollAmount = s;
-		wheelRotation = r * -1;
-
-	}
-
-	/**
 	 * Adds the specified repeat count.
 	 *
 	 * @param r the repeat count to add
@@ -1158,7 +1126,10 @@ public final class VCLEvent extends AWTEvent {
 	 */
 	void addWheelRotation(int r) {
 
-		wheelRotation += r;
+		if (source instanceof MouseWheelEvent) {
+			MouseWheelEvent e = (MouseWheelEvent)source;
+			source = new MouseWheelEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers(), e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger(), e.getScrollType(), e.getScrollAmount(), e.getWheelRotation() + r);
+		}
 
 	}
 
@@ -1709,7 +1680,10 @@ public final class VCLEvent extends AWTEvent {
 	 */
 	public int getScrollAmount() {
 
-		return scrollAmount;
+		if (source instanceof MouseWheelEvent)
+			return ((MouseWheelEvent)source).getScrollAmount();
+		else
+			return 0;
 
 	}
 
@@ -1752,7 +1726,10 @@ public final class VCLEvent extends AWTEvent {
 	 */
 	public int getWheelRotation() {
 
-		return wheelRotation;
+		if (source instanceof MouseWheelEvent)
+			return ((MouseWheelEvent)source).getWheelRotation() * -1;
+		else
+			return 0;
 
 	}
 

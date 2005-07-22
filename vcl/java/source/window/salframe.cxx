@@ -100,22 +100,13 @@ static OSStatus CarbonWindowEventHandler( EventHandlerCallRef aNextHandler, Even
 					// Unlock the Java lock
 					ReleaseJavaLock();
 
-					// Make sure condition is not already waiting
-					if ( !pSalData->maNativeEventCondition.check() )
-					{
-						pSalData->maNativeEventCondition.wait();
-						pSalData->maNativeEventCondition.set();
-					}
-
 					// Wakeup the event queue by sending it a dummy event
-					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
-					pSalData->mpEventQueue->postCachedEvent( &aEvent );
-
-					// Wait for all pending AWT events to be dispatched
+					// and wait for all pending AWT events to be dispatched
 					pSalData->mbNativeEventSucceeded = false;
 					pSalData->maNativeEventCondition.reset();
+					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
+					pSalData->mpEventQueue->postCachedEvent( &aEvent );
 					pSalData->maNativeEventCondition.wait();
-					pSalData->maNativeEventCondition.set();
 
 					// Fix bug 679 by checking if the condition was
 					// released to avoid a deadlock
