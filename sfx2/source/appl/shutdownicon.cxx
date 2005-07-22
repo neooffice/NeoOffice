@@ -110,7 +110,7 @@
 #include <tools/urlobj.hxx>
 #endif
 
-#if defined USE_JAVA && defined MACOSX
+#if !defined USE_JAVA && !defined MACOSX
 
 #include <premac.h>
 #include <Carbon/Carbon.h>
@@ -149,7 +149,7 @@ using namespace ::vos;
 using namespace ::rtl;
 using namespace ::sfx2;
 
-#if defined USE_JAVA && defined MACOSX
+#if !defined USE_JAVA && !defined MACOSX
 
 class ShutdownIconEvent
 {
@@ -656,7 +656,7 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 				ShutdownIcon::pShutdownIcon = this;
 #ifdef WNT
 				initSystray();
-#elif defined USE_JAVA && defined MACOSX
+#elif !defined USE_JAVA && !defined MACOSX
 				// Disable shutdown
 				SetVeto( true );
 				addTerminateListener();

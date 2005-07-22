@@ -47,13 +47,13 @@ for i in $commands ; do
 	fi
 done
 
-# Check that the user is running Mac OS X 10.2 or higher
+# Check that the user is running Mac OS X 10.3 or higher
 if [ -x "/usr/bin/sw_vers" ] ; then
     # Return 96 + 17 if it is a bad version
     version=`/usr/bin/sw_vers | grep '^ProductVersion:' | awk '{ print $2 }'`
     case "$version" in
-        10.[01]) exit 113;;
-        10.[01].*) exit 113;;
+        10.[012]) exit 113;;
+        10.[012].*) exit 113;;
     esac
 fi
 

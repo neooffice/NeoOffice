@@ -72,7 +72,7 @@
 			<key>CFBundleTypeIconFile</key>
 			<string>sds.icns</string>
 			<key>CFBundleTypeName</key>
-			<string>NeoOffice/J Document</string>
+			<string>$(PRODUCT_NAME) Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 		</dict>

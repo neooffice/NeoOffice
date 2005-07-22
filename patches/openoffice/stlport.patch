@@ -13,7 +13,7 @@ diff -u -r1.1.6.1 STLport-4.5-macxp-panther.patch
 + # endif
 + 
 ++#if defined(__GNUC__) && defined(__APPLE__)
-++# if (BUILD_OS_MAJOR >= 10) && (BUILD_OS_MINOR >= 4)
+++# if (BUILD_OS_MAJOR >= 10) && (BUILD_OS_MINOR >= 3)
 ++#  include _STLP_NATIVE_HEADER(../stdarg.h)
 ++# endif
 ++#else

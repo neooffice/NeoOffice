@@ -57,22 +57,23 @@ OO_VERSION=1.1
 OO_PRODUCT_NAME=OpenOffice.org
 OO_PRODUCT_VERSION=1.1.4
 OO_REGISTRATION_URL=http://www.openoffice.org/welcome/registration.html
-PRODUCT_NAME=NeoOffice/J
-PRODUCT_DIR_NAME=NeoOfficeJ
+PRODUCT_NAME=NeoOffice
+PRODUCT_DIR_NAME=NeoOffice
 # Important: Note that there are escape characters in the PRODUCT_NAME for the
 # UTF-8 trademark symbol. Don't replace these with "\x##" literal strings!
-PRODUCT_TRADEMARKED_NAME=NeoOffice®/J
-PRODUCT_VERSION=1.1
-PRODUCT_DIR_VERSION=1.1
+PRODUCT_TRADEMARKED_NAME=NeoOffice®
+PRODUCT_TRADEMARKED_NAME_RTF=NeoOffice\\\'a8
+PRODUCT_VERSION=1.2 Alpha
+PRODUCT_DIR_VERSION=1.2 Alpha
 PRODUCT_LANG_PACK_VERSION=Languages
 PRODUCT_DIR_LANG_PACK_VERSION=Languages
 PRODUCT_HELP_PACK_VERSION=Help
 PRODUCT_DIR_HELP_PACK_VERSION=Help
 PRODUCT_PATCH_VERSION=Patch 0
 PRODUCT_DIR_PATCH_VERSION=Patch-0
-PRODUCT_PREVIOUS_VERSION=1.1 Release Candidate
-# Don't allow patching of pre-Release Candidate installations
-PRODUCT_PREVIOUS_PATCH_VERSION=Patch 8
+PRODUCT_PREVIOUS_VERSION=1.1
+# Don't allow patching of pre-1.1 installations
+PRODUCT_PREVIOUS_PATCH_VERSION=Patch 0
 PRODUCT_FILETYPE=NO%F
 PRODUCT_INSTALL_URL=http://www.planamesa.com/neojava/download.php\\\#install
 PRODUCT_BUILD_URL=http://www.planamesa.com/neojava/build.php
@@ -86,7 +87,7 @@ OO_PACKAGES:=OpenOffice
 OO_TAG:=OpenOffice_1_1_4
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOfficeJ
-NEO_TAG:=NeoOfficeJ-1_1
+NEO_TAG:=HEAD
 
 all: build.all
 
@@ -106,7 +107,6 @@ build.oo_checkout:
 
 build.oo_patches: build.oo_checkout \
 	build.oo_berkeleydb_patch \
-	build.oo_dlcompat_patch \
 	build.oo_external_patch \
 	build.oo_sc_patch \
 	build.oo_scp_patch \
@@ -120,14 +120,12 @@ build.oo_patches: build.oo_checkout \
 build.oo_odk_patches: build.oo_checkout
 	touch "$@"
 
-build.oo_external_patch: $(OO_PATCHES_HOME)/external.patch build.oo_checkout
+build.oo_external_patch: build.oo_checkout
 	chmod -Rf u+w "$(BUILD_HOME)/external/gpc"
 	gnutar zxf "$(OO_PATCHES_HOME)/gpc231.tar.Z" -C "$(BUILD_HOME)/external/gpc"
 	chmod -Rf u+w "$(BUILD_HOME)/external/gpc"
 	mv -f "$(BUILD_HOME)/external/gpc/gpc231"/* "$(BUILD_HOME)/external/gpc"
 	rm -Rf "$(BUILD_HOME)/external/gpc/gpc231"
-	-( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	touch "$@"
 
 build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.oo_checkout
@@ -189,7 +187,6 @@ build.neo_patches: build.oo_all \
 	build.neo_extensions_patch \
 	build.neo_forms_patch \
 	build.neo_framework_patch \
-	build.neo_readlicense_oo_patch \
 	build.neo_offmgr_patch \
 	build.neo_sal_patch \
 	build.neo_setup2_patch \
@@ -251,7 +248,6 @@ build.package: build.neo_patches build.oo_download_dics build.oo_download_help b
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/automation/unxmacxp.pro/lib/libsts$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/basic/unxmacxp.pro/lib/libsb$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/dtrans/unxmacxp.pro/lib/libdtransjava$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/extensions/unxmacxp.pro/lib/libpl$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/forms/unxmacxp.pro/lib/libfrm$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/framework/unxmacxp.pro/lib/libfwk$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/offmgr/unxmacxp.pro/lib/libofa$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/sal/unxmacxp.pro/lib/libsal.dylib.3.1.0" "$(PWD)/$(BUILD_HOME)/sal/unxmacxp.pro/lib/libsalextra_x11osx_mxp.dylib" "$(PWD)/$(BUILD_HOME)/setup2/unxmacxp.pro/lib/libset$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/sfx2/unxmacxp.pro/lib/libsfx$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/shell/unxmacxp.pro/lib/libcmdmail.dylib" "$(PWD)/$(BUILD_HOME)/sj2/unxmacxp.pro/lib/libj$${UPD}$${DLLSUFFIX}_g.dylib" "$(PWD)/$(BUILD_HOME)/sot/unxmacxp.pro/lib/libsot$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/svtools/unxmacxp.pro/lib/libsvl$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/svtools/unxmacxp.pro/lib/libsvt$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/stoc/unxmacxp.pro/lib/javavm.uno.dylib" "$(PWD)/$(BUILD_HOME)/store/unxmacxp.pro/lib/libstore.dylib.3.1.0" "$(PWD)/$(BUILD_HOME)/sw/unxmacxp.pro/lib/libsw$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/toolkit/unxmacxp.pro/lib/libtk$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/vcl/unxmacxp.pro/lib/libvcl$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/writerperfect/unxmacxp.pro/lib/libwpft$${UPD}$${DLLSUFFIX}.dylib" "program"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/desktop/unxmacxp.pro/bin/pkgchk" "program/pkgchk.bin" ; chmod a+x "program/pkgchk.bin"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/desktop/unxmacxp.pro/bin/soffice" "program/soffice.bin" ; chmod a+x "program/soffice.bin"
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/readlicense_oo/source/license/unx/LICENSE" "$(PWD)/readlicense_oo/source/readme/unxmacxp/README" "."
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/language_numbers" | sed "s#,# #g"` ; do rm -f "program/resource/iso$${UPD}$${i}.res" ; cp -f "$(PWD)/$(BUILD_HOME)/offmgr/unxmacxp.pro/bin/neojava$${UPD}$${i}.res" "program/resource/iso$${UPD}$${i}.res" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' "$(PWD)/$(BUILD_HOME)/setup2/unxmacxp.pro/misc/setup.sh" | sed 's#$$(OO_VERSION)#$(OO_VERSION)#g' | sed 's#$$(LANGUAGE_NAMES)#'"`cat "$(PWD)/$(INSTALL_HOME)/language_names"`"'#g' | sed 's#$$(PRODUCT_PATCH_DOWNLOAD_URL)#$(PRODUCT_PATCH_DOWNLOAD_URL)#g' | sed 's#$$(PRODUCT_PATCH_CHECK_URL)#$(PRODUCT_PATCH_CHECK_URL)#g' > "program/setup" ; chmod a+x "program/setup"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/desktop/unxmacxp.pro/misc/mozwrapper.sh" "program/mozwrapper" ; chmod a+x "program/mozwrapper"
@@ -272,7 +268,6 @@ build.package: build.neo_patches build.oo_download_dics build.oo_download_help b
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "LICENSE.html" "README.html" "macosx_mailer" "setup" "spadmin" "program/libdtransX11$${UPD}$${DLLSUFFIX}.dylib" "program/libpsp$${UPD}$${DLLSUFFIX}.dylib" "program/libspa$${UPD}$${DLLSUFFIX}.dylib" "program/instdb.ins" "program/jvmsetup" "program/jvmsetup.bin" "program/pluginapp.bin" "program/setup.bin" "program/setup.log" "program/setofficelang.bin" "program/soffice" "program/sopatchlevel.sh" "program/spadmin" "program/spadmin.bin" "share/kde" "share/psprint" "share/gnome" "share/config/javarc"
 	cd "$(INSTALL_HOME)/package/Contents/program" ; ln -sf "pkgchk.bin" "pkgchk"
 	cd "$(INSTALL_HOME)/package/Contents/program" ; ln -sf "soffice.bin" "soffice"
-	cd "$(INSTALL_HOME)/package/Contents/program" ; sh -e -c 'for i in "libjava_uno" "libjpipe" "libjuh" "libjuhx" ; do ln -sf "$${i}.dylib" "$${i}.jnilib" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/Library/$(PRODUCT_DIR_NAME)-$(OO_VERSION)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' > "../../out" ; mv -f "../../out" "program/bootstraprc"
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share user -type d | grep -v /CVS$$` ; do mkdir -p "$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share user ! -type d | grep -v /CVS/` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
@@ -303,7 +298,7 @@ build.package: build.neo_patches build.oo_download_dics build.oo_download_help b
 	expr `du -sk "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources" | awk '{ print $$1 }'` + 3 | xargs echo "InstalledSize " >> "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).sizes"
 	expr `du -sk "$(INSTALL_HOME)/package" | awk '{ print $$1 }'` + `ls -s "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).info" | awk '{ print $$1 }'` + `ls -s "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).bom" | awk '{ print $$1 }'` + 3 | xargs echo "CompressedSize " >> "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).sizes"
 	cp "etc/gpl.html" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/License.html"
-	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/ReadMe.rtf" | sed 's#$$(PRODUCT_TRADEMARKED_NAME)#$(PRODUCT_TRADEMARKED_NAME)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/ReadMe.rtf"
+	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/ReadMe.rtf" | sed 's#$$(PRODUCT_TRADEMARKED_NAME_RTF)#'"$(PRODUCT_TRADEMARKED_NAME_RTF)"'#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/ReadMe.rtf"
 	cp "bin/InstallationCheck" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/InstallationCheck" ; chmod a+x "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/InstallationCheck"
 	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources" ; sh -e -c 'for i in `find . -type d -name "*.lproj"` ; do cp "$(PWD)/bin/InstallationCheck.strings" "$${i}/InstallationCheck.strings" ; done'
 	cp "bin/preflight" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/preflight" ; chmod a+x "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/preflight"
@@ -328,7 +323,8 @@ build.patch_package: build.package
 	chmod -Rf u+w,a+r "$(PATCH_INSTALL_HOME)/package"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' "$(PWD)/$(INSTALL_HOME)/package/Contents/program/bootstraprc" | sed 's#ProductPatch=.*$$#ProductPatch=$(PRODUCT_PATCH_VERSION)#' > "program/bootstraprc"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/vcl/unxmacxp.pro/class/vcl.jar" "program/classes"
-	source "$(OO_ENV_JAVA)" ; cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/framework/unxmacxp.pro/lib/libfwk$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/offmgr/unxmacxp.pro/lib/libofa$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/vcl/unxmacxp.pro/lib/libvcl$${UPD}$${DLLSUFFIX}.dylib" "program"
+	source "$(OO_ENV_JAVA)" ; cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sfx2/unxmacxp.pro/lib/libsfx$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/vcl/unxmacxp.pro/lib/libvcl$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/writerperfect/unxmacxp.pro/lib/libwpft$${UPD}$${DLLSUFFIX}.dylib" "program"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' "$(PWD)/$(BUILD_HOME)/setup2/unxmacxp.pro/misc/setup.sh" | sed 's#$$(OO_VERSION)#$(OO_VERSION)#g' | sed 's#$$(LANGUAGE_NAMES)#'"`cat "$(PWD)/$(INSTALL_HOME)/language_names"`"'#g' | sed 's#$$(PRODUCT_PATCH_DOWNLOAD_URL)#$(PRODUCT_PATCH_DOWNLOAD_URL)#g' | sed 's#$$(PRODUCT_PATCH_CHECK_URL)#$(PRODUCT_PATCH_CHECK_URL)#g' > "program/setup" ; chmod a+x "program/setup"
 	rm -Rf "$(PATCH_INSTALL_HOME)/package/Contents/Resources"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Resources"
 	cc -o "$(PATCH_INSTALL_HOME)/package/Contents/Resources/reload_file" "bin/reload_file.c" ; strip -S -x "$(PATCH_INSTALL_HOME)/package/Contents/Resources/reload_file"
@@ -349,7 +345,7 @@ build.patch_package: build.package
 	expr `du -sk "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources" | awk '{ print $$1 }'` + 3 | xargs echo "InstalledSize " >> "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).sizes"
 	expr `du -sk "$(PATCH_INSTALL_HOME)/package" | awk '{ print $$1 }'` + `ls -s "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).info" | awk '{ print $$1 }'` + `ls -s "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).bom" | awk '{ print $$1 }'` + 3 | xargs echo "CompressedSize " >> "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).sizes"
 	cp "etc/gpl.html" "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/License.html"
-	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/ReadMe.rtf" | sed 's#$$(PRODUCT_TRADEMARKED_NAME)#$(PRODUCT_TRADEMARKED_NAME)#g' > "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/ReadMe.rtf"
+	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/ReadMe.rtf" | sed 's#$$(PRODUCT_TRADEMARKED_NAME_RTF)#'"$(PRODUCT_TRADEMARKED_NAME_RTF)"'#g' > "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/ReadMe.rtf"
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "bin/installutils.patch" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_PREVIOUS_VERSION)#$(PRODUCT_PREVIOUS_VERSION)#g' | sed 's#$$(PRODUCT_PREVIOUS_PATCH_VERSION)#$(PRODUCT_PREVIOUS_PATCH_VERSION)#g' > "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/installutils"
 	cp "bin/InstallationCheck" "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/InstallationCheck" ; chmod a+x "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/InstallationCheck"
 	cd "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources" ; sh -e -c 'for i in `find . -type d -name "*.lproj"` ; do cp "$(PWD)/bin/InstallationCheck.strings" "$${i}/InstallationCheck.strings" ; done'
@@ -386,7 +382,7 @@ build.package_%: $(INSTALL_HOME)/package_%
 	expr `du -sk "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources" | awk '{ print $$1 }'` + 3 | xargs echo "InstalledSize " >> "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).sizes"
 	expr `du -sk "$<" | awk '{ print $$1 }'` + `ls -s "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).info" | awk '{ print $$1 }'` + `ls -s "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).bom" | awk '{ print $$1 }'` + 3 | xargs echo "CompressedSize " >> "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).sizes"
 	cp "etc/gpl.html" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/License.html"
-	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/ReadMe.rtf" | sed 's#$$(PRODUCT_TRADEMARKED_NAME)#$(PRODUCT_TRADEMARKED_NAME)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/ReadMe.rtf"
+	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/ReadMe.rtf" | sed 's#$$(PRODUCT_TRADEMARKED_NAME_RTF)#'"$(PRODUCT_TRADEMARKED_NAME_RTF)"'#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/ReadMe.rtf"
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "bin/installutils.langpack" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_LANG_PACK_VERSION)#$(PRODUCT_LANG_PACK_VERSION)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/installutils"
 	cp "bin/InstallationCheck" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/InstallationCheck" ; chmod a+x "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/InstallationCheck"
 	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources" ; sh -e -c 'for i in `find . -type d -name "*.lproj"` ; do cp "$(PWD)/bin/InstallationCheck.strings" "$${i}/InstallationCheck.strings" ; done'
