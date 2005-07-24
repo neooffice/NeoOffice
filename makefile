@@ -110,6 +110,7 @@ build.oo_checkout:
 build.oo_patches: build.oo_checkout \
 	build.oo_berkeleydb_patch \
 	build.oo_external_patch \
+	build.oo_sal_patch \
 	build.oo_sc_patch \
 	build.oo_scp_patch \
 	build.oo_solenv_patch \
