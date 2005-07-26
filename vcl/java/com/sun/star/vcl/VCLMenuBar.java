@@ -40,7 +40,6 @@ import java.awt.MenuBar;
 import java.awt.MenuItem;
 import java.awt.Frame;
 import java.awt.Window;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 
@@ -56,11 +55,11 @@ public final class VCLMenuBar {
 	/**
 	 * Used to keep track of all active menubars.
 	 */
-	private static ArrayList activeMenubars=new ArrayList();
+	private static LinkedList activeMenubars=new LinkedList();
 
 	/**
 	 * Called when a new VCLMenuBar object is created to insert it into our
-	 * tracking ArrayList.
+	 * tracking list.
 	 */
 	private static void addNewMenuBar(VCLMenuBar o) {
 
@@ -70,7 +69,7 @@ public final class VCLMenuBar {
 
 	/**
 	 * Called when a VCLMenuBar object is destroyed to remove it from our
-	 * tracking ArrayList.
+	 * tracking list.
 	 */
 	private static void removeMenuBar(VCLMenuBar o) {
 
@@ -94,7 +93,7 @@ public final class VCLMenuBar {
 			if(vmb.getAWTMenuBar()==null)
 				continue;
 
-			// we'll locate the item by checking object references directliy.
+			// we'll locate the item by checking object references directly.
 			// We don't want equivalence in content, we want identical objects.
 
 			MenuBar mb=vmb.getAWTMenuBar();
@@ -131,22 +130,6 @@ public final class VCLMenuBar {
 		}
 
 		return(false);
-
-	}
-
-	/**
-	 * At runtime, the AWT peers implementing menus and menu items may need to
-	 * have their classes changed on the fly. When this happens, we'll destroy
-	 * and recreate all of the menubars to make sure each menu bar contains
-	 * peers of the proper classes.
-	 */
-	static void regenerateAllMenuBars() {
-
-		Iterator menuBars=activeMenubars.iterator();
-		while(menuBars.hasNext()) {
-			VCLMenuBar mb=(VCLMenuBar)menuBars.next();
-			mb.regenerateMenuBar();
-		}
 
 	}
 
@@ -191,10 +174,10 @@ public final class VCLMenuBar {
 	private VCLEventQueue queue = null;
 
 	/**
-	 * ArrayList of internal VCLMenuItemData objects. Each menu is managed by
+	 * List of internal VCLMenuItemData objects. Each menu is managed by
 	 * an individual VCLMenuItemData object.
 	 */
-	private ArrayList menus = new ArrayList();
+	private LinkedList menus = new LinkedList();
 
 	/**
 	 * Construct a new VCLMenuBar instance. Before the menubar can be displayed
@@ -403,33 +386,4 @@ public final class VCLMenuBar {
 
 	}
 	
-	/**
-	 * Regenerate all of the menubars and recreate the peers of the menus. We
-	 * may need to do this if the set of peers that's currently in the menubar
-	 * becomes invalid.
-	 */
-	void regenerateMenuBar() {
-
-		int i=0;
-		Iterator e=menus.iterator();
-		while(e.hasNext()) {
-			VCLMenuItemData m=(VCLMenuItemData)e.next();
-			m.unregisterAWTPeer(awtMenuBar.getMenu(i));
-			i++;
-		}
-
-		for(i=awtMenuBar.countMenus()-1; i>=0; i--)
-			awtMenuBar.remove(i);
-
-		e=menus.iterator();
-		while(e.hasNext()) {
-			VCLMenuItemData m=(VCLMenuItemData)e.next();
-			if(m.isMenu())
-				awtMenuBar.add((Menu)m.createAWTPeer());
-			else
-				awtMenuBar.add(new Menu(m.getTitle()));
-		}
-
-	}
-
 }

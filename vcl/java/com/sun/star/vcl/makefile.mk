@@ -62,11 +62,10 @@ JAVAFILES = \
 	VCLFrame.java \
 	VCLGraphics.java \
 	VCLImage.java \
-        VCLMenu.java \
+	VCLMenu.java \
 	VCLMenuBar.java \
-        VCLMenuItemData.java \
+	VCLMenuItemData.java \
 	VCLPageFormat.java \
-	VCLPlatform.java \
 	VCLPrintJob.java \
 	VCLScreen.java
 

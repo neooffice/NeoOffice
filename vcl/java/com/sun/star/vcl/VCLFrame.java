@@ -77,9 +77,9 @@ import java.awt.peer.ComponentPeer;
 import java.text.CharacterIterator;
 import java.text.AttributedCharacterIterator;
 import java.text.AttributedString;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 
 /**
  * The Java class that implements the SalFrame C++ class methods.
@@ -675,7 +675,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	/** 
 	 * The child frames.
 	 */
-	private ArrayList children = new ArrayList();
+	private LinkedList children = new LinkedList();
 
 	/**
 	 * The frame pointer.

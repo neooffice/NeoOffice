@@ -126,65 +126,13 @@ public final class VCLEventQueue {
 		queueList[1] = new VCLEventQueue.Queue();
 
 		// Load platform specific event handlers
-		if (VCLPlatform.getJavaVersion() < VCLPlatform.JAVA_VERSION_1_4) {
-			try {
-				Class c = Class.forName("com.sun.star.vcl.macosx.VCLOpenApplicationHandler");
-				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-				ctor.newInstance(new Object[]{ this });
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			try {
-				Class c = Class.forName("com.sun.star.vcl.macosx.VCLOpenDocumentHandler");
-				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-				ctor.newInstance(new Object[]{ this });
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			try {
-				Class c = Class.forName("com.sun.star.vcl.macosx.VCLPrintDocumentHandler");
-				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-				ctor.newInstance(new Object[]{ this });
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			try {
-				Class c = Class.forName("com.sun.star.vcl.macosx.VCLQuitHandler");
-				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-				ctor.newInstance(new Object[]{ this });
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			try {
-				Class c = Class.forName("com.sun.star.vcl.macosx.VCLAboutHandler");
-				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-				ctor.newInstance(new Object[]{ this });
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			try {
-				Class c = Class.forName("com.sun.star.vcl.macosx.VCLPrefsHandler");
-				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-				ctor.newInstance(new Object[]{ this });
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
+		try {
+			Class c = Class.forName("com.sun.star.vcl.macosx.VCLApplicationListener");
+			Constructor ctor = c.getConstructor(new Class[]{ getClass() });
+			ctor.newInstance(new Object[]{ this });
 		}
-		else {
-			try {
-				Class c = Class.forName("com.sun.star.vcl.macosx.VCLApplicationListener");
-				Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-				ctor.newInstance(new Object[]{ this });
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
+		catch (Throwable t) {
+			t.printStackTrace();
 		}
 
 	}

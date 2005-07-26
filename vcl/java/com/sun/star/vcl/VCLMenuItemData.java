@@ -45,13 +45,13 @@ import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.ItemEvent;
-import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
 
  /**
   * Instances of this class are used to hold information needed to construct a
   * menu item or menu corresponding to VCL menu items. Menus are considered to
-  * be ArrayLists of these items.
+  * be lists of these items.
   */
 public final class VCLMenuItemData {
 
@@ -101,17 +101,17 @@ public final class VCLMenuItemData {
 	private boolean isSubmenu=false;
 
 	/**
-	 * If the item is a submenu, ArrayList containing all of the menu items
+	 * If the item is a submenu, list containing all of the menu items
 	 * comprising the menu. The items are stored as VCLMenuItemData references.
 	 */
-	private java.util.ArrayList menuItems=new ArrayList();
+	private LinkedList menuItems=new LinkedList();
 
 	/**
-	 * If the item has been inserted into menus, this ArrayList holds
+	 * If the item has been inserted into menus, this list holds
 	 * backreferences to the parent menus. The backreferences are to the
 	 * VCLMenuItemData objects for the parent menus.
 	 */
-	private java.util.ArrayList parentMenus=new ArrayList();
+	private LinkedList parentMenus=new LinkedList();
 
 	/**
 	 * True if this item is enabled, false if not.
@@ -130,10 +130,10 @@ public final class VCLMenuItemData {
 	private boolean isChecked=false;
 
 	/**
-	 * ArrayList of AWT objects that have been generated for this set of menu
+	 * List of AWT objects that have been generated for this set of menu
 	 * item data and are being managed by it.
 	 */
-	private java.util.ArrayList awtPeers=new ArrayList();
+	private LinkedList awtPeers=new LinkedList();
 
 	/**
 	 * Construct and initialize a new <b>VCLMenuItemData</b> instance.
@@ -874,7 +874,7 @@ public final class VCLMenuItemData {
 				((VCLMenuItemData)e.next()).unregisterAllAWTPeers();
 		}
 
-		ArrayList savedPeers = new ArrayList(awtPeers);
+		LinkedList savedPeers = new LinkedList(awtPeers);
 		Iterator peers=awtPeers.iterator();
 		while(peers.hasNext()) {
 			MenuItem mi=(MenuItem)peers.next();

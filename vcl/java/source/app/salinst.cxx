@@ -237,6 +237,12 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 							// blocked
 							UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
 
+							// We need to let any timers run that were added
+							// by any menu changes. Otherwise, some menus will
+							// be drawn in the state the menus were in before
+							// we updated the menus.
+							ReceiveNextEvent( 0, NULL, 0, false, NULL );
+
 							Application::GetSolarMutex().release();
 
 							return noErr;

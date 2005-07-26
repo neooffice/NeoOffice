@@ -369,20 +369,7 @@ public final class VCLGraphics {
 		else
 			graphicsBounds = new Rectangle(0, 0, bounds.width, bounds.height);
 		graphics = (Graphics2D)g.create(graphicsBounds.x, graphicsBounds.y, graphicsBounds.width, graphicsBounds.height);
-		if (VCLPlatform.getJavaVersion() < VCLPlatform.JAVA_VERSION_1_4) {
-			int b = graphics.getDeviceConfiguration().getColorModel().getPixelSize();
-			if (b <= 1)
-				bitCount = 1;
-			else if (b <= 4)
-				bitCount = 4;
-			else if (b <= 8)
-				bitCount = 8;
-			else
-				bitCount = 24;
-		}
-		else {
-			bitCount = 24;
-		}
+		bitCount = 24;
 
 		resetClipRegion();
 
@@ -1646,43 +1633,15 @@ public final class VCLGraphics {
 				Rectangle destBounds = pageBounds.intersection(graphicsBounds);
 				if (destBounds.isEmpty())
 					return;
-				if (VCLPlatform.getJavaVersion() < VCLPlatform.JAVA_VERSION_1_4) {
-					Dimension maxResolution = graphics.getResolution();
-					if (pageImageScaleX > maxResolution.width)
-						pageImageScaleX = maxResolution.width;
-					if (pageImageScaleY > maxResolution.height)
-						pageImageScaleY = maxResolution.height;
-					VCLImage pageImage = new VCLImage((int)(destBounds.width * pageImageScaleX), (int)(destBounds.height * pageImageScaleY), graphics.getBitCount());
-					VCLGraphics pageGraphics = pageImage.getGraphics();
-					pageGraphics.graphics.scale(pageImageScaleX, pageImageScaleY);
-					pageGraphics.graphics.translate(destBounds.x * -1, destBounds.y * -1);
-					pageGraphics.graphicsBounds = destBounds;
-					while (imageHead != null) {
-						pageGraphics.graphics.setClip(imageHead.clip);
-						try {
-							imageHead.method.invoke(pageGraphics, imageHead.params);
-						}
-						catch (Throwable t) {
-							t.printStackTrace();
-						}
-						imageHead = imageHead.next;
+				while (imageHead != null) {
+					g.setClip(imageHead.clip);
+					try {
+						imageHead.method.invoke(graphics, imageHead.params);
 					}
-					pageGraphics.dispose();
-					g.setClip(pageImageClip);
-					g.drawImage(pageImage.getImage(), destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, 0, 0, pageImage.getWidth(), pageImage.getHeight(), null);
-					pageImage.dispose();
-				}
-				else {
-					while (imageHead != null) {
-						g.setClip(imageHead.clip);
-						try {
-							imageHead.method.invoke(graphics, imageHead.params);
-						}
-						catch (Throwable t) {
-							t.printStackTrace();
-						}
-						imageHead = imageHead.next;
+					catch (Throwable t) {
+						t.printStackTrace();
 					}
+					imageHead = imageHead.next;
 				}
 				imageTail = null;
 			}

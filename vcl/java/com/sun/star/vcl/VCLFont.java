@@ -41,7 +41,7 @@ import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.image.BufferedImage;
 import java.awt.peer.FontPeer;
-import java.util.ArrayList;
+import java.util.LinkedList;
 
 /** 
  * The Java class that implements the convenience methods for accessing Java
@@ -136,16 +136,10 @@ public final class VCLFont {
 		// Initialize the cached fonts
 		if (fonts == null) {
 			// Get all of the fonts and screen out duplicates
-			String[] fontNames;
-			if (VCLPlatform.getJavaVersion() < VCLPlatform.JAVA_VERSION_1_4) {
- 				fontNames = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
-			}
-			else {
-				Font[] fonts = GraphicsEnvironment.getLocalGraphicsEnvironment().getAllFonts();
-				fontNames = new String[fonts.length];
-				for (int i = 0; i < fonts.length; i++)
-					fontNames[i] = fonts[i].getName();
-			}
+			Font[] systemFonts = GraphicsEnvironment.getLocalGraphicsEnvironment().getAllFonts();
+			String[] fontNames = new String[systemFonts.length];
+			for (int i = 0; i < systemFonts.length; i++)
+				fontNames[i] = systemFonts[i].getName();
 
 			// Java sometimes sets Times to Times Roman
 			int timesRomanIndex = -1;
@@ -162,7 +156,7 @@ public final class VCLFont {
 			if (timesRomanIndex > 0)
 				fontNames[timesRomanIndex] = "Times";
 
-			ArrayList array = new ArrayList();
+			LinkedList link = new LinkedList();
 			for (int i = 0; i < fontNames.length; i++) {
 				// Get rid of hidden Mac OS X fonts
 				if (fontNames[i].startsWith(".") || fontNames[i].equals("LastResort"))
@@ -177,10 +171,10 @@ public final class VCLFont {
 				else
 					type = VCLFont.FAMILY_SWISS;
 
-				array.add(new VCLFont(fontNames[i], type, 1, (short)0, false, false, true, false, 1.0));
+				link.add(new VCLFont(fontNames[i], type, 1, (short)0, false, false, true, false, 1.0));
 			}
 	
-			fonts = (VCLFont[])array.toArray(new VCLFont[array.size()]);
+			fonts = (VCLFont[])link.toArray(new VCLFont[link.size()]);
 		}
 
 		return fonts;
