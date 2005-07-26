@@ -36,6 +36,12 @@
 #import <Cocoa/Cocoa.h>
 #import "shutdownicon_cocoa.h"
 
+/*
+ * Create a class that is a facade for the application delegate set by the JVM.
+ * Note that this class does not implement any of the openFiles: and
+ * printFiles: methods as the JVM is apparently does not have these by design
+ * so that the openFile: and printFile: methods are called instead.
+ */
 @interface ShutdownIconDelegate : NSObject
 {
 	NSMenu*				mpDockMenu;
@@ -43,14 +49,9 @@
 }
 - (BOOL)application:(NSApplication *)pApplication delegateHandlesKey:(NSString *)pKey;
 - (BOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename;
-- (void)application:(NSApplication *)pApplication openFiles:(NSArray *)pFilenames;
 - (BOOL)application:(NSApplication *)pApplication openFileWithoutUI:(NSString *)pFilename;
 - (BOOL)application:(NSApplication *)pApplication openTempFile:(NSString *)pFilename;
 - (BOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename;
-- (void)application:(NSApplication *)pApplication printFiles:(NSArray *)pFilenames;
-#if (BUILD_OS_MAJOR >= 10) && (BUILD_OS_MINOR >= 4)
-- (NSApplicationPrintReply)application:(NSApplication *)pApplication printFiles:(NSArray *)pFilenames withSettings:(NSDictionary *)pPrintSettings showPrintPanels:(BOOL)bShowPrintPanels;
-#endif
 - (void)applicationDidBecomeActive:(NSNotification *)pNotification;
 - (void)applicationDidChangeScreenParameters:(NSNotification *)pNotification;
 - (void)applicationDidFinishLaunching:(NSNotification *)pNotification;
@@ -101,12 +102,6 @@
 		return NO;
 }
 
-- (void)application:(NSApplication *)pApplication openFiles:(NSArray *)pFilenames
-{
-	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(application:openFile:)] )
-		[mpDelegate application:pApplication openFiles:pFilenames];
-}
-
 - (BOOL)application:(NSApplication *)pApplication openFileWithoutUI:(NSString *)pFilename
 {
 	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(application:openFileWithoutUI:)] )
@@ -130,22 +125,6 @@
 	else
 		return NO;
 }
-
-- (void)application:(NSApplication *)pApplication printFiles:(NSArray *)pFilenames
-{
-	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(application:printFile:)] )
-		[mpDelegate application:pApplication printFiles:pFilenames];
-}
-
-#if (BUILD_OS_MAJOR >= 10) && (BUILD_OS_MINOR >= 4)
-- (NSApplicationPrintReply)application:(NSApplication *)pApplication printFiles:(NSArray *)pFilenames withSettings:(NSDictionary *)pPrintSettings showPrintPanels:(BOOL)bShowPrintPanels
-{
-	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(application:printFiles:withSettings:showPrintPanels:)] )
-		return [mpDelegate application:pApplication printFiles:pFilenames withSettings:pPrintSettings showPrintPanels:bShowPrintPanels];
-	else
-		return NSPrintingFailure;
-}
-#endif
 
 - (void)applicationDidBecomeActive:(NSNotification *)pNotification
 {
