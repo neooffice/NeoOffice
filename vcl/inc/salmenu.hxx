@@ -112,11 +112,6 @@ public:
     void SetItemImage( unsigned nPos, SalMenuItem* pSalMenuItem, const Image& rImage );
     void SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, const KeyCode& rKeyCode, const XubString& rKeyName );
     void GetSystemMenuData( SystemMenuData* pData );
-    
-    // called for menu bar associated items only.  called when the menubar
-    // hide state of the associated frame is changed.  native menubar should
-    // deactivate accordingly.
-    void SetDisplayed( BOOL bDisplay );
 };
 
 

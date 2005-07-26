@@ -186,11 +186,6 @@ public final class VCLMenuBar {
 	private VCLFrame frame = null;
 
 	/**
-	 * AWT MenuBar object which we will swap in when we hide the real menubar.
-	 */
-	private MenuBar hiddenMenuBar = null;
-
-	/**
 	 * Queue to which all menu events for this menubar should be posted.
 	 */
 	private VCLEventQueue queue = null;
@@ -228,7 +223,7 @@ public final class VCLMenuBar {
 
 		if(frame!=null) {
 			MenuBar mb = frame.getMenuBar();
-			if (mb != null && (mb == awtMenuBar || mb == hiddenMenuBar))
+			if (mb != null && mb == awtMenuBar)
 				frame.setMenuBar(null);
 		}
 
@@ -251,11 +246,6 @@ public final class VCLMenuBar {
 		menus=null;
 		queue=null;
 		frame=null;
-
-		if (hiddenMenuBar != null) {
-			hiddenMenuBar.removeNotify();
-		 	hiddenMenuBar=null;
-		}
 
 	}
 	
@@ -325,7 +315,7 @@ public final class VCLMenuBar {
 		if(nPos < 0)
 			nPos=(short)menus.size();
 
-		if(!menus.isEmpty() && nPos < menus.size()) {
+		if(nPos < menus.size()) {
 			// we can't insert menus in the middle of a menubar, so we have
 			// to remove the tail ones first and then reinsert them after
 			// we add the new Menu
@@ -414,28 +404,6 @@ public final class VCLMenuBar {
 	}
 	
 	/**
-	 * Hide the menubar associated with a frame.  This is accomplished
-	 * by creating a new empty menubar and attaching it to the frame.
-	 */
-	public void hide() {
-
-	  	if(frame!=null)
-			frame.setMenuBar(hiddenMenuBar);
-
-	}
-	
-	/**
-	 * Re-associate the underlying menubar, if created, with the frame to
-	 * redisplay the native menus.
-	 */
-	public void show() {
-
-	  	if(frame!=null)
-			frame.setMenuBar(getAWTMenuBar());
-
-	}
-
-	/**
 	 * Regenerate all of the menubars and recreate the peers of the menus. We
 	 * may need to do this if the set of peers that's currently in the menubar
 	 * becomes invalid.
@@ -461,21 +429,6 @@ public final class VCLMenuBar {
 			else
 				awtMenuBar.add(new Menu(m.getTitle()));
 		}
-
-	}
-
-	/**
-	 * Bugs in the 1.3.1 VM on Mac OS X prevent the state of a checkbox menu
-	 * item from being set properly unless its peer is already instantiated.
-	 * We need to periodically run through all of the checkbox menu items in
-	 * the menubar and perform the initial set of the checkbox menu item
-	 * states after their peers are created. (Bug 182).
-	 */
-	public void syncCheckboxMenuItemState() {
-
-		Iterator menuIter=menus.iterator();
-		while(menuIter.hasNext())
-			((VCLMenuItemData)menuIter.next()).fixCheckboxMenuItemState();
 
 	}
 

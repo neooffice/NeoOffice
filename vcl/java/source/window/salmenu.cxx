@@ -242,19 +242,6 @@ void SalMenu::GetSystemMenuData( SystemMenuData* pData )
 {
 }
 
-//-----------------------------------------------------------------------------
-
-void SalMenu::SetDisplayed( BOOL bDisplay )
-{
-	if( maData.mbIsMenuBarMenu && maData.mpVCLMenuBar )
-	{
-		if( bDisplay )
-			maData.mpVCLMenuBar->show();
-		else
-			maData.mpVCLMenuBar->hide();
-	}
-}
-
 // =======================================================================
 
 SalMenuItem::SalMenuItem()
@@ -413,18 +400,5 @@ void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu )
 	pDeactivateEvent->mpMenu = pVCLMenu;
 	com_sun_star_vcl_VCLEvent aDeactivateEvent( SALEVENT_MENUDEACTIVATE, pFrame, pDeactivateEvent );
 	aDeactivateEvent.dispatch();
-	
-	// For our menubars, following insertion of all of the items dispatch
-	// a refresh for all of the checkbox menu items.  We need to refresh
-	// their state before the menus are displayed in order to work around
-	// bugs in the Apple 1.3.1 VM that prevent the state from being
-	// set properly if the setState() call is issued prior to the
-	// checkbox menu item having a peer.  Bug 182.
-	
-	if( bWasMenuBarInvocation )
-	{
-		if( pFrame->maFrameData.mpMenuBar->maData.mpVCLMenuBar )
-			pFrame->maFrameData.mpMenuBar->maData.mpVCLMenuBar->syncCheckboxMenuItemState();
-	}
 #endif	// !NO_NATIVE_MENUS
 }
