@@ -110,11 +110,9 @@
 #include <tools/urlobj.hxx>
 #endif
 
-#if !defined USE_JAVA && !defined MACOSX
+#if defined USE_JAVA && defined MACOSX
 
-#include <premac.h>
-#include <Carbon/Carbon.h>
-#include <postmac.h>
+#include "shutdownicon_cocoa.h"
 
 #ifndef INCLUDED_SVTOOLS_MODULEOPTIONS_HXX
 #include <svtools/moduleoptions.hxx>
@@ -126,14 +124,6 @@
 #define IMPRESS_WIZARD_URL	"private:factory/simpress?slot=10425"
 #define DRAW_URL			"private:factory/sdraw"
 #define MATH_URL			"private:factory/smath"
-
-#define WRITER_COMMAND_ID			'SDI1'
-#define CALC_COMMAND_ID				'SDI2'
-#define IMPRESS_COMMAND_ID			'SDI3'
-#define DRAW_COMMAND_ID				'SDI4'
-#define MATH_COMMAND_ID				'SDI5'
-#define FROMTEMPLATE_COMMAND_ID		'SDI6'
-#define FILEOPEN_COMMAND_ID			'SDI7'
 
 #endif	// USE_JAVA && MACOSX
 
@@ -149,7 +139,7 @@ using namespace ::vos;
 using namespace ::rtl;
 using namespace ::sfx2;
 
-#if !defined USE_JAVA && !defined MACOSX
+#if defined USE_JAVA && defined MACOSX
 
 class ShutdownIconEvent
 {
@@ -195,40 +185,30 @@ IMPL_LINK( ShutdownIconEvent, DispatchEvent, void*, pData )
 	return 0;
 }
 
-static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData )
+void ProcessShutdownIconCommand( MenuCommand nCommand )
 {
 	if ( !Application::IsShutDown() )
 	{
-		if ( GetEventClass( aEvent ) == kEventClassCommand && GetEventKind( aEvent ) == kEventCommandProcess )
+		switch ( nCommand )
 		{
-			HICommand aCommand;
-			if ( GetEventParameter( aEvent, kEventParamDirectObject, typeHICommand, NULL, sizeof( HICommand ), NULL, &aCommand ) == noErr )
+			case WRITER_COMMAND_ID:
+			case CALC_COMMAND_ID:
+			case IMPRESS_COMMAND_ID:
+			case DRAW_COMMAND_ID:
+			case MATH_COMMAND_ID:
+			case FROMTEMPLATE_COMMAND_ID:
+			case FILEOPEN_COMMAND_ID:
 			{
-				MenuCommand nCommand = aCommand.commandID;
-				switch ( nCommand )
-				{
-					case WRITER_COMMAND_ID:
-					case CALC_COMMAND_ID:
-					case IMPRESS_COMMAND_ID:
-					case DRAW_COMMAND_ID:
-					case MATH_COMMAND_ID:
-					case FROMTEMPLATE_COMMAND_ID:
-					case FILEOPEN_COMMAND_ID:
-					{
-						ShutdownIconEvent *pEvent = new ShutdownIconEvent( nCommand );
-						Application::PostUserEvent( LINK( pEvent, ShutdownIconEvent, DispatchEvent ) );
-						return noErr;
-					}
-					default:
-					{
-						break;
-					}
-				}
+				ShutdownIconEvent *pEvent = new ShutdownIconEvent( nCommand );
+				Application::PostUserEvent( LINK( pEvent, ShutdownIconEvent, DispatchEvent ) );
+				break;
+			}
+			default:
+			{
+				break;
 			}
 		}
 	}
-
-	return CallNextEventHandler( aNextHandler, aEvent );
 }
 
 #endif	// USE_JAVA && MACOSX
@@ -656,144 +636,58 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 				ShutdownIcon::pShutdownIcon = this;
 #ifdef WNT
 				initSystray();
-#elif !defined USE_JAVA && !defined MACOSX
+#elif defined USE_JAVA && defined MACOSX
 				// Disable shutdown
 				SetVeto( true );
 				addTerminateListener();
 
-				// Add Quickstart menu items
 				SvtModuleOptions aModuleOptions;
-				MenuRef aAppMenu;
-				MenuRef aDockMenu;
+				MenuCommand aIDs[ 7 ];
+				CFStringRef aStrings[ 7 ];
 
-				MenuRef aRootMenu = AcquireRootMenu();
-                if ( CreateNewMenu( 0, 0, &aDockMenu ) != noErr )
-					aDockMenu = NULL;
-				if ( aRootMenu && aDockMenu && GetMenuItemHierarchicalMenu( aRootMenu, 1, &aAppMenu ) == noErr )
+				OUString aDesc;
+				int nCount = 0;
+				if ( aModuleOptions.IsWriter() )
 				{
-					// Insert a spacing menu item (only in the application menu)
-					OUString aDesc;
-					CFStringRef aString = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
-					if ( aString )
-					{
-						InsertMenuItemTextWithCFString( aAppMenu, aString, 2, kMenuItemAttrSeparator, 0 );
-						CFRelease( aString );
-					}
-
-					aDesc = GetResString( STR_QUICKSTART_FILEOPEN );
-					aString = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
-					if ( aString )
-					{
-						if ( CFStringGetLength( aString ) )
-						{
-							InsertMenuItemTextWithCFString( aAppMenu, aString, 2, 0, FILEOPEN_COMMAND_ID );
-							InsertMenuItemTextWithCFString( aDockMenu, aString, 0, 0, FILEOPEN_COMMAND_ID );
-						}
-						CFRelease( aString );
-					}
-
-					aDesc = GetResString( STR_QUICKSTART_FROMTEMPLATE );
-					aString = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
-					if ( aString )
-					{
-						if ( CFStringGetLength( aString ) )
-						{
-							InsertMenuItemTextWithCFString( aAppMenu, aString, 2, 0, FROMTEMPLATE_COMMAND_ID );
-							InsertMenuItemTextWithCFString( aDockMenu, aString, 0, 0, FROMTEMPLATE_COMMAND_ID );
-						}
-						CFRelease( aString );
-					}
-
-					if ( aModuleOptions.IsMath() )
-					{
-						aDesc = GetUrlDescription( OUString::createFromAscii( MATH_URL ) );
-						aString = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
-						if ( aString )
-						{
-							if ( CFStringGetLength( aString ) )
-							{
-								InsertMenuItemTextWithCFString( aAppMenu, aString, 2, 0, MATH_COMMAND_ID );
-								InsertMenuItemTextWithCFString( aDockMenu, aString, 0, 0, MATH_COMMAND_ID );
-							}
-							CFRelease( aString );
-						}
-					}
-
-					if ( aModuleOptions.IsDraw() )
-					{
-						aDesc = GetUrlDescription( OUString::createFromAscii( DRAW_URL ) );
-						aString = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
-						if ( aString )
-						{
-							if ( CFStringGetLength( aString ) )
-							{
-								InsertMenuItemTextWithCFString( aAppMenu, aString, 2, 0, DRAW_COMMAND_ID );
-								InsertMenuItemTextWithCFString( aDockMenu, aString, 0, 0, DRAW_COMMAND_ID );
-							}
-							CFRelease( aString );
-						}
-					}
-
-					if ( aModuleOptions.IsImpress() )
-					{
-						aDesc = GetUrlDescription( OUString::createFromAscii( IMPRESS_URL ) );
-						aString = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
-						if ( aString )
-						{
-							if ( CFStringGetLength( aString ) )
-							{
-								InsertMenuItemTextWithCFString( aAppMenu, aString, 2, 0, IMPRESS_COMMAND_ID );
-								InsertMenuItemTextWithCFString( aDockMenu, aString, 0, 0, IMPRESS_COMMAND_ID );
-							}
-							CFRelease( aString );
-						}
-					}
-
-					if ( aModuleOptions.IsCalc() )
-					{
-						aDesc = GetUrlDescription( OUString::createFromAscii( CALC_URL ) );
-						aString = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
-						if ( aString )
-						{
-							if ( CFStringGetLength( aString ) )
-							{
-								InsertMenuItemTextWithCFString( aAppMenu, aString, 2, 0, CALC_COMMAND_ID );
-								InsertMenuItemTextWithCFString( aDockMenu, aString, 0, 0, CALC_COMMAND_ID );
-							}
-							CFRelease( aString );
-						}
-					}
-
-					if ( aModuleOptions.IsWriter() )
-					{
-						aDesc = GetUrlDescription( OUString::createFromAscii( WRITER_URL ) );
-						aString = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
-						if ( aString )
-						{
-							if ( CFStringGetLength( aString ) )
-							{
-								InsertMenuItemTextWithCFString( aAppMenu, aString, 2, 0, WRITER_COMMAND_ID );
-								InsertMenuItemTextWithCFString( aDockMenu, aString, 0, 0, WRITER_COMMAND_ID );
-							}
-							CFRelease( aString );
-						}
-					}
-
-					SetApplicationDockTileMenu( aDockMenu );
-
-					EventHandlerUPP pEventHandlerUPP = NewEventHandlerUPP( CarbonEventHandler );
-					if ( pEventHandlerUPP )
-					{
-						EventTypeSpec aType;
-						aType.eventClass = kEventClassCommand;
-						aType.eventKind = kEventCommandProcess;
-						InstallApplicationEventHandler( pEventHandlerUPP, 1, &aType, NULL, NULL );
-					}
+					aIDs[ nCount ] = WRITER_COMMAND_ID;
+					aDesc = GetUrlDescription( OUString::createFromAscii( WRITER_URL ) );
+					aStrings[ nCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
 				}
+				if ( aModuleOptions.IsCalc() )
+				{
+					aIDs[ nCount ] = CALC_COMMAND_ID;
+					aDesc = GetUrlDescription( OUString::createFromAscii( CALC_URL ) );
+					aStrings[ nCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+				}
+				if ( aModuleOptions.IsImpress() )
+				{
+					aIDs[ nCount ] = IMPRESS_COMMAND_ID;
+					aDesc = GetUrlDescription( OUString::createFromAscii( IMPRESS_URL ) );
+					aStrings[ nCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+				}
+				if ( aModuleOptions.IsDraw() )
+				{
+					aIDs[ nCount ] = DRAW_COMMAND_ID;
+					aDesc = GetUrlDescription( OUString::createFromAscii( DRAW_URL ) );
+					aStrings[ nCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+				}
+				if ( aModuleOptions.IsMath() )
+				{
+					aIDs[ nCount ] = MATH_COMMAND_ID;
+					aDesc = GetUrlDescription( OUString::createFromAscii( MATH_URL ) );
+					aStrings[ nCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+				}
+				aIDs[ nCount ] = FROMTEMPLATE_COMMAND_ID;
+				aDesc = GetResString( STR_QUICKSTART_FROMTEMPLATE );
+				aStrings[ nCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+				aIDs[ nCount ] = FILEOPEN_COMMAND_ID;
+				aDesc = GetResString( STR_QUICKSTART_FILEOPEN );
+				aStrings[ nCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
 
-                if ( aDockMenu )
-					ReleaseMenu( aDockMenu );
-				ReleaseMenu( aRootMenu );
+				AddQuickstartMenuItems( nCount, aIDs, aStrings );
+
+				for ( int i = 0; i < nCount; i++ )
+					CFRelease( aStrings[ i ] );
 #endif
 			}
 			catch(const ::com::sun::star::lang::IllegalArgumentException&)
