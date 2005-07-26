@@ -51,10 +51,6 @@
 #include <com/sun/star/vcl/VCLImage.hxx>
 #endif
 
-#include <premac.h>
-#include <QuickTime/QuickTime.h>
-#include <postmac.h>
-
 using namespace rtl;
 using namespace vcl;
 
@@ -85,14 +81,6 @@ void com_sun_star_vcl_VCLGraphics::beep()
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
-		// Test the JVM version and if it is below 1.4, use Carbon APIs
-		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
-		{
-			// Toolkit.beep() doesn't work so call it natively
-			SysBeep( 30 );
-			return;
-		}
-
 		if ( !mID )
 		{
 			char *cSignature = "()V";
