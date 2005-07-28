@@ -33,39 +33,33 @@
  *
  ************************************************************************/
 
-#define _JAVA_DTRANS_COM_SUN_STAR_DTRANS_DTRANSCLIPBOARD_CXX
+#define _DTRANSCLIPBOARD_CXX
 
 #include <list>
 
-#ifndef _JAVA_DTRANS_COM_SUN_STAR_DTRANS_DTRANSCLIPBOARD_HXX
-#include <com/sun/star/dtrans/DTransClipboard.hxx>
+#ifndef _DTRANSCLIPBOARD_HXX
+#include "DTransClipboard.hxx"
 #endif
-#ifndef _JAVA_DTRANS_COM_SUN_STAR_DTRANS_DTRANSTRANSFERABLE_HXX
-#include <com/sun/star/dtrans/DTransTransferable.hxx>
-#endif
-#ifndef _STRING_HXX
-#include <tools/string.hxx>
-#endif
-
-#ifdef MACOSX
-
-#ifndef _JAVA_DTRANS_JAVA_LANG_CLASS_HXX
-#include <java/lang/Class.hxx>
+#ifndef _DTRANSTRANSFERABLE_HXX
+#include "DTransTransferable.hxx"
 #endif
 #ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
 #endif
-#ifndef _VOS_MODULE_HXX_
-#include <vos/module.hxx>
-#endif
 #ifndef _VOS_MUTEX_HXX_
 #include <vos/mutex.hxx>
 #endif
+
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <QuickTime/QuickTime.h>
 #include <postmac.h>
 
+using namespace com::sun::star::datatransfer;
+using namespace com::sun::star::io;
+using namespace com::sun::star::uno;
+using namespace java;
+using namespace osl;
 using namespace rtl;
 using namespace vcl;
 using namespace vos;
@@ -82,12 +76,12 @@ static FourCharCode aSupportedNativeTypes[] = {
 };
 
 // List of supported types that are text
-static BOOL aSupportedTextTypes[] = {
-	TRUE,
-	TRUE,
-	TRUE,
-	FALSE,
-	FALSE
+static bool aSupportedTextTypes[] = {
+	true,
+	true,
+	true,
+	false,
+	false
 };
 
 // List of supported mime types in priority order
@@ -108,50 +102,37 @@ static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 )
 };
 
+static Mutex aMutex;
+static ::std::list< DTransTransferable* > aTransferableList;
 static DragSendDataUPP pDragSendDataUPP = NULL;
 static ScrapPromiseKeeperUPP pScrapPromiseKeeperUPP = NULL;
 
-#endif	// MACOSX
-
-using namespace com::sun::star::datatransfer;
-using namespace com::sun::star::io;
-using namespace com::sun::star::uno;
-using namespace java::dtrans;
-using namespace osl;
-
-static Mutex aMutex;
-static ::std::list< com_sun_star_dtrans_DTransTransferable* > aTransferableList;
-
 // ============================================================================
 
-#ifdef MACOSX
 static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransferableType, FlavorType nType, void *pData )
 {
 	OSStatus nErr;
-	if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+	if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 		nErr = noTypeErr;
-	else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+	else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
 		nErr = cantGetFlavorErr;
 	else
 		nErr = noTypeErr;
 
 	MutexGuard aGuard( aMutex );
 
-	com_sun_star_dtrans_DTransTransferable *pTransferable = (com_sun_star_dtrans_DTransTransferable *)pData;
-
-	// Unlock Java lock
-	jboolean nReleased = ReleaseJavaLock();
+	DTransTransferable *pTransferable = (DTransTransferable *)pData;
 
 	OGuard aSolarGuard( Application::GetSolarMutex() );
 
-	BOOL bTransferableFound = FALSE;
+	bool bTransferableFound = false;
 	if ( pTransferable )
 	{
-		for ( ::std::list< com_sun_star_dtrans_DTransTransferable* >::const_iterator it = aTransferableList.begin(); it != aTransferableList.end(); ++it )
+		for ( ::std::list< DTransTransferable* >::const_iterator it = aTransferableList.begin(); it != aTransferableList.end(); ++it )
 		{
 			if ( pTransferable == *it )
 			{
-				bTransferableFound = TRUE;
+				bTransferableFound = true;
 				break;
 			}
 		}
@@ -159,7 +140,7 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 
 	if ( bTransferableFound )
 	{
-		BOOL bFlavorFound = FALSE;
+		bool bFlavorFound = false;
 		DataFlavor aFlavor;
 		for ( USHORT i = 0; i < nSupportedTypes; i++ ) {
 			if ( nType == aSupportedNativeTypes[ i ] )
@@ -168,7 +149,7 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 				aFlavor.DataType = aSupportedDataTypes[ i ];
 				if ( pTransferable->isDataFlavorSupported( aFlavor ) )
 				{
-					bFlavorFound = TRUE;
+					bFlavorFound = true;
 					break;
 				}
 			}
@@ -176,11 +157,11 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 
 		if ( bFlavorFound )
 		{
-			BOOL bDataFound = FALSE;
+			bool bDataFound = false;
 			Any aValue;
 			try {
 				aValue = pTransferable->getTransferData( aFlavor );
-				bDataFound = TRUE;
+				bDataFound = true;
 			}
 			catch ( ... )
 			{
@@ -208,9 +189,9 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 						{
 							OString aEncodedString = OUStringToOString( aString, RTL_TEXTENCODING_ASCII_US );
 
-							if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+							if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 								nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, aEncodedString.getLength(), (const void *)aEncodedString.getStr() );
-							else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+							else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
 								nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aEncodedString.getStr(), aEncodedString.getLength(), 0 );
 						}
 						else if ( nType == 'TEXT' )
@@ -229,9 +210,9 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 									if ( CFStringGetBytes( aCFString, aRange, CFStringGetSystemEncoding(), '?', false, aBuf, nBufLen, &nRealLen ) && nRealLen == nBufLen )
 									{
 										aBuf[ nBufLen ] = '\0';
-										if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+										if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 											nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nBufLen, (const void *)aBuf );
-										else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+										else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
 											nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aBuf, nBufLen, 0 );
 									}
 								}
@@ -242,9 +223,9 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 						else
 						{
  							nLen *= sizeof( sal_Unicode );
-							if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+							if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 								nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nLen, (const void *)aString.getStr() );
-							else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+							else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
 								nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aString.getStr(), nLen, 0 );
 						}
 					}
@@ -275,9 +256,9 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 										if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
 										{
 											HLock( (Handle)hPict );
-											if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+											if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 												nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, GetHandleSize( (Handle)hPict ), (const void *)*hPict );
-											else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+											else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
 												nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)*hPict, GetHandleSize( (Handle)hPict ), 0 );
 											HUnlock( (Handle)hPict );
 											KillPicture( hPict );
@@ -318,9 +299,9 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 														if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
 														{
 															HLock( hExportData );
-															if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+															if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 																nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nDataLen, (const void *)*hExportData );
-															else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+															else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
 																nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)*hExportData, nDataLen, 0 );
 															HUnlock( hExportData );
 														}
@@ -341,9 +322,9 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 						{
 							if ( pArray && nLen )
 							{
-								if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+								if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 									nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nLen, (const void *)pArray );
-								else if ( nTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+								else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
 									nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)pArray, nLen, 0 );
 							}
 						}
@@ -353,63 +334,32 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 		}
 	}
 
-	// Relock Java lock
-	if ( nReleased )
-		AcquireJavaLock();
-
 	return nErr;
 }
-#endif	// MACOSX
 
 // ----------------------------------------------------------------------------
 
-#ifdef MACOSX
 static OSErr ImplDragSendDataCallback( FlavorType nType, void *pData, DragItemRef aItem, DragRef aDrag )
 {
-	return ImplSetTransferableData( (void *)aDrag, JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG, nType, pData );
+	return ImplSetTransferableData( (void *)aDrag, TRANSFERABLE_TYPE_DRAG, nType, pData );
 }
-#endif	// MACOSX
 
 // ----------------------------------------------------------------------------
 
-#ifdef MACOSX
 static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType nType, void *pData )
 {
-	return ImplSetTransferableData( (void *)aScrap, JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD, nType, pData );
+	return ImplSetTransferableData( (void *)aScrap, TRANSFERABLE_TYPE_CLIPBOARD, nType, pData );
 }
-#endif	// MACOSX
 
 // ============================================================================
 
-jclass com_sun_star_dtrans_DTransTransferable::theClass = NULL;
-
-// ----------------------------------------------------------------------------
-
-jclass com_sun_star_dtrans_DTransTransferable::getMyClass()
-{
-#ifndef MACOSX
-	if ( !theClass )
-	{
-		DTransThreadAttach t;
-		if ( !t.pEnv ) return (jclass)NULL;
-		jclass tempClass = t.pEnv->FindClass( "com/sun/star/dtrans/DTransTransferable" );
-		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
-		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
-	}
-#endif	// !MACOSX
-	return theClass;
-}
-
-// ----------------------------------------------------------------------------
-
-Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( UnsupportedFlavorException, IOException, RuntimeException )
+Any SAL_CALL DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( UnsupportedFlavorException, IOException, RuntimeException )
 {
 	if ( mxTransferable.is() )
 		return mxTransferable->getTransferData( aFlavor );
 
 	Any out;
 
-#ifdef MACOSX
 	FourCharCode nRequestedType = NULL;
 	OSStatus nErr = noErr;
 
@@ -422,11 +372,11 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 			continue;
 
 		MacOSSize nSize;
-		if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+		if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 		{
 			nErr = GetScrapFlavorSize( (ScrapRef)mpNativeTransferable, nRequestedType, &nSize );
 		}
-		else if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+		else if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG )
 		{
 			DragItemRef aItem;
 			if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, 1, &aItem ) == noErr )
@@ -442,11 +392,11 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 		{
 			Sequence< sal_Int8 > aData( nSize );
 			bool bDataFound = false;
-			if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+			if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 			{
 				bDataFound = ( GetScrapFlavorData( (ScrapRef)mpNativeTransferable, nRequestedType, &nSize, aData.getArray() ) == noErr );
 			}
-			else if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+			else if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG )
 			{
 				DragItemRef aItem;
 				if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, 1, &aItem ) == noErr )
@@ -603,18 +553,13 @@ Any SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferData( const Data
 		else
 			throw IOException( aFlavor.MimeType, static_cast< XTransferable * >( this ) );
 	}
-#else // MACOSX
-#ifdef DEBUG
-	fprintf( stderr, "DTransTransferable::getTransferData not implemented\n" );
-#endif
-#endif	// MACOSX
 
 	return out;
 }
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_dtrans_DTransTransferable::~com_sun_star_dtrans_DTransTransferable()
+DTransTransferable::~DTransTransferable()
 {
 	MutexGuard aGuard( aMutex );
 
@@ -623,15 +568,14 @@ com_sun_star_dtrans_DTransTransferable::~com_sun_star_dtrans_DTransTransferable(
 
 // ----------------------------------------------------------------------------
 
-Sequence< DataFlavor > SAL_CALL com_sun_star_dtrans_DTransTransferable::getTransferDataFlavors() throw ( RuntimeException )
+Sequence< DataFlavor > SAL_CALL DTransTransferable::getTransferDataFlavors() throw ( RuntimeException )
 {
 	if ( mxTransferable.is() )
 		return mxTransferable->getTransferDataFlavors();
 
 	Sequence< DataFlavor > out;
 
-#ifdef MACOSX
-	if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+	if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 	{
 		UInt32 nCount;
 		if ( GetScrapFlavorCount( (ScrapRef)mpNativeTransferable, &nCount ) == noErr && nCount > 0 )
@@ -660,7 +604,7 @@ Sequence< DataFlavor > SAL_CALL com_sun_star_dtrans_DTransTransferable::getTrans
 			delete[] pInfo;
 		}
 	}
-	else if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+	else if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG )
 	{
 		DragItemRef aItem;
 		UInt16 nCount;
@@ -684,48 +628,36 @@ Sequence< DataFlavor > SAL_CALL com_sun_star_dtrans_DTransTransferable::getTrans
 			}
 		}
 	}
-#else // MACOSX
-#ifdef DEBUG
-	fprintf( stderr, "DTransTransferable::getTransferData not implemented\n" );
-#endif
-#endif	// MACOSX
 
 	return out;
 }
 
 // ----------------------------------------------------------------------------
 
-sal_Bool com_sun_star_dtrans_DTransTransferable::hasOwnership()
+sal_Bool DTransTransferable::hasOwnership()
 {
 	sal_Bool out = sal_False;
 
-#ifdef MACOSX
-	if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+	if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 	{
 		ScrapRef aScrap;
 
 		if ( GetCurrentScrap( &aScrap ) == noErr && aScrap == (ScrapRef)mpNativeTransferable )
 			out = sal_True;
 	}
-#else // MACOSX
-#ifdef DEBUG
-	fprintf( stderr, "DTransTransferable::transferToClipboard not implemented\n" );
-#endif
-#endif	// MACOSX
 
 	return out;
 }
 
 // ----------------------------------------------------------------------------
 
-sal_Bool SAL_CALL com_sun_star_dtrans_DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) throw ( RuntimeException )
+sal_Bool SAL_CALL DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) throw ( RuntimeException )
 {
 	if ( mxTransferable.is() )
 		return mxTransferable->isDataFlavorSupported( aFlavor );
 
 	sal_Bool out = sal_False;
 
-#ifdef MACOSX
 	FourCharCode nRequestedType = NULL;
 	Type aRequestedDataType;
 	for ( USHORT i = 0; i < nSupportedTypes; i++ )
@@ -740,7 +672,7 @@ sal_Bool SAL_CALL com_sun_star_dtrans_DTransTransferable::isDataFlavorSupported(
 
 	if ( nRequestedType )
 	{
-		if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+		if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 		{
 			UInt32 nCount;
 			if ( GetScrapFlavorCount( (ScrapRef)mpNativeTransferable, &nCount ) == noErr && nCount > 0 )
@@ -762,7 +694,7 @@ sal_Bool SAL_CALL com_sun_star_dtrans_DTransTransferable::isDataFlavorSupported(
 				delete[] pInfo;
 			}
 		}
-		else if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+		else if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG )
 		{
 			DragItemRef aItem;
 			UInt16 nCount;
@@ -780,18 +712,13 @@ sal_Bool SAL_CALL com_sun_star_dtrans_DTransTransferable::isDataFlavorSupported(
 			}
 		}
 	}
-#else // MACOSX
-#ifdef DEBUG
-	fprintf( stderr, "DTransTransferable::isDataFlavorSupported not implemented\n" );
-#endif
-#endif	// MACOSX
 
 	return out;
 }
 
 // ----------------------------------------------------------------------------
 
-sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< XTransferable > &xTransferable )
+sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTransferable )
 {
 	sal_Bool out = sal_False;
 
@@ -800,8 +727,7 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< X
 	mxTransferable = xTransferable;
 	if ( mxTransferable.is() )
 	{
-#ifdef MACOSX
-		if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD )
+		if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 		{
 			ScrapRef aScrap;
 			if ( ClearCurrentScrap() == noErr && GetCurrentScrap( &aScrap ) == noErr )
@@ -823,7 +749,7 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< X
 				// image flavors since we would be just passing a picture
 				// of text
 				sal_Int32 nLen = xFlavors.getLength();
-				BOOL bTextOnly = FALSE;
+				bool bTextOnly = false;
 				sal_Int32 i;
 				for ( i = 0; i < nLen; i++ )
 				{
@@ -831,7 +757,7 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< X
 					{
 						if ( xFlavors[ i ].MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ j ] ) && aSupportedTextTypes[ j ] )
 						{
-							bTextOnly = TRUE;
+							bTextOnly = true;
 							break;
 						}
 					}
@@ -839,11 +765,11 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< X
 
 				aTransferableList.push_back( this );
 
-				BOOL bRenderImmediately = FALSE;
+				bool bRenderImmediately = false;
 				if ( !pScrapPromiseKeeperUPP )
 					pScrapPromiseKeeperUPP = NewScrapPromiseKeeperUPP( (ScrapPromiseKeeperProcPtr)ImplScrapPromiseKeeperCallback );
 				if ( !pScrapPromiseKeeperUPP || SetScrapPromiseKeeper( (ScrapRef)mpNativeTransferable, pScrapPromiseKeeperUPP, (const void *)this ) != noErr )
-					bRenderImmediately = TRUE;
+					bRenderImmediately = true;
 
 				for ( i = 0; i < nLen; i++ )
 				{ 
@@ -863,7 +789,7 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< X
 				}
 			}
 		}
-		else if ( mnTransferableType == JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG )
+		else if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG )
 		{
 			out = sal_True;
 
@@ -880,7 +806,7 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< X
 			// image flavors since we would be just passing a picture
 			// of text
 			sal_Int32 nLen = xFlavors.getLength();
-			BOOL bTextOnly = FALSE;
+			bool bTextOnly = false;
 			sal_Int32 i;
 			for ( i = 0; i < nLen; i++ )
 			{
@@ -888,7 +814,7 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< X
 				{
 					if ( xFlavors[ i ].MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ j ] ) && aSupportedTextTypes[ j ] )
 					{
-						bTextOnly = TRUE;
+						bTextOnly = true;
 						break;
 					}
 				}
@@ -896,11 +822,11 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< X
 
 			aTransferableList.push_back( this );
 
-			BOOL bRenderImmediately = FALSE;
+			bool bRenderImmediately = false;
 			if ( !pDragSendDataUPP )
 				pDragSendDataUPP = NewDragSendDataUPP( (DragSendDataProcPtr)ImplDragSendDataCallback );
 			if ( !pDragSendDataUPP || SetDragSendProc( (DragRef)mpNativeTransferable, pDragSendDataUPP, (void *)this ) != noErr )
-				bRenderImmediately = TRUE;
+				bRenderImmediately = true;
 
 			for ( i = 0; i < nLen; i++ )
 			{ 
@@ -918,11 +844,6 @@ sal_Bool com_sun_star_dtrans_DTransTransferable::setContents( const Reference< X
 				}
 			}
 		}
-#else	// MACOSX
-#ifdef DEBUG
-		fprintf( stderr, "DTransTransferable::setContents not implemented\n" );
-#endif
-#endif	// MACOSX
 	}
 
 	return out;

@@ -33,35 +33,24 @@
  *
  ************************************************************************/
 
-#ifndef _JAVA_DTRANS_COM_SUN_STAR_DTRANS_DTRANSCLIPBOARD_HXX
-#define	_JAVA_DTRANS_COM_SUN_STAR_DTRANS_DTRANSCLIPBOARD_HXX
+#ifndef _DTRANSCLIPBOARD_HXX
+#define	_DTRANSCLIPBOARD_HXX
 
-#ifndef _JAVA_DTRANS_COM_SUN_STAR_DTRANS_DTRANSTRANSFERABLE_HXX
-#include <com/sun/star/dtrans/DTransTransferable.hxx>
+#ifndef _DTRANSTRANSFERABLE_HXX
+#include "DTransTransferable.hxx"
 #endif
 
 namespace java {
 
-namespace dtrans {
-
-class com_sun_star_dtrans_DTransClipboard : public java_lang_Object
+class DTransClipboard
 {
-protected:
-	static jclass		theClass;
-
-private:
-						com_sun_star_dtrans_DTransClipboard() : java_lang_Object( NULL ) {};
-
 public:
-	static jclass		getMyClass();
-	static com_sun_star_dtrans_DTransTransferable*	getContents();
-	static com_sun_star_dtrans_DTransTransferable*	setContents( const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable > &xTransferable );
+	static DTransTransferable*	getContents();
+	static DTransTransferable*	setContents( const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable > &xTransferable );
 
-						com_sun_star_dtrans_DTransClipboard( jobject myObj ) : java_lang_Object( myObj ) {};
+						DTransClipboard() {};
 };
-
-} // namespace dtrans
 
 } // namespace java
 
-#endif // _JAVA_DTRANS_COM_SUN_STAR_DTRANS_DTRANSCLIPBOARD_HXX
+#endif // _DTRANSCLIPBOARD_HXX

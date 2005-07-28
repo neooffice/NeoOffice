@@ -33,12 +33,9 @@
  *
  ************************************************************************/
 
-#ifndef _JAVA_DTRANS_COM_SUN_STAR_DTRANS_DTRANSTRANSFERABLE_HXX
-#define	_JAVA_DTRANS_COM_SUN_STAR_DTRANS_DTRANSTRANSFERABLE_HXX
+#ifndef _DTRANSTRANSFERABLE_HXX
+#define _DTRANSTRANSFERABLE_HXX
 
-#ifndef _JAVA_DTRANS_JAVA_LANG_OBJECT_HXX
-#include <java/lang/Object.hxx>
-#endif
 #ifndef _CPPUHELPER_COMPBASE1_HXX_
 #include <cppuhelper/compbase1.hxx>
 #endif
@@ -49,34 +46,21 @@
 #include <com/sun/star/datatransfer/XTransferable.hpp>
 #endif
 
-#define JAVA_DTRANS_TRANSFERABLE_TYPE_CLIPBOARD		0x0
-#define JAVA_DTRANS_TRANSFERABLE_TYPE_DRAG			0x1
+#define TRANSFERABLE_TYPE_CLIPBOARD		0x0
+#define TRANSFERABLE_TYPE_DRAG			0x1
 
 namespace java {
 
-namespace dtrans {
-
-class com_sun_star_dtrans_DTransTransferable;
-
-class com_sun_star_dtrans_DTransTransferable : public java_lang_Object, public ::cppu::WeakImplHelper1 < ::com::sun::star::datatransfer::XTransferable >
+class DTransTransferable : public ::cppu::WeakImplHelper1 < ::com::sun::star::datatransfer::XTransferable >
 {
-protected:
-	static jclass		theClass;
-
 private:
 	void*				mpNativeTransferable;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	mxTransferable;
 	int					mnTransferableType;
 
 public:
-	static jclass		getMyClass();
-
-#ifdef MACOSX
-						com_sun_star_dtrans_DTransTransferable( void *myNativeTransferable, int nTransferableType ) : java_lang_Object( NULL ), mpNativeTransferable( myNativeTransferable ), mnTransferableType( nTransferableType ) {}
-#else	// MACOSX
-						com_sun_star_dtrans_DTransTransferable( jobject myObj, int nTransferableType ) : java_lang_Object( myObj ), mpNativeTransferable( NULL ), mnTransferableType( nTransferableType ) {}
-#endif	// MACOSX
-	virtual				~com_sun_star_dtrans_DTransTransferable();
+						DTransTransferable( void *myNativeTransferable, int nTransferableType ) : mpNativeTransferable( myNativeTransferable ), mnTransferableType( nTransferableType ) {}
+	virtual				~DTransTransferable();
 
 	void*				getNativeTransferable() { return mpNativeTransferable; }
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	getTransferable() { return mxTransferable; }
@@ -88,8 +72,6 @@ public:
 	sal_Bool			setContents( const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable > &xTransferable );
 };
 
-} // namespace dtrans
-
 } // namespace java
 
-#endif // _JAVA_DTRANS_COM_SUN_STAR_DTRANS_DTRANSTRANSFERABLE_HXX
+#endif // _DTRANSTRANSFERABLE_HXX

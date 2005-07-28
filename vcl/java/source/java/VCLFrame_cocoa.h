@@ -11,11 +11,11 @@
  *
  *         - GNU General Public License Version 2.1
  *
- *  Patrick Luby, June 2003
+ *  Patrick Luby, July 2005
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2003 by Patrick Luby (patrick.luby@planamesa.com)
+ *  Copyright 2005 by Patrick Luby (patrick.luby@planamesa.com)
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
@@ -33,54 +33,25 @@
  *
  ************************************************************************/
 
-#define _DTRANSCLIPBOARD_CXX
+#ifndef __SHUTDOWNICON_COCOA_H__
+#define __SHUTDOWNICON_COCOA_H__
 
-#ifndef _DTRANSCLIPBOARD_HXX
-#include "DTransClipboard.hxx"
-#endif
-#ifndef _DTRANSTRANSFERABLE_HXX
-#include "DTransTransferable.hxx"
-#endif
-
+#ifdef __cplusplus
 #include <premac.h>
-#include <Carbon/Carbon.h>
-#include <postmac.h>
-
-using namespace com::sun::star::datatransfer;
-using namespace com::sun::star::uno;
-using namespace java;
-using namespace rtl;
-
-// ============================================================================
-
-DTransTransferable *DTransClipboard::getContents()
-{
-	DTransTransferable *out = NULL;
-
-#ifdef MACOSX
-	ScrapRef aScrap;
-	if ( GetCurrentScrap( &aScrap ) == noErr )
-		out = new DTransTransferable( aScrap, TRANSFERABLE_TYPE_CLIPBOARD );
-#else	// MACOSX
-#ifdef DEBUG
-	fprintf( stderr, "DTransClipboard::getContents not implemented\n" );
 #endif
-#endif	// MACOSX
+#include <Carbon/Carbon.h>
+#ifdef __cplusplus
+#include <postmac.h>
+#endif
 
-	return out;
-}
+#ifdef __cplusplus
+BEGIN_C
+#endif
+void CWindow_setVisible( void *pCWindow, BOOL bVisible, BOOL bEnable );
+void CWindow_toFront( void *pCWindow );
+WindowRef CWindow_windowRef( void *pCWindow );
+#ifdef __cplusplus
+END_C
+#endif
 
-// ----------------------------------------------------------------------------
-
-DTransTransferable *DTransClipboard::setContents( const Reference< XTransferable > &xTransferable )
-{
-	DTransTransferable *out = new DTransTransferable( NULL, TRANSFERABLE_TYPE_CLIPBOARD );
-
-	if ( !xTransferable.is() || !out->setContents( xTransferable ) )
-	{
-		delete out;
-		out = NULL;
-	}
-
-	return out;
-}
+#endif

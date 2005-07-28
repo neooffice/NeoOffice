@@ -37,7 +37,7 @@
 #include <unistd.h>
 
 #ifndef _DTRANS_JAVA_DNDCONTEXT_HXX
-#include <java_dndcontext.hxx>
+#include "java_dndcontext.hxx"
 #endif
 #ifndef _COM_SUN_STAR_DATATRANSFER_DND_DNDCONSTANTS_HPP_
 #include <com/sun/star/datatransfer/dnd/DNDConstants.hpp>

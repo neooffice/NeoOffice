@@ -11,11 +11,11 @@
  *
  *         - GNU General Public License Version 2.1
  *
- *  Patrick Luby, June 2003
+ *  Patrick Luby, July 2005
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2003 by Patrick Luby (patrick.luby@planamesa.com)
+ *  Copyright 2005 by Patrick Luby (patrick.luby@planamesa.com)
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
@@ -33,40 +33,44 @@
  *
  ************************************************************************/
 
-#ifndef _SV_COM_SUN_STAR_VCL_VCLSCREEN_HXX
-#define	_SV_COM_SUN_STAR_VCL_VCLSCREEN_HXX
+#import <Cocoa/Cocoa.h>
+#import "VCLFrame_cocoa.h"
 
-#ifndef _SV_JAVA_LANG_OBJECT_HXX
-#include <java/lang/Object.hxx>
-#endif
-#ifndef _SV_SALGTYPE_HXX
-#include <salgtype.hxx>
-#endif
-#ifndef _SV_GEN_HXX
-#include <tools/gen.hxx>
-#endif
-
-namespace vcl {
-
-class com_sun_star_vcl_VCLFrame;
-
-class com_sun_star_vcl_VCLScreen : public java_lang_Object
+static NSWindow *GetNSWindow( void *pCWindow )
 {
-protected:
-	static jclass		theClass;
+	SEL aSelector = @selector(getNSWindow);
+	if ( pCWindow && [(NSObject *)pCWindow respondsToSelector:aSelector] )
+		return (NSWindow *)[(NSObject *)pCWindow performSelector:aSelector];
+	else
+		return NULL;
+}
 
-public:
-	static jclass		getMyClass();
-	static SalColor		getControlColor();
-	static const Rectangle	getScreenBounds( const com_sun_star_vcl_VCLFrame *_par0 );
-	static SalColor		getTextHighlightColor();
-	static SalColor		getTextHighlightTextColor();
-	static SalColor		getTextTextColor();
+void CWindow_setVisible( void *pCWindow, BOOL bVisible, BOOL bEnable )
+{
+	NSWindow *pNSWindow = GetNSWindow( pCWindow );
+	if ( pNSWindow )
+	{
+		if ( bVisible )
+			[pNSWindow orderFront:pNSWindow];
+		else
+			[pNSWindow orderOut:pNSWindow];
+	}
+}
 
-						com_sun_star_vcl_VCLScreen( jobject myObj ) : java_lang_Object( myObj ) {};
-	virtual				~com_sun_star_vcl_VCLScreen() {};
-};
+void CWindow_toFront( void *pCWindow )
+{
+	NSWindow *pNSWindow = GetNSWindow( pCWindow );
+	if ( pNSWindow )
+		[pNSWindow orderFront:pNSWindow];
+}
 
-} // namespace vcl
+WindowRef CWindow_windowRef( void *pCWindow )
+{
+	WindowRef aWindow = NULL;
 
-#endif // _SV_COM_SUN_STAR_VCL_VCLSCREEN_HXX
+	NSWindow *pNSWindow = GetNSWindow( pCWindow );
+	if ( pNSWindow )
+		aWindow = [pNSWindow windowRef];
+
+	return aWindow;
+}

@@ -60,17 +60,12 @@ dummy:
 .ELSE		# "$(GUIBASE)"!="java"
 
 SLOFILES=\
-	$(SLO)$/Class.obj \
 	$(SLO)$/DTransClipboard.obj \
 	$(SLO)$/DTransTransferable.obj \
-	$(SLO)$/Object.obj \
-	$(SLO)$/String.obj \
-	$(SLO)$/Throwable.obj \
 	$(SLO)$/java_clipboard.obj \
 	$(SLO)$/java_dnd.obj \
 	$(SLO)$/java_dndcontext.obj \
-	$(SLO)$/java_service.obj \
-	$(SLO)$/tools.obj
+	$(SLO)$/java_service.obj
 
 SHL1TARGET= $(TARGET)$(UPD)$(DLLPOSTFIX)
 
@@ -106,10 +101,6 @@ APP1STDLIBS=\
 .IF "$(OS)"=="MACOSX"
 APP1STDLIBS += -framework QuickTime
 .ENDIF
-
-JARCLASSDIRS = com
-JARTARGET = $(TARGET).jar
-JARCOMPRESS = TRUE
 
 .ENDIF		# "$(GUIBASE)"!="java"
 

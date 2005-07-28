@@ -51,9 +51,7 @@
 #include <osl/mutex.hxx>
 #endif
 
-#include <premac.h>
-#include <Carbon/Carbon.h>
-#include <postmac.h>
+#include "VCLFrame_cocoa.h"
 #undef check
 
 using namespace osl;
@@ -63,60 +61,23 @@ using namespace vos;
 static bool bActivate = false;
 static bool bBringToFront = false;
 static Mutex aMutex;
-static EventLoopTimerUPP pEventLoopTimerUPP = NULL;
 
 // ============================================================================
 
-static void JNICALL Java_com_apple_mrj_macos_generated_MacWindowFunctions_SelectWindow( JNIEnv *pEnv, jobject object, jint pWindowRef )
+static void JNICALL Java_apple_awt_CWindow_toFront( JNIEnv *pEnv, jobject object, jint pCWindow )
 {
 	MutexGuard aGuard( aMutex );
 
-	WindowRef aWindow = (WindowRef)pWindowRef;
-
-	if ( bBringToFront )
-		BringToFront( aWindow );
-
-	WindowClass nClass;
-	if ( GetWindowClass( aWindow, &nClass ) == noErr && nClass == kDocumentWindowClass )
-	{
-		if ( bActivate )
-			SelectWindow( aWindow );
-	}
-	else
-	{
-		// Non-document windows must always be activated for mouse events
-		ActivateWindow( aWindow, true );
-	}
+	CWindow_toFront( (void *)pCWindow );
 }
 
 // ----------------------------------------------------------------------------
 
-static void JNICALL Java_com_apple_mrj_macos_generated_MacWindowFunctions_ShowWindow( JNIEnv *pEnv, jobject object, jint pWindowRef )
+static void JNICALL Java_apple_awt_CWindow__1setVisible( JNIEnv *pEnv, jobject object, jint pCWindow, jboolean bVisible, jboolean bEnable )
 {
 	MutexGuard aGuard( aMutex );
 
-	WindowRef aWindow = (WindowRef)pWindowRef;
-
-	ShowHide( aWindow, true );
-
-	Java_com_apple_mrj_macos_generated_MacWindowFunctions_SelectWindow( pEnv, object, pWindowRef );
-}
-
-// ----------------------------------------------------------------------------
-
-static void DisposeNativeWindowTimerCallback( EventLoopTimerRef aTimer, void *pData )
-{
-	WindowRef aWindow = (WindowRef)pData;
-	if ( aWindow )
-	{
-		// Fix bug 261 and 533 by explicitly clearing the port's dirty region
-		// before destroying it
-		CGrafPtr aPort = GetWindowPort( aWindow );
-		LockPortBits( aPort );
-		QDSetDirtyRegion( aPort, NULL );
-		UnlockPortBits( aPort );
-		ReleaseWindow( aWindow );
-	}
+	CWindow_setVisible( (void *)pCWindow, bVisible, bEnable );
 }
 
 // ============================================================================
@@ -132,27 +93,21 @@ jclass com_sun_star_vcl_VCLFrame::getMyClass()
 		VCLThreadAttach t;
 		if ( !t.pEnv ) return (jclass)NULL;
 
-		// Test the JVM version and if it is below 1.4, use Carbon window APIs
-		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+		// We need to replace the native CWindow._setVisible() and
+		// CWindow.toFront() methods that they will not change window focus
+		//  when invoked
+		jclass cWindowClass = t.pEnv->FindClass( "apple/awt/CWindow" );
+		if ( cWindowClass )
 		{
-			// We need to replace the native MacWindowFunctions.SelectWindow()
-			// method so that it will not change window focus when invoked
-			jclass macWindowFunctionsClass = t.pEnv->FindClass( "com/apple/mrj/macos/generated/MacWindowFunctions" );
-			if ( macWindowFunctionsClass )
-			{
-				JNINativeMethod pMethods[2];
-				pMethods[0].name = "SelectWindow";
-				pMethods[0].signature = "(I)V";
-				pMethods[0].fnPtr = (void *)Java_com_apple_mrj_macos_generated_MacWindowFunctions_SelectWindow;
-				pMethods[1].name = "ShowWindow";
-				pMethods[1].signature = "(I)V";
-				pMethods[1].fnPtr = (void *)Java_com_apple_mrj_macos_generated_MacWindowFunctions_ShowWindow;
-				t.pEnv->RegisterNatives( macWindowFunctionsClass, pMethods, 2 );
-			}
+			JNINativeMethod pMethods[2];
+			pMethods[0].name = "toFront";
+			pMethods[0].signature = "(J)V";
+			pMethods[0].fnPtr = (void *)Java_apple_awt_CWindow_toFront;
+			pMethods[1].name = "_setVisible";
+			pMethods[1].signature = "(IZZ)V";
+			pMethods[1].fnPtr = (void *)Java_apple_awt_CWindow__1setVisible;
+			// t.pEnv->RegisterNatives( cWindowClass, pMethods, 2 );
 		}
-
-		if ( !pEventLoopTimerUPP )
-			pEventLoopTimerUPP = NewEventLoopTimerUPP( DisposeNativeWindowTimerCallback );
 
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLFrame" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
@@ -242,32 +197,7 @@ void com_sun_star_vcl_VCLFrame::dispose()
 			ULONG nCount = Application::ReleaseSolarMutex();
 			OThread::yield();
 
-			WindowRef aWindow = NULL;
-			WindowRef aOwnerWindow = NULL;
-
-			// Test the JVM version and if it is below 1.4, use Carbon APIs
-			if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
-			{
-				aWindow = (WindowRef)getNativeWindow();
-				com_sun_star_vcl_VCLFrame *pOwner = getOwner();
-				if ( pOwner )
-				{
-					aOwnerWindow = (WindowRef)pOwner->getNativeWindow();
-					delete pOwner;
-				}
-			}
-
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
-
-			// Java 1.3.1 does not ever release the native window so we
-			// need to explicitly release it
-			if ( pEventLoopTimerUPP )
-			{
-				if ( aWindow )
-					InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pEventLoopTimerUPP, aWindow, NULL );
-				if ( aOwnerWindow )
-					InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pEventLoopTimerUPP, aOwnerWindow, NULL );
-			}
 
 			Application::AcquireSolarMutex( nCount );
 		}
@@ -519,37 +449,18 @@ void *com_sun_star_vcl_VCLFrame::getNativeWindow()
 			jobject tempObj = peer->getJavaObject();
 			if ( tempObj )
 			{
-				// Test the JVM version and if it is below 1.4, use Carbon APIs
-				if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
+				jclass tempClass = t.pEnv->FindClass( "apple/awt/CWindow" );
+				if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
 				{
-					jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/basepeers/VComponentPeer" );
-					if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
+					static jfieldID fIDNSWindow = NULL;
+					if ( !fIDNSWindow )
 					{
-						static jmethodID mIDGetMacWindow = NULL;
-						if ( !mIDGetMacWindow )
-						{
-							char *cSignature = "()Lcom/apple/mrj/macos/generated/WindowPtrOpaque;";
-							mIDGetMacWindow = t.pEnv->GetMethodID( tempClass, "getMacWindow", cSignature );
-						}
-						OSL_ENSURE( mIDGetMacWindow, "Unknown method id!" );
-						if ( mIDGetMacWindow )
-						{
-							jobject windowObj = t.pEnv->CallObjectMethod( tempObj, mIDGetMacWindow );
-							if ( windowObj )
-							{
-								jclass windowClass = t.pEnv->GetObjectClass( windowObj );
-								static jmethodID mIDGetPointer = NULL;
-								if ( !mIDGetPointer )
-								{
-									char *cSignature = "()I";
-									mIDGetPointer = t.pEnv->GetMethodID( windowClass, "getPointer", cSignature );
-								}
-								OSL_ENSURE( mIDGetPointer, "Unknown method id!" );
-								if ( mIDGetPointer )
-									out = (void *)t.pEnv->CallIntMethod( windowObj, mIDGetPointer );
-							}
-						}
+						char *cSignature = "I";
+						fIDNSWindow = t.pEnv->GetFieldID( tempClass, "fNSWindow", cSignature );
 					}
+					OSL_ENSURE( fIDNSWindow, "Unknown field id!" );
+					if ( fIDNSWindow )
+						out = (void *)CWindow_windowRef( (void *)t.pEnv->GetIntField( tempObj, fIDNSWindow ) );
 				}
 			}
 			delete peer;

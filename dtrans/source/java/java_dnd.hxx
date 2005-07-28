@@ -56,12 +56,13 @@
 #ifndef _COM_SUN_STAR_LANG_XSERVICEINFO_HPP_
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #endif
-#ifndef _SV_WINDOW_HXX
-#include <vcl/window.hxx>
-#endif
 #ifndef _OSL_THREAD_H_
 #include <osl/thread.h>
 #endif
+
+#include <premac.h>
+#include <Carbon/Carbon.h>
+#include <postmac.h>
 
 #define JAVA_DRAGSOURCE_SERVICE_NAME "com.sun.star.datatransfer.dnd.JavaDragSource"
 #define JAVA_DRAGSOURCE_IMPL_NAME "com.sun.star.datatransfer.dnd.JavaDragSource"
@@ -77,18 +78,14 @@ namespace java {
 
 class JavaDragSource : public ::cppu::WeakComponentImplHelper3< ::com::sun::star::datatransfer::dnd::XDragSource, ::com::sun::star::lang::XInitialization, ::com::sun::star::lang::XServiceInfo >
 {
-	friend class			JavaDropTarget;
-private:
+public:
 	sal_Int8				mnActions;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	maContents;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDragSourceListener >	maListener;
     ::osl::Mutex			maMutex;
 	bool*					mpInNativeDrag;
-	void*					mpNativeWindow;
+	WindowRef				mpNativeWindow;
 
-	static void				runDragExecute( void *pData );
-
-public:
 							JavaDragSource();
 	virtual					~JavaDragSource();
 
@@ -100,7 +97,7 @@ public:
 	virtual sal_Int32		SAL_CALL getDefaultCursor( sal_Int8 dragAction ) throw();
 	virtual void			SAL_CALL startDrag( const ::com::sun::star::datatransfer::dnd::DragGestureEvent& trigger, sal_Int8 sourceActions, sal_Int32 cursor, sal_Int32 image, const Reference< ::com::sun::star::datatransfer::XTransferable >& transferable, const Reference< ::com::sun::star::datatransfer::dnd::XDragSourceListener >& listener ) throw();
 
-	void*					getNativeWindow() { return mpNativeWindow; }
+	WindowRef				getNativeWindow() { return mpNativeWindow; }
 	void					handleDrag( sal_Int32 nX, sal_Int32 nY );
 };
 
@@ -109,16 +106,14 @@ public:
 
 class JavaDropTarget : public ::cppu::WeakComponentImplHelper3< ::com::sun::star::datatransfer::dnd::XDropTarget, ::com::sun::star::lang::XInitialization, ::com::sun::star::lang::XServiceInfo >
 {
-private:
+public:
     sal_Bool				mbActive;
 	sal_Int8				mnDefaultActions;
 	::std::list< ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDropTargetListener > >	maListeners;
     ::osl::Mutex			maMutex; 
-	void*					mpNativeWindow;
+	WindowRef				mpNativeWindow;
     bool					mbRejected;
-	Window*					mpWindow;
 
-public:
 							JavaDropTarget();
 	virtual					~JavaDropTarget();
 
@@ -134,10 +129,11 @@ public:
 	virtual sal_Bool		SAL_CALL supportsService( const ::rtl::OUString& serviceName ) throw();
 	virtual ::com::sun::star::uno::Sequence< ::rtl::OUString >	SAL_CALL getSupportedServiceNames() throw();
 
-	void					handleDragEnter( sal_Int32 nX, sal_Int32 nY, void *pNativeTransferable );
-	void					handleDragExit( sal_Int32 nX, sal_Int32 nY, void *pNativeTransferable );
-	void					handleDragOver( sal_Int32 nX, sal_Int32 nY, void *pNativeTransferable );
-	bool					handleDrop( sal_Int32 nX, sal_Int32 nY, void *pNativeTransferable );
+	WindowRef				getNativeWindow() { return mpNativeWindow; }
+	void					handleDragEnter( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable );
+	void					handleDragExit( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable );
+	void					handleDragOver( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable );
+	bool					handleDrop( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable );
 	bool					isRejected() { return mbRejected; }
 };
 

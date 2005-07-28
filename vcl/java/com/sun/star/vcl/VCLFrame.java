@@ -770,14 +770,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			bitCount = 8;
 		else
 			bitCount = 24;
-		if (window instanceof Frame) {
+
+		window.addNotify();
+		insets = window.getInsets();
+		if (window instanceof Frame)
 			parent = null;
-			insets = VCLScreen.getFrameInsets();
-		}
-		else {
+		else
 			parent = p;
-			insets = window.getInsets();
-		}
 		graphics = new VCLGraphics(this);
 
 	}
@@ -2013,18 +2012,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			height = size.height;
 
 		synchronized (window.getTreeLock()) {
-			// Fix bug 509 by temporarily moving the window and fix bug 378
-			// by yielding after each move
-			window.setBounds(x + 1, y, width, height);
-			Thread.yield();
 			window.setBounds(x, y, width, height);
-
-			// We need to create the native window handle after the first call
-			// to set bounds in order for the drag-and-drop UNO service to work
-			if (!window.isShowing())
-				window.addNotify();
-
-			Thread.yield();
 		}
 
 	}
@@ -2410,6 +2398,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			frame = f;
 			setMinimumSize(1, 1);
+			setIgnoreRepaint(true);
 
 		}
 
@@ -2564,6 +2553,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			super(f.getOwner().getWindow());
 			frame = f;
 			setMinimumSize(1, 1);
+			setIgnoreRepaint(true);
 
 		}
 

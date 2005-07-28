@@ -39,11 +39,9 @@
 #ifndef _COM_SUN_STAR_DATATRANSFER_CLIPBOARD_RENDERINGCAPABILITIES_HPP_
 #include <com/sun/star/datatransfer/clipboard/RenderingCapabilities.hpp>
 #endif
-#ifndef _JAVA_DTRANS_COM_SUN_STAR_DTRANS_DTRANSCLIPBOARD_HXX
-#include <com/sun/star/dtrans/DTransClipboard.hxx>
+#ifndef _DTRANSCLIPBOARD_HXX
+#include "DTransClipboard.hxx"
 #endif
-
-#include <tools/string.hxx>
 
 using namespace com::sun::star::datatransfer;
 using namespace com::sun::star::datatransfer::clipboard;
@@ -51,7 +49,6 @@ using namespace com::sun::star::lang;
 using namespace com::sun::star::uno;
 using namespace cppu;
 using namespace java;
-using namespace java::dtrans;
 using namespace osl;
 using namespace rtl;
 using namespace std;
@@ -72,7 +69,7 @@ Sequence< OUString > SAL_CALL JavaClipboard_getSupportedServiceNames()
 
 // ========================================================================
 
-JavaClipboard::JavaClipboard( BOOL bSystemClipboard ) : WeakComponentImplHelper4< XClipboardEx, XClipboardNotifier, XServiceInfo, XInitialization >( maMutex )
+JavaClipboard::JavaClipboard( bool bSystemClipboard ) : WeakComponentImplHelper4< XClipboardEx, XClipboardNotifier, XServiceInfo, XInitialization >( maMutex )
 {
 	mbSystemClipboard = bSystemClipboard;
 }
@@ -93,9 +90,9 @@ Reference< XTransferable > SAL_CALL JavaClipboard::getContents() throw( RuntimeE
 
 	if ( mbSystemClipboard )
 	{
-		com_sun_star_dtrans_DTransTransferable *pTransferable = NULL;
+		DTransTransferable *pTransferable = NULL;
 		if ( maContents.is() )
-			pTransferable = (com_sun_star_dtrans_DTransTransferable *)maContents.get();
+			pTransferable = (DTransTransferable *)maContents.get();
 
 		if ( pTransferable && pTransferable->hasOwnership() )
 		{
@@ -110,7 +107,7 @@ Reference< XTransferable > SAL_CALL JavaClipboard::getContents() throw( RuntimeE
 			Reference< XTransferable > aOldContents( maContents );
 			if ( pTransferable )
 				aOldContents = pTransferable->getTransferable();
-			pTransferable = com_sun_star_dtrans_DTransClipboard::getContents();
+			pTransferable = DTransClipboard::getContents();
 			if ( pTransferable )
 				maContents = Reference< XTransferable >( pTransferable );
 			else
@@ -155,14 +152,14 @@ void SAL_CALL JavaClipboard::setContents( const Reference< XTransferable >& xTra
 
 	if ( mbSystemClipboard )
 	{
-		com_sun_star_dtrans_DTransTransferable *pTransferable = NULL;
+		DTransTransferable *pTransferable = NULL;
 		if ( aOldContents.is() )
-			pTransferable = (com_sun_star_dtrans_DTransTransferable *)aOldContents.get();
+			pTransferable = (DTransTransferable *)aOldContents.get();
 		if ( pTransferable )
 			aOldContents = pTransferable->getTransferable();
 		else
 			aOldContents = Reference< XTransferable >();
-		pTransferable = com_sun_star_dtrans_DTransClipboard::setContents( xTransferable );
+		pTransferable = DTransClipboard::setContents( xTransferable );
 		if ( pTransferable )
 			maContents = Reference< XTransferable >( pTransferable );
 		else
@@ -271,7 +268,7 @@ Reference< XInterface > JavaClipboardFactory::createInstance() throw()
 
 Reference< XInterface > JavaClipboardFactory::createInstanceWithArguments( const Sequence< Any >& arguments ) throw()
 {
-	BOOL bSystemClipboard = FALSE;
+	bool bSystemClipboard = false;
 	OUString aClipboardName;
 	if ( arguments.getLength() > 1 )
 	{
@@ -280,7 +277,7 @@ Reference< XInterface > JavaClipboardFactory::createInstanceWithArguments( const
 	else
 	{
 		aClipboardName = OUString::createFromAscii( "CLIPBOARD" );
-		bSystemClipboard = TRUE;
+		bSystemClipboard = true;
 	}
 
 	MutexGuard aGuard( maMutex );

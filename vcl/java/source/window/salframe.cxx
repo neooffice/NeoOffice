@@ -78,55 +78,6 @@ using namespace vcl;
 
 // =======================================================================
 
-static OSStatus CarbonWindowEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData )
-{
-	if ( !Application::IsShutDown() )
-	{
-		SalData *pSalData = GetSalData();
-
-		if ( pSalData && pSalData->mpEventQueue )
-		{
-			EventClass nClass = GetEventClass( aEvent );
-			EventKind nKind = GetEventKind( aEvent );
-
-			if ( nClass == kEventClassKeyboard && nKind == kEventRawKeyModifiersChanged )
-			{
-				// Fix bug 236 by making a pass through the native menus before
-				// dispatching. Note that this fix causes bug 229 but since bug
-				// 229 is merely an annoyance, this fix wins.
-				UInt32 nKeyModifiers;
-				if ( GetEventParameter( aEvent, kEventParamKeyModifiers, typeUInt32, NULL, sizeof( UInt32 ), NULL, &nKeyModifiers ) == noErr && nKeyModifiers & ( cmdKey | controlKey ) )
-				{
-					// Wakeup the event queue by sending it a dummy event
-					// and wait for all pending AWT events to be dispatched
-					pSalData->mbNativeEventSucceeded = false;
-					pSalData->maNativeEventCondition.reset();
-					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
-					pSalData->mpEventQueue->postCachedEvent( &aEvent );
-					pSalData->maNativeEventCondition.wait();
-
-					// Fix bug 679 by checking if the condition was
-					// released to avoid a deadlock
-					if ( pSalData->mbNativeEventSucceeded )
-					{
-						Application::GetSolarMutex().acquire();
-
-						// Execute menu updates while the VCL event queue is
-						// blocked
-						UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
-
-						Application::GetSolarMutex().release();
-					}
-				}
-			}
-		}
-	}
-
-	return CallNextEventHandler( aNextHandler, aEvent );
-}
-
-// =======================================================================
-
 long ImplSalCallbackDummy( void*, SalFrame*, USHORT, const void* )
 {
 	return 0;
@@ -379,37 +330,6 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 
 	maFrameData.mpVCLFrame->setBounds( nX, nY, nWidth, nHeight );
 
-	// Cache the native window pointer since setBounds() will call the Java
-	// window's addNotify() method
-	if ( !maFrameData.maSysData.aWindow )
-	{
-		maFrameData.maSysData.aWindow = (long)maFrameData.mpVCLFrame->getNativeWindow();
-
-		// Test the JVM version and if it is earlier than 1.4, use Carbon
-		VCLThreadAttach t;
-		if ( maFrameData.maSysData.aWindow && t.pEnv && t.pEnv->GetVersion() < JNI_VERSION_1_4 )
-		{
-			if ( !pEventHandlerUPP )
-				pEventHandlerUPP = NewEventHandlerUPP( CarbonWindowEventHandler );
-
-			if ( pEventHandlerUPP )
-			{
-				// Set up native event handler
-				EventTypeSpec aType;
-				aType.eventClass = kEventClassKeyboard;
-				aType.eventKind = kEventRawKeyModifiersChanged;
-				InstallWindowEventHandler( (WindowRef)maFrameData.maSysData.aWindow, pEventHandlerUPP, 1, &aType, NULL, NULL );
-			}
-
-		}
-	}
-
-	// Fix bugs 169 and 283 by giving the Java event thread a chance
-	// to update the native window
-	ULONG nCount = Application::ReleaseSolarMutex();
-	OThread::yield();
-	Application::AcquireSolarMutex( nCount );
-
 	// Update the cached position
 	Rectangle *pBounds = new Rectangle( maFrameData.mpVCLFrame->getBounds() );
 	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pBounds );
@@ -425,7 +345,7 @@ void SalFrame::GetWorkArea( Rectangle &rRect )
 	// Adjust for system menu bar when not in presentation mode
 	if ( !maFrameData.mbPresentation && !rRect.nTop )
 	{
-		const Rectangle& rFrameInsets( com_sun_star_vcl_VCLScreen::getFrameInsets() );
+		const Rectangle& rFrameInsets( maFrameData.mpVCLFrame->getInsets() );
 		rRect.nTop += rFrameInsets.nTop;
 	}
 }

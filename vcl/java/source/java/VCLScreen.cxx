@@ -86,65 +86,6 @@ SalColor com_sun_star_vcl_VCLScreen::getControlColor()
 
 // ----------------------------------------------------------------------------
 
-const Rectangle com_sun_star_vcl_VCLScreen::getFrameInsets()
-{
-	static jmethodID mID = NULL;
-	static jfieldID fIDLeft = NULL;
-	static jfieldID fIDTop = NULL;
-	static jfieldID fIDRight = NULL;
-	static jfieldID fIDBottom = NULL;
-	Rectangle out( 0, 0, 0, 0 );
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()Ljava/awt/Insets;";
-			mID = t.pEnv->GetStaticMethodID( getMyClass(), "getFrameInsets", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jobject tempObj = t.pEnv->CallStaticObjectMethod( getMyClass(), mID );
-			if ( tempObj )
-			{
-				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
-				if ( !fIDLeft )
-				{
-					char *cSignature = "I";
-					fIDLeft = t.pEnv->GetFieldID( tempObjClass, "left", cSignature );
-				}
-				OSL_ENSURE( fIDLeft, "Unknown field id!" );
-				if ( !fIDTop )
-				{
-					char *cSignature = "I";
-					fIDTop  = t.pEnv->GetFieldID( tempObjClass, "top", cSignature );
-				}
-				OSL_ENSURE( fIDTop, "Unknown field id!" );
-				if ( !fIDRight )
-				{
-					char *cSignature = "I";
-					fIDRight = t.pEnv->GetFieldID( tempObjClass, "right", cSignature );
-				}
-				OSL_ENSURE( fIDRight, "Unknown field id!" );
-				if ( !fIDBottom )
-				{
-					char *cSignature = "I";
-					fIDBottom = t.pEnv->GetFieldID( tempObjClass, "bottom", cSignature );
-				}
-				OSL_ENSURE( fIDBottom, "Unknown field id!" );
-				if ( fIDLeft && fIDTop && fIDRight && fIDBottom )
-				{
-					out = Rectangle( (long)t.pEnv->GetIntField( tempObj, fIDLeft ), (long)t.pEnv->GetIntField( tempObj, fIDTop ), (long)t.pEnv->GetIntField( tempObj, fIDRight ), (long)t.pEnv->GetIntField( tempObj, fIDBottom ) );
-				}
-			}
-		}
-	}
-	return out;
-}
-
-// ----------------------------------------------------------------------------
-
 const Rectangle com_sun_star_vcl_VCLScreen::getScreenBounds( const com_sun_star_vcl_VCLFrame *_par0 )
 {
 	static jmethodID mID = NULL;
