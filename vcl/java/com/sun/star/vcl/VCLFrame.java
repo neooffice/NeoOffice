@@ -45,6 +45,7 @@ import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
+import java.awt.KeyboardFocusManager;
 import java.awt.MenuBar;
 import java.awt.MenuItem;
 import java.awt.MenuShortcut;
@@ -77,6 +78,7 @@ import java.awt.peer.ComponentPeer;
 import java.text.CharacterIterator;
 import java.text.AttributedCharacterIterator;
 import java.text.AttributedString;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -657,6 +659,14 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	static {
 
+		// Set the keyboard focus manager so that Java's default focus
+		// switching key events are passed are not consumed
+		KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS, Collections.EMPTY_SET);
+		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.BACKWARD_TRAVERSAL_KEYS, Collections.EMPTY_SET);
+		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.UP_CYCLE_TRAVERSAL_KEYS, Collections.EMPTY_SET);
+		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.DOWN_CYCLE_TRAVERSAL_KEYS, Collections.EMPTY_SET);
+
 		// Load pointer images
 		Toolkit t = Toolkit.getDefaultToolkit();
 		customCursors = new HashMap();
@@ -696,11 +706,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * The native window's insets.
 	 */
 	private Insets insets = null;
-
-	/**
-	 * The owner frame.
-	 */
-	private VCLFrame owner = null;
 
 	/**
 	 * The native window's panel.
@@ -746,13 +751,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		style = s;
 
 		// Create the native window
-		if ((style & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) != 0) {
+		if ((style & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) != 0)
 			window = new VCLFrame.NoPaintFrame(this);
-		}
-		else {
-			owner = new VCLFrame(SAL_FRAME_STYLE_DEFAULT, q, 0, null);
+		else
 			window = new VCLFrame.NoPaintWindow(this);
-		}
 
 		// Process remaining style flags
 		if ((style & SAL_FRAME_STYLE_SIZEABLE) != 0)
@@ -771,6 +773,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else
 			bitCount = 24;
 
+		window.setSize(1, 1);
 		window.addNotify();
 		insets = window.getInsets();
 		if (window instanceof Frame)
@@ -907,7 +910,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		queue = null;
 		bitCount = 0;
 		frame = 0;
-		fullScreenMode = true;
+		fullScreenMode = false;
 		if (graphics != null)
 			graphics.dispose();
 		insets = null;
@@ -928,9 +931,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			window.dispose();
 		}
 		window = null;
-		if (owner != null)
-			owner.dispose();
-		owner = null;
 
 	}
 
@@ -939,18 +939,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void endComposition() {
 
-		Frame[] frames = Frame.getFrames();
-		for (int i = 0; i < frames.length; i++) {
-			InputContext ic = frames[i].getInputContext();
-			if (ic != null)
-				ic.endComposition();
-			Window[] windows = frames[i].getOwnedWindows();
-			for (int j = 0; j < windows.length; j++) {
-				ic = windows[j].getInputContext();
-				if (ic != null)
-					ic.endComposition();
-			}
-		}
+		InputContext ic = window.getInputContext();
+		if (ic != null)
+			ic.endComposition();
 
 	}
 
@@ -1064,18 +1055,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	int getFrame() {
 
 		return frame;
-
-	}
-
-	/**
-	 * Returns the full screen mode.
-	 *
-	 * @return <code>true</code> if the component is in full screen mode and
-	 *  <code>false</code> if it is in normal mode
-	 */
-	boolean getFullScreenMode() {
-
-		return fullScreenMode;
 
 	}
 
@@ -1458,17 +1437,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
-	 * Returns the owner frame.
-	 *
-	 * @return the owner frame
-	 */
-	VCLFrame getOwner() {
-
-		return owner;
-
-	}
-
-	/**
 	 * Returns the panel for the native window.
 	 *
 	 * @return the panel for the native window
@@ -1584,6 +1552,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * Returns whether or not the native window is in full screen mode.
+	 *
+	 * @return <code>true</code> if the component is in full screen mode and
+	 *  <code>false</code> if it is in normal mode
+	 */
+	boolean isFullScreenMode() {
+
+		return fullScreenMode;
+
+	}
+
+	/**
 	 * Invoked when a key has been pressed.
 	 *
 	 * @param e the <code>KeyEvent</code>
@@ -1604,7 +1584,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		int keyCode = e.getKeyCode();
 		if (keyCode == KeyEvent.VK_SHIFT || keyCode == KeyEvent.VK_CONTROL || keyCode == KeyEvent.VK_ALT || keyCode == KeyEvent.VK_META )
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYMODCHANGE, this, 0));
-		else if (e.isActionKey())
+		else if (e.isActionKey() || keyCode == KeyEvent.VK_ESCAPE || (keyCode ==KeyEvent.VK_ENTER && e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD))
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
 		else
 			VCLFrame.lastKeyPressed = e;
@@ -1629,7 +1609,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (keyCode == KeyEvent.VK_SHIFT || keyCode == KeyEvent.VK_CONTROL || keyCode == KeyEvent.VK_ALT || keyCode == KeyEvent.VK_META ) {
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYMODCHANGE, this, 0));
 		}
-		else if (e.isActionKey()) {
+		else if (e.isActionKey() || keyCode == KeyEvent.VK_ESCAPE || (keyCode ==KeyEvent.VK_ENTER && e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD)) {
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0));
 		}
 		else if (VCLFrame.lastMenuShortcutPressed == null && VCLFrame.lastKeyPressed == null) {
@@ -1978,9 +1958,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (!window.isShowing())
 			return;
 
-		// Request keyboard focus
-		if (!isFloatingWindow())
-			panel.requestFocus();
+		panel.requestFocus();
 
 	}
 
@@ -2030,6 +2008,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		fullScreenMode = b;
 
+		if (window instanceof VCLFrame.NoPaintWindow)
+			((VCLFrame.NoPaintWindow)window).setFullScreenMode(fullScreenMode);
+
 	}
 
 	/**
@@ -2067,6 +2048,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public void setParent(VCLFrame p) {
 
 		parent = p;
+
+		if (window instanceof VCLFrame.NoPaintWindow)
+			((VCLFrame.NoPaintWindow)window).setOwner(parent != null ? parent.getWindow() : null);
 
 	}
 
@@ -2398,7 +2382,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			frame = f;
 			setMinimumSize(1, 1);
-			setIgnoreRepaint(true);
 
 		}
 
@@ -2544,16 +2527,34 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		private Dimension minSize = null;
 
 		/**
+		 * The owner for this window.
+		 */
+		private Window owner = null;
+
+		/**
 		 * Constructs a new <code>VCLFrame.NoPaintWindow</code> instance.
 		 *
 		 * @param f the <code>VCLFrame</code>
 		 */
 		NoPaintWindow(VCLFrame f) {
 
-			super(f.getOwner().getWindow());
+			super(new VCLFrame.NoDisplayFrame(f));
 			frame = f;
 			setMinimumSize(1, 1);
-			setIgnoreRepaint(true);
+
+		}
+
+		/**
+		 * Returns the focus owner of this window.
+		 *
+		 * @return the focus owner of this window
+		 */
+		public Component getFocusOwner() {
+
+			if (frame.isFullScreenMode())
+				return this;
+			else
+				return super.getFocusOwner();
 
 		}
 
@@ -2566,6 +2567,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			return minSize;
 			
+		}
+
+		/**
+		 * Returns the owner of this window.
+		 *
+		 * @return the owner of this window 
+		 */
+		public Window getOwner() {
+
+			if (owner != null)
+				return owner;
+			else
+				return super.getOwner();
+
 		}
 
 		/**
@@ -2586,6 +2601,17 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		/**
+		 * Sets the owner of this window.
+		 *
+		 * @param o the new owner of this window 
+		 */
+		public void setOwner(Window o) {
+
+			owner = o;
+
+		}
+
+		/**
 		 * This method performs no painting of the window. This method is used
 		 * to prevent Java from painting over what VCL has painted.
 		 *
@@ -2594,6 +2620,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		public void update(Graphics g) {
 
 			paint(g);
+
+		}
+
+		/**
+		 * Set the native window to show or hide in full screen mode.
+		 *
+		 * @param b <code>true</code> sets this component full screen mode and
+		 *  <code>false</code> sets it to normal mode
+		 */
+		void setFullScreenMode(boolean b) {
+
+			setFocusable(b);
+			setFocusableWindowState(b);
 
 		}
 
@@ -2617,4 +2656,41 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 	}
 
+	/**
+	 * A class that can be used as an owner for a <code>Window</code> that can
+	 * fake being displayed when the <code>Window</code> is in full screen
+	 * mode. Display of the owner must be faked in order for a
+	 * <code>Window</code> to be able to obtain focus.
+	 */
+	final class NoDisplayFrame extends Frame {
+
+		/**
+		 * The <code>VCLFrame</code>.
+		 */
+		private VCLFrame frame = null;
+
+		/**
+		 * Constructs a new <code>VCLFrame.NoPaintWindow</code> instance.
+		 *
+		 * @param f the <code>VCLFrame</code>
+		 */
+		NoDisplayFrame(VCLFrame f) {
+
+			frame = f;
+
+		}
+
+		/**
+		 * Returns whether or not this component is showing.
+		 *
+		 * @return <code>true</code> if the component is in full screen mode
+		 *  otherwise <code>false</code>.
+		 */
+		public boolean isShowing() {
+
+			return frame.isFullScreenMode();
+
+		}
+
+	}
 }
