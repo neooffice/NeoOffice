@@ -1656,7 +1656,11 @@ JavaVM * JavaVirtualMachine::createJavaVM(stoc_javavm::JVM const & jvm,
     JavaVMInitArgs vm_args;
 
     // we have "addOpt" additional properties to those kept in the JVM struct
+#ifdef MACOSX
+    sal_Int32 addOpt=5;
+#else	// MACOSX
     sal_Int32 addOpt=2;
+#endif	// MACOSX
     JavaVMOption * options= new JavaVMOption[cprops + addOpt];
     rtl::OString sClassPath= rtl::OString("-Djava.class.path=")
         + rtl::OUStringToOString(jvm.getClassPath(),
@@ -1671,6 +1675,18 @@ JavaVM * JavaVirtualMachine::createJavaVM(stoc_javavm::JVM const & jvm,
     // LD_LIBRARY_PATH need not to be set anymore.
     options[1].optionString= "abort";
     options[1].extraInfo= (void* )abort_handler;
+
+#ifdef MACOSX
+    // We need to turn off some of Java 1.4's graphics optimizations as they
+    // cause full screen window positioning, clipping, and image drawing
+    // speed to get messed up
+    options[2].optionString= "-Dapple.awt.window.position.forceSafeProgrammaticPositioning=false";
+    options[2].extraInfo= NULL;
+    options[3].optionString= "-Dapple.awt.graphics.OptimizeShapes=false";
+    options[3].extraInfo= NULL;
+    options[4].optionString= "-Dapple.awt.graphics.EnableLazyDrawing=false";
+    options[4].extraInfo= NULL;
+#endif	// MACOSX
 
     rtl::OString * arProps= new rtl::OString[cprops];
 
