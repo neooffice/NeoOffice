@@ -201,11 +201,6 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 	if ( maFrameData.mbVisible )
 	{
-		// Update the cached position
-		Rectangle *pBounds = new Rectangle( maFrameData.mpVCLFrame->getBounds() );
-		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pBounds );
-		aEvent.dispatch();
-
 		// Make a pass through the native menus to speed up later updates
 		UpdateMenusForFrame( this, NULL );
 	}
@@ -440,15 +435,15 @@ void SalFrame::ShowFullScreen( BOOL bFullScreen )
 // -----------------------------------------------------------------------
 
 /**
- * (static) Timer routine to toggle the system user interface mode on the
+ * Timer routine to toggle the system user interface mode on the
  * thread that is hosting our main runloop.  Starting with 10.3.8, it appears
  * that there is some type of contention that is causing SetSystemUIMode
  * to crash if it is invoked from a thread that is not the carbon runloop.
  *
  * @param aTimer	timer reference structure
  * @param pData		cookie passed to timer;  treated as a boolean value
- *			set to TRUE if we're entering fullscreen presentation
- *			mode, FALSE if we're returning to normal usage mode.
+ *			set to true if we're entering fullscreen presentation
+ *			mode, false if we're returning to normal usage mode.
  */
 static void SetSystemUIModeTimerCallback( EventLoopTimerRef aTimer, void *pData )
 {
@@ -458,31 +453,6 @@ static void SetSystemUIModeTimerCallback( EventLoopTimerRef aTimer, void *pData 
 		SetSystemUIMode( kUIModeAllHidden, kUIOptionDisableAppleMenu | kUIOptionDisableProcessSwitch );
 	else
 		SetSystemUIMode( kUIModeNormal, 0 );
-}
-
-// -----------------------------------------------------------------------
-
-/**
- * (static) Trigger a timer invocation to change our system user interface
- * mode to show/hide the dock, menubar, and other applications in preparation
- * for presentation mode.
- *
- * @param bStart	TRUE to enter fullscreen mode, FALSE to restore
- *			normal mode
- */
-static void InstallSetSystemUIModeTimer( BOOL bStart )
-{
-	if ( !pSystemUIModeTimerUPP )
-		pSystemUIModeTimerUPP = NewEventLoopTimerUPP( SetSystemUIModeTimerCallback );
-	if ( pSystemUIModeTimerUPP )
-	{
-		InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pSystemUIModeTimerUPP, (void *)( bStart ? true : false ), NULL );
-
-		// Let the native event thread run
-		ULONG nCount = Application::ReleaseSolarMutex();
-		OThread::yield();
-		Application::AcquireSolarMutex( nCount );
-	}
 }
 
 // -----------------------------------------------------------------------
@@ -502,7 +472,17 @@ void SalFrame::StartPresentation( BOOL bStart )
 
 	// [ed] 2/15/05 Change the SystemUIMode via timers so we can trigger
 	// it on the main runloop thread.  Bug 484
-	InstallSetSystemUIModeTimer( bStart );
+	if ( !pSystemUIModeTimerUPP )
+		pSystemUIModeTimerUPP = NewEventLoopTimerUPP( SetSystemUIModeTimerCallback );
+	if ( pSystemUIModeTimerUPP )
+	{
+		InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pSystemUIModeTimerUPP, (void *)( bStart ? true : false ), NULL );
+
+		// Let the native event thread run
+		ULONG nCount = Application::ReleaseSolarMutex();
+		OThread::yield();
+		Application::AcquireSolarMutex( nCount );
+	}
 
 	maFrameData.mbPresentation = bStart;
 	pSalData->mpPresentationFrame = this;
@@ -515,11 +495,6 @@ void SalFrame::StartPresentation( BOOL bStart )
 		Rectangle aWorkArea;
 		GetWorkArea( aWorkArea );
 
-		// The system menu bar is a dead zone of coordinates so we need to set
-		// the top of the window at -1 and make the cached insets larger to
-		// make the window appear at the top of the screen
-		if ( bStart )
-			aWorkArea.nTop -= 1;
 		SetPosSize( aWorkArea.nLeft, aWorkArea.nTop, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
 	}
 }
