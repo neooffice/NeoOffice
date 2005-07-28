@@ -449,18 +449,18 @@ void *com_sun_star_vcl_VCLFrame::getNativeWindow()
 			jobject tempObj = peer->getJavaObject();
 			if ( tempObj )
 			{
-				jclass tempClass = t.pEnv->FindClass( "apple/awt/CWindow" );
+				jclass tempClass = t.pEnv->FindClass( "apple/awt/ComponentModel" );
 				if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
 				{
-					static jfieldID fIDNSWindow = NULL;
-					if ( !fIDNSWindow )
+					static jmethodID mIDGetModelPtr = NULL;
+					if ( !mIDGetModelPtr )
 					{
-						char *cSignature = "I";
-						fIDNSWindow = t.pEnv->GetFieldID( tempClass, "fNSWindow", cSignature );
+						char *cSignature = "()J";
+						mIDGetModelPtr = t.pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
 					}
-					OSL_ENSURE( fIDNSWindow, "Unknown field id!" );
-					if ( fIDNSWindow )
-						out = (void *)CWindow_windowRef( (void *)t.pEnv->GetIntField( tempObj, fIDNSWindow ) );
+					OSL_ENSURE( mIDGetModelPtr, "Unknown field id!" );
+					if ( mIDGetModelPtr )
+						out = (void *)CWindow_windowRef( (void *)t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr ) );
 				}
 			}
 			delete peer;
