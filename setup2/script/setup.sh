@@ -274,8 +274,9 @@ if [ "$os" = "Darwin" ] ; then
             error "$javavm file does not exist"
         fi
     fi
-    # Turn off graphics acceleration and force vcl.jar into bootstrap classpath
-    printf "[Java]\nRuntimeLib=$javavm\ncom.apple.hwaccel=false\ncom.apple.hwaccellist=\n-Xbootclasspath/a:$apphome/classes/vcl.jar\n" > "$configdir/javarc"
+    # Force vcl.jar into bootstrap classpath so that we are sure that our
+    # classes are loaded
+    printf "[Java]\nRuntimeLib=$javavm\n-Xbootclasspath/a:$apphome/classes/vcl.jar\n" > "$configdir/javarc"
 else
     printf "[Java]\n" > "$configdir/javarc"
 fi
