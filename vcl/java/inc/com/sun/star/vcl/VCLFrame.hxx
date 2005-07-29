@@ -70,7 +70,7 @@ public:
 	com_sun_star_vcl_VCLGraphics*	getGraphics();
 	const Rectangle		getInsets();
 	::rtl::OUString		getKeyName( USHORT _par0 );
-	void*				getNativeWindow();
+	long				getNativeWindow( sal_Bool _par0 = sal_False );
 	com_sun_star_vcl_VCLFrame*	getOwner();
 	java_lang_Object*	getPeer();
 	ULONG				getState();
@@ -84,7 +84,7 @@ public:
 	void				setPointer( USHORT _par0 );
 	void				setState( ULONG _par0 );
 	void				setTitle( ::rtl::OUString _par0 );
-	void				setVisible( sal_Bool _par0, sal_Bool _par1 );
+	void				setVisible( sal_Bool _par0 );
 	void				toFront();
 };
 

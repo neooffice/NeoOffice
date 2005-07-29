@@ -524,7 +524,7 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 							return;
 						}
 					}
-					else if ( (WindowRef)pFrame->maFrameData.mpVCLFrame->getNativeWindow() == FrontNonFloatingWindow() )
+					else
 					{
 						// Make sure child frames are in front of frame as
 						// clicking on the title bar may have moved this frame
@@ -537,7 +537,7 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 					if ( pSalData->mpFocusFrame == pFrame )
 						pSalData->mpFocusFrame = NULL;
 				}
-				else if ( nID == SALEVENT_MOUSEBUTTONDOWN && pSalData->mpFocusFrame == pFrame && (WindowRef)pFrame->maFrameData.mpVCLFrame->getNativeWindow() == FrontNonFloatingWindow() )
+				else if ( nID == SALEVENT_MOUSEBUTTONDOWN )
 				{
 					// Make sure child frames are in front of frame as
 					// clicking on the title bar may have moved this frame

@@ -47,9 +47,11 @@
 #ifdef __cplusplus
 BEGIN_C
 #endif
-void CWindow_setVisible( void *pCWindow, BOOL bVisible, BOOL bEnable );
-void CWindow_toFront( void *pCWindow );
-WindowRef CWindow_windowRef( void *pCWindow );
+long CWindow_getNSWindow( long aCWindow );
+void CWindow_makeMainWindow( long aCWindow );
+void CWindow_orderFront( long aCWindow );
+void CWindow_setLevel( long aCWindow, CGWindowLevelKey nWindowLevel );
+WindowRef CWindow_windowRef( long aCWindow );
 #ifdef __cplusplus
 END_C
 #endif

@@ -47,37 +47,25 @@
 #ifndef _SV_SALFRAME_HXX
 #include <salframe.hxx>
 #endif
-#ifndef _OSL_MUTEX_HXX_
-#include <osl/mutex.hxx>
-#endif
 
 #include "VCLFrame_cocoa.h"
-#undef check
 
-using namespace osl;
 using namespace vcl;
-using namespace vos;
-
-static bool bActivate = false;
-static bool bBringToFront = false;
-static Mutex aMutex;
 
 // ============================================================================
 
-static void JNICALL Java_apple_awt_CWindow_toFront( JNIEnv *pEnv, jobject object, jint pCWindow )
+static void JNICALL Java_com_sun_star_vcl_VCLFrame_requestFocus0( JNIEnv *pEnv, jobject object )
 {
-	MutexGuard aGuard( aMutex );
-
-	CWindow_toFront( (void *)pCWindow );
+	com_sun_star_vcl_VCLFrame aFrame( object );
+	CWindow_makeMainWindow( (long)aFrame.getNativeWindow( sal_True ) );
 }
 
 // ----------------------------------------------------------------------------
 
-static void JNICALL Java_apple_awt_CWindow__1setVisible( JNIEnv *pEnv, jobject object, jint pCWindow, jboolean bVisible, jboolean bEnable )
+static void JNICALL Java_com_sun_star_vcl_VCLFrame_toFront0( JNIEnv *pEnv, jobject object )
 {
-	MutexGuard aGuard( aMutex );
-
-	CWindow_setVisible( (void *)pCWindow, bVisible, bEnable );
+	com_sun_star_vcl_VCLFrame aFrame( object );
+	CWindow_orderFront( (long)aFrame.getNativeWindow( sal_True ) );
 }
 
 // ============================================================================
@@ -92,27 +80,20 @@ jclass com_sun_star_vcl_VCLFrame::getMyClass()
 	{
 		VCLThreadAttach t;
 		if ( !t.pEnv ) return (jclass)NULL;
-
-		// We need to replace the native CWindow._setVisible() and
-		// CWindow.toFront() methods that they will not change window focus
-		//  when invoked
-		jclass cWindowClass = t.pEnv->FindClass( "apple/awt/CWindow" );
-		if ( cWindowClass )
-		{
-			JNINativeMethod pMethods[2];
-			pMethods[0].name = "toFront";
-			pMethods[0].signature = "(J)V";
-			pMethods[0].fnPtr = (void *)Java_apple_awt_CWindow_toFront;
-			pMethods[1].name = "_setVisible";
-			pMethods[1].signature = "(IZZ)V";
-			pMethods[1].fnPtr = (void *)Java_apple_awt_CWindow__1setVisible;
-			// t.pEnv->RegisterNatives( cWindowClass, pMethods, 2 );
-		}
-
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLFrame" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
+		if ( tempClass )
+		{
+			JNINativeMethod pMethods[2];
+			pMethods[0].name = "requestFocus0";
+			pMethods[0].signature = "()V";
+			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLFrame_requestFocus0;
+			pMethods[1].name = "toFront0";
+			pMethods[1].signature = "()V";
+			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLFrame_toFront0;
+			t.pEnv->RegisterNatives( tempClass, pMethods, 2 );
+		}
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
-
 	}
 	return theClass;
 }
@@ -187,20 +168,7 @@ void com_sun_star_vcl_VCLFrame::dispose()
 		OSL_ENSURE( mID, "Unknown method id!" );
 
 		if ( mID )
-		{
-			// Release lock while disposing a window to avoid deadlocking in
-			// the native event queue
-			SalData *pSalData = GetSalData();
-			if ( !pSalData->maNativeEventCondition.check() )
-				pSalData->maNativeEventCondition.set();
-
-			ULONG nCount = Application::ReleaseSolarMutex();
-			OThread::yield();
-
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
-
-			Application::AcquireSolarMutex( nCount );
-		}
 	}
 }
 
@@ -437,9 +405,9 @@ const Rectangle com_sun_star_vcl_VCLFrame::getInsets()
 
 // ----------------------------------------------------------------------------
 
-void *com_sun_star_vcl_VCLFrame::getNativeWindow()
+long com_sun_star_vcl_VCLFrame::getNativeWindow( sal_Bool _par0 )
 {
-	void *out = NULL;
+	long out = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
@@ -460,7 +428,13 @@ void *com_sun_star_vcl_VCLFrame::getNativeWindow()
 					}
 					OSL_ENSURE( mIDGetModelPtr, "Unknown field id!" );
 					if ( mIDGetModelPtr )
-						out = (void *)CWindow_windowRef( (void *)t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr ) );
+					{
+						jlong aCWindow = t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr );
+						if ( _par0 )
+							out = (long)aCWindow;
+						else
+							out = (long)CWindow_windowRef( aCWindow );
+					}
 				}
 			}
 			delete peer;
@@ -582,14 +556,7 @@ void com_sun_star_vcl_VCLFrame::requestFocus()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
-			MutexGuard aGuard( aMutex );
-			bActivate = true;
-
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
-
-			bActivate = false;
-		}
 	}
 }
 
@@ -632,23 +599,12 @@ void com_sun_star_vcl_VCLFrame::setBounds( long _par0, long _par1, long _par2, l
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			// Release lock while resizing a window to avoid deadlocking in
-			// the native event queue
-			SalData *pSalData = GetSalData();
-			if ( !pSalData->maNativeEventCondition.check() )
-				pSalData->maNativeEventCondition.set();
-
-			ULONG nCount = Application::ReleaseSolarMutex();
-			OThread::yield();
-
 			jvalue args[4];
 			args[0].i = jint( _par0 );
 			args[1].i = jint( _par1 );
 			args[2].i = jint( _par2 );
 			args[3].i = jint( _par3 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
-
-			Application::AcquireSolarMutex( nCount );
 		}
 	}
 }
@@ -765,20 +721,9 @@ void com_sun_star_vcl_VCLFrame::setState( ULONG _par0 )
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			// Release lock while setting window state to avoid deadlocking in
-			// the native event queue
-			SalData *pSalData = GetSalData();
-			if ( !pSalData->maNativeEventCondition.check() )
-				pSalData->maNativeEventCondition.set();
-
-			ULONG nCount = Application::ReleaseSolarMutex();
-			OThread::yield();
-
 			jvalue args[1];
 			args[0].j = jlong( _par0 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
-
-			Application::AcquireSolarMutex( nCount );
 		}
 	}
 }
@@ -808,7 +753,7 @@ void com_sun_star_vcl_VCLFrame::setTitle( ::rtl::OUString _par0 )
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0, sal_Bool _par1 )
+void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -822,27 +767,9 @@ void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0, sal_Bool _par1 )
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			// Release lock while showing or hiding a window to avoid
-			// deadlocking in the native event queue
-			SalData *pSalData = GetSalData();
-			if ( !pSalData->maNativeEventCondition.check() )
-				pSalData->maNativeEventCondition.set();
-
-			ULONG nCount = Application::ReleaseSolarMutex();
-			OThread::yield();
-
-			MutexGuard aGuard( aMutex );
-			bActivate = !_par1;
-			bBringToFront = true;
-
 			jvalue args[1];
 			args[0].z = jboolean( _par0 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
-
-			bActivate = false;
-			bBringToFront = false;
-
-			Application::AcquireSolarMutex( nCount );
 		}
 	}
 }
@@ -862,13 +789,6 @@ void com_sun_star_vcl_VCLFrame::toFront()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
-			MutexGuard aGuard( aMutex );
-			bBringToFront = true;
-
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
-
-			bBringToFront = false;
-		}
 	}
 }

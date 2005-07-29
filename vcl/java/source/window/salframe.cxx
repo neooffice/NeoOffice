@@ -72,8 +72,6 @@ static EventHandlerUPP pEventHandlerUPP = NULL;
 static EventLoopTimerUPP pSystemUIModeTimerUPP = NULL;
 
 using namespace rtl;
-using namespace vos;
-
 using namespace vcl;
 
 // =======================================================================
@@ -189,7 +187,7 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 	maFrameData.mbVisible = bVisible;
 
-	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible, bNoActivate );
+	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible );
 
 	// Reset graphics
 	com_sun_star_vcl_VCLGraphics *pVCLGraphics = maFrameData.mpVCLFrame->getGraphics();
@@ -207,12 +205,10 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	else
 	{
 		if ( pSalData->mpFocusFrame == this )
-		{
 			pSalData->mpFocusFrame = NULL;
 
-			if ( maFrameData.mpParent )
-				maFrameData.mpParent->ToTop( SAL_FRAME_TOTOP_GRABFOCUS );
-		}
+		if ( maFrameData.mpParent )
+			maFrameData.mpParent->ToTop( SAL_FRAME_TOTOP_GRABFOCUS );
 	}
 }
 
@@ -476,12 +472,10 @@ void SalFrame::StartPresentation( BOOL bStart )
 		pSystemUIModeTimerUPP = NewEventLoopTimerUPP( SetSystemUIModeTimerCallback );
 	if ( pSystemUIModeTimerUPP )
 	{
-		InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pSystemUIModeTimerUPP, (void *)( bStart ? true : false ), NULL );
-
-		// Let the native event thread run
-		ULONG nCount = Application::ReleaseSolarMutex();
-		OThread::yield();
-		Application::AcquireSolarMutex( nCount );
+		if ( GetCurrentEventLoop() != GetMainEventLoop() )
+			InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pSystemUIModeTimerUPP, (void *)( bStart ? true : false ), NULL );
+		else
+			SetSystemUIModeTimerCallback( NULL, (void *)( bStart ? true : false ) );
 	}
 
 	maFrameData.mbPresentation = bStart;
@@ -517,15 +511,15 @@ void SalFrame::ToTop( USHORT nFlags )
 	if ( nFlags & ( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) )
 		maFrameData.mpVCLFrame->setState( SAL_FRAMESTATE_NORMAL );
 
+	if ( nFlags & ( SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) )
+		maFrameData.mpVCLFrame->requestFocus();
+
 	if ( ! ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) )
 	{
 		maFrameData.mpVCLFrame->toFront();
 		for ( ::std::list< SalFrame* >::const_iterator it = maFrameData.maChildren.begin(); it != maFrameData.maChildren.end(); ++it )
 			(*it)->ToTop( nFlags & ~SAL_FRAME_TOTOP_GRABFOCUS );
 	}
-
-	if ( nFlags & ( SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) )
-		maFrameData.mpVCLFrame->requestFocus();
 }
 
 // -----------------------------------------------------------------------

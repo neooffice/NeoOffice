@@ -36,39 +36,36 @@
 #import <Cocoa/Cocoa.h>
 #import "VCLFrame_cocoa.h"
 
-static NSWindow *GetNSWindow( void *pCWindow )
+long CWindow_getNSWindow( long aCWindow )
 {
+	long out = nil;
+
 	SEL aSelector = @selector(getNSWindow);
-	if ( pCWindow && [(NSObject *)pCWindow respondsToSelector:aSelector] )
-		return (NSWindow *)[(NSObject *)pCWindow performSelector:aSelector];
-	else
-		return NULL;
+	if ( aCWindow && [(NSObject *)aCWindow respondsToSelector:aSelector] )
+		out = (long)[(NSObject *)aCWindow performSelector:aSelector];
+
+	return out;
 }
 
-void CWindow_setVisible( void *pCWindow, BOOL bVisible, BOOL bEnable )
+void CWindow_makeMainWindow( long aCWindow )
 {
-	NSWindow *pNSWindow = GetNSWindow( pCWindow );
+	NSWindow *pNSWindow = (NSWindow *)CWindow_getNSWindow( aCWindow );
 	if ( pNSWindow )
-	{
-		if ( bVisible )
-			[pNSWindow orderFront:pNSWindow];
-		else
-			[pNSWindow orderOut:pNSWindow];
-	}
+		[pNSWindow makeMainWindow];
 }
 
-void CWindow_toFront( void *pCWindow )
+void CWindow_orderFront( long aCWindow )
 {
-	NSWindow *pNSWindow = GetNSWindow( pCWindow );
+	NSWindow *pNSWindow = (NSWindow *)CWindow_getNSWindow( aCWindow );
 	if ( pNSWindow )
 		[pNSWindow orderFront:pNSWindow];
 }
 
-WindowRef CWindow_windowRef( void *pCWindow )
+WindowRef CWindow_windowRef( long aCWindow )
 {
 	WindowRef aWindow = NULL;
 
-	NSWindow *pNSWindow = GetNSWindow( pCWindow );
+	NSWindow *pNSWindow = (NSWindow *)CWindow_getNSWindow( aCWindow );
 	if ( pNSWindow )
 		aWindow = [pNSWindow windowRef];
 

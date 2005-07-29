@@ -1951,16 +1951,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
-	 * Sets the focus to this.
+	 * Sets the focus to the native window.
 	 */
 	public void requestFocus() {
 
-		if (!window.isShowing())
-			return;
-
-		panel.requestFocus();
+		if (!isFloatingWindow() && window.isShowing())
+			requestFocus0();
 
 	}
+
+	/**
+	 * Sets the focus to the native window. This native method is implemented
+	 * in the VCLFrame.cxx file.
+	 */
+	native void requestFocus0();
 
 	/**
 	 * Set the auto flush flag.
@@ -2048,9 +2052,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public void setParent(VCLFrame p) {
 
 		parent = p;
-
-		if (window instanceof VCLFrame.NoPaintWindow)
-			((VCLFrame.NoPaintWindow)window).setOwner(parent != null ? parent.getWindow() : null);
 
 	}
 
@@ -2269,16 +2270,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
-	 * Brings this window to the front without changing focus.
+	 * Brings the native window to the front without changing focus.
 	 */
 	public void toFront() {
 
-		if (!window.isShowing())
-			return;
-
-		window.toFront();
+		if (window.isShowing())
+			toFront0();
 
 	}
+
+	/**
+	 * Brings the native window to the front without changing focus. This
+	 * native method is implemented in the VCLFrame.cxx file.
+	 */
+	native void toFront0();
 
 	/**
 	 * Invoked the first time a window is made visible.
@@ -2414,6 +2419,15 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		/**
+		 * Sets the focus to this frame.
+		 */
+		public void requestFocus() {
+
+			frame.requestFocus();
+
+		}
+
+		/**
 		 * Set the minimum size for the frame.
 		 *
 		 * @param width the minimum width
@@ -2429,6 +2443,15 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			insets = getInsets();
 			minSize = new Dimension(width + insets.left + insets.right, height + insets.top + insets.bottom);
 			
+		}
+
+		/**
+		 * Brings the frame to the front without changing focus.
+		 */
+		public void toFront() {
+
+			frame.toFront();
+
 		}
 
 		/**
@@ -2527,11 +2550,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		private Dimension minSize = null;
 
 		/**
-		 * The owner for this window.
-		 */
-		private Window owner = null;
-
-		/**
 		 * Constructs a new <code>VCLFrame.NoPaintWindow</code> instance.
 		 *
 		 * @param f the <code>VCLFrame</code>
@@ -2570,20 +2588,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		/**
-		 * Returns the owner of this window.
-		 *
-		 * @return the owner of this window 
-		 */
-		public Window getOwner() {
-
-			if (owner != null)
-				return owner;
-			else
-				return super.getOwner();
-
-		}
-
-		/**
 		 * This method performs no painting of the window. This method is used
 		 * to prevent Java from painting over what VCL has painted.
 		 *
@@ -2601,32 +2605,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		/**
-		 * Sets the owner of this window.
-		 *
-		 * @param o the new owner of this window 
+		 * Sets the focus to the window.
 		 */
-		public void setOwner(Window o) {
+		public void requestFocus() {
 
-			owner = o;
-
-		}
-
-		/**
-		 * This method performs no painting of the window. This method is used
-		 * to prevent Java from painting over what VCL has painted.
-		 *
-		 * @param g the <code>Graphics</code>
-		 */
-		public void update(Graphics g) {
-
-			paint(g);
+			frame.requestFocus();
 
 		}
 
 		/**
 		 * Set the native window to show or hide in full screen mode.
 		 *
-		 * @param b <code>true</code> sets this component full screen mode and
+		 * @param b <code>true</code> sets this window to full screen mode and
 		 *  <code>false</code> sets it to normal mode
 		 */
 		void setFullScreenMode(boolean b) {
@@ -2652,6 +2642,37 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			insets = getInsets();
 			minSize = new Dimension(width + insets.left + insets.right, height + insets.top + insets.bottom);
 			
+		}
+
+		/**
+		 * Shows the window.
+		 */
+		public void show() {
+
+			super.show();
+			requestFocus();
+
+		}
+
+		/**
+		 * Brings the window to the front without changing focus.
+		 */
+		public void toFront() {
+
+			frame.toFront();
+
+		}
+
+		/**
+		 * This method performs no painting of the window. This method is used
+		 * to prevent Java from painting over what VCL has painted.
+		 *
+		 * @param g the <code>Graphics</code>
+		 */
+		public void update(Graphics g) {
+
+			paint(g);
+
 		}
 
 	}
@@ -2683,7 +2704,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		/**
 		 * Returns whether or not this component is showing.
 		 *
-		 * @return <code>true</code> if the component is in full screen mode
+		 * @return <code>true</code> if this component is in full screen mode
 		 *  otherwise <code>false</code>.
 		 */
 		public boolean isShowing() {
