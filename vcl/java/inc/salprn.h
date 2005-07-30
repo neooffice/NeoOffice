@@ -97,15 +97,9 @@ class SalPrinterData
 
 class SalDriverData
 {
-	friend class	ImplJobSetup;
-	friend class	JobSetup;
-	friend class	SalInfoPrinter;
-	friend class	SalInstance;
-	friend class	SalPrinter;
-
+public:
 	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
 
-public:
 					SalDriverData() : mpVCLPageFormat( NULL ) {}
 					SalDriverData( SalDriverData *pData );
 					~SalDriverData();

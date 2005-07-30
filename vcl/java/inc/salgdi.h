@@ -47,6 +47,9 @@
 
 class ImplFontSelectData;
 class SalATSLayout;
+class SalFrame;
+class SalPrinter;
+class SalVirtualDevice;
 
 namespace vcl
 {
@@ -60,16 +63,7 @@ class com_sun_star_vcl_VCLGraphics;
 
 class SalGraphicsData
 {
-	friend class	SalATSLayout;
-	friend class	SalBitmap;
-	friend class	SalFrame;
-	friend class	SalGraphics;
-	friend class	SalInfoPrinter;
-	friend class	SalInstance;
-	friend class	SalOpenGL;
-	friend class	SalPrinter;
-	friend class	SalVirtualDevice;
-
+public:
 	SalColor		mnFillColor;
 	SalColor		mnLineColor;
 	SalColor		mnTextColor;

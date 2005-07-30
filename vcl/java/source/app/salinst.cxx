@@ -49,6 +49,9 @@
 #ifndef _SALJAVA_H
 #include <saljava.h>
 #endif
+#ifndef _SV_SALMENU_HXX
+#include <salmenu.hxx>
+#endif
 #ifndef _SV_SALPTYPE_HXX
 #include <salptype.hxx>
 #endif

@@ -59,6 +59,7 @@ class java_lang_Object;
 }
 
 class SalBitmap;
+class SalMenu;
 
 // ----------------
 // - SalFrameData -
@@ -66,18 +67,7 @@ class SalBitmap;
 
 class SalFrameData
 {
-	friend class	SalFrame;
-	friend class	SalGraphics;
-	friend class	SalInstance;
-	friend class	SalMenu;
-	friend class	::vcl::com_sun_star_vcl_VCLEvent;
-	friend class	::vcl::com_sun_star_vcl_VCLEventQueue;
-	friend class	::vcl::com_sun_star_vcl_VCLFrame;
-	friend class	::vcl::com_sun_star_vcl_VCLMenuBar;
-	friend class	::vcl::com_sun_star_vcl_VCLPrintJob;
-	friend void 	UpdateMenusForFrame( SalFrame*, SalMenu* );
-	friend void		SetActiveMenuBarForFrame( SalFrame *pFrame );
-
+public:
 	::vcl::com_sun_star_vcl_VCLFrame*	mpVCLFrame;
 	::vcl::java_lang_Object*	mpPanel;
 	SalGraphics*	mpGraphics;

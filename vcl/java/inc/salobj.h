@@ -46,7 +46,7 @@
 
 class SalObjectData
 {
-	friend class	SalObject;
+public:
 					SalObjectData();
 					~SalObjectData();
 };

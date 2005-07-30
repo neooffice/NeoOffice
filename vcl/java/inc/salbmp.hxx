@@ -59,9 +59,7 @@ class	SalGraphics;
 
 class SalBitmap
 {
-	friend class	SalGraphics;
-	friend class	SalVirtualDevice;
-
+public:
 	Size 			maSize;
 	USHORT			mnAcquireCount;
 	USHORT			mnBitCount;

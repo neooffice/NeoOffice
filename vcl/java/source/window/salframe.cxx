@@ -44,6 +44,9 @@
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
+#ifndef _SV_SALMENU_HXX
+#include <salmenu.hxx>
+#endif
 #ifndef _SV_SALSYS_HXX
 #include <salsys.hxx>
 #endif

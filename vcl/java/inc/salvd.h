@@ -52,9 +52,7 @@
 
 class SalVirDevData
 {
-	friend class	SalVirtualDevice;
-	friend class	SalInstance;
-
+public:
 	::vcl::com_sun_star_vcl_VCLImage*	mpVCLImage;
 	USHORT			mnBitCount;
 	SalGraphics*	mpGraphics; 
