@@ -72,7 +72,7 @@
 #undef check
 
 static EventHandlerUPP pEventHandlerUPP = NULL;
-static EventLoopTimerUPP pSystemUIModeTimerUPP = NULL;
+static EventLoopTimerUPP pSetSystemUIModeTimerUPP = NULL;
 
 using namespace rtl;
 using namespace vcl;
@@ -471,12 +471,12 @@ void SalFrame::StartPresentation( BOOL bStart )
 
 	// [ed] 2/15/05 Change the SystemUIMode via timers so we can trigger
 	// it on the main runloop thread.  Bug 484
-	if ( !pSystemUIModeTimerUPP )
-		pSystemUIModeTimerUPP = NewEventLoopTimerUPP( SetSystemUIModeTimerCallback );
-	if ( pSystemUIModeTimerUPP )
+	if ( !pSetSystemUIModeTimerUPP )
+		pSetSystemUIModeTimerUPP = NewEventLoopTimerUPP( SetSystemUIModeTimerCallback );
+	if ( pSetSystemUIModeTimerUPP )
 	{
 		if ( GetCurrentEventLoop() != GetMainEventLoop() )
-			InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pSystemUIModeTimerUPP, (void *)( bStart ? true : false ), NULL );
+			InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pSetSystemUIModeTimerUPP, (void *)( bStart ? true : false ), NULL );
 		else
 			SetSystemUIModeTimerCallback( NULL, (void *)( bStart ? true : false ) );
 	}

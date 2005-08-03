@@ -33,8 +33,8 @@
  *
  ************************************************************************/
 
-#ifndef __SHUTDOWNICON_COCOA_H__
-#define __SHUTDOWNICON_COCOA_H__
+#ifndef __VCLFRAME_COCOA_H__
+#define __VCLFRAME_COCOA_H__
 
 #ifdef __cplusplus
 #include <premac.h>
