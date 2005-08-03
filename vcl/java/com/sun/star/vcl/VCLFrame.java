@@ -1546,7 +1546,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public boolean isFloatingWindow() {
 
-		return !(fullScreenMode || window.isUndecorated());
+		return (!fullScreenMode && window.isUndecorated());
 
 	}
 
@@ -1997,10 +1997,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (b == fullScreenMode)
 			return;
 
-		fullScreenMode = b;
-
-		if (window.isUndecorated())
+		if (window.isUndecorated()) {
+			fullScreenMode = b;
 			window.setFocusableWindowState(fullScreenMode);
+		}
 
 	}
 
@@ -2011,7 +2011,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	void setMenuBar(MenuBar menubar) {
 
-		window.setMenuBar(menubar);
+		if (!window.isUndecorated())
+			window.setMenuBar(menubar);
 
 	}
 
