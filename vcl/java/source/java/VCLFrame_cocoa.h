@@ -42,16 +42,14 @@
 #include <Carbon/Carbon.h>
 #ifdef __cplusplus
 #include <postmac.h>
+typedef void* id;
 #endif
 
 #ifdef __cplusplus
 BEGIN_C
 #endif
-long CWindow_getNSWindow( long aCWindow );
-void CWindow_makeMainWindow( long aCWindow );
-void CWindow_orderFront( long aCWindow );
-void CWindow_setLevel( long aCWindow, CGWindowLevelKey nWindowLevel );
-WindowRef CWindow_windowRef( long aCWindow );
+id CWindow_getNSWindow( id pCWindow );
+WindowRef CWindow_windowRef( id pCWindow );
 #ifdef __cplusplus
 END_C
 #endif

@@ -209,9 +209,6 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	{
 		if ( pSalData->mpFocusFrame == this )
 			pSalData->mpFocusFrame = NULL;
-
-		if ( maFrameData.mpParent )
-			maFrameData.mpParent->ToTop( SAL_FRAME_TOTOP_GRABFOCUS );
 	}
 }
 
@@ -511,18 +508,7 @@ void SalFrame::SetAlwaysOnTop( BOOL bOnTop )
 
 void SalFrame::ToTop( USHORT nFlags )
 {
-	if ( nFlags & ( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) )
-		maFrameData.mpVCLFrame->setState( SAL_FRAMESTATE_NORMAL );
-
-	if ( nFlags & ( SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) )
-		maFrameData.mpVCLFrame->requestFocus();
-
-	if ( ! ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) )
-	{
-		maFrameData.mpVCLFrame->toFront();
-		for ( ::std::list< SalFrame* >::const_iterator it = maFrameData.maChildren.begin(); it != maFrameData.maChildren.end(); ++it )
-			(*it)->ToTop( nFlags & ~SAL_FRAME_TOTOP_GRABFOCUS );
-	}
+	maFrameData.mpVCLFrame->toFront();
 }
 
 // -----------------------------------------------------------------------
@@ -727,7 +713,6 @@ void SalFrame::SetParent( SalFrame* pNewParent )
 		maFrameData.mpParent->maFrameData.mpVCLFrame->removeChild( this );
 	}
 	maFrameData.mpParent = pNewParent;
-	maFrameData.mpVCLFrame->setParent( maFrameData.mpParent );
 	if ( maFrameData.mpParent )
 	{
 		maFrameData.mpParent->maFrameData.maChildren.push_back( this );

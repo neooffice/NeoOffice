@@ -36,36 +36,19 @@
 #import <Cocoa/Cocoa.h>
 #import "VCLFrame_cocoa.h"
 
-long CWindow_getNSWindow( long aCWindow )
+id CWindow_getNSWindow( id pCWindow )
 {
-	long out = nil;
-
-	SEL aSelector = @selector(getNSWindow);
-	if ( aCWindow && [(NSObject *)aCWindow respondsToSelector:aSelector] )
-		out = (long)[(NSObject *)aCWindow performSelector:aSelector];
-
-	return out;
+	if ( pCWindow && [pCWindow respondsToSelector:@selector(getNSWindow)] )
+		return [pCWindow getNSWindow];
+	else
+		return nil;
 }
 
-void CWindow_makeMainWindow( long aCWindow )
-{
-	NSWindow *pNSWindow = (NSWindow *)CWindow_getNSWindow( aCWindow );
-	if ( pNSWindow )
-		[pNSWindow makeMainWindow];
-}
-
-void CWindow_orderFront( long aCWindow )
-{
-	NSWindow *pNSWindow = (NSWindow *)CWindow_getNSWindow( aCWindow );
-	if ( pNSWindow )
-		[pNSWindow orderFront:pNSWindow];
-}
-
-WindowRef CWindow_windowRef( long aCWindow )
+WindowRef CWindow_windowRef( id pCWindow )
 {
 	WindowRef aWindow = NULL;
 
-	NSWindow *pNSWindow = (NSWindow *)CWindow_getNSWindow( aCWindow );
+	NSWindow *pNSWindow = (NSWindow *)CWindow_getNSWindow( pCWindow );
 	if ( pNSWindow )
 		aWindow = [pNSWindow windowRef];
 

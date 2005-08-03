@@ -735,7 +735,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	/**
 	 * The native window.
 	 */
-	private Window window = null;
+	private VCLFrame.NoPaintFrame window = null;
 
 	/**
 	 * Constructs a new <code>VCLFrame</code> instance.
@@ -751,10 +751,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		style = s;
 
 		// Create the native window
-		if ((style & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) != 0)
-			window = new VCLFrame.NoPaintFrame(this);
-		else
-			window = new VCLFrame.NoPaintWindow(this);
+		window = new VCLFrame.NoPaintFrame(this);
+		if ((style & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) == 0) {
+			window.setUndecorated(true);
+			window.setFocusableWindowState(false);
+		}
 
 		// Process remaining style flags
 		if ((style & SAL_FRAME_STYLE_SIZEABLE) != 0)
@@ -776,10 +777,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		window.setSize(1, 1);
 		window.addNotify();
 		insets = window.getInsets();
-		if (window instanceof Frame)
-			parent = null;
-		else
-			parent = p;
+		if (p != null)
+			p.addChild(this);
 		graphics = new VCLGraphics(this);
 
 	}
@@ -888,10 +887,16 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param f the child frame.
 	 */
-	public synchronized void addChild(VCLFrame f) {
+	public void addChild(VCLFrame f) {
 
-		if (f != null)
-			children.add(f);
+		if (f != null) {
+			synchronized (f) {
+				synchronized (children) {
+					f.parent = this;
+					children.add(f);
+				}
+			}
+		}
 
 	}
 
@@ -1429,10 +1434,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	MenuBar getMenuBar() {
 
-		if (window instanceof Frame)
-			return ((Frame)window).getMenuBar();
-		else
-			return null;
+		return window.getMenuBar();
 
 	}
 
@@ -1489,10 +1491,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public long getState() {
 
-		int s = Frame.NORMAL;
-		if (window instanceof Frame)
-			s = ((Frame)window).getState();
-
+		int s = window.getState();
 		if (s == Frame.ICONIFIED)
 			return SAL_FRAMESTATE_MINIMIZED;
 		else
@@ -1547,7 +1546,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public boolean isFloatingWindow() {
 
-		return !(fullScreenMode || window instanceof Frame);
+		return !(fullScreenMode || window.isUndecorated());
 
 	}
 
@@ -1626,13 +1625,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 					// with the same shortcut
 					boolean ignoreShortcut = false;
 					MenuShortcut shortcut = new MenuShortcut(keyChar, (modifiers & InputEvent.SHIFT_MASK) == InputEvent.SHIFT_MASK ? true : false);
- 					if (window instanceof Frame) {
-						MenuBar mb = ((Frame)window).getMenuBar();
-						if (mb != null) {
-							MenuItem mi = mb.getShortcutMenuItem(shortcut);
-							if (mi != null && mi.isEnabled())
-								ignoreShortcut = true;
-						}
+					MenuBar mb = window.getMenuBar();
+					if (mb != null) {
+						MenuItem mi = mb.getShortcutMenuItem(shortcut);
+						if (mi != null && mi.isEnabled())
+							ignoreShortcut = true;
 					}
 
 					if (!ignoreShortcut) {
@@ -1943,28 +1940,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param f the child frame.
 	 */
-	public synchronized void removeChild(VCLFrame f) {
+	public void removeChild(VCLFrame f) {
 
-		if (f != null)
-			children.remove(f);
-
-	}
-
-	/**
-	 * Sets the focus to the native window.
-	 */
-	public void requestFocus() {
-
-		if (!isFloatingWindow() && window.isShowing())
-			requestFocus0();
+		if (f != null) {
+			synchronized (f) {
+				synchronized (children) {
+					f.parent = null;
+					children.remove(f);
+				}
+			}
+		}
 
 	}
-
-	/**
-	 * Sets the focus to the native window. This native method is implemented
-	 * in the VCLFrame.cxx file.
-	 */
-	native void requestFocus0();
 
 	/**
 	 * Set the auto flush flag.
@@ -2012,8 +1999,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		fullScreenMode = b;
 
-		if (window instanceof VCLFrame.NoPaintWindow)
-			((VCLFrame.NoPaintWindow)window).setFullScreenMode(fullScreenMode);
+		if (window.isUndecorated())
+			window.setFocusableWindowState(fullScreenMode);
 
 	}
 
@@ -2024,8 +2011,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	void setMenuBar(MenuBar menubar) {
 
-		if (window instanceof Frame)
-			((Frame)window).setMenuBar(menubar);
+		window.setMenuBar(menubar);
 
 	}
 
@@ -2037,21 +2023,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void setMinClientSize(int width, int height) {
 
-		if (window instanceof VCLFrame.NoPaintFrame)
-			((VCLFrame.NoPaintFrame)window).setMinimumSize(width, height);
-		else
-			((VCLFrame.NoPaintWindow)window).setMinimumSize(width, height);
-
-	}
-
-	/**
-	 * Sets the parent frame.
-	 *
-	 * @param the parent frame
-	 */
-	public void setParent(VCLFrame p) {
-
-		parent = p;
+		window.setMinimumSize(width, height);
 
 	}
 
@@ -2206,7 +2178,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void setState(long state) {
 
-		if (window instanceof Frame && window.isShowing()) {
+		if (window.isShowing()) {
 			// Only invoke Frame.setState() if the state needs to be changed
 			// as this method can cause a deadlock with the native menu handler
 			// on Mac OS X
@@ -2226,10 +2198,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void setTitle(String title) {
 
-		if (window instanceof Frame)
-			((Frame)window).setTitle(title);
-		else
-			((Frame)window.getOwner()).setTitle(title);
+		window.setTitle(title);
 
 	}
 
@@ -2245,8 +2214,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			return;
 
 		// Set the resizable flag if needed
-		if (window instanceof Frame)
-			((Frame)window).setResizable(resizable);
+		window.setResizable(resizable);
 
 		if (b) {
 			// Register listeners
@@ -2261,6 +2229,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			// Show the window
 			window.show();
+
+			// Focus doesn't seem to always get set to the panel for focusable
+			// borderless windows
+			if (fullScreenMode)
+				panel.requestFocus();
 		}
 		else {
 			// Hide the window
@@ -2270,20 +2243,14 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
-	 * Brings the native window to the front without changing focus.
+	 * Brings the native window to the front.
 	 */
 	public void toFront() {
 
 		if (window.isShowing())
-			toFront0();
+			window.toFront();
 
 	}
-
-	/**
-	 * Brings the native window to the front without changing focus. This
-	 * native method is implemented in the VCLFrame.cxx file.
-	 */
-	native void toFront0();
 
 	/**
 	 * Invoked the first time a window is made visible.
@@ -2336,7 +2303,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param e the <code>WindowEvent</code>
 	 */
 	public void windowDeiconified(WindowEvent e) {}
-
 
 	/**
 	 * Invoked when the window is set to be the user's active window, which
@@ -2419,15 +2385,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		/**
-		 * Sets the focus to this frame.
-		 */
-		public void requestFocus() {
-
-			frame.requestFocus();
-
-		}
-
-		/**
 		 * Set the minimum size for the frame.
 		 *
 		 * @param width the minimum width
@@ -2443,15 +2400,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			insets = getInsets();
 			minSize = new Dimension(width + insets.left + insets.right, height + insets.top + insets.bottom);
 			
-		}
-
-		/**
-		 * Brings the frame to the front without changing focus.
-		 */
-		public void toFront() {
-
-			frame.toFront();
-
 		}
 
 		/**
@@ -2534,184 +2482,4 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 	}
 
-	/**
-	 * A class that has painting methods that perform no painting.
-	 */
-	final class NoPaintWindow extends Window {
-
-		/**
-		 * The <code>VCLFrame</code>.
-		 */
-		private VCLFrame frame = null;
-
-		/**
-		 * The minimum size.
-		 */
-		private Dimension minSize = null;
-
-		/**
-		 * Constructs a new <code>VCLFrame.NoPaintWindow</code> instance.
-		 *
-		 * @param f the <code>VCLFrame</code>
-		 */
-		NoPaintWindow(VCLFrame f) {
-
-			super(new VCLFrame.NoDisplayFrame(f));
-			frame = f;
-			setMinimumSize(1, 1);
-
-		}
-
-		/**
-		 * Returns the focus owner of this window.
-		 *
-		 * @return the focus owner of this window
-		 */
-		public Component getFocusOwner() {
-
-			if (frame.isFullScreenMode())
-				return this;
-			else
-				return super.getFocusOwner();
-
-		}
-
-		/**
-		 * Returns the minimum size for the window.
-		 *
-		 * @return the minimum size for the window
-		 */
-		public Dimension getMinimumSize() {
-
-			return minSize;
-			
-		}
-
-		/**
-		 * This method performs no painting of the window. This method is used
-		 * to prevent Java from painting over what VCL has painted.
-		 *
-		 * @param g the <code>Graphics</code>
-		 */
-		public void paint(Graphics g) {
-
-			VCLGraphics graphics = frame.getGraphics();
-			if (graphics != null) {
-				synchronized (graphics) {
-					graphics.addToFlush();
-				}
-			}
-
-		}
-
-		/**
-		 * Sets the focus to the window.
-		 */
-		public void requestFocus() {
-
-			frame.requestFocus();
-
-		}
-
-		/**
-		 * Set the native window to show or hide in full screen mode.
-		 *
-		 * @param b <code>true</code> sets this window to full screen mode and
-		 *  <code>false</code> sets it to normal mode
-		 */
-		void setFullScreenMode(boolean b) {
-
-			setFocusable(b);
-			setFocusableWindowState(b);
-
-		}
-
-		/**
-		 * Set the minimum size for the window.
-		 *
-		 * @param width the minimum width
-		 * @param height the minimum height
-		 */
-		public void setMinimumSize(int width, int height) {
-
-			if (width < 1)
-				width = 1;
-			if (height < 1)
-				height = 1;
-
-			insets = getInsets();
-			minSize = new Dimension(width + insets.left + insets.right, height + insets.top + insets.bottom);
-			
-		}
-
-		/**
-		 * Shows the window.
-		 */
-		public void show() {
-
-			super.show();
-			requestFocus();
-
-		}
-
-		/**
-		 * Brings the window to the front without changing focus.
-		 */
-		public void toFront() {
-
-			frame.toFront();
-
-		}
-
-		/**
-		 * This method performs no painting of the window. This method is used
-		 * to prevent Java from painting over what VCL has painted.
-		 *
-		 * @param g the <code>Graphics</code>
-		 */
-		public void update(Graphics g) {
-
-			paint(g);
-
-		}
-
-	}
-
-	/**
-	 * A class that can be used as an owner for a <code>Window</code> that can
-	 * fake being displayed when the <code>Window</code> is in full screen
-	 * mode. Display of the owner must be faked in order for a
-	 * <code>Window</code> to be able to obtain focus.
-	 */
-	final class NoDisplayFrame extends Frame {
-
-		/**
-		 * The <code>VCLFrame</code>.
-		 */
-		private VCLFrame frame = null;
-
-		/**
-		 * Constructs a new <code>VCLFrame.NoPaintWindow</code> instance.
-		 *
-		 * @param f the <code>VCLFrame</code>
-		 */
-		NoDisplayFrame(VCLFrame f) {
-
-			frame = f;
-
-		}
-
-		/**
-		 * Returns whether or not this component is showing.
-		 *
-		 * @return <code>true</code> if this component is in full screen mode
-		 *  otherwise <code>false</code>.
-		 */
-		public boolean isShowing() {
-
-			return frame.isFullScreenMode();
-
-		}
-
-	}
 }

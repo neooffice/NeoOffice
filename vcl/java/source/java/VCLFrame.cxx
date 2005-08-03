@@ -54,22 +54,6 @@ using namespace vcl;
 
 // ============================================================================
 
-static void JNICALL Java_com_sun_star_vcl_VCLFrame_requestFocus0( JNIEnv *pEnv, jobject object )
-{
-	com_sun_star_vcl_VCLFrame aFrame( object );
-	CWindow_makeMainWindow( (long)aFrame.getNativeWindow( sal_True ) );
-}
-
-// ----------------------------------------------------------------------------
-
-static void JNICALL Java_com_sun_star_vcl_VCLFrame_toFront0( JNIEnv *pEnv, jobject object )
-{
-	com_sun_star_vcl_VCLFrame aFrame( object );
-	CWindow_orderFront( (long)aFrame.getNativeWindow( sal_True ) );
-}
-
-// ============================================================================
-
 jclass com_sun_star_vcl_VCLFrame::theClass = NULL;
 
 // ----------------------------------------------------------------------------
@@ -82,17 +66,6 @@ jclass com_sun_star_vcl_VCLFrame::getMyClass()
 		if ( !t.pEnv ) return (jclass)NULL;
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLFrame" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
-		if ( tempClass )
-		{
-			JNINativeMethod pMethods[2];
-			pMethods[0].name = "requestFocus0";
-			pMethods[0].signature = "()V";
-			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLFrame_requestFocus0;
-			pMethods[1].name = "toFront0";
-			pMethods[1].signature = "()V";
-			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLFrame_toFront0;
-			t.pEnv->RegisterNatives( tempClass, pMethods, 2 );
-		}
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
 	}
 	return theClass;
@@ -143,10 +116,7 @@ void com_sun_star_vcl_VCLFrame::addChild( SalFrame *_par0 )
 		if ( mID )
 		{
 			jvalue args[1];
-			if ( _par0 )
-				args[0].l = _par0->maFrameData.mpVCLFrame->getJavaObject();
-			else
-				args[0].l = NULL;
+			args[0].l = _par0->maFrameData.mpVCLFrame->getJavaObject();
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
@@ -405,9 +375,9 @@ const Rectangle com_sun_star_vcl_VCLFrame::getInsets()
 
 // ----------------------------------------------------------------------------
 
-long com_sun_star_vcl_VCLFrame::getNativeWindow( sal_Bool _par0 )
+void *com_sun_star_vcl_VCLFrame::getNativeWindow( sal_Bool _par0 )
 {
-	long out = NULL;
+	void *out = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
@@ -429,11 +399,9 @@ long com_sun_star_vcl_VCLFrame::getNativeWindow( sal_Bool _par0 )
 					OSL_ENSURE( mIDGetModelPtr, "Unknown field id!" );
 					if ( mIDGetModelPtr )
 					{
-						jlong aCWindow = t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr );
-						if ( _par0 )
-							out = (long)aCWindow;
-						else
-							out = (long)CWindow_windowRef( aCWindow );
+						out = (void *)t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr );
+						if ( !_par0 )
+							out = CWindow_windowRef( out );
 					}
 				}
 			}
@@ -532,31 +500,9 @@ void com_sun_star_vcl_VCLFrame::removeChild( SalFrame *_par0 )
 		if ( mID )
 		{
 			jvalue args[1];
-			if ( _par0 )
-				args[0].l = _par0->maFrameData.mpVCLFrame->getJavaObject();
-			else
-				args[0].l = NULL;
+			args[0].l = _par0->maFrameData.mpVCLFrame->getJavaObject();
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
-	}
-}
-
-// ----------------------------------------------------------------------------
-
-void com_sun_star_vcl_VCLFrame::requestFocus()
-{
-	static jmethodID mID = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()V";
-			mID = t.pEnv->GetMethodID( getMyClass(), "requestFocus", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 	}
 }
 
@@ -651,32 +597,6 @@ void com_sun_star_vcl_VCLFrame::setMinClientSize( long _par0, long _par1 )
 			jvalue args[2];
 			args[0].i = jint( _par0 );
 			args[1].i = jint( _par1 );
-			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
-		}
-	}
-}
-
-// ----------------------------------------------------------------------------
-
-void com_sun_star_vcl_VCLFrame::setParent( SalFrame *_par0 )
-{
-	static jmethodID mID = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "(Lcom/sun/star/vcl/VCLFrame;)V";
-			mID = t.pEnv->GetMethodID( getMyClass(), "setParent", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jvalue args[1];
-			if ( _par0 )
-				args[0].l = _par0->maFrameData.mpVCLFrame->getJavaObject();
-			else
-				args[0].l = NULL;
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}

@@ -36,23 +36,10 @@
 package com.sun.star.vcl;
 
 import java.awt.AWTEvent;
-import java.awt.Component;
 import java.awt.EventQueue;
-import java.awt.Frame;
-import java.awt.Panel;
 import java.awt.Toolkit;
-import java.awt.Window;
-import java.awt.event.ComponentEvent;
-import java.awt.event.FocusEvent;
-import java.awt.event.InputEvent;
-import java.awt.event.InputMethodEvent;
-import java.awt.event.KeyEvent;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseWheelEvent;
-import java.awt.im.InputContext;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.text.AttributedString;
 
 /**
  * An class that subclass that intercepts Java events and caches them for

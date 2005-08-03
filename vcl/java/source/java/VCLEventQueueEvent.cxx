@@ -520,29 +520,15 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 						if ( !pParent )
 						{
 							// Reset the focus and don't dispatch the event
-							pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+							pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
 							return;
 						}
-					}
-					else
-					{
-						// Make sure child frames are in front of frame as
-						// clicking on the title bar may have moved this frame
-						// to the front
-						pFrame->ToTop( 0 );
 					}
 				}
 				else if ( nID == SALEVENT_LOSEFOCUS )
 				{
 					if ( pSalData->mpFocusFrame == pFrame )
 						pSalData->mpFocusFrame = NULL;
-				}
-				else if ( nID == SALEVENT_MOUSEBUTTONDOWN )
-				{
-					// Make sure child frames are in front of frame as
-					// clicking on the title bar may have moved this frame
-					// to the front
-					pFrame->ToTop( 0 );
 				}
 
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
