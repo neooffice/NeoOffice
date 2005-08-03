@@ -126,10 +126,7 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		maGraphicsData.mpVCLFont = pVCLFont->deriveFont( pFont->mnHeight, bBold, bItalic, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical, pFont->mnWidth ? (double)pFont->mnWidth / (double)pFont->mnHeight : 1.0 );
 	}
 
-	if ( maGraphicsData.mpPrinter )
-		return SAL_SETFONT_USEDRAWTEXTARRAY;
-	else
-		return 0;
+	return 0;
 }
 
 // -----------------------------------------------------------------------
@@ -186,7 +183,7 @@ void SalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 
 ULONG SalGraphics::GetKernPairs( ULONG nPairs, ImplKernPairData* pKernPairs )
 {
-	if ( maGraphicsData.mpVCLFont )
+	if ( !maGraphicsData.mpVCLFont )
 		return 0;
 	
 	ImplKernPairData *pPair = pKernPairs;
