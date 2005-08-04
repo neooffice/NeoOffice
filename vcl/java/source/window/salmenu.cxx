@@ -180,13 +180,19 @@ void SalMenu::CheckItem( unsigned nPos, BOOL bCheck )
 
 void SalMenu::EnableItem( unsigned nPos, BOOL bEnable )
 {
+	// When menus are not displayed, leave them all enabled so that they
+	// will trap any menu shortcuts and forward those shortcuts to the
+	// OOo menu handlers
+	if ( !bEnable && !GetSalData()->mbInNativeMenuTracking )
+		bEnable = TRUE;
+
 	if( maData.mbIsMenuBarMenu && maData.mpVCLMenuBar )
 	{
 		maData.mpVCLMenuBar->enableMenu( nPos, bEnable );
 	}
 	else if( maData.mpVCLMenu )
 	{
-		maData.mpVCLMenu->enableItem(nPos, bEnable);
+		maData.mpVCLMenu->enableItem( nPos, bEnable );
 	}
 }
 
@@ -219,20 +225,13 @@ void SalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, const Ke
 	// assume pSalMenuItem is a pointer to the item to be associated with the
 	// new shortcut
 	if( pSalMenuItem && pSalMenuItem->maData.mpVCLMenuItemData ) {
-		// only pass through keycodes that are using Mod1, the equivalent of
-		// the "control" key.  Java AWT only allows us control and shift to
-		// be used as menu accelerator modifiers.  Bugs in AWT 1.3
-		// implementaion cause function keys to be misinterpreted as letter keys
-		// so we can only allow in Mod1 Alphanumeric keys with/without shift
-		// as valid modifiers.
-		if(rKeyCode.IsMod1() &&
-			!rKeyCode.IsMod2() &&
-			(((rKeyCode.GetCode()>=KEY_0) && (rKeyCode.GetCode()<=KEY_9)) ||
-			 ((rKeyCode.GetCode()>=KEY_A) && (rKeyCode.GetCode()<=KEY_Z)))
-		)
-		{
-			pSalMenuItem->maData.mpVCLMenuItemData->setKeyboardShortcut(rKeyCode.GetCode(), rKeyCode.IsShift());
-		}
+		// Only pass through keycodes that are using the command key as Java
+		// will always add a command key to any shortcut. Also, ignore any
+		// shortcuts that use modifiers other than the shift key as Java only
+		// allows adding of the shift key. Also, exclude standard shortcuts
+		// in the application menu.
+		if ( rKeyCode.IsMod1() && !rKeyCode.IsMod2() && !rKeyCode.IsControlMod() && ! ( rKeyCode.GetCode() == KEY_H && !rKeyCode.IsShift() ) && rKeyCode.GetCode() != KEY_Q && rKeyCode.GetCode() != KEY_COMMA )
+			pSalMenuItem->maData.mpVCLMenuItemData->setKeyboardShortcut( rKeyCode.GetCode(), rKeyCode.IsShift() );
 	}
 }
 
@@ -385,13 +384,18 @@ void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu )
 	for( USHORT i = 0; i < nCount; i++ )
 	{
 		SalMenuItem *pSalMenuItem = pVCLMenu->GetItemSalItem( i );
-
 		if ( pSalMenuItem )
 		{
 			// If this menu item has a submenu, fix that submenu up
 			if ( pSalMenuItem->maData.mpSalSubmenu )
 				UpdateMenusForFrame( pFrame, pSalMenuItem->maData.mpSalSubmenu );
 		}
+
+		// Disabled items need to be reset as the native menu will have been
+		// enabled when the menubar is not in tracking mode
+		USHORT nID = pVCLMenu->GetItemId( i );
+		if ( nID && !pVCLMenu->IsItemEnabled( nID ) )
+			pMenu->EnableItem( i, FALSE );
 	}
 
 	// Post the SALEVENT_MENUDEACTIVATE event

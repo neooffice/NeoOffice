@@ -47,8 +47,6 @@ import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.KeyboardFocusManager;
 import java.awt.MenuBar;
-import java.awt.MenuItem;
-import java.awt.MenuShortcut;
 import java.awt.Panel;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -617,11 +615,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private static KeyEvent lastKeyPressed = null;
 
-	/** 
-	 * The menu modifier.
-	 */
-	private static MenuShortcut lastMenuShortcutPressed = null;
-
 	/**
 	 * The last mouse drag event.
 	 */
@@ -641,17 +634,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	static VCLFrame findFrame(Component c) {
 
 		return (VCLFrame)componentMap.get(c);
-
-	}
-
-	/**
-	 * Cache the last menu shortcut pressed.
-	 *
-	 * @return the last menu shortcut pressed
-	 */
-	static void setLastMenuShortcutPressed(MenuShortcut s) {
-
-		lastMenuShortcutPressed = s;
 
 	}
 
@@ -1116,296 +1098,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if ((keyCode & VCLEvent.KEY_MOD2) == VCLEvent.KEY_MOD2)
 			buf.append("\u2325");
 
-		int outCode = 0;
-		switch (keyCode & VCLEvent.KEY_CODE) {
-			case VCLEvent.KEY_0:
-				outCode = KeyEvent.VK_0;
-				break;
-			case VCLEvent.KEY_1:
-				outCode = KeyEvent.VK_1;
-				break;
-			case VCLEvent.KEY_2:
-				outCode = KeyEvent.VK_2;
-				break;
-			case VCLEvent.KEY_3:
-				outCode = KeyEvent.VK_3;
-				break;
-			case VCLEvent.KEY_4:
-				outCode = KeyEvent.VK_4;
-				break;
-			case VCLEvent.KEY_5:
-				outCode = KeyEvent.VK_5;
-				break;
-			case VCLEvent.KEY_6:
-				outCode = KeyEvent.VK_6;
-				break;
-			case VCLEvent.KEY_7:
-				outCode = KeyEvent.VK_7;
-				break;
-			case VCLEvent.KEY_8:
-				outCode = KeyEvent.VK_8;
-				break;
-			case VCLEvent.KEY_9:
-				outCode = KeyEvent.VK_9;
-				break;
-			case VCLEvent.KEY_A:
-				outCode = KeyEvent.VK_A;
-				break;
-			case VCLEvent.KEY_B:
-				outCode = KeyEvent.VK_B;
-				break;
-			case VCLEvent.KEY_C:
-				outCode = KeyEvent.VK_C;
-				break;
-			case VCLEvent.KEY_D:
-				outCode = KeyEvent.VK_D;
-				break;
-			case VCLEvent.KEY_E:
-				outCode = KeyEvent.VK_E;
-				break;
-			case VCLEvent.KEY_F:
-				outCode = KeyEvent.VK_F;
-				break;
-			case VCLEvent.KEY_G:
-				outCode = KeyEvent.VK_G;
-				break;
-			case VCLEvent.KEY_H:
-				outCode = KeyEvent.VK_H;
-				break;
-			case VCLEvent.KEY_I:
-				outCode = KeyEvent.VK_I;
-				break;
-			case VCLEvent.KEY_J:
-				outCode = KeyEvent.VK_J;
-				break;
-			case VCLEvent.KEY_K:
-				outCode = KeyEvent.VK_K;
-				break;
-			case VCLEvent.KEY_L:
-				outCode = KeyEvent.VK_L;
-				break;
-			case VCLEvent.KEY_M:
-				outCode = KeyEvent.VK_M;
-				break;
-			case VCLEvent.KEY_N:
-				outCode = KeyEvent.VK_N;
-				break;
-			case VCLEvent.KEY_O:
-				outCode = KeyEvent.VK_O;
-				break;
-			case VCLEvent.KEY_P:
-				outCode = KeyEvent.VK_P;
-				break;
-			case VCLEvent.KEY_Q:
-				outCode = KeyEvent.VK_Q;
-				break;
-			case VCLEvent.KEY_R:
-				outCode = KeyEvent.VK_R;
-				break;
-			case VCLEvent.KEY_S:
-				outCode = KeyEvent.VK_S;
-				break;
-			case VCLEvent.KEY_T:
-				outCode = KeyEvent.VK_T;
-				break;
-			case VCLEvent.KEY_U:
-				outCode = KeyEvent.VK_U;
-				break;
-			case VCLEvent.KEY_V:
-				outCode = KeyEvent.VK_V;
-				break;
-			case VCLEvent.KEY_W:
-				outCode = KeyEvent.VK_W;
-				break;
-			case VCLEvent.KEY_X:
-				outCode = KeyEvent.VK_X;
-				break;
-			case VCLEvent.KEY_Y:
-				outCode = KeyEvent.VK_Y;
-				break;
-			case VCLEvent.KEY_Z:
-				outCode = KeyEvent.VK_Z;
-				break;
-			case VCLEvent.KEY_F1:
-				outCode = KeyEvent.VK_F1;
-				break;
-			case VCLEvent.KEY_F2:
-				outCode = KeyEvent.VK_F2;
-				break;
-			case VCLEvent.KEY_F3:
-				outCode = KeyEvent.VK_F3;
-				break;
-			case VCLEvent.KEY_F4:
-				outCode = KeyEvent.VK_F4;
-				break;
-			case VCLEvent.KEY_F5:
-				outCode = KeyEvent.VK_F5;
-				break;
-			case VCLEvent.KEY_F6:
-				outCode = KeyEvent.VK_F6;
-				break;
-			case VCLEvent.KEY_F7:
-				outCode = KeyEvent.VK_F7;
-				break;
-			case VCLEvent.KEY_F8:
-				outCode = KeyEvent.VK_F8;
-				break;
-			case VCLEvent.KEY_F9:
-				outCode = KeyEvent.VK_F9;
-				break;
-			case VCLEvent.KEY_F10:
-				outCode = KeyEvent.VK_F10;
-				break;
-			case VCLEvent.KEY_F11:
-				outCode = KeyEvent.VK_F11;
-				break;
-			case VCLEvent.KEY_F12:
-				outCode = KeyEvent.VK_F12;
-				break;
-			case VCLEvent.KEY_F13:
-				outCode = KeyEvent.VK_F13;
-				break;
-			case VCLEvent.KEY_F14:
-				outCode = KeyEvent.VK_F14;
-				break;
-			case VCLEvent.KEY_F15:
-				outCode = KeyEvent.VK_F15;
-				break;
-			case VCLEvent.KEY_F16:
-				outCode = KeyEvent.VK_F16;
-				break;
-			case VCLEvent.KEY_F17:
-				outCode = KeyEvent.VK_F17;
-				break;
-			case VCLEvent.KEY_F18:
-				outCode = KeyEvent.VK_F18;
-				break;
-			case VCLEvent.KEY_F19:
-				outCode = KeyEvent.VK_F19;
-				break;
-			case VCLEvent.KEY_F20:
-				outCode = KeyEvent.VK_F20;
-				break;
-			case VCLEvent.KEY_F21:
-				outCode = KeyEvent.VK_F21;
-				break;
-			case VCLEvent.KEY_F22:
-				outCode = KeyEvent.VK_F22;
-				break;
-			case VCLEvent.KEY_F23:
-				outCode = KeyEvent.VK_F23;
-				break;
-			case VCLEvent.KEY_F24:
-				outCode = KeyEvent.VK_F24;
-				break;
-			case VCLEvent.KEY_DOWN:
-				outCode = KeyEvent.VK_DOWN;
-				break;
-			case VCLEvent.KEY_UP:
-				outCode = KeyEvent.VK_UP;
-				break;
-			case VCLEvent.KEY_LEFT:
-				outCode = KeyEvent.VK_LEFT;
-				break;
-			case VCLEvent.KEY_RIGHT:
-				outCode = KeyEvent.VK_RIGHT;
-				break;
-			case VCLEvent.KEY_HOME:
-				outCode = KeyEvent.VK_HOME;
-				break;
-			case VCLEvent.KEY_END:
-				outCode = KeyEvent.VK_END;
-				break;
-			case VCLEvent.KEY_PAGEUP:
-				outCode = KeyEvent.VK_PAGE_UP;
-				break;
-			case VCLEvent.KEY_PAGEDOWN:
-				outCode = KeyEvent.VK_PAGE_DOWN;
-				break;
-			case VCLEvent.KEY_RETURN:
-				outCode = KeyEvent.VK_ENTER;
-				break;
-			case VCLEvent.KEY_ESCAPE:
-				outCode = KeyEvent.VK_ESCAPE;
-				break;
-			case VCLEvent.KEY_TAB:
-				outCode = KeyEvent.VK_TAB;
-				break;
-			case VCLEvent.KEY_BACKSPACE:
-				outCode = KeyEvent.VK_BACK_SPACE;
-				break;
-			case VCLEvent.KEY_SPACE:
-				outCode = KeyEvent.VK_SPACE;
-				break;
-			case VCLEvent.KEY_INSERT:
-				outCode = KeyEvent.VK_INSERT;
-				break;
-			case VCLEvent.KEY_DELETE:
-				outCode = KeyEvent.VK_DELETE;
-				break;
-			case VCLEvent.KEY_ADD:
-				outCode = KeyEvent.VK_ADD;
-				break;
-			case VCLEvent.KEY_SUBTRACT:
-				outCode = KeyEvent.VK_SUBTRACT;
-				break;
-			case VCLEvent.KEY_MULTIPLY:
-				outCode = KeyEvent.VK_MULTIPLY;
-				break;
-			case VCLEvent.KEY_DIVIDE:
-				outCode = KeyEvent.VK_DIVIDE;
-				break;
-			case VCLEvent.KEY_POINT:
-				outCode = KeyEvent.VK_PERIOD;
-				break;
-			case VCLEvent.KEY_COMMA:
-				outCode = KeyEvent.VK_COMMA;
-				break;
-			case VCLEvent.KEY_LESS:
-				outCode = KeyEvent.VK_LESS;
-				break;
-			case VCLEvent.KEY_GREATER:
-				outCode = KeyEvent.VK_GREATER;
-				break;
-			case VCLEvent.KEY_EQUAL:
-				outCode = KeyEvent.VK_EQUALS;
-				break;
-			case VCLEvent.KEY_CUT:
-				outCode = KeyEvent.VK_CUT;
-				break;
-			case VCLEvent.KEY_COPY:
-				outCode = KeyEvent.VK_COPY;
-				break;
-			case VCLEvent.KEY_PASTE:
-				outCode = KeyEvent.VK_PASTE;
-				break;
-			case VCLEvent.KEY_UNDO:
-				outCode = KeyEvent.VK_UNDO;
-				break;
-			case VCLEvent.KEY_REPEAT:
-				outCode = KeyEvent.VK_AGAIN;
-				break;
-			case VCLEvent.KEY_FIND:
-				outCode = KeyEvent.VK_FIND;
-				break;
-			case VCLEvent.KEY_PROPERTIES:
-				outCode = KeyEvent.VK_PROPS;
-				break;
-			case VCLEvent.KEY_HELP:
-				outCode = KeyEvent.VK_HELP;
-				break;
-			case VCLEvent.KEY_F25:
-			case VCLEvent.KEY_F26:
-			case VCLEvent.KEY_OPEN:
-			case VCLEvent.KEY_FRONT:
-			case VCLEvent.KEY_CONTEXTMENU:
-			case VCLEvent.KEY_MENU:
-			case VCLEvent.KEY_CODE:
-				break;
-			default:
-				break;
-		}
-
+		int outCode = VCLEvent.convertVCLKeyCode(keyCode);
 		if (outCode != 0)
 			buf.append(KeyEvent.getKeyText(outCode));
 		else
@@ -1575,9 +1268,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (VCLFrame.lastKeyPressed != null && VCLFrame.lastKeyPressed.getID() != KeyEvent.KEY_PRESSED)
 			VCLFrame.lastKeyPressed = null;
 
-		if (VCLFrame.lastMenuShortcutPressed != null)
-			VCLFrame.lastMenuShortcutPressed = null;
-
 		if (queue == null || window == null || !window.isShowing())
 			return;
 
@@ -1612,34 +1302,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else if (e.isActionKey() || keyCode == KeyEvent.VK_ESCAPE || (keyCode ==KeyEvent.VK_ENTER && e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD)) {
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0));
 		}
-		else if (VCLFrame.lastMenuShortcutPressed == null && VCLFrame.lastKeyPressed == null) {
-			// Trap the key combinations that can be used for menu shortcuts.
-			// This is necessary because the VCL menu handlers expect to get
-			// keyboard shortcuts for all menu items and Java will intercept
-			// those that are applicable to disabled menu items.
-			int modifiers = e.getModifiers();
-			char keyChar = e.getKeyChar();
-			if ((modifiers & InputEvent.META_MASK) == InputEvent.META_MASK && keyCode != KeyEvent.VK_SPACE && keyCode != KeyEvent.VK_Q) {
-				VCLEvent vclEvent = new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0);
-				if (VCLEvent.convertVCLKeyCode(vclEvent.getKeyCode()) > 0) {
-					// Fix bug 244 by checking if there is an active AWT menu
-					// with the same shortcut
-					boolean ignoreShortcut = false;
-					MenuShortcut shortcut = new MenuShortcut(keyChar, (modifiers & InputEvent.SHIFT_MASK) == InputEvent.SHIFT_MASK ? true : false);
-					MenuBar mb = window.getMenuBar();
-					if (mb != null) {
-						MenuItem mi = mb.getShortcutMenuItem(shortcut);
-						if (mi != null && mi.isEnabled())
-							ignoreShortcut = true;
-					}
-
-					if (!ignoreShortcut) {
-						keyTyped(new KeyEvent(e.getComponent(), KeyEvent.KEY_TYPED, e.getWhen(), modifiers, KeyEvent.VK_UNDEFINED, keyChar));
-						VCLFrame.lastMenuShortcutPressed = shortcut;
-					}
-				}
-			}
-		}
 
 		VCLFrame.keyModifiersPressed = e.getModifiers();
 		VCLFrame.keyModifiersUnpressed &= VCLFrame.keyModifiersPressed;
@@ -1657,12 +1319,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (queue == null || window == null || !window.isShowing())
 			return;
-
-		// Avoid duplication of menu shortcuts
-		if (VCLFrame.lastMenuShortcutPressed != null) {
-			VCLFrame.lastMenuShortcutPressed = null;
-			return;
-		}
 
 		VCLFrame.lastKeyPressed = e;
 

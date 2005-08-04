@@ -273,11 +273,6 @@ public final class VCLMenuItemData {
 	 */
 	public void setKeyboardShortcut(int key, boolean useShift) {
 
-		// Don't override Mac OS X's shortcuts in the Apple or the application
-		// menus
-		if (key == VCLEvent.KEY_Q || (!useShift && key == VCLEvent.KEY_H))
-			return;
-
 		if(delegate!=null) {
 			delegate.setKeyboardShortcut(key, useShift);
 			return;
@@ -650,10 +645,6 @@ public final class VCLMenuItemData {
 		 */
 		public void actionPerformed(ActionEvent e) {
 
-			// Cache the shortcut if there is one
-			if (d.keyboardShortcut!=null)
-				VCLFrame.setLastMenuShortcutPressed(d.keyboardShortcut);
-
 			VCLMenuBar mb=VCLMenuBar.findVCLMenuBar(this);
 			if (mb!=null) {
 				mb.getEventQueue().postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUACTIVATE, mb.getFrame(), d.getVCLID(), d.getVCLCookie()));
@@ -703,10 +694,6 @@ public final class VCLMenuItemData {
 		 * @param e	event spawning this action
 		 */
 		public void itemStateChanged(ItemEvent e) {
-
-			// Cache the shortcut if there is one
-			if (d.keyboardShortcut!=null)
-				VCLFrame.setLastMenuShortcutPressed(d.keyboardShortcut);
 
 			VCLMenuBar mb=VCLMenuBar.findVCLMenuBar(this);
 			if(mb!=null) {
