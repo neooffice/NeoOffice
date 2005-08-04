@@ -7841,7 +7841,6 @@ Reference< XDragSource > Window::GetDragSource()
                         aDragSourceSN = OUString::createFromAscii( "com.sun.star.datatransfer.dnd.JavaDragSource" );
                         aDropTargetSN = OUString::createFromAscii( "com.sun.star.datatransfer.dnd.JavaDropTarget" );
                         aDragSourceAL[ 0 ] = makeAny( (sal_uInt32) pEnvData->aWindow );
-                        aDragSourceAL[ 1 ] = makeAny( (sal_uInt32) &( GetAppSalData()->mbInNativeDrag ) );
                         aDropTargetAL[ 0 ] = makeAny( (sal_uInt32) pEnvData->aWindow );
 #elif defined UNX
                         aDropTargetAL.realloc( 3 );

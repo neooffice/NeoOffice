@@ -53,14 +53,8 @@
 #ifndef _SV_EVENT_HXX
 #include <event.hxx>
 #endif
-#ifndef _SV_SVAPP_HXX
-#include <svapp.hxx>
-#endif
 #ifndef _SV_SALMENU_HXX
 #include <salmenu.hxx>
-#endif
-#ifndef _SV_WINDOW_HXX
-#include <window.hxx>
 #endif
 
 #ifdef MACOSX
@@ -338,32 +332,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			// Adjust position for RTL layout
 			if ( pFrame && Application::GetSettings().GetLayoutRTL() )
 				pMouseEvent->mnX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pMouseEvent->mnX - 1;
-			if ( nID == SALEVENT_MOUSEBUTTONUP )
-			{
-				// Wait for drag thread to complete
-				while ( pSalData->mbInNativeDrag )
-				{
-					ULONG nCount = Application::ReleaseSolarMutex();
-					OThread::yield();
-					Application::AcquireSolarMutex( nCount );
-				}
-			}
-			else if ( ( nID == SALEVENT_MOUSELEAVE || nID == SALEVENT_MOUSEMOVE ) )
-			{
-				if ( pSalData->mbInNativeDrag )
-				{
-					// In native drag mode, OOo cannot handle drag events with
-					// key modifiers
-					pMouseEvent->mnCode &= ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
-				}
-				else
-				{
-					// Let drag thread have a chance to run
-					ULONG nCount = Application::ReleaseSolarMutex();
-					OThread::yield();
-					Application::AcquireSolarMutex( nCount );
-				}
-			}
 			dispatchEvent( nID, pFrame, pMouseEvent );
 			delete pMouseEvent;
 			return;

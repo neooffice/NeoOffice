@@ -61,7 +61,6 @@ SalData::SalData()
 	mpEventQueue = NULL;
 	mpPresentationFrame = NULL;
 	mbNativeEventSucceeded = false;
-	mbInNativeDrag = false;
 	mbInNativeMenuTracking = false;
 
 	// Set condition so that they don't block

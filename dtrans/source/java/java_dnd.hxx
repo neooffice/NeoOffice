@@ -83,7 +83,6 @@ public:
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	maContents;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDragSourceListener >	maListener;
     ::osl::Mutex			maMutex;
-	bool*					mpInNativeDrag;
 	WindowRef				mpNativeWindow;
 
 							JavaDragSource();

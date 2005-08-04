@@ -389,9 +389,6 @@ void TrackDragTimerCallback( EventLoopTimerRef aTimer, void *pData )
 		}
 	}
 
-	if ( pSource->mpInNativeDrag )
-		*pSource->mpInNativeDrag = false;
-
 	ClearableMutexGuard aGuard( pSource->maMutex );
 
 	Reference< XDragSourceListener > xListener( pSource->maListener );
@@ -449,7 +446,6 @@ XMultiServiceFactory >& xMultiServiceFactory )
 JavaDragSource::JavaDragSource() :
 	WeakComponentImplHelper3< XDragSource, XInitialization, XServiceInfo >( maMutex ),
 	mnActions( DNDConstants::ACTION_NONE ),
-	mpInNativeDrag( NULL ),
 	mpNativeWindow( NULL )
 {
 }
@@ -475,14 +471,6 @@ void SAL_CALL JavaDragSource::initialize( const Sequence< Any >& arguments ) thr
 		arguments.getConstArray()[0] >>= nWindow;
 		if ( nWindow )
 			mpNativeWindow = (WindowRef)nWindow;
-	}
-
-	if ( arguments.getLength() > 1 )
-	{
-		sal_Int32 nInNativeDrag;
-		arguments.getConstArray()[1] >>= nInNativeDrag;
-		if ( nInNativeDrag )
-			mpInNativeDrag = (bool *)nInNativeDrag;
 	}
 
 	if ( !mpNativeWindow || !IsValidWindowPtr( mpNativeWindow ) )
@@ -548,9 +536,6 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 	if ( maContents.is() && pTrackDragTimerUPP && mpNativeWindow )
 	{
 		pTrackDragOwner = this;
-		if ( mpInNativeDrag )
-			*mpInNativeDrag = true;
-
 		aTrackDragCondition.reset();
 		InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pTrackDragTimerUPP, (void *)this, NULL );
 	}
