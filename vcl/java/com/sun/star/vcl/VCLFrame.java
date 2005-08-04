@@ -52,6 +52,7 @@ import java.awt.MenuShortcut;
 import java.awt.Panel;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.Shape;
 import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.event.ComponentEvent;
@@ -2369,23 +2370,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		/**
-		 * This method performs no painting of the frame. This method is used
-		 * to prevent Java from painting over what VCL has painted.
-		 *
-		 * @param g the <code>Graphics</code>
-		 */
-		public void paint(Graphics g) {
-
-			VCLGraphics graphics = frame.getGraphics();
-			if (graphics != null) {
-				synchronized (graphics) {
-					graphics.addToFlush();
-				}
-			}
-
-		}
-
-		/**
 		 * Set the minimum size for the frame.
 		 *
 		 * @param width the minimum width
@@ -2460,10 +2444,17 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		public void paint(Graphics g) {
 
+            Rectangle bounds;
+            Shape clip = g.getClip();
+            if (clip != null)
+                bounds = clip.getBounds();
+            else
+                bounds = ((Graphics2D)g).getDeviceConfiguration().getBounds();
+
 			VCLGraphics graphics = frame.getGraphics();
 			if (graphics != null) {
 				synchronized (graphics) {
-					graphics.addToFlush();
+					graphics.addToFlush(bounds);
 				}
 			}
 

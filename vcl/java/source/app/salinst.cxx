@@ -596,7 +596,6 @@ void SalInstance::Yield( BOOL bWait )
 				pSalData->mpPresentationFrame->maFrameData.mpVCLFrame->setAutoFlush( TRUE );
 
 			gettimeofday( &pSalData->maTimeout, NULL );
-			pSalData->maTimeout += pSalData->mnTimerInterval;
 			pSalData->mpTimerProc();
 
 			if ( pSalData->mpPresentationFrame )
@@ -606,6 +605,8 @@ void SalInstance::Yield( BOOL bWait )
 			// synchronize native menus
 			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 				(*it)->Flush();
+
+			pSalData->maTimeout += pSalData->mnTimerInterval;
 		}
 	}
 

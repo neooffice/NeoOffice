@@ -382,19 +382,6 @@ public final class VCLGraphics {
 	}
 
 	/**
-	 * Marks the entire graphics bounds as requiring flushing.
-	 */
-	void addToFlush() {
-
-		if (frame != null)
-			update = new Rectangle(graphicsBounds);
-
-		if (autoFlush)
-			autoFlush();
-
-	}
-
-	/**
 	 * Unions the specified rectangle to the rectangle that requires flushing.
 	 *
 	 * @param b the rectangle to flush
@@ -1159,19 +1146,15 @@ public final class VCLGraphics {
 
 		if (update != null && !update.isEmpty()) {
 			if (image != null && frame != null) {
-				BufferedImage i = image.getImage();
-				Panel p = frame.getPanel();
-				if (i != null && p != null) {
-					synchronized(p) {
-						Graphics2D g = (Graphics2D)p.getGraphics();
-						if (g != null) {
-							// Fix bug 553 by limiting clip to the graphics
-							// bounds since the window may have been resized
-							// since the graphics bounds were last calculated
-							update = update.intersection(g.getDeviceConfiguration().getBounds());
-							if (update != null && !update.isEmpty()) {
-								g.setClip(update);
-								g.drawRenderedImage(i, null);
+				update = update.intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight())); 
+				if (!update.isEmpty()) {
+					BufferedImage i = image.getImage();
+					Panel p = frame.getPanel();
+					if (i != null && p != null) {
+						synchronized(p) {
+							Graphics2D g = (Graphics2D)p.getGraphics();
+							if (g != null) {
+								g.drawImage(i, update.x, update.y, update.x + update.width, update.y + update.height, update.x, update.y, update.x + update.width, update.y + update.height, null);
 								g.dispose();
 								update = null;
 							}
