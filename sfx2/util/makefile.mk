@@ -114,7 +114,7 @@ SHL1STDLIBS+=\
 # [ed] 1/25/05 Add Carbon for about support.  Bug 396
 .IF "$(GUIBASE)"=="java"
 .IF "$(OS)"=="MACOSX"
-SHL1STDLIBS += -framework ApplicationServices -framework AppKit
+SHL1STDLIBS += -framework Carbon -framework AppKit
 .ENDIF
 .ENDIF
 
