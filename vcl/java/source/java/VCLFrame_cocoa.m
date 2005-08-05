@@ -195,8 +195,8 @@
 
 - (BOOL)windowShouldZoom:(NSWindow *)pWindow toFrame:(NSRect)aRect
 {
-	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(windowShouldZoom:toFront:)] )
-		return [mpDelegate windowShouldZoom:pWindow toFront:aRect];
+	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(windowShouldZoom:toFrame:)] )
+		return [mpDelegate windowShouldZoom:pWindow toFrame:aRect];
 	else
 		return YES;
 }
