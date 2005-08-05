@@ -907,14 +907,9 @@ public final class VCLEvent extends AWTEvent {
 	private int keyCode = -1;
 
 	/**
-	 * The key modifiers pressed.
-	 */
-	private int keyModifiers = 0;
-
-	/**
 	 * The cached modifiers pressed.
 	 */
-	private int modifiers = -1;
+	private int modifiers = 0;
 
 	/**
 	 * The document path.
@@ -996,85 +991,84 @@ public final class VCLEvent extends AWTEvent {
 	/**
 	 * Constructs a new <code>VCLEvent</code> instance.
 	 *
-	 * @param event the <code>AWTEvent</code> that originated the event
+	 * @param source the <code>AWTEvent</code> that originated the event
 	 * @param id the event type
 	 * @param f the <code>VCLFrame</code> instance
 	 * @param d the data pointer
 	 */
 	VCLEvent(AWTEvent event, int id, VCLFrame f, int d) {
 
-		this(event, id, f, d, 0);
-
-	}
-
-	/**
-	 * Constructs a new <code>VCLEvent</code> instance.
-	 *
-	 * @param source the <code>AWTEvent</code> that originated the event
-	 * @param id the event type
-	 * @param f the <code>VCLFrame</code> instance
-	 * @param d the data pointer
-	 * @param k the key modifiers pressed
-	 */
-	VCLEvent(AWTEvent event, int id, VCLFrame f, int d, int k) {
-
 		this(id, f, d);
 
 		awtEvent = true;
 
-		int eid = event.getID();
-		switch (eid) {
-			case KeyEvent.KEY_PRESSED:
-			case KeyEvent.KEY_RELEASED:
-			case KeyEvent.KEY_TYPED:
+		if (event instanceof InputEvent)
+		{
+			InputEvent e = (InputEvent)event;
+			int awtModifiers = e.getModifiers() | e.getModifiersEx();
+			int eid = e.getID();
+
+			// Treat the Mac OS X command key as a control key and the control
+			// key as the meta key
+			if (awtModifiers != 0 && event instanceof KeyEvent)
 			{
-				KeyEvent e = (KeyEvent)event;
-				int modifiers = e.getModifiers();
-				// Treat the Mac OS X command key as a control key and
-				// the control key as the meta key
-				if ((modifiers & (InputEvent.CTRL_MASK | InputEvent.META_MASK)) == (InputEvent.CTRL_MASK | InputEvent.META_MASK)) {
+				if ((awtModifiers & (InputEvent.CTRL_DOWN_MASK | InputEvent.META_DOWN_MASK)) == (InputEvent.CTRL_DOWN_MASK | InputEvent.META_DOWN_MASK)) {
 					; // No switching is needed
 				}
-				else if ((modifiers & InputEvent.CTRL_MASK) == InputEvent.CTRL_MASK) {
-					modifiers = (modifiers & ~InputEvent.CTRL_MASK) | InputEvent.META_MASK;
-					int keyCode = e.getKeyCode();
-					if (keyCode == KeyEvent.VK_CONTROL)
+				else if ((awtModifiers & InputEvent.CTRL_DOWN_MASK) != 0) {
+					KeyEvent ke = (KeyEvent)e;
+					int keyCode = ke.getKeyCode();
+					if (keyCode == KeyEvent.VK_CONTROL) {
 						keyCode = KeyEvent.VK_META;
-					event = e = new KeyEvent(e.getComponent(), eid, e.getWhen(), modifiers, keyCode, e.getKeyChar());
+						event = e = new KeyEvent(e.getComponent(), eid, e.getWhen(), awtModifiers, keyCode, ke.getKeyChar());
+					}
 				}
-				else if ((modifiers & InputEvent.META_MASK) == InputEvent.META_MASK) {
-					modifiers = (modifiers & ~InputEvent.META_MASK) | InputEvent.CTRL_MASK;
-					int keyCode = e.getKeyCode();
-					if (keyCode == KeyEvent.VK_META)
+				else if ((awtModifiers & InputEvent.META_DOWN_MASK) != 0) {
+					KeyEvent ke = (KeyEvent)e;
+					int keyCode = ke.getKeyCode();
+					if (keyCode == KeyEvent.VK_META) {
 						keyCode = KeyEvent.VK_CONTROL;
-					event = e = new KeyEvent(e.getComponent(), eid, e.getWhen(), modifiers, keyCode, e.getKeyChar());
+						event = e = new KeyEvent(e.getComponent(), eid, e.getWhen(), awtModifiers, keyCode, ke.getKeyChar());
+					}
 				}
-				break;
 			}
-			case MouseEvent.MOUSE_CLICKED:
-			case MouseEvent.MOUSE_DRAGGED:
-			case MouseEvent.MOUSE_ENTERED:
-			case MouseEvent.MOUSE_EXITED:
-			case MouseEvent.MOUSE_MOVED:
-			case MouseEvent.MOUSE_PRESSED:
-			case MouseEvent.MOUSE_RELEASED:
+
+			if (awtModifiers != 0)
 			{
-				if (k != 0) {
-					// Treat the Mac OS X command key as a control key and
-					// the control key as the meta key
-					if ((k & (InputEvent.CTRL_MASK | InputEvent.META_MASK)) == (InputEvent.CTRL_MASK | InputEvent.META_MASK))
-						; // No switching is needed
-					else if ((k & InputEvent.CTRL_MASK) == InputEvent.CTRL_MASK)
-						k = (k & ~InputEvent.CTRL_MASK) | InputEvent.META_MASK;
-					else if ((k & InputEvent.META_MASK) == InputEvent.META_MASK)
-						k = (k & ~InputEvent.META_MASK) | InputEvent.CTRL_MASK;
+				if ((awtModifiers & InputEvent.BUTTON1_DOWN_MASK) != 0)
+					modifiers |= VCLEvent.MOUSE_LEFT;
+				if ((awtModifiers & InputEvent.BUTTON2_DOWN_MASK) != 0)
+					modifiers |= VCLEvent.MOUSE_MIDDLE;
+				if ((awtModifiers & InputEvent.BUTTON3_DOWN_MASK) != 0)
+					modifiers |= VCLEvent.MOUSE_RIGHT;
+				if ((awtModifiers & InputEvent.META_DOWN_MASK) != 0)
+					modifiers |= VCLEvent.KEY_MOD1;
+				if ((awtModifiers & InputEvent.ALT_DOWN_MASK) != 0)
+					modifiers |= VCLEvent.KEY_MOD2;
+				if ((awtModifiers & InputEvent.SHIFT_DOWN_MASK) != 0)
+					modifiers |= VCLEvent.KEY_SHIFT;
+				if ((awtModifiers & InputEvent.CTRL_DOWN_MASK) != 0)
+					modifiers |= VCLEvent.KEY_CONTROLMOD;
+
+				// If command plus left or middle button is pressed, Java
+				// will add the right button so we need to strip it out
+				if ((modifiers & VCLEvent.MOUSE_RIGHT) != 0 && (modifiers & VCLEvent.KEY_MOD1) != 0 && (modifiers & (VCLEvent.MOUSE_LEFT | VCLEvent.MOUSE_MIDDLE)) != 0)
+					modifiers &= ~VCLEvent.MOUSE_RIGHT;
+
+				if ((modifiers & VCLEvent.MOUSE_LEFT) != 0) {
+					// Convert control plus left button events to right button
+					// events since one button mice have no right button
+					if ((modifiers & VCLEvent.KEY_CONTROLMOD) != 0)
+						modifiers = (modifiers & ~(VCLEvent.KEY_CONTROLMOD | VCLEvent.MOUSE_LEFT)) | VCLEvent.MOUSE_RIGHT;
+
+					// Convert alt plus left button events to middle button
+					// events since one button mice have no middle button
+					if ((modifiers & VCLEvent.KEY_MOD2) != 0)
+						modifiers = (modifiers & ~(VCLEvent.KEY_MOD2 | VCLEvent.MOUSE_LEFT)) | VCLEvent.MOUSE_MIDDLE;
 				}
-				keyModifiers = k;
-				break;
 			}
 		}
-
-		if (event instanceof InputMethodEvent) {
+		else if (event instanceof InputMethodEvent) {
 			AttributedCharacterIterator i = ((InputMethodEvent)event).getText();
 			if (i != null) {
 				StringBuffer buf = new StringBuffer();
@@ -1128,7 +1122,7 @@ public final class VCLEvent extends AWTEvent {
 
 		if (source instanceof MouseWheelEvent) {
 			MouseWheelEvent e = (MouseWheelEvent)source;
-			source = new MouseWheelEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers(), e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger(), e.getScrollType(), e.getScrollAmount(), e.getWheelRotation() + r);
+			source = new MouseWheelEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | e.getModifiersEx(), e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger(), e.getScrollType(), e.getScrollAmount(), e.getWheelRotation() + r);
 		}
 
 	}
@@ -1224,7 +1218,7 @@ public final class VCLEvent extends AWTEvent {
 				// char resolved to their respective ASCII equivalents. Since
 				// we convert Mac OS X Meta-key events into Ctrl-key events,
 				// we need to do the resolving manually.
-				if ((e.getModifiers() & InputEvent.CTRL_MASK) != 0 && keyChar >= 'a' && keyChar <= 0x7d )
+				if ((e.getModifiersEx() & InputEvent.CTRL_DOWN_MASK) != 0 && keyChar >= 'a' && keyChar <= 0x7d )
 					keyChar -= 0x60;
 			}
 		}
@@ -1571,37 +1565,6 @@ public final class VCLEvent extends AWTEvent {
 	 */
 	public int getModifiers() {
 
-		if (modifiers < 0)
-		{
-			modifiers = 0;
-			int inModifiers = ((InputEvent)source).getModifiers();
-			if (source instanceof MouseEvent) {
-				if ((inModifiers & InputEvent.BUTTON1_MASK) == InputEvent.BUTTON1_MASK)
-					modifiers |= VCLEvent.MOUSE_LEFT;
-				if ((inModifiers & InputEvent.BUTTON2_MASK) == InputEvent.BUTTON2_MASK)
-					modifiers |= VCLEvent.MOUSE_RIGHT;
-				if ((inModifiers & InputEvent.BUTTON3_MASK) == InputEvent.BUTTON3_MASK)
-					modifiers |= VCLEvent.MOUSE_MIDDLE;
-				if ((keyModifiers & InputEvent.SHIFT_MASK) == InputEvent.SHIFT_MASK)
-					modifiers |= VCLEvent.KEY_SHIFT;
-				if ((keyModifiers & InputEvent.CTRL_MASK) == InputEvent.CTRL_MASK)
-					modifiers |= VCLEvent.KEY_MOD1;
-				if ((keyModifiers & InputEvent.ALT_MASK) == InputEvent.ALT_MASK)
-					modifiers |= VCLEvent.KEY_MOD2;
-				if ((keyModifiers & InputEvent.META_MASK) == InputEvent.META_MASK)
-					modifiers |= VCLEvent.KEY_CONTROLMOD;
-			}
-			else if (source instanceof KeyEvent) {
-				if ((inModifiers & InputEvent.SHIFT_MASK) == InputEvent.SHIFT_MASK)
-					modifiers |= VCLEvent.KEY_SHIFT;
-				if ((inModifiers & InputEvent.CTRL_MASK) == InputEvent.CTRL_MASK)
-					modifiers |= VCLEvent.KEY_MOD1;
-				if ((inModifiers & InputEvent.ALT_MASK) == InputEvent.ALT_MASK)
-					modifiers |= VCLEvent.KEY_MOD2;
-				if ((inModifiers & InputEvent.META_MASK) == InputEvent.META_MASK)
-					modifiers |= VCLEvent.KEY_CONTROLMOD;
-			}
-		}
 		return modifiers;
 
 	}

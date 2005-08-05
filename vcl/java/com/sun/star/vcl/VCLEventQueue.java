@@ -38,6 +38,8 @@ package com.sun.star.vcl;
 import java.awt.AWTEvent;
 import java.awt.EventQueue;
 import java.awt.Toolkit;
+import java.awt.event.InputEvent;
+import java.awt.event.MouseEvent;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 
@@ -315,6 +317,11 @@ public final class VCLEventQueue {
 	final class NoExceptionsEventQueue extends EventQueue {
 
 		/**
+		 * The last mouse pressed modifiers.
+		 */
+		private int mousePressedModifiersEx = 0;
+
+		/**
 		 * The <code>VCLEventQueue</code>.
 		 */
 		private VCLEventQueue queue = null;
@@ -338,6 +345,21 @@ public final class VCLEventQueue {
 		protected void dispatchEvent(AWTEvent event) {
 
 			try {
+				// The modifiers for mouse released events contain the
+				// modifiers after the event has occurred so we need to
+				// replace the modifiers with the modifiers that were released
+				if (event instanceof MouseEvent) {
+					int id = event.getID();
+					if (id == MouseEvent.MOUSE_PRESSED) {
+						mousePressedModifiersEx = ((MouseEvent)event).getModifiersEx();
+					}
+					else if (id == MouseEvent.MOUSE_RELEASED) {
+						MouseEvent e = (MouseEvent)event;
+						event = new MouseEvent(e.getComponent(), id, e.getWhen(), e.getModifiers() | mousePressedModifiersEx, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger(), e.getButton());
+						mousePressedModifiersEx = e.getModifiersEx();
+					}
+				}
+
 				super.dispatchEvent(event);
 			}
 			catch (Throwable t) {
