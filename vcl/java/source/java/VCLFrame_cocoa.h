@@ -48,7 +48,9 @@ typedef void* id;
 #ifdef __cplusplus
 BEGIN_C
 #endif
+void CWindow_disposeDelegate( id pCWindow );
 id CWindow_getNSWindow( id pCWindow );
+void CWindow_initDelegate( id pCWindow );
 WindowRef CWindow_windowRef( id pCWindow );
 #ifdef __cplusplus
 END_C

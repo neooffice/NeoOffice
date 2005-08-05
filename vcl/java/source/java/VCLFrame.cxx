@@ -97,6 +97,8 @@ com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, cons
 	jobject tempObj;
 	tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
 	saveRef( tempObj );
+
+	CWindow_initDelegate( getNativeWindow( sal_True ) );
 }
 
 // ----------------------------------------------------------------------------
@@ -138,7 +140,11 @@ void com_sun_star_vcl_VCLFrame::dispose()
 		OSL_ENSURE( mID, "Unknown method id!" );
 
 		if ( mID )
+		{
+			CWindow_disposeDelegate( getNativeWindow( sal_True ) );
+
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+		}
 	}
 }
 
