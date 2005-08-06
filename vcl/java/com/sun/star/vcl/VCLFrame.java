@@ -1949,6 +1949,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		NoPaintFrame(VCLFrame f) {
 
 			frame = f;
+			enableInputMethods(false);
 			setSize(1, 1);
 			addNotify();
 			minSize = getSize();
@@ -2093,9 +2094,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		NoPaintWindow(VCLFrame f) {
 
-			// super((f.getParent() != null && f.getParent().getWindow() != null) ? f.getParent().getWindow() : new VCLFrame.NoDisplayFrame(f));
 			super(new VCLFrame.NoDisplayFrame(f));
 			frame = f;
+			enableInputMethods(false);
 			setSize(1, 1);
 			addNotify();
 			minSize = getSize();
@@ -2193,6 +2194,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		NoDisplayFrame(VCLFrame f) {
 
 			frame = f;
+			enableInputMethods(false);
+			setSize(1, 1);
 
 		}
 
