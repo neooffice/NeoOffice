@@ -55,14 +55,7 @@
 #ifdef __cplusplus
 BEGIN_C
 #endif
-struct AddQuickstartMenuItemsParams
-{
-	int						mnCount;
-	MenuCommand*			mpIDs;
-	CFStringRef*			mpStrings;
-};
-
-void AddQuickstartMenuItems( struct AddQuickstartMenuItemsParams *pParams );
+void AddQuickstartMenuItems( int nCount, MenuCommand *pIDs, CFStringRef *pStrings );
 void ProcessShutdownIconCommand( MenuCommand nCommand );
 #ifdef __cplusplus
 END_C

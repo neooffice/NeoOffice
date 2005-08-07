@@ -643,51 +643,50 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 
 				SvtModuleOptions aModuleOptions;
 
-				int nMaxCount = 7;
-				AddQuickstartMenuItemsParams *pParams = (AddQuickstartMenuItemsParams *)rtl_allocateMemory( sizeof( AddQuickstartMenuItemsParams ) );
-				pParams->mnCount = 0;
-				pParams->mpIDs = (MenuCommand *)rtl_allocateMemory( sizeof( MenuCommand ) * nMaxCount );
-				pParams->mpStrings = (CFStringRef *)rtl_allocateMemory( sizeof( CFStringRef ) * nMaxCount );
-				
+				int nCount = 0;
+				MenuCommand aIDs[ 7 ];
+				CFStringRef aStrings[ 7 ];
 				OUString aDesc;
 				if ( aModuleOptions.IsWriter() )
 				{
-					pParams->mpIDs[ pParams->mnCount ] = WRITER_COMMAND_ID;
+					aIDs[ nCount ] = WRITER_COMMAND_ID;
 					aDesc = GetUrlDescription( OUString::createFromAscii( WRITER_URL ) );
-					pParams->mpStrings[ pParams->mnCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+					aStrings[ nCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
 				}
 				if ( aModuleOptions.IsCalc() )
 				{
-					pParams->mpIDs[ pParams->mnCount ] = CALC_COMMAND_ID;
+					aIDs[ nCount ] = CALC_COMMAND_ID;
 					aDesc = GetUrlDescription( OUString::createFromAscii( CALC_URL ) );
-					pParams->mpStrings[ pParams->mnCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+					aStrings[ nCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
 				}
 				if ( aModuleOptions.IsImpress() )
 				{
-					pParams->mpIDs[ pParams->mnCount ] = IMPRESS_COMMAND_ID;
+					aIDs[ nCount ] = IMPRESS_COMMAND_ID;
 					aDesc = GetUrlDescription( OUString::createFromAscii( IMPRESS_URL ) );
-					pParams->mpStrings[ pParams->mnCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+					aStrings[ nCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
 				}
 				if ( aModuleOptions.IsDraw() )
 				{
-					pParams->mpIDs[ pParams->mnCount ] = DRAW_COMMAND_ID;
+					aIDs[ nCount ] = DRAW_COMMAND_ID;
 					aDesc = GetUrlDescription( OUString::createFromAscii( DRAW_URL ) );
-					pParams->mpStrings[ pParams->mnCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+					aStrings[ nCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
 				}
 				if ( aModuleOptions.IsMath() )
 				{
-					pParams->mpIDs[ pParams->mnCount ] = MATH_COMMAND_ID;
+					aIDs[ nCount ] = MATH_COMMAND_ID;
 					aDesc = GetUrlDescription( OUString::createFromAscii( MATH_URL ) );
-					pParams->mpStrings[ pParams->mnCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+					aStrings[ nCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
 				}
-				pParams->mpIDs[ pParams->mnCount ] = FROMTEMPLATE_COMMAND_ID;
+				aIDs[ nCount ] = FROMTEMPLATE_COMMAND_ID;
 				aDesc = GetResString( STR_QUICKSTART_FROMTEMPLATE );
-				pParams->mpStrings[ pParams->mnCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
-				pParams->mpIDs[ pParams->mnCount ] = FILEOPEN_COMMAND_ID;
+				aStrings[ nCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+				aIDs[ nCount ] = FILEOPEN_COMMAND_ID;
 				aDesc = GetResString( STR_QUICKSTART_FILEOPEN );
-				pParams->mpStrings[ pParams->mnCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+				aStrings[ nCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
 
-				AddQuickstartMenuItems( pParams );
+				AddQuickstartMenuItems( nCount, aIDs, aStrings );
+				for ( int i = 0; i < nCount; i++ )
+					CFRelease( aStrings[ i ] );
 #endif
 			}
 			catch(const ::com::sun::star::lang::IllegalArgumentException&)

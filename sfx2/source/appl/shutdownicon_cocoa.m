@@ -34,7 +34,6 @@
  ************************************************************************/
 
 #import <Cocoa/Cocoa.h>
-#import <rtl/alloc.h>
 #import "shutdownicon_cocoa.h"
 
 /*
@@ -320,14 +319,20 @@
 
 @end
 
-static EventLoopTimerUPP pAddQuickstartMenuItemsTimerUPP = NULL;
-
-static void AddQuickstartMenuItemsTimerCallback( EventLoopTimerRef aTimer, void *pData )
+@interface QuickstartMenuItems : NSObject
 {
-	struct AddQuickstartMenuItemsParams *pParams = (struct AddQuickstartMenuItemsParams *)pData;
-	if ( !pParams )
-		return;
+	int					mnCount;
+	MenuCommand*		mpIDs;
+	CFStringRef*		mpStrings;
+}
+- (void)addMenuItems:(id)pObject;
+- (id)initWithCount:(int)nCount menuCommands:(MenuCommand *)pIDs strings:(CFStringRef *)pStrings;
+@end
 
+@implementation QuickstartMenuItems
+
+- (void)addMenuItems:(id)pObject
+{
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 	{
@@ -363,9 +368,9 @@ static void AddQuickstartMenuItemsTimerCallback( EventLoopTimerRef aTimer, void 
 			// Work the list of menu items is reverse order
 			SEL aSelector;
 			int i;
-			for ( i = pParams->mnCount - 1; i >= 0; i-- )
+			for ( i = mnCount - 1; i >= 0; i-- )
 			{
-				switch ( pParams->mpIDs[ i ] )
+				switch ( mpIDs[ i ] )
 				{
 					case CALC_COMMAND_ID:
 						aSelector = @selector(handleCalcCommand:);
@@ -394,34 +399,31 @@ static void AddQuickstartMenuItemsTimerCallback( EventLoopTimerRef aTimer, void 
 				}
 
 				// Insert and release string
-				if ( pParams->mpStrings[ i ] )
+				if ( mpStrings[ i ] )
 				{
-					[pAppMenu insertItemWithTitle:(NSString *)pParams->mpStrings[ i ] action:aSelector keyEquivalent:@"" atIndex:2];
-					[pDockMenu insertItemWithTitle:(NSString *)pParams->mpStrings[ i ] action:aSelector keyEquivalent:@"" atIndex:0];
-					CFRelease( pParams->mpStrings[ i ] );
+					[pAppMenu insertItemWithTitle:(NSString *)mpStrings[ i ] action:aSelector keyEquivalent:@"" atIndex:2];
+					[pDockMenu insertItemWithTitle:(NSString *)mpStrings[ i ] action:aSelector keyEquivalent:@"" atIndex:0];
 				}
 			}
+
+			mpIDs = nil;
+			mpStrings = nil;
 		}
 	}
-
-	// Free params
-	rtl_freeMemory( pParams->mpIDs );
-	rtl_freeMemory( pParams->mpStrings );
-	rtl_freeMemory( pParams );
 }
 
-void AddQuickstartMenuItems( struct AddQuickstartMenuItemsParams *pParams )
+- (id)initWithCount:(int)nCount menuCommands:(MenuCommand *)pIDs strings:(CFStringRef *)pStrings;
 {
-	if ( !pParams || !pParams->mnCount )
-		return;
+	mnCount = nCount;
+	mpIDs = pIDs;
+	mpStrings = pStrings;
+}
 
-	if ( !pAddQuickstartMenuItemsTimerUPP )
-		pAddQuickstartMenuItemsTimerUPP = NewEventLoopTimerUPP( AddQuickstartMenuItemsTimerCallback );
-	if ( pAddQuickstartMenuItemsTimerUPP )
-	{
-		if ( GetCurrentEventLoop() != GetMainEventLoop() )
-			InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pAddQuickstartMenuItemsTimerUPP, (void *)pParams, NULL );
-		else
-			AddQuickstartMenuItemsTimerCallback( NULL, (void *)pParams );
-	}
+@end
+
+void AddQuickstartMenuItems( int nCount, MenuCommand *pIDs, CFStringRef *pStrings )
+{
+	QuickstartMenuItems *pItems = [[QuickstartMenuItems alloc] initWithCount:nCount menuCommands:pIDs strings:pStrings];
+	[pItems performSelectorOnMainThread:@selector(addMenuItems:) withObject:pItems waitUntilDone:YES];
+	[pItems release];
 }
