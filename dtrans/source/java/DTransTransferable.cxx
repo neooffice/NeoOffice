@@ -123,7 +123,21 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 
 	DTransTransferable *pTransferable = (DTransTransferable *)pData;
 
-	OGuard aSolarGuard( Application::GetSolarMutex() );
+	IMutex& rSolarMutex = Application::GetSolarMutex();
+
+	if ( GetCurrentEventLoop() == GetMainEventLoop() )
+	{
+		// We need to let any pending timers run so that we don't deadlock
+		while ( !rSolarMutex.tryToAcquire() )
+		{
+			ReceiveNextEvent( 0, NULL, 0, false, NULL );
+			OThread::yield();
+		}
+	}
+	else
+	{
+		rSolarMutex.acquire();
+	}
 
 	bool bTransferableFound = false;
 	if ( pTransferable )
@@ -333,6 +347,8 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 			}
 		}
 	}
+
+	rSolarMutex.release();
 
 	return nErr;
 }

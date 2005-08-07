@@ -193,8 +193,14 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 	if ( !pTrackDragOwner )
 		return noErr;
 
-	OGuard aSolarGuard( Application::GetSolarMutex() );
-
+	// We need to let any pending timers run so that we don't deadlock
+	IMutex& rSolarMutex = Application::GetSolarMutex();
+	while ( !rSolarMutex.tryToAcquire() )
+	{
+		ReceiveNextEvent( 0, NULL, 0, false, NULL );
+		OThread::yield();
+	}
+ 
 	JavaDragSource *pSource = NULL;
 	for ( ::std::list< JavaDragSource* >::const_iterator it = aDragSources.begin(); it != aDragSources.end(); ++it )
 	{
@@ -205,13 +211,15 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 		}
 	}
 
-	if ( !pSource || pSource == pTrackDragOwner )
-		return noErr;
+	if ( pSource && pSource != pTrackDragOwner )
+	{
+		MacOSPoint aPoint;
+		Rect aRect;
+		if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( pTrackDragOwner->mpNativeWindow, kWindowContentRgn, &aRect ) == noErr )
+			pTrackDragOwner->handleDrag( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) );
+	}
 
-	MacOSPoint aPoint;
-	Rect aRect;
-	if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( pTrackDragOwner->mpNativeWindow, kWindowContentRgn, &aRect ) == noErr )
-		pTrackDragOwner->handleDrag( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) );
+	rSolarMutex.release();
 
 	return noErr;
 }
@@ -222,7 +230,13 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 {
 	MutexGuard aDragGuard( aDragMutex );
 
-	OGuard aSolarGuard( Application::GetSolarMutex() );
+	// We need to let any pending timers run so that we don't deadlock
+	IMutex& rSolarMutex = Application::GetSolarMutex();
+	while ( !rSolarMutex.tryToAcquire() )
+	{
+		ReceiveNextEvent( 0, NULL, 0, false, NULL );
+		OThread::yield();
+	}
 
 	JavaDropTarget *pTarget = NULL;
 	for ( ::std::list< JavaDropTarget* >::const_iterator it = aDropTargets.begin(); it != aDropTargets.end(); ++it )
@@ -234,33 +248,35 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 		}
 	}
 
-	if ( !pTarget )
-		return noErr;
-
-	MacOSPoint aPoint;
-	Rect aRect;
-	if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
+	if ( pTarget )
 	{
-		sal_Int32 nX = (sal_Int32)( aPoint.h - aRect.left );
-		sal_Int32 nY = (sal_Int32)( aPoint.v - aRect.top );
-
-		switch ( nMessage )
+		MacOSPoint aPoint;
+		Rect aRect;
+		if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
 		{
-			case kDragTrackingEnterWindow:
-				pTarget->handleDragEnter( nX, nY, aDrag );
-				break;
-			case kDragTrackingInWindow:
-				pTarget->handleDragOver( nX, nY, aDrag );
-				break;
-			case kDragTrackingLeaveWindow:
-				pTarget->handleDragExit( nX, nY, aDrag );
-				break;
-			default:
-				break;
-		}
+			sal_Int32 nX = (sal_Int32)( aPoint.h - aRect.left );
+			sal_Int32 nY = (sal_Int32)( aPoint.v - aRect.top );
 
-		ImplSetThemeCursor( pTarget->isRejected() ? DNDConstants::ACTION_NONE : nCurrentAction, PtInRect( aPoint, &aRect ) );
+			switch ( nMessage )
+			{
+				case kDragTrackingEnterWindow:
+					pTarget->handleDragEnter( nX, nY, aDrag );
+					break;
+				case kDragTrackingInWindow:
+					pTarget->handleDragOver( nX, nY, aDrag );
+					break;
+				case kDragTrackingLeaveWindow:
+					pTarget->handleDragExit( nX, nY, aDrag );
+					break;
+				default:
+					break;
+			}
+
+			ImplSetThemeCursor( pTarget->isRejected() ? DNDConstants::ACTION_NONE : nCurrentAction, PtInRect( aPoint, &aRect ) );
+		}
 	}
+
+	rSolarMutex.release();
 
 	return noErr;
 }
@@ -271,7 +287,13 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 {
 	MutexGuard aDragGuard( aDragMutex );
 
-	OGuard aSolarGuard( Application::GetSolarMutex() );
+	// We need to let any pending timers run so that we don't deadlock
+	IMutex& rSolarMutex = Application::GetSolarMutex();
+	while ( !rSolarMutex.tryToAcquire() )
+	{
+		ReceiveNextEvent( 0, NULL, 0, false, NULL );
+		OThread::yield();
+	}
 
 	JavaDropTarget *pTarget = NULL;
 	for ( ::std::list< JavaDropTarget* >::const_iterator it = aDropTargets.begin(); it != aDropTargets.end(); ++it )
@@ -283,20 +305,24 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 		}
 	}
 
-	if ( !pTarget )
-		return dragNotAcceptedErr;
+	OSErr nRet = dragNotAcceptedErr;
 
-	MacOSPoint aPoint;
-	Rect aRect;
-	if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr && pTarget->handleDrop( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ), aDrag ) )
+	if ( pTarget )
 	{
-		// Update actions
-		ImplSetDragDropAction( aDrag, nCurrentAction );
-		ImplSetThemeCursor( pTarget->isRejected() ? DNDConstants::ACTION_NONE : nCurrentAction, false );
-		return noErr;
+		MacOSPoint aPoint;
+		Rect aRect;
+		if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr && pTarget->handleDrop( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ), aDrag ) )
+		{
+			// Update actions
+			ImplSetDragDropAction( aDrag, nCurrentAction );
+			ImplSetThemeCursor( pTarget->isRejected() ? DNDConstants::ACTION_NONE : nCurrentAction, false );
+			nRet = noErr;
+		}
 	}
 
-	return dragNotAcceptedErr;
+	rSolarMutex.release();
+
+	return nRet;
 }
 
 // ------------------------------------------------------------------------
@@ -358,10 +384,23 @@ void TrackDragTimerCallback( EventLoopTimerRef aTimer, void *pData )
 
 				aDragSources.push_back( pSource );
 
+				// We need to let any pending timers run so
+				// that we don't deadlock
+				IMutex& rSolarMutex = Application::GetSolarMutex();
+				while ( !rSolarMutex.tryToAcquire() )
+				{
+					ReceiveNextEvent( 0, NULL, 0, false, NULL );
+					OThread::yield();
+				}
+
 				// Set the drag's transferable
 				DTransTransferable *pTransferable = new DTransTransferable( aDrag, TRANSFERABLE_TYPE_DRAG );
 
-				if ( pSource->maContents.is() && pTransferable->setContents( pSource->maContents ) && TrackDrag( aDrag, &aEventRecord, aRegion ) == noErr )
+				rSolarMutex.release();
+
+				bool bContentsSet = ( pSource->maContents.is() && pTransferable->setContents( pSource->maContents ) );
+
+				if ( bContentsSet && TrackDrag( aDrag, &aEventRecord, aRegion ) == noErr )
 				{
 					aDragMutex.acquire();
 
