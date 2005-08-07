@@ -127,7 +127,13 @@ using namespace com::sun::star::uno;
 
 static void ImplFontListChangedCallback( ATSFontNotificationInfoRef, void* )
 {
-	Application::GetSolarMutex().acquire();
+	// We need to let any pending timers run so that we don't deadlock
+	IMutex& rSolarMutex = Application::GetSolarMutex();
+	while ( !rSolarMutex.tryToAcquire() )
+	{
+		ReceiveNextEvent( 0, NULL, 0, false, NULL );
+		OThread::yield();
+	}
 
 	// Get the array of fonts
 	::std::list< ATSFontRef > aNewNativeFontList;
@@ -174,7 +180,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef, void* )
 
 	com_sun_star_vcl_VCLFont::useDefaultFont = bUseDefaultFont;
 
-	Application::GetSolarMutex().acquire();
+	rSolarMutex.release();
 }
 
 // ----------------------------------------------------------------------------
@@ -226,13 +232,29 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 						pSalData->maNativeEventCondition.reset();
 						com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
 						pSalData->mpEventQueue->postCachedEvent( &aEvent );
-						pSalData->maNativeEventCondition.wait();
+
+						// We need to let any pending timers run while we are
+						// waiting for the VCL event queue to clear so that
+						// we don't deadlock
+						IMutex& rSolarMutex = Application::GetSolarMutex();
+						while ( !pSalData->maNativeEventCondition.check() )
+						{
+							ReceiveNextEvent( 0, NULL, 0, false, NULL );
+							OThread::yield();
+						}
 
 						// Fix bug 679 by checking if the condition was
 						// released to avoid a deadlock
+						OSErr nRet = userCanceledErr;
 						if ( pSalData->mbNativeEventSucceeded )
 						{
-							Application::GetSolarMutex().acquire();
+							// We need to let any pending timers run so that we
+							// don't deadlock
+							while ( !rSolarMutex.tryToAcquire() )
+							{
+								ReceiveNextEvent( 0, NULL, 0, false, NULL );
+								OThread::yield();
+							}
 
 							pSalData->mbInNativeMenuTracking = ( nKind == kEventMenuBeginTracking );
 
@@ -242,18 +264,16 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 							// We need to let any timers run that were added
 							// by any menu changes. Otherwise, some menus will
-							// be drawn in the state the menus were in before
+							// be drawn in the state that they were in before
 							// we updated the menus.
 							ReceiveNextEvent( 0, NULL, 0, false, NULL );
 
-							Application::GetSolarMutex().release();
+							nRet = noErr;
+						}
 
-							return noErr;
-						}
-						else
-						{
-							return userCanceledErr;
-						}
+						rSolarMutex.release();
+
+						return nRet;
 					}
 				}
 			}
