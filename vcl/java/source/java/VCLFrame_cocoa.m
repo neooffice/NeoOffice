@@ -38,12 +38,17 @@
 
 @interface CWindowDelegate : NSObject
 {
+	BOOL					mbAttachChildren;
+	NSMutableSet*			mpChildWindows;
 	id						mpDelegate;
 	NSWindow*				mpWindow;
 }
+- (void)addChildWindow:(NSWindow *)pWindow;
+- (void)attachWindows;
 - (void)dealloc;
 - (id)delegate;
 - (id)initWithWindow:(NSWindow *)pWindow delegate:(id)pDelegate;
+- (void)removeChildWindow:(NSWindow *)pWindow;
 - (NSRect)window:(NSWindow *)pWindow willPositionSheet:(NSWindow *)pSheet usingRect:(NSRect)aRect;
 - (void)windowDidBecomeKey:(NSNotification *)pNotification;
 - (void)windowDidBecomeMain:(NSNotification *)pNotification;
@@ -72,8 +77,45 @@
 
 @implementation CWindowDelegate
 
+- (void)addChildWindow:(NSWindow *)pWindow
+{
+	if ( mpWindow && pWindow )
+	{
+		[mpChildWindows addObject:pWindow];
+		mbAttachChildren = TRUE;
+		[self attachWindows];
+	}
+}
+
+- (void)attachWindows
+{
+	if ( mbAttachChildren && mpWindow && [mpWindow isVisible])
+	{
+		NSWindow *pWindow;
+		NSEnumerator *pEnum = [mpChildWindows objectEnumerator];
+		while ( ( pWindow = [pEnum nextObject] ) != nil )
+		{
+			if ( [pWindow isVisible] )
+			{
+				NSWindow *pParent = [pWindow parentWindow];
+				if ( pParent != mpWindow )
+				{
+					if ( pParent )
+						[pParent removeChildWindow:pWindow];
+					[mpWindow addChildWindow:pWindow ordered:NSWindowAbove];
+				}
+			}
+		}
+
+		mbAttachChildren = FALSE;
+	}
+}
+
 - (void)dealloc
 {
+	if ( mpChildWindows )
+		[mpChildWindows release];
+
 	if ( mpDelegate )
 		[mpDelegate release];
 
@@ -90,6 +132,9 @@
 {
 	[super init];
 
+	mbAttachChildren = FALSE;
+	mpChildWindows = [[NSMutableSet alloc] init];
+
 	if ( pDelegate )
 		mpDelegate = [pDelegate retain];
 
@@ -97,6 +142,18 @@
 		mpWindow = [pWindow retain];
 
 	return self;
+}
+
+- (void)removeChildWindow:(NSWindow *)pWindow
+{
+	if ( pWindow )
+	{
+		NSWindow *pParent = [pWindow parentWindow];
+		if ( pParent == mpWindow )
+			[mpWindow removeChildWindow:pWindow];
+
+		[mpChildWindows removeObject:pWindow];
+	}
 }
 
 - (NSRect)window:(NSWindow *)pWindow willPositionSheet:(NSWindow *)pSheet usingRect:(NSRect)aRect
@@ -181,6 +238,8 @@
 
 - (void)windowDidUpdate:(NSNotification *)pNotification
 {
+	[self attachWindows];
+
 	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(windowDidUpdate:)] )
 		[mpDelegate windowDidUpdate:pNotification];
 }
@@ -209,6 +268,34 @@
 
 - (void)windowWillClose:(NSNotification *)pNotification
 {
+	if ( mpWindow )
+	{
+		// Detach all child windows
+		NSWindow *pWindow;
+		NSEnumerator *pEnum = [mpChildWindows objectEnumerator];
+		while ( ( pWindow = [pEnum nextObject] ) != nil )
+		{
+			NSWindow *pParent = [pWindow parentWindow];
+			if ( pParent == mpWindow )
+				[mpWindow removeChildWindow:pWindow];
+		}
+
+		// Detach this window from parent
+		NSWindow *pParent = [mpWindow parentWindow];
+		if ( pParent )
+			[pParent removeChildWindow:mpWindow];
+
+		mbAttachChildren = FALSE;
+	}
+
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
+	{
+		NSWindow *pKeyWindow = [pApp keyWindow];
+		if ( pKeyWindow && pKeyWindow != [pApp mainWindow] )
+			[pKeyWindow makeMainWindow];
+	}
+
 	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(windowWillClose:)] )
 		[mpDelegate windowWillClose:pNotification];
 }
@@ -259,7 +346,37 @@
 
 @end
 
+struct CWindow_addChildWindowTimerParams
+{
+	NSWindow*				mpWindow;
+	NSWindow*				mpChildWindow;
+};
+
+struct CWindow_removeChildWindowTimerParams
+{
+	NSWindow*				mpWindow;
+	NSWindow*				mpChildWindow;
+};
+
+static EventLoopTimerUPP pCWindow_addChildWindowTimerUPP = NULL;
 static EventLoopTimerUPP pCWindow_disposeDelegateTimerUPP = NULL;
+static EventLoopTimerUPP pCWindow_removeChildWindowTimerUPP = NULL;
+
+static void CWindow_addChildWindowTimerCallback( EventLoopTimerRef aTimer, void *pData )
+{
+	struct CWindow_addChildWindowTimerParams *pParams = (struct CWindow_addChildWindowTimerParams *)pData;
+	if ( pParams )
+	{
+		if ( pParams->mpWindow && pParams->mpChildWindow )
+		{
+			CWindowDelegate *pDelegate = [pParams->mpWindow delegate];
+			if ( pDelegate )
+				[pDelegate addChildWindow:pParams->mpChildWindow];
+		}
+
+		rtl_freeMemory( pParams );
+	}
+}
 
 static void CWindow_disposeDelegateTimerCallback( EventLoopTimerRef aTimer, void *pData )
 {
@@ -271,6 +388,44 @@ static void CWindow_disposeDelegateTimerCallback( EventLoopTimerRef aTimer, void
 		{
 			[pNSWindow setDelegate:nil];
 			[pDelegate release];
+		}
+	}
+}
+
+static void CWindow_removeChildWindowTimerCallback( EventLoopTimerRef aTimer, void *pData )
+{
+	struct CWindow_removeChildWindowTimerParams *pParams = (struct CWindow_removeChildWindowTimerParams *)pData;
+	if ( pParams )
+	{
+		if ( pParams->mpWindow && pParams->mpChildWindow )
+		{
+			CWindowDelegate *pDelegate = [pParams->mpWindow delegate];
+			if ( pDelegate )
+				[pDelegate removeChildWindow:pParams->mpChildWindow];
+		}
+
+		rtl_freeMemory( pParams );
+	}
+}
+
+void CWindow_addChildWindow( id pCWindow, id pChildCWindow )
+{
+	if ( !pCWindow_addChildWindowTimerUPP )
+		pCWindow_addChildWindowTimerUPP = NewEventLoopTimerUPP( CWindow_addChildWindowTimerCallback );
+	if ( pCWindow_addChildWindowTimerUPP )
+	{
+		NSWindow *pNSWindow = (NSWindow *)CWindow_getNSWindow( pCWindow );
+		NSWindow *pChildNSWindow = (NSWindow *)CWindow_getNSWindow( pChildCWindow );
+		if ( pNSWindow && pChildNSWindow )
+		{
+			struct CWindow_addChildWindowTimerParams *pParams = (struct CWindow_addChildWindowTimerParams *)rtl_allocateMemory( sizeof( struct CWindow_addChildWindowTimerParams ) );
+			pParams->mpWindow = pNSWindow;
+			pParams->mpChildWindow = pChildNSWindow;
+
+			if ( GetCurrentEventLoop() != GetMainEventLoop() )
+				InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pCWindow_addChildWindowTimerUPP, (void *)pParams, NULL );
+			else
+				CWindow_addChildWindowTimerCallback( NULL, (void *)pParams );
 		}
 	}
 }
@@ -307,6 +462,28 @@ void CWindow_initDelegate( id pCWindow )
 	{
 		CWindowDelegate *pNewDelegate = [[CWindowDelegate alloc] initWithWindow:pNSWindow delegate:[pNSWindow delegate]];
 		[pNSWindow setDelegate:pNewDelegate];
+	}
+}
+
+void CWindow_removeChildWindow( id pCWindow, id pChildCWindow )
+{
+	if ( !pCWindow_removeChildWindowTimerUPP )
+		pCWindow_removeChildWindowTimerUPP = NewEventLoopTimerUPP( CWindow_removeChildWindowTimerCallback );
+	if ( pCWindow_removeChildWindowTimerUPP )
+	{
+		NSWindow *pNSWindow = (NSWindow *)CWindow_getNSWindow( pCWindow );
+		NSWindow *pChildNSWindow = (NSWindow *)CWindow_getNSWindow( pChildCWindow );
+		if ( pNSWindow && pChildNSWindow )
+		{
+			struct CWindow_removeChildWindowTimerParams *pParams = (struct CWindow_removeChildWindowTimerParams *)rtl_allocateMemory( sizeof( struct CWindow_removeChildWindowTimerParams ) );
+			pParams->mpWindow = pNSWindow;
+			pParams->mpChildWindow = pChildNSWindow;
+
+			if ( GetCurrentEventLoop() != GetMainEventLoop() )
+				InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pCWindow_removeChildWindowTimerUPP, (void *)pParams, NULL );
+			else
+				CWindow_removeChildWindowTimerCallback( NULL, (void *)pParams );
+		}
 	}
 }
 

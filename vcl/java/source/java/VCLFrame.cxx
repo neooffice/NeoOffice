@@ -117,6 +117,8 @@ void com_sun_star_vcl_VCLFrame::addChild( SalFrame *_par0 )
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
+			CWindow_addChildWindow( getNativeWindow( sal_True ), _par0->maFrameData.mpVCLFrame->getNativeWindow( sal_True ) );
+
 			jvalue args[1];
 			args[0].l = _par0->maFrameData.mpVCLFrame->getJavaObject();
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
@@ -505,6 +507,8 @@ void com_sun_star_vcl_VCLFrame::removeChild( SalFrame *_par0 )
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
+			CWindow_removeChildWindow( getNativeWindow( sal_True ), _par0->maFrameData.mpVCLFrame->getNativeWindow( sal_True ) );
+
 			jvalue args[1];
 			args[0].l = _par0->maFrameData.mpVCLFrame->getJavaObject();
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );

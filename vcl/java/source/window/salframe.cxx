@@ -209,6 +209,9 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	{
 		if ( pSalData->mpFocusFrame == this )
 			pSalData->mpFocusFrame = NULL;
+
+		if ( maFrameData.mpParent )
+			maFrameData.mpParent->ToTop( SAL_FRAME_TOTOP_GRABFOCUS );
 	}
 }
 
@@ -508,6 +511,9 @@ void SalFrame::SetAlwaysOnTop( BOOL bOnTop )
 
 void SalFrame::ToTop( USHORT nFlags )
 {
+	if ( maFrameData.mpVCLFrame->getState() == SAL_FRAMESTATE_MINIMIZED && ! ( nFlags & SAL_FRAME_TOTOP_RESTOREWHENMIN ) )
+		return;
+
 	maFrameData.mpVCLFrame->toFront();
 }
 
