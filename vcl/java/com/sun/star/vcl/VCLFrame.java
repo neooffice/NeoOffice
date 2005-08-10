@@ -39,6 +39,7 @@ import java.awt.ActiveEvent;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
+import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.Frame;
@@ -681,11 +682,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private VCLFrame.NoPaintPanel panel = null;
 
 	/**
-	 * The parent frame.
-	 */
-	private VCLFrame parent = null;
-
-	/**
 	 * The event queue.
 	 */
 	private VCLEventQueue queue = null;
@@ -705,6 +701,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private Window window = null;
 
+	/** 
+	 * The window undecorated mode.
+	 */
+	private boolean undecorated = false;
+
 	/**
 	 * Constructs a new <code>VCLFrame</code> instance.
 	 *
@@ -719,10 +720,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		style = s;
 
 		// Create the native window
-		if ((style & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) != 0)
-			window = new VCLFrame.NoPaintFrame(this);
+		if ((style & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) == 0)
+			undecorated = true;
+
+		Window w = null;
+		if (p != null)
+			w = p.getWindow();
+		if (w instanceof Dialog)
+			window = new VCLFrame.NoPaintDialog(this, (Dialog)w);
+		else if (w instanceof Frame)
+			window = new VCLFrame.NoPaintDialog(this, (Frame)w);
 		else
-			window = new VCLFrame.NoPaintWindow(this);
+			window = new VCLFrame.NoPaintFrame(this);
 
 		// Process remaining style flags
 		if ((style & SAL_FRAME_STYLE_SIZEABLE) != 0)
@@ -741,9 +750,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else
 			bitCount = 24;
 
-		insets = window.getInsets();
-		if (p != null)
-			p.addChild(this);
+		if (undecorated)
+			insets = window.getInsets();
+		else
+			insets = VCLScreen.getFrameInsets();
 		graphics = new VCLGraphics(this);
 
 	}
@@ -857,7 +867,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (f != null) {
 			synchronized (f) {
 				synchronized (children) {
-					f.parent = this;
 					children.add(f);
 				}
 			}
@@ -869,43 +878,37 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * Disposes the native window and releases any system resources that it is
 	 * using.
 	 */
-	public void dispose() {
+	public synchronized void dispose() {
 
 		if (window != null) {
-			setVisible(false);
+			setVisible(false, false);
 			setMenuBar(null);
 		}
 		if (queue != null)
 			queue.removeCachedEvents(frame);
 		queue = null;
 		bitCount = 0;
+		children = null;
 		frame = 0;
 		fullScreenMode = false;
 		if (graphics != null)
 			graphics.dispose();
+		graphics = null;
 		insets = null;
 		if (panel != null) {
-			panel.removeNotify();
-			InputContext ic = panel.getInputContext();
-			if (ic != null)
-				ic.removeNotify(panel);
+			panel.enableInputMethods(false);
+			if (window != null)
+				window.remove(panel);
 		}
 		panel = null;
-		parent = null;
-		graphics = null;
 		if (window != null) {
 			window.removeNotify();
 			InputContext ic = window.getInputContext();
 			if (ic != null)
 				ic.removeNotify(window);
-			// Window owners will automatically dispose their children
-			Window owner = window.getOwner();
-			if (owner != null)
-				owner.dispose();
-			else
-				window.dispose();
 		}
 		window = null;
+		undecorated = false;
 
 	}
 
@@ -1132,17 +1135,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
-	 * Returns the parent frame.
-	 *
-	 * @return the parent frame
-	 */
-	VCLFrame getParent() {
-
-		return parent;
-
-	}
-
-	/**
 	 * Returns the <code>ComponentPeer</code>.
 	 *
 	 * @return the <code>ComponentPeer</code>
@@ -1231,7 +1223,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public boolean isFloatingWindow() {
 
-		return !(fullScreenMode || window instanceof Frame);
+		return (undecorated && !fullScreenMode);
 
 	}
 
@@ -1538,11 +1530,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (f != null) {
 			synchronized (f) {
 				synchronized (children) {
-					f.parent = null;
 					children.remove(f);
 				}
 			}
 		}
+
+	}
+
+	/**
+	 * Set focus to the native window.
+	 */
+	public void requestFocus() {
+
+		if (panel.isShowing())
+			panel.requestFocus();
 
 	}
 
@@ -1588,10 +1589,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (b == fullScreenMode)
 			return;
 
-        if (window instanceof VCLFrame.NoPaintWindow) {
-			fullScreenMode = b;
-            ((VCLFrame.NoPaintWindow)window).setFullScreenMode(fullScreenMode);
-		}
+		fullScreenMode = b;
+
+        if (window instanceof VCLFrame.NoPaintDialog)
+            ((VCLFrame.NoPaintDialog)window).setFullScreenMode(fullScreenMode);
+        else if (window instanceof VCLFrame.NoPaintFrame)
+            ((VCLFrame.NoPaintFrame)window).setFullScreenMode(fullScreenMode);
 
 	}
 
@@ -1617,8 +1620,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (window instanceof VCLFrame.NoPaintFrame)
 			((VCLFrame.NoPaintFrame)window).setMinimumSize(width, height);
-		else if (window instanceof VCLFrame.NoPaintWindow)
-			((VCLFrame.NoPaintWindow)window).setMinimumSize(width, height);
+		else if (window instanceof VCLFrame.NoPaintDialog)
+			((VCLFrame.NoPaintDialog)window).setMinimumSize(width, height);
 
 	}
 
@@ -1791,7 +1794,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void setTitle(String title) {
 
-		if (window instanceof Frame)
+		if (window instanceof Dialog)
+			((Dialog)window).setTitle(title);
+		else if (window instanceof Frame)
 			((Frame)window).setTitle(title);
 
 	}
@@ -1801,14 +1806,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param b <code>true</code> shows this component and <code>false</code>
 	 *  hides this component
+	 * @param noActivate <code>true</code> to not change the focus owner
+	 *  otherwise <code>false</code>
 	 */
-	public void setVisible(boolean b) {
+	public void setVisible(boolean b, boolean noActivate) {
 
 		if (b == window.isShowing())
 			return;
 
 		// Set the resizable flag if needed
-		if (window instanceof Frame)
+		if (window instanceof Dialog)
+			((Dialog)window).setResizable(resizable);
+		else if (window instanceof Frame)
 			((Frame)window).setResizable(resizable);
 
 		if (b) {
@@ -1822,12 +1831,29 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			panel.addMouseWheelListener(this);
 			window.addWindowListener(this);
 
+			// Cache the current focus owner
+			Component c = null;
+			if (noActivate)
+				c = KeyboardFocusManager.getCurrentKeyboardFocusManager().getPermanentFocusOwner();
+
 			// Show the window
 			window.show();
 
-			// Focus doesn't seem to always get set to the panel when the
-			// focusable windows are first displayed
-			panel.requestFocus();
+			// Reattach any visible children
+			synchronized (children) {
+				Iterator frames = children.iterator();
+				while (frames.hasNext()) {
+					Window w = ((VCLFrame)frames.next()).getWindow();
+					if (w != null && w.isShowing()) {
+						w.hide();
+						w.removeNotify();
+						w.show();
+					}
+				}
+			}
+
+			if (c != null && c != window)
+				c.requestFocus();
 		}
 		else {
 			// Hide the window
@@ -1919,6 +1945,141 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	/**
 	 * A class that has painting methods that perform no painting.
 	 */
+	final class NoPaintDialog extends Dialog {
+
+		/**
+		 * The <code>VCLFrame</code>.
+		 */
+		private VCLFrame frame = null;
+
+		/**
+		 * The minimum size.
+		 */
+		private Dimension minSize = new Dimension(1, 1);
+
+		/**
+		 * Constructs a new <code>VCLFrame.NoPaintDialog</code> instance.
+		 *
+		 * @param f the <code>VCLFrame</code>
+		 * @param o the native dialog that owns this dialog
+		 */
+		NoPaintDialog(VCLFrame f, Dialog o) {
+
+			super(o);
+			frame = f;
+			initialize();
+
+		}
+
+		/**
+		 * Constructs a new <code>VCLFrame.NoPaintDialog</code> instance.
+		 *
+		 * @param f the <code>VCLFrame</code>
+		 * @param o the native frame that owns this dialog
+		 */
+		NoPaintDialog(VCLFrame f, Frame o) {
+
+			super(o);
+			frame = f;
+			initialize();
+
+		}
+
+		/**
+		 * Returns the focus owner of this dialog.
+		 *
+		 * @return the focus owner of this dialog
+		 */
+		public Component getFocusOwner() {
+
+			if (frame.isFullScreenMode())
+				return this;
+			else
+				return super.getFocusOwner();
+
+		}
+
+		/**
+		 * Returns the minimum size for the dialog.
+		 *
+		 * @return the minimum size for the dialog
+		 */
+		public Dimension getMinimumSize() {
+
+			return minSize;
+			
+		}
+
+		/**
+		 * Set the native dialog's initial size and style.
+		 */
+		private void initialize() {
+
+			if (frame.undecorated) {
+				setUndecorated(true);
+				setFocusable(false);
+				setFocusableWindowState(false);
+			}
+			else {
+				Insets insets = VCLScreen.getFrameInsets();
+				minSize.width += insets.left + insets.right;
+				minSize.height += insets.top + insets.bottom;
+			}
+
+			enableInputMethods(false);
+
+		}
+		
+		/**
+		 * Set the native dialog to show or hide in full screen mode.
+		 *
+		 * @param b <code>true</code> sets this dialog to full screen mode and
+		 *  <code>false</code> sets it to normal mode
+		 */
+		void setFullScreenMode(boolean b) {
+
+			if (isUndecorated()) {
+				setFocusable(b);
+				setFocusableWindowState(b);
+			}
+
+		}
+
+		/**
+		 * Set the minimum size for the dialog.
+		 *
+		 * @param width the minimum width
+		 * @param height the minimum height
+		 */
+		public void setMinimumSize(int width, int height) {
+
+			if (width < 1)
+				width = 1;
+			if (height < 1)
+				height = 1;
+
+			insets = getInsets();
+			minSize = new Dimension(width + insets.left + insets.right, height + insets.top + insets.bottom);
+			
+		}
+
+		/**
+		 * This method performs no painting of the dialog. This method is used
+		 * to prevent Java from painting over what VCL has painted.
+		 *
+		 * @param g the <code>Graphics</code>
+		 */
+		public void update(Graphics g) {
+
+			paint(g);
+
+		}
+
+	}
+
+	/**
+	 * A class that has painting methods that perform no painting.
+	 */
 	final class NoPaintFrame extends Frame {
 
 		/**
@@ -1929,7 +2090,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		/**
 		 * The minimum size.
 		 */
-		private Dimension minSize = null;
+		private Dimension minSize = new Dimension(1, 1);
 
 		/**
 		 * Constructs a new <code>VCLFrame.NoPaintFrame</code> instance.
@@ -1939,10 +2100,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		NoPaintFrame(VCLFrame f) {
 
 			frame = f;
-			enableInputMethods(false);
-			setSize(1, 1);
-			addNotify();
-			minSize = getSize();
+			initialize();
 
 		}
 
@@ -1955,6 +2113,41 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			return minSize;
 			
+		}
+
+		/**
+		 * Set the native frame's initial size and style.
+		 */
+		private void initialize() {
+
+			if (frame.undecorated) {
+				setUndecorated(true);
+				setFocusable(false);
+				setFocusableWindowState(false);
+			}
+			else {
+				Insets insets = VCLScreen.getFrameInsets();
+				minSize.width += insets.left + insets.right;
+				minSize.height += insets.top + insets.bottom;
+			}
+
+			enableInputMethods(false);
+
+		}
+		
+		/**
+		 * Set the native dialog to show or hide in full screen mode.
+		 *
+		 * @param b <code>true</code> sets this dialog to full screen mode and
+		 *  <code>false</code> sets it to normal mode
+		 */
+		void setFullScreenMode(boolean b) {
+
+			if (isUndecorated()) {
+				setFocusable(b);
+				setFocusableWindowState(b);
+			}
+
 		}
 
 		/**
@@ -2063,107 +2256,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
-	 * A class that has painting methods that perform no painting.
-	 */
-	final class NoPaintWindow extends Window {
-
-		/**
-		 * The <code>VCLFrame</code>.
-		 */
-		private VCLFrame frame = null;
-
-		/**
-		 * The minimum size.
-		 */
-		private Dimension minSize = null;
-
-		/**
-		 * Constructs a new <code>VCLFrame.NoPaintWindow</code> instance.
-		 *
-		 * @param f the <code>VCLFrame</code>
-		 */
-		NoPaintWindow(VCLFrame f) {
-
-			super(new VCLFrame.NoDisplayFrame(f));
-			frame = f;
-			enableInputMethods(false);
-			setSize(1, 1);
-			addNotify();
-			minSize = getSize();
-
-		}
-
-		/**
-		 * Returns the focus owner of this window.
-		 *
-		 * @return the focus owner of this window
-		 */
-		public Component getFocusOwner() {
-
-			if (frame.isFullScreenMode())
-				return this;
-			else
-				return super.getFocusOwner();
-
-		}
-
-		/**
-		 * Returns the minimum size for the window.
-		 *
-		 * @return the minimum size for the window
-		 */
-		public Dimension getMinimumSize() {
-
-			return minSize;
-			
-		}
-
-		/**
-		 * Set the native window to show or hide in full screen mode.
-		 *
-		 * @param b <code>true</code> sets this window to full screen mode and
-		 *  <code>false</code> sets it to normal mode
-		 */
-		void setFullScreenMode(boolean b) {
-
-			setFocusable(b);
-			setFocusableWindowState(b);
-
-		}
-
-		/**
-		 * Set the minimum size for the window.
-		 *
-		 * @param width the minimum width
-		 * @param height the minimum height
-		 */
-		public void setMinimumSize(int width, int height) {
-
-			if (width < 1)
-				width = 1;
-			if (height < 1)
-				height = 1;
-
-			insets = getInsets();
-			minSize = new Dimension(width + insets.left + insets.right, height + insets.top + insets.bottom);
-			
-		}
-
-		/**
-		 * This method performs no painting of the window. This method is used
-		 * to prevent Java from painting over what VCL has painted.
-		 *
-		 * @param g the <code>Graphics</code>
-		 */
-		public void update(Graphics g) {
-
-			paint(g);
-
-		}
-
-	}
-
-	/**
 	 * A class that can be used as an owner for a <code>Window</code> that can
 	 * fake being displayed when the <code>Window</code> is in full screen
 	 * mode. Display of the owner must be faked in order for a
@@ -2177,7 +2269,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		private VCLFrame frame = null;
 
 		/**
-		 * Constructs a new <code>VCLFrame.NoPaintWindow</code> instance.
+		 * Constructs a new <code>VCLFrame.NoDisplayFrame</code> instance.
 		 *
 		 * @param f the <code>VCLFrame</code>
 		 */

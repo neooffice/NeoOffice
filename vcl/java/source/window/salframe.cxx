@@ -190,7 +190,7 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 	maFrameData.mbVisible = bVisible;
 
-	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible );
+	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible, bNoActivate );
 
 	// Reset graphics
 	com_sun_star_vcl_VCLGraphics *pVCLGraphics = maFrameData.mpVCLFrame->getGraphics();
@@ -209,9 +209,6 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	{
 		if ( pSalData->mpFocusFrame == this )
 			pSalData->mpFocusFrame = NULL;
-
-		if ( maFrameData.mpParent )
-			maFrameData.mpParent->ToTop( SAL_FRAME_TOTOP_GRABFOCUS );
 	}
 }
 
@@ -511,10 +508,18 @@ void SalFrame::SetAlwaysOnTop( BOOL bOnTop )
 
 void SalFrame::ToTop( USHORT nFlags )
 {
-	if ( maFrameData.mpVCLFrame->getState() == SAL_FRAMESTATE_MINIMIZED && ! ( nFlags & SAL_FRAME_TOTOP_RESTOREWHENMIN ) )
+	if ( ! ( nFlags & ( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) ) && maFrameData.mpVCLFrame->getState() == SAL_FRAMESTATE_MINIMIZED )
 		return;
 
-	maFrameData.mpVCLFrame->toFront();
+	if ( ! ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) )
+	{
+		maFrameData.mpVCLFrame->toFront();
+		for ( ::std::list< SalFrame* >::const_iterator it = maFrameData.maChildren.begin(); it != maFrameData.maChildren.end(); ++it )
+			(*it)->ToTop( nFlags & ~SAL_FRAME_TOTOP_GRABFOCUS );
+	}
+
+	if ( nFlags & ( SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) )
+		maFrameData.mpVCLFrame->requestFocus();
 }
 
 // -----------------------------------------------------------------------
@@ -713,16 +718,29 @@ ULONG SalFrame::GetCurrentModButtons()
 
 void SalFrame::SetParent( SalFrame* pNewParent )
 {
-	if ( maFrameData.mpParent )
+	if ( pNewParent != maFrameData.mpParent )
 	{
-		maFrameData.mpParent->maFrameData.maChildren.remove( this );
-		maFrameData.mpParent->maFrameData.mpVCLFrame->removeChild( this );
-	}
-	maFrameData.mpParent = pNewParent;
-	if ( maFrameData.mpParent )
-	{
-		maFrameData.mpParent->maFrameData.maChildren.push_back( this );
-		maFrameData.mpParent->maFrameData.mpVCLFrame->addChild( this );
+		if ( maFrameData.mpParent )
+		{
+			maFrameData.mpParent->maFrameData.maChildren.remove( this );
+			maFrameData.mpParent->maFrameData.mpVCLFrame->removeChild( this );
+		}
+
+		maFrameData.mpParent = pNewParent;
+
+		// Create a new native window with the new parent
+		ReleaseGraphics( maFrameData.mpGraphics );
+		if ( maFrameData.mpVCLFrame )
+			delete maFrameData.mpVCLFrame;
+		maFrameData.mpVCLFrame = new com_sun_star_vcl_VCLFrame( maFrameData.mnStyle, this, maFrameData.mpParent );
+		maFrameData.maSysData.aWindow = (long)maFrameData.mpVCLFrame->getNativeWindow();
+		SetPosSize( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration, maGeometry.nWidth, maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
+
+		if ( maFrameData.mpParent )
+		{
+			maFrameData.mpParent->maFrameData.mpVCLFrame->addChild( this );
+			maFrameData.mpParent->maFrameData.maChildren.push_back( this );
+		}
 	}
 }
 

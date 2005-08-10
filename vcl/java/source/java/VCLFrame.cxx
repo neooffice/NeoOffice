@@ -97,8 +97,6 @@ com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, cons
 	jobject tempObj;
 	tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
 	saveRef( tempObj );
-
-	CWindow_initDelegate( getNativeWindow( sal_True ) );
 }
 
 // ----------------------------------------------------------------------------
@@ -117,8 +115,6 @@ void com_sun_star_vcl_VCLFrame::addChild( SalFrame *_par0 )
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			CWindow_addChildWindow( getNativeWindow( sal_True ), _par0->maFrameData.mpVCLFrame->getNativeWindow( sal_True ) );
-
 			jvalue args[1];
 			args[0].l = _par0->maFrameData.mpVCLFrame->getJavaObject();
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
@@ -142,11 +138,7 @@ void com_sun_star_vcl_VCLFrame::dispose()
 		OSL_ENSURE( mID, "Unknown method id!" );
 
 		if ( mID )
-		{
-			CWindow_disposeDelegate( getNativeWindow( sal_True ) );
-
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
-		}
 	}
 }
 
@@ -383,7 +375,7 @@ const Rectangle com_sun_star_vcl_VCLFrame::getInsets()
 
 // ----------------------------------------------------------------------------
 
-void *com_sun_star_vcl_VCLFrame::getNativeWindow( sal_Bool _par0 )
+void *com_sun_star_vcl_VCLFrame::getNativeWindow()
 {
 	void *out = NULL;
 	VCLThreadAttach t;
@@ -406,11 +398,7 @@ void *com_sun_star_vcl_VCLFrame::getNativeWindow( sal_Bool _par0 )
 					}
 					OSL_ENSURE( mIDGetModelPtr, "Unknown field id!" );
 					if ( mIDGetModelPtr )
-					{
-						out = (void *)t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr );
-						if ( !_par0 )
-							out = CWindow_windowRef( out );
-					}
+						out = (void *)CWindow_windowRef( t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr ) );
 				}
 			}
 			delete peer;
@@ -507,12 +495,29 @@ void com_sun_star_vcl_VCLFrame::removeChild( SalFrame *_par0 )
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			CWindow_removeChildWindow( getNativeWindow( sal_True ), _par0->maFrameData.mpVCLFrame->getNativeWindow( sal_True ) );
-
 			jvalue args[1];
 			args[0].l = _par0->maFrameData.mpVCLFrame->getJavaObject();
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLFrame::requestFocus()
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "requestFocus", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 	}
 }
 
@@ -683,7 +688,7 @@ void com_sun_star_vcl_VCLFrame::setTitle( ::rtl::OUString _par0 )
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0 )
+void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0, sal_Bool _par1 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -691,14 +696,15 @@ void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0 )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(Z)V";
+			char *cSignature = "(ZZ)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "setVisible", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[1];
+			jvalue args[2];
 			args[0].z = jboolean( _par0 );
+			args[1].z = jboolean( _par1 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}

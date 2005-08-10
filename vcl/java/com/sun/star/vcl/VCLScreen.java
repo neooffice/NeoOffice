@@ -35,8 +35,10 @@
 
 package com.sun.star.vcl;
 
+import java.awt.Frame;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
+import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.SystemColor;
@@ -63,6 +65,25 @@ public final class VCLScreen {
 	public final static int MIN_SCREEN_RESOLUTION = 96;
 
 	/**
+	 * The cached frame insets.
+	 */
+	private static Insets frameInsets = null;
+
+	/**
+	 * Initialize screen size and frame insets.
+	 */
+	static {
+
+		Frame f = new Frame();
+		f.setSize(100, 100);
+		f.addNotify();
+		frameInsets = f.getInsets();
+		f.removeNotify();
+		f.dispose();
+
+	}
+
+	/**
 	 * Returns the <code>System.control</code>.
 	 *
 	 * @return the <code>System.control</code>
@@ -70,6 +91,17 @@ public final class VCLScreen {
 	public static int getControlColor() {
 
 		return SystemColor.control.getRGB();
+
+	}
+
+	/**
+	 * Gets the <code>Frame</code> insets.
+	 *
+	 * @return the <code>Frame</code> insets
+	 */
+	public static Insets getFrameInsets() {
+
+		return frameInsets;
 
 	}
 

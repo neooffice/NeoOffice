@@ -739,12 +739,18 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 {
 	SalFrame *pFrame = new SalFrame();
 
-	pFrame->maFrameData.mpVCLFrame = new com_sun_star_vcl_VCLFrame( nSalFrameStyle, pFrame, pParent );
+	pFrame->maFrameData.mnStyle = nSalFrameStyle;
+	pFrame->maFrameData.mpVCLFrame = new com_sun_star_vcl_VCLFrame( pFrame->maFrameData.mnStyle, pFrame, pParent );
 	pFrame->maFrameData.maSysData.aWindow = (long)pFrame->maFrameData.mpVCLFrame->getNativeWindow();
 	pFrame->maFrameData.maSysData.pSalFrame = pFrame;
-	pFrame->maFrameData.mnStyle = nSalFrameStyle;
 
-	pFrame->SetParent( pParent );
+	// Set initial parent
+	pFrame->maFrameData.mpParent = pParent;
+	if ( pFrame->maFrameData.mpParent )
+	{
+		pFrame->maFrameData.mpParent->maFrameData.mpVCLFrame->addChild( pFrame );
+		pFrame->maFrameData.mpParent->maFrameData.maChildren.push_back( pFrame );
+	}
 
 	// Insert this window into the window list
 	SalData *pSalData = GetSalData();
