@@ -892,9 +892,9 @@ public final class VCLEvent extends AWTEvent {
 	private int data = 0;
 
 	/**
-	 * The frame.
+	 * The frame pointer.
 	 */
-	private VCLFrame frame = null;
+	private int frame = 0;
 
 	/**
 	 * The cached key character.
@@ -951,7 +951,8 @@ public final class VCLEvent extends AWTEvent {
 	public VCLEvent(int id, VCLFrame f, int d) {
 
 		super(new Object(), id);
-		frame = f;
+		if (f != null)
+			frame = f.getFrame();
 		data = d;
 
 	}
@@ -967,7 +968,8 @@ public final class VCLEvent extends AWTEvent {
 	public VCLEvent(int id, VCLFrame f, short mID, int mCookie) {
 	    
 		super(new Object(), id);
-		frame = f;
+		if (f != null)
+			frame = f.getFrame();
 		menuID = mID;
 		menuCookie = mCookie;
 
@@ -1192,10 +1194,7 @@ public final class VCLEvent extends AWTEvent {
 	 */
 	public int getFrame() {
 
-		if (frame != null)
-			return frame.getFrame();
-		else
-			return 0;
+		return frame;
 
 	}
 

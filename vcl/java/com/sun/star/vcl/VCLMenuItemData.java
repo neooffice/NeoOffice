@@ -67,6 +67,11 @@ public final class VCLMenuItemData {
 	private VCLMenuItemData delegateForObject = null;
 
 	/**
+	 * The disposed flag.
+	 */
+	private boolean disposed = false;
+
+	/**
 	 * Unicode string that corresponds to the title.
 	 */
 	private String title="";
@@ -167,8 +172,11 @@ public final class VCLMenuItemData {
 	 * Note that this does not instruct an item's delegate object to be
 	 * disposed. Delegates must manually be disposed.
 	 */
-	public void dispose() {
-		
+	public synchronized void dispose() {
+
+		if (disposed)
+			return;
+
 		// [ed] 1/8/05 Set the delegate to NULL here so we make sure
 		// to leave active the peers for any delegate objects that may
 		// be inserted into other menus or menubars.  Bug #308
@@ -211,7 +219,9 @@ public final class VCLMenuItemData {
 		// disposed object
 		
 		if(delegateForObject!=null)
-			delegateForObject.delegate=null;
+			delegateForObject.setDelegate(null);
+
+		disposed = true;
 
 	}
 
@@ -340,7 +350,7 @@ public final class VCLMenuItemData {
 	 * Get the id corresponding to the menu item that should be used to refer
 	 * to this menu item in VCL events.
 	 */
-	short getVCLID() {
+	synchronized short getVCLID() {
 
 		if(delegate!=null)
 			return(delegate.getVCLID());
@@ -353,7 +363,7 @@ public final class VCLMenuItemData {
 	 * Get the cookie corresponding to the menu item that should be used to
 	 * refer to this menu in VCL events.
 	 */
-	int getVCLCookie() {
+	synchronized int getVCLCookie() {
 
 		if(delegate!=null)
 			return(delegate.getVCLCookie());
@@ -585,7 +595,7 @@ public final class VCLMenuItemData {
 	 *
 	 * @param d	new delegate
 	 */
-	void setDelegate(VCLMenuItemData d) {
+	synchronized void setDelegate(VCLMenuItemData d) {
 
 		if (delegate != null)
 			delegate.delegateForObject=null;
@@ -643,13 +653,20 @@ public final class VCLMenuItemData {
 		 *
 		 * @param e event spawning this action
 		 */
-		public void actionPerformed(ActionEvent e) {
+		public synchronized void actionPerformed(ActionEvent e) {
+
+			if (disposed)
+				return;
 
 			VCLMenuBar mb=VCLMenuBar.findVCLMenuBar(this);
 			if (mb!=null) {
-				mb.getEventQueue().postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUACTIVATE, mb.getFrame(), d.getVCLID(), d.getVCLCookie()));
-				mb.getEventQueue().postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUCOMMAND, mb.getFrame(), d.getVCLID(), d.getVCLCookie()));
-				mb.getEventQueue().postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUDEACTIVATE, mb.getFrame(), d.getVCLID(), d.getVCLCookie()));
+				VCLEventQueue q = mb.getEventQueue();
+				VCLFrame f = mb.getFrame();
+				if (q != null && f != null) {
+					q.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUACTIVATE, f, d.getVCLID(), d.getVCLCookie()));
+					q.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUCOMMAND, f, d.getVCLID(), d.getVCLCookie()));
+					q.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUDEACTIVATE, f, d.getVCLID(), d.getVCLCookie()));
+				}
 			}
 
 		}
@@ -693,13 +710,20 @@ public final class VCLMenuItemData {
 		 *
 		 * @param e	event spawning this action
 		 */
-		public void itemStateChanged(ItemEvent e) {
+		public synchronized void itemStateChanged(ItemEvent e) {
+
+			if (disposed)
+				return;
 
 			VCLMenuBar mb=VCLMenuBar.findVCLMenuBar(this);
 			if(mb!=null) {
-				mb.getEventQueue().postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUACTIVATE, mb.getFrame(), d.getVCLID(), d.getVCLCookie()));
-				mb.getEventQueue().postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUCOMMAND, mb.getFrame(), d.getVCLID(), d.getVCLCookie()));
-				mb.getEventQueue().postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUDEACTIVATE, mb.getFrame(), d.getVCLID(), d.getVCLCookie()));
+				VCLEventQueue q = mb.getEventQueue();
+				VCLFrame f = mb.getFrame();
+				if (q != null && f != null) {
+					q.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUACTIVATE, f, d.getVCLID(), d.getVCLCookie()));
+					q.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUCOMMAND, f, d.getVCLID(), d.getVCLCookie()));
+					q.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUDEACTIVATE, f, d.getVCLID(), d.getVCLCookie()));
+				}
 			}
 
 		}
@@ -798,7 +822,7 @@ public final class VCLMenuItemData {
 	 *
 	 * @param awtMI	AWT peer object that is about to be destroyed
 	 */
-	void unregisterAWTPeer(MenuItem awtMI) {
+	synchronized void unregisterAWTPeer(MenuItem awtMI) {
 		
 		if(delegate!=null) {
 			delegate.unregisterAWTPeer(awtMI);
@@ -848,7 +872,7 @@ public final class VCLMenuItemData {
 	 * item data. If the item data corresponds to a submenu, all of the submenu
 	 * peers will also be unregistered.
 	 */
-	void unregisterAllAWTPeers() {
+	synchronized void unregisterAllAWTPeers() {
 
 		if(delegate!=null) {
 			delegate.unregisterAllAWTPeers();

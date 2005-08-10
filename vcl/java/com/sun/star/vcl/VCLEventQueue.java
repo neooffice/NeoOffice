@@ -97,12 +97,12 @@ public final class VCLEventQueue {
 	 */
 	public VCLEventQueue() {
 
-		// Swap in our own event queue
-		Toolkit.getDefaultToolkit().getSystemEventQueue().push(new VCLEventQueue.NoExceptionsEventQueue(this));
-
 		// Create the list of queues
 		queueList[0] = new VCLEventQueue.Queue();
 		queueList[1] = new VCLEventQueue.Queue();
+
+		// Swap in our own event queue
+		Toolkit.getDefaultToolkit().getSystemEventQueue().push(new VCLEventQueue.NoExceptionsEventQueue(this));
 
 		// Load platform specific event handlers
 		try {

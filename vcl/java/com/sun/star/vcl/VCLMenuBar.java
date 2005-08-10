@@ -61,7 +61,7 @@ public final class VCLMenuBar {
 	 * Called when a new VCLMenuBar object is created to insert it into our
 	 * tracking list.
 	 */
-	private static void addNewMenuBar(VCLMenuBar o) {
+	private static synchronized void addNewMenuBar(VCLMenuBar o) {
 
 		activeMenubars.add(o);
 
@@ -71,7 +71,7 @@ public final class VCLMenuBar {
 	 * Called when a VCLMenuBar object is destroyed to remove it from our
 	 * tracking list.
 	 */
-	private static void removeMenuBar(VCLMenuBar o) {
+	private static synchronized void removeMenuBar(VCLMenuBar o) {
 
 		activeMenubars.remove(activeMenubars.indexOf(o));
 
@@ -85,22 +85,25 @@ public final class VCLMenuBar {
 	 * @return VCLFrame whose menubar is associated with the item, or null if
 	 *  the item could not be located in any menubar associated with a VCLFrame
 	 */
-	static VCLMenuBar findVCLMenuBar(MenuItem item) {
+	static synchronized VCLMenuBar findVCLMenuBar(MenuItem item) {
 
 		Iterator menuBars=activeMenubars.iterator();
 		while(menuBars.hasNext()) {
 			VCLMenuBar vmb=(VCLMenuBar)menuBars.next();
-			if(vmb.getAWTMenuBar()==null)
-				continue;
+			synchronized (vmb) {
+				if(vmb.getAWTMenuBar()==null)
+					continue;
 
-			// we'll locate the item by checking object references directly.
-			// We don't want equivalence in content, we want identical objects.
+				// we'll locate the item by checking object references directly.
+				// We don't want equivalence in content, we want identical
+				// objects.
 
-			MenuBar mb=vmb.getAWTMenuBar();
-			for(int i=0; i<mb.countMenus(); i++) {
-				Menu m=mb.getMenu(i);
-				if((m==item) || menuContainsItem(m, item))
-					return(vmb);
+				MenuBar mb=vmb.getAWTMenuBar();
+				for(int i=0; i<mb.countMenus(); i++) {
+					Menu m=mb.getMenu(i);
+					if((m==item) || menuContainsItem(m, item))
+						return(vmb);
+				}
 			}
 		}
 
@@ -140,7 +143,7 @@ public final class VCLMenuBar {
 	 * @return <code>true</code> if the item is in a menubar,
 	 *  <code>false</code> if the item is either a submenu or a menu item
 	 */
-	static boolean isTopLevelMenu(VCLMenuItemData item) {
+	static synchronized boolean isTopLevelMenu(VCLMenuItemData item) {
 
 		Iterator menuBars=activeMenubars.iterator();
 		while(menuBars.hasNext()) {
@@ -162,6 +165,11 @@ public final class VCLMenuBar {
 	 * AWT MenuBar object which we will be calling.
 	 */
 	private MenuBar awtMenuBar = null;
+
+	/**
+	 * The disposed flag.
+	 */
+	private boolean disposed = false;
 
 	/**
 	 * VCLFrame with which this menubar is associated.
@@ -200,7 +208,10 @@ public final class VCLMenuBar {
 	 * objects can be destructed. Free any AWT objects and set references to
 	 * null to allow garbage collection to cleanup at a later time.
 	 */
-	public void dispose() {
+	public synchronized void dispose() {
+
+		if (disposed)
+			return;
 
 		removeMenuBar(this);
 
@@ -230,6 +241,8 @@ public final class VCLMenuBar {
 		queue=null;
 		frame=null;
 
+		disposed = true;
+
 	}
 	
 	/**
@@ -253,7 +266,7 @@ public final class VCLMenuBar {
 	 *
 	 * @return VCLFrame that should respond to MenuBar invocatins
 	 */
-	VCLFrame getFrame() {
+	synchronized VCLFrame getFrame() {
 
 		return(frame);
 
@@ -264,7 +277,7 @@ public final class VCLMenuBar {
 	 *
 	 * @return VCLEventQueue that should receive events
 	 */
-	protected VCLEventQueue getEventQueue() {
+	synchronized VCLEventQueue getEventQueue() {
 
 		return(queue);
 
@@ -291,7 +304,7 @@ public final class VCLMenuBar {
 	 * @param menuItem menu item to be inserted
 	 * @param nPos position in the menubar where the menu should be added
 	 */
-	public void addMenuItem(VCLMenuItemData menuItem, short nPos) {
+	public synchronized void addMenuItem(VCLMenuItemData menuItem, short nPos) {
 
 		LinkedList menusToReinsert=null;
 
@@ -332,7 +345,7 @@ public final class VCLMenuBar {
 	 *
 	 * @param nPos index of menu to remove
 	 */
-	public void removeMenu(short nPos) {
+	public synchronized void removeMenu(short nPos) {
 
 		((VCLMenuItemData)menus.get(nPos)).unregisterAWTPeer(awtMenuBar.getMenu(nPos));
 		awtMenuBar.remove(nPos);
@@ -369,7 +382,7 @@ public final class VCLMenuBar {
 	 *
 	 * @param nPos position to enable
 	 */
-	public void enableMenu(short nPos, boolean enable) {
+	public synchronized void enableMenu(short nPos, boolean enable) {
 
 		if(nPos < menus.size()) {
 			VCLMenuItemData menu=(VCLMenuItemData)menus.get(nPos);

@@ -652,6 +652,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private LinkedList children = new LinkedList();
 
 	/**
+	 * The disposed flag.
+	 */
+	private boolean disposed = false;
+
+	/**
 	 * The frame pointer.
 	 */
 	private int frame = 0;
@@ -675,6 +680,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * The key modifiers pressed.
 	 */
 	private int keyModifiersPressed = 0;
+
+	/**
+	 * The listeners set flag.
+	 */
+	private boolean listenersSet = false;
 
 	/**
 	 * The native window's panel.
@@ -789,9 +799,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>ComponentEvent</code>
 	 */
-	public void componentResized(ComponentEvent e) {
+	public synchronized void componentResized(ComponentEvent e) {
 
-		if (queue == null || window == null || !window.isShowing())
+		if (disposed || !window.isShowing())
 			return;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVERESIZE, this, 0));
@@ -803,9 +813,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>ComponentEvent</code>
 	 */
-	public void componentMoved(ComponentEvent e) {
+	public synchronized void componentMoved(ComponentEvent e) {
 
-		if (queue == null || window == null || !window.isShowing())
+		if (disposed || !window.isShowing())
 			return;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVERESIZE, this, 0));
@@ -817,14 +827,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>ComponentEvent</code>
 	 */
-	public void componentShown(ComponentEvent e) {
+	public synchronized void componentShown(ComponentEvent e) {
+
+		if (disposed || !window.isShowing())
+			return;
 
 		// Add panel to mapping
-		if (panel != null)
-			VCLFrame.componentMap.put(panel, this);
-
-		if (queue == null || window == null || !window.isShowing())
-			return;
+		VCLFrame.componentMap.put(panel, this);
 
 	}
 
@@ -833,27 +842,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>ComponentEvent</code>
 	 */
-	public void componentHidden(ComponentEvent e) {
+	public synchronized void componentHidden(ComponentEvent e) {
+
+		if (disposed)
+			return;
 
 		// Remove panel from mapping
 		VCLFrame.componentMap.remove(panel);
-
-		// Unregister listeners
-		if (window != null) {
-			window.removeComponentListener(this);
-			window.removeWindowListener(this);
-		}
-		if (panel != null) {
-			panel.removeFocusListener(this);
-			panel.removeKeyListener(this);
-			panel.removeInputMethodListener(this);
-			panel.removeMouseListener(this);
-			panel.removeMouseMotionListener(this);
-			panel.removeMouseWheelListener(this);
-		}
-
-		if (queue != null)
-			queue.removeCachedEvents(frame);
 
 	}
 
@@ -862,15 +857,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param f the child frame.
 	 */
-	public void addChild(VCLFrame f) {
+	public synchronized void addChild(VCLFrame f) {
 
-		if (f != null) {
-			synchronized (f) {
-				synchronized (children) {
-					children.add(f);
-				}
-			}
-		}
+		if (f != null)
+			children.add(f);
 
 	}
 
@@ -880,35 +870,44 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public synchronized void dispose() {
 
-		if (window != null) {
-			setVisible(false, false);
-			setMenuBar(null);
-		}
-		if (queue != null)
-			queue.removeCachedEvents(frame);
-		queue = null;
+		if (disposed)
+			return;
+
+		setMenuBar(null);
 		bitCount = 0;
 		children = null;
 		frame = 0;
 		fullScreenMode = false;
-		if (graphics != null)
-			graphics.dispose();
+		graphics.dispose();
 		graphics = null;
 		insets = null;
-		if (panel != null) {
-			panel.enableInputMethods(false);
-			if (window != null)
-				window.remove(panel);
-		}
+
+		// Unregister listeners
+		panel.removeFocusListener(this);
+		panel.removeKeyListener(this);
+		panel.removeInputMethodListener(this);
+		panel.removeMouseListener(this);
+		panel.removeMouseMotionListener(this);
+		panel.removeMouseWheelListener(this);
+
+		panel.enableInputMethods(false);
+		window.remove(panel);
 		panel = null;
-		if (window != null) {
-			window.removeNotify();
-			InputContext ic = window.getInputContext();
-			if (ic != null)
-				ic.removeNotify(window);
-		}
+
+		// Unregister listeners
+		window.removeComponentListener(this);
+		window.removeWindowListener(this);
+
+		window.removeNotify();
+		InputContext ic = window.getInputContext();
+		if (ic != null)
+			ic.removeNotify(window);
 		window = null;
 		undecorated = false;
+		queue.removeCachedEvents(frame);
+		queue = null;
+
+		disposed = true;
 
 	}
 
@@ -938,9 +937,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>FocusEvent</code>
 	 */
-	public void focusGained(FocusEvent e) {
+	public synchronized void focusGained(FocusEvent e) {
 
-		if (queue == null || window == null || !window.isShowing())
+		if (disposed || !window.isShowing())
 			return;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_GETFOCUS, this, 0));
@@ -952,9 +951,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>FocusEvent</code>
 	 */
-	public void focusLost(FocusEvent e) {
+	public synchronized void focusLost(FocusEvent e) {
 
-		if (queue == null || window == null || !window.isShowing())
+		if (disposed || !window.isShowing())
 			return;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
@@ -1017,7 +1016,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @return the modifier keys that are currently pressed
 	 */
-	int getCurrentModButtons() {
+	synchronized int getCurrentModButtons() {
 
 		return keyModifiersPressed;
 
@@ -1026,9 +1025,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	/**
 	 * Returns the frame pointer for this component.
 	 *
-	 * @return the frame pointer for this component
+     * @return the frame pointer for this component
 	 */
-	int getFrame() {
+	synchronized int getFrame() {
 
 		return frame;
 
@@ -1165,14 +1164,16 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public long getState() {
 
-		int s = Frame.NORMAL;
-		if (window instanceof Frame)
-			s = ((Frame)window).getState();
+		
+		if (window instanceof Frame) {
+			int s = ((Frame)window).getExtendedState();
+			if ((s & Frame.ICONIFIED) != 0)
+				return SAL_FRAMESTATE_MINIMIZED;
+			else if ((s & (Frame.MAXIMIZED_BOTH | Frame.MAXIMIZED_HORIZ | Frame.MAXIMIZED_VERT)) != 0)
+				return SAL_FRAMESTATE_MAXIMIZED;
+		}
 
-		if (s == Frame.ICONIFIED)
-			return SAL_FRAMESTATE_MINIMIZED;
-		else
-			return SAL_FRAMESTATE_NORMAL;
+		return Frame.NORMAL;
 
 	}
 
@@ -1204,11 +1205,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param event the input method event
 	 */
-	public void inputMethodTextChanged(InputMethodEvent e) {
+	public synchronized void inputMethodTextChanged(InputMethodEvent e) {
 
 		e.consume();
 
-		if (queue == null || window == null || !window.isShowing())
+		if (disposed || !window.isShowing())
 			return;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_EXTTEXTINPUT, this, 0));
@@ -1244,11 +1245,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>KeyEvent</code>
 	 */
-	public void keyPressed(KeyEvent e) {
+	public synchronized void keyPressed(KeyEvent e) {
 
 		e.consume();
 
-		if (queue == null || window == null || !window.isShowing())
+		if (disposed || !window.isShowing())
 			return;
 
 		int keyCode = e.getKeyCode();
@@ -1268,11 +1269,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>KeyEvent</code>
 	 */
-	public void keyReleased(KeyEvent e) {
+	public synchronized void keyReleased(KeyEvent e) {
 
 		e.consume();
 
-		if (queue == null || window == null || !window.isShowing())
+		if (disposed || !window.isShowing())
 			return;
 
 		int keyCode = e.getKeyCode();
@@ -1292,11 +1293,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>KeyEvent</code>
 	 */
-	public void keyTyped(KeyEvent e) {
+	public synchronized void keyTyped(KeyEvent e) {
 
 		e.consume();
 
-		if (queue == null || window == null || !window.isShowing())
+		if (disposed || !window.isShowing())
 			return;
 
 		// Fix bug 710 by stripping out the Alt modifier. Note that we do it
@@ -1327,11 +1328,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>MouseEvent</code>
 	 */
-	public void mousePressed(MouseEvent e) {
+	public synchronized void mousePressed(MouseEvent e) {
 
 		e.consume();
 
-		if (queue == null || window == null || !window.isShowing())
+		if (disposed || !window.isShowing())
 			return;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONDOWN, this, 0));
@@ -1343,11 +1344,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>MouseEvent</code>
 	 */
-	public void mouseReleased(MouseEvent e) {
+	public synchronized void mouseReleased(MouseEvent e) {
 
 		e.consume();
 
-		if (queue == null || window == null || !window.isShowing())
+		if (disposed || !window.isShowing())
 			return;
 
 		e = preprocessMouseEvent(e);
@@ -1377,11 +1378,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>MouseEvent</code>
 	 */
-	public void mouseDragged(MouseEvent e) {
+	public synchronized void mouseDragged(MouseEvent e) {
 
 		e.consume();
 
-		if (queue == null || window == null || !window.isShowing())
+		if (disposed || !window.isShowing())
 			return;
 
 		if (VCLFrame.lastMouseDragEvent == null)
@@ -1395,7 +1396,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (lastComponent != currentComponent && lastComponent != null && currentComponent != null && lastComponent.isShowing() && currentComponent.isShowing()) {
 			// If dragging and there are floating windows visible, don't let
 			// the mouse fall through to a non-floating window
-			if (currentComponent == panel && currentComponent != null && panel != null && !isFloatingWindow() && lastComponent.isShowing() && currentComponent.isShowing()) {
+			if (currentComponent == panel && !isFloatingWindow() && lastComponent.isShowing() && currentComponent.isShowing()) {
 				Point srcPoint = currentComponent.getLocationOnScreen();
 				srcPoint.x += e.getX();
 				srcPoint.y += e.getY();
@@ -1415,11 +1416,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>MouseEvent</code>
 	 */
-	public void mouseEntered(MouseEvent e) {
+	public synchronized void mouseEntered(MouseEvent e) {
 
 		e.consume();
 
-		if (queue == null || window == null || !window.isShowing())
+		if (disposed || !window.isShowing())
 			return;
 
 		e = preprocessMouseEvent(e);
@@ -1433,11 +1434,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>MouseEvent</code>
 	 */
-	public void mouseExited(MouseEvent e) {
+	public synchronized void mouseExited(MouseEvent e) {
 
 		e.consume();
 
-		if (queue == null || window == null || !window.isShowing())
+		if (disposed || !window.isShowing())
 			return;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSELEAVE, VCLFrame.findFrame(e.getComponent()), 0));
@@ -1450,11 +1451,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>MouseEvent</code>
 	 */
-	public void mouseMoved(MouseEvent e) {
+	public synchronized void mouseMoved(MouseEvent e) {
 
 		e.consume();
 
-		if (queue == null || window == null || !window.isShowing())
+		if (disposed || !window.isShowing())
 			return;
 
 		e = preprocessMouseEvent(e);
@@ -1468,11 +1469,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>MouseWheelEvent</code>
 	 */
-    public void mouseWheelMoved(MouseWheelEvent e) {
+    public synchronized void mouseWheelMoved(MouseWheelEvent e) {
 
 		e.consume();
 
-		if (queue == null || window == null || !window.isShowing())
+		if (disposed || !window.isShowing())
 			return;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_WHEELMOUSE, VCLFrame.findFrame(e.getComponent()), 0));
@@ -1487,25 +1488,23 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @return the <code>MouseEvent</code> for the topmost floating window
 	 *  above the specified <code>MouseEvent</code>
 	 */
-	private MouseEvent preprocessMouseEvent(MouseEvent e) {
+	private synchronized MouseEvent preprocessMouseEvent(MouseEvent e) {
 
-		if (queue == null || window == null || !window.isShowing())
+		if (disposed || !window.isShowing())
 			return e;
 
 		Component c = e.getComponent();
 		if (c != null) {
 			// Iterate into children
-			synchronized (children) {
-				Iterator frames = children.iterator();
-				while (frames.hasNext()) {
-					VCLFrame f = (VCLFrame)frames.next();
-					e = f.preprocessMouseEvent(e);
-					c = e.getComponent();
-				}
+			Iterator frames = children.iterator();
+			while (frames.hasNext()) {
+				VCLFrame f = (VCLFrame)frames.next();
+				e = f.preprocessMouseEvent(e);
+				c = e.getComponent();
 			}
 
 			// Evaluate event
-			if (c != panel && c != null && panel != null && c.isShowing() && panel.isShowing() && isFloatingWindow() && (style & SAL_FRAME_STYLE_TOOLTIP) == 0) {
+			if (c != panel && c.isShowing() && panel.isShowing() && isFloatingWindow() && (style & SAL_FRAME_STYLE_TOOLTIP) == 0) {
 				Point srcPoint = c.getLocationOnScreen();
 				srcPoint.x += e.getX();
 				srcPoint.y += e.getY();
@@ -1525,15 +1524,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param f the child frame.
 	 */
-	public void removeChild(VCLFrame f) {
+	public synchronized void removeChild(VCLFrame f) {
 
-		if (f != null) {
-			synchronized (f) {
-				synchronized (children) {
-					children.remove(f);
-				}
-			}
-		}
+		if (f != null)
+			children.remove(f);
 
 	}
 
@@ -1566,7 +1560,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param width the new width
 	 * @param height the new height
 	 */
-	public void setBounds(int x, int y, int width, int height) {
+	public synchronized void setBounds(int x, int y, int width, int height) {
 
 		Dimension size = window.getMinimumSize();
 		if (width < size.width)
@@ -1760,7 +1754,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			c = Cursor.getPredefinedCursor(cursor);
 		}
 
-		if (c != null && window != null) {
+		if (c != null) {
 			window.setCursor(c);
 			Toolkit.getDefaultToolkit().sync();
 		}
@@ -1772,17 +1766,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param state the state of the native window
 	 */
-	public void setState(long state) {
+	public synchronized void setState(long state) {
 
 		if (window instanceof Frame && window.isShowing()) {
 			// Only invoke Frame.setState() if the state needs to be changed
 			// as this method can cause a deadlock with the native menu handler
 			// on Mac OS X
-			int s = Frame.NORMAL;
+			int s;
 			if (state == SAL_FRAMESTATE_MINIMIZED)
 				s = Frame.ICONIFIED;
- 			if (((Frame)window).getState() != s)
-				((Frame)window).setState(s);
+			else if (state == SAL_FRAMESTATE_MAXIMIZED)
+				s = Frame.MAXIMIZED_BOTH;
+			else
+				s = Frame.NORMAL;
+			((Frame)window).setState(s);
 		}
 
 	}
@@ -1809,7 +1806,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param noActivate <code>true</code> to not change the focus owner
 	 *  otherwise <code>false</code>
 	 */
-	public void setVisible(boolean b, boolean noActivate) {
+	public synchronized void setVisible(boolean b, boolean noActivate) {
 
 		if (b == window.isShowing())
 			return;
@@ -1832,19 +1829,22 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			window.addWindowListener(this);
 
 			// Cache the current focus owner
-			Component c = null;
+			Component c;
 			if (noActivate)
-				c = KeyboardFocusManager.getCurrentKeyboardFocusManager().getPermanentFocusOwner();
+				c = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+			else
+				c = panel;
 
 			// Show the window
 			window.show();
 
 			// Reattach any visible children
-			synchronized (children) {
-				Iterator frames = children.iterator();
-				while (frames.hasNext()) {
-					Window w = ((VCLFrame)frames.next()).getWindow();
-					if (w != null && w.isShowing()) {
+			Iterator frames = children.iterator();
+			while (frames.hasNext()) {
+				VCLFrame f = (VCLFrame)frames.next();
+				synchronized (f) {
+					Window w = f.getWindow();
+					if (w.isShowing()) {
 						w.hide();
 						w.removeNotify();
 						w.show();
@@ -1852,12 +1852,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				}
 			}
 
-			if (c != null && c != window)
+			if (c != null)
 				c.requestFocus();
 		}
 		else {
 			// Hide the window
 			window.hide();
+			window.removeNotify();
 		}
 
 	}
@@ -1885,9 +1886,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>WindowEvent</code>
 	 */
-	public void windowClosing(WindowEvent e) {
+	public synchronized void windowClosing(WindowEvent e) {
 
-		if (queue == null || window == null || !window.isShowing())
+		if (disposed || !window.isShowing())
 			return;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_CLOSE, this, 0));
@@ -1907,22 +1908,30 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>WindowEvent</code>
 	 */
-	public void windowIconified(WindowEvent e) {
-
-		// Force the C++ code to hide all child frames by posting a resize event
-		if (queue == null || window == null || !window.isShowing())
-			return;
-
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVERESIZE, this, 0));
-
-	}
+	public void windowIconified(WindowEvent e) {}
 
 	/**
 	 * Invoked when a window is changed from a minimized to a normal state.
 	 *
 	 * @param e the <code>WindowEvent</code>
 	 */
-	public void windowDeiconified(WindowEvent e) {}
+	public synchronized void windowDeiconified(WindowEvent e) {
+
+		// Reattach any visible children
+		Iterator frames = children.iterator();
+		while (frames.hasNext()) {
+			VCLFrame f = (VCLFrame)frames.next();
+			synchronized (f) {
+				Window w = f.getWindow();
+				if (w.isShowing()) {
+					w.hide();
+					w.removeNotify();
+					w.show();
+				}
+			}
+		}
+
+	}
 
 	/**
 	 * Invoked when the window is set to be the user's active window, which
@@ -2232,10 +2241,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
             else
                 bounds = ((Graphics2D)g).getDeviceConfiguration().getBounds();
 
-			VCLGraphics graphics = frame.getGraphics();
-			if (graphics != null) {
-				synchronized (graphics) {
-					graphics.addToFlush(bounds);
+			synchronized (frame) {
+				VCLGraphics graphics = frame.getGraphics();
+				if (graphics != null) {
+					synchronized (graphics) {
+						graphics.addToFlush(bounds);
+					}
 				}
 			}
 
