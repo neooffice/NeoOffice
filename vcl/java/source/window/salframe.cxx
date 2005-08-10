@@ -190,6 +190,11 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 	maFrameData.mbVisible = bVisible;
 
+	// If we are being displayed before the parent frame, delay display until
+	// the parent frame is displayed
+	if ( maFrameData.mbVisible && maFrameData.mpParent && !maFrameData.mpParent->maFrameData.mbVisible )
+		return;
+
 	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible, bNoActivate );
 
 	// Reset graphics
@@ -202,11 +207,27 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 	if ( maFrameData.mbVisible )
 	{
+		// Get native window since it won't be created until first shown
+		maFrameData.maSysData.aWindow = (long)maFrameData.mpVCLFrame->getNativeWindow();
+
+		// Show children that we delayed display for
+		for ( ::std::list< SalFrame* >::const_iterator it = maFrameData.maChildren.begin(); it != maFrameData.maChildren.end(); ++it )
+		{
+			if ( (*it)->maFrameData.mbVisible )
+			{
+				(*it)->maFrameData.mbVisible = FALSE;
+				(*it)->Show( TRUE, FALSE );
+			}
+		}
+
 		// Make a pass through the native menus to speed up later updates
 		UpdateMenusForFrame( this, NULL );
 	}
 	else
 	{
+		// Remove the native window since it is destroyed when hidden
+		maFrameData.maSysData.aWindow = 0;
+
 		if ( pSalData->mpFocusFrame == this )
 			pSalData->mpFocusFrame = NULL;
 	}
@@ -733,7 +754,7 @@ void SalFrame::SetParent( SalFrame* pNewParent )
 		if ( maFrameData.mpVCLFrame )
 			delete maFrameData.mpVCLFrame;
 		maFrameData.mpVCLFrame = new com_sun_star_vcl_VCLFrame( maFrameData.mnStyle, this, maFrameData.mpParent );
-		maFrameData.maSysData.aWindow = (long)maFrameData.mpVCLFrame->getNativeWindow();
+		maFrameData.maSysData.aWindow = 0;
 		SetPosSize( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration, maGeometry.nWidth, maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
 
 		if ( maFrameData.mpParent )
