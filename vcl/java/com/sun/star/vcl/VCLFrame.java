@@ -2232,25 +2232,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 *
 		 * @param g the <code>Graphics</code>
 		 */
-		public void paint(Graphics g) {
-
-            Rectangle bounds;
-            Shape clip = g.getClip();
-            if (clip != null)
-                bounds = clip.getBounds();
-            else
-                bounds = ((Graphics2D)g).getDeviceConfiguration().getBounds();
-
-			synchronized (frame) {
-				VCLGraphics graphics = frame.getGraphics();
-				if (graphics != null) {
-					synchronized (graphics) {
-						graphics.addToFlush(bounds);
-					}
-				}
-			}
-
-		}
+		public void paint(Graphics g) {}
 
 		/**
 		 * This method performs no painting of the panel. This method is used
