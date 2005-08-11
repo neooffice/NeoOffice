@@ -35,9 +35,6 @@
 
 #define _SV_COM_SUN_STAR_VCL_VCLSCREEN_CXX
 
-#ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
-#include <com/sun/star/vcl/VCLFrame.hxx>
-#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLSCREEN_HXX
 #include <com/sun/star/vcl/VCLScreen.hxx>
 #endif
@@ -80,66 +77,6 @@ SalColor com_sun_star_vcl_VCLScreen::getControlColor()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 			out = (SalColor)t.pEnv->CallStaticIntMethod( getMyClass(), mID );
-	}
-	return out;
-}
-
-// ----------------------------------------------------------------------------
-
-const Rectangle com_sun_star_vcl_VCLScreen::getScreenBounds( const com_sun_star_vcl_VCLFrame *_par0 )
-{
-	static jmethodID mID = NULL;
-	static jfieldID fIDX = NULL;
-	static jfieldID fIDY = NULL;
-	static jfieldID fIDWidth = NULL;
-	static jfieldID fIDHeight = NULL;
-	Rectangle out;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "(Lcom/sun/star/vcl/VCLFrame;)Ljava/awt/Rectangle;";
-			mID = t.pEnv->GetStaticMethodID( getMyClass(), "getScreenBounds", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jvalue args[1];
-			args[0].l = _par0->getJavaObject();
-			jobject tempObj = t.pEnv->CallStaticObjectMethodA( getMyClass(), mID, args );
-			if ( tempObj )
-			{
-				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
-				OSL_ENSURE( tempObjClass, "Java : FindClass not found!" );
-				if ( !fIDX )
-				{
-					char *cSignature = "I";
-					fIDX = t.pEnv->GetFieldID( tempObjClass, "x", cSignature );
-				}
-				OSL_ENSURE( fIDX, "Unknown field id!" );
-				if ( !fIDY )
-				{
-					char *cSignature = "I";
-					fIDY = t.pEnv->GetFieldID( tempObjClass, "y", cSignature );
-				}
-				OSL_ENSURE( fIDY, "Unknown field id!" );
-				if ( !fIDWidth )
-				{
-					char *cSignature = "I";
-					fIDWidth = t.pEnv->GetFieldID( tempObjClass, "width", cSignature );
-				}
-				OSL_ENSURE( fIDWidth, "Unknown field id!" );
-				if ( !fIDHeight )
-				{
-					char *cSignature = "I";
-					fIDHeight = t.pEnv->GetFieldID( tempObjClass, "height", cSignature );
-				}
-				OSL_ENSURE( fIDHeight, "Unknown field id!" );
-				if ( fIDX && fIDY && fIDWidth && fIDHeight )
-					out = Rectangle( Point( (long)t.pEnv->GetIntField( tempObj, fIDX ), (long)t.pEnv->GetIntField( tempObj, fIDY ) ), Size( (long)t.pEnv->GetIntField( tempObj, fIDWidth ), (long)t.pEnv->GetIntField( tempObj, fIDHeight ) ) );
-			}
-		}
 	}
 	return out;
 }

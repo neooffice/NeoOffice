@@ -66,6 +66,8 @@
 #include <com/sun/star/vcl/VCLScreen.hxx>
 #endif
 
+#include "salframe_cocoa.h"
+
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
@@ -352,14 +354,8 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 
 void SalFrame::GetWorkArea( Rectangle &rRect )
 {
-	rRect = com_sun_star_vcl_VCLScreen::getScreenBounds( maFrameData.mpVCLFrame );
-
-	// Adjust for system menu bar when not in presentation mode
-	if ( !maFrameData.mbPresentation && !rRect.nTop )
-	{
-		const Rectangle& rFrameInsets( maFrameData.mpVCLFrame->getInsets() );
-		rRect.nTop += rFrameInsets.nTop;
-	}
+	rRect = maFrameData.mpVCLFrame->getBounds();
+	NSScreen_getScreenBounds( &rRect.nLeft, &rRect.nTop, &rRect.nRight, &rRect.nBottom, maFrameData.mbPresentation ? TRUE : FALSE );
 }
 
 // -----------------------------------------------------------------------

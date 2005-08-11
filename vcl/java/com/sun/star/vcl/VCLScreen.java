@@ -106,38 +106,6 @@ public final class VCLScreen {
 	}
 
 	/**
-	 * Gets the bounds of the screen that a <code>VCLFrame</code> is located in.
-	 *
-	 * @param f the <code>VCLFrame</code>
-	 * @return the bounds of the screen
-	 */
-	public static Rectangle getScreenBounds(VCLFrame f) {
-
-		Rectangle bounds = null;
-
-		// Iterate through the screen devices and find the screen that the
-		// top left corner of the frame is in
-		GraphicsDevice[] screens = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
-		Window w = f.getWindow();
-		if (w != null) {
-			Point p = w.getLocation();
-			for (int i = 0; i < screens.length; i++) {
-				Rectangle r = screens[i].getDefaultConfiguration().getBounds();
-				if (r.contains(p)) {
-					bounds = new Rectangle(r);
-					break;
-				}
-			}
-		}
-
-		if (bounds == null)
-			bounds = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
-
-		return bounds;
-
-	}
-
-	/**
 	 * Returns the <code>System.textHighlight</code>.
 	 *
 	 * @return the <code>System.textHighlight</code>

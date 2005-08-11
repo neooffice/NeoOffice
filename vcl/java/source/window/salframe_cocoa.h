@@ -11,11 +11,11 @@
  *
  *         - GNU General Public License Version 2.1
  *
- *  Patrick Luby, June 2003
+ *  Patrick Luby, August 2005
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2003 by Patrick Luby (patrick.luby@planamesa.com)
+ *  Copyright 2005 by Patrick Luby (patrick.luby@planamesa.com)
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
@@ -33,34 +33,15 @@
  *
  ************************************************************************/
 
-#ifndef _SV_COM_SUN_STAR_VCL_VCLSCREEN_HXX
-#define	_SV_COM_SUN_STAR_VCL_VCLSCREEN_HXX
+#ifndef __SALFRAME_COCOA_H__
+#define __SALFRAME_COCOA_H__
 
-#ifndef _SV_JAVA_LANG_OBJECT_HXX
-#include <java/lang/Object.hxx>
+#ifdef __cplusplus
+BEGIN_C
 #endif
-#ifndef _SV_SALGTYPE_HXX
-#include <salgtype.hxx>
+void NSScreen_getScreenBounds( long *nX, long *nY, long *nWidth, long *nHeight, BOOL bFullScreen );
+#ifdef __cplusplus
+END_C
 #endif
 
-namespace vcl {
-
-class com_sun_star_vcl_VCLScreen : public java_lang_Object
-{
-protected:
-	static jclass		theClass;
-
-public:
-	static jclass		getMyClass();
-	static SalColor		getControlColor();
-	static SalColor		getTextHighlightColor();
-	static SalColor		getTextHighlightTextColor();
-	static SalColor		getTextTextColor();
-
-						com_sun_star_vcl_VCLScreen( jobject myObj ) : java_lang_Object( myObj ) {};
-	virtual				~com_sun_star_vcl_VCLScreen() {};
-};
-
-} // namespace vcl
-
-#endif // _SV_COM_SUN_STAR_VCL_VCLSCREEN_HXX
+#endif

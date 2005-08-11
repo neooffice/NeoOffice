@@ -56,6 +56,7 @@ dummy:
 .IF "$(remote)"
 SLOFILES= \
 	$(SLO)/salframe.obj \
+	$(SLO)/salframe_cocoa.obj \
 	$(SLO)/salobj.obj \
 	$(SLO)/salmenu.obj
 .ENDIF
