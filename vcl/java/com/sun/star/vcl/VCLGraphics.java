@@ -255,6 +255,11 @@ public final class VCLGraphics {
 	private int bitCount = 0;
 
 	/**
+	 * The flush entire bounds flag.
+	 */
+	private boolean flushEntireBounds = false;
+
+	/**
 	 * The frame that the graphics draws to.
 	 */
 	private VCLFrame frame = null;
@@ -378,6 +383,15 @@ public final class VCLGraphics {
 		// defer other drawing operations until after the combined image is
 		// created
 		pageQueue = new VCLGraphics.PageQueue(this);
+
+	}
+
+	/**
+	 * Sets the entire graphics to require flushing.
+	 */
+	synchronized void addToFlush() {
+
+		flushEntireBounds = true;
 
 	}
 
@@ -1142,11 +1156,18 @@ public final class VCLGraphics {
 	 * Flushes any pixels in the underlying <code>VCLImage</code> to the
 	 * underlying <code>VCLFrame</code>.
 	 */
-	void flush() {
+	synchronized void flush() {
 
-		if (update != null && !update.isEmpty()) {
+		if ((update != null && !update.isEmpty()) || flushEntireBounds) {
 			if (image != null && frame != null) {
-				update = update.intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight())); 
+				if (flushEntireBounds) {
+					update = new Rectangle(0, 0, image.getWidth(), image.getHeight());
+					flushEntireBounds = false;
+				}
+				else {
+					update = update.intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight())); 
+				}
+
 				if (!update.isEmpty()) {
 					BufferedImage i = image.getImage();
 					Panel p = frame.getPanel();

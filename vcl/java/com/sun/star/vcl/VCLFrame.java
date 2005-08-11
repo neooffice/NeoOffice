@@ -1038,7 +1038,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @return the graphics context for this component
 	 */
-	public VCLGraphics getGraphics() {
+	public synchronized VCLGraphics getGraphics() {
 
 		return graphics;
 
@@ -2060,7 +2060,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 * @param width the minimum width
 		 * @param height the minimum height
 		 */
-		public void setMinimumSize(int width, int height) {
+		void setMinimumSize(int width, int height) {
 
 			if (width < 1)
 				width = 1;
@@ -2145,9 +2145,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 		
 		/**
-		 * Set the native dialog to show or hide in full screen mode.
+		 * Set the native frame to show or hide in full screen mode.
 		 *
-		 * @param b <code>true</code> sets this dialog to full screen mode and
+		 * @param b <code>true</code> sets this frame to full screen mode and
 		 *  <code>false</code> sets it to normal mode
 		 */
 		void setFullScreenMode(boolean b) {
@@ -2165,7 +2165,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 * @param width the minimum width
 		 * @param height the minimum height
 		 */
-		public void setMinimumSize(int width, int height) {
+		void setMinimumSize(int width, int height) {
 
 			if (width < 1)
 				width = 1;
@@ -2232,7 +2232,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 *
 		 * @param g the <code>Graphics</code>
 		 */
-		public void paint(Graphics g) {}
+		public void paint(Graphics g) {
+
+			VCLGraphics graphics = frame.getGraphics();
+			if (graphics != null)
+				graphics.addToFlush();
+
+		}
 
 		/**
 		 * This method performs no painting of the panel. This method is used
