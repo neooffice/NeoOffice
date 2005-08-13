@@ -258,36 +258,32 @@ public final class VCLBitmap {
 		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, srcImage.getWidth(), srcImage.getHeight()));
 		if (srcBounds.isEmpty())
 			return;
+
 		if (srcX < 0)
 			destX -= srcX;
 		if (srcY < 0)
 			destY -= srcY;
+
 		Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, width, height));
 		if (destBounds.isEmpty())
 			return;
+
 		srcBounds.x += destBounds.x - destX;
 		srcBounds.y += destBounds.y - destY;
-		int[] srcData = srcImage.getData();
-		int srcDataWidth = srcImage.getWidth();
-		Point srcPoint = new Point(srcBounds.x, srcBounds.y);
-		Point destPoint = new Point(destBounds.x, destBounds.y);
-		int totalPixels = destBounds.width * destBounds.height;
 
-		for (int i = 0; i < totalPixels; i++) {
-			// Copy pixel
-			setPixel(destPoint, srcData[(srcPoint.y * srcDataWidth) + srcPoint.x]);
+		Point srcPoint = new Point(srcBounds.x, srcBounds.y + destBounds.height - 1);
+		Point destPoint = new Point(destBounds.x, destBounds.y + destBounds.height - 1);
+		int[] srcData = new int[destBounds.width];
+
+		while (srcPoint.y >= srcBounds.y) {
+			// Copy row
+			srcData = srcImage.getDataElements(srcPoint.x, srcPoint.y, srcData.length, 1, srcData);
+			for (int i = 0; i < srcData.length; i++)
+				setPixel(destPoint.x + i, destPoint.y, srcData[i]);
 
 			// Update current points
-			srcPoint.x++;
-			if (srcPoint.x >= srcBounds.x + destBounds.width) {
-				srcPoint.x = srcBounds.x;
-				srcPoint.y++;
-			}
-			destPoint.x++;
-			if (destPoint.x >= destBounds.x + destBounds.width) {
-				destPoint.x = destBounds.x;
-				destPoint.y++;
-			}
+			srcPoint.y--;
+			destPoint.y--;
 		}
 
 	}
@@ -350,12 +346,13 @@ public final class VCLBitmap {
 	/**
 	 * Returns the pixel for the specified point.
 	 *
-	 * @param p the point
+	 * @param x the x coordinate
+	 * @param y the y coordinate
 	 * @return the pixel
 	 */
-	int getPixel(Point p) {
+	int getPixel(int x, int y) {
 
-		return image.getRGB(p.x, p.y);
+		return image.getRGB(x, y);
 
 	}
 
@@ -391,12 +388,13 @@ public final class VCLBitmap {
 	/**
 	 * Sets the pixel for the specified point.
 	 *
-	 * @param p the point 
+	 * @param x the x coordinate
+	 * @param y the y coordinate
 	 * @param c the pixel
 	 */
-	void setPixel(Point p, int c) {
+	void setPixel(int x, int y, int c) {
 
-		image.setRGB(p.x, p.y, c);
+		image.setRGB(x, y, c);
 
 	}
 

@@ -35,12 +35,8 @@
 
 package com.sun.star.vcl;
 
-import java.awt.Graphics2D;
-import java.awt.Image;
-import java.awt.Point;
-import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferInt;
+import java.awt.image.WritableRaster;
 
 /**
  * The Java class that implements the SalFrame C++ class methods.
@@ -54,11 +50,6 @@ public final class VCLImage {
 	 * The bit count.
 	 */
 	private int bitCount = 0;
-
-	/**
-	 * The data buffer.
-	 */
-	private int[] data = null;
 
 	/**
 	 * The graphics.
@@ -79,6 +70,11 @@ public final class VCLImage {
 	 * The <code>VCLPageFormat</code>.
 	 */
 	private VCLPageFormat pageFormat = null;
+
+	/**
+	 * The raster.
+	 */
+	private WritableRaster raster = null;
 
 	/**
 	 * The width.
@@ -120,15 +116,13 @@ public final class VCLImage {
 
 		// Create the native image
 		image = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB_PRE);
+		raster = image.getRaster();
 		width = w;
 		height = h;
 
 		// Cache the graphics
 		pageFormat = p;
 		graphics = new VCLGraphics(this, pageFormat);
-
-		// Cache the data buffer
-		data = ((DataBufferInt)image.getRaster().getDataBuffer()).getData();
 
 	}
 
@@ -157,12 +151,12 @@ public final class VCLImage {
 	public void dispose() {
 
 		bitCount = 0;
-		data = null;
 		if (graphics != null)
 			graphics.dispose();
 		graphics = null;
 		image = null;
 		pageFormat = null;
+		raster = null;
 
 	}
 
@@ -180,11 +174,16 @@ public final class VCLImage {
 	/**
 	 * Returns the underlying image's data.
 	 *
+	 * @param x the x coordinate
+	 * @param y the y coordinate
+	 * @param w the width
+	 * @param h the height
+	 * @param d the array to copy the image data into
 	 * @return the underlying image's data
 	 */
-	int[] getData() {
+	int[] getDataElements(int x, int y, int w, int h, int[] d) {
 
-		return data;
+		return (int[])raster.getDataElements(x, y, w, h, d);
 
 	}
 
@@ -229,6 +228,22 @@ public final class VCLImage {
 	int getWidth() {
 
 		return width;
+
+	}
+
+	/**
+	 * Sets the underlying image's data.
+	 *
+	 * @param x the x coordinate
+	 * @param y the y coordinate
+	 * @param w the width
+	 * @param h the height
+	 * @param d the array to set the image data to
+	 * @return the underlying image's data
+	 */
+	void setDataElements(int x, int y, int w, int h, int[] d) {
+
+		raster.setDataElements(x, y, w, h, d);
 
 	}
 

@@ -184,12 +184,15 @@ public final class VCLGraphics {
 	static {
 
 		// Create the image50 image
-		VCLImage textureImage = new VCLImage(2, 2, 1);
-		int[] textureData = textureImage.getData();
+		int w = 2;
+		int h = 2;
+		VCLImage textureImage = new VCLImage(w, h, 1);
+		int[] textureData = textureImage.getDataElements(0, 0, w, h, new int[w * h]);
 		textureData[0] = 0xff000000;
 		textureData[1] = 0xffffffff;
 		textureData[2] = 0xffffffff;
 		textureData[3] = 0xff000000;
+		textureImage.setDataElements(0, 0, w, h, textureData);
 		image50 = textureImage;
 
 		// Set the screen and font resolutions
@@ -501,14 +504,7 @@ public final class VCLGraphics {
 	 */
 	public void drawBitmap(VCLBitmap bmp, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight) {
 
-		Rectangle destBounds = new Rectangle(destX, destY, destWidth, destHeight).intersection(graphicsBounds);
-		if (destBounds.isEmpty())
-			return;
-		Shape clip = graphics.getClip();
-		if (clip != null && !clip.intersects(destBounds))
-			return;
 		drawImage(bmp.getImage(), srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight);
-		addToFlush(destBounds);
 
 	}
 
@@ -555,30 +551,24 @@ public final class VCLGraphics {
 		}
 		else {
 			Rectangle srcBounds = new Rectangle(srcX + destBounds.x - destX, srcY + destBounds.y - destY, destBounds.width, destBounds.height);
-			int[] destData = image.getData();
-			int destDataWidth = image.getWidth();
-			Point srcPoint = new Point(srcBounds.x, srcBounds.y);
-			Point destPoint = new Point(destBounds.x, destBounds.y);
-			int totalPixels = destBounds.width * destBounds.height;
-
+			Point srcPoint = new Point(srcBounds.x, srcBounds.y + srcBounds.height - 1);
+			Point destPoint = new Point(destBounds.x, destBounds.y + srcBounds.height - 1);
+			int[] srcData = new int[srcBounds.width];
+ 
 			// If the pixel in the second image is black, copy the pixel
 			// from the first image. Otherwise mark it as transparent.
-			for (int i = 0; i < totalPixels; i++) {
-				// Copy pixel
-				if (transBmp.getPixel(srcPoint) == 0xff000000)
-					destData[(destPoint.y * destDataWidth) + destPoint.x] = bmp.getPixel(srcPoint) | 0xff000000;
-
+			while (srcPoint.y >= srcBounds.y) {
+				// Copy row
+				srcData = image.getDataElements(destPoint.x, destPoint.y, srcData.length, 1, srcData);
+				for (int i = 0; i < srcData.length; i++) {
+					if (transBmp.getPixel(srcPoint.x + i, srcPoint.y) == 0xff000000)
+						srcData[i] = bmp.getPixel(srcPoint.x + i, srcPoint.y) | 0xff000000;
+				}
+				image.setDataElements(destPoint.x, destPoint.y, srcData.length, 1, srcData);
+ 
 				// Update current points
-				srcPoint.x++;
-				if (srcPoint.x >= srcBounds.x + destBounds.width) {
-					srcPoint.x = srcBounds.x;
-					srcPoint.y++;
-				}
-				destPoint.x++;
-				if (destPoint.x >= destBounds.x + destBounds.width) {
-					destPoint.x = destBounds.x;
-					destPoint.y++;
-				}
+				srcPoint.y--;
+				destPoint.y--;
 			}
 			addToFlush(destBounds);
 		}
@@ -767,33 +757,24 @@ public final class VCLGraphics {
 		}
 		else {
 			Rectangle srcBounds = new Rectangle(srcX + destBounds.x - destX, srcY + destBounds.y - destY, destBounds.width, destBounds.height);
-			int[] srcData = img.getData();
-			int srcDataWidth = img.getWidth();
-			int[] destData = image.getData();
-			int destDataWidth = image.getWidth();
-			Point srcPoint = new Point(srcBounds.x, srcBounds.y);
-			Point destPoint = new Point(destBounds.x, destBounds.y);
-			int totalPixels = destBounds.width * destBounds.height;
-
-			for (int i = 0; i < totalPixels; i++) {
-				// XOR pixel
-				int j = (srcPoint.y * srcDataWidth) + srcPoint.x;
-				int k = (destPoint.y * destDataWidth) + destPoint.x;
-				destData[k] = destData[k] ^ 0xff000000 ^ srcData[j] | 0xff000000;
-
+			Point srcPoint = new Point(srcBounds.x, srcBounds.y + srcBounds.height - 1);
+			Point destPoint = new Point(destBounds.x, destBounds.y + srcBounds.height - 1);
+			int[] srcData = new int[srcBounds.width];
+			int[] destData = new int[srcBounds.width];
+ 
+			while (srcPoint.y >= srcBounds.y) {
+				// XOR row
+				srcData = img.getDataElements(srcPoint.x, srcPoint.y, srcData.length, 1, srcData);
+				destData = image.getDataElements(destPoint.x, destPoint.y, destData.length, 1, destData);
+				for (int i = 0; i < srcData.length; i++)
+					destData[i] = destData[i] ^ 0xff000000 ^ srcData[i] | 0xff000000;
+				image.setDataElements(destPoint.x, destPoint.y, destData.length, 1, destData);
+ 
 				// Update current points
-				srcPoint.x++;
-				if (srcPoint.x >= srcBounds.x + destBounds.width) {
-					srcPoint.x = srcBounds.x;
-					srcPoint.y++;
-				}
-				destPoint.x++;
-				if (destPoint.x >= destBounds.x + destBounds.width) {
-					destPoint.x = destBounds.x;
-					destPoint.y++;
-				}
-				addToFlush(destBounds);
+				srcPoint.y--;
+				destPoint.y--;
 			}
+			addToFlush(destBounds);
 		}
 	}
 
@@ -894,32 +875,26 @@ public final class VCLGraphics {
 		}
 		else {
 			Rectangle srcBounds = new Rectangle(srcX + destBounds.x - destX, srcY + destBounds.y - destY, destBounds.width, destBounds.height);
-			int[] destData = image.getData();
-			int destDataWidth = image.getWidth();
-			Point srcPoint = new Point(srcBounds.x, srcBounds.y);
-			Point destPoint = new Point(destBounds.x, destBounds.y);
-			int totalPixels = destBounds.width * destBounds.height;
-
+			Point srcPoint = new Point(srcBounds.x, srcBounds.y + srcBounds.height - 1);
+			Point destPoint = new Point(destBounds.x, destBounds.y + srcBounds.height - 1);
+			int[] srcData = new int[srcBounds.width];
+ 
 			// If the pixel is black, set the pixel to the mask color
 			color |= 0xff000000;
-			for (int i = 0; i < totalPixels; i++) {
-				// Copy pixel
-				if (bmp.getPixel(srcPoint) == 0xff000000)
-					destData[(destPoint.y * destDataWidth) + destPoint.x] = color;
-
+			while (srcPoint.y >= srcBounds.y) {
+				// Copy row
+				srcData = image.getDataElements(destPoint.x, destPoint.y, srcData.length, 1, srcData);
+				for (int i = 0; i < srcData.length; i++) {
+					if (bmp.getPixel(srcPoint.x + i, srcPoint.y) == 0xff000000)
+						srcData[i] = color;
+				}
+				image.setDataElements(destPoint.x, destPoint.y, srcData.length, 1, srcData);
+ 
 				// Update current points
-				srcPoint.x++;
-				if (srcPoint.x >= srcBounds.x + destBounds.width) {
-					srcPoint.x = srcBounds.x;
-					srcPoint.y++;
-				}
-				destPoint.x++;
-				if (destPoint.x >= destBounds.x + destBounds.width) {
-					destPoint.x = destBounds.x;
-					destPoint.y++;
-				}
-				addToFlush(destBounds);
+				srcPoint.y--;
+				destPoint.y--;
 			}
+			addToFlush(destBounds);
 		}
 
 	}
@@ -1256,8 +1231,8 @@ public final class VCLGraphics {
 		if (image == null)
 			return 0xff000000;
 
-		int[] pixels = image.getData();
-		return pixels[(image.getWidth() * y) + x];
+		int[] pixels = image.getDataElements(x, y, 1, 1, new int[1]);
+		return pixels[0];
 
 	}
 
@@ -1359,22 +1334,18 @@ public final class VCLGraphics {
 				srcImage.dispose();
 			}
 			else {
-				int[] destData = image.getData();
-				int destDataWidth = image.getWidth();
-				Point destPoint = new Point(bounds.x, bounds.y);
-				int totalPixels = bounds.width * bounds.height;
-
-				for (int i = 0; i < totalPixels; i++) {
+				Point point = new Point(bounds.x, bounds.y + bounds.height - 1);
+				int[] data = new int[bounds.width];
+ 
+				while (point.y >= bounds.y) {
 					// Invert pixel
-					int j = (destPoint.y * destDataWidth) + destPoint.x;
-					destData[j] = ~destData[j] | 0xff000000;
-
+					data = image.getDataElements(point.x, point.y, data.length, 1, data);
+					for (int i = 0; i < data.length; i++)
+						data[i] = ~data[i] | 0xff000000;
+					image.setDataElements(point.x, point.y, data.length, 1, data);
+ 
 					// Update current point
-					destPoint.x++;
-					if (destPoint.x >= bounds.x + bounds.width) {
-						destPoint.x = bounds.x;
-						destPoint.y++;
-					}
+					point.y--;
 				}
 				addToFlush(bounds);
 			}
@@ -1450,13 +1421,20 @@ public final class VCLGraphics {
 			srcGraphics.drawImage(image.getImage(), bounds.x, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height, bounds.x, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height, null);
 			srcGraphics.dispose();
 
-			int[] destData = srcImage.getData();
-			int totalPixels = bounds.width * bounds.height;
-
-			// Invert pixel
-			for (int i = 0; i < totalPixels; i++) {
-				if ((destData[i] & 0xff000000) == 0xff000000)
-					destData[i] = ~destData[i] | 0xff000000;
+			Point point = new Point(0, bounds.height - 1);
+			int[] data = new int[bounds.width];
+ 
+			while (point.y < bounds.y) {
+				// Invert pixel
+				data = srcImage.getDataElements(point.x, point.y, data.length, 1, data);
+				for (int i = 0; i < data.length; i++) {
+					if ((data[i] & 0xff000000) == 0xff000000)
+						data[i] = ~data[i] | 0xff000000;
+				}
+				srcImage.setDataElements(point.x, point.y, data.length, 1, data);
+ 
+				// Update current point
+				point.y--;
 			}
 
 			drawImage(srcImage.getImage(), 0, 0, bounds.width, bounds.height, bounds.x, bounds.y, bounds.width, bounds.height);
@@ -1549,12 +1527,16 @@ public final class VCLGraphics {
 			Shape clip = graphics.getClip();
 			if (clip != null && !clip.contains((double)x, (double)y))
 				return;
-			int[] pixels = image.getData();
-			int i = (image.getWidth() * y) + x;
 			color |= 0xff000000;
-			if (xor)
-				color = pixels[i] ^ 0xff000000 ^ color;
-			pixels[i] = color;
+			int[] pixels = new int[1];
+			if (xor) {
+ 				pixels = image.getDataElements(x, y, 1, 1, new int[1]);
+				pixels[0] = pixels[0] ^ 0xff000000 ^ color;
+			}
+			else {
+				pixels[0] = color;
+			}
+ 			image.setDataElements(x, y, 1, 1, pixels);
 			addToFlush(new Rectangle(x, y, 1, 1));
 		}
 		else {
