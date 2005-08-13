@@ -1657,7 +1657,7 @@ JavaVM * JavaVirtualMachine::createJavaVM(stoc_javavm::JVM const & jvm,
 
     // we have "addOpt" additional properties to those kept in the JVM struct
 #ifdef MACOSX
-    sal_Int32 addOpt=5;
+    sal_Int32 addOpt=4;
 #else	// MACOSX
     sal_Int32 addOpt=2;
 #endif	// MACOSX
@@ -1682,10 +1682,8 @@ JavaVM * JavaVirtualMachine::createJavaVM(stoc_javavm::JVM const & jvm,
     // speed to get messed up
     options[2].optionString= "-Dapple.awt.window.position.forceSafeProgrammaticPositioning=false";
     options[2].extraInfo= NULL;
-    options[3].optionString= "-Dapple.awt.graphics.OptimizeShapes=false";
+    options[3].optionString= "-Dapple.awt.graphics.EnableLazyDrawing=false";
     options[3].extraInfo= NULL;
-    options[4].optionString= "-Dapple.awt.graphics.EnableLazyDrawing=false";
-    options[4].extraInfo= NULL;
 #endif	// MACOSX
 
     rtl::OString * arProps= new rtl::OString[cprops];
