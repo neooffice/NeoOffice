@@ -200,7 +200,6 @@ sal_Int8 SAL_CALL JavaClipboard::getRenderingCapabilities() throw( RuntimeExcept
 
 void SAL_CALL JavaClipboard::addClipboardListener( const Reference< XClipboardListener >& listener ) throw( RuntimeException )
 {
-	MutexGuard aGuard( maMutex );
 	maListeners.push_back( listener );
 }
 
@@ -208,7 +207,6 @@ void SAL_CALL JavaClipboard::addClipboardListener( const Reference< XClipboardLi
 
 void SAL_CALL JavaClipboard::removeClipboardListener( const Reference< XClipboardListener >& listener ) throw( RuntimeException )
 {
-	MutexGuard aGuard( maMutex );
 	maListeners.remove( listener );
 }
 

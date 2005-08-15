@@ -59,7 +59,6 @@ using namespace com::sun::star::datatransfer;
 using namespace com::sun::star::io;
 using namespace com::sun::star::uno;
 using namespace java;
-using namespace osl;
 using namespace rtl;
 using namespace vcl;
 using namespace vos;
@@ -102,7 +101,6 @@ static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 )
 };
 
-static Mutex aMutex;
 static ::std::list< DTransTransferable* > aTransferableList;
 static DragSendDataUPP pDragSendDataUPP = NULL;
 static ScrapPromiseKeeperUPP pScrapPromiseKeeperUPP = NULL;
@@ -119,10 +117,6 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 	else
 		nErr = noTypeErr;
 
-	MutexGuard aGuard( aMutex );
-
-	DTransTransferable *pTransferable = (DTransTransferable *)pData;
-
 	IMutex& rSolarMutex = Application::GetSolarMutex();
 
 	if ( GetCurrentEventLoop() == GetMainEventLoop() )
@@ -138,6 +132,8 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 	{
 		rSolarMutex.acquire();
 	}
+
+	DTransTransferable *pTransferable = (DTransTransferable *)pData;
 
 	bool bTransferableFound = false;
 	if ( pTransferable )
@@ -577,8 +573,6 @@ Any SAL_CALL DTransTransferable::getTransferData( const DataFlavor& aFlavor ) th
 
 DTransTransferable::~DTransTransferable()
 {
-	MutexGuard aGuard( aMutex );
-
 	aTransferableList.remove( this );
 }
 
@@ -737,8 +731,6 @@ sal_Bool SAL_CALL DTransTransferable::isDataFlavorSupported( const DataFlavor& a
 sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTransferable )
 {
 	sal_Bool out = sal_False;
-
-	MutexGuard aGuard( aMutex );
 
 	mxTransferable = xTransferable;
 	if ( mxTransferable.is() )
