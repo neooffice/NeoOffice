@@ -248,19 +248,9 @@ public final class VCLGraphics {
 	}
 
 	/**
-	 * The auto flush flag.
-	 */
-	private boolean autoFlush = false;
-
-	/**
 	 * The cached bit count.
 	 */
 	private int bitCount = 0;
-
-	/**
-	 * The flush entire bounds flag.
-	 */
-	private boolean flushEntireBounds = false;
 
 	/**
 	 * The frame that the graphics draws to.
@@ -281,11 +271,6 @@ public final class VCLGraphics {
 	 * The image that the graphics draws to.
 	 */
 	private VCLImage image = null;
-
-	/**
-	 * The next auto flush.
-	 */
-	private long nextAutoFlush = 0;
 
 	/**
 	 * The printer page format.
@@ -329,13 +314,15 @@ public final class VCLGraphics {
 			Panel p = frame.getPanel();
 			Rectangle bounds = p.getBounds();
 			graphicsBounds = new Rectangle(0, 0, bounds.width, bounds.height);
+			graphics = (Graphics2D)p.getGraphics();
+			bitCount = 24;
 		}
 		else {
 			graphicsBounds = new Rectangle(0, 0, 1, 1);
+			image = new VCLImage(graphicsBounds.width, graphicsBounds.height, frame.getBitCount());
+			graphics = image.getImage().createGraphics();
+			bitCount = image.getBitCount();
 		}
-		image = new VCLImage(graphicsBounds.width, graphicsBounds.height, frame.getBitCount());
-		graphics = image.getImage().createGraphics();
-		bitCount = image.getBitCount();
 		resetClipRegion();
 
 	}
@@ -386,47 +373,6 @@ public final class VCLGraphics {
 		// defer other drawing operations until after the combined image is
 		// created
 		pageQueue = new VCLGraphics.PageQueue(this);
-
-	}
-
-	/**
-	 * Sets the entire graphics to require flushing.
-	 */
-	synchronized void addToFlush() {
-
-		flushEntireBounds = true;
-
-	}
-
-	/**
-	 * Unions the specified rectangle to the rectangle that requires flushing.
-	 *
-	 * @param b the rectangle to flush
-	 */
-	void addToFlush(Rectangle b) {
-
-		if (frame != null && !b.isEmpty()) {
-			if (update != null)
-				update.add(b);
-			else
-				update = b;
-
-			if (autoFlush)
-				autoFlush();
-		}
-
-	}
-
-	/**
-	 * Flushes if the auto flush timer has expired.
-	 */
-	void autoFlush() {
-
-		long currentTime = System.currentTimeMillis();
-		if (currentTime >= nextAutoFlush) {
-			flush();
-			nextAutoFlush = System.currentTimeMillis() + VCLGraphics.AUTO_FLUSH_INTERVAL;
-		}
 
 	}
 
@@ -570,7 +516,6 @@ public final class VCLGraphics {
 				srcPoint.y--;
 				destPoint.y--;
 			}
-			addToFlush(destBounds);
 		}
 
 	}
@@ -663,7 +608,6 @@ public final class VCLGraphics {
 			bounds.width *= fScaleX;
 		bounds.width += 2;
 		bounds.height += 2;
-		addToFlush(bounds);
 
 		g.dispose();
 
@@ -706,7 +650,6 @@ public final class VCLGraphics {
 		g.translate(srcBounds.x - srcX, srcBounds.y - srcY);
 		g.drawImage(img, 0, 0, srcBounds.width, srcBounds.height, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
 		g.dispose();
-		addToFlush(destBounds);
 
 	}
 
@@ -774,7 +717,6 @@ public final class VCLGraphics {
 				srcPoint.y--;
 				destPoint.y--;
 			}
-			addToFlush(destBounds);
 		}
 	}
 
@@ -828,7 +770,6 @@ public final class VCLGraphics {
 		else {
 			graphics.setColor(new Color(color));
 			graphics.drawLine(x1, y1, x2, y2);
-			addToFlush(bounds);
 		}
 
 	}
@@ -894,7 +835,6 @@ public final class VCLGraphics {
 				srcPoint.y--;
 				destPoint.y--;
 			}
-			addToFlush(destBounds);
 		}
 
 	}
@@ -956,7 +896,6 @@ public final class VCLGraphics {
 				for (int i = 1; i < npoints; i++)
 					graphics.drawLine(xpoints[i - 1], ypoints[i - 1], xpoints[i], ypoints[i]);
 			}
-			addToFlush(bounds);
 		}
 
 	}
@@ -1047,7 +986,6 @@ public final class VCLGraphics {
 						graphics.drawLine(xpoints[i][j - 1], ypoints[i][j - 1], xpoints[i][j], ypoints[i][j]);
 				}
 			}
-			addToFlush(bounds);
 		}
 
 	}
@@ -1108,7 +1046,6 @@ public final class VCLGraphics {
 				graphics.fillRect(x, y, width, height);
 			else
 				graphics.drawRect(x, y, width - 1, height - 1);
-			addToFlush(bounds);
 		}
 
 	}
@@ -1120,45 +1057,7 @@ public final class VCLGraphics {
 	 */
 	public void endSetClipRegion() {
 
-		if (userClip != null)
-			graphics.setClip(userClip);
-		else
-			graphics.setClip(graphicsBounds);
-
-	}
-
-	/**
-	 * Flushes any pixels in the underlying <code>VCLImage</code> to the
-	 * underlying <code>VCLFrame</code>.
-	 */
-	synchronized void flush() {
-
-		if ((update != null && !update.isEmpty()) || flushEntireBounds) {
-			if (image != null && frame != null) {
-				if (flushEntireBounds) {
-					update = new Rectangle(0, 0, image.getWidth(), image.getHeight());
-					flushEntireBounds = false;
-				}
-				else {
-					update = update.intersection(new Rectangle(0, 0, image.getWidth(), image.getHeight())); 
-				}
-
-				if (!update.isEmpty()) {
-					BufferedImage i = image.getImage();
-					Panel p = frame.getPanel();
-					if (i != null && p != null) {
-						synchronized(p) {
-							Graphics2D g = (Graphics2D)p.getGraphics();
-							if (g != null) {
-								g.drawImage(i, update.x, update.y, update.x + update.width, update.y + update.height, update.x, update.y, update.x + update.width, update.y + update.height, null);
-								g.dispose();
-								update = null;
-							}
-						}
-					}
-				}
-			}
-		}
+		graphics.setClip(userClip);
 
 	}
 
@@ -1347,7 +1246,6 @@ public final class VCLGraphics {
 					// Update current point
 					point.y--;
 				}
-				addToFlush(bounds);
 			}
 		}
 
@@ -1424,7 +1322,7 @@ public final class VCLGraphics {
 			Point point = new Point(0, bounds.height - 1);
 			int[] data = new int[bounds.width];
  
-			while (point.y < bounds.y) {
+			while (point.y >= bounds.y) {
 				// Invert pixel
 				data = srcImage.getDataElements(point.x, point.y, data.length, 1, data);
 				for (int i = 0; i < data.length; i++) {
@@ -1449,7 +1347,7 @@ public final class VCLGraphics {
 	public void resetClipRegion() {
 
 		userClip = null;
-		graphics.setClip(new Area(graphicsBounds));
+		endSetClipRegion();
 
 	}
 
@@ -1460,18 +1358,23 @@ public final class VCLGraphics {
 
 		if (frame != null) {
 			graphics.dispose();
-			image.dispose();
+			if (image != null) {
+				image.dispose();
+				image = null;
+			}
 			if (frame.getWindow().isShowing()) {
 				Panel p = frame.getPanel();
 				Rectangle bounds = p.getBounds();
 				graphicsBounds = new Rectangle(0, 0, bounds.width, bounds.height);
+				graphics = (Graphics2D)p.getGraphics();
+				bitCount = 24;
 			}
 			else {
 				graphicsBounds = new Rectangle(0, 0, 1, 1);
+				image = new VCLImage(graphicsBounds.width, graphicsBounds.height, frame.getBitCount());
+				graphics = image.getImage().createGraphics();
+				bitCount = image.getBitCount();
 			}
-			image = new VCLImage(graphicsBounds.width, graphicsBounds.height, frame.getBitCount());
-			graphics = image.getImage().createGraphics();
-			bitCount = image.getBitCount();
 			update = null;
 			resetClipRegion();
 		}
@@ -1491,26 +1394,6 @@ public final class VCLGraphics {
 		else
 			hints.put(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
 		graphics.setRenderingHints(hints);
-
-	}
-
-	/**
-	 * Set the auto flush flag.
-	 *
-	 * @param b the auto flush flag 
-	 */
-	void setAutoFlush(boolean b) {
-
-		if (b == autoFlush)
-			return;
-
-		autoFlush = b;
-		nextAutoFlush = 0;
-
-		if (autoFlush)
-			autoFlush();
-		else
-			flush();
 
 	}
 
@@ -1537,7 +1420,6 @@ public final class VCLGraphics {
 				pixels[0] = color;
 			}
  			image.setDataElements(x, y, 1, 1, pixels);
-			addToFlush(new Rectangle(x, y, 1, 1));
 		}
 		else {
 			drawLine(x, y, x, y, color);

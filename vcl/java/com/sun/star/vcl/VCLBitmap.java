@@ -249,42 +249,15 @@ public final class VCLBitmap {
 	 * @param destX the x coordinate of the bitmap
 	 * @param destY the y coordinate of the bitmap
 	 */
-	public void copyBits(VCLGraphics g, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY) {
+	public void copyBits(VCLGraphics graphics, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY) {
 
-		VCLImage srcImage = g.getImage();
+		VCLImage srcImage = graphics.getImage();
 		if (srcImage == null)
 			return;
 
-		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, srcImage.getWidth(), srcImage.getHeight()));
-		if (srcBounds.isEmpty())
-			return;
-
-		if (srcX < 0)
-			destX -= srcX;
-		if (srcY < 0)
-			destY -= srcY;
-
-		Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, width, height));
-		if (destBounds.isEmpty())
-			return;
-
-		srcBounds.x += destBounds.x - destX;
-		srcBounds.y += destBounds.y - destY;
-
-		Point srcPoint = new Point(srcBounds.x, srcBounds.y + destBounds.height - 1);
-		Point destPoint = new Point(destBounds.x, destBounds.y + destBounds.height - 1);
-		int[] srcData = new int[destBounds.width];
-
-		while (srcPoint.y >= srcBounds.y) {
-			// Copy row
-			srcData = srcImage.getDataElements(srcPoint.x, srcPoint.y, srcData.length, 1, srcData);
-			for (int i = 0; i < srcData.length; i++)
-				setPixel(destPoint.x + i, destPoint.y, srcData[i]);
-
-			// Update current points
-			srcPoint.y--;
-			destPoint.y--;
-		}
+		Graphics2D g = image.createGraphics();
+		g.drawImage(srcImage.getImage(), destX, destY, destX + srcWidth, destY + srcHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+		g.dispose();
 
 	}
 

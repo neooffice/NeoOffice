@@ -222,6 +222,14 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 			}
 		}
 
+		SalPaintEvent *pPaintEvent = new SalPaintEvent();
+		pPaintEvent->mnBoundX = 0;
+		pPaintEvent->mnBoundY = 0;
+		pPaintEvent->mnBoundWidth = maGeometry.nWidth;
+		pPaintEvent->mnBoundHeight = maGeometry.nHeight;
+		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_PAINT, this, (void *)pPaintEvent );
+		aEvent.dispatch();
+
 		// Make a pass through the native menus to speed up later updates
 		UpdateMenusForFrame( this, NULL );
 	}
@@ -568,14 +576,14 @@ void SalFrame::SetPointerPos( long nX, long nY )
 
 void SalFrame::Flush()
 {
-	maFrameData.mpVCLFrame->flush();
+	maFrameData.mpVCLFrame->sync();
 }
 
 // -----------------------------------------------------------------------
 
 void SalFrame::Sync()
 {
-	maFrameData.mpVCLFrame->flush();
+	maFrameData.mpVCLFrame->sync();
 }
 
 // -----------------------------------------------------------------------
