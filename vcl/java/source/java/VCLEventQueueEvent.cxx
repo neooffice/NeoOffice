@@ -150,8 +150,12 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		{
 			// If a window is found, dispatch the SALEVENT_SHUTDOWN
 			// event
-			if ( pSalData->maFrameList.size() )
-				dispatchEvent( nID, pSalData->maFrameList.front(), NULL );
+			if ( pSalData->maFrameList.size())
+			{
+				SalFrame *pFrame = pSalData->maFrameList.front();
+				if ( pFrame )
+					pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
+			}
 			return;
 		}
 		case SALEVENT_ACTIVATE_APPLICATION:
@@ -213,102 +217,165 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 	
 	// Handle events that require a SalFrame pointer
 	SalFrame *pFrame = getFrame();
+	bool bFound = false;
+	if ( pFrame && pFrame->maFrameData.mpProc )
+	{
+		SalData *pSalData = GetSalData();
+		for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+		{
+			if ( pFrame == *it )
+			{
+				bFound = true;
+				break;
+			}
+		}
+	}
+
+	if ( !bFound )
+		pFrame = NULL;
 
 	switch ( nID )
 	{
 		case SALEVENT_CLOSE:
 		{
-			dispatchEvent( nID, pFrame, NULL );
-			return;
+			if ( pFrame )
+				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
+			break;
 		}
 		case SALEVENT_ENDEXTTEXTINPUT:
 		{
 			SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)pData;
+
+			if ( pFrame )
+				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pInputEvent );
 			if ( pInputEvent )
 				delete pInputEvent;
-			dispatchEvent( nID, pFrame, NULL );
-			return;
+			break;
 		}
 		case SALEVENT_EXTTEXTINPUT:
 		{
-			ULONG nCommitted = getCommittedCharacterCount();
 			SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)pData;
-			if ( !pInputEvent )
+			if ( pFrame )
 			{
-				ULONG nCursorPos = getCursorPosition();
-				pInputEvent = new SalExtTextInputEvent();
-				pInputEvent->mnTime = getWhen();
-				pInputEvent->maText = XubString( getText() );
-				pInputEvent->mpTextAttr = getTextAttributes();
-				pInputEvent->mnCursorPos = nCursorPos > nCommitted ? nCursorPos : nCommitted;
-				pInputEvent->mnDeltaStart = 0;
-				pInputEvent->mbOnlyCursor = FALSE;
-				pInputEvent->mnCursorFlags = 0;
+				ULONG nCommitted = getCommittedCharacterCount();
+				if ( !pInputEvent )
+				{
+					ULONG nCursorPos = getCursorPosition();
+					pInputEvent = new SalExtTextInputEvent();
+					pInputEvent->mnTime = getWhen();
+					pInputEvent->maText = XubString( getText() );
+					pInputEvent->mpTextAttr = getTextAttributes();
+					pInputEvent->mnCursorPos = nCursorPos > nCommitted ? nCursorPos : nCommitted;
+					pInputEvent->mnDeltaStart = 0;
+					pInputEvent->mbOnlyCursor = FALSE;
+					pInputEvent->mnCursorFlags = 0;
+				}
+				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pInputEvent );
+				// If there is no text, the character is committed
+				if ( pInputEvent->maText.Len() == nCommitted )
+					pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, SALEVENT_ENDEXTTEXTINPUT, NULL );
+				if ( pInputEvent->mpTextAttr )
+					rtl_freeMemory( (USHORT *)pInputEvent->mpTextAttr );
 			}
-			dispatchEvent( nID, pFrame, pInputEvent );
-			// If there is no text, the character is committed
-			if ( pInputEvent->maText.Len() == nCommitted )
-				dispatchEvent( SALEVENT_ENDEXTTEXTINPUT, pFrame, NULL );
-			if ( pInputEvent->mpTextAttr )
-				rtl_freeMemory( (USHORT *)pInputEvent->mpTextAttr );
-			delete pInputEvent;
-			return;
+			if ( pInputEvent )
+				delete pInputEvent;
+			break;
 		}
 		case SALEVENT_GETFOCUS:
 		{
-			dispatchEvent( nID, pFrame, NULL );
+			if ( pFrame )
+			{
+				if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame != pFrame )
+					pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pSalData->mpFocusFrame, SALEVENT_LOSEFOCUS, NULL );
+				pSalData->mpFocusFrame = pFrame;
+
+				if ( pSalData->mpPresentationFrame && pFrame != pSalData->mpPresentationFrame )
+				{
+					// Make sure document window does not float to front
+					SalFrame *pParent = pFrame;
+					while ( pParent )
+					{
+						if ( pParent == pSalData->mpPresentationFrame )
+							break;
+						pParent = pParent->maFrameData.mpParent;
+					}
+
+					if ( !pParent )
+					{
+						// Reset the focus and don't dispatch the event
+						pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
+						pFrame = NULL;
+					}
+				}
+
+				if ( pFrame )
+					pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
+			}
 			// Force all "always on top" windows to the front without focus
 			for ( std::list< SalFrame* >::const_iterator it = pSalData->maAlwaysOnTopFrameList.begin(); it != pSalData->maAlwaysOnTopFrameList.end(); ++it )
 				(*it)->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
-			return;
+			break;
 		}
 		case SALEVENT_LOSEFOCUS:
 		{
-			dispatchEvent( nID, pFrame, NULL );
+			if ( pFrame )
+			{
+				if ( pSalData->mpFocusFrame == pFrame )
+					pSalData->mpFocusFrame = NULL;
+				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
+			}
 			// Force all "always on top" windows to the front without focus
 			for ( std::list< SalFrame* >::const_iterator it = pSalData->maAlwaysOnTopFrameList.begin(); it != pSalData->maAlwaysOnTopFrameList.end(); ++it )
 				(*it)->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
-			return;
+			break;
 		}
 		case SALEVENT_KEYINPUT:
 		case SALEVENT_KEYUP:
 		{
 			SalKeyEvent *pKeyEvent = (SalKeyEvent *)pData;
-			if ( !pKeyEvent )
+			if ( pFrame )
 			{
-				pKeyEvent = new SalKeyEvent();
-				pKeyEvent->mnTime = getWhen();
-				pKeyEvent->mnCode = getKeyCode() | getModifiers();
-				pKeyEvent->mnCharCode = getKeyChar();
-				pKeyEvent->mnRepeat = getRepeatCount();
-			}
-			// Fix bug 529 by manually converting KEY_MOD1-Dash into a
-			// non-breaking hyphen since Mac OS X does not normally have a
-			// key mapping for this character
-			if ( pKeyEvent->mnCharCode == 0x002d )
-			{
-				USHORT nModifiers = ( pKeyEvent->mnCode & ( KEY_MOD1 | KEY_MOD2 | KEY_SHIFT | KEY_CONTROLMOD ) );
-				if ( nModifiers == ( KEY_MOD1 | KEY_SHIFT ) )
-					pKeyEvent->mnCharCode = 0x2011;
-				else if ( nModifiers == KEY_MOD1 )
+				if ( !pKeyEvent )
+				{
+					pKeyEvent = new SalKeyEvent();
+					pKeyEvent->mnTime = getWhen();
+					pKeyEvent->mnCode = getKeyCode() | getModifiers();
+					pKeyEvent->mnCharCode = getKeyChar();
+					pKeyEvent->mnRepeat = getRepeatCount();
+				}
+				// Fix bug 529 by manually converting KEY_MOD1-Dash into a
+				// non-breaking hyphen since Mac OS X does not normally have a
+				// key mapping for this character
+				if ( pKeyEvent->mnCharCode == 0x002d )
+				{
+					USHORT nModifiers = ( pKeyEvent->mnCode & ( KEY_MOD1 | KEY_MOD2 | KEY_SHIFT | KEY_CONTROLMOD ) );
+					if ( nModifiers == ( KEY_MOD1 | KEY_SHIFT ) )
+						pKeyEvent->mnCharCode = 0x2011;
+					else if ( nModifiers == KEY_MOD1 )
 					pKeyEvent->mnCharCode = 0x00AD;
+				}
+				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pKeyEvent );
 			}
-			dispatchEvent( nID, pFrame, pKeyEvent );
-			delete pKeyEvent;
-			return;
+			if ( pKeyEvent )
+				delete pKeyEvent;
+			break;
 		}
 		case SALEVENT_KEYMODCHANGE:
 		{
 			SalKeyModEvent *pKeyModEvent = (SalKeyModEvent *)pData;
-			if ( !pKeyModEvent )
+			if ( pFrame )
 			{
-				pKeyModEvent = new SalKeyModEvent();
-				pKeyModEvent->mnTime = getWhen();
-				pKeyModEvent->mnCode = getModifiers();
+				if ( !pKeyModEvent )
+				{
+					pKeyModEvent = new SalKeyModEvent();
+					pKeyModEvent->mnTime = getWhen();
+					pKeyModEvent->mnCode = getModifiers();
+				}
+				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pKeyModEvent );
 			}
-			dispatchEvent( nID, pFrame, pKeyModEvent );
-			delete pKeyModEvent;
-			return;
+			if ( pKeyModEvent )
+				delete pKeyModEvent;
+			break;
 		}
 		case SALEVENT_MOUSEBUTTONDOWN:
 		case SALEVENT_MOUSEBUTTONUP:
@@ -316,35 +383,38 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_MOUSEMOVE:
 		{
 			SalMouseEvent *pMouseEvent = (SalMouseEvent *)pData;
-			if ( !pMouseEvent )
+			if ( pFrame )
 			{
-				pMouseEvent = new SalMouseEvent();
-				pMouseEvent->mnTime = getWhen();
-				pMouseEvent->mnX = getX();
-				pMouseEvent->mnY = getY();
-				USHORT nModifiers = getModifiers();
-				pMouseEvent->mnCode = nModifiers;
-				if ( nID == SALEVENT_MOUSELEAVE || nID == SALEVENT_MOUSEMOVE )
-					pMouseEvent->mnButton = 0;
-				else
-					pMouseEvent->mnButton = nModifiers & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
+				if ( !pMouseEvent )
+				{
+					pMouseEvent = new SalMouseEvent();
+					pMouseEvent->mnTime = getWhen();
+					pMouseEvent->mnX = getX();
+					pMouseEvent->mnY = getY();
+					USHORT nModifiers = getModifiers();
+					pMouseEvent->mnCode = nModifiers;
+					if ( nID == SALEVENT_MOUSELEAVE || nID == SALEVENT_MOUSEMOVE )
+						pMouseEvent->mnButton = 0;
+					else
+						pMouseEvent->mnButton = nModifiers & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
+				}
+				// Adjust position for RTL layout
+				if ( Application::GetSettings().GetLayoutRTL() )
+					pMouseEvent->mnX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pMouseEvent->mnX - 1;
+				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pMouseEvent );
 			}
-			// Adjust position for RTL layout
-			if ( pFrame && Application::GetSettings().GetLayoutRTL() )
-				pMouseEvent->mnX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pMouseEvent->mnX - 1;
-			dispatchEvent( nID, pFrame, pMouseEvent );
-			delete pMouseEvent;
-			return;
+			if ( pMouseEvent )
+				delete pMouseEvent;
+			break;
 		}
 		case SALEVENT_MOVE:
 		case SALEVENT_MOVERESIZE:
 		case SALEVENT_RESIZE:
 		{
 			Rectangle *pPosSize = (Rectangle *)pData;
-			Size aOldSize;
 			if ( pFrame )
 			{
-				aOldSize = Size( pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight );
+				Size aOldSize( pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight );
 				if ( !pPosSize )
 				{
 					// Update size
@@ -364,11 +434,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 						delete pVCLGraphics;
 					}
 				}
-			}
-			dispatchEvent( nID, pFrame, NULL );
-			delete pPosSize;
-			if ( pFrame )
-			{
+				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
 				// Invoke a paint event. Note that we repaint even if the size
 				// is the same as it may be due to the window being reset to
 				// the minimum client size.
@@ -380,132 +446,98 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				com_sun_star_vcl_VCLEvent aVCLPaintEvent( SALEVENT_PAINT, pFrame, (void *)pPaintEvent );
 				pSalData->mpEventQueue->postCachedEvent( &aVCLPaintEvent );
 			}
-			return;
+			if ( pPosSize )
+				delete pPosSize;
+			break;
 		}
 		case SALEVENT_PAINT:
 		{
 			SalPaintEvent *pPaintEvent = (SalPaintEvent *)pData;
-			if ( !pPaintEvent )
+			if ( pFrame )
 			{
-				// Get paint region
-				const Rectangle &aUpdateRect = getUpdateRect();
-				pPaintEvent = new SalPaintEvent();
-				if ( pFrame )
+				if ( !pPaintEvent )
 				{
+					// Get paint region
+					const Rectangle &aUpdateRect = getUpdateRect();
+					pPaintEvent = new SalPaintEvent();
 					pPaintEvent->mnBoundX = aUpdateRect.nLeft;
 					pPaintEvent->mnBoundY = aUpdateRect.nTop;
 					pPaintEvent->mnBoundWidth = aUpdateRect.GetWidth();
 					pPaintEvent->mnBoundHeight = aUpdateRect.GetHeight();
 				}
+				// Adjust position for RTL layout
+				if ( Application::GetSettings().GetLayoutRTL() )
+					pPaintEvent->mnBoundX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pPaintEvent->mnBoundWidth - pPaintEvent->mnBoundX;
+				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pPaintEvent );
 			}
-			// Adjust position for RTL layout
-			if ( pFrame && Application::GetSettings().GetLayoutRTL() )
-				pPaintEvent->mnBoundX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pPaintEvent->mnBoundWidth - pPaintEvent->mnBoundX;
-			dispatchEvent( nID, pFrame, pPaintEvent );
-			delete pPaintEvent;
-			return;
+			if ( pPaintEvent )
+				delete pPaintEvent;
+			break;
 		}
 		case SALEVENT_USEREVENT:
 		{
-			dispatchEvent( nID, pFrame, pData );
-			return;
+			if ( pFrame )
+				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
+			break;
 		}
 		case SALEVENT_WHEELMOUSE:
 		{
 			SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)pData;
-			if ( !pWheelMouseEvent )
+			if ( pFrame )
 			{
-				pWheelMouseEvent = new SalWheelMouseEvent();
-				pWheelMouseEvent->mnTime = getWhen();
-				pWheelMouseEvent->mnX = getX();
-				pWheelMouseEvent->mnY = getY();
-				long nWheelRotation = getWheelRotation();
-				pWheelMouseEvent->mnDelta = nWheelRotation * 120;
-				pWheelMouseEvent->mnNotchDelta = nWheelRotation;
-				pWheelMouseEvent->mnScrollLines = getScrollAmount();
-				pWheelMouseEvent->mnCode = getModifiers();
-				pWheelMouseEvent->mbHorz = FALSE;
+				if ( !pWheelMouseEvent )
+				{
+					pWheelMouseEvent = new SalWheelMouseEvent();
+					pWheelMouseEvent->mnTime = getWhen();
+					pWheelMouseEvent->mnX = getX();
+					pWheelMouseEvent->mnY = getY();
+					long nWheelRotation = getWheelRotation();
+					pWheelMouseEvent->mnDelta = nWheelRotation * 120;
+					pWheelMouseEvent->mnNotchDelta = nWheelRotation;
+					pWheelMouseEvent->mnScrollLines = getScrollAmount();
+					pWheelMouseEvent->mnCode = getModifiers();
+					pWheelMouseEvent->mbHorz = FALSE;
+				}
+				// Adjust position for RTL layout
+				if ( Application::GetSettings().GetLayoutRTL() )
+					pWheelMouseEvent->mnX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pWheelMouseEvent->mnX - 1;
+				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pWheelMouseEvent );
 			}
-			// Adjust position for RTL layout
-			if ( pFrame && Application::GetSettings().GetLayoutRTL() )
-				pWheelMouseEvent->mnX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pWheelMouseEvent->mnX - 1;
-			dispatchEvent( nID, pFrame, pWheelMouseEvent );
-			delete pWheelMouseEvent;
-			return;
+			if ( pWheelMouseEvent )
+				delete pWheelMouseEvent;
+			break;
 		}
 		case SALEVENT_MENUACTIVATE:
 		case SALEVENT_MENUCOMMAND:
 		case SALEVENT_MENUDEACTIVATE:
 		{
 			SalMenuEvent *pMenuEvent = (SalMenuEvent *)pData;
-			if ( !pMenuEvent )
+			if ( pFrame )
 			{
-				pMenuEvent = new SalMenuEvent();
-				pMenuEvent->mnId = getMenuID();
-				pMenuEvent->mpMenu = (void *)getMenuCookie();
+				if ( !pMenuEvent )
+				{
+					pMenuEvent = new SalMenuEvent();
+					pMenuEvent->mnId = getMenuID();
+					pMenuEvent->mpMenu = (void *)getMenuCookie();
+				}
+				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pMenuEvent );
 			}
-			dispatchEvent( nID, pFrame, pMenuEvent );
-			delete pMenuEvent;
-			return;
+			if ( pMenuEvent )
+				delete pMenuEvent;
+			break;
 		}
 		default:
 		{
-			dispatchEvent( nID, pFrame, pData );
-			return;
+			if ( pFrame )
+				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
+			break;
 		}
 	}
-}
 
-// ----------------------------------------------------------------------------
-
-void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, void *pData )
-{
-	if ( pFrame && pFrame->maFrameData.mpProc )
+	if ( pFrame )
 	{
-		SalData *pSalData = GetSalData();
-		::std::list< SalFrame* >::const_iterator it;
-		for ( it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-		{
-			if ( pFrame == *it )
-			{
-				if ( nID == SALEVENT_GETFOCUS )
-				{
-					if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame != pFrame )
-						dispatchEvent( SALEVENT_LOSEFOCUS, pSalData->mpFocusFrame, NULL );
-					pSalData->mpFocusFrame = pFrame;
-
-					if ( pSalData->mpPresentationFrame && pFrame != pSalData->mpPresentationFrame )
-					{
-						// Make sure document window does not float to front
-						SalFrame *pParent = pFrame;
-						while ( pParent )
-						{
-							if ( pParent == pSalData->mpPresentationFrame )
-								break;
-							pParent = pParent->maFrameData.mpParent;
-						}
-
-						if ( !pParent )
-						{
-							// Reset the focus and don't dispatch the event
-							pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
-							return;
-						}
-					}
-				}
-				else if ( nID == SALEVENT_LOSEFOCUS )
-				{
-					if ( pSalData->mpFocusFrame == pFrame )
-						pSalData->mpFocusFrame = NULL;
-				}
-
-				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
-				break;
-			}
-		}
-
 		// Flush the window's buffer to the native window
-		for ( it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+		for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 		{
 			if ( pFrame == *it )
 			{

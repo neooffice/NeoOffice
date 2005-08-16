@@ -58,8 +58,6 @@ class com_sun_star_vcl_VCLFrame;
 
 class com_sun_star_vcl_VCLEvent: public java_lang_Object
 {
-	void				dispatchEvent( USHORT nID, SalFrame *pFrame, void *pData );
-
 protected:
 	static jclass		theClass;
 
