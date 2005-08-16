@@ -503,6 +503,16 @@ void com_sun_star_vcl_VCLEvent::dispatchEvent( USHORT nID, SalFrame *pFrame, voi
 				break;
 			}
 		}
+
+		// Flush the window's buffer to the native window
+		for ( it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+		{
+			if ( pFrame == *it )
+			{
+				pFrame->Flush();
+				break;
+			}
+		}
 	}
 }
 

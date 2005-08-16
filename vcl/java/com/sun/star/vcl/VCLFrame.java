@@ -923,10 +923,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
-	 * Synchronizes the native window.
+	 * Flushes the native window.
 	 */
-	public void sync() {
+	public void flush() {
 
+		graphics.flush();
 		Toolkit.getDefaultToolkit().sync();
 
 	}
@@ -1541,6 +1542,17 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * Set the auto flush flag.
+	 *
+	 * @param b the auto flush flag 
+	 */
+	public void setAutoFlush(boolean b) {
+
+		graphics.setAutoFlush(b);
+
+	}
+
+	/**
 	 * Moves and resizes this native window.
 	 *
 	 * @param x the new x-coordinate
@@ -2026,15 +2038,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			enableInputMethods(false);
 
 		}
-
-		/**
-		 * This method performs no painting of the dialog. This method is used
-		 * to prevent Java from painting over what VCL has painted.
-		 *
-		 * @param g the <code>Graphics</code>
-		 */
-		public void paint(Graphics g) {}
-
+		
 		/**
 		 * Set the native dialog to show or hide in full screen mode.
 		 *
@@ -2074,7 +2078,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 *
 		 * @param g the <code>Graphics</code>
 		 */
-		public void update(Graphics g) {}
+		public void update(Graphics g) {
+
+			paint(g);
+
+		}
 
 	}
 
@@ -2135,15 +2143,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			enableInputMethods(false);
 
 		}
-
-		/**
-		 * This method performs no painting of the frame. This method is used
-		 * to prevent Java from painting over what VCL has painted.
-		 *
-		 * @param g the <code>Graphics</code>
-		 */
-		public void paint(Graphics g) {}
-
+		
 		/**
 		 * Set the native frame to show or hide in full screen mode.
 		 *
@@ -2183,7 +2183,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 *
 		 * @param g the <code>Graphics</code>
 		 */
-		public void update(Graphics g) {}
+		public void update(Graphics g) {
+
+			paint(g);
+
+		}
 
 	}
 
@@ -2211,23 +2215,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		/**
-		 * This method prevents the AWT event dispatching thread from accessing
-		 * the panel's graphics context. This is necessary because the VCL
-		 * event dispatching thread is frequently using the graphics context
-		 * and we don't want to have to synchronize all VCL drawing calls.
-		 *
-		 * @return the <code>Graphics</code>
-		 */
-		public Graphics getGraphics() {
-
-			if (EventQueue.isDispatchThread())
-				return null;
-			else
-				return super.getGraphics();
-
-		}
-
-		/**
 		 * Returns the input method request handler which supports requests
 		 * from input methods for this component.
 		 *
@@ -2245,7 +2232,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 *
 		 * @param g the <code>Graphics</code>
 		 */
-		public void paint(Graphics g) {}
+		public void paint(Graphics g) {
+
+			VCLGraphics graphics = frame.getGraphics();
+			if (graphics != null)
+				graphics.addToFlush();
+
+		}
 
 		/**
 		 * This method performs no painting of the panel. This method is used
@@ -2253,7 +2246,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 *
 		 * @param g the <code>Graphics</code>
 		 */
-		public void update(Graphics g) {}
+		public void update(Graphics g) {
+
+			paint(g);
+
+		}
 
 	}
 
