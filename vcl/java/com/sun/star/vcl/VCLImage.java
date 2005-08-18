@@ -36,7 +36,6 @@
 package com.sun.star.vcl;
 
 import java.awt.image.BufferedImage;
-import java.awt.image.WritableRaster;
 
 /**
  * The Java class that implements the SalFrame C++ class methods.
@@ -70,11 +69,6 @@ public final class VCLImage {
 	 * The <code>VCLPageFormat</code>.
 	 */
 	private VCLPageFormat pageFormat = null;
-
-	/**
-	 * The raster.
-	 */
-	private WritableRaster raster = null;
 
 	/**
 	 * The width.
@@ -116,7 +110,6 @@ public final class VCLImage {
 
 		// Create the native image
 		image = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB_PRE);
-		raster = image.getRaster();
 		width = w;
 		height = h;
 
@@ -156,7 +149,6 @@ public final class VCLImage {
 		graphics = null;
 		image = null;
 		pageFormat = null;
-		raster = null;
 
 	}
 
@@ -168,22 +160,6 @@ public final class VCLImage {
 	int getBitCount() {
 
 		return bitCount;
-
-	}
-
-	/**
-	 * Returns the underlying image's data.
-	 *
-	 * @param x the x coordinate
-	 * @param y the y coordinate
-	 * @param w the width
-	 * @param h the height
-	 * @param d the array to copy the image data into
-	 * @return the underlying image's data
-	 */
-	int[] getDataElements(int x, int y, int w, int h, int[] d) {
-
-		return (int[])raster.getDataElements(x, y, w, h, d);
 
 	}
 
@@ -228,22 +204,6 @@ public final class VCLImage {
 	int getWidth() {
 
 		return width;
-
-	}
-
-	/**
-	 * Sets the underlying image's data.
-	 *
-	 * @param x the x coordinate
-	 * @param y the y coordinate
-	 * @param w the width
-	 * @param h the height
-	 * @param d the array to set the image data to
-	 * @return the underlying image's data
-	 */
-	void setDataElements(int x, int y, int w, int h, int[] d) {
-
-		raster.setDataElements(x, y, w, h, d);
 
 	}
 
