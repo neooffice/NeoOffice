@@ -47,6 +47,7 @@ import java.awt.image.ColorModel;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
 import java.awt.image.DataBufferInt;
+import java.awt.image.DataBufferUShort;
 import java.awt.image.DirectColorModel;
 import java.awt.image.FilteredImageSource;
 import java.awt.image.ImageFilter;
@@ -239,6 +240,11 @@ public final class VCLBitmap {
 		if (bitCount <= 8) {
 			byte[] d = new byte[scanline * height];
 			raster = Raster.createWritableRaster(sampleModel, new DataBufferByte(d, d.length), null);
+			data = d;
+		}
+		else if (bitCount <= 16) {
+			short[] d = new short[width * height];
+			raster = Raster.createWritableRaster(sampleModel, new DataBufferUShort(d, d.length), null);
 			data = d;
 		}
 		else {
