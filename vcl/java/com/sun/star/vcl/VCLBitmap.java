@@ -44,14 +44,14 @@ import java.awt.Transparency;
 import java.awt.color.ColorSpace;
 import java.awt.image.BufferedImage;
 import java.awt.image.ColorModel;
-import java.awt.image.ComponentColorModel;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
+import java.awt.image.DataBufferInt;
+import java.awt.image.DirectColorModel;
 import java.awt.image.FilteredImageSource;
 import java.awt.image.ImageFilter;
 import java.awt.image.IndexColorModel;
 import java.awt.image.MultiPixelPackedSampleModel;
-import java.awt.image.PixelInterleavedSampleModel;
 import java.awt.image.Raster;
 import java.awt.image.SampleModel;
 import java.awt.image.SinglePixelPackedSampleModel;
@@ -96,9 +96,9 @@ public final class VCLBitmap {
 	private static IndexColorModel default8BitColorModel = null;
 
 	/**
-	 * The default 24 bit color model.
+	 * The default 32 bit color model.
 	 */
-	private static ComponentColorModel default24BitColorModel = null;
+	private static DirectColorModel default32BitColorModel = null;
 
 	/**
 	 * Initialize the default palettes and color models.
@@ -122,7 +122,8 @@ public final class VCLBitmap {
 		default8BitPalette = new int[default8BitColorModel.getMapSize()];
 		default8BitColorModel.getRGBs(default8BitPalette);
 
-		default24BitColorModel = new ComponentColorModel(ColorSpace.getInstance(ColorSpace.CS_sRGB), new int[]{ 8, 8, 8 }, false, true, Transparency.OPAQUE, DataBuffer.TYPE_BYTE);
+		default32BitColorModel = new DirectColorModel(ColorSpace.getInstance(ColorSpace.CS_sRGB), 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000, true, DataBuffer.TYPE_INT);
+
 	}
 
 	/**
@@ -133,7 +134,12 @@ public final class VCLBitmap {
 	/**
 	 * The data buffer.
 	 */
-	private byte[] data = null;
+	private Object data = null;
+
+	/**
+	 * The filtered image.
+	 */
+	private Image filteredImage = null;
 
 	/**
 	 * The height.
@@ -144,11 +150,6 @@ public final class VCLBitmap {
 	 * The image.
 	 */
 	private BufferedImage image = null;
-
-	/**
-	 * The filtered image.
-	 */
-	private Image filteredImage = null;
 
 	/**
 	 * The color model.
@@ -164,11 +165,6 @@ public final class VCLBitmap {
 	 * The writable raster.
 	 */
 	private WritableRaster raster = null;
-
-	/**
-	 * The scanline.
-	 */
-	private int scanline = 0;
 
 	/**
 	 * The width.
@@ -198,42 +194,54 @@ public final class VCLBitmap {
 		else if (b <= 8)
 			bitCount = 8;
 		else
-			bitCount = 24;
+			bitCount = 32;
 
-		// Create the color model
-		if (bitCount == 1) {
+		// Align buffer size to 4 bytes
+		int scanline = (((bitCount * width) + 31) >> 5) << 2;
+
+		// Set the palette, color model, and sample model
+		SampleModel sampleModel = null;
+		if (bitCount <= 1) {
 			palette = VCLBitmap.default1BitPalette;
 			model = VCLBitmap.default1BitColorModel;
+			sampleModel = new MultiPixelPackedSampleModel(DataBuffer.TYPE_BYTE, width, height, bitCount, scanline, 0);
 		}
-		else if (bitCount == 4) {
+		else if (bitCount <= 4) {
 			palette = VCLBitmap.default4BitPalette;
 			model = VCLBitmap.default4BitColorModel;
+			sampleModel = new MultiPixelPackedSampleModel(DataBuffer.TYPE_BYTE, width, height, bitCount, scanline, 0);
 		}
-		else if (bitCount == 8) {
+		else if (bitCount <= 8) {
 			palette = VCLBitmap.default8BitPalette;
 			model = VCLBitmap.default8BitColorModel;
+			sampleModel = new SinglePixelPackedSampleModel(DataBuffer.TYPE_BYTE, width, height, scanline, new int[]{ 0xff });
 		}
 		else {
-			model = default24BitColorModel;
+			model = VCLBitmap.default32BitColorModel;
+			sampleModel = VCLBitmap.default32BitColorModel.createCompatibleSampleModel(width, height);
 		}
 
-		// Align buffer size to 4 bytes and create the sample model
-		scanline = (((bitCount * width) + 31) >> 5) << 2;
-		SampleModel sampleModel = null;
-		if (bitCount < 8)
-			sampleModel = new MultiPixelPackedSampleModel(DataBuffer.TYPE_BYTE, width, height, bitCount, scanline, 0);
-		else if (bitCount == 8)
-			sampleModel = new SinglePixelPackedSampleModel(DataBuffer.TYPE_BYTE, width, height, scanline, new int[]{ 0xff });
-		else
-			sampleModel = new PixelInterleavedSampleModel(DataBuffer.TYPE_BYTE, width, height, bitCount / 8, scanline, new int[]{ 0, 1, 2 });
 
 		// Create the raster
-		data = new byte[scanline * height];
-		raster = Raster.createWritableRaster(sampleModel, new DataBufferByte(data, data.length), null);
+		if (bitCount <= 8) {
+			byte[] d = new byte[scanline * height];
+			raster = Raster.createWritableRaster(sampleModel, new DataBufferByte(d, d.length), null);
+			data = d;
+		}
+		else {
+			int[] d = new int[width * height];
+			raster = Raster.createWritableRaster(sampleModel, new DataBufferInt(d, d.length), null);
+			data = d;
+		}
+
 		image = new BufferedImage(model, raster, true, null);
 
-		// Fix bug 639 by wrapping the buffered image in a filter
-		filteredImage = Toolkit.getDefaultToolkit().createImage(new FilteredImageSource(image.getSource(), new ImageFilter()));
+		// Fix bug 639 by wrapping the buffered image in a filter if it uses
+		// an indexed color model
+		if (bitCount <= 8)
+			filteredImage = Toolkit.getDefaultToolkit().createImage(new FilteredImageSource(image.getSource(), new ImageFilter()));
+		else
+			filteredImage = image;
 
 	}
 
@@ -254,6 +262,8 @@ public final class VCLBitmap {
 		VCLImage srcImage = graphics.getImage();
 		if (srcImage == null)
 			return;
+
+		image.flush();
 
 		Graphics2D g = image.createGraphics();
 		g.drawImage(srcImage.getImage(), destX, destY, destX + srcWidth, destY + srcHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
@@ -277,7 +287,7 @@ public final class VCLBitmap {
 	 *
 	 * @return the bitmap's data
 	 */
-	public byte[] getData() {
+	public Object getData() {
 
 		return data;
 
@@ -317,19 +327,6 @@ public final class VCLBitmap {
 	}
 
 	/**
-	 * Returns the pixel for the specified point.
-	 *
-	 * @param x the x coordinate
-	 * @param y the y coordinate
-	 * @return the pixel
-	 */
-	int getPixel(int x, int y) {
-
-		return image.getRGB(x, y);
-
-	}
-
-	/**
 	 * Returns the width of the bitmap.
 	 *
 	 * @return the width of the bitmap
@@ -347,28 +344,17 @@ public final class VCLBitmap {
 	 */
 	public void setPalette(int[] p) {
 
-		palette = p;
-		if (palette != null) {
-			for (int i = 0; i < palette.length; i++)
-				palette[i] |= 0xff000000;
-			model = new IndexColorModel(bitCount, palette.length, palette, 0, false, -1, DataBuffer.TYPE_BYTE);
-			image = new BufferedImage(model, raster, true, null);
-			filteredImage = Toolkit.getDefaultToolkit().createImage(new FilteredImageSource(image.getSource(), new ImageFilter()));
+		if (bitCount <= 8) {
+			palette = p;
+			if (palette != null) {
+				for (int i = 0; i < palette.length; i++)
+					palette[i] |= 0xff000000;
+				model = new IndexColorModel(bitCount, palette.length, palette, 0, false, -1, DataBuffer.TYPE_BYTE);
+				image = new BufferedImage(model, raster, true, null);
+				filteredImage = Toolkit.getDefaultToolkit().createImage(new FilteredImageSource(image.getSource(), new ImageFilter()));
+			}
 		}
-
-	}
-
-	/**
-	 * Sets the pixel for the specified point.
-	 *
-	 * @param x the x coordinate
-	 * @param y the y coordinate
-	 * @param c the pixel
-	 */
-	void setPixel(int x, int y, int c) {
-
-		image.setRGB(x, y, c);
-
+	
 	}
 
 }

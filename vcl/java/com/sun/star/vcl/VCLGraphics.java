@@ -43,7 +43,6 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
-import java.awt.Image;
 import java.awt.Insets;
 import java.awt.Panel;
 import java.awt.Point;
@@ -443,7 +442,7 @@ public final class VCLGraphics {
 		else
 			graphicsBounds = new Rectangle(0, 0, bounds.width, bounds.height);
 		graphics = (Graphics2D)g;
-		bitCount = 24;
+		bitCount = 32;
 
 		resetClipRegion();
 

@@ -150,14 +150,14 @@ java_lang_Object *com_sun_star_vcl_VCLBitmap::getData()
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()[B";
+			char *cSignature = "()Ljava/lang/Object;";
 			mID = t.pEnv->GetMethodID( getMyClass(), "getData", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jbyteArray tempObj;
-			tempObj = (jbyteArray)t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
+			jobject tempObj;
+			tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			if ( tempObj )
 				out = new java_lang_Object( tempObj );
 		}

@@ -168,7 +168,12 @@ void SalBitmap::Destroy()
 		{
 			VCLThreadAttach t;
 			if ( t.pEnv )
-				t.pEnv->ReleaseByteArrayElements( (jbyteArray)mpData->getJavaObject(), (jbyte *)mpBits, 0 );
+			{
+				if ( mnBitCount <= 8 )
+					t.pEnv->ReleaseByteArrayElements( (jbyteArray)mpData->getJavaObject(), (jbyte *)mpBits, 0 );
+				else
+					t.pEnv->ReleaseIntArrayElements( (jintArray)mpData->getJavaObject(), (jint *)mpBits, 0 );
+			}
 		}
 		delete mpData;
 	}
@@ -210,7 +215,7 @@ BitmapBuffer* SalBitmap::AcquireBuffer( BOOL bReadOnly )
 	else if ( mnBitCount <= 8 )
 		pBuffer->mnFormat |= BMP_FORMAT_8BIT_PAL;
 	else
-		pBuffer->mnFormat |= BMP_FORMAT_24BIT_TC_RGB;
+		pBuffer->mnFormat |= BMP_FORMAT_32BIT_TC_ARGB;
 	pBuffer->mnWidth = maSize.Width();
 	pBuffer->mnHeight = maSize.Height();
 	pBuffer->mnScanlineSize = AlignedWidth4Bytes( mnBitCount * maSize.Width() );
@@ -228,7 +233,10 @@ BitmapBuffer* SalBitmap::AcquireBuffer( BOOL bReadOnly )
 		if ( t.pEnv )
 		{
 			jboolean bCopy( sal_False );
-			mpBits = (BYTE *)t.pEnv->GetByteArrayElements( (jbyteArray)mpData->getJavaObject(), &bCopy );
+			if ( mnBitCount <= 8 )
+				mpBits = (BYTE *)t.pEnv->GetByteArrayElements( (jbyteArray)mpData->getJavaObject(), &bCopy );
+			else
+				mpBits = (BYTE *)t.pEnv->GetIntArrayElements( (jintArray)mpData->getJavaObject(), &bCopy );
 		}
 	}
 
@@ -257,19 +265,24 @@ void SalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, BOOL bReadOnly )
 			VCLThreadAttach t;
 			if ( t.pEnv )
 			{
-				jbyteArray pArray = (jbyteArray)mpData->getJavaObject();
+				jint nCommit = JNI_ABORT;
 				if ( !mnAcquireCount )
 				{
 					if ( !bReadOnly )
-						t.pEnv->ReleaseByteArrayElements( pArray, (jbyte *)mpBits, 0 );
-					else
-						t.pEnv->ReleaseByteArrayElements( pArray, (jbyte *)mpBits, JNI_ABORT );
-					mpBits = NULL;
+						nCommit = 0;
 				}
 				else if ( !bReadOnly )
 				{
-					t.pEnv->ReleaseByteArrayElements( pArray, (jbyte *)mpBits, JNI_COMMIT );
+					nCommit = JNI_COMMIT;
 				}
+
+				if ( mnBitCount <= 8 )
+					t.pEnv->ReleaseByteArrayElements( (jbyteArray)mpData->getJavaObject(), (jbyte *)mpBits, nCommit );
+				else
+					t.pEnv->ReleaseIntArrayElements( (jintArray)mpData->getJavaObject(), (jint *)mpBits, nCommit );
+
+				if ( !mnAcquireCount )
+					mpBits = NULL;
 
 				// Save the palette
 				if ( !bReadOnly )
