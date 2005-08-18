@@ -757,6 +757,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			bitCount = 4;
 		else if (bitCount <= 8)
 			bitCount = 8;
+		else if (bitCount <= 16)
+			bitCount = 16;
 		else
 			bitCount = 32;
 

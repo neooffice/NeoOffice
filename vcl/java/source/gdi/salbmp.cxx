@@ -209,13 +209,28 @@ BitmapBuffer* SalBitmap::AcquireBuffer( BOOL bReadOnly )
 	pBuffer->mnBitCount = mnBitCount;
 	pBuffer->mnFormat = BMP_FORMAT_TOP_DOWN;
 	if ( mnBitCount <= 1 )
+	{
 		pBuffer->mnFormat |= BMP_FORMAT_1BIT_MSB_PAL;
+	}
 	else if ( mnBitCount <= 4 )
+	{
 		pBuffer->mnFormat |= BMP_FORMAT_4BIT_MSN_PAL;
+	}
 	else if ( mnBitCount <= 8 )
+	{
 		pBuffer->mnFormat |= BMP_FORMAT_8BIT_PAL;
+	}
+	else if ( mnBitCount <= 16 )
+	{
+		pBuffer->mnFormat |= BMP_FORMAT_16BIT_TC_MSB_MASK;
+		pBuffer->maColorMask = ColorMask( 0x7c00, 0x03e0, 0x001f );
+	}
 	else
+	{
 		pBuffer->mnFormat |= BMP_FORMAT_32BIT_TC_ARGB;
+		pBuffer->maColorMask = ColorMask( 0x00ff0000, 0x0000ff00, 0x000000ff );
+	}
+
 	pBuffer->mnWidth = maSize.Width();
 	pBuffer->mnHeight = maSize.Height();
 	pBuffer->mnScanlineSize = AlignedWidth4Bytes( mnBitCount * maSize.Width() );

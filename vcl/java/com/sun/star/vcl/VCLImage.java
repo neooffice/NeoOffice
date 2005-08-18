@@ -105,6 +105,8 @@ public final class VCLImage {
 			bitCount = 4;
 		else if (b <= 8)
 			bitCount = 8;
+		else if (b <= 16)
+			bitCount = 16;
 		else
 			bitCount = 32;
 

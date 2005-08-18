@@ -96,6 +96,11 @@ public final class VCLBitmap {
 	private static IndexColorModel default8BitColorModel = null;
 
 	/**
+	 * The default 16 bit color model.
+	 */
+	private static DirectColorModel default16BitColorModel = null;
+
+	/**
 	 * The default 32 bit color model.
 	 */
 	private static DirectColorModel default32BitColorModel = null;
@@ -121,6 +126,8 @@ public final class VCLBitmap {
 		default8BitColorModel = (IndexColorModel)img.getColorModel();
 		default8BitPalette = new int[default8BitColorModel.getMapSize()];
 		default8BitColorModel.getRGBs(default8BitPalette);
+
+		default16BitColorModel = new DirectColorModel(15, 0x7c00, 0x03e0, 0x001f);
 
 		default32BitColorModel = new DirectColorModel(ColorSpace.getInstance(ColorSpace.CS_sRGB), 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000, true, DataBuffer.TYPE_INT);
 
@@ -193,6 +200,8 @@ public final class VCLBitmap {
 			bitCount = 4;
 		else if (b <= 8)
 			bitCount = 8;
+		else if (b <= 16)
+			bitCount = 16;
 		else
 			bitCount = 32;
 
@@ -215,6 +224,10 @@ public final class VCLBitmap {
 			palette = VCLBitmap.default8BitPalette;
 			model = VCLBitmap.default8BitColorModel;
 			sampleModel = new SinglePixelPackedSampleModel(DataBuffer.TYPE_BYTE, width, height, scanline, new int[]{ 0xff });
+		}
+		else if (bitCount <= 16) {
+			model = VCLBitmap.default16BitColorModel;
+			sampleModel = VCLBitmap.default16BitColorModel.createCompatibleSampleModel(width, height);
 		}
 		else {
 			model = VCLBitmap.default32BitColorModel;
