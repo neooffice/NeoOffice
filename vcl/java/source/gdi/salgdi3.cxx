@@ -65,7 +65,7 @@ using namespace vcl;
 
 void SalGraphics::SetTextColor( SalColor nSalColor )
 {
-	maGraphicsData.mnTextColor = nSalColor;
+	maGraphicsData.mnTextColor = nSalColor | 0xff000000;
 }
 
 // -----------------------------------------------------------------------

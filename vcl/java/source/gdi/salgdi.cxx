@@ -624,28 +624,28 @@ void SalGraphics::EndSetClipRegion()
 
 void SalGraphics::SetLineColor()
 {
-	maGraphicsData.mnLineColor = 0xffffffff;
+	maGraphicsData.mnLineColor = 0x00000000;
 }
 
 // -----------------------------------------------------------------------
 
 void SalGraphics::SetLineColor( SalColor nSalColor )
 {
-	maGraphicsData.mnLineColor = nSalColor;
+	maGraphicsData.mnLineColor = nSalColor | 0xff000000;
 }
 
 // -----------------------------------------------------------------------
 
 void SalGraphics::SetFillColor()
 {
-	maGraphicsData.mnFillColor = 0xffffffff;
+	maGraphicsData.mnFillColor = 0x00000000;
 }
 
 // -----------------------------------------------------------------------
 
 void SalGraphics::SetFillColor( SalColor nSalColor )
 {
-	maGraphicsData.mnFillColor = nSalColor;
+	maGraphicsData.mnFillColor = nSalColor | 0xff000000;
 }
 
 // -----------------------------------------------------------------------
@@ -679,7 +679,7 @@ void SalGraphics::SetROPFillColor( SalROPColor nROPColor )
 
 void SalGraphics::DrawPixel( long nX, long nY, const OutputDevice *pOutDev )
 {
-	if ( maGraphicsData.mnLineColor != 0xffffffff )
+	if ( maGraphicsData.mnLineColor )
 		maGraphicsData.mpVCLGraphics->setPixel( nX, nY, maGraphicsData.mnLineColor );
 }
 
@@ -688,7 +688,7 @@ void SalGraphics::DrawPixel( long nX, long nY, const OutputDevice *pOutDev )
 void SalGraphics::DrawPixel( long nX, long nY, SalColor nSalColor,
                              const OutputDevice *pOutDev )
 {
-	maGraphicsData.mpVCLGraphics->setPixel( nX, nY, nSalColor );
+	maGraphicsData.mpVCLGraphics->setPixel( nX, nY, nSalColor | 0xff000000 );
 }
 
 // -----------------------------------------------------------------------
@@ -696,7 +696,7 @@ void SalGraphics::DrawPixel( long nX, long nY, SalColor nSalColor,
 void SalGraphics::DrawLine( long nX1, long nY1, long nX2, long nY2,
                              const OutputDevice *pOutDev )
 {
-	if ( maGraphicsData.mnLineColor != 0xffffffff )
+	if ( maGraphicsData.mnLineColor )
 		maGraphicsData.mpVCLGraphics->drawLine( nX1, nY1, nX2, nY2, maGraphicsData.mnLineColor );
 }
 
@@ -705,9 +705,9 @@ void SalGraphics::DrawLine( long nX1, long nY1, long nX2, long nY2,
 void SalGraphics::DrawRect( long nX, long nY, long nWidth, long nHeight,
                             const OutputDevice *pOutDev )
 {
-	if ( maGraphicsData.mnFillColor != 0xffffffff )
+	if ( maGraphicsData.mnFillColor )
 		maGraphicsData.mpVCLGraphics->drawRect( nX, nY, nWidth, nHeight, maGraphicsData.mnFillColor, TRUE );
-	if ( maGraphicsData.mnLineColor != 0xffffffff )
+	if ( maGraphicsData.mnLineColor )
 		maGraphicsData.mpVCLGraphics->drawRect( nX, nY, nWidth, nHeight, maGraphicsData.mnLineColor, FALSE );
 }
 
@@ -725,7 +725,7 @@ void SalGraphics::DrawPolyLine( ULONG nPoints, const SalPoint* pPtAry,
 		pPtAry++;
 	}
 
-	if ( maGraphicsData.mnLineColor != 0xffffffff )
+	if ( maGraphicsData.mnLineColor )
 		maGraphicsData.mpVCLGraphics->drawPolyline( nPoints, pXPoints, pYPoints, maGraphicsData.mnLineColor );
 }
 
@@ -743,9 +743,9 @@ void SalGraphics::DrawPolygon( ULONG nPoints, const SalPoint* pPtAry,
 		pPtAry++;
 	}
 	
-	if ( maGraphicsData.mnFillColor != 0xffffffff )
+	if ( maGraphicsData.mnFillColor )
 		maGraphicsData.mpVCLGraphics->drawPolygon( nPoints, pXPoints, pYPoints, maGraphicsData.mnFillColor, TRUE );
-	if ( maGraphicsData.mnLineColor != 0xffffffff )
+	if ( maGraphicsData.mnLineColor )
 		maGraphicsData.mpVCLGraphics->drawPolygon( nPoints, pXPoints, pYPoints, maGraphicsData.mnLineColor, FALSE );
 }
 
@@ -773,9 +773,9 @@ void SalGraphics::DrawPolyPolygon( ULONG nPoly, const ULONG* pPoints,
 		pYPtsAry[ i ] = pYPts;
 	}
 	
-	if ( maGraphicsData.mnFillColor != 0xffffffff )
+	if ( maGraphicsData.mnFillColor )
 		maGraphicsData.mpVCLGraphics->drawPolyPolygon( nPoly, pPoints, pXPtsAry, pYPtsAry, maGraphicsData.mnFillColor, TRUE );
-	if ( maGraphicsData.mnLineColor != 0xffffffff )
+	if ( maGraphicsData.mnLineColor )
 		maGraphicsData.mpVCLGraphics->drawPolyPolygon( nPoly, pPoints, pXPtsAry, pYPtsAry, maGraphicsData.mnLineColor, FALSE);
 
 	for ( i = 0; i < nPoly; i++ )
@@ -894,9 +894,9 @@ void SalGraphics::SetLineAntialiasing( BOOL bAntialias )
 
 SalGraphicsData::SalGraphicsData()
 {
-	mnFillColor = MAKE_SALCOLOR( 0xff, 0xff, 0xff );
-	mnLineColor = MAKE_SALCOLOR( 0, 0, 0 );
-	mnTextColor = MAKE_SALCOLOR( 0, 0, 0 );
+	mnFillColor = MAKE_SALCOLOR( 0xff, 0xff, 0xff ) | 0xff000000;
+	mnLineColor = MAKE_SALCOLOR( 0, 0, 0 ) | 0xff000000;
+	mnTextColor = MAKE_SALCOLOR( 0, 0, 0 ) | 0xff000000;
 	mpFrame = NULL;
 	mpPrinter = NULL;
 	mpVirDev = NULL;
