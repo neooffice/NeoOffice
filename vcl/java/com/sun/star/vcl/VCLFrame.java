@@ -835,6 +835,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// Add panel to mapping
 		VCLFrame.componentMap.put(panel, this);
 
+		// When in full screen mode, focus does not get assigned properly
+		if (fullScreenMode && KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner() == null)
+			requestFocus();
+
 	}
 
 	/**
@@ -2110,6 +2114,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			frame = f;
 			initialize();
+
+		}
+
+		/**
+		 * Returns the focus owner of this frame.
+		 *
+		 * @return the focus owner of this frame
+		 */
+		public Component getFocusOwner() {
+
+			if (frame.isFullScreenMode())
+				return this;
+			else
+				return super.getFocusOwner();
 
 		}
 
