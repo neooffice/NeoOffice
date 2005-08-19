@@ -35,6 +35,7 @@
 
 package com.sun.star.vcl;
 
+import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
@@ -70,14 +71,20 @@ public final class VCLScreen {
 	private static Insets frameInsets = null;
 
 	/**
+	 * The cached minimum frame size.
+	 */
+	private static Dimension minimumFrameSize = null;
+
+	/**
 	 * Initialize screen size and frame insets.
 	 */
 	static {
 
 		Frame f = new Frame();
-		f.setSize(100, 100);
+		f.setSize(1, 1);
 		f.addNotify();
 		frameInsets = f.getInsets();
+		minimumFrameSize = f.getSize();
 		f.removeNotify();
 		f.dispose();
 
@@ -102,6 +109,17 @@ public final class VCLScreen {
 	public static Insets getFrameInsets() {
 
 		return frameInsets;
+
+	}
+
+	/**
+	 * Gets the minimum <code>Frame</code> size.
+	 *
+	 * @return the minimum <code>Frame</code> size
+	 */
+	public static Dimension getMinimumFrameSize() {
+
+		return minimumFrameSize;
 
 	}
 

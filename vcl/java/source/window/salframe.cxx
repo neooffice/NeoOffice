@@ -126,8 +126,6 @@ SalFrame::~SalFrame()
 
 	if ( pSalData->mpPresentationFrame == this )
 		pSalData->mpPresentationFrame = NULL;
-
-	pSalData->maAlwaysOnTopFrameList.remove( this );
 }
 
 // -----------------------------------------------------------------------
@@ -225,13 +223,25 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		// Make a pass through the native menus to speed up later updates
 		UpdateMenusForFrame( this, NULL );
 
-		SalPaintEvent *pPaintEvent = new SalPaintEvent();
-		pPaintEvent->mnBoundX = 0;
-		pPaintEvent->mnBoundY = 0;
-		pPaintEvent->mnBoundWidth = maGeometry.nWidth;
-		pPaintEvent->mnBoundHeight = maGeometry.nHeight;
-		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_PAINT, this, (void *)pPaintEvent );
-		aEvent.dispatch();
+		Rectangle aBounds( maFrameData.mpVCLFrame->getBounds() );
+		if ( aBounds.GetWidth() != maGeometry.nWidth || aBounds.GetHeight() != maGeometry.nHeight )
+		{
+			// Update the bounds as they may have changed since the JVM's
+			// minimum window size may be larger than what VCL expects
+			Rectangle *pBounds = new Rectangle( aBounds );
+			com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pBounds );
+			pSalData->mpEventQueue->postCachedEvent( &aEvent );
+		}
+		else
+		{
+			SalPaintEvent *pPaintEvent = new SalPaintEvent();
+			pPaintEvent->mnBoundX = 0;
+			pPaintEvent->mnBoundY = 0;
+			pPaintEvent->mnBoundWidth = maGeometry.nWidth;
+			pPaintEvent->mnBoundHeight = maGeometry.nHeight;
+			com_sun_star_vcl_VCLEvent aEvent( SALEVENT_PAINT, this, (void *)pPaintEvent );
+			pSalData->mpEventQueue->postCachedEvent( &aEvent );
+		}
 	}
 	else
 	{
@@ -522,26 +532,17 @@ void SalFrame::StartPresentation( BOOL bStart )
 
 void SalFrame::SetAlwaysOnTop( BOOL bOnTop )
 {
-	SalData *pSalData = GetSalData();
-	if ( bOnTop )
-		pSalData->maAlwaysOnTopFrameList.push_back( this );
-	else
-		pSalData->maAlwaysOnTopFrameList.remove( this );
 }
 
 // -----------------------------------------------------------------------
 
 void SalFrame::ToTop( USHORT nFlags )
 {
-	if ( ! ( nFlags & ( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) ) && maFrameData.mpVCLFrame->getState() == SAL_FRAMESTATE_MINIMIZED )
+	if ( ! ( nFlags & SAL_FRAME_TOTOP_RESTOREWHENMIN ) && maFrameData.mpVCLFrame->getState() == SAL_FRAMESTATE_MINIMIZED )
 		return;
 
 	if ( ! ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) )
-	{
 		maFrameData.mpVCLFrame->toFront();
-		for ( ::std::list< SalFrame* >::const_iterator it = maFrameData.maChildren.begin(); it != maFrameData.maChildren.end(); ++it )
-			(*it)->ToTop( nFlags & ~SAL_FRAME_TOTOP_GRABFOCUS );
-	}
 
 	if ( nFlags & ( SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) )
 		maFrameData.mpVCLFrame->requestFocus();

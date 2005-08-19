@@ -883,13 +883,6 @@ long SalGraphics::GetGraphicsWidth()
 		return 0;
 }
 
-// -----------------------------------------------------------------------
-
-void SalGraphics::SetLineAntialiasing( BOOL bAntialias )
-{
-	maGraphicsData.mpVCLGraphics->setLineAntialiasing( bAntialias );
-}
-
 // =======================================================================
 
 SalGraphicsData::SalGraphicsData()

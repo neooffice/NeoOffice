@@ -339,11 +339,6 @@ public final class VCLGraphics {
 	 */
 	private Rectangle graphicsBounds = null;
 
-	/** 
-	 * The rendering hints.
-	 */
-	private RenderingHints hints = new RenderingHints(null);
-
 	/**
 	 * The image that the graphics draws to.
 	 */
@@ -558,6 +553,8 @@ public final class VCLGraphics {
 			return;
 
 		Graphics2D g = getGraphics();
+		if (xor)
+			g.setComposite(VCLGraphics.xorComposite);
 		g.drawImage(img.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
 		g.dispose();
 
@@ -771,10 +768,8 @@ public final class VCLGraphics {
 			bounds.y += bounds.height;
 			bounds.height *= -1;
 		}
-		bounds.x -= 1;
-		bounds.y -= 1;
-		bounds.width += 2;
-		bounds.height += 2;
+		bounds.width += 1;
+		bounds.height += 1;
 		bounds = bounds.intersection(graphicsBounds);
 		if (userClip != null)
 			bounds = bounds.intersection(userClip.getBounds());
@@ -869,10 +864,8 @@ public final class VCLGraphics {
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle bounds = polygon.getBounds();
-		bounds.x -= 1;
-		bounds.y -= 1;
-		bounds.width += 2;
-		bounds.height += 2;
+		bounds.width += 1;
+		bounds.height += 1;
 		bounds = bounds.intersection(graphicsBounds);
 		if (userClip != null)
 			bounds = bounds.intersection(userClip.getBounds());
@@ -938,10 +931,8 @@ public final class VCLGraphics {
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle bounds = polygon.getBounds();
-		bounds.x -= 1;
-		bounds.y -= 1;
-		bounds.width += 2;
-		bounds.height += 2;
+		bounds.width += 1;
+		bounds.height += 1;
 		bounds = bounds.intersection(graphicsBounds);
 		if (userClip != null)
 			bounds = bounds.intersection(userClip.getBounds());
@@ -1021,10 +1012,8 @@ public final class VCLGraphics {
 			return;
 
 		Rectangle bounds = area.getBounds();
-		bounds.x -= 1;
-		bounds.y -= 1;
-		bounds.width += 2;
-		bounds.height += 2;
+		bounds.width += 1;
+		bounds.height += 1;
 		bounds = bounds.intersection(graphicsBounds);
 		if (userClip != null)
 			bounds = bounds.intersection(userClip.getBounds());
@@ -1043,6 +1032,7 @@ public final class VCLGraphics {
 			}
 		}
 		g.dispose();
+
 		addToFlush(bounds);
 
 	}
@@ -1075,10 +1065,8 @@ public final class VCLGraphics {
 			bounds.y += bounds.height;
 			bounds.height *= -1;
 		}
-		bounds.x -= 1;
-		bounds.y -= 1;
-		bounds.width += 2;
-		bounds.height += 2;
+		bounds.width += 1;
+		bounds.height += 1;
 		bounds = bounds.intersection(graphicsBounds);
 		if (userClip != null)
 			bounds = bounds.intersection(userClip.getBounds());
@@ -1220,7 +1208,7 @@ public final class VCLGraphics {
 		else
 			g = (Graphics2D)graphics.create();
 
-		g.setRenderingHints(hints);
+		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
 		g.setClip(userClip);
 
 		return g;
@@ -1310,6 +1298,8 @@ public final class VCLGraphics {
 
 		// Clip any area outside of the image
 		Rectangle bounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
+		bounds.width += 1;
+		bounds.height += 1;
 		if (userClip != null)
 			bounds = bounds.intersection(userClip.getBounds());
 		if (bounds.isEmpty())
@@ -1376,10 +1366,8 @@ public final class VCLGraphics {
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle bounds = polygon.getBounds();
-		bounds.x -= 1;
-		bounds.y -= 1;
-		bounds.width += 2;
-		bounds.height += 2;
+		bounds.width += 1;
+		bounds.height += 1;
 		bounds = bounds.intersection(graphicsBounds);
 		if (userClip != null)
 			bounds = bounds.intersection(userClip.getBounds());
@@ -1461,20 +1449,6 @@ public final class VCLGraphics {
 			update = null;
 			resetClipRegion();
 		}
-
-	}
-
-	/**
-	 * Set the line drawing antialiasing attributes.
-	 *
-	 * @param b the line drawing antialiasing flag
-	 */
-	public void setLineAntialiasing(boolean b) {
-
-		if (b)
-			hints.put(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		else
-			hints.put(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
 
 	}
 

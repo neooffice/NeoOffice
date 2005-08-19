@@ -651,6 +651,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private LinkedList children = new LinkedList();
 
+	/** 
+	 * The detached child frames.
+	 */
+	private LinkedList detachedChildren = new LinkedList();
+
 	/**
 	 * The disposed flag.
 	 */
@@ -834,12 +839,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
-		// Add panel to mapping
+		// Add window and panel to mapping
+		VCLFrame.componentMap.put(window, this);
 		VCLFrame.componentMap.put(panel, this);
-
-		// When in full screen mode, focus does not get assigned properly
-		if (fullScreenMode && KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner() == null)
-			requestFocus();
 
 	}
 
@@ -853,7 +855,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed)
 			return;
 
-		// Remove panel from mapping
+		// Remove window and panel from mapping
+		VCLFrame.componentMap.remove(window);
 		VCLFrame.componentMap.remove(panel);
 
 	}
@@ -882,6 +885,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		setMenuBar(null);
 		bitCount = 0;
 		children = null;
+		detachedChildren = null;
 		frame = 0;
 		fullScreenMode = false;
 		graphics.dispose();
@@ -962,6 +966,27 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
+		if (fullScreenMode) {
+			// Make sure new focus owner is a child window
+			Component c = e.getOppositeComponent();
+			VCLFrame f = VCLFrame.findFrame(c);
+			while (f != null) {
+				if (f == this)
+					break;
+
+				synchronized (f) {
+					Window w = f.getWindow();
+					if (w != null)
+						f = VCLFrame.findFrame(w.getOwner());
+				}
+			}
+
+			if (f == null) {
+				toFront();
+				requestFocus();
+			}
+		}
+				
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
 
 	}
@@ -1532,8 +1557,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public synchronized void removeChild(VCLFrame f) {
 
-		if (f != null)
+		if (f != null) {
 			children.remove(f);
+			detachedChildren.remove(f);
+		}
 
 	}
 
@@ -1542,7 +1569,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void requestFocus() {
 
-		if (panel.isShowing())
+		if (window.isShowing())
 			panel.requestFocus();
 
 	}
@@ -1591,10 +1618,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		fullScreenMode = b;
 
-        if (window instanceof VCLFrame.NoPaintDialog)
-            ((VCLFrame.NoPaintDialog)window).setFullScreenMode(fullScreenMode);
-        else if (window instanceof VCLFrame.NoPaintFrame)
-            ((VCLFrame.NoPaintFrame)window).setFullScreenMode(fullScreenMode);
+		if (window instanceof VCLFrame.NoPaintDialog)
+			((VCLFrame.NoPaintDialog)window).setFullScreenMode(fullScreenMode);
+		else if (window instanceof VCLFrame.NoPaintFrame)
+			((VCLFrame.NoPaintFrame)window).setFullScreenMode(fullScreenMode);
 
 	}
 
@@ -1817,6 +1844,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (b == window.isShowing())
 			return;
 
+		detachedChildren.clear();
+
 		// Set the resizable flag if needed
 		if (window instanceof Dialog)
 			((Dialog)window).setResizable(resizable);
@@ -1835,10 +1864,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			window.addWindowListener(this);
 
 			// Cache the current focus owner
-			Component c;
+			Component c = null;
 			if (noActivate)
 				c = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-			else
+
+			if (c == null)
 				c = panel;
 
 			// Show the window
@@ -1914,7 +1944,23 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>WindowEvent</code>
 	 */
-	public void windowIconified(WindowEvent e) {}
+	public synchronized void windowIconified(WindowEvent e) {
+
+		// Detach any visible children
+		Iterator frames = children.iterator();
+		while (frames.hasNext()) {
+			VCLFrame f = (VCLFrame)frames.next();
+			synchronized (f) {
+				Window w = f.getWindow();
+				if (w != null && w.isShowing()) {
+					w.hide();
+					w.removeNotify();
+					detachedChildren.add(f);
+				}
+			}
+		}
+
+	}
 
 	/**
 	 * Invoked when a window is changed from a minimized to a normal state.
@@ -1924,18 +1970,16 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public synchronized void windowDeiconified(WindowEvent e) {
 
 		// Reattach any visible children
-		Iterator frames = children.iterator();
+		Iterator frames = detachedChildren.iterator();
 		while (frames.hasNext()) {
 			VCLFrame f = (VCLFrame)frames.next();
 			synchronized (f) {
 				Window w = f.getWindow();
-				if (w.isShowing()) {
-					w.hide();
-					w.removeNotify();
+				if (w != null && !w.isShowing())
 					w.show();
-				}
 			}
 		}
+		detachedChildren.clear();
 
 	}
 
@@ -1970,7 +2014,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		/**
 		 * The minimum size.
 		 */
-		private Dimension minSize = new Dimension(1, 1);
+		private Dimension minSize = null;
 
 		/**
 		 * Constructs a new <code>VCLFrame.NoPaintDialog</code> instance.
@@ -2035,11 +2079,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				setFocusable(false);
 				setFocusableWindowState(false);
 			}
-			else {
-				Insets insets = VCLScreen.getFrameInsets();
-				minSize.width += insets.left + insets.right;
-				minSize.height += insets.top + insets.bottom;
-			}
+
+			setMinimumSize(0, 0);
 
 			enableInputMethods(false);
 
@@ -2068,13 +2109,22 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		void setMinimumSize(int width, int height) {
 
-			if (width < 1)
-				width = 1;
-			if (height < 1)
-				height = 1;
+			Dimension minimumFrameSize = VCLScreen.getMinimumFrameSize();
+			if (isUndecorated())
+ 				minimumFrameSize = new Dimension(0, 0);
+			else
+ 				minimumFrameSize = VCLScreen.getMinimumFrameSize();
 
 			insets = getInsets();
-			minSize = new Dimension(width + insets.left + insets.right, height + insets.top + insets.bottom);
+			width += insets.left + insets.right;
+			height += insets.top + insets.bottom;
+
+			if (width < minimumFrameSize.width)
+				width = minimumFrameSize.width;
+			if (height < minimumFrameSize.height)
+				height = minimumFrameSize.height;
+
+			minSize = new Dimension(width, height);
 			
 		}
 
@@ -2105,7 +2155,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		/**
 		 * The minimum size.
 		 */
-		private Dimension minSize = new Dimension(1, 1);
+		private Dimension minSize = null;
 
 		/**
 		 * Constructs a new <code>VCLFrame.NoPaintFrame</code> instance.
@@ -2154,11 +2204,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				setFocusable(false);
 				setFocusableWindowState(false);
 			}
-			else {
-				Insets insets = VCLScreen.getFrameInsets();
-				minSize.width += insets.left + insets.right;
-				minSize.height += insets.top + insets.bottom;
-			}
+
+			setMinimumSize(0, 0);
 
 			enableInputMethods(false);
 
@@ -2187,13 +2234,22 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		void setMinimumSize(int width, int height) {
 
-			if (width < 1)
-				width = 1;
-			if (height < 1)
-				height = 1;
+			Dimension minimumFrameSize;
+			if (isUndecorated())
+ 				minimumFrameSize = new Dimension(0, 0);
+			else
+ 				minimumFrameSize = VCLScreen.getMinimumFrameSize();
 
 			insets = getInsets();
-			minSize = new Dimension(width + insets.left + insets.right, height + insets.top + insets.bottom);
+			width += insets.left + insets.right;
+			height += insets.top + insets.bottom;
+
+			if (width < minimumFrameSize.width)
+				width = minimumFrameSize.width;
+			if (height < minimumFrameSize.height)
+				height = minimumFrameSize.height;
+
+			minSize = new Dimension(width, height);
 			
 		}
 

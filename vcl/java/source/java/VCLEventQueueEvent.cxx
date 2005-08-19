@@ -158,25 +158,12 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			}
 			return;
 		}
-		case SALEVENT_ACTIVATE_APPLICATION:
 		case SALEVENT_OPENDOCUMENT:
 		case SALEVENT_PRINTDOCUMENT:
 		{
-			// Make sure that the current document window is showing
-			SalFrame *pParent = pSalData->mpFocusFrame;
-			while ( pParent && pParent->maFrameData.mpParent )
-				pParent = pParent->maFrameData.mpParent;
-			if ( pParent )
-				pParent->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
-			// Force all "always on top" windows to the front without focus
-			for ( std::list< SalFrame* >::const_iterator it = pSalData->maAlwaysOnTopFrameList.begin(); it != pSalData->maAlwaysOnTopFrameList.end(); ++it )
-				(*it)->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
-			if ( nID == SALEVENT_OPENDOCUMENT || nID == SALEVENT_PRINTDOCUMENT )
-			{
-				String aEmptyStr;
-				ApplicationEvent aAppEvt( aEmptyStr, aEmptyStr, SALEVENT_OPENDOCUMENT ? APPEVENT_OPEN_STRING : APPEVENT_PRINT_STRING, getPath() );
-				ImplGetSVData()->mpApp->AppEvent( aAppEvt );
-			}
+			String aEmptyStr;
+			ApplicationEvent aAppEvt( aEmptyStr, aEmptyStr, SALEVENT_OPENDOCUMENT ? APPEVENT_OPEN_STRING : APPEVENT_PRINT_STRING, getPath() );
+			ImplGetSVData()->mpApp->AppEvent( aAppEvt );
 			return;
 		}
 		case SALEVENT_ABOUT:
@@ -283,50 +270,20 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_GETFOCUS:
 		{
-			if ( pFrame )
+			if ( pFrame && pFrame != pSalData->mpFocusFrame )
 			{
-				if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame != pFrame )
-					pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pSalData->mpFocusFrame, SALEVENT_LOSEFOCUS, NULL );
 				pSalData->mpFocusFrame = pFrame;
-
-				if ( pSalData->mpPresentationFrame && pFrame != pSalData->mpPresentationFrame )
-				{
-					// Make sure document window does not float to front
-					SalFrame *pParent = pFrame;
-					while ( pParent )
-					{
-						if ( pParent == pSalData->mpPresentationFrame )
-							break;
-						pParent = pParent->maFrameData.mpParent;
-					}
-
-					if ( !pParent )
-					{
-						// Reset the focus and don't dispatch the event
-						pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
-						pFrame = NULL;
-					}
-				}
-
-				if ( pFrame )
-					pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
+				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
 			}
-			// Force all "always on top" windows to the front without focus
-			for ( std::list< SalFrame* >::const_iterator it = pSalData->maAlwaysOnTopFrameList.begin(); it != pSalData->maAlwaysOnTopFrameList.end(); ++it )
-				(*it)->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
 			break;
 		}
 		case SALEVENT_LOSEFOCUS:
 		{
-			if ( pFrame )
+			if ( pFrame && pFrame == pSalData->mpFocusFrame )
 			{
-				if ( pSalData->mpFocusFrame == pFrame )
-					pSalData->mpFocusFrame = NULL;
+				pSalData->mpFocusFrame = NULL;
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
 			}
-			// Force all "always on top" windows to the front without focus
-			for ( std::list< SalFrame* >::const_iterator it = pSalData->maAlwaysOnTopFrameList.begin(); it != pSalData->maAlwaysOnTopFrameList.end(); ++it )
-				(*it)->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN );
 			break;
 		}
 		case SALEVENT_KEYINPUT:

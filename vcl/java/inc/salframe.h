@@ -54,7 +54,6 @@ class com_sun_star_vcl_VCLEvent;
 class com_sun_star_vcl_VCLEventQueue;
 class com_sun_star_vcl_VCLFrame;
 class com_sun_star_vcl_VCLMenuBar;
-class com_sun_star_vcl_VCLPrintJob;
 class java_lang_Object;
 }
 
