@@ -613,14 +613,13 @@ void SalInstance::Yield( BOOL bWait )
 		if ( pSalData->mpTimerProc && aCurrentTime >= pSalData->maTimeout )
 		{
 			gettimeofday( &pSalData->maTimeout, NULL );
+			pSalData->maTimeout += pSalData->mnTimerInterval;
 			pSalData->mpTimerProc();
 
 			// Flush all of the window buffers to the native windows and
 			// synchronize native menus
 			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 				(*it)->Flush();
-
-			pSalData->maTimeout += pSalData->mnTimerInterval;
 		}
 	}
 
