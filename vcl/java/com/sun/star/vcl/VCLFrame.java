@@ -964,6 +964,29 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * Enables or disables flushing to the native window.
+	 *
+	 * @param b <code>true</code> to enable flushing and <code>false</code>
+	 *  to disable flushing
+	 */
+	void enableFlushing(boolean b) {
+
+		ComponentPeer peer = getPeer();
+		if (peer != null && windowPeerClass.isAssignableFrom(peer.getClass())) {
+			try {
+				if (b && windowPeerEnableFlushingMethod != null)
+					windowPeerEnableFlushingMethod.invoke(peer, new Object[0]);
+				else if (!b && windowPeerDisableFlushingMethod != null)
+					windowPeerDisableFlushingMethod.invoke(peer, new Object[0]);
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+		}
+
+	}
+
+	/**
 	 * Flushes the native window.
 	 */
 	public void flush() {
@@ -971,8 +994,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (!window.isShowing())
 			return;
 
-		setAutoFlush(true);
-		setAutoFlush(false);
+		enableFlushing(true);
+		enableFlushing(false);
 		Toolkit.getDefaultToolkit().sync();
 
 	}
@@ -1601,28 +1624,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
-	 * Set the auto flush flag.
-	 *
-	 * @param b the auto flush flag 
-	 */
-	public void setAutoFlush(boolean b) {
-
-		ComponentPeer peer = getPeer();
-		if (peer != null) {
-			try {
-				if (b)
-					windowPeerEnableFlushingMethod.invoke(peer, new Object[0]);
-				else
-					windowPeerDisableFlushingMethod.invoke(peer, new Object[0]);
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-		}
-
-	}
-
-	/**
 	 * Moves and resizes this native window.
 	 *
 	 * @param x the new x-coordinate
@@ -1659,6 +1660,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			((VCLFrame.NoPaintDialog)window).setFullScreenMode(fullScreenMode);
 		else if (window instanceof VCLFrame.NoPaintFrame)
 			((VCLFrame.NoPaintFrame)window).setFullScreenMode(fullScreenMode);
+
+		graphics.setAutoFlush(fullScreenMode);
 
 	}
 
@@ -1910,7 +1913,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			// Show the window
 			window.show();
-			setAutoFlush(false);
+			enableFlushing(false);
 
 			// Reattach any visible children
 			Iterator frames = children.iterator();
@@ -1923,7 +1926,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 							w.hide();
 							w.removeNotify();
 							w.show();
-							f.setAutoFlush(false);
+							f.enableFlushing(false);
 						}
 					}
 				}
@@ -2026,7 +2029,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 					Window w = f.getWindow();
 					if (!w.isShowing()) {
 						w.show();
-						f.setAutoFlush(false);
+						f.enableFlushing(false);
 					}
 				}
 			}
