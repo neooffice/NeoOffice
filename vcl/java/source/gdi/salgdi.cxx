@@ -716,17 +716,8 @@ void SalGraphics::DrawRect( long nX, long nY, long nWidth, long nHeight,
 void SalGraphics::DrawPolyLine( ULONG nPoints, const SalPoint* pPtAry,
                                 const OutputDevice *pOutDev )
 {
-	long pXPoints[ nPoints ];
-	long pYPoints[ nPoints ];
-	for ( ULONG i = 0; i < nPoints; i++ )
-	{
-		pXPoints[ i ] = pPtAry->mnX;
-		pYPoints[ i ] = pPtAry->mnY;
-		pPtAry++;
-	}
-
 	if ( maGraphicsData.mnLineColor )
-		maGraphicsData.mpVCLGraphics->drawPolyline( nPoints, pXPoints, pYPoints, maGraphicsData.mnLineColor );
+		maGraphicsData.mpVCLGraphics->drawPolyline( nPoints, pPtAry, maGraphicsData.mnLineColor );
 }
 
 // -----------------------------------------------------------------------
@@ -734,19 +725,10 @@ void SalGraphics::DrawPolyLine( ULONG nPoints, const SalPoint* pPtAry,
 void SalGraphics::DrawPolygon( ULONG nPoints, const SalPoint* pPtAry,
                                const OutputDevice *pOutDev )
 {
-	long pXPoints[ nPoints ];
-	long pYPoints[ nPoints ];
-	for ( ULONG i = 0; i < nPoints; i++ )
-	{
-		pXPoints[ i ] = pPtAry->mnX;
-		pYPoints[ i ] = pPtAry->mnY;
-		pPtAry++;
-	}
-	
 	if ( maGraphicsData.mnFillColor )
-		maGraphicsData.mpVCLGraphics->drawPolygon( nPoints, pXPoints, pYPoints, maGraphicsData.mnFillColor, TRUE );
+		maGraphicsData.mpVCLGraphics->drawPolygon( nPoints, pPtAry, maGraphicsData.mnFillColor, TRUE );
 	if ( maGraphicsData.mnLineColor )
-		maGraphicsData.mpVCLGraphics->drawPolygon( nPoints, pXPoints, pYPoints, maGraphicsData.mnLineColor, FALSE );
+		maGraphicsData.mpVCLGraphics->drawPolygon( nPoints, pPtAry, maGraphicsData.mnLineColor, FALSE );
 }
 
 // -----------------------------------------------------------------------
@@ -755,34 +737,10 @@ void SalGraphics::DrawPolyPolygon( ULONG nPoly, const ULONG* pPoints,
 								   PCONSTSALPOINT* pPtAry,
                                    const OutputDevice *pOutDev )
 {
-	long *pXPtsAry[ nPoly ];
-	long *pYPtsAry[ nPoly ];
-	ULONG i;
-	for ( i = 0; i < nPoly; i++ )
-	{
-		long *pXPts = new long[ pPoints[ i ] ];
-		long *pYPts = new long[ pPoints[ i ] ];
-		const SalPoint *pPts = pPtAry[ i ];
-		for ( ULONG j = 0; j < pPoints[ i ]; j++ )
-		{
-			pXPts[ j ] = pPts->mnX;
-			pYPts[ j ] = pPts->mnY;
-			pPts++;
-		}
-		pXPtsAry[ i ] = pXPts;
-		pYPtsAry[ i ] = pYPts;
-	}
-	
 	if ( maGraphicsData.mnFillColor )
-		maGraphicsData.mpVCLGraphics->drawPolyPolygon( nPoly, pPoints, pXPtsAry, pYPtsAry, maGraphicsData.mnFillColor, TRUE );
+		maGraphicsData.mpVCLGraphics->drawPolyPolygon( nPoly, pPoints, pPtAry, maGraphicsData.mnFillColor, TRUE );
 	if ( maGraphicsData.mnLineColor )
-		maGraphicsData.mpVCLGraphics->drawPolyPolygon( nPoly, pPoints, pXPtsAry, pYPtsAry, maGraphicsData.mnLineColor, FALSE);
-
-	for ( i = 0; i < nPoly; i++ )
-	{
-		delete pXPtsAry[ i ];
-		delete pYPtsAry[ i ];
-	}
+		maGraphicsData.mpVCLGraphics->drawPolyPolygon( nPoly, pPoints, pPtAry, maGraphicsData.mnLineColor, FALSE);
 }
 
 // -----------------------------------------------------------------------

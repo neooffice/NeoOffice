@@ -195,7 +195,7 @@ void com_sun_star_vcl_VCLBitmap::getPalette( BitmapPalette& _par0 )
 						jint nCurrentColor = pColorBits[ i ];
 						_par0[ i ] = BitmapColor( SALCOLOR_RED( nCurrentColor ), SALCOLOR_GREEN( nCurrentColor ), SALCOLOR_BLUE( nCurrentColor ) );
 					}
-					t.pEnv->ReleasePrimitiveArrayCritical( tempObj, (void *)pColorBits, JNI_ABORT );
+					t.pEnv->ReleasePrimitiveArrayCritical( tempObj, pColorBits, JNI_ABORT );
 				}
 			}
 			else
@@ -234,7 +234,7 @@ void com_sun_star_vcl_VCLBitmap::setPalette( const BitmapPalette& _par0 )
 					const BitmapColor &rCol = _par0[ i ];
 					pColorBits[ i ] = MAKE_SALCOLOR( rCol.GetRed(), rCol.GetGreen(), rCol.GetBlue() );
 				}
-				t.pEnv->ReleasePrimitiveArrayCritical( pColors, (void *)pColorBits, 0 );
+				t.pEnv->ReleasePrimitiveArrayCritical( pColors, pColorBits, 0 );
 				jvalue args[1];
 				args[0].l = pColors;
 				t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );

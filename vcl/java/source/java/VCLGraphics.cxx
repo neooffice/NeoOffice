@@ -221,15 +221,23 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
+			jboolean bCopy;
 			jsize elements( _par2 );
 			jintArray glypharray = t.pEnv->NewIntArray( elements );
+			bCopy = sal_False;
+			jint *pGlyphBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( glypharray, &bCopy );
+			memcpy( pGlyphBits, (jint *)_par3, elements * sizeof( jint ) );
+			t.pEnv->ReleasePrimitiveArrayCritical( glypharray, pGlyphBits, 0 );
 			jintArray advancearray = t.pEnv->NewIntArray( elements );
-			t.pEnv->SetIntArrayRegion( glypharray, 0, elements, (jint *)_par3 );
-			t.pEnv->SetIntArrayRegion( advancearray, 0, elements, (jint *)_par4 );
+			bCopy = sal_False;
+			jint *pAdvanceBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( advancearray, &bCopy );
+			memcpy( pAdvanceBits, (jint *)_par4, elements * sizeof( jint ) );
+			t.pEnv->ReleasePrimitiveArrayCritical( advancearray, pAdvanceBits, 0 );
 
 			com_sun_star_vcl_VCLFont *pFont = NULL;
 			if ( com_sun_star_vcl_VCLFont::useDefaultFont )
 				pFont = _par5->getDefaultFont();
+
 			jvalue args[10];
 			args[0].i = jint( _par0 );
 			args[1].i = jint( _par1 );
@@ -309,7 +317,7 @@ void com_sun_star_vcl_VCLGraphics::drawMask( const com_sun_star_vcl_VCLBitmap *_
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawPolygon( ULONG _par0, const long *_par1, const long *_par2, SalColor _par3, sal_Bool _par4 )
+void com_sun_star_vcl_VCLGraphics::drawPolygon( ULONG _par0, const SalPoint *_par1, SalColor _par2, sal_Bool _par3 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -323,17 +331,28 @@ void com_sun_star_vcl_VCLGraphics::drawPolygon( ULONG _par0, const long *_par1, 
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
+			jboolean bCopy;
 			jsize elements( _par0 );
 			jintArray xarray = t.pEnv->NewIntArray( elements );
-			t.pEnv->SetIntArrayRegion( xarray, 0, elements, (jint *)_par1 );
 			jintArray yarray = t.pEnv->NewIntArray( elements );
-			t.pEnv->SetIntArrayRegion( yarray, 0, elements, (jint *)_par2 );
+			bCopy = sal_False;
+			jint *pXBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( xarray, &bCopy );
+			bCopy = sal_False;
+			jint *pYBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( yarray, &bCopy );
+			for ( jsize i = 0; i < elements; i++ )
+			{
+				pXBits[ i ] = _par1[ i ].mnX;
+				pYBits[ i ] = _par1[ i ].mnY;
+			}
+			t.pEnv->ReleasePrimitiveArrayCritical( yarray, pYBits, 0 );
+			t.pEnv->ReleasePrimitiveArrayCritical( xarray, pXBits, 0 );
+
 			jvalue args[5];
 			args[0].i = jint( _par0 );
 			args[1].l = xarray;
 			args[2].l = yarray;
-			args[3].i = jint( _par3 );
-			args[4].z = jboolean( _par4 );
+			args[3].i = jint( _par2 );
+			args[4].z = jboolean( _par3 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
@@ -341,7 +360,7 @@ void com_sun_star_vcl_VCLGraphics::drawPolygon( ULONG _par0, const long *_par1, 
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawPolyline( ULONG _par0, const long *_par1, const long *_par2, SalColor _par3 )
+void com_sun_star_vcl_VCLGraphics::drawPolyline( ULONG _par0, const SalPoint *_par1, SalColor _par2 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -355,16 +374,27 @@ void com_sun_star_vcl_VCLGraphics::drawPolyline( ULONG _par0, const long *_par1,
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
+			jboolean bCopy;
 			jsize elements( _par0 );
 			jintArray xarray = t.pEnv->NewIntArray( elements );
-			t.pEnv->SetIntArrayRegion( xarray, 0, elements, (jint *)_par1 );
 			jintArray yarray = t.pEnv->NewIntArray( elements );
-			t.pEnv->SetIntArrayRegion( yarray, 0, elements, (jint *)_par2 );
+			bCopy = sal_False;
+			jint *pXBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( xarray, &bCopy );
+			bCopy = sal_False;
+			jint *pYBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( yarray, &bCopy );
+			for ( jsize i = 0; i < elements; i++ )
+			{
+				pXBits[ i ] = _par1[ i ].mnX;
+				pYBits[ i ] = _par1[ i ].mnY;
+			}
+			t.pEnv->ReleasePrimitiveArrayCritical( yarray, pYBits, 0 );
+			t.pEnv->ReleasePrimitiveArrayCritical( xarray, pXBits, 0 );
+
 			jvalue args[4];
 			args[0].i = jint( _par0 );
 			args[1].l = xarray;
 			args[2].l = yarray;
-			args[3].i = jint( _par3 );
+			args[3].i = jint( _par2 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
@@ -372,7 +402,7 @@ void com_sun_star_vcl_VCLGraphics::drawPolyline( ULONG _par0, const long *_par1,
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawPolyPolygon( ULONG _par0, const ULONG *_par1, long **_par2, long **_par3, SalColor _par4, sal_Bool _par5 )
+void com_sun_star_vcl_VCLGraphics::drawPolyPolygon( ULONG _par0, const ULONG *_par1, PCONSTSALPOINT *_par2, SalColor _par3, sal_Bool _par4 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -387,29 +417,45 @@ void com_sun_star_vcl_VCLGraphics::drawPolyPolygon( ULONG _par0, const ULONG *_p
 		jclass tempClass = t.pEnv->FindClass( "[I" );
 		if ( mID && tempClass )
 		{
+			jboolean bCopy;
 			jsize elements( _par0 );
 			jintArray ptsarray = t.pEnv->NewIntArray( elements );
-			t.pEnv->SetIntArrayRegion( ptsarray, 0, elements, (jint *)_par1 );
+			bCopy = sal_False;
+			jint *pPtsBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( ptsarray, &bCopy );
+			memcpy( pPtsBits, (jint *)_par1, elements * sizeof( jint ) );
+			t.pEnv->ReleasePrimitiveArrayCritical( ptsarray, pPtsBits, 0 );
+			
 			jintArray tempArray = t.pEnv->NewIntArray( 0 );
 			jobjectArray xptsarray = t.pEnv->NewObjectArray( elements, tempClass, tempArray );
 			jobjectArray yptsarray = t.pEnv->NewObjectArray( elements, tempClass, tempArray );
 			for ( jsize i = 0; i < elements; i++ )
 			{
-				jsize points = _par1[ i ];
+				jsize points( _par1[ i ] );
+				const SalPoint *pPts = _par2[ i ];
 				jintArray xarray = t.pEnv->NewIntArray( points );
-				t.pEnv->SetIntArrayRegion( xarray, 0, points, (jint *)_par2[ i ] );
-				t.pEnv->SetObjectArrayElement( xptsarray, i, xarray );
 				jintArray yarray = t.pEnv->NewIntArray( points );
-				t.pEnv->SetIntArrayRegion( yarray, 0, points, (jint *)_par3[ i ] );
+				bCopy = sal_False;
+				jint *pXBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( xarray, &bCopy );
+				bCopy = sal_False;
+				jint *pYBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( yarray, &bCopy );
+				for ( jsize j = 0; j < points; j++ )
+				{
+					pXBits[ j ] = pPts[ j ].mnX;
+					pYBits[ j ] = pPts[ j ].mnY;
+				}
+				t.pEnv->ReleasePrimitiveArrayCritical( yarray, pYBits, 0 );
+				t.pEnv->ReleasePrimitiveArrayCritical( xarray, pXBits, 0 );
 				t.pEnv->SetObjectArrayElement( yptsarray, i, yarray );
+				t.pEnv->SetObjectArrayElement( xptsarray, i, xarray );
 			}
+
 			jvalue args[6];
 			args[0].i = jint( _par0 );
 			args[1].l = ptsarray;
 			args[2].l = xptsarray;
 			args[3].l = yptsarray;
-			args[4].i = jint( _par4 );
-			args[5].z = jboolean( _par5 );
+			args[4].i = jint( _par3 );
+			args[5].z = jboolean( _par4 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
@@ -507,6 +553,7 @@ const Rectangle com_sun_star_vcl_VCLGraphics::getGlyphBounds( int _par0, com_sun
 			com_sun_star_vcl_VCLFont *pFont = NULL;
 			if ( com_sun_star_vcl_VCLFont::useDefaultFont )
 				pFont = _par1->getDefaultFont();
+
 			jvalue args[3];
 			args[0].i = jint( _par0 );
 			args[1].l = pFont ? pFont->getJavaObject() : _par1->getJavaObject();
@@ -717,7 +764,7 @@ void com_sun_star_vcl_VCLGraphics::invert( long _par0, long _par1, long _par2, l
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::invert( ULONG _par0, const long *_par1, const long *_par2, SalInvert _par3 )
+void com_sun_star_vcl_VCLGraphics::invert( ULONG _par0, const SalPoint *_par1, SalInvert _par2 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -731,16 +778,27 @@ void com_sun_star_vcl_VCLGraphics::invert( ULONG _par0, const long *_par1, const
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
+			jboolean bCopy;
 			jsize elements( _par0 );
 			jintArray xarray = t.pEnv->NewIntArray( elements );
-			t.pEnv->SetIntArrayRegion( xarray, 0, elements, (jint *)_par1 );
 			jintArray yarray = t.pEnv->NewIntArray( elements );
-			t.pEnv->SetIntArrayRegion( yarray, 0, elements, (jint *)_par2 );
+			bCopy = sal_False;
+			jint *pXBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( xarray, &bCopy );
+			bCopy = sal_False;
+			jint *pYBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( yarray, &bCopy );
+			for ( jsize i = 0; i < elements; i++ )
+			{
+				pXBits[ i ] = _par1[ i ].mnX;
+				pYBits[ i ] = _par1[ i ].mnY;
+			}
+			t.pEnv->ReleasePrimitiveArrayCritical( yarray, pYBits, 0 );
+			t.pEnv->ReleasePrimitiveArrayCritical( xarray, pXBits, 0 );
+
 			jvalue args[4];
 			args[0].i = jint( _par0 );
 			args[1].l = xarray;
 			args[2].l = yarray;
-			args[3].i = jint( _par3 );
+			args[3].i = jint( _par2 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}

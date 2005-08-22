@@ -164,14 +164,5 @@ void SalGraphics::Invert( long nX, long nY, long nWidth, long nHeight,
 void SalGraphics::Invert( ULONG nPoints, const SalPoint* pPtAry,
                           SalInvert nFlags, const OutputDevice *pOutDev )
 {
-	long pXPoints[ nPoints + 1 ];
-	long pYPoints[ nPoints + 1 ];
-	for ( ULONG i = 0; i < nPoints; i++ )
-	{
-		pXPoints[ i ] = pPtAry->mnX;
-		pYPoints[ i ] = pPtAry->mnY;
-		pPtAry++;
-	}
-
-	maGraphicsData.mpVCLGraphics->invert( nPoints, pXPoints, pYPoints, nFlags );
+	maGraphicsData.mpVCLGraphics->invert( nPoints, pPtAry, nFlags );
 }
