@@ -232,16 +232,6 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 			com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pBounds );
 			pSalData->mpEventQueue->postCachedEvent( &aEvent );
 		}
-		else
-		{
-			SalPaintEvent *pPaintEvent = new SalPaintEvent();
-			pPaintEvent->mnBoundX = 0;
-			pPaintEvent->mnBoundY = 0;
-			pPaintEvent->mnBoundWidth = maGeometry.nWidth;
-			pPaintEvent->mnBoundHeight = maGeometry.nHeight;
-			com_sun_star_vcl_VCLEvent aEvent( SALEVENT_PAINT, this, (void *)pPaintEvent );
-			pSalData->mpEventQueue->postCachedEvent( &aEvent );
-		}
 	}
 	else
 	{
@@ -541,10 +531,9 @@ void SalFrame::ToTop( USHORT nFlags )
 	if ( ! ( nFlags & SAL_FRAME_TOTOP_RESTOREWHENMIN ) && maFrameData.mpVCLFrame->getState() == SAL_FRAMESTATE_MINIMIZED )
 		return;
 
-	if ( ! ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) )
+	if ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS )
 		maFrameData.mpVCLFrame->toFront();
-
-	if ( nFlags & ( SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY ) )
+	else if ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS_ONLY )
 		maFrameData.mpVCLFrame->requestFocus();
 }
 

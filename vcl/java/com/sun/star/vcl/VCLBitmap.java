@@ -278,15 +278,41 @@ public final class VCLBitmap {
 	 */
 	public void copyBits(VCLGraphics graphics, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY) {
 
-		VCLImage srcImage = graphics.getImage();
-		if (srcImage == null)
-			return;
+		BufferedImage img = null;
+		if ( graphics.getImage() != null)
+			img = graphics.getImage().getImage();
 
-		image.flush();
+		if (img == null) {
+			Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(graphics.getGraphicsBounds());
+			if (srcBounds.isEmpty())
+				return;
 
-		Graphics2D g = image.createGraphics();
-		g.drawImage(srcImage.getImage(), destX, destY, destX + srcWidth, destY + srcHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
-		g.dispose();
+            img = graphics.getImageFromFrame(srcBounds.x, srcBounds.y, srcBounds.width, srcBounds.height);
+            if (img == null)
+                return;
+
+			srcX -= srcBounds.x;
+			srcY -= srcBounds.y;
+
+			Graphics2D g = image.createGraphics();
+			try {
+				g.drawImage(img, destX, destY, destX + srcWidth, destY + srcHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
+		}
+		else { 
+			Graphics2D g = image.createGraphics();
+			try {
+				g.drawImage(img, destX, destY, destX + srcWidth, destY + srcHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
+		}
 
 	}
 

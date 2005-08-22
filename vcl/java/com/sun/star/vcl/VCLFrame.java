@@ -68,6 +68,7 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
+import java.awt.event.PaintEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.awt.font.TextHitInfo;
@@ -75,6 +76,7 @@ import java.awt.im.InputContext;
 import java.awt.im.InputMethodRequests;
 import java.awt.image.BufferedImage;
 import java.awt.peer.ComponentPeer;
+import java.lang.reflect.Method;
 import java.text.CharacterIterator;
 import java.text.AttributedCharacterIterator;
 import java.text.AttributedString;
@@ -607,6 +609,21 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private static MouseEvent lastMouseDragEvent = null;
 
 	/**
+	 * The window peer class.
+	 */
+	private static Class windowPeerClass = null;
+
+	/**
+	 * The window peer disable flusing method.
+	 */
+	private static Method windowPeerDisableFlushingMethod = null;
+
+	/**
+	 * The window peer enable flusing method.
+	 */
+	private static Method windowPeerEnableFlushingMethod = null;
+
+	/**
 	 * Find the matching <code>VCLFrame</code> for the specified component.
 	 *
 	 * @param c the component
@@ -632,12 +649,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.DOWN_CYCLE_TRAVERSAL_KEYS, Collections.EMPTY_SET);
 
 		// Load pointer images
-		Toolkit t = Toolkit.getDefaultToolkit();
 		customCursors = new HashMap();
 		BufferedImage img = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB_PRE);
-		Cursor c = t.createCustomCursor(img, new Point(0, 0), "POINTER_NULL");
+		Cursor c = Toolkit.getDefaultToolkit().createCustomCursor(img, new Point(0, 0), "POINTER_NULL");
 		if (c != null)
 			customCursors.put(new Integer(POINTER_NULL), c);
+
+		try {
+			windowPeerClass = Class.forName("apple.awt.CWindow");
+			windowPeerDisableFlushingMethod = windowPeerClass.getMethod("disableFlushing", new Class[0]);
+			windowPeerEnableFlushingMethod = windowPeerClass.getMethod("enableFlushing", new Class[0]);
+		}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
 
 	}
 	
@@ -811,7 +836,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVERESIZE, this, 0));
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_RESIZE, this, 0));
 
 	}
 
@@ -825,7 +850,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVERESIZE, this, 0));
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVE, this, 0));
 
 	}
 
@@ -842,6 +867,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// Add window and panel to mapping
 		VCLFrame.componentMap.put(window, this);
 		VCLFrame.componentMap.put(panel, this);
+
+		Rectangle bounds = new Rectangle(panel.getSize());
+		queue.postCachedEvent(new VCLEvent(new PaintEvent(panel, PaintEvent.UPDATE, bounds), VCLEvent.SALEVENT_PAINT, this, 0));
+
+		// Flush any painting that has already been done
+		flush();
 
 	}
 
@@ -937,7 +968,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void flush() {
 
-		graphics.flush();
+		if (!window.isShowing())
+			return;
+
+		setAutoFlush(true);
+		setAutoFlush(false);
 		Toolkit.getDefaultToolkit().sync();
 
 	}
@@ -966,27 +1001,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
-		if (fullScreenMode) {
-			// Make sure new focus owner is a child window
-			Component c = e.getOppositeComponent();
-			VCLFrame f = VCLFrame.findFrame(c);
-			while (f != null) {
-				if (f == this)
-					break;
-
-				synchronized (f) {
-					Window w = f.getWindow();
-					if (w != null)
-						f = VCLFrame.findFrame(w.getOwner());
-				}
-			}
-
-			if (f == null) {
-				toFront();
-				requestFocus();
-			}
-		}
-				
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
 
 	}
@@ -1248,6 +1262,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * Returns whether or not the frame has been disposed.
+	 *
+	 * @return <code>true</code> if the frame has been disposed otherwise
+	 *  <code>false</code>
+	 */
+	public boolean isDisposed() {
+
+		return disposed;
+
+	}
+
+	/**
 	 * Returns whether or not the native window is a floating window.
 	 *
 	 * @return <code>true</code> if the native window is a floating window
@@ -1265,7 +1291,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @return <code>true</code> if the component is in full screen mode and
 	 *  <code>false</code> if it is in normal mode
 	 */
-	boolean isFullScreenMode() {
+	synchronized boolean isFullScreenMode() {
 
 		return fullScreenMode;
 
@@ -1581,7 +1607,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void setAutoFlush(boolean b) {
 
-		graphics.setAutoFlush(b);
+		ComponentPeer peer = getPeer();
+		if (peer != null) {
+			try {
+				if (b)
+					windowPeerEnableFlushingMethod.invoke(peer, new Object[0]);
+				else
+					windowPeerDisableFlushingMethod.invoke(peer, new Object[0]);
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+		}
 
 	}
 
@@ -1611,7 +1648,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param b <code>true</code> sets this component full screen mode and
 	 *  <code>false</code> sets it to normal mode
 	 */
-	public void setFullScreenMode(boolean b) {
+	public synchronized void setFullScreenMode(boolean b) {
 
 		if (b == fullScreenMode)
 			return;
@@ -1873,17 +1910,21 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			// Show the window
 			window.show();
+			setAutoFlush(false);
 
 			// Reattach any visible children
 			Iterator frames = children.iterator();
 			while (frames.hasNext()) {
 				VCLFrame f = (VCLFrame)frames.next();
 				synchronized (f) {
-					Window w = f.getWindow();
-					if (w.isShowing()) {
-						w.hide();
-						w.removeNotify();
-						w.show();
+					if (!f.isDisposed()) {
+						Window w = f.getWindow();
+						if (w.isShowing()) {
+							w.hide();
+							w.removeNotify();
+							w.show();
+							f.setAutoFlush(false);
+						}
 					}
 				}
 			}
@@ -1904,8 +1945,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void toFront() {
 
-		if (window.isShowing())
+		if (window.isShowing()) {
 			window.toFront();
+			panel.requestFocus();
+		}
 
 	}
 
@@ -1951,11 +1994,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		while (frames.hasNext()) {
 			VCLFrame f = (VCLFrame)frames.next();
 			synchronized (f) {
-				Window w = f.getWindow();
-				if (w != null && w.isShowing()) {
-					w.hide();
-					w.removeNotify();
-					detachedChildren.add(f);
+				if (!f.isDisposed()) {
+					Window w = f.getWindow();
+					if (w.isShowing()) {
+						w.hide();
+						w.removeNotify();
+						detachedChildren.add(f);
+					}
 				}
 			}
 		}
@@ -1969,17 +2014,30 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public synchronized void windowDeiconified(WindowEvent e) {
 
+		if (disposed)
+			return;
+
 		// Reattach any visible children
 		Iterator frames = detachedChildren.iterator();
 		while (frames.hasNext()) {
 			VCLFrame f = (VCLFrame)frames.next();
 			synchronized (f) {
-				Window w = f.getWindow();
-				if (w != null && !w.isShowing())
-					w.show();
+				if (!f.isDisposed()) {
+					Window w = f.getWindow();
+					if (!w.isShowing()) {
+						w.show();
+						f.setAutoFlush(false);
+					}
+				}
 			}
 		}
 		detachedChildren.clear();
+
+		Rectangle bounds = new Rectangle(panel.getSize());
+		queue.postCachedEvent(new VCLEvent(new PaintEvent(panel, PaintEvent.UPDATE, bounds), VCLEvent.SALEVENT_PAINT, this, 0));
+
+		// Flush any painting that has already been done
+		flush();
 
 	}
 
@@ -2085,7 +2143,15 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			enableInputMethods(false);
 
 		}
-		
+
+		/**
+		 * This method performs no painting of the dialog. This method is used
+		 * to prevent Java from painting over what VCL has painted.
+		 *
+		 * @param g the <code>Graphics</code>
+		 */
+		public void paint(Graphics g) {}
+
 		/**
 		 * Set the native dialog to show or hide in full screen mode.
 		 *
@@ -2134,11 +2200,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 *
 		 * @param g the <code>Graphics</code>
 		 */
-		public void update(Graphics g) {
-
-			paint(g);
-
-		}
+		public void update(Graphics g) {}
 
 	}
 
@@ -2210,7 +2272,15 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			enableInputMethods(false);
 
 		}
-		
+
+		/**
+		 * This method performs no painting of the frame. This method is used
+		 * to prevent Java from painting over what VCL has painted.
+		 *
+		 * @param g the <code>Graphics</code>
+		 */
+		public void paint(Graphics g) {}
+
 		/**
 		 * Set the native frame to show or hide in full screen mode.
 		 *
@@ -2259,11 +2329,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 *
 		 * @param g the <code>Graphics</code>
 		 */
-		public void update(Graphics g) {
-
-			paint(g);
-
-		}
+		public void update(Graphics g) {}
 
 	}
 
@@ -2308,13 +2374,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 *
 		 * @param g the <code>Graphics</code>
 		 */
-		public void paint(Graphics g) {
-
-			VCLGraphics graphics = frame.getGraphics();
-			if (graphics != null)
-				graphics.addToFlush();
-
-		}
+		public void paint(Graphics g) {}
 
 		/**
 		 * This method performs no painting of the panel. This method is used
@@ -2322,11 +2382,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 *
 		 * @param g the <code>Graphics</code>
 		 */
-		public void update(Graphics g) {
-
-			paint(g);
-
-		}
+		public void update(Graphics g) {}
 
 	}
 

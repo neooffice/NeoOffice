@@ -227,6 +227,23 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		{
 			if ( pFrame )
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
+			// Check if the window still exists as it may have been deleted
+			// if it was closed
+			bFound = false;
+			if ( pFrame && pFrame->maFrameData.mpProc )
+			{
+				SalData *pSalData = GetSalData();
+				for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+				{
+					if ( pFrame == *it )
+					{
+						bFound = true;
+						break;
+					}
+				}
+			}
+			if ( !bFound )
+				pFrame = NULL;
 			break;
 		}
 		case SALEVENT_ENDEXTTEXTINPUT:
@@ -270,20 +287,49 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_GETFOCUS:
 		{
+			if ( pSalData->mpPresentationFrame && pFrame != pSalData->mpPresentationFrame )
+			{
+				// Make sure document window does not float to front
+				SalFrame *pParent = pFrame;
+				while ( pParent )
+				{
+					if ( pParent == pSalData->mpPresentationFrame )
+						break;
+					pParent = pParent->maFrameData.mpParent;
+				}
+
+				if ( !pParent )
+				{
+					// Reset the focus and don't dispatch the event
+					pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+					pFrame = NULL;
+				}
+			}
+
 			if ( pFrame && pFrame != pSalData->mpFocusFrame )
 			{
 				pSalData->mpFocusFrame = pFrame;
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
 			}
+
 			break;
 		}
 		case SALEVENT_LOSEFOCUS:
 		{
+			if ( pSalData->mpPresentationFrame && pFrame == pSalData->mpPresentationFrame && !pSalData->mpPresentationFrame->maFrameData.maChildren.size() )
+			{
+				// If the presentation frame has no children, reset the focus
+				// and don't dispatch the event
+				pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+				pFrame = NULL;
+			}
+
 			if ( pFrame && pFrame == pSalData->mpFocusFrame )
 			{
 				pSalData->mpFocusFrame = NULL;
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
 			}
+
 			break;
 		}
 		case SALEVENT_KEYINPUT:
@@ -491,18 +537,9 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 	}
 
+	// Flush the window's buffer to the native window
 	if ( pFrame )
-	{
-		// Flush the window's buffer to the native window
-		for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-		{
-			if ( pFrame == *it )
-			{
-				pFrame->Flush();
-				break;
-			}
-		}
-	}
+		pFrame->Flush();
 }
 
 // ----------------------------------------------------------------------------
