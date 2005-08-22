@@ -36,12 +36,51 @@
 #import <Cocoa/Cocoa.h>
 #import "VCLFrame_cocoa.h"
 
+@interface GetNSWindow : NSObject
+{
+	id					mpCWindow;
+	NSWindow*			mpWindow;
+}
+- (void)getNSWindow:(id)pObject;
+- (id)initWithCWindow:(id)pCWindow;
+- (NSWindow *)window;
+@end
+
+@implementation GetNSWindow
+
+- (void)getNSWindow:(id)pObject
+{
+	if ( mpCWindow && [mpCWindow respondsToSelector:@selector(getNSWindow)] )
+		mpWindow = [mpCWindow getNSWindow];
+}
+
+- (id)initWithCWindow:(id)pCWindow
+{
+	[super init];
+
+	mpCWindow = pCWindow;
+	mpWindow = nil;
+
+	return self;
+}
+
+- (NSWindow *)window
+{
+	return mpWindow;
+}
+
+@end
+
 id CWindow_getNSWindow( id pCWindow )
 {
-	if ( pCWindow && [pCWindow respondsToSelector:@selector(getNSWindow)] )
-		return [pCWindow getNSWindow];
-	else
-		return nil;
+	NSWindow *pNSWindow = nil;
+
+	GetNSWindow *pGetNSWindow = [[GetNSWindow alloc] initWithCWindow:pCWindow];
+	[pGetNSWindow performSelectorOnMainThread:@selector(getNSWindow:) withObject:pGetNSWindow waitUntilDone:YES];
+	pNSWindow = [pGetNSWindow window];
+	[pGetNSWindow release];
+
+	return pNSWindow;
 }
 
 WindowRef CWindow_windowRef( id pCWindow )
