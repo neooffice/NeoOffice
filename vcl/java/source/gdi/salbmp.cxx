@@ -207,14 +207,11 @@ BitmapBuffer* SalBitmap::AcquireBuffer( BOOL bReadOnly )
 {
 	BitmapBuffer *pBuffer = new BitmapBuffer();
 
-	// Set buffer values
+	// Set buffer values. Note that the JVM cannot draw 1 bit bitmaps
+	// correctly so we don't use them.
 	pBuffer->mnBitCount = mnBitCount;
 	pBuffer->mnFormat = BMP_FORMAT_TOP_DOWN;
-	if ( mnBitCount <= 1 )
-	{
-		pBuffer->mnFormat |= BMP_FORMAT_1BIT_MSB_PAL;
-	}
-	else if ( mnBitCount <= 4 )
+	if ( mnBitCount <= 4 )
 	{
 		pBuffer->mnFormat |= BMP_FORMAT_4BIT_MSN_PAL;
 	}

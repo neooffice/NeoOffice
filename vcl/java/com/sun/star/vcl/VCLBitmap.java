@@ -67,16 +67,6 @@ import java.awt.image.WritableRaster;
 public final class VCLBitmap {
 
 	/**
-	 * The default 1 bit palette.
-	 */
-	private static int[] default1BitPalette = null;
-
-	/**
-	 * The default 1 bit color model.
-	 */
-	private static IndexColorModel default1BitColorModel = null;
-
-	/**
 	 * The default 4 bit palette.
 	 */
 	private static int[] default4BitPalette = null;
@@ -110,11 +100,6 @@ public final class VCLBitmap {
 	 * Initialize the default palettes and color models.
 	 */
 	static {
-
-		default1BitPalette = new int[2];
-		default1BitPalette[0] = 0xff000000;
-		default1BitPalette[1] = 0xffffffff;
-		default1BitColorModel = new IndexColorModel(1, default1BitPalette.length, default1BitPalette, 0, false, -1, DataBuffer.TYPE_BYTE);
 
 		default4BitPalette = new int[16];
 		for (int i = 0; i < default4BitPalette.length; i++) {
@@ -194,10 +179,9 @@ public final class VCLBitmap {
 		width = w;
 		height = h;
 
-		// Adjust the bit count
-		if (b <= 1)
-			bitCount = 1;
-		else if (b <= 4)
+		// Adjust the bit count. Note that the JVM cannot draw 1 bit bitmaps
+		// correctly so we don't use them.
+		if (b <= 4)
 			bitCount = 4;
 		else if (b <= 8)
 			bitCount = 8;
@@ -211,12 +195,7 @@ public final class VCLBitmap {
 
 		// Set the palette, color model, and sample model
 		SampleModel sampleModel = null;
-		if (bitCount <= 1) {
-			palette = VCLBitmap.default1BitPalette;
-			model = VCLBitmap.default1BitColorModel;
-			sampleModel = new MultiPixelPackedSampleModel(DataBuffer.TYPE_BYTE, width, height, bitCount, scanline, 0);
-		}
-		else if (bitCount <= 4) {
+		if (bitCount <= 4) {
 			palette = VCLBitmap.default4BitPalette;
 			model = VCLBitmap.default4BitColorModel;
 			sampleModel = new MultiPixelPackedSampleModel(DataBuffer.TYPE_BYTE, width, height, bitCount, scanline, 0);

@@ -98,10 +98,9 @@ public final class VCLImage {
 	 */
 	VCLImage(int w, int h, int b, VCLPageFormat p) {
 
-		// Adjust bit count
-		if (b <= 1)
-			bitCount = 1;
-		else if (b <= 4)
+		// Adjust the bit count. Note that the JVM cannot draw 1 bit bitmaps
+		// correctly so we don't use them.
+		if (b <= 4)
 			bitCount = 4;
 		else if (b <= 8)
 			bitCount = 8;

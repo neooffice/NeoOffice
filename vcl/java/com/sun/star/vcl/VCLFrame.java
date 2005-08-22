@@ -781,9 +781,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		panel = new VCLFrame.NoPaintPanel(this);
 		window.add(panel);
 		bitCount = panel.getColorModel().getPixelSize();
-		if (bitCount <= 1)
-			bitCount = 1;
-		else if (bitCount <= 4)
+		if (bitCount <= 4)
 			bitCount = 4;
 		else if (bitCount <= 8)
 			bitCount = 8;
