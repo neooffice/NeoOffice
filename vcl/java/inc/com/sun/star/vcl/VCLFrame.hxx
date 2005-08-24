@@ -64,7 +64,6 @@ public:
 	void				addChild( SalFrame *_par0 );
 	void				dispose();
 	void				endComposition();
-	void				flush();
 	const Rectangle		getBounds();
 	ULONG				getCurrentModButtons();
 	com_sun_star_vcl_VCLGraphics*	getGraphics();
@@ -83,6 +82,7 @@ public:
 	void				setState( ULONG _par0 );
 	void				setTitle( ::rtl::OUString _par0 );
 	void				setVisible( sal_Bool _par0, sal_Bool _par1 );
+	void				sync();
 	void				toFront();
 };
 

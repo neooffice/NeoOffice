@@ -552,7 +552,6 @@ void SalInstance::AcquireYieldMutex( ULONG nCount )
 void SalInstance::Yield( BOOL bWait )
 {
 	static USHORT nRecursionLevel = 0;
-	static com_sun_star_vcl_VCLEvent *pPendingEvent = NULL;
 	SalData *pSalData = GetSalData();
 	com_sun_star_vcl_VCLEvent *pEvent;
 
@@ -615,11 +614,6 @@ void SalInstance::Yield( BOOL bWait )
 			gettimeofday( &pSalData->maTimeout, NULL );
 			pSalData->maTimeout += pSalData->mnTimerInterval;
 			pSalData->mpTimerProc();
-
-			// Flush all of the window buffers to the native windows and
-			// synchronize native menus
-			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-				(*it)->Flush();
 		}
 	}
 
@@ -642,44 +636,20 @@ void SalInstance::Yield( BOOL bWait )
 	}
 
 	// Dispatch pending AWT events
-	if ( pPendingEvent )
-	{
-		pEvent = pPendingEvent;
-		pPendingEvent = NULL;
-	}
 	nCount = ReleaseYieldMutex();
-	if ( !pEvent )
-		pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE );
-	AcquireYieldMutex( nCount );
-	if ( pEvent )
+
+	while ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
 	{
-		USHORT nID = pEvent->getID();
+		maInstData.mpSalYieldMutex->acquire();
 		pEvent->dispatch();
 		delete pEvent;
-
-		// We cannot avoid bug 437 if we allow the timer to run between
-		// consecutive mouse button down and up events
-		if ( nID == SALEVENT_MOUSEBUTTONDOWN )
-		{
-			pEvent = pSalData->mpEventQueue->getNextCachedEvent( 0, TRUE );
-			if ( pEvent )
-			{
-				if ( pEvent->getID() == SALEVENT_MOUSEBUTTONUP )
-				{
-					pEvent->dispatch();
-					delete pEvent;
-				}
-				else
-				{
-					// Dispatch it the next time through
-					pPendingEvent = pEvent;
-				}
-			}
-		}
+		maInstData.mpSalYieldMutex->release();
 	}
 
+	AcquireYieldMutex( nCount );
+
 	// Allow Carbon event loop to proceed
-	if ( !pEvent && !pSalData->maNativeEventCondition.check() )
+	if ( !pSalData->maNativeEventCondition.check() )
 	{
 		pSalData->mbNativeEventSucceeded = true;
 		pSalData->maNativeEventCondition.set();

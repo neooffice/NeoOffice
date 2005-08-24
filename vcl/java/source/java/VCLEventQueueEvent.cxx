@@ -57,14 +57,11 @@
 #include <salmenu.hxx>
 #endif
 
-#ifdef MACOSX
-
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 
-#endif	// MACOSX
-
+using namespace rtl;
 using namespace vcl;
 using namespace vos;
 
@@ -227,23 +224,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		{
 			if ( pFrame )
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
-			// Check if the window still exists as it may have been deleted
-			// if it was closed
-			bFound = false;
-			if ( pFrame && pFrame->maFrameData.mpProc )
-			{
-				SalData *pSalData = GetSalData();
-				for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-				{
-					if ( pFrame == *it )
-					{
-						bFound = true;
-						break;
-					}
-				}
-			}
-			if ( !bFound )
-				pFrame = NULL;
 			break;
 		}
 		case SALEVENT_ENDEXTTEXTINPUT:
@@ -418,15 +398,18 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			if ( pFrame )
 			{
 				Size aOldSize( pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight );
+
 				if ( !pPosSize )
 				{
 					// Update size
 					pPosSize = new Rectangle( getBounds() );
 				}
+
 				pFrame->maGeometry.nX = pPosSize->nLeft + pFrame->maGeometry.nLeftDecoration;
 				pFrame->maGeometry.nY = pPosSize->nTop + pFrame->maGeometry.nTopDecoration;
 				pFrame->maGeometry.nWidth = pPosSize->GetWidth() - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration;
 				pFrame->maGeometry.nHeight = pPosSize->GetHeight() - pFrame->maGeometry.nTopDecoration - pFrame->maGeometry.nBottomDecoration;
+
 				// Reset graphics if the size has changed before dispatching
 				if ( pFrame->maGeometry.nWidth != aOldSize.Width() || pFrame->maGeometry.nHeight != aOldSize.Height() )
 				{
@@ -437,17 +420,22 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 						delete pVCLGraphics;
 					}
 				}
-				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
-				// Invoke a paint event. Note that we repaint even if the size
-				// is the same as it may be due to the window being reset to
-				// the minimum client size.
-				SalPaintEvent *pPaintEvent = new SalPaintEvent();
-				pPaintEvent->mnBoundX = 0;
-				pPaintEvent->mnBoundY = 0;
-				pPaintEvent->mnBoundWidth = pFrame->maGeometry.nWidth;
-				pPaintEvent->mnBoundHeight = pFrame->maGeometry.nHeight;
-				com_sun_star_vcl_VCLEvent aVCLPaintEvent( SALEVENT_PAINT, pFrame, (void *)pPaintEvent );
-				pSalData->mpEventQueue->postCachedEvent( &aVCLPaintEvent );
+
+				// Always post a SALEVENT_MOVERESIZE event to ensure that we
+				// are in sync with the Java bounds
+				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, SALEVENT_MOVERESIZE, NULL );
+
+				// Invoke a paint event if the size has changed
+				if ( pFrame->maGeometry.nWidth != aOldSize.Width() || pFrame->maGeometry.nHeight != aOldSize.Height() )
+				{
+					SalPaintEvent *pPaintEvent = new SalPaintEvent();
+					pPaintEvent->mnBoundX = 0;
+					pPaintEvent->mnBoundY = 0;
+					pPaintEvent->mnBoundWidth = pFrame->maGeometry.nWidth;
+					pPaintEvent->mnBoundHeight = pFrame->maGeometry.nHeight;
+					com_sun_star_vcl_VCLEvent aVCLPaintEvent( SALEVENT_PAINT, pFrame, (void *)pPaintEvent );
+					pSalData->mpEventQueue->postCachedEvent( &aVCLPaintEvent );
+				}
 			}
 			if ( pPosSize )
 				delete pPosSize;
@@ -536,10 +524,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			break;
 		}
 	}
-
-	// Flush the window's buffer to the native window
-	if ( pFrame )
-		pFrame->Flush();
 }
 
 // ----------------------------------------------------------------------------
@@ -773,10 +757,10 @@ USHORT com_sun_star_vcl_VCLEvent::getModifiers()
 
 // ----------------------------------------------------------------------------
 
-::rtl::OUString com_sun_star_vcl_VCLEvent::getPath()
+OUString com_sun_star_vcl_VCLEvent::getPath()
 {
 	static jmethodID mID = NULL;
-	::rtl::OUString out;
+	OUString out;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
@@ -819,10 +803,10 @@ USHORT com_sun_star_vcl_VCLEvent::getRepeatCount()
 
 // ----------------------------------------------------------------------------
 
-::rtl::OUString com_sun_star_vcl_VCLEvent::getText()
+OUString com_sun_star_vcl_VCLEvent::getText()
 {
 	static jmethodID mID = NULL;
-	::rtl::OUString out;
+	OUString out;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{

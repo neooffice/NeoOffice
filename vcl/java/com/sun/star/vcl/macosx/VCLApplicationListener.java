@@ -42,6 +42,8 @@ import com.apple.eawt.Application;
 import com.apple.eawt.ApplicationEvent;
 import com.apple.eawt.ApplicationListener;
 
+import java.io.File;
+
 /** 
  * A Java class that implements the <code>ApplicationListener</code> interface.
  * <p>
@@ -98,7 +100,9 @@ public class VCLApplicationListener implements ApplicationListener {
 	 */
 	public void handleOpenFile(ApplicationEvent event) {
 
-		queue.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_OPENDOCUMENT, null, 0, event.getFilename()));
+		File file = new File(event.getFilename());
+		if (file.exists() && !file.isDirectory())
+			queue.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_OPENDOCUMENT, null, 0, file.getAbsolutePath()));
 		event.setHandled(true);
 
 	}
@@ -122,7 +126,9 @@ public class VCLApplicationListener implements ApplicationListener {
 	 */
 	public void handlePrintFile(ApplicationEvent event) {
 
-		queue.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_PRINTDOCUMENT, null, 0, event.getFilename()));
+		File file = new File(event.getFilename());
+		if (file.exists() && !file.isDirectory())
+			queue.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_PRINTDOCUMENT, null, 0, file.getAbsolutePath()));
 		event.setHandled(true);
 
 	}

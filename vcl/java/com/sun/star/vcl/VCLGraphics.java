@@ -293,11 +293,6 @@ public final class VCLGraphics {
 	}
 
 	/**
-	 * The auto flush flag.
-	 */
-	private boolean autoFlush = false;
-
-	/**
 	 * The cached bit count.
 	 */
 	private int bitCount = 0;
@@ -545,11 +540,6 @@ public final class VCLGraphics {
 		}
 		g.dispose();
 
-		// Flush bitmaps to the screen when in auto flush mode so that the
-		// hourglass in the presentation window shows
-		if (autoFlush && frame != null && image == null)
-			frame.flush();
-
 	}
 
 	/**
@@ -606,11 +596,6 @@ public final class VCLGraphics {
 		g.dispose();
 
 		mergedImage.dispose();
-
-		// Flush bitmaps to the screen when in auto flush mode so that the
-		// hourglass in the presentation window shows
-		if (autoFlush && frame != null && image == null)
-			frame.flush();
 
 	}
 
@@ -783,11 +768,6 @@ public final class VCLGraphics {
 			t.printStackTrace();
 		}
 		g.dispose();
-
-		// Flush bitmaps to the screen when in auto flush mode so that the
-		// hourglass in the presentation window shows
-		if (autoFlush && frame != null && image == null)
-			frame.flush();
 
 	}
 
@@ -1331,17 +1311,6 @@ public final class VCLGraphics {
 			resetClipRegion();
 		}
 
-	}
-
-	/**
-	 * Set the auto flush flag.
-	 *
-	 * @param b the auto flush flag
-	 */
-	void setAutoFlush(boolean b) {
- 
-		autoFlush = b;
- 
 	}
 
 	/**

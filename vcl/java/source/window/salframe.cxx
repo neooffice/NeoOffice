@@ -566,14 +566,14 @@ void SalFrame::SetPointerPos( long nX, long nY )
 
 void SalFrame::Flush()
 {
-	maFrameData.mpVCLFrame->flush();
+	maFrameData.mpVCLFrame->sync();
 }
 
 // -----------------------------------------------------------------------
 
 void SalFrame::Sync()
 {
-	maFrameData.mpVCLFrame->flush();
+	maFrameData.mpVCLFrame->sync();
 }
 
 // -----------------------------------------------------------------------

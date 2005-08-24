@@ -163,25 +163,6 @@ void com_sun_star_vcl_VCLFrame::endComposition()
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLFrame::flush()
-{
-	static jmethodID mID = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()V";
-			mID = t.pEnv->GetMethodID( getMyClass(), "flush", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
-	}
-}
-
-// ----------------------------------------------------------------------------
-
 const Rectangle com_sun_star_vcl_VCLFrame::getBounds()
 {
 	static jmethodID mID = NULL;
@@ -684,6 +665,25 @@ void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0, sal_Bool _par1 )
 			args[1].z = jboolean( _par1 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLFrame::sync()
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "sync", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 	}
 }
 

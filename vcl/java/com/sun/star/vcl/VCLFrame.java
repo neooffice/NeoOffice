@@ -655,15 +655,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (c != null)
 			customCursors.put(new Integer(POINTER_NULL), c);
 
-		try {
-			windowPeerClass = Class.forName("apple.awt.CWindow");
-			windowPeerDisableFlushingMethod = windowPeerClass.getMethod("disableFlushing", new Class[0]);
-			windowPeerEnableFlushingMethod = windowPeerClass.getMethod("enableFlushing", new Class[0]);
-		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-
 	}
 	
 	/**
@@ -869,9 +860,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		Rectangle bounds = new Rectangle(panel.getSize());
 		queue.postCachedEvent(new VCLEvent(new PaintEvent(panel, PaintEvent.UPDATE, bounds), VCLEvent.SALEVENT_PAINT, this, 0));
 
-		// Flush any painting that has already been done
-		flush();
-
 	}
 
 	/**
@@ -958,43 +946,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		InputContext ic = window.getInputContext();
 		if (ic != null)
 			ic.endComposition();
-
-	}
-
-	/**
-	 * Enables or disables flushing to the native window.
-	 *
-	 * @param b <code>true</code> to enable flushing and <code>false</code>
-	 *  to disable flushing
-	 */
-	void enableFlushing(boolean b) {
-
-		ComponentPeer peer = getPeer();
-		if (peer != null && windowPeerClass.isAssignableFrom(peer.getClass())) {
-			try {
-				if (b && windowPeerEnableFlushingMethod != null)
-					windowPeerEnableFlushingMethod.invoke(peer, new Object[0]);
-				else if (!b && windowPeerDisableFlushingMethod != null)
-					windowPeerDisableFlushingMethod.invoke(peer, new Object[0]);
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-		}
-
-	}
-
-	/**
-	 * Flushes the native window.
-	 */
-	public void flush() {
-
-		if (!window.isShowing())
-			return;
-
-		enableFlushing(true);
-		enableFlushing(false);
-		Toolkit.getDefaultToolkit().sync();
 
 	}
 
@@ -1659,8 +1610,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else if (window instanceof VCLFrame.NoPaintFrame)
 			((VCLFrame.NoPaintFrame)window).setFullScreenMode(fullScreenMode);
 
-		graphics.setAutoFlush(fullScreenMode);
-
 	}
 
 	/**
@@ -1911,7 +1860,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			// Show the window
 			window.show();
-			enableFlushing(false);
 
 			// Reattach any visible children
 			Iterator frames = children.iterator();
@@ -1924,7 +1872,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 							w.hide();
 							w.removeNotify();
 							w.show();
-							f.enableFlushing(false);
 						}
 					}
 				}
@@ -1938,6 +1885,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			window.hide();
 			window.removeNotify();
 		}
+
+	}
+
+	/**
+	 * Syncs the native window.
+	 */
+	public void sync() {
+
+		if (!window.isShowing())
+			return;
+
+		Toolkit.getDefaultToolkit().sync();
 
 	}
 
@@ -2025,10 +1984,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			synchronized (f) {
 				if (!f.isDisposed()) {
 					Window w = f.getWindow();
-					if (!w.isShowing()) {
+					if (!w.isShowing())
 						w.show();
-						f.enableFlushing(false);
-					}
 				}
 			}
 		}
@@ -2036,9 +1993,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		Rectangle bounds = new Rectangle(panel.getSize());
 		queue.postCachedEvent(new VCLEvent(new PaintEvent(panel, PaintEvent.UPDATE, bounds), VCLEvent.SALEVENT_PAINT, this, 0));
-
-		// Flush any painting that has already been done
-		flush();
 
 	}
 
