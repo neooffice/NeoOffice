@@ -1130,21 +1130,6 @@ public final class VCLEvent extends AWTEvent {
 	}
 
 	/**
-	 * Returns the rectangle representing the bounds of the component if
-	 * this source event is a <code>ComponentEvent</code>.
-	 *
-	 * @return the bounding rectangle of the component
-	 */
-	public Rectangle getBounds() {
-
-		if (source instanceof ComponentEvent)
-			return ((ComponentEvent)source).getComponent().getBounds();
-		else
-			return new Rectangle();
-
-	}
-
-	/**
 	 * Returns the number of committed characters in the text associated with
 	 * this event.
 	 *

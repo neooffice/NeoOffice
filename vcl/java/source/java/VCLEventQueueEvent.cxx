@@ -397,45 +397,24 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			Rectangle *pPosSize = (Rectangle *)pData;
 			if ( pFrame )
 			{
-				Size aOldSize( pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight );
-
+				// Update size
 				if ( !pPosSize )
-				{
-					// Update size
-					pPosSize = new Rectangle( getBounds() );
-				}
+					pPosSize = new Rectangle( pFrame->maFrameData.mpVCLFrame->getBounds() );
 
 				pFrame->maGeometry.nX = pPosSize->nLeft + pFrame->maGeometry.nLeftDecoration;
 				pFrame->maGeometry.nY = pPosSize->nTop + pFrame->maGeometry.nTopDecoration;
 				pFrame->maGeometry.nWidth = pPosSize->GetWidth() - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration;
 				pFrame->maGeometry.nHeight = pPosSize->GetHeight() - pFrame->maGeometry.nTopDecoration - pFrame->maGeometry.nBottomDecoration;
 
-				// Reset graphics if the size has changed before dispatching
-				if ( pFrame->maGeometry.nWidth != aOldSize.Width() || pFrame->maGeometry.nHeight != aOldSize.Height() )
+				// Reset graphics
+				com_sun_star_vcl_VCLGraphics *pVCLGraphics = pFrame->maFrameData.mpVCLFrame->getGraphics();
+				if ( pVCLGraphics )
 				{
-					com_sun_star_vcl_VCLGraphics *pVCLGraphics = pFrame->maFrameData.mpVCLFrame->getGraphics();
-					if ( pVCLGraphics )
-					{
-						pVCLGraphics->resetGraphics();
-						delete pVCLGraphics;
-					}
+					pVCLGraphics->resetGraphics();
+					delete pVCLGraphics;
 				}
 
-				// Always post a SALEVENT_MOVERESIZE event to ensure that we
-				// are in sync with the Java bounds
-				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, SALEVENT_MOVERESIZE, NULL );
-
-				// Invoke a paint event if the size has changed
-				if ( pFrame->maGeometry.nWidth != aOldSize.Width() || pFrame->maGeometry.nHeight != aOldSize.Height() )
-				{
-					SalPaintEvent *pPaintEvent = new SalPaintEvent();
-					pPaintEvent->mnBoundX = 0;
-					pPaintEvent->mnBoundY = 0;
-					pPaintEvent->mnBoundWidth = pFrame->maGeometry.nWidth;
-					pPaintEvent->mnBoundHeight = pFrame->maGeometry.nHeight;
-					com_sun_star_vcl_VCLEvent aVCLPaintEvent( SALEVENT_PAINT, pFrame, (void *)pPaintEvent );
-					pSalData->mpEventQueue->postCachedEvent( &aVCLPaintEvent );
-				}
+				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
 			}
 			if ( pPosSize )
 				delete pPosSize;
@@ -446,6 +425,11 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			SalPaintEvent *pPaintEvent = (SalPaintEvent *)pData;
 			if ( pFrame )
 			{
+				// Post a resize event as the JVM will change the size of the
+				// frame if it is smaller than the allowed minimum
+				com_sun_star_vcl_VCLEvent aEvent( SALEVENT_RESIZE, pFrame, NULL );
+				aEvent.dispatch();
+
 				if ( !pPaintEvent )
 				{
 					// Get paint region
@@ -459,6 +443,15 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				// Adjust position for RTL layout
 				if ( Application::GetSettings().GetLayoutRTL() )
 					pPaintEvent->mnBoundX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pPaintEvent->mnBoundWidth - pPaintEvent->mnBoundX;
+
+				// Reset graphics
+				com_sun_star_vcl_VCLGraphics *pVCLGraphics = pFrame->maFrameData.mpVCLFrame->getGraphics();
+				if ( pVCLGraphics )
+				{
+					pVCLGraphics->resetGraphics();
+					delete pVCLGraphics;
+				}
+
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pPaintEvent );
 			}
 			if ( pPaintEvent )
@@ -524,67 +517,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			break;
 		}
 	}
-}
-
-// ----------------------------------------------------------------------------
-
-const Rectangle com_sun_star_vcl_VCLEvent::getBounds()
-{
-	static jmethodID mID = NULL;
-	static jfieldID fIDX = NULL;
-	static jfieldID fIDY = NULL;
-	static jfieldID fIDWidth = NULL;
-	static jfieldID fIDHeight = NULL;
-	Rectangle out( Point( 0, 0 ), Size( 0, 0 ) );
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()Ljava/awt/Rectangle;";
-			mID = t.pEnv->GetMethodID( getMyClass(), "getBounds", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
-			if ( tempObj )
-			{
-				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
-				if ( !fIDX )
-				{
-					char *cSignature = "I";
-					fIDX = t.pEnv->GetFieldID( tempObjClass, "x", cSignature );
-				}
-				OSL_ENSURE( fIDX, "Unknown field id!" );
-				if ( !fIDY )
-				{
-					char *cSignature = "I";
-					fIDY = t.pEnv->GetFieldID( tempObjClass, "y", cSignature );
-				}
-				OSL_ENSURE( fIDY, "Unknown field id!" );
-				if ( !fIDWidth )
-				{
-					char *cSignature = "I";
-					fIDWidth = t.pEnv->GetFieldID( tempObjClass, "width", cSignature );
-				}
-				OSL_ENSURE( fIDWidth, "Unknown field id!" );
-				if ( !fIDHeight )
-				{
-					char *cSignature = "I";
-					fIDHeight = t.pEnv->GetFieldID( tempObjClass, "height", cSignature );
-				}
-				OSL_ENSURE( fIDHeight, "Unknown field id!" );
-				if ( fIDX && fIDY && fIDWidth && fIDHeight )
-				{
-					Point aPoint( (long)t.pEnv->GetIntField( tempObj, fIDX ), (long)t.pEnv->GetIntField( tempObj, fIDY ) );
-					Size aSize( (long)t.pEnv->GetIntField( tempObj, fIDWidth ), (long)t.pEnv->GetIntField( tempObj, fIDHeight ) );
-					out = Rectangle( aPoint, aSize );
-				}
-			}
-		}
-	}
-	return out;
 }
 
 // ----------------------------------------------------------------------------

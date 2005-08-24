@@ -197,16 +197,20 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible, bNoActivate );
 
-	// Reset graphics
-	com_sun_star_vcl_VCLGraphics *pVCLGraphics = maFrameData.mpVCLFrame->getGraphics();
-	if ( pVCLGraphics )
-	{
-		pVCLGraphics->resetGraphics();
-		delete pVCLGraphics;
-	}
-
 	if ( maFrameData.mbVisible )
 	{
+		// Reset graphics only for splash screen. All other windows are reset
+		// in the first paint event
+		if ( !ImplGetSVData()->maAppData.mbInAppExecute )
+		{
+			com_sun_star_vcl_VCLGraphics *pVCLGraphics = maFrameData.mpVCLFrame->getGraphics();
+			if ( pVCLGraphics )
+			{
+				pVCLGraphics->resetGraphics();
+				delete pVCLGraphics;
+			}
+		}
+
 		// Get native window since it won't be created until first shown
 		maFrameData.maSysData.aWindow = (long)maFrameData.mpVCLFrame->getNativeWindow();
 
@@ -222,19 +226,17 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 		// Make a pass through the native menus to speed up later updates
 		UpdateMenusForFrame( this, NULL );
-
-		Rectangle aBounds( maFrameData.mpVCLFrame->getBounds() );
-		if ( aBounds.GetWidth() != maGeometry.nWidth || aBounds.GetHeight() != maGeometry.nHeight )
-		{
-			// Update the bounds as they may have changed since the JVM's
-			// minimum window size may be larger than what VCL expects
-			Rectangle *pBounds = new Rectangle( aBounds );
-			com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pBounds );
-			pSalData->mpEventQueue->postCachedEvent( &aEvent );
-		}
 	}
 	else
 	{
+		// Reset graphics
+		com_sun_star_vcl_VCLGraphics *pVCLGraphics = maFrameData.mpVCLFrame->getGraphics();
+		if ( pVCLGraphics )
+		{
+			pVCLGraphics->resetGraphics();
+			delete pVCLGraphics;
+		}
+
 		// Remove the native window since it is destroyed when hidden
 		maFrameData.maSysData.aWindow = 0;
 
@@ -353,8 +355,7 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	maFrameData.mpVCLFrame->setBounds( nX, nY, nWidth, nHeight );
 
 	// Update the cached position
-	Rectangle *pBounds = new Rectangle( maFrameData.mpVCLFrame->getBounds() );
-	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pBounds );
+	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, NULL );
 	aEvent.dispatch();
 }
 

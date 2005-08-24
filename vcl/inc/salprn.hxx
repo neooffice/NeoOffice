@@ -175,7 +175,6 @@ public:
 	ULONG					GetErrorCode();
 #ifdef USE_JAVA
 	XubString				GetPageRange();
-	void					SetResolution( long nDPIX, long nDPIY );
 #endif	// USE_JAVA
 };
 

@@ -70,7 +70,6 @@ public:
 	virtual				~com_sun_star_vcl_VCLEvent() {};
 
 	void				dispatch();
-	const Rectangle		getBounds();
 	ULONG				getCommittedCharacterCount();
 	ULONG				getCursorPosition();
 	void*				getData();

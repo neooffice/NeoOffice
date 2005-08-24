@@ -350,14 +350,6 @@ XubString SalPrinter::GetPageRange()
 	return maPrinterData.mpVCLPrintJob->getPageRange();
 }
 
-// -----------------------------------------------------------------------
-
-void SalPrinter::SetResolution( long nDPIX, long nDPIY )
-{
-	if ( maPrinterData.mpVCLPageFormat )
-		maPrinterData.mpVCLPageFormat->setPageResolution( nDPIX, nDPIY );
-}
-
 // =======================================================================
 
 SalPrinterData::SalPrinterData()

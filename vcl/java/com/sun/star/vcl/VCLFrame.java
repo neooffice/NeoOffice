@@ -857,9 +857,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		VCLFrame.componentMap.put(window, this);
 		VCLFrame.componentMap.put(panel, this);
 
-		Rectangle bounds = new Rectangle(panel.getSize());
-		queue.postCachedEvent(new VCLEvent(new PaintEvent(panel, PaintEvent.UPDATE, bounds), VCLEvent.SALEVENT_PAINT, this, 0));
-
 	}
 
 	/**
@@ -1510,6 +1507,16 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
     }
 
 	/**
+	 * Post a paint event.
+	 */
+	synchronized void paint() {
+
+		Rectangle bounds = new Rectangle(panel.getSize());
+		queue.postCachedEvent(new VCLEvent(new PaintEvent(panel, PaintEvent.UPDATE, bounds), VCLEvent.SALEVENT_PAINT, this, 0));
+
+	}
+
+	/**
 	 * Returns a <code>MouseEvent</code> for the topmost floating window above
 	 * the specified <code>MouseEvent</code>.
 	 *
@@ -1991,8 +1998,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 		detachedChildren.clear();
 
-		Rectangle bounds = new Rectangle(panel.getSize());
-		queue.postCachedEvent(new VCLEvent(new PaintEvent(panel, PaintEvent.UPDATE, bounds), VCLEvent.SALEVENT_PAINT, this, 0));
+		paint();
 
 	}
 
@@ -2329,7 +2335,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 *
 		 * @param g the <code>Graphics</code>
 		 */
-		public void paint(Graphics g) {}
+		public void paint(Graphics g) {
+
+			frame.paint();
+
+		}
 
 		/**
 		 * This method performs no painting of the panel. This method is used
@@ -2337,7 +2347,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 *
 		 * @param g the <code>Graphics</code>
 		 */
-		public void update(Graphics g) {}
+		public void update(Graphics g) {
+
+			paint(g);
+
+		}
 
 	}
 
