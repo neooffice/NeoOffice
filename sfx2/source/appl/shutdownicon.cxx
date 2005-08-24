@@ -643,49 +643,52 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 
 				SvtModuleOptions aModuleOptions;
 
-				int nCount = 0;
+				int nItems = 0;
 				MenuCommand aIDs[ 7 ];
 				CFStringRef aStrings[ 7 ];
 				OUString aDesc;
 				if ( aModuleOptions.IsWriter() )
 				{
-					aIDs[ nCount ] = WRITER_COMMAND_ID;
+					aIDs[ nItems ] = WRITER_COMMAND_ID;
 					aDesc = GetUrlDescription( OUString::createFromAscii( WRITER_URL ) );
-					aStrings[ nCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
 				}
 				if ( aModuleOptions.IsCalc() )
 				{
-					aIDs[ nCount ] = CALC_COMMAND_ID;
+					aIDs[ nItems ] = CALC_COMMAND_ID;
 					aDesc = GetUrlDescription( OUString::createFromAscii( CALC_URL ) );
-					aStrings[ nCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
 				}
 				if ( aModuleOptions.IsImpress() )
 				{
-					aIDs[ nCount ] = IMPRESS_COMMAND_ID;
+					aIDs[ nItems ] = IMPRESS_COMMAND_ID;
 					aDesc = GetUrlDescription( OUString::createFromAscii( IMPRESS_URL ) );
-					aStrings[ nCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
 				}
 				if ( aModuleOptions.IsDraw() )
 				{
-					aIDs[ nCount ] = DRAW_COMMAND_ID;
+					aIDs[ nItems ] = DRAW_COMMAND_ID;
 					aDesc = GetUrlDescription( OUString::createFromAscii( DRAW_URL ) );
-					aStrings[ nCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
 				}
 				if ( aModuleOptions.IsMath() )
 				{
-					aIDs[ nCount ] = MATH_COMMAND_ID;
+					aIDs[ nItems ] = MATH_COMMAND_ID;
 					aDesc = GetUrlDescription( OUString::createFromAscii( MATH_URL ) );
-					aStrings[ nCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
 				}
-				aIDs[ nCount ] = FROMTEMPLATE_COMMAND_ID;
+				aIDs[ nItems ] = FROMTEMPLATE_COMMAND_ID;
 				aDesc = GetResString( STR_QUICKSTART_FROMTEMPLATE );
-				aStrings[ nCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
-				aIDs[ nCount ] = FILEOPEN_COMMAND_ID;
+				aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+				aIDs[ nItems ] = FILEOPEN_COMMAND_ID;
 				aDesc = GetResString( STR_QUICKSTART_FILEOPEN );
-				aStrings[ nCount++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+				aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
 
-				AddQuickstartMenuItems( nCount, aIDs, aStrings );
-				for ( int i = 0; i < nCount; i++ )
+				ULONG nCount = Application::ReleaseSolarMutex();
+				AddQuickstartMenuItems( nItems, aIDs, aStrings );
+				Application::AcquireSolarMutex( nCount );
+
+				for ( int i = 0; i < nItems; i++ )
 					CFRelease( aStrings[ i ] );
 #endif
 			}

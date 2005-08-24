@@ -379,7 +379,11 @@ void *com_sun_star_vcl_VCLFrame::getNativeWindow()
 					}
 					OSL_ENSURE( mIDGetModelPtr, "Unknown field id!" );
 					if ( mIDGetModelPtr )
+					{
+						ULONG nCount = Application::ReleaseSolarMutex();
 						out = (void *)CWindow_windowRef( t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr ) );
+						Application::AcquireSolarMutex( nCount );
+					}
 				}
 			}
 			delete peer;

@@ -363,7 +363,10 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 void SalFrame::GetWorkArea( Rectangle &rRect )
 {
 	rRect = maFrameData.mpVCLFrame->getBounds();
+
+	ULONG nCount = Application::ReleaseSolarMutex();
 	NSScreen_getScreenBounds( &rRect.nLeft, &rRect.nTop, &rRect.nRight, &rRect.nBottom, maFrameData.mbPresentation ? TRUE : FALSE );
+	Application::AcquireSolarMutex( nCount );
 }
 
 // -----------------------------------------------------------------------
