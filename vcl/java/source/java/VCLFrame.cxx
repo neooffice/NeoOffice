@@ -372,16 +372,31 @@ void *com_sun_star_vcl_VCLFrame::getNativeWindow()
 				if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
 				{
 					static jmethodID mIDGetModelPtr = NULL;
+					static bool bReturnsInt = false;
 					if ( !mIDGetModelPtr )
 					{
 						char *cSignature = "()J";
 						mIDGetModelPtr = t.pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
+						if ( !mIDGetModelPtr )
+						{
+							// Java 1.4.1 has a different signature so check
+							// for it if we cannot find the first signature
+							if ( t.pEnv->ExceptionCheck() )
+								t.pEnv->ExceptionClear();
+							char *cSignature = "()I";
+							mIDGetModelPtr = t.pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
+							if ( mIDGetModelPtr )
+								bReturnsInt = true;
+						}
 					}
 					OSL_ENSURE( mIDGetModelPtr, "Unknown field id!" );
 					if ( mIDGetModelPtr )
 					{
 						ULONG nCount = Application::ReleaseSolarMutex();
-						out = (void *)CWindow_windowRef( t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr ) );
+						if ( bReturnsInt )
+							out = (void *)CWindow_windowRef( t.pEnv->CallIntMethod( tempObj, mIDGetModelPtr ) );
+						else
+							out = (void *)CWindow_windowRef( t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr ) );
 						Application::AcquireSolarMutex( nCount );
 					}
 				}
