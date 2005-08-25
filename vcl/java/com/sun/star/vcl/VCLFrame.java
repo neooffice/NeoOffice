@@ -2329,44 +2329,4 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 	}
 
-	/**
-	 * A class that can be used as an owner for a <code>Window</code> that can
-	 * fake being displayed when the <code>Window</code> is in full screen
-	 * mode. Display of the owner must be faked in order for a
-	 * <code>Window</code> to be able to obtain focus.
-	 */
-	final class NoDisplayFrame extends Frame {
-
-		/**
-		 * The <code>VCLFrame</code>.
-		 */
-		private VCLFrame frame = null;
-
-		/**
-		 * Constructs a new <code>VCLFrame.NoDisplayFrame</code> instance.
-		 *
-		 * @param f the <code>VCLFrame</code>
-		 */
-		NoDisplayFrame(VCLFrame f) {
-
-			frame = f;
-			enableInputMethods(false);
-			setSize(1, 1);
-
-		}
-
-		/**
-		 * Returns whether or not this component is showing.
-		 *
-		 * @return <code>true</code> if this component is in full screen mode
-		 *  otherwise <code>false</code>.
-		 */
-		public boolean isShowing() {
-
-			return frame.isFullScreenMode();
-
-		}
-
-	}
-
 }
