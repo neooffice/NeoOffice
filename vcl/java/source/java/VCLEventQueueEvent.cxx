@@ -296,12 +296,25 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_LOSEFOCUS:
 		{
-			if ( pSalData->mpPresentationFrame && pFrame == pSalData->mpPresentationFrame && !pSalData->mpPresentationFrame->maFrameData.maChildren.size() )
+			if ( pSalData->mpPresentationFrame && pFrame == pSalData->mpPresentationFrame )
 			{
-				// If the presentation frame has no children, reset the focus
-				// and don't dispatch the event
-				pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
-				pFrame = NULL;
+				// If the presentation frame has no visible children, reset the
+				// focus and don't dispatch the event
+				bool bNoVisibleChildren = true;
+				for ( ::std::list< SalFrame* >::const_iterator it = pSalData->mpPresentationFrame->maFrameData.maChildren.begin(); it != pSalData->mpPresentationFrame->maFrameData.maChildren.end(); ++it )
+				{
+					if ( (*it)->maFrameData.mbVisible )
+					{
+						bNoVisibleChildren = false;
+						break;
+					}
+				}
+
+				if ( bNoVisibleChildren )
+				{
+					pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+					pFrame = NULL;
+				}
 			}
 
 			if ( pFrame && pFrame == pSalData->mpFocusFrame )

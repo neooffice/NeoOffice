@@ -1868,22 +1868,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			// Show the window
 			window.show();
 
-			// Reattach any visible children
-			Iterator frames = children.iterator();
-			while (frames.hasNext()) {
-				VCLFrame f = (VCLFrame)frames.next();
-				synchronized (f) {
-					if (!f.isDisposed()) {
-						Window w = f.getWindow();
-						if (w.isShowing()) {
-							w.hide();
-							w.removeNotify();
-							w.show();
-						}
-					}
-				}
-			}
-
 			if (c != null)
 				c.requestFocus();
 		}
