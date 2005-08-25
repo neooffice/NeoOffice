@@ -725,7 +725,7 @@ public final class VCLGraphics {
 		if (g != null) {
 			try {
 				if (xor)
-					g.setXORMode(color == 0xffffffff ? Color.black : Color.white);
+					g.setXORMode(color == 0xff000000 ? Color.white : Color.black );
 				g.setColor(new Color(color));
 				g.drawLine(x1, y1, x2, y2);
 			}
@@ -808,15 +808,12 @@ public final class VCLGraphics {
 		if (g != null) {
 			try {
 				if (xor)
-					g.setXORMode(color == 0xffffffff ? Color.black : Color.white);
+					g.setXORMode(color == 0xff000000 ? Color.white : Color.black );
 				g.setColor(new Color(color));
-				if (fill) {
+				if (fill)
 					g.fillPolygon(polygon);
-				}
-				else {
-					for (int i = 1; i < npoints; i++)
-						g.drawLine(xpoints[i - 1], ypoints[i - 1], xpoints[i], ypoints[i]);
-				}
+				else
+					g.drawPolygon(polygon);
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -849,10 +846,9 @@ public final class VCLGraphics {
 		if (g != null) {
 			try {
 				if (xor)
-					g.setXORMode(color == 0xffffffff ? Color.black : Color.white);
+					g.setXORMode(color == 0xff000000 ? Color.white : Color.black );
 				g.setColor(new Color(color));
-				for (int i = 1; i < npoints; i++)
-					g.drawLine(xpoints[i - 1], ypoints[i - 1], xpoints[i], ypoints[i]);
+				g.drawPolyline(xpoints, ypoints, npoints);
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -910,15 +906,10 @@ public final class VCLGraphics {
 		if (g != null) {
 			try {
 				g.setColor(new Color(color));
-				if (fill) {
+				if (fill)
 					g.fill(area);
-				}
-				else {
-					for (int i = 0; i < npoly; i++) {
-						for (int j = 1; j < npoints[i]; j++)
-							g.drawLine(xpoints[i][j - 1], ypoints[i][j - 1], xpoints[i][j], ypoints[i][j]);
-					}
-				}
+				else 
+					g.draw(area);
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -951,7 +942,7 @@ public final class VCLGraphics {
 		if (g != null) {
 			try {
 				if (xor)
-					g.setXORMode(color == 0xffffffff ? Color.black : Color.white);
+					g.setXORMode(color == 0xff000000 ? Color.white : Color.black );
 				g.setColor(new Color(color));
 				if (fill)
 					g.fillRect(x, y, width, height);
@@ -1277,8 +1268,7 @@ public final class VCLGraphics {
 					g.setStroke(new BasicStroke(stroke.getLineWidth(), BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, stroke.getMiterLimit(), new float[]{ 1.0f, 1.0f }, 0.0f));
 					g.setXORMode(Color.white);
 					g.setColor(Color.black);
-					for (int i = 1; i < npoints; i++)
-						g.drawLine(xpoints[i - 1], ypoints[i - 1], xpoints[i], ypoints[i]);
+					g.drawPolyline(xpoints, ypoints, npoints);
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
@@ -1370,7 +1360,7 @@ public final class VCLGraphics {
 			if (g != null) {
 				try {
 					if (xor)
-						g.setXORMode(color == 0xffffffff ? Color.black : Color.white);
+						g.setXORMode(color == 0xff000000 ? Color.white : Color.black );
 					if (singlePixelImage == null)
 						singlePixelImage = g.getDeviceConfiguration().createCompatibleImage(1, 1);
 					singlePixelImage.setRGB(0, 0, color);
