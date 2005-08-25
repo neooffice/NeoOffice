@@ -158,6 +158,11 @@ public final class VCLGraphics {
 	private static Method drawRectMethod = null;
 
 	/**
+	 * The hidden window image.
+	 */
+	private static VCLImage hiddenWindowImage = new VCLImage(1, 1, 32);
+
+	/**
 	 * The image50 image.
 	 */
 	private static VCLImage image50 = null;
@@ -425,8 +430,6 @@ public final class VCLGraphics {
 			pageQueue.dispose();
 		pageQueue = null;
 		graphics = null;
-		if (image != null && frame != null)
-			image.dispose();
 		image = null;
 		frame = null;
 		pageFormat = null;
@@ -472,34 +475,40 @@ public final class VCLGraphics {
 				srcY -= srcBounds.y;
 
 				Graphics2D g = getGraphics();
-				try {
-					g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
-				}
-				catch (Throwable t) {
-					t.printStackTrace();
+				if (g != null) {
+					try {
+						g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+					}
+					catch (Throwable t) {
+						t.printStackTrace();
+					}
 				}
 				g.dispose();
 			}
 			else {
 				Graphics2D g = getGraphics();
+				if (g != null) {
+					try {
+						g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+					}
+					catch (Throwable t) {
+						t.printStackTrace();
+					}
+					g.dispose();
+				}
+			}
+		}
+		else {
+			Graphics2D g = getGraphics();
+			if (g != null) {
 				try {
-					g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+					g.copyArea(srcX, srcY, srcWidth, srcHeight, destX - srcX, destY - srcY);
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
 				}
 				g.dispose();
 			}
-		}
-		else {
-			Graphics2D g = getGraphics();
-			try {
-				g.copyArea(srcX, srcY, srcWidth, srcHeight, destX - srcX, destY - srcY);
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			g.dispose();
 		}
 
 	}
@@ -532,13 +541,15 @@ public final class VCLGraphics {
 			return;
 
 		Graphics2D g = getGraphics();
-		try {
-			g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+		if (g != null) {
+			try {
+				g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
 		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-		g.dispose();
 
 	}
 
@@ -573,27 +584,31 @@ public final class VCLGraphics {
 
 		VCLImage mergedImage = new VCLImage(destBounds.width, destBounds.height, bitCount);
 		Graphics2D mergedGraphics = mergedImage.getGraphics().getGraphics();
-		try {
-			mergedGraphics.setComposite(VCLGraphics.transparentComposite);
-			VCLGraphics.transparentComposite.setFirstPass(true);
-			mergedGraphics.translate(destBounds.x * -1, destBounds.y * -1 );
-			mergedGraphics.drawImage(transBmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
-			VCLGraphics.transparentComposite.setFirstPass(false);
-			mergedGraphics.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+		if (mergedGraphics != null) {
+			try {
+				mergedGraphics.setComposite(VCLGraphics.transparentComposite);
+				VCLGraphics.transparentComposite.setFirstPass(true);
+				mergedGraphics.translate(destBounds.x * -1, destBounds.y * -1 );
+				mergedGraphics.drawImage(transBmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+				VCLGraphics.transparentComposite.setFirstPass(false);
+				mergedGraphics.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			mergedGraphics.dispose();
 		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-		mergedGraphics.dispose();
 
 		Graphics2D g = getGraphics();
-		try {
-			g.drawImage(mergedImage.getImage(), destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, 0, 0, destBounds.width, destBounds.height, null);
+		if (g != null) {
+			try {
+				g.drawImage(mergedImage.getImage(), destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, 0, 0, destBounds.width, destBounds.height, null);
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
 		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-		g.dispose();
 
 		mergedImage.dispose();
 
@@ -623,76 +638,67 @@ public final class VCLGraphics {
 		}
 
 		Graphics2D g = getGraphics();
-		try {
-			g.translate(x, y);
-
-			// The graphics may adjust the font
-			Font f = font.getFont();
-			FontMetrics fm = null;
-
-			// Exceptions can be thrown if a font is disabled or removed
+		if (g != null) {
 			try {
-				fm = g.getFontMetrics(f);
+				g.translate(x, y);
+
+				// The graphics may adjust the font
+				Font f = font.getFont();
+				FontMetrics fm = null;
+
+				// Exceptions can be thrown if a font is disabled or removed
+				try {
+					fm = g.getFontMetrics(f);
+				}
+				catch (Throwable t) {
+					font = font.getDefaultFont();
+					f = font.getFont();
+					fm = g.getFontMetrics(f);
+				}
+
+				g.setFont(f);
+
+				RenderingHints hints = g.getRenderingHints();
+				if (font.isAntialiased())
+					hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+				else
+					hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
+				g.setRenderingHints(hints);
+				g.setColor(new Color(color));
+
+				// Set rotation
+				if (orientation != 0)
+					g.rotate(Math.toRadians((double)orientation / 10) * -1);
+
+				double fScaleX = font.getScaleX();
+				g.scale(fScaleX, 1.0);
+
+				GlyphVector gv = f.createGlyphVector(g.getFontRenderContext(), glyphs);
+
+				double fAdvance = 0;
+				for (int i = 0; i < glyphs.length; i++) {
+					Point2D p = gv.getGlyphPosition(i);
+					p.setLocation(fAdvance, p.getY());
+					gv.setGlyphPosition(i, p);
+					fAdvance += advances[i] / fScaleX;
+				}
+
+				glyphOrientation &= VCLGraphics.GF_ROTMASK;
+				if ((glyphOrientation & VCLGraphics.GF_ROTMASK) != 0) {
+					if (glyphOrientation == VCLGraphics.GF_ROTL)
+						g.rotate(Math.toRadians(-90));
+					else
+						g.rotate(Math.toRadians(90));
+				}
+
+				// Draw the text to a scaled graphics
+				g.drawGlyphVector(gv, translateX, translateY);
 			}
 			catch (Throwable t) {
-				font = font.getDefaultFont();
-				f = font.getFont();
-				fm = g.getFontMetrics(f);
+				t.printStackTrace();
 			}
-
-			g.setFont(f);
-
-			RenderingHints hints = g.getRenderingHints();
-			if (font.isAntialiased())
-				hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-			else
-				hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
-			g.setRenderingHints(hints);
-			g.setColor(new Color(color));
-
-			// Set rotation
-			if (orientation != 0)
-				g.rotate(Math.toRadians((double)orientation / 10) * -1);
-
-			double fScaleX = font.getScaleX();
-			g.scale(fScaleX, 1.0);
-
-			GlyphVector gv = f.createGlyphVector(g.getFontRenderContext(), glyphs);
-
-			double fAdvance = 0;
-			for (int i = 0; i < glyphs.length; i++) {
-				Point2D p = gv.getGlyphPosition(i);
-				p.setLocation(fAdvance, p.getY());
-				gv.setGlyphPosition(i, p);
-				fAdvance += advances[i] / fScaleX;
-			}
-
-			glyphOrientation &= VCLGraphics.GF_ROTMASK;
-			if ((glyphOrientation & VCLGraphics.GF_ROTMASK) != 0) {
-				if (glyphOrientation == VCLGraphics.GF_ROTL)
-					g.rotate(Math.toRadians(-90));
-				else
-					g.rotate(Math.toRadians(90));
-			}
-
-			// Draw the text to a scaled graphics
-			g.drawGlyphVector(gv, translateX, translateY);
-
-			Rectangle bounds = gv.getLogicalBounds().getBounds();
-
-			// Estimate bounds
-			bounds = g.getTransform().createTransformedShape(bounds).getBounds();
-			bounds.x += x - 1;
-			bounds.y += y - 1;
-			if (fScaleX != 1.0)
-				bounds.width *= fScaleX;
-			bounds.width += 2;
-			bounds.height += 2;
+			g.dispose();
 		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-		g.dispose();
 
 	}
 
@@ -716,16 +722,18 @@ public final class VCLGraphics {
 		}
 
 		Graphics2D g = getGraphics();
-		try {
-			if (xor)
-				g.setXORMode(color == 0xffffffff ? Color.black : Color.white);
-			g.setColor(new Color(color));
-			g.drawLine(x1, y1, x2, y2);
+		if (g != null) {
+			try {
+				if (xor)
+					g.setXORMode(color == 0xffffffff ? Color.black : Color.white);
+				g.setColor(new Color(color));
+				g.drawLine(x1, y1, x2, y2);
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
 		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-		g.dispose();
 
 	}
 
@@ -759,15 +767,17 @@ public final class VCLGraphics {
 			return;
 
 		Graphics2D g = getGraphics();
-		try {
-			g.setComposite(VCLGraphics.maskComposite);
-			VCLGraphics.maskComposite.setMaskColor(color);
-			g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+		if (g != null) {
+			try {
+				g.setComposite(VCLGraphics.maskComposite);
+				VCLGraphics.maskComposite.setMaskColor(color);
+				g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
 		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-		g.dispose();
 
 	}
 
@@ -795,22 +805,24 @@ public final class VCLGraphics {
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 
 		Graphics2D g = getGraphics();
-		try {
-			if (xor)
-				g.setXORMode(color == 0xffffffff ? Color.black : Color.white);
-			g.setColor(new Color(color));
-			if (fill) {
-				g.fillPolygon(polygon);
+		if (g != null) {
+			try {
+				if (xor)
+					g.setXORMode(color == 0xffffffff ? Color.black : Color.white);
+				g.setColor(new Color(color));
+				if (fill) {
+					g.fillPolygon(polygon);
+				}
+				else {
+					for (int i = 1; i < npoints; i++)
+						g.drawLine(xpoints[i - 1], ypoints[i - 1], xpoints[i], ypoints[i]);
+				}
 			}
-			else {
-				for (int i = 1; i < npoints; i++)
-					g.drawLine(xpoints[i - 1], ypoints[i - 1], xpoints[i], ypoints[i]);
+			catch (Throwable t) {
+				t.printStackTrace();
 			}
+			g.dispose();
 		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-		g.dispose();
 
 	}
 
@@ -834,17 +846,19 @@ public final class VCLGraphics {
 			return;
 
 		Graphics2D g = getGraphics();
-		try {
-			if (xor)
-				g.setXORMode(color == 0xffffffff ? Color.black : Color.white);
-			g.setColor(new Color(color));
-			for (int i = 1; i < npoints; i++)
-				g.drawLine(xpoints[i - 1], ypoints[i - 1], xpoints[i], ypoints[i]);
+		if (g != null) {
+			try {
+				if (xor)
+					g.setXORMode(color == 0xffffffff ? Color.black : Color.white);
+				g.setColor(new Color(color));
+				for (int i = 1; i < npoints; i++)
+					g.drawLine(xpoints[i - 1], ypoints[i - 1], xpoints[i], ypoints[i]);
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
 		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-		g.dispose();
 
 	}
 
@@ -893,22 +907,24 @@ public final class VCLGraphics {
 			return;
 
 		Graphics2D g = getGraphics();
-		try {
-			g.setColor(new Color(color));
-			if (fill) {
-				g.fill(area);
-			}
-			else {
-				for (int i = 0; i < npoly; i++) {
-					for (int j = 1; j < npoints[i]; j++)
-						g.drawLine(xpoints[i][j - 1], ypoints[i][j - 1], xpoints[i][j], ypoints[i][j]);
+		if (g != null) {
+			try {
+				g.setColor(new Color(color));
+				if (fill) {
+					g.fill(area);
+				}
+				else {
+					for (int i = 0; i < npoly; i++) {
+						for (int j = 1; j < npoints[i]; j++)
+							g.drawLine(xpoints[i][j - 1], ypoints[i][j - 1], xpoints[i][j], ypoints[i][j]);
+					}
 				}
 			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
 		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-		g.dispose();
 
 	}
 
@@ -932,19 +948,21 @@ public final class VCLGraphics {
 		}
 
 		Graphics2D g = getGraphics();
-		try {
-			if (xor)
-				g.setXORMode(color == 0xffffffff ? Color.black : Color.white);
-			g.setColor(new Color(color));
-			if (fill)
-				g.fillRect(x, y, width, height);
-			else
-				g.drawRect(x, y, width - 1, height - 1);
+		if (g != null) {
+			try {
+				if (xor)
+					g.setXORMode(color == 0xffffffff ? Color.black : Color.white);
+				g.setColor(new Color(color));
+				if (fill)
+					g.fillRect(x, y, width, height);
+				else
+					g.drawRect(x, y, width - 1, height - 1);
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
 		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-		g.dispose();
 
 	}
 
@@ -989,14 +1007,16 @@ public final class VCLGraphics {
 		Rectangle2D bounds = null;
 
 		Graphics2D g = getGraphics();
-		try {
-			GlyphVector glyphs = font.getFont().createGlyphVector(g.getFontRenderContext(), new int[]{ glyph });
-			bounds = glyphs.getVisualBounds();
+		if (g != null) {
+			try {
+				GlyphVector glyphs = font.getFont().createGlyphVector(g.getFontRenderContext(), new int[]{ glyph });
+				bounds = glyphs.getVisualBounds();
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
 		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-		g.dispose();
 
 		double fScaleX = font.getScaleX();
 		if (fScaleX != 1.0) {
@@ -1016,6 +1036,10 @@ public final class VCLGraphics {
 	 * @return the graphics context
 	 */
 	Graphics2D getGraphics() {
+
+		// Don't bother painting if we haven't attached to the panel yet
+		if (frame != null && image != null)
+			return null;
 
 		Graphics2D g;
 		if (image != null)
@@ -1073,17 +1097,19 @@ public final class VCLGraphics {
 		BufferedImage img = null;
 
 		Graphics2D g = getGraphics();
-		try {
-			img = g.getDeviceConfiguration().createCompatibleImage(w, h);
-			g.setComposite(VCLGraphics.copyComposite);
-			g.setClip(null);
-			VCLGraphics.copyComposite.setRaster(img.getRaster());
-			g.drawImage(img, x, y, x + w, y + h, 0, 0, w, h, null);
+		if (g != null) {
+			try {
+				img = g.getDeviceConfiguration().createCompatibleImage(w, h);
+				g.setComposite(VCLGraphics.copyComposite);
+				g.setClip(null);
+				VCLGraphics.copyComposite.setRaster(img.getRaster());
+				g.drawImage(img, x, y, x + w, y + h, 0, 0, w, h, null);
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
 		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-		g.dispose();
 
 		return img;
 
@@ -1108,19 +1134,21 @@ public final class VCLGraphics {
 			int pixel = 0x00000000;
 
 			Graphics2D g = getGraphics();
-			try {
-				g.setComposite(VCLGraphics.copyComposite);
-				g.setClip(null);
-				if (singlePixelImage == null)
-					singlePixelImage = g.getDeviceConfiguration().createCompatibleImage(1, 1);
-				VCLGraphics.copyComposite.setRaster(singlePixelImage.getRaster());
-				g.drawImage(singlePixelImage, x, y, x + 1, y + 1, 0, 0, 1, 1, null);
-				pixel = singlePixelImage.getRGB(0, 0);
+			if (g != null) {
+				try {
+					g.setComposite(VCLGraphics.copyComposite);
+					g.setClip(null);
+					if (singlePixelImage == null)
+						singlePixelImage = g.getDeviceConfiguration().createCompatibleImage(1, 1);
+					VCLGraphics.copyComposite.setRaster(singlePixelImage.getRaster());
+					g.drawImage(singlePixelImage, x, y, x + 1, y + 1, 0, 0, 1, 1, null);
+					pixel = singlePixelImage.getRGB(0, 0);
+				}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
+				g.dispose();
 			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			g.dispose();
 
 			return pixel;
 		}
@@ -1176,44 +1204,50 @@ public final class VCLGraphics {
 		// Invert the image 
 		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME) {
 			Graphics2D g = getGraphics();
-			try {
-				BasicStroke stroke = (BasicStroke)g.getStroke();
-				g.setStroke(new BasicStroke(stroke.getLineWidth(), BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, stroke.getMiterLimit(), new float[]{ 1.0f, 1.0f }, 0.0f));
-				g.setXORMode(Color.white);
-				g.setColor(Color.black);
-				// Note: the JVM seems to have a bug and drawRect() draws dashed
-				// strokes one pixel above the specified y coordinate
-				g.drawRect(x, y + 1, width - 1, height - 1);
+			if (g != null) {
+				try {
+					BasicStroke stroke = (BasicStroke)g.getStroke();
+					g.setStroke(new BasicStroke(stroke.getLineWidth(), BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, stroke.getMiterLimit(), new float[]{ 1.0f, 1.0f }, 0.0f));
+					g.setXORMode(Color.white);
+					g.setColor(Color.black);
+					// Note: the JVM seems to have a bug and drawRect() draws
+					// dashed strokes one pixel above the specified y coordinate
+					g.drawRect(x, y + 1, width - 1, height - 1);
+				}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
+				g.dispose();
 			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			g.dispose();
 		}
 		else if ((options & VCLGraphics.SAL_INVERT_50) == VCLGraphics.SAL_INVERT_50) {
 			Graphics2D g = getGraphics();
-			try {
-				g.setXORMode(Color.white);
-				g.setPaint(new TexturePaint(VCLGraphics.image50.getImage(), new Rectangle(0, 0, VCLGraphics.image50.getWidth(), VCLGraphics.image50.getHeight()).getBounds2D()));
-				g.fillRect(x, y, width, height);
+			if (g != null) {
+				try {
+					g.setXORMode(Color.white);
+					g.setPaint(new TexturePaint(VCLGraphics.image50.getImage(), new Rectangle(0, 0, VCLGraphics.image50.getWidth(), VCLGraphics.image50.getHeight()).getBounds2D()));
+					g.fillRect(x, y, width, height);
+				}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
+				g.dispose();
 			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			g.dispose();
 			
 		}
 		else {
 			Graphics2D g = getGraphics();
-			try {
-				g.setComposite(VCLGraphics.invertComposite);
-				g.clipRect(x, y, width, height);
-				g.fillRect(x, y, width, height);
+			if (g != null) {
+				try {
+					g.setComposite(VCLGraphics.invertComposite);
+					g.clipRect(x, y, width, height);
+					g.fillRect(x, y, width, height);
+				}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
+				g.dispose();
 			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			g.dispose();
 		}
 
 	}
@@ -1237,43 +1271,48 @@ public final class VCLGraphics {
 		// Invert the image 
 		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME) {
 			Graphics2D g = getGraphics();
-			try {
-				BasicStroke stroke = (BasicStroke)g.getStroke();
-				g.setStroke(new BasicStroke(stroke.getLineWidth(), BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, stroke.getMiterLimit(), new float[]{ 1.0f, 1.0f }, 0.0f));
-				g.setXORMode(Color.white);
-				g.setColor(Color.black);
-				for (int i = 1; i < npoints; i++)
-					g.drawLine(xpoints[i - 1], ypoints[i - 1], xpoints[i], ypoints[i]);
+			if (g != null) {
+				try {
+					BasicStroke stroke = (BasicStroke)g.getStroke();
+					g.setStroke(new BasicStroke(stroke.getLineWidth(), BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, stroke.getMiterLimit(), new float[]{ 1.0f, 1.0f }, 0.0f));
+					g.setXORMode(Color.white);
+					g.setColor(Color.black);
+					for (int i = 1; i < npoints; i++)
+						g.drawLine(xpoints[i - 1], ypoints[i - 1], xpoints[i], ypoints[i]);
+				}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
+				g.dispose();
 			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			g.dispose();
 		}
 		else if ((options & VCLGraphics.SAL_INVERT_50) == VCLGraphics.SAL_INVERT_50) {
 			Graphics2D g = getGraphics();
-			try {
-				g.setXORMode(Color.white);
-				g.setPaint(new TexturePaint(VCLGraphics.image50.getImage(), new Rectangle(0, 0, VCLGraphics.image50.getWidth(), VCLGraphics.image50.getHeight()).getBounds2D()));
-				g.fillPolygon(polygon);
+			if (g != null) {
+				try {
+					g.setXORMode(Color.white);
+					g.setPaint(new TexturePaint(VCLGraphics.image50.getImage(), new Rectangle(0, 0, VCLGraphics.image50.getWidth(), VCLGraphics.image50.getHeight()).getBounds2D()));
+					g.fillPolygon(polygon);
+				}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
+				g.dispose();
 			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			g.dispose();
-			
 		}
 		else {
 			Graphics2D g = getGraphics();
-			try {
-				g.setComposite(VCLGraphics.invertComposite);
-				g.clip(polygon);
-				g.fillPolygon(polygon);
+			if (g != null) {
+				try {
+					g.setComposite(VCLGraphics.invertComposite);
+					g.clip(polygon);
+					g.fillPolygon(polygon);
+				}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
+				g.dispose();
 			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			g.dispose();
 		}
 
 	}
@@ -1293,10 +1332,8 @@ public final class VCLGraphics {
 	public void resetGraphics() {
 
 		if (frame != null) {
-			if (image != null) {
-				image.dispose();
+			if (image != null)
 				image = null;
-			}
 			if (frame.getWindow().isShowing()) {
 				Panel p = frame.getPanel();
 				Rectangle bounds = p.getBounds();
@@ -1304,8 +1341,8 @@ public final class VCLGraphics {
 				bitCount = frame.getBitCount();
 			}
 			else {
-				graphicsBounds = new Rectangle(0, 0, 1, 1);
-				image = new VCLImage(graphicsBounds.width, graphicsBounds.height, frame.getBitCount());
+				image = hiddenWindowImage;
+				graphicsBounds = new Rectangle(0, 0, image.getWidth(), image.getHeight());
 				bitCount = image.getBitCount();
 			}
 			resetClipRegion();
@@ -1330,18 +1367,20 @@ public final class VCLGraphics {
 		}
 		else {
 			Graphics2D g = getGraphics();
-			try {
-				if (xor)
-					g.setXORMode(color == 0xffffffff ? Color.black : Color.white);
-				if (singlePixelImage == null)
-					singlePixelImage = g.getDeviceConfiguration().createCompatibleImage(1, 1);
-				singlePixelImage.setRGB(0, 0, color);
-				g.drawImage(singlePixelImage, x, y, x + 1, y + 1, 0, 0, 1, 1, null);
+			if (g != null) {
+				try {
+					if (xor)
+						g.setXORMode(color == 0xffffffff ? Color.black : Color.white);
+					if (singlePixelImage == null)
+						singlePixelImage = g.getDeviceConfiguration().createCompatibleImage(1, 1);
+					singlePixelImage.setRGB(0, 0, color);
+					g.drawImage(singlePixelImage, x, y, x + 1, y + 1, 0, 0, 1, 1, null);
+				}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
+				g.dispose();
 			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			g.dispose();
 		}
 
 	}
