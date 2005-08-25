@@ -787,6 +787,16 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			insets = VCLScreen.getFrameInsets();
 		graphics = new VCLGraphics(this);
 
+		// Register listeners
+		window.addComponentListener(this);
+		panel.addFocusListener(this);
+		panel.addKeyListener(this);
+		panel.addInputMethodListener(this);
+		panel.addMouseListener(this);
+		panel.addMouseMotionListener(this);
+		panel.addMouseWheelListener(this);
+		window.addWindowListener(this);
+
 	}
 
 	/**
@@ -1377,6 +1387,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
+		// Use adjusted modifiers
+		e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | queue.getLastAdjustedMouseModifiers(), e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
+
 		e = preprocessMouseEvent(e);
 
 		if (VCLFrame.lastMouseDragEvent != null) {
@@ -1830,10 +1843,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param b <code>true</code> shows this component and <code>false</code>
 	 *  hides this component
-	 * @param noActivate <code>true</code> to not change the focus owner
-	 *  otherwise <code>false</code>
 	 */
-	public synchronized void setVisible(boolean b, boolean noActivate) {
+	public synchronized void setVisible(boolean b) {
 
 		if (b == window.isShowing())
 			return;
@@ -1847,29 +1858,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			((Frame)window).setResizable(resizable);
 
 		if (b) {
-			// Register listeners
-			window.addComponentListener(this);
-			panel.addFocusListener(this);
-			panel.addKeyListener(this);
-			panel.addInputMethodListener(this);
-			panel.addMouseListener(this);
-			panel.addMouseMotionListener(this);
-			panel.addMouseWheelListener(this);
-			window.addWindowListener(this);
-
-			// Cache the current focus owner
-			Component c = null;
-			if (noActivate)
-				c = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-
-			if (c == null)
-				c = panel;
-
 			// Show the window
 			window.show();
-
-			if (c != null)
-				c.requestFocus();
 		}
 		else {
 			// Hide the window

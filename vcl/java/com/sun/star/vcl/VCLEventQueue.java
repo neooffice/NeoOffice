@@ -88,6 +88,11 @@ public final class VCLEventQueue {
 	public final static int INPUT_ANY = VCLEventQueue.INPUT_MOUSE | VCLEventQueue.INPUT_KEYBOARD | VCLEventQueue.INPUT_PAINT | VCLEventQueue.INPUT_TIMER | VCLEventQueue.INPUT_OTHER;
 
 	/**
+	 * The last adjusted mouse modifiers.
+	 */
+	private int lastAdjustedMouseModifiers = 0;
+
+	/**
 	 * The list of queues.
 	 */
 	private VCLEventQueue.Queue[] queueList = new VCLEventQueue.Queue[2];
@@ -142,6 +147,17 @@ public final class VCLEventQueue {
 		}
 
 		return false;
+
+	}
+
+	/**
+	 * Returns the last adjusted mouse modifiers.
+	 *
+	 * @return the last adjusted mouse modifiers
+	 */
+	int getLastAdjustedMouseModifiers() {
+
+		return lastAdjustedMouseModifiers;
 
 	}
 
@@ -311,15 +327,21 @@ public final class VCLEventQueue {
 	}
 
 	/**
+	 * Sets the last adjusted mouse modifiers.
+	 *
+	 * @param m the last adjusted mouse modifiers
+	 */
+	void setLastAdjustedMouseModifiers(int m) {
+
+		lastAdjustedMouseModifiers = m;
+
+	}
+
+	/**
 	 * The <code>NoExceptionEventQueue</code> class prevents unhandled
 	 * exceptions from stopping the event queue.
 	 */
 	final class NoExceptionsEventQueue extends EventQueue {
-
-		/**
-		 * The last mouse pressed modifiers.
-		 */
-		private int mousePressedModifiersEx = 0;
 
 		/**
 		 * The <code>VCLEventQueue</code>.
@@ -345,22 +367,16 @@ public final class VCLEventQueue {
 		protected void dispatchEvent(AWTEvent event) {
 
 			try {
+				super.dispatchEvent(event);
+
 				// The modifiers for mouse released events contain the
 				// modifiers after the event has occurred so we need to
 				// replace the modifiers with the modifiers that were released
 				if (event instanceof MouseEvent) {
 					int id = event.getID();
-					if (id == MouseEvent.MOUSE_PRESSED) {
-						mousePressedModifiersEx = ((MouseEvent)event).getModifiersEx();
-					}
-					else if (id == MouseEvent.MOUSE_RELEASED) {
-						MouseEvent e = (MouseEvent)event;
-						event = new MouseEvent(e.getComponent(), id, e.getWhen(), e.getModifiers() | mousePressedModifiersEx, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger(), e.getButton());
-						mousePressedModifiersEx = e.getModifiersEx();
-					}
+					if (id == MouseEvent.MOUSE_PRESSED || id == MouseEvent.MOUSE_RELEASED)
+						queue.setLastAdjustedMouseModifiers( ((MouseEvent)event).getModifiersEx() );
 				}
-
-				super.dispatchEvent(event);
 			}
 			catch (Throwable t) {
 				t.printStackTrace();

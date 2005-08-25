@@ -195,7 +195,7 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	if ( maFrameData.mbVisible && maFrameData.mpParent && !maFrameData.mpParent->maFrameData.mbVisible )
 		return;
 
-	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible, bNoActivate );
+	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible );
 
 	if ( maFrameData.mbVisible )
 	{
