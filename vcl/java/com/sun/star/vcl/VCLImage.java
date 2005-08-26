@@ -107,7 +107,7 @@ public final class VCLImage {
 		else if (b <= 16)
 			bitCount = 16;
 		else
-			bitCount = 32;
+			bitCount = 24;
 
 		// Create the native image
 		image = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB_PRE);

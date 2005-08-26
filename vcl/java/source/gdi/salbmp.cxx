@@ -168,7 +168,14 @@ void SalBitmap::Destroy()
 		{
 			VCLThreadAttach t;
 			if ( t.pEnv )
-				t.pEnv->ReleasePrimitiveArrayCritical( (jarray)mpData->getJavaObject(), mpBits, 0 );
+			{
+				if ( mnBitCount <= 8 )
+					t.pEnv->ReleaseByteArrayElements( (jbyteArray)mpData->getJavaObject(), (jbyte *)mpBits, JNI_ABORT );
+				else if ( mnBitCount <= 16 )
+					t.pEnv->ReleaseShortArrayElements( (jshortArray)mpData->getJavaObject(), (jshort *)mpBits, JNI_ABORT );
+				else
+					rtl_freeMemory( mpBits );
+			}
 		}
 		delete mpData;
 	}
@@ -219,8 +226,7 @@ BitmapBuffer* SalBitmap::AcquireBuffer( BOOL bReadOnly )
 	}
 	else
 	{
-		pBuffer->mnFormat |= BMP_FORMAT_32BIT_TC_ARGB;
-		pBuffer->maColorMask = ColorMask( 0x00ff0000, 0x0000ff00, 0x000000ff );
+		pBuffer->mnFormat |= BMP_FORMAT_24BIT_TC_RGB;
 	}
 
 	pBuffer->mnWidth = maSize.Width();
@@ -240,7 +246,39 @@ BitmapBuffer* SalBitmap::AcquireBuffer( BOOL bReadOnly )
 		if ( t.pEnv )
 		{
 			jboolean bCopy( sal_False );
-			mpBits = (BYTE *)t.pEnv->GetPrimitiveArrayCritical( (jarray)mpData->getJavaObject(), &bCopy );
+			if ( mnBitCount <= 8 )
+			{
+				mpBits = (BYTE *)t.pEnv->GetByteArrayElements( (jbyteArray)mpData->getJavaObject(), &bCopy );
+			}
+			else if ( mnBitCount <= 16 )
+			{
+				mpBits = (BYTE *)t.pEnv->GetShortArrayElements( (jshortArray)mpData->getJavaObject(), &bCopy );
+			}
+			else
+			{
+				jint *pBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( (jarray)mpData->getJavaObject(), &bCopy );
+				if ( pBits )
+				{
+					mpBits = (BYTE *)rtl_allocateMemory( pBuffer->mnScanlineSize * pBuffer->mnHeight );
+					jint *pBitsIn = pBits;
+					BYTE *pBitsOut = mpBits;
+					for ( long i = 0; i < pBuffer->mnHeight; i++ )
+					{
+						long j;
+						long k;
+						for ( j = 0, k = 0; j < pBuffer->mnWidth; j++ )
+						{
+							pBitsOut[ k++ ] = SALCOLOR_RED( pBitsIn[ j ] );
+							pBitsOut[ k++ ] = SALCOLOR_GREEN( pBitsIn[ j ] );
+							pBitsOut[ k++ ] = SALCOLOR_BLUE( pBitsIn[ j ] );
+						}
+
+						pBitsIn += pBuffer->mnWidth;
+						pBitsOut += pBuffer->mnScanlineSize;
+					}
+					t.pEnv->ReleasePrimitiveArrayCritical( (jarray)mpData->getJavaObject(), pBits, JNI_ABORT );
+				}
+			}
 		}
 	}
 
@@ -269,18 +307,52 @@ void SalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, BOOL bReadOnly )
 			VCLThreadAttach t;
 			if ( t.pEnv )
 			{
+				jint nCommit = JNI_ABORT;
 				if ( !mnAcquireCount )
 				{
-					if ( bReadOnly )
-						t.pEnv->ReleasePrimitiveArrayCritical( (jarray)mpData->getJavaObject(), mpBits, JNI_ABORT );
-					else
-						t.pEnv->ReleasePrimitiveArrayCritical( (jarray)mpData->getJavaObject(), mpBits, 0 );
-					mpBits = NULL;
+					if ( !bReadOnly )
+						nCommit = 0;
 				}
 				else if ( !bReadOnly )
 				{
-					t.pEnv->ReleasePrimitiveArrayCritical( (jarray)mpData->getJavaObject(), (void *)mpBits, JNI_COMMIT );
+					nCommit = JNI_COMMIT;
 				}
+
+				if ( mnBitCount <= 8 )
+				{
+					t.pEnv->ReleaseByteArrayElements( (jbyteArray)mpData->getJavaObject(), (jbyte *)mpBits, nCommit );
+				}
+				else if ( mnBitCount <= 16 )
+				{
+					t.pEnv->ReleaseShortArrayElements( (jshortArray)mpData->getJavaObject(), (jshort *)mpBits, nCommit );
+				}
+				else
+				{
+					if ( !nCommit || nCommit == JNI_COMMIT )
+					{
+						jboolean bCopy( sal_False );
+						jint *pBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( (jarray)mpData->getJavaObject(), &bCopy );
+						BYTE *pBitsIn = mpBits;
+						jint *pBitsOut = pBits;
+						for ( long i = 0; i < pBuffer->mnHeight; i++ )
+						{
+							long j;
+							long k;
+							for ( j = 0, k = 0; j < pBuffer->mnWidth; j++, k += 3 )
+								pBitsOut[ j ] = MAKE_SALCOLOR( pBitsIn[ k ], pBitsIn[ k + 1 ], pBitsIn[ k + 2 ] ) | 0xff000000;
+	
+							pBitsIn += pBuffer->mnScanlineSize;
+							pBitsOut += pBuffer->mnWidth;
+						}
+						t.pEnv->ReleasePrimitiveArrayCritical( (jarray)mpData->getJavaObject(), pBits, JNI_ABORT );
+					}
+
+					if ( !nCommit || nCommit == JNI_ABORT )
+						rtl_freeMemory( mpBits );
+				}
+
+				if ( !mnAcquireCount )
+					mpBits = NULL;
 
 				// Save the palette
 				if ( !bReadOnly )

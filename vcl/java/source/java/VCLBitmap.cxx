@@ -232,7 +232,7 @@ void com_sun_star_vcl_VCLBitmap::setPalette( const BitmapPalette& _par0 )
 				for ( jsize i = 0 ; i < nColors ; i++ )
 				{
 					const BitmapColor &rCol = _par0[ i ];
-					pColorBits[ i ] = MAKE_SALCOLOR( rCol.GetRed(), rCol.GetGreen(), rCol.GetBlue() );
+					pColorBits[ i ] = MAKE_SALCOLOR( rCol.GetRed(), rCol.GetGreen(), rCol.GetBlue() ) | 0xff000000;
 				}
 				t.pEnv->ReleasePrimitiveArrayCritical( pColors, pColorBits, 0 );
 				jvalue args[1];

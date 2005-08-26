@@ -399,7 +399,7 @@ public final class VCLGraphics {
 		else
 			graphicsBounds = new Rectangle(0, 0, bounds.width, bounds.height);
 		graphics = (Graphics2D)g;
-		bitCount = 32;
+		bitCount = 24;
 
 		// Mac OS X sometimes mangles images when multiple images are rendered
 		// to a printer so we need to combine all images into one image and
@@ -502,7 +502,7 @@ public final class VCLGraphics {
 			Graphics2D g = getGraphics();
 			if (g != null) {
 				try {
-					g.copyArea(srcX, srcY, srcWidth, srcHeight, destX - srcX, destY - srcY);
+					g.copyArea(srcX, srcY, destWidth, destHeight, destX - srcX, destY - srcY);
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
@@ -582,16 +582,20 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
-		VCLImage mergedImage = new VCLImage(destBounds.width, destBounds.height, bitCount);
+		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, bmp.getWidth(), bmp.getHeight()));
+		if (srcBounds.isEmpty())
+			return;
+
+		VCLImage mergedImage = new VCLImage(srcBounds.width, srcBounds.height, bmp.getBitCount());
 		Graphics2D mergedGraphics = mergedImage.getGraphics().getGraphics();
 		if (mergedGraphics != null) {
 			try {
 				mergedGraphics.setComposite(VCLGraphics.transparentComposite);
 				VCLGraphics.transparentComposite.setFirstPass(true);
-				mergedGraphics.translate(destBounds.x * -1, destBounds.y * -1 );
-				mergedGraphics.drawImage(transBmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+				mergedGraphics.translate(srcBounds.x * -1, srcBounds.y * -1 );
+				mergedGraphics.drawImage(transBmp.getImage(), srcX, srcY, srcX + srcWidth, srcY + srcHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
 				VCLGraphics.transparentComposite.setFirstPass(false);
-				mergedGraphics.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+				mergedGraphics.drawImage(bmp.getImage(), srcX, srcY, srcX + srcWidth, srcY + srcHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -599,10 +603,13 @@ public final class VCLGraphics {
 			mergedGraphics.dispose();
 		}
 
+		srcX -= srcBounds.x;
+		srcY -= srcBounds.y;
+
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
-				g.drawImage(mergedImage.getImage(), destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, 0, 0, destBounds.width, destBounds.height, null);
+				g.drawImage(mergedImage.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -908,7 +915,7 @@ public final class VCLGraphics {
 				g.setColor(new Color(color));
 				if (fill)
 					g.fill(area);
-				else 
+				else
 					g.draw(area);
 			}
 			catch (Throwable t) {
@@ -1092,8 +1099,8 @@ public final class VCLGraphics {
 			try {
 				img = g.getDeviceConfiguration().createCompatibleImage(w, h);
 				g.setComposite(VCLGraphics.copyComposite);
-				g.setClip(null);
 				VCLGraphics.copyComposite.setRaster(img.getRaster());
+				g.setClip(x, y, w, h);
 				g.drawImage(img, x, y, x + w, y + h, 0, 0, w, h, null);
 			}
 			catch (Throwable t) {
@@ -1128,10 +1135,10 @@ public final class VCLGraphics {
 			if (g != null) {
 				try {
 					g.setComposite(VCLGraphics.copyComposite);
-					g.setClip(null);
 					if (singlePixelImage == null)
 						singlePixelImage = g.getDeviceConfiguration().createCompatibleImage(1, 1);
 					VCLGraphics.copyComposite.setRaster(singlePixelImage.getRaster());
+					g.setClip(x, y, 1, 1);
 					g.drawImage(singlePixelImage, x, y, x + 1, y + 1, 0, 0, 1, 1, null);
 					pixel = singlePixelImage.getRGB(0, 0);
 				}
@@ -1231,7 +1238,6 @@ public final class VCLGraphics {
 			if (g != null) {
 				try {
 					g.setComposite(VCLGraphics.invertComposite);
-					g.clipRect(x, y, width, height);
 					g.fillRect(x, y, width, height);
 				}
 				catch (Throwable t) {
@@ -1295,7 +1301,6 @@ public final class VCLGraphics {
 			if (g != null) {
 				try {
 					g.setComposite(VCLGraphics.invertComposite);
-					g.clip(polygon);
 					g.fillPolygon(polygon);
 				}
 				catch (Throwable t) {
@@ -1499,8 +1504,10 @@ public final class VCLGraphics {
 
 		public void compose(Raster src, Raster destIn, WritableRaster destOut) {
 
-			destOut.setRect(destIn);
-			raster.setRect(destIn);
+			if (destIn != destOut)
+				destOut.setDataElements(0, 0, destIn);
+
+			raster.setDataElements(0, 0, destIn);
 
 			raster = null;
 
@@ -1526,14 +1533,21 @@ public final class VCLGraphics {
 
 		public void compose(Raster src, Raster destIn, WritableRaster destOut) {
 
+			if (destIn != destOut)
+				destOut.setDataElements(0, 0, destIn);
+
 			int w = destOut.getWidth();
 			int h = destOut.getHeight();
-			int[] data = new int[w];
+			int[] srcData = new int[w];
+			int[] destData = new int[w];
 			for (int line = 0; line < h; line++) {
-				data = (int[])destIn.getDataElements(0, line, data.length, 1, data);
-				for (int i = 0; i < data.length; i++)
-					data[i] = ~data[i] | 0xff000000;
-				destOut.setDataElements(0, line, data.length, 1, data);
+				srcData = (int[])src.getDataElements(0, line, srcData.length, 1, srcData);
+				destData = (int[])destIn.getDataElements(0, line, destData.length, 1, destData);
+				for (int i = 0; i < srcData.length && i < destData.length; i++) {
+					if ((srcData[i] & 0xff000000) == 0xff000000)
+						destData[i] = ~destData[i] | 0xff000000;
+				}
+				destOut.setDataElements(0, line, destData.length, 1, destData);
 			}
 
 		}
@@ -1553,6 +1567,9 @@ public final class VCLGraphics {
 		private int maskColor;
 
 		public void compose(Raster src, Raster destIn, WritableRaster destOut) {
+
+			if (destIn != destOut)
+				destOut.setDataElements(0, 0, destIn);
 
 			int w = destOut.getWidth();
 			int h = destOut.getHeight();
@@ -1593,20 +1610,25 @@ public final class VCLGraphics {
 
 		public void compose(Raster src, Raster destIn, WritableRaster destOut) {
 
+			if (destIn != destOut)
+				destOut.setDataElements(0, 0, destIn);
+
 			int w = destOut.getWidth();
 			int h = destOut.getHeight();
 
 			if (firstPass)
 			{
-				int[] data = new int[w];
+				int[] srcData = new int[w];
+				int[] destData = new int[w];
 				for (int line = 0; line < h; line++) {
-					data = (int[])src.getDataElements(0, line, data.length, 1, data);
+					srcData = (int[])src.getDataElements(0, line, srcData.length, 1, srcData);
+					destData = (int[])destIn.getDataElements(0, line, destData.length, 1, destData);
 					// Only copy black pixels from the source.
-					for (int i = 0; i < data.length; i++) {
-						if (data[i] != 0xff000000)
-							data[i] = 0x00000000;
+					for (int i = 0; i < srcData.length && i < destData.length; i++) {
+						if (srcData[i] == 0xff000000)
+							destData[i] = srcData[i];
 					}
-					destOut.setDataElements(0, line, data.length, 1, data);
+					destOut.setDataElements(0, line, destData.length, 1, destData);
 				}
 			}
 			else {
@@ -1615,10 +1637,9 @@ public final class VCLGraphics {
 				for (int line = 0; line < h; line++) {
 					srcData = (int[])src.getDataElements(0, line, srcData.length, 1, srcData);
 					destData = (int[])destIn.getDataElements(0, line, destData.length, 1, destData);
-					// Only copy pixel if the pixel in the destination is not
-					// transparent,
+					// Only copy pixel if the pixel in the destination is black
 					for (int i = 0; i < srcData.length && i < destData.length; i++) {
-						if (destData[i] != 0x00000000)
+						if (destData[i] == 0xff000000)
 							destData[i] = srcData[i];
 					}
 					destOut.setDataElements(0, line, destData.length, 1, destData);

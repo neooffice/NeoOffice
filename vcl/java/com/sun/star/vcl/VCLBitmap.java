@@ -188,7 +188,7 @@ public final class VCLBitmap {
 		else if (b <= 16)
 			bitCount = 16;
 		else
-			bitCount = 32;
+			bitCount = 24;
 
 		// Align buffer size to 4 bytes
 		int scanline = (((bitCount * width) + 31) >> 5) << 2;
@@ -371,8 +371,6 @@ public final class VCLBitmap {
 		if (bitCount <= 8) {
 			palette = p;
 			if (palette != null) {
-				for (int i = 0; i < palette.length; i++)
-					palette[i] |= 0xff000000;
 				model = new IndexColorModel(bitCount, palette.length, palette, 0, false, -1, DataBuffer.TYPE_BYTE);
 				image = new BufferedImage(model, raster, true, null);
 				filteredImage = Toolkit.getDefaultToolkit().createImage(new FilteredImageSource(image.getSource(), new ImageFilter()));

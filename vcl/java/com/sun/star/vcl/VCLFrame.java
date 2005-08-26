@@ -779,7 +779,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else if (bitCount <= 16)
 			bitCount = 16;
 		else
-			bitCount = 32;
+			bitCount = 24;
 
 		if (undecorated)
 			insets = window.getInsets();
