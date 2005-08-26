@@ -1527,6 +1527,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		Rectangle bounds = new Rectangle(panel.getSize());
 		queue.postCachedEvent(new VCLEvent(new PaintEvent(panel, PaintEvent.UPDATE, bounds), VCLEvent.SALEVENT_PAINT, this, 0));
 
+		notifyAll();
+
 	}
 
 	/**
@@ -1860,6 +1862,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (b) {
 			// Show the window
 			window.show();
+			try {
+				wait();
+			}
+			catch (Throwable t) {}
 		}
 		else {
 			// Hide the window
@@ -1965,8 +1971,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			synchronized (f) {
 				if (!f.isDisposed()) {
 					Window w = f.getWindow();
-					if (!w.isShowing())
+					if (!w.isShowing()) {
 						w.show();
+						try {
+							wait();
+						}
+						catch (Throwable t) {}
+					}
 				}
 			}
 		}
