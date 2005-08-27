@@ -440,7 +440,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			{
 				// Post a resize event as the JVM will change the size of the
 				// frame if it is smaller than the allowed minimum
-				com_sun_star_vcl_VCLEvent aEvent( SALEVENT_RESIZE, pFrame, NULL );
+				com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, pFrame, NULL );
 				aEvent.dispatch();
 
 				if ( !pPaintEvent )
