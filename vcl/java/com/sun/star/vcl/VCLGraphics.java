@@ -54,7 +54,6 @@ import java.awt.TexturePaint;
 import java.awt.Toolkit;
 import java.awt.font.FontRenderContext;
 import java.awt.font.GlyphVector;
-import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
@@ -1480,8 +1479,6 @@ public final class VCLGraphics {
 	final class PageQueueItem {
 
 		Area clip = null;
-
-		Area imageClip = null;
 
 		Method method = null;
 
