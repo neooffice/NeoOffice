@@ -1971,13 +1971,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			synchronized (f) {
 				if (!f.isDisposed()) {
 					Window w = f.getWindow();
-					if (!w.isShowing()) {
+					if (!w.isShowing())
 						w.show();
-						try {
-							wait();
-						}
-						catch (Throwable t) {}
-					}
 				}
 			}
 		}
