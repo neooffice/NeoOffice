@@ -147,6 +147,7 @@ int main( int argc, char * argv[])
 #ifdef UNIX
 #define INI_FILE "javarc"
 #ifdef MACOSX
+#include <unistd.h>
 #define DEF_JAVALIB "JavaVM.framework"
 #else
 #define DEF_JAVALIB "libjvm.so"
@@ -1734,6 +1735,39 @@ JavaVM * JavaVirtualMachine::createJavaVM(stoc_javavm::JVM const & jvm,
         //returns negative number on failure
         err= pCreateJavaVM(&pJavaVM, pMainThreadEnv, &vm_args);
         g_bInGetJavaVM = 0;
+
+#ifdef MACOSX
+        // The JVM's native drawing methods print many spurious error messages
+        // on Mac OS X 10.4 which will flood the system log so we need to
+        // filter out the messages
+        int fd[2];
+        if (!pipe(fd))
+        {
+            pid_t pid = fork();
+            if (!pid)
+            {
+                // Child process executes grep -v
+                dup2(1, 2);
+                dup2(fd[0], 0);
+                close(fd[0]);
+                close(fd[1]);
+                execlp( "/usr/bin/grep", "grep", "-v", "^ERROR: ", NULL );
+				exit(0);
+            }
+            else if (pid > 0)
+            {
+                // Parent process redirects stderr to pipe
+                dup2(fd[1], 2);
+                close(fd[0]);
+                close(fd[1]);
+            }
+			else
+			{
+                close(fd[0]);
+                close(fd[1]);
+			}
+        }
+#endif
     }
     else
         // set err to a positive number, so as or recognize that an abort (longjmp)
