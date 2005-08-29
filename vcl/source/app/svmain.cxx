@@ -175,6 +175,35 @@ void SalData::Init (int *pIPointer, char *pCPointer[] )
 
 #include <fontcfg.hxx>
 
+#ifdef MACOSX
+
+#include <premac.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <postmac.h>
+
+#endif	// MACOSX
+
+// ============================================================================
+
+#ifdef MACOSX 
+static void SourceContextCallBack( void *pInfo )
+{
+}
+#endif	// MACOSX
+
+// ============================================================================
+
+#ifdef MACOSX 
+static void *RunSVMain( void *pData )
+{
+	BOOL *pRet = (BOOL *)pData;
+	*pRet = SVMain();
+
+	// Force exit since some JVMs won't shutdown when only exit() is invoked
+	_exit( 0 );
+}
+#endif	// MACOSX
+
 #pragma hdrstop
 
 // =======================================================================
@@ -247,6 +276,42 @@ public:
 // =======================================================================
 BOOL SVMain()
 {
+#ifdef MACOSX
+	static oslThread hThreadID = 0;
+
+	// Mac OS X requires that any Cocoa code have a CFRunLoop started in the
+	// primordial thread. Since all of the AWT classes in Java 1.4 and higher
+	// are written in Cocoa, we need to start the CFRunLoop here and run
+	// SVMain() in a secondary thread.
+    if ( !hThreadID )
+    {
+		BOOL bInit = FALSE;
+
+        hThreadID = osl_createThread( RunSVMain, &bInit );
+
+        // Start the CFRunLoop
+        CFRunLoopSourceContext aSourceContext;
+        aSourceContext.version = 0;
+        aSourceContext.info = NULL;
+        aSourceContext.retain = NULL;
+        aSourceContext.release = NULL;
+        aSourceContext.copyDescription = NULL;
+        aSourceContext.equal = NULL;
+        aSourceContext.hash = NULL;
+        aSourceContext.schedule = NULL;
+        aSourceContext.cancel = NULL;
+        aSourceContext.perform = &SourceContextCallBack;
+        CFRunLoopSourceRef aSourceRef = CFRunLoopSourceCreate( NULL, 0, &aSourceContext );
+        CFRunLoopAddSource( CFRunLoopGetCurrent(), aSourceRef, kCFRunLoopCommonModes );
+        CFRunLoopRun();
+
+        osl_joinWithThread( hThreadID );
+        osl_destroyThread( hThreadID );
+
+        return bInit;
+    }
+#endif	// MACOSX
+
     RTL_LOGFILE_CONTEXT( aLog, "vcl (ss112471) ::SVMain" );
 
     ImplSVData* pSVData = ImplGetSVData();
