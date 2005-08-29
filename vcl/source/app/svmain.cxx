@@ -177,6 +177,8 @@ void SalData::Init (int *pIPointer, char *pCPointer[] )
 
 #ifdef MACOSX
 
+#include <unistd.h>
+
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
@@ -194,7 +196,7 @@ static void SourceContextCallBack( void *pInfo )
 // ============================================================================
 
 #ifdef MACOSX 
-static void *RunSVMain( void *pData )
+static void RunSVMain( void *pData )
 {
 	BOOL *pRet = (BOOL *)pData;
 	*pRet = SVMain();
