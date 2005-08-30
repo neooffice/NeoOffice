@@ -279,17 +279,19 @@ public:
 BOOL SVMain()
 {
 #ifdef MACOSX
-	static oslThread hThreadID = 0;
+	static BOOL bFirstPass = TRUE;
 
 	// Mac OS X requires that any Cocoa code have a CFRunLoop started in the
 	// primordial thread. Since all of the AWT classes in Java 1.4 and higher
 	// are written in Cocoa, we need to start the CFRunLoop here and run
 	// SVMain() in a secondary thread.
-    if ( !hThreadID )
+    if ( bFirstPass )
     {
+		bFirstPass = FALSE;
+
 		BOOL bInit = FALSE;
 
-        hThreadID = osl_createThread( RunSVMain, &bInit );
+		oslThread hThreadID = osl_createThread( RunSVMain, &bInit );
 
         // Start the CFRunLoop
         CFRunLoopSourceContext aSourceContext;
