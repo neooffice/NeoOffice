@@ -52,6 +52,8 @@ OrderedListLevelStyle::OrderedListLevelStyle(const WPXPropertyList &xPropList) :
 
 void OrderedListStyle::updateListLevel(const int iLevel, const WPXPropertyList &xPropList) 
 { 
+	if (iLevel < 0)
+		return;
 	if (!isListLevelDefined(iLevel))
 	    setListLevel(iLevel, new OrderedListLevelStyle(xPropList));
 }
@@ -77,7 +79,10 @@ void OrderedListLevelStyle::write(DocumentHandler &xHandler, int iLevel) const
 	TagOpenElement stylePropertiesOpen("style:properties");
         if (mPropList["text:space-before"])
                 stylePropertiesOpen.addAttribute("text:space-before", mPropList["text:space-before"]->getStr());
-	stylePropertiesOpen.addAttribute("text:min-label-width", "0.499cm");
+	if (mPropList["text:min-label-width"])
+		stylePropertiesOpen.addAttribute("text:min-label-width", mPropList["text:min-label-width"]->getStr());
+	if (mPropList["text:min-label-distance"])
+		stylePropertiesOpen.addAttribute("text:min-label-distance", mPropList["text:min-label-distance"]->getStr());
 	stylePropertiesOpen.write(xHandler);
 
 	xHandler.endElement("style:properties");
@@ -91,6 +96,8 @@ UnorderedListLevelStyle::UnorderedListLevelStyle(const WPXPropertyList &xPropLis
 
 void UnorderedListStyle::updateListLevel(const int iLevel, const WPXPropertyList &xPropList) 
 { 
+	if (iLevel < 0)
+		return;
 	if (!isListLevelDefined(iLevel))
 		setListLevel(iLevel, new UnorderedListLevelStyle(xPropList));
 }
@@ -109,9 +116,12 @@ void UnorderedListLevelStyle::write(DocumentHandler &xHandler, int iLevel) const
 
 	TagOpenElement stylePropertiesOpen("style:properties");
         if (mPropList["text:space-before"])
-                listLevelStyleOpen.addAttribute("text:space-before", mPropList["text:space-before"]->getStr());
-	stylePropertiesOpen.addAttribute("text:min-label-width", "0.499cm");
-	stylePropertiesOpen.addAttribute("style:font-name", "StarSymbol");
+                stylePropertiesOpen.addAttribute("text:space-before", mPropList["text:space-before"]->getStr());
+	if (mPropList["text:min-label-width"])
+		stylePropertiesOpen.addAttribute("text:min-label-width", mPropList["text:min-label-width"]->getStr());
+	if (mPropList["text:min-label-distance"])
+		stylePropertiesOpen.addAttribute("text:min-label-distance", mPropList["text:min-label-distance"]->getStr());
+	stylePropertiesOpen.addAttribute("style:font-name", "OpenSymbol");
 	stylePropertiesOpen.write(xHandler);
 
 	xHandler.endElement("style:properties");

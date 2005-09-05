@@ -63,7 +63,8 @@ _WriterDocumentState::_WriterDocumentState() :
 	mbInFakeSection(false),
 	mbListElementOpenedAtCurrentLevel(false),
 	mbTableCellOpened(false),
-	mbHeaderRow(false)
+	mbHeaderRow(false),
+	mbInNote(false)
 {
 }
 
@@ -582,11 +583,12 @@ void WordPerfectCollector::defineOrderedListLevel(const WPXPropertyList &propLis
  	OrderedListStyle *pOrderedListStyle = NULL;
 	if (mpCurrentListStyle && mpCurrentListStyle->getListID() == id)
 		pOrderedListStyle = static_cast<OrderedListStyle *>(mpCurrentListStyle); // FIXME: using a dynamic cast here causes oo to crash?!
+
 	// this rather appalling conditional makes sure we only start a new list (rather than continue an old
-	// one) iff: (1) we have no prior list OR (2) the prior list is actually definitively different
+	// one) if: (1) we have no prior list OR (2) the prior list is actually definitively different
 	// from the list that is just being defined (listIDs differ) OR (3) we can tell that the user actually
 	// is starting a new list at level 1 (and only level 1)
-	if (pOrderedListStyle == NULL || pOrderedListStyle->getListID() != id ||
+	if (pOrderedListStyle == NULL || pOrderedListStyle->getListID() != id  ||
 	    (propList["libwpd:level"] && propList["libwpd:level"]->getInt()==1 && 
              (propList["text:start-value"] && propList["text:start-value"]->getInt() != (miLastListNumber+1))))
 	{
@@ -603,7 +605,14 @@ void WordPerfectCollector::defineOrderedListLevel(const WPXPropertyList &propLis
 	else
 		mbListContinueNumbering = true;
 
-	pOrderedListStyle->updateListLevel(miCurrentListLevel, propList);
+	// Iterate through ALL list styles with the same WordPerfect list id and define a level if it is not already defined
+	// This solves certain problems with lists that start and finish without reaching certain levels and then begin again
+	// and reach those levels. See gradguide0405_PC.wpd in the regression suite
+	for (std::vector<ListStyle *>::iterator iterOrderedListStyles = mListStyles.begin(); iterOrderedListStyles != mListStyles.end(); iterOrderedListStyles++)
+	{
+		if ((* iterOrderedListStyles)->getListID() == propList["libwpd:id"]->getInt())
+			(* iterOrderedListStyles)->updateListLevel((propList["libwpd:level"]->getInt() - 1), propList);
+	}
 }
 
 void WordPerfectCollector::defineUnorderedListLevel(const WPXPropertyList &propList)
@@ -624,7 +633,13 @@ void WordPerfectCollector::defineUnorderedListLevel(const WPXPropertyList &propL
 		mListStyles.push_back(static_cast<ListStyle *>(pUnorderedListStyle));
 		mpCurrentListStyle = static_cast<ListStyle *>(pUnorderedListStyle);
 	}
-	pUnorderedListStyle->updateListLevel(miCurrentListLevel, propList);
+
+	// See comment in WordPerfectCollector::defineOrderedListLevel
+	for (std::vector<ListStyle *>::iterator iterUnorderedListStyles = mListStyles.begin(); iterUnorderedListStyles != mListStyles.end(); iterUnorderedListStyles++)
+	{
+		if ((* iterUnorderedListStyles)->getListID() == propList["libwpd:id"]->getInt())
+			(* iterUnorderedListStyles)->updateListLevel((propList["libwpd:level"]->getInt() - 1), propList);
+	}
 }
 
 void WordPerfectCollector::openOrderedListLevel(const WPXPropertyList &propList)
@@ -762,11 +777,14 @@ void WordPerfectCollector::openFootnote(const WPXPropertyList &propList)
 	mpCurrentContentElements->push_back(static_cast<DocumentElement *>(new TagCloseElement("text:footnote-citation")));
 
 	mpCurrentContentElements->push_back(static_cast<DocumentElement *>(new TagOpenElement("text:footnote-body")));
-
+	
+	mWriterDocumentState.mbInNote = true;
 }
 
 void WordPerfectCollector::closeFootnote()
 {
+	mWriterDocumentState.mbInNote = false;
+
 	mpCurrentContentElements->push_back(static_cast<DocumentElement *>(new TagCloseElement("text:footnote-body")));
 	mpCurrentContentElements->push_back(static_cast<DocumentElement *>(new TagCloseElement("text:footnote")));
 }
@@ -831,7 +849,7 @@ void WordPerfectCollector::openTable(const WPXPropertyList &propList, const WPXP
 
 void WordPerfectCollector::openTableRow(const WPXPropertyList &propList)
 {
-	if (propList["libwpd:is-header-row"] && propList["libwpd:is-header-row"]->getInt())
+	if (propList["libwpd:is-header-row"] && (propList["libwpd:is-header-row"]->getInt()))
 	{
 		mpCurrentContentElements->push_back(static_cast<DocumentElement *>(new TagOpenElement("table:table-header-rows")));
 		mWriterDocumentState.mbHeaderRow = true;
@@ -894,7 +912,6 @@ void WordPerfectCollector::closeTable()
 {
 	mpCurrentContentElements->push_back(static_cast<DocumentElement *>(new TagCloseElement("table:table")));
 }
-
 
 void WordPerfectCollector::insertTab()
 {
