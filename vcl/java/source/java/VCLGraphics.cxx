@@ -144,6 +144,31 @@ void com_sun_star_vcl_VCLGraphics::copyBits( const com_sun_star_vcl_VCLGraphics 
 
 // ----------------------------------------------------------------------------
 
+com_sun_star_vcl_VCLImage *com_sun_star_vcl_VCLGraphics::createCompatibleImage()
+{
+	static jmethodID mID = NULL;
+	com_sun_star_vcl_VCLImage *out = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Lcom/sun/star/vcl/VCLImage;";
+			mID = t.pEnv->GetMethodID( getMyClass(), "createCompatibleImage", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
+			if ( tempObj )
+				out = new com_sun_star_vcl_VCLImage( tempObj );
+		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLGraphics::drawBitmap( const com_sun_star_vcl_VCLBitmap *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8 )
 {
 	static jmethodID mID = NULL;
@@ -595,31 +620,6 @@ const Rectangle com_sun_star_vcl_VCLGraphics::getGlyphBounds( int _par0, com_sun
 					out = Rectangle( aPoint, aSize );
 				}
 			}
-		}
-	}
-	return out;
-}
-
-// ----------------------------------------------------------------------------
-
-com_sun_star_vcl_VCLImage *com_sun_star_vcl_VCLGraphics::getImage()
-{
-	static jmethodID mID = NULL;
-	com_sun_star_vcl_VCLImage *out = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()Lcom/sun/star/vcl/VCLImage;";
-			mID = t.pEnv->GetMethodID( getMyClass(), "getImage", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
-			if ( tempObj )
-				out = new com_sun_star_vcl_VCLImage( tempObj );
 		}
 	}
 	return out;

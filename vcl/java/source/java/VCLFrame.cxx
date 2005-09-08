@@ -394,9 +394,9 @@ void *com_sun_star_vcl_VCLFrame::getNativeWindow()
 					{
 						ULONG nCount = Application::ReleaseSolarMutex();
 						if ( bReturnsInt )
-							out = (void *)CWindow_windowRef( t.pEnv->CallIntMethod( tempObj, mIDGetModelPtr ) );
+							out = (void *)CWindow_getNSWindow( t.pEnv->CallIntMethod( tempObj, mIDGetModelPtr ) );
 						else
-							out = (void *)CWindow_windowRef( t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr ) );
+							out = (void *)CWindow_getNSWindow( t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr ) );
 						Application::AcquireSolarMutex( nCount );
 					}
 				}
@@ -410,27 +410,9 @@ void *com_sun_star_vcl_VCLFrame::getNativeWindow()
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLFrame *com_sun_star_vcl_VCLFrame::getOwner()
+void *com_sun_star_vcl_VCLFrame::getNativeWindowRef()
 {
-	static jmethodID mID = NULL;
-	com_sun_star_vcl_VCLFrame *out = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()Lcom/sun/star/vcl/VCLFrame;";
-			mID = t.pEnv->GetMethodID( getMyClass(), "getOwner", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
-			if ( tempObj )
-				out = new com_sun_star_vcl_VCLFrame( tempObj );
-		}
-	}
-	return out;
+	return NSWindow_windowRef( getNativeWindow() );
 }
 
 // ----------------------------------------------------------------------------

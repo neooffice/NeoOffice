@@ -743,6 +743,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param s the SAL_FRAME_STYLE flags
 	 * @param q the event queue to post events to
 	 * @param f the frame pointer
+	 * @param p the parent frame
 	 */
 	public VCLFrame(long s, VCLEventQueue q, int f, VCLFrame p) {
 

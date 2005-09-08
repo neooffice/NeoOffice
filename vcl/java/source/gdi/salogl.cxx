@@ -40,8 +40,14 @@
 #ifndef _SV_SALOGL_HXX
 #include <salogl.hxx>
 #endif
+#ifndef _SV_SALFRAME_HXX
+#include <salframe.hxx>
+#endif
 #ifndef _SV_SALGDI_HXX
 #include <salgdi.hxx>
+#endif
+#ifndef _SV_SALVD_HXX
+#include <salvd.hxx>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
@@ -53,47 +59,17 @@
 #include <vos/module.hxx>
 #endif
 
-#define DEF_OGLLIB "/System/Library/Frameworks/OpenGL.framework/OpenGL"
+#include "salogl_cocoa.h"
 
-#include <premac.h>
-#include <OpenGL/OpenGL.h>
-#include <postmac.h>
-
-typedef CGLError CGLChoosePixelFormat_Type( const CGLPixelFormatAttribute *, CGLPixelFormatObj *, long * );
-typedef CGLError CGLClearDrawable_Type( CGLContextObj );
-typedef CGLError CGLCreateContext_Type( CGLPixelFormatObj, CGLContextObj, CGLContextObj * );
-typedef CGLError CGLDestroyContext_Type( CGLContextObj );
-typedef CGLError CGLDestroyPixelFormat_Type( CGLPixelFormatObj );
-typedef CGLError CGLSetCurrentContext_Type( CGLContextObj );
-typedef CGLError CGLSetOffScreen_Type( CGLContextObj, long, long, long, void * );
-
-static CGLChoosePixelFormat_Type *pChoosePixelFormat = NULL;
-static CGLClearDrawable_Type *pClearDrawable = NULL;
-static CGLCreateContext_Type *pCreateContext = NULL;
-static CGLDestroyContext_Type *pDestroyContext = NULL;
-static CGLDestroyPixelFormat_Type *pDestroyPixelFormat = NULL;
-static CGLSetCurrentContext_Type *pSetCurrentContext = NULL;
-static CGLSetOffScreen_Type *pSetOffScreen = NULL;
-
-static ::vos::OModule aModule;
+#define DEF_LIB "/System/Library/Frameworks/OpenGL.framework/OpenGL"
 
 using namespace rtl;
 using namespace vcl;
 using namespace vos;
 
+static OModule aModule;
+
 // ========================================================================
-
-BYTE *SalOpenGL::mpBits = NULL;
-
-// ------------------------------------------------------------------------
-
-java_lang_Object *SalOpenGL::mpData = NULL;
-
-// ------------------------------------------------------------------------
-
-SalGraphics *SalOpenGL::mpLastGraphics = NULL;
-
-// ------------------------------------------------------------------------
 
 void *SalOpenGL::mpNativeContext = NULL;
 
@@ -103,7 +79,11 @@ ULONG SalOpenGL::mnOGLState = OGL_STATE_UNLOADED;
 
 // ------------------------------------------------------------------------
 
-SalOpenGL::SalOpenGL( SalGraphics* pGraphics ) : mpGraphics( NULL )
+SalOpenGL::SalOpenGL( SalGraphics* pGraphics ) :
+	mpBits( NULL ),
+	mpData( NULL ),
+	mpImage( NULL ),
+	mpGraphics( NULL )
 {
 }
 
@@ -111,24 +91,11 @@ SalOpenGL::SalOpenGL( SalGraphics* pGraphics ) : mpGraphics( NULL )
 
 SalOpenGL::~SalOpenGL()
 {
-	if ( mpGraphics && mpLastGraphics && mpGraphics->maGraphicsData.mpVCLGraphics == mpLastGraphics->maGraphicsData.mpVCLGraphics )
+	if ( mpImage )
 	{
-		if ( mpNativeContext && pClearDrawable )
-			pClearDrawable( (CGLContextObj)mpNativeContext );
-
-		if ( mpData )
-		{
-			if ( mpBits )
-			{
-				VCLThreadAttach t;
-				if ( t.pEnv )
-					t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), (jint *)mpBits, JNI_ABORT );
-			}
-			delete mpData;
-		}
-		mpBits = NULL;
-		mpData = NULL;
-		mpLastGraphics = NULL;
+		mpImage->dispose();
+		delete mpImage;
+		mpImage = NULL;
 	}
 }
 
@@ -139,40 +106,11 @@ BOOL SalOpenGL::Create()
 	if ( mnOGLState == OGL_STATE_UNLOADED )
 	{
 		mnOGLState = OGL_STATE_INVALID;
-		if ( aModule.load( OUString::createFromAscii( DEF_OGLLIB ) ) )
+		if ( aModule.load( OUString::createFromAscii( DEF_LIB ) ) )
 		{
-			pChoosePixelFormat = (CGLChoosePixelFormat_Type *)aModule.getSymbol( OUString::createFromAscii( "CGLChoosePixelFormat" ) );
-			pClearDrawable = (CGLClearDrawable_Type *)aModule.getSymbol( OUString::createFromAscii( "CGLClearDrawable" ) );
-			pCreateContext = (CGLCreateContext_Type *)aModule.getSymbol( OUString::createFromAscii( "CGLCreateContext" ) );
-			pDestroyContext = (CGLDestroyContext_Type *)aModule.getSymbol( OUString::createFromAscii( "CGLDestroyContext" ) );
-			pDestroyPixelFormat = (CGLDestroyPixelFormat_Type *)aModule.getSymbol( OUString::createFromAscii( "CGLDestroyPixelFormat" ) );
-			pSetCurrentContext = (CGLSetCurrentContext_Type *)aModule.getSymbol( OUString::createFromAscii( "CGLSetCurrentContext" ) );
-			pSetOffScreen = (CGLSetOffScreen_Type *)aModule.getSymbol( OUString::createFromAscii( "CGLSetOffScreen" ) );
-			if ( pChoosePixelFormat && pClearDrawable && pCreateContext && pDestroyContext && pDestroyPixelFormat && pSetCurrentContext && pSetOffScreen )
-			{
-
-				CGLPixelFormatAttribute pAttributes[ 6 ];
-				pAttributes[ 0 ] = kCGLPFAOffScreen;
-				pAttributes[ 1 ] = kCGLPFAColorSize;
-				pAttributes[ 2 ] = (CGLPixelFormatAttribute)32;
-				pAttributes[ 3 ] = kCGLPFAAlphaSize;
-				pAttributes[ 4 ] = (CGLPixelFormatAttribute)8;
-				pAttributes[ 5 ] = (CGLPixelFormatAttribute)NULL;
-				CGLPixelFormatObj aPixelFormat;
-				long nPixelFormats;
-				pChoosePixelFormat( pAttributes, &aPixelFormat, &nPixelFormats );
-				if ( aPixelFormat )
-				{
-					pCreateContext( aPixelFormat, NULL, (CGLContextObj *)&mpNativeContext );
-					pDestroyPixelFormat( aPixelFormat );
-
-					if ( mpNativeContext )
-					{
-						pSetCurrentContext( (CGLContextObj)mpNativeContext );
-						mnOGLState = OGL_STATE_VALID;
-					}
-				}
-			}
+			mpNativeContext = NSOpenGLContext_create();
+			if ( mpNativeContext )
+				mnOGLState = OGL_STATE_VALID;
 		}
 	}
 
@@ -183,34 +121,11 @@ BOOL SalOpenGL::Create()
 
 void SalOpenGL::Release()
 {
-	if ( mpNativeContext && pClearDrawable && pDestroyContext )
+	if ( mpNativeContext )
 	{
-		pClearDrawable( (CGLContextObj)mpNativeContext );
-		pDestroyContext( (CGLContextObj)mpNativeContext );
+		NSOpenGLContext_release( mpNativeContext );
+		mpNativeContext = NULL;
 	}
-	mpNativeContext = NULL;
-
-	pChoosePixelFormat = NULL;
-	pClearDrawable = NULL;
-	pCreateContext = NULL;
-	pDestroyContext = NULL;
-	pDestroyPixelFormat = NULL;
-	pSetCurrentContext = NULL;
-	pSetOffScreen = NULL;
-
-	if ( mpData )
-	{
-		if ( mpBits )
-		{
-			VCLThreadAttach t;
-			if ( t.pEnv )
-				t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), (jint *)mpBits, JNI_ABORT );
-		}
-		delete mpData;
-	}
-	mpBits = NULL;
-	mpData = NULL;
-	mpLastGraphics = NULL;
 
 	aModule.unload();
 	mnOGLState = OGL_STATE_UNLOADED;
@@ -222,8 +137,7 @@ void *SalOpenGL::GetOGLFnc( const char* pFncName )
 {
 	void *pRet = NULL;
 
-	// Fix bug 765 by not returning the glBlendFunc() function
-	if ( mnOGLState == OGL_STATE_VALID && strcmp( pFncName, "glBlendFunc" ) )
+	if ( mnOGLState == OGL_STATE_VALID )
 		pRet = aModule.getSymbol( OUString::createFromAscii( pFncName ) );
 
 	return pRet;
@@ -233,61 +147,75 @@ void *SalOpenGL::GetOGLFnc( const char* pFncName )
 
 void SalOpenGL::OGLEntry( SalGraphics* pGraphics )
 {
-	mpGraphics = pGraphics;
-
-	if ( !mpGraphics || !mpLastGraphics || mpGraphics->maGraphicsData.mpVCLGraphics != mpLastGraphics->maGraphicsData.mpVCLGraphics )
-	{
-		if ( mpNativeContext && pClearDrawable )
-			pClearDrawable( (CGLContextObj)mpNativeContext );
-
-		if ( mpData )
-		{
-			if ( mpBits )
-			{
-				VCLThreadAttach t;
-				if ( t.pEnv )
-					t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), (jint *)mpBits, JNI_ABORT );
-			}
-			delete mpData;
-		}
-		mpBits = NULL;
-		mpData = NULL;
-		mpLastGraphics = mpGraphics;
-
-		com_sun_star_vcl_VCLImage *pImage = pGraphics->maGraphicsData.mpVCLGraphics->getImage();
-		if ( pImage )
-		{
-			mpData = pImage->getData();
-			if ( mpData )
-			{
-				VCLThreadAttach t;
-				if ( t.pEnv )
-				{
-					long nWidth = pImage->getWidth();
-					long nHeight = pImage->getHeight();
-					jboolean bCopy( sal_False );
-					mpBits = (BYTE *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), &bCopy );
-					if ( mpBits && mpNativeContext && pSetOffScreen )
-						pSetOffScreen( (CGLContextObj)mpNativeContext, nWidth, nHeight, nWidth * 4, mpBits );
-				}
-			}
-			delete pImage;
-		}
-	}
-
-	// Fix bug 289 by resetting the current context in each thread
-	if ( mpNativeContext )
-		pSetCurrentContext( (CGLContextObj)mpNativeContext );
 }
 
 // ------------------------------------------------------------------------
 
 void SalOpenGL::OGLExit( SalGraphics* pGraphics )
 {
-	if ( mpData && mpBits )
+}
+
+// ------------------------------------------------------------------------
+
+void SalOpenGL::StartScene( SalGraphics* pGraphics )
+{
+	NSOpenGLContext_clearDrawable( mpNativeContext );
+
+	mpGraphics = pGraphics;
+
+	if ( !mpImage )
+		mpImage = mpGraphics->maGraphicsData.mpVCLGraphics->createCompatibleImage();
+
+	if ( mpImage )
 	{
-		VCLThreadAttach t;
-		if ( t.pEnv )
-			t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), (jint *)mpBits, JNI_COMMIT );
+		mpData = mpImage->getData();
+		if ( mpData )
+		{
+			VCLThreadAttach t;
+			if ( t.pEnv )
+			{
+				long nWidth = mpImage->getWidth();
+				long nHeight = mpImage->getHeight();
+				jboolean bCopy( sal_False );
+				mpBits = (BYTE *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), &bCopy );
+				if ( mpBits )
+					NSOpenGLContext_setOffScreen( mpNativeContext, mpBits, nWidth, nHeight, nWidth * 4 );
+			}
+		}
+	}
+
+	NSOpenGLContext_makeCurrentContext( mpNativeContext );
+}       
+            
+// ------------------------------------------------------------------------
+
+void SalOpenGL::StopScene()
+{
+	NSOpenGLContext_flushBuffer( mpNativeContext );
+	NSOpenGLContext_clearDrawable( mpNativeContext );
+
+	if ( mpData )
+	{
+		if ( mpBits )
+		{
+			VCLThreadAttach t;
+			if ( t.pEnv )
+				t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), (jint *)mpBits, 0 );
+		}
+		delete mpData;
+	}
+	mpBits = NULL;
+	mpData = NULL;
+
+	if ( mpImage )
+	{
+		com_sun_star_vcl_VCLGraphics *pGraphics = mpImage->getGraphics();
+		if ( pGraphics )
+		{
+			long nWidth = mpImage->getWidth();
+			long nHeight = mpImage->getHeight();
+			mpGraphics->maGraphicsData.mpVCLGraphics->copyBits( pGraphics, 0, 0, nWidth, nHeight, 0, 0, nWidth, nHeight );
+			delete pGraphics;
+		}
 	}
 }

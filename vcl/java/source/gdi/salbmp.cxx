@@ -347,7 +347,7 @@ void SalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, BOOL bReadOnly )
 						t.pEnv->ReleasePrimitiveArrayCritical( (jarray)mpData->getJavaObject(), pBits, JNI_ABORT );
 					}
 
-					if ( !nCommit || nCommit == JNI_ABORT )
+					if ( !mnAcquireCount )
 						rtl_freeMemory( mpBits );
 				}
 

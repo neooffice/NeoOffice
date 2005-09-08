@@ -52,6 +52,7 @@ import java.awt.RenderingHints;
 import java.awt.Shape;
 import java.awt.TexturePaint;
 import java.awt.Toolkit;
+import java.awt.Window;
 import java.awt.font.FontRenderContext;
 import java.awt.font.GlyphVector;
 import java.awt.geom.Area;
@@ -424,6 +425,18 @@ public final class VCLGraphics {
 
 		userClip = null;
 		userClipList = null;
+
+	}
+
+	/**
+	 * Returns a new <code>VCLImage</code> with the same size as the drawable
+	 * area of this graphics.
+	 *
+	 * @return a new <code>VCLImage</code>
+	 */
+	public VCLImage createCompatibleImage() {
+
+		return new VCLImage(graphicsBounds.width, graphicsBounds.height, bitCount);
 
 	}
 
@@ -1280,7 +1293,7 @@ public final class VCLGraphics {
 	 *
 	 * @return the <code>VCLImage</code>
 	 */
-	public VCLImage getImage() {
+	VCLImage getImage() {
 
 		return image;
 
@@ -1295,7 +1308,7 @@ public final class VCLGraphics {
 	 * @param height the height of the rectangle
 	 * @return a <code>BufferedImage</code> of the frame's pixels
 	 */
-	public BufferedImage getImageFromFrame(int x, int y, int width, int height) {
+	BufferedImage getImageFromFrame(int x, int y, int width, int height) {
 
 		if (frame == null)
 			return null;

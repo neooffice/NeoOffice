@@ -122,8 +122,7 @@ java_lang_Object *com_sun_star_vcl_VCLImage::getData()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jintArray tempObj;
-			tempObj = (jintArray)t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			if ( tempObj )
 				out = new java_lang_Object( tempObj );
 		}

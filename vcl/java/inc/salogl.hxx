@@ -51,22 +51,27 @@
 #define OGL_STATE_INVALID		(0x00000001)
 #define	OGL_STATE_VALID			(0x00000002)
 
+namespace vcl
+{
+class com_sun_star_vcl_VCLImage;
+}
+
+class SalGraphics;
+
 // -------------
 // - SalOpenGL -
 // -------------
 
-class SalGraphics;
-class String;
-
 class SalOpenGL
 {
 private:
-	static BYTE*		mpBits;
-	static ::vcl::java_lang_Object*	mpData;
-	static SalGraphics*	mpLastGraphics;
 	static void*		mpNativeContext;
 	static ULONG        mnOGLState;
+
+	BYTE*				mpBits;
+	::vcl::java_lang_Object*	mpData;
 	SalGraphics*		mpGraphics;
+	::vcl::com_sun_star_vcl_VCLImage*	mpImage;
 
 public:					
 						SalOpenGL( SalGraphics* pGraphics );
@@ -77,11 +82,13 @@ public:
 	static ULONG		GetState() { return SalOpenGL::mnOGLState; }
 	static BOOL			IsValid() { return ( OGL_STATE_VALID == SalOpenGL::mnOGLState ); } 
 						
-	static void*		GetOGLFnc( const String& rFncName );
     static void*        GetOGLFnc( const char* pFncName );
 						
 	void    			OGLEntry( SalGraphics* pGraphics );
 	void    			OGLExit( SalGraphics* pGraphics );
+
+	void				StartScene( SalGraphics* pGraphics );
+	void				StopScene();
 };
 
 #endif // _SV_SALOGL_HXX

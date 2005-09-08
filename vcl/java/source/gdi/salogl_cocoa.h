@@ -33,62 +33,24 @@
  *
  ************************************************************************/
 
-#import <Cocoa/Cocoa.h>
-#import "VCLFrame_cocoa.h"
+#ifndef __SALOGL_COCOA_H__
+#define __SALOGL_COCOA_H__
 
-@interface GetNSWindow : NSObject
-{
-	id					mpCWindow;
-	NSWindow*			mpWindow;
-}
-- (void)getNSWindow:(id)pObject;
-- (id)initWithCWindow:(id)pCWindow;
-- (NSWindow *)window;
-@end
+#ifdef __cplusplus
+typedef void* id;
+#endif
 
-@implementation GetNSWindow
+#ifdef __cplusplus
+BEGIN_C
+#endif
+void NSOpenGLContext_clearDrawable( id pContext );
+id NSOpenGLContext_create();
+void NSOpenGLContext_flushBuffer( id pContext );
+void NSOpenGLContext_makeCurrentContext( id pContext );
+void NSOpenGLContext_release( id pContext );
+void NSOpenGLContext_setOffScreen( id pContext, void *pBits, long nWidth, long nHeight, long nScanlineSize );
+#ifdef __cplusplus
+END_C
+#endif
 
-- (void)getNSWindow:(id)pObject
-{
-	if ( mpCWindow && [mpCWindow respondsToSelector:@selector(getNSWindow)] )
-		mpWindow = [mpCWindow getNSWindow];
-}
-
-- (id)initWithCWindow:(id)pCWindow
-{
-	[super init];
-
-	mpCWindow = pCWindow;
-	mpWindow = nil;
-
-	return self;
-}
-
-- (NSWindow *)window
-{
-	return mpWindow;
-}
-
-@end
-
-id CWindow_getNSWindow( id pCWindow )
-{
-	NSWindow *pNSWindow = nil;
-
-	GetNSWindow *pGetNSWindow = [[GetNSWindow alloc] initWithCWindow:pCWindow];
-	[pGetNSWindow performSelectorOnMainThread:@selector(getNSWindow:) withObject:pGetNSWindow waitUntilDone:YES];
-	pNSWindow = [pGetNSWindow window];
-	[pGetNSWindow release];
-
-	return pNSWindow;
-}
-
-WindowRef NSWindow_windowRef( id pNSWindow )
-{
-	WindowRef aWindow = nil;
-
-	if ( pNSWindow )
-		aWindow = [pNSWindow windowRef];
-
-	return aWindow;
-}
+#endif

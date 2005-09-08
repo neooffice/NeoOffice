@@ -48,8 +48,8 @@
 
 namespace vcl {
 
-class com_sun_star_vcl_VCLFont;
 class com_sun_star_vcl_VCLBitmap;
+class com_sun_star_vcl_VCLFont;
 class com_sun_star_vcl_VCLImage;
 
 class com_sun_star_vcl_VCLGraphics : public java_lang_Object
@@ -66,6 +66,7 @@ public:
 
 	void				beginSetClipRegion();
 	void				copyBits( const com_sun_star_vcl_VCLGraphics *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8 );
+	com_sun_star_vcl_VCLImage*	createCompatibleImage();
 	void				drawBitmap( const com_sun_star_vcl_VCLBitmap *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8 );
 	void				drawBitmap( const com_sun_star_vcl_VCLBitmap *_par0, const com_sun_star_vcl_VCLBitmap *_par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8, long _par9 );
 	void				drawGlyphs( long _par0, long _par1, int _par2, long *_par3, long *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, int _par8, long _par9, long _par10 );
@@ -78,7 +79,6 @@ public:
 	void				endSetClipRegion();
 	USHORT				getBitCount();
 	const Rectangle		getGlyphBounds( int _par0, com_sun_star_vcl_VCLFont *_par1, int _par2 );
-	com_sun_star_vcl_VCLImage *getImage();
 	SalColor			getPixel( long _par0, long _par1 );
 	const Size			getResolution();
 	const Size			getScreenFontResolution();

@@ -70,7 +70,7 @@ public:
 	const Rectangle		getInsets();
 	::rtl::OUString		getKeyName( USHORT _par0 );
 	void*				getNativeWindow();
-	com_sun_star_vcl_VCLFrame*	getOwner();
+	void*				getNativeWindowRef();
 	java_lang_Object*	getPeer();
 	ULONG				getState();
 	void				removeChild( SalFrame *_par0 );

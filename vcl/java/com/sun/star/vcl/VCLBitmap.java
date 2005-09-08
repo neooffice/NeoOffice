@@ -40,7 +40,6 @@ import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
-import java.awt.Transparency;
 import java.awt.color.ColorSpace;
 import java.awt.image.BufferedImage;
 import java.awt.image.ColorModel;
@@ -272,26 +271,16 @@ public final class VCLBitmap {
 
 			srcX -= srcBounds.x;
 			srcY -= srcBounds.y;
+		}
 
-			Graphics2D g = image.createGraphics();
-			try {
-				g.drawImage(img, destX, destY, destX + srcWidth, destY + srcHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			g.dispose();
+		Graphics2D g = image.createGraphics();
+		try {
+			g.drawImage(img, destX, destY, destX + srcWidth, destY + srcHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
 		}
-		else { 
-			Graphics2D g = image.createGraphics();
-			try {
-				g.drawImage(img, destX, destY, destX + srcWidth, destY + srcHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			g.dispose();
+		catch (Throwable t) {
+			t.printStackTrace();
 		}
+		g.dispose();
 
 	}
 

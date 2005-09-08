@@ -36,6 +36,7 @@
 package com.sun.star.vcl;
 
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferInt;
 
 /**
  * The Java class that implements the SalFrame C++ class methods.
@@ -161,6 +162,20 @@ public final class VCLImage {
 	int getBitCount() {
 
 		return bitCount;
+
+	}
+
+	/**
+	 * Returns the image's data. Warning: calling this method will disable
+	 * the JVM's built-in graphics acceleration so use this method only for
+	 * images that you won't access the image's <code>Graphics2D</code>
+	 * instance.
+	 *
+	 * @return the image's data
+	 */
+	public int[] getData() {
+
+		return ((DataBufferInt)image.getRaster().getDataBuffer()).getData();
 
 	}
 

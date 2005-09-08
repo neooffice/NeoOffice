@@ -212,7 +212,7 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		}
 
 		// Get native window since it won't be created until first shown
-		maFrameData.maSysData.aWindow = (long)maFrameData.mpVCLFrame->getNativeWindow();
+		maFrameData.maSysData.aWindow = (long)maFrameData.mpVCLFrame->getNativeWindowRef();
 
 		// Show children that we delayed display for
 		for ( ::std::list< SalFrame* >::const_iterator it = maFrameData.maChildren.begin(); it != maFrameData.maChildren.end(); ++it )
