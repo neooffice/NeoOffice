@@ -164,7 +164,7 @@ void SalOpenGL::StartScene( SalGraphics* pGraphics )
 	mpGraphics = pGraphics;
 
 	if ( !mpImage )
-		mpImage = mpGraphics->maGraphicsData.mpVCLGraphics->createCompatibleImage();
+		mpImage = mpGraphics->maGraphicsData.mpVCLGraphics->createImage();
 
 	if ( mpImage )
 	{

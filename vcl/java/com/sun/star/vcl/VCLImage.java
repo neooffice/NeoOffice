@@ -35,8 +35,13 @@
 
 package com.sun.star.vcl;
 
+import java.awt.color.ColorSpace;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferInt;
+import java.awt.image.DirectColorModel;
+import java.awt.image.Raster;
+import java.awt.image.WritableRaster;
 
 /**
  * The Java class that implements the SalFrame C++ class methods.
@@ -50,6 +55,11 @@ public final class VCLImage {
 	 * The bit count.
 	 */
 	private int bitCount = 0;
+
+	/**
+	 * The data buffer.
+	 */
+	private int[] data = null;
 
 	/**
 	 * The graphics.
@@ -99,6 +109,9 @@ public final class VCLImage {
 	 */
 	VCLImage(int w, int h, int b, VCLPageFormat p) {
 
+		width = w;
+		height = h;
+
 		// Adjust the bit count. Note that the JVM cannot draw 1 bit bitmaps
 		// correctly so we don't use them.
 		if (b <= 4)
@@ -110,10 +123,12 @@ public final class VCLImage {
 		else
 			bitCount = 24;
 
+		data = new int[width * height];
+
 		// Create the native image
-		image = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB_PRE);
-		width = w;
-		height = h;
+		DirectColorModel model = new DirectColorModel(ColorSpace.getInstance(ColorSpace.CS_sRGB), 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000, true, DataBuffer.TYPE_INT);
+		WritableRaster raster = Raster.createWritableRaster(model.createCompatibleSampleModel(width, height), new DataBufferInt(data, data.length), null);
+		image = new BufferedImage(model, raster, true, null);
 
 		// Cache the graphics
 		pageFormat = p;
@@ -166,16 +181,13 @@ public final class VCLImage {
 	}
 
 	/**
-	 * Returns the image's data. Warning: calling this method will disable
-	 * the JVM's built-in graphics acceleration so use this method only for
-	 * images that you won't access the image's <code>Graphics2D</code>
-	 * instance.
+	 * Returns the image's data.
 	 *
 	 * @return the image's data
 	 */
 	public int[] getData() {
 
-		return ((DataBufferInt)image.getRaster().getDataBuffer()).getData();
+		return data;
 
 	}
 

@@ -265,12 +265,15 @@ public final class VCLBitmap {
 			if (srcBounds.isEmpty())
 				return;
 
-            img = graphics.getImageFromFrame(srcBounds.x, srcBounds.y, srcBounds.width, srcBounds.height);
-            if (img == null)
+            VCLImage srcImage = graphics.createImage(srcBounds.x, srcBounds.y, srcBounds.width, srcBounds.height);
+            if (srcImage == null)
                 return;
 
 			srcX -= srcBounds.x;
 			srcY -= srcBounds.y;
+
+			img = srcImage.getImage();
+			srcImage.dispose();
 		}
 
 		Graphics2D g = image.createGraphics();

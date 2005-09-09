@@ -144,7 +144,7 @@ void com_sun_star_vcl_VCLGraphics::copyBits( const com_sun_star_vcl_VCLGraphics 
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLImage *com_sun_star_vcl_VCLGraphics::createCompatibleImage()
+com_sun_star_vcl_VCLImage *com_sun_star_vcl_VCLGraphics::createImage()
 {
 	static jmethodID mID = NULL;
 	com_sun_star_vcl_VCLImage *out = NULL;
@@ -154,7 +154,7 @@ com_sun_star_vcl_VCLImage *com_sun_star_vcl_VCLGraphics::createCompatibleImage()
 		if ( !mID )
 		{
 			char *cSignature = "()Lcom/sun/star/vcl/VCLImage;";
-			mID = t.pEnv->GetMethodID( getMyClass(), "createCompatibleImage", cSignature );
+			mID = t.pEnv->GetMethodID( getMyClass(), "createImage", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )

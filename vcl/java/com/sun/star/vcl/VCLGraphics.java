@@ -434,9 +434,48 @@ public final class VCLGraphics {
 	 *
 	 * @return a new <code>VCLImage</code>
 	 */
-	public VCLImage createCompatibleImage() {
+	public VCLImage createImage() {
 
-		return new VCLImage(graphicsBounds.width, graphicsBounds.height, bitCount);
+		return createImage(0, 0, graphicsBounds.width, graphicsBounds.height);
+
+	}
+
+	/**
+	 * Returns a <code>VCLImage</code> of the frame's pixels.
+	 *
+	 * @param x the x coordinate of the rectangle
+	 * @param y the y coordinate of the rectangle
+	 * @param width the width of the rectangle
+	 * @param height the height of the rectangle
+	 * @return a <code>VCLImage</code> of the frame's pixels
+	 */
+	VCLImage createImage(int x, int y, int width, int height) {
+
+		if (graphics != null)
+			return null;
+
+		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
+		if (destBounds.isEmpty())
+			return null;
+
+		VCLImage img = null;
+
+		Graphics2D g = getGraphics();
+		if (g != null) {
+			try {
+				img = new VCLImage(width, height, bitCount);
+				g.setComposite(VCLGraphics.copyComposite);
+				VCLGraphics.copyComposite.setRaster(img.getImage().getRaster());
+				g.setClip(x, y, width, height);
+				g.drawImage(img.getImage(), x, y, x + width, y + height, 0, 0, width, height, null);
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
+		}
+
+		return img;
 
 	}
 
@@ -505,12 +544,15 @@ public final class VCLGraphics {
 				if (srcBounds.isEmpty())
 					return;
 
-				img = vg.getImageFromFrame(srcBounds.x, srcBounds.y, srcBounds.width, srcBounds.height);
-				if (img == null)
+				VCLImage srcImage = vg.createImage(srcBounds.x, srcBounds.y, srcBounds.width, srcBounds.height);
+				if (srcImage == null)
 					return;
 
 				srcX -= srcBounds.x;
 				srcY -= srcBounds.y;
+
+				img = srcImage.getImage();
+				srcImage.dispose();
 			}
 
 			Graphics2D g = getGraphics();
@@ -1296,45 +1338,6 @@ public final class VCLGraphics {
 	VCLImage getImage() {
 
 		return image;
-
-	}
-
-	/**
-	 * Returns a <code>VCLImage</code> of the frame's pixels.
-	 *
-	 * @param x the x coordinate of the rectangle
-	 * @param y the y coordinate of the rectangle
-	 * @param width the width of the rectangle
-	 * @param height the height of the rectangle
-	 * @return a <code>BufferedImage</code> of the frame's pixels
-	 */
-	BufferedImage getImageFromFrame(int x, int y, int width, int height) {
-
-		if (frame == null)
-			return null;
-
-		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
-		if (destBounds.isEmpty())
-			return null;
-
-		BufferedImage img = null;
-
-		Graphics2D g = getGraphics();
-		if (g != null) {
-			try {
-				img = g.getDeviceConfiguration().createCompatibleImage(width, height);
-				g.setComposite(VCLGraphics.copyComposite);
-				VCLGraphics.copyComposite.setRaster(img.getRaster());
-				g.setClip(x, y, width, height);
-				g.drawImage(img, x, y, x + width, y + height, 0, 0, width, height, null);
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			g.dispose();
-		}
-
-		return img;
 
 	}
 
