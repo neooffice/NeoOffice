@@ -78,9 +78,7 @@ class SalInfoPrinterData
 
 class SalPrinterData
 {
-	friend class	SalGraphics;
-	friend class	SalPrinter;
-
+public:
 					SalPrinterData();
 					~SalPrinterData();
 
@@ -89,20 +87,6 @@ class SalPrinterData
 	BOOL			mbGraphics;
 	::vcl::com_sun_star_vcl_VCLPrintJob*	mpVCLPrintJob;
 	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
-};
-
-// ------------------
-// - SalPrinterData -
-// ------------------
-
-class SalDriverData
-{
-public:
-	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
-
-					SalDriverData() : mpVCLPageFormat( NULL ) {}
-					SalDriverData( SalDriverData *pData );
-					~SalDriverData();
 };
 
 #endif // _SV_SALPRN_H

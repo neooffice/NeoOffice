@@ -117,6 +117,11 @@ public final class VCLPageFormat {
 	private static int printerOrientation = PageFormat.PORTRAIT;
 
 	/**
+	 * The printer text resolution.
+	 */
+	private static Dimension printerTextResolution = new Dimension(2540, 2540);
+
+	/**
 	 * Returns the printer orientation.
 	 *
 	 * @return the printer orientation
@@ -143,11 +148,6 @@ public final class VCLPageFormat {
 	private PageFormat pageFormat = null;
 
 	/**
-	 * The page resolution.
-	 */
-	private Dimension pageResolution = null;
-
-	/**
 	 * Constructs a new <code>VCLPageFormat</code> instance.
 	 */
 	public VCLPageFormat() {
@@ -155,7 +155,6 @@ public final class VCLPageFormat {
 		job = PrinterJob.getPrinterJob();
 		pageFormat = job.defaultPage();
 		pageFormat.setOrientation(VCLPageFormat.printerOrientation);
-		pageResolution = new Dimension(VCLScreen.MAX_PRINTER_RESOLUTION, VCLScreen.MAX_PRINTER_RESOLUTION);
 		image = new VCLImage(1, 1, 32, this);
 
 	}
@@ -171,7 +170,6 @@ public final class VCLPageFormat {
 		image = null;
 		job = null;
 		pageFormat = null;
-		pageResolution = null;
 
 	}
 
@@ -193,7 +191,7 @@ public final class VCLPageFormat {
 	 */
 	public Rectangle getImageableBounds() {
 
-		return new Rectangle((int)(pageFormat.getImageableX() * pageResolution.width / 72), (int)(pageFormat.getImageableY() * pageResolution.height / 72), (int)(pageFormat.getImageableWidth() * pageResolution.width / 72), (int)(pageFormat.getImageableHeight() * pageResolution.height / 72));
+		return new Rectangle((int)(pageFormat.getImageableX() * printerTextResolution.width / 72), (int)(pageFormat.getImageableY() * printerTextResolution.height / 72), (int)(pageFormat.getImageableWidth() * printerTextResolution.width / 72), (int)(pageFormat.getImageableHeight() * printerTextResolution.height / 72));
 
 	}
 
@@ -230,9 +228,9 @@ public final class VCLPageFormat {
 	Dimension getPageResolution() {
 
 		if (pageFormat.getOrientation() == PageFormat.PORTRAIT)
-			return new Dimension(pageResolution.width, pageResolution.height);
+			return new Dimension(printerTextResolution.width, printerTextResolution.height);
 		else
-			return new Dimension(pageResolution.height, pageResolution.width);
+			return new Dimension(printerTextResolution.height, printerTextResolution.width);
 
 	}
 
@@ -243,7 +241,7 @@ public final class VCLPageFormat {
 	 */
 	public Dimension getPageSize() {
 
-		return new Dimension((int)(pageFormat.getWidth() * pageResolution.width / 72), (int)(pageFormat.getHeight() * pageResolution.height / 72));
+		return new Dimension((int)(pageFormat.getWidth() * printerTextResolution.width / 72), (int)(pageFormat.getHeight() * printerTextResolution.height / 72));
 
 	}
 
@@ -284,20 +282,11 @@ public final class VCLPageFormat {
 	 *
 	 * @return the <code>PrinterJob</code> instance
 	 */
-	public PrinterJob getPrinterJob() {
+	PrinterJob getPrinterJob() {
 
 		return job;
 
 	}  
-
-	/**
-	 * Reset the page resolution to the default resolution.
-	 */
-	public void resetPageResolution() {
-
-		pageResolution = new Dimension(VCLScreen.MAX_PRINTER_RESOLUTION, VCLScreen.MAX_PRINTER_RESOLUTION);
-
-	}
 
 	/**
 	 * Set the editability of this component.
@@ -327,18 +316,6 @@ public final class VCLPageFormat {
 			pageFormat.setOrientation(PageFormat.LANDSCAPE);
 		else
 			pageFormat.setOrientation(VCLPageFormat.printerOrientation);
-
-	}
-
-	/**
-	 * Set the page resolution.
-	 *
-	 * @param h the horizontal page resolution
-	 * @param v the vertical page resolution
-	 */
-	public void setPageResolution(int h, int v) {
-
-		pageResolution = new Dimension(h, v);
 
 	}
 

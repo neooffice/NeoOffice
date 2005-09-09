@@ -154,20 +154,11 @@ public: 					// public for Sal Implementation
 #endif
 
 public:
-#ifdef USE_JAVA
-	BOOL					StartJob( const XubString* pFileName,
-									  const XubString& rJobName,
-									  const XubString& rAppName,
-									  ULONG nCopies, BOOL bCollate,
-									  ImplJobSetup* pSetupData,
-									  BOOL bShowDialog );
-#else	// USE_JAVA
 	BOOL					StartJob( const XubString* pFileName,
 									  const XubString& rJobName,
 									  const XubString& rAppName,
 									  ULONG nCopies, BOOL bCollate,
 									  ImplJobSetup* pSetupData );
-#endif	// USE_JAVA
 	BOOL					EndJob();
 	BOOL					AbortJob();
 	SalGraphics*			StartPage( ImplJobSetup* pSetupData, BOOL bNewJobData );

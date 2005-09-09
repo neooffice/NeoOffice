@@ -59,29 +59,6 @@ using namespace vcl;
 
 // ============================================================================
 
-static jint JNICALL Java_com_apple_mrj_internal_awt_printing_MacPageFormat_createBestFormat( JNIEnv *pEnv, jobject object, jint pSessionPtr )
-{
-	jint nRet = 0;
-	PMPrintSession pSession = (PMPrintSession)pSessionPtr;
-	if ( pSession )
-	{
-		CFNumberRef aData = NULL;
-		if ( PMSessionGetDataFromSession( pSession, PAGEFORMAT_KEY, (CFTypeRef *)&aData ) == kPMNoError && aData )
-		{
-			CFIndex aValue;
-			if ( CFNumberGetValue( aData, kCFNumberCFIndexType, &aValue ) )
-			{
-				PMPageFormat aPageFormat = (PMPageFormat)aValue;
-				if ( aPageFormat && PMRetain( aPageFormat ) == kPMNoError )
-					nRet = (jint)aPageFormat;
-			}
-		}
-	}
-	return nRet;
-}
-
-// ============================================================================
-
 jclass com_sun_star_vcl_VCLPageFormat::theClass = NULL;
 
 // ----------------------------------------------------------------------------
@@ -92,24 +69,6 @@ jclass com_sun_star_vcl_VCLPageFormat::getMyClass()
 	{
 		VCLThreadAttach t;
 		if ( !t.pEnv ) return (jclass)NULL;
-
-		// Test the JVM version and if it is below 1.4, use Carbon printing APIs
-		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
-		{
-			// We need to replace the native MacPageFormat.createBestFormat()
-			// method as it will throw exceptions whenever a user selects a
-			// custom page format
-			jclass pageFormatClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/printing/MacPageFormat" );
-			if ( pageFormatClass )
-			{
-				JNINativeMethod aMethod;
-				aMethod.name = "createBestFormat";
-				aMethod.signature = "(I)I";
-				aMethod.fnPtr = (void *)Java_com_apple_mrj_internal_awt_printing_MacPageFormat_createBestFormat;
-				t.pEnv->RegisterNatives( pageFormatClass, &aMethod, 1 );
-			}
-		}
-
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLPageFormat" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
@@ -119,7 +78,7 @@ jclass com_sun_star_vcl_VCLPageFormat::getMyClass()
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLPageFormat::com_sun_star_vcl_VCLPageFormat() : java_lang_Object( (jobject)NULL ), mbInitialized( FALSE )
+com_sun_star_vcl_VCLPageFormat::com_sun_star_vcl_VCLPageFormat() : java_lang_Object( (jobject)NULL )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -134,34 +93,6 @@ com_sun_star_vcl_VCLPageFormat::com_sun_star_vcl_VCLPageFormat() : java_lang_Obj
 	jobject tempObj;
 	tempObj = t.pEnv->NewObject( getMyClass(), mID );
 	saveRef( tempObj );
-	initializeNativePrintJob();
-}
-
-// ----------------------------------------------------------------------------
-
-void com_sun_star_vcl_VCLPageFormat::destroyNativePrintJob()
-{
-	if ( !mbInitialized )
-		return;
-
-	PMPrintSession pSession = (PMPrintSession)getNativePrintJob();
-	if ( pSession )
-	{
-		CFNumberRef aData = NULL;
-		if ( PMSessionGetDataFromSession( pSession, PAGEFORMAT_KEY, (CFTypeRef *)&aData ) == kPMNoError && aData )
-		{
-			CFIndex aValue;
-			if ( CFNumberGetValue( aData, kCFNumberCFIndexType, &aValue ) )
-			{
-				PMPageFormat aPageFormat = (PMPageFormat)aValue;
-				if ( aPageFormat )
-					PMRelease( aPageFormat );
-			}
-		}
-		mbInitialized = FALSE;
-	}
-
-	GetSalData()->maVCLPageFormats.remove( this );
 }
 
 // ----------------------------------------------------------------------------
@@ -271,60 +202,6 @@ const Rectangle com_sun_star_vcl_VCLPageFormat::getImageableBounds()
 
 // ----------------------------------------------------------------------------
 
-void *com_sun_star_vcl_VCLPageFormat::getNativePrintJob()
-{
-	void *out = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		java_lang_Object *printerJob = getPrinterJob();
-		if ( printerJob )
-		{
-			jobject tempObj = printerJob->getJavaObject();
-			if ( tempObj )
-			{
-				// Test the JVM version and if it is below 1.4, use Carbon
-				// printing APIs
-				if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
-				{
-					jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/printing/MacPrinterJob" );
-					if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
-					{
-						static jfieldID fIDSession = NULL;
-						if ( !fIDSession )
-						{
-							char *cSignature = "Lcom/apple/mrj/macos/generated/PMPrintSessionOpaque;";
-							fIDSession = t.pEnv->GetFieldID( tempClass, "fPrintSession", cSignature );
-						}
-						OSL_ENSURE( fIDSession, "Unknown field id!" );
-						if ( fIDSession )
-						{
-							jobject session = t.pEnv->GetObjectField( tempObj, fIDSession );
-							if ( session )
-							{
-								static jmethodID mIDGetPointer = NULL;
-								jclass sessionClass = t.pEnv->GetObjectClass( session );
-								if ( !mIDGetPointer )
-								{
-									char *cSignature = "()I";
-									mIDGetPointer = t.pEnv->GetMethodID( sessionClass, "getPointer", cSignature );
-								}
-								OSL_ENSURE( mIDGetPointer, "Unknown method id!" );
-								if ( mIDGetPointer )
-									out = (void *)t.pEnv->CallIntMethod( session, mIDGetPointer );
-							}
-						}
-					}
-				}
-			}
-			delete printerJob;
-		}
-	}
-	return out;
-}
-
-// ----------------------------------------------------------------------------
-
 Orientation com_sun_star_vcl_VCLPageFormat::getOrientation()
 {
 	static jmethodID mID = NULL;
@@ -406,99 +283,6 @@ Paper com_sun_star_vcl_VCLPageFormat::getPaperType()
 			out = (Paper)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
-}
-
-// ----------------------------------------------------------------------------
-
-java_lang_Object *com_sun_star_vcl_VCLPageFormat::getPrinterJob()
-{
-	static jmethodID mID = NULL;
-	java_lang_Object *out = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()Ljava/awt/print/PrinterJob;";
-			mID = t.pEnv->GetMethodID( getMyClass(), "getPrinterJob", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
-			if ( tempObj )
-				out = new java_lang_Object( tempObj );
-		}
-	}
-	return out;
-}
-
-// ----------------------------------------------------------------------------
-
-void com_sun_star_vcl_VCLPageFormat::initializeNativePrintJob()
-{
-	if ( mbInitialized )
-		return;
-
-	PMPrintSession pSession = (PMPrintSession)getNativePrintJob();
-	if ( pSession )
-	{
-		PMPageFormat aPageFormat = NULL;
-		CFNumberRef aData = NULL;
-		if ( PMSessionGetDataFromSession( pSession, PAGEFORMAT_KEY, (CFTypeRef *)&aData ) == kPMNoError && aData )
-		{
-			CFIndex aValue;
-			if ( CFNumberGetValue( aData, kCFNumberCFIndexType, &aValue ) )
-			{
-				aPageFormat = (PMPageFormat)aValue;
-				if ( PMRetain( aPageFormat ) != kPMNoError )
-				{
-					PMRelease( aPageFormat );
-					aPageFormat = NULL;
-				}
-			}
-		}
-		if ( !aPageFormat )
-		{
-			if ( PMCreatePageFormat( &aPageFormat ) == kPMNoError )
-			{
-				if ( PMSessionDefaultPageFormat( pSession, aPageFormat ) == kPMNoError && ( aData = CFNumberCreate( kCFAllocatorDefault,  kCFNumberCFIndexType, &aPageFormat ) ) != NULL )
-				{
-					PMSessionSetDataInSession( pSession, PAGEFORMAT_KEY, (CFTypeRef)aData );
-				}
-				else
-				{
-					PMRelease( aPageFormat );
-					aPageFormat = NULL;
-				}
-			}
-		}
-		if ( aPageFormat )
-			mbInitialized = TRUE;
-	}
-
-	SalData *pSalData = GetSalData();
-	pSalData->maVCLPageFormats.remove( this );
-	pSalData->maVCLPageFormats.push_back( this );
-}
-
-// ----------------------------------------------------------------------------
-
-void com_sun_star_vcl_VCLPageFormat::resetPageResolution()
-{
-	static jmethodID mID = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()V";
-			mID = t.pEnv->GetMethodID( getMyClass(), "resetPageResolution", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
-	}
 }
 
 // ----------------------------------------------------------------------------

@@ -386,11 +386,6 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 		if( mbUserCopy && !mbCollateCopy )
 			nCopyCount = mnCopyCount;
 
-#if defined USE_JAVA && defined MACOSX
-		// Java on Mac OS X expects each page to be printed twice
-		nCopyCount *= 2;
-#endif	// USE_JAVA && MACOSX
-
 		for ( USHORT i = 0; i < nCopyCount; i++ )
 		{
 			ULONG nActionPos = 0UL;

@@ -887,38 +887,16 @@ SalInfoPrinter* SalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
 	pSetupData->maPrinterName = pQueueInfo->maPrinterName;
 	pSetupData->maDriver = pQueueInfo->maDriver;
 
-	// Check driver data
+	// Clear driver data
 	if ( pSetupData->mpDriverData )
 	{
-		if ( pSetupData->mnSystem != JOBSETUP_SYSTEM_JAVA || pSetupData->mnDriverDataLen != sizeof( SalDriverData ) )
-		{
-			rtl_freeMemory( pSetupData->mpDriverData );
-			pSetupData->mpDriverData = NULL;
-			pSetupData->mnDriverDataLen = 0;
-		}
-		else
-		{
-			SalDriverData *pDriverData = (SalDriverData *)pSetupData->mpDriverData;
-			if ( !pDriverData->mpVCLPageFormat )
-			{
-				delete (SalDriverData *)pSetupData->mpDriverData;
-				pSetupData->mpDriverData = NULL;
-				pSetupData->mnDriverDataLen = 0;
-			}
-		}
+		rtl_freeMemory( pSetupData->mpDriverData );
+		pSetupData->mpDriverData = NULL;
+		pSetupData->mnDriverDataLen = 0;
 	}
 
-	// Set driver data
-	if ( !pSetupData->mpDriverData )
-	{
-		SalDriverData *pDriverData = new SalDriverData();
-		pDriverData->mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat();
-		pSetupData->mpDriverData = (BYTE *)pDriverData;
-		pSetupData->mnDriverDataLen = sizeof( SalDriverData );
-	}
-
-	// Create a new page format instance that points to the same Java object
-	pPrinter->maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( ((SalDriverData *)pSetupData->mpDriverData)->mpVCLPageFormat->getJavaObject() );
+	// Create a new page format instance
+	pPrinter->maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat();
 
 	// Update values
 	pPrinter->SetData( 0, pSetupData );
@@ -957,6 +935,12 @@ XubString SalInstance::GetDefaultPrinter()
 SalPrinter* SalInstance::CreatePrinter( SalInfoPrinter* pInfoPrinter )
 {
 	SalPrinter *pPrinter = new SalPrinter();
+
+	if ( pInfoPrinter && pInfoPrinter->maPrinterData.mpVCLPageFormat )
+		pPrinter->maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pInfoPrinter->maPrinterData.mpVCLPageFormat->getJavaObject() );
+	else
+		pPrinter->maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat();
+
 	return pPrinter;
 }
 

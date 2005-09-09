@@ -56,12 +56,7 @@ import java.awt.Window;
 public final class VCLScreen {
 
 	/**
-	 * The minimum screen resolution
-	 */
-	public final static int MAX_PRINTER_RESOLUTION = 300;
-
-	/**
-	 * The minimum screen resolution
+	 * The minimum screen resolution.
 	 */
 	public final static int MIN_SCREEN_RESOLUTION = 96;
 

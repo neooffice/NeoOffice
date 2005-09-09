@@ -35,9 +35,6 @@
 
 #define _SV_SALPRN_CXX
 
-#ifndef _SV_SALDATA_HXX
-#include <saldata.hxx>
-#endif
 #ifndef _SV_SALPRN_HXX
 #include <salprn.hxx>
 #endif
@@ -102,15 +99,7 @@ BOOL SalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 	Orientation nOrientation = maPrinterData.mpVCLPageFormat->getOrientation();
 	maPrinterData.mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
 
-	// Unlock the VCL event loop so that the native event loop can do work
-	// while the native modal dialog is open
-	ULONG nCount = Application::ReleaseSolarMutex();
-
 	BOOL bOK = maPrinterData.mpVCLPageFormat->setup();
-
-	// Relock the VCL event loop
-	Application::AcquireSolarMutex( nCount );
-
 	if ( !bOK )
 		maPrinterData.mpVCLPageFormat->setOrientation( nOrientation );
 
@@ -124,46 +113,12 @@ BOOL SalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 
 BOOL SalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
 {
-	SalData *pSalData = GetSalData();
-
-	// Check driver data
+	// Clear driver data
 	if ( pSetupData->mpDriverData )
 	{
-		if ( pSetupData->mnSystem != JOBSETUP_SYSTEM_JAVA || pSetupData->mnDriverDataLen != sizeof( SalDriverData ) )
-		{
-			rtl_freeMemory( pSetupData->mpDriverData );
-			pSetupData->mpDriverData = NULL;
-			pSetupData->mnDriverDataLen = 0;
-		}
-		else
-		{
-			SalDriverData *pDriverData = (SalDriverData *)pSetupData->mpDriverData;
-			if ( !pDriverData->mpVCLPageFormat )
-			{
-				delete (SalDriverData *)pSetupData->mpDriverData;
-				pSetupData->mpDriverData = NULL;
-				pSetupData->mnDriverDataLen = 0;
-			}
-		}
-	}
-
-	// Set driver data
-	if ( !pSetupData->mpDriverData )
-	{
-		SalDriverData *pDriverData = new SalDriverData();
-		pDriverData->mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( maPrinterData.mpVCLPageFormat->getJavaObject() );
-		pSetupData->mpDriverData = (BYTE *)pDriverData;
-		pSetupData->mnDriverDataLen = sizeof( SalDriverData );
-	}
-	else
-	{
-		if ( maPrinterData.mpVCLPageFormat )
-			delete maPrinterData.mpVCLPageFormat;
-
-		// Create a new page format instance that points to the same Java
-		// object
-		SalDriverData *pDriverData = (SalDriverData *)pSetupData->mpDriverData;
-		maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pDriverData->mpVCLPageFormat->getJavaObject() );
+		rtl_freeMemory( pSetupData->mpDriverData );
+		pSetupData->mpDriverData = NULL;
+		pSetupData->mnDriverDataLen = 0;
 	}
 
 	// Set but don't update values
@@ -258,27 +213,9 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 						   const XubString& rJobName,
 						   const XubString&,
 						   ULONG nCopies, BOOL bCollate,
-						   ImplJobSetup* pSetupData,
-						   BOOL bShowDialog )
+						   ImplJobSetup* pSetupData )
 {
-	SalData *pSalData = GetSalData();
-
-	if ( maPrinterData.mpVCLPageFormat )
-		delete maPrinterData.mpVCLPageFormat;
-
-	// Create a new page format instance that points to the same Java object
-	SalDriverData *pDriverData = (SalDriverData *)pSetupData->mpDriverData;
-	maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pDriverData->mpVCLPageFormat->getJavaObject() );
-
-	// Unlock the VCL event loop so that the native event loop can do work
-	// while the native modal dialog is open
-	ULONG nCount = Application::ReleaseSolarMutex();
-
-	maPrinterData.mbStarted = maPrinterData.mpVCLPrintJob->startJob( maPrinterData.mpVCLPageFormat, bShowDialog );
-
-	// Relock the VCL event loop
-	Application::AcquireSolarMutex( nCount );
-
+	maPrinterData.mbStarted = maPrinterData.mpVCLPrintJob->startJob( maPrinterData.mpVCLPageFormat );
 	return maPrinterData.mbStarted;
 }
 
@@ -287,8 +224,6 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 BOOL SalPrinter::EndJob()
 {
 	maPrinterData.mpVCLPrintJob->endJob();
-	if ( maPrinterData.mpVCLPageFormat )
-		maPrinterData.mpVCLPageFormat->resetPageResolution();
 	maPrinterData.mbStarted = FALSE;
 	return TRUE;
 }
@@ -412,39 +347,4 @@ void SalInfoPrinter::InitPaperFormats( const ImplJobSetup* pSetupData )
 #ifdef DEBUG
 	fprintf( stderr, "SalInfoPrinter::InitPaperFormats not implemented\n" );
 #endif
-}
-
-// =======================================================================
-
-SalDriverData::SalDriverData( SalDriverData *pData ) : mpVCLPageFormat( NULL )
-{
-	SalData *pSalData = GetSalData();
-
-	for ( ::std::list< com_sun_star_vcl_VCLPageFormat* >::const_iterator it = pSalData->maVCLPageFormats.begin(); it != pSalData->maVCLPageFormats.end(); ++it )
-	{
-		if ( pData->mpVCLPageFormat == *it && pData->mpVCLPageFormat->getJavaObject() == (*it)->getJavaObject() )
-		{
-			mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pData->mpVCLPageFormat->getJavaObject() );
-			break;
-		}
-	}
-}
-
-// -----------------------------------------------------------------------
-
-SalDriverData::~SalDriverData()
-{
-	if ( mpVCLPageFormat )
-	{
-		SalData *pSalData = GetSalData();
-
-		for ( ::std::list< com_sun_star_vcl_VCLPageFormat* >::const_iterator it = pSalData->maVCLPageFormats.begin(); it != pSalData->maVCLPageFormats.end(); ++it )
-		{
-			if ( mpVCLPageFormat == *it && mpVCLPageFormat->getJavaObject() == (*it)->getJavaObject() )
-			{
-				delete mpVCLPageFormat;
-				break;
-			}
-		}
-	}
 }

@@ -54,16 +54,6 @@ import java.awt.print.PrinterJob;
 public final class VCLPrintJob implements Printable, Runnable {
 
 	/**
-	 * The current page.
-	 */
-	private int currentPage = 0;
-
-	/**
-	 * The dialogAccepted flag.
-	 */
-	private boolean dialogAccepted = false;
-
-	/**
 	 * The end job flag.
 	 */
 	private boolean endJob = false;
@@ -139,7 +129,6 @@ public final class VCLPrintJob implements Printable, Runnable {
 				graphicsInfo.currentGraphics = null;
 			}
 		}
-		currentPage = 0;
 		endJob = true;
 		graphicsInfo = null;
 		job = null;
@@ -177,11 +166,14 @@ public final class VCLPrintJob implements Printable, Runnable {
 				return;
 
 			// Allow the printer thread to move to the next page
-			graphicsInfo.notifyAll();
-			try {
-				graphicsInfo.wait();
+			graphicsInfo.endPage = true;
+			while (graphicsInfo.endPage) {
+				graphicsInfo.notifyAll();
+				try {
+					graphicsInfo.wait();
+				}
+				catch (Throwable t) {}
 			}
-			catch (Throwable t) {}
 		}
 
 	}
@@ -208,20 +200,27 @@ public final class VCLPrintJob implements Printable, Runnable {
 			graphicsInfo.pageFormat = f;
 
 			// Notify other threads and wait until painting is finished
-			graphicsInfo.notifyAll();
-			try {
-				graphicsInfo.wait();
+			while (!graphicsInfo.endPage) {
+				runNativeTimers();
+				graphicsInfo.notifyAll();
+				try {
+					graphicsInfo.wait(500);
+				}
+				catch (Throwable t) {}
 			}
-			catch (Throwable t) {}
+
+			// Allow endPage() method to continue
+			graphicsInfo.endPage = false;
 
 			if (graphicsInfo.currentGraphics != null) {
-				// Dispose a print graphics throws exceptions when memory is low
+				runNativeTimers();
 				try {
 					graphicsInfo.currentGraphics.dispose();
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
 				}
+				runNativeTimers();
 			}
 
 			graphicsInfo.graphics = null;
@@ -263,15 +262,11 @@ public final class VCLPrintJob implements Printable, Runnable {
 	}
 
 	/**
-	 * Returns the <code>PrinterJob</code> instance.
-	 *
-	 * @return the <code>PrinterJob</code> instance
+	 * Run any native timers that are pending. This method needs to be called
+	 * within the {@link #print(Graphics, PageFormat, int)} method as that
+	 * method is run by the JVM in a native timer.
 	 */
-	public PrinterJob getPrinterJob() {
-
-		return job;
-
-	}
+	native void runNativeTimers();
 
 	/**
 	 * Return the status of the print job.
@@ -289,30 +284,22 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 * Initialize the print job.
 	 *
 	 * @param p the <code>VCLPageFormat</code>
-	 * @param b <code>true</code> to show the print dialog or
-	 *  <code>false</code> to not show the print dialog
 	 * @return <code>true</code> if a print job was successfully created or
 	 *  <code>false</code> if the user cancelled the print dialog
 	 */
-	public boolean startJob(VCLPageFormat p, boolean b) {
+	public boolean startJob(VCLPageFormat p) {
 
 		// Detect if the user cancelled the print dialog
-		if (b) {
-			pageFormat = p;
-			job = pageFormat.getPrinterJob();
-			job.setPrintable(this, pageFormat.getPageFormat());
-			if (job.printDialog()) {
-				dialogAccepted = true;
-			}
-			else {
-				dialogAccepted = false;
-			}
-		}
-		else if (!b && dialogAccepted) {
+		pageFormat = p;
+		job = pageFormat.getPrinterJob();
+		job.setPrintable(this, pageFormat.getPageFormat());
+		if (job.printDialog()) {
 			pageFormat.setEditable(false);
+			return true;
 		}
-
-		return dialogAccepted;
+		else {
+			return false;
+		}
 
 	}
 
@@ -342,8 +329,11 @@ public final class VCLPrintJob implements Printable, Runnable {
 				catch (Throwable t) {}
 			}
 
+			// Mac OS X wants each page printed twice so skip the first as it
+			// seems to have no effect on the printed output
+			endPage();
+
 			// Get the current page's graphics context
-			currentPage++;
 			if (graphicsInfo.graphics != null && printThread != null && printThread.isAlive()) {
 				// Set the origin to the origin of the printable area
 				graphicsInfo.graphics.translate((int)graphicsInfo.pageFormat.getImageableX(), (int)graphicsInfo.pageFormat.getImageableY());
@@ -387,6 +377,8 @@ public final class VCLPrintJob implements Printable, Runnable {
 	}
 
 	class GraphicsInfo {
+
+		boolean endPage = false;
 
 		Graphics2D graphics = null;
 

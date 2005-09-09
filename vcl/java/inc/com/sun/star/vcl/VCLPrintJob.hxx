@@ -64,11 +64,9 @@ public:
 	void				dispose();
 	void				endJob();
 	void				endPage();
-	void*				getNativePrintJob();
 	XubString			getPageRange();
-	java_lang_Object*	getPrinterJob();
 	sal_Bool			isFinished();
-	sal_Bool			startJob( com_sun_star_vcl_VCLPageFormat *_par0, sal_Bool _par1 );
+	sal_Bool			startJob( com_sun_star_vcl_VCLPageFormat *_par0 );
 	com_sun_star_vcl_VCLGraphics*	startPage( Orientation _par0 );
 };
 

@@ -526,14 +526,7 @@ void Printer::ImplInit( SalPrinterQueueInfo* pInfo )
 		if ( (pJobSetup->maPrinterName != pInfo->maPrinterName) ||
 			 (pJobSetup->maDriver != pInfo->maDriver) )
 		{
-#ifdef USE_JAVA
-			if ( pJobSetup->mnSystem == JOBSETUP_SYSTEM_JAVA && pJobSetup->mnDriverDataLen == sizeof( SalDriverData ) )
-				delete (SalDriverData *)pJobSetup->mpDriverData;
-			else
-				rtl_freeMemory( pJobSetup->mpDriverData );
-#else	// USE_JAVA
 			delete[] pJobSetup->mpDriverData;
-#endif	// USE_JAVA
 			pJobSetup->mpDriverData = NULL;
 			pJobSetup->mnDriverDataLen = 0;
 		}
@@ -1799,15 +1792,12 @@ BOOL Printer::StartJob( const XubString& rJobName )
 			pPrintFile = NULL;
 
 #ifdef USE_JAVA
-		if ( !mpPrinter->StartJob( pPrintFile, rJobName, Application::GetDisplayName(),
-								   nCopies, bCollateCopy,
-								   maJobSetup.ImplGetConstData(),
-								   !mbDummy3 ) && !mbDummy3 )
+		if ( !mbDummy3 && !mpPrinter->StartJob( pPrintFile, rJobName, Application::GetDisplayName(),
 #else	// USE_JAVA
 		if ( !mpPrinter->StartJob( pPrintFile, rJobName, Application::GetDisplayName(),
+#endif	// USE_JAVA
 								   nCopies, bCollateCopy,
 								   maJobSetup.ImplGetConstData() ) )
-#endif	// USE_JAVA
 		{
 			mnError = ImplSalPrinterErrorCodeToVCL( mpPrinter->GetErrorCode() );
 			if ( !mnError )
@@ -1827,9 +1817,6 @@ BOOL Printer::StartJob( const XubString& rJobName )
 			mbDummy3 = TRUE;
 			return TRUE;
 		}
-
-		// The resolution of the printer may have changed
-		ImplUpdatePageData();
 #endif	// USE_JAVA
 
 		mbNewJobSetup	= FALSE;
@@ -1939,9 +1926,6 @@ BOOL Printer::EndJob()
 
 			mbDevOutput = FALSE;
 			mpPrinter->EndJob();
-#ifdef USE_JAVA
-			ImplUpdatePageData();
-#endif	// USE_JAVA
 			// Hier den Drucker nicht asyncron zerstoeren, da es
 			// W95 nicht verkraftet, wenn gleichzeitig gedruckt wird
 			// und ein Druckerobjekt zerstoert wird

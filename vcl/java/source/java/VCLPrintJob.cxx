@@ -47,12 +47,6 @@
 #ifndef _SV_JAVA_LANG_CLASS_HXX
 #include <java/lang/Class.hxx>
 #endif
-#ifndef _SV_SALDATA_HXX
-#include <saldata.hxx>
-#endif
-#ifndef _SV_SALFRAME_HXX
-#include <salframe.hxx>
-#endif
 #ifndef _STRING_HXX
 #include <tools/string.hxx>
 #endif
@@ -61,8 +55,14 @@
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 
-using namespace rtl;
 using namespace vcl;
+
+// ============================================================================
+
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLPrintJob_runNativeTimers( JNIEnv *pEnv, jobject object )
+{
+	ReceiveNextEvent( 0, NULL, 0, false, NULL );
+}
 
 // ============================================================================
 
@@ -78,6 +78,17 @@ jclass com_sun_star_vcl_VCLPrintJob::getMyClass()
 		if ( !t.pEnv ) return (jclass)NULL;
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLPrintJob" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
+
+		if ( tempClass )
+		{
+			// Register the native methods for our class
+			JNINativeMethod aMethod; 
+			aMethod.name = "runNativeTimers";
+			aMethod.signature = "()V";
+			aMethod.fnPtr = (void *)Java_com_sun_star_vcl_VCLPrintJob_runNativeTimers;
+			t.pEnv->RegisterNatives( tempClass, &aMethod, 1 );
+		}
+
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
 	}
 	return theClass;
@@ -180,140 +191,9 @@ void com_sun_star_vcl_VCLPrintJob::endPage()
 
 // ----------------------------------------------------------------------------
 
-void *com_sun_star_vcl_VCLPrintJob::getNativePrintJob()
-{
-	static jmethodID mID = NULL;
-	void *out = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		java_lang_Object *printerJob = getPrinterJob();
-		if ( printerJob )
-		{
-			jobject tempObj = printerJob->getJavaObject();
-			if ( tempObj )
-			{
-				// Test the JVM version and if it is below 1.4, use Carbon
-				// printing APIs
-				if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
-				{
-					jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/printing/MacPrinterJob" );
-					if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
-					{
-						static jfieldID fIDSession = NULL;
-						if ( !fIDSession )
-						{
-							char *cSignature = "Lcom/apple/mrj/macos/generated/PMPrintSessionOpaque;";
-							fIDSession = t.pEnv->GetFieldID( tempClass, "fPrintSession", cSignature );
-						}
-						OSL_ENSURE( fIDSession, "Unknown field id!" );
-						if ( fIDSession )
-						{
-							jobject session = t.pEnv->GetObjectField( tempObj, fIDSession );
-							if ( session )
-							{
-								static jmethodID mIDGetPointer = NULL;
-								jclass sessionClass = t.pEnv->GetObjectClass( session );
-								if ( !mIDGetPointer )
-								{
-									char *cSignature = "()I";
-									mIDGetPointer = t.pEnv->GetMethodID( sessionClass, "getPointer", cSignature );
-								}
-								OSL_ENSURE( mIDGetPointer, "Unknown method id!" );
-								if ( mIDGetPointer )
-									out = (void *)t.pEnv->CallIntMethod( session, mIDGetPointer );
-							}
-						}
-					}
-				}
-			}
-			delete printerJob;
-		}
-	}
-	return out;
-}
-
-// ----------------------------------------------------------------------------
-
 XubString com_sun_star_vcl_VCLPrintJob::getPageRange()
 {
-	static jmethodID mID = NULL;
-	XubString out;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		java_lang_Object *printerJob = getPrinterJob();
-		if ( printerJob )
-		{
-			jobject tempObj = printerJob->getJavaObject();
-			if ( tempObj )
-			{
-				// Test the JVM version and if it is below 1.4, use Carbon
-				// printing APIs
-				if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
-				{
-					jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/printing/MacPrinterJob" );
-					if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
-					{
-						jint firstPage = 0;
-						jint lastPage = 0;
-						static jfieldID fIDFirstPage = NULL;
-						static jfieldID fIDLastPage = NULL;
-						if ( !fIDFirstPage )
-						{
-							char *cSignature = "I";
-							fIDFirstPage = t.pEnv->GetFieldID( tempClass, "mFirstPage", cSignature );
-						}
-						OSL_ENSURE( fIDFirstPage, "Unknown field id!" );
-						if ( !fIDLastPage )
-						{
-							char *cSignature = "I";
-							fIDLastPage = t.pEnv->GetFieldID( tempClass, "mLastPage", cSignature );
-						}
-						OSL_ENSURE( fIDLastPage, "Unknown field id!" );
-						if ( fIDFirstPage && fIDLastPage )
-						{
-							firstPage = t.pEnv->GetIntField( tempObj, fIDFirstPage ) + 1;
-							lastPage = t.pEnv->GetIntField( tempObj, fIDLastPage ) + 1;
-						}
-						if ( firstPage > 0 && lastPage > 0 && firstPage <= lastPage && lastPage < 0x7fffffff )
-						{
-							out = XubString::CreateFromInt32( firstPage );
-							out += '-';
-							out += XubString::CreateFromInt32( lastPage );
-						}
-					}
-				}
-			}
-			delete printerJob;
-		}
-	}
-	return out;
-}
-
-// ----------------------------------------------------------------------------
-
-java_lang_Object *com_sun_star_vcl_VCLPrintJob::getPrinterJob()
-{
-	static jmethodID mID = NULL;
-	java_lang_Object *out = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()Ljava/awt/print/PrinterJob;";
-			mID = t.pEnv->GetMethodID( getMyClass(), "getPrinterJob", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
-			if ( tempObj )
-				out = new java_lang_Object( tempObj );
-		}
-	}
-	return out;
+	return XubString();
 }
 
 // ----------------------------------------------------------------------------
@@ -339,72 +219,23 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::isFinished()
 
 // ----------------------------------------------------------------------------
 
-sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat *_par0, sal_Bool _par1 ) 
+sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat *_par0 ) 
 {
 	static jmethodID mID = NULL;
 	sal_Bool out = sal_False;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
-		// Test the JVM version and if it is below 1.4, use Carbon
-		// printing APIs
-		if ( t.pEnv->GetVersion() < JNI_VERSION_1_4 )
-		{
-			// Reset the print dialog to print all pages
-			java_lang_Object *printerJob = _par0->getPrinterJob();
-			if ( printerJob )
-			{
-				jobject tempObj = printerJob->getJavaObject();
-				if ( tempObj )
-				{
-					jclass tempClass = t.pEnv->FindClass( "com/apple/mrj/internal/awt/printing/MacPrinterJob" );
-					if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
-					{
-						static jfieldID fIDPrintSettings = NULL;
-						if ( !fIDPrintSettings )
-						{
-							char *cSignature = "Lcom/apple/mrj/macos/generated/PMPrintSettingsOpaque;";
-							fIDPrintSettings = t.pEnv->GetFieldID( tempClass, "fPrintSettings", cSignature );
-						}
-						OSL_ENSURE( fIDPrintSettings, "Unknown field id!" );
-						if ( fIDPrintSettings )
-						{
-							jobject settings = t.pEnv->GetObjectField( tempObj, fIDPrintSettings );
-							if ( settings )
-							{
-								static jmethodID mIDGetPointer = NULL;
-								jclass settingsClass = t.pEnv->GetObjectClass( settings );
-								if ( !mIDGetPointer )
-								{
-									char *cSignature = "()I";
-									mIDGetPointer = t.pEnv->GetMethodID( settingsClass, "getPointer", cSignature );
-								}
-								OSL_ENSURE( mIDGetPointer, "Unknown method id!" );
-								if ( mIDGetPointer )
-								{
-									PMPrintSettings pSettings = (PMPrintSettings)t.pEnv->CallIntMethod( settings, mIDGetPointer );
-									if ( pSettings )
-										PMSetPageRange( pSettings, 1, kPMPrintAllPages );
-								}
-							}
-						}
-					}
-				}
-			}
-			delete printerJob;
-		}
-
 		if ( !mID )
 		{
-			char *cSignature = "(Lcom/sun/star/vcl/VCLPageFormat;Z)Z";
+			char *cSignature = "(Lcom/sun/star/vcl/VCLPageFormat;)Z";
 			mID = t.pEnv->GetMethodID( getMyClass(), "startJob", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[2];
+			jvalue args[1];
 			args[0].l = _par0->getJavaObject();
-			args[1].z = jboolean( _par1 );
 			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethodA( object, getMyClass(), mID, args );
 		}
 	}
