@@ -103,6 +103,7 @@ SalOpenGL::~SalOpenGL()
 
 BOOL SalOpenGL::Create()
 {
+#ifdef OGL_ENABLED
 	if ( mnOGLState == OGL_STATE_UNLOADED )
 	{
 		mnOGLState = OGL_STATE_INVALID;
@@ -113,6 +114,7 @@ BOOL SalOpenGL::Create()
 				mnOGLState = OGL_STATE_VALID;
 		}
 	}
+#endif	// OGL_ENABLED
 
 	return ( mnOGLState == OGL_STATE_VALID ? TRUE : FALSE );
 }
