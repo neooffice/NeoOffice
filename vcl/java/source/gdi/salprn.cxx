@@ -51,6 +51,7 @@
 #include <com/sun/star/vcl/VCLPrintJob.hxx>
 #endif
 
+using namespace rtl;
 using namespace vcl;
 
 // =======================================================================
@@ -215,7 +216,7 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 						   ULONG nCopies, BOOL bCollate,
 						   ImplJobSetup* pSetupData )
 {
-	maPrinterData.mbStarted = maPrinterData.mpVCLPrintJob->startJob( maPrinterData.mpVCLPageFormat );
+	maPrinterData.mbStarted = maPrinterData.mpVCLPrintJob->startJob( maPrinterData.mpVCLPageFormat, OUString( rJobName ) );
 	return maPrinterData.mbStarted;
 }
 

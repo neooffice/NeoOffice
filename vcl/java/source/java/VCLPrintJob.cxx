@@ -219,7 +219,7 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::isFinished()
 
 // ----------------------------------------------------------------------------
 
-sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat *_par0 ) 
+sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat *_par0, ::rtl::OUString _par1 ) 
 {
 	static jmethodID mID = NULL;
 	sal_Bool out = sal_False;
@@ -228,14 +228,15 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(Lcom/sun/star/vcl/VCLPageFormat;)Z";
+			char *cSignature = "(Lcom/sun/star/vcl/VCLPageFormat;Ljava/lang/String;)Z";
 			mID = t.pEnv->GetMethodID( getMyClass(), "startJob", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[1];
+			jvalue args[2];
 			args[0].l = _par0->getJavaObject();
+			args[1].l = StringToJavaString( t.pEnv, _par1 );
 			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethodA( object, getMyClass(), mID, args );
 		}
 	}

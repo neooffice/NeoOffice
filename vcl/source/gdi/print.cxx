@@ -1792,12 +1792,14 @@ BOOL Printer::StartJob( const XubString& rJobName )
 			pPrintFile = NULL;
 
 #ifdef USE_JAVA
-		if ( !mbDummy3 && !mpPrinter->StartJob( pPrintFile, rJobName, Application::GetDisplayName(),
-#else	// USE_JAVA
 		if ( !mpPrinter->StartJob( pPrintFile, rJobName, Application::GetDisplayName(),
-#endif	// USE_JAVA
 								   nCopies, bCollateCopy,
 								   maJobSetup.ImplGetConstData() ) )
+#else	// USE_JAVA
+		if ( !mpPrinter->StartJob( pPrintFile, rJobName, Application::GetDisplayName(),
+								   nCopies, bCollateCopy,
+								   maJobSetup.ImplGetConstData() ) )
+#endif	// USE_JAVA
 		{
 			mnError = ImplSalPrinterErrorCodeToVCL( mpPrinter->GetErrorCode() );
 			if ( !mnError )
