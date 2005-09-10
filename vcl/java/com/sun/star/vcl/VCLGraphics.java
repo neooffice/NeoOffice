@@ -1342,6 +1342,17 @@ public final class VCLGraphics {
 	}
 
 	/**
+	 * Returns the <code>VCLGraphics.PageQueue</code>.
+	 *
+	 * @return the <code>VCLGraphics.PageQueue</code>
+	 */
+	VCLGraphics.PageQueue getPageQueue() {
+
+		return pageQueue;
+
+	}
+
+	/**
 	 * Returns the pixel color in ARGB format for the specified coordinate.
 	 *
 	 * @param x the x coordinate of the source rectangle

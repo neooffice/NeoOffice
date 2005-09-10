@@ -1865,6 +1865,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			window.show();
 			try {
 				wait();
+				requestFocus();
 			}
 			catch (Throwable t) {}
 		}
@@ -1974,7 +1975,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 					Window w = f.getWindow();
 					if (!w.isShowing())
 						w.show();
-				}
+						try {
+							f.wait();
+						}
+						catch (Throwable t) {}
+					}
 			}
 		}
 		detachedChildren.clear();

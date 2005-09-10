@@ -551,52 +551,15 @@ void SalInstance::AcquireYieldMutex( ULONG nCount )
 
 void SalInstance::Yield( BOOL bWait )
 {
-	static USHORT nRecursionLevel = 0;
 	SalData *pSalData = GetSalData();
 	com_sun_star_vcl_VCLEvent *pEvent;
 
-	nRecursionLevel++;
-
-	// Dispatch pending non-AWT events
-	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( 0, FALSE ) ) != NULL )
+	// Dispatch next pending event if it exists
+	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( 0 ) ) != NULL )
 	{
-		bool bReturn = true;
-		USHORT nID = pEvent->getID();
-		if ( nID == SALEVENT_SHUTDOWN )
-		{
-			// Ignore SALEVENT_SHUTDOWN events when recursing into this
-			// method or when in presentation mode
-			ImplSVData *pSVData = ImplGetSVData();
-			if ( nRecursionLevel == 1 && !pSVData->maWinData.mpFirstFloat && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mpPresentationFrame )
-				pEvent->dispatch();
-		}
-		else if ( nID == SALEVENT_OPENDOCUMENT || nID == SALEVENT_PRINTDOCUMENT )
-		{
-			// Fix bug 168 && 607 by reposting SALEVENT_*DOCUMENT events when
-			// recursing into this method while opening a document
-			if ( nRecursionLevel == 1 && !ImplGetSVData()->maWinData.mpLastExecuteDlg && !pSalData->mpPresentationFrame )
-			{
-				pEvent->dispatch();
-			}
-			else
-			{
-				com_sun_star_vcl_VCLEvent aEvent( pEvent->getJavaObject() );
-				pSalData->mpEventQueue->postCachedEvent( &aEvent );
-				bReturn = false;
-			}
-		}
-		else
-		{
-			pEvent->dispatch();
-		}
+		pEvent->dispatch();
 		delete pEvent;
-		pEvent = NULL;
-
-		if ( bReturn )
-		{
-			nRecursionLevel--;
-			return;
-		}
+		return;
 	}
 
 	ULONG nCount = ReleaseYieldMutex();
@@ -635,18 +598,28 @@ void SalInstance::Yield( BOOL bWait )
 			nTimeout = 10;
 	}
 
-	// Dispatch pending AWT events
-	nCount = ReleaseYieldMutex();
+	// Dispatch any newly posted events
+	if ( nTimeout )
+		nCount = ReleaseYieldMutex();
+	else
+		nCount = 0;
 
-	while ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
+	while ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout ) ) != NULL )
 	{
-		maInstData.mpSalYieldMutex->acquire();
+		nTimeout = 0;
+
+		if ( nCount )
+		{
+			AcquireYieldMutex( nCount );
+			nCount = 0;
+		}
+
 		pEvent->dispatch();
 		delete pEvent;
-		maInstData.mpSalYieldMutex->release();
 	}
 
-	AcquireYieldMutex( nCount );
+	if ( nCount )
+		AcquireYieldMutex( nCount );
 
 	// Allow Carbon event loop to proceed
 	if ( !pSalData->maNativeEventCondition.check() )
@@ -657,8 +630,6 @@ void SalInstance::Yield( BOOL bWait )
 		OThread::yield();
 		AcquireYieldMutex( nCount );
 	}
-
-	nRecursionLevel--;
 }
 
 // -----------------------------------------------------------------------

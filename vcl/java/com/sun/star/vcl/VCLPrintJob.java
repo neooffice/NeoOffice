@@ -132,6 +132,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 				graphicsInfo.graphics = null;
 				graphicsInfo.pageFormat = null;
 				graphicsInfo.currentGraphics = null;
+				graphicsInfo.lastPageQueue = null;
 			}
 		}
 		graphicsInfo = null;
@@ -168,6 +169,18 @@ public final class VCLPrintJob implements Printable, Runnable {
  			if (!printThreadStarted || printThreadFinished)
 				return;
 
+			// Invoke all of the queued drawing operations. Note: we only
+			// alter the pendingHead member and never alter the head member
+			// so that there is always a reference to all of the drawing
+			// operations. This is necessary because the JVM will crash if we
+			// are printing bitmaps and those bitmaps are garbage collected
+			// before the JVM flushes the native print graphics for a page to
+			// the printer.
+			if (graphicsInfo.currentGraphics != null)
+				graphicsInfo.lastPageQueue = graphicsInfo.currentGraphics.getPageQueue();
+			else
+				graphicsInfo.lastPageQueue = null;
+
 			// Allow the printer thread to move to the next page
 			graphicsInfo.endPage = true;
 			while (graphicsInfo.endPage) {
@@ -177,6 +190,8 @@ public final class VCLPrintJob implements Printable, Runnable {
 				}
 				catch (Throwable t) {}
 			}
+
+			graphicsInfo.lastPageQueue = null;
 		}
 
 	}
@@ -207,7 +222,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 				runNativeTimers();
 				graphicsInfo.notifyAll();
 				try {
-					graphicsInfo.wait(500);
+					graphicsInfo.wait(100);
 				}
 				catch (Throwable t) {}
 			}
@@ -396,6 +411,8 @@ public final class VCLPrintJob implements Printable, Runnable {
 		PageFormat pageFormat = null;
 
 		VCLGraphics currentGraphics = null;
+
+		VCLGraphics.PageQueue lastPageQueue = null;
 
 	}
 
