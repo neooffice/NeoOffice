@@ -145,9 +145,10 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 	{
 		case SALEVENT_SHUTDOWN:
 		{
-			// If a window is found, dispatch the SALEVENT_SHUTDOWN
-			// event
-			if ( pSalData->maFrameList.size())
+			// Ignore SALEVENT_SHUTDOWN events when recursing into this
+			// method or when in presentation mode
+			ImplSVData *pSVData = ImplGetSVData();
+			if ( pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpFirstFloat && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mpPresentationFrame && pSalData->maFrameList.size())
 			{
 				SalFrame *pFrame = pSalData->maFrameList.front();
 				if ( pFrame )
@@ -158,9 +159,20 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_OPENDOCUMENT:
 		case SALEVENT_PRINTDOCUMENT:
 		{
-			String aEmptyStr;
-			ApplicationEvent aAppEvt( aEmptyStr, aEmptyStr, SALEVENT_OPENDOCUMENT ? APPEVENT_OPEN_STRING : APPEVENT_PRINT_STRING, getPath() );
-			ImplGetSVData()->mpApp->AppEvent( aAppEvt );
+			// Fix bug 168 && 607 by reposting SALEVENT_*DOCUMENT events when
+			// recursing into this method while opening a document
+			ImplSVData *pSVData = ImplGetSVData();
+			if ( pSVData->maAppData.mnDispatchLevel == 1 && !ImplGetSVData()->maWinData.mpLastExecuteDlg && !pSalData->mpPresentationFrame )
+			{
+				String aEmptyStr;
+				ApplicationEvent aAppEvt( aEmptyStr, aEmptyStr, SALEVENT_OPENDOCUMENT ? APPEVENT_OPEN_STRING : APPEVENT_PRINT_STRING, getPath() );
+				pSVData->mpApp->AppEvent( aAppEvt );
+			}
+			else
+			{
+				com_sun_star_vcl_VCLEvent aEvent( getJavaObject() );
+				pSalData->mpEventQueue->postCachedEvent( &aEvent );
+			}
 			return;
 		}
 		case SALEVENT_ABOUT:
