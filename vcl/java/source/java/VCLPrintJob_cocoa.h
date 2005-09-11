@@ -11,11 +11,11 @@
  *
  *         - GNU General Public License Version 2.1
  *
- *  Patrick Luby, June 2003
+ *  Patrick Luby, July 2005
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2003 by Patrick Luby (patrick.luby@planamesa.com)
+ *  Copyright 2005 by Patrick Luby (patrick.luby@planamesa.com)
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
@@ -33,45 +33,20 @@
  *
  ************************************************************************/
 
-#ifndef _SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX
-#define	_SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX
+#ifndef __VCLPRINTJOB_COCOA_H__
+#define __VCLPRINTJOB_COCOA_H__
 
-#ifndef _SV_JAVA_LANG_OBJECT_HXX
-#include <java/lang/Object.hxx>
-#endif
-#ifndef _SV_GEN_HXX
-#include <tools/gen.hxx>
-#endif
-#ifndef _SV_PRNTYPES_HXX
-#include <prntypes.hxx>
+#ifdef __cplusplus
+typedef void* id;
 #endif
 
-namespace vcl {
+#ifdef __cplusplus
+BEGIN_C
+#endif
+void NSPrintOperation_runNativeTimers();
+BOOL NSPrintInfo_pageRange( id pNSPrintInfo, int *nFirst, int *nLast );
+#ifdef __cplusplus
+END_C
+#endif
 
-class com_sun_star_vcl_VCLGraphics;
-
-class com_sun_star_vcl_VCLPageFormat : public java_lang_Object
-{
-protected:
-	static jclass		theClass;
-
-public:
-	static jclass		getMyClass();
-
-						com_sun_star_vcl_VCLPageFormat::com_sun_star_vcl_VCLPageFormat( jobject myObj ) : java_lang_Object( (jobject)myObj ) {}
-						com_sun_star_vcl_VCLPageFormat();
-	virtual				~com_sun_star_vcl_VCLPageFormat() {}
-
-	void				dispose();
-	com_sun_star_vcl_VCLGraphics*	getGraphics();
-	const Rectangle		getImageableBounds();
-	Orientation			getOrientation();
-	const Size			getPageSize();
-	void				setOrientation( Orientation _par0 );
-	Paper				getPaperType();
-	sal_Bool			setup();
-};
-
-} // namespace vcl
-
-#endif // _SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX
+#endif

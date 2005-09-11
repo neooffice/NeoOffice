@@ -310,30 +310,6 @@ void com_sun_star_vcl_VCLPageFormat::setOrientation( Orientation _par0 )
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLPageFormat::setPageResolution( long _par0, long _par1 )
-{
-	static jmethodID mID = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "(II)V";
-			mID = t.pEnv->GetMethodID( getMyClass(), "setPageResolution", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jvalue args[2];
-			args[0].i = jint( _par0 );
-			args[1].i = jint( _par1 );
-			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
-		}
-	}
-}
-
-// ----------------------------------------------------------------------------
-
 sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 {
 	static jmethodID mID = NULL;

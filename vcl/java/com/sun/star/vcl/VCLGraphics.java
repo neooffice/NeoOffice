@@ -185,11 +185,6 @@ public final class VCLGraphics {
 	private static int screenResolution = 0;
 
 	/**
-	 * The cached screen font resolution.
-	 */
-	private static int screenFontResolution = 0;
-
-	/**
 	 * The cached transparent composite.
 	 */
 	private static TransparentComposite transparentComposite = new TransparentComposite();
@@ -236,11 +231,9 @@ public final class VCLGraphics {
 		image50 = srcImage;
 
 		// Set the screen and font resolutions
-		screenResolution = screenFontResolution = Toolkit.getDefaultToolkit().getScreenResolution();
+		screenResolution = Toolkit.getDefaultToolkit().getScreenResolution();
 		if (screenResolution < VCLScreen.MIN_SCREEN_RESOLUTION)
 			screenResolution = VCLScreen.MIN_SCREEN_RESOLUTION;
-		if (screenFontResolution < VCLScreen.MIN_SCREEN_RESOLUTION)
-			screenFontResolution = VCLScreen.MIN_SCREEN_RESOLUTION;
 
 		// Set the method references
 		try {
@@ -1419,7 +1412,7 @@ public final class VCLGraphics {
 	 */
 	public Dimension getScreenFontResolution() {
 
-		return new Dimension(VCLGraphics.screenFontResolution, VCLGraphics.screenFontResolution);
+		return getResolution();
 
 	}
 
