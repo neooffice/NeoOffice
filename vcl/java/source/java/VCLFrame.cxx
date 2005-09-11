@@ -383,21 +383,19 @@ void *com_sun_star_vcl_VCLFrame::getNativeWindow()
 							// for it if we cannot find the first signature
 							if ( t.pEnv->ExceptionCheck() )
 								t.pEnv->ExceptionClear();
-							char *cSignature = "()I";
+							cSignature = "()I";
 							mIDGetModelPtr = t.pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
 							if ( mIDGetModelPtr )
 								bReturnsInt = true;
 						}
 					}
-					OSL_ENSURE( mIDGetModelPtr, "Unknown field id!" );
+					OSL_ENSURE( mIDGetModelPtr, "Unknown method id!" );
 					if ( mIDGetModelPtr )
 					{
-						ULONG nCount = Application::ReleaseSolarMutex();
 						if ( bReturnsInt )
 							out = (void *)CWindow_getNSWindow( t.pEnv->CallIntMethod( tempObj, mIDGetModelPtr ) );
 						else
 							out = (void *)CWindow_getNSWindow( t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr ) );
-						Application::AcquireSolarMutex( nCount );
 					}
 				}
 			}
