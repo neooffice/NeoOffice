@@ -324,8 +324,14 @@ void ImplQPrinter::ImplPrintMtf( GDIMetaFile& rMtf, long nMaxBmpDPIX, long nMaxB
 
 IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 {
+#ifdef USE_JAVA
+	// Allow printing of pages to occur while succeeding pages are still being
+	// added so that we can have the printer keep up with the pages
+	if( !IsPrinting() || !mpQueue->Count() )
+#else	// USE_JAVA
 	// Ist Drucken abgebrochen wurden?
 	if( !IsPrinting() || ( mpParent->IsJobActive() && ( mpQueue->Count() < (ULONG)mpParent->GetPageQueueSize() ) ) )
+#endif	// USE_JAVA
 		return 0;
 
 	// Druck-Job zuende?
@@ -444,6 +450,13 @@ void ImplQPrinter::EndQueuePrint()
 	QueuePage* pQueuePage	= new QueuePage;
 	pQueuePage->mbEndJob	= TRUE;
 	mpQueue->Put( pQueuePage );
+
+#ifdef USE_JAVA
+	// Invoked the timer so that all queued pages are printed immediately. We
+	// do this to prevent the long lag that would occur between closing of the
+	// print progress dialog and the end of the printing.
+	maTimer.Timeout();
+#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
@@ -474,6 +487,13 @@ void ImplQPrinter::AddQueuePage( GDIMetaFile* pPage, USHORT nPage, BOOL bNewJobS
 	if ( bNewJobSetup )
 		pQueuePage->mpSetup = new JobSetup( mpParent->GetJobSetup() );
 	mpQueue->Put( pQueuePage );
+
+#ifdef USE_JAVA
+	// Invoked the timer so that all queued pages are printed immediately. We
+	// do this to prevent the long lag that would occur between closing of the
+	// print progress dialog and the end of the printing.
+	maTimer.Timeout();
+#endif	// USE_JAVA
 }
 
 #endif
