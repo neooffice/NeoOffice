@@ -479,7 +479,7 @@ public final class VCLGraphics {
 	void dispose() {
 
 		if (pageQueue != null)
-			pageQueue.dispose();
+			pageQueue.drawOperations();
 		pageQueue = null;
 		graphics = null;
 		image = null;
@@ -1732,6 +1732,10 @@ public final class VCLGraphics {
 	 */
 	final class PageQueue {
 
+		VCLGraphics.PageQueueItem drawnHead = null;
+
+		VCLGraphics.PageQueueItem drawnTail = null;
+
 		VCLGraphics graphics = null;
 
 		VCLGraphics.PageQueueItem head = null;
@@ -1746,6 +1750,16 @@ public final class VCLGraphics {
 
 		void dispose() {
 
+			drawnHead = null;
+			drawnTail = null;
+			graphics = null;
+			head = null;
+			tail = null;
+
+		}
+
+		void drawOperations() {
+
 			graphics.pageQueue = null;
 
 			// Invoke all of the queued drawing operations
@@ -1758,8 +1772,20 @@ public final class VCLGraphics {
 				catch (Throwable t) {
 					t.printStackTrace();
 				}
+
+				VCLGraphics.PageQueueItem i = head;
 				head = head.next;
+				i.next = null;
+
+				if (drawnHead != null) {
+					drawnTail.next = i;
+					drawnTail = i;
+				}
+				else {
+					drawnHead = drawnTail = i;
+				}
 			}
+
 			tail = null;
 			graphics = null;
 
@@ -1772,10 +1798,7 @@ public final class VCLGraphics {
 				i.clip = new Area(graphics.userClip);
 				i.clipList = new LinkedList(graphics.userClipList);
 			}
-			else {
-				i.clip = null;
-				i.clip = null;
-			}
+
 			if (head != null) {
 				tail.next = i;
 				tail = i;
@@ -1783,7 +1806,6 @@ public final class VCLGraphics {
 			else {
 				head = tail = i;
 			}
-
 		}
 
 	}

@@ -11,7 +11,7 @@
  *
  *         - GNU General Public License Version 2.1
  *
- *  Patrick Luby, July 2005
+ *  Patrick Luby, September 2005
  *
  *  GNU General Public License Version 2.1
  *  =============================================
@@ -50,7 +50,29 @@
 
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
-		[pApp nextEventMatchingMask:NSAnyEventMask untilDate:[NSDate date] inMode:NSDefaultRunLoopMode dequeue:NO];
+	{
+		NSArray *pWindows = [pApp windows];
+		if ( pWindows )
+		{
+			NSEnumerator *pEnum = [pWindows objectEnumerator];
+			NSWindow *pWindow;
+			while ( ( pWindow = [pEnum nextObject] ) != nil )
+				[pWindow setAutodisplay:NO];
+		}
+
+		NSEvent *pEvent;
+		while ( ( pEvent = [pApp nextEventMatchingMask:NSAnyEventMask untilDate:[NSDate date] inMode:NSDefaultRunLoopMode dequeue:YES] ) != nil )
+			[pApp sendEvent:pEvent];
+
+		pWindows = [pApp windows];
+		if ( pWindows )
+		{
+			NSEnumerator *pEnum = [pWindows objectEnumerator];
+			NSWindow *pWindow;
+			while ( ( pWindow = [pEnum nextObject] ) != nil )
+				[pWindow setAutodisplay:YES];
+		}
+	}
 
 	if ( pFocusView )
 		[pFocusView lockFocus];

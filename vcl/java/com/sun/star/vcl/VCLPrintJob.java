@@ -44,6 +44,7 @@ import java.awt.print.Printable;
 import java.awt.print.PrinterAbortException;
 import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
+import java.util.LinkedList;
 
 /**
  * The Java class that implements the SalPrinter C++ class methods.
@@ -54,14 +55,24 @@ import java.awt.print.PrinterJob;
 public final class VCLPrintJob implements Printable, Runnable {
 
 	/**
+	 * The cached <code>VCLGraphics</code>.
+	 */
+	private VCLGraphics graphics = null;
+
+	/**
+	 * The disposed flag.
+	 */
+	private boolean disposed = false;
+
+	/**
 	 * The end job flag.
 	 */
 	private boolean endJob = false;
 
 	/**
-	 * The cached graphics info.
+	 * The end page flag.
 	 */
-	private VCLPrintJob.GraphicsInfo graphicsInfo = new VCLPrintJob.GraphicsInfo();
+	private boolean endPage = false;
 
 	/**
 	 * The cached printer job.
@@ -79,19 +90,24 @@ public final class VCLPrintJob implements Printable, Runnable {
 	private VCLPageFormat pageFormat = null;
 
 	/**
+	 * The cached printed page queues.
+	 */
+	LinkedList printedPageQueues = null;
+
+	/**
+	 * The cached native graphics context.
+	 */
+	private Graphics2D printGraphics = null;
+
+	/**
+	 * The cached native page format.
+	 */
+	private PageFormat printPageFormat = null;
+
+	/**
 	 * The print thread.
 	 */
 	private Thread printThread = null;
-
-	/**
-	 * The print thread finished flag.
-	 */
-	private boolean printThreadFinished = false;
-
-	/**
-	 * The print thread started flag.
-	 */
-	private boolean printThreadStarted = false;
 
 	/**
 	 * Constructs a new <code>VCLPrintJob</code> instance.
@@ -103,7 +119,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 */
 	public void abortJob() {
 
-		// End the job before disposing of the graphics
+		// End the job before disposing of the printGraphics
 		job.cancel();
 		endJob();
 
@@ -115,29 +131,40 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 */
 	public void dispose() {
 
-		if (graphicsInfo != null)
-		{
-			synchronized (graphicsInfo) {
-				if (graphicsInfo.currentGraphics != null) {
-					// Dispose a print graphics throws exceptions when memory
-					// is low
-					try {
-						graphicsInfo.currentGraphics.dispose();
-					}
-					catch (Throwable t) {
-						t.printStackTrace();
-					}
-				}
+		if (disposed)
+			return;
 
-				graphicsInfo.graphics = null;
-				graphicsInfo.pageFormat = null;
-				graphicsInfo.currentGraphics = null;
-				graphicsInfo.lastPageQueue = null;
+		abortJob();
+
+		synchronized (this) {
+			if (graphics != null) {
+				// Dispose a print printGraphics throws exceptions when memory
+				// is low
+				try {
+					graphics.dispose();
+				}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
+				graphics = null;
 			}
+
+			printGraphics = null;
+			printPageFormat = null;
+
+			if (printedPageQueues != null) {
+				while (printedPageQueues.size() > 0) {
+					VCLGraphics.PageQueue pq = (VCLGraphics.PageQueue)printedPageQueues.removeFirst();
+					pq.dispose();
+				}
+				printedPageQueues = null;
+			}
+
+			job = null;
+			printThread = null;
+
+			disposed = true;
 		}
-		graphicsInfo = null;
-		job = null;
-		printThread = null;
 
 	}
 
@@ -146,52 +173,42 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 */
 	public void endJob() {
 
-		// End the job after disposing of the graphics
+		// End the job after disposing of the printGraphics
 		endJob = true;
+
 		endPage();
-		if (printThread != null) {
+
+		// Release any pending locks
+		if (printThread != null && printThread.isAlive()) {
 			try {
 				printThread.join();
 			}
 			catch (Throwable t) {}
 		}
+
 		pageFormat.setEditable(true);
 		jobStarted = false;
 
 	}
 
 	/**
-	 * Release the graphics for the current page.
+	 * Release the printGraphics for the current page.
 	 */
 	public void endPage() {
 
-		synchronized (graphicsInfo) {
- 			if (!printThreadStarted || printThreadFinished)
-				return;
-
-			// Invoke all of the queued drawing operations. Note: we only
-			// alter the pendingHead member and never alter the head member
-			// so that there is always a reference to all of the drawing
-			// operations. This is necessary because the JVM will crash if we
-			// are printing bitmaps and those bitmaps are garbage collected
-			// before the JVM flushes the native print graphics for a page to
-			// the printer.
-			if (graphicsInfo.currentGraphics != null)
-				graphicsInfo.lastPageQueue = graphicsInfo.currentGraphics.getPageQueue();
-			else
-				graphicsInfo.lastPageQueue = null;
-
+		synchronized (this) {
 			// Allow the printer thread to move to the next page
-			graphicsInfo.endPage = true;
-			while (graphicsInfo.endPage) {
-				graphicsInfo.notifyAll();
+			endPage = true;
+
+			while (endPage && printThread != null && printThread.isAlive()) {
+				notifyAll();
 				try {
-					graphicsInfo.wait();
+					wait(100);
 				}
 				catch (Throwable t) {}
 			}
 
-			graphicsInfo.lastPageQueue = null;
+			endPage = false;
 		}
 
 	}
@@ -214,55 +231,59 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 */
 	public int print(Graphics g, PageFormat f, int i) throws PrinterException {
 
-		if (job.isCancelled())
-			throw new PrinterAbortException();
-		else if (endJob)
-			return Printable.NO_SUCH_PAGE;
+		synchronized (this) {
+			if (job.isCancelled())
+				throw new PrinterAbortException();
+			else if (endJob)
+				return Printable.NO_SUCH_PAGE;
 
-		Graphics2D graphics = (Graphics2D)g;
-
-		// Normalize to device resolution
-		graphics.transform(graphics.getDeviceConfiguration().getNormalizingTransform());
-
-		synchronized (graphicsInfo) {
-			graphicsInfo.graphics = graphics;
-			graphicsInfo.pageFormat = f;
+			printGraphics = (Graphics2D)g;
+			printPageFormat = f;
 
 			// Notify other threads and wait until painting is finished
-			while (!graphicsInfo.endPage) {
+			while (!endPage) {
 				runNativeTimers();
-				graphicsInfo.notifyAll();
+				notifyAll();
 				try {
-					graphicsInfo.wait(100);
+					wait(100);
 				}
 				catch (Throwable t) {}
 			}
 
 			// Allow endPage() method to continue
-			graphicsInfo.endPage = false;
+			endPage = false;
 
-			if (graphicsInfo.currentGraphics != null) {
-				runNativeTimers();
+			runNativeTimers();
+
+			if (graphics != null) {
+				// Cache the queued drawing operations. This is necessary
+				// because the JVM will crash if we are printing bitmaps
+				// and those bitmaps are garbage collected before the JVM
+				// finishes the print job.
+				printedPageQueues.add(graphics.getPageQueue());
+
 				try {
-					graphicsInfo.currentGraphics.dispose();
+					graphics.dispose();
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
 				}
-				runNativeTimers();
+	
+				graphics = null;
 			}
 
-			graphicsInfo.graphics = null;
-			graphicsInfo.pageFormat = f;
-			graphicsInfo.currentGraphics = null;
-		}
+			runNativeTimers();
 
-		if (job.isCancelled())
-			throw new PrinterAbortException();
-		else if (endJob)
-			return Printable.NO_SUCH_PAGE;
-		else
-			return Printable.PAGE_EXISTS;
+			printGraphics = null;
+			printPageFormat = null;
+
+			if (job.isCancelled())
+				throw new PrinterAbortException();
+			else if (endJob)
+				return Printable.NO_SUCH_PAGE;
+			else
+				return Printable.PAGE_EXISTS;
+		}
 
 	}
 
@@ -274,7 +295,12 @@ public final class VCLPrintJob implements Printable, Runnable {
 	public void run() {
 
 		try {
-			runNativeTimers();
+			synchronized (this) {
+				runNativeTimers();
+				if (printedPageQueues == null)
+					printedPageQueues = new LinkedList();
+			}
+
 			job.print();
 		}
 		catch (PrinterAbortException pae) {
@@ -283,10 +309,20 @@ public final class VCLPrintJob implements Printable, Runnable {
 		catch (Throwable t) {
 			t.printStackTrace();
 		}
+
 		// Notify other threads that printing is finished
-		synchronized (graphicsInfo) {
-			printThreadFinished = true;
-			graphicsInfo.notifyAll();
+		synchronized (this) {
+			runNativeTimers();
+
+			if (printedPageQueues != null) {
+				while (printedPageQueues.size() > 0) {
+					VCLGraphics.PageQueue pq = (VCLGraphics.PageQueue)printedPageQueues.removeFirst();
+					pq.dispose();
+				}
+				printedPageQueues = null;
+			}
+
+			notifyAll();
 		}
 
 	}
@@ -306,7 +342,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 */
 	public boolean isFinished() {
 
-		return (printThreadFinished || job.isCancelled());
+		return ((printThread != null && !printThread.isAlive()) || job.isCancelled());
 
 	}
 
@@ -349,82 +385,58 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 */
 	public VCLGraphics startPage(int o) {
 
-		synchronized (graphicsInfo) {
+		synchronized (this) {
 			// Start the printing thread if it has not yet been started
-			if (!printThreadStarted) {
+			if (printThread == null) {
 				printThread = new Thread(this);
 				printThread.setPriority(Thread.MIN_PRIORITY);
-				printThreadStarted = true;
 				printThread.start();
-			}
-
-			// Wait for the printing thread to gain the lock on the
-			// graphics queue
-			if (graphicsInfo.graphics == null && printThread != null && printThread.isAlive()) {
-				try {
-					graphicsInfo.wait();
-				}
-				catch (Throwable t) {}
 			}
 
 			// Mac OS X wants each page printed twice so skip the first as it
 			// seems to have no effect on the printed output
 			endPage();
 
-			// Get the current page's graphics context
-			if (graphicsInfo.graphics != null && printThread != null && printThread.isAlive()) {
+			// Get the current page's printGraphics context
+			if (printGraphics != null && printThread != null && printThread.isAlive()) {
 				// Set the origin to the origin of the printable area
-				graphicsInfo.graphics.translate((int)graphicsInfo.pageFormat.getImageableX(), (int)graphicsInfo.pageFormat.getImageableY());
+				printGraphics.translate((int)printPageFormat.getImageableX(), (int)printPageFormat.getImageableY());
 
 				// Rotate the page if necessary
-				int orientation = graphicsInfo.pageFormat.getOrientation();
+				int orientation = printPageFormat.getOrientation();
 				boolean rotatedPage = false;
 				if (o == VCLPageFormat.ORIENTATION_PORTRAIT && orientation != PageFormat.PORTRAIT) {
 					if (orientation == PageFormat.REVERSE_LANDSCAPE) {
-						graphicsInfo.graphics.translate(0, (int)graphicsInfo.pageFormat.getImageableHeight());
-						graphicsInfo.graphics.rotate(Math.toRadians(-90));
+						printGraphics.translate(0, (int)printPageFormat.getImageableHeight());
+						printGraphics.rotate(Math.toRadians(-90));
 					}
 					else {
-						graphicsInfo.graphics.translate((int)graphicsInfo.pageFormat.getImageableWidth(), 0);
-						graphicsInfo.graphics.rotate(Math.toRadians(90));
+						printGraphics.translate((int)printPageFormat.getImageableWidth(), 0);
+						printGraphics.rotate(Math.toRadians(90));
 					}
 					rotatedPage = true;
 				}
 				else if (o != VCLPageFormat.ORIENTATION_PORTRAIT && orientation == PageFormat.PORTRAIT ) {
-					graphicsInfo.graphics.translate(0, (int)graphicsInfo.pageFormat.getImageableHeight());
-					graphicsInfo.graphics.rotate(Math.toRadians(-90));
+					printGraphics.translate(0, (int)printPageFormat.getImageableHeight());
+					printGraphics.rotate(Math.toRadians(-90));
 					rotatedPage = true;
 				}
 
 				// Scale to printer resolution
 				Dimension pageResolution = pageFormat.getPageResolution();
 				if (rotatedPage)
-					graphicsInfo.graphics.scale((double)72 / pageResolution.height, (double)72 / pageResolution.width);
+					printGraphics.scale((double)72 / pageResolution.height, (double)72 / pageResolution.width);
 				else
-					graphicsInfo.graphics.scale((double)72 / pageResolution.width, (double)72 / pageResolution.height);
+					printGraphics.scale((double)72 / pageResolution.width, (double)72 / pageResolution.height);
 
-				graphicsInfo.currentGraphics = new VCLGraphics(graphicsInfo.graphics, pageFormat, rotatedPage);
+				graphics = new VCLGraphics(printGraphics, pageFormat, rotatedPage);
 			}
 			else {
-				graphicsInfo.currentGraphics = null;
+				graphics = null;
 			}
 
-			return graphicsInfo.currentGraphics;
+			return graphics;
 		}
-
-	}
-
-	class GraphicsInfo {
-
-		boolean endPage = false;
-
-		Graphics2D graphics = null;
-
-		PageFormat pageFormat = null;
-
-		VCLGraphics currentGraphics = null;
-
-		VCLGraphics.PageQueue lastPageQueue = null;
 
 	}
 
