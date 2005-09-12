@@ -65,6 +65,7 @@ SLOFILES= \
 	$(SLO)$/saltimer.obj \
 	$(SLO)$/salinfo.obj \
 	$(SLO)$/salinst.obj \
+	$(SLO)$/salinst_cocoa.obj \
 	$(SLO)$/salsound.obj
 
 .ELSE
