@@ -55,6 +55,7 @@ import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.font.FontRenderContext;
 import java.awt.font.GlyphVector;
+import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
@@ -123,6 +124,11 @@ public final class VCLGraphics {
 	 * The drawBitmap2Method method.
 	 */
 	private static Method drawBitmap2Method = null;
+
+	/**
+	 * The drawEPSMethod method.
+	 */
+	private static Method drawEPSMethod = null;
 
 	/**
 	 * The drawGlyphs method.
@@ -244,6 +250,12 @@ public final class VCLGraphics {
 		}
 		try {
 			drawBitmap2Method = VCLGraphics.class.getMethod("drawBitmap", new Class[]{ VCLBitmap.class, VCLBitmap.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class });
+		}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
+		try {
+			drawEPSMethod = VCLGraphics.class.getMethod("drawEPS", new Class[]{ long.class, long.class, int.class, int.class, int.class, int.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -719,6 +731,79 @@ public final class VCLGraphics {
 		mergedImage.dispose();
 
 	}
+
+	/**
+	 * Draws specified EPS data to the underlying graphics.
+	 *
+	 * @param epsData the pointer to the EPS data
+	 * @param epsDataSize the size of the EPS data pointer
+	 * @param destX the x coordinate of the graphics to draw to
+	 * @param destY the y coordinate of the graphics to draw to
+	 * @param destWidth the width of the graphics to copy to
+	 * @param destHeight the height of the graphics to copy to
+	 */
+	public void drawEPS(long epsData, long epsDataSize, int destX, int destY, int destWidth, int destHeight) {
+
+		// Only allow drawing of EPS data to printer
+		if (graphics == null)
+			return;
+
+		if (pageQueue != null) {
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawEPSMethod, new Object[]{ new Long(epsData), new Long(epsDataSize), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight) });
+			pageQueue.postDrawingOperation(pqi);
+			return;
+		}
+
+		Rectangle destBounds = new Rectangle(destX, destY, destWidth, destHeight).intersection(graphicsBounds);
+		if (destBounds.isEmpty())
+			return;
+
+		LinkedList clipList = new LinkedList();
+		if (userClipList != null) {
+			Iterator clipRects = userClipList.iterator();
+			while (clipRects.hasNext()) {
+				Rectangle clip = (Rectangle)clipRects.next();
+				if (destBounds.intersects(clip))
+					clipList.add(clip);
+			}
+		}
+		else {
+			clipList.add(destBounds);
+		}
+
+		Graphics2D g = getGraphics();
+		if (g != null) {
+			AffineTransform transform = g.getTransform();
+			float scaleX = (float)transform.getScaleX();
+			float scaleY = (float)transform.getScaleY();
+			Rectangle bounds = pageFormat.getImageableBounds();
+			try {
+				Iterator clipRects = clipList.iterator();
+				while (clipRects.hasNext()) {
+					g.setClip((Rectangle)clipRects.next());
+					// Note: the internal EPS bounds are flipped
+					drawEPS0(epsData, epsDataSize, scaleX * (bounds.x + destX), scaleY * (bounds.y + destY + destHeight), scaleX * destWidth, scaleY * destHeight * -1);
+				}
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
+		}
+
+	}
+
+	/**
+	 * Draws specified EPS data to the underlying graphics.
+	 *
+	 * @param epsData the pointer to the EPS data
+	 * @param epsDataSize the size of the EPS data pointer
+	 * @param destX the x coordinate of the graphics to draw to
+	 * @param destY the y coordinate of the graphics to draw to
+	 * @param destWidth the width of the graphics to copy to
+	 * @param destHeight the height of the graphics to copy to
+	 */
+	native void drawEPS0(long epsData, long epsDataSize, float destX, float destY, float destWidth, float destHeight);
 
 	/**
 	 * Draws the specified glyph codes using the specified font and color. Note

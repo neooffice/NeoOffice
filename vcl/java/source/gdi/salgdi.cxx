@@ -285,6 +285,12 @@ BOOL SalGraphics::DrawEPS( long nX, long nY, long nWidth, long nHeight,
                            void* pPtr, ULONG nSize,
                            const OutputDevice *pOutDev )
 {
+	if ( maGraphicsData.mpPrinter )
+	{
+		maGraphicsData.mpVCLGraphics->drawEPS( pPtr, nSize, nX, nY, nWidth, nHeight );
+		return TRUE;
+	}
+
 	return FALSE;
 }
 

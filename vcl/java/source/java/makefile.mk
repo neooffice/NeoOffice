@@ -67,6 +67,7 @@ SLOFILES = \
 	$(SLO)/VCLFrame.obj \
 	$(SLO)/VCLFrame_cocoa.obj \
 	$(SLO)/VCLGraphics.obj \
+	$(SLO)/VCLGraphics_cocoa.obj \
 	$(SLO)/VCLImage.obj \
 	$(SLO)/VCLMenu.obj \
 	$(SLO)/VCLMenuBar.obj \

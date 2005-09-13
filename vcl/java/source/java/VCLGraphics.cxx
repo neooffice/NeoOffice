@@ -51,8 +51,17 @@
 #include <com/sun/star/vcl/VCLImage.hxx>
 #endif
 
+#include "VCLGraphics_cocoa.h"
+
 using namespace rtl;
 using namespace vcl;
+
+// ============================================================================
+ 
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawEPS0( JNIEnv *pEnv, jobject object, jlong _par0, jlong _par1, jfloat _par2, jfloat _par3, jfloat _par4, jfloat _par5 )
+{
+	NSEPSImageRep_drawInRect( (void *)_par0, _par1, _par2, _par3, _par4, _par5 );
+}
 
 // ============================================================================
 
@@ -68,6 +77,17 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 		if ( !t.pEnv ) return (jclass)NULL;
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLGraphics" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
+
+		if ( tempClass )
+		{
+			// Register the native methods for our class
+			JNINativeMethod aMethod; 
+			aMethod.name = "drawEPS0";
+			aMethod.signature = "(JJFFFF)V";
+			aMethod.fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawEPS0;
+			t.pEnv->RegisterNatives( tempClass, &aMethod, 1 );
+		}
+
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
 	}
 	return theClass;
@@ -277,6 +297,34 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 			if ( pFont )
 				delete pFont;
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLGraphics::drawEPS( void *_par0, long _par1, long _par2, long _par3, long _par4, long _par5 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(JJIIII)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "drawEPS", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[6];
+			args[0].j = jlong( _par0 );
+			args[1].j = jlong( _par1 );
+			args[2].i = jint( _par2 );
+			args[3].i = jint( _par3 );
+			args[4].i = jint( _par4 );
+			args[5].i = jint( _par5 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
 }
