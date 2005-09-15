@@ -101,8 +101,9 @@ void NSEPSImageRep_drawInRect( void *pPtr, unsigned nSize, float fX, float fY, f
 {
 	if ( pPtr && nSize && fWidth && fHeight )
 	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, @"AWTRunLoopMode", nil];
 		DrawEPSInRect *pDrawEPSInRect = [[DrawEPSInRect alloc] initWithPtr:pPtr size:nSize x:fX y:fY width:fWidth height:fHeight];
-		[pDrawEPSInRect performSelectorOnMainThread:@selector(drawEPSInRect:) withObject:pDrawEPSInRect waitUntilDone:YES];
+		[pDrawEPSInRect performSelectorOnMainThread:@selector(drawEPSInRect:) withObject:pDrawEPSInRect waitUntilDone:YES modes:pModes];
 		[pDrawEPSInRect release];
 	}
 }
