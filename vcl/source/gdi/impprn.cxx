@@ -44,10 +44,6 @@
 
 #define _SV_IMPPRN_CXX
 #define _SPOOLPRINTER_EXT
-#ifdef USE_JAVA
-#define _SV_PRINT_CXX
-class SalPrinterQueueInfo;
-#endif
 
 #ifndef _QUEUE_HXX
 #include <tools/queue.hxx>
@@ -316,7 +312,11 @@ void ImplQPrinter::ImplPrintMtf( GDIMetaFile& rMtf, long nMaxBmpDPIX, long nMaxB
 		if( !bExecuted && pAct )
 			pAct->Execute( this );
 
+#ifndef USE_JAVA
+		// The JVM has locked the native event loop so avoid invoking any
+		// pending events or timers
 		Application::Reschedule();
+#endif	// USE_JAVA
 	}
 }
 
@@ -325,14 +325,18 @@ void ImplQPrinter::ImplPrintMtf( GDIMetaFile& rMtf, long nMaxBmpDPIX, long nMaxB
 IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 {
 #ifdef USE_JAVA
-	// Allow printing of pages to occur while succeeding pages are still being
-	// added so that we can have the printer keep up with the pages
-	if( !IsPrinting() || !mpQueue->Count() )
+	// Don't allow printing to occur until the last page is added to the queue.
+	// This is necessary because the JVM will lock the native event loop and
+	// we need to print all pages in one run. Otherwise, other operations such
+	// as showing or hiding a window will deadlock waiting for the JVM to
+	// unlock the native event loop.
+	while( IsPrinting() && !mpParent->IsJobActive() && mpQueue->Count() )
+	{
 #else	// USE_JAVA
 	// Ist Drucken abgebrochen wurden?
 	if( !IsPrinting() || ( mpParent->IsJobActive() && ( mpQueue->Count() < (ULONG)mpParent->GetPageQueueSize() ) ) )
-#endif	// USE_JAVA
 		return 0;
+#endif	// USE_JAVA
 
 	// Druck-Job zuende?
 	QueuePage* pActPage = (QueuePage*) mpQueue->Get();
@@ -414,12 +418,6 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 				EndPage();
 			else
 				break;
-
-#ifdef USE_JAVA
-			// If the native print job ended or aborted, abort the parent job
-			if ( mnError == PRINTER_ABORT )
-				mpParent->AbortJob();
-#endif	// USE_JAVA
 		}
 
         SetDrawMode( nOldDrawMode );
@@ -427,9 +425,24 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 		delete pActPage;
 		mbDestroyAllowed = TRUE;
 
+#ifdef USE_JAVA
+		if( mbDestroyed )
+		{
+			Destroy();
+			break;
+		}
+#else	// USE_JAVA
 		if( mbDestroyed )
 			Destroy();
+#endif	// USE_JAVA
 	}
+
+#ifdef USE_JAVA
+	}
+
+	// It is now safe to invoke pending events or timers
+	Application::Reschedule();
+#endif	// USE_JAVA
 
 	return 0;
 }
@@ -450,13 +463,6 @@ void ImplQPrinter::EndQueuePrint()
 	QueuePage* pQueuePage	= new QueuePage;
 	pQueuePage->mbEndJob	= TRUE;
 	mpQueue->Put( pQueuePage );
-
-#ifdef USE_JAVA
-	// Invoked the timer so that all queued pages are printed immediately. We
-	// do this to prevent the long lag that would occur between closing of the
-	// print progress dialog and the end of the printing.
-	maTimer.Timeout();
-#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
@@ -472,14 +478,6 @@ void ImplQPrinter::AbortQueuePrint()
 
 void ImplQPrinter::AddQueuePage( GDIMetaFile* pPage, USHORT nPage, BOOL bNewJobSetup )
 {
-#ifdef USE_JAVA
-	if ( mbAborted )
-	{
-		EndQueuePrint();
-		return;
-	}
-#endif	// USE_JAVA
-
 	QueuePage* pQueuePage	= new QueuePage;
 	pQueuePage->mpMtf		= pPage;
 	pQueuePage->mnPage		= nPage;
@@ -487,13 +485,6 @@ void ImplQPrinter::AddQueuePage( GDIMetaFile* pPage, USHORT nPage, BOOL bNewJobS
 	if ( bNewJobSetup )
 		pQueuePage->mpSetup = new JobSetup( mpParent->GetJobSetup() );
 	mpQueue->Put( pQueuePage );
-
-#ifdef USE_JAVA
-	// Invoked the timer so that all queued pages are printed immediately. We
-	// do this to prevent the long lag that would occur between closing of the
-	// print progress dialog and the end of the printing.
-	maTimer.Timeout();
-#endif	// USE_JAVA
 }
 
 #endif

@@ -43,7 +43,6 @@ typedef void* id;
 #ifdef __cplusplus
 BEGIN_C
 #endif
-void NSPrintOperation_runNativeTimers();
 BOOL NSPrintInfo_pageRange( id pNSPrintInfo, int *nFirst, int *nLast );
 #ifdef __cplusplus
 END_C

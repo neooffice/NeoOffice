@@ -36,57 +36,6 @@
 #import <Cocoa/Cocoa.h>
 #import "VCLPrintJob_cocoa.h"
 
-@interface RunNativeTimers : NSObject
-- (void)runNativeTimers:(id)pObject;
-@end
-
-@implementation RunNativeTimers
-
-- (void)runNativeTimers:(id)pObject
-{
-	NSView *pFocusView = [NSView focusView];
-	if ( pFocusView )
-		[pFocusView unlockFocus];
-
-	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( pApp )
-	{
-		NSArray *pWindows = [pApp windows];
-		if ( pWindows )
-		{
-			NSEnumerator *pEnum = [pWindows objectEnumerator];
-			NSWindow *pWindow;
-			while ( ( pWindow = [pEnum nextObject] ) != nil )
-				[pWindow setAutodisplay:NO];
-		}
-
-		NSEvent *pEvent;
-		while ( ( pEvent = [pApp nextEventMatchingMask:NSAnyEventMask untilDate:[NSDate date] inMode:NSDefaultRunLoopMode dequeue:YES] ) != nil )
-			[pApp sendEvent:pEvent];
-
-		pWindows = [pApp windows];
-		if ( pWindows )
-		{
-			NSEnumerator *pEnum = [pWindows objectEnumerator];
-			NSWindow *pWindow;
-			while ( ( pWindow = [pEnum nextObject] ) != nil )
-				[pWindow setAutodisplay:YES];
-		}
-	}
-
-	if ( pFocusView )
-		[pFocusView lockFocus];
-}
-
-@end
-
-void NSPrintOperation_runNativeTimers()
-{
-	RunNativeTimers *pRunNativeTimers = [[RunNativeTimers alloc] init];
-	[pRunNativeTimers performSelectorOnMainThread:@selector(runNativeTimers:) withObject:pRunNativeTimers waitUntilDone:YES];
-	[pRunNativeTimers release];
-}
-
 BOOL NSPrintInfo_pageRange( id pNSPrintInfo, int *nFirst, int *nLast )
 {
 	if ( pNSPrintInfo && nFirst && nLast )

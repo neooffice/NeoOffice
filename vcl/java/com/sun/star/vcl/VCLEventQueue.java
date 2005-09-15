@@ -336,7 +336,7 @@ public final class VCLEventQueue {
 		 *
 		 * @param event the event to dispatch
 		 */
-		protected void dispatchEvent(AWTEvent event) {
+		public void dispatchEvent(AWTEvent event) {
 
 			try {
 				super.dispatchEvent(event);

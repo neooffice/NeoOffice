@@ -291,7 +291,12 @@ BOOL SVMain()
 
 		BOOL bInit = FALSE;
 
-		oslThread hThreadID = osl_createThread( RunSVMain, &bInit );
+		// Make sure that the new thread has the highest priority (i.e. the
+		// same priority as the main thread) so that Java Object.wait() calls
+		// behave properly
+		oslThread hThreadID = osl_createSuspendedThread( RunSVMain, &bInit );
+		osl_setThreadPriority( hThreadID, osl_Thread_PriorityHighest );
+		osl_resumeThread( hThreadID );
 
         // Start the CFRunLoop
         CFRunLoopSourceContext aSourceContext;
@@ -311,6 +316,8 @@ BOOL SVMain()
 
         osl_joinWithThread( hThreadID );
         osl_destroyThread( hThreadID );
+
+		CFRelease( aSourceRef );
 
         return bInit;
     }

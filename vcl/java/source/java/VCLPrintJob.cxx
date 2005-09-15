@@ -57,13 +57,6 @@ using namespace vcl;
 
 // ============================================================================
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLPrintJob_runNativeTimers( JNIEnv *pEnv, jobject object )
-{
-	NSPrintOperation_runNativeTimers();
-}
-
-// ============================================================================
-
 jclass com_sun_star_vcl_VCLPrintJob::theClass = NULL;
 
 // ----------------------------------------------------------------------------
@@ -76,17 +69,6 @@ jclass com_sun_star_vcl_VCLPrintJob::getMyClass()
 		if ( !t.pEnv ) return (jclass)NULL;
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLPrintJob" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
-
-		if ( tempClass )
-		{
-			// Register the native methods for our class
-			JNINativeMethod aMethod; 
-			aMethod.name = "runNativeTimers";
-			aMethod.signature = "()V";
-			aMethod.fnPtr = (void *)Java_com_sun_star_vcl_VCLPrintJob_runNativeTimers;
-			t.pEnv->RegisterNatives( tempClass, &aMethod, 1 );
-		}
-
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
 	}
 	return theClass;

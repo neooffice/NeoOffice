@@ -36,6 +36,7 @@
 package com.sun.star.vcl;
 
 import java.awt.Dimension;
+import java.awt.EventQueue;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
@@ -70,11 +71,6 @@ public final class VCLPrintJob implements Printable, Runnable {
 	private boolean endJob = false;
 
 	/**
-	 * The end page flag.
-	 */
-	private boolean endPage = false;
-
-	/**
 	 * The cached printer job.
 	 */
 	private PrinterJob job = null;
@@ -92,7 +88,12 @@ public final class VCLPrintJob implements Printable, Runnable {
 	/**
 	 * The cached printed page queues.
 	 */
-	LinkedList printedPageQueues = null;
+	LinkedList printedPageQueues = new LinkedList();
+
+	/**
+	 * The print finished flag.
+	 */
+	private boolean printFinished = false;
 
 	/**
 	 * The cached native graphics context.
@@ -105,9 +106,9 @@ public final class VCLPrintJob implements Printable, Runnable {
 	private PageFormat printPageFormat = null;
 
 	/**
-	 * The print thread.
+	 * The print started flag.
 	 */
-	private Thread printThread = null;
+	private boolean printStarted = false;
 
 	/**
 	 * Constructs a new <code>VCLPrintJob</code> instance.
@@ -119,9 +120,11 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 */
 	public void abortJob() {
 
-		// End the job before disposing of the printGraphics
-		job.cancel();
+		// Due to a bug in some JVM versions, cancelling a native print job
+		// once the PrinterJob.print() method is invoked either deadlocks the
+		// JVM or does not cancel the job so we do not allow cancellation
 		endJob();
+
 
 	}
 
@@ -137,31 +140,11 @@ public final class VCLPrintJob implements Printable, Runnable {
 		abortJob();
 
 		synchronized (this) {
-			if (graphics != null) {
-				// Dispose a print printGraphics throws exceptions when memory
-				// is low
-				try {
-					graphics.dispose();
-				}
-				catch (Throwable t) {
-					t.printStackTrace();
-				}
-				graphics = null;
-			}
-
+			graphics = null;
+			printedPageQueues = null;
 			printGraphics = null;
 			printPageFormat = null;
-
-			if (printedPageQueues != null) {
-				while (printedPageQueues.size() > 0) {
-					VCLGraphics.PageQueue pq = (VCLGraphics.PageQueue)printedPageQueues.removeFirst();
-					pq.dispose();
-				}
-				printedPageQueues = null;
-			}
-
 			job = null;
-			printThread = null;
 
 			disposed = true;
 		}
@@ -171,44 +154,35 @@ public final class VCLPrintJob implements Printable, Runnable {
 	/**
 	 * End the printer job.
 	 */
-	public void endJob() {
+	public synchronized void endJob() {
 
 		// End the job after disposing of the printGraphics
 		endJob = true;
 
-		endPage();
-
-		// Release any pending locks
-		if (printThread != null && printThread.isAlive()) {
+		// Wait for print thread to finish
+		while (printStarted && !printFinished) {
+			notifyAll();
 			try {
-				printThread.join();
+				wait();
 			}
 			catch (Throwable t) {}
 		}
 
 		pageFormat.setEditable(true);
-		jobStarted = false;
 
 	}
 
 	/**
 	 * Release the printGraphics for the current page.
 	 */
-	public void endPage() {
+	public synchronized void endPage() {
 
-		synchronized (this) {
-			// Allow the printer thread to move to the next page
-			endPage = true;
-
-			while (endPage && printThread != null && printThread.isAlive()) {
-				notifyAll();
-				try {
-					wait(100);
-				}
-				catch (Throwable t) {}
+		if (printStarted && !printFinished) {
+			notifyAll();
+			try {
+				wait();
 			}
-
-			endPage = false;
+			catch (Throwable t) {}
 		}
 
 	}
@@ -229,61 +203,42 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 * context. This method will block until the <code>endPage</code> is
 	 * invoked.
 	 */
-	public int print(Graphics g, PageFormat f, int i) throws PrinterException {
+	public synchronized int print(Graphics g, PageFormat f, int i) throws PrinterException {
 
-		synchronized (this) {
-			if (job.isCancelled())
-				throw new PrinterAbortException();
-			else if (endJob)
-				return Printable.NO_SUCH_PAGE;
+		printGraphics = (Graphics2D)g;
+		printPageFormat = f;
 
-			printGraphics = (Graphics2D)g;
-			printPageFormat = f;
-
-			// Notify other threads and wait until painting is finished
-			while (!endPage) {
-				runNativeTimers();
-				notifyAll();
-				try {
-					wait(100);
-				}
-				catch (Throwable t) {}
+		// Notify other threads and wait until painting is finished
+		if (!endJob) {
+			notifyAll();
+			try {
+				wait();
 			}
-
-			// Allow endPage() method to continue
-			endPage = false;
-
-			runNativeTimers();
-
-			if (graphics != null) {
-				// Cache the queued drawing operations. This is necessary
-				// because the JVM will crash if we are printing bitmaps
-				// and those bitmaps are garbage collected before the JVM
-				// finishes the print job.
-				printedPageQueues.add(graphics.getPageQueue());
-
-				try {
-					graphics.dispose();
-				}
-				catch (Throwable t) {
-					t.printStackTrace();
-				}
-	
-				graphics = null;
-			}
-
-			runNativeTimers();
-
-			printGraphics = null;
-			printPageFormat = null;
-
-			if (job.isCancelled())
-				throw new PrinterAbortException();
-			else if (endJob)
-				return Printable.NO_SUCH_PAGE;
-			else
-				return Printable.PAGE_EXISTS;
+			catch (Throwable t) {}
 		}
+
+		if (graphics != null) {
+			// Cache the queued drawing operations. This is necessary
+			// because the JVM will crash if we are printing bitmaps
+			// and those bitmaps are garbage collected before the JVM
+			// finishes the print job.
+			printedPageQueues.add(graphics.getPageQueue());
+			try {
+				graphics.dispose();
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			graphics = null;
+		}
+
+		printGraphics = null;
+		printPageFormat = null;
+
+		if (endJob)
+			return Printable.NO_SUCH_PAGE;
+		else
+			return Printable.PAGE_EXISTS;
 
 	}
 
@@ -295,16 +250,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 	public void run() {
 
 		try {
-			synchronized (this) {
-				runNativeTimers();
-				if (printedPageQueues == null)
-					printedPageQueues = new LinkedList();
-			}
-
 			job.print();
-		}
-		catch (PrinterAbortException pae) {
-			// Don't print anything since the user pressed the cancel button
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -312,27 +258,16 @@ public final class VCLPrintJob implements Printable, Runnable {
 
 		// Notify other threads that printing is finished
 		synchronized (this) {
-			runNativeTimers();
-
-			if (printedPageQueues != null) {
-				while (printedPageQueues.size() > 0) {
-					VCLGraphics.PageQueue pq = (VCLGraphics.PageQueue)printedPageQueues.removeFirst();
-					pq.dispose();
-				}
-				printedPageQueues = null;
+			while (printedPageQueues.size() > 0) {
+				VCLGraphics.PageQueue pq = (VCLGraphics.PageQueue)printedPageQueues.removeFirst();
+				pq.dispose();
 			}
 
+			printFinished = true;
 			notifyAll();
 		}
 
 	}
-
-	/**
-	 * Run any native timers that are pending. This method needs to be called
-	 * within the {@link #print(Graphics, PageFormat, int)} method as that
-	 * method is run by the JVM in a native timer.
-	 */
-	native void runNativeTimers();
 
 	/**
 	 * Return the status of the print job.
@@ -342,7 +277,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 */
 	public boolean isFinished() {
 
-		return ((printThread != null && !printThread.isAlive()) || job.isCancelled());
+		return (printStarted && printFinished);
 
 	}
 
@@ -357,7 +292,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 	public boolean startJob(VCLPageFormat p, String n) {
 
 		// Detect if the user cancelled the print dialog
-		if (!jobStarted ) {
+		if (!jobStarted) {
 			pageFormat = p;
 			job = pageFormat.getPrinterJob();
 			job.setPrintable(this, pageFormat.getPageFormat());
@@ -383,61 +318,62 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 * @param o the page orientation
 	 * @return the <code>VCLGraphics</code> instance for the current page
 	 */
-	public VCLGraphics startPage(int o) {
+	public synchronized VCLGraphics startPage(int o) {
 
-		synchronized (this) {
-			// Start the printing thread if it has not yet been started
-			if (printThread == null) {
-				printThread = new Thread(this);
-				printThread.setPriority(Thread.MIN_PRIORITY);
-				printThread.start();
+		// Start the printing thread if it has not yet been started
+		if (!printStarted) {
+			printStarted = true;
+			EventQueue.invokeLater(this);
+			notifyAll();
+			try {
+				wait();
 			}
-
-			// Mac OS X wants each page printed twice so skip the first as it
-			// seems to have no effect on the printed output
-			endPage();
-
-			// Get the current page's printGraphics context
-			if (printGraphics != null && printThread != null && printThread.isAlive()) {
-				// Set the origin to the origin of the printable area
-				printGraphics.translate((int)printPageFormat.getImageableX(), (int)printPageFormat.getImageableY());
-
-				// Rotate the page if necessary
-				int orientation = printPageFormat.getOrientation();
-				boolean rotatedPage = false;
-				if (o == VCLPageFormat.ORIENTATION_PORTRAIT && orientation != PageFormat.PORTRAIT) {
-					if (orientation == PageFormat.REVERSE_LANDSCAPE) {
-						printGraphics.translate(0, (int)printPageFormat.getImageableHeight());
-						printGraphics.rotate(Math.toRadians(-90));
-					}
-					else {
-						printGraphics.translate((int)printPageFormat.getImageableWidth(), 0);
-						printGraphics.rotate(Math.toRadians(90));
-					}
-					rotatedPage = true;
-				}
-				else if (o != VCLPageFormat.ORIENTATION_PORTRAIT && orientation == PageFormat.PORTRAIT ) {
-					printGraphics.translate(0, (int)printPageFormat.getImageableHeight());
-					printGraphics.rotate(Math.toRadians(-90));
-					rotatedPage = true;
-				}
-
-				// Scale to printer resolution
-				Dimension pageResolution = pageFormat.getPageResolution();
-				if (rotatedPage)
-					printGraphics.scale((double)72 / pageResolution.height, (double)72 / pageResolution.width);
-				else
-					printGraphics.scale((double)72 / pageResolution.width, (double)72 / pageResolution.height);
-
-				graphics = new VCLGraphics(printGraphics, pageFormat, rotatedPage);
-			}
-			else {
-				graphics = null;
-			}
-
-			return graphics;
+			catch (Throwable t) {}
 		}
 
+		// Mac OS X wants each page printed twice so skip the first as it
+		// seems to have no effect on the printed output
+		endPage();
+
+		// Get the current page's printGraphics context
+		if (printStarted && !printFinished) {
+			// Set the origin to the origin of the printable area
+			printGraphics.translate((int)printPageFormat.getImageableX(), (int)printPageFormat.getImageableY());
+
+			// Rotate the page if necessary
+			int orientation = printPageFormat.getOrientation();
+			boolean rotatedPage = false;
+			if (o == VCLPageFormat.ORIENTATION_PORTRAIT && orientation != PageFormat.PORTRAIT) {
+				if (orientation == PageFormat.REVERSE_LANDSCAPE) {
+					printGraphics.translate(0, (int)printPageFormat.getImageableHeight());
+					printGraphics.rotate(Math.toRadians(-90));
+				}
+				else {
+					printGraphics.translate((int)printPageFormat.getImageableWidth(), 0);
+					printGraphics.rotate(Math.toRadians(90));
+				}
+				rotatedPage = true;
+			}
+			else if (o != VCLPageFormat.ORIENTATION_PORTRAIT && orientation == PageFormat.PORTRAIT ) {
+				printGraphics.translate(0, (int)printPageFormat.getImageableHeight());
+				printGraphics.rotate(Math.toRadians(-90));
+				rotatedPage = true;
+			}
+
+			// Scale to printer resolution
+			Dimension pageResolution = pageFormat.getPageResolution();
+			if (rotatedPage)
+				printGraphics.scale((double)72 / pageResolution.height, (double)72 / pageResolution.width);
+			else
+				printGraphics.scale((double)72 / pageResolution.width, (double)72 / pageResolution.height);
+
+			graphics = new VCLGraphics(printGraphics, pageFormat, rotatedPage);
+		}
+		else {
+			graphics = null;
+		}
+
+		return graphics;
 	}
 
 }
