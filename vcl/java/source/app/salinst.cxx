@@ -268,9 +268,9 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 							ReceiveNextEvent( 0, NULL, 0, false, NULL );
 
 							nRet = noErr;
-						}
 
-						rSolarMutex.release();
+							rSolarMutex.release();
+						}
 
 						return nRet;
 					}
