@@ -581,8 +581,10 @@ public final class VCLGraphics {
 				try {
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {
-						g.setClip((Rectangle)clipRects.next());
-						g.copyArea(srcX, srcY, destWidth, destHeight, destX - srcX, destY - srcY);
+						// Some versions of the JVM ignore clip in copyArea()
+						// so limit copying to the clip area
+						Rectangle clipRect = new Rectangle(destX, destY, destWidth, destHeight).intersection(((Rectangle)clipRects.next()));
+						g.copyArea(srcX + clipRect.x - destX, srcY + clipRect.y - destY, clipRect.width, clipRect.height, destX - srcX, destY - srcY);
 					}
 				}
 				catch (Throwable t) {
