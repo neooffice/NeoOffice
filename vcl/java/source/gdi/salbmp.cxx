@@ -205,6 +205,9 @@ Size SalBitmap::GetSize() const
 
 BitmapBuffer* SalBitmap::AcquireBuffer( BOOL bReadOnly )
 {
+	if ( !mpVCLBitmap || !mpData )
+		return NULL;
+
 	BitmapBuffer *pBuffer = new BitmapBuffer();
 
 	// Set buffer values. Note that the JVM cannot draw 1 bit bitmaps
@@ -233,12 +236,6 @@ BitmapBuffer* SalBitmap::AcquireBuffer( BOOL bReadOnly )
 	pBuffer->mnHeight = maSize.Height();
 	pBuffer->mnScanlineSize = AlignedWidth4Bytes( mnBitCount * maSize.Width() );
 	mpVCLBitmap->getPalette( pBuffer->maPalette );
-
-	if ( !mpData )
-	{
-		delete pBuffer;
-		return NULL;
-	}
 
 	if ( !mpBits )
 	{
@@ -355,7 +352,7 @@ void SalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, BOOL bReadOnly )
 					mpBits = NULL;
 
 				// Save the palette
-				if ( !bReadOnly )
+				if ( !bReadOnly && mpVCLBitmap )
 					mpVCLBitmap->setPalette( pBuffer->maPalette );
 			}
 		}
