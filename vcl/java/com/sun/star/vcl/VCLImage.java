@@ -112,16 +112,8 @@ public final class VCLImage {
 		width = w;
 		height = h;
 
-		// Adjust the bit count. Note that the JVM cannot draw 1 bit bitmaps
-		// correctly so we don't use them.
-		if (b <= 4)
-			bitCount = 4;
-		else if (b <= 8)
-			bitCount = 8;
-		else if (b <= 16)
-			bitCount = 16;
-		else
-			bitCount = 24;
+		// Always set bit count to 32
+		bitCount = 32;
 
 		data = new int[width * height];
 
