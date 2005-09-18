@@ -213,7 +213,6 @@ public final class VCLBitmap {
 			sampleModel = VCLBitmap.default32BitColorModel.createCompatibleSampleModel(width, height);
 		}
 
-
 		// Create the raster
 		if (bitCount <= 8) {
 			byte[] d = new byte[scanline * height];

@@ -79,7 +79,8 @@ BOOL SalBitmap::Create( const Size& rSize, USHORT nBitCount, const BitmapPalette
 		mpVCLBitmap = new com_sun_star_vcl_VCLBitmap( maSize.Width(), maSize.Height(), nBitCount );
 	}
 
-	if ( mpVCLBitmap ) {
+	if ( mpVCLBitmap && mpVCLBitmap->getJavaObject() )
+	{
 		// Cache the bit count
 		mnBitCount = mpVCLBitmap->getBitCount();
 

@@ -673,7 +673,15 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 	SalFrame *pFrame = new SalFrame();
 
 	pFrame->maFrameData.mnStyle = nSalFrameStyle;
-	pFrame->maFrameData.mpVCLFrame = new com_sun_star_vcl_VCLFrame( pFrame->maFrameData.mnStyle, pFrame, pParent );
+	com_sun_star_vcl_VCLFrame *pVCLFrame = new com_sun_star_vcl_VCLFrame( pFrame->maFrameData.mnStyle, pFrame, pParent );
+	if ( !pVCLFrame || !pVCLFrame->getJavaObject() )
+	{
+		if ( pVCLFrame )
+			delete pFrame;
+		delete pFrame;
+		return NULL;
+	}
+	pFrame->maFrameData.mpVCLFrame = pVCLFrame;
 	pFrame->maFrameData.maSysData.aWindow = 0;
 	pFrame->maFrameData.maSysData.pSalFrame = pFrame;
 

@@ -841,6 +841,7 @@ public final class VCLGraphics {
 		}
 
 		Graphics2D g = getGraphics();
+		Graphics2D g2 = null;
 		if (g != null) {
 			try {
 				// The graphics may adjust the font
@@ -879,10 +880,8 @@ public final class VCLGraphics {
 
 				Iterator clipRects = clipList.iterator();
 				while (clipRects.hasNext()) {
-					Graphics2D g2 = (Graphics2D)g.create();
-
+					g2 = (Graphics2D)g.create();
 					g2.setClip((Rectangle)clipRects.next());
-
 					g2.translate(x, y);
 
 					// Set rotation
@@ -904,11 +903,14 @@ public final class VCLGraphics {
 					g2.drawGlyphVector(gv, translateX, translateY);
 
 					g2.dispose();
+					g2 = null;
 				}
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
 			}
+			if (g2 != null)
+				g2.dispose();
 			g.dispose();
 		}
 

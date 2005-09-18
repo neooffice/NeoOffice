@@ -119,7 +119,7 @@ public final class VCLPageFormat {
 	/**
 	 * The printer text resolution.
 	 */
-	private static Dimension printerTextResolution = new Dimension(2540, 2540);
+	private static Dimension printerTextResolution = new Dimension(300, 300);
 
 	/**
 	 * Returns the printer orientation.

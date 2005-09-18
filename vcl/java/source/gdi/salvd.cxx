@@ -87,25 +87,35 @@ void SalVirtualDevice::ReleaseGraphics( SalGraphics* pGraphics )
 
 BOOL SalVirtualDevice::SetSize( long nDX, long nDY )
 {
-	if ( maVirDevData.mpGraphics->maGraphicsData.mpVCLGraphics )
-		delete maVirDevData.mpGraphics->maGraphicsData.mpVCLGraphics;
-	maVirDevData.mpGraphics->maGraphicsData.mpVCLGraphics = NULL;
-
-	if ( maVirDevData.mpVCLImage )
-	{
-		maVirDevData.mpVCLImage->dispose();
-		delete maVirDevData.mpVCLImage;
-	}
-	maVirDevData.mpVCLImage = NULL;
+	BOOL bRet = FALSE;
 
 	if ( nDX > 0 && nDY > 0 )
 	{
-		maVirDevData.mpVCLImage = new com_sun_star_vcl_VCLImage( nDX, nDY, maVirDevData.mnBitCount );
-		if ( maVirDevData.mpVCLImage && maVirDevData.mbGraphics )
+		com_sun_star_vcl_VCLImage *pVCLImage = new com_sun_star_vcl_VCLImage( nDX, nDY, maVirDevData.mnBitCount );
+		if ( pVCLImage && pVCLImage->getJavaObject() )
+		{
+			if ( maVirDevData.mpVCLImage )
+			{
+				maVirDevData.mpVCLImage->dispose();
+				delete maVirDevData.mpVCLImage;
+			}
+
+			maVirDevData.mpVCLImage = pVCLImage;
+
+			if ( maVirDevData.mpGraphics->maGraphicsData.mpVCLGraphics )
+				delete maVirDevData.mpGraphics->maGraphicsData.mpVCLGraphics;
 			maVirDevData.mpGraphics->maGraphicsData.mpVCLGraphics = maVirDevData.mpVCLImage->getGraphics();
+
+			bRet = TRUE;
+		}
+		else
+		{
+			if ( pVCLImage )
+				delete pVCLImage;
+		}
 	}
 
-	return maVirDevData.mpVCLImage ? TRUE : FALSE;
+	return bRet;
 }
 
 // =======================================================================

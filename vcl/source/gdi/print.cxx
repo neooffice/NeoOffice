@@ -2170,6 +2170,13 @@ BOOL Printer::EndPage()
 			mpPrinter->EndPage();
 			ImplReleaseGraphics();
 			mbDevOutput = FALSE;
+#ifdef USE_JAVA
+			// Update the error status for the cases where the native print
+			// job ends or is aborted before the last page is printed
+			mnError = ImplSalPrinterErrorCodeToVCL( mpPrinter->GetErrorCode() );
+			if ( !mnError )
+				mnError = PRINTER_GENERALERROR;
+#endif  // USE_JAVA
 		}
 		else if ( mpQPrinter )
 		{

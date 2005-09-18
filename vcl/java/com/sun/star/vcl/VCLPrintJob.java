@@ -45,7 +45,6 @@ import java.awt.print.Printable;
 import java.awt.print.PrinterAbortException;
 import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
-import java.util.LinkedList;
 
 /**
  * The Java class that implements the SalPrinter C++ class methods.
@@ -81,14 +80,14 @@ public final class VCLPrintJob implements Printable, Runnable {
 	private boolean jobStarted = false;
 
 	/**
+	 * The last page queue.
+	 */
+	VCLGraphics.PageQueue lastPageQueue = null;
+
+	/**
 	 * The cached <code>VCLPageFormat</code>.
 	 */
 	private VCLPageFormat pageFormat = null;
-
-	/**
-	 * The cached printed page queues.
-	 */
-	LinkedList printedPageQueues = new LinkedList();
 
 	/**
 	 * The print finished flag.
@@ -140,8 +139,14 @@ public final class VCLPrintJob implements Printable, Runnable {
 		abortJob();
 
 		synchronized (this) {
-			graphics = null;
-			printedPageQueues = null;
+			if (graphics != null) {
+				graphics.dispose();
+				graphics = null;
+			}
+			if (lastPageQueue != null) {
+				lastPageQueue.dispose();
+				lastPageQueue = null;
+			}
 			printGraphics = null;
 			printPageFormat = null;
 			job = null;
@@ -205,6 +210,11 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 */
 	public synchronized int print(Graphics g, PageFormat f, int i) throws PrinterException {
 
+		if (lastPageQueue != null) {
+			lastPageQueue.dispose();
+			lastPageQueue = null;
+		}
+
 		printGraphics = (Graphics2D)g;
 		printPageFormat = f;
 
@@ -222,13 +232,8 @@ public final class VCLPrintJob implements Printable, Runnable {
 			// because the JVM will crash if we are printing bitmaps
 			// and those bitmaps are garbage collected before the JVM
 			// finishes the print job.
-			printedPageQueues.add(graphics.getPageQueue());
-			try {
-				graphics.dispose();
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
+			lastPageQueue = graphics.getPageQueue();
+			graphics.dispose();
 			graphics = null;
 		}
 
@@ -258,11 +263,12 @@ public final class VCLPrintJob implements Printable, Runnable {
 
 		// Notify other threads that printing is finished
 		synchronized (this) {
-			while (printedPageQueues.size() > 0) {
-				VCLGraphics.PageQueue pq = (VCLGraphics.PageQueue)printedPageQueues.removeFirst();
-				pq.dispose();
+			if (lastPageQueue != null) {
+				lastPageQueue.dispose();
+				lastPageQueue = null;
 			}
-
+			printGraphics = null;
+			printPageFormat = null;
 			printFinished = true;
 			notifyAll();
 		}
