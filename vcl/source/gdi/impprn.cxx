@@ -316,7 +316,7 @@ void ImplQPrinter::ImplPrintMtf( GDIMetaFile& rMtf, long nMaxBmpDPIX, long nMaxB
 		// The JVM has locked the native event loop so avoid invoking any
 		// pending events or timers
 		Application::Reschedule();
-#endif	// USE_JAVA
+#endif	// !USE_JAVA
 	}
 }
 
