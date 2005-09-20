@@ -677,7 +677,7 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 	if ( !pVCLFrame || !pVCLFrame->getJavaObject() )
 	{
 		if ( pVCLFrame )
-			delete pFrame;
+			delete pVCLFrame;
 		delete pFrame;
 		return NULL;
 	}
