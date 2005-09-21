@@ -229,6 +229,10 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	}
 	else
 	{
+		// End composition
+		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_ENDEXTTEXTINPUT, this, NULL );
+		aEvent.dispatch();
+
 		// Reset graphics
 		com_sun_star_vcl_VCLGraphics *pVCLGraphics = maFrameData.mpVCLFrame->getGraphics();
 		if ( pVCLGraphics )

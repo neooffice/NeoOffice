@@ -1078,14 +1078,29 @@ public final class VCLEvent extends AWTEvent {
 				{
 					textAttributes = new int[count];
 					count = 0;
+					boolean selected = false;
 					for (char c = i.first(); c != CharacterIterator.DONE; c = i.next()) {
 						int attribute = 0;
 						InputMethodHighlight hl = (InputMethodHighlight)i.getAttribute(TextAttribute.INPUT_METHOD_HIGHLIGHT);
 						if (hl != null) {
-							if (hl.isSelected())
-								attribute |= SAL_EXTTEXTINPUT_ATTR_HIGHLIGHT;
-							else
-								attribute |= SAL_EXTTEXTINPUT_ATTR_UNDERLINE;
+							if (hl.isSelected()) {
+								if (!selected) {
+									// When we encounter the first selected
+									// character, reset the preceding characters
+									selected = true;
+									for (int j = 0; j < count; j++)
+										textAttributes[j] = SAL_EXTTEXTINPUT_ATTR_UNDERLINE;
+								}
+								attribute = SAL_EXTTEXTINPUT_ATTR_HIGHLIGHT;
+							}
+							else if (!selected) {
+								// If no characters are selected, highlight
+								// all of them
+								attribute = SAL_EXTTEXTINPUT_ATTR_HIGHLIGHT;
+							}
+							else {
+								attribute = SAL_EXTTEXTINPUT_ATTR_UNDERLINE;
+							}
 						}
 						textAttributes[count++] = attribute;
 					}

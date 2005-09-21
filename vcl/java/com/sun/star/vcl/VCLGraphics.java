@@ -1393,9 +1393,10 @@ public final class VCLGraphics {
 		else if (graphics != null)
 			g = (Graphics2D)graphics.create();
 		else
-			return null;
+			g = null;
 
-		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+		if (g != null)
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
 
 		return g;
 

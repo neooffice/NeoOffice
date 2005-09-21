@@ -622,6 +622,33 @@ void com_sun_star_vcl_VCLFrame::setState( ULONG _par0 )
 
 // ----------------------------------------------------------------------------
 
+void com_sun_star_vcl_VCLFrame::setTextLocation( long _par0, long _par1, long _par2, long _par3, sal_Bool _par4 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(IIIIZ)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "setTextLocation", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[5];
+			args[0].i = jint( _par0 );
+			args[1].i = jint( _par1 );
+			args[2].i = jint( _par2 );
+			args[3].i = jint( _par3 );
+			args[4].z = jboolean( _par4 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLFrame::setTitle( ::rtl::OUString _par0 )
 {
 	static jmethodID mID = NULL;

@@ -267,11 +267,19 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					pInputEvent->mnCursorFlags = 0;
 				}
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pInputEvent );
+				// Update the cached location
+				if ( pFrame->maFrameData.mpVCLFrame )
+				{
+					SalExtTextInputPosEvent aPosEvent;
+					pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, SALEVENT_EXTTEXTINPUTPOS, (void *)&aPosEvent );
+					pFrame->maFrameData.mpVCLFrame->setTextLocation( pFrame->maGeometry.nX - pFrame->maGeometry.nLeftDecoration + aPosEvent.mnX, pFrame->maGeometry.nY - pFrame->maGeometry.nTopDecoration + aPosEvent.mnY, aPosEvent.mnWidth, aPosEvent.mnHeight, aPosEvent.mbVertical );
+				}
 				// If there is no text, the character is committed
 				if ( pInputEvent->maText.Len() == nCommitted )
 					pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, SALEVENT_ENDEXTTEXTINPUT, NULL );
 				if ( pInputEvent->mpTextAttr )
 					rtl_freeMemory( (USHORT *)pInputEvent->mpTextAttr );
+				// Update the cached cursor location
 			}
 			if ( pInputEvent )
 				delete pInputEvent;

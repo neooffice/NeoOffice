@@ -601,7 +601,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	/** 
 	 * The default text location.
 	 */
-	private final static Rectangle defaultTextLocation = new Rectangle();
+	private final static Rectangle defaultTextLocation = new Rectangle(300, 300, 0, 12);
 
 	/**
 	 * The last mouse drag event.
@@ -636,7 +636,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
-	 * Initialize input context.
+	 * Initialize static data members.
 	 */
 	static {
 
@@ -728,6 +728,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private long style = 0;
 
 	/**
+	 * The text location.
+	 */
+	private Rectangle textLocation = null;
+
+	/**
 	 * The native window.
 	 */
 	private Window window = null;
@@ -813,7 +818,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public AttributedCharacterIterator cancelLatestCommittedText(AttributedCharacterIterator.Attribute[] attributes) {
 
-		return defaultAttributedCharacterIterator;
+		return null;
 
 	}
 
@@ -909,6 +914,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed)
 			return;
 
+		setVisible(false);
 		setMenuBar(null);
 		bitCount = 0;
 		children = null;
@@ -927,7 +933,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		panel.removeMouseMotionListener(this);
 		panel.removeMouseWheelListener(this);
 
-		panel.enableInputMethods(false);
 		window.remove(panel);
 		panel = null;
 
@@ -935,10 +940,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		window.removeComponentListener(this);
 		window.removeWindowListener(this);
 
-		window.removeNotify();
-		InputContext ic = window.getInputContext();
-		if (ic != null)
-			ic.removeNotify(window);
+		textLocation = null;
 		window = null;
 		undecorated = false;
 		queue.removeCachedEvents(frame);
@@ -953,9 +955,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void endComposition() {
 
-		InputContext ic = window.getInputContext();
-		if (ic != null)
-			ic.endComposition();
+		// Do nothing as call InputContext.endComposition() on Mac OS X
+		// causes the JVM to be stuck in a weird state that prevents
+		// further input
 
 	}
 
@@ -1022,7 +1024,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public AttributedCharacterIterator getCommittedText(int beginIndex, int endIndex, AttributedCharacterIterator.Attribute[] attributes) {
 
-		return defaultAttributedCharacterIterator;
+		return VCLFrame.defaultAttributedCharacterIterator;
 
 	}
 
@@ -1180,7 +1182,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public AttributedCharacterIterator getSelectedText(AttributedCharacterIterator.Attribute[] attributes) {
 
-		return defaultAttributedCharacterIterator;
+		return VCLFrame.defaultAttributedCharacterIterator;
 
 	}
 
@@ -1212,7 +1214,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public Rectangle getTextLocation(TextHitInfo offset) {
 
-		return defaultTextLocation;
+		if (disposed || !window.isShowing())
+			return defaultTextLocation;
+
+		// Give the VCL event queue a chance to dispatch any pending input
+		// method events before we return the location
+		Thread.yield();
+
+		synchronized (this) {
+			if (textLocation != null && textLocation.width >= 0 && textLocation.height >= 0)
+				return textLocation;
+			else
+				return defaultTextLocation;
+		}
 
 	}
 
@@ -1239,6 +1253,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
+		System.out.println(e);
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_EXTTEXTINPUT, this, 0));
 
 	}
@@ -1358,6 +1373,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public void mouseClicked(MouseEvent e) {
 
 		e.consume();
+
+		if (disposed || !window.isShowing())
+			return;
 
 	}
 
@@ -1801,6 +1819,25 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			window.setCursor(c);
 			Toolkit.getDefaultToolkit().sync();
 		}
+
+	}
+
+	/**
+	 * Sets the text location.
+	 *
+	 * @param x the x coordinate of the cursor
+	 * @param y the y coordinate of the cursor
+	 * @param width the width of the cursor
+	 * @param height the height of the cursor
+	 * @param vertical <code>true</code> if the text is vertical and
+	 *  <code>false</code> if the text is horizontal
+	 */
+	public synchronized void setTextLocation(int x, int y, int width, int height, boolean vertical) {
+
+		if (vertical)
+			textLocation = new Rectangle(x + height, y + width, width, height);
+		else
+			textLocation = new Rectangle(x + width, y + height, 0, height);
 
 	}
 
