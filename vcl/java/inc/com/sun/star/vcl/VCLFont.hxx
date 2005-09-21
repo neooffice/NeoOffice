@@ -56,7 +56,6 @@ protected:
 	static jclass		theClass;
 
 public:
-	static jboolean		useDefaultFont;
 	static ::std::list< void* >	validNativeFonts;
 
 	static jclass		getMyClass();
@@ -67,7 +66,6 @@ public:
 	com_sun_star_vcl_VCLFont*	deriveFont( long _par0, sal_Bool _par1, sal_Bool _par2, short _par3, sal_Bool _par4, sal_Bool _par5, double _par6 );
 	long				getAscent();
 	long				getDescent();
-	com_sun_star_vcl_VCLFont*	getDefaultFont();
 	FontFamily			getFamilyType();
 	long				getKerning( USHORT _par0, USHORT _par1 );
 	long				getLeading();

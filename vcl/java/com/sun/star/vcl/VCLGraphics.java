@@ -846,18 +846,7 @@ public final class VCLGraphics {
 			try {
 				// The graphics may adjust the font
 				Font f = font.getFont();
-				FontMetrics fm = null;
-
-				// Exceptions can be thrown if a font is disabled or removed
-				try {
-					fm = g.getFontMetrics(f);
-				}
-				catch (Throwable t) {
-					font = font.getDefaultFont();
-					f = font.getFont();
-					fm = g.getFontMetrics(f);
-				}
-
+				FontMetrics fm = g.getFontMetrics(f);
 				g.setFont(f);
 
 				RenderingHints hints = g.getRenderingHints();

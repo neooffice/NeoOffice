@@ -126,66 +126,6 @@ using namespace com::sun::star::uno;
 
 // ============================================================================
 
-static void ImplFontListChangedCallback( ATSFontNotificationInfoRef, void* )
-{
-	// We need to let any pending timers run so that we don't deadlock
-	IMutex& rSolarMutex = Application::GetSolarMutex();
-	while ( !rSolarMutex.tryToAcquire() )
-	{
-		ReceiveNextEvent( 0, NULL, 0, false, NULL );
-		OThread::yield();
-	}
-
-	// Get the array of fonts
-	::std::list< ATSFontRef > aNewNativeFontList;
-	BOOL bContinue = TRUE;
-	while ( bContinue )
-	{
-		ATSFontIterator aIterator;
-		ATSFontIteratorCreate( kATSFontContextLocal, NULL, NULL, kATSOptionFlagsUnRestrictedScope, &aIterator );
-		for ( ; ; )
-		{
-			ATSFontRef aFont;
-			OSStatus nErr = ATSFontIteratorNext( aIterator, &aFont );
-			if ( nErr == kATSIterationCompleted )
-			{
-				bContinue = FALSE;
-				break;
-			}
-			else if ( nErr == kATSIterationScopeModified )
-			{
-				aNewNativeFontList.clear();
-				break;
-			}
-			else
-			{
-				aNewNativeFontList.push_back( aFont );
-			}
-		}
-		ATSFontIteratorRelease( &aIterator );
-	}
-
-	// If any of the Java fonts have been disabled, use the default font
-	BOOL bUseDefaultFont = FALSE;
-	for ( ::std::list< void* >::const_iterator it = com_sun_star_vcl_VCLFont::validNativeFonts.begin(); it != com_sun_star_vcl_VCLFont::validNativeFonts.end(); ++it )
-	{
-		for ( ::std::list< ATSFontRef >::const_iterator nit = aNewNativeFontList.begin(); *nit != (ATSFontRef)( *it ) && nit != aNewNativeFontList.end(); ++nit )
-			;
-
-		if ( nit == aNewNativeFontList.end() )
-		{
-			bUseDefaultFont = TRUE;
-			break;
-		}
-	}
-
-	com_sun_star_vcl_VCLFont::useDefaultFont = bUseDefaultFont;
-
-	rSolarMutex.release();
-}
-
-// ----------------------------------------------------------------------------
-
 static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData )
 {
 	EventClass nClass = GetEventClass( aEvent );
@@ -324,61 +264,6 @@ void ExecuteApplicationMain( Application *pApp )
 			if ( FSPathMakeRef( (const UInt8 *)aFontDir.GetBuffer(), &aFontPath, 0 ) == noErr && FSGetCatalogInfo( &aFontPath, kFSCatInfoNone, NULL, NULL, &aFontSpec, NULL) == noErr )
 				ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextGlobal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDefault, NULL );
 		}
-	}
-
-	ATSFontIterator aIterator;
-
-	// Get the array of fonts
-	BOOL bContinue = TRUE;
-	while ( bContinue )
-	{
-		::std::list< CFStringRef > aFontNameList;
-		ATSFontIteratorCreate( kATSFontContextLocal, NULL, NULL, kATSOptionFlagsUnRestrictedScope, &aIterator );
-		for ( ; ; )
-		{
-			ATSFontRef aFont;
-			OSStatus nErr = ATSFontIteratorNext( aIterator, &aFont );
-			if ( nErr == kATSIterationCompleted )
-			{
-				// Register notification callback
-				ATSFontNotificationSubscribe( (ATSNotificationCallback)ImplFontListChangedCallback, kATSFontNotifyOptionReceiveWhileSuspended, NULL, NULL );
-				bContinue = FALSE;
-				break;
-			}
-			else if ( nErr == kATSIterationScopeModified )
-			{
-				com_sun_star_vcl_VCLFont::validNativeFonts.clear();
-				break;
-			}
-			else
-			{
-				// Eliminate duplicate font names
-				CFStringRef aFontNameRef;
-				if ( ATSFontGetName( aFont, kATSOptionFlagsDefault, &aFontNameRef ) == noErr )
-				{
-					for ( ::std::list< CFStringRef >::const_iterator sit = aFontNameList.begin(); sit != aFontNameList.end(); ++sit )
-					{
-						if ( CFStringCompare( *sit, aFontNameRef, kCFCompareCaseInsensitive ) == kCFCompareEqualTo )
-							break;
-					}
-
-					if ( sit == aFontNameList.end() )
-					{
-						aFontNameList.push_back( aFontNameRef );
-						com_sun_star_vcl_VCLFont::validNativeFonts.push_back( (void *)aFont );
-					}
-					else
-					{
-						CFRelease( aFontNameRef );
-					}
-				}
-			}
-		}
-		ATSFontIteratorRelease( &aIterator );
-
-		for ( ::std::list< CFStringRef >::const_iterator sit = aFontNameList.begin(); sit != aFontNameList.end(); ++sit )
-			CFRelease( *sit );
-		aFontNameList.clear();
 	}
 
 	// Now that Java is properly initialized, run the application's Main()

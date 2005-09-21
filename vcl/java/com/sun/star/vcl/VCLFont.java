@@ -40,8 +40,6 @@ import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.image.BufferedImage;
-import java.awt.peer.FontPeer;
-import java.util.LinkedList;
 
 /** 
  * The Java class that implements the convenience methods for accessing Java
@@ -88,11 +86,6 @@ public final class VCLFont {
 	public final static int FAMILY_SYSTEM = 6;
 
 	/**
-	 * Cached default font.
-	 */
-	private static VCLFont defaultFont = null;
-
-	/**
 	 * Cached fonts.
 	 */
 	private static VCLFont[] fonts = null;
@@ -101,29 +94,6 @@ public final class VCLFont {
 	 * Cached native graphics.
 	 */
 	private static Graphics2D graphics = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB_PRE).createGraphics();
-
-	/**
-	 * Returns the default font adjusted to the specified size and style.
-	 *
-	 * @param s the size of the font
-	 * @param b <code>true</code> if the font is bold
-	 * @param i <code>true</code> if the font is italic
-	 * @param o the orientation of the font in degrees
-	 * @param a <code>true</code> to enable antialiasing and <code>false</code>
-	 *  to disable antialiasing
-	 * @param v <code>true</code> if the font is vertical
-	 * @param x the X axis scale factor
-	 * @return the default font adjusted to the specified size and style
-	 */
-	static VCLFont getDefaultFont(int s, boolean b, boolean i, short o, boolean a, boolean v, double x) {
-
-		// Set default font
-		if (defaultFont == null)
-			defaultFont = new VCLFont("Dialog", VCLFont.FAMILY_DONTKNOW, 1, o, false, false, true, false, x);
-
-		return new VCLFont(VCLFont.defaultFont.getName(), VCLFont.defaultFont.getFamilyType(), s, o, b, i, a, v, x);
-
-	}
 
 	/**
 	 * Returns an array containing one-point instances of all fonts
@@ -137,44 +107,20 @@ public final class VCLFont {
 		if (fonts == null) {
 			// Get all of the fonts and screen out duplicates
 			Font[] systemFonts = GraphicsEnvironment.getLocalGraphicsEnvironment().getAllFonts();
-			String[] fontNames = new String[systemFonts.length];
-			for (int i = 0; i < systemFonts.length; i++)
-				fontNames[i] = systemFonts[i].getName();
-
-			// Java sometimes sets Times to Times Roman
-			int timesRomanIndex = -1;
-			for (int i = 0; i < fontNames.length; i++) {
-				if (fontNames[i].equals("Times")) {
-					timesRomanIndex = -1;
-					break;
-				}
-				else if (fontNames[i].equals("Times Roman")) {
-					timesRomanIndex = i;
-				}
-			}
-
-			if (timesRomanIndex > 0)
-				fontNames[timesRomanIndex] = "Times";
-
-			LinkedList link = new LinkedList();
-			for (int i = 0; i < fontNames.length; i++) {
-				// Get rid of hidden Mac OS X fonts
-				if (fontNames[i].startsWith(".") || fontNames[i].equals("LastResort"))
-					continue;
-
+			fonts = new VCLFont[systemFonts.length];
+			for (int i = 0; i < systemFonts.length; i++) {
 				// Get family type
+				String fontName = systemFonts[i].getName();
 				int type;
-				if (fontNames[i].indexOf("Mono") >= 0)
+				if (fontName.indexOf("Mono") >= 0)
 					type = VCLFont.FAMILY_MODERN;
-				else if (fontNames[i].indexOf("Serif") >= 0 || fontNames[i].indexOf("Times") >= 0 || fontNames[i].indexOf("Roman") >= 0)
+				else if (fontName.indexOf("Serif") >= 0 || fontName.indexOf("Times") >= 0 || fontName.indexOf("Roman") >= 0)
 					type = VCLFont.FAMILY_ROMAN;
 				else
 					type = VCLFont.FAMILY_SWISS;
 
-				link.add(new VCLFont(fontNames[i], type, 1, (short)0, false, false, true, false, 1.0));
+				fonts[i] = new VCLFont(systemFonts[i], type, systemFonts[i].getSize(), (short)0, systemFonts[i].isBold(), systemFonts[i].isItalic(), true, false, 1.0);
 			}
-	
-			fonts = (VCLFont[])link.toArray(new VCLFont[link.size()]);
 		}
 
 		return fonts;
@@ -222,11 +168,6 @@ public final class VCLFont {
 	private int leading = 0;
 
 	/**
-	 * The cached name.
-	 */
-	private String name = null;
-
-	/**
 	 * The cached orientation.
 	 */
 	private short orientation = 0;
@@ -254,7 +195,7 @@ public final class VCLFont {
 	/**
 	 * Constructs a new <code>VCLFont</code> instance.
 	 *
-	 * @param n the name of the font
+	 * @param f the font to derive from
 	 * @param ft the family type of the font
 	 * @param s the size of the font
 	 * @param o the orientation of the new <code>VCLFont</code> in degrees
@@ -265,14 +206,13 @@ public final class VCLFont {
 	 * @param v <code>true</code> if the font is vertical 
 	 * @param x the X axis scale factor
 	 */
-	VCLFont(String n, int ft, int s, short o, boolean b, boolean i, boolean a, boolean v, double x) {
+	VCLFont(Font f, int ft, int s, short o, boolean b, boolean i, boolean a, boolean v, double x) {
 
 		antialiased = a;
 		// Mac OS X applications and printing can't handle artificial bold and
 		// italics generation very well so we always use the plain version
 		bold = false;
 		italic = false;
-		name = n;
 		orientation = o;
 		scaleX = x;
 		size = s;
@@ -285,16 +225,8 @@ public final class VCLFont {
 			style |= Font.BOLD;
 		if (italic)
 			style |= Font.ITALIC;
-		font = new Font(name, style, size);
-
-		// Exceptions can be thrown if a font is disabled or removed
-		try {
-			fontMetrics = VCLFont.graphics.getFontMetrics(font);
-		}
-		catch (Throwable t) {
-			font = getDefaultFont().getFont();
-			fontMetrics = VCLFont.graphics.getFontMetrics(font);
-		}
+		font = f.deriveFont(style, size);
+		fontMetrics = VCLFont.graphics.getFontMetrics(font);
 
 		// Get size metrics
 		ascent = fontMetrics.getMaxAscent();
@@ -328,7 +260,7 @@ public final class VCLFont {
 	 */
 	public VCLFont deriveFont(int s, boolean b, boolean i, short o, boolean a, boolean v, double x) {
 
-		return new VCLFont(name, type, s, o, b, i, a, v, x);
+		return new VCLFont(font, type, s, o, b, i, a, v, x);
 
 	}
 
@@ -351,17 +283,6 @@ public final class VCLFont {
 	public int getDescent() {
 
 		return descent;
-
-	}
-
-	/**
-	 * Returns the default font adjusted to this font's size and style.
-	 *
-	 * @return the default font adjusted to this font's size and style
-	 */
-	public VCLFont getDefaultFont() {
-
-		return VCLFont.getDefaultFont(size, bold, italic, orientation, antialiased, vertical, scaleX);
 
 	}
 
@@ -428,7 +349,7 @@ public final class VCLFont {
 	 */
 	public String getName() {
 
-		return name;
+		return font.getName();
 
 	}
 
@@ -440,17 +361,6 @@ public final class VCLFont {
 	public short getOrientation() {
 
 		return orientation;
-
-	}
-
-	/**
-	 * Returns the <code>FontPeer</code>.
-	 *
-	 * @return the <code>FontPeer</code>
-	 */
-	public FontPeer getPeer() {
-
-		return font.getPeer();
 
 	}
 

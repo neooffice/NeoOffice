@@ -188,10 +188,6 @@ jclass com_sun_star_vcl_VCLFont::theClass = NULL;
 
 // ----------------------------------------------------------------------------
 
-jboolean com_sun_star_vcl_VCLFont::useDefaultFont = FALSE;
-
-// ----------------------------------------------------------------------------
-
 ::std::list< void* > com_sun_star_vcl_VCLFont::validNativeFonts;
 
 // ----------------------------------------------------------------------------
@@ -304,44 +300,7 @@ long com_sun_star_vcl_VCLFont::getAscent()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
-			if ( com_sun_star_vcl_VCLFont::useDefaultFont )
-			{
-				com_sun_star_vcl_VCLFont *pDefaultFont = getDefaultFont();
-				out = (long)t.pEnv->CallNonvirtualIntMethod( pDefaultFont->getJavaObject(), getMyClass(), mID );
-				delete pDefaultFont;
-			}
-			else
-			{
-				out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
-			}
-		}
-	}
-	return out;
-}
-
-// ----------------------------------------------------------------------------
-
-com_sun_star_vcl_VCLFont *com_sun_star_vcl_VCLFont::getDefaultFont()
-{
-	static jmethodID mID = NULL;
-	com_sun_star_vcl_VCLFont *out = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()Lcom/sun/star/vcl/VCLFont;";
-			mID = t.pEnv->GetMethodID( getMyClass(), "getDefaultFont", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jobject tempObj;
-			tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
-			if ( tempObj )
-				out = new com_sun_star_vcl_VCLFont( tempObj );
-		}
+			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
 }
@@ -362,18 +321,7 @@ long com_sun_star_vcl_VCLFont::getDescent()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
-			if ( com_sun_star_vcl_VCLFont::useDefaultFont )
-			{
-				com_sun_star_vcl_VCLFont *pDefaultFont = getDefaultFont();
-				out = (long)t.pEnv->CallNonvirtualIntMethod( pDefaultFont->getJavaObject(), getMyClass(), mID );
-				delete pDefaultFont;
-			}
-			else
-			{
-				out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
-			}
-		}
+			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
 }
@@ -419,16 +367,7 @@ long com_sun_star_vcl_VCLFont::getKerning( USHORT _par0, USHORT _par1 )
 			jvalue args[2];
 			args[0].c = jchar( _par0 );
 			args[1].c = jchar( _par1 );
-			if ( com_sun_star_vcl_VCLFont::useDefaultFont )
-			{
-				com_sun_star_vcl_VCLFont *pDefaultFont = getDefaultFont();
-				out = (long)t.pEnv->CallNonvirtualIntMethodA( pDefaultFont->getJavaObject(), getMyClass(), mID, args );
-				delete pDefaultFont;
-			}
-			else
-			{
-				out = (long)t.pEnv->CallNonvirtualIntMethodA( object, getMyClass(), mID, args );
-			}
+			out = (long)t.pEnv->CallNonvirtualIntMethodA( object, getMyClass(), mID, args );
 		}
 	}
 	return out;
@@ -450,18 +389,7 @@ long com_sun_star_vcl_VCLFont::getLeading()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
-			if ( com_sun_star_vcl_VCLFont::useDefaultFont )
-			{
-				com_sun_star_vcl_VCLFont *pDefaultFont = getDefaultFont();
-				out = (long)t.pEnv->CallNonvirtualIntMethod( pDefaultFont->getJavaObject(), getMyClass(), mID );
-				delete pDefaultFont;
-			}
-			else
-			{
-				out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
-			}
-		}
+			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
 }
@@ -498,18 +426,7 @@ void *com_sun_star_vcl_VCLFont::getNativeFont()
 {
 	void *out = NULL;
 
-	sal_uInt64 nFontFace;
-	if ( com_sun_star_vcl_VCLFont::useDefaultFont )
-	{
-		com_sun_star_vcl_VCLFont *pDefaultFont = getDefaultFont();
-		nFontFace = GetMacFontFace( pDefaultFont );
-		delete pDefaultFont;
-	}
-	else
-	{
-		nFontFace = GetMacFontFace( this );
-	}
-
+	sal_uInt64 nFontFace = GetMacFontFace( this );
 	if ( nFontFace )
 		out = (void *)( (sal_uInt32)( nFontFace >> 32 ) );
 
@@ -522,18 +439,7 @@ void *com_sun_star_vcl_VCLFont::getNativeFont( sal_Bool _par0, sal_Bool _par1 )
 {
 	void *out = NULL;
 
-	sal_uInt64 nFontFace;
-	if ( com_sun_star_vcl_VCLFont::useDefaultFont )
-	{
-		com_sun_star_vcl_VCLFont *pDefaultFont = getDefaultFont();
-		nFontFace = GetMacFontFace( pDefaultFont );
-		delete pDefaultFont;
-	}
-	else
-	{
-		nFontFace = GetMacFontFace( this );
-	}
-
+	sal_uInt64 nFontFace = GetMacFontFace( this );
 	if ( nFontFace )
 	{
 		out = (void *)( (sal_uInt32)( nFontFace >> 32 ) );
@@ -632,17 +538,7 @@ java_lang_Object *com_sun_star_vcl_VCLFont::getPeer()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jobject tempObj;
-			if ( com_sun_star_vcl_VCLFont::useDefaultFont )
-			{
-				com_sun_star_vcl_VCLFont *pDefaultFont = getDefaultFont();
-				tempObj = t.pEnv->CallNonvirtualObjectMethod( pDefaultFont->getJavaObject(), getMyClass(), mID );
-				delete pDefaultFont;
-			}
-			else
-			{
-				tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
-			}
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			if ( tempObj )
 				out = new java_lang_Object( tempObj );
 		}

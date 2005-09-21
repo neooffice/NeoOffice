@@ -279,24 +279,18 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2
 			memcpy( pAdvanceBits, (jint *)_par4, elements * sizeof( jint ) );
 			t.pEnv->ReleasePrimitiveArrayCritical( advancearray, pAdvanceBits, 0 );
 
-			com_sun_star_vcl_VCLFont *pFont = NULL;
-			if ( com_sun_star_vcl_VCLFont::useDefaultFont )
-				pFont = _par5->getDefaultFont();
-
 			jvalue args[10];
 			args[0].i = jint( _par0 );
 			args[1].i = jint( _par1 );
 			args[2].l = glypharray;
 			args[3].l = advancearray;
-			args[4].l = pFont ? pFont->getJavaObject() : _par5->getJavaObject();
+			args[4].l = _par5->getJavaObject();
 			args[5].i = jint( _par6 );
 			args[6].i = jint( _par7 );
 			args[7].i = jint( _par8 );
 			args[8].i = jint( _par9 );
 			args[9].i = jint( _par10 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
-			if ( pFont )
-				delete pFont;
 		}
 	}
 }
@@ -623,17 +617,11 @@ const Rectangle com_sun_star_vcl_VCLGraphics::getGlyphBounds( int _par0, com_sun
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			com_sun_star_vcl_VCLFont *pFont = NULL;
-			if ( com_sun_star_vcl_VCLFont::useDefaultFont )
-				pFont = _par1->getDefaultFont();
-
 			jvalue args[3];
 			args[0].i = jint( _par0 );
-			args[1].l = pFont ? pFont->getJavaObject() : _par1->getJavaObject();
+			args[1].l = _par1->getJavaObject();
 			args[2].i = jint( _par2 );
 			jobject tempObj = t.pEnv->CallNonvirtualObjectMethodA( object, getMyClass(), mID, args );
-			if ( pFont )
-				delete pFont;
 			if ( tempObj )
 			{
 				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
