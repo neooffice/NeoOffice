@@ -51,81 +51,9 @@ import java.awt.image.BufferedImage;
 public final class VCLFont {
 
 	/**
-	 * FAMILY_DONTKNOW constant.
+	 * Cached buffered image.
 	 */
-	public final static int FAMILY_DONTKNOW = 0;
-
-	/**
-	 * FAMILY_DECORATIVE constant.
-	 */
-	public final static int FAMILY_DECORATIVE = 1;
-
-	/**
-	 * FAMILY_MODERN constant.
-	 */
-	public final static int FAMILY_MODERN = 2;
-
-	/**
-	 * FAMILY_ROMAN constant.
-	 */
-	public final static int FAMILY_ROMAN = 3;
-
-	/**
-	 * FAMILY_SCRIPT constant.
-	 */
-	public final static int FAMILY_SCRIPT = 4;
-
-	/**
-	 * FAMILY_SWISS constant.
-	 */
-	public final static int FAMILY_SWISS = 5;
-
-	/**
-	 * FAMILY_SYSTEM constant.
-	 */
-	public final static int FAMILY_SYSTEM = 6;
-
-	/**
-	 * Cached fonts.
-	 */
-	private static VCLFont[] fonts = null;
-
-	/**
-	 * Cached native graphics.
-	 */
-	private static Graphics2D graphics = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB_PRE).createGraphics();
-
-	/**
-	 * Returns an array containing one-point instances of all fonts
-	 * available in the local <code>GraphicsEnvironment</code>.
-	 *
-	 * @return an array of <code>VCLFont</code> objects
-	 */
-	public static VCLFont[] getAllFonts() {
-
-		// Initialize the cached fonts
-		if (fonts == null) {
-			// Get all of the fonts and screen out duplicates
-			Font[] systemFonts = GraphicsEnvironment.getLocalGraphicsEnvironment().getAllFonts();
-			fonts = new VCLFont[systemFonts.length];
-			for (int i = 0; i < systemFonts.length; i++) {
-				// Get family type
-				String fontName = systemFonts[i].getName();
-				int type;
-				if (fontName.indexOf("Mono") >= 0)
-					type = VCLFont.FAMILY_MODERN;
-				else if (fontName.indexOf("Serif") >= 0 || fontName.indexOf("Times") >= 0 || fontName.indexOf("Roman") >= 0)
-					type = VCLFont.FAMILY_ROMAN;
-				else
-					type = VCLFont.FAMILY_SWISS;
-
-				fonts[i] = new VCLFont(systemFonts[i], type, systemFonts[i].getSize(), (short)0, systemFonts[i].isBold(), systemFonts[i].isItalic(), true, false, 1.0);
-			}
-		}
-
-		return fonts;
-
-	}
+	private static BufferedImage image = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB_PRE);
 
 	/**
 	 * The antialiased flag.
@@ -136,11 +64,6 @@ public final class VCLFont {
 	 * The cached ascent.
 	 */
 	private int ascent = 0;
-
-	/**
-	 * The bold flag.
-	 */
-	private boolean bold = false;
 
 	/**
 	 * The cached descent.
@@ -158,14 +81,19 @@ public final class VCLFont {
 	private FontMetrics fontMetrics = null;
 
 	/**
-	 * The italic flag.
-	 */
-	private boolean italic = false;
-
-	/**
 	 * The cached leading.
 	 */
 	private int leading = 0;
+
+	/**
+	 * The cached font name.
+	 */
+	private String name = null;
+
+	/**
+	 * The cached native font.
+	 */
+	private int nativeFont = 0;
 
 	/**
 	 * The cached orientation.
@@ -183,11 +111,6 @@ public final class VCLFont {
 	private int size = 0;
 
 	/**
-	 * The family type.
-	 */
-	private int type = VCLFont.FAMILY_SWISS;
-
-	/**
 	 * The vertical flag.
 	 */
 	private boolean vertical = false;
@@ -196,48 +119,53 @@ public final class VCLFont {
 	 * Constructs a new <code>VCLFont</code> instance.
 	 *
 	 * @param f the font to derive from
-	 * @param ft the family type of the font
+	 * @param nf the native font
 	 * @param s the size of the font
 	 * @param o the orientation of the new <code>VCLFont</code> in degrees
-	 * @param b <code>true</code> if the font is bold
-	 * @param i <code>true</code> if the font is italic
 	 * @param a <code>true</code> to enable antialiasing and <code>false</code>
 	 *  to disable antialiasing
 	 * @param v <code>true</code> if the font is vertical 
 	 * @param x the X axis scale factor
 	 */
-	VCLFont(Font f, int ft, int s, short o, boolean b, boolean i, boolean a, boolean v, double x) {
+	VCLFont(String n, int nf, int s, short o, boolean a, boolean v, double x) {
 
 		antialiased = a;
-		// Mac OS X applications and printing can't handle artificial bold and
-		// italics generation very well so we always use the plain version
-		bold = false;
-		italic = false;
+		name = n;
+		nativeFont = nf;
 		orientation = o;
 		scaleX = x;
 		size = s;
-		type = ft;
 		vertical = v;
 
 		// Cache font and font metrics
-		int style = Font.PLAIN;
-		if (bold)
-			style |= Font.BOLD;
-		if (italic)
-			style |= Font.ITALIC;
-		font = f.deriveFont(style, size);
-		fontMetrics = VCLFont.graphics.getFontMetrics(font);
+		font = new Font(name, Font.PLAIN, size);
+		Graphics2D g = VCLFont.image.createGraphics();
+		if (g != null)
+		{
+			try {
+				fontMetrics = g.getFontMetrics(font);
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
+		}
 
 		// Get size metrics
-		ascent = fontMetrics.getMaxAscent();
-		descent = fontMetrics.getMaxDescent();
-		leading = fontMetrics.getLeading();
-		if (ascent < 0)
-			ascent *= -1;
-		if (descent < 0)
-			descent *= -1;
-		if (leading < 0)
-			leading *= -1;
+		if (fontMetrics != null) {
+			ascent = fontMetrics.getMaxAscent();
+			descent = fontMetrics.getMaxDescent();
+			leading = fontMetrics.getLeading();
+			if (ascent < 0)
+				ascent *= -1;
+			if (descent < 0)
+				descent *= -1;
+			if (leading < 0)
+				leading *= -1;
+		}
+		else {
+			ascent = size;
+		}
 
 		// Mac OS X seems to understate the actual advance
 		ascent++;
@@ -249,8 +177,6 @@ public final class VCLFont {
 	 * <code>VCLFont</code> object and applying a new size.
 	 *
 	 * @param s the size for the new <code>VCLFont</code>
-	 * @param b whether the new <code>VCLFont</code> should be bold
-	 * @param i whether the new <code>VCLFont</code> should be italic
 	 * @param o the orientation of the new <code>VCLFont</code> in degrees
 	 * @param a <code>true</code> to enable antialiasing and <code>false</code>
 	 *  to disable antialiasing
@@ -258,9 +184,9 @@ public final class VCLFont {
 	 * @param x the X axis scale factor
 	 * @return a new <code>VCLFont</code> object
 	 */
-	public VCLFont deriveFont(int s, boolean b, boolean i, short o, boolean a, boolean v, double x) {
+	public VCLFont deriveFont(int s, short o, boolean a, boolean v, double x) {
 
-		return new VCLFont(font, type, s, o, b, i, a, v, x);
+		return new VCLFont(name, nativeFont, s, o, a, v, x);
 
 	}
 
@@ -283,17 +209,6 @@ public final class VCLFont {
 	public int getDescent() {
 
 		return descent;
-
-	}
-
-	/**
-	 * Returns the family type.
-	 *
-	 * @return the family type
-	 */
-	public int getFamilyType() {
-
-		return type;
 
 	}
 
@@ -343,13 +258,13 @@ public final class VCLFont {
 	}
 
 	/**
-	 * Returns the logical name of the <code>Font</code>.
+	 * Returns the native font.
 	 *
-	 * @return the logical name of the <code>Font</code>
+	 * @return the native font
 	 */
-	public String getName() {
+	public int getNativeFont() {
 
-		return font.getName();
+		return nativeFont;
 
 	}
 
@@ -394,28 +309,6 @@ public final class VCLFont {
 	public boolean isAntialiased() {
 
 		return antialiased;
-
-	}
-
-	/**
-	 * Indicates whether or not the <code>Font</code> is bold.
-	 *
-	 * @return <code>true</code> if the <code>Font</code> is bold
-	 */
-	public boolean isBold() {
-
-		return bold;
-
-	}
-
-	/**
-	 * Indicates whether or not the <code>Font</code> is italic.
-	 *
-	 * @return <code>true</code> if the <code>Font</code> is italic
-	 */
-	public boolean isItalic() {
-
-		return italic;
 
 	}
 

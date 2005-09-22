@@ -45,7 +45,6 @@
 #include <sv.h>
 #endif 
 
-class ImplFontSelectData;
 class SalATSLayout;
 class SalFrame;
 class SalPrinter;
@@ -73,7 +72,6 @@ public:
 	::vcl::com_sun_star_vcl_VCLGraphics*	mpVCLGraphics;
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
 	::std::map< int, ::vcl::com_sun_star_vcl_VCLFont* >	maFallbackFonts;
-	::std::map< int, ImplFontSelectData* >	maFallbackFontSelectData;
 	ImplLayoutRuns	maFallbackRuns;
 
 					SalGraphicsData();

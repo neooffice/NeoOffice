@@ -50,6 +50,9 @@
 #ifndef _SV_OUTDEV_H
 #include <outdev.h>
 #endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
+#include <com/sun/star/vcl/VCLFont.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
@@ -58,8 +61,137 @@
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 
+struct SVFontStyles
+{
+	void*			mpNativeBoldFont;
+	void*			mpNativeBoldItalicFont;
+	void*			mpNativeItalicFont;
+	void*			mpNativePlainFont;
+};
+
+static ATSFontNotificationRef aNotification = NULL;
+static ::std::map< void*, SVFontStyles* > aNativeFontStylesMapping;
+
 using namespace rtl;
 using namespace vcl;
+using namespace vos;
+
+// ============================================================================
+
+static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void *pData )
+{
+	if ( !Application::IsShutDown() )
+	{
+		// We need to let any pending timers run so that we don't deadlock
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		bool bAcquired = false;
+		while ( !Application::IsShutDown() )
+		{
+			if ( rSolarMutex.tryToAcquire() )
+			{
+				bAcquired = true;
+				break;
+			}
+
+			ReceiveNextEvent( 0, NULL, 0, false, NULL );
+			OThread::yield();
+		}
+
+		if ( bAcquired )
+		{
+			if ( !Application::IsShutDown() )
+			{
+				::std::list< ATSFontRef > aATSFontList;
+				BOOL bContinue = TRUE;
+				while ( bContinue )
+				{
+					ATSFontIterator aIterator;
+					ATSFontIteratorCreate( kATSFontContextLocal, NULL, NULL, kATSOptionFlagsUnRestrictedScope, &aIterator );
+					for ( ; ; )
+					{
+						ATSFontRef aFont;
+						OSStatus nErr = ATSFontIteratorNext( aIterator, &aFont );
+						if ( nErr == kATSIterationCompleted )
+						{
+							bContinue = FALSE;
+							break;
+						}
+						else if ( nErr == kATSIterationScopeModified )
+						{
+							aATSFontList.clear();
+							break;
+						}
+						else if ( aFont )
+						{
+							aATSFontList.push_back( aFont );
+						}
+					}
+
+					ATSFontIteratorRelease( &aIterator );
+				}
+
+				// Update cached fonts
+				SalData *pSalData = GetSalData();
+				for ( std::list< ATSFontRef >::const_iterator ait = aATSFontList.begin(); ait != aATSFontList.end(); ++ait )
+				{
+					CFStringRef aString;
+					if ( ATSFontGetName( *ait, kATSOptionFlagsDefault, &aString ) != noErr )
+						continue;
+
+					CFIndex nLen = CFStringGetLength( aString );
+					CFRange aRange = CFRangeMake( 0, nLen );
+					sal_Unicode pBuffer[ nLen + 1 ];
+					CFStringGetCharacters( aString, aRange, pBuffer );
+					pBuffer[ nLen ] = 0;
+					OUString aFontName( pBuffer );
+					void *pNativeFont = (void *)FMGetFontFromATSFontRef( *ait );
+
+					std::map< void*, ImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pNativeFont );
+					if ( it == pSalData->maNativeFontMapping.end() )
+					{
+						ImplFontData *pData = new ImplFontData();
+						pData->mpNext = NULL;
+						pData->mpSysData = (void *)( new com_sun_star_vcl_VCLFont( aFontName, pNativeFont, 12, 0, sal_True, sal_False, 1.0 ) );
+						pData->maName = XubString( aFontName );
+						// [ed] 11/1/04 Scalable fonts should always report
+						// their width and height as zero. The single size of
+						// zero causes higher-level font elements to treat
+						// fonts as infinitely scalable and provide lists of
+						// default font sizes. The size of zero matches the
+						// unx implementation. Bug 196.
+						pData->mnWidth = 0;
+						pData->mnHeight = 0;
+						pData->meFamily = FAMILY_DONTKNOW;
+						pData->meCharSet = RTL_TEXTENCODING_UNICODE;
+						pData->mePitch = PITCH_VARIABLE;
+						pData->meWidthType = WIDTH_DONTKNOW;
+						pData->meWeight = WEIGHT_NORMAL;
+						pData->meItalic = ITALIC_NONE;
+						pData->meType = TYPE_SCALABLE;
+						pData->mnVerticalOrientation = 0;
+						pData->mbOrientation = TRUE;
+						pData->mbDevice = FALSE;
+						pData->mnQuality = 0;
+						pData->mbSubsettable = TRUE;
+						pData->mbEmbeddable = FALSE;
+
+						pSalData->maNativeFontMapping[ pNativeFont ] = pData;
+
+						std::map< void*, SVFontStyles* >::const_iterator sit = aNativeFontStylesMapping.find( pNativeFont );
+						if ( sit == aNativeFontStylesMapping.end() )
+						{
+							SVFontStyles *pFontStyles = new SVFontStyles();
+							memset( pFontStyles, 0, sizeof( SVFontStyles ) );
+							aNativeFontStylesMapping[ pNativeFont ] = pFontStyles;
+						}
+					}
+				}
+			}
+
+			rSolarMutex.release();
+		}
+	}
+}
 
 // =======================================================================
 
@@ -73,23 +205,38 @@ void SalGraphics::SetTextColor( SalColor nSalColor )
 USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 {
 	SalData *pSalData = GetSalData();
-	sal_Bool bBold = ( pFont->meWeight > WEIGHT_MEDIUM );
-	sal_Bool bItalic = ( pFont->meItalic != ITALIC_NONE );
-
-	com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)pFont->mpFontData->mpSysData;
-	XubString aName( pVCLFont->getName() );
 
 	// Don't change the font for fallback levels as we need the first font
 	// to properly determine the fallback font
 	if ( !nFallbackLevel )
 	{
+		sal_Bool bBold = ( pFont->meWeight > pFont->mpFontData->meWeight );
+		sal_Bool bItalic = ( ( pFont->meItalic == ITALIC_OBLIQUE || pFont->meItalic == ITALIC_NORMAL ) && pFont->meItalic != pFont->mpFontData->meItalic );
+
 		// Handle remapping to and from bold and italic fonts
-		if ( bBold || bItalic || aName != pFont->maFoundName )
+		if ( bBold || bItalic || pFont->mpFontData->maName != pFont->maFoundName )
 		{
-			ATSUFontID nFontID = (ATSUFontID)pVCLFont->getNativeFont( bBold, bItalic );
-			::std::map< void*, ImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( (void *)nFontID );
-			if ( it != pSalData->maNativeFontMapping.end() )
-				aName = it->second->maName;
+			void *pNativeFont = ((com_sun_star_vcl_VCLFont *)pFont->mpFontData->mpSysData)->getNativeFont();
+			::std::map< void*, SVFontStyles* >::const_iterator sit = aNativeFontStylesMapping.find( pNativeFont );
+			if ( sit != pSalData->maNativeFontMapping.end() )
+			{
+				void *pReplacementFont;
+				if ( bBold && bItalic )
+					pReplacementFont = sit->second->mpNativeBoldItalicFont;
+				else if ( bBold )
+					pReplacementFont = sit->second->mpNativeBoldFont;
+				else if ( bItalic )
+					pReplacementFont = sit->second->mpNativeItalicFont;
+				else
+					pReplacementFont = sit->second->mpNativePlainFont;
+
+				if ( pReplacementFont )
+				{
+					::std::map< void*, ImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pReplacementFont );
+					if ( it != pSalData->maNativeFontMapping.end() )
+						pFont->mpFontData = it->second;
+				}
+			}
 		}
 	}
 	else
@@ -97,33 +244,22 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		// Retrieve the fallback font if one has been set by a text layout
 		::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = maGraphicsData.maFallbackFonts.find( nFallbackLevel );
 		if ( ffit != maGraphicsData.maFallbackFonts.end() )
-			pVCLFont = ffit->second;
-		aName = XubString( pVCLFont->getName() );
+		{
+			void *pNativeFont = ffit->second->getNativeFont();
+			::std::map< void*, ImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pNativeFont );
+			if ( it != pSalData->maNativeFontMapping.end() )
+				pFont->mpFontData = it->second;
+		}
 	}
 
-	// Find the matching font
-	::std::map< OUString, com_sun_star_vcl_VCLFont* >::const_iterator it = pSalData->maFontMapping.find( aName );
-	if ( it != pSalData->maFontMapping.end() )
-		pVCLFont = it->second;
+	pFont->maFoundName = pFont->mpFontData->maName;
 
-	// Update font in upper layers
-	::std::map< void*, ImplFontData* >::const_iterator fit = pSalData->maNativeFontMapping.find( pVCLFont->getNativeFont() );
-	if ( fit != pSalData->maNativeFontMapping.end() )
-		pFont->mpFontData = fit->second;
-
-	pFont->maFoundName = aName;
-
-	if ( nFallbackLevel )
-	{
-		// Cache font select data for layout
-		maGraphicsData.maFallbackFontSelectData[ nFallbackLevel ] = pFont;
-	}
-	else
+	if ( !nFallbackLevel )
 	{
 		// Set font for graphics device
 		if ( maGraphicsData.mpVCLFont )
 			delete maGraphicsData.mpVCLFont;
-		maGraphicsData.mpVCLFont = pVCLFont->deriveFont( pFont->mnHeight, bBold, bItalic, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical, pFont->mnWidth ? (double)pFont->mnWidth / (double)pFont->mnHeight : 1.0 );
+		maGraphicsData.mpVCLFont = ((com_sun_star_vcl_VCLFont *)pFont->mpFontData->mpSysData)->deriveFont( pFont->mnHeight, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical, pFont->mnWidth ? (double)pFont->mnWidth / (double)pFont->mnHeight : 1.0 );
 	}
 
 	return 0;
@@ -133,11 +269,23 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 
 void SalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 {
+	ImplFontData *pData = NULL;
+	if ( maGraphicsData.mpVCLFont )
+	{
+		SalData *pSalData = GetSalData();
+
+		void *pNativeFont = maGraphicsData.mpVCLFont->getNativeFont();
+		::std::map< void*, ImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pNativeFont );
+		if ( it != pSalData->maNativeFontMapping.end() )
+			pData = it->second;
+	}
+
 	if ( maGraphicsData.mpVCLFont )
 	{
 		pMetric->mnAscent = maGraphicsData.mpVCLFont->getAscent();
 		pMetric->mnDescent = maGraphicsData.mpVCLFont->getDescent();
 		pMetric->mnLeading = maGraphicsData.mpVCLFont->getLeading();
+		pMetric->mnOrientation = maGraphicsData.mpVCLFont->getOrientation();
 		pMetric->mnWidth = maGraphicsData.mpVCLFont->getSize();
 	}
 	else
@@ -145,38 +293,34 @@ void SalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 		pMetric->mnAscent = 0;
 		pMetric->mnDescent = 0;
 		pMetric->mnLeading = 0;
+		pMetric->mnOrientation = 0;
 		pMetric->mnWidth = 0;
 	}
-	pMetric->mnSlant = 0;
+
+	if ( pData )
+	{
+		pMetric->meCharSet = pData->meCharSet;
+		pMetric->meFamily = pData->meFamily;
+		pMetric->meItalic = pData->meItalic;
+		pMetric->maName = pData->maName;
+		pMetric->mePitch = pData->mePitch;
+		pMetric->meWeight = pData->meWeight;
+	}
+	else
+	{
+		pMetric->meCharSet = RTL_TEXTENCODING_UNICODE;
+		pMetric->meFamily = FAMILY_DONTKNOW;
+		pMetric->meItalic = ITALIC_NONE;
+		pMetric->maName = OUString();
+		pMetric->mePitch = PITCH_VARIABLE;
+		pMetric->meWeight = WEIGHT_NORMAL;
+	}
+
+	pMetric->mbDevice = FALSE;
 	pMetric->mnFirstChar = 0;
 	pMetric->mnLastChar = 255;
-	if ( maGraphicsData.mpVCLFont )
-	{
-		pMetric->maName = maGraphicsData.mpVCLFont->getName();
-		pMetric->mnOrientation = maGraphicsData.mpVCLFont->getOrientation();
-		pMetric->meFamily = maGraphicsData.mpVCLFont->getFamilyType();
-	}
-	else
-	{
-		pMetric->maName = OUString();
-		pMetric->mnOrientation = 0;
-		pMetric->meFamily = FAMILY_DONTKNOW;
-	}
-	pMetric->meCharSet = RTL_TEXTENCODING_UNICODE;
-	if ( maGraphicsData.mpVCLFont && maGraphicsData.mpVCLFont->isBold() )
-		pMetric->meWeight = WEIGHT_BOLD;
-	else
-		pMetric->meWeight = WEIGHT_NORMAL;
-	if ( maGraphicsData.mpVCLFont && maGraphicsData.mpVCLFont->isItalic() )
-		pMetric->meItalic = ITALIC_NORMAL;
-	else
-		pMetric->meItalic = ITALIC_NONE;
-	if ( pMetric->meFamily == FAMILY_MODERN )
-		pMetric->mePitch = PITCH_FIXED;
-	else
-		pMetric->mePitch = PITCH_VARIABLE;
+	pMetric->mnSlant = 0;
 	pMetric->meType = TYPE_SCALABLE;
-	pMetric->mbDevice = FALSE;
 }
 
 // -----------------------------------------------------------------------
@@ -212,48 +356,39 @@ void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 {
 	SalData *pSalData = GetSalData();
 
-	// Iterate through fonts and add each to the font list
-	for ( ::std::map< OUString, com_sun_star_vcl_VCLFont* >::const_iterator it = pSalData->maFontMapping.begin(); it != pSalData->maFontMapping.end(); ++it )
+	if ( !aNotification )
 	{
-		com_sun_star_vcl_VCLFont *pVCLFont = it->second;
-		void *pNativeFont = pVCLFont->getNativeFont();
-		if ( !pNativeFont )
+		if ( ATSFontNotificationSubscribe( ImplFontListChangedCallback, kATSFontNotifyOptionReceiveWhileSuspended, NULL, &aNotification ) == noErr )
+			ImplFontListChangedCallback( NULL, NULL );
+	}
+
+	// Iterate through fonts and add each to the font list
+	for ( ::std::map< void*, ImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.begin(); it != pSalData->maNativeFontMapping.end(); ++it )
+	{
+		// Set default values
+		com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)it->second->mpSysData;
+		if ( !pVCLFont )
 			continue;
 
-		// Set default values
 		ImplFontData *pFontData = new ImplFontData();
-		pFontData->mpNext = NULL;
-		pFontData->mpSysData = (void *)pVCLFont;
-		pFontData->maName = XubString( it->first );
-		// [ed] 11/1/04 Scalable fonts should always report their
-		// width and height as zero.  The single size of zero causes
-		// higher-level font elements to treat fonts as infinitely
-		// scalable and provide lists of default font sizes.  The
-		// size of zero matches the unx implementation.  Bug 196.
-		pFontData->mnWidth = 0;
-		pFontData->mnHeight = 0;
-		pFontData->meFamily = pVCLFont->getFamilyType();
-		pFontData->meCharSet = RTL_TEXTENCODING_UNICODE;
-		if ( pFontData->meFamily == FAMILY_MODERN )
-			pFontData->mePitch = PITCH_FIXED;
-		else
-			pFontData->mePitch = PITCH_VARIABLE;
-		pFontData->meWidthType = WIDTH_DONTKNOW;
-		if ( pVCLFont->isBold() )
-			pFontData->meWeight = WEIGHT_BOLD;
-		else
-			pFontData->meWeight = WEIGHT_NORMAL;
-		if ( pVCLFont->isItalic() )
-			pFontData->meItalic = ITALIC_NORMAL;
-		else
-			pFontData->meItalic = ITALIC_NONE;
-		pFontData->meType = TYPE_SCALABLE;
-		pFontData->mnVerticalOrientation = 0;
-		pFontData->mbOrientation = TRUE;
-		pFontData->mbDevice = FALSE;
-		pFontData->mnQuality = 0;
-		pFontData->mbSubsettable = TRUE;
-		pFontData->mbEmbeddable = FALSE;
+		pFontData->mpNext = it->second->mpNext;
+		pFontData->mpSysData = (void *)( new com_sun_star_vcl_VCLFont( pVCLFont->getJavaObject() ) );
+		pFontData->maName = it->second->maName;
+		pFontData->mnWidth = it->second->mnWidth;
+		pFontData->mnHeight = it->second->mnHeight;
+		pFontData->meFamily = it->second->meFamily;
+		pFontData->meCharSet = it->second->meCharSet;
+		pFontData->mePitch = it->second->mePitch;
+		pFontData->meWidthType = it->second->meWidthType;
+		pFontData->meWeight = it->second->meWeight;
+		pFontData->meItalic = it->second->meItalic;
+		pFontData->meType = it->second->meType;
+		pFontData->mnVerticalOrientation = it->second->mnVerticalOrientation;
+		pFontData->mbOrientation = it->second->mbOrientation;
+		pFontData->mbDevice = it->second->mbDevice;
+		pFontData->mnQuality = it->second->mnQuality;
+		pFontData->mbSubsettable = it->second->mbSubsettable;
+		pFontData->mbEmbeddable = it->second->mbEmbeddable;
 
 		// Add to list
 		pList->Add( pFontData );

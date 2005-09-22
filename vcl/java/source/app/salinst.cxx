@@ -73,9 +73,6 @@
 #ifndef _SV_JOBSET_H
 #include <jobset.h>
 #endif
-#ifndef _SV_OUTDEV_H
-#include <outdev.h>
-#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 #include <com/sun/star/vcl/VCLEvent.hxx>
 #endif
@@ -135,85 +132,95 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 	{
 		SalData *pSalData = GetSalData();
 
-		if ( pSalData && pSalData->mpEventQueue )
+		if ( nClass == kEventClassMenu && ( nKind == kEventMenuBeginTracking || nKind == kEventMenuEndTracking ) )
 		{
-			if ( nClass == kEventClassMenu && ( nKind == kEventMenuBeginTracking || nKind == kEventMenuEndTracking ) )
+			MenuRef trackingRef;
+			if ( GetEventParameter( aEvent, kEventParamDirectObject, typeMenuRef, NULL, sizeof( MenuRef ), NULL, &trackingRef ) == noErr )
 			{
-				MenuRef trackingRef;
-				if ( GetEventParameter( aEvent, kEventParamDirectObject, typeMenuRef, NULL, sizeof( MenuRef ), NULL, &trackingRef ) == noErr )
+				// According to Carbon documentation, the direct object
+				// parameter should be NULL when tracking is beginning
+				// in the menubar.  In reality, however, the direct
+				// object is in fact a menu reference to the root
+				// menu. To determine if we're a menubar tracking
+				// event, we need to to compare against both NULL and
+				// the root menu.
+				MenuRef rootMenu = AcquireRootMenu(); // increments ref count
+				bool isMenubar = false;
+
+				if ( ( trackingRef == NULL ) || ( trackingRef == rootMenu ) )
+					isMenubar = true;
+
+				if ( rootMenu != NULL )
+					ReleaseMenu( rootMenu );
+
+				// Check if there is a native modal window as we will
+				// deadlock when a native modal window is showing
+				if ( NSApplication_getModalWindow() )
+					isMenubar = false;
+				
+				if ( isMenubar )
 				{
-					// According to Carbon documentation, the direct object
-					// parameter should be NULL when tracking is beginning
-					// in the menubar.  In reality, however, the direct
-					// object is in fact a menu reference to the root
-					// menu. To determine if we're a menubar tracking
-					// event, we need to to compare against both NULL and
-					// the root menu.
-					MenuRef rootMenu = AcquireRootMenu(); // increments ref count
-					bool isMenubar = false;
+					// Wakeup the event queue by sending it a dummy event
+					// and wait for all pending AWT events to be dispatched
+					pSalData->mbNativeEventSucceeded = false;
+					pSalData->maNativeEventCondition.reset();
+					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
+					pSalData->mpEventQueue->postCachedEvent( &aEvent );
 
-					if ( ( trackingRef == NULL ) || ( trackingRef == rootMenu ) )
-						isMenubar = true;
-
-					if ( rootMenu != NULL )
-						ReleaseMenu( rootMenu );
-
-					// Check if there is a native modal window as we will
-					// deadlock when a native modal window is showing
-					if ( NSApplication_getModalWindow() )
-						isMenubar = false;
-					
-					if ( isMenubar )
+					// We need to let any pending timers run while we are
+					// waiting for the VCL event queue to clear so that
+					// we don't deadlock
+					IMutex& rSolarMutex = Application::GetSolarMutex();
+					while ( !Application::IsShutDown() && !pSalData->maNativeEventCondition.check() )
 					{
-						// Wakeup the event queue by sending it a dummy event
-						// and wait for all pending AWT events to be dispatched
-						pSalData->mbNativeEventSucceeded = false;
-						pSalData->maNativeEventCondition.reset();
-						com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
-						pSalData->mpEventQueue->postCachedEvent( &aEvent );
+						ReceiveNextEvent( 0, NULL, 0, false, NULL );
+						OThread::yield();
+					}
 
-						// We need to let any pending timers run while we are
-						// waiting for the VCL event queue to clear so that
-						// we don't deadlock
-						IMutex& rSolarMutex = Application::GetSolarMutex();
-						while ( !pSalData->maNativeEventCondition.check() )
+					// Fix bug 679 by checking if the condition was
+					// released to avoid a deadlock
+					OSErr nRet = userCanceledErr;
+					if ( !Application::IsShutDown() && pSalData->mbNativeEventSucceeded )
+					{
+						// We need to let any pending timers run so that we
+						// don't deadlock
+						bool bAcquired = false;
+						while ( !Application::IsShutDown() )
 						{
+							if ( rSolarMutex.tryToAcquire() )
+							{
+								bAcquired = true;
+								break;
+							}
+
 							ReceiveNextEvent( 0, NULL, 0, false, NULL );
 							OThread::yield();
 						}
 
-						// Fix bug 679 by checking if the condition was
-						// released to avoid a deadlock
-						OSErr nRet = userCanceledErr;
-						if ( pSalData->mbNativeEventSucceeded )
+						if ( bAcquired )
 						{
-							// We need to let any pending timers run so that we
-							// don't deadlock
-							while ( !rSolarMutex.tryToAcquire() )
+							if ( !Application::IsShutDown() )
 							{
+								pSalData->mbInNativeMenuTracking = ( nKind == kEventMenuBeginTracking );
+
+								// Execute menu updates while the VCL event
+								// queue is blocked
+								UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
+
+								// We need to let any timers run that were added
+								// by any menu changes. Otherwise, some menus
+								// will be drawn in the state that they were in
+								// before we updated the menus.
 								ReceiveNextEvent( 0, NULL, 0, false, NULL );
-								OThread::yield();
+
+								nRet = noErr;
 							}
-
-							pSalData->mbInNativeMenuTracking = ( nKind == kEventMenuBeginTracking );
-
-							// Execute menu updates while the VCL event queue is
-							// blocked
-							UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
-
-							// We need to let any timers run that were added
-							// by any menu changes. Otherwise, some menus will
-							// be drawn in the state that they were in before
-							// we updated the menus.
-							ReceiveNextEvent( 0, NULL, 0, false, NULL );
-
-							nRet = noErr;
 
 							rSolarMutex.release();
 						}
-
-						return nRet;
 					}
+
+					return nRet;
 				}
 			}
 		}
@@ -267,21 +274,7 @@ void ExecuteApplicationMain( Application *pApp )
 	}
 
 	// Now that Java is properly initialized, run the application's Main()
-	SalData *pSalData = GetSalData();
-
-	// Cache event queue
-	pSalData->mpEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
-
-	// Cache font data
-	pSalData->maFontMapping = com_sun_star_vcl_VCLFont::getAllFonts();
-	SalGraphics aGraphics;
-	ImplDevFontList aDevFontList;
-	aGraphics.GetDevFontList( &aDevFontList );
-	for ( ImplDevFontListData *pFontData = aDevFontList.First(); pFontData; pFontData = aDevFontList.Next() )
-	{
-		void *pNativeFont = ((com_sun_star_vcl_VCLFont *)pFontData->mpFirst->mpSysData)->getNativeFont();
-		pSalData->maNativeFontMapping[ pNativeFont ] = pFontData->mpFirst;
-	}
+	GetSalData()->mpEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
 
 	EventHandlerUPP pEventHandlerUPP = NewEventHandlerUPP( CarbonEventHandler );
 	if ( pEventHandlerUPP )

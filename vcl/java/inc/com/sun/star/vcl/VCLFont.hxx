@@ -36,7 +36,6 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
 #define	_SV_COM_SUN_STAR_VCL_VCLFONT_HXX
 
-#include <list>
 #include <map>
 
 #ifndef _SV_JAVA_LANG_OBJECT_HXX
@@ -56,29 +55,22 @@ protected:
 	static jclass		theClass;
 
 public:
-	static ::std::list< void* >	validNativeFonts;
-
 	static jclass		getMyClass();
-	static ::std::map< ::rtl::OUString, com_sun_star_vcl_VCLFont* >	getAllFonts();
 
 						com_sun_star_vcl_VCLFont( jobject myObj ) : java_lang_Object( myObj ) {};
 
-	com_sun_star_vcl_VCLFont*	deriveFont( long _par0, sal_Bool _par1, sal_Bool _par2, short _par3, sal_Bool _par4, sal_Bool _par5, double _par6 );
+						com_sun_star_vcl_VCLFont( ::rtl::OUString& rName, void *pNativeFont, long nSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX );
+	com_sun_star_vcl_VCLFont*	deriveFont( long _par0, short _par1, sal_Bool _par2, sal_Bool _par3, double _par4 );
 	long				getAscent();
 	long				getDescent();
-	FontFamily			getFamilyType();
 	long				getKerning( USHORT _par0, USHORT _par1 );
 	long				getLeading();
 	::rtl::OUString		getName();
 	void*				getNativeFont();
-	void*				getNativeFont( sal_Bool _par1, sal_Bool _par2 );
 	short				getOrientation();
-	java_lang_Object*	getPeer();
 	double				getScaleX();
 	long				getSize();
 	sal_Bool			isAntialiased();
-	sal_Bool			isBold();
-	sal_Bool			isItalic();
 	sal_Bool			isVertical();
 };
 
