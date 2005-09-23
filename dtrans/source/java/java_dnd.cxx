@@ -185,36 +185,52 @@ static void ImplSetDragAllowableActions( DragRef aDrag, sal_Int8 nActions )
 
 static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, WindowRef aWindow, void *pData, DragRef aDrag )
 {
-	// We need to let any pending timers run so that we don't deadlock
-	IMutex& rSolarMutex = Application::GetSolarMutex();
-	while ( !rSolarMutex.tryToAcquire() )
+	if ( !Application::IsShutDown() )
 	{
-		ReceiveNextEvent( 0, NULL, 0, false, NULL );
-		OThread::yield();
-	}
- 
-	if ( pTrackDragOwner )
-	{
-		JavaDragSource *pSource = NULL;
-		for ( ::std::list< JavaDragSource* >::const_iterator it = aDragSources.begin(); it != aDragSources.end(); ++it )
+		// We need to let any pending timers run so that we don't deadlock
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		bool bAcquired = false;
+		while ( !Application::IsShutDown() )
 		{
-			if ( (*it)->getNativeWindow() == aWindow )
+			if ( rSolarMutex.tryToAcquire() )
 			{
-				pSource = *it;
+				if ( !Application::IsShutDown() )
+					bAcquired = true;
+				else
+					rSolarMutex.release();
 				break;
 			}
+
+			ReceiveNextEvent( 0, NULL, 0, false, NULL );
+			OThread::yield();
 		}
 
-		if ( pSource && pSource != pTrackDragOwner )
+		if ( bAcquired )
 		{
-			MacOSPoint aPoint;
-			Rect aRect;
-			if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( pTrackDragOwner->mpNativeWindow, kWindowContentRgn, &aRect ) == noErr )
-				pTrackDragOwner->handleDrag( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) );
+			if ( pTrackDragOwner )
+			{
+				JavaDragSource *pSource = NULL;
+				for ( ::std::list< JavaDragSource* >::const_iterator it = aDragSources.begin(); it != aDragSources.end(); ++it )
+				{
+					if ( (*it)->getNativeWindow() == aWindow )
+					{
+						pSource = *it;
+						break;
+					}
+				}
+
+				if ( pSource && pSource != pTrackDragOwner )
+				{
+					MacOSPoint aPoint;
+					Rect aRect;
+					if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( pTrackDragOwner->mpNativeWindow, kWindowContentRgn, &aRect ) == noErr )
+						pTrackDragOwner->handleDrag( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) );
+				}
+			}
+
+			rSolarMutex.release();
 		}
 	}
-
-	rSolarMutex.release();
 	
 	return noErr;
 }
@@ -223,53 +239,69 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 
 static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, WindowRef aWindow, void *pData, DragRef aDrag )
 {
-	// We need to let any pending timers run so that we don't deadlock
-	IMutex& rSolarMutex = Application::GetSolarMutex();
-	while ( !rSolarMutex.tryToAcquire() )
+	if ( !Application::IsShutDown() )
 	{
-		ReceiveNextEvent( 0, NULL, 0, false, NULL );
-		OThread::yield();
-	}
-
-	JavaDropTarget *pTarget = NULL;
-	for ( ::std::list< JavaDropTarget* >::const_iterator it = aDropTargets.begin(); it != aDropTargets.end(); ++it )
-	{
-		if ( (*it)->getNativeWindow() == aWindow )
+		// We need to let any pending timers run so that we don't deadlock
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		bool bAcquired = false;
+		while ( !Application::IsShutDown() )
 		{
-			pTarget = *it;
-			break;
-		}
-	}
-
-	if ( pTarget )
-	{
-		MacOSPoint aPoint;
-		Rect aRect;
-		if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
-		{
-			sal_Int32 nX = (sal_Int32)( aPoint.h - aRect.left );
-			sal_Int32 nY = (sal_Int32)( aPoint.v - aRect.top );
-
-			switch ( nMessage )
+			if ( rSolarMutex.tryToAcquire() )
 			{
-				case kDragTrackingEnterWindow:
-					pTarget->handleDragEnter( nX, nY, aDrag );
-					break;
-				case kDragTrackingInWindow:
-					pTarget->handleDragOver( nX, nY, aDrag );
-					break;
-				case kDragTrackingLeaveWindow:
-					pTarget->handleDragExit( nX, nY, aDrag );
-					break;
-				default:
-					break;
+				if ( !Application::IsShutDown() )
+					bAcquired = true;
+				else
+					rSolarMutex.release();
+				break;
 			}
 
-			ImplSetThemeCursor( pTarget->isRejected() ? DNDConstants::ACTION_NONE : nCurrentAction, PtInRect( aPoint, &aRect ) );
+			ReceiveNextEvent( 0, NULL, 0, false, NULL );
+			OThread::yield();
+		}
+
+		if ( bAcquired )
+		{
+			JavaDropTarget *pTarget = NULL;
+			for ( ::std::list< JavaDropTarget* >::const_iterator it = aDropTargets.begin(); it != aDropTargets.end(); ++it )
+			{
+				if ( (*it)->getNativeWindow() == aWindow )
+				{
+					pTarget = *it;
+					break;
+				}
+			}
+
+			if ( pTarget )
+			{
+				MacOSPoint aPoint;
+				Rect aRect;
+				if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
+				{
+					sal_Int32 nX = (sal_Int32)( aPoint.h - aRect.left );
+					sal_Int32 nY = (sal_Int32)( aPoint.v - aRect.top );
+
+					switch ( nMessage )
+					{
+						case kDragTrackingEnterWindow:
+							pTarget->handleDragEnter( nX, nY, aDrag );
+							break;
+						case kDragTrackingInWindow:
+							pTarget->handleDragOver( nX, nY, aDrag );
+							break;
+						case kDragTrackingLeaveWindow:
+							pTarget->handleDragExit( nX, nY, aDrag );
+							break;
+						default:
+							break;
+					}
+
+					ImplSetThemeCursor( pTarget->isRejected() ? DNDConstants::ACTION_NONE : nCurrentAction, PtInRect( aPoint, &aRect ) );
+				}
+			}
+
+			rSolarMutex.release();
 		}
 	}
-
-	rSolarMutex.release();
 
 	return noErr;
 }
@@ -278,40 +310,56 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 
 static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, DragRef aDrag )
 {
-	// We need to let any pending timers run so that we don't deadlock
-	IMutex& rSolarMutex = Application::GetSolarMutex();
-	while ( !rSolarMutex.tryToAcquire() )
-	{
-		ReceiveNextEvent( 0, NULL, 0, false, NULL );
-		OThread::yield();
-	}
-
-	JavaDropTarget *pTarget = NULL;
-	for ( ::std::list< JavaDropTarget* >::const_iterator it = aDropTargets.begin(); it != aDropTargets.end(); ++it )
-	{
-		if ( (*it)->getNativeWindow() == aWindow )
-		{
-			pTarget = *it;
-			break;
-		}
-	}
-
 	OSErr nRet = dragNotAcceptedErr;
 
-	if ( pTarget )
+	if ( !Application::IsShutDown() )
 	{
-		MacOSPoint aPoint;
-		Rect aRect;
-		if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr && pTarget->handleDrop( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ), aDrag ) )
+		// We need to let any pending timers run so that we don't deadlock
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		bool bAcquired = false;
+		while ( !Application::IsShutDown() )
 		{
-			// Update actions
-			ImplSetDragDropAction( aDrag, nCurrentAction );
-			ImplSetThemeCursor( pTarget->isRejected() ? DNDConstants::ACTION_NONE : nCurrentAction, false );
-			nRet = noErr;
+			if ( rSolarMutex.tryToAcquire() )
+			{
+				if ( !Application::IsShutDown() )
+					bAcquired = true;
+				else
+					rSolarMutex.release();
+				break;
+			}
+
+			ReceiveNextEvent( 0, NULL, 0, false, NULL );
+			OThread::yield();
+		}
+
+		if ( bAcquired )
+		{
+			JavaDropTarget *pTarget = NULL;
+			for ( ::std::list< JavaDropTarget* >::const_iterator it = aDropTargets.begin(); it != aDropTargets.end(); ++it )
+			{
+				if ( (*it)->getNativeWindow() == aWindow )
+				{
+					pTarget = *it;
+					break;
+				}
+			}
+
+			if ( pTarget )
+			{
+				MacOSPoint aPoint;
+				Rect aRect;
+				if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr && pTarget->handleDrop( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ), aDrag ) )
+				{
+					// Update actions
+					ImplSetDragDropAction( aDrag, nCurrentAction );
+					ImplSetThemeCursor( pTarget->isRejected() ? DNDConstants::ACTION_NONE : nCurrentAction, false );
+					nRet = noErr;
+				}
+			}
+
+			rSolarMutex.release();
 		}
 	}
-
-	rSolarMutex.release();
 
 	return nRet;
 }

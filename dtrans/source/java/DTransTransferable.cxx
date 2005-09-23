@@ -117,234 +117,242 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 	else
 		nErr = noTypeErr;
 
-	IMutex& rSolarMutex = Application::GetSolarMutex();
-
-	if ( GetCurrentEventLoop() == GetMainEventLoop() )
+	if ( !Application::IsShutDown() )
 	{
 		// We need to let any pending timers run so that we don't deadlock
-		while ( !rSolarMutex.tryToAcquire() )
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		bool bAcquired = false; 
+		while ( !Application::IsShutDown() )
 		{
+			if ( rSolarMutex.tryToAcquire() )
+			{
+				if ( !Application::IsShutDown() )
+					bAcquired = true;
+				else
+					rSolarMutex.release(); 
+				break;
+			}
+
 			ReceiveNextEvent( 0, NULL, 0, false, NULL );
 			OThread::yield();
 		}
-	}
-	else
-	{
-		rSolarMutex.acquire();
-	}
 
-	DTransTransferable *pTransferable = (DTransTransferable *)pData;
-
-	bool bTransferableFound = false;
-	if ( pTransferable )
-	{
-		for ( ::std::list< DTransTransferable* >::const_iterator it = aTransferableList.begin(); it != aTransferableList.end(); ++it )
+		if ( bAcquired )
 		{
-			if ( pTransferable == *it )
-			{
-				bTransferableFound = true;
-				break;
-			}
-		}
-	}
+			DTransTransferable *pTransferable = (DTransTransferable *)pData;
 
-	if ( bTransferableFound )
-	{
-		bool bFlavorFound = false;
-		DataFlavor aFlavor;
-		for ( USHORT i = 0; i < nSupportedTypes; i++ ) {
-			if ( nType == aSupportedNativeTypes[ i ] )
+			bool bTransferableFound = false;
+			if ( pTransferable )
 			{
-				aFlavor.MimeType = aSupportedMimeTypes[ i ];
-				aFlavor.DataType = aSupportedDataTypes[ i ];
-				if ( pTransferable->isDataFlavorSupported( aFlavor ) )
+				for ( ::std::list< DTransTransferable* >::const_iterator it = aTransferableList.begin(); it != aTransferableList.end(); ++it )
 				{
-					bFlavorFound = true;
-					break;
+					if ( pTransferable == *it )
+					{
+						bTransferableFound = true;
+						break;
+					}
 				}
 			}
-		}
 
-		if ( bFlavorFound )
-		{
-			bool bDataFound = false;
-			Any aValue;
-			try {
-				aValue = pTransferable->getTransferData( aFlavor );
-				bDataFound = true;
-			}
-			catch ( ... )
+			if ( bTransferableFound )
 			{
-			}
-
-			if ( bDataFound )
-			{
-				if ( aValue.getValueType().equals( getCppuType( ( OUString* )0 ) ) )
-				{
-					OUString aString;
-					aValue >>= aString;
-					sal_Unicode *pArray = (sal_Unicode *)aString.getStr();
-					sal_Int32 nLen = aString.getLength();
-					if ( pArray && nLen )
+				bool bFlavorFound = false;
+				DataFlavor aFlavor;
+				for ( USHORT i = 0; i < nSupportedTypes; i++ ) {
+					if ( nType == aSupportedNativeTypes[ i ] )
 					{
-						// Replace line feeds with carriage returns
-						sal_Int32 j = 0;
-						for ( j = 0; j < nLen; j++ )
+						aFlavor.MimeType = aSupportedMimeTypes[ i ];
+						aFlavor.DataType = aSupportedDataTypes[ i ];
+						if ( pTransferable->isDataFlavorSupported( aFlavor ) )
 						{
-							if ( pArray[ j ] == (sal_Unicode)'\n' )
-								pArray[ j ] = (sal_Unicode)'\r';
-						}
-
-						if ( nType == 'RTF ' )
-						{
-							OString aEncodedString = OUStringToOString( aString, RTL_TEXTENCODING_ASCII_US );
-
-							if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
-								nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, aEncodedString.getLength(), (const void *)aEncodedString.getStr() );
-							else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
-								nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aEncodedString.getStr(), aEncodedString.getLength(), 0 );
-						}
-						else if ( nType == 'TEXT' )
-						{
-							CFStringRef aCFString = CFStringCreateWithCharactersNoCopy( kCFAllocatorDefault, pArray, nLen, kCFAllocatorNull );
-							if ( aCFString )
-							{
-								CFIndex nBufLen;
-								CFRange aRange;
-								aRange.location = 0;
-								aRange.length = CFStringGetLength( aCFString );
-								if ( CFStringGetBytes( aCFString, aRange, CFStringGetSystemEncoding(), '?', false, NULL, 0, &nBufLen ) )
-								{
-									CFIndex nRealLen = nBufLen;
-									UInt8 aBuf[ nBufLen + 1 ];
-									if ( CFStringGetBytes( aCFString, aRange, CFStringGetSystemEncoding(), '?', false, aBuf, nBufLen, &nRealLen ) && nRealLen == nBufLen )
-									{
-										aBuf[ nBufLen ] = '\0';
-										if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
-											nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nBufLen, (const void *)aBuf );
-										else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
-											nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aBuf, nBufLen, 0 );
-									}
-								}
-
-								CFRelease( aCFString );
-							}
-						}
-						else
-						{
- 							nLen *= sizeof( sal_Unicode );
-							if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
-								nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nLen, (const void *)aString.getStr() );
-							else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
-								nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aString.getStr(), nLen, 0 );
+							bFlavorFound = true;
+							break;
 						}
 					}
 				}
-				else if ( aValue.getValueType().equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
+
+				if ( bFlavorFound )
 				{
-					Sequence< sal_Int8 > aData;
-					aValue >>= aData;
-					sal_Int8 *pArray = aData.getArray();
-					sal_Int32 nLen = aData.getLength();
-					if ( pArray && nLen )
+					bool bDataFound = false;
+					Any aValue;
+					try {
+						aValue = pTransferable->getTransferData( aFlavor );
+						bDataFound = true;
+					}
+					catch ( ... )
 					{
-						if ( nType == 'PICT' )
-						{
-							// Convert to PICT from our BMP data
-							ComponentInstance aImporter;
-							if ( OpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
-							{
-								Handle hData;
-								if ( PtrToHand( pArray, &hData, nLen ) == noErr )
-								{
-									// Free the source data
-									aData = Sequence< sal_Int8 >();
+					}
 
-									if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr )
-									{
-										PicHandle hPict;
-										if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
-										{
-											HLock( (Handle)hPict );
-											if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
-												nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, GetHandleSize( (Handle)hPict ), (const void *)*hPict );
-											else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
-												nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)*hPict, GetHandleSize( (Handle)hPict ), 0 );
-											HUnlock( (Handle)hPict );
-											KillPicture( hPict );
-										}
-										HUnlock( hData );
-										DisposeHandle( hData );
-									}
-									CloseComponent( aImporter );
-								}
-							}
-						}
-						else if ( nType == 'TIFF' )
+					if ( bDataFound )
+					{
+						if ( aValue.getValueType().equals( getCppuType( ( OUString* )0 ) ) )
 						{
-							// Convert to TIFF from our BMP data
-							ComponentInstance aImporter;
-							if ( OpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
-							{
-								Handle hData;
-								if ( PtrToHand( pArray, &hData, nLen ) == noErr )
-								{
-									// Free the source data
-									aData = Sequence< sal_Int8 >();
-
-									if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr )
-									{
-										PicHandle hPict;
-										if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
-										{
-											ComponentInstance aExporter;
-											if ( OpenADefaultComponent( GraphicsExporterComponentType, nType, &aExporter ) == noErr );
-											{
-												if ( GraphicsExportSetInputPicture( aExporter, hPict ) == noErr )
-												{
-													Handle hExportData = NewHandle( 0 );
-													if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
-													{
-														unsigned long nDataLen;
-														if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
-														{
-															HLock( hExportData );
-															if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
-																nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nDataLen, (const void *)*hExportData );
-															else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
-																nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)*hExportData, nDataLen, 0 );
-															HUnlock( hExportData );
-														}
-														DisposeHandle( hExportData );
-													}
-												}
-												CloseComponent( aExporter );
-											}
-											KillPicture( hPict );
-										}
-										DisposeHandle( hData );
-									}
-									CloseComponent( aImporter );
-								}
-							}
-						}
-						else
-						{
+							OUString aString;
+							aValue >>= aString;
+							sal_Unicode *pArray = (sal_Unicode *)aString.getStr();
+							sal_Int32 nLen = aString.getLength();
 							if ( pArray && nLen )
 							{
-								if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
-									nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nLen, (const void *)pArray );
-								else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
-									nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)pArray, nLen, 0 );
+								// Replace line feeds with carriage returns
+								sal_Int32 j = 0;
+								for ( j = 0; j < nLen; j++ )
+								{
+									if ( pArray[ j ] == (sal_Unicode)'\n' )
+										pArray[ j ] = (sal_Unicode)'\r';
+								}
+		
+								if ( nType == 'RTF ' )
+								{
+									OString aEncodedString = OUStringToOString( aString, RTL_TEXTENCODING_ASCII_US );
+
+									if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
+										nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, aEncodedString.getLength(), (const void *)aEncodedString.getStr() );
+									else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
+										nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aEncodedString.getStr(), aEncodedString.getLength(), 0 );
+								}
+								else if ( nType == 'TEXT' )
+								{
+									CFStringRef aCFString = CFStringCreateWithCharactersNoCopy( kCFAllocatorDefault, pArray, nLen, kCFAllocatorNull );
+									if ( aCFString )
+									{
+										CFIndex nBufLen;
+										CFRange aRange;
+										aRange.location = 0;
+										aRange.length = CFStringGetLength( aCFString );
+										if ( CFStringGetBytes( aCFString, aRange, CFStringGetSystemEncoding(), '?', false, NULL, 0, &nBufLen ) )
+										{
+											CFIndex nRealLen = nBufLen;
+											UInt8 aBuf[ nBufLen + 1 ];
+											if ( CFStringGetBytes( aCFString, aRange, CFStringGetSystemEncoding(), '?', false, aBuf, nBufLen, &nRealLen ) && nRealLen == nBufLen )
+											{
+												aBuf[ nBufLen ] = '\0';
+												if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
+													nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nBufLen, (const void *)aBuf );
+												else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
+													nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aBuf, nBufLen, 0 );
+											}
+										}
+
+										CFRelease( aCFString );
+									}
+								}
+								else
+								{
+ 									nLen *= sizeof( sal_Unicode );
+									if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
+										nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nLen, (const void *)aString.getStr() );
+									else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
+										nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aString.getStr(), nLen, 0 );
+								}
+							}
+						}
+						else if ( aValue.getValueType().equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
+						{
+							Sequence< sal_Int8 > aData;
+							aValue >>= aData;
+							sal_Int8 *pArray = aData.getArray();
+							sal_Int32 nLen = aData.getLength();
+							if ( pArray && nLen )
+							{
+								if ( nType == 'PICT' )
+								{
+									// Convert to PICT from our BMP data
+									ComponentInstance aImporter;
+									if ( OpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
+									{
+										Handle hData;
+										if ( PtrToHand( pArray, &hData, nLen ) == noErr )
+										{
+											// Free the source data
+											aData = Sequence< sal_Int8 >();
+
+											if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr )
+											{
+												PicHandle hPict;
+												if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
+												{
+													HLock( (Handle)hPict );
+													if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
+														nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, GetHandleSize( (Handle)hPict ), (const void *)*hPict );
+													else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
+														nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)*hPict, GetHandleSize( (Handle)hPict ), 0 );
+													HUnlock( (Handle)hPict );
+													KillPicture( hPict );
+												}
+												HUnlock( hData );
+												DisposeHandle( hData );
+											}
+											CloseComponent( aImporter );
+										}
+									}
+								}
+								else if ( nType == 'TIFF' )
+								{
+									// Convert to TIFF from our BMP data
+									ComponentInstance aImporter;
+									if ( OpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
+									{
+										Handle hData;
+										if ( PtrToHand( pArray, &hData, nLen ) == noErr )
+										{
+											// Free the source data
+											aData = Sequence< sal_Int8 >();
+
+											if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr )
+											{
+												PicHandle hPict;
+												if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
+												{
+													ComponentInstance aExporter;
+													if ( OpenADefaultComponent( GraphicsExporterComponentType, nType, &aExporter ) == noErr );
+													{
+														if ( GraphicsExportSetInputPicture( aExporter, hPict ) == noErr )
+														{
+															Handle hExportData = NewHandle( 0 );
+															if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
+															{
+																unsigned long nDataLen;
+																if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
+																{
+																	HLock( hExportData );
+																	if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
+																		nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nDataLen, (const void *)*hExportData );
+																	else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
+																		nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)*hExportData, nDataLen, 0 );
+																	HUnlock( hExportData );
+																}
+																DisposeHandle( hExportData );
+															}
+														}
+														CloseComponent( aExporter );
+													}
+													KillPicture( hPict );
+												}
+												DisposeHandle( hData );
+											}
+											CloseComponent( aImporter );
+										}
+									}
+								}
+								else
+								{
+									if ( pArray && nLen )
+									{
+										if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
+											nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nLen, (const void *)pArray );
+										else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
+											nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)pArray, nLen, 0 );
+									}
+								}
 							}
 						}
 					}
 				}
 			}
+
+			rSolarMutex.release();
 		}
 	}
-
-	rSolarMutex.release();
 
 	return nErr;
 }
