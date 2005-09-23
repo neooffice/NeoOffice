@@ -61,6 +61,8 @@ check_installation() {
 				else
 					return 1
 				fi
+			elif [ -z "$product_previous_patch_version" ] ; then
+				return 0
 			elif [ "$productpatch" -ge "$product_previous_patch_version" ] ; then
 				return 0
 			fi
