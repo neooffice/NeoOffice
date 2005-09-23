@@ -436,7 +436,9 @@ void TrackDragTimerCallback( EventLoopTimerRef aTimer, void *pData )
 
 				bool bTrackDrag = ( bContentsSet && TrackDrag( aDrag, &aEventRecord, aRegion ) == noErr );
 
-				// Relock application mutex
+				// Relock application mutex. Note that we don't check for
+				// application shutdown as we are noew on the hook to clean up
+				// this thread
 				while ( !rSolarMutex.tryToAcquire() )
 				{
 					ReceiveNextEvent( 0, NULL, 0, false, NULL );
@@ -529,7 +531,11 @@ JavaDragSource::~JavaDragSource()
 {
 	// If we own the event loop timer, wait for the timer to finish
 	if ( pTrackDragOwner == this )
+	{
+		ULONG nCount = Application::ReleaseSolarMutex();
 		aTrackDragCondition.wait();
+		Application::AcquireSolarMutex( nCount );
+	}
 }
 
 // ------------------------------------------------------------------------
