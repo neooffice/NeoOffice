@@ -54,11 +54,28 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLEVENTQUEUE_HXX
 #include <com/sun/star/vcl/VCLEventQueue.hxx>
 #endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
+#include <com/sun/star/vcl/VCLFont.hxx>
+#endif
 #ifndef _OSL_CONDITN_HXX_
 #include <osl/conditn.hxx>
 #endif
 
 class ImplFontData;
+
+// ---------------------
+// - SalSystemFontData -
+// ---------------------
+
+struct SalSystemFontData 
+{
+public:
+    void*           mpNativeBoldFont;
+    void*           mpNativeBoldItalicFont;
+    void*           mpNativeItalicFont;
+    void*           mpNativePlainFont;
+    ::vcl::com_sun_star_vcl_VCLFont*   mpVCLFont;
+};
 
 // -----------
 // - SalData -
@@ -75,6 +92,7 @@ public:
 	ULONG					mnTimerInterval;
 	XubString				maDefaultPrinter;
 	::vcl::com_sun_star_vcl_VCLEventQueue*	mpEventQueue;
+	::std::map< XubString, ImplFontData* >	maFontNameMapping;
 	::std::map< void*, ImplFontData* >	maNativeFontMapping;
 	SalFrame*				mpPresentationFrame;
 	::osl::Condition		maNativeEventCondition;

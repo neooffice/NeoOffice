@@ -74,6 +74,11 @@ SalData::~SalData()
 	if ( mpEventQueue )
 		delete mpEventQueue;
 
-	for ( ::std::map< void*, ImplFontData* >::const_iterator it = maNativeFontMapping.begin(); it != maNativeFontMapping.end(); ++it )
+	for ( ::std::map< XubString, ImplFontData* >::const_iterator it = maFontNameMapping.begin(); it != maFontNameMapping.end(); ++it )
+	{
+		SalSystemFontData *pSystemFont = (SalSystemFontData *)it->second->mpSysData;
+		delete pSystemFont->mpVCLFont;
+		delete pSystemFont;
 		delete it->second;
+	}
 }
