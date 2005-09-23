@@ -663,7 +663,12 @@ BOOL Desktop::QueryExit()
         xPropertySet->setPropertyValue( OUSTRING(RTL_CONSTASCII_USTRINGPARAM( SUSPEND_QUICKSTARTVETO )), a );
     }
 
+#ifdef USE_JAVA
+    // Don't allow termination if we haven't finished startup
+    BOOL bExit = ( ::desktop::Desktop::bSuppressOpenDefault && ( !xDesktop.is() || xDesktop->terminate() ) );
+#else	// USE_JAVA
     BOOL bExit = ( !xDesktop.is() || xDesktop->terminate() );
+#endif	// USE_JAVA
 
     if ( !bExit && xPropertySet.is() )
     {
@@ -2161,6 +2166,9 @@ void Desktop::OpenClients()
 
     {
         OpenDefault();
+#ifdef USE_JAVA
+        ::desktop::Desktop::bSuppressOpenDefault = sal_True;
+#endif	// USE_JAVA
     }
 }
 
