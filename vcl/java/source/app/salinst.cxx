@@ -189,7 +189,10 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 						{
 							if ( rSolarMutex.tryToAcquire() )
 							{
-								bAcquired = true;
+								if ( !Application::IsShutDown() )
+									bAcquired = true;
+								else
+									rSolarMutex.release();
 								break;
 							}
 
@@ -199,25 +202,22 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 						if ( bAcquired )
 						{
-							if ( !Application::IsShutDown() )
-							{
-								pSalData->mbInNativeMenuTracking = ( nKind == kEventMenuBeginTracking );
+							pSalData->mbInNativeMenuTracking = ( nKind == kEventMenuBeginTracking );
 
-								// Execute menu updates while the VCL event
-								// queue is blocked
-								UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
+							// Execute menu updates while the VCL event
+							// queue is blocked
+							UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
 
-								// We need to let any timers run that were added
-								// by any menu changes. Otherwise, some menus
-								// will be drawn in the state that they were in
-								// before we updated the menus.
-								ReceiveNextEvent( 0, NULL, 0, false, NULL );
+							// We need to let any timers run that were added
+							// by any menu changes. Otherwise, some menus
+							// will be drawn in the state that they were in
+							// before we updated the menus.
+							ReceiveNextEvent( 0, NULL, 0, false, NULL );
 
-								nRet = noErr;
-							}
-
-							rSolarMutex.release();
+							nRet = noErr;
 						}
+
+						rSolarMutex.release();
 					}
 
 					return nRet;
