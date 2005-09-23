@@ -75,6 +75,9 @@
 #ifndef _SV_SALATSLAYOUT_HXX
 #include <salatslayout.hxx>
 #endif
+#ifndef _SV_SALDATA_HXX
+#include <saldata.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
 #include <com/sun/star/vcl/VCLFont.hxx>
 #endif
@@ -6504,8 +6507,8 @@ void PDFWriterImpl::encodeGlyphs()
         {
             FontEmit& rEmit = *lit;
 
-            com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)pCurrentFont->mpSysData;
-            ATSUFontID nFontID = (ATSUFontID)( pVCLFont->getNativeFont() );
+			SalSystemFontData *pSystemFont = (SalSystemFontData *)pCurrentFont->mpSysData;
+            ATSUFontID nFontID = (ATSUFontID)( pSystemFont->mpVCLFont->getNativeFont() );
             ATSFontRef aATSFont = FMGetATSFontRefFromFont( nFontID );
             CGFontRef aFont = CGFontCreateWithPlatformFont( (void *)&aATSFont );
             if ( !aFont )
