@@ -70,10 +70,7 @@ class ImplFontData;
 struct SalSystemFontData 
 {
 public:
-    void*           mpNativeBoldFont;
-    void*           mpNativeBoldItalicFont;
-    void*           mpNativeItalicFont;
-    void*           mpNativePlainFont;
+	const void*				mpNativeFontName;
     ::vcl::com_sun_star_vcl_VCLFont*   mpVCLFont;
 };
 

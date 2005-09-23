@@ -58,6 +58,7 @@ SLOFILES= \
 	$(SLO)$/salgdi.obj \
 	$(SLO)$/salgdi2.obj \
 	$(SLO)$/salgdi3.obj \
+	$(SLO)$/salgdi3_cocoa.obj \
 	$(SLO)$/salogl.obj \
 	$(SLO)$/salogl_cocoa.obj \
 	$(SLO)$/salprn.obj \
