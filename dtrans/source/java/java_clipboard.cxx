@@ -69,7 +69,7 @@ Sequence< OUString > SAL_CALL JavaClipboard_getSupportedServiceNames()
 
 // ========================================================================
 
-JavaClipboard::JavaClipboard( bool bSystemClipboard ) : WeakComponentImplHelper4< XClipboardEx, XClipboardNotifier, XServiceInfo, XInitialization >( maMutex )
+JavaClipboard::JavaClipboard( bool bSystemClipboard ) : WeakComponentImplHelper4< XClipboardEx, XFlushableClipboard, XClipboardNotifier, XServiceInfo >( maMutex )
 {
 	mbSystemClipboard = bSystemClipboard;
 }
@@ -78,6 +78,21 @@ JavaClipboard::JavaClipboard( bool bSystemClipboard ) : WeakComponentImplHelper4
 
 JavaClipboard::~JavaClipboard()
 {
+}
+
+// ------------------------------------------------------------------------
+
+void SAL_CALL JavaClipboard::flushClipboard( ) throw( RuntimeException )
+{
+	if ( mbSystemClipboard )
+	{
+		DTransTransferable *pTransferable = NULL;
+		if ( maContents.is() )
+			pTransferable = (DTransTransferable *)maContents.get();
+
+		if ( pTransferable )
+			pTransferable->flush();
+	}
 }
 
 // ------------------------------------------------------------------------

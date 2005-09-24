@@ -373,7 +373,15 @@ static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType
 
 // ============================================================================
 
-Any SAL_CALL DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( UnsupportedFlavorException, IOException, RuntimeException )
+void DTransTransferable::flush()
+{
+	if ( hasOwnership() )
+		CallInScrapPromises();
+}
+
+// ============================================================================
+
+Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( UnsupportedFlavorException, IOException, RuntimeException )
 {
 	if ( mxTransferable.is() )
 		return mxTransferable->getTransferData( aFlavor );
@@ -586,7 +594,7 @@ DTransTransferable::~DTransTransferable()
 
 // ----------------------------------------------------------------------------
 
-Sequence< DataFlavor > SAL_CALL DTransTransferable::getTransferDataFlavors() throw ( RuntimeException )
+Sequence< DataFlavor > DTransTransferable::getTransferDataFlavors() throw ( RuntimeException )
 {
 	if ( mxTransferable.is() )
 		return mxTransferable->getTransferDataFlavors();
@@ -669,7 +677,7 @@ sal_Bool DTransTransferable::hasOwnership()
 
 // ----------------------------------------------------------------------------
 
-sal_Bool SAL_CALL DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) throw ( RuntimeException )
+sal_Bool DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) throw ( RuntimeException )
 {
 	if ( mxTransferable.is() )
 		return mxTransferable->isDataFlavorSupported( aFlavor );

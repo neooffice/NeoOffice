@@ -69,11 +69,11 @@
 #ifndef _COM_SUN_STAR_DATATRANSFER_CLIPBOARD_XCLIPBOARDNOTIFIER_HPP_
 #include <com/sun/star/datatransfer/clipboard/XClipboardNotifier.hpp>
 #endif
+#ifndef _COM_SUN_STAR_DATATRANSFER_CLIPBOARD_XFLUSHABLECLIPBOARD_HPP_
+#include <com/sun/star/datatransfer/clipboard/XFlushableClipboard.hpp>
+#endif
 #ifndef _COM_SUN_STAR_LANG_XSERVICEINFO_HPP_
 #include <com/sun/star/lang/XServiceInfo.hpp>
-#endif
-#ifndef _COM_SUN_STAR_LANG_XINITIALIZATION_HPP_
-#include <com/sun/star/lang/XInitialization.hpp>
 #endif
 #ifndef __SGI_STL_HASHMAP
 #include <hash_map>
@@ -88,7 +88,7 @@
 
 namespace java {
 
-class JavaClipboard : public ::cppu::WeakComponentImplHelper4< ::com::sun::star::datatransfer::clipboard::XClipboardEx, ::com::sun::star::datatransfer::clipboard::XClipboardNotifier, ::com::sun::star::lang::XServiceInfo, ::com::sun::star::lang::XInitialization >
+class JavaClipboard : public ::cppu::WeakComponentImplHelper4< ::com::sun::star::datatransfer::clipboard::XClipboardEx, ::com::sun::star::datatransfer::clipboard::XFlushableClipboard, ::com::sun::star::datatransfer::clipboard::XClipboardNotifier, ::com::sun::star::lang::XServiceInfo >
 {
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	maContents;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::clipboard::XClipboardOwner >	maOwner;
@@ -99,7 +99,8 @@ class JavaClipboard : public ::cppu::WeakComponentImplHelper4< ::com::sun::star:
 public:
 							JavaClipboard( bool bSystemClipboard );
 	virtual					~JavaClipboard();
-	
+
+    virtual void			SAL_CALL flushClipboard( ) throw( ::com::sun::star::uno::RuntimeException );
 	virtual ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	SAL_CALL getContents() throw( ::com::sun::star::uno::RuntimeException );
 	virtual void			SAL_CALL setContents( const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >& xTransferable, const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::clipboard::XClipboardOwner >& xClipboardOwner ) throw( ::com::sun::star::uno::RuntimeException );
 	virtual ::rtl::OUString	SAL_CALL getName() throw( ::com::sun::star::uno::RuntimeException );
