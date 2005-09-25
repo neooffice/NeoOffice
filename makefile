@@ -316,6 +316,7 @@ build.package: build.neo_patches build.oo_download_dics build.oo_download_help b
 	cp -f "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION).src.tar.gz" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)/src"
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/Build.html" | sed 's#$$(PRODUCT_BUILD_URL)#$(PRODUCT_BUILD_URL)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)/src/Build.html"
 	chmod -Rf a-w,a+r "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
+	chmod -f u+w "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
 	touch "$@"
 
 build.odk_package: build.neo_odk_patches
@@ -367,6 +368,7 @@ build.patch_package: build.package
 	mv -f "$(PATCH_INSTALL_HOME)/$(PRODUCT_PREVIOUS_DIR_NAME).pkg" "$(PATCH_INSTALL_HOME)/$(PRODUCT_PREVIOUS_DIR_NAME)-$(PRODUCT_PREVIOUS_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)"
 	cp -f "$(PATCH_INSTALL_HOME)/$(PRODUCT_PREVIOUS_DIR_NAME)-$(PRODUCT_PREVIOUS_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)/$(PRODUCT_PREVIOUS_DIR_NAME).pkg/Contents/Resources/ReadMe.rtf" "$(PATCH_INSTALL_HOME)/$(PRODUCT_PREVIOUS_DIR_NAME)-$(PRODUCT_PREVIOUS_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)/ReadMe.rtf"
 	chmod -Rf a-w,a+r "$(PATCH_INSTALL_HOME)/$(PRODUCT_PREVIOUS_DIR_NAME)-$(PRODUCT_PREVIOUS_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)"
+	chmod -f u+w "$(PATCH_INSTALL_HOME)/$(PRODUCT_PREVIOUS_DIR_NAME)-$(PRODUCT_PREVIOUS_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)"
 	touch "$@"
 
 build.package_%: $(INSTALL_HOME)/package_%
@@ -404,6 +406,7 @@ build.package_%: $(INSTALL_HOME)/package_%
 	mv -f "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)_$(@:build.package_%=%)"
 	cp -f "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)_$(@:build.package_%=%)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/ReadMe.rtf" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)_$(@:build.package_%=%)/ReadMe.rtf"
 	chmod -Rf a-w,a+r "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)_$(@:build.package_%=%)"
+	chmod -f u+w "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)_$(@:build.package_%=%)"
 
 build.source_zip:
 	rm -Rf "$(SOURCE_HOME)"
@@ -425,6 +428,7 @@ build.cd_package: build.package
 	cd "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)/Language Packs" ; sh -e -c 'for i in `cd "$(PWD)/$(INSTALL_HOME)" ; find . -type d -name "$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)_*" -maxdepth 1` ; do ( cd "$(PWD)/$(INSTALL_HOME)" ; tar zcf - "$$i" ) | tar zxf - ; done'
 	cd "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)" ; ( cd "$(PWD)/$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)" ; tar zcf - * ) | tar zxf -
 	chmod -Rf a-w,a+r "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
+	chmod -f u+w "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
 	touch "$@"
 
 build.all: build.package
