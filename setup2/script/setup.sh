@@ -50,7 +50,15 @@ os=`uname`
 apphome=`dirname "$0"`
 sharebase="$apphome/../share"
 userbase="$apphome/../user"
-userinstall="$HOME/Library/$(PRODUCT_DIR_NAME)-$(OO_VERSION)/user"
+userlibrary="$HOME/Library"
+userinstall="$userlibrary/$(PRODUCT_DIR_NAME)-$(OO_VERSION)/user"
+
+
+# Make sure the user's home directory exists and is writable
+if [ ! -d "$userlibrary" ] ; then
+    mkdir -p "$userlibrary"
+fi
+chmod -f u+w "$userlibrary"
 
 # Make sure that this is not a botched installation
 if [ ! -d "$apphome" ] ; then
