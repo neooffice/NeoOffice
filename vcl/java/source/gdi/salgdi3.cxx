@@ -38,6 +38,9 @@
 #ifndef _SV_SALGDI_HXX
 #include <salgdi.hxx>
 #endif
+#ifndef _SV_SALATSLAYOUT_HXX
+#include <salatslayout.hxx>
+#endif
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
@@ -53,6 +56,15 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
+#ifndef _OSL_PROCESS_H_
+#include <rtl/process.h>
+#endif
+#ifndef _FSYS_HXX
+#include <tools/fsys.hxx>
+#endif
+#ifndef _UTL_BOOTSTRAP_HXX
+#include <unotools/bootstrap.hxx>
+#endif
 
 #include <premac.h>
 #include <Carbon/Carbon.h>
@@ -60,9 +72,11 @@
 
 #include "salgdi3_cocoa.h"
 
+static bool bNativeFontsLoaded = false;
 static ATSFontNotificationRef aNotification = NULL;
 
 using namespace rtl;
+using namespace utl;
 using namespace vcl;
 using namespace vos;
 
@@ -89,9 +103,55 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 
 		if ( bAcquired )
 		{
+			SalData *pSalData = GetSalData();
+
+			SalATSLayout::ClearLayoutDataCache();
+
 			if ( !Application::IsShutDown() )
 			{
-				::std::list< ATSFontRef > aATSFontList;
+				if ( !bNativeFontsLoaded )
+				{
+					bNativeFontsLoaded = true;
+
+					// Activate the fonts in the "user/fonts" directory
+					OUString aUserStr;
+					OUString aUserPath;
+					if ( Bootstrap::locateUserInstallation( aUserStr ) == Bootstrap::PATH_EXISTS && osl_getSystemPathFromFileURL( aUserStr.pData, &aUserPath.pData ) == osl_File_E_None )
+					{
+						ByteString aFontDir( aUserPath.getStr(), RTL_TEXTENCODING_UTF8 );
+						if ( aFontDir.Len() )
+		{
+							aFontDir += ByteString( "/user/fonts", RTL_TEXTENCODING_UTF8 );
+							FSRef aFontPath;
+							FSSpec aFontSpec;
+							if ( FSPathMakeRef( (const UInt8 *)aFontDir.GetBuffer(), &aFontPath, 0 ) == noErr && FSGetCatalogInfo( &aFontPath, kFSCatInfoNone, NULL, NULL, &aFontSpec, NULL) == noErr )
+								ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextGlobal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDefault, NULL );
+						}
+					}
+
+					// Activate the fonts in the "share/fonts/truetype"
+					// directory
+					OUString aExecStr;
+					OUString aExecPath;
+					if ( osl_getExecutableFile( &aExecStr.pData ) == osl_Process_E_None && osl_getSystemPathFromFileURL( aExecStr.pData, &aExecPath.pData ) == osl_File_E_None )
+					{
+						ByteString aFontDir( aExecPath.getStr(), RTL_TEXTENCODING_UTF8 );
+						if ( aFontDir.Len() )
+						{
+							DirEntry aFontDirEntry( aFontDir );
+							aFontDirEntry.ToAbs();
+							aFontDir = ByteString( aFontDirEntry.GetPath().GetFull(), RTL_TEXTENCODING_UTF8 );
+							aFontDir += ByteString( "/../share/fonts/truetype", RTL_TEXTENCODING_UTF8 );
+							FSRef aFontPath;
+							FSSpec aFontSpec;
+							if ( FSPathMakeRef( (const UInt8 *)aFontDir.GetBuffer(), &aFontPath, 0 ) == noErr && FSGetCatalogInfo( &aFontPath, kFSCatInfoNone, NULL, NULL, &aFontSpec, NULL) == noErr )
+								ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextGlobal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDefault, NULL );
+						}
+					}
+				}
+
+				long nSize = 12;
+				::std::map< ATSFontRef, ImplFontData* > aATSFontMapping;
 				BOOL bContinue = TRUE;
 				while ( bContinue )
 				{
@@ -108,28 +168,26 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						}
 						else if ( nErr == kATSIterationScopeModified )
 						{
-							aATSFontList.clear();
+							aATSFontMapping.clear();
 							break;
 						}
 						else if ( aFont )
 						{
-							aATSFontList.push_back( aFont );
+							aATSFontMapping[ aFont ] = NULL;
 						}
 					}
 
 					ATSFontIteratorRelease( &aIterator );
 				}
 
-				SalData *pSalData = GetSalData();
-
 				// Update cached fonts
 				OUString aRoman( OUString::createFromAscii( "Roman" ) );
 				OUString aTimes( OUString::createFromAscii( "Times" ) );
 				OUString aSerif( OUString::createFromAscii( "Serif" ) );
-				for ( std::list< ATSFontRef >::const_iterator ait = aATSFontList.begin(); ait != aATSFontList.end(); ++ait )
+				for ( std::map< ATSFontRef, ImplFontData* >::iterator ait = aATSFontMapping.begin(); ait != aATSFontMapping.end(); ++ait )
 				{
 					CFStringRef aString;
-					if ( ATSFontGetName( *ait, kATSOptionFlagsDefault, &aString ) != noErr )
+					if ( ATSFontGetName( ait->first, kATSOptionFlagsDefault, &aString ) != noErr )
 						continue;
 
 					// Ignore empty font names or font names that start with
@@ -138,11 +196,10 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 					if ( !nLen || CFStringGetCharacterAtIndex( aString, 0 ) == (UniChar)'.' )
 						continue;
 
-					void *pNativeFont = (void *)FMGetFontFromATSFontRef( *ait );
+					void *pNativeFont = (void *)FMGetFontFromATSFontRef( ait->first );
 					if ( (ATSUFontID)pNativeFont == kATSUInvalidFontID )
 						continue;
 
-					long nSize = 12;
 					void *pNSFont = NSFont_create( aString, nSize );
 					if ( !pNSFont )
 						continue;
@@ -156,7 +213,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 
 					OUString aPSFontName;
 					CFStringRef aPSString;
-					if ( ATSFontGetPostScriptName( *ait, kATSOptionFlagsDefault, &aPSString ) == noErr )
+					if ( ATSFontGetPostScriptName( ait->first, kATSOptionFlagsDefault, &aPSString ) == noErr )
 					{
 						CFIndex nPSLen = CFStringGetLength( aPSString );
 						CFRange aPSRange = CFRangeMake( 0, nPSLen );
@@ -228,6 +285,39 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 					pData->mbEmbeddable = FALSE;
 
 					NSFont_release( pNSFont );
+				}
+
+				// Reset any cached VCLFont instances
+				for ( ::std::list< SalGraphics* >::const_iterator git = pSalData->maGraphicsList.begin(); git != pSalData->maGraphicsList.end(); ++git )
+				{
+					com_sun_star_vcl_VCLFont *pCurrentFont = (*git)->maGraphicsData.mpVCLFont;
+					if ( pCurrentFont )
+					{
+						void *pNativeFont = pCurrentFont->getNativeFont();
+						::std::map< void*, ImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pNativeFont );
+						if ( it != pSalData->maNativeFontMapping.end() )
+						{
+							SalSystemFontData *pReplacementFont = (SalSystemFontData *)it->second->mpSysData;
+							OUString aFontName( it->second->maName );
+							(*git)->maGraphicsData.mpVCLFont = new com_sun_star_vcl_VCLFont( aFontName, pReplacementFont->mpVCLFont->getNativeFont(), pCurrentFont->getSize(), pCurrentFont->getOrientation(), pCurrentFont->isAntialiased(), pCurrentFont->isVertical(), pCurrentFont->getScaleX() );
+							delete pCurrentFont;
+						}
+
+						for ( ::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = (*git)->maGraphicsData.maFallbackFonts.begin(); ffit != (*git)->maGraphicsData.maFallbackFonts.end(); ++ffit )
+						{
+							pCurrentFont = ffit->second;
+							if ( pCurrentFont )
+							{
+								pNativeFont = pCurrentFont->getNativeFont();
+								it = pSalData->maNativeFontMapping.find( pNativeFont );
+								if ( it != pSalData->maNativeFontMapping.end() )
+								{
+									SalSystemFontData *pReplacementFont = (SalSystemFontData *)it->second->mpSysData;
+									OUString aFontName( it->second->maName );
+								}
+							}
+						}
+					}
 				}
 			}
 

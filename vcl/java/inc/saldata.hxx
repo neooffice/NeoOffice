@@ -95,6 +95,7 @@ public:
 	::osl::Condition		maNativeEventCondition;
 	bool					mbNativeEventSucceeded;
 	bool					mbInNativeMenuTracking;
+	::std::list< SalGraphics* >	maGraphicsList;
 
 							SalData();
 							~SalData();

@@ -111,6 +111,7 @@ struct ImplATSLayoutData {
 	long				mnBaselineDelta;
 	bool				mbValid;
 
+	static void					ClearLayoutDataCache();
 	static ImplATSLayoutData*	GetLayoutData( ImplLayoutArgs& rArgs, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, int nBeginChars, int nEndChars );
 
 						ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHash *pLayoutHash, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont );
@@ -151,6 +152,19 @@ bool ImplHashEquality::operator()( const ImplATSLayoutDataHash *p1, const ImplAT
 // ----------------------------------------------------------------------------
 
 ::std::list< ImplATSLayoutData* > ImplATSLayoutData::maLayoutCacheList;
+
+// ----------------------------------------------------------------------------
+
+void ImplATSLayoutData::ClearLayoutDataCache()
+{
+	maLayoutCache.clear();
+
+	while ( maLayoutCache.size() )
+	{
+		maLayoutCacheList.back()->Release();
+		maLayoutCacheList.pop_back();
+	}
+}
 
 // ----------------------------------------------------------------------------
 
@@ -740,6 +754,13 @@ SalLayout *SalGraphics::GetTextLayout( ImplLayoutArgs& rArgs, int nFallbackLevel
 }
 
 // ============================================================================
+
+void SalATSLayout::ClearLayoutDataCache()
+{
+	ImplATSLayoutData::ClearLayoutDataCache();
+}
+
+// ----------------------------------------------------------------------------
 
 SalATSLayout::SalATSLayout( SalGraphics *pGraphics, int nFallbackLevel ) :
 	mpGraphics( pGraphics ),

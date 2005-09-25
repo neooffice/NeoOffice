@@ -38,6 +38,9 @@
 #ifndef _SV_SALGDI_HXX
 #include <salgdi.hxx>
 #endif
+#ifndef _SV_SALDATA_HXX
+#include <saldata.hxx>
+#endif
 #ifndef _SV_SALFRAME_HXX
 #include <salframe.hxx>
 #endif
@@ -54,12 +57,14 @@ using namespace vcl;
 
 SalGraphics::SalGraphics()
 {
+	GetSalData()->maGraphicsList.push_back( this );
 }
 
 // -----------------------------------------------------------------------
 
 SalGraphics::~SalGraphics()
 {
+	GetSalData()->maGraphicsList.remove( this );
 }
 
 // -----------------------------------------------------------------------

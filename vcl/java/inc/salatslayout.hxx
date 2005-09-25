@@ -67,6 +67,8 @@ class SalATSLayout : public GenericSalLayout
 	ImplATSLayoutData*	mpKashidaLayoutData;
 
 public:
+	static void			ClearLayoutDataCache();
+
 						SalATSLayout( SalGraphics *pGraphics, int nFallbackLevel );
 	virtual				~SalATSLayout();
 

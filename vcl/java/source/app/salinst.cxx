@@ -91,20 +91,11 @@
 #ifndef _SV_MENU_HXX
 #include <menu.hxx>
 #endif
-#ifndef _OSL_PROCESS_H_
-#include <rtl/process.h>
-#endif
-#ifndef _FSYS_HXX
-#include <tools/fsys.hxx>
-#endif
 #ifndef _TOOLS_RESMGR_HXX
 #include <tools/resmgr.hxx>
 #endif
 #ifndef _TOOLS_SIMPLERESMGR_HXX_
 #include <tools/simplerm.hxx>
-#endif
-#ifndef _UTL_BOOTSTRAP_HXX
-#include <unotools/bootstrap.hxx>
 #endif
 
 #include "salinst.hrc"
@@ -118,8 +109,6 @@
 using namespace rtl;
 using namespace vcl;
 using namespace vos;
-using namespace utl;
-using namespace com::sun::star::uno;
 
 // ============================================================================
 
@@ -234,45 +223,6 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 void ExecuteApplicationMain( Application *pApp )
 {
-	// If there is a "user/fonts" directory, explicitly activate the
-	// fonts since Panther does not automatically add fonts in the user's
-	// Library/Fonts directory until they reboot or relogin
-	OUString aUserStr;
-	OUString aUserPath;
-	if ( Bootstrap::locateUserInstallation( aUserStr ) == Bootstrap::PATH_EXISTS && osl_getSystemPathFromFileURL( aUserStr.pData, &aUserPath.pData ) == osl_File_E_None )
-	{
-		ByteString aFontDir( aUserPath.getStr(), RTL_TEXTENCODING_UTF8 );
-		if ( aFontDir.Len() )
-		{
-			aFontDir += ByteString( "/user/fonts", RTL_TEXTENCODING_UTF8 );
-			FSRef aFontPath;
-			FSSpec aFontSpec;
-			if ( FSPathMakeRef( (const UInt8 *)aFontDir.GetBuffer(), &aFontPath, 0 ) == noErr && FSGetCatalogInfo( &aFontPath, kFSCatInfoNone, NULL, NULL, &aFontSpec, NULL) == noErr )
-				ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextGlobal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDefault, NULL );
-		}
-	}
-
-	// If there is a "share/fonts/truetype" directory, explicitly activate the
-	// fonts since Panther does not automatically add fonts in the user's
-	// Library/Fonts directory until they reboot or relogin
-	OUString aExecStr;
-	OUString aExecPath;
-	if ( osl_getExecutableFile( &aExecStr.pData ) == osl_Process_E_None && osl_getSystemPathFromFileURL( aExecStr.pData, &aExecPath.pData ) == osl_File_E_None )
-	{
-		ByteString aFontDir( aExecPath.getStr(), RTL_TEXTENCODING_UTF8 );
-		if ( aFontDir.Len() )
-		{
-			DirEntry aFontDirEntry( aFontDir );
-			aFontDirEntry.ToAbs();
-			aFontDir = ByteString( aFontDirEntry.GetPath().GetFull(), RTL_TEXTENCODING_UTF8 );
-			aFontDir += ByteString( "/../share/fonts/truetype", RTL_TEXTENCODING_UTF8 );
-			FSRef aFontPath;
-			FSSpec aFontSpec;
-			if ( FSPathMakeRef( (const UInt8 *)aFontDir.GetBuffer(), &aFontPath, 0 ) == noErr && FSGetCatalogInfo( &aFontPath, kFSCatInfoNone, NULL, NULL, &aFontSpec, NULL) == noErr )
-				ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextGlobal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDefault, NULL );
-		}
-	}
-
 	// Now that Java is properly initialized, run the application's Main()
 	GetSalData()->mpEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
 
