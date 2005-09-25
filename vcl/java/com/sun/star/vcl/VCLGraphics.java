@@ -539,7 +539,7 @@ public final class VCLGraphics {
 			clipList.add(destBounds);
 		}
 
-		if (vg != this || srcWidth != destWidth || srcHeight != destHeight || clipList.size() > 1) {
+		if (xor || vg != this || srcWidth != destWidth || srcHeight != destHeight || clipList.size() > 1) {
 			BufferedImage img = null;
 			if (vg.getImage() != null)
 				img = vg.getImage().getImage();
@@ -563,6 +563,8 @@ public final class VCLGraphics {
 			Graphics2D g = getGraphics();
 			if (g != null) {
 				try {
+					if (xor)
+						g.setXORMode(Color.black);
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {
 						g.setClip((Rectangle)clipRects.next());
@@ -637,6 +639,8 @@ public final class VCLGraphics {
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
+				if (xor)
+					g.setXORMode(Color.black);
 				Iterator clipRects = clipList.iterator();
 				while (clipRects.hasNext()) {
 					g.setClip((Rectangle)clipRects.next());
@@ -701,7 +705,7 @@ public final class VCLGraphics {
 			try {
 				mergedGraphics.setComposite(VCLGraphics.transparentComposite);
 				VCLGraphics.transparentComposite.setFirstPass(true);
-				mergedGraphics.translate(srcBounds.x * -1, srcBounds.y * -1 );
+				mergedGraphics.translate(srcBounds.x * -1, srcBounds.y * -1);
 				mergedGraphics.drawImage(transBmp.getImage(), srcX, srcY, srcX + srcWidth, srcY + srcHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
 				VCLGraphics.transparentComposite.setFirstPass(false);
 				mergedGraphics.drawImage(bmp.getImage(), srcX, srcY, srcX + srcWidth, srcY + srcHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
@@ -718,6 +722,8 @@ public final class VCLGraphics {
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
+				if (xor)
+					g.setXORMode(Color.black);
 				Iterator clipRects = clipList.iterator();
 				while (clipRects.hasNext()) {
 					g.setClip((Rectangle)clipRects.next());
@@ -950,7 +956,7 @@ public final class VCLGraphics {
 		if (g != null) {
 			try {
 				if (xor)
-					g.setXORMode(color == 0xff000000 ? Color.white : Color.black );
+					g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 				g.setColor(new Color(color));
 				Iterator clipRects = clipList.iterator();
 				while (clipRects.hasNext()) {
@@ -1068,7 +1074,7 @@ public final class VCLGraphics {
 		if (g != null) {
 			try {
 				if (xor)
-					g.setXORMode(color == 0xff000000 ? Color.white : Color.black );
+					g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 				g.setColor(new Color(color));
 				Iterator clipRects = clipList.iterator();
 				while (clipRects.hasNext()) {
@@ -1133,7 +1139,7 @@ public final class VCLGraphics {
 		if (g != null) {
 			try {
 				if (xor)
-					g.setXORMode(color == 0xff000000 ? Color.white : Color.black );
+					g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 				g.setColor(new Color(color));
 				Iterator clipRects = clipList.iterator();
 				while (clipRects.hasNext()) {
@@ -1280,7 +1286,7 @@ public final class VCLGraphics {
 		if (g != null) {
 			try {
 				if (xor)
-					g.setXORMode(color == 0xff000000 ? Color.white : Color.black );
+					g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 				g.setColor(new Color(color));
 				Iterator clipRects = clipList.iterator();
 				while (clipRects.hasNext()) {
@@ -1740,7 +1746,7 @@ public final class VCLGraphics {
 			if (g != null) {
 				try {
 					if (xor)
-						g.setXORMode(color == 0xff000000 ? Color.white : Color.black );
+						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 					if (singlePixelImage == null)
 						singlePixelImage = g.getDeviceConfiguration().createCompatibleImage(1, 1);
 					singlePixelImage.setRGB(0, 0, color);
