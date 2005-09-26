@@ -73,7 +73,6 @@
 #include "salgdi3_cocoa.h"
 
 static bool bNativeFontsLoaded = false;
-static ATSFontNotificationRef aNotification = NULL;
 
 using namespace rtl;
 using namespace utl;
@@ -109,47 +108,6 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 
 			if ( !Application::IsShutDown() )
 			{
-				if ( !bNativeFontsLoaded )
-				{
-					bNativeFontsLoaded = true;
-
-					// Activate the fonts in the "user/fonts" directory
-					OUString aUserStr;
-					OUString aUserPath;
-					if ( Bootstrap::locateUserInstallation( aUserStr ) == Bootstrap::PATH_EXISTS && osl_getSystemPathFromFileURL( aUserStr.pData, &aUserPath.pData ) == osl_File_E_None )
-					{
-						ByteString aFontDir( aUserPath.getStr(), RTL_TEXTENCODING_UTF8 );
-						if ( aFontDir.Len() )
-		{
-							aFontDir += ByteString( "/user/fonts", RTL_TEXTENCODING_UTF8 );
-							FSRef aFontPath;
-							FSSpec aFontSpec;
-							if ( FSPathMakeRef( (const UInt8 *)aFontDir.GetBuffer(), &aFontPath, 0 ) == noErr && FSGetCatalogInfo( &aFontPath, kFSCatInfoNone, NULL, NULL, &aFontSpec, NULL) == noErr )
-								ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextGlobal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDefault, NULL );
-						}
-					}
-
-					// Activate the fonts in the "share/fonts/truetype"
-					// directory
-					OUString aExecStr;
-					OUString aExecPath;
-					if ( osl_getExecutableFile( &aExecStr.pData ) == osl_Process_E_None && osl_getSystemPathFromFileURL( aExecStr.pData, &aExecPath.pData ) == osl_File_E_None )
-					{
-						ByteString aFontDir( aExecPath.getStr(), RTL_TEXTENCODING_UTF8 );
-						if ( aFontDir.Len() )
-						{
-							DirEntry aFontDirEntry( aFontDir );
-							aFontDirEntry.ToAbs();
-							aFontDir = ByteString( aFontDirEntry.GetPath().GetFull(), RTL_TEXTENCODING_UTF8 );
-							aFontDir += ByteString( "/../share/fonts/truetype", RTL_TEXTENCODING_UTF8 );
-							FSRef aFontPath;
-							FSSpec aFontSpec;
-							if ( FSPathMakeRef( (const UInt8 *)aFontDir.GetBuffer(), &aFontPath, 0 ) == noErr && FSGetCatalogInfo( &aFontPath, kFSCatInfoNone, NULL, NULL, &aFontSpec, NULL) == noErr )
-								ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextGlobal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDefault, NULL );
-						}
-					}
-				}
-
 				long nSize = 12;
 				::std::map< ATSFontRef, ImplFontData* > aATSFontMapping;
 				BOOL bContinue = TRUE;
@@ -211,16 +169,17 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 					OUString aFontName( pBuffer );
 					XubString aXubFontName( aFontName );
 
-					OUString aPSFontName;
-					CFStringRef aPSString;
-					if ( ATSFontGetPostScriptName( ait->first, kATSOptionFlagsDefault, &aPSString ) == noErr )
+					OUString aRealFontName;
+					CFStringRef aRealString = NSFont_fontName( pNSFont );
+					if ( aRealString )
 					{
-						CFIndex nPSLen = CFStringGetLength( aPSString );
-						CFRange aPSRange = CFRangeMake( 0, nPSLen );
-						sal_Unicode pPSBuffer[ nPSLen + 1 ];
-						CFStringGetCharacters( aPSString, aPSRange, pPSBuffer );
-						pPSBuffer[ nPSLen ] = 0;
-						aPSFontName = OUString( pPSBuffer );
+						CFIndex nRealLen = CFStringGetLength( aRealString );
+						CFRange aRealRange = CFRangeMake( 0, nRealLen );
+						sal_Unicode pRealBuffer[ nRealLen + 1 ];
+						CFStringGetCharacters( aRealString, aRealRange, pRealBuffer );
+						pRealBuffer[ nRealLen ] = 0;
+						aRealFontName = OUString( pRealBuffer );
+						CFRelease( aRealString );
 					}
 
 					ImplFontData *pData;
@@ -242,7 +201,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 					}
 
 					pSystemFont->mpNativeFontName = (const void *)aString;
-					pSystemFont->mpVCLFont = new com_sun_star_vcl_VCLFont( aFontName, pNativeFont, nSize, 0, sal_True, sal_False, 1.0 );
+					pSystemFont->mpVCLFont = new com_sun_star_vcl_VCLFont( aRealFontName, pNativeFont, nSize, 0, sal_True, sal_False, 1.0 );
 					pData->mpSysData = (void *)pSystemFont;
 
 					// Multiple native fonts can map to the same font due to
@@ -261,7 +220,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 
 					pData->mpNext = NULL;
 					pData->maName = aXubFontName;
-					pData->maMapNames = XubString( aPSFontName );
+					pData->maMapNames = XubString( aRealFontName );
 					// [ed] 11/1/04 Scalable fonts should always report
 					// their width and height as zero. The single size of
 					// zero causes higher-level font elements to treat
@@ -298,7 +257,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						if ( it != pSalData->maNativeFontMapping.end() )
 						{
 							SalSystemFontData *pReplacementFont = (SalSystemFontData *)it->second->mpSysData;
-							OUString aFontName( it->second->maName );
+							OUString aFontName( it->second->maMapNames );
 							(*git)->maGraphicsData.mpVCLFont = new com_sun_star_vcl_VCLFont( aFontName, pReplacementFont->mpVCLFont->getNativeFont(), pCurrentFont->getSize(), pCurrentFont->getOrientation(), pCurrentFont->isAntialiased(), pCurrentFont->isVertical(), pCurrentFont->getScaleX() );
 							delete pCurrentFont;
 						}
@@ -487,10 +446,48 @@ void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 {
 	SalData *pSalData = GetSalData();
 
-	if ( !aNotification )
+	if ( !bNativeFontsLoaded )
 	{
-		if ( ATSFontNotificationSubscribe( ImplFontListChangedCallback, kATSFontNotifyOptionReceiveWhileSuspended, NULL, &aNotification ) == noErr )
-			ImplFontListChangedCallback( NULL, NULL );
+		// Activate the fonts in the "user/fonts" directory
+		OUString aUserStr;
+		OUString aUserPath;
+		if ( Bootstrap::locateUserInstallation( aUserStr ) == Bootstrap::PATH_EXISTS && osl_getSystemPathFromFileURL( aUserStr.pData, &aUserPath.pData ) == osl_File_E_None )
+		{
+			ByteString aFontDir( aUserPath.getStr(), RTL_TEXTENCODING_UTF8 );
+			if ( aFontDir.Len() )
+			{
+				aFontDir += ByteString( "/user/fonts", RTL_TEXTENCODING_UTF8 );
+				FSRef aFontPath;
+				FSSpec aFontSpec;
+				if ( FSPathMakeRef( (const UInt8 *)aFontDir.GetBuffer(), &aFontPath, 0 ) == noErr && FSGetCatalogInfo( &aFontPath, kFSCatInfoNone, NULL, NULL, &aFontSpec, NULL) == noErr )
+					ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextGlobal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDefault, NULL );
+			}
+		}
+
+		// Activate the fonts in the "share/fonts/truetype" directory
+		OUString aExecStr;
+		OUString aExecPath;
+		if ( osl_getExecutableFile( &aExecStr.pData ) == osl_Process_E_None && osl_getSystemPathFromFileURL( aExecStr.pData, &aExecPath.pData ) == osl_File_E_None )
+		{
+			ByteString aFontDir( aExecPath.getStr(), RTL_TEXTENCODING_UTF8 );
+			if ( aFontDir.Len() )
+			{
+				DirEntry aFontDirEntry( aFontDir );
+				aFontDirEntry.ToAbs();
+				aFontDir = ByteString( aFontDirEntry.GetPath().GetFull(), RTL_TEXTENCODING_UTF8 );
+				aFontDir += ByteString( "/../share/fonts/truetype", RTL_TEXTENCODING_UTF8 );
+				FSRef aFontPath;
+				FSSpec aFontSpec;
+				if ( FSPathMakeRef( (const UInt8 *)aFontDir.GetBuffer(), &aFontPath, 0 ) == noErr && FSGetCatalogInfo( &aFontPath, kFSCatInfoNone, NULL, NULL, &aFontSpec, NULL) == noErr )
+					ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextGlobal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDefault, NULL );
+			}
+		}
+
+		ImplFontListChangedCallback( NULL, NULL );
+
+		ATSFontNotificationSubscribe( ImplFontListChangedCallback, kATSFontNotifyOptionReceiveWhileSuspended, NULL, NULL );
+
+		bNativeFontsLoaded = true;
 	}
 
 	// Iterate through fonts and add each to the font list

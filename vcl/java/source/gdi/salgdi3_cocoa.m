@@ -44,6 +44,20 @@ id NSFont_create( CFStringRef aFontName, long nSize )
 		return nil;
 }
 
+CFStringRef NSFont_fontName( id pNSFont )
+{
+	CFStringRef aRet = nil;
+
+	if ( pNSFont )
+	{
+		aRet = (CFStringRef)[pNSFont fontName];
+		if ( aRet )
+			CFRetain( aRet );
+	}
+
+	return aRet;
+}
+
 void NSFont_release( id pNSFont )
 {
 	if ( pNSFont )
