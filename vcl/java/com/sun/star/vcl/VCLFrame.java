@@ -1899,6 +1899,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (b) {
 			// Show the window
 			window.show();
+			requestFocus();
 		}
 		else {
 			// Hide the window
