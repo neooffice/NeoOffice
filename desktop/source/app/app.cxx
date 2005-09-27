@@ -459,7 +459,10 @@ CommandLineArgs* Desktop::GetCommandLineArgs()
     {
         ::osl::MutexGuard aGuard( ::osl::Mutex::getGlobalMutex() );
         if ( !pArgs )
-            pArgs = new CommandLineArgs( ::vos::OExtCommandLine() );
+	{
+	    ::vos::OExtCommandLine extCommandLine;
+            pArgs = new CommandLineArgs( extCommandLine );
+	}
     }
 
     return pArgs;
