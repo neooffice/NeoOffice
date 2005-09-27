@@ -117,7 +117,7 @@ build.oo_patches: build.oo_checkout \
 	build.oo_codemaker_patch \
 	build.oo_comphelper_patch \
 	build.oo_config_office_patch \
-	build.oo_configmgr.patch \
+	build.oo_configmgr_patch \
 	build.oo_connectivity_patch \
 	build.oo_cppu_patch \
 	build.oo_cppuhelper_patch \
@@ -166,8 +166,8 @@ build.oo_external_patch: build.oo_checkout
 	touch "$@"
 
 build.oo_python_patch: $(OO_PATCHES_HOME)/python.patch build.oo_checkout
-	-( cd "$(BUILD_HOME)/$(@:build.oo_python_patch=%)" ; patch -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(BUILD_HOME)/$(@:build.oo_python_patch=%)" ; patch -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+	-( cd "$(BUILD_HOME)/python" ; patch -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(BUILD_HOME)/python" ; patch -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	cp "$(OO_PATCHES_HOME)/Python-2.2.2.gcc4.macosx.patch" "$(BUILD_HOME)/python"
 	touch "$@"
 	
