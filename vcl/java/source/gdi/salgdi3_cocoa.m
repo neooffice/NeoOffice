@@ -50,7 +50,7 @@ void NSFont_release( id pNSFont )
 		[(NSFont *)pNSFont release];
 }
 
-CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, int nWeight, BOOL bItalic, long nSize )
+CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, BOOL bBold, BOOL bItalic, long nSize )
 {
 	CFStringRef aRet = nil;
 
@@ -62,20 +62,13 @@ CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, int nWei
 			NSFontManager *pFontManager = [NSFontManager sharedFontManager];
 			if ( pFontManager )
 			{
-				// Convert from FontWeight values to NSFont weights
-				if ( nWeight <= 6 )
-					;
-				else if ( nWeight <= 7 )
-					nWeight = 8;
-				else if ( nWeight <= 8 )
-					nWeight = 9;
-				else if ( nWeight <= 9 )
-					nWeight = 12;
-				else
-					nWeight = 15;
-
-				int nFontWeight = [pFontManager weightOfFont:pNSFont];
-				NSFont *pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:( bItalic ? NSItalicFontMask : 0 ) weight:nWeight size:(float)nSize];
+				int nWeight = [pFontManager weightOfFont:pNSFont];
+				NSFontTraitMask nTraits = 0;
+				if ( bBold )
+					nTraits |= NSBoldFontMask;
+				if ( bItalic )
+					nTraits |= NSItalicFontMask;
+				NSFont *pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:nTraits weight:nWeight size:(float)nSize];
 				if ( pNewNSFont && pNewNSFont != pNSFont )
 				{
 					aRet = (CFStringRef)[pNewNSFont fontName];
@@ -84,10 +77,11 @@ CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, int nWei
 
 					[pNewNSFont release];
 				}
-				else if ( bItalic && nWeight != nFontWeight )
+				else if ( bBold && bItalic )
 				{
 					// Try again without italics
-					pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:0 weight:nWeight size:(float)nSize];
+					nTraits = NSBoldFontMask;
+					pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:nTraits weight:nWeight size:(float)nSize];
 					if ( pNewNSFont && pNewNSFont != pNSFont )
 					{
 						aRet = (CFStringRef)[pNewNSFont fontName];
@@ -98,8 +92,9 @@ CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, int nWei
 					}
 					else
 					{
-						// Try again without weight
-						pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:NSItalicFontMask weight:nFontWeight size:(float)nSize];
+						// Try again without bold
+						nTraits = NSItalicFontMask;
+						pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:nTraits weight:nWeight size:(float)nSize];
 						if ( pNewNSFont && pNewNSFont != pNSFont )
 						{
 							aRet = (CFStringRef)[pNewNSFont fontName];

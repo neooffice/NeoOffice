@@ -141,11 +141,12 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 				// Update cached fonts
 				OUString aRoman( OUString::createFromAscii( "Roman" ) );
 				OUString aTimes( OUString::createFromAscii( "Times" ) );
+				OUString aSans( OUString::createFromAscii( "Sans" ) );
 				OUString aSerif( OUString::createFromAscii( "Serif" ) );
 				for ( std::map< ATSFontRef, ImplFontData* >::iterator ait = aATSFontMapping.begin(); ait != aATSFontMapping.end(); ++ait )
 				{
 					CFStringRef aString;
-					if ( ATSFontGetName( ait->first, kATSOptionFlagsDefault, &aString ) != noErr )
+					if ( ATSFontGetPostScriptName( ait->first, kATSOptionFlagsDefault, &aString ) != noErr && ATSFontGetName( ait->first, kATSOptionFlagsDefault, &aString ) != noErr )
 						continue;
 
 					// Ignore empty font names or font names that start with
@@ -165,33 +166,33 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 					OUString aFontName( pBuffer );
 					XubString aXubFontName( aFontName );
 
-					OUString aPSFontName;
-					XubString aXubPSFontName;
-					CFStringRef aPSString;
-					if ( ATSFontGetPostScriptName( ait->first, kATSOptionFlagsDefault, &aPSString ) == noErr )
+					OUString aDisplayName;
+					XubString aXubDisplayName;
+					CFStringRef aDisplayString;
+					if ( ATSFontGetName( ait->first, kATSOptionFlagsDefault, &aDisplayString ) == noErr )
 					{
-						CFIndex nPSLen = CFStringGetLength( aPSString );
-						CFRange aPSRange = CFRangeMake( 0, nPSLen );
-						sal_Unicode pPSBuffer[ nPSLen + 1 ];
-						CFStringGetCharacters( aPSString, aPSRange, pPSBuffer );
-						pPSBuffer[ nPSLen ] = 0;
-						aPSFontName = OUString( pPSBuffer );
-						aXubPSFontName = XubString( aPSFontName );
+						CFIndex nDisplayLen = CFStringGetLength( aDisplayString );
+						CFRange aDisplayRange = CFRangeMake( 0, nDisplayLen );
+						sal_Unicode pDisplayBuffer[ nDisplayLen + 1 ];
+						CFStringGetCharacters( aDisplayString, aDisplayRange, pDisplayBuffer );
+						pDisplayBuffer[ nDisplayLen ] = 0;
+						aDisplayName = OUString( pDisplayBuffer );
+						aXubDisplayName = XubString( aDisplayName );
 					}
 					else
 					{
-						aPSFontName = aFontName;
-						aXubPSFontName = aXubFontName;
-						aPSString = aString;
+						aDisplayName = aFontName;
+						aXubDisplayName = aXubFontName;
+						aDisplayString = aString;
 					}
 
-					void *pNSFont = NSFont_create( aPSString, nSize );
+					void *pNSFont = NSFont_create( aString, nSize );
 					if ( !pNSFont )
 						continue;
 
 					ImplFontData *pData;
 					SalSystemFontData *pSystemFont;
-					::std::map< XubString, ImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aXubPSFontName );
+					::std::map< XubString, ImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aXubFontName );
 					if ( it != pSalData->maFontNameMapping.end() )
 					{
 						// Delete old font data
@@ -202,13 +203,13 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 					else
 					{
 						pData = new ImplFontData();
-						pSalData->maFontNameMapping[ aXubPSFontName ] = pData;
+						pSalData->maFontNameMapping[ aXubFontName ] = pData;
 
 						pSystemFont = new SalSystemFontData();
 					}
 
-					pSystemFont->mpNativeFontName = (const void *)aPSString;
-					pSystemFont->mpVCLFont = new com_sun_star_vcl_VCLFont( aPSFontName, pNativeFont, nSize, 0, sal_True, sal_False, 1.0 );
+					pSystemFont->mpNativeFontName = (const void *)aString;
+					pSystemFont->mpVCLFont = new com_sun_star_vcl_VCLFont( aFontName, pNativeFont, nSize, 0, sal_True, sal_False, 1.0 );
 					pData->mpSysData = (void *)pSystemFont;
 
 					// Multiple native fonts can map to the same font due to
@@ -220,14 +221,16 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 					FontFamily nFamily;
 					if ( nPitch == PITCH_FIXED )
 						nFamily = FAMILY_MODERN;
-					else if ( aFontName.indexOf( aRoman ) >= 0 || aFontName.indexOf( aSerif ) >= 0 || aFontName.indexOf( aTimes ) >= 0 )
+					else if ( aDisplayName.indexOf( aSans ) >= 0 )
+						nFamily = FAMILY_SWISS;
+					else if ( aDisplayName.indexOf( aRoman ) >= 0 || aDisplayName.indexOf( aSerif ) >= 0 || aDisplayName.indexOf( aTimes ) >= 0 )
 						nFamily = FAMILY_ROMAN;
 					else
 						nFamily = FAMILY_SWISS;
 
 					pData->mpNext = NULL;
-					pData->maName = aXubFontName;
-					pData->maMapNames = aXubPSFontName;
+					pData->maName = aXubDisplayName;
+					pData->maMapNames = aXubFontName;
 					// [ed] 11/1/04 Scalable fonts should always report
 					// their width and height as zero. The single size of
 					// zero causes higher-level font elements to treat
@@ -265,13 +268,11 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						{
 							SalSystemFontData *pReplacementFont = (SalSystemFontData *)it->second->mpSysData;
 							OUString aFontName( it->second->maMapNames );
-							if ( !aFontName.getLength() )
-								aFontName = it->second->maName;
 							(*git)->maGraphicsData.mpVCLFont = new com_sun_star_vcl_VCLFont( aFontName, pReplacementFont->mpVCLFont->getNativeFont(), pCurrentFont->getSize(), pCurrentFont->getOrientation(), pCurrentFont->isAntialiased(), pCurrentFont->isVertical(), pCurrentFont->getScaleX() );
 							delete pCurrentFont;
 						}
 
-						for ( ::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = (*git)->maGraphicsData.maFallbackFonts.begin(); ffit != (*git)->maGraphicsData.maFallbackFonts.end(); ++ffit )
+						for ( ::std::map< int, com_sun_star_vcl_VCLFont* >::iterator ffit = (*git)->maGraphicsData.maFallbackFonts.begin(); ffit != (*git)->maGraphicsData.maFallbackFonts.end(); ++ffit )
 						{
 							pCurrentFont = ffit->second;
 							if ( pCurrentFont )
@@ -282,8 +283,8 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								{
 									SalSystemFontData *pReplacementFont = (SalSystemFontData *)it->second->mpSysData;
 									OUString aFontName( it->second->maMapNames );
-									if ( !aFontName.getLength() )
-										aFontName = it->second->maName;
+									ffit->second = new com_sun_star_vcl_VCLFont( aFontName, pReplacementFont->mpVCLFont->getNativeFont(), pCurrentFont->getSize(), pCurrentFont->getOrientation(), pCurrentFont->isAntialiased(), pCurrentFont->isVertical(), pCurrentFont->getScaleX() );
+									delete pCurrentFont;
 								}
 							}
 						}
@@ -313,14 +314,12 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	// to properly determine the fallback font
 	if ( !nFallbackLevel )
 	{
-		BOOL bBold = ( pFont->meWeight > pFont->mpFontData->meWeight );
+		BOOL bBold = ( pFont->meWeight > WEIGHT_MEDIUM && pFont->mpFontData->meWeight <= WEIGHT_MEDIUM );
 		BOOL bItalic = ( ( pFont->meItalic == ITALIC_OBLIQUE || pFont->meItalic == ITALIC_NORMAL ) && pFont->mpFontData->meItalic != ITALIC_OBLIQUE && pFont->mpFontData->meItalic != ITALIC_NORMAL );
-
-		// Handle remapping to and from bold and italic fonts
-		if ( bBold || bItalic )
+		if ( bBold || bItalic || pFont->maFoundName != pFont->mpFontData->maName )
 		{
 			SalSystemFontData *pSystemFont = (SalSystemFontData *)pFont->mpFontData->mpSysData;
-			CFStringRef aString = NSFontManager_findFontNameWithStyle( (CFStringRef)pSystemFont->mpNativeFontName, pFont->meWeight, bItalic, pSystemFont->mpVCLFont->getSize() );
+			CFStringRef aString = NSFontManager_findFontNameWithStyle( (CFStringRef)pSystemFont->mpNativeFontName, bBold, bItalic, pSystemFont->mpVCLFont->getSize() );
 			if ( aString )
 			{
 				CFIndex nLen = CFStringGetLength( aString );
