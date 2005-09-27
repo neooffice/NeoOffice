@@ -1644,7 +1644,7 @@ public final class VCLEvent extends AWTEvent {
 
 	/**
 	 * Returns the rectangle representing the area which needs to be repainted
-     * in response to this event.
+	 * in response to this event.
 	 *
 	 * @return the rectangle to be repainted
 	 */
@@ -1869,6 +1869,19 @@ public final class VCLEvent extends AWTEvent {
 				typeStr = "unknown type";
 		}
 		return typeStr;
+
+	}
+
+	/**
+	 * Sets the rectangle representing the area which needs to be repainted
+	 * in response to this event.
+	 *
+	 * @param r the rectangle to be repainted
+	 */
+	void setUpdateRect(Rectangle r) {
+
+		if (source instanceof PaintEvent)
+			((PaintEvent)source).setUpdateRect(r);
 
 	}
 

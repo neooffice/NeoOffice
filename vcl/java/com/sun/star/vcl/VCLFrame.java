@@ -1630,6 +1630,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		window.setBounds(x, y, width, height);
 
+		if (window.isShowing())
+			paint();
+
 	}
 
 	/**
@@ -1899,6 +1902,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (b) {
 			// Show the window
 			window.show();
+			paint();
 			requestFocus();
 		}
 		else {
@@ -2005,8 +2009,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			synchronized (f) {
 				if (!f.isDisposed()) {
 					Window w = f.getWindow();
-					if (!w.isShowing())
+					if (!w.isShowing()) {
 						w.show();
+						f.paint();
+					}
 				}
 			}
 		}

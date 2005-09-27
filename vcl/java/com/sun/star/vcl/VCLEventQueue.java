@@ -37,6 +37,7 @@ package com.sun.star.vcl;
 
 import java.awt.AWTEvent;
 import java.awt.EventQueue;
+import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.event.InputEvent;
 import java.awt.event.MouseEvent;
@@ -180,9 +181,11 @@ public final class VCLEventQueue {
 					queue.mouseWheelMove = null;
 				else if (eqi == queue.moveResize)
 					queue.moveResize = null;
+				else if (eqi == queue.paint)
+					queue.paint = null;
 			}
 			if (queue.head == null)
-				queue.keyInput = queue.mouseMove = queue.mouseWheelMove = queue.moveResize = queue.tail = null;
+				queue.keyInput = queue.mouseMove = queue.mouseWheelMove = queue.moveResize = queue.paint = queue.tail = null;
 			return eqi != null ? eqi.event : null;
 		}
 
@@ -199,8 +202,16 @@ public final class VCLEventQueue {
 		VCLEventQueue.QueueItem newItem = new VCLEventQueue.QueueItem(event);
 		int id = newItem.event.getID();
 		synchronized (queue) {
-			// Coalesce key and mouse events
-			if (id == VCLEvent.SALEVENT_KEYINPUT) {
+			// Coalesce events
+			if (id == VCLEvent.SALEVENT_CLOSE) {
+				VCLEventQueue.QueueItem eqi = queue.head;
+				while (eqi != null) {
+					if (eqi.event.getID() == VCLEvent.SALEVENT_CLOSE && eqi.event.getFrame() == newItem.event.getFrame())
+						return;
+					eqi = eqi.next;
+				}
+			}
+			else if (id == VCLEvent.SALEVENT_KEYINPUT) {
 				if (queue.keyInput != null && !queue.keyInput.remove && queue.keyInput.event.getFrame() == newItem.event.getFrame() && queue.keyInput.event.getKeyChar() == newItem.event.getKeyChar() && queue.keyInput.event.getKeyCode() == newItem.event.getKeyCode() && queue.keyInput.event.getModifiers() == newItem.event.getModifiers()) {
 					queue.keyInput.remove = true;
 					newItem.event.addRepeatCount((short)1);
@@ -227,14 +238,18 @@ public final class VCLEventQueue {
 					queue.moveResize.remove = true;
 				queue.moveResize = newItem;
 			}
-
-			// Ignore duplicate window close events
-			if (id == VCLEvent.SALEVENT_CLOSE) {
-				VCLEventQueue.QueueItem eqi = queue.head;
-				while (eqi != null) {
-					if (eqi.event.getID() == VCLEvent.SALEVENT_CLOSE && eqi.event.getFrame() == newItem.event.getFrame())
-						return;
-					eqi = eqi.next;
+			else if (id == VCLEvent.SALEVENT_PAINT) {
+				if (queue.paint != null && !queue.paint.remove && queue.paint.event.getFrame() == newItem.event.getFrame()) {
+					queue.paint.remove = true;
+					Rectangle oldBounds = queue.paint.event.getUpdateRect();
+					if (oldBounds != null) {
+						Rectangle newBounds = newItem.event.getUpdateRect();
+						if (newBounds != null)
+							newItem.event.setUpdateRect(oldBounds.union(newBounds));
+						else
+							newItem.event.setUpdateRect(oldBounds);
+					}
+					queue.paint = newItem;
 				}
 			}
 
@@ -373,6 +388,8 @@ public final class VCLEventQueue {
 		VCLEventQueue.QueueItem mouseWheelMove = null;
 
 		VCLEventQueue.QueueItem moveResize = null;
+
+		VCLEventQueue.QueueItem paint = null;
 
 		VCLEventQueue.QueueItem tail = null;
 
