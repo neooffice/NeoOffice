@@ -4,7 +4,7 @@ RCS file: /cvs/external/stlport/STLport-4.5-macxp-panther.patch,v
 retrieving revision 1.1.6.1
 diff -u -r1.1.6.1 STLport-4.5-macxp-panther.patch
 --- STLport-4.5-macxp-panther.patch	28 Jan 2004 10:51:26 -0000	1.1.6.1
-+++ STLport-4.5-macxp-panther.patch	27 Sep 2005 03:29:55 -0000
++++ STLport-4.5-macxp-panther.patch	27 Sep 2005 06:40:48 -0000
 @@ -1,3 +1,60 @@
 +--- misc/STLport-4.5/stlport/stdarg.h	2001-01-27 02:39:59.000000000 +0100
 ++++ misc/build/STLport-4.5/stlport/stdarg.h	2005-05-01 19:37:22.000000000 +0200
@@ -13,8 +13,8 @@ diff -u -r1.1.6.1 STLport-4.5-macxp-panther.patch
 + # endif
 + 
 ++#if defined(__GNUC__) && defined(__APPLE__)
-++# if (BUILD_OS_MAJOR >= 10) && (BUILD_OS_MINOR >= 3)
-++#  include _STLP_NATIVE_HEADER(../stdarg.h)
+++# if (BUILD_OS_MAJOR >= 10) && (BUILD_OS_MINOR >= 3) && (__GNUC__ >= 4)
+++#  include _STLP_NATIVE_HEADER(../../3.3/stdarg.h)
 ++# endif
 ++#else
 + # include _STLP_NATIVE_C_HEADER(stdarg.h)
@@ -75,13 +75,167 @@ diff -u -r1.1.6.1 STLport-4.5-macxp-panther.patch
  ! 
  ! CXXFLAGS_RELEASE_static = $(CXXFLAGS_COMMON) -O2 -fPIC
  ! CXXFLAGS_RELEASE_dynamic = $(CXXFLAGS_COMMON) -O2 -fPIC
+@@ -269,88 +326,71 @@
+   
+   CXXFLAGS_DEBUG_static = $(CXXFLAGS_COMMON) -g
+   CXXFLAGS_DEBUG_dynamic = $(CXXFLAGS_COMMON) -g -fPIC
+-*** misc/STLport-4.5/stlport/config/stl_gcc.h	Tue Sep  4 13:10:16 2001
+---- misc/build/STLport-4.5/stlport/config/stl_gcc.h	Fri Oct 31 12:11:56 2003
+-***************
+-*** 71,80 ****
+-   * static data members in template classes */
+-  # if defined (__APPLE__)
+-  /* Mac OS X is missing a required typedef and standard macro */
+-! typedef unsigned int wint_t;
+-  
+-  #  define __unix
+-  
+-   /* Mac OS X needs one and only one source file to initialize all static data
+-    * members in template classes. Only one source file in an executable or
+-    * library can declare instances for such data members, otherwise duplicate
+---- 71,82 ----
+-   * static data members in template classes */
+-  # if defined (__APPLE__)
+-  /* Mac OS X is missing a required typedef and standard macro */
+-! /* typedef int wint_t; */
+-  
+-  #  define __unix
+-  
+-+ # if ( __GNUC__ < 3 )
+-+ 
+-   /* Mac OS X needs one and only one source file to initialize all static data
+-    * members in template classes. Only one source file in an executable or
+-    * library can declare instances for such data members, otherwise duplicate
+-***************
+-*** 97,103 ****
+-  #  define _STLP_NATIVE_CPP_C_HEADER(header) <../g++/##header##>
+-  #  define _STLP_NATIVE_OLD_STREAMS_HEADER(header) <../g++/##header##>
+-  #  define _STLP_NATIVE_CPP_RUNTIME_HEADER(header) <../g++/##header##>
+-! # endif
+-  
+-  
+-  # if defined(__BEOS__) && defined(__INTEL__)
+---- 99,121 ----
+-  #  define _STLP_NATIVE_CPP_C_HEADER(header) <../g++/##header##>
+-  #  define _STLP_NATIVE_OLD_STREAMS_HEADER(header) <../g++/##header##>
+-  #  define _STLP_NATIVE_CPP_RUNTIME_HEADER(header) <../g++/##header##>
+-! 
+-! # else
+-! /* Mac OS X using gcc 3.3 handles all well */
+-! #   undef  _STLP_NO_STATIC_TEMPLATE_DATA
+-! #   define _STLP_STATIC_TEMPLATE_DATA 1
+-! #   define _STLP_WEAK_ATTRIBUTE 1
+-! #   undef _STLP_NO_LONG_DOUBLE
+-! 
+-! #if 0
+-!  /* Mac OS X needs all "::" scope references to be "std::" */
+-!  #  define _STLP_NO_CSTD_FUNCTION_IMPORTS
+-!  #  undef _STLP_VENDOR_GLOBAL_STD
+-!  #  undef _STLP_VENDOR_GLOBAL_CSTD
+-! #endif
+-! 
+-! # endif   /* __GNUC__ < 3 */
+-! # endif   /* __APPLE__ */
+-  
+-  
+-  # if defined(__BEOS__) && defined(__INTEL__)
+-***************
+-*** 226,233 ****
+-  
+-  # if (__GNUC__ >= 3)
+-  
+-! #  define _STLP_NATIVE_INCLUDE_PATH ../g++-v3
+-! #  define _STLP_NATIVE_OLD_STREAMS_INCLUDE_PATH ../g++-v3/backward
+-  
+-  # elif (__GNUC_MINOR__ < 8)
+-  
+---- 244,254 ----
+-  
+-  # if (__GNUC__ >= 3)
+-  
+-! /* properly determine the STLP_NATIVE_INCLUDE_PATH */
+-! #undef i386
+-! #  define _STLP_NATIVE_INCLUDE_PATH GXX_INCLUDE_PATH
+-! #  define _STLP_NATIVE_OLD_STREAMS_INCLUDE_PATH \
+-!           GXX_INCLUDE_PATH/backward
+-  
+-  # elif (__GNUC_MINOR__ < 8)
+-  
++--- misc/STLport-4.5/stlport/config/stl_gcc.h	Tue Sep  4 13:10:16 2001
+++++ misc/build/STLport-4.5/stlport/config/stl_gcc.h	Fri Oct 31 12:11:56 2003
++@@ -7,7 +7,9 @@
++ # define _STLP_USE_GLIBC
++ #endif
++ 
+++# if (__GNUC__ < 4)
++ #   define _STLP_NO_MEMBER_TEMPLATE_KEYWORD
+++# endif
++ 
++ # if defined(__FreeBSD__) || defined (__hpux)
++ #  define _STLP_NO_WCHAR_T
++@@ -71,10 +73,12 @@
++  * static data members in template classes */
++ # if defined (__APPLE__)
++ /* Mac OS X is missing a required typedef and standard macro */
++-typedef unsigned int wint_t;
+++/* typedef int wint_t; */
++ 
++ #  define __unix
++ 
+++# if ( __GNUC__ < 3 )
+++
++  /* Mac OS X needs one and only one source file to initialize all static data
++   * members in template classes. Only one source file in an executable or
++   * library can declare instances for such data members, otherwise duplicate
++@@ -97,7 +101,23 @@
++ #  define _STLP_NATIVE_CPP_C_HEADER(header) <../g++/##header##>
++ #  define _STLP_NATIVE_OLD_STREAMS_HEADER(header) <../g++/##header##>
++ #  define _STLP_NATIVE_CPP_RUNTIME_HEADER(header) <../g++/##header##>
++-# endif
+++
+++# else
+++/* Mac OS X using gcc 3.3 handles all well */
+++#   undef  _STLP_NO_STATIC_TEMPLATE_DATA
+++#   define _STLP_STATIC_TEMPLATE_DATA 1
+++#   define _STLP_WEAK_ATTRIBUTE 1
+++#   undef _STLP_NO_LONG_DOUBLE
+++
+++#if 0
+++ /* Mac OS X needs all "::" scope references to be "std::" */
+++ #  define _STLP_NO_CSTD_FUNCTION_IMPORTS
+++ #  undef _STLP_VENDOR_GLOBAL_STD
+++ #  undef _STLP_VENDOR_GLOBAL_CSTD
+++#endif
+++
+++# endif   /* __GNUC__ < 3 */
+++# endif   /* __APPLE__ */
++ 
++ 
++ # if defined(__BEOS__) && defined(__INTEL__)
++@@ -226,8 +246,11 @@
++ 
++ # if (__GNUC__ >= 3)
++ 
++-#  define _STLP_NATIVE_INCLUDE_PATH ../g++-v3
++-#  define _STLP_NATIVE_OLD_STREAMS_INCLUDE_PATH ../g++-v3/backward
+++/* properly determine the STLP_NATIVE_INCLUDE_PATH */
+++#undef i386
+++#  define _STLP_NATIVE_INCLUDE_PATH GXX_INCLUDE_PATH
+++#  define _STLP_NATIVE_OLD_STREAMS_INCLUDE_PATH \
+++          GXX_INCLUDE_PATH/backward
++ 
++ # elif (__GNUC_MINOR__ < 8)
++ 
+ *** misc/STLport-4.5/stlport/cwchar	Fri Jan 26 20:39:42 2001
+ --- misc/build/STLport-4.5/stlport/cwchar	Fri Oct 31 12:11:56 2003
+ ***************
 Index: makefile.mk
 ===================================================================
 RCS file: /cvs/external/stlport/makefile.mk,v
 retrieving revision 1.22.6.4
 diff -u -r1.22.6.4 makefile.mk
 --- makefile.mk	28 Jan 2004 10:52:04 -0000	1.22.6.4
-+++ makefile.mk	27 Sep 2005 03:29:56 -0000
++++ makefile.mk	27 Sep 2005 06:40:48 -0000
 @@ -73,8 +73,12 @@
  .EXPORT : CC CXX
  .IF "$(COMID)"=="gcc3"
