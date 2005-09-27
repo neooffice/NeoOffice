@@ -158,10 +158,6 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 					if ( (ATSUFontID)pNativeFont == kATSUInvalidFontID )
 						continue;
 
-					void *pNSFont = NSFont_create( aString, nSize );
-					if ( !pNSFont )
-						continue;
-
 					CFRange aRange = CFRangeMake( 0, nLen );
 					sal_Unicode pBuffer[ nLen + 1 ];
 					CFStringGetCharacters( aString, aRange, pBuffer );
@@ -169,22 +165,33 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 					OUString aFontName( pBuffer );
 					XubString aXubFontName( aFontName );
 
-					OUString aRealFontName;
-					CFStringRef aRealString = NSFont_fontName( pNSFont );
-					if ( aRealString )
+					OUString aPSFontName;
+					XubString aXubPSFontName;
+					CFStringRef aPSString;
+					if ( ATSFontGetPostScriptName( ait->first, kATSOptionFlagsDefault, &aPSString ) == noErr )
 					{
-						CFIndex nRealLen = CFStringGetLength( aRealString );
-						CFRange aRealRange = CFRangeMake( 0, nRealLen );
-						sal_Unicode pRealBuffer[ nRealLen + 1 ];
-						CFStringGetCharacters( aRealString, aRealRange, pRealBuffer );
-						pRealBuffer[ nRealLen ] = 0;
-						aRealFontName = OUString( pRealBuffer );
-						CFRelease( aRealString );
+						CFIndex nPSLen = CFStringGetLength( aPSString );
+						CFRange aPSRange = CFRangeMake( 0, nPSLen );
+						sal_Unicode pPSBuffer[ nPSLen + 1 ];
+						CFStringGetCharacters( aPSString, aPSRange, pPSBuffer );
+						pPSBuffer[ nPSLen ] = 0;
+						aPSFontName = OUString( pPSBuffer );
+						aXubPSFontName = XubString( aPSFontName );
 					}
+					else
+					{
+						aPSFontName = aFontName;
+						aXubPSFontName = aXubFontName;
+						aPSString = aString;
+					}
+
+					void *pNSFont = NSFont_create( aPSString, nSize );
+					if ( !pNSFont )
+						continue;
 
 					ImplFontData *pData;
 					SalSystemFontData *pSystemFont;
-					::std::map< XubString, ImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aXubFontName );
+					::std::map< XubString, ImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aXubPSFontName );
 					if ( it != pSalData->maFontNameMapping.end() )
 					{
 						// Delete old font data
@@ -195,13 +202,13 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 					else
 					{
 						pData = new ImplFontData();
-						pSalData->maFontNameMapping[ aXubFontName ] = pData;
+						pSalData->maFontNameMapping[ aXubPSFontName ] = pData;
 
 						pSystemFont = new SalSystemFontData();
 					}
 
-					pSystemFont->mpNativeFontName = (const void *)aString;
-					pSystemFont->mpVCLFont = new com_sun_star_vcl_VCLFont( aRealFontName, pNativeFont, nSize, 0, sal_True, sal_False, 1.0 );
+					pSystemFont->mpNativeFontName = (const void *)aPSString;
+					pSystemFont->mpVCLFont = new com_sun_star_vcl_VCLFont( aPSFontName, pNativeFont, nSize, 0, sal_True, sal_False, 1.0 );
 					pData->mpSysData = (void *)pSystemFont;
 
 					// Multiple native fonts can map to the same font due to
@@ -220,7 +227,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 
 					pData->mpNext = NULL;
 					pData->maName = aXubFontName;
-					pData->maMapNames = XubString( aRealFontName );
+					pData->maMapNames = aXubPSFontName;
 					// [ed] 11/1/04 Scalable fonts should always report
 					// their width and height as zero. The single size of
 					// zero causes higher-level font elements to treat
@@ -258,6 +265,8 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						{
 							SalSystemFontData *pReplacementFont = (SalSystemFontData *)it->second->mpSysData;
 							OUString aFontName( it->second->maMapNames );
+							if ( !aFontName.getLength() )
+								aFontName = it->second->maName;
 							(*git)->maGraphicsData.mpVCLFont = new com_sun_star_vcl_VCLFont( aFontName, pReplacementFont->mpVCLFont->getNativeFont(), pCurrentFont->getSize(), pCurrentFont->getOrientation(), pCurrentFont->isAntialiased(), pCurrentFont->isVertical(), pCurrentFont->getScaleX() );
 							delete pCurrentFont;
 						}
@@ -272,7 +281,9 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								if ( it != pSalData->maNativeFontMapping.end() )
 								{
 									SalSystemFontData *pReplacementFont = (SalSystemFontData *)it->second->mpSysData;
-									OUString aFontName( it->second->maName );
+									OUString aFontName( it->second->maMapNames );
+									if ( !aFontName.getLength() )
+										aFontName = it->second->maName;
 								}
 							}
 						}
@@ -302,7 +313,7 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	// to properly determine the fallback font
 	if ( !nFallbackLevel )
 	{
-		BOOL bBold = ( pFont->meWeight != pFont->mpFontData->meWeight );
+		BOOL bBold = ( pFont->meWeight > pFont->mpFontData->meWeight );
 		BOOL bItalic = ( ( pFont->meItalic == ITALIC_OBLIQUE || pFont->meItalic == ITALIC_NORMAL ) && pFont->mpFontData->meItalic != ITALIC_OBLIQUE && pFont->mpFontData->meItalic != ITALIC_NORMAL );
 
 		// Handle remapping to and from bold and italic fonts

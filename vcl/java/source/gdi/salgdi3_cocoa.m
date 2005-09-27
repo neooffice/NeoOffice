@@ -44,20 +44,6 @@ id NSFont_create( CFStringRef aFontName, long nSize )
 		return nil;
 }
 
-CFStringRef NSFont_fontName( id pNSFont )
-{
-	CFStringRef aRet = nil;
-
-	if ( pNSFont )
-	{
-		aRet = (CFStringRef)[pNSFont fontName];
-		if ( aRet )
-			CFRetain( aRet );
-	}
-
-	return aRet;
-}
-
 void NSFont_release( id pNSFont )
 {
 	if ( pNSFont )
@@ -92,7 +78,7 @@ CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, int nWei
 				NSFont *pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:( bItalic ? NSItalicFontMask : 0 ) weight:nWeight size:(float)nSize];
 				if ( pNewNSFont && pNewNSFont != pNSFont )
 				{
-					aRet = (CFStringRef)[pNewNSFont displayName];
+					aRet = (CFStringRef)[pNewNSFont fontName];
 					if ( aRet )
 						CFRetain( aRet );
 
@@ -104,7 +90,7 @@ CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, int nWei
 					pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:0 weight:nWeight size:(float)nSize];
 					if ( pNewNSFont && pNewNSFont != pNSFont )
 					{
-						aRet = (CFStringRef)[pNewNSFont displayName];
+						aRet = (CFStringRef)[pNewNSFont fontName];
 						if ( aRet )
 							CFRetain( aRet );
 
@@ -116,7 +102,7 @@ CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, int nWei
 						pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:NSItalicFontMask weight:nFontWeight size:(float)nSize];
 						if ( pNewNSFont && pNewNSFont != pNSFont )
 						{
-							aRet = (CFStringRef)[pNewNSFont displayName];
+							aRet = (CFStringRef)[pNewNSFont fontName];
 							if ( aRet )
 								CFRetain( aRet );
 
