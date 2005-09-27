@@ -1,0 +1,30 @@
+? icu-2.2.patch.new
+Index: icu-2.2.patch
+===================================================================
+RCS file: /cvs/external/icu/Attic/icu-2.2.patch,v
+retrieving revision 1.17.6.2
+diff -u -r1.17.6.2 icu-2.2.patch
+--- icu-2.2.patch	6 Jul 2004 10:40:19 -0000	1.17.6.2
++++ icu-2.2.patch	27 Sep 2005 05:20:42 -0000
+@@ -72,6 +72,21 @@
+   
+   # Versioned target for a shared library.
+   FINAL_SO_TARGET = $(SO_TARGET).$(SO_TARGET_VERSION)
++--- misc/icu/source/common/unicode/locid.h.h     2005-09-26 21:16:42.000000000 -0700
+++++ misc/build/icu/source/common/unicode/locid.h   2005-09-26 21:18:38.000000000 -0700
++@@ -728,8 +728,12 @@
++ #ifdef ICU_LOCID_USE_DEPRECATES
++     static Locale fgDefaultLocale;
++ #else
+++#if defined(__GNUC__) && (__GNUC__ >= 4)
+++    friend class icu_2_2::Locale::LocaleProxy;
+++#else
++     friend struct LocaleProxy;
++ #endif
+++#endif
++ 
++     static const Locale &getLocale(int locid);
++ 
+ *** misc/icu/source/common/brkiter.cpp	Thu Aug  8 02:39:14 2002
+ --- misc/build/icu/source/common/brkiter.cpp	Tue Jul 22 10:11:48 2003
+ ***************

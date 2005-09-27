@@ -1,0 +1,240 @@
+Index: inc/com/sun/star/uno/Any.hxx
+===================================================================
+RCS file: /cvs/udk/cppu/inc/com/sun/star/uno/Any.hxx,v
+retrieving revision 1.11
+diff -u -r1.11 Any.hxx
+--- inc/com/sun/star/uno/Any.hxx	19 Aug 2002 07:18:44 -0000	1.11
++++ inc/com/sun/star/uno/Any.hxx	27 Sep 2005 05:21:49 -0000
+@@ -191,14 +191,22 @@
+ template< class C >
+ inline Any SAL_CALL makeAny( const C & value ) SAL_THROW( () )
+ { 
++#if defined( __GNUC__ ) && ( __GNUC__ >= 4 )
++	return Any( &value, getCppuType( &value ) );
++#else
+ 	return Any( &value, ::getCppuType( &value ) );
++#endif
+ }
+ 
+ //__________________________________________________________________________________________________
+ template< class C >
+ inline void SAL_CALL operator <<= ( Any & rAny, const C & value ) SAL_THROW( () )
+ { 
++#if defined( __GNUC__ ) && ( __GNUC__ >= 4 )
++	const Type & rType = getCppuType( &value );
++#else
+ 	const Type & rType = ::getCppuType( &value );
++#endif
+ 	::uno_type_any_assign(
+ 		&rAny, const_cast< C * >( &value ), rType.getTypeLibType(),
+         (uno_AcquireFunc)cpp_acquire, (uno_ReleaseFunc)cpp_release );
+@@ -207,7 +215,11 @@
+ template< class C >
+ inline sal_Bool SAL_CALL operator >>= ( const Any & rAny, C & value ) SAL_THROW( () )
+ {
++#if defined( __GNUC__ ) && ( __GNUC__ >= 4 )
++	const Type & rType = getCppuType( &value );
++#else
+ 	const Type & rType = ::getCppuType( &value );
++#endif
+ 	return ::uno_type_assignData(
+ 		&value, rType.getTypeLibType(),
+ 		rAny.pData, rAny.pType,
+@@ -510,7 +522,11 @@
+ template< class C >
+ inline sal_Bool SAL_CALL operator == ( const Any & rAny, const C & value ) SAL_THROW( () )
+ {
++#if defined( __GNUC__ ) && ( __GNUC__ >= 4 )
++	const Type & rType = getCppuType( &value );
++#else
+ 	const Type & rType = ::getCppuType( &value );
++#endif
+ 	return ::uno_type_equalData(
+ 		rAny.pData, rAny.pType,
+ 		const_cast< C * >( &value ), rType.getTypeLibType(),
+Index: inc/com/sun/star/uno/Reference.hxx
+===================================================================
+RCS file: /cvs/udk/cppu/inc/com/sun/star/uno/Reference.hxx,v
+retrieving revision 1.16
+diff -u -r1.16 Reference.hxx
+--- inc/com/sun/star/uno/Reference.hxx	21 Aug 2002 09:19:06 -0000	1.16
++++ inc/com/sun/star/uno/Reference.hxx	27 Sep 2005 05:21:49 -0000
+@@ -102,9 +102,15 @@
+ inline interface_type * Reference< interface_type >::iquery(
+ 	XInterface * pInterface ) SAL_THROW( (RuntimeException) )
+ {
++#if defined( __GNUC__ ) && ( __GNUC__ >= 4 )
++ return static_cast< interface_type * >(
++        BaseReference::iquery(
++            pInterface, getCppuType( (const Reference< interface_type > *)0 ) ) );
++#else
+     return static_cast< interface_type * >(
+         BaseReference::iquery(
+             pInterface, ::getCppuType( (const Reference< interface_type > *)0 ) ) );
++#endif
+ }
+ #ifndef EXCEPTIONS_OFF
+ extern "C" rtl_uString * SAL_CALL cppu_unsatisfied_iquery_msg(
+@@ -127,9 +133,15 @@
+ inline interface_type * Reference< interface_type >::iquery_throw(
+ 	XInterface * pInterface ) SAL_THROW( (RuntimeException) )
+ {
++#if defined( __GNUC__ ) && ( __GNUC__ >= 4 )
++    return static_cast< interface_type * >(
++        BaseReference::iquery_throw(
++            pInterface, getCppuType( (const Reference< interface_type > *)0 ) ) );
++#else
+     return static_cast< interface_type * >(
+         BaseReference::iquery_throw(
+             pInterface, ::getCppuType( (const Reference< interface_type > *)0 ) ) );
++#endif
+ }
+ #endif
+ 
+Index: inc/com/sun/star/uno/Sequence.hxx
+===================================================================
+RCS file: /cvs/udk/cppu/inc/com/sun/star/uno/Sequence.hxx,v
+retrieving revision 1.15.12.1
+diff -u -r1.15.12.1 Sequence.hxx
+--- inc/com/sun/star/uno/Sequence.hxx	28 Jan 2004 10:19:00 -0000	1.15.12.1
++++ inc/com/sun/star/uno/Sequence.hxx	27 Sep 2005 05:21:50 -0000
+@@ -97,7 +97,11 @@
+ template< class E >
+ inline Sequence< E >::Sequence() SAL_THROW( () )
+ {
++#if defined( __GNUC__ ) && ( __GNUC__ >= 4 )
++	const Type & rType = getCppuType( this );
++#else
+ 	const Type & rType = ::getCppuType( this );
++#endif
+ 	::uno_type_sequence_construct(
+         &_pSequence, rType.getTypeLibType(),
+         0, 0, (uno_AcquireFunc)cpp_acquire );
+@@ -119,7 +123,11 @@
+ template< class E >
+ inline Sequence< E >::Sequence( const E * pElements, sal_Int32 len ) SAL_THROW( () )
+ {
++#if defined( __GNUC__ ) && ( __GNUC__ >= 4 )
++	const Type & rType = getCppuType( this );
++#else
+ 	const Type & rType = ::getCppuType( this );
++#endif
+ 	::uno_type_sequence_construct(
+ 		&_pSequence, rType.getTypeLibType(),
+         const_cast< E * >( pElements ), len, (uno_AcquireFunc)cpp_acquire );
+@@ -128,7 +136,11 @@
+ template< class E >
+ inline Sequence< E >::Sequence( sal_Int32 len ) SAL_THROW( () )
+ {
++#if defined( __GNUC__ ) && ( __GNUC__ >= 4)
++	const Type & rType = getCppuType( this );
++#else
+ 	const Type & rType = ::getCppuType( this );
++#endif
+ 	::uno_type_sequence_construct(
+ 		&_pSequence, rType.getTypeLibType(),
+         0, len, (uno_AcquireFunc)cpp_acquire );
+@@ -137,7 +149,11 @@
+ template< class E >
+ inline Sequence< E >::~Sequence() SAL_THROW( () )
+ {
++#if defined( __GNUC__ ) && ( __GNUC__ >= 4 )
++	const Type & rType = getCppuType( this );
++#else
+ 	const Type & rType = ::getCppuType( this );
++#endif
+ 	::uno_type_destructData(
+ 		this, rType.getTypeLibType(), (uno_ReleaseFunc)cpp_release );
+ }
+@@ -145,7 +161,11 @@
+ template< class E >
+ inline Sequence< E > & Sequence< E >::operator = ( const Sequence< E > & rSeq ) SAL_THROW( () )
+ {
++#if defined( __GNUC__ ) && ( __GNUC__ >= 4 )
++	const Type & rType = getCppuType( this );
++#else
+ 	const Type & rType = ::getCppuType( this );
++#endif
+ 	::uno_type_sequence_assign(
+ 		&_pSequence, rSeq._pSequence, rType.getTypeLibType(), (uno_ReleaseFunc)cpp_release );
+ 	return *this;
+@@ -156,7 +176,11 @@
+ {
+ 	if (_pSequence == rSeq._pSequence)
+ 		return sal_True;
++#if defined( __GNUC__ ) && ( __GNUC__ >= 4 )
++	const Type & rType = getCppuType( this );
++#else
+ 	const Type & rType = ::getCppuType( this );
++#endif
+ 	return ::uno_type_equalData(
+ 		const_cast< Sequence< E > * >( this ), rType.getTypeLibType(),
+ 		const_cast< Sequence< E > * >( &rSeq ), rType.getTypeLibType(),
+@@ -172,7 +196,11 @@
+ template< class E >
+ inline E * Sequence< E >::getArray() SAL_THROW( () )
+ {
++#if defined( __GNUC__ ) && ( __GNUC__ >= 4 )
++	const Type & rType = getCppuType( this );
++#else
+ 	const Type & rType = ::getCppuType( this );
++#endif
+ 	::uno_type_sequence_reference2One(
+ 		&_pSequence, rType.getTypeLibType(),
+         (uno_AcquireFunc)cpp_acquire, (uno_ReleaseFunc)cpp_release );
+@@ -183,7 +211,11 @@
+ inline E & Sequence< E >::operator [] ( sal_Int32 nIndex ) SAL_THROW( () )
+ {
+ 	OSL_ENSURE( nIndex >= 0 && nIndex < getLength(), "### illegal index of sequence!" );
++#if defined( __GNUC__ ) && ( __GNUC__ >= 4 )
++	const Type & rType = getCppuType( this );
++#else
+ 	const Type & rType = ::getCppuType( this );
++#endif
+ 	::uno_type_sequence_reference2One(
+ 		&_pSequence, rType.getTypeLibType(),
+         (uno_AcquireFunc)cpp_acquire, (uno_ReleaseFunc)cpp_release );
+@@ -200,7 +232,11 @@
+ template< class E >
+ inline void Sequence< E >::realloc( sal_Int32 nSize ) SAL_THROW( () )
+ {
++#if defined( __GNUC__ ) && ( __GNUC__ >= 4 )
++	const Type & rType = getCppuType( this );
++#else
+ 	const Type & rType = ::getCppuType( this );
++#endif
+ 	::uno_type_sequence_realloc(
+ 		&_pSequence, rType.getTypeLibType(), nSize,
+         (uno_AcquireFunc)cpp_acquire, (uno_ReleaseFunc)cpp_release );
+@@ -226,8 +262,13 @@
+ {
+ 	if (! ::com::sun::star::uno::Sequence< E >::s_pType)
+ 	{
++#if defined( __GNUC__ ) && ( __GNUC__ >= 4 )
++		const ::com::sun::star::uno::Type & rElementType = getCppuType(
++			(typename ::com::sun::star::uno::Sequence< E >::ElementType const *)0 );
++#else
+ 		const ::com::sun::star::uno::Type & rElementType = ::getCppuType(
+ 			(typename ::com::sun::star::uno::Sequence< E >::ElementType const *)0 );
++#endif
+ 		::typelib_static_sequence_type_init(
+ 			& ::com::sun::star::uno::Sequence< E >::s_pType,
+ 			rElementType.getTypeLibType() );
+Index: inc/uno/lbnames.h
+===================================================================
+RCS file: /cvs/udk/cppu/inc/uno/lbnames.h,v
+retrieving revision 1.10
+diff -u -r1.10 lbnames.h
+--- inc/uno/lbnames.h	28 Apr 2003 16:26:36 -0000	1.10
++++ inc/uno/lbnames.h	27 Sep 2005 05:21:50 -0000
+@@ -94,7 +94,9 @@
+ #define	TMP_CPPU_ENV gcc2
+ #elif (__GNUC__ == 2)
+ #error "Tested gcc 2 versions are 2.91 and 2.95.  Patch uno/lbnames.h to try your gcc 2 version."
+-#elif (__GNUC__ == 3 && __GNUC_MINOR__ <= 3)
++#elif (__GNUC__ == 3 && __GNUC_MINOR__ <= 4)
++#define __CPPU_ENV gcc3
++#elif (__GNUC__ == 4 && __GNUC_MINOR__ == 0)
+ #define __CPPU_ENV gcc3
+ #elif (__GNUC__ == 3)
+ #error "Tested gcc 3 version is <= 3.3.  Patch uno/lbnames.h to try your gcc 3 version."

@@ -1,0 +1,126 @@
+Index: inc/comphelper/guarding.hxx
+===================================================================
+RCS file: /cvs/util/comphelper/inc/comphelper/guarding.hxx,v
+retrieving revision 1.1.1.1
+diff -u -r1.1.1.1 guarding.hxx
+--- inc/comphelper/guarding.hxx	29 Sep 2000 11:28:15 -0000	1.1.1.1
++++ inc/comphelper/guarding.hxx	27 Sep 2005 05:24:08 -0000
+@@ -115,18 +115,18 @@
+ 
+ 	const OReusableGuard& operator= (const OReusableGuard& _rMaster)
+ 	{
+-		clear();
+-		pT = _rMaster.pT;
+-		if (pT)
+-			pT->acquire();
++		::osl::ClearableGuard<T>::clear();
++		::osl::ClearableGuard<T>::pT = _rMaster.pT;
++		if (::osl::ClearableGuard<T>::pT)
++			::osl::ClearableGuard<T>::pT->acquire();
+ 		return *this;
+ 	}
+ 
+ 	void attach(T& rMutex)
+ 	{
+-		clear();
+-		pT = &rMutex;
+-		pT->acquire();
++		::osl::ClearableGuard<T>::clear();
++		::osl::ClearableGuard<T>::pT = &rMutex;
++		::osl::ClearableGuard<T>::pT->acquire();
+ 	}
+ };
+ 
+Index: inc/comphelper/property.hxx
+===================================================================
+RCS file: /cvs/util/comphelper/inc/comphelper/property.hxx,v
+retrieving revision 1.4
+diff -u -r1.4 property.hxx
+--- inc/comphelper/property.hxx	19 Mar 2003 15:58:31 -0000	1.4
++++ inc/comphelper/property.hxx	27 Sep 2005 05:24:08 -0000
+@@ -179,7 +179,7 @@
+ template <class ENUMTYPE>
+ sal_Bool tryPropertyValueEnum(staruno::Any& /*out*/_rConvertedValue, staruno::Any& /*out*/_rOldValue, const staruno::Any& _rValueToSet, const ENUMTYPE& _rCurrentValue)
+ {
+-	if (::getCppuType(&_rCurrentValue).getTypeClass() != staruno::TypeClass_ENUM)
++	if (getCppuType(&_rCurrentValue).getTypeClass() != staruno::TypeClass_ENUM)
+ 		return tryPropertyValue(_rConvertedValue, _rOldValue, _rValueToSet, _rCurrentValue);
+ 
+ 	sal_Bool bModified(sal_False);
+Index: inc/comphelper/types.hxx
+===================================================================
+RCS file: /cvs/util/comphelper/inc/comphelper/types.hxx,v
+retrieving revision 1.5
+diff -u -r1.5 types.hxx
+--- inc/comphelper/types.hxx	19 Nov 2000 15:20:37 -0000	1.5
++++ inc/comphelper/types.hxx	27 Sep 2005 05:24:08 -0000
+@@ -133,7 +133,7 @@
+ 	template <class TYPE>
+ 	sal_Bool isA(const staruno::Type& _rType, TYPE* pDummy)
+ 	{
+-		return  _rType.equals(::getCppuType(pDummy));
++		return  _rType.equals(getCppuType(pDummy));
+ 	}
+ 
+ 	//-------------------------------------------------------------------------
+@@ -143,7 +143,7 @@
+ 	template <class TYPE>
+ 	sal_Bool isA(const staruno::Any& _rVal, TYPE* pDummy)
+ 	{
+-		return  _rVal.getValueType().equals(::getCppuType(pDummy));
++		return  _rVal.getValueType().equals(getCppuType(pDummy));
+ 	}
+ 
+ 	//-------------------------------------------------------------------------
+@@ -152,7 +152,7 @@
+ 	template <class TYPE>
+ 	sal_Bool isAReference(const staruno::Type& _rType, TYPE* pDummy)
+ 	{
+-		return  _rType.equals(::getCppuType(reinterpret_cast<staruno::Reference<TYPE>*>(NULL)));
++		return  _rType.equals(getCppuType(reinterpret_cast<staruno::Reference<TYPE>*>(NULL)));
+ 	}
+ 
+ 	//-------------------------------------------------------------------------
+@@ -161,7 +161,7 @@
+ 	template <class TYPE>
+ 	sal_Bool isAReference(const staruno::Any& _rVal, TYPE* pDummy)
+ 	{
+-		return  _rVal.getValueType().equals(::getCppuType(reinterpret_cast<staruno::Reference<TYPE>*>(NULL)));
++		return  _rVal.getValueType().equals(getCppuType(reinterpret_cast<staruno::Reference<TYPE>*>(NULL)));
+ 	}
+ 
+ 	//-------------------------------------------------------------------------
+@@ -182,7 +182,7 @@
+ 	sal_Bool getImplementation(TYPE*& _pObject, const ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface >& _rxIFace)
+ 	{
+ 		_pObject = NULL;
+-		::com::sun::star::uno::Reference< ::com::sun::star::lang::XUnoTunnel > xTunnel(_rxIFace, UNO_QUERY);
++		::com::sun::star::uno::Reference< ::com::sun::star::lang::XUnoTunnel > xTunnel(_rxIFace, staruno::UNO_QUERY);
+ 		if (xTunnel.is())
+ 			_pObject = reinterpret_cast< TYPE* >(xTunnel->getSomething(TYPE::getUnoTunnelImplementationId()));
+ 
+Index: inc/comphelper/uno3.hxx
+===================================================================
+RCS file: /cvs/util/comphelper/inc/comphelper/uno3.hxx,v
+retrieving revision 1.5
+diff -u -r1.5 uno3.hxx
+--- inc/comphelper/uno3.hxx	23 Apr 2002 11:06:59 -0000	1.5
++++ inc/comphelper/uno3.hxx	27 Sep 2005 05:24:08 -0000
+@@ -206,7 +206,7 @@
+ 		_rxOut = static_cast<iface*>(NULL);
+ 		if (_rxAggregate.is())
+ 		{
+-			::com::sun::star::uno::Any aCheck = _rxAggregate->queryAggregation(::getCppuType((::com::sun::star::uno::Reference<iface>*)NULL));
++			::com::sun::star::uno::Any aCheck = _rxAggregate->queryAggregation(getCppuType((::com::sun::star::uno::Reference<iface>*)NULL));
+ 			if (aCheck.hasValue())
+ 				_rxOut = *(::com::sun::star::uno::Reference<iface>*)aCheck.getValue();
+ 		}
+@@ -225,7 +225,7 @@
+ 		_rxOut = static_cast<iface*>(NULL);
+ 		if (_rxObject.is())
+ 		{
+-			::com::sun::star::uno::Any aCheck = _rxObject->queryInterface(::getCppuType((::com::sun::star::uno::Reference<iface>*)NULL));
++			::com::sun::star::uno::Any aCheck = _rxObject->queryInterface(getCppuType((::com::sun::star::uno::Reference<iface>*)NULL));
+ 			if(aCheck.hasValue())
+ 			{
+ 				_rxOut = *(::com::sun::star::uno::Reference<iface>*)aCheck.getValue();

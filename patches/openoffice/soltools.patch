@@ -1,0 +1,39 @@
+Index: inc/st_list.hxx
+===================================================================
+RCS file: /cvs/tools/soltools/inc/st_list.hxx,v
+retrieving revision 1.2
+diff -u -r1.2 st_list.hxx
+--- inc/st_list.hxx	16 Jul 2003 17:27:41 -0000	1.2
++++ inc/st_list.hxx	27 Sep 2005 03:30:15 -0000
+@@ -338,13 +338,13 @@
+ void
+ DynamicList<XY>::Insert(unsigned pos, XY * const & elem)
+ {
+-	if ( pos > len )
++	if ( pos > DynamicList<XY>::len )
+ 	  return;
+ 
+-	checkSize(len+2);
+-	memmove( inhalt+pos+1, inhalt+pos, (len-pos) * sizeof(XY*) );
+-	inhalt[pos] = elem;
+-	len++;
++	checkSize(DynamicList<XY>::len+2);
++	memmove( DynamicList<XY>::inhalt+pos+1, DynamicList<XY>::inhalt+pos, (DynamicList<XY>::len-pos) * sizeof(XY*) );
++	DynamicList<XY>::inhalt[pos] = elem;
++	DynamicList<XY>::len++;
+ }
+ 
+ template <class XY>
+@@ -353,9 +353,9 @@
+ {
+ 	if (!is_valid_index(pos) )
+ 		return;
+-	len--;
+-	delete inhalt[pos];
+-	memmove(inhalt+pos, inhalt+pos+1, (len-pos) * sizeof(XY*) );
++	DynamicList<XY>::len--;
++	delete DynamicList<XY>::inhalt[pos];
++	memmove(DynamicList<XY>::inhalt+pos, DynamicList<XY>::inhalt+pos+1, (DynamicList<XY>::len-pos) * sizeof(XY*) );
+ }
+ 
+ 

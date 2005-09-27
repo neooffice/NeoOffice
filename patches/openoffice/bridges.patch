@@ -1,0 +1,15 @@
+Index: source/remote/urp/urp_cache.hxx
+===================================================================
+RCS file: /cvs/udk/bridges/source/remote/urp/urp_cache.hxx,v
+retrieving revision 1.4
+diff -u -r1.4 urp_cache.hxx
+--- source/remote/urp/urp_cache.hxx	31 Aug 2001 16:16:52 -0000	1.4
++++ source/remote/urp/urp_cache.hxx	27 Sep 2005 05:25:52 -0000
+@@ -60,6 +60,7 @@
+  ************************************************************************/
+ #include <stdio.h>
+ #include <list>
++#include <algorithm>
+ 
+ #ifndef _RTL_USTRING_HXX_
+ #include <rtl/ustring.hxx>

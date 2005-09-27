@@ -1,0 +1,429 @@
+Index: inc/fmtftn.hxx
+===================================================================
+RCS file: /cvs/sw/sw/inc/fmtftn.hxx,v
+retrieving revision 1.1.1.1
+diff -u -r1.1.1.1 fmtftn.hxx
+--- inc/fmtftn.hxx	18 Sep 2000 17:14:26 -0000	1.1.1.1
++++ inc/fmtftn.hxx	27 Sep 2005 05:36:55 -0000
+@@ -81,11 +81,11 @@
+ 	USHORT  nNumber;		//Automatische Nummerierung
+ 	BOOL	bEndNote;		//Ist es eine Endnote?
+ 
++public:
+ 	// geschuetzter CopyCtor
+ 	SwFmtFtn& operator=(const SwFmtFtn& rFtn);
+ 	SwFmtFtn( const SwFmtFtn& );
+ 
+-public:
+ 	SwFmtFtn( BOOL bEndNote = FALSE );
+ 	~SwFmtFtn();
+ 
+Index: inc/pam.hxx
+===================================================================
+RCS file: /cvs/sw/sw/inc/pam.hxx,v
+retrieving revision 1.6
+diff -u -r1.6 pam.hxx
+--- inc/pam.hxx	17 Apr 2003 16:03:18 -0000	1.6
++++ inc/pam.hxx	27 Sep 2005 05:36:56 -0000
+@@ -164,7 +164,10 @@
+ public:
+ 	SwPaM( const SwPosition& rPos, SwPaM* pRing = 0 );
+ 	SwPaM( const SwPosition& rMk, const SwPosition& rPt, SwPaM* pRing = 0 );
+-	SwPaM( SwPaM & );
++        // @@@ semantic: no copy ctor.
++        SwPaM( const SwPaM & );
++        // @@@ semantic: no copy assignment for super class Ring.
++        SwPaM& operator=( const SwPaM & );
+ 	SwPaM( const SwNodeIndex& rMk, const SwNodeIndex& rPt,
+ 		   long nMkOffset = 0, long nPtOffset = 0, SwPaM* pRing = 0 );
+ 	SwPaM( const SwNode& rMk, const SwNode& rPt,
+@@ -233,8 +236,6 @@
+ 		  SwPosition *End()
+ 					{ return (*pPoint) > (*pMark)? pPoint: pMark; }
+ 
+-	SwPaM& operator=( SwPaM & );
+-
+ 	// erfrage vom SwPaM den aktuellen Node/ContentNode am SPoint / Mark
+ 	SwNode* GetNode( BOOL bPoint = TRUE ) const
+ 	{
+Index: inc/ring.hxx
+===================================================================
+RCS file: /cvs/sw/sw/inc/ring.hxx,v
+retrieving revision 1.1.1.1
+diff -u -r1.1.1.1 ring.hxx
+--- inc/ring.hxx	18 Sep 2000 17:14:27 -0000	1.1.1.1
++++ inc/ring.hxx	27 Sep 2005 05:36:56 -0000
+@@ -68,8 +68,8 @@
+ 
+ protected:
+ 	Ring()			{ pNext = this; pPrev = this; }
+-	Ring( Ring * );
+ public:
++	Ring( Ring * );
+ 	virtual ~Ring();
+ 	void MoveTo( Ring *pDestRing );
+ 	void MoveRingTo( Ring *pDestRing );
+Index: source/core/crsr/pam.cxx
+===================================================================
+RCS file: /cvs/sw/sw/source/core/crsr/pam.cxx,v
+retrieving revision 1.8
+diff -u -r1.8 pam.cxx
+--- source/core/crsr/pam.cxx	17 Apr 2003 16:04:18 -0000	1.8
++++ source/core/crsr/pam.cxx	27 Sep 2005 05:36:57 -0000
+@@ -492,7 +492,7 @@
+ 	pPoint = &aBound2;
+ }
+ 
+-SwPaM::SwPaM( SwPaM &rPam )
++SwPaM::SwPaM( const SwPaM &rPam )
+ 	: aBound1( *(rPam.pPoint) ), aBound2( *(rPam.pMark) ), Ring( &rPam )
+ {
+ 	pPoint = &aBound1;
+@@ -539,8 +539,8 @@
+ }
+ #endif
+ 
+-
+-SwPaM &SwPaM::operator=( SwPaM &rPam )
++// @@@ semantic: no copy assignment for super class Ring.
++SwPaM &SwPaM::operator=( const SwPaM &rPam )
+ {
+ 	*pPoint = *( rPam.pPoint );
+ 	if( rPam.HasMark() )
+Index: source/core/doc/docnum.cxx
+===================================================================
+RCS file: /cvs/sw/sw/source/core/doc/docnum.cxx,v
+retrieving revision 1.14.108.5
+diff -u -r1.14.108.5 docnum.cxx
+--- source/core/doc/docnum.cxx	12 Oct 2004 09:40:35 -0000	1.14.108.5
++++ source/core/doc/docnum.cxx	27 Sep 2005 05:36:59 -0000
+@@ -1942,7 +1942,8 @@
+ 
+ 	if( !pOwnRedl && !IsIgnoreRedline() && GetRedlineTbl().Count() )
+ 	{
+-		SplitRedline( SwPaM( aIdx ));
++		SwPaM aPaM( aIdx );
++		SplitRedline( aPaM );
+ 	}
+ 
+ 	ULONG nRedlSttNd, nRedlEndNd;
+Index: source/core/doc/docredln.cxx
+===================================================================
+RCS file: /cvs/sw/sw/source/core/doc/docredln.cxx,v
+retrieving revision 1.24.160.1
+diff -u -r1.24.160.1 docredln.cxx
+--- source/core/doc/docredln.cxx	9 Jan 2004 14:31:25 -0000	1.24.160.1
++++ source/core/doc/docredln.cxx	27 Sep 2005 05:37:01 -0000
+@@ -1315,7 +1315,8 @@
+ BOOL SwDoc::DeleteRedline( const SwStartNode& rNode, BOOL bSaveInUndo,
+ 							USHORT nDelType )
+ {
+-	return DeleteRedline( SwPaM( *rNode.EndOfSectionNode(), rNode ),
++	SwPaM aPaM( *rNode.EndOfSectionNode(), rNode );
++	return DeleteRedline( aPaM,
+ 							bSaveInUndo, nDelType );
+ }
+ 
+Index: source/core/doc/swtable.cxx
+===================================================================
+RCS file: /cvs/sw/sw/source/core/doc/swtable.cxx,v
+retrieving revision 1.7
+diff -u -r1.7 swtable.cxx
+--- source/core/doc/swtable.cxx	17 Apr 2003 16:05:04 -0000	1.7
++++ source/core/doc/swtable.cxx	27 Sep 2005 05:37:03 -0000
+@@ -1691,7 +1691,8 @@
+ 
+             if( !pDoc->IsIgnoreRedline() && pDoc->GetRedlineTbl().Count() )
+             {
+-                pDoc->DeleteRedline( SwPaM( *pTNd, 0, *pTNd, rOrig.Len() ), 
++		SwPaM aPaM( *pTNd, 0, *pTNd, rOrig.Len() );
++                pDoc->DeleteRedline( aPaM, 
+                                      sal_True );
+             }
+ 
+@@ -1700,9 +1701,10 @@
+ 
+             if( pDoc->IsRedlineOn() )
+             {
++		SwPaM aPaM( *pTNd, 0, *pTNd, rTxt.Len() );
+                 pDoc->AppendRedline( 
+                     new SwRedline( REDLINE_INSERT, 
+-                                   SwPaM( *pTNd, 0, *pTNd, rTxt.Len() ) ) );
++                                   aPaM ) );
+             }
+ 		}
+ 
+Index: source/core/draw/dpage.cxx
+===================================================================
+RCS file: /cvs/sw/sw/source/core/draw/dpage.cxx,v
+retrieving revision 1.5
+diff -u -r1.5 dpage.cxx
+--- source/core/draw/dpage.cxx	17 Apr 2003 13:58:52 -0000	1.5
++++ source/core/draw/dpage.cxx	27 Sep 2005 05:37:03 -0000
+@@ -341,8 +341,8 @@
+ 					aPt -= pFly->Frm().Pos();
+ 					// ohne MapMode-Offset !!!!!
+ 					// ohne MapMode-Offset, ohne Offset, o ... !!!!!
+-					aPt = (Point&)(Size&)pWindow->LogicToPixel(
+-							(Size&)aPt, MapMode( MAP_TWIP ) );
++					aPt = (Point&)(const Size&)pWindow->LogicToPixel(
++							(const Size&)aPt, MapMode( MAP_TWIP ) );
+ 					((( sTxt += '?' ) += String::CreateFromInt32( aPt.X() ))
+ 							 += ',' ) += String::CreateFromInt32( aPt.Y() );
+ 				}
+Index: source/core/frmedt/fefly1.cxx
+===================================================================
+RCS file: /cvs/sw/sw/source/core/frmedt/fefly1.cxx,v
+retrieving revision 1.14
+diff -u -r1.14 fefly1.cxx
+--- source/core/frmedt/fefly1.cxx	24 Jul 2003 08:57:18 -0000	1.14
++++ source/core/frmedt/fefly1.cxx	27 Sep 2005 05:37:04 -0000
+@@ -1693,8 +1693,8 @@
+ 						Point aPt( rPt );
+ 						aPt -= pFly->Frm().Pos();
+ 						// ohne MapMode-Offset, ohne Offset, o ... !!!!!
+-						aPt = (Point&)(Size&)GetOut()->LogicToPixel(
+-								(Size&)aPt, MapMode( MAP_TWIP ) );
++						aPt = (Point&)(const Size&)GetOut()->LogicToPixel(
++								(const Size&)aPt, MapMode( MAP_TWIP ) );
+ 						((( *pURL += '?' ) += String::CreateFromInt32( aPt.X() ))
+ 								  += ',' ) += String::CreateFromInt32(aPt.Y() );
+ 					}
+Index: source/core/unocore/unosect.cxx
+===================================================================
+RCS file: /cvs/sw/sw/source/core/unocore/unosect.cxx,v
+retrieving revision 1.44
+diff -u -r1.44 unosect.cxx
+--- source/core/unocore/unosect.cxx	30 Jun 2003 14:59:36 -0000	1.44
++++ source/core/unocore/unosect.cxx	27 Sep 2005 05:37:06 -0000
+@@ -908,7 +908,7 @@
+ 						if ( pSect->IsLinkType() && pSect->IsConnected() )
+ 						{
+ 							sal_Bool bTemp =
+-								(pSect->GetUpdateType() == so3::LINKUPDATE_ALWAYS);
++								(pSect->GetUpdateType() == (ULONG)so3::LINKUPDATE_ALWAYS);
+ 							pRet[nProperty].setValue( &bTemp, ::getCppuBooleanType());
+ 						}
+                     }
+Index: source/filter/ww1/w1class.hxx
+===================================================================
+RCS file: /cvs/sw/sw/source/filter/ww1/w1class.hxx,v
+retrieving revision 1.3
+diff -u -r1.3 w1class.hxx
+--- source/filter/ww1/w1class.hxx	28 Sep 2001 08:07:48 -0000	1.3
++++ source/filter/ww1/w1class.hxx	27 Sep 2005 05:37:08 -0000
+@@ -352,7 +352,7 @@
+ 		return 256; }
+ 	friend ostream& operator <<(ostream&, Ww1StyleSheet&);
+ 	void Out(Ww1Shell&, Ww1Manager&);
+-	friend Ww1Style;
++	friend class Ww1Style;
+ 	BOOL GetError() {
+ 		return !bOK; }
+ };
+Index: source/filter/ww8/wrtww8.hxx
+===================================================================
+RCS file: /cvs/sw/sw/source/filter/ww8/wrtww8.hxx,v
+retrieving revision 1.49.66.2
+diff -u -r1.49.66.2 wrtww8.hxx
+--- source/filter/ww8/wrtww8.hxx	18 Mar 2004 12:17:59 -0000	1.49.66.2
++++ source/filter/ww8/wrtww8.hxx	27 Sep 2005 05:37:09 -0000
+@@ -405,8 +405,12 @@
+ // der WW8-Writer
+ class SwWW8Writer: public StgWriter
+ {
++#if defined( MACOSX ) && ( __GNUC__ >= 4 )
++friend class WW8_WrPlcSepx;
++#else
+ friend bool WW8_WrPlcSepx::WriteKFTxt( SwWW8Writer& rWrt ); // pO
+ friend void WW8_WrPlcSepx::WriteOlst( SwWW8Writer& rWrt, USHORT i );
++#endif
+ friend Writer& OutWW8_SwTxtNode( Writer& rWrt, SwCntntNode& rNode );
+ 
+     wwFontHelper maFontHelper;
+Index: source/filter/xml/xmltble.cxx
+===================================================================
+RCS file: /cvs/sw/sw/source/filter/xml/xmltble.cxx,v
+retrieving revision 1.24
+diff -u -r1.24 xmltble.cxx
+--- source/filter/xml/xmltble.cxx	17 Apr 2003 15:09:03 -0000	1.24
++++ source/filter/xml/xmltble.cxx	27 Sep 2005 05:37:10 -0000
+@@ -1170,7 +1170,7 @@
+ 						  sCmd.GetToken(2, so3::cTokenSeperator) );
+ 
+ 			// auto update
+-			if (pDDEFldType->GetType() == so3::LINKUPDATE_ALWAYS)
++			if (pDDEFldType->GetType() == (USHORT)so3::LINKUPDATE_ALWAYS)
+ 			{
+ 				AddAttribute( XML_NAMESPACE_OFFICE,
+                               XML_AUTOMATIC_UPDATE, XML_TRUE );
+Index: source/ui/dbui/dbinsdlg.cxx
+===================================================================
+RCS file: /cvs/sw/sw/source/ui/dbui/dbinsdlg.cxx,v
+retrieving revision 1.38.160.2
+diff -u -r1.38.160.2 dbinsdlg.cxx
+--- source/ui/dbui/dbinsdlg.cxx	30 Mar 2004 13:52:04 -0000	1.38.160.2
++++ source/ui/dbui/dbinsdlg.cxx	27 Sep 2005 05:37:12 -0000
+@@ -340,9 +340,9 @@
+ 
+ 	~_DB_Column()
+ 	{
+-		if( DB_COL_FIELD == eColType )
++		if( DB_COL_FIELD == (ULONG)eColType )
+ 			delete DB_ColumnData.pField;
+-		else if( DB_FILLTEXT == eColType )
++		else if( DB_FILLTEXT == (ULONG)eColType )
+ 			delete DB_ColumnData.pText;
+ 	}
+ };
+Index: source/ui/dochdl/swdtflvr.cxx
+===================================================================
+RCS file: /cvs/sw/sw/source/ui/dochdl/swdtflvr.cxx,v
+retrieving revision 1.70.102.1
+diff -u -r1.70.102.1 swdtflvr.cxx
+--- source/ui/dochdl/swdtflvr.cxx	9 Jan 2004 14:32:43 -0000	1.70.102.1
++++ source/ui/dochdl/swdtflvr.cxx	27 Sep 2005 05:37:15 -0000
+@@ -1003,7 +1003,7 @@
+ 		else
+ 		{
+ 			eBufferType = TRNSFR_DOCUMENT;
+-			if (pWrtShell->IntelligentCut(nSelection, FALSE) != SwWrtShell::NO_WORD)
++			if (pWrtShell->IntelligentCut(nSelection, FALSE) != (ULONG)SwWrtShell::NO_WORD)
+ 				eBufferType = (TransferBufferType)(TRNSFR_DOCUMENT_WORD | eBufferType);
+ 		}
+ 
+@@ -3425,9 +3425,9 @@
+ 			{
+ 				//SmartCut, eines der Blank mitnehmen.
+ 				rSh.SwCrsrShell::DestroyCrsr();
+-				if ( cWord == SwWrtShell::WORD_SPACE_BEFORE )
++				if ( cWord == (ULONG)SwWrtShell::WORD_SPACE_BEFORE )
+ 					rSh.ExtendSelection( FALSE );
+-				else if ( cWord == SwWrtShell::WORD_SPACE_AFTER )
++				else if ( cWord == (ULONG)SwWrtShell::WORD_SPACE_AFTER )
+ 					rSh.ExtendSelection();
+ 				rSrcSh.DelRight();
+ 			}
+@@ -3447,8 +3447,8 @@
+ 	if( bRet && !bTblSel && !bFrmSel )
+ 	{
+ 		if( (bInWrd || bEndWrd) &&
+-			(cWord == SwWrtShell::WORD_SPACE_AFTER ||
+-				cWord == SwWrtShell::WORD_SPACE_BEFORE) )
++			(cWord == (ULONG)SwWrtShell::WORD_SPACE_AFTER ||
++				cWord == (ULONG)SwWrtShell::WORD_SPACE_BEFORE) )
+ 		{
+ 			if ( bSttWrd || bInWrd )
+ 				rSh.SwEditShell::Insert(' ', bIsXSelection);
+Index: source/ui/inc/cfgitems.hxx
+===================================================================
+RCS file: /cvs/sw/sw/source/ui/inc/cfgitems.hxx,v
+retrieving revision 1.6
+diff -u -r1.6 cfgitems.hxx
+--- source/ui/inc/cfgitems.hxx	20 Sep 2002 12:09:59 -0000	1.6
++++ source/ui/inc/cfgitems.hxx	27 Sep 2005 05:37:16 -0000
+@@ -94,9 +94,9 @@
+ --------------------------------------------------------- */
+ class SwDocDisplayItem : public SfxPoolItem
+ {
+-	friend SwWriterApp;
+-    friend SwShdwCrsrOptionsTabPage;
+-    friend SwModule;
++	friend class SwWriterApp;
++    friend class SwShdwCrsrOptionsTabPage;
++    friend class SwModule;
+ 
+     BOOL bParagraphEnd      :1;
+     BOOL bTab               :1;
+@@ -148,7 +148,7 @@
+ 	BOOL bFieldName			:1;
+ 	BOOL bNotes				:1;
+ 
+-    friend SwContentOptPage;
++    friend class SwContentOptPage;
+ 
+ public:
+ 							TYPEINFO();
+@@ -170,7 +170,7 @@
+ 
+ class SwAddPrinterItem : public SfxPoolItem, public SwPrintData
+ {
+-	friend 	SwAddPrinterTabPage;
++	friend 	class SwAddPrinterTabPage;
+ 
+ public:
+ 	TYPEINFO();
+@@ -237,10 +237,10 @@
+ --------------------------------------------------------- */
+ class SwTestItem : public SfxPoolItem
+ {
+-	friend SwModule;
+-	friend SwWriterApp;
+-	friend SwTestTabPage;
+-	friend SwDocEditDialog;
++	friend class SwModule;
++	friend class SwWriterApp;
++	friend class SwTestTabPage;
++	friend class SwDocEditDialog;
+ 
+ 	BOOL	bTest1:1;
+ 	BOOL	bTest2:1;
+Index: source/ui/inc/glossary.hxx
+===================================================================
+RCS file: /cvs/sw/sw/source/ui/inc/glossary.hxx,v
+retrieving revision 1.6
+diff -u -r1.6 glossary.hxx
+--- source/ui/inc/glossary.hxx	27 Jun 2001 09:45:14 -0000	1.6
++++ source/ui/inc/glossary.hxx	27 Sep 2005 05:37:16 -0000
+@@ -163,8 +163,8 @@
+ class SwOneExampleFrame;
+ class SwGlossaryDlg : public SvxStandardDialog
+ {
+-	friend SwNewGlosNameDlg;
+-	friend SwGlTreeListBox;
++	friend class SwNewGlosNameDlg;
++	friend class SwGlTreeListBox;
+ 
+ 	CheckBox		aInsertTipCB;
+ 	FixedText		aNameLbl;
+Index: source/ui/wizard/wizag.hxx
+===================================================================
+RCS file: /cvs/sw/sw/source/ui/wizard/Attic/wizag.hxx,v
+retrieving revision 1.2
+diff -u -r1.2 wizag.hxx
+--- source/ui/wizard/wizag.hxx	12 Mar 2002 12:47:37 -0000	1.2
++++ source/ui/wizard/wizag.hxx	27 Sep 2005 05:37:17 -0000
+@@ -122,7 +122,7 @@
+ #define DIALOGLINES 6
+ class AgenList
+ {
+-friend AgenDialog;
++friend class AgenDialog;
+ 	AgendaDlgRec aRec[DIALOGLINES];
+ 	AgenDialog*  pDlg;
+ 	ScrollBar*   pScrl;
+@@ -158,7 +158,7 @@
+ 
+ class AgenDialog: public WizardAgenDialog, private WizardGo
+ {
+-friend AgenList;
++friend class AgenList;
+ 	WizardAgenPage 		aPage1;
+ 	SwAgendaWizardCfg   aConfig;
+ 	AgenList       		aList;
+Index: source/ui/wizard/wizpage.hxx
+===================================================================
+RCS file: /cvs/sw/sw/source/ui/wizard/Attic/wizpage.hxx,v
+retrieving revision 1.6
+diff -u -r1.6 wizpage.hxx
+--- source/ui/wizard/wizpage.hxx	14 Aug 2002 13:24:38 -0000	1.6
++++ source/ui/wizard/wizpage.hxx	27 Sep 2005 05:37:17 -0000
+@@ -121,7 +121,7 @@
+ 
+ class WizardFrame
+ {
+-friend WizardIni;
++friend class WizardIni;
+ 	BOOL b2ndHide;
+ 	BOOL bIsDa;
+ protected:

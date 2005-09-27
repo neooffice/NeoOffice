@@ -1,0 +1,47 @@
+Index: source/inc/cfg.hxx
+===================================================================
+RCS file: /cvs/framework/sfx2/source/inc/cfg.hxx,v
+retrieving revision 1.19
+diff -u -r1.19 cfg.hxx
+--- source/inc/cfg.hxx	17 Apr 2003 15:22:13 -0000	1.19
++++ source/inc/cfg.hxx	27 Sep 2005 05:32:40 -0000
+@@ -343,7 +343,7 @@
+ 
+ class SfxAcceleratorConfigPage : public SfxTabPage
+ {
+-	friend SfxAccCfgTabListBox_Impl;
++	friend class SfxAccCfgTabListBox_Impl;
+ private:
+ 	const SfxMacroInfoItem*			m_pMacroInfoItem;
+ 	SfxAccCfgTabListBox_Impl		aEntriesBox;
+Index: source/inc/scriptcont.hxx
+===================================================================
+RCS file: /cvs/framework/sfx2/source/inc/scriptcont.hxx,v
+retrieving revision 1.13
+diff -u -r1.13 scriptcont.hxx
+--- source/inc/scriptcont.hxx	27 Mar 2003 11:28:30 -0000	1.13
++++ source/inc/scriptcont.hxx	27 Sep 2005 05:32:40 -0000
+@@ -182,7 +182,7 @@
+ 
+ class SfxScriptLibrary : public SfxLibrary_Impl
+ {
+-    friend SfxScriptLibraryContainer;
++    friend class SfxScriptLibraryContainer;
+ 
+ 	sal_Bool mbLoadedSource;
+ 	sal_Bool mbLoadedBinary;
+Index: source/toolbox/tbxcust.cxx
+===================================================================
+RCS file: /cvs/framework/sfx2/source/toolbox/Attic/tbxcust.cxx,v
+retrieving revision 1.27
+diff -u -r1.27 tbxcust.cxx
+--- source/toolbox/tbxcust.cxx	15 May 2003 10:54:28 -0000	1.27
++++ source/toolbox/tbxcust.cxx	27 Sep 2005 05:32:41 -0000
+@@ -580,6 +580,7 @@
+ 	return 0;	
+ }
+ 
++template <>
+ struct std::hash< SfxConfigManager* >
+ {
+ 	size_t operator()(const SfxConfigManager* __s) const { return (size_t)__s; }

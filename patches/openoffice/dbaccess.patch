@@ -1,0 +1,19 @@
+Index: source/core/dataaccess/SharedConnection.hxx
+===================================================================
+RCS file: /cvs/dba/dbaccess/source/core/dataaccess/SharedConnection.hxx,v
+retrieving revision 1.2
+diff -u -r1.2 SharedConnection.hxx
+--- source/core/dataaccess/SharedConnection.hxx	12 Aug 2002 09:21:58 -0000	1.2
++++ source/core/dataaccess/SharedConnection.hxx	27 Sep 2005 05:39:12 -0000
+@@ -200,8 +200,10 @@
+         virtual sal_Int32 SAL_CALL getTransactionIsolation(  ) throw(::com::sun::star::sdbc::SQLException, ::com::sun::star::uno::RuntimeException);
+         virtual ::com::sun::star::uno::Reference< ::com::sun::star::container::XNameAccess > SAL_CALL getTypeMap(  ) throw(::com::sun::star::sdbc::SQLException, ::com::sun::star::uno::RuntimeException);
+ 	};
+-	
++
++#ifdef IMPLEMENT_GET_IMPLEMENTATION_ID	
+ 	IMPLEMENT_GET_IMPLEMENTATION_ID( OSharedConnection );
++#endif
+ //........................................................................
+ }	// namespace dbaccess
+ //........................................................................

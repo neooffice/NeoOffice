@@ -1,0 +1,35 @@
+? bmpmaker/bmpmaker..dpr
+Index: inc/communi.hxx
+===================================================================
+RCS file: /cvs/util/svtools/inc/Attic/communi.hxx,v
+retrieving revision 1.6
+diff -u -r1.6 communi.hxx
+--- inc/communi.hxx	27 Mar 2003 14:36:07 -0000	1.6
++++ inc/communi.hxx	27 Sep 2005 05:28:20 -0000
+@@ -141,7 +141,7 @@
+ 
+ class CommunicationManagerServerViaSocket : public CommunicationManagerServer
+ {
+-	friend CommunicationManagerServerAcceptThread;
++	friend class CommunicationManagerServerAcceptThread;
+ public:
+ 	CommunicationManagerServerViaSocket( ULONG nPort, USHORT nMaxCon, BOOL bUseMultiChannel = FALSE );
+ 	virtual ~CommunicationManagerServerViaSocket();
+Index: source/dialogs/mcvmath.hxx
+===================================================================
+RCS file: /cvs/util/svtools/source/dialogs/mcvmath.hxx,v
+retrieving revision 1.1.1.1
+diff -u -r1.1.1.1 mcvmath.hxx
+--- source/dialogs/mcvmath.hxx	18 Sep 2000 16:58:58 -0000	1.1.1.1
++++ source/dialogs/mcvmath.hxx	27 Sep 2005 05:28:21 -0000
+@@ -107,8 +107,8 @@
+ class Fix
+ {
+ private:
+-	friend	FixCpx;
+-	friend	ColWheel;
++	friend	class FixCpx;
++	friend	class ColWheel;
+ 
+ //	friend	Fix ImpMultBig2( const Fix& a, const Fix& b );
+ 

@@ -1,0 +1,320 @@
+Index: inc/AccessibleShapeInfo.hxx
+===================================================================
+RCS file: /cvs/graphics/svx/inc/AccessibleShapeInfo.hxx,v
+retrieving revision 1.3
+diff -u -r1.3 AccessibleShapeInfo.hxx
+--- inc/AccessibleShapeInfo.hxx	24 Apr 2003 16:50:00 -0000	1.3
++++ inc/AccessibleShapeInfo.hxx	27 Sep 2005 05:34:05 -0000
+@@ -142,7 +142,11 @@
+ private:
+     // Don't use these three methods.
+     explicit AccessibleShapeInfo (void);
+-    explicit AccessibleShapeInfo (const AccessibleShapeInfo&);
++public:
++    // [ed] 9/22/05 We need this for gcc4 that otherwise can't initialize
++    // const references used in constructors (AccessiblePageShape in sd).
++    AccessibleShapeInfo (const AccessibleShapeInfo&);
++private:
+     AccessibleShapeInfo& operator= (const AccessibleShapeInfo&);
+ };
+ 
+Index: inc/ShapeTypeHandler.hxx
+===================================================================
+RCS file: /cvs/graphics/svx/inc/ShapeTypeHandler.hxx,v
+retrieving revision 1.11
+diff -u -r1.11 ShapeTypeHandler.hxx
+--- inc/ShapeTypeHandler.hxx	24 Apr 2003 16:50:54 -0000	1.11
++++ inc/ShapeTypeHandler.hxx	27 Sep 2005 05:34:06 -0000
+@@ -205,7 +205,8 @@
+             ::com::sun::star::accessibility::XAccessible>& rxParent,
+             const AccessibleShapeTreeInfo& rShapeTreeInfo) const
+     {
+-        return CreateAccessibleObject (AccessibleShapeInfo (rxShape,rxParent),rShapeTreeInfo);
++	AccessibleShapeInfo aShapeInfo(rxShape,rxParent);
++        return CreateAccessibleObject (aShapeInfo,rShapeTreeInfo);
+     }
+ 
+     /**  Add new shape types to the internal tables.  Each new shape type is
+Index: inc/frmsel.hxx
+===================================================================
+RCS file: /cvs/graphics/svx/inc/frmsel.hxx,v
+retrieving revision 1.10
+diff -u -r1.10 frmsel.hxx
+--- inc/frmsel.hxx	24 Apr 2003 16:51:37 -0000	1.10
++++ inc/frmsel.hxx	27 Sep 2005 05:34:06 -0000
+@@ -172,8 +172,8 @@
+ 
+ class SvxFrameSelector : public Control
+ {
+-    friend SvxFrameSelectorAccessible_Impl;
+-	friend SvxFrameSelector_Impl;
++    friend class SvxFrameSelectorAccessible_Impl;
++	friend class SvxFrameSelector_Impl;
+ 
+     SvxFrameShadow      eShadow;        // Schattenposition
+     Color               aShadowCol;   // aktuelle Schattenfarbe
+Index: inc/svdetc.hxx
+===================================================================
+RCS file: /cvs/graphics/svx/inc/svdetc.hxx,v
+retrieving revision 1.5
+diff -u -r1.5 svdetc.hxx
+--- inc/svdetc.hxx	23 Nov 2001 19:20:49 -0000	1.5
++++ inc/svdetc.hxx	27 Sep 2005 05:34:06 -0000
+@@ -206,7 +206,7 @@
+ 	   0 falls *pElem1=*pElem2
+ 	  +1 falls *pElem1>*pElem2
+ #endif
+-	virtual int Compare(const void* pElem1, const void* pElem2) const=NULL;
++	virtual int Compare(const void* pElem1, const void* pElem2) const=0;
+ private: // damit keiner vergessen wird
+ virtual
+ #if SUPD <= 355
+Index: inc/unomaster.hxx
+===================================================================
+RCS file: /cvs/graphics/svx/inc/unomaster.hxx,v
+retrieving revision 1.2
+diff -u -r1.2 unomaster.hxx
+--- inc/unomaster.hxx	7 Dec 2001 17:59:33 -0000	1.2
++++ inc/unomaster.hxx	27 Sep 2005 05:34:07 -0000
+@@ -84,7 +84,7 @@
+ class SvxShapeMaster
+ {
+ public:
+-	virtual sal_Bool queryAggregation( const com::sun::star::uno::Type & rType, com::sun::star::uno::Any& aAny ) = NULL;
++	virtual sal_Bool queryAggregation( const com::sun::star::uno::Type & rType, com::sun::star::uno::Any& aAny ) = 0;
+ 
+     virtual ::com::sun::star::uno::Reference< ::com::sun::star::beans::XPropertySetInfo > SAL_CALL getPropertySetInfo(  ) throw(::com::sun::star::uno::RuntimeException) = 0;
+     virtual void SAL_CALL setPropertyValue( const ::rtl::OUString& aPropertyName, const ::com::sun::star::uno::Any& aValue ) throw(::com::sun::star::beans::UnknownPropertyException, ::com::sun::star::beans::PropertyVetoException, ::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::lang::WrappedTargetException, ::com::sun::star::uno::RuntimeException) = 0;
+@@ -98,7 +98,7 @@
+ 
+     virtual ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL getSupportedServiceNames() throw(::com::sun::star::uno::RuntimeException) = 0;
+ 
+-	virtual void dispose() = NULL;
++	virtual void dispose() = 0;
+ };
+ 
+ #endif
+Index: source/accessibility/AccessibleShapeInfo.cxx
+===================================================================
+RCS file: /cvs/graphics/svx/source/accessibility/AccessibleShapeInfo.cxx,v
+retrieving revision 1.2
+diff -u -r1.2 AccessibleShapeInfo.cxx
+--- source/accessibility/AccessibleShapeInfo.cxx	24 Apr 2003 16:55:01 -0000	1.2
++++ source/accessibility/AccessibleShapeInfo.cxx	27 Sep 2005 05:34:07 -0000
+@@ -100,6 +100,14 @@
+ }
+ 
+ 
++AccessibleShapeInfo::AccessibleShapeInfo (const AccessibleShapeInfo &rOther)
++      : mxShape (rOther.mxShape),
++      mxParent (rOther.mxParent),
++      mpChildrenManager (rOther.mpChildrenManager),
++      mnIndex (rOther.mnIndex)
++{
++    // empty.
++}
+ 
+ 
+ AccessibleShapeInfo::~AccessibleShapeInfo (void)
+Index: source/accessibility/AccessibleTextEventQueue.hxx
+===================================================================
+RCS file: /cvs/graphics/svx/source/accessibility/AccessibleTextEventQueue.hxx,v
+retrieving revision 1.3
+diff -u -r1.3 AccessibleTextEventQueue.hxx
+--- source/accessibility/AccessibleTextEventQueue.hxx	24 Jun 2003 07:39:24 -0000	1.3
++++ source/accessibility/AccessibleTextEventQueue.hxx	27 Sep 2005 05:34:08 -0000
+@@ -64,6 +64,7 @@
+ 
+ #include <memory>
+ #include <list>
++#include <algorithm>
+ 
+ #ifndef _SOLAR_H
+ #include <tools/solar.h>
+Index: source/accessibility/ChildrenManagerImpl.cxx
+===================================================================
+RCS file: /cvs/graphics/svx/source/accessibility/ChildrenManagerImpl.cxx,v
+retrieving revision 1.30
+diff -u -r1.30 ChildrenManagerImpl.cxx
+--- source/accessibility/ChildrenManagerImpl.cxx	28 Apr 2003 15:27:00 -0000	1.30
++++ source/accessibility/ChildrenManagerImpl.cxx	27 Sep 2005 05:34:09 -0000
+@@ -197,13 +197,14 @@
+         {
+             // Create accessible object that corresponds to the descriptor's
+             // shape.
+-            AccessibleShape* pShape =
+-                ShapeTypeHandler::Instance().CreateAccessibleObject (
+-                    AccessibleShapeInfo (
++	    AccessibleShapeInfo aShapeInfo (
+                         rChildDescriptor.mxShape,
+                         mxParent,
+                         this,
+-                        mnNewNameIndex++),
++                        mnNewNameIndex++);
++            AccessibleShape* pShape =
++                ShapeTypeHandler::Instance().CreateAccessibleObject (
++                    aShapeInfo,
+                     maShapeTreeInfo);
+             rChildDescriptor.mxAccessibleShape = uno::Reference<XAccessible> (
+                 static_cast<uno::XWeak*>(pShape),
+@@ -797,8 +798,9 @@
+     throw (uno::RuntimeException)
+ {
+ 	// create the new child
++	AccessibleShapeInfo aShapeInfo( _rxShape, pCurrentChild->getAccessibleParent(), this, _nIndex );
+ 	AccessibleShape* pNewChild = ShapeTypeHandler::Instance().CreateAccessibleObject (
+-		AccessibleShapeInfo ( _rxShape, pCurrentChild->getAccessibleParent(), this, _nIndex ),
++		aShapeInfo,
+ 		_rShapeTreeInfo
+ 	);
+ 	Reference< XAccessible > xNewChild( pNewChild );	// keep this alive (do this before calling Init!)
+Index: source/accessibility/GraphCtlAccessibleContext.cxx
+===================================================================
+RCS file: /cvs/graphics/svx/source/accessibility/GraphCtlAccessibleContext.cxx,v
+retrieving revision 1.15
+diff -u -r1.15 GraphCtlAccessibleContext.cxx
+--- source/accessibility/GraphCtlAccessibleContext.cxx	26 Jun 2003 11:10:07 -0000	1.15
++++ source/accessibility/GraphCtlAccessibleContext.cxx	27 Sep 2005 05:34:09 -0000
+@@ -252,8 +252,9 @@
+ 			Reference< XShape > xShape( Reference< XShape >::query( (const_cast<SdrObject*>(pObj))->getUnoShape() ) );
+ 
+ 			// Create accessible object that corresponds to the descriptor's shape.
++			AccessibleShapeInfo aShapeInfo(xShape,mxParent);
+ 			AccessibleShape* pAcc = ShapeTypeHandler::Instance().CreateAccessibleObject(
+-                AccessibleShapeInfo (xShape,mxParent), maTreeInfo);
++                aShapeInfo, maTreeInfo);
+ 			xAccessibleShape = pAcc;
+             if (pAcc != NULL)
+             {
+Index: source/dialog/srchdlg.cxx
+===================================================================
+RCS file: /cvs/graphics/svx/source/dialog/srchdlg.cxx,v
+retrieving revision 1.25
+diff -u -r1.25 srchdlg.cxx
+--- source/dialog/srchdlg.cxx	8 Apr 2003 15:24:47 -0000	1.25
++++ source/dialog/srchdlg.cxx	27 Sep 2005 05:34:11 -0000
+@@ -582,15 +582,15 @@
+ 
+ INT32 SvxSearchDialog::GetTransliterationFlags() const
+ {
+-	INT32 &rFlags = (INT32) nTransliterationFlags;
++	INT32 *rFlags = (INT32 *) &nTransliterationFlags;
+     if (!aMatchCaseCB.IsChecked())
+-		rFlags |=  TransliterationModules_IGNORE_CASE;
++		*rFlags |=  TransliterationModules_IGNORE_CASE;
+ 	else
+-		rFlags &= ~TransliterationModules_IGNORE_CASE;
++		*rFlags &= ~TransliterationModules_IGNORE_CASE;
+     if ( !aJapMatchFullHalfWidthCB.IsChecked())
+-		rFlags |=  TransliterationModules_IGNORE_WIDTH;
++		*rFlags |=  TransliterationModules_IGNORE_WIDTH;
+ 	else
+-		rFlags &= ~TransliterationModules_IGNORE_WIDTH;
++		*rFlags &= ~TransliterationModules_IGNORE_WIDTH;
+ 	return nTransliterationFlags;
+ }
+ 
+Index: source/engine3d/scene3d.cxx
+===================================================================
+RCS file: /cvs/graphics/svx/source/engine3d/scene3d.cxx,v
+retrieving revision 1.16
+diff -u -r1.16 scene3d.cxx
+--- source/engine3d/scene3d.cxx	7 Jun 2002 12:06:28 -0000	1.16
++++ source/engine3d/scene3d.cxx	27 Sep 2005 05:34:13 -0000
+@@ -1383,7 +1383,7 @@
+ 						// ambientes licht, auf globales aufaddieren
+ 						B3dColor aCol(pLight->GetColor().GetColor());
+ 						aCol *= pLight->GetIntensity();
+-						aCol += (B3dColor &)aLightGroup.GetGlobalAmbientLight();
++						aCol += B3dColor(aLightGroup.GetGlobalAmbientLight());
+ 						aLightGroup.SetGlobalAmbientLight(aCol);
+ 					}
+ 				}
+Index: source/fmcomp/gridcell.cxx
+===================================================================
+RCS file: /cvs/graphics/svx/source/fmcomp/gridcell.cxx,v
+retrieving revision 1.32
+diff -u -r1.32 gridcell.cxx
+--- source/fmcomp/gridcell.cxx	15 Apr 2003 17:30:38 -0000	1.32
++++ source/fmcomp/gridcell.cxx	27 Sep 2005 05:34:17 -0000
+@@ -1041,7 +1041,6 @@
+ //==============================================================================
+ //= DbFormattedField
+ //==============================================================================
+-DBG_NAME(DbFormattedField);
+ //------------------------------------------------------------------------------
+ DbFormattedField::DbFormattedField(DbGridColumn& _rColumn)
+     :DbLimitedLengthField(_rColumn)
+@@ -2393,7 +2392,6 @@
+ }
+ 
+ 
+-DBG_NAME(DbFilterField);
+ /*************************************************************************/
+ DbFilterField::DbFilterField(const Reference< ::com::sun::star::lang::XMultiServiceFactory >& _rxORB,DbGridColumn& _rColumn)
+               :DbCellControl(_rColumn)
+@@ -2879,7 +2877,6 @@
+ TYPEINIT0(FmXGridCell);
+ 
+ 
+-DBG_NAME(FmXGridCell);
+ //-----------------------------------------------------------------------------
+ FmXGridCell::FmXGridCell(DbGridColumn* pColumn, DbCellControl* pControl)
+             :OComponentHelper(m_aMutex)
+@@ -3040,10 +3037,7 @@
+ 
+ 
+ /*************************************************************************/
+-SMART_UNO_IMPLEMENTATION(FmXEditCell, FmXTextCell);
+ 
+-
+-DBG_NAME(FmXEditCell);
+ //------------------------------------------------------------------------------
+ FmXEditCell::FmXEditCell(DbGridColumn* pColumn, DbCellControl* pControl)
+             :FmXTextCell(pColumn, pControl)
+@@ -3248,10 +3242,7 @@
+ }
+ 
+ /*************************************************************************/
+-SMART_UNO_IMPLEMENTATION(FmXCheckBoxCell, FmXDataCell);
+-
+ 
+-DBG_NAME(FmXCheckBoxCell);
+ //------------------------------------------------------------------------------
+ FmXCheckBoxCell::FmXCheckBoxCell(DbGridColumn* pColumn, DbCellControl* pControl)
+                 :FmXDataCell(pColumn, pControl)
+@@ -3394,10 +3385,7 @@
+ }
+ 
+ /*************************************************************************/
+-SMART_UNO_IMPLEMENTATION(FmXListBoxCell, FmXTextCell);
+-
+ 
+-DBG_NAME(FmXListBoxCell);
+ //------------------------------------------------------------------------------
+ FmXListBoxCell::FmXListBoxCell(DbGridColumn* pColumn, DbCellControl* pControl)
+                :FmXTextCell(pColumn, pControl)
+@@ -3748,7 +3736,6 @@
+     return *new FmXFilterCell();
+ }
+ 
+-DBG_NAME(FmXFilterCell);
+ //------------------------------------------------------------------------------
+ FmXFilterCell::FmXFilterCell(DbGridColumn* pColumn, DbCellControl* pControl)
+               :FmXGridCell(pColumn, pControl)
+Index: source/inc/hlmarkwn.hxx
+===================================================================
+RCS file: /cvs/graphics/svx/source/inc/hlmarkwn.hxx,v
+retrieving revision 1.2
+diff -u -r1.2 hlmarkwn.hxx
+--- source/inc/hlmarkwn.hxx	8 May 2001 15:21:39 -0000	1.2
++++ source/inc/hlmarkwn.hxx	27 Sep 2005 05:34:17 -0000
+@@ -114,7 +114,7 @@
+ class SvxHlinkDlgMarkWnd : public ModalDialog //FloatingWindow
+ {
+ private:
+-	friend SvxHlmarkTreeLBox;
++	friend class SvxHlmarkTreeLBox;
+ 
+ 	PushButton		maBtApply;
+ 	PushButton		maBtClose;

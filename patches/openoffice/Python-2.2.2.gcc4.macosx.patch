@@ -1,0 +1,1869 @@
+*** misc/Python-2.2.2/Makefile.pre.in	Fri Aug 23 18:05:49 2002
+--- misc/build/Python-2.2.2/Makefile.pre.in	Fri Oct 10 12:42:16 2003
+***************
+*** 350,355 ****
+--- 350,359 ----
+  	libtool -o $(LDLIBRARY) -dynamic $(OTHER_LIBTOOL_OPT) $(LIBRARY) \
+  		-framework System @LIBTOOL_CRUFT@
+  
++ libpython$(VERSION).dylib:	$(LIBRARY)
++ 	libtool -o $(LDLIBRARY) -dynamic $(OTHER_LIBTOOL_OPT) $(LIBRARY) \
++ 		-framework System -lSystemStubs @LIBTOOL_CRUFT@
++ 
+  # This rule builds the Cygwin Python DLL
+  libpython$(VERSION).dll.a: $(LIBRARY_OBJS)
+  	dlltool --export-all --output-def $@ $^
+***************
+*** 560,565 ****
+--- 564,573 ----
+  		$(INSTALL_DATA) libpython$(VERSION).so $(LIBDIR); \
+  	else	true; \
+  	fi
++ 	if test -f libpython$(VERSION).dylib; then \
++ 		$(INSTALL_DATA) libpython$(VERSION).dylib $(LIBDIR); \
++ 	else	true; \
++ 	fi
+  	if test -f "$(DLLLIBRARY)"; then \
+  		$(INSTALL_SHARED) $(DLLLIBRARY) $(BINDIR); \
+  	else	true; \
+***************
+*** 689,695 ****
+  	@if test -d $(LDLIBRARY); then :; else \
+  		if test "$(PYTHONFRAMEWORKDIR)" = no-framework; then \
+  			$(INSTALL_DATA) $(LDLIBRARY) $(LIBPL)/$(LDLIBRARY) ; \
+! 			$(RANLIB) $(LIBPL)/$(LDLIBRARY) ; \
+  		else \
+  			echo Skip install of $(LDLIBRARY) - use make frameworkinstall; \
+  		fi; \
+--- 697,705 ----
+  	@if test -d $(LDLIBRARY); then :; else \
+  		if test "$(PYTHONFRAMEWORKDIR)" = no-framework; then \
+  			$(INSTALL_DATA) $(LDLIBRARY) $(LIBPL)/$(LDLIBRARY) ; \
+! 			if test "$(LDLIBRARY)" != libpython$(VERSION).dylib; then \
+! 				$(RANLIB) $(LIBPL)/$(LDLIBRARY) ; \
+! 			fi \
+  		else \
+  			echo Skip install of $(LDLIBRARY) - use make frameworkinstall; \
+  		fi; \
+*** misc/Python-2.2.2/Modules/_hotshot.c	Mon Sep 30 18:16:13 2002
+--- misc/build/Python-2.2.2/Modules/_hotshot.c	Fri Oct 10 12:42:16 2003
+***************
+*** 14,27 ****
+   */
+  #ifdef MS_WIN32
+  #include <windows.h>
+  #include <largeint.h>
+  #include <direct.h>    /* for getcwd() */
+  typedef __int64 hs_time;
+  #define GETTIMEOFDAY(P_HS_TIME) \
+  	{ LARGE_INTEGER _temp; \
+  	  QueryPerformanceCounter(&_temp); \
+  	  *(P_HS_TIME) = _temp.QuadPart; }
+! 	  
+  
+  #else
+  #ifndef HAVE_GETTIMEOFDAY
+--- 14,30 ----
+   */
+  #ifdef MS_WIN32
+  #include <windows.h>
++ #if defined(_MSC_VER) && (_MSC_VER < 1300)
+  #include <largeint.h>
++ #endif
++ 
+  #include <direct.h>    /* for getcwd() */
+  typedef __int64 hs_time;
+  #define GETTIMEOFDAY(P_HS_TIME) \
+  	{ LARGE_INTEGER _temp; \
+  	  QueryPerformanceCounter(&_temp); \
+  	  *(P_HS_TIME) = _temp.QuadPart; }
+! 
+  
+  #else
+  #ifndef HAVE_GETTIMEOFDAY
+*** misc/Python-2.2.2/Modules/posixmodule.c	Fri Aug 23 18:27:40 2002
+--- misc/build/Python-2.2.2/Modules/posixmodule.c	Fri Oct 10 12:42:16 2003
+***************
+*** 271,276 ****
+--- 271,279 ----
+  #	define STRUCT_STAT struct stat
+  #endif
+  
++ #ifdef __APPLE__
++ #include <crt_externs.h>
++ #endif
+  
+  /* Return a dictionary corresponding to the POSIX environment table */
+  
+***************
+*** 281,288 ****
+--- 284,297 ----
+  static PyObject *
+  convertenviron(void)
+  {
++ #ifdef __APPLE__
++ 	char **environ;
++ #endif
+  	PyObject *d;
+  	char **e;
++ #ifdef __APPLE__
++ 	environ = *_NSGetEnviron();
++ #endif
+  	d = PyDict_New();
+  	if (d == NULL)
+  		return NULL;
+*** misc/Python-2.2.2/Modules/timemodule.c	Tue Mar 12 22:38:31 2002
+--- misc/build/Python-2.2.2/Modules/timemodule.c	Fri Oct 10 12:42:16 2003
+***************
+*** 51,57 ****
+--- 51,61 ----
+  #if defined(MS_WIN32) && !defined(MS_WIN64) && !defined(__BORLANDC__)
+  /* Win32 has better clock replacement
+     XXX Win64 does not yet, but might when the platform matures. */
++ #if defined(_MSC_VER) && (_MSC_VER < 1300)
+  #include <largeint.h>
++ #else
++ #include <winnt.h>
++ #endif
+  #undef HAVE_CLOCK /* We have our own version down below */
+  #endif /* MS_WIN32 && !MS_WIN64 */
+  
+***************
+*** 145,150 ****
+--- 149,155 ----
+  
+  #if defined(MS_WIN32) && !defined(MS_WIN64) && !defined(__BORLANDC__)
+  /* Due to Mark Hammond */
++ #if defined(_MSC_VER) && (_MSC_VER < 1300)
+  static PyObject *
+  time_clock(PyObject *self, PyObject *args)
+  {
+***************
+*** 175,180 ****
+--- 180,220 ----
+  	return PyFloat_FromDouble((double)diff.LowPart +
+  		              ((double)rem.LowPart / (double)divisor.LowPart));
+  }
++ #else
++ /* Due to Mark Hammond and Tim Peters*/
++ time_clock(PyObject *self, PyObject *args)
++ {
++ 	static LONG_LONG ctrStart;
++ 	static LONG_LONG divisor = {0.0};
++ 	LONG_LONG now;
++ 	double diff;
++ 
++ 	assert(sizeof(LONG_LONG) == sizeof(LARGE_INTEGER));
++ 	if (!PyArg_ParseTuple(args, ":clock"))
++ 		return NULL;
++ 
++ 	if ( divisor == 0.0) {
++ 		LONG_LONG freq;
++ 		QueryPerformanceCounter( (LARGE_INTEGER*) &ctrStart);
++ 		if (!QueryPerformanceFrequency((LARGE_INTEGER*)&divisor) ||
++ 		    freq == 0 ) {
++ 				/* Unlikely to happen -
++ 				   this works on all intel machines at least!
++ 				   Revert to clock() */
++ 			return PyFloat_FromDouble(clock());
++ 		}
++ 		divisor = (double) freq;
++ 	}
++ 	QueryPerformanceCounter( (LARGE_INTEGER*) &now);
++ 	diff = (double) (now - ctrStart);
++ 
++ 	/* XXX - we assume both divide results fit in 32 bits.  This is
++ 	   true on Intels.  First person who can afford a machine that
++ 	   doesnt deserves to fix it :-)
++ 	*/
++ 	return PyFloat_FromDouble( diff / divisor );
++ }
++ #endif
+  
+  #define HAVE_CLOCK /* So it gets included in the methods */
+  #endif /* MS_WIN32 && !MS_WIN64 */
+*** misc/Python-2.2.2/PC/python_nt.rc	Mon Oct 14 17:07:34 2002
+--- misc/build/Python-2.2.2/PC/python_nt.rc	Fri Oct 10 12:42:16 2003
+***************
+*** 1,7 ****
+--- 1,9 ----
+  // Resource script for Python core DLL.
+  // Currently only holds version information.
+  //
++ #if defined(_MSC_VER) && (_MSC_VER < 1300)
+  #include "ver.h"
++ #endif
+  #include "winver.h"
+  
+  #define MS_WINDOWS
+*** misc/Python-2.2.2/PCbuild/_socket.dsp	Mon Aug 14 00:59:26 2000
+--- misc/build/Python-2.2.2/PCbuild/_socket.dsp	Fri Oct 10 12:42:16 2003
+***************
+*** 7,30 ****
+  CFG=_socket - Win32 Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE 
+  !MESSAGE NMAKE /f "_socket.mak".
+! !MESSAGE 
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE 
+  !MESSAGE NMAKE /f "_socket.mak" CFG="_socket - Win32 Debug"
+! !MESSAGE 
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE 
+  !MESSAGE "_socket - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "_socket - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+! !MESSAGE 
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName "_socket"
+! # PROP Scc_LocalPath ".."
+  CPP=cl.exe
+  MTL=midl.exe
+  RSC=rc.exe
+--- 7,30 ----
+  CFG=_socket - Win32 Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE
+  !MESSAGE NMAKE /f "_socket.mak".
+! !MESSAGE
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE
+  !MESSAGE NMAKE /f "_socket.mak" CFG="_socket - Win32 Debug"
+! !MESSAGE
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE
+  !MESSAGE "_socket - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "_socket - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+! !MESSAGE
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName ""
+! # PROP Scc_LocalPath ""
+  CPP=cl.exe
+  MTL=midl.exe
+  RSC=rc.exe
+***************
+*** 85,91 ****
+  # ADD LINK32 user32.lib kernel32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib /nologo /base:"0x1e1D0000" /subsystem:windows /dll /debug /machine:I386 /out:"./_socket_d.pyd" /pdbtype:sept /export:init_socket
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF 
+  
+  # Begin Target
+  
+--- 85,91 ----
+  # ADD LINK32 user32.lib kernel32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib /nologo /base:"0x1e1D0000" /subsystem:windows /dll /debug /machine:I386 /out:"./_socket_d.pyd" /pdbtype:sept /export:init_socket
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF
+  
+  # Begin Target
+  
+*** misc/Python-2.2.2/PCbuild/_sre.dsp	Thu Sep  6 08:39:39 2001
+--- misc/build/Python-2.2.2/PCbuild/_sre.dsp	Fri Oct 10 12:42:16 2003
+***************
+*** 8,33 ****
+  CFG=_sre - Win32 Alpha Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE 
+  !MESSAGE NMAKE /f "_sre.mak".
+! !MESSAGE 
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE 
+  !MESSAGE NMAKE /f "_sre.mak" CFG="_sre - Win32 Alpha Debug"
+! !MESSAGE 
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE 
+  !MESSAGE "_sre - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "_sre - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "_sre - Win32 Alpha Debug" (based on "Win32 (ALPHA) Dynamic-Link Library")
+  !MESSAGE "_sre - Win32 Alpha Release" (based on "Win32 (ALPHA) Dynamic-Link Library")
+! !MESSAGE 
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName "_sre"
+! # PROP Scc_LocalPath ".."
+  
+  !IF  "$(CFG)" == "_sre - Win32 Release"
+  
+--- 8,33 ----
+  CFG=_sre - Win32 Alpha Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE
+  !MESSAGE NMAKE /f "_sre.mak".
+! !MESSAGE
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE
+  !MESSAGE NMAKE /f "_sre.mak" CFG="_sre - Win32 Alpha Debug"
+! !MESSAGE
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE
+  !MESSAGE "_sre - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "_sre - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "_sre - Win32 Alpha Debug" (based on "Win32 (ALPHA) Dynamic-Link Library")
+  !MESSAGE "_sre - Win32 Alpha Release" (based on "Win32 (ALPHA) Dynamic-Link Library")
+! !MESSAGE
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName ""
+! # PROP Scc_LocalPath ""
+  
+  !IF  "$(CFG)" == "_sre - Win32 Release"
+  
+***************
+*** 155,161 ****
+  # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib wsock32.lib /nologo /base:"0x1e1F0000" /subsystem:windows /dll /debug /machine:ALPHA /out:"alpha-temp-release/_sre.pyd" /export:init_sre
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF 
+  
+  # Begin Target
+  
+--- 155,161 ----
+  # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib wsock32.lib /nologo /base:"0x1e1F0000" /subsystem:windows /dll /debug /machine:ALPHA /out:"alpha-temp-release/_sre.pyd" /export:init_sre
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF
+  
+  # Begin Target
+  
+***************
+*** 175,181 ****
+  
+  !ELSEIF  "$(CFG)" == "_sre - Win32 Alpha Release"
+  
+! !ENDIF 
+  
+  # End Source File
+  # End Target
+--- 175,181 ----
+  
+  !ELSEIF  "$(CFG)" == "_sre - Win32 Alpha Release"
+  
+! !ENDIF
+  
+  # End Source File
+  # End Target
+*** misc/Python-2.2.2/PCbuild/_symtable.dsp	Thu Sep  6 08:39:39 2001
+--- misc/build/Python-2.2.2/PCbuild/_symtable.dsp	Fri Oct 10 12:42:16 2003
+***************
+*** 7,30 ****
+  CFG=_symtable - Win32 Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE 
+  !MESSAGE NMAKE /f "_symtable.mak".
+! !MESSAGE 
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE 
+  !MESSAGE NMAKE /f "_symtable.mak" CFG="_symtable - Win32 Debug"
+! !MESSAGE 
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE 
+  !MESSAGE "_symtable - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "_symtable - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+! !MESSAGE 
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName "_symtable"
+! # PROP Scc_LocalPath ".."
+  CPP=cl.exe
+  MTL=midl.exe
+  RSC=rc.exe
+--- 7,30 ----
+  CFG=_symtable - Win32 Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE
+  !MESSAGE NMAKE /f "_symtable.mak".
+! !MESSAGE
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE
+  !MESSAGE NMAKE /f "_symtable.mak" CFG="_symtable - Win32 Debug"
+! !MESSAGE
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE
+  !MESSAGE "_symtable - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "_symtable - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+! !MESSAGE
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName ""
+! # PROP Scc_LocalPath ""
+  CPP=cl.exe
+  MTL=midl.exe
+  RSC=rc.exe
+***************
+*** 85,91 ****
+  # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /base:"0x1e100000" /dll /debug /machine:I386 /out:"./_symtable_d.pyd" /pdbtype:sept /export:init_symtable
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF 
+  
+  # Begin Target
+  
+--- 85,91 ----
+  # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /base:"0x1e100000" /dll /debug /machine:I386 /out:"./_symtable_d.pyd" /pdbtype:sept /export:init_symtable
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF
+  
+  # Begin Target
+  
+*** misc/Python-2.2.2/PCbuild/_testcapi.dsp	Wed Feb 14 10:43:47 2001
+--- misc/build/Python-2.2.2/PCbuild/_testcapi.dsp	Fri Oct 10 12:42:16 2003
+***************
+*** 7,30 ****
+  CFG=_testcapi - Win32 Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE 
+  !MESSAGE NMAKE /f "_testcapi.mak".
+! !MESSAGE 
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE 
+  !MESSAGE NMAKE /f "_testcapi.mak" CFG="_testcapi - Win32 Debug"
+! !MESSAGE 
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE 
+  !MESSAGE "_testcapi - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "_testcapi - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+! !MESSAGE 
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName "_testcapi"
+! # PROP Scc_LocalPath ".."
+  CPP=cl.exe
+  MTL=midl.exe
+  RSC=rc.exe
+--- 7,30 ----
+  CFG=_testcapi - Win32 Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE
+  !MESSAGE NMAKE /f "_testcapi.mak".
+! !MESSAGE
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE
+  !MESSAGE NMAKE /f "_testcapi.mak" CFG="_testcapi - Win32 Debug"
+! !MESSAGE
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE
+  !MESSAGE "_testcapi - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "_testcapi - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+! !MESSAGE
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName ""
+! # PROP Scc_LocalPath ""
+  CPP=cl.exe
+  MTL=midl.exe
+  RSC=rc.exe
+***************
+*** 85,91 ****
+  # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /base:"0x1e1F0000" /dll /debug /machine:I386 /out:"./_testcapi_d.pyd" /pdbtype:sept /export:init_testcapi
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF 
+  
+  # Begin Target
+  
+--- 85,91 ----
+  # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /base:"0x1e1F0000" /dll /debug /machine:I386 /out:"./_testcapi_d.pyd" /pdbtype:sept /export:init_testcapi
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF
+  
+  # Begin Target
+  
+*** misc/Python-2.2.2/PCbuild/_tkinter.dsp	Fri Aug 25 08:52:44 2000
+--- misc/build/Python-2.2.2/PCbuild/_tkinter.dsp	Fri Oct 10 12:42:16 2003
+***************
+*** 8,33 ****
+  CFG=_tkinter - Win32 Alpha Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE 
+  !MESSAGE NMAKE /f "_tkinter.mak".
+! !MESSAGE 
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE 
+  !MESSAGE NMAKE /f "_tkinter.mak" CFG="_tkinter - Win32 Alpha Debug"
+! !MESSAGE 
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE 
+  !MESSAGE "_tkinter - Win32 Alpha Debug" (based on "Win32 (ALPHA) Dynamic-Link Library")
+  !MESSAGE "_tkinter - Win32 Alpha Release" (based on "Win32 (ALPHA) Dynamic-Link Library")
+  !MESSAGE "_tkinter - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "_tkinter - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+! !MESSAGE 
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName "_tkinter"
+! # PROP Scc_LocalPath "..\..\.."
+  
+  !IF  "$(CFG)" == "_tkinter - Win32 Alpha Debug"
+  
+--- 8,33 ----
+  CFG=_tkinter - Win32 Alpha Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE
+  !MESSAGE NMAKE /f "_tkinter.mak".
+! !MESSAGE
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE
+  !MESSAGE NMAKE /f "_tkinter.mak" CFG="_tkinter - Win32 Alpha Debug"
+! !MESSAGE
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE
+  !MESSAGE "_tkinter - Win32 Alpha Debug" (based on "Win32 (ALPHA) Dynamic-Link Library")
+  !MESSAGE "_tkinter - Win32 Alpha Release" (based on "Win32 (ALPHA) Dynamic-Link Library")
+  !MESSAGE "_tkinter - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "_tkinter - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+! !MESSAGE
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName ""
+! # PROP Scc_LocalPath ""
+  
+  !IF  "$(CFG)" == "_tkinter - Win32 Alpha Debug"
+  
+***************
+*** 155,161 ****
+  # ADD LINK32 ..\..\tcl\lib\tk83.lib ..\..\tcl\lib\tcl83.lib odbc32.lib odbccp32.lib user32.lib kernel32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /base:"0x1e190000" /subsystem:windows /dll /debug /machine:I386 /out:"./_tkinter.pyd" /libpath:"C:\Program Files\Tcl\lib" /export:init_tkinter
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF 
+  
+  # Begin Target
+  
+--- 155,161 ----
+  # ADD LINK32 ..\..\tcl\lib\tk83.lib ..\..\tcl\lib\tcl83.lib odbc32.lib odbccp32.lib user32.lib kernel32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /base:"0x1e190000" /subsystem:windows /dll /debug /machine:I386 /out:"./_tkinter.pyd" /libpath:"C:\Program Files\Tcl\lib" /export:init_tkinter
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF
+  
+  # Begin Target
+  
+***************
+*** 175,181 ****
+  
+  !ELSEIF  "$(CFG)" == "_tkinter - Win32 Release"
+  
+! !ENDIF 
+  
+  # End Source File
+  # Begin Source File
+--- 175,181 ----
+  
+  !ELSEIF  "$(CFG)" == "_tkinter - Win32 Release"
+  
+! !ENDIF
+  
+  # End Source File
+  # Begin Source File
+***************
+*** 190,196 ****
+  
+  !ELSEIF  "$(CFG)" == "_tkinter - Win32 Release"
+  
+! !ENDIF 
+  
+  # End Source File
+  # End Target
+--- 190,196 ----
+  
+  !ELSEIF  "$(CFG)" == "_tkinter - Win32 Release"
+  
+! !ENDIF
+  
+  # End Source File
+  # End Target
+*** misc/Python-2.2.2/PCbuild/bsddb.dsp	Mon Aug 14 00:59:26 2000
+--- misc/build/Python-2.2.2/PCbuild/bsddb.dsp	Fri Oct 10 12:42:16 2003
+***************
+*** 8,33 ****
+  CFG=bsddb - Win32 Alpha Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE 
+  !MESSAGE NMAKE /f "bsddb.mak".
+! !MESSAGE 
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE 
+  !MESSAGE NMAKE /f "bsddb.mak" CFG="bsddb - Win32 Alpha Debug"
+! !MESSAGE 
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE 
+  !MESSAGE "bsddb - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "bsddb - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "bsddb - Win32 Alpha Debug" (based on "Win32 (ALPHA) Dynamic-Link Library")
+  !MESSAGE "bsddb - Win32 Alpha Release" (based on "Win32 (ALPHA) Dynamic-Link Library")
+! !MESSAGE 
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName "bsddb"
+! # PROP Scc_LocalPath ".."
+  
+  !IF  "$(CFG)" == "bsddb - Win32 Release"
+  
+--- 8,33 ----
+  CFG=bsddb - Win32 Alpha Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE
+  !MESSAGE NMAKE /f "bsddb.mak".
+! !MESSAGE
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE
+  !MESSAGE NMAKE /f "bsddb.mak" CFG="bsddb - Win32 Alpha Debug"
+! !MESSAGE
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE
+  !MESSAGE "bsddb - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "bsddb - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "bsddb - Win32 Alpha Debug" (based on "Win32 (ALPHA) Dynamic-Link Library")
+  !MESSAGE "bsddb - Win32 Alpha Release" (based on "Win32 (ALPHA) Dynamic-Link Library")
+! !MESSAGE
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName ""
+! # PROP Scc_LocalPath ""
+  
+  !IF  "$(CFG)" == "bsddb - Win32 Release"
+  
+***************
+*** 155,161 ****
+  # ADD LINK32 ..\..\bsddb\port\win32\db.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib wsock32.lib /nologo /base:"0x1e180000" /subsystem:windows /dll /debug /machine:ALPHA /out:"alpha-temp-release\bsddb.pyd" /export:initbsddb
+  # SUBTRACT LINK32 /verbose /pdb:none
+  
+! !ENDIF 
+  
+  # Begin Target
+  
+--- 155,161 ----
+  # ADD LINK32 ..\..\bsddb\port\win32\db.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib wsock32.lib /nologo /base:"0x1e180000" /subsystem:windows /dll /debug /machine:ALPHA /out:"alpha-temp-release\bsddb.pyd" /export:initbsddb
+  # SUBTRACT LINK32 /verbose /pdb:none
+  
+! !ENDIF
+  
+  # Begin Target
+  
+***************
+*** 181,187 ****
+  
+  !ELSEIF  "$(CFG)" == "bsddb - Win32 Alpha Release"
+  
+! !ENDIF 
+  
+  # End Source File
+  # End Target
+--- 181,187 ----
+  
+  !ELSEIF  "$(CFG)" == "bsddb - Win32 Alpha Release"
+  
+! !ENDIF
+  
+  # End Source File
+  # End Target
+*** misc/Python-2.2.2/PCbuild/mmap.dsp	Thu Jan 11 23:46:45 2001
+--- misc/build/Python-2.2.2/PCbuild/mmap.dsp	Fri Oct 10 12:42:16 2003
+***************
+*** 7,30 ****
+  CFG=mmap - Win32 Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE 
+  !MESSAGE NMAKE /f "mmap.mak".
+! !MESSAGE 
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE 
+  !MESSAGE NMAKE /f "mmap.mak" CFG="mmap - Win32 Debug"
+! !MESSAGE 
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE 
+  !MESSAGE "mmap - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "mmap - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+! !MESSAGE 
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName "mmap"
+! # PROP Scc_LocalPath ".."
+  CPP=cl.exe
+  MTL=midl.exe
+  RSC=rc.exe
+--- 7,30 ----
+  CFG=mmap - Win32 Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE
+  !MESSAGE NMAKE /f "mmap.mak".
+! !MESSAGE
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE
+  !MESSAGE NMAKE /f "mmap.mak" CFG="mmap - Win32 Debug"
+! !MESSAGE
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE
+  !MESSAGE "mmap - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "mmap - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+! !MESSAGE
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName ""
+! # PROP Scc_LocalPath ""
+  CPP=cl.exe
+  MTL=midl.exe
+  RSC=rc.exe
+***************
+*** 85,91 ****
+  # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /base:"0x1e1F0000" /dll /debug /machine:I386 /out:"./mmap_d.pyd" /pdbtype:sept /export:initmmap
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF 
+  
+  # Begin Target
+  
+--- 85,91 ----
+  # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /base:"0x1e1F0000" /dll /debug /machine:I386 /out:"./mmap_d.pyd" /pdbtype:sept /export:initmmap
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF
+  
+  # Begin Target
+  
+*** misc/Python-2.2.2/PCbuild/parser.dsp	Thu Sep  6 08:39:39 2001
+--- misc/build/Python-2.2.2/PCbuild/parser.dsp	Fri Oct 10 12:42:16 2003
+***************
+*** 8,33 ****
+  CFG=parser - Win32 Alpha Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE 
+  !MESSAGE NMAKE /f "parser.mak".
+! !MESSAGE 
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE 
+  !MESSAGE NMAKE /f "parser.mak" CFG="parser - Win32 Alpha Debug"
+! !MESSAGE 
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE 
+  !MESSAGE "parser - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "parser - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "parser - Win32 Alpha Debug" (based on "Win32 (ALPHA) Dynamic-Link Library")
+  !MESSAGE "parser - Win32 Alpha Release" (based on "Win32 (ALPHA) Dynamic-Link Library")
+! !MESSAGE 
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName "parser"
+! # PROP Scc_LocalPath ".."
+  
+  !IF  "$(CFG)" == "parser - Win32 Release"
+  
+--- 8,33 ----
+  CFG=parser - Win32 Alpha Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE
+  !MESSAGE NMAKE /f "parser.mak".
+! !MESSAGE
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE
+  !MESSAGE NMAKE /f "parser.mak" CFG="parser - Win32 Alpha Debug"
+! !MESSAGE
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE
+  !MESSAGE "parser - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "parser - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "parser - Win32 Alpha Debug" (based on "Win32 (ALPHA) Dynamic-Link Library")
+  !MESSAGE "parser - Win32 Alpha Release" (based on "Win32 (ALPHA) Dynamic-Link Library")
+! !MESSAGE
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName ""
+! # PROP Scc_LocalPath ""
+  
+  !IF  "$(CFG)" == "parser - Win32 Release"
+  
+***************
+*** 155,161 ****
+  # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib wsock32.lib /nologo /base:"0x1eA00000" /subsystem:windows /dll /debug /machine:ALPHA /out:"alpha-temp-release/parser.pyd" /export:initparser
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF 
+  
+  # Begin Target
+  
+--- 155,161 ----
+  # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib wsock32.lib /nologo /base:"0x1eA00000" /subsystem:windows /dll /debug /machine:ALPHA /out:"alpha-temp-release/parser.pyd" /export:initparser
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF
+  
+  # Begin Target
+  
+***************
+*** 175,181 ****
+  
+  !ELSEIF  "$(CFG)" == "parser - Win32 Alpha Release"
+  
+! !ENDIF 
+  
+  # End Source File
+  # End Target
+--- 175,181 ----
+  
+  !ELSEIF  "$(CFG)" == "parser - Win32 Alpha Release"
+  
+! !ENDIF
+  
+  # End Source File
+  # End Target
+*** misc/Python-2.2.2/PCbuild/pyexpat.dsp	Sat Jul 28 09:56:38 2001
+--- misc/build/Python-2.2.2/PCbuild/pyexpat.dsp	Fri Oct 10 12:42:16 2003
+***************
+*** 8,33 ****
+  CFG=pyexpat - Win32 Alpha Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE 
+  !MESSAGE NMAKE /f "pyexpat.mak".
+! !MESSAGE 
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE 
+  !MESSAGE NMAKE /f "pyexpat.mak" CFG="pyexpat - Win32 Alpha Debug"
+! !MESSAGE 
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE 
+  !MESSAGE "pyexpat - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "pyexpat - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "pyexpat - Win32 Alpha Debug" (based on "Win32 (ALPHA) Dynamic-Link Library")
+  !MESSAGE "pyexpat - Win32 Alpha Release" (based on "Win32 (ALPHA) Dynamic-Link Library")
+! !MESSAGE 
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName "pyexpat"
+! # PROP Scc_LocalPath ".."
+  
+  !IF  "$(CFG)" == "pyexpat - Win32 Release"
+  
+--- 8,33 ----
+  CFG=pyexpat - Win32 Alpha Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE
+  !MESSAGE NMAKE /f "pyexpat.mak".
+! !MESSAGE
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE
+  !MESSAGE NMAKE /f "pyexpat.mak" CFG="pyexpat - Win32 Alpha Debug"
+! !MESSAGE
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE
+  !MESSAGE "pyexpat - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "pyexpat - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "pyexpat - Win32 Alpha Debug" (based on "Win32 (ALPHA) Dynamic-Link Library")
+  !MESSAGE "pyexpat - Win32 Alpha Release" (based on "Win32 (ALPHA) Dynamic-Link Library")
+! !MESSAGE
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName ""
+! # PROP Scc_LocalPath ""
+  
+  !IF  "$(CFG)" == "pyexpat - Win32 Release"
+  
+***************
+*** 155,161 ****
+  # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib wsock32.lib /nologo /base:"0x1D100000" /subsystem:windows /dll /debug /machine:ALPHA /out:"alpha-temp-release/pyexpat.pyd" /export:initpyexpat
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF 
+  
+  # Begin Target
+  
+--- 155,161 ----
+  # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib wsock32.lib /nologo /base:"0x1D100000" /subsystem:windows /dll /debug /machine:ALPHA /out:"alpha-temp-release/pyexpat.pyd" /export:initpyexpat
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF
+  
+  # Begin Target
+  
+***************
+*** 175,181 ****
+  
+  !ELSEIF  "$(CFG)" == "pyexpat - Win32 Alpha Release"
+  
+! !ENDIF 
+  
+  # End Source File
+  # Begin Source File
+--- 175,181 ----
+  
+  !ELSEIF  "$(CFG)" == "pyexpat - Win32 Alpha Release"
+  
+! !ENDIF
+  
+  # End Source File
+  # Begin Source File
+*** misc/Python-2.2.2/PCbuild/python.dsp	Thu Sep  6 08:39:39 2001
+--- misc/build/Python-2.2.2/PCbuild/python.dsp	Fri Oct 10 12:42:16 2003
+***************
+*** 8,33 ****
+  CFG=python - Win32 Alpha Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE 
+  !MESSAGE NMAKE /f "python.mak".
+! !MESSAGE 
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE 
+  !MESSAGE NMAKE /f "python.mak" CFG="python - Win32 Alpha Debug"
+! !MESSAGE 
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE 
+  !MESSAGE "python - Win32 Release" (based on "Win32 (x86) Console Application")
+  !MESSAGE "python - Win32 Debug" (based on "Win32 (x86) Console Application")
+  !MESSAGE "python - Win32 Alpha Debug" (based on "Win32 (ALPHA) Console Application")
+  !MESSAGE "python - Win32 Alpha Release" (based on "Win32 (ALPHA) Console Application")
+! !MESSAGE 
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName "python"
+! # PROP Scc_LocalPath ".."
+  
+  !IF  "$(CFG)" == "python - Win32 Release"
+  
+--- 8,33 ----
+  CFG=python - Win32 Alpha Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE
+  !MESSAGE NMAKE /f "python.mak".
+! !MESSAGE
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE
+  !MESSAGE NMAKE /f "python.mak" CFG="python - Win32 Alpha Debug"
+! !MESSAGE
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE
+  !MESSAGE "python - Win32 Release" (based on "Win32 (x86) Console Application")
+  !MESSAGE "python - Win32 Debug" (based on "Win32 (x86) Console Application")
+  !MESSAGE "python - Win32 Alpha Debug" (based on "Win32 (ALPHA) Console Application")
+  !MESSAGE "python - Win32 Alpha Release" (based on "Win32 (ALPHA) Console Application")
+! !MESSAGE
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName ""
+! # PROP Scc_LocalPath ""
+  
+  !IF  "$(CFG)" == "python - Win32 Release"
+  
+***************
+*** 137,143 ****
+  # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /subsystem:console /debug /machine:ALPHA
+  # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib wsock32.lib /nologo /subsystem:console /debug /machine:ALPHA
+  
+! !ENDIF 
+  
+  # Begin Target
+  
+--- 137,143 ----
+  # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /subsystem:console /debug /machine:ALPHA
+  # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib wsock32.lib /nologo /subsystem:console /debug /machine:ALPHA
+  
+! !ENDIF
+  
+  # Begin Target
+  
+***************
+*** 161,167 ****
+  
+  !ELSEIF  "$(CFG)" == "python - Win32 Alpha Release"
+  
+! !ENDIF 
+  
+  # End Source File
+  # Begin Source File
+--- 161,167 ----
+  
+  !ELSEIF  "$(CFG)" == "python - Win32 Alpha Release"
+  
+! !ENDIF
+  
+  # End Source File
+  # Begin Source File
+*** misc/Python-2.2.2/PCbuild/pythoncore.dsp	Mon Oct 14 17:03:43 2002
+--- misc/build/Python-2.2.2/PCbuild/pythoncore.dsp	Fri Oct 10 12:42:16 2003
+***************
+*** 8,33 ****
+  CFG=pythoncore - Win32 Alpha Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE 
+  !MESSAGE NMAKE /f "pythoncore.mak".
+! !MESSAGE 
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE 
+  !MESSAGE NMAKE /f "pythoncore.mak" CFG="pythoncore - Win32 Alpha Debug"
+! !MESSAGE 
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE 
+  !MESSAGE "pythoncore - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "pythoncore - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "pythoncore - Win32 Alpha Debug" (based on "Win32 (ALPHA) Dynamic-Link Library")
+  !MESSAGE "pythoncore - Win32 Alpha Release" (based on "Win32 (ALPHA) Dynamic-Link Library")
+! !MESSAGE 
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName "pythoncore"
+! # PROP Scc_LocalPath ".."
+  
+  !IF  "$(CFG)" == "pythoncore - Win32 Release"
+  
+--- 8,33 ----
+  CFG=pythoncore - Win32 Alpha Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE
+  !MESSAGE NMAKE /f "pythoncore.mak".
+! !MESSAGE
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE
+  !MESSAGE NMAKE /f "pythoncore.mak" CFG="pythoncore - Win32 Alpha Debug"
+! !MESSAGE
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE
+  !MESSAGE "pythoncore - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "pythoncore - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "pythoncore - Win32 Alpha Debug" (based on "Win32 (ALPHA) Dynamic-Link Library")
+  !MESSAGE "pythoncore - Win32 Alpha Release" (based on "Win32 (ALPHA) Dynamic-Link Library")
+! !MESSAGE
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName ""
+! # PROP Scc_LocalPath ""
+  
+  !IF  "$(CFG)" == "pythoncore - Win32 Release"
+  
+***************
+*** 155,161 ****
+  # ADD LINK32 largeint.lib kernel32.lib user32.lib advapi32.lib /nologo /base:"0x1e100000" /subsystem:windows /dll /debug /machine:ALPHA /nodefaultlib:"libc"
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF 
+  
+  # Begin Target
+  
+--- 155,161 ----
+  # ADD LINK32 largeint.lib kernel32.lib user32.lib advapi32.lib /nologo /base:"0x1e100000" /subsystem:windows /dll /debug /machine:ALPHA /nodefaultlib:"libc"
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF
+  
+  # Begin Target
+  
+***************
+*** 175,181 ****
+  
+  !ELSEIF  "$(CFG)" == "pythoncore - Win32 Alpha Release"
+  
+! !ENDIF 
+  
+  # End Source File
+  # Begin Source File
+--- 175,181 ----
+  
+  !ELSEIF  "$(CFG)" == "pythoncore - Win32 Alpha Release"
+  
+! !ENDIF
+  
+  # End Source File
+  # Begin Source File
+***************
+*** 190,196 ****
+  
+  !ELSEIF  "$(CFG)" == "pythoncore - Win32 Alpha Release"
+  
+! !ENDIF 
+  
+  # End Source File
+  # Begin Source File
+--- 190,196 ----
+  
+  !ELSEIF  "$(CFG)" == "pythoncore - Win32 Alpha Release"
+  
+! !ENDIF
+  
+  # End Source File
+  # Begin Source File
+*** misc/Python-2.2.2/PCbuild/pythonw.dsp	Thu Sep  6 08:39:39 2001
+--- misc/build/Python-2.2.2/PCbuild/pythonw.dsp	Fri Oct 10 12:42:16 2003
+***************
+*** 8,33 ****
+  CFG=pythonw - Win32 Alpha Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE 
+  !MESSAGE NMAKE /f "pythonw.mak".
+! !MESSAGE 
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE 
+  !MESSAGE NMAKE /f "pythonw.mak" CFG="pythonw - Win32 Alpha Debug"
+! !MESSAGE 
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE 
+  !MESSAGE "pythonw - Win32 Release" (based on "Win32 (x86) Application")
+  !MESSAGE "pythonw - Win32 Debug" (based on "Win32 (x86) Application")
+  !MESSAGE "pythonw - Win32 Alpha Debug" (based on "Win32 (ALPHA) Application")
+  !MESSAGE "pythonw - Win32 Alpha Release" (based on "Win32 (ALPHA) Application")
+! !MESSAGE 
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName "pythonw"
+! # PROP Scc_LocalPath "..\pc"
+  
+  !IF  "$(CFG)" == "pythonw - Win32 Release"
+  
+--- 8,33 ----
+  CFG=pythonw - Win32 Alpha Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE
+  !MESSAGE NMAKE /f "pythonw.mak".
+! !MESSAGE
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE
+  !MESSAGE NMAKE /f "pythonw.mak" CFG="pythonw - Win32 Alpha Debug"
+! !MESSAGE
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE
+  !MESSAGE "pythonw - Win32 Release" (based on "Win32 (x86) Application")
+  !MESSAGE "pythonw - Win32 Debug" (based on "Win32 (x86) Application")
+  !MESSAGE "pythonw - Win32 Alpha Debug" (based on "Win32 (ALPHA) Application")
+  !MESSAGE "pythonw - Win32 Alpha Release" (based on "Win32 (ALPHA) Application")
+! !MESSAGE
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName ""
+! # PROP Scc_LocalPath ""
+  
+  !IF  "$(CFG)" == "pythonw - Win32 Release"
+  
+***************
+*** 153,159 ****
+  # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib wsock32.lib /nologo /base:"0x1e190000" /subsystem:windows /debug /machine:ALPHA
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF 
+  
+  # Begin Target
+  
+--- 153,159 ----
+  # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib wsock32.lib /nologo /base:"0x1e190000" /subsystem:windows /debug /machine:ALPHA
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF
+  
+  # Begin Target
+  
+***************
+*** 177,183 ****
+  
+  !ELSEIF  "$(CFG)" == "pythonw - Win32 Alpha Release"
+  
+! !ENDIF 
+  
+  # End Source File
+  # End Target
+--- 177,183 ----
+  
+  !ELSEIF  "$(CFG)" == "pythonw - Win32 Alpha Release"
+  
+! !ENDIF
+  
+  # End Source File
+  # End Target
+*** misc/Python-2.2.2/PCbuild/select.dsp	Mon Aug 14 00:59:26 2000
+--- misc/build/Python-2.2.2/PCbuild/select.dsp	Fri Oct 10 12:42:16 2003
+***************
+*** 7,30 ****
+  CFG=select - Win32 Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE 
+  !MESSAGE NMAKE /f "select.mak".
+! !MESSAGE 
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE 
+  !MESSAGE NMAKE /f "select.mak" CFG="select - Win32 Debug"
+! !MESSAGE 
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE 
+  !MESSAGE "select - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "select - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+! !MESSAGE 
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName "select"
+! # PROP Scc_LocalPath ".."
+  CPP=cl.exe
+  MTL=midl.exe
+  RSC=rc.exe
+--- 7,30 ----
+  CFG=select - Win32 Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE
+  !MESSAGE NMAKE /f "select.mak".
+! !MESSAGE
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE
+  !MESSAGE NMAKE /f "select.mak" CFG="select - Win32 Debug"
+! !MESSAGE
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE
+  !MESSAGE "select - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "select - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+! !MESSAGE
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName ""
+! # PROP Scc_LocalPath ""
+  CPP=cl.exe
+  MTL=midl.exe
+  RSC=rc.exe
+***************
+*** 85,91 ****
+  # ADD LINK32 user32.lib kernel32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib /nologo /base:"0x1D110000" /subsystem:windows /dll /debug /machine:I386 /nodefaultlib:"libc" /nodefaultlib:"msvcrt" /out:"./select_d.pyd" /pdbtype:sept /export:initselect
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF 
+  
+  # Begin Target
+  
+--- 85,91 ----
+  # ADD LINK32 user32.lib kernel32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib /nologo /base:"0x1D110000" /subsystem:windows /dll /debug /machine:I386 /nodefaultlib:"libc" /nodefaultlib:"msvcrt" /out:"./select_d.pyd" /pdbtype:sept /export:initselect
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF
+  
+  # Begin Target
+  
+*** misc/Python-2.2.2/PCbuild/unicodedata.dsp	Mon Jan 22 00:49:56 2001
+--- misc/build/Python-2.2.2/PCbuild/unicodedata.dsp	Fri Oct 10 12:42:16 2003
+***************
+*** 7,30 ****
+  CFG=unicodedata - Win32 Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE 
+  !MESSAGE NMAKE /f "unicodedata.mak".
+! !MESSAGE 
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE 
+  !MESSAGE NMAKE /f "unicodedata.mak" CFG="unicodedata - Win32 Debug"
+! !MESSAGE 
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE 
+  !MESSAGE "unicodedata - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "unicodedata - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+! !MESSAGE 
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName "unicodedata"
+! # PROP Scc_LocalPath ".."
+  CPP=cl.exe
+  MTL=midl.exe
+  RSC=rc.exe
+--- 7,30 ----
+  CFG=unicodedata - Win32 Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE
+  !MESSAGE NMAKE /f "unicodedata.mak".
+! !MESSAGE
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE
+  !MESSAGE NMAKE /f "unicodedata.mak" CFG="unicodedata - Win32 Debug"
+! !MESSAGE
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE
+  !MESSAGE "unicodedata - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "unicodedata - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+! !MESSAGE
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName ""
+! # PROP Scc_LocalPath ""
+  CPP=cl.exe
+  MTL=midl.exe
+  RSC=rc.exe
+***************
+*** 85,91 ****
+  # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /base:"0x1D120000" /dll /debug /machine:I386 /out:"./unicodedata_d.pyd" /pdbtype:sept /export:initunicodedata
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF 
+  
+  # Begin Target
+  
+--- 85,91 ----
+  # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /base:"0x1D120000" /dll /debug /machine:I386 /out:"./unicodedata_d.pyd" /pdbtype:sept /export:initunicodedata
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF
+  
+  # Begin Target
+  
+*** misc/Python-2.2.2/PCbuild/winreg.dsp	Mon Aug 14 00:59:26 2000
+--- misc/build/Python-2.2.2/PCbuild/winreg.dsp	Fri Oct 10 12:42:16 2003
+***************
+*** 7,30 ****
+  CFG=winreg - Win32 Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE 
+  !MESSAGE NMAKE /f "winreg.mak".
+! !MESSAGE 
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE 
+  !MESSAGE NMAKE /f "winreg.mak" CFG="winreg - Win32 Debug"
+! !MESSAGE 
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE 
+  !MESSAGE "winreg - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "winreg - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+! !MESSAGE 
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName "winreg"
+! # PROP Scc_LocalPath "..\pc"
+  CPP=cl.exe
+  MTL=midl.exe
+  RSC=rc.exe
+--- 7,30 ----
+  CFG=winreg - Win32 Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE
+  !MESSAGE NMAKE /f "winreg.mak".
+! !MESSAGE
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE
+  !MESSAGE NMAKE /f "winreg.mak" CFG="winreg - Win32 Debug"
+! !MESSAGE
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE
+  !MESSAGE "winreg - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "winreg - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+! !MESSAGE
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName ""
+! # PROP Scc_LocalPath ""
+  CPP=cl.exe
+  MTL=midl.exe
+  RSC=rc.exe
+***************
+*** 83,89 ****
+  # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
+  # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /base:"0x1e1C0000" /dll /debug /machine:I386 /out:"_winreg_d.pyd" /pdbtype:sept
+  
+! !ENDIF 
+  
+  # Begin Target
+  
+--- 83,89 ----
+  # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
+  # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /base:"0x1e1C0000" /dll /debug /machine:I386 /out:"_winreg_d.pyd" /pdbtype:sept
+  
+! !ENDIF
+  
+  # Begin Target
+  
+***************
+*** 101,107 ****
+  
+  # ADD CPP /MDd
+  
+! !ENDIF 
+  
+  # End Source File
+  # End Target
+--- 101,107 ----
+  
+  # ADD CPP /MDd
+  
+! !ENDIF
+  
+  # End Source File
+  # End Target
+*** misc/Python-2.2.2/PCbuild/winsound.dsp	Thu Sep  6 08:39:39 2001
+--- misc/build/Python-2.2.2/PCbuild/winsound.dsp	Fri Oct 10 12:42:16 2003
+***************
+*** 7,30 ****
+  CFG=winsound - Win32 Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE 
+  !MESSAGE NMAKE /f "winsound.mak".
+! !MESSAGE 
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE 
+  !MESSAGE NMAKE /f "winsound.mak" CFG="winsound - Win32 Debug"
+! !MESSAGE 
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE 
+  !MESSAGE "winsound - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "winsound - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+! !MESSAGE 
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName "winsound"
+! # PROP Scc_LocalPath "..\pc"
+  CPP=cl.exe
+  MTL=midl.exe
+  RSC=rc.exe
+--- 7,30 ----
+  CFG=winsound - Win32 Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE
+  !MESSAGE NMAKE /f "winsound.mak".
+! !MESSAGE
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE
+  !MESSAGE NMAKE /f "winsound.mak" CFG="winsound - Win32 Debug"
+! !MESSAGE
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE
+  !MESSAGE "winsound - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "winsound - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+! !MESSAGE
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName ""
+! # PROP Scc_LocalPath ""
+  CPP=cl.exe
+  MTL=midl.exe
+  RSC=rc.exe
+***************
+*** 85,91 ****
+  # ADD LINK32 kernel32.lib winmm.lib /nologo /base:"0x1D160000" /dll /debug /machine:I386 /out:"./winsound_d.pyd" /pdbtype:sept /export:initwinsound
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF 
+  
+  # Begin Target
+  
+--- 85,91 ----
+  # ADD LINK32 kernel32.lib winmm.lib /nologo /base:"0x1D160000" /dll /debug /machine:I386 /out:"./winsound_d.pyd" /pdbtype:sept /export:initwinsound
+  # SUBTRACT LINK32 /pdb:none
+  
+! !ENDIF
+  
+  # Begin Target
+  
+*** misc/Python-2.2.2/PCbuild/zlib.dsp	Thu Mar 14 00:56:48 2002
+--- misc/build/Python-2.2.2/PCbuild/zlib.dsp	Fri Oct 10 12:42:16 2003
+***************
+*** 7,30 ****
+  CFG=zlib - Win32 Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE 
+  !MESSAGE NMAKE /f "zlib.mak".
+! !MESSAGE 
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE 
+  !MESSAGE NMAKE /f "zlib.mak" CFG="zlib - Win32 Debug"
+! !MESSAGE 
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE 
+  !MESSAGE "zlib - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "zlib - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+! !MESSAGE 
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName "zlib"
+! # PROP Scc_LocalPath ".."
+  CPP=cl.exe
+  MTL=midl.exe
+  RSC=rc.exe
+--- 7,30 ----
+  CFG=zlib - Win32 Debug
+  !MESSAGE This is not a valid makefile. To build this project using NMAKE,
+  !MESSAGE use the Export Makefile command and run
+! !MESSAGE
+  !MESSAGE NMAKE /f "zlib.mak".
+! !MESSAGE
+  !MESSAGE You can specify a configuration when running NMAKE
+  !MESSAGE by defining the macro CFG on the command line. For example:
+! !MESSAGE
+  !MESSAGE NMAKE /f "zlib.mak" CFG="zlib - Win32 Debug"
+! !MESSAGE
+  !MESSAGE Possible choices for configuration are:
+! !MESSAGE
+  !MESSAGE "zlib - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+  !MESSAGE "zlib - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+! !MESSAGE
+  
+  # Begin Project
+  # PROP AllowPerConfigDependencies 0
+! # PROP Scc_ProjName ""
+! # PROP Scc_LocalPath ""
+  CPP=cl.exe
+  MTL=midl.exe
+  RSC=rc.exe
+***************
+*** 95,101 ****
+  PreLink_Cmds=cd ..\..\zlib-1.1.4	nmake -nologo -f msdos\makefile.w32 zlib.lib
+  # End Special Build Tool
+  
+! !ENDIF 
+  
+  # Begin Target
+  
+--- 95,101 ----
+  PreLink_Cmds=cd ..\..\zlib-1.1.4	nmake -nologo -f msdos\makefile.w32 zlib.lib
+  # End Special Build Tool
+  
+! !ENDIF
+  
+  # Begin Target
+  
+*** misc/Python-2.2.2/Python/dynload_next.c	Thu Dec  6 23:58:56 2001
+--- misc/build/Python-2.2.2/Python/dynload_next.c	Fri Oct 10 12:42:16 2003
+***************
+*** 33,40 ****
+  
+  
+  const struct filedescr _PyImport_DynLoadFiletab[] = {
+! 	{".so", "rb", C_EXTENSION},
+! 	{"module.so", "rb", C_EXTENSION},
+  	{0, 0}
+  };
+  
+--- 33,40 ----
+  
+  
+  const struct filedescr _PyImport_DynLoadFiletab[] = {
+! 	{".dylib", "rb", C_EXTENSION},
+! 	{"module.dylib", "rb", C_EXTENSION},
+  	{0, 0}
+  };
+  
+***************
+*** 115,123 ****
+  	of shared library) and rld() can't be used in the same program;
+  	instead, you have to use dyld, which is mostly unimplemented. */
+  	{
+! 		NSObjectFileImageReturnCode rc;
+! 		NSObjectFileImage image;
+! 		NSModule newModule;
+  		NSSymbol theSym;
+  		const char *errString;
+  	
+--- 115,121 ----
+  	of shared library) and rld() can't be used in the same program;
+  	instead, you have to use dyld, which is mostly unimplemented. */
+  	{
+! 		const struct mach_header      *pLib = NULL;
+  		NSSymbol theSym;
+  		const char *errString;
+  	
+***************
+*** 126,172 ****
+  			p = (dl_funcptr)NSAddressOfSymbol(theSym);
+  			return p;
+  		}
+! 		rc = NSCreateObjectFileImageFromFile(pathname, &image);
+! 		switch(rc) {
+! 		    default:
+! 		    case NSObjectFileImageFailure:
+! 		    case NSObjectFileImageFormat:
+! 		    /* for these a message is printed on stderr by dyld */
+! 			errString = "Can't create object file image";
+! 			break;
+! 		    case NSObjectFileImageSuccess:
+! 			errString = NULL;
+! 			break;
+! 		    case NSObjectFileImageInappropriateFile:
+! 			errString = "Inappropriate file type for dynamic loading";
+! 			break;
+! 		    case NSObjectFileImageArch:
+! 			errString = "Wrong CPU type in object file";
+! 			break;
+! 		    case NSObjectFileImageAccess:
+! 			errString = "Can't read object file (no access)";
+! 			break;
+! 		}
+! 		if (errString == NULL) {
+! 			newModule = NSLinkModule(image, pathname,
+! 				NSLINKMODULE_OPTION_BINDNOW|NSLINKMODULE_OPTION_RETURN_ON_ERROR);
+! 			if (!newModule)
+! 				errString = "Failure linking new module";
+! 		}
+! 		if (errString != NULL) {
+! 			PyErr_SetString(PyExc_ImportError, errString);
+! 			return NULL;
+! 		}
+! 		if (!NSIsSymbolNameDefined(funcname)) {
+! 			/* UnlinkModule() isn't implemented in current versions, but calling it does no harm */
+! 			NSUnLinkModule(newModule, FALSE);
+! 			PyErr_Format(PyExc_ImportError,
+! 				     "Loaded module does not contain symbol %.200s",
+! 				     funcname);
+! 			return NULL;
+  		}
+! 		theSym = NSLookupAndBindSymbol(funcname);
+! 		p = (dl_funcptr)NSAddressOfSymbol(theSym);
+   	}
+  #endif /* USE_DYLD */
+  
+--- 124,141 ----
+  			p = (dl_funcptr)NSAddressOfSymbol(theSym);
+  			return p;
+  		}
+!           pLib = NSAddImage(pathname, NSADDIMAGE_OPTION_WITH_SEARCHING |
+!                                  NSADDIMAGE_OPTION_RETURN_ON_ERROR);
+! 		if ( pLib )
+! 		{
+!                theSym = NSLookupSymbolInImage(pLib, funcname, NSLOOKUPSYMBOLINIMAGE_OPTION_BIND);
+! 			p = (dl_funcptr)NSAddressOfSymbol(theSym);
+! 			return p;
+  		}
+! 		else
+! 			errString = "Library could not be loaded";
+! 
+! fprintf( stderr, "error string = %s\n", errString );
+   	}
+  #endif /* USE_DYLD */
+  
+*** misc/Python-2.2.2/configure	Thu Oct 10 17:26:41 2002
+--- misc/build/Python-2.2.2/configure	Fri Oct 10 12:44:57 2003
+***************
+*** 1454,1459 ****
+--- 1454,1462 ----
+        LDLIBRARY='libpython$(VERSION).dll.a'
+        DLLLIBRARY='libpython$(VERSION).dll'
+        ;;
++ darwin*)
++       LDLIBRARY='libpython$(VERSION).dylib'
++ 	 ;;
+  esac
+  
+  # MacOSX framework builds need more magic. LDLIBRARY is the dynamic
+***************
+*** 1696,1702 ****
+      esac
+      case $ac_sys_system in
+      Darwin*)
+!     	OPT="$OPT -no-cpp-precomp";;
+      esac
+  fi
+  
+--- 1699,1721 ----
+      esac
+      case $ac_sys_system in
+      Darwin*)
+!     	OPT="$OPT -dynamic -no-cpp-precomp -fno-common -fPIC -malign-natural";;
+!     FreeBSD*)
+!         OPT="$OPT $PTHREAD_CFLAGS";;
+!     Solaris*)
+!         OPT="$OPT -KPIC";;
+!     Linux*)
+!         case "`uname -m`" in
+! 	    ppc*)
+!     	       OPT="$OPT -fPIC";;
+! 	    sparc64*)
+!     	       OPT="$OPT -fPIC";;
+!           x86_64*)
+!              OPT="$OPT -fPIC";;
+!             *)
+!     	       OPT="$OPT";;
+! 	esac
+!         ;;
+      esac
+  fi
+  
+***************
+*** 3100,3108 ****
+      LIBTOOL_CRUFT=$LIBTOOL_CRUFT' -compatibility_version $(VERSION) -current_version $(VERSION)';;
+    Darwin/*)
+      ns_undef_sym='_environ'
+!     LIBTOOL_CRUFT="-lcc_dynamic -arch_only ppc -flat_namespace -U $ns_undef_sym"
+        LIBTOOL_CRUFT="$LIBTOOL_CRUFT $extra_frameworks"
+!     LIBTOOL_CRUFT=$LIBTOOL_CRUFT' -install_name $(PYTHONFRAMEWORKDIR)/Versions/$(VERSION)/Python'
+      LIBTOOL_CRUFT=$LIBTOOL_CRUFT' -compatibility_version $(VERSION) -current_version $(VERSION)';;
+  esac
+  
+--- 3117,3125 ----
+      LIBTOOL_CRUFT=$LIBTOOL_CRUFT' -compatibility_version $(VERSION) -current_version $(VERSION)';;
+    Darwin/*)
+      ns_undef_sym='_environ'
+!     LIBTOOL_CRUFT="-arch_only ppc"
+        LIBTOOL_CRUFT="$LIBTOOL_CRUFT $extra_frameworks"
+!     LIBTOOL_CRUFT=$LIBTOOL_CRUFT' -install_name @executable_path/$(LDLIBRARY)'
+      LIBTOOL_CRUFT=$LIBTOOL_CRUFT' -compatibility_version $(VERSION) -current_version $(VERSION)';;
+  esac
+  
+***************
+*** 3159,3164 ****
+--- 3176,3182 ----
+  	case $ac_sys_system in
+  	hp*|HP*)   SO=.sl;;
+  	CYGWIN*)   SO=.dll;;
++ 	Darwin*)   SO=.dylib;;
+  	*)	   SO=.so;;
+  	esac
+  fi
+***************
+*** 3201,3214 ****
+  			LDSHARED="$LDSHARED -undefined suppress"
+  		fi ;;
+  	Darwin/*)
+! 		LDSHARED='$(CC) $(LDFLAGS) -bundle'
+  		if test "$enable_framework" ; then
+  			# Link against the framework. All externals should be defined.
+  			LDSHARED="$LDSHARED "'-framework $(PYTHONFRAMEWORK)'
+  		else
+  			# No framework, use the Python app as bundle-loader
+! 			BLDSHARED="$LDSHARED "'-bundle_loader $(BUILDPYTHON)'
+! 			LDSHARED="$LDSHARED "'-bundle_loader $(BINDIR)/$(PYTHON)'
+  		fi ;;
+  	Linux*) LDSHARED='$(CC) -shared';;
+  	dgux*) LDSHARED="ld -G";;
+--- 3219,3233 ----
+  			LDSHARED="$LDSHARED -undefined suppress"
+  		fi ;;
+  	Darwin/*)
+! 		LDSHARED='g++ -dynamiclib $(LDFLAGS) -lSystemStubs -framework System -framework CoreServices -framework Foundation -lstdc++ -L. -lpython$(VERSION)'
+  		if test "$enable_framework" ; then
+  			# Link against the framework. All externals should be defined.
+  			LDSHARED="$LDSHARED "'-framework $(PYTHONFRAMEWORK)'
+  		else
+  			# No framework, use the Python app as bundle-loader
+! 			#BLDSHARED="$LDSHARED "'-bundle_loader $(BUILDPYTHON)'
+! 			#LDSHARED="$LDSHARED "'-bundle_loader $(BINDIR)/$(PYTHON)'
+! 			LDSHARED="$LDSHARED"
+  		fi ;;
+  	Linux*) LDSHARED='$(CC) -shared';;
+  	dgux*) LDSHARED="ld -G";;
+***************
+*** 3216,3226 ****
+  	OpenBSD*|FreeBSD*)
+  		if [ "`$CC -dM -E - </dev/null | grep __ELF__`" != "" ]
+  		then
+! 			LDSHARED="cc -shared ${LDFLAGS}"
+  		else
+  			LDSHARED="ld -Bshareable ${LDFLAGS}"
+  		fi;;
+! 	NetBSD*) LDSHARED="cc -shared ${LDFLAGS}";;
+  	OpenUNIX*|UnixWare*)
+  		if test "$GCC" = "yes"
+  		then LDSHARED="$(CC) -shared"
+--- 3235,3245 ----
+  	OpenBSD*|FreeBSD*)
+  		if [ "`$CC -dM -E - </dev/null | grep __ELF__`" != "" ]
+  		then
+! 			LDSHARED="${CC} -shared ${LDFLAGS}"
+  		else
+  			LDSHARED="ld -Bshareable ${LDFLAGS}"
+  		fi;;
+! 	NetBSD*) LDSHARED="${CC} -shared ${LDFLAGS}";;
+  	OpenUNIX*|UnixWare*)
+  		if test "$GCC" = "yes"
+  		then LDSHARED="$(CC) -shared"
+*** misc/Python-2.2.2/setup.py	Thu Oct 10 02:59:16 2002
+--- misc/build/Python-2.2.2/setup.py	Fri Oct 10 12:42:16 2003
+***************
+*** 699,705 ****
+              tcl_includes = find_file('tcl.h', inc_dirs, debian_tcl_include)
+              tk_includes = find_file('tk.h', inc_dirs, debian_tk_include)
+  
+!         if (tcllib is None or tklib is None and
+              tcl_includes is None or tk_includes is None):
+              # Something's missing, so give up
+              return
+--- 699,705 ----
+              tcl_includes = find_file('tcl.h', inc_dirs, debian_tcl_include)
+              tk_includes = find_file('tk.h', inc_dirs, debian_tk_include)
+  
+!         if (tcllib is None or tklib is None or
+              tcl_includes is None or tk_includes is None):
+              # Something's missing, so give up
+              return

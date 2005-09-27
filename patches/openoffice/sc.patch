@@ -1,10 +1,198 @@
+Index: inc/chgtrack.hxx
+===================================================================
+RCS file: /cvs/sc/sc/inc/chgtrack.hxx,v
+retrieving revision 1.17.122.1
+diff -u -r1.17.122.1 chgtrack.hxx
+--- inc/chgtrack.hxx	9 Jan 2004 14:40:23 -0000	1.17.122.1
++++ inc/chgtrack.hxx	27 Sep 2005 05:36:21 -0000
+@@ -714,7 +714,7 @@
+ class ScChangeActionMove : public ScChangeAction
+ {
+ 	friend class ScChangeTrack;
+-#ifdef IRIX
++#if defined( IRIX ) || ( defined( MACOSX ) && ( __GNUC__ >= 4 ) )
+ 	friend class ScChangeActionDel;
+ #else
+ 	friend void ScChangeActionDel::UndoCutOffMoves();
+@@ -1013,7 +1013,7 @@
+ class ScChangeActionReject : public ScChangeAction
+ {
+ 	friend class ScChangeTrack;
+-#ifdef IRIX
++#if defined( IRIX ) || ( defined( MACOSX ) && ( __GNUC__ >= 4 ) )
+ 	friend class ScChangeActionContent;
+ #else
+ 	friend BOOL ScChangeActionContent::Select( ScDocument*, ScChangeTrack*, BOOL, Stack* );
+Index: inc/scextopt.hxx
+===================================================================
+RCS file: /cvs/sc/sc/inc/scextopt.hxx,v
+retrieving revision 1.6
+diff -u -r1.6 scextopt.hxx
+--- inc/scextopt.hxx	26 Mar 2003 18:03:36 -0000	1.6
++++ inc/scextopt.hxx	27 Sep 2005 05:36:22 -0000
+@@ -140,7 +140,7 @@
+ {
+ // Code: colrowst.cxx
+ private:
+-	friend ColRowSettings;
++	friend class ColRowSettings;
+ 	// Window -Info
+ 	ScExtTabOptions**		ppExtTabOpts;
+ 
+Index: source/filter/inc/colrowst.hxx
+===================================================================
+RCS file: /cvs/sc/sc/source/filter/inc/colrowst.hxx,v
+retrieving revision 1.14
+diff -u -r1.14 colrowst.hxx
+--- source/filter/inc/colrowst.hxx	21 May 2003 08:01:14 -0000	1.14
++++ source/filter/inc/colrowst.hxx	27 Sep 2005 05:36:23 -0000
+@@ -93,7 +93,7 @@
+ {
+ private:
+ 	// ACHTUNG: Col-/Row-Angaben in TWIPS
+-	friend ScExtDocOptions;
++	friend class ScExtDocOptions;
+ 
+     ScfUInt16List*      pHorizPb;   // horizontale Seitenumbrueche
+     ScfUInt16List*      pVertPb;    // vertikale ~
+Index: source/filter/inc/dif.hxx
+===================================================================
+RCS file: /cvs/sc/sc/source/filter/inc/dif.hxx,v
+retrieving revision 1.2
+diff -u -r1.2 dif.hxx
+--- source/filter/inc/dif.hxx	26 Mar 2003 18:04:58 -0000	1.2
++++ source/filter/inc/dif.hxx	27 Sep 2005 05:36:23 -0000
+@@ -208,7 +208,7 @@
+ class DifColumn : private List
+ {
+ private:
+-	friend DifAttrCache;
++	friend class DifAttrCache;
+ 	struct ENTRY
+ 	{
+ 		UINT32			nNumFormat;
+Index: source/filter/inc/lotattr.hxx
+===================================================================
+RCS file: /cvs/sc/sc/source/filter/inc/lotattr.hxx,v
+retrieving revision 1.1.1.1
+diff -u -r1.1.1.1 lotattr.hxx
+--- source/filter/inc/lotattr.hxx	18 Sep 2000 16:45:13 -0000	1.1.1.1
++++ source/filter/inc/lotattr.hxx	27 Sep 2005 05:36:23 -0000
+@@ -109,7 +109,7 @@
+ class LotAttrCache : private List
+ {
+ private:
+-	friend LotAttrTable;
++	friend class LotAttrTable;
+ 
+ 	struct ENTRY
+ 	{
+Index: source/filter/inc/lotrange.hxx
+===================================================================
+RCS file: /cvs/sc/sc/source/filter/inc/lotrange.hxx,v
+retrieving revision 1.1.1.1
+diff -u -r1.1.1.1 lotrange.hxx
+--- source/filter/inc/lotrange.hxx	18 Sep 2000 16:45:13 -0000	1.1.1.1
++++ source/filter/inc/lotrange.hxx	27 Sep 2005 05:36:23 -0000
+@@ -75,7 +75,7 @@
+ 
+ class LotusRange
+ {
+-	friend LotusRangeList;
++	friend class LotusRangeList;
+ private:
+ 	UINT32				nHash;
+ 	UINT16				nColStart;
+Index: source/filter/inc/namebuff.hxx
+===================================================================
+RCS file: /cvs/sc/sc/source/filter/inc/namebuff.hxx,v
+retrieving revision 1.6.122.1
+diff -u -r1.6.122.1 namebuff.hxx
+--- source/filter/inc/namebuff.hxx	24 Sep 2004 09:21:16 -0000	1.6.122.1
++++ source/filter/inc/namebuff.hxx	27 Sep 2005 05:36:24 -0000
+@@ -89,7 +89,7 @@
+ class StringHashEntry
+ {
+ private:
+-	friend NameBuffer;
++	friend class NameBuffer;
+ 	String			aString;
+ 	UINT32			nHash;
+ 
+Index: source/filter/inc/xcl97rec.hxx
+===================================================================
+RCS file: /cvs/sc/sc/source/filter/inc/xcl97rec.hxx,v
+retrieving revision 1.29.20.1
+diff -u -r1.29.20.1 xcl97rec.hxx
+--- source/filter/inc/xcl97rec.hxx	14 Nov 2003 11:04:06 -0000	1.29.20.1
++++ source/filter/inc/xcl97rec.hxx	27 Sep 2005 05:36:24 -0000
+@@ -655,7 +655,7 @@
+ class XclCf : public ExcRecord, protected XclExpRoot
+ {
+ private:
+-	friend XclCondFormat;
++	friend class XclCondFormat;
+ 
+ 	sal_Char*					pVarData;		// formats + formulas
+ 	UINT16						nVarLen;		// len of attributes + formulas
+Index: source/ui/Accessibility/AccessibleDocument.cxx
+===================================================================
+RCS file: /cvs/sc/sc/source/ui/Accessibility/AccessibleDocument.cxx,v
+retrieving revision 1.63
+diff -u -r1.63 AccessibleDocument.cxx
+--- source/ui/Accessibility/AccessibleDocument.cxx	17 Jul 2003 11:30:29 -0000	1.63
++++ source/ui/Accessibility/AccessibleDocument.cxx	27 Sep 2005 05:36:26 -0000
+@@ -521,8 +521,9 @@
+     throw (uno::RuntimeException)
+ {
+ 	// create the new child
++	::accessibility::AccessibleShapeInfo aShapeInfo( _rxShape, pCurrentChild->getAccessibleParent(), this, _nIndex );
+ 	::accessibility::AccessibleShape* pReplacement = ::accessibility::ShapeTypeHandler::Instance().CreateAccessibleObject (
+-		::accessibility::AccessibleShapeInfo ( _rxShape, pCurrentChild->getAccessibleParent(), this, _nIndex ),
++		aShapeInfo,
+ 		_rShapeTreeInfo
+ 	);
+ 	::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessible > xNewChild( pReplacement );	// keep this alive (do this before calling Init!)
+Index: source/ui/inc/AccessibleText.hxx
+===================================================================
+RCS file: /cvs/sc/sc/source/ui/inc/AccessibleText.hxx,v
+retrieving revision 1.14
+diff -u -r1.14 AccessibleText.hxx
+--- source/ui/inc/AccessibleText.hxx	26 Mar 2003 18:06:09 -0000	1.14
++++ source/ui/inc/AccessibleText.hxx	27 Sep 2005 05:36:27 -0000
+@@ -97,18 +97,18 @@
+ 						ScAccessibleTextData() {}
+ 	virtual				~ScAccessibleTextData() {}
+ 
+-	virtual	ScAccessibleTextData* Clone() const = NULL;
++	virtual	ScAccessibleTextData* Clone() const = 0;
+ 
+ 	virtual void		Notify( SfxBroadcaster& rBC, const SfxHint& rHint ) {}
+ 
+-	virtual SvxTextForwarder* GetTextForwarder() = NULL;
+-	virtual SvxViewForwarder* GetViewForwarder() = NULL;
+-	virtual SvxEditViewForwarder* GetEditViewForwarder( sal_Bool bCreate ) = NULL;
++	virtual SvxTextForwarder* GetTextForwarder() = 0;
++	virtual SvxViewForwarder* GetViewForwarder() = 0;
++	virtual SvxEditViewForwarder* GetEditViewForwarder( sal_Bool bCreate ) = 0;
+ 	virtual SfxBroadcaster& GetBroadcaster() const { return maBroadcaster; }
+ 
+-    virtual void				UpdateData() = NULL;
+-	virtual void				SetDoUpdate(sal_Bool bValue) = NULL;
+-	virtual sal_Bool			IsDirty() const = NULL;
++    virtual void				UpdateData() = 0;
++	virtual void				SetDoUpdate(sal_Bool bValue) = 0;
++	virtual sal_Bool			IsDirty() const = 0;
+ 
+ private:
+ 	mutable SfxBroadcaster maBroadcaster;
 Index: util/makefile.mk
 ===================================================================
 RCS file: /cvs/sc/sc/util/makefile.mk,v
 retrieving revision 1.18.42.1
 diff -u -r1.18.42.1 makefile.mk
 --- util/makefile.mk	15 Aug 2003 11:52:48 -0000	1.18.42.1
-+++ util/makefile.mk	27 Dec 2004 21:33:55 -0000
++++ util/makefile.mk	27 Sep 2005 05:36:28 -0000
 @@ -70,6 +70,10 @@
  
  # --- Settings -----------------------------------------------------------

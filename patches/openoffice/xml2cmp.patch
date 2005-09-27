@@ -1,0 +1,104 @@
+Index: source/support/list.hxx
+===================================================================
+RCS file: /cvs/tools/xml2cmp/source/support/list.hxx,v
+retrieving revision 1.6
+diff -u -r1.6 list.hxx
+--- source/support/list.hxx	8 Aug 2002 16:07:56 -0000	1.6
++++ source/support/list.hxx	27 Sep 2005 03:30:44 -0000
+@@ -169,16 +169,16 @@
+ void
+ List<XX>::insert(unsigned pos, const XX & elem)
+ {
+-    if ( pos > len )
++    if ( pos > List<XX>::len )
+       return;
+ 
+-    checkSize(len+2);
+-    for ( unsigned p = len; p > pos; --p)
++    checkSize(List<XX>::len+2);
++    for ( unsigned p = List<XX>::len; p > pos; --p)
+     {
+-        inhalt[p] = inhalt[p-1];
++        List<XX>::inhalt[p] = List<XX>::inhalt[p-1];
+     }
+-    inhalt[pos] = elem;
+-    len++;
++    List<XX>::inhalt[pos] = elem;
++    List<XX>::len++;
+ }
+ 
+ 
+@@ -186,12 +186,12 @@
+ void
+ List<XX>::remove(unsigned pos)
+ {
+-    if ( pos >= len )
++    if ( pos >= List<XX>::len )
+       return;
+-    len--;
+-    for ( unsigned p = pos; p < len; ++p)
++    List<XX>::len--;
++    for ( unsigned p = pos; p < List<XX>::len; ++p)
+     {
+-        inhalt[p] = inhalt[p+1];
++        List<XX>::inhalt[p] = List<XX>::inhalt[p+1];
+     }
+ }
+ 
+@@ -232,19 +232,19 @@
+ {
+     XX * pNew = new XX[newSpace];
+ 
+-    if (inhalt != 0)
++    if (List<XX>::inhalt != 0)
+     {
+         if (re)
+     	{
+-            for (unsigned i = 0; i < len; ++i)
++            for (unsigned i = 0; i < List<XX>::len; ++i)
+     		{
+-                pNew[i] = inhalt[i];
++                pNew[i] = List<XX>::inhalt[i];
+             }  // end for
+     	}
+-        delete [] inhalt;
++        delete [] List<XX>::inhalt;
+     }
+ 
+-    inhalt = pNew;
++    List<XX>::inhalt = pNew;
+     allocated = newSpace;
+ }
+ 
+@@ -259,13 +259,13 @@
+ void
+ DynamicList<XY>::insert(unsigned pos, XY * const & elem)
+ {
+-    if ( pos > len )
++    if ( pos > DynamicList<XY>::len )
+       return;
+ 
+-    checkSize(len+2);
+-    memmove(inhalt[pos+1], inhalt[pos], (len-pos) * sizeof(XY*) );
+-    inhalt[pos] = elem;
+-    len++;
++    checkSize(DynamicList<XY>::len+2);
++    memmove(DynamicList<XY>::inhalt[pos+1], DynamicList<XY>::inhalt[pos], (DynamicList<XY>::len-pos) * sizeof(XY*) );
++    DynamicList<XY>::inhalt[pos] = elem;
++    DynamicList<XY>::len++;
+ }
+ 
+ template <class XY>
+@@ -274,9 +274,9 @@
+ {
+     if (!is_valid_index(pos) )
+         return;
+-    len--;
+-    delete inhalt[pos];
+-    memmove(inhalt[pos], inhalt[pos+1], (len-pos) * sizeof(XY*) );
++    DynamicList<XY>::len--;
++    delete DynamicList<XY>::inhalt[pos];
++    memmove(DynamicList<XY>::inhalt[pos], DynamicList<XY>::inhalt[pos+1], (DynamicList<XY>::len-pos) * sizeof(XY*) );
+ }
+ 
+ 

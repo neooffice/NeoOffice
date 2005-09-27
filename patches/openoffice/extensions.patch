@@ -1,0 +1,19 @@
+Index: source/plugin/inc/plugin/plctrl.hxx
+===================================================================
+RCS file: /cvs/util/extensions/source/plugin/inc/plugin/plctrl.hxx,v
+retrieving revision 1.2
+diff -u -r1.2 plctrl.hxx
+--- source/plugin/inc/plugin/plctrl.hxx	30 Jun 2003 15:14:41 -0000	1.2
++++ source/plugin/inc/plugin/plctrl.hxx	27 Sep 2005 05:35:45 -0000
+@@ -173,9 +173,9 @@
+     virtual Reference< XInterface > SAL_CALL getContext() throw( RuntimeException )
+ 	{ return _xContext; }
+ 	
+-    virtual sal_Bool SAL_CALL setModel( const Reference< ::com::sun::star::awt::XControlModel > & Model ) throw( RuntimeException ) = NULL;
++    virtual sal_Bool SAL_CALL setModel( const Reference< ::com::sun::star::awt::XControlModel > & Model ) throw( RuntimeException ) = 0;
+ //	{ DBG_ERROR( "### setModel() illegal on plugincontrol!" ); return sal_False; }
+-    virtual Reference< ::com::sun::star::awt::XControlModel > SAL_CALL getModel() throw( RuntimeException ) = NULL;
++    virtual Reference< ::com::sun::star::awt::XControlModel > SAL_CALL getModel() throw( RuntimeException ) = 0;
+ 
+     virtual Reference< ::com::sun::star::awt::XView > SAL_CALL getView() throw( RuntimeException )
+ 	{ return (::com::sun::star::awt::XView*)this; }

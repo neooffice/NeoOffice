@@ -1,0 +1,17 @@
+? unxmacxp.pro.oo
+Index: source/server/statemnt.hxx
+===================================================================
+RCS file: /cvs/util/automation/source/server/statemnt.hxx,v
+retrieving revision 1.4
+diff -u -r1.4 statemnt.hxx
+--- source/server/statemnt.hxx	10 Jun 2003 11:29:57 -0000	1.4
++++ source/server/statemnt.hxx	27 Sep 2005 05:31:43 -0000
+@@ -351,7 +351,7 @@
+ 
+ class StatementCommand : public StatementList	// Befehl ausführen (wintree, resetaplication ...)
+ {
+-	friend ImplRemoteControl;
++	friend class ImplRemoteControl;
+ protected:
+ 	USHORT nMethodId;
+ 	USHORT nParams;

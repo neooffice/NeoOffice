@@ -1,0 +1,27 @@
+? Python-2.2.2.gcc4.macosx.patch
+Index: makefile.mk
+===================================================================
+RCS file: /cvs/external/python/makefile.mk,v
+retrieving revision 1.6.2.3
+diff -u -r1.6.2.3 makefile.mk
+--- makefile.mk	28 Jan 2004 12:02:42 -0000	1.6.2.3
++++ makefile.mk	27 Sep 2005 03:36:39 -0000
+@@ -71,7 +71,18 @@
+ # --- Files --------------------------------------------------------
+ 
+ TARFILE_NAME=Python-$(PYVERSION)
++.IF "$(OS)"=="MACOSX"
++# [ed] 9/11/05 For gcc4 we need different linker flags.  As the python
++# build system doesn't use our makefiles, we'll fix these errors with
++# a different patch
++.IF "$(CCNUMVER)">="000400000000"
++PATCH_FILE_NAME=Python-$(PYVERSION).gcc4.macosx.patch
++.ELSE
++PATCH_FILE_NAME=Python-$(PYVERSION).patch
++.ENDIF
++.ELSE
+ PATCH_FILE_NAME=Python-$(PYVERSION).patch
++.ENDIF
+ 
+ CONFIGURE_DIR=
+ 

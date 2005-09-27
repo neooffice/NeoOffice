@@ -1,0 +1,70 @@
+Index: source/cppumaker/cpputype.cxx
+===================================================================
+RCS file: /cvs/udk/codemaker/source/cppumaker/cpputype.cxx,v
+retrieving revision 1.22.18.2
+diff -u -r1.22.18.2 cpputype.cxx
+--- source/cppumaker/cpputype.cxx	28 Jan 2004 15:27:37 -0000	1.22.18.2
++++ source/cppumaker/cpputype.cxx	27 Sep 2005 05:22:50 -0000
+@@ -1649,7 +1649,11 @@
+ 
+ 	dumpAttributes(o);
+ 	dumpMethods(o);
+-
++	
++	o << "\n" << indent()
++ 	      << ("static inline ::com::sun::star::uno::Type const & SAL_CALL"
++ 	          " static_type(void * = 0) SAL_THROW(());\n");
++		  
+ 	dec();
+ 	o << "};\n\n";
+ 
+@@ -1729,6 +1733,16 @@
+ 		}
+ 	}
+ 
++	o << "\n::com::sun::star::uno::Type const & "
++	      << scopedName(rtl::OString(), m_typeName)
++ 	      << "::static_type(void *) SAL_THROW(()) {\n";
++ 	    inc();
++ 	    o << indent() << "return ::getCppuType(static_cast< ";
++ 	    dumpType(o, m_typeName);
++ 	    o << " * >(0));\n";
++ 	    dec();
++ 	    o << "}\n";
++
+ 	o << "\n#endif // "<< headerDefine << "\n";
+ 	return sal_True;
+ }
+@@ -2821,16 +2835,18 @@
+ 	o << "\n";
+ 	dumpDepIncludes(o, m_typeName, "hdl");
+ 	o << "\n";
+-
++	
++	o << "\nnamespace com { namespace sun { namespace star { namespace uno {\n"
++	  << "class Type;\n} } } }\n\n";
++	  
+ 	dumpNameSpace(o);
+ 
+ 	dumpDeclaration(o);
+ 
+ 	dumpNameSpace(o, sal_False);
+-
+-	o << "\nnamespace com { namespace sun { namespace star { namespace uno {\n"
+-	  << "class Type;\n} } } }\n\n";
+-
++	
++	o << "\n";
++	
+ 	if (m_cppuTypeStatic)
+ 		o << "static";
+ 	else
+@@ -3049,7 +3065,7 @@
+ 
+ 	o << "\n";
+ 	dumpGetCppuType(o);
+-
++		    
+ 	o << "\n#endif // "<< headerDefine << "\n";
+ 
+ 	return sal_True;

@@ -1,0 +1,16 @@
+Index: source/forms/elementimport_impl.hxx
+===================================================================
+RCS file: /cvs/xml/xmloff/source/forms/elementimport_impl.hxx,v
+retrieving revision 1.4
+diff -u -r1.4 elementimport_impl.hxx
+--- source/forms/elementimport_impl.hxx	3 Jan 2001 16:25:34 -0000	1.4
++++ source/forms/elementimport_impl.hxx	27 Sep 2005 05:30:19 -0000
+@@ -148,7 +148,7 @@
+ 	if (m_xColumnFactory.is())
+ 	{
+ 		// create the column
+-		xReturn = m_xColumnFactory->createColumn(m_sServiceName);
++		xReturn = m_xColumnFactory->createColumn(BASE::m_sServiceName);
+ 		OSL_ENSURE(xReturn.is(), "OColumnImport::createElement: the factory returned an invalid object!");
+ 	}
+ 	return xReturn;

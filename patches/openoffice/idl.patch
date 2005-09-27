@@ -1,0 +1,16 @@
+Index: inc/hash.hxx
+===================================================================
+RCS file: /cvs/framework/idl/inc/hash.hxx,v
+retrieving revision 1.1.1.1
+diff -u -r1.1.1.1 hash.hxx
+--- inc/hash.hxx	18 Sep 2000 16:30:41 -0000	1.1.1.1
++++ inc/hash.hxx	27 Sep 2005 05:25:25 -0000
+@@ -99,7 +99,7 @@
+ class SvStringHashTable;
+ class SvStringHashEntry : public SvRefBase
+ {
+-friend SvStringHashTable;
++friend class SvStringHashTable;
+     ByteString  aName;
+     UINT32  nHashId;
+     ULONG   nValue;

@@ -1,0 +1,20 @@
+? unxmacxp.pro.oo
+Index: source/app/app.cxx
+===================================================================
+RCS file: /cvs/framework/desktop/source/app/app.cxx,v
+retrieving revision 1.121.10.8
+diff -u -r1.121.10.8 app.cxx
+--- source/app/app.cxx	2 Mar 2004 10:06:34 -0000	1.121.10.8
++++ source/app/app.cxx	27 Sep 2005 05:38:40 -0000
+@@ -478,7 +478,10 @@
+     {
+         ::osl::MutexGuard aGuard( ::osl::Mutex::getGlobalMutex() );
+         if ( !pArgs )
+-            pArgs = new CommandLineArgs( ::vos::OExtCommandLine() );
++	{
++	    ::vos::OExtCommandLine extCommandLine;
++            pArgs = new CommandLineArgs( extCommandLine );
++	}
+     }
+ 
+     return pArgs;

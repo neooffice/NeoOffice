@@ -1,0 +1,199 @@
+Index: source/ary/inc/nametreenode.hxx
+===================================================================
+RCS file: /cvs/tools/autodoc/source/ary/inc/nametreenode.hxx,v
+retrieving revision 1.2
+diff -u -r1.2 nametreenode.hxx
+--- source/ary/inc/nametreenode.hxx	18 Mar 2003 14:11:34 -0000	1.2
++++ source/ary/inc/nametreenode.hxx	27 Sep 2005 03:40:42 -0000
+@@ -187,7 +187,7 @@
+ NameTreeNode<ITEM_ID>::Add_Name( const String &      i_sName,
+                                  item_id             i_nId )
+ {
+-    LocalNames().insert( Map_LocalNames::value_type(i_sName, i_nId) );
++    LocalNames().insert( typename Map_LocalNames::value_type(i_sName, i_nId) );
+ }
+ 
+ 
+Index: source/ary/inc/store/st_iterator.hxx
+===================================================================
+RCS file: /cvs/tools/autodoc/source/ary/inc/store/st_iterator.hxx,v
+retrieving revision 1.1
+diff -u -r1.1 st_iterator.hxx
+--- source/ary/inc/store/st_iterator.hxx	1 Nov 2002 17:13:57 -0000	1.1
++++ source/ary/inc/store/st_iterator.hxx	27 Sep 2005 03:40:42 -0000
+@@ -244,7 +244,7 @@
+ 
+ 
+     const unit_type &   operator*() const       /// @precond bool(*this);
+-                                                { return CurUnit(); }
++                                                { return this->CurUnit(); }
+ };
+ 
+ 
+@@ -271,7 +271,7 @@
+                             { }
+ 
+     unit_type &         operator*() const       /// @precond bool(*this);
+-                                                { return CurUnit(); }
++                                                { return this->CurUnit(); }
+ };
+ 
+ 
+@@ -279,6 +279,8 @@
+ class RootFilterConstIterator : public internal::IteratorBase< UNIT, FILTER >
+ {
+   public:
++  typedef UNIT unit_type;
++
+     typedef RootFilterConstIterator<UNIT,FILTER>    self;
+ 
+                         RootFilterConstIterator(
+@@ -290,7 +292,7 @@
+                                     i_rOther.CurPosition() ) {}
+ 
+     const unit_type &   operator*() const       /// @precond bool(*this);
+-                                                { return CurUnit(); }
++                                                { return this->CurUnit(); }
+     self &              operator=(
+                             const RootConstIterator<UNIT> &
+                                                 i_rOther )
+@@ -307,6 +309,9 @@
+ class RootFilterIterator : public internal::IteratorBase< UNIT, FILTER >
+ {
+   public:
++  typedef UNIT unit_type;
++  typedef RootFilterConstIterator<UNIT,FILTER>    self;
++
+                         RootFilterIterator(
+                             const RootIterator<UNIT> &
+                                                 i_rOther )
+@@ -317,7 +322,7 @@
+ 
+ 
+     unit_type &         operator*() const       /// @precond bool(*this);
+-                                                { return CurUnit(); }
++                                                { return this->CurUnit(); }
+     self &              operator=(
+                             const RootIterator<UNIT> &
+                                                 i_rOther )
+Index: source/ary/store/t_storg.hxx
+===================================================================
+RCS file: /cvs/tools/autodoc/source/ary/store/t_storg.hxx,v
+retrieving revision 1.2
+diff -u -r1.2 t_storg.hxx
+--- source/ary/store/t_storg.hxx	2 Jul 2003 13:49:27 -0000	1.2
++++ source/ary/store/t_storg.hxx	27 Sep 2005 03:40:42 -0000
+@@ -131,8 +131,8 @@
+ StdReStorage<RE>::do_Add( const KEY &         i_rKey,
+ 						  DYN RE &            let_drElement )
+ {
+-	std::pair<DataBase::iterator, bool> result
+-			= aDataBase.insert(DataBase::value_type(i_rKey, &let_drElement));
++	std::pair<typename DataBase::iterator, bool> result
++			= aDataBase.insert(typename DataBase::value_type(i_rKey, &let_drElement));
+ 	if (result.second == false)
+ 		delete &let_drElement;
+ 	return *(*result.first).second;
+Index: source/inc/estack.hxx
+===================================================================
+RCS file: /cvs/tools/autodoc/source/inc/estack.hxx,v
+retrieving revision 1.2
+diff -u -r1.2 estack.hxx
+--- source/inc/estack.hxx	30 Jun 2003 15:27:34 -0000	1.2
++++ source/inc/estack.hxx	27 Sep 2005 03:40:43 -0000
+@@ -98,11 +98,11 @@
+     bool                operator==(
+                             const EStack<ELEM> &
+                                                 i_r2 ) const
+-                                                { return std::operator==( Base(), i_rStack.Base() ); }
++                                                { return std::operator==( Base(), std::slist<ELEM>::i_rStack.Base() ); }
+     bool                operator<(
+                             const EStack<ELEM> &
+                                                 i_r2 ) const
+-                                                { return std::operator<( Base(), i_rStack.Base() ); }
++                                                { return std::operator<( Base(), std::slist<ELEM>::i_rStack.Base() ); }
+     // OPERATIONS
+     void                push(
+                             const value_type &  i_rElem )
+Index: source/parser_i/idl/tk_keyw.cxx
+===================================================================
+RCS file: /cvs/tools/autodoc/source/parser_i/idl/tk_keyw.cxx,v
+retrieving revision 1.3
+diff -u -r1.3 tk_keyw.cxx
+--- source/parser_i/idl/tk_keyw.cxx	1 Nov 2002 17:15:41 -0000	1.3
++++ source/parser_i/idl/tk_keyw.cxx	27 Sep 2005 03:40:43 -0000
+@@ -137,15 +137,15 @@
+ namespace lux
+ {
+ 
+-EnumValueMap &
++template <> EnumValueMap &
+ TokBuiltInType::EV_TokenId::Values_()		{ return G_aTokBuiltInType_EV_TokenId_Values; }
+-EnumValueMap &
++template <> EnumValueMap &
+ TokTypeModifier::EV_TokenId::Values_()		{ return G_aTokTypeModifier_EV_TokenId_Values; }
+-EnumValueMap &
++template <> EnumValueMap &
+ TokMetaType::EV_TokenId::Values_()			{ return G_aTokMetaType_EV_TokenId_Values; }
+-EnumValueMap &
++template <> EnumValueMap &
+ TokStereotype::EV_TokenId::Values_()		{ return G_aTokStereotype_EV_TokenId_Values; }
+-EnumValueMap &
++template <> EnumValueMap &
+ TokParameterHandling::EV_TokenId::Values_()	{ return G_aTokParameterHandling_EV_TokenId_Values; }
+ 
+ }   // namespace lux
+Index: source/parser_i/idl/tk_punct.cxx
+===================================================================
+RCS file: /cvs/tools/autodoc/source/parser_i/idl/tk_punct.cxx,v
+retrieving revision 1.2.62.1
+diff -u -r1.2.62.1 tk_punct.cxx
+--- source/parser_i/idl/tk_punct.cxx	25 Mar 2004 11:33:03 -0000	1.2.62.1
++++ source/parser_i/idl/tk_punct.cxx	27 Sep 2005 03:40:43 -0000
+@@ -90,7 +90,7 @@
+ 
+ namespace lux
+ {
+-EnumValueMap &
++template <> EnumValueMap &
+ TokPunctuation::EV_TokenId::Values_()		{ return G_aTokPunctuation_EV_TokenId_Values; }
+ }
+ 
+Index: source/parser_i/idoc/tk_atag2.cxx
+===================================================================
+RCS file: /cvs/tools/autodoc/source/parser_i/idoc/tk_atag2.cxx,v
+retrieving revision 1.3
+diff -u -r1.3 tk_atag2.cxx
+--- source/parser_i/idoc/tk_atag2.cxx	10 Jun 2003 11:35:20 -0000	1.3
++++ source/parser_i/idoc/tk_atag2.cxx	27 Sep 2005 03:40:43 -0000
+@@ -90,7 +90,7 @@
+ 
+ namespace lux
+ {
+-EnumValueMap &
++template <> EnumValueMap &
+ Tok_AtTag::EV_TokenId::Values_()	{ return G_aTokAtTag_EV_TokenId_Values; }
+ }
+ 
+Index: source/parser_i/idoc/tk_xml.cxx
+===================================================================
+RCS file: /cvs/tools/autodoc/source/parser_i/idoc/tk_xml.cxx,v
+retrieving revision 1.2
+diff -u -r1.2 tk_xml.cxx
+--- source/parser_i/idoc/tk_xml.cxx	14 May 2002 09:02:21 -0000	1.2
++++ source/parser_i/idoc/tk_xml.cxx	27 Sep 2005 03:40:44 -0000
+@@ -94,11 +94,11 @@
+ namespace lux
+ {
+ 
+-EnumValueMap &
++template <> EnumValueMap &
+ Tok_XmlConst::EV_TokenId::Values_()	        { return G_aTok_XmlConst_EV_TokenId_Values; }
+-EnumValueMap &
++template <> EnumValueMap &
+ Tok_XmlLink_Tag::EV_TokenId::Values_()	    { return G_aTok_XmlLink_Tag_EV_TokenId_Values; }
+-EnumValueMap &
++template <> EnumValueMap &
+ Tok_XmlFormat_Tag::EV_TokenId::Values_()	{ return G_aTok_XmlFormat_Tag_EV_TokenId_Values; }
+ 
+ }   // namespace lux

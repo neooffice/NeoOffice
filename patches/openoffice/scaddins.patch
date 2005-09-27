@@ -1,0 +1,16 @@
+Index: source/analysis/analysishelper.hxx
+===================================================================
+RCS file: /cvs/sc/scaddins/source/analysis/analysishelper.hxx,v
+retrieving revision 1.24
+diff -u -r1.24 analysishelper.hxx
+--- source/analysis/analysishelper.hxx	4 Jun 2003 10:31:56 -0000	1.24
++++ source/analysis/analysishelper.hxx	27 Sep 2005 05:29:52 -0000
+@@ -614,7 +614,7 @@
+ class ConvertData
+ {
+ protected:
+-	friend ConvertDataList;
++	friend class ConvertDataList;
+ 	double					fConst;
+ 	STRING					aName;
+ 	ConvertDataClass		eClass;

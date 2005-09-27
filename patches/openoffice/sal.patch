@@ -1,10 +1,45 @@
+Index: inc/osl/mutex.hxx
+===================================================================
+RCS file: /cvs/porting/sal/inc/osl/mutex.hxx,v
+retrieving revision 1.9
+diff -u -r1.9 mutex.hxx
+--- inc/osl/mutex.hxx	4 Apr 2003 17:10:54 -0000	1.9
++++ inc/osl/mutex.hxx	27 Sep 2005 03:31:14 -0000
+@@ -245,8 +245,8 @@
+         {
+             if( pResetT )
+             {
+-                pT = pResetT;
+-                pT->acquire();
++                this->pT = pResetT;
++                this->pT->acquire();
+             }
+         }
+     };
+Index: osl/unx/system.h
+===================================================================
+RCS file: /cvs/porting/sal/osl/unx/system.h,v
+retrieving revision 1.19.10.1
+diff -u -r1.19.10.1 system.h
+--- osl/unx/system.h	15 Aug 2003 11:38:50 -0000	1.19.10.1
++++ osl/unx/system.h	27 Sep 2005 03:31:15 -0000
+@@ -482,7 +482,9 @@
+ #	define PTHREAD_VALUE(t) 			(t)
+ #endif
+ #ifndef PTHREAD_NONE
++#if (!defined(MACOSX) || (defined(MACOSX) && (__GNUC__ < 4)))
+ extern pthread_t _pthread_none_;
++#endif
+ #	define PTHREAD_NONE					_pthread_none_
+ #   ifndef PTHREAD_NONE_INIT
+ #		define PTHREAD_NONE_INIT		((pthread_t)-1)
 Index: systools/macxp_extras/x11osx/osxlocale.c
 ===================================================================
 RCS file: /cvs/porting/sal/systools/macxp_extras/x11osx/osxlocale.c,v
 retrieving revision 1.2.10.3
 diff -u -r1.2.10.3 osxlocale.c
 --- systools/macxp_extras/x11osx/osxlocale.c	27 Aug 2004 10:23:08 -0000	1.2.10.3
-+++ systools/macxp_extras/x11osx/osxlocale.c	24 Jul 2005 18:20:17 -0000
++++ systools/macxp_extras/x11osx/osxlocale.c	27 Sep 2005 03:31:15 -0000
 @@ -126,7 +126,10 @@
          lstr = CFLocaleGetIdentifier(lref);
          CFStringGetCString(lstr, locale, bufferLen, kCFStringEncodingASCII);
@@ -17,3 +52,19 @@ diff -u -r1.2.10.3 osxlocale.c
  
          if ( strchr(locale, '.') == NULL )
  	  strlcat( locale, ".UTF-8", bufferLen );
+Index: util/makefile.mk
+===================================================================
+RCS file: /cvs/porting/sal/util/makefile.mk,v
+retrieving revision 1.31
+diff -u -r1.31 makefile.mk
+--- util/makefile.mk	16 Jul 2003 17:23:32 -0000	1.31
++++ util/makefile.mk	27 Sep 2005 03:31:16 -0000
+@@ -160,7 +160,7 @@
+ .ENDIF # UNX
+ 
+ .IF "$(OS)"=="MACOSX"
+-SHL1STDLIBS+=-lstlport_gcc -framework CoreFoundation
++SHL1STDLIBS+=-lstlport_gcc -framework CoreFoundation -lstdc++
+ .ENDIF
+ 
+ SHL1LIBS+=$(SLB)$/$(TARGET).lib

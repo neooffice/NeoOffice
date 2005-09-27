@@ -1,0 +1,16 @@
+Index: inc/chainwidthbuilder.hxx
+===================================================================
+RCS file: /cvs/installation/setup2/inc/chainwidthbuilder.hxx,v
+retrieving revision 1.1
+diff -u -r1.1 chainwidthbuilder.hxx
+--- inc/chainwidthbuilder.hxx	16 Aug 2002 10:47:28 -0000	1.1
++++ inc/chainwidthbuilder.hxx	27 Sep 2005 05:32:08 -0000
+@@ -118,7 +118,7 @@
+ 					m_pNewSize = new sal_Int32[nValues];
+ 					
+ 					sal_Int32 i = 0;
+-					for (std::vector<TClass*>::iterator it = m_aList.begin();
++					for (typename std::vector<TClass*>::iterator it = m_aList.begin();
+ 						 it != m_aList.end();
+ 						 it++)
+ 					{

@@ -1,0 +1,66 @@
+Index: source/api2/apinodeaccess.hxx
+===================================================================
+RCS file: /cvs/util/configmgr/source/api2/apinodeaccess.hxx,v
+retrieving revision 1.5
+diff -u -r1.5 apinodeaccess.hxx
+--- source/api2/apinodeaccess.hxx	19 Mar 2003 16:18:29 -0000	1.5
++++ source/api2/apinodeaccess.hxx	27 Sep 2005 05:24:39 -0000
+@@ -66,6 +66,10 @@
+ #include "utility.hxx"
+ #endif
+ 
++#ifndef CONFIGMGR_ACCESSOR_HXX
++#include "accessor.hxx"
++#endif
++
+ namespace osl { class Mutex; }
+ 
+ namespace configmgr
+Index: source/api2/apinodeupdate.hxx
+===================================================================
+RCS file: /cvs/util/configmgr/source/api2/apinodeupdate.hxx,v
+retrieving revision 1.5
+diff -u -r1.5 apinodeupdate.hxx
+--- source/api2/apinodeupdate.hxx	19 Mar 2003 16:18:29 -0000	1.5
++++ source/api2/apinodeupdate.hxx	27 Sep 2005 05:24:40 -0000
+@@ -207,13 +207,13 @@
+         }
+ 
+ 		template <class Access>
+-        GuardedNodeUpdate<Access>::Updater GuardedNodeUpdate<Access>::getNodeUpdater() const
++        typename GuardedNodeUpdate<Access>::Updater GuardedNodeUpdate<Access>::getNodeUpdater() const
+         {
+             return get().getNodeUpdater(this->getDataAccessor());
+         }
+ 
+ 		template <class Access>
+-        GuardedNodeUpdate<Access>::Defaulter GuardedNodeUpdate<Access>::getNodeDefaulter() const
++        typename GuardedNodeUpdate<Access>::Defaulter GuardedNodeUpdate<Access>::getNodeDefaulter() const
+         {
+             return get().getNodeDefaulter(this->getDataAccessor());
+         }
+Index: source/api2/listenercontainer.hxx
+===================================================================
+RCS file: /cvs/util/configmgr/source/api2/listenercontainer.hxx,v
+retrieving revision 1.11
+diff -u -r1.11 listenercontainer.hxx
+--- source/api2/listenercontainer.hxx	19 Mar 2003 16:18:34 -0000	1.11
++++ source/api2/listenercontainer.hxx	27 Sep 2005 05:24:40 -0000
+@@ -155,7 +155,7 @@
+ 				BasicContainerInfo() : pInterface(0), pContainer(0) {}
+ 			};
+ 			typedef std::vector<BasicContainerInfo>			BasicContainerHelperArray;
+-			typedef BasicContainerHelperArray::size_type	Index;
++			typedef typename BasicContainerHelperArray::size_type	Index;
+ 
+ 			typedef Key_ Key;
+             typedef typename KeyToIndex_::KeyFinder KeyFinder;
+@@ -647,7 +647,7 @@
+ 			KeyList aKeys;
+ 			if (m_aMapper.findKeysForIndex(_aFinder, nIndex,aKeys))
+ 			{
+-				for(KeyList::iterator it = aKeys.begin(); it != aKeys.end(); ++it)
++				for(typename KeyList::iterator it = aKeys.begin(); it != aKeys.end(); ++it)
+ 				{
+ 					if (ListenerContainer* pContainer = m_aSpecialHelper.aLC.getContainer(*it))
+ 					{

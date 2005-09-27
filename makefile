@@ -109,16 +109,49 @@ build.oo_checkout:
 	touch "$@"
 
 build.oo_patches: build.oo_checkout \
+	build.oo_autodoc_patch \
+	build.oo_automation_patch \
+	build.oo_basic_patch \
 	build.oo_berkeleydb_patch \
+	build.oo_bridges_patch \
+	build.oo_codemaker_patch \
+	build.oo_comphelper_patch \
+	build.oo_config_office_patch \
+	build.oo_configmgr.patch \
+	build.oo_connectivity_patch \
+	build.oo_cppu_patch \
+	build.oo_cppuhelper_patch \
+	build.oo_dbaccess_patch \
+	build.oo_desktop_patch \
+	build.oo_extensions_patch \
 	build.oo_external_patch \
+	build.oo_forms_patch \
+	build.oo_framework_patch \
+	build.oo_icu_patch \
+	build.oo_idl_patch \
+	build.oo_psprint_patch \
+	build.oo_python_patch \
 	build.oo_sal_patch \
 	build.oo_sc_patch \
+	build.oo_scaddins_patch \
 	build.oo_scp_patch \
+	build.oo_setup2_patch \
+	build.oo_sfx2_patch \
 	build.oo_solenv_patch \
+	build.oo_soltools_patch \
 	build.oo_stlport_patch \
+	build.oo_stoc_patch \
+	build.oo_store_patch \
+	build.oo_svtools_patch \
+	build.oo_svx_patch \
+	build.oo_sw_patch \
+	build.oo_tools_patch \
+	build.oo_ucb_patch \
 	build.oo_ucbhelper_patch \
 	build.oo_vcl_patch \
-	build.oo_xmlhelp_patch
+	build.oo_xml2cmp_patch \
+	build.oo_xmlhelp_patch \
+	build.oo_xmloff_patch
 	touch "$@"
 
 build.oo_odk_patches: build.oo_checkout
@@ -132,6 +165,12 @@ build.oo_external_patch: build.oo_checkout
 	rm -Rf "$(BUILD_HOME)/external/gpc/gpc231"
 	touch "$@"
 
+build.oo_python_patch: $(OO_PATCHES_HOME)/python.patch build.oo_checkout
+	-( cd "$(BUILD_HOME)/$(@:build.oo_python_patch=%)" ; patch -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(BUILD_HOME)/$(@:build.oo_python_patch=%)" ; patch -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+	cp "$(OO_PATCHES_HOME)/Python-2.2.2.gcc4.macosx.patch" "$(BUILD_HOME)/python"
+	touch "$@"
+	
 build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.oo_checkout
 	-( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -R -p0 -N -r "/dev/null" ) < "$<"
 	( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -p0 -N -r "$(PWD)/patch.rej" ) < "$<"

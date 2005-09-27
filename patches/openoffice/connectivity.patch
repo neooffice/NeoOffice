@@ -1,0 +1,104 @@
+Index: source/drivers/jdbc/Connection.cxx
+===================================================================
+RCS file: /cvs/dba/connectivity/source/drivers/jdbc/Connection.cxx,v
+retrieving revision 1.17
+diff -u -r1.17 Connection.cxx
+--- source/drivers/jdbc/Connection.cxx	6 Jun 2003 10:50:29 -0000	1.17
++++ source/drivers/jdbc/Connection.cxx	27 Sep 2005 05:33:27 -0000
+@@ -674,7 +674,13 @@
+ 		} //mID
+ 	} //t.pEnv
+ 	// ACHTUNG: der Aufrufer wird Eigentuemer des zurueckgelieferten Zeigers !!!
+-	return out ? makeAny(java_sql_SQLWarning(java_sql_SQLWarning_BASE( t.pEnv, out ),*this)) : Any();
++        if( out )
++        {
++                java_sql_SQLWarning_BASE                warn_base(t.pEnv, out);
++                return makeAny(java_sql_SQLWarning(warn_base,*this));
++        }
++  
++        return Any();
+ }
+ // -----------------------------------------------------------------------------
+ void java_sql_Connection::loadDriverFromProperties(const Sequence< PropertyValue >& info,
+Index: source/drivers/jdbc/ResultSet.cxx
+===================================================================
+RCS file: /cvs/dba/connectivity/source/drivers/jdbc/ResultSet.cxx,v
+retrieving revision 1.18
+diff -u -r1.18 ResultSet.cxx
+--- source/drivers/jdbc/ResultSet.cxx	24 Apr 2003 13:21:49 -0000	1.18
++++ source/drivers/jdbc/ResultSet.cxx	27 Sep 2005 05:33:29 -0000
+@@ -1070,7 +1070,13 @@
+ 		} //mID
+ 	} //t.pEnv
+ 	// ACHTUNG: der Aufrufer wird Eigentuemer des zurueckgelieferten Zeigers !!!
+-        return out ? makeAny(java_sql_SQLWarning(java_sql_SQLWarning_BASE( t.pEnv, out ),*this)) : ::com::sun::star::uno::Any();
++        if( out )
++        {
++                java_sql_SQLWarning_BASE                warn_base(t.pEnv, out);
++                return makeAny(java_sql_SQLWarning(warn_base,*this));
++        }
++  
++        return ::com::sun::star::uno::Any();
+ }
+ // -------------------------------------------------------------------------
+ 
+Index: source/drivers/jdbc/SQLException.cxx
+===================================================================
+RCS file: /cvs/dba/connectivity/source/drivers/jdbc/SQLException.cxx,v
+retrieving revision 1.5
+diff -u -r1.5 SQLException.cxx
+--- source/drivers/jdbc/SQLException.cxx	24 Apr 2003 13:22:09 -0000	1.5
++++ source/drivers/jdbc/SQLException.cxx	27 Sep 2005 05:33:29 -0000
+@@ -140,7 +140,13 @@
+ 		} //mID
+ 	} //t.pEnv
+ 	// ACHTUNG: der Aufrufer wird Eigentuemer des zurueckgelieferten Zeigers !!!
+-	return out ? (starsdbc::SQLException)java_sql_SQLException(java_sql_SQLException_BASE(t.pEnv,out),0) : starsdbc::SQLException();
++        if( out )
++        {
++                java_sql_SQLException_BASE      warn_base(t.pEnv,out);
++                return (starsdbc::SQLException)java_sql_SQLException(warn_base,0);
++        }
++  
++        return starsdbc::SQLException();
+ }
+ 
+ ::rtl::OUString java_sql_SQLException_BASE::getSQLState() const
+Index: source/drivers/jdbc/Statement.cxx
+===================================================================
+RCS file: /cvs/dba/connectivity/source/drivers/jdbc/Statement.cxx,v
+retrieving revision 1.20
+diff -u -r1.20 Statement.cxx
+--- source/drivers/jdbc/Statement.cxx	24 Apr 2003 13:22:28 -0000	1.20
++++ source/drivers/jdbc/Statement.cxx	27 Sep 2005 05:33:30 -0000
+@@ -550,7 +550,13 @@
+ 		} //mID
+ 	} //t.pEnv
+ 	// ACHTUNG: der Aufrufer wird Eigentuemer des zurueckgelieferten Zeigers !!!
+-	return out ? makeAny(java_sql_SQLWarning(java_sql_SQLWarning_BASE( t.pEnv, out ),*(::cppu::OWeakObject*)this)) : Any();
++        if( out )
++        {
++                java_sql_SQLWarning_BASE                warn_base(t.pEnv, out);
++                return makeAny(java_sql_SQLWarning(warn_base,*this));
++        }
++  
++        return Any();
+ }
+ // -------------------------------------------------------------------------
+ void SAL_CALL java_sql_Statement_Base::clearWarnings(  ) throw(::com::sun::star::sdbc::SQLException, RuntimeException)
+Index: source/parse/sqlNoException.cxx
+===================================================================
+RCS file: /cvs/dba/connectivity/source/parse/sqlNoException.cxx,v
+retrieving revision 1.11.48.1
+diff -u -r1.11.48.1 sqlNoException.cxx
+--- source/parse/sqlNoException.cxx	9 Jan 2004 15:00:58 -0000	1.11.48.1
++++ source/parse/sqlNoException.cxx	27 Sep 2005 05:33:31 -0000
+@@ -119,8 +119,6 @@
+ 	}
+ 	// -----------------------------------------------------------------------------
+ }
+-// -----------------------------------------------------------------------------
+-DBG_NAME(OSQLParseNode);
+ //-----------------------------------------------------------------------------
+ OSQLParseNode::OSQLParseNode(const sal_Char * pNewValue,
+ 							 SQLNodeType eNewNodeType,

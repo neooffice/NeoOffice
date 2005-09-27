@@ -1,0 +1,22 @@
+Index: source/helper/ppdparser.cxx
+===================================================================
+RCS file: /cvs/gsl/psprint/source/helper/ppdparser.cxx,v
+retrieving revision 1.8.38.2
+diff -u -r1.8.38.2 ppdparser.cxx
+--- source/helper/ppdparser.cxx	19 Feb 2004 10:58:29 -0000	1.8.38.2
++++ source/helper/ppdparser.cxx	27 Sep 2005 05:26:17 -0000
+@@ -67,11 +67,13 @@
+ // define a hash for PPDKey
+ namespace psp { class PPDKey; }
+ 
+-struct std::hash< const psp::PPDKey* >
++namespace std {
++template<> struct hash< const psp::PPDKey* >
+ {
+     size_t operator()( const psp::PPDKey * pKey) const
+     { return (size_t)pKey; }
+ };
++}
+ 
+ #include <psprint/ppdparser.hxx>
+ #include <tools/debug.hxx>
