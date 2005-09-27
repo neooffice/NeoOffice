@@ -94,14 +94,18 @@ public final class VCLEventQueue {
 	private int lastAdjustedMouseModifiers = 0;
 
 	/**
-	 * The queue.
+	 * The list of queues.
 	 */
-	private VCLEventQueue.Queue queue = new VCLEventQueue.Queue();
+	private VCLEventQueue.Queue[] queueList = new VCLEventQueue.Queue[2];
 
 	/**
 	 * Construct a VCLEventQueue and make it the system queue.
 	 */
 	public VCLEventQueue() {
+
+		// Create the list of queues
+		queueList[0] = new VCLEventQueue.Queue();
+		queueList[1] = new VCLEventQueue.Queue();
 
 		// Swap in our own event queue
 		Toolkit.getDefaultToolkit().getSystemEventQueue().push(new VCLEventQueue.NoExceptionsEventQueue(this));
@@ -127,12 +131,19 @@ public final class VCLEventQueue {
 	 */
 	public boolean anyCachedEvent(int type) {
 
-		synchronized (queue) {
-			VCLEventQueue.QueueItem eqi = queue.head;
-			while (eqi != null) {
-				if (!eqi.remove && (type & eqi.type) != 0)
-					return true;
-				eqi = eqi.next;
+		synchronized (queueList) {
+			for (int i = 0; i < queueList.length; i++) {
+				VCLEventQueue.Queue queue = queueList[i];
+
+				if (queue.head == null)
+					continue;
+
+				VCLEventQueue.QueueItem eqi = queue.head;
+				while (eqi != null) {
+					if (!eqi.remove && (type & eqi.type) != 0)
+						return true;
+					eqi = eqi.next;
+				}
 			}
 		}
 
@@ -158,14 +169,21 @@ public final class VCLEventQueue {
 	 *
 	 * @param wait the number of milliseconds to wait for an event to be added
 	 *  to the queue
+	 * @param awtEvents <code>true</code> to use to the <code>AWTEvent</code>
+	 *  queue and <code>false</code> to use the non-<code>AWTEvent</code> queue
 	 * @return the next cached <code>VCLEvent</code> instance
 	 */
-	public VCLEvent getNextCachedEvent(long wait) {
+	public VCLEvent getNextCachedEvent(long wait, boolean awtEvents) {
 
-		synchronized (queue) {
-			if (wait > 0 && queue.head == null) {
+		VCLEventQueue.Queue queue = (awtEvents ? queueList[0] : queueList[1]);
+
+		if (wait <= 0 && queue.head == null)
+			return null;
+
+		synchronized (queueList) {
+			if (wait > 0 && queueList[0].head == null && queueList[1].head == null) {
 				try {
-					queue.wait(wait);
+					queueList.wait(wait);
 				}
 				catch (Throwable t) {}
 			}
@@ -198,10 +216,12 @@ public final class VCLEventQueue {
 	 */
 	public void postCachedEvent(VCLEvent event) {
 
+		VCLEventQueue.Queue queue = (event.isAWTEvent() ? queueList[0] : queueList[1]);
+
 		// Add the event to the cache
 		VCLEventQueue.QueueItem newItem = new VCLEventQueue.QueueItem(event);
 		int id = newItem.event.getID();
-		synchronized (queue) {
+		synchronized (queueList) {
 			// Coalesce events
 			if (id == VCLEvent.SALEVENT_CLOSE) {
 				VCLEventQueue.QueueItem eqi = queue.head;
@@ -216,7 +236,7 @@ public final class VCLEventQueue {
 					queue.keyInput.remove = true;
 					newItem.event.addRepeatCount((short)1);
 				}
-				queue.keyInput= newItem;
+				queue.keyInput = newItem;
 			}
 			else if (id == VCLEvent.SALEVENT_KEYUP) {
 				queue.keyInput = null;
@@ -284,7 +304,7 @@ public final class VCLEventQueue {
 					break;
 			}
 
-			queue.notifyAll();
+			queueList.notifyAll();
 		}
 
 	}
@@ -297,18 +317,26 @@ public final class VCLEventQueue {
 	 */
 	void removeCachedEvents(int frame) {
 
-		synchronized (queue) {
-			VCLEventQueue.QueueItem eqi = queue.head;
-			while (eqi != null) {
-				if (eqi.event.getFrame() == frame)
-					eqi.remove = true;
-				eqi = eqi.next;
+		synchronized (queueList) {
+			for (int i = 0; i < queueList.length; i++) {
+				VCLEventQueue.Queue queue = queueList[i];
+
+				if (queue.head == null)
+					continue;
+
+				VCLEventQueue.QueueItem eqi = queue.head;
+				while (eqi != null) {
+					if (eqi.event.getFrame() == frame)
+						eqi.remove = true;
+					eqi = eqi.next;
+				}
+				// Purge removed events from the front of the queue
+				while (queue.head != null && queue.head.remove)
+					queue.head = queue.head.next;
+				if (queue.head == null)
+					queue.tail = null;
+					
 			}
-			// Purge removed events from the front of the queue
-			while (queue.head != null && queue.head.remove)
-				queue.head = queue.head.next;
-			if (queue.head == null)
-				queue.tail = null;
 		}
 
 	}

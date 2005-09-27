@@ -381,17 +381,15 @@ void SalInstance::Yield( BOOL bWait )
 	SalData *pSalData = GetSalData();
 	com_sun_star_vcl_VCLEvent *pEvent;
 
-	// Dispatch next pending event if it exists
-	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( 0 ) ) != NULL )
+	// Dispatch next pending non-AWT event
+	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( 0, FALSE ) ) != NULL )
 	{
 		pEvent->dispatch();
 		delete pEvent;
-		return;
 	}
 
 	ULONG nCount = ReleaseYieldMutex();
-	if ( !bWait )
-		OThread::yield();
+	OThread::yield();
 	AcquireYieldMutex( nCount );
 
 	// Check timer
@@ -431,7 +429,8 @@ void SalInstance::Yield( BOOL bWait )
 	else
 		nCount = 0;
 
-	while ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout ) ) != NULL )
+	// Dispatch any pending AWT events
+	while ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
 	{
 		nTimeout = 0;
 
