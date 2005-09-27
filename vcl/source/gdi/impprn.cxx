@@ -445,9 +445,6 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 
 #ifdef USE_JAVA
 	}
-
-	// It is now safe to invoke pending events or timers
-	Application::Reschedule();
 #endif	// USE_JAVA
 
 	return 0;
