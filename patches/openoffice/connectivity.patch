@@ -4,7 +4,7 @@ RCS file: /cvs/dba/connectivity/source/drivers/jdbc/Connection.cxx,v
 retrieving revision 1.17
 diff -u -r1.17 Connection.cxx
 --- source/drivers/jdbc/Connection.cxx	6 Jun 2003 10:50:29 -0000	1.17
-+++ source/drivers/jdbc/Connection.cxx	27 Sep 2005 05:33:27 -0000
++++ source/drivers/jdbc/Connection.cxx	28 Sep 2005 07:27:26 -0000
 @@ -674,7 +674,13 @@
  		} //mID
  	} //t.pEnv
@@ -20,13 +20,32 @@ diff -u -r1.17 Connection.cxx
  }
  // -----------------------------------------------------------------------------
  void java_sql_Connection::loadDriverFromProperties(const Sequence< PropertyValue >& info,
+Index: source/drivers/jdbc/DriverPropertyInfo.cxx
+===================================================================
+RCS file: /cvs/dba/connectivity/source/drivers/jdbc/DriverPropertyInfo.cxx,v
+retrieving revision 1.4
+diff -u -r1.4 DriverPropertyInfo.cxx
+--- source/drivers/jdbc/DriverPropertyInfo.cxx	24 Apr 2003 13:20:29 -0000	1.4
++++ source/drivers/jdbc/DriverPropertyInfo.cxx	28 Sep 2005 07:27:27 -0000
+@@ -184,7 +184,10 @@
+ 	{
+ 		jfieldID id = t.pEnv->GetFieldID(java_sql_DriverPropertyInfo::getMyClass(),"choices","[Ljava/lang/String;");
+ 		if(id)
+-			return copyArrayAndDelete(t.pEnv,(jobjectArray)t.pEnv->GetObjectField( object, id), ::rtl::OUString(),java_lang_String(NULL,NULL));
++		  {
++		    java_lang_String emptyString(NULL,NULL);
++			return copyArrayAndDelete(t.pEnv,(jobjectArray)t.pEnv->GetObjectField( object, id), ::rtl::OUString(), emptyString);
++		  }
+ 	} //t.pEnv
+ 	return Sequence< ::rtl::OUString>();
+ }
 Index: source/drivers/jdbc/ResultSet.cxx
 ===================================================================
 RCS file: /cvs/dba/connectivity/source/drivers/jdbc/ResultSet.cxx,v
 retrieving revision 1.18
 diff -u -r1.18 ResultSet.cxx
 --- source/drivers/jdbc/ResultSet.cxx	24 Apr 2003 13:21:49 -0000	1.18
-+++ source/drivers/jdbc/ResultSet.cxx	27 Sep 2005 05:33:29 -0000
++++ source/drivers/jdbc/ResultSet.cxx	28 Sep 2005 07:27:28 -0000
 @@ -1070,7 +1070,13 @@
  		} //mID
  	} //t.pEnv
@@ -48,7 +67,7 @@ RCS file: /cvs/dba/connectivity/source/drivers/jdbc/SQLException.cxx,v
 retrieving revision 1.5
 diff -u -r1.5 SQLException.cxx
 --- source/drivers/jdbc/SQLException.cxx	24 Apr 2003 13:22:09 -0000	1.5
-+++ source/drivers/jdbc/SQLException.cxx	27 Sep 2005 05:33:29 -0000
++++ source/drivers/jdbc/SQLException.cxx	28 Sep 2005 07:27:28 -0000
 @@ -140,7 +140,13 @@
  		} //mID
  	} //t.pEnv
@@ -70,7 +89,7 @@ RCS file: /cvs/dba/connectivity/source/drivers/jdbc/Statement.cxx,v
 retrieving revision 1.20
 diff -u -r1.20 Statement.cxx
 --- source/drivers/jdbc/Statement.cxx	24 Apr 2003 13:22:28 -0000	1.20
-+++ source/drivers/jdbc/Statement.cxx	27 Sep 2005 05:33:30 -0000
++++ source/drivers/jdbc/Statement.cxx	28 Sep 2005 07:27:29 -0000
 @@ -550,7 +550,13 @@
  		} //mID
  	} //t.pEnv
@@ -92,7 +111,7 @@ RCS file: /cvs/dba/connectivity/source/parse/sqlNoException.cxx,v
 retrieving revision 1.11.48.1
 diff -u -r1.11.48.1 sqlNoException.cxx
 --- source/parse/sqlNoException.cxx	9 Jan 2004 15:00:58 -0000	1.11.48.1
-+++ source/parse/sqlNoException.cxx	27 Sep 2005 05:33:31 -0000
++++ source/parse/sqlNoException.cxx	28 Sep 2005 07:27:31 -0000
 @@ -119,8 +119,6 @@
  	}
  	// -----------------------------------------------------------------------------
