@@ -4,7 +4,7 @@ RCS file: /cvs/udk/stoc/source/corereflection/lrucache.hxx,v
 retrieving revision 1.2
 diff -u -r1.2 lrucache.hxx
 --- source/corereflection/lrucache.hxx	23 Nov 2000 01:55:21 -0000	1.2
-+++ source/corereflection/lrucache.hxx	27 Sep 2005 05:26:44 -0000
++++ source/corereflection/lrucache.hxx	28 Sep 2005 03:10:17 -0000
 @@ -189,7 +189,7 @@
  inline sal_Bool LRU_Cache< t_Key, t_Val, t_KeyHash, t_KeyEqual >::hasValue( const t_Key & rKey ) const
  {
@@ -38,7 +38,7 @@ RCS file: /cvs/udk/stoc/source/defaultregistry/defaultregistry.cxx,v
 retrieving revision 1.7
 diff -u -r1.7 defaultregistry.cxx
 --- source/defaultregistry/defaultregistry.cxx	7 Dec 2001 15:37:29 -0000	1.7
-+++ source/defaultregistry/defaultregistry.cxx	27 Sep 2005 05:26:45 -0000
++++ source/defaultregistry/defaultregistry.cxx	28 Sep 2005 03:10:18 -0000
 @@ -183,7 +183,7 @@
      virtual Type SAL_CALL getElementType(  ) throw (RuntimeException);
      virtual sal_Bool SAL_CALL hasElements(  ) throw (RuntimeException);
@@ -48,13 +48,47 @@ diff -u -r1.7 defaultregistry.cxx
  protected:
  	Mutex						m_mutex;
  	sal_uInt32					m_state;
+Index: source/invocation/invocation.cxx
+===================================================================
+RCS file: /cvs/udk/stoc/source/invocation/invocation.cxx,v
+retrieving revision 1.13
+diff -u -r1.13 invocation.cxx
+--- source/invocation/invocation.cxx	27 Mar 2003 12:00:44 -0000	1.13
++++ source/invocation/invocation.cxx	28 Sep 2005 03:10:19 -0000
+@@ -805,7 +805,8 @@
+ 	OUString aName;
+ 
+ 	// Defines where the member comes from
+-	enum { NAMEACCESS, PROPERTYSET, METHOD } eMode;
++	enum modeType { NAMEACCESS, PROPERTYSET, METHOD };
++	modeType eMode;
+ 
+ 	// Index to respective sequence 
+ 	// (Index to NameAccess sequence for eMode==NAMEACCESS etc.)
+Index: source/security/access_controller.cxx
+===================================================================
+RCS file: /cvs/udk/stoc/source/security/access_controller.cxx,v
+retrieving revision 1.5
+diff -u -r1.5 access_controller.cxx
+--- source/security/access_controller.cxx	19 Apr 2002 15:16:45 -0000	1.5
++++ source/security/access_controller.cxx	28 Sep 2005 03:10:20 -0000
+@@ -445,7 +445,8 @@
+         SAL_THROW( (RuntimeException) );
+     
+     // mode
+-    enum { OFF, ON, DYNAMIC_ONLY, SINGLE_USER, SINGLE_DEFAULT_USER } m_mode;
++    enum modeEnum { OFF, ON, DYNAMIC_ONLY, SINGLE_USER, SINGLE_DEFAULT_USER };
++    modeEnum m_mode;
+     
+     PermissionCollection m_defaultPermissions;
+     // for single-user mode
 Index: source/security/lru_cache.h
 ===================================================================
 RCS file: /cvs/udk/stoc/source/security/lru_cache.h,v
 retrieving revision 1.1
 diff -u -r1.1 lru_cache.h
 --- source/security/lru_cache.h	4 Mar 2002 17:43:21 -0000	1.1
-+++ source/security/lru_cache.h	27 Sep 2005 05:26:45 -0000
++++ source/security/lru_cache.h	28 Sep 2005 03:10:20 -0000
 @@ -214,7 +214,7 @@
  inline bool lru_cache< t_key, t_val, t_hashKey, t_equalKey >::has(
      t_key const & key ) const SAL_THROW( () )
@@ -99,7 +133,7 @@ RCS file: /cvs/udk/stoc/source/simpleregistry/simpleregistry.cxx,v
 retrieving revision 1.9
 diff -u -r1.9 simpleregistry.cxx
 --- source/simpleregistry/simpleregistry.cxx	21 Oct 2002 15:26:05 -0000	1.9
-+++ source/simpleregistry/simpleregistry.cxx	27 Sep 2005 05:26:46 -0000
++++ source/simpleregistry/simpleregistry.cxx	28 Sep 2005 03:10:21 -0000
 @@ -175,7 +175,7 @@
      virtual sal_Bool SAL_CALL isReadOnly(  ) throw(InvalidRegistryException, RuntimeException);
      virtual void SAL_CALL mergeKey( const OUString& aKeyName, const OUString& aUrl ) throw(InvalidRegistryException, MergeConflictException, RuntimeException);
@@ -115,7 +149,7 @@ RCS file: /cvs/udk/stoc/source/tdmanager/lrucache.hxx,v
 retrieving revision 1.3
 diff -u -r1.3 lrucache.hxx
 --- source/tdmanager/lrucache.hxx	10 May 2001 14:35:25 -0000	1.3
-+++ source/tdmanager/lrucache.hxx	27 Sep 2005 05:26:46 -0000
++++ source/tdmanager/lrucache.hxx	28 Sep 2005 03:10:22 -0000
 @@ -191,7 +191,7 @@
      t_Key const & rKey ) const
  {
@@ -149,7 +183,7 @@ RCS file: /cvs/udk/stoc/source/tdmanager/tdmgr.cxx,v
 retrieving revision 1.13
 diff -u -r1.13 tdmgr.cxx
 --- source/tdmanager/tdmgr.cxx	11 Nov 2002 08:33:38 -0000	1.13
-+++ source/tdmanager/tdmgr.cxx	27 Sep 2005 05:26:47 -0000
++++ source/tdmanager/tdmgr.cxx	28 Sep 2005 03:10:22 -0000
 @@ -199,8 +199,8 @@
                                         XTypeDescriptionEnumerationAccess,
                                         XInitialization >
