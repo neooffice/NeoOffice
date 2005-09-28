@@ -1,10 +1,26 @@
+Index: inc/tabdlg.hxx
+===================================================================
+RCS file: /cvs/framework/sfx2/inc/tabdlg.hxx,v
+retrieving revision 1.8
+diff -u -r1.8 tabdlg.hxx
+--- inc/tabdlg.hxx	26 Jun 2001 14:50:55 -0000	1.8
++++ inc/tabdlg.hxx	28 Sep 2005 06:28:29 -0000
+@@ -286,7 +286,7 @@
+ 	void				SetExchangeSupport( BOOL bNew = TRUE )
+ 							{ bHasExchangeSupport = bNew; }
+ 
+-	enum {
++	enum retEnum {
+ 		KEEP_PAGE = 0x0000,		// Fehlerbehandlung; Seite nicht wechseln
+ 			// 2. F"ullen eines ItemSets f"ur die Aktualilsierung
+ 			// "ubergeordneter Beispiele; dieser Pointer kann immer
 Index: source/inc/cfg.hxx
 ===================================================================
 RCS file: /cvs/framework/sfx2/source/inc/cfg.hxx,v
 retrieving revision 1.19
 diff -u -r1.19 cfg.hxx
 --- source/inc/cfg.hxx	17 Apr 2003 15:22:13 -0000	1.19
-+++ source/inc/cfg.hxx	27 Sep 2005 05:32:40 -0000
++++ source/inc/cfg.hxx	28 Sep 2005 06:28:30 -0000
 @@ -343,7 +343,7 @@
  
  class SfxAcceleratorConfigPage : public SfxTabPage
@@ -20,7 +36,7 @@ RCS file: /cvs/framework/sfx2/source/inc/scriptcont.hxx,v
 retrieving revision 1.13
 diff -u -r1.13 scriptcont.hxx
 --- source/inc/scriptcont.hxx	27 Mar 2003 11:28:30 -0000	1.13
-+++ source/inc/scriptcont.hxx	27 Sep 2005 05:32:40 -0000
++++ source/inc/scriptcont.hxx	28 Sep 2005 06:28:30 -0000
 @@ -182,7 +182,7 @@
  
  class SfxScriptLibrary : public SfxLibrary_Impl
@@ -36,7 +52,7 @@ RCS file: /cvs/framework/sfx2/source/toolbox/Attic/tbxcust.cxx,v
 retrieving revision 1.27
 diff -u -r1.27 tbxcust.cxx
 --- source/toolbox/tbxcust.cxx	15 May 2003 10:54:28 -0000	1.27
-+++ source/toolbox/tbxcust.cxx	27 Sep 2005 05:32:41 -0000
++++ source/toolbox/tbxcust.cxx	28 Sep 2005 06:28:31 -0000
 @@ -580,6 +580,7 @@
  	return 0;	
  }
