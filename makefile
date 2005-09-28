@@ -135,6 +135,7 @@ build.oo_patches: build.oo_checkout \
 	build.oo_sc_patch \
 	build.oo_scaddins_patch \
 	build.oo_scp_patch \
+	build.oo_sd_patch \
 	build.oo_setup2_patch \
 	build.oo_sfx2_patch \
 	build.oo_solenv_patch \

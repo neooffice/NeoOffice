@@ -1,0 +1,16 @@
+Index: inc/sdoutl.hxx
+===================================================================
+RCS file: /cvs/graphics/sd/inc/Attic/sdoutl.hxx,v
+retrieving revision 1.5
+diff -u -r1.5 sdoutl.hxx
+--- inc/sdoutl.hxx	3 Dec 2002 09:31:50 -0000	1.5
++++ inc/sdoutl.hxx	28 Sep 2005 17:23:24 -0000
+@@ -192,7 +192,7 @@
+ 
+ private:
+     /// Specifies whether to search and replace or to spell check.
+-    enum {SEARCH, SPELL} meMode;
++    enum searchModeEnum {SEARCH, SPELL} meMode;
+ 
+     /// The view which displays the searched objects.
+ 	SdView* mpView;
