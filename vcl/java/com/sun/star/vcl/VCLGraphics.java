@@ -1349,7 +1349,7 @@ public final class VCLGraphics {
 		if (g != null) {
 			try {
 				GlyphVector glyphs = font.getFont().createGlyphVector(g.getFontRenderContext(), new int[]{ glyph });
-				bounds = glyphs.getVisualBounds();
+				bounds = glyphs.getGlyphOutline(0).getBounds2D();
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
