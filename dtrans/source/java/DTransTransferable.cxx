@@ -258,18 +258,18 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 								{
 									// Convert to PICT from our BMP data
 									ComponentInstance aImporter;
-									if ( OpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
+									if ( OpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == (OSStatus)noErr )
 									{
 										Handle hData;
-										if ( PtrToHand( pArray, &hData, nLen ) == noErr )
+										if ( PtrToHand( pArray, &hData, nLen ) == (OSStatus)noErr )
 										{
 											// Free the source data
 											aData = Sequence< sal_Int8 >();
 
-											if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr )
+											if ( GraphicsImportSetDataHandle( aImporter, hData ) == (OSStatus)noErr )
 											{
 												PicHandle hPict;
-												if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
+												if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == (OSStatus)noErr )
 												{
 													HLock( (Handle)hPict );
 													if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
@@ -290,29 +290,29 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 								{
 									// Convert to TIFF from our BMP data
 									ComponentInstance aImporter;
-									if ( OpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
+									if ( OpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == (OSStatus)noErr )
 									{
 										Handle hData;
-										if ( PtrToHand( pArray, &hData, nLen ) == noErr )
+										if ( PtrToHand( pArray, &hData, nLen ) == (OSStatus)noErr )
 										{
 											// Free the source data
 											aData = Sequence< sal_Int8 >();
 
-											if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr )
+											if ( GraphicsImportSetDataHandle( aImporter, hData ) == (OSStatus)noErr )
 											{
 												PicHandle hPict;
-												if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
+												if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == (OSStatus)noErr )
 												{
 													ComponentInstance aExporter;
-													if ( OpenADefaultComponent( GraphicsExporterComponentType, nType, &aExporter ) == noErr );
+													if ( OpenADefaultComponent( GraphicsExporterComponentType, nType, &aExporter ) == (OSStatus)noErr );
 													{
-														if ( GraphicsExportSetInputPicture( aExporter, hPict ) == noErr )
+														if ( GraphicsExportSetInputPicture( aExporter, hPict ) == (OSStatus)noErr )
 														{
 															Handle hExportData = NewHandle( 0 );
-															if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
+															if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == (OSStatus)noErr )
 															{
 																unsigned long nDataLen;
-																if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
+																if ( GraphicsExportDoExport( aExporter, &nDataLen ) == (OSStatus)noErr )
 																{
 																	HLock( hExportData );
 																	if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
@@ -407,7 +407,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 		else if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG )
 		{
 			DragItemRef aItem;
-			if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, 1, &aItem ) == noErr )
+			if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, 1, &aItem ) == (OSStatus)noErr )
 				nErr = GetFlavorDataSize( (DragRef)mpNativeTransferable, aItem, nRequestedType, &nSize );
 		}
 		else
@@ -416,19 +416,19 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 			nSize = 0;
 		}
 
-		if ( nErr == noErr && nSize > 0 )
+		if ( nErr == (OSStatus)noErr && nSize > 0 )
 		{
 			Sequence< sal_Int8 > aData( nSize );
 			bool bDataFound = false;
 			if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 			{
-				bDataFound = ( GetScrapFlavorData( (ScrapRef)mpNativeTransferable, nRequestedType, &nSize, aData.getArray() ) == noErr );
+				bDataFound = ( GetScrapFlavorData( (ScrapRef)mpNativeTransferable, nRequestedType, &nSize, aData.getArray() ) == (OSStatus)noErr );
 			}
 			else if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG )
 			{
 				DragItemRef aItem;
-				if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, 1, &aItem ) == noErr )
-					bDataFound = ( GetFlavorData( (DragRef)mpNativeTransferable, aItem, nRequestedType, aData.getArray(), &nSize, 0 ) == noErr );
+				if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, 1, &aItem ) == (OSStatus)noErr )
+					bDataFound = ( GetFlavorData( (DragRef)mpNativeTransferable, aItem, nRequestedType, aData.getArray(), &nSize, 0 ) == (OSStatus)noErr );
 			}
 
 			if ( bDataFound )
@@ -488,18 +488,18 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 					{
 						// Convert to BMP format
 						ComponentInstance aExporter;
-						if ( OpenADefaultComponent( GraphicsExporterComponentType, 'BMPf', &aExporter ) == noErr );
+						if ( OpenADefaultComponent( GraphicsExporterComponentType, 'BMPf', &aExporter ) == (OSStatus)noErr );
 						{
 							Handle hData;
-							if ( PtrToHand( aData.getArray(), &hData, aData.getLength() ) == noErr )
+							if ( PtrToHand( aData.getArray(), &hData, aData.getLength() ) == (OSStatus)noErr )
 							{
-								if ( GraphicsExportSetInputPicture( aExporter, (PicHandle)hData ) == noErr )
+								if ( GraphicsExportSetInputPicture( aExporter, (PicHandle)hData ) == (OSStatus)noErr )
 								{
 									Handle hExportData = NewHandle( 0 );
-									if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
+									if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == (OSStatus)noErr )
 									{
 										unsigned long nDataLen;
-										if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
+										if ( GraphicsExportDoExport( aExporter, &nDataLen ) == (OSStatus)noErr )
 										{
 											Sequence< sal_Int8 > aExportData( nDataLen );
 											HLock( hExportData );
@@ -519,29 +519,29 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 					{
 						// Convert to BMP format
 						ComponentInstance aImporter;
-						if ( OpenADefaultComponent( GraphicsImporterComponentType, nRequestedType, &aImporter ) == noErr )
+						if ( OpenADefaultComponent( GraphicsImporterComponentType, nRequestedType, &aImporter ) == (OSStatus)noErr )
 						{
 							Handle hData;
-							if ( PtrToHand( aData.getArray(), &hData, aData.getLength() ) == noErr )
+							if ( PtrToHand( aData.getArray(), &hData, aData.getLength() ) == (OSStatus)noErr )
 							{
 								// Free the source data
 								aData = Sequence< sal_Int8 >();
 
-								if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr )
+								if ( GraphicsImportSetDataHandle( aImporter, hData ) == (OSStatus)noErr )
 								{
 									PicHandle hPict;
-									if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
+									if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == (OSStatus)noErr )
 									{
 										ComponentInstance aExporter;
-										if ( OpenADefaultComponent( GraphicsExporterComponentType, 'BMPf', &aExporter ) == noErr );
+										if ( OpenADefaultComponent( GraphicsExporterComponentType, 'BMPf', &aExporter ) == (OSStatus)noErr );
 										{
-											if ( GraphicsExportSetInputPicture( aExporter, hPict ) == noErr )
+											if ( GraphicsExportSetInputPicture( aExporter, hPict ) == (OSStatus)noErr )
 											{
 												Handle hExportData = NewHandle( 0 );
-												if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
+												if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == (OSStatus)noErr )
 												{
 													unsigned long nDataLen;
-													if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
+													if ( GraphicsExportDoExport( aExporter, &nDataLen ) == (OSStatus)noErr )
 													{
 														Sequence< sal_Int8 > aExportData( nDataLen );
 														HLock( hExportData );
@@ -576,7 +576,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 
 	if ( !nRequestedType )
 	{
-		if ( nErr == noTypeErr || nErr == cantGetFlavorErr )
+		if ( nErr == (OSStatus)noTypeErr || nErr == (OSStatus)cantGetFlavorErr )
 			throw UnsupportedFlavorException( aFlavor.MimeType, static_cast< XTransferable * >( this ) );
 		else
 			throw IOException( aFlavor.MimeType, static_cast< XTransferable * >( this ) );
@@ -604,11 +604,11 @@ Sequence< DataFlavor > DTransTransferable::getTransferDataFlavors() throw ( Runt
 	if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 	{
 		UInt32 nCount;
-		if ( GetScrapFlavorCount( (ScrapRef)mpNativeTransferable, &nCount ) == noErr && nCount > 0 )
+		if ( GetScrapFlavorCount( (ScrapRef)mpNativeTransferable, &nCount ) == (OSStatus)noErr && nCount > 0 )
 		{
 			ScrapFlavorInfo *pInfo = new ScrapFlavorInfo[ nCount ];
 
-			if ( GetScrapFlavorInfoList( (ScrapRef)mpNativeTransferable, &nCount, pInfo ) == noErr )
+			if ( GetScrapFlavorInfoList( (ScrapRef)mpNativeTransferable, &nCount, pInfo ) == (OSStatus)noErr )
 			{
 				for ( USHORT i = 0; i < nSupportedTypes; i++ )
 				{
@@ -634,14 +634,14 @@ Sequence< DataFlavor > DTransTransferable::getTransferDataFlavors() throw ( Runt
 	{
 		DragItemRef aItem;
 		UInt16 nCount;
-		if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, 1, &aItem ) == noErr && CountDragItemFlavors( (DragRef)mpNativeTransferable, aItem, &nCount ) == noErr && nCount > 0 )
+		if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, 1, &aItem ) == (OSStatus)noErr && CountDragItemFlavors( (DragRef)mpNativeTransferable, aItem, &nCount ) == (OSStatus)noErr && nCount > 0 )
 		{
 			for ( USHORT i = 0; i < nSupportedTypes; i++ )
 			{
 				for ( UInt16 j = 0; j < nCount; j++ )
 				{
 					FlavorType nFlavor;
-					if ( GetFlavorType( (DragRef)mpNativeTransferable, aItem, j, &nFlavor ) == noErr && aSupportedNativeTypes[ i ] == nFlavor )
+					if ( GetFlavorType( (DragRef)mpNativeTransferable, aItem, j, &nFlavor ) == (OSStatus)noErr && aSupportedNativeTypes[ i ] == nFlavor )
 					{
 						DataFlavor aFlavor;
 						aFlavor.MimeType = aSupportedMimeTypes[ i ];
@@ -668,7 +668,7 @@ sal_Bool DTransTransferable::hasOwnership()
 	{
 		ScrapRef aScrap;
 
-		if ( GetCurrentScrap( &aScrap ) == noErr && aScrap == (ScrapRef)mpNativeTransferable )
+		if ( GetCurrentScrap( &aScrap ) == (OSStatus)noErr && aScrap == (ScrapRef)mpNativeTransferable )
 			out = sal_True;
 	}
 
@@ -701,11 +701,11 @@ sal_Bool DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) 
 		if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 		{
 			UInt32 nCount;
-			if ( GetScrapFlavorCount( (ScrapRef)mpNativeTransferable, &nCount ) == noErr && nCount > 0 )
+			if ( GetScrapFlavorCount( (ScrapRef)mpNativeTransferable, &nCount ) == (OSStatus)noErr && nCount > 0 )
 			{
 				ScrapFlavorInfo *pInfo = new ScrapFlavorInfo[ nCount ];
 
-				if ( GetScrapFlavorInfoList( (ScrapRef)mpNativeTransferable, &nCount, pInfo ) == noErr )
+				if ( GetScrapFlavorInfoList( (ScrapRef)mpNativeTransferable, &nCount, pInfo ) == (OSStatus)noErr )
 				{
 					for ( UInt32 i = 0; i < nCount; i++ )
 					{
@@ -724,12 +724,12 @@ sal_Bool DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) 
 		{
 			DragItemRef aItem;
 			UInt16 nCount;
-			if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, 1, &aItem ) == noErr && CountDragItemFlavors( (DragRef)mpNativeTransferable, aItem, &nCount ) == noErr && nCount > 0 )
+			if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, 1, &aItem ) == (OSStatus)noErr && CountDragItemFlavors( (DragRef)mpNativeTransferable, aItem, &nCount ) == (OSStatus)noErr && nCount > 0 )
 			{
 				for ( UInt16 i = 0; i < nCount; i++ )
 				{
 					FlavorType nFlavor;
-					if ( GetFlavorType( (DragRef)mpNativeTransferable, aItem, i, &nFlavor ) == noErr && nFlavor == nRequestedType && aFlavor.DataType.equals( aRequestedDataType ) )
+					if ( GetFlavorType( (DragRef)mpNativeTransferable, aItem, i, &nFlavor ) == (OSStatus)noErr && nFlavor == nRequestedType && aFlavor.DataType.equals( aRequestedDataType ) )
 					{
 						out = sal_True;
 						break;
@@ -754,7 +754,7 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 		if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 		{
 			ScrapRef aScrap;
-			if ( ClearCurrentScrap() == noErr && GetCurrentScrap( &aScrap ) == noErr )
+			if ( ClearCurrentScrap() == (OSStatus)noErr && GetCurrentScrap( &aScrap ) == (OSStatus)noErr )
 			{
 				// We have now cleared the scrap so we now own it
 				mpNativeTransferable = aScrap;
@@ -792,7 +792,7 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 				bool bRenderImmediately = false;
 				if ( !pScrapPromiseKeeperUPP )
 					pScrapPromiseKeeperUPP = NewScrapPromiseKeeperUPP( (ScrapPromiseKeeperProcPtr)ImplScrapPromiseKeeperCallback );
-				if ( !pScrapPromiseKeeperUPP || SetScrapPromiseKeeper( (ScrapRef)mpNativeTransferable, pScrapPromiseKeeperUPP, (const void *)this ) != noErr )
+				if ( !pScrapPromiseKeeperUPP || SetScrapPromiseKeeper( (ScrapRef)mpNativeTransferable, pScrapPromiseKeeperUPP, (const void *)this ) != (OSStatus)noErr )
 					bRenderImmediately = true;
 
 				for ( i = 0; i < nLen; i++ )
@@ -849,7 +849,7 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 			bool bRenderImmediately = false;
 			if ( !pDragSendDataUPP )
 				pDragSendDataUPP = NewDragSendDataUPP( (DragSendDataProcPtr)ImplDragSendDataCallback );
-			if ( !pDragSendDataUPP || SetDragSendProc( (DragRef)mpNativeTransferable, pDragSendDataUPP, (void *)this ) != noErr )
+			if ( !pDragSendDataUPP || SetDragSendProc( (DragRef)mpNativeTransferable, pDragSendDataUPP, (void *)this ) != (OSStatus)noErr )
 				bRenderImmediately = true;
 
 			for ( i = 0; i < nLen; i++ )

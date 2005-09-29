@@ -59,7 +59,7 @@ DTransTransferable *DTransClipboard::getContents()
 
 #ifdef MACOSX
 	ScrapRef aScrap;
-	if ( GetCurrentScrap( &aScrap ) == noErr )
+	if ( GetCurrentScrap( &aScrap ) == (OSStatus)noErr )
 		out = new DTransTransferable( aScrap, TRANSFERABLE_TYPE_CLIPBOARD );
 #else	// MACOSX
 #ifdef DEBUG

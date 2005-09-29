@@ -112,7 +112,7 @@ static sal_Int8 ImplGetDragDropAction( DragRef aDrag )
 	sal_Int8 nActions = DNDConstants::ACTION_NONE;
 
 	DragActions nDragActions;
-	if ( GetDragDropAction( aDrag, &nDragActions ) == noErr )
+	if ( GetDragDropAction( aDrag, &nDragActions ) == (OSStatus)noErr )
 	{
 		if ( nDragActions & kDragActionMove )
 			nActions = DNDConstants::ACTION_MOVE;
@@ -123,7 +123,7 @@ static sal_Int8 ImplGetDragDropAction( DragRef aDrag )
 	}
 
 	SInt16 nKeyModifiers;
-	if ( GetDragModifiers( aDrag, &nKeyModifiers, NULL, NULL ) != noErr || ! ( nKeyModifiers & ( shiftKey | cmdKey ) ) )
+	if ( GetDragModifiers( aDrag, &nKeyModifiers, NULL, NULL ) != (OSStatus)noErr || ! ( nKeyModifiers & ( shiftKey | cmdKey ) ) )
 		nActions |= DNDConstants::ACTION_DEFAULT;
 
 	return nActions;
@@ -150,7 +150,7 @@ static sal_Int8 ImplGetDragAllowableActions( DragRef aDrag )
 	sal_Int8 nActions = DNDConstants::ACTION_NONE;
 
 	DragActions nDragActions;
-	if ( GetDragAllowableActions( aDrag, &nDragActions ) == noErr )
+	if ( GetDragAllowableActions( aDrag, &nDragActions ) == (OSStatus)noErr )
 	{
 		if ( nDragActions & ( kDragActionMove | kDragActionGeneric ) )
 			nActions |= DNDConstants::ACTION_MOVE;
@@ -161,7 +161,7 @@ static sal_Int8 ImplGetDragAllowableActions( DragRef aDrag )
 	}
 
 	SInt16 nKeyModifiers;
-	if ( GetDragModifiers( aDrag, &nKeyModifiers, NULL, NULL ) != noErr || ! ( nKeyModifiers & ( shiftKey | cmdKey ) ) )
+	if ( GetDragModifiers( aDrag, &nKeyModifiers, NULL, NULL ) != (OSStatus)noErr || ! ( nKeyModifiers & ( shiftKey | cmdKey ) ) )
 		nActions |= DNDConstants::ACTION_DEFAULT;
 
 	return nActions;
@@ -223,7 +223,7 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 				{
 					MacOSPoint aPoint;
 					Rect aRect;
-					if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( pTrackDragOwner->mpNativeWindow, kWindowContentRgn, &aRect ) == noErr )
+					if ( GetDragMouse( aDrag, &aPoint, NULL ) == (OSStatus)noErr && GetWindowBounds( pTrackDragOwner->mpNativeWindow, kWindowContentRgn, &aRect ) == (OSStatus)noErr )
 						pTrackDragOwner->handleDrag( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) );
 				}
 			}
@@ -232,7 +232,7 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 		}
 	}
 	
-	return noErr;
+	return (OSStatus)noErr;
 }
 
 // ------------------------------------------------------------------------
@@ -275,7 +275,7 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 			{
 				MacOSPoint aPoint;
 				Rect aRect;
-				if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
+				if ( GetDragMouse( aDrag, &aPoint, NULL ) == (OSStatus)noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == (OSStatus)noErr )
 				{
 					sal_Int32 nX = (sal_Int32)( aPoint.h - aRect.left );
 					sal_Int32 nY = (sal_Int32)( aPoint.v - aRect.top );
@@ -303,7 +303,7 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 		}
 	}
 
-	return noErr;
+	return (OSStatus)noErr;
 }
 
 // ------------------------------------------------------------------------
@@ -348,12 +348,12 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 			{
 				MacOSPoint aPoint;
 				Rect aRect;
-				if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr && pTarget->handleDrop( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ), aDrag ) )
+				if ( GetDragMouse( aDrag, &aPoint, NULL ) == (OSStatus)noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == (OSStatus)noErr && pTarget->handleDrop( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ), aDrag ) )
 				{
 					// Update actions
 					ImplSetDragDropAction( aDrag, nCurrentAction );
 					ImplSetThemeCursor( pTarget->isRejected() ? DNDConstants::ACTION_NONE : nCurrentAction, false );
-					nRet = noErr;
+					nRet = (OSStatus)noErr;
 				}
 			}
 
@@ -388,7 +388,7 @@ void TrackDragTimerCallback( EventLoopTimerRef aTimer, void *pData )
 	if ( pTrackDragOwner == pSource )
 	{
 		DragRef aDrag;
-		if ( NewDrag( &aDrag ) == noErr )
+		if ( NewDrag( &aDrag ) == (OSStatus)noErr )
 		{
 			EventRecord aEventRecord;
 			aEventRecord.what = mouseDown;
@@ -434,7 +434,7 @@ void TrackDragTimerCallback( EventLoopTimerRef aTimer, void *pData )
 				// Unlock application mutex while we are in the drag
 				rSolarMutex.release();
 
-				bool bTrackDrag = ( bContentsSet && TrackDrag( aDrag, &aEventRecord, aRegion ) == noErr );
+				bool bTrackDrag = ( bContentsSet && TrackDrag( aDrag, &aEventRecord, aRegion ) == (OSStatus)noErr );
 
 				// Relock application mutex. Note that we don't check for
 				// application shutdown as we are noew on the hook to clean up
