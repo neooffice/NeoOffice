@@ -801,7 +801,8 @@ public final class VCLMenuItemData {
 	 */
 	void refreshAWTPeersInParentMenus() {
 
-		Iterator parents=parentMenus.iterator();
+		LinkedList parentMenusClone = (LinkedList)parentMenus.clone();
+		Iterator parents=parentMenusClone.iterator();
 		while(parents.hasNext()) {
 			VCLMenuItemData parent=(VCLMenuItemData)parents.next();
 			short menuPos=parent.getMenuItemIndex(this);
