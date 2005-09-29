@@ -68,7 +68,7 @@
 
 using namespace com::sun::star::datatransfer::clipboard;
 using namespace com::sun::star::uno;
-using namespace vcl;
+using vcl::com_sun_star_vcl_VCLEvent;
 
 //=============================================================================
 
