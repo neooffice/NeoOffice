@@ -2012,8 +2012,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 		detachedChildren.clear();
 
-		paint();
-
 	}
 
 	/**
