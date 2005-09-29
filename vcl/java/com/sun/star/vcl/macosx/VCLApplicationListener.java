@@ -42,6 +42,7 @@ import com.apple.eawt.Application;
 import com.apple.eawt.ApplicationEvent;
 import com.apple.eawt.ApplicationListener;
 
+import java.awt.Frame;
 import java.io.File;
 
 /** 
@@ -141,7 +142,18 @@ public class VCLApplicationListener implements ApplicationListener {
 	public void handleQuit(ApplicationEvent event) {
 
 		queue.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_SHUTDOWN, null, 0));
-		event.setHandled(false);
+
+		// Only set event as handled if there are no visible frames
+		boolean handled = true;
+		Frame[] frames = Frame.getFrames();
+		for (int i = 0; i < frames.length; i++) {
+			if (frames[i].isShowing()) {
+				handled = false;
+				break;
+			}
+		}
+		
+		event.setHandled(handled);
 
 	}
 
