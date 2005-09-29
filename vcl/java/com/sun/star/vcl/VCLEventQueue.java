@@ -200,7 +200,8 @@ public final class VCLEventQueue {
 				else if (eqi == queue.moveResize)
 					queue.moveResize = null;
 				else if (eqi == queue.paint)
-					queue.paint = null;
+					queue.moveResize = queue.paint = null;
+				
 			}
 			if (queue.head == null)
 				queue.keyInput = queue.mouseMove = queue.mouseWheelMove = queue.moveResize = queue.paint = queue.tail = null;
@@ -253,7 +254,7 @@ public final class VCLEventQueue {
 				}
 				queue.mouseWheelMove = newItem;
 			}
-			else if (id == VCLEvent.SALEVENT_MOVE || id == VCLEvent.SALEVENT_MOVERESIZE || id == VCLEvent.SALEVENT_RESIZE) {
+			else if (id == VCLEvent.SALEVENT_MOVERESIZE) {
 				if (queue.moveResize != null && !queue.moveResize.remove && queue.moveResize.event.getFrame() == newItem.event.getFrame())
 					queue.moveResize.remove = true;
 				queue.moveResize = newItem;
@@ -269,8 +270,11 @@ public final class VCLEventQueue {
 						else
 							newItem.event.setUpdateRect(oldBounds);
 					}
-					queue.paint = newItem;
 				}
+				// A SALEVENT_MOVERESIZE event will be dispatched with the
+				// paint event
+				queue.moveResize = null;
+				queue.paint = newItem;
 			}
 
 			// Purge removed events from the front of the queue

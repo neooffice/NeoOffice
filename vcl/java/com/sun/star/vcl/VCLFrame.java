@@ -843,7 +843,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_RESIZE, this, 0));
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVERESIZE, this, 0));
 
 	}
 
@@ -857,7 +857,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVE, this, 0));
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVERESIZE, this, 0));
 
 	}
 
@@ -1899,7 +1899,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (b) {
 			// Show the window
 			window.show();
-			paint();
 			toFront();
 		}
 		else {
@@ -2006,10 +2005,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			synchronized (f) {
 				if (!f.isDisposed()) {
 					Window w = f.getWindow();
-					if (!w.isShowing()) {
+					if (!w.isShowing())
 						w.show();
-						f.paint();
-					}
 				}
 			}
 		}
