@@ -149,16 +149,11 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 					if ( ATSFontGetPostScriptName( ait->first, kATSOptionFlagsDefault, &aString ) != noErr && ATSFontGetName( ait->first, kATSOptionFlagsDefault, &aString ) != noErr )
 						continue;
 
-					// Ignore empty font names or font names that start with
-					// a "."
-					CFIndex nLen = CFStringGetLength( aString );
-					if ( !nLen || CFStringGetCharacterAtIndex( aString, 0 ) == (UniChar)'.' )
-						continue;
-
 					void *pNativeFont = (void *)FMGetFontFromATSFontRef( ait->first );
 					if ( (ATSUFontID)pNativeFont == kATSUInvalidFontID )
 						continue;
 
+					CFIndex nLen = CFStringGetLength( aString );
 					CFRange aRange = CFRangeMake( 0, nLen );
 					sal_Unicode pBuffer[ nLen + 1 ];
 					CFStringGetCharacters( aString, aRange, pBuffer );
@@ -186,6 +181,11 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						aDisplayString = aString;
 					}
 
+					// Ignore empty font names or font names that start with
+					// a "."
+					if ( !aDisplayName.getLength() || aDisplayName.toChar() == (sal_Unicode)'.' )
+						continue;
+
 					void *pNSFont = NSFont_create( aString, nSize );
 					if ( !pNSFont )
 						continue;
@@ -208,7 +208,6 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						pSystemFont = new SalSystemFontData();
 					}
 
-					pSystemFont->mpNativeFontName = (const void *)aString;
 					pSystemFont->mpVCLFont = new com_sun_star_vcl_VCLFont( aFontName, pNativeFont, nSize, 0, sal_True, sal_False, 1.0 );
 					pData->mpSysData = (void *)pSystemFont;
 
@@ -319,23 +318,11 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		if ( bBold || bItalic || pFont->maFoundName != pFont->mpFontData->maName )
 		{
 			SalSystemFontData *pSystemFont = (SalSystemFontData *)pFont->mpFontData->mpSysData;
-			CFStringRef aString = NSFontManager_findFontNameWithStyle( (CFStringRef)pSystemFont->mpNativeFontName, bBold, bItalic, pSystemFont->mpVCLFont->getSize() );
-			if ( aString )
-			{
-				CFIndex nLen = CFStringGetLength( aString );
-				CFRange aRange = CFRangeMake( 0, nLen );
-				sal_Unicode pBuffer[ nLen + 1 ];
-				CFStringGetCharacters( aString, aRange, pBuffer );
-				pBuffer[ nLen ] = 0;
-				OUString aFontName( pBuffer );
-				XubString aXubFontName( aFontName );
-
-				::std::map< XubString, ImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aXubFontName );
-				if ( it != pSalData->maFontNameMapping.end() )
-					pFont->mpFontData = it->second;
-
-				CFRelease( aString );
-			}
+			OUString aFontName = pSystemFont->mpVCLFont->findFontNameForStyle( bBold, bItalic );
+			XubString aXubFontName( aFontName );
+			::std::map< XubString, ImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aXubFontName );
+			if ( it != pSalData->maFontNameMapping.end() )
+				pFont->mpFontData = it->second;
 		}
 	}
 	else
