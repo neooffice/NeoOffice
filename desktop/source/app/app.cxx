@@ -506,6 +506,7 @@ static String aVersion;
 static String aExtension;
 static String aXMLFileFormatVersion;
 static String aXMLFileFormatName;
+static String aNextVersion;
 
 void ReplaceStringHookProc( UniString& rStr )
 {
@@ -522,6 +523,23 @@ void ReplaceStringHookProc( UniString& rStr )
         aRet = ::utl::ConfigManager::GetDirectConfigProperty( ::utl::ConfigManager::PRODUCTVERSION );
         if((aRet >>= aTmp) && aTmp.getLength())
             aVersion = aTmp;
+
+        /* pb: #118218# calculate the number of the next office version
+               and substitute "%NEXTPRODUCTVERSION" */
+        if ( aVersion.Search( '.' ) == STRING_NOTFOUND )  // aVersion == "7" or "11"
+        {
+            sal_Int32 nVersion = aVersion.ToInt32();
+            nVersion++;
+            aNextVersion = String::CreateFromInt32( nVersion );
+        }
+        else if ( aVersion.Len() > 0 )  // aVersion == "1.1" or "12.0"
+        {
+            String sTemp = aVersion.Copy( 0, aVersion.Search('.') );
+            sal_Int32 nVersion = sTemp.ToInt32();
+            nVersion++;
+            aNextVersion = String::CreateFromInt32( nVersion );
+            aNextVersion += String( RTL_CONSTASCII_STRINGPARAM(".0") );
+        }
 
         aRet = ::utl::ConfigManager::GetDirectConfigProperty( ::utl::ConfigManager::PRODUCTXMLFILEFORMATNAME );
         if((aRet >>= aTmp) && aTmp.getLength())
@@ -552,6 +570,7 @@ void ReplaceStringHookProc( UniString& rStr )
         rStr.SearchAndReplaceAllAscii( "%PRODUCTEXTENSION", aExtension );
         rStr.SearchAndReplaceAllAscii( "%PRODUCTXMLFILEFORMATVERSION", aXMLFileFormatVersion );
         rStr.SearchAndReplaceAllAscii( "%PRODUCTXMLFILEFORMATNAME", aXMLFileFormatName );
+        rStr.SearchAndReplaceAllAscii( "%NEXTPRODUCTVERSION", aNextVersion );
     }
 }
 
@@ -684,6 +703,13 @@ BOOL Desktop::QueryExit()
 
 void Desktop::StartSetup( const OUString& aParameters )
 {
+    OUString aArgListArray[1];
+    aArgListArray[0] = aParameters;
+    StartSetup(aArgListArray, 1, sal_False);
+}
+
+void Desktop::StartSetup( const OUString* aArgListArray, sal_Int32 numArgs, sal_Bool bWait)
+{
     OUString aProgName;
     OUString aSysPathFileName;
     OUString aDir;
@@ -703,35 +729,34 @@ void Desktop::StartSetup( const OUString& aParameters )
 #endif
     }
 
-    ::vos::OSecurity        aSecurity;
-    ::vos::OEnvironment        aEnv;
-    ::vos::OArgumentList    aArgList;
-    ::vos::OProcess    aProcess( aProgName, aDir );
+    ::vos::OSecurity     aSecurity;
+    ::vos::OEnvironment  aEnv;
+    ::vos::OArgumentList aArgumentList( aArgListArray, numArgs );
 
+    ::vos::OProcess      aProcess( aProgName, aDir );
 #ifdef USE_JAVA
     // Wait for execution to finish since Java is so dependent on it
-    sal_uInt32 nMaxArgs = 4;
-    OUString aArgListArray[ nMaxArgs ];
+    sal_uInt32 nMaxArgs = numArgs + 4;
+	sal_uInt32 nArg = 0;
+    OUString aNewArgListArray[ nMaxArgs ];
     rtl_Locale *pLocale;
     if ( osl_getProcessLocale( &pLocale ) == osl_Process_E_None )
     {
-        aArgListArray[0] = OUString( RTL_CONSTASCII_USTRINGPARAM( "-locale" ) );
-        aArgListArray[1] = OUString( rtl_locale_getLanguage( pLocale ) );
-        OUString aCountry = OUString( rtl_locale_getCountry( pLocale ) );
+        aNewArgListArray[nArg++] = OUString( RTL_CONSTASCII_USTRINGPARAM( "-locale" ) );
+        OUString aLocale( rtl_locale_getLanguage( pLocale ) );
+        OUString aCountry( rtl_locale_getCountry( pLocale ) );
         if ( aCountry.getLength() )
         {
-            aArgListArray[1] += OUString( RTL_CONSTASCII_USTRINGPARAM( "-" ) );
-            aArgListArray[1] += OUString( aCountry );
+            aLocale += OUString( RTL_CONSTASCII_USTRINGPARAM( "-" ) );
+            aLocale += OUString( aCountry );
         } 
-        aArgListArray[2] = aParameters;
-    } 
-    else
-    {
-        aArgListArray[0] = aParameters;
-        aArgListArray[1] = OUString();
-        aArgListArray[2] = OUString();
+        aNewArgListArray[nArg++] = aLocale;
     }
-    OArgumentList aArgumentList( aArgListArray, 4 );
+
+	for ( sal_uInt32 i = 0; i < numArgs; i++ )
+        aNewArgListArray[nArg++] = aArgListArray[i];
+
+    aArgumentList = ::vos::OArgumentList( aNewArgListArray, nMaxArgs );
     ::vos::OProcess::TProcessError aProcessError =
         aProcess.execute( OProcess::TOption_Wait,
                           aSecurity,
@@ -750,29 +775,19 @@ void Desktop::StartSetup( const OUString& aParameters )
     // If the setup command failed, try running it with the "-repair" argument
     if ( aProcessError != OProcess::E_None )
     {
-        for ( sal_uInt32 i = 0; i < nMaxArgs; i++ )
-        {
-            if ( !aArgListArray[ i ].getLength() )
-            {
-                aArgListArray[ i ] = OUString( RTL_CONSTASCII_USTRINGPARAM( "-repair" ) );
-                break;
-            }
-        }
-        aArgumentList = OArgumentList( aArgListArray, 4 );
+        aNewArgListArray[ nArg++ ] = OUString( RTL_CONSTASCII_USTRINGPARAM( "-repair" ) );
+        aArgumentList = OArgumentList( aNewArgListArray, 4 );
         aProcessError = aProcess.execute( OProcess::TOption_Wait,
                                           aSecurity,
                                           aArgumentList,
                                           aEnv );
     }
 #else	// USE_JAVA
-    OUString aArgListArray[1];
-    aArgListArray[0] = aParameters;
-    OArgumentList aArgumentList( aArgListArray, 1 );
     ::vos::OProcess::TProcessError aProcessError =
-        aProcess.execute( OProcess::TOption_Detached,
-                          aSecurity,
-                          aArgumentList,
-                          aEnv );
+        aProcess.execute(bWait ? OProcess::TOption_Wait : OProcess::TOption_Detached,
+                         aSecurity,
+                         aArgumentList,
+                         aEnv );
 #endif	// USE_JAVA
 
     if ( aProcessError != OProcess::E_None )
@@ -784,6 +799,56 @@ void Desktop::StartSetup( const OUString& aParameters )
         ErrorBox aBootstrapFailedBox( NULL, WB_OK, aMessage );
         aBootstrapFailedBox.Execute();
     }
+}
+
+void Desktop::StartPP5Setup()
+{
+    using namespace utl;
+    using namespace osl;
+    // if <userinstall>/user/config/pp5.dat does not exist, setup has to make some changes to 
+    // the user (workstation) installation by executing the <baseinstall>/share/responsefile/pp5.rsp
+    // response-file
+    OUString aUserInstallURL;
+    OUString aBaseInstallURL;
+    utl::Bootstrap::locateUserInstallation( aUserInstallURL );
+    utl::Bootstrap::PathStatus aBaseInstallStatus =utl::Bootstrap::locateBaseInstallation(aBaseInstallURL);
+    utl::Bootstrap::PathStatus aUserInstallStatus =utl::Bootstrap::locateUserInstallation(aUserInstallURL);
+    if (aBaseInstallStatus == utl::Bootstrap::PATH_EXISTS && 
+        aUserInstallStatus == utl::Bootstrap::PATH_EXISTS &&
+        aBaseInstallURL != aUserInstallURL ) // this is a workstation installation
+        {
+            // this is a workstation install. check for user/config/pp5.dat            
+            File aDataFile(aUserInstallURL + OUString::createFromAscii("/user/config/pp5.dat"));
+            if (aDataFile.open(OpenFlag_Read) != File::E_None)
+            {                
+                // move aside old user/instdb.inf file
+#ifdef WNT
+                if (File::move(aUserInstallURL + OUString::createFromAscii("/instdb.inf"),
+                               aUserInstallURL + OUString::createFromAscii("/instdb.inf.orig"))
+                    == FileBase::E_None) 
+#else
+                if (File::move(aUserInstallURL + OUString::createFromAscii("/instdb.ins"),
+                               aUserInstallURL + OUString::createFromAscii("/instdb.ins.orig"))
+                    == FileBase::E_None) 
+#endif
+                {
+                           
+                    OUString aResponseFileURL = aBaseInstallURL + 
+                        OUString::createFromAscii("/share/responsefile/pp5.rsp");
+                    OUString aResponseFile;
+                    FileBase::getSystemPathFromFileURL( aResponseFileURL, aResponseFile );
+                    OUString aUserDir;
+                    FileBase::getSystemPathFromFileURL( aUserInstallURL, aUserDir );
+                    OUString aParameters[5];
+                    aParameters[0] = OUString::createFromAscii("-nogui");
+                    aParameters[1] = OUString::createFromAscii("-r");
+                    aParameters[2] = aResponseFile;
+                    aParameters[3] = OUString::createFromAscii("-d");
+                    aParameters[4] = aUserDir;                
+                    StartSetup(aParameters, 5, sal_True);
+                }
+            }
+        }
 }
 
 void Desktop::HandleBootstrapPathErrors( ::utl::Bootstrap::Status aBootstrapStatus, const OUString& aDiagnosticMessage )
@@ -1437,7 +1502,12 @@ void Desktop::Main()
 
     // ----  Startup screen ----
     OpenSplashScreen();
-
+    
+    SetSplashScreenProgress(5);
+    // run pp5 specific setup if needed
+    StartPP5Setup();
+    SetSplashScreenProgress(10);
+    
     // check if accessibility is enabled but not working and allow to quit
     if( Application::GetSettings().GetMiscSettings().GetEnableATToolSupport() )
     {
@@ -1493,7 +1563,7 @@ void Desktop::Main()
         // Check special env variable #111015#
         std::vector< String > aUnrestrictedFolders;
         svt::getUnrestrictedFolders( aUnrestrictedFolders );
-        
+
         if ( aUnrestrictedFolders.size() > 0 )
         {
             // Set different working directory. The first entry is
@@ -2232,16 +2302,16 @@ void Desktop::OpenDefault()
     catch ( ::com::sun::star::lang::IllegalArgumentException& iae)
     {
         OUString aMsg = OUString::createFromAscii(
-            "Desktop::OpenDefault() IllegalArgumentException while calling loadComponentFromURL: ") 
+            "Desktop::OpenDefault() IllegalArgumentException while calling loadComponentFromURL: ")
             + iae.Message;
-        OSL_ENSURE( sal_False, U2S( aMsg ) );
+        OSL_ENSURE( sal_False, U2S(aMsg).getStr());
     }
     catch (com::sun::star::io::IOException& ioe)
     {
         OUString aMsg = OUString::createFromAscii(
-            "Desktop::OpenDefault() IOException while calling loadComponentFromURL: ") 
+            "Desktop::OpenDefault() IOException while calling loadComponentFromURL: ")
             + ioe.Message;
-        OSL_ENSURE( sal_False, U2S( aMsg ) );
+        OSL_ENSURE( sal_False, U2S(aMsg).getStr());
     }
 
     // shut down again if no component could be loaded
@@ -2390,16 +2460,16 @@ void Desktop::HandleAppEvent( const ApplicationEvent& rAppEvent )
                 catch ( ::com::sun::star::lang::IllegalArgumentException& iae)
                 {
                     OUString aMsg = OUString::createFromAscii(
-                        "handle app event IllegalArgumentException while calling loadComponentFromURL: ") 
+                        "handle app event IllegalArgumentException while calling loadComponentFromURL: ")
                         + iae.Message;
-                    OSL_ENSURE( sal_False, U2S( aMsg ) );
+                    OSL_ENSURE( sal_False, U2S(aMsg).getStr());
                 }
                 catch (com::sun::star::io::IOException& ioe)
                 {
                     OUString aMsg = OUString::createFromAscii(
-                        "handle app event IOException while calling loadComponentFromURL: ") 
+                        "handle app event IOException while calling loadComponentFromURL: ")
                         + ioe.Message;
-                    OSL_ENSURE( sal_False, U2S( aMsg ) );
+                    OSL_ENSURE( sal_False, U2S(aMsg).getStr());
                 }
 
                 if ( !xDoc.is() )
@@ -2636,3 +2706,15 @@ void Desktop::CheckFirstRun( )
 }
 
 }
+
+// This is a work-around for the following bug:  If the soffice executable is
+// compiled with a relatively old GCC on Linux, the resulting executable will
+// not contain a PT_GNU_STACK entry; however, on some relatively recent Linux
+// distributions, lack of PT_GNU_STACK means that an mmap(2) with PROT_READ on a
+// file from a noexec file system will fail.  See #i40750# for further details.
+// (Theoretically, this fix should be applied to every executable in the OOo
+// distribution; practically, only the soffice executable seems to be affected
+// by the bug.)
+#if defined LINUX && __GNUC__ == 3 && __GNUC_MINOR__ == 2
+asm(".section .note.GNU-stack, \"\", @progbits");
+#endif

@@ -39,7 +39,6 @@
  *  Contributor(s): _______________________________________
  *
  ************************************************************************/
-
 #include <osl/nlsupport.h>
 #include <osl/diagnose.h>
 #include <osl/process.h>
@@ -310,7 +309,7 @@ const _pair _nl_language_list[] = {
    { "sjis",		RTL_TEXTENCODING_SHIFT_JIS	} /* Japan */
 };
 
-#elif defined(LINUX) || defined(NETBSD)
+#elif defined(LINUX)
 
 const _pair _nl_language_list[] = {
     { "ANSI_X3.110-1983",           RTL_TEXTENCODING_DONTKNOW   },  /* ISO-IR-99 NAPLPS */

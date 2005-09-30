@@ -300,10 +300,11 @@ SHL1STDLIBS += -lXext -lSM -lICE -lX11
 .ENDIF          # "$(OS)"=="SOLARIS"
 .ENDIF          # "$(GUIBASE)"=="unx"
 
+.IF "$(ENABLE_PASF)" != ""
 .IF "$(OS)"=="MACOSX"
-.IF "$(GUIBASE)"=="unx"
-SHL1STDLIBS += -lXinerama
+SHL1STDLIBS += -framework CoreAudio -framework AudioToolbox
 .ENDIF
+SHL1STDLIBS += -lsndfile -lportaudio
 .ENDIF
 
 .IF "$(OS)"=="LINUX" || "$(OS)"=="SOLARIS" || "$(OS)"=="FREEBSD"
@@ -315,6 +316,7 @@ SHL1STDLIBS += -laudio
 SHL1STDLIBS += -ldl -lnsl -lsocket
 .ENDIF # SOLARIS
 .ENDIF          # "$(OS)"=="LINUX" || "$(OS)"=="SOLARIS" || "$(OS)"=="FREEBSD"
+
 
 .ENDIF          # "$(GUI)"=="UNX"
 

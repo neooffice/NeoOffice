@@ -177,49 +177,6 @@ inline storeError __store_fopen (
 		return ERROR_FROM_NATIVE(errno);
 	}
 
-#ifdef SOLARIS /* see workaround comment below */
-
-	/*
-	 * Workaround for SunOS <= 5.7:
-	 *
-	 * 'mmap()' fails on posix (advisory) locked (F_SETLK) NFS file handles.
-	 * Using non-posix F_SHARE / F_UNSHARE instead.
-	 */
-
-	// Acquire (advisory) Share Access (Multiple Reader | Single Writer)
-	struct fshare share;
-
-	if (nMode & store_File_OpenWrite)
-	{
-		share.f_access = F_RWACC; /* Request own read and write access */
-		share.f_deny   = F_RWDNY; /* Deny other's read and write access */
-	}
-	else
-	{
-		share.f_access = F_RDACC; /* Request own read-only access */
-		share.f_deny   = F_WRDNY; /* Deny other's write access */
-	}
-
-	share.f_id = 0;
-
-	if (::fcntl (rhFile, F_SHARE, &share) < 0)
-	{
-		// Save original result.
-		storeError result;
-		if ((errno == EACCES) || (errno == EAGAIN))
-			result = store_E_LockingViolation;
-		else
-			result = ERROR_FROM_NATIVE(errno);
-
-		// Close file handle.
-		::close (rhFile); rhFile = 0;
-
-		// Finish.
-		return (result);
-	}
-
-#else  /* POSIX */
-
 	// Acquire (advisory) Lock (Multiple Reader | Single Writer)
 	struct flock lock;
 
@@ -253,8 +210,6 @@ inline storeError __store_fopen (
 		// Finish.
 		return (result);
 	}
-
-#endif /* SOLARIS || POSIX */
 
 	int nFlags = ::fcntl (rhFile, F_GETFD, 0);
 	if (!(nFlags < 0))
@@ -378,19 +333,6 @@ inline void __store_fsync (HSTORE h)
  */
 inline void __store_fclose (HSTORE h)
 {
-#ifdef SOLARIS /* see comment in __store_fopen() */
-
-	// Release (advisory) Share Access (Multiple Reader | Single Writer)
-	struct fshare share;
-
-	share.f_access = 0;
-	share.f_deny = 0;
-	share.f_id = 0;
-
-	::fcntl (h, F_UNSHARE, &share);
-
-#else  /* POSIX */
-
 	// Release (advisory) Lock (Multiple Reader | Single Writer)
 	struct flock lock;
 
@@ -401,8 +343,6 @@ inline void __store_fclose (HSTORE h)
 
 	::fcntl (h, F_SETLK, &lock);
 
-#endif /* SOLARIS || POSIX */
-		
 	// Close file handle.
 	::close (h);
 }

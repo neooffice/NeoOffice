@@ -55,7 +55,7 @@ NEOLIGHT_MDIMPORTER_URL:=http://trinity.neooffice.org/downloads/neolight.mdimpor
 # Product information
 OO_VERSION=1.1
 OO_PRODUCT_NAME=OpenOffice.org
-OO_PRODUCT_VERSION=1.1.4
+OO_PRODUCT_VERSION=1.1.5
 OO_REGISTRATION_URL=http://www.openoffice.org/welcome/registration.html
 PRODUCT_NAME=NeoOffice
 PRODUCT_DIR_NAME=NeoOffice
@@ -87,7 +87,7 @@ PRODUCT_REGISTRATION_URL=http://www.planamesa.com/neojava/donate.php
 # CVS macros
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
 OO_PACKAGES:=OpenOffice
-OO_TAG:=OpenOffice_1_1_4
+OO_TAG:=OpenOffice_1_1_5
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOfficeJ
 NEO_TAG:=HEAD
@@ -110,6 +110,7 @@ build.oo_checkout:
 
 build.oo_patches: build.oo_checkout \
 	build.oo_berkeleydb_patch \
+	build.oo_config_office_patch \
 	build.oo_external_patch \
 	build.oo_sal_patch \
 	build.oo_sc_patch \
@@ -151,7 +152,7 @@ build.oo_all: build.configure
 	touch "$@"
 
 build.oo_odk_all: build.configure build.oo_all build.oo_odk_patches
-	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/sdk_oo" ; `alias build` $(OO_BUILD_ARGS)
+	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/odk" ; `alias build` $(OO_BUILD_ARGS)
 	touch "$@"
 
 build.neo_configure: build.oo_all

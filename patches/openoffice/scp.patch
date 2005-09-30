@@ -1,11 +1,11 @@
 Index: source/office/files.scp
 ===================================================================
 RCS file: /cvs/installation/scp/source/office/Attic/files.scp,v
-retrieving revision 1.369.16.19
-diff -u -r1.369.16.19 files.scp
---- source/office/files.scp	28 Oct 2004 11:54:26 -0000	1.369.16.19
-+++ source/office/files.scp	28 Dec 2004 18:14:56 -0000
-@@ -1037,7 +1037,11 @@
+retrieving revision 1.369.16.21
+diff -u -r1.369.16.21 files.scp
+--- source/office/files.scp	12 Jul 2005 13:48:28 -0000	1.369.16.21
++++ source/office/files.scp	26 Sep 2005 01:07:19 -0000
+@@ -1038,7 +1038,11 @@
          Styles          = (PACKED);
          Dir             = GID_DIR_PROGRAM;
          #ifdef UNX
