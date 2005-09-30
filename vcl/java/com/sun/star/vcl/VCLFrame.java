@@ -1607,7 +1607,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void requestFocus() {
 
-		if (window.isShowing())
+		if (window.isShowing() && (style & SAL_FRAME_STYLE_TOOLTIP) == 0)
 			panel.requestFocus();
 
 	}
@@ -1926,7 +1926,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void toFront() {
 
-		if (window.isShowing()) {
+		if (window.isShowing() && (style & SAL_FRAME_STYLE_TOOLTIP) == 0) {
 			window.toFront();
 			panel.requestFocus();
 		}
