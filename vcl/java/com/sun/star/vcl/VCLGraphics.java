@@ -196,6 +196,11 @@ public final class VCLGraphics {
 	private static TransparentComposite transparentComposite = new TransparentComposite();
 
 	/**
+	 * The cached XOR image composite.
+	 */
+	private static XORImageComposite xorImageComposite = new XORImageComposite();
+
+	/**
 	 * The use default font flag.
 	 */
 	private static boolean useDefaultFont = true;
@@ -564,7 +569,7 @@ public final class VCLGraphics {
 			if (g != null) {
 				try {
 					if (xor)
-						g.setXORMode(Color.black);
+						g.setComposite(VCLGraphics.xorImageComposite);
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {
 						g.setClip((Rectangle)clipRects.next());
@@ -640,7 +645,7 @@ public final class VCLGraphics {
 		if (g != null) {
 			try {
 				if (xor)
-					g.setXORMode(Color.black);
+					g.setComposite(VCLGraphics.xorImageComposite);
 				Iterator clipRects = clipList.iterator();
 				while (clipRects.hasNext()) {
 					g.setClip((Rectangle)clipRects.next());
@@ -723,7 +728,7 @@ public final class VCLGraphics {
 		if (g != null) {
 			try {
 				if (xor)
-					g.setXORMode(Color.black);
+					g.setComposite(VCLGraphics.xorImageComposite);
 				Iterator clipRects = clipList.iterator();
 				while (clipRects.hasNext()) {
 					g.setClip((Rectangle)clipRects.next());
@@ -2083,6 +2088,38 @@ public final class VCLGraphics {
 			firstPass = b;
 
 		}
+
+	}
+
+	final static class XORImageComposite implements Composite, CompositeContext {
+
+		public void compose(Raster src, Raster destIn, WritableRaster destOut) {
+
+			if (destIn != destOut)
+				destOut.setDataElements(0, 0, destIn);
+
+			int w = destOut.getWidth();
+			int h = destOut.getHeight();
+
+			int[] srcData = new int[w];
+			int[] destData = new int[w];
+			for (int line = 0; line < h; line++) {
+				srcData = (int[])src.getDataElements(0, line, srcData.length, 1, srcData);
+				destData = (int[])destIn.getDataElements(0, line, destData.length, 1, destData);
+				for (int i = 0; i < srcData.length && i < destData.length; i++)
+					destData[i] = (destData[i] ^ 0xff000000 ^ srcData[i]) | 0xff000000;
+				destOut.setDataElements(0, line, destData.length, 1, destData);
+			}
+
+		}
+
+		public CompositeContext createContext(ColorModel srcColorModel, ColorModel destColorModel, RenderingHints hints) {
+
+			return this;
+
+		}
+
+		public void dispose() {}
 
 	}
 
