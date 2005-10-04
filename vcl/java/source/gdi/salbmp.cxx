@@ -50,13 +50,14 @@ using namespace vcl;
 // ==================================================================
 
 SalBitmap::SalBitmap() :
-	maSize( 0, 0 )
+	maSize( 0, 0 ),
+	mnAcquireCount( 0 ),
+	mnBitCount( 0 ),
+	mpBits( NULL ),
+	mbCopyFromVCLBitmap( false ),
+	mpData( NULL ),
+	mpVCLBitmap( NULL )
 {
-	mnAcquireCount = 0;
-	mnBitCount = 0;
-	mpBits = NULL;
-	mpData = NULL;
-	mpVCLBitmap = NULL;
 }
 
 // ------------------------------------------------------------------
@@ -85,8 +86,12 @@ BOOL SalBitmap::Create( const Size& rSize, USHORT nBitCount, const BitmapPalette
 		mnBitCount = mpVCLBitmap->getBitCount();
 
 		// Save the palette
-		if ( rPal.GetEntryCount() )
-			mpVCLBitmap->setPalette( rPal );
+		USHORT nColors = ( ( mnBitCount <= 8 ) ? ( 1 << mnBitCount ) : 0 );
+		if ( nColors )
+		{
+			maPalette = rPal;
+			maPalette.SetEntryCount( nColors );
+		}
 
 		// Fill the buffer with pointers to the Java buffer
 		mpData = mpVCLBitmap->getData();
@@ -107,11 +112,7 @@ BOOL SalBitmap::Create( const SalBitmap& rSalBmp )
 {
 	Destroy();
 
-	BitmapPalette aPalette;
-	if ( rSalBmp.mpVCLBitmap )
-		rSalBmp.mpVCLBitmap->getPalette( aPalette );
-
-	BOOL bRet = Create( rSalBmp.GetSize(), rSalBmp.GetBitCount(), aPalette );
+	BOOL bRet = Create( rSalBmp.GetSize(), rSalBmp.GetBitCount(), rSalBmp.maPalette );
 
 	if ( bRet )
 	{
@@ -162,30 +163,27 @@ void SalBitmap::Destroy()
 	maSize = Size( 0, 0 );
 	mnAcquireCount = 0;
 	mnBitCount = 0;
+	mbCopyFromVCLBitmap = false;
+
+	if ( mpBits )
+	{
+		rtl_freeMemory( mpBits );
+		mpBits = NULL;
+	}
 
 	if ( mpData )
 	{
-		if ( mpBits )
-		{
-			VCLThreadAttach t;
-			if ( t.pEnv )
-			{
-				if ( mnBitCount <= 8 )
-					t.pEnv->ReleaseByteArrayElements( (jbyteArray)mpData->getJavaObject(), (jbyte *)mpBits, JNI_ABORT );
-				else if ( mnBitCount <= 16 )
-					t.pEnv->ReleaseShortArrayElements( (jshortArray)mpData->getJavaObject(), (jshort *)mpBits, JNI_ABORT );
-				else
-					rtl_freeMemory( mpBits );
-			}
-		}
 		delete mpData;
+		mpData = NULL;
 	}
-	mpBits = NULL;
-	mpData = NULL;
+
+	maPalette.SetEntryCount( 0 );
 
 	if ( mpVCLBitmap )
+	{
 		delete mpVCLBitmap;
-	mpVCLBitmap = NULL;
+		mpVCLBitmap = NULL;
+	}
 }
 
 // ------------------------------------------------------------------
@@ -211,11 +209,13 @@ BitmapBuffer* SalBitmap::AcquireBuffer( BOOL bReadOnly )
 
 	BitmapBuffer *pBuffer = new BitmapBuffer();
 
-	// Set buffer values. Note that the JVM cannot draw 1 bit bitmaps
-	// correctly so we don't use them.
 	pBuffer->mnBitCount = mnBitCount;
 	pBuffer->mnFormat = BMP_FORMAT_TOP_DOWN;
-	if ( mnBitCount <= 4 )
+	if ( mnBitCount <= 1 )
+	{
+		pBuffer->mnFormat |= BMP_FORMAT_1BIT_MSB_PAL;
+	}
+	else if ( mnBitCount <= 4 )
 	{
 		pBuffer->mnFormat |= BMP_FORMAT_4BIT_MSN_PAL;
 	}
@@ -236,46 +236,104 @@ BitmapBuffer* SalBitmap::AcquireBuffer( BOOL bReadOnly )
 	pBuffer->mnWidth = maSize.Width();
 	pBuffer->mnHeight = maSize.Height();
 	pBuffer->mnScanlineSize = AlignedWidth4Bytes( mnBitCount * maSize.Width() );
-	mpVCLBitmap->getPalette( pBuffer->maPalette );
+	pBuffer->maPalette = maPalette;
 
 	if ( !mpBits )
 	{
-		VCLThreadAttach t;
-		if ( t.pEnv )
+		mpBits = (BYTE *)rtl_allocateMemory( pBuffer->mnScanlineSize * pBuffer->mnHeight );
+		if ( mpBits )
 		{
-			jboolean bCopy( sal_False );
-			if ( mnBitCount <= 8 )
+			if ( mbCopyFromVCLBitmap )
 			{
-				mpBits = (BYTE *)t.pEnv->GetByteArrayElements( (jbyteArray)mpData->getJavaObject(), &bCopy );
-			}
-			else if ( mnBitCount <= 16 )
-			{
-				mpBits = (BYTE *)t.pEnv->GetShortArrayElements( (jshortArray)mpData->getJavaObject(), &bCopy );
+				mbCopyFromVCLBitmap = false;
+
+				VCLThreadAttach t;
+				if ( t.pEnv )
+				{
+					jboolean bCopy( sal_False );
+					jint *pBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), &bCopy );
+					if ( pBits )
+					{
+						jint *pBitsIn = pBits;
+						BYTE *pBitsOut = mpBits;
+	
+						if ( pBuffer->mnFormat & BMP_FORMAT_1BIT_MSB_PAL )
+						{
+							for ( long i = 0; i < pBuffer->mnHeight; i++ )
+							{
+								for ( long j = 0; j < pBuffer->mnWidth; j++ )
+								{
+									BYTE& rByte = pBitsOut[ j >> 3 ];
+									USHORT nIndex = maPalette.GetBestIndex( BitmapColor( (BYTE)( pBitsIn[ j ] >> 16 ), (BYTE)( pBitsIn[ j ] >> 8 ), (BYTE)pBitsIn[ j ] ) );
+									( nIndex & 1 ) ? ( rByte |= 1 << ( 7 - ( j & 7 ) ) ) : ( rByte &= ~( 1 << ( 7 - ( j & 7 ) ) ) );
+								}
+
+								pBitsIn += pBuffer->mnWidth;
+								pBitsOut += pBuffer->mnScanlineSize;
+							}
+						}
+						else if ( pBuffer->mnFormat & BMP_FORMAT_4BIT_MSN_PAL )
+						{
+							for ( long i = 0; i < pBuffer->mnHeight; i++ )
+							{
+								for ( long j = 0; j < pBuffer->mnWidth; j++ )
+								{
+									BYTE& rByte = pBitsOut[ j >> 1 ];
+									USHORT nIndex = maPalette.GetBestIndex( BitmapColor( (BYTE)( pBitsIn[ j ] >> 16 ), (BYTE)( pBitsIn[ j ] >> 8 ), (BYTE)pBitsIn[ j ] ) );
+									( j & 1 ) ? ( rByte &= 0xf0, rByte |= ( nIndex & 0x0f ) ) : ( rByte &= 0x0f, rByte |= ( nIndex << 4 ) );
+								}
+
+								pBitsIn += pBuffer->mnWidth;
+								pBitsOut += pBuffer->mnScanlineSize;
+							}
+						}
+						else if ( pBuffer->mnFormat & BMP_FORMAT_8BIT_PAL )
+						{
+							for ( long i = 0; i < pBuffer->mnHeight; i++ )
+							{
+								for ( long j = 0; j < pBuffer->mnWidth; j++ )
+									pBitsOut[ j ] = (BYTE)maPalette.GetBestIndex( BitmapColor( (BYTE)( pBitsIn[ j ] >> 16 ), (BYTE)( pBitsIn[ j ] >> 8 ), (BYTE)pBitsIn[ j ] ) );
+
+								pBitsIn += pBuffer->mnWidth;
+								pBitsOut += pBuffer->mnScanlineSize;
+							}
+						}
+						else if ( pBuffer->mnFormat & BMP_FORMAT_16BIT_TC_MSB_MASK )
+						{
+							for ( long i = 0; i < pBuffer->mnHeight; i++ )
+							{
+								for ( long j = 0; j < pBuffer->mnWidth; j++ )
+									pBuffer->maColorMask.SetColorFor16BitMSB( BitmapColor( (BYTE)( pBitsIn[ j ] >> 16 ), (BYTE)( pBitsIn[ j ] >> 8 ), (BYTE)pBitsIn[ j ] ), pBitsOut + ( j << 1UL ) );
+
+								pBitsIn += pBuffer->mnWidth;
+								pBitsOut += pBuffer->mnScanlineSize;
+							}
+						}
+						else if ( pBuffer->mnFormat & BMP_FORMAT_24BIT_TC_RGB )
+						{
+							for ( long i = 0; i < pBuffer->mnHeight; i++ )
+							{
+								long j;
+								long k;
+								for ( j = 0, k = 0; j < pBuffer->mnWidth; j++ )
+								{
+									pBitsOut[ k++ ] = SALCOLOR_RED( pBitsIn[ j ] );
+									pBitsOut[ k++ ] = SALCOLOR_GREEN( pBitsIn[ j ] );
+									pBitsOut[ k++ ] = SALCOLOR_BLUE( pBitsIn[ j ] );
+								}
+
+								pBitsIn += pBuffer->mnWidth;
+								pBitsOut += pBuffer->mnScanlineSize;
+							}
+						}
+
+						t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), pBits, JNI_ABORT );
+					}
+				}
 			}
 			else
 			{
-				jint *pBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( (jarray)mpData->getJavaObject(), &bCopy );
-				if ( pBits )
-				{
-					mpBits = (BYTE *)rtl_allocateMemory( pBuffer->mnScanlineSize * pBuffer->mnHeight );
-					jint *pBitsIn = pBits;
-					BYTE *pBitsOut = mpBits;
-					for ( long i = 0; i < pBuffer->mnHeight; i++ )
-					{
-						long j;
-						long k;
-						for ( j = 0, k = 0; j < pBuffer->mnWidth; j++ )
-						{
-							pBitsOut[ k++ ] = SALCOLOR_RED( pBitsIn[ j ] );
-							pBitsOut[ k++ ] = SALCOLOR_GREEN( pBitsIn[ j ] );
-							pBitsOut[ k++ ] = SALCOLOR_BLUE( pBitsIn[ j ] );
-						}
-
-						pBitsIn += pBuffer->mnWidth;
-						pBitsOut += pBuffer->mnScanlineSize;
-					}
-					t.pEnv->ReleasePrimitiveArrayCritical( (jarray)mpData->getJavaObject(), pBits, JNI_ABORT );
-				}
+				memset( mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
 			}
 		}
 	}
@@ -305,56 +363,104 @@ void SalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, BOOL bReadOnly )
 			VCLThreadAttach t;
 			if ( t.pEnv )
 			{
-				jint nCommit = JNI_ABORT;
-				if ( !mnAcquireCount )
+				if ( !bReadOnly )
 				{
-					if ( !bReadOnly )
-						nCommit = 0;
-				}
-				else if ( !bReadOnly )
-				{
-					nCommit = JNI_COMMIT;
-				}
-
-				if ( mnBitCount <= 8 )
-				{
-					t.pEnv->ReleaseByteArrayElements( (jbyteArray)mpData->getJavaObject(), (jbyte *)mpBits, nCommit );
-				}
-				else if ( mnBitCount <= 16 )
-				{
-					t.pEnv->ReleaseShortArrayElements( (jshortArray)mpData->getJavaObject(), (jshort *)mpBits, nCommit );
-				}
-				else
-				{
-					if ( !nCommit || nCommit == JNI_COMMIT )
+					// Save the palette
+					USHORT nColors = ( ( mnBitCount <= 8 ) ? ( 1 << mnBitCount ) : 0 );
+					if ( nColors )
 					{
-						jboolean bCopy( sal_False );
-						jint *pBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( (jarray)mpData->getJavaObject(), &bCopy );
-						BYTE *pBitsIn = mpBits;
-						jint *pBitsOut = pBits;
-						for ( long i = 0; i < pBuffer->mnHeight; i++ )
-						{
-							long j;
-							long k;
-							for ( j = 0, k = 0; j < pBuffer->mnWidth; j++, k += 3 )
-								pBitsOut[ j ] = MAKE_SALCOLOR( pBitsIn[ k ], pBitsIn[ k + 1 ], pBitsIn[ k + 2 ] ) | 0xff000000;
-	
-							pBitsIn += pBuffer->mnScanlineSize;
-							pBitsOut += pBuffer->mnWidth;
-						}
-						t.pEnv->ReleasePrimitiveArrayCritical( (jarray)mpData->getJavaObject(), pBits, JNI_ABORT );
+						maPalette = pBuffer->maPalette;
+						maPalette.SetEntryCount( nColors );
 					}
 
-					if ( !mnAcquireCount )
-						rtl_freeMemory( mpBits );
+					jboolean bCopy( sal_False );
+					jint *pBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), &bCopy );
+					if ( pBits )
+					{
+						BYTE *pBitsIn = mpBits;
+						jint *pBitsOut = pBits;
+
+						if ( pBuffer->mnFormat & BMP_FORMAT_1BIT_MSB_PAL )
+						{
+							for ( long i = 0; i < pBuffer->mnHeight; i++ )
+							{
+								for ( long j = 0; j < pBuffer->mnWidth; j++ )
+								{
+									BitmapColor& rColor = maPalette[ pBitsIn[ j >> 3 ] & ( 1 << ( 7 - ( j & 7 ) ) ) ? 1 : 0 ];
+									pBitsOut[ j ] = MAKE_SALCOLOR( rColor.GetRed(), rColor.GetGreen(), rColor.GetBlue() ) | 0xff000000;
+								}
+		
+								pBitsIn += pBuffer->mnScanlineSize;
+								pBitsOut += pBuffer->mnWidth;
+							}
+						}
+						else if ( pBuffer->mnFormat & BMP_FORMAT_4BIT_MSN_PAL )
+						{
+							for ( long i = 0; i < pBuffer->mnHeight; i++ )
+							{
+								for ( long j = 0; j < pBuffer->mnWidth; j++ )
+								{
+									BitmapColor& rColor = maPalette[ ( pBitsIn[ j >> 1 ] >> ( j & 1 ? 0 : 4 ) ) & 0x0f ];
+									pBitsOut[ j ] = MAKE_SALCOLOR( rColor.GetRed(), rColor.GetGreen(), rColor.GetBlue() ) | 0xff000000;
+								}
+		
+								pBitsIn += pBuffer->mnScanlineSize;
+								pBitsOut += pBuffer->mnWidth;
+							}
+						}
+						else if ( pBuffer->mnFormat & BMP_FORMAT_8BIT_PAL )
+						{
+							for ( long i = 0; i < pBuffer->mnHeight; i++ )
+							{
+								for ( long j = 0; j < pBuffer->mnWidth; j++ )
+								{
+									BitmapColor& rColor = maPalette[ pBitsIn[ j ] ];
+									pBitsOut[ j ] = MAKE_SALCOLOR( rColor.GetRed(), rColor.GetGreen(), rColor.GetBlue() ) | 0xff000000;
+								}
+		
+								pBitsIn += pBuffer->mnScanlineSize;
+								pBitsOut += pBuffer->mnWidth;
+							}
+						}
+						else if ( pBuffer->mnFormat & BMP_FORMAT_16BIT_TC_MSB_MASK )
+						{
+							BitmapColor aColor;
+							for ( long i = 0; i < pBuffer->mnHeight; i++ )
+							{
+								for ( long j = 0; j < pBuffer->mnWidth; j++ )
+								{
+									pBuffer->maColorMask.GetColorFor16BitMSB( aColor, pBitsIn + ( j << 1UL ) );
+									pBitsOut[ j ] = MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000;
+								}
+		
+								pBitsIn += pBuffer->mnScanlineSize;
+								pBitsOut += pBuffer->mnWidth;
+							}
+						}
+						else if ( pBuffer->mnFormat & BMP_FORMAT_24BIT_TC_RGB )
+						{
+							for ( long i = 0; i < pBuffer->mnHeight; i++ )
+							{
+								long j;
+								long k;
+								for ( j = 0, k = 0; j < pBuffer->mnWidth; j++, k += 3 )
+									pBitsOut[ j ] = MAKE_SALCOLOR( pBitsIn[ k ], pBitsIn[ k + 1 ], pBitsIn[ k + 2 ] ) | 0xff000000;
+		
+								pBitsIn += pBuffer->mnScanlineSize;
+								pBitsOut += pBuffer->mnWidth;
+							}
+						}
+
+						t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), pBits, 0 );
+					}
 				}
+			}
 
-				if ( !mnAcquireCount )
-					mpBits = NULL;
-
-				// Save the palette
-				if ( !bReadOnly && mpVCLBitmap )
-					mpVCLBitmap->setPalette( pBuffer->maPalette );
+			if ( !mnAcquireCount && mpBits )
+			{
+				rtl_freeMemory( mpBits );
+				mpBits = NULL;
+				mbCopyFromVCLBitmap = true;
 			}
 		}
 		delete pBuffer;

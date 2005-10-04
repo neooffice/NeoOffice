@@ -150,7 +150,7 @@ java_lang_Object *com_sun_star_vcl_VCLBitmap::getData()
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()Ljava/lang/Object;";
+			char *cSignature = "()[I";
 			mID = t.pEnv->GetMethodID( getMyClass(), "getData", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -164,88 +164,3 @@ java_lang_Object *com_sun_star_vcl_VCLBitmap::getData()
 	}
 	return out;
 }
-
-// ----------------------------------------------------------------------------
-
-void com_sun_star_vcl_VCLBitmap::getPalette( BitmapPalette& _par0 )
-{
-	static jmethodID mID = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()[I";
-			mID = t.pEnv->GetMethodID( getMyClass(), "getPalette", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jintArray tempObj = (jintArray)t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
-			if ( tempObj )
-			{
-				jsize nColors = t.pEnv->GetArrayLength( tempObj );
-				if ( nColors )
-				{
-					_par0.SetEntryCount( nColors );
-					jboolean bCopy( sal_False );
-					jint *pColorBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( tempObj, &bCopy );
-					for ( jsize i = 0 ; i < nColors ; i++ )
-					{
-						jint nCurrentColor = pColorBits[ i ];
-						_par0[ i ] = BitmapColor( SALCOLOR_RED( nCurrentColor ), SALCOLOR_GREEN( nCurrentColor ), SALCOLOR_BLUE( nCurrentColor ) );
-					}
-					t.pEnv->ReleasePrimitiveArrayCritical( tempObj, pColorBits, JNI_ABORT );
-				}
-			}
-			else
-			{
-				_par0.SetEntryCount( 0 );
-			}
-		}
-	}
-}
-
-
-// ----------------------------------------------------------------------------
-
-void com_sun_star_vcl_VCLBitmap::setPalette( const BitmapPalette& _par0 )
-{
-	static jmethodID mID = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "([I)V";
-			mID = t.pEnv->GetMethodID( getMyClass(), "setPalette", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jsize nColors = _par0.GetEntryCount();
-			if ( nColors )
-			{
-				jintArray pColors = t.pEnv->NewIntArray( nColors );
-				jboolean bCopy( sal_False );
-				jint *pColorBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( pColors, &bCopy );
-				for ( jsize i = 0 ; i < nColors ; i++ )
-				{
-					const BitmapColor &rCol = _par0[ i ];
-					pColorBits[ i ] = MAKE_SALCOLOR( rCol.GetRed(), rCol.GetGreen(), rCol.GetBlue() ) | 0xff000000;
-				}
-				t.pEnv->ReleasePrimitiveArrayCritical( pColors, pColorBits, 0 );
-				jvalue args[1];
-				args[0].l = pColors;
-				t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
-			}
-			else
-			{
-				jvalue args[1];
-				args[0].l = NULL;
-				t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
-			}
-		}
-	}
-}
-

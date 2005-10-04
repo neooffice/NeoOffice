@@ -64,7 +64,9 @@ public:
 	USHORT			mnAcquireCount;
 	USHORT			mnBitCount;
 	BYTE*			mpBits;
+	bool			mbCopyFromVCLBitmap;
 	::vcl::java_lang_Object*	mpData;
+	BitmapPalette	maPalette;
 	::vcl::com_sun_star_vcl_VCLBitmap*	mpVCLBitmap;
 public:	
 					SalBitmap();

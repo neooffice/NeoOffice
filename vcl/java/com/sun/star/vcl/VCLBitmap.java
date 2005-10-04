@@ -66,31 +66,6 @@ import java.awt.image.WritableRaster;
 public final class VCLBitmap {
 
 	/**
-	 * The default 4 bit palette.
-	 */
-	private static int[] default4BitPalette = null;
-
-	/**
-	 * The default 4 bit color model.
-	 */
-	private static IndexColorModel default4BitColorModel = null;
-
-	/**
-	 * The default 8 bit palette.
-	 */
-	private static int[] default8BitPalette = null;
-
-	/**
-	 * The default 8 bit color model.
-	 */
-	private static IndexColorModel default8BitColorModel = null;
-
-	/**
-	 * The default 16 bit color model.
-	 */
-	private static DirectColorModel default16BitColorModel = null;
-
-	/**
 	 * The default 32 bit color model.
 	 */
 	private static DirectColorModel default32BitColorModel = null;
@@ -99,20 +74,6 @@ public final class VCLBitmap {
 	 * Initialize the default palettes and color models.
 	 */
 	static {
-
-		default4BitPalette = new int[16];
-		for (int i = 0; i < default4BitPalette.length; i++) {
-			int j = i * 17;
-			default4BitPalette[i] = 0xff000000 | ((j << 16) & 0x00ff0000) | ((j << 8) & 0x0000ff00) | (j & 0x000000ff);
-		}
-		default4BitColorModel = new IndexColorModel(4, default4BitPalette.length, default4BitPalette, 0, false, -1, DataBuffer.TYPE_BYTE);
-
-		BufferedImage img = new BufferedImage(1, 1, BufferedImage.TYPE_BYTE_INDEXED);
-		default8BitColorModel = (IndexColorModel)img.getColorModel();
-		default8BitPalette = new int[default8BitColorModel.getMapSize()];
-		default8BitColorModel.getRGBs(default8BitPalette);
-
-		default16BitColorModel = new DirectColorModel(15, 0x7c00, 0x03e0, 0x001f);
 
 		default32BitColorModel = new DirectColorModel(ColorSpace.getInstance(ColorSpace.CS_sRGB), 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000, true, DataBuffer.TYPE_INT);
 
@@ -126,12 +87,7 @@ public final class VCLBitmap {
 	/**
 	 * The data buffer.
 	 */
-	private Object data = null;
-
-	/**
-	 * The filtered image.
-	 */
-	private Image filteredImage = null;
+	private int[] data = null;
 
 	/**
 	 * The height.
@@ -142,21 +98,6 @@ public final class VCLBitmap {
 	 * The image.
 	 */
 	private BufferedImage image = null;
-
-	/**
-	 * The color model.
-	 */
-	private ColorModel model = null;
-
-	/**
-	 * The color palette.
-	 */
-	private int[] palette = null;
-
-	/**
-	 * The writable raster.
-	 */
-	private WritableRaster raster = null;
 
 	/**
 	 * The width.
@@ -178,9 +119,9 @@ public final class VCLBitmap {
 		width = w;
 		height = h;
 
-		// Adjust the bit count. Note that the JVM cannot draw 1 bit bitmaps
-		// correctly so we don't use them.
-		if (b <= 4)
+		if (b <= 1)
+			bitCount = 1;
+		else if (b <= 4)
 			bitCount = 4;
 		else if (b <= 8)
 			bitCount = 8;
@@ -189,55 +130,13 @@ public final class VCLBitmap {
 		else
 			bitCount = 24;
 
-		// Align buffer size to 4 bytes
-		int scanline = (((bitCount * width) + 31) >> 5) << 2;
-
-		// Set the palette, color model, and sample model
-		SampleModel sampleModel = null;
-		if (bitCount <= 4) {
-			palette = VCLBitmap.default4BitPalette;
-			model = VCLBitmap.default4BitColorModel;
-			sampleModel = new MultiPixelPackedSampleModel(DataBuffer.TYPE_BYTE, width, height, bitCount, scanline, 0);
-		}
-		else if (bitCount <= 8) {
-			palette = VCLBitmap.default8BitPalette;
-			model = VCLBitmap.default8BitColorModel;
-			sampleModel = new SinglePixelPackedSampleModel(DataBuffer.TYPE_BYTE, width, height, scanline, new int[]{ 0xff });
-		}
-		else if (bitCount <= 16) {
-			model = VCLBitmap.default16BitColorModel;
-			sampleModel = VCLBitmap.default16BitColorModel.createCompatibleSampleModel(width, height);
-		}
-		else {
-			model = VCLBitmap.default32BitColorModel;
-			sampleModel = VCLBitmap.default32BitColorModel.createCompatibleSampleModel(width, height);
-		}
-
-		// Create the raster
-		if (bitCount <= 8) {
-			byte[] d = new byte[scanline * height];
-			raster = Raster.createWritableRaster(sampleModel, new DataBufferByte(d, d.length), null);
-			data = d;
-		}
-		else if (bitCount <= 16) {
-			short[] d = new short[width * height];
-			raster = Raster.createWritableRaster(sampleModel, new DataBufferUShort(d, d.length), null);
-			data = d;
-		}
-		else {
-			int[] d = new int[width * height];
-			raster = Raster.createWritableRaster(sampleModel, new DataBufferInt(d, d.length), null);
-			data = d;
-		}
-
-		image = new BufferedImage(model, raster, true, null);
-
-		// Fix bug 639 by wrapping the buffered image in a filter if it uses
-		// an indexed color model
-		if (bitCount <= 8)
-			filteredImage = Toolkit.getDefaultToolkit().createImage(new FilteredImageSource(image.getSource(), new ImageFilter()));
-		else
-			filteredImage = image;
+		// Create the image. Note that all rasters are mapped to 32 bit rasters
+		// since this is what the JVM will convert all rasters to every time
+		// a non-32 bit raster is drawn.
+		data = new int[width * height];
+		DirectColorModel model = new DirectColorModel(ColorSpace.getInstance(ColorSpace.CS_sRGB), 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000, true, DataBuffer.TYPE_INT);
+		WritableRaster raster = Raster.createWritableRaster(model.createCompatibleSampleModel(width, height), new DataBufferInt(data, data.length), null);
+        image = new BufferedImage(model, raster, true, null);
 
 	}
 
@@ -302,7 +201,7 @@ public final class VCLBitmap {
 	 *
 	 * @return the bitmap's data
 	 */
-	public Object getData() {
+	public int[] getData() {
 
 		return data;
 
@@ -324,20 +223,9 @@ public final class VCLBitmap {
 	 *
 	 * @return the underlying image
 	 */
-	Image getImage() {
+	BufferedImage getImage() {
 
-		return filteredImage;
-
-	}
-
-	/**
-	 * Returns the bitmap's palette.
-	 *
-	 * @return the palette 
-	 */
-	public int[] getPalette() {
-
-		return palette;
+		return image;
 
 	}
 
@@ -350,24 +238,6 @@ public final class VCLBitmap {
 
 		return width;
 
-	}
-
-	/**
-	 * Sets the bitmap's palette.
-	 *
-	 * @param p the palette 
-	 */
-	public void setPalette(int[] p) {
-
-		if (bitCount <= 8) {
-			palette = p;
-			if (palette != null) {
-				model = new IndexColorModel(bitCount, palette.length, palette, 0, false, -1, DataBuffer.TYPE_BYTE);
-				image = new BufferedImage(model, raster, true, null);
-				filteredImage = Toolkit.getDefaultToolkit().createImage(new FilteredImageSource(image.getSource(), new ImageFilter()));
-			}
-		}
-	
 	}
 
 }
