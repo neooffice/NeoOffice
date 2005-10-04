@@ -234,7 +234,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 	{
 		case SALEVENT_CLOSE:
 		{
-			if ( pFrame )
+			if ( pFrame && pFrame->maFrameData.mbVisible )
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
 			break;
 		}
@@ -242,7 +242,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		{
 			SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)pData;
 
-			if ( pFrame )
+			if ( pFrame && pFrame->maFrameData.mbVisible )
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pInputEvent );
 			if ( pInputEvent )
 				delete pInputEvent;
@@ -251,7 +251,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_EXTTEXTINPUT:
 		{
 			SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)pData;
-			if ( pFrame )
+			if ( pFrame && pFrame->maFrameData.mbVisible )
 			{
 				ULONG nCommitted = getCommittedCharacterCount();
 				if ( !pInputEvent )
@@ -306,7 +306,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				}
 			}
 
-			if ( pFrame && pFrame != pSalData->mpFocusFrame )
+			if ( pFrame && pFrame->maFrameData.mbVisible && pFrame != pSalData->mpFocusFrame )
 			{
 				pSalData->mpFocusFrame = pFrame;
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
@@ -340,7 +340,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			if ( pFrame && pFrame == pSalData->mpFocusFrame )
 			{
 				pSalData->mpFocusFrame = NULL;
-				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
+				if ( pFrame->maFrameData.mbVisible )
+					pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
 			}
 
 			break;
@@ -349,7 +350,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_KEYUP:
 		{
 			SalKeyEvent *pKeyEvent = (SalKeyEvent *)pData;
-			if ( pFrame )
+			if ( pFrame && pFrame->maFrameData.mbVisible )
 			{
 				if ( !pKeyEvent )
 				{
@@ -379,7 +380,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_KEYMODCHANGE:
 		{
 			SalKeyModEvent *pKeyModEvent = (SalKeyModEvent *)pData;
-			if ( pFrame )
+			if ( pFrame && pFrame->maFrameData.mbVisible )
 			{
 				if ( !pKeyModEvent )
 				{
@@ -399,7 +400,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_MOUSEMOVE:
 		{
 			SalMouseEvent *pMouseEvent = (SalMouseEvent *)pData;
-			if ( pFrame )
+			if ( pFrame && pFrame->maFrameData.mbVisible )
 			{
 				if ( !pMouseEvent )
 				{
@@ -456,13 +457,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_PAINT:
 		{
 			SalPaintEvent *pPaintEvent = (SalPaintEvent *)pData;
-			if ( pFrame )
+			if ( pFrame && pFrame->maFrameData.mbVisible )
 			{
-				// Post a resize event as the JVM will change the size of the
-				// frame if it is smaller than the allowed minimum
-				com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, pFrame, NULL );
-				aEvent.dispatch();
-
 				if ( !pPaintEvent )
 				{
 					// Get paint region
@@ -500,7 +496,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_WHEELMOUSE:
 		{
 			SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)pData;
-			if ( pFrame )
+			if ( pFrame && pFrame->maFrameData.mbVisible )
 			{
 				if ( !pWheelMouseEvent )
 				{
@@ -529,7 +525,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_MENUDEACTIVATE:
 		{
 			SalMenuEvent *pMenuEvent = (SalMenuEvent *)pData;
-			if ( pFrame )
+			if ( pFrame && pFrame->maFrameData.mbVisible )
 			{
 				if ( !pMenuEvent )
 				{
@@ -545,7 +541,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		default:
 		{
-			if ( pFrame )
+			if ( pFrame && pFrame->maFrameData.mbVisible )
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
 			break;
 		}
