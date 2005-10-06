@@ -36,25 +36,14 @@
 package com.sun.star.vcl;
 
 import java.awt.Graphics2D;
-import java.awt.Image;
-import java.awt.Point;
 import java.awt.Rectangle;
-import java.awt.Toolkit;
 import java.awt.color.ColorSpace;
 import java.awt.image.BufferedImage;
-import java.awt.image.ColorModel;
 import java.awt.image.DataBuffer;
-import java.awt.image.DataBufferByte;
 import java.awt.image.DataBufferInt;
-import java.awt.image.DataBufferUShort;
 import java.awt.image.DirectColorModel;
-import java.awt.image.FilteredImageSource;
-import java.awt.image.ImageFilter;
-import java.awt.image.IndexColorModel;
-import java.awt.image.MultiPixelPackedSampleModel;
 import java.awt.image.Raster;
 import java.awt.image.SampleModel;
-import java.awt.image.SinglePixelPackedSampleModel;
 import java.awt.image.WritableRaster;
 
 /**
@@ -68,16 +57,7 @@ public final class VCLBitmap {
 	/**
 	 * The default 32 bit color model.
 	 */
-	private static DirectColorModel default32BitColorModel = null;
-
-	/**
-	 * Initialize the default palettes and color models.
-	 */
-	static {
-
-		default32BitColorModel = new DirectColorModel(ColorSpace.getInstance(ColorSpace.CS_sRGB), 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000, true, DataBuffer.TYPE_INT);
-
-	}
+	private static DirectColorModel default32BitColorModel = new DirectColorModel(ColorSpace.getInstance(ColorSpace.CS_sRGB), 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000, true, DataBuffer.TYPE_INT);
 
 	/**
 	 * The bit count.
@@ -134,9 +114,8 @@ public final class VCLBitmap {
 		// since this is what the JVM will convert all rasters to every time
 		// a non-32 bit raster is drawn.
 		data = new int[width * height];
-		DirectColorModel model = new DirectColorModel(ColorSpace.getInstance(ColorSpace.CS_sRGB), 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000, true, DataBuffer.TYPE_INT);
-		WritableRaster raster = Raster.createWritableRaster(model.createCompatibleSampleModel(width, height), new DataBufferInt(data, data.length), null);
-        image = new BufferedImage(model, raster, true, null);
+		WritableRaster raster = Raster.createWritableRaster(VCLBitmap.default32BitColorModel.createCompatibleSampleModel(width, height), new DataBufferInt(data, data.length), null);
+        image = new BufferedImage(VCLBitmap.default32BitColorModel, raster, true, null);
 
 	}
 

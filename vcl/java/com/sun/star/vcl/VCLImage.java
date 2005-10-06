@@ -52,6 +52,11 @@ import java.awt.image.WritableRaster;
 public final class VCLImage {
 
 	/**
+	 * The default 32 bit color model.
+	 */
+	private static DirectColorModel default32BitColorModel = new DirectColorModel(ColorSpace.getInstance(ColorSpace.CS_sRGB), 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000, true, DataBuffer.TYPE_INT);
+
+	/**
 	 * The bit count.
 	 */
 	private int bitCount = 0;
@@ -118,9 +123,8 @@ public final class VCLImage {
 		data = new int[width * height];
 
 		// Create the native image
-		DirectColorModel model = new DirectColorModel(ColorSpace.getInstance(ColorSpace.CS_sRGB), 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000, true, DataBuffer.TYPE_INT);
-		WritableRaster raster = Raster.createWritableRaster(model.createCompatibleSampleModel(width, height), new DataBufferInt(data, data.length), null);
-		image = new BufferedImage(model, raster, true, null);
+		WritableRaster raster = Raster.createWritableRaster(VCLImage.default32BitColorModel.createCompatibleSampleModel(width, height), new DataBufferInt(data, data.length), null);
+		image = new BufferedImage(VCLImage.default32BitColorModel, raster, true, null);
 
 		// Cache the graphics
 		pageFormat = p;
