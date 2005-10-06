@@ -62,7 +62,7 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
 
-#define LAYOUT_CACHE_MAX_SIZE 512
+#define LAYOUT_CACHE_MAX_SIZE 1024
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
@@ -91,7 +91,7 @@ struct ImplHashEquality
 };
 
 struct ImplATSLayoutData {
-	static ::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplHash, ImplHashEquality >	maLayoutCache;
+	static ::std::hash_multimap< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplHash, ImplHashEquality >	maLayoutCache;
 	static ::std::list< ImplATSLayoutData* >	maLayoutCacheList;
 
 	mutable int			mnRefCount;
@@ -147,7 +147,7 @@ bool ImplHashEquality::operator()( const ImplATSLayoutDataHash *p1, const ImplAT
 
 // ============================================================================
 
-::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplHash, ImplHashEquality > ImplATSLayoutData::maLayoutCache;
+::std::hash_multimap< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplHash, ImplHashEquality > ImplATSLayoutData::maLayoutCache;
 
 // ----------------------------------------------------------------------------
 
@@ -159,7 +159,7 @@ void ImplATSLayoutData::ClearLayoutDataCache()
 {
 	maLayoutCache.clear();
 
-	while ( maLayoutCache.size() )
+	while ( maLayoutCacheList.size() )
 	{
 		maLayoutCacheList.back()->Release();
 		maLayoutCacheList.pop_back();
@@ -191,7 +191,7 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 	pLayoutHash->mnStrHash = rtl_ustr_hashCode_WithLength( pLayoutHash->mpStr, pLayoutHash->mnLen );
 
 	// Search cache for matching layout
-	::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplHash, ImplHashEquality >::const_iterator it = maLayoutCache.find( pLayoutHash );
+	::std::hash_multimap< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplHash, ImplHashEquality >::const_iterator it = maLayoutCache.find( pLayoutHash );
 	if ( it != maLayoutCache.end() )
 	{
 		pLayoutData = it->second;
@@ -213,7 +213,7 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 			return NULL;
 		}
 
-		maLayoutCache[ pLayoutData->mpHash ] = pLayoutData;
+		maLayoutCache.insert( ::std::hash_multimap< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplHash, ImplHashEquality >::value_type( pLayoutData->mpHash, pLayoutData ) );
 		maLayoutCacheList.push_front( pLayoutData );
 
 		// Limit cache size
