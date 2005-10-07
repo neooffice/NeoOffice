@@ -121,11 +121,6 @@ public final class VCLGraphics {
 	private static Method drawBitmapMethod = null;
 
 	/**
-	 * The drawBitmap2Method method.
-	 */
-	private static Method drawBitmap2Method = null;
-
-	/**
 	 * The drawEPSMethod method.
 	 */
 	private static Method drawEPSMethod = null;
@@ -139,11 +134,6 @@ public final class VCLGraphics {
 	 * The drawLine method.
 	 */
 	private static Method drawLineMethod = null;
-
-	/**
-	 * The drawMaskMethod method.
-	 */
-	private static Method drawMaskMethod = null;
 
 	/**
 	 * The drawPolygon method.
@@ -164,6 +154,11 @@ public final class VCLGraphics {
 	 * The drawRect method.
 	 */
 	private static Method drawRectMethod = null;
+
+	/**
+	 * The setPixel method.
+	 */
+	private static Method setPixelMethod = null;
 
 	/**
 	 * The hidden window image.
@@ -254,12 +249,6 @@ public final class VCLGraphics {
 			t.printStackTrace();
 		}
 		try {
-			drawBitmap2Method = VCLGraphics.class.getMethod("drawBitmap", new Class[]{ VCLBitmap.class, VCLBitmap.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class });
-		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-		try {
 			drawEPSMethod = VCLGraphics.class.getMethod("drawEPS", new Class[]{ long.class, long.class, int.class, int.class, int.class, int.class });
 		}
 		catch (Throwable t) {
@@ -273,12 +262,6 @@ public final class VCLGraphics {
 		}
 		try {
 			drawLineMethod = VCLGraphics.class.getMethod("drawLine", new Class[]{ int.class, int.class, int.class, int.class, int.class });
-		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-		try {
-			drawMaskMethod = VCLGraphics.class.getMethod("drawMask", new Class[]{ VCLBitmap.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -303,6 +286,12 @@ public final class VCLGraphics {
 		}
 		try {
 			drawRectMethod = VCLGraphics.class.getMethod("drawRect", new Class[]{ int.class, int.class, int.class, int.class, int.class, boolean.class });
+		}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
+		try {
+			setPixelMethod = VCLGraphics.class.getMethod("setPixel", new Class[]{ int.class, int.class, int.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -619,8 +608,35 @@ public final class VCLGraphics {
 	public void drawBitmap(VCLBitmap bmp, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight) {
 
 		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawBitmapMethod, new Object[]{ bmp, new Integer(srcX), new Integer(srcY), new Integer(srcWidth), new Integer(srcHeight), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight) });
-			pageQueue.postDrawingOperation(pqi);
+			// Bitmaps that are garbage collected before a print job has ended
+			// will be mangled or may crash the JVM so do scaling here so that
+			// we can maintain a reference to the scaled bitmap
+			if (srcWidth != destWidth || srcHeight != destHeight) {
+				VCLBitmap scaledBmp = new VCLBitmap(destWidth, destHeight, bmp.getBitCount());
+				BufferedImage img = scaledBmp.getImage();
+				Graphics2D g = img.createGraphics();
+				if (g != null) {
+					try {
+						g.drawImage(bmp.getImage(), 0, 0, destWidth, destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+						srcX = 0;
+						srcY = 0;
+						srcWidth = destWidth;
+						srcHeight = destHeight;
+						bmp = scaledBmp;
+					}
+					catch (Throwable t) {
+						t.printStackTrace();
+						bmp = null;
+					}
+					g.dispose();
+				}
+			}
+
+			if (bmp != null) {
+				VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawBitmapMethod, new Object[]{ bmp, new Integer(srcX), new Integer(srcY), new Integer(destWidth), new Integer(destHeight), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight) });
+				pageQueue.postDrawingOperation(pqi);
+			}
+
 			return;
 		}
 
@@ -677,11 +693,9 @@ public final class VCLGraphics {
 	 * @param destHeight the height of the graphics to copy to
 	 */
 	public void drawBitmap(VCLBitmap bmp, VCLBitmap transBmp, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight) {
-		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawBitmap2Method, new Object[]{ bmp, transBmp, new Integer(srcX), new Integer(srcY), new Integer(srcWidth), new Integer(srcHeight), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight) });
-			pageQueue.postDrawingOperation(pqi);
+		// No draw bitmap allowed for printing
+		if (graphics != null)
 			return;
-		}
 
 		Rectangle destBounds = new Rectangle(destX, destY, destWidth, destHeight).intersection(graphicsBounds);
 		if (destBounds.isEmpty())
@@ -994,11 +1008,9 @@ public final class VCLGraphics {
 	 */
 	public void drawMask(VCLBitmap bmp, int color, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight) {
 
-		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawMaskMethod, new Object[]{ bmp, new Integer(color), new Integer(srcX), new Integer(srcY), new Integer(srcWidth), new Integer(srcHeight), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight) });
-			pageQueue.postDrawingOperation(pqi);
+		// No draw bitmap allowed for printing
+		if (graphics != null)
 			return;
-		}
 
 		Rectangle destBounds = new Rectangle(destX, destY, destWidth, destHeight).intersection(graphicsBounds);
 		if (destBounds.isEmpty())
@@ -1739,6 +1751,12 @@ public final class VCLGraphics {
 	 * @param color the color of the pixel 
 	 */
 	public void setPixel(int x, int y, int color) {
+
+		if (pageQueue != null) {
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.setPixelMethod, new Object[]{ new Integer(x), new Integer(y), new Integer(color) });
+			pageQueue.postDrawingOperation(pqi);
+			return;
+		}
 
 		if (!graphicsBounds.contains(x, y) || (userClip != null && !userClip.contains(x, y)))
 			return;
