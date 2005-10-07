@@ -210,6 +210,11 @@ public final class VCLGraphics {
 	}
 
 	/**
+	 * Releases any native bitmaps that were created while printing.
+	 */
+	public static native void releaseNativeBitmaps();
+
+	/**
 	 * Set the use default font flag.
 	 *
 	 * @param b the default font flag
@@ -608,35 +613,8 @@ public final class VCLGraphics {
 	public void drawBitmap(VCLBitmap bmp, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight) {
 
 		if (pageQueue != null) {
-			// Bitmaps that are garbage collected before a print job has ended
-			// will be mangled or may crash the JVM so do scaling here so that
-			// we can maintain a reference to the scaled bitmap
-			if (srcWidth != destWidth || srcHeight != destHeight) {
-				VCLBitmap scaledBmp = new VCLBitmap(destWidth, destHeight, bmp.getBitCount());
-				BufferedImage img = scaledBmp.getImage();
-				Graphics2D g = img.createGraphics();
-				if (g != null) {
-					try {
-						g.drawImage(bmp.getImage(), 0, 0, destWidth, destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
-						srcX = 0;
-						srcY = 0;
-						srcWidth = destWidth;
-						srcHeight = destHeight;
-						bmp = scaledBmp;
-					}
-					catch (Throwable t) {
-						t.printStackTrace();
-						bmp = null;
-					}
-					g.dispose();
-				}
-			}
-
-			if (bmp != null) {
-				VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawBitmapMethod, new Object[]{ bmp, new Integer(srcX), new Integer(srcY), new Integer(destWidth), new Integer(destHeight), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight) });
-				pageQueue.postDrawingOperation(pqi);
-			}
-
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawBitmapMethod, new Object[]{ bmp, new Integer(srcX), new Integer(srcY), new Integer(srcWidth), new Integer(srcHeight), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight) });
+			pageQueue.postDrawingOperation(pqi);
 			return;
 		}
 
@@ -660,12 +638,26 @@ public final class VCLGraphics {
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
-				if (xor)
-					g.setComposite(VCLGraphics.xorImageComposite);
-				Iterator clipRects = clipList.iterator();
-				while (clipRects.hasNext()) {
-					g.setClip((Rectangle)clipRects.next());
-					g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+				if (graphics != null) {
+					AffineTransform transform = g.getTransform();
+					float scaleX = (float)transform.getScaleX();
+					float scaleY = (float)transform.getScaleY();
+					Rectangle bounds = pageFormat.getImageableBounds();
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						g.setClip((Rectangle)clipRects.next());
+						// Note: the bitmap needs to be are flipped
+						drawBitmap0(bmp.getData(), bmp.getWidth(), bmp.getHeight(), srcX, srcY, srcWidth, srcHeight, scaleX * (bounds.x + destX), scaleY * (bounds.y + destY + destHeight), scaleX * destWidth, scaleY * destHeight * -1);
+					}
+				}
+				else {
+					if (xor)
+						g.setComposite(VCLGraphics.xorImageComposite);
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						g.setClip((Rectangle)clipRects.next());
+						g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+					}
 				}
 			}
 			catch (Throwable t) {
@@ -760,6 +752,21 @@ public final class VCLGraphics {
 	}
 
 	/**
+	 * Draws specified bitmap to the underlying graphics.
+	 *
+	 * @param bmpData the bitmap data buffer
+	 * @param srcX the x coordinate of the bitmap to be drawn
+	 * @param srcY the y coordinate of the bitmap to be drawn
+	 * @param srcWidth the width of the bitmap to be drawn
+	 * @param srcHeight the height of the bitmap to be drawn
+	 * @param destX the x coordinate of the graphics to draw to
+	 * @param destY the y coordinate of the graphics to draw to
+	 * @param destWidth the width of the graphics to copy to
+	 * @param destHeight the height of the graphics to copy to
+	 */
+	native void drawBitmap0(int[] bmpData, int width, int height, int srcX, int srcY, int srcWidth, int srcHeight, float destX, float destY, float destWidth, float destHeight);
+
+	/**
 	 * Draws specified EPS data to the underlying graphics.
 	 *
 	 * @param epsData the pointer to the EPS data
@@ -808,7 +815,7 @@ public final class VCLGraphics {
 				Iterator clipRects = clipList.iterator();
 				while (clipRects.hasNext()) {
 					g.setClip((Rectangle)clipRects.next());
-					// Note: the internal EPS bounds are flipped
+					// Note: the EPS image needs to be flipped
 					drawEPS0(epsData, epsDataSize, scaleX * (bounds.x + destX), scaleY * (bounds.y + destY + destHeight), scaleX * destWidth, scaleY * destHeight * -1);
 				}
 			}
@@ -1840,10 +1847,6 @@ public final class VCLGraphics {
 	 */
 	final class PageQueue {
 
-		VCLGraphics.PageQueueItem drawnHead = null;
-
-		VCLGraphics.PageQueueItem drawnTail = null;
-
 		VCLGraphics graphics = null;
 
 		VCLGraphics.PageQueueItem head = null;
@@ -1858,8 +1861,9 @@ public final class VCLGraphics {
 
 		void dispose() {
 
-			drawnHead = null;
-			drawnTail = null;
+			// Release any native bitmaps
+			VCLGraphics.releaseNativeBitmaps();
+
 			graphics = null;
 			head = null;
 			tail = null;
@@ -1884,14 +1888,6 @@ public final class VCLGraphics {
 				VCLGraphics.PageQueueItem i = head;
 				head = head.next;
 				i.next = null;
-
-				if (drawnHead != null) {
-					drawnTail.next = i;
-					drawnTail = i;
-				}
-				else {
-					drawnHead = drawnTail = i;
-				}
 			}
 
 			tail = null;
