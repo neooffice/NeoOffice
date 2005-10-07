@@ -130,14 +130,7 @@
 			{
 				CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
 				if ( aContext )
-				{
-					CGRect aRect;
-					aRect.origin.x = mfX;
-					aRect.origin.y = mfY;
-					aRect.size.width = mfWidth;
-					aRect.size.height = mfHeight;
-					CGContextDrawImage( aContext, aRect, maImage );
-				}
+					CGContextDrawImage( aContext, CGRectMake( mfX, mfY, mfWidth, mfHeight ), maImage );
 			}
 
 			[pPrintView unlockFocus];
