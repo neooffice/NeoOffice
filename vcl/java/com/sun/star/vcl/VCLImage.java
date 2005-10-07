@@ -133,24 +133,6 @@ public final class VCLImage {
 	}
 
 	/**
-	 * Constructs a new <code>VCLImage</code> instance from a
-	 * <code>VCLBitmap</code>.
-	 *
-	 * @param bmp the bitmap
-	 * @param x the x coordinate of the bitmap
-	 * @param y the y coordinate of the bitmap
-	 * @param w the width to copy from
-	 * @param h the height to copy from
-	 */
-	VCLImage(VCLBitmap bmp, int x, int y, int w, int h) {
-
-		this(w, h, bmp.getBitCount());
-
-		getGraphics().drawBitmap(bmp, x, y, w, h, 0, 0, w, h);
-
-	}
-
-	/**
  	 * Disposes the image and releases any system resources that it is
 	 * using.
 	 */
