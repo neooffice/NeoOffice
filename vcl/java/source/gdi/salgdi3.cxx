@@ -121,7 +121,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 					{
 						jobjectArray pArray = (jobjectArray)pFonts->getJavaObject();
 						jsize nFonts = t.pEnv->GetArrayLength( pArray );
-						for ( jsize i = 0; i < nFonts; i++ )
+						for ( jsize i = nFonts - 1; i >= 0; i-- )
 						{
 							jobject tempObj = t.pEnv->GetObjectArrayElement( pArray, i );
 							if ( !tempObj )
