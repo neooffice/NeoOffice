@@ -87,6 +87,7 @@ public:
 	Menu *				mpVCLMenu;		// VCL menu into which this item is inserted
 };
 
+void ResetMenuEnabledStateForFrame( SalFrame *pFrame, SalMenu *pMenu );
 void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu );
 
 #endif // _SV_SALMENU_H
