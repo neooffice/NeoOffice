@@ -35,6 +35,8 @@
 
 #define _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_CXX
 
+#include <list>
+
 #ifndef _SV_JAVA_LANG_CLASS_HXX
 #include <java/lang/Class.hxx>
 #endif
@@ -53,11 +55,136 @@
 
 #include "VCLGraphics_cocoa.h"
 
+static ::std::list< CGImageRef > aCGImageList;
+
 using namespace rtl;
 using namespace vcl;
 
 // ============================================================================
  
+static const void *GetBytePointerCallback( void *pInfo )
+{
+	return pInfo;
+}
+
+// ----------------------------------------------------------------------------
+
+static const void *ReleaseBytePointerCallback( void *pInfo, const void *pPointer )
+{
+	if ( pPointer )
+		rtl_freeMemory( (jint *)pPointer );
+}
+
+// ----------------------------------------------------------------------------
+
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pEnv, jobject object, jintArray _par0, jint _par1, jint _par2, jint _par3, jint _par4, jint _par5, jint _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10 )
+{
+	static CGDataProviderDirectAccessCallbacks aProviderCallbacks = { GetBytePointerCallback, ReleaseBytePointerCallback, NULL, NULL };
+
+	float fScaleX = _par9 / _par5;
+	float fScaleY = _par10 / _par6;
+
+	// Adjust for negative source origin
+	if ( _par3 < 0 )
+	{
+		_par7 -= fScaleX * _par3;
+		_par9 += fScaleX * _par3;
+		_par5 += _par3;
+		_par3 = 0;
+	}
+	if ( _par4 < 0 )
+	{
+		_par8 -= fScaleY * _par4;
+		_par10 += fScaleY * _par4;
+		_par6 += _par4;
+		_par4 = 0;
+	}
+	
+	// Adjust for size outside of the source image
+	jint nExtraWidth = _par3 + _par5 - _par1;
+	if ( nExtraWidth > 0 )
+	{
+		_par9 -= fScaleX * nExtraWidth;
+		_par5 -= nExtraWidth;
+	}
+	jint nExtraHeight = _par4 + _par6 - _par2;
+	if ( nExtraHeight > 0 )
+	{
+		_par10 -= fScaleY * nExtraHeight;
+		_par6 -= nExtraHeight;
+	}
+
+	jboolean bCopy( sal_False );
+	jint *pJavaBits = (jint *)pEnv->GetPrimitiveArrayCritical( _par0, &bCopy );
+	if ( !pJavaBits )
+		return;
+
+	size_t nSize = _par5 * _par6 * sizeof( jint );
+	size_t nRowSize = _par5 * sizeof( jint );
+	jint *pCGBits = (jint *)rtl_allocateMemory( nSize );
+	if ( pCGBits )
+	{
+		// Copy the subimage
+		jint *pBitsIn = pJavaBits + ( _par4 * _par1 ) + _par3;
+		jint *pBitsOut = pCGBits;
+		for ( jint i = _par4; i < _par6; i++ )
+		{
+			memcpy( pBitsOut, pBitsIn, nRowSize );
+			pBitsIn += _par1;
+			pBitsOut += _par5;
+		}
+
+		pEnv->ReleasePrimitiveArrayCritical( _par0, pJavaBits, JNI_ABORT );
+	}
+	else
+	{
+		pEnv->ReleasePrimitiveArrayCritical( _par0, pJavaBits, JNI_ABORT );
+		return;
+	}
+
+	CGDataProviderRef aProvider = CGDataProviderCreateDirectAccess( pCGBits, nSize, &aProviderCallbacks );
+	if ( !aProvider )
+	{
+		rtl_freeMemory( pCGBits );
+		return;
+	}
+
+	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+	if ( !aColorSpace )
+	{
+		CGDataProviderRelease( aProvider );
+		rtl_freeMemory( pCGBits );
+		return;
+	}
+
+	CGImageRef aImage = CGImageCreate( _par5, _par6, 8, sizeof( jint ) * 8, nRowSize, aColorSpace, kCGImageAlphaPremultipliedFirst, aProvider, NULL, false, kCGRenderingIntentDefault );
+	CGColorSpaceRelease( aColorSpace );
+	CGDataProviderRelease( aProvider );
+
+	if ( aImage )
+	{
+		aCGImageList.push_back( aImage );
+		CGImageRef_drawInRect( aImage, _par7, _par8, _par9, _par10 );
+	}
+	else
+	{
+		rtl_freeMemory( pCGBits );
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps( JNIEnv *pEnv, jobject object )
+{
+	while ( aCGImageList.size() )
+	{
+		CGImageRelease( aCGImageList.front() );
+		aCGImageList.pop_front();
+	}
+}
+
+// ============================================================================
+
 JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawEPS0( JNIEnv *pEnv, jobject object, jlong _par0, jlong _par1, jfloat _par2, jfloat _par3, jfloat _par4, jfloat _par5 )
 {
 	NSEPSImageRep_drawInRect( (void *)_par0, _par1, _par2, _par3, _par4, _par5 );
@@ -81,11 +208,17 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 		if ( tempClass )
 		{
 			// Register the native methods for our class
-			JNINativeMethod aMethod; 
-			aMethod.name = "drawEPS0";
-			aMethod.signature = "(JJFFFF)V";
-			aMethod.fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawEPS0;
-			t.pEnv->RegisterNatives( tempClass, &aMethod, 1 );
+			JNINativeMethod pMethods[3]; 
+			pMethods[0].name = "drawBitmap0";
+			pMethods[0].signature = "([IIIIIIIFFFF)V";
+			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawBitmap0;
+			pMethods[1].name = "drawEPS0";
+			pMethods[1].signature = "(JJFFFF)V";
+			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawEPS0;
+			pMethods[2].name = "releaseNativeBitmaps";
+			pMethods[2].signature = "()V";
+			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps;
+			t.pEnv->RegisterNatives( tempClass, pMethods, 3 );
 		}
 
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );

@@ -40,6 +40,7 @@ import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.image.BufferedImage;
+import java.util.LinkedList;
 
 /** 
  * The Java class that implements the convenience methods for accessing Java
@@ -51,9 +52,67 @@ import java.awt.image.BufferedImage;
 public final class VCLFont {
 
 	/**
+	 * FAMILY_DONTKNOW constant.
+	 */
+	public final static int FAMILY_DONTKNOW = 0;
+
+	/**
+	 * FAMILY_DECORATIVE constant.
+	 */
+	public final static int FAMILY_DECORATIVE = 1;
+
+	/**
+	 * FAMILY_MODERN constant.
+	 */
+	public final static int FAMILY_MODERN = 2;
+
+	/**
+	 * FAMILY_ROMAN constant.
+	 */
+	public final static int FAMILY_ROMAN = 3;
+
+    /**
+     * FAMILY_SCRIPT constant.
+     */
+    public final static int FAMILY_SCRIPT = 4;
+
+	/**
+	 * FAMILY_SWISS constant.
+	 */
+	public final static int FAMILY_SWISS = 5;
+
+	/**
+	 * FAMILY_SYSTEM constant.
+	 */
+	public final static int FAMILY_SYSTEM = 6;
+
+	/**
 	 * Cached buffered image.
 	 */
 	private static BufferedImage image = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB_PRE);
+
+	/**
+	 * Returns an array containing one-point instances of all fonts
+	 * available in the local <code>GraphicsEnvironment</code>.
+	 *
+	 * @return an array of <code>VCLFont</code> objects
+	 */
+	public static VCLFont[] getAllFonts() {
+
+		Font[] javaFonts = GraphicsEnvironment.getLocalGraphicsEnvironment().getAllFonts();
+		VCLFont[] vclFonts = new VCLFont[javaFonts.length + 1];
+
+		// Copy JVM's fonts
+		int i;
+		for (i = 0; i < javaFonts.length; i++)
+			vclFonts[i] = new VCLFont(javaFonts[i], 0, javaFonts[i].getSize(), (short)0, true, false, 1.0);
+
+		// Create fonts that the JVM fails to create
+		vclFonts[i++] = new VCLFont(new Font("Helvetica Regular", Font.PLAIN, 1), 0, 1, (short)0, true, false, 1.0);
+
+		return vclFonts;
+
+	}
 
 	/**
 	 * The antialiased flag.
@@ -86,11 +145,6 @@ public final class VCLFont {
 	private int leading = 0;
 
 	/**
-	 * The cached font name.
-	 */
-	private String name = null;
-
-	/**
 	 * The cached native font.
 	 */
 	private int nativeFont = 0;
@@ -118,7 +172,7 @@ public final class VCLFont {
 	/**
 	 * Constructs a new <code>VCLFont</code> instance.
 	 *
-	 * @param f the font to derive from
+	 * @param f the font
 	 * @param nf the native font
 	 * @param s the size of the font
 	 * @param o the orientation of the new <code>VCLFont</code> in degrees
@@ -127,10 +181,9 @@ public final class VCLFont {
 	 * @param v <code>true</code> if the font is vertical 
 	 * @param x the X axis scale factor
 	 */
-	VCLFont(String n, int nf, int s, short o, boolean a, boolean v, double x) {
+	VCLFont(Font f, int nf, int s, short o, boolean a, boolean v, double x) {
 
 		antialiased = a;
-		name = n;
 		nativeFont = nf;
 		orientation = o;
 		scaleX = x;
@@ -138,7 +191,7 @@ public final class VCLFont {
 		vertical = v;
 
 		// Cache font and font metrics
-		font = new Font(name, Font.PLAIN, size);
+		font = f.deriveFont((float)s);
 		Graphics2D g = VCLFont.image.createGraphics();
 		if (g != null)
 		{
@@ -186,7 +239,7 @@ public final class VCLFont {
 	 */
 	public VCLFont deriveFont(int s, short o, boolean a, boolean v, double x) {
 
-		return new VCLFont(name, nativeFont, s, o, a, v, x);
+		return new VCLFont(font, nativeFont, s, o, a, v, x);
 
 	}
 
@@ -352,6 +405,17 @@ public final class VCLFont {
 	public boolean isVertical() {
 
 		return vertical;
+
+	}
+
+	/**
+	 * Sets the native font.
+	 *
+	 * @param nf the native font
+	 */
+	public void setNativeFont(int nf) {
+
+		nativeFont = nf;
 
 	}
 

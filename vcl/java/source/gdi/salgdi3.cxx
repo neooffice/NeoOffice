@@ -108,151 +108,155 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 
 			if ( !Application::IsShutDown() )
 			{
-				long nSize = 12;
-				::std::map< ATSFontRef, ImplFontData* > aATSFontMapping;
-				BOOL bContinue = TRUE;
-				while ( bContinue )
+				VCLThreadAttach t;
+				if ( t.pEnv )
 				{
-					ATSFontIterator aIterator;
-					ATSFontIteratorCreate( kATSFontContextLocal, NULL, NULL, kATSOptionFlagsUnRestrictedScope, &aIterator );
-					for ( ; ; )
+					// Update cached fonts
+					OUString aRoman( OUString::createFromAscii( "Roman" ) );
+					OUString aTimes( OUString::createFromAscii( "Times" ) );
+					OUString aSans( OUString::createFromAscii( "Sans" ) );
+					OUString aSerif( OUString::createFromAscii( "Serif" ) );
+					java_lang_Object *pFonts = com_sun_star_vcl_VCLFont::getAllFonts();
+					if ( pFonts )
 					{
-						ATSFontRef aFont;
-						OSStatus nErr = ATSFontIteratorNext( aIterator, &aFont );
-						if ( nErr == kATSIterationCompleted )
+						jobjectArray pArray = (jobjectArray)pFonts->getJavaObject();
+						jsize nFonts = t.pEnv->GetArrayLength( pArray );
+						for ( jsize i = nFonts - 1; i >= 0; i-- )
 						{
-							bContinue = FALSE;
-							break;
+							jobject tempObj = t.pEnv->GetObjectArrayElement( pArray, i );
+							if ( !tempObj )
+								continue;
+
+							com_sun_star_vcl_VCLFont *pVCLFont = new com_sun_star_vcl_VCLFont( tempObj );
+							if ( !pVCLFont )
+								continue;
+
+							OUString aFontName( pVCLFont->getName() );
+							XubString aXubFontName( aFontName );
+
+							CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aFontName.getStr(), aFontName.getLength(), kCFAllocatorNull );
+							if ( !aString )
+							{
+								delete pVCLFont;
+								continue;
+							}
+
+							ATSFontRef aFont = ATSFontFindFromPostScriptName( aString, kATSOptionFlagsDefault );
+							if ( !aFont )
+							{
+								CFRelease( aString );
+								delete pVCLFont;
+								continue;
+							}
+
+							void *pNativeFont = (void *)FMGetFontFromATSFontRef( aFont );
+							pVCLFont->setNativeFont( pNativeFont );
+							if ( (ATSUFontID)pNativeFont == kATSUInvalidFontID )
+							{
+								CFRelease( aString );
+								continue;
+							}
+
+							CFStringRef aDisplayString;
+							if ( ATSFontGetName( aFont, kATSOptionFlagsDefault, &aDisplayString ) != noErr )
+							{
+								CFRelease( aString );
+								delete pVCLFont;
+								continue;
+							}
+
+							CFIndex nDisplayLen = CFStringGetLength( aDisplayString );
+							CFRange aDisplayRange = CFRangeMake( 0, nDisplayLen );
+							sal_Unicode pDisplayBuffer[ nDisplayLen + 1 ];
+							CFStringGetCharacters( aDisplayString, aDisplayRange, pDisplayBuffer );
+							pDisplayBuffer[ nDisplayLen ] = 0;
+							OUString aDisplayName( pDisplayBuffer );
+							XubString aXubDisplayName( aDisplayName );
+
+							// Ignore empty font names or font names that start
+							// with a "."
+							if ( !aDisplayName.getLength() || aDisplayName.toChar() == (sal_Unicode)'.' )
+							{
+								CFRelease( aString );
+								delete pVCLFont;
+								continue;
+							}
+
+							void *pNSFont = NSFont_create( aString, pVCLFont->getSize() );
+							if ( !pNSFont )
+							{
+								CFRelease( aString );
+								delete pVCLFont;
+								continue;
+							}
+
+							ImplFontData *pData;
+							SalSystemFontData *pSystemFont;
+							::std::map< XubString, ImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aXubFontName );
+							if ( it != pSalData->maFontNameMapping.end() )
+							{
+								// Delete old font data
+								pData = it->second;
+								pSystemFont = (SalSystemFontData *)pData->mpSysData;
+								delete pSystemFont->mpVCLFont;
+							}
+							else
+							{
+								pData = new ImplFontData();
+								pSalData->maFontNameMapping[ aXubFontName ] = pData;
+
+								pSystemFont = new SalSystemFontData();
+							}
+
+							pSystemFont->mpVCLFont = pVCLFont;
+							pData->mpSysData = (void *)pSystemFont;
+
+							// Multiple native fonts can map to the same font due to
+							// disabling and reenabling of fonts with the same name
+							pSalData->maNativeFontMapping[ pNativeFont ] = pData;
+
+							// Determine pitch and family type
+							FontPitch nPitch = ( NSFontManager_isFixedPitch( pNSFont ) ? PITCH_FIXED : PITCH_VARIABLE );
+							FontFamily nFamily;
+							if ( nPitch == PITCH_FIXED )
+								nFamily = FAMILY_MODERN;
+							else if ( aDisplayName.indexOf( aSans ) >= 0 )
+								nFamily = FAMILY_SWISS;
+							else if ( aDisplayName.indexOf( aRoman ) >= 0 || aDisplayName.indexOf( aSerif ) >= 0 || aDisplayName.indexOf( aTimes ) >= 0 )
+								nFamily = FAMILY_ROMAN;
+							else
+								nFamily = FAMILY_SWISS;
+
+							pData->mpNext = NULL;
+							pData->maName = aXubDisplayName;
+							// [ed] 11/1/04 Scalable fonts should always report
+							// their width and height as zero. The single size
+							// zero causes higher-level font elements to treat
+							// fonts as infinitely scalable and provide lists of
+							// default font sizes. The size of zero matches the
+							// unx implementation. Bug 196.
+							pData->mnWidth = 0;
+							pData->mnHeight = 0;
+							pData->meFamily = nFamily;
+							pData->meCharSet = RTL_TEXTENCODING_UNICODE;
+							pData->mePitch = nPitch;
+							pData->meWidthType = (FontWidth)NSFontManager_widthOfFont( pNSFont );
+							pData->meWeight = (FontWeight)NSFontManager_weightOfFont( pNSFont );
+							pData->meItalic = ( NSFontManager_isItalic( pNSFont ) ? ITALIC_NORMAL : ITALIC_NONE );
+							pData->meType = TYPE_SCALABLE;
+							pData->mnVerticalOrientation = 0;
+							pData->mbOrientation = TRUE;
+							pData->mbDevice = FALSE;
+							pData->mnQuality = 0;
+							pData->mbSubsettable = TRUE;
+							pData->mbEmbeddable = FALSE;
+
+							NSFont_release( pNSFont );
+							CFRelease( aString );
 						}
-						else if ( nErr == kATSIterationScopeModified )
-						{
-							aATSFontMapping.clear();
-							break;
-						}
-						else if ( aFont )
-						{
-							aATSFontMapping[ aFont ] = NULL;
-						}
+
+						delete pFonts;
 					}
-
-					ATSFontIteratorRelease( &aIterator );
-				}
-
-				// Update cached fonts
-				OUString aRoman( OUString::createFromAscii( "Roman" ) );
-				OUString aTimes( OUString::createFromAscii( "Times" ) );
-				OUString aSans( OUString::createFromAscii( "Sans" ) );
-				OUString aSerif( OUString::createFromAscii( "Serif" ) );
-				for ( std::map< ATSFontRef, ImplFontData* >::iterator ait = aATSFontMapping.begin(); ait != aATSFontMapping.end(); ++ait )
-				{
-					CFStringRef aString;
-					if ( ATSFontGetPostScriptName( ait->first, kATSOptionFlagsDefault, &aString ) != noErr && ATSFontGetName( ait->first, kATSOptionFlagsDefault, &aString ) != noErr )
-						continue;
-
-					void *pNativeFont = (void *)FMGetFontFromATSFontRef( ait->first );
-					if ( (ATSUFontID)pNativeFont == kATSUInvalidFontID )
-						continue;
-
-					CFIndex nLen = CFStringGetLength( aString );
-					CFRange aRange = CFRangeMake( 0, nLen );
-					sal_Unicode pBuffer[ nLen + 1 ];
-					CFStringGetCharacters( aString, aRange, pBuffer );
-					pBuffer[ nLen ] = 0;
-					OUString aFontName( pBuffer );
-					XubString aXubFontName( aFontName );
-
-					OUString aDisplayName;
-					XubString aXubDisplayName;
-					CFStringRef aDisplayString;
-					if ( ATSFontGetName( ait->first, kATSOptionFlagsDefault, &aDisplayString ) == noErr )
-					{
-						CFIndex nDisplayLen = CFStringGetLength( aDisplayString );
-						CFRange aDisplayRange = CFRangeMake( 0, nDisplayLen );
-						sal_Unicode pDisplayBuffer[ nDisplayLen + 1 ];
-						CFStringGetCharacters( aDisplayString, aDisplayRange, pDisplayBuffer );
-						pDisplayBuffer[ nDisplayLen ] = 0;
-						aDisplayName = OUString( pDisplayBuffer );
-						aXubDisplayName = XubString( aDisplayName );
-					}
-					else
-					{
-						aDisplayName = aFontName;
-						aXubDisplayName = aXubFontName;
-						aDisplayString = aString;
-					}
-
-					// Ignore empty font names or font names that start with
-					// a "."
-					if ( !aDisplayName.getLength() || aDisplayName.toChar() == (sal_Unicode)'.' )
-						continue;
-
-					void *pNSFont = NSFont_create( aString, nSize );
-					if ( !pNSFont )
-						continue;
-
-					ImplFontData *pData;
-					SalSystemFontData *pSystemFont;
-					::std::map< XubString, ImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aXubFontName );
-					if ( it != pSalData->maFontNameMapping.end() )
-					{
-						// Delete old font data
-						pData = it->second;
-						pSystemFont = (SalSystemFontData *)pData->mpSysData;
-						delete pSystemFont->mpVCLFont;
-					}
-					else
-					{
-						pData = new ImplFontData();
-						pSalData->maFontNameMapping[ aXubFontName ] = pData;
-
-						pSystemFont = new SalSystemFontData();
-					}
-
-					pSystemFont->mpVCLFont = new com_sun_star_vcl_VCLFont( aFontName, pNativeFont, nSize, 0, sal_True, sal_False, 1.0 );
-					pData->mpSysData = (void *)pSystemFont;
-
-					// Multiple native fonts can map to the same font due to
-					// disabling and reenabling of fonts with the same name
-					pSalData->maNativeFontMapping[ pNativeFont ] = pData;
-
-					// Determine pitch and family type
-					FontPitch nPitch = ( NSFontManager_isFixedPitch( pNSFont ) ? PITCH_FIXED : PITCH_VARIABLE );
-					FontFamily nFamily;
-					if ( nPitch == PITCH_FIXED )
-						nFamily = FAMILY_MODERN;
-					else if ( aDisplayName.indexOf( aSans ) >= 0 )
-						nFamily = FAMILY_SWISS;
-					else if ( aDisplayName.indexOf( aRoman ) >= 0 || aDisplayName.indexOf( aSerif ) >= 0 || aDisplayName.indexOf( aTimes ) >= 0 )
-						nFamily = FAMILY_ROMAN;
-					else
-						nFamily = FAMILY_SWISS;
-
-					pData->mpNext = NULL;
-					pData->maName = aXubDisplayName;
-					pData->maMapNames = aXubFontName;
-					// [ed] 11/1/04 Scalable fonts should always report
-					// their width and height as zero. The single size of
-					// zero causes higher-level font elements to treat
-					// fonts as infinitely scalable and provide lists of
-					// default font sizes. The size of zero matches the
-					// unx implementation. Bug 196.
-					pData->mnWidth = 0;
-					pData->mnHeight = 0;
-					pData->meFamily = nFamily;
-					pData->meCharSet = RTL_TEXTENCODING_UNICODE;
-					pData->mePitch = nPitch;
-					pData->meWidthType = (FontWidth)NSFontManager_widthOfFont( pNSFont );
-					pData->meWeight = (FontWeight)NSFontManager_weightOfFont( pNSFont );
-					pData->meItalic = ( NSFontManager_isItalic( pNSFont ) ? ITALIC_NORMAL : ITALIC_NONE );
-					pData->meType = TYPE_SCALABLE;
-					pData->mnVerticalOrientation = 0;
-					pData->mbOrientation = TRUE;
-					pData->mbDevice = FALSE;
-					pData->mnQuality = 0;
-					pData->mbSubsettable = TRUE;
-					pData->mbEmbeddable = FALSE;
-
-					NSFont_release( pNSFont );
 				}
 
 				// Reset any cached VCLFont instances
@@ -266,8 +270,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						if ( it != pSalData->maNativeFontMapping.end() )
 						{
 							SalSystemFontData *pReplacementFont = (SalSystemFontData *)it->second->mpSysData;
-							OUString aFontName( it->second->maMapNames );
-							(*git)->maGraphicsData.mpVCLFont = new com_sun_star_vcl_VCLFont( aFontName, pReplacementFont->mpVCLFont->getNativeFont(), pCurrentFont->getSize(), pCurrentFont->getOrientation(), pCurrentFont->isAntialiased(), pCurrentFont->isVertical(), pCurrentFont->getScaleX() );
+							(*git)->maGraphicsData.mpVCLFont = pReplacementFont->mpVCLFont->deriveFont(pCurrentFont->getSize(), pCurrentFont->getOrientation(), pCurrentFont->isAntialiased(), pCurrentFont->isVertical(), pCurrentFont->getScaleX() );
 							delete pCurrentFont;
 						}
 
@@ -281,8 +284,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								if ( it != pSalData->maNativeFontMapping.end() )
 								{
 									SalSystemFontData *pReplacementFont = (SalSystemFontData *)it->second->mpSysData;
-									OUString aFontName( it->second->maMapNames );
-									ffit->second = new com_sun_star_vcl_VCLFont( aFontName, pReplacementFont->mpVCLFont->getNativeFont(), pCurrentFont->getSize(), pCurrentFont->getOrientation(), pCurrentFont->isAntialiased(), pCurrentFont->isVertical(), pCurrentFont->getScaleX() );
+									ffit->second = pReplacementFont->mpVCLFont->deriveFont(pCurrentFont->getSize(), pCurrentFont->getOrientation(), pCurrentFont->isAntialiased(), pCurrentFont->isVertical(), pCurrentFont->getScaleX() );
 									delete pCurrentFont;
 								}
 							}

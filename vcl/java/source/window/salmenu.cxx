@@ -326,6 +326,59 @@ void SalInstance::DestroyMenuItem( SalMenuItem* pItem )
 
 // ============================================================================
 
+void ResetMenuEnabledStateForFrame( SalFrame *pFrame, SalMenu *pMenu )
+{
+#ifndef NO_NATIVE_MENUS
+	SalData *pSalData = GetSalData();
+
+	// Check is frame is valid
+	bool bFrameFound = false;
+	for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+	{
+		if ( *it == pFrame )
+		{
+			if ( pFrame->maFrameData.mbVisible )
+				bFrameFound = true;
+			break;
+		}
+	}
+	if ( !bFrameFound )
+		return;
+
+	bool bWasMenuBarInvocation = false;
+	if(!pMenu) {
+		// locate the menubar for the frame
+		pMenu = pFrame->maFrameData.mpMenuBar;
+		if(!pMenu)
+			return;
+		bWasMenuBarInvocation = true;
+	}
+
+	Menu *pVCLMenu = pMenu->mpParentVCLMenu;
+	OSL_ENSURE(pVCLMenu, "Unknown VCL menu for SalMenu!");
+
+	USHORT nCount = pVCLMenu->GetItemCount();
+	for( USHORT i = 0; i < nCount; i++ )
+	{
+		SalMenuItem *pSalMenuItem = pVCLMenu->GetItemSalItem( i );
+		if ( pSalMenuItem )
+		{
+			// If this menu item has a submenu, fix that submenu up
+			if ( pSalMenuItem->maData.mpSalSubmenu )
+				ResetMenuEnabledStateForFrame( pFrame, pSalMenuItem->maData.mpSalSubmenu );
+		}
+
+		// Disabled items need to be reset as the native menu will have been
+		// enabled when the menubar is not in tracking mode
+		USHORT nID = pVCLMenu->GetItemId( i );
+		if ( nID && !pVCLMenu->IsItemEnabled( nID ) )
+			pMenu->EnableItem( i, FALSE );
+	}
+#endif	// !NO_NATIVE_MENUS
+}
+
+// ----------------------------------------------------------------------------
+
 /**
  * Given a frame and a submenu, post SALEVENT_MENUACTIVATE and
  * SALEVENT_MENUDEACTIVATE events to all of the VCL menu objects. This function
@@ -390,12 +443,6 @@ void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu )
 			if ( pSalMenuItem->maData.mpSalSubmenu )
 				UpdateMenusForFrame( pFrame, pSalMenuItem->maData.mpSalSubmenu );
 		}
-
-		// Disabled items need to be reset as the native menu will have been
-		// enabled when the menubar is not in tracking mode
-		USHORT nID = pVCLMenu->GetItemId( i );
-		if ( nID && !pVCLMenu->IsItemEnabled( nID ) )
-			pMenu->EnableItem( i, FALSE );
 	}
 
 	// Post the SALEVENT_MENUDEACTIVATE event

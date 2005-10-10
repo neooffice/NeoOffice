@@ -139,7 +139,17 @@ SalBitmap* SalGraphics::GetBitmap( long nX, long nY, long nDX, long nDY,
 	}
 
 	if ( pBitmap )
+	{
+		if ( !pBitmap->mpVCLBitmap )
+		{
+			BitmapBuffer *pBuffer = pBitmap->AcquireBuffer( FALSE );
+			if ( pBuffer )
+				pBitmap->ReleaseBuffer( pBuffer, FALSE );
+		}
+
 		pBitmap->mpVCLBitmap->copyBits( maGraphicsData.mpVCLGraphics, nX, nY, nDX, nDY, 0, 0 );
+		pBitmap->mbCopyFromVCLBitmap = true;
+	}
 
 	return pBitmap;
 }

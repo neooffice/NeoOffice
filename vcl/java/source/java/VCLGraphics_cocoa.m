@@ -40,13 +40,13 @@
 {
 	void*				mpPtr;
 	unsigned			mnSize;
-	long				mfX;
-	long				mfY;
-	long				mfWidth;
-	long				mfHeight;
+	float				mfX;
+	float				mfY;
+	float				mfWidth;
+	float				mfHeight;
 }
 - (void)drawEPSInRect:(id)pObject;
-- (id)initWithPtr:(void *)pPtr size:(unsigned)nSize x:(long)fX y:(long)fY width:(long)fWidth height:(long)fHeight;
+- (id)initWithPtr:(void *)pPtr size:(unsigned)nSize x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight;
 @end
 
 @implementation DrawEPSInRect
@@ -81,7 +81,7 @@
 	}
 }
 
-- (id)initWithPtr:(void *)pPtr size:(unsigned)nSize x:(long)fX y:(long)fY width:(long)fWidth height:(long)fHeight
+- (id)initWithPtr:(void *)pPtr size:(unsigned)nSize x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight
 {
 	[super init];
 
@@ -96,6 +96,76 @@
 }
 
 @end
+
+@interface DrawImageInRect : NSObject
+{
+	CGImageRef			maImage;
+	float				mfX;
+	float				mfY;
+	float				mfWidth;
+	float				mfHeight;
+}
+- (void)drawImageInRect:(id)pObject;
+- (id)initWithImage:(CGImageRef)aImage x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight;
+@end
+
+@implementation DrawImageInRect
+
+- (void)drawImageInRect:(id)pObject
+{
+	NSPrintOperation *pOperation = [NSPrintOperation currentOperation];
+	if ( pOperation )
+	{
+		NSView *pPrintView = [pOperation view];
+		if ( pPrintView )
+		{
+			NSView *pFocusView = [NSView focusView];
+			if ( pFocusView )
+				[pFocusView unlockFocus];
+
+			[pPrintView lockFocus];
+
+			NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
+			if ( pContext )
+			{
+				CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+				if ( aContext )
+					CGContextDrawImage( aContext, CGRectMake( mfX, mfY, mfWidth, mfHeight ), maImage );
+			}
+
+			[pPrintView unlockFocus];
+
+			if ( pFocusView )
+				[pFocusView lockFocus];
+		}
+	}
+}
+
+- (id)initWithImage:(CGImageRef)aImage x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight
+{
+	[super init];
+
+	maImage = aImage;
+	mfX = fX;
+	mfY = fY;
+	mfWidth = fWidth;
+	mfHeight = fHeight;
+
+	return self;
+}
+
+@end
+
+void CGImageRef_drawInRect( CGImageRef aImage, float fX, float fY, float fWidth, float fHeight )
+{
+	if ( aImage && fWidth && fHeight )
+	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, @"AWTRunLoopMode", nil];
+		DrawImageInRect *pDrawImageInRect = [[DrawImageInRect alloc] initWithImage:aImage x:fX y:fY width:fWidth height:fHeight];
+		[pDrawImageInRect performSelectorOnMainThread:@selector(drawImageInRect:) withObject:pDrawImageInRect waitUntilDone:YES modes:pModes];
+		[pDrawImageInRect release];
+	}
+}
 
 void NSEPSImageRep_drawInRect( void *pPtr, unsigned nSize, float fX, float fY, float fWidth, float fHeight )
 {

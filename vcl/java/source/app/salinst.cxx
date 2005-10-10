@@ -195,7 +195,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 							// Execute menu updates while the VCL event
 							// queue is blocked
-							UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
+							ResetMenuEnabledStateForFrame( pSalData->mpFocusFrame, NULL );
 
 							// We need to let any timers run that were added
 							// by any menu changes. Otherwise, some menus

@@ -37,8 +37,17 @@
 #define __VCLGRAPHICS_COCOA_H__
 
 #ifdef __cplusplus
+#include <premac.h>
+#endif
+#include <ApplicationServices/ApplicationServices.h>
+#ifdef __cplusplus
+#include <postmac.h>
+#endif
+
+#ifdef __cplusplus
 BEGIN_C
 #endif
+void CGImageRef_drawInRect( CGImageRef aImage, float fX, float fY, float fWidth, float fHeight );
 void NSEPSImageRep_drawInRect( void *pPtr, unsigned nSize, float fX, float fY, float fWidth, float fHeight );
 #ifdef __cplusplus
 END_C
