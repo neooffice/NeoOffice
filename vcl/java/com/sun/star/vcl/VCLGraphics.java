@@ -891,12 +891,13 @@ public final class VCLGraphics {
 
 				GlyphVector gv = f.createGlyphVector(g.getFontRenderContext(), glyphs);
 
-				long advance = 0;
+				double advance = 0;
+				double fScaleX = font.getScaleX();
 				for (int i = 0; i < glyphs.length; i++) {
 					Point2D p = gv.getGlyphPosition(i);
 					p.setLocation(advance, p.getY());
 					gv.setGlyphPosition(i, p);
-					advance += advances[i];
+					advance += advances[i] / fScaleX;
 				}
 
 				Iterator clipRects = clipList.iterator();
@@ -909,7 +910,6 @@ public final class VCLGraphics {
 					if (orientation != 0)
 						g2.rotate(Math.toRadians((double)orientation / 10) * -1);
 
-					double fScaleX = font.getScaleX();
 					g2.scale(fScaleX, 1.0);
 
 					glyphOrientation &= VCLGraphics.GF_ROTMASK;
