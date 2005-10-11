@@ -344,7 +344,8 @@ BitmapBuffer* SalBitmap::AcquireBuffer( BOOL bReadOnly )
 		return NULL;
 	}
 
-	mnAcquireCount++;
+	if ( !bReadOnly )
+		mnAcquireCount++;
 	pBuffer->mpBits = mpBits;
 
 	return pBuffer;
@@ -356,111 +357,107 @@ void SalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, BOOL bReadOnly )
 {
 	if ( pBuffer )
 	{
-		mnAcquireCount--;
-
-		if ( mpData && mpBits )
+		if ( !bReadOnly )
 		{
-			VCLThreadAttach t;
-			if ( t.pEnv )
+			mnAcquireCount--;
+
+			// Save the palette
+			USHORT nColors = ( ( mnBitCount <= 8 ) ? ( 1 << mnBitCount ) : 0 );
+			if ( nColors )
 			{
-				if ( !bReadOnly )
-				{
-					// Save the palette
-					USHORT nColors = ( ( mnBitCount <= 8 ) ? ( 1 << mnBitCount ) : 0 );
-					if ( nColors )
-					{
-						maPalette = pBuffer->maPalette;
-						maPalette.SetEntryCount( nColors );
-					}
-
-					jboolean bCopy( sal_False );
-					jint *pBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), &bCopy );
-					if ( pBits )
-					{
-						BYTE *pBitsIn = mpBits;
-						jint *pBitsOut = pBits;
-
-						if ( pBuffer->mnFormat & BMP_FORMAT_1BIT_MSB_PAL )
-						{
-							for ( long i = 0; i < pBuffer->mnHeight; i++ )
-							{
-								for ( long j = 0; j < pBuffer->mnWidth; j++ )
-								{
-									BitmapColor& rColor = maPalette[ pBitsIn[ j >> 3 ] & ( 1 << ( 7 - ( j & 7 ) ) ) ? 1 : 0 ];
-									pBitsOut[ j ] = MAKE_SALCOLOR( rColor.GetRed(), rColor.GetGreen(), rColor.GetBlue() ) | 0xff000000;
-								}
-		
-								pBitsIn += pBuffer->mnScanlineSize;
-								pBitsOut += pBuffer->mnWidth;
-							}
-						}
-						else if ( pBuffer->mnFormat & BMP_FORMAT_4BIT_MSN_PAL )
-						{
-							for ( long i = 0; i < pBuffer->mnHeight; i++ )
-							{
-								for ( long j = 0; j < pBuffer->mnWidth; j++ )
-								{
-									BitmapColor& rColor = maPalette[ ( pBitsIn[ j >> 1 ] >> ( j & 1 ? 0 : 4 ) ) & 0x0f ];
-									pBitsOut[ j ] = MAKE_SALCOLOR( rColor.GetRed(), rColor.GetGreen(), rColor.GetBlue() ) | 0xff000000;
-								}
-		
-								pBitsIn += pBuffer->mnScanlineSize;
-								pBitsOut += pBuffer->mnWidth;
-							}
-						}
-						else if ( pBuffer->mnFormat & BMP_FORMAT_8BIT_PAL )
-						{
-							for ( long i = 0; i < pBuffer->mnHeight; i++ )
-							{
-								for ( long j = 0; j < pBuffer->mnWidth; j++ )
-								{
-									BitmapColor& rColor = maPalette[ pBitsIn[ j ] ];
-									pBitsOut[ j ] = MAKE_SALCOLOR( rColor.GetRed(), rColor.GetGreen(), rColor.GetBlue() ) | 0xff000000;
-								}
-		
-								pBitsIn += pBuffer->mnScanlineSize;
-								pBitsOut += pBuffer->mnWidth;
-							}
-						}
-						else if ( pBuffer->mnFormat & BMP_FORMAT_16BIT_TC_MSB_MASK )
-						{
-							BitmapColor aColor;
-							for ( long i = 0; i < pBuffer->mnHeight; i++ )
-							{
-								for ( long j = 0; j < pBuffer->mnWidth; j++ )
-								{
-									pBuffer->maColorMask.GetColorFor16BitMSB( aColor, pBitsIn + ( j << 1UL ) );
-									pBitsOut[ j ] = MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000;
-								}
-		
-								pBitsIn += pBuffer->mnScanlineSize;
-								pBitsOut += pBuffer->mnWidth;
-							}
-						}
-						else if ( pBuffer->mnFormat & BMP_FORMAT_24BIT_TC_RGB )
-						{
-							for ( long i = 0; i < pBuffer->mnHeight; i++ )
-							{
-								long j;
-								long k;
-								for ( j = 0, k = 0; j < pBuffer->mnWidth; j++, k += 3 )
-									pBitsOut[ j ] = MAKE_SALCOLOR( pBitsIn[ k ], pBitsIn[ k + 1 ], pBitsIn[ k + 2 ] ) | 0xff000000;
-		
-								pBitsIn += pBuffer->mnScanlineSize;
-								pBitsOut += pBuffer->mnWidth;
-							}
-						}
-
-						t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), pBits, 0 );
-					}
-				}
+				maPalette = pBuffer->maPalette;
+				maPalette.SetEntryCount( nColors );
 			}
 
 			if ( !mnAcquireCount && mpBits )
 			{
-				rtl_freeMemory( mpBits );
-				mpBits = NULL;
-				mbCopyFromVCLBitmap = true;
+				if ( mpData )
+				{
+					VCLThreadAttach t;
+					if ( t.pEnv )
+					{
+						jboolean bCopy( sal_False );
+						jint *pBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), &bCopy );
+						if ( pBits )
+						{
+							BYTE *pBitsIn = mpBits;
+							jint *pBitsOut = pBits;
+
+							if ( pBuffer->mnFormat & BMP_FORMAT_1BIT_MSB_PAL )
+							{
+								for ( long i = 0; i < pBuffer->mnHeight; i++ )
+								{
+									for ( long j = 0; j < pBuffer->mnWidth; j++ )
+									{
+										BitmapColor& rColor = maPalette[ pBitsIn[ j >> 3 ] & ( 1 << ( 7 - ( j & 7 ) ) ) ? 1 : 0 ];
+										pBitsOut[ j ] = MAKE_SALCOLOR( rColor.GetRed(), rColor.GetGreen(), rColor.GetBlue() ) | 0xff000000;
+									}
+			
+									pBitsIn += pBuffer->mnScanlineSize;
+									pBitsOut += pBuffer->mnWidth;
+								}
+							}
+							else if ( pBuffer->mnFormat & BMP_FORMAT_4BIT_MSN_PAL )
+							{
+								for ( long i = 0; i < pBuffer->mnHeight; i++ )
+								{
+									for ( long j = 0; j < pBuffer->mnWidth; j++ )
+									{
+										BitmapColor& rColor = maPalette[ ( pBitsIn[ j >> 1 ] >> ( j & 1 ? 0 : 4 ) ) & 0x0f ];
+										pBitsOut[ j ] = MAKE_SALCOLOR( rColor.GetRed(), rColor.GetGreen(), rColor.GetBlue() ) | 0xff000000;
+									}
+			
+									pBitsIn += pBuffer->mnScanlineSize;
+									pBitsOut += pBuffer->mnWidth;
+								}
+							}
+							else if ( pBuffer->mnFormat & BMP_FORMAT_8BIT_PAL )
+							{
+								for ( long i = 0; i < pBuffer->mnHeight; i++ )
+								{
+									for ( long j = 0; j < pBuffer->mnWidth; j++ )
+									{
+										BitmapColor& rColor = maPalette[ pBitsIn[ j ] ];
+										pBitsOut[ j ] = MAKE_SALCOLOR( rColor.GetRed(), rColor.GetGreen(), rColor.GetBlue() ) | 0xff000000;
+									}
+			
+									pBitsIn += pBuffer->mnScanlineSize;
+									pBitsOut += pBuffer->mnWidth;
+								}
+							}
+							else if ( pBuffer->mnFormat & BMP_FORMAT_16BIT_TC_MSB_MASK )
+							{
+								BitmapColor aColor;
+								for ( long i = 0; i < pBuffer->mnHeight; i++ )
+								{
+									for ( long j = 0; j < pBuffer->mnWidth; j++ )
+									{
+										pBuffer->maColorMask.GetColorFor16BitMSB( aColor, pBitsIn + ( j << 1UL ) );
+										pBitsOut[ j ] = MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000;
+									}
+			
+									pBitsIn += pBuffer->mnScanlineSize;
+									pBitsOut += pBuffer->mnWidth;
+								}
+							}
+							else if ( pBuffer->mnFormat & BMP_FORMAT_24BIT_TC_RGB )
+							{
+								for ( long i = 0; i < pBuffer->mnHeight; i++ )
+								{
+									long j;
+									long k;
+									for ( j = 0, k = 0; j < pBuffer->mnWidth; j++, k += 3 )
+										pBitsOut[ j ] = MAKE_SALCOLOR( pBitsIn[ k ], pBitsIn[ k + 1 ], pBitsIn[ k + 2 ] ) | 0xff000000;
+			
+									pBitsIn += pBuffer->mnScanlineSize;
+									pBitsOut += pBuffer->mnWidth;
+								}
+							}
+
+							t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), pBits, 0 );
+						}
+					}
+				}
 			}
 		}
 		delete pBuffer;
