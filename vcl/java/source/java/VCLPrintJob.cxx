@@ -47,6 +47,9 @@
 #ifndef _SV_JAVA_LANG_CLASS_HXX
 #include <java/lang/Class.hxx>
 #endif
+#ifndef _SV_SVAPP_HXX
+#include <svapp.hxx>
+#endif
 #ifndef _STRING_HXX
 #include <tools/string.hxx>
 #endif
@@ -108,7 +111,11 @@ void com_sun_star_vcl_VCLPrintJob::abortJob()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
+		{
+			ULONG nCount = Application::ReleaseSolarMutex();
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+			Application::AcquireSolarMutex( nCount );
+		}
 	}
 }
 
@@ -146,7 +153,11 @@ void com_sun_star_vcl_VCLPrintJob::endJob()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
+		{
+			ULONG nCount = Application::ReleaseSolarMutex();
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+			Application::AcquireSolarMutex( nCount );
+		}
 	}
 }
 
@@ -165,7 +176,11 @@ void com_sun_star_vcl_VCLPrintJob::endPage()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
+		{
+			ULONG nCount = Application::ReleaseSolarMutex();
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+			Application::AcquireSolarMutex( nCount );
+		}
 	}
 }
 
@@ -302,7 +317,10 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 			jvalue args[2];
 			args[0].l = _par0->getJavaObject();
 			args[1].l = StringToJavaString( t.pEnv, _par1 );
+
+			ULONG nCount = Application::ReleaseSolarMutex();
 			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethodA( object, getMyClass(), mID, args );
+			Application::AcquireSolarMutex( nCount );
 		}
 	}
 	return out;
@@ -329,7 +347,11 @@ com_sun_star_vcl_VCLGraphics *com_sun_star_vcl_VCLPrintJob::startPage( Orientati
 			args[0].i = jint( _par0 );
 			jobject tempObj = t.pEnv->CallNonvirtualObjectMethodA( object, getMyClass(), mID, args );
 			if ( tempObj )
+			{
+				ULONG nCount = Application::ReleaseSolarMutex();
 				out = new com_sun_star_vcl_VCLGraphics( tempObj );
+				Application::AcquireSolarMutex( nCount );
+			}
 		}
 	}
 	return out;
