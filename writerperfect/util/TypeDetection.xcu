@@ -1897,8 +1897,236 @@
     <value>0,image/x-xpixmap,,,xpm,20004,</value>
    </prop>
   </node>
+  <node oor:name="calc8" oor:op="replace">
+   <prop oor:name="Data">
+    <value>0,application/vnd.oasis.opendocument.spreadsheet,Calc 8,,ods,0</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Calc 8</value>
+   </prop>
+  </node>
+  <node oor:name="calc8_template" oor:op="replace">
+   <prop oor:name="Data">
+    <value>0,,Calc 8,,ots,0</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Calc 8 Template</value>
+   </prop>
+  </node>
+  <node oor:name="chart8" oor:op="replace">
+   <prop oor:name="Data">
+    <value>0,application/vnd.oasis.opendocument.chart,Chart 8,,ooc,0</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Chart 8</value>
+   </prop>
+  </node>
+  <node oor:name="draw8" oor:op="replace">
+   <prop oor:name="Data">
+    <value>0,application/vnd.oasis.opendocument.graphics,Draw 8,,odg,0</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Draw 8</value>
+   </prop>
+  </node>
+  <node oor:name="draw8_template" oor:op="replace">
+   <prop oor:name="Data">
+    <value>0,,Draw 8,,otg,0</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Draw 8 Template</value>
+   </prop>
+  </node>
+  <node oor:name="impress8" oor:op="replace">
+   <prop oor:name="Data">
+    <value>0,application/vnd.oasis.openoffice.presentation,Impress 8,,odp,0</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Impress 8</value>
+   </prop>
+  </node>
+  <node oor:name="impress8_template" oor:op="replace">
+   <prop oor:name="Data">
+    <value>0,,Impress 8,,otp,0</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Impress 8 Template</value>
+   </prop>
+  </node>
+  <node oor:name="math8" oor:op="replace">
+   <prop oor:name="Data">
+    <value>0,application/vnd.oasis.opendocument.formula,Math 8,,odf,0</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Math 8</value>
+   </prop>
+  </node>
+  <node oor:name="writer8" oor:op="replace">
+   <prop oor:name="Data">
+    <value>0,application/vnd.oasis.opendocument.text,Writer 8,,odt,0</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Writer 8</value>
+   </prop>
+  </node>
+  <node oor:name="writer8_template" oor:op="replace">
+   <prop oor:name="Data">
+    <value>1,,Writer 8,,ott,0</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Writer 8 Template</value>
+   </prop>
+  </node>
+  <node oor:name="writerglobal8" oor:op="replace">
+   <prop oor:name="Data">
+    <value>0,application/vnd.oasis.opendocument.text-master,Writer/Global 8,,odm,0</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Writer 8 Master Document</value>
+   </prop>
+  </node>
+  <node oor:name="writerweb8_writer_template" oor:op="replace">
+   <prop oor:name="Data">
+    <value>0,,Writer/Web 8,,oth,0</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">Writer/Web 8 Template</value>
+   </prop>
+  </node>
  </node>
  <node oor:name="Filters">
+  <node oor:name="calc8" oor:op="replace">
+   <prop oor:name="Data">
+    <value>0,calc8,com.sun.star.sheet.SpreadsheetDocument,,37,,6800,</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">OpenDocument Spreadsheet</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="calc8_template" oor:op="replace">
+   <prop oor:name="Data">
+    <value>0,calc8_template,com.sun.star.sheet.SpreadsheetDocument,,53,,6800,</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">OpenDocument Spreadsheet Template</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="chart8" oor:op="replace">
+   <prop oor:name="Data">
+    <value>0,chart8,com.sun.star.chart.ChartDocument,,12321,XML,6800,</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">OpenDocument Chart</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw8" oor:op="replace">
+   <prop oor:name="Data">
+    <value>0,draw8,com.sun.star.drawing.DrawingDocument,,268435493,XML,6800,</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">OpenDocument Drawing</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="draw8_template" oor:op="replace">
+   <prop oor:name="Data">
+    <value>0,draw8_template,com.sun.star.drawing.DrawingDocument,,53,CXMLV,6800,</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">OpenDocument Drawing Template</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="impress8" oor:op="replace">
+   <prop oor:name="Data">
+    <value>0,impress8,com.sun.star.presentation.PresentationDocument,,268435493,XML,6800,</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">OpenDocument Presentation</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="impress8_template" oor:op="replace">
+   <prop oor:name="Data">
+    <value>0,impress8_template,com.sun.star.presentation.PresentationDocument,,53,CXMLV,6800,</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">OpenDocument Presentation Template</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="math8" oor:op="replace">
+   <prop oor:name="Data">
+    <value>0,math8,com.sun.star.formula.FormulaProperties,,37,,6800,</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">OpenDocument Formula</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="writer8" oor:op="replace">
+   <prop oor:name="Data">
+    <value>0,writer8,com.sun.star.text.TextDocument,,268435493,CXML,6800,</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">OpenDocument Text</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="writer8_template" oor:op="replace">
+   <prop oor:name="Data">
+    <value>0,writer8_template,com.sun.star.text.TextDocument,,53,CXMLV,6800,</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">OpenDocument Text Template</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="writerglobal8" oor:op="replace">
+   <prop oor:name="Data">
+    <value>0,writerglobal8,com.sun.star.text.GlobalDocument,,268435493,CXML,6800,</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">OpenDocument Master Document</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
+  <node oor:name="writerweb8_writer_template" oor:op="replace">
+   <prop oor:name="Data">
+    <value>0,writerweb8_writer_template,com.sun.star.text.WebDocument,,53,CXMLVWEB,6800,</value>
+   </prop>
+   <prop oor:name="UIName">
+    <value xml:lang="en-US">HTML Document Template</value>
+   </prop>
+   <prop oor:name="Installed" oor:type="xs:boolean">
+    <value>true</value>
+   </prop>
+  </node>
   <node oor:name="AportisDoc Palm DB" oor:op="replace">
    <prop oor:name="UIName">
     <value xml:lang="en-US">AportisDoc (Palm)</value>
