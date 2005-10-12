@@ -125,16 +125,16 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 		if ( nClass == kEventClassMenu && ( nKind == kEventMenuOpening || nKind == kEventMenuEndTracking ) )
 		{
-			// Check if there is a native modal window as we will deadlock
-			// when a native modal window is showing
-			if ( NSApplication_getModalWindow() )
-				return userCanceledErr;
-
 			// Check if this is a menubar event as we don't want to dispatch
 			// native popup menus in modal dialogs
 			UInt32 nContext;
 			if ( GetEventParameter( aEvent, kEventParamMenuContext, typeUInt32, NULL, sizeof( UInt32 ), NULL, &nContext ) == noErr && nContext & kMenuContextMenuBarTracking )
 			{
+				// Check if there is a native modal window as we will deadlock
+				// when a native modal window is showing
+				if ( NSApplication_getModalWindow() )
+					return userCanceledErr;
+
 				// Wakeup the event queue by sending it a dummy event
 				// and wait for all pending AWT events to be dispatched
 				pSalData->mbNativeEventSucceeded = false;
