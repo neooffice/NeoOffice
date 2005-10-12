@@ -106,6 +106,8 @@
 #include <postmac.h>
 #undef check
 
+static bool bFirstPass = true;
+
 using namespace rtl;
 using namespace vcl;
 using namespace vos;
@@ -121,95 +123,77 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 	{
 		SalData *pSalData = GetSalData();
 
-		if ( nClass == kEventClassMenu && ( nKind == kEventMenuBeginTracking || nKind == kEventMenuEndTracking ) )
+		if ( nClass == kEventClassMenu && ( nKind == kEventMenuOpening || nKind == kEventMenuEndTracking ) )
 		{
-			MenuRef trackingRef;
-			if ( GetEventParameter( aEvent, kEventParamDirectObject, typeMenuRef, NULL, sizeof( MenuRef ), NULL, &trackingRef ) == noErr )
+			// Check if there is a native modal window as we will deadlock
+			// when a native modal window is showing
+			if ( NSApplication_getModalWindow() )
+				return userCanceledErr;
+
+			// Check if this is a menubar event as we don't want to dispatch
+			// native popup menus in modal dialogs
+			UInt32 nContext;
+			if ( GetEventParameter( aEvent, kEventParamMenuContext, typeUInt32, NULL, sizeof( UInt32 ), NULL, &nContext ) == noErr && nContext & kMenuContextMenuBarTracking )
 			{
-				// According to Carbon documentation, the direct object
-				// parameter should be NULL when tracking is beginning
-				// in the menubar.  In reality, however, the direct
-				// object is in fact a menu reference to the root
-				// menu. To determine if we're a menubar tracking
-				// event, we need to to compare against both NULL and
-				// the root menu.
-				MenuRef rootMenu = AcquireRootMenu(); // increments ref count
-				bool isMenubar = false;
+				// Wakeup the event queue by sending it a dummy event
+				// and wait for all pending AWT events to be dispatched
+				pSalData->mbNativeEventSucceeded = false;
+				pSalData->maNativeEventCondition.reset();
+				com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
+				pSalData->mpEventQueue->postCachedEvent( &aEvent );
 
-				if ( ( trackingRef == NULL ) || ( trackingRef == rootMenu ) )
-					isMenubar = true;
-
-				if ( rootMenu != NULL )
-					ReleaseMenu( rootMenu );
-
-				// Check if there is a native modal window as we will
-				// deadlock when a native modal window is showing
-				if ( NSApplication_getModalWindow() )
-					isMenubar = false;
-				
-				if ( isMenubar )
+				// We need to let any pending timers run while we are
+				// waiting for the VCL event queue to clear so that
+				// we don't deadlock
+				IMutex& rSolarMutex = Application::GetSolarMutex();
+				while ( !Application::IsShutDown() && !pSalData->maNativeEventCondition.check() )
 				{
-					// Wakeup the event queue by sending it a dummy event
-					// and wait for all pending AWT events to be dispatched
-					pSalData->mbNativeEventSucceeded = false;
-					pSalData->maNativeEventCondition.reset();
-					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
-					pSalData->mpEventQueue->postCachedEvent( &aEvent );
+					ReceiveNextEvent( 0, NULL, 0, false, NULL );
+					OThread::yield();
+				}
 
-					// We need to let any pending timers run while we are
-					// waiting for the VCL event queue to clear so that
-					// we don't deadlock
-					IMutex& rSolarMutex = Application::GetSolarMutex();
-					while ( !Application::IsShutDown() && !pSalData->maNativeEventCondition.check() )
+				// Fix bug 679 by checking if the condition was
+				// released to avoid a deadlock
+				OSErr nRet = userCanceledErr;
+				if ( !Application::IsShutDown() && pSalData->mbNativeEventSucceeded )
+				{
+					// We need to let any pending timers run so that we
+					// don't deadlock
+					bool bAcquired = false;
+					while ( !Application::IsShutDown() )
 					{
+						if ( rSolarMutex.tryToAcquire() )
+						{
+							if ( !Application::IsShutDown() )
+								bAcquired = true;
+							else
+								rSolarMutex.release();
+							break;
+						}
+
 						ReceiveNextEvent( 0, NULL, 0, false, NULL );
 						OThread::yield();
 					}
 
-					// Fix bug 679 by checking if the condition was
-					// released to avoid a deadlock
-					OSErr nRet = userCanceledErr;
-					if ( !Application::IsShutDown() && pSalData->mbNativeEventSucceeded )
+					if ( bAcquired )
 					{
-						// We need to let any pending timers run so that we
-						// don't deadlock
-						bool bAcquired = false;
-						while ( !Application::IsShutDown() )
-						{
-							if ( rSolarMutex.tryToAcquire() )
-							{
-								if ( !Application::IsShutDown() )
-									bAcquired = true;
-								else
-									rSolarMutex.release();
-								break;
-							}
+						bool bFirstPass = !pSalData->mbInNativeMenuTracking;
+						pSalData->mbInNativeMenuTracking = ( nKind == kEventMenuOpening );
 
-							ReceiveNextEvent( 0, NULL, 0, false, NULL );
-							OThread::yield();
-						}
+						// Execute menu updates while the VCL event
+						// queue is blocked
+						ResetMenuEnabledStateForFrame( pSalData->mpFocusFrame, NULL );
+						if ( bFirstPass )
+							UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
 
-						if ( bAcquired )
-						{
-							pSalData->mbInNativeMenuTracking = ( nKind == kEventMenuBeginTracking );
-
-							// Execute menu updates while the VCL event
-							// queue is blocked
-							ResetMenuEnabledStateForFrame( pSalData->mpFocusFrame, NULL );
-
-							// We need to let any timers run that were added
-							// by any menu changes. Otherwise, some menus
-							// will be drawn in the state that they were in
-							// before we updated the menus.
-							ReceiveNextEvent( 0, NULL, 0, false, NULL );
-
-							nRet = noErr;
-						}
-
-						rSolarMutex.release();
+						// We need to let any timers run that were added
+						// by any menu changes. Otherwise, some menus
+						// will be drawn in the state that they were in
+						// before we updated the menus.
+						ReceiveNextEvent( 0, NULL, 0, false, NULL );
 					}
 
-					return nRet;
+					rSolarMutex.release();
 				}
 			}
 		}
@@ -232,7 +216,7 @@ void ExecuteApplicationMain( Application *pApp )
 		// Set up native event handler
 		EventTypeSpec aTypes[2];
 		aTypes[0].eventClass = kEventClassMenu;
-		aTypes[0].eventKind = kEventMenuBeginTracking;
+		aTypes[0].eventKind = kEventMenuOpening;
 		aTypes[1].eventClass = kEventClassMenu;
 		aTypes[1].eventKind = kEventMenuEndTracking;
 		InstallApplicationEventHandler( pEventHandlerUPP, 2, aTypes, NULL, NULL );
