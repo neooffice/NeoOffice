@@ -78,6 +78,21 @@
 	if ( pPanel )
 	{
 		[mpLock lock];
+
+		// Set the job name from the window title
+		PMPrintSettings aSettings = (PMPrintSettings)[mpInfo pmPrintSettings];
+		if ( aSettings )
+		{
+			NSString *pTitle = [mpWindow title];
+			if ( pTitle )
+				pTitle = [pTitle stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+			else
+				pTitle = [NSString stringWithString:@"Untitled"];
+
+			if ( pTitle)
+				PMSetJobNameCFString( aSettings, (CFStringRef)pTitle );
+		}
+
 		[pPanel beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(printPanelDidEnd:returnCode:contextInfo:) contextInfo:nil];
 	}
 }
