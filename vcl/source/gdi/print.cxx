@@ -1818,6 +1818,10 @@ BOOL Printer::StartJob( const XubString& rJobName )
 				mpQPrinter->Destroy();
 			mpQPrinter = new ImplQPrinter( this );
 		}
+		else
+		{
+			mpQPrinter->SetJobSetup( GetJobSetup() );
+		}
 #else 	// USE_JAVA
 		mpQPrinter = new ImplQPrinter( this );
 #endif	// USE_JAVA
