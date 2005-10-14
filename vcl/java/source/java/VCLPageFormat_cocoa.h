@@ -11,11 +11,11 @@
  *
  *         - GNU General Public License Version 2.1
  *
- *  Patrick Luby, June 2003
+ *  Patrick Luby, September 2005
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2003 by Patrick Luby (patrick.luby@planamesa.com)
+ *  Copyright 2005 by Patrick Luby (patrick.luby@planamesa.com)
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
@@ -33,45 +33,22 @@
  *
  ************************************************************************/
 
-#ifndef _SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX
-#define	_SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX
+#ifndef __VCLPAGEFORMAT_COCOA_H__
+#define __VCLPAGEFORMAT_COCOA_H__
 
-#ifndef _SV_JAVA_LANG_OBJECT_HXX
-#include <java/lang/Object.hxx>
-#endif
-#ifndef _SV_JOBSET_H
-#include <jobset.h>
+#ifdef __cplusplus
+typedef void* id;
 #endif
 
-namespace vcl {
+#ifdef __cplusplus
+BEGIN_C
+#endif
+id NSPrintInfo_create();
+void NSPrintInfo_installVCLPrintInfo();
+void NSPrintInfo_setSharedPrintInfo( id pNSPrintInfo );
+BOOL NSPrintInfo_showPageLayoutDialog( id pNSPrintInfo, id pNSWindow );
+#ifdef __cplusplus
+END_C
+#endif
 
-class com_sun_star_vcl_VCLGraphics;
-class com_sun_star_vcl_VCLPageFormat;
-
-class com_sun_star_vcl_VCLPrintJob : public java_lang_Object
-{
-protected:
-	static jclass		theClass;
-
-public:
-	static jclass		getMyClass();
-
-						com_sun_star_vcl_VCLPrintJob( jobject myObj ) : java_lang_Object( myObj ) {}
-						com_sun_star_vcl_VCLPrintJob();
-	virtual				~com_sun_star_vcl_VCLPrintJob() {};
-
-	void				abortJob();
-	void				dispose();
-	void				endJob();
-	void				endPage();
-	void*				getNativePrinterJob();
-	XubString			getPageRange();
-	java_lang_Object*	getPrinterJob();
-	sal_Bool			isFinished();
-	sal_Bool			startJob( com_sun_star_vcl_VCLPageFormat *_par0, ::rtl::OUString _par1, sal_Bool _par2 );
-	com_sun_star_vcl_VCLGraphics*	startPage( Orientation _par0 );
-};
-
-} // namespace vcl
-
-#endif // _SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX
+#endif

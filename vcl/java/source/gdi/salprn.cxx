@@ -216,7 +216,7 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 						   ULONG nCopies, BOOL bCollate,
 						   ImplJobSetup* pSetupData )
 {
-	maPrinterData.mbStarted = maPrinterData.mpVCLPrintJob->startJob( maPrinterData.mpVCLPageFormat, OUString( rJobName ) );
+	maPrinterData.mbStarted = maPrinterData.mpVCLPrintJob->startJob( maPrinterData.mpVCLPageFormat, OUString( rJobName ), maPrinterData.mbStarted );
 	return maPrinterData.mbStarted;
 }
 

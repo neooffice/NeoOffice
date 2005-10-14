@@ -282,7 +282,7 @@ public final class VCLPageFormat {
 	 *
 	 * @return the <code>PrinterJob</code> instance
 	 */
-	PrinterJob getPrinterJob() {
+	public PrinterJob getPrinterJob() {
 
 		return job;
 
@@ -328,22 +328,7 @@ public final class VCLPageFormat {
 	 */
 	public boolean setup() {
 
-		if (!editable)
-			return false;
-
-		synchronized (VCLPageFormat.class) {
-			PageFormat pClone = (PageFormat)pageFormat.clone();
-			pClone.setOrientation(VCLPageFormat.printerOrientation);
-			PageFormat p = job.pageDialog(pClone);
-			if (p != pageFormat) {
-				pageFormat = p;
-				VCLPageFormat.printerOrientation = pageFormat.getOrientation();
-				return true;
-			}
-			else {
-				return false;
-			}
-		}
+		return editable;
 
 	}
 

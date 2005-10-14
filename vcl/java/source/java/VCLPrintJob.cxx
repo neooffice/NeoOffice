@@ -35,8 +35,17 @@
 
 #define _SV_COM_SUN_STAR_VCL_VCLPRINTJOB_CXX
 
+#ifndef _SV_SALDATA_HXX
+#include <saldata.hxx>
+#endif
+#ifndef _SV_SALFRAME_HXX
+#include <salframe.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX
 #include <com/sun/star/vcl/VCLPrintJob.hxx>
+#endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
+#include <com/sun/star/vcl/VCLFrame.hxx>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
@@ -57,6 +66,7 @@
 #include "VCLPrintJob_cocoa.h"
 
 using namespace vcl;
+using namespace vos;
 
 // ============================================================================
 
@@ -299,16 +309,17 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::isFinished()
 
 // ----------------------------------------------------------------------------
 
-sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat *_par0, ::rtl::OUString _par1 ) 
+sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat *_par0, ::rtl::OUString _par1, sal_Bool _par2 ) 
 {
 	static jmethodID mID = NULL;
-	sal_Bool out = sal_False;
+	sal_Bool out = _par2;
+
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(Lcom/sun/star/vcl/VCLPageFormat;Ljava/lang/String;)Z";
+			char *cSignature = "(Lcom/sun/star/vcl/VCLPageFormat;Ljava/lang/String;)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "startJob", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -317,12 +328,22 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 			jvalue args[2];
 			args[0].l = _par0->getJavaObject();
 			args[1].l = StringToJavaString( t.pEnv, _par1 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
 
+	if ( !out )
+	{
+		SalFrame *pFocusFrame = GetSalData()->mpFocusFrame;
+		if ( pFocusFrame )
+		{
 			ULONG nCount = Application::ReleaseSolarMutex();
-			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethodA( object, getMyClass(), mID, args );
+			void *pNSPrintInfo = _par0->getNativePrinterJob();
+			out = (sal_Bool)NSPrintInfo_showPrintDialog( pNSPrintInfo, pFocusFrame->maFrameData.mpVCLFrame->getNativeWindow() );
 			Application::AcquireSolarMutex( nCount );
 		}
 	}
+
 	return out;
 }
 

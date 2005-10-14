@@ -73,6 +73,7 @@ SLOFILES = \
 	$(SLO)/VCLMenuBar.obj \
 	$(SLO)/VCLMenuItemData.obj \
 	$(SLO)/VCLPageFormat.obj \
+	$(SLO)/VCLPageFormat_cocoa.obj \
 	$(SLO)/VCLPrintJob.obj \
 	$(SLO)/VCLPrintJob_cocoa.obj \
 	$(SLO)/VCLScreen.obj \

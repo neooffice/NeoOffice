@@ -292,29 +292,20 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 *
 	 * @param p the <code>VCLPageFormat</code>
 	 * @param n the job name
-	 * @return <code>true</code> if a print job was successfully created or
-	 *  <code>false</code> if the user cancelled the print dialog
 	 */
-	public boolean startJob(VCLPageFormat p, String n) {
+	public void startJob(VCLPageFormat p, String n) {
 
 		// Detect if the user cancelled the print dialog
 		if (!jobStarted) {
 			pageFormat = p;
 			job = pageFormat.getPrinterJob();
 			job.setPrintable(this, pageFormat.getPageFormat());
-			if (job.printDialog()) {
-				pageFormat.setEditable(false);
-				jobStarted = true;
-			}
-			else {
-				jobStarted = false;
-			}
+			pageFormat.setEditable(false);
+			jobStarted = true;
 		}
 		else {
 			job.setJobName(n);
 		}
-
-		return jobStarted;
 
 	}
 
