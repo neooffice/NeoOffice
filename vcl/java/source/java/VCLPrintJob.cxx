@@ -312,31 +312,37 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::isFinished()
 sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat *_par0, ::rtl::OUString _par1, sal_Bool _par2 ) 
 {
 	static jmethodID mID = NULL;
-	sal_Bool out = _par2;
+	sal_Bool out = sal_False;
 
-	VCLThreadAttach t;
-	if ( t.pEnv )
+	if ( _par2 )
 	{
-		if ( !mID )
+		VCLThreadAttach t;
+		if ( t.pEnv )
 		{
-			char *cSignature = "(Lcom/sun/star/vcl/VCLPageFormat;Ljava/lang/String;)V";
-			mID = t.pEnv->GetMethodID( getMyClass(), "startJob", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jvalue args[2];
-			args[0].l = _par0->getJavaObject();
-			args[1].l = StringToJavaString( t.pEnv, _par1 );
-			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+			if ( !mID )
+			{
+				char *cSignature = "(Lcom/sun/star/vcl/VCLPageFormat;Ljava/lang/String;)Z";
+				mID = t.pEnv->GetMethodID( getMyClass(), "startJob", cSignature );
+			}
+			OSL_ENSURE( mID, "Unknown method id!" );
+			if ( mID )
+			{
+				jvalue args[2];
+				args[0].l = _par0->getJavaObject();
+				args[1].l = StringToJavaString( t.pEnv, _par1 );
+				out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethodA( object, getMyClass(), mID, args );
+			}
 		}
 	}
-
-	if ( !out )
+	else
 	{
 		SalFrame *pFocusFrame = GetSalData()->mpFocusFrame;
 		if ( pFocusFrame )
 		{
+			// Make sure frame is a top-level window
+			while ( pFocusFrame->maFrameData.mpParent && pFocusFrame->maFrameData.mpParent->maFrameData.mbVisible )
+				pFocusFrame = pFocusFrame->maFrameData.mpParent;
+
 			ULONG nCount = Application::ReleaseSolarMutex();
 			void *pNSPrintInfo = _par0->getNativePrinterJob();
 			out = (sal_Bool)NSPrintInfo_showPrintDialog( pNSPrintInfo, pFocusFrame->maFrameData.mpVCLFrame->getNativeWindow() );

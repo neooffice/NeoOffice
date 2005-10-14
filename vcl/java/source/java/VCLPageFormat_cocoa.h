@@ -46,7 +46,7 @@ BEGIN_C
 id NSPrintInfo_create();
 void NSPrintInfo_installVCLPrintInfo();
 void NSPrintInfo_setSharedPrintInfo( id pNSPrintInfo );
-BOOL NSPrintInfo_showPageLayoutDialog( id pNSPrintInfo, id pNSWindow );
+BOOL NSPrintInfo_showPageLayoutDialog( id pNSPrintInfo, id pNSWindow, BOOL bLandscape );
 #ifdef __cplusplus
 END_C
 #endif

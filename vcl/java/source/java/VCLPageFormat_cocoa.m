@@ -64,10 +64,11 @@
 {
 	NSPrintInfo*			mpInfo;
 	NSLock*					mpLock;
+	NSPrintingOrientation	mnOrientation;
 	BOOL					mbResult;
 	NSWindow*				mpWindow;
 }
-- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow lock:(NSLock *)pLock;
+- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow orientation:(NSPrintingOrientation)nOrientation lock:(NSLock *)pLock;
 - (void)pageLayoutDidEnd:(NSPageLayout *)pLayout returnCode:(int)nCode contextInfo:(void *)pContextInfo;
 - (BOOL)result;
 - (void)showPageLayoutDialog:(id)pObject;
@@ -75,10 +76,11 @@
 
 @implementation ShowPageLayoutDialog
 
-- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow lock:(NSLock *)pLock
+- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow orientation:(NSPrintingOrientation)nOrientation lock:(NSLock *)pLock
 {
 	mpInfo = pInfo;
 	mpLock = pLock;
+	mnOrientation = nOrientation;
 	mbResult = NO;
 	mpWindow = pWindow;
 }
@@ -103,6 +105,8 @@
 	if ( pLayout )
 	{
 		[mpLock lock];
+		if ( [mpInfo orientation] != mnOrientation )
+			[mpInfo setOrientation:mnOrientation ];
 		[pLayout beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(pageLayoutDidEnd:returnCode:contextInfo:) contextInfo:nil];
 	}
 }
@@ -141,7 +145,7 @@ void NSPrintInfo_setSharedPrintInfo( id pNSPrintInfo )
 		[VCLPrintInfo setSharedPrintInfo:pNSPrintInfo];
 }
 
-BOOL NSPrintInfo_showPageLayoutDialog( id pNSPrintInfo, id pNSWindow )
+BOOL NSPrintInfo_showPageLayoutDialog( id pNSPrintInfo, id pNSWindow, BOOL bLandscape )
 {
 	BOOL bRet = NO;
 
@@ -150,7 +154,7 @@ BOOL NSPrintInfo_showPageLayoutDialog( id pNSPrintInfo, id pNSWindow )
 		NSLock *pLock = [[NSLock alloc] init];
 		if ( pLock )
 		{
-			ShowPageLayoutDialog *pShowPageLayoutDialog = [[ShowPageLayoutDialog alloc] initWithPrintInfo:(NSPrintInfo *)pNSPrintInfo window:(NSWindow *)pNSWindow lock:pLock];
+			ShowPageLayoutDialog *pShowPageLayoutDialog = [[ShowPageLayoutDialog alloc] initWithPrintInfo:(NSPrintInfo *)pNSPrintInfo window:(NSWindow *)pNSWindow orientation:( bLandscape ? NSLandscapeOrientation : NSPortraitOrientation ) lock:pLock];
 			[pShowPageLayoutDialog performSelectorOnMainThread:@selector(showPageLayoutDialog:) withObject:pShowPageLayoutDialog waitUntilDone:YES];
 			[pLock lock];
 			bRet = [pShowPageLayoutDialog result];
