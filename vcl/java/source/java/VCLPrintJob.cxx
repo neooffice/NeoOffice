@@ -336,17 +336,28 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 	}
 	else
 	{
-		SalFrame *pFocusFrame = GetSalData()->mpFocusFrame;
+		SalData *pSalData = GetSalData();
+
+		SalFrame *pFocusFrame = pSalData->mpFocusFrame;
 		if ( pFocusFrame )
 		{
 			// Make sure frame is a top-level window
 			while ( pFocusFrame->maFrameData.mpParent && pFocusFrame->maFrameData.mpParent->maFrameData.mbVisible )
 				pFocusFrame = pFocusFrame->maFrameData.mpParent;
 
-			ULONG nCount = Application::ReleaseSolarMutex();
+			// Ignore any AWT events while the print dialog is showing to
+			// emulate a modal dialog
 			void *pNSPrintInfo = _par0->getNativePrinterJob();
-			out = (sal_Bool)NSPrintInfo_showPrintDialog( pNSPrintInfo, pFocusFrame->maFrameData.mpVCLFrame->getNativeWindow() );
-			Application::AcquireSolarMutex( nCount );
+			void *pDialog = NSPrintInfo_showPrintDialog( pNSPrintInfo, pFocusFrame->maFrameData.mpVCLFrame->getNativeWindow() );
+
+			pSalData->mpNativeModalSheetFrame = pFocusFrame;
+			pSalData->mbInNativeModalSheet = true;
+			while ( !NSPrintPanel_finished( pDialog ) )
+				Application::Reschedule();
+			pSalData->mbInNativeModalSheet = false;
+			pSalData->mpNativeModalSheetFrame = NULL;
+
+			out = (sal_Bool)NSPrintPanel_result( pDialog );
 		}
 	}
 

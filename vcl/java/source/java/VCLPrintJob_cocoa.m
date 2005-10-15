@@ -38,33 +38,39 @@
 
 @interface ShowPrintDialog : NSObject
 {
+	BOOL					mbFinished;
 	NSPrintInfo*			mpInfo;
-	NSLock*					mpLock;
 	BOOL					mbResult;
 	NSWindow*				mpWindow;
 }
-- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow lock:(NSLock *)pLock;
+- (BOOL)finished;
+- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow;
 - (BOOL)result;
 - (void)showPrintDialog:(id)pObject;
 @end
 
 @implementation ShowPrintDialog
 
-- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow lock:(NSLock *)pLock
+- (BOOL)finished
 {
+	return mbFinished;
+}
+
+- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow
+{
+	mbFinished = YES;
 	mpInfo = pInfo;
-	mpLock = pLock;
 	mbResult = NO;
 	mpWindow = pWindow;
 }
 
 - (void)printPanelDidEnd:(NSPrintPanel *)pPanel returnCode:(int)nCode contextInfo:(void *)pContextInfo
 {
+	mbFinished = YES;
 	if ( nCode == NSOKButton )
 		mbResult = YES;
 	else
 		mbResult = NO;
-	[mpLock unlock];
 }
 
 - (BOOL)result
@@ -77,8 +83,6 @@
 	NSPrintPanel *pPanel = [NSPrintPanel printPanel];
 	if ( pPanel )
 	{
-		[mpLock lock];
-
 		// Set the job name from the window title
 		PMPrintSettings aSettings = (PMPrintSettings)[mpInfo pmPrintSettings];
 		if ( aSettings )
@@ -93,6 +97,7 @@
 				PMSetJobNameCFString( aSettings, (CFStringRef)pTitle );
 		}
 
+		mbFinished = NO;
 		[pPanel beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(printPanelDidEnd:returnCode:contextInfo:) contextInfo:nil];
 	}
 }
@@ -125,23 +130,37 @@ BOOL NSPrintInfo_pageRange( id pNSPrintInfo, int *nFirst, int *nLast )
 	return NO;
 }
 
-BOOL NSPrintInfo_showPrintDialog( id pNSPrintInfo, id pNSWindow )
+id NSPrintInfo_showPrintDialog( id pNSPrintInfo, id pNSWindow )
 {
-	BOOL bRet = NO;
+	ShowPrintDialog *pRet = nil;
 
 	if ( pNSPrintInfo && pNSWindow )
 	{
-		NSLock *pLock = [[NSLock alloc] init];
-		if ( pLock )
-		{
-			ShowPrintDialog *pShowPrintDialog = [[ShowPrintDialog alloc] initWithPrintInfo:(NSPrintInfo *)pNSPrintInfo window:(NSWindow *)pNSWindow lock:pLock];
-			[pShowPrintDialog performSelectorOnMainThread:@selector(showPrintDialog:) withObject:pShowPrintDialog waitUntilDone:YES];
-			[pLock lock];
-			bRet = [pShowPrintDialog result];
-			[pLock unlock];
-			[pShowPrintDialog release];
-			[pLock release];
-		}
+		pRet = [[ShowPrintDialog alloc] initWithPrintInfo:(NSPrintInfo *)pNSPrintInfo window:(NSWindow *)pNSWindow];
+		[pRet performSelectorOnMainThread:@selector(showPrintDialog:) withObject:pRet waitUntilDone:YES];
+	}
+
+	return pRet;
+}
+
+BOOL NSPrintPanel_finished( id pDialog )
+{
+	BOOL bRet = YES;
+
+	if ( pDialog )
+		bRet = [(ShowPrintDialog *)pDialog finished];
+
+	return bRet;
+}
+
+BOOL NSPrintPanel_result( id pDialog )
+{
+	BOOL bRet = NO;
+
+	if ( pDialog )
+	{
+		bRet = [(ShowPrintDialog *)pDialog result];
+		[(ShowPrintDialog *)pDialog release];
 	}
 
 	return bRet;

@@ -1733,7 +1733,7 @@ public final class VCLEvent extends AWTEvent {
 	 */
 	boolean isAWTEvent() {
 
-		return (awtEvent || getID() == SALEVENT_ACTIVATE_APPLICATION);
+		return (awtEvent || getID() >= VCLEvent.SALEVENT_OPENDOCUMENT);
 
 	}
 

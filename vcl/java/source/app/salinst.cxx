@@ -424,7 +424,17 @@ void SalInstance::Yield( BOOL bWait )
 			nCount = 0;
 		}
 
-		pEvent->dispatch();
+		if ( pSalData->mbInNativeModalSheet )
+		{
+			if ( pEvent->getFrame() != pSalData->mpNativeModalSheetFrame )
+				pSalData->mpNativeModalSheetFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+			if ( pEvent->getID() == SALEVENT_PAINT )
+				pEvent->dispatch();
+		}
+		else
+		{
+			pEvent->dispatch();
+		}
 		delete pEvent;
 	}
 
@@ -434,7 +444,7 @@ void SalInstance::Yield( BOOL bWait )
 	// Allow Carbon event loop to proceed
 	if ( !pSalData->maNativeEventCondition.check() )
 	{
-		pSalData->mbNativeEventSucceeded = true;
+		pSalData->mbNativeEventSucceeded = !pSalData->mbInNativeModalSheet;
 		pSalData->maNativeEventCondition.set();
 		nCount = ReleaseYieldMutex();
 		OThread::yield();

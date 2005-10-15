@@ -598,17 +598,28 @@ sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 
 	if ( out )
 	{
-		SalFrame *pFocusFrame = GetSalData()->mpFocusFrame;
+		SalData *pSalData = GetSalData();
+
+		SalFrame *pFocusFrame = pSalData->mpFocusFrame;
 		if ( pFocusFrame )
 		{
 			// Make sure frame is a top-level window
 			while ( pFocusFrame->maFrameData.mpParent && pFocusFrame->maFrameData.mpParent->maFrameData.mbVisible )
 				pFocusFrame = pFocusFrame->maFrameData.mpParent;
 
-			ULONG nCount = Application::ReleaseSolarMutex();
+            // Ignore any AWT events while the page layout dialog is showing to
+            // emulate a modal dialog
 			void *pNSPrintInfo = getNativePrinterJob();
-			NSPrintInfo_showPageLayoutDialog( pNSPrintInfo, pFocusFrame->maFrameData.mpVCLFrame->getNativeWindow(), ( getOrientation() == ORIENTATION_LANDSCAPE ) ? TRUE : FALSE );
-			Application::AcquireSolarMutex( nCount );
+			void *pDialog = NSPrintInfo_showPageLayoutDialog( pNSPrintInfo, pFocusFrame->maFrameData.mpVCLFrame->getNativeWindow(), ( getOrientation() == ORIENTATION_LANDSCAPE ) ? TRUE : FALSE );
+    
+			pSalData->mpNativeModalSheetFrame = pFocusFrame;
+			pSalData->mbInNativeModalSheet = true;
+			while ( !NSPageLayout_finished( pDialog ) )
+				Application::Reschedule();
+			pSalData->mbInNativeModalSheet = false;
+			pSalData->mpNativeModalSheetFrame = NULL;
+
+			out = (sal_Bool)NSPageLayout_result( pDialog );
 		}
 	}
 	

@@ -43,10 +43,12 @@ typedef void* id;
 #ifdef __cplusplus
 BEGIN_C
 #endif
+BOOL NSPageLayout_finished( id pDialog );
+BOOL NSPageLayout_result( id pDialog );
 id NSPrintInfo_create();
 void NSPrintInfo_installVCLPrintInfo();
 void NSPrintInfo_setSharedPrintInfo( id pNSPrintInfo );
-BOOL NSPrintInfo_showPageLayoutDialog( id pNSPrintInfo, id pNSWindow, BOOL bLandscape );
+id NSPrintInfo_showPageLayoutDialog( id pNSPrintInfo, id pNSWindow, BOOL bLandscape );
 #ifdef __cplusplus
 END_C
 #endif
