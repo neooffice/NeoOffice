@@ -67,11 +67,13 @@
 
 typedef void Java_apple_awt_CPrinterJob_getDefaultPage_Type( JNIEnv *, jobject, jobject );
 typedef void Java_apple_awt_CPrinterJob_printLoop_Type( JNIEnv *, jobject, jboolean );
+typedef void Java_apple_awt_CPrinterJob_printLoopBoolean_Type( JNIEnv *, jobject, jboolean, jint, jint );
 typedef void Java_apple_awt_CPrinterJob_validatePaper_Type( JNIEnv *, jobject, jobject, jobject );
 
 static ::vos::OModule aModule;
 static Java_apple_awt_CPrinterJob_getDefaultPage_Type *pGetDefaultPage = NULL;
 static Java_apple_awt_CPrinterJob_printLoop_Type *pPrintLoop = NULL;
+static Java_apple_awt_CPrinterJob_printLoopBoolean_Type *pPrintLoopBoolean = NULL;
 static Java_apple_awt_CPrinterJob_validatePaper_Type *pValidatePaper = NULL;
 
 using namespace rtl;
@@ -161,6 +163,20 @@ static void JNICALL Java_apple_awt_CPrinterJob_printLoop( JNIEnv *pEnv, jobject 
 
 // ----------------------------------------------------------------------------
 
+static jboolean JNICALL Java_apple_awt_CPrinterJob_printLoopBoolean( JNIEnv *pEnv, jobject object, jboolean _par0, jint _par1, jint _par2 )
+{
+	if ( pPrintLoop )
+	{
+		// Make this object's print info pointer the shared print info since
+		// the JVM's native methods use the shared print info
+		NSPrintInfo_setSharedPrintInfo( GetNSPrintInfo( pEnv, object ) );
+
+		pPrintLoopBoolean( pEnv, object, _par0, _par1, _par2 );
+	}
+}
+
+// ----------------------------------------------------------------------------
+
 static void JNICALL Java_apple_awt_CPrinterJob_validatePaper( JNIEnv *pEnv, jobject object, jobject _par0, jobject _par1 )
 {
 	if ( pValidatePaper )
@@ -225,6 +241,7 @@ jclass com_sun_star_vcl_VCLPageFormat::getMyClass()
 				{
 					pGetDefaultPage = (Java_apple_awt_CPrinterJob_getDefaultPage_Type *)aModule.getSymbol( OUString::createFromAscii( "Java_apple_awt_CPrinterJob_getDefaultPage" ) );
 					pPrintLoop = (Java_apple_awt_CPrinterJob_printLoop_Type *)aModule.getSymbol( OUString::createFromAscii( "Java_apple_awt_CPrinterJob_printLoop" ) );
+					pPrintLoopBoolean = (Java_apple_awt_CPrinterJob_printLoopBoolean_Type *)aModule.getSymbol( OUString::createFromAscii( "Java_apple_awt_CPrinterJob_printLoop" ) );
 					pValidatePaper = (Java_apple_awt_CPrinterJob_validatePaper_Type *)aModule.getSymbol( OUString::createFromAscii( "Java_apple_awt_CPrinterJob_validatePaper" ) );
 				}
 			}
@@ -236,29 +253,42 @@ jclass com_sun_star_vcl_VCLPageFormat::getMyClass()
 		jclass cPrinterJobClass = t.pEnv->FindClass( "apple/awt/CPrinterJob" );
 		if ( cPrinterJobClass )
 		{
-			JNINativeMethod pMethods[4];
-			pMethods[0].name = "createNSPrintInfo";
-			pMethods[0].signature = "()J";
-			pMethods[0].fnPtr = (void *)Java_apple_awt_CPrinterJob_createNSPrintInfoLong;
-			pMethods[1].name = "getDefaultPage";
-			pMethods[1].signature = "(Ljava/awt/print/PageFormat;)V";
-			pMethods[1].fnPtr = (void *)Java_apple_awt_CPrinterJob_getDefaultPage;
-			pMethods[2].name = "printLoop";
-			pMethods[2].signature = "(Z)V";
-			pMethods[2].fnPtr = (void *)Java_apple_awt_CPrinterJob_printLoop;
-			pMethods[3].name = "validatePaper";
-			pMethods[3].signature = "(Ljava/awt/print/Paper;Ljava/awt/print/Paper;)V";
-			pMethods[3].fnPtr = (void *)Java_apple_awt_CPrinterJob_validatePaper;
-			t.pEnv->RegisterNatives( cPrinterJobClass, pMethods, 4 );
+			JNINativeMethod aMethod;
+			aMethod.name = "createNSPrintInfo";
+			aMethod.signature = "()J";
+			aMethod.fnPtr = (void *)Java_apple_awt_CPrinterJob_createNSPrintInfoLong;
+			t.pEnv->RegisterNatives( cPrinterJobClass, &aMethod, 1 );
 
-			// Java 1.4.1 has a different signature for some methods so check
+			// Java 1.4.1 has a different signature for this method so check
 			// for it if an exception is thrown
 			if ( t.pEnv->ExceptionCheck() )
 			{
 				t.pEnv->ExceptionClear();
-				pMethods[0].signature = "()I";
-				pMethods[0].fnPtr = (void *)Java_apple_awt_CPrinterJob_createNSPrintInfoInt;
-				t.pEnv->RegisterNatives( cPrinterJobClass, pMethods, 4 );
+				aMethod.signature = "()I";
+				aMethod.fnPtr = (void *)Java_apple_awt_CPrinterJob_createNSPrintInfoInt;
+				t.pEnv->RegisterNatives( cPrinterJobClass, &aMethod, 1 );
+			}
+
+			JNINativeMethod pMethods[3];
+			pMethods[0].name = "getDefaultPage";
+			pMethods[0].signature = "(Ljava/awt/print/PageFormat;)V";
+			pMethods[0].fnPtr = (void *)Java_apple_awt_CPrinterJob_getDefaultPage;
+			pMethods[1].name = "printLoop";
+			pMethods[1].signature = "(Z)V";
+			pMethods[1].fnPtr = (void *)Java_apple_awt_CPrinterJob_printLoop;
+			pMethods[2].name = "validatePaper";
+			pMethods[2].signature = "(Ljava/awt/print/Paper;Ljava/awt/print/Paper;)V";
+			pMethods[2].fnPtr = (void *)Java_apple_awt_CPrinterJob_validatePaper;
+			t.pEnv->RegisterNatives( cPrinterJobClass, pMethods, 3 );
+
+			// Java on Mac OS X 10.4 has a different signature for some methods
+			// so check for it if an exception is thrown
+			if ( t.pEnv->ExceptionCheck() )
+			{
+				t.pEnv->ExceptionClear();
+				pMethods[1].signature = "(ZII)Z";
+				pMethods[1].fnPtr = (void *)Java_apple_awt_CPrinterJob_printLoopBoolean;
+				t.pEnv->RegisterNatives( cPrinterJobClass, pMethods, 3 );
 			}
 		}
 
