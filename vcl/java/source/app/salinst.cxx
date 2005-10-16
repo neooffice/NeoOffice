@@ -362,6 +362,16 @@ void SalInstance::AcquireYieldMutex( ULONG nCount )
 
 void SalInstance::Yield( BOOL bWait )
 {
+	// When we are in the native event dispatch thread, allow any pending
+	// native timers to run but don't dispatch any events as we might be in
+	// a signal handler and we will block since we don't have the SalYieldMutex
+	// lock
+	if ( GetCurrentEventLoop() == GetMainEventLoop() )
+	{
+		ReceiveNextEvent( 0, NULL, 0, false, NULL );
+		return;
+	}
+
 	SalData *pSalData = GetSalData();
 	com_sun_star_vcl_VCLEvent *pEvent;
 
