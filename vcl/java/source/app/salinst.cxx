@@ -154,7 +154,6 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 				// Fix bug 679 by checking if the condition was
 				// released to avoid a deadlock
-				OSErr nRet = userCanceledErr;
 				if ( !Application::IsShutDown() && pSalData->mbNativeEventSucceeded )
 				{
 					// We need to let any pending timers run so that we

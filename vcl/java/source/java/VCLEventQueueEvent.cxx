@@ -148,7 +148,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			// Ignore SALEVENT_SHUTDOWN events when recursing into this
 			// method or when in presentation mode
 			ImplSVData *pSVData = ImplGetSVData();
-			if ( pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpFirstFloat && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mpPresentationFrame && pSalData->maFrameList.size())
+			if ( pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpFirstFloat && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mpPresentationFrame && !pSalData->mbInNativeModalSheet && pSalData->maFrameList.size() )
 			{
 				SalFrame *pFrame = pSalData->maFrameList.front();
 				if ( pFrame )
@@ -162,7 +162,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			// Fix bug 168 && 607 by reposting SALEVENT_*DOCUMENT events when
 			// recursing into this method while opening a document
 			ImplSVData *pSVData = ImplGetSVData();
-			if ( pSVData->maAppData.mnDispatchLevel == 1 && !ImplGetSVData()->maWinData.mpLastExecuteDlg && !pSalData->mpPresentationFrame )
+			if ( pSVData->maAppData.mnDispatchLevel == 1 && !ImplGetSVData()->maWinData.mpLastExecuteDlg && !pSalData->mpPresentationFrame && !pSalData->mbInNativeModalSheet )
 			{
 				String aEmptyStr;
 				ApplicationEvent aAppEvt( aEmptyStr, aEmptyStr, SALEVENT_OPENDOCUMENT ? APPEVENT_OPEN_STRING : APPEVENT_PRINT_STRING, getPath() );
@@ -177,36 +177,42 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_ABOUT:
 		{
-			// [ed] 1/25/05 Send ourselves an about appleevent
-			// that can be handled by the sfx2 module
-			AppleEvent theEvent;
-			ProcessSerialNumber me = { 0, kCurrentProcess };
-			AEDesc target;
-			AECreateDesc( typeProcessSerialNumber, &me, sizeof( ProcessSerialNumber ), &target );
-			if ( AECreateAppleEvent( kCoreEventClass, kAEAbout, &target, kAutoGenerateReturnID, kAnyTransactionID, &theEvent ) == noErr )
+			if ( !pSalData->mbInNativeModalSheet )
 			{
-				AppleEvent theReply = { typeNull, NULL };
-				AESend( &theEvent, &theReply, kAENoReply, kAENormalPriority, kNoTimeOut, NULL, NULL );
-				AEDisposeDesc( &theEvent );
+				// [ed] 1/25/05 Send ourselves an about appleevent
+				// that can be handled by the sfx2 module
+				AppleEvent theEvent;
+				ProcessSerialNumber me = { 0, kCurrentProcess };
+				AEDesc target;
+				AECreateDesc( typeProcessSerialNumber, &me, sizeof( ProcessSerialNumber ), &target );
+				if ( AECreateAppleEvent( kCoreEventClass, kAEAbout, &target, kAutoGenerateReturnID, kAnyTransactionID, &theEvent ) == noErr )
+				{
+					AppleEvent theReply = { typeNull, NULL };
+					AESend( &theEvent, &theReply, kAENoReply, kAENormalPriority, kNoTimeOut, NULL, NULL );
+					AEDisposeDesc( &theEvent );
+				}
+				AEDisposeDesc( &target );
 			}
-			AEDisposeDesc( &target );
 			return;
 		}
 		case SALEVENT_PREFS:
 		{
-			// [ed] 1/25/05 Send ourselves a prefs appleevent
-			// that can be handled by the sfx2 module
-			AppleEvent theEvent;
-			ProcessSerialNumber me = { 0, kCurrentProcess };
-			AEDesc target;
-			AECreateDesc( typeProcessSerialNumber, &me, sizeof( ProcessSerialNumber ), &target );
-			if ( AECreateAppleEvent( kCoreEventClass, 'mPRF', &target, kAutoGenerateReturnID, kAnyTransactionID, &theEvent ) == noErr )
+			if ( !pSalData->mbInNativeModalSheet )
 			{
-				AppleEvent theReply = { typeNull, NULL };
-				AESend( &theEvent, &theReply, kAENoReply, kAENormalPriority, kNoTimeOut, NULL, NULL );
-				AEDisposeDesc( &theEvent );
+				// [ed] 1/25/05 Send ourselves a prefs appleevent
+				// that can be handled by the sfx2 module
+				AppleEvent theEvent;
+				ProcessSerialNumber me = { 0, kCurrentProcess };
+				AEDesc target;
+				AECreateDesc( typeProcessSerialNumber, &me, sizeof( ProcessSerialNumber ), &target );
+				if ( AECreateAppleEvent( kCoreEventClass, 'mPRF', &target, kAutoGenerateReturnID, kAnyTransactionID, &theEvent ) == noErr )
+				{
+					AppleEvent theReply = { typeNull, NULL };
+					AESend( &theEvent, &theReply, kAENoReply, kAENormalPriority, kNoTimeOut, NULL, NULL );
+					AEDisposeDesc( &theEvent );
+				}
+				AEDisposeDesc( &target );
 			}
-			AEDisposeDesc( &target );
 			return;
 		}
 	}
