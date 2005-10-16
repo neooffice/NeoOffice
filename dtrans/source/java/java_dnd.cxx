@@ -673,7 +673,8 @@ JavaDropTarget::JavaDropTarget() :
 	mbActive( sal_True ),
 	mnDefaultActions( DNDConstants::ACTION_NONE ),
 	mpNativeWindow( NULL ),
-	mbRejected( false )
+	mbRejected( false ),
+	mpWindow( NULL )
 {
 }
 
@@ -694,6 +695,14 @@ void SAL_CALL JavaDropTarget::initialize( const Sequence< Any >& arguments ) thr
 		arguments.getConstArray()[0] >>= nWindow;
 		if ( nWindow )
 			mpNativeWindow = (WindowRef)nWindow;
+	}
+
+	if ( arguments.getLength() > 1 )
+	{
+		sal_Int32 nWindow;
+		arguments.getConstArray()[1] >>= nWindow;
+		if ( nWindow )
+			mpWindow = (Window *)nWindow;
 	}
 
 	if ( !mpNativeWindow || !IsValidWindowPtr( mpNativeWindow ) )
@@ -919,6 +928,19 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTran
 {
 	// Don't set the cursor to the reject cursor since a drop has occurred
 	bNoRejectCursor = true;
+
+	// Reset the pointer to the last pointer set in VCL window
+	if ( mpWindow )
+	{
+		// We need to toggle the style to make sure that VCL resets the
+		// pointer
+		PointerStyle nStyle = mpWindow->GetPointer().GetStyle();
+		if ( nStyle == POINTER_ARROW )
+			mpWindow->SetPointer( Pointer( POINTER_NULL ) );
+		else
+			mpWindow->SetPointer( Pointer( POINTER_ARROW ) );
+		mpWindow->SetPointer( Pointer( nStyle ) );
+	}
 
 	if ( mbRejected )
 		return false;
