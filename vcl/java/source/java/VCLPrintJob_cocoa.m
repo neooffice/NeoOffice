@@ -98,6 +98,7 @@
 		}
 
 		mbFinished = NO;
+		[mpInfo setPrinter:[NSPrintInfo defaultPrinter]];
 		[pPanel beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(printPanelDidEnd:returnCode:contextInfo:) contextInfo:nil];
 	}
 }
