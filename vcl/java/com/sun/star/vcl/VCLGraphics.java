@@ -584,7 +584,7 @@ public final class VCLGraphics {
 					while (clipRects.hasNext()) {
 						// Some versions of the JVM ignore clip in copyArea()
 						// so limit copying to the clip area
-						Rectangle clipRect = new Rectangle(destX, destY, destWidth, destHeight).intersection(((Rectangle)clipRects.next()));
+						Rectangle clipRect = (Rectangle)clipRects.next();
 						g.copyArea(srcX + clipRect.x - destX, srcY + clipRect.y - destY, clipRect.width, clipRect.height, destX - srcX, destY - srcY);
 					}
 				}
@@ -1078,7 +1078,10 @@ public final class VCLGraphics {
 			return;
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
-		Rectangle destBounds = polygon.getBounds().intersection(graphicsBounds);
+		Rectangle destBounds = polygon.getBounds();
+		destBounds.width++;
+		destBounds.height++;
+		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
 
