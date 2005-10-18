@@ -44,6 +44,9 @@ typedef void* id;
 BEGIN_C
 #endif
 BOOL NSPrintInfo_pageRange( id pNSPrintInfo, int *nFirst, int *nLast );
+id NSPrintInfo_showPrintDialog( id pNSPrintInfo, id pNSWindow );
+BOOL NSPrintPanel_finished( id pDialog );
+BOOL NSPrintPanel_result( id pDialog );
 #ifdef __cplusplus
 END_C
 #endif

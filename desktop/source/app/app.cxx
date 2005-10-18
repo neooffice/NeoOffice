@@ -2228,11 +2228,25 @@ void Desktop::OpenClients()
 
     // no default document if a document was loaded by recovery or by command line or if soffice is used as server
     if ( bRestored || bLoaded || xFirst.is() || pArgs->IsServer() )
+#ifdef USE_JAVA
+    {
+        ::desktop::Desktop::bSuppressOpenDefault = sal_True;
         return;
+    }
+#else	// USE_JAVA
+        return;
+#endif	// USE_JAVA
 
     if ( pArgs->IsQuickstart() || pArgs->IsInvisible() || pArgs->IsBean() )
+#ifdef USE_JAVA
+    {
+        ::desktop::Desktop::bSuppressOpenDefault = sal_True;
+        return;
+    }
+#else	// USE_JAVA
         // soffice was started as tray icon ...
         return;
+#endif	// USE_JAVA
 
     {
         OpenDefault();

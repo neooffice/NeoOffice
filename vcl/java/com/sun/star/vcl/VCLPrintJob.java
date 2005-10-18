@@ -173,7 +173,8 @@ public final class VCLPrintJob implements Printable, Runnable {
 			catch (Throwable t) {}
 		}
 
-		pageFormat.setEditable(true);
+		if (pageFormat != null)
+			pageFormat.setEditable(true);
 
 	}
 
@@ -292,8 +293,8 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 *
 	 * @param p the <code>VCLPageFormat</code>
 	 * @param n the job name
-	 * @return <code>true</code> if a print job was successfully created or
-	 *  <code>false</code> if the user cancelled the print dialog
+	 * @return <code>true</code> if the print job is properly setup otherwise
+	 *  <code>false</code>
 	 */
 	public boolean startJob(VCLPageFormat p, String n) {
 
@@ -302,16 +303,9 @@ public final class VCLPrintJob implements Printable, Runnable {
 			pageFormat = p;
 			job = pageFormat.getPrinterJob();
 			job.setPrintable(this, pageFormat.getPageFormat());
-			if (job.printDialog()) {
-				pageFormat.setEditable(false);
-				jobStarted = true;
-			}
-			else {
-				jobStarted = false;
-			}
-		}
-		else {
 			job.setJobName(n);
+			pageFormat.setEditable(false);
+			jobStarted = true;
 		}
 
 		return jobStarted;

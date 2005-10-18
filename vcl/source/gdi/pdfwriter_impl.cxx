@@ -5354,7 +5354,11 @@ bool PDFWriterImpl::writeBitmapObject( BitmapEmit& rObject, bool bMask )
     CHECK_RETURN( (osl_File_E_None == osl_getFilePos( m_aFile, &nStartPos )) );
 
     beginCompression();
+#ifdef USE_JAVA
+    if( ! bTrueColor )
+#else	// USE_JAVA
     if( ! bTrueColor || pAccess->GetScanlineFormat() == BMP_FORMAT_24BIT_TC_RGB )
+#endif	// USE_JAVA
     {
         const int nScanLineBytes = 1 + ( pAccess->GetBitCount() * ( pAccess->Width() - 1 ) / 8U );
 

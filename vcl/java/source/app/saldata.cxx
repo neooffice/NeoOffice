@@ -62,6 +62,8 @@ SalData::SalData()
 	mpPresentationFrame = NULL;
 	mbNativeEventSucceeded = false;
 	mbInNativeMenuTracking = false;
+	mbInNativeModalSheet = false;
+	mpNativeModalSheetFrame = NULL;
 
 	// Set condition so that they don't block
 	maNativeEventCondition.set();

@@ -65,8 +65,10 @@ public:
 	void				dispose();
 	com_sun_star_vcl_VCLGraphics*	getGraphics();
 	const Rectangle		getImageableBounds();
+	void*				getNativePrinterJob();
 	Orientation			getOrientation();
 	const Size			getPageSize();
+	java_lang_Object*	getPrinterJob();
 	void				setOrientation( Orientation _par0 );
 	Paper				getPaperType();
 	sal_Bool			setup();

@@ -108,6 +108,45 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 
 			if ( !Application::IsShutDown() )
 			{
+				::std::map< OUString, ATSFontRef > aATSFontNameMapping;
+				bool bContinue = true;
+				while ( bContinue )
+				{
+					ATSFontIterator aIterator;
+					ATSFontIteratorCreate( kATSFontContextLocal, NULL, NULL, kATSOptionFlagsUnRestrictedScope, &aIterator );
+					for ( ; ; )
+					{
+						ATSFontRef aFont;
+						OSStatus nErr = ATSFontIteratorNext( aIterator, &aFont );
+						if ( nErr == kATSIterationCompleted )
+						{
+							bContinue = false;
+							break;
+						}
+						else if ( nErr == kATSIterationScopeModified )
+						{
+							aATSFontNameMapping.clear();
+							break;
+						}
+						else
+						{
+							CFStringRef aString;
+							if ( ATSFontGetPostScriptName( aFont, kATSOptionFlagsDefault, &aString ) == noErr )
+							{
+								CFIndex nLen = CFStringGetLength( aString );
+								CFRange aRange = CFRangeMake( 0, nLen );
+								sal_Unicode pBuffer[ nLen + 1 ];
+								CFStringGetCharacters( aString, aRange, pBuffer );
+								pBuffer[ nLen ] = 0;
+								OUString aName( pBuffer );
+								::std::map< OUString, ATSFontRef >::const_iterator ait = aATSFontNameMapping.find( aName );
+								if ( ait == aATSFontNameMapping.end() )
+									aATSFontNameMapping[ aName ] = aFont;
+							}
+						}
+					}
+				}
+
 				VCLThreadAttach t;
 				if ( t.pEnv )
 				{
@@ -133,34 +172,27 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 
 							OUString aFontName( pVCLFont->getName() );
 							XubString aXubFontName( aFontName );
-
-							CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aFontName.getStr(), aFontName.getLength(), kCFAllocatorNull );
-							if ( !aString )
+							ATSFontRef aFont;
+							::std::map< OUString, ATSFontRef >::const_iterator ait = aATSFontNameMapping.find( aFontName );
+							if ( ait == aATSFontNameMapping.end() )
 							{
 								delete pVCLFont;
 								continue;
 							}
 
-							ATSFontRef aFont = ATSFontFindFromPostScriptName( aString, kATSOptionFlagsDefault );
-							if ( !aFont )
-							{
-								CFRelease( aString );
-								delete pVCLFont;
-								continue;
-							}
-
+							aFont = ait->second;
 							void *pNativeFont = (void *)FMGetFontFromATSFontRef( aFont );
-							pVCLFont->setNativeFont( pNativeFont );
 							if ( (ATSUFontID)pNativeFont == kATSUInvalidFontID )
 							{
-								CFRelease( aString );
+								delete pVCLFont;
 								continue;
 							}
+
+							pVCLFont->setNativeFont( pNativeFont );
 
 							CFStringRef aDisplayString;
 							if ( ATSFontGetName( aFont, kATSOptionFlagsDefault, &aDisplayString ) != noErr )
 							{
-								CFRelease( aString );
 								delete pVCLFont;
 								continue;
 							}
@@ -177,15 +209,17 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							// with a "."
 							if ( !aDisplayName.getLength() || aDisplayName.toChar() == (sal_Unicode)'.' )
 							{
-								CFRelease( aString );
 								delete pVCLFont;
 								continue;
 							}
 
+							CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aFontName.getStr(), aFontName.getLength(), kCFAllocatorNull );
 							void *pNSFont = NSFont_create( aString, pVCLFont->getSize() );
+							if ( aString )
+								CFRelease( aString );
+
 							if ( !pNSFont )
 							{
-								CFRelease( aString );
 								delete pVCLFont;
 								continue;
 							}
@@ -211,8 +245,9 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							pSystemFont->mpVCLFont = pVCLFont;
 							pData->mpSysData = (void *)pSystemFont;
 
-							// Multiple native fonts can map to the same font due to
-							// disabling and reenabling of fonts with the same name
+							// Multiple native fonts can map to the same font
+							// due to disabling and reenabling of fonts with
+							// the same name
 							pSalData->maNativeFontMapping[ pNativeFont ] = pData;
 
 							// Determine pitch and family type
@@ -252,7 +287,6 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							pData->mbEmbeddable = FALSE;
 
 							NSFont_release( pNSFont );
-							CFRelease( aString );
 						}
 
 						delete pFonts;
@@ -291,6 +325,8 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						}
 					}
 				}
+
+				aATSFontNameMapping.clear();
 			}
 
 			rSolarMutex.release();

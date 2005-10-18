@@ -59,6 +59,9 @@
 #ifndef _OSL_THREAD_H_
 #include <osl/thread.h>
 #endif
+#ifndef _SV_WINDOW_HXX
+#include <vcl/window.hxx>
+#endif
 
 #include <premac.h>
 #include <Carbon/Carbon.h>
@@ -112,6 +115,7 @@ public:
     ::osl::Mutex			maMutex; 
 	WindowRef				mpNativeWindow;
     bool					mbRejected;
+	Window*					mpWindow;
 
 							JavaDropTarget();
 	virtual					~JavaDropTarget();

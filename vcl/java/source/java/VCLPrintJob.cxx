@@ -35,8 +35,17 @@
 
 #define _SV_COM_SUN_STAR_VCL_VCLPRINTJOB_CXX
 
+#ifndef _SV_SALDATA_HXX
+#include <saldata.hxx>
+#endif
+#ifndef _SV_SALFRAME_HXX
+#include <salframe.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX
 #include <com/sun/star/vcl/VCLPrintJob.hxx>
+#endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
+#include <com/sun/star/vcl/VCLFrame.hxx>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
@@ -47,6 +56,9 @@
 #ifndef _SV_JAVA_LANG_CLASS_HXX
 #include <java/lang/Class.hxx>
 #endif
+#ifndef _SV_SVAPP_HXX
+#include <svapp.hxx>
+#endif
 #ifndef _STRING_HXX
 #include <tools/string.hxx>
 #endif
@@ -54,6 +66,7 @@
 #include "VCLPrintJob_cocoa.h"
 
 using namespace vcl;
+using namespace vos;
 
 // ============================================================================
 
@@ -108,7 +121,11 @@ void com_sun_star_vcl_VCLPrintJob::abortJob()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
+		{
+			ULONG nCount = Application::ReleaseSolarMutex();
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+			Application::AcquireSolarMutex( nCount );
+		}
 	}
 }
 
@@ -146,7 +163,11 @@ void com_sun_star_vcl_VCLPrintJob::endJob()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
+		{
+			ULONG nCount = Application::ReleaseSolarMutex();
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+			Application::AcquireSolarMutex( nCount );
+		}
 	}
 }
 
@@ -165,7 +186,11 @@ void com_sun_star_vcl_VCLPrintJob::endPage()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
+		{
+			ULONG nCount = Application::ReleaseSolarMutex();
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+			Application::AcquireSolarMutex( nCount );
+		}
 	}
 }
 
@@ -284,27 +309,58 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::isFinished()
 
 // ----------------------------------------------------------------------------
 
-sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat *_par0, ::rtl::OUString _par1 ) 
+sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat *_par0, ::rtl::OUString _par1, sal_Bool _par2 ) 
 {
 	static jmethodID mID = NULL;
 	sal_Bool out = sal_False;
-	VCLThreadAttach t;
-	if ( t.pEnv )
+
+	if ( _par2 )
 	{
-		if ( !mID )
+		VCLThreadAttach t;
+		if ( t.pEnv )
 		{
-			char *cSignature = "(Lcom/sun/star/vcl/VCLPageFormat;Ljava/lang/String;)Z";
-			mID = t.pEnv->GetMethodID( getMyClass(), "startJob", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jvalue args[2];
-			args[0].l = _par0->getJavaObject();
-			args[1].l = StringToJavaString( t.pEnv, _par1 );
-			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethodA( object, getMyClass(), mID, args );
+			if ( !mID )
+			{
+				char *cSignature = "(Lcom/sun/star/vcl/VCLPageFormat;Ljava/lang/String;)Z";
+				mID = t.pEnv->GetMethodID( getMyClass(), "startJob", cSignature );
+			}
+			OSL_ENSURE( mID, "Unknown method id!" );
+			if ( mID )
+			{
+				jvalue args[2];
+				args[0].l = _par0->getJavaObject();
+				args[1].l = StringToJavaString( t.pEnv, _par1 );
+				out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethodA( object, getMyClass(), mID, args );
+			}
 		}
 	}
+	else
+	{
+		SalData *pSalData = GetSalData();
+
+		SalFrame *pFocusFrame = pSalData->mpFocusFrame;
+		if ( pFocusFrame )
+		{
+			// Make sure frame is a top-level window
+			while ( pFocusFrame->maFrameData.mpParent && pFocusFrame->maFrameData.mpParent->maFrameData.mbVisible )
+				pFocusFrame = pFocusFrame->maFrameData.mpParent;
+
+			// Ignore any AWT events while the print dialog is showing to
+			// emulate a modal dialog
+			void *pNSPrintInfo = _par0->getNativePrinterJob();
+			void *pDialog = NSPrintInfo_showPrintDialog( pNSPrintInfo, pFocusFrame->maFrameData.mpVCLFrame->getNativeWindow() );
+
+			pSalData->mpNativeModalSheetFrame = pFocusFrame;
+			pSalData->mbInNativeModalSheet = true;
+			while ( !NSPrintPanel_finished( pDialog ) )
+				Application::Reschedule();
+			pSalData->mbInNativeModalSheet = false;
+			pSalData->mpNativeModalSheetFrame = NULL;
+
+			out = (sal_Bool)NSPrintPanel_result( pDialog );
+		}
+	}
+
 	return out;
 }
 
@@ -329,7 +385,11 @@ com_sun_star_vcl_VCLGraphics *com_sun_star_vcl_VCLPrintJob::startPage( Orientati
 			args[0].i = jint( _par0 );
 			jobject tempObj = t.pEnv->CallNonvirtualObjectMethodA( object, getMyClass(), mID, args );
 			if ( tempObj )
+			{
+				ULONG nCount = Application::ReleaseSolarMutex();
 				out = new com_sun_star_vcl_VCLGraphics( tempObj );
+				Application::AcquireSolarMutex( nCount );
+			}
 		}
 	}
 	return out;
