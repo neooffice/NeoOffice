@@ -196,92 +196,16 @@ void com_sun_star_vcl_VCLPrintJob::endPage()
 
 // ----------------------------------------------------------------------------
 
-void *com_sun_star_vcl_VCLPrintJob::getNativePrinterJob()
-{
-	void *out = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		java_lang_Object *printerJob = getPrinterJob();
-		if ( printerJob )
-		{
-			jobject tempObj = printerJob->getJavaObject();
-			if ( tempObj )
-			{
-				jclass tempClass = t.pEnv->FindClass( "apple/awt/CPrinterJob" );
-				if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
-				{
-					static jmethodID mIDGetNSPrintInfo = NULL;
-					static bool bReturnsInt = false;
-					if ( !mIDGetNSPrintInfo )
-					{
-						char *cSignature = "()J";
-						mIDGetNSPrintInfo = t.pEnv->GetMethodID( tempClass, "getNSPrintInfo", cSignature );
-						if ( !mIDGetNSPrintInfo )
-						{
-							// Java 1.4.1 has a different signature so check
-							// for it if we cannot find the first signature
-							if ( t.pEnv->ExceptionCheck() )
-								t.pEnv->ExceptionClear();
-							cSignature = "()I";
-							mIDGetNSPrintInfo = t.pEnv->GetMethodID( tempClass, "getNSPrintInfo", cSignature );
-							if ( mIDGetNSPrintInfo )
-								bReturnsInt = true;
-						}
-					}
-					OSL_ENSURE( mIDGetNSPrintInfo, "Unknown method id!" );
-					if ( mIDGetNSPrintInfo )
-					{
-						if ( bReturnsInt )
-							out = (void *)t.pEnv->CallIntMethod( tempObj, mIDGetNSPrintInfo );
-						else
-							out = (void *)t.pEnv->CallLongMethod( tempObj, mIDGetNSPrintInfo );
-					}
-				}
-			}
-			delete printerJob;
-		}
-	}
-	return out;
-}
-
-// ----------------------------------------------------------------------------
-
-XubString com_sun_star_vcl_VCLPrintJob::getPageRange()
+XubString com_sun_star_vcl_VCLPrintJob::getPageRange( com_sun_star_vcl_VCLPageFormat *_par0 )
 {
 	XubString out;
 	int nFirst;
 	int nLast;
-	if ( NSPrintInfo_pageRange( getNativePrinterJob(), &nFirst, &nLast ) )
+	if ( NSPrintInfo_pageRange( _par0->getNativePrinterJob(), &nFirst, &nLast ) )
 	{
 		out = XubString::CreateFromInt32( nFirst );
 		out += '-';
 		out += XubString::CreateFromInt32( nLast );
-	}
-	return out;
-}
-
-// ----------------------------------------------------------------------------
-
-java_lang_Object *com_sun_star_vcl_VCLPrintJob::getPrinterJob()
-{
-	static jmethodID mID = NULL;
-	java_lang_Object *out = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()Ljava/awt/print/PrinterJob;";
-			mID = t.pEnv->GetMethodID( getMyClass(), "getPrinterJob", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
-			if ( tempObj )
-				out = new java_lang_Object( tempObj );
-		}
 	}
 	return out;
 }

@@ -283,7 +283,7 @@ ULONG SalPrinter::GetErrorCode()
 
 XubString SalPrinter::GetPageRange()
 {
-	return maPrinterData.mpVCLPrintJob->getPageRange();
+	return maPrinterData.mpVCLPrintJob->getPageRange( maPrinterData.mpVCLPageFormat );
 }
 
 // =======================================================================
