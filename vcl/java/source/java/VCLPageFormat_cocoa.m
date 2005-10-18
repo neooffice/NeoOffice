@@ -36,19 +36,12 @@
 #import <Cocoa/Cocoa.h>
 #import "VCLPageFormat_cocoa.h"
 
+
 @interface VCLPrintInfo : NSPrintInfo
-{
-}
-+ (void)installVCLPrintInfo:(id)pObject;
 - (id)copyWithZone:(NSZone *)pZone;
 @end
 
 @implementation VCLPrintInfo
-
-+ (void)installVCLPrintInfo:(id)pObject;
-{
-	[VCLPrintInfo poseAsClass:[NSPrintInfo class]];
-}
 
 - (id)copyWithZone:(NSZone *)pZone
 {
@@ -56,6 +49,19 @@
 	// print info and we need all copies to stay in sync whenever the selected
 	// printer changes
 	return [self retain];
+}
+
+@end
+
+@interface InstallVCLPrintInfo : NSObject
+- (void)installVCLPrintInfo:(id)pObject;
+@end
+
+@implementation InstallVCLPrintInfo
+
+- (void)installVCLPrintInfo:(id)pObject
+{
+	[VCLPrintInfo poseAsClass:[NSPrintInfo class]];
 }
 
 @end
@@ -174,14 +180,15 @@ id NSPrintInfo_create()
 
 void NSPrintInfo_installVCLPrintInfo()
 {
-	[VCLPrintInfo performSelectorOnMainThread:@selector(installVCLPrintInfo:) withObject:nil waitUntilDone:YES];
-
+	InstallVCLPrintInfo *pInstallVCLPrintInfo = [[InstallVCLPrintInfo alloc] init];
+	[pInstallVCLPrintInfo performSelectorOnMainThread:@selector(installVCLPrintInfo:) withObject:pInstallVCLPrintInfo waitUntilDone:YES];
+	[pInstallVCLPrintInfo release];
 }
 
 void NSPrintInfo_setSharedPrintInfo( id pNSPrintInfo )
 {
 	if ( pNSPrintInfo )
-		[NSPrintInfo performSelectorOnMainThread:@selector(setSharedPrintInfo:) withObject:pNSPrintInfo waitUntilDone:YES];
+		[VCLPrintInfo setSharedPrintInfo:pNSPrintInfo];
 }
 
 id NSPrintInfo_showPageLayoutDialog( id pNSPrintInfo, id pNSWindow, BOOL bLandscape )
