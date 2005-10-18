@@ -37,14 +37,8 @@ package com.sun.star.vcl;
 
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
-import java.awt.color.ColorSpace;
 import java.awt.image.BufferedImage;
-import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferInt;
-import java.awt.image.DirectColorModel;
-import java.awt.image.Raster;
-import java.awt.image.SampleModel;
-import java.awt.image.WritableRaster;
 
 /**
  * The Java class that implements the SalFrame C++ class methods.
@@ -55,19 +49,9 @@ import java.awt.image.WritableRaster;
 public final class VCLBitmap {
 
 	/**
-	 * The default 32 bit color model.
-	 */
-	private static DirectColorModel default32BitColorModel = new DirectColorModel(ColorSpace.getInstance(ColorSpace.CS_sRGB), 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000, true, DataBuffer.TYPE_INT);
-
-	/**
 	 * The bit count.
 	 */
 	private int bitCount = 0;
-
-	/**
-	 * The data buffer.
-	 */
-	private int[] data = null;
 
 	/**
 	 * The height.
@@ -113,9 +97,7 @@ public final class VCLBitmap {
 		// Create the image. Note that all rasters are mapped to 32 bit rasters
 		// since this is what the JVM will convert all rasters to every time
 		// a non-32 bit raster is drawn.
-		data = new int[width * height];
-		WritableRaster raster = Raster.createWritableRaster(VCLBitmap.default32BitColorModel.createCompatibleSampleModel(width, height), new DataBufferInt(data, data.length), null);
-        image = new BufferedImage(VCLBitmap.default32BitColorModel, raster, true, null);
+		image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE);
 
 	}
 
@@ -176,13 +158,16 @@ public final class VCLBitmap {
 	}
 
 	/**
-	 * Returns the bitmap's data.
+	 * Returns the bitmap's data. Warning: calling this method will cause all
+	 * succeeding drawing operations to this image to be an order of magnitude
+	 * slower on Mac OS X 10.4 due to the way the JVM does graphics
+	 * acceleration.
 	 *
 	 * @return the bitmap's data
 	 */
 	public int[] getData() {
 
-		return data;
+		return ((DataBufferInt)image.getRaster().getDataBuffer()).getData();
 
 	}
 
