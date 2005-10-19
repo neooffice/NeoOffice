@@ -864,7 +864,6 @@ public final class VCLMenuItemData {
 			m.removeAll();
 		}
 
-		awtMI.removeNotify();
 		awtPeers.remove(awtPeers.indexOf(awtMI));
 	}
 					
@@ -912,10 +911,8 @@ public final class VCLMenuItemData {
 				m.removeAll();
 			}
 
-			if (mi.getParent() == null) {
-				mi.removeNotify();
+			if (mi.getParent() == null)
 				savedPeers.remove(mi);
-			}
 		}
 
 		awtPeers.clear();

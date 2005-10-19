@@ -50,8 +50,8 @@
 
 - (void)getNSWindow:(id)pObject
 {
-	if ( mpCWindow && [mpCWindow respondsToSelector:@selector(getNSWindow)] )
-		mpWindow = [mpCWindow getNSWindow];
+	if ( [mpCWindow respondsToSelector:@selector(getNSWindow)] )
+		mpWindow = (NSWindow *)[mpCWindow getNSWindow];
 }
 
 - (id)initWithCWindow:(id)pCWindow
@@ -71,24 +71,77 @@
 
 @end
 
+@interface GetWindowRef : NSObject
+{
+	id					mpCWindow;
+	WindowRef			maWindow;
+}
+- (void)getWindowRef:(id)pObject;
+- (id)initWithCWindow:(id)pCWindow;
+- (WindowRef)windowRef;
+@end
+
+@implementation GetWindowRef
+
+- (void)getWindowRef:(id)pObject
+{
+	if ( [mpCWindow respondsToSelector:@selector(getNSWindow)] )
+	{
+		NSWindow *pWindow = (NSWindow *)[mpCWindow getNSWindow];
+		if ( pWindow )
+			maWindow = [pWindow windowRef];
+	}
+}
+
+- (id)initWithCWindow:(id)pCWindow
+{
+	[super init];
+
+	mpCWindow = pCWindow;
+	maWindow = nil;
+
+	return self;
+}
+
+- (WindowRef)windowRef
+{
+	return maWindow;
+}
+
+@end
+
 id CWindow_getNSWindow( id pCWindow )
 {
 	NSWindow *pNSWindow = nil;
 
-	GetNSWindow *pGetNSWindow = [[GetNSWindow alloc] initWithCWindow:pCWindow];
-	[pGetNSWindow performSelectorOnMainThread:@selector(getNSWindow:) withObject:pGetNSWindow waitUntilDone:YES];
-	pNSWindow = [pGetNSWindow window];
-	[pGetNSWindow release];
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pCWindow )
+	{
+		GetNSWindow *pGetNSWindow = [[GetNSWindow alloc] initWithCWindow:pCWindow];
+		[pGetNSWindow performSelectorOnMainThread:@selector(getNSWindow:) withObject:pGetNSWindow waitUntilDone:YES];
+		pNSWindow = [pGetNSWindow window];
+	}
+
+	[pPool release];
 
 	return pNSWindow;
 }
 
-WindowRef NSWindow_windowRef( id pNSWindow )
+WindowRef CWindow_getWindowRef( id pCWindow )
 {
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	WindowRef aWindow = nil;
 
-	if ( pNSWindow )
-		aWindow = [pNSWindow windowRef];
+	if ( pCWindow )
+	{
+		GetWindowRef *pGetWindowRef = [[GetWindowRef alloc] initWithCWindow:pCWindow];
+		[pGetWindowRef performSelectorOnMainThread:@selector(getWindowRef:) withObject:pGetWindowRef waitUntilDone:YES];
+		aWindow = [pGetWindowRef windowRef];
+	}
+
+	[pPool release];
 
 	return aWindow;
 }

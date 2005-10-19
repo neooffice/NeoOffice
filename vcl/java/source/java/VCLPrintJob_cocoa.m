@@ -107,6 +107,10 @@
 
 BOOL NSPrintInfo_pageRange( id pNSPrintInfo, int *nFirst, int *nLast )
 {
+	BOOL bRet = NO;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	if ( pNSPrintInfo && nFirst && nLast )
 	{
 		NSMutableDictionary *pDictionary = [(NSPrintInfo *)pNSPrintInfo dictionary];
@@ -122,24 +126,34 @@ BOOL NSPrintInfo_pageRange( id pNSPrintInfo, int *nFirst, int *nLast )
 					*nFirst = [pFirst intValue];
 					*nLast = [pLast intValue];
 					if ( nFirst > 0 && nLast > nFirst )
-						return YES;
+						bRet = YES;
 				}
 			}
 		}
 	}
 
-	return NO;
+	[pPool release];
+
+	return bRet;
 }
 
 id NSPrintInfo_showPrintDialog( id pNSPrintInfo, id pNSWindow )
 {
 	ShowPrintDialog *pRet = nil;
 
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	if ( pNSPrintInfo && pNSWindow )
 	{
 		pRet = [[ShowPrintDialog alloc] initWithPrintInfo:(NSPrintInfo *)pNSPrintInfo window:(NSWindow *)pNSWindow];
-		[pRet performSelectorOnMainThread:@selector(showPrintDialog:) withObject:pRet waitUntilDone:YES];
+		if ( pRet )
+		{
+			[pRet retain];
+			[pRet performSelectorOnMainThread:@selector(showPrintDialog:) withObject:pRet waitUntilDone:YES];
+		}
 	}
+
+	[pPool release];
 
 	return pRet;
 }
@@ -148,8 +162,12 @@ BOOL NSPrintPanel_finished( id pDialog )
 {
 	BOOL bRet = YES;
 
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	if ( pDialog )
 		bRet = [(ShowPrintDialog *)pDialog finished];
+
+	[pPool release];
 
 	return bRet;
 }
@@ -158,11 +176,15 @@ BOOL NSPrintPanel_result( id pDialog )
 {
 	BOOL bRet = NO;
 
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	if ( pDialog )
 	{
 		bRet = [(ShowPrintDialog *)pDialog result];
 		[(ShowPrintDialog *)pDialog release];
 	}
+
+	[pPool release];
 
 	return bRet;
 }

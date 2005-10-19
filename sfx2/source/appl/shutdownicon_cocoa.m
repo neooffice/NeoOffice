@@ -53,7 +53,6 @@
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag;
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication;
 - (void)applicationWillFinishLaunching:(NSNotification *)pNotification;
-- (void)dealloc;
 - (id)init;
 - (void)handleCalcCommand:(id)pObject;
 - (void)handleDrawCommand:(id)pObject;
@@ -116,17 +115,6 @@
 		[mpDelegate applicationWillFinishLaunching:pNotification];
 }
 
-- (void)dealloc
-{
-	if ( mpDockMenu )
-		[mpDockMenu release];
-
-	if ( mpDelegate )
-		[mpDelegate release];
-
-	[super dealloc];
-}
-
 - (id)init
 {
 	[super init];
@@ -175,7 +163,7 @@
 - (void)setDelegate:(id)pDelegate
 {
 	if ( pDelegate )
-    	mpDelegate = [pDelegate retain];
+    	mpDelegate = pDelegate;
 }
 
 @end
@@ -284,7 +272,10 @@
 
 void AddQuickstartMenuItems( int nCount, MenuCommand *pIDs, CFStringRef *pStrings )
 {
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	QuickstartMenuItems *pItems = [[QuickstartMenuItems alloc] initWithCount:nCount menuCommands:pIDs strings:pStrings];
 	[pItems performSelectorOnMainThread:@selector(addMenuItems:) withObject:pItems waitUntilDone:YES];
-	[pItems release];
+
+	[pPool release];
 }

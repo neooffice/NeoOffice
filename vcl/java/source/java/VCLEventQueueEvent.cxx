@@ -56,10 +56,20 @@
 #ifndef _SV_SALMENU_HXX
 #include <salmenu.hxx>
 #endif
+#ifndef _VOS_MODULE_HXX_
+#include <vos/module.hxx>
+#endif
 
-#include <premac.h>
-#include <Carbon/Carbon.h>
-#include <postmac.h>
+#define DOSTRING( x )			#x
+#define STRING( x )				DOSTRING( x )
+
+typedef void NativeAboutMenuHandler_Type();
+typedef void NativePreferencesMenuHandler_Type();
+
+static ::vos::OModule aAboutHandlerModule;
+static ::vos::OModule aPreferencesHandlerModule;
+static NativeAboutMenuHandler_Type *pAboutHandler = NULL;
+static NativePreferencesMenuHandler_Type *pPreferencesHandler = NULL;
 
 using namespace rtl;
 using namespace vcl;
@@ -177,42 +187,38 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_ABOUT:
 		{
-			if ( !pSalData->mbInNativeModalSheet )
+			// Load libsfx and invoke the native preferences handler
+			if ( !pAboutHandler )
 			{
-				// [ed] 1/25/05 Send ourselves an about appleevent
-				// that can be handled by the sfx2 module
-				AppleEvent theEvent;
-				ProcessSerialNumber me = { 0, kCurrentProcess };
-				AEDesc target;
-				AECreateDesc( typeProcessSerialNumber, &me, sizeof( ProcessSerialNumber ), &target );
-				if ( AECreateAppleEvent( kCoreEventClass, kAEAbout, &target, kAutoGenerateReturnID, kAnyTransactionID, &theEvent ) == noErr )
-				{
-					AppleEvent theReply = { typeNull, NULL };
-					AESend( &theEvent, &theReply, kAENoReply, kAENormalPriority, kNoTimeOut, NULL, NULL );
-					AEDisposeDesc( &theEvent );
-				}
-				AEDisposeDesc( &target );
+				OUString aLibName = OUString::createFromAscii( "libsfx" );
+				aLibName += OUString::valueOf( (sal_Int32)SUPD, 10 );
+				aLibName += OUString::createFromAscii( STRING( DLLSUFFIX ) );
+				aLibName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+				if ( aAboutHandlerModule.load( aLibName ) )
+					pAboutHandler = (NativeAboutMenuHandler_Type *)aAboutHandlerModule.getSymbol( OUString::createFromAscii( "NativeAboutMenuHandler" ) );
 			}
+
+			if ( pAboutHandler && !pSalData->mbInNativeModalSheet )
+				pAboutHandler();
+
 			return;
 		}
 		case SALEVENT_PREFS:
 		{
-			if ( !pSalData->mbInNativeModalSheet )
+			// Load libofa and invoke the native preferences handler
+			if ( !pPreferencesHandler )
 			{
-				// [ed] 1/25/05 Send ourselves a prefs appleevent
-				// that can be handled by the sfx2 module
-				AppleEvent theEvent;
-				ProcessSerialNumber me = { 0, kCurrentProcess };
-				AEDesc target;
-				AECreateDesc( typeProcessSerialNumber, &me, sizeof( ProcessSerialNumber ), &target );
-				if ( AECreateAppleEvent( kCoreEventClass, 'mPRF', &target, kAutoGenerateReturnID, kAnyTransactionID, &theEvent ) == noErr )
-				{
-					AppleEvent theReply = { typeNull, NULL };
-					AESend( &theEvent, &theReply, kAENoReply, kAENormalPriority, kNoTimeOut, NULL, NULL );
-					AEDisposeDesc( &theEvent );
-				}
-				AEDisposeDesc( &target );
+				OUString aLibName = OUString::createFromAscii( "libofa" );
+				aLibName += OUString::valueOf( (sal_Int32)SUPD, 10 );
+				aLibName += OUString::createFromAscii( STRING( DLLSUFFIX ) );
+				aLibName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+				if ( aPreferencesHandlerModule.load( aLibName ) )
+					pPreferencesHandler = (NativePreferencesMenuHandler_Type *)aPreferencesHandlerModule.getSymbol( OUString::createFromAscii( "NativePreferencesMenuHandler" ) );
 			}
+
+			if ( pPreferencesHandler && !pSalData->mbInNativeModalSheet )
+				pPreferencesHandler();
+
 			return;
 		}
 	}

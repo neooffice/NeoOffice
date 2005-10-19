@@ -49,7 +49,7 @@ typedef void* id;
 BEGIN_C
 #endif
 id CWindow_getNSWindow( id pCWindow );
-WindowRef NSWindow_windowRef( id pNSWindow );
+WindowRef CWindow_getWindowRef( id pCWindow );
 #ifdef __cplusplus
 END_C
 #endif

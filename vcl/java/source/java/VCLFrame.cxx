@@ -410,7 +410,52 @@ void *com_sun_star_vcl_VCLFrame::getNativeWindow()
 
 void *com_sun_star_vcl_VCLFrame::getNativeWindowRef()
 {
-	return NSWindow_windowRef( getNativeWindow() );
+	void *out = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		java_lang_Object *peer = getPeer();
+		if ( peer )
+		{
+			jobject tempObj = peer->getJavaObject();
+			if ( tempObj )
+			{
+				jclass tempClass = t.pEnv->FindClass( "apple/awt/ComponentModel" );
+				if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
+				{
+					static jmethodID mIDGetModelPtr = NULL;
+					static bool bReturnsInt = false;
+					if ( !mIDGetModelPtr )
+					{
+						char *cSignature = "()J";
+						mIDGetModelPtr = t.pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
+						if ( !mIDGetModelPtr )
+						{
+							// Java 1.4.1 has a different signature so check
+							// for it if we cannot find the first signature
+							if ( t.pEnv->ExceptionCheck() )
+								t.pEnv->ExceptionClear();
+							cSignature = "()I";
+							mIDGetModelPtr = t.pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
+							if ( mIDGetModelPtr )
+								bReturnsInt = true;
+						}
+					}
+					OSL_ENSURE( mIDGetModelPtr, "Unknown method id!" );
+					if ( mIDGetModelPtr )
+					{
+						if ( bReturnsInt )
+							out = (void *)CWindow_getWindowRef( t.pEnv->CallIntMethod( tempObj, mIDGetModelPtr ) );
+						else
+							out = (void *)CWindow_getWindowRef( t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr ) );
+					}
+				}
+			}
+			delete peer;
+		}
+	}
+
+	return out;
 }
 
 // ----------------------------------------------------------------------------

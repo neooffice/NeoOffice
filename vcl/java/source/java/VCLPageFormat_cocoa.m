@@ -36,19 +36,12 @@
 #import <Cocoa/Cocoa.h>
 #import "VCLPageFormat_cocoa.h"
 
+
 @interface VCLPrintInfo : NSPrintInfo
-{
-}
-+ (void)installVCLPrintInfo:(id)pObject;
 - (id)copyWithZone:(NSZone *)pZone;
 @end
 
 @implementation VCLPrintInfo
-
-+ (void)installVCLPrintInfo:(id)pObject;
-{
-	[VCLPrintInfo poseAsClass:[NSPrintInfo class]];
-}
 
 - (id)copyWithZone:(NSZone *)pZone
 {
@@ -56,6 +49,19 @@
 	// print info and we need all copies to stay in sync whenever the selected
 	// printer changes
 	return [self retain];
+}
+
+@end
+
+@interface InstallVCLPrintInfo : NSObject
+- (void)installVCLPrintInfo:(id)pObject;
+@end
+
+@implementation InstallVCLPrintInfo
+
+- (void)installVCLPrintInfo:(id)pObject
+{
+	[VCLPrintInfo poseAsClass:[NSPrintInfo class]];
 }
 
 @end
@@ -134,8 +140,12 @@ BOOL NSPageLayout_finished( id pDialog )
 {
 	BOOL bRet = YES;
 
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	if ( pDialog )
 		bRet = [(ShowPageLayoutDialog *)pDialog finished];
+
+	[pPool release];
 
 	return bRet;
 }
@@ -144,11 +154,15 @@ BOOL NSPageLayout_result( id pDialog )
 {
 	BOOL bRet = NO;
 
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	if ( pDialog )
 	{
 		bRet = [(ShowPageLayoutDialog *)pDialog result];
 		[(ShowPageLayoutDialog *)pDialog release];
 	}
+
+	[pPool release];
 
 	return bRet;
 }
@@ -156,6 +170,8 @@ BOOL NSPageLayout_result( id pDialog )
 id NSPrintInfo_create()
 {
 	VCLPrintInfo *pRet = nil;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	NSPrintInfo *pSharedInfo = [NSPrintInfo sharedPrintInfo];
 	if ( pSharedInfo )
@@ -165,34 +181,56 @@ id NSPrintInfo_create()
 		{
 			pDict = [[NSMutableDictionary alloc] initWithDictionary:pDict];
 			if ( pDict )
+			{
 				pRet = [[VCLPrintInfo alloc] initWithDictionary:pDict];
+				if ( pRet )
+					pRet = [pRet retain];
+			}
 		}
 	}
+
+	[pPool release];
 
 	return pRet;
 }
 
 void NSPrintInfo_installVCLPrintInfo()
 {
-	[VCLPrintInfo performSelectorOnMainThread:@selector(installVCLPrintInfo:) withObject:nil waitUntilDone:YES];
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
+	InstallVCLPrintInfo *pInstallVCLPrintInfo = [[InstallVCLPrintInfo alloc] init];
+	[pInstallVCLPrintInfo performSelectorOnMainThread:@selector(installVCLPrintInfo:) withObject:pInstallVCLPrintInfo waitUntilDone:YES];
+
+	[pPool release];
 }
 
 void NSPrintInfo_setSharedPrintInfo( id pNSPrintInfo )
 {
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	if ( pNSPrintInfo )
-		[NSPrintInfo performSelectorOnMainThread:@selector(setSharedPrintInfo:) withObject:pNSPrintInfo waitUntilDone:YES];
+		[VCLPrintInfo setSharedPrintInfo:pNSPrintInfo];
+
+	[pPool release];
 }
 
 id NSPrintInfo_showPageLayoutDialog( id pNSPrintInfo, id pNSWindow, BOOL bLandscape )
 {
 	ShowPageLayoutDialog *pRet = nil;
 
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	if ( pNSPrintInfo && pNSWindow )
 	{
 		pRet = [[ShowPageLayoutDialog alloc] initWithPrintInfo:(NSPrintInfo *)pNSPrintInfo window:(NSWindow *)pNSWindow orientation:( bLandscape ? NSLandscapeOrientation : NSPortraitOrientation )];
-		[pRet performSelectorOnMainThread:@selector(showPageLayoutDialog:) withObject:pRet waitUntilDone:YES];
+		if ( pRet )
+		{
+			[pRet performSelectorOnMainThread:@selector(showPageLayoutDialog:) withObject:pRet waitUntilDone:YES];
+			[pRet retain];
+		}
 	}
+
+	[pPool release];
 
 	return pRet;
 }

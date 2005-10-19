@@ -194,17 +194,6 @@ public final class VCLPrintJob implements Printable, Runnable {
 	}
 
 	/**
-	 * Returns the <code>PrinterJob</code> instance.
-	 *
-	 * @return the <code>PrinterJob</code> instance
-	 */
-	public PrinterJob getPrinterJob() {
-
-		return job;
-
-	}
-
-	/**
 	 * Prints the specified page into the specified <code>Graphics</code>
 	 * context. This method will block until the <code>endPage</code> is
 	 * invoked.
