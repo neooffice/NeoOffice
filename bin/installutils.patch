@@ -49,11 +49,9 @@ check_installation() {
 		productpatch=`echo $productpatch | awk -F= '{ print $2 }' | sed 's#^Patch ##'`
 
 		if [ "$productkey" = "$(PRODUCT_NAME) $(PRODUCT_VERSION)" ] ; then
-			if [ -z "$productpatch" ] ; then
-				return 0
-			elif [ "$productpatch" -le "$product_patch_version" ] ; then
-				return 0
-			fi
+			# Don't allow the performance patches to be applied to the new
+			# release
+			return 1
 		elif [ "$productkey" = "$(PRODUCT_PREVIOUS_NAME) $(PRODUCT_PREVIOUS_VERSION)" ] ; then
 			if [ -z "$productpatch" ] ; then
 				if [ -z "$product_previous_patch_version" ] ; then
