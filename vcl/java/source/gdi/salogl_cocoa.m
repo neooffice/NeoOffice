@@ -38,13 +38,19 @@
 
 void NSOpenGLContext_clearDrawable( id pContext )
 {
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	if ( pContext )
 		[(NSOpenGLContext *)pContext clearDrawable];
+
+	[pPool release];
 }
 
 id NSOpenGLContext_create()
 {
 	NSOpenGLContext *pContext = nil;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	NSOpenGLPixelFormatAttribute pAttributes[ 8 ];
 	pAttributes[ 0 ] = NSOpenGLPFAOffScreen;
@@ -59,32 +65,51 @@ id NSOpenGLContext_create()
 	if ( pFormat )
 	{
 		pContext = [[NSOpenGLContext alloc] initWithFormat:pFormat shareContext:nil];
-		[pFormat release];
+		if ( pContext )
+			pContext = [pContext retain];
 	}
+
+	[pPool release];
 
 	return pContext;
 }
 
 void NSOpenGLContext_flushBuffer( id pContext )
 {
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	if ( pContext )
 		[(NSOpenGLContext *)pContext flushBuffer];
+
+	[pPool release];
 }
 
 void NSOpenGLContext_makeCurrentContext( id pContext )
 {
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	if ( pContext )
 		[(NSOpenGLContext *)pContext makeCurrentContext];
+
+	[pPool release];
 }
 
 void NSOpenGLContext_release( id pContext )
 {
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	if ( pContext )
 		[(NSOpenGLContext *)pContext release];
+
+	[pPool release];
 }
 
 void NSOpenGLContext_setOffScreen( id pContext, void *pBits, long nWidth, long nHeight, long nScanlineSize )
 {
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	if ( pContext )
 		[(NSOpenGLContext *)pContext setOffScreen:pBits width:nWidth height:nHeight rowbytes:nScanlineSize];
+
+	[pPool release];
 }

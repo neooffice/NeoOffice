@@ -38,29 +38,51 @@
 
 id NSFont_create( CFStringRef aFontName, long nSize )
 {
+	NSFont *pRet = nil;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	if ( aFontName && nSize )
-		return [NSFont fontWithName:(NSString *)aFontName size:(float)nSize];
-	else
-		return nil;
+	{
+		pRet = [NSFont fontWithName:(NSString *)aFontName size:(float)nSize];
+		if ( pRet )
+			pRet = [pRet retain];
+	}
+
+	[pPool release];
+
+	return pRet;
 }
 
 void NSFont_release( id pNSFont )
 {
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	if ( pNSFont )
 		[(NSFont *)pNSFont release];
+
+	[pPool release];
 }
 
 BOOL NSFontManager_isFixedPitch( id pNSFont )
 {
+	BOOL bRet = FALSE;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	if ( pNSFont )
-		return [pNSFont isFixedPitch];
-	else
-		return FALSE;
+		bRet = [pNSFont isFixedPitch];
+
+	[pPool release];
+
+	return bRet;
 }
 
 BOOL NSFontManager_isItalic( id pNSFont )
 {
 	BOOL bRet = FALSE;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pNSFont )
 	{
@@ -69,12 +91,16 @@ BOOL NSFontManager_isItalic( id pNSFont )
 			bRet = ( [pFontManager traitsOfFont:(NSFont *)pNSFont] & NSItalicFontMask );
 	}
 
+	[pPool release];
+
 	return bRet;
 }
 
 int NSFontManager_widthOfFont( id pNSFont )
 {
 	int nRet = 0;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pNSFont )
 	{
@@ -95,11 +121,15 @@ int NSFontManager_widthOfFont( id pNSFont )
 		}
 	}
 
+	[pPool release];
+
 	return nRet;
 }
 int NSFontManager_weightOfFont( id pNSFont )
 {
 	int nRet = 0;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pNSFont )
 	{
@@ -123,6 +153,8 @@ int NSFontManager_weightOfFont( id pNSFont )
 				nRet = 10;
 		}
 	}
+
+	[pPool release];
 
 	return nRet;
 }

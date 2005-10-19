@@ -72,12 +72,15 @@
 
 id NSApplication_getModalWindow()
 {
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	NSWindow *pModalWindow = nil;
 
 	GetModalWindow *pGetModalWindow = [[GetModalWindow alloc] init];
 	[pGetModalWindow performSelectorOnMainThread:@selector(getModalWindow:) withObject:pGetModalWindow waitUntilDone:YES];
 	pModalWindow = [pGetModalWindow modalWindow];
-	[pGetModalWindow release];
+
+	[pPool release];
 
 	return pModalWindow;
 }

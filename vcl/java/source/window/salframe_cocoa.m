@@ -118,6 +118,8 @@
 
 void NSScreen_getScreenBounds( long *nX, long *nY, long *nWidth, long *nHeight, BOOL bFullScreen )
 {
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	ScreenBounds *pScreenBounds = [[ScreenBounds alloc] initWithPoint:NSMakePoint( (float)( *nX ), (float)( *nY ) ) fullScreen:bFullScreen];
 	[pScreenBounds performSelectorOnMainThread:@selector(calcBounds:) withObject:pScreenBounds waitUntilDone:YES];
 
@@ -127,5 +129,5 @@ void NSScreen_getScreenBounds( long *nX, long *nY, long *nWidth, long *nHeight, 
 	*nWidth = (long)( aBounds.origin.x + aBounds.size.width );
 	*nHeight = (long)( aBounds.origin.y + aBounds.size.height );
 
-	[pScreenBounds release];
+	[pPool release];
 }
