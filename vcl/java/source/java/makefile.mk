@@ -44,6 +44,8 @@ TARGET=saljava
 .INCLUDE :  settings.mk
 .INCLUDE :  sv.mk
 
+CDEFS+=-DDLLSUFFIX=$(DLLSUFFIX)
+
 # --- Files --------------------------------------------------------
 
 .IF "$(GUIBASE)"!="java"

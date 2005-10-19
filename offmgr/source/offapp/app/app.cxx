@@ -315,13 +315,6 @@
 
 #include <osl/module.hxx>
 
-// [ed] 1/25/05 Includes for appleevent handlers.  Bug #396
-#ifdef MACOSX
-#include <premac.h>
-#include <Carbon/Carbon.h>
-#include <postmac.h>
-#endif
-
 using namespace ::com::sun::star::uno;
 
 //=========================================================================
@@ -350,13 +343,11 @@ typedef	long (SAL_CALL *basicide_handle_basic_error)(void*);
 //=========================================================================
 
 #ifdef MACOSX
-// [ed] 1/26/05 AppleEvent handler for preferences events.
-static OSErr DoAEPref( const AppleEvent *message, AppleEvent *reply, long refcon )
+// [ed] 1/26/05 handler for preferences events.
+// Note: this must not be static as the symbol will be loaded by the vcl module
+extern "C" void NativePreferencesMenuHandler()
 {
-    OfficeApplication *theApp=(OfficeApplication *)refcon;
-    if ( theApp )
-        theApp->ExecuteGeneralOptionsDialog( SID_OPTIONS_TREEDIALOG );
-	return noErr;
+    OFF_APP()->ExecuteGeneralOptionsDialog( SID_OPTIONS_TREEDIALOG );
 }
 #endif
 
@@ -452,11 +443,6 @@ void OfficeApplication::Init()
 	pAppearanceCfg->SetApplicationDefaults( GetpApp() );
 
     pDataImpl->SetVCLSettings();
-
-#ifdef MACOSX
-// [ed] 1/26/05 Install preferenceshandler.
-	AEInstallEventHandler( kCoreEventClass, 'mPRF', NewAEEventHandlerUPP( DoAEPref ), (long)this, FALSE );
-#endif
 }
 
 // ------------------------------------------------------------------------

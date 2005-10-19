@@ -230,13 +230,6 @@
 #endif
 #include <svtools/extendedsecurityoptions.hxx>
 
-// [ed] 1/25/05 Includes for appleevent handlers.  Bug #396
-#ifdef MACOSX
-#include <premac.h>
-#include <Carbon/Carbon.h>
-#include <postmac.h>
-#endif
-
 // Static member
 SfxApplication* SfxApplication::pApp = NULL;
 
@@ -441,19 +434,17 @@ void SfxApplication::SetApp( SfxApplication* pSfxApp )
     pApp->Initialize_Impl();
 }
 
-// [ed] 1/25/05 AppleEvent handler for About events.  Bug #396 
 #ifdef MACOSX
-static OSErr DoAEAbout( const AppleEvent *message, AppleEvent *reply, long refcon )
+// [ed] 1/25/05 handler for About events.  Bug #396 
+// Note: this must not be static as the symbol will be loaded by the vcl module
+extern "C" void NativeAboutMenuHandler()
 {
 	if ( !AboutDialog::DialogIsActive() )
 	{
-		SfxApplication *theApp=(SfxApplication *)refcon;
-		ModalDialog *pDlg = theApp->CreateAboutDialog();
+		ModalDialog *pDlg = SFX_APP()->CreateAboutDialog();
 		pDlg->Execute();
 		delete pDlg;
 	}
-
-	return noErr;
 }
 #endif
 
@@ -592,11 +583,6 @@ SfxApplication::SfxApplication()
 #endif
 #if SUPD>637
 	RTL_LOGFILE_CONTEXT_TRACE( aLog, "} initialize DDE" );
-#endif
-
-#ifdef MACOSX
-// [ed] 1/25/05 Register about handler.  Bug #396
-	AEInstallEventHandler( kCoreEventClass, kAEAbout, NewAEEventHandlerUPP( DoAEAbout ), (long)this, FALSE );
 #endif
 }
 
