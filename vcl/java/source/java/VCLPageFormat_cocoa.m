@@ -36,12 +36,20 @@
 #import <Cocoa/Cocoa.h>
 #import "VCLPageFormat_cocoa.h"
 
+static BOOL bInDialog = NO;
 
 @interface VCLPrintInfo : NSPrintInfo
++ (void)setInDialog:(BOOL)bIn;
 - (id)copyWithZone:(NSZone *)pZone;
+- (void)setPrinter:(NSPrinter *)pPrinter;
 @end
 
 @implementation VCLPrintInfo
+
++ (void)setInDialog:(BOOL)bIn
+{
+	bInDialog = bIn;
+}
 
 - (id)copyWithZone:(NSZone *)pZone
 {
@@ -49,6 +57,13 @@
 	// print info and we need all copies to stay in sync whenever the selected
 	// printer changes
 	return [self retain];
+}
+
+- (void)setPrinter:(NSPrinter *)pPrinter
+{
+	// Only allow the native Cocoa dialogs to change the printer
+	if ( bInDialog )
+		[super setPrinter:pPrinter];
 }
 
 @end
@@ -99,6 +114,7 @@
 
 - (void)pageLayoutDidEnd:(NSPageLayout *)pLayout returnCode:(int)nCode contextInfo:(void *)pContextInfo
 {
+	[VCLPrintInfo setInDialog:NO];
 	mbFinished = YES;
 	if ( nCode == NSOKButton )
 		mbResult = YES;
@@ -130,6 +146,7 @@
         }
 
 		mbFinished = NO;
+		[VCLPrintInfo setInDialog:YES];
 		[pLayout beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(pageLayoutDidEnd:returnCode:contextInfo:) contextInfo:nil];
 	}
 }
@@ -202,6 +219,11 @@ void NSPrintInfo_installVCLPrintInfo()
 	[pInstallVCLPrintInfo performSelectorOnMainThread:@selector(installVCLPrintInfo:) withObject:pInstallVCLPrintInfo waitUntilDone:YES];
 
 	[pPool release];
+}
+
+void NSPrintInfo_setInDialog( BOOL bIn )
+{
+	[VCLPrintInfo setInDialog:bIn];
 }
 
 void NSPrintInfo_setSharedPrintInfo( id pNSPrintInfo )
