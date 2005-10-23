@@ -749,14 +749,6 @@ void SalFrame::SetParent( SalFrame* pNewParent )
 
 		maFrameData.mpParent = pNewParent;
 
-		// Create a new native window with the new parent
-		ReleaseGraphics( maFrameData.mpGraphics );
-		if ( maFrameData.mpVCLFrame )
-			delete maFrameData.mpVCLFrame;
-		maFrameData.mpVCLFrame = new com_sun_star_vcl_VCLFrame( maFrameData.mnStyle, this, maFrameData.mpParent );
-		maFrameData.maSysData.aWindow = 0;
-		SetPosSize( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration, maGeometry.nWidth, maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
-
 		if ( maFrameData.mpParent )
 		{
 			maFrameData.mpParent->maFrameData.mpVCLFrame->addChild( this );

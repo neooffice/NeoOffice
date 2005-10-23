@@ -62,7 +62,7 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
 
-#define LAYOUT_CACHE_MAX_SIZE 1024
+#define LAYOUT_CACHE_MAX_SIZE 4096
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 

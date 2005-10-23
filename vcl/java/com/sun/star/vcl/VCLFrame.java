@@ -1672,7 +1672,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 							Window w = f.getWindow();
 							if (w.isShowing()) {
 								w.hide();
-								w.removeNotify();
 								detachedChildren.add(f);
 							}
 						}
@@ -2017,7 +2016,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 					Window w = f.getWindow();
 					if (w.isShowing()) {
 						w.hide();
-						w.removeNotify();
 						detachedChildren.add(f);
 					}
 				}

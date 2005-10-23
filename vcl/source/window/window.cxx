@@ -3731,13 +3731,6 @@ void Window::ImplShowAllOverlaps()
         {
             pOverlapWindow->Show( TRUE, SHOW_NOACTIVATE );
             pOverlapWindow->mbOverlapVisible = FALSE;
-
-#ifdef USE_JAVA
-            // Discard and recreate DragSource and DropTarget members since
-        	// the native window may be new
-            pOverlapWindow->ImplStopDnd();
-            pOverlapWindow->GetDropTarget();
-#endif	// USE_JAVA
         }
 
         pOverlapWindow = pOverlapWindow->mpNext;
@@ -5873,14 +5866,15 @@ void Window::SetParent( Window* pNewParent )
 
     ImplSetFrameParent( pNewParent );
 
+#ifndef USE_JAVA
     if ( mbFrame )
         return;
+#endif	// USE_JAVA
 
     if ( mpBorderWindow )
     {
         mpRealParent = pNewParent;
         mpBorderWindow->SetParent( pNewParent );
-        return;
     }
 
     if ( mpParent == pNewParent )
@@ -5994,17 +5988,13 @@ void Window::SetParent( Window* pNewParent )
         }
     }
     
+#ifndef USE_JAVA
     // Assure DragSource and DropTarget members are created
     if ( bNewFrame )
     {
-#ifdef USE_JAVA
             GetDropTarget();
-#else	// USE_JAVA
-            // Discard DragSource and DropTarget members since the old native
-            // window will have been destroyed
-            ImplStopDnd();
-#endif	// USE_JAVA
     }
+#endif	// USE_JAVA
 
     if ( bVisible )
         Show( TRUE, SHOW_NOFOCUSCHANGE | SHOW_NOACTIVATE );
@@ -6039,6 +6029,41 @@ void Window::Show( BOOL bVisible, USHORT nFlags )
             mbSuppressAccessibilityEvents = TRUE;
             mpFrame->Show( FALSE, FALSE );
         }
+
+#ifdef USE_JAVA
+        // Discard DragSource and DropTarget members since the native
+        // window has been destroyed
+        if ( mbFrame && mpFrameData )
+        {
+            try
+            {
+                // Deregister drop target listener
+                if ( mpFrameData->mxDropTargetListener.is() )
+                {
+                    Reference< XDragGestureRecognizer > xDragGestureRecognizer = Reference< XDragGestureRecognizer >( mpFrameData->mxDragSource, UNO_QUERY );
+                    if ( xDragGestureRecognizer.is() )
+                        xDragGestureRecognizer->removeDragGestureListener( Reference< XDragGestureListener >( mpFrameData->mxDropTargetListener, UNO_QUERY ) );
+
+                    mpFrameData->mxDropTarget->removeDropTargetListener( mpFrameData->mxDropTargetListener );
+                    mpFrameData->mxDropTargetListener.clear();
+                }
+
+                // Shutdown drag and drop for this frame window
+                Reference< XComponent > xComponent( mpFrameData->mxDropTarget, UNO_QUERY );
+
+                // DNDEventDispatcher does not hold a reference of the
+                // DropTarget, so it's ok if it does not support XComponent
+                if( xComponent.is() )
+                    xComponent->dispose();
+            }
+            catch ( Exception exc )
+            {
+            }
+
+            mpFrameData->mxDropTarget.clear();
+            mpFrameData->mxDragSource.clear();
+        }
+#endif	// USE_JAVA
 
         StateChanged( STATE_CHANGE_VISIBLE );
 
@@ -6165,13 +6190,13 @@ void Window::Show( BOOL bVisible, USHORT nFlags )
         }
 #endif
 
+        ImplShowAllOverlaps();
+
 #ifdef USE_JAVA
         // Ensure that DragSource and DropTarget members are created since the
-    	// native window is not created until first shown
+        // native window is not created until first shown
         GetDropTarget();
 #endif	// USE_JAVA
-
-        ImplShowAllOverlaps();
     }
 
     // Hintergrund-Sicherung zuruecksetzen
