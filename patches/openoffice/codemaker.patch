@@ -1,10 +1,11 @@
+? source/.DS_Store
 Index: source/cppumaker/cpputype.cxx
 ===================================================================
 RCS file: /cvs/udk/codemaker/source/cppumaker/cpputype.cxx,v
 retrieving revision 1.22.18.2
 diff -u -r1.22.18.2 cpputype.cxx
 --- source/cppumaker/cpputype.cxx	28 Jan 2004 15:27:37 -0000	1.22.18.2
-+++ source/cppumaker/cpputype.cxx	27 Sep 2005 05:22:50 -0000
++++ source/cppumaker/cpputype.cxx	23 Oct 2005 16:59:09 -0000
 @@ -1649,7 +1649,11 @@
  
  	dumpAttributes(o);

@@ -4,7 +4,7 @@ RCS file: /cvs/udk/cppu/inc/com/sun/star/uno/Any.hxx,v
 retrieving revision 1.11
 diff -u -r1.11 Any.hxx
 --- inc/com/sun/star/uno/Any.hxx	19 Aug 2002 07:18:44 -0000	1.11
-+++ inc/com/sun/star/uno/Any.hxx	27 Sep 2005 05:21:49 -0000
++++ inc/com/sun/star/uno/Any.hxx	23 Oct 2005 16:59:25 -0000
 @@ -191,14 +191,22 @@
  template< class C >
  inline Any SAL_CALL makeAny( const C & value ) SAL_THROW( () )
@@ -58,36 +58,27 @@ RCS file: /cvs/udk/cppu/inc/com/sun/star/uno/Reference.hxx,v
 retrieving revision 1.16
 diff -u -r1.16 Reference.hxx
 --- inc/com/sun/star/uno/Reference.hxx	21 Aug 2002 09:19:06 -0000	1.16
-+++ inc/com/sun/star/uno/Reference.hxx	27 Sep 2005 05:21:49 -0000
-@@ -102,9 +102,15 @@
++++ inc/com/sun/star/uno/Reference.hxx	23 Oct 2005 16:59:26 -0000
+@@ -102,9 +102,7 @@
  inline interface_type * Reference< interface_type >::iquery(
  	XInterface * pInterface ) SAL_THROW( (RuntimeException) )
  {
-+#if defined( __GNUC__ ) && ( __GNUC__ >= 4 )
-+ return static_cast< interface_type * >(
-+        BaseReference::iquery(
-+            pInterface, getCppuType( (const Reference< interface_type > *)0 ) ) );
-+#else
-     return static_cast< interface_type * >(
-         BaseReference::iquery(
-             pInterface, ::getCppuType( (const Reference< interface_type > *)0 ) ) );
-+#endif
+-    return static_cast< interface_type * >(
+-        BaseReference::iquery(
+-            pInterface, ::getCppuType( (const Reference< interface_type > *)0 ) ) );
++    return BaseReference::iquery(pInterface, interface_type::static_type());
  }
  #ifndef EXCEPTIONS_OFF
  extern "C" rtl_uString * SAL_CALL cppu_unsatisfied_iquery_msg(
-@@ -127,9 +133,15 @@
+@@ -127,9 +125,8 @@
  inline interface_type * Reference< interface_type >::iquery_throw(
  	XInterface * pInterface ) SAL_THROW( (RuntimeException) )
  {
-+#if defined( __GNUC__ ) && ( __GNUC__ >= 4 )
-+    return static_cast< interface_type * >(
-+        BaseReference::iquery_throw(
-+            pInterface, getCppuType( (const Reference< interface_type > *)0 ) ) );
-+#else
-     return static_cast< interface_type * >(
-         BaseReference::iquery_throw(
-             pInterface, ::getCppuType( (const Reference< interface_type > *)0 ) ) );
-+#endif
+-    return static_cast< interface_type * >(
+-        BaseReference::iquery_throw(
+-            pInterface, ::getCppuType( (const Reference< interface_type > *)0 ) ) );
++    return BaseReference::iquery_throw(
++        pInterface, interface_type::static_type());
  }
  #endif
  
@@ -97,7 +88,7 @@ RCS file: /cvs/udk/cppu/inc/com/sun/star/uno/Sequence.hxx,v
 retrieving revision 1.15.12.1
 diff -u -r1.15.12.1 Sequence.hxx
 --- inc/com/sun/star/uno/Sequence.hxx	28 Jan 2004 10:19:00 -0000	1.15.12.1
-+++ inc/com/sun/star/uno/Sequence.hxx	27 Sep 2005 05:21:50 -0000
++++ inc/com/sun/star/uno/Sequence.hxx	23 Oct 2005 16:59:26 -0000
 @@ -97,7 +97,11 @@
  template< class E >
  inline Sequence< E >::Sequence() SAL_THROW( () )
@@ -226,7 +217,7 @@ RCS file: /cvs/udk/cppu/inc/uno/lbnames.h,v
 retrieving revision 1.10
 diff -u -r1.10 lbnames.h
 --- inc/uno/lbnames.h	28 Apr 2003 16:26:36 -0000	1.10
-+++ inc/uno/lbnames.h	27 Sep 2005 05:21:50 -0000
++++ inc/uno/lbnames.h	23 Oct 2005 16:59:27 -0000
 @@ -94,7 +94,9 @@
  #define	TMP_CPPU_ENV gcc2
  #elif (__GNUC__ == 2)
@@ -238,3 +229,465 @@ diff -u -r1.10 lbnames.h
  #define __CPPU_ENV gcc3
  #elif (__GNUC__ == 3)
  #error "Tested gcc 3 version is <= 3.3.  Patch uno/lbnames.h to try your gcc 3 version."
+Index: source/typelib/typelib.cxx
+===================================================================
+RCS file: /cvs/udk/cppu/source/typelib/typelib.cxx,v
+retrieving revision 1.18.12.2
+diff -u -r1.18.12.2 typelib.cxx
+--- source/typelib/typelib.cxx	9 Jan 2004 15:01:46 -0000	1.18.12.2
++++ source/typelib/typelib.cxx	23 Oct 2005 16:59:29 -0000
+@@ -59,6 +59,8 @@
+  *
+  ************************************************************************/
+ 
++#include <stdio.h>
++
+ #include <hash_map>
+ #include <list>
+ 
+@@ -1933,6 +1935,8 @@
+ 	}
+ 	}
+ 
++	fprintf(stderr, "typelib_typedescriptionreference_getDescription : weak type, but no weak reference, calling typelib_typedescription_getByName\n");
++	
+ 	typelib_typedescription_getByName( ppRet, pRef->pTypeName );
+ 	OSL_ASSERT( !*ppRet || rtl_ustr_compare( pRef->pTypeName->buffer, (*ppRet)->pTypeName->buffer ) == 0 );
+ 	OSL_ASSERT( !*ppRet || pRef->eTypeClass == (*ppRet)->eTypeClass );
+@@ -1953,9 +1957,21 @@
+ 	if( aInit.pWeakMap )
+ 	{
+ 		MutexGuard aGuard( aInit.getMutex() );
++		fprintf(stderr, "typelib_typedescriptionreference_getByName : querying pWeakMap, has %d elements\n", aInit.pWeakMap->size());
++		long index=0;
++		/*
++		for(WeakMap_Impl::iterator i = aInit.pWeakMap->begin(); i !=aInit.pWeakMap->end(); i++)
++		{
++		    fprintf(stderr, "\tEntry %ld : %s\n", index, OString((*i).first, rtl_ustr_getLength((*i).first), RTL_TEXTENCODING_UTF8).getStr());
++		    index++;
++		}
++		*/
++		fprintf(stderr, "\n\tSearching for : %s\n", OString((sal_Unicode *)pName->buffer, rtl_ustr_getLength((sal_Unicode *)pName->buffer), RTL_TEXTENCODING_UTF8).getStr());
++		
+ 		WeakMap_Impl::const_iterator aIt = aInit.pWeakMap->find( (sal_Unicode*)pName->buffer );
+ 		if( !(aIt == aInit.pWeakMap->end()) ) // != failed on msc4.2
+ 		{
++			fprintf(stderr, "\tType found.\n");
+ 			sal_Int32 n = ::osl_incrementInterlockedCount( &(*aIt).second->nRefCount );
+ 			if( n > 1 )
+ 			{
+@@ -1970,6 +1986,10 @@
+ 				::osl_decrementInterlockedCount( &(*aIt).second->nRefCount );
+ 			}
+ 		}
++		else
++		{
++		    fprintf(stderr, "\tType NOT found.\n");
++		}
+ 	}
+ }
+ 
+Index: test/testcppu.cxx
+===================================================================
+RCS file: /cvs/udk/cppu/test/testcppu.cxx,v
+retrieving revision 1.25
+diff -u -r1.25 testcppu.cxx
+--- test/testcppu.cxx	19 Aug 2002 07:18:49 -0000	1.25
++++ test/testcppu.cxx	23 Oct 2005 16:59:30 -0000
+@@ -122,13 +122,13 @@
+ {
+ 	{
+ 	// test the size of types
+-	OSL_ENSURE( sizeof( Uik ) == getSize( getCppuType( (Uik *)0) ),
++	OSL_ENSURE( sizeof( Uik ) == getSize( ::getCppuType( (Uik *)0) ),
+ 				"bad sizeof uik" );
+-	OSL_ENSURE( sizeof( Test1 ) == getSize( getCppuType( (Test1*)0).getTypeLibType() ),
++	OSL_ENSURE( sizeof( Test1 ) == getSize( ::getCppuType( (Test1*)0).getTypeLibType() ),
+ 				"bad sizeof test1" );
+ //  	OSL_ENSURE( sizeof( TdTest1 ) == getSize( get_test_TdTest1_Type().getTypeLibType() ),
+ //  				"bad sizeof TypedefTest1" );
+-	OSL_ENSURE( sizeof( Test2 ) == getSize( getCppuType( (Test2*)0).getTypeLibType() ),
++	OSL_ENSURE( sizeof( Test2 ) == getSize( ::getCppuType( (Test2*)0).getTypeLibType() ),
+ 				"bad sizeof test2" );
+ 
+ /* find the error
+@@ -150,7 +150,7 @@
+ nPos = (sal_Int32)&((Test3 *)0)->bBool;
+ nPos = (sal_Int32)&((Test3 *)0)->aAny;
+ */
+-	OSL_ENSURE( sizeof( Test3 ) == getSize( getCppuType( (Test3*)0).getTypeLibType() ),
++	OSL_ENSURE( sizeof( Test3 ) == getSize( ::getCppuType( (Test3*)0).getTypeLibType() ),
+ 				"bad sizeof test3" );
+ 	}
+ 
+@@ -160,7 +160,7 @@
+ 	a1.nInt16 = 4;
+ 	a1.dDouble = 3.6;
+ 	a1.bBool = sal_True;
+-	uno_type_constructData( &a1, getCppuType( (Test1*)0).getTypeLibType() );
++	uno_type_constructData( &a1, ::getCppuType( (Test1*)0).getTypeLibType() );
+ 	OSL_ASSERT( a1.nInt16 == 0 && a1.dDouble == 0.0 && a1.bBool == sal_False);
+ 
+ 	Test2 a2;
+@@ -168,7 +168,7 @@
+ 	a2.aTest1.nInt16 = 4;
+ 	a2.aTest1.dDouble = 3.6;
+ 	a2.aTest1.dDouble = sal_True;
+-	uno_type_constructData( &a2, getCppuType( (Test2*)0).getTypeLibType() );
++	uno_type_constructData( &a2, ::getCppuType( (Test2*)0).getTypeLibType() );
+ 	OSL_ASSERT( a2.nInt16 == 0 && a2.aTest1.nInt16 == 0 && a2.aTest1.dDouble == 0.0 && a2.aTest1.bBool == sal_False);
+ 
+ 	Test3 * pa3 = (Test3 *)new char[ sizeof( Test3 ) ];
+@@ -187,7 +187,7 @@
+ 	a3.td.nInt16 = 2;
+ 	a3.td.dDouble = 2;
+ 	a3.bBool = sal_True;
+-	uno_type_constructData( &a3, getCppuType( (Test3*)0).getTypeLibType() );
++	uno_type_constructData( &a3, ::getCppuType( (Test3*)0).getTypeLibType() );
+ 	OSL_ASSERT( a3.nInt8 == 0 && a3.nFloat == (float)0
+ 				&& a3.nDouble == 0 && a3.nInt16 == 0 &&	a3.aString == OUString()
+ 				&& a3.nuInt16 == 0 && a3.nInt64 == 0 &&	a3.nInt32 == 0 
+@@ -201,18 +201,18 @@
+ 	{
+ 	// test the destructor
+ 	long a1[ sizeof( Test1 ) / sizeof(long) +1 ];
+-	uno_type_constructData( &a1, getCppuType( (Test1*)0).getTypeLibType() );
+-	uno_type_destructData( &a1, getCppuType( (Test1*)0).getTypeLibType(), cpp_release );
++	uno_type_constructData( &a1, ::getCppuType( (Test1*)0).getTypeLibType() );
++	uno_type_destructData( &a1, ::getCppuType( (Test1*)0).getTypeLibType(), cpp_release );
+ 
+ 	long a2[ sizeof( Test2 ) / sizeof(long) +1 ];
+-	uno_type_constructData( &a2, getCppuType( (Test2*)0).getTypeLibType() );
+-	uno_type_destructData( &a2, getCppuType( (Test2*)0).getTypeLibType(), cpp_release );
++	uno_type_constructData( &a2, ::getCppuType( (Test2*)0).getTypeLibType() );
++	uno_type_destructData( &a2, ::getCppuType( (Test2*)0).getTypeLibType(), cpp_release );
+ 
+ 	long a3[ sizeof( Test3 ) / sizeof(long) +1 ];
+-	uno_type_constructData( &a3, getCppuType( (Test3*)0).getTypeLibType() );
++	uno_type_constructData( &a3, ::getCppuType( (Test3*)0).getTypeLibType() );
+ 	OUString aTestString( RTL_CONSTASCII_USTRINGPARAM("test") );
+ 	((Test3*)a3)->aString = aTestString;
+-	uno_type_destructData( &a3, getCppuType( (Test3*)0).getTypeLibType(), cpp_release );
++	uno_type_destructData( &a3, ::getCppuType( (Test3*)0).getTypeLibType(), cpp_release );
+ 	OSL_ASSERT( aTestString.pData->refCount == 1 );
+ 	}
+ 
+@@ -223,7 +223,7 @@
+ 	a1.dDouble = 3.6;
+ 	a1.bBool = sal_True;
+ 	char sz1[sizeof( Test1 )];
+-	uno_type_copyData( sz1, &a1, getCppuType( (Test1*)0).getTypeLibType(), cpp_acquire );
++	uno_type_copyData( sz1, &a1, ::getCppuType( (Test1*)0).getTypeLibType(), cpp_acquire );
+ 	OSL_ASSERT( ((Test1*)sz1)->nInt16 == 4 && ((Test1*)sz1)->dDouble == 3.6 && ((Test1*)sz1)->bBool == sal_True);
+ 
+ 	Test2 a2;
+@@ -232,7 +232,7 @@
+ 	a2.aTest1.dDouble = 3.6;
+ 	a2.aTest1.bBool = sal_True;
+ 	char sz2[sizeof( Test2 )];
+-	uno_type_copyData( sz2, &a2, getCppuType( (Test2*)0).getTypeLibType(), cpp_acquire );
++	uno_type_copyData( sz2, &a2, ::getCppuType( (Test2*)0).getTypeLibType(), cpp_acquire );
+ 	OSL_ASSERT( ((Test2*)sz2)->nInt16 == 2 );
+ 	OSL_ASSERT(((Test2*)sz2)->aTest1.nInt16 == 4 );
+ 	OSL_ASSERT( ((Test2*)sz2)->aTest1.dDouble == 3.6 );
+@@ -256,7 +256,7 @@
+ 	a3.bBool = sal_True;
+ 	a3.aAny = makeAny( (sal_Int32)2 );
+ 	char sz3[sizeof( Test3 )];
+-	uno_type_copyData( sz3, &a3, getCppuType( (Test3*)0).getTypeLibType(), cpp_acquire );
++	uno_type_copyData( sz3, &a3, ::getCppuType( (Test3*)0).getTypeLibType(), cpp_acquire );
+ 	OSL_ASSERT( ((Test3*)sz3)->nInt8 == 2 );
+ 	OSL_ASSERT( ((Test3*)sz3)->nFloat == (float)2 );
+ 	OSL_ASSERT( ((Test3*)sz3)->nDouble == 2 ); 
+@@ -272,7 +272,7 @@
+ 	OSL_ASSERT(	((Test3*)sz3)->td.nInt16 == 2 ); 
+ 	OSL_ASSERT( ((Test3*)sz3)->td.dDouble == 2 );
+ 	OSL_ASSERT( ((Test3*)sz3)->bBool == sal_True );
+-	OSL_ASSERT( ((Test3*)sz3)->aAny.getValueType() == getCppuType( (sal_Int32 *)0 ) );
++	OSL_ASSERT( ((Test3*)sz3)->aAny.getValueType() == ::getCppuType( (sal_Int32 *)0 ) );
+ 	OSL_ASSERT( *(sal_Int32*)((Test3*)sz3)->aAny.getValue() == 2 );
+ 	((Test3 *)sz3)->~Test3();
+ 	}
+@@ -286,8 +286,8 @@
+ 	a1.bBool = sal_True;
+ 	Test1 sz1;
+ 	bAssignable = uno_type_assignData(
+-		&sz1, getCppuType( (Test1*)0).getTypeLibType(), 
+-		&a1, getCppuType( (Test1*)0).getTypeLibType(),
++		&sz1, ::getCppuType( (Test1*)0).getTypeLibType(), 
++		&a1, ::getCppuType( (Test1*)0).getTypeLibType(),
+ 		cpp_queryInterface, cpp_acquire, cpp_release );
+ 	OSL_ASSERT( bAssignable );
+ 	OSL_ASSERT( sz1.nInt16 == 4 && sz1.dDouble == 3.6 && sz1.bBool == sal_True);
+@@ -299,8 +299,8 @@
+ 	a2.aTest1.bBool = sal_True;
+ 	Test2 sz2;
+ 	bAssignable = uno_type_assignData(
+-		&sz2, getCppuType( (Test2*)0).getTypeLibType(), 
+-		&a2, getCppuType( (Test2*)0).getTypeLibType(),
++		&sz2, ::getCppuType( (Test2*)0).getTypeLibType(), 
++		&a2, ::getCppuType( (Test2*)0).getTypeLibType(),
+ 		cpp_queryInterface, cpp_acquire, cpp_release );
+ 	OSL_ASSERT( bAssignable );
+ 	OSL_ASSERT( sz2.nInt16 == 2 && sz2.aTest1.nInt16 == 4 
+@@ -324,11 +324,11 @@
+ 	a3.td.dDouble = 2;
+ 	a3.bBool = sal_True;
+ 	a3.aAny = makeAny( (sal_Int32)2 );
+-    OSL_ASSERT( a3.aAny.isExtractableTo( ::getCppuType( (sal_Int64 const *)0 ) ) );
+-    OSL_ASSERT( ::getCppuType( (sal_Int64 const *)0 ).isAssignableFrom( a3.aAny.getValueType() ) );
++    OSL_ASSERT( a3.aAny.isExtractableTo( ::::getCppuType( (sal_Int64 const *)0 ) ) );
++    OSL_ASSERT( ::::getCppuType( (sal_Int64 const *)0 ).isAssignableFrom( a3.aAny.getValueType() ) );
+ 	bAssignable = uno_type_assignData(
+-		&sz3, getCppuType( (Test3*)0).getTypeLibType(), 
+-		&a3, getCppuType( (Test3*)0).getTypeLibType(),
++		&sz3, ::getCppuType( (Test3*)0).getTypeLibType(), 
++		&a3, ::getCppuType( (Test3*)0).getTypeLibType(),
+ 		cpp_queryInterface, cpp_acquire, cpp_release );
+ 	OSL_ASSERT( bAssignable );
+ 	OSL_ASSERT( sz3.nInt8 == 2 );
+@@ -346,13 +346,13 @@
+ 	OSL_ASSERT(	sz3.td.nInt16 == 2 ); 
+ 	OSL_ASSERT( sz3.td.dDouble == 2 );
+ 	OSL_ASSERT( sz3.bBool == sal_True );
+-	OSL_ASSERT( sz3.aAny.getValueType() == getCppuType( (sal_Int32 *)0 ) );
++	OSL_ASSERT( sz3.aAny.getValueType() == ::getCppuType( (sal_Int32 *)0 ) );
+ 	OSL_ASSERT( *(sal_Int32*)sz3.aAny.getValue() == 2 );
+ 
+ 	// test not assigneable values
+ 	bAssignable = uno_type_assignData(
+-		&a1, getCppuType( (Test1*)0).getTypeLibType(),
+-		&a2, getCppuType( (Test2*)0).getTypeLibType(),
++		&a1, ::getCppuType( (Test1*)0).getTypeLibType(),
++		&a2, ::getCppuType( (Test2*)0).getTypeLibType(),
+ 		cpp_queryInterface, cpp_acquire, cpp_release );
+ 	OSL_ASSERT( !bAssignable );
+ 	}
+@@ -360,42 +360,42 @@
+ 	{
+ 	// test any
+ 	Any aAny = makeAny( (sal_Int8)2 );
+-	OSL_ASSERT( aAny.getValueType() == getCppuType( (sal_Int8 *)0 ) );
++	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (sal_Int8 *)0 ) );
+ 	OSL_ASSERT( *(sal_Int8*)aAny.getValue() == 2 );
+ 	aAny = makeAny( (float)2 );
+-	OSL_ASSERT( aAny.getValueType() == getCppuType( (float *)0 ) );
++	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (float *)0 ) );
+ 	OSL_ASSERT( *(float*)aAny.getValue() == (float)2 );
+ 	aAny = makeAny( (sal_Int8)2 );
+-	OSL_ASSERT( aAny.getValueType() == getCppuType( (sal_Int8 *)0 ) );
++	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (sal_Int8 *)0 ) );
+ 	OSL_ASSERT( *(sal_Int8*)aAny.getValue() == 2 );
+ 	aAny = makeAny( (double)2 );
+-	OSL_ASSERT( aAny.getValueType() == getCppuType( (double *)0 ) );
++	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (double *)0 ) );
+ 	OSL_ASSERT( *(double*)aAny.getValue() == (double)2 );
+ 	aAny = makeAny( (sal_Int16)2 );
+-	OSL_ASSERT( aAny.getValueType() == getCppuType( (sal_Int16 *)0 ) );
++	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (sal_Int16 *)0 ) );
+ 	OSL_ASSERT( *(sal_Int16*)aAny.getValue() == 2 );
+ 	aAny = makeAny( OUString( RTL_CONSTASCII_USTRINGPARAM("test") ) );
+-	OSL_ASSERT( aAny.getValueType() == getCppuType( (OUString *)0 ) );
++	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (OUString *)0 ) );
+ 	OSL_ASSERT( *(OUString*)aAny.getValue() == OUString::createFromAscii("test") );
+ 	aAny = makeAny( (sal_uInt16)2 );
+-	OSL_ASSERT( aAny.getValueType() == getCppuType( (sal_uInt16 *)0 ) );
++	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (sal_uInt16 *)0 ) );
+ 	OSL_ASSERT( *(sal_Int16*)aAny.getValue() == 2 );
+ 	sal_Int64 aInt64 = 0x200000000;
+ 	aAny = makeAny( aInt64 );
+-	OSL_ASSERT( aAny.getValueType() == getCppuType( (sal_Int64 *)0 ) );
++	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (sal_Int64 *)0 ) );
+ 	OSL_ASSERT( *(sal_Int64*)aAny.getValue() == 0x200000000 );
+ 	aAny = makeAny( (sal_Int32)2 );
+-	OSL_ASSERT( aAny.getValueType() == getCppuType( (sal_Int32 *)0 ) );
++	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (sal_Int32 *)0 ) );
+ 	OSL_ASSERT( *(sal_Int32*)aAny.getValue() == 2 );
+ 	sal_uInt64 auInt64 = 0x200000000;
+ 	aAny = makeAny( auInt64 );
+-	OSL_ASSERT( aAny.getValueType() == getCppuType( (sal_uInt64 *)0 ) );
++	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (sal_uInt64 *)0 ) );
+ 	OSL_ASSERT( *(sal_uInt64*)aAny.getValue() == 0x200000000 );
+ 	aAny = makeAny( (sal_uInt32)2 );
+-	OSL_ASSERT( aAny.getValueType() == getCppuType( (sal_uInt32 *)0 ) );
++	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (sal_uInt32 *)0 ) );
+ 	OSL_ASSERT( *(sal_uInt32*)aAny.getValue() == 2 );
+ 	aAny = makeAny( TypeClass_STRUCT );
+-	OSL_ASSERT( aAny.getValueType() == getCppuType( (TypeClass *)0 ) );
++	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (TypeClass *)0 ) );
+ 	OSL_ASSERT( *(TypeClass*)aAny.getValue() == TypeClass_STRUCT );
+ 	sal_Unicode c = L'2';
+ 	aAny.setValue( &c, getCppuCharType() );
+@@ -411,42 +411,42 @@
+ 	// test: operator <<=( any, value )
+ 	Any aAny;
+ 	aAny <<= (sal_Int8)2;
+-	OSL_ASSERT( aAny.getValueType() == getCppuType( (sal_Int8 *)0 ) );
++	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (sal_Int8 *)0 ) );
+ 	OSL_ASSERT( *(sal_Int8*)aAny.getValue() == 2 );
+ 	aAny <<=( (float)2 );
+-	OSL_ASSERT( aAny.getValueType() == getCppuType( (float *)0 ) );
++	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (float *)0 ) );
+ 	OSL_ASSERT( *(float*)aAny.getValue() == (float)2 );
+ //  	aAny <<=( (sal_uInt8)2 );
+-//  	OSL_ASSERT( aAny.getValueType() == getCppuType( (sal_uInt8 *)0 ) );
++//  	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (sal_uInt8 *)0 ) );
+ //  	OSL_ASSERT( *(sal_uInt8*)aAny.getValue() == 2 );
+ 	aAny <<=( (double)2 );
+-	OSL_ASSERT( aAny.getValueType() == getCppuType( (double *)0 ) );
++	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (double *)0 ) );
+ 	OSL_ASSERT( *(double*)aAny.getValue() == (double)2 );
+ 	aAny <<=( (sal_Int16)2 );
+-	OSL_ASSERT( aAny.getValueType() == getCppuType( (sal_Int16 *)0 ) );
++	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (sal_Int16 *)0 ) );
+ 	OSL_ASSERT( *(sal_Int16*)aAny.getValue() == 2 );
+ 	aAny <<=( OUString( RTL_CONSTASCII_USTRINGPARAM("test") ) );
+-	OSL_ASSERT( aAny.getValueType() == getCppuType( (OUString *)0 ) );
++	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (OUString *)0 ) );
+ 	OSL_ASSERT( *(OUString*)aAny.getValue() == OUString::createFromAscii("test") );
+ 	aAny <<=( (sal_uInt16)2 );
+-	OSL_ASSERT( aAny.getValueType() == getCppuType( (sal_uInt16 *)0 ) );
++	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (sal_uInt16 *)0 ) );
+ 	OSL_ASSERT( *(sal_Int16*)aAny.getValue() == 2 );
+ 	sal_Int64 aInt64 = 0x200000000;
+ 	aAny <<=( aInt64 );
+-	OSL_ASSERT( aAny.getValueType() == getCppuType( (sal_Int64 *)0 ) );
++	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (sal_Int64 *)0 ) );
+ 	OSL_ASSERT( *(sal_Int64*)aAny.getValue() == 0x200000000 );
+ 	aAny <<=( (sal_Int32)2 );
+-	OSL_ASSERT( aAny.getValueType() == getCppuType( (sal_Int32 *)0 ) );
++	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (sal_Int32 *)0 ) );
+ 	OSL_ASSERT( *(sal_Int32*)aAny.getValue() == 2 );
+ 	sal_uInt64 auInt64 = 0x200000000;
+ 	aAny <<=( auInt64 );
+-	OSL_ASSERT( aAny.getValueType() == getCppuType( (sal_uInt64 *)0 ) );
++	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (sal_uInt64 *)0 ) );
+ 	OSL_ASSERT( *(sal_uInt64*)aAny.getValue() == 0x200000000 );
+ 	aAny <<=( (sal_uInt32)2 );
+-	OSL_ASSERT( aAny.getValueType() == getCppuType( (sal_uInt32 *)0 ) );
++	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (sal_uInt32 *)0 ) );
+ 	OSL_ASSERT( *(sal_uInt32*)aAny.getValue() == 2 );
+ 	aAny <<=( TypeClass_STRUCT );
+-	OSL_ASSERT( aAny.getValueType() == getCppuType( (TypeClass *)0 ) );
++	OSL_ASSERT( aAny.getValueType() == ::getCppuType( (TypeClass *)0 ) );
+ 	OSL_ASSERT( *(TypeClass*)aAny.getValue() == TypeClass_STRUCT );
+ 	}
+     
+@@ -678,10 +678,10 @@
+ 
+ 	// equals...
+ 	sal_uInt64 n = (sal_uInt64)(sal_Int64)-5;
+-	a.setValue( &n, getCppuType( (sal_uInt64 *)0 ) );
++	a.setValue( &n, ::getCppuType( (sal_uInt64 *)0 ) );
+ 	Any b;
+ 	sal_Int8 n2 = -5;
+-	b.setValue( &n2, getCppuType( (sal_Int8 *)0 ) );
++	b.setValue( &n2, ::getCppuType( (sal_Int8 *)0 ) );
+ 	OSL_ASSERT( a != b );
+ }
+ 
+@@ -697,9 +697,9 @@
+ 
+ void test_inheritance()
+ {
+-	OSL_ASSERT( sizeof( Base ) == getSize( getCppuType( (Base *)0).getTypeLibType() ) );
+-	OSL_ASSERT( sizeof( Base1 ) == getSize( getCppuType( (Base1 *)0).getTypeLibType() ) );
+-	OSL_ASSERT( sizeof( Base2 ) == getSize( getCppuType( (Base2 *)0).getTypeLibType() ) );
++	OSL_ASSERT( sizeof( Base ) == getSize( ::getCppuType( (Base *)0).getTypeLibType() ) );
++	OSL_ASSERT( sizeof( Base1 ) == getSize( ::getCppuType( (Base1 *)0).getTypeLibType() ) );
++	OSL_ASSERT( sizeof( Base2 ) == getSize( ::getCppuType( (Base2 *)0).getTypeLibType() ) );
+ }
+ 
+ sal_Int32 nCallback_1;
+@@ -870,7 +870,7 @@
+ 
+ inline const ::com::sun::star::uno::Type& SAL_CALL getCppuType( const Sequence< OUString[2][4] >* ) SAL_THROW( () )
+ {
+-	return getCppuSequenceType< OUString[2][4] >( getCppuArrayType2( (const OUString (*)[2][4])0 ) );
++	return getCppuSequenceType< OUString[2][4] >( ::getCppuArrayType2( (const OUString (*)[2][4])0 ) );
+ }	
+ 
+ //==================================================================================================
+@@ -944,29 +944,30 @@
+ 
+ void testArray(void)
+ {
++/*
+ 	long a[5][6];
+-	getCppuArrayType2( &a );
++	::getCppuArrayType2( &a );
+ 	
+-	getCppuArrayType1( (const long (*)[5])0 );
+-	getCppuArrayType2( (const long (*)[6][7])0 );
+-	getCppuArrayType3( (const long (*)[7][8][9])0 );
+-	getCppuArrayType4( (const long (*)[8][9][10][11])0 );
+-	getCppuArrayType5( (const long (*)[9][10][11][12][13])0 );
+-	getCppuArrayType6( (const long (*)[10][11][12][13][14][15])0 );
+-
+-	getCppuArrayType2( (const Reference< XInterface > (*)[6][7])0 );
+-
+-	getCppuArrayType1( (const Test1 (*)[5])0 );
+-	getCppuArrayType2( (const Test1 (*)[6][7])0 );
+-	getCppuArrayType3( (const Test1 (*)[7][8][9])0 );
+-	getCppuArrayType4( (const Test1 (*)[8][9][10][11])0 );
+-	getCppuArrayType5( (const Test1 (*)[9][10][11][12][13])0 );
+-	getCppuArrayType6( (const Test1 (*)[10][11][12][13][14][15])0 );
++	::getCppuArrayType1( (const long (*)[5])0 );
++	::getCppuArrayType2( (const long (*)[6][7])0 );
++	::getCppuArrayType3( (const long (*)[7][8][9])0 );
++	::getCppuArrayType4( (const long (*)[8][9][10][11])0 );
++	::getCppuArrayType5( (const long (*)[9][10][11][12][13])0 );
++	::getCppuArrayType6( (const long (*)[10][11][12][13][14][15])0 );
++
++	::getCppuArrayType2( (const Reference< XInterface > (*)[6][7])0 );
++
++	::getCppuArrayType1( (const Test1 (*)[5])0 );
++	::getCppuArrayType2( (const Test1 (*)[6][7])0 );
++	::getCppuArrayType3( (const Test1 (*)[7][8][9])0 );
++	::getCppuArrayType4( (const Test1 (*)[8][9][10][11])0 );
++	::getCppuArrayType5( (const Test1 (*)[9][10][11][12][13])0 );
++	::getCppuArrayType6( (const Test1 (*)[10][11][12][13][14][15])0 );
+ 	
+ 	typelib_TypeDescription* pType = NULL;
+ 	typelib_TypeDescriptionReference* pTypeRef = NULL;
+ 	sal_Int32 pDim[] = { 2, 4 };
+-	Type rType = getCppuType((const sal_Int32*)0);
++	Type rType = ::getCppuType((const sal_Int32*)0);
+ 	typelib_typedescription_newArray(&pType, rType.getTypeLibType(), 2, pDim);
+ 	OSL_ASSERT( pType );
+ 	typelib_typedescriptionreference_new(&pTypeRef, typelib_TypeClass_ARRAY, pType->pTypeName);	
+@@ -993,7 +994,7 @@
+ 	pType = NULL;
+ 	pTypeRef = NULL;
+ 
+-	typelib_typedescription_newArray(&pType, getCppuType((const OUString*)0).getTypeLibType(), 2, pDim);
++	typelib_typedescription_newArray(&pType, ::getCppuType((const OUString*)0).getTypeLibType(), 2, pDim);
+ 	OSL_ASSERT( pType );
+ 	typelib_typedescriptionreference_new(&pTypeRef, typelib_TypeClass_ARRAY, pType->pTypeName);	
+ 	OSL_ASSERT( pTypeRef );
+@@ -1040,7 +1041,7 @@
+ 	Any aa1, aa2;
+ 	Type arrayType;
+ 	OUString (*sB)[2][4];
+-	aa1.setValue(&sA, getCppuArrayType2( (const OUString (*)[2][4])0 ));
++	aa1.setValue(&sA, ::getCppuArrayType2( (const OUString (*)[2][4])0 ));
+ 	aa2 = aa1;	
+ 	arrayType = aa2.getValueType();
+ 	sB = (OUString(*)[2][4])aa2.getValue(); 
+@@ -1048,7 +1049,7 @@
+ 		for ( j=0; j<4; j++ )
+ 			OSL_ASSERT( sA[i][j] == (*sB)[i][j] );
+ 
+-	// requires a specialized getCppuType function 'getCppuType( const Sequence< OUString[2][4] >* )'
++	// requires a specialized ::getCppuType function '::getCppuType( const Sequence< OUString[2][4] >* )'
+ 	Sequence< OUString[2][4] > aSeq(2); 
+ 	OUString (*pSeq)[2][4] = aSeq.getArray();	
+ 	uno_copyData(pSeq[0], sA, pType, cpp_acquire);
+@@ -1088,6 +1089,7 @@
+ 	typelib_typedescriptionreference_release(pTypeRef);
+ 	pType = NULL;
+ 	pTypeRef = NULL;
++	*/
+ }	
+ 
+ /*
