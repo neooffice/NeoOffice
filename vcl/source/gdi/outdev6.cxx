@@ -90,6 +90,23 @@
 #include <com/sun/star/uno/Sequence.hxx>
 #endif
 
+#ifdef USE_JAVA
+
+#ifndef _SV_OUTDATA_HXX
+#include <outdata.hxx>
+#endif
+#ifndef _SV_SALINST_HXX
+#include <salinst.hxx>
+#endif
+#ifndef _SV_SALVD_HXX
+#include <salvd.hxx>
+#endif
+#ifndef _SV_SVDATA_HXX
+#include <svdata.hxx>
+#endif
+
+#endif	// USE_JAVA
+
 // ========================================================================
 
 DBG_NAMEEX( OutputDevice );
@@ -198,31 +215,22 @@ void OutputDevice::DrawGrid( const Rectangle& rRect, const Size& rDist, ULONG nF
 
 			if ( aSrcSize.Width() > 0 && aSrcSize.Height() > 0 )
 			{
-				VirtualDevice aVDev( *this );
-				if ( aVDev.SetOutputSizePixel( aSrcSize ) )
-				{
-					if ( ((OutputDevice*)&aVDev)->mpGraphics || ((OutputDevice*)&aVDev)->ImplGetGraphics() )
-					{
-						SalTwoRect aPosAry;
-						aPosAry.mnSrcX = aSrcPt.X();
-						aPosAry.mnSrcY = aSrcPt.Y();
-						aPosAry.mnSrcWidth = aSrcSize.Width();
-						aPosAry.mnSrcHeight = aSrcSize.Height();
-						aPosAry.mnDestX = aDestPt.X();
-						aPosAry.mnDestY = aDestPt.Y();
-						aPosAry.mnDestWidth = aPosAry.mnSrcWidth;
-						aPosAry.mnDestHeight = aPosAry.mnSrcHeight;
-						(((OutputDevice*)&aVDev)->mpGraphics)->CopyBits( &aPosAry, mpGraphics, &aVDev, this );
+				ImplSVData* pSVData = ImplGetSVData();
 
-						aVDev.SetLineColor( GetLineColor() );
-						aVDev.SetFillColor( GetFillColor() );
-						aVDev.SetRasterOp( GetRasterOp() );
-						aVDev.ImplInitLineColor();
-						aVDev.ImplInitFillColor();
+				// Use a SalVirtualDevice instance directly since the
+				// VirtualDevice construct will initialize all pixels to white
+				SalVirtualDevice *pSalVirDev = pSVData->mpDefInst->CreateVirtualDevice( mpGraphics, aSrcSize.Width(), aSrcSize.Height(), GetBitCount() );
+				if ( pSalVirDev )
+				{
+					SalGraphics *pGraphics = pSalVirDev->GetGraphics();
+					if ( pGraphics )
+					{
+						pGraphics->SetLineColor( ImplColorToSal( maLineColor ) );
 						for( long i = nVertCount - 1; i >= 0L; i-- )
 							for( long j = nHorzCount - 1, nX = aHorzBuf[ j ] - aSrcPt.X(), nY = aVertBuf[ i ] - aSrcPt.Y(); j >= 0L && nX >= 0L && nY >= 0L; j--, nX = aHorzBuf[ j ] - aSrcPt.X() )
-								(((OutputDevice*)&aVDev)->mpGraphics)->DrawPixel( nX, nY, &aVDev );
+								pGraphics->DrawPixel( nX, nY, NULL );
 
+						SalTwoRect aPosAry;
 						aPosAry.mnSrcX = aDestPt.X();
 						aPosAry.mnSrcY = aDestPt.Y();
 						aPosAry.mnSrcWidth = aSrcSize.Width();
@@ -231,8 +239,12 @@ void OutputDevice::DrawGrid( const Rectangle& rRect, const Size& rDist, ULONG nF
 						aPosAry.mnDestY = aSrcPt.Y();
 						aPosAry.mnDestWidth = aPosAry.mnSrcWidth;
 						aPosAry.mnDestHeight = aPosAry.mnSrcHeight;
-						mpGraphics->CopyBits( &aPosAry, ((OutputDevice*)&aVDev)->mpGraphics, this, &aVDev );
+						mpGraphics->CopyBits( &aPosAry, pGraphics, this, NULL );
+
+						pSalVirDev->ReleaseGraphics( pGraphics );
 					}
+
+					pSVData->mpDefInst->DestroyVirtualDevice( pSalVirDev );
 				}
 			}
 		}
