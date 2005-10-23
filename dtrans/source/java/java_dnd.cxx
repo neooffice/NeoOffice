@@ -930,7 +930,7 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTran
 	bNoRejectCursor = true;
 
 	// Reset the pointer to the last pointer set in VCL window
-	if ( mpWindow )
+	if ( mpWindow && mpWindow->IsVisible() )
 	{
 		// We need to toggle the style to make sure that VCL resets the
 		// pointer
