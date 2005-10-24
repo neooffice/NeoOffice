@@ -54,33 +54,27 @@
  */
 int macxp_getOSXLocale( char *locale, sal_uInt32 bufferLen )
 {
-	CFBundleRef rBundle;
+	locale[0] = '\0';
 
-	locale[0] = '\0'; 
-	rBundle = CFBundleGetMainBundle();
-	if ( rBundle )
+	CFArrayRef aArray = (CFArrayRef)CFPreferencesCopyAppValue( CFSTR( "AppleLanguages" ), kCFPreferencesCurrentApplication );
+	if ( aArray && CFGetTypeID( aArray ) == CFArrayGetTypeID() && CFArrayGetCount( aArray ) > 0 )
 	{
-		CFArrayRef rAvailableLocales = CFBundleCopyBundleLocalizations( rBundle );
-		if ( rAvailableLocales )
+		CFStringRef aString = CFArrayGetValueAtIndex( aArray, 0 );
+		if ( aString )
 		{
-			CFArrayRef rPreferredLocales = CFBundleCopyPreferredLocalizationsFromArray( rAvailableLocales );
-			if ( rPreferredLocales )
+			// Convert any old language names to ISO format
+			CFStringRef aLocaleString = CFLocaleCreateCanonicalLocaleIdentifierFromString( kCFAllocatorDefault, aString );
+			if ( aLocaleString )
 			{
-				CFStringRef rString = (CFStringRef)CFArrayGetValueAtIndex( rPreferredLocales, 0 );
-				if ( rString )
-				{
-					if ( !CFStringGetCString( rString, locale, bufferLen, kCFStringEncodingUTF8 ) )
-						locale[0] = '\0';
-					
-				}
-				CFRelease( rPreferredLocales );
+				if ( !CFStringGetCString( aLocaleString, locale, bufferLen, kCFStringEncodingUTF8 ) )
+					locale[0] = '\0';
+				CFRelease( aLocaleString );
 			}
-			CFRelease( rAvailableLocales );
 		}
 	}
 
 	if ( !strlen( locale ) )
-		strcpy( locale, "en" );
+		strcpy( locale, "en_US" );
 
 	return( noErr );
 }
