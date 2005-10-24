@@ -51,7 +51,7 @@ apphome=`dirname "$0"`
 sharebase="$apphome/../share"
 userbase="$apphome/../user"
 userlibrary="$HOME/Library"
-userinstall="$userlibrary/$(PRODUCT_DIR_NAME)-$(OO_VERSION)/user"
+userinstall="$userlibrary/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)/user"
 
 
 # Make sure the user's home directory exists and is writable
@@ -193,9 +193,10 @@ s#<value.*$#<value>1</value>#
 fi
 
 # Make locale the default document language
+sharedictdir="$sharebase/dict/ooo"
 lang=`echo "$locale" | awk -F- '{ print $1 }'`
 linguxml="$registrydir/Office/Linguistic.xcu"
-linguxmlset="$linguxml.set"
+linguxmlset="$linguxml.set.1"
 linguxmlbak="$linguxml.bak"
 rm -f "$linguxmlbak"
 if [ ! -f "$linguxml" ] ; then
@@ -204,7 +205,12 @@ fi
 if [ ! -f "$linguxmlset" -a ! -f "$linguxmlbak" ] ; then
     # Match the locale to one of the installed locales
     locales='$(LANGUAGE_NAMES)'
-    country=`echo "$locale" | awk -F- '{ print $2 }'`
+    if [ -d "$sharedictdir" ] ; then
+        locales="$locales "`cd "$sharedictdir" ; ls -1d *.aff | sed 's/\.aff//g' | sed 's/_/-/g'`
+    fi
+    if [ -d "$wordbookdir" ] ; then
+        locales="$locales "`cd "$wordbookdir" ; ls -1d *.aff | sed 's/\.aff//g' | sed 's/_/-/g'`
+    fi
     matchedlocale=""
     for i in $locales ; do
         if [ "$locale" = "$i" ] ; then
@@ -213,7 +219,6 @@ if [ ! -f "$linguxmlset" -a ! -f "$linguxmlbak" ] ; then
         fi
     done
     if [ -z "$matchedlocale" ] ; then
-        country=""
         for i in $locales ; do
             ilang=`echo "$i" | awk -F- '{ print $1 }'`
             if [ "$lang" = "$ilang" ] ; then
@@ -223,9 +228,7 @@ if [ ! -f "$linguxmlset" -a ! -f "$linguxmlbak" ] ; then
         done
     fi
     if [ -z "$matchedlocale" ] ; then
-        lang="en"
-        country="US"
-        locale="$lang-$country"
+        locale="en-US"
     else
         locale="$matchedlocale"
     fi
@@ -247,7 +250,6 @@ s#<value.*$#<value>'"$locale"'</value>#
 fi
 
 # Create user dictionary.lst file
-sharedictdir="$sharebase/dict/ooo"
 if [ -d "$sharedictdir" ] ; then
     userdictlst="$wordbookdir/dictionary.lst"
     sharedictlst="$sharedictdir/dictionary.lst"
