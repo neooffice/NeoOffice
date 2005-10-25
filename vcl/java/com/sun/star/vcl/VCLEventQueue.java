@@ -177,10 +177,10 @@ public final class VCLEventQueue {
 
 		VCLEventQueue.Queue queue = (awtEvents ? queueList[0] : queueList[1]);
 
-		if (wait <= 0 && queue.head == null)
-			return null;
-
 		synchronized (queueList) {
+			if (awtEvents && queueList[1].head != null)
+				return null;
+
 			if (wait > 0 && queueList[0].head == null && queueList[1].head == null) {
 				try {
 					queueList.wait(wait);
