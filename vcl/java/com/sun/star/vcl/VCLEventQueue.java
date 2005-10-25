@@ -178,8 +178,13 @@ public final class VCLEventQueue {
 		VCLEventQueue.Queue queue = (awtEvents ? queueList[0] : queueList[1]);
 
 		synchronized (queueList) {
-			if (awtEvents && queueList[1].head != null)
-				return null;
+			if (awtEvents && queueList[1].head != null) {
+				// Fix bug 1089 by ignoring open and print document events
+				// since they will get reposted in certain cases
+				int id = queueList[1].head.event.getID();
+				if (id != VCLEvent.SALEVENT_OPENDOCUMENT && id != VCLEvent.SALEVENT_PRINTDOCUMENT)
+					return null;
+			}
 
 			if (wait > 0 && queueList[0].head == null && queueList[1].head == null) {
 				try {
