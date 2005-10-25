@@ -381,8 +381,14 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					if ( nModifiers == ( KEY_MOD1 | KEY_SHIFT ) )
 						pKeyEvent->mnCharCode = 0x2011;
 					else if ( nModifiers == KEY_MOD1 )
-					pKeyEvent->mnCharCode = 0x00AD;
+						pKeyEvent->mnCharCode = 0x00AD;
 				}
+				// The OOo code expects that Ctrl-key events will have the key
+				// char resolved to their respective ASCII equivalents. Since
+				// we convert Mac OS X Meta-key events into Ctrl-key events, we
+				// need to do the resolving manually.
+				if ( pKeyEvent->mnCode & KEY_MOD1 && ! ( pKeyEvent->mnCode & KEY_CONTROLMOD ) && pKeyEvent->mnCharCode >= 'a' && pKeyEvent->mnCharCode <= 0x7d )
+					pKeyEvent->mnCharCode -= 0x60;
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pKeyEvent );
 			}
 			if ( pKeyEvent )
