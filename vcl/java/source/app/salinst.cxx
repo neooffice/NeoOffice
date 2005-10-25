@@ -123,13 +123,13 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 	{
 		SalData *pSalData = GetSalData();
 
-		if ( nClass == kEventClassMenu && ( nKind == kEventMenuOpening || nKind == kEventMenuEndTracking ) )
+		if ( nClass == kEventClassMenu && ( nKind == kEventMenuBeginTracking || nKind == kEventMenuEndTracking ) )
 		{
 			// Check if this a menubar event as we don't want to dispatch
 			// native popup menus in modal dialogs and make sure that this is
 			// not a duplicate menu opening event
 			UInt32 nContext;
-			if ( GetEventParameter( aEvent, kEventParamMenuContext, typeUInt32, NULL, sizeof( UInt32 ), NULL, &nContext ) == noErr && nContext & kMenuContextMenuBarTracking && ( !pSalData->mbInNativeMenuTracking || nKind == kEventMenuEndTracking ) )
+			if ( GetEventParameter( aEvent, kEventParamMenuContext, typeUInt32, NULL, sizeof( UInt32 ), NULL, &nContext ) == noErr && nContext & kMenuContextMenuBarTracking )
 			{
 				// Check if there is a native modal window as we will deadlock
 				// when a native modal window is showing
@@ -138,7 +138,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 				// Wakeup the event queue by sending it a dummy event
 				// and wait for all pending AWT events to be dispatched
-				pSalData->mbInNativeMenuTracking = ( nKind == kEventMenuOpening );
+				pSalData->mbInNativeMenuTracking = ( nKind == kEventMenuBeginTracking );
 				pSalData->mbNativeEventSucceeded = false;
 				pSalData->maNativeEventCondition.reset();
 				com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
@@ -180,7 +180,7 @@ void ExecuteApplicationMain( Application *pApp )
 		// Set up native event handler
 		EventTypeSpec aTypes[2];
 		aTypes[0].eventClass = kEventClassMenu;
-		aTypes[0].eventKind = kEventMenuOpening;
+		aTypes[0].eventKind = kEventMenuBeginTracking;
 		aTypes[1].eventClass = kEventClassMenu;
 		aTypes[1].eventKind = kEventMenuEndTracking;
 		InstallApplicationEventHandler( pEventHandlerUPP, 2, aTypes, NULL, NULL );
