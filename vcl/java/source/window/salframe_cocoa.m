@@ -38,9 +38,9 @@
 
 @interface ScreenBounds : NSObject
 {
+	NSRect					maBounds;
 	BOOL					mbFullScreen;
 	NSPoint					maPoint;
-	NSRect					maBounds;
 }
 - (NSRect)bounds;
 - (void)calcBounds:(id)pObject;
@@ -59,46 +59,46 @@
 	NSArray *pScreens = [NSScreen screens];
 	if ( pScreens )
 	{
-		NSRect aVirtualBounds = NSMakeRect( 0, 0, 0, 0 );
 		unsigned nCount = [pScreens count];
+		NSScreen *pScreen = (NSScreen *)[pScreens objectAtIndex:0];
+		NSRect aVirtualBounds = [pScreen frame];
 
 		// Iterate through the screen devices and calculate the virtual screen
 		// size
 		unsigned i;
-		for ( i = 0; i < nCount; i++ )
+		for ( i = 1; i < nCount; i++ )
 		{
-			NSScreen *pScreen = (NSScreen *)[pScreens objectAtIndex:i];
+			pScreen = (NSScreen *)[pScreens objectAtIndex:i];
 			aVirtualBounds = NSUnionRect( aVirtualBounds, [pScreen frame] );
 		}
 
-		// Iterate through the screen devices in reverse order and find the
-		// screen that the top left corner of the frame is in and if we get to
-		// the first screen always use that as the default
-		for ( i = nCount - 1; i >= 0; i-- )
+		if ( mbFullScreen )
 		{
-			NSScreen *pScreen = (NSScreen *)[pScreens objectAtIndex:i];
+			// Use only the first screen for full screen mode
+			NSScreen *pScreen = (NSScreen *)[pScreens objectAtIndex:0];
 			NSRect aBounds = [pScreen frame];
-
+			aBounds.size.width /= 2;
+	
 			// Flip the coordinate system to match the VCL coordinate system
 			aBounds.origin.y = aVirtualBounds.size.height - aBounds.origin.y - aBounds.size.height;
-			
-			if ( !i || NSPointInRect( maPoint, aBounds ) )
-			{
-				if ( !mbFullScreen )
-				{
-					// Flip the coordinate system to match the VCL coordinate
-					// system
-					NSRect aVisibleBounds = [pScreen visibleFrame];
-					aVisibleBounds.origin.y = aBounds.origin.y + aBounds.size.height - aVisibleBounds.origin.y - aVisibleBounds.size.height;
-					maBounds = aVisibleBounds;
-				}
-				else
-				{
-					maBounds = aBounds;
-				}
+			maBounds = aBounds;
+		}
+		else
+		{
+			// Calculate the size of the visible portion of the virtual screen
+			pScreen = (NSScreen *)[pScreens objectAtIndex:0];
+			NSRect aVisibleVirtualBounds = [pScreen visibleFrame];
 
-				break;
+			unsigned i;
+			for ( i = 1; i < nCount; i++ )
+			{
+				pScreen = (NSScreen *)[pScreens objectAtIndex:i];
+				aVisibleVirtualBounds = NSUnionRect( aVisibleVirtualBounds, [pScreen visibleFrame] );
 			}
+
+			// Flip the coordinate system to match the VCL coordinate system
+			aVisibleVirtualBounds.origin.y = aVirtualBounds.origin.y + aVirtualBounds.size.height - aVisibleVirtualBounds.origin.y - aVisibleVirtualBounds.size.height;
+			maBounds = aVisibleVirtualBounds;
 		}
 	}
 }
@@ -107,9 +107,9 @@
 {
 	[super init];
 
+	maBounds = NSMakeRect( 0, 0, 800, 600 );
 	mbFullScreen = bFullScreen;
 	maPoint = aPoint;
-	maBounds = NSMakeRect( 0, 0, 800, 600 );
 
 	return self;
 }

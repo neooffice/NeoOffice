@@ -293,13 +293,10 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	}
 
 	Rectangle aWorkArea;
+	GetWorkArea( aWorkArea );
 
 	if ( maFrameData.mbCenter && ! ( nFlags & ( SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y ) ) )
 	{
-		if ( maFrameData.mpParent )
-			maFrameData.mpParent->GetWorkArea( aWorkArea );
-		else
-			GetWorkArea( aWorkArea );
 		if ( maFrameData.mpParent && maFrameData.mpParent->maGeometry.nWidth >= nWidth && maFrameData.mpParent->maGeometry.nHeight > nHeight)
 		{
 			nX = maFrameData.mpParent->maGeometry.nX + ( ( maFrameData.mpParent->maGeometry.nWidth - nWidth ) / 2 );
@@ -319,18 +316,6 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 			nX += maFrameData.mpParent->maGeometry.nX;
 		if ( nFlags & SAL_FRAME_POSSIZE_Y )
 			nY += maFrameData.mpParent->maGeometry.nY;
-
-		// If this is a popup window, we need to put the window on the correct
-		// screen when the parent window straddles more than one screen
-		Rectangle aBounds( Point( nX, nY ), Size( nWidth + maGeometry.nLeftDecoration + maGeometry.nRightDecoration, nHeight + maGeometry.nTopDecoration + maGeometry.nBottomDecoration ) );
-		maFrameData.mpVCLFrame->setBounds( aBounds.nLeft, aBounds.nTop, aBounds.GetWidth(), aBounds.GetHeight() );
-		GetWorkArea( aWorkArea );
-		if ( aBounds.Intersection( aWorkArea ).IsEmpty() )
-			maFrameData.mpParent->GetWorkArea( aWorkArea );
-	}
-	else
-	{
-		GetWorkArea( aWorkArea );
 	}
 
 	// Make sure window does not spill off of the screen
@@ -367,8 +352,6 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 
 void SalFrame::GetWorkArea( Rectangle &rRect )
 {
-	rRect = maFrameData.mpVCLFrame->getBounds();
-
 	NSScreen_getScreenBounds( &rRect.nLeft, &rRect.nTop, &rRect.nRight, &rRect.nBottom, maFrameData.mbPresentation ? TRUE : FALSE );
 }
 
