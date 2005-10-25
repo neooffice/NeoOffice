@@ -534,9 +534,6 @@ void SalFrame::SetAlwaysOnTop( BOOL bOnTop )
 
 void SalFrame::ToTop( USHORT nFlags )
 {
-	if ( ! ( nFlags & SAL_FRAME_TOTOP_RESTOREWHENMIN ) && maFrameData.mpVCLFrame->getState() == SAL_FRAMESTATE_MINIMIZED )
-		return;
-
 	if ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS )
 		maFrameData.mpVCLFrame->toFront();
 	else if ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS_ONLY )
