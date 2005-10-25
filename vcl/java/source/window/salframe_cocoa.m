@@ -39,12 +39,13 @@
 @interface ScreenBounds : NSObject
 {
 	NSRect					maBounds;
-	BOOL					mbFullScreen;
+	BOOL					mbFullScreenMode;
+	BOOL					mbFullScreenWindow;
 	NSPoint					maPoint;
 }
 - (NSRect)bounds;
 - (void)calcBounds:(id)pObject;
-- (id)initWithPoint:(NSPoint)aPoint fullScreen:(BOOL)bFullScreen;
+- (id)initWithPoint:(NSPoint)aPoint fullScreenMode:(BOOL)bFullScreenMode fullScreenWindow:(BOOL)bFullScreenWindow;
 @end
 
 @implementation ScreenBounds
@@ -72,12 +73,11 @@
 			aVirtualBounds = NSUnionRect( aVirtualBounds, [pScreen frame] );
 		}
 
-		if ( mbFullScreen )
+		if ( mbFullScreenWindow )
 		{
 			// Use only the first screen for full screen mode
 			NSScreen *pScreen = (NSScreen *)[pScreens objectAtIndex:0];
 			NSRect aBounds = [pScreen frame];
-			aBounds.size.width /= 2;
 	
 			// Flip the coordinate system to match the VCL coordinate system
 			aBounds.origin.y = aVirtualBounds.size.height - aBounds.origin.y - aBounds.size.height;
@@ -87,28 +87,29 @@
 		{
 			// Calculate the size of the visible portion of the virtual screen
 			pScreen = (NSScreen *)[pScreens objectAtIndex:0];
-			NSRect aVisibleVirtualBounds = [pScreen visibleFrame];
+			NSRect aBounds = ( mbFullScreenMode ? [pScreen frame] : [pScreen visibleFrame] );
 
 			unsigned i;
 			for ( i = 1; i < nCount; i++ )
 			{
 				pScreen = (NSScreen *)[pScreens objectAtIndex:i];
-				aVisibleVirtualBounds = NSUnionRect( aVisibleVirtualBounds, [pScreen visibleFrame] );
+				aBounds = NSUnionRect( aBounds, mbFullScreenMode ? [pScreen frame] : [pScreen visibleFrame] );
 			}
 
 			// Flip the coordinate system to match the VCL coordinate system
-			aVisibleVirtualBounds.origin.y = aVirtualBounds.origin.y + aVirtualBounds.size.height - aVisibleVirtualBounds.origin.y - aVisibleVirtualBounds.size.height;
-			maBounds = aVisibleVirtualBounds;
+			aBounds.origin.y = aVirtualBounds.origin.y + aVirtualBounds.size.height - aBounds.origin.y - aBounds.size.height;
+			maBounds = aBounds;
 		}
 	}
 }
 
-- (id)initWithPoint:(NSPoint)aPoint fullScreen:(BOOL)bFullScreen
+- (id)initWithPoint:(NSPoint)aPoint fullScreenMode:(BOOL)bFullScreenMode fullScreenWindow:(BOOL)bFullScreenWindow;
 {
 	[super init];
 
 	maBounds = NSMakeRect( 0, 0, 800, 600 );
-	mbFullScreen = bFullScreen;
+	mbFullScreenMode = bFullScreenMode;
+	mbFullScreenWindow = bFullScreenWindow;
 	maPoint = aPoint;
 
 	return self;
@@ -116,11 +117,11 @@
 
 @end
 
-void NSScreen_getScreenBounds( long *nX, long *nY, long *nWidth, long *nHeight, BOOL bFullScreen )
+void NSScreen_getScreenBounds( long *nX, long *nY, long *nWidth, long *nHeight, BOOL bFullScreenMode, BOOL bFullScreenWindow )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	ScreenBounds *pScreenBounds = [[ScreenBounds alloc] initWithPoint:NSMakePoint( (float)( *nX ), (float)( *nY ) ) fullScreen:bFullScreen];
+	ScreenBounds *pScreenBounds = [[ScreenBounds alloc] initWithPoint:NSMakePoint( (float)( *nX ), (float)( *nY ) ) fullScreenMode:bFullScreenMode fullScreenWindow:bFullScreenWindow];
 	[pScreenBounds performSelectorOnMainThread:@selector(calcBounds:) withObject:pScreenBounds waitUntilDone:YES];
 
 	NSRect aBounds = [pScreenBounds bounds];

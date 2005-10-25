@@ -352,7 +352,7 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 
 void SalFrame::GetWorkArea( Rectangle &rRect )
 {
-	NSScreen_getScreenBounds( &rRect.nLeft, &rRect.nTop, &rRect.nRight, &rRect.nBottom, maFrameData.mbPresentation ? TRUE : FALSE );
+	NSScreen_getScreenBounds( &rRect.nLeft, &rRect.nTop, &rRect.nRight, &rRect.nBottom, GetSalData()->mpPresentationFrame ? TRUE : FALSE, maFrameData.mbPresentation ? TRUE : FALSE );
 }
 
 // -----------------------------------------------------------------------
