@@ -1699,7 +1699,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 					}
 				}
 				detachedChildren.clear();
-				toFront();
 			}
 		}
 
@@ -1940,7 +1939,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (b) {
 			// Show the window
 			window.show();
-			toFront();
 		}
 		else {
 			// Hide the window
