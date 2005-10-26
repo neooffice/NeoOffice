@@ -254,9 +254,20 @@ if [ -d "$sharedictdir" ] ; then
     userdictlst="$wordbookdir/dictionary.lst"
     sharedictlst="$sharedictdir/dictionary.lst"
     if [ -r "$sharedictlst" ] ; then
-        ( cat /dev/null "$userdictlst" ; grep -E '[^][#:space:]*(DICT|HYPH|THES)[[:space:]]*'"$lang"'[[:space:]]' "$sharedictlst" ) 2>/dev/null | sed 's#^[#[:space:]]*##' > "$userdictlst.tmp"
+        ( cat /dev/null "$userdictlst" ; grep -E '[^][#:space:]*(DICT|HYPH|THES)[[:space:]]*'"$lang"'[[:space:]]' "$sharedictlst" ) 2>/dev/null | sed 's#^[#[:space:]]*##' | sort -u > "$userdictlst.tmp"
         if [ -s "$userdictlst.tmp" ] ; then
-            sort -u "$userdictlst.tmp" > "$userdictlst"
+            lasttype=
+            lastlang=
+            lastcountry=
+            while read type lang country file ; do
+                if [ "$type $lang $country" = "$lasttype $lastlang $lastcountry" ] ; then
+                    continue;
+                fi
+                echo "$type $lang $country $file"
+                lasttype="$type"
+                lastlang="$lang"
+                lastcountry="$country"
+            done < "$userdictlst.tmp" > "$userdictlst"
         fi
         rm -f "$userdictlst.tmp"
     fi
