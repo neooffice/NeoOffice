@@ -1206,7 +1206,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				return SAL_FRAMESTATE_MAXIMIZED;
 		}
 
-		return Frame.NORMAL;
+		return SAL_FRAMESTATE_NORMAL;
 
 	}
 
@@ -1898,7 +1898,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				s = Frame.MAXIMIZED_BOTH;
 			else
 				s = Frame.NORMAL;
-			((Frame)window).setState(s);
+			((Frame)window).setExtendedState(s);
 		}
 
 	}
@@ -1937,6 +1937,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			((Frame)window).setResizable(resizable);
 
 		if (b) {
+			// Fix bug 1012 by deiconifying the parent window
+			VCLFrame f = VCLFrame.findFrame(window.getOwner());
+			if (f != null && f.getState() == SAL_FRAMESTATE_MINIMIZED)
+				f.setState(SAL_FRAMESTATE_NORMAL);
+
 			// Show the window
 			window.show();
 		}
