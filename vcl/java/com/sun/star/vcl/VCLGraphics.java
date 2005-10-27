@@ -529,8 +529,8 @@ public final class VCLGraphics {
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = (Rectangle)clipRects.next();
-				if (clip.intersects(destBounds))
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
 		}
@@ -626,8 +626,8 @@ public final class VCLGraphics {
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = (Rectangle)clipRects.next();
-				if (clip.intersects(destBounds))
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
 		}
@@ -697,8 +697,8 @@ public final class VCLGraphics {
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = (Rectangle)clipRects.next();
-				if (clip.intersects(destBounds))
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
 		}
@@ -796,8 +796,8 @@ public final class VCLGraphics {
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = (Rectangle)clipRects.next();
-				if (clip.intersects(destBounds))
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
 		}
@@ -866,8 +866,8 @@ public final class VCLGraphics {
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = (Rectangle)clipRects.next();
-				if (clip.intersects(graphicsBounds))
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(graphicsBounds);
+				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
 		}
@@ -970,8 +970,8 @@ public final class VCLGraphics {
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = (Rectangle)clipRects.next();
-				if (clip.intersects(destBounds))
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
 		}
@@ -1028,8 +1028,8 @@ public final class VCLGraphics {
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = (Rectangle)clipRects.next();
-				if (clip.intersects(destBounds))
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
 		}
@@ -1079,8 +1079,10 @@ public final class VCLGraphics {
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle destBounds = polygon.getBounds();
-		destBounds.width++;
-		destBounds.height++;
+		destBounds.x--;
+		destBounds.y--;
+		destBounds.width += 2;
+		destBounds.height += 2;
 		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
@@ -1089,8 +1091,8 @@ public final class VCLGraphics {
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = (Rectangle)clipRects.next();
-				if (clip.intersects(destBounds))
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
 		}
@@ -1142,8 +1144,10 @@ public final class VCLGraphics {
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle destBounds = polygon.getBounds();
-		destBounds.width++;
-		destBounds.height++;
+		destBounds.x--;
+		destBounds.y--;
+		destBounds.width += 2;
+		destBounds.height += 2;
 		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
@@ -1152,8 +1156,8 @@ public final class VCLGraphics {
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = (Rectangle)clipRects.next();
-				if (clip.intersects(destBounds))
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
 		}
@@ -1225,7 +1229,12 @@ public final class VCLGraphics {
 		if (area == null || area.isEmpty())
 			return;
 
-		Rectangle destBounds = area.getBounds().intersection(graphicsBounds);
+		Rectangle destBounds = area.getBounds();
+		destBounds.x--;
+		destBounds.y--;
+		destBounds.width += 2;
+		destBounds.height += 2;
+		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
 
@@ -1233,8 +1242,8 @@ public final class VCLGraphics {
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = (Rectangle)clipRects.next();
-				if (clip.intersects(destBounds))
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
 		}
@@ -1299,8 +1308,8 @@ public final class VCLGraphics {
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = (Rectangle)clipRects.next();
-				if (clip.intersects(destBounds))
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
 		}
@@ -1542,7 +1551,8 @@ public final class VCLGraphics {
 		if (graphics != null)
 			return;
 
-		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
+		Rectangle destBounds = new Rectangle(x, y, width, height);
+		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
 
@@ -1550,8 +1560,8 @@ public final class VCLGraphics {
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = (Rectangle)clipRects.next();
-				if (clip.intersects(destBounds))
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
 		}
@@ -1638,8 +1648,10 @@ public final class VCLGraphics {
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle destBounds = polygon.getBounds();
-		destBounds.width++;
-		destBounds.height++;
+		destBounds.x--;
+		destBounds.y--;
+		destBounds.width += 2;
+		destBounds.height += 2;
 		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
@@ -1648,8 +1660,8 @@ public final class VCLGraphics {
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = (Rectangle)clipRects.next();
-				if (clip.intersects(destBounds))
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
 		}
