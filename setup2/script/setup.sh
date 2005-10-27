@@ -192,66 +192,11 @@ s#<value.*$#<value>1</value>#
     fi
 fi
 
-# Make locale the default document language
-sharedictdir="$sharebase/dict/ooo"
-lang=`echo "$locale" | awk -F- '{ print $1 }'`
-linguxml="$registrydir/Office/Linguistic.xcu"
-linguxmlset="$linguxml.set.1"
-linguxmlbak="$linguxml.bak"
-rm -f "$linguxmlbak"
-if [ ! -f "$linguxml" ] ; then
-    error "$linguxml file not found"
-fi
-if [ ! -f "$linguxmlset" -a ! -f "$linguxmlbak" ] ; then
-    # Match the locale to one of the installed locales
-    locales='$(LANGUAGE_NAMES)'
-    if [ -d "$sharedictdir" ] ; then
-        locales="$locales "`cd "$sharedictdir" ; ls -1d *.aff | sed 's/\.aff//g' | sed 's/_/-/g'`
-    fi
-    if [ -d "$wordbookdir" ] ; then
-        locales="$locales "`cd "$wordbookdir" ; ls -1d *.aff | sed 's/\.aff//g' | sed 's/_/-/g'`
-    fi
-    matchedlocale=""
-    for i in $locales ; do
-        if [ "$locale" = "$i" ] ; then
-            matchedlocale="$i"
-            break
-        fi
-    done
-    if [ -z "$matchedlocale" ] ; then
-        for i in $locales ; do
-            ilang=`echo "$i" | awk -F- '{ print $1 }'`
-            if [ "$lang" = "$ilang" ] ; then
-                matchedlocale="$i"
-                break
-            fi
-        done
-    fi
-    if [ -z "$matchedlocale" ] ; then
-        locale="en-US"
-    else
-        locale="$matchedlocale"
-    fi
-
-    # Begin multi-line pattern
-    deflocalepattern='/<prop oor:name="DefaultLocale" oor:type="xs:string">/{
-N
-s#<value.*$#<value>'"$locale"'</value>#
-}'
-    # End multi-line pattern
-
-    sed -e "$deflocalepattern" "$linguxml" > "$linguxmlbak"
-    if [ $? -eq 0 -a -s "$linguxmlbak" ] ; then
-        mv -f "$linguxmlbak" "$linguxml"
-        touch -f "$linguxmlset"
-    else
-        rm -f "$linguxmlbak"
-    fi
-fi
-
 # Create user dictionary.lst file
+lang=`echo "$locale" | awk -F- '{ print $1 }'`
+sharedictdir="$sharebase/dict/ooo"
+userdictlst="$wordbookdir/dictionary.lst"
 if [ -d "$sharedictdir" ] ; then
-    userdictlst="$wordbookdir/dictionary.lst"
     sharedictlst="$sharedictdir/dictionary.lst"
     if [ -r "$sharedictlst" ] ; then
         ( cat /dev/null "$userdictlst" ; grep -E '[^][#:space:]*(DICT|HYPH|THES)[[:space:]]*'"$lang"'[[:space:]]' "$sharedictlst" ) 2>/dev/null | sed 's#^[#[:space:]]*##' | sort -u > "$userdictlst.tmp"
@@ -276,6 +221,59 @@ if [ -d "$sharedictdir" ] ; then
             ln -sf "$sharedictdir/$i" "$wordbookdir/$i"
         fi
     done
+fi
+
+# Make locale the default document language
+linguxml="$registrydir/Office/Linguistic.xcu"
+linguxmlset="$linguxml.set.2"
+linguxmlbak="$linguxml.bak"
+rm -f "$linguxmlbak"
+if [ ! -f "$linguxml" ] ; then
+    error "$linguxml file not found"
+fi
+if [ ! -f "$linguxmlset" -a ! -f "$linguxmlbak" ] ; then
+    # Match the locale to one of the installed locales
+    locales='$(LANGUAGE_NAMES)'
+    if [ -f "$userdictlst" ] ; then
+        locales="$locales "`awk '{ print $2 "-" $3 }' "$userdictlst"`
+    fi
+    matchedlocale=""
+    for i in $locales ; do
+        if [ "$locale" = "$i" ] ; then
+            matchedlocale="$i"
+            break
+        fi
+    done
+    if [ -z "$matchedlocale" ] ; then
+        for i in $locales ; do
+            ilang=`echo "$i" | awk -F- '{ print $1 }'`
+            if [ "$lang" = "$ilang" ] ; then
+                matchedlocale="$i"
+                break
+            fi
+        done
+    fi
+    if [ -z "$matchedlocale" ] ; then
+        lang="US"
+        locale="en-$lang"
+    else
+        locale="$matchedlocale"
+    fi
+
+    # Begin multi-line pattern
+    deflocalepattern='/<prop oor:name="DefaultLocale" oor:type="xs:string">/{
+N
+s#<value.*$#<value>'"$locale"'</value>#
+}'
+    # End multi-line pattern
+
+    sed -e "$deflocalepattern" "$linguxml" > "$linguxmlbak"
+    if [ $? -eq 0 -a -s "$linguxmlbak" ] ; then
+        mv -f "$linguxmlbak" "$linguxml"
+        touch -f "$linguxmlset"
+    else
+        rm -f "$linguxmlbak"
+    fi
 fi
 
 # Create javarc file
