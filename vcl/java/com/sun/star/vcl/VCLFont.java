@@ -100,15 +100,12 @@ public final class VCLFont {
 	public static VCLFont[] getAllFonts() {
 
 		Font[] javaFonts = GraphicsEnvironment.getLocalGraphicsEnvironment().getAllFonts();
-		VCLFont[] vclFonts = new VCLFont[javaFonts.length + 1];
+		VCLFont[] vclFonts = new VCLFont[javaFonts.length];
 
 		// Copy JVM's fonts
 		int i;
 		for (i = 0; i < javaFonts.length; i++)
 			vclFonts[i] = new VCLFont(javaFonts[i], 0, javaFonts[i].getSize(), (short)0, true, false, 1.0);
-
-		// Create fonts that the JVM fails to create
-		vclFonts[i++] = new VCLFont(new Font("Helvetica Regular", Font.PLAIN, 1), 0, 1, (short)0, true, false, 1.0);
 
 		return vclFonts;
 
@@ -260,7 +257,7 @@ public final class VCLFont {
 			s |= Font.ITALIC;
 
 		Font f = font.deriveFont(s, size);
-		return f.getPSName();
+		return f.getName();
 
 	}
 
@@ -338,7 +335,7 @@ public final class VCLFont {
 	 */
 	public String getName() {
 
-		return font.getPSName();
+		return font.getName();
 
 	}
 
