@@ -1079,11 +1079,13 @@ public final class VCLGraphics {
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle destBounds = polygon.getBounds();
-		destBounds.x--;
-		destBounds.y--;
-		destBounds.width += 2;
-		destBounds.height += 2;
-		destBounds = destBounds.intersection(graphicsBounds);
+		if (!fill) {
+			destBounds.x--;
+			destBounds.y--;
+			destBounds.width += 2;
+			destBounds.height += 2;
+			destBounds = destBounds.intersection(graphicsBounds);
+		}
 		if (destBounds.isEmpty())
 			return;
 
@@ -1230,10 +1232,12 @@ public final class VCLGraphics {
 			return;
 
 		Rectangle destBounds = area.getBounds();
-		destBounds.x--;
-		destBounds.y--;
-		destBounds.width += 2;
-		destBounds.height += 2;
+		if (!fill) {
+			destBounds.x--;
+			destBounds.y--;
+			destBounds.width += 2;
+			destBounds.height += 2;
+		}
 		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
@@ -1648,10 +1652,12 @@ public final class VCLGraphics {
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle destBounds = polygon.getBounds();
-		destBounds.x--;
-		destBounds.y--;
-		destBounds.width += 2;
-		destBounds.height += 2;
+		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME) {
+			destBounds.x--;
+			destBounds.y--;
+			destBounds.width += 2;
+			destBounds.height += 2;
+		}
 		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
