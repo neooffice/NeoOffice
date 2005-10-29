@@ -356,7 +356,22 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		if ( bBold || bItalic || pFont->maFoundName != pFont->mpFontData->maName )
 		{
 			SalSystemFontData *pSystemFont = (SalSystemFontData *)pFont->mpFontData->mpSysData;
-			OUString aFontName = pSystemFont->mpVCLFont->findFontNameForStyle( bBold, bItalic );
+			OUString aFontName = pSystemFont->mpVCLFont->getName();
+			CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aFontName.getStr(), aFontName.getLength(), kCFAllocatorNull );
+			CFStringRef aMatchedString = NSFontManager_findFontNameWithStyle( aString, bBold, bItalic, pFont->mnHeight );
+			if ( aString )
+				CFRelease( aString );
+			if ( aMatchedString )
+			{
+				CFIndex nLen = CFStringGetLength( aMatchedString );
+				CFRange aRange = CFRangeMake( 0, nLen );
+				sal_Unicode pBuffer[ nLen + 1 ];
+				CFStringGetCharacters( aMatchedString, aRange, pBuffer );
+				pBuffer[ nLen ] = 0;
+				aFontName = OUString( pBuffer );
+				CFRelease( aMatchedString );
+			}
+
 			XubString aXubFontName( aFontName );
 			::std::map< XubString, ImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aXubFontName );
 			if ( it != pSalData->maFontNameMapping.end() )

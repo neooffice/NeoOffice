@@ -45,6 +45,7 @@ BEGIN_C
 #endif
 id NSFont_create( CFStringRef aFontName, long nSize );
 void NSFont_release( id pNSFont );
+CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, BOOL bBold, BOOL bItalic, long nSize );
 BOOL NSFontManager_isFixedPitch( id pNSFont );
 BOOL NSFontManager_isItalic( id pNSFont );
 int NSFontManager_widthOfFont( id pNSFont );

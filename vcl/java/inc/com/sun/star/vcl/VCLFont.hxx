@@ -61,7 +61,6 @@ public:
 						com_sun_star_vcl_VCLFont( jobject myObj ) : java_lang_Object( myObj ) {};
 
 	com_sun_star_vcl_VCLFont*	deriveFont( long _par0, short _par1, sal_Bool _par2, sal_Bool _par3, double _par4 );
-	::rtl::OUString		findFontNameForStyle( sal_Bool _par0, sal_Bool _par1 );
 	long				getAscent();
 	long				getDescent();
 	long				getKerning( USHORT _par0, USHORT _par1 );

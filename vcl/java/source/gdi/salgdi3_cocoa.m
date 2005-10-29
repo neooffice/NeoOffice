@@ -64,6 +64,66 @@ void NSFont_release( id pNSFont )
 	[pPool release];
 }
 
+CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, BOOL bBold, BOOL bItalic, long nSize )
+{
+	CFStringRef aRet = nil;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( aFontName && nSize )
+	{
+		NSFont *pNSFont = [NSFont fontWithName:(NSString *)aFontName size:(float)nSize];
+		if ( pNSFont )
+		{
+			NSFontManager *pFontManager = [NSFontManager sharedFontManager];
+			if ( pFontManager )
+			{
+				int nWeight = [pFontManager weightOfFont:pNSFont];
+				NSFontTraitMask nTraits = 0;
+				if ( bBold )
+					nTraits |= NSBoldFontMask;
+				if ( bItalic )
+					nTraits |= NSItalicFontMask;
+				NSFont *pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:nTraits weight:nWeight size:(float)nSize];
+				if ( pNewNSFont && pNewNSFont != pNSFont )
+				{
+					aRet = (CFStringRef)[pNewNSFont fontName];
+					if ( aRet )
+						CFRetain( aRet );
+				}
+				else if ( bBold && bItalic )
+				{
+					// Try again without italics
+					nTraits = NSBoldFontMask;
+					pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:nTraits weight:nWeight size:(float)nSize];
+					if ( pNewNSFont && pNewNSFont != pNSFont )
+					{
+						aRet = (CFStringRef)[pNewNSFont fontName];
+						if ( aRet )
+							CFRetain( aRet );
+					}
+					else
+					{
+						// Try again without bold
+						nTraits = NSItalicFontMask;
+						pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:nTraits weight:nWeight size:(float)nSize];
+						if ( pNewNSFont && pNewNSFont != pNSFont )
+						{
+							aRet = (CFStringRef)[pNewNSFont fontName];
+							if ( aRet )
+								CFRetain( aRet );
+						}
+					}
+				}
+			}
+		}
+	}
+
+	[pPool release];
+
+	return aRet;
+}
+
 BOOL NSFontManager_isFixedPitch( id pNSFont )
 {
 	BOOL bRet = FALSE;
