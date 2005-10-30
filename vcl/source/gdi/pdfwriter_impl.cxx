@@ -2555,6 +2555,7 @@ bool PDFWriterImpl::emit()
         encodeGlyphs();
 
         PDFWriterImpl aWriter( m_aFileName, m_eVersion, m_eCompression, &m_aSubsets );
+		aWriter.setDocInfo( m_aDocInfo );
         for ( ULONG i = 0, nCount = m_aMtf.GetActionCount(); i < nCount; i++ )
         {
             const MetaAction *pAction = m_aMtf.GetAction( i );
