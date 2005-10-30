@@ -157,7 +157,6 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							pVCLFont->setNativeFont( pNativeFont );
 
 							OUString aFontName( pVCLFont->getName() );
-							XubString aXubFontName( aFontName );
 							CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aFontName.getStr(), aFontName.getLength(), kCFAllocatorNull );
 							if ( !aString )
 							{
@@ -200,25 +199,20 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							}
 
 							ImplFontData *pData;
-							SalSystemFontData *pSystemFont;
-							::std::map< XubString, ImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aXubFontName );
+							::std::map< XubString, ImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aXubDisplayName );
 							if ( it != pSalData->maFontNameMapping.end() )
 							{
 								// Delete old font data
 								pData = it->second;
-								pSystemFont = (SalSystemFontData *)pData->mpSysData;
-								delete pSystemFont->mpVCLFont;
+								delete (com_sun_star_vcl_VCLFont *)pData->mpSysData;
 							}
 							else
 							{
 								pData = new ImplFontData();
-								pSalData->maFontNameMapping[ aXubFontName ] = pData;
-
-								pSystemFont = new SalSystemFontData();
+								pSalData->maFontNameMapping[ aXubDisplayName ] = pData;
 							}
 
-							pSystemFont->mpVCLFont = pVCLFont;
-							pData->mpSysData = (void *)pSystemFont;
+							pData->mpSysData = (void *)pVCLFont;
 
 							// Multiple native fonts can map to the same font
 							// due to disabling and reenabling of fonts with
@@ -226,6 +220,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							// names can map to a single native font so do not
 							// rely on the native font to look up the font name.
 							pSalData->maNativeFontMapping[ pNativeFont ] = pData;
+							pSalData->maJavaFontNameMapping[ aFontName ] = pData;
 
 							// Determine pitch and family type
 							FontPitch nPitch = ( NSFontManager_isFixedPitch( pNSFont ) ? PITCH_FIXED : PITCH_VARIABLE );
@@ -277,12 +272,11 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 					if ( pCurrentFont )
 					{
 						OUString aFontName( pCurrentFont->getName() );
-						XubString aXubFontName( aFontName );
-						::std::map< XubString, ImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aXubFontName );
-						if ( it != pSalData->maFontNameMapping.end() )
+						::std::map< OUString, ImplFontData* >::const_iterator it = pSalData->maJavaFontNameMapping.find( aFontName );
+						if ( it != pSalData->maJavaFontNameMapping.end() )
 						{
-							SalSystemFontData *pReplacementFont = (SalSystemFontData *)it->second->mpSysData;
-							(*git)->maGraphicsData.mpVCLFont = pReplacementFont->mpVCLFont->deriveFont(pCurrentFont->getSize(), pCurrentFont->getOrientation(), pCurrentFont->isAntialiased(), pCurrentFont->isVertical(), pCurrentFont->getScaleX() );
+							com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)it->second->mpSysData;
+							(*git)->maGraphicsData.mpVCLFont = pVCLFont->deriveFont( pCurrentFont->getSize(), pCurrentFont->getOrientation(), pCurrentFont->isAntialiased(), pCurrentFont->isVertical(), pCurrentFont->getScaleX() );
 							delete pCurrentFont;
 						}
 
@@ -291,13 +285,12 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							pCurrentFont = ffit->second;
 							if ( pCurrentFont )
 							{
-								aFontName = pCurrentFont->getName();
-								aXubFontName = XubString( aFontName );
-								it = pSalData->maFontNameMapping.find( aXubFontName );
-								if ( it != pSalData->maFontNameMapping.end() )
+								OUString aFontName( pCurrentFont->getName() );
+								::std::map< OUString, ImplFontData* >::const_iterator it = pSalData->maJavaFontNameMapping.find( aFontName );
+								if ( it != pSalData->maJavaFontNameMapping.end() )
 								{
-									SalSystemFontData *pReplacementFont = (SalSystemFontData *)it->second->mpSysData;
-									ffit->second = pReplacementFont->mpVCLFont->deriveFont(pCurrentFont->getSize(), pCurrentFont->getOrientation(), pCurrentFont->isAntialiased(), pCurrentFont->isVertical(), pCurrentFont->getScaleX() );
+									com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)it->second->mpSysData;
+									ffit->second = pVCLFont->deriveFont(pCurrentFont->getSize(), pCurrentFont->getOrientation(), pCurrentFont->isAntialiased(), pCurrentFont->isVertical(), pCurrentFont->getScaleX() );
 									delete pCurrentFont;
 								}
 							}
@@ -332,8 +325,8 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		BOOL bItalic = ( ( pFont->meItalic == ITALIC_OBLIQUE || pFont->meItalic == ITALIC_NORMAL ) && pFont->mpFontData->meItalic != ITALIC_OBLIQUE && pFont->mpFontData->meItalic != ITALIC_NORMAL );
 		if ( bBold || bItalic || pFont->maFoundName != pFont->mpFontData->maName )
 		{
-			SalSystemFontData *pSystemFont = (SalSystemFontData *)pFont->mpFontData->mpSysData;
-			OUString aFontName = pSystemFont->mpVCLFont->getName();
+			com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)pFont->mpFontData->mpSysData;
+			OUString aFontName = pVCLFont->getName();
 			CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aFontName.getStr(), aFontName.getLength(), kCFAllocatorNull );
 			CFStringRef aMatchedString = NSFontManager_findFontNameWithStyle( aString, bBold, bItalic, pFont->mnHeight );
 			if ( aMatchedString )
@@ -420,8 +413,8 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		// Set font for graphics device
 		if ( maGraphicsData.mpVCLFont )
 			delete maGraphicsData.mpVCLFont;
-		SalSystemFontData *pSystemFont = (SalSystemFontData *)pFont->mpFontData->mpSysData;
-		maGraphicsData.mpVCLFont = pSystemFont->mpVCLFont->deriveFont( pFont->mnHeight, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical, pFont->mnWidth ? (double)pFont->mnWidth / (double)pFont->mnHeight : 1.0 );
+		com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)pFont->mpFontData->mpSysData;
+		maGraphicsData.mpVCLFont = pVCLFont->deriveFont( pFont->mnHeight, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical, pFont->mnWidth ? (double)pFont->mnWidth / (double)pFont->mnHeight : 1.0 );
 	}
 
 	return 0;
@@ -432,16 +425,10 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 void SalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 {
 	ImplFontData *pData = NULL;
-	if ( maGraphicsData.mpVCLFont )
-	{
-		SalData *pSalData = GetSalData();
-
-		OUString aFontName( maGraphicsData.mpVCLFont->getName() );
-		XubString aXubFontName( aFontName );
-		::std::map< XubString, ImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aXubFontName );
-		if ( it != pSalData->maFontNameMapping.end() )
-			pData = it->second;
-	}
+	SalData *pSalData = GetSalData();
+	::std::map< XubString, ImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( pMetric->maName );
+	if ( it != pSalData->maFontNameMapping.end() )
+		pData = it->second;
 
 	if ( maGraphicsData.mpVCLFont )
 	{

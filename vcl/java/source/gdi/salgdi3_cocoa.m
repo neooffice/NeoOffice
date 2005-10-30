@@ -105,7 +105,7 @@ CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, BOOL bBo
 				NSFont *pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:nTraits weight:nWeight size:(float)nSize];
 				if ( pNewNSFont && pNewNSFont != pNSFont )
 				{
-					aRet = (CFStringRef)[pNewNSFont fontName];
+					aRet = (CFStringRef)[pNewNSFont displayName];
 					if ( aRet )
 						CFRetain( aRet );
 				}

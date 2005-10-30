@@ -291,6 +291,11 @@ BOOL SVMain()
 
 		BOOL bInit = FALSE;
 
+		// Don't allow retrieval of locale happen in a secondary thread as
+		// Mac OS X can sometimes return garbage in such cases
+		rtl_Locale *pLocale;
+		osl_getProcessLocale( &pLocale );
+
 		// Make sure that the new thread has the highest priority (i.e. the
 		// same priority as the main thread) so that Java Object.wait() calls
 		// behave properly

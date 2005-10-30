@@ -6512,8 +6512,8 @@ void PDFWriterImpl::encodeGlyphs()
         {
             FontEmit& rEmit = *lit;
 
-			SalSystemFontData *pSystemFont = (SalSystemFontData *)pCurrentFont->mpSysData;
-            ATSUFontID nFontID = (ATSUFontID)( pSystemFont->mpVCLFont->getNativeFont() );
+			com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)pCurrentFont->mpSysData;
+            ATSUFontID nFontID = (ATSUFontID)( pVCLFont->getNativeFont() );
             ATSFontRef aATSFont = FMGetATSFontRefFromFont( nFontID );
             CGFontRef aFont = CGFontCreateWithPlatformFont( (void *)&aATSFont );
             if ( !aFont )
