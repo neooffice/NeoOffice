@@ -68,6 +68,7 @@ public:
 	::rtl::OUString		getName();
 	void*				getNativeFont();
 	short				getOrientation();
+	::rtl::OUString		getPSName();
 	double				getScaleX();
 	long				getSize();
 	sal_Bool			isAntialiased();

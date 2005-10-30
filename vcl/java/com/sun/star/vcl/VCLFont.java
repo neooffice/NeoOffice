@@ -308,9 +308,9 @@ public final class VCLFont {
 	}
 
 	/**
-	 * Returns the font's PostScript name.
+	 * Returns the font's name.
 	 *
-	 * @return the font's PostScript name
+	 * @return the font's name
 	 */
 	public String getName() {
 
@@ -337,6 +337,17 @@ public final class VCLFont {
 	public short getOrientation() {
 
 		return orientation;
+
+	}
+
+	/**
+	 * Returns the font's PostScript name.
+	 *
+	 * @return the font's PostScript name
+	 */
+	public String getPSName() {
+
+		return font.getPSName();
 
 	}
 

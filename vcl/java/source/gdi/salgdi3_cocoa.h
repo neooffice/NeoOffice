@@ -44,6 +44,7 @@ typedef void* id;
 BEGIN_C
 #endif
 id NSFont_create( CFStringRef aFontName, long nSize );
+CFStringRef NSFont_displayName( id pNSFont );
 void NSFont_release( id pNSFont );
 CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, BOOL bBold, BOOL bItalic, long nSize );
 BOOL NSFontManager_isFixedPitch( id pNSFont );

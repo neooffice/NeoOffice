@@ -276,6 +276,32 @@ short com_sun_star_vcl_VCLFont::getOrientation()
 
 // ----------------------------------------------------------------------------
 
+OUString com_sun_star_vcl_VCLFont::getPSName()
+{
+	static jmethodID mID = NULL;
+	OUString out;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Ljava/lang/String;";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getPSName", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jstring tempObj;
+			tempObj = (jstring)t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
+			if ( tempObj )
+				out = JavaString2String( t.pEnv, tempObj );
+		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
 double com_sun_star_vcl_VCLFont::getScaleX()
 {
 	static jmethodID mID = NULL;
