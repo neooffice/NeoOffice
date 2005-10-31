@@ -212,7 +212,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								pSalData->maFontNameMapping[ aXubDisplayName ] = pData;
 							}
 
-							pData->mpSysData = (void *)pVCLFont;
+							pData->mpSysData = (void *)( new com_sun_star_vcl_VCLFont( pVCLFont->getJavaObject() ) );
 
 							// Multiple native fonts can map to the same font
 							// due to disabling and reenabling of fonts with
@@ -259,6 +259,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							pData->mbEmbeddable = FALSE;
 
 							NSFont_release( pNSFont );
+							delete pVCLFont;
 						}
 
 						delete pFonts;
@@ -546,8 +547,6 @@ void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 		}
 
 		ImplFontListChangedCallback( NULL, NULL );
-
-		ATSFontNotificationSubscribe( ImplFontListChangedCallback, kATSFontNotifyOptionReceiveWhileSuspended, NULL, NULL );
 
 		bNativeFontsLoaded = true;
 	}
