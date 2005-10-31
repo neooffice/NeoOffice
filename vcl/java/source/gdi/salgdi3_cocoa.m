@@ -62,9 +62,12 @@ CFStringRef NSFont_displayName( id pNSFont )
 
 	if ( pNSFont )
 	{
-		aRet = (CFStringRef)[(NSFont *)pNSFont displayName];
-		if ( aRet )
-			aRet = CFRetain( aRet );
+		// Get the ATS font name as the Cocoa name on some Mac OS X versions
+		// adds extraneous words
+		CFStringRef aPSName = (CFStringRef)[(NSFont *)pNSFont fontName];
+		ATSFontRef aFont = ATSFontFindFromPostScriptName( aPSName, kATSOptionFlagsDefault );
+		if ( aFont )
+			ATSFontGetName( aFont, kATSOptionFlagsDefault, &aRet );
 	}
 
 	[pPool release];
@@ -97,7 +100,7 @@ CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, BOOL bBo
 			if ( pFontManager )
 			{
 				int nWeight = [pFontManager weightOfFont:pNSFont];
-				NSFontTraitMask nTraits = 0;
+				NSFontTraitMask nTraits = ( [pFontManager traitsOfFont:pNSFont] & ( NSBoldFontMask | NSItalicFontMask ) );
 				if ( bBold )
 					nTraits |= NSBoldFontMask;
 				if ( bItalic )
@@ -105,9 +108,12 @@ CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, BOOL bBo
 				NSFont *pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:nTraits weight:nWeight size:(float)nSize];
 				if ( pNewNSFont && pNewNSFont != pNSFont )
 				{
-					aRet = (CFStringRef)[pNewNSFont displayName];
-					if ( aRet )
-						CFRetain( aRet );
+					// Get the ATS font name as the Cocoa name on some Mac OS X
+					// versions adds extraneous words
+					CFStringRef aPSName = (CFStringRef)[(NSFont *)pNewNSFont fontName];
+					ATSFontRef aFont = ATSFontFindFromPostScriptName( aPSName, kATSOptionFlagsDefault );
+					if ( aFont )
+						ATSFontGetName( aFont, kATSOptionFlagsDefault, &aRet );
 				}
 			}
 		}

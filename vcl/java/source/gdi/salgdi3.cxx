@@ -321,10 +321,12 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	// to properly determine the fallback font
 	if ( !nFallbackLevel )
 	{
-		BOOL bBold = ( pFont->meWeight > WEIGHT_MEDIUM && pFont->mpFontData->meWeight <= WEIGHT_MEDIUM );
-		BOOL bItalic = ( ( pFont->meItalic == ITALIC_OBLIQUE || pFont->meItalic == ITALIC_NORMAL ) && pFont->mpFontData->meItalic != ITALIC_OBLIQUE && pFont->mpFontData->meItalic != ITALIC_NORMAL );
-		if ( bBold || bItalic || pFont->maFoundName != pFont->mpFontData->maName )
+		BOOL bAddBold = ( pFont->meWeight > WEIGHT_MEDIUM && pFont->mpFontData->meWeight <= WEIGHT_MEDIUM );
+		BOOL bAddItalic = ( ( pFont->meItalic == ITALIC_OBLIQUE || pFont->meItalic == ITALIC_NORMAL ) && pFont->mpFontData->meItalic != ITALIC_OBLIQUE && pFont->mpFontData->meItalic != ITALIC_NORMAL );
+		if ( bAddBold || bAddItalic )
 		{
+			BOOL bBold = ( pFont->meWeight > WEIGHT_MEDIUM );
+			BOOL bItalic = ( pFont->meItalic == ITALIC_OBLIQUE || pFont->meItalic == ITALIC_NORMAL );
 			com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)pFont->mpFontData->mpSysData;
 			OUString aFontName = pVCLFont->getName();
 			CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aFontName.getStr(), aFontName.getLength(), kCFAllocatorNull );
@@ -342,11 +344,11 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 
 			XubString aXubFontName( aFontName );
 			::std::map< XubString, ImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aXubFontName );
-			if ( it != pSalData->maFontNameMapping.end() )
+			if ( it != pSalData->maFontNameMapping.end() && ( !bAddBold || it->second->meWeight > WEIGHT_MEDIUM ) && ( !bAddItalic || it->second->meItalic == ITALIC_OBLIQUE || it->second->meItalic == ITALIC_NORMAL ) )
 			{
 				pFont->mpFontData = it->second;
 			}
-			else if ( bBold && bItalic )
+			else if ( bAddBold && bAddItalic )
 			{
 				// Try with bold only
 				aMatchedString = NSFontManager_findFontNameWithStyle( aString, bBold, FALSE, pFont->mnHeight );
@@ -363,7 +365,7 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 
 				XubString aXubFontName( aFontName );
 				::std::map< XubString, ImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aXubFontName );
-				if ( it != pSalData->maFontNameMapping.end() )
+				if ( it != pSalData->maFontNameMapping.end() && it->second->meWeight > WEIGHT_MEDIUM )
 				{
 					pFont->mpFontData = it->second;
 				}
@@ -384,7 +386,7 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 
 					XubString aXubFontName( aFontName );
 					::std::map< XubString, ImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aXubFontName );
-					if ( it != pSalData->maFontNameMapping.end() )
+					if ( it != pSalData->maFontNameMapping.end() && ( it->second->meItalic == ITALIC_OBLIQUE || it->second->meItalic == ITALIC_NORMAL ) )
 						pFont->mpFontData = it->second;
 				}
 			}
