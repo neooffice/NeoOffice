@@ -113,9 +113,10 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 				{
 					// Update cached fonts
 					OUString aRoman( OUString::createFromAscii( "Roman" ) );
-					OUString aTimes( OUString::createFromAscii( "Times" ) );
 					OUString aSans( OUString::createFromAscii( "Sans" ) );
 					OUString aSerif( OUString::createFromAscii( "Serif" ) );
+					OUString aTimes( OUString::createFromAscii( "Times" ) );
+					OUString aTimesRoman( OUString::createFromAscii( "Times Roman" ) );
 					java_lang_Object *pFonts = com_sun_star_vcl_VCLFont::getAllFonts();
 					if ( pFonts )
 					{
@@ -185,8 +186,18 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							sal_Unicode pDisplayBuffer[ nDisplayLen + 1 ];
 							CFStringGetCharacters( aDisplayString, aDisplayRange, pDisplayBuffer );
 							pDisplayBuffer[ nDisplayLen ] = 0;
+							OUString aMapName;
 							OUString aDisplayName( pDisplayBuffer );
-							XubString aXubDisplayName( aDisplayName );
+							sal_Int32 nColon = aDisplayName.indexOf( (sal_Unicode)':' );
+							if ( nColon >= 0 )
+							{
+								aMapName = aDisplayName;
+								aDisplayName = OUString( aDisplayName.getStr(), nColon );
+							}
+
+							if ( aDisplayName == aTimesRoman )
+								aMapName = aTimes;
+
 							CFRelease( aDisplayString );
 
 							// Ignore empty font names or font names that start
@@ -198,6 +209,8 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								continue;
 							}
 
+							XubString aXubMapName( aMapName );
+							XubString aXubDisplayName( aDisplayName );
 							ImplFontData *pData;
 							::std::map< XubString, ImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aXubDisplayName );
 							if ( it != pSalData->maFontNameMapping.end() )
@@ -236,6 +249,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 
 							pData->mpNext = NULL;
 							pData->maName = aXubDisplayName;
+							pData->maMapNames = aXubMapName;
 							// [ed] 11/1/04 Scalable fonts should always report
 							// their width and height as zero. The single size
 							// zero causes higher-level font elements to treat
@@ -334,8 +348,13 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 			CFStringRef aMatchedString = NSFontManager_findFontNameWithStyle( aString, bBold, bItalic, pFont->mnHeight );
 			if ( aMatchedString )
 			{
-				CFIndex nLen = CFStringGetLength( aMatchedString );
-				CFRange aRange = CFRangeMake( 0, nLen );
+				CFRange aRange = CFStringFind( aMatchedString, CFSTR( ":" ), 0 );
+				CFIndex nLen;
+				if ( aRange.location != kCFNotFound )
+					nLen = aRange.location;
+				else
+					nLen = CFStringGetLength( aMatchedString );
+				aRange = CFRangeMake( 0, nLen );
 				sal_Unicode pBuffer[ nLen + 1 ];
 				CFStringGetCharacters( aMatchedString, aRange, pBuffer );
 				pBuffer[ nLen ] = 0;
@@ -355,8 +374,13 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 				aMatchedString = NSFontManager_findFontNameWithStyle( aString, bBold, FALSE, pFont->mnHeight );
 				if ( aMatchedString )
 				{
-					CFIndex nLen = CFStringGetLength( aMatchedString );
-					CFRange aRange = CFRangeMake( 0, nLen );
+					CFRange aRange = CFStringFind( aMatchedString, CFSTR( ":" ), 0 );
+					CFIndex nLen;
+					if ( aRange.location != kCFNotFound )
+						nLen = aRange.location;
+					else
+						nLen = CFStringGetLength( aMatchedString );
+					aRange = CFRangeMake( 0, nLen );
 					sal_Unicode pBuffer[ nLen + 1 ];
 					CFStringGetCharacters( aMatchedString, aRange, pBuffer );
 					pBuffer[ nLen ] = 0;
@@ -376,8 +400,13 @@ USHORT SalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 					aMatchedString = NSFontManager_findFontNameWithStyle( aString, FALSE, bItalic, pFont->mnHeight );
 					if ( aMatchedString )
 					{
-						CFIndex nLen = CFStringGetLength( aMatchedString );
-						CFRange aRange = CFRangeMake( 0, nLen );
+						CFRange aRange = CFStringFind( aMatchedString, CFSTR( ":" ), 0 );
+						CFIndex nLen;
+						if ( aRange.location != kCFNotFound )
+							nLen = aRange.location;
+						else
+							nLen = CFStringGetLength( aMatchedString );
+						aRange = CFRangeMake( 0, nLen );
 						sal_Unicode pBuffer[ nLen + 1 ];
 						CFStringGetCharacters( aMatchedString, aRange, pBuffer );
 						pBuffer[ nLen ] = 0;
