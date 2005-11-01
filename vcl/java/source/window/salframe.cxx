@@ -199,6 +199,8 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 	if ( maFrameData.mbVisible )
 	{
+		maFrameData.mbCenter = FALSE;
+
 		// Reset graphics only for splash screen. All other windows are reset
 		// in the first paint event
 		if ( !ImplGetSVData()->maAppData.mbInAppExecute )
@@ -274,7 +276,6 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 		return;
 
 	Rectangle aPosSize( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
-	aPosSize.Justify();
 
 	if ( ! ( nFlags & SAL_FRAME_POSSIZE_X ) )
 		nX = aPosSize.nLeft;
@@ -286,36 +287,43 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 		nHeight = aPosSize.GetHeight();
 
 	// Adjust position for RTL layout
-	if ( maFrameData.mpParent && nFlags & ( SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y ) && Application::GetSettings().GetLayoutRTL() )
+	if ( maFrameData.mpParent )
 	{
-		Rectangle aParentPosSize( Point( maFrameData.mpParent->maGeometry.nX - maFrameData.mpParent->maGeometry.nLeftDecoration, maFrameData.mpParent->maGeometry.nY - maFrameData.mpParent->maGeometry.nTopDecoration ), Size( maFrameData.mpParent->maGeometry.nWidth, maFrameData.mpParent->maGeometry.nHeight ) );
-		nX = aParentPosSize.GetWidth() - nWidth - nX - 1;
+		if ( nFlags & ( SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y ) && Application::GetSettings().GetLayoutRTL() )
+			nX = maFrameData.mpParent->maGeometry.nWidth - nWidth - nX - 1;
+
+		if ( nFlags & SAL_FRAME_POSSIZE_X )
+			nX += maFrameData.mpParent->maGeometry.nX;
+		if ( nFlags & SAL_FRAME_POSSIZE_Y )
+			nY += maFrameData.mpParent->maGeometry.nY;
 	}
 
 	Rectangle aWorkArea;
-	GetWorkArea( aWorkArea );
-
 	if ( maFrameData.mbCenter && ! ( nFlags & ( SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y ) ) )
 	{
 		if ( maFrameData.mpParent && maFrameData.mpParent->maGeometry.nWidth >= nWidth && maFrameData.mpParent->maGeometry.nHeight > nHeight)
 		{
-			nX = maFrameData.mpParent->maGeometry.nX + ( ( maFrameData.mpParent->maGeometry.nWidth - nWidth ) / 2 );
-			nY = maFrameData.mpParent->maGeometry.nY + ( ( maFrameData.mpParent->maGeometry.nHeight - nHeight ) / 2 );
+			nX = maFrameData.mpParent->maGeometry.nX + ( maFrameData.mpParent->maGeometry.nWidth - nWidth ) / 2;
+			nY = maFrameData.mpParent->maGeometry.nY + ( maFrameData.mpParent->maGeometry.nHeight - nHeight ) / 2;
+
+			aWorkArea = Rectangle( Point( nX, nX ), Size( nWidth, nHeight ) );
+			GetWorkArea( aWorkArea );
 		}
 		else
 		{
+			aWorkArea = Rectangle( Point( nX, nX ), Size( nWidth, nHeight ) );
+			GetWorkArea( aWorkArea );
+
 			nX = aWorkArea.nLeft + ( ( aWorkArea.GetWidth() - nWidth ) / 2 );
 			nY = aWorkArea.nTop + ( ( aWorkArea.GetHeight() - nHeight ) / 2 );
 		}
 
 		maFrameData.mbCenter = FALSE;
 	}
-	else if ( maFrameData.mpParent )
+	else
 	{
-		if ( nFlags & SAL_FRAME_POSSIZE_X )
-			nX += maFrameData.mpParent->maGeometry.nX;
-		if ( nFlags & SAL_FRAME_POSSIZE_Y )
-			nY += maFrameData.mpParent->maGeometry.nY;
+		aWorkArea = Rectangle( Point( nX, nX ), Size( nWidth, nHeight ) );
+		GetWorkArea( aWorkArea );
 	}
 
 	// Make sure window does not spill off of the screen
@@ -326,8 +334,8 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 		nMinX -= 1;
 		nMinY -= 1;
 	}
-	nWidth = nWidth + maGeometry.nLeftDecoration + maGeometry.nRightDecoration;
-	nHeight = nHeight + maGeometry.nTopDecoration + maGeometry.nBottomDecoration;
+	nWidth += maGeometry.nLeftDecoration + maGeometry.nRightDecoration;
+	nHeight += maGeometry.nTopDecoration + maGeometry.nBottomDecoration;
 	if ( nMinX + nWidth > aWorkArea.nLeft + aWorkArea.GetWidth() )
 		nWidth = aWorkArea.nLeft + aWorkArea.GetWidth() - nMinX;
 	if ( nMinY + nHeight > aWorkArea.nTop + aWorkArea.GetHeight() )
@@ -352,7 +360,10 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 
 void SalFrame::GetWorkArea( Rectangle &rRect )
 {
-	NSScreen_getScreenBounds( &rRect.nLeft, &rRect.nTop, &rRect.nRight, &rRect.nBottom, GetSalData()->mpPresentationFrame ? TRUE : FALSE, maFrameData.mbPresentation ? TRUE : FALSE );
+	if ( rRect.IsEmpty() )
+		rRect = maFrameData.mpVCLFrame->getBounds();
+
+	NSScreen_getScreenBounds( &rRect.nLeft, &rRect.nTop, &rRect.nRight, &rRect.nBottom, GetSalData()->mpPresentationFrame ? TRUE : FALSE );
 }
 
 // -----------------------------------------------------------------------

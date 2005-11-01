@@ -520,9 +520,9 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 	// Set default window size based on style
 	Rectangle aWorkArea;
 	if ( pFrame->maFrameData.mpParent )
-		pFrame->maFrameData.mpParent->GetWorkArea( aWorkArea );
-	else
-		pFrame->GetWorkArea( aWorkArea );
+		aWorkArea = Rectangle( Point( pFrame->maFrameData.mpParent->maGeometry.nX, pFrame->maFrameData.mpParent->maGeometry.nY ), Size( pFrame->maFrameData.mpParent->maGeometry.nWidth, pFrame->maFrameData.mpParent->maGeometry.nHeight ) );
+	pFrame->GetWorkArea( aWorkArea );
+
 	long nX = aWorkArea.nLeft;
 	long nY = aWorkArea.nTop;
 	long nWidth = aWorkArea.GetWidth();
