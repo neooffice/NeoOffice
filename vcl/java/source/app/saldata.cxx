@@ -78,9 +78,8 @@ SalData::~SalData()
 
 	for ( ::std::map< XubString, ImplFontData* >::const_iterator it = maFontNameMapping.begin(); it != maFontNameMapping.end(); ++it )
 	{
-		SalSystemFontData *pSystemFont = (SalSystemFontData *)it->second->mpSysData;
-		delete pSystemFont->mpVCLFont;
-		delete pSystemFont;
+		com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)it->second->mpSysData;
+		delete pVCLFont;
 		delete it->second;
 	}
 }

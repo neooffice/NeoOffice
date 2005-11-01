@@ -345,13 +345,11 @@ void ResetMenuEnabledStateForFrame( SalFrame *pFrame, SalMenu *pMenu )
 	if ( !bFrameFound )
 		return;
 
-	bool bWasMenuBarInvocation = false;
 	if(!pMenu) {
 		// locate the menubar for the frame
 		pMenu = pFrame->maFrameData.mpMenuBar;
 		if(!pMenu)
 			return;
-		bWasMenuBarInvocation = true;
 	}
 
 	Menu *pVCLMenu = pMenu->mpParentVCLMenu;
@@ -418,12 +416,15 @@ void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu )
 	// Force the clipboard service to update itself before we update the
 	// menus as if the native clipboard was cleared when we last checked, we
 	// won't be notified when another application puts content.
-	Window *pWindow = pVCLMenu->GetWindow();
-	if ( pWindow )
+	if ( bWasMenuBarInvocation )
 	{
-		Reference< XClipboard > aClipboard = pWindow->GetClipboard();
-		if ( aClipboard.is() )
-			aClipboard->getContents();
+		Window *pWindow = pVCLMenu->GetWindow();
+		if ( pWindow )
+		{
+			Reference< XClipboard > aClipboard = pWindow->GetClipboard();
+			if ( aClipboard.is() )
+				aClipboard->getContents();
+		}
 	}
 
 	// Post the SALEVENT_MENUACTIVATE event

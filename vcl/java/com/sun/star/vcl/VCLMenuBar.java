@@ -221,17 +221,13 @@ public final class VCLMenuBar {
 				frame.setMenuBar(null);
 		}
 
-		if(awtMenuBar.countMenus() > 0) {
-			Iterator e=menus.iterator();
-			int i = 0;
-			while(e.hasNext()) {
-				VCLMenuItemData m=(VCLMenuItemData)e.next();
-				m.unregisterAWTPeer(awtMenuBar.getMenu(i));
-				i++;
-			}
+		for(int i=awtMenuBar.countMenus()-1; i>=0; i--)
+			awtMenuBar.remove(i);
 
-			for(i=awtMenuBar.countMenus()-1; i>=0; i--)
-				awtMenuBar.remove(i);
+		Iterator e=menus.iterator();
+		while(e.hasNext()) {
+			VCLMenuItemData m=(VCLMenuItemData)e.next();
+			m.unregisterAllAWTPeers();
 		}
 			
 	 	awtMenuBar=null;
@@ -345,9 +341,31 @@ public final class VCLMenuBar {
 	 */
 	public synchronized void removeMenu(short nPos) {
 
-		((VCLMenuItemData)menus.get(nPos)).unregisterAWTPeer(awtMenuBar.getMenu(nPos));
+		LinkedList menusToReinsert=null;
+
+		if(nPos < 0)
+			nPos=(short)menus.size();
+
+		if(nPos < menus.size()) {
+			// we can't remove menus in the middle of a menubar, so we have
+			// to remove the tail ones first and then reinsert them after
+			// we add the new Menu
+			menusToReinsert=new LinkedList();
+			for(int i=menus.size()-1; i > nPos; i--) {
+				menusToReinsert.addLast(awtMenuBar.getMenu(i));
+				awtMenuBar.remove(i);
+			}
+		}
+
 		awtMenuBar.remove(nPos);
+		((VCLMenuItemData)menus.get(nPos)).unregisterAllAWTPeers();
 		menus.remove(nPos);
+
+		// reinsert any menus we need to add
+		if(menusToReinsert!=null) {
+			while(menusToReinsert.size() > 0)
+				awtMenuBar.add((Menu)menusToReinsert.removeLast());
+		}
 
 	}
 
@@ -361,16 +379,44 @@ public final class VCLMenuBar {
 	 */
 	public void changeMenu(VCLMenuItemData newMenu, short nPos) {
 
+		LinkedList menusToReinsert=null;
+
+		if(nPos < 0)
+			nPos=(short)menus.size();
+
 		if(nPos < menus.size()) {
-			VCLMenuItemData oldMenu=(VCLMenuItemData)menus.get(nPos);
-			newMenu.setTitle(oldMenu.getTitle());
-			newMenu.setEnabled(oldMenu.getEnabled());
-			
-			// let new menu provide contents, but retain reference
-			// to old menu in the actual menubar.  Bug #175
-			oldMenu.setDelegate(newMenu);
-			removeMenu(nPos);
-			addMenuItem(oldMenu, nPos);
+			// we can't remove menus in the middle of a menubar, so we have
+			// to remove the tail ones first and then reinsert them after
+			// we add the new Menu
+			menusToReinsert=new LinkedList();
+			for(int i=menus.size()-1; i > nPos; i--) {
+				menusToReinsert.addLast(awtMenuBar.getMenu(i));
+				awtMenuBar.remove(i);
+			}
+		}
+
+		VCLMenuItemData oldMenu=(VCLMenuItemData)menus.get(nPos);
+		newMenu.setTitle(oldMenu.getTitle());
+		newMenu.setEnabled(oldMenu.getEnabled());
+
+		// let new menu provide contents, but retain reference
+		// to old menu in the actual menubar.  Bug #175
+		awtMenuBar.remove(nPos);
+		oldMenu.unregisterAllAWTPeers();
+		oldMenu.setDelegate(newMenu);
+
+		// if we were passed an object that isn't yet a menu, insert a dummy
+		// menu object as a placeholder. if we were passed a menu, insert
+		// its peer.
+		if(oldMenu.isMenu())
+			awtMenuBar.add((Menu)oldMenu.createAWTPeer());
+		else
+			awtMenuBar.add(new Menu(oldMenu.getTitle()));
+
+		// reinsert any menus we need to add
+		if(menusToReinsert!=null) {
+			while(menusToReinsert.size() > 0)
+				awtMenuBar.add((Menu)menusToReinsert.removeLast());
 		}
 
 	}

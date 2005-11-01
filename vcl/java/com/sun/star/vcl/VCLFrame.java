@@ -968,7 +968,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public synchronized void focusGained(FocusEvent e) {
 
-		if (disposed || !window.isShowing())
+		// Ignore temporary focus events as Java 1.4.1 generates them for
+		// undecorated windows
+		if (disposed || e.isTemporary() || !window.isShowing())
 			return;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_GETFOCUS, this, 0));
@@ -982,7 +984,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public synchronized void focusLost(FocusEvent e) {
 
-		if (disposed || !window.isShowing())
+		// Ignore temporary focus events as Java 1.4.1 generates them for
+		// undecorated windows
+		if (disposed || e.isTemporary() || !window.isShowing())
 			return;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
@@ -1202,7 +1206,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				return SAL_FRAMESTATE_MAXIMIZED;
 		}
 
-		return Frame.NORMAL;
+		return SAL_FRAMESTATE_NORMAL;
 
 	}
 
@@ -1672,7 +1676,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 							Window w = f.getWindow();
 							if (w.isShowing()) {
 								w.hide();
-								w.removeNotify();
 								detachedChildren.add(f);
 							}
 						}
@@ -1696,7 +1699,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 					}
 				}
 				detachedChildren.clear();
-				toFront();
 			}
 		}
 
@@ -1896,7 +1898,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				s = Frame.MAXIMIZED_BOTH;
 			else
 				s = Frame.NORMAL;
-			((Frame)window).setState(s);
+			((Frame)window).setExtendedState(s);
 		}
 
 	}
@@ -1935,9 +1937,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			((Frame)window).setResizable(resizable);
 
 		if (b) {
+			// Fix bug 1012 by deiconifying the parent window
+			VCLFrame f = VCLFrame.findFrame(window.getOwner());
+			if (f != null && f.getState() == SAL_FRAMESTATE_MINIMIZED)
+				f.setState(SAL_FRAMESTATE_NORMAL);
+
 			// Show the window
 			window.show();
-			toFront();
 		}
 		else {
 			// Hide the window
@@ -2017,7 +2023,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 					Window w = f.getWindow();
 					if (w.isShowing()) {
 						w.hide();
-						w.removeNotify();
 						detachedChildren.add(f);
 					}
 				}

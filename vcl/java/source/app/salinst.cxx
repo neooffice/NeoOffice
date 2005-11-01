@@ -123,10 +123,11 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 	{
 		SalData *pSalData = GetSalData();
 
-		if ( nClass == kEventClassMenu && ( nKind == kEventMenuOpening || nKind == kEventMenuEndTracking ) )
+		if ( nClass == kEventClassMenu && ( nKind == kEventMenuBeginTracking || nKind == kEventMenuEndTracking ) )
 		{
-			// Check if this is a menubar event as we don't want to dispatch
-			// native popup menus in modal dialogs
+			// Check if this a menubar event as we don't want to dispatch
+			// native popup menus in modal dialogs and make sure that this is
+			// not a duplicate menu opening event
 			UInt32 nContext;
 			if ( GetEventParameter( aEvent, kEventParamMenuContext, typeUInt32, NULL, sizeof( UInt32 ), NULL, &nContext ) == noErr && nContext & kMenuContextMenuBarTracking )
 			{
@@ -137,6 +138,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 				// Wakeup the event queue by sending it a dummy event
 				// and wait for all pending AWT events to be dispatched
+				pSalData->mbInNativeMenuTracking = ( nKind == kEventMenuBeginTracking );
 				pSalData->mbNativeEventSucceeded = false;
 				pSalData->maNativeEventCondition.reset();
 				com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
@@ -152,48 +154,11 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 					OThread::yield();
 				}
 
-				// Fix bug 679 by checking if the condition was
-				// released to avoid a deadlock
+				// We need to let any timers run that were added by any menu
+				// changes. Otherwise, some menus will be drawn in the state
+				// that they were in before we updated the menus.
 				if ( !Application::IsShutDown() && pSalData->mbNativeEventSucceeded )
-				{
-					// We need to let any pending timers run so that we
-					// don't deadlock
-					bool bAcquired = false;
-					while ( !Application::IsShutDown() )
-					{
-						if ( rSolarMutex.tryToAcquire() )
-						{
-							if ( !Application::IsShutDown() )
-								bAcquired = true;
-							else
-								rSolarMutex.release();
-							break;
-						}
-
-						ReceiveNextEvent( 0, NULL, 0, false, NULL );
-						OThread::yield();
-					}
-
-					if ( bAcquired )
-					{
-						bool bFirstPass = !pSalData->mbInNativeMenuTracking;
-						pSalData->mbInNativeMenuTracking = ( nKind == kEventMenuOpening );
-
-						// Execute menu updates while the VCL event
-						// queue is blocked
-						ResetMenuEnabledStateForFrame( pSalData->mpFocusFrame, NULL );
-						if ( bFirstPass )
-							UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
-
-						// We need to let any timers run that were added
-						// by any menu changes. Otherwise, some menus
-						// will be drawn in the state that they were in
-						// before we updated the menus.
-						ReceiveNextEvent( 0, NULL, 0, false, NULL );
-					}
-
-					rSolarMutex.release();
-				}
+					ReceiveNextEvent( 0, NULL, 0, false, NULL );
 			}
 		}
 	}
@@ -215,7 +180,7 @@ void ExecuteApplicationMain( Application *pApp )
 		// Set up native event handler
 		EventTypeSpec aTypes[2];
 		aTypes[0].eventClass = kEventClassMenu;
-		aTypes[0].eventKind = kEventMenuOpening;
+		aTypes[0].eventKind = kEventMenuBeginTracking;
 		aTypes[1].eventClass = kEventClassMenu;
 		aTypes[1].eventKind = kEventMenuEndTracking;
 		InstallApplicationEventHandler( pEventHandlerUPP, 2, aTypes, NULL, NULL );
@@ -330,6 +295,11 @@ ULONG SalInstance::ReleaseYieldMutex()
 	SalYieldMutex* pYieldMutex = maInstData.mpSalYieldMutex;
 	if ( pYieldMutex->GetThreadId() == OThread::getCurrentIdentifier() )
 	{
+		// Fix bug 1079 by not allowing releasing of the mutex when we are in
+		// the native event dispatch thread
+		if ( GetCurrentEventLoop() == GetMainEventLoop() )
+			return 0;
+
 		ULONG nCount = pYieldMutex->GetAcquireCount();
 		ULONG n = nCount;
 		while ( n )
@@ -454,6 +424,19 @@ void SalInstance::Yield( BOOL bWait )
 	if ( !pSalData->maNativeEventCondition.check() )
 	{
 		pSalData->mbNativeEventSucceeded = !pSalData->mbInNativeModalSheet;
+		if ( pSalData->mbNativeEventSucceeded )
+		{
+			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+			{
+				if ( (*it)->maFrameData.mbVisible )
+				{
+					ResetMenuEnabledStateForFrame ( *it, NULL );
+					if ( pSalData->mbInNativeMenuTracking )
+						UpdateMenusForFrame( *it, NULL );
+				}
+			}
+		}
+
 		pSalData->maNativeEventCondition.set();
 		nCount = ReleaseYieldMutex();
 		OThread::yield();
@@ -537,9 +520,9 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 	// Set default window size based on style
 	Rectangle aWorkArea;
 	if ( pFrame->maFrameData.mpParent )
-		pFrame->maFrameData.mpParent->GetWorkArea( aWorkArea );
-	else
-		pFrame->GetWorkArea( aWorkArea );
+		aWorkArea = Rectangle( Point( pFrame->maFrameData.mpParent->maGeometry.nX, pFrame->maFrameData.mpParent->maGeometry.nY ), Size( pFrame->maFrameData.mpParent->maGeometry.nWidth, pFrame->maFrameData.mpParent->maGeometry.nHeight ) );
+	pFrame->GetWorkArea( aWorkArea );
+
 	long nX = aWorkArea.nLeft;
 	long nY = aWorkArea.nTop;
 	long nWidth = aWorkArea.GetWidth();

@@ -199,6 +199,8 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 	if ( maFrameData.mbVisible )
 	{
+		maFrameData.mbCenter = FALSE;
+
 		// Reset graphics only for splash screen. All other windows are reset
 		// in the first paint event
 		if ( !ImplGetSVData()->maAppData.mbInAppExecute )
@@ -274,7 +276,6 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 		return;
 
 	Rectangle aPosSize( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
-	aPosSize.Justify();
 
 	if ( ! ( nFlags & SAL_FRAME_POSSIZE_X ) )
 		nX = aPosSize.nLeft;
@@ -286,50 +287,42 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 		nHeight = aPosSize.GetHeight();
 
 	// Adjust position for RTL layout
-	if ( maFrameData.mpParent && nFlags & ( SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y ) && Application::GetSettings().GetLayoutRTL() )
+	if ( maFrameData.mpParent )
 	{
-		Rectangle aParentPosSize( Point( maFrameData.mpParent->maGeometry.nX - maFrameData.mpParent->maGeometry.nLeftDecoration, maFrameData.mpParent->maGeometry.nY - maFrameData.mpParent->maGeometry.nTopDecoration ), Size( maFrameData.mpParent->maGeometry.nWidth, maFrameData.mpParent->maGeometry.nHeight ) );
-		nX = aParentPosSize.GetWidth() - nWidth - nX - 1;
+		if ( nFlags & ( SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y ) && Application::GetSettings().GetLayoutRTL() )
+			nX = maFrameData.mpParent->maGeometry.nWidth - nWidth - nX - 1;
+
+		if ( nFlags & SAL_FRAME_POSSIZE_X )
+			nX += maFrameData.mpParent->maGeometry.nX;
+		if ( nFlags & SAL_FRAME_POSSIZE_Y )
+			nY += maFrameData.mpParent->maGeometry.nY;
 	}
 
 	Rectangle aWorkArea;
-
 	if ( maFrameData.mbCenter && ! ( nFlags & ( SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y ) ) )
 	{
-		if ( maFrameData.mpParent )
-			maFrameData.mpParent->GetWorkArea( aWorkArea );
-		else
-			GetWorkArea( aWorkArea );
 		if ( maFrameData.mpParent && maFrameData.mpParent->maGeometry.nWidth >= nWidth && maFrameData.mpParent->maGeometry.nHeight > nHeight)
 		{
-			nX = maFrameData.mpParent->maGeometry.nX + ( ( maFrameData.mpParent->maGeometry.nWidth - nWidth ) / 2 );
-			nY = maFrameData.mpParent->maGeometry.nY + ( ( maFrameData.mpParent->maGeometry.nHeight - nHeight ) / 2 );
+			nX = maFrameData.mpParent->maGeometry.nX + ( maFrameData.mpParent->maGeometry.nWidth - nWidth ) / 2;
+			nY = maFrameData.mpParent->maGeometry.nY + ( maFrameData.mpParent->maGeometry.nHeight - nHeight ) / 2;
+
+			aWorkArea = Rectangle( Point( nX, nX ), Size( nWidth, nHeight ) );
+			GetWorkArea( aWorkArea );
 		}
 		else
 		{
+			aWorkArea = Rectangle( Point( nX, nX ), Size( nWidth, nHeight ) );
+			GetWorkArea( aWorkArea );
+
 			nX = aWorkArea.nLeft + ( ( aWorkArea.GetWidth() - nWidth ) / 2 );
 			nY = aWorkArea.nTop + ( ( aWorkArea.GetHeight() - nHeight ) / 2 );
 		}
 
 		maFrameData.mbCenter = FALSE;
 	}
-	else if ( maFrameData.mpParent )
-	{
-		if ( nFlags & SAL_FRAME_POSSIZE_X )
-			nX += maFrameData.mpParent->maGeometry.nX;
-		if ( nFlags & SAL_FRAME_POSSIZE_Y )
-			nY += maFrameData.mpParent->maGeometry.nY;
-
-		// If this is a popup window, we need to put the window on the correct
-		// screen when the parent window straddles more than one screen
-		Rectangle aBounds( Point( nX, nY ), Size( nWidth + maGeometry.nLeftDecoration + maGeometry.nRightDecoration, nHeight + maGeometry.nTopDecoration + maGeometry.nBottomDecoration ) );
-		maFrameData.mpVCLFrame->setBounds( aBounds.nLeft, aBounds.nTop, aBounds.GetWidth(), aBounds.GetHeight() );
-		GetWorkArea( aWorkArea );
-		if ( aBounds.Intersection( aWorkArea ).IsEmpty() )
-			maFrameData.mpParent->GetWorkArea( aWorkArea );
-	}
 	else
 	{
+		aWorkArea = Rectangle( Point( nX, nX ), Size( nWidth, nHeight ) );
 		GetWorkArea( aWorkArea );
 	}
 
@@ -341,8 +334,8 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 		nMinX -= 1;
 		nMinY -= 1;
 	}
-	nWidth = nWidth + maGeometry.nLeftDecoration + maGeometry.nRightDecoration;
-	nHeight = nHeight + maGeometry.nTopDecoration + maGeometry.nBottomDecoration;
+	nWidth += maGeometry.nLeftDecoration + maGeometry.nRightDecoration;
+	nHeight += maGeometry.nTopDecoration + maGeometry.nBottomDecoration;
 	if ( nMinX + nWidth > aWorkArea.nLeft + aWorkArea.GetWidth() )
 		nWidth = aWorkArea.nLeft + aWorkArea.GetWidth() - nMinX;
 	if ( nMinY + nHeight > aWorkArea.nTop + aWorkArea.GetHeight() )
@@ -367,9 +360,10 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 
 void SalFrame::GetWorkArea( Rectangle &rRect )
 {
-	rRect = maFrameData.mpVCLFrame->getBounds();
+	if ( rRect.IsEmpty() )
+		rRect = maFrameData.mpVCLFrame->getBounds();
 
-	NSScreen_getScreenBounds( &rRect.nLeft, &rRect.nTop, &rRect.nRight, &rRect.nBottom, maFrameData.mbPresentation ? TRUE : FALSE );
+	NSScreen_getScreenBounds( &rRect.nLeft, &rRect.nTop, &rRect.nRight, &rRect.nBottom, GetSalData()->mpPresentationFrame ? TRUE : FALSE );
 }
 
 // -----------------------------------------------------------------------
@@ -534,9 +528,6 @@ void SalFrame::SetAlwaysOnTop( BOOL bOnTop )
 
 void SalFrame::ToTop( USHORT nFlags )
 {
-	if ( ! ( nFlags & SAL_FRAME_TOTOP_RESTOREWHENMIN ) && maFrameData.mpVCLFrame->getState() == SAL_FRAMESTATE_MINIMIZED )
-		return;
-
 	if ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS )
 		maFrameData.mpVCLFrame->toFront();
 	else if ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS_ONLY )
@@ -748,14 +739,6 @@ void SalFrame::SetParent( SalFrame* pNewParent )
 		}
 
 		maFrameData.mpParent = pNewParent;
-
-		// Create a new native window with the new parent
-		ReleaseGraphics( maFrameData.mpGraphics );
-		if ( maFrameData.mpVCLFrame )
-			delete maFrameData.mpVCLFrame;
-		maFrameData.mpVCLFrame = new com_sun_star_vcl_VCLFrame( maFrameData.mnStyle, this, maFrameData.mpParent );
-		maFrameData.maSysData.aWindow = 0;
-		SetPosSize( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration, maGeometry.nWidth, maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
 
 		if ( maFrameData.mpParent )
 		{

@@ -2555,6 +2555,7 @@ bool PDFWriterImpl::emit()
         encodeGlyphs();
 
         PDFWriterImpl aWriter( m_aFileName, m_eVersion, m_eCompression, &m_aSubsets );
+		aWriter.setDocInfo( m_aDocInfo );
         for ( ULONG i = 0, nCount = m_aMtf.GetActionCount(); i < nCount; i++ )
         {
             const MetaAction *pAction = m_aMtf.GetAction( i );
@@ -6511,8 +6512,8 @@ void PDFWriterImpl::encodeGlyphs()
         {
             FontEmit& rEmit = *lit;
 
-			SalSystemFontData *pSystemFont = (SalSystemFontData *)pCurrentFont->mpSysData;
-            ATSUFontID nFontID = (ATSUFontID)( pSystemFont->mpVCLFont->getNativeFont() );
+			com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)pCurrentFont->mpSysData;
+            ATSUFontID nFontID = (ATSUFontID)( pVCLFont->getNativeFont() );
             ATSFontRef aATSFont = FMGetATSFontRefFromFont( nFontID );
             CGFontRef aFont = CGFontCreateWithPlatformFont( (void *)&aATSFont );
             if ( !aFont )

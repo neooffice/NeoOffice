@@ -100,15 +100,12 @@ public final class VCLFont {
 	public static VCLFont[] getAllFonts() {
 
 		Font[] javaFonts = GraphicsEnvironment.getLocalGraphicsEnvironment().getAllFonts();
-		VCLFont[] vclFonts = new VCLFont[javaFonts.length + 1];
+		VCLFont[] vclFonts = new VCLFont[javaFonts.length];
 
 		// Copy JVM's fonts
 		int i;
 		for (i = 0; i < javaFonts.length; i++)
 			vclFonts[i] = new VCLFont(javaFonts[i], 0, javaFonts[i].getSize(), (short)0, true, false, 1.0);
-
-		// Create fonts that the JVM fails to create
-		vclFonts[i++] = new VCLFont(new Font("Helvetica Regular", Font.PLAIN, 1), 0, 1, (short)0, true, false, 1.0);
 
 		return vclFonts;
 
@@ -244,27 +241,6 @@ public final class VCLFont {
 	}
 
 	/**
-	 * Returns the PostScript name of the font with the specified style.
-	 *
-	 * @param b <code>true</code> for bold and <code>false</code> otherwise
-	 * @param i <code>true</code> for italic and <code>false</code> otherwise
-	 * @return the PostScript name of the font with the specified style or,
-	 *  if none is found, the PostScript name of this font
-	 */
-	public String findFontNameForStyle(boolean b, boolean i) {
-
-		int s = Font.PLAIN;
-		if (b)
-			s |= Font.BOLD;
-		if (i)
-			s |= Font.ITALIC;
-
-		Font f = font.deriveFont(s, size);
-		return f.getPSName();
-
-	}
-
-	/**
 	 * Determines the font ascent of the <code>Font</code>.
 	 *
 	 * @return the font ascent of the <code>Font</code>
@@ -332,13 +308,13 @@ public final class VCLFont {
 	}
 
 	/**
-	 * Returns the font's PostScript name.
+	 * Returns the font's name.
 	 *
-	 * @return the font's PostScript name
+	 * @return the font's name
 	 */
 	public String getName() {
 
-		return font.getPSName();
+		return font.getName();
 
 	}
 
@@ -361,6 +337,17 @@ public final class VCLFont {
 	public short getOrientation() {
 
 		return orientation;
+
+	}
+
+	/**
+	 * Returns the font's PostScript name.
+	 *
+	 * @return the font's PostScript name
+	 */
+	public String getPSName() {
+
+		return font.getPSName();
 
 	}
 

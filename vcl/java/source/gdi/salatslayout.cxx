@@ -62,7 +62,7 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
 
-#define LAYOUT_CACHE_MAX_SIZE 1024
+#define LAYOUT_CACHE_MAX_SIZE 4096
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
@@ -567,8 +567,8 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 				::std::map< void*, ImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( (void *)nFontID );
 				if ( it != pSalData->maNativeFontMapping.end() )
 				{
-					SalSystemFontData *pSystemFont = (SalSystemFontData *)it->second->mpSysData;
-					mpFallbackFont = pSystemFont->mpVCLFont->deriveFont( mpHash->mnFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
+					com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)it->second->mpSysData;
+					mpFallbackFont = pVCLFont->deriveFont( mpHash->mnFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
 				}
 				else
 				{

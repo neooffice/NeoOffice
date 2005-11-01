@@ -37,14 +37,14 @@ package com.sun.star.vcl;
 
 import java.awt.Dimension;
 import java.awt.Frame;
-import java.awt.GraphicsDevice;
-import java.awt.GraphicsEnvironment;
+import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.SystemColor;
 import java.awt.Toolkit;
 import java.awt.Window;
+import java.awt.image.BufferedImage;
 
 /** 
  * The Java class that implements the convenience methods for accessing
@@ -71,6 +71,11 @@ public final class VCLScreen {
 	private static Dimension minimumFrameSize = null;
 
 	/**
+	 * Cached buffered image.
+	 */
+	private static BufferedImage image = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB_PRE);
+
+	/**
 	 * Initialize screen size and frame insets.
 	 */
 	static {
@@ -92,7 +97,22 @@ public final class VCLScreen {
 	 */
 	public static int getControlColor() {
 
-		return SystemColor.control.getRGB();
+		int color = 0x00000000;
+
+		Graphics2D g = image.createGraphics();
+		if (g != null) {
+			try {
+				g.setColor(SystemColor.control);
+				g.fillRect(0, 0, 1, 1);
+				color = image.getRGB(0, 0);
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
+		}
+
+		return color;
 
 	}
 
@@ -125,7 +145,22 @@ public final class VCLScreen {
 	 */
 	public static int getTextHighlightColor() {
 
-		return SystemColor.textHighlight.getRGB();
+		int color = 0x00000000;
+
+		Graphics2D g = image.createGraphics();
+		if (g != null) {
+			try {
+				g.setColor(SystemColor.textHighlight);
+				g.fillRect(0, 0, 1, 1);
+				color = image.getRGB(0, 0);
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
+		}
+
+		return color;
 
 	}
 
@@ -136,7 +171,22 @@ public final class VCLScreen {
 	 */
 	public static int getTextHighlightTextColor() {
 
-		return SystemColor.textHighlightText.getRGB();
+		int color = 0x00000000;
+
+		Graphics2D g = image.createGraphics();
+		if (g != null) {
+			try {
+				g.setColor(SystemColor.textHighlightText);
+				g.fillRect(0, 0, 1, 1);
+				color = image.getRGB(0, 0);
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
+		}
+
+		return color;
 
 	}
 
@@ -147,7 +197,22 @@ public final class VCLScreen {
 	 */
 	public static int getTextTextColor() {
 
-		return SystemColor.textText.getRGB();
+		int color = 0x00000000;
+
+		Graphics2D g = image.createGraphics();
+		if (g != null) {
+			try {
+				g.setColor(SystemColor.textText);
+				g.fillRect(0, 0, 1, 1);
+				color = image.getRGB(0, 0);
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
+		}
+
+		return color;
 
 	}
 

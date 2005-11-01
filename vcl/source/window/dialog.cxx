@@ -93,9 +93,15 @@
 #include <unowrap.hxx>
 
 #ifdef USE_JAVA
+
+#ifndef _SV_SALFRAME_HXX
+#include <salframe.hxx>
+#endif
+
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
+
 #endif	// USE_JAVA
 
 #pragma hdrstop
@@ -684,6 +690,10 @@ short Dialog::Execute()
     EnableSaveBackground();
     Show();
 
+#ifdef USE_JAVA
+    // Force modal windows to the front
+    mpFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
+#endif	// USE_JAVA
 
     if ( Application::GetAccessHdlCount() )
     {

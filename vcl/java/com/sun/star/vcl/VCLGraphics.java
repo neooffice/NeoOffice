@@ -1079,9 +1079,13 @@ public final class VCLGraphics {
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle destBounds = polygon.getBounds();
-		destBounds.width++;
-		destBounds.height++;
-		destBounds = destBounds.intersection(graphicsBounds);
+		if (!fill) {
+			destBounds.x--;
+			destBounds.y--;
+			destBounds.width += 2;
+			destBounds.height += 2;
+			destBounds = destBounds.intersection(graphicsBounds);
+		}
 		if (destBounds.isEmpty())
 			return;
 
@@ -1142,8 +1146,10 @@ public final class VCLGraphics {
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle destBounds = polygon.getBounds();
-		destBounds.width++;
-		destBounds.height++;
+		destBounds.x--;
+		destBounds.y--;
+		destBounds.width += 2;
+		destBounds.height += 2;
 		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
@@ -1225,7 +1231,14 @@ public final class VCLGraphics {
 		if (area == null || area.isEmpty())
 			return;
 
-		Rectangle destBounds = area.getBounds().intersection(graphicsBounds);
+		Rectangle destBounds = area.getBounds();
+		if (!fill) {
+			destBounds.x--;
+			destBounds.y--;
+			destBounds.width += 2;
+			destBounds.height += 2;
+		}
+		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
 
@@ -1542,7 +1555,8 @@ public final class VCLGraphics {
 		if (graphics != null)
 			return;
 
-		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
+		Rectangle destBounds = new Rectangle(x, y, width, height);
+		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
 
@@ -1638,8 +1652,12 @@ public final class VCLGraphics {
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle destBounds = polygon.getBounds();
-		destBounds.width++;
-		destBounds.height++;
+		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME) {
+			destBounds.x--;
+			destBounds.y--;
+			destBounds.width += 2;
+			destBounds.height += 2;
+		}
 		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;

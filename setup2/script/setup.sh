@@ -50,7 +50,7 @@ os=`uname`
 apphome=`dirname "$0"`
 sharebase="$apphome/../share"
 userbase="$apphome/../user"
-userlibrary="$HOME/Library"
+userlibrary="$HOME/Library/Preferences"
 userinstall="$userlibrary/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)/user"
 
 
@@ -192,9 +192,38 @@ s#<value.*$#<value>1</value>#
     fi
 fi
 
-# Make locale the default document language
-sharedictdir="$sharebase/dict/ooo"
+# Create user dictionary.lst file
 lang=`echo "$locale" | awk -F- '{ print $1 }'`
+sharedictdir="$sharebase/dict/ooo"
+userdictlst="$wordbookdir/dictionary.lst"
+if [ -d "$sharedictdir" ] ; then
+    sharedictlst="$sharedictdir/dictionary.lst"
+    if [ -r "$sharedictlst" ] ; then
+        ( cat /dev/null "$userdictlst" ; grep -E '[^][#:space:]*(DICT|HYPH|THES)[[:space:]]*'"$lang"'[[:space:]]' "$sharedictlst" ) 2>/dev/null | sed 's#^[#[:space:]]*##' | sort -u > "$userdictlst.tmp"
+        if [ -s "$userdictlst.tmp" ] ; then
+            lasttype=
+            lastlang=
+            lastcountry=
+            while read type lang country file ; do
+                if [ "$type $lang $country" = "$lasttype $lastlang $lastcountry" ] ; then
+                    continue;
+                fi
+                echo "$type $lang $country $file"
+                lasttype="$type"
+                lastlang="$lang"
+                lastcountry="$country"
+            done < "$userdictlst.tmp" > "$userdictlst"
+        fi
+        rm -f "$userdictlst.tmp"
+    fi
+    for i in `cd "$sharedictdir" ; find . -name "*$lang*"` ; do
+        if [ ! -r "$wordbookdir/$i" ] ; then
+            ln -sf "$sharedictdir/$i" "$wordbookdir/$i"
+        fi
+    done
+fi
+
+# Make locale the default document language
 linguxml="$registrydir/Office/Linguistic.xcu"
 linguxmlset="$linguxml.set"
 linguxmlbak="$linguxml.bak"
@@ -205,11 +234,8 @@ fi
 if [ ! -f "$linguxmlset" -a ! -f "$linguxmlbak" ] ; then
     # Match the locale to one of the installed locales
     locales='$(LANGUAGE_NAMES)'
-    if [ -d "$sharedictdir" ] ; then
-        locales="$locales "`cd "$sharedictdir" ; ls -1d *.aff | sed 's/\.aff//g' | sed 's/_/-/g'`
-    fi
-    if [ -d "$wordbookdir" ] ; then
-        locales="$locales "`cd "$wordbookdir" ; ls -1d *.aff | sed 's/\.aff//g' | sed 's/_/-/g'`
+    if [ -f "$userdictlst" ] ; then
+        locales="$locales "`awk '{ print $2 "-" $3 }' "$userdictlst"`
     fi
     matchedlocale=""
     for i in $locales ; do
@@ -228,7 +254,8 @@ if [ ! -f "$linguxmlset" -a ! -f "$linguxmlbak" ] ; then
         done
     fi
     if [ -z "$matchedlocale" ] ; then
-        locale="en-US"
+        lang="US"
+        locale="en-$lang"
     else
         locale="$matchedlocale"
     fi
@@ -247,24 +274,6 @@ s#<value.*$#<value>'"$locale"'</value>#
     else
         rm -f "$linguxmlbak"
     fi
-fi
-
-# Create user dictionary.lst file
-if [ -d "$sharedictdir" ] ; then
-    userdictlst="$wordbookdir/dictionary.lst"
-    sharedictlst="$sharedictdir/dictionary.lst"
-    if [ -r "$sharedictlst" ] ; then
-        ( cat /dev/null "$userdictlst" ; grep -E '[^][#:space:]*(DICT|HYPH|THES)[[:space:]]*'"$lang"'[[:space:]]' "$sharedictlst" ) 2>/dev/null | sed 's#^[#[:space:]]*##' > "$userdictlst.tmp"
-        if [ -s "$userdictlst.tmp" ] ; then
-            sort -u "$userdictlst.tmp" > "$userdictlst"
-        fi
-        rm -f "$userdictlst.tmp"
-    fi
-    for i in `cd "$sharedictdir" ; find . -name "*$lang*"` ; do
-        if [ ! -r "$wordbookdir/$i" ] ; then
-            ln -sf "$sharedictdir/$i" "$wordbookdir/$i"
-        fi
-    done
 fi
 
 # Create javarc file

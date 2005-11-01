@@ -54,6 +54,27 @@ id NSFont_create( CFStringRef aFontName, long nSize )
 	return pRet;
 }
 
+CFStringRef NSFont_displayName( id pNSFont )
+{
+	CFStringRef aRet = nil;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pNSFont )
+	{
+		// Get the ATS font name as the Cocoa name on some Mac OS X versions
+		// adds extraneous words
+		CFStringRef aPSName = (CFStringRef)[(NSFont *)pNSFont fontName];
+		ATSFontRef aFont = ATSFontFindFromPostScriptName( aPSName, kATSOptionFlagsDefault );
+		if ( aFont )
+			ATSFontGetName( aFont, kATSOptionFlagsDefault, &aRet );
+	}
+
+	[pPool release];
+
+	return aRet;
+}
+
 void NSFont_release( id pNSFont )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -62,6 +83,45 @@ void NSFont_release( id pNSFont )
 		[(NSFont *)pNSFont release];
 
 	[pPool release];
+}
+
+CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, BOOL bBold, BOOL bItalic, long nSize )
+{
+	CFStringRef aRet = nil;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( aFontName && nSize )
+	{
+		NSFont *pNSFont = [NSFont fontWithName:(NSString *)aFontName size:(float)nSize];
+		if ( pNSFont )
+		{
+			NSFontManager *pFontManager = [NSFontManager sharedFontManager];
+			if ( pFontManager )
+			{
+				int nWeight = [pFontManager weightOfFont:pNSFont];
+				NSFontTraitMask nTraits = ( [pFontManager traitsOfFont:pNSFont] & ( NSBoldFontMask | NSItalicFontMask ) );
+				if ( bBold )
+					nTraits |= NSBoldFontMask;
+				if ( bItalic )
+					nTraits |= NSItalicFontMask;
+				NSFont *pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:nTraits weight:nWeight size:(float)nSize];
+				if ( pNewNSFont && pNewNSFont != pNSFont )
+				{
+					// Get the ATS font name as the Cocoa name on some Mac OS X
+					// versions adds extraneous words
+					CFStringRef aPSName = (CFStringRef)[(NSFont *)pNewNSFont fontName];
+					ATSFontRef aFont = ATSFontFindFromPostScriptName( aPSName, kATSOptionFlagsDefault );
+					if ( aFont )
+						ATSFontGetName( aFont, kATSOptionFlagsDefault, &aRet );
+				}
+			}
+		}
+	}
+
+	[pPool release];
+
+	return aRet;
 }
 
 BOOL NSFontManager_isFixedPitch( id pNSFont )

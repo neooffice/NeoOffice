@@ -38,13 +38,13 @@
 
 @interface ScreenBounds : NSObject
 {
-	BOOL					mbFullScreen;
-	NSPoint					maPoint;
 	NSRect					maBounds;
+	BOOL					mbFullScreenMode;
+	NSPoint					maPoint;
 }
 - (NSRect)bounds;
 - (void)calcBounds:(id)pObject;
-- (id)initWithPoint:(NSPoint)aPoint fullScreen:(BOOL)bFullScreen;
+- (id)initWithPoint:(NSPoint)aPoint fullScreenMode:(BOOL)bFullScreenMode;
 @end
 
 @implementation ScreenBounds
@@ -59,68 +59,116 @@
 	NSArray *pScreens = [NSScreen screens];
 	if ( pScreens )
 	{
-		NSRect aVirtualBounds = NSMakeRect( 0, 0, 0, 0 );
-		unsigned nCount = [pScreens count];
-
 		// Iterate through the screen devices and calculate the virtual screen
 		// size
+		unsigned nCount = [pScreens count];
+		NSScreen *pScreen = (NSScreen *)[pScreens objectAtIndex:0];
+		NSRect aVirtualBounds = NSUnionRect( aVirtualBounds, [pScreen frame] );
 		unsigned i;
-		for ( i = 0; i < nCount; i++ )
+		for ( i = 1; i < nCount; i++ )
 		{
-			NSScreen *pScreen = (NSScreen *)[pScreens objectAtIndex:i];
+			pScreen = (NSScreen *)[pScreens objectAtIndex:i];
 			aVirtualBounds = NSUnionRect( aVirtualBounds, [pScreen frame] );
 		}
 
-		// Iterate through the screen devices in reverse order and find the
-		// screen that the top left corner of the frame is in and if we get to
-		// the first screen always use that as the default
-		for ( i = nCount - 1; i >= 0; i-- )
+		// Iterate through screen and find the screen that the point is
+		// inside of
+		NSRect aClosestBounds = maBounds;
+		BOOL bScreenFound = NO;
+		for ( i = 0; i < nCount; i++ )
 		{
-			NSScreen *pScreen = (NSScreen *)[pScreens objectAtIndex:i];
-			NSRect aBounds = [pScreen frame];
+			pScreen = (NSScreen *)[pScreens objectAtIndex:i];
+
+			NSRect aBounds;
+			if ( mbFullScreenMode )
+				aBounds = [pScreen frame];
+			else
+				aBounds = [pScreen visibleFrame];
 
 			// Flip the coordinate system to match the VCL coordinate system
 			aBounds.origin.y = aVirtualBounds.size.height - aBounds.origin.y - aBounds.size.height;
-			
-			if ( !i || NSPointInRect( maPoint, aBounds ) )
-			{
-				if ( !mbFullScreen )
-				{
-					// Flip the coordinate system to match the VCL coordinate
-					// system
-					NSRect aVisibleBounds = [pScreen visibleFrame];
-					aVisibleBounds.origin.y = aBounds.origin.y + aBounds.size.height - aVisibleBounds.origin.y - aVisibleBounds.size.height;
-					maBounds = aVisibleBounds;
-				}
-				else
-				{
-					maBounds = aBounds;
-				}
 
+			if ( NSPointInRect( maPoint, aBounds ) )
+			{
+				aClosestBounds = aBounds;
+				bScreenFound = YES;
 				break;
 			}
 		}
+
+		if ( !bScreenFound )
+		{
+			// Iterate through screen and find the screen that the point is
+			// closest to
+			unsigned nClosestArea = 0xffffffff;
+			aClosestBounds = NSMakeRect( 0, 0, 0, 0);
+			for ( i = 0; i < nCount; i++ )
+			{
+				pScreen = (NSScreen *)[pScreens objectAtIndex:i];
+
+				NSRect aBounds;
+				if ( mbFullScreenMode )
+					aBounds = [pScreen frame];
+				else
+					aBounds = [pScreen visibleFrame];
+
+				// Flip the coordinate system to match the VCL coordinate system
+				aBounds.origin.y = aVirtualBounds.size.height - aBounds.origin.y - aBounds.size.height;
+				
+				// Test the closeness of each corner of the screen
+				BOOL bCloserScreenFound = NO;
+				unsigned nArea = abs( (unsigned)( ( aBounds.origin.x - maPoint.x ) * ( aBounds.origin.y - maPoint.y ) ) );
+				if ( nClosestArea > nArea )
+				{
+					bCloserScreenFound = YES;
+					nClosestArea = nArea;
+				}
+				nArea = abs( (unsigned)( ( aBounds.origin.x + aBounds.size.width - maPoint.x ) * ( aBounds.origin.y - maPoint.y ) ) );
+				if ( nClosestArea > nArea )
+				{
+					bCloserScreenFound = YES;
+					nClosestArea = nArea;
+				}
+				nArea = abs( (unsigned)( ( aBounds.origin.x + aBounds.size.width - maPoint.x ) * ( aBounds.origin.y + aBounds.size.height - maPoint.y ) ) );
+				if ( nClosestArea > nArea )
+				{
+					bCloserScreenFound = YES;
+					nClosestArea = nArea;
+				}
+				nArea = abs( (unsigned)( ( aBounds.origin.x - maPoint.x ) * ( aBounds.origin.y + aBounds.size.height - maPoint.y ) ) );
+				if ( nClosestArea > nArea )
+				{
+					bCloserScreenFound = YES;
+					nClosestArea = nArea;
+				}
+
+				if ( bCloserScreenFound )
+					aClosestBounds = aBounds;
+			}
+		}
+	
+		maBounds = aClosestBounds;
 	}
 }
 
-- (id)initWithPoint:(NSPoint)aPoint fullScreen:(BOOL)bFullScreen
+- (id)initWithPoint:(NSPoint)aPoint fullScreenMode:(BOOL)bFullScreenMode;
 {
 	[super init];
 
-	mbFullScreen = bFullScreen;
+	maBounds = NSMakeRect( 0, 0, 640, 480 );
+	mbFullScreenMode = bFullScreenMode;
 	maPoint = aPoint;
-	maBounds = NSMakeRect( 0, 0, 800, 600 );
 
 	return self;
 }
 
 @end
 
-void NSScreen_getScreenBounds( long *nX, long *nY, long *nWidth, long *nHeight, BOOL bFullScreen )
+void NSScreen_getScreenBounds( long *nX, long *nY, long *nWidth, long *nHeight, BOOL bFullScreenMode )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	ScreenBounds *pScreenBounds = [[ScreenBounds alloc] initWithPoint:NSMakePoint( (float)( *nX ), (float)( *nY ) ) fullScreen:bFullScreen];
+	ScreenBounds *pScreenBounds = [[ScreenBounds alloc] initWithPoint:NSMakePoint( (float)( *nX ), (float)( *nY ) ) fullScreenMode:bFullScreenMode];
 	[pScreenBounds performSelectorOnMainThread:@selector(calcBounds:) withObject:pScreenBounds waitUntilDone:YES];
 
 	NSRect aBounds = [pScreenBounds bounds];

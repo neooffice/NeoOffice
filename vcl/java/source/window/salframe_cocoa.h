@@ -39,7 +39,7 @@
 #ifdef __cplusplus
 BEGIN_C
 #endif
-void NSScreen_getScreenBounds( long *nX, long *nY, long *nWidth, long *nHeight, BOOL bFullScreen );
+void NSScreen_getScreenBounds( long *nX, long *nY, long *nWidth, long *nHeight, BOOL bFullScreenMode );
 #ifdef __cplusplus
 END_C
 #endif
