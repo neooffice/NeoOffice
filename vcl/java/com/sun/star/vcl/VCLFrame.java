@@ -914,7 +914,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed)
 			return;
 
-		setVisible(false);
 		setMenuBar(null);
 		bitCount = 0;
 		children = null;

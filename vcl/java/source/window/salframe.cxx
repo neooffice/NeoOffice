@@ -119,13 +119,8 @@ SalFrame::SalFrame()
 
 SalFrame::~SalFrame()
 {
-	SalData *pSalData = GetSalData();
-
-	if ( pSalData->mpFocusFrame == this )
-		pSalData->mpFocusFrame = NULL;
-
-	if ( pSalData->mpPresentationFrame == this )
-		pSalData->mpPresentationFrame = NULL;
+	Show( FALSE, FALSE );
+	StartPresentation( FALSE );
 }
 
 // -----------------------------------------------------------------------
@@ -246,8 +241,24 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		// Remove the native window since it is destroyed when hidden
 		maFrameData.maSysData.aWindow = 0;
 
+		// Fix bug 1106 by ensuring that some frame has focus if we close
+		// the focus frame
 		if ( pSalData->mpFocusFrame == this )
+		{
 			pSalData->mpFocusFrame = NULL;
+
+			// Make sure frame is a top-level window
+			SalFrame *pFocusFrame = this;
+			while ( pFocusFrame->maFrameData.mpParent && pFocusFrame->maFrameData.mpParent->maFrameData.mbVisible )
+				pFocusFrame = pFocusFrame->maFrameData.mpParent;
+	
+			if ( pFocusFrame != this )
+			{
+				pFocusFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
+				com_sun_star_vcl_VCLEvent aEvent( SALEVENT_GETFOCUS, pFocusFrame, NULL );
+				aEvent.dispatch();
+			}
+		}
 	}
 }
 
@@ -762,6 +773,9 @@ bool SalFrame::SetPluginParent( SystemParentData* pNewParent )
 
 void SalFrame::SetMenu( SalMenu* pSalMenu )
 {
+	// Make a pass through the native menus to speed up later updates
+	if ( pSalMenu )
+		UpdateMenusForFrame( this, pSalMenu );
 }
 
 // -----------------------------------------------------------------------
