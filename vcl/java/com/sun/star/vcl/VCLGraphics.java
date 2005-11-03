@@ -623,16 +623,21 @@ public final class VCLGraphics {
 			return;
 
 		LinkedList clipList = new LinkedList();
+		Rectangle clipBounds;
+		if (graphics != null)
+			clipBounds = graphicsBounds;
+		else
+			clipBounds = destBounds;
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(clipBounds);
 				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
 		}
 		else {
-			clipList.add(destBounds);
+			clipList.add(clipBounds);
 		}
 
 		Graphics2D g = getGraphics();
@@ -796,13 +801,13 @@ public final class VCLGraphics {
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(graphicsBounds);
 				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
 		}
 		else {
-			clipList.add(destBounds);
+			clipList.add(graphicsBounds);
 		}
 
 		Graphics2D g = getGraphics();
@@ -967,16 +972,21 @@ public final class VCLGraphics {
 			return;
 
 		LinkedList clipList = new LinkedList();
+		Rectangle clipBounds;
+		if (graphics != null)
+			clipBounds = graphicsBounds;
+		else
+			clipBounds = destBounds;
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(clipBounds);
 				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
 		}
 		else {
-			clipList.add(destBounds);
+			clipList.add(clipBounds);
 		}
 
 		Graphics2D g = getGraphics();
@@ -1090,16 +1100,21 @@ public final class VCLGraphics {
 			return;
 
 		LinkedList clipList = new LinkedList();
+		Rectangle clipBounds;
+		if (graphics != null)
+			clipBounds = graphicsBounds;
+		else
+			clipBounds = destBounds;
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(clipBounds);
 				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
 		}
 		else {
-			clipList.add(destBounds);
+			clipList.add(clipBounds);
 		}
 
 		Graphics2D g = getGraphics();
@@ -1155,16 +1170,21 @@ public final class VCLGraphics {
 			return;
 
 		LinkedList clipList = new LinkedList();
+		Rectangle clipBounds;
+		if (graphics != null)
+			clipBounds = graphicsBounds;
+		else
+			clipBounds = destBounds;
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(clipBounds);
 				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
 		}
 		else {
-			clipList.add(destBounds);
+			clipList.add(clipBounds);
 		}
 
 		Graphics2D g = getGraphics();
@@ -1243,16 +1263,21 @@ public final class VCLGraphics {
 			return;
 
 		LinkedList clipList = new LinkedList();
+		Rectangle clipBounds;
+		if (graphics != null)
+			clipBounds = graphicsBounds;
+		else
+			clipBounds = destBounds;
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(clipBounds);
 				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
 		}
 		else {
-			clipList.add(destBounds);
+			clipList.add(clipBounds);
 		}
 
 		Graphics2D g = getGraphics();
@@ -1309,16 +1334,21 @@ public final class VCLGraphics {
 			return;
 
 		LinkedList clipList = new LinkedList();
+		Rectangle clipBounds;
+		if (graphics != null)
+			clipBounds = graphicsBounds;
+		else
+			clipBounds = destBounds;
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(clipBounds);
 				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
 		}
 		else {
-			clipList.add(destBounds);
+			clipList.add(clipBounds);
 		}
 
 		Graphics2D g = getGraphics();
