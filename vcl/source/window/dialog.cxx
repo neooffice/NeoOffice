@@ -94,6 +94,9 @@
 
 #ifdef USE_JAVA
 
+#ifndef _SV_SALDATA_HXX
+#include <saldata.hxx>
+#endif
 #ifndef _SV_SALFRAME_HXX
 #include <salframe.hxx>
 #endif
@@ -659,8 +662,9 @@ short Dialog::Execute()
 
 #ifdef USE_JAVA
     // Do not attempt to run a modal dialog in the native event dispatch thread
-    // as it will disable the crash handler
-    if ( GetCurrentEventLoop() == GetMainEventLoop() )
+    // as it will disable the crash handler. Also, fix bug 1108 by not running
+	// it if a native sheet is being displayed.
+    if ( GetCurrentEventLoop() == GetMainEventLoop() || GetAppSalData()->mbInNativeModalSheet )
         return 0;
 #endif	// USE_JAVA
 
