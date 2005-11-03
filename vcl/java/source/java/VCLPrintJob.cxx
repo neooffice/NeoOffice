@@ -277,7 +277,7 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 			pSalData->mpNativeModalSheetFrame = pFocusFrame;
 			pSalData->mbInNativeModalSheet = true;
 			while ( !NSPrintPanel_finished( pDialog ) )
-				Application::Reschedule();
+				Application::Yield();
 			pSalData->mbInNativeModalSheet = false;
 			pSalData->mpNativeModalSheetFrame = NULL;
 

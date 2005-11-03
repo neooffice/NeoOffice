@@ -615,7 +615,7 @@ sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 			pSalData->mpNativeModalSheetFrame = pFocusFrame;
 			pSalData->mbInNativeModalSheet = true;
 			while ( !NSPageLayout_finished( pDialog ) )
-				Application::Reschedule();
+				Application::Yield();
 			pSalData->mbInNativeModalSheet = false;
 			pSalData->mpNativeModalSheetFrame = NULL;
 
