@@ -58,7 +58,7 @@ userinstall="$userlibrary/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)/user"
 if [ ! -d "$userlibrary" ] ; then
     mkdir -p "$userlibrary"
 fi
-chmod -f u+w "$userlibrary"
+chmod -f u+rwx "$userlibrary"
 
 # Make sure that this is not a botched installation
 if [ ! -d "$apphome" ] ; then
@@ -97,9 +97,8 @@ if [ ! -d "$configdir" -o ! -d "$registrydir" -o ! -d "$wordbookdir" ] ; then
     repair="true"
     mkdir -p "$userinstall"
 fi
+chmod -Rf u+rwx "$userinstall"
 if [ ! -z "$repair" ] ; then
-    find "$userinstall" -type d -exec chmod u+rwx {} \;
-    chmod -Rf u+rw "$userinstall"
     # Make backup copy
     if [ -d "$userinstall" ] ; then
         if [ ! -z "`ls "$userinstall"`" ] ; then
@@ -111,15 +110,16 @@ if [ ! -z "$repair" ] ; then
         rm -f "$userinstall"
     fi
     mkdir -p "$userinstall"
-    # Make a clean copy of the registry directory and only copy missing
-    # files in all other directories
+    # Make a clean copy of the registry directory
     rm -Rf "$userinstall/registry"
     ( cd "$userbase" ; pax -r -w "registry" "$userinstall" )
-    ( cd "$userbase" ; pax -r -w -k "." "$userinstall" )
-    chmod -Rf u+rw "$userinstall"
-    if [ ! -d "$configdir" -o ! -d "$registrydir" -o ! -d "$wordbookdir" ] ; then
-        error "Installation of files in the $userinstall directory failed"
-    fi
+fi
+
+# Copy any missing files
+( cd "$userbase" ; pax -r -w -k "." "$userinstall" )
+chmod -Rf u+rwx "$userinstall"
+if [ ! -d "$configdir" -o ! -d "$registrydir" -o ! -d "$wordbookdir" ] ; then
+    error "Installation of files in the $userinstall directory failed"
 fi
 
 # Set the locale
