@@ -299,7 +299,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_GETFOCUS:
 		{
-			if ( pSalData->mpPresentationFrame && pFrame != pSalData->mpPresentationFrame )
+			if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame->maFrameData.mbVisible && pFrame != pSalData->mpPresentationFrame )
 			{
 				// Make sure document window does not float to front
 				SalFrame *pParent = pFrame;
@@ -328,7 +328,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_LOSEFOCUS:
 		{
-			if ( pSalData->mpPresentationFrame && pFrame == pSalData->mpPresentationFrame )
+			if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame->maFrameData.mbVisible && pFrame == pSalData->mpPresentationFrame )
 			{
 				// If the presentation frame has no visible children, reset the
 				// focus and don't dispatch the event

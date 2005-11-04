@@ -1610,7 +1610,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void requestFocus() {
 
-		if (window.isShowing() && (style & SAL_FRAME_STYLE_TOOLTIP) == 0)
+		// Don't do anything if the window already has focus since this can
+		// cause cycling through all windows. The only exception is that we
+		// need to always set focus for the full screen window as the JVM does
+		// not automatically give focus to the window's panel.
+		if (window.isShowing() && (fullScreenMode || (!window.isFocused() && !undecorated)))
 			panel.requestFocus();
 
 	}
@@ -1937,12 +1941,26 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (b) {
 			// Fix bug 1012 by deiconifying the parent window
-			VCLFrame f = VCLFrame.findFrame(window.getOwner());
-			if (f != null && f.getState() == SAL_FRAMESTATE_MINIMIZED)
-				f.setState(SAL_FRAMESTATE_NORMAL);
+			Window w = window;
+			VCLFrame f = this;
+			while (f != null) {
+				w = w.getOwner();
+ 				if (w == null || !w.isShowing())
+					break;
+				f = VCLFrame.findFrame(w);
+				if (f != null) {
+ 					if (f.getState() == SAL_FRAMESTATE_MINIMIZED)
+						f.setState(SAL_FRAMESTATE_NORMAL);
+				}
+			}
 
 			// Show the window
 			window.show();
+
+			// Fix bug 1113 by forcing the parent window to the front except
+			// when this is a floating window
+			if (f != null && !isFloatingWindow())
+				f.toFront();
 		}
 		else {
 			// Hide the window
@@ -1969,7 +1987,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void toFront() {
 
-		if (window.isShowing() && (style & SAL_FRAME_STYLE_TOOLTIP) == 0) {
+		// Don't do anything if the window already has focus since this can
+		// cause cycling through all windows. The only exception is that we
+		// need to always set focus for the full screen window as the JVM does
+		// not automatically give focus to the window's panel.
+		if (window.isShowing() && (fullScreenMode || (!window.isFocused() && !undecorated))) {
 			window.toFront();
 			panel.requestFocus();
 		}

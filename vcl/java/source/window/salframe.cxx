@@ -254,7 +254,7 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	
 			if ( pFocusFrame != this )
 			{
-				pFocusFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
+				pFocusFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS );
 				com_sun_star_vcl_VCLEvent aEvent( SALEVENT_GETFOCUS, pFocusFrame, NULL );
 				aEvent.dispatch();
 			}
@@ -443,15 +443,7 @@ void SalFrame::ShowFullScreen( BOOL bFullScreen )
 		SalData *pSalData = GetSalData();
 		memcpy( &maFrameData.maOriginalGeometry, &maGeometry, sizeof( SalFrameGeometry ) );
 		Rectangle aWorkArea;
-		// If a window does not have a parent, who knows which screen the full
-		// screen window will appear on so we place it on the same screen as
-		// the focus window
-		if ( maFrameData.mpParent )
-			maFrameData.mpParent->GetWorkArea( aWorkArea );
-		else if ( pSalData->mpFocusFrame )
-			pSalData->mpFocusFrame->GetWorkArea( aWorkArea );
-		else
-			GetWorkArea( aWorkArea );
+		GetWorkArea( aWorkArea );
 		SetPosSize( aWorkArea.nLeft, aWorkArea.nTop, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
 	}
 	else
@@ -515,17 +507,22 @@ void SalFrame::StartPresentation( BOOL bStart )
 	}
 
 	maFrameData.mbPresentation = bStart;
-	pSalData->mpPresentationFrame = this;
 
 	// Adjust window size if in full screen mode
 	if ( maFrameData.mbFullScreen )
 	{
+		pSalData->mpPresentationFrame = this;
+
 		USHORT nFlags = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT;
 
 		Rectangle aWorkArea;
 		GetWorkArea( aWorkArea );
 
 		SetPosSize( aWorkArea.nLeft, aWorkArea.nTop, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
+	}
+	else
+	{
+		pSalData->mpPresentationFrame = NULL;
 	}
 }
 
