@@ -86,7 +86,7 @@
 				aBounds = [pScreen visibleFrame];
 
 			// Flip the coordinate system to match the VCL coordinate system
-			aBounds.origin.y = aVirtualBounds.size.height - aBounds.origin.y - aBounds.size.height;
+			aBounds.origin.y = aVirtualBounds.origin.y + aVirtualBounds.size.height - aBounds.origin.y - aBounds.size.height;
 
 			if ( NSPointInRect( maPoint, aBounds ) )
 			{
