@@ -508,21 +508,20 @@ void SalFrame::StartPresentation( BOOL bStart )
 
 	maFrameData.mbPresentation = bStart;
 
+	if ( maFrameData.mbPresentation )
+		pSalData->mpPresentationFrame = this;
+	else
+		pSalData->mpPresentationFrame = NULL;
+
 	// Adjust window size if in full screen mode
 	if ( maFrameData.mbFullScreen )
 	{
-		pSalData->mpPresentationFrame = this;
-
 		USHORT nFlags = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT;
 
 		Rectangle aWorkArea;
 		GetWorkArea( aWorkArea );
 
 		SetPosSize( aWorkArea.nLeft, aWorkArea.nTop, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
-	}
-	else
-	{
-		pSalData->mpPresentationFrame = NULL;
 	}
 }
 
