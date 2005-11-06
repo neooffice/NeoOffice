@@ -125,8 +125,6 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 		if ( nClass == kEventClassMenu && ( nKind == kEventMenuBeginTracking || nKind == kEventMenuEndTracking ) )
 		{
-			int *i = NULL;
-			*i = 5;
 			// Check if this a menubar event as we don't want to dispatch
 			// native popup menus in modal dialogs and make sure that this is
 			// not a duplicate menu opening event
