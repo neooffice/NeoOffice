@@ -125,6 +125,8 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 		if ( nClass == kEventClassMenu && ( nKind == kEventMenuBeginTracking || nKind == kEventMenuEndTracking ) )
 		{
+			int *i = NULL;
+			*i = 5;
 			// Check if this a menubar event as we don't want to dispatch
 			// native popup menus in modal dialogs and make sure that this is
 			// not a duplicate menu opening event
@@ -331,17 +333,20 @@ void SalInstance::AcquireYieldMutex( ULONG nCount )
 
 void SalInstance::Yield( BOOL bWait )
 {
+	SalData *pSalData = GetSalData();
+
 	// When we are in the native event dispatch thread, allow any pending
 	// native timers to run but don't dispatch any events as we might be in
 	// a signal handler and we will block since we don't have the SalYieldMutex
 	// lock
-	if ( GetCurrentEventLoop() == GetMainEventLoop() )
+	if ( GetCurrentEventLoop() == GetMainEventLoop() || maInstData.mpSalYieldMutex->GetThreadId() != OThread::getCurrentIdentifier() )
 	{
 		ReceiveNextEvent( 0, NULL, 0, false, NULL );
+		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
+		pSalData->mpEventQueue->postCachedEvent( &aEvent );
 		return;
 	}
 
-	SalData *pSalData = GetSalData();
 	com_sun_star_vcl_VCLEvent *pEvent;
 
 	// Dispatch next pending non-AWT event
@@ -403,17 +408,7 @@ void SalInstance::Yield( BOOL bWait )
 			nCount = 0;
 		}
 
-		if ( pSalData->mbInNativeModalSheet )
-		{
-			if ( pEvent->getFrame() != pSalData->mpNativeModalSheetFrame )
-				pSalData->mpNativeModalSheetFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
-			if ( pEvent->getID() == SALEVENT_PAINT )
-				pEvent->dispatch();
-		}
-		else
-		{
-			pEvent->dispatch();
-		}
+		pEvent->dispatch();
 		delete pEvent;
 	}
 
