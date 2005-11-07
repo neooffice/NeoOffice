@@ -327,8 +327,10 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				}
 			}
 
-			if ( !bDeleteDataOnly && pFrame && pFrame->maFrameData.mbVisible && pFrame != pSalData->mpFocusFrame )
+			if ( !bDeleteDataOnly && pFrame && pFrame->maFrameData.mbVisible )
 			{
+				if ( pSalData->mpFocusFrame == pFrame )
+					pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, SALEVENT_LOSEFOCUS, NULL );
 				pSalData->mpFocusFrame = pFrame;
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
 			}
@@ -358,11 +360,10 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				}
 			}
 
-			if ( !bDeleteDataOnly && pFrame && pFrame == pSalData->mpFocusFrame )
+			if ( !bDeleteDataOnly && pFrame )
 			{
 				pSalData->mpFocusFrame = NULL;
-				if ( pFrame->maFrameData.mbVisible )
-					pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
+				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
 			}
 
 			break;

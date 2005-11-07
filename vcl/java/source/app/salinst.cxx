@@ -419,15 +419,9 @@ void SalInstance::Yield( BOOL bWait )
 		pSalData->mbNativeEventSucceeded = !pSalData->mbInNativeModalSheet;
 		if ( pSalData->mbNativeEventSucceeded )
 		{
-			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-			{
-				if ( (*it)->maFrameData.mbVisible )
-				{
-					ResetMenuEnabledStateForFrame ( *it, NULL );
-					if ( pSalData->mbInNativeMenuTracking )
-						UpdateMenusForFrame( *it, NULL );
-				}
-			}
+			ResetMenuEnabledStateForFrame ( pSalData->mpFocusFrame, NULL );
+			if ( pSalData->mbInNativeMenuTracking )
+				UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
 		}
 
 		pSalData->maNativeEventCondition.set();
@@ -550,7 +544,6 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 			if ( pNextFrame )
 			{
 				// Set screen to same screen as next frame
-				pNextFrame->GetWorkArea( aWorkArea );
 				pFrame->maFrameData.mbCenter = FALSE;
 				const SalFrameGeometry& rGeom( pNextFrame->GetGeometry() );
 				nX = rGeom.nX - rGeom.nLeftDecoration;

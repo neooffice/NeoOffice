@@ -975,7 +975,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		// Ignore temporary focus events as Java 1.4.1 generates them for
 		// undecorated windows
-		if (disposed || e.isTemporary() || !window.isShowing())
+		if (disposed || !window.isShowing() || isFloatingWindow())
 			return;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_GETFOCUS, this, 0));
@@ -991,7 +991,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		// Ignore temporary focus events as Java 1.4.1 generates them for
 		// undecorated windows
-		if (disposed || e.isTemporary() || !window.isShowing())
+		if (disposed || !window.isShowing() || isFloatingWindow())
 			return;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
@@ -1630,11 +1630,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void requestFocus() {
 
-		// Don't do anything if the window already has focus since this can
-		// cause cycling through all windows. The only exception is that we
-		// need to always set focus for the full screen window as the JVM does
-		// not automatically give focus to the window's panel.
-		if (window.isShowing() && (fullScreenMode || (!window.isFocused() && !undecorated)))
+		if (window.isShowing() && !isFloatingWindow())
 			panel.requestFocus();
 
 	}
@@ -2008,11 +2004,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void toFront() {
 
-		// Don't do anything if the window already has focus since this can
-		// cause cycling through all windows. The only exception is that we
-		// need to always set focus for the full screen window as the JVM does
-		// not automatically give focus to the window's panel.
-		if (window.isShowing() && (fullScreenMode || (!window.isFocused() && !undecorated))) {
+		if (window.isShowing() && !isFloatingWindow()) {
 			window.toFront();
 			panel.requestFocus();
 		}
