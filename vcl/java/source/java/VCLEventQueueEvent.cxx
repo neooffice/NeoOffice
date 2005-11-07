@@ -329,8 +329,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 
 			if ( !bDeleteDataOnly && pFrame && pFrame->maFrameData.mbVisible )
 			{
-				if ( pSalData->mpFocusFrame == pFrame )
-					pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, SALEVENT_LOSEFOCUS, NULL );
+				if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->maFrameData.mbVisible )
+					pSalData->mpFocusFrame->maFrameData.mpProc( pSalData->mpFocusFrame->maFrameData.mpInst, pSalData->mpFocusFrame, SALEVENT_LOSEFOCUS, NULL );
 				pSalData->mpFocusFrame = pFrame;
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
 			}
@@ -362,8 +362,10 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 
 			if ( !bDeleteDataOnly && pFrame )
 			{
-				pSalData->mpFocusFrame = NULL;
-				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
+				if ( pFrame->maFrameData.mbVisible )
+					pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
+				if ( pFrame == pSalData->mpFocusFrame )
+					pSalData->mpFocusFrame = NULL;
 			}
 
 			break;

@@ -253,11 +253,7 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 				pFocusFrame = pFocusFrame->maFrameData.mpParent;
 	
 			if ( pFocusFrame != this )
-			{
-				pFocusFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS );
-				com_sun_star_vcl_VCLEvent aEvent( SALEVENT_GETFOCUS, pFocusFrame, NULL );
-				aEvent.dispatch();
-			}
+				pFocusFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
 		}
 	}
 }
