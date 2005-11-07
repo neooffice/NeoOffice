@@ -994,6 +994,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing() || isFloatingWindow())
 			return;
 
+		// Also ignore when focus is lost to a floating window
+		VCLFrame f = VCLFrame.findFrame(e.getOppositeComponent());
+		if (f != null && f.isFloatingWindow())
+			return;
+
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
 
 	}
