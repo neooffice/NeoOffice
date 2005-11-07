@@ -114,36 +114,14 @@
 
 				// Flip the coordinate system to match the VCL coordinate system
 				aBounds.origin.y = aVirtualBounds.size.height - aBounds.origin.y - aBounds.size.height;
-				
-				// Test the closeness of each corner of the screen
-				BOOL bCloserScreenFound = NO;
-				unsigned nArea = abs( (unsigned)( ( aBounds.origin.x - maPoint.x ) * ( aBounds.origin.y - maPoint.y ) ) );
-				if ( nClosestArea > nArea )
-				{
-					bCloserScreenFound = YES;
-					nClosestArea = nArea;
-				}
-				nArea = abs( (unsigned)( ( aBounds.origin.x + aBounds.size.width - maPoint.x ) * ( aBounds.origin.y - maPoint.y ) ) );
-				if ( nClosestArea > nArea )
-				{
-					bCloserScreenFound = YES;
-					nClosestArea = nArea;
-				}
-				nArea = abs( (unsigned)( ( aBounds.origin.x + aBounds.size.width - maPoint.x ) * ( aBounds.origin.y + aBounds.size.height - maPoint.y ) ) );
-				if ( nClosestArea > nArea )
-				{
-					bCloserScreenFound = YES;
-					nClosestArea = nArea;
-				}
-				nArea = abs( (unsigned)( ( aBounds.origin.x - maPoint.x ) * ( aBounds.origin.y + aBounds.size.height - maPoint.y ) ) );
-				if ( nClosestArea > nArea )
-				{
-					bCloserScreenFound = YES;
-					nClosestArea = nArea;
-				}
 
-				if ( bCloserScreenFound )
+				// Test the closeness of the point to the center of the screen
+				unsigned nArea = abs( (unsigned)( ( ( ( aBounds.origin.x + aBounds.size.width ) / 2 ) - maPoint.x ) * ( ( ( aBounds.origin.y + aBounds.size.height ) / 2 ) - maPoint.y ) ) );
+				if ( nArea < nClosestArea )
+				{
+					nClosestArea = nArea;
 					aClosestBounds = aBounds;
+				}
 			}
 		}
 	
