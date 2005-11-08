@@ -531,10 +531,20 @@ void SalFrame::SetAlwaysOnTop( BOOL bOnTop )
 
 void SalFrame::ToTop( USHORT nFlags )
 {
+	bool bSuccess = false;
+
 	if ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS )
-		maFrameData.mpVCLFrame->toFront();
+		bSuccess = maFrameData.mpVCLFrame->toFront();
 	else if ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS_ONLY )
-		maFrameData.mpVCLFrame->requestFocus();
+		bSuccess = maFrameData.mpVCLFrame->requestFocus();
+
+	// If Java has set the focus, update it now in the OOo code as it may
+	// take a while before the Java event shows up in the queue
+	if ( bSuccess )
+	{
+		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_GETFOCUS, this, NULL );
+		aEvent.dispatch();
+	}
 }
 
 // -----------------------------------------------------------------------

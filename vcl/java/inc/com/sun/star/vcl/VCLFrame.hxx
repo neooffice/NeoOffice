@@ -74,7 +74,7 @@ public:
 	java_lang_Object*	getPeer();
 	ULONG				getState();
 	void				removeChild( SalFrame *_par0 );
-	void				requestFocus();
+	sal_Bool			requestFocus();
 	void				setBounds( long _par0, long _par1, long _par2, long _par3 );
 	void				setFullScreenMode( sal_Bool _par0 );
 	void				setMinClientSize( long _par0, long _par1 );
@@ -84,7 +84,7 @@ public:
 	void				setTitle( ::rtl::OUString _par0 );
 	void				setVisible( sal_Bool _par0 );
 	void				sync();
-	void				toFront();
+	sal_Bool			toFront();
 };
 
 } // namespace vcl

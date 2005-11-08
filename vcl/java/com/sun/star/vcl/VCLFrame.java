@@ -1632,11 +1632,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 	/**
 	 * Set focus to the native window.
+	 *
+	 * @return <code>true</code> is the window was brought to the front else
+	 *  <code>false</code>
 	 */
-	public void requestFocus() {
+	public boolean requestFocus() {
 
-		if (window.isShowing() && !isFloatingWindow())
+		if (window.isShowing() && !isFloatingWindow()) {
 			panel.requestFocus();
+			return true;
+		}
+		else {
+			return false;
+		}
 
 	}
 
@@ -2006,12 +2014,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 	/**
 	 * Brings the native window to the front.
+	 *
+	 * @return <code>true</code> is the window was brought to the front else
+	 *  <code>false</code>
 	 */
-	public void toFront() {
+	public boolean toFront() {
 
 		if (window.isShowing() && !isFloatingWindow()) {
 			window.toFront();
 			panel.requestFocus();
+			return true;
+		}
+		else {
+			return true;
 		}
 
 	}

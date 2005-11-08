@@ -71,9 +71,12 @@
 			aVirtualBounds = NSUnionRect( aVirtualBounds, [pScreen frame] );
 		}
 
+		if ( NSIsEmptyRect( aVirtualBounds ) )
+			aVirtualBounds = maBounds;
+
 		// Iterate through screen and find the screen that the point is
 		// inside of
-		NSRect aClosestBounds = maBounds;
+		NSRect aClosestBounds = NSMakeRect( 0, 0, 0, 0 );
 		BOOL bScreenFound = NO;
 		for ( i = 0; i < nCount; i++ )
 		{
@@ -101,7 +104,6 @@
 			// Iterate through screen and find the screen that the point is
 			// closest to
 			unsigned nClosestArea = 0xffffffff;
-			aClosestBounds = NSMakeRect( 0, 0, 0, 0);
 			for ( i = 0; i < nCount; i++ )
 			{
 				pScreen = (NSScreen *)[pScreens objectAtIndex:i];
@@ -124,8 +126,9 @@
 				}
 			}
 		}
-	
-		maBounds = aClosestBounds;
+
+		if ( !NSIsEmptyRect( aVirtualBounds ) )
+			maBounds = aClosestBounds;
 	}
 }
 
