@@ -50,7 +50,7 @@ os=`uname`
 apphome=`dirname "$0"`
 sharebase="$apphome/../share"
 userbase="$apphome/../user"
-userlibrary="$HOME/Library"
+userlibrary="$HOME/Library/Preferences"
 userinstall="$userlibrary/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)/user"
 
 

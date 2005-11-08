@@ -374,7 +374,7 @@ IMPL_LINK( PrintDialog, ImplPropertiesHdl, void*, EMPTYARG )
 {
 	if ( !TEMPPRINTER() )
 		TEMPPRINTER() = new Printer( mpPrinter->GetJobSetup() );
-	TEMPPRINTER()->Setup();
+	TEMPPRINTER()->Setup( this );
 
 	return 0;
 }
