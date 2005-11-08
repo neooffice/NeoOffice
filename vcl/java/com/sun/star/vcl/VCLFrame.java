@@ -1895,6 +1895,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * Enables or disables queuing of drawing operations.
+	 *
+	 * @param b <code>true</code> to queue all drawing operations and
+	 *  <code>false</code> to disable queueing and flush all queued drawing
+	 *  operations
+	 */
+	public void setQueueDrawingOperations(boolean b) {
+
+		graphics.setQueueDrawingOperations(b);
+
+	}
+
+	/**
 	 * Sets the text location.
 	 *
 	 * @param x the x coordinate of the cursor

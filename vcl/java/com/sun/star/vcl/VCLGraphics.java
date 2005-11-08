@@ -416,7 +416,7 @@ public final class VCLGraphics {
 		// to a printer so we need to combine all images into one image and
 		// defer other drawing operations until after the combined image is
 		// created
-		pageQueue = new VCLGraphics.PageQueue(this);
+		setQueueDrawingOperations(true);
 
 	}
 
@@ -489,9 +489,8 @@ public final class VCLGraphics {
 	 */
 	void dispose() {
 
-		if (pageQueue != null)
-			pageQueue.drawOperations();
-		pageQueue = null;
+		// Flush any pending drawing operations
+		setQueueDrawingOperations(false);
 		graphics = null;
 		image = null;
 		frame = null;
@@ -1841,6 +1840,30 @@ public final class VCLGraphics {
 	}
 
 	/**
+	 * Enables or disables queuing of drawing operations.
+	 *
+	 * @param b <code>true</code> to queue all drawing operations and
+	 *  <code>false</code> to disable queueing and flush all queued drawing
+	 *  operations
+	 */
+	void setQueueDrawingOperations(boolean b) {
+
+		if (b && pageQueue == null) {
+			pageQueue = new VCLGraphics.PageQueue(this);
+		}
+		else if (!b && pageQueue != null)
+		{
+			// Cache page queue since the drawOperations() method will set it
+			// to null
+			VCLGraphics.PageQueue pq = pageQueue;
+			pq.drawOperations();
+			if (graphics == null)
+				pq.dispose();
+		}
+
+	}
+
+	/**
 	 * Enables or disables drawing in XOR mode.
 	 *
 	 * @param b <code>true</code> to enable XOR mode and <code>false</code>
@@ -1895,6 +1918,8 @@ public final class VCLGraphics {
 	 */
 	final class PageQueue {
 
+		boolean releaseNativeBitmaps = false;
+
 		VCLGraphics graphics = null;
 
 		VCLGraphics.PageQueueItem head = null;
@@ -1905,12 +1930,16 @@ public final class VCLGraphics {
 
 			graphics = g;
 
+			if (graphics.graphics != null)
+				releaseNativeBitmaps = true;
+
 		}
 
 		void dispose() {
 
 			// Release any native bitmaps
-			VCLGraphics.releaseNativeBitmaps();
+			if (releaseNativeBitmaps)
+				VCLGraphics.releaseNativeBitmaps();
 
 			graphics = null;
 			head = null;
@@ -1939,7 +1968,6 @@ public final class VCLGraphics {
 			}
 
 			tail = null;
-			graphics = null;
 
 		}
 
@@ -1959,7 +1987,6 @@ public final class VCLGraphics {
 				head = tail = i;
 			}
 		}
-
 	}
 
 	/**
