@@ -683,6 +683,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private int frame = 0;
 
 	/**
+	 * The full screen escape key pressed flag.
+	 */
+	private boolean fullScreenEscapeKeyPressed = false;
+
+	/**
 	 * The full screen mode.
 	 */
 	private boolean fullScreenMode = false;
@@ -920,6 +925,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		detachedChildren = null;
 		frame = 0;
 		fullScreenMode = false;
+		fullScreenEscapeKeyPressed = false;
 		graphics.dispose();
 		graphics = null;
 		insets = null;
@@ -969,7 +975,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		// Ignore temporary focus events as Java 1.4.1 generates them for
 		// undecorated windows
-		if (disposed || e.isTemporary() || !window.isShowing())
+		if (disposed || !window.isShowing() || isFloatingWindow())
 			return;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_GETFOCUS, this, 0));
@@ -985,7 +991,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		// Ignore temporary focus events as Java 1.4.1 generates them for
 		// undecorated windows
-		if (disposed || e.isTemporary() || !window.isShowing())
+		if (disposed || !window.isShowing() || isFloatingWindow())
+			return;
+
+		// Also ignore when focus is lost to a floating window
+		VCLFrame f = VCLFrame.findFrame(e.getOppositeComponent());
+		if (f != null && f.isFloatingWindow())
 			return;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
@@ -1314,8 +1325,22 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			keyModifiersPressed = keyModChangeEvent.getModifiers();
 			queue.postCachedEvent(keyModChangeEvent);
 		}
-		else if (e.isActionKey() || keyCode == KeyEvent.VK_ESCAPE || (keyCode ==KeyEvent.VK_ENTER && e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD)) {
+		else if (e.isActionKey() || (keyCode ==KeyEvent.VK_ENTER && e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD)) {
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
+		}
+		else if (keyCode == KeyEvent.VK_ESCAPE) {
+			// HACK: For some reason, pressing escape multiple times when in
+			// a presentation will cause a crash. I have found no pattern
+			// that consistent fixes this so the following code will only
+			// allow the first escape key event to be passed to the C++ code.
+			if (!fullScreenEscapeKeyPressed) {
+				queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
+				KeyEvent keyReleasedEvent = new KeyEvent(e.getComponent(), KeyEvent.KEY_RELEASED, e.getWhen(), e.getModifiers() | e.getModifiersEx(), keyCode, e.getKeyChar(), e.getKeyLocation());
+				queue.postCachedEvent(new VCLEvent(keyReleasedEvent, VCLEvent.SALEVENT_KEYUP, this, 0));
+			}
+
+			if (fullScreenMode)
+				fullScreenEscapeKeyPressed = true;
 		}
 
 	}
@@ -1338,7 +1363,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			keyModifiersPressed = keyModChangeEvent.getModifiers();
 			queue.postCachedEvent(keyModChangeEvent);
 		}
-		else if (e.isActionKey() || keyCode == KeyEvent.VK_ESCAPE || (keyCode ==KeyEvent.VK_ENTER && e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD)) {
+		else if (e.isActionKey() || (keyCode ==KeyEvent.VK_ENTER && e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD)) {
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0));
 		}
 
@@ -1360,7 +1385,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// here because we need to let the Alt modifier through for action
 		// keys.
 		if ((e.getModifiersEx() & InputEvent.ALT_DOWN_MASK) != 0)
-			e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), (e.getModifiers() | e.getModifiersEx()) & ~InputEvent.ALT_DOWN_MASK, e.getKeyCode(), e.getKeyChar());
+			e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), (e.getModifiers() | e.getModifiersEx()) & ~(InputEvent.ALT_MASK | InputEvent.ALT_DOWN_MASK), e.getKeyCode(), e.getKeyChar());
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0));
@@ -1607,11 +1632,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 	/**
 	 * Set focus to the native window.
+	 *
+	 * @return <code>true</code> is the window was brought to the front else
+	 *  <code>false</code>
 	 */
-	public void requestFocus() {
+	public boolean requestFocus() {
 
-		if (window.isShowing() && (style & SAL_FRAME_STYLE_TOOLTIP) == 0)
+		if (window.isShowing() && !isFloatingWindow()) {
 			panel.requestFocus();
+			return true;
+		}
+		else {
+			return false;
+		}
 
 	}
 
@@ -1647,6 +1680,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			return;
 
 		fullScreenMode = b;
+		fullScreenEscapeKeyPressed = false;
 
 		if (window instanceof VCLFrame.NoPaintDialog)
 			((VCLFrame.NoPaintDialog)window).setFullScreenMode(fullScreenMode);
@@ -1861,6 +1895,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * Enables or disables queuing of drawing operations.
+	 *
+	 * @param b <code>true</code> to queue all drawing operations and
+	 *  <code>false</code> to disable queueing and flush all queued drawing
+	 *  operations
+	 */
+	public void setQueueDrawingOperations(boolean b) {
+
+		graphics.setQueueDrawingOperations(b);
+
+	}
+
+	/**
 	 * Sets the text location.
 	 *
 	 * @param x the x coordinate of the cursor
@@ -1937,12 +1984,26 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (b) {
 			// Fix bug 1012 by deiconifying the parent window
-			VCLFrame f = VCLFrame.findFrame(window.getOwner());
-			if (f != null && f.getState() == SAL_FRAMESTATE_MINIMIZED)
-				f.setState(SAL_FRAMESTATE_NORMAL);
+			Window w = window;
+			VCLFrame f = this;
+			while (f != null) {
+				w = w.getOwner();
+ 				if (w == null || !w.isShowing())
+					break;
+				f = VCLFrame.findFrame(w);
+				if (f != null) {
+ 					if (f.getState() == SAL_FRAMESTATE_MINIMIZED)
+						f.setState(SAL_FRAMESTATE_NORMAL);
+				}
+			}
 
 			// Show the window
 			window.show();
+
+			// Fix bug 1113 by forcing the parent window to the front except
+			// when this is a floating window
+			if (f != null && !isFloatingWindow())
+				f.toFront();
 		}
 		else {
 			// Hide the window
@@ -1966,12 +2027,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 	/**
 	 * Brings the native window to the front.
+	 *
+	 * @return <code>true</code> is the window was brought to the front else
+	 *  <code>false</code>
 	 */
-	public void toFront() {
+	public boolean toFront() {
 
-		if (window.isShowing() && (style & SAL_FRAME_STYLE_TOOLTIP) == 0) {
+		if (window.isShowing() && !isFloatingWindow()) {
 			window.toFront();
 			panel.requestFocus();
+			return true;
+		}
+		else {
+			return true;
 		}
 
 	}

@@ -242,11 +242,20 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 	if ( !bFound )
 		pFrame = NULL;
 
+	bool bDeleteDataOnly = false;
+	if ( pSalData->mbInNativeModalSheet && pFrame != pSalData->mpNativeModalSheetFrame )
+	{
+		// We need to prevent dispatching of events other than system events
+		// like bounds change or paint events
+		bDeleteDataOnly = true;
+		pSalData->mpNativeModalSheetFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+	}
+
 	switch ( nID )
 	{
 		case SALEVENT_CLOSE:
 		{
-			if ( pFrame && pFrame->maFrameData.mbVisible )
+			if ( !bDeleteDataOnly && pFrame && pFrame->maFrameData.mbVisible )
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
 			break;
 		}
@@ -254,7 +263,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		{
 			SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)pData;
 
-			if ( pFrame && pFrame->maFrameData.mbVisible )
+			if ( !bDeleteDataOnly && pFrame && pFrame->maFrameData.mbVisible )
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pInputEvent );
 			if ( pInputEvent )
 				delete pInputEvent;
@@ -263,7 +272,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_EXTTEXTINPUT:
 		{
 			SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)pData;
-			if ( pFrame && pFrame->maFrameData.mbVisible )
+			if ( !bDeleteDataOnly && pFrame && pFrame->maFrameData.mbVisible )
 			{
 				ULONG nCommitted = getCommittedCharacterCount();
 				if ( !pInputEvent )
@@ -299,7 +308,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_GETFOCUS:
 		{
-			if ( pSalData->mpPresentationFrame && pFrame != pSalData->mpPresentationFrame )
+			if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame->maFrameData.mbVisible && pFrame != pSalData->mpPresentationFrame )
 			{
 				// Make sure document window does not float to front
 				SalFrame *pParent = pFrame;
@@ -318,8 +327,10 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				}
 			}
 
-			if ( pFrame && pFrame->maFrameData.mbVisible && pFrame != pSalData->mpFocusFrame )
+			if ( !bDeleteDataOnly && pFrame && pFrame->maFrameData.mbVisible && pFrame != pSalData->mpFocusFrame )
 			{
+				if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->maFrameData.mbVisible )
+					pSalData->mpFocusFrame->maFrameData.mpProc( pSalData->mpFocusFrame->maFrameData.mpInst, pSalData->mpFocusFrame, SALEVENT_LOSEFOCUS, NULL );
 				pSalData->mpFocusFrame = pFrame;
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
 			}
@@ -328,7 +339,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_LOSEFOCUS:
 		{
-			if ( pSalData->mpPresentationFrame && pFrame == pSalData->mpPresentationFrame )
+			if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame->maFrameData.mbVisible && pFrame == pSalData->mpPresentationFrame )
 			{
 				// If the presentation frame has no visible children, reset the
 				// focus and don't dispatch the event
@@ -349,11 +360,11 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				}
 			}
 
-			if ( pFrame && pFrame == pSalData->mpFocusFrame )
+			if ( !bDeleteDataOnly && pFrame && pFrame == pSalData->mpFocusFrame )
 			{
-				pSalData->mpFocusFrame = NULL;
 				if ( pFrame->maFrameData.mbVisible )
 					pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
+				pSalData->mpFocusFrame = NULL;
 			}
 
 			break;
@@ -362,7 +373,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_KEYUP:
 		{
 			SalKeyEvent *pKeyEvent = (SalKeyEvent *)pData;
-			if ( pFrame && pFrame->maFrameData.mbVisible )
+			if ( !bDeleteDataOnly && pFrame && pFrame->maFrameData.mbVisible )
 			{
 				if ( !pKeyEvent )
 				{
@@ -398,7 +409,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_KEYMODCHANGE:
 		{
 			SalKeyModEvent *pKeyModEvent = (SalKeyModEvent *)pData;
-			if ( pFrame && pFrame->maFrameData.mbVisible )
+			if ( !bDeleteDataOnly && pFrame && pFrame->maFrameData.mbVisible )
 			{
 				if ( !pKeyModEvent )
 				{
@@ -418,7 +429,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_MOUSEMOVE:
 		{
 			SalMouseEvent *pMouseEvent = (SalMouseEvent *)pData;
-			if ( pFrame && pFrame->maFrameData.mbVisible )
+			if ( !bDeleteDataOnly && pFrame && pFrame->maFrameData.mbVisible )
 			{
 				if ( !pMouseEvent )
 				{
@@ -514,7 +525,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_WHEELMOUSE:
 		{
 			SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)pData;
-			if ( pFrame && pFrame->maFrameData.mbVisible )
+			if ( !bDeleteDataOnly && pFrame && pFrame->maFrameData.mbVisible )
 			{
 				if ( !pWheelMouseEvent )
 				{
@@ -543,7 +554,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_MENUDEACTIVATE:
 		{
 			SalMenuEvent *pMenuEvent = (SalMenuEvent *)pData;
-			if ( pFrame && pFrame->maFrameData.mbVisible )
+			if ( !bDeleteDataOnly && pFrame && pFrame->maFrameData.mbVisible )
 			{
 				if ( !pMenuEvent )
 				{

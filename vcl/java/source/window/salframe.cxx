@@ -253,11 +253,7 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 				pFocusFrame = pFocusFrame->maFrameData.mpParent;
 	
 			if ( pFocusFrame != this )
-			{
-				pFocusFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
-				com_sun_star_vcl_VCLEvent aEvent( SALEVENT_GETFOCUS, pFocusFrame, NULL );
-				aEvent.dispatch();
-			}
+				pFocusFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
 		}
 	}
 }
@@ -443,15 +439,7 @@ void SalFrame::ShowFullScreen( BOOL bFullScreen )
 		SalData *pSalData = GetSalData();
 		memcpy( &maFrameData.maOriginalGeometry, &maGeometry, sizeof( SalFrameGeometry ) );
 		Rectangle aWorkArea;
-		// If a window does not have a parent, who knows which screen the full
-		// screen window will appear on so we place it on the same screen as
-		// the focus window
-		if ( maFrameData.mpParent )
-			maFrameData.mpParent->GetWorkArea( aWorkArea );
-		else if ( pSalData->mpFocusFrame )
-			pSalData->mpFocusFrame->GetWorkArea( aWorkArea );
-		else
-			GetWorkArea( aWorkArea );
+		GetWorkArea( aWorkArea );
 		SetPosSize( aWorkArea.nLeft, aWorkArea.nTop, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
 	}
 	else
@@ -515,7 +503,11 @@ void SalFrame::StartPresentation( BOOL bStart )
 	}
 
 	maFrameData.mbPresentation = bStart;
-	pSalData->mpPresentationFrame = this;
+
+	if ( maFrameData.mbPresentation )
+		pSalData->mpPresentationFrame = this;
+	else
+		pSalData->mpPresentationFrame = NULL;
 
 	// Adjust window size if in full screen mode
 	if ( maFrameData.mbFullScreen )
@@ -539,10 +531,20 @@ void SalFrame::SetAlwaysOnTop( BOOL bOnTop )
 
 void SalFrame::ToTop( USHORT nFlags )
 {
+	bool bSuccess = false;
+
 	if ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS )
-		maFrameData.mpVCLFrame->toFront();
+		bSuccess = maFrameData.mpVCLFrame->toFront();
 	else if ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS_ONLY )
-		maFrameData.mpVCLFrame->requestFocus();
+		bSuccess = maFrameData.mpVCLFrame->requestFocus();
+
+	// If Java has set the focus, update it now in the OOo code as it may
+	// take a while before the Java event shows up in the queue
+	if ( bSuccess )
+	{
+		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_GETFOCUS, this, NULL );
+		aEvent.dispatch();
+	}
 }
 
 // -----------------------------------------------------------------------
@@ -773,9 +775,6 @@ bool SalFrame::SetPluginParent( SystemParentData* pNewParent )
 
 void SalFrame::SetMenu( SalMenu* pSalMenu )
 {
-	// Make a pass through the native menus to speed up later updates
-	if ( pSalMenu )
-		UpdateMenusForFrame( this, pSalMenu );
 }
 
 // -----------------------------------------------------------------------

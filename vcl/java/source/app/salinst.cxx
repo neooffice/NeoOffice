@@ -331,17 +331,20 @@ void SalInstance::AcquireYieldMutex( ULONG nCount )
 
 void SalInstance::Yield( BOOL bWait )
 {
+	SalData *pSalData = GetSalData();
+
 	// When we are in the native event dispatch thread, allow any pending
 	// native timers to run but don't dispatch any events as we might be in
 	// a signal handler and we will block since we don't have the SalYieldMutex
 	// lock
-	if ( GetCurrentEventLoop() == GetMainEventLoop() )
+	if ( GetCurrentEventLoop() == GetMainEventLoop() || maInstData.mpSalYieldMutex->GetThreadId() != OThread::getCurrentIdentifier() )
 	{
 		ReceiveNextEvent( 0, NULL, 0, false, NULL );
+		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
+		pSalData->mpEventQueue->postCachedEvent( &aEvent );
 		return;
 	}
 
-	SalData *pSalData = GetSalData();
 	com_sun_star_vcl_VCLEvent *pEvent;
 
 	// Dispatch next pending non-AWT event
@@ -403,17 +406,7 @@ void SalInstance::Yield( BOOL bWait )
 			nCount = 0;
 		}
 
-		if ( pSalData->mbInNativeModalSheet )
-		{
-			if ( pEvent->getFrame() != pSalData->mpNativeModalSheetFrame )
-				pSalData->mpNativeModalSheetFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
-			if ( pEvent->getID() == SALEVENT_PAINT )
-				pEvent->dispatch();
-		}
-		else
-		{
-			pEvent->dispatch();
-		}
+		pEvent->dispatch();
 		delete pEvent;
 	}
 
@@ -426,15 +419,9 @@ void SalInstance::Yield( BOOL bWait )
 		pSalData->mbNativeEventSucceeded = !pSalData->mbInNativeModalSheet;
 		if ( pSalData->mbNativeEventSucceeded )
 		{
-			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-			{
-				if ( (*it)->maFrameData.mbVisible )
-				{
-					ResetMenuEnabledStateForFrame ( *it, NULL );
-					if ( pSalData->mbInNativeMenuTracking )
-						UpdateMenusForFrame( *it, NULL );
-				}
-			}
+			ResetMenuEnabledStateForFrame ( pSalData->mpFocusFrame, NULL );
+			if ( pSalData->mbInNativeMenuTracking )
+				UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
 		}
 
 		pSalData->maNativeEventCondition.set();
@@ -557,7 +544,6 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 			if ( pNextFrame )
 			{
 				// Set screen to same screen as next frame
-				pNextFrame->GetWorkArea( aWorkArea );
 				pFrame->maFrameData.mbCenter = FALSE;
 				const SalFrameGeometry& rGeom( pNextFrame->GetGeometry() );
 				nX = rGeom.nX - rGeom.nLeftDecoration;

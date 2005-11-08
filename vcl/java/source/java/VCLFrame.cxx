@@ -529,21 +529,23 @@ void com_sun_star_vcl_VCLFrame::removeChild( SalFrame *_par0 )
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLFrame::requestFocus()
+sal_Bool com_sun_star_vcl_VCLFrame::requestFocus()
 {
 	static jmethodID mID = NULL;
+	sal_Bool out = sal_False;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()V";
+			char *cSignature = "()Z";
 			mID = t.pEnv->GetMethodID( getMyClass(), "requestFocus", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethod( object, getMyClass(), mID );
 	}
+	return out;
 }
 
 // ----------------------------------------------------------------------------
@@ -637,6 +639,29 @@ void com_sun_star_vcl_VCLFrame::setPointer( USHORT _par0 )
 		{
 			jvalue args[1];
 			args[0].i = jint( _par0 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLFrame::setQueueDrawingOperations( sal_Bool _par0 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(Z)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "setQueueDrawingOperations", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[1];
+			args[0].z = jboolean( _par0 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
@@ -759,19 +784,21 @@ void com_sun_star_vcl_VCLFrame::sync()
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLFrame::toFront()
+sal_Bool com_sun_star_vcl_VCLFrame::toFront()
 {
 	static jmethodID mID = NULL;
+	sal_Bool out = sal_False;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()V";
+			char *cSignature = "()Z";
 			mID = t.pEnv->GetMethodID( getMyClass(), "toFront", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethod( object, getMyClass(), mID );
 	}
+	return out;
 }
