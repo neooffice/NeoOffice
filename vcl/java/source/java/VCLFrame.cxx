@@ -54,20 +54,6 @@ using namespace vcl;
 
 // ============================================================================
 
-static void JNICALL Java_apple_awt_CWindow_toFrontLong( JNIEnv *pEnv, jobject object, jlong _par0 )
-{
-	CWindow_toFront( _par0 );
-}
-
-// ----------------------------------------------------------------------------
-
-static void JNICALL Java_apple_awt_CWindow_toFrontInt( JNIEnv *pEnv, jobject object, jint _par0 )
-{
-	CWindow_toFront( _par0 );
-}
-
-// ============================================================================
-
 jclass com_sun_star_vcl_VCLFrame::theClass = NULL;
 
 // ----------------------------------------------------------------------------
@@ -78,29 +64,6 @@ jclass com_sun_star_vcl_VCLFrame::getMyClass()
 	{
 		VCLThreadAttach t;
 		if ( !t.pEnv ) return (jclass)NULL;
-
-		// Override the CWindow.toFront() method to explicity to prevent
-		// unnecessary posting of Java paint events
-		jclass cWindowClass = t.pEnv->FindClass( "apple/awt/CWindow" );
-		if ( cWindowClass )
-		{
-			JNINativeMethod aMethod;
-			aMethod.name = "toFront";
-			aMethod.signature = "(J)V";
-			aMethod.fnPtr = (void *)Java_apple_awt_CWindow_toFrontLong;
-			t.pEnv->RegisterNatives( cWindowClass, &aMethod, 1 );
-
-			// Java 1.4.1 has a different signature for this method so check
-			// for it if an exception is thrown
-			if ( t.pEnv->ExceptionCheck() )
-			{
-				t.pEnv->ExceptionClear();
-				aMethod.signature = "(I)V";
-				aMethod.fnPtr = (void *)Java_apple_awt_CWindow_toFrontInt;
-				t.pEnv->RegisterNatives( cWindowClass, &aMethod, 1 );
-			}
-		}
-
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLFrame" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
