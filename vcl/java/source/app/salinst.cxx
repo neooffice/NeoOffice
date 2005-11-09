@@ -419,9 +419,24 @@ void SalInstance::Yield( BOOL bWait )
 		pSalData->mbNativeEventSucceeded = !pSalData->mbInNativeModalSheet;
 		if ( pSalData->mbNativeEventSucceeded )
 		{
-			ResetMenuEnabledStateForFrame ( pSalData->mpFocusFrame, NULL );
-			if ( pSalData->mbInNativeMenuTracking )
-				UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
+			if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->maFrameData.mbVisible )
+			{
+				ResetMenuEnabledStateForFrame( pSalData->mpFocusFrame, NULL );
+				if ( pSalData->mbInNativeMenuTracking )
+					UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
+			}
+		}
+		else
+		{
+			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+			{
+				if ( (*it)->maFrameData.mbVisible )
+				{
+					ResetMenuEnabledStateForFrame( *it, NULL );
+					if ( pSalData->mbInNativeMenuTracking )
+						UpdateMenusForFrame( *it, NULL );
+				}
+			}
 		}
 
 		pSalData->maNativeEventCondition.set();
