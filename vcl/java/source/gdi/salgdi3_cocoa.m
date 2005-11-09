@@ -102,7 +102,13 @@ CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, BOOL bBo
 				int nWeight = [pFontManager weightOfFont:pNSFont];
 				NSFontTraitMask nTraits = ( [pFontManager traitsOfFont:pNSFont] & ( NSBoldFontMask | NSItalicFontMask ) );
 				if ( bBold )
+				{
 					nTraits |= NSBoldFontMask;
+
+					// Fix bug 1128 by ensuring that the weight is at least 9
+					if ( nWeight < 9 )
+						nWeight = 9;
+				}
 				if ( bItalic )
 					nTraits |= NSItalicFontMask;
 				NSFont *pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:nTraits weight:nWeight size:(float)nSize];
