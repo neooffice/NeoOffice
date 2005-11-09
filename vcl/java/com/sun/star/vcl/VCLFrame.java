@@ -1578,14 +1578,15 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 	/**
 	 * Post a paint event.
+	 *
+	 * @param b the bounds to paint
 	 */
-	synchronized void paint() {
+	synchronized void paint(Rectangle b) {
 
-		if (disposed || !window.isShowing())
+		if (disposed || !window.isShowing() || b.isEmpty())
 			return;
 
-		Rectangle bounds = new Rectangle(panel.getSize());
-		queue.postCachedEvent(new VCLEvent(new PaintEvent(panel, PaintEvent.UPDATE, bounds), VCLEvent.SALEVENT_PAINT, this, 0));
+		queue.postCachedEvent(new VCLEvent(new PaintEvent(panel, PaintEvent.UPDATE, b), VCLEvent.SALEVENT_PAINT, this, 0));
 
 	}
 
@@ -2034,7 +2035,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (window.isShowing() && !isFloatingWindow()) {
 			window.toFront();
-			panel.requestFocus();
+			if (fullScreenMode)
+				panel.requestFocus();
 			return true;
 		}
 		else {
@@ -2458,7 +2460,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		public void paint(Graphics g) {
 
-			frame.paint();
+			Shape clip = g.getClip();
+			if (clip != null)
+				frame.paint(clip.getBounds());
+			else
+				frame.paint(new Rectangle(getSize()));
 
 		}
 
