@@ -94,8 +94,18 @@ configdir="$userinstall/config"
 registrydir="$userinstall/registry/data/org/openoffice"
 wordbookdir="$userinstall/wordbook"
 if [ ! -d "$configdir" -o ! -d "$registrydir" -o ! -d "$wordbookdir" ] ; then
-    repair="true"
-    mkdir -p "$userinstall"
+    # If this is a new user installation, try to copy the user's NeoOffice/J
+    # 1.1 preferences
+    olduserinstall="$HOME/Library/NeoOfficeJ-1.1/user"
+    if [ ! -d "$userinstall" -a -d "$olduserinstall" ] ; then
+        mkdir -p "$userinstall"
+        ( cd "$olduserinstall" ; pax -r -w "." "$userinstall" )
+        rm -f "$userinstall/../.lock"
+        rm -f "$registrydir/Office/Common.xcu.set.3"
+    else
+        mkdir -p "$userinstall"
+        repair="true"
+    fi
 fi
 chmod -Rf u+rwx "$userinstall"
 if [ ! -z "$repair" ] ; then
