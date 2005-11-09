@@ -36,6 +36,37 @@
 #import <Cocoa/Cocoa.h>
 #import "VCLFrame_cocoa.h"
 
+@interface ToFront : NSObject
+{
+	id					mpCWindow;
+}
+- (void)toFront:(id)pObject;
+- (id)initWithCWindow:(id)pCWindow;
+@end
+
+@implementation ToFront
+
+- (void)toFront:(id)pObject
+{
+	if ( [mpCWindow respondsToSelector:@selector(getNSWindow)] )
+	{
+		NSWindow *pWindow = (NSWindow *)[mpCWindow getNSWindow];
+		if ( pWindow && [pWindow isVisible] )
+			[pWindow orderFront:self];
+	}
+}
+
+- (id)initWithCWindow:(id)pCWindow
+{
+	[super init];
+
+	mpCWindow = pCWindow;
+
+	return self;
+}
+
+@end
+
 @interface GetNSWindow : NSObject
 {
 	id					mpCWindow;
@@ -109,6 +140,19 @@
 }
 
 @end
+
+void CWindow_toFront( id pCWindow )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pCWindow )
+	{
+		ToFront *pToFront = [[ToFront alloc] initWithCWindow:pCWindow];
+		[pToFront performSelectorOnMainThread:@selector(toFront:) withObject:pToFront waitUntilDone:YES];
+	}
+
+	[pPool release];
+}
 
 id CWindow_getNSWindow( id pCWindow )
 {

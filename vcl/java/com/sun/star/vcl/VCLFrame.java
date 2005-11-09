@@ -975,7 +975,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		// Ignore temporary focus events as Java 1.4.1 generates them for
 		// undecorated windows
-		if (disposed || !window.isShowing() || isFloatingWindow())
+		if (disposed || e.isTemporary() || !window.isShowing())
 			return;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_GETFOCUS, this, 0));
@@ -991,12 +991,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		// Ignore temporary focus events as Java 1.4.1 generates them for
 		// undecorated windows
-		if (disposed || !window.isShowing() || isFloatingWindow())
-			return;
-
-		// Also ignore when focus is lost to a floating window
-		VCLFrame f = VCLFrame.findFrame(e.getOppositeComponent());
-		if (f != null && f.isFloatingWindow())
+		if (disposed || e.isTemporary() || !window.isShowing())
 			return;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
@@ -1419,6 +1414,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
+		// The JVM can get confused when we click on a non-focused window. In
+		// these cases, we will receive no mouse move events so if the OOo code
+		// displays a popup menu, the popup menu will receive no mouse move
+		// events.
+		if (window.getOwner() == null && !window.isFocused())
+			return;
+
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONDOWN, this, 0));
 
 	}
@@ -1433,6 +1435,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		e.consume();
 
 		if (disposed || !window.isShowing())
+			return;
+
+		// The JVM can get confused when we click on a non-focused window. In
+		// these cases, we will receive no mouse move events so if the OOo code
+		// displays a popup menu, the popup menu will receive no mouse move
+		// events.
+		if (window.getOwner() == null && !window.isFocused())
 			return;
 
 		// Use adjusted modifiers
@@ -1571,6 +1580,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * Post a paint event.
 	 */
 	synchronized void paint() {
+
+		if (disposed || !window.isShowing())
+			return;
 
 		Rectangle bounds = new Rectangle(panel.getSize());
 		queue.postCachedEvent(new VCLEvent(new PaintEvent(panel, PaintEvent.UPDATE, bounds), VCLEvent.SALEVENT_PAINT, this, 0));
@@ -1891,19 +1903,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			window.setCursor(c);
 			Toolkit.getDefaultToolkit().sync();
 		}
-
-	}
-
-	/**
-	 * Enables or disables queuing of drawing operations.
-	 *
-	 * @param b <code>true</code> to queue all drawing operations and
-	 *  <code>false</code> to disable queueing and flush all queued drawing
-	 *  operations
-	 */
-	public void setQueueDrawingOperations(boolean b) {
-
-		graphics.setQueueDrawingOperations(b);
 
 	}
 

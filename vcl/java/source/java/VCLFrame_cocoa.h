@@ -48,6 +48,7 @@ typedef void* id;
 #ifdef __cplusplus
 BEGIN_C
 #endif
+void CWindow_toFront( id pCWindow );
 id CWindow_getNSWindow( id pCWindow );
 WindowRef CWindow_getWindowRef( id pCWindow );
 #ifdef __cplusplus

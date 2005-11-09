@@ -775,6 +775,9 @@ bool SalFrame::SetPluginParent( SystemParentData* pNewParent )
 
 void SalFrame::SetMenu( SalMenu* pSalMenu )
 {
+	// Make a pass through the native menus to speed up later updates
+	if ( pSalMenu )
+		UpdateMenusForFrame( this, pSalMenu );
 }
 
 // -----------------------------------------------------------------------

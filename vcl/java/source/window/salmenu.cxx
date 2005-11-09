@@ -53,9 +53,6 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 #include <com/sun/star/vcl/VCLEvent.hxx>
 #endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
-#include <com/sun/star/vcl/VCLFrame.hxx>
-#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLMENUBAR_HXX
 #include <com/sun/star/vcl/VCLMenuBar.hxx>
 #endif
@@ -111,13 +108,7 @@ void SalMenu::SetFrame( SalFrame *pFrame )
 	if( maData.mbIsMenuBarMenu && maData.mpVCLMenuBar )
 	{
 		maData.mpVCLMenuBar->setFrame( pFrame->maFrameData.mpVCLFrame );
-		if ( pFrame->maFrameData.mpMenuBar != this )
-		{
-			pFrame->maFrameData.mpMenuBar = this;
-
-			// Make a pass through the native menus to speed up later updates
-			UpdateMenusForFrame( pFrame, this );
-		}
+		pFrame->maFrameData.mpMenuBar=this;
 	}
 }
 
@@ -420,14 +411,11 @@ void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu )
 	Menu *pVCLMenu = pMenu->mpParentVCLMenu;
 	OSL_ENSURE(pVCLMenu, "Unknown VCL menu for SalMenu!");
 
-	if ( pMenu->maData.mbIsMenuBarMenu )
+	// Force the clipboard service to update itself before we update the
+	// menus as if the native clipboard was cleared when we last checked, we
+	// won't be notified when another application puts content.
+	if ( pFrame->maFrameData.mpMenuBar )
 	{
-		// Queue drawing operations
-		pFrame->maFrameData.mpVCLFrame->setQueueDrawingOperations( sal_True );
-
-		// Force the clipboard service to update itself before we update the
-		// menus as if the native clipboard was cleared when we last checked,
-		// we won't be notified when another application puts content.
 		Window *pWindow = pVCLMenu->GetWindow();
 		if ( pWindow )
 		{
@@ -462,9 +450,5 @@ void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu )
 	pDeactivateEvent->mpMenu = pVCLMenu;
 	com_sun_star_vcl_VCLEvent aDeactivateEvent( SALEVENT_MENUDEACTIVATE, pFrame, pDeactivateEvent );
 	aDeactivateEvent.dispatch();
-
-	// Flush queued drawing operations
-	if ( pMenu->maData.mbIsMenuBarMenu )
-		pFrame->maFrameData.mpVCLFrame->setQueueDrawingOperations( sal_False );
 #endif	// !NO_NATIVE_MENUS
 }
