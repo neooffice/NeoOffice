@@ -82,7 +82,8 @@
 - (void)showPrintDialog:(id)pObject
 {
 	NSPrintPanel *pPanel = [NSPrintPanel printPanel];
-	if ( pPanel )
+	if ( pPanel && [mpInfo respondsToSelector:@selector(pmPrintSettings)] )
+
 	{
 		// Set the job name from the window title
 		PMPrintSettings aSettings = (PMPrintSettings)[mpInfo pmPrintSettings];
