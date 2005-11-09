@@ -2039,7 +2039,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			return true;
 		}
 		else {
-			return true;
+			return false;
 		}
 
 	}
