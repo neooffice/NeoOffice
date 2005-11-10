@@ -698,6 +698,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private VCLGraphics graphics = null;
 
 	/**
+	 * The ignore mouse released modifiers.
+	 */
+	private int ignoreMouseReleasedModifiers = 0;
+
+	/**
 	 * The native window's insets.
 	 */
 	private Insets insets = null;
@@ -811,9 +816,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		window.addFocusListener(this);
 		window.addKeyListener(this);
 		window.addInputMethodListener(this);
-		window.addMouseListener(this);
-		window.addMouseMotionListener(this);
-		window.addMouseWheelListener(this);
 		window.addWindowListener(this);
 
 	}
@@ -940,9 +942,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		panel.removeFocusListener(this);
 		panel.removeKeyListener(this);
 		panel.removeInputMethodListener(this);
-		panel.removeMouseListener(this);
-		panel.removeMouseMotionListener(this);
-		panel.removeMouseWheelListener(this);
 		window.removeComponentListener(this);
 		window.removeFocusListener(this);
 		window.removeKeyListener(this);
@@ -1428,8 +1427,15 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// these cases, we will receive no mouse move events so if the OOo code
 		// displays a popup menu, the popup menu will receive no mouse move
 		// events.
-		if (window.getOwner() == null && !window.isFocused())
-			return;
+		if (!isFloatingWindow() && !window.isFocused()) {
+			int modifiers = e.getModifiersEx();
+			if (modifiers != InputEvent.BUTTON1_DOWN_MASK) {
+				ignoreMouseReleasedModifiers = e.getModifiersEx();
+				return;
+			}
+		}
+
+		ignoreMouseReleasedModifiers = 0;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONDOWN, this, 0));
 
@@ -1447,15 +1453,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
-		// The JVM can get confused when we click on a non-focused window. In
-		// these cases, we will receive no mouse move events so if the OOo code
-		// displays a popup menu, the popup menu will receive no mouse move
-		// events.
-		if (window.getOwner() == null && !window.isFocused())
-			return;
-
 		// Use adjusted modifiers
-		e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | queue.getLastAdjustedMouseModifiers(), e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
+		int modifiers = queue.getLastAdjustedMouseModifiers();
+		e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | modifiers, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
 
 		e = preprocessMouseEvent(e);
 
@@ -1473,6 +1473,15 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			}
 
 			VCLFrame.lastMouseDragEvent = null;
+		}
+
+		// The JVM can get confused when we click on a non-focused window. In
+		// these cases, we will receive no mouse move events so if the OOo code
+		// displays a popup menu, the popup menu will receive no mouse move
+		// events.
+		if (ignoreMouseReleasedModifiers != 0 && (ignoreMouseReleasedModifiers & modifiers) == modifiers) {
+			ignoreMouseReleasedModifiers &= ~modifiers;
+			return;
 		}
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONUP, VCLFrame.findFrame(e.getComponent()), 0));
@@ -2018,7 +2027,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else {
 			// Hide the window
 			window.hide();
-			window.removeNotify();
 		}
 
 	}
