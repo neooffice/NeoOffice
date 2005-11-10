@@ -85,7 +85,6 @@ public final class VCLScreen {
 		f.addNotify();
 		frameInsets = f.getInsets();
 		minimumFrameSize = f.getSize();
-		f.removeNotify();
 		f.dispose();
 
 	}
