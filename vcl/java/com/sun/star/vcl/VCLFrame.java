@@ -604,6 +604,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private final static Rectangle defaultTextLocation = new Rectangle(300, 300, 0, 12);
 
 	/**
+	 * The ignore mouse released modifiers.
+	 */
+	private static int ignoreMouseReleasedModifiers = 0;
+
+	/**
 	 * The last mouse drag event.
 	 */
 	private static MouseEvent lastMouseDragEvent = null;
@@ -1428,8 +1433,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// these cases, we will receive no mouse move events so if the OOo code
 		// displays a popup menu, the popup menu will receive no mouse move
 		// events.
-		if (window.getOwner() == null && !window.isFocused())
+		if (window.getOwner() == null && !window.isFocused()) {
+			ignoreMouseReleasedModifiers = e.getModifiersEx();
 			return;
+		}
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONDOWN, this, 0));
 
@@ -1451,11 +1458,14 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// these cases, we will receive no mouse move events so if the OOo code
 		// displays a popup menu, the popup menu will receive no mouse move
 		// events.
-		if (window.getOwner() == null && !window.isFocused())
+		int modifiers = queue.getLastAdjustedMouseModifiers();
+		if ((ignoreMouseReleasedModifiers & modifiers) == modifiers) {
+			ignoreMouseReleasedModifiers &= ~modifiers;
 			return;
+		}
 
 		// Use adjusted modifiers
-		e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | queue.getLastAdjustedMouseModifiers(), e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
+		e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | modifiers, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
 
 		e = preprocessMouseEvent(e);
 
