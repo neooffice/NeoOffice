@@ -801,13 +801,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		graphics = new VCLGraphics(this);
 
 		// Register listeners
-		window.addComponentListener(this);
 		panel.addFocusListener(this);
 		panel.addKeyListener(this);
 		panel.addInputMethodListener(this);
 		panel.addMouseListener(this);
 		panel.addMouseMotionListener(this);
 		panel.addMouseWheelListener(this);
+		window.addComponentListener(this);
+		window.addFocusListener(this);
+		window.addKeyListener(this);
+		window.addInputMethodListener(this);
+		window.addMouseListener(this);
+		window.addMouseMotionListener(this);
+		window.addMouseWheelListener(this);
 		window.addWindowListener(this);
 
 	}
@@ -937,13 +943,17 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		panel.removeMouseListener(this);
 		panel.removeMouseMotionListener(this);
 		panel.removeMouseWheelListener(this);
+		window.removeComponentListener(this);
+		window.removeFocusListener(this);
+		window.removeKeyListener(this);
+		window.removeInputMethodListener(this);
+		window.removeMouseListener(this);
+		window.removeMouseMotionListener(this);
+		window.removeMouseWheelListener(this);
+		window.removeWindowListener(this);
 
 		window.remove(panel);
 		panel = null;
-
-		// Unregister listeners
-		window.removeComponentListener(this);
-		window.removeWindowListener(this);
 
 		textLocation = null;
 		window = null;
@@ -2035,8 +2045,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (window.isShowing() && !isFloatingWindow()) {
 			window.toFront();
-			if (fullScreenMode)
-				panel.requestFocus();
 			return true;
 		}
 		else {
