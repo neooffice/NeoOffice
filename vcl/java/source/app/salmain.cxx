@@ -105,8 +105,7 @@ int main( int argc, char *argv[] )
 
 	SVMain();
 
-	// Force exit since some JVMs won't shutdown when only exit() is invoked
-	_exit( 0 );
+	exit( 0 );
 }
 
 END_C
