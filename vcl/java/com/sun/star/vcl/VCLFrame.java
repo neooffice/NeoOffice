@@ -2018,11 +2018,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			// Show the window
 			window.show();
-
-			// Fix bug 1113 by forcing the parent window to the front except
-			// when this is a floating window
-			if (f != null && !isFloatingWindow())
-				f.toFront();
 		}
 		else {
 			// Hide the window

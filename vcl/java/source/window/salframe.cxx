@@ -223,6 +223,10 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 		// Make a pass through the native menus to speed up later updates
 		UpdateMenusForFrame( this, NULL );
+
+		// Fix bug 1113 by forcing the window to the front
+		if ( !bNoActivate )
+			ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
 	}
 	else
 	{
