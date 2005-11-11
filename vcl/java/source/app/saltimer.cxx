@@ -44,9 +44,6 @@
 #ifndef _SALJAVA_H
 #include <saljava.h>
 #endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
-#include <com/sun/star/vcl/VCLEvent.hxx>
-#endif
 
 using namespace vcl;
 
@@ -62,19 +59,9 @@ void SalTimer::SetCallback( SALTIMERPROC pProc )
 void SalTimer::Start( ULONG nMS )
 {
 	SalData *pSalData = GetSalData();
-
-	timeval aOldTimeout( pSalData->maTimeout );
 	gettimeofday( &pSalData->maTimeout, NULL );
 	pSalData->maTimeout += nMS;
 	pSalData->mnTimerInterval = nMS;
-
-	// If the next timeout has been set in the past or the timer was stopped,
-	// wakeup the event queue by sending it a dummy event
-	if ( aOldTimeout > pSalData->maTimeout || aOldTimeout.tv_sec == 0 )
-	{
-		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
-		pSalData->mpEventQueue->postCachedEvent( &aEvent );
-	}
 } 
 
 // -----------------------------------------------------------------------

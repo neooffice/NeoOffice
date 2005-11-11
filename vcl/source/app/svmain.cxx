@@ -201,8 +201,9 @@ static void RunSVMain( void *pData )
 	BOOL *pRet = (BOOL *)pData;
 	*pRet = SVMain();
 
-	// Force exit since some JVMs won't shutdown when only exit() is invoked
-	_exit( 0 );
+	// Invoke exit() here as there is no reliable way to stop the main event
+	// loop
+	exit( 0 );
 }
 #endif	// MACOSX
 
