@@ -352,6 +352,7 @@ void SalInstance::Yield( BOOL bWait )
 	{
 		pEvent->dispatch();
 		delete pEvent;
+		return;
 	}
 
 	ULONG nCount = ReleaseYieldMutex();
