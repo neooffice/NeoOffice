@@ -65,11 +65,14 @@
 
 typedef void NativeAboutMenuHandler_Type();
 typedef void NativePreferencesMenuHandler_Type();
+typedef void NativeShutdownCancelledHandler_Type();
 
 static ::vos::OModule aAboutHandlerModule;
 static ::vos::OModule aPreferencesHandlerModule;
+static ::vos::OModule aShutdownCancelledHandlerModule;
 static NativeAboutMenuHandler_Type *pAboutHandler = NULL;
 static NativePreferencesMenuHandler_Type *pPreferencesHandler = NULL;
+static NativeShutdownCancelledHandler_Type *pShutdownCancelledHandler = NULL;
 
 using namespace rtl;
 using namespace vcl;
@@ -182,12 +185,33 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			if ( pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpFirstFloat && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mpPresentationFrame && !pSalData->mbInNativeModalSheet && pSalData->maFrameList.size() )
 			{
 				SalFrame *pFrame = pSalData->maFrameList.front();
-				if ( pFrame && !pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL ) )
-					bCancelShutdown = false;
+				if ( pFrame )
+				{
+					pSalData->mbInShutdownEvent = true;
+					if ( !pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL ) )
+						bCancelShutdown = false;
+					pSalData->mbInShutdownEvent = false;
+				}
 			}
 
 			if ( bCancelShutdown )
+			{
 				cancelShutdown();
+
+				// Load libsfx and invoke the native shutdown cancelled handler
+				if ( !pShutdownCancelledHandler )
+				{
+					OUString aLibName = OUString::createFromAscii( "libsfx" );
+					aLibName += OUString::valueOf( (sal_Int32)SUPD, 10 );
+					aLibName += OUString::createFromAscii( STRING( DLLSUFFIX ) );
+					aLibName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+					if ( aShutdownCancelledHandlerModule.load( aLibName ) )
+						pShutdownCancelledHandler = (NativeShutdownCancelledHandler_Type *)aShutdownCancelledHandlerModule.getSymbol( OUString::createFromAscii( "NativeShutdownCancelledHandler" ) );
+				}
+
+				if ( pShutdownCancelledHandler )
+					pShutdownCancelledHandler();
+			}
 
 			return;
 		}

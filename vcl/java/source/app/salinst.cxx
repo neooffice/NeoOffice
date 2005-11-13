@@ -159,6 +159,8 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				// that they were in before we updated the menus.
 				if ( !Application::IsShutDown() && pSalData->mbNativeEventSucceeded )
 					ReceiveNextEvent( 0, NULL, 0, false, NULL );
+				else
+					return userCanceledErr;
 			}
 		}
 	}
@@ -417,7 +419,7 @@ void SalInstance::Yield( BOOL bWait )
 	// Allow Carbon event loop to proceed
 	if ( !pSalData->maNativeEventCondition.check() )
 	{
-		pSalData->mbNativeEventSucceeded = !pSalData->mbInNativeModalSheet;
+		pSalData->mbNativeEventSucceeded = ( !Application::IsShutDown() && !pSalData->mbInNativeModalSheet && !pSalData->mbInShutdownEvent );
 		if ( pSalData->mbNativeEventSucceeded )
 		{
 			if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->maFrameData.mbVisible )
