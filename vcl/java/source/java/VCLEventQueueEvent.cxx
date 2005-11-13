@@ -144,6 +144,25 @@ com_sun_star_vcl_VCLEvent::com_sun_star_vcl_VCLEvent( USHORT nID, const SalFrame
 
 // ----------------------------------------------------------------------------
 
+void com_sun_star_vcl_VCLEvent::cancelShutdown()
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "cancelShutdown", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+	}
+}
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLEvent::dispatch()
 {
 	USHORT nID = getID();
@@ -155,15 +174,21 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 	{
 		case SALEVENT_SHUTDOWN:
 		{
+			bool bCancelShutdown = true;
+
 			// Ignore SALEVENT_SHUTDOWN events when recursing into this
 			// method or when in presentation mode
 			ImplSVData *pSVData = ImplGetSVData();
 			if ( pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpFirstFloat && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mpPresentationFrame && !pSalData->mbInNativeModalSheet && pSalData->maFrameList.size() )
 			{
 				SalFrame *pFrame = pSalData->maFrameList.front();
-				if ( pFrame )
-					pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
+				if ( pFrame && !pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL ) )
+					bCancelShutdown = false;
 			}
+
+			if ( bCancelShutdown )
+				cancelShutdown();
+
 			return;
 		}
 		case SALEVENT_OPENDOCUMENT:
