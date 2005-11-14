@@ -232,6 +232,11 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 		// Make a pass through the native menus to speed up later updates
 		UpdateMenusForFrame( this, NULL );
+
+		// Explicitly set focus to this frame since Java may set the focus
+		// to the child frame
+		if ( !bNoActivate )
+			ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
 	}
 	else
 	{
