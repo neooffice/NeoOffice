@@ -65,11 +65,14 @@
 
 typedef void NativeAboutMenuHandler_Type();
 typedef void NativePreferencesMenuHandler_Type();
+typedef void NativeShutdownCancelledHandler_Type();
 
 static ::vos::OModule aAboutHandlerModule;
 static ::vos::OModule aPreferencesHandlerModule;
+static ::vos::OModule aShutdownCancelledHandlerModule;
 static NativeAboutMenuHandler_Type *pAboutHandler = NULL;
 static NativePreferencesMenuHandler_Type *pPreferencesHandler = NULL;
+static NativeShutdownCancelledHandler_Type *pShutdownCancelledHandler = NULL;
 
 using namespace rtl;
 using namespace vcl;
@@ -144,6 +147,25 @@ com_sun_star_vcl_VCLEvent::com_sun_star_vcl_VCLEvent( USHORT nID, const SalFrame
 
 // ----------------------------------------------------------------------------
 
+void com_sun_star_vcl_VCLEvent::cancelShutdown()
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "cancelShutdown", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+	}
+}
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLEvent::dispatch()
 {
 	USHORT nID = getID();
@@ -155,6 +177,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 	{
 		case SALEVENT_SHUTDOWN:
 		{
+			bool bCancelShutdown = true;
+
 			// Ignore SALEVENT_SHUTDOWN events when recursing into this
 			// method or when in presentation mode
 			ImplSVData *pSVData = ImplGetSVData();
@@ -162,8 +186,33 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			{
 				SalFrame *pFrame = pSalData->maFrameList.front();
 				if ( pFrame )
-					pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
+				{
+					pSalData->mbInShutdownEvent = true;
+					if ( !pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL ) )
+						bCancelShutdown = false;
+					pSalData->mbInShutdownEvent = false;
+				}
 			}
+
+			if ( bCancelShutdown )
+			{
+				cancelShutdown();
+
+				// Load libsfx and invoke the native shutdown cancelled handler
+				if ( !pShutdownCancelledHandler )
+				{
+					OUString aLibName = OUString::createFromAscii( "libsfx" );
+					aLibName += OUString::valueOf( (sal_Int32)SUPD, 10 );
+					aLibName += OUString::createFromAscii( STRING( DLLSUFFIX ) );
+					aLibName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+					if ( aShutdownCancelledHandlerModule.load( aLibName ) )
+						pShutdownCancelledHandler = (NativeShutdownCancelledHandler_Type *)aShutdownCancelledHandlerModule.getSymbol( OUString::createFromAscii( "NativeShutdownCancelledHandler" ) );
+				}
+
+				if ( pShutdownCancelledHandler )
+					pShutdownCancelledHandler();
+			}
+
 			return;
 		}
 		case SALEVENT_OPENDOCUMENT:

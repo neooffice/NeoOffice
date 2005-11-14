@@ -152,6 +152,26 @@ public final class VCLEventQueue {
 	}
 
 	/**
+	 * Dispatches the next event in the Java event queue. Note that this
+	 * method will do nothing if the current thread is not the Java dispatch
+	 * thread.
+	 */
+	public void dispatchNextEvent() {
+
+		if (EventQueue.isDispatchThread()) {
+			try {
+				VCLEventQueue.NoExceptionsEventQueue eventQueue = (VCLEventQueue.NoExceptionsEventQueue)Toolkit.getDefaultToolkit().getSystemEventQueue();
+				AWTEvent nextEvent = eventQueue.getNextEvent();
+				eventQueue.dispatchEvent(nextEvent);
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+		}
+
+	}
+
+	/**
 	 * Returns the last adjusted mouse modifiers.
 	 *
 	 * @return the last adjusted mouse modifiers

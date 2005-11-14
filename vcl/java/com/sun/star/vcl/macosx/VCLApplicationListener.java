@@ -141,19 +141,16 @@ public class VCLApplicationListener implements ApplicationListener {
 	 */
 	public void handleQuit(ApplicationEvent event) {
 
-		queue.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_SHUTDOWN, null, 0));
+		VCLEvent shutdownEvent = new VCLEvent(VCLEvent.SALEVENT_SHUTDOWN, null, 0);
+		queue.postCachedEvent(shutdownEvent);
 
-		// Only set event as handled if there are no visible frames
-		boolean handled = true;
-		Frame[] frames = Frame.getFrames();
-		for (int i = 0; i < frames.length; i++) {
-			if (frames[i].isShowing()) {
-				handled = false;
-				break;
-			}
-		}
-		
-		event.setHandled(handled);
+		// Wait for event to be dispatched in the C++ code. Note that if the
+		// event is successfully processed, this loop will never finish and
+		// the process will exit.
+		while (!shutdownEvent.isShutdownCancelled())
+			queue.dispatchNextEvent();
+
+		event.setHandled(false);
 
 	}
 

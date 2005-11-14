@@ -45,6 +45,7 @@
 {
 	NSMenu*				mpDockMenu;
 	id					mpDelegate;
+	BOOL				mbInTermination;
 }
 - (BOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename;
 - (BOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename;
@@ -53,6 +54,7 @@
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag;
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication;
 - (void)applicationWillFinishLaunching:(NSNotification *)pNotification;
+- (id)cancelTermination;
 - (id)init;
 - (void)handleCalcCommand:(id)pObject;
 - (void)handleDrawCommand:(id)pObject;
@@ -103,6 +105,11 @@
 
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication
 {
+	if (mbInTermination)
+		return NSTerminateCancel;
+
+	mbInTermination = YES;
+
 	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(applicationShouldTerminate:)] )
 		return [mpDelegate applicationShouldTerminate:pApplication];
 	else
@@ -115,11 +122,17 @@
 		[mpDelegate applicationWillFinishLaunching:pNotification];
 }
 
+- (id)cancelTermination
+{
+	mbInTermination = NO;
+}
+
 - (id)init
 {
 	[super init];
 
 	mpDockMenu = [[NSMenu alloc] initWithTitle:@""];
+	mbInTermination = NO;
 
 	return self;
 }
@@ -166,6 +179,24 @@
     	mpDelegate = pDelegate;
 }
 
+@end
+
+@interface CancelTermination : NSObject
+- (void)cancelTermination:(id)pObject;
+@end
+
+@implementation CancelTermination
+
+- (void)cancelTermination:(id)pObject;
+{
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
+	{
+		NSObject *pDelegate = [pApp delegate];
+		if ( pDelegate && [pDelegate respondsToSelector:@selector(cancelTermination)] )
+			[pDelegate cancelTermination];
+	}
+}
 @end
 
 @interface QuickstartMenuItems : NSObject
@@ -276,6 +307,17 @@ void AddQuickstartMenuItems( int nCount, MenuCommand *pIDs, CFStringRef *pString
 
 	QuickstartMenuItems *pItems = [[QuickstartMenuItems alloc] initWithCount:nCount menuCommands:pIDs strings:pStrings];
 	[pItems performSelectorOnMainThread:@selector(addMenuItems:) withObject:pItems waitUntilDone:YES];
+
+	[pPool release];
+}
+
+// Note: this must not be static as the symbol will be loaded by the vcl module
+void NativeShutdownCancelledHandler()
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	CancelTermination *pCancelTermination = [[CancelTermination alloc] init];
+	[pCancelTermination performSelectorOnMainThread:@selector(cancelTermination:) withObject:pCancelTermination waitUntilDone:YES];
 
 	[pPool release];
 }

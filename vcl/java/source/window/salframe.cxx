@@ -194,6 +194,18 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 	if ( maFrameData.mbVisible )
 	{
+		// Get native window since it won't be created until first shown
+		maFrameData.maSysData.aWindow = (long)maFrameData.mpVCLFrame->getNativeWindowRef();
+
+		// On certain rare occasions, the JVM will not display a window so we
+		// need to keep trying until a window appears or the app crashes
+		if ( !maFrameData.maSysData.aWindow )
+		{
+			Show( FALSE, FALSE );
+			Show( bVisible, bNoActivate );
+			return;
+		}
+
 		maFrameData.mbCenter = FALSE;
 
 		// Reset graphics only for splash screen. All other windows are reset
@@ -208,9 +220,6 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 			}
 		}
 
-		// Get native window since it won't be created until first shown
-		maFrameData.maSysData.aWindow = (long)maFrameData.mpVCLFrame->getNativeWindowRef();
-
 		// Show children that we delayed display for
 		for ( ::std::list< SalFrame* >::const_iterator it = maFrameData.maChildren.begin(); it != maFrameData.maChildren.end(); ++it )
 		{
@@ -224,7 +233,8 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		// Make a pass through the native menus to speed up later updates
 		UpdateMenusForFrame( this, NULL );
 
-		// Fix bug 1113 by forcing the window to the front
+		// Explicitly set focus to this frame since Java may set the focus
+		// to the child frame
 		if ( !bNoActivate )
 			ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
 	}
