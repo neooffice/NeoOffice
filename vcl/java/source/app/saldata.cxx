@@ -64,7 +64,6 @@ SalData::SalData()
 	mbInNativeMenuTracking = false;
 	mbInNativeModalSheet = false;
 	mpNativeModalSheetFrame = NULL;
-	mbInShutdownEvent = false;
 
 	// Set condition so that they don't block
 	maNativeEventCondition.set();

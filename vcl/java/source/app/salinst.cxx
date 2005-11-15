@@ -419,7 +419,7 @@ void SalInstance::Yield( BOOL bWait )
 	// Allow Carbon event loop to proceed
 	if ( !pSalData->maNativeEventCondition.check() )
 	{
-		pSalData->mbNativeEventSucceeded = ( !Application::IsShutDown() && !pSalData->mbInNativeModalSheet && !pSalData->mbInShutdownEvent );
+		pSalData->mbNativeEventSucceeded = ( !Application::IsShutDown() && !pSalData->mbInNativeModalSheet );
 		if ( pSalData->mbNativeEventSucceeded )
 		{
 			if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->maFrameData.mbVisible )

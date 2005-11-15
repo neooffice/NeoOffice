@@ -64,13 +64,14 @@
 - (void)handleMathCommand:(id)pObject;
 - (void)handleWriterCommand:(id)pObject;
 - (void)setDelegate:(id)pDelegate;
+- (BOOL)validateMenuItem:(NSMenuItem *)pMenuItem;
 @end
 
 @implementation ShutdownIconDelegate
 
 - (BOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename
 {
-	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(application:openFile:)] )
+	if ( !mbInTermination && mpDelegate && [mpDelegate respondsToSelector:@selector(application:openFile:)] )
 		return [mpDelegate application:pApplication openFile:pFilename];
 	else
 		return NO;
@@ -78,7 +79,7 @@
 
 - (BOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename
 {
-	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(application:printFile:)] )
+	if ( !mbInTermination && mpDelegate && [mpDelegate respondsToSelector:@selector(application:printFile:)] )
 		return [mpDelegate application:pApplication printFile:pFilename];
 	else
 		return NO;
@@ -97,7 +98,7 @@
 
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag
 {
-	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(applicationShouldHandleReopen:hasVisibleWindows:)] )
+	if ( !mbInTermination && mpDelegate && [mpDelegate respondsToSelector:@selector(applicationShouldHandleReopen:hasVisibleWindows:)] )
 		return [mpDelegate applicationShouldHandleReopen:pApplication hasVisibleWindows:bFlag];
 	else
 		return NO;
@@ -105,7 +106,7 @@
 
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication
 {
-	if (mbInTermination)
+	if ( mbInTermination )
 		return NSTerminateCancel;
 
 	mbInTermination = YES;
@@ -179,6 +180,11 @@
     	mpDelegate = pDelegate;
 }
 
+- (BOOL)validateMenuItem:(NSMenuItem *)pMenuItem
+{
+	return !mbInTermination;
+}
+
 @end
 
 @interface CancelTermination : NSObject
@@ -237,6 +243,7 @@
 			if ( pDelegate )
 				[pNewDelegate setDelegate:pDelegate];
 			[pApp setDelegate: pNewDelegate];
+			pDelegate = pNewDelegate;
 			pDockMenu = [pNewDelegate applicationDockMenu:pApp];
 		}
 
@@ -281,8 +288,12 @@
 				// Insert and release string
 				if ( mpStrings[ i ] )
 				{
-					[pAppMenu insertItemWithTitle:(NSString *)mpStrings[ i ] action:aSelector keyEquivalent:@"" atIndex:2];
-					[pDockMenu insertItemWithTitle:(NSString *)mpStrings[ i ] action:aSelector keyEquivalent:@"" atIndex:0];
+					NSMenuItem *pAppMenuItem = [pAppMenu insertItemWithTitle:(NSString *)mpStrings[ i ] action:aSelector keyEquivalent:@"" atIndex:2];
+					if ( pAppMenuItem )
+						[pAppMenuItem setTarget:pDelegate];
+					NSMenuItem *pDockMenuItem = [pDockMenu insertItemWithTitle:(NSString *)mpStrings[ i ] action:aSelector keyEquivalent:@"" atIndex:0];
+					if ( pDockMenuItem )
+						[pDockMenuItem setTarget:pDelegate];
 				}
 			}
 

@@ -141,6 +141,10 @@ public class VCLApplicationListener implements ApplicationListener {
 	 */
 	public void handleQuit(ApplicationEvent event) {
 
+		Application application = Application.getApplication();
+		application.setEnabledAboutMenu(false);
+		application.setEnabledPreferencesMenu(false);
+
 		VCLEvent shutdownEvent = new VCLEvent(VCLEvent.SALEVENT_SHUTDOWN, null, 0);
 		queue.postCachedEvent(shutdownEvent);
 
@@ -151,6 +155,9 @@ public class VCLApplicationListener implements ApplicationListener {
 			queue.dispatchNextEvent();
 
 		event.setHandled(false);
+
+		application.setEnabledAboutMenu(true);
+		application.setEnabledPreferencesMenu(true);
 
 	}
 

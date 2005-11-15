@@ -185,13 +185,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			if ( pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpFirstFloat && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mpPresentationFrame && !pSalData->mbInNativeModalSheet && pSalData->maFrameList.size() )
 			{
 				SalFrame *pFrame = pSalData->maFrameList.front();
-				if ( pFrame )
-				{
-					pSalData->mbInShutdownEvent = true;
-					if ( !pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL ) )
-						bCancelShutdown = false;
-					pSalData->mbInShutdownEvent = false;
-				}
+				if ( pFrame && !pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL ) )
+					bCancelShutdown = false;
 			}
 
 			if ( bCancelShutdown )
