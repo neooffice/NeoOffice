@@ -84,7 +84,6 @@ public:
 	bool					mbInNativeMenuTracking;
 	bool					mbInNativeModalSheet;
 	SalFrame*				mpNativeModalSheetFrame;
-	bool					mbInShutdownEvent;
 	::std::list< SalGraphics* >	maGraphicsList;
 
 							SalData();
