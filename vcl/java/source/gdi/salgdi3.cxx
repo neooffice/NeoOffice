@@ -132,31 +132,6 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							if ( !pVCLFont )
 								continue;
 
-							OUString aFontPSName( pVCLFont->getPSName() );
-							CFStringRef aPSString = CFStringCreateWithCharactersNoCopy( NULL, aFontPSName.getStr(), aFontPSName.getLength(), kCFAllocatorNull );
-							if ( !aPSString )
-							{
-								delete pVCLFont;
-								continue;
-							}
-
-							ATSFontRef aFont = ATSFontFindFromPostScriptName( aPSString, kATSOptionFlagsDefault );
-							CFRelease( aPSString );
-							if ( !aFont )
-							{
-								delete pVCLFont;
-								continue;
-							}
-
-							void *pNativeFont = (void *)FMGetFontFromATSFontRef( aFont );
-							if ( (ATSUFontID)pNativeFont == kATSUInvalidFontID )
-							{
-								delete pVCLFont;
-								continue;
-							}
-
-							pVCLFont->setNativeFont( pNativeFont );
-
 							OUString aFontName( pVCLFont->getName() );
 							CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aFontName.getStr(), aFontName.getLength(), kCFAllocatorNull );
 							if ( !aString )
@@ -173,8 +148,28 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								continue;
 							}
 
-							CFStringRef aDisplayString = NSFont_displayName( pNSFont );
-							if ( !aDisplayString )
+							ATSFontRef aFont = NSFont_getATSFontRef( pNSFont );
+							if ( !aFont )
+							{
+								NSFont_release( pNSFont );
+								delete pVCLFont;
+								continue;
+							}
+			
+							void *pNativeFont = (void *)FMGetFontFromATSFontRef( aFont );
+							if ( (ATSUFontID)pNativeFont == kATSUInvalidFontID )
+							{
+								NSFont_release( pNSFont );
+								delete pVCLFont;
+								continue;
+							}
+
+							pVCLFont->setNativeFont( pNativeFont );
+
+							// Get the ATS font name as the Cocoa name on some
+							// Mac OS X versions adds extraneous words
+							CFStringRef aDisplayString;
+							if ( ATSFontGetName( aFont, kATSOptionFlagsDefault, &aDisplayString ) != noErr )
 							{
 								NSFont_release( pNSFont );
 								delete pVCLFont;
@@ -574,6 +569,9 @@ void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 					ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextGlobal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDefault, NULL );
 			}
 		}
+
+		// Give the native fonts a chance to load
+		OThread::yield();
 
 		ImplFontListChangedCallback( NULL, NULL );
 

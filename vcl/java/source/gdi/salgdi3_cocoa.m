@@ -54,20 +54,16 @@ id NSFont_create( CFStringRef aFontName, long nSize )
 	return pRet;
 }
 
-CFStringRef NSFont_displayName( id pNSFont )
+ATSFontRef NSFont_getATSFontRef( id pNSFont )
 {
-	CFStringRef aRet = nil;
+	ATSFontRef aRet = nil;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pNSFont )
 	{
-		// Get the ATS font name as the Cocoa name on some Mac OS X versions
-		// adds extraneous words
 		CFStringRef aPSName = (CFStringRef)[(NSFont *)pNSFont fontName];
-		ATSFontRef aFont = ATSFontFindFromPostScriptName( aPSName, kATSOptionFlagsDefault );
-		if ( aFont )
-			ATSFontGetName( aFont, kATSOptionFlagsDefault, &aRet );
+		aRet = ATSFontFindFromPostScriptName( aPSName, kATSOptionFlagsDefault );
 	}
 
 	[pPool release];
