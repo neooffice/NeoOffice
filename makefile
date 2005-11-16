@@ -56,12 +56,12 @@ NEOLIGHT_MDIMPORTER_URL:=http://trinity.neooffice.org/downloads/neolight.mdimpor
 OO_PRODUCT_NAME=OpenOffice.org
 OO_PRODUCT_VERSION=1.1.4
 OO_REGISTRATION_URL=http://www.openoffice.org/welcome/registration.html
-PRODUCT_NAME=NeoOffice
-PRODUCT_DIR_NAME=NeoOffice
+PRODUCT_NAME=NeoOffice/J
+PRODUCT_DIR_NAME=NeoOfficeJ
 # Important: Note that there are escape characters in the PRODUCT_NAME for the
 # UTF-8 trademark symbol. Don't replace these with "\x##" literal strings!
-PRODUCT_TRADEMARKED_NAME=NeoOffice®
-PRODUCT_TRADEMARKED_NAME_RTF=NeoOffice\\\'a8
+PRODUCT_TRADEMARKED_NAME=NeoOffice®/J
+PRODUCT_TRADEMARKED_NAME_RTF=NeoOffice\\\'a8/J
 PRODUCT_VERSION_FAMILY=1.1
 PRODUCT_VERSION=1.2 Alpha
 PRODUCT_DIR_VERSION=1.2 Alpha
