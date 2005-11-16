@@ -922,6 +922,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed)
 			return;
 
+		setVisible(false);
 		setMenuBar(null);
 		bitCount = 0;
 		children = null;
@@ -2001,6 +2002,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else {
 			// Hide the window
 			window.hide();
+
+			// Fix bug 1145 by destroying the native window
 			window.removeNotify();
 		}
 
