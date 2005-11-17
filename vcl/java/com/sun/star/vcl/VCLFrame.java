@@ -899,6 +899,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		VCLFrame.componentMap.remove(window);
 		VCLFrame.componentMap.remove(panel);
 
+		// Fix bug 1145 by destroying the native window
+		window.removeNotify();
+
 	}
 
 	/**
@@ -2002,9 +2005,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else {
 			// Hide the window
 			window.hide();
-
-			// Fix bug 1145 by destroying the native window
-			window.removeNotify();
 		}
 
 	}
