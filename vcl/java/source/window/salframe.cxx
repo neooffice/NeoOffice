@@ -621,8 +621,6 @@ void SalFrame::UpdateSettings( AllSettings& rSettings )
 	if ( nDblTime < 25 )
 		nDblTime = 25;
 	aMouseSettings.SetDoubleClickTime( nDblTime * 1000 / CLK_TCK );
-	aMouseSettings.SetStartDragWidth( 1 );
-	aMouseSettings.SetStartDragHeight( 1 );
 	rSettings.SetMouseSettings( aMouseSettings );
 
 	StyleSettings aStyleSettings( rSettings.GetStyleSettings() );
