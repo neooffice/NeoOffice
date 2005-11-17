@@ -1487,6 +1487,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (VCLFrame.lastMouseDragEvent == null)
 			VCLFrame.lastMouseDragEvent = e;
 
+		// Use adjusted modifiers
+		int modifiers = queue.getLastAdjustedMouseModifiers();
+		e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | modifiers, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
+
 		e = preprocessMouseEvent(e);
 
 		// Generate mouse exited events that the OOo code expects
