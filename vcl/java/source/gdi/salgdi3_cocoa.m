@@ -36,6 +36,74 @@
 #import <Cocoa/Cocoa.h>
 #import "salgdi3_cocoa.h"
 
+// Note: many of the exported functions in this file do not use the
+// performOnMainThread selector but only because the code that calls these
+// functions is run in a native timer from the native event dispatch thread.
+
+@interface FindFontNameWithStyle : NSObject
+{
+    BOOL				mbBold;
+    CFStringRef			maFontName;
+    CFStringRef			maFoundFontName;
+    BOOL				mbItalic;
+	float				mfSize;
+}
+- (void)findFontNameWithStyle:(id)pObject;
+- (CFStringRef)foundFontName;
+- (id)initWithFontName:(CFStringRef)aFontName bold:(BOOL)bBold italic:(BOOL)bItalic size:(float)fSize;
+@end
+
+@implementation FindFontNameWithStyle
+- (void)findFontNameWithStyle:(id)pObject
+{
+	NSFontManager *pFontManager = [NSFontManager sharedFontManager];
+	if ( pFontManager )
+	{
+		NSFont *pNSFont = [NSFont fontWithName:(NSString *)maFontName size:mfSize];
+		if ( pNSFont )
+		{
+			int nWeight = [pFontManager weightOfFont:pNSFont];
+			NSFontTraitMask nTraits = ( [pFontManager traitsOfFont:pNSFont] & ( NSBoldFontMask | NSItalicFontMask ) );
+			if ( mbBold )
+			{
+				nTraits |= NSBoldFontMask;
+
+				// Fix bug 1128 by ensuring that the weight is at least 9
+				if ( nWeight < 9 )
+					nWeight = 9;
+			}
+			if ( mbItalic )
+				nTraits |= NSItalicFontMask;
+			NSFont *pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:nTraits weight:nWeight size:mfSize];
+			if ( pNewNSFont && pNewNSFont != pNSFont )
+			{
+				ATSFontRef aFont = NSFont_getATSFontRef( pNewNSFont );
+				if ( aFont )
+					ATSFontGetName( aFont, kATSOptionFlagsDefault, &maFoundFontName );
+			}
+		}
+	}
+}
+
+- (CFStringRef)foundFontName
+{
+	return maFoundFontName;
+}
+
+- (id)initWithFontName:(CFStringRef)aFontName bold:(BOOL)bBold italic:(BOOL)bItalic size:(float)fSize
+{
+	[super init];
+
+	mbBold = bBold;
+	maFontName = aFontName;
+	maFoundFontName = nil;
+	mbItalic = bItalic;
+	mfSize = fSize;
+
+	return self;
+}
+@end
+
 id NSFont_create( CFStringRef aFontName, long nSize )
 {
 	NSFont *pRet = nil;
@@ -54,20 +122,34 @@ id NSFont_create( CFStringRef aFontName, long nSize )
 	return pRet;
 }
 
-CFStringRef NSFont_displayName( id pNSFont )
+ATSFontRef NSFont_getATSFontRef( id pNSFont )
 {
-	CFStringRef aRet = nil;
+	ATSFontRef aRet = nil;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pNSFont )
 	{
-		// Get the ATS font name as the Cocoa name on some Mac OS X versions
-		// adds extraneous words
 		CFStringRef aPSName = (CFStringRef)[(NSFont *)pNSFont fontName];
-		ATSFontRef aFont = ATSFontFindFromPostScriptName( aPSName, kATSOptionFlagsDefault );
-		if ( aFont )
-			ATSFontGetName( aFont, kATSOptionFlagsDefault, &aRet );
+		if ( [pNSFont respondsToSelector:@selector(_atsFontID)] )
+		{
+			aRet = (ATSFontRef)[pNSFont _atsFontID];
+			if ( aRet )
+			{
+				CFStringRef aString;
+				if ( ATSFontGetPostScriptName( aRet, kATSOptionFlagsDefault, &aString ) == noErr )
+				{
+					// In some cases, _atsFontID may return a different font
+					// so ignore if names don't match
+					if ( CFStringCompare( aPSName, aString, 0 ) )
+						aRet = nil;
+					CFRelease( aString );
+				}
+			}
+		}
+
+		if ( !aRet )
+			aRet = ATSFontFindFromPostScriptName( aPSName, kATSOptionFlagsDefault );
 	}
 
 	[pPool release];
@@ -93,36 +175,9 @@ CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, BOOL bBo
 
 	if ( aFontName && nSize )
 	{
-		NSFont *pNSFont = [NSFont fontWithName:(NSString *)aFontName size:(float)nSize];
-		if ( pNSFont )
-		{
-			NSFontManager *pFontManager = [NSFontManager sharedFontManager];
-			if ( pFontManager )
-			{
-				int nWeight = [pFontManager weightOfFont:pNSFont];
-				NSFontTraitMask nTraits = ( [pFontManager traitsOfFont:pNSFont] & ( NSBoldFontMask | NSItalicFontMask ) );
-				if ( bBold )
-				{
-					nTraits |= NSBoldFontMask;
-
-					// Fix bug 1128 by ensuring that the weight is at least 9
-					if ( nWeight < 9 )
-						nWeight = 9;
-				}
-				if ( bItalic )
-					nTraits |= NSItalicFontMask;
-				NSFont *pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:nTraits weight:nWeight size:(float)nSize];
-				if ( pNewNSFont && pNewNSFont != pNSFont )
-				{
-					// Get the ATS font name as the Cocoa name on some Mac OS X
-					// versions adds extraneous words
-					CFStringRef aPSName = (CFStringRef)[(NSFont *)pNewNSFont fontName];
-					ATSFontRef aFont = ATSFontFindFromPostScriptName( aPSName, kATSOptionFlagsDefault );
-					if ( aFont )
-						ATSFontGetName( aFont, kATSOptionFlagsDefault, &aRet );
-				}
-			}
-		}
+		FindFontNameWithStyle *pFindFontNameWithStyle = [[FindFontNameWithStyle alloc] initWithFontName:aFontName bold:bBold italic:bItalic size:(float)nSize];
+		[pFindFontNameWithStyle performSelectorOnMainThread:@selector(findFontNameWithStyle:) withObject:pFindFontNameWithStyle waitUntilDone:YES];
+		aRet = [pFindFontNameWithStyle foundFontName];
 	}
 
 	[pPool release];

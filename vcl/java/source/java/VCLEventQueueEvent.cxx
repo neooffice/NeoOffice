@@ -56,6 +56,12 @@
 #ifndef _SV_SALMENU_HXX
 #include <salmenu.hxx>
 #endif
+#ifndef _SV_WINDOW_HXX
+#include <window.hxx>
+#endif
+#ifndef _SV_WINDOW_H
+#include <window.h>
+#endif
 #ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
 #endif
@@ -484,9 +490,23 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					USHORT nModifiers = getModifiers();
 					pMouseEvent->mnCode = nModifiers;
 					if ( nID == SALEVENT_MOUSELEAVE || nID == SALEVENT_MOUSEMOVE )
+					{
 						pMouseEvent->mnButton = 0;
+
+						// Fix bug 1147 by stripping off key modifiers while in
+						// native drag mode
+						USHORT nKeyModifiers = nModifiers & ~( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
+						if ( nKeyModifiers )
+						{
+							Window *pWindow = (Window *)pFrame->maFrameData.mpInst;
+							if ( pWindow && pWindow->ImplGetFrameData()->mbStartDragCalled )
+								pMouseEvent->mnCode = nModifiers & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
+						}
+					}
 					else
+					{
 						pMouseEvent->mnButton = nModifiers & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
+					}
 				}
 				// Adjust position for RTL layout
 				if ( Application::GetSettings().GetLayoutRTL() )

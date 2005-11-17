@@ -683,11 +683,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private int frame = 0;
 
 	/**
-	 * The full screen escape key pressed flag.
-	 */
-	private boolean fullScreenEscapeKeyPressed = false;
-
-	/**
 	 * The full screen mode.
 	 */
 	private boolean fullScreenMode = false;
@@ -904,6 +899,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		VCLFrame.componentMap.remove(window);
 		VCLFrame.componentMap.remove(panel);
 
+		// Fix bug 1145 by destroying the native window
+		window.removeNotify();
+
 	}
 
 	/**
@@ -927,13 +925,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed)
 			return;
 
+		setVisible(false);
 		setMenuBar(null);
 		bitCount = 0;
 		children = null;
 		detachedChildren = null;
 		frame = 0;
 		fullScreenMode = false;
-		fullScreenEscapeKeyPressed = false;
 		graphics.dispose();
 		graphics = null;
 		insets = null;
@@ -1329,22 +1327,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			keyModifiersPressed = keyModChangeEvent.getModifiers();
 			queue.postCachedEvent(keyModChangeEvent);
 		}
-		else if (e.isActionKey() || (keyCode ==KeyEvent.VK_ENTER && e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD)) {
+		else if (e.isActionKey() || keyCode == KeyEvent.VK_ESCAPE || (keyCode ==KeyEvent.VK_ENTER && e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD)) {
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
-		}
-		else if (keyCode == KeyEvent.VK_ESCAPE) {
-			// HACK: For some reason, pressing escape multiple times when in
-			// a presentation will cause a crash. I have found no pattern
-			// that consistent fixes this so the following code will only
-			// allow the first escape key event to be passed to the C++ code.
-			if (!fullScreenEscapeKeyPressed) {
-				queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
-				KeyEvent keyReleasedEvent = new KeyEvent(e.getComponent(), KeyEvent.KEY_RELEASED, e.getWhen(), e.getModifiers() | e.getModifiersEx(), keyCode, e.getKeyChar(), e.getKeyLocation());
-				queue.postCachedEvent(new VCLEvent(keyReleasedEvent, VCLEvent.SALEVENT_KEYUP, this, 0));
-			}
-
-			if (fullScreenMode)
-				fullScreenEscapeKeyPressed = true;
 		}
 
 	}
@@ -1367,7 +1351,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			keyModifiersPressed = keyModChangeEvent.getModifiers();
 			queue.postCachedEvent(keyModChangeEvent);
 		}
-		else if (e.isActionKey() || (keyCode ==KeyEvent.VK_ENTER && e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD)) {
+		else if (e.isActionKey() || keyCode == KeyEvent.VK_ESCAPE || (keyCode ==KeyEvent.VK_ENTER && e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD)) {
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0));
 		}
 
@@ -1502,6 +1486,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (VCLFrame.lastMouseDragEvent == null)
 			VCLFrame.lastMouseDragEvent = e;
+
+		// Use adjusted modifiers
+		int modifiers = queue.getLastAdjustedMouseModifiers();
+		e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | modifiers, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
 
 		e = preprocessMouseEvent(e);
 
@@ -1712,7 +1700,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			return;
 
 		fullScreenMode = b;
-		fullScreenEscapeKeyPressed = false;
 
 		if (window instanceof VCLFrame.NoPaintDialog)
 			((VCLFrame.NoPaintDialog)window).setFullScreenMode(fullScreenMode);

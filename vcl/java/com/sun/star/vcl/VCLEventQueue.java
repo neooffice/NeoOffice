@@ -89,9 +89,19 @@ public final class VCLEventQueue {
 	public final static int INPUT_ANY = VCLEventQueue.INPUT_MOUSE | VCLEventQueue.INPUT_KEYBOARD | VCLEventQueue.INPUT_PAINT | VCLEventQueue.INPUT_TIMER | VCLEventQueue.INPUT_OTHER;
 
 	/**
+	 * The GC_INTERVAL constant.
+	 */
+	public final static long GC_INTERVAL = 60000;
+
+	/**
 	 * The last adjusted mouse modifiers.
 	 */
 	private int lastAdjustedMouseModifiers = 0;
+
+	/**
+	 * The next garbage collection.
+	 */
+	private long nextGC = 0;
 
 	/**
 	 * The list of queues.
@@ -199,6 +209,13 @@ public final class VCLEventQueue {
 
 		synchronized (queueList) {
 			if (wait > 0 && queueList[0].head == null && queueList[1].head == null) {
+				// Since we are going to block, this is a good time to run the
+				// garbage collector
+				long currentTime = System.currentTimeMillis();
+				if (currentTime >= nextGC) {
+					System.gc();
+					nextGC = System.currentTimeMillis() + VCLEventQueue.GC_INTERVAL;
+				}
 				try {
 					queueList.wait(wait);
 				}

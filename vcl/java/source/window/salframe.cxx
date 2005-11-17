@@ -185,12 +185,15 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 	maFrameData.mbVisible = bVisible;
 
-	// If we are being displayed before the parent frame, delay display until
-	// the parent frame is displayed
-	if ( maFrameData.mbVisible && maFrameData.mpParent && !maFrameData.mpParent->maFrameData.mbVisible )
-		return;
-
 	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible );
+
+	// Reset graphics
+	com_sun_star_vcl_VCLGraphics *pVCLGraphics = maFrameData.mpVCLFrame->getGraphics();
+	if ( pVCLGraphics )
+	{
+		pVCLGraphics->resetGraphics();
+		delete pVCLGraphics;
+	}
 
 	if ( maFrameData.mbVisible )
 	{
@@ -208,30 +211,17 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 		maFrameData.mbCenter = FALSE;
 
-		// Reset graphics only for splash screen. All other windows are reset
-		// in the first paint event
-		if ( !ImplGetSVData()->maAppData.mbInAppExecute )
-		{
-			com_sun_star_vcl_VCLGraphics *pVCLGraphics = maFrameData.mpVCLFrame->getGraphics();
-			if ( pVCLGraphics )
-			{
-				pVCLGraphics->resetGraphics();
-				delete pVCLGraphics;
-			}
-		}
+		UpdateMenusForFrame( this, NULL );
 
-		// Show children that we delayed display for
+		// Reattach child frames
 		for ( ::std::list< SalFrame* >::const_iterator it = maFrameData.maChildren.begin(); it != maFrameData.maChildren.end(); ++it )
 		{
 			if ( (*it)->maFrameData.mbVisible )
 			{
-				(*it)->maFrameData.mbVisible = FALSE;
+				(*it)->Show( FALSE, FALSE );
 				(*it)->Show( TRUE, FALSE );
 			}
 		}
-
-		// Make a pass through the native menus to speed up later updates
-		UpdateMenusForFrame( this, NULL );
 
 		// Explicitly set focus to this frame since Java may set the focus
 		// to the child frame
@@ -243,14 +233,6 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		// End composition
 		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_ENDEXTTEXTINPUT, this, NULL );
 		aEvent.dispatch();
-
-		// Reset graphics
-		com_sun_star_vcl_VCLGraphics *pVCLGraphics = maFrameData.mpVCLFrame->getGraphics();
-		if ( pVCLGraphics )
-		{
-			pVCLGraphics->resetGraphics();
-			delete pVCLGraphics;
-		}
 
 		// Remove the native window since it is destroyed when hidden
 		maFrameData.maSysData.aWindow = 0;
@@ -639,8 +621,6 @@ void SalFrame::UpdateSettings( AllSettings& rSettings )
 	if ( nDblTime < 25 )
 		nDblTime = 25;
 	aMouseSettings.SetDoubleClickTime( nDblTime * 1000 / CLK_TCK );
-	aMouseSettings.SetStartDragWidth( 1 );
-	aMouseSettings.SetStartDragHeight( 1 );
 	rSettings.SetMouseSettings( aMouseSettings );
 
 	StyleSettings aStyleSettings( rSettings.GetStyleSettings() );
@@ -789,9 +769,6 @@ bool SalFrame::SetPluginParent( SystemParentData* pNewParent )
 
 void SalFrame::SetMenu( SalMenu* pSalMenu )
 {
-	// Make a pass through the native menus to speed up later updates
-	if ( pSalMenu )
-		UpdateMenusForFrame( this, pSalMenu );
 }
 
 // -----------------------------------------------------------------------
