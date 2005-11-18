@@ -609,21 +609,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private static MouseEvent lastMouseDragEvent = null;
 
 	/**
-	 * The window peer class.
-	 */
-	private static Class windowPeerClass = null;
-
-	/**
-	 * The window peer disable flusing method.
-	 */
-	private static Method windowPeerDisableFlushingMethod = null;
-
-	/**
-	 * The window peer enable flusing method.
-	 */
-	private static Method windowPeerEnableFlushingMethod = null;
-
-	/**
 	 * Find the matching <code>VCLFrame</code> for the specified component.
 	 *
 	 * @param c the component
@@ -676,6 +661,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * The disposed flag.
 	 */
 	private boolean disposed = false;
+
+	/**
+	 * The flushing enabled flag.
+	 */
+	private boolean flushingEnabled = true;
 
 	/**
 	 * The frame pointer.
@@ -960,6 +950,38 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		disposed = true;
 
+	}
+
+	/**
+	 * Enable or disable flushing of the native window.
+	 *
+	 * @param b <code>true</code> to enable flushing and <code>false</code> to
+	 *  disable flushing
+	 */
+	public void enableFlushing(boolean b)
+	{
+		if (b != flushingEnabled)
+		{
+			Graphics2D g = graphics.getGraphics();
+			if (g != null) {
+				try {
+					if (g instanceof sun.java2d.SunGraphics2D) {
+						sun.java2d.SurfaceData sd = ((sun.java2d.SunGraphics2D)g).getSurfaceData();
+						if (sd instanceof apple.awt.CPeerSurfaceData) {
+							if (b)
+								((apple.awt.CPeerSurfaceData)sd).enableFlushing();
+							else if (!fullScreenMode)
+								((apple.awt.CPeerSurfaceData)sd).disableFlushing();
+							flushingEnabled = b;
+						}
+					}
+				}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
+g.dispose();
+			}
+		}
 	}
 
 	/**
@@ -1372,8 +1394,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// Fix bug 710 by stripping out the Alt modifier. Note that we do it
 		// here because we need to let the Alt modifier through for action
 		// keys.
-		if ((e.getModifiersEx() & InputEvent.ALT_DOWN_MASK) != 0)
-			e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), (e.getModifiers() | e.getModifiersEx()) & ~(InputEvent.ALT_MASK | InputEvent.ALT_DOWN_MASK), e.getKeyCode(), e.getKeyChar());
+		int modifiers = e.getModifiersEx();
+		if ((modifiers & InputEvent.ALT_DOWN_MASK) != 0) {
+			e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), (e.getModifiers() | modifiers) & ~(InputEvent.ALT_MASK | InputEvent.ALT_DOWN_MASK), e.getKeyCode(), e.getKeyChar());
+		}
+
+		// Fix bug 1143 by converting any capital alpha characters to lowercase
+		// when the meta key is pressed
+		if ((modifiers & InputEvent.META_DOWN_MASK) != 0) {
+			char keyChar = e.getKeyChar();
+
+			if (keyChar >= 'A' && keyChar <= 'Z')
+				e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | modifiers, e.getKeyCode(), (char)(keyChar + 32));
+		}
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0));
@@ -1728,6 +1761,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 							Window w = f.getWindow();
 							if (w.isShowing()) {
 								w.hide();
+								if (!f.flushingEnabled)
+									f.enableFlushing(true);
 								detachedChildren.add(f);
 							}
 						}
@@ -1745,8 +1780,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 					synchronized (f) {
 						if (!f.isDisposed()) {
 							Window w = f.getWindow();
-							if (!w.isShowing())
+							if (!w.isShowing()) {
 								w.show();
+								if (!f.flushingEnabled)
+									f.enableFlushing(true);
+							}
 						}
 					}
 				}
@@ -2011,6 +2049,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			window.hide();
 		}
 
+		if (!flushingEnabled)
+			enableFlushing(true);
+			
 	}
 
 	/**
@@ -2089,6 +2130,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 					Window w = f.getWindow();
 					if (w.isShowing()) {
 						w.hide();
+						if (!f.flushingEnabled)
+							f.enableFlushing(true);
 						detachedChildren.add(f);
 					}
 				}
@@ -2114,8 +2157,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			synchronized (f) {
 				if (!f.isDisposed()) {
 					Window w = f.getWindow();
-					if (!w.isShowing())
+					if (!w.isShowing()) {
 						w.show();
+						if (!f.flushingEnabled)
+							f.enableFlushing(true);
+					}
 				}
 			}
 		}

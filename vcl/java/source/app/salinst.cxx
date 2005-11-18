@@ -368,9 +368,21 @@ void SalInstance::Yield( BOOL bWait )
 		gettimeofday( &aCurrentTime, NULL );
 		if ( pSalData->mpTimerProc && aCurrentTime >= pSalData->maTimeout )
 		{
+			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+			{
+				if ( (*it)->maFrameData.mbVisible )
+					(*it)->maFrameData.mpVCLFrame->enableFlushing( sal_False );
+			}
+
 			gettimeofday( &pSalData->maTimeout, NULL );
 			pSalData->maTimeout += pSalData->mnTimerInterval;
 			pSalData->mpTimerProc();
+
+			for ( it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+			{
+				if ( (*it)->maFrameData.mbVisible )
+					(*it)->maFrameData.mpVCLFrame->enableFlushing( sal_True );
+			}
 		}
 	}
 
@@ -409,15 +421,21 @@ void SalInstance::Yield( BOOL bWait )
 			nCount = 0;
 		}
 
+		USHORT nID = pEvent->getID();
 		pEvent->dispatch();
 		delete pEvent;
+
+		// Fix bug 1147 by allowing non-AWT events to be dispatched after a
+		// mouse released event
+		if ( nID == SALEVENT_MOUSEBUTTONUP )
+			break;
 	}
 
 	if ( nCount )
 		AcquireYieldMutex( nCount );
 
 	// Allow Carbon event loop to proceed
-	if ( !pSalData->maNativeEventCondition.check() )
+	if ( !pEvent && !pSalData->maNativeEventCondition.check() )
 	{
 		pSalData->mbNativeEventSucceeded = ( !Application::IsShutDown() && !pSalData->mbInNativeModalSheet );
 		if ( pSalData->mbNativeEventSucceeded )

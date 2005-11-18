@@ -228,10 +228,6 @@ public final class VCLEventQueue {
 				queue.head = queue.head.next;
 				if (eqi == queue.keyInput)
 					queue.keyInput = null;
-				else if (eqi == queue.mouseMove)
-					queue.mouseMove = null;
-				else if (eqi == queue.mouseWheelMove)
-					queue.mouseWheelMove = null;
 				else if (eqi == queue.moveResize)
 					queue.moveResize = null;
 				else if (eqi == queue.paint)
@@ -239,7 +235,7 @@ public final class VCLEventQueue {
 				
 			}
 			if (queue.head == null)
-				queue.keyInput = queue.mouseMove = queue.mouseWheelMove = queue.moveResize = queue.paint = queue.tail = null;
+				queue.keyInput = queue.moveResize = queue.paint = queue.tail = null;
 			return eqi != null ? eqi.event : null;
 		}
 
@@ -278,16 +274,14 @@ public final class VCLEventQueue {
 				queue.keyInput = null;
 			}
 			else if (id == VCLEvent.SALEVENT_MOUSEMOVE) {
-				if (queue.mouseMove != null && !queue.mouseMove.remove && queue.mouseMove.event.getFrame() == newItem.event.getFrame())
-					queue.mouseMove.remove = true;
-				queue.mouseMove = newItem;
+				if (queue.tail != null && !queue.tail.remove && queue.tail.event.getID() == VCLEvent.SALEVENT_MOUSEMOVE && queue.tail.event.getFrame() == newItem.event.getFrame())
+					queue.tail.remove = true;
 			}
 			else if (id == VCLEvent.SALEVENT_WHEELMOUSE) {
-				if (queue.mouseWheelMove != null && !queue.mouseWheelMove.remove && queue.mouseWheelMove.event.getFrame() == newItem.event.getFrame()) {
-					queue.mouseWheelMove.remove = true;
-					newItem.event.addWheelRotation(queue.mouseWheelMove.event.getWheelRotation());
+				if (queue.tail != null && !queue.tail.remove && queue.tail.event.getID() == VCLEvent.SALEVENT_WHEELMOUSE && queue.tail.event.getFrame() == newItem.event.getFrame()) {
+					queue.tail.remove = true;
+					newItem.event.addWheelRotation(queue.tail.event.getWheelRotation());
 				}
-				queue.mouseWheelMove = newItem;
 			}
 			else if (id == VCLEvent.SALEVENT_MOVERESIZE) {
 				if (queue.moveResize != null && !queue.moveResize.remove && queue.moveResize.event.getFrame() == newItem.event.getFrame())
@@ -306,9 +300,6 @@ public final class VCLEventQueue {
 							newItem.event.setUpdateRect(oldBounds);
 					}
 				}
-				// A SALEVENT_MOVERESIZE event will be dispatched with the
-				// paint event
-				queue.moveResize = null;
 				queue.paint = newItem;
 			}
 
@@ -449,10 +440,6 @@ public final class VCLEventQueue {
 		VCLEventQueue.QueueItem head = null;
 
 		VCLEventQueue.QueueItem keyInput = null;
-
-		VCLEventQueue.QueueItem mouseMove = null;
-
-		VCLEventQueue.QueueItem mouseWheelMove = null;
 
 		VCLEventQueue.QueueItem moveResize = null;
 
