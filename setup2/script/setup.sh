@@ -371,7 +371,10 @@ checkforpatches()
     patchfileurl="$(PRODUCT_PATCH_CHECK_URL)"
     patchdownloadurl="$(PRODUCT_PATCH_DOWNLOAD_URL)"
     lastcheckfile="$userinstall/.lastpatchcheck"
-    if [ ! -r "$lastcheckfile" -o -z "`find "$lastcheckfile" -mtime -6 -o -mtime -5 -o -mtime -4 -o -mtime -3 -o -mtime -2 -o -mtime -1 -o -mtime 0`" ] ; then
+    if [ ! -r "$lastcheckfile" ] ; then
+        # Don't run the patch check on the first run
+        touch -f "$lastcheckfile"
+    elif [ -z "`find "$lastcheckfile" -mtime -6 -o -mtime -5 -o -mtime -4 -o -mtime -3 -o -mtime -2 -o -mtime -1 -o -mtime 0`" ] ; then
         proxies=`scutil << !
 open
 get "State:/Network/Global/Proxies"
