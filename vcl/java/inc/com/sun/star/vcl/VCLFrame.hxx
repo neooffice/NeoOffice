@@ -63,6 +63,7 @@ public:
 
 	void				addChild( SalFrame *_par0 );
 	void				dispose();
+	void				enableFlushing( sal_Bool _par0 );
 	void				endComposition();
 	const Rectangle		getBounds();
 	ULONG				getCurrentModButtons();

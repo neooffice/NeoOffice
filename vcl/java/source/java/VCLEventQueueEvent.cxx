@@ -276,14 +276,19 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 	// Handle events that require a SalFrame pointer
 	SalFrame *pFrame = getFrame();
 	bool bFound = false;
+	bool bFlushingDisabled = false;
 	if ( pFrame && pFrame->maFrameData.mpProc )
 	{
-		SalData *pSalData = GetSalData();
 		for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 		{
 			if ( pFrame == *it )
 			{
 				bFound = true;
+				if ( pFrame->maFrameData.mbVisible )
+				{
+					bFlushingDisabled = true;
+					pFrame->maFrameData.mpVCLFrame->enableFlushing( sal_False );
+				}
 				break;
 			}
 		}
@@ -637,6 +642,22 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			if ( pFrame && pFrame->maFrameData.mbVisible )
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
 			break;
+		}
+	}
+
+	if ( bFlushingDisabled )
+	{
+		for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+		{
+			if ( pFrame == *it )
+			{
+				if ( pFrame->maFrameData.mbVisible )
+				{
+					bFlushingDisabled = false;
+					pFrame->maFrameData.mpVCLFrame->enableFlushing( sal_True );
+				}
+				break;
+			}
 		}
 	}
 }
