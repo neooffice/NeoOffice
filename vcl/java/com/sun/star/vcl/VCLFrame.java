@@ -889,9 +889,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		VCLFrame.componentMap.remove(window);
 		VCLFrame.componentMap.remove(panel);
 
-		// Fix bug 1145 by destroying the native window
-		window.removeNotify();
-
 	}
 
 	/**
@@ -939,6 +936,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		window.removeMouseWheelListener(this);
 		window.removeWindowListener(this);
 
+		// Fix bug 1145 by destroying the native window
+		window.removeNotify();
 		window.remove(panel);
 		panel = null;
 
@@ -1748,49 +1747,8 @@ g.dispose();
 	 */
 	void setMenuBar(MenuBar menubar) {
 
-		if (window instanceof Frame) {
-			// The menubar doesn't refresh when a child window until the focus
-			// is restored so hide any children while changing the menubar
-			if (menubar != null) {
-				// Detach any visible children
-				Iterator frames = children.iterator();
-				while (frames.hasNext()) {
-					VCLFrame f = (VCLFrame)frames.next();
-					synchronized (f) {
-						if (!f.isDisposed()) {
-							Window w = f.getWindow();
-							if (w.isShowing()) {
-								w.hide();
-								if (!f.flushingEnabled)
-									f.enableFlushing(true);
-								detachedChildren.add(f);
-							}
-						}
-					}
-				}
-			}
-
+		if (window instanceof Frame)
 			((Frame)window).setMenuBar(menubar);
-
-			if (detachedChildren.size() > 0) {
-				// Reattach any visible children
-				Iterator frames = detachedChildren.iterator();
-				while (frames.hasNext()) {
-					VCLFrame f = (VCLFrame)frames.next();
-					synchronized (f) {
-						if (!f.isDisposed()) {
-							Window w = f.getWindow();
-							if (!w.isShowing()) {
-								w.show();
-								if (!f.flushingEnabled)
-									f.enableFlushing(true);
-							}
-						}
-					}
-				}
-				detachedChildren.clear();
-			}
-		}
 
 	}
 
@@ -2049,9 +2007,8 @@ g.dispose();
 			window.hide();
 		}
 
-		if (!flushingEnabled)
-			enableFlushing(true);
-			
+		enableFlushing(b);
+
 	}
 
 	/**
@@ -2130,8 +2087,7 @@ g.dispose();
 					Window w = f.getWindow();
 					if (w.isShowing()) {
 						w.hide();
-						if (!f.flushingEnabled)
-							f.enableFlushing(true);
+						f.enableFlushing(false);
 						detachedChildren.add(f);
 					}
 				}
@@ -2159,8 +2115,7 @@ g.dispose();
 					Window w = f.getWindow();
 					if (!w.isShowing()) {
 						w.show();
-						if (!f.flushingEnabled)
-							f.enableFlushing(true);
+						f.enableFlushing(true);
 					}
 				}
 			}

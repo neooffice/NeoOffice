@@ -199,16 +199,6 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	{
 		// Get native window since it won't be created until first shown
 		maFrameData.maSysData.aWindow = (long)maFrameData.mpVCLFrame->getNativeWindowRef();
-
-		// On certain rare occasions, the JVM will not display a window so we
-		// need to keep trying until a window appears or the app crashes
-		if ( !maFrameData.maSysData.aWindow )
-		{
-			Show( FALSE, FALSE );
-			Show( bVisible, bNoActivate );
-			return;
-		}
-
 		maFrameData.mbCenter = FALSE;
 
 		UpdateMenusForFrame( this, NULL );
@@ -493,7 +483,7 @@ void SalFrame::StartPresentation( BOOL bStart )
 	if ( pSetSystemUIModeTimerUPP )
 	{
 		if ( GetCurrentEventLoop() != GetMainEventLoop() )
-			InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pSetSystemUIModeTimerUPP, (void *)( bStart ? true : false ), NULL );
+			InstallEventLoopTimer( GetMainEventLoop(), 0.001, kEventDurationForever, pSetSystemUIModeTimerUPP, (void *)( bStart ? true : false ), NULL );
 		else
 			SetSystemUIModeTimerCallback( NULL, (void *)( bStart ? true : false ) );
 	}

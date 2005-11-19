@@ -159,8 +159,37 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								delete pVCLFont;
 								continue;
 							}
-			
-							void *pNativeFont = (void *)FMGetFontFromATSFontRef( aFont );
+
+							ATSFontRef aRealFont = aFont;
+							CFStringRef aRealPSString;
+							if ( ATSFontGetPostScriptName( aRealFont, kATSOptionFlagsDefault, &aRealPSString ) != noErr )
+							{
+								NSFont_release( pNSFont );
+								delete pVCLFont;
+								continue;
+							}
+
+							OUString aFontPSName( pVCLFont->getPSName() );
+							CFStringRef aPSString = CFStringCreateWithCharactersNoCopy( NULL, aFontPSName.getStr(), aFontPSName.getLength(), kCFAllocatorNull );
+							if ( aPSString )
+							{
+								if ( CFStringCompare( aPSString, aRealPSString, 0 ) )
+									aRealFont = ATSFontFindFromPostScriptName( aPSString, kATSOptionFlagsDefault );
+								CFRelease( aRealPSString );
+							}
+							else
+							{
+								aRealFont = NULL;
+							}
+
+							if ( !aRealFont )
+							{
+								NSFont_release( pNSFont );
+								delete pVCLFont;
+								continue;
+							}
+							
+							void *pNativeFont = (void *)FMGetFontFromATSFontRef( aRealFont );
 							if ( (ATSUFontID)pNativeFont == kATSUInvalidFontID )
 							{
 								NSFont_release( pNSFont );
@@ -322,6 +351,13 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 
 static void LoadNativeFontsTimerCallback( EventLoopTimerRef aTimer, void *pData )
 {
+	static bool bInLoad = false;
+
+	if ( bInLoad )
+		return;
+
+	bInLoad = true;
+
 	// Activate the fonts in the "user/fonts" directory
 	OUString aUserStr;
 	OUString aUserPath;
@@ -361,6 +397,8 @@ static void LoadNativeFontsTimerCallback( EventLoopTimerRef aTimer, void *pData 
 
 	// Release any waiting thread
 	aLoadNativeFontsCondition.set();
+
+	bInLoad = false;
 }
 
 // =======================================================================
@@ -592,8 +630,8 @@ void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 			if ( GetCurrentEventLoop() != GetMainEventLoop() )
 			{
 				aLoadNativeFontsCondition.reset();
+				InstallEventLoopTimer( GetMainEventLoop(), 0.001, kEventDurationForever, pLoadNativeFontsTimerUPP, NULL, NULL );
 				ULONG nCount = Application::ReleaseSolarMutex();
-				InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pLoadNativeFontsTimerUPP, NULL, NULL );
 				aLoadNativeFontsCondition.wait();
 				Application::AcquireSolarMutex( nCount );
 			}
