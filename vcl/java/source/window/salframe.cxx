@@ -483,7 +483,7 @@ void SalFrame::StartPresentation( BOOL bStart )
 	if ( pSetSystemUIModeTimerUPP )
 	{
 		if ( GetCurrentEventLoop() != GetMainEventLoop() )
-			InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pSetSystemUIModeTimerUPP, (void *)( bStart ? true : false ), NULL );
+			InstallEventLoopTimer( GetMainEventLoop(), 0.001, kEventDurationForever, pSetSystemUIModeTimerUPP, (void *)( bStart ? true : false ), NULL );
 		else
 			SetSystemUIModeTimerCallback( NULL, (void *)( bStart ? true : false ) );
 	}
