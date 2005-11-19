@@ -608,7 +608,7 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 	{
 		pTrackDragOwner = this;
 		aTrackDragCondition.reset();
-		InstallEventLoopTimer( GetMainEventLoop(), 0, 0, pTrackDragTimerUPP, (void *)this, NULL );
+		InstallEventLoopTimer( GetMainEventLoop(), 0.001, kEventDurationForever, pTrackDragTimerUPP, (void *)this, NULL );
 	}
 	else
 	{
