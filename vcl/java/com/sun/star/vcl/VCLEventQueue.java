@@ -36,10 +36,14 @@
 package com.sun.star.vcl;
 
 import java.awt.AWTEvent;
+import java.awt.Component;
 import java.awt.EventQueue;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
+import java.awt.Window;
 import java.awt.event.InputEvent;
+import java.awt.event.InputMethodEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -412,6 +416,28 @@ public final class VCLEventQueue {
 		protected void dispatchEvent(AWTEvent event) {
 
 			try {
+				// Key and input method events can sometimes be routed to a
+				// window instead of the panel so fix bug 1158 by replacing
+				// the window with the panel
+				if (event instanceof InputMethodEvent) {
+					InputMethodEvent e = (InputMethodEvent)event;
+					Object c = e.getSource();
+					if (c instanceof Window) {
+						VCLFrame f = VCLFrame.findFrame((Component)c);
+						if (f != null)
+							event = e = new InputMethodEvent(f.getPanel(), e.getID(), e.getWhen(), e.getText(), e.getCommittedCharacterCount(), e.getCaret(), e.getVisiblePosition());
+					}
+				}
+				else if (event instanceof KeyEvent) {
+					KeyEvent e = (KeyEvent)event;
+					Component c = e.getComponent();
+					if (c instanceof Window) {
+						VCLFrame f = VCLFrame.findFrame(c);
+						if (f != null)
+							event = e = new KeyEvent(f.getPanel(), e.getID(), e.getWhen(), e.getModifiers() | e.getModifiersEx(), e.getKeyCode(), e.getKeyChar(), e.getKeyLocation());
+					}
+				}
+
 				super.dispatchEvent(event);
 
 				// The modifiers for mouse released events contain the

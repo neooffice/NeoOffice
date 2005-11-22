@@ -313,7 +313,16 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)pData;
 
 			if ( !bDeleteDataOnly && pFrame && pFrame->maFrameData.mbVisible )
+			{
+				// Fix bug 1158 by resetting the focus to whichever window is
+				// receiving key events
+				if ( pFrame != pSalData->mpFocusFrame )
+				{
+					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_GETFOCUS, pFrame, NULL );
+					aEvent.dispatch();
+				}
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pInputEvent );
+			}
 			if ( pInputEvent )
 				delete pInputEvent;
 			break;
@@ -335,6 +344,13 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					pInputEvent->mnDeltaStart = 0;
 					pInputEvent->mbOnlyCursor = FALSE;
 					pInputEvent->mnCursorFlags = 0;
+				}
+				// Fix bug 1158 by resetting the focus to whichever window is
+				// receiving key events
+				if ( pFrame != pSalData->mpFocusFrame )
+				{
+					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_GETFOCUS, pFrame, NULL );
+					aEvent.dispatch();
 				}
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pInputEvent );
 				// Update the cached location
@@ -449,6 +465,13 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				// need to do the resolving manually.
 				if ( pKeyEvent->mnCode & KEY_MOD1 && ! ( pKeyEvent->mnCode & KEY_CONTROLMOD ) && pKeyEvent->mnCharCode >= 'a' && pKeyEvent->mnCharCode <= 0x7d )
 					pKeyEvent->mnCharCode -= 0x60;
+				// Fix bug 1158 by resetting the focus to whichever window is
+				// receiving key events
+				if ( pFrame != pSalData->mpFocusFrame )
+				{
+					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_GETFOCUS, pFrame, NULL );
+					aEvent.dispatch();
+				}
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pKeyEvent );
 			}
 			if ( pKeyEvent )
