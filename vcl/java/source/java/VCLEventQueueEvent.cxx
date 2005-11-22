@@ -56,12 +56,6 @@
 #ifndef _SV_SALMENU_HXX
 #include <salmenu.hxx>
 #endif
-#ifndef _SV_WINDOW_HXX
-#include <window.hxx>
-#endif
-#ifndef _SV_WINDOW_H
-#include <window.h>
-#endif
 #ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
 #endif
@@ -319,7 +313,16 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)pData;
 
 			if ( !bDeleteDataOnly && pFrame && pFrame->maFrameData.mbVisible )
+			{
+				// Fix bug 1158 by resetting the focus to whichever window is
+				// receiving key events
+				if ( pFrame != pSalData->mpFocusFrame )
+				{
+					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_GETFOCUS, pFrame, NULL );
+					aEvent.dispatch();
+				}
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pInputEvent );
+			}
 			if ( pInputEvent )
 				delete pInputEvent;
 			break;
@@ -341,6 +344,13 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					pInputEvent->mnDeltaStart = 0;
 					pInputEvent->mbOnlyCursor = FALSE;
 					pInputEvent->mnCursorFlags = 0;
+				}
+				// Fix bug 1158 by resetting the focus to whichever window is
+				// receiving key events
+				if ( pFrame != pSalData->mpFocusFrame )
+				{
+					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_GETFOCUS, pFrame, NULL );
+					aEvent.dispatch();
 				}
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pInputEvent );
 				// Update the cached location
@@ -455,6 +465,13 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				// need to do the resolving manually.
 				if ( pKeyEvent->mnCode & KEY_MOD1 && ! ( pKeyEvent->mnCode & KEY_CONTROLMOD ) && pKeyEvent->mnCharCode >= 'a' && pKeyEvent->mnCharCode <= 0x7d )
 					pKeyEvent->mnCharCode -= 0x60;
+				// Fix bug 1158 by resetting the focus to whichever window is
+				// receiving key events
+				if ( pFrame != pSalData->mpFocusFrame )
+				{
+					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_GETFOCUS, pFrame, NULL );
+					aEvent.dispatch();
+				}
 				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pKeyEvent );
 			}
 			if ( pKeyEvent )
@@ -495,23 +512,9 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					USHORT nModifiers = getModifiers();
 					pMouseEvent->mnCode = nModifiers;
 					if ( nID == SALEVENT_MOUSELEAVE || nID == SALEVENT_MOUSEMOVE )
-					{
 						pMouseEvent->mnButton = 0;
-
-						// Fix bug 1147 by stripping off key modifiers while in
-						// native drag mode
-						USHORT nKeyModifiers = nModifiers & ~( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
-						if ( nKeyModifiers )
-						{
-							Window *pWindow = (Window *)pFrame->maFrameData.mpInst;
-							if ( pWindow && pWindow->ImplGetFrameData()->mbStartDragCalled )
-								pMouseEvent->mnCode = nModifiers & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
-						}
-					}
 					else
-					{
 						pMouseEvent->mnButton = nModifiers & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
-					}
 				}
 				// Adjust position for RTL layout
 				if ( Application::GetSettings().GetLayoutRTL() )

@@ -799,8 +799,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		panel.addMouseWheelListener(this);
 		window.addComponentListener(this);
 		window.addFocusListener(this);
-		window.addKeyListener(this);
-		window.addInputMethodListener(this);
 		window.addWindowListener(this);
 
 	}
@@ -929,11 +927,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		panel.removeInputMethodListener(this);
 		window.removeComponentListener(this);
 		window.removeFocusListener(this);
-		window.removeKeyListener(this);
-		window.removeInputMethodListener(this);
-		window.removeMouseListener(this);
-		window.removeMouseMotionListener(this);
-		window.removeMouseWheelListener(this);
 		window.removeWindowListener(this);
 
 		// Fix bug 1145 by destroying the native window
@@ -1747,8 +1740,45 @@ g.dispose();
 	 */
 	void setMenuBar(MenuBar menubar) {
 
-		if (window instanceof Frame)
+		if (window instanceof Frame) {
+			// The menubar doesn't refresh when a child window until the focus
+			// is restored so hide any children while changing the menubar
+			if (menubar != null) {
+				// Detach any visible children
+				Iterator frames = children.iterator();
+				while (frames.hasNext()) {
+					VCLFrame f = (VCLFrame)frames.next();
+					synchronized (f) {
+						if (!f.isDisposed()) {
+							Window w = f.getWindow();
+							if (w.isShowing()) {
+								w.hide();
+								f.enableFlushing(false);
+								detachedChildren.add(f);
+							}
+						}
+					}
+				}
+			}
+
 			((Frame)window).setMenuBar(menubar);
+
+			// Reattach any visible children
+			Iterator frames = detachedChildren.iterator();
+			while (frames.hasNext()) {
+				VCLFrame f = (VCLFrame)frames.next();
+				synchronized (f) {
+					if (!f.isDisposed()) {
+						Window w = f.getWindow();
+						if (!w.isShowing()) {
+							w.show();
+							f.enableFlushing(true);
+						}
+					}
+				}
+			}
+			detachedChildren.clear();
+		}
 
 	}
 
@@ -2032,6 +2062,7 @@ g.dispose();
 	public boolean toFront() {
 
 		if (window.isShowing() && !isFloatingWindow()) {
+			panel.requestFocus();
 			window.toFront();
 			return true;
 		}

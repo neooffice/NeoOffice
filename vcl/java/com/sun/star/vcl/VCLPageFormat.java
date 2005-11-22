@@ -323,10 +323,15 @@ public final class VCLPageFormat {
 	 * Setup the page configuration. This method displays a native page setup
 	 * dialog and saves any changes made by the user.
 	 *
+	 * @param <code>true</code> to update the cached page format and
+	 *  <code>false</code> to only return whether the page format is updateable
 	 * @return <code>false</code> if the user pressed the page dialog's
 	 *  cancel button or else <code>true</code>
 	 */
-	public boolean setup() {
+	public boolean setup(boolean b) {
+
+		if (b && editable)
+			pageFormat = job.defaultPage();
 
 		return editable;
 
