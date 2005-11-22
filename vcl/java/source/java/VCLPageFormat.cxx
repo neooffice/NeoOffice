@@ -588,12 +588,16 @@ sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()Z";
+			char *cSignature = "(Z)Z";
 			mID = t.pEnv->GetMethodID( getMyClass(), "setup", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethod( object, getMyClass(), mID );
+		{
+			jvalue args[1];
+			args[0].z = jboolean( sal_False );
+			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethodA( object, getMyClass(), mID, args );
+		}
 	}
 
 	if ( out )
@@ -620,6 +624,13 @@ sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 			pSalData->mpNativeModalSheetFrame = NULL;
 
 			out = (sal_Bool)NSPageLayout_result( pDialog );
+
+			if ( out && mID )
+			{
+				jvalue args[1];
+				args[0].z = jboolean( sal_True );
+				out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethodA( object, getMyClass(), mID, args );
+			}
 		}
 	}
 	
