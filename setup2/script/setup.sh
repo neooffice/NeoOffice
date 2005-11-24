@@ -50,9 +50,12 @@ os=`uname`
 apphome=`dirname "$0"`
 sharebase="$apphome/../share"
 userbase="$apphome/../user"
-userlibrary="$HOME/Library/Preferences"
-userinstall="$userlibrary/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)/user"
-
+userlibrarybase="Library/Preferences"
+userlibrary="$HOME/$userlibrarybase"
+userinstallbase="$userlibrarybase/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)/user"
+userinstall="$HOME/$userinstallbase"
+olduserinstallbase="Library/NeoOfficeJ-1.1/user"
+olduserinstall="$HOME/$olduserinstallbase"
 
 # Make sure the user's home directory exists and is writable
 if [ ! -d "$userlibrary" ] ; then
@@ -96,7 +99,6 @@ wordbookdir="$userinstall/wordbook"
 if [ ! -d "$configdir" -o ! -d "$registrydir" -o ! -d "$wordbookdir" ] ; then
     # If this is a new user installation, try to copy the user's NeoOffice/J
     # 1.1 preferences
-    olduserinstall="$HOME/Library/NeoOfficeJ-1.1/user"
     if [ ! -d "$userinstall" -a -d "$olduserinstall" ] ; then
         mkdir -p "$userinstall"
         ( cd "$olduserinstall" ; pax -r -w "." "$userinstall" )
@@ -351,6 +353,23 @@ if [ -d "$contentshome" -a -r "$lastcontentshomefile" ] ; then
     fi
 fi
 echo "$contentshome" > "$lastcontentshomefile"
+
+# Fix bug 1167 by removing any old NeoOffice/J path reference
+oldpathsfixedfile="$userinstall/.oldpathsfixed"
+if [ ! -r "$oldpathsfixedfile" ] ; then
+    for i in `cd "$userinstall" ; find . -type f -name "*.x*"` ; do
+        rm -f "$userinstall/$i.tmp"
+        if [ ! -f "$userinstall/$i.tmp" ] ; then
+            sed -e "s#$olduserinstallbase#$userinstallbase#g" "$userinstall/$i" > "$userinstall/$i.tmp"
+            if [ $? -eq 0 -a -s "$userinstall/$i.tmp" ] ; then
+                mv -f "$userinstall/$i.tmp" "$userinstall/$i"
+            else
+                rm -f "$userinstall/$i.tmp"
+            fi
+        fi
+    done
+    touch -f "$oldpathsfixedfile"
+fi
 
 # Make sure that there is a /tmp directory
 if [ "$os" = "Darwin" ] ; then
