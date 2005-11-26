@@ -47,6 +47,7 @@ CD_INSTALL_HOME:=cd_install
 OO_PATCHES_HOME:=patches/openoffice
 OO_ENV_X11:=$(BUILD_HOME)/MacosxEnv.Set
 OO_ENV_JAVA:=$(BUILD_HOME)/MacosxEnvJava.Set
+GNUCP=gnu-copy
 OO_LANGUAGES=ALL
 OO_DIC_URL:=http://ftp.services.openoffice.org/pub/OpenOffice.org/contrib/dictionaries
 OO_HELP_URL:=http://ftp.services.openoffice.org/pub/OpenOffice.org/contrib/helpcontent
@@ -54,7 +55,7 @@ NEOLIGHT_MDIMPORTER_URL:=http://trinity.neooffice.org/downloads/neolight.mdimpor
 
 # Product information
 OO_PRODUCT_NAME=OpenOffice.org
-OO_PRODUCT_VERSION=1.1.5
+OO_PRODUCT_VERSION=2.0
 OO_REGISTRATION_URL=http://www.openoffice.org/welcome/registration.html
 PRODUCT_NAME=NeoOffice
 PRODUCT_DIR_NAME=NeoOffice
@@ -62,17 +63,17 @@ PRODUCT_DIR_NAME=NeoOffice
 # UTF-8 trademark symbol. Don't replace these with "\x##" literal strings!
 PRODUCT_TRADEMARKED_NAME=NeoOffice®
 PRODUCT_TRADEMARKED_NAME_RTF=NeoOffice\\\'a8
-PRODUCT_VERSION_FAMILY=1.x
-PRODUCT_VERSION=1.2 Alpha
-PRODUCT_DIR_VERSION=1.2_Alpha
+PRODUCT_VERSION_FAMILY=2.x
+PRODUCT_VERSION=2.0 Alpha
+PRODUCT_DIR_VERSION=2.0_Alpha
 PRODUCT_LANG_PACK_VERSION=Languages
 PRODUCT_DIR_LANG_PACK_VERSION=Languages
 PRODUCT_HELP_PACK_VERSION=Help
 PRODUCT_DIR_HELP_PACK_VERSION=Help
 PRODUCT_PATCH_VERSION=Patch 1
 PRODUCT_DIR_PATCH_VERSION=Patch-1
-PRODUCT_PREVIOUS_VERSION=1.1
-# Don't allow patching of pre-1.2 installations
+PRODUCT_PREVIOUS_VERSION=1.2
+# Don't allow patching of pre-2.0 installations
 PRODUCT_PREVIOUS_PATCH_VERSION=99
 PRODUCT_FILETYPE=NO%F
 PRODUCT_INSTALL_URL=http://www.planamesa.com/neojava/download.php\\\#install
@@ -83,11 +84,11 @@ PRODUCT_REGISTRATION_URL=http://trinity.neooffice.org/
 
 # CVS macros
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
-OO_PACKAGES:=OpenOffice
-OO_TAG:=OpenOffice_1_1_5
+OO_PACKAGES:=OpenOffice2
+OO_TAG:=OpenOffice_2_0_0
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
-NEO_PACKAGE:=NeoOfficeJ
-NEO_TAG:=NeoOffice-1_2_Alpha
+NEO_PACKAGE:=NeoOffice
+NEO_TAG:=HEAD
 
 all: build.all
 
@@ -106,17 +107,8 @@ build.oo_checkout:
 	touch "$@"
 
 build.oo_patches: build.oo_checkout \
-	build.oo_berkeleydb_patch \
-	build.oo_config_office_patch \
 	build.oo_external_patch \
-	build.oo_sal_patch \
-	build.oo_sc_patch \
-	build.oo_scp_patch \
-	build.oo_solenv_patch \
-	build.oo_stlport_patch \
-	build.oo_ucbhelper_patch \
-	build.oo_vcl_patch \
-	build.oo_xmlhelp_patch
+	build.oo_solenv_patch
 	touch "$@"
 
 build.oo_odk_patches: build.oo_checkout
@@ -137,7 +129,7 @@ build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.oo_checkout
 
 build.configure: build.oo_patches
 	cd "$(BUILD_HOME)/config_office" ; autoconf
-	( cd "$(BUILD_HOME)/config_office" ; ./configure CC=cc CXX=c++ --with-x --x-includes=/usr/X11R6/include --with-lang="$(OO_LANGUAGES)" )
+	( cd "$(BUILD_HOME)/config_office" ; ./configure CC=cc CXX=c++ --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-epm=internal --disable-mozilla --with-gnu-cp=`which "$(GNUCP)"` --with-x --x-includes=/usr/X11R6/include --with-lang="$(OO_LANGUAGES)" )
 	echo "unsetenv LD_SEG_ADDR_TABLE" >> "$(OO_ENV_X11)"
 	echo "unsetenv LD_PREBIND" >> "$(OO_ENV_X11)"
 	echo "unsetenv LD_PREBIND_ALLOW_OVERLAP" >> "$(OO_ENV_X11)"
@@ -145,7 +137,7 @@ build.configure: build.oo_patches
 	touch "$@"
 
 build.oo_all: build.configure
-	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/instsetoo" ; `alias build` --all $(OO_BUILD_ARGS)
+	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/instsetoo_native" ; `alias build` --all $(OO_BUILD_ARGS)
 	touch "$@"
 
 build.oo_odk_all: build.configure build.oo_all build.oo_odk_patches

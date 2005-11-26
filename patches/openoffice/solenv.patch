@@ -1,41 +1,27 @@
 Index: inc/unxmacxp.mk
 ===================================================================
 RCS file: /cvs/tools/solenv/inc/unxmacxp.mk,v
-retrieving revision 1.43.8.3
-diff -u -r1.43.8.3 unxmacxp.mk
---- inc/unxmacxp.mk	28 Jan 2004 17:32:17 -0000	1.43.8.3
-+++ inc/unxmacxp.mk	3 Jun 2005 05:20:31 -0000
-@@ -170,6 +170,13 @@
- 	INCGUI+= -I$(PRJ)$/unx/inc
- .ENDIF
- 
-+# [ed] 6/2/05 Add in objc library for everything on 10.4 as it's required by
-+# the runtime (ugh!)
-+
-+.IF "$(BUILD_OS_MINOR)"=="4"
-+LINKFLAGS+=-lobjc
-+.ENDIF
-+
- # Random link flags dealing with different cases of linking
- 
- LINKFLAGSAPPGUI=-bind_at_load
-@@ -214,10 +221,19 @@
+retrieving revision 1.56
+diff -u -r1.56 unxmacxp.mk
+--- inc/unxmacxp.mk	8 Sep 2005 09:59:29 -0000	1.56
++++ inc/unxmacxp.mk	26 Nov 2005 02:14:48 -0000
+@@ -192,10 +192,19 @@
  STDSLOCUI=
  
  STDLIBGUIST=-lm
 +.IF "$(GUIBASE)"=="unx"
- STDLIBCUIST=-lX11 -lpthread -lm
+ STDLIBCUIST=-lX11 -lpthread CPPRUNTIME -lm
 +.ELSE
-+STDLIBCUIST=-lpthread -lm
++STDLIBCUIST=-lpthread CPPRUNTIME -lm
 +.ENDIF
- STDLIBGUIMT=-lpthread -lm
+ STDLIBGUIMT=-lpthread CPPRUNTIME -lm
 +.IF "$(GUIBASE)"=="unx"
- STDLIBCUIMT=-lX11 -lm
- STDSHLGUIMT=-lX11 -lXext -lpthread -m
+ STDLIBCUIMT=-lX11 CPPRUNTIME -lm
+ STDSHLGUIMT=-lX11 -lXext -lpthread CPPRUNTIME -lm
 +.ELSE
-+STDLIBCUIMT=-lm
-+STDSHLGUIMT=-lpthread -m
++STDLIBCUIMT=CPPRUNTIME -lm
++STDSHLGUIMT=-lpthread CPPRUNTIME -lm
 +.ENDIF
- STDSHLCUIMT=-lpthread -lm
+ STDSHLCUIMT=-lpthread CPPRUNTIME -lm
  
  LIBMGR=ar
