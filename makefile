@@ -47,7 +47,8 @@ CD_INSTALL_HOME:=cd_install
 OO_PATCHES_HOME:=patches/openoffice
 OO_ENV_X11:=$(BUILD_HOME)/MacosxEnv.Set
 OO_ENV_JAVA:=$(BUILD_HOME)/MacosxEnvJava.Set
-GNUCP=gnu-copy
+GNUCP=/opt/local/bin/gcp
+PKG_CONFIG=/opt/local/bin/pkgp-config
 OO_LANGUAGES=ALL
 OO_DIC_URL:=http://ftp.services.openoffice.org/pub/OpenOffice.org/contrib/dictionaries
 OO_HELP_URL:=http://ftp.services.openoffice.org/pub/OpenOffice.org/contrib/helpcontent
@@ -130,7 +131,7 @@ build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.oo_checkout
 
 build.configure: build.oo_patches
 	cd "$(BUILD_HOME)/config_office" ; autoconf
-	( cd "$(BUILD_HOME)/config_office" ; ./configure CC=cc CXX=c++ --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-epm=internal --disable-mozilla --with-gnu-cp=`which "$(GNUCP)"` --with-x --x-includes=/usr/X11R6/include --with-lang="$(OO_LANGUAGES)" )
+	( cd "$(BUILD_HOME)/config_office" ; ./configure CC=cc CXX=c++ PKG_CONFIG=$(PKG_CONFIG) --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-epm=internal --disable-mozilla --with-gnu-cp="$(GNUCP)" --with-x --x-includes=/usr/X11R6/include --with-lang="$(OO_LANGUAGES)" )
 	echo "unsetenv LD_SEG_ADDR_TABLE" >> "$(OO_ENV_X11)"
 	echo "unsetenv LD_PREBIND" >> "$(OO_ENV_X11)"
 	echo "unsetenv LD_PREBIND_ALLOW_OVERLAP" >> "$(OO_ENV_X11)"
