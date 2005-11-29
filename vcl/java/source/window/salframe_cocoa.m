@@ -63,7 +63,7 @@
 		// size
 		unsigned nCount = [pScreens count];
 		NSScreen *pScreen = (NSScreen *)[pScreens objectAtIndex:0];
-		NSRect aVirtualBounds = NSUnionRect( aVirtualBounds, [pScreen frame] );
+		NSRect aVirtualBounds = [pScreen frame];
 		unsigned i;
 		for ( i = 1; i < nCount; i++ )
 		{
@@ -127,7 +127,7 @@
 			}
 		}
 
-		if ( !NSIsEmptyRect( aVirtualBounds ) )
+		if ( !NSIsEmptyRect( aClosestBounds ) )
 			maBounds = aClosestBounds;
 	}
 }
