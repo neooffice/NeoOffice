@@ -274,12 +274,27 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 			void *pNSPrintInfo = _par0->getNativePrinterJob();
 			void *pDialog = NSPrintInfo_showPrintDialog( pNSPrintInfo, pFocusFrame->maFrameData.mpVCLFrame->getNativeWindow() );
 
+			// Fix bug 1160 by hiding any child frames while modal sheet is
+			// showing
+			::std::list< SalFrame* > aDetachedChildren;
+			for ( ::std::list< SalFrame* >::const_iterator it = pFocusFrame->maFrameData.maChildren.begin(); it != pFocusFrame->maFrameData.maChildren.end(); ++it )
+			{
+				if ( (*it)->maFrameData.mbVisible )
+				{
+					aDetachedChildren.push_front( *it );
+					(*it)->Show( FALSE, FALSE );
+				}
+			}
+
 			pSalData->mpNativeModalSheetFrame = pFocusFrame;
 			pSalData->mbInNativeModalSheet = true;
 			while ( !NSPrintPanel_finished( pDialog ) )
 				Application::Yield();
 			pSalData->mbInNativeModalSheet = false;
 			pSalData->mpNativeModalSheetFrame = NULL;
+
+			for ( it = aDetachedChildren.begin(); it != aDetachedChildren.end(); ++it )
+				(*it)->Show( TRUE, TRUE );
 
 			out = (sal_Bool)NSPrintPanel_result( pDialog );
 		}
