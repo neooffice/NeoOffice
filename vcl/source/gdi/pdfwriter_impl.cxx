@@ -2920,22 +2920,13 @@ void PDFWriterImpl::registerGlyphs(
         if( pCurrentFont->mbSubsettable )
         {
 #if defined USE_JAVA && defined MACOSX
-            // Fix bug 250 by finding fonts that are the same but are different
-            // pointers
-            if ( m_bUsingMtf )
-            {
-                for ( FontSubsetData::iterator sit = m_aSubsets.begin(); sit != m_aSubsets.end(); ++sit )
-                {
-                    if ( pCurrentFont->mpSysData == sit->first->mpSysData )
-                    {
-                        pCurrentFont = sit->first;
-                        break;
-                    }
-                }
-            }
-#endif	// USE_JAVA && MACOSX
-
+			com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)pCurrentFont->mpSysData;
+            ATSUFontID nFontID = (ATSUFontID)( pVCLFont->getNativeFont() );
+            ATSFontRef aATSFont = FMGetATSFontRefFromFont( nFontID );
+            FontSubset& rSubset = m_aSubsets[ (void *)aATSFont ];
+#else	// USE_JAVA && MACOSX
             FontSubset& rSubset = m_aSubsets[ pCurrentFont ];
+#endif	// USE_JAVA && MACOSX
             // search for glyphID
             FontMapping::iterator it = rSubset.m_aMapping.find( pGlyphs[i] );
             if( it != rSubset.m_aMapping.end() )
@@ -6503,21 +6494,15 @@ void PDFWriterImpl::encodeGlyphs()
     // Create font objects using Mac OS X's PDF rendering APIs
     for ( FontSubsetData::iterator it = m_aSubsets.begin(); it != m_aSubsets.end(); ++it )
     {
-        ImplFontData *pCurrentFont = it->first;
-        if ( !pCurrentFont->mbSubsettable )
+        ATSFontRef aATSFont = (ATSFontRef)it->first;
+        CGFontRef aFont = CGFontCreateWithPlatformFont( (void *)&aATSFont );
+        if ( !aFont )
             continue;
 
         FontSubset& rSubset = it->second;
         for ( FontEmitList::iterator lit = rSubset.m_aSubsets.begin(); lit != rSubset.m_aSubsets.end(); ++lit )
         {
             FontEmit& rEmit = *lit;
-
-			com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)pCurrentFont->mpSysData;
-            ATSUFontID nFontID = (ATSUFontID)( pVCLFont->getNativeFont() );
-            ATSFontRef aATSFont = FMGetATSFontRefFromFont( nFontID );
-            CGFontRef aFont = CGFontCreateWithPlatformFont( (void *)&aATSFont );
-            if ( !aFont )
-                continue;
 
             CGGlyph aGlyphIDs[ 256 ];
             int nGlyphIDs = 0;
@@ -6907,6 +6892,8 @@ void PDFWriterImpl::encodeGlyphs()
                 osl_closeFile( aFile );
             }
         }
+
+        CGFontRelease( aFont );
     }
 }
 #endif	// USE_JAVA && MACOSX
