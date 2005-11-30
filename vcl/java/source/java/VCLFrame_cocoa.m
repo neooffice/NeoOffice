@@ -110,6 +110,42 @@
 
 @end
 
+@interface UpdateLocation : NSObject
+{
+	id					mpCWindow;
+}
+- (void)updateLocation:(id)pObject;
+- (id)initWithCWindow:(id)pCWindow;
+@end
+
+@implementation UpdateLocation
+
+- (void)updateLocation:(id)pObject
+{
+	if ( [mpCWindow respondsToSelector:@selector(getNSWindow)] )
+	{
+		NSWindow *pWindow = (NSWindow *)[mpCWindow getNSWindow];
+		if ( pWindow )
+		{
+			NSRect aBounds = [pWindow frame];
+			NSPoint aPoint = NSMakePoint( aBounds.origin.x + 1, aBounds.origin.y + 1 );
+			[pWindow setFrameOrigin:aPoint];
+			[pWindow setFrameOrigin:aBounds.origin];
+		}
+	}
+}
+
+- (id)initWithCWindow:(id)pCWindow
+{
+	[super init];
+
+	mpCWindow = pCWindow;
+
+	return self;
+}
+
+@end
+
 id CWindow_getNSWindow( id pCWindow )
 {
 	NSWindow *pNSWindow = nil;
@@ -144,4 +180,17 @@ WindowRef CWindow_getWindowRef( id pCWindow )
 	[pPool release];
 
 	return aWindow;
+}
+
+void CWindow_updateLocation( id pCWindow )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pCWindow )
+	{
+		UpdateLocation *pUpdateLocation = [[UpdateLocation alloc] initWithCWindow:pCWindow];
+		[pUpdateLocation performSelectorOnMainThread:@selector(updateLocation:) withObject:pUpdateLocation waitUntilDone:YES];
+	}
+
+	[pPool release];
 }
