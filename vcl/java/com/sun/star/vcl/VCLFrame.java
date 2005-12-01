@@ -919,11 +919,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		setVisible(false);
 		setMenuBar(null);
-		bitCount = 0;
 		children = null;
 		detachedChildren = null;
-		frame = 0;
-		fullScreenMode = false;
 		graphics.dispose();
 		graphics = null;
 		insets = null;
@@ -936,6 +933,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		window.removeFocusListener(this);
 		window.removeWindowListener(this);
 		window.removeWindowStateListener(this);
+		queue.removeCachedEvents(frame);
 
 		// Fix bug 1145 by destroying the native window
 		window.removeNotify();
@@ -944,8 +942,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		textLocation = null;
 		window = null;
-		undecorated = false;
-		queue.removeCachedEvents(frame);
 		queue = null;
 
 		disposed = true;
