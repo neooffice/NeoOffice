@@ -298,16 +298,14 @@ for i in `cd "$apphome/classes" ; find . -name "*.jar"` ; do
 done
 sysclasspath=`printf "$sysclasspath" | sed 's#^:##'`
 if [ "$os" = "Darwin" ] ; then
-    javavm="/System/Library/Frameworks/JavaVM.framework/Versions/A/JavaVM"
+    javabasedir=/System/Library/Frameworks/JavaVM.framework
+    javavm="$javabasedir/JavaVM"
     if [ ! -f "$javavm" ] ; then
-        javavm="/System/Library/Frameworks/JavaVM.framework/JavaVM"
-        if [ ! -f "$javavm" ] ; then
-            error "$javavm file does not exist"
-        fi
+        error "$javavm file does not exist"
     fi
     # Force vcl.jar into bootstrap classpath so that we are sure that our
     # classes are loaded
-    printf "[Java]\nRuntimeLib=$javavm\n-Xbootclasspath/a:$apphome/classes/vcl.jar\n" > "$configdir/javarc"
+    printf "[Java]\nRuntimeLib=$javavm\njava.ext.dirs=$javabasedir/Home/lib/ext\njava.endorsed.dirs=\n-Xbootclasspath/a:$apphome/classes/vcl.jar\n" > "$configdir/javarc"
 else
     printf "[Java]\n" > "$configdir/javarc"
 fi
