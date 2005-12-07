@@ -211,7 +211,7 @@ userdictlst="$wordbookdir/dictionary.lst"
 if [ -d "$sharedictdir" ] ; then
     sharedictlst="$sharedictdir/dictionary.lst"
     if [ -r "$sharedictlst" ] ; then
-        ( cat /dev/null "$userdictlst" ; grep -E '[^][#:space:]*(DICT|HYPH|THES)[[:space:]]*'"$lang"'[[:space:]]' "$sharedictlst" ) 2>/dev/null | sed 's#^[#[:space:]]*##' | sort -u > "$userdictlst.tmp"
+        ( cat /dev/null "$userdictlst" ; grep -E '[^][#:space:]*(DICT|HYPH|THES)[[:space:]]*'"$lang"'[[:space:]]' "$sharedictlst" ) 2>/dev/null | sed 's#^[#[:space:]]*##' | grep -E '[^](DICT|HYPH|THES)[[:space:]]' | sort -u > "$userdictlst.tmp"
         if [ -s "$userdictlst.tmp" ] ; then
             lasttype=
             lastlang=
@@ -305,7 +305,7 @@ if [ "$os" = "Darwin" ] ; then
     fi
     # Force vcl.jar into bootstrap classpath so that we are sure that our
     # classes are loaded
-    printf "[Java]\nRuntimeLib=$javavm\njava.ext.dirs=$javabasedir/Home/lib/ext\njava.endorsed.dirs=\n-Xbootclasspath/a:$apphome/classes/vcl.jar\n" > "$configdir/javarc"
+    printf "[Java]\nRuntimeLib=$javavm\njava.ext.dirs=$javabasedir/Home/lib/ext\njava.endorsed.dirs=\n" > "$configdir/javarc"
 else
     printf "[Java]\n" > "$configdir/javarc"
 fi
