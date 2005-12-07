@@ -83,6 +83,7 @@ public:
 	BOOL			mbFullScreen;
 	BOOL			mbPresentation;
 	SalMenu*		mpMenuBar;
+	BOOL			mbUseMainScreenOnly;
 
 					SalFrameData();
 					~SalFrameData();

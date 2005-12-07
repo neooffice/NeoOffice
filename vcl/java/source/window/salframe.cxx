@@ -356,7 +356,7 @@ void SalFrame::GetWorkArea( Rectangle &rRect )
 	if ( rRect.IsEmpty() )
 		rRect = maFrameData.mpVCLFrame->getBounds();
 
-	NSScreen_getScreenBounds( &rRect.nLeft, &rRect.nTop, &rRect.nRight, &rRect.nBottom, GetSalData()->mpPresentationFrame ? TRUE : FALSE );
+	NSScreen_getScreenBounds( &rRect.nLeft, &rRect.nTop, &rRect.nRight, &rRect.nBottom, GetSalData()->mpPresentationFrame ? TRUE : FALSE, maFrameData.mbUseMainScreenOnly );
 }
 
 // -----------------------------------------------------------------------
@@ -786,6 +786,7 @@ SalFrameData::SalFrameData()
 	mbFullScreen = FALSE;
 	mbPresentation = FALSE;
 	mpMenuBar = NULL;
+	mbUseMainScreenOnly = FALSE;
 }
 
 // -----------------------------------------------------------------------

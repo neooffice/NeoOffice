@@ -549,8 +549,17 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 	// Set default window size based on style
 	Rectangle aWorkArea;
 	if ( pFrame->maFrameData.mpParent )
+	{
 		aWorkArea = Rectangle( Point( pFrame->maFrameData.mpParent->maGeometry.nX, pFrame->maFrameData.mpParent->maGeometry.nY ), Size( pFrame->maFrameData.mpParent->maGeometry.nWidth, pFrame->maFrameData.mpParent->maGeometry.nHeight ) );
-	pFrame->GetWorkArea( aWorkArea );
+		pFrame->GetWorkArea( aWorkArea );
+	}
+	else
+	{
+		// Fix bug 1194 by forcing the work area to the main screen
+		pFrame->maFrameData.mbUseMainScreenOnly = TRUE;
+		pFrame->GetWorkArea( aWorkArea );
+		pFrame->maFrameData.mbUseMainScreenOnly = FALSE;
+	}
 
 	long nX = aWorkArea.nLeft;
 	long nY = aWorkArea.nTop;
