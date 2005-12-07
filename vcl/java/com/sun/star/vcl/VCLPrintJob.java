@@ -110,6 +110,11 @@ public final class VCLPrintJob implements Printable, Runnable {
 	private boolean printStarted = false;
 
 	/**
+	 * The cached scale factor.
+	 */
+	private float scale = 1.0f;
+
+	/**
 	 * Constructs a new <code>VCLPrintJob</code> instance.
 	 */
 	public VCLPrintJob() {}
@@ -207,6 +212,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 
 		printGraphics = (Graphics2D)g;
 		printPageFormat = f;
+		printGraphics.scale(scale, scale);
 
 		// Notify other threads and wait until painting is finished
 		if (!endJob) {
@@ -282,14 +288,16 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 *
 	 * @param p the <code>VCLPageFormat</code>
 	 * @param n the job name
+	 * @param s the scale factor
 	 * @return <code>true</code> if the print job is properly setup otherwise
 	 *  <code>false</code>
 	 */
-	public boolean startJob(VCLPageFormat p, String n) {
+	public boolean startJob(VCLPageFormat p, String n, float s) {
 
 		// Detect if the user cancelled the print dialog
 		if (!jobStarted) {
 			pageFormat = p;
+			scale = s;
 			job = pageFormat.getPrinterJob();
 			job.setPrintable(this, pageFormat.getPageFormat());
 			job.setJobName(n);

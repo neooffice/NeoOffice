@@ -245,15 +245,16 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 		{
 			if ( !mID )
 			{
-				char *cSignature = "(Lcom/sun/star/vcl/VCLPageFormat;Ljava/lang/String;)Z";
+				char *cSignature = "(Lcom/sun/star/vcl/VCLPageFormat;Ljava/lang/String;F)Z";
 				mID = t.pEnv->GetMethodID( getMyClass(), "startJob", cSignature );
 			}
 			OSL_ENSURE( mID, "Unknown method id!" );
 			if ( mID )
 			{
-				jvalue args[2];
+				jvalue args[3];
 				args[0].l = _par0->getJavaObject();
 				args[1].l = StringToJavaString( t.pEnv, _par1 );
+				args[2].f = jfloat( NSPrintInfo_scale( _par0->getNativePrinterJob() ) );
 				out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethodA( object, getMyClass(), mID, args );
 			}
 		}

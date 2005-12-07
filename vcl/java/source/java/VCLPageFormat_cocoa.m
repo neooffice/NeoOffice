@@ -135,16 +135,6 @@ static BOOL bInDialog = NO;
 		if ( [mpInfo orientation] != mnOrientation )
 			[mpInfo setOrientation:mnOrientation ];
 
-		// Set the scaling factor to 100% until we can accurately implement
-		// scaling in the Java printing code
-		NSMutableDictionary *pDict = [mpInfo dictionary];
-		if ( pDict )
-		{
-			NSNumber *pNum = [NSNumber numberWithFloat:1.0];
-			if ( pNum )
-				[pDict setObject:pNum forKey:NSPrintScalingFactor];
-        }
-
 		mbFinished = NO;
 		[VCLPrintInfo setInDialog:YES];
 		[pLayout beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(pageLayoutDidEnd:returnCode:contextInfo:) contextInfo:nil];

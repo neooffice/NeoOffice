@@ -140,6 +140,28 @@ BOOL NSPrintInfo_pageRange( id pNSPrintInfo, int *nFirst, int *nLast )
 	return bRet;
 }
 
+float NSPrintInfo_scale( id pNSPrintInfo )
+{
+	float fRet = 1.0;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pNSPrintInfo )
+	{
+		NSMutableDictionary *pDictionary = [(NSPrintInfo *)pNSPrintInfo dictionary];
+		if ( pDictionary )
+		{
+			NSNumber *pNumber = [pDictionary objectForKey:NSPrintScalingFactor];
+			if ( pNumber )
+				fRet = [pNumber floatValue];
+		}
+	}
+
+	[pPool release];
+
+	return fRet;
+}
+
 id NSPrintInfo_showPrintDialog( id pNSPrintInfo, id pNSWindow )
 {
 	ShowPrintDialog *pRet = nil;
