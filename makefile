@@ -109,8 +109,7 @@ build.oo_checkout:
 
 build.oo_patches: build.oo_checkout \
 	build.oo_external_patch \
-	build.oo_solenv_patch \
-	build.oo_stlport_patch
+	build.oo_solenv_patch
 	touch "$@"
 
 build.oo_odk_patches: build.oo_checkout
@@ -131,7 +130,7 @@ build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.oo_checkout
 
 build.configure: build.oo_patches
 	cd "$(BUILD_HOME)/config_office" ; autoconf
-	( cd "$(BUILD_HOME)/config_office" ; ./configure CC=cc CXX=c++ PKG_CONFIG=$(PKG_CONFIG) --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-epm=internal --disable-mozilla --with-gnu-cp="$(GNUCP)" --with-x --x-includes=/usr/X11R6/include --with-lang="$(OO_LANGUAGES)" )
+	( cd "$(BUILD_HOME)/config_office" ; ./configure CC=cc CXX=c++ PKG_CONFIG=$(PKG_CONFIG) --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-epm=internal --disable-gtk --disable-mozilla --with-gnu-cp="$(GNUCP)" --with-x --x-includes=/usr/X11R6/include --with-lang="$(OO_LANGUAGES)" )
 	echo "unsetenv LD_SEG_ADDR_TABLE" >> "$(OO_ENV_X11)"
 	echo "unsetenv LD_PREBIND" >> "$(OO_ENV_X11)"
 	echo "unsetenv LD_PREBIND_ALLOW_OVERLAP" >> "$(OO_ENV_X11)"
