@@ -51,8 +51,8 @@ TARGET=wpd
 
 # --- Files --------------------------------------------------------
 
-TARFILE_NAME=libwpd-0.8.3
-PATCH_FILE_NAME=$(TARFILE_NAME).diff
+TARFILE_NAME=libwpd-0.8.4
+# PATCH_FILE_NAME=$(TARFILE_NAME).diff
 BUILD_ACTION=dmake
 BUILD_DIR=src/lib
 
