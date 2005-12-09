@@ -204,6 +204,13 @@ s#<value.*$#<value>1</value>#
     fi
 fi
 
+# Clean up old dictionary softlinks
+for i in `cd "$wordbookdir" ; find . -type l` ; do
+    if [ ! -s "$wordbookdir/$i" ] ; then
+        rm -f "$wordbookdir/$i"
+    fi
+done
+
 # Create user dictionary.lst file
 lang=`echo "$locale" | awk -F- '{ print $1 }'`
 sharedictdir="$sharebase/dict/ooo"
@@ -224,15 +231,15 @@ if [ -d "$sharedictdir" ] ; then
                 lasttype="$type"
                 lastlang="$lang"
                 lastcountry="$country"
+                for i in `cd "$sharedictdir" ; find . -name "*$lang*"` ; do
+                    if [ ! -s "$wordbookdir/$i" ] ; then
+                        ln -sf "$sharedictdir/$i" "$wordbookdir/$i"
+                    fi
+                done
             done < "$userdictlst.tmp" > "$userdictlst"
         fi
         rm -f "$userdictlst.tmp"
     fi
-    for i in `cd "$sharedictdir" ; find . -name "*$lang*"` ; do
-        if [ ! -r "$wordbookdir/$i" ] ; then
-            ln -sf "$sharedictdir/$i" "$wordbookdir/$i"
-        fi
-    done
 fi
 
 # Make locale the default document language
