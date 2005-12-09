@@ -101,7 +101,7 @@ if [ ! -d "$configdir" -o ! -d "$registrydir" -o ! -d "$wordbookdir" ] ; then
     # 1.1 preferences
     if [ ! -d "$userinstall" -a -d "$olduserinstall" ] ; then
         mkdir -p "$userinstall"
-        ( cd "$olduserinstall" ; pax -w "." ) | ( cd "$userinstall" ; pax -r )
+        ( cd "$olduserinstall" ; pax -w -x ustar "." ) | ( cd "$userinstall" ; pax -r )
         rm -f "$userinstall/../.lock"
         rm -f "$registrydir/Office/Common.xcu.set.3"
     else
@@ -116,7 +116,7 @@ if [ ! -z "$repair" ] ; then
         if [ ! -z "`ls "$userinstall"`" ] ; then
             userinstallbak="$userinstall.backup.`date +%Y%m%d%H%M`"
             mkdir -p "$userinstallbak"
-            ( cd "$userinstall" ; pax -w "." ) | ( cd "$userinstallbak" ; pax -r )
+            ( cd "$userinstall" ; pax -w -x ustar "." ) | ( cd "$userinstallbak" ; pax -r )
         fi
     else
         rm -f "$userinstall"
@@ -124,11 +124,11 @@ if [ ! -z "$repair" ] ; then
     mkdir -p "$userinstall"
     # Make a clean copy of the registry directory
     rm -Rf "$userinstall/registry"
-    ( cd "$userbase" ; pax -w "registry" ) | ( cd "$userinstall" ; pax -r )
+    ( cd "$userbase" ; pax -w -x ustar "registry" ) | ( cd "$userinstall" ; pax -r )
 fi
 
 # Copy any missing files
-( cd "$userbase" ; pax -w "." ) | ( cd "$userinstall" ; pax -r -k )
+( cd "$userbase" ; pax -w -x ustar "." ) | ( cd "$userinstall" ; pax -r -k )
 chmod -Rf u+rwx "$userinstall"
 if [ ! -d "$configdir" -o ! -d "$registrydir" -o ! -d "$wordbookdir" ] ; then
     error "Installation of files in the $userinstall directory failed"
@@ -305,7 +305,7 @@ if [ "$os" = "Darwin" ] ; then
     fi
     # Force vcl.jar into bootstrap classpath so that we are sure that our
     # classes are loaded
-    printf "[Java]\nRuntimeLib=$javavm\njava.ext.dirs=$javabasedir/Home/lib/ext\njava.endorsed.dirs=\n" > "$configdir/javarc"
+    printf "[Java]\nRuntimeLib=$javavm\njava.ext.dirs=$javabasedir/Home/lib/ext\njava.endorsed.dirs=\n-Xbootclasspath/a:$apphome/classes/vcl.jar\n" > "$configdir/javarc"
 else
     printf "[Java]\n" > "$configdir/javarc"
 fi
