@@ -86,7 +86,7 @@ int main( int argc, char *argv[] )
 
 	// Assign command's directory to DYLD_LIBRARY_PATH environment variable
 	ByteString aLibPath( getenv( "DYLD_LIBRARY_PATH" ) );
-	if ( aCmdPath.Len() )
+	if ( aCmdPath.Len() && aLibPath.GetToken( 0, ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 ).GetChar( 0 ) ).CompareTo( aCmdPath, aCmdPath.Len() ) != COMPARE_EQUAL )
 	{
 		ByteString aTmpPath( "DYLD_LIBRARY_PATH=" );
 		aTmpPath += aCmdPath;
@@ -96,11 +96,23 @@ int main( int argc, char *argv[] )
 			aTmpPath += aLibPath;
 		}
 		putenv( aTmpPath.GetBuffer() );
-		// Restart if necessary since most library path changes don't have
-		// any affect after the application has already started on most
-		// platforms
-		if ( aLibPath.GetToken( 0, ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 ).GetChar( 0 ) ).CompareTo( aCmdPath, aCmdPath.Len() ) != COMPARE_EQUAL )
-			execv( pCmdPath, argv );
+
+		// Fix bug 1198 by setting the DYLD_FRAMEWORK_PATH environment variable
+		// to the standard framework directories documented in the ld man page
+		// if DYLD_LIBRARY_PATH is set so that frameworks are searched before
+		// the paths in DYLD_LIBRARY_PATH
+		ByteString aFrameworkPath( getenv( "DYLD_FRAMEWORK_PATH" ) );
+		aTmpPath = ByteString( "DYLD_FRAMEWORK_PATH=/Library/Frameworks:/Network/Library/Frameworks:/System/Library/Frameworks" );
+		if ( aFrameworkPath.Len() )
+		{
+			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
+			aTmpPath += aFrameworkPath;
+		}
+		putenv( aTmpPath.GetBuffer() );
+
+		// Restart if necessary since most library path changes don't have any
+		// effect after the application has already started on most platforms
+		execv( pCmdPath, argv );
 	}
 
 	SVMain();
