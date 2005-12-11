@@ -1426,15 +1426,19 @@ public final class VCLGraphics {
 			g.dispose();
 		}
 
-		double fScaleX = font.getScaleX();
-		if (fScaleX != 1.0) {
-			if ((glyphOrientation & VCLGraphics.GF_ROTMASK) != 0)
-				bounds = new Rectangle2D.Double(bounds.getX(), bounds.getY() * fScaleX, bounds.getWidth(), bounds.getHeight() * fScaleX);
-			else
-				bounds = new Rectangle2D.Double(bounds.getX() * fScaleX, bounds.getY(), bounds.getWidth() * fScaleX, bounds.getHeight());
+		if (bounds != null) {
+			double fScaleX = font.getScaleX();
+			if (fScaleX != 1.0) {
+				if ((glyphOrientation & VCLGraphics.GF_ROTMASK) != 0)
+					bounds = new Rectangle2D.Double(bounds.getX(), bounds.getY() * fScaleX, bounds.getWidth(), bounds.getHeight() * fScaleX);
+				else
+					bounds = new Rectangle2D.Double(bounds.getX() * fScaleX, bounds.getY(), bounds.getWidth() * fScaleX, bounds.getHeight());
+			}
+
+			return bounds.getBounds();
 		}
 
-		return bounds.getBounds();
+		return null;
 
 	}
 
