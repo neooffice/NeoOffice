@@ -337,30 +337,9 @@ if [ -d "$shareautocorrdir" -a -d "$userautocorrdir" ] ; then
     done
 fi
 
-# Fix bug 154 by checking if the installation location has changed
-lastcontentshomefile="$userinstall/.lastcontentshome"
-contentshome=`dirname "$apphome"`
-if [ -d "$contentshome" -a -r "$lastcontentshomefile" ] ; then
-    lastcontentshome=`cat /dev/null "$lastcontentshomefile"`
-    rm -f "$lastcontentshomefile"
-    if [ ! -z "$lastcontentshome" ] ; then
-        for i in `cd "$userinstall" ; find . -type f -name "*.x*"` ; do
-            rm -f "$userinstall/$i.tmp"
-            if [ ! -f "$userinstall/$i.tmp" ] ; then
-                sed -e "s#$lastcontentshome#$contentshome#g" "$userinstall/$i" > "$userinstall/$i.tmp"
-                if [ $? -eq 0 -a -s "$userinstall/$i.tmp" ] ; then
-                    mv -f "$userinstall/$i.tmp" "$userinstall/$i"
-                else
-                    rm -f "$userinstall/$i.tmp"
-                fi
-            fi
-        done
-    fi
-fi
-echo "$contentshome" > "$lastcontentshomefile"
-
 # Fix bug 1167 by removing any old NeoOffice/J path reference
-oldpathsfixedfile="$userinstall/.oldpathsfixed"
+lastcontentshomefile="$userinstall/.lastcontentshome"
+oldpathsfixedfile="$userinstall/.oldpathsfixed.1"
 if [ ! -r "$oldpathsfixedfile" ] ; then
     for i in `cd "$userinstall" ; find . -type f -name "*.x*"` ; do
         rm -f "$userinstall/$i.tmp"
@@ -373,8 +352,35 @@ if [ ! -r "$oldpathsfixedfile" ] ; then
             fi
         fi
     done
+    rm -f "$lastcontentshomefile"
     touch -f "$oldpathsfixedfile"
 fi
+
+# Fix bug 154 by checking if the installation location has changed
+contentshome=`dirname "$apphome"`/
+if [ -d "$contentshome" ] ; then
+    if [ ! -s "$lastcontentshomefile" ] ; then
+        cat /dev/null "$userinstall/basic/"*.xlc | grep '"file:\/\/\/.*\.app\/Contents\/' | sed 's#^.*"file:\/\/\(\/.*\.app\/Contents\/\).*$#\1#g' | uniq > "$lastcontentshomefile"
+    fi
+    if [ -s "$lastcontentshomefile" ] ; then
+        while read currentcontentshome ; do
+            if [ ! -z "$currentcontentshome" -a "$currentcontentshome" != "$contentshome" ] ; then
+                for i in `cd "$userinstall" ; find . -type f -name "*.x*"` ; do
+                    rm -f "$userinstall/$i.tmp"
+                    if [ ! -f "$userinstall/$i.tmp" ] ; then
+                        sed -e "s#$currentcontentshome#$contentshome#g" "$userinstall/$i" > "$userinstall/$i.tmp"
+                        if [ $? -eq 0 -a -s "$userinstall/$i.tmp" ] ; then
+                            mv -f "$userinstall/$i.tmp" "$userinstall/$i"
+                        else
+                            rm -f "$userinstall/$i.tmp"
+                        fi
+                    fi
+                done
+            fi
+        done < "$lastcontentshomefile"
+    fi
+fi
+echo "$contentshome" > "$lastcontentshomefile"
 
 # Make sure that there is a /tmp directory
 if [ "$os" = "Darwin" ] ; then
