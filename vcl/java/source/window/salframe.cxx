@@ -119,7 +119,7 @@ SalFrame::SalFrame()
 
 SalFrame::~SalFrame()
 {
-	Show( FALSE, FALSE );
+	Show( FALSE );
 	StartPresentation( FALSE );
 }
 
@@ -197,6 +197,8 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 	if ( maFrameData.mbVisible )
 	{
+		maFrameData.mbInShow = TRUE;
+
 		// Get native window since it won't be created until first shown
 		maFrameData.maSysData.aWindow = (long)maFrameData.mpVCLFrame->getNativeWindowRef();
 		maFrameData.mbCenter = FALSE;
@@ -208,7 +210,7 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		{
 			if ( (*it)->maFrameData.mbVisible )
 			{
-				(*it)->Show( FALSE, FALSE );
+				(*it)->Show( FALSE );
 				(*it)->Show( TRUE, FALSE );
 			}
 		}
@@ -217,6 +219,10 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		// to the child frame
 		if ( !bNoActivate )
 			ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+		else if ( pSalData->mpFocusFrame )
+			pSalData->mpFocusFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+
+		maFrameData.mbInShow = FALSE;
 	}
 	else
 	{
@@ -525,8 +531,9 @@ void SalFrame::ToTop( USHORT nFlags )
 		bSuccess = maFrameData.mpVCLFrame->requestFocus();
 
 	// If Java has set the focus, update it now in the OOo code as it may
-	// take a while before the Java event shows up in the queue
-	if ( bSuccess )
+	// take a while before the Java event shows up in the queue. Fix bug
+	// 1203 by not doing this update if we are in the Show() method.
+	if ( bSuccess && !maFrameData.mbInShow )
 	{
 		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_GETFOCUS, this, NULL );
 		aEvent.dispatch();
@@ -787,6 +794,7 @@ SalFrameData::SalFrameData()
 	mbPresentation = FALSE;
 	mpMenuBar = NULL;
 	mbUseMainScreenOnly = FALSE;
+	mbInShow = FALSE;
 }
 
 // -----------------------------------------------------------------------
