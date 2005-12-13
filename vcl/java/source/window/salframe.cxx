@@ -274,6 +274,8 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	if ( maFrameData.mnStyle & SAL_FRAME_STYLE_CHILD )
 		return;
 
+	maFrameData.mbInSetPosSize = TRUE;
+
 	Rectangle aPosSize( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
 
 	if ( ! ( nFlags & SAL_FRAME_POSSIZE_X ) )
@@ -353,6 +355,8 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	// Update the cached position
 	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, NULL );
 	aEvent.dispatch();
+
+	maFrameData.mbInSetPosSize = FALSE;
 }
 
 // -----------------------------------------------------------------------
@@ -388,6 +392,8 @@ void SalFrame::SetWindowState( const SalFrameState* pState )
 		nFlags |= SAL_FRAME_POSSIZE_HEIGHT;
 	if ( nFlags )
 	{
+		maFrameData.mbUseMainScreenOnly = FALSE;
+
 		Rectangle aPosSize( Point( pState->mnX, pState->mnY ), Size( pState->mnWidth, pState->mnHeight ) );
 		if ( maFrameData.mpParent )
 			aPosSize.Move( -maFrameData.mpParent->maGeometry.nX, -maFrameData.mpParent->maGeometry.nY );
@@ -746,6 +752,7 @@ void SalFrame::SetParent( SalFrame* pNewParent )
 
 		if ( maFrameData.mpParent )
 		{
+			maFrameData.mbUseMainScreenOnly = FALSE;
 			maFrameData.mpParent->maFrameData.mpVCLFrame->addChild( this );
 			maFrameData.mpParent->maFrameData.maChildren.push_back( this );
 		}
@@ -793,7 +800,8 @@ SalFrameData::SalFrameData()
 	mbFullScreen = FALSE;
 	mbPresentation = FALSE;
 	mpMenuBar = NULL;
-	mbUseMainScreenOnly = FALSE;
+	mbUseMainScreenOnly = TRUE;
+	mbInSetPosSize = FALSE;
 	mbInShow = FALSE;
 }
 

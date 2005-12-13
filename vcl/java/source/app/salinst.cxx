@@ -528,12 +528,7 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 	pFrame->maFrameData.maSysData.pSalFrame = pFrame;
 
 	// Set initial parent
-	pFrame->maFrameData.mpParent = pParent;
-	if ( pFrame->maFrameData.mpParent )
-	{
-		pFrame->maFrameData.mpParent->maFrameData.mpVCLFrame->addChild( pFrame );
-		pFrame->maFrameData.mpParent->maFrameData.maChildren.push_back( pFrame );
-	}
+	pFrame->SetParent( pParent );
 
 	// Insert this window into the window list
 	SalData *pSalData = GetSalData();
@@ -555,10 +550,7 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 	}
 	else
 	{
-		// Fix bug 1194 by forcing the work area to the main screen
-		pFrame->maFrameData.mbUseMainScreenOnly = TRUE;
 		pFrame->GetWorkArea( aWorkArea );
-		pFrame->maFrameData.mbUseMainScreenOnly = FALSE;
 	}
 
 	long nX = aWorkArea.nLeft;

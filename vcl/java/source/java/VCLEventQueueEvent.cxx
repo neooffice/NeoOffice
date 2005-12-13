@@ -541,6 +541,9 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pFrame->maGeometry.nWidth = pPosSize->GetWidth() - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration;
 				pFrame->maGeometry.nHeight = pPosSize->GetHeight() - pFrame->maGeometry.nTopDecoration - pFrame->maGeometry.nBottomDecoration;
 
+				if ( !pFrame->maFrameData.mbInSetPosSize )
+					pFrame->maFrameData.mbUseMainScreenOnly = FALSE;
+
 				// Reset graphics
 				com_sun_star_vcl_VCLGraphics *pVCLGraphics = pFrame->maFrameData.mpVCLFrame->getGraphics();
 				if ( pVCLGraphics )
