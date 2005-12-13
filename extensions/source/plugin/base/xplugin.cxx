@@ -6,37 +6,31 @@
  *
  *  last change: $Author$ $Date$
  *
- *  The Contents of this file are made available subject to the terms of
- *  either of the following licenses
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- *         - GNU General Public License Version 2.1
  *
- *  Sun Microsystems Inc., October, 2000
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- *  GNU General Public License Version 2.1
- *  =============================================
- *  Copyright 2000 by Sun Microsystems, Inc.
- *  901 San Antonio Road, Palo Alto, CA 94303, USA
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
  *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public
- *  License version 2.1, as published by the Free Software Foundation.
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
  *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
  *
- *  You should have received a copy of the GNU General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *  MA  02111-1307  USA
- *  
- *  =================================================
- *  Modified December 2004 by Patrick Luby. SISSL Removed. NeoOffice is
- *  distributed under GPL only under modification term 3 of the LGPL.
- *
- *  Contributor(s): _______________________________________
+ *    Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
 
@@ -52,6 +46,7 @@
 #ifndef _COM_SUN_STAR_LOADER_CANNOTACTIVATEFACTORYEXCEPTION_HPP_
 #include <com/sun/star/loader/CannotActivateFactoryException.hpp>
 #endif
+
 #include <plugin/impl.hxx>
 #include <tools/fsys.hxx>
 #include <ucbhelper/content.hxx>
@@ -75,10 +70,6 @@ using namespace com::sun::star::beans;
 using namespace com::sun::star::plugin;
 using namespace rtl;
 using namespace osl;
-
-#include <osl/file.h>
-#include <osl/thread.h>
-#define OU2ENC(rtlOUString)     ::rtl::OString((rtlOUString).getStr(), (rtlOUString).getLength(), osl_getThreadTextEncoding()).getStr()
 
 class PluginDisposer : public vos::OTimer
 {
@@ -536,7 +527,7 @@ void XPlugin_Impl::loadPlugin()
 #ifdef UNX
 #ifndef USE_JAVA
     XSync( (Display*)pEnvData->pDisplay, False );
-#endif	// USE_JAVA
+#endif	// !USE_JAVA
 #endif
     if( ! getPluginComm() )
     {
@@ -577,7 +568,7 @@ void XPlugin_Impl::loadPlugin()
 #ifdef UNX
 #ifndef USE_JAVA
     XSync( (Display*)pEnvData->pDisplay, False );
-#endif	// USE_JAVA
+#endif	// !USE_JAVA
 #endif
 #ifdef UNX
     m_aNPWindow.window      = (void*)pEnvData->aWindow;
@@ -799,17 +790,24 @@ sal_Bool XPlugin_Impl::provideNewStream(const OUString& mimetype,
         }
         fprintf( stderr, "Plugin wants it in Mode %s\n", pType );
 #endif
-
-        if( (isfile || (strncmp(pStream->getStream()->url,"file://",7)==0)) && stype == NP_ASFILEONLY ) {
-
-	    OUString aSyspath;
-            OUString aURL = OUString::createFromAscii(pStream->getStream()->url);
-            osl_getSystemPathFromFileURL(aURL.pData,&aSyspath.pData);
+        if( isfile && stype == NP_ASFILEONLY )
+        {
+            OString aFileName;
+            if( url.compareToAscii( "file:", 5 ) == 0 )
+            {
+                OUString aSysName;
+                osl_getSystemPathFromFileURL( url.pData, &aSysName.pData );
+                aFileName = OUStringToOString( aSysName, m_aEncoding );
+            }
+            else
+                aFileName = OUStringToOString( url, m_aEncoding );
             m_pPluginComm->
                 NPP_StreamAsFile( &m_aInstance,
                                   pStream->getStream(),
-                                  OU2ENC(aSyspath));
-        } else {
+                                  aFileName.getStr() );
+        }
+        else
+        {
             pStream->setMode( stype );
 
             if( ! stream.is() )
