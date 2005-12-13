@@ -6,37 +6,31 @@
  *
  *  last change: $Author$ $Date$
  *
- *  The Contents of this file are made available subject to the terms of
- *  either of the following licenses
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- *         - GNU General Public License Version 2.1
  *
- *  Sun Microsystems Inc., October, 2000
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- *  GNU General Public License Version 2.1
- *  =============================================
- *  Copyright 2000 by Sun Microsystems, Inc.
- *  901 San Antonio Road, Palo Alto, CA 94303, USA
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
  *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public
- *  License version 2.1, as published by the Free Software Foundation.
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
  *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
  *
- *  You should have received a copy of the GNU General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *  MA  02111-1307  USA
- *  
- *  =================================================
- *  Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
- *  distributed under GPL only under modification term 3 of the LGPL.
- *
- *  Contributor(s): _______________________________________
+ *    Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
 
@@ -49,6 +43,16 @@
 #ifndef _RTL_URI_HXX_
 #include <rtl/uri.hxx>
 #endif
+#include <rtl/ustring.hxx>
+#include <comphelper/processfactory.hxx>
+#include <com/sun/star/uri/XExternalUriReferenceTranslator.hpp>
+#include <com/sun/star/lang/XMultiServiceFactory.hpp>
+#include <com/sun/star/uno/Reference.hxx>
+
+using namespace rtl;
+using namespace com::sun::star::lang;
+using namespace com::sun::star::uri;
+using namespace com::sun::star::uno;
 
 namespace desktop
 {
@@ -61,12 +65,13 @@ static CommandLineArgs::BoolParam aModuleGroupDefinition[] =
 	CommandLineArgs::CMD_BOOLPARAM_IMPRESS,
 	CommandLineArgs::CMD_BOOLPARAM_GLOBAL,
 	CommandLineArgs::CMD_BOOLPARAM_MATH,
-	CommandLineArgs::CMD_BOOLPARAM_WEB
+	CommandLineArgs::CMD_BOOLPARAM_WEB,
+	CommandLineArgs::CMD_BOOLPARAM_BASE
 };
 
 CommandLineArgs::GroupDefinition CommandLineArgs::m_pGroupDefinitions[ CommandLineArgs::CMD_GRPID_COUNT ] =
 {
-	{ 7, aModuleGroupDefinition }
+	{ 8, aModuleGroupDefinition }
 };
 
 CommandLineArgs::CommandLineArgs()
@@ -75,7 +80,7 @@ CommandLineArgs::CommandLineArgs()
 }
 
 // intialize class with command line parameters from process environment
-CommandLineArgs::CommandLineArgs( const ::vos::OExtCommandLine& aExtCmdLine )
+CommandLineArgs::CommandLineArgs( ::vos::OExtCommandLine& aExtCmdLine )
 {
 	ResetParamValues();
 	ParseCommandLine_Impl( aExtCmdLine );
@@ -90,24 +95,43 @@ CommandLineArgs::CommandLineArgs( const ::rtl::OUString& aCmdLineArgs )
 
 // ----------------------------------------------------------------------------
 
-void CommandLineArgs::ParseCommandLine_Impl( const ::vos::OExtCommandLine& aExtCmdLine )
+void CommandLineArgs::ParseCommandLine_Impl( ::vos::OExtCommandLine& aCmdLine )
 {
-    ::vos::OExtCommandLine aCmdLine;
-
 	sal_uInt32		nCount = aCmdLine.getCommandArgCount();
 	::rtl::OUString	aDummy;
 	String			aArguments;
+
+	Reference<XMultiServiceFactory> xMS(comphelper::getProcessServiceFactory(), UNO_QUERY);
+	OSL_ENSURE(xMS.is(), "CommandLineArgs: no ProcessServiceFactory.");
+
+    Reference< XExternalUriReferenceTranslator > xTranslator(
+        xMS->createInstance(
+        OUString::createFromAscii(
+        "com.sun.star.uri.ExternalUriReferenceTranslator")),
+        UNO_QUERY);
+
 
 	// Extract cmdline parameters and concat them to the cmdline string format
 	for( sal_uInt32 i=0; i < nCount; i++ )
 	{
 		aCmdLine.getCommandArg( i, aDummy );
+
 #ifdef MACOSX
-		// When launched from the Mac OS X Finder, the first argument begins
-		// with the Carbon process serial number
-		if ( !i && aDummy.matchAsciiL( "-psn_", 5 ) )
-			continue;
+        // When launched from the Mac OS X Finder, the first argument begins
+        // with the Carbon process serial number
+        if ( !i && aDummy.matchAsciiL( "-psn_", 5 ) )
+            continue;
 #endif	// MACOSX
+
+        // convert file URLs to internal form #112849#
+        if (aDummy.indexOf(OUString::createFromAscii("file:"))==0 && 
+            xTranslator.is())
+        {
+            OUString tmp(xTranslator->translateToInternal(aDummy));
+            if (tmp.getLength() > 0)
+                aDummy = tmp;
+        }
+
 		aArguments += String( aDummy );
 		aArguments += '|';
 	}
@@ -144,6 +168,7 @@ void CommandLineArgs::ParseCommandLine_String( const ::rtl::OUString& aCmdLineSt
     sal_Bool	bForceNewEvent	= sal_False;
 	sal_Bool 	bDisplaySpec	= sal_False;
 
+    m_nArgumentCount = 0;
     m_bEmpty = (aCmdLineString.getLength()<1);
 
     sal_Int32 nIndex = 0;
@@ -154,6 +179,7 @@ void CommandLineArgs::ParseCommandLine_String( const ::rtl::OUString& aCmdLineSt
 
 		if ( aArg.getLength() > 0 )
 		{
+		    m_nArgumentCount++;
 			if ( !InterpretCommandLineParameter( aArg ))
 			{
 				if ( aArgStr.GetChar(0) == '-' )
@@ -332,7 +358,9 @@ sal_Bool CommandLineArgs::InterpretCommandLineParameter( const ::rtl::OUString& 
 	}
 	else if ( aArg.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "-quickstart" )) == sal_True )
 	{
+#ifdef WNT
 		SetBoolParam_Impl( CMD_BOOLPARAM_QUICKSTART, sal_True );
+#endif
 		return sal_True;
 	}
 	else if ( aArg.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "-terminate_after_init" )) == sal_True )
@@ -375,6 +403,11 @@ sal_Bool CommandLineArgs::InterpretCommandLineParameter( const ::rtl::OUString& 
     else if ( aArg.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "-helpimpress" )) == sal_True )
 	{
 		SetBoolParam_Impl( CMD_BOOLPARAM_HELPIMPRESS, sal_True );
+		return sal_True;
+	}
+	else if ( aArg.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "-helpbase" )) == sal_True )
+	{
+		SetBoolParam_Impl( CMD_BOOLPARAM_HELPBASE, sal_True );
 		return sal_True;
 	}
     else if ( aArg.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "-helpbasic" )) == sal_True )
@@ -454,6 +487,13 @@ sal_Bool CommandLineArgs::InterpretCommandLineParameter( const ::rtl::OUString& 
 			SetBoolParam_Impl( CMD_BOOLPARAM_IMPRESS, sal_True );
         return sal_True;
 	}
+	else if ( aArg.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "-base" )) == sal_True )
+	{
+		sal_Bool bAlreadySet = CheckGroupMembers( CMD_GRPID_MODULE, CMD_BOOLPARAM_BASE );
+		if ( !bAlreadySet )
+			SetBoolParam_Impl( CMD_BOOLPARAM_BASE, sal_True );
+        return sal_True;
+	}
 	else if ( aArg.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "-global" )) == sal_True )
 	{
 		sal_Bool bAlreadySet = CheckGroupMembers( CMD_GRPID_MODULE, CMD_BOOLPARAM_GLOBAL );
@@ -494,11 +534,14 @@ sal_Bool CommandLineArgs::CheckGroupMembers( GroupParamId nGroupId, BoolParam nE
 
 void CommandLineArgs::ResetParamValues()
 {
-	for ( int i = 0; i < CMD_BOOLPARAM_COUNT; i++ )
+	int i;
+
+	for ( i = 0; i < CMD_BOOLPARAM_COUNT; i++ )
 		m_aBoolParams[i] = sal_False;
 	for ( i = 0; i < CMD_STRINGPARAM_COUNT; i++ )
 		m_aStrSetParams[i] = sal_False;
     m_bEmpty = sal_True;
+    m_nArgumentCount = 0;
 }
 
 sal_Bool CommandLineArgs::GetBoolParam( BoolParam eParam ) const
@@ -633,6 +676,12 @@ sal_Bool CommandLineArgs::IsHelpImpress() const
 	osl::MutexGuard  aMutexGuard( m_aMutex );
 	return m_aBoolParams[ CMD_BOOLPARAM_HELPIMPRESS ];
 }
+
+sal_Bool CommandLineArgs::IsHelpBase() const
+{
+	osl::MutexGuard  aMutexGuard( m_aMutex );
+	return m_aBoolParams[ CMD_BOOLPARAM_HELPBASE ];
+}
 sal_Bool CommandLineArgs::IsHelpMath() const
 {
 	osl::MutexGuard  aMutexGuard( m_aMutex );
@@ -666,6 +715,12 @@ sal_Bool CommandLineArgs::IsImpress() const
 {
 	osl::MutexGuard  aMutexGuard( m_aMutex );
 	return m_aBoolParams[ CMD_BOOLPARAM_IMPRESS ];
+}
+
+sal_Bool CommandLineArgs::IsBase() const
+{
+	osl::MutexGuard  aMutexGuard( m_aMutex );
+	return m_aBoolParams[ CMD_BOOLPARAM_BASE ];
 }
 
 sal_Bool CommandLineArgs::IsGlobal() const
@@ -808,6 +863,13 @@ sal_Bool CommandLineArgs::IsEmpty() const
 {
     osl::MutexGuard  aMutexGuard( m_aMutex );
     return m_bEmpty;
+}
+
+sal_Bool CommandLineArgs::IsEmptyOrAcceptOnly() const
+{
+    osl::MutexGuard  aMutexGuard( m_aMutex );
+
+    return m_bEmpty || ( ( m_nArgumentCount == 1 ) && ( m_aStrParams[ CMD_STRINGPARAM_ACCEPT ].getLength() ) );
 }
 
 } // namespace desktop

@@ -6,37 +6,31 @@
  *
  *  last change: $Author$ $Date$
  *
- *  The Contents of this file are made available subject to the terms of
- *  either of the following licenses
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- *         - GNU General Public License Version 2.1
  *
- *  Sun Microsystems Inc., October, 2000
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- *  GNU General Public License Version 2.1
- *  =============================================
- *  Copyright 2000 by Sun Microsystems, Inc.
- *  901 San Antonio Road, Palo Alto, CA 94303, USA
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
  *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public
- *  License version 2.1, as published by the Free Software Foundation.
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
  *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
  *
- *  You should have received a copy of the GNU General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *  MA  02111-1307  USA
- *  
- *  =================================================
- *  Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
- *  distributed under GPL only under modification term 3 of the LGPL.
- *
- *  Contributor(s): _______________________________________
+ *    Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
 
@@ -70,12 +64,18 @@
 #ifndef _RTL_USTRBUF_HXX_
 #include <rtl/ustrbuf.hxx>
 #endif
+#ifndef INCLUDED_RTL_INSTANCE_HXX
+#include <rtl/instance.hxx>
+#endif
 #ifndef _OSL_CONDITN_HXX_
 #include <osl/conditn.hxx>
 #endif
 #ifndef INCLUDED_SVTOOLS_MODULEOPTIONS_HXX
 #include <svtools/moduleoptions.hxx>
 #endif
+#include <comphelper/processfactory.hxx>
+#include <com/sun/star/uri/XExternalUriReferenceTranslator.hpp>
+
 
 using namespace vos;
 using namespace rtl;
@@ -83,6 +83,7 @@ using namespace desktop;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::frame;
+using namespace ::com::sun::star::uri;
 
 const char  *OfficeIPCThread::sc_aTerminationSequence = "InternalIPC::TerminateThread";
 const int OfficeIPCThread::sc_nTSeqLength = 28;
@@ -105,7 +106,7 @@ namespace desktop
 String GetURL_Impl( const String& rName );
 
 OfficeIPCThread*	OfficeIPCThread::pGlobalOfficeIPCThread = 0;
-OSecurity			OfficeIPCThread::maSecurity;
+namespace { struct Security : public rtl::Static<OSecurity, Security> {}; }
 ::osl::Mutex*		OfficeIPCThread::pOfficeIPCThreadMutex = 0;
 
 
@@ -316,7 +317,7 @@ OfficeIPCThread::Status OfficeIPCThread::EnableOfficeIPCThread()
 	// The name of the named pipe is created with the hashcode of the user installation directory (without /user). We have to retrieve
 	// this information from a unotools implementation.
 	::utl::Bootstrap::PathStatus aLocateResult = ::utl::Bootstrap::locateUserInstallation( aUserInstallPath );
-	if ( aLocateResult == ::utl::Bootstrap::PATH_EXISTS )
+	if ( aLocateResult == ::utl::Bootstrap::PATH_EXISTS || aLocateResult == ::utl::Bootstrap::PATH_VALID)
 		aDummy = aUserInstallPath;
 	else
 	{
@@ -340,19 +341,24 @@ OfficeIPCThread::Status OfficeIPCThread::EnableOfficeIPCThread()
 	PipeMode nPipeMode = PIPEMODE_DONTKNOW;
 	do
 	{
+		OSecurity &rSecurity = Security::get();
 		// Try to create pipe
-		if ( pThread->maPipe.create( pThread->maPipeIdent.getStr(), OPipe::TOption_Create, maSecurity ))
+		if ( pThread->maPipe.create( pThread->maPipeIdent.getStr(), OPipe::TOption_Create, rSecurity ))
 		{
 			// Pipe created
 			nPipeMode = PIPEMODE_CREATED;
 		}
-		else if( pThread->maPipe.create( pThread->maPipeIdent.getStr(), OPipe::TOption_Open, maSecurity )) // Creation not successfull, now we try to connect
+		else if( pThread->maPipe.create( pThread->maPipeIdent.getStr(), OPipe::TOption_Open, rSecurity )) // Creation not successfull, now we try to connect
 		{
 			// Pipe connected to first office
 			nPipeMode = PIPEMODE_CONNECTED;
 		}
 		else
 		{
+			OPipe::TPipeError eReason = pThread->maPipe.getError();
+			if ((eReason == OPipe::E_ConnectionRefused) || (eReason == OPipe::E_invalidError))
+				return IPC_STATUS_BOOTSTRAP_ERROR;
+
 			// Wait for second office to be ready
 			TimeValue aTimeValue;
 			aTimeValue.Seconds = 0;
@@ -388,6 +394,13 @@ OfficeIPCThread::Status OfficeIPCThread::EnableOfficeIPCThread()
 		{
             sal_Bool    bPrintTo = sal_False;
             OUString    aPrintToCmd( RTL_CONSTASCII_USTRINGPARAM( "-pt" ));
+
+            Reference< XExternalUriReferenceTranslator > xTranslator(
+                comphelper::getProcessServiceFactory()->createInstance(
+                OUString::createFromAscii(
+                "com.sun.star.uri.ExternalUriReferenceTranslator")),
+                UNO_QUERY);
+
             for( ULONG i=0; i < nCount; i++ )
 			{
 				aInfo.getCommandArg( i, aDummy );
@@ -398,8 +411,19 @@ OfficeIPCThread::Status OfficeIPCThread::EnableOfficeIPCThread()
 				if( aDummy.indexOf('-',0) != 0 )
 				{
                     bWaitBeforeClose = sal_True;
-					if ( !bPrintTo )
+                    // convert to an absolut url, but don't touch extrnal file URLs here
+                    if ( !bPrintTo)
+                    {
+                        // convert file URLs to internal form #112849#
+                        if (aDummy.indexOf(OUString::createFromAscii("file:"))==0 &&
+                            xTranslator.is())
+                        {
+                            OUString tmp(xTranslator->translateToInternal(aDummy));
+                            if (tmp.getLength() > 0)
+                                aDummy = tmp;
+                        }
 					    aDummy = GetURL_Impl( aDummy );
+                    }
                     bPrintTo = sal_False;
 				}
                 else
@@ -450,27 +474,27 @@ void OfficeIPCThread::DisableOfficeIPCThread()
 		// send thread a termination message
 		// this is done so the subsequent join will not hang
 		// because the thread hangs in accept of pipe
-        	OPipe Pipe( pOfficeIPCThread->maPipeIdent, OPipe::TOption_Open, maSecurity );
-		if (Pipe.isValid()) {
+        OPipe Pipe( pOfficeIPCThread->maPipeIdent, OPipe::TOption_Open, Security::get() );
 		//Pipe.send( TERMINATION_SEQUENCE, TERMINATION_LENGTH );
-		Pipe.send( sc_aTerminationSequence, sc_nTSeqLength+1 ); // also send 0-byte
+        if (Pipe.isValid())
+        {
+    		Pipe.send( sc_aTerminationSequence, sc_nTSeqLength+1 ); // also send 0-byte
 
-		// close the pipe so that the streampipe on the other
-		// side produces EOF
-			Pipe.close();
-		}
+	    	// close the pipe so that the streampipe on the other
+    		// side produces EOF
+	    	Pipe.close();
+        }
 
 		// release mutex to avoid deadlocks
 		aMutex.clear();
 
-        // set condition in case we are still waiting for it in run
-        // with pGlobalOfficeIPCThread set to NULL we will exit the run method
-        // afterwards
         OfficeIPCThread::SetReady(pOfficeIPCThread);
 
 		// exit gracefully and join
 		pOfficeIPCThread->join();
-        delete pOfficeIPCThread;
+		delete pGlobalOfficeIPCThread;
+
+
 	}
 }
 
@@ -499,15 +523,13 @@ static void AddURLToStringList( const rtl::OUString& aURL, rtl::OUString& aStrin
 	aStringList += aURL;
 }
 
-void OfficeIPCThread::SetReady(OfficeIPCThread* pIPCThread)
+void OfficeIPCThread::SetReady(OfficeIPCThread* pThread)
 {
-    osl::ClearableMutexGuard aGuard(GetMutex());
-    if (pGlobalOfficeIPCThread != NULL) 
-        pGlobalOfficeIPCThread->cReady.set();
-    else
-        if (pIPCThread != NULL)
-            pIPCThread->cReady.set();
-
+    if (pThread == NULL) pThread = pGlobalOfficeIPCThread;
+    if (pThread != NULL)
+    {
+        pThread->cReady.set();
+    }
 }
 
 void SAL_CALL OfficeIPCThread::run()
@@ -519,7 +541,22 @@ void SAL_CALL OfficeIPCThread::run()
 
 
 		if( nError == OStreamPipe::E_None )
-		{			
+		{
+
+            // #111143# and others:
+            // if we receive a request while the office is displaying some dialog or error during
+            // bootstrap, that dialogs event loop might get events that are dispatched by this thread
+            // we have to wait for cReady to be set by the real main loop.
+            // only reqests that dont dispatch events may be processed before cReady is set.
+            cReady.wait();
+
+            // we might have decided to shutdown while we were sleeping
+            if (!pGlobalOfficeIPCThread) return;
+
+            // only lock the mutex when processing starts, othewise we deadlock when the office goes
+            // down during wait
+            osl::ClearableMutexGuard aGuard( GetMutex() );
+
             ByteString aArguments;
             // test byte by byte
             const int nBufSz = 2048;
@@ -534,26 +571,12 @@ void SAL_CALL OfficeIPCThread::run()
 			        break;
 		        }
 	        }
-
-            // #111143# and others:
-            // if we receive a request while the office is displaying some dialog or error during
-            // bootstrap, that dialogs event loop might get events that are dispatched by this thread
-            // we have to wait for cReady to be set by the real main loop.
-            // only reqests that dont dispatch events may be processed before cReady is set.
-            cReady.wait();
-
-            // we might have decided to shutdown while we were sleeping
-            if (OfficeIPCThread::pGlobalOfficeIPCThread == NULL) return;
-
-            // only lock the mutex when processing starts, othewise we deadlock when the office goes
-            // down during wait
-            osl::ClearableMutexGuard aGuard( GetMutex() );
+			// don't close pipe ...
 
 			// #90717# Is this a lookup message from another application? if so, ignore
 			if ( aArguments.Len() == 0 )
 				continue;
-            
-            
+
             // is this a termination message ? if so, terminate
             if(( aArguments.CompareTo( sc_aTerminationSequence, sc_nTSeqLength ) == COMPARE_EQUAL ) ||
                     mbBlockRequests ) return;
@@ -577,7 +600,7 @@ void SAL_CALL OfficeIPCThread::run()
             if ( aCmdLineArgs.GetAcceptString(aAcceptString) && Desktop::CheckOEM()) {
 				ApplicationEvent* pAppEvent =
 					new ApplicationEvent( aEmpty, aEmpty,
-										"ACCEPT", aAcceptString );
+										  "ACCEPT", aAcceptString );
 				ImplPostForeignAppEvent( pAppEvent );
 				bAcceptorRequest = sal_True;
 			}
@@ -586,7 +609,7 @@ void SAL_CALL OfficeIPCThread::run()
 			if ( aCmdLineArgs.GetUnAcceptString(aUnAcceptString) ) {
 				ApplicationEvent* pAppEvent =
 					new ApplicationEvent( aEmpty, aEmpty,
-										"UNACCEPT", aUnAcceptString );
+										 "UNACCEPT", aUnAcceptString );
 				ImplPostForeignAppEvent( pAppEvent );
 				bAcceptorRequest = sal_True;
 			}
@@ -623,7 +646,12 @@ void SAL_CALL OfficeIPCThread::run()
 				bDocRequestSent |= aCmdLineArgs.GetForceNewList( pRequest->aForceNewList );
 
 				// Special command line args to create an empty document for a given module
-                if ( aCmdLineArgs.HasModuleParam() && Desktop::CheckOEM())
+
+                // #i18338# (lo)
+                // we only do this if no document was specified on the command line,
+                // since this would be inconsistent with the the behaviour of
+                // the first process, see OpenClients() (call to OpenDefault()) in app.cxx
+                if ( aCmdLineArgs.HasModuleParam() && Desktop::CheckOEM() && (!bDocRequestSent))
 				{
 					SvtModuleOptions aOpt;
 					SvtModuleOptions::EFactory eFactory = SvtModuleOptions::E_WRITER;
@@ -635,24 +663,30 @@ void SAL_CALL OfficeIPCThread::run()
 						eFactory = SvtModuleOptions::E_DRAW;
 					else if ( aCmdLineArgs.IsImpress() )
 						eFactory = SvtModuleOptions::E_IMPRESS;
+					else if ( aCmdLineArgs.IsBase() )
+						eFactory = SvtModuleOptions::E_DATABASE;
 					else if ( aCmdLineArgs.IsMath() )
 						eFactory = SvtModuleOptions::E_MATH;
 					else if ( aCmdLineArgs.IsGlobal() )
 						eFactory = SvtModuleOptions::E_WRITERGLOBAL;
 					else if ( aCmdLineArgs.IsWeb() )
 						eFactory = SvtModuleOptions::E_WRITERWEB;
-					AddURLToStringList( aOpt.GetFactoryEmptyDocumentURL( eFactory ), pRequest->aOpenList );
+
+                    if ( pRequest->aOpenList.getLength() )
+                        pRequest->aModule = aOpt.GetFactoryName( eFactory );
+                    else
+                        AddURLToStringList( aOpt.GetFactoryEmptyDocumentURL( eFactory ), pRequest->aOpenList );
 					bDocRequestSent = sal_True;
 				}
             }
-            
+
             if (!aCmdLineArgs.IsQuickstart() && Desktop::CheckOEM()) {
                 sal_Bool bShowHelp = sal_False;
                 rtl::OUStringBuffer aHelpURLBuffer;
                 if (aCmdLineArgs.IsHelpWriter()) {
                     bShowHelp = sal_True;
                     aHelpURLBuffer.appendAscii("vnd.sun.star.help://swriter/start");
-                } else if (aCmdLineArgs.IsHelpCalc()) {            
+                } else if (aCmdLineArgs.IsHelpCalc()) {
                     bShowHelp = sal_True;
                     aHelpURLBuffer.appendAscii("vnd.sun.star.help://scalc/start");
                 } else if (aCmdLineArgs.IsHelpDraw()) {
@@ -661,6 +695,9 @@ void SAL_CALL OfficeIPCThread::run()
                 } else if (aCmdLineArgs.IsHelpImpress()) {
                     bShowHelp = sal_True;
                     aHelpURLBuffer.appendAscii("vnd.sun.star.help://simpress/start");
+				} else if (aCmdLineArgs.IsHelpBase()) {
+                    bShowHelp = sal_True;
+                    aHelpURLBuffer.appendAscii("vnd.sun.star.help://sdatabase/start");
                 } else if (aCmdLineArgs.IsHelpBasic()) {
                     bShowHelp = sal_True;
                     aHelpURLBuffer.appendAscii("vnd.sun.star.help://sbasic/start");
@@ -671,7 +708,7 @@ void SAL_CALL OfficeIPCThread::run()
                 if (bShowHelp) {
                     Any aRet = ::utl::ConfigManager::GetDirectConfigProperty( ::utl::ConfigManager::LOCALE );
                     rtl::OUString aTmp;
-                    aRet >>= aTmp;            
+                    aRet >>= aTmp;
                     aHelpURLBuffer.appendAscii("?Language=");
                     aHelpURLBuffer.append(aTmp);
 #if defined UNX
@@ -680,18 +717,34 @@ void SAL_CALL OfficeIPCThread::run()
                     aHelpURLBuffer.appendAscii("&System=WIN");
 #elif defined MAC
                     aHelpURLBuffer.appendAscii("&System=MAC");
-#endif            
+#endif
                     ApplicationEvent* pAppEvent =
                         new ApplicationEvent( aEmpty, aEmpty,
-                                            "OPENHELPURL", aHelpURLBuffer.makeStringAndClear());
-                    ImplPostForeignAppEvent( pAppEvent );                    
+                                              "OPENHELPURL", aHelpURLBuffer.makeStringAndClear());
+                    ImplPostForeignAppEvent( pAppEvent );
                 }
             }
-                
+
             if ( bDocRequestSent && Desktop::CheckOEM())
  			{
 				// Send requests to dispatch watcher if we have at least one. The receiver
 				// is responsible to delete the request after processing it.
+                if ( aCmdLineArgs.HasModuleParam() )
+                {
+                    SvtModuleOptions    aOpt;
+
+                    // Support command line parameters to start a module (as preselection)
+                    if ( aCmdLineArgs.IsWriter() && aOpt.IsModuleInstalled( SvtModuleOptions::E_SWRITER ) )
+                        pRequest->aModule = aOpt.GetFactoryName( SvtModuleOptions::E_WRITER );
+                    else if ( aCmdLineArgs.IsCalc() && aOpt.IsModuleInstalled( SvtModuleOptions::E_SCALC ) )
+                        pRequest->aModule = aOpt.GetFactoryName( SvtModuleOptions::E_CALC );
+                    else if ( aCmdLineArgs.IsImpress() && aOpt.IsModuleInstalled( SvtModuleOptions::E_SIMPRESS ) )
+                        pRequest->aModule= aOpt.GetFactoryName( SvtModuleOptions::E_IMPRESS );
+                    else if ( aCmdLineArgs.IsDraw() && aOpt.IsModuleInstalled( SvtModuleOptions::E_SDRAW ) )
+                        pRequest->aModule= aOpt.GetFactoryName( SvtModuleOptions::E_DRAW );
+                }
+
+
 				ImplPostProcessDocumentsEvent( pRequest );
 			}
 			else
@@ -699,10 +752,7 @@ void SAL_CALL OfficeIPCThread::run()
 				// delete not used request again
 				delete pRequest;
 				pRequest = NULL;
-                // if no request was send, there is no need to wait
-                cProcessed.set();
 			}
-
 			if ((( aArguments.CompareTo( sc_aShowSequence, sc_nShSeqLength ) == COMPARE_EQUAL ) ||
 				!bDocRequestSent ) && !bAcceptorRequest )
 			{
@@ -714,17 +764,17 @@ void SAL_CALL OfficeIPCThread::run()
 
 			// we don't need the mutex any longer...
 			aGuard.clear();
-			// wait for processing to finish if a doc request was sent
+			// wait for processing to finish
             if (bDocRequestSent)
-			    cProcessed.wait();
+    			cProcessed.wait();
 			// processing finished, inform the requesting end
 			nBytes = 0;
 			while (
-                (nResult = maStreamPipe.send(sc_aConfirmationSequence+nBytes, sc_nCSeqLength-nBytes))>0 &&
-                ((nBytes += nResult) < sc_nCSeqLength) );
+                   (nResult = maStreamPipe.send(sc_aConfirmationSequence+nBytes, sc_nCSeqLength-nBytes))>0 &&
+                   ((nBytes += nResult) < sc_nCSeqLength) );
 			// now we can close, don't we?
 			// maStreamPipe.close();
-            
+
         }
         else
         {
@@ -735,7 +785,7 @@ void SAL_CALL OfficeIPCThread::run()
 			tval.Seconds = 1;
 			tval.Nanosec = 0;
 			sleep( tval );
-        }
+		}
 	} while( schedule() );
 }
 
@@ -743,7 +793,8 @@ static void AddToDispatchList(
 	DispatchWatcher::DispatchList& rDispatchList,
 	const OUString& aRequestList,
 	DispatchWatcher::RequestType nType,
-	const OUString& aParam )
+    const OUString& aParam,
+    const OUString& aFactory )
 {
 	if ( aRequestList.getLength() > 0 )
 	{
@@ -753,7 +804,7 @@ static void AddToDispatchList(
 			OUString aToken = aRequestList.getToken( 0, APPEVENT_PARAM_DELIMITER, nIndex );
 			if ( aToken.getLength() > 0 )
 				rDispatchList.push_back(
-					DispatchWatcher::DispatchRequest( nType, aToken, aParam ));
+                    DispatchWatcher::DispatchRequest( nType, aToken, aParam, aFactory ));
 		}
 		while ( nIndex >= 0 );
 	}
@@ -765,13 +816,13 @@ void OfficeIPCThread::ExecuteCmdLineRequests( ProcessDocumentsRequest& aRequest 
 	DispatchWatcher::DispatchList	aDispatchList;
 
 	// Create dispatch list for dispatch watcher
-	AddToDispatchList( aDispatchList, aRequest.aOpenList, DispatchWatcher::REQUEST_OPEN, aEmpty );
-	AddToDispatchList( aDispatchList, aRequest.aViewList, DispatchWatcher::REQUEST_VIEW, aEmpty );
-    AddToDispatchList( aDispatchList, aRequest.aStartList, DispatchWatcher::REQUEST_START, aEmpty );
-	AddToDispatchList( aDispatchList, aRequest.aPrintList, DispatchWatcher::REQUEST_PRINT, aEmpty );
-	AddToDispatchList( aDispatchList, aRequest.aPrintToList, DispatchWatcher::REQUEST_PRINTTO, aRequest.aPrinterName );
-	AddToDispatchList( aDispatchList, aRequest.aForceOpenList, DispatchWatcher::REQUEST_FORCEOPEN, aEmpty );
-	AddToDispatchList( aDispatchList, aRequest.aForceNewList, DispatchWatcher::REQUEST_FORCENEW, aEmpty );
+    AddToDispatchList( aDispatchList, aRequest.aOpenList, DispatchWatcher::REQUEST_OPEN, aEmpty, aRequest.aModule );
+    AddToDispatchList( aDispatchList, aRequest.aViewList, DispatchWatcher::REQUEST_VIEW, aEmpty, aRequest.aModule );
+    AddToDispatchList( aDispatchList, aRequest.aStartList, DispatchWatcher::REQUEST_START, aEmpty, aRequest.aModule );
+    AddToDispatchList( aDispatchList, aRequest.aPrintList, DispatchWatcher::REQUEST_PRINT, aEmpty, aRequest.aModule );
+    AddToDispatchList( aDispatchList, aRequest.aPrintToList, DispatchWatcher::REQUEST_PRINTTO, aRequest.aPrinterName, aRequest.aModule );
+    AddToDispatchList( aDispatchList, aRequest.aForceOpenList, DispatchWatcher::REQUEST_FORCEOPEN, aEmpty, aRequest.aModule );
+    AddToDispatchList( aDispatchList, aRequest.aForceNewList, DispatchWatcher::REQUEST_FORCENEW, aEmpty, aRequest.aModule );
 
 	osl::ClearableMutexGuard aGuard( GetMutex() );
 

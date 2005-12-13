@@ -1,4 +1,4 @@
-##########################################################################
+#*************************************************************************
 #
 #   $RCSfile$
 #
@@ -6,39 +6,33 @@
 #
 #   last change: $Author$ $Date$
 #
-#   The Contents of this file are made available subject to the terms of
-#   either of the following licenses
+#   The Contents of this file are made available subject to
+#   the terms of GNU General Public License Version 2.1.
 #
-#          - GNU General Public License Version 2.1
 #
-#   Sun Microsystems Inc., October, 2000
+#     GNU General Public License Version 2.1
+#     =============================================
+#     Copyright 2005 by Sun Microsystems, Inc.
+#     901 San Antonio Road, Palo Alto, CA 94303, USA
 #
-#   GNU General Public License Version 2.1
-#   =============================================
-#   Copyright 2000 by Sun Microsystems, Inc.
-#   901 San Antonio Road, Palo Alto, CA 94303, USA
+#     This library is free software; you can redistribute it and/or
+#     modify it under the terms of the GNU General Public
+#     License version 2.1, as published by the Free Software Foundation.
 #
-#   This library is free software; you can redistribute it and/or
-#   modify it under the terms of the GNU General Public
-#   License version 2.1, as published by the Free Software Foundation.
+#     This library is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#     General Public License for more details.
 #
-#   This library is distributed in the hope that it will be useful,
-#   but WITHOUT ANY WARRANTY; without even the implied warranty of
-#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#   General Public License for more details.
+#     You should have received a copy of the GNU General Public
+#     License along with this library; if not, write to the Free Software
+#     Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+#     MA  02111-1307  USA
 #
-#   You should have received a copy of the GNU General Public
-#   License along with this library; if not, write to the Free Software
-#   Foundation, Inc., 59 Temple Place, Suite 330, Boston,
-#   MA  02111-1307  USA
-#   
-#   =================================================
-#   Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
-#   distributed under GPL only under modification term 3 of the LGPL.
+#     Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+#     GPL only under modification term 3 of the LGPL.
 #
-#   Contributor(s): _______________________________________
-#
-##########################################################################
+#*************************************************************************
 
 PRJ=..$/..
 
@@ -51,8 +45,6 @@ ENABLE_EXCEPTIONS=TRUE
 # --- Settings -----------------------------------------------------
 
 .INCLUDE :  settings.mk
-.INCLUDE :  $(UPD)minor.mk
-RSCUPDVER=$(RSCREVISION)(SV$(UPD)$(UPDMINOR))
 
 .IF "$(PRODUCT_DIR_NAME)" != ""
 CDEFS += -DPRODUCT_DIR_NAME='"$(PRODUCT_DIR_NAME)"'
@@ -61,10 +53,12 @@ CDEFS += -DPRODUCT_DIR_NAME='"$(PRODUCT_DIR_NAME)"'
 # --- Files --------------------------------------------------------
 
 OBJFILES = \
+        $(OBJ)$/main.obj					\
         $(OBJ)$/app.obj						\
         $(OBJ)$/copyright_ascii_sun.obj		\
         $(OBJ)$/copyright_ascii_ooo.obj		\
         $(OBJ)$/lockfile.obj				\
+        $(OBJ)$/lockfile2.obj				\
 		$(OBJ)$/intro.obj					\
 		$(OBJ)$/officeipcthread.obj			\
 		$(OBJ)$/appinit.obj					\
@@ -74,30 +68,18 @@ OBJFILES = \
 		$(OBJ)$/appsys.obj					\
 		$(OBJ)$/desktopresid.obj			\
 		$(OBJ)$/dispatchwatcher.obj			\
-		$(OBJ)$/ssodlg.obj					\
-		$(OBJ)$/ssoinit.obj					\
 		$(OBJ)$/configinit.obj				\
-		$(OBJ)$/javainteractionhandler.obj	\
-		$(OBJ)$/testtool.obj				\
 		$(OBJ)$/checkinstall.obj			\
-		$(OBJ)$/cmdlinehelp.obj
+		$(OBJ)$/langselect.obj			    \
+		$(OBJ)$/cmdlinehelp.obj             \
+		$(OBJ)$/userinstall.obj             \
+		$(OBJ)$/desktopcontext.obj
 
-.IF "$(GUI)" == "UNX"
-.IF "$(OS)" != "MACOSX"
-OBJFILES+= $(OBJ)$/icon_resource_ooo.obj \
-	$(OBJ)$/icon_resource_sun.obj
-.ENDIF
-.ENDIF
 
-SRC1FILES=	desktop.src	\
-			ssodlg.src
 SRS1NAME=	desktop
+SRC1FILES=	desktop.src	
 
 # --- Targets ------------------------------------------------------
-
-.IF "$(depend)" != ""
-SRCFILES=$(SRC1FILES)
-.ENDIF
 
 .INCLUDE :  target.mk
 
