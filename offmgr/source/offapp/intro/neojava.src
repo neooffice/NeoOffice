@@ -120,7 +120,7 @@ ModalDialog RID_DEFAULTABOUT
 	{
 		Pos = MAP_APPFONT ( 54 , 25 ) ;
 		Size = MAP_APPFONT ( 168 , 51 ) ;
-		Text =	"Copyright 2003-2005 Patrick Luby and Edward H. Peterlin\nwith portions copyright 2001-2004 Sun Microsystems";
+		Text =	"Copyright 2003-2006 Patrick Luby and Edward H. Peterlin\nwith portions copyright 2001-2005 Sun Microsystems";
 	};
 	String ABOUT_STR_DEVELOPER
 	{
