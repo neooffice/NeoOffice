@@ -6,37 +6,31 @@
  *
  *  last change: $Author$ $Date$
  *
- *  The Contents of this file are made available subject to the terms of
- *  either of the following licenses
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- *         - GNU General Public License Version 2.1
  *
- *  Sun Microsystems Inc., October, 2000
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- *  GNU General Public License Version 2.1
- *  =============================================
- *  Copyright 2000 by Sun Microsystems, Inc.
- *  901 San Antonio Road, Palo Alto, CA 94303, USA
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
  *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public
- *  License version 2.1, as published by the Free Software Foundation.
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
  *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
  *
- *  You should have received a copy of the GNU General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *  MA  02111-1307  USA
- *  
- *  =================================================
- *  Modified May 2005 by Patrick Luby. SISSL Removed. NeoOffice is
- *  distributed under GPL only under modification term 3 of the LGPL.
- *
- *  Contributor(s): _______________________________________
+ *    Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
 
@@ -110,14 +104,16 @@
 #include <tools/urlobj.hxx>
 #endif
 
+#include "sfxresid.hxx"
+
 #if defined USE_JAVA && defined MACOSX
-
+ 
 #include "shutdownicon_cocoa.h"
-
+ 
 #ifndef INCLUDED_SVTOOLS_MODULEOPTIONS_HXX
 #include <svtools/moduleoptions.hxx>
 #endif
-
+ 
 #define WRITER_URL			"private:factory/swriter"
 #define CALC_URL			"private:factory/scalc"
 #define IMPRESS_URL			"private:factory/simpress"
@@ -140,11 +136,9 @@ using namespace ::rtl;
 using namespace ::sfx2;
 
 #if defined USE_JAVA && defined MACOSX
-
 class ShutdownIconEvent
 {
 	MenuCommand			mnCommand;
-
 public:
 						ShutdownIconEvent( MenuCommand nCommand ) : mnCommand( nCommand ) {}
 						~ShutdownIconEvent() {}
@@ -238,9 +232,9 @@ ShutdownIcon* ShutdownIcon::pShutdownIcon = 0;
 
 ShutdownIcon::ShutdownIcon( Reference< XMultiServiceFactory > aSMgr ) :
 	ShutdownIconServiceBase( m_aMutex ),
-	m_xServiceManager( aSMgr ),
+	m_bVeto ( false ),
 	m_pResMgr( 0 ),
-	m_bVeto ( false )
+	m_xServiceManager( aSMgr )
 {
 }
 
@@ -257,12 +251,14 @@ void ShutdownIcon::SetAutostart( bool bActivate )
 {
 #ifdef WNT
     OUString aShortcutName( RTL_CONSTASCII_USTRINGPARAM( "StarOffice 6.0" ) );
-    if( SFX_APP() && SFX_APP()->GetSfxResManager() )
+	ResMgr* pMgr = SfxResId::GetResMgr();
+    if( pMgr )
     {
         ::vos::OGuard aGuard( Application::GetSolarMutex() );
-        UniString aRes( ResId( STR_QUICKSTART_LNKNAME, SFX_APP()->GetSfxResManager() ) );
+        UniString aRes( SfxResId( STR_QUICKSTART_LNKNAME ) );
         aShortcutName = OUString( aRes );
     }
+
     aShortcutName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".lnk" ) );
 
     SetAutostartW32( aShortcutName, bActivate );
@@ -273,10 +269,11 @@ bool ShutdownIcon::GetAutostart( )
 {
 #ifdef WNT
     OUString aShortcutName( RTL_CONSTASCII_USTRINGPARAM( "StarOffice 6.0" ) );
-    if( SFX_APP() && SFX_APP()->GetSfxResManager() )
+	ResMgr* pMgr = SfxResId::GetResMgr();
+    if( pMgr )
     {
         ::vos::OGuard aGuard( Application::GetSolarMutex() );
-        UniString aRes( ResId( STR_QUICKSTART_LNKNAME, SFX_APP()->GetSfxResManager() ) );
+        UniString aRes( SfxResId( STR_QUICKSTART_LNKNAME ) );
         aShortcutName = OUString( aRes );
     }
     aShortcutName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".lnk" ) );
@@ -328,7 +325,7 @@ void ShutdownIcon::FileOpen()
 		EnterModalMode();
 #endif
 		// use ctor for filling up filters automatically! #89169#
-		FileDialogHelper dlg( WB_OPEN | SFXWB_MULTISELECTION, *(SfxObjectFactory*) NULL );
+		FileDialogHelper dlg( WB_OPEN | SFXWB_MULTISELECTION, String() );
         if ( ERRCODE_NONE == dlg.Execute() )
 		{
 			Reference< XFilePicker >	xPicker = dlg.GetFilePicker();
@@ -500,14 +497,12 @@ void ShutdownIcon::FromTemplate()
 }
 
 // ---------------------------------------------------------------------------
-#include <tools/rcid.h>
+
 OUString ShutdownIcon::GetResString( int id )
 {
     ::vos::OGuard aGuard( Application::GetSolarMutex() );
 
-	ResId aResId( id, m_pResMgr );
-	aResId.SetRT( RSC_STRING );
-	if( !m_pResMgr || !m_pResMgr->IsAvailable( aResId ) )
+    if( !m_pResMgr )
         return OUString();
 
     UniString aRes( ResId(id, m_pResMgr) );
@@ -540,6 +535,7 @@ void ShutdownIcon::terminateDesktop()
         // always remove ourselves as listener
         getInstance()->m_xDesktop->removeTerminateListener( getInstance() );
 
+
         // terminate desktop only if no tasks exist
         Reference < XFramesSupplier > xSupplier( getInstance()->m_xDesktop, UNO_QUERY );
         if( xSupplier.is() )
@@ -551,6 +547,9 @@ void ShutdownIcon::terminateDesktop()
                     getInstance()->m_xDesktop->terminate();
             }
         }
+
+        // remove the instance pointer
+        ShutdownIcon::pShutdownIcon = 0;
     }
 }
 
@@ -561,6 +560,7 @@ ShutdownIcon* ShutdownIcon::getInstance()
 	OSL_ASSERT( pShutdownIcon );
 	return pShutdownIcon;
 }
+
 
 // ---------------------------------------------------------------------------
 
@@ -604,7 +604,16 @@ throw(::com::sun::star::uno::RuntimeException)
 void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any>& aArguments )
 	throw( ::com::sun::star::uno::Exception )
 {
-	::osl::ResettableMutexGuard	aGuard(	m_aMutex );
+	::osl::ClearableMutexGuard	aGuard(	m_aMutex );
+
+    // third argument only sets veto, everything else will be ignored!
+    if (aArguments.getLength() > 2)
+    {
+        sal_Bool bVeto = sal_True;
+        bVeto = ::cppu::any2bool(aArguments[2]);
+        m_bVeto = bVeto;
+        return;
+    }
 
 	if ( aArguments.getLength() > 0 )
 	{
@@ -614,18 +623,10 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 			{
 				sal_Bool bQuickstart = sal_False;
 				bQuickstart = ::cppu::any2bool( aArguments[0] );
-				{
-					aGuard.clear();
-					// access resource system and sfx only protected by solarmutex
-					vos::OGuard aSolarGuard( Application::GetSolarMutex() );
+				if( !bQuickstart && !GetAutostart() )
+					return;
 
-					if( Application::IsRemoteServer() || ( !bQuickstart && !GetAutostart() ) )
-						return;
-
-					m_pResMgr = SFX_APP()->GetSfxResManager();
-				}
-				aGuard.reset();
-
+				m_pResMgr = SfxResId::GetResMgr();
 				m_xDesktop = Reference < XDesktop >( m_xServiceManager->createInstance(
 															DEFINE_CONST_UNICODE( "com.sun.star.frame.Desktop" )),
 														UNO_QUERY );
@@ -697,4 +698,14 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 			}
 		}
 	}
+    if ( aArguments.getLength() > 1 )
+    {
+			sal_Bool bAutostart = sal_False;
+			bAutostart = ::cppu::any2bool( aArguments[1] );
+            if (bAutostart && !GetAutostart())
+                SetAutostart( sal_True );
+            if (!bAutostart && GetAutostart())
+                SetAutostart( sal_False );
+    }
+
 }

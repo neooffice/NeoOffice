@@ -6,37 +6,31 @@
  *
  *  last change: $Author$ $Date$
  *
- *  The Contents of this file are made available subject to the terms of
- *  either of the following licenses
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- *         - GNU General Public License Version 2.1
  *
- *  Sun Microsystems Inc., October, 2000
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- *  GNU General Public License Version 2.1
- *  =============================================
- *  Copyright 2000 by Sun Microsystems, Inc.
- *  901 San Antonio Road, Palo Alto, CA 94303, USA
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
  *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public
- *  License version 2.1, as published by the Free Software Foundation.
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
  *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
  *
- *  You should have received a copy of the GNU General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *  MA  02111-1307  USA
- *  
- *  =================================================
- *  Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
- *  distributed under GPL only under modification term 3 of the LGPL.
- *
- *  Contributor(s): _______________________________________
+ *    Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
 
@@ -77,7 +71,9 @@
 #endif
 #include <svtools/useroptions.hxx>
 #include <svtools/printwarningoptions.hxx>
+#ifndef GCC
 #pragma hdrstop
+#endif
 
 #include "viewsh.hxx"
 #include "viewimp.hxx"
@@ -179,7 +175,7 @@ IMPL_LINK( SfxDialogExecutor_Impl, Execute, void *, EMPTYARG )
 	SfxPrintOptionsDialog* pDlg = new SfxPrintOptionsDialog( NULL, _pViewSh, _pOptions );
 #else	// USE_JAVA
 	SfxPrintOptionsDialog* pDlg = new SfxPrintOptionsDialog( _pParent, _pViewSh, _pOptions );
-#endif	// USE_JAVA
+#endif// USE_JAVA
 	if ( _bHelpDisabled )
 		pDlg->DisableHelp();
 #ifdef USE_JAVA
@@ -358,7 +354,8 @@ SfxPrinter* SfxViewShell::SetPrinter_Impl( SfxPrinter *pNewPrinter )
 
 void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 {
-	USHORT                  nCopies=1, nPaperBin = 0, nDialogRet = RET_CANCEL;
+	USHORT                  nCopies=1;
+	USHORT                  nDialogRet = RET_CANCEL;
 	BOOL                    bCollate=FALSE;
 	SfxPrinter*             pPrinter = 0;
 	PrintDialog*            pPrintDlg = 0;
@@ -369,431 +366,447 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 	const USHORT nId = rReq.GetSlot();
 	switch( nId )
 	{
-	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+		// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-	case SID_PRINTDOC:
-	case SID_SETUPPRINTER:
-    case SID_PRINTER_NAME :
-	{
-        // quiet mode (AppEvent, API call)
-		SFX_REQUEST_ARG(rReq, pSilentItem, SfxBoolItem, SID_SILENT, FALSE);
-		bSilent = pSilentItem ? pSilentItem->GetValue() : FALSE;
-
-        // get printer and printer settings from the document
-		SfxPrinter *pDocPrinter = GetPrinter(TRUE);
-
-        // look for printer in parameters
-        SFX_REQUEST_ARG( rReq, pPrinterItem, SfxStringItem, SID_PRINTER_NAME, FALSE );
-		if ( pPrinterItem )
+		case SID_PRINTDOC:
+		case SID_SETUPPRINTER:
+	    case SID_PRINTER_NAME :
 		{
-            // use PrinterName parameter to create a printer
-            pPrinter = new SfxPrinter( pDocPrinter->GetOptions().Clone(), ((const SfxStringItem*) pPrinterItem)->GetValue() );
+	        // quiet mode (AppEvent, API call)
+			SFX_REQUEST_ARG(rReq, pSilentItem, SfxBoolItem, SID_SILENT, FALSE);
+			bSilent = pSilentItem ? pSilentItem->GetValue() : FALSE;
 
-            // if printer is unknown, it can't be used - now printer from document will be used
-			if ( !pPrinter->IsOriginal() )
-				DELETEZ(pPrinter);
-		}
+	        // get printer and printer settings from the document
+			SfxPrinter *pDocPrinter = GetPrinter(TRUE);
 
-        if ( SID_PRINTER_NAME == nId )
-        {
-            // just set a recorded printer name
-            if ( pPrinter )
-                SetPrinter( pPrinter, SFX_PRINTER_PRINTER  );
-            return;
-        }
-
-        // no PrinterName parameter in ItemSet or the PrinterName points to an unknown printer
-        if ( !pPrinter )
-            // use default printer from document
-			pPrinter = pDocPrinter;
-
-        if( !pPrinter || !pPrinter->IsValid() )
-		{
-            // no valid printer either in ItemSet or at the document
-            if ( bSilent )
+	        // look for printer in parameters
+	        SFX_REQUEST_ARG( rReq, pPrinterItem, SfxStringItem, SID_PRINTER_NAME, FALSE );
+			if ( pPrinterItem )
 			{
-			    rReq.SetReturnValue(SfxBoolItem(0,FALSE));
-			    return;
+	            // use PrinterName parameter to create a printer
+	            pPrinter = new SfxPrinter( pDocPrinter->GetOptions().Clone(), ((const SfxStringItem*) pPrinterItem)->GetValue() );
+
+	            // if printer is unknown, it can't be used - now printer from document will be used
+				if ( !pPrinter->IsOriginal() )
+					DELETEZ(pPrinter);
 			}
-            else
-                ErrorBox( NULL, WB_OK | WB_DEF_OK, String( SfxResId( STR_NODEFPRINTER ) ) ).Execute();
-		}
 
-        if ( !pPrinter->IsOriginal() && rReq.GetArgs() && !UseStandardPrinter_Impl( NULL, pPrinter ) )
-		{
-            // printer is not available, but standard printer should not be used
-			rReq.SetReturnValue(SfxBoolItem(0,FALSE));
-			return;
-		}
+	        if ( SID_PRINTER_NAME == nId )
+	        {
+	            // just set a recorded printer name
+	            if ( pPrinter )
+	                SetPrinter( pPrinter, SFX_PRINTER_PRINTER  );
+	            return;
+	        }
 
-		if( pPrinter->IsPrinting() )
-		{
-            // if printer is busy, abort printing
-            if ( !bSilent )
-				InfoBox( NULL, String( SfxResId( STR_ERROR_PRINTER_BUSY ) ) ).Execute();
-			rReq.SetReturnValue(SfxBoolItem(0,FALSE));
-			return;
-		}
+	        // no PrinterName parameter in ItemSet or the PrinterName points to an unknown printer
+	        if ( !pPrinter )
+	            // use default printer from document
+				pPrinter = pDocPrinter;
 
-        // the print dialog shouldn't use a help button if it is called from the help window
-        // (pressing help button would exchange the current page inside the help document that is going to be printed!)
-		String aHelpFilterName( DEFINE_CONST_UNICODE("writer_web_HTML_help") );
-		SfxMedium* pMedium = GetViewFrame()->GetObjectShell()->GetMedium();
-		const SfxFilter* pFilter = pMedium ? pMedium->GetFilter() : NULL;
-		sal_Bool bPrintOnHelp = ( pFilter && pFilter->GetFilterName() == aHelpFilterName );
-
-        // if no arguments are given, retrieve them from a dialog
-        if ( !bIsAPI )
-		{
-#ifdef USE_JAVA
-			// Don't make a copy as we need to run StartJob() multiple times
-			SfxPrinter* pDlgPrinter = pPrinter;
-#else	// USE_JAVA
-            // PrinterDialog needs a temporary printer
-			SfxPrinter* pDlgPrinter = pPrinter->Clone();
-#endif	// USE_JAVA
-			nDialogRet = 0;
-			if ( SID_PRINTDOC == nId )
+	        if( !pPrinter || !pPrinter->IsValid() )
 			{
-                // execute PrintDialog
-				pPrintDlg = CreatePrintDialog( NULL );
-				if ( bPrintOnHelp )
-					pPrintDlg->DisableHelp();
-
-				if ( pImp->bHasPrintOptions )
+	            // no valid printer either in ItemSet or at the document
+	            if ( bSilent )
 				{
-                    // additional controls for dialog
-					pExecutor = new SfxDialogExecutor_Impl( this, pPrintDlg );
-					if ( bPrintOnHelp )
-						pExecutor->DisableHelp();
-					pPrintDlg->SetOptionsHdl( pExecutor->GetLink() );
-					pPrintDlg->ShowOptionsButton();
+				    rReq.SetReturnValue(SfxBoolItem(0,FALSE));
+				    return;
 				}
+	            else
+	                ErrorBox( NULL, WB_OK | WB_DEF_OK, String( SfxResId( STR_NODEFPRINTER ) ) ).Execute();
+			}
 
-                // set printer on dialog and execute
-				pPrintDlg->SetPrinter( pDlgPrinter );
-                ::DisableRanges( *pPrintDlg, pDlgPrinter );
-				nDialogRet = pPrintDlg->Execute();
-				if ( pExecutor && pExecutor->GetOptions() )
+	        if ( !pPrinter->IsOriginal() && rReq.GetArgs() && !UseStandardPrinter_Impl( NULL, pPrinter ) )
+			{
+	            // printer is not available, but standard printer should not be used
+				rReq.SetReturnValue(SfxBoolItem(0,FALSE));
+				return;
+			}
+
+			if( pPrinter->IsPrinting() )
+			{
+	            // if printer is busy, abort printing
+	            if ( !bSilent )
+					InfoBox( NULL, String( SfxResId( STR_ERROR_PRINTER_BUSY ) ) ).Execute();
+				rReq.SetReturnValue(SfxBoolItem(0,FALSE));
+				return;
+			}
+
+	        // the print dialog shouldn't use a help button if it is called from the help window
+	        // (pressing help button would exchange the current page inside the help document that is going to be printed!)
+			String aHelpFilterName( DEFINE_CONST_UNICODE("writer_web_HTML_help") );
+			SfxMedium* pMedium = GetViewFrame()->GetObjectShell()->GetMedium();
+			const SfxFilter* pFilter = pMedium ? pMedium->GetFilter() : NULL;
+			sal_Bool bPrintOnHelp = ( pFilter && pFilter->GetFilterName() == aHelpFilterName );
+
+	        // if no arguments are given, retrieve them from a dialog
+	        if ( !bIsAPI )
+			{
+#ifdef USE_JAVA
+				// Don't make a copy as we need to run StartJob() multiple times
+				SfxPrinter* pDlgPrinter = pPrinter;
+#else	// USE_JAVA
+	            // PrinterDialog needs a temporary printer
+				SfxPrinter* pDlgPrinter = pPrinter->Clone();
+#endif	// USE_JAVA
+				nDialogRet = 0;
+				if ( SID_PRINTDOC == nId )
 				{
-					if ( nDialogRet == RET_OK )
-                        // remark: have to be recorded if possible!
-						pDlgPrinter->SetOptions( *pExecutor->GetOptions() );
-					else
+					SfxObjectShell* pDoc = GetObjectShell();
+					bool bDetectHidden = ( !bSilent && !bPrintOnHelp && pDoc );
+					if ( !bDetectHidden
+						|| pDoc->QueryHiddenInformation( WhenPrinting, NULL ) == RET_YES )
 					{
-						pPrinter->SetOptions( *pExecutor->GetOptions() );
-						SetPrinter( pPrinter, SFX_PRINTER_OPTIONS );
+		                // execute PrintDialog
+						pPrintDlg = CreatePrintDialog( NULL );
+						if ( bPrintOnHelp )
+							pPrintDlg->DisableHelp();
+
+						if ( pImp->bHasPrintOptions )
+						{
+		                    // additional controls for dialog
+							pExecutor = new SfxDialogExecutor_Impl( this, pPrintDlg );
+							if ( bPrintOnHelp )
+								pExecutor->DisableHelp();
+							pPrintDlg->SetOptionsHdl( pExecutor->GetLink() );
+							pPrintDlg->ShowOptionsButton();
+						}
+
+		                // set printer on dialog and execute
+						pPrintDlg->SetPrinter( pDlgPrinter );
+		                ::DisableRanges( *pPrintDlg, pDlgPrinter );
+						nDialogRet = pPrintDlg->Execute();
+						if ( pExecutor && pExecutor->GetOptions() )
+						{
+							if ( nDialogRet == RET_OK )
+		                        // remark: have to be recorded if possible!
+								pDlgPrinter->SetOptions( *pExecutor->GetOptions() );
+							else
+							{
+								pPrinter->SetOptions( *pExecutor->GetOptions() );
+								SetPrinter( pPrinter, SFX_PRINTER_OPTIONS );
+							}
+						}
+
+		                DELETEZ( pExecutor );
 					}
 				}
-
-                DELETEZ( pExecutor );
-			}
-			else
-			{
-                // execute PrinterSetupDialog
-                PrinterSetupDialog* pPrintSetupDlg = new PrinterSetupDialog( GetWindow() );
-				pPrintSetupDlg->SetPrinter( pDlgPrinter );
-				nDialogRet = pPrintSetupDlg->Execute();
-                DELETEZ( pPrintSetupDlg );
-
-                // no recording of PrinterSetup except printer name (is printer dependent)
-                rReq.Ignore();
-			}
-
-			if ( nDialogRet == RET_OK )
-			{
-                if ( pPrinter->GetName() != pDlgPrinter->GetName() )
-                {
-                    // user has changed the printer -> macro recording
-                    SfxRequest aReq( GetViewFrame(), SID_PRINTER_NAME );
-                    aReq.AppendItem( SfxStringItem( SID_PRINTER_NAME, pDlgPrinter->GetName() ) );
-                    aReq.Done();
-                }
-
-#ifndef USE_JAVA
-                // take the changes made in the dialog
-				pPrinter = SetPrinter_Impl( pDlgPrinter );
-#endif	// !USE_JAVA
-
-                // forget new printer, it was taken over (as pPrinter) or deleted
-                pDlgPrinter = NULL;
-
-				if ( SID_PRINTDOC == nId )
-				{
-                    nCopies  = pPrintDlg->GetCopyCount();
-                    bCollate = pPrintDlg->IsCollateChecked();
-				}
-                else
-                    break;
-			}
-			else
-            {
-#ifndef USE_JAVA
-                // PrinterDialog is used to transfer information on printing,
-                // so it will only be deleted here if dialog was cancelled
-                DELETEZ( pDlgPrinter );
-#endif	// !USE_JAVA
-                DELETEZ( pPrintDlg );
-                rReq.Ignore();
-				if ( SID_PRINTDOC == nId )
-                    rReq.SetReturnValue(SfxBoolItem(0,FALSE));
-                break;
-            }
-
-            // recording
-            rReq.AppendItem( SfxBoolItem( SID_PRINT_COLLATE, bCollate ) );
-            rReq.AppendItem( SfxInt16Item( SID_PRINT_COPIES, (INT16) pPrintDlg->GetCopyCount() ) );
-            if ( pPrinter->IsPrintFileEnabled() )
-                rReq.AppendItem( SfxStringItem( SID_FILE_NAME, pPrinter->GetPrintFile() ) );
-            if ( pPrintDlg->IsRangeChecked(PRINTDIALOG_SELECTION) )
-                rReq.AppendItem( SfxBoolItem( SID_SELECTION, TRUE ) );
-            else if ( pPrintDlg->IsRangeChecked(PRINTDIALOG_RANGE) )
-                rReq.AppendItem( SfxStringItem( SID_PRINT_PAGES, pPrintDlg->GetRangeText() ) );
-            else if ( pPrintDlg->IsRangeChecked(PRINTDIALOG_FROMTO) )
-            {
-                // currently this doesn't seem to work -> return values of dialog are always 0
-                // seems to be encoded as range string like "1-3"
-                rReq.AppendItem( SfxInt16Item( SID_PRINT_FIRST_PAGE, (INT16) pPrintDlg->GetFirstPage() ) );
-                rReq.AppendItem( SfxInt16Item( SID_PRINT_LAST_PAGE, (INT16) pPrintDlg->GetLastPage() ) );
-            }
-		}
-		else if ( rReq.GetArgs() )
-		{
-            if ( SID_PRINTDOC != nId )
-            {
-                DBG_ERROR("Wrong slotid!");
-                break;
-            }
-
-            // PrinterDialog is used to transfer information on printing
-			pPrintDlg = CreatePrintDialog( GetWindow() );
-			if ( bPrintOnHelp )
-				pPrintDlg->DisableHelp();
-			pPrintDlg->SetPrinter( pPrinter );
-#ifdef USE_JAVA
-			nDialogRet = pPrintDlg->Execute();
-			if ( nDialogRet == RET_CANCEL )
-			{
-				DELETEZ( pPrintDlg );
-				rReq.Ignore();
-				break;
-			}
-#else	// USE_JAVA
-			::DisableRanges( *pPrintDlg, pPrinter );
-
-            // PrintToFile requested?
-			SFX_REQUEST_ARG(rReq, pFileItem, SfxStringItem, SID_FILE_NAME, FALSE);
-			if ( pFileItem )
-			{
-				pPrinter->EnablePrintFile(TRUE);
-				pPrinter->SetPrintFile( pFileItem->GetValue() );
-			}
-
-            // Collate
-            SFX_REQUEST_ARG(rReq, pCollateItem, SfxBoolItem, SID_PRINT_COLLATE, FALSE);
-            if ( pCollateItem )
-                bCollate = pCollateItem->GetValue();
-
-            // Selection
-            SFX_REQUEST_ARG(rReq, pSelectItem, SfxBoolItem, SID_SELECTION, FALSE);
-
-			// Pages (as String)
-			SFX_REQUEST_ARG(rReq, pPagesItem, SfxStringItem, SID_PRINT_PAGES, FALSE);
-
-			// FirstPage
-			SFX_REQUEST_ARG(rReq, pFirstPgItem, SfxInt16Item, SID_PRINT_FIRST_PAGE, FALSE);
-			USHORT nFrom = 1;
-			if ( pFirstPgItem )
-				nFrom = pFirstPgItem->GetValue();
-
-			// LastPage
-			SFX_REQUEST_ARG(rReq, pLastPgItem, SfxInt16Item, SID_PRINT_LAST_PAGE, FALSE);
-			USHORT nTo = 9999;
-			if ( pLastPgItem )
-				nTo = pLastPgItem->GetValue();
-
-            // CopyCount
-			SFX_REQUEST_ARG(rReq, pCopyItem, SfxInt16Item, SID_PRINT_COPIES, FALSE);
-			if ( pCopyItem )
-			{
-				nCopies = pCopyItem->GetValue();
-				pPrintDlg->SetCopyCount( nCopies );
-			}
-
-            // does the view support ranges?
-            if ( pPagesItem || pPrintDlg->IsRangeEnabled(PRINTDIALOG_RANGE) )
-			{
-                // enable ranges
-				pPrintDlg->CheckRange(PRINTDIALOG_RANGE);
-
-				if ( pPagesItem )
-                    // get range text from parameter
-					pPrintDlg->SetRangeText( pPagesItem->GetValue() );
 				else
 				{
-                    // construct range text from page range
-					String aRange = String::CreateFromInt32( nFrom );
-					aRange += '-';
-					aRange += String::CreateFromInt32( nTo );
-					pPrintDlg->SetRangeText( aRange );
+	                // execute PrinterSetupDialog
+	                PrinterSetupDialog* pPrintSetupDlg = new PrinterSetupDialog( GetWindow() );
+					pPrintSetupDlg->SetPrinter( pDlgPrinter );
+					nDialogRet = pPrintSetupDlg->Execute();
+	                DELETEZ( pPrintSetupDlg );
+
+	                // no recording of PrinterSetup except printer name (is printer dependent)
+	                rReq.Ignore();
 				}
+
+				if ( nDialogRet == RET_OK )
+				{
+	                if ( pPrinter->GetName() != pDlgPrinter->GetName() )
+	                {
+	                    // user has changed the printer -> macro recording
+	                    SfxRequest aReq( GetViewFrame(), SID_PRINTER_NAME );
+	                    aReq.AppendItem( SfxStringItem( SID_PRINTER_NAME, pDlgPrinter->GetName() ) );
+	                    aReq.Done();
+	                }
+
+#ifndef USE_JAVA
+	                // take the changes made in the dialog
+					pPrinter = SetPrinter_Impl( pDlgPrinter );
+#endif	// !USE_JAVA
+
+	                // forget new printer, it was taken over (as pPrinter) or deleted
+	                pDlgPrinter = NULL;
+
+                    /* Now lets reset the Dialog printer, since its freed */
+                    if (pPrintDlg)
+                        pPrintDlg->SetPrinter (pPrinter);					
+                    
+                    if ( SID_PRINTDOC == nId )
+					{
+	                    nCopies  = pPrintDlg->GetCopyCount();
+	                    bCollate = pPrintDlg->IsCollateChecked();
+					}
+	                else
+	                    break;
+				}
+				else
+	            {
+#ifndef USE_JAVA
+	                // PrinterDialog is used to transfer information on printing,
+	                // so it will only be deleted here if dialog was cancelled
+	                DELETEZ( pDlgPrinter );
+#endif	// !USE_JAVA
+	                DELETEZ( pPrintDlg );
+	                rReq.Ignore();
+					if ( SID_PRINTDOC == nId )
+	                    rReq.SetReturnValue(SfxBoolItem(0,FALSE));
+	                break;
+	            }
+
+	            // recording
+	            rReq.AppendItem( SfxBoolItem( SID_PRINT_COLLATE, bCollate ) );
+	            rReq.AppendItem( SfxInt16Item( SID_PRINT_COPIES, (INT16) pPrintDlg->GetCopyCount() ) );
+	            if ( pPrinter->IsPrintFileEnabled() )
+	                rReq.AppendItem( SfxStringItem( SID_FILE_NAME, pPrinter->GetPrintFile() ) );
+	            if ( pPrintDlg->IsRangeChecked(PRINTDIALOG_SELECTION) )
+	                rReq.AppendItem( SfxBoolItem( SID_SELECTION, TRUE ) );
+	            else if ( pPrintDlg->IsRangeChecked(PRINTDIALOG_RANGE) )
+	                rReq.AppendItem( SfxStringItem( SID_PRINT_PAGES, pPrintDlg->GetRangeText() ) );
+	            else if ( pPrintDlg->IsRangeChecked(PRINTDIALOG_FROMTO) )
+	            {
+	                // currently this doesn't seem to work -> return values of dialog are always 0
+	                // seems to be encoded as range string like "1-3"
+	                rReq.AppendItem( SfxInt16Item( SID_PRINT_FIRST_PAGE, (INT16) pPrintDlg->GetFirstPage() ) );
+	                rReq.AppendItem( SfxInt16Item( SID_PRINT_LAST_PAGE, (INT16) pPrintDlg->GetLastPage() ) );
+	            }
 			}
-            else if ( pSelectItem && pSelectItem->GetValue() )
-            {
-                // print selecion only
-                pPrintDlg->CheckRange(PRINTDIALOG_SELECTION);
-            }
-            else
+			else if ( rReq.GetArgs() )
 			{
-                // print page rage
-				pPrintDlg->CheckRange(PRINTDIALOG_FROMTO);
-				pPrintDlg->SetFirstPage( nFrom );
-				pPrintDlg->SetLastPage( nTo );
-			}
+	            if ( SID_PRINTDOC != nId )
+	            {
+	                DBG_ERROR("Wrong slotid!");
+	                break;
+	            }
+
+	            // PrinterDialog is used to transfer information on printing
+				pPrintDlg = CreatePrintDialog( GetWindow() );
+				if ( bPrintOnHelp )
+					pPrintDlg->DisableHelp();
+				pPrintDlg->SetPrinter( pPrinter );
+#ifdef USE_JAVA
+				nDialogRet = pPrintDlg->Execute();
+				if ( nDialogRet == RET_CANCEL )
+				{
+					DELETEZ( pPrintDlg );
+					rReq.Ignore();
+					break;
+				}
+#else	// USE_JAVA
+				::DisableRanges( *pPrintDlg, pPrinter );
+
+	            // PrintToFile requested?
+				SFX_REQUEST_ARG(rReq, pFileItem, SfxStringItem, SID_FILE_NAME, FALSE);
+				if ( pFileItem )
+				{
+					pPrinter->EnablePrintFile(TRUE);
+					pPrinter->SetPrintFile( pFileItem->GetValue() );
+				}
+
+	            // Collate
+	            SFX_REQUEST_ARG(rReq, pCollateItem, SfxBoolItem, SID_PRINT_COLLATE, FALSE);
+	            if ( pCollateItem )
+	                bCollate = pCollateItem->GetValue();
+
+	            // Selection
+	            SFX_REQUEST_ARG(rReq, pSelectItem, SfxBoolItem, SID_SELECTION, FALSE);
+
+				// Pages (as String)
+				SFX_REQUEST_ARG(rReq, pPagesItem, SfxStringItem, SID_PRINT_PAGES, FALSE);
+
+				// FirstPage
+				SFX_REQUEST_ARG(rReq, pFirstPgItem, SfxInt16Item, SID_PRINT_FIRST_PAGE, FALSE);
+				USHORT nFrom = 1;
+				if ( pFirstPgItem )
+					nFrom = pFirstPgItem->GetValue();
+
+				// LastPage
+				SFX_REQUEST_ARG(rReq, pLastPgItem, SfxInt16Item, SID_PRINT_LAST_PAGE, FALSE);
+				USHORT nTo = 9999;
+				if ( pLastPgItem )
+					nTo = pLastPgItem->GetValue();
+
+	            // CopyCount
+				SFX_REQUEST_ARG(rReq, pCopyItem, SfxInt16Item, SID_PRINT_COPIES, FALSE);
+				if ( pCopyItem )
+				{
+					nCopies = pCopyItem->GetValue();
+					pPrintDlg->SetCopyCount( nCopies );
+				}
+
+	            // does the view support ranges?
+	            if ( pPagesItem || pPrintDlg->IsRangeEnabled(PRINTDIALOG_RANGE) )
+				{
+	                // enable ranges
+					pPrintDlg->CheckRange(PRINTDIALOG_RANGE);
+
+					if ( pPagesItem )
+	                    // get range text from parameter
+						pPrintDlg->SetRangeText( pPagesItem->GetValue() );
+					else
+					{
+	                    // construct range text from page range
+						String aRange = String::CreateFromInt32( nFrom );
+						aRange += '-';
+						aRange += String::CreateFromInt32( nTo );
+						pPrintDlg->SetRangeText( aRange );
+					}
+				}
+	            else if ( pSelectItem && pSelectItem->GetValue() )
+	            {
+	                // print selecion only
+	                pPrintDlg->CheckRange(PRINTDIALOG_SELECTION);
+	            }
+	            else
+				{
+	                // print page rage
+					pPrintDlg->CheckRange(PRINTDIALOG_FROMTO);
+					pPrintDlg->SetFirstPage( nFrom );
+					pPrintDlg->SetLastPage( nTo );
+				}
 #endif	// USE_JAVA
+			}
+
+	        // intentionally no break for SID_PRINTDOC
+	        // printing now proceeds like SID_PRINTDOCDIRECT
 		}
 
-        // intentionally no break for SID_PRINTDOC
-        // printing now proceeds like SID_PRINTDOCDIRECT
-	}
+		// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+		case SID_PRINTDOCDIRECT:
+		{
+	        if ( SID_PRINTDOCDIRECT == nId )
+	        {
+				SfxObjectShell* pDoc = GetObjectShell();
+				bool bDetectHidden = ( !bSilent && pDoc );
+				if ( bDetectHidden && pDoc->QueryHiddenInformation( WhenPrinting, NULL ) != RET_YES )
+					return;
 
-	case SID_PRINTDOCDIRECT:
-	{
-        if ( SID_PRINTDOCDIRECT == nId )
-        {
-            // if no printer was selected before
-            if ( !pPrinter )
-                pPrinter = GetPrinter(TRUE);
+				// if no printer was selected before
+	            if ( !pPrinter )
+	                pPrinter = GetPrinter(TRUE);
 
-            if( !pPrinter->IsValid() )
-            {
-                // redirect slot to call the print dialog if the document's printer is not valid!
-                rReq.SetSlot( SID_PRINTDOC );
-				ExecPrint_Impl( rReq );
-				return;
-            }
+	            if( !pPrinter->IsValid() )
+	            {
+	                // redirect slot to call the print dialog if the document's printer is not valid!
+	                rReq.SetSlot( SID_PRINTDOC );
+					ExecPrint_Impl( rReq );
+					return;
+	            }
 
 #ifdef USE_JAVA
-			// Redirect slot to make sure that the print dialog is shown
-			if ( !pPrintDlg )
-			{
-				BOOL bPrintOptions = pImp->bHasPrintOptions;
-				pImp->bHasPrintOptions = FALSE;
-				rReq.SetSlot(SID_PRINTDOC);
-				ExecPrint_Impl( rReq );
-				pImp->bHasPrintOptions = bPrintOptions;
-				return;
-			}
+				// Redirect slot to make sure that the print dialog is shown
+				if ( !pPrintDlg )
+				{
+					BOOL bPrintOptions = pImp->bHasPrintOptions;
+					pImp->bHasPrintOptions = FALSE;
+					rReq.SetSlot(SID_PRINTDOC);
+					ExecPrint_Impl( rReq );
+					pImp->bHasPrintOptions = bPrintOptions;
+					return;
+				}
 #else	// USE_JAVA
-            if( pPrinter->IsOriginal() && pPrinter->GetName() != Printer::GetDefaultPrinterName() )
-			{
-                // redirect slot to call the print dialog if the document's printer is available but not system default
-                rReq.SetSlot( SID_PRINTDOC );
-				ExecPrint_Impl( rReq );
-				return;
-            }
+	            if( pPrinter->IsOriginal() && pPrinter->GetName() != Printer::GetDefaultPrinterName() )
+	            {
+	                // redirect slot to call the print dialog
+					// if the document's printer is available but not system default
+	                rReq.SetSlot( SID_PRINTDOC );
+					ExecPrint_Impl( rReq );
+					return;
+	            }
 #endif	// USE_JAVA
-        }
+	        }
 
-        // if "Collate" was checked, the SfxPrinter must handle the CopyCount itself,
-        // usually this is handled by the printer driver
-        if( bCollate )
-            // set printer to default, handle multiple copies explicitly
-            pPrinter->SetCopyCount( 1 );
-        else
-            pPrinter->SetCopyCount( nCopies );
+	        // if "Collate" was checked, the SfxPrinter must handle the CopyCount itself,
+	        // usually this is handled by the printer driver
+	        if( bCollate )
+	            // set printer to default, handle multiple copies explicitly
+	            pPrinter->SetCopyCount( 1 );
+	        else
+	            pPrinter->SetCopyCount( nCopies );
 
-        // enable background printing
-        pPrinter->SetPageQueueSize( 1 );
+	        // enable background printing
+	        pPrinter->SetPageQueueSize( 1 );
 
-        // refresh document info
-        SfxObjectShell *pObjSh = GetObjectShell();
-		SfxDocumentInfo *pInfo = &pObjSh->GetDocInfo();
-		SfxStamp aOldStamp = pInfo->GetPrinted();
-		String aUserName = SvtUserOptions().GetFullName();
-		if ( !pInfo->IsUseUserData() )
-			aUserName.Erase();
+	        // refresh document info
+	        SfxObjectShell *pObjSh = GetObjectShell();
+			SfxDocumentInfo *pInfo = &pObjSh->GetDocInfo();
+			SfxStamp aOldStamp = pInfo->GetPrinted();
+			String aUserName = SvtUserOptions().GetFullName();
+			if ( !pInfo->IsUseUserData() )
+				aUserName.Erase();
 
-        // check configuration: shall update of printing information in DocInfo set the document to "modified"?
-        BOOL bOldFlag = pObjSh->IsEnableSetModified();
-        BOOL bDontModifyDoc = !SvtPrintWarningOptions().IsModifyDocumentOnPrintingAllowed();
-        if ( bDontModifyDoc && bOldFlag )
-            // prevent document from getting into the "modified" state
-            pObjSh->EnableSetModified( FALSE );
+	        // check configuration: shall update of printing information in DocInfo set the document to "modified"?
+	        BOOL bOldFlag = pObjSh->IsEnableSetModified();
+	        BOOL bDontModifyDoc = !SvtPrintWarningOptions().IsModifyDocumentOnPrintingAllowed();
+	        if ( bDontModifyDoc && bOldFlag )
+	            // prevent document from getting into the "modified" state
+	            pObjSh->EnableSetModified( FALSE );
 
-        pInfo->SetPrinted( aUserName );
-        pObjSh->Broadcast( SfxDocumentInfoHint( pInfo ) );
+	        pInfo->SetPrinted( aUserName );
+	        pObjSh->Broadcast( SfxDocumentInfoHint( pInfo ) );
 
-        if ( bDontModifyDoc && bOldFlag != pObjSh->IsEnableSetModified() )
-            pObjSh->EnableSetModified( bOldFlag );
+	        if ( bDontModifyDoc && bOldFlag != pObjSh->IsEnableSetModified() )
+	            pObjSh->EnableSetModified( bOldFlag );
 
-		GetObjectShell()->Broadcast( SfxPrintingHint( -1, pPrintDlg, pPrinter ) );
+			GetObjectShell()->Broadcast( SfxPrintingHint( -1, pPrintDlg, pPrinter ) );
 #ifdef USE_JAVA
-		ErrCode nError;
-		if ( pPrintDlg->IsRangeChecked( PRINTDIALOG_RANGE ) )
-			nError = DoPrint( pPrinter, pPrintDlg, bSilent );
-		else
-			nError = DoPrint( pPrinter, NULL, FALSE );
+			ErrCode nError;
+			if ( pPrintDlg->IsRangeChecked( PRINTDIALOG_RANGE ) )
+				nError = DoPrint( pPrinter, pPrintDlg, bSilent );
+			else
+				nError = DoPrint( pPrinter, NULL, FALSE );
 #else	// USE_JAVA
-		ErrCode nError = DoPrint( pPrinter, pPrintDlg, bSilent );
+			ErrCode nError = DoPrint( pPrinter, pPrintDlg, bSilent );
 #endif	// USE_JAVA
-		if ( nError == PRINTER_OK )
-		{
-            // printer was started sucessfully
-            bOldFlag = pObjSh->IsEnableSetModified();
-            if ( bDontModifyDoc && bOldFlag )
-                pObjSh->EnableSetModified( FALSE );
-
-            pObjSh->FlushDocInfo();
-
-            if ( bDontModifyDoc && bOldFlag != pObjSh->IsEnableSetModified() )
-                pObjSh->EnableSetModified( bOldFlag );
-
-			Invalidate( SID_PRINTDOC );
-			Invalidate( SID_PRINTDOCDIRECT );
-			Invalidate( SID_SETUPPRINTER );
-			rReq.SetReturnValue(SfxBoolItem(0,TRUE));
-
-			SFX_REQUEST_ARG(rReq, pAsyncItem, SfxBoolItem, SID_ASYNCHRON, FALSE);
-			if ( pAsyncItem && !pAsyncItem->GetValue() )
+			if ( nError == PRINTER_OK )
 			{
-                // synchronous execution wanted - wait for end of printing
-				while ( pPrinter->IsPrinting())
-					Application::Yield();
+	            // printer was started sucessfully
+	            bOldFlag = pObjSh->IsEnableSetModified();
+	            if ( bDontModifyDoc && bOldFlag )
+	                pObjSh->EnableSetModified( FALSE );
+
+	            pObjSh->FlushDocInfo();
+
+	            if ( bDontModifyDoc && bOldFlag != pObjSh->IsEnableSetModified() )
+	                pObjSh->EnableSetModified( bOldFlag );
+
+				Invalidate( SID_PRINTDOC );
+				Invalidate( SID_PRINTDOCDIRECT );
+				Invalidate( SID_SETUPPRINTER );
+				rReq.SetReturnValue(SfxBoolItem(0,TRUE));
+
+				SFX_REQUEST_ARG(rReq, pAsyncItem, SfxBoolItem, SID_ASYNCHRON, FALSE);
+				if ( pAsyncItem && !pAsyncItem->GetValue() )
+				{
+	                // synchronous execution wanted - wait for end of printing
+					while ( pPrinter->IsPrinting())
+						Application::Yield();
+				}
+
+	            rReq.Done();
+			}
+			else
+			{
+	            bOldFlag = pObjSh->IsEnableSetModified();
+	            if ( bDontModifyDoc && bOldFlag )
+	                pObjSh->EnableSetModified( FALSE );
+
+	            // printing not succesful, reset DocInfo
+	            pInfo->SetPrinted(aOldStamp);
+				pObjSh->Broadcast( SfxDocumentInfoHint( pInfo ) );
+
+	            if ( bDontModifyDoc && bOldFlag != pObjSh->IsEnableSetModified() )
+	                pObjSh->EnableSetModified( bOldFlag );
+
+				if ( nError != PRINTER_ABORT )
+				{
+	                // "real" problem (not simply printing cancelled by user)
+					String aMsg( SfxResId( STR_NOSTARTPRINTER ) );
+	                if ( !bIsAPI )
+	                    ErrorBox( NULL, WB_OK | WB_DEF_OK,  aMsg ).Execute();
+					rReq.SetReturnValue(SfxBoolItem(0,FALSE));
+				}
+
+	            rReq.Ignore();
 			}
 
-            rReq.Done();
+			delete pPrintDlg;
+			break;
 		}
-		else
-		{
-            bOldFlag = pObjSh->IsEnableSetModified();
-            if ( bDontModifyDoc && bOldFlag )
-                pObjSh->EnableSetModified( FALSE );
-
-            // printing not succesful, reset DocInfo
-            pInfo->SetPrinted(aOldStamp);
-			pObjSh->Broadcast( SfxDocumentInfoHint( pInfo ) );
-
-            if ( bDontModifyDoc && bOldFlag != pObjSh->IsEnableSetModified() )
-                pObjSh->EnableSetModified( bOldFlag );
-
-			if ( nError != PRINTER_ABORT )
-			{
-                // "real" problem (not simply printing cancelled by user)
-				String aMsg( SfxResId( STR_NOSTARTPRINTER ) );
-                if ( !bIsAPI )
-                    ErrorBox( NULL, WB_OK | WB_DEF_OK,  aMsg ).Execute();
-				rReq.SetReturnValue(SfxBoolItem(0,FALSE));
-			}
-
-            rReq.Ignore();
-		}
-
-		delete pPrintDlg;
-		break;
-	}
 	}
 }
 
