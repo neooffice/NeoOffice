@@ -117,6 +117,11 @@ SHL1STDLIBS+=\
 
 .ENDIF # WNT
 
+.IF "$(OS)"=="MACOSX"
+.IF "$(GUIBASE)"=="java"
+SHL1STDLIBS += -framework AppKit
+.ENDIF
+.ENDIF
 
 .IF "$(GUI)"!="MAC"
 SHL1DEPN += $(shell $(FIND) $(SLO) -type f -name "*.OBJ" -print)
