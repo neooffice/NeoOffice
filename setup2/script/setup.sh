@@ -35,7 +35,7 @@
 ##########################################################################
 
 # Reset PATH
-PATH=/usr/bin:/bin:/usr/sbin:/sbin
+PATH=/bin:/sbin:/usr/bin:/usr/sbin
 export PATH
 
 error()
@@ -310,9 +310,10 @@ if [ "$os" = "Darwin" ] ; then
     if [ ! -f "$javavm" ] ; then
         error "$javavm file does not exist"
     fi
-    # Force vcl.jar into bootstrap classpath so that we are sure that our
-    # classes are loaded
-    printf "[Java]\nRuntimeLib=$javavm\njava.ext.dirs=$javabasedir/Home/lib/ext\njava.endorsed.dirs=\n-Xbootclasspath/a:$apphome/classes/vcl.jar\n" > "$configdir/javarc"
+    # Prevent any classes or libraries from being loaded from the JVM's
+    # standard extensions and endorsed directories as they can cause random
+    # crashing of the JVM
+    printf "[Java]\nRuntimeLib=$javavm\njava.ext.dirs=$javabasedir/Home/lib/ext\njava.endorsed.dirs=\njava.library.path=/usr/lib/java:$apphome\n" > "$configdir/javarc"
 else
     printf "[Java]\n" > "$configdir/javarc"
 fi
