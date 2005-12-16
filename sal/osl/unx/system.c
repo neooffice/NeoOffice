@@ -660,7 +660,7 @@ void macxp_getSystemVersion( unsigned int *isDarwin, unsigned int *majorVersion,
 	*minorMinorVersion = 0;
 }
 
-int macxp_resolveAlias(char *path, int buflen)
+int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement)
 {
     FSRef aFSRef;
     OSStatus nErr;
@@ -679,8 +679,6 @@ int macxp_resolveAlias(char *path, int buflen)
             *unprocessedPath = '\0';
 
         nErr = noErr;
-        bFolder = FALSE;
-        bAliased = FALSE;
         if ( FSPathMakeRef( (const UInt8 *)path, &aFSRef, 0 ) == noErr )
         {
             nErr = FSResolveAliasFileWithMountFlags( &aFSRef, TRUE, &bFolder, &bAliased, kResolveAliasFileNoUI );
@@ -691,29 +689,32 @@ int macxp_resolveAlias(char *path, int buflen)
             }
             else if ( nErr == noErr && bAliased )
             {
-                char tmpPath[ PATH_MAX ];
-                if ( FSRefMakePath( &aFSRef, (UInt8 *)tmpPath, PATH_MAX ) == noErr )
+                if ( !noResolveLastElement || ( unprocessedPath && *unprocessedPath ) )
                 {
-                    int nLen = strlen( tmpPath ) + ( unprocessedPath ? strlen( unprocessedPath + 1 ) + 1 : 0 );
-                    if ( nLen < buflen && nLen < PATH_MAX )
+                    char tmpPath[ PATH_MAX ];
+                    if ( FSRefMakePath( &aFSRef, (UInt8 *)tmpPath, PATH_MAX ) == noErr )
                     {
-                        if ( unprocessedPath )
+                        int nLen = strlen( tmpPath ) + ( unprocessedPath ? strlen( unprocessedPath + 1 ) + 1 : 0 );
+                        if ( nLen < buflen && nLen < PATH_MAX )
                         {
-                            int nTmpPathLen = strlen( tmpPath );
-                            strcat( tmpPath, "/" );
-                            strcat( tmpPath, unprocessedPath + 1 );
-                            strcpy( path, tmpPath);
-                            unprocessedPath = path + nTmpPathLen;
+                            if ( unprocessedPath )
+                            {
+                                int nTmpPathLen = strlen( tmpPath );
+                                strcat( tmpPath, "/" );
+                                strcat( tmpPath, unprocessedPath + 1 );
+                                strcpy( path, tmpPath);
+                                unprocessedPath = path + nTmpPathLen;
+                            }
+                            else if ( !unprocessedPath )
+                            {
+                                strcpy( path, tmpPath);
+                            }
                         }
-                        else if ( !unprocessedPath )
+                        else
                         {
-                            strcpy( path, tmpPath);
+                            errno = ENAMETOOLONG;
+                            nRet = -1;
                         }
-                    }
-                    else
-                    {
-                        errno = ENAMETOOLONG;
-                        nRet = -1;
                     }
                 }
             }

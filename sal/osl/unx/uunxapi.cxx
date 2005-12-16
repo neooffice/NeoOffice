@@ -75,7 +75,7 @@
     if ( p.getLength() < PATH_MAX )
     {
 	    strcpy( path, p.getStr() );
-        macxp_resolveAlias( path, PATH_MAX );
+        macxp_resolveAlias( path, PATH_MAX, sal_False );
         p = rtl::OString( path );
     }
  #endif
@@ -98,7 +98,7 @@
     if ( fn.getLength() < PATH_MAX )
     {
 	    strcpy( path, fn.getStr() );
-        macxp_resolveAlias( path, PATH_MAX );
+        macxp_resolveAlias( path, PATH_MAX, sal_False );
         fn = rtl::OString( path );
     }
  #endif
@@ -132,7 +132,7 @@
     if ( p.getLength() < PATH_MAX )
     {
 	    strcpy( path, p.getStr() );
-        macxp_resolveAlias( path, PATH_MAX );
+        macxp_resolveAlias( path, PATH_MAX, sal_False );
         p = rtl::OString( path );
     }
  #endif

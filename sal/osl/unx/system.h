@@ -1,4 +1,5 @@
 /*************************************************************************
+#ifndef _SAL_TYPES_H_
  *
  *  $RCSfile$
  *
@@ -392,16 +393,22 @@ extern char *strdup(const char *);
 #	define  NO_PTHREAD_RTL
 /* for NSGetArgc/Argv/Environ */
 #       include <crt_externs.h>
+#ifndef _SAL_TYPES_H_
+#include <sal/types.h>
+#endif
+
 int  readdir_r( DIR *dirp, struct dirent *entry, struct dirent **result );
 char *asctime_r( const struct tm *tm, char *buffer );
 char *macxp_tempnam( const char *tmpdir, const char *prefix );
 void macxp_getSystemVersion( unsigned int *isDarwin, unsigned int *majorVersion, unsigned int *minorVersion, unsigned int *minorMinorVersion );
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-int macxp_resolveAlias(char *path, int buflen);
+int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement);
 #ifdef __cplusplus
 }
+
 #endif
 #endif
 

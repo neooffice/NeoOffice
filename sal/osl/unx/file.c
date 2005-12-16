@@ -320,7 +320,7 @@ oslFileError SAL_CALL osl_openDirectory(rtl_uString* ustrDirectoryURL, oslDirect
 
     /* convert unicode path to text */
 #ifdef MACOSX
-    if ( UnicodeToText( path, PATH_MAX, ustrSystemPath->buffer, ustrSystemPath->length ) && macxp_resolveAlias( path, PATH_MAX ) == 0 )
+    if ( UnicodeToText( path, PATH_MAX, ustrSystemPath->buffer, ustrSystemPath->length ) && macxp_resolveAlias( path, PATH_MAX, sal_False ) == 0 )
 #else	/* MACOSX */
     if ( UnicodeToText( path, PATH_MAX, ustrSystemPath->buffer, ustrSystemPath->length ) )
 #endif	/* MACOSX */
@@ -587,7 +587,7 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
 
     /* convert unicode path to text */
 #ifdef MACOSX
-    if( UnicodeToText( buffer, PATH_MAX, ustrFilePath->buffer, ustrFilePath->length ) && macxp_resolveAlias( buffer, PATH_MAX ) == 0 )
+    if( UnicodeToText( buffer, PATH_MAX, ustrFilePath->buffer, ustrFilePath->length ) && macxp_resolveAlias( buffer, PATH_MAX, sal_False ) == 0 )
 #else	/* MACOSX */
     if( UnicodeToText( buffer, PATH_MAX, ustrFilePath->buffer, ustrFilePath->length ) )
 #endif	/* MACOSX */
@@ -647,7 +647,15 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                     aflock.l_type = 0;
 
                 /* lock the file if flock.l_type is set */
+#ifdef MACOSX
+                /*  
+                 * Mac OS X will return ENOTSUP for mounted file systems so
+				 * ignore the error for write locks
+                 */  
+                if( F_WRLCK != aflock.l_type || -1 != fcntl( fd, F_SETLK, &aflock ) || errno == ENOTSUP )
+#else	/* MACOSX */
                 if( F_WRLCK != aflock.l_type || -1 != fcntl( fd, F_SETLK, &aflock ) )
+#endif	/* MACOSX */
                 {
                     /* allocate memory for impl structure */
                     pHandleImpl = (oslFileHandleImpl*) rtl_allocateMemory( sizeof(oslFileHandleImpl) );
@@ -684,17 +692,6 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                 struct stat aFileStat;
 
                 if( stat( buffer, &aFileStat ) >= 0 && ( aFileStat.st_flags & ( UF_IMMUTABLE | SF_IMMUTABLE ) ) )
-                    errno = EACCES;
-            }
-            /*
-             * Mac OS X will return ENOTSUP for mounted file systems so ignore
-             * the error for write locks
-             */
-            else if ( errno == ENOTSUP )
-            {
-                struct stat aFileStat;
-
-                if( stat( buffer, &aFileStat ) >= 0 )
                     errno = EACCES;
             }
 #endif	/* MACOSX */
@@ -742,7 +739,15 @@ oslFileError osl_closeFile( oslFileHandle Handle )
             /* FIXME: check if file is really locked ?  */
 
             /* release the file share lock on this file */
+#ifdef MACOSX
+            /*  
+             * Mac OS X will return ENOTSUP for mounted file systems so ignore
+             * the error for write locks
+             */  
+            if( -1 == fcntl( pHandleImpl->fd, F_SETLK, &aflock ) && errno != ENOTSUP )
+#else	/* MACOSX */
             if( -1 == fcntl( pHandleImpl->fd, F_SETLK, &aflock ) )
+#endif	/* MACOSX */
                 PERROR( "osl_closeFile", "unlock failed" );
         }
 
@@ -821,7 +826,7 @@ oslFileError osl_moveFile( rtl_uString* ustrFileURL, rtl_uString* ustrDestURL )
         return eRet;
 
 #ifdef MACOSX
-    if ( macxp_resolveAlias( srcPath, PATH_MAX ) != 0 || macxp_resolveAlias( destPath, PATH_MAX ) != 0 )
+    if ( macxp_resolveAlias( srcPath, PATH_MAX, sal_True ) != 0 || macxp_resolveAlias( destPath, PATH_MAX, sal_False ) != 0 )
         return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif	/* MACOSX */
 
@@ -852,7 +857,7 @@ oslFileError osl_copyFile( rtl_uString* ustrFileURL, rtl_uString* ustrDestURL )
         return eRet;
 
 #ifdef MACOSX
-    if ( macxp_resolveAlias( srcPath, PATH_MAX ) != 0 || macxp_resolveAlias( destPath, PATH_MAX ) != 0 )
+    if ( macxp_resolveAlias( srcPath, PATH_MAX, sal_False ) != 0 || macxp_resolveAlias( destPath, PATH_MAX, sal_False ) != 0 )
         return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif	/* MACOSX */
 
@@ -876,7 +881,7 @@ oslFileError osl_removeFile( rtl_uString* ustrFileURL )
         return eRet;
 
 #ifdef MACOSX
-    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+    if ( macxp_resolveAlias( path, PATH_MAX, sal_True ) != 0 )
         return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif	/* MACOSX */
 
@@ -901,7 +906,7 @@ oslFileError osl_getVolumeInformation( rtl_uString* ustrDirectoryURL, oslVolumeI
         return eRet;
 
 #ifdef MACOSX
-    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+    if ( macxp_resolveAlias( path, PATH_MAX, sal_False ) != 0 )
         return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif	/* MACOSX */
 
@@ -925,7 +930,7 @@ oslFileError osl_createDirectory( rtl_uString* ustrDirectoryURL )
         return eRet;
 
 #ifdef MACOSX
-    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+    if ( macxp_resolveAlias( path, PATH_MAX, sal_False ) != 0 )
         return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif	/* MACOSX */
 
@@ -949,8 +954,16 @@ oslFileError osl_removeDirectory( rtl_uString* ustrDirectoryURL )
         return eRet;
 
 #ifdef MACOSX
-    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+    if ( macxp_resolveAlias( path, PATH_MAX, sal_True ) == 0 )
+    {
+        struct stat aStat;
+        if ( lstat( path, &aStat ) != -1 && !S_ISDIR( aStat.st_mode ) )
+           return osl_psz_removeFile( path );
+    }
+    else
+    {
         return oslTranslateFileError( OSL_FET_ERROR, errno );
+    }
 #endif	/* MACOSX */
 
     return osl_psz_removeDirectory( path );
@@ -986,7 +999,7 @@ oslFileError osl_setFileAttributes( rtl_uString* ustrFileURL, sal_uInt64 uAttrib
         return eRet;
 
 #ifdef MACOSX
-    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+    if ( macxp_resolveAlias( path, PATH_MAX, sal_False ) != 0 )
         return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif	/* MACOSX */
 
@@ -1011,7 +1024,7 @@ oslFileError osl_setFileTime( rtl_uString* ustrFileURL, const TimeValue* pCreati
         return eRet;
 
 #ifdef MACOSX
-    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+    if ( macxp_resolveAlias( path, PATH_MAX, sal_False ) != 0 )
         return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif	/* MACOSX */
 
@@ -1675,6 +1688,13 @@ static oslFileError oslDoMoveFile( const sal_Char* pszPath, const sal_Char* pszD
     {
         return tErr;
     }
+
+#ifdef MACOSX
+    char aliasedPath[PATH_MAX];
+    strcpy( aliasedPath, pszPath );
+    if ( macxp_resolveAlias( aliasedPath, PATH_MAX, sal_True ) != 0 || strcmp( pszPath, aliasedPath ) != 0 )
+        return tErr;
+#endif	/* MACOSX */
 
     tErr=osl_psz_copyFile(pszPath,pszDestPath);
 
