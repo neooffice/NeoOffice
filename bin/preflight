@@ -34,7 +34,7 @@
 # 
 ##########################################################################
 
-PATH=/usr/bin:/bin:/usr/sbin:/sbin
+PATH=/bin:/sbin:/usr/bin:/usr/sbin
 export PATH
 
 if [ -d "$2/Contents" ] ; then
