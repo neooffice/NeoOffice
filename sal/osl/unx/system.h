@@ -408,8 +408,8 @@ extern "C" {
 int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement);
 #ifdef __cplusplus
 }
-
 #endif
+
 #endif
 
 #if !defined(_WIN32)  && !defined(_WIN16) && !defined(OS2)  && \
