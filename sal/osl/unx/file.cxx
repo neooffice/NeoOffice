@@ -6,39 +6,34 @@
  *
  *  last change: $Author$ $Date$
  *
- *  The Contents of this file are made available subject to the terms of
- *  either of the following licenses
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- *         - GNU General Public License Version 2.1
  *
- *  Sun Microsystems Inc., October, 2000
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- *  GNU General Public License Version 2.1
- *  =============================================
- *  Copyright 2000 by Sun Microsystems, Inc.
- *  901 San Antonio Road, Palo Alto, CA 94303, USA
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
  *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public
- *  License version 2.1, as published by the Free Software Foundation.
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
  *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
  *
- *  You should have received a copy of the GNU General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *  MA  02111-1307  USA
- *  
- *  =================================================
- *  Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
- *  distributed under GPL only under modification term 3 of the LGPL.
- *
- *  Contributor(s): _______________________________________
+ *    Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
+
 
 /************************************************************************
  *   ToDo
@@ -63,9 +58,8 @@
 #include <rtl/alloc.h>
 #endif
 
-#ifndef _OSL_FILE_H_
-#include <osl/file.h>
-#endif
+#include "osl/file.hxx"
+
 
 #ifndef _SAL_TYPES_H_
 #include <sal/types.h>
@@ -91,13 +85,9 @@
 #include "file_url.h"
 #endif
 
-#ifndef _OSL_FILE_PATH_HELPER_H_
-#include "file_path_helper.h"
-#endif
+#include "file_path_helper.hxx"
+#include "uunxapi.hxx"
 
-#ifndef _OSL_UUNXAPI_H_
-#include "uunxapi.h"
-#endif
 
 #include <sys/mman.h>
 
@@ -153,6 +143,12 @@ static const sal_Char* MOUNTTAB="/etc/mtab";
 #include <sys/mount.h>
 #define HAVE_STATFS_H
 
+// add MACOSX Time Value
+
+#define TimeValue CFTimeValue
+#include <CoreFoundation/CoreFoundation.h>
+#undef TimeValue
+
 #endif
 
 #if OSL_DEBUG_LEVEL > 1
@@ -168,6 +164,7 @@ static const sal_Char* MOUNTTAB="/etc/mtab";
 #	define PERROR( a, b )
 #endif
 
+extern "C" oslFileHandle osl_createFileHandleFromFD( int fd );
 
 /******************************************************************************
  *
@@ -246,9 +243,6 @@ static int           oslDoCopyLink(const sal_Char* pszSourceFileName, const sal_
 static int           oslDoCopyFile(const sal_Char* pszSourceFileName, const sal_Char* pszDestFileName, size_t nSourceSize, mode_t mode);
 static oslFileError  oslDoMoveFile(const sal_Char* pszPath, const sal_Char* pszDestPath);
 static rtl_uString*  oslMakeUStrFromPsz(const sal_Char* pszStr,rtl_uString** uStr);
-#if defined MACOSX && defined PRODUCT_FILETYPE
-static void          oslSetFileTypeFromPsz(const sal_Char* pszStr);
-#endif	/* MACOSX && PRODUCT_FILETYPE */
 
 /******************************************************************************
  *
@@ -256,8 +250,9 @@ static void          oslSetFileTypeFromPsz(const sal_Char* pszStr);
  *
  *****************************************************************************/
 
-int UnicodeToText( char *, size_t, const sal_Unicode *, sal_Int32 );
-
+extern "C" int UnicodeToText( char *, size_t, const sal_Unicode *, sal_Int32 );
+extern "C" int TextToUnicode(
+    const char* text, size_t text_buffer_size,	sal_Unicode* unic_text, sal_Int32 unic_text_buffer_size);
 
 /******************************************************************************
  *
@@ -320,7 +315,7 @@ oslFileError SAL_CALL osl_openDirectory(rtl_uString* ustrDirectoryURL, oslDirect
 
     /* convert unicode path to text */
 #ifdef MACOSX
-    if ( UnicodeToText( path, PATH_MAX, ustrSystemPath->buffer, ustrSystemPath->length ) && macxp_resolveAlias( path, PATH_MAX ) == 0 )
+    if ( UnicodeToText( path, PATH_MAX, ustrSystemPath->buffer, ustrSystemPath->length ) && macxp_resolveAlias( path, PATH_MAX, sal_False ) == 0 )
 #else	/* MACOSX */
     if ( UnicodeToText( path, PATH_MAX, ustrSystemPath->buffer, ustrSystemPath->length ) )
 #endif	/* MACOSX */
@@ -412,7 +407,7 @@ static struct dirent* osl_readdir_impl_(DIR* pdir, sal_Bool bFilterLocalAndParen
  *	osl_getNextDirectoryItem
  ***************************************************************************/
 
-oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirectoryItem* pItem, sal_uInt32 uHint)
+oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirectoryItem* pItem, sal_uInt32 /*uHint*/)
 {
     oslDirectoryImpl* pDirImpl     = (oslDirectoryImpl*)Directory;
     rtl_uString*      ustrFileName = NULL;
@@ -430,25 +425,28 @@ oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirect
     if (NULL == pEntry)
         return osl_File_E_NOENT;
 
+
 #if defined(MACOSX) && (BUILD_OS_MAJOR==10) && (BUILD_OS_MINOR>=2)
-    /* convert decomposed file name to precomposed unicode */
-    char composed_name[BUFSIZ];
-    CFMutableStringRef strRef = CFStringCreateMutable( NULL, 0 );
-    CFStringAppendCString( strRef, pEntry->d_name, kCFStringEncodingUTF8 );
+
+    // convert decomposed filename to precomposed unicode 
+    char composed_name[BUFSIZ];  
+    CFMutableStringRef strRef = CFStringCreateMutable (NULL, 0 );
+    CFStringAppendCString( strRef, pEntry->d_name, kCFStringEncodingUTF8 );  //UTF8 is default on Mac OSX
     CFStringNormalize( strRef, kCFStringNormalizationFormC );
     CFStringGetCString( strRef, composed_name, BUFSIZ, kCFStringEncodingUTF8 );
     CFRelease( strRef );
+    rtl_string2UString( &ustrFileName, composed_name, strlen( composed_name),
+	osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
 
-    rtl_string2UString( &ustrFileName, composed_name, strlen( composed_name ),
-        osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
-#else
+#else  // not MACOSX
     /* convert file name to unicode */
     rtl_string2UString( &ustrFileName, pEntry->d_name, strlen( pEntry->d_name ),
         osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
+    OSL_ASSERT(ustrFileName != 0);
+
 #endif
 
 	osl_systemPathMakeAbsolutePath(pDirImpl->ustrPath, ustrFileName, &ustrFilePath);
-
     rtl_uString_release( ustrFileName );
 
     /* use path as directory item */
@@ -587,12 +585,11 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
 
     /* convert unicode path to text */
 #ifdef MACOSX
-    if( UnicodeToText( buffer, PATH_MAX, ustrFilePath->buffer, ustrFilePath->length ) && macxp_resolveAlias( buffer, PATH_MAX ) == 0 )
+    if( UnicodeToText( buffer, PATH_MAX, ustrFilePath->buffer, ustrFilePath->length ) && macxp_resolveAlias( buffer, PATH_MAX, sal_False ) == 0 )
 #else	/* MACOSX */
     if( UnicodeToText( buffer, PATH_MAX, ustrFilePath->buffer, ustrFilePath->length ) )
 #endif	/* MACOSX */
     {
-
         /* we do not open devices or such here */
         if( !( uFlags & osl_File_OpenFlag_Create ) )
         {
@@ -618,17 +615,17 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
 
             if ( uFlags & osl_File_OpenFlag_Write )
             {
-                mode |= S_IWUSR | S_IWGRP | S_IWOTH;                
+                mode |= S_IWUSR | S_IWGRP | S_IWOTH;
                 flags = O_RDWR;
                 aflock.l_type = F_WRLCK;
             }
 
             if ( uFlags & osl_File_OpenFlag_Create )
             {
-                mode |= S_IWUSR | S_IWGRP | S_IWOTH;        
+                mode |= S_IWUSR | S_IWGRP | S_IWOTH;
                 flags = O_CREAT | O_EXCL | O_RDWR;
             }
-				
+
             /* open the file */
             fd = open( buffer, flags, mode );
             if ( fd >= 0 )
@@ -647,7 +644,15 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                     aflock.l_type = 0;
 
                 /* lock the file if flock.l_type is set */
+#ifdef MACOSX
+                /*
+                 * Mac OS X will return ENOTSUP for mounted file systems so
+                 * ignore the error for write locks
+                 */
+                if( F_WRLCK != aflock.l_type || -1 != fcntl( fd, F_SETLK, &aflock ) || errno == ENOTSUP )
+#else	/* MACOSX */
                 if( F_WRLCK != aflock.l_type || -1 != fcntl( fd, F_SETLK, &aflock ) )
+#endif	/* MACOSX */
                 {
                     /* allocate memory for impl structure */
                     pHandleImpl = (oslFileHandleImpl*) rtl_allocateMemory( sizeof(oslFileHandleImpl) );
@@ -657,11 +662,6 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                         pHandleImpl->fd = fd;
 
                         *pHandle = (oslFileHandle) pHandleImpl;
-
-#if defined MACOSX && defined PRODUCT_FILETYPE
-                        if ( uFlags & osl_File_OpenFlag_Create )
-                            oslSetFileTypeFromPsz( buffer );
-#endif	/* MACOSX && PRODUCT_FILETYPE */
 
                         return osl_File_E_None;
                     }
@@ -674,39 +674,10 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                 close( fd );
             }
 
-#ifdef MACOSX
-            /*
-             * Handle case where we cannot open a file for writing because it
-             * is locked in the Finder's GetInfo panel
-             */
-            if ( errno == EPERM )
-            {
-                struct stat aFileStat;
-
-                if( stat( buffer, &aFileStat ) >= 0 && ( aFileStat.st_flags & ( UF_IMMUTABLE | SF_IMMUTABLE ) ) )
-                    errno = EACCES;
-            }
-            /*
-             * Mac OS X will return ENOTSUP for mounted file systems so ignore
-             * the error for write locks
-             */
-            else if ( errno == ENOTSUP )
-            {
-                struct stat aFileStat;
-
-                if( stat( buffer, &aFileStat ) >= 0 )
-                    errno = EACCES;
-            }
-#endif	/* MACOSX */
-
             PERROR( "osl_openFile", buffer );
             eRet = oslTranslateFileError(OSL_FET_ERROR, errno );
         }
     }
-#ifdef MACOSX
-    else if( errno )
-        eRet = oslTranslateFileError(OSL_FET_ERROR, errno );
-#endif	/* MACOSX */
     else
         eRet = osl_File_E_INVAL;
 
@@ -742,7 +713,15 @@ oslFileError osl_closeFile( oslFileHandle Handle )
             /* FIXME: check if file is really locked ?  */
 
             /* release the file share lock on this file */
+#ifdef MACOSX
+            /*
+             * Mac OS X will return ENOTSUP for mounted file systems so ignore
+             * the error for write locks
+             */
+            if( -1 == fcntl( pHandleImpl->fd, F_SETLK, &aflock ) && errno != ENOTSUP )
+#else	/* MACOSX */
             if( -1 == fcntl( pHandleImpl->fd, F_SETLK, &aflock ) )
+#endif	/* MACOSX */
                 PERROR( "osl_closeFile", "unlock failed" );
         }
 
@@ -821,7 +800,7 @@ oslFileError osl_moveFile( rtl_uString* ustrFileURL, rtl_uString* ustrDestURL )
         return eRet;
 
 #ifdef MACOSX
-    if ( macxp_resolveAlias( srcPath, PATH_MAX ) != 0 || macxp_resolveAlias( destPath, PATH_MAX ) != 0 )
+    if ( macxp_resolveAlias( srcPath, PATH_MAX, sal_True ) != 0 || macxp_resolveAlias( destPath, PATH_MAX, sal_False ) != 0 )
         return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif	/* MACOSX */
 
@@ -852,7 +831,7 @@ oslFileError osl_copyFile( rtl_uString* ustrFileURL, rtl_uString* ustrDestURL )
         return eRet;
 
 #ifdef MACOSX
-    if ( macxp_resolveAlias( srcPath, PATH_MAX ) != 0 || macxp_resolveAlias( destPath, PATH_MAX ) != 0 )
+    if ( macxp_resolveAlias( srcPath, PATH_MAX, sal_False ) != 0 || macxp_resolveAlias( destPath, PATH_MAX, sal_False ) != 0 )
         return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif	/* MACOSX */
 
@@ -876,7 +855,7 @@ oslFileError osl_removeFile( rtl_uString* ustrFileURL )
         return eRet;
 
 #ifdef MACOSX
-    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+    if ( macxp_resolveAlias( path, PATH_MAX, sal_True ) != 0 )
         return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif	/* MACOSX */
 
@@ -901,7 +880,7 @@ oslFileError osl_getVolumeInformation( rtl_uString* ustrDirectoryURL, oslVolumeI
         return eRet;
 
 #ifdef MACOSX
-    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+    if ( macxp_resolveAlias( path, PATH_MAX, sal_False ) != 0 )
         return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif	/* MACOSX */
 
@@ -925,7 +904,7 @@ oslFileError osl_createDirectory( rtl_uString* ustrDirectoryURL )
         return eRet;
 
 #ifdef MACOSX
-    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+    if ( macxp_resolveAlias( path, PATH_MAX, sal_False ) != 0 )
         return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif	/* MACOSX */
 
@@ -947,13 +926,125 @@ oslFileError osl_removeDirectory( rtl_uString* ustrDirectoryURL )
     eRet = FileURLToPath( path, PATH_MAX, ustrDirectoryURL );
     if( eRet != osl_File_E_None )
         return eRet;
-
 #ifdef MACOSX
-    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+    if ( macxp_resolveAlias( path, PATH_MAX, sal_True ) == 0 )
+    {
+        struct stat aStat;
+        if ( lstat( path, &aStat ) != -1 && !S_ISDIR( aStat.st_mode ) )
+           return osl_psz_removeFile( path );
+    }
+    else
+    {
         return oslTranslateFileError( OSL_FET_ERROR, errno );
+    }
 #endif	/* MACOSX */
 
     return osl_psz_removeDirectory( path );
+}
+
+//#############################################
+int path_make_parent(sal_Unicode* path)
+{
+	int i = rtl_ustr_lastIndexOfChar(path, '/');
+	
+	if (i > 0)
+	{
+		*(path + i) = 0;
+		return i;
+	}
+	else
+		return 0;
+}
+
+//#############################################
+int create_dir_with_callback(
+	sal_Unicode* directory_path,
+    oslDirectoryCreationCallbackFunc aDirectoryCreationCallbackFunc, 
+    void* pData)
+{
+	int mode = S_IRWXU | S_IRWXG | S_IRWXO;
+	
+	if (osl::mkdir(directory_path, mode) == 0)
+    {
+    	if (aDirectoryCreationCallbackFunc)
+        {
+        	rtl::OUString url;                
+            osl::FileBase::getFileURLFromSystemPath(directory_path, url);                                
+            aDirectoryCreationCallbackFunc(pData, url.pData);
+        }                
+        return 0;
+    }
+    return errno;
+}
+
+//#############################################
+oslFileError create_dir_recursively_(
+	sal_Unicode* dir_path,
+    oslDirectoryCreationCallbackFunc aDirectoryCreationCallbackFunc, 
+    void* pData)
+{   
+	OSL_PRECOND((rtl_ustr_getLength(dir_path) > 0) && ((dir_path + (rtl_ustr_getLength(dir_path) - 1)) != (dir_path + rtl_ustr_lastIndexOfChar(dir_path, '/'))), \
+	"Path must not end with a slash");
+	     
+	int native_err = create_dir_with_callback(
+    	dir_path, aDirectoryCreationCallbackFunc, pData);
+		
+	if (native_err == 0)    
+        return osl_File_E_None;
+                        
+    if (native_err != ENOENT)
+    	return oslTranslateFileError(OSL_FET_ERROR, native_err);
+    
+	// we step back until '/a_dir' at maximum because
+	// we should get an error unequal ENOENT when
+	// we try to create 'a_dir' at '/' and would so 
+	// return before	    
+	int pos = path_make_parent(dir_path);
+                    
+    oslFileError osl_error = create_dir_recursively_(
+    	dir_path, aDirectoryCreationCallbackFunc, pData);
+                    
+    if (osl_File_E_None != osl_error)
+    	return osl_error;
+                    
+   	dir_path[pos] = '/';
+                               
+    return create_dir_recursively_(dir_path, aDirectoryCreationCallbackFunc, pData);     
+}
+
+//#######################################
+oslFileError SAL_CALL osl_createDirectoryPath(
+	rtl_uString* aDirectoryUrl, 
+    oslDirectoryCreationCallbackFunc aDirectoryCreationCallbackFunc,
+    void* pData)
+{
+    if (aDirectoryUrl == NULL)
+        return osl_File_E_INVAL;
+    
+    rtl::OUString sys_path;         
+    oslFileError osl_error = osl_getSystemPathFromFileURL_Ex(
+        aDirectoryUrl, &sys_path.pData, sal_False);        
+    
+    if (osl_error != osl_File_E_None)
+        return osl_error;
+                                                                
+    osl::systemPathRemoveSeparator(sys_path);
+    
+#ifdef MACOSX
+    rtl::OString p = rtl::OUStringToOString( sys_path, osl_getThreadTextEncoding() );
+    sal_Char path[ PATH_MAX ];
+    if ( p.getLength() < PATH_MAX )
+    {
+        strcpy( path, p.getStr() );
+        macxp_resolveAlias( path, PATH_MAX, sal_False );
+        p = rtl::OString( path );
+    }
+	sys_path = ::rtl::OStringToOUString( p, osl_getThreadTextEncoding() );
+#endif	/* MACOSX */
+
+    // const_cast because sys_path is a local copy which we want to modify inplace instead of 
+    // coyp it into another buffer on the heap again
+	return create_dir_recursively_(sys_path.pData->buffer, aDirectoryCreationCallbackFunc, pData);			
 }
 
 /****************************************************************************/
@@ -986,7 +1077,7 @@ oslFileError osl_setFileAttributes( rtl_uString* ustrFileURL, sal_uInt64 uAttrib
         return eRet;
 
 #ifdef MACOSX
-    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+    if ( macxp_resolveAlias( path, PATH_MAX, sal_False ) != 0 )
         return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif	/* MACOSX */
 
@@ -1011,10 +1102,10 @@ oslFileError osl_setFileTime( rtl_uString* ustrFileURL, const TimeValue* pCreati
         return eRet;
 
 #ifdef MACOSX
-    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+    if ( macxp_resolveAlias( path, PATH_MAX, sal_False ) != 0 )
         return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif	/* MACOSX */
-
+  
     return osl_psz_setFileTime( path, pCreationTime, pLastAccessTime, pLastWriteTime );
 }
 
@@ -1034,7 +1125,7 @@ oslFileError osl_readFile(oslFileHandle Handle, void* pBuffer, sal_uInt64 uBytes
 {
     ssize_t            nBytes      = 0;
     oslFileHandleImpl* pHandleImpl = (oslFileHandleImpl*)Handle;
-    
+
     if ((0 == pHandleImpl) || (pHandleImpl->fd < 0) || (0 == pBuffer) || (0 == pBytesRead))
         return osl_File_E_INVAL;
     
@@ -1055,10 +1146,19 @@ oslFileError osl_writeFile(oslFileHandle Handle, const void* pBuffer, sal_uInt64
 {
     ssize_t            nBytes      = 0;
     oslFileHandleImpl* pHandleImpl = (oslFileHandleImpl*)Handle;
-    
-    if ((0 == pHandleImpl) || (pHandleImpl->fd < 0) || (0 == pBuffer) || (0 == pBytesWritten))
+
+    OSL_ASSERT(pHandleImpl);
+    OSL_ASSERT(pBuffer);
+    OSL_ASSERT(pBytesWritten);
+
+    if ((0 == pHandleImpl) || (0 == pBuffer) || (0 == pBytesWritten))
         return osl_File_E_INVAL;
-    
+
+    OSL_ASSERT(pHandleImpl->fd >= 0);
+
+    if (pHandleImpl->fd < 0)
+        return osl_File_E_INVAL;
+
     nBytes = write(pHandleImpl->fd, pBuffer, uBytesToWrite);
 
     if (-1 == nBytes)
@@ -1113,7 +1213,6 @@ oslFileError osl_setFilePos( oslFileHandle Handle, sal_uInt32 uHow, sal_Int64 uP
 
         default:
             return osl_File_E_INVAL;
-            break;
     }
 
     if ( nOffset < 0 )
@@ -1159,6 +1258,24 @@ oslFileError osl_getFilePos( oslFileHandle Handle, sal_uInt64* pPos )
 
     *pPos=nOffset;
 
+    return osl_File_E_None;
+}
+
+/****************************************************************************
+ *	osl_getFileSize
+ ****************************************************************************/
+
+oslFileError osl_getFileSize( oslFileHandle Handle, sal_uInt64* pSize )
+{	
+    oslFileHandleImpl* pHandleImpl=(oslFileHandleImpl*) Handle;
+    if (pHandleImpl == 0)
+        return osl_File_E_INVAL;
+
+    struct stat file_stat;
+    if (fstat(pHandleImpl->fd, &file_stat) == -1)
+        return oslTranslateFileError(OSL_FET_ERROR, errno);
+
+    *pSize = file_stat.st_size;
     return osl_File_E_None;
 }
 
@@ -1435,6 +1552,7 @@ static oslFileError osl_psz_getVolumeInformation (
         	rtl_str_getLength(__OSL_STATFS_TYPENAME(sfs)),
         	osl_getThreadTextEncoding(),
         	OUSTRING_TO_OSTRING_CVTFLAGS);
+        OSL_ASSERT(pInfo->ustrFileSystemName != 0);
         	
 		pInfo->uValidFields |= osl_VolumeInfo_Mask_FileSystemName;
 	}
@@ -1446,9 +1564,9 @@ static oslFileError osl_psz_getVolumeInformation (
         /* FIXME: check also entries in mntent for the device
 		   and fill it with correct values */
 		
-        pInfo->pDeviceHandle = osl_isFloppyDrive(pszDirectory);
+        *pInfo->pDeviceHandle = osl_isFloppyDrive(pszDirectory);
 
-        if (pInfo->pDeviceHandle)
+        if (*pInfo->pDeviceHandle)
         {
             pInfo->uValidFields |= osl_VolumeInfo_Mask_DeviceHandle;
             pInfo->uAttributes  |= osl_Volume_Attribute_Removeable;
@@ -1507,7 +1625,7 @@ static oslFileError osl_psz_setFileAttributes( const sal_Char* pszFilePath, sal_
  *****************************************/
 
 static oslFileError osl_psz_setFileTime( const sal_Char* pszFilePath,
-                                  const TimeValue* pCreationTime,
+                                  const TimeValue* /*pCreationTime*/,
                                   const TimeValue* pLastAccessTime,
                                   const TimeValue* pLastWriteTime )
 {
@@ -2018,27 +2136,16 @@ static int oslDoCopyFile(const sal_Char* pszSourceFileName, const sal_Char* pszD
         close(DestFileFD);
         return nRet;
     }
-
-    /* #112584# ensure the data have really been written to the destination
-             file. When working over NFS, write may return another number of
-             bytes written then really arrived at the physical target medium. The
-             alternative would be to open the destimation file with the flag O_SYNC
-             which slows down the overall write performance. */
-    if (fsync(DestFileFD) == -1)
-    {        
-        close(SourceFileFD);
-        close(DestFileFD);
-        return errno;
-    }
     
     close(SourceFileFD);
-    close(DestFileFD);
-
-#if defined MACOSX && defined PRODUCT_FILETYPE
-    oslSetFileTypeFromPsz( pszDestFileName );
-#endif	/* MACOSX && PRODUCT_FILETYPE */
-
-    return 0;
+    
+    // Removed call to 'fsync' again (#112584#) and instead 
+    // evaluate the return value of 'close' in order to detect 
+    // and report ENOSPC and other erronous conditions on close    
+    if (close(DestFileFD) == -1)
+        return errno;
+    else
+        return 0;
 }
 
 /*****************************************
@@ -2053,29 +2160,10 @@ static rtl_uString* oslMakeUStrFromPsz(const sal_Char* pszStr, rtl_uString** ust
         rtl_str_getLength( pszStr ),
         osl_getThreadTextEncoding(),
         OUSTRING_TO_OSTRING_CVTFLAGS );
+    OSL_ASSERT(*ustrValid != 0);
 
     return *ustrValid;
 }
-
-/*****************************************
- * oslSetFileTypeFromPsz 
- ****************************************/
-
-#if defined MACOSX && defined PRODUCT_FILETYPE
-static void oslSetFileTypeFromPsz(const sal_Char* pszStr)
-{
-    FSRef aFSRef;
-    FSCatalogInfo aCatInfo;
-    if ( FSPathMakeRef( (const UInt8 *)pszStr, &aFSRef, 0 ) == noErr && FSGetCatalogInfo( &aFSRef, kFSCatInfoFinderInfo, &aCatInfo, NULL, NULL, NULL) == noErr )
-    {
-        if ( ( (FileInfo *)&aCatInfo.finderInfo )->fileType == 0x00000000 )
-        {
-            ( (FileInfo *)&aCatInfo.finderInfo )->fileType = (OSType)PRODUCT_FILETYPE;
-            FSSetCatalogInfo( &aFSRef, kFSCatInfoFinderInfo, &aCatInfo );
-        }
-    }
-}
-#endif	/* MACOSX && PRODUCT_FILETYPE */
 
 /*****************************************************************************
  * UnicodeToText
@@ -2086,7 +2174,7 @@ static void oslSetFileTypeFromPsz(const sal_Char* pszStr)
 int UnicodeToText( char * buffer, size_t bufLen, const sal_Unicode * uniText, sal_Int32 uniTextLen )
 {
     rtl_UnicodeToTextConverter hConverter;
-    sal_Size   nInfo;
+    sal_uInt32   nInfo;
     sal_Size   nSrcChars, nDestBytes;
 
     /* stolen from rtl/string.c */
@@ -2135,9 +2223,9 @@ int TextToUnicode(
 	sal_Int32    unic_text_buffer_size)
 {
     rtl_TextToUnicodeConverter hConverter;
-    sal_Size nInfo;
+    sal_uInt32 nInfo;
     sal_Size nSrcChars;
-	sal_Size nDestBytes;
+    sal_Size nDestBytes;
 
     /* stolen from rtl/string.c */
     hConverter = rtl_createTextToUnicodeConverter(osl_getThreadTextEncoding());
@@ -2476,14 +2564,12 @@ static oslFileError osl_mountFloppy(oslVolumeDeviceHandle hFloppy)
             fclose (pMountTab);
             return osl_File_E_BUSY;
         }
-        break;
-        
+        //break; // break not necessary here, see return statements before
+         
     case 1:
         return osl_File_E_BUSY;
-        break;
 
     default:
-        return osl_File_E_BUSY;
         break;
     }
 
@@ -2492,8 +2578,8 @@ static oslFileError osl_mountFloppy(oslVolumeDeviceHandle hFloppy)
 
 static oslFileError osl_unmountFloppy(oslVolumeDeviceHandle hFloppy)
 {
-    FILE*                       pMountTab;
-    struct mnttab               aMountEnt;
+//    FILE*                       pMountTab;
+//    struct mnttab               aMountEnt;
     oslVolumeDeviceHandleImpl*  pHandle = (oslVolumeDeviceHandleImpl*) hFloppy;    
     
     int nRet=0;
@@ -2537,19 +2623,16 @@ static oslFileError osl_unmountFloppy(oslVolumeDeviceHandle hFloppy)
             return osl_File_E_None;
         }
         
-        break;
+        //break; //break not necessary, see return statements before
         
     case 1:
         return osl_File_E_NODEV;
-        break;
 
     case 4:
         pHandle->pszMountPoint[0] = 0;
         return osl_File_E_None;
-        break;
 
     default:
-        return osl_File_E_BUSY;
         break;
     }
 

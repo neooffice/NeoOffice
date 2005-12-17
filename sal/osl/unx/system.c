@@ -6,37 +6,31 @@
  *
  *  last change: $Author$ $Date$
  *
- *  The Contents of this file are made available subject to the terms of
- *  either of the following licenses
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- *         - GNU General Public License Version 2.1
  *
- *  Sun Microsystems Inc., October, 2000
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- *  GNU General Public License Version 2.1
- *  =============================================
- *  Copyright 2000 by Sun Microsystems, Inc.
- *  901 San Antonio Road, Palo Alto, CA 94303, USA
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
  *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public
- *  License version 2.1, as published by the Free Software Foundation.
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
  *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
  *
- *  You should have received a copy of the GNU General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *  MA  02111-1307  USA
- *  
- *  =================================================
- *  Modified August 2004 by Patrick Luby. SISSL Removed. NeoOffice is
- *  distributed under GPL only under modification term 3 of the LGPL.
- *
- *  Contributor(s): _______________________________________
+ *    Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
 
@@ -544,23 +538,16 @@ char *macxp_tempnam( const char *tmpdir, const char *prefix )
 	 * 3) P_tmpdir (defined in stdio.h)
 	 * 4) /tmp
 	 */
-#ifdef USE_JAVA
-	/* But because /tmp gets automatically cleaned up with each reboot, we
-	 * won't use P_tmpdir.
-	 */
-#endif	/* USE_JAVA */
 	
 	/* Get the length of whatever temp dir we are going to use. */
 	if ( (envTempDir=getenv("TMPDIR")) != NULL )
 		tempDirLen = strlen( envTempDir );
 	else if ( tmpdir != NULL )
 		tempDirLen = strlen( tmpdir );
-#ifdef USE_JAVA
 	#ifdef P_tmpdir
 		else if ( P_tmpdir != NULL )
 			tempDirLen = strlen( P_tmpdir );
 	#endif
-#endif	/* USE_JAVA */
 	else
 		tempDirLen = strlen( kLastResortTempDir );
 	tempDirLen++;
@@ -583,12 +570,10 @@ char *macxp_tempnam( const char *tmpdir, const char *prefix )
 				strncpy( tempFilePathAndPrefix, envTempDir, tempDirLen );
 			else if ( tmpdir != NULL )
 				strncpy( tempFilePathAndPrefix, tmpdir, tempDirLen );
-#ifdef USE_JAVA
 			#ifdef P_tmpdir
 				else if ( P_tmpdir != NULL )
 					strncpy( tempFilePathAndPrefix, P_tmpdir, tempDirLen );
 			#endif
-#endif	/* USE_JAVA */
 			else
 				strncpy( tempFilePathAndPrefix, kLastResortTempDir, tempDirLen );
 
@@ -660,7 +645,7 @@ void macxp_getSystemVersion( unsigned int *isDarwin, unsigned int *majorVersion,
 	*minorMinorVersion = 0;
 }
 
-int macxp_resolveAlias(char *path, int buflen)
+int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement)
 {
     FSRef aFSRef;
     OSStatus nErr;
@@ -679,8 +664,6 @@ int macxp_resolveAlias(char *path, int buflen)
             *unprocessedPath = '\0';
 
         nErr = noErr;
-        bFolder = FALSE;
-        bAliased = FALSE;
         if ( FSPathMakeRef( (const UInt8 *)path, &aFSRef, 0 ) == noErr )
         {
             nErr = FSResolveAliasFileWithMountFlags( &aFSRef, TRUE, &bFolder, &bAliased, kResolveAliasFileNoUI );
@@ -691,29 +674,32 @@ int macxp_resolveAlias(char *path, int buflen)
             }
             else if ( nErr == noErr && bAliased )
             {
-                char tmpPath[ PATH_MAX ];
-                if ( FSRefMakePath( &aFSRef, (UInt8 *)tmpPath, PATH_MAX ) == noErr )
+                if ( !noResolveLastElement || ( unprocessedPath && *unprocessedPath ) )
                 {
-                    int nLen = strlen( tmpPath ) + ( unprocessedPath ? strlen( unprocessedPath + 1 ) + 1 : 0 );
-                    if ( nLen < buflen && nLen < PATH_MAX )
+                    char tmpPath[ PATH_MAX ];
+                    if ( FSRefMakePath( &aFSRef, (UInt8 *)tmpPath, PATH_MAX ) == noErr )
                     {
-                        if ( unprocessedPath )
+                        int nLen = strlen( tmpPath ) + ( unprocessedPath ? strlen( unprocessedPath + 1 ) + 1 : 0 );
+                        if ( nLen < buflen && nLen < PATH_MAX )
                         {
-                            int nTmpPathLen = strlen( tmpPath );
-                            strcat( tmpPath, "/" );
-                            strcat( tmpPath, unprocessedPath + 1 );
-                            strcpy( path, tmpPath);
-                            unprocessedPath = path + nTmpPathLen;
+                            if ( unprocessedPath )
+                            {
+                                int nTmpPathLen = strlen( tmpPath );
+                                strcat( tmpPath, "/" );
+                                strcat( tmpPath, unprocessedPath + 1 );
+                                strcpy( path, tmpPath);
+                                unprocessedPath = path + nTmpPathLen;
+                            }
+                            else if ( !unprocessedPath )
+                            {
+                                strcpy( path, tmpPath);
+                            }
                         }
-                        else if ( !unprocessedPath )
+                        else
                         {
-                            strcpy( path, tmpPath);
+                            errno = ENAMETOOLONG;
+                            nRet = -1;
                         }
-                    }
-                    else
-                    {
-                        errno = ENAMETOOLONG;
-                        nRet = -1;
                     }
                 }
             }

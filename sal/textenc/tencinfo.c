@@ -6,37 +6,31 @@
  *
  *  last change: $Author$ $Date$
  *
- *  The Contents of this file are made available subject to the terms of
- *  either of the following licenses
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- *         - GNU General Public License Version 2.1
  *
- *  Sun Microsystems Inc., October, 2000
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- *  GNU General Public License Version 2.1
- *  =============================================
- *  Copyright 2000 by Sun Microsystems, Inc.
- *  901 San Antonio Road, Palo Alto, CA 94303, USA
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
  *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public
- *  License version 2.1, as published by the Free Software Foundation.
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
  *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
  *
- *  You should have received a copy of the GNU General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *  MA  02111-1307  USA
- *  
- *  =================================================
- *  Modified September 2004 by Patrick Luby. SISSL Removed. NeoOffice is
- *  distributed under GPL only under modification term 3 of the LGPL.
- *
- *  Contributor(s): _______________________________________
+ *    Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
 
@@ -67,8 +61,8 @@
 sal_Bool SAL_CALL rtl_isOctetTextEncoding(rtl_TextEncoding nEncoding)
 {
     return nEncoding > RTL_TEXTENCODING_DONTKNOW
-           && nEncoding <= RTL_TEXTENCODING_ISCII_DEVANAGARI
-                              /* always update this! */
+           && nEncoding <= RTL_TEXTENCODING_PT154
+               /* always update this! */
            && nEncoding != 9; /* RTL_TEXTENCODING_SYSTEM */
 }
 
@@ -150,7 +144,7 @@ typedef struct
     const ImplStrCharsetDef*    mpSecondPartTab;
 } ImplStrFirstPartCharsetDef;
 
-#if MACOSX
+#ifdef MACOSX
 rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromMacTextEncoding( sal_uInt32 nMacTextEncoding );
 #endif	/* MACOSX */
 
@@ -233,9 +227,9 @@ rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromWindowsCharset( sal_uInt8 nWinC
     };
 
 #ifdef MACOSX
-    /* Mac OS X sets the encoding in RTF files to 77 + nWinCharset */
-    if ( eTextEncoding == RTL_TEXTENCODING_DONTKNOW && nWinCharset >= 77 )
-        eTextEncoding = rtl_getTextEncodingFromMacTextEncoding( nWinCharset - 77 );
+	/* Mac OS X sets the encoding in RTF files to 77 + nWinCharset */
+	if ( eTextEncoding == RTL_TEXTENCODING_DONTKNOW && nWinCharset >= 77 )
+		eTextEncoding = rtl_getTextEncodingFromMacTextEncoding( nWinCharset - 77 );
 #endif	/* MACOSX */
 
     return eTextEncoding;
@@ -243,7 +237,7 @@ rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromWindowsCharset( sal_uInt8 nWinC
 
 /* ----------------------------------------------------------------------- */
 
-#if MACOSX
+#ifdef MACOSX
 
 rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromMacTextEncoding( sal_uInt32 nMacTextEncoding )
 {
@@ -418,6 +412,7 @@ rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromUnixCharset( const sal_Char* pU
         { "15", RTL_TEXTENCODING_ISO_8859_15 },
         { "14", RTL_TEXTENCODING_ISO_8859_14 },
         { "13", RTL_TEXTENCODING_ISO_8859_13 },
+        { "11", RTL_TEXTENCODING_TIS_620 },
         { "10", RTL_TEXTENCODING_ISO_8859_10 },
         { "1", RTL_TEXTENCODING_ISO_8859_1 },
         { "2", RTL_TEXTENCODING_ISO_8859_2 },
@@ -557,6 +552,27 @@ rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromUnixCharset( const sal_Char* pU
         { NULL, RTL_TEXTENCODING_SYMBOL }
     };
 
+    /* See <http://cvs.freedesktop.org/xorg/xc/fonts/encodings/iso8859-11.enc?
+       rev=1.1.1.1>: */
+    static ImplStrCharsetDef const aUnixCharsetTIS620Tab[] =
+    {
+        { "0", RTL_TEXTENCODING_TIS_620 },
+        { "2529", RTL_TEXTENCODING_TIS_620 },
+        { "2533", RTL_TEXTENCODING_TIS_620 },
+        { NULL, RTL_TEXTENCODING_TIS_620 }
+    };
+    static ImplStrCharsetDef const aUnixCharsetTIS6202529Tab[] =
+    {
+        { "1", RTL_TEXTENCODING_TIS_620 },
+        { NULL, RTL_TEXTENCODING_DONTKNOW }
+    };
+    static ImplStrCharsetDef const aUnixCharsetTIS6202533Tab[] =
+    {
+        { "0", RTL_TEXTENCODING_TIS_620 },
+        { "1", RTL_TEXTENCODING_TIS_620 },
+        { NULL, RTL_TEXTENCODING_DONTKNOW }
+    };
+
     static ImplStrFirstPartCharsetDef const aUnixCharsetFirstPartTab[] =
     {
         { "iso8859", aUnixCharsetISOTab },
@@ -581,7 +597,9 @@ rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromUnixCharset( const sal_Char* pU
         { "iso10646", aUnixCharsetUNICODETab },
         { "ksc5601.1987", aUnixCharsetKSC56011987Tab },
         { "ksc5601.1992", aUnixCharsetKSC56011992Tab },
-/*        { "tis620.2553",  },          */
+        { "tis620.2529", aUnixCharsetTIS6202529Tab },
+        { "tis620.2533", aUnixCharsetTIS6202533Tab },
+        { "tis620", aUnixCharsetTIS620Tab },
 /*        { "sunudcja.1997",  },        */
 /*        { "sunudcko.1997",  },        */
 /*        { "sunudczh.1997",  },        */
@@ -752,6 +770,7 @@ rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromMimeCharset( const sal_Char* pM
         { "l4", RTL_TEXTENCODING_ISO_8859_4 },
         { "csisolatin4", RTL_TEXTENCODING_ISO_8859_4 },
         { "isoir144", RTL_TEXTENCODING_ISO_8859_5 },
+        { "cyrillicasian", RTL_TEXTENCODING_PT154 },
         { "cyrillic", RTL_TEXTENCODING_ISO_8859_5 },
         { "csisolatincyrillic", RTL_TEXTENCODING_ISO_8859_5 },
         { "isoir127", RTL_TEXTENCODING_ISO_8859_6 },
@@ -786,7 +805,7 @@ rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromMimeCharset( const sal_Char* pM
         { "ansix34", RTL_TEXTENCODING_ASCII_US },
         { "ibm367", RTL_TEXTENCODING_ASCII_US },
         { "cp367", RTL_TEXTENCODING_ASCII_US },
-        { "csASCII", RTL_TEXTENCODING_ASCII_US },
+        { "csascii", RTL_TEXTENCODING_ASCII_US },
         { "ibm775", RTL_TEXTENCODING_IBM_775 },
         { "cp775", RTL_TEXTENCODING_IBM_775 },
         { "cspc775baltic", RTL_TEXTENCODING_IBM_775 },
@@ -908,6 +927,14 @@ rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromMimeCharset( const sal_Char* pM
                this character set identifier seems to be prominently used by MS
                to stand for KS C 5601 plus MS-949 extensions */
         { "latin9", RTL_TEXTENCODING_ISO_8859_15 },
+        { "adobestandardencoding", RTL_TEXTENCODING_ADOBE_STANDARD },
+        { "csadobestandardencoding", RTL_TEXTENCODING_ADOBE_STANDARD },
+        { "adobesymbolencoding", RTL_TEXTENCODING_ADOBE_SYMBOL },
+        { "cshppsmath", RTL_TEXTENCODING_ADOBE_SYMBOL },
+        { "ptcp154", RTL_TEXTENCODING_PT154 },
+        { "csptcp154", RTL_TEXTENCODING_PT154 },
+        { "pt154", RTL_TEXTENCODING_PT154 },
+        { "cp154", RTL_TEXTENCODING_PT154 },
         { NULL, RTL_TEXTENCODING_DONTKNOW }
     };
 

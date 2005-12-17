@@ -6,37 +6,31 @@
  *
  *  last change: $Author$ $Date$
  *
- *  The Contents of this file are made available subject to the terms of
- *  either of the following licenses
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- *         - GNU General Public License Version 2.1
  *
- *  Sun Microsystems Inc., October, 2000
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- *  GNU General Public License Version 2.1
- *  =============================================
- *  Copyright 2000 by Sun Microsystems, Inc.
- *  901 San Antonio Road, Palo Alto, CA 94303, USA
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
  *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public
- *  License version 2.1, as published by the Free Software Foundation.
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
  *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
  *
- *  You should have received a copy of the GNU General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *  MA  02111-1307  USA
- *  
- *  =================================================
- *  Modified September 2004 by Patrick Luby. SISSL Removed. NeoOffice is
- *  distributed under GPL only under modification term 3 of the LGPL.
- *
- *  Contributor(s): _______________________________________
+ *    Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
 
@@ -88,10 +82,13 @@
 #endif
 
 #ifdef LINUX
-#define __USE_GNU
+#   ifndef __USE_GNU
+#   define __USE_GNU
+#   endif
+
 #if GLIBC >= 2
 #   include <shadow.h>
-#   if !defined(SPARC)
+#   if ! (defined(SPARC) || defined(X86_64))
 #       include <asm/sigcontext.h>
 #   endif
 #   include <pthread.h>
@@ -116,8 +113,6 @@
 #	define 	IOCHANNEL_TRANSFER_BSD_RENO
 #	define	pthread_testcancel()
 #	define  NO_PTHREAD_PRIORITY
-#	define  CMD_ARG_PROC_STREAM
-#	define  CMD_ARG_PROC_NAME			"/proc/%u/cmdline"
 #	define  PTHREAD_SIGACTION 			pthread_sigaction
 #else
 #   include <shadow.h>
@@ -143,8 +138,6 @@
 #	define	pthread_testcancel()
 #	define  NO_PTHREAD_RTL
 #	define  NO_PTHREAD_PRIORITY
-#	define  CMD_ARG_PROC_STREAM
-#	define  CMD_ARG_PROC_NAME			"/proc/%u/cmdline"
 #	define  PTHREAD_SIGACTION 			pthread_sigaction
 #endif
 #endif
@@ -177,13 +170,6 @@
 #	define  NO_PTHREAD_PRIORITY
 #     define  NO_PTHREAD_SEMAPHORES
 #	define  NO_PTHREAD_RTL
-/* __progname isn't sufficient here. We need the full path as well 
- * for e.g. setup and __progname only points to the binary name. 
- */
-extern struct ps_strings *__ps_strings;
-#	define  CMD_ARG_PRG			*(__ps_strings->ps_argvstr)
-#	define  CMD_ARG_PRG_IS_DEFINED
-#	define  CMD_ARG_ENV			environ
 #	define  PTHREAD_SIGACTION 			pthread_sigaction
 #endif
 
@@ -217,12 +203,6 @@ extern struct ps_strings *__ps_strings;
 #   endif
 #endif
 #	define  NO_PTHREAD_RTL
-/* __progname isn't sufficient here. We need the full path as well 
- * for e.g. setup and __progname only points to the binary name. 
- */
-#	define  CMD_ARG_PRG_IS_DEFINED
-#	define  CMD_ARG_PRG			*((struct ps_strings *)PS_STRINGS)->ps_argvstr
-#	define  CMD_ARG_ENV			environ
 #endif
 
 #ifdef SCO
@@ -253,7 +233,6 @@ extern unsigned int nanosleep(unsigned int);
 #	define  PATH_MAX 					_POSIX_PATH_MAX
 #	define	S_ISSOCK					S_ISFIFO 
 #	define	PTHREAD_SIGACTION 			pthread_sigaction
-#   define  CMD_ARG_ENV					_environ
 #	define	STAT_PARENT					stat
 #endif
 
@@ -278,7 +257,6 @@ extern unsigned int nanosleep(unsigned int);
 #	define  PTR_SIZE_T(s)				((size_t *)&(s))
 #	define  NO_PTHREAD_SEMAPHORES
 #   define  NO_DL_FUNCTIONS
-#   define  CMD_ARG_PS					"ps -p %u -o args=\"\""
 #endif
 
 #ifdef HPUX
@@ -305,8 +283,6 @@ extern unsigned int nanosleep(unsigned int);
 #	define  NO_PTHREAD_PRIORITY
 #	define  NO_PTHREAD_SEMAPHORES
 #   define  NO_DL_FUNCTIONS
-#	define  CMD_ARG_PRG					$ARGV		
-#	define  CMD_ARG_ENV					environ
 #	undef	sigaction
 #	define  PTHREAD_SIGACTION 			cma_sigaction
 #endif
@@ -334,7 +310,6 @@ extern unsigned int nanosleep(unsigned int);
 #   endif
 #	define  SA_FAMILY_DECL \
 		union { struct { short sa_family2; } sa_generic; } sa_union
-#	define  CMD_ARG_ENV	_environ
 #	define  PTR_SIZE_T(s)				((int *)&(s))
 #	define  NO_PTHREAD_PRIORITY
 #	include <dlfcn.h>
@@ -357,11 +332,6 @@ extern char *strdup(const char *);
 #	define 	IOCHANNEL_TRANSFER_BSD
 #	define  LIBPATH "LD_LIBRARY_PATH"
 #	define  PTR_SIZE_T(s)				((int *)&(s))
-#   define  CMD_ARG_PROC_IOCTL			PIOCPSINFO
-#	define  CMD_ARG_PROC_NAME			"/proc/%u"
-#	define  CMD_ARG_PROC_TYPE			prpsinfo_t
-#	define  CMD_ARG_PROC_ARGC(t)		t.pr_argc
-#	define  CMD_ARG_PROC_ARGV(t)		t.pr_argv
 #endif
 
 #ifdef MACOSX
@@ -378,8 +348,8 @@ extern char *strdup(const char *);
 /* fixme are premac and postmac still needed here? */
 #	include <premac.h>
 #	include <mach-o/dyld.h> 
-#	define __OPENTRANSPORTPROVIDERS__
-#	include <Carbon/Carbon.h>
+#   define __OPENTRANSPORTPROVIDERS__
+#   include <Carbon/Carbon.h>
 #	include <postmac.h>
 #	if BYTE_ORDER == LITTLE_ENDIAN
 #		define _LITTLE_ENDIAN
@@ -392,17 +362,23 @@ extern char *strdup(const char *);
 #	define  NO_PTHREAD_RTL
 /* for NSGetArgc/Argv/Environ */
 #       include <crt_externs.h>
+#ifndef _SAL_TYPES_H_
+#include <sal/types.h>
+#endif
+
 int  readdir_r( DIR *dirp, struct dirent *entry, struct dirent **result );
 char *asctime_r( const struct tm *tm, char *buffer );
 char *macxp_tempnam( const char *tmpdir, const char *prefix );
 void macxp_getSystemVersion( unsigned int *isDarwin, unsigned int *majorVersion, unsigned int *minorVersion, unsigned int *minorMinorVersion );
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-int macxp_resolveAlias(char *path, int buflen);
+int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement);
 #ifdef __cplusplus
 }
 #endif
+
 #endif
 
 #if !defined(_WIN32)  && !defined(_WIN16) && !defined(OS2)  && \
@@ -429,14 +405,6 @@ int macxp_resolveAlias(char *path, int buflen);
 #else
 #	error undetermined endianess
 #endif
-#endif
-
-#ifndef CMD_ARG_MAX
-#	define CMD_ARG_MAX					4096
-#endif
-
-#ifndef ENV_VAR_MAX
-#	define ENV_VAR_MAX					4096
 #endif
 
 #ifndef PTR_SIZE_T
