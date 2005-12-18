@@ -136,28 +136,25 @@ public final class VCLPrintJob implements Printable, Runnable {
  	 * Disposes the printer job and releases any system resources that it is
 	 * using.
 	 */
-	public void dispose() {
+	public synchronized void dispose() {
 
 		if (disposed)
 			return;
 
 		abortJob();
 
-		synchronized (this) {
-			if (graphics != null) {
-				graphics.dispose();
-				graphics = null;
-			}
-			if (lastPageQueue != null) {
-				lastPageQueue.dispose();
-				lastPageQueue = null;
-			}
-			printGraphics = null;
-			printPageFormat = null;
-			job = null;
-
-			disposed = true;
+		// Don't dispose the graphics as we only want to draw in the
+		// printing thread
+		graphics = null;
+		if (lastPageQueue != null) {
+			lastPageQueue.dispose();
+			lastPageQueue = null;
 		}
+		printGraphics = null;
+		printPageFormat = null;
+		job = null;
+
+		disposed = true;
 
 	}
 
@@ -166,17 +163,14 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 */
 	public synchronized void endJob() {
 
+		if (endJob)
+			return;
+
 		// End the job after disposing of the printGraphics
 		endJob = true;
 
 		// Wait for print thread to finish
-		while (printStarted && !printFinished) {
-			notifyAll();
-			try {
-				wait();
-			}
-			catch (Throwable t) {}
-		}
+		endPage();
 
 		if (pageFormat != null)
 			pageFormat.setEditable(true);
@@ -259,6 +253,9 @@ public final class VCLPrintJob implements Printable, Runnable {
 
 		// Notify other threads that printing is finished
 		synchronized (this) {
+			// Don't dispose the graphics as we only want to draw in the
+			// printing thread
+			graphics = null;
 			if (lastPageQueue != null) {
 				lastPageQueue.dispose();
 				lastPageQueue = null;
