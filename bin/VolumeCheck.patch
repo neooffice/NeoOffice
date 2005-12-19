@@ -58,6 +58,24 @@ if [ -d "$scriptdir" -a -f "$scriptdir/installutils" ] ; then
 
 	fi
 
+	lastcontentshomefile="$userinstall/.lastcontentshome"
+	if [ -s "$lastcontentshomefile" ] ; then
+
+		lastcontentshome=
+		if [ "$1" = "/" ] ; then
+			lastcontentshome=`grep -v '^/Volumes/' "$lastcontentshomefile"`
+		else
+			lastcontentshome=`grep "^$volume/" "$lastcontentshomefile"`
+		fi
+
+		while read i ; do
+			check_installation "$i" && exit 0
+		done << !
+`echo "$lastcontentshome" | sed 's#/Contents/$##g'`
+!
+
+	fi
+
 fi
 
 exit 48
