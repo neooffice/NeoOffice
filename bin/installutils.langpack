@@ -34,6 +34,8 @@
 # 
 ##########################################################################
 
+userinstall="$HOME/Library/Preferences/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)/user"
+
 check_installation() {
 
 	if [ -f "$1/Contents/MacOS/bootstraprc" ] ; then
