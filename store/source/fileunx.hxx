@@ -1,42 +1,38 @@
 /*************************************************************************
  *
+ *  OpenOffice.org - a multi-platform office productivity suite
+ *
  *  $RCSfile$
  *
  *  $Revision$
  *
  *  last change: $Author$ $Date$
  *
- *  The Contents of this file are made available subject to the terms of
- *  either of the following licenses
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- *         - GNU General Public License Version 2.1
  *
- *  Sun Microsystems Inc., October, 2000
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- *  GNU General Public License Version 2.1
- *  =============================================
- *  Copyright 2000 by Sun Microsystems, Inc.
- *  901 San Antonio Road, Palo Alto, CA 94303, USA
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
  *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public
- *  License version 2.1, as published by the Free Software Foundation.
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
  *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
  *
- *  You should have received a copy of the GNU General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *  MA  02111-1307  USA
- *  
- *  =================================================
- *  Modified August 2004 by Patrick Luby. SISSL Removed. NeoOffice is
- *  distributed under GPL only under modification term 3 of the LGPL.
- *
- *  Contributor(s): _______________________________________
+ *    Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
 
@@ -79,6 +75,7 @@ static const __store_errcode_mapping_st __store_errcode_map[] =
 #endif /* EDEADLOCK */
 	{ EBADF,     store_E_InvalidHandle    },
 	{ EINVAL,    store_E_InvalidParameter },
+	{ ENOSPC,    store_E_OutOfSpace       },
 };
 
 /*
@@ -140,7 +137,7 @@ inline sal_uInt8* __store_mmap (HSTORE h, sal_uInt32 k, sal_uInt32 n)
  */
 inline void __store_munmap (sal_uInt8 *p, sal_uInt32 n)
 {
-	::munmap ((char *)p, (size_t)n);
+	(void)::munmap ((char *)p, (size_t)n);
 }
 
 /*
@@ -192,7 +189,7 @@ inline storeError __store_fopen (
 #ifdef MACOSX
 	// Mac OS X will return ENOTSUP for mounted file systems so ignore the
 	// error for read locks
-	if (::fcntl (rhFile, F_SETLK, &lock) < 0 && errno != ENOTSUP && lock.l_type == F_RDLCK)
+	if (::fcntl (rhFile, F_SETLK, &lock) < 0 && errno != ENOTSUP)
 #else	// MACOSX
 	if (::fcntl (rhFile, F_SETLK, &lock) < 0)
 #endif	// MACOSX
@@ -205,7 +202,7 @@ inline storeError __store_fopen (
 			result = ERROR_FROM_NATIVE(errno);
 
 		// Close file handle.
-		::close (rhFile); rhFile = 0;
+		(void)::close (rhFile); rhFile = 0;
 
 		// Finish.
 		return (result);
@@ -216,7 +213,7 @@ inline storeError __store_fopen (
 	{
 		// Set close-on-exec flag.
 		nFlags |= FD_CLOEXEC;
-		::fcntl (rhFile, F_SETFD, nFlags);
+		(void)::fcntl (rhFile, F_SETFD, nFlags);
 	}
 	return store_E_None;
 }
@@ -323,15 +320,18 @@ inline storeError __store_ftrunc (HSTORE h, sal_uInt32 n)
 /*
  * __store_fsync.
  */
-inline void __store_fsync (HSTORE h)
+inline storeError __store_fsync (HSTORE h)
 {
-	::fsync (h);
+	if (::fsync (h) == -1)
+		return ERROR_FROM_NATIVE(errno);
+	else
+		return store_E_None;
 }
 
 /*
  * __store_fclose.
  */
-inline void __store_fclose (HSTORE h)
+inline storeError __store_fclose (HSTORE h)
 {
 	// Release (advisory) Lock (Multiple Reader | Single Writer)
 	struct flock lock;
@@ -341,10 +341,13 @@ inline void __store_fclose (HSTORE h)
 	lock.l_start  = 0;
 	lock.l_len    = 0;
 
-	::fcntl (h, F_SETLK, &lock);
+	(void)::fcntl (h, F_SETLK, &lock);
 
 	// Close file handle.
-	::close (h);
+	if (::close (h) == -1)
+		return ERROR_FROM_NATIVE(errno);
+	else
+		return store_E_None;
 }
 
 #endif /* INCLUDED_STORE_FILEUNX_HXX */
