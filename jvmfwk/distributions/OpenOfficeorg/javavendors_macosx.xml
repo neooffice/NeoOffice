@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<javaSelection xmlns="http://openoffice.org/2004/java/framework/1.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+ 
+ <updated>2005-12-17</updated>
+ 
+ <vendorInfos> 
+  <vendor name="Apple Computer, Inc.">
+    <minVersion>1.4.1</minVersion>
+    <maxVersion>1.4.2</maxVersion>
+  </vendor>
+ </vendorInfos>
+
+ <plugins>
+  <library vendor="Apple Computer, Inc.">sunjavaplugin.dylib</library>
+ </plugins>
+</javaSelection>

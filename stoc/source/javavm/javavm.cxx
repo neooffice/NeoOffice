@@ -6,37 +6,32 @@
  *
  *  last change: $Author$ $Date$
  *
- *  The Contents of this file are made available subject to the terms of
- *  either of the following licenses
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- *         - GNU General Public License Version 2.1
  *
- *  Sun Microsystems Inc., October, 2000
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- *  GNU General Public License Version 2.1
- *  =============================================
- *  Copyright 2000 by Sun Microsystems, Inc.
- *  901 San Antonio Road, Palo Alto, CA 94303, USA
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
  *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public
- *  License version 2.1, as published by the Free Software Foundation.
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
  *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
  *
- *  You should have received a copy of the GNU General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *  MA  02111-1307  USA
- *  
- *  =================================================
- *  Modified August 2004 by Patrick Luby. SISSL Removed. NeoOffice is
- *  distributed under GPL only under modification term 3 of the LGPL.
+ *    Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
- *  Contributor(s): _______________________________________
  *
  ************************************************************************/
 
@@ -91,10 +86,11 @@ int main( int argc, char * argv[])
 #include "com/sun/star/beans/PropertyState.hpp"
 #include "com/sun/star/beans/PropertyValue.hpp"
 #include "com/sun/star/container/XContainer.hpp"
+#include "com/sun/star/java/JavaNotFoundException.hpp"
+#include "com/sun/star/java/InvalidJavaSettingsException.hpp"
+#include "com/sun/star/java/RestartRequiredException.hpp"
 #include "com/sun/star/java/JavaDisabledException.hpp"
-#include "com/sun/star/java/JavaNotConfiguredException.hpp"
 #include "com/sun/star/java/JavaVMCreationFailureException.hpp"
-#include "com/sun/star/java/MissingJavaRuntimeException.hpp"
 #include "com/sun/star/lang/DisposedException.hpp"
 #include "com/sun/star/lang/IllegalArgumentException.hpp"
 #include "com/sun/star/lang/XEventListener.hpp"
@@ -111,10 +107,14 @@ int main( int argc, char * argv[])
 #include "com/sun/star/uno/XComponentContext.hpp"
 #include "com/sun/star/uno/XCurrentContext.hpp"
 #include "com/sun/star/uno/XInterface.hpp"
+#include "com/sun/star/uri/ExternalUriReferenceTranslator.hpp"
+#include "com/sun/star/util/XMacroExpander.hpp"
+#include "com/sun/star/container/XNameAccess.hpp"
 #include "cppuhelper/exc_hlp.hxx"
 #include "cppuhelper/factory.hxx"
 #include "cppuhelper/implbase1.hxx"
 #include "cppuhelper/implementationentry.hxx"
+#include "jvmaccess/unovirtualmachine.hxx"
 #include "jvmaccess/virtualmachine.hxx"
 #include "osl/file.hxx"
 #include "osl/thread.h"
@@ -124,20 +124,19 @@ int main( int argc, char * argv[])
 #include "rtl/ustrbuf.hxx"
 #include "rtl/ustring.h"
 #include "rtl/ustring.hxx"
+#include "rtl/uri.hxx"
 #include "sal/types.h"
 #include "uno/current_context.hxx"
 #include "uno/environment.h"
 #include "uno/lbnames.h"
-
+#include "jvmfwk/framework.h"
 #include "jni.h"
 
-#include <setjmp.h>
-#include <signal.h>
 #include <stack>
 #include <string.h>
 #include <time.h>
 #include <memory>
-
+#include "boost/scoped_array.hpp"
 #define OUSTR(x) rtl::OUString(RTL_CONSTASCII_USTRINGPARAM( x ))
 
 // Properties of the javavm can be put
@@ -147,7 +146,6 @@ int main( int argc, char * argv[])
 #ifdef UNIX
 #define INI_FILE "javarc"
 #ifdef MACOSX
-#include <unistd.h>
 #define DEF_JAVALIB "JavaVM.framework"
 #else
 #define DEF_JAVALIB "libjvm.so"
@@ -159,11 +157,24 @@ int main( int argc, char * argv[])
 #define TIMEZONE "MET"
 #endif
 
+/* Within this implementation of the com.sun.star.java.JavaVirtualMachine
+ * service and com.sun.star.java.theJavaVirtualMachine singleton, the method
+ * com.sun.star.java.XJavaVM.getJavaVM relies on the string
+ * "$URE_INTERNAL_JAVA_DIR/" being expanded via the
+ * com.sun.star.util.theMacroExpander singleton into an internal (see the
+ * com.sun.star.uri.ExternalUriReferenceTranslator service), hierarchical URI
+ * reference relative to which the URE JAR files can be addressed.  If this is
+ * not the case, getJavaVM raises a com.sun.star.uno.RuntimeException.
+ */
+
 namespace css = com::sun::star;
 
 using stoc_javavm::JavaVirtualMachine;
 
 namespace {
+
+
+
 class NoJavaIniException: public css::uno::Exception
 {
 };
@@ -415,17 +426,24 @@ void getINetPropsFromConfig(stoc_javavm::JVM * pjvm,
 	xConfRegistry_simple->close();
 }
 
-void getDefaultLocaleFromConfig(stoc_javavm::JVM * pjvm,
-                                const css::uno::Reference<css::lang::XMultiComponentFactory> & xSMgr,
-                                const css::uno::Reference<css::uno::XComponentContext> &xCtx ) throw(css::uno::Exception)
+void getDefaultLocaleFromConfig(
+    stoc_javavm::JVM * pjvm,
+    const css::uno::Reference<css::lang::XMultiComponentFactory> & xSMgr,
+    const css::uno::Reference<css::uno::XComponentContext> &xCtx ) throw(css::uno::Exception)
 {
-	css::uno::Reference<css::uno::XInterface> xConfRegistry = xSMgr->createInstanceWithContext(
-		rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.configuration.ConfigurationRegistry")),
-		xCtx );
-	if(!xConfRegistry.is()) throw css::uno::RuntimeException(rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("javavm.cxx: couldn't get ConfigurationRegistry")), 0);
+	css::uno::Reference<css::uno::XInterface> xConfRegistry =
+        xSMgr->createInstanceWithContext(
+		rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(
+                          "com.sun.star.configuration.ConfigurationRegistry")), xCtx );
+	if(!xConfRegistry.is())
+        throw css::uno::RuntimeException(
+            rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("javavm.cxx: couldn't get ConfigurationRegistry")), 0);
 
-	css::uno::Reference<css::registry::XSimpleRegistry> xConfRegistry_simple(xConfRegistry, css::uno::UNO_QUERY);
-	if(!xConfRegistry_simple.is()) throw css::uno::RuntimeException(rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("javavm.cxx: couldn't get ConfigurationRegistry")), 0);
+	css::uno::Reference<css::registry::XSimpleRegistry> xConfRegistry_simple(
+        xConfRegistry, css::uno::UNO_QUERY);
+	if(!xConfRegistry_simple.is())
+        throw css::uno::RuntimeException(
+            rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("javavm.cxx: couldn't get ConfigurationRegistry")), 0);
 
 	xConfRegistry_simple->open(rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("org.openoffice.Setup")), sal_True, sal_False);
 	css::uno::Reference<css::registry::XRegistryKey> xRegistryRootKey = xConfRegistry_simple->getRootKey();
@@ -450,7 +468,7 @@ void getDefaultLocaleFromConfig(stoc_javavm::JVM * pjvm,
 			}
 
 			if(country.getLength()) {
-				rtl::OUString prop(RTL_CONSTASCII_USTRINGPARAM("user.region="));
+				rtl::OUString prop(RTL_CONSTASCII_USTRINGPARAM("user.country="));
 				prop += country;
 
 				pjvm->pushProp(prop);
@@ -461,188 +479,48 @@ void getDefaultLocaleFromConfig(stoc_javavm::JVM * pjvm,
 	xConfRegistry_simple->close();
 }
 
-void getJavaPropsFromConfig(stoc_javavm::JVM * pjvm,
-                            const css::uno::Reference<css::lang::XMultiComponentFactory> & xSMgr,
-                            const css::uno::Reference<css::uno::XComponentContext> &xCtx) throw(css::uno::Exception)
+
+
+void getJavaPropsFromSafetySettings(
+    stoc_javavm::JVM * pjvm,
+    const css::uno::Reference<css::lang::XMultiComponentFactory> & xSMgr,
+    const css::uno::Reference<css::uno::XComponentContext> &xCtx) throw(css::uno::Exception)
 {
-	rtl::OUString usInstallDir;
-	rtl::Bootstrap::get(OUSTR("UserInstallation"),
-				   usInstallDir,
-				   OUSTR("${$SYSBINDIR/" SAL_CONFIGFILE("bootstrap") ":UserInstallation}"));
-	rtl::OUString urlrcPath= usInstallDir + OUSTR("/user/config/" INI_FILE);
-    std::auto_ptr<osl::File>  pIniFile(new osl::File(urlrcPath));
-    if( pIniFile->open(OpenFlag_Read) != osl::File::E_None)
-    {
-		rtl::Bootstrap::get(OUSTR("BaseInstallation"),
-			   usInstallDir,
-			   OUSTR("${$SYSBINDIR/" SAL_CONFIGFILE("bootstrap") ":BaseInstallation}"));
-        urlrcPath= usInstallDir + OUSTR("/share/config/" INI_FILE);
-        std::auto_ptr<osl::File> pIni2(new osl::File(urlrcPath));
-        if(pIni2->open(OpenFlag_Read) != osl::File::E_None)
-			throw NoJavaIniException();
-        else
-            pIniFile= pIni2;
-    }
+    css::uno::Reference<css::uno::XInterface> xConfRegistry =
+        xSMgr->createInstanceWithContext(
+            rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(
+                              "com.sun.star.configuration.ConfigurationRegistry")),
+            xCtx);
+	if(!xConfRegistry.is())
+        throw css::uno::RuntimeException(
+            rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("javavm.cxx: couldn't get ConfigurationRegistry")), 0);
 
-    // The javarc is encoded as UTF-8
+	css::uno::Reference<css::registry::XSimpleRegistry> xConfRegistry_simple(
+        xConfRegistry, css::uno::UNO_QUERY);
+	if(!xConfRegistry_simple.is())
+        throw css::uno::RuntimeException(
+            rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("javavm.cxx: couldn't get ConfigurationRegistry")), 0);
 
-    //Find the Java Section
-    rtl::OString sJavaSection("[Java]");
-    bool bSectionFound= false;
-    while(1)
-    {
-        rtl::ByteSequence seq;
-        if(pIniFile->readLine(seq) == osl::File::E_None)
-        {
-            rtl::OString line((sal_Char*)seq.getArray(),seq.getLength());
-            if(line.match(sJavaSection, 0))
-            {
-                bSectionFound= true;
-                break;
-            }
-
-        }
-        else
-            break;
-    }
-
-    //Read each line from the Java section
-    if(bSectionFound)
-    {
-        while(1)
-        {
-            rtl::ByteSequence seq;
-            if(pIniFile->readLine(seq) == osl::File::E_None)
-            {
-                //check if another Section starts
-                rtl::OUString line((sal_Char*)seq.getArray(), seq.getLength(),
-                                   RTL_TEXTENCODING_UTF8);
-                sal_Unicode const * pIndex = line.getStr();
-                sal_Unicode const * pEnd = pIndex + line.getLength();
-                if (pIndex == pEnd || *pIndex == '[')
-                    break;
-                //check if there is '=' after the first word
-                //check for jvm options, e.g. -Xdebug, -D, ..
-                if( *pIndex != '-')
-                {
-                    //no jvm option, check for property, e.g RuntimeLib=XXX
-                    // the line must not start with characters for commenting ';' ' ', etc.
-                    if( *pIndex == ';'
-                        || *pIndex == '/'
-                        || *pIndex == '\''
-                        || *pIndex == '#')
-                        goto nextLine;
-
-
-                    //the line must not contain spaces or tabs
-                    while( pIndex != pEnd
-                           && *pIndex != ' '
-                           && *pIndex != '\t'
-                           && *pIndex != '=')
-                        pIndex ++;
-                    if(pIndex == pEnd || *pIndex != '=')
-                        goto nextLine;   // no '=' found
-                }
-                // Ok, store the line
-                pjvm->pushProp(line.trim());
-            nextLine:
-                sal_Bool bEOF = true;
-                pIniFile->isEndOfFile(&bEOF);
-                if(bEOF)
-                    break;
-            }
-            else
-                break;
-        }
-    }
-    pIniFile->close();
-
-	//The office can be configured not to use Java. Then a java.ini exists but
-	//the entries RuntimeLib,Home, VMType, Version and SystemClasspath are missing.
-	const rtl::OUString & usRt = pjvm->getRuntimeLib();
-	if (usRt.getLength() == 0)
-		throw css::java::JavaNotConfiguredException();
-}
-
-void getJavaPropsFromEnvironment(stoc_javavm::JVM * pjvm) throw() {
-
-	const char * pClassPath = getenv("CLASSPATH");
-	//sometimes pClassPath contains only seperator, then we donot call addSystemClasspath
-	rtl::OUString usCP(pClassPath, strlen(pClassPath), osl_getThreadTextEncoding());
-	if ( ! (usCP.getLength() == 1 && usCP[0] == SAL_PATHSEPARATOR))
-    {
-        pjvm->addSystemClasspath(usCP);
-    }
-	pjvm->setRuntimeLib(
-        rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(DEF_JAVALIB)));
-	pjvm->setEnabled(1);
-
-	// See if properties have been set and parse them
-	const char * pOOjavaProperties = getenv(PROPERTIES_ENV);
-	if(pOOjavaProperties) {
-		rtl::OUString properties(rtl::OUString(pOOjavaProperties,
-                                               strlen(pOOjavaProperties),
-                                               osl_getThreadTextEncoding()));
-
-		sal_Int32 index;
-		sal_Int32 lastIndex = 0;
-
-		do {
-			index = properties.indexOf((sal_Unicode)',', lastIndex);
-			rtl::OUString token = (index == -1) ? properties.copy(lastIndex) : properties.copy(lastIndex, index - lastIndex);
-
-			lastIndex = index + 1;
-
-			pjvm->pushProp(token);
-		}
-		while(index > -1);
-	}
-}
-
-void getJavaPropsFromSafetySettings(stoc_javavm::JVM * pjvm,
-                                    const css::uno::Reference<css::lang::XMultiComponentFactory> & xSMgr,
-                                    const css::uno::Reference<css::uno::XComponentContext> &xCtx) throw(css::uno::Exception)
-{
-    css::uno::Reference<css::uno::XInterface> xConfRegistry = xSMgr->createInstanceWithContext(
-		rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.configuration.ConfigurationRegistry")),
-		xCtx);
-	if(!xConfRegistry.is()) throw css::uno::RuntimeException(rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("javavm.cxx: couldn't get ConfigurationRegistry")), 0);
-
-	css::uno::Reference<css::registry::XSimpleRegistry> xConfRegistry_simple(xConfRegistry, css::uno::UNO_QUERY);
-	if(!xConfRegistry_simple.is()) throw css::uno::RuntimeException(rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("javavm.cxx: couldn't get ConfigurationRegistry")), 0);
-
-	xConfRegistry_simple->open(rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("org.openoffice.Office.Java")), sal_True, sal_False);
-	css::uno::Reference<css::registry::XRegistryKey> xRegistryRootKey = xConfRegistry_simple->getRootKey();
+	xConfRegistry_simple->open(
+        rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("org.openoffice.Office.Java")),
+        sal_True, sal_False);
+	css::uno::Reference<css::registry::XRegistryKey> xRegistryRootKey =
+        xConfRegistry_simple->getRootKey();
 
 	if (xRegistryRootKey.is())
 	{
-#ifndef USE_JAVA
-		// Fix bug 595 by making sure Java is never disabled
-		css::uno::Reference<css::registry::XRegistryKey> key_Enable = xRegistryRootKey->openKey(rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("VirtualMachine/Enable")));
-		if (key_Enable.is())
-		{
-			sal_Bool bEnableVal= (sal_Bool) key_Enable->getLongValue();
-			pjvm->setEnabled( bEnableVal);
-		}
-#endif	// USE_JAVA
-		css::uno::Reference<css::registry::XRegistryKey> key_UserClasspath = xRegistryRootKey->openKey(rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("VirtualMachine/UserClassPath")));
-		if (key_UserClasspath.is())
-		{
-			rtl::OUString sClassPath= key_UserClasspath->getStringValue();
-			pjvm->addUserClasspath( sClassPath);
-		}
-				css::uno::Reference<css::registry::XRegistryKey> key_NetAccess= xRegistryRootKey->openKey(rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("VirtualMachine/NetAccess")));
+        css::uno::Reference<css::registry::XRegistryKey> key_NetAccess= xRegistryRootKey->openKey(rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("VirtualMachine/NetAccess")));
 		if (key_NetAccess.is())
 		{
 			sal_Int32 val= key_NetAccess->getLongValue();
 			rtl::OUString sVal;
 			switch( val)
 			{
-			case 0: sVal= rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("unrestricted"));
+			case 0: sVal= rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("host"));
 				break;
-			case 1: sVal= rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("none"));
+			case 1: sVal= rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("unrestricted"));
 				break;
-			case 2: sVal= rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("host"));
+			case 3: sVal= rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("none"));
 				break;
 			}
 			rtl::OUString sProperty( RTL_CONSTASCII_USTRINGPARAM("appletviewer.security.mode="));
@@ -665,7 +543,7 @@ void getJavaPropsFromSafetySettings(stoc_javavm::JVM * pjvm,
 	xConfRegistry_simple->close();
 }
 
-const rtl::Bootstrap & getBootstrapHandle()
+static const rtl::Bootstrap & getBootstrapHandle()
 {
     static rtl::Bootstrap *pBootstrap = 0;
     if( !pBootstrap )
@@ -691,94 +569,6 @@ const rtl::Bootstrap & getBootstrapHandle()
     return *pBootstrap;
 }
 
-rtl::OUString retrieveComponentClassPath( const sal_Char *pVariableName )
-{
-    // java_classpath file is encoded as ASCII
-
-    rtl::OUString ret;
-    rtl::OUStringBuffer buf( 128 );
-    buf.appendAscii( "$" ).appendAscii( pVariableName );
-    rtl::OUString path( buf.makeStringAndClear() );
-
-    const rtl::Bootstrap & handle = getBootstrapHandle();
-    rtl_bootstrap_expandMacros_from_handle( *(void**)&handle , &(path.pData) );
-    if( path.getLength() )
-    {
-        buf.append( path ).appendAscii( "/java_classpath" );
-
-        rtl::OUString fileName( buf.makeStringAndClear() );
-        sal_Char * p = 0;
-
-        osl::DirectoryItem item;
-        if( osl::DirectoryItem::E_None == osl::DirectoryItem::get( fileName , item ) )
-        {
-            osl::FileStatus status ( osl_FileStatus_Mask_FileSize );
-            if( osl::FileBase::E_None == item.getFileStatus( status ) )
-            {
-                sal_Int64 nSize = status.getFileSize();
-                if( nSize )
-                {
-                    sal_Char * p = (sal_Char * ) rtl_allocateMemory( (sal_uInt32)nSize +1 );
-                    if( p )
-                    {
-                        osl::File file( fileName );
-                        if( osl::File::E_None == file.open( OpenFlag_Read ) )
-                        {
-                            sal_uInt64 nRead;
-                            if( osl::File::E_None == file.read( p , (sal_uInt64)nSize , nRead )
-                                && (sal_uInt64)nSize == nRead )
-                            {
-                                buf = rtl::OUStringBuffer( 1024 );
-
-                                sal_Int32 nIndex = 0;
-                                sal_Bool bPrepend = sal_False;
-                                while( nIndex < nSize )
-                                {
-                                    while( nIndex < nSize && p[nIndex] == ' ' ) nIndex ++;
-                                    sal_Int32 nStart = nIndex;
-                                    while( nIndex < nSize && p[nIndex] != ' ' ) nIndex ++;
-                                    rtl::OUString relativeUrl( &(p[nStart]), nIndex-nStart, RTL_TEXTENCODING_ASCII_US);
-                                    relativeUrl = relativeUrl.trim();
-                                    if (0 < relativeUrl.getLength())
-                                    {
-                                        rtl::OUString fileurlElement;
-                                        rtl::OUString systemPathElement;
-
-                                        OSL_VERIFY(
-                                            osl_File_E_None ==
-                                            osl_getAbsoluteFileURL(
-                                                path.pData, relativeUrl.pData,
-                                                &fileurlElement.pData ) );
-                                        OSL_VERIFY(
-                                            osl_File_E_None ==
-                                            osl_getSystemPathFromFileURL(
-                                                fileurlElement.pData,
-                                                &systemPathElement.pData ) );
-                                        if( systemPathElement.getLength() )
-                                        {
-                                            if( bPrepend )
-                                                buf.appendAscii( CLASSPATH_DELIMETER );
-                                            else
-                                                bPrepend = sal_True;
-                                            buf.append( systemPathElement );
-                                        }
-                                    }
-                                }
-                                ret = buf.makeStringAndClear();
-                            }
-                        }
-                        rtl_freeMemory( p );
-                    }
-                }
-            }
-        }
-    }
-#if OSL_DEBUG_LEVEL > 1
-    fprintf( stderr, "JavaVM: classpath retrieved from $%s: %s\n", pVariableName,
-             rtl::OUStringToOString( ret, RTL_TEXTENCODING_ASCII_US).getStr());
-#endif
-    return ret;
-}
 
 static void setTimeZone(stoc_javavm::JVM * pjvm) throw() {
 	/* A Bug in the Java function
@@ -801,9 +591,11 @@ static void setTimeZone(stoc_javavm::JVM * pjvm) throw() {
 		pjvm->pushProp(rtl::OUString::createFromAscii("user.timezone=ECT"));
 }
 
-void initVMConfiguration(stoc_javavm::JVM * pjvm,
-                         const css::uno::Reference<css::lang::XMultiComponentFactory> & xSMgr,
-                         const css::uno::Reference<css::uno::XComponentContext > &xCtx) throw(css::uno::Exception) {
+void initVMConfiguration(
+    stoc_javavm::JVM * pjvm,
+    const css::uno::Reference<css::lang::XMultiComponentFactory> & xSMgr,
+    const css::uno::Reference<css::uno::XComponentContext > &xCtx) throw(css::uno::Exception)
+{
 	stoc_javavm::JVM jvm;
 	try {
 		getINetPropsFromConfig(&jvm, xSMgr, xCtx);
@@ -824,48 +616,9 @@ void initVMConfiguration(stoc_javavm::JVM * pjvm,
 		OSL_TRACE("javavm.cxx: can not get locale cause of >%s<", message.getStr());
 #endif
 	}
-
-
-    sal_Bool bPropsFail= sal_False;
+    
     try
     {
-		//JavaNotConfiguredException is rethrown. The user chose not to use java, therefore
-		//we do not look fore settings from the environment.
-		getJavaPropsFromConfig(&jvm, xSMgr,xCtx);
-	}
-    catch(NoJavaIniException& e)
-    {
-		//no java.ini. This can be the case when the setup runs and java was used for accessibility etc.
-        bPropsFail= sal_True;
-    }
-	catch(css::java::JavaNotConfiguredException& e)
-	{
-		throw;
-	}
-	catch(css::uno::Exception & exception)
-    {
-#if OSL_DEBUG_LEVEL > 1
-		rtl::OString message = rtl::OUStringToOString(exception.Message, RTL_TEXTENCODING_ASCII_US);
-		OSL_TRACE("javavm.cxx: unexspected exception: >%s<", message.getStr());
-#endif
-    }
-    if( bPropsFail)
-    {
-		getJavaPropsFromEnvironment(&jvm);
-        // at this point we have to find out if there is a classpath. If not
-        // we'll throw the exception, because Java is misconfigured and won't run.
-        rtl::OUString usRuntimeLib= jvm.getRuntimeLib();
-        rtl::OUString usUserClasspath= jvm.getUserClasspath();
-        rtl::OUString usSystemClasspath= jvm.getSystemClasspath();
-        if (usSystemClasspath.getLength() == 0)
-        {
-            throw css::java::JavaNotConfiguredException(rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(
-				"There is neither a java.ini (or javarc) " \
-                "and there are no environment variables set which " \
-                "contain configuration data")), 0);
-        }
-	}
-	try {
 		getJavaPropsFromSafetySettings(&jvm, xSMgr, xCtx);
 	}
 	catch(css::uno::Exception & exception) {
@@ -874,37 +627,27 @@ void initVMConfiguration(stoc_javavm::JVM * pjvm,
 		OSL_TRACE("javavm.cxx: couldn't get safety settings because of >%s<", message.getStr());
 #endif
 	}
-	jvm.addSystemClasspath( retrieveComponentClassPath( "UNO_SHARED_PACKAGES_CACHE" ) );
-    jvm.addUserClasspath( retrieveComponentClassPath( "UNO_USER_PACKAGES_CACHE" ) );
-
-//For a non product office we use the flag -ea
-// we cannot use -Xcheck:jni, because this prevents debugging (j2re1.4.1_01, netbeans 3.4)
-#if OSL_DEBUG_LEVEL > 0
-        if(!getenv( "DISABLE_SAL_DBGBOX" ) )
-            jvm.pushProp(rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("-ea")));
-#endif
-
 
 	*pjvm= jvm;
 	setTimeZone(pjvm);
 
-//  		pjvm->setPrint(vm_vfprintf);
-//  		pjvm->setExit(vm_exit);
-//  		pjvm->setAbort(vm_abort);
 }
 
-jmp_buf jmp_jvm_abort;
-sig_atomic_t g_bInGetJavaVM = 0;
+class DetachCurrentThread {
+public:
+    explicit DetachCurrentThread(JavaVM * jvm): m_jvm(jvm) {}
 
-void abort_handler()
-{
-    // If we are within JNI_CreateJavaVM then we jump back into getJavaVM
-    if( g_bInGetJavaVM != 0 )
-    {
-        fprintf( stderr, "JavaVM: JNI_CreateJavaVM called _exit, caught by abort_handler in javavm.cxx\n");
-        longjmp( jmp_jvm_abort, 0);
+    ~DetachCurrentThread() {
+        jint n = m_jvm->DetachCurrentThread();
+        OSL_ASSERT(n == 0);
     }
-}
+
+private:
+    DetachCurrentThread(DetachCurrentThread &); // not defined
+    void operator =(DetachCurrentThread &); // not defined
+
+    JavaVM * m_jvm;
+};
 
 }
 
@@ -959,6 +702,7 @@ JavaVirtualMachine::JavaVirtualMachine(
     JavaVirtualMachine_Impl(*static_cast< osl::Mutex * >(this)),
     m_xContext(rContext),
     m_bDisposed(false),
+    m_pJavaVm(0),
     m_bDontCreateJvm(false),
     m_aAttachGuards(destroyAttachGuards) // TODO check for validity
 {}
@@ -972,7 +716,7 @@ JavaVirtualMachine::initialize(css::uno::Sequence< css::uno::Any > const &
     if (m_bDisposed)
         throw css::lang::DisposedException(
             rtl::OUString(), static_cast< cppu::OWeakObject * >(this));
-    if (m_xVirtualMachine.is())
+    if (m_xUnoVirtualMachine.is())
         throw css::uno::RuntimeException(
             rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(
                               "bad call to initialize")),
@@ -983,15 +727,26 @@ JavaVirtualMachine::initialize(css::uno::Sequence< css::uno::Any > const &
         static_cast< jvmaccess::VirtualMachine * >(0));
     if (rArguments.getLength() == 1)
         rArguments[0] >>= nPointer;
-    m_xVirtualMachine = reinterpret_cast< jvmaccess::VirtualMachine * >(
-        nPointer);
-    if (!m_xVirtualMachine.is())
+    rtl::Reference< jvmaccess::VirtualMachine > vm(
+        reinterpret_cast< jvmaccess::VirtualMachine * >(nPointer));
+    if (!vm.is())
         throw css::lang::IllegalArgumentException(
             rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(
                               "sequence of exactly one any containing a hyper"
                               " representing a non-null pointer to a"
                               " jvmaccess::VirtualMachine required")),
             static_cast< cppu::OWeakObject * >(this), 0);
+    try {
+        m_xUnoVirtualMachine = new jvmaccess::UnoVirtualMachine(vm, 0);
+            //TODO: non-null classLoader
+    } catch (jvmaccess::UnoVirtualMachine::CreationException &) {
+        throw css::uno::RuntimeException(
+            rtl::OUString(
+                RTL_CONSTASCII_USTRINGPARAM(
+                    "jvmaccess::UnoVirtualMachine::CreationException")),
+            static_cast< cppu::OWeakObject * >(this));
+    }
+    m_xVirtualMachine = vm;
 }
 
 rtl::OUString SAL_CALL JavaVirtualMachine::getImplementationName()
@@ -1028,153 +783,245 @@ JavaVirtualMachine::getJavaVM(css::uno::Sequence< sal_Int8 > const & rProcessId)
             rtl::OUString(), static_cast< cppu::OWeakObject * >(this));
     css::uno::Sequence< sal_Int8 > aId(16);
     rtl_getGlobalProcessId(reinterpret_cast< sal_uInt8 * >(aId.getArray()));
-    // This method can return either a pointer to m_xVirtualMachine, or, for
-    // backwards compatibility, the underlying JavaVM pointer.  If the passed in
-    // rProcessId has a 17th byte of value zero, a pointer to m_xVirtualMachine
-    // is returned.  If the passed in rProcessId has only 16 bytes, the
-    // underlying JavaVM pointer is returned.
-    bool bReturnVirtualMachine
-        = rProcessId.getLength() == 17 && rProcessId[16] == 0;
+    enum ReturnType {
+        RETURN_JAVAVM, RETURN_VIRTUALMACHINE, RETURN_UNOVIRTUALMACHINE };
+    ReturnType returnType =
+        rProcessId.getLength() == 17 && rProcessId[16] == 0
+        ? RETURN_VIRTUALMACHINE
+        : rProcessId.getLength() == 17 && rProcessId[16] == 1
+        ? RETURN_UNOVIRTUALMACHINE
+        : RETURN_JAVAVM;
     css::uno::Sequence< sal_Int8 > aProcessId(rProcessId);
-    if (bReturnVirtualMachine)
+    if (returnType != RETURN_JAVAVM)
         aProcessId.realloc(16);
-    if (aId == aProcessId)
-    {
-        while (!m_xVirtualMachine.is()) // retry until successful
-        {
-            stoc_javavm::JVM aJvm;
-            try
-            {
-                initVMConfiguration(&aJvm, m_xContext->getServiceManager(),
-                                    m_xContext);
-            }
-            catch (css::java::JavaNotConfiguredException & rException)
-            {
-                if (!askForRetry(css::uno::makeAny(rException)))
-                    return css::uno::Any();
-                continue; // retry
-            }
-            // This is the second attempt to create Java.  m_bDontCreateJvm is
-            // set which means instantiating the JVM might crash.
-            if (m_bDontCreateJvm)
-                //throw css::uno::RuntimeException();
-                return css::uno::Any();
+    if (aId != aProcessId)
+        return css::uno::Any();
 
-            if (!aJvm.isEnabled())
+    while (!m_xVirtualMachine.is()) // retry until successful
+    {
+        // This is the second attempt to create Java.  m_bDontCreateJvm is
+        // set which means instantiating the JVM might crash.
+        if (m_bDontCreateJvm)
+            //throw css::uno::RuntimeException();
+            return css::uno::Any();
+
+        stoc_javavm::JVM aJvm;
+        initVMConfiguration(&aJvm, m_xContext->getServiceManager(),
+                            m_xContext);
+        //Create the JavaVMOption array
+        const std::vector<rtl::OUString> & props = aJvm.getProperties();
+        boost::scoped_array<JavaVMOption> sarOptions(
+            new JavaVMOption[props.size()]);
+        JavaVMOption * arOptions = sarOptions.get();
+        //Create an array that contains the strings which are passed
+        //into the options
+        boost::scoped_array<rtl::OString> sarPropStrings(
+             new rtl::OString[props.size()]);
+        rtl::OString * arPropStrings = sarPropStrings.get();
+
+        rtl::OString sJavaOption("-");
+        typedef std::vector<rtl::OUString>::const_iterator cit;
+        int index = 0;
+        for (cit i = props.begin(); i != props.end(); i++)
+        {
+            rtl::OString sOption = rtl::OUStringToOString(
+                *i, osl_getThreadTextEncoding());
+            
+            if (!sOption.matchIgnoreAsciiCase(sJavaOption, 0))
+                arPropStrings[index]= rtl::OString("-D") + sOption;
+            else
+                arPropStrings[index] = sOption;
+
+            arOptions[index].optionString = (sal_Char*)arPropStrings[index].getStr();
+            arOptions[index].extraInfo = 0;
+            index ++;
+        }
+
+        JNIEnv * pMainThreadEnv = 0;
+        javaFrameworkError errcode = JFW_E_NONE;
+        errcode = jfw_startVM(arOptions, index, & m_pJavaVm,
+                                & pMainThreadEnv);
+
+        bool bStarted = false;
+        switch (errcode)
+        {
+        case JFW_E_NONE: bStarted = true; break;
+        case JFW_E_NO_SELECT:
+        {
+            // No Java configured. We silenty run the java configuration
+            // Java.
+            javaFrameworkError errFind = jfw_findAndSelectJRE( NULL );
+            if (errFind == JFW_E_NONE)
             {
-                css::java::JavaDisabledException aException(
+                continue;
+            }
+            else if (errFind == JFW_E_NO_JAVA_FOUND)
+            {
+                
+                //Warning MessageBox: 
+                //%PRODUCTNAME requires a Java runtime environment (JRE) to perform this task.
+                //Please install a JRE and restart %PRODUCTNAME.
+                css::java::JavaNotFoundException exc(
                     rtl::OUString(
                         RTL_CONSTASCII_USTRINGPARAM(
                             "JavaVirtualMachine::getJavaVM failed because"
-                            " Java is deactivated in the configuration")),
+                            " No suitable JRE found!")),
                     static_cast< cppu::OWeakObject * >(this));
-                if (!askForRetry(css::uno::makeAny(aException)))
-                    //throw aException;
-                    return css::uno::Any();
-                continue; // retry
+                askForRetry(css::uno::makeAny(exc));
+                return css::uno::Any();
+                break;
             }
-
-            JNIEnv * pMainThreadEnv;
-            try
+            else
             {
-                m_pJavaVm = createJavaVM(aJvm, &pMainThreadEnv);
+                //An unexpected error occurred
+                throw css::uno::RuntimeException(
+                    rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(
+                                      "[JavaVirtualMachine]:An unexpected error occurred"
+                                      " while searching for a Java!")), 0);
             }
-            catch (css::lang::WrappedTargetRuntimeException & rException)
+        }
+        case JFW_E_INVALID_SETTINGS:
+        {
+            //Warning MessageBox: 
+            // The %PRODUCTNAME configuration has been changed. Under Tools
+            // - Options - %PRODUCTNAME - Java, select the Java runtime environment
+            // you want to have used by %PRODUCTNAME.
+            css::java::InvalidJavaSettingsException exc(
+                rtl::OUString(
+                    RTL_CONSTASCII_USTRINGPARAM(
+                        "JavaVirtualMachine::getJavaVM failed because"
+                        " Java settings have changed!")),
+                static_cast< cppu::OWeakObject * >(this));
+            askForRetry(css::uno::makeAny(exc));
+            return css::uno::Any();
+            break;
+        }
+        case JFW_E_JAVA_DISABLED:
+        {
+            //QueryBox:
+            //%PRODUCTNAME requires a Java runtime environment (JRE) to perform
+            //this task. However, use of a JRE has been disabled. Do you want to
+            //enable the use of a JRE now?
+            css::java::JavaDisabledException exc(
+                rtl::OUString(
+                    RTL_CONSTASCII_USTRINGPARAM(
+                        "JavaVirtualMachine::getJavaVM failed because"
+                        " Java is disabled!")),
+                static_cast< cppu::OWeakObject * >(this));
+            if( ! askForRetry(css::uno::makeAny(exc)))
+                return css::uno::Any();
+            continue;
+            break;
+        }
+        case JFW_E_VM_CREATION_FAILED:
+        {
+            //Error:
+            //%PRODUCTNAME requires a Java runtime environment (JRE) to perform
+            //this task. The selected JRE is defective. Please select another
+            //version or install a new JRE and select  it under Tools - Options -
+            //%PRODUCTNAME - Java.
+            css::java::JavaVMCreationFailureException exc(
+                rtl::OUString(
+                    RTL_CONSTASCII_USTRINGPARAM(
+                        "JavaVirtualMachine::getJavaVM failed because"
+                        " Java is defective!")),
+                static_cast< cppu::OWeakObject * >(this), 0);
+            askForRetry(css::uno::makeAny(exc));
+            return css::uno::Any();
+        }
+        case JFW_E_RUNNING_JVM:
+        {
+            //This service should make sure that we do not start java twice.
+            OSL_ASSERT(0);
+            break;
+        }
+        case JFW_E_NEED_RESTART:
+        {
+            //Error:
+            //For the selected Java runtime environment to work properly,
+            //%PRODUCTNAME must be restarted. Please restart %PRODUCTNAME now.
+            css::java::RestartRequiredException exc(
+                rtl::OUString(
+                    RTL_CONSTASCII_USTRINGPARAM(
+                        "JavaVirtualMachine::getJavaVM failed because"
+                        "Office must be restarted before Java can be used!")),
+                static_cast< cppu::OWeakObject * >(this));
+            askForRetry(css::uno::makeAny(exc));
+            return css::uno::Any();
+
+            m_bDontCreateJvm = true;
+            break;
+        }
+        default:
+        {
+            //RuntimeException: error is somewhere in the java framework.
+            //An unexpected error occurred
+            throw css::uno::RuntimeException(
+                rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(
+                                  "[JavaVirtualMachine]:An unexpected error occurred"
+                                  " while starting Java!")), 0);
+            break;
+        }
+        }
+
+        if (bStarted)
+        {
             {
-                // Depending on platform and kind of error, it might be best not
-                // to create a JVM again, because it might crash the
-                // application:
-                if (rException.TargetException.isExtractableTo(
-                        getCppuType(
-                            static_cast<
-                                css::java::JavaNotConfiguredException * >(0))))
-                {
-#if defined LINUX || defined FREEBSD || defined NETBSD
-                    // Because of LD_LIBRARY_PATH, even javaldx --use-links does
-                    // not work sometimes:
-                    m_bDontCreateJvm = true;
-#endif // LINUX
-                }
-                else if (rException.TargetException.isExtractableTo(
-                             getCppuType(
-                                 static_cast<
-                                     css::java::MissingJavaRuntimeException * >(
-                                         0))))
-                {
-#if defined LINUX || defined FREEBSD || defined NETBSD
-                    // Because of LD_LIBRARY_PATH, even javaldx --use-links does
-                    // not work sometimes:
-                    m_bDontCreateJvm = true;
-#endif // LINUX
-                }
-                else if (rException.TargetException.isExtractableTo(
-                             getCppuType(
-                                 static_cast<
-                                  css::java::JavaVMCreationFailureException * >(
-                                         0))))
-                    m_bDontCreateJvm = true;
-
-                if (!askForRetry(rException.TargetException))
-                {
-                    if (rException.TargetException.isExtractableTo(
-                            getCppuType(
-                                static_cast<
-                                    css::java::JavaNotConfiguredException * >(
-                                        0)))
-                        || rException.TargetException.isExtractableTo(
-                            getCppuType(
-                                static_cast<
-                                    css::java::MissingJavaRuntimeException * >(
-                                        0)))
-                        || rException.TargetException.isExtractableTo(
-                            getCppuType(
-                                static_cast<
-                                  css::java::JavaVMCreationFailureException * >(
-                                        0))))
-                        //cppu::throwException(rException.TargetException);
-                    //throw;
-                    return css::uno::Any();
-                }
-                continue; // retry
+                DetachCurrentThread detach(m_pJavaVm);
+                    // necessary to make debugging work; this thread will be
+                    // suspended when the destructor of detach returns
+                m_xVirtualMachine = new jvmaccess::VirtualMachine(
+                    m_pJavaVm, JNI_VERSION_1_2, true, pMainThreadEnv);
+                setUpUnoVirtualMachine(pMainThreadEnv);
             }
-
-            m_xVirtualMachine = new jvmaccess::VirtualMachine(
-                m_pJavaVm, JNI_VERSION_1_2, true, pMainThreadEnv);
-
-            // Necessary to make debugging work. This thread will be
-            // suspended when this function returns.
-            m_pJavaVm->DetachCurrentThread();
-
             // Listen for changes in the configuration (e.g. proxy settings):
             // TODO this is done too late; changes to the configuration done
             // after the above call to initVMConfiguration are lost
             registerConfigChangesListener();
-        }
-        if (bReturnVirtualMachine)
-        {
-            // Return a non-refcounted pointer to m_xVirtualMachine.  It is
-            // guaranteed that this pointer is valid for the caller as long as
-            // the caller's reference to this XJavaVM service is valid; the
-            // caller should convert this non-refcounted pointer into a
-            // refcounted one as soon as possible.
-            OSL_ENSURE(sizeof (sal_Int64)
-                           >= sizeof (jvmaccess::VirtualMachine *),
-                       "Pointer cannot be represented as sal_Int64");
-            return css::uno::makeAny(reinterpret_cast< sal_Int64 >(
-                                         m_xVirtualMachine.get()));
-        }
-        else
-        {
-            if (sizeof (m_pJavaVm) <= sizeof (sal_Int32))
-                return css::uno::makeAny(reinterpret_cast< sal_Int32 >(
-                                             m_pJavaVm));
-            else if (sizeof (m_pJavaVm) <= sizeof (sal_Int64))
-                return css::uno::makeAny(reinterpret_cast< sal_Int64 >(
-                                             m_pJavaVm));
-            OSL_ENSURE(false, "Pointer cannot be represented as sal_Int64");
+            
+            break;
         }
     }
-    return css::uno::Any();
+    if (!m_xUnoVirtualMachine.is()) {
+        try {
+            jvmaccess::VirtualMachine::AttachGuard guard(m_xVirtualMachine);
+            setUpUnoVirtualMachine(guard.getEnvironment());
+        } catch (jvmaccess::VirtualMachine::AttachGuard::CreationException &) {
+            throw css::uno::RuntimeException(
+                rtl::OUString(
+                    RTL_CONSTASCII_USTRINGPARAM(
+                        "jvmaccess::VirtualMachine::AttachGuard::"
+                        "CreationException occurred")),
+                static_cast< cppu::OWeakObject * >(this));
+        }
+    }
+    switch (returnType) {
+    default: // RETURN_JAVAVM
+        if (m_pJavaVm == 0) {
+            throw css::uno::RuntimeException(
+                rtl::OUString(
+                    RTL_CONSTASCII_USTRINGPARAM(
+                        "JavaVirtualMachine service was initialized in a way"
+                        " that the requested JavaVM pointer is not available")),
+                static_cast< cppu::OWeakObject * >(this));
+        }
+        if (sizeof (m_pJavaVm) <= sizeof (sal_Int32)) {
+            return css::uno::makeAny(reinterpret_cast< sal_Int32 >(m_pJavaVm));
+        } else {
+            OSL_ASSERT(
+                sizeof (sal_Int64) >= sizeof (jvmaccess::VirtualMachine *));
+            return css::uno::makeAny(reinterpret_cast< sal_Int64 >(m_pJavaVm));
+        }
+    case RETURN_VIRTUALMACHINE:
+        OSL_ASSERT(sizeof (sal_Int64) >= sizeof (jvmaccess::VirtualMachine *));
+        return css::uno::makeAny(
+            reinterpret_cast< sal_Int64 >(
+                m_xUnoVirtualMachine->getVirtualMachine().get()));
+    case RETURN_UNOVIRTUALMACHINE:
+        OSL_ASSERT(sizeof (sal_Int64) >= sizeof (jvmaccess::VirtualMachine *));
+        return css::uno::makeAny(
+            reinterpret_cast< sal_Int64 >(m_xUnoVirtualMachine.get()));
+    }
 }
 
 sal_Bool SAL_CALL JavaVirtualMachine::isVMStarted()
@@ -1184,7 +1031,7 @@ sal_Bool SAL_CALL JavaVirtualMachine::isVMStarted()
     if (m_bDisposed)
         throw css::lang::DisposedException(
             rtl::OUString(), static_cast< cppu::OWeakObject * >(this));
-    return m_xVirtualMachine.is();
+    return m_xUnoVirtualMachine.is();
 }
 
 sal_Bool SAL_CALL JavaVirtualMachine::isVMEnabled()
@@ -1196,9 +1043,14 @@ sal_Bool SAL_CALL JavaVirtualMachine::isVMEnabled()
             throw css::lang::DisposedException(
                 rtl::OUString(), static_cast< cppu::OWeakObject * >(this));
     }
-    stoc_javavm::JVM aJvm;
-    initVMConfiguration(&aJvm, m_xContext->getServiceManager(), m_xContext);
-    return aJvm.isEnabled();
+//    stoc_javavm::JVM aJvm;
+//    initVMConfiguration(&aJvm, m_xContext->getServiceManager(), m_xContext);
+//    return aJvm.isEnabled();
+    //ToDo
+    sal_Bool bEnabled = sal_False;
+    if (jfw_getEnabled( & bEnabled) != JFW_E_NONE)
+        throw css::uno::RuntimeException();
+    return bEnabled;
 }
 
 sal_Bool SAL_CALL JavaVirtualMachine::isThreadAttached()
@@ -1222,7 +1074,7 @@ void SAL_CALL JavaVirtualMachine::registerThread()
     if (m_bDisposed)
         throw css::lang::DisposedException(
             rtl::OUString(), static_cast< cppu::OWeakObject * >(this));
-    if (!m_xVirtualMachine.is())
+    if (!m_xUnoVirtualMachine.is())
         throw css::uno::RuntimeException(
             rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(
                               "JavaVirtualMachine::registerThread:"
@@ -1238,7 +1090,8 @@ void SAL_CALL JavaVirtualMachine::registerThread()
     try
     {
         pStack->push(
-            new jvmaccess::VirtualMachine::AttachGuard(m_xVirtualMachine));
+            new jvmaccess::VirtualMachine::AttachGuard(
+                m_xUnoVirtualMachine->getVirtualMachine()));
     }
     catch (jvmaccess::VirtualMachine::AttachGuard::CreationException &)
     {
@@ -1258,7 +1111,7 @@ void SAL_CALL JavaVirtualMachine::revokeThread()
     if (m_bDisposed)
         throw css::lang::DisposedException(
             rtl::OUString(), static_cast< cppu::OWeakObject * >(this));
-    if (!m_xVirtualMachine.is())
+    if (!m_xUnoVirtualMachine.is())
         throw css::uno::RuntimeException(
             rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(
                               "JavaVirtualMachine::revokeThread:"
@@ -1378,15 +1231,15 @@ void SAL_CALL JavaVirtualMachine::elementReplaced(
             {
             case 0:
                 aPropertyValue = rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(
-                                                   "unrestricted"));
+                                                   "host"));
                 break;
             case 1:
                 aPropertyValue = rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(
-                                                   "none"));
+                                                   "unrestricted"));
                 break;
-            case 2:
+            case 3:
                 aPropertyValue = rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(
-                                                   "host"));
+                                                   "none"));
                 break;
             }
         else
@@ -1415,7 +1268,9 @@ void SAL_CALL JavaVirtualMachine::elementReplaced(
     rtl::Reference< jvmaccess::VirtualMachine > xVirtualMachine;
     {
         osl::MutexGuard aGuard(*this);
-        xVirtualMachine = m_xVirtualMachine;
+        if (m_xUnoVirtualMachine.is()) {
+            xVirtualMachine = m_xUnoVirtualMachine->getVirtualMachine();
+        }
     }
     if (xVirtualMachine.is())
     {
@@ -1583,221 +1438,6 @@ void SAL_CALL JavaVirtualMachine::disposing()
         xContainer2->removeContainerListener(this);
 }
 
-JavaVM * JavaVirtualMachine::createJavaVM(stoc_javavm::JVM const & jvm,
-                                          JNIEnv ** pMainThreadEnv)
-{
-    // On linux we load jvm with RTLD_GLOBAL. This is necessary for debugging, because
-    // libjdwp.so need a symbol (fork1) from libjvm which it only gets if the jvm is loaded
-    // witd RTLD_GLOBAL. On Solaris libjdwp.so is correctly linked with libjvm.so
-#if defined(LINUX)|| defined(FREEBSD) || defined NETBSD
-    if(!m_aJavaLib.load(jvm.getRuntimeLib(), SAL_LOADMODULE_GLOBAL | SAL_LOADMODULE_NOW))
-#else
-    if(!m_aJavaLib.load(jvm.getRuntimeLib()))
-#endif
-    {
-        //Java installation was deleted or moved
-        rtl::OUString libURL;
-        if( osl::File::getFileURLFromSystemPath( jvm.getJavaHome(), libURL) != osl::File::E_None)
-            libURL= rtl::OUString();
-        css::java::MissingJavaRuntimeException exc(
-            rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("JavaVirtualMachine::createJavaVM, Java runtime library cannot be found")),
-            0, libURL);
-        css::lang::WrappedTargetRuntimeException wt;
-        wt.TargetException<<= exc;
-        throw wt;
-    }
-
-#ifdef UNX
-    rtl::OUString javaHome(RTL_CONSTASCII_USTRINGPARAM("JAVA_HOME="));
-    javaHome += jvm.getJavaHome();
-    const rtl::OUString & vmType  = jvm.getVMType();
-
-    if(!vmType.equals(rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("JRE"))))
-    {
-        javaHome += rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("/jre"));
-    }
-
-    rtl::OString osJavaHome = rtl::OUStringToOString(javaHome, osl_getThreadTextEncoding());
-    putenv(strdup(osJavaHome.getStr()));
-#endif
-
-    JNI_CreateVM_Type * pCreateJavaVM = (JNI_CreateVM_Type *)m_aJavaLib.getSymbol(
-        rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("JNI_CreateJavaVM")));
-    if (!pCreateJavaVM)
-    {
-        // The java installation is somehow corrupted
-        css::java::JavaVMCreationFailureException exc(
-            rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("JavaVirtualMachine::createJavaVM, could not find symbol " \
-                  "JNI_GetDefaultJavaVMInitArgs or JNI_CreateJavaVM")),
-            0, 1);
-
-        css::lang::WrappedTargetRuntimeException wt;
-        wt.TargetException<<= exc;
-        throw wt;
-    }
-
-    // The office sets a signal handler at startup. That causes a crash
-    // with java 1.3 under Solaris. To make it work, we set back the
-    // handler
-#if defined UNX && !defined MACOSX
-    struct sigaction act;
-    act.sa_handler=SIG_DFL;
-    act.sa_flags= 0;
-    sigaction( SIGSEGV, &act, NULL);
-    sigaction( SIGPIPE, &act, NULL);
-    sigaction( SIGBUS, &act, NULL);
-    sigaction( SIGILL, &act, NULL);
-    sigaction( SIGFPE, &act, NULL);
-#endif
-
-    sal_uInt16 cprops= jvm.getProperties().size();
-
-    // Some testing with Java 1.4 showed that JavaVMOption.optionString has to
-    // be encoded with the system encoding (i.e., osl_getThreadTextEncoding):
-    JavaVMInitArgs vm_args;
-
-    // we have "addOpt" additional properties to those kept in the JVM struct
-#ifdef MACOSX
-    sal_Int32 addOpt=3;
-#else	// MACOSX
-    sal_Int32 addOpt=2;
-#endif	// MACOSX
-    JavaVMOption * options= new JavaVMOption[cprops + addOpt];
-    rtl::OString sClassPath= rtl::OString("-Djava.class.path=")
-        + rtl::OUStringToOString(jvm.getClassPath(),
-                                 osl_getThreadTextEncoding());
-    options[0].optionString= (char*)sClassPath.getStr();
-    options[0].extraInfo= NULL;
-
-    // We set an abort handler which is called when the VM calls _exit during
-    // JNI_CreateJavaVM. This happens when the LD_LIBRARY_PATH does not contain
-    // all some directories of the Java installation. This is necessary for
-    // linux j2re1.3, 1.4 and Solaris j2re1.3. With a j2re1.4 on Solaris the
-    // LD_LIBRARY_PATH need not to be set anymore.
-    options[1].optionString= "abort";
-    options[1].extraInfo= (void* )abort_handler;
-
-#ifdef MACOSX
-    // We need to turn off some of Java 1.4's graphics optimizations as they
-    // cause full screen window positioning, clipping, and image drawing
-    // speed to get messed up
-    options[2].optionString= "-Dapple.awt.window.position.forceSafeProgrammaticPositioning=false";
-    options[2].extraInfo= NULL;
-#endif	// MACOSX
-
-    rtl::OString * arProps= new rtl::OString[cprops];
-
-    /*If there are entries in the Java section of the java.ini/javarc which are meant
-      to be java system properties then they get a "-D" at the beginning of the string.
-      Entries which start with "-" are regarded as java options as they are passed at
-      the command-line. If those entries appear under the Java section then there are
-      used as they are. For example, the entry  "-ea" would be uses as
-      JavaVMOption.optionString.
-    */
-    rtl::OString sJavaOption("-");
-    for( sal_uInt16 x= 0; x< cprops; x++)
-    {
-        rtl::OString sOption(rtl::OUStringToOString(
-                                 jvm.getProperties()[x],
-                                 osl_getThreadTextEncoding()));
-        if (!sOption.matchIgnoreAsciiCase(sJavaOption, 0))
-            arProps[x]= rtl::OString("-D") + sOption;
-        else
-            arProps[x]= sOption;
-        options[x+addOpt].optionString= (char*)arProps[x].getStr();
-        options[x+addOpt].extraInfo= NULL;
-    }
-#if defined MACOSX
-    // Apple will not load Java 1.4 unless the version is JNI_VERSION_1_4
-    vm_args.version= JNI_VERSION_1_4;
-#else	// MACOSX
-    vm_args.version= JNI_VERSION_1_2;
-#endif	// MACOSX
-    vm_args.options= options;
-    vm_args.nOptions= cprops + addOpt;
-    vm_args.ignoreUnrecognized= JNI_TRUE;
-
-    /* We set a global flag which is used by the abort handler in order to
-       determine whether it is  should use longjmp to get back into this function.
-       That is, the abort handler determines if it is on the same stack as this function
-       and then jumps back into this function.
-    */
-    g_bInGetJavaVM = 1;
-    jint err;
-    JavaVM * pJavaVM;
-    memset( jmp_jvm_abort, 0, sizeof(jmp_jvm_abort));
-    int jmpval= setjmp( jmp_jvm_abort );
-    /* If jmpval is not "0" then this point was reached by a longjmp in the
-       abort_handler, which was called indirectly by JNI_CreateVM.
-    */
-    if( jmpval == 0)
-    {
-        //returns negative number on failure
-        err= pCreateJavaVM(&pJavaVM, pMainThreadEnv, &vm_args);
-        g_bInGetJavaVM = 0;
-
-#ifdef MACOSX
-        // The JVM's native drawing methods print many spurious error messages
-        // on Mac OS X 10.4 which will flood the system log so we need to
-        // filter out the messages
-        int fd[2];
-        if (!pipe(fd))
-        {
-            pid_t pid = fork();
-            if (!pid)
-            {
-                // Child process executes grep -v
-                dup2(1, 2);
-                dup2(fd[0], 0);
-                close(fd[0]);
-                close(fd[1]);
-                execlp( "/usr/bin/grep", "grep", "-v", "^ERROR: ", NULL );
-				exit(0);
-            }
-            else if (pid > 0)
-            {
-                // Parent process redirects stderr to pipe
-                dup2(fd[1], 2);
-                close(fd[0]);
-                close(fd[1]);
-            }
-			else
-			{
-                close(fd[0]);
-                close(fd[1]);
-			}
-        }
-#endif
-    }
-    else
-        // set err to a positive number, so as or recognize that an abort (longjmp)
-        //occurred
-        err= 1;
-
-    delete [] options;
-    delete [] arProps;
-
-    if(err != 0)
-    {
-        rtl::OUString message;
-        if( err < 0)
-        {
-            message= rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(
-                "JavaVirtualMachine::createJavaVM - can not create VM, cause of err:"));
-            message += rtl::OUString::valueOf((sal_Int32)err);
-        }
-        else if( err > 0)
-            message= rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(
-                "JavaVirtualMachine::createJavaVM - can not create VM, abort handler was called"));
-        css::java::JavaVMCreationFailureException exc(message,
-                                                      0, err);
-        css::lang::WrappedTargetRuntimeException wt;
-        wt.TargetException<<= exc;
-        throw wt;
-    }
-    return pJavaVM;
-}
-
 /*We listen to changes in the configuration. For example, the user changes the proxy
   settings in the options dialog (menu tools). Then we are notified of this change and
   if the java vm is already running we change the properties (System.lang.System.setProperties)
@@ -1883,10 +1523,10 @@ void JavaVirtualMachine::setINetSettingsInVM(bool set_reset)
     osl::MutexGuard aGuard(*this);
     try
     {
-        if (m_xVirtualMachine.is())
+        if (m_xUnoVirtualMachine.is())
         {
             jvmaccess::VirtualMachine::AttachGuard aAttachGuard(
-                m_xVirtualMachine);
+                m_xUnoVirtualMachine->getVirtualMachine());
             JNIEnv * pJNIEnv = aAttachGuard.getEnvironment();
 
             // The Java Properties
@@ -2008,4 +1648,147 @@ void JavaVirtualMachine::setINetSettingsInVM(bool set_reset)
         OSL_ENSURE(false,
                    "jvmaccess::VirtualMachine::AttachGuard::CreationException");
     }
+}
+
+void JavaVirtualMachine::setUpUnoVirtualMachine(JNIEnv * environment) {
+    css::uno::Reference< css::util::XMacroExpander > exp;
+    if (!(m_xContext->getValueByName(
+              rtl::OUString(
+                  RTL_CONSTASCII_USTRINGPARAM(
+                      "/singletons/com.sun.star.util.theMacroExpander")))
+          >>= exp)
+        || !exp.is())
+    {
+        throw css::uno::RuntimeException(
+            rtl::OUString(
+                RTL_CONSTASCII_USTRINGPARAM(
+                    "component context fails to supply singleton"
+                    " com.sun.star.util.theMacroExpander of type"
+                    " com.sun.star.util.XMacroExpander")),
+            m_xContext);
+    }
+    rtl::OUString baseUrl;
+    try {
+        baseUrl = exp->expandMacros(
+            rtl::OUString(
+                RTL_CONSTASCII_USTRINGPARAM("$URE_INTERNAL_JAVA_DIR/")));
+    } catch (css::lang::IllegalArgumentException &) {
+        throw css::uno::RuntimeException(
+            rtl::OUString(
+                RTL_CONSTASCII_USTRINGPARAM(
+                    "com::sun::star::lang::IllegalArgumentException")),
+            static_cast< cppu::OWeakObject * >(this));
+    }
+    if (baseUrl.getLength() > 0) {
+        baseUrl = css::uri::ExternalUriReferenceTranslator::create(m_xContext)->
+            translateToExternal(baseUrl);
+        if (baseUrl.getLength() == 0) {
+            throw css::uno::RuntimeException(
+                rtl::OUString(
+                    RTL_CONSTASCII_USTRINGPARAM(
+                        "com.sun.star.uri.ExternalUriReferenceTranslator."
+                        "translateToExternal failed")),
+                static_cast< cppu::OWeakObject * >(this));
+        }
+    }
+    jclass class_URLClassLoader = environment->FindClass(
+        "java/net/URLClassLoader");
+    if (class_URLClassLoader == 0) {
+        handleJniException(environment);
+    }
+    jmethodID ctor_URLClassLoader = environment->GetMethodID(
+        class_URLClassLoader, "<init>", "([Ljava/net/URL;)V");
+    if (ctor_URLClassLoader == 0) {
+        handleJniException(environment);
+    }
+    jclass class_URL = environment->FindClass("java/net/URL");
+    if (class_URL == 0) {
+        handleJniException(environment);
+    }
+    jmethodID ctor_URL_1 = environment->GetMethodID(
+        class_URL, "<init>", "(Ljava/lang/String;)V");
+    if (ctor_URL_1 == 0) {
+        handleJniException(environment);
+    }
+    jvalue args[2];
+    args[0].l = environment->NewString(
+        static_cast< jchar const * >(baseUrl.getStr()),
+        static_cast< jsize >(baseUrl.getLength()));
+    if (args[0].l == 0) {
+        handleJniException(environment);
+    }
+    jobject base = environment->NewObjectA(class_URL, ctor_URL_1, args);
+    if (base == 0) {
+        handleJniException(environment);
+    }
+    jmethodID ctor_URL_2 = environment->GetMethodID(
+        class_URL, "<init>", "(Ljava/net/URL;Ljava/lang/String;)V");
+    if (ctor_URL_2 == 0) {
+        handleJniException(environment);
+    }
+    args[0].l = base;
+    args[1].l = environment->NewStringUTF("unoloader.jar");
+    if (args[1].l == 0) {
+        handleJniException(environment);
+    }
+    args[0].l = environment->NewObjectA(class_URL, ctor_URL_2, args);
+    if (args[0].l == 0) {
+        handleJniException(environment);
+    }
+    args[0].l = environment->NewObjectArray(1, class_URL, args[0].l);
+    if (args[0].l == 0) {
+        handleJniException(environment);
+    }
+    jobject cl1 = environment->NewObjectA(
+        class_URLClassLoader, ctor_URLClassLoader, args);
+    if (cl1 == 0) {
+        handleJniException(environment);
+    }
+    jmethodID method_loadClass = environment->GetMethodID(
+        class_URLClassLoader, "loadClass",
+        "(Ljava/lang/String;)Ljava/lang/Class;");
+    if (method_loadClass == 0) {
+        handleJniException(environment);
+    }
+    args[0].l = environment->NewStringUTF(
+        "com.sun.star.lib.unoloader.UnoClassLoader");
+    if (args[0].l == 0) {
+        handleJniException(environment);
+    }
+    jclass class_UnoClassLoader = static_cast< jclass >(
+        environment->CallObjectMethodA(cl1, method_loadClass, args));
+    if (class_UnoClassLoader == 0) {
+        handleJniException(environment);
+    }
+    jmethodID ctor_UnoClassLoader = environment->GetMethodID(
+        class_UnoClassLoader, "<init>",
+        "(Ljava/net/URL;Ljava/lang/ClassLoader;)V");
+    if (ctor_UnoClassLoader == 0) {
+        handleJniException(environment);
+    }
+    args[0].l = base;
+    args[1].l = cl1;
+    jobject cl2 = environment->NewObjectA(
+        class_UnoClassLoader, ctor_UnoClassLoader, args);
+    if (cl2 == 0) {
+        handleJniException(environment);
+    }
+    try {
+        m_xUnoVirtualMachine = new jvmaccess::UnoVirtualMachine(
+            m_xVirtualMachine, cl2);
+    } catch (jvmaccess::UnoVirtualMachine::CreationException &) {
+        throw css::uno::RuntimeException(
+            rtl::OUString(
+                RTL_CONSTASCII_USTRINGPARAM(
+                    "jvmaccess::UnoVirtualMachine::CreationException")),
+            static_cast< cppu::OWeakObject * >(this));
+    }
+}
+
+void JavaVirtualMachine::handleJniException(JNIEnv * environment) {
+    environment->ExceptionClear();
+    throw css::uno::RuntimeException(
+        rtl::OUString(
+            RTL_CONSTASCII_USTRINGPARAM("JNI exception occurred")),
+        static_cast< cppu::OWeakObject * >(this));
 }
