@@ -560,6 +560,9 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 			for ( ; nCurrentPos < nOffsetPos; nCurrentPos++ )
 				mpNeedFallback[ nCurrentPos ] = true;
 
+			if ( mpHash->mbRTL && nOffsetPos < mpHash->mnLen && mpHash->mpStr[ nOffsetPos ] == 0x0020 )
+				mpNeedFallback[ nOffsetPos ] = true;
+
 			// Update font for next pass through
 			if ( !mpFallbackFont )
 			{
@@ -863,7 +866,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		maRuns.NextRun();
 
 		// Check if this run will need Kashida justification
-		if ( bLastRunRTL && ( rArgs.mpDXArray || rArgs.mnLayoutWidth ) && !mpKashidaLayoutData )
+		if ( bRunRTL && ( rArgs.mpDXArray || rArgs.mnLayoutWidth ) && !mpKashidaLayoutData )
 		{
 			UErrorCode nErrorCode = U_ZERO_ERROR;
 			UScriptCode eScriptCode = uscript_getScript( rArgs.mpStr[ nMinCharPos ], &nErrorCode );

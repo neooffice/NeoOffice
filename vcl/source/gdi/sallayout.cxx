@@ -993,7 +993,7 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
 #if defined USE_JAVA && defined MACOSX
                 // Fix bug 578 by right aligning glyphs that following missing
                 // character positions
-                if( pG > mpGlyphItems && pG[-1].mnCharPos - pG->mnCharPos > 1 )
+                if( pG > mpGlyphItems && ( IsSpacingGlyph( pG[-1].mnGlyphIndex ) || pG[-1].mnCharPos - pG->mnCharPos > 1 ) )
                     pG[-1].mnNewWidth += nDiff;
                 else if( IsSpacingGlyph( pG->mnGlyphIndex ) )
                     pG->mnNewWidth += nDiff;
