@@ -29,6 +29,9 @@
  *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
  *    MA  02111-1307  USA
  *
+ *    Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
+ *
  ************************************************************************/
 #include "boost/scoped_array.hpp"
 #include "rtl/ustring.hxx"
