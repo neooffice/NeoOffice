@@ -4,8 +4,8 @@ RCS file: /cvs/gsl/toolkit/util/makefile.mk,v
 retrieving revision 1.18
 diff -u -r1.18 makefile.mk
 --- util/makefile.mk	9 Sep 2005 13:25:15 -0000	1.18
-+++ util/makefile.mk	22 Dec 2005 18:48:54 -0000
-@@ -78,16 +78,7 @@
++++ util/makefile.mk	22 Dec 2005 19:38:28 -0000
+@@ -78,17 +78,8 @@
  DEF1DES		=TK
  DEFLIB1NAME	=tk
  
@@ -19,7 +19,8 @@ diff -u -r1.18 makefile.mk
 -.ENDIF
 -
 -.ELSE
-+.IF "$(OS)"!="MACOSX" 
  .IF "$(GUI)"=="UNX"
++.IF "$(OS)"!="MACOSX" 
  SHL1STDLIBS +=\
  	-lX11
+ .ENDIF

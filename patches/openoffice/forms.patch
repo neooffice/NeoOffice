@@ -1,0 +1,29 @@
+Index: util/makefile.mk
+===================================================================
+RCS file: /cvs/gsl/forms/util/makefile.mk,v
+retrieving revision 1.12
+diff -u -r1.12 makefile.mk
+--- util/makefile.mk	8 Sep 2005 23:27:19 -0000	1.12
++++ util/makefile.mk	22 Dec 2005 19:37:52 -0000
+@@ -104,19 +104,10 @@
+ RESLIB1SRSFILES=$(RES1FILELIST)
+ 
+ .IF "$(GUI)"=="UNX"
+-
+-# [ed] 6/19/02 Only add in libraries for X11 OS X builds
+-
+-.IF "$(OS)"=="MACOSX"
+-.IF "$(GUIBASE)"=="unx"
+-SHL1STDLIBS +=\
+-        -lX11 -lXt -lXmu
+-.ENDIF
+-.ELSE
++.IF "$(OS)"!="MACOSX"
+ SHL1STDLIBS +=\
+ 	-lX11
+-.ENDIF # OS == MACOSX
+-
++.ENDIF
+ .ENDIF
+ 
+ # --- Targets ----------------------------------
