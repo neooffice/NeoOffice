@@ -1,27 +1,22 @@
+? unxmacxp/bin/dmake
 Index: inc/unxmacxp.mk
 ===================================================================
 RCS file: /cvs/tools/solenv/inc/unxmacxp.mk,v
 retrieving revision 1.56
 diff -u -r1.56 unxmacxp.mk
 --- inc/unxmacxp.mk	8 Sep 2005 09:59:29 -0000	1.56
-+++ inc/unxmacxp.mk	26 Nov 2005 02:14:48 -0000
-@@ -192,10 +192,19 @@
++++ inc/unxmacxp.mk	22 Dec 2005 15:35:54 -0000
+@@ -192,10 +192,10 @@
  STDSLOCUI=
  
  STDLIBGUIST=-lm
-+.IF "$(GUIBASE)"=="unx"
- STDLIBCUIST=-lX11 -lpthread CPPRUNTIME -lm
-+.ELSE
-+STDLIBCUIST=-lpthread CPPRUNTIME -lm
-+.ENDIF
+-STDLIBCUIST=-lX11 -lpthread CPPRUNTIME -lm
++STDLIBCUIST=-lm
  STDLIBGUIMT=-lpthread CPPRUNTIME -lm
-+.IF "$(GUIBASE)"=="unx"
- STDLIBCUIMT=-lX11 CPPRUNTIME -lm
- STDSHLGUIMT=-lX11 -lXext -lpthread CPPRUNTIME -lm
-+.ELSE
-+STDLIBCUIMT=CPPRUNTIME -lm
+-STDLIBCUIMT=-lX11 CPPRUNTIME -lm
+-STDSHLGUIMT=-lX11 -lXext -lpthread CPPRUNTIME -lm
++STDLIBCUIMT=-lpthread CPPRUNTIME -lm
 +STDSHLGUIMT=-lpthread CPPRUNTIME -lm
-+.ENDIF
  STDSHLCUIMT=-lpthread CPPRUNTIME -lm
  
  LIBMGR=ar
