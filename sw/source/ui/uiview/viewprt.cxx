@@ -6,37 +6,28 @@
  *
  *  last change: $Author$ $Date$
  *
- *  The Contents of this file are made available subject to the terms of
- *  either of the following licenses
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- *         - GNU General Public License Version 2.1
  *
- *  Sun Microsystems Inc., October, 2000
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- *  GNU General Public License Version 2.1
- *  =============================================
- *  Copyright 2000 by Sun Microsystems, Inc.
- *  901 San Antonio Road, Palo Alto, CA 94303, USA
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
  *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public
- *  License version 2.1, as published by the Free Software Foundation.
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
  *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *  MA  02111-1307  USA
- *  
- *  =================================================
- *  Modified November 2004 by Patrick Luby. SISSL Removed. NeoOffice is
- *  distributed under GPL only under modification term 3 of the LGPL.
- *
- *  Contributor(s): _______________________________________
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
  *
  ************************************************************************/
 
@@ -83,7 +74,7 @@
 #include <sfx2/dispatch.hxx>
 #endif
 #ifndef _SFX_MISCCFG_HXX
-#include <sfx2/misccfg.hxx>
+#include <svtools/misccfg.hxx>
 #endif
 #ifndef _SVX_PRTQRY_HXX
 #include <svx/prtqry.hxx>
@@ -104,6 +95,9 @@
 #include <svtools/flagitem.hxx>
 #endif
 
+#ifndef _MODOPT_HXX //autogen
+#include <modcfg.hxx>
+#endif
 #ifndef _EDTWIN_HXX
 #include <edtwin.hxx>
 #endif
@@ -125,8 +119,11 @@
 #ifndef _SWPRTOPT_HXX
 #include <swprtopt.hxx>
 #endif
-#ifndef _OPTPAGE_HXX
-#include <optpage.hxx>
+//CHINA001 #ifndef _OPTPAGE_HXX
+//CHINA001 #include <optpage.hxx>
+//CHINA001 #endif
+#ifndef _FONTCFG_HXX
+#include <fontcfg.hxx>
 #endif
 #ifndef _CFGITEMS_HXX
 #include <cfgitems.hxx>
@@ -146,6 +143,12 @@
 #ifndef _WVIEW_HXX
 #include <wview.hxx>
 #endif
+#ifndef _DOC_HXX
+#include <doc.hxx>
+#endif
+#ifndef _FLDBAS_HXX
+#include <fldbas.hxx>
+#endif
 
 #ifndef _GLOBALS_HRC
 #include <globals.hrc>
@@ -156,7 +159,14 @@
 #ifndef _APP_HRC
 #include <app.hrc>
 #endif
-
+#ifndef _SFXENUMITEM_HXX
+#include <svtools/eitem.hxx>
+#endif
+#include <swwrtshitem.hxx> //CHINA001
+#include "swabstdlg.hxx" //CHINA001
+#ifndef _SFXSLSTITM_HXX //CHINA001
+#include <svtools/slstitm.hxx> //CHINA001
+#endif //CHINA001
 #define C2U(cChar) ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(cChar))
 
 /*--------------------------------------------------------------------
@@ -245,7 +255,10 @@ ErrCode	SwView::DoPrint( SfxPrinter *pPrinter, PrintDialog *pDlg,
 	SwNewDBMgr* pMgr = pSh->GetNewDBMgr();
 
 	int bPrintSelection = -1;
-	if( DBMGR_MERGE_MAILMERGE != pMgr->GetMergeType() && !pDlg && !bSilent
+    USHORT nMergeType = pMgr->GetMergeType();
+    if( DBMGR_MERGE_MAILMERGE != nMergeType &&
+        DBMGR_MERGE_DOCUMENTS != nMergeType &&
+            !pDlg && !bSilent
 		&& !bIsApi && ( pSh->IsSelection() || pSh->IsFrmSelected() ||
 		pSh->IsObjSelected() ) )
 	{
@@ -290,11 +303,16 @@ ErrCode	SwView::DoPrint( SfxPrinter *pPrinter, PrintDialog *pDlg,
 		SfxObjectShell *pObjShell = GetViewFrame()->GetObjectShell();
 		SwPrtOptions aOpts( pObjShell->GetTitle(0) );
 		BOOL bWeb = 0 != PTR_CAST(SwWebView, this);
-		if( pMgr->GetMergeType() == DBMGR_MERGE_MAILMERGE )
+        USHORT nMergeType = pMgr->GetMergeType();
+        if( nMergeType == DBMGR_MERGE_MAILMERGE ||
+                DBMGR_MERGE_DOCUMENTS == nMergeType )
 		{
             SwView::MakeOptions( pDlg, aOpts, 0, bWeb, GetPrinter(),
 							pSh->GetPrintData() );
-			bStartJob = pMgr->MergePrint( *this, aOpts, *pProgress );
+            if(DBMGR_MERGE_DOCUMENTS == nMergeType)
+                bStartJob = pMgr->MergePrintDocuments( *this, aOpts, *pProgress );
+            else
+                bStartJob = pMgr->MergePrint( *this, aOpts, *pProgress );
 		}
 		else
 		{
@@ -382,7 +400,7 @@ ErrCode	SwView::DoPrint( SfxPrinter *pPrinter, PrintDialog *pDlg,
 						pSh->PrintProspect( aOpts, *pProgress );
 				}
 				else
-					bStartJob = pSh->Prt( aOpts, *pProgress );
+                    bStartJob = pSh->Prt( aOpts, pProgress );
 
 				if ( bBrowse )
 				{
@@ -509,20 +527,29 @@ void __EXPORT SwView::ExecutePrint(SfxRequest& rReq)
             BOOL bSilent = pSilentItem ? pSilentItem->GetValue() : FALSE;
             SFX_REQUEST_ARG(rReq, pPrintFromMergeItem, SfxBoolItem, FN_QRY_MERGE, FALSE);
 #ifdef MACOSX
-			// Fix bug 206 by retrieving the value before removing it as once
-			// it is removed, it will sometimes be set by the compiler to FALSE
-            BOOL bFromMerge = pPrintFromMergeItem ? pPrintFromMergeItem->GetValue() : FALSE;
-			if(pPrintFromMergeItem)
-				rReq.RemoveItem(FN_QRY_MERGE);
-#else	// MACOSX
-			if(pPrintFromMergeItem)
-				rReq.RemoveItem(FN_QRY_MERGE);
+            // Fix bug 206 by retrieving the value before removing it as once
+            // it is removed, it will sometimes be set by the compiler to FALSE
             BOOL bFromMerge = pPrintFromMergeItem ? pPrintFromMergeItem->GetValue() : FALSE;
 #endif	// MACOSX
-            if(!bSilent && !bFromMerge && pSh->IsAnyDatabaseFieldInDoc())
+			if(pPrintFromMergeItem)
+				rReq.RemoveItem(FN_QRY_MERGE);
+			if(pPrintFromMergeItem)
+				rReq.RemoveItem(FN_QRY_MERGE);
+#ifndef MACOSX
+            BOOL bFromMerge = pPrintFromMergeItem ? pPrintFromMergeItem->GetValue() : FALSE;
+#endif	// !MACOSX
+            SwMiscConfig aMiscConfig;
+            if(!bSilent && !bFromMerge &&
+                    SW_MOD()->GetModuleConfig()->IsAskForMailMerge() && pSh->IsAnyDatabaseFieldInDoc())
             {
                 QueryBox aBox( &GetEditWin(), SW_RES( MSG_PRINT_AS_MERGE ));
-                if(RET_YES == aBox.Execute())
+                aBox.SetCheckBoxText( SW_RESSTR( STR_DONT_ASK_AGAIN ));
+                short nRet = aBox.Execute();
+                if(RET_CANCEL != nRet && aBox.GetCheckBoxState())
+                {
+                    SW_MOD()->GetModuleConfig()->SetAskForMailMerge(sal_False);
+                }
+                if(RET_YES == nRet)
                 {
                     SfxBoolItem aBool(FN_QRY_MERGE, TRUE);
                     GetViewFrame()->GetDispatcher()->Execute(
@@ -531,26 +558,61 @@ void __EXPORT SwView::ExecutePrint(SfxRequest& rReq)
 					return;
                 }
             }
-            if(!bSilent && pSh->GetViewOptions()->IsFldName() && pSh->IsAnyFieldInDoc())
+            //set the appropriate view options to print
+            //on silent mode the field commands have to be switched off always
+            //on default print the user is asked what to do
+            const SwViewOption* pCurrentViewOptions = pSh->GetViewOptions();
+            bool bSwitchOff_IsFldName = pCurrentViewOptions->IsFldName() && pSh->IsAnyFieldInDoc();
+
+            if(!bSilent && bSwitchOff_IsFldName)
 			{
 				QueryBox aBox( &GetEditWin(), SW_RES( DLG_PRT_FIELDNAME ) );
 				USHORT nRet = aBox.Execute();
 				if( RET_CANCEL == nRet)
 					return;
 				// disable field commands
-				if( RET_NO == nRet )
+                if( RET_NO != nRet )
 				{
-					pOrgViewOption = new SwViewOption(*pSh->GetViewOptions());
-					pOrgViewOption->SetFldName(FALSE);
-					SW_MOD()->ApplyUsrPref(*pOrgViewOption, this, VIEWOPT_DEST_VIEW_ONLY );
-				}
+                    bSwitchOff_IsFldName = false;
+                }
 			}
+            bool bApplyViewOptions = bSwitchOff_IsFldName;
+            //switch off display of hidden characters if on and hidden characters are in use
+            bool bSwitchOff_HiddenChar = pCurrentViewOptions->IsShowHiddenChar() && pSh->GetDoc()->ContainsHiddenChars();
+            //switch off display of hidden paragraphs if on and hidden paragraphs are in use
+            bool bSwitchOff_HiddenParagraphs = pCurrentViewOptions->IsShowHiddenPara();
+            if(bSwitchOff_HiddenParagraphs)
+            {
+                const SwFieldType* pFldType = pSh->GetDoc()->GetSysFldType(RES_HIDDENPARAFLD);
+                if(!pFldType || !pFldType->GetDepends())
+                    bSwitchOff_HiddenParagraphs = false;
+            }
+
+            bApplyViewOptions |= bSwitchOff_HiddenChar;
+            bApplyViewOptions |= bSwitchOff_HiddenParagraphs;
+            if(bApplyViewOptions)
+            {
+                pOrgViewOption = new SwViewOption(*pSh->GetViewOptions());
+                if(bSwitchOff_IsFldName)
+                    pOrgViewOption->SetFldName(FALSE);
+                if(bSwitchOff_HiddenChar)
+                    pOrgViewOption->SetShowHiddenChar(FALSE);
+                if(bSwitchOff_HiddenParagraphs)
+                    pOrgViewOption->SetShowHiddenPara(FALSE);
+
+                SW_MOD()->ApplyUsrPref(*pOrgViewOption, this, VIEWOPT_DEST_VIEW_ONLY );
+            }
 			bIsApi = rReq.IsAPI();
 			SfxViewShell::ExecuteSlot( rReq, SfxViewShell::GetInterface() );
 			if(pOrgViewOption)
 			{
-				pOrgViewOption->SetFldName(TRUE);
-				SW_MOD()->ApplyUsrPref(*pOrgViewOption, this, VIEWOPT_DEST_VIEW_ONLY );
+                if(bSwitchOff_IsFldName)
+                    pOrgViewOption->SetFldName(TRUE);
+                if(bSwitchOff_HiddenChar)
+                    pOrgViewOption->SetShowHiddenChar(TRUE);
+                if(bSwitchOff_HiddenParagraphs)
+                    pOrgViewOption->SetShowHiddenPara(TRUE);
+                SW_MOD()->ApplyUsrPref(*pOrgViewOption, this, VIEWOPT_DEST_VIEW_ONLY );
 				delete pOrgViewOption;
 			}
 			return;
@@ -569,19 +631,32 @@ void __EXPORT SwView::ExecutePrint(SfxRequest& rReq)
 SfxTabPage* CreatePrintOptionsPage( Window *pParent,
 								const SfxItemSet &rOptions, BOOL bPreview )
 {
-	SwAddPrinterTabPage* pPage = ( SwAddPrinterTabPage* )
-							SwAddPrinterTabPage::Create(pParent, rOptions);
-	pPage->SetPreview(bPreview);
-
-	SvStringsDtor aFaxList;
-	const USHORT nCount = Printer::GetQueueCount();
-	pPage->Reset(rOptions);
-	for (USHORT i = 0; i < nCount; ++i)
+//CHINA001	SwAddPrinterTabPage* pPage = ( SwAddPrinterTabPage* )
+//CHINA001	SwAddPrinterTabPage::Create(pParent, rOptions);
+	SfxTabPage* pPage = NULL;
+	SwAbstractDialogFactory* pFact = SwAbstractDialogFactory::Create();
+	if ( pFact )
 	{
-		String* pString = new String( Printer::GetQueueInfo( i ).GetPrinterName() );
-		aFaxList.Insert(pString, 0);
+		::CreateTabPage fnCreatePage = pFact->GetTabPageCreatorFunc( TP_OPTPRINT_PAGE );
+		if ( fnCreatePage )
+			pPage = (*fnCreatePage)( pParent, rOptions );
 	}
-	pPage->SetFax( aFaxList );
+	SfxAllItemSet aSet(*(rOptions.GetPool()));
+	//CHINA001 pPage->SetPreview(bPreview);
+	aSet.Put (SfxBoolItem(SID_PREVIEWFLAG_TYPE, bPreview));
+//CHINA001	SvStringsDtor aFaxList;
+//CHINA001	const USHORT nCount = Printer::GetQueueCount();
+//CHINA001	pPage->Reset(rOptions);
+//CHINA001	for (USHORT i = 0; i < nCount; ++i)
+//CHINA001	{
+//CHINA001	String* pString = new String( Printer::GetQueueInfo( i ).GetPrinterName() );
+//CHINA001	aFaxList.Insert(pString, 0);
+//CHINA001 }
+//CHINA001	pPage->SetFax( aFaxList );
+	//CHINA001 Reset(rOptions); can't be transfer as Item, so in SwAddPrinterTabPage::PageCreated(), call Reset() after SetPreview().
+	//CHINA001 It's difficult to transfer SvStringsDtor as Item, so move above code directly to SwAddPrinterTabPage::PageCreated()
+	aSet.Put (SfxBoolItem(SID_FAX_LIST, sal_True));
+	pPage->PageCreated(aSet);
 	return pPage;
 }
 
