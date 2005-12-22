@@ -346,7 +346,7 @@ public final class VCLGraphics {
 	/**
 	 * The single pixel buffer.
 	 */
-	private BufferedImage singlePixelImage = null;
+	private VCLBitmap singlePixelBitmap = null;
 
 	/**
 	 * The cached clipping area.
@@ -496,7 +496,7 @@ public final class VCLGraphics {
 		image = null;
 		frame = null;
 		pageFormat = null;
-		singlePixelImage = null;
+		singlePixelBitmap = null;
 		userClip = null;
 		userClipList = null;
 
@@ -614,7 +614,7 @@ public final class VCLGraphics {
 
 		if (pageQueue != null) {
 			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawBitmapMethod, new Object[]{ bmp, new Integer(srcX), new Integer(srcY), new Integer(srcWidth), new Integer(srcHeight), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight) });
-			pageQueue.postDrawingOperation(pqi);
+			pageQueue.postImageOperation(pqi);
 			return;
 		}
 
@@ -651,7 +651,7 @@ public final class VCLGraphics {
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {
 						g.setClip((Rectangle)clipRects.next());
-						// Note: the bitmap needs to be are flipped
+						// Note: the bitmap needs to be flipped
 						drawBitmap0(bmp.getData(), bmp.getWidth(), bmp.getHeight(), srcX, srcY, srcWidth, srcHeight, scaleX * (bounds.x + destX), scaleY * (bounds.y + destY + destHeight), scaleX * destWidth, scaleY * destHeight * -1);
 					}
 				}
@@ -789,7 +789,7 @@ public final class VCLGraphics {
 
 		if (pageQueue != null) {
 			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawEPSMethod, new Object[]{ new Long(epsData), new Long(epsDataSize), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight) });
-			pageQueue.postDrawingOperation(pqi);
+			pageQueue.postImageOperation(pqi);
 			return;
 		}
 
@@ -1525,12 +1525,13 @@ public final class VCLGraphics {
 			if (g != null) {
 				try {
 					g.setComposite(VCLGraphics.copyComposite);
-					if (singlePixelImage == null)
-						singlePixelImage = g.getDeviceConfiguration().createCompatibleImage(1, 1);
-					VCLGraphics.copyComposite.setRaster(singlePixelImage.getRaster());
+					if (singlePixelBitmap == null)
+						singlePixelBitmap = new VCLBitmap(1, 1, bitCount);
+					BufferedImage i = singlePixelBitmap.getImage();
+					VCLGraphics.copyComposite.setRaster(i.getRaster());
 					g.setClip(x, y, 1, 1);
-					g.drawImage(singlePixelImage, x, y, x + 1, y + 1, 0, 0, 1, 1, null);
-					pixel = singlePixelImage.getRGB(0, 0);
+					g.drawImage(i, x, y, x + 1, y + 1, 0, 0, 1, 1, null);
+					pixel = i.getRGB(0, 0);
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
@@ -1813,7 +1814,7 @@ public final class VCLGraphics {
 
 		if (pageQueue != null) {
 			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.setPixelMethod, new Object[]{ new Integer(x), new Integer(y), new Integer(color) });
-			pageQueue.postDrawingOperation(pqi);
+			pageQueue.postImageOperation(pqi);
 			return;
 		}
 
@@ -1827,13 +1828,25 @@ public final class VCLGraphics {
 			Graphics2D g = getGraphics();
 			if (g != null) {
 				try {
-					if (xor)
-						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
-					if (singlePixelImage == null)
-						singlePixelImage = g.getDeviceConfiguration().createCompatibleImage(1, 1);
-					singlePixelImage.setRGB(0, 0, color);
-					g.setClip(x, y, 1, 1);
-					g.drawImage(singlePixelImage, x, y, x + 1, y + 1, 0, 0, 1, 1, null);
+					if (singlePixelBitmap == null)
+						singlePixelBitmap = new VCLBitmap(1, 1, bitCount);
+					BufferedImage i = singlePixelBitmap.getImage();
+					i.setRGB(0, 0, color);
+					if (graphics != null) {
+						AffineTransform transform = g.getTransform();
+						float scaleX = (float)transform.getScaleX();
+						float scaleY = (float)transform.getScaleY();
+						Rectangle bounds = pageFormat.getImageableBounds();
+						g.setClip(x, y, 1, 1);
+						// Note: the bitmap needs to be flipped
+						drawBitmap0(singlePixelBitmap.getData(), singlePixelBitmap.getWidth(), singlePixelBitmap.getHeight(), 0, 0, 1, 1, scaleX * (bounds.x + x), scaleY * (bounds.y + y), scaleX, scaleY * -1);
+					}
+					else {
+						if (xor)
+							g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
+						g.setClip(x, y, 1, 1);
+						g.drawImage(i, x, y, x + 1, y + 1, 0, 0, 1, 1, null);
+					}
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
@@ -1899,11 +1912,15 @@ public final class VCLGraphics {
 	 */
 	final class PageQueue {
 
+		VCLGraphics.PageQueueItem drawingHead = null;
+
+		VCLGraphics.PageQueueItem drawingTail = null;
+
 		VCLGraphics graphics = null;
 
-		VCLGraphics.PageQueueItem head = null;
+		VCLGraphics.PageQueueItem imageHead = null;
 
-		VCLGraphics.PageQueueItem tail = null;
+		VCLGraphics.PageQueueItem imageTail = null;
 
 		PageQueue(VCLGraphics g) {
 
@@ -1916,15 +1933,30 @@ public final class VCLGraphics {
 			// Release any native bitmaps
 			VCLGraphics.releaseNativeBitmaps();
 
+			drawingHead = null;
+			drawingTail = null;
 			graphics = null;
-			head = null;
-			tail = null;
+			imageHead = null;
+			imageTail = null;
 
 		}
 
 		void drawOperations() {
 
 			graphics.pageQueue = null;
+
+			// Fix bug 1217 by drawing image operations first
+			VCLGraphics.PageQueueItem head = imageHead;
+			VCLGraphics.PageQueueItem tail = imageTail;
+			if (imageHead != null)
+				tail.next = drawingHead;
+			else
+				head = drawingHead;
+			tail = drawingTail;
+			drawingHead = null;
+			drawingTail = null;
+			imageHead = null;
+			imageTail = null;
 
 			// Invoke all of the queued drawing operations
 			while (head != null) {
@@ -1941,8 +1973,8 @@ public final class VCLGraphics {
 				head = head.next;
 				i.next = null;
 			}
-
 			tail = null;
+
 			graphics = null;
 
 		}
@@ -1955,12 +1987,29 @@ public final class VCLGraphics {
 				i.clipList = new LinkedList(graphics.userClipList);
 			}
 
-			if (head != null) {
-				tail.next = i;
-				tail = i;
+			if (drawingHead != null) {
+				drawingTail.next = i;
+				drawingTail = i;
 			}
 			else {
-				head = tail = i;
+				drawingHead = drawingTail = i;
+			}
+		}
+
+		void postImageOperation(VCLGraphics.PageQueueItem i) {
+
+			// Add the drawing operation to the queue
+			if (graphics.userClip != null) {
+				i.clip = new Area(graphics.userClip);
+				i.clipList = new LinkedList(graphics.userClipList);
+			}
+
+			if (imageHead != null) {
+				imageTail.next = i;
+				imageTail = i;
+			}
+			else {
+				imageHead = imageTail = i;
 			}
 		}
 
