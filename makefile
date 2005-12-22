@@ -110,7 +110,9 @@ build.oo_checkout:
 build.oo_patches: build.oo_checkout \
 	build.oo_external_patch \
 	build.oo_instsetoo_native_patch \
-	build.oo_solenv_patch
+	build.oo_padmin_patch \
+	build.oo_solenv_patch \
+	build.oo_toolkit_patch
 	touch "$@"
 
 build.oo_odk_patches: build.oo_checkout
@@ -193,7 +195,6 @@ build.neo_patches: build.oo_all \
 	build.neo_svx_patch \
 	build.neo_sw_patch \
 	build.neo_sysui_patch \
-	build.neo_toolkit_patch \
 	build.neo_vcl_patch
 	touch "$@"
 

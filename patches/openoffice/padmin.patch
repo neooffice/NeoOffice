@@ -1,0 +1,21 @@
+Index: source/makefile.mk
+===================================================================
+RCS file: /cvs/gsl/padmin/source/makefile.mk,v
+retrieving revision 1.18
+diff -u -r1.18 makefile.mk
+--- source/makefile.mk	8 Sep 2005 16:25:28 -0000	1.18
++++ source/makefile.mk	22 Dec 2005 18:59:09 -0000
+@@ -102,8 +102,12 @@
+ 	$(COMPHELPERLIB)	\
+ 	$(CPPUHELPERLIB)	\
+ 	$(CPPULIB)			\
+-	$(SALLIB)			\
++	$(SALLIB)
++
++.IF "$(OS)"!="MACOSX"
++APP1STDLIBS+=	\
+ 	-lXext -lX11
++.ENDIF
+ 
+ .ENDIF
+ 
