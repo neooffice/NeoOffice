@@ -57,5 +57,17 @@ if [ -x "/usr/bin/sw_vers" ] ; then
     esac
 fi
 
+# Check that the user is running on the correct hardware
+target_machine="$(TARGET_MACHINE)"
+machine=`uname -p`
+if [ "$target_machine" != "$machine" ] ; then
+    # Return 96 + 18, 19, or 20 if we are running the incorrect hardware
+    case "$machine" in
+        i386) exit 114;;
+        powerpc) exit 115;;
+        *) exit 116;;
+    esac
+fi
+
 exit 0
 
