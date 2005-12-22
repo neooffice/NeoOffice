@@ -104,9 +104,13 @@
 	float				mfY;
 	float				mfWidth;
 	float				mfHeight;
+	float				mfClipX;
+	float				mfClipY;
+	float				mfClipWidth;
+	float				mfClipHeight;
 }
 - (void)drawImageInRect:(id)pObject;
-- (id)initWithImage:(CGImageRef)aImage x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight;
+- (id)initWithImage:(CGImageRef)aImage x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight;
 @end
 
 @implementation DrawImageInRect
@@ -130,7 +134,13 @@
 			{
 				CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
 				if ( aContext )
+				{
+					// Fix bug 1218 by setting the clip here and not in Java
+					CGContextSaveGState( aContext );
+					CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
 					CGContextDrawImage( aContext, CGRectMake( mfX, mfY, mfWidth, mfHeight ), maImage );
+					CGContextRestoreGState( aContext );
+				}
 			}
 
 			[pPrintView unlockFocus];
@@ -141,7 +151,7 @@
 	}
 }
 
-- (id)initWithImage:(CGImageRef)aImage x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight
+- (id)initWithImage:(CGImageRef)aImage x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight
 {
 	[super init];
 
@@ -150,20 +160,24 @@
 	mfY = fY;
 	mfWidth = fWidth;
 	mfHeight = fHeight;
+	mfClipX = fClipX;
+	mfClipY = fClipY;
+	mfClipWidth = fClipWidth;
+	mfClipHeight = fClipHeight;
 
 	return self;
 }
 
 @end
 
-void CGImageRef_drawInRect( CGImageRef aImage, float fX, float fY, float fWidth, float fHeight )
+void CGImageRef_drawInRect( CGImageRef aImage, float fX, float fY, float fWidth, float fHeight, float fClipX, float fClipY, float fClipWidth, float fClipHeight )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( aImage && fWidth && fHeight )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, @"AWTRunLoopMode", nil];
-		DrawImageInRect *pDrawImageInRect = [[DrawImageInRect alloc] initWithImage:aImage x:fX y:fY width:fWidth height:fHeight];
+		DrawImageInRect *pDrawImageInRect = [[DrawImageInRect alloc] initWithImage:aImage x:fX y:fY width:fWidth height:fHeight clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight];
 		[pDrawImageInRect performSelectorOnMainThread:@selector(drawImageInRect:) withObject:pDrawImageInRect waitUntilDone:YES modes:pModes];
 	}
 

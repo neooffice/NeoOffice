@@ -650,9 +650,9 @@ public final class VCLGraphics {
 					Rectangle bounds = pageFormat.getImageableBounds();
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {
-						g.setClip((Rectangle)clipRects.next());
+						Rectangle clip = (Rectangle)clipRects.next();
 						// Note: the bitmap needs to be flipped
-						drawBitmap0(bmp.getData(), bmp.getWidth(), bmp.getHeight(), srcX, srcY, srcWidth, srcHeight, scaleX * (bounds.x + destX), scaleY * (bounds.y + destY + destHeight), scaleX * destWidth, scaleY * destHeight * -1);
+						drawBitmap0(bmp.getData(), bmp.getWidth(), bmp.getHeight(), srcX, srcY, srcWidth, srcHeight, scaleX * (bounds.x + destX), scaleY * (bounds.y + destY + destHeight), scaleX * destWidth, scaleY * destHeight * -1, scaleX * (bounds.x + clip.x), scaleY * (bounds.y + clip.y + clip.height), scaleX * clip.width, scaleY * clip.height * -1);
 					}
 				}
 				else {
@@ -768,8 +768,12 @@ public final class VCLGraphics {
 	 * @param destY the y coordinate of the graphics to draw to
 	 * @param destWidth the width of the graphics to copy to
 	 * @param destHeight the height of the graphics to copy to
+	 * @param clipX the x coordinate of the graphics to clip to
+	 * @param clipY the y coordinate of the graphics to clip to
+	 * @param clipWidth the width of the graphics to clip to
+	 * @param clipHeight the height of the graphics to clip to
 	 */
-	native void drawBitmap0(int[] bmpData, int width, int height, int srcX, int srcY, int srcWidth, int srcHeight, float destX, float destY, float destWidth, float destHeight);
+	native void drawBitmap0(int[] bmpData, int width, int height, int srcX, int srcY, int srcWidth, int srcHeight, float destX, float destY, float destWidth, float destHeight, float clipX, float clipY, float clipWidth, float clipHeight);
 
 	/**
 	 * Draws specified EPS data to the underlying graphics.
@@ -1837,9 +1841,8 @@ public final class VCLGraphics {
 						float scaleX = (float)transform.getScaleX();
 						float scaleY = (float)transform.getScaleY();
 						Rectangle bounds = pageFormat.getImageableBounds();
-						g.setClip(x, y, 1, 1);
 						// Note: the bitmap needs to be flipped
-						drawBitmap0(singlePixelBitmap.getData(), singlePixelBitmap.getWidth(), singlePixelBitmap.getHeight(), 0, 0, 1, 1, scaleX * (bounds.x + x), scaleY * (bounds.y + y), scaleX, scaleY * -1);
+						drawBitmap0(singlePixelBitmap.getData(), singlePixelBitmap.getWidth(), singlePixelBitmap.getHeight(), 0, 0, 1, 1, scaleX * (bounds.x + x), scaleY * (bounds.y + y), scaleX, scaleY * -1, scaleX * (bounds.x + x), scaleY * (bounds.y + y), scaleX, scaleY * -1);
 					}
 					else {
 						if (xor)
