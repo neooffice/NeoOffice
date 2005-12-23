@@ -39,9 +39,13 @@ userinstall="$HOME/Library/Preferences/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAM
 check_installation() {
 
 	if [ -f "$1/Contents/MacOS/bootstraprc" ] ; then
-		productkey=`grep '^ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)' "$1/Contents/MacOS/bootstraprc"`
-		if [ ! -z "$productkey" ] ; then
-			return 0;
+		productkey=`grep '^ProductKey=' "$1/Contents/MacOS/bootstraprc"`
+		if [ -z "$productkey" ] ; then
+			return 1;
+		fi
+		productkey=`echo $productkey | awk -F= '{ print $2 }'`
+		if [ "$productkey" = "$(PRODUCT_NAME) $(PRODUCT_VERSION)" ] ; then
+			return 0
 		fi
 	fi
 
