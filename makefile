@@ -86,7 +86,7 @@ OO_PACKAGES:=OpenOffice
 OO_TAG:=OpenOffice_1_1_5
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
-NEO_TAG:=NeoOffice-1_2_branch
+NEO_TAG:=NeoOffice-1_2_Beta
 
 all: build.all
 
