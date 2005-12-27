@@ -86,7 +86,7 @@ PRODUCT_REGISTRATION_URL=http://trinity.neooffice.org/
 # CVS macros
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
 OO_PACKAGES:=OpenOffice2
-OO_TAG:=OpenOffice_2_0_0
+OO_TAG:=OpenOffice_2_0_1
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
 NEO_TAG:=HEAD
