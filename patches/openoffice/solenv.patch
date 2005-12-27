@@ -1,12 +1,11 @@
-? unxmacxp/bin/dmake
 Index: inc/unxmacxp.mk
 ===================================================================
 RCS file: /cvs/tools/solenv/inc/unxmacxp.mk,v
-retrieving revision 1.56
-diff -u -r1.56 unxmacxp.mk
---- inc/unxmacxp.mk	8 Sep 2005 09:59:29 -0000	1.56
-+++ inc/unxmacxp.mk	22 Dec 2005 15:35:54 -0000
-@@ -192,10 +192,10 @@
+retrieving revision 1.57
+diff -u -r1.57 unxmacxp.mk
+--- inc/unxmacxp.mk	17 Oct 2005 14:20:53 -0000	1.57
++++ inc/unxmacxp.mk	27 Dec 2005 20:10:42 -0000
+@@ -198,10 +198,10 @@
  STDSLOCUI=
  
  STDLIBGUIST=-lm

@@ -1,25 +1,34 @@
 Index: util/makefile.mk
 ===================================================================
 RCS file: /cvs/installation/instsetoo_native/util/makefile.mk,v
-retrieving revision 1.41.6.2
-diff -u -r1.41.6.2 makefile.mk
---- util/makefile.mk	5 Oct 2005 10:24:20 -0000	1.41.6.2
-+++ util/makefile.mk	11 Dec 2005 20:07:24 -0000
-@@ -95,7 +95,7 @@
+retrieving revision 1.48
+diff -u -r1.48 makefile.mk
+--- util/makefile.mk	18 Nov 2005 16:14:01 -0000	1.48
++++ util/makefile.mk	27 Dec 2005 20:18:59 -0000
+@@ -96,7 +96,7 @@
  	@echo "No EPM: do no packaging at this stage"
  .ELSE			# "$(GUI)"!="WNT" && "$(EPM)"=="NO" && "$(USE_PACKAGER)"==""
  .IF "$(UPDATER)"=="" || "$(USE_PACKAGER)"==""
--ALLTAR : openoffice ure_en-US
-+ALLTAR : openoffice ure_en-US ooolanguagepack
+-ALLTAR : openoffice sdkoo ure_en-US
++ALLTAR : openoffice sdkoo ure_en-US ooolanguagepack
  .ELSE			# "$(UPDATER)"=="" || "$(USE_PACKAGER)"==""
  ALLTAR : updatepack
  .ENDIF			# "$(UPDATER)"=="" || "$(USE_PACKAGER)"==""
-@@ -114,7 +114,7 @@
+@@ -115,7 +115,7 @@
  
  .IF "$(alllangiso)"!=""
  
 -openoffice: $(foreach,i,$(alllangiso) openoffice_$i)
 +openoffice: openoffice_en-US
  
- openofficewithjre: $(foreach,i,$(alllangiso) openofficewithjre_$i)
+ openofficedev: $(foreach,i,$(alllangiso) openofficedev_$i)
  
+@@ -123,7 +123,7 @@
+ 
+ ooolanguagepack : $(foreach,i,$(alllangiso) ooolanguagepack_$i)
+ 
+-sdkoo: $(foreach,i,$(alllangiso) sdkoo_$i)
++sdkoo: sdkoo_en-US
+ 
+ MSIOFFICETEMPLATESOURCE=$(PRJ)$/inc_openoffice$/windows$/msi_templates
+ MSILANGPACKTEMPLATESOURCE=$(PRJ)$/inc_ooolangpack$/windows$/msi_templates
