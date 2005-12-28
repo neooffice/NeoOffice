@@ -388,7 +388,7 @@ struct QuickHelpData
 #endif	// USE_JAVA
 
 #ifdef USE_JAVA
-    QuickHelpData() : pCETID( 0 ), pAttrs( 0 ), bExtTextEnabled( TRUE ) { ClearCntnt(); }
+	QuickHelpData() : pCETID( 0 ), pAttrs( 0 ), bExtTextEnabled( TRUE ) { ClearCntnt(); }
 #else	// USE_JAVA
 	QuickHelpData() : pCETID( 0 ), pAttrs( 0 ) { ClearCntnt(); }
 #endif	// USE_JAVA
@@ -1115,8 +1115,18 @@ void SwEditWin::ChangeDrawing( BYTE nDir )
             // if the object's position is not protected
             if(0 == (nProtect&FLYPROTECT_POS))
             {
-                pSdrView->MoveAllMarked(Size(nX, nY));
-                rSh.SetModified();
+                // --> FME 2005-04-26 #i47138#
+                // Check if object is anchored as character and move direction
+                BOOL bDummy;
+                const bool bVertAnchor = rSh.IsFrmVertical( TRUE, bDummy );
+                const bool bHoriMove = !bVertAnchor == !( nDir % 2 );
+                const bool bMoveAllowed = !bHoriMove || rSh.GetAnchorId() != FLY_IN_CNTNT;
+                if ( bMoveAllowed )
+                {
+                // <--
+                    pSdrView->MoveAllMarked(Size(nX, nY));
+                    rSh.SetModified();
+                }
             }
         }
         else
@@ -1685,7 +1695,8 @@ KEYINPUT_CHECKTABLE_INSDEL:
         					eKeyState = KS_GlossaryExpand;
 
 						//RETURN und leerer Absatz in Numerierung -> Num. beenden
-						else if( rSh.GetCurNumRule() &&
+						else if( !aInBuffer.Len() &&
+                                 rSh.GetCurNumRule() &&
                                  !rSh.GetCurNumRule()->IsOutlineRule() &&
                                  !rSh.HasSelection() &&
 								rSh.IsSttPara() && rSh.IsEndPara() )
@@ -1975,6 +1986,8 @@ KEYINPUT_CHECKTABLE_INSDEL:
 			{
 				eKeyState = KS_Ende;
                 bNormalChar = !rKeyCode.IsControlMod() &&
+                    rKeyCode.GetModifier() != (KEY_MOD1) &&
+                    rKeyCode.GetModifier() != (KEY_MOD1|KEY_SHIFT) &&
                                 SW_ISPRINTABLE( aCh );
 
                 if (bNormalChar && rSh.IsInFrontOfLabel())
@@ -2506,6 +2519,11 @@ void SwEditWin::MouseButtonDown(const MouseEvent& _rMEvt)
 		}
 		else
 		{
+            // --> FME 2005-11-03 #125036# Make sure the pointer is set to 0,
+            // otherwise it may point to nowhere after deleting the corresponding
+            // text node.
+			rView.SetNumRuleNodeFromDoc( NULL );
+            // <--
             return;
 		}
     }
@@ -4416,8 +4434,8 @@ void SwEditWin::Command( const CommandEvent& rCEvt )
 						aDocPos = rSh.GetCharRect().Center();
                     else
                     {
-                        if(SelectMenuPosition(rSh, rCEvt.GetMousePosPixel()))
-                            rView.StopShellTimer();
+                        SelectMenuPosition(rSh, rCEvt.GetMousePosPixel());
+                        rView.StopShellTimer();
 
                     }
 					const Point aPixPos = LogicToPixel( aDocPos );
@@ -4753,6 +4771,11 @@ void SwEditWin::Command( const CommandEvent& rCEvt )
         case COMMAND_HANGUL_HANJA_CONVERSION :
             GetView().GetViewFrame()->GetDispatcher()->Execute(SID_HANGUL_HANJA_CONVERSION);
         break;
+        case COMMAND_INPUTLANGUAGECHANGE :
+            //#i42732# update state of fontname if input language changes
+            rView.GetViewFrame()->GetBindings().Invalidate( SID_ATTR_CHAR_FONT );
+            rView.GetViewFrame()->GetBindings().Invalidate( SID_ATTR_CHAR_FONTHEIGHT );
+        break;
 
 #ifdef DBG_UTIL
 		default:
@@ -4851,7 +4874,7 @@ BOOL SwEditWin::SelectMenuPosition(SwWrtShell& rSh, const Point& rMousePos )
 
     UpdatePointer( aDocPos, 0 );
 
-    if ( aActHitType != SDRHIT_NONE && !rSh.IsSelFrmMode() &&
+    if( !rSh.IsSelFrmMode() &&
 		!GetView().GetViewFrame()->GetDispatcher()->IsLocked() )
     {
         // #107513#
