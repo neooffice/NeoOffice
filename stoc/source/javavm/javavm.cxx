@@ -1005,13 +1005,7 @@ JavaVirtualMachine::getJavaVM(css::uno::Sequence< sal_Int8 > const & rProcessId)
                         " that the requested JavaVM pointer is not available")),
                 static_cast< cppu::OWeakObject * >(this));
         }
-        if (sizeof (m_pJavaVm) <= sizeof (sal_Int32)) {
-            return css::uno::makeAny(reinterpret_cast< sal_Int32 >(m_pJavaVm));
-        } else {
-            OSL_ASSERT(
-                sizeof (sal_Int64) >= sizeof (jvmaccess::VirtualMachine *));
-            return css::uno::makeAny(reinterpret_cast< sal_Int64 >(m_pJavaVm));
-        }
+        return css::uno::makeAny(reinterpret_cast< sal_IntPtr >(m_pJavaVm));
     case RETURN_VIRTUALMACHINE:
         OSL_ASSERT(sizeof (sal_Int64) >= sizeof (jvmaccess::VirtualMachine *));
         return css::uno::makeAny(
