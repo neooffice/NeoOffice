@@ -364,7 +364,17 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, pVoid )
     css::uno::Reference< css::frame::XFramesSupplier > xDesktop(xSMGR->createInstance(SERVICENAME_DESKTOP), css::uno::UNO_QUERY_THROW);
     FrameListAnalyzer aCheck1(xDesktop, xCloseFrame, FrameListAnalyzer::E_HELP | FrameListAnalyzer::E_BACKINGCOMPONENT);
 
-    // a) The help window cant disagree with any request.
+    // a) If the curent frame (where the close dispatch was requested for) does not have
+    //    any parent frame ... it will close this frame only. Such frame isnt part of the
+    //    global desktop tree ... and such frames are used as "implementation details" only.
+    //    E.g. the live previews of our wizards doing such things. And then the owner of the frame
+    //    is responsible for closing the application or accepting closing of the application
+    //    by others.
+    if ( ! xCloseFrame->getCreator().is())
+        bCloseFrame = sal_True;
+    else
+
+    // b) The help window cant disagree with any request.
     //    Because it doesnt implement a controller - it uses a window only.
     //    Further t cant be the last open frame - if we do all other things
     //    right inside this CloseDispatcher implementation.
@@ -373,7 +383,7 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, pVoid )
         bCloseFrame = sal_True;
     else
 
-    // b) If we are already in "backing mode", we have to terminate
+    // c) If we are already in "backing mode", we have to terminate
     //    the application, if this special frame is closed.
     //    It doesnt matter, how many other frames (can be the help or hidden frames only)
     //    are open then.
@@ -382,7 +392,7 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, pVoid )
         bTerminateApp = sal_True;
     else
 
-    // c) Otherwhise we have to: close all views to the same document, close the
+    // d) Otherwhise we have to: close all views to the same document, close the
     //    document inside our own frame and decide then again, what has to be done!
     {
         if (implts_closeView(bAllowSuspend, bCloseAllViewsToo))

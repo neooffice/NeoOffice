@@ -73,6 +73,9 @@
 #ifndef INCLUDED_SVTOOLS_MODULEOPTIONS_HXX
 #include <svtools/moduleoptions.hxx>
 #endif
+#ifndef _RTL_BOOTSTRAP_HXX_
+#include <rtl/bootstrap.hxx>
+#endif
 #include <comphelper/processfactory.hxx>
 #include <com/sun/star/uri/XExternalUriReferenceTranslator.hpp>
 
@@ -330,7 +333,41 @@ OfficeIPCThread::Status OfficeIPCThread::EnableOfficeIPCThread()
 	// First we try to create our pipe if this fails we try to connect. We have to do this
 	// in a loop because the the other office can crash or shutdown between createPipe
 	// and connectPipe!!
-	OUString aUserInstallPathHashCode = CreateMD5FromString( aDummy );
+
+    OUString            aIniName;
+    
+    aInfo.getExecutableFile( aIniName );
+    sal_uInt32     lastIndex = aIniName.lastIndexOf('/');
+    if ( lastIndex > 0 )
+    {
+        aIniName    = aIniName.copy( 0, lastIndex+1 );
+        aIniName    += OUString( RTL_CONSTASCII_USTRINGPARAM( "perftune" ));
+#ifdef WNT
+        aIniName    += OUString( RTL_CONSTASCII_USTRINGPARAM( ".ini" ));
+#else
+        aIniName    += OUString( RTL_CONSTASCII_USTRINGPARAM( "rc" ));
+#endif
+    }
+   
+	::rtl::Bootstrap aPerfTuneIniFile( aIniName );
+    
+    OUString aDefault( RTL_CONSTASCII_USTRINGPARAM( "0" ));
+    OUString aPreloadData;
+    
+    aPerfTuneIniFile.getFrom( OUString( RTL_CONSTASCII_USTRINGPARAM( "FastPipeCommunication" )), aPreloadData, aDefault );
+
+
+	OUString aUserInstallPathHashCode;
+
+    if ( aPreloadData.equalsAscii( "1" ))
+    {
+		sal_Char	szBuffer[32];
+		sprintf( szBuffer, "%d", SUPD );
+		aUserInstallPathHashCode = OUString( szBuffer, strlen(szBuffer), osl_getThreadTextEncoding() );
+    }
+	else
+		aUserInstallPathHashCode = CreateMD5FromString( aDummy );
+	
 
 	// Check result to create a hash code from the user install path
 	if ( aUserInstallPathHashCode.getLength() == 0 )
