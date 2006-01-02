@@ -60,7 +60,7 @@ Mac OS X 10.4 (Tiger)
 
 4. Make sure that you have set the compiler version to 3.3 by executing the following command:
 
-   sudo gcc_select 3.3
+   sudo gcc_select 4
 
 5. Make sure that you have downloaded and installed the following Perl module from the http://www.cpan.org/modules/index.html website. Note that you will need to follow the instructions on the website to download and install the Archive::Zip module:
 
