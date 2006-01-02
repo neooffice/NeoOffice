@@ -107,7 +107,9 @@ build.oo_checkout:
 	cd "$(BUILD_HOME)/tmp" ; cvs -d "$(OO_CVSROOT)" co MathMLDTD ; cd MathMLDTD ; cvs update -d -r "$(OO_TAG)"
 	rm -Rf "$(BUILD_HOME)/tmp"
 # Do the real checkout
-	cd "$(BUILD_HOME)" ; cvs -d "$(OO_CVSROOT)" co -r "$(OO_TAG)" $(OO_PACKAGES)
+	-cd "$(BUILD_HOME)" ; cvs -d "$(OO_CVSROOT)" co -r "$(OO_TAG)" $(OO_PACKAGES)
+# cvs seems to always fail so check that the last module has been checked out
+	cd "$(BUILD_HOME)/agg" ; cvs -d "$(OO_CVSROOT)" update -r "$(OO_TAG)"
 	chmod -Rf u+w "$(BUILD_HOME)"
 	touch "$@"
 
