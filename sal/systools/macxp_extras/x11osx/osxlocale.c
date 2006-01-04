@@ -73,8 +73,36 @@ int macxp_getOSXLocale( char *locale, sal_uInt32 bufferLen )
 		}
 	}
 
-	if ( !strlen( locale ) )
+	size_t nLen = strlen( locale );
+	if ( nLen > 2 && locale[2] == '-' )
+	{
+		locale[2] = '_';
+
+		// Fix bug 1240 by handling cases where Mac OS X returns a script code
+		// where a country code is expected
+		if ( nLen > 5 )
+		{
+			char *script = locale + 3;
+			if ( !strcmp( script, "Hans" ) )
+			{
+				locale[3] = '\0';
+				strcat( locale, "CN" );
+			}
+			else if ( !strcmp( script, "Hant" ) )
+			{
+				locale[3] = '\0';
+				strcat( locale, "TW" );
+			}
+			else
+			{
+				locale[2] = '\0';
+			}
+		}
+	}
+	else if ( !nLen )
+	{
 		strcpy( locale, "en_US" );
+	}
 
 	return( noErr );
 }
