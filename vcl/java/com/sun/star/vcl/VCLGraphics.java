@@ -614,7 +614,7 @@ public final class VCLGraphics {
 
 		if (pageQueue != null) {
 			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawBitmapMethod, new Object[]{ bmp, new Integer(srcX), new Integer(srcY), new Integer(srcWidth), new Integer(srcHeight), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight) });
-			pageQueue.postImageOperation(pqi);
+			pageQueue.postDrawingOperation(pqi);
 			return;
 		}
 
@@ -793,7 +793,7 @@ public final class VCLGraphics {
 
 		if (pageQueue != null) {
 			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawEPSMethod, new Object[]{ new Long(epsData), new Long(epsDataSize), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight) });
-			pageQueue.postImageOperation(pqi);
+			pageQueue.postDrawingOperation(pqi);
 			return;
 		}
 
@@ -1818,7 +1818,7 @@ public final class VCLGraphics {
 
 		if (pageQueue != null) {
 			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.setPixelMethod, new Object[]{ new Integer(x), new Integer(y), new Integer(color) });
-			pageQueue.postImageOperation(pqi);
+			pageQueue.postDrawingOperation(pqi);
 			return;
 		}
 
@@ -1921,10 +1921,6 @@ public final class VCLGraphics {
 
 		VCLGraphics graphics = null;
 
-		VCLGraphics.PageQueueItem imageHead = null;
-
-		VCLGraphics.PageQueueItem imageTail = null;
-
 		PageQueue(VCLGraphics g) {
 
 			graphics = g;
@@ -1939,8 +1935,6 @@ public final class VCLGraphics {
 			drawingHead = null;
 			drawingTail = null;
 			graphics = null;
-			imageHead = null;
-			imageTail = null;
 
 		}
 
@@ -1948,35 +1942,22 @@ public final class VCLGraphics {
 
 			graphics.pageQueue = null;
 
-			// Fix bug 1217 by drawing image operations first
-			VCLGraphics.PageQueueItem head = imageHead;
-			VCLGraphics.PageQueueItem tail = imageTail;
-			if (imageHead != null)
-				tail.next = drawingHead;
-			else
-				head = drawingHead;
-			tail = drawingTail;
-			drawingHead = null;
-			drawingTail = null;
-			imageHead = null;
-			imageTail = null;
-
 			// Invoke all of the queued drawing operations
-			while (head != null) {
-				graphics.userClip = head.clip;
-				graphics.userClipList = head.clipList;
+			while (drawingHead != null) {
+				graphics.userClip = drawingHead.clip;
+				graphics.userClipList = drawingHead.clipList;
 				try {
-					head.method.invoke(graphics, head.params);
+					drawingHead.method.invoke(graphics, drawingHead.params);
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
 				}
 
-				VCLGraphics.PageQueueItem i = head;
-				head = head.next;
+				VCLGraphics.PageQueueItem i = drawingHead;
+				drawingHead = drawingHead.next;
 				i.next = null;
 			}
-			tail = null;
+			drawingTail = null;
 
 			graphics = null;
 
@@ -1997,23 +1978,7 @@ public final class VCLGraphics {
 			else {
 				drawingHead = drawingTail = i;
 			}
-		}
 
-		void postImageOperation(VCLGraphics.PageQueueItem i) {
-
-			// Add the drawing operation to the queue
-			if (graphics.userClip != null) {
-				i.clip = new Area(graphics.userClip);
-				i.clipList = new LinkedList(graphics.userClipList);
-			}
-
-			if (imageHead != null) {
-				imageTail.next = i;
-				imageTail = i;
-			}
-			else {
-				imageHead = imageTail = i;
-			}
 		}
 
 	}
