@@ -83,10 +83,6 @@
 #include <unicode/ubidi.h>
 #include <unicode/uchar.h>
 
-#if defined USE_JAVA && defined MACOSX
-#include <unicode/uscript.h>
-#endif	// USE_JAVA && MACOSX
-
 // =======================================================================
 
 int GetVerticalFlags( sal_Unicode nChar )
