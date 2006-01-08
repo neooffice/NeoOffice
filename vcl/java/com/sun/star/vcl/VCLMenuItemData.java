@@ -196,18 +196,6 @@ public final class VCLMenuItemData {
 		//
 		// Bug 332
 
-		// Clear out any orphaned peers
-		Iterator peers=awtPeers.iterator();
-		while(peers.hasNext()) {
-			MenuItem mi=(MenuItem)peers.next();
-			MenuContainer mc = mi.getParent();
-			if (mc != null) {
-				if (mc instanceof Menu) {
-					Menu m = (Menu)mc;
-					m.remove(mi);
-				}
-			}
-		}
 		unregisterAllAWTPeers();
 
 		keyboardShortcut=null;
@@ -845,26 +833,13 @@ public final class VCLMenuItemData {
 			((CheckboxMenuItem)awtMI).removeItemListener((VCLAWTCheckboxMenuItem)awtMI);
 		awtMI.setShortcut(null);
 
-		// remove the item from whatever menus may be holding
-		// references to it
-			
-		Iterator parents=parentMenus.iterator();
-		while(parents.hasNext()) {
-			VCLMenuItemData parent=(VCLMenuItemData)parents.next();
-			Iterator parentPeers=parent.awtPeers.iterator();
-			while(parentPeers.hasNext()) {
-				Menu m=(Menu)parentPeers.next();
-				m.remove(awtMI);
-			}
+		MenuContainer mc = awtMI.getParent();
+		if (mc instanceof Menu) {
+			Menu m = (Menu)mc;
+			m.remove(awtMI);
 		}
 
-		// Detach any orphaned menu items
-		if (awtMI instanceof Menu) {
-			Menu m = (Menu)awtMI;
-			m.removeAll();
-		}
-
-		awtPeers.remove(awtPeers.indexOf(awtMI));
+		awtPeers.remove(awtMI);
 	}
 					
 	/**
@@ -885,7 +860,6 @@ public final class VCLMenuItemData {
 				((VCLMenuItemData)e.next()).unregisterAllAWTPeers();
 		}
 
-		LinkedList savedPeers = new LinkedList(awtPeers);
 		Iterator peers=awtPeers.iterator();
 		while(peers.hasNext()) {
 			MenuItem mi=(MenuItem)peers.next();
@@ -895,28 +869,14 @@ public final class VCLMenuItemData {
 				((CheckboxMenuItem)mi).removeItemListener((VCLAWTCheckboxMenuItem)mi);
 			mi.setShortcut(null);
 
-			Iterator parents=parentMenus.iterator();
-			while(parents.hasNext()) {
-				VCLMenuItemData parent=(VCLMenuItemData)parents.next();
-				Iterator parentPeers=parent.awtPeers.iterator();
-				while(parentPeers.hasNext()) {
-					Menu m=(Menu)parentPeers.next();
-					m.remove(mi);
-				}
+			MenuContainer mc = mi.getParent();
+			if (mc instanceof Menu) {
+				Menu m = (Menu)mc;
+				m.remove(mi);
 			}
-
-			// Detach any orphaned menu items
-			if (mi instanceof Menu) {
-				Menu m = (Menu)mi;
-				m.removeAll();
-			}
-
-			if (mi.getParent() == null)
-				savedPeers.remove(mi);
 		}
 
 		awtPeers.clear();
-		awtPeers.addAll(savedPeers);
 
 	}
 

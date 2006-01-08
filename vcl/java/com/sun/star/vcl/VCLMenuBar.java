@@ -221,21 +221,13 @@ public final class VCLMenuBar {
 				frame.setMenuBar(null);
 		}
 
-		for(int i=awtMenuBar.countMenus()-1; i>=0; i--)
-			awtMenuBar.remove(i);
-
-		if(awtMenuBar.countMenus() > 0) {
-			Iterator e=menus.iterator();
-			int i = 0;
-			while(e.hasNext()) {
-				VCLMenuItemData m=(VCLMenuItemData)e.next();
-				m.unregisterAWTPeer(awtMenuBar.getMenu(i++));
-			}
- 
-			for(i=awtMenuBar.countMenus()-1; i>=0; i--)
-				awtMenuBar.remove(i);
+		Iterator e=menus.iterator();
+		int i = 0;
+		while(e.hasNext()) {
+			VCLMenuItemData m=(VCLMenuItemData)e.next();
+			m.unregisterAWTPeer(awtMenuBar.getMenu(i++));
 		}
-
+ 
 	 	awtMenuBar=null;
 		menus=null;
 		queue=null;
