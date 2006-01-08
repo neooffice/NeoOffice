@@ -823,11 +823,15 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		bool bFallbackRunRTL;
 		int nMinFallbackCharPos;
 		int nEndFallbackCharPos;
+		bool bLastFallbackRunRTL;
+		int nMinLastFallbackCharPos;
+		int nEndLastFallbackCharPos;
 		while ( rArgs.GetNextRun( &nMinCharPos, &nEndCharPos, &bRunRTL ) )
 		{
 			mpGraphics->maGraphicsData.maFallbackRuns.ResetPos();
 			while ( mpGraphics->maGraphicsData.maFallbackRuns.GetRun( &nMinFallbackCharPos, &nEndFallbackCharPos, &bFallbackRunRTL ) )
 			{
+				mpGraphics->maGraphicsData.maFallbackRuns.NextRun();
 				if ( nMinCharPos >= nMinFallbackCharPos && nEndCharPos <= nEndFallbackCharPos )
 				{
 					maRuns.AddRun( nMinCharPos, nEndCharPos, bRunRTL );
