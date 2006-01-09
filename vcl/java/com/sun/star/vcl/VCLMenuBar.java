@@ -35,6 +35,7 @@
 
 package com.sun.star.vcl;
 
+import java.awt.Component;
 import java.awt.Menu;
 import java.awt.MenuBar;
 import java.awt.MenuItem;
@@ -50,7 +51,7 @@ import java.util.LinkedList;
  * @version 	$Revision$ $Date$
  * @author 		$Author$
  */
-public final class VCLMenuBar {
+public final class VCLMenuBar extends Component {
 
 	/**
 	 * Used to keep track of all active menubars.
@@ -90,16 +91,16 @@ public final class VCLMenuBar {
 		Iterator menuBars=activeMenubars.iterator();
 		while(menuBars.hasNext()) {
 			VCLMenuBar vmb=(VCLMenuBar)menuBars.next();
-			synchronized (vmb) {
-				if(vmb.getAWTMenuBar()==null)
+			synchronized (vmb.getTreeLock()) {
+				MenuBar mb=vmb.getAWTMenuBar();
+				if(mb==null)
 					continue;
 
 				// we'll locate the item by checking object references directly.
 				// We don't want equivalence in content, we want identical
 				// objects.
 
-				MenuBar mb=vmb.getAWTMenuBar();
-				for(int i=0; i<mb.countMenus(); i++) {
+				for(int i=0; i<mb.getMenuCount(); i++) {
 					Menu m=mb.getMenu(i);
 					if((m==item) || menuContainsItem(m, item))
 						return(vmb);
@@ -124,7 +125,7 @@ public final class VCLMenuBar {
 	 */
 	private static boolean menuContainsItem(Menu m, MenuItem item) {
 
-		for(int i=0; i<m.countItems(); i++) {
+		for(int i=0; i<m.getItemCount(); i++) {
 			MenuItem mi=m.getItem(i);
 			if(mi==item)
 				return(true);
@@ -148,11 +149,13 @@ public final class VCLMenuBar {
 		Iterator menuBars=activeMenubars.iterator();
 		while(menuBars.hasNext()) {
 			VCLMenuBar mb=(VCLMenuBar)menuBars.next();
-			if(mb.menus!=null) {
-				Iterator e=mb.menus.iterator();
-				while(e.hasNext()) {
-					if(item==e.next())
-						return(true);
+			synchronized (mb.getTreeLock()) {
+				if(mb.menus!=null) {
+					Iterator e=mb.menus.iterator();
+					while(e.hasNext()) {
+						if(item==e.next())
+							return(true);
+					}
 				}
 			}
 		}
@@ -198,6 +201,7 @@ public final class VCLMenuBar {
 	public VCLMenuBar(VCLEventQueue q) {
 
 		awtMenuBar=new MenuBar();
+		awtMenuBar.setHelpMenu(null);
 		addNewMenuBar(this);
 		queue=q;
 
@@ -208,32 +212,34 @@ public final class VCLMenuBar {
 	 * objects can be destructed. Free any AWT objects and set references to
 	 * null to allow garbage collection to cleanup at a later time.
 	 */
-	public synchronized void dispose() {
+	public void dispose() {
 
-		if (disposed)
-			return;
+		synchronized (getTreeLock()) {
+			if (disposed)
+				return;
 
-		removeMenuBar(this);
+			removeMenuBar(this);
 
-		if(frame!=null) {
-			MenuBar mb = frame.getMenuBar();
-			if (mb != null && mb == awtMenuBar)
-				frame.setMenuBar(null);
-		}
+			if(frame!=null) {
+				MenuBar mb = frame.getMenuBar();
+				if (mb != null && mb == awtMenuBar)
+					frame.setMenuBar(null);
+			}
 
-		Iterator e=menus.iterator();
-		int i = 0;
-		while(e.hasNext()) {
-			VCLMenuItemData m=(VCLMenuItemData)e.next();
-			m.unregisterAWTPeer(awtMenuBar.getMenu(i++));
-		}
+			Iterator e=menus.iterator();
+			int i = 0;
+			while(e.hasNext()) {
+				VCLMenuItemData m=(VCLMenuItemData)e.next();
+				m.unregisterAWTPeer(awtMenuBar.getMenu(i++));
+			}
  
-	 	awtMenuBar=null;
-		menus=null;
-		queue=null;
-		frame=null;
+		 	awtMenuBar=null;
+			menus=null;
+			queue=null;
+			frame=null;
 
-		disposed = true;
+			disposed = true;
+		}
 
 	}
 	
@@ -296,38 +302,40 @@ public final class VCLMenuBar {
 	 * @param menuItem menu item to be inserted
 	 * @param nPos position in the menubar where the menu should be added
 	 */
-	public synchronized void addMenuItem(VCLMenuItemData menuItem, short nPos) {
+	public void addMenuItem(VCLMenuItemData menuItem, short nPos) {
 
-		LinkedList menusToReinsert=null;
+		synchronized (getTreeLock()) {
+			LinkedList menusToReinsert=null;
 
-		if(nPos < 0)
-			nPos=(short)menus.size();
+			if(nPos < 0)
+				nPos=(short)menus.size();
 
-		if(nPos < menus.size()) {
-			// we can't insert menus in the middle of a menubar, so we have
-			// to remove the tail ones first and then reinsert them after
-			// we add the new Menu
-			menusToReinsert=new LinkedList();
-			for(int i=menus.size()-1; i >= nPos; i--) {
-				menusToReinsert.addLast(awtMenuBar.getMenu(i));
-				awtMenuBar.remove(i);
+			if(nPos < menus.size()) {
+				// we can't insert menus in the middle of a menubar, so we have
+				// to remove the tail ones first and then reinsert them after
+				// we add the new Menu
+				menusToReinsert=new LinkedList();
+				for(int i=menus.size()-1; i >= nPos; i--) {
+					menusToReinsert.addLast(awtMenuBar.getMenu(i));
+					awtMenuBar.remove(i);
+				}
 			}
-		}
 
-		menus.add(nPos, menuItem);
+			menus.add(nPos, menuItem);
 
-		// if we were passed an object that isn't yet a menu, insert a dummy
-		// menu object as a placeholder. if we were passed a menu, insert
-		// its peer.
-		if(menuItem.isMenu())
-			awtMenuBar.add((Menu)menuItem.createAWTPeer());
-		else
-			awtMenuBar.add(new Menu(menuItem.getTitle()));
+			// if we were passed an object that isn't yet a menu, insert a dummy
+			// menu object as a placeholder. if we were passed a menu, insert
+			// its peer.
+			if(menuItem.isMenu())
+				awtMenuBar.add((Menu)menuItem.createAWTPeer());
+			else
+				awtMenuBar.add(new Menu(menuItem.getTitle()));
 
-		// reinsert any menus we need to add
-		if(menusToReinsert!=null) {
-			while(menusToReinsert.size() > 0)
-				awtMenuBar.add((Menu)menusToReinsert.removeLast());
+			// reinsert any menus we need to add
+			if(menusToReinsert!=null) {
+				while(menusToReinsert.size() > 0)
+					awtMenuBar.add((Menu)menusToReinsert.removeLast());
+			}
 		}
 
 	}
@@ -337,31 +345,33 @@ public final class VCLMenuBar {
 	 *
 	 * @param nPos index of menu to remove
 	 */
-	public synchronized void removeMenu(short nPos) {
+	public void removeMenu(short nPos) {
 
-		LinkedList menusToReinsert=null;
+		synchronized (getTreeLock()) {
+			LinkedList menusToReinsert=null;
 
-		if(nPos < 0)
-			nPos=(short)menus.size();
+			if(nPos < 0)
+				nPos=(short)menus.size();
 
-		if(nPos < menus.size()) {
-			// we can't remove menus in the middle of a menubar, so we have
-			// to remove the tail ones first and then reinsert them after
-			// we add the new Menu
-			menusToReinsert=new LinkedList();
-			for(int i=menus.size()-1; i > nPos; i--) {
-				menusToReinsert.addLast(awtMenuBar.getMenu(i));
-				awtMenuBar.remove(i);
+			if(nPos < menus.size()) {
+				// we can't remove menus in the middle of a menubar, so we have
+				// to remove the tail ones first and then reinsert them after
+				// we add the new Menu
+				menusToReinsert=new LinkedList();
+				for(int i=menus.size()-1; i > nPos; i--) {
+					menusToReinsert.addLast(awtMenuBar.getMenu(i));
+					awtMenuBar.remove(i);
+				}
 			}
-		}
 
-		((VCLMenuItemData)menus.get(nPos)).unregisterAWTPeer(awtMenuBar.getMenu(nPos));
-		menus.remove(nPos);
+			((VCLMenuItemData)menus.get(nPos)).unregisterAWTPeer(awtMenuBar.getMenu(nPos));
+			menus.remove(nPos);
 
-		// reinsert any menus we need to add
-		if(menusToReinsert!=null) {
-			while(menusToReinsert.size() > 0)
-				awtMenuBar.add((Menu)menusToReinsert.removeLast());
+			// reinsert any menus we need to add
+			if(menusToReinsert!=null) {
+				while(menusToReinsert.size() > 0)
+					awtMenuBar.add((Menu)menusToReinsert.removeLast());
+			}
 		}
 
 	}
@@ -376,44 +386,46 @@ public final class VCLMenuBar {
 	 */
 	public void changeMenu(VCLMenuItemData newMenu, short nPos) {
 
-		LinkedList menusToReinsert=null;
+		synchronized (getTreeLock()) {
+			LinkedList menusToReinsert=null;
 
-		if(nPos < 0)
-			nPos=(short)menus.size();
+			if(nPos < 0)
+				nPos=(short)menus.size();
 
-		if(nPos < menus.size()) {
-			// we can't remove menus in the middle of a menubar, so we have
-			// to remove the tail ones first and then reinsert them after
-			// we add the new Menu
-			menusToReinsert=new LinkedList();
-			for(int i=menus.size()-1; i > nPos; i--) {
-				menusToReinsert.addLast(awtMenuBar.getMenu(i));
-				awtMenuBar.remove(i);
+			if(nPos < menus.size()) {
+				// we can't remove menus in the middle of a menubar, so we have
+				// to remove the tail ones first and then reinsert them after
+				// we add the new Menu
+				menusToReinsert=new LinkedList();
+				for(int i=menus.size()-1; i > nPos; i--) {
+					menusToReinsert.addLast(awtMenuBar.getMenu(i));
+					awtMenuBar.remove(i);
+				}
 			}
-		}
 
-		VCLMenuItemData oldMenu=(VCLMenuItemData)menus.get(nPos);
-		newMenu.setTitle(oldMenu.getTitle());
-		newMenu.setEnabled(oldMenu.getEnabled());
+			VCLMenuItemData oldMenu=(VCLMenuItemData)menus.get(nPos);
+			newMenu.setTitle(oldMenu.getTitle());
+			newMenu.setEnabled(oldMenu.getEnabled());
 
-		// let new menu provide contents, but retain reference
-		// to old menu in the actual menubar.  Bug #175
-		awtMenuBar.remove(nPos);
-		oldMenu.unregisterAllAWTPeers();
-		oldMenu.setDelegate(newMenu);
+			// let new menu provide contents, but retain reference
+			// to old menu in the actual menubar.  Bug #175
+			awtMenuBar.remove(nPos);
+			oldMenu.unregisterAllAWTPeers();
+			oldMenu.setDelegate(newMenu);
 
-		// if we were passed an object that isn't yet a menu, insert a dummy
-		// menu object as a placeholder. if we were passed a menu, insert
-		// its peer.
-		if(oldMenu.isMenu())
-			awtMenuBar.add((Menu)oldMenu.createAWTPeer());
-		else
-			awtMenuBar.add(new Menu(oldMenu.getTitle()));
+			// if we were passed an object that isn't yet a menu, insert a dummy
+			// menu object as a placeholder. if we were passed a menu, insert
+			// its peer.
+			if(oldMenu.isMenu())
+				awtMenuBar.add((Menu)oldMenu.createAWTPeer());
+			else
+				awtMenuBar.add(new Menu(oldMenu.getTitle()));
 
-		// reinsert any menus we need to add
-		if(menusToReinsert!=null) {
-			while(menusToReinsert.size() > 0)
-				awtMenuBar.add((Menu)menusToReinsert.removeLast());
+			// reinsert any menus we need to add
+			if(menusToReinsert!=null) {
+				while(menusToReinsert.size() > 0)
+					awtMenuBar.add((Menu)menusToReinsert.removeLast());
+			}
 		}
 
 	}
@@ -423,18 +435,20 @@ public final class VCLMenuBar {
 	 *
 	 * @param nPos position to enable
 	 */
-	public synchronized void enableMenu(short nPos, boolean enable) {
+	public void enableMenu(short nPos, boolean enable) {
 
-		if(nPos < menus.size()) {
-			VCLMenuItemData menu=(VCLMenuItemData)menus.get(nPos);
-			menu.setEnabled(enable);
-			if(!menu.isMenu()) {
-				// we have a dummy item currently in the menubar that isn't
-				// being managed, so flip its state manually
-				if(enable)
-					awtMenuBar.getMenu(nPos).enable();
-				else
-					awtMenuBar.getMenu(nPos).disable();
+		synchronized (getTreeLock()) {
+			if(nPos < menus.size()) {
+				VCLMenuItemData menu=(VCLMenuItemData)menus.get(nPos);
+				menu.setEnabled(enable);
+				if(!menu.isMenu()) {
+					// we have a dummy item currently in the menubar that isn't
+					// being managed, so flip its state manually
+					if(enable)
+						awtMenuBar.getMenu(nPos).enable();
+					else
+						awtMenuBar.getMenu(nPos).disable();
+				}
 			}
 		}
 

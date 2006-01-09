@@ -35,6 +35,7 @@
 
 package com.sun.star.vcl;
 
+import java.awt.Component;
 import java.awt.Menu;
 import java.awt.MenuBar;
 import java.awt.MenuContainer;
@@ -53,7 +54,7 @@ import java.util.LinkedList;
   * menu item or menu corresponding to VCL menu items. Menus are considered to
   * be lists of these items.
   */
-public final class VCLMenuItemData {
+public final class VCLMenuItemData extends Component {
 
 	/**
 	 * Delagate object that performs work for us, if applicable.
@@ -172,44 +173,46 @@ public final class VCLMenuItemData {
 	 * Note that this does not instruct an item's delegate object to be
 	 * disposed. Delegates must manually be disposed.
 	 */
-	public synchronized void dispose() {
+	public void dispose() {
 
-		if (disposed)
-			return;
+		synchronized (getTreeLock()) {
+			if (disposed)
+				return;
 
-		// [ed] 1/8/05 Set the delegate to NULL here so we make sure
-		// to leave active the peers for any delegate objects that may
-		// be inserted into other menus or menubars.  Bug #308
+			// [ed] 1/8/05 Set the delegate to NULL here so we make sure
+			// to leave active the peers for any delegate objects that may
+			// be inserted into other menus or menubars.  Bug #308
 		
-		if(delegate!=null)
-			setDelegate(null);
+			if(delegate!=null)
+				setDelegate(null);
 		
-		// [ed] 1/9/05 If we have an assigned delegate object, we
-		// shouldn't actually remove ourselves from the parent menu
-		// or menubar.  If we do, this will cause the arrays for
-		// our internal VCLMenuItemData structures to become out
-		// of sync with the AWT structures;  removing a delegate must
-		// still leave a placeholder in the AWT structure in order to
-		// mirror the placeholder's mirror in our internal arrays.
-		// The underlying bug is that the parent-for object actually
-		// "owns" the peers, not the delegate.
-		//
-		// Bug 332
+			// [ed] 1/9/05 If we have an assigned delegate object, we
+			// shouldn't actually remove ourselves from the parent menu
+			// or menubar.  If we do, this will cause the arrays for
+			// our internal VCLMenuItemData structures to become out
+			// of sync with the AWT structures;  removing a delegate must
+			// still leave a placeholder in the AWT structure in order to
+			// mirror the placeholder's mirror in our internal arrays.
+			// The underlying bug is that the parent-for object actually
+			// "owns" the peers, not the delegate.
+			//
+			// Bug 332
 
-		unregisterAllAWTPeers();
+			unregisterAllAWTPeers();
 
-		keyboardShortcut=null;
-		menuItems=null;
-		title=null;
+			keyboardShortcut=null;
+			menuItems=null;
+			title=null;
 		
-		// if we're a delegate for another object, set that object's
-		// delegate to null to avoid a dangling reference to a
-		// disposed object
+			// if we're a delegate for another object, set that object's
+			// delegate to null to avoid a dangling reference to a
+			// disposed object
 		
-		if(delegateForObject!=null)
-			delegateForObject.setDelegate(null);
+			if(delegateForObject!=null)
+				delegateForObject.setDelegate(null);
 
-		disposed = true;
+			disposed = true;
+		}
 
 	}
 
@@ -233,28 +236,30 @@ public final class VCLMenuItemData {
 	 */
 	public void setTitle(String newTitle) {
 
-		if(delegate!=null) {
-			delegate.setTitle(newTitle);
-			return;
-		}
+		synchronized (getTreeLock()) {
+			if(delegate!=null) {
+				delegate.setTitle(newTitle);
+				return;
+			}
 
-		if(!isSeparator) {
-			if(newTitle!=null)
-				title=newTitle;
-			else
-				title="";
+			if(!isSeparator) {
+				if(newTitle!=null)
+					title=newTitle;
+				else
+					title="";
 
-			// if we're a delegate for an object, set the title for our
-			// parent object so if the delegate gets switched the new delegate
-			// can retain the title.
+				// if we're a delegate for an object, set the title for our
+				// parent object so if the delegate gets switched the new
+				// delegate can retain the title.
 
-			if(delegateForObject!=null)
-				delegateForObject.title=title;
+				if(delegateForObject!=null)
+					delegateForObject.title=title;
 
-			Iterator e=awtPeers.iterator();
-			while(e.hasNext()) {
-				MenuItem m=(MenuItem)e.next();
-				m.setLabel(title);
+				Iterator e=awtPeers.iterator();
+				while(e.hasNext()) {
+					MenuItem m=(MenuItem)e.next();
+					m.setLabel(title);
+				}
 			}
 		}
 
@@ -271,18 +276,20 @@ public final class VCLMenuItemData {
 	 */
 	public void setKeyboardShortcut(int key, boolean useShift) {
 
-		if(delegate!=null) {
-			delegate.setKeyboardShortcut(key, useShift);
-			return;
-		}
+		synchronized (getTreeLock()) {
+			if(delegate!=null) {
+				delegate.setKeyboardShortcut(key, useShift);
+				return;
+			}
 
-		int newShortcut=VCLEvent.convertVCLKeyCode(key);
-		if(newShortcut!=0) {
-			keyboardShortcut=new MenuShortcut(newShortcut, useShift);
-			Iterator e=awtPeers.iterator();
-			while(e.hasNext()) {
-				MenuItem m=(MenuItem)e.next();
-				m.setShortcut(keyboardShortcut);
+			int newShortcut=VCLEvent.convertVCLKeyCode(key);
+			if(newShortcut!=0) {
+				keyboardShortcut=new MenuShortcut(newShortcut, useShift);
+				Iterator e=awtPeers.iterator();
+				while(e.hasNext()) {
+					MenuItem m=(MenuItem)e.next();
+					m.setShortcut(keyboardShortcut);
+				}
 			}
 		}
 
@@ -307,29 +314,31 @@ public final class VCLMenuItemData {
 	 * @param newEnabled <code>true</code> if the item should be enabled,
 	 *  <code>false</code> if it should be disabled
 	 */
-	void setEnabled(boolean newEnabled) {
+	public void setEnabled(boolean newEnabled) {
 
-		if(delegate!=null) {
-			delegate.setEnabled(newEnabled);
-			return;
-		}
+		synchronized (getTreeLock()) {
+			if(delegate!=null) {
+				delegate.setEnabled(newEnabled);
+				return;
+			}
 
-		isEnabled=newEnabled;
+			isEnabled=newEnabled;
 
-		// if we're the delegate for an object, make sure that the underlying
-		// object's state changed as well so if the delegate gets switched the
-		// enabled state can get retained
+			// if we're the delegate for an object, make sure that the
+			// underlying object's state changed as well so if the delegate
+			// gets switched the enabled state can get retained
 
-		if(delegateForObject!=null)
-			delegateForObject.isEnabled=newEnabled;
+			if(delegateForObject!=null)
+				delegateForObject.isEnabled=newEnabled;
 
-		Iterator e=awtPeers.iterator();
-		while(e.hasNext()) {
-			MenuItem m=(MenuItem)e.next();
-			if(isEnabled)
-				m.enable();
-			else
-				m.disable();
+			Iterator e=awtPeers.iterator();
+			while(e.hasNext()) {
+				MenuItem m=(MenuItem)e.next();
+				if(isEnabled)
+					m.enable();
+				else
+					m.disable();
+			}
 		}
 
 	}
@@ -338,7 +347,7 @@ public final class VCLMenuItemData {
 	 * Get the id corresponding to the menu item that should be used to refer
 	 * to this menu item in VCL events.
 	 */
-	synchronized short getVCLID() {
+	short getVCLID() {
 
 		if(delegate!=null)
 			return(delegate.getVCLID());
@@ -351,7 +360,7 @@ public final class VCLMenuItemData {
 	 * Get the cookie corresponding to the menu item that should be used to
 	 * refer to this menu in VCL events.
 	 */
-	synchronized int getVCLCookie() {
+	int getVCLCookie() {
 
 		if(delegate!=null)
 			return(delegate.getVCLCookie());
@@ -386,36 +395,39 @@ public final class VCLMenuItemData {
 	 */
 	boolean setChecked(boolean newCheck) {
 
-		if(delegate!=null)
-			return(delegate.setChecked(newCheck));
+		synchronized (getTreeLock()) {
+			if(delegate!=null)
+				return(delegate.setChecked(newCheck));
 
-		boolean peersInvalidated=false;
+			boolean peersInvalidated=false;
 
-		isChecked=newCheck;
-		if(!isCheckbox) {
-			if(isChecked) {
-				isCheckbox=true;
+			isChecked=newCheck;
+			if(!isCheckbox) {
+				if(isChecked) {
+					isCheckbox=true;
 
-				// we were just set to checked, so we need to use instances of
-				// CheckMenuItem AWT objects instead of regular MenuItems.
-				// We need to invalidate our peers.
+					// we were just set to checked, so we need to use instances
+					// of CheckMenuItem AWT objects instead of regular
+					// MenuItems. We need to invalidate our peers.
 
-				unregisterAllAWTPeers();
-				peersInvalidated=true;
+					unregisterAllAWTPeers();
+					peersInvalidated=true;
+				}
 			}
-		}
-		else {
-			// change state of our checkbox peers
+			else {
+				// change state of our checkbox peers
 
-			Iterator e=awtPeers.iterator();
-			while(e.hasNext()) {
-				MenuItem cMI=(MenuItem)e.next();
-				if (cMI instanceof CheckboxMenuItem)
-					((CheckboxMenuItem)cMI).setState(isChecked);
+				Iterator e=awtPeers.iterator();
+				while(e.hasNext()) {
+					MenuItem cMI=(MenuItem)e.next();
+					if (cMI instanceof CheckboxMenuItem)
+						((CheckboxMenuItem)cMI).setState(isChecked);
+				}
 			}
+
+			return(peersInvalidated);
 		}
 
-		return(peersInvalidated);
 	}
 
 	/**
@@ -437,23 +449,16 @@ public final class VCLMenuItemData {
 	/**
 	 * Mark a menu item as designated for a submenu prior to the insertion of
 	 * any elements into it. This should only be used by VCLMenu constructors.
-	 *
-	 * @return <code>true</code> if the peers were invalidated and need dto be
-	 *  reinserted, <code>false</code> if all changes hav been properly sent
-	 *  to peers
 	 */
-	protected boolean makeMenu() {
+	protected void makeMenu() {
 
-		if(delegate!=null)
-			return(delegate.makeMenu());
+		if(delegate!=null) {
+			delegate.makeMenu();
+			return;
+		}
 
-		boolean peersInvalidated=false;
 		isSubmenu=true;
-
 		unregisterAllAWTPeers();
-		peersInvalidated=true;
-
-		return(peersInvalidated);
 
 	}
 
@@ -472,30 +477,32 @@ public final class VCLMenuItemData {
 	 */
 	boolean addMenuItem(VCLMenuItemData newItem, short nPos) {
 
-		if(delegate!=null)
-			return(delegate.addMenuItem(newItem, nPos));
+		synchronized (getTreeLock()) {
+			if(delegate!=null)
+				return(delegate.addMenuItem(newItem, nPos));
 
-		boolean peersInvalidated=false;
+			boolean peersInvalidated=false;
 
-		if(nPos < 0)
-			nPos=(short)menuItems.size();
+			if(nPos < 0)
+				nPos=(short)menuItems.size();
 
-		menuItems.add(nPos, newItem);
-		newItem.parentMenus.add(this);
-		if(!isSubmenu) {
-			isSubmenu=true;
-			unregisterAllAWTPeers();
-			peersInvalidated=true;
-		}
-		else {
-			Iterator e=awtPeers.iterator();
-			while(e.hasNext()) {
-				Menu m=(Menu)e.next();
-				m.insert((MenuItem)newItem.createAWTPeer(), nPos);
+			menuItems.add(nPos, newItem);
+			newItem.parentMenus.add(this);
+			if(!isSubmenu) {
+				isSubmenu=true;
+				unregisterAllAWTPeers();
+				peersInvalidated=true;
 			}
-		}
+			else {
+				Iterator e=awtPeers.iterator();
+				while(e.hasNext()) {
+					Menu m=(Menu)e.next();
+					m.insert((MenuItem)newItem.createAWTPeer(), nPos);
+				}
+			}
 
-		return(peersInvalidated);
+			return(peersInvalidated);
+		}
 
 	}
 
@@ -507,18 +514,20 @@ public final class VCLMenuItemData {
 	 */
 	void removeMenuItem(short nPos) {
 
-		if(delegate!=null) {
-			delegate.removeMenuItem(nPos);
-			return;
+		synchronized (getTreeLock()) {
+			if(delegate!=null) {
+				delegate.removeMenuItem(nPos);
+				return;
+			}
+
+			if(nPos < 0)
+				nPos=(short)menuItems.size();
+
+			VCLMenuItemData i = (VCLMenuItemData)menuItems.get(nPos);
+			i.unregisterAllAWTPeers();
+			i.parentMenus.remove(this);
+			menuItems.remove(nPos);
 		}
-
-		if(nPos < 0)
-			nPos=(short)menuItems.size();
-
-		VCLMenuItemData i = (VCLMenuItemData)menuItems.get(nPos);
-		i.unregisterAllAWTPeers();
-		i.parentMenus.remove(this);
-		menuItems.remove(nPos);
 
 	}
 
@@ -583,15 +592,17 @@ public final class VCLMenuItemData {
 	 *
 	 * @param d	new delegate
 	 */
-	synchronized void setDelegate(VCLMenuItemData d) {
+	void setDelegate(VCLMenuItemData d) {
 
-		if (delegate != null)
-			delegate.delegateForObject=null;
+		synchronized (getTreeLock()) {
+			if (delegate != null)
+				delegate.delegateForObject=null;
 
-		delegate=d;
+			delegate=d;
 
-		if (delegate != null)
-			delegate.delegateForObject=this;
+			if (delegate != null)
+				delegate.delegateForObject=this;
+		}
 
 	}
 
@@ -641,19 +652,21 @@ public final class VCLMenuItemData {
 		 *
 		 * @param e event spawning this action
 		 */
-		public synchronized void actionPerformed(ActionEvent e) {
+		public void actionPerformed(ActionEvent e) {
 
-			if (disposed)
-				return;
+			synchronized (getTreeLock()) {
+				if (disposed)
+					return;
 
-			VCLMenuBar mb=VCLMenuBar.findVCLMenuBar(this);
-			if (mb!=null) {
-				VCLEventQueue q = mb.getEventQueue();
-				VCLFrame f = mb.getFrame();
-				if (q != null && f != null) {
-					q.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUACTIVATE, f, d.getVCLID(), d.getVCLCookie()));
-					q.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUCOMMAND, f, d.getVCLID(), d.getVCLCookie()));
-					q.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUDEACTIVATE, f, d.getVCLID(), d.getVCLCookie()));
+				VCLMenuBar mb=VCLMenuBar.findVCLMenuBar(this);
+				if (mb!=null) {
+					VCLEventQueue q = mb.getEventQueue();
+					VCLFrame f = mb.getFrame();
+					if (q != null && f != null) {
+						q.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUACTIVATE, f, d.getVCLID(), d.getVCLCookie()));
+						q.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUCOMMAND, f, d.getVCLID(), d.getVCLCookie()));
+						q.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUDEACTIVATE, f, d.getVCLID(), d.getVCLCookie()));
+					}
 				}
 			}
 
@@ -698,19 +711,21 @@ public final class VCLMenuItemData {
 		 *
 		 * @param e	event spawning this action
 		 */
-		public synchronized void itemStateChanged(ItemEvent e) {
+		public void itemStateChanged(ItemEvent e) {
 
-			if (disposed)
-				return;
+			synchronized (getTreeLock()) {
+				if (disposed)
+					return;
 
-			VCLMenuBar mb=VCLMenuBar.findVCLMenuBar(this);
-			if(mb!=null) {
-				VCLEventQueue q = mb.getEventQueue();
-				VCLFrame f = mb.getFrame();
-				if (q != null && f != null) {
-					q.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUACTIVATE, f, d.getVCLID(), d.getVCLCookie()));
-					q.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUCOMMAND, f, d.getVCLID(), d.getVCLCookie()));
-					q.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUDEACTIVATE, f, d.getVCLID(), d.getVCLCookie()));
+				VCLMenuBar mb=VCLMenuBar.findVCLMenuBar(this);
+				if(mb!=null) {
+					VCLEventQueue q = mb.getEventQueue();
+					VCLFrame f = mb.getFrame();
+					if (q != null && f != null) {
+						q.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUACTIVATE, f, d.getVCLID(), d.getVCLCookie()));
+						q.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUCOMMAND, f, d.getVCLID(), d.getVCLCookie()));
+						q.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUDEACTIVATE, f, d.getVCLID(), d.getVCLCookie()));
+					}
 				}
 			}
 
@@ -730,56 +745,58 @@ public final class VCLMenuItemData {
 	 */
 	Object createAWTPeer() {
 
-		if(delegate!=null)
-			return(delegate.createAWTPeer());
+		synchronized (getTreeLock()) {
+			if(delegate!=null)
+				return(delegate.createAWTPeer());
 
-		Object toReturn=null;
+			Object toReturn=null;
 
-		if(isCheckbox) {
-			VCLAWTCheckboxMenuItem cmi=new VCLAWTCheckboxMenuItem(getTitle(), this, getChecked());
-			if(getEnabled())
-				cmi.enable();
-			else
-				cmi.disable();
-			if(keyboardShortcut!=null)
-				cmi.setShortcut(keyboardShortcut);
-			toReturn=(Object)cmi;
-		}
-		else if(isSubmenu) {
-			Menu mn=new Menu(getTitle());
-			if(getEnabled())
-				mn.enable();
-			else
-				mn.disable();
-			Iterator items=menuItems.iterator();
-			while(items.hasNext()) {
-				VCLMenuItemData i=(VCLMenuItemData)items.next();
-				mn.add((MenuItem)i.createAWTPeer());
+			if(isCheckbox) {
+				VCLAWTCheckboxMenuItem cmi=new VCLAWTCheckboxMenuItem(getTitle(), this, getChecked());
+				if(getEnabled())
+					cmi.enable();
+				else
+					cmi.disable();
+				if(keyboardShortcut!=null)
+					cmi.setShortcut(keyboardShortcut);
+				toReturn=(Object)cmi;
 			}
-			toReturn=(Object)mn;
-		}
-		else if(isSeparator) {
-			// separator is a menu item with a label of a dash
-			MenuItem sep=new MenuItem("-");
-			toReturn=(Object)sep;
-		}
-		else {
-			VCLAWTMenuItem mi=new VCLAWTMenuItem(getTitle(), this);
-			if(getEnabled())
-				mi.enable();
-			else
-				mi.disable();
-			if(keyboardShortcut!=null)
-				mi.setShortcut(keyboardShortcut);
-			toReturn=(Object)mi;
-		}
+			else if(isSubmenu) {
+				Menu mn=new Menu(getTitle());
+				if(getEnabled())
+					mn.enable();
+				else
+					mn.disable();
+				Iterator items=menuItems.iterator();
+				while(items.hasNext()) {
+					VCLMenuItemData i=(VCLMenuItemData)items.next();
+					mn.add((MenuItem)i.createAWTPeer());
+				}
+				toReturn=(Object)mn;
+			}
+			else if(isSeparator) {
+				// separator is a menu item with a label of a dash
+				MenuItem sep=new MenuItem("-");
+				toReturn=(Object)sep;
+			}
+			else {
+				VCLAWTMenuItem mi=new VCLAWTMenuItem(getTitle(), this);
+				if(getEnabled())
+					mi.enable();
+				else
+					mi.disable();
+				if(keyboardShortcut!=null)
+					mi.setShortcut(keyboardShortcut);
+				toReturn=(Object)mi;
+			}
 
-		// add the new peer onto our internal tracking lists
+			// add the new peer onto our internal tracking lists
 
-		if(toReturn!=null)
-			awtPeers.add(toReturn);
+			if(toReturn!=null)
+				awtPeers.add(toReturn);
 
-		return(toReturn);
+			return(toReturn);
+		}
 
 	}
 
@@ -789,19 +806,21 @@ public final class VCLMenuItemData {
 	 */
 	void refreshAWTPeersInParentMenus() {
 
-		LinkedList parentMenusClone = (LinkedList)parentMenus.clone();
-		Iterator parents=parentMenusClone.iterator();
-		while(parents.hasNext()) {
-			VCLMenuItemData parent=(VCLMenuItemData)parents.next();
-			short menuPos=parent.getMenuItemIndex(this);
-			if(menuPos >= 0) {
-				parent.removeMenuItem(menuPos);
-				parent.addMenuItem(this, menuPos); // creates a new peer
+		synchronized (getTreeLock()) {
+			LinkedList parentMenusClone = (LinkedList)parentMenus.clone();
+			Iterator parents=parentMenusClone.iterator();
+			while(parents.hasNext()) {
+				VCLMenuItemData parent=(VCLMenuItemData)parents.next();
+				short menuPos=parent.getMenuItemIndex(this);
+				if(menuPos >= 0) {
+					parent.removeMenuItem(menuPos);
+					parent.addMenuItem(this, menuPos); // creates a new peer
+				}
 			}
 		}
 
 	}
-	
+
 	/**
 	 * Unregister a single AWT peer for an item.  Because menu items may
 	 * be inserted in multiple menus or multiple menubars not all the peers
@@ -811,35 +830,38 @@ public final class VCLMenuItemData {
 	 *
 	 * @param awtMI	AWT peer object that is about to be destroyed
 	 */
-	synchronized void unregisterAWTPeer(MenuItem awtMI) {
-		
-		if(delegate!=null) {
-			delegate.unregisterAWTPeer(awtMI);
-			return;
-		}
-		
-		if(awtPeers.indexOf(awtMI) < 0)
-			return;
-			
-		if(isSubmenu && (awtMI instanceof Menu)) {
-			Iterator e=menuItems.iterator();
-			while(e.hasNext())
-				((VCLMenuItemData)e.next()).unregisterAWTPeer(((Menu)awtMI).getItem(0));
-		}
-		
-		if(awtMI instanceof VCLAWTMenuItem)
-			awtMI.removeActionListener((VCLAWTMenuItem)awtMI);
-		else if(awtMI instanceof VCLAWTCheckboxMenuItem)
-			((CheckboxMenuItem)awtMI).removeItemListener((VCLAWTCheckboxMenuItem)awtMI);
-		awtMI.setShortcut(null);
+	void unregisterAWTPeer(MenuItem awtMI) {
 
-		MenuContainer mc = awtMI.getParent();
-		if (mc instanceof Menu) {
-			Menu m = (Menu)mc;
-			m.remove(awtMI);
+		synchronized (getTreeLock()) {
+			if(delegate!=null) {
+				delegate.unregisterAWTPeer(awtMI);
+				return;
+			}
+
+			if(awtPeers.indexOf(awtMI) < 0)
+				return;
+
+			if(isSubmenu && (awtMI instanceof Menu)) {
+				Iterator e=menuItems.iterator();
+				while(e.hasNext())
+					((VCLMenuItemData)e.next()).unregisterAWTPeer(((Menu)awtMI).getItem(0));
+			}
+
+			if(awtMI instanceof VCLAWTMenuItem)
+				awtMI.removeActionListener((VCLAWTMenuItem)awtMI);
+			else if(awtMI instanceof VCLAWTCheckboxMenuItem)
+				((CheckboxMenuItem)awtMI).removeItemListener((VCLAWTCheckboxMenuItem)awtMI);
+			awtMI.setShortcut(null);
+
+			MenuContainer mc = awtMI.getParent();
+			if (mc instanceof Menu) {
+				Menu m = (Menu)mc;
+				m.remove(awtMI);
+			}
+
+			awtPeers.remove(awtMI);
 		}
 
-		awtPeers.remove(awtMI);
 	}
 					
 	/**
@@ -847,36 +869,38 @@ public final class VCLMenuItemData {
 	 * item data. If the item data corresponds to a submenu, all of the submenu
 	 * peers will also be unregistered.
 	 */
-	synchronized void unregisterAllAWTPeers() {
+	void unregisterAllAWTPeers() {
 
-		if(delegate!=null) {
-			delegate.unregisterAllAWTPeers();
-			return;
-		}
-
-		if(isSubmenu && menuItems!=null) {
-			Iterator e=menuItems.iterator();
-			while(e.hasNext())
-				((VCLMenuItemData)e.next()).unregisterAllAWTPeers();
-		}
-
-		Iterator peers=awtPeers.iterator();
-		while(peers.hasNext()) {
-			MenuItem mi=(MenuItem)peers.next();
-			if(mi instanceof VCLAWTMenuItem)
-				mi.removeActionListener((VCLAWTMenuItem)mi);
-			else if(mi instanceof VCLAWTCheckboxMenuItem)
-				((CheckboxMenuItem)mi).removeItemListener((VCLAWTCheckboxMenuItem)mi);
-			mi.setShortcut(null);
-
-			MenuContainer mc = mi.getParent();
-			if (mc instanceof Menu) {
-				Menu m = (Menu)mc;
-				m.remove(mi);
+		synchronized (getTreeLock()) {
+			if(delegate!=null) {
+				delegate.unregisterAllAWTPeers();
+				return;
 			}
-		}
 
-		awtPeers.clear();
+			if(isSubmenu && menuItems!=null) {
+				Iterator e=menuItems.iterator();
+				while(e.hasNext())
+					((VCLMenuItemData)e.next()).unregisterAllAWTPeers();
+			}
+
+			Iterator peers=awtPeers.iterator();
+			while(peers.hasNext()) {
+				MenuItem mi=(MenuItem)peers.next();
+				if(mi instanceof VCLAWTMenuItem)
+					mi.removeActionListener((VCLAWTMenuItem)mi);
+				else if(mi instanceof VCLAWTCheckboxMenuItem)
+					((CheckboxMenuItem)mi).removeItemListener((VCLAWTCheckboxMenuItem)mi);
+				mi.setShortcut(null);
+
+				MenuContainer mc = mi.getParent();
+				if (mc instanceof Menu) {
+					Menu m = (Menu)mc;
+					m.remove(mi);
+				}
+			}
+
+			awtPeers.clear();
+		}
 
 	}
 
