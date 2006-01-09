@@ -1622,7 +1622,12 @@ JavaVM * JavaVirtualMachine::createJavaVM(stoc_javavm::JVM const & jvm,
 #endif
 
     JNI_CreateVM_Type * pCreateJavaVM = (JNI_CreateVM_Type *)m_aJavaLib.getSymbol(
+#if defined USE_JAVA && defined MACOSX
+        // Fix bug 1257 by looking for only supported JVM versions
+        rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("JNI_CreateJavaVM_Impl")));
+#else	// USE_JAVA && MACOSX
         rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("JNI_CreateJavaVM")));
+#endif	// USE_JAVA && MACOSX
     if (!pCreateJavaVM)
     {
         // The java installation is somehow corrupted

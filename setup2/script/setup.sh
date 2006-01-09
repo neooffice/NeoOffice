@@ -305,10 +305,15 @@ for i in `cd "$apphome/classes" ; find . -name "*.jar"` ; do
 done
 sysclasspath=`printf "$sysclasspath" | sed 's#^:##'`
 if [ "$os" = "Darwin" ] ; then
-    javabasedir=/System/Library/Frameworks/JavaVM.framework
-    javavm="$javabasedir/JavaVM"
+    # Fix bug 1257 by looking for only supported JVM versions
+    javabasedir=/System/Library/Frameworks/JavaVM.framework/Versions/1.4.2
+    javavm="$javabasedir/Libraries/libjvm.dylib"
     if [ ! -f "$javavm" ] ; then
-        error "$javavm file does not exist"
+        javabasedir=/System/Library/Frameworks/JavaVM.framework/Versions/1.4.1
+        javavm="$javabasedir/Libraries/libjvm.dylib"
+        if [ ! -f "$javavm" ] ; then
+            error "$javavm file does not exist"
+        fi
     fi
     # Prevent any classes or libraries from being loaded from the JVM's
     # standard extensions and endorsed directories as they can cause random
