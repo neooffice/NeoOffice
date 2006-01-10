@@ -39,6 +39,7 @@ import java.awt.Component;
 import java.awt.Menu;
 import java.awt.MenuBar;
 import java.awt.MenuContainer;
+import java.awt.MenuComponent;
 import java.awt.MenuItem;
 import java.awt.MenuShortcut;
 import java.awt.CheckboxMenuItem;
@@ -450,14 +451,16 @@ public final class VCLMenuItemData extends Component {
 	 * Mark a menu item as designated for a submenu prior to the insertion of
 	 * any elements into it. This should only be used by VCLMenu constructors.
 	 */
-	protected void makeMenu() {
+	void makeMenu() {
 
 		if(delegate!=null) {
 			delegate.makeMenu();
 			return;
 		}
 
+		isCheckbox=false;
 		isSubmenu=true;
+		isSeparator=false;
 		unregisterAllAWTPeers();
 
 	}
@@ -562,7 +565,8 @@ public final class VCLMenuItemData extends Component {
 			return(delegate.getMenuItemIndex(item));
 
 		short toReturn=-1;
-		for(short i=0; i<menuItems.size(); i++) {
+		short items = (short)menuItems.size();
+		for(short i=0; i<items; i++) {
 			if(menuItems.get(i)==item) {
 				toReturn=i;
 				break;
@@ -743,13 +747,13 @@ public final class VCLMenuItemData extends Component {
 	 *
 	 * @return AWT MenuItem for this object
 	 */
-	Object createAWTPeer() {
+	MenuComponent createAWTPeer() {
 
 		synchronized (getTreeLock()) {
 			if(delegate!=null)
 				return(delegate.createAWTPeer());
 
-			Object toReturn=null;
+			MenuComponent toReturn=null;
 
 			if(isCheckbox) {
 				VCLAWTCheckboxMenuItem cmi=new VCLAWTCheckboxMenuItem(getTitle(), this, getChecked());
@@ -759,7 +763,7 @@ public final class VCLMenuItemData extends Component {
 					cmi.disable();
 				if(keyboardShortcut!=null)
 					cmi.setShortcut(keyboardShortcut);
-				toReturn=(Object)cmi;
+				toReturn=cmi;
 			}
 			else if(isSubmenu) {
 				Menu mn=new Menu(getTitle());
@@ -772,12 +776,12 @@ public final class VCLMenuItemData extends Component {
 					VCLMenuItemData i=(VCLMenuItemData)items.next();
 					mn.add((MenuItem)i.createAWTPeer());
 				}
-				toReturn=(Object)mn;
+				toReturn=mn;
 			}
 			else if(isSeparator) {
 				// separator is a menu item with a label of a dash
 				MenuItem sep=new MenuItem("-");
-				toReturn=(Object)sep;
+				toReturn=sep;
 			}
 			else {
 				VCLAWTMenuItem mi=new VCLAWTMenuItem(getTitle(), this);
@@ -787,7 +791,7 @@ public final class VCLMenuItemData extends Component {
 					mi.disable();
 				if(keyboardShortcut!=null)
 					mi.setShortcut(keyboardShortcut);
-				toReturn=(Object)mi;
+				toReturn=mi;
 			}
 
 			// add the new peer onto our internal tracking lists
@@ -817,6 +821,63 @@ public final class VCLMenuItemData extends Component {
 					parent.addMenuItem(this, menuPos); // creates a new peer
 				}
 			}
+		}
+
+	}
+
+	/**
+	 * Reregister a single AWT menu peer from another item to item.  This will
+	 * remove the AWT menu peer awtPeer from the specified menu and reregister
+	 * it to this item.
+	 *
+	 * @param srcItem the item to obtain the AWT menu peer from
+	 * @param mb the AWT menubar to obtain the AWT menu peer from
+	 * @return <code>true</code> if the reregistration was successful otherwise
+	 *  <code>false</code>
+	 */
+	boolean reregisterAWTPeer(VCLMenuItemData srcItem, MenuBar mb) {
+
+		if(delegate!=null)
+			return(delegate.reregisterAWTPeer(srcItem, mb));
+
+		if(srcItem.delegate!=null)
+			return(reregisterAWTPeer(srcItem.delegate, mb));
+
+		if (isSubmenu && srcItem.isMenu()) {
+			// Reassign the source's peers
+			LinkedList destPeers = new LinkedList();
+			Iterator e=srcItem.awtPeers.iterator();
+			while(e.hasNext()) {
+				Menu m=(Menu)e.next();
+				if (m.getParent() == mb)
+					destPeers.add(m);
+			}
+
+			// Remove the peer's that we are moving from the source and add
+			// it to the destination
+			e=destPeers.iterator();
+			while(e.hasNext()) {
+				Menu m=(Menu)e.next();
+				srcItem.awtPeers.remove(m);
+				if(isEnabled)
+					m.enable();
+				else
+					m.disable();
+				m.setLabel(title);
+				m.removeAll();
+				awtPeers.add(m);
+
+				Iterator items=menuItems.iterator();
+				while(items.hasNext()) {
+					VCLMenuItemData i=(VCLMenuItemData)items.next();
+					m.add((MenuItem)i.createAWTPeer());
+				}
+			}
+
+			return true;
+		}
+		else {
+			return false;
 		}
 
 	}
@@ -863,7 +924,7 @@ public final class VCLMenuItemData extends Component {
 		}
 
 	}
-					
+
 	/**
 	 * Unregister all AWT peer objects that have been created from the menu
 	 * item data. If the item data corresponds to a submenu, all of the submenu

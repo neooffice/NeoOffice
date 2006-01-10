@@ -137,8 +137,7 @@ public final class VCLMenu extends Component {
 			if((item!=null) && item.setChecked(bCheck)) {
 				// checkbox items can't be top level menus, so we only have to
 				// worry about reinserting new peers into their parent menus
-				if(item!=null)
-					item.refreshAWTPeersInParentMenus();
+				item.refreshAWTPeersInParentMenus();
 			}
 		}
 
