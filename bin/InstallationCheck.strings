@@ -3,4 +3,5 @@
 "18" = "This package can only be installed on a PowerPC machine and it cannot be installed on an Intel-based machine.";
 "19" = "This package can only be installed on an Intel-based machine and it cannot be installed on a PowerPC machine.";
 "20" = "This package could not determine whether or not this is a PowerPC or an Intel-based machine.";
+"25" = "The $(PRODUCT_NAME) application appears to be running. Please retry after you have quit the $(PRODUCT_NAME) application.";
 
