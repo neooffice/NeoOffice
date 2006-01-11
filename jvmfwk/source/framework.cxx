@@ -929,6 +929,12 @@ javaFrameworkError SAL_CALL jfw_setEnabled(sal_Bool bEnabled)
                 
 		jfw::CNodeJava node;
 
+#ifdef USE_JAVA
+		// Fix bug 595 by making sure Java is never disabled
+		if (!bEnabled)
+			throw jfw::FrameworkException(JFW_E_CONFIGURATION, rtl::OString("[Java framework] The JRE is required to run this application so disabling of the JRE is not allowed."));
+#endif	// USE_JAVA
+
 		if (g_bEnabledSwitchedOn == false && bEnabled == sal_True)
 		{
 			//When the process started then Enabled was false.
@@ -970,7 +976,7 @@ javaFrameworkError SAL_CALL jfw_getEnabled(sal_Bool *pbEnabled)
 		// Fix bug 595 by making sure Java is never disabled
 		if (!*pbEnabled)
 		{
-			jfw_setEnabled(true);
+			jfw_setEnabled(sal_True);
 			*pbEnabled = node.getEnabled();
 		}
 #endif	// USE_JAVA
