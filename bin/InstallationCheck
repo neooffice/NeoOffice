@@ -37,7 +37,7 @@
 PATH=/bin:/sbin:/usr/bin:/usr/sbin
 export PATH
 
-commands="awk cat date chmod chown find grep ln ls mkdir mv open pax printf rm sed sort touch uname"
+commands="awk cat date chmod chown echo find grep id ln ls mkdir mv open pax printf ps rm sed sort touch uname"
 
 # Check that the required BSD command are installed
 for i in $commands ; do
@@ -67,6 +67,22 @@ if [ "$target_machine" != "$machine" ] ; then
         powerpc) exit 115;;
         *) exit 116;;
     esac
+fi
+
+scriptdir=`dirname "$0"`
+if [ -d "$scriptdir" -a -f "$scriptdir/installutils" ] ; then
+
+    . "$scriptdir/installutils"
+
+    # Check that no instances of the application are running
+    id=`id -un`
+    while read i ; do
+        # Return 96 + 25 if any instances are running
+        check_installation "$i" && exit 121
+    done << !
+`ps -U "$id" -o command | grep '/Contents/MacOS/soffice\.bin' | sed 's#/Contents/MacOS/soffice\.bin.*$##'`
+!
+
 fi
 
 exit 0
