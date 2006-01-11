@@ -858,20 +858,24 @@ public final class VCLMenuItemData extends Component {
 			e=destPeers.iterator();
 			while(e.hasNext()) {
 				Menu m=(Menu)e.next();
+				awtPeers.add(m);
 				srcItem.awtPeers.remove(m);
 				if(isEnabled)
 					m.enable();
 				else
 					m.disable();
 				m.setLabel(title);
-				m.removeAll();
-				awtPeers.add(m);
 
+				int oldCount = m.getItemCount();
 				Iterator items=menuItems.iterator();
 				while(items.hasNext()) {
 					VCLMenuItemData i=(VCLMenuItemData)items.next();
 					m.add((MenuItem)i.createAWTPeer());
 				}
+
+				// Remove preexisting menu items
+				while (oldCount-- > 0) 
+					m.remove(0);
 			}
 
 			return true;
