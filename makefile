@@ -84,6 +84,8 @@ PRODUCT_REGISTRATION_URL=http://www.planamesa.com/neojava/donate.php
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
 OO_PACKAGES:=OpenOffice
 OO_TAG:=OpenOffice_1_1_5
+OO_SOURCE_TAR_GZ_FILE:=$(PWD)/OOo_1.1.5_src.tar.gz
+OO_SOURCE_OUTPUT_DIR:=OOo_1.1.5
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
 NEO_TAG:=NeoOffice-1_2_Beta
@@ -95,12 +97,10 @@ build.oo_checkout:
 	mkdir -p "$(BUILD_HOME)"
 # The OOo cvs server gets messed up with tags so we need to do a little trick
 # to get the checkout to work
-	rm -Rf "$(BUILD_HOME)/tmp"
-	mkdir -p "$(BUILD_HOME)/tmp"
-	cd "$(BUILD_HOME)/tmp" ; cvs -d "$(OO_CVSROOT)" co MathMLDTD ; cd MathMLDTD ; cvs update -d -r "$(OO_TAG)"
+	sh -e -c 'if [ ! -e "$(OO_SOURCE_TAR_GZ_FILE)" ] ; then rm -Rf "$(BUILD_HOME)/tmp" ; mkdir -p "$(BUILD_HOME)/tmp" ; cd "$(BUILD_HOME)/tmp" ; cvs -d "$(OO_CVSROOT)" co MathMLDTD ; cd MathMLDTD ; cvs update -d -r "$(OO_TAG)" ; fi'
 	rm -Rf "$(BUILD_HOME)/tmp"
 # Do the real checkout
-	cd "$(BUILD_HOME)" ; cvs -d "$(OO_CVSROOT)" co -r "$(OO_TAG)" $(OO_PACKAGES)
+	sh -e -c 'if [ -e "$(OO_SOURCE_TAR_GZ_FILE)" ] ; then pax -z -v -r -s "/$(OO_SOURCE_OUTPUT_DIR)/$(BUILD_HOME)/" -f "$(OO_SOURCE_TAR_GZ_FILE)" ; else cd "$(BUILD_HOME)" ; cvs -d "$(OO_CVSROOT)" co -r "$(OO_TAG)" $(OO_PACKAGES) ; fi'
 	chmod -Rf u+w "$(BUILD_HOME)"
 	touch "$@"
 
