@@ -37,6 +37,15 @@
 #include "osl/thread.h"
 #include "otherjre.hxx"
 
+#ifdef MACOSX
+
+#include "sunversion.hxx"
+#include "diagnostics.h"
+
+#define OUSTR(x) ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM(x) )
+
+#endif	// MACOSX
+
 using namespace rtl;
 using namespace std;
 
@@ -127,11 +136,30 @@ char const* const* OtherInfo::getLibraryPaths(int* size)
 
 int OtherInfo::compareVersions(const rtl::OUString& sSecond) const
 {
+#ifdef MACOSX
+    OUString sFirst = getVersion();
+      
+    SunVersion version1(sFirst);
+    JFW_ENSURE(version1, OUSTR("[Java framework] sunjavaplugin"SAL_DLLEXTENSION
+                               " does not know the version: ")
+               + sFirst + OUSTR(" as valid for a SUN JRE."));
+    SunVersion version2(sSecond);
+    if ( ! version2)
+        throw MalformedVersionException(); 
+ 
+    if(version1 == version2)
+        return 0;
+    if(version1 > version2)
+        return 1;
+    else
+        return -1;
+#else	// MACOSX
     //Need to provide an own algorithm for comparing version. 
     //Because this function returns always 0, which means the version of
     //this JRE and the provided version "sSecond" are equal, one cannot put
     //any excludeVersion entries in the javavendors.xml file.
     return 0;
+#endif	// MACOSX
 }
 
 }
