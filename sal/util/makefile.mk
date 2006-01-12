@@ -1,44 +1,38 @@
-##########################################################################
-# 
+#*************************************************************************
+#
 #   $RCSfile$
-# 
+#
 #   $Revision$
-# 
+#
 #   last change: $Author$ $Date$
-# 
-#   The Contents of this file are made available subject to the terms of
-#   either of the following licenses
-# 
-#          - GNU General Public License Version 2.1
-# 
-#   Sun Microsystems Inc., October, 2000
-# 
-#   GNU General Public License Version 2.1
-#   =============================================
-#   Copyright 2000 by Sun Microsystems, Inc.
-#   901 San Antonio Road, Palo Alto, CA 94303, USA
-# 
-#   This library is free software; you can redistribute it and/or
-#   modify it under the terms of the GNU General Public
-#   License version 2.1, as published by the Free Software Foundation.
-# 
-#   This library is distributed in the hope that it will be useful,
-#   but WITHOUT ANY WARRANTY; without even the implied warranty of
-#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#   General Public License for more details.
-# 
-#   You should have received a copy of the GNU General Public
-#   License along with this library; if not, write to the Free Software
-#   Foundation, Inc., 59 Temple Place, Suite 330, Boston,
-#   MA  02111-1307  USA
-#   
-#   =================================================
-#   Modified September 2004 by Patrick Luby. SISSL Removed. NeoOffice is
-#   distributed under GPL only under modification term 3 of the LGPL.
-# 
-#   Contributor(s): _______________________________________
-# 
-##########################################################################
+#
+#   The Contents of this file are made available subject to
+#   the terms of GNU General Public License Version 2.1.
+#
+#
+#     GNU General Public License Version 2.1
+#     =============================================
+#     Copyright 2005 by Sun Microsystems, Inc.
+#     901 San Antonio Road, Palo Alto, CA 94303, USA
+#
+#     This library is free software; you can redistribute it and/or
+#     modify it under the terms of the GNU General Public
+#     License version 2.1, as published by the Free Software Foundation.
+#
+#     This library is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#     General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public
+#     License along with this library; if not, write to the Free Software
+#     Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+#     MA  02111-1307  USA
+#
+#     Modified January 2006 by Patrick Luby. NeoOffice is distributed under
+#     GPL only under modification term 3 of the LGPL.
+#
+#*************************************************************************
 
 PRJ=..
 
@@ -97,8 +91,11 @@ LIB3FILES=	\
 #LIB3FILES+=$(LB)$/systoolsunx.lib
 #.ENDIF # UNX
 
-
+.IF "$(GUI)" == "WNT"
 SHL1TARGET= $(TARGET)
+.ELSE
+SHL1TARGET= uno_$(TARGET)
+.ENDIF
 SHL1IMPLIB= i$(TARGET)
 
 SHL1VERSIONMAP=	$(TARGET).map
@@ -139,8 +136,35 @@ SHL1STDLIBS= -lexc
 .ENDIF
 .ENDIF # UNX
 
+# If we compile sal with STLport checking iterators
+# we need to link against the STLport
+.IF "$(USE_STLP_DEBUG)" != ""
+SHL1STDLIBS+=$(LIBSTLPORT)
+.ENDIF
+
+#The irony that using the system STL instead of
+#stlport requires that we link libsal with the
+#LIBSTLPORT alias which is not required when using
+#stlport is not lost on me
+.IF "$(USE_SYSTEM_STL)"=="YES"
+SHL1STDLIBS+=$(LIBSTLPORT)
+.ELSE
 .IF "$(OS)"=="MACOSX"
-SHL1STDLIBS+=-lstlport_gcc -framework CoreFoundation -framework Carbon
+SHL1STDLIBS+=-lstlport_gcc
+.ENDIF
+.ENDIF
+
+.IF "$(OS)"=="MACOSX"
+SHL1STDLIBS+=-framework CoreFoundation -framework Carbon
+.ENDIF
+
+.IF "$(OS)" == "LINUX"
+.IF "$(PAM_LINK)" == "YES"
+SHL1STDLIBS+=-lpam
+.ENDIF
+.IF "$(CRYPT_LINK)" == "YES"
+SHL1STDLIBS+=-lcrypt
+.ENDIF
 .ENDIF
 
 SHL1LIBS+=$(SLB)$/$(TARGET).lib
@@ -165,6 +189,43 @@ SHL1DEPN=
 SHL1DEF=    $(MISC)$/$(SHL1TARGET).def
 
 DEF1NAME= $(SHL1TARGET)
+
+#
+# This part builds a tiny extra lib,
+# containing an alloc.c which uses system 
+# heap instead of our own mem management. 
+# This is e.g. useful for proper valgrinding
+# the office.
+#
+.IF "$(OS)"=="LINUX"
+
+TARGET2 = salalloc_malloc
+SHL2TARGET= $(TARGET2)
+SHL2IMPLIB= i$(TARGET2)
+SHL2VERSIONMAP=	salalloc.map
+
+SHL2LIBS+=$(SLB)$/SYSALLOC_cpprtl.lib
+
+.ENDIF # .IF "$(OS)"=="LINUX"
+
+# --- Coverage -----------------------------------------------------
+# LLA: 20040304 The follows lines are an additional which is only need if we run
+#               coverage tests. For normal test runs this feature is not used.
+#               For more information about coverage tests see:
+#               http://gcc.gnu.org/onlinedocs/gcc-3.0/gcc_8.html
+#
+#               Why this additional?
+#               Anybody has decide to link sal with g++ instead of gcc.
+#
+.IF "$(TESTCOVERAGE)"!=""
+.IF "$(GUI)"=="UNX"
+.IF "$(COM)"=="GCC"
+.IF "$(OS)"=="LINUX"
+SHL1STDLIBS+=-lgcc
+.ENDIF
+.ENDIF
+.ENDIF
+.ENDIF
 
 # --- Targets ------------------------------------------------------
 
