@@ -91,6 +91,8 @@ PRODUCT_REGISTRATION_URL=http://trinity.neooffice.org/
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
 OO_PACKAGES:=OpenOffice2
 OO_TAG:=OpenOffice_2_0_1
+OO_SOURCE_TAR_GZ_FILE:=$(PWD)/OOo_2.0.1_src.tar.gz
+OO_SOURCE_OUTPUT_DIR:=OOA680_m1
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
 NEO_TAG:=HEAD
@@ -102,14 +104,14 @@ build.oo_checkout:
 	mkdir -p "$(BUILD_HOME)"
 # The OOo cvs server gets messed up with tags so we need to do a little trick
 # to get the checkout to work
-	rm -Rf "$(BUILD_HOME)/tmp"
-	mkdir -p "$(BUILD_HOME)/tmp"
-	cd "$(BUILD_HOME)/tmp" ; cvs -d "$(OO_CVSROOT)" co MathMLDTD ; cd MathMLDTD ; cvs update -d -r "$(OO_TAG)"
+	sh -e -c 'if [ ! -e "$(OO_SOURCE_TAR_GZ_FILE)" ] ; then rm -Rf "$(BUILD_HOME)/tmp" ; mkdir -p "$(BUILD_HOME)/tmp" ; cd "$(BUILD_HOME)/tmp" ; cvs -d "$(OO_CVSROOT)" co MathMLDTD ; cd MathMLDTD ; cvs update -d -r "$(OO_TAG)" ; fi'
 	rm -Rf "$(BUILD_HOME)/tmp"
 # Do the real checkout
-	-cd "$(BUILD_HOME)" ; cvs -d "$(OO_CVSROOT)" co -r "$(OO_TAG)" $(OO_PACKAGES)
+	sh -e -c 'if [ -e "$(OO_SOURCE_TAR_GZ_FILE)" ] ; then pax -z -v -r -s "/$(OO_SOURCE_OUTPUT_DIR)/$(BUILD_HOME)/" -f "$(OO_SOURCE_TAR_GZ_FILE)" ; fi'
+	-sh -e -c 'if [ ! -e "$(OO_SOURCE_TAR_GZ_FILE)" ] ; then cd "$(BUILD_HOME)" ; cvs -d "$(OO_CVSROOT)" co -r "$(OO_TAG)" $(OO_PACKAGES) ; fi'
 # cvs seems to always fail so check that the last module has been checked out
 	cd "$(BUILD_HOME)/agg" ; cvs -d "$(OO_CVSROOT)" update -r "$(OO_TAG)"
+	sh -e -c 'if [ ! -e "$(OO_SOURCE_TAR_GZ_FILE)" ] ; then cd "$(BUILD_HOME)/agg" ; cvs -d "$(OO_CVSROOT)" update -r "$(OO_TAG)" ; fi'
 	chmod -Rf u+w "$(BUILD_HOME)"
 	touch "$@"
 
