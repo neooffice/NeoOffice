@@ -61,7 +61,9 @@ NEOLIGHT_MDIMPORTER_URL:=http://trinity.neooffice.org/downloads/neolight.mdimpor
 # Product information
 OO_PRODUCT_NAME=OpenOffice.org
 OO_PRODUCT_VERSION=2.0
-OO_REGISTRATION_URL=http://www.openoffice.org/welcome/registration.html
+OO_REGISTRATION_URL=http://www.openoffice.org/welcome/registration20.html
+OO_SUPPORT_URL=http://www.openoffice.org
+OO_SUPPORT_URL_TEXT=www.openoffice.org
 PRODUCT_NAME=NeoOffice
 PRODUCT_DIR_NAME=NeoOffice
 # Important: Note that there are escape characters in the PRODUCT_NAME for the
@@ -85,7 +87,9 @@ PRODUCT_INSTALL_URL=http://www.planamesa.com/neojava/download.php\\\#install
 PRODUCT_BUILD_URL=http://www.planamesa.com/neojava/build.php
 PRODUCT_PATCH_DOWNLOAD_URL=http://www.planamesa.com/neojava/patch.php
 PRODUCT_PATCH_CHECK_URL=http://www.planamesa.com/neojava/downloads/patches/latest.dmg
-PRODUCT_REGISTRATION_URL=http://trinity.neooffice.org/
+PRODUCT_REGISTRATION_URL=http://www.planamesa.com/neojava/donate.php
+PRODUCT_SUPPORT_URL=http://trinity.neooffice.org/modules.php?name=Forums
+PRODUCT_SUPPORT_URL_TEXT:=$(PRODUCT_NAME) Support
 
 # CVS macros
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
@@ -273,9 +277,10 @@ build.package: build.neo_patches build.oo_download_dics build.oo_download_help b
 	cd "$(INSTALL_HOME)/package/Contents/program" ; ln -sf "soffice.bin" "soffice"
 	cd "$(INSTALL_HOME)/package/Contents/program" ; ln -sf "unopkg.bin" "unopkg"
 	cd "$(INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/Library/Preferences/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' > "../../out" ; mv -f "../../out" "program/bootstraprc"
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find help share user -type d | grep -v /CVS$$` ; do mkdir -p "$$i" ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find help share user ! -type d | grep -v /CVS/` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in "share/registry/data/org/openoffice/Setup.xcu" "share/registry/data/org/openoffice/Office/Common.xcu" ; do sed "s#\$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g" "$${i}" | sed "s#\$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g" | sed "s#\$$(PRODUCT_REGISTRATION_URL)#$(PRODUCT_REGISTRATION_URL)#g" | sed "s#$(OO_PRODUCT_NAME)#$(PRODUCT_NAME)#g" | sed "s#$(OO_PRODUCT_VERSION)#$(PRODUCT_VERSION)#g" > "../../../out" ; mv -f "../../../out" "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f | grep -v /CVS | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f | grep -v /CVS` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -name "*.xcu` ; do sed "s#$(OO_PRODUCT_NAME)#$(PRODUCT_NAME)#g" "$${i}" | sed "s#$(OO_PRODUCT_VERSION)#$(PRODUCT_VERSION)#g" | sed "s#$(OO_REGISTRATION_URL)#$(PRODUCT_REGISTRATION_URL)#g" > "../../../out" ; mv -f "../../../out" "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#$(OO_PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/help/main_transform.xsl" | sed 's#$(OO_SUPPORT_URL)#$(PRODUCT_SUPPORT_URL)#g' | sed 's#$(OO_SUPPORT_URL_TEXT)#$(PRODUCT_SUPPORT_URL_TEXT)#g' > "help/main_transform.xsl"
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.dylib*" -o -name "*.bin"` ; do strip -S -x "$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'if [ ! -d "MacOS" ] ; then rm -Rf "MacOS" ; mv -f "program" "MacOS" ; ln -sf "MacOS" "program" ; fi'
 	cd "$(INSTALL_HOME)/package/Contents/share/dict/ooo" ; sh -c 'for i in `sed "s#-[a-zA-Z0-9]* # #g" "$(PWD)/$(INSTALL_HOME)/language_names"` ; do for j in "$(PWD)/$(DIC_HOME)"/*.zip ; do unzip -o "$$j" "$$i*.aff" "$$i*.dic" "hyph_$$i*.dic" "th_$$i*.dat" "th_$$i*.idx" ; if [ $$? != 0 -a $$? != 11 ] ; then exit $$? ; fi ; done ; done'
