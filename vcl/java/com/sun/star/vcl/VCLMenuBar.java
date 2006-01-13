@@ -382,8 +382,14 @@ public final class VCLMenuBar extends Component {
 			VCLMenuItemData oldMenu=(VCLMenuItemData)menus.get(nPos);
 			newMenu.setTitle(oldMenu.getTitle());
 			newMenu.setEnabled(oldMenu.getEnabled());
-			menus.set(nPos, newMenu);
-			if (!newMenu.reregisterAWTPeer(oldMenu, awtMenuBar)) {
+
+			boolean reregistered = newMenu.reregisterAWTPeer(oldMenu, awtMenuBar);
+
+			// let new menu provide contents, but retain reference
+			// to old menu in the actual menubar.  Bug #175
+			oldMenu.setDelegate(newMenu);
+
+			if (!reregistered) {
 				MenuBar oldMenuBar = awtMenuBar;
 				removeMenuBar(this);
 				awtMenuBar = new MenuBar();
@@ -408,11 +414,6 @@ public final class VCLMenuBar extends Component {
 						awtMenuBar.add(new Menu(mi.getTitle()));
 				}
 			}
-
-			// let new menu provide contents, but retain reference
-			// to old menu in the actual menubar.  Bug #175
-			oldMenu.unregisterAllAWTPeers();
-			oldMenu.setDelegate(newMenu);
 		}
 
 	}
