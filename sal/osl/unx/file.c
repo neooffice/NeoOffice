@@ -441,13 +441,28 @@ oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirect
 
     rtl_string2UString( &ustrFileName, composed_name, strlen( composed_name ),
         osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
+
+	osl_systemPathMakeAbsolutePath(pDirImpl->ustrPath, ustrFileName, &ustrFilePath);
+
+    /*
+     * Fix bug 1246 by ensuring that the normalized directory name exists,
+     * otherwise use the unnormalized name.
+     */
+    struct stat aEntryStat;
+	if ( 0 > lstat_u( ustrFilePath, &aEntryStat ) )
+    {
+        rtl_string2UString( &ustrFileName, pEntry->d_name, strlen( pEntry->d_name ),
+            osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
+
+    	osl_systemPathMakeAbsolutePath(pDirImpl->ustrPath, ustrFileName, &ustrFilePath);
+    }
 #else
     /* convert file name to unicode */
     rtl_string2UString( &ustrFileName, pEntry->d_name, strlen( pEntry->d_name ),
         osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
-#endif
 
 	osl_systemPathMakeAbsolutePath(pDirImpl->ustrPath, ustrFileName, &ustrFilePath);
+#endif
 
     rtl_uString_release( ustrFileName );
 
