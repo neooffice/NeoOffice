@@ -62,7 +62,7 @@ static BOOL bInDialog = NO;
 - (void)setPrinter:(NSPrinter *)pPrinter
 {
 	// Only allow the native Cocoa dialogs to change the printer
-	if ( bInDialog )
+	if ( bInDialog && pPrinter )
 		[super setPrinter:pPrinter];
 }
 
