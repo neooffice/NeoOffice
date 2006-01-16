@@ -427,7 +427,6 @@ oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirect
 
 
 #if defined(MACOSX) && (BUILD_OS_MAJOR==10) && (BUILD_OS_MINOR>=2)
-
     // convert decomposed filename to precomposed unicode 
     char composed_name[BUFSIZ];  
     CFMutableStringRef strRef = CFStringCreateMutable (NULL, 0 );
@@ -435,18 +434,32 @@ oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirect
     CFStringNormalize( strRef, kCFStringNormalizationFormC );
     CFStringGetCString( strRef, composed_name, BUFSIZ, kCFStringEncodingUTF8 );
     CFRelease( strRef );
-    rtl_string2UString( &ustrFileName, composed_name, strlen( composed_name),
-	osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
+    rtl_string2UString( &ustrFileName, composed_name, strlen( composed_name ),
+        osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
 
+	osl_systemPathMakeAbsolutePath(pDirImpl->ustrPath, ustrFileName, &ustrFilePath);
+
+    /*
+     * Fix bug 1246 by ensuring that the normalized directory name exists,
+     * otherwise use the unnormalized name.
+     */
+    struct stat aEntryStat;
+    if ( 0 > lstat_u( ustrFilePath, &aEntryStat ) )
+    {
+        rtl_string2UString( &ustrFileName, pEntry->d_name, strlen( pEntry->d_name ),
+            osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
+
+	    osl_systemPathMakeAbsolutePath(pDirImpl->ustrPath, ustrFileName, &ustrFilePath);
+    }
 #else  // not MACOSX
     /* convert file name to unicode */
     rtl_string2UString( &ustrFileName, pEntry->d_name, strlen( pEntry->d_name ),
         osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
     OSL_ASSERT(ustrFileName != 0);
 
+	osl_systemPathMakeAbsolutePath(pDirImpl->ustrPath, ustrFileName, &ustrFilePath);
 #endif
 
-	osl_systemPathMakeAbsolutePath(pDirImpl->ustrPath, ustrFileName, &ustrFilePath);
     rtl_uString_release( ustrFileName );
 
     /* use path as directory item */
