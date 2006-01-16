@@ -95,7 +95,7 @@ public final class VCLEventQueue {
 	/**
 	 * The GC_INTERVAL constant.
 	 */
-	public final static long GC_INTERVAL = 10000;
+	public final static long GC_INTERVAL = 60000;
 
 	/**
 	 * The last adjusted mouse modifiers.

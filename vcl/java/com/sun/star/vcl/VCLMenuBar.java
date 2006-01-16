@@ -225,13 +225,6 @@ public final class VCLMenuBar extends Component {
 					frame.setMenuBar(null);
 			}
 
-			Iterator e=menus.iterator();
-			int i = 0;
-			while(e.hasNext()) {
-				VCLMenuItemData m=(VCLMenuItemData)e.next();
-				m.unregisterAWTPeer(awtMenuBar.getMenu(i++));
-			}
- 
 		 	awtMenuBar=null;
 			menus=null;
 			queue=null;
@@ -337,7 +330,6 @@ public final class VCLMenuBar extends Component {
 					// If this object is not yet a menu, insert a dummy as a
 					// placeholder otherwise insert its peer.
 					VCLMenuItemData mi = (VCLMenuItemData)menus.get(i);
-					mi.unregisterAWTPeer(oldMenuBar.getMenu(i));
 					if(mi.isMenu())
 						awtMenuBar.add((Menu)mi.createAWTPeer());
 					else

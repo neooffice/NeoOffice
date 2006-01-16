@@ -887,49 +887,6 @@ public final class VCLMenuItemData extends Component {
 	}
 
 	/**
-	 * Unregister a single AWT peer for an item.  Because menu items may
-	 * be inserted in multiple menus or multiple menubars not all the peers
-	 * may become invalid at once.  This will remove the awtPeer from the
-	 * internal tracking, free any underlying heavyweight peers for it,
-	 * and iterate through any submenus to free their peers as well.
-	 *
-	 * @param awtMI	AWT peer object that is about to be destroyed
-	 */
-	void unregisterAWTPeer(MenuItem awtMI) {
-
-		synchronized (getTreeLock()) {
-			if(delegate!=null) {
-				delegate.unregisterAWTPeer(awtMI);
-				return;
-			}
-
-			if(awtPeers.indexOf(awtMI) < 0)
-				return;
-
-			if(isSubmenu && (awtMI instanceof Menu)) {
-				Iterator e=menuItems.iterator();
-				while(e.hasNext())
-					((VCLMenuItemData)e.next()).unregisterAWTPeer(((Menu)awtMI).getItem(0));
-			}
-
-			if(awtMI instanceof VCLAWTMenuItem)
-				awtMI.removeActionListener((VCLAWTMenuItem)awtMI);
-			else if(awtMI instanceof VCLAWTCheckboxMenuItem)
-				((CheckboxMenuItem)awtMI).removeItemListener((VCLAWTCheckboxMenuItem)awtMI);
-			awtMI.setShortcut(null);
-
-			MenuContainer mc = awtMI.getParent();
-			if (mc instanceof Menu) {
-				Menu m = (Menu)mc;
-				m.remove(awtMI);
-			}
-
-			awtPeers.remove(awtMI);
-		}
-
-	}
-
-	/**
 	 * Unregister all AWT peer objects that have been created from the menu
 	 * item data. If the item data corresponds to a submenu, all of the submenu
 	 * peers will also be unregistered.
