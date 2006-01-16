@@ -554,7 +554,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 
     boost::scoped_array<JavaVMOption> sarOptions(
 #if defined USE_JAVA && defined MACOSX
-        new JavaVMOption[cOptions + 7]);
+        new JavaVMOption[cOptions + 8]);
 #else	// USE_JAVA && MACOSX
         new JavaVMOption[cOptions + 1]);
 #endif	// USE_JAVA && MACOSX
@@ -624,12 +624,14 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         options[i+5].extraInfo = NULL;
         options[i+6].optionString = "-Xmx256m";
         options[i+6].extraInfo = NULL;
+        options[i+7].optionString = "-XX:+UseParallelGC";
+        options[i+7].extraInfo = NULL;
 
         // We need to turn off some of Java 1.4's graphics optimizations as
         // they cause full screen window positioning, clipping, and image
         // drawing speed to get messed up
-        options[i+7].optionString = "-Dapple.awt.window.position.forceSafeProgrammaticPositioning=false";
-        options[i+7].extraInfo = NULL;
+        options[i+8].optionString = "-Dapple.awt.window.position.forceSafeProgrammaticPositioning=false";
+        options[i+8].extraInfo = NULL;
 #endif	// USE_JAVA && MACOSX
 
 #if OSL_DEBUG_LEVEL >= 2
@@ -645,7 +647,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 #endif	// USE_JAVA && MACOSX
     vm_args.options= options;
 #if defined USE_JAVA && defined MACOSX
-    vm_args.nOptions= cOptions + 7;
+    vm_args.nOptions= cOptions + 8;
 #else	// USE_JAVA && MACOSX
     vm_args.nOptions= cOptions + 1;
 #endif	// USE_JAVA && MACOSX
