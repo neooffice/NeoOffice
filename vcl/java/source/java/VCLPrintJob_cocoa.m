@@ -101,9 +101,7 @@
 
 		mbFinished = NO;
 		NSPrintInfo_setInDialog( YES );
-		fprintf( stderr, "Here\n");
 		[mpInfo setPrinter:[NSPrintInfo defaultPrinter]];
-		fprintf( stderr, "There\n");
 		[pPanel beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(printPanelDidEnd:returnCode:contextInfo:) contextInfo:nil];
 	}
 }
