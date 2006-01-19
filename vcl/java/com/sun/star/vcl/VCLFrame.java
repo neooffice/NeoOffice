@@ -983,11 +983,17 @@ g.dispose();
 	/**
 	 * Create and post event to end any uncommitted key input.
 	 */
-	public void endComposition() {
+	public synchronized void endComposition() {
 
-		// Do nothing as call InputContext.endComposition() on Mac OS X
-		// causes the JVM to be stuck in a weird state that prevents
-		// further input
+		if (disposed || !window.isShowing())
+			return;
+
+		// Toggle the enable input methods state of the panel instead of
+		// invoking InputContext.endComposition() as on Mac OS X the
+		// InputContext.endComposition() method does nothing
+		panel.enableInputMethods(false);
+		panel.enableInputMethods(true);
+		queue.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_ENDEXTTEXTINPUT, this, 0));
 
 	}
 
