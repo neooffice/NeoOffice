@@ -607,10 +607,6 @@ sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 		SalFrame *pFocusFrame = pSalData->mpFocusFrame;
 		if ( pFocusFrame )
 		{
-			// Make sure frame is a top-level window
-			while ( pFocusFrame->maFrameData.mpParent && pFocusFrame->maFrameData.mpParent->maFrameData.mbVisible )
-				pFocusFrame = pFocusFrame->maFrameData.mpParent;
-
 			// Ignore any AWT events while the page layout dialog is showing to
 			// emulate a modal dialog
 			void *pNSPrintInfo = getNativePrinterJob();

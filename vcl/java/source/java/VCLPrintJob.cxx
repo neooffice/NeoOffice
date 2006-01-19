@@ -266,10 +266,6 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 		SalFrame *pFocusFrame = pSalData->mpFocusFrame;
 		if ( pFocusFrame )
 		{
-			// Make sure frame is a top-level window
-			while ( pFocusFrame->maFrameData.mpParent && pFocusFrame->maFrameData.mpParent->maFrameData.mbVisible )
-				pFocusFrame = pFocusFrame->maFrameData.mpParent;
-
 			// Ignore any AWT events while the print dialog is showing to
 			// emulate a modal dialog
 			void *pNSPrintInfo = _par0->getNativePrinterJob();
