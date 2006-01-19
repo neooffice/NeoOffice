@@ -129,16 +129,9 @@ public final class VCLMenu extends Component {
 	public void checkItem(short nPos, boolean bCheck) {
 
 		synchronized (getTreeLock()) {
-			VCLMenuItemData item=null;
-			item=(VCLMenuItemData)menuData.getMenuItem(nPos);
-
-			// our peers were invalidated and need to be
-			// reconstructed.
-			if((item!=null) && item.setChecked(bCheck)) {
-				// checkbox items can't be top level menus, so we only have to
-				// worry about reinserting new peers into their parent menus
+			VCLMenuItemData item=(VCLMenuItemData)menuData.getMenuItem(nPos);
+			if(item.setChecked(bCheck))
 				item.refreshAWTPeersInParentMenus();
-			}
 		}
 
 	}

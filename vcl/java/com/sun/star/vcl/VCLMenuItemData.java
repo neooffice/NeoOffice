@@ -853,7 +853,7 @@ public final class VCLMenuItemData extends Component {
 					destPeers.add(m);
 			}
 
-			// Remove the peer's that we are moving from the source and add
+			// Remove the peers that we are moving from the source and add
 			// it to the destination
 			e=destPeers.iterator();
 			while(e.hasNext()) {
@@ -897,12 +897,6 @@ public final class VCLMenuItemData extends Component {
 			if(delegate!=null) {
 				delegate.unregisterAllAWTPeers();
 				return;
-			}
-
-			if(isSubmenu && menuItems!=null) {
-				Iterator e=menuItems.iterator();
-				while(e.hasNext())
-					((VCLMenuItemData)e.next()).unregisterAllAWTPeers();
 			}
 
 			Iterator peers=awtPeers.iterator();
