@@ -699,9 +699,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private int keyModifiersPressed = 0;
 
 	/**
-	 * The listeners set flag.
+	 * The last mouse drag event.
 	 */
-	private boolean listenersSet = false;
+	private InputMethodEvent lastInputMethodEvent = null;
 
 	/**
 	 * The native window's panel.
@@ -924,11 +924,15 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		graphics.dispose();
 		graphics = null;
 		insets = null;
+		lastInputMethodEvent = null;
 
 		// Unregister listeners
 		panel.removeFocusListener(this);
 		panel.removeKeyListener(this);
 		panel.removeInputMethodListener(this);
+		panel.removeMouseListener(this);
+		panel.removeMouseMotionListener(this);
+		panel.removeMouseWheelListener(this);
 		window.removeComponentListener(this);
 		window.removeFocusListener(this);
 		window.removeWindowListener(this);
@@ -988,12 +992,14 @@ g.dispose();
 		if (disposed || !window.isShowing())
 			return;
 
-		// Toggle the enable input methods state of the panel instead of
-		// invoking InputContext.endComposition() as on Mac OS X the
-		// InputContext.endComposition() method does nothing
-		panel.enableInputMethods(false);
-		panel.enableInputMethods(true);
-		queue.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_ENDEXTTEXTINPUT, this, 0));
+		// Invoking InputContext.endComposition() does nothing on Mac OS X
+		// and leaving uncommitted text can cause the OOo code to crash so
+		// we must temporarily commit an empty string and then redispatch
+		// the last input method
+		InputMethodEvent e = new InputMethodEvent(panel, InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, VCLFrame.defaultAttributedCharacterIterator, 0, TextHitInfo.afterOffset(0), TextHitInfo.afterOffset(0));
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_EXTTEXTINPUT, this, 0));
+		if (lastInputMethodEvent != null)
+			queue.postCachedEvent(new VCLEvent(lastInputMethodEvent, VCLEvent.SALEVENT_EXTTEXTINPUT, this, 0));
 
 	}
 
@@ -1293,6 +1299,7 @@ g.dispose();
 		if (disposed || !window.isShowing())
 			return;
 
+		lastInputMethodEvent = e;
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_EXTTEXTINPUT, this, 0));
 
 	}
