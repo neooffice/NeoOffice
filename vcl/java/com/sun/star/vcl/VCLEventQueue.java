@@ -45,6 +45,7 @@ import java.awt.event.InputEvent;
 import java.awt.event.InputMethodEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.awt.event.PaintEvent;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 
@@ -55,7 +56,7 @@ import java.lang.reflect.Method;
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public final class VCLEventQueue {
+public final class VCLEventQueue implements Runnable {
 
     /** 
      * INPUT_MOUSE constant.
@@ -175,8 +176,15 @@ public final class VCLEventQueue {
 		if (EventQueue.isDispatchThread()) {
 			try {
 				VCLEventQueue.NoExceptionsEventQueue eventQueue = (VCLEventQueue.NoExceptionsEventQueue)Toolkit.getDefaultToolkit().getSystemEventQueue();
+
+				// Post a dummy event to ensure that we don't block if there
+				// are no low priority events
+				if (eventQueue.peekEvent(PaintEvent.PAINT) == null && eventQueue.peekEvent(PaintEvent.UPDATE) == null)
+					EventQueue.invokeLater(this);
+
 				AWTEvent nextEvent = eventQueue.getNextEvent();
-				eventQueue.dispatchEvent(nextEvent);
+				if (nextEvent != null)
+					eventQueue.dispatchEvent(nextEvent);
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -374,6 +382,13 @@ public final class VCLEventQueue {
 		}
 
 	}
+
+	/**
+	 * Runnable method that performs nothing. This method is used for passing
+	 * this class to the <code>EventQueue.invokeLater()</code> method so that
+	 * we can prevent blocking in the {@link #dispatchNextEvent()} method.
+	 */
+	public void run() {}
 
 	/**
 	 * Sets the last adjusted mouse modifiers.

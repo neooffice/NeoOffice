@@ -699,11 +699,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private int keyModifiersPressed = 0;
 
 	/**
-	 * The last mouse drag event.
-	 */
-	private InputMethodEvent lastInputMethodEvent = null;
-
-	/**
 	 * The native window's panel.
 	 */
 	private VCLFrame.NoPaintPanel panel = null;
@@ -924,7 +919,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		graphics.dispose();
 		graphics = null;
 		insets = null;
-		lastInputMethodEvent = null;
 
 		// Unregister listeners
 		panel.removeFocusListener(this);
@@ -987,19 +981,13 @@ g.dispose();
 	/**
 	 * Create and post event to end any uncommitted key input.
 	 */
-	public synchronized void endComposition() {
-
-		if (disposed || !window.isShowing())
-			return;
+	public void endComposition() {
 
 		// Invoking InputContext.endComposition() does nothing on Mac OS X
-		// and leaving uncommitted text can cause the OOo code to crash so
-		// we must temporarily commit an empty string and then redispatch
-		// the last input method
-		InputMethodEvent e = new InputMethodEvent(panel, InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, VCLFrame.defaultAttributedCharacterIterator, 0, TextHitInfo.afterOffset(0), TextHitInfo.afterOffset(0));
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_EXTTEXTINPUT, this, 0));
-		if (lastInputMethodEvent != null)
-			queue.postCachedEvent(new VCLEvent(lastInputMethodEvent, VCLEvent.SALEVENT_EXTTEXTINPUT, this, 0));
+		// but we invoke it anyway in the hopes that it does do something
+		InputContext ic = window.getInputContext();
+		if (ic != null)
+			ic.endComposition();
 
 	}
 
@@ -1299,7 +1287,6 @@ g.dispose();
 		if (disposed || !window.isShowing())
 			return;
 
-		lastInputMethodEvent = e;
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_EXTTEXTINPUT, this, 0));
 
 	}
