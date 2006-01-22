@@ -397,20 +397,36 @@ fi
 
 sync
 
+showdonationpage()
+{
+    donationpageurl="$(PRODUCT_DONATION_URL)"
+    lastcheckfile="$userinstall/.lastshowdonationpage"
+    rm -f "$lastcheckfile.tmp"
+    touch -f "$lastcheckfile.tmp"
+    if [ "$lastcheckfile.tmp" -nt "$lastcheckfile" ] ; then
+        sleep 30 
+        open "$donationpageurl"
+    fi
+
+    # Cache the next check date
+    now=`date '+%s'`
+    now=`expr "$now" + 2592000`
+    touch -f -t `date -r "$now" '+%Y%m%d%H%M'` "$lastcheckfile"
+    rm -f "$lastcheckfile.tmp"
+}
+
 checkforpatches()
 {
-    soffice=`dirname "$0"`/soffice.bin
-    if [ ! -x "$soffice" -o ! -x "/usr/sbin/scutil" -o ! -x "/usr/bin/curl" ] ; then
+    if [ ! -x "/usr/sbin/scutil" -o ! -x "/usr/bin/curl" ] ; then
         return 1
     fi
 
     patchfileurl="$(PRODUCT_PATCH_CHECK_URL)"
     patchdownloadurl="$(PRODUCT_PATCH_DOWNLOAD_URL)"
-    lastcheckfile="$userinstall/.lastpatchcheck"
-    if [ ! -r "$lastcheckfile" ] ; then
-        # Don't run the patch check on the first run
-        touch -f "$lastcheckfile"
-    elif [ -z "`find "$lastcheckfile" -mtime -6 -o -mtime -5 -o -mtime -4 -o -mtime -3 -o -mtime -2 -o -mtime -1 -o -mtime 0`" ] ; then
+    lastcheckfile="$userinstall/.lastpatchcheck.1"
+    rm -f "$lastcheckfile.tmp"
+    touch -f "$lastcheckfile.tmp"
+    if [ -r "$lastcheckfile" -a "$lastcheckfile.tmp" -nt "$lastcheckfile" ] ; then
         proxies=`scutil << !
 open
 get "State:/Network/Global/Proxies"
@@ -439,14 +455,22 @@ quit
         oldproductkey=`grep "^ProductKey=" "$apphome/bootstraprc" | awk -F= '{ print $2 }'`
         oldproductpatch=`grep "^ProductPatch=" "$apphome/bootstraprc" | awk -F= '{ print $2 }'`
         if [ "$newproductkey" != "$oldproductkey" -o "$newproductpatch" != "$oldproductpatch" ] ; then 
-            sleep 15
+            sleep 60
             open "$patchdownloadurl"
         fi
-
-        # Cache the last check date
-        touch -f "$lastcheckfile"
     fi
+
+    # Cache the next check date
+    now=`date '+%s'`
+    now=`expr "$now" + 604800`
+    touch -f -t `date -r "$now" '+%Y%m%d%H%M'` "$lastcheckfile"
+    rm -f "$lastcheckfile.tmp"
 }
+
+# Check for patches
+if [ "$os" = "Darwin" -a ! -f "$apphome/.noshowdonationpage" ] ; then
+    showdonationpage >/dev/null 2>&1 &
+fi
 
 # Check for patches
 if [ "$os" = "Darwin" -a ! -f "$apphome/.nocheckforpatches" ] ; then
