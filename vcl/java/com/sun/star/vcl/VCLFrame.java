@@ -699,6 +699,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private int keyModifiersPressed = 0;
 
 	/**
+	 * The last input method event.
+	 */
+	private InputMethodEvent lastInputMethodEvent = null;
+
+	/**
 	 * The native window's panel.
 	 */
 	private VCLFrame.NoPaintPanel panel = null;
@@ -988,6 +993,9 @@ g.dispose();
 		InputContext ic = window.getInputContext();
 		if (ic != null)
 			ic.endComposition();
+
+		InputMethodEvent e = new InputMethodEvent(panel, InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, TextHitInfo.afterOffset(0), TextHitInfo.afterOffset(0));
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_EXTTEXTINPUT, this, 0));
 
 	}
 
@@ -1287,6 +1295,7 @@ g.dispose();
 		if (disposed || !window.isShowing())
 			return;
 
+		lastInputMethodEvent = e;
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_EXTTEXTINPUT, this, 0));
 
 	}
