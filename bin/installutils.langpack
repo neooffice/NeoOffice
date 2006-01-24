@@ -48,6 +48,8 @@ check_installation() {
 			return 0
 		elif [ "$productkey" = "$(PRODUCT_NAME) $(PRODUCT_PREVIOUS_VERSION)" ] ; then
 			return 0
+		elif [ "$productkey" = "$(PRODUCT_NAME) $(PRODUCT_PREVIOUS_PREVIOUS_VERSION)" ] ; then
+			return 0
 		fi
 	fi
 
