@@ -117,7 +117,7 @@ if [ -d "$2" ]; then
 	touch -f "$2"
 
 	# Turn off patch checking by default by uncommenting the following line
-	# touch -f "$2/Contents/MacOS/.nocheckforpatches"
+	touch -f "$2/Contents/MacOS/.nocheckforpatches"
 
 	# Do a full reindexing of OOo file types
 	if [ -x "/usr/bin/mdimport" ] ; then
