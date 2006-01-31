@@ -97,12 +97,13 @@ com_sun_star_vcl_VCLPrintJob::com_sun_star_vcl_VCLPrintJob() : java_lang_Object(
 		return;
 	if ( !mID )
 	{
-		char *cSignature = "()V";
+		char *cSignature = "(Lcom/sun/star/vcl/VCLEventQueue;)V";
 		mID = t.pEnv->GetMethodID( getMyClass(), "<init>", cSignature );
 	}
 	OSL_ENSURE( mID, "Unknown method id!" );
-	jobject tempObj;
-	tempObj = t.pEnv->NewObject( getMyClass(), mID );
+	jvalue args[1];
+	args[0].l = GetSalData()->mpEventQueue->getJavaObject();
+	jobject tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
 	saveRef( tempObj );
 }
 

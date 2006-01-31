@@ -105,6 +105,11 @@ public final class VCLPrintJob implements Printable, Runnable {
 	private PageFormat printPageFormat = null;
 
 	/**
+	 * The event queue.
+	 */
+	private VCLEventQueue queue = null;
+
+	/**
 	 * The print started flag.
 	 */
 	private boolean printStarted = false;
@@ -117,7 +122,11 @@ public final class VCLPrintJob implements Printable, Runnable {
 	/**
 	 * Constructs a new <code>VCLPrintJob</code> instance.
 	 */
-	public VCLPrintJob() {}
+	public VCLPrintJob(VCLEventQueue q) {
+
+		queue = q;
+
+	}
 
 	/**
 	 * Abort the printer job.
@@ -174,6 +183,8 @@ public final class VCLPrintJob implements Printable, Runnable {
 
 		if (pageFormat != null)
 			pageFormat.setEditable(true);
+
+		queue.setPrinting(false);
 
 	}
 
@@ -291,7 +302,6 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 */
 	public boolean startJob(VCLPageFormat p, String n, float s) {
 
-		// Detect if the user cancelled the print dialog
 		if (!jobStarted) {
 			pageFormat = p;
 			scale = s;
@@ -301,6 +311,8 @@ public final class VCLPrintJob implements Printable, Runnable {
 			pageFormat.setEditable(false);
 			jobStarted = true;
 		}
+
+		queue.setPrinting(jobStarted);
 
 		return jobStarted;
 

@@ -114,6 +114,11 @@ public final class VCLEventQueue implements Runnable {
 	private VCLEventQueue.Queue[] queueList = new VCLEventQueue.Queue[2];
 
 	/**
+	 * The printing flag.
+	 */
+	private boolean printing = false;
+
+	/**
 	 * Construct a VCLEventQueue and make it the system queue.
 	 */
 	public VCLEventQueue() {
@@ -260,11 +265,16 @@ public final class VCLEventQueue implements Runnable {
 	 */
 	public void postCachedEvent(VCLEvent event) {
 
+		int id = event.getID();
+		if (printing && id == VCLEvent.SALEVENT_SHUTDOWN) {
+			event.cancelShutdown();
+			return;
+		}
+
 		VCLEventQueue.Queue queue = (event.isAWTEvent() ? queueList[0] : queueList[1]);
 
 		// Add the event to the cache
 		VCLEventQueue.QueueItem newItem = new VCLEventQueue.QueueItem(event);
-		int id = newItem.event.getID();
 		synchronized (queueList) {
 			// Coalesce events
 			if (id == VCLEvent.SALEVENT_CLOSE) {
@@ -398,6 +408,42 @@ public final class VCLEventQueue implements Runnable {
 	void setLastAdjustedMouseModifiers(int m) {
 
 		lastAdjustedMouseModifiers = m;
+
+	}
+
+	/**
+	 * Sets the printing flag.
+	 *
+	 * @param p <code>true</code> if printing has started otherwise
+	 *  <code>false</code>
+	 */
+	void setPrinting(boolean p) {
+
+		printing = p;
+
+		synchronized (queueList) {
+			for (int i = 0; i < queueList.length; i++) {
+				VCLEventQueue.Queue queue = queueList[i];
+
+				if (queue.head == null)
+					continue;
+
+				VCLEventQueue.QueueItem eqi = queue.head;
+				while (eqi != null) {
+					if (eqi.event.getID() == VCLEvent.SALEVENT_SHUTDOWN) {
+						eqi.event.cancelShutdown();
+						eqi.remove = true;
+					}
+					eqi = eqi.next;
+				}
+				// Purge removed events from the front of the queue
+				while (queue.head != null && queue.head.remove)
+					queue.head = queue.head.next;
+				if (queue.head == null)
+					queue.tail = null;
+					
+			}
+		}
 
 	}
 
