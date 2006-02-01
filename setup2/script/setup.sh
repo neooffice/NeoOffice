@@ -92,6 +92,13 @@ while [ ! -z "$1" ] ; do
     shift
 done
 
+# Make sure that there is a /tmp directory
+if [ "$os" = "Darwin" ] ; then
+    if [ ! -d "/tmp" -a -d "/private/tmp" ] ; then
+        ln -sf "private/tmp" "/tmp"
+    fi
+fi
+
 # Create user installation directory
 configdir="$userinstall/config"
 registrydir="$userinstall/registry/data/org/openoffice"
@@ -387,13 +394,6 @@ if [ -d "$contentshome" ] ; then
     fi
 fi
 echo "$contentshome" > "$lastcontentshomefile"
-
-# Make sure that there is a /tmp directory
-if [ "$os" = "Darwin" ] ; then
-    if [ ! -d "/tmp" -a -d "/private/tmp" ] ; then
-        ln -sf "private/tmp" "/tmp"
-    fi
-fi
 
 sync
 
