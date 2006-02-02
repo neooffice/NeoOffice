@@ -1,5 +1,4 @@
-mkdir: %_DEST%\bin%_EXT%\remote
-mkdir: %_DEST%\lib%_EXT%\remote
+mkdir: %COMMON_DEST%\bin%_EXT%\hid
 mkdir: %_DEST%\inc%_EXT%\sv
 mkdir: %_DEST%\inc%_EXT%\tools
 mkdir: %_DEST%\inc%_EXT%\uno
@@ -7,19 +6,16 @@ mkdir: %_DEST%\inc%_EXT%\uno\awt
 mkdir: %_DEST%\inc%_EXT%\vcl
 mkdir: %_DEST%\inc%_EXT%\vcl\unx
 
-..\%__SRC%\bin\remote\vcl?????.dll %_DEST%\bin%_EXT%\remote\vcl?????.dll
-..\%__SRC%\bin\vcl?????.res %_DEST%\bin%_EXT%\vcl?????.res
+..\%COMMON_OUTDIR%\misc\*.hid %COMMON_DEST%\bin%_EXT%\hid\*.hid
+..\%__SRC%\bin\vcl*.res %_DEST%\bin%_EXT%\vcl*.res
 ..\%__SRC%\bin\vcl?????.dll %_DEST%\bin%_EXT%\vcl?????.dll
 ..\%__SRC%\bin\vcl?????.sym %_DEST%\bin%_EXT%\vcl?????.sym
-..\%__SRC%\bin\getstyle-gnome %_DEST%\bin%_EXT%\getstyle-gnome
-..\%__SRC%\bin\msgbox-gnome %_DEST%\bin%_EXT%\msgbox-gnome
 ..\%__SRC%\lib\libvcl*.so %_DEST%\lib%_EXT%\libvcl*.so
 ..\%__SRC%\lib\*.dylib %_DEST%\lib%_EXT%\*.dylib
 ..\%__SRC%\lib\app16.lib %_DEST%\lib%_EXT%\app16.lib
 ..\%__SRC%\lib\gdi16.lib %_DEST%\lib%_EXT%\gdi16.lib
 ..\%__SRC%\lib\isv.lib %_DEST%\lib%_EXT%\isv.lib
 ..\%__SRC%\lib\ivcl.lib %_DEST%\lib%_EXT%\ivcl.lib
-..\%__SRC%\lib\remote\lib*.so %_DEST%\lib%_EXT%\remote\lib*.so
 ..\%__SRC%\lib\vcl.lib %_DEST%\lib%_EXT%\vcl.lib
 ..\%__SRC%\misc\vcl?????.map %_DEST%\bin%_EXT%\vcl?????.map
 ..\%__SRC%\obj\main.obj %_DEST%\lib%_EXT%\xsvmain.obj
@@ -31,17 +27,11 @@ mkdir: %_DEST%\inc%_EXT%\vcl\unx
 ..\%__SRC%\slo\svdll.obj %_DEST%\lib%_EXT%\xsvdll.obj
 ..\%__SRC%\class\vcl.jar %_DEST%\bin%_EXT%\vcl.jar
 
-hedabu: ..\%__SRC%\inc\*.h %_DEST%\inc%_EXT%\vcl\*.h
-hedabu: ..\%__SRC%\inc\*.hxx %_DEST%\inc%_EXT%\vcl\*.hxx
-hedabu: ..\%__SRC%\inc\convert.hxx %_DEST%\inc%_EXT%\vcl\convert.hxx
 hedabu: ..\inc\accel.hxx %_DEST%\inc%_EXT%\vcl\accel.hxx
-hedabu: ..\inc\access.hxx %_DEST%\inc%_EXT%\vcl\access.hxx
-hedabu: ..\inc\accmgr.hxx %_DEST%\inc%_EXT%\vcl\accmgr.hxx
 hedabu: ..\inc\alpha.hxx %_DEST%\inc%_EXT%\vcl\alpha.hxx
 hedabu: ..\inc\animate.hxx %_DEST%\inc%_EXT%\vcl\animate.hxx
 hedabu: ..\inc\apptypes.hxx %_DEST%\inc%_EXT%\vcl\apptypes.hxx
 hedabu: ..\inc\bitmap.hxx %_DEST%\inc%_EXT%\vcl\bitmap.hxx
-hedabu: ..\inc\bitmap.inl %_DEST%\inc%_EXT%\vcl\bitmap.inl
 hedabu: ..\inc\bitmapex.hxx %_DEST%\inc%_EXT%\vcl\bitmapex.hxx
 hedabu: ..\inc\bmpacc.hxx %_DEST%\inc%_EXT%\vcl\bmpacc.hxx
 hedabu: ..\inc\btndlg.hxx %_DEST%\inc%_EXT%\vcl\btndlg.hxx
@@ -49,17 +39,17 @@ hedabu: ..\inc\button.hxx %_DEST%\inc%_EXT%\vcl\button.hxx
 hedabu: ..\inc\button.hxx %_DEST%\inc%_EXT%\vcl\imagebtn.hxx
 hedabu: ..\inc\cmdevt.h %_DEST%\inc%_EXT%\vcl\cmdevt.h
 hedabu: ..\inc\cmdevt.hxx %_DEST%\inc%_EXT%\vcl\cmdevt.hxx
-hedabu: ..\inc\color.hxx %_DEST%\inc%_EXT%\vcl\color.hxx
 hedabu: ..\inc\combobox.h %_DEST%\inc%_EXT%\vcl\combobox.h
 hedabu: ..\inc\combobox.hxx %_DEST%\inc%_EXT%\vcl\combobox.hxx
-hedabu: ..\inc\config.hxx %_DEST%\inc%_EXT%\vcl\config.hxx
 hedabu: ..\inc\ctrl.hxx %_DEST%\inc%_EXT%\vcl\ctrl.hxx
 hedabu: ..\inc\cursor.hxx %_DEST%\inc%_EXT%\vcl\cursor.hxx
 hedabu: ..\inc\cvtgrf.hxx %_DEST%\inc%_EXT%\vcl\cvtgrf.hxx
 hedabu: ..\inc\cvtsvm.hxx %_DEST%\inc%_EXT%\vcl\cvtsvm.hxx
 hedabu: ..\inc\decoview.hxx %_DEST%\inc%_EXT%\vcl\decoview.hxx
 hedabu: ..\inc\dialog.hxx %_DEST%\inc%_EXT%\vcl\dialog.hxx
+hedabu: ..\inc\dockingarea.hxx %_DEST%\inc%_EXT%\vcl\dockingarea.hxx
 hedabu: ..\inc\dockwin.hxx %_DEST%\inc%_EXT%\vcl\dockwin.hxx
+hedabu: ..\inc\dllapi.h %_DEST%\inc%_EXT%\vcl\dllapi.h
 hedabu: ..\inc\edit.hxx %_DEST%\inc%_EXT%\vcl\edit.hxx
 hedabu: ..\inc\event.hxx %_DEST%\inc%_EXT%\vcl\event.hxx
 hedabu: ..\inc\field.hxx %_DEST%\inc%_EXT%\vcl\field.hxx
@@ -74,8 +64,6 @@ hedabu: ..\inc\font.hxx %_DEST%\inc%_EXT%\vcl\font.hxx
 hedabu: ..\inc\fontcvt.hxx %_DEST%\inc%_EXT%\vcl\fontcvt.hxx
 hedabu: ..\inc\fonttype.hxx %_DEST%\inc%_EXT%\vcl\fonttype.hxx
 hedabu: ..\inc\gdimtf.hxx %_DEST%\inc%_EXT%\vcl\gdimtf.hxx
-hedabu: ..\inc\gdiobj.hxx %_DEST%\inc%_EXT%\vcl\gdiobj.hxx
-hedabu: ..\inc\gen.hxx %_DEST%\inc%_EXT%\vcl\gen.hxx
 hedabu: ..\inc\gfxlink.hxx %_DEST%\inc%_EXT%\vcl\gfxlink.hxx
 hedabu: ..\inc\gradient.hxx %_DEST%\inc%_EXT%\vcl\gradient.hxx
 hedabu: ..\inc\graph.h %_DEST%\inc%_EXT%\vcl\graph.h
@@ -89,10 +77,10 @@ hedabu: ..\inc\imagebtn.hxx %_DEST%\inc%_EXT%\vcl\imagebtn.hxx
 hedabu: ..\inc\imgcons.hxx %_DEST%\inc%_EXT%\vcl\imgcons.hxx
 hedabu: ..\inc\imgctrl.hxx %_DEST%\inc%_EXT%\vcl\imgctrl.hxx
 hedabu: ..\inc\inputctx.hxx %_DEST%\inc%_EXT%\vcl\inputctx.hxx
+hedabu: ..\inc\javachild.hxx %_DEST%\inc%_EXT%\vcl\javachild.hxx
 hedabu: ..\inc\jobset.hxx %_DEST%\inc%_EXT%\vcl\jobset.hxx
 hedabu: ..\inc\keycod.hxx %_DEST%\inc%_EXT%\vcl\keycod.hxx
 hedabu: ..\inc\keycodes.hxx %_DEST%\inc%_EXT%\vcl\keycodes.hxx
-hedabu: ..\inc\line.hxx %_DEST%\inc%_EXT%\vcl\line.hxx
 hedabu: ..\inc\lineinfo.hxx %_DEST%\inc%_EXT%\vcl\lineinfo.hxx
 hedabu: ..\inc\longcurr.hxx %_DEST%\inc%_EXT%\vcl\longcurr.hxx
 hedabu: ..\inc\lstbox.h %_DEST%\inc%_EXT%\vcl\lstbox.h
@@ -112,26 +100,20 @@ hedabu: ..\inc\outdev.hxx %_DEST%\inc%_EXT%\vcl\outdev.hxx
 hedabu: ..\inc\outdev3d.hxx %_DEST%\inc%_EXT%\vcl\outdev3d.hxx
 hedabu: ..\inc\pal.hxx %_DEST%\inc%_EXT%\vcl\pal.hxx
 hedabu: ..\inc\pointr.hxx %_DEST%\inc%_EXT%\vcl\pointr.hxx
-hedabu: ..\inc\poly.hxx %_DEST%\inc%_EXT%\vcl\poly.hxx
 hedabu: ..\inc\print.hxx %_DEST%\inc%_EXT%\vcl\print.hxx
 hedabu: ..\inc\prndlg.hxx %_DEST%\inc%_EXT%\vcl\prndlg.hxx
 hedabu: ..\inc\prntypes.hxx %_DEST%\inc%_EXT%\vcl\prntypes.hxx
 hedabu: ..\inc\ptrstyle.hxx %_DEST%\inc%_EXT%\vcl\ptrstyle.hxx
-hedabu: ..\inc\rc.h %_DEST%\inc%_EXT%\vcl\rc.h
-hedabu: ..\inc\rc.hxx %_DEST%\inc%_EXT%\vcl\rc.hxx
-hedabu: ..\inc\rcid.h %_DEST%\inc%_EXT%\vcl\rcid.h
-hedabu: ..\inc\rcown.hxx %_DEST%\inc%_EXT%\vcl\rcown.hxx
 hedabu: ..\inc\regband.hxx %_DEST%\inc%_EXT%\vcl\regband.hxx
 hedabu: ..\inc\region.hxx %_DEST%\inc%_EXT%\vcl\region.hxx
-hedabu: ..\inc\resary.hxx %_DEST%\inc%_EXT%\vcl\resary.hxx
-hedabu: ..\inc\resid.hxx %_DEST%\inc%_EXT%\vcl\resid.hxx
-hedabu: ..\inc\resmgr.hxx %_DEST%\inc%_EXT%\vcl\resmgr.hxx
 hedabu: ..\inc\rversion.h %_DEST%\inc%_EXT%\vcl\rversion.h
 hedabu: ..\inc\salbtype.hxx %_DEST%\inc%_EXT%\vcl\salbtype.hxx
 hedabu: ..\inc\salctype.hxx %_DEST%\inc%_EXT%\vcl\salctype.hxx
 hedabu: ..\inc\salgtype.hxx %_DEST%\inc%_EXT%\vcl\salgtype.hxx
 hedabu: ..\inc\salotype.hxx %_DEST%\inc%_EXT%\vcl\salotype.hxx
 hedabu: ..\inc\salstype.hxx %_DEST%\inc%_EXT%\vcl\salstype.hxx
+hedabu: ..\inc\salnativewidgets.hxx %_DEST%\inc%_EXT%\vcl\salnativewidgets.hxx
+hedabu: ..\unx\inc\salnativewidgets.h %_DEST%\inc%_EXT%\vcl\salnativewidgets.h
 hedabu: ..\inc\scrbar.hxx %_DEST%\inc%_EXT%\vcl\scrbar.hxx
 hedabu: ..\inc\seleng.hxx %_DEST%\inc%_EXT%\vcl\seleng.hxx
 hedabu: ..\inc\settings.hxx %_DEST%\inc%_EXT%\vcl\settings.hxx
@@ -152,7 +134,6 @@ hedabu: ..\inc\symbol.hxx %_DEST%\inc%_EXT%\vcl\symbol.hxx
 hedabu: ..\inc\syschild.hxx %_DEST%\inc%_EXT%\vcl\syschild.hxx
 hedabu: ..\inc\sysdata.hxx %_DEST%\inc%_EXT%\vcl\sysdata.hxx
 hedabu: ..\inc\sysdlg.hxx %_DEST%\inc%_EXT%\vcl\sysdlg.hxx
-hedabu: ..\inc\system.hxx %_DEST%\inc%_EXT%\vcl\system.hxx
 hedabu: ..\inc\syswin.hxx %_DEST%\inc%_EXT%\vcl\syswin.hxx
 hedabu: ..\inc\tab.hxx %_DEST%\inc%_EXT%\vcl\tab.hxx
 hedabu: ..\inc\tabctrl.hxx %_DEST%\inc%_EXT%\vcl\tabctrl.hxx
@@ -163,9 +144,9 @@ hedabu: ..\inc\timer.hxx %_DEST%\inc%_EXT%\vcl\timer.hxx
 hedabu: ..\inc\toolbox.hxx %_DEST%\inc%_EXT%\vcl\toolbox.hxx
 hedabu: ..\inc\uniqid.hxx %_DEST%\inc%_EXT%\vcl\uniqid.hxx
 hedabu: ..\inc\unowrap.hxx %_DEST%\inc%_EXT%\vcl\unowrap.hxx
+hedabu: ..\inc\canvastools.hxx %_DEST%\inc%_EXT%\vcl\canvastools.hxx
 hedabu: ..\inc\vclenum.hxx %_DEST%\inc%_EXT%\vcl\vclenum.hxx
 hedabu: ..\inc\vclevent.hxx %_DEST%\inc%_EXT%\vcl\vclevent.hxx
-hedabu: ..\inc\vector2d.hxx %_DEST%\inc%_EXT%\vcl\vector2d.hxx
 hedabu: ..\inc\virdev.hxx %_DEST%\inc%_EXT%\vcl\virdev.hxx
 hedabu: ..\inc\waitobj.hxx %_DEST%\inc%_EXT%\vcl\waitobj.hxx
 hedabu: ..\inc\wall.hxx %_DEST%\inc%_EXT%\vcl\wall.hxx
@@ -183,5 +164,12 @@ hedabu: ..\inc\dndhelp.hxx %_DEST%\inc%_EXT%\vcl\dndhelp.hxx
 hedabu: ..\inc\pdfwriter.hxx %_DEST%\inc%_EXT%\vcl\pdfwriter.hxx
 hedabu: ..\inc\controllayout.hxx %_DEST%\inc%_EXT%\vcl\controllayout.hxx
 hedabu: ..\inc\introwin.hxx %_DEST%\inc%_EXT%\vcl\introwin.hxx
+hedabu: ..\inc\abstdlg.hxx %_DEST%\inc%_EXT%\vcl\abstdlg.hxx
+hedabu: ..\inc\extoutdevdata.hxx %_DEST%\inc%_EXT%\vcl\extoutdevdata.hxx
+hedabu: ..\inc\pdfextoutdevdata.hxx %_DEST%\inc%_EXT%\vcl\pdfextoutdevdata.hxx
+hedabu: ..\inc\pngread.hxx %_DEST%\inc%_EXT%\vcl\pngread.hxx
+hedabu: ..\inc\pngwrite.hxx %_DEST%\inc%_EXT%\vcl\pngwrite.hxx
+hedabu: ..\inc\smartid.hxx %_DEST%\inc%_EXT%\vcl\smartid.hxx
+hedabu: ..\inc\configsettings.hxx %_DEST%\inc%_EXT%\vcl\configsettings.hxx
 
 dos: sh -c "if test %OS% = MACOSX; then create-bundle %_DEST%\lib%_EXT%\*.dylib; fi"
