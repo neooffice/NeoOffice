@@ -77,7 +77,7 @@ static const void *ReleaseBytePointerCallback( void *pInfo, const void *pPointer
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pEnv, jobject object, jintArray _par0, jint _par1, jint _par2, jint _par3, jint _par4, jint _par5, jint _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10 )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pEnv, jobject object, jintArray _par0, jint _par1, jint _par2, jint _par3, jint _par4, jint _par5, jint _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14 )
 {
 	static CGDataProviderDirectAccessCallbacks aProviderCallbacks = { GetBytePointerCallback, ReleaseBytePointerCallback, NULL, NULL };
 
@@ -164,7 +164,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pE
 	if ( aImage )
 	{
 		aCGImageList.push_back( aImage );
-		CGImageRef_drawInRect( aImage, _par7, _par8, _par9, _par10 );
+		CGImageRef_drawInRect( aImage, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14 );
 	}
 	else
 	{
@@ -210,7 +210,7 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 			// Register the native methods for our class
 			JNINativeMethod pMethods[3]; 
 			pMethods[0].name = "drawBitmap0";
-			pMethods[0].signature = "([IIIIIIIFFFF)V";
+			pMethods[0].signature = "([IIIIIIIFFFFFFFF)V";
 			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawBitmap0;
 			pMethods[1].name = "drawEPS0";
 			pMethods[1].signature = "(JJFFFF)V";

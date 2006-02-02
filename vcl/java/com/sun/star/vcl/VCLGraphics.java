@@ -346,7 +346,7 @@ public final class VCLGraphics {
 	/**
 	 * The single pixel buffer.
 	 */
-	private BufferedImage singlePixelImage = null;
+	private VCLBitmap singlePixelBitmap = null;
 
 	/**
 	 * The cached clipping area.
@@ -496,7 +496,7 @@ public final class VCLGraphics {
 		image = null;
 		frame = null;
 		pageFormat = null;
-		singlePixelImage = null;
+		singlePixelBitmap = null;
 		userClip = null;
 		userClipList = null;
 
@@ -650,9 +650,9 @@ public final class VCLGraphics {
 					Rectangle bounds = pageFormat.getImageableBounds();
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {
-						g.setClip((Rectangle)clipRects.next());
-						// Note: the bitmap needs to be are flipped
-						drawBitmap0(bmp.getData(), bmp.getWidth(), bmp.getHeight(), srcX, srcY, srcWidth, srcHeight, scaleX * (bounds.x + destX), scaleY * (bounds.y + destY + destHeight), scaleX * destWidth, scaleY * destHeight * -1);
+						Rectangle clip = (Rectangle)clipRects.next();
+						// Note: the bitmap needs to be flipped
+						drawBitmap0(bmp.getData(), bmp.getWidth(), bmp.getHeight(), srcX, srcY, srcWidth, srcHeight, scaleX * (bounds.x + destX), scaleY * (bounds.y + destY + destHeight), scaleX * destWidth, scaleY * destHeight * -1, scaleX * (bounds.x + clip.x), scaleY * (bounds.y + clip.y + clip.height), scaleX * clip.width, scaleY * clip.height * -1);
 					}
 				}
 				else {
@@ -768,8 +768,12 @@ public final class VCLGraphics {
 	 * @param destY the y coordinate of the graphics to draw to
 	 * @param destWidth the width of the graphics to copy to
 	 * @param destHeight the height of the graphics to copy to
+	 * @param clipX the x coordinate of the graphics to clip to
+	 * @param clipY the y coordinate of the graphics to clip to
+	 * @param clipWidth the width of the graphics to clip to
+	 * @param clipHeight the height of the graphics to clip to
 	 */
-	native void drawBitmap0(int[] bmpData, int width, int height, int srcX, int srcY, int srcWidth, int srcHeight, float destX, float destY, float destWidth, float destHeight);
+	native void drawBitmap0(int[] bmpData, int width, int height, int srcX, int srcY, int srcWidth, int srcHeight, float destX, float destY, float destWidth, float destHeight, float clipX, float clipY, float clipWidth, float clipHeight);
 
 	/**
 	 * Draws specified EPS data to the underlying graphics.
@@ -1426,15 +1430,19 @@ public final class VCLGraphics {
 			g.dispose();
 		}
 
-		double fScaleX = font.getScaleX();
-		if (fScaleX != 1.0) {
-			if ((glyphOrientation & VCLGraphics.GF_ROTMASK) != 0)
-				bounds = new Rectangle2D.Double(bounds.getX(), bounds.getY() * fScaleX, bounds.getWidth(), bounds.getHeight() * fScaleX);
-			else
-				bounds = new Rectangle2D.Double(bounds.getX() * fScaleX, bounds.getY(), bounds.getWidth() * fScaleX, bounds.getHeight());
+		if (bounds != null) {
+			double fScaleX = font.getScaleX();
+			if (fScaleX != 1.0) {
+				if ((glyphOrientation & VCLGraphics.GF_ROTMASK) != 0)
+					bounds = new Rectangle2D.Double(bounds.getX(), bounds.getY() * fScaleX, bounds.getWidth(), bounds.getHeight() * fScaleX);
+				else
+					bounds = new Rectangle2D.Double(bounds.getX() * fScaleX, bounds.getY(), bounds.getWidth() * fScaleX, bounds.getHeight());
+			}
+
+			return bounds.getBounds();
 		}
 
-		return bounds.getBounds();
+		return null;
 
 	}
 
@@ -1521,12 +1529,13 @@ public final class VCLGraphics {
 			if (g != null) {
 				try {
 					g.setComposite(VCLGraphics.copyComposite);
-					if (singlePixelImage == null)
-						singlePixelImage = g.getDeviceConfiguration().createCompatibleImage(1, 1);
-					VCLGraphics.copyComposite.setRaster(singlePixelImage.getRaster());
+					if (singlePixelBitmap == null)
+						singlePixelBitmap = new VCLBitmap(1, 1, bitCount);
+					BufferedImage i = singlePixelBitmap.getImage();
+					VCLGraphics.copyComposite.setRaster(i.getRaster());
 					g.setClip(x, y, 1, 1);
-					g.drawImage(singlePixelImage, x, y, x + 1, y + 1, 0, 0, 1, 1, null);
-					pixel = singlePixelImage.getRGB(0, 0);
+					g.drawImage(i, x, y, x + 1, y + 1, 0, 0, 1, 1, null);
+					pixel = i.getRGB(0, 0);
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
@@ -1823,13 +1832,24 @@ public final class VCLGraphics {
 			Graphics2D g = getGraphics();
 			if (g != null) {
 				try {
-					if (xor)
-						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
-					if (singlePixelImage == null)
-						singlePixelImage = g.getDeviceConfiguration().createCompatibleImage(1, 1);
-					singlePixelImage.setRGB(0, 0, color);
-					g.setClip(x, y, 1, 1);
-					g.drawImage(singlePixelImage, x, y, x + 1, y + 1, 0, 0, 1, 1, null);
+					if (singlePixelBitmap == null)
+						singlePixelBitmap = new VCLBitmap(1, 1, bitCount);
+					BufferedImage i = singlePixelBitmap.getImage();
+					i.setRGB(0, 0, color);
+					if (graphics != null) {
+						AffineTransform transform = g.getTransform();
+						float scaleX = (float)transform.getScaleX();
+						float scaleY = (float)transform.getScaleY();
+						Rectangle bounds = pageFormat.getImageableBounds();
+						// Note: the bitmap needs to be flipped
+						drawBitmap0(singlePixelBitmap.getData(), singlePixelBitmap.getWidth(), singlePixelBitmap.getHeight(), 0, 0, 1, 1, scaleX * (bounds.x + x), scaleY * (bounds.y + y), scaleX, scaleY * -1, scaleX * (bounds.x + x), scaleY * (bounds.y + y), scaleX, scaleY * -1);
+					}
+					else {
+						if (xor)
+							g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
+						g.setClip(x, y, 1, 1);
+						g.drawImage(i, x, y, x + 1, y + 1, 0, 0, 1, 1, null);
+					}
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
@@ -1895,11 +1915,11 @@ public final class VCLGraphics {
 	 */
 	final class PageQueue {
 
+		VCLGraphics.PageQueueItem drawingHead = null;
+
+		VCLGraphics.PageQueueItem drawingTail = null;
+
 		VCLGraphics graphics = null;
-
-		VCLGraphics.PageQueueItem head = null;
-
-		VCLGraphics.PageQueueItem tail = null;
 
 		PageQueue(VCLGraphics g) {
 
@@ -1912,9 +1932,9 @@ public final class VCLGraphics {
 			// Release any native bitmaps
 			VCLGraphics.releaseNativeBitmaps();
 
+			drawingHead = null;
+			drawingTail = null;
 			graphics = null;
-			head = null;
-			tail = null;
 
 		}
 
@@ -1923,22 +1943,22 @@ public final class VCLGraphics {
 			graphics.pageQueue = null;
 
 			// Invoke all of the queued drawing operations
-			while (head != null) {
-				graphics.userClip = head.clip;
-				graphics.userClipList = head.clipList;
+			while (drawingHead != null) {
+				graphics.userClip = drawingHead.clip;
+				graphics.userClipList = drawingHead.clipList;
 				try {
-					head.method.invoke(graphics, head.params);
+					drawingHead.method.invoke(graphics, drawingHead.params);
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
 				}
 
-				VCLGraphics.PageQueueItem i = head;
-				head = head.next;
+				VCLGraphics.PageQueueItem i = drawingHead;
+				drawingHead = drawingHead.next;
 				i.next = null;
 			}
+			drawingTail = null;
 
-			tail = null;
 			graphics = null;
 
 		}
@@ -1951,13 +1971,14 @@ public final class VCLGraphics {
 				i.clipList = new LinkedList(graphics.userClipList);
 			}
 
-			if (head != null) {
-				tail.next = i;
-				tail = i;
+			if (drawingHead != null) {
+				drawingTail.next = i;
+				drawingTail = i;
 			}
 			else {
-				head = tail = i;
+				drawingHead = drawingTail = i;
 			}
+
 		}
 
 	}

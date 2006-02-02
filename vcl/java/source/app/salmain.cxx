@@ -72,10 +72,13 @@ int main( int argc, char *argv[] )
 
 	// Assign command's directory to PATH environment variable
 	ByteString aPath( getenv( "PATH" ) );
-	if ( aCmdPath.Len() )
+	ByteString aStandardPath( aCmdPath );
+	aStandardPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
+	aStandardPath += ByteString( "/bin:/sbin:/usr/bin:/usr/sbin" );
+	if ( aPath.CompareTo( aStandardPath, aStandardPath.Len() ) != COMPARE_EQUAL || ( aPath.Len() > aStandardPath.Len() && aPath.GetChar( aStandardPath.Len() ) != ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 ).GetChar( 0 ) ) )
 	{
 		ByteString aTmpPath( "PATH=" );
-		aTmpPath += aCmdPath;
+		aTmpPath += aStandardPath;
 		if ( aPath.Len() )
 		{
 			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
@@ -84,24 +87,57 @@ int main( int argc, char *argv[] )
 		putenv( aTmpPath.GetBuffer() );
 	}
 
-	// Assign command's directory to DYLD_LIBRARY_PATH environment variable
-	ByteString aLibPath( getenv( "DYLD_LIBRARY_PATH" ) );
-	if ( aCmdPath.Len() )
+	// Assign command's directory and DYLD_LIBRARY_PATH to
+	// DYLD_FALLBACK_LIBRARY_PATH. Also, fix bug 1198 and eliminate
+	// "libzip.jnilib not found" crashes by unsetting DYLD_FRAMEWORK_PATH and
+	// DYLD_LIBRARY_PATH.
+	bool bRestart = false;
+	char *pFrameworkPath = getenv( "DYLD_FRAMEWORK_PATH" );
+	if ( pFrameworkPath )
 	{
-		ByteString aTmpPath( "DYLD_LIBRARY_PATH=" );
+		ByteString aFrameworkPath( pFrameworkPath );
+		ByteString aFallbackFrameworkPath( getenv( "DYLD_FALLBACK_LIBRARY_PATH" ) );
+		if ( aFallbackFrameworkPath.Len() )
+		{
+			aFrameworkPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
+			aFrameworkPath += aFallbackFrameworkPath;
+		}
+		if ( aFrameworkPath.Len() )
+		{
+			ByteString aTmpPath( "DYLD_FALLBACK_FRAMEWORK_PATH=" );
+			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
+			aTmpPath += aFrameworkPath;
+			putenv( aTmpPath.GetBuffer() );
+		}
+		unsetenv( "DYLD_FRAMEWORK_PATH" );
+		bRestart = true;
+	}
+	char *pLibPath = getenv( "DYLD_LIBRARY_PATH" );
+	ByteString aFallbackLibPath( getenv( "DYLD_FALLBACK_LIBRARY_PATH" ) );
+	if ( pLibPath || aFallbackLibPath.CompareTo( aCmdPath, aCmdPath.Len() ) != COMPARE_EQUAL || ( aFallbackLibPath.Len() > aCmdPath.Len() && aFallbackLibPath.GetChar( aCmdPath.Len() ) != ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 ).GetChar( 0 ) ) )
+	{
+		ByteString aTmpPath( "DYLD_FALLBACK_LIBRARY_PATH=" );
 		aTmpPath += aCmdPath;
+		ByteString aLibPath( pLibPath );
 		if ( aLibPath.Len() )
 		{
 			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
 			aTmpPath += aLibPath;
 		}
+		if ( aFallbackLibPath.Len() )
+		{
+			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
+			aTmpPath += aFallbackLibPath;
+		}
 		putenv( aTmpPath.GetBuffer() );
-		// Restart if necessary since most library path changes don't have
-		// any affect after the application has already started on most
-		// platforms
-		if ( aLibPath.GetToken( 0, ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 ).GetChar( 0 ) ).CompareTo( aCmdPath, aCmdPath.Len() ) != COMPARE_EQUAL )
-			execv( pCmdPath, argv );
+		unsetenv( "DYLD_LIBRARY_PATH" );
+		bRestart = true;
 	}
+
+	// Restart if necessary since most library path changes don't have any
+	// effect after the application has already started on most platforms
+	if ( bRestart )
+		execv( pCmdPath, argv );
 
 	SVMain();
 

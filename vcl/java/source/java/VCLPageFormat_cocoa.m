@@ -62,7 +62,7 @@ static BOOL bInDialog = NO;
 - (void)setPrinter:(NSPrinter *)pPrinter
 {
 	// Only allow the native Cocoa dialogs to change the printer
-	if ( bInDialog )
+	if ( bInDialog && pPrinter )
 		[super setPrinter:pPrinter];
 }
 
@@ -134,16 +134,6 @@ static BOOL bInDialog = NO;
 	{
 		if ( [mpInfo orientation] != mnOrientation )
 			[mpInfo setOrientation:mnOrientation ];
-
-		// Set the scaling factor to 100% until we can accurately implement
-		// scaling in the Java printing code
-		NSMutableDictionary *pDict = [mpInfo dictionary];
-		if ( pDict )
-		{
-			NSNumber *pNum = [NSNumber numberWithFloat:1.0];
-			if ( pNum )
-				[pDict setObject:pNum forKey:NSPrintScalingFactor];
-        }
 
 		mbFinished = NO;
 		[VCLPrintInfo setInDialog:YES];

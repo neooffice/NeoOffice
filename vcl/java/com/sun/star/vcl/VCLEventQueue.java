@@ -36,11 +36,16 @@
 package com.sun.star.vcl;
 
 import java.awt.AWTEvent;
+import java.awt.Component;
 import java.awt.EventQueue;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
+import java.awt.Window;
 import java.awt.event.InputEvent;
+import java.awt.event.InputMethodEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.awt.event.PaintEvent;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 
@@ -51,7 +56,7 @@ import java.lang.reflect.Method;
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public final class VCLEventQueue {
+public final class VCLEventQueue implements Runnable {
 
     /** 
      * INPUT_MOUSE constant.
@@ -107,6 +112,11 @@ public final class VCLEventQueue {
 	 * The list of queues.
 	 */
 	private VCLEventQueue.Queue[] queueList = new VCLEventQueue.Queue[2];
+
+	/**
+	 * The printing flag.
+	 */
+	private boolean printing = false;
 
 	/**
 	 * Construct a VCLEventQueue and make it the system queue.
@@ -171,8 +181,15 @@ public final class VCLEventQueue {
 		if (EventQueue.isDispatchThread()) {
 			try {
 				VCLEventQueue.NoExceptionsEventQueue eventQueue = (VCLEventQueue.NoExceptionsEventQueue)Toolkit.getDefaultToolkit().getSystemEventQueue();
+
+				// Post a dummy event to ensure that we don't block if there
+				// are no low priority events
+				if (eventQueue.peekEvent(PaintEvent.PAINT) == null && eventQueue.peekEvent(PaintEvent.UPDATE) == null)
+					EventQueue.invokeLater(this);
+
 				AWTEvent nextEvent = eventQueue.getNextEvent();
-				eventQueue.dispatchEvent(nextEvent);
+				if (nextEvent != null)
+					eventQueue.dispatchEvent(nextEvent);
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -248,11 +265,16 @@ public final class VCLEventQueue {
 	 */
 	public void postCachedEvent(VCLEvent event) {
 
+		int id = event.getID();
+		if (printing && id == VCLEvent.SALEVENT_SHUTDOWN) {
+			event.cancelShutdown();
+			return;
+		}
+
 		VCLEventQueue.Queue queue = (event.isAWTEvent() ? queueList[0] : queueList[1]);
 
 		// Add the event to the cache
 		VCLEventQueue.QueueItem newItem = new VCLEventQueue.QueueItem(event);
-		int id = newItem.event.getID();
 		synchronized (queueList) {
 			// Coalesce events
 			if (id == VCLEvent.SALEVENT_CLOSE) {
@@ -372,6 +394,13 @@ public final class VCLEventQueue {
 	}
 
 	/**
+	 * Runnable method that performs nothing. This method is used for passing
+	 * this class to the <code>EventQueue.invokeLater()</code> method so that
+	 * we can prevent blocking in the {@link #dispatchNextEvent()} method.
+	 */
+	public void run() {}
+
+	/**
 	 * Sets the last adjusted mouse modifiers.
 	 *
 	 * @param m the last adjusted mouse modifiers
@@ -379,6 +408,42 @@ public final class VCLEventQueue {
 	void setLastAdjustedMouseModifiers(int m) {
 
 		lastAdjustedMouseModifiers = m;
+
+	}
+
+	/**
+	 * Sets the printing flag.
+	 *
+	 * @param p <code>true</code> if printing has started otherwise
+	 *  <code>false</code>
+	 */
+	void setPrinting(boolean p) {
+
+		printing = p;
+
+		synchronized (queueList) {
+			for (int i = 0; i < queueList.length; i++) {
+				VCLEventQueue.Queue queue = queueList[i];
+
+				if (queue.head == null)
+					continue;
+
+				VCLEventQueue.QueueItem eqi = queue.head;
+				while (eqi != null) {
+					if (eqi.event.getID() == VCLEvent.SALEVENT_SHUTDOWN) {
+						eqi.event.cancelShutdown();
+						eqi.remove = true;
+					}
+					eqi = eqi.next;
+				}
+				// Purge removed events from the front of the queue
+				while (queue.head != null && queue.head.remove)
+					queue.head = queue.head.next;
+				if (queue.head == null)
+					queue.tail = null;
+					
+			}
+		}
 
 	}
 
@@ -412,6 +477,28 @@ public final class VCLEventQueue {
 		protected void dispatchEvent(AWTEvent event) {
 
 			try {
+				// Key and input method events can sometimes be routed to a
+				// window instead of the panel so fix bug 1158 by replacing
+				// the window with the panel
+				if (event instanceof InputMethodEvent) {
+					InputMethodEvent e = (InputMethodEvent)event;
+					Object c = e.getSource();
+					if (c instanceof Window) {
+						VCLFrame f = VCLFrame.findFrame((Component)c);
+						if (f != null)
+							event = e = new InputMethodEvent(f.getPanel(), e.getID(), e.getWhen(), e.getText(), e.getCommittedCharacterCount(), e.getCaret(), e.getVisiblePosition());
+					}
+				}
+				else if (event instanceof KeyEvent) {
+					KeyEvent e = (KeyEvent)event;
+					Component c = e.getComponent();
+					if (c instanceof Window) {
+						VCLFrame f = VCLFrame.findFrame(c);
+						if (f != null)
+							event = e = new KeyEvent(f.getPanel(), e.getID(), e.getWhen(), e.getModifiers() | e.getModifiersEx(), e.getKeyCode(), e.getKeyChar(), e.getKeyLocation());
+					}
+				}
+
 				super.dispatchEvent(event);
 
 				// The modifiers for mouse released events contain the

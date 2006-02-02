@@ -133,7 +133,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 			{
 				// Check if there is a native modal window as we will deadlock
 				// when a native modal window is showing
-				if ( NSApplication_getModalWindow() )
+				if ( NSApplication_getModalWindow() || !pSalData->maNativeEventCondition.check() )
 					return userCanceledErr;
 
 				// Wakeup the event queue by sending it a dummy event
@@ -147,7 +147,6 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				// We need to let any pending timers run while we are
 				// waiting for the VCL event queue to clear so that
 				// we don't deadlock
-				IMutex& rSolarMutex = Application::GetSolarMutex();
 				while ( !Application::IsShutDown() && !pSalData->maNativeEventCondition.check() )
 				{
 					ReceiveNextEvent( 0, NULL, 0, false, NULL );
@@ -434,7 +433,11 @@ void SalInstance::Yield( BOOL bWait )
 		// Fix bug 1147 by allowing non-AWT events to be dispatched after a
 		// mouse released event
 		if ( nID == SALEVENT_MOUSEBUTTONUP )
-			break;
+		{
+			if ( nCount )
+				AcquireYieldMutex( nCount );
+			return;
+		}
 	}
 
 	if ( nCount )
@@ -528,12 +531,7 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 	pFrame->maFrameData.maSysData.pSalFrame = pFrame;
 
 	// Set initial parent
-	pFrame->maFrameData.mpParent = pParent;
-	if ( pFrame->maFrameData.mpParent )
-	{
-		pFrame->maFrameData.mpParent->maFrameData.mpVCLFrame->addChild( pFrame );
-		pFrame->maFrameData.mpParent->maFrameData.maChildren.push_back( pFrame );
-	}
+	pFrame->SetParent( pParent );
 
 	// Insert this window into the window list
 	SalData *pSalData = GetSalData();
@@ -549,8 +547,14 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 	// Set default window size based on style
 	Rectangle aWorkArea;
 	if ( pFrame->maFrameData.mpParent )
+	{
 		aWorkArea = Rectangle( Point( pFrame->maFrameData.mpParent->maGeometry.nX, pFrame->maFrameData.mpParent->maGeometry.nY ), Size( pFrame->maFrameData.mpParent->maGeometry.nWidth, pFrame->maFrameData.mpParent->maGeometry.nHeight ) );
-	pFrame->GetWorkArea( aWorkArea );
+		pFrame->GetWorkArea( aWorkArea );
+	}
+	else
+	{
+		pFrame->GetWorkArea( aWorkArea );
+	}
 
 	long nX = aWorkArea.nLeft;
 	long nY = aWorkArea.nTop;

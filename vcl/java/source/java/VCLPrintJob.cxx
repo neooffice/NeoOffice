@@ -97,12 +97,13 @@ com_sun_star_vcl_VCLPrintJob::com_sun_star_vcl_VCLPrintJob() : java_lang_Object(
 		return;
 	if ( !mID )
 	{
-		char *cSignature = "()V";
+		char *cSignature = "(Lcom/sun/star/vcl/VCLEventQueue;)V";
 		mID = t.pEnv->GetMethodID( getMyClass(), "<init>", cSignature );
 	}
 	OSL_ENSURE( mID, "Unknown method id!" );
-	jobject tempObj;
-	tempObj = t.pEnv->NewObject( getMyClass(), mID );
+	jvalue args[1];
+	args[0].l = GetSalData()->mpEventQueue->getJavaObject();
+	jobject tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
 	saveRef( tempObj );
 }
 
@@ -245,15 +246,16 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 		{
 			if ( !mID )
 			{
-				char *cSignature = "(Lcom/sun/star/vcl/VCLPageFormat;Ljava/lang/String;)Z";
+				char *cSignature = "(Lcom/sun/star/vcl/VCLPageFormat;Ljava/lang/String;F)Z";
 				mID = t.pEnv->GetMethodID( getMyClass(), "startJob", cSignature );
 			}
 			OSL_ENSURE( mID, "Unknown method id!" );
 			if ( mID )
 			{
-				jvalue args[2];
+				jvalue args[3];
 				args[0].l = _par0->getJavaObject();
 				args[1].l = StringToJavaString( t.pEnv, _par1 );
+				args[2].f = jfloat( NSPrintInfo_scale( _par0->getNativePrinterJob() ) );
 				out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethodA( object, getMyClass(), mID, args );
 			}
 		}
@@ -265,10 +267,6 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 		SalFrame *pFocusFrame = pSalData->mpFocusFrame;
 		if ( pFocusFrame )
 		{
-			// Make sure frame is a top-level window
-			while ( pFocusFrame->maFrameData.mpParent && pFocusFrame->maFrameData.mpParent->maFrameData.mbVisible )
-				pFocusFrame = pFocusFrame->maFrameData.mpParent;
-
 			// Ignore any AWT events while the print dialog is showing to
 			// emulate a modal dialog
 			void *pNSPrintInfo = _par0->getNativePrinterJob();

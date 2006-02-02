@@ -54,6 +54,45 @@ using namespace vcl;
 
 // ============================================================================
 
+static void JNICALL Java_com_sun_star_vcl_VCLFrame_updateLocation( JNIEnv *pEnv, jobject object, jobject _par0 )
+{
+	if ( _par0 )
+	{
+		jclass tempClass = pEnv->FindClass( "apple/awt/ComponentModel" );
+		if ( tempClass && pEnv->IsInstanceOf( _par0, tempClass ) )
+		{
+			static jmethodID mIDGetModelPtr = NULL;
+			static bool bReturnsInt = false;
+			if ( !mIDGetModelPtr )
+			{
+				char *cSignature = "()J";
+				mIDGetModelPtr = pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
+				if ( !mIDGetModelPtr )
+				{
+					// Java 1.4.1 has a different signature so check
+					// for it if we cannot find the first signature
+					if ( pEnv->ExceptionCheck() )
+						pEnv->ExceptionClear();
+					cSignature = "()I";
+					mIDGetModelPtr = pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
+					if ( mIDGetModelPtr )
+						bReturnsInt = true;
+				}
+			}
+			OSL_ENSURE( mIDGetModelPtr, "Unknown method id!" );
+			if ( mIDGetModelPtr )
+			{
+				if ( bReturnsInt )
+					CWindow_updateLocation( pEnv->CallIntMethod( _par0, mIDGetModelPtr ) );
+				else
+					CWindow_updateLocation( pEnv->CallLongMethod( _par0, mIDGetModelPtr ) );
+			}
+		}
+	}
+}
+
+// ============================================================================
+
 jclass com_sun_star_vcl_VCLFrame::theClass = NULL;
 
 // ----------------------------------------------------------------------------
@@ -66,6 +105,17 @@ jclass com_sun_star_vcl_VCLFrame::getMyClass()
 		if ( !t.pEnv ) return (jclass)NULL;
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLFrame" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
+
+		if ( tempClass )
+		{
+			// Register the native methods for our class
+			JNINativeMethod aMethod;
+			aMethod.name = "updateLocation";
+			aMethod.signature = "(Ljava/awt/peer/ComponentPeer;)V";
+			aMethod.fnPtr = (void *)Java_com_sun_star_vcl_VCLFrame_updateLocation;
+			t.pEnv->RegisterNatives( tempClass, &aMethod, 1 );
+		}
+
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
 	}
 	return theClass;

@@ -119,7 +119,7 @@ SalFrame::SalFrame()
 
 SalFrame::~SalFrame()
 {
-	Show( FALSE, FALSE );
+	Show( FALSE );
 	StartPresentation( FALSE );
 }
 
@@ -197,6 +197,8 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 	if ( maFrameData.mbVisible )
 	{
+		maFrameData.mbInShow = TRUE;
+
 		// Get native window since it won't be created until first shown
 		maFrameData.maSysData.aWindow = (long)maFrameData.mpVCLFrame->getNativeWindowRef();
 		maFrameData.mbCenter = FALSE;
@@ -208,7 +210,7 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		{
 			if ( (*it)->maFrameData.mbVisible )
 			{
-				(*it)->Show( FALSE, FALSE );
+				(*it)->Show( FALSE );
 				(*it)->Show( TRUE, FALSE );
 			}
 		}
@@ -217,6 +219,10 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		// to the child frame
 		if ( !bNoActivate )
 			ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+		else if ( pSalData->mpFocusFrame )
+			pSalData->mpFocusFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+
+		maFrameData.mbInShow = FALSE;
 	}
 	else
 	{
@@ -267,6 +273,8 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 {
 	if ( maFrameData.mnStyle & SAL_FRAME_STYLE_CHILD )
 		return;
+
+	maFrameData.mbInSetPosSize = TRUE;
 
 	Rectangle aPosSize( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
 
@@ -347,6 +355,8 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	// Update the cached position
 	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, NULL );
 	aEvent.dispatch();
+
+	maFrameData.mbInSetPosSize = FALSE;
 }
 
 // -----------------------------------------------------------------------
@@ -356,7 +366,7 @@ void SalFrame::GetWorkArea( Rectangle &rRect )
 	if ( rRect.IsEmpty() )
 		rRect = maFrameData.mpVCLFrame->getBounds();
 
-	NSScreen_getScreenBounds( &rRect.nLeft, &rRect.nTop, &rRect.nRight, &rRect.nBottom, GetSalData()->mpPresentationFrame ? TRUE : FALSE );
+	NSScreen_getScreenBounds( &rRect.nLeft, &rRect.nTop, &rRect.nRight, &rRect.nBottom, GetSalData()->mpPresentationFrame ? TRUE : FALSE, maFrameData.mbUseMainScreenOnly );
 }
 
 // -----------------------------------------------------------------------
@@ -382,6 +392,8 @@ void SalFrame::SetWindowState( const SalFrameState* pState )
 		nFlags |= SAL_FRAME_POSSIZE_HEIGHT;
 	if ( nFlags )
 	{
+		maFrameData.mbUseMainScreenOnly = FALSE;
+
 		Rectangle aPosSize( Point( pState->mnX, pState->mnY ), Size( pState->mnWidth, pState->mnHeight ) );
 		if ( maFrameData.mpParent )
 			aPosSize.Move( -maFrameData.mpParent->maGeometry.nX, -maFrameData.mpParent->maGeometry.nY );
@@ -525,8 +537,9 @@ void SalFrame::ToTop( USHORT nFlags )
 		bSuccess = maFrameData.mpVCLFrame->requestFocus();
 
 	// If Java has set the focus, update it now in the OOo code as it may
-	// take a while before the Java event shows up in the queue
-	if ( bSuccess )
+	// take a while before the Java event shows up in the queue. Fix bug
+	// 1203 by not doing this update if we are in the Show() method.
+	if ( bSuccess && !maFrameData.mbInShow )
 	{
 		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_GETFOCUS, this, NULL );
 		aEvent.dispatch();
@@ -739,6 +752,7 @@ void SalFrame::SetParent( SalFrame* pNewParent )
 
 		if ( maFrameData.mpParent )
 		{
+			maFrameData.mbUseMainScreenOnly = FALSE;
 			maFrameData.mpParent->maFrameData.mpVCLFrame->addChild( this );
 			maFrameData.mpParent->maFrameData.maChildren.push_back( this );
 		}
@@ -786,6 +800,9 @@ SalFrameData::SalFrameData()
 	mbFullScreen = FALSE;
 	mbPresentation = FALSE;
 	mpMenuBar = NULL;
+	mbUseMainScreenOnly = TRUE;
+	mbInSetPosSize = FALSE;
+	mbInShow = FALSE;
 }
 
 // -----------------------------------------------------------------------

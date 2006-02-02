@@ -588,12 +588,16 @@ sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()Z";
+			char *cSignature = "(Z)Z";
 			mID = t.pEnv->GetMethodID( getMyClass(), "setup", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethod( object, getMyClass(), mID );
+		{
+			jvalue args[1];
+			args[0].z = jboolean( sal_False );
+			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethodA( object, getMyClass(), mID, args );
+		}
 	}
 
 	if ( out )
@@ -603,15 +607,11 @@ sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 		SalFrame *pFocusFrame = pSalData->mpFocusFrame;
 		if ( pFocusFrame )
 		{
-			// Make sure frame is a top-level window
-			while ( pFocusFrame->maFrameData.mpParent && pFocusFrame->maFrameData.mpParent->maFrameData.mbVisible )
-				pFocusFrame = pFocusFrame->maFrameData.mpParent;
-
-            // Ignore any AWT events while the page layout dialog is showing to
-            // emulate a modal dialog
+			// Ignore any AWT events while the page layout dialog is showing to
+			// emulate a modal dialog
 			void *pNSPrintInfo = getNativePrinterJob();
 			void *pDialog = NSPrintInfo_showPageLayoutDialog( pNSPrintInfo, pFocusFrame->maFrameData.mpVCLFrame->getNativeWindow(), ( getOrientation() == ORIENTATION_LANDSCAPE ) ? TRUE : FALSE );
-    
+
 			pSalData->mpNativeModalSheetFrame = pFocusFrame;
 			pSalData->mbInNativeModalSheet = true;
 			while ( !NSPageLayout_finished( pDialog ) )
@@ -620,6 +620,13 @@ sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 			pSalData->mpNativeModalSheetFrame = NULL;
 
 			out = (sal_Bool)NSPageLayout_result( pDialog );
+
+			if ( out && mID )
+			{
+				jvalue args[1];
+				args[0].z = jboolean( sal_True );
+				out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethodA( object, getMyClass(), mID, args );
+			}
 		}
 	}
 	

@@ -105,14 +105,28 @@ public final class VCLPrintJob implements Printable, Runnable {
 	private PageFormat printPageFormat = null;
 
 	/**
+	 * The event queue.
+	 */
+	private VCLEventQueue queue = null;
+
+	/**
 	 * The print started flag.
 	 */
 	private boolean printStarted = false;
 
 	/**
+	 * The cached scale factor.
+	 */
+	private float scale = 1.0f;
+
+	/**
 	 * Constructs a new <code>VCLPrintJob</code> instance.
 	 */
-	public VCLPrintJob() {}
+	public VCLPrintJob(VCLEventQueue q) {
+
+		queue = q;
+
+	}
 
 	/**
 	 * Abort the printer job.
@@ -131,28 +145,25 @@ public final class VCLPrintJob implements Printable, Runnable {
  	 * Disposes the printer job and releases any system resources that it is
 	 * using.
 	 */
-	public void dispose() {
+	public synchronized void dispose() {
 
 		if (disposed)
 			return;
 
 		abortJob();
 
-		synchronized (this) {
-			if (graphics != null) {
-				graphics.dispose();
-				graphics = null;
-			}
-			if (lastPageQueue != null) {
-				lastPageQueue.dispose();
-				lastPageQueue = null;
-			}
-			printGraphics = null;
-			printPageFormat = null;
-			job = null;
-
-			disposed = true;
+		// Don't dispose the graphics as we only want to draw in the
+		// printing thread
+		graphics = null;
+		if (lastPageQueue != null) {
+			lastPageQueue.dispose();
+			lastPageQueue = null;
 		}
+		printGraphics = null;
+		printPageFormat = null;
+		job = null;
+
+		disposed = true;
 
 	}
 
@@ -161,20 +172,19 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 */
 	public synchronized void endJob() {
 
+		if (endJob)
+			return;
+
 		// End the job after disposing of the printGraphics
 		endJob = true;
 
 		// Wait for print thread to finish
-		while (printStarted && !printFinished) {
-			notifyAll();
-			try {
-				wait();
-			}
-			catch (Throwable t) {}
-		}
+		endPage();
 
 		if (pageFormat != null)
 			pageFormat.setEditable(true);
+
+		queue.setPrinting(false);
 
 	}
 
@@ -207,6 +217,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 
 		printGraphics = (Graphics2D)g;
 		printPageFormat = f;
+		printGraphics.scale(scale, scale);
 
 		// Notify other threads and wait until painting is finished
 		if (!endJob) {
@@ -253,6 +264,9 @@ public final class VCLPrintJob implements Printable, Runnable {
 
 		// Notify other threads that printing is finished
 		synchronized (this) {
+			// Don't dispose the graphics as we only want to draw in the
+			// printing thread
+			graphics = null;
 			if (lastPageQueue != null) {
 				lastPageQueue.dispose();
 				lastPageQueue = null;
@@ -282,20 +296,23 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 *
 	 * @param p the <code>VCLPageFormat</code>
 	 * @param n the job name
+	 * @param s the scale factor
 	 * @return <code>true</code> if the print job is properly setup otherwise
 	 *  <code>false</code>
 	 */
-	public boolean startJob(VCLPageFormat p, String n) {
+	public boolean startJob(VCLPageFormat p, String n, float s) {
 
-		// Detect if the user cancelled the print dialog
 		if (!jobStarted) {
 			pageFormat = p;
+			scale = s;
 			job = pageFormat.getPrinterJob();
 			job.setPrintable(this, pageFormat.getPageFormat());
 			job.setJobName(n);
 			pageFormat.setEditable(false);
 			jobStarted = true;
 		}
+
+		queue.setPrinting(jobStarted);
 
 		return jobStarted;
 

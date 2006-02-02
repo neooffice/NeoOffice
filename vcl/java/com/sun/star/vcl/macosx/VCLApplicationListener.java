@@ -151,8 +151,10 @@ public class VCLApplicationListener implements ApplicationListener {
 		// Wait for event to be dispatched in the C++ code. Note that if the
 		// event is successfully processed, this loop will never finish and
 		// the process will exit.
-		while (!shutdownEvent.isShutdownCancelled())
+		while (!shutdownEvent.isShutdownCancelled()) {
 			queue.dispatchNextEvent();
+			Thread.yield();
+		}
 
 		event.setHandled(false);
 

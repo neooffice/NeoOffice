@@ -71,6 +71,7 @@ import java.awt.event.MouseWheelListener;
 import java.awt.event.PaintEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
+import java.awt.event.WindowStateListener;
 import java.awt.font.TextHitInfo;
 import java.awt.im.InputContext;
 import java.awt.im.InputMethodRequests;
@@ -91,7 +92,7 @@ import java.util.LinkedList;
  * @version		$Revision$ $Date$
  * @author		$Author$
  */
-public final class VCLFrame implements ComponentListener, FocusListener, KeyListener, InputMethodListener, InputMethodRequests, MouseListener, MouseMotionListener, MouseWheelListener, WindowListener {
+public final class VCLFrame implements ComponentListener, FocusListener, KeyListener, InputMethodListener, InputMethodRequests, MouseListener, MouseMotionListener, MouseWheelListener, WindowListener, WindowStateListener {
 
 	/**
 	 * SAL_FRAME_STYLE_DEFAULT constant.
@@ -698,9 +699,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private int keyModifiersPressed = 0;
 
 	/**
-	 * The listeners set flag.
+	 * The last input method event.
 	 */
-	private boolean listenersSet = false;
+	private InputMethodEvent lastInputMethodEvent = null;
 
 	/**
 	 * The native window's panel.
@@ -799,9 +800,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		panel.addMouseWheelListener(this);
 		window.addComponentListener(this);
 		window.addFocusListener(this);
-		window.addKeyListener(this);
-		window.addInputMethodListener(this);
 		window.addWindowListener(this);
+		window.addWindowStateListener(this);
 
 	}
 
@@ -840,6 +840,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (disposed || !window.isShowing())
 			return;
+
+		// Fix bug 1174 by forcing the JVM to update its cached location for
+		// the native window. The JVM has a bug in that when changing window
+		// state, the size of the window is updated but not the location.
+		// updateLocationOnScreen(window.getPeer());
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVERESIZE, this, 0));
 
@@ -914,11 +919,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		setVisible(false);
 		setMenuBar(null);
-		bitCount = 0;
 		children = null;
 		detachedChildren = null;
-		frame = 0;
-		fullScreenMode = false;
 		graphics.dispose();
 		graphics = null;
 		insets = null;
@@ -927,14 +929,14 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		panel.removeFocusListener(this);
 		panel.removeKeyListener(this);
 		panel.removeInputMethodListener(this);
+		panel.removeMouseListener(this);
+		panel.removeMouseMotionListener(this);
+		panel.removeMouseWheelListener(this);
 		window.removeComponentListener(this);
 		window.removeFocusListener(this);
-		window.removeKeyListener(this);
-		window.removeInputMethodListener(this);
-		window.removeMouseListener(this);
-		window.removeMouseMotionListener(this);
-		window.removeMouseWheelListener(this);
 		window.removeWindowListener(this);
+		window.removeWindowStateListener(this);
+		queue.removeCachedEvents(frame);
 
 		// Fix bug 1145 by destroying the native window
 		window.removeNotify();
@@ -943,8 +945,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		textLocation = null;
 		window = null;
-		undecorated = false;
-		queue.removeCachedEvents(frame);
 		queue = null;
 
 		disposed = true;
@@ -988,9 +988,14 @@ g.dispose();
 	 */
 	public void endComposition() {
 
-		// Do nothing as call InputContext.endComposition() on Mac OS X
-		// causes the JVM to be stuck in a weird state that prevents
-		// further input
+		// Invoking InputContext.endComposition() does nothing on Mac OS X
+		// but we invoke it anyway in the hopes that it does do something
+		InputContext ic = window.getInputContext();
+		if (ic != null)
+			ic.endComposition();
+
+		InputMethodEvent e = new InputMethodEvent(panel, InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, TextHitInfo.afterOffset(0), TextHitInfo.afterOffset(0));
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_EXTTEXTINPUT, this, 0));
 
 	}
 
@@ -1290,6 +1295,7 @@ g.dispose();
 		if (disposed || !window.isShowing())
 			return;
 
+		lastInputMethodEvent = e;
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_EXTTEXTINPUT, this, 0));
 
 	}
@@ -1747,8 +1753,45 @@ g.dispose();
 	 */
 	void setMenuBar(MenuBar menubar) {
 
-		if (window instanceof Frame)
+		if (window instanceof Frame) {
+			// The menubar doesn't refresh when a child window until the focus
+			// is restored so hide any children while changing the menubar
+			if (menubar != null) {
+				// Detach any visible children
+				Iterator frames = children.iterator();
+				while (frames.hasNext()) {
+					VCLFrame f = (VCLFrame)frames.next();
+					synchronized (f) {
+						if (!f.isDisposed()) {
+							Window w = f.getWindow();
+							if (w.isShowing()) {
+								w.hide();
+								f.enableFlushing(false);
+								detachedChildren.add(f);
+							}
+						}
+					}
+				}
+			}
+
 			((Frame)window).setMenuBar(menubar);
+
+			// Reattach any visible children
+			Iterator frames = detachedChildren.iterator();
+			while (frames.hasNext()) {
+				VCLFrame f = (VCLFrame)frames.next();
+				synchronized (f) {
+					if (!f.isDisposed()) {
+						Window w = f.getWindow();
+						if (!w.isShowing()) {
+							w.show();
+							f.enableFlushing(true);
+						}
+					}
+				}
+			}
+			detachedChildren.clear();
+		}
 
 	}
 
@@ -2032,6 +2075,7 @@ g.dispose();
 	public boolean toFront() {
 
 		if (window.isShowing() && !isFloatingWindow()) {
+			panel.requestFocus();
 			window.toFront();
 			return true;
 		}
@@ -2040,6 +2084,13 @@ g.dispose();
 		}
 
 	}
+
+	/**
+	 * Force the native window to update its cached screen location.
+	 *
+	 * @param p the <code>ComponentPeer</code>
+	 */
+	public native void updateLocation(ComponentPeer p);
 
 	/**
 	 * Invoked the first time a window is made visible.
@@ -2141,6 +2192,23 @@ g.dispose();
 	 * @param e the <code>WindowEvent</code>
 	 */
 	public void windowDeactivated(WindowEvent e) {}
+
+	/**
+	 * Invoked when the the native window's state changes.
+	 *
+	 * @param e the <code>WindowEvent</code>
+	 */
+	public synchronized void windowStateChanged(WindowEvent e) {
+
+		if (disposed || !window.isShowing())
+			return;
+
+		// Fix bug 1174 by forcing the JVM to update its cached location for
+		// the native window. The JVM has a bug in that when changing window
+		// state, the size of the window is updated but not the location.
+		updateLocation(window.getPeer());
+
+	}
 
 	/**
 	 * A class that has painting methods that perform no painting.

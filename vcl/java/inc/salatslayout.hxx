@@ -64,6 +64,7 @@ class SalATSLayout : public GenericSalLayout
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
 	mutable ImplLayoutRuns	maRuns;
 	::std::vector< ImplATSLayoutData* >	maLayoutData;
+	::std::vector< int >	maLayoutMinCharPos;
 	ImplATSLayoutData*	mpKashidaLayoutData;
 
 public:

@@ -676,16 +676,12 @@ void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 BOOL SalGraphics::GetGlyphBoundRect( long nIndex, Rectangle& rRect,
                                      const OutputDevice *pOutDev )
 {
+	rRect.SetEmpty();
+
 	if ( maGraphicsData.mpVCLFont )
-	{
 		rRect = maGraphicsData.mpVCLGraphics->getGlyphBounds( nIndex & GF_IDXMASK, maGraphicsData.mpVCLFont, nIndex & GF_ROTMASK );
-		return TRUE;
-	}
-	else
-	{
-		rRect.SetEmpty();
-		return FALSE;
-	}
+
+	return !rRect.IsEmpty();
 }
 
 // -----------------------------------------------------------------------

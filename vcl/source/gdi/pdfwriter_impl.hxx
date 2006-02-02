@@ -464,7 +464,11 @@ public:
         FontEmitList		m_aSubsets;
         FontMapping			m_aMapping;
     };
+#if defined USE_JAVA && defined MACOSX
+    typedef std::map< void*, FontSubset > FontSubsetData;
+#else	// USE_JAVA && MACOSX
     typedef std::map< ImplFontData*, FontSubset > FontSubsetData;
+#endif	// USE_JAVA && MACOSX
 
     struct EmbedCode
     {

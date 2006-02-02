@@ -1081,7 +1081,8 @@ public final class VCLEvent extends AWTEvent {
 				}
 				text = buf.toString();
 
-				if (getCommittedCharacterCount() < count)
+				int committedCount = getCommittedCharacterCount();
+				if (count > committedCount)
 				{
 					textAttributes = new int[count];
 					count = 0;
@@ -1108,6 +1109,11 @@ public final class VCLEvent extends AWTEvent {
 							else {
 								attribute = SAL_EXTTEXTINPUT_ATTR_UNDERLINE;
 							}
+						}
+						else if (count >= committedCount) {
+							// Fix bug 1190 by highlighting uncommitted
+							// characters
+							attribute = SAL_EXTTEXTINPUT_ATTR_HIGHLIGHT;
 						}
 						textAttributes[count++] = attribute;
 					}

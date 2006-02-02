@@ -35,6 +35,7 @@
 
 package com.sun.star.vcl;
 
+import java.awt.Component;
 import java.awt.Menu;
 
 /**
@@ -48,7 +49,7 @@ import java.awt.Menu;
  * @version 	$Revision$ $Date$
  * @author 		$Author$
  */
-public final class VCLMenu {
+public final class VCLMenu extends Component {
 
 	/**
 	 * VCLMenuItemData object associated with this menu.
@@ -98,11 +99,13 @@ public final class VCLMenu {
 	 */
 	public void insertItem(VCLMenuItemData newItem, short nPos) {
 
-		if(nPos < 0)
-			nPos=menuData.getNumMenuItems();
+		synchronized (getTreeLock()) {
+			if(nPos < 0)
+				nPos=menuData.getNumMenuItems();
 
-		if(menuData.addMenuItem(newItem, nPos))
-			menuData.refreshAWTPeersInParentMenus();
+			if(menuData.addMenuItem(newItem, nPos))
+				menuData.refreshAWTPeersInParentMenus();
+		}
 
 	}
 
@@ -125,15 +128,9 @@ public final class VCLMenu {
 	 */
 	public void checkItem(short nPos, boolean bCheck) {
 
-		VCLMenuItemData item=null;
-		item=(VCLMenuItemData)menuData.getMenuItem(nPos);
-
-		// our peers were invalidated and need to be
-		// reconstructed.
-		if((item!=null) && item.setChecked(bCheck)) {
-			// checkbox items can't be top level menus, so we only have to
-			// worry about reinserting new peers into their parent menus
-			if(item!=null)
+		synchronized (getTreeLock()) {
+			VCLMenuItemData item=(VCLMenuItemData)menuData.getMenuItem(nPos);
+			if(item.setChecked(bCheck))
 				item.refreshAWTPeersInParentMenus();
 		}
 
@@ -147,8 +144,10 @@ public final class VCLMenu {
 	 */
 	public void enableItem(short nPos, boolean bEnable) {
 
-		VCLMenuItemData item=(VCLMenuItemData)menuData.getMenuItem(nPos);
-		item.setEnabled(bEnable);
+		synchronized (getTreeLock()) {
+			VCLMenuItemData item=(VCLMenuItemData)menuData.getMenuItem(nPos);
+			item.setEnabled(bEnable);
+		}
 
 	}
 
@@ -160,21 +159,23 @@ public final class VCLMenu {
 	 */
 	public void attachSubmenu(VCLMenuItemData newMenu, short nPos) {
 
-		VCLMenuItemData item=null;
-		item=(VCLMenuItemData)menuData.getMenuItem(nPos);
-		if(item==null)
-			return;
+		synchronized (getTreeLock()) {
+			VCLMenuItemData item=null;
+			item=(VCLMenuItemData)menuData.getMenuItem(nPos);
+			if(item==null)
+				return;
 
-		// no need to reassociate the menu if its item is already the
-		// delegate
-		if(item.getDelegate()==newMenu)
-			return;
+			// no need to reassociate the menu if its item is already the
+			// delegate
+			if(item.getDelegate()==newMenu)
+				return;
 
-		newMenu.setTitle(item.getTitle());
-		newMenu.setEnabled(item.getEnabled());
-		item.unregisterAllAWTPeers();
-		item.setDelegate(newMenu);
-		item.refreshAWTPeersInParentMenus();
+			newMenu.setTitle(item.getTitle());
+			newMenu.setEnabled(item.getEnabled());
+			item.unregisterAllAWTPeers();
+			item.setDelegate(newMenu);
+			item.refreshAWTPeersInParentMenus();
+		}
 
 	}
 

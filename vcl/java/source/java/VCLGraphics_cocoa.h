@@ -47,7 +47,7 @@
 #ifdef __cplusplus
 BEGIN_C
 #endif
-void CGImageRef_drawInRect( CGImageRef aImage, float fX, float fY, float fWidth, float fHeight );
+void CGImageRef_drawInRect( CGImageRef aImage, float fX, float fY, float fWidth, float fHeight, float fClipX, float fClipY, float fClipWidth, float fClipHeight );
 void NSEPSImageRep_drawInRect( void *pPtr, unsigned nSize, float fX, float fY, float fWidth, float fHeight );
 #ifdef __cplusplus
 END_C
