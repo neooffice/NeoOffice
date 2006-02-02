@@ -6,48 +6,40 @@
  *
  *  last change: $Author$ $Date$
  *
- *  The Contents of this file are made available subject to the terms of
- *  either of the following licenses
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- *         - GNU General Public License Version 2.1
  *
- *  Sun Microsystems Inc., October, 2000
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- *  GNU General Public License Version 2.1
- *  =============================================
- *  Copyright 2000 by Sun Microsystems, Inc.
- *  901 San Antonio Road, Palo Alto, CA 94303, USA
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
  *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public
- *  License version 2.1, as published by the Free Software Foundation.
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
  *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
  *
- *  You should have received a copy of the GNU General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *  MA  02111-1307  USA
- *  
- *  =================================================
- *  Modified October 2005 by Patrick Luby. SISSL Removed. NeoOffice is
- *  distributed under GPL only under modification term 3 of the LGPL.
- *
- *  Contributor(s): _______________________________________
+ *    Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
-
-#define _SV_DIALOG_CXX
 
 #ifndef _TOOLS_DEBUG_HXX
 #include <tools/debug.hxx>
 #endif
 
 #ifndef _SV_RC_H
-#include <rc.h>
+#include <tools/rc.h>
 #endif
 #ifndef _SV_SVDATA_HXX
 #include <svdata.hxx>
@@ -72,9 +64,6 @@
 #endif
 #ifndef _SV_MNEMONIC_HXX
 #include <mnemonic.hxx>
-#endif
-#ifndef _SV_ACCESS_HXX
-#include <access.hxx>
 #endif
 #ifndef _SV_DIALOG_HXX
 #include <dialog.hxx>
@@ -107,7 +96,6 @@
 
 #endif	// USE_JAVA
 
-#pragma hdrstop
 
 // =======================================================================
 
@@ -298,7 +286,7 @@ static void ImplMouseAutoPos( Dialog* pDialog )
 
 void Dialog::ImplInitData()
 {
-    mbDialog            = TRUE;
+    mpWindowImpl->mbDialog            = TRUE;
 
     mpDialogParent      = NULL;
     mpResult            = NULL;
@@ -329,7 +317,7 @@ void Dialog::ImplInit( Window* pParent, WinBits nStyle )
     {
         pParent = Application::GetDefDialogParent();
         if ( !pParent && !(nStyle & WB_SYSTEMWINDOW) )
-            pParent = Application::GetAppWindow();
+            pParent = ImplGetSVData()->maWinData.mpAppWin;
 
         // If Parent is disabled, then we search for a modal dialog
         // in this frame
@@ -360,13 +348,13 @@ void Dialog::ImplInit( Window* pParent, WinBits nStyle )
     // Now, all Dialogs are per default system windows !!!
     if ( pParent && !(nSysWinMode & SYSTEMWINDOW_MODE_NOAUTOMODE) )
     {
-        if ( !pParent->mpFrameWindow->IsVisible() )
+        if ( !pParent->mpWindowImpl->mpFrameWindow->IsVisible() )
             pParent = NULL;
         else
         {
-            if ( pParent->mpFrameWindow->IsDialog() )
+            if ( pParent->mpWindowImpl->mpFrameWindow->IsDialog() )
             {
-                Size aOutSize = pParent->mpFrameWindow->GetOutputSizePixel();
+                Size aOutSize = pParent->mpWindowImpl->mpFrameWindow->GetOutputSizePixel();
                 if ( (aOutSize.Width() < 210) ||(aOutSize.Height() < 160) )
                     nStyle |= WB_SYSTEMWINDOW;
             }
@@ -375,7 +363,7 @@ void Dialog::ImplInit( Window* pParent, WinBits nStyle )
 */
 
     if ( !pParent || (nStyle & WB_SYSTEMWINDOW) ||
-         (pParent->mpFrameData->mbNeedSysWindow && !(nSysWinMode & SYSTEMWINDOW_MODE_NOAUTOMODE)) ||
+         (pParent->mpWindowImpl->mpFrameData->mbNeedSysWindow && !(nSysWinMode & SYSTEMWINDOW_MODE_NOAUTOMODE)) ||
          (nSysWinMode & SYSTEMWINDOW_MODE_DIALOG) )
     {
         // create window with a small border ?
@@ -383,28 +371,28 @@ void Dialog::ImplInit( Window* pParent, WinBits nStyle )
         {
             ImplBorderWindow* pBorderWin  = new ImplBorderWindow( pParent, nStyle, BORDERWINDOW_STYLE_FRAME );
             SystemWindow::ImplInit( pBorderWin, nStyle & ~WB_BORDER, NULL );
-            pBorderWin->mpClientWindow = this;
-            pBorderWin->GetBorder( mnLeftBorder, mnTopBorder, mnRightBorder, mnBottomBorder );
-            mpBorderWindow  = pBorderWin;
-            mpRealParent    = pParent;
+            pBorderWin->mpWindowImpl->mpClientWindow = this;
+            pBorderWin->GetBorder( mpWindowImpl->mnLeftBorder, mpWindowImpl->mnTopBorder, mpWindowImpl->mnRightBorder, mpWindowImpl->mnBottomBorder );
+            mpWindowImpl->mpBorderWindow  = pBorderWin;
+            mpWindowImpl->mpRealParent    = pParent;
         }
         else
         {
-            mbFrame         = TRUE;
-            mbOverlapWin    = TRUE;
+            mpWindowImpl->mbFrame         = TRUE;
+            mpWindowImpl->mbOverlapWin    = TRUE;
             SystemWindow::ImplInit( pParent, nStyle & (WB_MOVEABLE | WB_SIZEABLE | WB_ROLLABLE | WB_CLOSEABLE | WB_STANDALONE) | WB_CLOSEABLE, NULL );
             // Now set all style bits
-            mnStyle = nStyle;
+            mpWindowImpl->mnStyle = nStyle;
         }
     }
     else
     {
         ImplBorderWindow* pBorderWin  = new ImplBorderWindow( pParent, nStyle, BORDERWINDOW_STYLE_OVERLAP | BORDERWINDOW_STYLE_BORDER );
         SystemWindow::ImplInit( pBorderWin, nStyle & ~WB_BORDER, NULL );
-        pBorderWin->mpClientWindow = this;
-        pBorderWin->GetBorder( mnLeftBorder, mnTopBorder, mnRightBorder, mnBottomBorder );
-        mpBorderWindow  = pBorderWin;
-        mpRealParent    = pParent;
+        pBorderWin->mpWindowImpl->mpClientWindow = this;
+        pBorderWin->GetBorder( mpWindowImpl->mnLeftBorder, mpWindowImpl->mnTopBorder, mpWindowImpl->mnRightBorder, mpWindowImpl->mnBottomBorder );
+        mpWindowImpl->mpBorderWindow  = pBorderWin;
+        mpWindowImpl->mpRealParent    = pParent;
     }
 
     SetActivateMode( ACTIVATE_MODE_GRABFOCUS );
@@ -432,8 +420,8 @@ void Dialog::ImplCenterDialog()
     Size        aDeskSize = aDeskRect.GetSize();
     Size        aWinSize = GetSizePixel();
     Window *pWindow = this;
-    while ( pWindow->mpBorderWindow )
-        pWindow = pWindow->mpBorderWindow;
+    while ( pWindow->mpWindowImpl->mpBorderWindow )
+        pWindow = pWindow->mpWindowImpl->mpBorderWindow;
     Point       aWinPos( ((aDeskSize.Width() - aWinSize.Width()) / 2) + aDeskPos.X(),
                          ((aDeskSize.Height() - aWinSize.Height()) / 2) + aDeskPos.Y() );
 
@@ -537,7 +525,7 @@ void Dialog::StateChanged( StateChangedType nType )
         if ( GetSettings().GetStyleSettings().GetAutoMnemonic() )
             ImplWindowAutoMnemonic( this );
 
-        //if ( IsDefaultPos() && !mbFrame )
+        //if ( IsDefaultPos() && !mpWindowImpl->mbFrame )
         //    ImplCenterDialog();
         if ( !HasChildPathFocus() || HasFocus() )
             GrabFocusToFirstControl();
@@ -584,7 +572,7 @@ BOOL Dialog::Close()
         return FALSE;
     ImplRemoveDel( &aDelData );
 
-    if ( mxWindowPeer.is() && IsCreatedWithToolkit() && !IsInExecute() )
+    if ( mpWindowImpl->mxWindowPeer.is() && IsCreatedWithToolkit() && !IsInExecute() )
         return FALSE;
 
     mbInClose = TRUE;
@@ -661,11 +649,11 @@ short Dialog::Execute()
 #endif
 
 #ifdef USE_JAVA
-    // Do not attempt to run a modal dialog in the native event dispatch thread
-    // as it will disable the crash handler. Also, fix bug 1108 by not running
+	// Do not attempt to run a modal dialog in the native event dispatch thread
+	// as it will disable the crash handler. Also, fix bug 1108 by not running
 	// it if a native sheet is being displayed.
-    if ( GetCurrentEventLoop() == GetMainEventLoop() || GetAppSalData()->mbInNativeModalSheet )
-        return 0;
+	if ( GetCurrentEventLoop() == GetMainEventLoop() || GetAppSalData()->mbInNativeModalSheet )
+		return 0;
 #endif	// USE_JAVA
 
     ImplSVData* pSVData = ImplGetSVData();
@@ -695,29 +683,41 @@ short Dialog::Execute()
     Show();
 
 #ifdef USE_JAVA
-    // Force modal windows to the front
-    mpFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
+	// Force modal windows to the front
+	mpWindowImpl->mpFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
 #endif	// USE_JAVA
-
-    if ( Application::GetAccessHdlCount() )
-    {
-        Application::AccessNotify( AccessNotification( ACCESS_EVENT_MODALDIALOG_START, this ) );
-        Application::AccessNotify( AccessNotification( ACCESS_EVENT_DLGCONTROLS, this ) );
-    }
 
     // Solange Yielden, bis EndDialog aufgerufen wird, oder der Dialog
     // zerstoert wird (sollte nicht sein und ist nur vorsichtsmassnahme)
     ImplDelData aDelData;
     ImplAddDel( &aDelData );
+    ImplDelData aParentDelData;
+    
     pSVData->maAppData.mnModalMode++;
     //DBG_ASSERT( mpDialogParent, "Dialog::Execute() - no Parent: cannot set modal count!" );
-    if( mpDialogParent )
-        mpDialogParent->ImplIncModalCount();        // #106303# support frame based modal count
+    Window* pDialogParent = mpDialogParent;
+    if( pDialogParent )
+    {
+        pDialogParent->ImplIncModalCount();        // #106303# support frame based modal count
+        pDialogParent->ImplAddDel( &aParentDelData );
+    }
     while ( !aDelData.IsDelete() && mbInExecute )
         Application::Yield();
     pSVData->maAppData.mnModalMode--;
-    if( mpDialogParent )
-        mpDialogParent->ImplDecModalCount();        // #106303# support frame based modal count
+    if( pDialogParent  )
+    {
+        if( ! aParentDelData.IsDelete() )
+        {
+            pDialogParent->ImplDecModalCount();        // #106303# support frame based modal count
+            pDialogParent->ImplRemoveDel( &aParentDelData );
+        }
+#ifdef DBG_UTIL
+        else
+        {
+            DBG_ERROR( "Dialog::Execute() - Parent of dialog destroyed in Execute()" );
+        }
+#endif
+    }
     if ( !aDelData.IsDelete() )
         ImplRemoveDel( &aDelData );
 #ifdef DBG_UTIL
@@ -772,8 +772,6 @@ void Dialog::EndDialog( long nResult )
             NotifyEvent aNEvt( EVENT_ENDEXECUTEDIALOG, this );
             GetParent()->Notify( aNEvt );
         }
-        if ( Application::GetAccessHdlCount() )
-            Application::AccessNotify( AccessNotification( ACCESS_EVENT_MODALDIALOG_END, this ) );
         if ( mpResult )
             *mpResult = nResult;
         mpResult    = NULL;
@@ -819,16 +817,25 @@ void Dialog::SetModalInputMode( BOOL bModal )
         if ( mpPrevExecuteDlg && !mpPrevExecuteDlg->IsWindowOrChild( this, TRUE ) )
             mpPrevExecuteDlg->EnableInput( FALSE, TRUE, TRUE, this );
 
-         // determine next overlap dialog parent
-         Window* pParent = GetParent();
-         if ( pParent )
-         {
-             //mpDialogParent = pParent->ImplGetFirstOverlapWindow();
-             // #103716# dialogs should always be modal to the whole frame window
-             mpDialogParent = pParent->mpFrameWindow;
-             if ( mpDialogParent )
-                 mpDialogParent->EnableInput( FALSE, TRUE, TRUE, this );
-		 }
+        // determine next overlap dialog parent
+        Window* pParent = GetParent();
+        if ( pParent )
+        {
+            // #103716# dialogs should always be modal to the whole frame window
+            mpDialogParent = pParent->mpWindowImpl->mpFrameWindow;
+
+            // #115933# disable the whole frame hierarchie, useful if our parent
+            // is a modeless dialog
+            Window *pFrame = mpDialogParent;
+            while( pFrame )
+            {
+                pFrame->EnableInput( FALSE, TRUE, TRUE, this );
+                if( pFrame->GetParent() )
+                    pFrame = pFrame->GetParent()->mpWindowImpl->mpFrameWindow;
+                else
+                    pFrame = NULL;
+            }
+        }
 
     }
     else
@@ -836,7 +843,22 @@ void Dialog::SetModalInputMode( BOOL bModal )
         pSVData->maAppData.mnModalDialog--;
 
         if ( mpDialogParent )
-            mpDialogParent->EnableInput( TRUE, TRUE, TRUE, this );		
+        {
+            // #115933# re-enable the whole frame hierarchie again (see above)
+            // note that code in getfocus assures that we do not accidentally enable
+            // windows that were disabled before
+            Window *pFrame = mpDialogParent;
+            while( pFrame )
+            {
+                pFrame->EnableInput( TRUE, TRUE, TRUE, this );
+                if( pFrame->GetParent() )
+                    pFrame = pFrame->GetParent()->mpWindowImpl->mpFrameWindow;
+                else
+                    pFrame = NULL;
+            }
+
+        }
+
         // Enable the prev Modal Dialog
         if ( mpPrevExecuteDlg && !mpPrevExecuteDlg->IsWindowOrChild( this, TRUE ) )
         {
@@ -856,12 +878,12 @@ void Dialog::SetModalInputMode( BOOL bModal, BOOL bSubModalDialogs )
     if ( bSubModalDialogs )
     {
         Window* pOverlap = ImplGetFirstOverlapWindow();
-        pOverlap = pOverlap->mpFirstOverlap;
+        pOverlap = pOverlap->mpWindowImpl->mpFirstOverlap;
         while ( pOverlap )
         {
             if ( pOverlap->IsDialog() )
                 ((Dialog*)pOverlap)->SetModalInputMode( bModal, TRUE );
-            pOverlap = pOverlap->mpNext;
+            pOverlap = pOverlap->mpWindowImpl->mpNext;
         }
     }
 
@@ -882,7 +904,7 @@ void Dialog::GrabFocusToFirstControl()
     {
         // Wenn schon ein Child-Fenster mal den Focus hatte,
         // dann dieses bevorzugen
-        pFocusControl = ImplGetFirstOverlapWindow()->mpLastFocusWindow;
+        pFocusControl = ImplGetFirstOverlapWindow()->mpWindowImpl->mpLastFocusWindow;
         // Control aus der Dialog-Steuerung suchen
         if ( pFocusControl )
             pFocusControl = ImplFindDlgCtrlWindow( pFocusControl );
@@ -902,7 +924,7 @@ void Dialog::GrabFocusToFirstControl()
         pFocusControl->ImplControlFocus( GETFOCUS_INIT );
 }
 
-void Dialog::GetDrawWindowBorder( long& rLeftBorder, long& rTopBorder, long& rRightBorder, long& rBottomBorder ) const
+void Dialog::GetDrawWindowBorder( sal_Int32& rLeftBorder, sal_Int32& rTopBorder, sal_Int32& rRightBorder, sal_Int32& rBottomBorder ) const
 {
     ImplBorderWindow aImplWin( (Window*)this, WB_BORDER|WB_STDWORK, BORDERWINDOW_STYLE_OVERLAP );
 //  aImplWin.SetText( GetText() );
