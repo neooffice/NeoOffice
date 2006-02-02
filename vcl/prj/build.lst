@@ -35,6 +35,6 @@ vc	vcl\java\source\gdi						nmake	-	u	vc__gdij vc_unot NULL
 vc	vcl\win\source\window					nmake	-	u	vc__winj vc_unot NULL
 vc	vcl\java\source\java					nmake	-	u	vc__javaj vc_unot NULL
 vc	vcl\java\com\sun\star\vcl				nmake	-	u	vc__javavcl vc_unot NULL
-vc	vcl\java\com\sun\star\vcl\macosx		nmake	-	u	vc__javavclmacosx vc__javavcl vc_unot NULL
-vc	vcl\util								nmake	-	all	vc_util vc__plug.u vc__appa.u vc__appm.m vc__appu.u vc__appw.w vc__appj.u vc__gdim.m vc__gdiu.u vc__gdiw.w vc__gdij.u vc__srcm.m vc__srcu.u vc__srcw.w vc__wina.u vc__winm.m vc__winu.u vc__winw.w vc__winj.u vc__du.u vc__gtka.u vc__gtkw.u vc__gtkg.u vc__kde.u vc__javavcl vc__javavclmacosx vc_app vc_ctrl vc_gdi vc_hlp vc_src vc_win vc_glyphs NULL
+vc	vcl\java\com\sun\star\vcl\macosx		nmake	-	u	vc__javavclmacosx vc_unot NULL
+vc	vcl\util								nmake	-	all	vc_util vc__plug.u vc__appa.u vc__appm.m vc__appu.u vc__appw.w vc__appj.u vc__gdim.m vc__gdiu.u vc__gdiw.w vc__gdij.u vc__srcm.m vc__srcu.u vc__srcw.w vc__wina.u vc__winm.m vc__winu.u vc__winw.w vc__winj.u vc__du.u vc__gtka.u vc__gtkw.u vc__gtkg.u vc__kde.u vc__javavcl.u vc__javavclmacosx.u vc_app vc_ctrl vc_gdi vc_hlp vc_src vc_win vc_glyphs NULL
 vc	vcl\workben								nmake	-	all	vc_wrkb vc_util NULL
