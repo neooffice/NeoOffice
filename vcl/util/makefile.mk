@@ -1,44 +1,38 @@
-##########################################################################
-# 
+#*************************************************************************
+#
 #   $RCSfile$
-# 
+#
 #   $Revision$
-# 
+#
 #   last change: $Author$ $Date$
-# 
-#   The Contents of this file are made available subject to the terms of
-#   either of the following licenses
-# 
-#          - GNU General Public License Version 2.1
-# 
-#   Sun Microsystems Inc., October, 2000
-# 
-#   GNU General Public License Version 2.1
-#   =============================================
-#   Copyright 2000 by Sun Microsystems, Inc.
-#   901 San Antonio Road, Palo Alto, CA 94303, USA
-# 
-#   This library is free software; you can redistribute it and/or
-#   modify it under the terms of the GNU General Public
-#   License version 2.1, as published by the Free Software Foundation.
-# 
-#   This library is distributed in the hope that it will be useful,
-#   but WITHOUT ANY WARRANTY; without even the implied warranty of
-#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#   General Public License for more details.
-# 
-#   You should have received a copy of the GNU General Public
-#   License along with this library; if not, write to the Free Software
-#   Foundation, Inc., 59 Temple Place, Suite 330, Boston,
-#   MA  02111-1307  USA
-#   
-#   =================================================
-#   Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
-#   distributed under GPL only under modification term 3 of the LGPL.
-# 
-#   Contributor(s): _______________________________________
-# 
-##########################################################################
+#
+#   The Contents of this file are made available subject to
+#   the terms of GNU General Public License Version 2.1.
+#
+#
+#     GNU General Public License Version 2.1
+#     =============================================
+#     Copyright 2005 by Sun Microsystems, Inc.
+#     901 San Antonio Road, Palo Alto, CA 94303, USA
+#
+#     This library is free software; you can redistribute it and/or
+#     modify it under the terms of the GNU General Public
+#     License version 2.1, as published by the Free Software Foundation.
+#
+#     This library is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#     General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public
+#     License along with this library; if not, write to the Free Software
+#     Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+#     MA  02111-1307  USA
+#
+#     Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+#     GPL only under modification term 3 of the LGPL.
+#
+#*************************************************************************
 
 PRJ=..
 
@@ -47,10 +41,15 @@ TARGET=vcl
 VERSION=$(UPD)
 USE_DEFFILE=TRUE
 
+.IF "$(OS)" == "SOLARIS"
+LINKFLAGSRUNPATH=-R/usr/sfw/lib -R\''$$ORIGIN'\'
+.ENDIF
+
 # --- Settings -----------------------------------------------------------
 
 .INCLUDE :  settings.mk
 .INCLUDE :  makefile.pmk
+.INCLUDE :  makefile2.pmk
 
 
 # --- Allgemein ----------------------------------------------------------
@@ -64,12 +63,11 @@ HXXDEPNLST= $(INC)$/accel.hxx       \
             $(INC)$/btndlg.hxx      \
             $(INC)$/button.hxx      \
             $(INC)$/ctrl.hxx        \
-            $(INC)$/color.hxx       \
-            $(INC)$/config.hxx      \
             $(INC)$/cursor.hxx      \
             $(INC)$/cmdevt.hxx      \
             $(INC)$/decoview.hxx    \
             $(INC)$/dialog.hxx      \
+            $(INC)$/dllapi.h        \
             $(INC)$/dockwin.hxx     \
             $(INC)$/edit.hxx        \
             $(INC)$/event.hxx       \
@@ -86,7 +84,6 @@ HXXDEPNLST= $(INC)$/accel.hxx       \
             $(INC)$/keycodes.hxx    \
             $(INC)$/keycod.hxx      \
             $(INC)$/image.hxx       \
-            $(INC)$/line.hxx        \
             $(INC)$/lstbox.h        \
             $(INC)$/lstbox.hxx      \
             $(INC)$/mapmod.hxx      \
@@ -100,15 +97,11 @@ HXXDEPNLST= $(INC)$/accel.hxx       \
             $(INC)$/outdev.hxx      \
             $(INC)$/outdev3d.hxx    \
             $(INC)$/pointr.hxx      \
-            $(INC)$/poly.hxx        \
             $(INC)$/ptrstyle.hxx    \
             $(INC)$/prntypes.hxx    \
             $(INC)$/print.hxx       \
             $(INC)$/prndlg.hxx      \
             $(INC)$/region.hxx      \
-            $(INC)$/rc.hxx          \
-            $(INC)$/resid.hxx       \
-            $(INC)$/resary.hxx      \
             $(INC)$/salbtype.hxx    \
             $(INC)$/scrbar.hxx      \
             $(INC)$/slider.hxx      \
@@ -126,7 +119,6 @@ HXXDEPNLST= $(INC)$/accel.hxx       \
             $(INC)$/svapp.hxx       \
             $(INC)$/syschild.hxx    \
             $(INC)$/sysdata.hxx     \
-            $(INC)$/system.hxx      \
             $(INC)$/syswin.hxx      \
             $(INC)$/tabctrl.hxx     \
             $(INC)$/tabdlg.hxx      \
@@ -159,27 +151,19 @@ LIB1FILES=  $(SLB)$/app.lib     \
             $(SLB)$/helper.lib
 
 
-.IF "$(remote)" != ""
-    LIB1FILES+= $(SLB)$/remote.lib
-.IF "$(COM)"=="GCC"
-LIB1OBJFILES=$(SLO)$/salmain.obj
-.ENDIF
-.ELSE           # "$(remote)" != ""
+.IF "$(GUI)" == "UNX" && "$(GUIBASE)" != "java"
+LIB1FILES+=$(SLB)$/salplug.lib
+.ELSE
 LIB1FILES+= \
             $(SLB)$/salwin.lib  \
             $(SLB)$/salgdi.lib  \
             $(SLB)$/salapp.lib
-.ENDIF          # "$(remote)" != ""
 
-.IF "$(GUI)" == "UNX"
-.IF "$(GUIBASE)"=="java"
-    LIB1FILES += $(SLB)$/saljava.lib
-.ELSE
-.IF "$(USE_XPRINT)" != "TRUE"
-    SHL1STDLIBS=-lpsp$(VERSION)$(DLLPOSTFIX)
-.ENDIF # ! USE_XPRINT
-.ENDIF # java
-.ENDIF # UNX
+.IF "$(GUIBASE)" != "java"
+LIB1FILES+= \
+            $(SLB)$/saljava.lib
+.ENDIF
+.ENDIF
 
 SHL1TARGET= vcl$(VERSION)$(DLLPOSTFIX)
 SHL1IMPLIB= ivcl
@@ -192,11 +176,12 @@ SHL1STDLIBS+=\
             $(CPPUHELPERLIB)    \
             $(CPPULIB)          \
             $(VOSLIB)           \
-            $(SALLIB)
-
-.IF "$(ENABLE_CTL)"!=""
-    SHL1STDLIBS+= $(ICUUCLIB) $(ICULELIB)
-.ENDIF # ENABLE_CTL
+            $(SALLIB)			\
+            $(BASEGFXLIB)		\
+            $(ICUUCLIB)			\
+            $(ICULELIB)			\
+			$(JVMACCESSLIB)
+SHL1USE_EXPORTS=ordinal
 
 .IF "$(USE_BUILTIN_RASTERIZER)"!=""
     LIB1FILES +=    $(SLB)$/glyphs.lib
@@ -211,6 +196,8 @@ SHL1DEPN=   $(L)$/itools.lib $(L)$/sot.lib
 SHL1LIBS=   $(LIB1TARGET)
 .IF "$(GUI)"!="UNX"
 SHL1OBJS=   $(SLO)$/salshl.obj
+.ELIF "$(OS)"!="FREEBSD"
+SHL1STDLIBS+=-ldl
 .ENDIF
 
 .IF "$(GUI)" != "MAC"
@@ -221,15 +208,10 @@ SHL1RES=    $(RES)$/salsrc.res
 SHL1DEF=    $(MISC)$/$(SHL1TARGET).def
 
 DEF1NAME    =$(SHL1TARGET)
-DEF1DEPN    =   $(MISC)$/$(SHL1TARGET).flt \
-                $(HXXDEPNLST) \
+DEF1DEPN    =   $(HXXDEPNLST) \
                 $(LIB1TARGET)
 DEF1DES     =VCL
 DEFLIB1NAME =vcl
-DEF1EXPORT1=component_getFactory
-DEF1EXPORT2=component_getImplementationEnvironment
-DEF1EXPORT3=component_writeInfo
-
 
 # --- W32 ----------------------------------------------------------------
 
@@ -247,123 +229,194 @@ SHL1STDLIBS += uwinapi.lib      \
 .IF "$(GUI)$(COM)$(CPU)" == "WNTMSCI"
 LINKFLAGSSHL += /ENTRY:LibMain@12
 .ENDIF
-
 .ENDIF
+
 
 # --- UNX ----------------------------------------------------------------
 
 .IF "$(GUI)"=="UNX"
 
-.IF "$(OS)"=="MACOSX"
-SHL1STDLIBS += -ldl
-.ENDIF
-
-.IF "$(GUIBASE)"=="java"
-.IF "$(OS)"=="MACOSX"
-SHL1STDLIBS += -framework ApplicationServices -framework Carbon -framework AudioToolbox -framework AudioUnit -framework AppKit
-.ENDIF
+.IF "$(OS)"!="MACOSX" && "$(OS)"!="FREEBSD"
+SHL1STDLIBS+= -ldl
 .ENDIF
 
 .IF "$(GUIBASE)"=="aqua"
 SHL1STDLIBS += -framework Cocoa
 .ENDIF
 
-.IF "$(GUIBASE)"=="unx"
-
-.IF "$(WITH_LIBSN)"=="YES"
-SHL1STDLIBS+=$(LIBSN_LIBS)
+.IF "$(GUIBASE)" != "unx"
+SHL1STDLIBS += -lX11
 .ENDIF
 
-# Solaris
-.IF "$(OS)"=="SOLARIS"
-
-.IF "$(USE_XPRINT)" == "TRUE"
-SHL1STDLIBS += -lXp -lXext -lSM -lICE -lX11
-.ELSE
-SHL1STDLIBS += -lXext -lSM -lICE -lX11
-.ENDIF          # "$(USE_XPRINT)" == "TRUE"
-
-# Others
-.ELSE           # "$(OS)"=="SOLARIS"
-.IF "$(USE_XPRINT)" == "TRUE"
-SHL1STDLIBS += -lXp -lXext -lSM -lICE -lX11
-.ELSE
-.IF "$(USE_XINERAMA)" != "NO"
-.IF "$(XINERAMA_LINK)" == "dynamic" || "$(OS)" == "MACOSX"
-SHL1STDLIBS += -lXinerama
-.ELSE
-SHL1STDLIBS += -Wl,-Bstatic -lXinerama -Wl,-Bdynamic 
-.ENDIF          # $(XINERAMA_LINK)
-.ENDIF          # $(USE_XINERAMA)
-SHL1STDLIBS += -lXext -lSM -lICE -lX11
-.ENDIF          # "$(USE_XPRINT)" == "TRUE"
-.ENDIF          # "$(OS)"=="SOLARIS"
-.ENDIF          # "$(GUIBASE)"=="unx"
-
-.IF "$(ENABLE_PASF)" != ""
 .IF "$(OS)"=="MACOSX"
-SHL1STDLIBS += -framework CoreAudio -framework AudioToolbox
+.IF "$(GUIBASE)" == "java"
+SHL1STDLIBS += -framework ApplicationServices -framework Carbon -framework AudioToolbox -framework AudioUnit -framework AppKit
+.ELSE
+SHL1STDLIBS += -framework Foundation -framework CoreFoundation
 .ENDIF
-SHL1STDLIBS += -lsndfile -lportaudio
-.ENDIF
-
-.IF "$(OS)"=="LINUX" || "$(OS)"=="SOLARIS" || "$(OS)"=="FREEBSD"
-# some nas versions need -lXt, too
-#we must not link with Xt !!! it requires Xm which is not available on all platforms
-SHL1STDLIBS += -laudio
-.IF "$(OS)"=="SOLARIS"
-# needed by libaudio.a
-SHL1STDLIBS += -ldl -lnsl -lsocket
-.ENDIF # SOLARIS
-.ENDIF          # "$(OS)"=="LINUX" || "$(OS)"=="SOLARIS" || "$(OS)"=="FREEBSD"
-
+.ENDIF # "$(OS)"=="MACOSX"
 
 .ENDIF          # "$(GUI)"=="UNX"
 
-.IF "$(GUIBASE)"=="java"
-JARCLASSDIRS = com
-JARTARGET = $(TARGET).jar
-JARCOMPRESS = TRUE
+# UNX sal plugins
+.IF "$(GUI)" == "UNX" && "$(GUIBASE)" != "java"
+
+# basic pure X11 plugin
+LIB2TARGET=$(SLB)$/ipure_x
+LIB2FILES= \
+            $(SLB)$/salwin.lib  \
+            $(SLB)$/salgdi.lib  \
+            $(SLB)$/salapp.lib
+SHL2TARGET=vclplug_gen$(UPD)$(DLLPOSTFIX)
+SHL2IMPLIB=ipure_x
+SHL2LIBS=$(LIB2TARGET)
+SHL2DEPN=$(SHL1IMPLIBN) $(SHL1TARGETN)
+
+# libs for generic plugin
+SHL2STDLIBS=\
+			$(VCLLIB)\
+			-lpsp$(VERSION)$(DLLPOSTFIX)\
+            $(SOTLIB)           \
+            $(UNOTOOLSLIB)      \
+            $(TOOLSLIB)         \
+            $(COMPHELPERLIB)	\
+            $(UCBHELPERLIB)     \
+            $(CPPUHELPERLIB)    \
+            $(CPPULIB)          \
+            $(VOSLIB)           \
+            $(SALLIB)
+
+# prepare linking of Xinerama
+.IF "$(USE_XINERAMA)" != "NO"
+
+.IF "$(OS)"=="MACOSX"
+XINERAMALIBS=-lXinerama
+.ELSE
+.IF "$(OS)" != "SOLARIS"
+.IF "$(XINERAMA_LINK)" == "dynamic"
+XINERAMALIBS= -lXinerama
+.ELSE
+XINERAMALIBS= -Wl,-Bstatic -lXinerama -Wl,-Bdynamic 
+.ENDIF # XINERAMA_LINK == dynamic
+.ENDIF # OS == SOLARIS
+.ENDIF # OS == MACOSX
+
+SHL2STDLIBS += $(XINERAMALIBS)
+.ENDIF # USE_XINERAMA != NO
+
+.IF "$(XRENDER_LINK)" == "YES"
+SHL2STDLIBS+=`pkg-config --libs xrender`
 .ENDIF
+
+
+.IF "$(ENABLE_PASF)" != ""
+.IF "$(OS)"=="MACOSX"
+SHL2STDLIBS += -framework CoreAudio -framework AudioToolbox
+.ENDIF
+SHL2STDLIBS += -lsndfile -lportaudio
+.ENDIF # ENABLE_PASF
+
+.IF "$(ENABLE_NAS)" != ""
+SHL2STDLIBS += -laudio
+.IF "$(OS)"=="SOLARIS"
+# needed by libaudio.a
+SHL2STDLIBS += -ldl -lnsl -lsocket
+.ENDIF # SOLARIS
+.ENDIF
+
+.IF "$(GUIBASE)"=="unx"
+
+.IF "$(WITH_LIBSN)"=="YES"
+SHL2STDLIBS+=$(LIBSN_LIBS)
+.ENDIF
+
+SHL2STDLIBS += -lXext -lSM -lICE -lX11
+.IF "$(OS)"!="MACOSX" && "$(OS)"!="FREEBSD"
+# needed by salprnpsp.cxx
+SHL2STDLIBS+= -ldl
+.ENDIF
+
+.ENDIF          # "$(GUIBASE)"=="unx"
+
+# dummy plugin
+LIB3TARGET=$(SLB)$/idummy_plug_
+LIB3FILES= \
+            $(SLB)$/dapp.lib
+SHL3TARGET=vclplug_dummy$(UPD)$(DLLPOSTFIX)
+SHL3IMPLIB=idummy_plug_
+SHL3LIBS=$(LIB3TARGET)
+SHL3DEPN=$(SHL1IMPLIBN) $(SHL1TARGETN)
+
+# libs for dummy plugin
+SHL3STDLIBS=\
+			$(VCLLIB)\
+			-lpsp$(VERSION)$(DLLPOSTFIX)\
+            $(SOTLIB)           \
+            $(UNOTOOLSLIB)      \
+            $(TOOLSLIB)         \
+            $(COMPHELPERLIB)	\
+            $(UCBHELPERLIB)     \
+            $(CPPUHELPERLIB)    \
+            $(CPPULIB)          \
+            $(VOSLIB)           \
+            $(SALLIB)
+
+# gtk plugin
+.IF "$(ENABLE_GTK)" != ""
+PKGCONFIG_MODULES=gtk+-2.0 gthread-2.0
+.INCLUDE: pkg_config.mk
+
+LIB4TARGET=$(SLB)$/igtk_plug_
+LIB4FILES=\
+			$(SLB)$/gtkapp.lib\
+			$(SLB)$/gtkgdi.lib\
+			$(SLB)$/gtkwin.lib
+SHL4TARGET=vclplug_gtk$(UPD)$(DLLPOSTFIX)
+SHL4IMPLIB=igtk_plug_
+SHL4LIBS=$(LIB4TARGET)
+SHL4DEPN=$(SHL1IMPLIBN) $(SHL1TARGETN) $(SHL2IMPLIBN) $(SHL2TARGETN)
+# libs for gtk plugin
+SHL4STDLIBS+=$(PKGCONFIG_LIBS:s/ -lpangoxft-1.0//)
+# hack for faked SO environment
+.IF "$(PKGCONFIG_ROOT)"!=""
+SHL4SONAME+=-z nodefs
+SHL4NOCHECK=TRUE
+.ENDIF          # "$(PKGCONFIG_ROOT)"!=""
+
+
+SHL4STDLIBS+=-l$(SHL2TARGET)
+.IF "$(OS)"=="FREEBSD" || "$(OS)"=="MACOSX"
+SHL4STDLIBS+=$(SHL3STDLIBS) -lX11
+.ELSE
+SHL4STDLIBS+=$(SHL3STDLIBS) -lX11 -ldl
+.ENDIF # "$(OS)"=="FREEBSD" || "$(OS)"=="MACOSX"
+.ENDIF # "$(ENABLE_GTK)" != ""
+
+# KDE plugin
+.IF "$(ENABLE_KDE)" != ""
+.IF "$(KDE_ROOT)"!=""
+SOLARLIB+=-L$(KDE_ROOT)$/lib
+KDE_LIBS:=-lkdeui -lkdecore -lqt-mt
+.ENDIF 			# "$(KDE_ROOT)"!=""
+LIB5TARGET=$(SLB)$/ikde_plug_
+LIB5FILES=$(SLB)$/kdeplug.lib
+SHL5TARGET=vclplug_kde$(UPD)$(DLLPOSTFIX)
+SHL5IMPLIB=ikde_plug_
+SHL5LIBS=$(LIB5TARGET)
+SHL5DEPN=$(SHL2TARGETN)
+# libs for KDE plugin
+SHL5STDLIBS=$(KDE_LIBS)
+SHL5STDLIBS+=-l$(SHL2TARGET)
+.IF "$(OS)"=="FREEBSD" || "$(OS)"=="MACOSX"
+SHL5STDLIBS+=$(SHL3STDLIBS) -lX11
+.ELSE
+SHL5STDLIBS+=$(SHL3STDLIBS) -lX11 -ldl
+.ENDIF # "$(OS)"=="FREEBSD" || "$(OS)"=="MACOSX"
+.ENDIF # "$(ENABLE_KDE)" != ""
+
+.ENDIF # UNX && !java
 
 # --- Allgemein ----------------------------------------------------------
 
 .INCLUDE :  target.mk
-
-# --- Targets ------------------------------------------------------------
-
-# --- VCL-Filter-Datei ---
-
-$(MISC)$/$(SHL1TARGET).flt: makefile.mk
-    @echo ------------------------------
-    @echo Making: $@
-    @echo Impl > $@
-    @echo Sal>> $@
-    @echo Dbg>> $@
-    @echo HelpTextWindow>> $@
-    @echo MenuBarWindow>> $@
-    @echo MenuFloatingWindow>> $@
-    @echo MenuItemList>> $@
-    @echo LibMain>> $@
-    @echo LIBMAIN>> $@
-    @echo Wep>> $@
-    @echo WEP>> $@
-    @echo RmEvent>> $@
-    @echo RmFrameWindow>> $@
-    @echo RmPrinter>> $@
-    @echo RmBitmap>> $@
-    @echo RmSound>> $@
-    @echo __CT>> $@
-    @echo _TI2>> $@
-    @echo _TI3>> $@
-    @echo _real@ >> $@
-    @echo xMonitorFrom >> $@
-    @echo xEnumDisplay >> $@
-    @echo xGetSystemMetrics >> $@
-    @echo xGetMonitorInfo >> $@
-    @echo WIN_ >> $@
-    @echo component_ >> $@
-    @echo DNDEventDispatcher>> $@
-    @echo DNDListenerContainer>> $@
-    @echo vcl\ >> $@
 
