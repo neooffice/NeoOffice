@@ -6,41 +6,33 @@
  *
  *  last change: $Author$ $Date$
  *
- *  The Contents of this file are made available subject to the terms of
- *  either of the following licenses
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- *         - GNU General Public License Version 2.1
  *
- *  Sun Microsystems Inc., October, 2000
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- *  GNU General Public License Version 2.1
- *  =============================================
- *  Copyright 2000 by Sun Microsystems, Inc.
- *  901 San Antonio Road, Palo Alto, CA 94303, USA
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
  *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public
- *  License version 2.1, as published by the Free Software Foundation.
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
  *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
  *
- *  You should have received a copy of the GNU General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *  MA  02111-1307  USA
- *  
- *  =================================================
- *  Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
- *  distributed under GPL only under modification term 3 of the LGPL.
- *
- *  Contributor(s): _______________________________________
+ *    Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
-
-#define _SV_SVMAIN_CXX
 
 #ifdef WNT
 #include <tools/prewin.h>
@@ -57,9 +49,6 @@
 #include <svunx.h>
 #endif
 
-#ifndef _SV_SALDATA_HXX
-#include <saldata.hxx>
-#endif
 #ifndef _SV_SVSYS_HXX
 #include <svsys.h>
 #endif
@@ -109,7 +98,7 @@
 #include <image.hxx>
 #endif
 #ifndef _SV_RESMGR_HXX
-#include <resmgr.hxx>
+#include <tools/resmgr.hxx>
 #endif
 #ifndef _SV_ACCMGR_HXX
 #include <accmgr.hxx>
@@ -129,6 +118,21 @@
 #ifndef _SV_SETTINGS_HXX
 #include <settings.hxx>
 #endif
+#ifndef _VCL_UNOWRAP_HXX
+#include <unowrap.hxx>
+#endif
+#ifndef _SV_SALSYS_HXX
+#include <salsys.hxx>
+#endif
+#ifndef _SV_SALTIMER_HXX
+#include <saltimer.hxx>
+#endif
+#ifndef _SV_SALIMESTATUS_HXX
+#include <salimestatus.hxx>
+#endif
+#ifndef _SV_IMPIMAGETREE_HXX
+#include <impimagetree.hxx>
+#endif
 
 #include <vos/process.hxx>
 #include <osl/file.hxx>
@@ -140,73 +144,24 @@
 #ifndef _COM_SUN_STAR_LANG_XMULTISERVICEFACTORY_HPP_
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #endif
+#ifndef _COM_SUN_STAR_LANG_XCOMPONENT_HPP_
+#include <com/sun/star/lang/XComponent.hpp>
+#endif
 #include <rtl/logfile.hxx>
 
 using namespace ::rtl;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
 
-#ifdef REMOTE_APPSERVER
-#include <config.hxx>
-#include <ooffice.hxx>
-#include <rversion.h>
-#include <xevthdl.hxx>
-#include <rmevents.hxx>
-#include <rmprint.hxx>
-#include <outdev.h>
-#include <vos/mutex.hxx>
-#include <vos/timer.hxx>
-#include "rvp.hxx"
-#include <unotools/atom.hxx>
-
-
-#include <com/sun/star/portal/client/XRmStatus.hpp>
-#include <com/sun/star/portal/client/XRmSync.hpp>
-
-using namespace ::cppu;
-using namespace ::com::sun::star::portal::client;
-
-#ifdef UNX
-void SalData::Init (int *pIPointer, char *pCPointer[] )
-{};
-#endif /* UNX */
-
-#endif /* REMOTE_APPSERVER */
-
 #include <fontcfg.hxx>
+#include <configsettings.hxx>
 
-#ifdef MACOSX
+#ifdef USE_JAVA
+#ifndef _SV_SALINST_H
+#include <salinst.h>
+#endif
+#endif	// USE_JAVA
 
-#include <unistd.h>
-
-#include <premac.h>
-#include <CoreFoundation/CoreFoundation.h>
-#include <postmac.h>
-
-#endif	// MACOSX
-
-// ============================================================================
-
-#ifdef MACOSX 
-static void SourceContextCallBack( void *pInfo )
-{
-}
-#endif	// MACOSX
-
-// ============================================================================
-
-#ifdef MACOSX 
-static void RunSVMain( void *pData )
-{
-	BOOL *pRet = (BOOL *)pData;
-	*pRet = SVMain();
-
-	// Force exit since some JVMs won't shutdown when only exit() is invoked
-	_exit( 0 );
-}
-#endif	// MACOSX
-
-#pragma hdrstop
 
 // =======================================================================
 
@@ -264,11 +219,7 @@ public:
             }
             bIn = FALSE;
 
-#ifndef REMOTE_APPSERVER
             return vos::OSignalHandler::TAction_CallNextHandler;
-#else
-            return vos::OSignalHandler::TAction_KillApplication;
-#endif
         }
     }
 
@@ -276,58 +227,9 @@ public:
 }
 
 // =======================================================================
-BOOL SVMain()
+BOOL ImplSVMain()
 {
-#ifdef MACOSX
-	static BOOL bFirstPass = TRUE;
-
-	// Mac OS X requires that any Cocoa code have a CFRunLoop started in the
-	// primordial thread. Since all of the AWT classes in Java 1.4 and higher
-	// are written in Cocoa, we need to start the CFRunLoop here and run
-	// SVMain() in a secondary thread.
-    if ( bFirstPass )
-    {
-		bFirstPass = FALSE;
-
-		BOOL bInit = FALSE;
-
-		// Don't allow retrieval of locale happen in a secondary thread as
-		// Mac OS X can sometimes return garbage in such cases
-		rtl_Locale *pLocale;
-		osl_getProcessLocale( &pLocale );
-
-		// Make sure that the new thread has the highest priority (i.e. the
-		// same priority as the main thread) so that Java Object.wait() calls
-		// behave properly
-		oslThread hThreadID = osl_createSuspendedThread( RunSVMain, &bInit );
-		osl_setThreadPriority( hThreadID, osl_Thread_PriorityHighest );
-		osl_resumeThread( hThreadID );
-
-        // Start the CFRunLoop
-        CFRunLoopSourceContext aSourceContext;
-        aSourceContext.version = 0;
-        aSourceContext.info = NULL;
-        aSourceContext.retain = NULL;
-        aSourceContext.release = NULL;
-        aSourceContext.copyDescription = NULL;
-        aSourceContext.equal = NULL;
-        aSourceContext.hash = NULL;
-        aSourceContext.schedule = NULL;
-        aSourceContext.cancel = NULL;
-        aSourceContext.perform = &SourceContextCallBack;
-        CFRunLoopSourceRef aSourceRef = CFRunLoopSourceCreate( NULL, 0, &aSourceContext );
-        CFRunLoopAddSource( CFRunLoopGetCurrent(), aSourceRef, kCFRunLoopCommonModes );
-        CFRunLoopRun();
-
-        osl_joinWithThread( hThreadID );
-        osl_destroyThread( hThreadID );
-
-		CFRelease( aSourceRef );
-
-        return bInit;
-    }
-#endif	// MACOSX
-
+    // The 'real' SVMain()
     RTL_LOGFILE_CONTEXT( aLog, "vcl (ss112471) ::SVMain" );
 
     ImplSVData* pSVData = ImplGetSVData();
@@ -344,17 +246,42 @@ BOOL SVMain()
         // Application-Main rufen
         pSVData->maAppData.mbInAppMain = TRUE;
 #ifdef USE_JAVA
-        ExecuteApplicationMain( pSVData->mpApp );
+		ExecuteApplicationMain( pSVData->mpApp );
 #else	// USE_JAVA
         pSVData->mpApp->Main();
 #endif	// USE_JAVA
         pSVData->maAppData.mbInAppMain = FALSE;
     }
 
+    // This is a hack to work around the problem of the asynchronous nature
+    // of bridging accessibility through Java: on shutdown there might still 
+    // be some events in the AWT EventQueue, which need the SolarMutex which
+    // - on the other hand - is destroyed in DeInitVCL(). So empty the queue
+    // here ..
+	Reference< XComponent > xComponent(pSVData->mxAccessBridge, UNO_QUERY);
+	if( xComponent.is() )
+	{
+	  ULONG nCount = Application::ReleaseSolarMutex();
+	  xComponent->dispose();
+	  Application::AcquireSolarMutex(nCount);
+	  pSVData->mxAccessBridge.clear();
+	}
+
     DeInitVCL();
     return bInit;
 }
 
+BOOL SVMain()
+{
+    // #i47888# allow for alternative initialization as required for e.g. MacOSX
+    extern BOOL ImplSVMainHook( BOOL* );
+
+    BOOL bInit;
+    if( ImplSVMainHook( &bInit ) )
+        return bInit;
+    else
+        return ImplSVMain();
+}
 // This variable is set, when no Application object is instantiated
 // before SVInit is called
 static Application *        pOwnSvApp = NULL;
@@ -373,28 +300,15 @@ BOOL InitVCL( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XM
 
     if( pExceptionHandler != NULL )
         return FALSE;
+    
+    if( ! ImplGetSVData() )
+        ImplInitSVData();
 
     if( !ImplGetSVData()->mpApp )
     {
         pOwnSvApp = new Application_Impl();
     }
-#ifndef REMOTE_APPSERVER
     InitSalMain();
-#endif
-
-#ifdef WNT
-    // remember data, copied from WinMain
-    SalData* pData = GetAppSalData();
-    if ( pData )    // Im AppServer NULL
-    {
-        STARTUPINFO aSI;
-        aSI.cb = sizeof( aSI );
-        GetStartupInfo( &aSI );
-        pData->mhInst                   = GetModuleHandle( NULL );
-        pData->mhPrevInst               = NULL;
-        pData->mnCmdShow                = aSI.wShowWindow;
-    }
-#endif
 
     /*AllSettings aAS;
     Application::SetSettings( aAS );// ???
@@ -413,43 +327,19 @@ BOOL InitVCL( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XM
     vos::OStartupInfo   aStartInfo;
     rtl::OUString       aExeFileName;
 
-#ifdef REMOTE_APPSERVER
-    // create condition now to avoid race
-    pSVData->mpStartUpCond = new vos::OCondition;
-#endif
 
     // Sal initialisieren
-#ifndef REMOTE_APPSERVER
     RTL_LOGFILE_CONTEXT_TRACE( aLog, "{ ::CreateSalInstance" );
     pSVData->mpDefInst = CreateSalInstance();
     if ( !pSVData->mpDefInst )
         return FALSE;
     RTL_LOGFILE_CONTEXT_TRACE( aLog, "} ::CreateSalInstance" );
-#endif
 
 	// Initialize application instance (should be done after initialization of VCL SAL part)
     if( pSVData->mpApp )
         // call init to initialize application class
         // soffice/sfx implementation creates the global service manager
         pSVData->mpApp->Init();
-
-#ifdef REMOTE_APPSERVER
-    {
-    Reference< XMultiServiceFactory > rSMgr = ::comphelper::getProcessServiceFactory();
-
-    pSVData->mpRmEventQueue = new RmEventQueue;
-    pSVData->mpWindowObjectMutex = new vos::OMutex;
-    pSVData->maAppData.mpSolarMutex = new ImplRemoteYieldMutex;
-
-    pSVData->maGDIData.mpScreenFontList   = new ImplDevFontList;
-    pSVData->maGDIData.mpScreenFontCache  = new ImplFontCache( FALSE );
-
-    pSVData->maAppData.mpSolarMutex->acquire(); // mutex should be aquired for startup
-
-//    ImplInitRemotePrinterList();
-    }
-
-#endif
 
     // Den AppFileName gleich holen und absolut machen, bevor das
     // WorkingDirectory sich aendert...
@@ -476,6 +366,8 @@ BOOL InitVCL( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XM
 
 void DeInitVCL()
 {
+    ImplImageTree::cleanup();
+
     delete pExceptionHandler;
     pExceptionHandler = NULL;
 
@@ -483,22 +375,6 @@ void DeInitVCL()
 
     // Debug Daten zuruecksetzen
     DBGGUI_DEINIT();
-
-    // Access list
-    List* pList = pSVData->maAppData.mpAccessList;
-    if( pList )
-    {
-        for( void* pLink = pList->First(); pLink; pLink = pList->Next() )
-            delete (Link*) pLink;
-        delete pList;
-        pSVData->maAppData.mpAccessList = NULL;
-    }
-
-    // globale daten wieder freigeben
-#ifndef REMOTE_APPSERVER
-    SalSound::Release();
-    SalOpenGL::Release();
-#endif
 
     // free global data
     delete pSVData->maGDIData.mpGrfConverter;
@@ -559,85 +435,12 @@ void DeInitVCL()
         delete pSVData->mpDefaultWin;
         pSVData->mpDefaultWin = NULL;
     }
-    if ( pSVData->mpResMgr )
-    {
-        delete pSVData->mpResMgr;
-        pSVData->mpResMgr = NULL;
-    }
-
-#ifdef REMOTE_APPSERVER
-    if( pSVData->mxClientFactory.is() )
-    {
-        try
-        {
-            pSVData->mxClientFactory = Reference < XMultiServiceFactory >();
-        }
-        catch(::com::sun::star::uno::Exception&)
-        {
-        }
-    }
-
-    if( pSVData->mxMultiFactory.is() )
-    {
-        try
-        {
-            pSVData->mxMultiFactory.clear();
-        }
-        catch(::com::sun::star::uno::Exception&)
-        {
-        }
-
-    }
-    CORmStarOffice::eraseRemoteCaches();
-    if( pSVData->mxStatus.is() )
-    {
-        try
-        {
-            // #93174 DO NOT SYNC HERE - 
-            // the client's sync object might already be destructed by the ORmRemoteClientFactory destructor
-            // CHECK_FOR_RVPSYNC_NORMAL()
-
-            delete pSVData->mpRVPNormalSync;
-            delete pSVData->mpRVPSoundSync;
-            delete pSVData->mpAtoms;
-
-            pSVData->mxStatus->Quit();
-            pSVData->mxStatus = Reference < ::com::sun::star::portal::client::XRmStatus >();
-        }
-        catch(::com::sun::star::uno::Exception&)
-        {
-        }
-    }
 
     if( pSVData->mpApp )
         // call deinit to deinitialize application class
         // soffice/sfx implementation disposes the global service manager
         // Warning: After this call you can't call uno services
         pSVData->mpApp->DeInit();
-
-    pSVData->maAppData.mpSolarMutex->release();
-    delete pSVData->maAppData.mpSolarMutex;
-    pSVData->maAppData.mpSolarMutex = NULL;
-    pSVData->mpOTimer->release();
-    pSVData->mpOTimer = NULL;
-    delete pSVData->mpRmEventQueue;
-    pSVData->mpRmEventQueue = NULL;
-    delete pSVData->mpWindowObjectMutex;
-    pSVData->mpWindowObjectMutex = NULL;
-
-    if ( pSVData->mpKeyNames )
-    {
-        for( String* pObj = pSVData->mpKeyNames->First(); pObj; pObj = pSVData->mpKeyNames->Next() )
-            delete pObj;
-        delete pSVData->mpKeyNames;
-    }
-#else
-    if( pSVData->mpApp )
-        // call deinit to deinitialize application class
-        // soffice/sfx implementation disposes the global service manager
-        // Warning: After this call you can't call uno services
-        pSVData->mpApp->DeInit();
-#endif
 
     if ( pSVData->maAppData.mpSettings )
     {
@@ -669,11 +472,6 @@ void DeInitVCL()
         delete pSVData->maAppData.mpDisplayName;
         pSVData->maAppData.mpDisplayName = NULL;
     }
-    if ( pSVData->maAppData.mpResPath )
-    {
-        delete pSVData->maAppData.mpResPath;
-        pSVData->maAppData.mpResPath = NULL;
-    }
     if ( pSVData->maAppData.mpEventListeners )
     {
         delete pSVData->maAppData.mpEventListeners;
@@ -690,6 +488,13 @@ void DeInitVCL()
     if ( pSVData->maAppData.mpFirstEventHook )
         ImplFreeEventHookData();
 
+	// #114285# Moved here from ImplDeInitSVData...
+    if ( pSVData->mpUnoWrapper )
+    {
+        pSVData->mpUnoWrapper->Destroy();
+        pSVData->mpUnoWrapper = NULL;
+    }
+
     ImplDeletePrnQueueList();
     delete pSVData->maGDIData.mpScreenFontList;
     pSVData->maGDIData.mpScreenFontList = NULL;
@@ -697,18 +502,30 @@ void DeInitVCL()
     pSVData->maGDIData.mpScreenFontCache = NULL;
     ImplFreeOutDevFontData();
 
+    if ( pSVData->mpResMgr )
+    {
+        delete pSVData->mpResMgr;
+        pSVData->mpResMgr = NULL;
+    }
+
     ResMgr::DestroyAllResMgr();
 
+	// destroy all Sal interfaces before destorying the instance
+	// and thereby unloading the plugin
+	delete pSVData->mpImeStatus;
+	pSVData->mpImeStatus = NULL;
+	delete pSVData->mpSalSystem;
+	pSVData->mpSalSystem = NULL;
+	delete pSVData->mpSalTimer;
+	pSVData->mpSalTimer = NULL;
+
     // Sal deinitialisieren
-#ifndef REMOTE_APPSERVER
     DestroySalInstance( pSVData->mpDefInst );
-#endif
 
     DeInitTools();
 
-#ifndef REMOTE_APPSERVER
     DeInitSalMain();
-#endif
+
     if( pOwnSvApp )
     {
         delete pOwnSvApp;
