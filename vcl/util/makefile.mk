@@ -416,6 +416,12 @@ SHL5STDLIBS+=$(SHL3STDLIBS) -lX11 -ldl
 
 .ENDIF # UNX && !java
 
+.IF "$(GUIBASE)"=="java"
+JARCLASSDIRS = com
+JARTARGET = $(TARGET).jar
+JARCOMPRESS = TRUE
+.ENDIF
+
 # --- Allgemein ----------------------------------------------------------
 
 .INCLUDE :  target.mk
