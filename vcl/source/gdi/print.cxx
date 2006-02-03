@@ -522,7 +522,7 @@ void Printer::ImplInit( SalPrinterQueueInfo* pInfo )
 		if ( (pJobSetup->maPrinterName != pInfo->maPrinterName) ||
 			 (pJobSetup->maDriver != pInfo->maDriver) )
 		{
-			delete[] pJobSetup->mpDriverData;
+			rtl_freeMemory( pJobSetup->mpDriverData );
 			pJobSetup->mpDriverData = NULL;
 			pJobSetup->mnDriverDataLen = 0;
 		}
