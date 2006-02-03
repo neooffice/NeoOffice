@@ -1928,9 +1928,9 @@ sal_Int32 PDFWriterImpl::emitFonts()
     char buf[8192];
 
     std::map< sal_Int32, sal_Int32 > aFontIDToObject;
-    std::map< OString, sal_Int32 > aFontStrToObject;
 
 #if defined USE_JAVA && defined MACOSX
+    std::map< OString, sal_Int32 > aFontStrToObject;
     for ( FontSubsetData::iterator it = m_aSubsets.begin(); it != m_aSubsets.end(); ++it )
     {
         for ( FontEmitList::iterator lit = it->second.m_aSubsets.begin(); lit != it->second.m_aSubsets.end(); ++lit )
