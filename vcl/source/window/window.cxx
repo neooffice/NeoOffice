@@ -5997,13 +5997,7 @@ void Window::SetParent( Window* pNewParent )
     // Assure DragSource and DropTarget members are created
     if ( bNewFrame )
     {
-#ifdef USE_JAVA
             GetDropTarget();
-#else	// USE_JAVA
-            // Discard DragSource and DropTarget members since the old native
-            // window will have been destroyed
-            ImplStopDnd();
-#endif	// USE_JAVA
     }
 
     if ( bVisible )
@@ -6167,7 +6161,7 @@ void Window::Show( BOOL bVisible, USHORT nFlags )
 
 #ifdef USE_JAVA
         // Ensure that DragSource and DropTarget members are created since the
-    	// native window is not created until first shown
+        // native window is not created until first shown
         GetDropTarget();
 #endif	// USE_JAVA
 
