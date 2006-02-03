@@ -1450,7 +1450,9 @@ BOOL SfxObjectShell::Print
 			pPrintDlg->SetLastPage( 9999 );
 			pPrintDlg->EnableCollate();
 			pPrintDlg->SetPrinter( &rPrt );
-			if ( pPrintDlg->Execute() != RET_OK )
+			short nRet = pPrintDlg->Execute();
+			delete pPrintDlg;
+			if ( nRet != RET_OK )
 				return FALSE;
 #endif	// USE_JAVA
 
@@ -1565,9 +1567,6 @@ BOOL SfxObjectShell::Print
 			rPrt.EndJob();
 			if ( pStbMgr )
 				pStbMgr->EndProgressMode();
-#ifdef USE_JAVA
-			delete pPrintDlg;
-#endif	// USE_JAVA
 			delete pIter;
 			break;
 		}
