@@ -6,47 +6,36 @@
  *
  *  last change: $Author$ $Date$
  *
- *  The Contents of this file are made available subject to the terms of
- *  either of the following licenses
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- *         - GNU General Public License Version 2.1
  *
- *  Sun Microsystems Inc., October, 2000
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- *  GNU General Public License Version 2.1
- *  =============================================
- *  Copyright 2000 by Sun Microsystems, Inc.
- *  901 San Antonio Road, Palo Alto, CA 94303, USA
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
  *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public
- *  License version 2.1, as published by the Free Software Foundation.
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
  *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
  *
- *  You should have received a copy of the GNU General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *  MA  02111-1307  USA
- *  
- *  =================================================
- *  Modified September 2005 by Patrick Luby. SISSL Removed. NeoOffice is
- *  distributed under GPL only under modification term 3 of the LGPL.
- *
- *  Contributor(s): _______________________________________
+ *    Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
 
-#define _SV_OPENGL_CXX
-
-#define private public
 #include <svsys.h>
 #include <window.hxx>
-#undef private
-#define private public
 
 #ifndef _SV_OUTDEV_HXX
 #include <outdev.hxx>
@@ -60,6 +49,15 @@
 #ifndef _SV_SALGDI_HXX
 #include <salgdi.hxx>
 #endif
+#ifndef _SV_SVDATA_HXX
+#include <svdata.hxx>
+#endif
+#ifndef _SV_SALINST_HXX
+#include <salinst.hxx>
+#endif
+#ifndef _SV_WINDOW_H
+#include <window.h>
+#endif
 
 
 #include <svapp.hxx>
@@ -69,9 +67,7 @@
 // - Defines -
 // -----------
 
-#ifdef WIN
-#define __OPENGL_CALL _far _pascal
-#elif defined WNT
+#ifdef WNT
 #define __OPENGL_CALL __stdcall
 #else
 #define __OPENGL_CALL
@@ -171,11 +167,7 @@ typedef void ( __OPENGL_CALL *OGLFncBlendFunc ) ( GLenum sfactor, GLenum dfactor
 
 #define PGRAPHICS mpOutDev->mpGraphics
 
-#ifndef REMOTE_APPSERVER
 #define OGL_INIT() (mpOGL && (mpOutDev->mpGraphics || mpOutDev->ImplGetGraphics()))
-#else
-#define OGL_INIT() (mpOGL && (mpOutDev->mpGraphics || mpOutDev->ImplGetGraphics()))
-#endif
 
 #define INIT_OGLFNC( FncName ) static OGLFnc##FncName pImplOpenGLFnc##FncName = NULL;
 #define GET_OGLFNC_GL( FncName )													\
@@ -278,7 +270,6 @@ INIT_OGLFNC( BlendFunc );
 
 BOOL OpenGL::ImplInitFncPointers()
 {
-#ifndef REMOTE_APPSERVER
 	BOOL bRet = TRUE;
 
 	GET_OGLFNC_GL( ClearDepth );
@@ -368,9 +359,6 @@ BOOL OpenGL::ImplInitFncPointers()
 	GET_OGLFNC_GL( BlendFunc );
 
 	return bRet;
-#else
-	return FALSE;
-#endif
 }
 
 BOOL OpenGL::mbNoOGL = FALSE;
@@ -387,22 +375,18 @@ OpenGL::OpenGL( OutputDevice* pOutDev ) :
 
 OpenGL::~OpenGL()
 {
-#ifndef REMOTE_APPSERVER
 	delete mpOGL;
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::ImplInit()
 {
-#ifndef REMOTE_APPSERVER
 	if( ( PGRAPHICS || mpOutDev->ImplGetGraphics() ) && ! mbNoOGL )
 	{
-		mpOGL = new SalOpenGL( PGRAPHICS );
+		mpOGL = ImplGetSVData()->mpDefInst->CreateSalOpenGL( PGRAPHICS );
 
-		if ( !mpOGL->Create() || (!bImplOpenGLFncPtrInitialized && !ImplInitFncPointers()) )
+		if ( !mpOGL->IsValid() || (!bImplOpenGLFncPtrInitialized && !ImplInitFncPointers()) )
 		{
 			delete mpOGL;
 			mpOGL = NULL;
@@ -412,190 +396,153 @@ void OpenGL::ImplInit()
 	}
 	else
 		mpOGL = NULL;
-#else
-	mpOGL = NULL;
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::SetConnectOutputDevice( OutputDevice* pOutDev )
 {
-#ifndef REMOTE_APPSERVER
 	delete mpOGL;
 	mpOutDev = pOutDev;
 	ImplInit();
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::ClearDepth( GLclampd fDepth )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncClearDepth( fDepth );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::DepthFunc( GLenum eFunc )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncDepthFunc( eFunc );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::Enable( GLenum eCap )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncEnable( eCap );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::Disable( GLenum eCap )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncDisable( eCap );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::DepthMask( GLboolean bFlag )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncDepthMask( bFlag );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::ShadeModel( GLenum eMode )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncShadeModel( eMode );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::EdgeFlag( GLboolean bFlag )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncEdgeFlag( bFlag );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::Clear( GLbitfield nMask )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
-#if defined UNX
+#if defined UNX && ( ! defined MACOSX || defined USE_JAVA )
 		mpOGL->StartScene( PGRAPHICS );
 #endif
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncClear( nMask );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::Flush()
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncFlush();
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::Finish()
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncFinish();
-#if defined UNX
+#if defined UNX && ( ! defined MACOSX || defined USE_JAVA )
 		mpOGL->StopScene();
 #endif
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::Viewport( GLint nX, GLint nY, GLsizei nWidth, GLsizei nHeight )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		long nOutHeight;
 
 		if( mpOutDev->GetOutDevType() == OUTDEV_WINDOW )
-			nOutHeight = ( (Window*) mpOutDev )->mpFrameWindow->mnOutHeight;
+			nOutHeight = ( (Window*) mpOutDev )->ImplGetFrameWindow()->mnOutHeight;
 		else
 			nOutHeight = mpOutDev->mnOutHeight;
 
@@ -606,7 +553,7 @@ void OpenGL::Viewport( GLint nX, GLint nY, GLsizei nWidth, GLsizei nHeight )
         {
             long lx = nX + mpOutDev->mnOutOffX;
             long lwidth = nWidth;
-            ((SalGraphicsLayout*)mpOutDev->mpGraphics)->mirror( lx, lwidth, mpOutDev );
+            mpOutDev->mpGraphics->mirror( lx, lwidth, mpOutDev );
             nX = lx - mpOutDev->mnOutOffX;
         }
 		pImplOpenGLFncViewport( nX + mpOutDev->mnOutOffX,
@@ -615,549 +562,438 @@ void OpenGL::Viewport( GLint nX, GLint nY, GLsizei nWidth, GLsizei nHeight )
 
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::Begin( GLenum eMode )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncBegin( eMode );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::End()
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncEnd();
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::Vertex3dv( const GLdouble* fVar )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncVertex3dv( fVar );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::Normal3dv( const GLdouble* fVar )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncNormal3dv( fVar );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::Color4ub( GLubyte cRed, GLubyte cGreen, GLubyte cBlue, GLubyte cAlpha )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncColor4ub( cRed, cGreen, cBlue, cAlpha );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::Materialfv( GLenum eFace, GLenum ePName, const GLfloat *fParams )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncMaterialfv( eFace, ePName, fParams );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::Materialf( GLenum eFace, GLenum ePName, GLfloat fParam )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncMaterialf( eFace, ePName, fParam );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::LightModelfv( GLenum ePName, const GLfloat *fParams )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncLightModelfv( ePName, fParams );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::LightModelf( GLenum ePName, GLfloat fParam )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncLightModelf( ePName, fParam );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::Lightfv( GLenum eLight, GLenum ePName, const GLfloat *fParams )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncLightfv( eLight, ePName, fParams );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::Lightf( GLenum eLight, GLenum ePName, GLfloat fParam )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncLightf( eLight, ePName, fParam );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::PolygonMode( GLenum eFace, GLenum eMode )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncPolygonMode( eFace, eMode );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::CullFace( GLenum eMode )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncCullFace( eMode );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::PointSize( GLfloat fSize )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncPointSize( fSize );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::LineWidth( GLfloat fWidth )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncLineWidth( fWidth );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::MatrixMode( GLenum eMode )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncMatrixMode( eMode );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::LoadMatrixd( const GLdouble *fM )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncLoadMatrixd( fM );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::TexCoord2dv( const GLdouble *pParams )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncTexCoord2dv( pParams );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::TexCoord3dv( const GLdouble *fVar )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncTexCoord3dv( fVar );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::TexImage1D( GLenum target, GLint level, GLint internalformat, GLsizei width, GLint border, GLenum format, GLenum type, const GLvoid *pixels )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncTexImage1D( target, level, internalformat, width, border, format, type, pixels );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::TexImage2D( GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncTexImage2D( target, level, internalformat, width, height, border, format, type, pixels );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::CopyTexImage1D( GLenum target, GLint level, GLenum internalFormat, GLint x, GLint y, GLsizei width, GLint border )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncCopyTexImage1D( target, level, internalFormat, x, y, width, border );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::CopyTexImage2D( GLenum target, GLint level, GLenum internalFormat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncCopyTexImage2D( target, level, internalFormat, x, y, width, height, border );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::CopyTexSubImage1D( GLenum target, GLint level, GLint xoffset, GLint x, GLint y, GLsizei width )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncCopyTexSubImage1D( target, level, xoffset, x, y, width );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::CopyTexSubImage2D( GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint x, GLint y, GLsizei width, GLsizei height )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncCopyTexSubImage2D( target, level, xoffset, yoffset, x, y, width, height );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::PixelTransferf( GLenum pname, GLfloat param )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncPixelTransferf( pname, param );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::PixelTransferi( GLenum pname, GLint param )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncPixelTransferi( pname, param );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::GetTexLevelParameterfv( GLenum target, GLint level, GLenum pname, GLfloat *params )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncGetTexLevelParameterfv( target, level, pname, params );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::GetTexLevelParameteriv( GLenum target, GLint level, GLenum pname, GLint *params )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncGetTexLevelParameteriv( target, level, pname, params );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::GetTexParameterfv( GLenum target, GLenum pname, GLfloat *params )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncGetTexParameterfv( target, pname, params );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::GetTexParameteriv( GLenum target, GLenum pname, GLint *params )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncGetTexParameteriv( target, pname, params );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::TexSubImage1D( GLenum target, GLint level, GLint xoffset, GLsizei width, GLenum format, GLenum type, const GLvoid *pixels )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncTexSubImage1D( target, level, xoffset, width, format, type, pixels );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::TexSubImage2D( GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncTexSubImage2D( target, level, xoffset, yoffset, width, height, format, type, pixels );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::PixelStoref( GLenum pname, GLfloat param )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncPixelStoref( pname, param );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::PixelStorei( GLenum pname, GLint param )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncPixelStorei( pname, param );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::GenTextures( GLsizei n, GLuint *textures )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncGenTextures( n, textures );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
@@ -1166,16 +1002,12 @@ GLboolean OpenGL::IsTexture( GLuint texture )
 {
 	GLboolean bRet = FALSE;
 
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		bRet = pImplOpenGLFncIsTexture( texture );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
-
 	return bRet;
 }
 
@@ -1183,30 +1015,24 @@ GLboolean OpenGL::IsTexture( GLuint texture )
 
 void OpenGL::BindTexture( GLenum target, GLuint texture )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncBindTexture( target, texture );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::DeleteTextures( GLsizei n, const GLuint *textures )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncDeleteTextures( n, textures );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
@@ -1214,17 +1040,12 @@ void OpenGL::DeleteTextures( GLsizei n, const GLuint *textures )
 GLboolean OpenGL::AreTexturesResident( GLsizei n, const GLuint *textures, GLboolean *residences )
 {
 	GLboolean bRet = FALSE;
-
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		bRet = pImplOpenGLFncAreTexturesResident( n, textures, residences );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
-
 	return bRet;
 }
 
@@ -1232,268 +1053,216 @@ GLboolean OpenGL::AreTexturesResident( GLsizei n, const GLuint *textures, GLbool
 
 void OpenGL::PrioritizeTextures( GLsizei n, const GLuint *textures, const GLclampf *priorities )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncPrioritizeTextures( n, textures, priorities );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::TexEnvf( GLenum target, GLenum pname, GLfloat param )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncTexEnvf( target, pname, param );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::TexEnvfv( GLenum target, GLenum pname, const GLfloat *params )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncTexEnvfv( target, pname, params );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::TexEnvi( GLenum target, GLenum pname, GLint param )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncTexEnvi( target, pname, param );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::TexEnviv( GLenum target, GLenum pname, const GLint *params )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncTexEnviv( target, pname, params );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::TexParameterf( GLenum target, GLenum pname, GLfloat param )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncTexParameterf( target, pname, param );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::TexParameterfv( GLenum target, GLenum pname, const GLfloat *params )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncTexParameterfv( target, pname, params );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::TexParameteri( GLenum target, GLenum pname, GLint param )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncTexParameteri( target, pname, param );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::TexParameteriv( GLenum target, GLenum pname, const GLint *params )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncTexParameteriv( target, pname, params );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::TexGend( GLenum coord, GLenum pname, GLdouble param )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncTexGend( coord, pname, param );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::TexGendv( GLenum coord, GLenum pname, const GLdouble *params )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncTexGendv( coord, pname, params );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::TexGenf( GLenum coord, GLenum pname, GLfloat param )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncTexGenf( coord, pname, param );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::TexGenfv( GLenum coord, GLenum pname, const GLfloat *params )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncTexGenfv( coord, pname, params );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::TexGeni( GLenum coord, GLenum pname, GLint param )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncTexGeni( coord, pname, param );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::TexGeniv( GLenum coord, GLenum pname, const GLint *params )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncTexGeniv( coord, pname, params );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::GetIntegerv( GLenum pname, GLint *params )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncGetIntegerv( pname, params );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::PolygonOffset( GLfloat factor, GLfloat units )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncPolygonOffset( factor, units );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::Scissor( GLint nX, GLint nY, GLsizei nWidth, GLsizei nHeight )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		long nOutHeight;
 
 		if( mpOutDev->GetOutDevType() == OUTDEV_WINDOW )
-			nOutHeight = ( (Window*) mpOutDev )->mpFrameWindow->mnOutHeight;
+			nOutHeight = ( (Window*) mpOutDev )->ImplGetFrameWindow()->mnOutHeight;
 		else
 			nOutHeight = mpOutDev->mnOutHeight;
 
@@ -1504,7 +1273,7 @@ void OpenGL::Scissor( GLint nX, GLint nY, GLsizei nWidth, GLsizei nHeight )
         {
             long lx = nX + mpOutDev->mnOutOffX;
             long lwidth = nWidth;
-            ((SalGraphicsLayout*)mpOutDev->mpGraphics)->mirror( lx, lwidth, mpOutDev );
+            mpOutDev->mpGraphics->mirror( lx, lwidth, mpOutDev );
             nX = lx - mpOutDev->mnOutOffX;
         }
 		pImplOpenGLFncScissor( nX + mpOutDev->mnOutOffX,
@@ -1512,217 +1281,173 @@ void OpenGL::Scissor( GLint nX, GLint nY, GLsizei nWidth, GLsizei nHeight )
 					 nWidth, nHeight );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::EnableClientState( GLenum array )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncEnableClientState( array );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::DisableClientState( GLenum array )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncDisableClientState( array );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::VertexPointer( GLint size, GLenum type, GLsizei stride, const GLvoid *pointer )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncVertexPointer( size, type, stride, pointer );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::ColorPointer( GLint size, GLenum type, GLsizei stride, const GLvoid *pointer )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncColorPointer( size, type, stride, pointer );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::IndexPointer( GLenum type, GLsizei stride, const GLvoid *pointer )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncIndexPointer( type, stride, pointer );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::NormalPointer( GLenum type, GLsizei stride, const GLvoid *pointer )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncNormalPointer( type, stride, pointer );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::TexCoordPointer( GLint size, GLenum type, GLsizei stride, const GLvoid *pointer )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncTexCoordPointer( size, type, stride, pointer );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::EdgeFlagPointer( GLsizei stride, const GLvoid *pointer )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncEdgeFlagPointer( stride, pointer );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::ArrayElement( GLint i )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncArrayElement( i );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::DrawElements( GLenum mode, GLsizei count, GLenum type, const GLvoid *indices )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncDrawElements( mode, count, type, indices );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::DrawArrays( GLenum mode, GLint first, GLsizei count )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncDrawArrays( mode, first, count );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::InterleavedArrays( GLenum format, GLsizei stride, const GLvoid *pointer )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncInterleavedArrays( format, stride, pointer );
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::LoadIdentity( )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncLoadIdentity();
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 
 // ------------------------------------------------------------------------
 
 void OpenGL::BlendFunc( GLenum sfactor, GLenum dfactor )
 {
-#ifndef REMOTE_APPSERVER
 	if( OGL_INIT() )
 	{
 		mpOGL->OGLEntry( PGRAPHICS );
 		pImplOpenGLFncBlendFunc( sfactor, dfactor);
 		mpOGL->OGLExit( PGRAPHICS );
 	}
-#else
-#endif
 }
 

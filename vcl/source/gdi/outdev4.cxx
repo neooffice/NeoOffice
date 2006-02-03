@@ -6,57 +6,41 @@
  *
  *  last change: $Author$ $Date$
  *
- *  The Contents of this file are made available subject to the terms of
- *  either of the following licenses
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- *         - GNU General Public License Version 2.1
  *
- *  Sun Microsystems Inc., October, 2000
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- *  GNU General Public License Version 2.1
- *  =============================================
- *  Copyright 2000 by Sun Microsystems, Inc.
- *  901 San Antonio Road, Palo Alto, CA 94303, USA
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
  *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public
- *  License version 2.1, as published by the Free Software Foundation.
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
  *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
  *
- *  You should have received a copy of the GNU General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *  MA  02111-1307  USA
- *  
- *  =================================================
- *  Modified June 2004 by Patrick Luby. SISSL Removed. NeoOffice is
- *  distributed under GPL only under modification term 3 of the LGPL.
- *
- *  Contributor(s): _______________________________________
+ *    Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
 
-#define _SV_OUTDEV_CXX
-
 #include <math.h>
 
-#ifndef REMOTE_APPSERVER
 #ifndef _SV_SVSYS_HXX
 #include <svsys.h>
 #endif
-#endif
-#ifndef REMOTE_APPSERVER
 #ifndef _SV_SALGDI_HXX
 #include <salgdi.hxx>
-#endif
-#else
-#ifndef _SV_RMOUTDEV_HXX
-#include <rmoutdev.hxx>
-#endif
 #endif
 #ifndef _DEBUG_HXX
 #include <tools/debug.hxx>
@@ -76,14 +60,14 @@
 #ifndef _SV_OUTDATA_HXX
 #include <outdata.hxx>
 #endif
-#ifndef _POLY_HXX
+#ifndef _TL_POLY_HXX
 #include <tools/poly.hxx>
 #endif
 #ifndef _SV_SALBTYPE_HXX
 #include <salbtype.hxx>
 #endif
-#ifndef _SV_LINE_HXX
-#include <line.hxx>
+#ifndef _LINE_HXX
+#include <tools/line.hxx>
 #endif
 #ifndef _SV_HATCH_HXX
 #include <hatch.hxx>
@@ -127,8 +111,6 @@ DBG_NAMEEX( OutputDevice );
 DBG_NAMEEX( Gradient );
 
 // =======================================================================
-
-#ifndef REMOTE_APPSERVER
 
 void OutputDevice::ImplDrawPolygon( const Polygon& rPoly, const PolyPolygon* pClipPolyPoly )
 {
@@ -204,8 +186,6 @@ void OutputDevice::ImplDrawPolyPolygon( const PolyPolygon& rPolyPoly, const Poly
 	if( pClipPolyPoly )
 		delete pPolyPoly;
 }
-
-#endif
 
 // -----------------------------------------------------------------------
 
@@ -353,7 +333,7 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 	UINT8	nGreen;
 	UINT8	nBlue;
 	long	nSteps2;
-	long	nStepsHalf;
+	long	nStepsHalf = 0;
 	if ( bLinear )
 	{
 		// Um 1 erhoeht, um die Border innerhalb der Schleife
@@ -376,10 +356,8 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 
 	if ( bMtf )
 		mpMetaFile->AddAction( new MetaFillColorAction( Color( nRed, nGreen, nBlue ), TRUE ) );
-#ifndef REMOTE_APPSERVER
 	else
 		mpGraphics->SetFillColor( MAKE_SALCOLOR( nRed, nGreen, nBlue ) );
-#endif
 
 	// Startpolygon erzeugen (== Borderpolygon)
 	Polygon 	aPoly( 4 );
@@ -396,10 +374,8 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 		// berechnetesPolygon ausgeben
 		if ( bMtf )
 			mpMetaFile->AddAction( new MetaPolygonAction( aPoly ) );
-#ifndef REMOTE_APPSERVER
 		else
 			ImplDrawPolygon( aPoly, pClipPolyPoly );
-#endif
 
 		// neues Polygon berechnen
 		aRect.Top() = (long)(fScanLine += fScanInc);
@@ -465,10 +441,8 @@ void OutputDevice::ImplDrawLinearGradient( const Rectangle& rRect,
 
 		if ( bMtf )
 			mpMetaFile->AddAction( new MetaFillColorAction( Color( nRed, nGreen, nBlue ), TRUE ) );
-#ifndef REMOTE_APPSERVER
 		else
 			mpGraphics->SetFillColor( MAKE_SALCOLOR( nRed, nGreen, nBlue ) );
-#endif
 	}
 }
 
@@ -611,17 +585,14 @@ void OutputDevice::ImplDrawComplexGradient( const Rectangle& rRect,
 
 	if( bMtf )
 		mpMetaFile->AddAction( new MetaFillColorAction( Color( nRed, nGreen, nBlue ), TRUE ) );
-#ifndef REMOTE_APPSERVER
 	else
 		mpGraphics->SetFillColor( MAKE_SALCOLOR( nRed, nGreen, nBlue ) );
-#endif
 
 	if( pPolyPoly )
 	{   
     	pPolyPoly->Insert( aPoly = rRect );
 		pPolyPoly->Insert( aPoly );
 	}
-#ifndef REMOTE_APPSERVER
 	else
     {
 	    // extend rect, to avoid missing bounding line
@@ -634,7 +605,6 @@ void OutputDevice::ImplDrawComplexGradient( const Rectangle& rRect,
 
 		ImplDrawPolygon( aPoly = aExtRect, pClipPolyPoly );
     }
-#endif
 
 	// Schleife, um nacheinander die Polygone/PolyPolygone auszugeben
 	for( long i = 1; i < nSteps; i++ )
@@ -671,10 +641,8 @@ void OutputDevice::ImplDrawComplexGradient( const Rectangle& rRect,
 
 			if( bMtf )
 				mpMetaFile->AddAction( new MetaPolyPolygonAction( *pPolyPoly ) );
-#ifndef REMOTE_APPSERVER
 			else
 				ImplDrawPolyPolygon( *pPolyPoly, pClipPolyPoly );
-#endif
 
             // #107349# Set fill color _after_ geometry painting:
             // pPolyPoly's geometry is the band from last iteration's
@@ -688,7 +656,6 @@ void OutputDevice::ImplDrawComplexGradient( const Rectangle& rRect,
             else
                 mpGraphics->SetFillColor( MAKE_SALCOLOR( nRed, nGreen, nBlue ) );
 		}
-#ifndef REMOTE_APPSERVER
 		else
         {
             // #107349# Set fill color _before_ geometry painting
@@ -699,7 +666,6 @@ void OutputDevice::ImplDrawComplexGradient( const Rectangle& rRect,
 
 			ImplDrawPolygon( aPoly, pClipPolyPoly );
         }
-#endif
 	}
 
 	// Falls PolyPolygon-Ausgabe, muessen wir noch ein letztes inneres Polygon zeichnen
@@ -724,13 +690,11 @@ void OutputDevice::ImplDrawComplexGradient( const Rectangle& rRect,
 	    		mpMetaFile->AddAction( new MetaFillColorAction( Color( nRed, nGreen, nBlue ), TRUE ) );
 				mpMetaFile->AddAction( new MetaPolygonAction( rPoly ) );
             }
-#ifndef REMOTE_APPSERVER
 		    else
             {
 			    mpGraphics->SetFillColor( MAKE_SALCOLOR( nRed, nGreen, nBlue ) );
    				ImplDrawPolygon( rPoly, pClipPolyPoly );
             }
-#endif
 		}
 
 		delete pPolyPoly;
@@ -816,7 +780,6 @@ void OutputDevice::DrawGradient( const Rectangle& rRect,
 	// Wenn Rechteck leer ist, brauchen wir nichts machen
 	if ( !aRect.IsEmpty() )
 	{
-#ifndef REMOTE_APPSERVER
 		// Clip Region sichern
 		Push( PUSH_CLIPREGION );
 		IntersectClipRegion( rRect );
@@ -860,12 +823,13 @@ void OutputDevice::DrawGradient( const Rectangle& rRect,
 		}
 
 		Pop();
-#else
-		ImplServerGraphics* pGraphics = ImplGetServerGraphics();
-		if ( pGraphics )
-			pGraphics->DrawGradient( aRect, aGradient );
-#endif
 	}
+
+    if( mpAlphaVDev )
+    {
+        // #i32109#: Make gradient area opaque
+        mpAlphaVDev->ImplFillOpaqueRectangle( rRect );
+    }
 }
 
 // -----------------------------------------------------------------------
@@ -971,7 +935,6 @@ void OutputDevice::DrawGradient( const PolyPolygon& rPolyPoly,
 			aGradient.SetEndColor( aEndCol );
 		}
 
-#ifndef REMOTE_APPSERVER
 		if( OUTDEV_PRINTER == meOutDevType )
 		{
 			const Rectangle	aBoundRect( rPolyPoly.GetBoundRect() );
@@ -1035,58 +998,69 @@ void OutputDevice::DrawGradient( const PolyPolygon& rPolyPoly,
 
 			if( !aDstRect.IsEmpty() )
 			{
-				VirtualDevice	aVDev;
+				VirtualDevice*	pVDev;
 				const Size		aDstSize( aDstRect.GetSize() );
 
-				if( aVDev.SetOutputSizePixel( aDstSize) )
+                if( HasAlpha() )
+                {
+                    // #110958# Pay attention to alpha VDevs here, otherwise, 
+                    // background will be wrong: Temp VDev has to have alpha, too.
+                    pVDev = new VirtualDevice( *this, 0, GetAlphaBitCount() > 1 ? 0 : 1 );
+                }
+                else
+                {
+                    // nothing special here. Plain VDev
+                    pVDev = new VirtualDevice();
+                }
+
+				if( pVDev->SetOutputSizePixel( aDstSize) )
 				{
 					MapMode			aVDevMap;
-					const RasterOp	eOldROP = GetRasterOp();
 					const BOOL		bOldMap = mbMap;
 
-					mbMap = FALSE;
+					EnableMapMode( FALSE );
 
+					pVDev->DrawOutDev( Point(), aDstSize, aDstRect.TopLeft(), aDstSize, *this );
 #ifdef USE_JAVA
-					aVDev.DrawOutDev( Point(), aDstSize, aDstRect.TopLeft(), aDstSize, *this );
+                    const RasterOp eOldROP = GetRasterOp();
 					DrawGradient( aBoundRect, aGradient );
-					aVDev.SetRasterOp( ROP_XOR );
-					aVDev.DrawOutDev( Point(), aDstSize, aDstRect.TopLeft(), aDstSize, *this );
-					aVDev.SetFillColor( COL_BLACK );
-					aVDev.SetRasterOp( ROP_0 );
+					pVDev->SetRasterOp( ROP_XOR );
+					pVDev->DrawOutDev( Point(), aDstSize, aDstRect.TopLeft(), aDstSize, *this );
+					pVDev->SetFillColor( COL_BLACK );
+					pVDev->SetRasterOp( ROP_0 );
 					aVDevMap.SetOrigin( Point( -aDstRect.Left(), -aDstRect.Top() ) );
-					aVDev.SetMapMode( aVDevMap );
-					aVDev.DrawPolyPolygon( aPolyPoly );
+					pVDev->SetMapMode( aVDevMap );
+					pVDev->DrawPolyPolygon( aPolyPoly );
 					aVDevMap.SetOrigin( Point() );
-					aVDev.SetMapMode( aVDevMap );
+					pVDev->SetMapMode( aVDevMap );
 					SetRasterOp( ROP_XOR );
-					DrawOutDev( aDstRect.TopLeft(), aDstSize, Point(), aDstSize, aVDev );
-					SetRasterOp( eOldROP );
+					DrawOutDev( aDstRect.TopLeft(), aDstSize, Point(), aDstSize, *pVDev );
+                    SetRasterOp( eOldROP );
 #else	// USE_JAVA
-					aVDev.DrawOutDev( Point(), aDstSize, aDstRect.TopLeft(), aDstSize, *this );
-					aVDev.SetRasterOp( ROP_XOR );
+					pVDev->SetRasterOp( ROP_XOR );
 					aVDevMap.SetOrigin( Point( -aDstRect.Left(), -aDstRect.Top() ) );
-					aVDev.SetMapMode( aVDevMap );
-					aVDev.DrawGradient( aBoundRect, aGradient );
-					aVDev.SetFillColor( COL_BLACK );
-					aVDev.SetRasterOp( ROP_0 );
-					aVDev.DrawPolyPolygon( aPolyPoly );
-					aVDev.SetRasterOp( ROP_XOR );
-					aVDev.DrawGradient( aBoundRect, aGradient );
+					pVDev->SetMapMode( aVDevMap );
+					pVDev->DrawGradient( aBoundRect, aGradient );
+					pVDev->SetFillColor( COL_BLACK );
+					pVDev->SetRasterOp( ROP_0 );
+					pVDev->DrawPolyPolygon( aPolyPoly );
+					pVDev->SetRasterOp( ROP_XOR );
+					pVDev->DrawGradient( aBoundRect, aGradient );
 					aVDevMap.SetOrigin( Point() );
-					aVDev.SetMapMode( aVDevMap );
-					DrawOutDev( aDstRect.TopLeft(), aDstSize, Point(), aDstSize, aVDev );
+					pVDev->SetMapMode( aVDevMap );
+					DrawOutDev( aDstRect.TopLeft(), aDstSize, Point(), aDstSize, *pVDev );
 #endif	// USE_JAVA
 
-					mbMap = bOldMap;
+					EnableMapMode( bOldMap );
 				}
+
+                delete pVDev;
 			}
 		}
-#else
-		ImplServerGraphics* pGraphics = ImplGetServerGraphics();
-		if ( pGraphics )
-			pGraphics->DrawGradient( ImplLogicToDevicePixel( rPolyPoly ), aGradient );
-#endif
 	}
+
+    if( mpAlphaVDev )
+        mpAlphaVDev->DrawPolyPolygon( rPolyPoly );
 }
 
 // -----------------------------------------------------------------------
@@ -1178,7 +1152,6 @@ void OutputDevice::DrawHatch( const PolyPolygon& rPolyPoly, const Hatch& rHatch 
 	if( !IsDeviceOutputNecessary() || ImplIsRecordLayout() )
 		return;
 
-#ifndef REMOTE_APPSERVER
 	if( !mpGraphics && !ImplGetGraphics() )
 		return;
 
@@ -1187,39 +1160,29 @@ void OutputDevice::DrawHatch( const PolyPolygon& rPolyPoly, const Hatch& rHatch 
 
 	if( mbOutputClipped )
 		return;
-#endif
 
 	if( rPolyPoly.Count() )
 	{ 
-#ifndef REMOTE_APPSERVER
 		PolyPolygon		aPolyPoly( LogicToPixel( rPolyPoly ) );
 		GDIMetaFile*	pOldMetaFile = mpMetaFile;
 		BOOL			bOldMap = mbMap;
 
 		aPolyPoly.Optimize( POLY_OPTIMIZE_NO_SAME );
-		aHatch.SetDistance( ImplLogicWidthToDevicePixel( aHatch.GetDistance() ) );
+        aHatch.SetDistance( ImplLogicWidthToDevicePixel( aHatch.GetDistance() ) );
 
 		mpMetaFile = NULL;
-		mbMap = FALSE;
+		EnableMapMode( FALSE );
 		Push( PUSH_LINECOLOR );
 		SetLineColor( aHatch.GetColor() );
 		ImplInitLineColor();
 		ImplDrawHatch( aPolyPoly, aHatch, FALSE );
 		Pop();
-		mbMap = bOldMap;
+		EnableMapMode( bOldMap );
 		mpMetaFile = pOldMetaFile;
-#else
-		ImplServerGraphics* pGraphics = ImplGetServerGraphics();
-		if ( pGraphics )
-		{
-			PolyPolygon aPolyPoly( ImplLogicToDevicePixel( rPolyPoly ) );
-
-			aPolyPoly.Optimize( POLY_OPTIMIZE_NO_SAME );
-			aHatch.SetDistance( ImplLogicWidthToDevicePixel( aHatch.GetDistance() ) );
-			pGraphics->DrawHatch( aPolyPoly, aHatch );
-		}
-#endif
 	}
+
+    if( mpAlphaVDev )
+        mpAlphaVDev->DrawHatch( rPolyPoly, rHatch );
 }
 
 // -----------------------------------------------------------------------
@@ -1420,7 +1383,6 @@ void OutputDevice::ImplDrawHatchLine( const Line& rLine, const PolyPolygon& rPol
 
 		if( rPoly.GetSize() > 1 )
 		{
-			Point	aIntersection;
 			Line	aCurSegment( rPoly[ 0 ], Point() );
 
 			for( long i = 1, nCount = rPoly.GetSize(); i <= nCount; i++ )
@@ -1480,20 +1442,19 @@ void OutputDevice::ImplDrawHatchLine( const Line& rLine, const PolyPolygon& rPol
 		}
 		else
 		{
-#ifndef REMOTE_APPSERVER
 			for( long i = 0; i < nPCounter; i += 2 )
 			{
                 if( mpPDFWriter )
-                    mpPDFWriter->drawLine( pPtBuffer[i], pPtBuffer[i+1] );
+                {
+                    mpPDFWriter->drawLine( pPtBuffer[ i ], pPtBuffer[ i+1 ] );
+                }
                 else
                 {
                     const Point aPt1( ImplLogicToDevicePixel( pPtBuffer[ i ] ) );
                     const Point aPt2( ImplLogicToDevicePixel( pPtBuffer[ i + 1 ] ) );
-                    
                     mpGraphics->DrawLine( aPt1.X(), aPt1.Y(), aPt2.X(), aPt2.Y(), this );
                 }
 			}
-#endif
 		}
 	}
 }

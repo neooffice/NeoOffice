@@ -6,53 +6,41 @@
  *
  *  last change: $Author$ $Date$
  *
- *  The Contents of this file are made available subject to the terms of
- *  either of the following licenses
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- *         - GNU General Public License Version 2.1
  *
- *  Sun Microsystems Inc., October, 2000
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- *  GNU General Public License Version 2.1
- *  =============================================
- *  Copyright 2000 by Sun Microsystems, Inc.
- *  901 San Antonio Road, Palo Alto, CA 94303, USA
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
  *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public
- *  License version 2.1, as published by the Free Software Foundation.
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
  *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
  *
- *  You should have received a copy of the GNU General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *  MA  02111-1307  USA
- *  
- *  =================================================
- *  Modified August 2005 by Patrick Luby. SISSL Removed. NeoOffice is
- *  distributed under GPL only under modification term 3 of the LGPL.
- *
- *  Contributor(s): _______________________________________
+ *    Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
 
-#define _SV_WALL_CXX
-
 #include <math.h>
-#ifndef REMOTE_APPSERVER
 #ifndef _SV_SVSYS_HXX
 #include <svsys.h>
 #endif
 #ifndef _SV_SALGDI_HXX
 #include <salgdi.hxx>
 #endif
-#else // REMOTE_APPSERVER
-#include <tools/stream.hxx>
-#endif // REMOTE_APPSERVER
 #ifndef _DEBUG_HXX
 #include <tools/debug.hxx>
 #endif
@@ -83,8 +71,8 @@
 #ifndef _SV_GRAPH_HXX
 #include <graph.hxx>
 #endif
-#ifdef REMOTE_APPSERVER
-#include <rmoutdev.hxx>
+#ifndef _SV_WALL2_HXX
+#include <wall2.hxx>
 #endif
 #ifndef _COM_SUN_STAR_UNO_SEQUENCE_HXX_
 #include <com/sun/star/uno/Sequence.hxx>
@@ -124,7 +112,6 @@ void OutputDevice::DrawGrid( const Rectangle& rRect, const Size& rDist, ULONG nF
 	if( aDstRect.IsEmpty() || ImplIsRecordLayout() )
 		return;
 
-#ifndef REMOTE_APPSERVER
 	if( !mpGraphics && !ImplGetGraphics() )
 		return;
 
@@ -133,12 +120,6 @@ void OutputDevice::DrawGrid( const Rectangle& rRect, const Size& rDist, ULONG nF
 
 	if( mbOutputClipped )
 		return;
-#else
-	ImplServerGraphics* pGraphics = ImplGetServerGraphics();
-
-	if( !pGraphics )
-		return;
-#endif
 
 	const long	nDistX = Max( rDist.Width(), 1L );
 	const long	nDistY = Max( rDist.Height(), 1L );
@@ -178,9 +159,8 @@ void OutputDevice::DrawGrid( const Rectangle& rRect, const Size& rDist, ULONG nF
 	if( mbInitFillColor )
 		ImplInitFillColor();
 
-#ifndef REMOTE_APPSERVER
 	const BOOL bOldMap = mbMap;
-	mbMap = FALSE;
+	EnableMapMode( FALSE );
 
 	if( nFlags & GRID_DOTS )
 	{
@@ -275,12 +255,10 @@ void OutputDevice::DrawGrid( const Rectangle& rRect, const Size& rDist, ULONG nF
 		}
 	}
 
-	mbMap = bOldMap;
-#else // REMOTE_APPSERVER
-	aHorzBuf.realloc( nHorzCount );
-	aVertBuf.realloc( nVertCount );
-	pGraphics->DrawGrid( nStartX, nEndX, aHorzBuf, nStartY, nEndY, aVertBuf, nFlags );
-#endif // REMOTE_APPSERVER
+	EnableMapMode( bOldMap );
+
+    if( mpAlphaVDev )
+        mpAlphaVDev->DrawGrid( rRect, rDist, nFlags );
 }
 
 // ------------------------------------------------------------------------
@@ -305,6 +283,13 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
 		if( mpMetaFile )
 			mpMetaFile->AddAction( new MetaTransparentAction( rPolyPoly, nTransparencePercent ) );
 
+        VirtualDevice* pOldAlphaVDev = mpAlphaVDev;
+
+        // #110958# Disable alpha VDev, we perform the necessary
+        // operation explicitely further below.
+        if( mpAlphaVDev )
+            mpAlphaVDev = NULL;
+
 		if( !IsDeviceOutputNecessary() || ( !mbLineColor && !mbFillColor ) || ImplIsRecordLayout() )
 			return;
 
@@ -327,6 +312,8 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
 				case( 25 ): nMove = nBaseExtent * 3; break;
 				case( 50 ): nMove = nBaseExtent * 4; break;
 				case( 75 ): nMove = nBaseExtent * 6; break;
+							// TODO What is the correct VALUE???
+				default:    nMove = 0; break;
 			}
 
 			Push( PUSH_CLIPREGION | PUSH_LINECOLOR );
@@ -336,7 +323,7 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
 			Rectangle aRect( aPolyRect.TopLeft(), Size( aPolyRect.GetWidth(), nBaseExtent ) );
 
 			const BOOL bOldMap = mbMap;
-			mbMap = FALSE;
+			EnableMapMode( FALSE );
 
 			while( aRect.Top() <= aPolyRect.Bottom() )
 			{
@@ -351,12 +338,11 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
 				aRect.Move( nMove, 0 );
 			}
 
-			mbMap = bOldMap;
+			EnableMapMode( bOldMap );
 			Pop();
 		}
 		else
 		{
-#ifndef REMOTE_APPSERVER
 			PolyPolygon 	aPolyPoly( LogicToPixel( rPolyPoly ) );
 			Rectangle		aPolyRect( aPolyPoly.GetBoundRect() );
 			Point			aPoint;
@@ -385,7 +371,7 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
 				{
 					const BOOL bOldMap = mbMap;
 
-					mbMap = FALSE;
+					EnableMapMode( FALSE );
 
 					aVDev.SetLineColor( COL_BLACK );
 					aVDev.SetFillColor( COL_BLACK );
@@ -502,7 +488,7 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
 
                         DrawBitmap( aDstRect.TopLeft(), aPaint );
 
-                        mbMap = bOldMap;
+                        EnableMapMode( bOldMap );
 
                         if( mbLineColor )
                         {
@@ -516,20 +502,25 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
 				else
 					DrawPolyPolygon( rPolyPoly );
 			}
-#else // REMOTE_APPSERVER
-			ImplServerGraphics* pGraphics = ImplGetServerGraphics();
-			if ( pGraphics )
-			{
-				if ( mbInitLineColor )
-					ImplInitLineColor();
-				if ( mbInitFillColor )
-					ImplInitFillColor();
-				pGraphics->DrawTransparent( ImplLogicToDevicePixel( rPolyPoly ), nTransparencePercent );
-			}
-#endif // REMOTE_APPSERVER
 		}
 
 		mpMetaFile = pOldMetaFile;
+
+        // #110958# Restore disabled alpha VDev
+        mpAlphaVDev = pOldAlphaVDev;
+
+        // #110958# Apply alpha value also to VDev alpha channel
+        if( mpAlphaVDev )
+        {
+            const Color aFillCol( mpAlphaVDev->GetFillColor() );
+            mpAlphaVDev->SetFillColor( Color(255*nTransparencePercent/100,
+                                             255*nTransparencePercent/100,
+                                             255*nTransparencePercent/100) );
+
+            mpAlphaVDev->DrawTransparent( rPolyPoly, nTransparencePercent );
+
+            mpAlphaVDev->SetFillColor( aFillCol );
+        }
 	}
 }
 
@@ -575,8 +566,8 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
 		{
 			VirtualDevice* pVDev = new VirtualDevice;
 
-			pVDev->mnDPIX = mnDPIX;
-			pVDev->mnDPIY = mnDPIY;
+			((OutputDevice*)pVDev)->mnDPIX = mnDPIX;
+			((OutputDevice*)pVDev)->mnDPIY = mnDPIY;
 
 			if( pVDev->SetOutputSizePixel( aDstRect.GetSize() ) )
 			{
@@ -588,6 +579,7 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
 
 				aMap.SetOrigin( Point( -aOutPos.X(), -aOutPos.Y() ) );
 				pVDev->SetMapMode( aMap );
+				const BOOL	bVDevOldMap = pVDev->IsMapModeEnabled();
 
 				// create paint bitmap
 				( (GDIMetaFile&) rMtf ).WindStart();
@@ -595,7 +587,7 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
 				( (GDIMetaFile&) rMtf ).WindStart();
 				pVDev->EnableMapMode( FALSE );
 				aPaint = pVDev->GetBitmap( Point(), pVDev->GetOutputSizePixel() );
-				pVDev->EnableMapMode( TRUE );
+				pVDev->EnableMapMode( bVDevOldMap ); // #i35331#: MUST NOT use EnableMapMode( TRUE ) here!
 
 				// create mask bitmap
 				pVDev->SetLineColor( COL_BLACK );
@@ -608,7 +600,7 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
 				( (GDIMetaFile&) rMtf ).WindStart();
 				pVDev->EnableMapMode( FALSE );
 				aMask = pVDev->GetBitmap( Point(), pVDev->GetOutputSizePixel() );
-				pVDev->EnableMapMode( TRUE );
+				pVDev->EnableMapMode( bVDevOldMap ); // #i35331#: MUST NOT use EnableMapMode( TRUE ) here!
 
 				// create alpha mask from gradient
 				pVDev->SetDrawMode( DRAWMODE_GRAYGRADIENT );
@@ -617,17 +609,13 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
 				pVDev->EnableMapMode( FALSE );
 				pVDev->DrawMask( Point(), pVDev->GetOutputSizePixel(), aMask, Color( COL_WHITE ) );
 
-#ifndef REMOTE_APPSERVER
 				aAlpha = pVDev->GetBitmap( Point(), pVDev->GetOutputSizePixel() );
-#else
-				aAlpha.ImplSetBitmap( pVDev->GetBitmap( Point(), pVDev->GetOutputSizePixel() ) );
-#endif
 
 				delete pVDev;
 
-				mbMap = FALSE;
+				EnableMapMode( FALSE );
 				DrawBitmapEx( aDstRect.TopLeft(), BitmapEx( aPaint, aAlpha ) );
-				mbMap = bOldMap;
+				EnableMapMode( bOldMap );
 			}
 			else
 				delete pVDev;
@@ -643,48 +631,17 @@ void OutputDevice::ImplDrawColorWallpaper( long nX, long nY,
 										   long nWidth, long nHeight,
 										   const Wallpaper& rWallpaper )
 {
-#ifndef REMOTE_APPSERVER
-	// we need a graphics
-	if ( !mpGraphics )
-	{
-		if ( !ImplGetGraphics() )
-			return;
-	}
-
-	if ( mbInitClipRegion )
-		ImplInitClipRegion();
-	if ( mbOutputClipped )
-		return;
-
 	// Wallpaper ohne Umrandung zeichnen
 	Color aOldLineColor = GetLineColor();
 	Color aOldFillColor = GetFillColor();
 	SetLineColor();
 	SetFillColor( rWallpaper.GetColor() );
-	if ( mbInitLineColor )
-		ImplInitLineColor();
-	if ( mbInitFillColor )
-		ImplInitFillColor();
-	mpGraphics->DrawRect( nX+mnOutOffX, nY+mnOutOffY, nWidth, nHeight, this );
+    BOOL bMap = mbMap;
+    EnableMapMode( FALSE );
+    DrawRect( Rectangle( Point( nX, nY ), Size( nWidth, nHeight ) ) );
 	SetLineColor( aOldLineColor );
 	SetFillColor( aOldFillColor );
-#else
-	ImplServerGraphics* pGraphics = ImplGetServerGraphics();
-	if ( pGraphics )
-	{
-		Color aOldLineColor = GetLineColor();
-		Color aOldFillColor = GetFillColor();
-		SetLineColor();
-		SetFillColor( rWallpaper.GetColor() );
-		if ( mbInitLineColor )
-			ImplInitLineColor();
-		if ( mbInitFillColor )
-			ImplInitFillColor();
-		pGraphics->DrawRect( Rectangle( Point( nX+mnOutOffX, nY+mnOutOffY ), Size( nWidth, nHeight ) ) );
-		SetLineColor( aOldLineColor );
-		SetFillColor( aOldFillColor );
-	}
-#endif
+    EnableMapMode( bMap );
 }
 
 // -----------------------------------------------------------------------
@@ -763,7 +720,7 @@ void OutputDevice::ImplDrawBitmapWallpaper( long nX, long nY,
 	}
 
 	mpMetaFile = NULL;
-	mbMap = FALSE;
+	EnableMapMode( FALSE );
 	Push( PUSH_CLIPREGION );
 	IntersectClipRegion( Rectangle( Point( nX, nY ), Size( nWidth, nHeight ) ) );
 
@@ -926,7 +883,7 @@ void OutputDevice::ImplDrawBitmapWallpaper( long nX, long nY,
 	rWallpaper.ImplGetImpWallpaper()->ImplSetCachedBitmap( aBmpEx );
 
 	Pop();
-	mbMap = bOldMap;
+	EnableMapMode( bOldMap );
 	mpMetaFile = pOldMetaFile;
 }
 
@@ -939,6 +896,7 @@ void OutputDevice::ImplDrawGradientWallpaper( long nX, long nY,
 	Rectangle		aBound;
 	GDIMetaFile*	pOldMetaFile = mpMetaFile;
 	const BOOL		bOldMap = mbMap;
+    BOOL            bNeedGradient = TRUE;
 
 /*
 	if ( rWallpaper.IsRect() )
@@ -948,14 +906,34 @@ void OutputDevice::ImplDrawGradientWallpaper( long nX, long nY,
 		aBound = Rectangle( Point( nX, nY ), Size( nWidth, nHeight ) );
 
 	mpMetaFile = NULL;
-	mbMap = FALSE;
+	EnableMapMode( FALSE );
 	Push( PUSH_CLIPREGION );
 	IntersectClipRegion( Rectangle( Point( nX, nY ), Size( nWidth, nHeight ) ) );
 
-	DrawGradient( aBound, rWallpaper.GetGradient() );
+    if( OUTDEV_WINDOW == meOutDevType && rWallpaper.GetStyle() == WALLPAPER_APPLICATIONGRADIENT )
+    {
+        Window *pWin = dynamic_cast< Window* >( this );
+        if( pWin )
+        {
+            // limit gradient to useful size, so that it still can be noticed
+            // in maximized windows
+            long gradientWidth = pWin->GetDesktopRectPixel().GetSize().Width();
+            if( gradientWidth > 1024 )
+                gradientWidth = 1024;
+            if( mnOutOffX+nWidth > gradientWidth )
+		        ImplDrawColorWallpaper(  nX, nY, nWidth, nHeight, rWallpaper.GetGradient().GetEndColor() );
+            if( mnOutOffX > gradientWidth )
+                bNeedGradient = FALSE;
+            else
+                aBound = Rectangle( Point( -mnOutOffX, nY ), Size( gradientWidth, nHeight ) );
+        }
+    }
+
+    if( bNeedGradient )
+	    DrawGradient( aBound, rWallpaper.GetGradient() );
 
 	Pop();
-	mbMap = bOldMap;
+	EnableMapMode( bOldMap );
 	mpMetaFile = pOldMetaFile;
 }
 
@@ -995,6 +973,9 @@ void OutputDevice::DrawWallpaper( const Rectangle& rRect,
 							   rWallpaper );
 		}
 	}
+    
+    if( mpAlphaVDev )
+        mpAlphaVDev->DrawWallpaper( rRect, rWallpaper );
 }
 
 // -----------------------------------------------------------------------
@@ -1013,6 +994,9 @@ void OutputDevice::Erase()
 		if ( eRasterOp != ROP_OVERPAINT )
 			SetRasterOp( eRasterOp );
 	}
+
+    if( mpAlphaVDev )
+        mpAlphaVDev->Erase();
 }
 
 // -----------------------------------------------------------------------
@@ -1021,40 +1005,12 @@ void OutputDevice::ImplDraw2ColorFrame( const Rectangle& rRect,
 										const Color& rLeftTopColor,
 										const Color& rRightBottomColor )
 {
-#ifndef REMOTE_APPSERVER
 	SetFillColor( rLeftTopColor );
 	DrawRect( Rectangle( rRect.TopLeft(), Point( rRect.Left(), rRect.Bottom()-1 ) ) );
 	DrawRect( Rectangle( rRect.TopLeft(), Point( rRect.Right()-1, rRect.Top() ) ) );
 	SetFillColor( rRightBottomColor );
 	DrawRect( Rectangle( rRect.BottomLeft(), rRect.BottomRight() ) );
 	DrawRect( Rectangle( rRect.TopRight(), rRect.BottomRight() ) );
-#else
-	if ( mpMetaFile )
-	{
-		BOOL bOutputEnabled = IsOutputEnabled();
-		EnableOutput( FALSE );
-		SetFillColor( rLeftTopColor );
-		DrawRect( Rectangle( rRect.TopLeft(), Point( rRect.Left(), rRect.Bottom()-1 ) ) );
-		DrawRect( Rectangle( rRect.TopLeft(), Point( rRect.Right()-1, rRect.Top() ) ) );
-		SetFillColor( rRightBottomColor );
-		DrawRect( Rectangle( rRect.BottomLeft(), rRect.BottomRight() ) );
-		DrawRect( Rectangle( rRect.TopRight(), rRect.BottomRight() ) );
-		EnableOutput( bOutputEnabled );
-	}
-
-	if ( IsDeviceOutputNecessary() && !rRect.IsEmpty() )
-	{
-		ImplServerGraphics* pGraphics = ImplGetServerGraphics();
-		if ( pGraphics )
-		{
-			if ( mbInitLineColor )
-				ImplInitLineColor();
-			Rectangle aRect( ImplLogicToDevicePixel( rRect ) );
-			pGraphics->Draw2ColorFrame( aRect, rLeftTopColor, rRightBottomColor );
-		}
-	}
-	SetFillColor( rRightBottomColor );
-#endif
 }
 
 // -----------------------------------------------------------------------
@@ -1075,6 +1031,9 @@ void OutputDevice::DrawEPS( const Point& rPoint, const Size& rSize,
 	if ( !IsDeviceOutputNecessary() || ImplIsRecordLayout() )
 		return;
 
+	if( mbOutputClipped )
+		return;
+
 	Rectangle	aRect( ImplLogicToDevicePixel( Rectangle( rPoint, rSize ) ) );
 	BOOL		bDrawn = FALSE;
 
@@ -1084,21 +1043,14 @@ void OutputDevice::DrawEPS( const Point& rPoint, const Size& rSize,
 
 		if( GetOutDevType() == OUTDEV_PRINTER )
 		{
-#ifndef REMOTE_APPSERVER
 			if( !mpGraphics && !ImplGetGraphics() )
 				return;
 
 			if( mbInitClipRegion )
 				ImplInitClipRegion();
 
-			if( !mbOutputClipped )
-			{
-				bDrawn = mpGraphics->DrawEPS( aRect.Left(), aRect.Top(), aRect.GetWidth(), aRect.GetHeight(),
-											  (BYTE*) rGfxLink.GetData(), rGfxLink.GetDataSize(), this );
-			}
-#else
-			DBG_ERROR( "No direct EPS-support for remote appserver!" );
-#endif
+            bDrawn = mpGraphics->DrawEPS( aRect.Left(), aRect.Top(), aRect.GetWidth(), aRect.GetHeight(),
+                                          (BYTE*) rGfxLink.GetData(), rGfxLink.GetDataSize(), this );
 		}
 
 		if( !bDrawn && pSubst )
@@ -1110,4 +1062,7 @@ void OutputDevice::DrawEPS( const Point& rPoint, const Size& rSize,
 			mpMetaFile = pOldMetaFile;
 		}
 	}
+
+    if( mpAlphaVDev )
+        mpAlphaVDev->DrawEPS( rPoint, rSize, rGfxLink, pSubst );
 }
