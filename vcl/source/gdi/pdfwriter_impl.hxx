@@ -6,40 +6,33 @@
  *
  *  last change: $Author$ $Date$
  *
- *  The Contents of this file are made available subject to the terms of
- *  either of the following licenses
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- *         - GNU General Public License Version 2.1
  *
- *  Sun Microsystems Inc., October, 2000
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- *  GNU General Public License Version 2.1
- *  =============================================
- *  Copyright 2000 by Sun Microsystems, Inc.
- *  901 San Antonio Road, Palo Alto, CA 94303, USA
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
  *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public
- *  License version 2.1, as published by the Free Software Foundation.
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
  *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
  *
- *  You should have received a copy of the GNU General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *  MA  02111-1307  USA
- *  
- *  =================================================
- *  Modified August 2004 by Patrick Luby. SISSL Removed. NeoOffice is
- *  distributed under GPL only under modification term 3 of the LGPL.
- *
- *  Contributor(s): _______________________________________
+ *    Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
-
 #ifndef _VCL_PDFWRITER_IMPL_HXX
 #define _VCL_PDFWRITER_IMPL_HXX
 
@@ -90,173 +83,513 @@
 #include <metaact.hxx>
 #endif
 
-#define META_TEXT_PDF_ACTION             META_TEXT_ACTION
-#define META_TEXTLINE_PDF_ACTION         META_TEXTLINE_ACTION
-#define META_TEXTARRAY_PDF_ACTION        META_TEXTARRAY_ACTION
-#define META_STRETCHTEXT_PDF_ACTION      META_STRETCHTEXT_ACTION
-#define META_TEXTRECT_PDF_ACTION         META_TEXTRECT_ACTION
-#define META_NEW_PAGE_PDF_ACTION         (10000)
-#define META_PIXEL_PDF_ACTION            (10001)
-#define META_JPG_PDF_ACTION              (10002)
-#define META_ANTIALIAS_PDF_ACTION        (10003)
+#define META_TEXT_PDF_ACTION					META_TEXT_ACTION
+#define META_TEXTLINE_PDF_ACTION				META_TEXTLINE_ACTION
+#define META_TEXTARRAY_PDF_ACTION				META_TEXTARRAY_ACTION
+#define META_STRETCHTEXT_PDF_ACTION				META_STRETCHTEXT_ACTION
+#define META_TEXTRECT_PDF_ACTION				META_TEXTRECT_ACTION
+#define META_NEW_PAGE_PDF_ACTION				(10000)
+#define META_PIXEL_PDF_ACTION					(10001)
+#define META_JPG_PDF_ACTION						(10002)
+#define META_ANTIALIAS_PDF_ACTION				(10003)
+#define META_POLYLINE_PDF_ACTION				(10004)
+#define META_CREATELINK_PDF_ACTION				(10005)
+#define META_CREATEDEST_PDF_ACTION				(10006)
+#define META_SETLINKDEST_PDF_ACTION				(10007)
+#define META_SETLINKURL_PDF_ACTION				(10008)
+#define META_SETLINKPROPERTYID_PDF_ACTION		(10009)
+#define META_CREATEOUTLINEITEM_PDF_ACTION		(10010)
+#define META_SETOUTLINEITEMPARENT_PDF_ACTION	(10011)
+#define META_SETOUTLINEITEMTEXT_PDF_ACTION		(10012)
+#define META_SETOUTLINEITEMDEST_PDF_ACTION		(10013)
+#define META_CREATENOTE_PDF_ACTION				(10014)
+#define META_BEGINSTRUCTUREELEMENT_PDF_ACTION	(10015)
+#define META_ENDSTRUCTUREELEMENT_PDF_ACTION		(10016)
+#define META_SETCURRENTSTRUCTUREELEMENT_PDF_ACTION	(10017)
+#define META_SETSTRUCTUREATTRIBUTE_PDF_ACTION	(10018)
+#define META_SETSTRUCTUREATTRIBUTENUMERICAL_PDF_ACTION	(10019)
+#define META_SETSTRUCTUREBOUNDINGBOX_PDF_ACTION	(10020)
+#define META_SETACTUALTEXT_PDF_ACTION			(10021)
+#define META_SETALTERNATETEXT_PDF_ACTION		(10022)
+#define META_SETAUTOADVANCETIME_PDF_ACTION		(10023)
+#define META_SETPAGETRANSITION_PDF_ACTION		(10024)
+#define META_CREATECONTROL_PDF_ACTION			(10025)
+#define META_BEGINCONTROLAPPEARANCE_PDF_ACTION	(10026)
+#define META_ENDCONTROLAPPEARANCE_PDF_ACTION	(10027)
 
 class MetaTextPDFAction : public MetaTextAction
 {
 private:
-
-    bool                mbTextLines;
+    bool				mbTextLines;
 
 public:
-                        MetaTextPDFAction( const Point& rPt, const XubString& rStr, USHORT nIndex, USHORT nLen, bool bTextLines ) : MetaTextAction( rPt, rStr, nIndex, nLen ), mbTextLines( bTextLines ) {}
-    virtual             ~MetaTextPDFAction() {}
+    					MetaTextPDFAction( const Point& rPt, const XubString& rStr, USHORT nIndex, USHORT nLen, bool bTextLines ) : MetaTextAction( rPt, rStr, nIndex, nLen ), mbTextLines( bTextLines ) {}
+    virtual				~MetaTextPDFAction() {}
 
-    bool                IsTextLines() const { return mbTextLines; }
+    bool				IsTextLines() const { return mbTextLines; }
 };
 
 class MetaTextLinePDFAction : public MetaTextLineAction
 {
 private:
-
     bool                mbUnderlineAbove;
 
 public:
-                        MetaTextLinePDFAction( const Point& rPos, long nWidth, FontStrikeout eStrikeout, FontUnderline eUnderline, bool bUnderlineAbove ) : MetaTextLineAction( rPos, nWidth, eStrikeout, eUnderline ), mbUnderlineAbove( bUnderlineAbove ) {}
-    virtual             ~MetaTextLinePDFAction() {}
+    					MetaTextLinePDFAction( const Point& rPos, long nWidth, FontStrikeout eStrikeout, FontUnderline eUnderline, bool bUnderlineAbove ) : MetaTextLineAction( rPos, nWidth, eStrikeout, eUnderline ), mbUnderlineAbove( bUnderlineAbove ) {}
+    virtual				~MetaTextLinePDFAction() {}
 
-    bool                IsUnderlineAbove() const { return mbUnderlineAbove; }
+    bool				IsUnderlineAbove() const { return mbUnderlineAbove; }
 };
 
 class MetaTextArrayPDFAction : public MetaTextArrayAction
 {
 private:
-
-    long*               mpDXAry;
-    bool                mbTextLines;
+    long*				mpDXAry;
+    bool				mbTextLines;
 
 public:
-                        MetaTextArrayPDFAction( const Point& rPt, const XubString& rStr, const long* pDXAry, USHORT nIndex, USHORT nLen, bool bTextLines ) : MetaTextArrayAction( rPt, rStr, pDXAry, nIndex, nLen ), mpDXAry( NULL ), mbTextLines( bTextLines )
-                        {
-                            if ( pDXAry )
-                            {
-                                size_t nSize = nLen * sizeof( long );
-                                mpDXAry = (long *)rtl_allocateMemory( nSize );
-                                memcpy( mpDXAry, pDXAry, nSize );
-                            }
-                        }
-    virtual             ~MetaTextArrayPDFAction()
-                        {
-                            if ( mpDXAry )
-                                rtl_freeMemory( mpDXAry );
-                        }
+    					MetaTextArrayPDFAction( const Point& rPt, const XubString& rStr, const long* pDXAry, USHORT nIndex, USHORT nLen, bool bTextLines ) : MetaTextArrayAction( rPt, rStr, pDXAry, nIndex, nLen ), mpDXAry( NULL ), mbTextLines( bTextLines )
+    					{
+    						if ( pDXAry )
+    						{
+    							size_t nSize = nLen * sizeof( long );
+    							mpDXAry = (long *)rtl_allocateMemory( nSize );
+    							memcpy( mpDXAry, pDXAry, nSize );
+    						}
+    					}
+    virtual				~MetaTextArrayPDFAction()
+    					{
+    						if ( mpDXAry )
+    							rtl_freeMemory( mpDXAry );
+    					}
 
-    long*               GetDXArray() const { return mpDXAry; }
-    bool                IsTextLines() const { return mbTextLines; }
+    long*				GetDXArray() const { return mpDXAry; }
+    bool				IsTextLines() const { return mbTextLines; }
 };
 
 class MetaStretchTextPDFAction : public MetaStretchTextAction
 {
 private:
-
-    bool                mbTextLines;
+    bool				mbTextLines;
 
 public:
-                        MetaStretchTextPDFAction( const Point& rPt, ULONG nWidth, const XubString& rStr, USHORT nIndex, USHORT nLen, bool bTextLines ) : MetaStretchTextAction( rPt, nWidth, rStr, nIndex, nLen ), mbTextLines( bTextLines ) {}
-    virtual             ~MetaStretchTextPDFAction() {}
+						MetaStretchTextPDFAction( const Point& rPt, ULONG nWidth, const XubString& rStr, USHORT nIndex, USHORT nLen, bool bTextLines ) : MetaStretchTextAction( rPt, nWidth, rStr, nIndex, nLen ), mbTextLines( bTextLines ) {}
+    virtual				~MetaStretchTextPDFAction() {}
 
-    bool                IsTextLines() const { return mbTextLines; }
+    bool				IsTextLines() const { return mbTextLines; }
 };
 
 class MetaTextRectPDFAction : public MetaTextRectAction
 {
 private:
-
-    bool                mbTextLines;
+    bool				mbTextLines;
 
 public:
-                        MetaTextRectPDFAction( const Rectangle& rRect, const XubString& rStr, USHORT nStyle, bool bTextLines ) : MetaTextRectAction( rRect, rStr, nStyle ), mbTextLines( bTextLines ) {}
-    virtual             ~MetaTextRectPDFAction() {}
+    					MetaTextRectPDFAction( const Rectangle& rRect, const XubString& rStr, USHORT nStyle, bool bTextLines ) : MetaTextRectAction( rRect, rStr, nStyle ), mbTextLines( bTextLines ) {}
+    virtual				~MetaTextRectPDFAction() {}
 
-    bool                IsTextLines() const { return mbTextLines; }
+    bool				IsTextLines() const { return mbTextLines; }
 };
 
 class MetaNewPagePDFAction : public MetaAction
 {
 private:
-
-    sal_Int32           mnPageWidth;
-    sal_Int32           mnPageHeight;
-    ::vcl::PDFWriter::Orientation   meOrientation;
+    sal_Int32			mnPageWidth;
+    sal_Int32			mnPageHeight;
+    ::vcl::PDFWriter::Orientation	meOrientation;
 
 public:
-                        MetaNewPagePDFAction( sal_Int32 nPageWidth, sal_Int32 nPageHeight, ::vcl::PDFWriter::Orientation eOrientation ) : MetaAction( META_NEW_PAGE_PDF_ACTION ), mnPageWidth( nPageWidth ), mnPageHeight( nPageHeight ), meOrientation( eOrientation ) {}
-    virtual             ~MetaNewPagePDFAction() {}
+    					MetaNewPagePDFAction( sal_Int32 nPageWidth, sal_Int32 nPageHeight, ::vcl::PDFWriter::Orientation eOrientation ) : MetaAction( META_NEW_PAGE_PDF_ACTION ), mnPageWidth( nPageWidth ), mnPageHeight( nPageHeight ), meOrientation( eOrientation ) {}
+    virtual				~MetaNewPagePDFAction() {}
 
-    sal_Int32           GetPageWidth() const { return mnPageWidth; }
-    sal_Int32           GetPageHeight() const { return mnPageHeight; }
-    ::vcl::PDFWriter::Orientation   GetOrientation() const { return meOrientation; }
+    sal_Int32			GetPageWidth() const { return mnPageWidth; }
+    sal_Int32			GetPageHeight() const { return mnPageHeight; }
+    ::vcl::PDFWriter::Orientation	GetOrientation() const { return meOrientation; }
 };
 
 class MetaPixelPDFAction : public MetaAction
 {
 private:
-
-    const Polygon&      mrPoints;
-    const Color*        mpColors;
+    const Polygon&		mrPoints;
+    const Color*		mpColors;
 
 public:
-                        MetaPixelPDFAction( const Polygon& rPoints, const Color* pColors ) : MetaAction( META_PIXEL_PDF_ACTION ), mrPoints( rPoints ), mpColors( pColors ) {}
-    virtual             ~MetaPixelPDFAction() {}
+    					MetaPixelPDFAction( const Polygon& rPoints, const Color* pColors ) : MetaAction( META_PIXEL_PDF_ACTION ), mrPoints( rPoints ), mpColors( pColors ) {}
+    virtual				~MetaPixelPDFAction() {}
 
-    const Polygon&      GetPoints() const { return mrPoints; }
-    const Color*        GetColors() const { return mpColors; }
+    const Polygon&		GetPoints() const { return mrPoints; }
+    const Color*		GetColors() const { return mpColors; }
 };
 
 class MetaJpgPDFAction : public MetaAction
 {
 private:
-
-    SvMemoryStream      maStream;
-    Size                maSize;
-    Rectangle           maRect;
-    Bitmap              maMask;
+    SvMemoryStream		maStream;
+    bool				mbTrueColor;
+    Size				maSize;
+    const Rectangle&	mrRect;
+    Bitmap				maMask;
 
 public:
-                        MetaJpgPDFAction( SvStream& rStream, const Size& rSize, const Rectangle& rRect, const Bitmap& rMask ) : MetaAction( META_JPG_PDF_ACTION ), maSize( rSize ), maRect( rRect ), maMask( rMask ) { rStream.Seek( 0 ); maStream << rStream; }
-    virtual             ~MetaJpgPDFAction() {}
+    					MetaJpgPDFAction( SvStream& rStream, bool bTrueColor, const Size& rSize, const Rectangle& rRect, const Bitmap& rMask ) : MetaAction( META_JPG_PDF_ACTION ), mbTrueColor( bTrueColor ), maSize( rSize ), mrRect( rRect ), maMask( rMask ) { rStream.Seek( 0 ); maStream << rStream; }
+    virtual				~MetaJpgPDFAction() {}
 
-    const SvStream&     GetStream() const { return maStream; }
-    const Size&         GetSize() const { return maSize; }
-    const Rectangle&    GetRect() const { return maRect; }
-    const Bitmap&       GetMask() const { return maMask; }
+    const SvStream&		GetStream() const { return maStream; }
+    bool				IsTrueColor() const { return mbTrueColor; }
+    const Size&			GetSize() const { return maSize; }
+    const Rectangle&	GetRect() const { return mrRect; }
+    const Bitmap&		GetMask() const { return maMask; }
 };
 
 class MetaAntiAliasPDFAction : public MetaAction
 {
 private:
-
-    sal_Int32           mnAntiAlias;
+    sal_Int32			mnAntiAlias;
 
 public:
-                        MetaAntiAliasPDFAction( sal_Int32 nAntiAlias ) : MetaAction( META_ANTIALIAS_PDF_ACTION ), mnAntiAlias( nAntiAlias ) {}
-    virtual             ~MetaAntiAliasPDFAction() {}
+    					MetaAntiAliasPDFAction( sal_Int32 nAntiAlias ) : MetaAction( META_ANTIALIAS_PDF_ACTION ), mnAntiAlias( nAntiAlias ) {}
+    virtual				~MetaAntiAliasPDFAction() {}
 
-    sal_Int32           GetAntiAlias() const { return mnAntiAlias; }
+    sal_Int32			GetAntiAlias() const { return mnAntiAlias; }
+};
+
+class MetaPolyLinePDFAction : public MetaAction
+{
+private:
+    const Polygon&		mrPoly;
+    const ::vcl::PDFWriter::ExtLineInfo&	mrInfo;
+
+public:
+    					MetaPolyLinePDFAction( const Polygon& rPoly, const ::vcl::PDFWriter::ExtLineInfo& rInfo ) : MetaAction( META_POLYLINE_PDF_ACTION ), mrPoly( rPoly ), mrInfo( rInfo ) {}
+    virtual				~MetaPolyLinePDFAction() {}
+
+    const Polygon&		GetPolygon() const { return mrPoly; }
+    const ::vcl::PDFWriter::ExtLineInfo&	GetExtLineInfo() const { return mrInfo; }
+};
+
+class MetaCreateLinkPDFAction : public MetaAction
+{
+private:
+    const Rectangle&	mrRect;
+    sal_Int32			mnPage;
+
+public:
+    					MetaCreateLinkPDFAction( const Rectangle& rRect, sal_Int32 nPage ) : MetaAction( META_CREATELINK_PDF_ACTION ), mrRect( rRect ), mnPage( nPage ) {}
+    virtual				~MetaCreateLinkPDFAction() {}
+
+    const Rectangle&	GetRect() const { return mrRect; }
+    sal_Int32			GetPage() const { return mnPage; }
+};
+
+class MetaCreateDestPDFAction : public MetaAction
+{
+private:
+    const Rectangle&	mrRect;
+    sal_Int32			mnPage;
+    ::vcl::PDFWriter::DestAreaType	meType;
+
+public:
+    					MetaCreateDestPDFAction( const Rectangle& rRect, sal_Int32 nPage, ::vcl::PDFWriter::DestAreaType eType ) : MetaAction( META_CREATEDEST_PDF_ACTION ), mrRect( rRect ), mnPage( nPage ), meType( eType ) {}
+    virtual				~MetaCreateDestPDFAction() {}
+
+    const Rectangle&	GetRect() const { return mrRect; }
+    sal_Int32			GetPage() const { return mnPage; }
+    ::vcl::PDFWriter::DestAreaType	GetType() const { return meType; }
+};
+
+class MetaSetLinkDestPDFAction : public MetaAction
+{
+private:
+    sal_Int32			mnLink;
+    sal_Int32			mnDest;
+
+public:
+    					MetaSetLinkDestPDFAction( sal_Int32 nLink, sal_Int32 nDest ) : MetaAction( META_SETLINKDEST_PDF_ACTION ), mnLink( nLink ), mnDest( nDest ) {}
+    virtual				~MetaSetLinkDestPDFAction() {}
+
+    sal_Int32			GetLink() const { return mnLink; }
+    sal_Int32			GetDest() const { return mnDest; }
+};
+
+class MetaSetLinkUrlPDFAction : public MetaAction
+{
+private:
+    sal_Int32			mnLink;
+    const rtl::OUString&	mrURL;
+
+public:
+    					MetaSetLinkUrlPDFAction( sal_Int32 nLink, const rtl::OUString& rURL ) : MetaAction( META_SETLINKURL_PDF_ACTION ), mnLink( nLink ), mrURL( rURL ) {}
+    virtual				~MetaSetLinkUrlPDFAction() {}
+
+    sal_Int32			GetLink() const { return mnLink; }
+    const rtl::OUString&	GetURL() const { return mrURL; }
+};
+
+class MetaSetLinkPropertyIdPDFAction : public MetaAction
+{
+private:
+    sal_Int32			mnLink;
+    sal_Int32			mnProp;
+
+public:
+    					MetaSetLinkPropertyIdPDFAction( sal_Int32 nLink, sal_Int32 nProp ) : MetaAction( META_SETLINKPROPERTYID_PDF_ACTION ), mnLink( nLink ), mnProp( nProp ) {}
+    virtual				~MetaSetLinkPropertyIdPDFAction() {}
+
+    sal_Int32			GetLink() const { return mnLink; }
+    sal_Int32			GetProperty() const { return mnProp; }
+};
+
+class MetaCreateOutlineItemPDFAction : public MetaAction
+{
+private:
+    sal_Int32			mnParent;
+    const rtl::OUString&	mrText;
+    sal_Int32			mnDest;
+
+public:
+    					MetaCreateOutlineItemPDFAction( sal_Int32 nParent, const rtl::OUString& rText, sal_Int32 nDest ) : MetaAction( META_CREATEOUTLINEITEM_PDF_ACTION ), mnParent( nParent ), mrText( rText ), mnDest( nDest ) {}
+    virtual				~MetaCreateOutlineItemPDFAction() {}
+
+    sal_Int32			GetParent() const { return mnParent; }
+    const rtl::OUString&	GetText() const { return mrText; }
+    sal_Int32			GetDest() const { return mnDest; }
+};
+
+class MetaSetOutlineItemParentPDFAction : public MetaAction
+{
+private:
+    sal_Int32			mnItem;
+    sal_Int32			mnParent;
+
+public:
+    					MetaSetOutlineItemParentPDFAction( sal_Int32 nItem, sal_Int32 nParent ) : MetaAction( META_SETOUTLINEITEMPARENT_PDF_ACTION ), mnItem( nItem ), mnParent( nParent ) {}
+    virtual				~MetaSetOutlineItemParentPDFAction() {}
+
+    sal_Int32			GetItem() const { return mnItem; }
+    sal_Int32			GetParent() const { return mnParent; }
+};
+
+class MetaSetOutlineItemTextPDFAction : public MetaAction
+{
+private:
+    sal_Int32			mnItem;
+    const rtl::OUString&	mrText;
+
+public:
+    					MetaSetOutlineItemTextPDFAction( sal_Int32 nItem, const rtl::OUString& rText ) : MetaAction( META_SETOUTLINEITEMTEXT_PDF_ACTION ), mnItem( nItem ), mrText( rText ) {}
+    virtual				~MetaSetOutlineItemTextPDFAction() {}
+
+    sal_Int32			GetItem() const { return mnItem; }
+    const rtl::OUString&	GetText() const { return mrText; }
+};
+
+class MetaSetOutlineItemDestPDFAction : public MetaAction
+{
+private:
+    sal_Int32			mnItem;
+    sal_Int32			mnDest;
+
+public:
+    					MetaSetOutlineItemDestPDFAction( sal_Int32 nItem, sal_Int32 nDest ) : MetaAction( META_SETOUTLINEITEMDEST_PDF_ACTION ), mnItem( nItem ), mnDest( nDest ) {}
+    virtual				~MetaSetOutlineItemDestPDFAction() {}
+
+    sal_Int32			GetItem() const { return mnItem; }
+    sal_Int32			GetDest() const { return mnDest; }
+};
+
+class MetaCreateNotePDFAction : public MetaAction
+{
+private:
+    const Rectangle&	mrRect;
+    const ::vcl::PDFNote&	mrNote;
+    sal_Int32			mnPage;
+
+public:
+    					MetaCreateNotePDFAction( const Rectangle& rRect, const ::vcl::PDFNote& rNote, sal_Int32 nPage ) : MetaAction( META_CREATENOTE_PDF_ACTION ), mrRect( rRect ), mnPage( nPage ), mrNote( rNote ) {}
+    virtual				~MetaCreateNotePDFAction() {}
+
+    const Rectangle&	GetRect() const { return mrRect; }
+    sal_Int32			GetPage() const { return mnPage; }
+    const ::vcl::PDFNote&	GetNote() const { return mrNote; }
+};
+
+class MetaCreateControlPDFAction : public MetaAction
+{
+private:
+    const ::vcl::PDFWriter::AnyWidget&	mrControl;
+    sal_Int32			mnPage;
+
+public:
+						MetaCreateControlPDFAction( const ::vcl::PDFWriter::AnyWidget& rControl, sal_Int32 nPage ) : MetaAction( META_CREATECONTROL_PDF_ACTION ), mrControl( rControl ), mnPage( nPage ) {}
+    virtual				~MetaCreateControlPDFAction() {}
+
+    const ::vcl::PDFWriter::AnyWidget&	GetControl() const { return mrControl; }
+    sal_Int32			GetPage() const { return mnPage; }
+};
+
+class MetaBeginControlAppearancePDFAction : public MetaAction
+{
+private:
+    sal_Int32			mnControl;
+
+public:
+    					MetaBeginControlAppearancePDFAction( sal_Int32 nControl ) : MetaAction( META_BEGINCONTROLAPPEARANCE_PDF_ACTION ), mnControl( nControl ) {}
+    virtual				~MetaBeginControlAppearancePDFAction() {}
+
+    sal_Int32			GetControl() const { return mnControl; }
+};
+
+class MetaEndControlAppearancePDFAction : public MetaAction
+{
+private:
+    ::vcl::PDFWriter::WidgetState	meState;
+
+public:
+    					MetaEndControlAppearancePDFAction( ::vcl::PDFWriter::WidgetState eState ) : MetaAction( META_ENDCONTROLAPPEARANCE_PDF_ACTION ), meState( eState ) {}
+    virtual				~MetaEndControlAppearancePDFAction() {}
+
+    ::vcl::PDFWriter::WidgetState	GetState() const { return meState; }
+};
+
+class MetaBeginStructureElementPDFAction : public MetaAction
+{
+private:
+    ::vcl::PDFWriter::StructElement meType;
+
+public:
+    					MetaBeginStructureElementPDFAction( ::vcl::PDFWriter::StructElement eType ) : MetaAction( META_BEGINSTRUCTUREELEMENT_PDF_ACTION ), meType( eType ) {}
+    virtual				~MetaBeginStructureElementPDFAction() {}
+
+    ::vcl::PDFWriter::StructElement	GetType() const { return meType; }
+};
+
+class MetaEndStructureElementPDFAction : public MetaAction
+{
+public:
+    					MetaEndStructureElementPDFAction() : MetaAction( META_ENDSTRUCTUREELEMENT_PDF_ACTION ) {}
+    virtual				~MetaEndStructureElementPDFAction() {}
+};
+
+class MetaSetCurrentStructureElementPDFAction : public MetaAction
+{
+private:
+    sal_Int32			mnElement;
+
+public:
+    					MetaSetCurrentStructureElementPDFAction( sal_Int32 nElement ) : MetaAction( META_SETCURRENTSTRUCTUREELEMENT_PDF_ACTION ), mnElement( nElement ) {}
+    virtual				~MetaSetCurrentStructureElementPDFAction() {}
+
+    sal_Int32			GetElement() const { return mnElement; }
+};
+
+class MetaSetStructureAttributePDFAction : public MetaAction
+{
+private:
+    enum ::vcl::PDFWriter::StructAttribute	meAttr;
+    enum ::vcl::PDFWriter::StructAttributeValue	meValue;
+
+public:
+    					MetaSetStructureAttributePDFAction( enum ::vcl::PDFWriter::StructAttribute eAttr, enum ::vcl::PDFWriter::StructAttributeValue eValue ) : MetaAction( META_SETSTRUCTUREATTRIBUTE_PDF_ACTION ), meAttr( eAttr ), meValue( eValue ) {}
+    virtual				~MetaSetStructureAttributePDFAction() {}
+
+    enum ::vcl::PDFWriter::StructAttribute	GetAttribute() const { return meAttr; }
+    enum ::vcl::PDFWriter::StructAttributeValue	GetValue() const { return meValue; }
+};
+
+class MetaSetStructureAttributeNumericalPDFAction : public MetaAction
+{
+private:
+    enum ::vcl::PDFWriter::StructAttribute	meAttr;
+    sal_Int32			mnValue;
+
+public:
+    					MetaSetStructureAttributeNumericalPDFAction( enum ::vcl::PDFWriter::StructAttribute eAttr, sal_Int32 nValue ) : MetaAction( META_SETSTRUCTUREATTRIBUTENUMERICAL_PDF_ACTION ), meAttr( eAttr ), mnValue( nValue ) {}
+    virtual				~MetaSetStructureAttributeNumericalPDFAction() {}
+
+    enum ::vcl::PDFWriter::StructAttribute	GetAttribute() const { return meAttr; }
+    sal_Int32			GetValue() const { return mnValue; }
+};
+
+class MetaSetStructureBoundingBoxPDFAction : public MetaAction
+{
+private:
+    const Rectangle&	mrRect;
+
+public:
+    					MetaSetStructureBoundingBoxPDFAction( const Rectangle& rRect ) : MetaAction( META_SETSTRUCTUREBOUNDINGBOX_PDF_ACTION ), mrRect( rRect ) {}
+    virtual				~MetaSetStructureBoundingBoxPDFAction() {}
+
+    const Rectangle&	GetRect() const { return mrRect; }
+};
+
+class MetaSetActualTextPDFAction : public MetaAction
+{
+private:
+    const String&		mrText;
+
+public:
+    					MetaSetActualTextPDFAction( const String& rText ) : MetaAction( META_SETACTUALTEXT_PDF_ACTION ), mrText( rText ) {}
+    virtual				~MetaSetActualTextPDFAction() {}
+
+    const String&		GetText() const { return mrText; }
+};
+
+class MetaSetAlternateTextPDFAction : public MetaAction
+{
+private:
+    const String&		mrText;
+
+public:
+    					MetaSetAlternateTextPDFAction( const String& rText ) : MetaAction( META_SETALTERNATETEXT_PDF_ACTION ), mrText( rText ) {}
+    virtual				~MetaSetAlternateTextPDFAction() {}
+
+    const String&		GetText() const { return mrText; }
+};
+
+class MetaSetAutoAdvanceTimePDFAction : public MetaAction
+{
+private:
+    sal_uInt32			mnSeconds;
+    sal_Int32			mnPage;
+
+public:
+    					MetaSetAutoAdvanceTimePDFAction( sal_uInt32 nSeconds, sal_Int32 nPage ) : MetaAction( META_SETAUTOADVANCETIME_PDF_ACTION ), mnSeconds( nSeconds ), mnPage( nPage ) {}
+    virtual				~MetaSetAutoAdvanceTimePDFAction() {}
+
+    sal_uInt32			GetSeconds() const { return mnSeconds; }
+    sal_Int32			GetPage() const { return mnPage; }
+};
+
+class MetaSetPageTransitionPDFAction : public MetaAction
+{
+private:
+	::vcl::PDFWriter::PageTransition	meType;
+    sal_uInt32			mnMilliSeconds;
+    sal_Int32			mnPage;
+
+public:
+    					MetaSetPageTransitionPDFAction( ::vcl::PDFWriter::PageTransition eType, sal_uInt32 nMilliSeconds, sal_Int32 nPage ) : MetaAction( META_SETPAGETRANSITION_PDF_ACTION ), meType( eType ), mnMilliSeconds( nMilliSeconds ), mnPage( nPage ) {}
+    virtual				~MetaSetPageTransitionPDFAction() {}
+
+    ::vcl::PDFWriter::PageTransition	GetType() const { return meType; }
+    sal_uInt32			GetMilliSeconds() const { return mnMilliSeconds; }
+    sal_Int32			GetPage() const { return mnPage; }
 };
 
 #endif	// USE_JAVA && MACOSX
 
 #include <vector>
 #include <map>
+#include <hash_map>
 #include <list>
 
 class SalLayout;
 class ImplLayoutArgs;
-struct ImplFontData;
-struct ImplFontSelectData;
-struct ImplFontMetricData;
+class ImplFontData;
+class ImplFontSelectData;
+class ImplFontMetricData;
 struct FontSubsetInfo;
 class ZCodec;
-class SvMemoryStream;
 
 namespace vcl
 {
@@ -291,9 +624,16 @@ public:
         sal_Int32					m_nPageHeight;			// in inch/72
         PDFWriter::Orientation		m_eOrientation;
         sal_Int32					m_nPageObject;
+        sal_Int32					m_nPageIndex;
         sal_Int32					m_nStreamObject;
         sal_Int32					m_nStreamLengthObject;
         sal_uInt64					m_nBeginStreamPos;
+        std::vector<sal_Int32>		m_aAnnotations;
+        std::vector<sal_Int32>		m_aMCIDParents;
+        PDFWriter::PageTransition	m_eTransition;
+        sal_uInt32					m_nTransTime;
+        sal_uInt32					m_nDuration;
+        bool                        m_bHasWidgets;
 
         PDFPage( PDFWriterImpl* pWriter, sal_Int32 nPageWidth, sal_Int32 nPageHeight, PDFWriter::Orientation eOrientation );
         ~PDFPage();
@@ -308,27 +648,30 @@ public:
         // to page (useful for transformation matrices
         // if pOutPoint is set it will be updated to the emitted point
         // (in PDF map mode, that is 10th of point)
-        void appendPoint( const Point& rPoint, rtl::OStringBuffer& rBuffer, bool bNeg = false, Point* pOutPoint = NULL );
+        void appendPoint( const Point& rPoint, rtl::OStringBuffer& rBuffer, bool bNeg = false, Point* pOutPoint = NULL ) const;
         // appends a rectangle
-        void appendRect( const Rectangle& rRect, rtl::OStringBuffer& rBuffer );
+        void appendRect( const Rectangle& rRect, rtl::OStringBuffer& rBuffer ) const;
         // converts a rectangle to 10th points page space
-        void convertRect( Rectangle& rRect );
+        void convertRect( Rectangle& rRect ) const;
         // appends a polygon optionally closing it
-        void appendPolygon( const Polygon& rPoly, rtl::OStringBuffer& rBuffer, bool bClose = true );
+        void appendPolygon( const Polygon& rPoly, rtl::OStringBuffer& rBuffer, bool bClose = true ) const;
         // appends a polypolygon optionally closing the subpaths
-        void appendPolyPolygon( const PolyPolygon& rPolyPoly, rtl::OStringBuffer& rBuffer, bool bClose = true );
+        void appendPolyPolygon( const PolyPolygon& rPolyPoly, rtl::OStringBuffer& rBuffer, bool bClose = true ) const;
         // converts a length (either vertical or horizontal; this
         // can be important if the source MapMode is not
         // symmetrical) to page length and appends it to the buffer
         // if pOutLength is set it will be updated to the emitted length
         // (in PDF map mode, that is 10th of point)        
-        void appendMappedLength( sal_Int32 nLength, rtl::OStringBuffer& rBuffer, bool bVertical = true, sal_Int32* pOutLength = NULL );
+        void appendMappedLength( sal_Int32 nLength, rtl::OStringBuffer& rBuffer, bool bVertical = true, sal_Int32* pOutLength = NULL ) const;
         // the same for double values
-        void appendMappedLength( double fLength, rtl::OStringBuffer& rBuffer, bool bVertical = true, sal_Int32* pOutLength = NULL );
+        void appendMappedLength( double fLength, rtl::OStringBuffer& rBuffer, bool bVertical = true, sal_Int32* pOutLength = NULL ) const;
         // appends LineInfo
-        void appendLineInfo( const LineInfo& rInfo, rtl::OStringBuffer& rBuffer );
+        void appendLineInfo( const LineInfo& rInfo, rtl::OStringBuffer& rBuffer ) const;
         // appends a horizontal waveline with vertical offset (helper for drawWaveLine)
-        void appendWaveLine( sal_Int32 nLength, sal_Int32 nYOffset, sal_Int32 nDelta, rtl::OStringBuffer& rBuffer );
+        void appendWaveLine( sal_Int32 nLength, sal_Int32 nYOffset, sal_Int32 nDelta, rtl::OStringBuffer& rBuffer ) const;
+
+        sal_Int32 getWidth() const { return m_nPageWidth ? m_nPageWidth : m_pWriter->m_nInheritedPageWidth; }
+        sal_Int32 getHeight() const { return m_nPageHeight ? m_nPageHeight : m_pWriter->m_nInheritedPageHeight; }
     };
 
     friend struct PDFPage;
@@ -376,6 +719,7 @@ public:
         SvMemoryStream*		m_pStream;
         Bitmap				m_aMask;
         sal_Int32			m_nObject;
+        bool                m_bTrueColor;
 
         JPGEmit() : m_pStream( NULL ) {}
         ~JPGEmit() { delete m_pStream; }
@@ -400,9 +744,24 @@ public:
     struct TransparencyEmit
     {
         sal_Int32			m_nObject;
+        sal_Int32			m_nExtGStateObject;
         double				m_fAlpha;
         Rectangle			m_aBoundRect;
-        rtl::OStringBuffer	m_aContentStream;
+        SvMemoryStream*		m_pContentStream;
+        SvMemoryStream*		m_pSoftMaskStream;
+
+        TransparencyEmit()
+                : m_nObject( 0 ),
+                  m_nExtGStateObject( -1 ),
+                  m_fAlpha( 0.0 ),
+                  m_pContentStream( NULL ),
+                  m_pSoftMaskStream( NULL )
+        {}
+        ~TransparencyEmit()
+        {
+            delete m_pContentStream;
+            delete m_pSoftMaskStream;
+        }
     };
 
     // font subsets
@@ -410,20 +769,20 @@ public:
     {
 #if defined USE_JAVA && defined MACOSX
         sal_uInt16		m_nSubsetGlyphID;
-#else	// USE_JAVA && MACOSX
+#else	// USE_JAVA
         sal_uInt8		m_nSubsetGlyphID;
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
         sal_Unicode		m_aUnicode;
     };
     typedef std::map< long, GlyphEmit > FontEmitMapping;
 #if defined USE_JAVA && defined MACOSX
     struct PDFEmitObject
     {
-        sal_Int32		m_nID;
-        rtl::OString	m_aContent;
-        bool			m_bStream;
-        sal_uInt64		m_nStreamPos;
-        sal_uInt64		m_nStreamLen;
+        sal_Int32			m_nID;
+        rtl::OString		m_aContent;
+        bool				m_bStream;
+        sal_uInt64			m_nStreamPos;
+        sal_uInt64			m_nStreamLen;
 
         PDFEmitObject() : m_nID( 0 ), m_bStream( false ), m_nStreamPos( 0 ), m_nStreamLen( 0 ) {}
     };
@@ -437,13 +796,13 @@ public:
         rtl::OUString		m_aFontFileName;
         std::map< long, sal_uInt16 >	m_aGlyphEncoding;
         PDFObjectMapping	m_aObjectMapping;
-        std::map< rtl::OString, sal_Int32 >	m_aFontSubIDMapping;
+        std::map< rtl::OString, sal_Int32 > m_aFontSubIDMapping;
 #endif	// USE_JAVA && MACOSX
 
         FontEmit( sal_Int32 nID ) : m_nFontID( nID ) {}
 #if defined USE_JAVA && defined MACOSX
         ~FontEmit() { osl_removeFile( m_aFontFileName.pData ); }
-#endif  // USE_JAVA && MACOSX
+#endif	// USE_JAVA && MACOSX
     };
     typedef std::list< FontEmit > FontEmitList;
     struct Glyph
@@ -487,47 +846,263 @@ public:
         std::list< EmbedEncoding >		m_aExtendedEncodings;
     };
     typedef std::map< ImplFontData*, EmbedFont > FontEmbedData;
+
+    struct PDFDest
+    {
+        sal_Int32					m_nPage;
+        PDFWriter::DestAreaType		m_eType;
+        Rectangle					m_aRect;
+    };
+
+    struct PDFOutlineEntry
+    {
+        sal_Int32					m_nParentID;
+        sal_Int32					m_nObject;
+        sal_Int32					m_nParentObject;
+        sal_Int32					m_nNextObject;
+        sal_Int32					m_nPrevObject;
+        std::vector< sal_Int32 >	m_aChildren;
+        rtl::OUString				m_aTitle;
+        sal_Int32					m_nDestID;
+        
+        PDFOutlineEntry() 
+                : m_nParentID( -1 ),
+                  m_nObject( 0 ),
+                  m_nParentObject( 0 ),
+                  m_nNextObject( 0 ),
+                  m_nPrevObject( 0 ),
+                  m_nDestID( -1 )
+        {}
+    };
+
+    struct PDFAnnotation
+    {
+        sal_Int32					m_nObject;
+        Rectangle					m_aRect;
+        sal_Int32					m_nPage;
+
+        PDFAnnotation()
+                : m_nObject( -1 ),
+                  m_nPage( -1 )
+        {}
+    };
+
+    struct PDFLink : public PDFAnnotation
+    {
+        sal_Int32					m_nDest; // set to -1 for URL, to a dest else
+        rtl::OUString				m_aURL;
+        sal_Int32                   m_nStructParent; // struct parent entry
+        
+        PDFLink() 
+                : m_nDest( -1 ),
+                  m_nStructParent( -1 )
+        {}
+    };
+
+    struct PDFNoteEntry : public PDFAnnotation
+    {
+        PDFNote						m_aContents;
+
+        PDFNoteEntry()
+        {}
+    };
+
+    typedef std::hash_map< rtl::OString, SvMemoryStream*, rtl::OStringHash > PDFAppearanceStreams;
+    typedef std::hash_map< rtl::OString, PDFAppearanceStreams, rtl::OStringHash > PDFAppearanceMap;
+
+    struct PDFWidget : public PDFAnnotation
+    {
+        PDFWriter::WidgetType		m_eType;
+        rtl::OString				m_aName;
+        rtl::OUString				m_aDescription;
+        rtl::OUString				m_aText;
+        USHORT						m_nTextStyle;
+        rtl::OUString				m_aValue;
+        rtl::OString				m_aDAString;
+        rtl::OString				m_aMKDict;
+        sal_Int32					m_nFlags;
+        sal_Int32					m_nParent; // if not 0, parent's object number
+        std::vector<sal_Int32>		m_aKids; // widget children, contains object numbers
+        std::vector<sal_Int32>      m_aKidsIndex; // widget children, contains index to m_aWidgets
+        rtl::OUString               m_aOnValue;
+        sal_Int32                   m_nTabOrder; // lowest number gets first in tab order
+        sal_Int32					m_nRadioGroup;
+        sal_Int32					m_nMaxLen;
+        std::list<rtl::OUString>	m_aListEntries;
+        PDFAppearanceMap			m_aAppearances;
+        PDFWidget()
+                : m_eType( PDFWriter::PushButton ),
+                  m_nTextStyle( 0 ),
+                  m_nFlags( 0 ),
+                  m_nParent( 0 ),
+                  m_nRadioGroup( -1 ),
+                  m_nMaxLen( 0 )
+        {}
+    };
+
+    struct PDFStructureAttribute
+    {
+        PDFWriter::StructAttributeValue		eValue;
+        sal_Int32							nValue;
+
+        PDFStructureAttribute()
+                : eValue( PDFWriter::Invalid ),
+                  nValue( 0 )
+        {}
+
+        PDFStructureAttribute( PDFWriter::StructAttributeValue eVal )
+                : eValue( eVal ),
+                  nValue( 0 )
+        {}
+
+        PDFStructureAttribute( sal_Int32 nVal )
+                : eValue( PDFWriter::Invalid ),
+                  nValue( nVal )
+        {}
+    };
+
+    typedef std::map<PDFWriter::StructAttribute, PDFStructureAttribute > PDFStructAttributes;
+
+    struct PDFStructureElementKid // for Kids entries
+    {
+        sal_Int32 nObject;  // an object number if nMCID is -1,
+                            // else the page object relevant to MCID
+        sal_Int32 nMCID;    // an MCID if >= 0
+        
+        PDFStructureElementKid( sal_Int32 nObj ) : nObject( nObj ), nMCID( -1 ) {}
+        PDFStructureElementKid( sal_Int32 MCID, sal_Int32 nPage ) : nObject( nPage ), nMCID( MCID ) {}
+    };
+    
+    struct PDFStructureElement
+    {
+        sal_Int32											m_nObject;
+        PDFWriter::StructElement							m_eType;
+        sal_Int32											m_nOwnElement; // index into structure vector
+        sal_Int32											m_nParentElement; // index into structure vector
+        sal_Int32											m_nFirstPageObject;
+        bool												m_bOpenMCSeq;
+        std::list< sal_Int32 >								m_aChildren; // indices into strucure vector
+        std::list< PDFStructureElementKid >                 m_aKids;
+        PDFStructAttributes									m_aAttributes;
+        Rectangle											m_aBBox;
+        rtl::OUString										m_aActualText;
+        rtl::OUString										m_aAltText;
+
+        // m_aContents contains the element's marked content sequence
+        // as pairs of (page nr, MCID)
+
+        PDFStructureElement()
+                : m_nObject( 0 ),
+                  m_eType( PDFWriter::NonStructElement ),
+                  m_nOwnElement( -1 ),
+                  m_nParentElement( -1 ),
+                  m_nFirstPageObject( 0 ),
+                  m_bOpenMCSeq( false )
+        {
+        }
+
+    };
+    
+    static const sal_Char* getStructureTag( PDFWriter::StructElement );
+    static const sal_Char* getAttributeTag( PDFWriter::StructAttribute eAtr );
+    static const sal_Char* getAttributeValueTag( PDFWriter::StructAttributeValue eVal );
+    
+    // returns true if compression was done
+    // else false
+    static bool compressStream( SvMemoryStream* );
+
 private:
     static const BuiltinFont m_aBuiltinFonts[14];
 
-    OutputDevice*					m_pReferenceDevice;
+    OutputDevice*						m_pReferenceDevice;
 
-    MapMode							m_aMapMode; // PDFWriterImpl scaled units
-    std::list< PDFPage >			m_aPages;
-    PDFDocInfo						m_aDocInfo;
+    MapMode								m_aMapMode; // PDFWriterImpl scaled units
+    MapMode                             m_aFineMapMode;
+    std::vector< PDFPage >				m_aPages;
+    PDFDocInfo							m_aDocInfo;
     /* maps object numbers to file offsets (needed for xref) */
-    std::vector< sal_uInt64 >		m_aObjects;
+    std::vector< sal_uInt64 >			m_aObjects;
     /* contains Bitmaps until they are written to the
      *  file stream as XObjects*/
-    std::list< BitmapEmit >			m_aBitmaps;
-    /* contains JPG streams until written to file
+    std::list< BitmapEmit >				m_aBitmaps;
+    /* contains JPG streams until written to file     */
+    std::list<JPGEmit>					m_aJPGs;
+    /* contains all dests ever set during the PDF creation,
+       dest id is always the dest's position in this vector
      */
-    std::list<JPGEmit>				m_aJPGs;
+    std::vector<PDFDest>				m_aDests;
+    /* contains all links ever set during PDF creation,
+       link id is always the link's position in this vector
+    */
+    std::vector<PDFLink>				m_aLinks;
+    /* maps arbitrary link ids for structure attributes to real link ids
+       (for setLinkPropertyId)
+    */
+    std::map<sal_Int32, sal_Int32>		m_aLinkPropertyMap;
+    /* contains all outline items,
+       object 0 is the outline root
+     */
+    std::vector<PDFOutlineEntry>		m_aOutline;
+    /* contains all notes set during PDF creation
+     */
+    std::vector<PDFNoteEntry>			m_aNotes;
+	/* the root of the structure tree
+     */
+    std::vector<PDFStructureElement>	m_aStructure;
+    /* current object in the structure hierarchy
+     */
+    sal_Int32							m_nCurrentStructElement;
+    /* structure parent tree */
+    std::vector< rtl::OString >         m_aStructParentTree;
+    /* emit strucure marks currently (aka. NonStructElement or not)
+     */
+    bool								m_bEmitStructure;
+    bool								m_bNewMCID;
+
+    /* contains all widgets used in the PDF
+     */
+    std::vector<PDFWidget>				m_aWidgets;
+    /* maps radio group id to index of radio group control in m_aWidgets */
+    std::map< sal_Int32, sal_Int32 >	m_aRadioGroupWidgets;
+    /* used to store control id during beginControlAppearance/endControlAppearance */
+    sal_Int32							m_nCurrentControl;
+    /* hash_map for field names, used to ensure unique field names */
+    std::hash_map< rtl::OString, sal_Int32, rtl::OStringHash > m_aFieldNameMap;
 
     /* contains Bitmaps for gradient functions until they are written
      *  to the file stream */
-    std::list< GradientEmit >		m_aGradients;
+    std::list< GradientEmit >			m_aGradients;
     /* contains bitmap tiling patterns */
-    std::list< BitmapPatternEmit >	m_aTilings;
-    std::list< TransparencyEmit >	m_aTransparentObjects;
+    std::list< BitmapPatternEmit >		m_aTilings;
+    std::list< TransparencyEmit >		m_aTransparentObjects;
     /*  contains all font subsets in use */
-    FontSubsetData					m_aSubsets;
-    FontEmbedData					m_aEmbeddedFonts;
-    sal_Int32						m_nNextFID;
+    FontSubsetData						m_aSubsets;
+    FontEmbedData						m_aEmbeddedFonts;
+    sal_Int32							m_nNextFID;
 
-    sal_Int32						m_nInheritedPageWidth;  // in inch/72
-    sal_Int32						m_nInheritedPageHeight; // in inch/72
-    PDFWriter::Orientation			m_eInheritedOrientation;
-    sal_Int32						m_nCurrentPage;
+    sal_Int32							m_nInheritedPageWidth;  // in inch/72
+    sal_Int32							m_nInheritedPageHeight; // in inch/72
+    PDFWriter::Orientation				m_eInheritedOrientation;
+    sal_Int32							m_nCurrentPage;
 
-    sal_Int32						m_nCatalogObject;
-    sal_Int32						m_nResourceDict;
+    sal_Int32							m_nCatalogObject;
+    sal_Int32							m_nResourceDict;
+    sal_Int32							m_nFontResourceDict;
 
-    PDFWriter::PDFVersion			m_eVersion;
-    PDFWriter::Compression          m_eCompression;
-    rtl::OUString					m_aFileName;
-    oslFileHandle					m_aFile;
-    bool							m_bOpen;
+    PDFWriter::PDFWriterContext			m_aContext;
+    oslFileHandle						m_aFile;
+    bool								m_bOpen;
+
+
+    /* output redirection; e.g. to accumulate content streams for
+       XObjects
+     */
+    struct StreamRedirect
+    {
+        SvStream*		m_pStream;
+        MapMode   		m_aMapMode;
+    };
+    std::list< StreamRedirect >			m_aOutputStreams;
 
     // graphics state
     struct GraphicsState
@@ -542,6 +1117,17 @@ private:
         sal_Int32		m_nLayoutMode;
         sal_Int32		m_nTransparentPercent;
         sal_uInt16		m_nFlags;
+        sal_uInt16      m_nUpdateFlags;
+        
+        static const sal_uInt16 updateFont                  = 0x0001;
+        static const sal_uInt16 updateMapMode               = 0x0002;
+        static const sal_uInt16 updateLineColor             = 0x0004;
+        static const sal_uInt16 updateFillColor             = 0x0008;
+        static const sal_uInt16 updateTextLineColor         = 0x0010;
+        static const sal_uInt16 updateClipRegion            = 0x0020;
+        static const sal_uInt16 updateAntiAlias             = 0x0040;
+        static const sal_uInt16 updateLayoutMode            = 0x0080;
+        static const sal_uInt16 updateTransparentPercent    = 0x0100;
 
         GraphicsState() :
                 m_aLineColor( COL_TRANSPARENT ),
@@ -550,7 +1136,8 @@ private:
                 m_nAntiAlias( 1 ),
                 m_nLayoutMode( 0 ),
                 m_nTransparentPercent( 0 ),
-                m_nFlags( 0xffff )
+                m_nFlags( 0xffff ),
+                m_nUpdateFlags( 0xffff )
         {}
         GraphicsState( const GraphicsState& rState ) :
                 m_aFont( rState.m_aFont ),
@@ -562,7 +1149,8 @@ private:
                 m_nAntiAlias( rState.m_nAntiAlias ),
                 m_nLayoutMode( rState.m_nLayoutMode ),
                 m_nTransparentPercent( rState.m_nTransparentPercent ),
-                m_nFlags( rState.m_nFlags )
+                m_nFlags( rState.m_nFlags ),
+                m_nUpdateFlags( rState.m_nUpdateFlags )
         {
         }
 
@@ -578,30 +1166,33 @@ private:
             m_nLayoutMode			= rState.m_nLayoutMode;
             m_nTransparentPercent	= rState.m_nTransparentPercent;
             m_nFlags				= rState.m_nFlags;
+            m_nUpdateFlags          = rState.m_nUpdateFlags;
             return *this;
         }
     };
-    std::list< GraphicsState >			m_aGraphicsStack;
-    GraphicsState						m_aCurrentPDFState;
+    std::list< GraphicsState >				m_aGraphicsStack;
+    GraphicsState							m_aCurrentPDFState;
 
 #if defined USE_JAVA && defined MACOSX
-	GDIMetaFile							m_aMtf;
-	bool								m_bUsingMtf;
+    GDIMetaFile								m_aMtf;
+    bool									m_bUsingMtf;
 #endif	// USE_JAVA && MACOSX
 
-    ZCodec*								m_pCodec;
-    SvMemoryStream*						m_pMemStream;
+    ZCodec*									m_pCodec;
+    SvMemoryStream*							m_pMemStream;
 
     /* creates fonts and subsets that will be emitted later */
 #if defined USE_JAVA && defined MACOSX
-    void registerGlyphs( int nGlyphs, long* pGlyphs, sal_Unicode* pUnicodes, sal_uInt16* pMappedGlyphs, bool* pMappedIdentityGlyphs, sal_Int32* pMappedFontObjects, sal_Int32* pMappedFontSubObjects, ImplFontData* pFallbackFonts[] );
+    void registerGlyphs( int nGlyphs, sal_Int32* pGlyphs, sal_Unicode* pUnicodes, sal_uInt16* pMappedGlyphs, bool* pMappedIdentityGlyphs, sal_Int32* pMappedFontObjects, sal_Int32* pMappedFontSubObjects, ImplFontData* pFallbackFonts[] );
 #else	// USE_JAVA && MACOSX
-    void registerGlyphs( int nGlyphs, long* pGlyphs, sal_Unicode* pUnicodes, sal_uInt8* pMappedGlyphs, sal_Int32* pMappedFontObjects, ImplFontData* pFallbackFonts[] );
+    void registerGlyphs( int nGlyphs, sal_Int32* pGlyphs, sal_Unicode* pUnicodes, sal_uInt8* pMappedGlyphs, sal_Int32* pMappedFontObjects, ImplFontData* pFallbackFonts[] );
 #endif	// USE_JAVA && MACOSX
 
     /*  emits a text object according to the passed layout */
     /* TODO: remove rText as soon as SalLayout will change so that rText is not necessary anymore */
     void drawLayout( SalLayout& rLayout, const String& rText, bool bTextLines );
+    void drawRelief( SalLayout& rLayout, const String& rText, bool bTextLines );
+    void drawShadow( SalLayout& rLayout, const String& rText, bool bTextLines );
 
     /*  writes differences between graphics stack and current real PDF
      *   state to the file
@@ -641,6 +1232,23 @@ private:
     sal_Int32 emitFontDescriptor( ImplFontData* pFont, FontSubsetInfo& rInfo, sal_Int32 nSubsetID, sal_Int32 nStream );
     /* writes a ToUnicode cmap, returns the corresponding stream object */
     sal_Int32 createToUnicodeCMap( sal_uInt8* pEncoding, sal_Unicode* pUnicodes, int nGlyphs );
+
+    /* get resource dict object number */
+    sal_Int32 getResourceDictObj()
+    {
+        if( m_nResourceDict <= 0 )
+            m_nResourceDict = createObject();
+        return m_nResourceDict;
+    }
+
+    /* get font dict object number */
+    sal_Int32 getFontDictObj()
+    {
+        if( m_nFontResourceDict <= 0 )
+            m_nFontResourceDict = createObject();
+        return m_nFontResourceDict;
+    }
+
     /* writes a the font dictionary and emits all font objects
      * returns object id of font directory (or 0 on error)
      */
@@ -649,13 +1257,59 @@ private:
      * returns dict object id (or 0 on error)
      */
     sal_Int32 emitResources();
+    // appends a dest
+    bool appendDest( sal_Int32 nDestID, rtl::OStringBuffer& rBuffer );
+    // write all links
+    bool emitLinkAnnotations();
+    // write all notes
+    bool emitNoteAnnotations();
+    // write the appearance streams of a widget
+    bool emitAppearances( PDFWidget& rWidget, rtl::OStringBuffer& rAnnotDict );
+    // clean up radio button "On" values
+    void ensureUniqueRadioOnValues();
+    // write all widgets
+    bool emitWidgetAnnotations();
+    // writes all annotation objects
+    bool emitAnnotations();
+    // writes the dest dict for the catalog
+    sal_Int32 emitDestDict();
+    // writes outline dict and tree
+    sal_Int32 emitOutline();
+    // puts the attribute objects of a structure element into the returned string,
+    // helper for emitStructure
+    rtl::OString emitStructureAttributes( PDFStructureElement& rEle );
+    // writes document structure
+    sal_Int32 emitStructure( PDFStructureElement& rEle );
+    // writes structure parent tree
+    sal_Int32 emitStructParentTree( sal_Int32 nTreeObject );
     // writes page tree and catalog
     bool emitCatalog();
     // writes xref and trailer
     bool emitTrailer();
-    // emits info dict (if applicable)
-    sal_Int32 emitInfoDict();
+    // emits info dict (if applicable), passes back the contents of all values written
+    // for recommend file id computation
+    sal_Int32 emitInfoDict( rtl::OString& rIDOut );
+    
+    // acrobat reader 5 and 6 use the order of the annotations
+    // as their tab order; since PDF1.5 one can make the
+    // tab order explicit by using the structure tree
+    void sortWidgets();
 
+    // default appearences for widgets
+    sal_Int32 findRadioGroupWidget( const PDFWriter::RadioButtonWidget& rRadio );
+    Font replaceFont( const Font& rControlFont, const Font& rAppSetFont );
+
+    // used for edit and listbox
+    Font drawFieldBorder( PDFWidget&, const PDFWriter::AnyWidget&, const StyleSettings& );
+    
+    void createDefaultPushButtonAppearance( PDFWidget&, const PDFWriter::PushButtonWidget& rWidget );
+    void createDefaultCheckBoxAppearance( PDFWidget&, const PDFWriter::CheckBoxWidget& rWidget );
+    void createDefaultRadioButtonAppearance( PDFWidget&, const PDFWriter::RadioButtonWidget& rWidget );
+    void createDefaultEditAppearance( PDFWidget&, const PDFWriter::EditWidget& rWidget );
+    void createDefaultListBoxAppearance( PDFWidget&, const PDFWriter::ListBoxWidget& rWidget );
+
+    /* ensure proper escapement and uniqueness of field names */
+    rtl::OString convertWidgetFieldName( const rtl::OUString& rString );
     /* adds an entry to m_aObjects and returns its index+1,
      * sets the offset to ~0
      */
@@ -667,22 +1321,37 @@ private:
     bool writeBuffer( const void* pBuffer, sal_uInt64 nBytes );
     void beginCompression();
     void endCompression();
+    void beginRedirect( SvStream* pStream, const Rectangle& );
+    SvStream* endRedirect();
+
     void endPage();
+
+    void beginStructureElementMCSeq();
+    void endStructureElementMCSeq();
+    /** checks whether a non struct element lies in the ancestor hierarchy
+        of the current structure element
+
+        @returns
+        <true/> if no NonStructElement was found in ancestor path and tagged
+        PDF output is enabled
+        <false/> else
+     */
+    bool checkEmitStructure();
 
 #if defined USE_JAVA && defined MACOSX
     sal_Int32 getNextPDFObject( oslFileHandle aFile, PDFObjectMapping& rObjectMapping );
     sal_Int32 writePDFObjectTree( PDFEmitObject& rObj, oslFileHandle aFile, PDFObjectMapping& rObjMapping, sal_Int32 nFontID, std::map< sal_Int32, sal_Int32 >& rIDMapping );
     void encodeGlyphs();
-#endif  // USE_JAVA && MACOSX
+#endif	// USE_JAVA && MACOSX
 
     /* draws an emphasis mark */
     void drawEmphasisMark(  long nX, long nY, const PolyPolygon& rPolyPoly, BOOL bPolyLine, const Rectangle& rRect1, const Rectangle& rRect2 );
-#if defined USE_JAVA && defined MACOSX
 public:
-    PDFWriterImpl( const rtl::OUString& rTargetFile, PDFWriter::PDFVersion eVersion = PDFWriter::PDF_1_4, PDFWriter::Compression eCompression = PDFWriter::Screen, FontSubsetData *pSubsets = NULL );
+#if defined USE_JAVA && defined MACOSX
+    PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext, FontSubsetData *pSubsets = NULL );
 #else	// USE_JAVA && MACOSX
-    PDFWriterImpl( const rtl::OUString& rTargetFile, PDFWriter::PDFVersion eVersion = PDFWriter::PDF_1_4, PDFWriter::Compression eCompression = PDFWriter::Screen );
-#endif  // USE_JAVA && MACOSX
+    PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext );
+#endif	// USE_JAVA && MACOSX
     ~PDFWriterImpl();
 
     /*	for OutputDevice so the reference device can have a list
@@ -705,7 +1374,7 @@ public:
     sal_Int32 newPage( sal_Int32 nPageWidth , sal_Int32 nPageHeight, PDFWriter::Orientation eOrientation );
     bool emit();
 
-    PDFWriter::PDFVersion getVersion() const { return m_eVersion; }
+    PDFWriter::PDFVersion getVersion() const { return m_aContext.Version; }
     void setDocInfo( const PDFDocInfo& rInfo );
     const PDFDocInfo& getDocInfo() const { return m_aDocInfo; }
     
@@ -714,14 +1383,7 @@ public:
     void push( sal_uInt16 nFlags );
     void pop();
 
-    void setFont( const Font& rFont )
-    {
-#if defined USE_JAVA && defined MACOSX
-        if ( !m_bUsingMtf )
-            m_aMtf.AddAction( new MetaFontAction( rFont ) );
-#endif	// USE_JAVA && MACOSX
-        m_aGraphicsStack.front().m_aFont = rFont;
-    }
+    void setFont( const Font& rFont );
 
     void setMapMode( const MapMode& rMapMode );
     void setMapMode() { setMapMode( m_aMapMode ); }
@@ -735,7 +1397,8 @@ public:
         if ( !m_bUsingMtf )
             m_aMtf.AddAction( new MetaLineColorAction( rColor, TRUE ) );
 #endif	// USE_JAVA && MACOSX
-        m_aGraphicsStack.front().m_aLineColor = rColor;
+        m_aGraphicsStack.front().m_aLineColor = ImplIsColorTransparent(rColor) ? Color( COL_TRANSPARENT ) : rColor;
+        m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateLineColor;
     }
 
     void setFillColor( const Color& rColor )
@@ -744,7 +1407,8 @@ public:
         if ( !m_bUsingMtf )
             m_aMtf.AddAction( new MetaFillColorAction( rColor, TRUE ) );
 #endif	// USE_JAVA && MACOSX
-        m_aGraphicsStack.front().m_aFillColor = rColor;
+        m_aGraphicsStack.front().m_aFillColor = ImplIsColorTransparent(rColor) ? Color( COL_TRANSPARENT ) : rColor;
+        m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateFillColor;        
     }
 
     void setTextLineColor()
@@ -754,6 +1418,7 @@ public:
             m_aMtf.AddAction( new MetaTextLineColorAction( Color( COL_TRANSPARENT ), FALSE ) );
 #endif	// USE_JAVA && MACOSX
         m_aGraphicsStack.front().m_aTextLineColor = Color( COL_TRANSPARENT );
+        m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateTextLineColor;        
     }
 
     void setTextLineColor( const Color& rColor )
@@ -763,6 +1428,7 @@ public:
             m_aMtf.AddAction( new MetaTextLineColorAction( rColor, TRUE ) );
 #endif	// USE_JAVA && MACOSX
         m_aGraphicsStack.front().m_aTextLineColor = rColor;
+        m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateTextLineColor;        
     }
 
     void setTextFillColor( const Color& rColor )
@@ -773,8 +1439,8 @@ public:
 #endif	// USE_JAVA && MACOSX
         m_aGraphicsStack.front().m_aFont.SetFillColor( rColor );
         m_aGraphicsStack.front().m_aFont.SetTransparent( ImplIsColorTransparent( rColor ) );
+        m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateFont;
     }
-
     void setTextFillColor()
     {
 #if defined USE_JAVA && defined MACOSX
@@ -783,8 +1449,8 @@ public:
 #endif	// USE_JAVA && MACOSX
         m_aGraphicsStack.front().m_aFont.SetFillColor( Color( COL_TRANSPARENT ) );
         m_aGraphicsStack.front().m_aFont.SetTransparent( TRUE );
+        m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateFont;
     }
-
     void setTextColor( const Color& rColor )
     {
 #if defined USE_JAVA && defined MACOSX
@@ -792,6 +1458,7 @@ public:
             m_aMtf.AddAction( new MetaTextColorAction( rColor ) );
 #endif	// USE_JAVA && MACOSX
         m_aGraphicsStack.front().m_aFont.SetColor( rColor );
+        m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateFont;
     }
 
     void clearClipRegion()
@@ -801,6 +1468,7 @@ public:
             m_aMtf.AddAction( new MetaClipRegionAction( Region(), FALSE ) );
 #endif	// USE_JAVA && MACOSX
         m_aGraphicsStack.front().m_aClipRegion.SetNull();
+        m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateClipRegion;
     }
 
     void setClipRegion( const Region& rRegion );
@@ -818,6 +1486,7 @@ public:
             m_aMtf.AddAction( new MetaLayoutModeAction( nLayoutMode ) );
 #endif	// USE_JAVA && MACOSX
         m_aGraphicsStack.front().m_nLayoutMode = nLayoutMode;
+        m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateLayoutMode;
     }
 
     void setTextAlign( TextAlign eAlign )
@@ -826,7 +1495,9 @@ public:
         if ( !m_bUsingMtf )
             m_aMtf.AddAction( new MetaTextAlignAction( eAlign ) );
 #endif	// USE_JAVA && MACOSX
+
         m_aGraphicsStack.front().m_aFont.SetAlign( eAlign );
+        m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateFont;
     }
 
     void setAntiAlias( sal_Int32 nAntiAlias )
@@ -836,11 +1507,12 @@ public:
             m_aMtf.AddAction( new MetaAntiAliasPDFAction( nAntiAlias ) );
 #endif	// USE_JAVA && MACOSX
         m_aGraphicsStack.front().m_nAntiAlias = nAntiAlias;
+        m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateAntiAlias;
     }
 
     /* actual drawing functions */
     void drawText( const Point& rPos, const String& rText, xub_StrLen nIndex = 0, xub_StrLen nLen = STRING_LEN, bool bTextLines = true );
-    void drawTextArray( const Point& rPos, const String& rText, const long* pDXArray = NULL, xub_StrLen nIndex = 0, xub_StrLen nLen = STRING_LEN, bool bTextLines = true );
+    void drawTextArray( const Point& rPos, const String& rText, const sal_Int32* pDXArray = NULL, xub_StrLen nIndex = 0, xub_StrLen nLen = STRING_LEN, bool bTextLines = true );
     void drawStretchText( const Point& rPos, ULONG nWidth, const String& rText,
                           xub_StrLen nIndex = 0, xub_StrLen nLen = STRING_LEN,
                           bool bTextLines = true  );
@@ -853,6 +1525,7 @@ public:
     void drawPolyPolygon( const PolyPolygon& rPolyPoly );
     void drawPolyLine( const Polygon& rPoly );
     void drawPolyLine( const Polygon& rPoly, const LineInfo& rInfo );
+    void drawPolyLine( const Polygon& rPoly, const PDFWriter::ExtLineInfo& rInfo );
     void drawWaveLine( const Point& rStart, const Point& rStop, sal_Int32 nDelta, sal_Int32 nLineWidth );
 
     void drawPixel( const Point& rPt, const Color& rColor );
@@ -866,15 +1539,63 @@ public:
     void drawBitmap( const Point& rDestPoint, const Size& rDestSize, const Bitmap& rBitmap );
     void drawBitmap( const Point& rDestPoint, const Size& rDestSize, const BitmapEx& rBitmap );
     void drawMask( const Point& rDestPoint, const Size& rDestSize, const Bitmap& rBitmap, const Color& rFillColor );
-    void drawJPGBitmap( SvStream& rDCTData, const Size& rSizePixel, const Rectangle& rTargetArea, const Bitmap& rMask );
+    void drawJPGBitmap( SvStream& rDCTData, bool bIsTrueColor, const Size& rSizePixel, const Rectangle& rTargetArea, const Bitmap& rMask );
 
     void drawGradient( const Rectangle& rRect, const Gradient& rGradient );
     void drawGradient( const PolyPolygon& rPolyPoly, const Gradient& rGradient );
     void drawHatch( const PolyPolygon& rPolyPoly, const Hatch& rHatch );
     void drawWallpaper( const Rectangle& rRect, const Wallpaper& rWall );
     void drawTransparent( const PolyPolygon& rPolyPoly, sal_uInt32 nTransparentPercent );
+    void beginTransparencyGroup();
+    void endTransparencyGroup( const Rectangle& rBoundingBox, sal_uInt32 nTransparentPercent );
+    void endTransparencyGroup( const Rectangle& rBoundingBox, const Bitmap& rAlphaMask );
 
-    void emitComment( const rtl::OString& rComment );
+    void emitComment( const char* pComment );
+
+    // links
+    sal_Int32 createLink( const Rectangle& rRect, sal_Int32 nPageNr = -1 );
+    sal_Int32 createDest( const Rectangle& rRect, sal_Int32 nPageNr = -1, PDFWriter::DestAreaType eType = PDFWriter::XYZ );
+    sal_Int32 setLinkDest( sal_Int32 nLinkId, sal_Int32 nDestId );
+    sal_Int32 setLinkURL( sal_Int32 nLinkId, const rtl::OUString& rURL );
+    void setLinkPropertyId( sal_Int32 nLinkId, sal_Int32 nPropertyId );
+
+    // outline
+    sal_Int32 createOutlineItem( sal_Int32 nParent = 0, const rtl::OUString& rText = rtl::OUString(), sal_Int32 nDestID = -1 );
+    sal_Int32 setOutlineItemParent( sal_Int32 nItem, sal_Int32 nNewParent );
+    sal_Int32 setOutlineItemText( sal_Int32 nItem, const rtl::OUString& rText );
+    sal_Int32 setOutlineItemDest( sal_Int32 nItem, sal_Int32 nDestID );
+
+    // notes
+    void createNote( const Rectangle& rRect, const PDFNote& rNote, sal_Int32 nPageNr = -1 );
+    // structure elements
+    sal_Int32 beginStructureElement( PDFWriter::StructElement eType );
+    void endStructureElement();
+    bool setCurrentStructureElement( sal_Int32 nElement );
+    sal_Int32 getCurrentStructureElement();
+    bool setStructureAttribute( enum PDFWriter::StructAttribute eAttr, enum PDFWriter::StructAttributeValue eVal );
+    bool setStructureAttributeNumerical( enum PDFWriter::StructAttribute eAttr, sal_Int32 nValue );
+    void setStructureBoundingBox( const Rectangle& rRect );
+    void setActualText( const String& rText );
+    void setAlternateText( const String& rText );
+
+    // transitional effects
+    void setAutoAdvanceTime( sal_uInt32 nSeconds, sal_Int32 nPageNr = -1 );
+    void setPageTransition( PDFWriter::PageTransition eType, sal_uInt32 nMilliSec, sal_Int32 nPageNr = -1 );
+
+    // controls
+    sal_Int32 createControl( const PDFWriter::AnyWidget& rControl, sal_Int32 nPageNr = -1 );
+    void beginControlAppearance( sal_Int32 nControl );
+    bool endControlAppearance( PDFWriter::WidgetState eState );
+
+    // helper: eventually begin marked content sequence and
+    // emit a comment in debug case
+    void MARK( const char* pString )
+    {
+        beginStructureElementMCSeq();
+#if OSL_DEBUG_LEVEL > 1
+        emitComment( pString );
+#endif
+    }
 };
 
 }
