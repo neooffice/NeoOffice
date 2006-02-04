@@ -109,8 +109,14 @@ if [ ! -d "$configdir" -o ! -d "$registrydir" -o ! -d "$wordbookdir" ] ; then
     if [ ! -d "$userinstall" -a -d "$olduserinstall" ] ; then
         mkdir -p "$userinstall"
         ( cd "$olduserinstall" ; pax -w -x ustar "." ) | ( cd "$userinstall" ; pax -r )
-        rm -f "$userinstall/../.lock"
-        rm -f "$registrydir/Office/Common.xcu.set.3"
+        if [ $? -eq 0 ] ; then
+            rm -f "$userinstall/../.lock"
+            rm -f "$registrydir/Office/Common.xcu.set.3"
+        else
+            rm -Rf "$userinstall"
+            mkdir -p "$userinstall"
+            repair="true"
+        fi
     else
         mkdir -p "$userinstall"
         repair="true"
