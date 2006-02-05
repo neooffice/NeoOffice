@@ -693,11 +693,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private Insets insets = null;
 
-	/** 
-	 * The key modifiers pressed.
-	 */
-	private int keyModifiersPressed = 0;
-
 	/**
 	 * The last input method event.
 	 */
@@ -1083,17 +1078,6 @@ g.dispose();
 	}
 
 	/**
-	 * Returns the modifier keys that are currently pressed.
-	 *
-	 * @return the modifier keys that are currently pressed
-	 */
-	synchronized int getCurrentModButtons() {
-
-		return keyModifiersPressed;
-
-	}
-
-	/**
 	 * Returns the frame pointer for this component.
 	 *
      * @return the frame pointer for this component
@@ -1351,7 +1335,6 @@ g.dispose();
 		int keyCode = e.getKeyCode();
 		if (keyCode == KeyEvent.VK_SHIFT || keyCode == KeyEvent.VK_CONTROL || keyCode == KeyEvent.VK_ALT || keyCode == KeyEvent.VK_META) {
 			VCLEvent keyModChangeEvent = new VCLEvent(e, VCLEvent.SALEVENT_KEYMODCHANGE, this, 0);
-			keyModifiersPressed = keyModChangeEvent.getModifiers();
 			queue.postCachedEvent(keyModChangeEvent);
 		}
 		else if (e.isActionKey() || keyCode == KeyEvent.VK_ESCAPE || (keyCode ==KeyEvent.VK_ENTER && e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD)) {
@@ -1375,7 +1358,6 @@ g.dispose();
 		int keyCode = e.getKeyCode();
 		if (keyCode == KeyEvent.VK_SHIFT || keyCode == KeyEvent.VK_CONTROL || keyCode == KeyEvent.VK_ALT || keyCode == KeyEvent.VK_META) {
 			VCLEvent keyModChangeEvent = new VCLEvent(e, VCLEvent.SALEVENT_KEYMODCHANGE, this, 0);
-			keyModifiersPressed = keyModChangeEvent.getModifiers();
 			queue.postCachedEvent(keyModChangeEvent);
 		}
 		else if (e.isActionKey() || keyCode == KeyEvent.VK_ESCAPE || (keyCode ==KeyEvent.VK_ENTER && e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD)) {

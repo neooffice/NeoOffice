@@ -44,6 +44,9 @@
 #ifndef _SV_SYSDATA_HXX 
 #include <sysdata.hxx>
 #endif
+#ifndef _SV_SALFRAME_HXX
+#include <salframe.hxx>
+#endif
 #ifndef _SV_SALGEOM_HXX
 #include <salgeom.hxx>
 #endif
@@ -57,38 +60,79 @@ class com_sun_star_vcl_VCLMenuBar;
 class java_lang_Object;
 }
 
+class JavaSalGraphics;
 class SalBitmap;
-class SalMenu;
+class JavaSalMenu;
 
 // ----------------
-// - SalFrameData -
+// - JavaSalFrame -
 // ----------------
 
-class SalFrameData
+class JavaSalFrame : public SalFrame
 {
 public:
 	::vcl::com_sun_star_vcl_VCLFrame*	mpVCLFrame;
 	::vcl::java_lang_Object*	mpPanel;
-	SalGraphics*	mpGraphics;
-	ULONG			mnStyle;
-	SalFrame*		mpParent;
-	BOOL			mbGraphics;
-	BOOL			mbVisible;
-	::std::list< SalFrame* > maChildren;
-	void*			mpInst;
-	SALFRAMEPROC	mpProc;
-	SystemEnvData	maSysData;
-	BOOL			mbCenter;
-	SalFrameGeometry	maOriginalGeometry;
-	BOOL			mbFullScreen;
-	BOOL			mbPresentation;
-	SalMenu*		mpMenuBar;
-	BOOL			mbUseMainScreenOnly;
-	BOOL			mbInSetPosSize;
-	BOOL			mbInShow;
+	JavaSalGraphics*		mpGraphics;
+	ULONG					mnStyle;
+	JavaSalFrame*			mpParent;
+	BOOL					mbGraphics;
+	BOOL					mbVisible;
+	::std::list< JavaSalFrame* >	maChildren;
+	SystemEnvData			maSysData;
+	BOOL					mbCenter;
+	SalFrameGeometry		maOriginalGeometry;
+	BOOL					mbFullScreen;
+	BOOL					mbPresentation;
+	JavaSalMenu*			mpMenuBar;
+	BOOL					mbUseMainScreenOnly;
+	BOOL					mbInSetPosSize;
+	BOOL					mbInShow;
 
-					SalFrameData();
-					~SalFrameData();
+							JavaSalFrame();
+	virtual					~JavaSalFrame();
+
+	virtual SalGraphics*	GetGraphics();
+	virtual void			ReleaseGraphics( SalGraphics* pGraphics );
+	virtual BOOL			PostEvent( void* pData );
+	virtual void			SetTitle( const XubString& rTitle );
+	virtual void			SetIcon( USHORT nIcon );
+	virtual void			SetMenu( SalMenu *pSalMenu );
+	virtual void			DrawMenuBar();
+	virtual void			SetExtendedFrameStyle( SalExtStyle nExtStyle );
+	virtual void			Show( BOOL bVisible, BOOL bNoActivate = FALSE );
+	virtual void			Enable( BOOL bEnable );
+	virtual void			SetMinClientSize( long nWidth, long nHeight );
+	virtual void			SetMaxClientSize( long nWidth, long nHeight );
+	virtual void			SetPosSize( long nX, long nY, long nWidth, long nHeight, USHORT nFlags );
+	virtual void			GetClientSize( long& rWidth, long& rHeight );
+	virtual void			GetWorkArea( Rectangle& rRect );
+	virtual SalFrame*		GetParent() const;
+	virtual void			SetWindowState( const SalFrameState* pState );
+	virtual BOOL			GetWindowState( SalFrameState* pState );
+	virtual void			ShowFullScreen( BOOL bFullScreen );
+	virtual void			StartPresentation( BOOL bStart );
+	virtual void			SetAlwaysOnTop( BOOL bOnTop );
+	virtual void			ToTop( USHORT nFlags );
+	virtual void			SetPointer( PointerStyle ePointerStyle );
+	virtual void			CaptureMouse( BOOL bMouse );
+	virtual void			SetPointerPos( long nX, long nY );
+	virtual void			Flush();
+	virtual void			Sync();
+	virtual void			SetInputContext( SalInputContext* pContext );
+	virtual void			EndExtTextInput( USHORT nFlags );
+	virtual String			GetKeyName( USHORT nKeyCode );
+	virtual String			GetSymbolKeyName( const XubString& rFontName, USHORT nKeyCode );
+	virtual BOOL			MapUnicodeToKeyCode( sal_Unicode aUnicode, LanguageType aLangType, KeyCode& rKeyCode );
+	virtual LanguageType	GetInputLanguage();
+	virtual SalBitmap*		SnapShot();
+	virtual void			UpdateSettings( AllSettings& rSettings );
+	virtual void			Beep( SoundType eSoundType );
+	virtual const SystemEnvData*	GetSystemData() const;
+	virtual void			SetBackgroundBitmap( SalBitmap* );
+	virtual SalPointerState	GetPointerState();
+	virtual void			SetParent( SalFrame* pNewParent );
+	virtual bool			SetPluginParent( SystemParentData* pNewParent );
 };
 
 #endif // _SV_SALFRAME_H

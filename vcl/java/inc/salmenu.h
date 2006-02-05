@@ -42,10 +42,11 @@
 #ifndef _SV_IMAGE_H
 #include <image.h>
 #endif
+#ifndef _SV_SALMENU_HXX
+#include <salmenu.hxx>
+#endif
 
-class SalMenu;
-class SalMenuItem;
-class SalFrame;
+class JavaSalFrame;
 class Menu;
 
 namespace vcl
@@ -57,7 +58,7 @@ class com_sun_star_vcl_VCLMenuItemData;
 
 // =======================================================================
 
-class SalMenuData
+class JavaSalMenu : public SalMenu
 {
 public:
 	// used for menubars only
@@ -67,27 +68,46 @@ public:
 	::vcl::com_sun_star_vcl_VCLMenu *	mpVCLMenu;
 	
 	// Generic data
-	SalFrame *			mpParentFrame;		// pointer to the parent frame
-	BOOL				mbIsMenuBarMenu;	// true for menu bars
-	SalMenu *			mpParentMenu;		// Parent menu if this is a submenu
+	JavaSalFrame*			mpParentFrame;		// pointer to the parent frame
+	BOOL					mbIsMenuBarMenu;	// true for menu bars
+	JavaSalMenu* 			mpParentMenu;		// Parent menu if this is a submenu
+	Menu*					mpParentVCLMenu;
+
+							JavaSalMenu();
+	virtual					~JavaSalMenu();
+
+	virtual BOOL			VisibleMenuBar();
+	virtual void			InsertItem( SalMenuItem* pSalMenuItem, unsigned nPos );
+	virtual void			RemoveItem( unsigned nPos );
+	virtual void			SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsigned nPos );
+	virtual void			SetFrame( const SalFrame* pFrame );
+	virtual void			CheckItem( unsigned nPos, BOOL bCheck );
+	virtual void			EnableItem( unsigned nPos, BOOL bEnable );
+	virtual void			SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const XubString& rText );
+	virtual void			SetItemImage( unsigned nPos, SalMenuItem* pSalMenuItem, const Image& rImage );
+	virtual void			SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, const KeyCode& rKeyCode, const XubString& rKeyName );
+	virtual void			GetSystemMenuData( SystemMenuData* pData );
 };
 
-class SalMenuItemData
+class JavaSalMenuItem : public SalMenuItem
 {
 public:
-	XubString			mText;			// the item text
-	XubString			mAccelText;		// the accelerator string
-	Bitmap				maBitmap;		// item image
-	int					mnId;			// item id
+	XubString				mText;			// the item text
+	XubString				mAccelText;		// the accelerator string
+	Bitmap					maBitmap;		// item image
+	int						mnId;			// item id
 
 	::vcl::com_sun_star_vcl_VCLMenuItemData *mpVCLMenuItemData;
 	
-	SalMenu *			mpSalMenu;		// SalMenu into which this item is inserted
-	SalMenu *			mpSalSubmenu;	// Submenu SalMenu if this item has a submenu
-	Menu *				mpVCLMenu;		// VCL menu into which this item is inserted
+	JavaSalMenu*			mpSalMenu;		// SalMenu into which this item is inserted
+	JavaSalMenu*			mpSalSubmenu;	// Submenu SalMenu if this item has a submenu
+	Menu*					mpVCLMenu;		// VCL menu into which this item is inserted
+
+							JavaSalMenuItem();
+	virtual					~JavaSalMenuItem();
 };
 
-void ResetMenuEnabledStateForFrame( SalFrame *pFrame, SalMenu *pMenu );
-void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu );
+void ResetMenuEnabledStateForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu );
+void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu );
 
 #endif // _SV_SALMENU_H

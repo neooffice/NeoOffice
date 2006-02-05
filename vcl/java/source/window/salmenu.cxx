@@ -41,11 +41,11 @@
 #ifndef _SV_SALINST_HXX
 #include <salinst.hxx>
 #endif
-#ifndef _SV_SALMENU_HXX
-#include <salmenu.hxx>
+#ifndef _SV_SALMENU_H
+#include <salmenu.h>
 #endif
-#ifndef _SV_SALFRAME_HXX
-#include <salframe.hxx>
+#ifndef _SV_SALFRAME_H
+#include <salframe.h>
 #endif
 #ifndef _SV_WINDOW_HXX
 #include <window.hxx>
@@ -72,71 +72,78 @@ using namespace vcl;
 
 //=============================================================================
 
-SalMenu::SalMenu()
+JavaSalMenu::JavaSalMenu()
 {
-	memset( &maData, 0, sizeof(maData) );
+	mpVCLMenuBar = NULL;
+	mpVCLMenu = NULL;
+	mpParentFrame = NULL;
+	mbIsMenuBarMenu = FALSE;
+	mpParentMenu = NULL;
 	mpParentVCLMenu = NULL;
 }
 
 //-----------------------------------------------------------------------------
 
-SalMenu::~SalMenu()
+JavaSalMenu::~JavaSalMenu()
 {
-	if( maData.mbIsMenuBarMenu && maData.mpVCLMenuBar )
+	if( mbIsMenuBarMenu && mpVCLMenuBar )
 	{
-		maData.mpVCLMenuBar->dispose();
-		delete maData.mpVCLMenuBar;
+		mpVCLMenuBar->dispose();
+		delete mpVCLMenuBar;
 	}
-	else if( maData.mpVCLMenu )
+	else if( mpVCLMenu )
 	{
-		maData.mpVCLMenu->dispose();
-		delete maData.mpVCLMenu;
+		mpVCLMenu->dispose();
+		delete mpVCLMenu;
 	}
 }
 
 //-----------------------------------------------------------------------------
 
-BOOL SalMenu::VisibleMenuBar()
+BOOL JavaSalMenu::VisibleMenuBar()
 {
 	return TRUE;
 }
 
 //-----------------------------------------------------------------------------
 
-void SalMenu::SetFrame( SalFrame *pFrame )
+void JavaSalMenu::SetFrame( const SalFrame *pFrame )
 {
-	if( maData.mbIsMenuBarMenu && maData.mpVCLMenuBar )
+	if( mbIsMenuBarMenu && mpVCLMenuBar )
 	{
-		maData.mpVCLMenuBar->setFrame( pFrame->maFrameData.mpVCLFrame );
-		pFrame->maFrameData.mpMenuBar=this;
+		JavaSalFrame *pJavaFrame = (JavaSalFrame *)pFrame;
+		mpVCLMenuBar->setFrame( pJavaFrame->mpVCLFrame );
+		if ( pJavaFrame )
+			pJavaFrame->mpMenuBar=this;
 	}
 }
 
 //-----------------------------------------------------------------------------
 
-void SalMenu::InsertItem( SalMenuItem* pSalMenuItem, unsigned nPos )
+void JavaSalMenu::InsertItem( SalMenuItem* pSalMenuItem, unsigned nPos )
 {
-	if( maData.mbIsMenuBarMenu && maData.mpVCLMenuBar )
+	JavaSalMenuItem *pJavaSalMenuItem = (JavaSalMenuItem *)pSalMenuItem;
+	if( mbIsMenuBarMenu && mpVCLMenuBar )
 	{
-		maData.mpVCLMenuBar->addMenuItem( pSalMenuItem->maData.mpVCLMenuItemData, nPos );
+		mpVCLMenuBar->addMenuItem( pJavaSalMenuItem->mpVCLMenuItemData, nPos );
 	}
-	else if( maData.mpVCLMenu )
+	else if( mpVCLMenu )
 	{
-		maData.mpVCLMenu->insertItem( pSalMenuItem->maData.mpVCLMenuItemData, nPos );
+		mpVCLMenu->insertItem( pJavaSalMenuItem->mpVCLMenuItemData, nPos );
 	}
 }
 
 //-----------------------------------------------------------------------------
 
-void SalMenu::RemoveItem( unsigned nPos )
+void JavaSalMenu::RemoveItem( unsigned nPos )
 {
-	if( maData.mbIsMenuBarMenu && maData.mpVCLMenuBar )
+	if( mbIsMenuBarMenu && mpVCLMenuBar )
 	{
-		maData.mpVCLMenuBar->removeMenu( nPos );
+		mpVCLMenuBar->removeMenu( nPos );
 	}
-	else if( maData.mpVCLMenu )
+	else if( mpVCLMenu )
 	{
-		maData.mpVCLMenu->removeItem( nPos );
+		mpVCLMenu->removeItem( nPos );
 	}
 }
 
@@ -149,36 +156,38 @@ void SalMenu::RemoveItem( unsigned nPos )
  * @param pSubMenu		new menu to provide the contents of the submenu
  * @param nPos			position of the submenu in the menu item list
  */
-void SalMenu::SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsigned nPos )
+void JavaSalMenu::SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsigned nPos )
 {
-	if( maData.mbIsMenuBarMenu && maData.mpVCLMenuBar && pSubMenu && pSubMenu->maData.mpVCLMenu )
+	JavaSalMenuItem *pJavaSalMenuItem = (JavaSalMenuItem *)pSalMenuItem;
+	JavaSalMenu* pJavaSubMenu = (JavaSalMenu *)pSubMenu;
+	if( mbIsMenuBarMenu && mpVCLMenuBar && pJavaSubMenu && pJavaSubMenu->mpVCLMenu )
 	{
-		maData.mpVCLMenuBar->changeMenu( pSubMenu->maData.mpVCLMenu->getMenuItemDataObject(), nPos );
+		mpVCLMenuBar->changeMenu( pJavaSubMenu->mpVCLMenu->getMenuItemDataObject(), nPos );
 	}
-	else if( maData.mpVCLMenu && pSubMenu )
+	else if( mpVCLMenu && pSubMenu )
 	{
-		maData.mpVCLMenu->attachSubmenu( pSubMenu->maData.mpVCLMenu->getMenuItemDataObject(), nPos );
+		mpVCLMenu->attachSubmenu( pJavaSubMenu->mpVCLMenu->getMenuItemDataObject(), nPos );
 	}
-	pSalMenuItem->maData.mpSalSubmenu=pSubMenu;
+	pJavaSalMenuItem->mpSalSubmenu=(JavaSalMenu *)pSubMenu;
 }
 
 //-----------------------------------------------------------------------------
 
-void SalMenu::CheckItem( unsigned nPos, BOOL bCheck )
+void JavaSalMenu::CheckItem( unsigned nPos, BOOL bCheck )
 {
-	if( maData.mbIsMenuBarMenu )
+	if( mbIsMenuBarMenu )
 	{
 		// doesn't make sense to check top level menus!
 	}
-	else if( maData.mpVCLMenu )
+	else if( mpVCLMenu )
 	{
-		maData.mpVCLMenu->checkItem(nPos, bCheck);
+		mpVCLMenu->checkItem(nPos, bCheck);
 	}
 }
 
 //-----------------------------------------------------------------------------
 
-void SalMenu::EnableItem( unsigned nPos, BOOL bEnable )
+void JavaSalMenu::EnableItem( unsigned nPos, BOOL bEnable )
 {
 	// When menus are not displayed, leave them all enabled so that they
 	// will trap any menu shortcuts and forward those shortcuts to the
@@ -186,19 +195,19 @@ void SalMenu::EnableItem( unsigned nPos, BOOL bEnable )
 	if ( !bEnable && !GetSalData()->mbInNativeMenuTracking )
 		bEnable = TRUE;
 
-	if( maData.mbIsMenuBarMenu && maData.mpVCLMenuBar )
+	if( mbIsMenuBarMenu && mpVCLMenuBar )
 	{
-		maData.mpVCLMenuBar->enableMenu( nPos, bEnable );
+		mpVCLMenuBar->enableMenu( nPos, bEnable );
 	}
-	else if( maData.mpVCLMenu )
+	else if( mpVCLMenu )
 	{
-		maData.mpVCLMenu->enableItem( nPos, bEnable );
+		mpVCLMenu->enableItem( nPos, bEnable );
 	}
 }
 
 //-----------------------------------------------------------------------------
 
-void SalMenu::SetItemImage( unsigned nPos, SalMenuItem* pSalMenuItem, const Image& rImage )
+void JavaSalMenu::SetItemImage( unsigned nPos, SalMenuItem* pSalMenuItem, const Image& rImage )
 {
 	// for now we'll ignore putting icons in AWT menus.  Most Mac apps don't
 	// have them, so they're kind of extraneous on the platform anyhow.
@@ -206,80 +215,82 @@ void SalMenu::SetItemImage( unsigned nPos, SalMenuItem* pSalMenuItem, const Imag
 
 //-----------------------------------------------------------------------------
 
-void SalMenu::SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const XubString& rText )
+void JavaSalMenu::SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const XubString& rText )
 {
 	// assume pSalMenuItem is a pointer to the menu item object already at nPos
-	if( pSalMenuItem && pSalMenuItem->maData.mpVCLMenuItemData )
+	JavaSalMenuItem *pJavaSalMenuItem = (JavaSalMenuItem *)pSalMenuItem;
+	if( pJavaSalMenuItem && pJavaSalMenuItem->mpVCLMenuItemData )
 	{
 		// remove accelerator character
 		XubString theText(rText);
 		theText.EraseAllChars('~');
-		pSalMenuItem->maData.mpVCLMenuItemData->setTitle( theText );
+		pJavaSalMenuItem->mpVCLMenuItemData->setTitle( theText );
 	}
 }
 
 //-----------------------------------------------------------------------------
 
-void SalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, const KeyCode& rKeyCode, const XubString& rKeyName )
+void JavaSalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, const KeyCode& rKeyCode, const XubString& rKeyName )
 {
 	// assume pSalMenuItem is a pointer to the item to be associated with the
 	// new shortcut
-	if( pSalMenuItem && pSalMenuItem->maData.mpVCLMenuItemData ) {
+	JavaSalMenuItem *pJavaSalMenuItem = (JavaSalMenuItem *)pSalMenuItem;
+	if( pJavaSalMenuItem && pJavaSalMenuItem->mpVCLMenuItemData ) {
 		// Only pass through keycodes that are using the command key as Java
 		// will always add a command key to any shortcut. Also, ignore any
 		// shortcuts that use modifiers other than the shift key as Java only
 		// allows adding of the shift key. Also, exclude standard shortcuts
 		// in the application menu.
 		if ( rKeyCode.IsMod1() && !rKeyCode.IsMod2() && !rKeyCode.IsControlMod() && ! ( rKeyCode.GetCode() == KEY_H && !rKeyCode.IsShift() ) && rKeyCode.GetCode() != KEY_Q && rKeyCode.GetCode() != KEY_COMMA )
-			pSalMenuItem->maData.mpVCLMenuItemData->setKeyboardShortcut( rKeyCode.GetCode(), rKeyCode.IsShift() );
+			pJavaSalMenuItem->mpVCLMenuItemData->setKeyboardShortcut( rKeyCode.GetCode(), rKeyCode.IsShift() );
 	}
 }
 
 //-----------------------------------------------------------------------------
 
-void SalMenu::GetSystemMenuData( SystemMenuData* pData )
+void JavaSalMenu::GetSystemMenuData( SystemMenuData* pData )
 {
 }
 
 // =======================================================================
 
-SalMenuItem::SalMenuItem()
+JavaSalMenuItem::JavaSalMenuItem()
 {
-	maData.mpVCLMenuItemData = NULL;
-	maData.mpSalSubmenu = NULL;
+	mpVCLMenuItemData = NULL;
+	mpSalSubmenu = NULL;
 }
 
 //-----------------------------------------------------------------------------
 
-SalMenuItem::~SalMenuItem()
+JavaSalMenuItem::~JavaSalMenuItem()
 {
-	if( maData.mpVCLMenuItemData )
+	if( mpVCLMenuItemData )
 	{
-		maData.mpVCLMenuItemData->dispose();
-		delete maData.mpVCLMenuItemData;
+		mpVCLMenuItemData->dispose();
+		delete mpVCLMenuItemData;
 	}
 }
 
 //-----------------------------------------------------------------------------
 
-SalMenu* SalInstance::CreateMenu( BOOL bMenuBar, Menu* pVCLMenu )
+SalMenu* SalInstance::CreateMenu( BOOL bMenuBar, Menu *pVCLMenu )
 {
 #ifndef NO_NATIVE_MENUS
-	SalMenu *pSalMenu = new SalMenu();
-	pSalMenu->maData.mbIsMenuBarMenu = bMenuBar;
-	pSalMenu->maData.mpVCLMenuBar=NULL;
-	pSalMenu->maData.mpVCLMenu=NULL;
+	JavaSalMenu *pSalMenu = new JavaSalMenu();
+	pSalMenu->mbIsMenuBarMenu = bMenuBar;
+	pSalMenu->mpVCLMenuBar=NULL;
+	pSalMenu->mpVCLMenu=NULL;
 	pSalMenu->mpParentVCLMenu=pVCLMenu;
 
 	if( bMenuBar )
 	{
 		// create a menubar java object
-		pSalMenu->maData.mpVCLMenuBar=new ::vcl::com_sun_star_vcl_VCLMenuBar();
+		pSalMenu->mpVCLMenuBar=new ::vcl::com_sun_star_vcl_VCLMenuBar();
 	}
 	else
 	{
 		// create a regular menu instance
-		pSalMenu->maData.mpVCLMenu=new ::vcl::com_sun_star_vcl_VCLMenu();
+		pSalMenu->mpVCLMenu=new ::vcl::com_sun_star_vcl_VCLMenu();
 	}
 
 	return( pSalMenu );
@@ -305,10 +316,10 @@ SalMenuItem* SalInstance::CreateMenuItem( const SalItemParams* pItemData )
 	if(!pItemData)
 		return NULL;
 
-	SalMenuItem *	pSalMenuItem = new SalMenuItem();
+	JavaSalMenuItem *pSalMenuItem = new JavaSalMenuItem();
 	XubString title(pItemData->aText);
 	title.EraseAllChars('~');
-	pSalMenuItem->maData.mpVCLMenuItemData=new ::vcl::com_sun_star_vcl_VCLMenuItemData( title, ( pItemData->eType == MENUITEM_SEPARATOR ), pItemData->nId, pItemData->pMenu );
+	pSalMenuItem->mpVCLMenuItemData=new ::vcl::com_sun_star_vcl_VCLMenuItemData( title, ( pItemData->eType == MENUITEM_SEPARATOR ), pItemData->nId, pItemData->pMenu );
 	return( pSalMenuItem );
 #else	// !NO_NATIVE_MENUS
 	return NULL;
@@ -326,7 +337,7 @@ void SalInstance::DestroyMenuItem( SalMenuItem* pItem )
 
 // ============================================================================
 
-void ResetMenuEnabledStateForFrame( SalFrame *pFrame, SalMenu *pMenu )
+void ResetMenuEnabledStateForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu )
 {
 #ifndef NO_NATIVE_MENUS
 	SalData *pSalData = GetSalData();
@@ -337,7 +348,7 @@ void ResetMenuEnabledStateForFrame( SalFrame *pFrame, SalMenu *pMenu )
 	{
 		if ( *it == pFrame )
 		{
-			if ( pFrame->maFrameData.mbVisible )
+			if ( pFrame->mbVisible )
 				bFrameFound = true;
 			break;
 		}
@@ -347,7 +358,7 @@ void ResetMenuEnabledStateForFrame( SalFrame *pFrame, SalMenu *pMenu )
 
 	if(!pMenu) {
 		// locate the menubar for the frame
-		pMenu = pFrame->maFrameData.mpMenuBar;
+		pMenu = pFrame->mpMenuBar;
 		if(!pMenu)
 			return;
 	}
@@ -358,12 +369,12 @@ void ResetMenuEnabledStateForFrame( SalFrame *pFrame, SalMenu *pMenu )
 	USHORT nCount = pVCLMenu->GetItemCount();
 	for( USHORT i = 0; i < nCount; i++ )
 	{
-		SalMenuItem *pSalMenuItem = pVCLMenu->GetItemSalItem( i );
+		JavaSalMenuItem *pSalMenuItem = (JavaSalMenuItem *)pVCLMenu->GetItemSalItem( i );
 		if ( pSalMenuItem )
 		{
 			// If this menu item has a submenu, fix that submenu up
-			if ( pSalMenuItem->maData.mpSalSubmenu )
-				ResetMenuEnabledStateForFrame( pFrame, pSalMenuItem->maData.mpSalSubmenu );
+			if ( pSalMenuItem->mpSalSubmenu )
+				ResetMenuEnabledStateForFrame( pFrame, pSalMenuItem->mpSalSubmenu );
 		}
 
 		// Disabled items need to be reset as the native menu will have been
@@ -382,7 +393,7 @@ void ResetMenuEnabledStateForFrame( SalFrame *pFrame, SalMenu *pMenu )
  * SALEVENT_MENUDEACTIVATE events to all of the VCL menu objects. This function
  * is normally called before the native menus are shown.
  */
-void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu )
+void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu )
 {
 #ifndef NO_NATIVE_MENUS
 	SalData *pSalData = GetSalData();
@@ -393,7 +404,7 @@ void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu )
 	{
 		if ( *it == pFrame )
 		{
-			if ( pFrame->maFrameData.mbVisible )
+			if ( pFrame->mbVisible )
 				bFrameFound = true;
 			break;
 		}
@@ -403,7 +414,7 @@ void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu )
 
 	if(!pMenu) {
 		// locate the menubar for the frame
-		pMenu = pFrame->maFrameData.mpMenuBar;
+		pMenu = pFrame->mpMenuBar;
 		if(!pMenu)
 			return;
 	}
@@ -414,7 +425,7 @@ void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu )
 	// Force the clipboard service to update itself before we update the
 	// menus as if the native clipboard was cleared when we last checked, we
 	// won't be notified when another application puts content.
-	if ( pFrame->maFrameData.mpMenuBar )
+	if ( pFrame->mpMenuBar )
 	{
 		Window *pWindow = pVCLMenu->GetWindow();
 		if ( pWindow )
@@ -435,12 +446,12 @@ void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu )
 	USHORT nCount = pVCLMenu->GetItemCount();
 	for( USHORT i = 0; i < nCount; i++ )
 	{
-		SalMenuItem *pSalMenuItem = pVCLMenu->GetItemSalItem( i );
+		JavaSalMenuItem *pSalMenuItem = (JavaSalMenuItem *)pVCLMenu->GetItemSalItem( i );
 		if ( pSalMenuItem )
 		{
 			// If this menu item has a submenu, fix that submenu up
-			if ( pSalMenuItem->maData.mpSalSubmenu )
-				UpdateMenusForFrame( pFrame, pSalMenuItem->maData.mpSalSubmenu );
+			if ( pSalMenuItem->mpSalSubmenu )
+				UpdateMenusForFrame( pFrame, pSalMenuItem->mpSalSubmenu );
 		}
 	}
 

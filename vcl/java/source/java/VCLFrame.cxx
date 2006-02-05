@@ -44,8 +44,8 @@
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
-#ifndef _SV_SALFRAME_HXX
-#include <salframe.hxx>
+#ifndef _SV_SALFRAME_H
+#include <salframe.h>
 #endif
 
 #include "VCLFrame_cocoa.h"
@@ -123,7 +123,7 @@ jclass com_sun_star_vcl_VCLFrame::getMyClass()
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, const SalFrame *pFrame, const SalFrame *pParent ) : java_lang_Object( (jobject)NULL )
+com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, const JavaSalFrame *pFrame, const JavaSalFrame *pParent ) : java_lang_Object( (jobject)NULL )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -141,7 +141,7 @@ com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, cons
 	args[1].l = GetSalData()->mpEventQueue->getJavaObject();
 	args[2].i = jint( pFrame );
 	if ( pParent )
-		args[3].l = pParent->maFrameData.mpVCLFrame->getJavaObject();
+		args[3].l = pParent->mpVCLFrame->getJavaObject();
 	else
 		args[3].l = NULL;
 	jobject tempObj;
@@ -151,7 +151,7 @@ com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, cons
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLFrame::addChild( SalFrame *_par0 )
+void com_sun_star_vcl_VCLFrame::addChild( JavaSalFrame *_par0 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -166,7 +166,7 @@ void com_sun_star_vcl_VCLFrame::addChild( SalFrame *_par0 )
 		if ( mID )
 		{
 			jvalue args[1];
-			args[0].l = _par0->maFrameData.mpVCLFrame->getJavaObject();
+			args[0].l = _par0->mpVCLFrame->getJavaObject();
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
@@ -291,27 +291,6 @@ const Rectangle com_sun_star_vcl_VCLFrame::getBounds()
 				}
 			}
 		}
-	}
-	return out;
-}
-
-// ----------------------------------------------------------------------------
-
-ULONG com_sun_star_vcl_VCLFrame::getCurrentModButtons()
-{
-	static jmethodID mID = NULL;
-	ULONG out = 0;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()I";
-			mID = t.pEnv->GetMethodID( getMyClass(), "getCurrentModButtons", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-			out = (ULONG)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
 }
@@ -579,7 +558,7 @@ ULONG com_sun_star_vcl_VCLFrame::getState()
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLFrame::removeChild( SalFrame *_par0 )
+void com_sun_star_vcl_VCLFrame::removeChild( JavaSalFrame *_par0 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -594,7 +573,7 @@ void com_sun_star_vcl_VCLFrame::removeChild( SalFrame *_par0 )
 		if ( mID )
 		{
 			jvalue args[1];
-			args[0].l = _par0->maFrameData.mpVCLFrame->getJavaObject();
+			args[0].l = _par0->mpVCLFrame->getJavaObject();
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}

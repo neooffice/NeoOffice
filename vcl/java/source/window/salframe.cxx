@@ -35,23 +35,23 @@
 
 #define _SV_SALFRAME_CXX
 
-#ifndef _SV_SALFRAME_HXX
-#include <salframe.hxx>
+#ifndef _SV_SALFRAME_H
+#include <salframe.h>
 #endif
-#ifndef _SV_SALGDI_HXX
-#include <salgdi.hxx>
+#ifndef _SV_SALGDI_H
+#include <salgdi.h>
 #endif
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
-#ifndef _SV_SALMENU_HXX
-#include <salmenu.hxx>
-#endif
-#ifndef _SV_SALSYS_HXX
-#include <salsys.hxx>
+#ifndef _SV_SALMENU_H
+#include <salmenu.h>
 #endif
 #ifndef _SV_SETTINGS_HXX
 #include <settings.hxx>
+#endif
+#ifndef _SV_SVAPP_HXX
+#include <svapp.hxx>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 #include <com/sun/star/vcl/VCLEvent.hxx>
@@ -86,72 +86,75 @@ long ImplSalCallbackDummy( void*, SalFrame*, USHORT, const void* )
 	return 0;
 }
 
-// -----------------------------------------------------------------------
-
-bool GetSalSystemDisplayInfo( System::DisplayInfo& rInfo )
-{
-#ifdef DEBUG
-	fprintf( stderr, "GetSalSystemDisplayInfo not implemented\n" );
-#endif
-	return false;
-}
-
-// -----------------------------------------------------------------------
-
-int ImplShowNativeMessageBox( const String& rTitle, const String& rMessage,
-                              int nButtonCombination, int nDefaultButton)
-{
-#ifdef DEBUG
-	fprintf( stderr, "ImplShowNativeMessageBox not implemented\n" );
-#endif
-	return 0;
-}
-
 // =======================================================================
 
-SalFrame::SalFrame()
+JavaSalFrame::JavaSalFrame()
 {
 	memset( &maGeometry, 0, sizeof( maGeometry ) );
-	maFrameData.mpGraphics->maGraphicsData.mpFrame = this;
+	mpVCLFrame = NULL;
+	mpGraphics = new JavaSalGraphics();
+	mpGraphics->mpFrame = this;
+	mnStyle = 0;
+	mpParent = NULL;
+	mbGraphics = FALSE;
+	mbVisible = FALSE;
+	memset( &maSysData, 0, sizeof( SystemEnvData ) );
+	maSysData.nSize = sizeof( SystemEnvData );
+	mbCenter = TRUE;
+	memset( &maOriginalGeometry, 0, sizeof( maOriginalGeometry ) );
+	mbFullScreen = FALSE;
+	mbPresentation = FALSE;
+	mpMenuBar = NULL;
+	mbUseMainScreenOnly = TRUE;
+	mbInSetPosSize = FALSE;
+	mbInShow = FALSE;
 }
 
 // -----------------------------------------------------------------------
 
-SalFrame::~SalFrame()
+JavaSalFrame::~JavaSalFrame()
 {
 	Show( FALSE );
 	StartPresentation( FALSE );
+
+	if ( mpVCLFrame )
+	{
+		mpVCLFrame->dispose();
+		delete mpVCLFrame;
+	}
+
+	delete mpGraphics;
 }
 
 // -----------------------------------------------------------------------
 
-SalGraphics* SalFrame::GetGraphics()
+SalGraphics* JavaSalFrame::GetGraphics()
 {
-	if ( maFrameData.mbGraphics )
+	if ( mbGraphics )
 		return NULL;
 
-	maFrameData.mpGraphics->maGraphicsData.mpVCLGraphics = maFrameData.mpVCLFrame->getGraphics();
-	maFrameData.mbGraphics = TRUE;
+	mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
+	mbGraphics = TRUE;
 
-	return maFrameData.mpGraphics;
+	return mpGraphics;
 }
 
 // -----------------------------------------------------------------------
 
-void SalFrame::ReleaseGraphics( SalGraphics* pGraphics )
+void JavaSalFrame::ReleaseGraphics( SalGraphics* pGraphics )
 {
-	if ( pGraphics != maFrameData.mpGraphics )
+	if ( pGraphics != mpGraphics )
 		return;
 
-	if ( maFrameData.mpGraphics->maGraphicsData.mpVCLGraphics )
-		delete maFrameData.mpGraphics->maGraphicsData.mpVCLGraphics;
-	maFrameData.mpGraphics->maGraphicsData.mpVCLGraphics = NULL;
-	maFrameData.mbGraphics = FALSE;
+	if ( mpGraphics->mpVCLGraphics )
+		delete mpGraphics->mpVCLGraphics;
+	mpGraphics->mpVCLGraphics = NULL;
+	mbGraphics = FALSE;
 }
 
 // -----------------------------------------------------------------------
 
-BOOL SalFrame::PostEvent( void *pData )
+BOOL JavaSalFrame::PostEvent( void *pData )
 {
 	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, this, pData );
 	GetSalData()->mpEventQueue->postCachedEvent( &aEvent );
@@ -160,55 +163,55 @@ BOOL SalFrame::PostEvent( void *pData )
 
 // -----------------------------------------------------------------------
 
-void SalFrame::SetTitle( const XubString& rTitle )
+void JavaSalFrame::SetTitle( const XubString& rTitle )
 {
-	maFrameData.mpVCLFrame->setTitle( rTitle );
+	mpVCLFrame->setTitle( rTitle );
 }
 
 // -----------------------------------------------------------------------
 
-void SalFrame::SetIcon( USHORT nIcon )
+void JavaSalFrame::SetIcon( USHORT nIcon )
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalFrame::SetIcon not implemented\n" );
+	fprintf( stderr, "JavaSalFrame::SetIcon not implemented\n" );
 #endif
 }
 
 // -----------------------------------------------------------------------
 
-void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
+void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 {
-	if ( bVisible == maFrameData.mbVisible )
+	if ( bVisible == mbVisible )
 		return;
 
 	SalData *pSalData = GetSalData();
 
-	maFrameData.mbVisible = bVisible;
+	mbVisible = bVisible;
 
-	maFrameData.mpVCLFrame->setVisible( maFrameData.mbVisible );
+	mpVCLFrame->setVisible( mbVisible );
 
 	// Reset graphics
-	com_sun_star_vcl_VCLGraphics *pVCLGraphics = maFrameData.mpVCLFrame->getGraphics();
+	com_sun_star_vcl_VCLGraphics *pVCLGraphics = mpVCLFrame->getGraphics();
 	if ( pVCLGraphics )
 	{
 		pVCLGraphics->resetGraphics();
 		delete pVCLGraphics;
 	}
 
-	if ( maFrameData.mbVisible )
+	if ( mbVisible )
 	{
-		maFrameData.mbInShow = TRUE;
+		mbInShow = TRUE;
 
 		// Get native window since it won't be created until first shown
-		maFrameData.maSysData.aWindow = (long)maFrameData.mpVCLFrame->getNativeWindowRef();
-		maFrameData.mbCenter = FALSE;
+		maSysData.aWindow = (long)mpVCLFrame->getNativeWindowRef();
+		mbCenter = FALSE;
 
 		UpdateMenusForFrame( this, NULL );
 
 		// Reattach child frames
-		for ( ::std::list< SalFrame* >::const_iterator it = maFrameData.maChildren.begin(); it != maFrameData.maChildren.end(); ++it )
+		for ( ::std::list< JavaSalFrame* >::const_iterator it = maChildren.begin(); it != maChildren.end(); ++it )
 		{
-			if ( (*it)->maFrameData.mbVisible )
+			if ( (*it)->mbVisible )
 			{
 				(*it)->Show( FALSE );
 				(*it)->Show( TRUE, FALSE );
@@ -222,7 +225,7 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		else if ( pSalData->mpFocusFrame )
 			pSalData->mpFocusFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
 
-		maFrameData.mbInShow = FALSE;
+		mbInShow = FALSE;
 	}
 	else
 	{
@@ -231,7 +234,7 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		aEvent.dispatch();
 
 		// Remove the native window since it is destroyed when hidden
-		maFrameData.maSysData.aWindow = 0;
+		maSysData.aWindow = 0;
 
 		// Fix bug 1106 by ensuring that some frame has focus if we close
 		// the focus frame
@@ -240,9 +243,9 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 			pSalData->mpFocusFrame = NULL;
 
 			// Make sure frame is a top-level window
-			SalFrame *pFocusFrame = this;
-			while ( pFocusFrame->maFrameData.mpParent && pFocusFrame->maFrameData.mpParent->maFrameData.mbVisible )
-				pFocusFrame = pFocusFrame->maFrameData.mpParent;
+			JavaSalFrame *pFocusFrame = this;
+			while ( pFocusFrame->mpParent && pFocusFrame->mpParent->mbVisible )
+				pFocusFrame = pFocusFrame->mpParent;
 	
 			if ( pFocusFrame != this )
 				pFocusFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
@@ -252,29 +255,29 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 // -----------------------------------------------------------------------
 
-void SalFrame::Enable( BOOL bEnable )
+void JavaSalFrame::Enable( BOOL bEnable )
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalFrame::Enable not implemented\n" );
+	fprintf( stderr, "JavaSalFrame::Enable not implemented\n" );
 #endif
 }
 
 // -----------------------------------------------------------------------
 
-void SalFrame::SetMinClientSize( long nWidth, long nHeight )
+void JavaSalFrame::SetMinClientSize( long nWidth, long nHeight )
 {
-	maFrameData.mpVCLFrame->setMinClientSize( nWidth, nHeight );
+	mpVCLFrame->setMinClientSize( nWidth, nHeight );
 }
 
 // -----------------------------------------------------------------------
 
-void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
+void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 							USHORT nFlags )
 {
-	if ( maFrameData.mnStyle & SAL_FRAME_STYLE_CHILD )
+	if ( mnStyle & SAL_FRAME_STYLE_CHILD )
 		return;
 
-	maFrameData.mbInSetPosSize = TRUE;
+	mbInSetPosSize = TRUE;
 
 	Rectangle aPosSize( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
 
@@ -288,24 +291,24 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 		nHeight = aPosSize.GetHeight();
 
 	// Adjust position for RTL layout
-	if ( maFrameData.mpParent )
+	if ( mpParent )
 	{
 		if ( nFlags & ( SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y ) && Application::GetSettings().GetLayoutRTL() )
-			nX = maFrameData.mpParent->maGeometry.nWidth - nWidth - nX - 1;
+			nX = mpParent->maGeometry.nWidth - nWidth - nX - 1;
 
 		if ( nFlags & SAL_FRAME_POSSIZE_X )
-			nX += maFrameData.mpParent->maGeometry.nX;
+			nX += mpParent->maGeometry.nX;
 		if ( nFlags & SAL_FRAME_POSSIZE_Y )
-			nY += maFrameData.mpParent->maGeometry.nY;
+			nY += mpParent->maGeometry.nY;
 	}
 
 	Rectangle aWorkArea;
-	if ( maFrameData.mbCenter && ! ( nFlags & ( SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y ) ) )
+	if ( mbCenter && ! ( nFlags & ( SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y ) ) )
 	{
-		if ( maFrameData.mpParent && maFrameData.mpParent->maGeometry.nWidth >= nWidth && maFrameData.mpParent->maGeometry.nHeight > nHeight)
+		if ( mpParent && mpParent->maGeometry.nWidth >= nWidth && mpParent->maGeometry.nHeight > nHeight)
 		{
-			nX = maFrameData.mpParent->maGeometry.nX + ( maFrameData.mpParent->maGeometry.nWidth - nWidth ) / 2;
-			nY = maFrameData.mpParent->maGeometry.nY + ( maFrameData.mpParent->maGeometry.nHeight - nHeight ) / 2;
+			nX = mpParent->maGeometry.nX + ( mpParent->maGeometry.nWidth - nWidth ) / 2;
+			nY = mpParent->maGeometry.nY + ( mpParent->maGeometry.nHeight - nHeight ) / 2;
 
 			aWorkArea = Rectangle( Point( nX, nX ), Size( nWidth, nHeight ) );
 			GetWorkArea( aWorkArea );
@@ -319,7 +322,7 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 			nY = aWorkArea.nTop + ( ( aWorkArea.GetHeight() - nHeight ) / 2 );
 		}
 
-		maFrameData.mbCenter = FALSE;
+		mbCenter = FALSE;
 	}
 	else
 	{
@@ -330,7 +333,7 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	// Make sure window does not spill off of the screen
 	long nMinX = aWorkArea.nLeft;
 	long nMinY = aWorkArea.nTop;
-	if ( maFrameData.mbPresentation )
+	if ( mbPresentation )
 	{
 		nMinX -= 1;
 		nMinY -= 1;
@@ -350,28 +353,28 @@ void SalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	if ( nY + nHeight > aWorkArea.nTop + aWorkArea.GetHeight() )
 		nY = aWorkArea.nTop + aWorkArea.GetHeight() - nHeight;
 
-	maFrameData.mpVCLFrame->setBounds( nX, nY, nWidth, nHeight );
+	mpVCLFrame->setBounds( nX, nY, nWidth, nHeight );
 
 	// Update the cached position
 	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, NULL );
 	aEvent.dispatch();
 
-	maFrameData.mbInSetPosSize = FALSE;
+	mbInSetPosSize = FALSE;
 }
 
 // -----------------------------------------------------------------------
 
-void SalFrame::GetWorkArea( Rectangle &rRect )
+void JavaSalFrame::GetWorkArea( Rectangle &rRect )
 {
 	if ( rRect.IsEmpty() )
-		rRect = maFrameData.mpVCLFrame->getBounds();
+		rRect = mpVCLFrame->getBounds();
 
-	NSScreen_getScreenBounds( &rRect.nLeft, &rRect.nTop, &rRect.nRight, &rRect.nBottom, GetSalData()->mpPresentationFrame ? TRUE : FALSE, maFrameData.mbUseMainScreenOnly );
+	NSScreen_getScreenBounds( &rRect.nLeft, &rRect.nTop, &rRect.nRight, &rRect.nBottom, GetSalData()->mpPresentationFrame ? TRUE : FALSE, mbUseMainScreenOnly );
 }
 
 // -----------------------------------------------------------------------
 
-void SalFrame::GetClientSize( long& rWidth, long& rHeight )
+void JavaSalFrame::GetClientSize( long& rWidth, long& rHeight )
 {
 	rWidth = maGeometry.nWidth;
 	rHeight = maGeometry.nHeight;
@@ -379,7 +382,7 @@ void SalFrame::GetClientSize( long& rWidth, long& rHeight )
 
 // -----------------------------------------------------------------------
 
-void SalFrame::SetWindowState( const SalFrameState* pState )
+void JavaSalFrame::SetWindowState( const SalFrameState* pState )
 {
 	USHORT nFlags = 0;
 	if ( pState->mnMask & SAL_FRAMESTATE_MASK_X )
@@ -392,42 +395,42 @@ void SalFrame::SetWindowState( const SalFrameState* pState )
 		nFlags |= SAL_FRAME_POSSIZE_HEIGHT;
 	if ( nFlags )
 	{
-		maFrameData.mbUseMainScreenOnly = FALSE;
+		mbUseMainScreenOnly = FALSE;
 
 		Rectangle aPosSize( Point( pState->mnX, pState->mnY ), Size( pState->mnWidth, pState->mnHeight ) );
-		if ( maFrameData.mpParent )
-			aPosSize.Move( -maFrameData.mpParent->maGeometry.nX, -maFrameData.mpParent->maGeometry.nY );
+		if ( mpParent )
+			aPosSize.Move( -mpParent->maGeometry.nX, -mpParent->maGeometry.nY );
 		SetPosSize( aPosSize.nLeft, aPosSize.nTop, aPosSize.GetWidth(), aPosSize.GetHeight(), nFlags );
 	}
 
 	if ( pState->mnMask & SAL_FRAMESTATE_MASK_STATE )
 	{
 		if ( pState->mnState & SAL_FRAMESTATE_MINIMIZED )
-			maFrameData.mpVCLFrame->setState( SAL_FRAMESTATE_MINIMIZED );
+			mpVCLFrame->setState( SAL_FRAMESTATE_MINIMIZED );
 		else
-			maFrameData.mpVCLFrame->setState( SAL_FRAMESTATE_NORMAL );
+			mpVCLFrame->setState( SAL_FRAMESTATE_NORMAL );
 	}
 }
 
 // -----------------------------------------------------------------------
 
-BOOL SalFrame::GetWindowState( SalFrameState* pState )
+BOOL JavaSalFrame::GetWindowState( SalFrameState* pState )
 {
 	pState->mnMask = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT | SAL_FRAMESTATE_MASK_STATE;
 	pState->mnX = maGeometry.nX - maGeometry.nLeftDecoration;
 	pState->mnY = maGeometry.nY - maGeometry.nTopDecoration;
 	pState->mnWidth = maGeometry.nWidth;
 	pState->mnHeight = maGeometry.nHeight;
-	pState->mnState = maFrameData.mpVCLFrame->getState();
+	pState->mnState = mpVCLFrame->getState();
 
 	return TRUE;
 }
 
 // -----------------------------------------------------------------------
 
-void SalFrame::ShowFullScreen( BOOL bFullScreen )
+void JavaSalFrame::ShowFullScreen( BOOL bFullScreen )
 {
-	if ( bFullScreen == maFrameData.mbFullScreen )
+	if ( bFullScreen == mbFullScreen )
 		return;
 
 	USHORT nFlags = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT;
@@ -435,19 +438,19 @@ void SalFrame::ShowFullScreen( BOOL bFullScreen )
 	if ( bFullScreen )
 	{
 		SalData *pSalData = GetSalData();
-		memcpy( &maFrameData.maOriginalGeometry, &maGeometry, sizeof( SalFrameGeometry ) );
+		memcpy( &maOriginalGeometry, &maGeometry, sizeof( SalFrameGeometry ) );
 		Rectangle aWorkArea;
 		GetWorkArea( aWorkArea );
 		SetPosSize( aWorkArea.nLeft, aWorkArea.nTop, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
 	}
 	else
 	{
-		SetPosSize( maFrameData.maOriginalGeometry.nX - maFrameData.maOriginalGeometry.nLeftDecoration, maFrameData.maOriginalGeometry.nY - maFrameData.maOriginalGeometry.nTopDecoration, maFrameData.maOriginalGeometry.nWidth, maFrameData.maOriginalGeometry.nHeight, nFlags );
-		memset( &maFrameData.maOriginalGeometry, 0, sizeof( SalFrameGeometry ) );
+		SetPosSize( maOriginalGeometry.nX - maOriginalGeometry.nLeftDecoration, maOriginalGeometry.nY - maOriginalGeometry.nTopDecoration, maOriginalGeometry.nWidth, maOriginalGeometry.nHeight, nFlags );
+		memset( &maOriginalGeometry, 0, sizeof( SalFrameGeometry ) );
 	}
 
-	maFrameData.mpVCLFrame->setFullScreenMode( bFullScreen );
-	maFrameData.mbFullScreen = bFullScreen;
+	mpVCLFrame->setFullScreenMode( bFullScreen );
+	mbFullScreen = bFullScreen;
 }
 
 // -----------------------------------------------------------------------
@@ -475,9 +478,9 @@ static void SetSystemUIModeTimerCallback( EventLoopTimerRef aTimer, void *pData 
 
 // -----------------------------------------------------------------------
 
-void SalFrame::StartPresentation( BOOL bStart )
+void JavaSalFrame::StartPresentation( BOOL bStart )
 {
-	if ( bStart == maFrameData.mbPresentation )
+	if ( bStart == mbPresentation )
 		return;
 
 	SalData *pSalData = GetSalData();
@@ -500,15 +503,15 @@ void SalFrame::StartPresentation( BOOL bStart )
 			SetSystemUIModeTimerCallback( NULL, (void *)( bStart ? true : false ) );
 	}
 
-	maFrameData.mbPresentation = bStart;
+	mbPresentation = bStart;
 
-	if ( maFrameData.mbPresentation )
+	if ( mbPresentation )
 		pSalData->mpPresentationFrame = this;
 	else
 		pSalData->mpPresentationFrame = NULL;
 
 	// Adjust window size if in full screen mode
-	if ( maFrameData.mbFullScreen )
+	if ( mbFullScreen )
 	{
 		USHORT nFlags = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT;
 
@@ -521,25 +524,25 @@ void SalFrame::StartPresentation( BOOL bStart )
 
 // -----------------------------------------------------------------------
 
-void SalFrame::SetAlwaysOnTop( BOOL bOnTop )
+void JavaSalFrame::SetAlwaysOnTop( BOOL bOnTop )
 {
 }
 
 // -----------------------------------------------------------------------
 
-void SalFrame::ToTop( USHORT nFlags )
+void JavaSalFrame::ToTop( USHORT nFlags )
 {
 	bool bSuccess = false;
 
 	if ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS )
-		bSuccess = maFrameData.mpVCLFrame->toFront();
+		bSuccess = mpVCLFrame->toFront();
 	else if ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS_ONLY )
-		bSuccess = maFrameData.mpVCLFrame->requestFocus();
+		bSuccess = mpVCLFrame->requestFocus();
 
 	// If Java has set the focus, update it now in the OOo code as it may
 	// take a while before the Java event shows up in the queue. Fix bug
 	// 1203 by not doing this update if we are in the Show() method.
-	if ( bSuccess && !maFrameData.mbInShow )
+	if ( bSuccess && !mbInShow )
 	{
 		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_GETFOCUS, this, NULL );
 		aEvent.dispatch();
@@ -548,76 +551,76 @@ void SalFrame::ToTop( USHORT nFlags )
 
 // -----------------------------------------------------------------------
 
-void SalFrame::SetPointer( PointerStyle ePointerStyle )
+void JavaSalFrame::SetPointer( PointerStyle ePointerStyle )
 {
-	maFrameData.mpVCLFrame->setPointer( ePointerStyle );
+	mpVCLFrame->setPointer( ePointerStyle );
 }
 
 // -----------------------------------------------------------------------
 
-void SalFrame::CaptureMouse( BOOL bCapture )
+void JavaSalFrame::CaptureMouse( BOOL bCapture )
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalFrame::CaptureMouse not implemented\n" );
+	fprintf( stderr, "JavaSalFrame::CaptureMouse not implemented\n" );
 #endif
 }
 
 // -----------------------------------------------------------------------
 
-void SalFrame::SetPointerPos( long nX, long nY )
+void JavaSalFrame::SetPointerPos( long nX, long nY )
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalFrame::SetPointerPos not implemented\n" );
+	fprintf( stderr, "JavaSalFrame::SetPointerPos not implemented\n" );
 #endif
 }
 
 // -----------------------------------------------------------------------
 
-void SalFrame::Flush()
+void JavaSalFrame::Flush()
 {
-	maFrameData.mpVCLFrame->sync();
+	mpVCLFrame->sync();
 }
 
 // -----------------------------------------------------------------------
 
-void SalFrame::Sync()
+void JavaSalFrame::Sync()
 {
-	maFrameData.mpVCLFrame->sync();
+	mpVCLFrame->sync();
 }
 
 // -----------------------------------------------------------------------
 
-void SalFrame::SetInputContext( SalInputContext* pContext )
+void JavaSalFrame::SetInputContext( SalInputContext* pContext )
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalFrame::SetInputContext not implemented\n" );
+	fprintf( stderr, "JavaSalFrame::SetInputContext not implemented\n" );
 #endif
 }
 
 // -----------------------------------------------------------------------
 
-void SalFrame::EndExtTextInput( USHORT nFlags )
+void JavaSalFrame::EndExtTextInput( USHORT nFlags )
 {
-	maFrameData.mpVCLFrame->endComposition();
+	mpVCLFrame->endComposition();
 }
 
 // -----------------------------------------------------------------------
 
-XubString SalFrame::GetKeyName( USHORT nKeyCode )
+XubString JavaSalFrame::GetKeyName( USHORT nKeyCode )
 {
-	return maFrameData.mpVCLFrame->getKeyName( nKeyCode );
+	return mpVCLFrame->getKeyName( nKeyCode );
 }
 
 // -----------------------------------------------------------------------
 
-XubString SalFrame::GetSymbolKeyName( const XubString&, USHORT nKeyCode )
+XubString JavaSalFrame::GetSymbolKeyName( const XubString&, USHORT nKeyCode )
 {
 	return GetKeyName( nKeyCode );
 }
 
 // -----------------------------------------------------------------------
 
-void SalFrame::UpdateSettings( AllSettings& rSettings )
+void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 {
 	MouseSettings aMouseSettings = rSettings.GetMouseSettings();
 	ULONG nDblTime = (ULONG)GetDblTime();
@@ -679,141 +682,127 @@ void SalFrame::UpdateSettings( AllSettings& rSettings )
 
 // -----------------------------------------------------------------------
 
-SalBitmap* SalFrame::SnapShot()
+SalBitmap* JavaSalFrame::SnapShot()
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalFrame::Snapshot not implemented\n" );
+	fprintf( stderr, "JavaSalFrame::Snapshot not implemented\n" );
 #endif
 	return NULL;
 }
 
 // -----------------------------------------------------------------------
 
-const SystemEnvData* SalFrame::GetSystemData() const
+const SystemEnvData* JavaSalFrame::GetSystemData() const
 {
-	return &maFrameData.maSysData;
+	return &maSysData;
 }
 
 // -----------------------------------------------------------------------
 
-void SalFrame::Beep( SoundType eSoundType )
+void JavaSalFrame::Beep( SoundType eSoundType )
 {
 	com_sun_star_vcl_VCLGraphics::beep();
 }
 
 // -----------------------------------------------------------------------
 
-void SalFrame::SetCallback( void* pInst, SALFRAMEPROC pProc )
+SalFrame* JavaSalFrame::GetParent() const
 {
-	maFrameData.mpInst = pInst;
-	if ( pProc )
-		maFrameData.mpProc = pProc;
-	else
-		maFrameData.mpProc = ImplSalCallbackDummy;
+	return mpParent;
 }
 
 // -----------------------------------------------------------------------
 
-SalFrame* SalFrame::GetParent() const
-{
-	return maFrameData.mpParent;
-}
-
-// -----------------------------------------------------------------------
-
-LanguageType SalFrame::GetInputLanguage()
+LanguageType JavaSalFrame::GetInputLanguage()
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalFrame::GetInputLanguage not implemented\n" );
+	fprintf( stderr, "JavaSalFrame::GetInputLanguage not implemented\n" );
 #endif
 	return LANGUAGE_DONTKNOW;
 }
 
 // -----------------------------------------------------------------------
 
-ULONG SalFrame::GetCurrentModButtons()
+void JavaSalFrame::SetParent( SalFrame* pNewParent )
 {
-	return maFrameData.mpVCLFrame->getCurrentModButtons();
-}
-
-// -----------------------------------------------------------------------
-
-void SalFrame::SetParent( SalFrame* pNewParent )
-{
-	if ( pNewParent != maFrameData.mpParent )
+	if ( pNewParent != mpParent )
 	{
-		if ( maFrameData.mpParent )
+		if ( mpParent )
 		{
-			maFrameData.mpParent->maFrameData.maChildren.remove( this );
-			maFrameData.mpParent->maFrameData.mpVCLFrame->removeChild( this );
+			mpParent->maChildren.remove( this );
+			mpParent->mpVCLFrame->removeChild( this );
 		}
 
-		maFrameData.mpParent = pNewParent;
+		mpParent = (JavaSalFrame *)pNewParent;
 
-		if ( maFrameData.mpParent )
+		if ( mpParent )
 		{
-			maFrameData.mbUseMainScreenOnly = FALSE;
-			maFrameData.mpParent->maFrameData.mpVCLFrame->addChild( this );
-			maFrameData.mpParent->maFrameData.maChildren.push_back( this );
+			mbUseMainScreenOnly = FALSE;
+			mpParent->mpVCLFrame->addChild( this );
+			mpParent->maChildren.push_back( this );
 		}
 	}
 }
 
 // -----------------------------------------------------------------------
 
-bool SalFrame::SetPluginParent( SystemParentData* pNewParent )
+bool JavaSalFrame::SetPluginParent( SystemParentData* pNewParent )
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalFrame::SetPluginParent not implemented\n" );
+	fprintf( stderr, "JavaSalFrame::SetPluginParent not implemented\n" );
 #endif
 	return false;
 }
 
 // -----------------------------------------------------------------------
 
-void SalFrame::SetMenu( SalMenu* pSalMenu )
+void JavaSalFrame::SetMenu( SalMenu* pSalMenu )
 {
 }
 
 // -----------------------------------------------------------------------
 
-void SalFrame::DrawMenuBar()
+void JavaSalFrame::DrawMenuBar()
 {
-}
-
-// =======================================================================
-
-SalFrameData::SalFrameData()
-{
-	mpVCLFrame = NULL;
-	mpGraphics = new SalGraphicsLayout();
-	mnStyle = 0;
-	mpParent = NULL;
-	mbGraphics = FALSE;
-	mbVisible = FALSE;
-	mpInst = NULL;
-	mpProc = ImplSalCallbackDummy;
-	memset( &maSysData, 0, sizeof( SystemEnvData ) );
-	maSysData.nSize = sizeof( SystemEnvData );
-	mbCenter = TRUE;
-	memset( &maOriginalGeometry, 0, sizeof( maOriginalGeometry ) );
-	mbFullScreen = FALSE;
-	mbPresentation = FALSE;
-	mpMenuBar = NULL;
-	mbUseMainScreenOnly = TRUE;
-	mbInSetPosSize = FALSE;
-	mbInShow = FALSE;
 }
 
 // -----------------------------------------------------------------------
 
-SalFrameData::~SalFrameData()
+SalFrame::SalPointerState JavaSalFrame::GetPointerState()
 {
-	if ( mpVCLFrame )
-	{
-		mpVCLFrame->dispose();
-		delete mpVCLFrame;
-	}
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalFrame::GetPointerState not implemented\n" );
+#endif
+	SalPointerState aState;
+	aState.mnState = 0;
+	aState.maPos = Point();
+	return aState;
+}
 
-	delete mpGraphics;
+// -----------------------------------------------------------------------
+
+BOOL JavaSalFrame::MapUnicodeToKeyCode( sal_Unicode aUnicode, LanguageType aLangType, KeyCode& rKeyCode )
+{
+	return FALSE;
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalFrame::SetExtendedFrameStyle( SalExtStyle nExtStyle )
+{
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalFrame::SetBackgroundBitmap( SalBitmap* )
+{
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalFrame::SetMaxClientSize( long nWidth, long nHeight )
+{
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalFrame::SetMaxClientSize not implemented\n" );
+#endif
 }

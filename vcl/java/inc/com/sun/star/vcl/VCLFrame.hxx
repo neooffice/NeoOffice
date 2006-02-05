@@ -43,7 +43,7 @@
 #include <tools/gen.hxx>
 #endif
 
-class SalFrame;
+class JavaSalFrame;
 
 namespace vcl {
 
@@ -58,15 +58,14 @@ public:
 	static jclass		getMyClass();
 
 						com_sun_star_vcl_VCLFrame( jobject myObj ) : java_lang_Object( myObj ) {}
-						com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, const SalFrame *pFrame, const SalFrame *pParent );
+						com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, const JavaSalFrame *pFrame, const JavaSalFrame *pParent );
 	virtual				~com_sun_star_vcl_VCLFrame() {}
 
-	void				addChild( SalFrame *_par0 );
+	void				addChild( JavaSalFrame *_par0 );
 	void				dispose();
 	void				enableFlushing( sal_Bool _par0 );
 	void				endComposition();
 	const Rectangle		getBounds();
-	ULONG				getCurrentModButtons();
 	com_sun_star_vcl_VCLGraphics*	getGraphics();
 	const Rectangle		getInsets();
 	::rtl::OUString		getKeyName( USHORT _par0 );
@@ -74,7 +73,7 @@ public:
 	void*				getNativeWindowRef();
 	java_lang_Object*	getPeer();
 	ULONG				getState();
-	void				removeChild( SalFrame *_par0 );
+	void				removeChild( JavaSalFrame *_par0 );
 	sal_Bool			requestFocus();
 	void				setBounds( long _par0, long _par1, long _par2, long _par3 );
 	void				setFullScreenMode( sal_Bool _par0 );
