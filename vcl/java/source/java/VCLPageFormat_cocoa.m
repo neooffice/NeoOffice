@@ -205,8 +205,9 @@ void NSPrintInfo_installVCLPrintInfo()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, @"AWTRunLoopMode", nil];
 	InstallVCLPrintInfo *pInstallVCLPrintInfo = [[InstallVCLPrintInfo alloc] init];
-	[pInstallVCLPrintInfo performSelectorOnMainThread:@selector(installVCLPrintInfo:) withObject:pInstallVCLPrintInfo waitUntilDone:YES];
+	[pInstallVCLPrintInfo performSelectorOnMainThread:@selector(installVCLPrintInfo:) withObject:pInstallVCLPrintInfo waitUntilDone:YES modes:pModes];
 
 	[pPool release];
 }
@@ -237,7 +238,8 @@ id NSPrintInfo_showPageLayoutDialog( id pNSPrintInfo, id pNSWindow, BOOL bLandsc
 		pRet = [[ShowPageLayoutDialog alloc] initWithPrintInfo:(NSPrintInfo *)pNSPrintInfo window:(NSWindow *)pNSWindow orientation:( bLandscape ? NSLandscapeOrientation : NSPortraitOrientation )];
 		if ( pRet )
 		{
-			[pRet performSelectorOnMainThread:@selector(showPageLayoutDialog:) withObject:pRet waitUntilDone:YES];
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, @"AWTRunLoopMode", nil];
+			[pRet performSelectorOnMainThread:@selector(showPageLayoutDialog:) withObject:pRet waitUntilDone:YES modes:pModes];
 			[pRet retain];
 		}
 	}

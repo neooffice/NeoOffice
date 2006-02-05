@@ -76,8 +76,9 @@ id NSApplication_getModalWindow()
 
 	NSWindow *pModalWindow = nil;
 
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, @"AWTRunLoopMode", nil];
 	GetModalWindow *pGetModalWindow = [[GetModalWindow alloc] init];
-	[pGetModalWindow performSelectorOnMainThread:@selector(getModalWindow:) withObject:pGetModalWindow waitUntilDone:YES];
+	[pGetModalWindow performSelectorOnMainThread:@selector(getModalWindow:) withObject:pGetModalWindow waitUntilDone:YES modes:pModes];
 	pModalWindow = [pGetModalWindow modalWindow];
 
 	[pPool release];
