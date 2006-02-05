@@ -54,8 +54,6 @@ dummy:
 
 .ELSE		# "$(GUIBASE)"!="java"
 
-.IF "$(remote)"
-
 OBJFILES=\
 	$(OBJ)$/salmain.obj
 
@@ -67,13 +65,6 @@ SLOFILES= \
 	$(SLO)$/salinst.obj \
 	$(SLO)$/salinst_cocoa.obj \
 	$(SLO)$/salsound.obj
-
-.ELSE
-
-SLOFILES=\
-	$(SLO)$/salmain.obj
-
-.ENDIF
 
 SRCFILES=\
 	salinst.src

@@ -51,7 +51,6 @@ dummy:
 
 .ELSE		# "$(GUIBASE)"!="java"
 
-.IF "$(remote)"==""
 SLOFILES= \
 	$(SLO)$/salatslayout.obj \
 	$(SLO)$/salbmp.obj \
@@ -63,8 +62,6 @@ SLOFILES= \
 	$(SLO)$/salogl_cocoa.obj \
 	$(SLO)$/salprn.obj \
 	$(SLO)$/salvd.obj
-
-.ENDIF
 
 .ENDIF	# "$(GUIBASE)"!="java"
 

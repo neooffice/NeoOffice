@@ -55,8 +55,6 @@ dummy:
 
 .ELSE		# "$(GUIBASE)"!="java"
 
-.IF "$(remote)"
-
 SLOFILES = \
 	$(SLO)/Class.obj \
 	$(SLO)/Object.obj \
@@ -80,8 +78,6 @@ SLOFILES = \
 	$(SLO)/VCLPrintJob_cocoa.obj \
 	$(SLO)/VCLScreen.obj \
 	$(SLO)/tools.obj
-
-.ENDIF
 
 .ENDIF		# "$(GUIBASE)"!="java"
 
