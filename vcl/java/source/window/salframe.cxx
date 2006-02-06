@@ -735,6 +735,14 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 
 		mpParent = (JavaSalFrame *)pNewParent;
 
+		// Fix bug 1310 by creating a new native window with the new parent
+		ReleaseGraphics( mpGraphics );
+		if ( mpVCLFrame )
+			delete mpVCLFrame;
+		mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, mpParent );
+		maSysData.aWindow = 0;
+		SetPosSize( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration, maGeometry.nWidth, maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
+
 		if ( mpParent )
 		{
 			mbUseMainScreenOnly = FALSE;
