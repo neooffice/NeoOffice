@@ -154,9 +154,8 @@ id CWindow_getNSWindow( id pCWindow )
 
 	if ( pCWindow )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, @"AWTRunLoopMode", nil];
 		GetNSWindow *pGetNSWindow = [[GetNSWindow alloc] initWithCWindow:pCWindow];
-		[pGetNSWindow performSelectorOnMainThread:@selector(getNSWindow:) withObject:pGetNSWindow waitUntilDone:YES modes:pModes];
+		[pGetNSWindow performSelectorOnMainThread:@selector(getNSWindow:) withObject:pGetNSWindow waitUntilDone:YES];
 		pNSWindow = [pGetNSWindow window];
 	}
 
@@ -173,9 +172,8 @@ WindowRef CWindow_getWindowRef( id pCWindow )
 
 	if ( pCWindow )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, @"AWTRunLoopMode", nil];
 		GetWindowRef *pGetWindowRef = [[GetWindowRef alloc] initWithCWindow:pCWindow];
-		[pGetWindowRef performSelectorOnMainThread:@selector(getWindowRef:) withObject:pGetWindowRef waitUntilDone:YES modes:pModes];
+		[pGetWindowRef performSelectorOnMainThread:@selector(getWindowRef:) withObject:pGetWindowRef waitUntilDone:YES];
 		aWindow = [pGetWindowRef windowRef];
 	}
 
@@ -190,9 +188,8 @@ void CWindow_updateLocation( id pCWindow )
 
 	if ( pCWindow )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, @"AWTRunLoopMode", nil];
 		UpdateLocation *pUpdateLocation = [[UpdateLocation alloc] initWithCWindow:pCWindow];
-		[pUpdateLocation performSelectorOnMainThread:@selector(updateLocation:) withObject:pUpdateLocation waitUntilDone:YES modes:pModes];
+		[pUpdateLocation performSelectorOnMainThread:@selector(updateLocation:) withObject:pUpdateLocation waitUntilDone:YES];
 	}
 
 	[pPool release];
