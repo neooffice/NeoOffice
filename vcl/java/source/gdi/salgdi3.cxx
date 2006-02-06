@@ -92,6 +92,9 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 		// We need to let any pending timers run so that we don't deadlock
 		IMutex& rSolarMutex = Application::GetSolarMutex();
 		bool bAcquired = false;
+		TimeValue aDelay;
+		aDelay.Seconds = 0;
+		aDelay.Nanosec = 10;
 		while ( !Application::IsShutDown() )
 		{
 			if ( rSolarMutex.tryToAcquire() )
@@ -101,7 +104,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 			}
 
 			ReceiveNextEvent( 0, NULL, 0, false, NULL );
-			OThread::yield();
+			OThread::wait( aDelay );
 		}
 
 		if ( bAcquired )

@@ -190,6 +190,9 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 		// We need to let any pending timers run so that we don't deadlock
 		IMutex& rSolarMutex = Application::GetSolarMutex();
 		bool bAcquired = false;
+		TimeValue aDelay;
+		aDelay.Seconds = 0;
+		aDelay.Nanosec = 10;
 		while ( !Application::IsShutDown() )
 		{
 			if ( rSolarMutex.tryToAcquire() )
@@ -202,7 +205,7 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 			}
 
 			ReceiveNextEvent( 0, NULL, 0, false, NULL );
-			OThread::yield();
+			OThread::wait( aDelay );
 		}
 
 		if ( bAcquired )
@@ -244,6 +247,9 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 		// We need to let any pending timers run so that we don't deadlock
 		IMutex& rSolarMutex = Application::GetSolarMutex();
 		bool bAcquired = false;
+		TimeValue aDelay;
+		aDelay.Seconds = 0;
+		aDelay.Nanosec = 10;
 		while ( !Application::IsShutDown() )
 		{
 			if ( rSolarMutex.tryToAcquire() )
@@ -256,7 +262,7 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 			}
 
 			ReceiveNextEvent( 0, NULL, 0, false, NULL );
-			OThread::yield();
+			OThread::wait( aDelay );
 		}
 
 		if ( bAcquired )
@@ -317,6 +323,9 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 		// We need to let any pending timers run so that we don't deadlock
 		IMutex& rSolarMutex = Application::GetSolarMutex();
 		bool bAcquired = false;
+		TimeValue aDelay;
+		aDelay.Seconds = 0;
+		aDelay.Nanosec = 10;
 		while ( !Application::IsShutDown() )
 		{
 			if ( rSolarMutex.tryToAcquire() )
@@ -329,7 +338,7 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 			}
 
 			ReceiveNextEvent( 0, NULL, 0, false, NULL );
-			OThread::yield();
+			OThread::wait( aDelay );
 		}
 
 		if ( bAcquired )
@@ -379,10 +388,13 @@ void TrackDragTimerCallback( EventLoopTimerRef aTimer, void *pData )
 
 	// We need to let any pending timers run so that we don't deadlock
 	IMutex& rSolarMutex = Application::GetSolarMutex();
+	TimeValue aDelay;
+	aDelay.Seconds = 0;
+	aDelay.Nanosec = 10;
 	while ( !rSolarMutex.tryToAcquire() )
 	{
 		ReceiveNextEvent( 0, NULL, 0, false, NULL );
-		OThread::yield();
+		OThread::wait( aDelay );
 	}
 
 	if ( pTrackDragOwner == pSource )
@@ -442,7 +454,7 @@ void TrackDragTimerCallback( EventLoopTimerRef aTimer, void *pData )
 				while ( !rSolarMutex.tryToAcquire() )
 				{
 					ReceiveNextEvent( 0, NULL, 0, false, NULL );
-					OThread::yield();
+					OThread::wait( aDelay );
 				}
 
 				if ( bTrackDrag )

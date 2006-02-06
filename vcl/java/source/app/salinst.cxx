@@ -147,10 +147,13 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				// We need to let any pending timers run while we are
 				// waiting for the VCL event queue to clear so that
 				// we don't deadlock
+				TimeValue aDelay;
+				aDelay.Seconds = 0;
+				aDelay.Nanosec = 10;
 				while ( !Application::IsShutDown() && !pSalData->maNativeEventCondition.check() )
 				{
 					ReceiveNextEvent( 0, NULL, 0, false, NULL );
-					OThread::yield();
+					OThread::wait( aDelay );
 				}
 
 				// We need to let any timers run that were added by any menu
