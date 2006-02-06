@@ -36,7 +36,6 @@
 package com.sun.star.vcl;
 
 import java.awt.Dimension;
-import java.awt.EventQueue;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
@@ -90,11 +89,6 @@ public final class VCLPrintJob implements Printable, Runnable {
 	private VCLPageFormat pageFormat = null;
 
 	/**
-	 * The print finished flag.
-	 */
-	private boolean printFinished = false;
-
-	/**
 	 * The cached native graphics context.
 	 */
 	private Graphics2D printGraphics = null;
@@ -113,6 +107,11 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 * The print started flag.
 	 */
 	private boolean printStarted = false;
+
+	/**
+	 * The print thread.
+	 */
+	private Thread printThread = null;
 
 	/**
 	 * The cached scale factor.
@@ -159,9 +158,10 @@ public final class VCLPrintJob implements Printable, Runnable {
 			lastPageQueue.dispose();
 			lastPageQueue = null;
 		}
+		job = null;
 		printGraphics = null;
 		printPageFormat = null;
-		job = null;
+		printThread = null;
 
 		disposed = true;
 
@@ -179,7 +179,13 @@ public final class VCLPrintJob implements Printable, Runnable {
 		endJob = true;
 
 		// Wait for print thread to finish
-		endPage();
+		while (printStarted && printThread != null) {
+			notifyAll();
+			try {
+				wait(10);
+			}
+			catch (Throwable t) {}
+		}
 
 		if (pageFormat != null)
 			pageFormat.setEditable(true);
@@ -193,7 +199,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 */
 	public synchronized void endPage() {
 
-		if (printStarted && !printFinished) {
+		if (printStarted && printThread != null) {
 			notifyAll();
 			try {
 				wait();
@@ -209,6 +215,11 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 * invoked.
 	 */
 	public synchronized int print(Graphics g, PageFormat f, int i) throws PrinterException {
+
+		if (!printStarted) {
+			printStarted = true;
+			notifyAll();
+		}
 
 		if (lastPageQueue != null) {
 			lastPageQueue.dispose();
@@ -273,7 +284,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 			}
 			printGraphics = null;
 			printPageFormat = null;
-			printFinished = true;
+			printThread = null;
 			notifyAll();
 		}
 
@@ -285,9 +296,9 @@ public final class VCLPrintJob implements Printable, Runnable {
 	 * @return <code>true</code> if a print job has ended or aborted or
 	 *  <code>false</code> if the print job is still running
 	 */
-	public boolean isFinished() {
+	public synchronized boolean isFinished() {
 
-		return (printStarted && printFinished);
+		return (printStarted && printThread == null);
 
 	}
 
@@ -327,10 +338,10 @@ public final class VCLPrintJob implements Printable, Runnable {
 	public synchronized VCLGraphics startPage(int o) {
 
 		// Start the printing thread if it has not yet been started
-		if (!printStarted) {
-			printStarted = true;
-			EventQueue.invokeLater(this);
-			notifyAll();
+		if (!printStarted && printThread == null) {
+			printStarted = false;
+			printThread = new Thread(this);
+			printThread.start();
 			try {
 				wait();
 			}
@@ -342,7 +353,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 		endPage();
 
 		// Get the current page's printGraphics context
-		if (printStarted && !printFinished) {
+		if (printStarted && printThread != null) {
 			// Set the origin to the origin of the printable area
 			printGraphics.translate((int)printPageFormat.getImageableX(), (int)printPageFormat.getImageableY());
 
