@@ -37,6 +37,7 @@ package com.sun.star.vcl;
 
 import java.awt.AWTEvent;
 import java.awt.Component;
+import java.awt.Container;
 import java.awt.EventQueue;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
@@ -56,7 +57,7 @@ import java.lang.reflect.Method;
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public final class VCLEventQueue implements Runnable {
+public final class VCLEventQueue {
 
     /** 
      * INPUT_MOUSE constant.
@@ -182,13 +183,12 @@ public final class VCLEventQueue implements Runnable {
 			try {
 				VCLEventQueue.NoExceptionsEventQueue eventQueue = (VCLEventQueue.NoExceptionsEventQueue)Toolkit.getDefaultToolkit().getSystemEventQueue();
 
-				// Post a dummy event to ensure that we don't block if there
-				// are no low priority events
-				if (eventQueue.peekEvent(PaintEvent.PAINT) == null && eventQueue.peekEvent(PaintEvent.UPDATE) == null)
-					EventQueue.invokeLater(this);
-
-				AWTEvent nextEvent = eventQueue.getNextEvent();
-				if (nextEvent != null)
+				// Post a dummy, low priority event to ensure that we don't
+				// block if there are no pending events
+				PaintEvent e = new PaintEvent(new Container(), PaintEvent.PAINT, new Rectangle());
+				eventQueue.postEvent(e);
+				AWTEvent nextEvent;
+				while ((nextEvent = eventQueue.getNextEvent()) != e)
 					eventQueue.dispatchEvent(nextEvent);
 			}
 			catch (Throwable t) {
@@ -392,13 +392,6 @@ public final class VCLEventQueue implements Runnable {
 		}
 
 	}
-
-	/**
-	 * Runnable method that performs nothing. This method is used for passing
-	 * this class to the <code>EventQueue.invokeLater()</code> method so that
-	 * we can prevent blocking in the {@link #dispatchNextEvent()} method.
-	 */
-	public void run() {}
 
 	/**
 	 * Sets the last adjusted mouse modifiers.
