@@ -85,25 +85,24 @@ BOOL SalBitmap::Create( const Size& rSize, USHORT nBitCount, const BitmapPalette
 		// Cache the bit count
 		mnBitCount = mpVCLBitmap->getBitCount();
 
-		// Save the palette
-		USHORT nColors = ( ( mnBitCount <= 8 ) ? ( 1 << mnBitCount ) : 0 );
-		if ( nColors )
-		{
-			maPalette = rPal;
-			maPalette.SetEntryCount( nColors );
-		}
-
 		// Fill the buffer with pointers to the Java buffer
 		mpData = mpVCLBitmap->getData();
 
-		return TRUE;
 	}
 	else
 	{
-		Destroy();
-		return FALSE;
+		mnBitCount = nBitCount;
 	}
 
+	// Save the palette
+	USHORT nColors = ( ( mnBitCount <= 8 ) ? ( 1 << mnBitCount ) : 0 );
+	if ( nColors )
+	{
+		maPalette = rPal;
+		maPalette.SetEntryCount( nColors );
+	}
+
+	return TRUE;
 }
 
 // ------------------------------------------------------------------
@@ -204,7 +203,7 @@ Size SalBitmap::GetSize() const
 
 BitmapBuffer* SalBitmap::AcquireBuffer( BOOL bReadOnly )
 {
-	if ( !mpVCLBitmap || !mpData )
+	if ( !mpVCLBitmap )
 		return NULL;
 
 	BitmapBuffer *pBuffer = new BitmapBuffer();
@@ -243,7 +242,7 @@ BitmapBuffer* SalBitmap::AcquireBuffer( BOOL bReadOnly )
 		mpBits = (BYTE *)rtl_allocateMemory( pBuffer->mnScanlineSize * pBuffer->mnHeight );
 		if ( mpBits )
 		{
-			if ( mbCopyFromVCLBitmap )
+			if ( mbCopyFromVCLBitmap && mpData )
 			{
 				mbCopyFromVCLBitmap = false;
 
