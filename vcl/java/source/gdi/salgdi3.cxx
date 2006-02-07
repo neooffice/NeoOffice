@@ -68,6 +68,9 @@
 #ifndef _UTL_BOOTSTRAP_HXX
 #include <unotools/bootstrap.hxx>
 #endif
+#ifndef _VOS_MODULE_HXX_
+#include <vos/module.hxx>
+#endif
 
 #include <premac.h>
 #include <Carbon/Carbon.h>
@@ -75,8 +78,15 @@
 
 #include "salgdi3_cocoa.h"
 
+#define DOSTRING( x )			#x
+#define STRING( x )				DOSTRING( x )
+
+typedef void NativeShutdownCancelledHandler_Type();
+
 static EventLoopTimerUPP pLoadNativeFontsTimerUPP = NULL;
 static ::osl::Condition aLoadNativeFontsCondition;
+static ::vos::OModule aShutdownCancelledHandlerModule;
+static NativeShutdownCancelledHandler_Type *pShutdownCancelledHandler = NULL;
 
 using namespace rtl;
 using namespace utl;
@@ -623,11 +633,26 @@ void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 {
 	SalData *pSalData = GetSalData();
 
+	// Only run the timer once since loading fonts is extremely expensive
 	if ( !pLoadNativeFontsTimerUPP )
 	{
-		pLoadNativeFontsTimerUPP = NewEventLoopTimerUPP( LoadNativeFontsTimerCallback );
+		pSalData->mpEventQueue->setShutdownDisabled( sal_True );
 
-		// Only run the timer once since loading fonts is extremely expensive
+		// Load libsfx and invoke the native shutdown cancelled handler
+		if ( !pShutdownCancelledHandler )
+		{
+			OUString aLibName = OUString::createFromAscii( "libsfx" );
+			aLibName += OUString::valueOf( (sal_Int32)SUPD, 10 );
+			aLibName += OUString::createFromAscii( STRING( DLLSUFFIX ) );
+			aLibName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+			if ( aShutdownCancelledHandlerModule.load( aLibName ) )
+				pShutdownCancelledHandler = (NativeShutdownCancelledHandler_Type *)aShutdownCancelledHandlerModule.getSymbol( OUString::createFromAscii( "NativeShutdownCancelledHandler" ) );
+		}
+
+		if ( pShutdownCancelledHandler )
+			pShutdownCancelledHandler();
+
+		pLoadNativeFontsTimerUPP = NewEventLoopTimerUPP( LoadNativeFontsTimerCallback );
 		if ( pLoadNativeFontsTimerUPP )
 		{
 			if ( GetCurrentEventLoop() != GetMainEventLoop() )
@@ -643,6 +668,8 @@ void SalGraphics::GetDevFontList( ImplDevFontList* pList )
 				LoadNativeFontsTimerCallback( NULL, NULL );
 			}
 		}
+
+		pSalData->mpEventQueue->setShutdownDisabled( sal_False );
 	}
 
 	// Iterate through fonts and add each to the font list

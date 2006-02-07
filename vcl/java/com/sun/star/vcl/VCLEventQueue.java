@@ -110,14 +110,14 @@ public final class VCLEventQueue {
 	private long nextGC = 0;
 
 	/**
+	 * The shutdown disabled flag.
+	 */
+	private boolean shutdownDisabled = false;
+
+	/**
 	 * The list of queues.
 	 */
 	private VCLEventQueue.Queue[] queueList = new VCLEventQueue.Queue[2];
-
-	/**
-	 * The printing flag.
-	 */
-	private boolean printing = false;
 
 	/**
 	 * Construct a VCLEventQueue and make it the system queue.
@@ -266,7 +266,7 @@ public final class VCLEventQueue {
 	public void postCachedEvent(VCLEvent event) {
 
 		int id = event.getID();
-		if (printing && id == VCLEvent.SALEVENT_SHUTDOWN) {
+		if (shutdownDisabled && id == VCLEvent.SALEVENT_SHUTDOWN) {
 			event.cancelShutdown();
 			return;
 		}
@@ -382,12 +382,12 @@ public final class VCLEventQueue {
 						eqi.remove = true;
 					eqi = eqi.next;
 				}
+
 				// Purge removed events from the front of the queue
 				while (queue.head != null && queue.head.remove)
 					queue.head = queue.head.next;
 				if (queue.head == null)
 					queue.tail = null;
-					
 			}
 		}
 
@@ -405,14 +405,14 @@ public final class VCLEventQueue {
 	}
 
 	/**
-	 * Sets the printing flag.
+	 * Sets the shutdown disabled flag.
 	 *
-	 * @param p <code>true</code> if printing has started otherwise
+	 * @param p <code>true</code> to disable shutdown otherwise
 	 *  <code>false</code>
 	 */
-	void setPrinting(boolean p) {
+	public void setShutdownDisabled(boolean b) {
 
-		printing = p;
+		shutdownDisabled = b;
 
 		synchronized (queueList) {
 			for (int i = 0; i < queueList.length; i++) {
