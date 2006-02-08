@@ -37,156 +37,128 @@
 
 #include <stdio.h>
 
-#ifndef _SV_SALOBJ_HXX
-#include <salobj.hxx>
+#ifndef _SV_SALOBJ_H
+#include <salobj.h>
 #endif
 
 // =======================================================================
 
-long ImplSalObjCallbackDummy( void*, SalObject*, USHORT, const void* )
-{
-	return 0;
-}
-
-// =======================================================================
-
-SalObject::SalObject()
+JavaSalObject::JavaSalObject()
 {
 }
 
 // -----------------------------------------------------------------------
 
-SalObject::~SalObject()
+JavaSalObject::~JavaSalObject()
 {
 }
 
 // -----------------------------------------------------------------------
 
-void SalObject::ResetClipRegion()
+void JavaSalObject::ResetClipRegion()
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalObject::ResetClipRegion not implemented\n" );
+	fprintf( stderr, "JavaSalObject::ResetClipRegion not implemented\n" );
 #endif
 }
 
 // -----------------------------------------------------------------------
 
-USHORT SalObject::GetClipRegionType()
+USHORT JavaSalObject::GetClipRegionType()
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalObject::GetClipRegionType not implemented\n" );
+	fprintf( stderr, "JavaSalObject::GetClipRegionType not implemented\n" );
 #endif
 	return SAL_OBJECT_CLIP_INCLUDERECTS;
 }
 
 // -----------------------------------------------------------------------
 
-void SalObject::BeginSetClipRegion( ULONG nRectCount )
+void JavaSalObject::BeginSetClipRegion( ULONG nRects )
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalObject::BeginSetClipRegion not implemented\n" );
+	fprintf( stderr, "JavaSalObject::BeginSetClipRegion not implemented\n" );
 #endif
 }
 
 // -----------------------------------------------------------------------
 
-void SalObject::UnionClipRegion( long nX, long nY, long nWidth, long nHeight )
+void JavaSalObject::UnionClipRegion( long nX, long nY, long nWidth, long nHeight )
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalObject::UnionClipRegion not implemented\n" );
+	fprintf( stderr, "JavaSalObject::UnionClipRegion not implemented\n" );
 #endif
 }
 
 // -----------------------------------------------------------------------
 
-void SalObject::EndSetClipRegion()
+void JavaSalObject::EndSetClipRegion()
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalObject::EndSetClipRegion not implemented\n" );
+	fprintf( stderr, "JavaSalObject::EndSetClipRegion not implemented\n" );
 #endif
 }
 
 // -----------------------------------------------------------------------
 
-void SalObject::SetPosSize( long nX, long nY, long nWidth, long nHeight )
+void JavaSalObject::SetPosSize( long nX, long nY, long nWidth, long nHeight )
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalObject::SetPosSize not implemented\n" );
+	fprintf( stderr, "JavaSalObject::SetPosSize not implemented\n" );
 #endif
 }
 
 // -----------------------------------------------------------------------
 
-void SalObject::Show( BOOL bVisible )
+void JavaSalObject::Show( BOOL bVisible )
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalObject::Show not implemented\n" );
+	fprintf( stderr, "JavaSalObject::Show not implemented\n" );
 #endif
 }
 
 // -----------------------------------------------------------------------
 
-void SalObject::Enable( BOOL bEnable )
+void JavaSalObject::Enable( BOOL bEnable )
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalObject::Enable not implemented\n" );
+	fprintf( stderr, "JavaSalObject::Enable not implemented\n" );
 #endif
 }
 
 // -----------------------------------------------------------------------
 
-void SalObject::GrabFocus()
+void JavaSalObject::GrabFocus()
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalObject::GrabFocus not implemented\n" );
+	fprintf( stderr, "JavaSalObject::GrabFocus not implemented\n" );
 #endif
 }
 
 // -----------------------------------------------------------------------
 
-void SalObject::SetBackground()
+void JavaSalObject::SetBackground()
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalObject::SetBackground not implemented\n" );
+	fprintf( stderr, "JavaSalObject::SetBackground not implemented\n" );
 #endif
 }
 
 // -----------------------------------------------------------------------
 
-void SalObject::SetBackground( SalColor nSalColor )
+void JavaSalObject::SetBackground( SalColor nSalColor )
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalObject::SetBackground #2 not implemented\n" );
+	fprintf( stderr, "JavaSalObject::SetBackground #2 not implemented\n" );
 #endif
 }
 
 // -----------------------------------------------------------------------
 
-const SystemEnvData* SalObject::GetSystemData() const
+const SystemEnvData* JavaSalObject::GetSystemData() const
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalObject::GetSystemData not implemented\n" );
+	fprintf( stderr, "JavaSalObject::GetSystemData not implemented\n" );
 #endif
 	return NULL;
-}
-
-// -----------------------------------------------------------------------
-
-void SalObject::SetCallback( void* pInst, SALOBJECTPROC pProc )
-{
-#ifdef DEBUG
-	fprintf( stderr, "SalObject::SetCallback not implemented\n" );
-#endif
-}
-
-// =======================================================================
-
-SalObjectData::SalObjectData()
-{
-}
-
-// -----------------------------------------------------------------------
-
-SalObjectData::~SalObjectData()
-{
 }

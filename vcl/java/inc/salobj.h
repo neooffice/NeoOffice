@@ -9,7 +9,7 @@
  *  The Contents of this file are made available subject to the terms of
  *  either of the following licenses
  *
- *         - GNU General Public License Version 2.1
+ *		 - GNU General Public License Version 2.1
  *
  *  Patrick Luby, June 2003
  *
@@ -36,19 +36,35 @@
 #ifndef _SV_SALOBJ_H
 #define _SV_SALOBJ_H
 
+#ifndef _SV_SALOBJ_HXX
+#include <salobj.hxx>
+#endif 
 #ifndef _SV_SV_H
 #include <sv.h>
 #endif 
 
 // -----------------
-// - SalObjectData -
+// - JavaSalObject -
 // -----------------
 
-class SalObjectData
+class JavaSalObject : public SalObject
 {
 public:
-					SalObjectData();
-					~SalObjectData();
+							JavaSalObject();
+	virtual					~JavaSalObject();
+
+	virtual void			ResetClipRegion();
+	virtual USHORT			GetClipRegionType();
+	virtual void			BeginSetClipRegion( ULONG nRects );
+	virtual void			UnionClipRegion( long nX, long nY, long nWidth, long nHeight );
+	virtual void			EndSetClipRegion();
+	virtual void			SetPosSize( long nX, long nY, long nWidth, long nHeight );
+	virtual void			Show( BOOL bVisible );
+	virtual void			Enable( BOOL nEnable );
+	virtual void			GrabFocus();
+	virtual void			SetBackground();
+	virtual void			SetBackground( SalColor nSalColor );
+	virtual const SystemEnvData*	GetSystemData() const;
 };
 
 #endif // _SV_SALOBJ_H
