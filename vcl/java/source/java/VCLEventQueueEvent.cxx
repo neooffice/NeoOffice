@@ -47,14 +47,17 @@
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
-#ifndef _SV_SALFRAME_HXX
-#include <salframe.hxx>
+#ifndef _SV_SALFRAME_H
+#include <salframe.h>
 #endif
 #ifndef _SV_EVENT_HXX
 #include <event.hxx>
 #endif
-#ifndef _SV_SALMENU_HXX
-#include <salmenu.hxx>
+#ifndef _SV_SALMENU_H
+#include <salmenu.h>
+#endif
+#ifndef _SV_SVAPP_HXX
+#include <svapp.hxx>
 #endif
 #ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
@@ -99,7 +102,7 @@ jclass com_sun_star_vcl_VCLEvent::getMyClass()
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLEvent::com_sun_star_vcl_VCLEvent( USHORT nID, const SalFrame *pFrame, void *pData ) : java_lang_Object( (jobject)NULL )
+com_sun_star_vcl_VCLEvent::com_sun_star_vcl_VCLEvent( USHORT nID, const JavaSalFrame *pFrame, void *pData ) : java_lang_Object( (jobject)NULL )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -113,7 +116,7 @@ com_sun_star_vcl_VCLEvent::com_sun_star_vcl_VCLEvent( USHORT nID, const SalFrame
 	OSL_ENSURE( mID, "Unknown method id!" );
 	jvalue args[3];
 	args[0].i = jint( nID );
-	args[1].l = pFrame ? pFrame->maFrameData.mpVCLFrame->getJavaObject() : NULL;
+	args[1].l = pFrame ? pFrame->mpVCLFrame->getJavaObject() : NULL;
 	args[2].i = jint( pData );
 	jobject tempObj;
 	tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
@@ -122,7 +125,7 @@ com_sun_star_vcl_VCLEvent::com_sun_star_vcl_VCLEvent( USHORT nID, const SalFrame
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLEvent::com_sun_star_vcl_VCLEvent( USHORT nID, const SalFrame *pFrame, void *pData, const char *str ) : java_lang_Object( (jobject)NULL )
+com_sun_star_vcl_VCLEvent::com_sun_star_vcl_VCLEvent( USHORT nID, const JavaSalFrame *pFrame, void *pData, const char *str ) : java_lang_Object( (jobject)NULL )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -136,7 +139,7 @@ com_sun_star_vcl_VCLEvent::com_sun_star_vcl_VCLEvent( USHORT nID, const SalFrame
 	OSL_ENSURE( mID, "Unknown method id!" );
 	jvalue args[4];
 	args[0].i = jint( nID );
-	args[1].l = pFrame ? pFrame->maFrameData.mpVCLFrame->getJavaObject() : NULL;
+	args[1].l = pFrame ? pFrame->mpVCLFrame->getJavaObject() : NULL;
 	args[2].i = jint( pData );
 	args[3].l = t.pEnv->NewStringUTF( str );
 
@@ -172,7 +175,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 	void *pData = getData();
 	SalData *pSalData = GetSalData();
 
-	// Handle events that do not need a SalFrame pointer
+	// Handle events that do not need a JavaSalFrame pointer
 	switch ( nID )
 	{
 		case SALEVENT_SHUTDOWN:
@@ -184,8 +187,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			ImplSVData *pSVData = ImplGetSVData();
 			if ( pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpFirstFloat && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mpPresentationFrame && !pSalData->mbInNativeModalSheet && pSalData->maFrameList.size() )
 			{
-				SalFrame *pFrame = pSalData->maFrameList.front();
-				if ( pFrame && !pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL ) )
+				JavaSalFrame *pFrame = pSalData->maFrameList.front();
+				if ( pFrame && !pFrame->CallCallback( nID, NULL ) )
 					bCancelShutdown = false;
 			}
 
@@ -267,21 +270,21 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 	}
 	
-	// Handle events that require a SalFrame pointer
-	SalFrame *pFrame = getFrame();
+	// Handle events that require a JavaSalFrame pointer
+	JavaSalFrame *pFrame = getFrame();
 	bool bFound = false;
 	bool bFlushingDisabled = false;
-	if ( pFrame && pFrame->maFrameData.mpProc )
+	if ( pFrame && pFrame->GetInstance() )
 	{
-		for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+		for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 		{
 			if ( pFrame == *it )
 			{
 				bFound = true;
-				if ( pFrame->maFrameData.mbVisible )
+				if ( pFrame->mbVisible )
 				{
 					bFlushingDisabled = true;
-					pFrame->maFrameData.mpVCLFrame->enableFlushing( sal_False );
+					pFrame->mpVCLFrame->enableFlushing( sal_False );
 				}
 				break;
 			}
@@ -304,15 +307,15 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 	{
 		case SALEVENT_CLOSE:
 		{
-			if ( !bDeleteDataOnly && pFrame && pFrame->maFrameData.mbVisible )
-				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
+			if ( !bDeleteDataOnly && pFrame && pFrame->mbVisible )
+				pFrame->CallCallback( nID, NULL );
 			break;
 		}
 		case SALEVENT_ENDEXTTEXTINPUT:
 		{
 			SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)pData;
 
-			if ( !bDeleteDataOnly && pFrame && pFrame->maFrameData.mbVisible )
+			if ( !bDeleteDataOnly && pFrame && pFrame->mbVisible )
 			{
 				// Fix bug 1158 by resetting the focus to whichever window is
 				// receiving key events
@@ -321,7 +324,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_GETFOCUS, pFrame, NULL );
 					aEvent.dispatch();
 				}
-				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pInputEvent );
+				pFrame->CallCallback( nID, pInputEvent );
 			}
 			if ( pInputEvent )
 				delete pInputEvent;
@@ -330,7 +333,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_EXTTEXTINPUT:
 		{
 			SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)pData;
-			if ( !bDeleteDataOnly && pFrame && pFrame->maFrameData.mbVisible )
+			if ( !bDeleteDataOnly && pFrame && pFrame->mbVisible )
 			{
 				ULONG nCommitted = getCommittedCharacterCount();
 				if ( !pInputEvent )
@@ -352,17 +355,17 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_GETFOCUS, pFrame, NULL );
 					aEvent.dispatch();
 				}
-				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pInputEvent );
+				pFrame->CallCallback( nID, pInputEvent );
 				// Update the cached location
-				if ( pFrame->maFrameData.mpVCLFrame )
+				if ( pFrame->mpVCLFrame )
 				{
 					SalExtTextInputPosEvent aPosEvent;
-					pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, SALEVENT_EXTTEXTINPUTPOS, (void *)&aPosEvent );
-					pFrame->maFrameData.mpVCLFrame->setTextLocation( pFrame->maGeometry.nX - pFrame->maGeometry.nLeftDecoration + aPosEvent.mnX, pFrame->maGeometry.nY - pFrame->maGeometry.nTopDecoration + aPosEvent.mnY, aPosEvent.mnWidth, aPosEvent.mnHeight, aPosEvent.mbVertical );
+					pFrame->CallCallback( SALEVENT_EXTTEXTINPUTPOS, (void *)&aPosEvent );
+					pFrame->mpVCLFrame->setTextLocation( pFrame->maGeometry.nX - pFrame->maGeometry.nLeftDecoration + aPosEvent.mnX, pFrame->maGeometry.nY - pFrame->maGeometry.nTopDecoration + aPosEvent.mnY, aPosEvent.mnWidth, aPosEvent.mnHeight, aPosEvent.mbVertical );
 				}
 				// If there is no text, the character is committed
 				if ( pInputEvent->maText.Len() == nCommitted )
-					pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, SALEVENT_ENDEXTTEXTINPUT, NULL );
+					pFrame->CallCallback( SALEVENT_ENDEXTTEXTINPUT, NULL );
 				if ( pInputEvent->mpTextAttr )
 					rtl_freeMemory( (USHORT *)pInputEvent->mpTextAttr );
 				// Update the cached cursor location
@@ -373,15 +376,15 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_GETFOCUS:
 		{
-			if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame->maFrameData.mbVisible && pFrame != pSalData->mpPresentationFrame )
+			if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame->mbVisible && pFrame != pSalData->mpPresentationFrame )
 			{
 				// Make sure document window does not float to front
-				SalFrame *pParent = pFrame;
+				JavaSalFrame *pParent = pFrame;
 				while ( pParent )
 				{
 					if ( pParent == pSalData->mpPresentationFrame )
 						break;
-					pParent = pParent->maFrameData.mpParent;
+					pParent = pParent->mpParent;
 				}
 
 				if ( !pParent )
@@ -392,26 +395,26 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				}
 			}
 
-			if ( !bDeleteDataOnly && pFrame && pFrame->maFrameData.mbVisible && pFrame != pSalData->mpFocusFrame )
+			if ( !bDeleteDataOnly && pFrame && pFrame->mbVisible && pFrame != pSalData->mpFocusFrame )
 			{
-				if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->maFrameData.mbVisible )
-					pSalData->mpFocusFrame->maFrameData.mpProc( pSalData->mpFocusFrame->maFrameData.mpInst, pSalData->mpFocusFrame, SALEVENT_LOSEFOCUS, NULL );
+				if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
+					pSalData->mpFocusFrame->CallCallback( SALEVENT_LOSEFOCUS, NULL );
 				pSalData->mpFocusFrame = pFrame;
-				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
+				pFrame->CallCallback( nID, NULL );
 			}
 
 			break;
 		}
 		case SALEVENT_LOSEFOCUS:
 		{
-			if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame->maFrameData.mbVisible && pFrame == pSalData->mpPresentationFrame )
+			if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame->mbVisible && pFrame == pSalData->mpPresentationFrame )
 			{
 				// If the presentation frame has no visible children, reset the
 				// focus and don't dispatch the event
 				bool bNoVisibleChildren = true;
-				for ( ::std::list< SalFrame* >::const_iterator it = pSalData->mpPresentationFrame->maFrameData.maChildren.begin(); it != pSalData->mpPresentationFrame->maFrameData.maChildren.end(); ++it )
+				for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->mpPresentationFrame->maChildren.begin(); it != pSalData->mpPresentationFrame->maChildren.end(); ++it )
 				{
-					if ( (*it)->maFrameData.mbVisible )
+					if ( (*it)->mbVisible )
 					{
 						bNoVisibleChildren = false;
 						break;
@@ -427,8 +430,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 
 			if ( !bDeleteDataOnly && pFrame && pFrame == pSalData->mpFocusFrame )
 			{
-				if ( pFrame->maFrameData.mbVisible )
-					pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
+				if ( pFrame->mbVisible )
+					pFrame->CallCallback( nID, NULL );
 				pSalData->mpFocusFrame = NULL;
 			}
 
@@ -438,7 +441,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_KEYUP:
 		{
 			SalKeyEvent *pKeyEvent = (SalKeyEvent *)pData;
-			if ( !bDeleteDataOnly && pFrame && pFrame->maFrameData.mbVisible )
+			if ( !bDeleteDataOnly && pFrame && pFrame->mbVisible )
 			{
 				if ( !pKeyEvent )
 				{
@@ -482,7 +485,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_GETFOCUS, pFrame, NULL );
 					aEvent.dispatch();
 				}
-				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pKeyEvent );
+				pFrame->CallCallback( nID, pKeyEvent );
 			}
 			if ( pKeyEvent )
 				delete pKeyEvent;
@@ -491,7 +494,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_KEYMODCHANGE:
 		{
 			SalKeyModEvent *pKeyModEvent = (SalKeyModEvent *)pData;
-			if ( !bDeleteDataOnly && pFrame && pFrame->maFrameData.mbVisible )
+			if ( !bDeleteDataOnly && pFrame && pFrame->mbVisible )
 			{
 				if ( !pKeyModEvent )
 				{
@@ -499,7 +502,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					pKeyModEvent->mnTime = getWhen();
 					pKeyModEvent->mnCode = getModifiers();
 				}
-				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pKeyModEvent );
+				pFrame->CallCallback( nID, pKeyModEvent );
 			}
 			if ( pKeyModEvent )
 				delete pKeyModEvent;
@@ -511,7 +514,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_MOUSEMOVE:
 		{
 			SalMouseEvent *pMouseEvent = (SalMouseEvent *)pData;
-			if ( !bDeleteDataOnly && pFrame && pFrame->maFrameData.mbVisible )
+			if ( !bDeleteDataOnly && pFrame && pFrame->mbVisible )
 			{
 				if ( !pMouseEvent )
 				{
@@ -529,7 +532,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				// Adjust position for RTL layout
 				if ( Application::GetSettings().GetLayoutRTL() )
 					pMouseEvent->mnX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pMouseEvent->mnX - 1;
-				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pMouseEvent );
+				pFrame->CallCallback( nID, pMouseEvent );
 			}
 			if ( pMouseEvent )
 				delete pMouseEvent;
@@ -544,25 +547,25 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			{
 				// Update size
 				if ( !pPosSize )
-					pPosSize = new Rectangle( pFrame->maFrameData.mpVCLFrame->getBounds() );
+					pPosSize = new Rectangle( pFrame->mpVCLFrame->getBounds() );
 
 				pFrame->maGeometry.nX = pPosSize->nLeft + pFrame->maGeometry.nLeftDecoration;
 				pFrame->maGeometry.nY = pPosSize->nTop + pFrame->maGeometry.nTopDecoration;
 				pFrame->maGeometry.nWidth = pPosSize->GetWidth() - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration;
 				pFrame->maGeometry.nHeight = pPosSize->GetHeight() - pFrame->maGeometry.nTopDecoration - pFrame->maGeometry.nBottomDecoration;
 
-				if ( !pFrame->maFrameData.mbInSetPosSize )
-					pFrame->maFrameData.mbUseMainScreenOnly = FALSE;
+				if ( !pFrame->mbInSetPosSize )
+					pFrame->mbUseMainScreenOnly = FALSE;
 
 				// Reset graphics
-				com_sun_star_vcl_VCLGraphics *pVCLGraphics = pFrame->maFrameData.mpVCLFrame->getGraphics();
+				com_sun_star_vcl_VCLGraphics *pVCLGraphics = pFrame->mpVCLFrame->getGraphics();
 				if ( pVCLGraphics )
 				{
 					pVCLGraphics->resetGraphics();
 					delete pVCLGraphics;
 				}
 
-				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, NULL );
+				pFrame->CallCallback( nID, NULL );
 			}
 			if ( pPosSize )
 				delete pPosSize;
@@ -571,7 +574,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_PAINT:
 		{
 			SalPaintEvent *pPaintEvent = (SalPaintEvent *)pData;
-			if ( pFrame && pFrame->maFrameData.mbVisible )
+			if ( pFrame && pFrame->mbVisible )
 			{
 				if ( !pPaintEvent )
 				{
@@ -588,14 +591,14 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					pPaintEvent->mnBoundX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pPaintEvent->mnBoundWidth - pPaintEvent->mnBoundX;
 
 				// Reset graphics
-				com_sun_star_vcl_VCLGraphics *pVCLGraphics = pFrame->maFrameData.mpVCLFrame->getGraphics();
+				com_sun_star_vcl_VCLGraphics *pVCLGraphics = pFrame->mpVCLFrame->getGraphics();
 				if ( pVCLGraphics )
 				{
 					pVCLGraphics->resetGraphics();
 					delete pVCLGraphics;
 				}
 
-				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pPaintEvent );
+				pFrame->CallCallback( nID, pPaintEvent );
 			}
 			if ( pPaintEvent )
 				delete pPaintEvent;
@@ -604,13 +607,13 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_USEREVENT:
 		{
 			if ( pFrame )
-				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
+				pFrame->CallCallback( nID, pData );
 			break;
 		}
 		case SALEVENT_WHEELMOUSE:
 		{
 			SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)pData;
-			if ( !bDeleteDataOnly && pFrame && pFrame->maFrameData.mbVisible )
+			if ( !bDeleteDataOnly && pFrame && pFrame->mbVisible )
 			{
 				if ( !pWheelMouseEvent )
 				{
@@ -628,7 +631,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				// Adjust position for RTL layout
 				if ( Application::GetSettings().GetLayoutRTL() )
 					pWheelMouseEvent->mnX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pWheelMouseEvent->mnX - 1;
-				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pWheelMouseEvent );
+				pFrame->CallCallback( nID, pWheelMouseEvent );
 			}
 			if ( pWheelMouseEvent )
 				delete pWheelMouseEvent;
@@ -639,7 +642,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_MENUDEACTIVATE:
 		{
 			SalMenuEvent *pMenuEvent = (SalMenuEvent *)pData;
-			if ( !bDeleteDataOnly && pFrame && pFrame->maFrameData.mbVisible )
+			if ( !bDeleteDataOnly && pFrame && pFrame->mbVisible )
 			{
 				if ( !pMenuEvent )
 				{
@@ -647,7 +650,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					pMenuEvent->mnId = getMenuID();
 					pMenuEvent->mpMenu = (void *)getMenuCookie();
 				}
-				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pMenuEvent );
+				pFrame->CallCallback( nID, pMenuEvent );
 			}
 			if ( pMenuEvent )
 				delete pMenuEvent;
@@ -655,22 +658,22 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		default:
 		{
-			if ( pFrame && pFrame->maFrameData.mbVisible )
-				pFrame->maFrameData.mpProc( pFrame->maFrameData.mpInst, pFrame, nID, pData );
+			if ( pFrame && pFrame->mbVisible )
+				pFrame->CallCallback( nID, pData );
 			break;
 		}
 	}
 
 	if ( bFlushingDisabled )
 	{
-		for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+		for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 		{
 			if ( pFrame == *it )
 			{
-				if ( pFrame->maFrameData.mbVisible )
+				if ( pFrame->mbVisible )
 				{
 					bFlushingDisabled = false;
-					pFrame->maFrameData.mpVCLFrame->enableFlushing( sal_True );
+					pFrame->mpVCLFrame->enableFlushing( sal_True );
 				}
 				break;
 			}
@@ -743,10 +746,10 @@ void *com_sun_star_vcl_VCLEvent::getData()
 
 // ----------------------------------------------------------------------------
 
-SalFrame *com_sun_star_vcl_VCLEvent::getFrame()
+JavaSalFrame *com_sun_star_vcl_VCLEvent::getFrame()
 {
 	static jmethodID mID = NULL;
-	SalFrame *out = NULL;
+	JavaSalFrame *out = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
@@ -757,7 +760,7 @@ SalFrame *com_sun_star_vcl_VCLEvent::getFrame()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (SalFrame *)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+			out = (JavaSalFrame *)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
 }

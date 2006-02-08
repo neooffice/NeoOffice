@@ -38,8 +38,11 @@
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
-#ifndef _SV_SALFRAME_HXX
-#include <salframe.hxx>
+#ifndef _SV_SALFRAME_H
+#include <salframe.h>
+#endif
+#ifndef _SV_SVAPP_HXX
+#include <svapp.hxx>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX
 #include <com/sun/star/vcl/VCLPageFormat.hxx>
@@ -604,13 +607,13 @@ sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 	{
 		SalData *pSalData = GetSalData();
 
-		SalFrame *pFocusFrame = pSalData->mpFocusFrame;
+		JavaSalFrame *pFocusFrame = pSalData->mpFocusFrame;
 		if ( pFocusFrame )
 		{
 			// Ignore any AWT events while the page layout dialog is showing to
 			// emulate a modal dialog
 			void *pNSPrintInfo = getNativePrinterJob();
-			void *pDialog = NSPrintInfo_showPageLayoutDialog( pNSPrintInfo, pFocusFrame->maFrameData.mpVCLFrame->getNativeWindow(), ( getOrientation() == ORIENTATION_LANDSCAPE ) ? TRUE : FALSE );
+			void *pDialog = NSPrintInfo_showPageLayoutDialog( pNSPrintInfo, pFocusFrame->mpVCLFrame->getNativeWindow(), ( getOrientation() == ORIENTATION_LANDSCAPE ) ? TRUE : FALSE );
 
 			pSalData->mpNativeModalSheetFrame = pFocusFrame;
 			pSalData->mbInNativeModalSheet = true;

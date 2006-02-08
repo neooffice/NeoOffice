@@ -344,7 +344,7 @@ void ResetMenuEnabledStateForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu )
 
 	// Check is frame is valid
 	bool bFrameFound = false;
-	for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+	for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 	{
 		if ( *it == pFrame )
 		{
@@ -400,7 +400,7 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu )
 
 	// Check is frame is valid
 	bool bFrameFound = false;
-	for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+	for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 	{
 		if ( *it == pFrame )
 		{

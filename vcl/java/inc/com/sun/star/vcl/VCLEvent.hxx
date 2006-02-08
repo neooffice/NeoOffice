@@ -49,7 +49,7 @@
 #define SALEVENT_ABOUT			((USHORT)130)
 #define SALEVENT_PREFS			((USHORT)140)
 
-class SalFrame;
+class JavaSalFrame;
 
 namespace vcl {
 
@@ -64,8 +64,8 @@ public:
 	static jclass		getMyClass();
 
 						com_sun_star_vcl_VCLEvent( jobject myObj ) : java_lang_Object( myObj ) {};
-						com_sun_star_vcl_VCLEvent( USHORT nID, const SalFrame *pFrame, void *pData );
-						com_sun_star_vcl_VCLEvent( USHORT nID, const SalFrame *pFrame, void *pData, const char *str );
+						com_sun_star_vcl_VCLEvent( USHORT nID, const JavaSalFrame *pFrame, void *pData );
+						com_sun_star_vcl_VCLEvent( USHORT nID, const JavaSalFrame *pFrame, void *pData, const char *str );
 	virtual				~com_sun_star_vcl_VCLEvent() {};
 
 	void				cancelShutdown();
@@ -73,7 +73,7 @@ public:
 	ULONG				getCommittedCharacterCount();
 	ULONG				getCursorPosition();
 	void*				getData();
-	SalFrame*			getFrame();
+	JavaSalFrame*		getFrame();
 	USHORT				getKeyChar();
 	USHORT				getKeyCode();
 	USHORT				getID();

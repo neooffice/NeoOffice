@@ -69,7 +69,7 @@ static const void *GetBytePointerCallback( void *pInfo )
 
 // ----------------------------------------------------------------------------
 
-static const void *ReleaseBytePointerCallback( void *pInfo, const void *pPointer )
+static const void ReleaseBytePointerCallback( void *pInfo, const void *pPointer )
 {
 	if ( pPointer )
 		rtl_freeMemory( (jint *)pPointer );
@@ -79,7 +79,7 @@ static const void *ReleaseBytePointerCallback( void *pInfo, const void *pPointer
 
 JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pEnv, jobject object, jintArray _par0, jint _par1, jint _par2, jint _par3, jint _par4, jint _par5, jint _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14 )
 {
-	static CGDataProviderDirectAccessCallbacks aProviderCallbacks = { GetBytePointerCallback, ReleaseBytePointerCallback, NULL, NULL };
+	static CGDataProviderDirectAccessCallbacks aProviderCallbacks = { GetBytePointerCallback, (void (*)(void*, const void*))ReleaseBytePointerCallback, NULL, NULL };
 
 	float fScaleX = _par9 / _par5;
 	float fScaleY = _par10 / _par6;

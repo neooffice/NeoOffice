@@ -59,6 +59,7 @@
 #endif
 
 class ImplFontData;
+class JavaSalFrame;
 
 // -----------
 // - SalData -
@@ -68,8 +69,8 @@ class SalData
 {
 public:
 	SalInstance*			mpFirstInstance;
-	::std::list< SalFrame* >	maFrameList;
-	SalFrame*				mpFocusFrame;
+	::std::list< JavaSalFrame* >	maFrameList;
+	JavaSalFrame*			mpFocusFrame;
 	timeval					maTimeout;
 	SALTIMERPROC			mpTimerProc;
 	ULONG					mnTimerInterval;
@@ -78,12 +79,12 @@ public:
 	::std::map< XubString, ImplFontData* >	maFontNameMapping;
 	::std::map< ::rtl::OUString, ImplFontData* >	maJavaFontNameMapping;
 	::std::map< void*, ImplFontData* >	maNativeFontMapping;
-	SalFrame*				mpPresentationFrame;
+	JavaSalFrame*			mpPresentationFrame;
 	::osl::Condition		maNativeEventCondition;
 	bool					mbNativeEventSucceeded;
 	bool					mbInNativeMenuTracking;
 	bool					mbInNativeModalSheet;
-	SalFrame*				mpNativeModalSheetFrame;
+	JavaSalFrame*			mpNativeModalSheetFrame;
 	::std::list< SalGraphics* >	maGraphicsList;
 
 							SalData();
