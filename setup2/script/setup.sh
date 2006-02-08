@@ -108,7 +108,10 @@ if [ ! -d "$configdir" -o ! -d "$registrydir" -o ! -d "$wordbookdir" ] ; then
     # 1.1 preferences
     if [ ! -d "$userinstall" -a -d "$olduserinstall" ] ; then
         mkdir -p "$userinstall"
-        ( cd "$olduserinstall" ; pax -w -x cpio "." ) | ( cd "$userinstall" ; pax -r )
+        ( cd "$olduserinstall" ; gnutar cf - "." ) | ( cd "$userinstall" ; gnutar xf - )
+        if [ $? -ne 0 ] ; then
+            ( cd "$olduserinstall" ; pax -w -x cpio "." ) | ( cd "$userinstall" ; pax -r )
+        fi
         if [ $? -eq 0 ] ; then
             rm -f "$userinstall/../.lock"
             rm -f "$registrydir/Office/Common.xcu.set.3"
@@ -129,7 +132,10 @@ if [ ! -z "$repair" ] ; then
         if [ ! -z "`ls "$userinstall"`" ] ; then
             userinstallbak="$userinstall.backup.`date +%Y%m%d%H%M`"
             mkdir -p "$userinstallbak"
-            ( cd "$userinstall" ; pax -w -x cpio "." ) | ( cd "$userinstallbak" ; pax -r )
+            ( cd "$userinstall" ; gnutar cf - "." ) | ( cd "$userinstallbak" ; gnutar xf - )
+            if [ $? -ne 0 ] ; then
+                ( cd "$userinstall" ; pax -w -x cpio "." ) | ( cd "$userinstallbak" ; pax -r )
+            fi
         fi
     else
         rm -f "$userinstall"
@@ -137,11 +143,17 @@ if [ ! -z "$repair" ] ; then
     mkdir -p "$userinstall"
     # Make a clean copy of the registry directory
     rm -Rf "$userinstall/registry"
-    ( cd "$userbase" ; pax -w -x cpio "registry" ) | ( cd "$userinstall" ; pax -r )
+    ( cd "$userbase" ; gnutar cf - "registry" ) | ( cd "$userinstall" ; gnutar xf - )
+    if [ $? -ne 0 ] ; then
+        ( cd "$userbase" ; pax -w -x cpio "registry" ) | ( cd "$userinstall" ; pax -r )
+    fi
 fi
 
 # Copy any missing files
-( cd "$userbase" ; pax -w -x cpio "." ) | ( cd "$userinstall" ; pax -r -k )
+( cd "$userbase" ; gnutar cf - "." ) | ( cd "$userinstall" ; gnutar xfk - 2>/dev/null )
+if [ $? -ne 0 ] ; then
+    ( cd "$userbase" ; pax -w -x cpio "." ) | ( cd "$userinstall" ; pax -r -k )
+fi
 chmod -Rf u+rwx "$userinstall"
 if [ ! -d "$configdir" -o ! -d "$registrydir" -o ! -d "$wordbookdir" ] ; then
     error "Installation of files in the $userinstall directory failed"
