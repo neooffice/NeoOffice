@@ -265,10 +265,10 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								pSalData->maFontNameMapping.erase( it );
 							}
 							::std::map< int, JavaImplFontData* >::iterator nit = pSalData->maNativeFontMapping.find( pNativeFont );
-							if ( it != pSalData->maNativeFontMapping.end() )
+							if ( nit != pSalData->maNativeFontMapping.end() )
 								pSalData->maNativeFontMapping.erase( nit );
 							::std::map< OUString, JavaImplFontData* >::iterator jit = pSalData->maJavaFontNameMapping.find( aFontName );
-							if ( it != pSalData->maJavaFontNameMapping.end() )
+							if ( jit != pSalData->maJavaFontNameMapping.end() )
 								pSalData->maJavaFontNameMapping.erase( jit );
 
 							ImplDevFontAttributes aAttributes;
