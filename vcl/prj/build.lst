@@ -32,7 +32,7 @@ vc	vcl\mac\source\window					nmake	-	m	vc__winm vc_unot NULL
 vc	vcl\mac\source\src						nmake	-	m	vc__srcm vc_unot NULL
 vc	vcl\java\source\app						nmake	-	u	vc__appj vc_unot NULL
 vc	vcl\java\source\gdi						nmake	-	u	vc__gdij vc_unot NULL
-vc	vcl\win\source\window					nmake	-	u	vc__winj vc_unot NULL
+vc	vcl\java\source\window					nmake	-	u	vc__winj vc_unot NULL
 vc	vcl\java\source\java					nmake	-	u	vc__javaj vc_unot NULL
 vc	vcl\java\com\sun\star\vcl				nmake	-	u	vc__javavcl vc_unot NULL
 vc	vcl\java\com\sun\star\vcl\macosx		nmake	-	u	vc__javavclmacosx vc_unot NULL
