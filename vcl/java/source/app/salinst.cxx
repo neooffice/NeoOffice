@@ -70,6 +70,9 @@
 #ifndef _SV_SALSOUND_H
 #include <salsound.h>
 #endif
+#ifndef _SV_SALSYS_H
+#include <salsys.h>
+#endif
 #ifndef _SV_SALTIMER_H
 #include <saltimer.h>
 #endif
@@ -234,6 +237,14 @@ void SalAbort( const XubString& rErrorText )
 		fprintf( stderr, ByteString( rErrorText, gsl_getSystemTextEncoding() ).GetBuffer() );
 	fprintf( stderr, "\n" );
 	abort();
+}
+
+// -----------------------------------------------------------------------
+
+const ::rtl::OUString& SalGetDesktopEnvironment()
+{
+	static ::rtl::OUString aDesktopEnvironment( RTL_CONSTASCII_USTRINGPARAM( "Mac OS X" ) );
+	return aDesktopEnvironment;
 }
 
 // -----------------------------------------------------------------------
@@ -871,6 +882,13 @@ SalBitmap* JavaSalInstance::CreateSalBitmap()
 SalSession* JavaSalInstance::CreateSalSession()
 {
 	return NULL;
+}
+
+// -----------------------------------------------------------------------
+
+SalSystem* JavaSalInstance::CreateSalSystem()
+{
+	return new JavaSalSystem();
 }
 
 // =========================================================================
