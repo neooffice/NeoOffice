@@ -68,9 +68,9 @@ public:
 	ULONG					mnTimerInterval;
 	XubString				maDefaultPrinter;
 	::vcl::com_sun_star_vcl_VCLEventQueue*	mpEventQueue;
-	::std::map< XubString, JavaImplFontData* >	maFontNameMapping;
+	::std::map< String, JavaImplFontData* >	maFontNameMapping;
 	::std::map< ::rtl::OUString, JavaImplFontData* >	maJavaFontNameMapping;
-	::std::map< void*, JavaImplFontData* >	maNativeFontMapping;
+	::std::map< int, JavaImplFontData* >	maNativeFontMapping;
 	JavaSalFrame*			mpPresentationFrame;
 	::osl::Condition		maNativeEventCondition;
 	bool					mbNativeEventSucceeded;

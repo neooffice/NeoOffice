@@ -35,8 +35,11 @@
 
 #define _SV_SALPRN_CXX
 
-#ifndef _SV_SALPRN_HXX
-#include <salprn.hxx>
+#ifndef _SV_SALPRN_H
+#include <salprn.h>
+#endif
+#ifndef _SV_SALGDI_H
+#include <salgdi.h>
 #endif
 #ifndef _SV_SALPTYPE_HXX
 #include <salptype.hxx>
@@ -56,53 +59,60 @@ using namespace vcl;
 
 // =======================================================================
 
-SalInfoPrinter::SalInfoPrinter()
+JavaSalInfoPrinter::JavaSalInfoPrinter()
 {
+	mpGraphics = new JavaSalGraphics();
+	mbGraphics = FALSE;
+	mpVCLPageFormat = NULL;
 }
 
 // -----------------------------------------------------------------------
 
-SalInfoPrinter::~SalInfoPrinter()
+JavaSalInfoPrinter::~JavaSalInfoPrinter()
 {
+	if ( mpGraphics )
+		delete mpGraphics;
+	if ( mpVCLPageFormat )
+		delete mpVCLPageFormat;
 }
 
 // -----------------------------------------------------------------------
 
-SalGraphics* SalInfoPrinter::GetGraphics()
+SalGraphics* JavaSalInfoPrinter::GetGraphics()
 {
-	if ( maPrinterData.mbGraphics )
+	if ( mbGraphics )
 		return NULL;
 
-	maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics = maPrinterData.mpVCLPageFormat->getGraphics();
-	maPrinterData.mbGraphics = TRUE;
+	mpGraphics->mpVCLGraphics = mpVCLPageFormat->getGraphics();
+	mbGraphics = TRUE;
 
-	return maPrinterData.mpGraphics;
+	return mpGraphics;
 }
 
 // -----------------------------------------------------------------------
 
-void SalInfoPrinter::ReleaseGraphics( SalGraphics* pGraphics )
+void JavaSalInfoPrinter::ReleaseGraphics( SalGraphics* pGraphics )
 {
-	if ( pGraphics != maPrinterData.mpGraphics )
+	if ( pGraphics != mpGraphics )
 		return;
 
-	if ( maPrinterData.mpGraphics && maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics )
-		delete maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics;
-	maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics = NULL;
-	maPrinterData.mbGraphics = FALSE;
+	if ( mpGraphics && mpGraphics->mpVCLGraphics )
+		delete mpGraphics->mpVCLGraphics;
+	mpGraphics->mpVCLGraphics = NULL;
+	mbGraphics = FALSE;
 }
 
 // -----------------------------------------------------------------------
 
-BOOL SalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
+BOOL JavaSalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 {
 	// Display a native page setup dialog
-	Orientation nOrientation = maPrinterData.mpVCLPageFormat->getOrientation();
-	maPrinterData.mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
+	Orientation nOrientation = mpVCLPageFormat->getOrientation();
+	mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
 
-	BOOL bOK = maPrinterData.mpVCLPageFormat->setup();
+	BOOL bOK = mpVCLPageFormat->setup();
 	if ( !bOK )
-		maPrinterData.mpVCLPageFormat->setOrientation( nOrientation );
+		mpVCLPageFormat->setOrientation( nOrientation );
 
 	// Update values
 	SetData( 0, pSetupData );
@@ -112,7 +122,7 @@ BOOL SalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 
 // -----------------------------------------------------------------------
 
-BOOL SalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
+BOOL JavaSalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
 {
 	// Clear driver data
 	if ( pSetupData->mpDriverData )
@@ -130,13 +140,13 @@ BOOL SalInfoPrinter::SetPrinterData( ImplJobSetup* pSetupData )
 
 // -----------------------------------------------------------------------
 
-BOOL SalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
+BOOL JavaSalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 {
 	// Set or update values
 	if ( ! ( nFlags & SAL_JOBSET_ORIENTATION ) )
-		pSetupData->meOrientation = maPrinterData.mpVCLPageFormat->getOrientation();
+		pSetupData->meOrientation = mpVCLPageFormat->getOrientation();
 	else
-		maPrinterData.mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
+		mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
 
 	if ( ! ( nFlags & SAL_JOBSET_PAPERBIN ) )
 		pSetupData->mnPaperBin = 0;
@@ -144,8 +154,8 @@ BOOL SalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 
 	if ( ! ( nFlags & SAL_JOBSET_PAPERSIZE ) )
 	{
-		pSetupData->mePaperFormat = maPrinterData.mpVCLPageFormat->getPaperType();
-		Size aSize( maPrinterData.mpVCLPageFormat->getPageSize() );
+		pSetupData->mePaperFormat = mpVCLPageFormat->getPaperType();
+		Size aSize( mpVCLPageFormat->getPageSize() );
 		pSetupData->mnPaperWidth = aSize.Width();
 		pSetupData->mnPaperHeight = aSize.Height();
 	}
@@ -155,7 +165,7 @@ BOOL SalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 
 // -----------------------------------------------------------------------
 
-ULONG SalInfoPrinter::GetPaperBinCount( const ImplJobSetup* pSetupData )
+ULONG JavaSalInfoPrinter::GetPaperBinCount( const ImplJobSetup* pSetupData )
 {
 	// Return a dummy value
 	return 1;
@@ -163,7 +173,7 @@ ULONG SalInfoPrinter::GetPaperBinCount( const ImplJobSetup* pSetupData )
 
 // -----------------------------------------------------------------------
 
-XubString SalInfoPrinter::GetPaperBinName( const ImplJobSetup* pSetupData, ULONG nPaperBin )
+XubString JavaSalInfoPrinter::GetPaperBinName( const ImplJobSetup* pSetupData, ULONG nPaperBin )
 {
 	// Return a dummy value
 	return XubString();
@@ -171,7 +181,7 @@ XubString SalInfoPrinter::GetPaperBinName( const ImplJobSetup* pSetupData, ULONG
 
 // -----------------------------------------------------------------------
 
-ULONG SalInfoPrinter::GetCapabilities( const ImplJobSetup* pSetupData, USHORT nType )
+ULONG JavaSalInfoPrinter::GetCapabilities( const ImplJobSetup* pSetupData, USHORT nType )
 {
 	if ( nType == PRINTER_CAPABILITIES_SETORIENTATION )
 		return 1;
@@ -181,13 +191,13 @@ ULONG SalInfoPrinter::GetCapabilities( const ImplJobSetup* pSetupData, USHORT nT
 
 // -----------------------------------------------------------------------
 
-void SalInfoPrinter::GetPageInfo( const ImplJobSetup* pSetupData,
+void JavaSalInfoPrinter::GetPageInfo( const ImplJobSetup* pSetupData,
 								  long& rOutWidth, long& rOutHeight,
 								  long& rPageOffX, long& rPageOffY,
 								  long& rPageWidth, long& rPageHeight )
 {
-	Size aSize( maPrinterData.mpVCLPageFormat->getPageSize() );
-	Rectangle aRect( maPrinterData.mpVCLPageFormat->getImageableBounds() );
+	Size aSize( mpVCLPageFormat->getPageSize() );
+	Rectangle aRect( mpVCLPageFormat->getImageableBounds() );
 	rPageWidth = aSize.Width();
 	rPageHeight = aSize.Height();
 	rPageOffX = aRect.nLeft;
@@ -196,99 +206,38 @@ void SalInfoPrinter::GetPageInfo( const ImplJobSetup* pSetupData,
 	rOutHeight = aRect.nBottom - aRect.nTop + 1;
 }
 
-// =======================================================================
+// -----------------------------------------------------------------------
 
-SalPrinter::SalPrinter()
+void JavaSalInfoPrinter::InitPaperFormats( const ImplJobSetup* pSetupData )
 {
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalInfoPrinter::InitPaperFormats not implemented\n" );
+#endif
 }
 
 // -----------------------------------------------------------------------
 
-SalPrinter::~SalPrinter()
+int JavaSalInfoPrinter::GetLandscapeAngle( const ImplJobSetup* pSetupData )
 {
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalInfoPrinter::GetLandscapeAngle not implemented\n" );
+#endif
+	return 900;
 }
 
 // -----------------------------------------------------------------------
 
-BOOL SalPrinter::StartJob( const XubString* pFileName,
-						   const XubString& rJobName,
-						   const XubString&,
-						   ULONG nCopies, BOOL bCollate,
-						   ImplJobSetup* pSetupData )
+DuplexMode JavaSalInfoPrinter::GetDuplexMode( const ImplJobSetup* pJobSetup )
 {
-	maPrinterData.mbStarted = maPrinterData.mpVCLPrintJob->startJob( maPrinterData.mpVCLPageFormat, OUString( rJobName ), maPrinterData.mbStarted );
-	return maPrinterData.mbStarted;
-}
-
-// -----------------------------------------------------------------------
-
-BOOL SalPrinter::EndJob()
-{
-	maPrinterData.mpVCLPrintJob->endJob();
-	maPrinterData.mbStarted = FALSE;
-	return TRUE;
-}
-
-// -----------------------------------------------------------------------
-
-BOOL SalPrinter::AbortJob()
-{
-	maPrinterData.mpVCLPrintJob->abortJob();
-	return TRUE;
-}
-
-// -----------------------------------------------------------------------
-
-SalGraphics* SalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobData )
-{
-	if ( maPrinterData.mbGraphics )
-		return NULL;
-
-	com_sun_star_vcl_VCLGraphics *pVCLGraphics = maPrinterData.mpVCLPrintJob->startPage( pSetupData->meOrientation );
-	if ( !pVCLGraphics )
-		return NULL;
-	maPrinterData.mpGraphics = new SalGraphics();
-	maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics = pVCLGraphics;
-	maPrinterData.mpGraphics->maGraphicsData.mpPrinter = this;
-	maPrinterData.mbGraphics = TRUE;
-
-	return maPrinterData.mpGraphics;
-}
-
-// -----------------------------------------------------------------------
-
-BOOL SalPrinter::EndPage()
-{
-	if ( maPrinterData.mpGraphics && maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics )
-		delete maPrinterData.mpGraphics->maGraphicsData.mpVCLGraphics;
-	if ( maPrinterData.mpGraphics )
-		delete maPrinterData.mpGraphics;
-	maPrinterData.mpGraphics = NULL;
-	maPrinterData.mbGraphics = FALSE;
-	maPrinterData.mpVCLPrintJob->endPage();
-	return TRUE;
-}
-
-// -----------------------------------------------------------------------
-
-ULONG SalPrinter::GetErrorCode()
-{
-	if ( !maPrinterData.mbStarted || maPrinterData.mpVCLPrintJob->isFinished() )
-		return SAL_PRINTER_ERROR_ABORT;
-	else
-		return 0;
-}
-
-// -----------------------------------------------------------------------
-
-XubString SalPrinter::GetPageRange()
-{
-	return maPrinterData.mpVCLPrintJob->getPageRange( maPrinterData.mpVCLPageFormat );
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalInfoPrinter::GetDuplexMode not implemented\n" );
+#endif
+	return DUPLEX_UNKNOWN;
 }
 
 // =======================================================================
 
-SalPrinterData::SalPrinterData()
+JavaSalPrinter::JavaSalPrinter()
 {
 	mbStarted = FALSE;
 	mpGraphics = NULL;
@@ -299,7 +248,7 @@ SalPrinterData::SalPrinterData()
 
 // -----------------------------------------------------------------------
 
-SalPrinterData::~SalPrinterData()
+JavaSalPrinter::~JavaSalPrinter()
 {
 	if ( mpGraphics )
 		delete mpGraphics;
@@ -312,40 +261,80 @@ SalPrinterData::~SalPrinterData()
 	}
 }
 
-// =======================================================================
+// -----------------------------------------------------------------------
 
-SalInfoPrinterData::SalInfoPrinterData()
+BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
+						   const XubString& rJobName,
+						   const XubString&,
+						   ULONG nCopies, BOOL bCollate,
+						   ImplJobSetup* pSetupData )
 {
-	mpGraphics = new SalGraphics();
-	mbGraphics = FALSE;
-	mpVCLPageFormat = NULL;
+	mbStarted = mpVCLPrintJob->startJob( mpVCLPageFormat, OUString( rJobName ), mbStarted );
+	return mbStarted;
 }
 
 // -----------------------------------------------------------------------
 
-SalInfoPrinterData::~SalInfoPrinterData()
+BOOL JavaSalPrinter::EndJob()
 {
+	mpVCLPrintJob->endJob();
+	mbStarted = FALSE;
+	return TRUE;
+}
+
+// -----------------------------------------------------------------------
+
+BOOL JavaSalPrinter::AbortJob()
+{
+	mpVCLPrintJob->abortJob();
+	return TRUE;
+}
+
+// -----------------------------------------------------------------------
+
+SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobData )
+{
+	if ( mbGraphics )
+		return NULL;
+
+	com_sun_star_vcl_VCLGraphics *pVCLGraphics = mpVCLPrintJob->startPage( pSetupData->meOrientation );
+	if ( !pVCLGraphics )
+		return NULL;
+	mpGraphics = new JavaSalGraphics();
+	mpGraphics->mpVCLGraphics = pVCLGraphics;
+	mpGraphics->mpPrinter = this;
+	mbGraphics = TRUE;
+
+	return mpGraphics;
+}
+
+// -----------------------------------------------------------------------
+
+BOOL JavaSalPrinter::EndPage()
+{
+	if ( mpGraphics && mpGraphics->mpVCLGraphics )
+		delete mpGraphics->mpVCLGraphics;
 	if ( mpGraphics )
 		delete mpGraphics;
-	if ( mpVCLPageFormat )
-		delete mpVCLPageFormat;
+	mpGraphics = NULL;
+	mbGraphics = FALSE;
+	mpVCLPrintJob->endPage();
+	return TRUE;
 }
 
 // -----------------------------------------------------------------------
 
-int SalInfoPrinter::GetLandscapeAngle( const ImplJobSetup* pSetupData )
+ULONG JavaSalPrinter::GetErrorCode()
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalInfoPrinter::GetLandscapeAngle not implemented\n" );
-#endif
-	return 900;
+	if ( !mbStarted || mpVCLPrintJob->isFinished() )
+		return SAL_PRINTER_ERROR_ABORT;
+	else
+		return 0;
 }
 
 // -----------------------------------------------------------------------
 
-void SalInfoPrinter::InitPaperFormats( const ImplJobSetup* pSetupData )
+XubString JavaSalPrinter::GetPageRange()
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalInfoPrinter::InitPaperFormats not implemented\n" );
-#endif
+	return mpVCLPrintJob->getPageRange( mpVCLPageFormat );
 }

@@ -66,14 +66,14 @@ public:
 	long				getKerning( USHORT _par0, USHORT _par1 );
 	long				getLeading();
 	::rtl::OUString		getName();
-	void*				getNativeFont();
+	int					getNativeFont();
 	short				getOrientation();
 	::rtl::OUString		getPSName();
 	double				getScaleX();
 	long				getSize();
 	sal_Bool			isAntialiased();
 	sal_Bool			isVertical();
-	void				setNativeFont( void *_par0 );
+	void				setNativeFont( int _par0 );
 };
 
 } // namespace vcl

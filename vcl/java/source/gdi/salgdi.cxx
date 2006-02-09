@@ -35,14 +35,14 @@
 
 #define _SV_SALGDI_CXX
 
-#ifndef _SV_SALGDI_HXX
-#include <salgdi.hxx>
+#ifndef _SV_SALGDI_H
+#include <salgdi.h>
 #endif
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
-#ifndef _SV_SALFRAME_HXX
-#include <salframe.hxx>
+#ifndef _SV_SALFRAME_H
+#include <salframe.h>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
@@ -55,263 +55,7 @@ using namespace vcl;
 
 // =======================================================================
 
-SalGraphics::SalGraphics()
-{
-	GetSalData()->maGraphicsList.push_back( this );
-}
-
-// -----------------------------------------------------------------------
-
-SalGraphics::~SalGraphics()
-{
-	GetSalData()->maGraphicsList.remove( this );
-}
-
-// -----------------------------------------------------------------------
-
-void SalGraphics::GetResolution( long& rDPIX, long& rDPIY )
-{
-	Size aSize( maGraphicsData.mpVCLGraphics->getResolution() );
-	rDPIX = aSize.Width();
-	rDPIY = aSize.Height();
-}
-
-// -----------------------------------------------------------------------
-
-void SalGraphics::GetScreenFontResolution( long& rDPIX, long& rDPIY )
-{
-	Size aSize( maGraphicsData.mpVCLGraphics->getScreenFontResolution() );
-	rDPIX = aSize.Width();
-	rDPIY = aSize.Height();
-}
-
-// -----------------------------------------------------------------------
-
-USHORT SalGraphics::GetBitCount()
-{
-	return maGraphicsData.mpVCLGraphics->getBitCount();
-}
-
-// -----------------------------------------------------------------------
-
-void SalGraphics::ResetClipRegion()
-{
-	maGraphicsData.mpVCLGraphics->resetClipRegion();
-}
-
-// -----------------------------------------------------------------------
-
-void SalGraphics::BeginSetClipRegion( ULONG nRectCount )
-{
-	maGraphicsData.mpVCLGraphics->beginSetClipRegion();
-}
-
-// -----------------------------------------------------------------------
-
-BOOL SalGraphics::UnionClipRegion( long nX, long nY, long nWidth, long nHeight,
-                                   const OutputDevice *pOutDev )
-{
-	maGraphicsData.mpVCLGraphics->unionClipRegion( nX, nY, nWidth, nHeight );
-	return TRUE;
-}
-
-// -----------------------------------------------------------------------
-
-void SalGraphics::EndSetClipRegion()
-{
-	maGraphicsData.mpVCLGraphics->endSetClipRegion();
-}
-
-// -----------------------------------------------------------------------
-
-void SalGraphics::SetLineColor()
-{
-	maGraphicsData.mnLineColor = 0x00000000;
-}
-
-// -----------------------------------------------------------------------
-
-void SalGraphics::SetLineColor( SalColor nSalColor )
-{
-	maGraphicsData.mnLineColor = nSalColor | 0xff000000;
-}
-
-// -----------------------------------------------------------------------
-
-void SalGraphics::SetFillColor()
-{
-	maGraphicsData.mnFillColor = 0x00000000;
-}
-
-// -----------------------------------------------------------------------
-
-void SalGraphics::SetFillColor( SalColor nSalColor )
-{
-	maGraphicsData.mnFillColor = nSalColor | 0xff000000;
-}
-
-// -----------------------------------------------------------------------
-
-void SalGraphics::SetXORMode( BOOL bSet )
-{
-	maGraphicsData.mpVCLGraphics->setXORMode( bSet );
-}
-
-// -----------------------------------------------------------------------
-
-void SalGraphics::SetROPLineColor( SalROPColor nROPColor )
-{
-	if ( nROPColor == SAL_ROP_0 )
-		SetLineColor( MAKE_SALCOLOR( 0, 0, 0 ) );
-	else
-		SetLineColor( MAKE_SALCOLOR( 0xff, 0xff, 0xff ) );
-}
-
-// -----------------------------------------------------------------------
-
-void SalGraphics::SetROPFillColor( SalROPColor nROPColor )
-{
-	if ( nROPColor == SAL_ROP_0 )
-		SetFillColor( MAKE_SALCOLOR( 0, 0, 0 ) );
-	else
-		SetFillColor( MAKE_SALCOLOR( 0xff, 0xff, 0xff ) );
-}
-
-// -----------------------------------------------------------------------
-
-void SalGraphics::DrawPixel( long nX, long nY, const OutputDevice *pOutDev )
-{
-	if ( maGraphicsData.mnLineColor )
-		maGraphicsData.mpVCLGraphics->setPixel( nX, nY, maGraphicsData.mnLineColor );
-}
-
-// -----------------------------------------------------------------------
-
-void SalGraphics::DrawPixel( long nX, long nY, SalColor nSalColor,
-                             const OutputDevice *pOutDev )
-{
-	maGraphicsData.mpVCLGraphics->setPixel( nX, nY, nSalColor | 0xff000000 );
-}
-
-// -----------------------------------------------------------------------
-
-void SalGraphics::DrawLine( long nX1, long nY1, long nX2, long nY2,
-                             const OutputDevice *pOutDev )
-{
-	if ( maGraphicsData.mnLineColor )
-		maGraphicsData.mpVCLGraphics->drawLine( nX1, nY1, nX2, nY2, maGraphicsData.mnLineColor );
-}
-
-// -----------------------------------------------------------------------
-
-void SalGraphics::DrawRect( long nX, long nY, long nWidth, long nHeight,
-                            const OutputDevice *pOutDev )
-{
-	if ( maGraphicsData.mnFillColor )
-		maGraphicsData.mpVCLGraphics->drawRect( nX, nY, nWidth, nHeight, maGraphicsData.mnFillColor, TRUE );
-	if ( maGraphicsData.mnLineColor )
-		maGraphicsData.mpVCLGraphics->drawRect( nX, nY, nWidth, nHeight, maGraphicsData.mnLineColor, FALSE );
-}
-
-// -----------------------------------------------------------------------
-
-void SalGraphics::DrawPolyLine( ULONG nPoints, const SalPoint* pPtAry,
-                                const OutputDevice *pOutDev )
-{
-	if ( maGraphicsData.mnLineColor )
-		maGraphicsData.mpVCLGraphics->drawPolyline( nPoints, pPtAry, maGraphicsData.mnLineColor );
-}
-
-// -----------------------------------------------------------------------
-
-void SalGraphics::DrawPolygon( ULONG nPoints, const SalPoint* pPtAry,
-                               const OutputDevice *pOutDev )
-{
-	if ( maGraphicsData.mnFillColor )
-		maGraphicsData.mpVCLGraphics->drawPolygon( nPoints, pPtAry, maGraphicsData.mnFillColor, TRUE );
-	if ( maGraphicsData.mnLineColor )
-		maGraphicsData.mpVCLGraphics->drawPolygon( nPoints, pPtAry, maGraphicsData.mnLineColor, FALSE );
-}
-
-// -----------------------------------------------------------------------
-
-void SalGraphics::DrawPolyPolygon( ULONG nPoly, const ULONG* pPoints,
-								   PCONSTSALPOINT* pPtAry,
-                                   const OutputDevice *pOutDev )
-{
-	if ( maGraphicsData.mnFillColor )
-		maGraphicsData.mpVCLGraphics->drawPolyPolygon( nPoly, pPoints, pPtAry, maGraphicsData.mnFillColor, TRUE );
-	if ( maGraphicsData.mnLineColor )
-		maGraphicsData.mpVCLGraphics->drawPolyPolygon( nPoly, pPoints, pPtAry, maGraphicsData.mnLineColor, FALSE);
-}
-
-// -----------------------------------------------------------------------
-
-sal_Bool SalGraphics::DrawPolyLineBezier( ULONG nPoints,
-                                          const SalPoint* pPtAry,
-                                          const BYTE* pFlgAry,
-                                          const OutputDevice* )
-{
-#ifdef DEBUG
-	fprintf( stderr, "SalGraphics::DrawPolyLineBezier not implemented\n" );
-#endif
-	return sal_False;
-}
-
-// -----------------------------------------------------------------------
-
-sal_Bool SalGraphics::DrawPolygonBezier( ULONG nPoints,
-                                         const SalPoint* pPtAry,
-                                         const BYTE* pFlgAry,
-                                         const OutputDevice* )
-{
-#ifdef DEBUG
-	fprintf( stderr, "SalGraphics::DrawPolygonBezier not implemented\n" );
-#endif
-	return sal_False;
-}
-
-// -----------------------------------------------------------------------
-
-sal_Bool SalGraphics::DrawPolyPolygonBezier( ULONG nPoly, const ULONG* nPoints,
-                                         const SalPoint* const* pPtAry,
-                                         const BYTE* const* pFlgAry,
-                                         const OutputDevice* )
-{
-#ifdef DEBUG
-	fprintf( stderr, "SalGraphics::DrawPolyPolygonBezier not implemented\n" );
-#endif
-	return sal_False;
-}
-
-// -----------------------------------------------------------------------
-
-BOOL SalGraphics::DrawEPS( long nX, long nY, long nWidth, long nHeight,
-                           void* pPtr, ULONG nSize,
-                           const OutputDevice *pOutDev )
-{
-	if ( maGraphicsData.mpPrinter )
-	{
-		maGraphicsData.mpVCLGraphics->drawEPS( pPtr, nSize, nX, nY, nWidth, nHeight );
-		return TRUE;
-	}
-
-	return FALSE;
-}
-
-// -----------------------------------------------------------------------
-
-long SalGraphics::GetGraphicsWidth()
-{
-	if ( maGraphicsData.mpFrame )
-		return maGraphicsData.mpFrame->maGeometry.nWidth;
-	else
-		return 0;
-}
-
-// =======================================================================
-
-SalGraphicsData::SalGraphicsData()
+JavaSalGraphics::JavaSalGraphics()
 {
 	mnFillColor = MAKE_SALCOLOR( 0xff, 0xff, 0xff ) | 0xff000000;
 	mnLineColor = MAKE_SALCOLOR( 0, 0, 0 ) | 0xff000000;
@@ -321,15 +65,233 @@ SalGraphicsData::SalGraphicsData()
 	mpVirDev = NULL;
 	mpVCLGraphics = NULL;
 	mpVCLFont = NULL;
+
+	GetSalData()->maGraphicsList.push_back( this );
 }
 
 // -----------------------------------------------------------------------
 
-SalGraphicsData::~SalGraphicsData()
+JavaSalGraphics::~JavaSalGraphics()
 {
+	GetSalData()->maGraphicsList.remove( this );
+
 	if ( mpVCLFont )
 		delete mpVCLFont;
 
 	for ( ::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = maFallbackFonts.begin(); it != maFallbackFonts.end(); ++it )
 		delete it->second;
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::GetResolution( long& rDPIX, long& rDPIY )
+{
+	Size aSize( mpVCLGraphics->getResolution() );
+	rDPIX = aSize.Width();
+	rDPIY = aSize.Height();
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::GetScreenFontResolution( long& rDPIX, long& rDPIY )
+{
+	Size aSize( mpVCLGraphics->getScreenFontResolution() );
+	rDPIX = aSize.Width();
+	rDPIY = aSize.Height();
+}
+
+// -----------------------------------------------------------------------
+
+USHORT JavaSalGraphics::GetBitCount()
+{
+	return mpVCLGraphics->getBitCount();
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::ResetClipRegion()
+{
+	mpVCLGraphics->resetClipRegion();
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::BeginSetClipRegion( ULONG nRectCount )
+{
+	mpVCLGraphics->beginSetClipRegion();
+}
+
+// -----------------------------------------------------------------------
+
+BOOL JavaSalGraphics::unionClipRegion( long nX, long nY, long nWidth, long nHeight )
+{
+	mpVCLGraphics->unionClipRegion( nX, nY, nWidth, nHeight );
+	return TRUE;
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::EndSetClipRegion()
+{
+	mpVCLGraphics->endSetClipRegion();
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::SetLineColor()
+{
+	mnLineColor = 0x00000000;
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::SetLineColor( SalColor nSalColor )
+{
+	mnLineColor = nSalColor | 0xff000000;
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::SetFillColor()
+{
+	mnFillColor = 0x00000000;
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::SetFillColor( SalColor nSalColor )
+{
+	mnFillColor = nSalColor | 0xff000000;
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::SetXORMode( BOOL bSet )
+{
+	mpVCLGraphics->setXORMode( bSet );
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::SetROPLineColor( SalROPColor nROPColor )
+{
+	if ( nROPColor == SAL_ROP_0 )
+		SetLineColor( MAKE_SALCOLOR( 0, 0, 0 ) );
+	else
+		SetLineColor( MAKE_SALCOLOR( 0xff, 0xff, 0xff ) );
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::SetROPFillColor( SalROPColor nROPColor )
+{
+	if ( nROPColor == SAL_ROP_0 )
+		SetFillColor( MAKE_SALCOLOR( 0, 0, 0 ) );
+	else
+		SetFillColor( MAKE_SALCOLOR( 0xff, 0xff, 0xff ) );
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::drawPixel( long nX, long nY )
+{
+	if ( mnLineColor )
+		mpVCLGraphics->setPixel( nX, nY, mnLineColor );
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::drawPixel( long nX, long nY, SalColor nSalColor )
+{
+	mpVCLGraphics->setPixel( nX, nY, nSalColor | 0xff000000 );
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::drawLine( long nX1, long nY1, long nX2, long nY2 )
+{
+	if ( mnLineColor )
+		mpVCLGraphics->drawLine( nX1, nY1, nX2, nY2, mnLineColor );
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
+{
+	if ( mnFillColor )
+		mpVCLGraphics->drawRect( nX, nY, nWidth, nHeight, mnFillColor, TRUE );
+	if ( mnLineColor )
+		mpVCLGraphics->drawRect( nX, nY, nWidth, nHeight, mnLineColor, FALSE );
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::drawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
+{
+	if ( mnLineColor )
+		mpVCLGraphics->drawPolyline( nPoints, pPtAry, mnLineColor );
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
+{
+	if ( mnFillColor )
+		mpVCLGraphics->drawPolygon( nPoints, pPtAry, mnFillColor, TRUE );
+	if ( mnLineColor )
+		mpVCLGraphics->drawPolygon( nPoints, pPtAry, mnLineColor, FALSE );
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONSTSALPOINT* pPtAry )
+{
+	if ( mnFillColor )
+		mpVCLGraphics->drawPolyPolygon( nPoly, pPoints, pPtAry, mnFillColor, TRUE );
+	if ( mnLineColor )
+		mpVCLGraphics->drawPolyPolygon( nPoly, pPoints, pPtAry, mnLineColor, FALSE);
+}
+
+// -----------------------------------------------------------------------
+
+sal_Bool JavaSalGraphics::drawPolyLineBezier( ULONG nPoints, const SalPoint* pPtAry, const BYTE* pFlgAry )
+{
+	return sal_False;
+}
+
+// -----------------------------------------------------------------------
+
+sal_Bool JavaSalGraphics::drawPolygonBezier( ULONG nPoints, const SalPoint* pPtAry, const BYTE* pFlgAry )
+{
+	return sal_False;
+}
+
+// -----------------------------------------------------------------------
+
+sal_Bool JavaSalGraphics::drawPolyPolygonBezier( ULONG nPoly, const ULONG* nPoints, const SalPoint* const* pPtAry, const BYTE* const* pFlgAry )
+{
+	return sal_False;
+}
+
+// -----------------------------------------------------------------------
+
+BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void* pPtr, ULONG nSize )
+{
+	if ( mpPrinter )
+	{
+		mpVCLGraphics->drawEPS( pPtr, nSize, nX, nY, nWidth, nHeight );
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
+// -----------------------------------------------------------------------
+
+long JavaSalGraphics::GetGraphicsWidth()
+{
+	if ( mpFrame )
+		return mpFrame->maGeometry.nWidth;
+	else
+		return 0;
 }

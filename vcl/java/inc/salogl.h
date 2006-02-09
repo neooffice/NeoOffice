@@ -53,10 +53,11 @@
 
 namespace vcl
 {
+class java_lang_Object;
 class com_sun_star_vcl_VCLImage;
 }
 
-class SalGraphics;
+class JavaSalGraphics;
 
 // -----------------
 // - JavaSalOpenGL -
@@ -70,7 +71,7 @@ private:
 
 	BYTE*					mpBits;
 	::vcl::java_lang_Object*	mpData;
-	SalGraphics*			mpGraphics;
+	JavaSalGraphics*		mpGraphics;
 	::vcl::com_sun_star_vcl_VCLImage*	mpImage;
 
 public:					

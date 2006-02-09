@@ -37,17 +37,17 @@
 
 #include <stdio.h>
 
-#ifndef _SV_SALOGL_HXX
-#include <salogl.hxx>
+#ifndef _SV_SALOGL_H
+#include <salogl.h>
 #endif
-#ifndef _SV_SALFRAME_HXX
-#include <salframe.hxx>
+#ifndef _SV_SALFRAME_H
+#include <salframe.h>
 #endif
-#ifndef _SV_SALGDI_HXX
-#include <salgdi.hxx>
+#ifndef _SV_SALGDI_H
+#include <salgdi.h>
 #endif
-#ifndef _SV_SALVD_HXX
-#include <salvd.hxx>
+#ifndef _SV_SALVD_H
+#include <salvd.h>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
@@ -71,15 +71,15 @@ static OModule aModule;
 
 // ========================================================================
 
-void *SalOpenGL::mpNativeContext = NULL;
+void *JavaSalOpenGL::mpNativeContext = NULL;
 
 // ------------------------------------------------------------------------
 
-ULONG SalOpenGL::mnOGLState = OGL_STATE_UNLOADED;
+ULONG JavaSalOpenGL::mnOGLState = OGL_STATE_UNLOADED;
 
 // ------------------------------------------------------------------------
 
-SalOpenGL::SalOpenGL( SalGraphics* pGraphics ) :
+JavaSalOpenGL::JavaSalOpenGL() :
 	mpBits( NULL ),
 	mpData( NULL ),
 	mpImage( NULL ),
@@ -89,7 +89,7 @@ SalOpenGL::SalOpenGL( SalGraphics* pGraphics ) :
 
 // ------------------------------------------------------------------------
 
-SalOpenGL::~SalOpenGL()
+JavaSalOpenGL::~JavaSalOpenGL()
 {
 	if ( mpImage )
 	{
@@ -101,7 +101,7 @@ SalOpenGL::~SalOpenGL()
 
 // ------------------------------------------------------------------------
 
-BOOL SalOpenGL::Create()
+bool JavaSalOpenGL::IsValid()
 {
 #ifdef OGL_ENABLED
 	if ( mnOGLState == OGL_STATE_UNLOADED )
@@ -121,21 +121,7 @@ BOOL SalOpenGL::Create()
 
 // ------------------------------------------------------------------------
 
-void SalOpenGL::Release()
-{
-	if ( mpNativeContext )
-	{
-		NSOpenGLContext_release( mpNativeContext );
-		mpNativeContext = NULL;
-	}
-
-	aModule.unload();
-	mnOGLState = OGL_STATE_UNLOADED;
-}
-
-// ------------------------------------------------------------------------
-
-void *SalOpenGL::GetOGLFnc( const char* pFncName )
+void *JavaSalOpenGL::GetOGLFnc( const char* pFncName )
 {
 	void *pRet = NULL;
 
@@ -147,26 +133,26 @@ void *SalOpenGL::GetOGLFnc( const char* pFncName )
 
 // ------------------------------------------------------------------------
 
-void SalOpenGL::OGLEntry( SalGraphics* pGraphics )
+void JavaSalOpenGL::OGLEntry( SalGraphics* pGraphics )
 {
 }
 
 // ------------------------------------------------------------------------
 
-void SalOpenGL::OGLExit( SalGraphics* pGraphics )
+void JavaSalOpenGL::OGLExit( SalGraphics* pGraphics )
 {
 }
 
 // ------------------------------------------------------------------------
 
-void SalOpenGL::StartScene( SalGraphics* pGraphics )
+void JavaSalOpenGL::StartScene( SalGraphics* pGraphics )
 {
 	NSOpenGLContext_clearDrawable( mpNativeContext );
 
-	mpGraphics = pGraphics;
+	mpGraphics = (JavaSalGraphics *)pGraphics;
 
 	if ( !mpImage )
-		mpImage = mpGraphics->maGraphicsData.mpVCLGraphics->createImage();
+		mpImage = mpGraphics->mpVCLGraphics->createImage();
 
 	if ( mpImage )
 	{
@@ -191,7 +177,7 @@ void SalOpenGL::StartScene( SalGraphics* pGraphics )
             
 // ------------------------------------------------------------------------
 
-void SalOpenGL::StopScene()
+void JavaSalOpenGL::StopScene()
 {
 	NSOpenGLContext_flushBuffer( mpNativeContext );
 	NSOpenGLContext_clearDrawable( mpNativeContext );
@@ -216,7 +202,7 @@ void SalOpenGL::StopScene()
 		{
 			long nWidth = mpImage->getWidth();
 			long nHeight = mpImage->getHeight();
-			mpGraphics->maGraphicsData.mpVCLGraphics->copyBits( pGraphics, 0, 0, nWidth, nHeight, 0, 0, nWidth, nHeight );
+			mpGraphics->mpVCLGraphics->copyBits( pGraphics, 0, 0, nWidth, nHeight, 0, 0, nWidth, nHeight );
 			delete pGraphics;
 		}
 	}

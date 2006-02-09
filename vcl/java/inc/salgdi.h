@@ -51,10 +51,12 @@
 #include <sv.h>
 #endif 
 
-class SalATSLayout;
+class ImplDevFontAttributes;
+class ImplFontSelectData;
 class JavaSalFrame;
 class JavaSalPrinter;
 class JavaSalVirtualDevice;
+class SalATSLayout;
 
 namespace vcl
 {
@@ -68,15 +70,15 @@ class com_sun_star_vcl_VCLGraphics;
 
 class JavaImplFontData : public ImplFontData
 {
+public:
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
 
-public:
-							JavaImplFontData( );
+							JavaImplFontData( const ImplDevFontAttributes& rAttibutes, const ::vcl::com_sun_star_vcl_VCLFont *pVCLFont );
 	virtual					~JavaImplFontData();
 
-	virtual ImplFontEntry*	CreateFontInstance( ImplFontSelectData& ) const;
+	virtual ImplFontEntry*	CreateFontInstance( ImplFontSelectData& rData ) const;
 	virtual ImplFontData*   Clone() const;
-	::vcl::com_sun_star_vcl_VCLFont*	GetVCLFont();
+	virtual int				GetFontId() const;
 };
 
 // -------------------
@@ -152,7 +154,6 @@ public:
 	virtual BOOL			GetGlyphOutline( long nIndex, basegfx::B2DPolyPolygon& );
 	virtual SalLayout*		GetTextLayout( ImplLayoutArgs&, int nFallbackLevel );
 	virtual void			DrawServerFontLayout( const ServerFontLayout& );
-	virtual bool			filterText( const String& rOrigText, String& rNewText, xub_StrLen nIndex, xub_StrLen& rLen, xub_StrLen& rCutStart, xub_StrLen& rCutStop );
 };
 
 #endif // _SV_SALGDI_H

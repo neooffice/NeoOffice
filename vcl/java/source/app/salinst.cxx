@@ -49,6 +49,9 @@
 #ifndef _SV_SALFRAME_H
 #include <salframe.h>
 #endif
+#ifndef _SV_SALGDI_H
+#include <salgdi.h>
+#endif
 #ifndef _SV_SALIMESTATUS_HXX
 #include <salimestatus.hxx>
 #endif

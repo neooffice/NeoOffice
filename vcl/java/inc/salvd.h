@@ -42,14 +42,14 @@
 #ifndef _SV_SV_H
 #include <sv.h>
 #endif
-#ifndef _SV_SALGDI_HXX
-#include <salgdi.hxx>
-#endif
 
 namespace vcl
 {
 class com_sun_star_vcl_VCLImage;
 }
+
+class JavaSalGraphics;
+class SalGraphics;
 
 // ------------------------
 // - JavaSalVirtualDevice -
@@ -60,7 +60,7 @@ class JavaSalVirtualDevice : public SalVirtualDevice
 public:
 	::vcl::com_sun_star_vcl_VCLImage*	mpVCLImage;
 	USHORT					mnBitCount;
-	SalGraphics*			mpGraphics; 
+	JavaSalGraphics*		mpGraphics; 
 	BOOL					mbGraphics;
 
 							JavaSalVirtualDevice();

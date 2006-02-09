@@ -234,10 +234,10 @@ OUString com_sun_star_vcl_VCLFont::getName()
 
 // ----------------------------------------------------------------------------
 
-void *com_sun_star_vcl_VCLFont::getNativeFont()
+int com_sun_star_vcl_VCLFont::getNativeFont()
 {
 	static jmethodID mID = NULL;
-	void *out = NULL;
+	int out = 0;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
@@ -248,7 +248,7 @@ void *com_sun_star_vcl_VCLFont::getNativeFont()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (void *)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+			out = (int)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
 }
@@ -386,7 +386,7 @@ sal_Bool com_sun_star_vcl_VCLFont::isVertical()
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLFont::setNativeFont( void *_par0 )
+void com_sun_star_vcl_VCLFont::setNativeFont( int _par0 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;

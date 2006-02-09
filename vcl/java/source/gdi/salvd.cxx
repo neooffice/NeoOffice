@@ -35,76 +35,97 @@
 
 #define _SV_SALVD_CXX
 
-#ifndef _SV_SALVD_HXX
-#include <salvd.hxx>
+#ifndef _SV_SALVD_H
+#include <salvd.h>
+#endif
+#ifndef _SV_SALGDI_H
+#include <salgdi.h>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
+#endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLIMAGE_HXX
+#include <com/sun/star/vcl/VCLImage.hxx>
 #endif
 
 using namespace vcl;
 
 // =======================================================================
 
-SalVirtualDevice::SalVirtualDevice()
+JavaSalVirtualDevice::JavaSalVirtualDevice()
 {
-	maVirDevData.mpGraphics->maGraphicsData.mpVirDev = this;
+	mpVCLImage = NULL;
+	mnBitCount = 0;
+	mpGraphics = new JavaSalGraphics();
+	mbGraphics = FALSE;
+
+	// By default no mirroring for VirtualDevices
+	mpGraphics->SetLayout( 0 );
+	mpGraphics->mpVirDev = this;
 }
 
 // -----------------------------------------------------------------------
 
-SalVirtualDevice::~SalVirtualDevice()
+JavaSalVirtualDevice::~JavaSalVirtualDevice()
 {
+	if ( mpGraphics )
+		delete mpGraphics;
+
+	if ( mpVCLImage )
+	{
+		mpVCLImage->dispose();
+		delete mpVCLImage;
+	}
 }
 
 // -----------------------------------------------------------------------
 
-SalGraphics* SalVirtualDevice::GetGraphics()
+SalGraphics* JavaSalVirtualDevice::GetGraphics()
 {
-	if ( maVirDevData.mbGraphics )
+	if ( mbGraphics )
 		return NULL;
 
-	maVirDevData.mpGraphics->maGraphicsData.mpVCLGraphics = maVirDevData.mpVCLImage->getGraphics();
-	maVirDevData.mbGraphics = TRUE;
+	mpGraphics->mpVCLGraphics = mpVCLImage->getGraphics();
+	mbGraphics = TRUE;
 
-	return maVirDevData.mpGraphics;
+	return mpGraphics;
 }
 
 // -----------------------------------------------------------------------
 
-void SalVirtualDevice::ReleaseGraphics( SalGraphics* pGraphics )
+void JavaSalVirtualDevice::ReleaseGraphics( SalGraphics* pGraphics )
 {
-	if ( pGraphics != maVirDevData.mpGraphics )
+	if ( pGraphics != mpGraphics )
 		return;
 
-	if ( maVirDevData.mpGraphics->maGraphicsData.mpVCLGraphics )
-		delete maVirDevData.mpGraphics->maGraphicsData.mpVCLGraphics;
-	maVirDevData.mpGraphics->maGraphicsData.mpVCLGraphics = NULL;
-	maVirDevData.mbGraphics = FALSE;
+	if ( mpGraphics->mpVCLGraphics )
+		delete mpGraphics->mpVCLGraphics;
+	mpGraphics->mpVCLGraphics = NULL;
+	mbGraphics = FALSE;
 }
 
 // -----------------------------------------------------------------------
 
-BOOL SalVirtualDevice::SetSize( long nDX, long nDY )
+BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 {
 	BOOL bRet = FALSE;
 
 	if ( nDX > 0 && nDY > 0 )
 	{
-		com_sun_star_vcl_VCLImage *pVCLImage = new com_sun_star_vcl_VCLImage( nDX, nDY, maVirDevData.mnBitCount );
+		com_sun_star_vcl_VCLImage *pVCLImage = new com_sun_star_vcl_VCLImage( nDX, nDY, mnBitCount );
 		if ( pVCLImage && pVCLImage->getJavaObject() )
 		{
-			if ( maVirDevData.mpVCLImage )
+			if ( mpVCLImage )
 			{
-				maVirDevData.mpVCLImage->dispose();
-				delete maVirDevData.mpVCLImage;
+				mpVCLImage->dispose();
+				delete mpVCLImage;
 			}
 
-			maVirDevData.mpVCLImage = pVCLImage;
+			mpVCLImage = pVCLImage;
 
-			if ( maVirDevData.mpGraphics->maGraphicsData.mpVCLGraphics )
-				delete maVirDevData.mpGraphics->maGraphicsData.mpVCLGraphics;
-			maVirDevData.mpGraphics->maGraphicsData.mpVCLGraphics = maVirDevData.mpVCLImage->getGraphics();
+			if ( mpGraphics->mpVCLGraphics )
+				delete mpGraphics->mpVCLGraphics;
+			mpGraphics->mpVCLGraphics = mpVCLImage->getGraphics();
 
 			bRet = TRUE;
 		}
@@ -116,32 +137,4 @@ BOOL SalVirtualDevice::SetSize( long nDX, long nDY )
 	}
 
 	return bRet;
-}
-
-// =======================================================================
-
-SalVirDevData::SalVirDevData()
-{
-	mpVCLImage = NULL;
-	mnBitCount = 0;
-	mpGraphics = new SalGraphicsLayout();
-	mbGraphics = FALSE;
-
-	// By default no mirroring for VirtualDevices
-	mpGraphics->SetLayout( 0 );
-
-}
-
-// -----------------------------------------------------------------------
-
-SalVirDevData::~SalVirDevData()
-{
-	if ( mpGraphics )
-		delete mpGraphics;
-
-	if ( mpVCLImage )
-	{
-		mpVCLImage->dispose();
-		delete mpVCLImage;
-	}
 }

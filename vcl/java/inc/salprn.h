@@ -42,9 +42,6 @@
 #ifndef _SV_SV_H
 #include <sv.h>
 #endif
-#ifndef _SV_SALGDI_HXX
-#include <salgdi.hxx>
-#endif
 #ifndef _SV_PRNTYPES_HXX
 #include <prntypes.hxx>
 #endif
@@ -55,6 +52,8 @@ class com_sun_star_vcl_VCLPageFormat;
 class com_sun_star_vcl_VCLPrintJob;
 }
 
+class JavaSalGraphics;
+
 // ----------------------
 // - JavaSalInfoPrinter -
 // ----------------------
@@ -62,7 +61,7 @@ class com_sun_star_vcl_VCLPrintJob;
 class JavaSalInfoPrinter : public SalInfoPrinter
 {
 public:
-	SalGraphics*			mpGraphics;
+	JavaSalGraphics*		mpGraphics;
 	BOOL					mbGraphics;
 	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
 
@@ -91,7 +90,7 @@ class JavaSalPrinter : public SalPrinter
 {
 public:
 	BOOL					mbStarted;
-	SalGraphics*			mpGraphics;
+	JavaSalGraphics*		mpGraphics;
 	BOOL					mbGraphics;
 	::vcl::com_sun_star_vcl_VCLPrintJob*	mpVCLPrintJob;
 	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;

@@ -35,14 +35,11 @@
 
 #define _SV_SALGDI2_CXX
 
-#ifndef _SV_SALGDI_HXX
-#include <salgdi.hxx>
+#ifndef _SV_SALGDI_H
+#include <salgdi.h>
 #endif
-#ifndef _SV_SALFRAME_HXX
-#include <salframe.hxx>
-#endif
-#ifndef _SV_SALBMP_HXX
-#include <salbmp.hxx>
+#ifndef _SV_SALBMP_H
+#include <salbmp.h>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
@@ -55,82 +52,62 @@ using namespace vcl;
 
 // =======================================================================
 
-void SalGraphics::CopyBits( const SalTwoRect* pPosAry,
-                            SalGraphics* pSrcGraphics,
-                            const OutputDevice *pOutDev,
-                            const OutputDevice *pSrcOutDev )
+void JavaSalGraphics::copyBits( const SalTwoRect* pPosAry, SalGraphics* pSrcGraphics )
 {
-	if ( !pSrcGraphics )
-		pSrcGraphics = this;
+	JavaSalGraphics *pJavaSrcGraphics = (JavaSalGraphics *)pSrcGraphics;
+	if ( !pJavaSrcGraphics )
+		pJavaSrcGraphics = this;
 
-	maGraphicsData.mpVCLGraphics->copyBits( pSrcGraphics->maGraphicsData.mpVCLGraphics, pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight, pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight );
+	mpVCLGraphics->copyBits( pJavaSrcGraphics->mpVCLGraphics, pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight, pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight );
 }
 
 // -----------------------------------------------------------------------
 
-void SalGraphics::CopyArea( long nDestX, long nDestY,
-							long nSrcX, long nSrcY,
-							long nSrcWidth, long nSrcHeight,
-							USHORT nFlags, const OutputDevice *pOutDev )
+void JavaSalGraphics::copyArea( long nDestX, long nDestY, long nSrcX, long nSrcY, long nSrcWidth, long nSrcHeight, USHORT nFlags )
 {
-	maGraphicsData.mpVCLGraphics->copyBits( maGraphicsData.mpVCLGraphics, nSrcX, nSrcY, nSrcWidth, nSrcHeight, nDestX, nDestY, nSrcWidth, nSrcHeight );
+	mpVCLGraphics->copyBits( mpVCLGraphics, nSrcX, nSrcY, nSrcWidth, nSrcHeight, nDestX, nDestY, nSrcWidth, nSrcHeight );
 }
 
 // -----------------------------------------------------------------------
 
-void SalGraphics::DrawBitmap( const SalTwoRect* pPosAry,
-							  const SalBitmap& rSalBitmap,
-                              const OutputDevice *pOutDev )
+void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rSalBitmap )
 {
-	maGraphicsData.mpVCLGraphics->drawBitmap( rSalBitmap.mpVCLBitmap, pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight, pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight );
+	mpVCLGraphics->drawBitmap( ((const JavaSalBitmap&)rSalBitmap).mpVCLBitmap, pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight, pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight );
 }
 
 // -----------------------------------------------------------------------
 
-void SalGraphics::DrawBitmap( const SalTwoRect* pPosAry,
-							  const SalBitmap& rSalBitmap,
-							  SalColor nTransparentColor,
-                              const OutputDevice *pOutDev )
+void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rSalBitmap, SalColor nTransparentColor )
 {
-#ifdef DEBUG
-	fprintf( stderr, "SalGraphics::DrawBitmap #2 not implemented\n" );
-#endif
 }
 
 // -----------------------------------------------------------------------
 
-void SalGraphics::DrawBitmap( const SalTwoRect* pPosAry,
-							  const SalBitmap& rSalBitmap,
-							  const SalBitmap& rTransparentBitmap,
-                              const OutputDevice *pOutDev )
+void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rSalBitmap, const SalBitmap& rTransparentBitmap )
 {
-	maGraphicsData.mpVCLGraphics->drawBitmap( rSalBitmap.mpVCLBitmap, rTransparentBitmap.mpVCLBitmap, pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight, pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight );
+	mpVCLGraphics->drawBitmap( ((const JavaSalBitmap&)rSalBitmap).mpVCLBitmap, ((const JavaSalBitmap&)rTransparentBitmap).mpVCLBitmap, pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight, pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight );
 }
 
 // -----------------------------------------------------------------------
 
-void SalGraphics::DrawMask( const SalTwoRect* pPosAry,
-							const SalBitmap& rSalBitmap,
-							SalColor nMaskColor,
-                            const OutputDevice *pOutDev )
+void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSalBitmap, SalColor nMaskColor )
 {
-	maGraphicsData.mpVCLGraphics->drawMask( rSalBitmap.mpVCLBitmap, nMaskColor | 0xff000000, pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight, pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight );
+	mpVCLGraphics->drawMask( ((const JavaSalBitmap&)rSalBitmap).mpVCLBitmap, nMaskColor | 0xff000000, pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight, pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight );
 }
 
 // -----------------------------------------------------------------------
 
-SalBitmap* SalGraphics::GetBitmap( long nX, long nY, long nDX, long nDY,
-                                   const OutputDevice *pOutDev )
+SalBitmap* JavaSalGraphics::getBitmap( long nX, long nY, long nDX, long nDY )
 {
 	// Don't do anything if this is a printer
-	if ( maGraphicsData.mpPrinter )
+	if ( mpPrinter )
 		return NULL;
 
 	// Normalize rectangle
 	nDX = abs( nDX );
 	nDY = abs( nDY );
 
-	SalBitmap *pBitmap = new SalBitmap();
+	JavaSalBitmap *pBitmap = new JavaSalBitmap();
 
 	if ( !pBitmap->Create( Size( nDX, nDY ), GetBitCount(), BitmapPalette() ) )
 	{
@@ -147,7 +124,7 @@ SalBitmap* SalGraphics::GetBitmap( long nX, long nY, long nDX, long nDY,
 				pBitmap->ReleaseBuffer( pBuffer, FALSE );
 		}
 
-		pBitmap->mpVCLBitmap->copyBits( maGraphicsData.mpVCLGraphics, nX, nY, nDX, nDY, 0, 0 );
+		pBitmap->mpVCLBitmap->copyBits( mpVCLGraphics, nX, nY, nDX, nDY, 0, 0 );
 		pBitmap->mbCopyFromVCLBitmap = true;
 	}
 
@@ -156,23 +133,21 @@ SalBitmap* SalGraphics::GetBitmap( long nX, long nY, long nDX, long nDY,
 
 // -----------------------------------------------------------------------
 
-SalColor SalGraphics::GetPixel( long nX, long nY, const OutputDevice *pOutDev )
+SalColor JavaSalGraphics::getPixel( long nX, long nY )
 {
-	return maGraphicsData.mpVCLGraphics->getPixel( nX, nY );
+	return mpVCLGraphics->getPixel( nX, nY );
 }
 
 // -----------------------------------------------------------------------
 
-void SalGraphics::Invert( long nX, long nY, long nWidth, long nHeight,
-                          SalInvert nFlags, const OutputDevice *pOutDev )
+void JavaSalGraphics::invert( long nX, long nY, long nWidth, long nHeight, SalInvert nFlags )
 {
-	maGraphicsData.mpVCLGraphics->invert( nX, nY, nWidth, nHeight, nFlags );
+	mpVCLGraphics->invert( nX, nY, nWidth, nHeight, nFlags );
 }
 
 // -----------------------------------------------------------------------
 
-void SalGraphics::Invert( ULONG nPoints, const SalPoint* pPtAry,
-                          SalInvert nFlags, const OutputDevice *pOutDev )
+void JavaSalGraphics::invert( ULONG nPoints, const SalPoint* pPtAry, SalInvert nFlags )
 {
-	maGraphicsData.mpVCLGraphics->invert( nPoints, pPtAry, nFlags );
+	mpVCLGraphics->invert( nPoints, pPtAry, nFlags );
 }

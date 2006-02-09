@@ -69,7 +69,7 @@ JavaSalBitmap::~JavaSalBitmap()
 
 // ------------------------------------------------------------------
 
-BOOL JavaSalBitmap::Create( const Size& rSize, USHORT nBitCount, const BitmapPalette& rPal )
+bool JavaSalBitmap::Create( const Size& rSize, USHORT nBitCount, const BitmapPalette& rPal )
 {
 	Destroy();
 
@@ -102,20 +102,21 @@ BOOL JavaSalBitmap::Create( const Size& rSize, USHORT nBitCount, const BitmapPal
 		maPalette.SetEntryCount( nColors );
 	}
 
-	return TRUE;
+	return true;
 }
 
 // ------------------------------------------------------------------
 
-BOOL JavaSalBitmap::Create( const JavaSalBitmap& rSalBmp )
+bool JavaSalBitmap::Create( const SalBitmap& rSalBmp )
 {
 	Destroy();
 
-	BOOL bRet = Create( rSalBmp.GetSize(), rSalBmp.GetBitCount(), rSalBmp.maPalette );
+	JavaSalBitmap& rJavaSalBmp = (JavaSalBitmap&)rSalBmp;
+	bool bRet = Create( rJavaSalBmp.GetSize(), rJavaSalBmp.GetBitCount(), rJavaSalBmp.maPalette );
 
 	if ( bRet )
 	{
-		BitmapBuffer *pSrcBuffer = rSalBmp.AcquireBuffer( TRUE );
+		BitmapBuffer *pSrcBuffer = rJavaSalBmp.AcquireBuffer( TRUE );
 		if ( pSrcBuffer )
 		{
 			BitmapBuffer *pDestBuffer = AcquireBuffer( FALSE );
@@ -127,14 +128,14 @@ BOOL JavaSalBitmap::Create( const JavaSalBitmap& rSalBmp )
 			else
 			{
 				Destroy();
-				bRet = FALSE;
+				bRet = false;
 			}
-			rSalBmp.ReleaseBuffer( pSrcBuffer, TRUE );
+			rJavaSalBmp.ReleaseBuffer( pSrcBuffer, TRUE );
 		}
 		else
 		{
 			Destroy();
-			bRet = FALSE;
+			bRet = false;
 		}
 	}
 
@@ -143,16 +144,16 @@ BOOL JavaSalBitmap::Create( const JavaSalBitmap& rSalBmp )
 
 // ------------------------------------------------------------------
 
-BOOL JavaSalBitmap::Create( const JavaSalBitmap& rSalBmp, SalGraphics* pGraphics )
+bool JavaSalBitmap::Create( const SalBitmap& rSalBmp, SalGraphics* pGraphics )
 {
-	return FALSE;
+	return false;
 }
 
 // ------------------------------------------------------------------
 
-BOOL JavaSalBitmap::Create( const JavaSalBitmap& rSalBmp, USHORT nNewBitCount )
+bool JavaSalBitmap::Create( const SalBitmap& rSalBmp, USHORT nNewBitCount )
 {
-	FALSE;
+	return false;
 }
 
 // ------------------------------------------------------------------
@@ -201,7 +202,7 @@ Size JavaSalBitmap::GetSize() const
 
 // ------------------------------------------------------------------
 
-BitmapBuffer* JavaSalBitmap::AcquireBuffer( BOOL bReadOnly )
+BitmapBuffer* JavaSalBitmap::AcquireBuffer( bool bReadOnly )
 {
 	if ( !mpVCLBitmap )
 		return NULL;
@@ -352,7 +353,7 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( BOOL bReadOnly )
 
 // ------------------------------------------------------------------
 
-void JavaSalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, BOOL bReadOnly )
+void JavaSalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, bool bReadOnly )
 {
 	if ( pBuffer )
 	{
@@ -461,4 +462,14 @@ void JavaSalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, BOOL bReadOnly )
 		}
 		delete pBuffer;
 	}
+}
+
+// ------------------------------------------------------------------
+
+bool JavaSalBitmap::GetSystemData( BitmapSystemData& rData )
+{
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalBitmap::GetSystemData not implemented\n" );
+#endif
+	return false;
 }

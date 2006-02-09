@@ -78,6 +78,6 @@ SalData::~SalData()
 	if ( mpEventQueue )
 		delete mpEventQueue;
 
-	for ( ::std::map< XubString, JavaImplFontData* >::const_iterator it = maFontNameMapping.begin(); it != maFontNameMapping.end(); ++it )
+	for ( ::std::map< String, JavaImplFontData* >::const_iterator it = maFontNameMapping.begin(); it != maFontNameMapping.end(); ++it )
 		delete it->second;
 }

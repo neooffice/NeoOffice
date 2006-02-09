@@ -558,10 +558,10 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 			if ( !mpFallbackFont )
 			{
 				SalData *pSalData = GetSalData();
-				::std::map< void*, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( (void *)nFontID );
+				::std::map< int, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( (int)nFontID );
 				if ( it != pSalData->maNativeFontMapping.end() )
 				{
-					com_sun_star_vcl_VCLFont *pVCLFont = it->second->GetVCLFont();
+					com_sun_star_vcl_VCLFont *pVCLFont = it->second->mpVCLFont;
 					mpFallbackFont = pVCLFont->deriveFont( mpHash->mnFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
 				}
 				else
@@ -1045,8 +1045,8 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 		for ( i = 0; i < nGlyphCount; i++ )
 			aGlyphArray[ i ] &= GF_IDXMASK;
 
-		JavaSalGraphics *pJavaGraphics = (JavaSalGraphics *)&rGraphics;
-		pJavaGraphics->mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), nGlyphCount, aGlyphArray, aDXArray, mpVCLFont, pJavaGraphics->mnTextColor, GetOrientation(), nGlyphOrientation, nTranslateX, nTranslateY );
+		JavaSalGraphics& rJavaGraphics = (JavaSalGraphics&)rGraphics;
+		rJavaGraphics.mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), nGlyphCount, aGlyphArray, aDXArray, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, nTranslateX, nTranslateY );
 	}
 }
 
