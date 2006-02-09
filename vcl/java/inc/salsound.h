@@ -11,11 +11,11 @@
  *
  *         - GNU General Public License Version 2.1
  *
- *  Patrick Luby, June 2003
+ *  Patrick Luby, February 2006
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2003 by Patrick Luby (patrick.luby@planamesa.com)
+ *  Copyright 2006 by Patrick Luby (patrick.luby@planamesa.com)
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
@@ -33,57 +33,49 @@
  *
  ************************************************************************/
 
-#ifndef _SV_SALBMP_HXX
-#define _SV_SALBMP_HXX
+#ifndef _SV_SALSOUND_H
+#define _SV_SALSOUND_H
 
+#ifndef _SV_SALSOUND_HXX
+#include <salsound.hxx>
+#endif 
 #ifndef _SV_SV_H
 #include <sv.h>
-#endif
-#ifndef _SV_GEN_HXX
-#include <tools/gen.hxx>
-#endif
-#ifndef _SV_SALBTYPE_HXX
-#include <salbtype.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLBITMAP_HXX
-#include <com/sun/star/vcl/VCLBitmap.hxx>
+#endif 
+#ifndef _SV_SALSTYPE_HXX
+#include <salstype.hxx>
 #endif
 
-struct	BitmapBuffer;
-class	BitmapPalette;
-class	SalGraphics;
+class SalSoundNativeData;
 
-// -------------
-// - SalBitmap -
-// -------------
+// ----------------
+// - JavaSalSound -
+// ----------------
 
-class SalBitmap
+class JavaSalSound : public SalSound
 {
+private:
+	static ULONG			mnSoundState;
+
+	void*					mpInst;
+	void*					mpNativeContext;
+	SalSoundNativeData*		mpNativeData;
+	bool					mbPlaying;
+	SALSOUNDPROC			mpProc;
+
 public:
-	Size 			maSize;
-	USHORT			mnAcquireCount;
-	USHORT			mnBitCount;
-	BYTE*			mpBits;
-	bool			mbCopyFromVCLBitmap;
-	::vcl::java_lang_Object*	mpData;
-	BitmapPalette	maPalette;
-	::vcl::com_sun_star_vcl_VCLBitmap*	mpVCLBitmap;
-public:	
-					SalBitmap();
-					~SalBitmap();
+							JavaSalSound();
+	virtual					~JavaSalSound();
 
-	BOOL			Create( const Size& rSize, USHORT nBitCount, const BitmapPalette& rPal );
-	BOOL			Create( const SalBitmap& rSalBmp );
-	BOOL			Create( const SalBitmap& rSalBmp, SalGraphics *pGraphics );
-	BOOL			Create( const SalBitmap& rSalBmp, USHORT nNewBitCount );
-
-	void			Destroy();
-
-	USHORT			GetBitCount() const;
-	Size			GetSize() const;
-
-	BitmapBuffer*	AcquireBuffer( BOOL bReadOnly );
-	void			ReleaseBuffer( BitmapBuffer* pBuffer, BOOL bReadOnly );
+	virtual bool			IsValid();
+	virtual bool			Init( const String& rSoundName, ULONG& rSoundLen );
+	virtual void			Play( ULONG nStartTime, ULONG nPlayTime, bool bLoop );
+	virtual void			Stop();
+	virtual void			Pause();
+	virtual void			Continue();
+	virtual bool			IsLoopMode() const;
+	virtual bool			IsPlaying() const;
+	virtual bool			IsPaused() const;
 };
 
-#endif // _SV_SALBMP_HXX
+#endif // _SV_SALSOUND_H

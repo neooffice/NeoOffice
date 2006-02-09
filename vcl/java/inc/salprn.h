@@ -36,6 +36,9 @@
 #ifndef _SV_SALPRN_H
 #define _SV_SALPRN_H
 
+#ifndef _SV_SALPRN_HXX
+#include <salprn.hxx>
+#endif
 #ifndef _SV_SV_H
 #include <sv.h>
 #endif
@@ -45,48 +48,64 @@
 #ifndef _SV_PRNTYPES_HXX
 #include <prntypes.hxx>
 #endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX
-#include <com/sun/star/vcl/VCLPageFormat.hxx>
-#endif
 
 namespace vcl
-{
+{   
+class com_sun_star_vcl_VCLPageFormat;
 class com_sun_star_vcl_VCLPrintJob;
 }
 
 // ----------------------
-// - SalInfoPrinterData -
+// - JavaSalInfoPrinter -
 // ----------------------
 
-class SalInfoPrinterData
+class JavaSalInfoPrinter : public SalInfoPrinter
 {
-	friend class	SalInfoPrinter;
-	friend class	SalInstance;
-	friend class	SalPrinter;
-
-					SalInfoPrinterData();
-					~SalInfoPrinterData();
-
-	SalGraphics*	mpGraphics;
-	BOOL			mbGraphics;
+public:
+	SalGraphics*			mpGraphics;
+	BOOL					mbGraphics;
 	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
+
+							JavaSalInfoPrinter();
+	virtual					~JavaSalInfoPrinter();
+
+	virtual SalGraphics*	GetGraphics();
+	virtual void			ReleaseGraphics( SalGraphics* pGraphics );
+	virtual BOOL			Setup( SalFrame* pFrame, ImplJobSetup* pSetupData );
+	virtual BOOL			SetPrinterData( ImplJobSetup* pSetupData );
+	virtual BOOL			SetData( ULONG nFlags, ImplJobSetup* pSetupData );
+	virtual void			GetPageInfo( const ImplJobSetup* pSetupData, long& rOutWidth, long& rOutHeight, long& rPageOffX, long& rPageOffY, long& rPageWidth, long& rPageHeight );
+	virtual ULONG			GetCapabilities( const ImplJobSetup* pSetupData, USHORT nType );
+	virtual ULONG			GetPaperBinCount( const ImplJobSetup* pSetupData );
+	virtual String			GetPaperBinName( const ImplJobSetup* pSetupData, ULONG nPaperBin );
+	virtual void			InitPaperFormats( const ImplJobSetup* pSetupData );
+	virtual int				GetLandscapeAngle( const ImplJobSetup* pSetupData );
+	virtual DuplexMode		GetDuplexMode( const ImplJobSetup* pSetupData );
 };
 
 // ------------------
-// - SalPrinterData -
+// - JavaSalPrinter -
 // ------------------
 
-class SalPrinterData
+class JavaSalPrinter : public SalPrinter
 {
 public:
-					SalPrinterData();
-					~SalPrinterData();
-
-	BOOL			mbStarted;
-	SalGraphics*	mpGraphics;
-	BOOL			mbGraphics;
+	BOOL					mbStarted;
+	SalGraphics*			mpGraphics;
+	BOOL					mbGraphics;
 	::vcl::com_sun_star_vcl_VCLPrintJob*	mpVCLPrintJob;
 	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
+
+							JavaSalPrinter();
+	virtual					~JavaSalPrinter();
+
+	virtual BOOL			StartJob( const XubString* pFileName, const XubString& rJobName, const XubString& rAppName, ULONG nCopies, BOOL bCollate, ImplJobSetup* pSetupData );
+	virtual BOOL			EndJob();
+	virtual BOOL			AbortJob();
+	virtual SalGraphics*	StartPage( ImplJobSetup* pSetupData, BOOL bNewJobData );
+	virtual BOOL			EndPage();
+	virtual ULONG			GetErrorCode();
+	virtual XubString		GetPageRange();
 };
 
 #endif // _SV_SALPRN_H

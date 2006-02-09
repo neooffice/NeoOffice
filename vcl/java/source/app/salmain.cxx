@@ -35,8 +35,12 @@
 
 #define _SV_SALMAIN_CXX
 
+#include <stdio.h>
 #include <unistd.h>
 
+#ifndef _SAL_MAIN_H_
+#include "sal/main.h"
+#endif
 #ifndef _SV_SALINST_HXX
 #include <salinst.hxx>
 #endif
@@ -48,9 +52,8 @@
  
 BEGIN_C
 
-int main( int argc, char *argv[] )
+SAL_IMPLEMENT_MAIN()
 {
-
 	char *pCmdPath = argv[ 0 ];
 
 	// Don't allow running as root as we really cannot trust that we won't

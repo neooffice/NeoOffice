@@ -11,11 +11,11 @@
  *
  *         - GNU General Public License Version 2.1
  *
- *  Patrick Luby, June 2003
+ *  Patrick Luby, February 2006
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2003 by Patrick Luby (patrick.luby@planamesa.com)
+ *  Copyright 2006 by Patrick Luby (patrick.luby@planamesa.com)
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
@@ -33,48 +33,28 @@
  *
  ************************************************************************/
 
-#define _SV_SALDATA_CXX
+#ifndef _SV_SALTIMER_H
+#define _SV_SALTIMER_H
 
-#ifndef _SV_SALDATA_HXX
-#include <saldata.hxx>
-#endif
-#ifndef _SV_OUTFONT_HXX
-#include <outfont.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
-#include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif
+#ifndef _SV_SALTIMER_HXX
+#include <saltimer.hxx>
+#endif 
+#ifndef _SV_SV_H
+#include <sv.h>
+#endif 
 
-using namespace rtl;
-using namespace vcl;
+// ----------------
+// - JavaSalTimer -
+// ----------------
 
-// ========================================================================
-
-SalData::SalData()
+class JavaSalTimer : public SalTimer
 {
-	mpFirstInstance	= NULL;
-	mpFocusFrame = NULL;
-	mnTimerInterval = 0;
-	maTimeout.tv_sec = 0;
-	maTimeout.tv_usec = 0;
-	mpEventQueue = NULL;
-	mpPresentationFrame = NULL;
-	mbNativeEventSucceeded = false;
-	mbInNativeMenuTracking = false;
-	mbInNativeModalSheet = false;
-	mpNativeModalSheetFrame = NULL;
+public:
+							JavaSalTimer();
+	virtual					~JavaSalTimer();
 
-	// Set condition so that they don't block
-	maNativeEventCondition.set();
-}
+	virtual void			Start( ULONG nMS );
+	virtual void			Stop();
+};
 
-// ------------------------------------------------------------------------
-
-SalData::~SalData()
-{
-	if ( mpEventQueue )
-		delete mpEventQueue;
-
-	for ( ::std::map< XubString, ImplFontData* >::const_iterator it = maFontNameMapping.begin(); it != maFontNameMapping.end(); ++it )
-		delete it->second;
-}
+#endif // _SV_SALTIMER_H

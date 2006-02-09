@@ -37,7 +37,6 @@ PRJ=..$/..$/..
 
 PRJNAME=vcl
 TARGET=salapp
-RESTARGET=$(TARGET)
 
 # --- Settings -----------------------------------------------------
 
@@ -66,10 +65,9 @@ SLOFILES= \
 	$(SLO)$/salinst_cocoa.obj \
 	$(SLO)$/salsound.obj
 
-SRCFILES=\
-	salinst.src
-
-RESLIB1NAME=$(RESTARGET)
+SRC1FILES=salinst.src
+SRS1NAME=$(TARGET)
+RESLIB1NAME=$(TARGET)
 RESLIB1SRSFILES=$(SRS)$/salapp.srs
 
 .ENDIF		# "$(GUIBASE)"!="java"

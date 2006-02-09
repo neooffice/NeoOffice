@@ -35,8 +35,8 @@
 
 #define _SV_SALTIMER_CXX
 
-#ifndef _SV_SALTIMER_HXX
-#include <saltimer.hxx>
+#ifndef _SV_SALTIMER_H
+#include <saltimer.h>
 #endif
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
@@ -45,18 +45,9 @@
 #include <saljava.h>
 #endif
 
-using namespace vcl;
-
 // =======================================================================
 
-void SalTimer::SetCallback( SALTIMERPROC pProc )
-{
-	GetSalData()->mpTimerProc = pProc;
-}
-
-// -----------------------------------------------------------------------
-
-void SalTimer::Start( ULONG nMS )
+void JavaSalTimer::Start( ULONG nMS )
 {
 	SalData *pSalData = GetSalData();
 	gettimeofday( &pSalData->maTimeout, NULL );
@@ -66,7 +57,7 @@ void SalTimer::Start( ULONG nMS )
 
 // -----------------------------------------------------------------------
   
-void SalTimer::Stop()
+void JavaSalTimer::Stop()
 {
 	SalData *pSalData = GetSalData();
 	pSalData->mnTimerInterval = 0;

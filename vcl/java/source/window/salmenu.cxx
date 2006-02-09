@@ -38,8 +38,8 @@
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
-#ifndef _SV_SALINST_HXX
-#include <salinst.hxx>
+#ifndef _SV_SALINST_H
+#include <salinst.h>
 #endif
 #ifndef _SV_SALMENU_H
 #include <salmenu.h>
@@ -273,7 +273,7 @@ JavaSalMenuItem::~JavaSalMenuItem()
 
 //-----------------------------------------------------------------------------
 
-SalMenu* SalInstance::CreateMenu( BOOL bMenuBar, Menu *pVCLMenu )
+SalMenu* JavaSalInstance::CreateMenu( BOOL bMenuBar, Menu *pVCLMenu )
 {
 #ifndef NO_NATIVE_MENUS
 	JavaSalMenu *pSalMenu = new JavaSalMenu();
@@ -301,7 +301,7 @@ SalMenu* SalInstance::CreateMenu( BOOL bMenuBar, Menu *pVCLMenu )
 
 //-----------------------------------------------------------------------------
 
-void SalInstance::DestroyMenu( SalMenu* pMenu )
+void JavaSalInstance::DestroyMenu( SalMenu* pMenu )
 {
 #ifndef NO_NATIVE_MENUS
 	delete pMenu;
@@ -310,7 +310,7 @@ void SalInstance::DestroyMenu( SalMenu* pMenu )
 
 //-----------------------------------------------------------------------------
 
-SalMenuItem* SalInstance::CreateMenuItem( const SalItemParams* pItemData )
+SalMenuItem* JavaSalInstance::CreateMenuItem( const SalItemParams* pItemData )
 {
 #ifndef NO_NATIVE_MENUS
 	if(!pItemData)
@@ -328,7 +328,7 @@ SalMenuItem* SalInstance::CreateMenuItem( const SalItemParams* pItemData )
 
 //-----------------------------------------------------------------------------
 
-void SalInstance::DestroyMenuItem( SalMenuItem* pItem )
+void JavaSalInstance::DestroyMenuItem( SalMenuItem* pItem )
 {
 #ifndef NO_NATIVE_MENUS
 	delete pItem;

@@ -11,11 +11,11 @@
  *
  *         - GNU General Public License Version 2.1
  *
- *  Patrick Luby, June 2003
+ *  Patrick Luby, February 2006
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2003 by Patrick Luby (patrick.luby@planamesa.com)
+ *  Copyright 2006 by Patrick Luby (patrick.luby@planamesa.com)
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
@@ -33,54 +33,56 @@
  *
  ************************************************************************/
 
-#ifndef _SV_SALSOUND_HXX
-#define _SV_SALSOUND_HXX
+#ifndef _SV_SALOGL_H
+#define _SV_SALOGL_H
 
+#ifndef _SV_SALOGL_HXX
+#include <salogl.hxx>
+#endif
 #ifndef _SV_SV_H
 #include <sv.h>
-#endif 
-
-#ifndef _SV_SALSTYPE_HXX
-#include <salstype.hxx>
 #endif
 
-class SalFrame;
-class SalSoundNativeData;
+// -----------------
+// - State defines -
+// -----------------
 
-// ------------
-// - SalSound -
-// ------------
+#define OGL_STATE_UNLOADED		(0x00000000)
+#define OGL_STATE_INVALID		(0x00000001)
+#define	OGL_STATE_VALID			(0x00000002)
 
-class SalSound
+namespace vcl
+{
+class com_sun_star_vcl_VCLImage;
+}
+
+class SalGraphics;
+
+// -----------------
+// - JavaSalOpenGL -
+// -----------------
+
+class JavaSalOpenGL : public SalOpenGL
 {
 private:
-	static ULONG	mnSoundState;
-	void*			mpInst;
-	void*			mpNativeContext;
-	SalSoundNativeData*	mpNativeData;
-	BOOL			mbPlaying;
-	SALSOUNDPROC	mpProc;
+	static void*			mpNativeContext;
+	static ULONG			mnOGLState;
 
-public:
-	static void		Release();
-	static BOOL		IsValid() { return ( SOUND_STATE_VALID == SalSound::mnSoundState ); }
+	BYTE*					mpBits;
+	::vcl::java_lang_Object*	mpData;
+	SalGraphics*			mpGraphics;
+	::vcl::com_sun_star_vcl_VCLImage*	mpImage;
 
-					SalSound();
-					~SalSound();
+public:					
+							JavaSalOpenGL();
+	virtual					~JavaSalOpenGL();
 
-	BOOL			Create();
-	BOOL			Init( SalFrame*		pFrame,
-						  const String&	rSoundName,
-						  ULONG&		rSoundLen );
-	BOOL			Init( SalFrame*		pFrame,
-						  const BYTE*	pSound,
-						  ULONG			nDataLen,	
-						  ULONG&		rSoundLen );
-	void			Play( ULONG nStartTime, ULONG nPlayTime, BOOL bLoop );
-	void			Stop();
-	void			Pause();
-	void			Continue();
-	void			SetNotifyProc( void* pInst, SALSOUNDPROC pProc );
+	virtual bool			IsValid();
+	virtual void*			GetOGLFnc( const char * );
+	virtual void			OGLEntry( SalGraphics* pGraphics );
+	virtual void			OGLExit( SalGraphics* pGraphics );
+	virtual void			StartScene( SalGraphics* pGraphics );
+	virtual void			StopScene();
 };
 
-#endif // _SV_SALSOUND_HXX
+#endif // _SV_SALOGL_H

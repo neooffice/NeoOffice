@@ -42,15 +42,6 @@
 #ifndef _SV_SVDATA_HXX
 #include <svdata.hxx>
 #endif
-#ifndef _SV_SALINST_HXX
-#include <salinst.hxx>
-#endif
-#ifndef _SV_SALTIMER_HXX
-#include <saltimer.hxx>
-#endif
-#ifndef _SV_JAVA_LANG_CLASS_HXX
-#include "java/lang/Class.hxx"
-#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLEVENTQUEUE_HXX
 #include <com/sun/star/vcl/VCLEventQueue.hxx>
 #endif
@@ -60,6 +51,8 @@
 
 class ImplFontData;
 class JavaSalFrame;
+class JavaSalGraphics;
+class JavaSalInstance;
 
 // -----------
 // - SalData -
@@ -68,11 +61,10 @@ class JavaSalFrame;
 class SalData
 {
 public:
-	SalInstance*			mpFirstInstance;
+	JavaSalInstance*		mpFirstInstance;
 	::std::list< JavaSalFrame* >	maFrameList;
 	JavaSalFrame*			mpFocusFrame;
 	timeval					maTimeout;
-	SALTIMERPROC			mpTimerProc;
 	ULONG					mnTimerInterval;
 	XubString				maDefaultPrinter;
 	::vcl::com_sun_star_vcl_VCLEventQueue*	mpEventQueue;
@@ -85,7 +77,7 @@ public:
 	bool					mbInNativeMenuTracking;
 	bool					mbInNativeModalSheet;
 	JavaSalFrame*			mpNativeModalSheetFrame;
-	::std::list< SalGraphics* >	maGraphicsList;
+	::std::list< JavaSalGraphics* >	maGraphicsList;
 
 							SalData();
 							~SalData();

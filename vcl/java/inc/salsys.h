@@ -9,13 +9,13 @@
  *  The Contents of this file are made available subject to the terms of
  *  either of the following licenses
  *
- *         - GNU General Public License Version 2.1
+ *		 - GNU General Public License Version 2.1
  *
- *  Patrick Luby, June 2003
+ *  Patrick Luby, February 2006
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2003 by Patrick Luby (patrick.luby@planamesa.com)
+ *  Copyright 2006 by Patrick Luby (patrick.luby@planamesa.com)
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
@@ -33,42 +33,28 @@
  *
  ************************************************************************/
 
-#define _SV_SALINFO_CXX
-
-#include <stdio.h>
-
 #ifndef _SV_SALSYS_H
-#include <salsys.h>
-#endif
+#define _SV_SALSYS_H
 
-// =======================================================================
+#ifndef _SV_SALSYS_HXX
+#include <salsys.hxx>
+#endif 
+#ifndef _SV_SV_H
+#include <sv.h>
+#endif 
 
-JavaSalSystem::JavaSalSystem()
+// -----------------
+// - JavaSalSystem -
+// -----------------
+
+class JavaSalSystem : public SalSystem
 {
-}
+public:
+							JavaSalSystem();
+	virtual					~JavaSalSystem();
 
-// -----------------------------------------------------------------------
+	virtual bool			GetSalSystemDisplayInfo( DisplayInfo& rInfo );
+	virtual int				ShowNativeMessageBox( const String& rTitle, const String& rMessage, int nButtonCombination, int nDefaultButton );
+};
 
-JavaSalSystem::~JavaSalSystem()
-{
-}
-
-// -----------------------------------------------------------------------
-
-bool JavaSalSystem::GetSalSystemDisplayInfo( DisplayInfo& rInfo )
-{
-#ifdef DEBUG
-	fprintf( stderr, "GetSalSystemDisplayInfo not implemented\n" );
-#endif
-	return false;
-}
-
-// -----------------------------------------------------------------------
-
-int JavaSalSystem::ShowNativeMessageBox( const String& rTitle, const String& rMessage, int nButtonCombination, int nDefaultButton )
-{
-#ifdef DEBUG
-	fprintf( stderr, "ShowNativeMessageBox not implemented\n" );
-#endif
-	return -1;
-}
+#endif // _SV_SALSYS_H

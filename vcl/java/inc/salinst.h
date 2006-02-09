@@ -36,6 +36,9 @@
 #ifndef _SV_SALINST_H
 #define _SV_SALINST_H
 
+#ifndef _SV_SALINST_HXX
+#include <salinst.hxx>
+#endif
 #ifndef _SV_SV_H
 #include <sv.h>
 #endif
@@ -55,31 +58,63 @@
 
 class SalYieldMutex : public ::vos::OMutex
 {
-	ULONG				mnCount;
+	ULONG					mnCount;
 	::vos::OThread::TThreadIdentifier	mnThreadId;
 
-public: 
-						SalYieldMutex();
-	virtual void		acquire();
-	virtual void		release();
-	virtual sal_Bool	tryToAcquire();  
-	ULONG				GetAcquireCount() { return mnCount; }
+public:
+							SalYieldMutex();
+	virtual void			acquire();
+	virtual void			release();
+	virtual sal_Bool		tryToAcquire();
+	ULONG					GetAcquireCount() { return mnCount; }
 	::vos::OThread::TThreadIdentifier	GetThreadId() { return mnThreadId; }
 };
 
 // -------------------
-// - SalInstanceData -
+// - JavaSalInstance -
 // -------------------
 
-class SalInstanceData
+class JavaSalInstance : public SalInstance
 {
 public:
-	SalYieldMutex*		mpSalYieldMutex;
-	void*				mpFilterInst;
-	void*				mpFilterCallback;
+	SalYieldMutex*			mpSalYieldMutex;
 
-						SalInstanceData();
-						~SalInstanceData();
+							JavaSalInstance();
+	virtual					~JavaSalInstance();
+
+	virtual SalFrame*		CreateChildFrame( SystemParentData* pParent, ULONG nStyle );
+	virtual SalFrame*		CreateFrame( SalFrame* pParent, ULONG nStyle );
+	virtual void			DestroyFrame( SalFrame* pFrame );
+	virtual SalObject*		CreateObject( SalFrame* pParent, SystemWindowData* pWindowData );
+	virtual void			DestroyObject( SalObject* pObject );
+	virtual SalVirtualDevice*	CreateVirtualDevice( SalGraphics* pGraphics, long nDX, long nDY, USHORT nBitCount, const SystemGraphicsData *pData = NULL );
+	virtual void			DestroyVirtualDevice( SalVirtualDevice* pDevice );
+	virtual SalInfoPrinter* CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo, ImplJobSetup* pSetupData );
+	virtual void			DestroyInfoPrinter( SalInfoPrinter* pPrinter );
+	virtual SalPrinter*		CreatePrinter( SalInfoPrinter* pInfoPrinter );
+	virtual void			DestroyPrinter( SalPrinter* pPrinter );
+
+	virtual void			GetPrinterQueueInfo( ImplPrnQueueList* pList );
+	virtual void			GetPrinterQueueState( SalPrinterQueueInfo* pInfo );
+	virtual void			DeletePrinterQueueInfo( SalPrinterQueueInfo* pInfo );
+	virtual String			GetDefaultPrinter();
+	virtual SalSound*		CreateSalSound();
+	virtual SalTimer*		CreateSalTimer();
+	virtual SalOpenGL*		CreateSalOpenGL( SalGraphics* pGraphics );
+	virtual SalI18NImeStatus*	CreateI18NImeStatus();
+	virtual SalSystem*		CreateSalSystem();
+	virtual SalBitmap*		CreateSalBitmap();
+	virtual vos::IMutex*	GetYieldMutex();
+	virtual ULONG			ReleaseYieldMutex();
+	virtual void			AcquireYieldMutex( ULONG nCount );
+	virtual void			Yield( BOOL bWait );
+	virtual bool			AnyInput( USHORT nType );
+	virtual SalMenu*		CreateMenu( BOOL bMenuBar, Menu* pVCLMenu );
+	virtual void			DestroyMenu( SalMenu* pMenu);
+	virtual SalMenuItem*	CreateMenuItem( const SalItemParams* pItemData );
+	virtual void			DestroyMenuItem( SalMenuItem* pItem );
+	virtual SalSession*		CreateSalSession();
+	virtual void*			GetConnectionIdentifier( ConnectionIdentifierType& rReturnedType, int& rReturnedBytes );
 };
 
 void ExecuteApplicationMain( Application *pApp );

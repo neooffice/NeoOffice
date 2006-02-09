@@ -37,32 +37,50 @@
 
 #include <sys/syslimits.h>
 
-#ifndef _SV_SALINST_HXX
-#include <salinst.hxx>
+#ifndef _SV_SALINST_H
+#include <salinst.h>
+#endif
+#ifndef _SV_SALBMP_H
+#include <salbmp.h>
 #endif
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
-#ifndef _SV_SALFRAME_HXX
-#include <salframe.hxx>
+#ifndef _SV_SALFRAME_H
+#include <salframe.h>
+#endif
+#ifndef _SV_SALIMESTATUS_HXX
+#include <salimestatus.hxx>
 #endif
 #ifndef _SALJAVA_H
 #include <saljava.h>
 #endif
-#ifndef _SV_SALMENU_HXX
-#include <salmenu.hxx>
+#ifndef _SV_SALMENU_H
+#include <salmenu.h>
+#endif
+#ifndef _SV_SALOGL_H
+#include <salogl.h>
 #endif
 #ifndef _SV_SALPTYPE_HXX
 #include <salptype.hxx>
 #endif
-#ifndef _SV_SALVD_HXX
-#include <salvd.hxx>
+#ifndef _SV_SALSOUND_H
+#include <salsound.h>
+#endif
+#ifndef _SV_SALTIMER_H
+#include <saltimer.h>
+#endif
+#ifndef _SV_SALVD_H
+#include <salvd.h>
 #endif
 #ifndef _SV_SALBTYPE_HXX
 #include <salbtype.hxx>
 #endif
-#ifndef _SV_SALPRN_HXX
-#include <salprn.hxx>
+#ifndef _SV_SALPRN_H
+#include <salprn.h>
+#endif
+#ifndef _SV_SALTIMER_HXX
+#include <saltimer.hxx>
 #endif
 #ifndef _VCL_APPTYPES_HXX
 #include <apptypes.hxx>
@@ -105,6 +123,16 @@
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 #undef check
+
+class JavaSalI18NImeStatus : public SalI18NImeStatus
+{
+public:
+							JavaSalI18NImeStatus() {}
+	virtual					~JavaSalI18NImeStatus() {}
+
+	virtual bool			canToggle() { return false; }
+	virtual void			toggle() {}
+};
 
 static bool bFirstPass = true;
 
@@ -236,20 +264,11 @@ void DeInitSalMain()
 
 // -----------------------------------------------------------------------
 
-void SetFilterCallback( void* pCallback, void* pInst )
-{
-	SalData* pSalData = GetSalData();
-	pSalData->mpFirstInstance->maInstData.mpFilterCallback = pCallback;
-	pSalData->mpFirstInstance->maInstData.mpFilterInst = pInst;
-}
-
-// -----------------------------------------------------------------------
-
 SalInstance* CreateSalInstance()
 {
 	SalData *pSalData = GetSalData();
 
-	SalInstance *pInst = new SalInstance();
+	JavaSalInstance *pInst = new JavaSalInstance();
 	pSalData->mpFirstInstance = pInst;
 
 	return pInst;
@@ -270,33 +289,35 @@ void DestroySalInstance( SalInstance* pInst )
 
 // =======================================================================
 
-SalInstance::SalInstance()
+JavaSalInstance::JavaSalInstance()
 {
-	maInstData.mpSalYieldMutex = new SalYieldMutex();
-	maInstData.mpSalYieldMutex->acquire();
+	mpSalYieldMutex = new SalYieldMutex();
+	mpSalYieldMutex->acquire();
 }
 
 // -----------------------------------------------------------------------
 
-SalInstance::~SalInstance()
+JavaSalInstance::~JavaSalInstance()
 {
-	maInstData.mpSalYieldMutex->release();
-	if ( maInstData.mpSalYieldMutex )
-		delete maInstData.mpSalYieldMutex;
+	if ( mpSalYieldMutex )
+	{
+		mpSalYieldMutex->release();
+		delete mpSalYieldMutex;
+	}
 }
 
 // -----------------------------------------------------------------------
 
-IMutex* SalInstance::GetYieldMutex()
+IMutex* JavaSalInstance::GetYieldMutex()
 {
-	return maInstData.mpSalYieldMutex;
+	return mpSalYieldMutex;
 }
 
 // -----------------------------------------------------------------------
 
-ULONG SalInstance::ReleaseYieldMutex()
+ULONG JavaSalInstance::ReleaseYieldMutex()
 {
-	SalYieldMutex* pYieldMutex = maInstData.mpSalYieldMutex;
+	SalYieldMutex* pYieldMutex = mpSalYieldMutex;
 	if ( pYieldMutex->GetThreadId() == OThread::getCurrentIdentifier() )
 	{
 		// Fix bug 1079 by not allowing releasing of the mutex when we are in
@@ -321,9 +342,9 @@ ULONG SalInstance::ReleaseYieldMutex()
 
 // -----------------------------------------------------------------------
 
-void SalInstance::AcquireYieldMutex( ULONG nCount )
+void JavaSalInstance::AcquireYieldMutex( ULONG nCount )
 {
-	SalYieldMutex* pYieldMutex = maInstData.mpSalYieldMutex;
+	SalYieldMutex* pYieldMutex = mpSalYieldMutex;
 	while ( nCount )
 	{
 		pYieldMutex->acquire();
@@ -333,7 +354,7 @@ void SalInstance::AcquireYieldMutex( ULONG nCount )
 
 // -----------------------------------------------------------------------
 
-void SalInstance::Yield( BOOL bWait )
+void JavaSalInstance::Yield( BOOL bWait )
 {
 	SalData *pSalData = GetSalData();
 
@@ -341,7 +362,7 @@ void SalInstance::Yield( BOOL bWait )
 	// native timers to run but don't dispatch any events as we might be in
 	// a signal handler and we will block since we don't have the SalYieldMutex
 	// lock
-	if ( GetCurrentEventLoop() == GetMainEventLoop() || maInstData.mpSalYieldMutex->GetThreadId() != OThread::getCurrentIdentifier() )
+	if ( GetCurrentEventLoop() == GetMainEventLoop() || mpSalYieldMutex->GetThreadId() != OThread::getCurrentIdentifier() )
 	{
 		ReceiveNextEvent( 0, NULL, 0, false, NULL );
 		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
@@ -370,26 +391,28 @@ void SalInstance::Yield( BOOL bWait )
 	AcquireYieldMutex( nCount );
 
 	// Check timer
-	if ( pSalData->mnTimerInterval )
+	ImplSVData* pSVData = ImplGetSVData();
+	if ( pSVData->mpSalTimer && pSalData->mnTimerInterval )
 	{
 		timeval aCurrentTime;
 		gettimeofday( &aCurrentTime, NULL );
-		if ( pSalData->mpTimerProc && aCurrentTime >= pSalData->maTimeout )
+		if ( aCurrentTime >= pSalData->maTimeout )
 		{
-			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+			::std::list< JavaSalFrame* >::const_iterator it;
+			for ( it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
-				if ( (*it)->maFrameData.mbVisible )
-					(*it)->maFrameData.mpVCLFrame->enableFlushing( sal_False );
+				if ( (*it)->mbVisible )
+					(*it)->mpVCLFrame->enableFlushing( sal_False );
 			}
 
 			gettimeofday( &pSalData->maTimeout, NULL );
 			pSalData->maTimeout += pSalData->mnTimerInterval;
-			pSalData->mpTimerProc();
+			pSVData->mpSalTimer->CallCallback();
 
 			for ( it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
-				if ( (*it)->maFrameData.mbVisible )
-					(*it)->maFrameData.mpVCLFrame->enableFlushing( sal_True );
+				if ( (*it)->mbVisible )
+					(*it)->mpVCLFrame->enableFlushing( sal_True );
 			}
 		}
 	}
@@ -452,7 +475,7 @@ void SalInstance::Yield( BOOL bWait )
 		pSalData->mbNativeEventSucceeded = ( !Application::IsShutDown() && !pSalData->mbInNativeModalSheet );
 		if ( pSalData->mbNativeEventSucceeded )
 		{
-			if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->maFrameData.mbVisible )
+			if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
 			{
 				ResetMenuEnabledStateForFrame( pSalData->mpFocusFrame, NULL );
 				if ( pSalData->mbInNativeMenuTracking )
@@ -461,9 +484,9 @@ void SalInstance::Yield( BOOL bWait )
 		}
 		else
 		{
-			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
-				if ( (*it)->maFrameData.mbVisible )
+				if ( (*it)->mbVisible )
 				{
 					ResetMenuEnabledStateForFrame( *it, NULL );
 					if ( pSalData->mbInNativeMenuTracking )
@@ -481,47 +504,48 @@ void SalInstance::Yield( BOOL bWait )
 
 // -----------------------------------------------------------------------
 
-BOOL SalInstance::AnyInput( USHORT nType )
+bool JavaSalInstance::AnyInput( USHORT nType )
 {
-	BOOL bRet = FALSE;
+	bool bRet = false;
 
 	if ( nType & INPUT_TIMER )
 	{
 		// Check timer
 		SalData *pSalData = GetSalData();
-		if ( pSalData->mnTimerInterval )
+		ImplSVData* pSVData = ImplGetSVData();
+		if ( pSVData->mpSalTimer && pSalData->mnTimerInterval )
 		{
 			timeval aCurrentTime;
 			gettimeofday( &aCurrentTime, NULL );
-			if ( pSalData->mpTimerProc && aCurrentTime >= pSalData->maTimeout )
-				bRet = TRUE;
+			if ( aCurrentTime >= pSalData->maTimeout )
+				bRet = true;
 		}
 	}
 
 	if ( !bRet )
-		bRet = (BOOL)GetSalData()->mpEventQueue->anyCachedEvent( nType );
+		bRet = (bool)GetSalData()->mpEventQueue->anyCachedEvent( nType );
 
 	return bRet;
 }
 
 // -----------------------------------------------------------------------
 
-SalFrame* SalInstance::CreateChildFrame( SystemParentData* pSystemParentData, ULONG nSalFrameStyle )
+SalFrame* JavaSalInstance::CreateChildFrame( SystemParentData* pSystemParentData, ULONG nSalFrameStyle )
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalInstance::CreateChildFrame not implemented\n" );
+	fprintf( stderr, "JavaSalInstance::CreateChildFrame not implemented\n" );
 #endif
 	return NULL;
 }
 
 // -----------------------------------------------------------------------
 
-SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
+SalFrame* JavaSalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 {
-	SalFrame *pFrame = new SalFrame();
+	JavaSalFrame *pFrame = new JavaSalFrame();
 
-	pFrame->maFrameData.mnStyle = nSalFrameStyle;
-	com_sun_star_vcl_VCLFrame *pVCLFrame = new com_sun_star_vcl_VCLFrame( pFrame->maFrameData.mnStyle, pFrame, pParent );
+	pFrame->mnStyle = nSalFrameStyle;
+	com_sun_star_vcl_VCLFrame *pVCLFrame = new com_sun_star_vcl_VCLFrame( pFrame->mnStyle, pFrame, (JavaSalFrame *)pParent );
 	if ( !pVCLFrame || !pVCLFrame->getJavaObject() )
 	{
 		if ( pVCLFrame )
@@ -529,9 +553,9 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 		delete pFrame;
 		return NULL;
 	}
-	pFrame->maFrameData.mpVCLFrame = pVCLFrame;
-	pFrame->maFrameData.maSysData.aWindow = 0;
-	pFrame->maFrameData.maSysData.pSalFrame = pFrame;
+	pFrame->mpVCLFrame = pVCLFrame;
+	pFrame->maSysData.aWindow = 0;
+	pFrame->maSysData.pSalFrame = pFrame;
 
 	// Set initial parent
 	pFrame->SetParent( pParent );
@@ -541,7 +565,7 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 	pSalData->maFrameList.push_front( pFrame );
 
 	// Cache the insets
-	Rectangle aRect = pFrame->maFrameData.mpVCLFrame->getInsets();
+	Rectangle aRect = pFrame->mpVCLFrame->getInsets();
 	pFrame->maGeometry.nLeftDecoration = aRect.nLeft;
 	pFrame->maGeometry.nTopDecoration = aRect.nTop;
 	pFrame->maGeometry.nRightDecoration = aRect.nRight;
@@ -549,9 +573,9 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 
 	// Set default window size based on style
 	Rectangle aWorkArea;
-	if ( pFrame->maFrameData.mpParent )
+	if ( pFrame->mpParent )
 	{
-		aWorkArea = Rectangle( Point( pFrame->maFrameData.mpParent->maGeometry.nX, pFrame->maFrameData.mpParent->maGeometry.nY ), Size( pFrame->maFrameData.mpParent->maGeometry.nWidth, pFrame->maFrameData.mpParent->maGeometry.nHeight ) );
+		aWorkArea = Rectangle( Point( pFrame->mpParent->maGeometry.nX, pFrame->mpParent->maGeometry.nY ), Size( pFrame->mpParent->maGeometry.nWidth, pFrame->mpParent->maGeometry.nHeight ) );
 		pFrame->GetWorkArea( aWorkArea );
 	}
 	else
@@ -575,16 +599,16 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 			nWidth = (long)( nWidth * 0.8 );
 			nHeight = (long)( nHeight * 0.8 );
 		}
-		if ( !pFrame->maFrameData.mpParent )
+		if ( !pFrame->mpParent )
 		{
 			// Find the next document window if any exist
-			SalFrame* pNextFrame = NULL;
-			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+			JavaSalFrame* pNextFrame = NULL;
+			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
 				if ( (*it) && (*it) != pFrame &&
-					! (*it)->maFrameData.mpParent &&
-					(*it)->maFrameData.mnStyle != SAL_FRAME_STYLE_DEFAULT &&
-					(*it)->maFrameData.mnStyle & SAL_FRAME_STYLE_SIZEABLE &&
+					! (*it)->mpParent &&
+					(*it)->mnStyle != SAL_FRAME_STYLE_DEFAULT &&
+					(*it)->mnStyle & SAL_FRAME_STYLE_SIZEABLE &&
 					(*it)->GetGeometry().nWidth &&
 					(*it)->GetGeometry().nHeight )
 						pNextFrame = *it;
@@ -593,7 +617,7 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 			if ( pNextFrame )
 			{
 				// Set screen to same screen as next frame
-				pFrame->maFrameData.mbCenter = FALSE;
+				pFrame->mbCenter = FALSE;
 				const SalFrameGeometry& rGeom( pNextFrame->GetGeometry() );
 				nX = rGeom.nX - rGeom.nLeftDecoration;
 				nY = rGeom.nY - rGeom.nTopDecoration;
@@ -604,69 +628,59 @@ SalFrame* SalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle )
 	}
 
 	long nFlags = SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT;
-	if ( !pFrame->maFrameData.mbCenter )
+	if ( !pFrame->mbCenter )
 		nFlags |= SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y;
 	pFrame->SetPosSize( nX, nY, nWidth, nHeight, nFlags );
 
 	// Reset mbCenter flag to default value
-	pFrame->maFrameData.mbCenter = TRUE;
+	pFrame->mbCenter = TRUE;
 
 	return pFrame;
 }
 
 // -----------------------------------------------------------------------
 
-void SalInstance::DestroyFrame( SalFrame* pFrame )
+void JavaSalInstance::DestroyFrame( SalFrame* pFrame )
 {
 	// Remove this window from the window list
 	if ( pFrame )
 	{
-		pFrame->SetParent( NULL );
+		JavaSalFrame *pJavaFrame = (JavaSalFrame *)pFrame;
 
-		if ( pFrame->maFrameData.mbVisible )
-			pFrame->Show( FALSE );
+		pJavaFrame->SetParent( NULL );
+
+		if ( pJavaFrame->mbVisible )
+			pJavaFrame->Show( FALSE );
 
 		SalData *pSalData = GetSalData();
-		pSalData->maFrameList.remove( pFrame );
+		pSalData->maFrameList.remove( pJavaFrame );
 
-		delete pFrame;
+		delete pJavaFrame;
 	}
 }
 
 // -----------------------------------------------------------------------
 
-SalObject* SalInstance::CreateObject( SalFrame* pParent )
+SalObject* JavaSalInstance::CreateObject( SalFrame* pParent, SystemWindowData* pWindowData )
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalInstance::CreateObject not implemented\n" );
+	fprintf( stderr, "JavaSalInstance::CreateObject not implemented\n" );
 #endif
 	return NULL;
 }
 
 // -----------------------------------------------------------------------
 
-void SalInstance::DestroyObject( SalObject* pObject )
+void JavaSalInstance::DestroyObject( SalObject* pObject )
 {
 #ifdef DEBUG
-	fprintf( stderr, "SalInstance::DestroyObject not implemented\n" );
+	fprintf( stderr, "JavaSalInstance::DestroyObject not implemented\n" );
 #endif
 }
 
 // -----------------------------------------------------------------------
 
-void SalInstance::SetEventCallback( void* pInstance, bool(*pCallback)(void*,void*,int) )
-{
-}
-
-// -----------------------------------------------------------------------
-
-void SalInstance::SetErrorEventCallback( void* pInstance, bool(*pCallback)(void*,void*,int) )
-{
-}
-
-// -----------------------------------------------------------------------
-
-void* SalInstance::GetConnectionIdentifier( ConnectionIdentifierType& rReturnedType, int& rReturnedBytes )
+void* JavaSalInstance::GetConnectionIdentifier( ConnectionIdentifierType& rReturnedType, int& rReturnedBytes )
 {
 	rReturnedBytes = 1;
 	rReturnedType = AsciiCString;
@@ -675,7 +689,7 @@ void* SalInstance::GetConnectionIdentifier( ConnectionIdentifierType& rReturnedT
 
 // -----------------------------------------------------------------------
 
-void SalInstance::GetPrinterQueueInfo( ImplPrnQueueList* pList )
+void JavaSalInstance::GetPrinterQueueInfo( ImplPrnQueueList* pList )
 {
 	// Create a dummy queue for our dummy default printer
 	SalPrinterQueueInfo *pInfo = new SalPrinterQueueInfo();
@@ -686,13 +700,13 @@ void SalInstance::GetPrinterQueueInfo( ImplPrnQueueList* pList )
 
 // -----------------------------------------------------------------------
 
-void SalInstance::GetPrinterQueueState( SalPrinterQueueInfo* pInfo )
+void JavaSalInstance::GetPrinterQueueState( SalPrinterQueueInfo* pInfo )
 {
 }
 
 // -----------------------------------------------------------------------
 
-void SalInstance::DeletePrinterQueueInfo( SalPrinterQueueInfo* pInfo )
+void JavaSalInstance::DeletePrinterQueueInfo( SalPrinterQueueInfo* pInfo )
 {
 	if ( pInfo )
 		delete pInfo;
@@ -700,13 +714,13 @@ void SalInstance::DeletePrinterQueueInfo( SalPrinterQueueInfo* pInfo )
 
 // -----------------------------------------------------------------------
 
-SalInfoPrinter* SalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
+SalInfoPrinter* JavaSalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
                                                 ImplJobSetup* pSetupData )
 {
 	SalData *pSalData = GetSalData();
 
 	// Create a dummy printer configuration for our dummy printer
-	SalInfoPrinter *pPrinter = new SalInfoPrinter();
+	JavaSalInfoPrinter *pPrinter = new JavaSalInfoPrinter();
 
 	// Populate data
 	pSetupData->mnSystem = JOBSETUP_SYSTEM_JAVA;
@@ -722,7 +736,7 @@ SalInfoPrinter* SalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
 	}
 
 	// Create a new page format instance
-	pPrinter->maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat();
+	pPrinter->mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat();
 
 	// Update values
 	pPrinter->SetData( 0, pSetupData );
@@ -732,7 +746,7 @@ SalInfoPrinter* SalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
 
 // -----------------------------------------------------------------------
 
-void SalInstance::DestroyInfoPrinter( SalInfoPrinter* pPrinter )
+void JavaSalInstance::DestroyInfoPrinter( SalInfoPrinter* pPrinter )
 {
 	if ( pPrinter )
 		delete pPrinter;
@@ -740,7 +754,7 @@ void SalInstance::DestroyInfoPrinter( SalInfoPrinter* pPrinter )
 
 // -----------------------------------------------------------------------
 
-XubString SalInstance::GetDefaultPrinter()
+XubString JavaSalInstance::GetDefaultPrinter()
 {
 	// Create a dummy default printer
 	SalData *pSalData = GetSalData();
@@ -758,21 +772,22 @@ XubString SalInstance::GetDefaultPrinter()
 
 // -----------------------------------------------------------------------
 
-SalPrinter* SalInstance::CreatePrinter( SalInfoPrinter* pInfoPrinter )
+SalPrinter* JavaSalInstance::CreatePrinter( SalInfoPrinter* pInfoPrinter )
 {
-	SalPrinter *pPrinter = new SalPrinter();
+	JavaSalPrinter *pPrinter = new JavaSalPrinter();
 
-	if ( pInfoPrinter && pInfoPrinter->maPrinterData.mpVCLPageFormat )
-		pPrinter->maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pInfoPrinter->maPrinterData.mpVCLPageFormat->getJavaObject() );
+	JavaSalInfoPrinter *pJavaInfoPrinter = (JavaSalInfoPrinter *)pInfoPrinter;
+	if ( pJavaInfoPrinter && pJavaInfoPrinter->mpVCLPageFormat )
+		pPrinter->mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pJavaInfoPrinter->mpVCLPageFormat->getJavaObject() );
 	else
-		pPrinter->maPrinterData.mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat();
+		pPrinter->mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat();
 
 	return pPrinter;
 }
 
 // -----------------------------------------------------------------------
 
-void SalInstance::DestroyPrinter( SalPrinter* pPrinter )
+void JavaSalInstance::DestroyPrinter( SalPrinter* pPrinter )
 {
 	if ( pPrinter )
 		delete pPrinter;
@@ -780,19 +795,20 @@ void SalInstance::DestroyPrinter( SalPrinter* pPrinter )
 
 // -----------------------------------------------------------------------
 
-SalVirtualDevice* SalInstance::CreateVirtualDevice( SalGraphics* pGraphics,
+SalVirtualDevice* JavaSalInstance::CreateVirtualDevice( SalGraphics* pGraphics,
                                                     long nDX, long nDY,
-                                                    USHORT nBitCount )
+                                                    USHORT nBitCount,
+                                                    const SystemGraphicsData *pData )
 {
-	SalVirtualDevice *pDevice = NULL;
+	JavaSalVirtualDevice *pDevice = NULL;
 
 	if ( nDX > 0 && nDY > 0 )
 	{
-		pDevice = new SalVirtualDevice();
+		pDevice = new JavaSalVirtualDevice();
 
 		if ( pGraphics )
 			nBitCount = pGraphics->GetBitCount();
-		pDevice->maVirDevData.mnBitCount = nBitCount;
+		pDevice->mnBitCount = nBitCount;
 
 		if ( !pDevice->SetSize( nDX, nDY ) )
 		{
@@ -806,7 +822,7 @@ SalVirtualDevice* SalInstance::CreateVirtualDevice( SalGraphics* pGraphics,
 
 // -----------------------------------------------------------------------
 
-void SalInstance::DestroyVirtualDevice( SalVirtualDevice* pDevice )
+void JavaSalInstance::DestroyVirtualDevice( SalVirtualDevice* pDevice )
 {
 	if ( pDevice )
 		delete pDevice;
@@ -814,24 +830,44 @@ void SalInstance::DestroyVirtualDevice( SalVirtualDevice* pDevice )
 
 // -----------------------------------------------------------------------
 
-SalSession* SalInstance::CreateSalSession()
+SalSound* JavaSalInstance::CreateSalSound()
 {
-	return NULL;
-}
-
-// =======================================================================
-
-SalInstanceData::SalInstanceData()
-{
-	mpSalYieldMutex = NULL;
-	mpFilterCallback = NULL;
-	mpFilterInst = NULL;
+    return new JavaSalSound();
 }
 
 // -----------------------------------------------------------------------
 
-SalInstanceData::~SalInstanceData()
+SalTimer* JavaSalInstance::CreateSalTimer()
 {
+    return new JavaSalTimer();
+}
+
+// -----------------------------------------------------------------------
+
+SalOpenGL* JavaSalInstance::CreateSalOpenGL( SalGraphics* pGraphics )
+{
+    return new JavaSalOpenGL();
+}
+
+// -----------------------------------------------------------------------
+
+SalI18NImeStatus* JavaSalInstance::CreateI18NImeStatus()
+{
+    return new JavaSalI18NImeStatus();
+}
+
+// -----------------------------------------------------------------------
+
+SalBitmap* JavaSalInstance::CreateSalBitmap()
+{
+    return new JavaSalBitmap();
+}
+
+// -----------------------------------------------------------------------
+
+SalSession* JavaSalInstance::CreateSalSession()
+{
+	return NULL;
 }
 
 // =========================================================================

@@ -38,11 +38,11 @@
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
-#ifndef _SV_SALINST_HXX
-#include <salinst.hxx>
+#ifndef _SV_SALINST_H
+#include <salinst.h>
 #endif
-#ifndef _SV_SALSOUND_HXX
-#include <salsound.hxx>
+#ifndef _SV_SALSOUND_H
+#include <salsound.h>
 #endif
 
 #include <premac.h>
@@ -133,14 +133,14 @@ OSStatus SalSoundFileRenderProc(void *pRefCon, AudioUnitRenderActionFlags *pActi
 
 // ========================================================================
 
-ULONG SalSound::mnSoundState = SOUND_STATE_UNLOADED;
+ULONG JavaSalSound::mnSoundState = SOUND_STATE_UNLOADED;
 
 // ------------------------------------------------------------------------
 
-SalSound::SalSound() :
+JavaSalSound::JavaSalSound() :
 	mpInst( NULL ),
 	mpNativeContext( NULL ),
-	mbPlaying( FALSE ),
+	mbPlaying( false ),
 	mpProc( NULL )
 {
 	mpNativeData = new SalSoundNativeData();
@@ -149,7 +149,7 @@ SalSound::SalSound() :
 
 // ------------------------------------------------------------------------
 
-SalSound::~SalSound()
+JavaSalSound::~JavaSalSound()
 {
 	if ( mpNativeData )
 	{
@@ -172,9 +172,9 @@ SalSound::~SalSound()
 
 // ------------------------------------------------------------------------
 
-BOOL SalSound::Create()
+bool JavaSalSound::IsValid()
 {
-	BOOL bRet = FALSE;
+	bool bRet = false;
 
 	if ( !mpNativeContext )
 	{
@@ -198,7 +198,7 @@ BOOL SalSound::Create()
 	if ( mpNativeContext )
 	{
 		mnSoundState = SOUND_STATE_VALID;
-		bRet = TRUE;
+		bRet = true;
 	}
 	else
 	{
@@ -210,16 +210,9 @@ BOOL SalSound::Create()
 
 // ------------------------------------------------------------------------
 
-void SalSound::Release()
+bool JavaSalSound::Init( const String& rSoundName, ULONG& rSoundLen )
 {
-	mnSoundState = SOUND_STATE_UNLOADED;
-}
-
-// ------------------------------------------------------------------------
-
-BOOL SalSound::Init( SalFrame* pFrame, const XubString& rSoundName, ULONG& rSoundLen )
-{
-	BOOL bRet = FALSE;
+	bool bRet = false;
 
 	if ( mpNativeContext )
 	{
@@ -229,7 +222,7 @@ BOOL SalSound::Init( SalFrame* pFrame, const XubString& rSoundName, ULONG& rSoun
 			if ( mbPlaying )
 			{
 				AudioOutputUnitStop( (AudioUnit)mpNativeContext );
-				mbPlaying = FALSE;
+				mbPlaying = false;
 			}
 			if ( mpNativeData->mpBuffer )
 				rtl_freeMemory( mpNativeData->mpBuffer );
@@ -282,7 +275,7 @@ BOOL SalSound::Init( SalFrame* pFrame, const XubString& rSoundName, ULONG& rSoun
 							aRenderCallback.inputProc = SalSoundFileRenderProc;
 							aRenderCallback.inputProcRefCon = (void *)mpNativeData;
 							if ( AudioUnitSetProperty( (AudioUnit)mpNativeContext, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Input, 0, &aRenderCallback, sizeof( AURenderCallbackStruct ) ) == noErr )
-								bRet = TRUE;
+								bRet = true;
 						}
 					}
 				}
@@ -295,25 +288,15 @@ BOOL SalSound::Init( SalFrame* pFrame, const XubString& rSoundName, ULONG& rSoun
 
 // ------------------------------------------------------------------------
 
-BOOL SalSound::Init( SalFrame* pFrame, const BYTE* pSound, ULONG nDataLen, ULONG& rSoundLen )
-{
-#ifdef DEBUG
-	fprintf( stderr, "SalSound::Init #2 not implemented\n" );
-#endif
-	return FALSE;
-}
-
-// ------------------------------------------------------------------------
-
-void SalSound::Play( ULONG nStartTime, ULONG nPlayLen, BOOL bLoop )
+void JavaSalSound::Play( ULONG nStartTime, ULONG nPlayLen, bool bLoop )
 {
 	OSStatus nErr = kAudioFileUnspecifiedError;
 	if ( mpNativeContext )
 	{
 		if ( mbPlaying && ( nErr = AudioOutputUnitStop( (AudioUnit)mpNativeContext ) ) == noErr )
-			mbPlaying = FALSE;
+			mbPlaying = false;
 		if ( !mbPlaying && ( nErr = AudioOutputUnitStart( (AudioUnit)mpNativeContext ) ) == noErr )
-			mbPlaying = TRUE;
+			mbPlaying = true;
 	}
 
 	if ( mpProc )
@@ -327,13 +310,13 @@ void SalSound::Play( ULONG nStartTime, ULONG nPlayLen, BOOL bLoop )
 
 // ------------------------------------------------------------------------
 
-void SalSound::Stop()
+void JavaSalSound::Stop()
 {
 	OSStatus nErr = kAudioFileUnspecifiedError;
 	if ( mbPlaying && mpNativeContext )
 	{
 		if ( ( nErr = AudioOutputUnitStop( (AudioUnit)mpNativeContext ) ) == noErr )
-			mbPlaying = FALSE;
+			mbPlaying = false;
 	}
 
 	if ( mpProc )
@@ -347,13 +330,13 @@ void SalSound::Stop()
 
 // ------------------------------------------------------------------------
 
-void SalSound::Pause()
+void JavaSalSound::Pause()
 {
 	OSStatus nErr = kAudioFileUnspecifiedError;
 	if ( mbPlaying && mpNativeContext )
 	{
 		if ( ( nErr = AudioOutputUnitStop( (AudioUnit)mpNativeContext ) ) == noErr )
-			mbPlaying = FALSE;
+			mbPlaying = false;
 	}
 
 	if ( mpProc )
@@ -367,8 +350,28 @@ void SalSound::Pause()
 
 // ------------------------------------------------------------------------
 
-void SalSound::SetNotifyProc( void* pInst, SALSOUNDPROC pProc )
+void JavaSalSound::Continue()
 {
-	mpInst = pInst;
-	mpProc = pProc;
+	Play( 0, 0, false );
+}
+
+// ------------------------------------------------------------------------
+
+bool JavaSalSound::IsLoopMode() const
+{
+	return false;
+}
+
+// ------------------------------------------------------------------------
+
+bool JavaSalSound::IsPlaying() const
+{
+	return mbPlaying;
+}
+
+// ------------------------------------------------------------------------
+
+bool JavaSalSound::IsPaused() const
+{
+	return !mbPlaying;
 }
