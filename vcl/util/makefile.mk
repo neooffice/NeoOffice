@@ -159,7 +159,7 @@ LIB1FILES+= \
             $(SLB)$/salgdi.lib  \
             $(SLB)$/salapp.lib
 
-.IF "$(GUIBASE)" != "java"
+.IF "$(GUIBASE)" == "java"
 LIB1FILES+= \
             $(SLB)$/saljava.lib
 .ENDIF
