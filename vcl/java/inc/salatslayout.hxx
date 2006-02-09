@@ -51,7 +51,7 @@
 #undef check
 
 struct ImplATSLayoutData;
-class SalGraphics;
+class JavaSalGraphics;
 
 // ----------------
 // - SalATSLayout -
@@ -59,7 +59,7 @@ class SalGraphics;
 
 class SalATSLayout : public GenericSalLayout
 {
-	SalGraphics*		mpGraphics;
+	JavaSalGraphics*	mpGraphics;
 	int					mnFallbackLevel;
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
 	mutable ImplLayoutRuns	maRuns;
@@ -70,17 +70,17 @@ class SalATSLayout : public GenericSalLayout
 public:
 	static void			ClearLayoutDataCache();
 
-						SalATSLayout( SalGraphics *pGraphics, int nFallbackLevel );
+						SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel );
 	virtual				~SalATSLayout();
 
 	virtual void		AdjustLayout( ImplLayoutArgs& rArgs );
 	virtual bool		LayoutText( ImplLayoutArgs& rArgs );
 	virtual void		DrawText( SalGraphics& rGraphics ) const;
-	virtual bool		GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector ) const;
+	virtual bool		GetOutline( SalGraphics& rGraphics, ::basegfx::B2DPolyPolygonVector& rVector ) const;
+	virtual void		GetVerticalGlyphTranslation( long nGlyph, long& nX, long& nY ) const;
 
 	void				Destroy();
 	long				GetBaselineDelta() const;
-	void				GetVerticalGlyphTranslation( long nGlyph, long& nX, long& nY ) const;
 };
 
 #endif // _SV_SALATSLAYOUT_HXX

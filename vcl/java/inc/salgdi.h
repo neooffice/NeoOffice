@@ -41,6 +41,9 @@
 #ifndef _SV_SALGDI_HXX
 #include <salgdi.hxx>
 #endif
+#ifndef _SV_OUTFONT_HXX
+#include <outfont.hxx>
+#endif
 #ifndef _SV_SALLAYOUT_HXX
 #include <sallayout.hxx>
 #endif
@@ -50,14 +53,31 @@
 
 class SalATSLayout;
 class JavaSalFrame;
-class SalPrinter;
-class SalVirtualDevice;
+class JavaSalPrinter;
+class JavaSalVirtualDevice;
 
 namespace vcl
 {
 class com_sun_star_vcl_VCLFont;
 class com_sun_star_vcl_VCLGraphics;
 }
+
+// --------------------
+// - JavaImplFontData -
+// --------------------
+
+class JavaImplFontData : public ImplFontData
+{
+	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
+
+public:
+							JavaImplFontData( );
+	virtual					~JavaImplFontData();
+
+	virtual ImplFontEntry*	CreateFontInstance( ImplFontSelectData& ) const;
+	virtual ImplFontData*   Clone() const;
+	::vcl::com_sun_star_vcl_VCLFont*	GetVCLFont();
+};
 
 // -------------------
 // - JavaSalGraphics -
@@ -69,9 +89,9 @@ public:
 	SalColor				mnFillColor;
 	SalColor				mnLineColor;
 	SalColor				mnTextColor;
-	SalFrame*				mpFrame;
-	SalPrinter*				mpPrinter;
-	SalVirtualDevice*		mpVirDev;
+	JavaSalFrame*			mpFrame;
+	JavaSalPrinter*			mpPrinter;
+	JavaSalVirtualDevice*	mpVirDev;
 	::vcl::com_sun_star_vcl_VCLGraphics*	mpVCLGraphics;
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
 	::std::map< int, ::vcl::com_sun_star_vcl_VCLFont* >	maFallbackFonts;

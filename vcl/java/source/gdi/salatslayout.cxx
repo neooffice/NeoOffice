@@ -49,8 +49,8 @@
 #ifndef _SV_SALATSLAYOUT_HXX
 #include <salatslayout.hxx>
 #endif
-#ifndef _SV_SALGDI_HXX
-#include <salgdi.hxx>
+#ifndef _SV_SALGDI_H
+#include <salgdi.h>
 #endif
 #ifndef _SV_OUTFONT_HXX
 #include <outfont.hxx>
@@ -60,6 +60,9 @@
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
+#endif
+#ifndef _BGFX_POLYGON_B2DPOLYPOLYGON_HXX
+#include <basegfx/polygon/b2dpolypolygon.hxx>
 #endif
 
 #define LAYOUT_CACHE_MAX_SIZE 4096
@@ -120,6 +123,7 @@ struct ImplATSLayoutData {
 	void				Release() const;
 };
 
+using namespace basegfx;
 using namespace osl;
 using namespace rtl;
 using namespace vcl;
@@ -470,7 +474,8 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 			}
 
 			bool bValidChar = true;
-			for ( int j = mpCharsToGlyphs[ i ]; j >= 0 && j < mnGlyphCount && mpGlyphInfoArray->glyphs[ j ].charIndex == i; j++ )
+			int j;
+			for ( j = mpCharsToGlyphs[ i ]; j >= 0 && j < mnGlyphCount && mpGlyphInfoArray->glyphs[ j ].charIndex == i; j++ )
 			{
 				if ( mpGlyphInfoArray->glyphs[ j ].glyphID == 0xffff || mpGlyphInfoArray->glyphs[ j ].layoutFlags & kATSGlyphInfoTerminatorGlyph )
 				{
@@ -553,10 +558,10 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 			if ( !mpFallbackFont )
 			{
 				SalData *pSalData = GetSalData();
-				::std::map< void*, ImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( (void *)nFontID );
+				::std::map< void*, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( (void *)nFontID );
 				if ( it != pSalData->maNativeFontMapping.end() )
 				{
-					com_sun_star_vcl_VCLFont *pVCLFont = (com_sun_star_vcl_VCLFont *)it->second->mpSysData;
+					com_sun_star_vcl_VCLFont *pVCLFont = it->second->GetVCLFont();
 					mpFallbackFont = pVCLFont->deriveFont( mpHash->mnFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
 				}
 				else
@@ -734,7 +739,7 @@ static OSStatus SalATSCubicClosePathCallback( void *pData )
 
 // ============================================================================
 
-SalLayout *SalGraphics::GetTextLayout( ImplLayoutArgs& rArgs, int nFallbackLevel )
+SalLayout *JavaSalGraphics::GetTextLayout( ImplLayoutArgs& rArgs, int nFallbackLevel )
 {
 	if ( nFallbackLevel && rArgs.mnFlags & SAL_LAYOUT_DISABLE_GLYPH_PROCESSING )
 		return NULL;
@@ -751,7 +756,7 @@ void SalATSLayout::ClearLayoutDataCache()
 
 // ----------------------------------------------------------------------------
 
-SalATSLayout::SalATSLayout( SalGraphics *pGraphics, int nFallbackLevel ) :
+SalATSLayout::SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel ) :
 	mpGraphics( pGraphics ),
 	mnFallbackLevel( nFallbackLevel ),
 	mpVCLFont( NULL ),
@@ -759,13 +764,13 @@ SalATSLayout::SalATSLayout( SalGraphics *pGraphics, int nFallbackLevel ) :
 {
 	if ( mnFallbackLevel )
 	{
-		::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = mpGraphics->maGraphicsData.maFallbackFonts.find( mnFallbackLevel );
-		if ( it != mpGraphics->maGraphicsData.maFallbackFonts.end() )
+		::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = mpGraphics->maFallbackFonts.find( mnFallbackLevel );
+		if ( it != mpGraphics->maFallbackFonts.end() )
 			mpVCLFont = new com_sun_star_vcl_VCLFont( it->second->getJavaObject() );
 	}
 	else
 	{
-		mpVCLFont = new com_sun_star_vcl_VCLFont( mpGraphics->maGraphicsData.mpVCLFont->getJavaObject() );
+		mpVCLFont = new com_sun_star_vcl_VCLFont( mpGraphics->mpVCLFont->getJavaObject() );
 	}
 }
 
@@ -811,10 +816,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	rArgs.ResetPos();
 	if ( !mnFallbackLevel )
 	{
-		mpGraphics->maGraphicsData.maFallbackRuns.Clear();
+		mpGraphics->maFallbackRuns.Clear();
 		while ( rArgs.GetNextRun( &nMinCharPos, &nEndCharPos, &bRunRTL ) )
 		{
-			mpGraphics->maGraphicsData.maFallbackRuns.AddRun( nMinCharPos, nEndCharPos, bRunRTL );
+			mpGraphics->maFallbackRuns.AddRun( nMinCharPos, nEndCharPos, bRunRTL );
 			maRuns.AddRun( nMinCharPos, nEndCharPos, bRunRTL );
 		}
 	}
@@ -828,10 +833,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		int nEndLastFallbackCharPos;
 		while ( rArgs.GetNextRun( &nMinCharPos, &nEndCharPos, &bRunRTL ) )
 		{
-			mpGraphics->maGraphicsData.maFallbackRuns.ResetPos();
-			while ( mpGraphics->maGraphicsData.maFallbackRuns.GetRun( &nMinFallbackCharPos, &nEndFallbackCharPos, &bFallbackRunRTL ) )
+			mpGraphics->maFallbackRuns.ResetPos();
+			while ( mpGraphics->maFallbackRuns.GetRun( &nMinFallbackCharPos, &nEndFallbackCharPos, &bFallbackRunRTL ) )
 			{
-				mpGraphics->maGraphicsData.maFallbackRuns.NextRun();
+				mpGraphics->maFallbackRuns.NextRun();
 				if ( nMinCharPos >= nMinFallbackCharPos && nEndCharPos <= nEndFallbackCharPos )
 				{
 					maRuns.AddRun( nMinCharPos, nEndCharPos, bRunRTL );
@@ -843,7 +848,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 	Point aPos;
 	maRuns.ResetPos();
-	mpGraphics->maGraphicsData.maFallbackRuns.ResetPos();
+	mpGraphics->maFallbackRuns.ResetPos();
 	while ( maRuns.GetRun( &nMinCharPos, &nEndCharPos, &bRunRTL ) )
 	{
 		maRuns.NextRun();
@@ -875,17 +880,17 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			}
 		}
 
-		if ( !mpGraphics->maGraphicsData.maFallbackRuns.PosIsInRun( nMinCharPos ) )
+		if ( !mpGraphics->maFallbackRuns.PosIsInRun( nMinCharPos ) )
 		{
-			mpGraphics->maGraphicsData.maFallbackRuns.ResetPos();
-			while ( !mpGraphics->maGraphicsData.maFallbackRuns.PosIsInRun( nMinCharPos ) )
-				mpGraphics->maGraphicsData.maFallbackRuns.NextRun();
+			mpGraphics->maFallbackRuns.ResetPos();
+			while ( !mpGraphics->maFallbackRuns.PosIsInRun( nMinCharPos ) )
+				mpGraphics->maFallbackRuns.NextRun();
 		}
 
 		bool bFallbackRunRTL;
 		int nMinFallbackCharPos;
 		int nEndFallbackCharPos;
-		if ( !mpGraphics->maGraphicsData.maFallbackRuns.GetRun( &nMinFallbackCharPos, &nEndFallbackCharPos, &bFallbackRunRTL ) )
+		if ( !mpGraphics->maFallbackRuns.GetRun( &nMinFallbackCharPos, &nEndFallbackCharPos, &bFallbackRunRTL ) )
 			return false;
 
 		// Turn off direction analysis
@@ -915,10 +920,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			}
 
 			int nNextLevel = mnFallbackLevel + 1;
-			::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = mpGraphics->maGraphicsData.maFallbackFonts.find( nNextLevel );
-			if ( it != mpGraphics->maGraphicsData.maFallbackFonts.end() )
+			::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = mpGraphics->maFallbackFonts.find( nNextLevel );
+			if ( it != mpGraphics->maFallbackFonts.end() )
 				delete it->second;
-			mpGraphics->maGraphicsData.maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pLayoutData->mpFallbackFont->getJavaObject() );
+			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pLayoutData->mpFallbackFont->getJavaObject() );
 			rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 		}
 
@@ -1040,13 +1045,14 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 		for ( i = 0; i < nGlyphCount; i++ )
 			aGlyphArray[ i ] &= GF_IDXMASK;
 
-		rGraphics.maGraphicsData.mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), nGlyphCount, aGlyphArray, aDXArray, mpVCLFont, rGraphics.maGraphicsData.mnTextColor, GetOrientation(), nGlyphOrientation, nTranslateX, nTranslateY );
+		JavaSalGraphics *pJavaGraphics = (JavaSalGraphics *)&rGraphics;
+		pJavaGraphics->mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), nGlyphCount, aGlyphArray, aDXArray, mpVCLFont, pJavaGraphics->mnTextColor, GetOrientation(), nGlyphOrientation, nTranslateX, nTranslateY );
 	}
 }
 
 // ----------------------------------------------------------------------------
 
-bool SalATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector ) const
+bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVector ) const
 {
 	bool bRet = false;
 
@@ -1132,7 +1138,7 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, PolyPolyVector& rVector )
 				}
 			}
 
-			rVector.push_back( aPolyPolygon );
+			rVector.push_back( aPolyPolygon.getB2DPolyPolygon() );
 			bRet = true;
 			break;
 		}

@@ -38,6 +38,9 @@
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
+#ifndef _SV_SALGDI_H
+#include <salgdi.h>
+#endif
 #ifndef _SV_OUTFONT_HXX
 #include <outfont.hxx>
 #endif
@@ -75,6 +78,6 @@ SalData::~SalData()
 	if ( mpEventQueue )
 		delete mpEventQueue;
 
-	for ( ::std::map< XubString, ImplFontData* >::const_iterator it = maFontNameMapping.begin(); it != maFontNameMapping.end(); ++it )
+	for ( ::std::map< XubString, JavaImplFontData* >::const_iterator it = maFontNameMapping.begin(); it != maFontNameMapping.end(); ++it )
 		delete it->second;
 }

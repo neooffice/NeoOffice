@@ -49,7 +49,7 @@
 #include <osl/conditn.hxx>
 #endif
 
-class ImplFontData;
+class JavaImplFontData;
 class JavaSalFrame;
 class JavaSalGraphics;
 class JavaSalInstance;
@@ -68,9 +68,9 @@ public:
 	ULONG					mnTimerInterval;
 	XubString				maDefaultPrinter;
 	::vcl::com_sun_star_vcl_VCLEventQueue*	mpEventQueue;
-	::std::map< XubString, ImplFontData* >	maFontNameMapping;
-	::std::map< ::rtl::OUString, ImplFontData* >	maJavaFontNameMapping;
-	::std::map< void*, ImplFontData* >	maNativeFontMapping;
+	::std::map< XubString, JavaImplFontData* >	maFontNameMapping;
+	::std::map< ::rtl::OUString, JavaImplFontData* >	maJavaFontNameMapping;
+	::std::map< void*, JavaImplFontData* >	maNativeFontMapping;
 	JavaSalFrame*			mpPresentationFrame;
 	::osl::Condition		maNativeEventCondition;
 	bool					mbNativeEventSucceeded;

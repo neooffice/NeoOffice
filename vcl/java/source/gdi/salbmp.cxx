@@ -35,8 +35,8 @@
 
 #define _SV_SALBMP_CXX
 
-#ifndef _SV_SALBMP_HXX
-#include <salbmp.hxx>
+#ifndef _SV_SALBMP_H
+#include <salbmp.h>
 #endif
 #ifndef _SV_SALGDI_HXX
 #include <salgdi.hxx>
@@ -49,7 +49,7 @@ using namespace vcl;
 
 // ==================================================================
 
-SalBitmap::SalBitmap() :
+JavaSalBitmap::JavaSalBitmap() :
 	maSize( 0, 0 ),
 	mnAcquireCount( 0 ),
 	mnBitCount( 0 ),
@@ -62,14 +62,14 @@ SalBitmap::SalBitmap() :
 
 // ------------------------------------------------------------------
 
-SalBitmap::~SalBitmap()
+JavaSalBitmap::~JavaSalBitmap()
 {
 	Destroy();
 }
 
 // ------------------------------------------------------------------
 
-BOOL SalBitmap::Create( const Size& rSize, USHORT nBitCount, const BitmapPalette& rPal )
+BOOL JavaSalBitmap::Create( const Size& rSize, USHORT nBitCount, const BitmapPalette& rPal )
 {
 	Destroy();
 
@@ -107,7 +107,7 @@ BOOL SalBitmap::Create( const Size& rSize, USHORT nBitCount, const BitmapPalette
 
 // ------------------------------------------------------------------
 
-BOOL SalBitmap::Create( const SalBitmap& rSalBmp )
+BOOL JavaSalBitmap::Create( const JavaSalBitmap& rSalBmp )
 {
 	Destroy();
 
@@ -143,21 +143,21 @@ BOOL SalBitmap::Create( const SalBitmap& rSalBmp )
 
 // ------------------------------------------------------------------
 
-BOOL SalBitmap::Create( const SalBitmap& rSalBmp, SalGraphics* pGraphics )
+BOOL JavaSalBitmap::Create( const JavaSalBitmap& rSalBmp, SalGraphics* pGraphics )
 {
 	return FALSE;
 }
 
 // ------------------------------------------------------------------
 
-BOOL SalBitmap::Create( const SalBitmap& rSalBmp, USHORT nNewBitCount )
+BOOL JavaSalBitmap::Create( const JavaSalBitmap& rSalBmp, USHORT nNewBitCount )
 {
 	FALSE;
 }
 
 // ------------------------------------------------------------------
 
-void SalBitmap::Destroy()
+void JavaSalBitmap::Destroy()
 {
 	maSize = Size( 0, 0 );
 	mnAcquireCount = 0;
@@ -187,21 +187,21 @@ void SalBitmap::Destroy()
 
 // ------------------------------------------------------------------
 
-USHORT SalBitmap::GetBitCount() const
+USHORT JavaSalBitmap::GetBitCount() const
 {
 	return mnBitCount;
 }
 
 // ------------------------------------------------------------------
 
-Size SalBitmap::GetSize() const
+Size JavaSalBitmap::GetSize() const
 {
 	return maSize;
 }
 
 // ------------------------------------------------------------------
 
-BitmapBuffer* SalBitmap::AcquireBuffer( BOOL bReadOnly )
+BitmapBuffer* JavaSalBitmap::AcquireBuffer( BOOL bReadOnly )
 {
 	if ( !mpVCLBitmap )
 		return NULL;
@@ -352,7 +352,7 @@ BitmapBuffer* SalBitmap::AcquireBuffer( BOOL bReadOnly )
 
 // ------------------------------------------------------------------
 
-void SalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, BOOL bReadOnly )
+void JavaSalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, BOOL bReadOnly )
 {
 	if ( pBuffer )
 	{
