@@ -41,6 +41,14 @@ PKG_CONFIG=/opt/local/bin/pkg-config
 
 # Set the shell to tcsh since the OpenOffice.org build requires it
 SHELL:=/bin/tcsh
+UNAME:=$(shell uname -p)
+ifeq ("$(UNAME)","powerpc")
+ULONGNAME=PowerPC
+UOUTPUTDIR=unxmacxp.pro
+else
+ULONGNAME=Intel
+UOUTPUTDIR=unxmacxi.pro
+endif
 
 # Build location macros
 BUILD_HOME:=build
@@ -112,7 +120,7 @@ build.oo_checkout:
 	sh -e -c 'if [ ! -e "$(OO_SOURCE_TAR_GZ_FILE)" ] ; then rm -Rf "$(BUILD_HOME)/tmp" ; mkdir -p "$(BUILD_HOME)/tmp" ; cd "$(BUILD_HOME)/tmp" ; cvs -d "$(OO_CVSROOT)" co MathMLDTD ; cd MathMLDTD ; cvs update -d -r "$(OO_TAG)" ; fi'
 	rm -Rf "$(BUILD_HOME)/tmp"
 # Do the real checkout
-	sh -e -c 'if [ -e "$(OO_SOURCE_TAR_GZ_FILE)" ] ; then pax -z -v -r -s "/$(OO_SOURCE_OUTPUT_DIR)/$(BUILD_HOME)/" -f "$(OO_SOURCE_TAR_GZ_FILE)" ; fi'
+	sh -e -c 'if [ -e "$(OO_SOURCE_TAR_GZ_FILE)" ] ; then pax -z -v -r -s "#$(OO_SOURCE_OUTPUT_DIR)#$(BUILD_HOME)#" -f "$(OO_SOURCE_TAR_GZ_FILE)" ; fi'
 	-sh -e -c 'if [ ! -e "$(OO_SOURCE_TAR_GZ_FILE)" ] ; then cd "$(BUILD_HOME)" ; cvs -d "$(OO_CVSROOT)" co -r "$(OO_TAG)" $(OO_PACKAGES) ; fi'
 # cvs seems to always fail so check that the last module has been checked out
 	cd "$(BUILD_HOME)/agg" ; cvs -d "$(OO_CVSROOT)" update -r "$(OO_TAG)"
@@ -176,12 +184,12 @@ build.neo_configure: build.oo_all
 	touch "$@"
 
 build.neo_%_patch: % build.neo_configure
-	cd "$<" ; sh -e -c 'for i in `cd "$(PWD)/$(BUILD_HOME)/$<" ; find . -type d | grep -v /CVS$$ | grep -v /unxmacxp.pro` ; do mkdir -p "$$i" ; done'
-	cd "$<" ; sh -e -c 'for i in `cd "$(PWD)/$(BUILD_HOME)/$<" ; find . ! -type d | grep -v /CVS/ | grep -v /unxmacxp.pro` ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
-	sh -e -c 'if [ ! -d "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro.oo" -a -d "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro" ] ; then rm -Rf "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro.oo" ; mv -f "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro" "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro.oo" ; fi'
-	rm -Rf "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro"
-	mkdir -p "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro"
-	cd "$<" ; ln -sf "$(PWD)/$(BUILD_HOME)/$</unxmacxp.pro"
+	cd "$<" ; sh -e -c 'for i in `cd "$(PWD)/$(BUILD_HOME)/$<" ; find . -type d | grep -v /CVS$$ | grep -v /$(UOUTPUTDIR)` ; do mkdir -p "$$i" ; done'
+	cd "$<" ; sh -e -c 'for i in `cd "$(PWD)/$(BUILD_HOME)/$<" ; find . ! -type d | grep -v /CVS/ | grep -v /$(UOUTPUTDIR)` ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
+	sh -e -c 'if [ ! -d "$(PWD)/$(BUILD_HOME)/$</$(UOUTPUTDIR).oo" -a -d "$(PWD)/$(BUILD_HOME)/$</$(UOUTPUTDIR)" ] ; then rm -Rf "$(PWD)/$(BUILD_HOME)/$</$(UOUTPUTDIR).oo" ; mv -f "$(PWD)/$(BUILD_HOME)/$</$(UOUTPUTDIR)" "$(PWD)/$(BUILD_HOME)/$</$(UOUTPUTDIR).oo" ; fi'
+	rm -Rf "$(PWD)/$(BUILD_HOME)/$</$(UOUTPUTDIR)"
+	mkdir -p "$(PWD)/$(BUILD_HOME)/$</$(UOUTPUTDIR)"
+	cd "$<" ; ln -sf "$(PWD)/$(BUILD_HOME)/$</$(UOUTPUTDIR)"
 	source "$(OO_ENV_JAVA)" ; cd "$<" ; `alias build` $(NEO_BUILD_ARGS)
 	touch "$@"
 
@@ -235,43 +243,33 @@ build.oo_download_help:
 
 build.package: build.neo_patches build.oo_download_dics build.oo_download_help build.source_zip
 	sh -e -c 'if [ -d "$(INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(INSTALL_HOME)" ; fi'
-	mkdir -p "$(INSTALL_HOME)/package"
-	echo `source "$(OO_ENV_JAVA)" ; cd "instsetoo/util" ; dmake language_numbers` > "$(INSTALL_HOME)/language_numbers"
-	echo `source "$(OO_ENV_JAVA)" ; cd "instsetoo/util" ; dmake language_names` > "$(INSTALL_HOME)/language_names"
-	echo "[ENVIRONMENT]" > "$(INSTALL_HOME)/response"
-	echo "INSTALLATIONMODE=INSTALL_NETWORK" >> "$(INSTALL_HOME)/response"
-	echo "INSTALLATIONTYPE=STANDARD" >> "$(INSTALL_HOME)/response"
-	echo "DESTINATIONPATH=$(PWD)/$(INSTALL_HOME)/package/Contents" >> "$(INSTALL_HOME)/response"
-	echo "OUTERPATH=" >> "$(INSTALL_HOME)/response"
-	echo "LOGFILE=" >> "$(INSTALL_HOME)/response"
-	echo "LANGUAGELIST="`cat "$(INSTALL_HOME)/language_numbers"` >> "$(INSTALL_HOME)/response"
-	echo "[JAVA]" >> "$(INSTALL_HOME)/response"
-	echo "JavaSupport=preinstalled_or_none" >> "$(INSTALL_HOME)/response"
-# Eliminate duplicate help directories since only English is available
-	mkdir -p "$(INSTALL_HOME)/package/Contents/help/en"
-	cd "$(INSTALL_HOME)/package/Contents/help" ; sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/language_names"` ; do ln -sf "en" "$${i}" ; done'
-	echo "A" > "$(INSTALL_HOME)/setupinput"
-	source "$(OO_ENV_JAVA)" ; "$(BUILD_HOME)/instsetoo/unxmacxp.pro/"`cat "$(INSTALL_HOME)/language_numbers"`"/normal/setup" -nogui -v "-r:$(PWD)/$(INSTALL_HOME)/response" < "$(INSTALL_HOME)/setupinput"
+	mkdir -p "$(INSTALL_HOME)/package/Contents"
+	mkdir -p "$(INSTALL_HOME)/package/Applications"
+	ln -sf "$(PWD)/$(INSTALL_HOME)/package/Contents" "$(PWD)/$(INSTALL_HOME)/package/Applications/openoffice.org2.0"
+	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find "$(PWD)/$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice/portable/install/en-US" . -name "*.sw"` ; do gnutar xvf "$${i}"; done'
+	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find "$(PWD)/$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice_languagepack/portable/install" . -name "*.sw"` ; do gnutar xvf "$${i}"; done'
+	rm -Rf "$(INSTALL_HOME)/package/Applications"
+	cd "$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice_languagepack/portable/install" ; find . -type d -maxdepth 1 > "$(PWD)/$(INSTALL_HOME)/language_names"
 	chmod -Rf u+w,a+r "$(INSTALL_HOME)/package"
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/dtrans/unxmacxp.pro/lib/libdtransjava$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/extensions/unxmacxp.pro/lib/libpl$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/framework/unxmacxp.pro/lib/libfwk$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/jvmfwk/unxmacxp.pro/bin/sunjavapluginrc" "$(PWD)/$(BUILD_HOME)/jvmfwk/unxmacxp.pro/lib/libjvmfwk.dylib.3" "$(PWD)/$(BUILD_HOME)/jvmfwk/unxmacxp.pro/lib/sunjavaplugin.dylib" "$(PWD)/$(BUILD_HOME)/sal/unxmacxp.pro/lib/libsalextra_x11osx_mxp.dylib" "$(PWD)/$(BUILD_HOME)/sal/unxmacxp.pro/lib/libuno_sal.dylib.3" $(PWD)/$(BUILD_HOME)/sfx2/unxmacxp.pro/lib/libsfx$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/shell/unxmacxp.pro/lib/librecentfile.dylib" "$(PWD)/$(BUILD_HOME)/shell/unxmacxp.pro/lib/localebe1.uno.dylib" "$(PWD)/$(BUILD_HOME)/sj2/unxmacxp.pro/lib/libj$${UPD}$${DLLSUFFIX}_g.dylib" "$(PWD)/$(BUILD_HOME)/svtools/unxmacxp.pro/lib/libsvl$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/svtools/unxmacxp.pro/lib/libsvt$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/store/unxmacxp.pro/lib/libstore.dylib.3.1.0" "$(PWD)/$(BUILD_HOME)/svx/unxmacxp.pro/lib/libsvx$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/sw/unxmacxp.pro/lib/libsw$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/vcl/unxmacxp.pro/lib/libvcl$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/writerperfect/unxmacxp.pro/lib/libwpft$${UPD}$${DLLSUFFIX}.dylib" "program"
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/desktop/unxmacxp.pro/bin/pkgchk" "program/pkgchk.bin" ; chmod a+x "program/pkgchk.bin"
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/desktop/unxmacxp.pro/bin/soffice" "program/soffice.bin" ; chmod a+x "program/soffice.bin"
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/resource/ooo$${UPD}"*.res ; cp -f "$(PWD)/$(BUILD_HOME)/svx/unxmacxp.pro/bin/ooo$${UPD}"*.res "program/resource"
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/shell/unxmacxp.pro/bin/senddoc" "program/senddoc" ; chmod a+x "program/senddoc"
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/jvmfwk/unxmacxp.pro/bin/javavendors_ooo.xml" "share/config/javavendors.xml"
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/Info.plist" "."
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/PkgInfo" "."
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/vcl/unxmacxp.pro/bin/salapp"*.res "program/resource"
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/vcl/unxmacxp.pro/class/vcl.jar" "program/classes"
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/dtrans/$(UOUTPUTDIR)/lib/libdtransjava$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/extensions/$(UOUTPUTDIR)/lib/libpl$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/framework/$(UOUTPUTDIR)/lib/libfwk$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/jvmfwk/$(UOUTPUTDIR)/bin/sunjavapluginrc" "$(PWD)/$(BUILD_HOME)/jvmfwk/$(UOUTPUTDIR)/lib/libjvmfwk.dylib.3" "$(PWD)/$(BUILD_HOME)/jvmfwk/$(UOUTPUTDIR)/lib/sunjavaplugin.dylib" "$(PWD)/$(BUILD_HOME)/sal/$(UOUTPUTDIR)/lib/libsalextra_x11osx_mxp.dylib" "$(PWD)/$(BUILD_HOME)/sal/$(UOUTPUTDIR)/lib/libuno_sal.dylib.3" "$(PWD)/$(BUILD_HOME)/sfx2/$(UOUTPUTDIR)/lib/libsfx$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/shell/$(UOUTPUTDIR)/lib/librecentfile.dylib" "$(PWD)/$(BUILD_HOME)/shell/$(UOUTPUTDIR)/lib/localebe1.uno.dylib" "$(PWD)/$(BUILD_HOME)/sj2/$(UOUTPUTDIR)/lib/libj$${UPD}$${DLLSUFFIX}_g.dylib" "$(PWD)/$(BUILD_HOME)/svtools/$(UOUTPUTDIR)/lib/libsvl$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/svtools/$(UOUTPUTDIR)/lib/libsvt$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/store/$(UOUTPUTDIR)/lib/libstore.dylib.3" "$(PWD)/$(BUILD_HOME)/svx/$(UOUTPUTDIR)/lib/libsvx$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/sw/$(UOUTPUTDIR)/lib/libsw$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/$(BUILD_HOME)/vcl/$(UOUTPUTDIR)/lib/libvcl$${UPD}$${DLLSUFFIX}.dylib" "$(PWD)/writerperfect/$(UOUTPUTDIR)/lib/libwpft$${UPD}$${DLLSUFFIX}.dylib" "program"
+	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/desktop/$(UOUTPUTDIR)/bin/pkgchk" "program/pkgchk.bin" ; chmod a+x "program/pkgchk.bin"
+	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/desktop/$(UOUTPUTDIR)/bin/soffice" "program/soffice.bin" ; chmod a+x "program/soffice.bin"
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents" ; rm -f "program/resource/ooo$${UPD}"*.res ; cp -f "$(PWD)/$(BUILD_HOME)/svx/$(UOUTPUTDIR)/bin/ooo$${UPD}"*.res "program/resource"
+	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/shell/$(UOUTPUTDIR)/bin/senddoc" "program/senddoc" ; chmod a+x "program/senddoc"
+	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/jvmfwk/$(UOUTPUTDIR)/bin/javavendors_ooo.xml" "share/config/javavendors.xml"
+	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sysui/$(UOUTPUTDIR)/misc/Info.plist" "."
+	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sysui/$(UOUTPUTDIR)/misc/PkgInfo" "."
+	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/vcl/$(UOUTPUTDIR)/bin/salapp"*.res "program/resource"
+	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/vcl/$(UOUTPUTDIR)/class/vcl.jar" "program/classes"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/Resources"
 	mkdir -p "$(INSTALL_HOME)/package/Contents/Resources"
 	cc -o "$(INSTALL_HOME)/package/Contents/Resources/reload_file" "bin/reload_file.c" ; strip -S -x "$(INSTALL_HOME)/package/Contents/Resources/reload_file"
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/License" "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/Readme" "$(PWD)/$(BUILD_HOME)/sysui/unxmacxp.pro/misc/"*.icns "Resources"
+	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sysui/$(UOUTPUTDIR)/misc/License" "$(PWD)/$(BUILD_HOME)/sysui/$(UOUTPUTDIR)/misc/Readme" "$(PWD)/$(BUILD_HOME)/sysui/$(UOUTPUTDIR)/misc/"*.icns "Resources"
 	cd "$(INSTALL_HOME)/package/Contents/Resources" ; sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/language_names" | sed "s#-#_#g"` ; do mkdir -p "$${i}.lproj" ; mkdir -p `echo "$${i}" | sed "s#_.*\\$$##"`".lproj" ; done'
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/program" ; regcomp -revoke -r services.rdb -c "libdtransX11$${UPD}$${DLLSUFFIX}.dylib"
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/program" ; regcomp -register -r services.rdb -c "libdtransjava$${UPD}$${DLLSUFFIX}.dylib"
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/program" ; regcomp -register -r services.rdb -c "libwpft$${UPD}$${DLLSUFFIX}.dylib"
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf LICENSE* README* licenses/* "program/cde-open-url" "program/configimport" "program/gengal" "program/gnome-open-url" "program/gnome-open-url.bin" "program/kde-open-url" "program/libdtransX11$${UPD}$${DLLSUFFIX}.dylib" "program/pluginapp.bin" "program/libpsp$${UPD}$${DLLSUFFIX}.dylib" "program/libspa$${UPD}$${DLLSUFFIX}.dylib" "program/open-url" "program/setofficelang" "program/oo_product.bmp" "program/soffice" "program/spadmin" "program/spadmin.bin" "program/unopkg" readmes/* "share/psprint"
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf LICENSE* README* licenses/* "program/cde-open-url" "program/configimport" "program/gengal" "program/gnome-open-url" "program/gnome-open-url.bin" "program/kde-open-url" "program/libdtransX11$${UPD}$${DLLSUFFIX}.dylib" "program/pluginapp.bin" "program/libpsp$${UPD}$${DLLSUFFIX}.dylib" "program/libspa$${UPD}$${DLLSUFFIX}.dylib" "program/libvclplug_gen$${UPD}$${DLLSUFFIX}.dylib" "program/open-url" "program/setofficelang" "program/oo_product.bmp" "program/soffice" "program/spadmin" "program/spadmin.bin" "program/unopkg" readmes/* "share/psprint"
 	cd "$(INSTALL_HOME)/package/Contents/program" ; ln -sf "configimport.bin" "configimport"
 	cd "$(INSTALL_HOME)/package/Contents/program" ; ln -sf "gengal.bin" "gengal"
 	cd "$(INSTALL_HOME)/package/Contents/program" ; ln -sf "pkgchk.bin" "pkgchk"
@@ -291,10 +289,10 @@ build.package: build.neo_patches build.oo_download_dics build.oo_download_help b
 	cd "$(INSTALL_HOME)/package/Contents/Library/Spotlight" ; curl -L "$(NEOLIGHT_MDIMPORTER_URL)" | tar zxvf -
 	cd "$(INSTALL_HOME)" ; curl -L -O "$(NEOLIGHT_MDIMPORTER_URL)"
 # Move the language pack languages out and create the language pack installers
-	sh -e -c 'while read i ; do rm -f "$(INSTALL_HOME)/no_lang.Set" ; grep -v "^setenv RES_" "$(OO_ENV_JAVA)" > "$(INSTALL_HOME)/no_lang.Set" ; for j in $$i ; do echo "setenv $${j} \"TRUE\"" >> "$(INSTALL_HOME)/no_lang.Set" ; done ; rm -rf "$(INSTALL_HOME)/no_lang_language_numbers" ; "$(SHELL)" -c "source \"$(INSTALL_HOME)/no_lang.Set\" ; cd \"instsetoo/util\" ; dmake language_numbers" | sed "s/01,//" | sed "s/49,//" > "$(INSTALL_HOME)/no_lang_language_numbers" ; rm -Rf "$(INSTALL_HOME)/no_lang_language_names" ; "$(SHELL)" -c "source \"$(INSTALL_HOME)/no_lang.Set\" ; cd \"instsetoo/util\" ; dmake language_names" | sed "s/ /,/g" | sed "s/de,//" > "$(INSTALL_HOME)/no_lang_language_names" ; rm -Rf "$(INSTALL_HOME)/no_lang_language_longnames" ; "$(SHELL)" -c "source \"$(INSTALL_HOME)/no_lang.Set\" ; cd \"instsetoo/util\" ; dmake language_longnames" | sed "s/ /,/g" | sed "s/german,//" > "$(INSTALL_HOME)/no_lang_language_longnames" ; mkdir -p "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"` ; for k in `cat "$(INSTALL_HOME)/no_lang_language_numbers" | sed "s/,/ /g"` ; do mkdir -p "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"`"/Contents/program/resource" ; for l in `cd "$(INSTALL_HOME)/package/Contents/program/resource" ; find . -type f -name "*$${k}.res" -maxdepth 1` ; do mv "$(INSTALL_HOME)/package/Contents/program/resource/$${l}" "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"`"/Contents/program/resource/$${l}" ; done ; done ; mkdir -p "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"`"/Contents/share/dict/ooo" ; for m in `cat "$(INSTALL_HOME)/no_lang_language_names" | sed "s/,/ /g"` ; do for n in `cd "$(INSTALL_HOME)/package/Contents/share/dict/ooo" ; find . -type f -name "$${m}_[A-Z]*" -maxdepth 1 ; find . -type f -name "*_$${m}_[A-Z]*" -maxdepth 1` ; do mv "$(INSTALL_HOME)/package/Contents/share/dict/ooo/$${n}" "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"`"/Contents/share/dict/ooo/$${n}" ; done ; done ; mkdir -p "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"`"/Contents/share/template" ; for o in `cat "$(INSTALL_HOME)/no_lang_language_longnames" | sed "s/,/ /g"` ; do for p in `cd "$(INSTALL_HOME)/package/Contents/share/template" ; find . -type d -name "$${o}" -maxdepth 1` ; do mv "$(INSTALL_HOME)/package/Contents/share/template/$${p}" "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"`"/Contents/share/template/$${p}" ; done ; done ; done < "etc/language_pack_languages"'
-	sh -e -c 'for i in `find "$(INSTALL_HOME)" -type d -name "package_*" -maxdepth 1` ; do "$(MAKE)" $(MFLAGS) build.`basename "$$i"` ; done'
+#	sh -e -c 'while read i ; do rm -f "$(INSTALL_HOME)/no_lang.Set" ; grep -v "^setenv RES_" "$(OO_ENV_JAVA)" > "$(INSTALL_HOME)/no_lang.Set" ; for j in $$i ; do echo "setenv $${j} \"TRUE\"" >> "$(INSTALL_HOME)/no_lang.Set" ; done ; rm -rf "$(INSTALL_HOME)/no_lang_language_numbers" ; "$(SHELL)" -c "source \"$(INSTALL_HOME)/no_lang.Set\" ; cd \"instsetoo/util\" ; dmake language_numbers" | sed "s/01,//" | sed "s/49,//" > "$(INSTALL_HOME)/no_lang_language_numbers" ; rm -Rf "$(INSTALL_HOME)/no_lang_language_names" ; "$(SHELL)" -c "source \"$(INSTALL_HOME)/no_lang.Set\" ; cd \"instsetoo/util\" ; dmake language_names" | sed "s/ /,/g" | sed "s/de,//" > "$(INSTALL_HOME)/no_lang_language_names" ; rm -Rf "$(INSTALL_HOME)/no_lang_language_longnames" ; "$(SHELL)" -c "source \"$(INSTALL_HOME)/no_lang.Set\" ; cd \"instsetoo/util\" ; dmake language_longnames" | sed "s/ /,/g" | sed "s/german,//" > "$(INSTALL_HOME)/no_lang_language_longnames" ; mkdir -p "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"` ; for k in `cat "$(INSTALL_HOME)/no_lang_language_numbers" | sed "s/,/ /g"` ; do mkdir -p "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"`"/Contents/program/resource" ; for l in `cd "$(INSTALL_HOME)/package/Contents/program/resource" ; find . -type f -name "*$${k}.res" -maxdepth 1` ; do mv "$(INSTALL_HOME)/package/Contents/program/resource/$${l}" "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"`"/Contents/program/resource/$${l}" ; done ; done ; mkdir -p "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"`"/Contents/share/dict/ooo" ; for m in `cat "$(INSTALL_HOME)/no_lang_language_names" | sed "s/,/ /g"` ; do for n in `cd "$(INSTALL_HOME)/package/Contents/share/dict/ooo" ; find . -type f -name "$${m}_[A-Z]*" -maxdepth 1 ; find . -type f -name "*_$${m}_[A-Z]*" -maxdepth 1` ; do mv "$(INSTALL_HOME)/package/Contents/share/dict/ooo/$${n}" "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"`"/Contents/share/dict/ooo/$${n}" ; done ; done ; mkdir -p "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"`"/Contents/share/template" ; for o in `cat "$(INSTALL_HOME)/no_lang_language_longnames" | sed "s/,/ /g"` ; do for p in `cd "$(INSTALL_HOME)/package/Contents/share/template" ; find . -type d -name "$${o}" -maxdepth 1` ; do mv "$(INSTALL_HOME)/package/Contents/share/template/$${p}" "$(INSTALL_HOME)/package_"`cat "$(INSTALL_HOME)/no_lang_language_names"`"/Contents/share/template/$${p}" ; done ; done ; done < "etc/language_pack_languages"'
+#	sh -e -c 'for i in `find "$(INSTALL_HOME)" -type d -name "package_*" -maxdepth 1` ; do "$(MAKE)" $(MFLAGS) build.`basename "$$i"` ; done'
 # Move the help files out and create the help content installers
-	sh -e -c 'j=1 ; for i in `cat "$(PWD)/$(INSTALL_HOME)/language_numbers" | sed "s#,# #g"` ; do k=`awk "{ print \\$$$$j }" "$(PWD)/$(INSTALL_HOME)/language_names"` ; j=`expr "$$j" + 1` ; if [ "$$k" = "en-US" ] ; then continue ; fi ; for l in `ls "$(PWD)/$(HELP_HOME)"/*\_$$i\_*` ; do mkdir -p "$(PWD)/$(INSTALL_HOME)/package_$$k/Contents/help/$$k" ; ( cd "$(PWD)/$(INSTALL_HOME)/package_$$k/Contents/help/$$k" ; pax -z -r -f "$$l" "*.zip" ; for m in `ls *.zip` ; do unzip "$$m" ; done ; rm -f *.zip ) ; done ; if [ -d "$(PWD)/$(INSTALL_HOME)/package_$$k/Contents/help/$$k" ] ; then "$(MAKE)" $(MFLAGS) "PRODUCT_LANG_PACK_VERSION=$(PRODUCT_HELP_PACK_VERSION)" "PRODUCT_DIR_LANG_PACK_VERSION=$(PRODUCT_DIR_HELP_PACK_VERSION)" "build.package_$$k" ; fi ; done'
+#	sh -e -c 'j=1 ; for i in `cat "$(PWD)/$(INSTALL_HOME)/language_numbers" | sed "s#,# #g"` ; do k=`awk "{ print \\$$$$j }" "$(PWD)/$(INSTALL_HOME)/language_names"` ; j=`expr "$$j" + 1` ; if [ "$$k" = "en-US" ] ; then continue ; fi ; for l in `ls "$(PWD)/$(HELP_HOME)"/*\_$$i\_*` ; do mkdir -p "$(PWD)/$(INSTALL_HOME)/package_$$k/Contents/help/$$k" ; ( cd "$(PWD)/$(INSTALL_HOME)/package_$$k/Contents/help/$$k" ; pax -z -r -f "$$l" "*.zip" ; for m in `ls *.zip` ; do unzip "$$m" ; done ; rm -f *.zip ) ; done ; if [ -d "$(PWD)/$(INSTALL_HOME)/package_$$k/Contents/help/$$k" ] ; then "$(MAKE)" $(MFLAGS) "PRODUCT_LANG_PACK_VERSION=$(PRODUCT_HELP_PACK_VERSION)" "PRODUCT_DIR_LANG_PACK_VERSION=$(PRODUCT_DIR_HELP_PACK_VERSION)" "build.package_$$k" ; fi ; done'
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find "." -name ".DS_Store"` ; do rm "$${i}" ; done'
 	chmod -Rf a-w,a+r "$(INSTALL_HOME)/package"
 	echo "Running sudo to chown installation files..."
@@ -310,13 +308,11 @@ build.package: build.neo_patches build.oo_download_dics build.oo_download_help b
 	expr `du -sk "$(INSTALL_HOME)/package" | awk '{ print $$1 }'` + `ls -s "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).info" | awk '{ print $$1 }'` + `ls -s "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).bom" | awk '{ print $$1 }'` + 3 | xargs echo "CompressedSize " >> "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).sizes"
 	cp "etc/gpl.html" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/License.html"
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/ReadMe.rtf" | sed 's#$$(PRODUCT_TRADEMARKED_NAME_RTF)#'"$(PRODUCT_TRADEMARKED_NAME_RTF)"'#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/ReadMe.rtf"
-	sed 's#$$(TARGET_MACHINE)#'"`uname -p`"'#g' "bin/InstallationCheck" > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/InstallationCheck" ; chmod a+x "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/InstallationCheck"
+	sed 's#$$(TARGET_MACHINE)#$(UNAME)#g' "bin/InstallationCheck" > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/InstallationCheck" ; chmod a+x "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/InstallationCheck"
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "bin/InstallationCheck.strings" > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/InstallationCheck.strings"
 	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources" ; sh -e -c 'for i in `find . -type d -name "*.lproj"` ; do ln -sf "../InstallationCheck.strings" "$${i}/InstallationCheck.strings" ; done'
 	cp "bin/preflight" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/preflight" ; chmod a+x "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/preflight"
-# Mac OS X 10.2.8 cannot handle a postflight script
-	cp "bin/postflight" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_install" ; chmod a+x "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_install"
-	cp "bin/postflight" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_upgrade" ; chmod a+x "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_upgrade"
+	cp "bin/postflight" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).postflight" ; chmod a+x "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).postflight"
 	mkdir -p "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
 	mv -f "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
 	cp -f "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/ReadMe.rtf" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)/ReadMe.rtf"
@@ -325,6 +321,7 @@ build.package: build.neo_patches build.oo_download_dics build.oo_download_help b
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/Build.html" | sed 's#$$(PRODUCT_BUILD_URL)#$(PRODUCT_BUILD_URL)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)/src/Build.html"
 	chmod -Rf a-w,a+r "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
 	chmod -f u+w "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
+	mv "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)"
 	touch "$@"
 
 build.odk_package: build.neo_odk_patches
@@ -334,9 +331,9 @@ build.patch_package: build.package
 	sh -e -c 'if [ -d "$(PATCH_INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(PATCH_INSTALL_HOME)" ; fi'
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/program/classes"
 	chmod -Rf u+w,a+r "$(PATCH_INSTALL_HOME)/package"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/vcl/unxmacxp.pro/class/vcl.jar" "program/classes"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/vcl/$(UOUTPUTDIR)/class/vcl.jar" "program/classes"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' "$(PWD)/$(INSTALL_HOME)/package/Contents/program/bootstraprc" | sed 's#ProductPatch=.*$$#ProductPatch=$(PRODUCT_PATCH_VERSION)#' > "program/bootstraprc"
-	source "$(OO_ENV_JAVA)" ; cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/vcl/unxmacxp.pro/lib/libvcl$${UPD}$${DLLSUFFIX}.dylib" "program"
+	source "$(OO_ENV_JAVA)" ; cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/vcl/$(UOUTPUTDIR)/lib/libvcl$${UPD}$${DLLSUFFIX}.dylib" "program"
 	rm -Rf "$(PATCH_INSTALL_HOME)/package/Contents/Resources"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Resources"
 	cc -o "$(PATCH_INSTALL_HOME)/package/Contents/Resources/reload_file" "bin/reload_file.c" ; strip -S -x "$(PATCH_INSTALL_HOME)/package/Contents/Resources/reload_file"
@@ -359,20 +356,20 @@ build.patch_package: build.package
 	cp "etc/gpl.html" "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/License.html"
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/ReadMe.rtf" | sed 's#$$(PRODUCT_TRADEMARKED_NAME_RTF)#'"$(PRODUCT_TRADEMARKED_NAME_RTF)"'#g' > "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/ReadMe.rtf"
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "bin/installutils.patch" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION_FAMILY)#$(PRODUCT_VERSION_FAMILY)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_PREVIOUS_VERSION)#$(PRODUCT_PREVIOUS_VERSION)#g' | sed 's#$$(PRODUCT_PREVIOUS_PATCH_VERSION)#$(PRODUCT_PREVIOUS_PATCH_VERSION)#g' > "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/installutils"
+	sed 's#$$(TARGET_MACHINE)#$(UNAME)#g' "bin/InstallationCheck" > "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/InstallationCheck" ; chmod a+x "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/InstallationCheck"
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "bin/InstallationCheck.strings" > "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/InstallationCheck.strings"
 	cd "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources" ; sh -e -c 'for i in `find . -type d -name "*.lproj"` ; do ln -sf "../InstallationCheck.strings" "$${i}/InstallationCheck.strings" ; done'
 	cd "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources" ; sh -e -c 'for i in `find . -type d -name "*.lproj"` ; do cp "$(PWD)/bin/InstallationCheck.strings" "$${i}/InstallationCheck.strings" ; done'
 	cp "bin/VolumeCheck.patch" "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/VolumeCheck" ; chmod a+x "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/VolumeCheck"
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "bin/VolumeCheck.strings.patch" | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' > "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/VolumeCheck.strings"
 	cd "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources" ; sh -e -c 'for i in `find . -type d -name "*.lproj"` ; do cp "VolumeCheck.strings" "$${i}/VolumeCheck.strings" ; done' ; rm -f "VolumeCheck.strings"
-# Mac OS X 10.2.8 cannot handle a postflight script
-	cp "bin/postflight.patch" "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_install" ; chmod a+x "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_install"
-	cp "bin/postflight.patch" "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_upgrade" ; chmod a+x "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_upgrade"
+	cp "bin/postflight.patch" "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).postflight" ; chmod a+x "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).postflight"
 	mkdir -p "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)"
 	mv -f "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg" "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)"
 	cp -f "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/ReadMe.rtf" "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)/ReadMe.rtf"
 	chmod -Rf a-w,a+r "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)"
 	chmod -f u+w "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)"
+	mv "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)" "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME)"
 	touch "$@"
 
 build.package_%: $(INSTALL_HOME)/package_%
@@ -398,20 +395,19 @@ build.package_%: $(INSTALL_HOME)/package_%
 	cp "etc/gpl.html" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/License.html"
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/ReadMe.rtf" | sed 's#$$(PRODUCT_TRADEMARKED_NAME_RTF)#'"$(PRODUCT_TRADEMARKED_NAME_RTF)"'#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/ReadMe.rtf"
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "bin/installutils.langpack" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION_FAMILY)#$(PRODUCT_VERSION_FAMILY)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/installutils"
-	sed 's#$$(TARGET_MACHINE)#'"`uname -p`"'#g' "bin/InstallationCheck" > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/InstallationCheck" ; chmod a+x "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/InstallationCheck"
+	sed 's#$$(TARGET_MACHINE)#$(UNAME)#g' "bin/InstallationCheck" > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/InstallationCheck" ; chmod a+x "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/InstallationCheck"
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "bin/InstallationCheck.strings" > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/InstallationCheck.strings"
 	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources" ; sh -e -c 'for i in `find . -type d -name "*.lproj"` ; do ln -sf "../InstallationCheck.strings" "$${i}/InstallationCheck.strings" ; done'
 	cp "bin/VolumeCheck.langpack" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/VolumeCheck" ; chmod a+x "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/VolumeCheck"
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "bin/VolumeCheck.strings.langpack" | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' > "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/VolumeCheck.strings"
 	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources" ; sh -e -c 'for i in `find . -type d -name "*.lproj"` ; do cp "VolumeCheck.strings" "$${i}/VolumeCheck.strings" ; done' ; rm -f "VolumeCheck.strings"
-# Mac OS X 10.2.8 cannot handle a postflight script
-	cp "bin/postflight.langpack" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_install" ; chmod a+x "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_install"
-	cp "bin/postflight.langpack" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_upgrade" ; chmod a+x "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).post_upgrade"
+	cp "bin/postflight.langpack" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).postflight" ; chmod a+x "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/$(PRODUCT_DIR_NAME).postflight"
 	mkdir -p "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)_$(@:build.package_%=%)"
 	mv -f "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME).pkg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)_$(@:build.package_%=%)"
 	cp -f "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)_$(@:build.package_%=%)/$(PRODUCT_DIR_NAME).pkg/Contents/Resources/ReadMe.rtf" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)_$(@:build.package_%=%)/ReadMe.rtf"
 	chmod -Rf a-w,a+r "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)_$(@:build.package_%=%)"
 	chmod -f u+w "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)_$(@:build.package_%=%)"
+	mv "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)_$(@:build.package_%=%)" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)_$(@:build.package_%=%)-$(ULONGNAME)"
 
 build.source_zip:
 	rm -Rf "$(SOURCE_HOME)"
