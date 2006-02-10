@@ -244,7 +244,7 @@ SHL1STDLIBS+= -ldl
 SHL1STDLIBS += -framework Cocoa
 .ENDIF
 
-.IF "$(GUIBASE)" != "unx"
+.IF "$(GUIBASE)"=="unx"
 SHL1STDLIBS += -lX11
 .ENDIF
 
