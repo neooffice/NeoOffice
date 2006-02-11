@@ -1716,9 +1716,9 @@ JavaVM * JavaVirtualMachine::createJavaVM(stoc_javavm::JVM const & jvm,
         options[x+addOpt].extraInfo= NULL;
     }
 #if defined MACOSX
-    // Set the Java max memory to the greater of a portion of real memory or
-	// 256 MB. Note that this option must be at the end otherwise the JVM seems
-	// to ignore it.
+    // Set the Java max memory to the greater of half of physical user memory
+	// or 256 MB. Note that this option must be at the end otherwise the JVM
+	// seems to ignore it.
 	int pMib[2];
 	size_t nMinMem = 256 * 1024 * 1024;
 	size_t nMaxMem = nMinMem * 3;
@@ -1727,7 +1727,7 @@ JavaVM * JavaVirtualMachine::createJavaVM(stoc_javavm::JVM const & jvm,
 	pMib[0] = CTL_HW;
 	pMib[1] = HW_USERMEM;
 	if ( !sysctl( pMib, 2, &nUserMem, &nLen, NULL, 0 ) )
-		nUserMem = ( nUserMem * 3 ) / 4;
+		nUserMem /= 2;
 
 	if ( nUserMem > nMaxMem )
 		nUserMem = nMaxMem;
