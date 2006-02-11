@@ -60,8 +60,10 @@
 #include "diagnostics.h"
 
 #if defined USE_JAVA && defined MACOSX
-#include <unistd.h>
 #include "osl/process.h"
+#include "rtl/strbuf.hxx"
+#include <sys/sysctl.h>
+#include <unistd.h>
 #endif	// USE_JAVA && MACOSX
 
 #define OUSTR(x) ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM(x) )
@@ -622,16 +624,36 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         // Set miscellaneous optimizations for the JVM
         options[i+5].optionString = "-Xrs";
         options[i+5].extraInfo = NULL;
-        options[i+6].optionString = "-Xmx256m";
+
+        options[i+6].optionString = "-XX:+UseParallelGC";
         options[i+6].extraInfo = NULL;
-        options[i+7].optionString = "-XX:+UseParallelGC";
-        options[i+7].extraInfo = NULL;
 
         // We need to turn off some of Java 1.4's graphics optimizations as
         // they cause full screen window positioning, clipping, and image
         // drawing speed to get messed up
-        options[i+8].optionString = "-Dapple.awt.window.position.forceSafeProgrammaticPositioning=false";
-        options[i+8].extraInfo = NULL;
+        options[i+7].optionString = "-Dapple.awt.window.position.forceSafeProgrammaticPositioning=false";
+        options[i+7].extraInfo = NULL;
+
+		// Set the Java max memory to the greater of half of physical user
+		// memory or 256 MB.
+		int pMib[2];
+		size_t nMinMem = 256 * 1024 * 1024;
+		size_t nMaxMem = nMinMem * 3;
+		size_t nUserMem = 0;
+		size_t nLen = sizeof( nUserMem );
+		pMib[0] = CTL_HW;
+		pMib[1] = HW_USERMEM;
+		if ( !sysctl( pMib, 2, &nUserMem, &nLen, NULL, 0 ) )
+			nUserMem /= 2;
+		if ( nUserMem > nMaxMem )
+			nUserMem = nMaxMem;
+		else if ( nUserMem < nMinMem )
+			nUserMem = nMinMem;
+		rtl::OStringBuffer aBuf( "-Xmx" );
+		aBuf.append( (sal_Int32)( nUserMem / ( 1024 * 1024 ) ) );
+		aBuf.append( "m" );
+		options[i+8].optionString = (char *)aBuf.makeStringAndClear().getStr();
+		options[i+8].extraInfo = NULL;
 #endif	// USE_JAVA && MACOSX
 
 #if OSL_DEBUG_LEVEL >= 2

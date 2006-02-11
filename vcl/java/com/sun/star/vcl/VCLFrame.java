@@ -954,7 +954,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void enableFlushing(boolean b)
 	{
-		if (b != flushingEnabled)
+		if (b != flushingEnabled && window.isShowing())
 		{
 			Graphics2D g = graphics.getGraphics();
 			if (g != null) {
@@ -1747,8 +1747,8 @@ g.dispose();
 						if (!f.isDisposed()) {
 							Window w = f.getWindow();
 							if (w.isShowing()) {
-								w.hide();
 								f.enableFlushing(false);
+								w.hide();
 								detachedChildren.add(f);
 							}
 						}
@@ -2026,13 +2026,13 @@ g.dispose();
 
 			// Show the window
 			window.show();
+			enableFlushing(true);
 		}
 		else {
 			// Hide the window
+			enableFlushing(false);
 			window.hide();
 		}
-
-		enableFlushing(b);
 
 	}
 
@@ -2119,8 +2119,8 @@ g.dispose();
 				if (!f.isDisposed()) {
 					Window w = f.getWindow();
 					if (w.isShowing()) {
-						w.hide();
 						f.enableFlushing(false);
+						w.hide();
 						detachedChildren.add(f);
 					}
 				}

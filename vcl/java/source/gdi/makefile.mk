@@ -42,6 +42,8 @@ TARGET=salgdi
 
 .INCLUDE :  settings.mk
 
+CDEFS+=-DDLLSUFFIX=$(DLLSUFFIX)
+
 # --- Files --------------------------------------------------------
 
 .IF "$(GUIBASE)"!="java"
