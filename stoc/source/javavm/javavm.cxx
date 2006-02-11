@@ -147,6 +147,8 @@ int main( int argc, char * argv[])
 #ifdef UNIX
 #define INI_FILE "javarc"
 #ifdef MACOSX
+#include "rtl/strbuf.hxx"
+#include <sys/sysctl.h>
 #include <unistd.h>
 #define DEF_JAVALIB "JavaVM.framework"
 #else
@@ -1664,10 +1666,11 @@ JavaVM * JavaVirtualMachine::createJavaVM(stoc_javavm::JVM const & jvm,
     // we have "addOpt" additional properties to those kept in the JVM struct
 #ifdef MACOSX
     sal_Int32 addOpt=3;
+    JavaVMOption * options= new JavaVMOption[cprops + addOpt + 1];
 #else	// MACOSX
     sal_Int32 addOpt=2;
-#endif	// MACOSX
     JavaVMOption * options= new JavaVMOption[cprops + addOpt];
+#endif	// MACOSX
     rtl::OString sClassPath= rtl::OString("-Djava.class.path=")
         + rtl::OUStringToOString(jvm.getClassPath(),
                                  osl_getThreadTextEncoding());
@@ -1713,13 +1716,40 @@ JavaVM * JavaVirtualMachine::createJavaVM(stoc_javavm::JVM const & jvm,
         options[x+addOpt].extraInfo= NULL;
     }
 #if defined MACOSX
+    // Set the Java max memory to the greater of a portion of real memory or
+	// 256 MB. Note that this option must be at the end otherwise the JVM seems
+	// to ignore it.
+	int pMib[2];
+	size_t nMinMem = 256 * 1024 * 1024;
+	size_t nMaxMem = nMinMem * 3;
+	size_t nUserMem = 0;
+	size_t nLen = sizeof( nUserMem );
+	pMib[0] = CTL_HW;
+	pMib[1] = HW_USERMEM;
+	if ( !sysctl( pMib, 2, &nUserMem, &nLen, NULL, 0 ) )
+		nUserMem = ( nUserMem * 3 ) / 4;
+
+	if ( nUserMem > nMaxMem )
+		nUserMem = nMaxMem;
+	else if ( nUserMem < nMinMem )
+		nUserMem = nMinMem;
+
+	rtl::OStringBuffer aBuf( "-Xmx" );
+	aBuf.append( (sal_Int32)( nUserMem / ( 1024 * 1024 ) ) );
+	aBuf.append( "m" );
+
+   	options[cprops+addOpt].optionString= (char *)aBuf.makeStringAndClear().getStr();
+    options[cprops+addOpt].extraInfo= NULL;
+
     // Apple will not load Java 1.4 unless the version is JNI_VERSION_1_4
     vm_args.version= JNI_VERSION_1_4;
+    vm_args.options= options;
+    vm_args.nOptions= cprops + addOpt + 1;
 #else	// MACOSX
     vm_args.version= JNI_VERSION_1_2;
-#endif	// MACOSX
     vm_args.options= options;
     vm_args.nOptions= cprops + addOpt;
+#endif	// MACOSX
     vm_args.ignoreUnrecognized= JNI_TRUE;
 
     /* We set a global flag which is used by the abort handler in order to
