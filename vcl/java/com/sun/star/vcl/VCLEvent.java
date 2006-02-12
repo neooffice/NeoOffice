@@ -582,6 +582,16 @@ public final class VCLEvent extends AWTEvent {
 	public final static int KEY_HELP = VCLEvent.KEYGROUP_MISC + 27;
 
 	/**
+	 * KEY_HANGUL_HANJA constant.
+	 */
+	public final static int KEY_HANGUL_HANJA = VCLEvent.KEYGROUP_MISC + 28;
+
+	/**
+	 * KEY_DECIMAL constant.
+	 */
+	public final static int KEY_DECIMAL = VCLEvent.KEYGROUP_MISC + 29;
+
+	/**
 	 * KEY_CODE constant.
 	 */
 	public final static int KEY_CODE = 0x0FFF;
@@ -812,9 +822,29 @@ public final class VCLEvent extends AWTEvent {
 	public final static int SALEVENT_MENUDEACTIVATE = 36;
 
 	/**
+	 * SALEVENT_EXTERNALMOUSEMOVE constant.
+	 */
+	public final static int SALEVENT_EXTERNALMOUSEMOVE = 37;
+
+	/**
+	 * SALEVENT_EXTERNALMOUSEBUTTONDOWN constant.
+	 */
+	public final static int SALEVENT_EXTERNALMOUSEBUTTONDOWN = 38;
+
+	/**
+	 * SALEVENT_EXTERNALMOUSEBUTTONUP constant.
+	 */
+	public final static int SALEVENT_EXTERNALMOUSEBUTTONUP = 39;
+
+	/**
+	 * SALEVENT_INPUTLANGUAGECHANGE constant.
+	 */
+	public final static int SALEVENT_INPUTLANGUAGECHANGE = 40;
+
+	/**
 	 * SALEVENT_COUNT constant.
 	 */
-	public final static int SALEVENT_COUNT = 36;
+	public final static int SALEVENT_COUNT = 40;
 
 	/**
 	 * SALEVENT_OPENDOCUMENT constant.
@@ -1278,7 +1308,7 @@ public final class VCLEvent extends AWTEvent {
 						break;
 					case KeyEvent.VK_ENTER:
 						keyCode = VCLEvent.KEY_RETURN;
-					break;
+						break;
 					case KeyEvent.VK_BACK_SPACE:
 						keyCode = VCLEvent.KEY_BACKSPACE;
 						break;
@@ -1563,6 +1593,9 @@ public final class VCLEvent extends AWTEvent {
 						break;
 					case KeyEvent.VK_PROPS:
 						keyCode = VCLEvent.KEY_PROPERTIES;
+						break;
+					case KeyEvent.VK_DECIMAL:
+						keyCode = VCLEvent.KEY_DECIMAL;
 						break;
 					default:
 						keyCode = 0;
@@ -2232,6 +2265,9 @@ public final class VCLEvent extends AWTEvent {
 			case VCLEvent.KEY_HELP:
 				outCode = KeyEvent.VK_HELP;
 				break;
+			case VCLEvent.KEY_DECIMAL:
+				outCode = KeyEvent.VK_DECIMAL;
+				break;
 			case VCLEvent.KEY_F25:
 			case VCLEvent.KEY_F26:
 			case VCLEvent.KEY_OPEN:
@@ -2239,6 +2275,7 @@ public final class VCLEvent extends AWTEvent {
 			case VCLEvent.KEY_CONTEXTMENU:
 			case VCLEvent.KEY_MENU:
 			case VCLEvent.KEY_CODE:
+			case VCLEvent.KEY_HANGUL_HANJA:
 				break;
 			default:
 				break;
