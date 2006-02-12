@@ -50,6 +50,9 @@
 #ifndef _SV_SALLAYOUT_HXX
 #include <sallayout.hxx>
 #endif
+#ifndef _SV_IMPFONT_HXX
+#include <impfont.hxx>
+#endif
 #ifndef _SV_OUTDEV_H
 #include <outdev.h>
 #endif
@@ -417,11 +420,11 @@ JavaImplFontData::JavaImplFontData( const ImplDevFontAttributes& rAttributes, co
 {
 	mpVCLFont = new com_sun_star_vcl_VCLFont( pVCLFont->getJavaObject() );
 
-	// Scalable fonts should always report their width as zero. The single size
-	// zero causes higher-level font elements to treat fonts as infinitely
-	// scalable and provide lists of default font sizes. The size of zero
-	// matches the Windows implementation. Bug 196.
-	SetBitmapSize( 0, mpVCLFont->getSize() );
+	// [ed] 11/1/04 Scalable fonts should always report their width and height
+	// as zero. The single size zero causes higher-level font elements to treat
+	// fonts as infinitely scalable and provide lists of default font sizes.
+	// The size of zero matches the unx implementation. Bug 196.
+	SetBitmapSize( 0, 0 );
 }
 
 // -----------------------------------------------------------------------
@@ -815,8 +818,5 @@ void JavaSalGraphics::DrawServerFontLayout( const ServerFontLayout& )
 
 ImplFontCharMap* JavaSalGraphics::GetImplFontCharMap() const
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalGraphics::GetImplFontCharMap not implemented\n" );
-#endif
-	return NULL;
+	return ImplFontCharMap::GetDefaultMap();
 }
