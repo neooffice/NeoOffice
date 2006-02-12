@@ -6157,8 +6157,8 @@ SalLayout* OutputDevice::ImplGlyphFallbackLayout( SalLayout* pSalLayout, ImplLay
     for( int nFallbackLevel = 1; nFallbackLevel < MAX_FALLBACK; ++nFallbackLevel )
     {
 #if defined USE_JAVA && defined MACOSX
-            // SetFont() will push the fallback font into aFontSelData
-            mpGraphics->SetFont( &aFontSelData, nFallbackLevel );
+        // SetFont() will push the fallback font into aFontSelData
+        mpGraphics->SetFont( &aFontSelData, nFallbackLevel );
 #else	// USE_JAVA && MACOSX
         // find a font family suited for glyph fallback
         ImplFontEntry* pFallbackFont = mpFontCache->GetFallback( mpFontList,
