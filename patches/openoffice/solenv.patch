@@ -1,10 +1,26 @@
+Index: inc/settings.mk
+===================================================================
+RCS file: /cvs/tools/solenv/inc/settings.mk,v
+retrieving revision 1.178
+diff -u -r1.178 settings.mk
+--- inc/settings.mk	14 Nov 2005 09:33:05 -0000	1.178
++++ inc/settings.mk	13 Feb 2006 22:25:11 -0000
+@@ -188,7 +188,7 @@
+ JAVAC=$(JAVACOMPILER) --encoding=ISO-8859-15 -O2 -fno-assert -Wno-deprecated -C
+ JAVAI=$(JAVAINTERPRETER) -Dgnu.gcj.precompiled.db.path=$(GCJ_DATABASE)
+ .ELSE
+-JAVAC=$(JAVACOMPILER)
++JAVAC=$(JAVACOMPILER) -source 1.4
+ JAVAI=$(JAVAINTERPRETER)
+ .ENDIF
+ 
 Index: inc/unxmacxp.mk
 ===================================================================
 RCS file: /cvs/tools/solenv/inc/unxmacxp.mk,v
 retrieving revision 1.57
 diff -u -r1.57 unxmacxp.mk
 --- inc/unxmacxp.mk	17 Oct 2005 14:20:53 -0000	1.57
-+++ inc/unxmacxp.mk	27 Dec 2005 20:10:42 -0000
++++ inc/unxmacxp.mk	13 Feb 2006 22:25:12 -0000
 @@ -198,10 +198,10 @@
  STDSLOCUI=
  
