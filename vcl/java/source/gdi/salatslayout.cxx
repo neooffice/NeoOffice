@@ -385,6 +385,25 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 		return;
 	}
 
+	// The OOo code will often layout fonts at unrealistically large sizes so
+	// we need to use a more reasonably sized font or else we will exceed the
+	// 32K Fixed data type limit that the ATSTrapezoid struct uses
+	Fixed nAdjustedSize = nSize;
+	while ( Float32ToLong( Fix2X( aTrapezoid.upperRight.x ) ) >= 0x7fff )
+	{
+		// Reset font size
+		nAdjustedSize /= 10;
+		nTags[0] = kATSUSizeTag;
+		nBytes[0] = sizeof( Fixed );
+		nVals[0] = &nAdjustedSize;
+
+		if ( nAdjustedSize < 1 || ATSUSetAttributes( maFontStyle, 1, nTags, nBytes, nVals ) != noErr || ATSUGetGlyphBounds( maLayout, 0, 0, kATSUFromTextBeginning, kATSUToTextEnd, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) != noErr )
+		{
+			Destroy();
+			return;
+		}
+	}
+
 	ByteCount nBufSize;
 	if ( ATSUGetGlyphInfo( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nBufSize, NULL ) != noErr )
 	{
@@ -452,6 +471,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	memset( mpCharAdvances, 0, nBufSize );
 
 	// Fix bug 448 by eliminating subpixel advances.
+	float nScaleY = Fix2X( nSize ) / Fix2X( nAdjustedSize );
 	int nLastValidCharPos = -1;
 	UniCharArrayOffset nNextCaretPos = 0;
 	for ( i = 0; i < mpHash->mnLen; i = nNextCaretPos )
@@ -464,7 +484,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 		if ( mpHash->mbRTL )
 		{
 			if ( ATSUGetGlyphBounds( maLayout, 0, 0, i, nNextCaretPos - i, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
-				mpCharAdvances[ i ] += Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX );
+				mpCharAdvances[ i ] += Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX * nScaleY );
 
 			if ( mpCharAdvances[ i ] < 1 )
 			{
@@ -508,12 +528,12 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 				if ( j != mpCharsToChars[ j ] )
 				{
 					if ( ATSUGetGlyphBounds( maLayout, 0, 0, j, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
-						nWidth = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX ) + nClusterWidth;
+						nWidth = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX * nScaleY ) + nClusterWidth;
 				}
 				else
 				{
 					if ( ATSUGetGlyphBounds( maLayout, 0, 0, j, nNextCaretPos - j, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
-						nWidth = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX );
+						nWidth = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX * nScaleY );
 				}
 
 				if ( nWidth > nClusterWidth )
@@ -526,6 +546,20 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 					mpCharAdvances[ j ] = 1;
 				}
 			}
+		}
+	}
+
+	if ( nAdjustedSize != nSize )
+	{
+		// Reset font size
+		nTags[0] = kATSUSizeTag;
+		nBytes[0] = sizeof( Fixed );
+		nVals[0] = &nSize;
+
+		if ( ATSUSetAttributes( maFontStyle, 1, nTags, nBytes, nVals ) != noErr )
+		{
+			Destroy();
+			return;
 		}
 	}
 
