@@ -1461,6 +1461,7 @@ BOOL Printer::StartJob( const XubString& rJobName )
 		else
 			pPrintFile = NULL;
 
+#ifndef USE_JAVA
         // #125075# StartJob can Reschedule on Windows, sfx
         // depends on IsPrinting() in case of closing a document
         BOOL bSaveNewJobSetup   = mbNewJobSetup;
@@ -1471,6 +1472,7 @@ BOOL Printer::StartJob( const XubString& rJobName )
 		mnCurPrintPage	        = 1;
 		mbJobActive 	        = TRUE;
 		mbPrinting		        = TRUE;
+#endif	// !USE_JAVA
         
 		if ( !mpPrinter->StartJob( pPrintFile, rJobName, Application::GetDisplayName(),
 								   nCopies, bCollateCopy,
@@ -1481,12 +1483,14 @@ BOOL Printer::StartJob( const XubString& rJobName )
 				mnError = PRINTER_GENERALERROR;
 			ImplSVData* pSVData = ImplGetSVData();
 			pSVData->mpDefInst->DestroyPrinter( mpPrinter );
+#ifndef USE_JAVA
             mbNewJobSetup	    = bSaveNewJobSetup;
             maJobName		    = aSaveJobName;
             mnCurPage		    = 0;
             mnCurPrintPage	    = 0;
             mbJobActive 	    = FALSE;
             mbPrinting		    = FALSE;
+#endif	// !USE_JAVA
 			mpPrinter = NULL;
 			return FALSE;
 		}
@@ -1494,6 +1498,13 @@ BOOL Printer::StartJob( const XubString& rJobName )
 #ifdef USE_JAVA
 		if ( bFirstPass )
 			return TRUE;
+
+		mbNewJobSetup	= FALSE;
+		maJobName		= rJobName;
+		mnCurPage		= 1;
+		mnCurPrintPage	= 1;
+		mbJobActive		= TRUE;
+		mbPrinting		= TRUE;
 #endif	// USE_JAVA
 
 		StartPrint();
@@ -1519,6 +1530,7 @@ BOOL Printer::StartJob( const XubString& rJobName )
 		mpQPrinter->SetUserCopy( bUserCopy );
         mpQPrinter->SetPrinterOptions( *mpPrinterOptions );
 
+#ifndef USE_JAVA
         // #125075# StartJob can Reschedule on Windows, sfx
         // depends on IsPrinting() in case of closing a document
         BOOL bSaveNewJobSetup   = mbNewJobSetup;
@@ -1528,6 +1540,7 @@ BOOL Printer::StartJob( const XubString& rJobName )
 		mnCurPage		        = 1;
 		mbJobActive 	        = TRUE;
 		mbPrinting		        = TRUE;
+#endif	// !USE_JAVA
         
 #ifdef USE_JAVA
 		if ( mpQPrinter->StartJob( rJobName ) && !bFirstPass )
@@ -1548,17 +1561,28 @@ BOOL Printer::StartJob( const XubString& rJobName )
 #endif	// USE_JAVA
 		else
 		{
+#ifndef USE_JAVA
 			mbNewJobSetup	= bSaveNewJobSetup;
 			maJobName		= aSaveJobName;
 			mnCurPage		= 0;
 			mbJobActive 	= FALSE;
 			mbPrinting		= FALSE;
+#endif	// !USE_JAVA
 			mnError = mpQPrinter->GetErrorCode();
 			mpQPrinter->Destroy();
 			mpQPrinter = NULL;
 			return FALSE;
 		}
 	}
+
+#ifdef USE_JAVA
+	mbNewJobSetup	= FALSE;
+	maJobName		= rJobName;
+	mnCurPage		= 1;
+	mnCurPrintPage	= 1;
+	mbJobActive		= TRUE;
+	mbPrinting		= TRUE;
+#endif	// USE_JAVA
 
 	return TRUE;
 }
