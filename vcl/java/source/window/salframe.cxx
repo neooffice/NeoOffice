@@ -631,6 +631,8 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 
 	StyleSettings aStyleSettings( rSettings.GetStyleSettings() );
 
+	aStyleSettings.SetCursorBlinkTime( 500 );
+
 	SalColor nTextTextColor = com_sun_star_vcl_VCLScreen::getTextTextColor();
 	Color aTextColor( SALCOLOR_RED( nTextTextColor ), SALCOLOR_GREEN( nTextTextColor ), SALCOLOR_BLUE( nTextTextColor ) );
 	aStyleSettings.SetDialogTextColor( aTextColor );
