@@ -740,7 +740,10 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		// Fix bug 1310 by creating a new native window with the new parent
 		ReleaseGraphics( mpGraphics );
 		if ( mpVCLFrame )
+		{
+			mpVCLFrame->dispose();
 			delete mpVCLFrame;
+		}
 		mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, mpParent );
 		maSysData.aWindow = 0;
 		SetPosSize( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration, maGeometry.nWidth, maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
