@@ -508,7 +508,7 @@ static void ChildStatusProc(void *pData)
 			for (i = 0; data.m_pszEnv[i] != NULL; i++)
 	     		putenv(data.m_pszEnv[i]);
 
-#if defined(LINUX)
+#if defined(LINUX) && !defined(NPTL)
             /* mfe: linux likes to have just one thread when the exec family is called */
             /*      this np function has this purpose ...                              */
             pthread_kill_other_threads_np();
@@ -581,7 +581,7 @@ static void ChildStatusProc(void *pData)
 		close(channel[0]);
 
 
-		if (i == 0)
+		if ((pid > 0) && (i == 0))
 		{
 			osl_acquireMutex(ChildListMutex);
 

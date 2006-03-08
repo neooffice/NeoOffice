@@ -1571,7 +1571,7 @@ void Desktop::Main()
         RTL_LOGFILE_CONTEXT_TRACE( aLog, "{ create SvtPathOptions and SvtLanguageOptions" );
         pPathOptions = new SvtPathOptions;
 //        SetSplashScreenProgress(40);
-        pLanguageOptions = new SvtLanguageOptions(sal_True);
+//        pLanguageOptions = new SvtLanguageOptions(sal_True);
 //        SetSplashScreenProgress(45);
         RTL_LOGFILE_CONTEXT_TRACE( aLog, "} create SvtPathOptions and SvtLanguageOptions" );
 
@@ -1615,6 +1615,9 @@ void Desktop::Main()
             }
         }
         RTL_LOGFILE_CONTEXT_TRACE( aLog, "} FirstStartWizard" );
+
+		// keep a language options instance...
+		pLanguageOptions = new SvtLanguageOptions(sal_True);
 
         if (xGlobalBroadcaster.is())
         {

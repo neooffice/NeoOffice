@@ -336,6 +336,7 @@ extern char *strdup(const char *);
 
 #ifdef MACOSX
 #	define  ETIME ETIMEDOUT
+#	include <dlfcn.h>    
 #	include <pthread.h>
 #	include <sys/file.h>
 #	include <sys/ioctl.h>
@@ -352,11 +353,17 @@ extern char *strdup(const char *);
 #   include <Carbon/Carbon.h>
 #	include <postmac.h>
 #	if BYTE_ORDER == LITTLE_ENDIAN
+#		ifndef _LITTLE_ENDIAN
 #		define _LITTLE_ENDIAN
+#		endif
 #	elif BYTE_ORDER == BIG_ENDIAN
+#		ifndef _BIG_ENDIAN
 #		define _BIG_ENDIAN
+#		endif
 #	elif BYTE_ORDER == PDP_ENDIAN
+#		ifndef _PDP_ENDIAN
 #		define _PDP_ENDIAN
+#		endif
 #	endif
 #	define 	IOCHANNEL_TRANSFER_BSD_RENO
 #	define  NO_PTHREAD_RTL
