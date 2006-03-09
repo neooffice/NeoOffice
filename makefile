@@ -59,8 +59,13 @@ PATCH_INSTALL_HOME:=patch_install
 SOURCE_HOME:=source
 CD_INSTALL_HOME:=cd_install
 OO_PATCHES_HOME:=patches/openoffice
-OO_ENV_X11:=$(BUILD_HOME)/MacosxEnv.Set
-OO_ENV_JAVA:=$(BUILD_HOME)/MacosxEnvJava.Set
+ifeq ("$(UNAME)","powerpc")
+OO_ENV_X11:=$(BUILD_HOME)/MacOSXPPCEnv.Set
+OO_ENV_JAVA:=$(BUILD_HOME)/MacOSXPPCEnvJava.Set
+else
+OO_ENV_X11:=$(BUILD_HOME)/MacOSXIntelEnv.Set
+OO_ENV_JAVA:=$(BUILD_HOME)/MacOSXIntelEnvJava.Set
+endif
 OO_LANGUAGES=ALL
 OO_DIC_URL:=http://ftp.services.openoffice.org/pub/OpenOffice.org/contrib/dictionaries
 OO_HELP_URL:=http://ftp.services.openoffice.org/pub/OpenOffice.org/contrib/helpcontent
