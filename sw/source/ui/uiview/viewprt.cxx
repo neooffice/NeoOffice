@@ -535,8 +535,6 @@ void __EXPORT SwView::ExecutePrint(SfxRequest& rReq)
 #endif	// MACOSX
 			if(pPrintFromMergeItem)
 				rReq.RemoveItem(FN_QRY_MERGE);
-			if(pPrintFromMergeItem)
-				rReq.RemoveItem(FN_QRY_MERGE);
 #ifndef MACOSX
             BOOL bFromMerge = pPrintFromMergeItem ? pPrintFromMergeItem->GetValue() : FALSE;
 #endif	// !MACOSX
