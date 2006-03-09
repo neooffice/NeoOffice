@@ -116,6 +116,7 @@
 #define META_CREATECONTROL_PDF_ACTION			(10025)
 #define META_BEGINCONTROLAPPEARANCE_PDF_ACTION	(10026)
 #define META_ENDCONTROLAPPEARANCE_PDF_ACTION	(10027)
+#define META_METADIGITLANGUAGE_PDF_ACTION		(10028)
 
 class MetaTextPDFAction : public MetaTextAction
 {
@@ -576,6 +577,18 @@ public:
     sal_Int32			GetPage() const { return mnPage; }
 };
 
+class MetaDigitLanguagePDFAction : public MetaAction
+{
+private:
+    LanguageType		meLang;
+
+public:
+    					MetaDigitLanguagePDFAction( LanguageType eType ) : MetaAction( META_DIGITLANGUAGE_PDF_ACTION ), meLang( eLang ) {}
+    virtual				~MetaDigitLanguagePDFAction() {}
+
+    LanguageType		GetLanguage() const { return meLang; }
+};
+
 #endif	// USE_JAVA && MACOSX
 
 #include <vector>
@@ -666,7 +679,9 @@ public:
         // the same for double values
         void appendMappedLength( double fLength, rtl::OStringBuffer& rBuffer, bool bVertical = true, sal_Int32* pOutLength = NULL ) const;
         // appends LineInfo
-        void appendLineInfo( const LineInfo& rInfo, rtl::OStringBuffer& rBuffer ) const;
+        // returns false if too many dash array entry were created for
+        // the implementation limits of some PDF readers
+        bool appendLineInfo( const LineInfo& rInfo, rtl::OStringBuffer& rBuffer ) const;
         // appends a horizontal waveline with vertical offset (helper for drawWaveLine)
         void appendWaveLine( sal_Int32 nLength, sal_Int32 nYOffset, sal_Int32 nDelta, rtl::OStringBuffer& rBuffer ) const;
 
@@ -1011,6 +1026,7 @@ public:
     // else false
     static bool compressStream( SvMemoryStream* );
 
+    static void convertLineInfoToExtLineInfo( const LineInfo& rIn, PDFWriter::ExtLineInfo& rOut );
 private:
     static const BuiltinFont m_aBuiltinFonts[14];
 
@@ -1115,6 +1131,7 @@ private:
         Region			m_aClipRegion;
         sal_Int32		m_nAntiAlias;
         sal_Int32		m_nLayoutMode;
+        LanguageType    m_aDigitLanguage;
         sal_Int32		m_nTransparentPercent;
         sal_uInt16		m_nFlags;
         sal_uInt16      m_nUpdateFlags;
@@ -1128,6 +1145,7 @@ private:
         static const sal_uInt16 updateAntiAlias             = 0x0040;
         static const sal_uInt16 updateLayoutMode            = 0x0080;
         static const sal_uInt16 updateTransparentPercent    = 0x0100;
+        static const sal_uInt16 updateDigitLanguage         = 0x0200;
 
         GraphicsState() :
                 m_aLineColor( COL_TRANSPARENT ),
@@ -1487,6 +1505,17 @@ public:
 #endif	// USE_JAVA && MACOSX
         m_aGraphicsStack.front().m_nLayoutMode = nLayoutMode;
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateLayoutMode;
+    }
+    
+    void setDigitLanguage( LanguageType eLang )
+    {
+#if defined USE_JAVA && defined MACOSX
+        if ( !m_bUsingMtf )
+            m_aMtf.AddAction( new MetaDigitLanguagePDFAction( eLang ) );
+#endif	// USE_JAVA && MACOSX
+
+        m_aGraphicsStack.front().m_aDigitLanguage = eLang;
+        m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateDigitLanguage;
     }
 
     void setTextAlign( TextAlign eAlign )

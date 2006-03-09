@@ -41,6 +41,9 @@
 #include <tools/isolang.hxx>
 #endif
 
+#ifndef _SV_SVAPP_HXX
+#include <svapp.hxx>
+#endif
 #ifndef _SV_SVDATA_HXX
 #include <svdata.hxx>
 #endif
@@ -465,6 +468,7 @@ ImplStyleData::ImplStyleData()
     mnOptions                   = 0;
     mnAutoMnemonic				= 1;
     mnToolbarIconSize			= STYLE_TOOLBAR_ICONSIZE_UNKNOWN;
+    mnSymbolsStyle				= STYLE_SYMBOLS_AUTO;
 
     SetStandardStyles();
 }
@@ -526,7 +530,9 @@ ImplStyleData::ImplStyleData( const ImplStyleData& rData ) :
     maRadioCheckFont( rData.maRadioCheckFont ),
     maPushButtonFont( rData.maPushButtonFont ),
     maFieldFont( rData.maFieldFont ),
-    maIconFont( rData.maIconFont )
+    maIconFont( rData.maIconFont ),
+    maButtonRolloverTextColor( rData.maButtonRolloverTextColor ),
+    maFieldRolloverTextColor( rData.maButtonRolloverTextColor )
 {
     mnRefCount                  = 1;
     mnBorderSize                = rData.mnBorderSize;
@@ -562,6 +568,7 @@ ImplStyleData::ImplStyleData( const ImplStyleData& rData ) :
     mnAutoMnemonic				= rData.mnAutoMnemonic;
     mnUseImagesInMenus			= rData.mnUseImagesInMenus;
     mnToolbarIconSize			= rData.mnToolbarIconSize;
+    mnSymbolsStyle				= rData.mnSymbolsStyle;
 }
 
 // -----------------------------------------------------------------------
@@ -598,6 +605,7 @@ void ImplStyleData::SetStandardStyles()
     maShadowColor               = Color( COL_GRAY );
     maDarkShadowColor           = Color( COL_BLACK );
     maButtonTextColor           = Color( COL_BLACK );
+    maButtonRolloverTextColor   = Color( COL_BLACK );
     maRadioCheckTextColor       = Color( COL_BLACK );
     maGroupTextColor            = Color( COL_BLACK );
     maLabelTextColor            = Color( COL_BLACK );
@@ -610,6 +618,7 @@ void ImplStyleData::SetStandardStyles()
     maMonoColor                 = Color( COL_BLACK );
     maFieldColor                = Color( COL_WHITE );
     maFieldTextColor            = Color( COL_BLACK );
+    maFieldRolloverTextColor    = Color( COL_BLACK );
     maActiveColor               = Color( COL_BLUE );
     maActiveColor2              = Color( COL_BLACK );
     maActiveTextColor           = Color( COL_WHITE );
@@ -710,6 +719,66 @@ void StyleSettings::Set3DColors( const Color& rColor )
         mpData->maLightColor    = Color( COL_WHITE );
         mpData->maShadowColor   = Color( COL_GRAY );
     }
+}
+
+// -----------------------------------------------------------------------
+
+::rtl::OUString StyleSettings::ImplSymbolsStyleToName( ULONG nStyle ) const
+{
+	switch ( nStyle )
+	{
+		case STYLE_SYMBOLS_DEFAULT:    return ::rtl::OUString::createFromAscii( "default" );
+		case STYLE_SYMBOLS_HICONTRAST: return ::rtl::OUString::createFromAscii( "hicontrast" );
+		case STYLE_SYMBOLS_INDUSTRIAL: return ::rtl::OUString::createFromAscii( "industrial" );
+		case STYLE_SYMBOLS_CRYSTAL:    return ::rtl::OUString::createFromAscii( "crystal" );
+	}
+
+	return ::rtl::OUString::createFromAscii( "auto" );
+}
+
+// -----------------------------------------------------------------------
+
+ULONG StyleSettings::ImplNameToSymbolsStyle( const ::rtl::OUString &rName ) const
+{
+	if ( rName == ::rtl::OUString::createFromAscii( "default" ) )
+		return STYLE_SYMBOLS_DEFAULT;
+	else if ( rName == ::rtl::OUString::createFromAscii( "hicontrast" ) )
+		return STYLE_SYMBOLS_HICONTRAST;
+	else if ( rName == ::rtl::OUString::createFromAscii( "industrial" ) )
+		return STYLE_SYMBOLS_INDUSTRIAL;
+	else if ( rName == ::rtl::OUString::createFromAscii( "crystal" ) )
+		return STYLE_SYMBOLS_CRYSTAL;
+
+	return STYLE_SYMBOLS_AUTO;
+}
+
+// -----------------------------------------------------------------------
+
+ULONG StyleSettings::GetCurrentSymbolsStyle() const
+{
+	ULONG nStyle = GetSymbolsStyle();
+
+	if ( nStyle == STYLE_SYMBOLS_AUTO )
+	{
+		static bool sbDesktopChecked = false;
+		static ULONG snDesktopStyle = STYLE_SYMBOLS_DEFAULT;
+
+		if ( !sbDesktopChecked )
+		{
+			const ::rtl::OUString &rDesktopEnvironment = Application::GetDesktopEnvironment();
+
+			if( rDesktopEnvironment.equalsIgnoreAsciiCaseAscii( "gnome" ) )
+				snDesktopStyle = STYLE_SYMBOLS_INDUSTRIAL;
+			else if( rDesktopEnvironment.equalsIgnoreAsciiCaseAscii( "kde" ) )
+				snDesktopStyle = STYLE_SYMBOLS_CRYSTAL;
+
+			sbDesktopChecked = true;
+		}
+
+		nStyle = GetHighContrastMode()? STYLE_SYMBOLS_HICONTRAST: snDesktopStyle;
+	}
+
+	return nStyle;
 }
 
 // -----------------------------------------------------------------------

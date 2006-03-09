@@ -1470,10 +1470,9 @@ BOOL Printer::StartJob( const XubString& rJobName )
 		maJobName		        = rJobName;
 		mnCurPage		        = 1;
 		mnCurPrintPage	        = 1;
-		mbJobActive 	        = TRUE;
 		mbPrinting		        = TRUE;
 #endif	// !USE_JAVA
-        
+
 		if ( !mpPrinter->StartJob( pPrintFile, rJobName, Application::GetDisplayName(),
 								   nCopies, bCollateCopy,
 								   maJobSetup.ImplGetConstData() ) )
@@ -1488,7 +1487,6 @@ BOOL Printer::StartJob( const XubString& rJobName )
             maJobName		    = aSaveJobName;
             mnCurPage		    = 0;
             mnCurPrintPage	    = 0;
-            mbJobActive 	    = FALSE;
             mbPrinting		    = FALSE;
 #endif	// !USE_JAVA
 			mpPrinter = NULL;
@@ -1503,10 +1501,10 @@ BOOL Printer::StartJob( const XubString& rJobName )
 		maJobName		= rJobName;
 		mnCurPage		= 1;
 		mnCurPrintPage	= 1;
-		mbJobActive		= TRUE;
 		mbPrinting		= TRUE;
 #endif	// USE_JAVA
 
+		mbJobActive 	        = TRUE;
 		StartPrint();
 	}
 	else
@@ -1538,16 +1536,16 @@ BOOL Printer::StartJob( const XubString& rJobName )
         String aSaveJobName     = maJobName;
 		maJobName		        = rJobName;
 		mnCurPage		        = 1;
-		mbJobActive 	        = TRUE;
 		mbPrinting		        = TRUE;
 #endif	// !USE_JAVA
-        
+
 #ifdef USE_JAVA
 		if ( mpQPrinter->StartJob( rJobName ) && !bFirstPass )
 #else	// USE_JAVA
 		if ( mpQPrinter->StartJob( rJobName ) )
 #endif	// USE_JAVA
 		{
+            mbJobActive             = TRUE;
 			StartPrint();
 			mpQPrinter->StartQueuePrint();
 		}
@@ -1565,7 +1563,6 @@ BOOL Printer::StartJob( const XubString& rJobName )
 			mbNewJobSetup	= bSaveNewJobSetup;
 			maJobName		= aSaveJobName;
 			mnCurPage		= 0;
-			mbJobActive 	= FALSE;
 			mbPrinting		= FALSE;
 #endif	// !USE_JAVA
 			mnError = mpQPrinter->GetErrorCode();

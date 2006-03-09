@@ -394,10 +394,6 @@ SHL4STDLIBS+=$(SHL3STDLIBS) -lX11 -ldl
 
 # KDE plugin
 .IF "$(ENABLE_KDE)" != ""
-.IF "$(KDE_ROOT)"!=""
-SOLARLIB+=-L$(KDE_ROOT)$/lib
-KDE_LIBS:=-lkdeui -lkdecore -lqt-mt
-.ENDIF 			# "$(KDE_ROOT)"!=""
 LIB5TARGET=$(SLB)$/ikde_plug_
 LIB5FILES=$(SLB)$/kdeplug.lib
 SHL5TARGET=vclplug_kde$(UPD)$(DLLPOSTFIX)

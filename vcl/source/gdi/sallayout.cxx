@@ -38,12 +38,7 @@
 
 #define _USE_MATH_DEFINES
 #include <math.h>
-
-#if defined(SOLARIS) || defined(IRIX)
-  #include <alloca.h>
-#elif !(defined(MACOSX) || defined(FREEBSD))
-  #include <malloc.h>
-#endif
+#include <sal/alloca.h>
 
 #ifndef _SV_SVSYS_HXX
 #include <svsys.h>
@@ -1620,8 +1615,6 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
         }
     }
     mnLevel = nLevel;
-    if( mnLevel <= 1 )
-        return;
 
     // merge the fallback levels
     long nXPos = 0;
@@ -1629,7 +1622,7 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
     for( n = 0; n < nLevel; ++n )
         maFallbackRuns[n].ResetPos();
     int nActiveCharPos = nCharPos[0];
-    while( nValid[0] )
+    while( nValid[0] && (nLevel > 1))
     {
         // find best fallback level
         for( n = 0; n < nLevel; ++n )
@@ -1637,7 +1630,7 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
                 // fallback level n wins when it requested no further fallback
                 break;
         int nFBLevel = n;
-        
+
         if( n < nLevel )
         {
             // use base(n==0) or fallback(n>=1) level
@@ -1712,7 +1705,7 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
         if( aMultiArgs.mpDXArray )
         {
             // the run advance is the width from the first char
-	    // in the run to the first char in the next run
+            // in the run to the first char in the next run
             nRunAdvance = 0;
             int nRelPos = nCharPos[0] - mnMinCharPos;
             if( nRelPos > 0 )
@@ -1726,13 +1719,13 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
             nRunAdvance *= mpLayouts[n]->GetUnitsPerPixel();
         }
 
-	// adjust advance width from fallback font units to base units
+        // adjust advance width from fallback font units to base units
         if( n > 0 )
             nRunAdvance = static_cast<long>(nRunAdvance*fUnitMul + 0.5);
 
         // calculate new x position
         nXPos += nRunAdvance;
-        
+
         // prepare for next fallback run
         nActiveCharPos = nCharPos[0];
         for( int i = nFBLevel; --i >= 0;)

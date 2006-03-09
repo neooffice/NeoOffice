@@ -262,6 +262,15 @@ WindowImpl::~WindowImpl()
 
 // -----------------------------------------------------------------------
 
+// helper method to allow inline constructor even for pWindow!=NULL case
+void ImplDelData::AttachToWindow( Window* pWindow )
+{
+    if( pWindow )
+        pWindow->ImplAddDel( this );
+}
+
+// -----------------------------------------------------------------------
+
 // define dtor for ImplDelData
 ImplDelData::~ImplDelData()
 {
@@ -667,6 +676,7 @@ void Window::ImplInitData( WindowType nType )
     mpWindowImpl->mbPushButton        = FALSE;        // TRUE: PushButton is the base class
     mpWindowImpl->mbToolBox			= FALSE;		// TRUE: ToolBox is the base class
     mpWindowImpl->mbMenuFloatingWindow= FALSE;		// TRUE: MenuFloatingWindow is the base class
+    mpWindowImpl->mbToolbarFloatingWindow= FALSE;		// TRUE: ImplPopupFloatWin is the base class, used for subtoolbars
     mpWindowImpl->mbSplitter			= FALSE;		// TRUE: Splitter is the base class
     mpWindowImpl->mbVisible           = FALSE;        // TRUE: Show( TRUE ) called
     mpWindowImpl->mbOverlapVisible    = FALSE;        // TRUE: Hide called for visible window from ImplHideAllOverlapWindow()
@@ -2471,7 +2481,7 @@ void Window::ImplCallPaint( const Region* pRegion, USHORT nPaintFlags )
 
     // #98943# draw toolbox selection
     if( !aSelectionRect.IsEmpty() )
-        DrawSelectionBackground( aSelectionRect, 2, FALSE, TRUE, FALSE );
+        DrawSelectionBackground( aSelectionRect, 3, FALSE, TRUE, FALSE );
 
     if ( pChildRegion )
         delete pChildRegion;
@@ -3926,6 +3936,10 @@ void Window::ImplCallFocusChangeActivate( Window* pNewOverlapWindow,
 // -----------------------------------------------------------------------
 void Window::ImplGrabFocus( USHORT nFlags )
 {
+    // some event listeners do really bad stuff
+    // => prepare for the worst
+    ImplDelData aDogTag( this );
+
     // Es soll immer das Client-Fenster den Focus bekommen. Falls
     // wir mal auch Border-Fenstern den Focus geben wollen,
     // muessten wir bei allen GrabFocus()-Aufrufen in VCL dafuer
@@ -4206,8 +4220,11 @@ void Window::ImplGrabFocus( USHORT nFlags )
                 if ( !ImplCallPreNotify( aNEvt ) )
                     GetFocus();
                 ImplCallActivateListeners( pOldFocusWindow );
-                mpWindowImpl->mnGetFocusFlags = 0;
-                mpWindowImpl->mbInFocusHdl = FALSE;
+                if( !aDogTag.IsDelete() )
+                {
+                    mpWindowImpl->mnGetFocusFlags = 0;
+                    mpWindowImpl->mbInFocusHdl = FALSE;
+                }
             }
         }
 
@@ -6145,7 +6162,7 @@ void Window::SetParent( Window* pNewParent )
     SystemWindow *pSysWin = ImplGetLastSystemWindow(this);
     SystemWindow *pNewSysWin = NULL;
     BOOL bChangeTaskPaneList = FALSE;
-    if( pSysWin->ImplIsInTaskPaneList( this ) )
+    if( pSysWin && pSysWin->ImplIsInTaskPaneList( this ) )
     {
         pNewSysWin = ImplGetLastSystemWindow( pNewParent );
         if( pNewSysWin && pNewSysWin != pSysWin )
@@ -8730,8 +8747,8 @@ USHORT Window::GetAccessibleRole() const
             case WINDOW_INFOBOX:
             case WINDOW_WARNINGBOX:
             case WINDOW_ERRORBOX:
-            case WINDOW_QUERYBOX: nRole = accessibility::AccessibleRole::DIALOG; break; // #i12331, DIALOG must be used to
-                                                                                        // to allow activation, those are frames!
+            case WINDOW_QUERYBOX: nRole = accessibility::AccessibleRole::ALERT; break;
+
             case WINDOW_MODELESSDIALOG:
             case WINDOW_MODALDIALOG:
             case WINDOW_SYSTEMDIALOG:
@@ -8808,9 +8825,13 @@ USHORT Window::GetAccessibleRole() const
             case WINDOW_TABCONTROL: nRole = accessibility::AccessibleRole::PAGE_TAB_LIST; break;
 
             case WINDOW_DOCKINGWINDOW:
-            case WINDOW_SYSWINDOW:
-            case WINDOW_FLOATINGWINDOW: nRole = mpWindowImpl->mbFrame ? accessibility::AccessibleRole::FRAME :
-                                                            accessibility::AccessibleRole::PANEL; break;
+            case WINDOW_SYSWINDOW:      nRole = (mpWindowImpl->mbFrame) ? accessibility::AccessibleRole::FRAME :
+                                                                          accessibility::AccessibleRole::PANEL; break;
+
+            case WINDOW_FLOATINGWINDOW: nRole = ( mpWindowImpl->mbFrame || 
+                                                 (mpWindowImpl->mpBorderWindow && mpWindowImpl->mpBorderWindow->mpWindowImpl->mbFrame) || 
+                                                 (GetStyle() & WB_OWNERDRAWDECORATION) ) ? accessibility::AccessibleRole::FRAME :
+                                                                                           accessibility::AccessibleRole::WINDOW; break;
 
             case WINDOW_WORKWINDOW: nRole = accessibility::AccessibleRole::ROOT_PANE; break;
 
@@ -9080,10 +9101,13 @@ void Window::DrawSelectionBackground( const Rectangle& rRect, USHORT highlight, 
 			if( bDark )
 			    aSelectionFillCol = COL_LIGHTGRAY;
             else if ( bBright )
-            {
+            {                    
 			    aSelectionFillCol = COL_BLACK;
                 SetLineColor( COL_BLACK );
-                nPercent = 0;
+                if( highlight == 3 )
+                    nPercent = 80;
+                else
+                    nPercent = 0;
             }
             else
                 nPercent = 70;          // selected ( dark )

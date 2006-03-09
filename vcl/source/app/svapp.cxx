@@ -1469,11 +1469,13 @@ Window* Application::GetDefDialogParent()
                 return NULL;       
             }
 
-            // use only decorated windows
-            if( pWin->mpWindowImpl->mpFrameWindow->GetStyle() & (WB_MOVEABLE | WB_SIZEABLE) )
+            // MAV: before the implementation has used only decorated windows,
+            //      but it is not true in case of ActiveX or plugin scenario,
+            //      so this check is commented out 
+            // if( pWin->mpWindowImpl->mpFrameWindow->GetStyle() & (WB_MOVEABLE | WB_SIZEABLE) )
                 return pWin->mpWindowImpl->mpFrameWindow->ImplGetWindow();
-            else
-                return NULL;
+            // else
+            //    return NULL;
         }
         // last active application frame
         else if( pWin = pSVData->maWinData.mpActiveApplicationFrame )
