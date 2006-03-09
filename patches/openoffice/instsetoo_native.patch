@@ -5,16 +5,16 @@ retrieving revision 1.48
 diff -u -r1.48 makefile.mk
 --- util/makefile.mk	18 Nov 2005 16:14:01 -0000	1.48
 +++ util/makefile.mk	27 Dec 2005 20:18:59 -0000
-@@ -96,7 +96,7 @@
+@@ -103,7 +103,7 @@
  	@echo "No EPM: do no packaging at this stage"
  .ELSE			# "$(GUI)"!="WNT" && "$(EPM)"=="NO" && "$(USE_PACKAGER)"==""
  .IF "$(UPDATER)"=="" || "$(USE_PACKAGER)"==""
--ALLTAR : openoffice sdkoo ure_en-US
-+ALLTAR : openoffice sdkoo ure_en-US ooolanguagepack
+-ALLTAR : openoffice sdkoo_en-US ure_en-US
++ALLTAR : openoffice sdkoo_en-US ure_en-US ooolanguagepack
  .ELSE			# "$(UPDATER)"=="" || "$(USE_PACKAGER)"==""
  ALLTAR : updatepack
  .ENDIF			# "$(UPDATER)"=="" || "$(USE_PACKAGER)"==""
-@@ -115,7 +115,7 @@
+@@ -122,7 +122,7 @@
  
  .IF "$(alllangiso)"!=""
  
@@ -23,12 +23,3 @@ diff -u -r1.48 makefile.mk
  
  openofficedev: $(foreach,i,$(alllangiso) openofficedev_$i)
  
-@@ -123,7 +123,7 @@
- 
- ooolanguagepack : $(foreach,i,$(alllangiso) ooolanguagepack_$i)
- 
--sdkoo: $(foreach,i,$(alllangiso) sdkoo_$i)
-+sdkoo: sdkoo_en-US
- 
- MSIOFFICETEMPLATESOURCE=$(PRJ)$/inc_openoffice$/windows$/msi_templates
- MSILANGPACKTEMPLATESOURCE=$(PRJ)$/inc_ooolangpack$/windows$/msi_templates
