@@ -319,6 +319,8 @@ void SfxApplication::MiscExec_Impl( SfxRequest& rReq )
             pAppData_Impl->bInQuit = TRUE;
             Reference < XDesktop > xDesktop ( ::comphelper::getProcessServiceFactory()->createInstance( DEFINE_CONST_UNICODE("com.sun.star.frame.Desktop") ), UNO_QUERY );
 
+            rReq.ForgetAllArgs();
+
             // if terminate() failed, pAppData_Impl->bInQuit will now be FALSE, allowing further calls of SID_QUITAPP
 			BOOL bTerminated = xDesktop->terminate();
 			if (!bTerminated)
@@ -392,9 +394,15 @@ void SfxApplication::MiscExec_Impl( SfxRequest& rReq )
 						SID_CONFIG, pStringItem->GetValue() ) );
 				}
 
+                Reference< XFrame > xFrame;
+				const SfxItemSet* pIntSet = rReq.GetInternalArgs_Impl();
+                SFX_ITEMSET_ARG( pIntSet, pFrame, SfxUnoAnyItem, SID_DOCFRAME, FALSE );
+                if (pFrame)
+                    pFrame->GetValue() >>= xFrame;
+
 				SfxAbstractTabDialog* pDlg = pFact->CreateTabDialog(
 					ResId( RID_SVXDLG_CUSTOMIZE ),
-					NULL, &aSet, pViewFrame );
+					NULL, &aSet, xFrame );
 
 			  	if ( pDlg )
 				{

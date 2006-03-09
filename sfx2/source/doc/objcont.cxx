@@ -240,7 +240,7 @@ GDIMetaFile* SfxObjectShell::GetPreviewMetaFile( sal_Bool bFullContent ) const
 
 SfxViewFrame* SfxObjectShell::LoadWindows_Impl( SfxTopFrame *pPreferedFrame )
 {
-    DBG_ASSERT( pPreferedFrame, "Can't be implemented in StarPortal!" );
+    DBG_ASSERT( pPreferedFrame, "Call without preferred Frame is not supported anymore!" );
     if ( pImp->bLoadingWindows || !pPreferedFrame )
 		return NULL;
 
