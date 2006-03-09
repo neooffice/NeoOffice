@@ -45,10 +45,11 @@
 #ifndef _HINTIDS_HXX
 #include <hintids.hxx>
 #endif
-#ifdef ACCESSIBLE_LAYOUT
 #ifndef _COM_SUN_STAR_ACCESSIBILITY_XACCESSIBLE_HPP_
 #include <com/sun/star/accessibility/XAccessible.hpp>
 #endif
+#ifndef _COMPHELPER_PROCESSFACTORY_HXX_
+#include <comphelper/processfactory.hxx>
 #endif
 
 #ifndef _COM_SUN_STAR_I18N_SCRIPTTYPE_HPP_
@@ -93,6 +94,9 @@
 #endif
 #ifndef _SFXSTRITEM_HXX //autogen
 #include <svtools/stritem.hxx>
+#endif
+#ifndef _SFX_CLIENTSH_HXX
+#include <sfx2/ipclient.hxx>
 #endif
 #ifndef _SFXVIEWFRM_HXX //autogen
 #include <sfx2/viewfrm.hxx>
@@ -319,6 +323,7 @@
 #if !defined( PRODUCT ) && (OSL_DEBUG_LEVEL > 1)
 //#define TEST_FOR_BUG91313
 #endif
+using namespace ::com::sun::star;
 
 /*--------------------------------------------------------------------
 	Beschreibung:	Globals
@@ -1727,10 +1732,24 @@ KEYINPUT_CHECKTABLE_INSDEL:
 					{
                         // #i23725#
                         BOOL bDone = FALSE;
-                        if (rSh.IsSttPara() &&
-                            NULL == rSh.GetCurNumRule() &&
-                            !rSh.HasSelection() ) // i40834
+                        // --> OD 2006-01-31 - try to add comment for code snip:
+                        // Remove the paragraph indent, if the cursor is at the
+                        // beginning of a paragraph, there is no selection
+                        // and no numbering rule found at the current paragraph
+                        // --> OD 2006-01-31 #b6341339#, #i58776#
+                        // Also try to remove indent, if current paragraph
+                        // has numbering rule, but isn't counted and only
+                        // key <backspace> is hit.
+                        const bool bOnlyBackspaceKey(
+                                    KEY_BACKSPACE == rKeyCode.GetFullCode() );
+                        if ( rSh.IsSttPara() &&
+                             !rSh.HasSelection() && // i40834
+                             ( NULL == rSh.GetCurNumRule() ||
+                               ( rSh.IsNoNum() && bOnlyBackspaceKey ) ) )
+                        {
                             bDone = rSh.TryRemoveIndent();
+                        }
+                        // <--
 
                         // -> #i23725#
                         if (bDone)
@@ -1755,10 +1774,24 @@ KEYINPUT_CHECKTABLE_INSDEL:
                                 }
                             }
                             // <- #i23725#
-                            if( ! bDone && rSh.NumOrNoNum
-                                (KEY_BACKSPACE != rKeyCode.GetFullCode(),
-                                      TRUE))
+                            // --> OD 2006-01-31 #b6341339#, #i58776#
+                            // In this situation method <SwEditShell::NumOrNoNum(..)>
+                            // should only change the <IsCounted()> state of
+                            // the current paragraph depending of the key.
+                            // On <backspace> it is set to <false>,
+                            // on <shift-backspace> it is set to <true>.
+                            // No switching on or off of the numbering at the
+                            // current paragraph is intended here.
+                            // Thus, assure that method <SwEditShell::NumOrNum(..)>
+                            // is only called for the intended purpose.
+                            if ( !bDone &&
+                                 ( ( !rSh.IsNoNum() && bOnlyBackspaceKey ) ||
+                                   ( rSh.IsNoNum() && !bOnlyBackspaceKey ) ) &&
+                                 rSh.NumOrNoNum( !bOnlyBackspaceKey, TRUE ) )
+                            {
                                 eKeyState = KS_NumOrNoNum;
+                            }
+                            // <--
                         }
 					}
 					break;
@@ -2380,6 +2413,21 @@ void SwEditWin::RstMBDownFlags()
 
 void SwEditWin::MouseButtonDown(const MouseEvent& _rMEvt)
 {
+	SwWrtShell &rSh = rView.GetWrtShell();
+    
+    // We have to check if a context menu is shown and we have an UI
+    // active inplace client. In that case we have to ignore the mouse
+    // button down event. Otherwise we would crash (context menu has been
+    // opened by inplace client and we would deactivate the inplace client,
+    // the contex menu is closed by VCL asynchronously which in the end
+    // would work on deleted objects or the context menu has no parent anymore)
+    // See #126086# and #128122#
+    SfxInPlaceClient* pIPClient = rSh.GetSfxViewShell()->GetIPClient();
+    BOOL bIsOleActive = ( pIPClient && pIPClient->IsObjectInPlaceActive() );
+
+    if ( bIsOleActive && PopupMenu::IsInExecute() )
+        return;
+
     MouseEvent rMEvt(_rMEvt);
 
 	GrabFocus();
@@ -2397,8 +2445,7 @@ void SwEditWin::MouseButtonDown(const MouseEvent& _rMEvt)
 	if( bWasShdwCrsr )
 		delete pShadCrsr, pShadCrsr = 0;
 
-	SwWrtShell &rSh = rView.GetWrtShell();
-	const Point aDocPos( PixelToLogic( rMEvt.GetPosPixel() ) );
+    const Point aDocPos( PixelToLogic( rMEvt.GetPosPixel() ) );
 
 	if ( IsChainMode() )
 	{
@@ -2422,7 +2469,7 @@ void SwEditWin::MouseButtonDown(const MouseEvent& _rMEvt)
 		pQuickHlpData->Stop( rSh );
 	pQuickHlpData->bChkInsBlank = FALSE;
 
-	if( rSh.FinishOLEObj() )
+    if( rSh.FinishOLEObj() )
 		return;	//InPlace beenden und der Klick zaehlt nicht mehr
 
 	SET_CURR_SHELL( &rSh );
@@ -2456,6 +2503,7 @@ void SwEditWin::MouseButtonDown(const MouseEvent& _rMEvt)
         // --> FME 2004-07-30 #i32329# Enhanced table selection
         if ( SW_TABSEL_HORI <= nMouseTabCol && SW_TABCOLSEL_VERT >= nMouseTabCol )
         {
+            rSh.EnterStdMode();
             rSh.SelectTableRowCol( aDocPos );
             if( SW_TABSEL_HORI  != nMouseTabCol && SW_TABSEL_HORI_RTL  != nMouseTabCol)
             {
@@ -4229,7 +4277,7 @@ SwEditWin::SwEditWin(Window *pParent, SwView &rMyView):
     eBufferLanguage(LANGUAGE_DONTKNOW),
     bLockInput(FALSE),
     nKS_NUMDOWN_Count(0), // #i23725#
-    nKS_NUMINDENTINC_Count(0) // #i23725#
+    nKS_NUMINDENTINC_Count(0) // #i23725#    
 {
 	SetHelpId(HID_EDIT_WIN);
 	EnableChildTransparentMode();
@@ -4368,9 +4416,7 @@ void SwEditWin::GetFocus()
 {
 	rView.GotFocus();
 	Window::GetFocus();
-#ifdef ACCESSIBLE_LAYOUT
     rView.GetWrtShell().InvalidateAccessibleFocus();
-#endif
 }
 
 /******************************************************************************
@@ -4381,9 +4427,7 @@ void SwEditWin::GetFocus()
 
 void SwEditWin::LoseFocus()
 {
-#ifdef ACCESSIBLE_LAYOUT
     rView.GetWrtShell().InvalidateAccessibleFocus();
-#endif
 	Window::LoseFocus();
 	if( pQuickHlpData->bClear )
 		pQuickHlpData->Stop( rView.GetWrtShell() );
@@ -4398,6 +4442,8 @@ void SwEditWin::LoseFocus()
 
 void SwEditWin::Command( const CommandEvent& rCEvt )
 {
+	SwWrtShell &rSh = rView.GetWrtShell();
+
 	if ( !rView.GetViewFrame() || !rView.GetViewFrame()->GetFrame() )
 	{
 		//Wenn der ViewFrame in Kuerze stirbt kein Popup mehr!
@@ -4405,9 +4451,20 @@ void SwEditWin::Command( const CommandEvent& rCEvt )
 		return;
 	}
 
-	BOOL bCallBase		= TRUE;
+    // The command event is send to the window after a possible context 
+    // menu from an inplace client has been closed. Now we have the chance 
+    // to deactivate the inplace client without any problem regarding parent
+    // windows and code on the stack.
+    // For more information, see #126086# and #128122#
+    SfxInPlaceClient* pIPClient = rSh.GetSfxViewShell()->GetIPClient();
+    BOOL bIsOleActive = ( pIPClient && pIPClient->IsObjectInPlaceActive() );
+    if ( bIsOleActive && ( rCEvt.GetCommand() == COMMAND_CONTEXTMENU ))
+    {
+        rSh.FinishOLEObj();
+        return;
+    }
 
-	SwWrtShell &rSh = rView.GetWrtShell();
+	BOOL bCallBase		= TRUE;
 
 	switch ( rCEvt.GetCommand() )
 	{
@@ -4454,7 +4511,8 @@ void SwEditWin::Command( const CommandEvent& rCEvt )
                             if ( pMenu )
                             {
                                 USHORT nId = ((PopupMenu*)pMenu)->Execute(this, aPixPos);
-                                pROPopup->Execute(this, nId);
+                                if( !::ExecuteMenuCommand( *static_cast<PopupMenu*>(pMenu), *rView.GetViewFrame(), nId ))
+                                    pROPopup->Execute(this, nId);
                             }
                             else
                                 pROPopup->Execute(this, aPixPos);
@@ -5096,7 +5154,6 @@ void SwEditWin::SetChainMode( BOOL bOn )
 	rView.GetViewFrame()->GetBindings().Invalidate(aInva);
 }
 
-#ifdef ACCESSIBLE_LAYOUT
 ::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessible > SwEditWin::CreateAccessible()
 {
 	vos::OGuard aGuard(Application::GetSolarMutex());	// this should have
@@ -5110,7 +5167,6 @@ void SwEditWin::SetChainMode( BOOL bOn )
 
 	return xAcc;
 }
-#endif
 
 //-------------------------------------------------------------
 
@@ -5209,8 +5265,7 @@ void QuickHelpData::FillStrArr( SwWrtShell& rSh, const String& rWord )
 {
 	pCalendarWrapper->LoadDefaultCalendar( rSh.GetCurLang() );
 
-	using namespace ::com::sun::star;
-	{
+    {
 		uno::Sequence< i18n::CalendarItem > aNames(
 											pCalendarWrapper->getMonths() );
 		for( int n = 0; n < 2; ++n )
@@ -5261,7 +5316,7 @@ void QuickHelpData::FillStrArr( SwWrtShell& rSh, const String& rWord )
  *
  * --------------------------------------------------*/
 void SwEditWin::ShowAutoTextCorrectQuickHelp(
-        const String& rWord, SvxAutoCorrCfg* pACfg, SvxAutoCorrect* pACorr, 
+        const String& rWord, SvxAutoCorrCfg* pACfg, SvxAutoCorrect* pACorr,
         sal_Bool bFromIME )
 {
     SwWrtShell& rSh = rView.GetWrtShell();
