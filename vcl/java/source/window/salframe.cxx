@@ -203,6 +203,10 @@ void SalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		maFrameData.maSysData.aWindow = (long)maFrameData.mpVCLFrame->getNativeWindowRef();
 		maFrameData.mbCenter = FALSE;
 
+		// The window size may have changed
+		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, NULL );
+		aEvent.dispatch();
+
 		UpdateMenusForFrame( this, NULL );
 
 		// Reattach child frames
@@ -784,6 +788,10 @@ bool SalFrame::SetPluginParent( SystemParentData* pNewParent )
 
 void SalFrame::SetMenu( SalMenu* pSalMenu )
 {
+	if ( pSalMenu && pSalMenu->maData.mbIsMenuBarMenu )
+		maFrameData.mpMenuBar = pSalMenu;
+	else
+		maFrameData.mpMenuBar = NULL;
 }
 
 // -----------------------------------------------------------------------
