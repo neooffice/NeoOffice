@@ -139,6 +139,7 @@ build.oo_patches: build.oo_checkout \
 	build.oo_external_patch \
 	build.oo_forms_patch \
 	build.oo_instsetoo_native_patch \
+	build.oo_jvmfwk_patch \
 	build.oo_padmin_patch \
 	build.oo_sj2_patch \
 	build.oo_solenv_patch \
