@@ -106,7 +106,7 @@
 #include <postmac.h>
 #undef check
 
-static bool bFirstPass = true;
+static ::osl::Mutex aEventQueueMutex;
 
 using namespace rtl;
 using namespace vcl;
@@ -123,7 +123,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 	{
 		SalData *pSalData = GetSalData();
 
-		if ( nClass == kEventClassMenu && ( nKind == kEventMenuBeginTracking || nKind == kEventMenuEndTracking ) )
+		if ( nClass == kEventClassMenu && nKind == kEventMenuBeginTracking )
 		{
 			// Check if this a menubar event as we don't want to dispatch
 			// native popup menus in modal dialogs and make sure that this is
@@ -133,35 +133,93 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 			{
 				// Check if there is a native modal window as we will deadlock
 				// when a native modal window is showing
-				if ( NSApplication_getModalWindow() || !pSalData->maNativeEventCondition.check() )
+				if ( NSApplication_getModalWindow() )
 					return userCanceledErr;
 
-				// Wakeup the event queue by sending it a dummy event
-				// and wait for all pending AWT events to be dispatched
-				pSalData->mbInNativeMenuTracking = ( nKind == kEventMenuBeginTracking );
-				pSalData->mbNativeEventSucceeded = false;
-				pSalData->maNativeEventCondition.reset();
-				com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
-				pSalData->mpEventQueue->postCachedEvent( &aEvent );
-
-				// We need to let any pending timers run while we are
-				// waiting for the VCL event queue to clear so that
-				// we don't deadlock
+				// Make sure that any events fetched from the queue while the
+				// application mutex was unlocked are already dispatched before
+				// we try to lock the mutex
 				TimeValue aDelay;
 				aDelay.Seconds = 0;
 				aDelay.Nanosec = 10;
-				while ( !Application::IsShutDown() && !pSalData->maNativeEventCondition.check() )
+				while ( !Application::IsShutDown() )
 				{
+					if ( aEventQueueMutex.tryToAcquire() )
+					{
+						// Wakeup the event queue by sending it a dummy event
+						com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
+						pSalData->mpEventQueue->postCachedEvent( &aEvent );
+
+						if ( Application::IsShutDown() )
+						{
+							aEventQueueMutex.release();
+							return userCanceledErr;
+						}
+						else
+						{
+							break;
+						}
+					}
+
 					ReceiveNextEvent( 0, NULL, 0, false, NULL );
 					OThread::wait( aDelay );
 				}
 
-				// We need to let any timers run that were added by any menu
-				// changes. Otherwise, some menus will be drawn in the state
-				// that they were in before we updated the menus.
-				if ( !Application::IsShutDown() && pSalData->mbNativeEventSucceeded )
+				// We need to let any pending timers run so that we don't
+				// deadlock
+				IMutex& rSolarMutex = Application::GetSolarMutex();
+				bool bAcquired = false;
+				while ( !Application::IsShutDown() )
+				{
+					if ( rSolarMutex.tryToAcquire() )
+					{
+						if ( !Application::IsShutDown() )
+							bAcquired = true; 
+						else
+							rSolarMutex.release();
+						break;
+					}
+
 					ReceiveNextEvent( 0, NULL, 0, false, NULL );
-				else
+					OThread::wait( aDelay );
+				}
+
+				aEventQueueMutex.release();
+
+				if ( !bAcquired )
+					return userCanceledErr;
+
+				pSalData->maNativeEventCondition.reset();
+
+				// Dispatch pending VCL events until the queue is clear
+				while ( !Application::IsShutDown() && !pSalData->maNativeEventCondition.check() )
+					pSalData->mpFirstInstance->Yield( FALSE );
+
+				bool bSucceeded = ( !Application::IsShutDown() && !pSalData->mbInNativeModalSheet );
+				if ( bSucceeded )
+				{
+					if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->maFrameData.mbVisible )
+					{
+						UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
+					}
+					else
+					{
+						for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+						{
+							if ( (*it)->maFrameData.mbVisible )
+								UpdateMenusForFrame( *it, NULL );
+						}
+					}
+
+					// We need to let any timers run that were added by any menu
+					// changes. Otherwise, some menus will be drawn in the state
+					// that they were in before we updated the menus.
+					ReceiveNextEvent( 0, NULL, 0, false, NULL );
+				}
+
+				rSolarMutex.release();
+
+				if ( !bSucceeded )
 					return userCanceledErr;
 			}
 		}
@@ -182,12 +240,10 @@ void ExecuteApplicationMain( Application *pApp )
 	if ( pEventHandlerUPP )
 	{
 		// Set up native event handler
-		EventTypeSpec aTypes[2];
-		aTypes[0].eventClass = kEventClassMenu;
-		aTypes[0].eventKind = kEventMenuBeginTracking;
-		aTypes[1].eventClass = kEventClassMenu;
-		aTypes[1].eventKind = kEventMenuEndTracking;
-		InstallApplicationEventHandler( pEventHandlerUPP, 2, aTypes, NULL, NULL );
+		EventTypeSpec aType;
+		aType.eventClass = kEventClassMenu;
+		aType.eventKind = kEventMenuBeginTracking;
+		InstallApplicationEventHandler( pEventHandlerUPP, 1, &aType, NULL, NULL );
 	}
 
 	pApp->Main();
@@ -337,15 +393,23 @@ void SalInstance::Yield( BOOL bWait )
 {
 	SalData *pSalData = GetSalData();
 
-	// When we are in the native event dispatch thread, allow any pending
-	// native timers to run but don't dispatch any events as we might be in
-	// a signal handler and we will block since we don't have the SalYieldMutex
-	// lock
-	if ( GetCurrentEventLoop() == GetMainEventLoop() || maInstData.mpSalYieldMutex->GetThreadId() != OThread::getCurrentIdentifier() )
+	// If we don't have the application mutex, we are most likely in a signal
+	// handler so try and lock the mutex first. If we cannot lock the mutex,
+	// allow any pending native timers to run but don't dispatch any events to
+	// prevent deadlocking
+	if ( maInstData.mpSalYieldMutex->GetThreadId() != OThread::getCurrentIdentifier() )
 	{
-		ReceiveNextEvent( 0, NULL, 0, false, NULL );
-		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
-		pSalData->mpEventQueue->postCachedEvent( &aEvent );
+		if ( maInstData.mpSalYieldMutex->tryToAcquire() )
+		{
+			Yield( FALSE );
+			maInstData.mpSalYieldMutex->release();
+		}
+		else if ( GetCurrentEventLoop() == GetMainEventLoop() )
+		{
+			ReceiveNextEvent( 0, NULL, 0, false, NULL );
+			com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
+			pSalData->mpEventQueue->postCachedEvent( &aEvent );
+		}
 		return;
 	}
 
@@ -414,9 +478,17 @@ void SalInstance::Yield( BOOL bWait )
 
 	// Dispatch any newly posted events
 	if ( nTimeout )
+	{
 		nCount = ReleaseYieldMutex();
+		if ( nCount )
+			aEventQueueMutex.acquire();
+		else
+			nTimeout = 0;
+	}
 	else
+	{
 		nCount = 0;
+	}
 
 	// Dispatch any pending AWT events
 	while ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
@@ -424,54 +496,33 @@ void SalInstance::Yield( BOOL bWait )
 		nTimeout = 0;
 
 		if ( nCount )
-		{
 			AcquireYieldMutex( nCount );
-			nCount = 0;
-		}
 
 		USHORT nID = pEvent->getID();
 		pEvent->dispatch();
 		delete pEvent;
 
+		if ( nCount )
+		{
+			aEventQueueMutex.release();
+			nCount = 0;
+		}
+
 		// Fix bug 1147 by allowing non-AWT events to be dispatched after a
 		// mouse released event
 		if ( nID == SALEVENT_MOUSEBUTTONUP )
-		{
-			if ( nCount )
-				AcquireYieldMutex( nCount );
 			return;
-		}
 	}
 
 	if ( nCount )
+	{
 		AcquireYieldMutex( nCount );
+		aEventQueueMutex.release();
+	}
 
 	// Allow Carbon event loop to proceed
 	if ( !pEvent && !pSalData->maNativeEventCondition.check() )
 	{
-		pSalData->mbNativeEventSucceeded = ( !Application::IsShutDown() && !pSalData->mbInNativeModalSheet );
-		if ( pSalData->mbNativeEventSucceeded )
-		{
-			if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->maFrameData.mbVisible )
-			{
-				ResetMenuEnabledStateForFrame( pSalData->mpFocusFrame, NULL );
-				if ( pSalData->mbInNativeMenuTracking )
-					UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
-			}
-		}
-		else
-		{
-			for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-			{
-				if ( (*it)->maFrameData.mbVisible )
-				{
-					ResetMenuEnabledStateForFrame( *it, NULL );
-					if ( pSalData->mbInNativeMenuTracking )
-						UpdateMenusForFrame( *it, NULL );
-				}
-			}
-		}
-
 		pSalData->maNativeEventCondition.set();
 		nCount = ReleaseYieldMutex();
 		OThread::yield();

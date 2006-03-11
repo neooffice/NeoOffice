@@ -108,7 +108,7 @@ void SalMenu::SetFrame( SalFrame *pFrame )
 	if( maData.mbIsMenuBarMenu && maData.mpVCLMenuBar )
 	{
 		maData.mpVCLMenuBar->setFrame( pFrame->maFrameData.mpVCLFrame );
-		pFrame->maFrameData.mpMenuBar=this;
+		maData.mpParentFrame=pFrame;
 	}
 }
 
@@ -180,12 +180,6 @@ void SalMenu::CheckItem( unsigned nPos, BOOL bCheck )
 
 void SalMenu::EnableItem( unsigned nPos, BOOL bEnable )
 {
-	// When menus are not displayed, leave them all enabled so that they
-	// will trap any menu shortcuts and forward those shortcuts to the
-	// OOo menu handlers
-	if ( !bEnable && !GetSalData()->mbInNativeMenuTracking )
-		bEnable = TRUE;
-
 	if( maData.mbIsMenuBarMenu && maData.mpVCLMenuBar )
 	{
 		maData.mpVCLMenuBar->enableMenu( nPos, bEnable );
@@ -321,57 +315,6 @@ void SalInstance::DestroyMenuItem( SalMenuItem* pItem )
 {
 #ifndef NO_NATIVE_MENUS
 	delete pItem;
-#endif	// !NO_NATIVE_MENUS
-}
-
-// ============================================================================
-
-void ResetMenuEnabledStateForFrame( SalFrame *pFrame, SalMenu *pMenu )
-{
-#ifndef NO_NATIVE_MENUS
-	SalData *pSalData = GetSalData();
-
-	// Check is frame is valid
-	bool bFrameFound = false;
-	for ( ::std::list< SalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-	{
-		if ( *it == pFrame )
-		{
-			if ( pFrame->maFrameData.mbVisible )
-				bFrameFound = true;
-			break;
-		}
-	}
-	if ( !bFrameFound )
-		return;
-
-	if(!pMenu) {
-		// locate the menubar for the frame
-		pMenu = pFrame->maFrameData.mpMenuBar;
-		if(!pMenu)
-			return;
-	}
-
-	Menu *pVCLMenu = pMenu->mpParentVCLMenu;
-	OSL_ENSURE(pVCLMenu, "Unknown VCL menu for SalMenu!");
-
-	USHORT nCount = pVCLMenu->GetItemCount();
-	for( USHORT i = 0; i < nCount; i++ )
-	{
-		SalMenuItem *pSalMenuItem = pVCLMenu->GetItemSalItem( i );
-		if ( pSalMenuItem )
-		{
-			// If this menu item has a submenu, fix that submenu up
-			if ( pSalMenuItem->maData.mpSalSubmenu )
-				ResetMenuEnabledStateForFrame( pFrame, pSalMenuItem->maData.mpSalSubmenu );
-		}
-
-		// Disabled items need to be reset as the native menu will have been
-		// enabled when the menubar is not in tracking mode
-		USHORT nID = pVCLMenu->GetItemId( i );
-		if ( nID && !pVCLMenu->IsItemEnabled( nID ) )
-			pMenu->EnableItem( i, FALSE );
-	}
 #endif	// !NO_NATIVE_MENUS
 }
 

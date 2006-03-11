@@ -69,25 +69,16 @@ public:
 	// Generic data
 	SalFrame *			mpParentFrame;		// pointer to the parent frame
 	BOOL				mbIsMenuBarMenu;	// true for menu bars
-	SalMenu *			mpParentMenu;		// Parent menu if this is a submenu
 };
 
 class SalMenuItemData
 {
 public:
-	XubString			mText;			// the item text
-	XubString			mAccelText;		// the accelerator string
-	Bitmap				maBitmap;		// item image
-	int					mnId;			// item id
-
 	::vcl::com_sun_star_vcl_VCLMenuItemData *mpVCLMenuItemData;
 	
-	SalMenu *			mpSalMenu;		// SalMenu into which this item is inserted
 	SalMenu *			mpSalSubmenu;	// Submenu SalMenu if this item has a submenu
-	Menu *				mpVCLMenu;		// VCL menu into which this item is inserted
 };
 
-void ResetMenuEnabledStateForFrame( SalFrame *pFrame, SalMenu *pMenu );
 void UpdateMenusForFrame( SalFrame *pFrame, SalMenu *pMenu );
 
 #endif // _SV_SALMENU_H

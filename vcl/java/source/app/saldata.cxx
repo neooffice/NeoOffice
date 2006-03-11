@@ -44,6 +44,9 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
+#include <com/sun/star/vcl/VCLFont.hxx>
+#endif
 
 using namespace rtl;
 using namespace vcl;
@@ -60,8 +63,6 @@ SalData::SalData()
 	mpTimerProc = NULL;
 	mpEventQueue = NULL;
 	mpPresentationFrame = NULL;
-	mbNativeEventSucceeded = false;
-	mbInNativeMenuTracking = false;
 	mbInNativeModalSheet = false;
 	mpNativeModalSheetFrame = NULL;
 

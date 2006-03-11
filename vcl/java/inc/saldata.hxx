@@ -80,8 +80,6 @@ public:
 	::std::map< void*, ImplFontData* >	maNativeFontMapping;
 	SalFrame*				mpPresentationFrame;
 	::osl::Condition		maNativeEventCondition;
-	bool					mbNativeEventSucceeded;
-	bool					mbInNativeMenuTracking;
 	bool					mbInNativeModalSheet;
 	SalFrame*				mpNativeModalSheetFrame;
 	::std::list< SalGraphics* >	maGraphicsList;
