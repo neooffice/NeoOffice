@@ -216,7 +216,9 @@ BOOL SalPrinter::StartJob( const XubString* pFileName,
 						   ULONG nCopies, BOOL bCollate,
 						   ImplJobSetup* pSetupData )
 {
-	maPrinterData.mbStarted = maPrinterData.mpVCLPrintJob->startJob( maPrinterData.mpVCLPageFormat, OUString( rJobName ), maPrinterData.mbStarted );
+	// Fix bug by detecting when an OOo printer job is being reused for serial
+	// print jobs
+	maPrinterData.mbStarted = maPrinterData.mpVCLPrintJob->startJob( maPrinterData.mpVCLPageFormat, OUString( rJobName ), rJobName.Len() ? sal_True : maPrinterData.mbStarted );
 	return maPrinterData.mbStarted;
 }
 
