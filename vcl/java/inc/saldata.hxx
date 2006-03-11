@@ -73,8 +73,6 @@ public:
 	::std::map< int, JavaImplFontData* >	maNativeFontMapping;
 	JavaSalFrame*			mpPresentationFrame;
 	::osl::Condition		maNativeEventCondition;
-	bool					mbNativeEventSucceeded;
-	bool					mbInNativeMenuTracking;
 	bool					mbInNativeModalSheet;
 	JavaSalFrame*			mpNativeModalSheetFrame;
 	::std::list< JavaSalGraphics* >	maGraphicsList;

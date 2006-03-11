@@ -206,6 +206,9 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		maSysData.aWindow = (long)mpVCLFrame->getNativeWindowRef();
 		mbCenter = FALSE;
 
+		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, NULL );
+		aEvent.dispatch();
+
 		UpdateMenusForFrame( this, NULL );
 
 		// Reattach child frames
@@ -771,6 +774,11 @@ bool JavaSalFrame::SetPluginParent( SystemParentData* pNewParent )
 
 void JavaSalFrame::SetMenu( SalMenu* pSalMenu )
 {
+	JavaSalMenu *pJavaSalMenu = (JavaSalMenu *)pSalMenu;
+	if ( pJavaSalMenu && pJavaSalMenu->mbIsMenuBarMenu )
+		mpMenuBar = pJavaSalMenu;
+	else
+		mpMenuBar = NULL;
 }
 
 // -----------------------------------------------------------------------

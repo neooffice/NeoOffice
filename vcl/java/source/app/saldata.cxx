@@ -62,8 +62,6 @@ SalData::SalData()
 	maTimeout.tv_usec = 0;
 	mpEventQueue = NULL;
 	mpPresentationFrame = NULL;
-	mbNativeEventSucceeded = false;
-	mbInNativeMenuTracking = false;
 	mbInNativeModalSheet = false;
 	mpNativeModalSheetFrame = NULL;
 
