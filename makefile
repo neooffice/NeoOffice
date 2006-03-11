@@ -135,6 +135,7 @@ build.oo_checkout:
 
 build.oo_patches: build.oo_checkout \
 	build.oo_binfilter_patch \
+	build.oo_extensions_patch \
 	build.oo_external_patch \
 	build.oo_forms_patch \
 	build.oo_instsetoo_native_patch \
@@ -200,7 +201,6 @@ build.neo_%_patch: % build.neo_configure
 build.neo_patches: build.oo_all \
 	build.neo_desktop_patch \
 	build.neo_dtrans_patch \
-	build.neo_extensions_patch \
 	build.neo_framework_patch \
 	build.neo_jvmfwk_patch \
 	build.neo_sal_patch \
