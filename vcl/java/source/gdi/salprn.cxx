@@ -269,7 +269,9 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 						   ULONG nCopies, BOOL bCollate,
 						   ImplJobSetup* pSetupData )
 {
-	mbStarted = mpVCLPrintJob->startJob( mpVCLPageFormat, OUString( rJobName ), mbStarted );
+	// Fix bug by detecting when an OOo printer job is being reused for serial
+	// print jobs
+	mbStarted = mpVCLPrintJob->startJob( mpVCLPageFormat, OUString( rJobName ), rJobName.Len() ? sal_True : mbStarted );
 	return mbStarted;
 }
 

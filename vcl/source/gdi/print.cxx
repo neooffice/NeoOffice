@@ -1448,6 +1448,11 @@ BOOL Printer::StartJob( const XubString& rJobName )
 				pSVData->mpDefInst->DestroyPrinter( mpPrinter );
 			mpPrinter = pSVData->mpDefInst->CreatePrinter( mpInfoPrinter );
 		}
+		else
+		{
+			if ( !mpPrinter )
+				mpPrinter = pSVData->mpDefInst->CreatePrinter( mpInfoPrinter );
+		}
 #else	// USE_JAVA
 		mpPrinter = pSVData->mpDefInst->CreatePrinter( mpInfoPrinter );
 #endif	// USE_JAVA
@@ -1519,6 +1524,8 @@ BOOL Printer::StartJob( const XubString& rJobName )
 		}
 		else
 		{
+			if ( !mpQPrinter )
+				mpQPrinter = new ImplQPrinter( this );
 			mpQPrinter->SetJobSetup( GetJobSetup() );
 		}
 #else	// USE_JAVA
