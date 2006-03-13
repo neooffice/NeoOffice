@@ -789,9 +789,24 @@ bool SalFrame::SetPluginParent( SystemParentData* pNewParent )
 void SalFrame::SetMenu( SalMenu* pSalMenu )
 {
 	if ( pSalMenu && pSalMenu->maData.mbIsMenuBarMenu )
+	{
 		maFrameData.mpMenuBar = pSalMenu;
+
+		// If the menu is being set while the window is showing, we need
+		// to update the new menus
+		if ( maFrameData.mbVisible )
+		{
+			UpdateMenusForFrame( this, NULL );
+
+			// Explicitly set the focus so that Java will repaint the menubar
+			if ( this == GetSalData()->mpFocusFrame )
+				maFrameData.mpVCLFrame->requestFocus();
+		}
+	}
 	else
+	{
 		maFrameData.mpMenuBar = NULL;
+	}
 }
 
 // -----------------------------------------------------------------------
