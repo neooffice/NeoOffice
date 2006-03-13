@@ -366,7 +366,7 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu )
 	// Force the clipboard service to update itself before we update the
 	// menus as if the native clipboard was cleared when we last checked, we
 	// won't be notified when another application puts content.
-	if ( pFrame->mpMenuBar )
+	if ( pMenu->mbIsMenuBarMenu )
 	{
 		Window *pWindow = pVCLMenu->GetWindow();
 		if ( pWindow )

@@ -664,11 +664,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private boolean disposed = false;
 
 	/**
-	 * The flushing disabled count.
-	 */
-	private short flushingDisabledCount = 0;
-
-	/**
 	 * The flushing enabled flag.
 	 */
 	private boolean flushingEnabled = true;
@@ -952,17 +947,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
-	 * Disable flushing and then hide the native window.
-	 */
-	void disableFlushingAndHide()
-	{
-		enableFlushing(false);
-		if (window.isShowing())
-			window.hide();
-		flushingDisabledCount = 0;
-	}
-
-	/**
 	 * Enable or disable flushing of the native window.
 	 *
 	 * @param b <code>true</code> to enable flushing and <code>false</code> to
@@ -970,37 +954,26 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void enableFlushing(boolean b)
 	{
-		if (window.isShowing())
+		if (b != flushingEnabled && window.isShowing())
 		{
-			if (!b && !flushingEnabled)
-			{
-				flushingDisabledCount++;
-			}
-			else if (b && !flushingEnabled && flushingDisabledCount > 0)
-			{
-				flushingDisabledCount--;
-			}
-			else if (b != flushingEnabled)
-			{
-				Graphics2D g = graphics.getGraphics();
-				if (g != null) {
-					try {
-						if (g instanceof sun.java2d.SunGraphics2D) {
-							sun.java2d.SurfaceData sd = ((sun.java2d.SunGraphics2D)g).getSurfaceData();
-							if (sd instanceof apple.awt.CPeerSurfaceData) {
-								if (b)
-									((apple.awt.CPeerSurfaceData)sd).enableFlushing();
-								else if (!fullScreenMode)
-									((apple.awt.CPeerSurfaceData)sd).disableFlushing();
-								flushingEnabled = b;
-							}
+			Graphics2D g = graphics.getGraphics();
+			if (g != null) {
+				try {
+					if (g instanceof sun.java2d.SunGraphics2D) {
+						sun.java2d.SurfaceData sd = ((sun.java2d.SunGraphics2D)g).getSurfaceData();
+						if (sd instanceof apple.awt.CPeerSurfaceData) {
+							if (b)
+								((apple.awt.CPeerSurfaceData)sd).enableFlushing();
+							else if (!fullScreenMode)
+								((apple.awt.CPeerSurfaceData)sd).disableFlushing();
+							flushingEnabled = b;
 						}
 					}
-					catch (Throwable t) {
-						t.printStackTrace();
-					}
-g.dispose();
 				}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
+g.dispose();
 			}
 		}
 	}
@@ -1774,7 +1747,8 @@ g.dispose();
 						if (!f.isDisposed()) {
 							Window w = f.getWindow();
 							if (w.isShowing()) {
-								f.disableFlushingAndHide();
+								f.enableFlushing(false);
+								w.hide();
 								detachedChildren.add(f);
 							}
 						}
@@ -2056,7 +2030,8 @@ g.dispose();
 		}
 		else {
 			// Hide the window
-			disableFlushingAndHide();
+			enableFlushing(false);
+			window.hide();
 		}
 
 	}
@@ -2144,7 +2119,8 @@ g.dispose();
 				if (!f.isDisposed()) {
 					Window w = f.getWindow();
 					if (w.isShowing()) {
-						f.disableFlushingAndHide();
+						f.enableFlushing(false);
+						w.hide();
 						detachedChildren.add(f);
 					}
 				}

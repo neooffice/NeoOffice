@@ -776,9 +776,24 @@ void JavaSalFrame::SetMenu( SalMenu* pSalMenu )
 {
 	JavaSalMenu *pJavaSalMenu = (JavaSalMenu *)pSalMenu;
 	if ( pJavaSalMenu && pJavaSalMenu->mbIsMenuBarMenu )
+	{
 		mpMenuBar = pJavaSalMenu;
+
+		// If the menu is being set while the window is showing, we need
+		// to update the new menus
+		if ( mbVisible )
+		{
+			UpdateMenusForFrame( this, NULL );
+ 
+			// Explicitly set the focus so that Java will repaint the menubar
+			if ( this == GetSalData()->mpFocusFrame )
+				mpVCLFrame->requestFocus();
+		}
+	}
 	else
+	{
 		mpMenuBar = NULL;
+	}
 }
 
 // -----------------------------------------------------------------------
