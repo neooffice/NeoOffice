@@ -67,8 +67,8 @@ OO_ENV_X11:=$(BUILD_HOME)/MacOSXIntelEnv.Set
 OO_ENV_JAVA:=$(BUILD_HOME)/MacOSXIntelEnvJava.Set
 endif
 OO_LANGUAGES=ALL
-OO_DIC_URL:=http://ftp.services.openoffice.org/pub/OpenOffice.org/contrib/dictionaries
-OO_HELP_URL:=http://ftp.services.openoffice.org/pub/OpenOffice.org/contrib/helpcontent
+# OO_DIC_URL:=http://ftp.services.openoffice.org/pub/OpenOffice.org/contrib/dictionaries
+OO_DIC_URL:=http://mirrors.dotsrc.org/openoffice/contrib/dictionaries
 NEOLIGHT_MDIMPORTER_URL:=http://trinity.neooffice.org/downloads/neolight.mdimporter.tgz
 
 # Product information
@@ -232,13 +232,7 @@ build.oo_download_dics:
 	cd "$(DIC_HOME)" ; sh -e -c 'for i in `curl -L -l "$(OO_DIC_URL)" | grep "\.zip<" | grep -v -- "-pack\.zip" | grep -v "_v2\." | sed "s#<\/[aA]>.*\\$$##" | sed "s#^.*>##"` ; do curl -L -O "$(OO_DIC_URL)/$$i" ; done'
 	touch "$@"
 
-build.oo_download_help:
-	rm -Rf "$(HELP_HOME)"
-	mkdir -p "$(HELP_HOME)"
-	cd "$(HELP_HOME)" ; sh -e -c 'for i in `curl -L -l "$(OO_HELP_URL)" | grep "\.tgz<" | sed "s#^.*>helpcontent#helpcontent#" | sed "s#<\/[aA]>.*\\$$##"` ; do curl -L -O "$(OO_HELP_URL)/$$i" ; done'
-	touch "$@"
-
-build.package: build.neo_patches build.oo_download_dics build.oo_download_help build.source_zip
+build.package: build.neo_patches build.oo_download_dics build.source_zip
 	sh -e -c 'if [ -d "$(INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(INSTALL_HOME)" ; fi'
 	mkdir -p "$(INSTALL_HOME)/package/Contents"
 	mkdir -p "$(INSTALL_HOME)/package/Applications"
