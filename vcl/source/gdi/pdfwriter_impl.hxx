@@ -116,7 +116,7 @@
 #define META_CREATECONTROL_PDF_ACTION			(10025)
 #define META_BEGINCONTROLAPPEARANCE_PDF_ACTION	(10026)
 #define META_ENDCONTROLAPPEARANCE_PDF_ACTION	(10027)
-#define META_METADIGITLANGUAGE_PDF_ACTION		(10028)
+#define META_DIGITLANGUAGE_PDF_ACTION			(10028)
 
 class MetaTextPDFAction : public MetaTextAction
 {
@@ -583,7 +583,7 @@ private:
     LanguageType		meLang;
 
 public:
-    					MetaDigitLanguagePDFAction( LanguageType eType ) : MetaAction( META_DIGITLANGUAGE_PDF_ACTION ), meLang( eLang ) {}
+    					MetaDigitLanguagePDFAction( LanguageType eLang ) : MetaAction( META_DIGITLANGUAGE_PDF_ACTION ), meLang( eLang ) {}
     virtual				~MetaDigitLanguagePDFAction() {}
 
     LanguageType		GetLanguage() const { return meLang; }
