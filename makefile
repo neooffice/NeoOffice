@@ -238,8 +238,10 @@ build.package: build.neo_patches build.oo_download_dics build.source_zip
 	mkdir -p "$(INSTALL_HOME)/package/Contents"
 	mkdir -p "$(INSTALL_HOME)/package/Applications"
 	ln -sf "$(PWD)/$(INSTALL_HOME)/package/Contents" "$(PWD)/$(INSTALL_HOME)/package/Applications/openoffice.org2.0"
-	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find "$(PWD)/$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice/portable/install/en-US" -name "*.sw"` ; do gnutar xvf "$${i}"; done'
-	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find "$(PWD)/$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice_languagepack/portable/install" . -name "*.sw"` ; do gnutar xvf "$${i}"; done'
+	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find "$(PWD)/$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice/portable/install/en-US" -name "*.sw"` ; do gnutar xvf "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find "$(PWD)/$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice/portable/install/en-US" -name "*.install"` ; do grep "mkdir " "$${i}" | grep "/Applications" | sed "s#^.*/Applications#Applications#" | xargs -n1 mkdir -p ; done'
+	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find "$(PWD)/$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice_languagepack/portable/install" . -name "*.sw"` ; do gnutar xvf "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find "$(PWD)/$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice_languagepack/portable/install" . -name "*.install"` ; do grep "mkdir " "$${i}" | grep "/Applications" | sed "s#^.*/Applications#Applications#" | xargs -n1 mkdir -p ; done'
 	rm -Rf "$(INSTALL_HOME)/package/Applications"
 	cd "$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice_languagepack/portable/install" ; find . -type d -maxdepth 1 > "$(PWD)/$(INSTALL_HOME)/language_names"
 	chmod -Rf u+w,a+r "$(INSTALL_HOME)/package"
