@@ -134,6 +134,7 @@ build.oo_checkout:
 	touch "$@"
 
 build.oo_patches: build.oo_checkout \
+	build.oo_automation_patch \
 	build.oo_binfilter_patch \
 	build.oo_extensions_patch \
 	build.oo_external_patch \

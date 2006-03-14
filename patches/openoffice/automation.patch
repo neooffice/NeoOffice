@@ -1,0 +1,30 @@
+Index: source/testtool/makefile.mk
+===================================================================
+RCS file: /cvs/util/automation/source/testtool/makefile.mk,v
+retrieving revision 1.5
+diff -u -r1.5 makefile.mk
+--- source/testtool/makefile.mk	7 Sep 2005 19:31:53 -0000	1.5
++++ source/testtool/makefile.mk	14 Mar 2006 05:55:17 -0000
+@@ -44,13 +44,21 @@
+ 
+ # --- Allgemein ------------------------------------------------------------
+ 
++# [ed] On Mac OS X with gcc 4.0.1, the objtest.cxx file causes infinite loops
++# in the optimizer.  Turn off optimizations for this module.  Note that since
++# this isn't a shared library, for some reason the standard NOOPTFILES
++# definitions don't work, so we have to turn off optimizations for all files!
++
++.IF "$(OS)"=="MACOSX"
++CFLAGSOPT = -O0
++.ENDIF
++
+ OBJFILES = \
+ 	$(OBJ)$/cmdstrm.obj              \
+ 	$(OBJ)$/cretstrm.obj             \
+ 	$(OBJ)$/objtest.obj              \
+ 	$(OBJ)$/tcommuni.obj             \
+ 	$(OBJ)$/comm_bas.obj             \
+-	
+ 
+ EXCEPTIONSFILES= \
+ 	$(OBJ)$/cmdstrm.obj              \
