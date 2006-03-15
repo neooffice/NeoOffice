@@ -178,11 +178,12 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				aDelay.Nanosec = 10;
 				while ( !Application::IsShutDown() )
 				{
+					// Wakeup the event queue by sending it a dummy event
+					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
+					pSalData->mpEventQueue->postCachedEvent( &aEvent );
+
 					if ( aEventQueueMutex.tryToAcquire() )
 					{
-						// Wakeup the event queue by sending it a dummy event
-						com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
-						pSalData->mpEventQueue->postCachedEvent( &aEvent );
 						if ( Application::IsShutDown() )
 						{
 							aEventQueueMutex.release();
