@@ -468,10 +468,12 @@ public final class VCLGraphics {
 		if (g != null) {
 			try {
 				img = new VCLImage(width, height, bitCount);
+				x = destBounds.x - x;
+				y = destBounds.y - y;
 				g.setComposite(VCLGraphics.copyComposite);
-				VCLGraphics.copyComposite.setRaster(img.getImage().getRaster());
-				g.setClip(x, y, width, height);
-				g.drawImage(img.getImage(), x, y, x + width, y + height, 0, 0, width, height, null);
+				VCLGraphics.copyComposite.setRaster(img.getImage().getRaster(), x, y);
+				g.setClip(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
+				g.drawImage(img.getImage(), destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, x, y, destBounds.width, destBounds.height, null);
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -521,6 +523,10 @@ public final class VCLGraphics {
 		if (graphics != null)
 			return;
 
+		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(vg.getGraphicsBounds());
+		if (srcBounds.isEmpty())
+			return;
+
 		Rectangle destBounds = new Rectangle(destX, destY, destWidth, destHeight).intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
@@ -543,17 +549,13 @@ public final class VCLGraphics {
 			if (vg.getImage() != null)
 				img = vg.getImage().getImage();
 
-			if (img == null) {
-				Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(vg.getGraphicsBounds());
-				if (srcBounds.isEmpty())
-					return;
-
-				VCLImage srcImage = vg.createImage(srcBounds.x, srcBounds.y, srcBounds.width, srcBounds.height);
+			if (img == null || !srcBounds.contains(srcX, srcY, srcWidth, srcHeight)) {
+				VCLImage srcImage = vg.createImage(srcX, srcY, srcWidth, srcHeight);
 				if (srcImage == null)
 					return;
 
-				srcX -= srcBounds.x;
-				srcY -= srcBounds.y;
+				srcX = 0;
+				srcY = 0;
 
 				img = srcImage.getImage();
 				srcImage.dispose();
@@ -1532,7 +1534,7 @@ public final class VCLGraphics {
 					if (singlePixelBitmap == null)
 						singlePixelBitmap = new VCLBitmap(1, 1, bitCount);
 					BufferedImage i = singlePixelBitmap.getImage();
-					VCLGraphics.copyComposite.setRaster(i.getRaster());
+					VCLGraphics.copyComposite.setRaster(i.getRaster(), 0, 0);
 					g.setClip(x, y, 1, 1);
 					g.drawImage(i, x, y, x + 1, y + 1, 0, 0, 1, 1, null);
 					pixel = i.getRGB(0, 0);
@@ -2012,12 +2014,13 @@ public final class VCLGraphics {
 
 		private WritableRaster raster = null;
 
+		private int rasterX = 0;
+
+		private int rasterY = 0;
+
 		public void compose(Raster src, Raster destIn, WritableRaster destOut) {
 
-			if (destIn != destOut)
-				destOut.setDataElements(0, 0, destIn);
-
-			raster.setDataElements(0, 0, destIn);
+			raster.setDataElements(rasterX, rasterY, destIn);
 
 			raster = null;
 
@@ -2031,9 +2034,11 @@ public final class VCLGraphics {
 
 		public void dispose() {}
 
-		void setRaster(WritableRaster r) {
+		void setRaster(WritableRaster r, int x, int y) {
 
 			raster = r;
+			rasterX = x;
+			rasterY = y;
 
 		}
 
