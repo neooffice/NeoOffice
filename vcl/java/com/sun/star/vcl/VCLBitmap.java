@@ -115,21 +115,30 @@ public final class VCLBitmap {
 	 */
 	public void copyBits(VCLGraphics graphics, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY) {
 
+		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(graphics.getGraphicsBounds());
+		if (srcBounds.isEmpty())
+			return;
+
+		if (!srcBounds.contains(srcX, srcY, srcWidth, srcHeight)) {
+			destX = srcBounds.x - srcX;
+			destY = srcBounds.y - srcY;
+			srcX = srcBounds.x;
+			srcY = srcBounds.y;
+			srcWidth = srcBounds.width;
+			srcY = srcBounds.height;
+		}
+
 		BufferedImage img = null;
 		if ( graphics.getImage() != null)
 			img = graphics.getImage().getImage();
 
 		if (img == null) {
-			Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(graphics.getGraphicsBounds());
-			if (srcBounds.isEmpty())
-				return;
-
-            VCLImage srcImage = graphics.createImage(srcBounds.x, srcBounds.y, srcBounds.width, srcBounds.height);
+            VCLImage srcImage = graphics.createImage(srcX, srcY, srcWidth, srcHeight);
             if (srcImage == null)
                 return;
 
-			srcX -= srcBounds.x;
-			srcY -= srcBounds.y;
+			srcX = 0;
+			srcY = 0;
 
 			img = srcImage.getImage();
 			srcImage.dispose();
