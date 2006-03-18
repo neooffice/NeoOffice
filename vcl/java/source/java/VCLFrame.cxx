@@ -83,9 +83,9 @@ static void JNICALL Java_com_sun_star_vcl_VCLFrame_updateLocation( JNIEnv *pEnv,
 			if ( mIDGetModelPtr )
 			{
 				if ( bReturnsInt )
-					CWindow_updateLocation( pEnv->CallIntMethod( _par0, mIDGetModelPtr ) );
+					CWindow_updateLocation( (void *) pEnv->CallIntMethod( _par0, mIDGetModelPtr ) );
 				else
-					CWindow_updateLocation( pEnv->CallLongMethod( _par0, mIDGetModelPtr ) );
+					CWindow_updateLocation( (void *) pEnv->CallLongMethod( _par0, mIDGetModelPtr ) );
 			}
 		}
 	}
@@ -445,9 +445,9 @@ void *com_sun_star_vcl_VCLFrame::getNativeWindow()
 					if ( mIDGetModelPtr )
 					{
 						if ( bReturnsInt )
-							out = (void *)CWindow_getNSWindow( t.pEnv->CallIntMethod( tempObj, mIDGetModelPtr ) );
+							out = (void *)CWindow_getNSWindow( (void *) t.pEnv->CallIntMethod( tempObj, mIDGetModelPtr ) );
 						else
-							out = (void *)CWindow_getNSWindow( t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr ) );
+							out = (void *)CWindow_getNSWindow( (void *) t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr ) );
 					}
 				}
 			}
@@ -497,9 +497,9 @@ void *com_sun_star_vcl_VCLFrame::getNativeWindowRef()
 					if ( mIDGetModelPtr )
 					{
 						if ( bReturnsInt )
-							out = (void *)CWindow_getWindowRef( t.pEnv->CallIntMethod( tempObj, mIDGetModelPtr ) );
+							out = (void *)CWindow_getWindowRef( (void *)t.pEnv->CallIntMethod( tempObj, mIDGetModelPtr ) );
 						else
-							out = (void *)CWindow_getWindowRef( t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr ) );
+							out = (void *)CWindow_getWindowRef( (void *)t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr ) );
 					}
 				}
 			}
