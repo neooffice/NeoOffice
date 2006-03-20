@@ -40,8 +40,6 @@
 #include <java/lang/Object.hxx>
 #endif
 
-class SalMenu;
-
 namespace vcl {
 
 class com_sun_star_vcl_VCLFrame;
@@ -53,8 +51,6 @@ protected:
 	static jclass		theClass;
 
 public:
-	friend class SalMenu;
-	
 	static jclass		getMyClass();
 				
 						com_sun_star_vcl_VCLMenuBar( jobject myObj ) : java_lang_Object( myObj ) {}

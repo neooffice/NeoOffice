@@ -116,7 +116,7 @@ SAL_IMPLEMENT_MAIN()
 			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
 			aTmpPath += aPath;
 		}
-		putenv( aTmpPath.GetBuffer() );
+		putenv( (char *)aTmpPath.GetBuffer() );
 	}
 
 	// Assign command's directory and DYLD_LIBRARY_PATH to
@@ -139,7 +139,7 @@ SAL_IMPLEMENT_MAIN()
 			ByteString aTmpPath( "DYLD_FALLBACK_FRAMEWORK_PATH=" );
 			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
 			aTmpPath += aFrameworkPath;
-			putenv( aTmpPath.GetBuffer() );
+			putenv( (char *)aTmpPath.GetBuffer() );
 		}
 		unsetenv( "DYLD_FRAMEWORK_PATH" );
 		bRestart = true;
@@ -161,7 +161,7 @@ SAL_IMPLEMENT_MAIN()
 			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
 			aTmpPath += aFallbackLibPath;
 		}
-		putenv( aTmpPath.GetBuffer() );
+		putenv( (char *)aTmpPath.GetBuffer() );
 		unsetenv( "DYLD_LIBRARY_PATH" );
 		bRestart = true;
 	}
