@@ -56,7 +56,7 @@ Mac OS X 10.4 (Tiger)
 
 3. Make sure that you have downloaded and installed the following dependencies from http://connect.apple.com/ website:
 
-   Xcode Tools v2.2
+   Xcode Tools v2.2.1
 
 4. Make sure that you have set the compiler version to 4.0.1 by executing the following command:
 
