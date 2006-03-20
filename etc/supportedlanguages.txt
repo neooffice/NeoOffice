@@ -1,4 +1,3 @@
-af,Afrikaans
 be-BY,Byelorussian
 bg,Bulgarian
 ca,Catalan
@@ -15,21 +14,16 @@ fa,Persian
 fi,Finnish
 fr,French
 hi-IN,Hindi
-hr,Croatian
 hu,Hungarian
 it,Italian
 ja,Japanese
 ko,Korean
 lt,Lithuanian
-mk,Macedonian
 nb,Norwegian
 nl,Dutch
 pl,Polish
 pt-BR,Brazilian Portuguese
 ru,Russian
-sk,Slovak
-sl,Slovenian
-sr-CS,Serbian
 sv,Swedish
 th,Thai
 tr,Turkish
