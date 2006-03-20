@@ -226,7 +226,7 @@ build.package: build.neo_patches build.source_zip
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find "$(PWD)/$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice/portable/install" -name "*.sw"` ; do gnutar xvf "$${i}" ; done'
 # Regroup the OOo langauge packs
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find "$(PWD)/$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice/portable/install" -name "*.install"` ; do grep "mkdir " "$${i}" | grep "/Applications" | sed "s#^.*/Applications#Applications#" | xargs -n1 mkdir -p ; done'
-	cd "$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice_languagepack/portable/install" ; find . -type d -maxdepth 1 -exec basename {} \; | grep -v '^\.$$' > "$(PWD)/$(INSTALL_HOME)/language_names"
+	cd "$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice_languagepack/portable/install" ; find . -type d -maxdepth 1 -exec basename {} \; | grep -v '^\.$$' | grep -v '^log$$' > "$(PWD)/$(INSTALL_HOME)/language_names"
 	rm -Rf "$(INSTALL_HOME)/package/Applications"
 # Create the language pack installers
 	sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/language_names"` ; do if [ "$${i}" = "en-US" ] ; then continue ; fi ; mkdir -p "$(PWD)/$(INSTALL_HOME)/package_$${i}/Contents" ; mkdir -p "$(PWD)/$(INSTALL_HOME)/package_$${i}/Applications" ; ln -sf "$(PWD)/$(INSTALL_HOME)/package_$${i}/Contents" "$(PWD)/$(INSTALL_HOME)/package_$${i}/Applications/$(OO_DIR_NAME)" ; ( cd "$(PWD)/$(INSTALL_HOME)/package_$${i}" ; for j in `find "$(PWD)/$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice_languagepack/portable/install/$${i}" -name "*.sw"` ; do gnutar xvf "$${j}" ; done ; for j in `find "$(PWD)/$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice_languagepack/portable/install/$${i}" -name "*.install"` ; do grep "mkdir " "$${j}" | grep "/Applications" | sed "s#^.*/Applications#Applications#" | xargs -n1 mkdir -p ; done ) ; rm -Rf "$(PWD)/$(INSTALL_HOME)/package_$${i}/Applications" ; "$(MAKE)" $(MFLAGS) "build.package_$${i}" ; done'
@@ -259,7 +259,7 @@ build.package: build.neo_patches build.source_zip
 	cd "$(INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/Library/Preferences/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' > "../../out" ; mv -f "../../out" "program/bootstraprc"
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find program share -type f | grep -v /CVS | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find program share -type f | grep -v /CVS` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find share/registry -name "*.xcu` ; do sed "s#$(OO_PRODUCT_NAME)#$(PRODUCT_NAME)#g" "$${i}" | sed "s#$(OO_PRODUCT_VERSION)#$(PRODUCT_VERSION)#g" | sed "s#$(OO_REGISTRATION_URL)#$(PRODUCT_REGISTRATION_URL)#g" > "../../out" ; mv -f "../../out" "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find share/registry -name "*.xcu"` ; do sed "s#$(OO_PRODUCT_NAME)#$(PRODUCT_NAME)#g" "$${i}" | sed "s#$(OO_PRODUCT_VERSION)#$(PRODUCT_VERSION)#g" | sed "s#$(OO_REGISTRATION_URL)#$(PRODUCT_REGISTRATION_URL)#g" > "../../out" ; mv -f "../../out" "$${i}" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#$(OO_PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/help/main_transform.xsl" | sed 's#$(OO_SUPPORT_URL)#$(PRODUCT_SUPPORT_URL)#g' | sed 's#$(OO_SUPPORT_URL_TEXT)#$(PRODUCT_SUPPORT_URL_TEXT)#g' > "help/main_transform.xsl"
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.dylib*" -o -name "*.bin"` ; do strip -S -x "$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'if [ ! -d "MacOS" ] ; then rm -Rf "MacOS" ; mv -f "program" "MacOS" ; ln -sf "MacOS" "program" ; fi'
@@ -355,7 +355,7 @@ build.package_%: $(INSTALL_HOME)/package_%
 	chmod -Rf u+w,a+r "$<"
 	cd "$</Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find program share -type f | grep -v /CVS | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
 	cd "$</Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find program share -type f | grep -v /CVS` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
-	cd "$</Contents" ; sh -e -c 'for i in `find share/registry -name "*.xcu` ; do sed "s#$(OO_PRODUCT_NAME)#$(PRODUCT_NAME)#g" "$${i}" | sed "s#$(OO_PRODUCT_VERSION)#$(PRODUCT_VERSION)#g" | sed "s#$(OO_REGISTRATION_URL)#$(PRODUCT_REGISTRATION_URL)#g" > "../../out" ; mv -f "../../out" "$${i}" ; done'
+	cd "$</Contents" ; sh -e -c 'for i in `find share/registry -name "*.xcu"` ; do sed "s#$(OO_PRODUCT_NAME)#$(PRODUCT_NAME)#g" "$${i}" | sed "s#$(OO_PRODUCT_VERSION)#$(PRODUCT_VERSION)#g" | sed "s#$(OO_REGISTRATION_URL)#$(PRODUCT_REGISTRATION_URL)#g" > "../../out" ; mv -f "../../out" "$${i}" ; done'
 	rm -Rf "$</Contents/Resources"
 	mkdir -p "$</Contents/Resources"
 	cd "$</Contents" ; sh -e -c 'if [ ! -d "MacOS" ] ; then rm -Rf "MacOS" ; mv -f "program" "MacOS" ; ln -sf "MacOS" "program" ; fi'
