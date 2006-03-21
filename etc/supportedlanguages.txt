@@ -1,32 +1,22 @@
-be-BY,Byelorussian
-bg,Bulgarian
-ca,Catalan
 cs,Czech
-cy,Welsh
 da,Danish
 de,German
-el,Greek
 en-GB,British English
 en-US,American English
 es,Spanish
 et,Estonian
-fa,Persian
-fi,Finnish
 fr,French
-hi-IN,Hindi
 hu,Hungarian
 it,Italian
 ja,Japanese
 ko,Korean
-lt,Lithuanian
-nb,Norwegian
+mk,Macedonian
 nl,Dutch
 pl,Polish
 pt-BR,Brazilian Portuguese
 ru,Russian
+sk,Slovak
+sl,Slovenian
 sv,Swedish
-th,Thai
-tr,Turkish
-vi,Vietnamese
 zh-CN,Simplified Chinese
 zh-TW,Traditional Chinese
