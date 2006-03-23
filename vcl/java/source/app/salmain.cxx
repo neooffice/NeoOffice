@@ -51,17 +51,22 @@
 #include <tools/fsys.hxx>
 #endif
 
+#define TMPDIR "/tmp"
+
 // ============================================================================
  
 SAL_IMPLEMENT_MAIN()
 {
-	rlimit aLimit;
-	if ( !getrlimit( RLIMIT_NOFILE, &aLimit ) )
-	{
-		aLimit.rlim_cur = aLimit.rlim_max;
-		setrlimit( RLIMIT_NOFILE, &aLimit );
-	}
 	char *pCmdPath = argv[ 0 ];
+
+	// Make sure TMPDIR exists as a softlink to /private/tmp as it can be
+	// easily removed. In most cases, this call should fail, but we do it
+	// just to be sure.
+	symlink( "private/tmp", TMPDIR );
+
+	// If TMPDIR is not set, set it to /tmp
+	if ( !getenv( "TMPDIR" ) )
+		putenv( "TMPDIR=" TMPDIR );
 
 	// Don't allow running as root as we really cannot trust that we won't
 	// do any accidental damage
@@ -148,6 +153,13 @@ SAL_IMPLEMENT_MAIN()
 	// effect after the application has already started on most platforms
 	if ( bRestart )
 		execv( pCmdPath, argv );
+
+	rlimit aLimit;
+	if ( !getrlimit( RLIMIT_NOFILE, &aLimit ) )
+	{
+		aLimit.rlim_cur = aLimit.rlim_max;
+		setrlimit( RLIMIT_NOFILE, &aLimit );
+	}
 
 	SVMain();
 
