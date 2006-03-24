@@ -305,9 +305,13 @@
 
 - (id)initWithCount:(int)nCount menuCommands:(MenuCommand *)pIDs strings:(CFStringRef *)pStrings;
 {
+	[super init];
+
 	mnCount = nCount;
 	mpIDs = pIDs;
 	mpStrings = pStrings;
+
+	return self;
 }
 
 @end
