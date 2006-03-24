@@ -418,12 +418,6 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 				EndPage();
 			else
 				break;
-
-#ifdef USE_JAVA
-			// If the native print job ended or aborted, abort the parent job
-			if ( mnError == PRINTER_ABORT )
-				mpParent->AbortJob();
-#endif	// USE_JAVA
 		}
 
         SetDrawMode( nOldDrawMode );
@@ -431,20 +425,19 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 		delete pActPage;
 		mbDestroyAllowed = TRUE;
 
+		if( mbDestroyed )
 #ifdef USE_JAVA
-		if( mbDestroyed )
-		{
-			Destroy();
 			break;
-		}
 #else	// USE_JAVA
-		if( mbDestroyed )
 			Destroy();
 #endif	// USE_JAVA
 	}
 
 #ifdef USE_JAVA
 	}
+
+	if( mbDestroyed )
+		Destroy();
 #endif	// USE_JAVA
 
 	return 0;

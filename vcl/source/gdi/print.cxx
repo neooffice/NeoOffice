@@ -1820,7 +1820,10 @@ BOOL Printer::StartJob( const XubString& rJobName )
 		if ( bFirstPass )
 		{
 			if ( mpQPrinter )
+			{
+				mpQPrinter->AbortQueuePrint();
 				mpQPrinter->Destroy();
+			}
 			mpQPrinter = new ImplQPrinter( this );
 		}
 		else
