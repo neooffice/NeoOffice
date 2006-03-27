@@ -98,6 +98,20 @@ if [ -d "$2" ]; then
 		rm -Rf "$2/resource" || exit 1
 	fi
 
+	# Put back user's custom font files
+	if [ -d "$2/truetype" ]; then
+		for i in `cd "$2/truetype" ; find . -maxdepth 1`; do
+			# Keep old fonts as they may have been loaded by the ATS server
+			if [ -e "$2/Contents/share/fonts/truetype/$i" ]; then
+				rm -f "$2/Contents/share/fonts/truetype/$i"
+			fi
+			mv -f "$2/truetype/$i" "$2/Contents/share/fonts/truetype" || exit 1
+		done
+		chown -Rf root:admin "$2/Contents/share/fonts/truetype" || exit 1
+		chmod -Rf u-w,u+r "$2/Contents/share/fonts/truetype" || exit 1
+		rm -Rf "$2/truetype" || exit 1
+	fi
+
 	sync
 
 	# Mark certain directories writable for admin group
