@@ -496,17 +496,15 @@ void SalInstance::Yield( BOOL bWait )
 		nTimeout = 0;
 
 		if ( nCount )
+		{
 			AcquireYieldMutex( nCount );
+			aEventQueueMutex.release();
+			nCount = 0;
+		}
 
 		USHORT nID = pEvent->getID();
 		pEvent->dispatch();
 		delete pEvent;
-
-		if ( nCount )
-		{
-			aEventQueueMutex.release();
-			nCount = 0;
-		}
 
 		// Fix bug 1147 by allowing non-AWT events to be dispatched after a
 		// mouse released event
@@ -522,12 +520,7 @@ void SalInstance::Yield( BOOL bWait )
 
 	// Allow Carbon event loop to proceed
 	if ( !pEvent && !pSalData->maNativeEventCondition.check() )
-	{
 		pSalData->maNativeEventCondition.set();
-		nCount = ReleaseYieldMutex();
-		OThread::yield();
-		AcquireYieldMutex( nCount );
-	}
 }
 
 // -----------------------------------------------------------------------
