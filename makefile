@@ -260,7 +260,7 @@ build.package: build.neo_patches build.source_zip
 	cd "$(INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/Library/Preferences/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' > "../../out" ; mv -f "../../out" "program/bootstraprc"
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find program share -type f | grep -v /CVS | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find program share -type f | grep -v /CVS` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find share/registry -name "*.xcu"` ; do sed "s#$(OO_PRODUCT_NAME)#$(PRODUCT_NAME)#g" "$${i}" | sed "s#$(OO_PRODUCT_VERSION)#$(PRODUCT_VERSION)#g" | sed "s#$(OO_REGISTRATION_URL)#$(PRODUCT_REGISTRATION_URL)#g" > "../../out" ; mv -f "../../out" "$${i}" ; done'
+	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find share/registry/data -name "*.xcu"` ; do sed "s#$(OO_PRODUCT_NAME)#$(PRODUCT_NAME)#g" "$${i}" | sed "s#$(OO_PRODUCT_VERSION)#$(PRODUCT_VERSION)#g" | sed "s#$(OO_REGISTRATION_URL)#$(PRODUCT_REGISTRATION_URL)#g" > "../../out" ; mv -f "../../out" "$${i}" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#$$(OO_PRODUCT_NAME)#$(OO_PRODUCT_NAME)#g' "$(PWD)/etc/help/main_transform.xsl" | sed 's#$$(OO_SUPPORT_URL)#$(OO_SUPPORT_URL)#g' | sed 's#$$(OO_SUPPORT_URL_TEXT)#$(OO_SUPPORT_URL_TEXT)#g' | sed 's#$$(PRODUCT_SUPPORT_URL)#$(PRODUCT_SUPPORT_URL)#g' | sed 's#$$(PRODUCT_SUPPORT_URL_TEXT)#$(PRODUCT_SUPPORT_URL_TEXT)#g' > "help/main_transform.xsl"
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.dylib*" -o -name "*.bin"` ; do strip -S -x "$$i" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'if [ ! -d "MacOS" ] ; then rm -Rf "MacOS" ; mv -f "program" "MacOS" ; ln -sf "MacOS" "program" ; fi'
@@ -357,7 +357,7 @@ build.package_%: $(INSTALL_HOME)/package_%
 	chmod -Rf u+w,a+r "$<"
 	cd "$</Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find program share -type f | grep -v /CVS | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
 	cd "$</Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find program share -type f | grep -v /CVS` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
-	cd "$</Contents" ; sh -e -c 'for i in `find share/registry -name "*.xcu"` ; do sed "s#$(OO_PRODUCT_NAME)#$(PRODUCT_NAME)#g" "$${i}" | sed "s#$(OO_PRODUCT_VERSION)#$(PRODUCT_VERSION)#g" | sed "s#$(OO_REGISTRATION_URL)#$(PRODUCT_REGISTRATION_URL)#g" > "../../out" ; mv -f "../../out" "$${i}" ; done'
+	cd "$</Contents" ; sh -e -c 'for i in `find share/registry/data -name "*.xcu"` ; do sed "s#$(OO_PRODUCT_NAME)#$(PRODUCT_NAME)#g" "$${i}" | sed "s#$(OO_PRODUCT_VERSION)#$(PRODUCT_VERSION)#g" | sed "s#$(OO_REGISTRATION_URL)#$(PRODUCT_REGISTRATION_URL)#g" > "../../out" ; mv -f "../../out" "$${i}" ; done'
 	rm -Rf "$</Contents/Resources"
 	mkdir -p "$</Contents/Resources"
 	cd "$</Contents" ; sh -e -c 'if [ ! -d "MacOS" ] ; then rm -Rf "MacOS" ; mv -f "program" "MacOS" ; ln -sf "MacOS" "program" ; fi'
