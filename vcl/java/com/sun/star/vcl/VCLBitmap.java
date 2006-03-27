@@ -91,8 +91,10 @@ public final class VCLBitmap {
 			bitCount = 8;
 		else if (b <= 16)
 			bitCount = 16;
-		else
+		else if (b <= 24)
 			bitCount = 24;
+		else
+			bitCount = 32;
 
 		// Create the image. Note that all rasters are mapped to 32 bit rasters
 		// since this is what the JVM will convert all rasters to every time

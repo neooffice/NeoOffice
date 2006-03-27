@@ -228,9 +228,13 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( bool bReadOnly )
 		pBuffer->mnFormat |= BMP_FORMAT_16BIT_TC_MSB_MASK;
 		pBuffer->maColorMask = ColorMask( 0x7c00, 0x03e0, 0x001f );
 	}
-	else
+	else if ( mnBitCount <= 24 )
 	{
 		pBuffer->mnFormat |= BMP_FORMAT_24BIT_TC_RGB;
+	}
+	else
+	{
+		pBuffer->mnFormat |= BMP_FORMAT_32BIT_TC_ARGB;
 	}
 
 	pBuffer->mnWidth = maSize.Width();
@@ -325,6 +329,10 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( bool bReadOnly )
 								pBitsIn += pBuffer->mnWidth;
 								pBitsOut += pBuffer->mnScanlineSize;
 							}
+						}
+						else if ( pBuffer->mnFormat & BMP_FORMAT_32BIT_TC_ARGB )
+						{
+							memcpy( mpBits, pBits, pBuffer->mnScanlineSize * pBuffer->mnHeight );
 						}
 
 						t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), pBits, JNI_ABORT );
@@ -452,6 +460,10 @@ void JavaSalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, bool bReadOnly )
 									pBitsIn += pBuffer->mnScanlineSize;
 									pBitsOut += pBuffer->mnWidth;
 								}
+							}
+							else if ( pBuffer->mnFormat & BMP_FORMAT_32BIT_TC_ARGB )
+							{
+								memcpy( pBits, mpBits, pBuffer->mnScanlineSize * pBuffer->mnHeight );
 							}
 
 							t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), pBits, 0 );
