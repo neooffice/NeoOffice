@@ -183,7 +183,7 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 	// spaces so that ATSUGetGlyphInfo() will not fail as described in
 	// bug 554
 	pLayoutHash->mpStr = (sal_Unicode *)rtl_allocateMemory( pLayoutHash->mnLen * sizeof( sal_Unicode ) );
-	if ( pLayoutHash->mbRTL )
+	if ( pLayoutHash->mbRTL && ! ( rArgs.mnFlags & SAL_LAYOUT_RIGHT_ALIGN ) )
 	{
 		for ( int i = 0; i < pLayoutHash->mnLen; i++ )
 			pLayoutHash->mpStr[ i ] = GetMirroredChar( rArgs.mpStr[ i + rArgs.mnMinCharPos ] );
