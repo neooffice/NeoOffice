@@ -40,6 +40,10 @@ userinstall="$HOME/Library/Preferences/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAM
 
 check_installation() {
 
+	if [ -z "$1" ] ; then
+		return 1;
+	fi
+
 	if [ -f "$1/Contents/MacOS/bootstraprc" ] ; then
 		productkey=`grep '^ProductKey=' "$1/Contents/MacOS/bootstraprc"`
 		productpatch=`grep '^ProductPatch=' "$1/Contents/MacOS/bootstraprc"`
