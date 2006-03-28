@@ -10,7 +10,7 @@
 #   The Contents of this file are made available subject to the terms of
 #   either of the following licenses
 # 
-#          - GNU General Public License Version 2.1
+#         - GNU General Public License Version 2.1
 # 
 #   Patrick Luby, June 2003
 # 
@@ -37,57 +37,13 @@
 PATH=/bin:/sbin:/usr/bin:/usr/sbin
 export PATH
 
-if [ -d "$2" ]; then
+if [ -d "$2" ] ; then
 
 	# Fix Apple installer bug described in bug 1373
 	if [ "$2" = "/" -o `cd "$2" ; pwd` = "/" ]; then
 		exit 1;
 	fi
 
-	rm -Rf "$2/Contents"
-
-fi
-
-scriptdir=`dirname "$0"`
-if [ -d "$scriptdir" -a -f "$scriptdir/installutils" ] ; then
-
-	. "$scriptdir/installutils"
-
-	if [ "$3" = "/" ] ; then
-		volume=""
-	else
-		volume="$3"
-	fi
-
-	lastcontentshomefile="$userinstall/.lastcontentshome"
-	if [ -s "$lastcontentshomefile" ] ; then
-
-		lastcontentshome=
-		if [ "$3" = "/" ] ; then
-			lastcontentshome=`grep -v '^/Volumes/' "$lastcontentshomefile"`
-		else
-			lastcontentshome=`grep "^$volume/" "$lastcontentshomefile"`
-		fi
-
-		while read i ; do
-			update_installation "$i" "$1" || exit 1
-		done << !
-`echo "$lastcontentshome" | sed 's#/Contents/$##g'`
-!
-
-	fi
-
-	if [ -d "$volume/Applications" ] ; then
-
-		while read i ; do
-			update_installation "$i" "$1" || exit 1
-		done << !
-`find -L "$volume/Applications" -type d -name "*.app" -prune`
-!
-
-	fi
-
 fi
 
 exit 0
-
