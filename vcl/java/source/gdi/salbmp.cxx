@@ -234,7 +234,11 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( bool bReadOnly )
 	}
 	else
 	{
+#ifdef POWERPC
 		pBuffer->mnFormat |= BMP_FORMAT_32BIT_TC_ARGB;
+#else	// POWERPC
+		pBuffer->mnFormat |= BMP_FORMAT_32BIT_TC_BGRA;
+#endif	// POWERPC
 	}
 
 	pBuffer->mnWidth = maSize.Width();
@@ -330,7 +334,11 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( bool bReadOnly )
 								pBitsOut += pBuffer->mnScanlineSize;
 							}
 						}
+#ifdef POWERPC
 						else if ( pBuffer->mnFormat & BMP_FORMAT_32BIT_TC_ARGB )
+#else	// POWERPC
+						else if ( pBuffer->mnFormat & BMP_FORMAT_32BIT_TC_BGRA )
+#endif	// POWERPC
 						{
 							memcpy( mpBits, pBits, pBuffer->mnScanlineSize * pBuffer->mnHeight );
 						}
@@ -461,7 +469,11 @@ void JavaSalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, bool bReadOnly )
 									pBitsOut += pBuffer->mnWidth;
 								}
 							}
+#ifdef POWERPC
 							else if ( pBuffer->mnFormat & BMP_FORMAT_32BIT_TC_ARGB )
+#else	// POWERPC
+							else if ( pBuffer->mnFormat & BMP_FORMAT_32BIT_TC_BGRA )
+#endif	// POWERPC
 							{
 								memcpy( pBits, mpBits, pBuffer->mnScanlineSize * pBuffer->mnHeight );
 							}
