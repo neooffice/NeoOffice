@@ -36,6 +36,7 @@
 
 product_patch_version=`echo $(PRODUCT_PATCH_VERSION) | sed 's#^Patch ##'`
 product_previous_patch_version=`echo $(PRODUCT_PREVIOUS_PATCH_VERSION) | sed 's#^Patch ##'`
+product_previous_previous_patch_version=`echo $(PRODUCT_PREVIOUS_PREVIOUS_PATCH_VERSION) | sed 's#^Patch ##'`
 userinstall="$HOME/Library/Preferences/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)/user"
 
 check_installation() {
@@ -59,10 +60,16 @@ check_installation() {
 			elif [ "$productpatch" -le "$product_patch_version" ] ; then
 				return 0
 			fi
-		elif [ "`echo $productkey | sed 's#$(PRODUCT_NAME) $(PRODUCT_PREVIOUS_VERSION).*$#$(PRODUCT_NAME) $(PRODUCT_PREVIOUS_VERSION)#'`" = "$(PRODUCT_NAME) $(PRODUCT_PREVIOUS_VERSION)" ] ; then
+		elif [ "`echo $productkey | sed 's#$(PRODUCT_NAME) $(PRODUCT_PREVIOUS_VERSION) .*$#$(PRODUCT_NAME) $(PRODUCT_PREVIOUS_VERSION)#'`" = "$(PRODUCT_NAME) $(PRODUCT_PREVIOUS_VERSION)" ] ; then
 			if [ -z "$product_previous_patch_version" ] ; then
 				return 0
 			elif [ "$productpatch" -ge "$product_previous_patch_version" ] ; then
+				return 0
+			fi
+		elif [ "`echo $productkey | sed 's#$(PRODUCT_NAME) $(PRODUCT_PREVIOUS_PREVIOUS_VERSION) .*$#$(PRODUCT_NAME) $(PRODUCT_PREVIOUS_PREVIOUS_VERSION)#'`" = "$(PRODUCT_NAME) $(PRODUCT_PREVIOUS_PREVIOUS_VERSION)" ] ; then
+			if [ -z "$product_previous_previous_patch_version" ] ; then
+				return 0
+			elif [ "$productpatch" -ge "$product_previous_previous_patch_version" ] ; then
 				return 0
 			fi
 		fi
