@@ -113,6 +113,11 @@ public final class VCLGraphics {
 	public final static int GF_ROTR = 0x03000000;
 
 	/**
+	 * The button component.
+	 */
+	private static DefaultableJButton button = null;
+
+	/**
 	 * The cached copy composite.
 	 */
 	private static CopyComposite copyComposite = new CopyComposite();
@@ -231,6 +236,10 @@ public final class VCLGraphics {
 	 * Initialize static data.
 	 */
 	static {
+
+		// Create the button with a transparent background
+		button = new DefaultableJButton();
+		button.setBackground(new Color(0x00000000, true));
 
 		// Create the image50 image
 		int w = 2;
@@ -1400,15 +1409,14 @@ public final class VCLGraphics {
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
-				JButton b = new JButton(title);
-				b.setBounds(x, y, width, height);
-				g.translate(x, y);
-				b.setBackground(new Color(0x00000000, true));
-				ButtonModel m = b.getModel();
+				VCLGraphics.button.setLabel(title);
+				VCLGraphics.button.setDefault(isDefault);
+				VCLGraphics.button.setBounds(x, y, width, height);
+				ButtonModel m = VCLGraphics.button.getModel();
 				m.setSelected(pressed);
 				m.setEnabled(enabled);
-				b.getUI().paint(g, b);
-				b = null;
+				g.translate(x, y);
+				VCLGraphics.button.getUI().paint(g, VCLGraphics.button);
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -2247,6 +2255,24 @@ public final class VCLGraphics {
 		}
 
 		public void dispose() {}
+
+	}
+
+	final static class DefaultableJButton extends JButton {
+
+		private boolean isDefault = false;
+
+		public boolean hasFocus() {
+
+			return isDefault;
+
+		}
+
+		void setDefault(boolean b) {
+
+			isDefault = b;
+
+		}
 
 	}
 
