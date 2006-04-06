@@ -66,6 +66,8 @@ import java.awt.image.WritableRaster;
 import java.lang.reflect.Method;
 import java.util.Iterator;
 import java.util.LinkedList;
+import javax.swing.ButtonModel;
+import javax.swing.JButton;
 
 /**
  * The Java class that implements the SalGraphics C++ class methods.
@@ -1379,6 +1381,43 @@ public final class VCLGraphics {
 		}
 
 	}
+	
+	/**
+	 * Draws a pushbutton into the graphics using the default Swing LAF.
+	 *
+	 * @param x the x coordinate of the top left of the button frame
+	 * @param y the y coordinate of the top left of the button frame
+	 * @param width the width of the button
+	 * @param height the height of the button
+	 * @param title the text to be contained within the button.  Will be placed in the button literally without accelerator replacement.
+	 * @param enabled true if the button is enabled, false if the button is disabled
+	 * @param focused true if the button is keyboard focused, false if the button is not keyboard focused
+	 * @param pressed true if the button is currently pressed, false if it is in normal state
+	 * @param isDefault true if the button is the default button of the window, false if it is a regular pushbutton
+	 */
+	void drawPushButton(int x, int y, int width, int height, String title, boolean enabled, boolean focused, boolean pressed, boolean isDefault) {
+		
+		Graphics2D g = getGraphics();
+		if (g != null) {
+			try {
+				JButton b = new JButton(title);
+				b.setBounds(x, y, width, height);
+				g.translate(x, y);
+				b.setBackground(new Color(0x00000000, true));
+				ButtonModel m = b.getModel();
+				m.setSelected(pressed);
+				m.setEnabled(enabled);
+				b.getUI().paint(g, b);
+				b = null;
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
+		}
+		
+	}
+	 
 
 	/**
 	 * Applies the cached clipping area. The cached clipping area is set using

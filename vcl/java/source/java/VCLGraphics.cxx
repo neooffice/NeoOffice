@@ -691,6 +691,39 @@ void com_sun_star_vcl_VCLGraphics::drawRect( long _par0, long _par1, long _par2,
 
 // ----------------------------------------------------------------------------
 
+#ifdef GENESIS_OF_THE_NEW_WEAPONS
+void com_sun_star_vcl_VCLGraphics::drawPushButton( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4, sal_Bool _par5, sal_Bool _par6, sal_Bool _par7, sal_Bool _par8 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(IIIILjava/lang/String;ZZZZ)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "drawPushButton", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[9];
+			args[0].i = jint( _par0 );
+			args[1].i = jint( _par1 );
+			args[2].i = jint( _par2 );
+			args[3].i = jint( _par3 );
+			args[4].l = StringToJavaString( t.pEnv, _par4 );
+			args[5].z = jboolean( _par5 );
+			args[6].z = jboolean( _par6 );
+			args[7].z = jboolean( _par7 );
+			args[8].z = jboolean( _par8 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}
+#endif
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLGraphics::endSetClipRegion()
 {
 	static jmethodID mID = NULL;
