@@ -1405,7 +1405,11 @@ public final class VCLGraphics {
 	 * @param isDefault true if the button is the default button of the window, false if it is a regular pushbutton
 	 */
 	void drawPushButton(int x, int y, int width, int height, String title, boolean enabled, boolean focused, boolean pressed, boolean isDefault) {
-		
+
+		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
+		if (destBounds.isEmpty())
+			return;
+
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
@@ -1414,11 +1418,25 @@ public final class VCLGraphics {
 					VCLGraphics.button.setDefault(true);
 				else
 					VCLGraphics.button.setDefault(false);
-				VCLGraphics.button.setSize(width, height);
 				ButtonModel m = VCLGraphics.button.getModel();
 				m.setSelected(pressed);
 				m.setEnabled(enabled);
-				g.translate(x, y);
+
+				// Since this method is only invoked when the C++ layer is
+				// drawing with PART_ENTIRE_CONTROL, we only clip ot the
+				// specified bounds. However, since Java will not draw a native
+				// button if the height is greater than the preferred height or
+				// is more than 3 less than the preferred height, we need to
+				// ensure that the clip region is set to the specified height.
+				Dimension d = VCLGraphics.button.getPreferredSize();
+				int realHeight;
+				if (d.height > height && d.height - height <= 3)
+					realHeight = height;
+				else
+					realHeight = d.height;
+				VCLGraphics.button.setSize(width, realHeight);
+				g.setClip(destBounds);
+				g.translate(x, y + ((height - realHeight) / 2));
 				VCLGraphics.button.getUI().paint(g, VCLGraphics.button);
 			}
 			catch (Throwable t) {
