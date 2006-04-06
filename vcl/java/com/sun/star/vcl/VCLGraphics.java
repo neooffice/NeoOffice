@@ -1410,8 +1410,11 @@ public final class VCLGraphics {
 		if (g != null) {
 			try {
 				VCLGraphics.button.setLabel(title);
-				VCLGraphics.button.setDefault(isDefault);
-				VCLGraphics.button.setBounds(x, y, width, height);
+				if (enabled && isDefault)
+					VCLGraphics.button.setDefault(true);
+				else
+					VCLGraphics.button.setDefault(false);
+				VCLGraphics.button.setSize(width, height);
 				ButtonModel m = VCLGraphics.button.getModel();
 				m.setSelected(pressed);
 				m.setEnabled(enabled);
