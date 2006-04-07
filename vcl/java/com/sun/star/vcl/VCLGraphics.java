@@ -1423,21 +1423,9 @@ public final class VCLGraphics {
 				m.setSelected(pressed);
 				m.setEnabled(enabled);
 
-				// Since this method is only invoked when the C++ layer is
-				// drawing with PART_ENTIRE_CONTROL, we only clip ot the
-				// specified bounds. However, since Java will not draw a native
-				// button if the height is greater than the preferred height or
-				// is more than 3 less than the preferred height, we need to
-				// ensure that the clip region is set to the specified height.
-				Dimension d = VCLGraphics.button.getPreferredSize();
-				int realHeight;
-				if (d.height > height && d.height - height <= 3)
-					realHeight = height;
-				else
-					realHeight = d.height;
-				VCLGraphics.button.setSize(width, realHeight);
+				VCLGraphics.button.setSize(width, height);
 				g.setClip(destBounds);
-				g.translate(x, y + ((height - realHeight) / 2));
+				g.translate(x, y);
 				VCLGraphics.button.getUI().paint(g, VCLGraphics.button);
 			}
 			catch (Throwable t) {
@@ -1479,7 +1467,19 @@ public final class VCLGraphics {
 	int getPreferredPushButtonHeight(int x, int y, int width, int height, String title) {
 		VCLGraphics.button.setLabel(title);
 		Dimension d = VCLGraphics.button.getPreferredSize();
-		return d.height;
+		// If the button is less than 30 pixels in width, assume that
+		// it's intended to be a "placard" type button with an icon.
+		// In that case, return the requested height as the Aqua
+		// LAF will then draw it as a placard button instead of a
+		// rounded button.  This makes buttons used as parts of
+		// subcontrols (combo boxes, small toolbar buttons) draw
+		// with the appropraite style.
+		int returnHeight;
+		if (width > 30)
+			returnHeight = d.height;
+		else
+			returnHeight = height;
+		return returnHeight;
 	}
 	
 	/**
