@@ -189,6 +189,11 @@ public final class VCLGraphics {
 	private static MaskComposite maskComposite = new MaskComposite();
 
 	/**
+	 * The radio button component.
+	 */
+	private static JRadioButton radioButton = null;
+
+	/**
 	 * The cached screen resolution.
 	 */
 	private static int screenResolution = 0;
@@ -238,9 +243,14 @@ public final class VCLGraphics {
 	 */
 	static {
 
+		Color c = new Color(0x00000000, true);
+
 		// Create the button with a transparent background
 		button = new DefaultableJButton();
-		button.setBackground(new Color(0x00000000, true));
+		button.setBackground(c);
+
+		radioButton = new JRadioButton();
+		radioButton.setBackground(c);
 
 		// Create the image50 image
 		int w = 2;
@@ -1405,7 +1415,7 @@ public final class VCLGraphics {
 	 * @param pressed true if the button is currently pressed, false if it is in normal state
 	 * @param isDefault true if the button is the default button of the window, false if it is a regular pushbutton
 	 */
-	void drawPushButton(int x, int y, int width, int height, String title, boolean enabled, boolean focused, boolean pressed, boolean isDefault) {
+	public void drawPushButton(int x, int y, int width, int height, String title, boolean enabled, boolean focused, boolean pressed, boolean isDefault) {
 
 		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
 		if (destBounds.isEmpty())
@@ -1423,9 +1433,12 @@ public final class VCLGraphics {
 				m.setSelected(pressed);
 				m.setEnabled(enabled);
 
-				VCLGraphics.button.setSize(width, height);
+				int adjustedHeight = VCLGraphics.button.getPreferredSize().height;
+				if (adjustedHeight >= width)
+					adjustedHeight = height;
+				VCLGraphics.button.setSize(width, adjustedHeight);
 				g.setClip(destBounds);
-				g.translate(x, y);
+				g.translate(x, y + ((height - adjustedHeight) / 2));
 				VCLGraphics.button.getUI().paint(g, VCLGraphics.button);
 			}
 			catch (Throwable t) {
@@ -1447,10 +1460,11 @@ public final class VCLGraphics {
 	 * @param title the text to be contained within the button.  Will be placed in the button literally without accelerator replacement.
 	 * @return desired button width
 	 */
-	int getPreferredPushButtonWidth(int x, int y, int width, int height, String title) {
+	public int getPreferredPushButtonWidth(int x, int y, int width, int height, String title) {
+
 		VCLGraphics.button.setLabel(title);
-		Dimension d = VCLGraphics.button.getPreferredSize();
-		return d.width;
+		return VCLGraphics.button.getPreferredSize().width;
+
 	}
 	
 	/**
@@ -1464,22 +1478,21 @@ public final class VCLGraphics {
 	 * @param title the text to be contained within the button.  Will be placed in the button literally without accelerator replacement.
 	 * @return desired button height
 	 */
-	int getPreferredPushButtonHeight(int x, int y, int width, int height, String title) {
+	public int getPreferredPushButtonHeight(int x, int y, int width, int height, String title) {
+
+		// If the button has no title, assume that it's intended to be a
+		// "placard" type button with an icon. In that case, return the
+		// requested height as the Aqua LAF will then draw it as a placard
+		// button instead of a rounded button. This makes buttons used as
+		// parts of subcontrols (combo boxes, small toolbar buttons) draw
+		// with the appropriate style.
 		VCLGraphics.button.setLabel(title);
-		Dimension d = VCLGraphics.button.getPreferredSize();
-		// If the button is less than 30 pixels in width, assume that
-		// it's intended to be a "placard" type button with an icon.
-		// In that case, return the requested height as the Aqua
-		// LAF will then draw it as a placard button instead of a
-		// rounded button.  This makes buttons used as parts of
-		// subcontrols (combo boxes, small toolbar buttons) draw
-		// with the appropraite style.
-		int returnHeight;
-		if (width > 30)
-			returnHeight = d.height;
+		int adjustedHeight = VCLGraphics.button.getPreferredSize().height;
+		if (adjustedHeight >= width)
+			return height;
 		else
-			returnHeight = height;
-		return returnHeight;
+			return adjustedHeight;
+
 	}
 	
 	/**
@@ -1495,7 +1508,7 @@ public final class VCLGraphics {
 	 * @param pressed true if the button is currently pressed, false if it is in normal state
 	 * @param buttonState	0 = off, 1 = on, 2 = mixed.  Note that Aqua does not provide mixed button state by default.
 	 */
-	void drawRadioButton(int x, int y, int width, int height, String title, boolean enabled, boolean focused, boolean pressed, int buttonState) {
+	public void drawRadioButton(int x, int y, int width, int height, String title, boolean enabled, boolean focused, boolean pressed, int buttonState) {
 
 		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
 		if (destBounds.isEmpty())
@@ -1504,32 +1517,30 @@ public final class VCLGraphics {
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
-				JRadioButton b = new JRadioButton(title);
-				b.setBackground(new Color(0x00000000, true));
-				ButtonModel m = b.getModel();
+				ButtonModel m = VCLGraphics.radioButton.getModel();
 				m.setEnabled(enabled);
 				switch(buttonState)
 				{
 					case 0:
 						m.setSelected(false);
 						break;
-					
 					case 1:
 					case 2:
 						m.setSelected(true);
 						break;
 				}
 				m.setPressed(pressed);
-				b.setSize(width, height);
+				VCLGraphics.radioButton.setSize(width, height);
 				g.setClip(destBounds);
 				g.translate(x, y);
-				b.getUI().paint(g, b);
+				VCLGraphics.radioButton.getUI().paint(g, VCLGraphics.radioButton);
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
 			}
 			g.dispose();
 		}
+
 	}
 	
 	/**
@@ -1543,11 +1554,11 @@ public final class VCLGraphics {
 	 * @param title the text to be contained within the button.  Will be placed in the button literally without accelerator replacement.
 	 * @return desired button width
 	 */
-	int getPreferredRadioButtonWidth(int x, int y, int width, int height, String title) {
-		JRadioButton b = new JRadioButton(title);
-		b.setSize(width, height);
-		Dimension d = b.getPreferredSize();
-		return d.width;
+	public int getPreferredRadioButtonWidth(int x, int y, int width, int height, String title) {
+
+		VCLGraphics.radioButton.setLabel(title);
+		return VCLGraphics.radioButton.getPreferredSize().width;
+
 	}
 	
 	/**
@@ -1561,11 +1572,11 @@ public final class VCLGraphics {
 	 * @param title the text to be contained within the button.  Will be placed in the button literally without accelerator replacement.
 	 * @return desired button height
 	 */
-	int getPreferredRadioButtonHeight(int x, int y, int width, int height, String title) {
-		JRadioButton b = new JRadioButton(title);
-		b.setSize(width, height);
-		Dimension d = b.getPreferredSize();
-		return d.height;
+	public int getPreferredRadioButtonHeight(int x, int y, int width, int height, String title) {
+
+		VCLGraphics.radioButton.setLabel(title);
+		return VCLGraphics.radioButton.getPreferredSize().height;
+
 	}
 
 	/**
