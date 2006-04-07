@@ -92,6 +92,11 @@ public:
 	void				unionClipRegion( long _par0, long _par1, long _par2, long _par3 );
 #ifdef GENESIS_OF_THE_NEW_WEAPONS
 	void				drawPushButton( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4, sal_Bool _par5, sal_Bool _par6, sal_Bool _par7, sal_Bool _par8 );
+	USHORT				getPreferredPushButtonWidth( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 );
+	USHORT				getPreferredPushButtonHeight( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 );
+	void				drawRadioButton( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4, sal_Bool _par5, sal_Bool _par6, sal_Bool _par7, long _par8 );
+	USHORT				getPreferredRadioButtonWidth( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 );
+	USHORT				getPreferredRadioButtonHeight( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 );
 #endif
 };
 

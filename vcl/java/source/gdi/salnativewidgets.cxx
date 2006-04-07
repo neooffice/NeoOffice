@@ -81,6 +81,11 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 				isSupported = TRUE;
 			break;
                 
+		case CTRL_RADIOBUTTON:
+			if( nPart == PART_ENTIRE_CONTROL )
+				isSupported = TRUE;
+			break;
+			
 		default:
 			isSupported = FALSE;
 			break;
@@ -141,6 +146,31 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				bOK = TRUE;
 			}
 			break;
+		
+		case CTRL_RADIOBUTTON:
+			if( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle buttonRect = rControlRegion.GetBoundRect();
+				long javaRadioVal = 0;
+				switch( aValue.getTristateVal() )
+				{
+					case BUTTONVALUE_DONTKNOW:
+					case BUTTONVALUE_OFF:
+						javaRadioVal = 0;
+						break;
+					
+					case BUTTONVALUE_ON:
+						javaRadioVal = 1;
+						break;
+					
+					case BUTTONVALUE_MIXED:
+						javaRadioVal = 2;
+						break;
+				}
+				mpVCLGraphics->drawRadioButton( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), javaRadioVal );
+				bOK = TRUE;
+			}
+			break;
 	}
 	
 	return bOK;
@@ -196,7 +226,36 @@ BOOL JavaSalGraphics::drawNativeControlText( ControlType nType, ControlPart nPar
  */
 BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, OUString aCaption, Region &rNativeBoundingRegion, Region &rNativeContentRegion )
 {
-	return FALSE;
+	BOOL bReturn = FALSE;
+	
+	switch( nType )
+	{
+		case CTRL_PUSHBUTTON:
+			if( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle buttonRect = rControlRegion.GetBoundRect();
+				long desiredWidth = mpVCLGraphics->getPreferredPushButtonWidth( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption );
+				long desiredHeight = mpVCLGraphics->getPreferredPushButtonHeight( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption );
+				rNativeBoundingRegion = Region( Rectangle( Point( buttonRect.Left(), buttonRect.Top() ), Size( desiredWidth, desiredHeight ) ) );
+				rNativeContentRegion = Region( rNativeBoundingRegion );
+				bReturn = TRUE;
+			}
+			break;
+		
+		case CTRL_RADIOBUTTON:
+			if( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle buttonRect = rControlRegion.GetBoundRect();
+				long desiredWidth = mpVCLGraphics->getPreferredRadioButtonWidth( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption );
+				long desiredHeight = mpVCLGraphics->getPreferredRadioButtonHeight( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption );
+				rNativeBoundingRegion = Region( Rectangle( Point( buttonRect.Left(), buttonRect.Top() ), Size( desiredWidth, desiredHeight ) ) );
+				rNativeContentRegion = Region( rNativeBoundingRegion );
+				bReturn = TRUE;
+			}
+			break;
+	}
+	
+	return bReturn;
 }
 
 #endif // GENESIS_OF_THE_NEW_WEAPONS

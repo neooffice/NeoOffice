@@ -720,6 +720,153 @@ void com_sun_star_vcl_VCLGraphics::drawPushButton( long _par0, long _par1, long 
 		}
 	}
 }
+
+// ----------------------------------------------------------------------------
+
+USHORT com_sun_star_vcl_VCLGraphics::getPreferredPushButtonWidth( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 )
+{
+	static jmethodID mID = NULL;
+	USHORT out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(IIIILjava/lang/String;)I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getPreferredPushButtonWidth", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[5];
+			args[0].i = jint( _par0 );
+			args[1].i = jint( _par1 );
+			args[2].i = jint( _par2 );
+			args[3].i = jint( _par3 );
+			args[4].l = StringToJavaString( t.pEnv, _par4 );
+			out = (USHORT)t.pEnv->CallNonvirtualIntMethodA( object, getMyClass(), mID, args );
+		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+USHORT com_sun_star_vcl_VCLGraphics::getPreferredPushButtonHeight( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 )
+{
+	static jmethodID mID = NULL;
+	USHORT out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(IIIILjava/lang/String;)I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getPreferredPushButtonHeight", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[5];
+			args[0].i = jint( _par0 );
+			args[1].i = jint( _par1 );
+			args[2].i = jint( _par2 );
+			args[3].i = jint( _par3 );
+			args[4].l = StringToJavaString( t.pEnv, _par4 );
+			out = (USHORT)t.pEnv->CallNonvirtualIntMethodA( object, getMyClass(), mID, args );
+		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLGraphics::drawRadioButton( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4, sal_Bool _par5, sal_Bool _par6, sal_Bool _par7, long _par8 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(IIIILjava/lang/String;ZZZI)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "drawRadioButton", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[9];
+			args[0].i = jint( _par0 );
+			args[1].i = jint( _par1 );
+			args[2].i = jint( _par2 );
+			args[3].i = jint( _par3 );
+			args[4].l = StringToJavaString( t.pEnv, _par4 );
+			args[5].z = jboolean( _par5 );
+			args[6].z = jboolean( _par6 );
+			args[7].z = jboolean( _par7 );
+			args[8].i = jint( _par8 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+USHORT com_sun_star_vcl_VCLGraphics::getPreferredRadioButtonWidth( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 )
+{
+	static jmethodID mID = NULL;
+	USHORT out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(IIIILjava/lang/String;)I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getPreferredRadioButtonWidth", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[5];
+			args[0].i = jint( _par0 );
+			args[1].i = jint( _par1 );
+			args[2].i = jint( _par2 );
+			args[3].i = jint( _par3 );
+			args[4].l = StringToJavaString( t.pEnv, _par4 );
+			out = (USHORT)t.pEnv->CallNonvirtualIntMethodA( object, getMyClass(), mID, args );
+		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+USHORT com_sun_star_vcl_VCLGraphics::getPreferredRadioButtonHeight( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 )
+{
+	static jmethodID mID = NULL;
+	USHORT out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(IIIILjava/lang/String;)I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getPreferredRadioButtonHeight", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[5];
+			args[0].i = jint( _par0 );
+			args[1].i = jint( _par1 );
+			args[2].i = jint( _par2 );
+			args[3].i = jint( _par3 );
+			args[4].l = StringToJavaString( t.pEnv, _par4 );
+			out = (USHORT)t.pEnv->CallNonvirtualIntMethodA( object, getMyClass(), mID, args );
+		}
+	}
+	return out;
+}
 #endif
 
 // ----------------------------------------------------------------------------

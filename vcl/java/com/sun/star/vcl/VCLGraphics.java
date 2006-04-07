@@ -68,6 +68,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import javax.swing.ButtonModel;
 import javax.swing.JButton;
+import javax.swing.JRadioButton;
 
 /**
  * The Java class that implements the SalGraphics C++ class methods.
@@ -1446,7 +1447,126 @@ public final class VCLGraphics {
 		}
 		
 	}
-	 
+	
+	/**
+	 * Retrieves the desired width for a button implemented via default
+	 * Swing LAF.
+	 *
+	 * @param x the x coordinate of the top left of the button frame
+	 * @param y the y coordinate of the top left of the button frame
+	 * @param width the width of the button
+	 * @param height the height of the button
+	 * @param title the text to be contained within the button.  Will be placed in the button literally without accelerator replacement.
+	 * @return desired button width
+	 */
+	int getPreferredPushButtonWidth(int x, int y, int width, int height, String title) {
+		VCLGraphics.button.setLabel(title);
+		Dimension d = VCLGraphics.button.getPreferredSize();
+		return d.width;
+	}
+	
+	/**
+	 * Retrieves the desired height for a button implemented via default
+	 * Swing LAF.
+	 *
+	 * @param x the x coordinate of the top left of the button frame
+	 * @param y the y coordinate of the top left of the button frame
+	 * @param width the width of the button
+	 * @param height the height of the button
+	 * @param title the text to be contained within the button.  Will be placed in the button literally without accelerator replacement.
+	 * @return desired button height
+	 */
+	int getPreferredPushButtonHeight(int x, int y, int width, int height, String title) {
+		VCLGraphics.button.setLabel(title);
+		Dimension d = VCLGraphics.button.getPreferredSize();
+		return d.height;
+	}
+	
+	/**
+	 * Draws a radiobutton into the graphics using the default Swing LAF
+	 *
+	 * @param x the x coordinate of the top left of the button frame
+	 * @param y the y coordinate of the top left of the button frame
+	 * @param width the width of the button
+	 * @param height the height of the button
+	 * @param title the text to be drawn aside the button.  Will be placed besode the button literally without accelerator replacement.
+	 * @param enabled true if the button is enabled, false if the button is disabled
+	 * @param focused true if the button is keyboard focused, false if the button is not keyboard focused
+	 * @param pressed true if the button is currently pressed, false if it is in normal state
+	 * @param buttonState	0 = off, 1 = on, 2 = mixed.  Note that Aqua does not provide mixed button state by default.
+	 */
+	void drawRadioButton(int x, int y, int width, int height, String title, boolean enabled, boolean focused, boolean pressed, int buttonState) {
+
+		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
+		if (destBounds.isEmpty())
+			return;
+
+		Graphics2D g = getGraphics();
+		if (g != null) {
+			try {
+				JRadioButton b = new JRadioButton(title);
+				b.setBackground(new Color(0x00000000, true));
+				ButtonModel m = b.getModel();
+				m.setEnabled(enabled);
+				switch(buttonState)
+				{
+					case 0:
+						m.setSelected(false);
+						break;
+					
+					case 1:
+					case 2:
+						m.setSelected(true);
+						break;
+				}
+				m.setPressed(pressed);
+				b.setSize(width, height);
+				g.setClip(destBounds);
+				g.translate(x, y);
+				b.getUI().paint(g, b);
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
+		}
+	}
+	
+	/**
+	 * Retrieves the desired width for a radio button implemented via default
+	 * Swing LAF.
+	 *
+	 * @param x the x coordinate of the top left of the button frame
+	 * @param y the y coordinate of the top left of the button frame
+	 * @param width the width of the button
+	 * @param height the height of the button
+	 * @param title the text to be contained within the button.  Will be placed in the button literally without accelerator replacement.
+	 * @return desired button width
+	 */
+	int getPreferredRadioButtonWidth(int x, int y, int width, int height, String title) {
+		JRadioButton b = new JRadioButton(title);
+		b.setSize(width, height);
+		Dimension d = b.getPreferredSize();
+		return d.width;
+	}
+	
+	/**
+	 * Retrieves the desired height for a radio button implemented via default
+	 * Swing LAF.
+	 *
+	 * @param x the x coordinate of the top left of the button frame
+	 * @param y the y coordinate of the top left of the button frame
+	 * @param width the width of the button
+	 * @param height the height of the button
+	 * @param title the text to be contained within the button.  Will be placed in the button literally without accelerator replacement.
+	 * @return desired button height
+	 */
+	int getPreferredRadioButtonHeight(int x, int y, int width, int height, String title) {
+		JRadioButton b = new JRadioButton(title);
+		b.setSize(width, height);
+		Dimension d = b.getPreferredSize();
+		return d.height;
+	}
 
 	/**
 	 * Applies the cached clipping area. The cached clipping area is set using
