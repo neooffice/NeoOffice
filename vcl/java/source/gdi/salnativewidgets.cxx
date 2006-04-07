@@ -234,9 +234,8 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
-				long desiredWidth = mpVCLGraphics->getPreferredPushButtonWidth( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption );
-				long desiredHeight = mpVCLGraphics->getPreferredPushButtonHeight( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption );
-				rNativeBoundingRegion = Region( Rectangle( Point( buttonRect.Left(), buttonRect.Top() ), Size( desiredWidth, desiredHeight ) ) );
+				Size desiredSize = mpVCLGraphics->getPreferredPushButtonSize( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption );
+				rNativeBoundingRegion = Region( Rectangle( Point( buttonRect.Left(), buttonRect.Top() ), desiredSize ) );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
 				bReturn = TRUE;
 			}
@@ -246,9 +245,8 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
-				long desiredWidth = mpVCLGraphics->getPreferredRadioButtonWidth( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption );
-				long desiredHeight = mpVCLGraphics->getPreferredRadioButtonHeight( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption );
-				rNativeBoundingRegion = Region( Rectangle( Point( buttonRect.Left(), buttonRect.Top() ), Size( desiredWidth, desiredHeight ) ) );
+				Size desiredSize = mpVCLGraphics->getPreferredRadioButtonSize( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption );
+				rNativeBoundingRegion = Region( Rectangle( Point( buttonRect.Left(), buttonRect.Top() ), desiredSize ) );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
 				bReturn = TRUE;
 			}

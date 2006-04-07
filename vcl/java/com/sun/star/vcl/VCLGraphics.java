@@ -1401,7 +1401,7 @@ public final class VCLGraphics {
 		}
 
 	}
-	
+
 	/**
 	 * Draws a pushbutton into the graphics using the default Swing LAF.
 	 *
@@ -1446,9 +1446,9 @@ public final class VCLGraphics {
 			}
 			g.dispose();
 		}
-		
+
 	}
-	
+
 	/**
 	 * Retrieves the desired width for a button implemented via default
 	 * Swing LAF.
@@ -1458,43 +1458,25 @@ public final class VCLGraphics {
 	 * @param width the width of the button
 	 * @param height the height of the button
 	 * @param title the text to be contained within the button.  Will be placed in the button literally without accelerator replacement.
-	 * @return desired button width
+	 * @return desired button size
 	 */
-	public int getPreferredPushButtonWidth(int x, int y, int width, int height, String title) {
+	public Dimension getPreferredPushButtonSize(int x, int y, int width, int height, String title) {
 
+		// If the button width is less than the preferred height, assume that
+		// it's intended to be a "placard" type button with an icon. In that
+		// case, return the requested height as the Aqua LAF will then draw it
+		// as a placard button instead of a rounded button. This makes buttons
+		// used as parts of subcontrols (combo boxes, small toolbar buttons)
+		// draw with the appropriate style.
 		VCLGraphics.button.setLabel(title);
-		return VCLGraphics.button.getPreferredSize().width;
-
-	}
-	
-	/**
-	 * Retrieves the desired height for a button implemented via default
-	 * Swing LAF.
-	 *
-	 * @param x the x coordinate of the top left of the button frame
-	 * @param y the y coordinate of the top left of the button frame
-	 * @param width the width of the button
-	 * @param height the height of the button
-	 * @param title the text to be contained within the button.  Will be placed in the button literally without accelerator replacement.
-	 * @return desired button height
-	 */
-	public int getPreferredPushButtonHeight(int x, int y, int width, int height, String title) {
-
-		// If the button has no title, assume that it's intended to be a
-		// "placard" type button with an icon. In that case, return the
-		// requested height as the Aqua LAF will then draw it as a placard
-		// button instead of a rounded button. This makes buttons used as
-		// parts of subcontrols (combo boxes, small toolbar buttons) draw
-		// with the appropriate style.
-		VCLGraphics.button.setLabel(title);
-		int adjustedHeight = VCLGraphics.button.getPreferredSize().height;
-		if (adjustedHeight >= width)
-			return height;
+		Dimension d = VCLGraphics.button.getPreferredSize();
+		if (d.height >= width)
+			return new Dimension(d.width, height);
 		else
-			return adjustedHeight;
+			return d;
 
 	}
-	
+
 	/**
 	 * Draws a radiobutton into the graphics using the default Swing LAF
 	 *
@@ -1542,7 +1524,7 @@ public final class VCLGraphics {
 		}
 
 	}
-	
+
 	/**
 	 * Retrieves the desired width for a radio button implemented via default
 	 * Swing LAF.
@@ -1552,30 +1534,12 @@ public final class VCLGraphics {
 	 * @param width the width of the button
 	 * @param height the height of the button
 	 * @param title the text to be contained within the button.  Will be placed in the button literally without accelerator replacement.
-	 * @return desired button width
+	 * @return desired button size
 	 */
-	public int getPreferredRadioButtonWidth(int x, int y, int width, int height, String title) {
+	public Dimension getPreferredRadioButtonSize(int x, int y, int width, int height, String title) {
 
 		VCLGraphics.radioButton.setLabel(title);
-		return VCLGraphics.radioButton.getPreferredSize().width;
-
-	}
-	
-	/**
-	 * Retrieves the desired height for a radio button implemented via default
-	 * Swing LAF.
-	 *
-	 * @param x the x coordinate of the top left of the button frame
-	 * @param y the y coordinate of the top left of the button frame
-	 * @param width the width of the button
-	 * @param height the height of the button
-	 * @param title the text to be contained within the button.  Will be placed in the button literally without accelerator replacement.
-	 * @return desired button height
-	 */
-	public int getPreferredRadioButtonHeight(int x, int y, int width, int height, String title) {
-
-		VCLGraphics.radioButton.setLabel(title);
-		return VCLGraphics.radioButton.getPreferredSize().height;
+		return VCLGraphics.radioButton.getPreferredSize();
 
 	}
 
@@ -1854,7 +1818,7 @@ public final class VCLGraphics {
 				}
 				g.dispose();
 			}
-			
+
 		}
 		else {
 			Graphics2D g = getGraphics();
