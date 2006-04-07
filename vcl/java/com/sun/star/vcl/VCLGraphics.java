@@ -1421,6 +1421,19 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
+		LinkedList clipList = new LinkedList();
+		if (userClipList != null) {
+			Iterator clipRects = userClipList.iterator();
+			while (clipRects.hasNext()) {
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				if (!clip.isEmpty())
+					clipList.add(clip);
+			}
+		}
+		else {
+			clipList.add(destBounds);
+		}
+
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
@@ -1437,9 +1450,14 @@ public final class VCLGraphics {
 				if (adjustedHeight >= width)
 					adjustedHeight = height;
 				VCLGraphics.button.setSize(width, adjustedHeight);
-				g.setClip(destBounds);
-				g.translate(x, y + ((height - adjustedHeight) / 2));
-				VCLGraphics.button.getUI().paint(g, VCLGraphics.button);
+				Iterator clipRects = clipList.iterator();
+				y += (height - adjustedHeight) / 2;
+				while (clipRects.hasNext()) {
+					g.setClip((Rectangle)clipRects.next());
+					g.translate(x, y);
+					VCLGraphics.button.getUI().paint(g, VCLGraphics.button);
+					g.translate(x * -1, y * -1);
+				}
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -1496,6 +1514,19 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
+		LinkedList clipList = new LinkedList();
+		if (userClipList != null) {
+			Iterator clipRects = userClipList.iterator();
+			while (clipRects.hasNext()) {
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				if (!clip.isEmpty())
+					clipList.add(clip);
+			}
+		}
+		else {
+			clipList.add(destBounds);
+		}
+
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
@@ -1513,9 +1544,13 @@ public final class VCLGraphics {
 				}
 				m.setPressed(pressed);
 				VCLGraphics.radioButton.setSize(width, height);
-				g.setClip(destBounds);
-				g.translate(x, y);
-				VCLGraphics.radioButton.getUI().paint(g, VCLGraphics.radioButton);
+				Iterator clipRects = clipList.iterator();
+				while (clipRects.hasNext()) {
+					g.setClip((Rectangle)clipRects.next());
+					g.translate(x, y);
+					VCLGraphics.radioButton.getUI().paint(g, VCLGraphics.radioButton);
+					g.translate(x * -1, y * -1);
+				}
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
