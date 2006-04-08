@@ -113,7 +113,12 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
  */
 BOOL JavaSalGraphics::hitTestNativeControl( ControlType nType, ControlPart nPart, const Region& rControlRegion, const Point& aPos, SalControlHandle& rControlHandle, BOOL& rIsInside )
 {
-	return FALSE;
+	Region aNativeBoundingRegion;
+	Region aNativeContentRegion;
+	if ( getNativeControlRegion( nType, nPart, rControlRegion, 0, ImplControlValue(), rControlHandle, OUString(), aNativeBoundingRegion, aNativeContentRegion ) )
+		return aNativeBoundingRegion.IsInside( aPos );
+	else
+		return FALSE;
 }
 
 // =======================================================================
@@ -135,7 +140,7 @@ BOOL JavaSalGraphics::hitTestNativeControl( ControlType nType, ControlPart nPart
 BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, OUString aCaption )
 {
 	BOOL bOK = FALSE;
-	
+
 	switch( nType )
 	{
 		case CTRL_PUSHBUTTON:
@@ -172,7 +177,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 			}
 			break;
 	}
-	
+
 	return bOK;
 }
 
@@ -227,15 +232,14 @@ BOOL JavaSalGraphics::drawNativeControlText( ControlType nType, ControlPart nPar
 BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, OUString aCaption, Region &rNativeBoundingRegion, Region &rNativeContentRegion )
 {
 	BOOL bReturn = FALSE;
-	
+
 	switch( nType )
 	{
 		case CTRL_PUSHBUTTON:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
-				Size desiredSize = mpVCLGraphics->getPreferredPushButtonSize( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption );
-				rNativeBoundingRegion = Region( Rectangle( Point( buttonRect.Left(), buttonRect.Top() ), desiredSize ) );
+				rNativeBoundingRegion = Region( mpVCLGraphics->getPreferredPushButtonBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption ) );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
 				bReturn = TRUE;
 			}
@@ -245,14 +249,13 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
-				Size desiredSize = mpVCLGraphics->getPreferredRadioButtonSize( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption );
-				rNativeBoundingRegion = Region( Rectangle( Point( buttonRect.Left(), buttonRect.Top() ), desiredSize ) );
+				rNativeBoundingRegion = Region( mpVCLGraphics->getPreferredRadioButtonBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption ) );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
 				bReturn = TRUE;
 			}
 			break;
 	}
-	
+
 	return bReturn;
 }
 

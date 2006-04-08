@@ -92,9 +92,9 @@ public:
 	void				unionClipRegion( long _par0, long _par1, long _par2, long _par3 );
 #ifdef GENESIS_OF_THE_NEW_WEAPONS
 	void				drawPushButton( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4, sal_Bool _par5, sal_Bool _par6, sal_Bool _par7, sal_Bool _par8 );
-	const Size			getPreferredPushButtonSize( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 );
+	const Rectangle		getPreferredPushButtonBounds( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 );
 	void				drawRadioButton( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4, sal_Bool _par5, sal_Bool _par6, sal_Bool _par7, long _par8 );
-	const Size			getPreferredRadioButtonSize( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 );
+	const Rectangle		getPreferredRadioButtonBounds( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 );
 #endif	// GENESIS_OF_THE_NEW_WEAPONS
 };
 

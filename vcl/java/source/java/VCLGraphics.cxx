@@ -723,19 +723,21 @@ void com_sun_star_vcl_VCLGraphics::drawPushButton( long _par0, long _par1, long 
 
 // ----------------------------------------------------------------------------
 
-const Size com_sun_star_vcl_VCLGraphics::getPreferredPushButtonSize( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 )
+const Rectangle com_sun_star_vcl_VCLGraphics::getPreferredPushButtonBounds( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 )
 {
 	static jmethodID mID = NULL;
+	static jfieldID fIDX = NULL;
+	static jfieldID fIDY = NULL;
 	static jfieldID fIDWidth = NULL;
 	static jfieldID fIDHeight = NULL;
-	Size out(0, 0);
+	Rectangle out( Point( 0, 0 ), Size( 0, 0 ) );
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(IIIILjava/lang/String;)Ljava/awt/Dimension;";
-			mID = t.pEnv->GetMethodID( getMyClass(), "getPreferredPushButtonSize", cSignature );
+			char *cSignature = "(IIIILjava/lang/String;)Ljava/awt/Rectangle;";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getPreferredPushButtonBounds", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
@@ -750,6 +752,18 @@ const Size com_sun_star_vcl_VCLGraphics::getPreferredPushButtonSize( long _par0,
 			if ( tempObj )
 			{
 				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
+				if ( !fIDX )
+				{
+					char *cSignature = "I";
+					fIDX = t.pEnv->GetFieldID( tempObjClass, "x", cSignature );
+				}
+				OSL_ENSURE( fIDX, "Unknown field id!" );
+				if ( !fIDY )
+				{
+					char *cSignature = "I";
+					fIDY = t.pEnv->GetFieldID( tempObjClass, "y", cSignature );
+				}
+				OSL_ENSURE( fIDY, "Unknown field id!" );
 				if ( !fIDWidth )
 				{
 					char *cSignature = "I";
@@ -762,8 +776,12 @@ const Size com_sun_star_vcl_VCLGraphics::getPreferredPushButtonSize( long _par0,
 					fIDHeight = t.pEnv->GetFieldID( tempObjClass, "height", cSignature );
 				}
 				OSL_ENSURE( fIDHeight, "Unknown field id!" );
-				if ( fIDWidth && fIDHeight )
-					out = Size( (long)t.pEnv->GetIntField( tempObj, fIDWidth ), (long)t.pEnv->GetIntField( tempObj, fIDHeight ) );
+				if ( fIDX && fIDY && fIDWidth && fIDHeight )
+				{
+					Point aPoint( (long)t.pEnv->GetIntField( tempObj, fIDX ), (long)t.pEnv->GetIntField( tempObj, fIDY ) );
+					Size aSize( (long)t.pEnv->GetIntField( tempObj, fIDWidth ), (long)t.pEnv->GetIntField( tempObj, fIDHeight ) );
+					out = Rectangle( aPoint, aSize );
+				}
 			}
 		}
 	}
@@ -803,19 +821,21 @@ void com_sun_star_vcl_VCLGraphics::drawRadioButton( long _par0, long _par1, long
 
 // ----------------------------------------------------------------------------
 
-const Size com_sun_star_vcl_VCLGraphics::getPreferredRadioButtonSize( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 )
+const Rectangle com_sun_star_vcl_VCLGraphics::getPreferredRadioButtonBounds( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 )
 {
 	static jmethodID mID = NULL;
+	static jfieldID fIDX = NULL;
+	static jfieldID fIDY = NULL;
 	static jfieldID fIDWidth = NULL;
 	static jfieldID fIDHeight = NULL;
-	Size out(0, 0);
+	Rectangle out( Point( 0, 0 ), Size( 0, 0 ) );
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(IIIILjava/lang/String;)Ljava/awt/Dimension;";
-			mID = t.pEnv->GetMethodID( getMyClass(), "getPreferredRadioButtonSize", cSignature );
+			char *cSignature = "(IIIILjava/lang/String;)Ljava/awt/Rectangle;";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getPreferredRadioButtonBounds", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
@@ -830,6 +850,18 @@ const Size com_sun_star_vcl_VCLGraphics::getPreferredRadioButtonSize( long _par0
 			if ( tempObj )
 			{
 				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
+				if ( !fIDX )
+				{
+					char *cSignature = "I";
+					fIDX = t.pEnv->GetFieldID( tempObjClass, "x", cSignature );
+				}
+				OSL_ENSURE( fIDX, "Unknown field id!" );
+				if ( !fIDY )
+				{
+					char *cSignature = "I";
+					fIDY = t.pEnv->GetFieldID( tempObjClass, "y", cSignature );
+				}
+				OSL_ENSURE( fIDY, "Unknown field id!" );
 				if ( !fIDWidth )
 				{
 					char *cSignature = "I";
@@ -842,8 +874,12 @@ const Size com_sun_star_vcl_VCLGraphics::getPreferredRadioButtonSize( long _par0
 					fIDHeight = t.pEnv->GetFieldID( tempObjClass, "height", cSignature );
 				}
 				OSL_ENSURE( fIDHeight, "Unknown field id!" );
-				if ( fIDWidth && fIDHeight )
-					out = Size( (long)t.pEnv->GetIntField( tempObj, fIDWidth ), (long)t.pEnv->GetIntField( tempObj, fIDHeight ) );
+				if ( fIDX && fIDY && fIDWidth && fIDHeight )
+				{
+					Point aPoint( (long)t.pEnv->GetIntField( tempObj, fIDX ), (long)t.pEnv->GetIntField( tempObj, fIDY ) );
+					Size aSize( (long)t.pEnv->GetIntField( tempObj, fIDWidth ), (long)t.pEnv->GetIntField( tempObj, fIDHeight ) );
+					out = Rectangle( aPoint, aSize );
+				}
 			}
 		}
 	}

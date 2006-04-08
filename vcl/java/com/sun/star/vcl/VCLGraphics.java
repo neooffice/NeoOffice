@@ -1437,7 +1437,6 @@ public final class VCLGraphics {
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
-				VCLGraphics.button.setLabel(title);
 				if (enabled && isDefault)
 					VCLGraphics.button.setDefault(true);
 				else
@@ -1446,17 +1445,14 @@ public final class VCLGraphics {
 				m.setSelected(pressed);
 				m.setEnabled(enabled);
 
-				int adjustedHeight = VCLGraphics.button.getPreferredSize().height;
-				if (adjustedHeight >= width)
-					adjustedHeight = height;
-				VCLGraphics.button.setSize(width, adjustedHeight);
+				Rectangle bounds = getPreferredPushButtonBounds(x, y, width, height, title);
+				VCLGraphics.button.setSize(bounds.width, bounds.height);
 				Iterator clipRects = clipList.iterator();
-				y += (height - adjustedHeight) / 2;
 				while (clipRects.hasNext()) {
 					g.setClip((Rectangle)clipRects.next());
-					g.translate(x, y);
+					g.translate(bounds.x, bounds.y);
 					VCLGraphics.button.getUI().paint(g, VCLGraphics.button);
-					g.translate(x * -1, y * -1);
+					g.translate(bounds.x * -1, bounds.y * -1);
 				}
 			}
 			catch (Throwable t) {
@@ -1476,9 +1472,9 @@ public final class VCLGraphics {
 	 * @param width the width of the button
 	 * @param height the height of the button
 	 * @param title the text to be contained within the button.  Will be placed in the button literally without accelerator replacement.
-	 * @return desired button size
+	 * @return desired button bounds
 	 */
-	public Dimension getPreferredPushButtonSize(int x, int y, int width, int height, String title) {
+	public Rectangle getPreferredPushButtonBounds(int x, int y, int width, int height, String title) {
 
 		// If the button width is less than the preferred height, assume that
 		// it's intended to be a "placard" type button with an icon. In that
@@ -1487,11 +1483,11 @@ public final class VCLGraphics {
 		// used as parts of subcontrols (combo boxes, small toolbar buttons)
 		// draw with the appropriate style.
 		VCLGraphics.button.setLabel(title);
-		Dimension d = VCLGraphics.button.getPreferredSize();
-		if (d.height >= width)
-			return new Dimension(d.width, height);
-		else
-			return d;
+		Rectangle bounds = new Rectangle(x, y, width, VCLGraphics.button.getPreferredSize().height);
+		if (bounds.height >= width)
+			bounds.height = height;
+		bounds.y += (height - bounds.height) / 2;
+		return bounds;
 
 	}
 
@@ -1543,13 +1539,14 @@ public final class VCLGraphics {
 						break;
 				}
 				m.setPressed(pressed);
-				VCLGraphics.radioButton.setSize(width, height);
+				Rectangle bounds = getPreferredRadioButtonBounds(x, y, width, height, title);
+				VCLGraphics.radioButton.setSize(bounds.width, bounds.height);
 				Iterator clipRects = clipList.iterator();
 				while (clipRects.hasNext()) {
 					g.setClip((Rectangle)clipRects.next());
-					g.translate(x, y);
+					g.translate(bounds.x, bounds.y);
 					VCLGraphics.radioButton.getUI().paint(g, VCLGraphics.radioButton);
-					g.translate(x * -1, y * -1);
+					g.translate(bounds.x * -1, bounds.y * -1);
 				}
 			}
 			catch (Throwable t) {
@@ -1569,12 +1566,16 @@ public final class VCLGraphics {
 	 * @param width the width of the button
 	 * @param height the height of the button
 	 * @param title the text to be contained within the button.  Will be placed in the button literally without accelerator replacement.
-	 * @return desired button size
+	 * @return desired button bounds
 	 */
-	public Dimension getPreferredRadioButtonSize(int x, int y, int width, int height, String title) {
+	public Rectangle getPreferredRadioButtonBounds(int x, int y, int width, int height, String title) {
 
 		VCLGraphics.radioButton.setLabel(title);
-		return VCLGraphics.radioButton.getPreferredSize();
+		Dimension d = VCLGraphics.radioButton.getPreferredSize();
+		Rectangle bounds = new Rectangle(x, y, d.width, height < d.height ? height : d.height);
+		bounds.x += (width - bounds.width) / 2;
+		bounds.y += (height - bounds.height) / 2;
+		return bounds;
 
 	}
 
