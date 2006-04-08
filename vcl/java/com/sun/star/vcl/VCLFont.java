@@ -36,6 +36,7 @@
 package com.sun.star.vcl;
 
 import java.awt.Font;
+import java.awt.FontFormatException;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
@@ -104,8 +105,14 @@ public final class VCLFont {
 
 		// Copy JVM's fonts
 		int i;
-		for (i = 0; i < javaFonts.length; i++)
-			vclFonts[i] = new VCLFont(javaFonts[i], 0, javaFonts[i].getSize(), (short)0, true, false, 1.0);
+		for (i = 0; i < javaFonts.length; i++) {
+			try {
+				vclFonts[i] = new VCLFont(javaFonts[i], 0, javaFonts[i].getSize(), (short)0, true, false, 1.0);
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+		}
 
 		return vclFonts;
 
@@ -178,7 +185,7 @@ public final class VCLFont {
 	 * @param v <code>true</code> if the font is vertical 
 	 * @param x the X axis scale factor
 	 */
-	VCLFont(Font f, int nf, int s, short o, boolean a, boolean v, double x) {
+	VCLFont(Font f, int nf, int s, short o, boolean a, boolean v, double x) throws FontFormatException {
 
 		antialiased = a;
 		nativeFont = nf;
@@ -213,9 +220,9 @@ public final class VCLFont {
 			if (leading < 0)
 				leading *= -1;
 		}
-		else {
-			ascent = size;
-		}
+
+		if (ascent == 0 && descent == 0 && leading == 0)
+			throw new FontFormatException("Font " + font.getName() + " has no height");
 
 		// Mac OS X seems to understate the actual advance
 		ascent++;
@@ -234,7 +241,7 @@ public final class VCLFont {
 	 * @param x the X axis scale factor
 	 * @return a new <code>VCLFont</code> object
 	 */
-	public VCLFont deriveFont(int s, short o, boolean a, boolean v, double x) {
+	public VCLFont deriveFont(int s, short o, boolean a, boolean v, double x) throws FontFormatException {
 
 		return new VCLFont(font, nativeFont, s, o, a, v, x);
 
