@@ -114,6 +114,26 @@ public final class VCLGraphics {
 	public final static int GF_ROTR = 0x03000000;
 
 	/**
+	 * The BUTTONVALUE_DONTKNOW constant.
+	 */
+	public final static int BUTTONVALUE_DONTKNOW = 0;
+
+	/**
+	 * The BUTTONVALUE_ON constant.
+	 */
+	public final static int BUTTONVALUE_ON = 1;
+
+	/**
+	 * The BUTTONVALUE_OFF constant.
+	 */
+	public final static int BUTTONVALUE_OFF = 2;
+
+	/**
+	 * The BUTTONVALUE_MIXED constant.
+	 */
+	public final static int BUTTONVALUE_MIXED = 3;
+
+	/**
 	 * The button component.
 	 */
 	private static DefaultableJButton button = null;
@@ -1528,17 +1548,15 @@ public final class VCLGraphics {
 			try {
 				ButtonModel m = VCLGraphics.radioButton.getModel();
 				m.setEnabled(enabled);
-				switch(buttonState)
-				{
-					case 0:
-						m.setSelected(false);
-						break;
-					case 1:
-					case 2:
-						m.setSelected(true);
-						break;
-				}
 				m.setPressed(pressed);
+				if (pressed)
+					m.setArmed(true);
+				else
+					m.setArmed(false);
+				if (buttonState == VCLGraphics.BUTTONVALUE_ON)
+					m.setSelected(true);
+				else
+					m.setSelected(false);
 				Rectangle bounds = getPreferredRadioButtonBounds(x, y, width, height, title);
 				VCLGraphics.radioButton.setSize(bounds.width, bounds.height);
 				Iterator clipRects = clipList.iterator();

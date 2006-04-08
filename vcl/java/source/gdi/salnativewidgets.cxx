@@ -156,23 +156,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
-				long javaRadioVal = 0;
-				switch( aValue.getTristateVal() )
-				{
-					case BUTTONVALUE_DONTKNOW:
-					case BUTTONVALUE_OFF:
-						javaRadioVal = 0;
-						break;
-					
-					case BUTTONVALUE_ON:
-						javaRadioVal = 1;
-						break;
-					
-					case BUTTONVALUE_MIXED:
-						javaRadioVal = 2;
-						break;
-				}
-				mpVCLGraphics->drawRadioButton( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), javaRadioVal );
+				mpVCLGraphics->drawRadioButton( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), aValue.getTristateVal() );
 				bOK = TRUE;
 			}
 			break;
