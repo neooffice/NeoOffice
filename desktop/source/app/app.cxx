@@ -1451,6 +1451,43 @@ void Desktop::Main()
             HandleBootstrapErrors( BE_USERINSTALL_FAILED );
             return;
         }
+
+#ifdef USE_JAVA
+        OUString aProgName;
+        ::vos::OStartupInfo aInfo;
+        aInfo.getExecutableFile( aProgName );
+        sal_uInt32 lastIndex = aProgName.lastIndexOf('/');
+        if ( lastIndex > 0 )
+        {
+            OUString aProgPath;
+            if ( ::osl::FileBase::E_None == ::osl::FileBase::getSystemPathFromFileURL( aProgName.copy( 0, lastIndex+1 ), aProgPath ) )
+            {
+                OUString aUserInstallURL;
+                ::utl::Bootstrap::PathStatus aUserInstallStatus = ::utl::Bootstrap::locateUserInstallation( aUserInstallURL );
+                if ( aUserInstallStatus == ::utl::Bootstrap::PATH_EXISTS )
+                {
+                    aUserInstallURL += OUString::createFromAscii( "/.lastcontentshome" );
+
+                    // Create the file if it does not exist
+                    ::osl::File aFile( aUserInstallURL );
+                    ::osl::FileBase::RC eError = aFile.open( osl_File_OpenFlag_Write | osl_File_OpenFlag_Create );
+                    if ( eError != ::osl::FileBase::E_None )
+                        eError = aFile.open( osl_File_OpenFlag_Write );
+                    if ( eError == ::osl::FileBase::E_None )
+                    {
+                        sal_uInt64 nWritten;
+                        OString aBuf = OUStringToOString( aProgPath.getStr(), RTL_TEXTENCODING_UTF8 );
+                        aBuf += "\n";
+                        aFile.setSize( 0 );
+                        if ( aFile.write( (const BYTE *)aBuf.getStr(), aBuf.getLength(), nWritten ) != ::osl::FileBase::E_None || nWritten != aBuf.getLength() )
+                            aFile.setSize( 0 );
+                        aFile.close();
+                    }
+                }
+            }
+        }
+#endif	// USE_JAVA
+
         // refresh path information
         utl::Bootstrap::reloadData();
         SetSplashScreenProgress(25);
