@@ -34,7 +34,7 @@
 # 
 ##########################################################################
 
-userinstall="$HOME/Library/Preferences/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)/user"
+userinstall="$HOME/Library/Preferences/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)"
 
 check_installation() {
 
