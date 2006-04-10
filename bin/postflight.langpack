@@ -59,33 +59,23 @@ if [ -d "$scriptdir" -a -f "$scriptdir/installutils" ] ; then
 		volume="$3"
 	fi
 
+	lastcontentshome=
 	lastcontentshomefile="$userinstall/.lastcontentshome"
 	if [ -s "$lastcontentshomefile" ] ; then
 
-		lastcontentshome=
 		if [ "$3" = "/" ] ; then
-			lastcontentshome=`grep -v '^/Volumes/' "$lastcontentshomefile"`
+			lastcontentshome=`grep -v '^/Volumes/' "$lastcontentshomefile" | sed 's#/Contents/MacOS/$##'`
 		else
-			lastcontentshome=`grep "^$volume/" "$lastcontentshomefile"`
+			lastcontentshome=`grep "^$volume/" "$lastcontentshomefile" | sed 's#/Contents/MacOS/$##'`
 		fi
 
-		while read i ; do
-			update_installation "$i" "$1" || exit 1
-		done << !
-`echo "$lastcontentshome" | sed 's#/Contents/$##g'`
-!
-
 	fi
 
-	if [ -d "$volume/Applications" ] ; then
-
-		while read i ; do
-			update_installation "$i" "$1" || exit 1
-		done << !
-`find -L "$volume/Applications" -type d -name "*.app" -prune`
+	while read i ; do
+		update_installation "$i" "$1" || exit 1
+	done << !
+`( echo "$lastcontentshome" ; find -L "$volume/Applications" -type d -name "*.app" -prune 2>/dev/null ) | sort -u`
 !
-
-	fi
 
 fi
 

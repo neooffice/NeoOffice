@@ -1,0 +1,9 @@
+[Bootstrap]
+BaseInstallation=$ORIGIN/..
+ProductKey=
+ProductPatch=
+InstallMode=<installmode>
+UserInstallation=
+[ErrorReport]
+ErrorReportPort=80
+ErrorReportServer=
