@@ -68,6 +68,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import javax.swing.ButtonModel;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JRadioButton;
 
 /**
@@ -212,6 +213,11 @@ public final class VCLGraphics {
 	 * The radio button component.
 	 */
 	private static JRadioButton radioButton = null;
+	
+	/**
+	 * The radio button component.
+	 */
+	private static JCheckBox checkBoxButton = null;
 
 	/**
 	 * The cached screen resolution.
@@ -271,6 +277,9 @@ public final class VCLGraphics {
 
 		radioButton = new JRadioButton();
 		radioButton.setBackground(c);
+		
+		checkBoxButton = new JCheckBox();
+		checkBoxButton.setBackground(c);
 
 		// Create the image50 image
 		int w = 2;
@@ -1590,6 +1599,92 @@ public final class VCLGraphics {
 
 		VCLGraphics.radioButton.setLabel(title);
 		Dimension d = VCLGraphics.radioButton.getPreferredSize();
+		Rectangle bounds = new Rectangle(x, y, d.width, height < d.height ? height : d.height);
+		bounds.x += (width - bounds.width) / 2;
+		bounds.y += (height - bounds.height) / 2;
+		return bounds;
+
+	}
+	
+	/**
+	 * Draws a check box into the graphics using the default Swing LAF
+	 *
+	 * @param x the x coordinate of the top left of the button frame
+	 * @param y the y coordinate of the top left of the button frame
+	 * @param width the width of the button
+	 * @param height the height of the button
+	 * @param title the text to be drawn aside the button.  Will be placed besode the button literally without accelerator replacement.
+	 * @param enabled true if the button is enabled, false if the button is disabled
+	 * @param focused true if the button is keyboard focused, false if the button is not keyboard focused
+	 * @param pressed true if the button is currently pressed, false if it is in normal state
+	 * @param buttonState	0 = off, 1 = on, 2 = mixed.  Note that Aqua does not provide mixed button state by default.
+	 */
+	public void drawCheckBox(int x, int y, int width, int height, String title, boolean enabled, boolean focused, boolean pressed, int buttonState) {
+
+		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
+		if (destBounds.isEmpty())
+			return;
+
+		LinkedList clipList = new LinkedList();
+		if (userClipList != null) {
+			Iterator clipRects = userClipList.iterator();
+			while (clipRects.hasNext()) {
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				if (!clip.isEmpty())
+					clipList.add(clip);
+			}
+		}
+		else {
+			clipList.add(destBounds);
+		}
+
+		Graphics2D g = getGraphics();
+		if (g != null) {
+			try {
+				ButtonModel m = VCLGraphics.checkBoxButton.getModel();
+				m.setEnabled(enabled);
+				m.setPressed(pressed);
+				if (pressed)
+					m.setArmed(true);
+				else
+					m.setArmed(false);
+				if (buttonState == VCLGraphics.BUTTONVALUE_ON)
+					m.setSelected(true);
+				else
+					m.setSelected(false);
+				Rectangle bounds = getPreferredCheckBoxBounds(x, y, width, height, title);
+				VCLGraphics.checkBoxButton.setSize(bounds.width, bounds.height);
+				Iterator clipRects = clipList.iterator();
+				while (clipRects.hasNext()) {
+					g.setClip((Rectangle)clipRects.next());
+					g.translate(bounds.x, bounds.y);
+					VCLGraphics.checkBoxButton.getUI().paint(g, VCLGraphics.checkBoxButton);
+					g.translate(bounds.x * -1, bounds.y * -1);
+				}
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
+		}
+
+	}
+
+	/**
+	 * Retrieves the desired width for a checkbox implemented via default
+	 * Swing LAF.
+	 *
+	 * @param x the x coordinate of the top left of the button frame
+	 * @param y the y coordinate of the top left of the button frame
+	 * @param width the width of the button
+	 * @param height the height of the button
+	 * @param title the text to be contained within the button.  Will be placed in the button literally without accelerator replacement.
+	 * @return desired button bounds
+	 */
+	public Rectangle getPreferredCheckBoxBounds(int x, int y, int width, int height, String title) {
+
+		VCLGraphics.checkBoxButton.setLabel(title);
+		Dimension d = VCLGraphics.checkBoxButton.getPreferredSize();
 		Rectangle bounds = new Rectangle(x, y, d.width, height < d.height ? height : d.height);
 		bounds.x += (width - bounds.width) / 2;
 		bounds.y += (height - bounds.height) / 2;

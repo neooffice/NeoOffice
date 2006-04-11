@@ -85,6 +85,11 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
+		
+		case CTRL_CHECKBOX:
+			if( nPart == PART_ENTIRE_CONTROL )
+				isSupported = TRUE;
+			break;
 			
 		default:
 			isSupported = FALSE;
@@ -160,6 +165,15 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				bOK = TRUE;
 			}
 			break;
+		
+		case CTRL_CHECKBOX:
+			if( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle buttonRect = rControlRegion.GetBoundRect();
+				mpVCLGraphics->drawCheckBox( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), aValue.getTristateVal() );
+				bOK = TRUE;
+			}	
+			break;
 	}
 
 	return bOK;
@@ -234,6 +248,16 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			{
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
 				rNativeBoundingRegion = Region( mpVCLGraphics->getPreferredRadioButtonBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption ) );
+				rNativeContentRegion = Region( rNativeBoundingRegion );
+				bReturn = TRUE;
+			}
+			break;
+		
+		case CTRL_CHECKBOX:
+			if( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle buttonRect = rControlRegion.GetBoundRect();
+				rNativeBoundingRegion = Region( mpVCLGraphics->getPreferredCheckBoxBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption ) );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
 				bReturn = TRUE;
 			}

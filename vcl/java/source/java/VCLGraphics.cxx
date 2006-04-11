@@ -885,6 +885,104 @@ const Rectangle com_sun_star_vcl_VCLGraphics::getPreferredRadioButtonBounds( lon
 	}
 	return out;
 }
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLGraphics::drawCheckBox( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4, sal_Bool _par5, sal_Bool _par6, sal_Bool _par7, long _par8 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(IIIILjava/lang/String;ZZZI)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "drawCheckBox", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[9];
+			args[0].i = jint( _par0 );
+			args[1].i = jint( _par1 );
+			args[2].i = jint( _par2 );
+			args[3].i = jint( _par3 );
+			args[4].l = StringToJavaString( t.pEnv, _par4 );
+			args[5].z = jboolean( _par5 );
+			args[6].z = jboolean( _par6 );
+			args[7].z = jboolean( _par7 );
+			args[8].i = jint( _par8 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+const Rectangle com_sun_star_vcl_VCLGraphics::getPreferredCheckBoxBounds( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 )
+{
+	static jmethodID mID = NULL;
+	static jfieldID fIDX = NULL;
+	static jfieldID fIDY = NULL;
+	static jfieldID fIDWidth = NULL;
+	static jfieldID fIDHeight = NULL;
+	Rectangle out( Point( 0, 0 ), Size( 0, 0 ) );
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(IIIILjava/lang/String;)Ljava/awt/Rectangle;";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getPreferredCheckBoxBounds", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[5];
+			args[0].i = jint( _par0 );
+			args[1].i = jint( _par1 );
+			args[2].i = jint( _par2 );
+			args[3].i = jint( _par3 );
+			args[4].l = StringToJavaString( t.pEnv, _par4 );
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethodA( object, getMyClass(), mID, args );
+			if ( tempObj )
+			{
+				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
+				if ( !fIDX )
+				{
+					char *cSignature = "I";
+					fIDX = t.pEnv->GetFieldID( tempObjClass, "x", cSignature );
+				}
+				OSL_ENSURE( fIDX, "Unknown field id!" );
+				if ( !fIDY )
+				{
+					char *cSignature = "I";
+					fIDY = t.pEnv->GetFieldID( tempObjClass, "y", cSignature );
+				}
+				OSL_ENSURE( fIDY, "Unknown field id!" );
+				if ( !fIDWidth )
+				{
+					char *cSignature = "I";
+					fIDWidth = t.pEnv->GetFieldID( tempObjClass, "width", cSignature );
+				}
+				OSL_ENSURE( fIDWidth, "Unknown field id!" );
+				if ( !fIDHeight )
+				{
+					char *cSignature = "I";
+					fIDHeight = t.pEnv->GetFieldID( tempObjClass, "height", cSignature );
+				}
+				OSL_ENSURE( fIDHeight, "Unknown field id!" );
+				if ( fIDX && fIDY && fIDWidth && fIDHeight )
+				{
+					Point aPoint( (long)t.pEnv->GetIntField( tempObj, fIDX ), (long)t.pEnv->GetIntField( tempObj, fIDY ) );
+					Size aSize( (long)t.pEnv->GetIntField( tempObj, fIDWidth ), (long)t.pEnv->GetIntField( tempObj, fIDHeight ) );
+					out = Rectangle( aPoint, aSize );
+				}
+			}
+		}
+	}
+	return out;
+}
 #endif	// GENESIS_OF_THE_NEW_WEAPONS
 
 // ----------------------------------------------------------------------------
