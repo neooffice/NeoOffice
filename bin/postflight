@@ -135,6 +135,7 @@ if [ -d "$2" ]; then
 
 	# Open welcome page
 	open "http://www.planamesa.com/neojava/welcome.php?product=$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)&host=`hostname`.`domainname`"
+
 	# Touch installation directory to force activation of any bundled Spotlight
 	# plugins
 	touch -f "$2"
