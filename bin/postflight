@@ -134,7 +134,11 @@ if [ -d "$2" ]; then
 	done
 
 	# Open welcome page
-	open "http://www.planamesa.com/neojava/welcome.php?product=$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)&host=`hostname`.`domainname`"
+	sudoargs=
+	if [ ! -z "$USER" ] ; then
+		sudoargs="-u $USER"
+	fi
+	sudo $sudoargs open "http://www.planamesa.com/neojava/welcome.php?product=$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)&host=`hostname`.`domainname`"
 
 	# Touch installation directory to force activation of any bundled Spotlight
 	# plugins
