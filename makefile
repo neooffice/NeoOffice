@@ -95,7 +95,7 @@ PRODUCT_INSTALL_URL=http://www.planamesa.com/neojava/download.php\\\#install
 PRODUCT_BUILD_URL=http://www.planamesa.com/neojava/build.php
 PRODUCT_PATCH_DOWNLOAD_URL=http://www.planamesa.com/neojava/patch.php
 PRODUCT_PATCH_CHECK_URL=http://www.planamesa.com/neojava/downloads/patches/latest.dmg
-PRODUCT_REGISTRATION_URL=http://trinity.neooffice.org/
+PRODUCT_REGISTRATION_URL=http://trinity.neooffice.org/modules.php?name=Your_Account&redirect=index
 PRODUCT_DONATION_URL=http://www.planamesa.com/neojava/donate.php
 PRODUCT_SUPPORT_URL=http://trinity.neooffice.org/modules.php?name=Forums
 PRODUCT_SUPPORT_URL_TEXT:=$(PRODUCT_NAME) Support
