@@ -35,6 +35,9 @@
 
 #define _SV_JAVA_LANG_OBJECT_CXX
 
+#ifndef _SV_SALINST_H
+#include <salinst.h>
+#endif
 #ifndef _SV_SVAPP_HXX
 #include <svapp.hxx>
 #endif
@@ -167,6 +170,8 @@ sal_Bool VCLThreadAttach::StartJava()
 
 			if ( pEnv )
 			{
+				InitJavaAWT();
+
 				if ( xRG11Ref.is() )
 					xRG11Ref->revokeThread();
 				

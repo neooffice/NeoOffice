@@ -264,22 +264,26 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 // ----------------------------------------------------------------------------
 
-void ExecuteApplicationMain( Application *pApp )
+void InitJavaAWT()
 {
-	// Now that Java is properly initialized, run the application's Main()
-	GetSalData()->mpEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
-
-	EventHandlerUPP pEventHandlerUPP = NewEventHandlerUPP( CarbonEventHandler );
-	if ( pEventHandlerUPP )
+	if ( !Application::IsShutDown() )
 	{
-		// Set up native event handler
-		EventTypeSpec aType;
-		aType.eventClass = kEventClassMenu;
-		aType.eventKind = kEventMenuBeginTracking;
-		InstallApplicationEventHandler( pEventHandlerUPP, 1, &aType, NULL, NULL );
-	}
+		SalData *pSalData = GetSalData();
+		if ( !pSalData->mpEventQueue )
+		{
+			pSalData->mpEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
 
-	pApp->Main();
+			EventHandlerUPP pEventHandlerUPP = NewEventHandlerUPP( CarbonEventHandler );
+			if ( pEventHandlerUPP )
+			{
+				// Set up native event handler
+				EventTypeSpec aType;
+				aType.eventClass = kEventClassMenu;
+				aType.eventKind = kEventMenuBeginTracking;
+				InstallApplicationEventHandler( pEventHandlerUPP, 1, &aType, NULL, NULL );
+			}
+		}
+	}
 }
 
 // =======================================================================
@@ -444,6 +448,8 @@ void JavaSalInstance::Yield( BOOL bWait )
 			com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
 			pSalData->mpEventQueue->postCachedEvent( &aEvent );
 		}
+
+		return;
 	}
 
 	com_sun_star_vcl_VCLEvent *pEvent;
@@ -452,6 +458,8 @@ void JavaSalInstance::Yield( BOOL bWait )
 	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( 0, FALSE ) ) != NULL )
 	{
 		USHORT nID = pEvent->getID();
+		if ( !nID )
+			_exit( 0 );
 		pEvent->dispatch();
 		delete pEvent;
 
@@ -539,6 +547,8 @@ void JavaSalInstance::Yield( BOOL bWait )
 
 
 		USHORT nID = pEvent->getID();
+		if ( !nID )
+			_exit( 0 );
 		pEvent->dispatch();
 		delete pEvent;
 
