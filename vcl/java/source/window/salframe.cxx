@@ -188,6 +188,10 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 	mbVisible = bVisible;
 
+	// Do some of the updating before the window is shown
+	if ( mbVisible )
+		UpdateMenusForFrame( this, NULL );
+
 	mpVCLFrame->setVisible( mbVisible );
 
 	// Reset graphics
