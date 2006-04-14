@@ -315,6 +315,10 @@
 
 #include <stdio.h>
 
+#ifdef PRODUCT_DONATION_URL
+#include <rtl/uri.hxx>
+#endif	// PRODUCT_DONATION_URL
+
 #define DEFINE_CONST_UNICODE(CONSTASCII)        UniString(RTL_CONSTASCII_USTRINGPARAM(CONSTASCII))
 #define U2S(STRING)                                ::rtl::OUStringToOString(STRING, RTL_TEXTENCODING_UTF8)
 
@@ -2084,14 +2088,12 @@ IMPL_LINK( Desktop, OpenClients_Impl, void*, pvoid )
         ::osl::FileStatus aStatus( FileStatusMask_CreationTime | FileStatusMask_ModifyTime );
         ::osl::DirectoryItem aItem;
         if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aNoShowDonationName, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) && aStatus.getAttributes() )
-        {
             bShowDonationPage = false;
 
-            OUString aNoShowPatchesName( aProgName );
-            aNoShowPatchesName += OUString::createFromAscii( ".nocheckforpatches" );
-            if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aNoShowPatchesName, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) && aStatus.getAttributes() )
-                bCheckForPatches = false;
-        }
+        OUString aNoShowPatchesName( aProgName );
+        aNoShowPatchesName += OUString::createFromAscii( ".nocheckforpatches" );
+        if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aNoShowPatchesName, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) && aStatus.getAttributes() )
+            bCheckForPatches = false;
     }
 
     if ( bShowDonationPage )
@@ -2129,7 +2131,24 @@ IMPL_LINK( Desktop, OpenClients_Impl, void*, pvoid )
                         ::vos::OEnvironment aEnv;
                         ::vos::OArgumentList aArgList;
 
-                        aArgListArray[0] = OUString::createFromAscii( PRODUCT_DONATION_URL );
+                        OUString aURL( RTL_CONSTASCII_USTRINGPARAM( PRODUCT_DONATION_URL ) );
+                        if ( bCheckForPatches )
+                        {
+                            OUString aProductKey;
+                            aProductKey = ::utl::Bootstrap::getProductKey( aProductKey );
+                            if ( aProductKey.getLength() )
+                            {
+                                OUString aProductPatchKey;
+                                aProductPatchKey = ::utl::Bootstrap::getProductPatchLevel( aProductPatchKey );
+                                aURL += OUString::createFromAscii( "?product=" );
+                                aURL += aProductKey;
+                                aURL += OUString::createFromAscii( "&patch=" );
+                                aURL += aProductPatchKey;
+                            }
+                        }
+
+                        aURL = ::rtl::Uri::encode( aURL, rtl_UriCharClassUric, rtl_UriEncodeStrict, RTL_TEXTENCODING_UTF8 );
+                        aArgListArray[0] = aURL;
                         OArgumentList aArgumentList( aArgListArray, 1 );
 
                         ::vos::OProcess aProcess( aProgName, aDir );
