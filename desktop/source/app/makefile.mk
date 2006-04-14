@@ -50,6 +50,10 @@ ENABLE_EXCEPTIONS=TRUE
 CDEFS += -DPRODUCT_DIR_NAME='"$(PRODUCT_DIR_NAME)"'
 .ENDIF
 
+.IF "$(PRODUCT_DONATION_URL)" != ""
+CDEFS += -DPRODUCT_DONATION_URL='"$(PRODUCT_DONATION_URL)"'
+.ENDIF
+
 # --- Files --------------------------------------------------------
 
 OBJFILES = \

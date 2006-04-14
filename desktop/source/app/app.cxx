@@ -1361,8 +1361,7 @@ void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
 #ifdef USE_JAVA
     if ( rAppEvent.IsOpenEvent() || rAppEvent.IsPrintEvent() )
     {
-        static bool bInTerminate = false;
-        if ( bInTerminate || GetCommandLineArgs()->IsInvisible() )
+        if ( GetCommandLineArgs()->IsInvisible() )
             return;
 
         if ( !::desktop::Desktop::bSuppressOpenDefault )
@@ -1394,9 +1393,10 @@ void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
             }
         }
 
-        bInTerminate = true;
-
-        xDesktop->terminate();
+        // Fix bug 1379 by opening default window if there are no windows open
+        ::desktop::Desktop::bSuppressOpenDefault = sal_False;
+        OpenDefault();
+        ::desktop::Desktop::bSuppressOpenDefault = sal_True;
 
         return;
 	}
@@ -2067,6 +2067,86 @@ IMPL_LINK( Desktop, OpenClients_Impl, void*, pvoid )
 //    OfficeIPCThread::SetReady();
 
     EnableOleAutomation();
+
+#ifdef PRODUCT_DONATION_URL
+    bool bShowDonationPage = true;
+    bool bCheckForPatches = true;
+
+    OUString aProgName;
+    ::vos::OStartupInfo aInfo;
+    aInfo.getExecutableFile( aProgName );
+    sal_uInt32 lastIndex = aProgName.lastIndexOf('/');
+    if ( lastIndex > 0 )
+    {
+        aProgName = aProgName.copy( 0, lastIndex+1 );
+        OUString aNoShowDonationName( aProgName );
+        aNoShowDonationName += OUString::createFromAscii( ".noshowdonationpage" );
+        ::osl::FileStatus aStatus( FileStatusMask_CreationTime | FileStatusMask_ModifyTime );
+        ::osl::DirectoryItem aItem;
+        if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aNoShowDonationName, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) && aStatus.getAttributes() )
+        {
+            bShowDonationPage = false;
+
+            OUString aNoShowPatchesName( aProgName );
+            aNoShowPatchesName += OUString::createFromAscii( ".nocheckforpatches" );
+            if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aNoShowPatchesName, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) && aStatus.getAttributes() )
+                bCheckForPatches = false;
+        }
+    }
+
+    if ( bShowDonationPage )
+    {
+        OUString aUserInstallURL;
+        ::utl::Bootstrap::PathStatus aUserInstallStatus = ::utl::Bootstrap::locateUserInstallation( aUserInstallURL );
+        if ( aUserInstallStatus == ::utl::Bootstrap::PATH_EXISTS )
+        {
+            aUserInstallURL += OUString::createFromAscii( "/.nextshowdonationpage" );
+
+            // Create the file if it does not exist
+            ::osl::File aFile( aUserInstallURL );
+            ::osl::FileBase::RC eError = aFile.open( osl_File_OpenFlag_Write | osl_File_OpenFlag_Create );
+            aFile.close();
+            if ( eError != ::osl::FileBase::E_None )
+            {
+                // Check the last modified data of the file
+                ::osl::FileStatus aStatus( FileStatusMask_CreationTime | FileStatusMask_ModifyTime );
+                ::osl::DirectoryItem aItem;
+                if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aUserInstallURL, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) )
+                {
+                    TimeValue aCreationTime = aStatus.getCreationTime();
+                    TimeValue aModifyTime = aStatus.getModifyTime();
+                    TimeValue aCurrentTime;
+                    if ( osl_getSystemTime( &aCurrentTime ) && aCurrentTime.Seconds >= aModifyTime.Seconds )
+                    {
+                        // Open URL
+                        OUString aDir( RTL_CONSTASCII_USTRINGPARAM( "file:///usr/bin/" ) );
+                        OUString aProgName = aDir;
+                        aProgName += OUString::createFromAscii( "open" );
+                        ::vos::OStartupInfo aInfo;
+
+                        OUString aArgListArray[1];
+                        ::vos::OSecurity aSecurity;
+                        ::vos::OEnvironment aEnv;
+                        ::vos::OArgumentList aArgList;
+
+                        aArgListArray[0] = OUString::createFromAscii( PRODUCT_DONATION_URL );
+                        OArgumentList aArgumentList( aArgListArray, 1 );
+
+                        ::vos::OProcess aProcess( aProgName, aDir );
+                        ::vos::OProcess::TProcessError aProcessError = aProcess.execute( OProcess::TOption_Detached, aSecurity, aArgumentList, aEnv );
+                        if ( aProcessError == OProcess::E_None )
+                        {
+                            // Touch file
+                            aCurrentTime.Seconds += 864000; // 10 days
+                            ::osl::File::setTime( aUserInstallURL, aCreationTime, aCurrentTime, aCurrentTime );
+                        }
+                    }
+                }
+            }
+        }
+    }
+#endif	// PRODUCT_DONATION_URL
+
     return 0;
 }
 
