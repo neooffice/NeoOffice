@@ -250,11 +250,7 @@ IMPL_FORMAT_GETPIXEL( _32BIT_TC_ABGR )
 
 IMPL_FORMAT_SETPIXEL( _32BIT_TC_ABGR )
 {
-#ifdef USE_JAVA
-	*( pScanline = pScanline + ( nX << 2 ) )++ = 0xFF;
-#else	// USE_JAVA
 	*( pScanline = pScanline + ( nX << 2 ) )++ = 0;
-#endif	// USE_JAVA
 	*pScanline++ = rBitmapColor.GetBlue();
 	*pScanline++ = rBitmapColor.GetGreen();
 	*pScanline = rBitmapColor.GetRed();
@@ -307,7 +303,11 @@ IMPL_FORMAT_SETPIXEL( _32BIT_TC_BGRA )
 	*( pScanline = pScanline + ( nX << 2 ) )++ = rBitmapColor.GetBlue();
 	*pScanline++ = rBitmapColor.GetGreen();
 	*pScanline++ = rBitmapColor.GetRed();
+#ifdef USE_JAVA
+	*pScanline = 0xFF;
+#else	// USE_JAVA
 	*pScanline = 0;
+#endif	// USE_JAVA
 }
 
 // ------------------------------------------------------------------
