@@ -35,6 +35,7 @@
 
 #define _SV_SALINST_CXX
 
+#include <unistd.h>
 #include <sys/syslimits.h>
 
 #ifndef _SV_SALINST_H
