@@ -255,7 +255,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			// Load libofa and invoke the native preferences handler
 			if ( !pPreferencesHandler )
 			{
-				OUString aLibName = OUString::createFromAscii( "libofa" );
+				OUString aLibName = OUString::createFromAscii( "libsfx" );
 				aLibName += OUString::valueOf( (sal_Int32)SUPD, 10 );
 				aLibName += OUString::createFromAscii( STRING( DLLSUFFIX ) );
 				aLibName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
