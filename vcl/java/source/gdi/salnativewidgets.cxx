@@ -47,6 +47,9 @@
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
+#ifndef _SV_SALBMP_H
+#include <salbmp.h>
+#endif
 
 #ifndef _RTL_USTRING_H_
 #include <rtl/ustring.h>
@@ -57,8 +60,146 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
 
+#ifdef __cplusplus
+#include <premac.h>
+#endif
+#include <Carbon/Carbon.h>
+#include <ApplicationServices/ApplicationServices.h>
+#ifdef __cplusplus
+#include <postmac.h>
+#endif
+
 using namespace vcl;
 using namespace rtl;
+
+#ifdef GENESIS_OF_THE_NEW_WEAPONS
+
+#define COMBOBOX_BUTTON_WIDTH 17
+
+static JavaSalBitmap *pComboBoxBitmap = NULL;
+
+// =======================================================================
+
+static BOOL InitButtonDrawInfo( HIThemeButtonDrawInfo *pButtonDrawInfo, ControlState nState )
+{
+	memset( pButtonDrawInfo, 0, sizeof( HIThemeButtonDrawInfo ) );
+	pButtonDrawInfo->version = 0;
+	pButtonDrawInfo->kind = kThemeComboBox;
+	if ( nState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED ) )
+		pButtonDrawInfo->state = kThemeStatePressed;
+	else if ( nState & CTRL_STATE_ENABLED )
+		pButtonDrawInfo->state = kThemeStateActive;
+	else
+		pButtonDrawInfo->state = kThemeStateInactive;
+
+	if ( nState & CTRL_STATE_FOCUSED )
+		pButtonDrawInfo->adornment = kThemeAdornmentFocus;
+	else
+		pButtonDrawInfo->adornment = kThemeAdornmentDefault;
+}
+
+// -----------------------------------------------------------------------
+
+/**
+ * (static) Draw a ComboBox into the graphics port at the specified location.
+ * ComboBoxes are editable pulldowns, the left portion of which is an edit
+ * field and the right portion a downward arrow button used to display the
+ * full list contents.
+ *
+ * Due to VM implementation, JComboBox Swing elements cannot be drawn into
+ * a Graphics unless the JComboBox is properly embedded into a visible JFrame.
+ * The VM implementation draws these objects asynchronously.  Since we can't
+ * easily handle it in Java, we'll use HITheme APIs to draw it into a
+ * SalBitmap that we then blit into the graphics.
+ *
+ * @param pGraphics		pointer to the destination graphics where we'll
+ *				be drawing
+ * @param rDestBounds		eventual destination rectangle that encompasses
+ *				the entire control, editing area as well as
+ *				popup arrow
+ * @param nState		state of the button to b drawn (enabled/pressed/etc.)
+ * @param aCaption		text used for the control.  Presently ignored
+ *				as we draw only the frame and let VCL draw
+ *				the text
+ * @return TRUE if successful, FALSE on error
+ */
+static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, OUString aCaption )
+{
+	if ( !pComboBoxBitmap )
+	{
+		pComboBoxBitmap = new JavaSalBitmap();
+		if ( !pComboBoxBitmap )
+			return FALSE;
+	}
+
+	if ( rDestBounds.GetWidth() > pComboBoxBitmap->GetSize().Width() || rDestBounds.GetHeight() > pComboBoxBitmap->GetSize().Height() )
+		pComboBoxBitmap->Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
+
+	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+	if ( !aColorSpace )
+		return FALSE;
+
+	BitmapBuffer *pBuffer = pComboBoxBitmap->AcquireBuffer( false );
+	if ( !pBuffer )
+	{
+		CGColorSpaceRelease( aColorSpace );
+		return FALSE;
+	}
+
+	// Clear the bitmap before drawing
+	memset( pBuffer->mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
+
+	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
+	if ( !aContext )
+	{
+		pComboBoxBitmap->ReleaseBuffer( pBuffer, false );
+		CGColorSpaceRelease( aColorSpace );
+		return FALSE;
+	}
+
+	HIThemeButtonDrawInfo aButtonDrawInfo;
+	InitButtonDrawInfo( &aButtonDrawInfo, nState );
+
+	HIRect destRect;
+	destRect.origin.x = 0;
+	destRect.origin.y = 0;
+	destRect.size.width = rDestBounds.GetWidth();
+	destRect.size.height = rDestBounds.GetHeight();
+	HIThemeDrawButton( &destRect, &aButtonDrawInfo, aContext, kHIThemeOrientationNormal, NULL );
+
+	CGContextRelease( aContext );
+	CGColorSpaceRelease( aColorSpace );
+
+	pComboBoxBitmap->ReleaseBuffer( pBuffer, false );
+
+	// For some reason, HIThemeDrawButton() draws the text edit field slightly
+	// lower then the button so we need to draw the two parts of the bitmap
+	// separately. We draw the text edit area first and then the button second.
+	SalTwoRect aTwoRect;
+	aTwoRect.mnSrcX = 0;
+	aTwoRect.mnSrcY = 0;
+	aTwoRect.mnSrcWidth = rDestBounds.GetWidth() - COMBOBOX_BUTTON_WIDTH;
+	aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
+	aTwoRect.mnDestX = rDestBounds.Left();
+	aTwoRect.mnDestY = rDestBounds.Top() - 2;
+	aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
+	aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
+	pGraphics->drawBitmap( &aTwoRect, *pComboBoxBitmap );
+
+	aTwoRect.mnSrcX = rDestBounds.GetWidth() - COMBOBOX_BUTTON_WIDTH;
+	aTwoRect.mnSrcY = 0;
+	aTwoRect.mnSrcWidth = COMBOBOX_BUTTON_WIDTH;
+	aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
+	aTwoRect.mnDestX = rDestBounds.Left() + aTwoRect.mnSrcX;
+	aTwoRect.mnDestY = rDestBounds.Top();
+	aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
+	aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
+	pGraphics->drawBitmap( &aTwoRect, *pComboBoxBitmap );
+
+	return TRUE;
+}
+
+#endif // GENESIS_OF_THE_NEW_WEAPONS
 
 // =======================================================================
 
@@ -73,29 +214,34 @@ using namespace rtl;
 BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart nPart )
 {
 	BOOL isSupported = NULL;
-        
+
 	switch( nType )
 	{
 		case CTRL_PUSHBUTTON:
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
-                
+
 		case CTRL_RADIOBUTTON:
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
-		
+
 		case CTRL_CHECKBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
-			
+
+		case CTRL_COMBOBOX:
+			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == HAS_BACKGROUND_TEXTURE ) )
+				isSupported = TRUE;
+			break;
+
 		default:
 			isSupported = FALSE;
 			break;
 	}
-        
+
 	return isSupported;
 }
 
@@ -108,9 +254,9 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
  *
  * @param nType                 primary type of control to be hit tested
  * @param nPart                 subportion of the control to be hit tested
- * @param rControlRegion        
+ * @param rControlRegion
  * @param aPos                  coordinate to hit test
- * @param rControlHandle        
+ * @param rControlHandle
  * @param rIsInside             return parameter indicating whether aPos was
  *                              within the control or not
  * @return TRUE if the function performed hit testing, FALSE if default OOo
@@ -152,27 +298,35 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
-				mpVCLGraphics->drawPushButton( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), ( nState & CTRL_STATE_DEFAULT ) );
+				mpVCLGraphics->drawPushButton( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), aCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), ( nState & CTRL_STATE_DEFAULT ) );
 				bOK = TRUE;
 			}
 			break;
-		
+
 		case CTRL_RADIOBUTTON:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
-				mpVCLGraphics->drawRadioButton( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), aValue.getTristateVal() );
+				mpVCLGraphics->drawRadioButton( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), aCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), aValue.getTristateVal() );
 				bOK = TRUE;
 			}
 			break;
-		
+
 		case CTRL_CHECKBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
-				mpVCLGraphics->drawCheckBox( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), aValue.getTristateVal() );
+				mpVCLGraphics->drawCheckBox( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), aCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), aValue.getTristateVal() );
 				bOK = TRUE;
-			}	
+			}
+			break;
+
+		case CTRL_COMBOBOX:
+			if( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle buttonRect = rControlRegion.GetBoundRect();
+				bOK = DrawNativeComboBox( this, buttonRect, nState, aCaption );
+			}
 			break;
 	}
 
@@ -237,29 +391,84 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
-				rNativeBoundingRegion = Region( mpVCLGraphics->getPreferredPushButtonBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption ) );
+				rNativeBoundingRegion = Region( mpVCLGraphics->getPreferredPushButtonBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), aCaption ) );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
 				bReturn = TRUE;
 			}
 			break;
-		
+
 		case CTRL_RADIOBUTTON:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
-				rNativeBoundingRegion = Region( mpVCLGraphics->getPreferredRadioButtonBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption ) );
+				rNativeBoundingRegion = Region( mpVCLGraphics->getPreferredRadioButtonBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), aCaption ) );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
 				bReturn = TRUE;
 			}
 			break;
-		
+
 		case CTRL_CHECKBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
-				rNativeBoundingRegion = Region( mpVCLGraphics->getPreferredCheckBoxBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.Right()-buttonRect.Left(), buttonRect.Bottom()-buttonRect.Top(), aCaption ) );
+				rNativeBoundingRegion = Region( mpVCLGraphics->getPreferredCheckBoxBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), aCaption ) );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
 				bReturn = TRUE;
+			}
+			break;
+
+		case CTRL_COMBOBOX:
+			{
+				Rectangle comboBoxRect = rControlRegion.GetBoundRect();
+
+				HIThemeButtonDrawInfo aButtonDrawInfo;
+				InitButtonDrawInfo( &aButtonDrawInfo, nState );
+
+				HIShapeRef preferredShape;
+				HIRect destRect;
+				destRect.origin.x = comboBoxRect.Left();
+				destRect.origin.y = comboBoxRect.Top();
+				destRect.size.width = comboBoxRect.GetWidth();
+				destRect.size.height = comboBoxRect.GetHeight();
+				if ( HIThemeGetButtonShape( &destRect, &aButtonDrawInfo, &preferredShape ) == noErr )
+				{
+					HIRect preferredRect;
+					HIShapeGetBounds( preferredShape, &preferredRect );
+					CFRelease( preferredShape );
+
+					switch( nPart )
+					{
+						case PART_ENTIRE_CONTROL:
+							{
+								Point topLeft( (long)preferredRect.origin.x, (long)preferredRect.origin.y );
+								Size boundsSize( (long)preferredRect.size.width, (long)preferredRect.size.height );
+								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+								rNativeContentRegion = Region( rNativeBoundingRegion );
+								bReturn = TRUE;
+							}
+							break;
+
+						case PART_BUTTON_DOWN:
+							{
+								Point topLeft( (long)preferredRect.origin.x + (long)preferredRect.size.width - COMBOBOX_BUTTON_WIDTH, (long)preferredRect.origin.y );
+								Size boundsSize( COMBOBOX_BUTTON_WIDTH, (long)preferredRect.size.height );
+								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+								rNativeContentRegion = Region( rNativeBoundingRegion );
+								bReturn = TRUE;
+							}
+							break;
+
+						case PART_SUB_EDIT:
+							{
+								Point topLeft( (long)preferredRect.origin.x, (long)preferredRect.origin.y );
+								Size boundsSize( (long)preferredRect.size.width - COMBOBOX_BUTTON_WIDTH, (long)preferredRect.size.height );
+								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+								rNativeContentRegion = Region( rNativeBoundingRegion );
+								bReturn = TRUE;
+							}
+							break;
+					}
+				}
 			}
 			break;
 	}

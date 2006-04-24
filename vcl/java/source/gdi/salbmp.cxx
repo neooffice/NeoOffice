@@ -195,13 +195,6 @@ USHORT JavaSalBitmap::GetBitCount() const
 
 // ------------------------------------------------------------------
 
-Size JavaSalBitmap::GetSize() const
-{
-	return maSize;
-}
-
-// ------------------------------------------------------------------
-
 BitmapBuffer* JavaSalBitmap::AcquireBuffer( bool bReadOnly )
 {
 	if ( !mpVCLBitmap )

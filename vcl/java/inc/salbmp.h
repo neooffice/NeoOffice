@@ -80,7 +80,7 @@ public:
 	virtual bool			Create( const SalBitmap& rSalBmp, SalGraphics* pGraphics );
 	virtual bool			Create( const SalBitmap& rSalBmp, USHORT nNewBitCount );
 	virtual void			Destroy();
-	virtual Size			GetSize() const;
+	virtual Size			GetSize() const { return maSize; }
 	virtual USHORT			GetBitCount() const;
 	virtual BitmapBuffer*	AcquireBuffer( bool bReadOnly );
 	virtual void			ReleaseBuffer( BitmapBuffer* pBuffer, bool bReadOnly );
