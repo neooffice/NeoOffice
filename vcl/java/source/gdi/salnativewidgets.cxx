@@ -146,10 +146,14 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 		return FALSE;
 	}
 
-	// Clear the bitmap before drawing
-	memset( pBuffer->mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
+	// Make the entire bitmap white before drawing
+	memset( pBuffer->mpBits, 0xff, pBuffer->mnScanlineSize * pBuffer->mnHeight );
 
+#ifdef POWERPC
 	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
+#else	// POWERPC
+	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+#endif	// POWERPC
 	if ( !aContext )
 	{
 		pComboBoxBitmap->ReleaseBuffer( pBuffer, false );
@@ -172,25 +176,12 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 
 	pComboBoxBitmap->ReleaseBuffer( pBuffer, false );
 
-	// For some reason, HIThemeDrawButton() draws the text edit field slightly
-	// lower then the button so we need to draw the two parts of the bitmap
-	// separately. We draw the text edit area first and then the button second.
 	SalTwoRect aTwoRect;
 	aTwoRect.mnSrcX = 0;
 	aTwoRect.mnSrcY = 0;
-	aTwoRect.mnSrcWidth = rDestBounds.GetWidth() - COMBOBOX_BUTTON_WIDTH;
+	aTwoRect.mnSrcWidth = rDestBounds.GetWidth();
 	aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
 	aTwoRect.mnDestX = rDestBounds.Left();
-	aTwoRect.mnDestY = rDestBounds.Top() - 2;
-	aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
-	aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
-	pGraphics->drawBitmap( &aTwoRect, *pComboBoxBitmap );
-
-	aTwoRect.mnSrcX = rDestBounds.GetWidth() - COMBOBOX_BUTTON_WIDTH;
-	aTwoRect.mnSrcY = 0;
-	aTwoRect.mnSrcWidth = COMBOBOX_BUTTON_WIDTH;
-	aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
-	aTwoRect.mnDestX = rDestBounds.Left() + aTwoRect.mnSrcX;
 	aTwoRect.mnDestY = rDestBounds.Top();
 	aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
 	aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
