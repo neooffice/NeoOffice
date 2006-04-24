@@ -74,7 +74,8 @@ using namespace rtl;
 
 #ifdef GENESIS_OF_THE_NEW_WEAPONS
 
-#define COMBOBOX_BUTTON_WIDTH 17
+#define COMBOBOX_BUTTON_WIDTH 22
+#define COMBOBOX_BUTTON_TRIMWIDTH 3
 
 static JavaSalBitmap *pComboBoxBitmap = NULL;
 
@@ -125,11 +126,13 @@ static BOOL InitButtonDrawInfo( HIThemeButtonDrawInfo *pButtonDrawInfo, ControlS
  */
 static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, OUString aCaption )
 {
+	BOOL bRet = FALSE;
+
 	if ( !pComboBoxBitmap )
 	{
 		pComboBoxBitmap = new JavaSalBitmap();
 		if ( !pComboBoxBitmap )
-			return FALSE;
+			return bRet;
 	}
 
 	if ( rDestBounds.GetWidth() > pComboBoxBitmap->GetSize().Width() || rDestBounds.GetHeight() > pComboBoxBitmap->GetSize().Height() )
@@ -137,17 +140,14 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 
 	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
 	if ( !aColorSpace )
-		return FALSE;
+		return bRet;
 
 	BitmapBuffer *pBuffer = pComboBoxBitmap->AcquireBuffer( false );
 	if ( !pBuffer )
 	{
 		CGColorSpaceRelease( aColorSpace );
-		return FALSE;
+		return bRet;
 	}
-
-	// Make the entire bitmap white before drawing
-	memset( pBuffer->mpBits, 0xff, pBuffer->mnScanlineSize * pBuffer->mnHeight );
 
 #ifdef POWERPC
 	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
@@ -158,8 +158,11 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 	{
 		pComboBoxBitmap->ReleaseBuffer( pBuffer, false );
 		CGColorSpaceRelease( aColorSpace );
-		return FALSE;
+		return bRet;
 	}
+
+	// Make the entire bitmap white before drawing
+	memset( pBuffer->mpBits, 0xff, pBuffer->mnScanlineSize * pBuffer->mnHeight );
 
 	HIThemeButtonDrawInfo aButtonDrawInfo;
 	InitButtonDrawInfo( &aButtonDrawInfo, nState );
@@ -167,25 +170,28 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 	HIRect destRect;
 	destRect.origin.x = 0;
 	destRect.origin.y = 0;
-	destRect.size.width = rDestBounds.GetWidth();
+	destRect.size.width = rDestBounds.GetWidth() - COMBOBOX_BUTTON_TRIMWIDTH;
 	destRect.size.height = rDestBounds.GetHeight();
-	HIThemeDrawButton( &destRect, &aButtonDrawInfo, aContext, kHIThemeOrientationNormal, NULL );
+	bRet = ( HIThemeDrawButton( &destRect, &aButtonDrawInfo, aContext, kHIThemeOrientationInverted, NULL ) == noErr );
 
 	CGContextRelease( aContext );
 	CGColorSpaceRelease( aColorSpace );
 
 	pComboBoxBitmap->ReleaseBuffer( pBuffer, false );
 
-	SalTwoRect aTwoRect;
-	aTwoRect.mnSrcX = 0;
-	aTwoRect.mnSrcY = 0;
-	aTwoRect.mnSrcWidth = rDestBounds.GetWidth();
-	aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
-	aTwoRect.mnDestX = rDestBounds.Left();
-	aTwoRect.mnDestY = rDestBounds.Top();
-	aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
-	aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
-	pGraphics->drawBitmap( &aTwoRect, *pComboBoxBitmap );
+	if ( bRet )
+	{
+		SalTwoRect aTwoRect;
+		aTwoRect.mnSrcX = 0;
+		aTwoRect.mnSrcY = 0;
+		aTwoRect.mnSrcWidth = rDestBounds.GetWidth();
+		aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
+		aTwoRect.mnDestX = rDestBounds.Left();
+		aTwoRect.mnDestY = rDestBounds.Top();
+		aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
+		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
+		pGraphics->drawBitmap( &aTwoRect, *pComboBoxBitmap );
+	}
 
 	return TRUE;
 }
@@ -429,20 +435,10 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 					switch( nPart )
 					{
-						case PART_ENTIRE_CONTROL:
-							{
-								Point topLeft( (long)preferredRect.origin.x, (long)preferredRect.origin.y );
-								Size boundsSize( (long)preferredRect.size.width, (long)preferredRect.size.height );
-								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-								rNativeContentRegion = Region( rNativeBoundingRegion );
-								bReturn = TRUE;
-							}
-							break;
-
 						case PART_BUTTON_DOWN:
 							{
 								Point topLeft( (long)preferredRect.origin.x + (long)preferredRect.size.width - COMBOBOX_BUTTON_WIDTH, (long)preferredRect.origin.y );
-								Size boundsSize( COMBOBOX_BUTTON_WIDTH, (long)preferredRect.size.height );
+								Size boundsSize( COMBOBOX_BUTTON_WIDTH + COMBOBOX_BUTTON_TRIMWIDTH, (long)preferredRect.size.height );
 								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
 								rNativeContentRegion = Region( rNativeBoundingRegion );
 								bReturn = TRUE;
