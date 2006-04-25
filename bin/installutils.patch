@@ -100,6 +100,13 @@ update_installation() {
 		touch -f "$1/Contents/MacOS/$i"   
 	done
 
+	# Open welcome page
+	sudoargs=
+	if [ ! -z "$USER" ] ; then
+		sudoargs="-u $USER"
+	fi
+	sudo $sudoargs /System/Library/Frameworks/ApplicationServices.framework/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister -f "$1"
+
 	# Touch installation directory to force activation of any bundled Spotlight
 	# plugins
 	touch -f "$1"

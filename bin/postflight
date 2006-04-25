@@ -139,6 +139,7 @@ if [ -d "$2" ]; then
 		sudoargs="-u $USER"
 	fi
 	sudo $sudoargs open "http://www.planamesa.com/neojava/welcome.php?product=$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)&host=`hostname`.`domainname`"
+	sudo $sudoargs /System/Library/Frameworks/ApplicationServices.framework/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister -f "$2"
 
 	# Touch installation directory to force activation of any bundled Spotlight
 	# plugins
