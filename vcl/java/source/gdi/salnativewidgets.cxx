@@ -161,8 +161,11 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 		return bRet;
 	}
 
-	// Make the entire bitmap white before drawing
-	memset( pBuffer->mpBits, 0xff, pBuffer->mnScanlineSize * pBuffer->mnHeight );
+	// Set the background to the fill color
+	long nBits = pBuffer->mnWidth * pBuffer->mnHeight;
+	int *pBits = (int *)pBuffer->mpBits;
+	for ( long i = 0; i < nBits; i++ )
+		pBits[ i ] = pGraphics->mnFillColor;
 
 	HIThemeButtonDrawInfo aButtonDrawInfo;
 	InitButtonDrawInfo( &aButtonDrawInfo, nState );
