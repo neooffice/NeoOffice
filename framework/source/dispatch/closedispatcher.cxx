@@ -424,13 +424,14 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, pVoid )
             //     application or establish the backing mode now.
             //     And that depends from the dispatched URL ...
             {
+#if defined USE_JAVA && defined MACOSX
+                bCloseFrame = sal_True;
+#else	// USE_JAVA && MACOSX
                 if (eOperation == E_CLOSE_FRAME)
-                    bCloseFrame = sal_True;
-#if !defined USE_JAVA || !defined MACOSX
                     bTerminateApp = sal_True;
-#endif	// !USE_JAVA || !MACOSX
                 else
                     bEstablishBackingMode = sal_True;
+#endif	// USE_JAVA && MACOSX
             }
         }
     }
