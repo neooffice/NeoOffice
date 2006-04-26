@@ -297,11 +297,21 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	nBytes[0] = sizeof( ATSUFontID );
 	nVals[0] = &mpHash->mnFontID;
 
-	// Set font size
+	// The OOo code will often layout fonts at unrealistically large sizes so
+	// we need to use a more reasonably sized font or else we will exceed the
+	// 32K Fixed data type limit that the ATSTrapezoid struct uses so we
+	// preemptively limit font size to 100 like in the OOo 1.1.x code.
 	Fixed nSize = Long2Fix( mpHash->mnFontSize );
+	float fSize = Fix2X( nSize );
+	float fAdjustedSize;
+	if ( fSize > 100 )
+		fAdjustedSize = 100;
+	else
+		fAdjustedSize = fSize;
+	Fixed nAdjustedSize = X2Fix( fAdjustedSize );
 	nTags[1] = kATSUSizeTag;
 	nBytes[1] = sizeof( Fixed );
-	nVals[1] = &nSize;
+	nVals[1] = &nAdjustedSize;
 
 	// Set antialiasing
 	ATSStyleRenderingOptions nOptions;
@@ -393,19 +403,19 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 		return;
 	}
 
-	// The OOo code will often layout fonts at unrealistically large sizes so
-	// we need to use a more reasonably sized font or else we will exceed the
-	// 32K Fixed data type limit that the ATSTrapezoid struct uses
-	Fixed nAdjustedSize = nSize;
-	while ( Float32ToLong( Fix2X( aTrapezoid.upperRight.x ) ) >= 0x7fff )
+	// If the font is still too large that the text length exceeds the 32K
+	// Fixed data type limit and becomes negative, reduce the font size until
+	// we find a small enough size that works
+	while ( Fix2X( aTrapezoid.upperRight.x ) < 0 )
 	{
 		// Reset font size
-		nAdjustedSize /= 10;
+		fAdjustedSize /= 10;
+		nAdjustedSize = X2Fix( fAdjustedSize );
 		nTags[0] = kATSUSizeTag;
 		nBytes[0] = sizeof( Fixed );
 		nVals[0] = &nAdjustedSize;
 
-		if ( nAdjustedSize < 1 || ATSUSetAttributes( maFontStyle, 1, nTags, nBytes, nVals ) != noErr || ATSUGetGlyphBounds( maLayout, 0, 0, kATSUFromTextBeginning, kATSUToTextEnd, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) != noErr )
+		if ( fAdjustedSize < 1 || ATSUSetAttributes( maFontStyle, 1, nTags, nBytes, nVals ) != noErr || ATSUGetGlyphBounds( maLayout, 0, 0, kATSUFromTextBeginning, kATSUToTextEnd, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) != noErr )
 		{
 			Destroy();
 			return;
@@ -479,7 +489,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	memset( mpCharAdvances, 0, nBufSize );
 
 	// Fix bug 448 by eliminating subpixel advances.
-	float nScaleY = Fix2X( nSize ) / Fix2X( nAdjustedSize );
+	float nScaleY = fSize / fAdjustedSize;
 	int nLastValidCharPos = -1;
 	UniCharArrayOffset nNextCaretPos = 0;
 	for ( i = 0; i < mpHash->mnLen; i = nNextCaretPos )
