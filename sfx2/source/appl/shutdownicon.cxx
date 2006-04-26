@@ -39,6 +39,7 @@
 #include <app.hxx>
 #include <vos/mutex.hxx>
 #include <svtools/imagemgr.hxx>
+#include <svtools/dynamicmenuoptions.hxx>
 // #include <cmdlineargs.hxx>
 
 #ifndef _COM_SUN_STAR_TASK_XINTERACTIONHANDLER_HPP_
@@ -120,6 +121,7 @@
 #define IMPRESS_WIZARD_URL	"private:factory/simpress?slot=10425"
 #define DRAW_URL			"private:factory/sdraw"
 #define MATH_URL			"private:factory/smath"
+#define BASE_URL        "private:factory/sdatabase?Interactive"
 
 #endif	// USE_JAVA && MACOSX
 
@@ -164,6 +166,9 @@ IMPL_LINK( ShutdownIconEvent, DispatchEvent, void*, pData )
 		case MATH_COMMAND_ID:
 			ShutdownIcon::OpenURL( OUString::createFromAscii( MATH_URL ), OUString::createFromAscii( "_default" ) );
 			break;
+		case BASE_COMMAND_ID:
+			ShutdownIcon::OpenURL( OUString::createFromAscii( BASE_URL ), OUString::createFromAscii( "_default" ) );
+			break;
 		case FROMTEMPLATE_COMMAND_ID:
 			ShutdownIcon::FromTemplate();
 			break;
@@ -190,6 +195,7 @@ void ProcessShutdownIconCommand( MenuCommand nCommand )
 			case IMPRESS_COMMAND_ID:
 			case DRAW_COMMAND_ID:
 			case MATH_COMMAND_ID:
+			case BASE_COMMAND_ID:
 			case FROMTEMPLATE_COMMAND_ID:
 			case FILEOPEN_COMMAND_ID:
 			{
@@ -677,6 +683,30 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 					aIDs[ nItems ] = MATH_COMMAND_ID;
 					aDesc = GetUrlDescription( OUString::createFromAscii( MATH_URL ) );
 					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+				}
+				if ( aModuleOptions.IsDataBase() )
+				{
+					SvtDynamicMenuOptions aOpt;
+					Sequence < Sequence < PropertyValue > > aMenu = aOpt.GetMenu( E_NEWMENU );
+					for ( sal_Int32 n=0; n<aMenu.getLength(); n++ )
+					{
+					    ::rtl::OUString aURL;
+					    ::rtl::OUString aDescription;
+					    Sequence < PropertyValue >& aEntry = aMenu[n];
+					    for ( sal_Int32 m=0; m<aEntry.getLength(); m++ )
+					    {
+						if ( aEntry[m].Name.equalsAsciiL( "URL", 3 ) )
+						    aEntry[m].Value >>= aURL;
+						if ( aEntry[m].Name.equalsAsciiL( "Title", 5 ) )
+						    aEntry[m].Value >>= aDescription;
+					    }
+
+					    if ( aURL.equalsAscii( BASE_URL ) && aDescription.getLength() )
+					    {
+						aIDs[ nItems ] = BASE_COMMAND_ID;
+						aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDescription.getStr(), aDescription.getLength() );
+					    }
+					}
 				}
 				aIDs[ nItems ] = FROMTEMPLATE_COMMAND_ID;
 				aDesc = GetResString( STR_QUICKSTART_FROMTEMPLATE );

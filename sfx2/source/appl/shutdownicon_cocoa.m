@@ -173,6 +173,11 @@
 	ProcessShutdownIconCommand( WRITER_COMMAND_ID );
 }
 
+- (void)handleBaseCommand:(id)pObject
+{
+	ProcessShutdownIconCommand( BASE_COMMAND_ID );
+}
+
 
 - (void)setDelegate:(id)pDelegate
 {
@@ -259,6 +264,9 @@
 			{
 				switch ( mpIDs[ i ] )
 				{
+					case BASE_COMMAND_ID:
+						aSelector = @selector(handleBaseCommand:);
+						break;
 					case CALC_COMMAND_ID:
 						aSelector = @selector(handleCalcCommand:);
 						break;
