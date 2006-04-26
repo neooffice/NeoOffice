@@ -78,6 +78,7 @@ using namespace rtl;
 #define COMBOBOX_BUTTON_TRIMWIDTH 3
 
 static JavaSalBitmap *pComboBoxBitmap = NULL;
+static JavaSalBitmap *pListBoxBitmap = NULL;
 
 // =======================================================================
 
@@ -199,6 +200,104 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 	return TRUE;
 }
 
+/**
+ * (static) Draw a popupmenu into the graphics port at the specified location.
+ * Popup menus, a.k.a listboxes or non-editable combo boxes, consist of a
+ * regular popup button and text.
+ *
+ * Due to VM implementation, JComboBox Swing elements cannot be drawn into
+ * a Graphics unless the JComboBox is properly embedded into a visible JFrame.
+ * The VM implementation draws these objects asynchronously.  Since we can't
+ * easily handle it in Java, we'll use HITheme APIs to draw it into a
+ * SalBitmap that we then blit into the graphics.
+ *
+ * @param pGraphics		pointer to the destination graphics where we'll
+ *				be drawing
+ * @param rDestBounds		eventual destination rectangle that encompasses
+ *				the entire control, editing area as well as
+ *				popup arrow
+ * @param nState		state of the button to b drawn (enabled/pressed/etc.)
+ * @param aCaption		text used for the control.  Presently ignored
+ *				as we draw only the frame and let VCL draw
+ *				the text
+ * @return TRUE if successful, FALSE on error
+ */
+static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, OUString aCaption )
+{
+	BOOL bRet = FALSE;
+
+	if ( !pListBoxBitmap )
+	{
+		pListBoxBitmap = new JavaSalBitmap();
+		if ( !pComboBoxBitmap )
+			return bRet;
+	}
+
+	if ( rDestBounds.GetWidth() > pComboBoxBitmap->GetSize().Width() || rDestBounds.GetHeight() > pComboBoxBitmap->GetSize().Height() )
+		pComboBoxBitmap->Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
+
+	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+	if ( !aColorSpace )
+		return bRet;
+
+	BitmapBuffer *pBuffer = pComboBoxBitmap->AcquireBuffer( false );
+	if ( !pBuffer )
+	{
+		CGColorSpaceRelease( aColorSpace );
+		return bRet;
+	}
+
+#ifdef POWERPC
+	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
+#else	// POWERPC
+	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+#endif	// POWERPC
+	if ( !aContext )
+	{
+		pComboBoxBitmap->ReleaseBuffer( pBuffer, false );
+		CGColorSpaceRelease( aColorSpace );
+		return bRet;
+	}
+
+	// Set the background to the fill color
+	long nBits = pBuffer->mnWidth * pBuffer->mnHeight;
+	int *pBits = (int *)pBuffer->mpBits;
+	for ( long i = 0; i < nBits; i++ )
+		pBits[ i ] = pGraphics->mnFillColor;
+
+	HIThemeButtonDrawInfo aButtonDrawInfo;
+	InitButtonDrawInfo( &aButtonDrawInfo, nState );
+	aButtonDrawInfo.kind = kThemePopupButton;
+	
+	HIRect destRect;
+	destRect.origin.x = 0;
+	destRect.origin.y = 0;
+	destRect.size.width = rDestBounds.GetWidth()/* - COMBOBOX_BUTTON_TRIMWIDTH */;
+	destRect.size.height = rDestBounds.GetHeight();
+	bRet = ( HIThemeDrawButton( &destRect, &aButtonDrawInfo, aContext, kHIThemeOrientationInverted, NULL ) == noErr );
+
+	CGContextRelease( aContext );
+	CGColorSpaceRelease( aColorSpace );
+
+	pComboBoxBitmap->ReleaseBuffer( pBuffer, false );
+
+	if ( bRet )
+	{
+		SalTwoRect aTwoRect;
+		aTwoRect.mnSrcX = 0;
+		aTwoRect.mnSrcY = 0;
+		aTwoRect.mnSrcWidth = rDestBounds.GetWidth();
+		aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
+		aTwoRect.mnDestX = rDestBounds.Left();
+		aTwoRect.mnDestY = rDestBounds.Top();
+		aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
+		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
+		pGraphics->drawBitmap( &aTwoRect, *pComboBoxBitmap );
+	}
+
+	return TRUE;
+}
+
 #endif // GENESIS_OF_THE_NEW_WEAPONS
 
 // =======================================================================
@@ -233,6 +332,11 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			break;
 
 		case CTRL_COMBOBOX:
+			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == HAS_BACKGROUND_TEXTURE ) )
+				isSupported = TRUE;
+			break;
+		
+		case CTRL_LISTBOX:
 			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == HAS_BACKGROUND_TEXTURE ) )
 				isSupported = TRUE;
 			break;
@@ -328,6 +432,14 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				bOK = DrawNativeComboBox( this, buttonRect, nState, aCaption );
 			}
 			break;
+		
+		case CTRL_LISTBOX:
+			if( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle buttonRect = rControlRegion.GetBoundRect();
+				bOK = DrawNativeListBox( this, buttonRect, nState, aCaption );
+			}
+			break;
 	}
 
 	return bOK;
@@ -418,6 +530,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			break;
 
 		case CTRL_COMBOBOX:
+		case CTRL_LISTBOX:
 			{
 				Rectangle comboBoxRect = rControlRegion.GetBoundRect();
 
