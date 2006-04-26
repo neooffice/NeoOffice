@@ -59,6 +59,7 @@ public:
 	static jclass		getMyClass();
 
 						com_sun_star_vcl_VCLFont( jobject myObj ) : java_lang_Object( myObj ) {};
+	virtual				~com_sun_star_vcl_VCLFont() {};
 
 	com_sun_star_vcl_VCLFont*	deriveFont( long _par0, short _par1, sal_Bool _par2, sal_Bool _par3, double _par4 );
 	long				getAscent();
