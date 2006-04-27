@@ -1941,7 +1941,7 @@ public final class VCLGraphics {
 						// Note: the JVM seems to have a bug and drawRect()
 						// draws dashed strokes one pixel above the
 						// specified y coordinate
-						g.drawRect(x, y + 1, width - 1, height - 1);
+						g.drawRect(x, y + 1, width - 1, height - 2);
 					}
 				}
 				catch (Throwable t) {
