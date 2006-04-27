@@ -694,11 +694,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private Insets insets = null;
 
 	/**
-	 * The last input method event.
-	 */
-	private InputMethodEvent lastInputMethodEvent = null;
-
-	/**
 	 * The native window's panel.
 	 */
 	private VCLFrame.NoPaintPanel panel = null;
@@ -1279,7 +1274,6 @@ g.dispose();
 		if (disposed || !window.isShowing())
 			return;
 
-		lastInputMethodEvent = e;
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_EXTTEXTINPUT, this, 0));
 
 	}
