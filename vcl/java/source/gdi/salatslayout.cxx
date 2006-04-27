@@ -65,7 +65,10 @@
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 #endif
 
-#define LAYOUT_CACHE_MAX_SIZE 4096
+// Fix bug 1418 by setting the cache size very small as the OOo 2.0.x code
+// lays out entire documents in the background and the cache will get full
+// very quickly
+#define LAYOUT_CACHE_MAX_SIZE 256
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
