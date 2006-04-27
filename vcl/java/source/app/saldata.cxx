@@ -64,6 +64,7 @@ SalData::SalData()
 	mpPresentationFrame = NULL;
 	mbInNativeModalSheet = false;
 	mpNativeModalSheetFrame = NULL;
+	maLastPointerState.mnState = 0;
 
 	// Set condition so that they don't block
 	maNativeEventCondition.set();

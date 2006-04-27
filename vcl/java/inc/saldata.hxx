@@ -42,6 +42,9 @@
 #ifndef _SV_SVDATA_HXX
 #include <svdata.hxx>
 #endif
+#ifndef _SV_SALFRAME_HXX
+#include <salframe.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLEVENTQUEUE_HXX
 #include <com/sun/star/vcl/VCLEventQueue.hxx>
 #endif
@@ -76,6 +79,7 @@ public:
 	bool					mbInNativeModalSheet;
 	JavaSalFrame*			mpNativeModalSheetFrame;
 	::std::list< JavaSalGraphics* >	maGraphicsList;
+	SalFrame::SalPointerState	maLastPointerState;
 
 							SalData();
 							~SalData();

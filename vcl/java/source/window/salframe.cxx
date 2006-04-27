@@ -810,12 +810,12 @@ void JavaSalFrame::DrawMenuBar()
 
 SalFrame::SalPointerState JavaSalFrame::GetPointerState()
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalFrame::GetPointerState not implemented\n" );
-#endif
+	SalData *pSalData = GetSalData();
+
 	SalPointerState aState;
-	aState.mnState = 0;
-	aState.maPos = Point();
+	aState.mnState = pSalData->maLastPointerState.mnState;
+	aState.maPos = Point( pSalData->maLastPointerState.maPos.X() - maGeometry.nX - maGeometry.nLeftDecoration, pSalData->maLastPointerState.maPos.Y() - maGeometry.nY - maGeometry.nTopDecoration );
+
 	return aState;
 }
 

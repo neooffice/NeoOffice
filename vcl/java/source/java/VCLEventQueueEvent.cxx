@@ -516,13 +516,15 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			SalMouseEvent *pMouseEvent = (SalMouseEvent *)pData;
 			if ( !bDeleteDataOnly && pFrame && pFrame->mbVisible )
 			{
+				USHORT nModifiers = getModifiers();
+				long nX = getX();
+				long nY = getY();
 				if ( !pMouseEvent )
 				{
 					pMouseEvent = new SalMouseEvent();
 					pMouseEvent->mnTime = getWhen();
-					pMouseEvent->mnX = getX();
-					pMouseEvent->mnY = getY();
-					USHORT nModifiers = getModifiers();
+					pMouseEvent->mnX = nX;
+					pMouseEvent->mnY = nY;
 					pMouseEvent->mnCode = nModifiers;
 					if ( nID == SALEVENT_MOUSELEAVE || nID == SALEVENT_MOUSEMOVE )
 						pMouseEvent->mnButton = 0;
@@ -532,6 +534,9 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				// Adjust position for RTL layout
 				if ( Application::GetSettings().GetLayoutRTL() )
 					pMouseEvent->mnX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pMouseEvent->mnX - 1;
+
+				pSalData->maLastPointerState.mnState = nModifiers;
+				pSalData->maLastPointerState.maPos = Point( nX + pFrame->maGeometry.nX + pFrame->maGeometry.nLeftDecoration, nY + pFrame->maGeometry.nY + pFrame->maGeometry.nTopDecoration );
 				pFrame->CallCallback( nID, pMouseEvent );
 			}
 			if ( pMouseEvent )
