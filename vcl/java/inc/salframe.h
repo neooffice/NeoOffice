@@ -92,6 +92,8 @@ public:
 							JavaSalFrame();
 	virtual					~JavaSalFrame();
 
+	bool					IsFloatingFrame();
+
 	virtual SalGraphics*	GetGraphics();
 	virtual void			ReleaseGraphics( SalGraphics* pGraphics );
 	virtual BOOL			PostEvent( void* pData );

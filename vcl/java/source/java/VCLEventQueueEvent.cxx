@@ -83,6 +83,32 @@ using namespace vos;
 
 // ============================================================================
 
+static JavaSalFrame *FindMouseEventFrame( JavaSalFrame *pFrame, const Point &rScreenPoint )
+{
+	if ( !pFrame->mbVisible )
+		return NULL;
+
+	// Iterate through children
+	for ( ::std::list< JavaSalFrame* >::const_iterator it = pFrame->maChildren.begin(); it != pFrame->maChildren.end(); ++it )
+	{
+		JavaSalFrame *pRet = pFrame;
+		pRet = FindMouseEventFrame( *it, rScreenPoint );
+		if ( pRet && pRet != pFrame )
+			return pRet;
+	}
+
+	if ( pFrame->IsFloatingFrame() && ! ( pFrame->mnStyle & SAL_FRAME_STYLE_TOOLTIP ) && pFrame != GetSalData()->mpPresentationFrame )
+	{
+		Rectangle aBounds( Point( pFrame->maGeometry.nX - pFrame->maGeometry.nLeftDecoration, pFrame->maGeometry.nY - pFrame->maGeometry.nTopDecoration ), Size( pFrame->maGeometry.nWidth + pFrame->maGeometry.nLeftDecoration + pFrame->maGeometry.nRightDecoration, pFrame->maGeometry.nHeight + pFrame->maGeometry.nTopDecoration + pFrame->maGeometry.nBottomDecoration ) );
+		if ( aBounds.IsInside( rScreenPoint ) )
+			return pFrame;
+	}
+
+	return NULL;
+}
+
+// ============================================================================
+
 jclass com_sun_star_vcl_VCLEvent::theClass = NULL;
 
 // ----------------------------------------------------------------------------
@@ -517,26 +543,66 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			if ( !bDeleteDataOnly && pFrame && pFrame->mbVisible )
 			{
 				USHORT nModifiers = getModifiers();
-				long nX = getX();
-				long nY = getY();
+				USHORT nButtons = nModifiers & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
 				if ( !pMouseEvent )
 				{
 					pMouseEvent = new SalMouseEvent();
 					pMouseEvent->mnTime = getWhen();
-					pMouseEvent->mnX = nX;
-					pMouseEvent->mnY = nY;
+					pMouseEvent->mnX = getX();
+					pMouseEvent->mnY = getY();
 					pMouseEvent->mnCode = nModifiers;
 					if ( nID == SALEVENT_MOUSELEAVE || nID == SALEVENT_MOUSEMOVE )
 						pMouseEvent->mnButton = 0;
 					else
-						pMouseEvent->mnButton = nModifiers & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
+						pMouseEvent->mnButton = nButtons;
 				}
+
+				if ( nButtons && nID == SALEVENT_MOUSEMOVE && !pSalData->mpLastDragFrame )
+					pSalData->mpLastDragFrame = pFrame;
+
+				// Find the real mouse frame
+				JavaSalFrame *pOriginalFrame = pFrame;
+				Point aScreenPoint( pMouseEvent->mnX + pFrame->maGeometry.nX, pMouseEvent->mnY + pFrame->maGeometry.nY );
+				if ( nID != SALEVENT_MOUSELEAVE )
+				{
+					JavaSalFrame *pMouseFrame = FindMouseEventFrame( pFrame, aScreenPoint );
+					if ( pMouseFrame && pMouseFrame != pFrame && pMouseFrame->mbVisible )
+					{
+						pMouseEvent->mnX = aScreenPoint.X() - pMouseFrame->maGeometry.nX + pMouseFrame->maGeometry.nLeftDecoration;
+						pMouseEvent->mnY = aScreenPoint.Y() - pMouseFrame->maGeometry.nY + pMouseFrame->maGeometry.nBottomDecoration;
+						pFrame = pMouseFrame;
+					}
+				}
+
+				// If we are releasing after dragging, send the event to the
+				// last dragged frame
+				if ( pSalData->mpLastDragFrame && ( nID == SALEVENT_MOUSEBUTTONUP || nID == SALEVENT_MOUSEMOVE ) )
+				{
+ 					if ( pSalData->mpLastDragFrame != pFrame && pSalData->mpLastDragFrame->mbVisible )
+					{
+						// If dragging and there are floating windows visible,
+						// don't let the mouse fall through to a non-floating
+						// window
+						if ( nID == SALEVENT_MOUSEBUTTONUP || ( pFrame == pOriginalFrame && !pFrame->IsFloatingFrame() ) )
+						{
+							pMouseEvent->mnX = aScreenPoint.X() - pSalData->mpLastDragFrame->maGeometry.nX;
+							pMouseEvent->mnY = aScreenPoint.Y() - pSalData->mpLastDragFrame->maGeometry.nY;
+							pFrame = pSalData->mpLastDragFrame;
+						}
+					}
+
+					if ( nButtons )
+						pSalData->mpLastDragFrame = pFrame;
+					else
+						pSalData->mpLastDragFrame = NULL;
+				}
+
 				// Adjust position for RTL layout
 				if ( Application::GetSettings().GetLayoutRTL() )
 					pMouseEvent->mnX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pMouseEvent->mnX - 1;
 
 				pSalData->maLastPointerState.mnState = nModifiers;
-				pSalData->maLastPointerState.maPos = Point( nX + pFrame->maGeometry.nX + pFrame->maGeometry.nLeftDecoration, nY + pFrame->maGeometry.nY + pFrame->maGeometry.nTopDecoration );
+				pSalData->maLastPointerState.maPos = Point( aScreenPoint.X(), aScreenPoint.Y() );
 				pFrame->CallCallback( nID, pMouseEvent );
 			}
 			if ( pMouseEvent )

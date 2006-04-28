@@ -80,6 +80,7 @@ public:
 	JavaSalFrame*			mpNativeModalSheetFrame;
 	::std::list< JavaSalGraphics* >	maGraphicsList;
 	SalFrame::SalPointerState	maLastPointerState;
+	JavaSalFrame*			mpLastDragFrame;
 
 							SalData();
 							~SalData();

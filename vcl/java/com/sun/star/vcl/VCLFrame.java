@@ -605,11 +605,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private final static Rectangle defaultTextLocation = new Rectangle(300, 300, 0, 12);
 
 	/**
-	 * The last mouse drag event.
-	 */
-	private static MouseEvent lastMouseDragEvent = null;
-
-	/**
 	 * Find the matching <code>VCLFrame</code> for the specified component.
 	 *
 	 * @param c the component
@@ -848,6 +843,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public synchronized void componentMoved(ComponentEvent e) {
 
 		if (disposed || !window.isShowing())
+			return;
+
+		// The OOo code may move floating windows while dragging its
+		// lightweight title bar so we need to ignore move events associated
+		// with that action as they will be out of sync with what the OOo
+		// code expects
+		if ( isFloatingWindow() && queue.getLastAdjustedMouseModifiers() != 0 )
 			return;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVERESIZE, this, 0));
@@ -1455,24 +1457,6 @@ g.dispose();
 		int modifiers = queue.getLastAdjustedMouseModifiers();
 		e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | modifiers, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
 
-		e = preprocessMouseEvent(e);
-
-		if (VCLFrame.lastMouseDragEvent != null) {
-			// If we are releasing after dragging, send the event to the
-			// last dragged frame
-			Component currentComponent = e.getComponent();
-			Component lastComponent = VCLFrame.lastMouseDragEvent.getComponent();
-			if (lastComponent != currentComponent && lastComponent != null && currentComponent != null && lastComponent.isShowing() && currentComponent.isShowing()) {
-				Point srcPoint = currentComponent.getLocationOnScreen();
-				srcPoint.x += e.getX();
-				srcPoint.y += e.getY();
-				Point destPoint = lastComponent.getLocationOnScreen();
-				e = new MouseEvent(lastComponent, e.getID(), e.getWhen(), e.getModifiers() | e.getModifiersEx(), srcPoint.x - destPoint.x, srcPoint.y - destPoint.y, e.getClickCount(), e.isPopupTrigger());
-			}
-
-			VCLFrame.lastMouseDragEvent = null;
-		}
-
 		// The JVM can get confused when we click on a non-focused window. In
 		// these cases, we will receive no mouse move events so if the OOo code
 		// displays a popup menu, the popup menu will receive no mouse move
@@ -1498,31 +1482,9 @@ g.dispose();
 		if (disposed || !window.isShowing())
 			return;
 
-		if (VCLFrame.lastMouseDragEvent == null)
-			VCLFrame.lastMouseDragEvent = e;
-
 		// Use adjusted modifiers
 		int modifiers = queue.getLastAdjustedMouseModifiers();
 		e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | modifiers, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
-
-		e = preprocessMouseEvent(e);
-
-		// Generate mouse exited events that the OOo code expects
-		Component lastComponent = VCLFrame.lastMouseDragEvent.getComponent();
-		Component currentComponent = e.getComponent();
-		if (lastComponent != currentComponent && lastComponent != null && currentComponent != null && lastComponent.isShowing() && currentComponent.isShowing()) {
-			// If dragging and there are floating windows visible, don't let
-			// the mouse fall through to a non-floating window
-			if (currentComponent == panel && !isFloatingWindow() && lastComponent.isShowing() && currentComponent.isShowing()) {
-				Point srcPoint = currentComponent.getLocationOnScreen();
-				srcPoint.x += e.getX();
-				srcPoint.y += e.getY();
-				Point destPoint = lastComponent.getLocationOnScreen();
-				e = new MouseEvent(lastComponent, e.getID(), e.getWhen(), e.getModifiers() | e.getModifiersEx(), srcPoint.x - destPoint.x, srcPoint.y - destPoint.y, e.getClickCount(), e.isPopupTrigger());
-			}
-
-			VCLFrame.lastMouseDragEvent = e;
-		}
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0));
 
@@ -1539,8 +1501,6 @@ g.dispose();
 
 		if (disposed || !window.isShowing())
 			return;
-
-		e = preprocessMouseEvent(e);
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0));
 
@@ -1575,8 +1535,6 @@ g.dispose();
 		if (disposed || !window.isShowing())
 			return;
 
-		e = preprocessMouseEvent(e);
-
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0));
 
 	}
@@ -1608,45 +1566,6 @@ g.dispose();
 			return;
 
 		queue.postCachedEvent(new VCLEvent(new PaintEvent(panel, PaintEvent.UPDATE, b), VCLEvent.SALEVENT_PAINT, this, 0));
-
-	}
-
-	/**
-	 * Returns a <code>MouseEvent</code> for the topmost floating window above
-	 * the specified <code>MouseEvent</code>.
-	 *
-	 * @param e the <code>MouseEvent</code>
-	 * @return the <code>MouseEvent</code> for the topmost floating window
-	 *  above the specified <code>MouseEvent</code>
-	 */
-	private synchronized MouseEvent preprocessMouseEvent(MouseEvent e) {
-
-		if (disposed || !window.isShowing())
-			return e;
-
-		Component c = e.getComponent();
-		if (c != null) {
-			// Iterate into children
-			Iterator frames = children.iterator();
-			while (frames.hasNext()) {
-				VCLFrame f = (VCLFrame)frames.next();
-				e = f.preprocessMouseEvent(e);
-				c = e.getComponent();
-			}
-
-			// Evaluate event
-			if (c != panel && c.isShowing() && panel.isShowing() && isFloatingWindow() && (style & SAL_FRAME_STYLE_TOOLTIP) == 0) {
-				Point srcPoint = c.getLocationOnScreen();
-				srcPoint.x += e.getX();
-				srcPoint.y += e.getY();
-				Point destPoint = panel.getLocationOnScreen();
-				Rectangle destRect = new Rectangle(destPoint.x, destPoint.y, panel.getWidth(), panel.getHeight());
-				if (destRect.contains(srcPoint))
-					return new MouseEvent(panel, e.getID(), e.getWhen(), e.getModifiers() | e.getModifiersEx(), srcPoint.x - destPoint.x, srcPoint.y - destPoint.y, e.getClickCount(), e.isPopupTrigger());
-			}
-		}
-
-		return e;
 
 	}
 

@@ -64,10 +64,11 @@ SalData::SalData()
 	mpPresentationFrame = NULL;
 	mbInNativeModalSheet = false;
 	mpNativeModalSheetFrame = NULL;
-	maLastPointerState.mnState = 0;
+	mpLastDragFrame = NULL;
 
 	// Set condition so that they don't block
 	maNativeEventCondition.set();
+	maLastPointerState.mnState = 0;
 }
 
 // ------------------------------------------------------------------------

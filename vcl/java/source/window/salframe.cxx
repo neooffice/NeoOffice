@@ -128,6 +128,13 @@ JavaSalFrame::~JavaSalFrame()
 
 // -----------------------------------------------------------------------
 
+bool JavaSalFrame::IsFloatingFrame()
+{
+	return ( ! ( mnStyle & ( SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE ) ) && this != GetSalData()->mpPresentationFrame );
+}
+
+// -----------------------------------------------------------------------
+
 SalGraphics* JavaSalFrame::GetGraphics()
 {
 	if ( mbGraphics )
@@ -257,6 +264,9 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 			if ( pFocusFrame != this )
 				pFocusFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
 		}
+
+		if ( pSalData->mpLastDragFrame == this )
+			pSalData->mpLastDragFrame = NULL;
 	}
 }
 
@@ -362,8 +372,9 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 
 	mpVCLFrame->setBounds( nX, nY, nWidth, nHeight );
 
-	// Update the cached position
-	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, NULL );
+	// Update the cached position immediately
+	Rectangle *pRect = new Rectangle( Point( nX, nY ), Size( nWidth, nHeight ) );
+	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pRect );
 	aEvent.dispatch();
 
 	mbInSetPosSize = FALSE;
@@ -814,7 +825,7 @@ SalFrame::SalPointerState JavaSalFrame::GetPointerState()
 
 	SalPointerState aState;
 	aState.mnState = pSalData->maLastPointerState.mnState;
-	aState.maPos = Point( pSalData->maLastPointerState.maPos.X() - maGeometry.nX - maGeometry.nLeftDecoration, pSalData->maLastPointerState.maPos.Y() - maGeometry.nY - maGeometry.nTopDecoration );
+	aState.maPos = Point( pSalData->maLastPointerState.maPos.X() - maGeometry.nX, pSalData->maLastPointerState.maPos.Y() - maGeometry.nY );
 
 	return aState;
 }
