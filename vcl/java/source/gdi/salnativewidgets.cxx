@@ -98,9 +98,72 @@ static BOOL InitButtonDrawInfo( HIThemeButtonDrawInfo *pButtonDrawInfo, ControlS
 		pButtonDrawInfo->adornment = kThemeAdornmentFocus;
 	else
 		pButtonDrawInfo->adornment = kThemeAdornmentDefault;
+	return TRUE;
 }
 
-// -----------------------------------------------------------------------
+// =======================================================================
+
+/**
+ * (static) Convert a VCL scrollbar value structure into HITheme structures.
+ *
+ * @param pScrollBarTrackInfo		HITheme scrollbar structure
+ * @param nState					overall control state of the scrollbar.
+ *									states of subparts are contained in the
+ *									scrollbar value structure.
+ * @param bounds					drawing bounds of the scrollbar
+ * @param pScrollbarValue			VCL implcontrolvalue containing scrollbar
+ *									value
+ * @return TRUE on success, FALSE on failure
+ */
+static BOOL InitScrollBarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, ControlState nState, Rectangle bounds, ScrollbarValue *pScrollbarValue )
+{
+	memset( pTrackDrawInfo, 0, sizeof( HIThemeTrackDrawInfo ) );
+	pTrackDrawInfo->version = 0;
+	pTrackDrawInfo->kind = kThemeScrollBarMedium;
+	pTrackDrawInfo->bounds.origin.x = 0;
+	pTrackDrawInfo->bounds.origin.y = 0;
+	pTrackDrawInfo->bounds.size.width = bounds.GetWidth();
+	pTrackDrawInfo->bounds.size.height = bounds.GetHeight();
+	if( bounds.GetWidth() > bounds.GetHeight() )
+		pTrackDrawInfo->attributes |= kThemeTrackHorizontal;
+	pTrackDrawInfo->attributes |= kThemeTrackShowThumb;
+	if( nState & CTRL_STATE_ENABLED )
+		pTrackDrawInfo->enableState = kThemeTrackActive;
+	else
+		pTrackDrawInfo->enableState = kThemeTrackDisabled;
+	if( pScrollbarValue )
+	{
+		pTrackDrawInfo->min = pScrollbarValue->mnMin;
+		pTrackDrawInfo->max = pScrollbarValue->mnMax;
+		pTrackDrawInfo->value = pScrollbarValue->mnCur;
+		pTrackDrawInfo->trackInfo.scrollbar.viewsize = pScrollbarValue->mnVisibleSize;
+		if( pScrollbarValue->mnButton1State & CTRL_STATE_PRESSED )
+			pTrackDrawInfo->trackInfo.scrollbar.pressState |= ( kThemeLeftOutsideArrowPressed | kThemeLeftInsideArrowPressed );
+		if( pScrollbarValue->mnButton2State & CTRL_STATE_PRESSED )
+			pTrackDrawInfo->trackInfo.scrollbar.pressState |= ( kThemeRightOutsideArrowPressed | kThemeRightInsideArrowPressed );
+		if( pScrollbarValue->mnPage1State & CTRL_STATE_PRESSED )
+			pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeLeftTrackPressed;
+		if( pScrollbarValue->mnPage2State & CTRL_STATE_PRESSED )
+			pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeRightTrackPressed;
+		if( pScrollbarValue->mnThumbState & CTRL_STATE_PRESSED )
+			pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeThumbPressed;
+	}
+	else
+	{
+		// we need to seed the min, max, and value with "reasonable" values
+		// in order for scrollbar metrics to be computed properly by HITheme.
+		// If the values are all equal, HITheme will return a NULL rectangle
+		// for all potential scrollbar parts.
+		
+		pTrackDrawInfo->min = 0;
+		pTrackDrawInfo->max = 1;
+		pTrackDrawInfo->value = 0;
+		pTrackDrawInfo->trackInfo.scrollbar.viewsize = 0;
+	}
+	return TRUE;
+}
+
+// =======================================================================
 
 /**
  * (static) Draw a ComboBox into the graphics port at the specified location.
@@ -196,6 +259,8 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 
 	return TRUE;
 }
+
+// =======================================================================
 
 /**
  * (static) Draw a popupmenu into the graphics port at the specified location.
@@ -295,6 +360,86 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	return TRUE;
 }
 
+// =======================================================================
+
+/**
+ * (static) Draw a scrollbar into the graphics port at the specified location.
+ * Swing scrollbars can lead to some odd tracking issues and don't provide
+ * easy access to all of the individual subparts of the control proper,
+ * so we'll draw them using HIThemes and SalBitmaps.
+ *
+ * @param pGraphics			pointer to the destination graphics where we'll be drawing
+ * @param rDestBounds		eventual destination rectangle for the scrollbar
+ * @param nState			overall scrollbar state (active vs. disabled)
+ * @param pScrollbarValue	VCL scrollbar info value
+ * @return TRUE if successful, FALSE on error
+ */
+static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, ScrollbarValue *pScrollbarValue )
+{
+	BOOL bRet = FALSE;
+	
+	JavaSalBitmap scrollbarBitmap;
+	scrollbarBitmap.Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
+	
+	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+	if ( !aColorSpace )
+		return bRet;
+
+	BitmapBuffer *pBuffer = scrollbarBitmap.AcquireBuffer( false );
+	if ( !pBuffer )
+	{
+		CGColorSpaceRelease( aColorSpace );
+		return bRet;
+	}
+
+#ifdef POWERPC
+	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
+#else	// POWERPC
+	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+#endif	// POWERPC
+	if ( !aContext )
+	{
+		scrollbarBitmap.ReleaseBuffer( pBuffer, false );
+		CGColorSpaceRelease( aColorSpace );
+		return bRet;
+	}
+
+	// Clear the image
+	memset( pBuffer->mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
+					
+	HIThemeTrackDrawInfo pTrackDrawInfo;
+	InitScrollBarTrackInfo( &pTrackDrawInfo, nState, rDestBounds, pScrollbarValue );
+	
+	HIRect destRect;
+	destRect.origin.x = 0;
+	destRect.origin.y = 0;
+	destRect.size.width = rDestBounds.GetWidth();
+	destRect.size.height = rDestBounds.GetHeight();
+
+	bRet = ( HIThemeDrawTrack( &pTrackDrawInfo, NULL, aContext, kHIThemeOrientationInverted ) == noErr );
+	
+	CGContextRelease( aContext );
+	CGColorSpaceRelease( aColorSpace );
+
+	scrollbarBitmap.ReleaseBuffer( pBuffer, false );
+
+	if ( bRet )
+	{
+		SalTwoRect aTwoRect;
+		aTwoRect.mnSrcX = 0;
+		aTwoRect.mnSrcY = 0;
+		aTwoRect.mnSrcWidth = rDestBounds.GetWidth();
+		aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
+		aTwoRect.mnDestX = rDestBounds.Left();
+		aTwoRect.mnDestY = rDestBounds.Top();
+		aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
+		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
+		pGraphics->drawBitmap( &aTwoRect, scrollbarBitmap );
+	}
+	return TRUE;
+}
+
+
 #endif // GENESIS_OF_THE_NEW_WEAPONS
 
 // =======================================================================
@@ -335,6 +480,11 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 		
 		case CTRL_LISTBOX:
 			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == HAS_BACKGROUND_TEXTURE ) )
+				isSupported = TRUE;
+			break;
+		
+		case CTRL_SCROLLBAR:
+			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == PART_DRAW_BACKGROUND_HORZ ) || ( nPart == PART_DRAW_BACKGROUND_VERT ) )
 				isSupported = TRUE;
 			break;
 
@@ -435,6 +585,15 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 			{
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
 				bOK = DrawNativeListBox( this, buttonRect, nState, aCaption );
+			}
+			break;
+		
+		case CTRL_SCROLLBAR:
+			if( ( nPart == PART_ENTIRE_CONTROL) || ( nPart == PART_DRAW_BACKGROUND_HORZ ) || ( nPart == PART_DRAW_BACKGROUND_VERT ) )
+			{
+				Rectangle buttonRect = rControlRegion.GetBoundRect();
+				ScrollbarValue *pValue = static_cast<ScrollbarValue *> ( aValue.getOptionalVal() );
+				bOK = DrawNativeScrollBar( this, buttonRect, nState, pValue );
 			}
 			break;
 	}
@@ -569,6 +728,58 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							break;
 					}
 				}
+			}
+			break;
+		
+		case CTRL_SCROLLBAR:
+			{
+				Rectangle comboBoxRect = rControlRegion.GetBoundRect();
+				
+				ScrollbarValue *pValue = static_cast<ScrollbarValue *> ( aValue.getOptionalVal() );
+				
+				HIThemeTrackDrawInfo pTrackDrawInfo;
+				InitScrollBarTrackInfo( &pTrackDrawInfo, nState, comboBoxRect, pValue );
+				
+				HIRect bounds;
+				
+				switch ( nPart )
+				{
+					case PART_ENTIRE_CONTROL:
+						HIThemeGetTrackBounds( &pTrackDrawInfo, &bounds );
+						break;
+						
+					case PART_BUTTON_LEFT:
+					case PART_BUTTON_UP:
+						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartUpButton, &bounds );
+						break;
+					
+					case PART_BUTTON_RIGHT:
+					case PART_BUTTON_DOWN:
+						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &bounds );
+						break;
+					
+					case PART_TRACK_HORZ_LEFT:
+					case PART_TRACK_VERT_UPPER:
+						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageUpArea, &bounds );
+						break;
+					
+					case PART_TRACK_HORZ_RIGHT:
+					case PART_TRACK_VERT_LOWER:
+						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageDownArea, &bounds );
+						break;
+					
+					case PART_THUMB_HORZ:
+					case PART_THUMB_VERT:
+						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartIndicator, &bounds );
+						break;
+				}
+				
+				Point topLeft( (long)(comboBoxRect.Left()+bounds.origin.x), (long)(comboBoxRect.Top()+bounds.origin.y) );
+				Size boundsSize( (long)bounds.size.width, (long)bounds.size.height );
+				rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+				rNativeContentRegion = Region( rNativeBoundingRegion );
+				
+				bReturn = TRUE;
 			}
 			break;
 	}
