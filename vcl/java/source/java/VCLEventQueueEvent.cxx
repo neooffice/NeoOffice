@@ -604,6 +604,29 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pSalData->maLastPointerState.mnState = nModifiers;
 				pSalData->maLastPointerState.maPos = Point( aScreenPoint.X(), aScreenPoint.Y() );
 				pFrame->CallCallback( nID, pMouseEvent );
+				if ( nID == SALEVENT_MOUSEBUTTONUP )
+				{
+					// For some reason, after dragging floating palette frames,
+					// the OOo code needs a mouse move event to finish up its
+					// work so we dispatch some mouse move events here
+					SalMouseEvent *pMouseMoveEvent = new SalMouseEvent();
+					pMouseMoveEvent->mnTime = pMouseEvent->mnTime;
+					pMouseMoveEvent->mnX = pMouseEvent->mnX + 1;
+					pMouseMoveEvent->mnY = pMouseEvent->mnY + 1;
+					pMouseMoveEvent->mnCode = pMouseEvent->mnCode;
+					pMouseMoveEvent->mnButton = 0;
+					com_sun_star_vcl_VCLEvent aMoveEvent( SALEVENT_MOUSEMOVE, pFrame, (void *)pMouseMoveEvent );
+					aMoveEvent.dispatch();
+
+					SalMouseEvent *pMouseMoveBackEvent = new SalMouseEvent();
+					pMouseMoveBackEvent->mnTime = pMouseEvent->mnTime;
+					pMouseMoveBackEvent->mnX = pMouseEvent->mnX;
+					pMouseMoveBackEvent->mnY = pMouseEvent->mnY;
+					pMouseMoveBackEvent->mnCode = pMouseEvent->mnCode;
+					pMouseMoveBackEvent->mnButton = 0;
+					com_sun_star_vcl_VCLEvent aMoveBackEvent( SALEVENT_MOUSEMOVE, pFrame, (void *)pMouseMoveBackEvent );
+					aMoveBackEvent.dispatch();
+				}
 			}
 			if ( pMouseEvent )
 				delete pMouseEvent;
