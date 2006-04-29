@@ -107,6 +107,8 @@ static BOOL InitButtonDrawInfo( HIThemeButtonDrawInfo *pButtonDrawInfo, ControlS
  * (static) Convert a VCL scrollbar value structure into HITheme structures.
  *
  * @param pScrollBarTrackInfo		HITheme scrollbar structure
+ * @param pHITrackInfo				alternative HITheme scrollbar structure used
+ *									by some calls
  * @param nState					overall control state of the scrollbar.
  *									states of subparts are contained in the
  *									scrollbar value structure.
@@ -115,9 +117,11 @@ static BOOL InitButtonDrawInfo( HIThemeButtonDrawInfo *pButtonDrawInfo, ControlS
  *									value
  * @return TRUE on success, FALSE on failure
  */
-static BOOL InitScrollBarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, ControlState nState, Rectangle bounds, ScrollbarValue *pScrollbarValue )
+static BOOL InitScrollBarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, HIScrollBarTrackInfo *pHITrackInfo, ControlState nState, Rectangle bounds, ScrollbarValue *pScrollbarValue )
 {
 	memset( pTrackDrawInfo, 0, sizeof( HIThemeTrackDrawInfo ) );
+	if( pHITrackInfo )
+		memset( pHITrackInfo, 0, sizeof( HIScrollBarTrackInfo ) );
 	pTrackDrawInfo->version = 0;
 	pTrackDrawInfo->kind = kThemeScrollBarMedium;
 	pTrackDrawInfo->bounds.origin.x = 0;
@@ -131,6 +135,8 @@ static BOOL InitScrollBarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, Contro
 		pTrackDrawInfo->enableState = kThemeTrackActive;
 	else
 		pTrackDrawInfo->enableState = kThemeTrackDisabled;
+	if( pHITrackInfo )
+		pHITrackInfo->enableState = pTrackDrawInfo->enableState;
 	if( pScrollbarValue )
 	{
 		pTrackDrawInfo->min = pScrollbarValue->mnMin;
@@ -160,6 +166,11 @@ static BOOL InitScrollBarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, Contro
 		pTrackDrawInfo->max = 1;
 		pTrackDrawInfo->value = 0;
 		pTrackDrawInfo->trackInfo.scrollbar.viewsize = 0;
+	}
+	if( pHITrackInfo )
+	{
+		pHITrackInfo->pressState = pTrackDrawInfo->trackInfo.scrollbar.pressState;
+		pHITrackInfo->viewsize = pTrackDrawInfo->trackInfo.scrollbar.viewsize;
 	}
 	return TRUE;
 }
@@ -409,7 +420,7 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
 	memset( pBuffer->mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
 					
 	HIThemeTrackDrawInfo pTrackDrawInfo;
-	InitScrollBarTrackInfo( &pTrackDrawInfo, nState, rDestBounds, pScrollbarValue );
+	InitScrollBarTrackInfo( &pTrackDrawInfo, NULL, nState, rDestBounds, pScrollbarValue );
 	
 	HIRect destRect;
 	destRect.origin.x = 0;
@@ -747,7 +758,8 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				ScrollbarValue *pValue = static_cast<ScrollbarValue *> ( aValue.getOptionalVal() );
 				
 				HIThemeTrackDrawInfo pTrackDrawInfo;
-				InitScrollBarTrackInfo( &pTrackDrawInfo, nState, comboBoxRect, pValue );
+				HIScrollBarTrackInfo pScrollBarTrackInfo;
+				InitScrollBarTrackInfo( &pTrackDrawInfo, &pScrollBarTrackInfo, nState, comboBoxRect, pValue );
 				
 				HIRect bounds;
 				
@@ -769,17 +781,35 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					
 					case PART_TRACK_HORZ_LEFT:
 					case PART_TRACK_VERT_UPPER:
-						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageUpArea, &bounds );
+						// for disabled scrollbars, we still need our parts to
+						// cover the entire control even though they don't 
+						// exist.
+						if( ! ( nState & CTRL_STATE_ENABLED ) )
+							HIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
+						else
+							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageUpArea, &bounds );
 						break;
 					
 					case PART_TRACK_HORZ_RIGHT:
 					case PART_TRACK_VERT_LOWER:
-						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageDownArea, &bounds );
+						// for disabled scrollbars, we still need our parts to
+						// cover the entire control even though they don't 
+						// exist.
+						if( ! ( nState & CTRL_STATE_ENABLED ) )
+							HIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
+						else
+							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageDownArea, &bounds );
 						break;
 					
 					case PART_THUMB_HORZ:
 					case PART_THUMB_VERT:
-						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartIndicator, &bounds );
+						// for disabled scrollbars, we still need our parts to
+						// cover the entire control even though they don't 
+						// exist.
+						if( ! ( nState & CTRL_STATE_ENABLED ) )
+							HIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
+						else
+							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartIndicator, &bounds );
 						break;
 				}
 				
