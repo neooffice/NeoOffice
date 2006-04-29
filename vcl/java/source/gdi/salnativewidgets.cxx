@@ -134,9 +134,9 @@ static BOOL InitScrollBarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, Contro
 	if( pScrollbarValue )
 	{
 		pTrackDrawInfo->min = pScrollbarValue->mnMin;
-		pTrackDrawInfo->max = pScrollbarValue->mnMax;
+		pTrackDrawInfo->max = pScrollbarValue->mnMax-pScrollbarValue->mnVisibleSize;
 		pTrackDrawInfo->value = pScrollbarValue->mnCur;
-		pTrackDrawInfo->trackInfo.scrollbar.viewsize = pScrollbarValue->mnVisibleSize * 2;
+		pTrackDrawInfo->trackInfo.scrollbar.viewsize = pScrollbarValue->mnVisibleSize;
 		if( pScrollbarValue->mnButton1State & CTRL_STATE_PRESSED )
 			pTrackDrawInfo->trackInfo.scrollbar.pressState |= ( kThemeLeftInsideArrowPressed );
 		if( pScrollbarValue->mnButton2State & CTRL_STATE_PRESSED )
