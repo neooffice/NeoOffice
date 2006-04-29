@@ -136,11 +136,11 @@ static BOOL InitScrollBarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, Contro
 		pTrackDrawInfo->min = pScrollbarValue->mnMin;
 		pTrackDrawInfo->max = pScrollbarValue->mnMax;
 		pTrackDrawInfo->value = pScrollbarValue->mnCur;
-		pTrackDrawInfo->trackInfo.scrollbar.viewsize = pScrollbarValue->mnVisibleSize;
+		pTrackDrawInfo->trackInfo.scrollbar.viewsize = pScrollbarValue->mnVisibleSize * 2;
 		if( pScrollbarValue->mnButton1State & CTRL_STATE_PRESSED )
-			pTrackDrawInfo->trackInfo.scrollbar.pressState |= ( kThemeLeftOutsideArrowPressed | kThemeLeftInsideArrowPressed );
+			pTrackDrawInfo->trackInfo.scrollbar.pressState |= ( kThemeLeftInsideArrowPressed );
 		if( pScrollbarValue->mnButton2State & CTRL_STATE_PRESSED )
-			pTrackDrawInfo->trackInfo.scrollbar.pressState |= ( kThemeRightOutsideArrowPressed | kThemeRightInsideArrowPressed );
+			pTrackDrawInfo->trackInfo.scrollbar.pressState |= ( kThemeRightOutsideArrowPressed );
 		if( pScrollbarValue->mnPage1State & CTRL_STATE_PRESSED )
 			pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeLeftTrackPressed;
 		if( pScrollbarValue->mnPage2State & CTRL_STATE_PRESSED )
@@ -148,7 +148,8 @@ static BOOL InitScrollBarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, Contro
 		if( pScrollbarValue->mnThumbState & CTRL_STATE_PRESSED )
 			pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeThumbPressed;
 	}
-	else
+
+	if( pTrackDrawInfo->min == pTrackDrawInfo->max )
 	{
 		// we need to seed the min, max, and value with "reasonable" values
 		// in order for scrollbar metrics to be computed properly by HITheme.
@@ -515,6 +516,14 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
  */
 BOOL JavaSalGraphics::hitTestNativeControl( ControlType nType, ControlPart nPart, const Region& rControlRegion, const Point& aPos, SalControlHandle& rControlHandle, BOOL& rIsInside )
 {
+	// [ed] Scrollbars are a special case:  in order to get proper regions,
+	// a full description of the scrollbar is required including its values
+	// and visible width.  We'll rely on the VCL scrollbar, which queried
+	// these regions, to perform our hit testing.
+	
+	if( nType== CTRL_SCROLLBAR )
+		return FALSE;
+	
 	Region aNativeBoundingRegion;
 	Region aNativeContentRegion;
 	if ( getNativeControlRegion( nType, nPart, rControlRegion, 0, ImplControlValue(), rControlHandle, OUString(), aNativeBoundingRegion, aNativeContentRegion ) )
