@@ -687,6 +687,20 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                 close( fd );
             }
 
+#ifdef MACOSX
+            /*
+             * Handle case where we cannot open a file for writing because it
+             * is locked in the Finder's GetInfo panel
+             */
+            if ( errno == EPERM )
+            {
+                struct stat aFileStat;
+
+                if( stat( buffer, &aFileStat ) >= 0 && ( aFileStat.st_flags & ( UF_IMMUTABLE | SF_IMMUTABLE ) ) )
+                    errno = EACCES;
+            }
+#endif	/* MACOSX */
+
             PERROR( "osl_openFile", buffer );
             eRet = oslTranslateFileError(OSL_FET_ERROR, errno );
         }
