@@ -129,6 +129,17 @@ SAL_IMPLEMENT_MAIN()
 	}
 	char *pLibPath = getenv( "DYLD_LIBRARY_PATH" );
 	ByteString aFallbackLibPath( getenv( "DYLD_FALLBACK_LIBRARY_PATH" ) );
+	if ( !aFallbackLibPath.Len() )
+	{
+		// Explicitly set the default value specified in the dyld man pages
+		ByteString aHomePath( getenv( "HOME" ) );
+		if ( aHomePath.Len() )
+		{
+			aFallbackLibPath += aHomePath;
+			aFallbackLibPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
+		}
+		aFallbackLibPath += ByteString( "/usr/local/lib:/lib:/usr/lib" );
+	}
 	if ( pLibPath || aFallbackLibPath.CompareTo( aCmdPath, aCmdPath.Len() ) != COMPARE_EQUAL || ( aFallbackLibPath.Len() > aCmdPath.Len() && aFallbackLibPath.GetChar( aCmdPath.Len() ) != ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 ).GetChar( 0 ) ) )
 	{
 		ByteString aTmpPath( "DYLD_FALLBACK_LIBRARY_PATH=" );
