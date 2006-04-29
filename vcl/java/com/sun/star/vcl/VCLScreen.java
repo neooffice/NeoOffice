@@ -58,7 +58,7 @@ public final class VCLScreen {
 	/**
 	 * The minimum screen resolution.
 	 */
-	public final static int MIN_SCREEN_RESOLUTION = 72;
+	public final static int MIN_SCREEN_RESOLUTION = 96;
 
 	/**
 	 * The cached frame insets.
