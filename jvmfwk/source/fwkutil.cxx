@@ -120,9 +120,7 @@ bool isAccessibilitySupportDesired()
     RegCloseKey(hKey);
 
 #elif UNX
-#ifdef USE_JAVA
-    retVal = true;
-#else	// USE_JAVA
+#ifndef USE_JAVA
     char buf[16];
     // use 2 shells to suppress the eventual "gcontool-2 not found" message
     // of the shell trying to execute the command
@@ -136,7 +134,7 @@ bool isAccessibilitySupportDesired()
         }
         pclose( fp );
     }
-#endif	// USE_JAVA
+#endif	// !USE_JAVA
 #endif
     return retVal;
 }
