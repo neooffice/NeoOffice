@@ -365,10 +365,16 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 		nX = nMinX;
 	if ( nY < nMinY )
 		nY = nMinY;
-	if ( nX + nWidth > aWorkArea.nLeft + aWorkArea.GetWidth() )
-		nX = aWorkArea.nLeft + aWorkArea.GetWidth() - nWidth;
-	if ( nY + nHeight > aWorkArea.nTop + aWorkArea.GetHeight() )
-		nY = aWorkArea.nTop + aWorkArea.GetHeight() - nHeight;
+
+	// Fix bug 1420 by not restricting width or height to work area for current
+	// drag frame
+	if ( this != GetSalData()->mpLastDragFrame )
+	{
+		if ( nX + nWidth > aWorkArea.nLeft + aWorkArea.GetWidth() )
+			nX = aWorkArea.nLeft + aWorkArea.GetWidth() - nWidth;
+		if ( nY + nHeight > aWorkArea.nTop + aWorkArea.GetHeight() )
+			nY = aWorkArea.nTop + aWorkArea.GetHeight() - nHeight;
+	}
 
 	mpVCLFrame->setBounds( nX, nY, nWidth, nHeight );
 
@@ -387,7 +393,9 @@ void JavaSalFrame::GetWorkArea( Rectangle &rRect )
 	if ( rRect.IsEmpty() )
 		rRect = mpVCLFrame->getBounds();
 
-	NSScreen_getScreenBounds( &rRect.nLeft, &rRect.nTop, &rRect.nRight, &rRect.nBottom, GetSalData()->mpPresentationFrame ? TRUE : FALSE, mbUseMainScreenOnly );
+	SalData *pSalData = GetSalData();
+	BOOL bFullScreenMode = ( pSalData->mpPresentationFrame || pSalData->mpLastDragFrame );
+	NSScreen_getScreenBounds( &rRect.nLeft, &rRect.nTop, &rRect.nRight, &rRect.nBottom, bFullScreenMode, mbUseMainScreenOnly );
 }
 
 // -----------------------------------------------------------------------
