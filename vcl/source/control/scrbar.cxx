@@ -380,7 +380,7 @@ void ScrollBar::ImplUpdateRectsNative( BOOL bUpdate )
 	GetNativeControlRegion( CTRL_SCROLLBAR, ( ( bHorz ) ? PART_TRACK_HORZ_LEFT : PART_TRACK_VERT_UPPER ), aControlRegion, 0, aControlValue, rtl::OUString(), aBoundingRegion, aPage1Region );
 	maPage1Rect = aPage1Region.GetBoundRect();
 	
-	GetNativeControlRegion( CTRL_SCROLLBAR, ( ( bHorz ) ? PART_TRACK_HORZ_RIGHT : PART_TRACK_VERT_UPPER ), aControlRegion, 0, aControlValue, rtl::OUString(), aBoundingRegion, aPage2Region );
+	GetNativeControlRegion( CTRL_SCROLLBAR, ( ( bHorz ) ? PART_TRACK_HORZ_RIGHT : PART_TRACK_VERT_LOWER ), aControlRegion, 0, aControlValue, rtl::OUString(), aBoundingRegion, aPage2Region );
 	maPage2Rect = aPage2Region.GetBoundRect();
 	
 	GetNativeControlRegion( CTRL_SCROLLBAR, ( ( bHorz ) ? PART_THUMB_HORZ : PART_THUMB_VERT ), aControlRegion, 0, aControlValue, rtl::OUString(), aBoundingRegion, aThumbRegion );

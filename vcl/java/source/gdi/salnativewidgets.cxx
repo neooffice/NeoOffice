@@ -781,35 +781,37 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					
 					case PART_TRACK_HORZ_LEFT:
 					case PART_TRACK_VERT_UPPER:
-						// for disabled scrollbars, we still need our parts to
-						// cover the entire control even though they don't 
-						// exist.
-						if( ! ( nState & CTRL_STATE_ENABLED ) )
+						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageUpArea, &bounds );
+						if( ! bounds.size.width && ! bounds.size.height )
+						{
+							// disabled control or other invalid settings.  Set to the entire
+							// track.
+							
 							HIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
-						else
-							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageUpArea, &bounds );
+						}
 						break;
 					
 					case PART_TRACK_HORZ_RIGHT:
 					case PART_TRACK_VERT_LOWER:
-						// for disabled scrollbars, we still need our parts to
-						// cover the entire control even though they don't 
-						// exist.
-						if( ! ( nState & CTRL_STATE_ENABLED ) )
+						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageDownArea, &bounds );
+						if( ! bounds.size.width && ! bounds.size.height )
+						{
+							// disabled control or other invalid settings.  Set to the entire
+							// track.
+							
 							HIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
-						else
-							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageDownArea, &bounds );
-						break;
+						}break;
 					
 					case PART_THUMB_HORZ:
 					case PART_THUMB_VERT:
-						// for disabled scrollbars, we still need our parts to
-						// cover the entire control even though they don't 
-						// exist.
-						if( ! ( nState & CTRL_STATE_ENABLED ) )
+						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartIndicator, &bounds );
+						if( ! bounds.size.width && ! bounds.size.height )
+						{
+							// disabled control or other invalid settings.  Set to the entire
+							// track.
+							
 							HIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
-						else
-							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartIndicator, &bounds );
+						}
 						break;
 				}
 				
