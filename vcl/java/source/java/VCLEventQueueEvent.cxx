@@ -542,10 +542,9 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			SalMouseEvent *pMouseEvent = (SalMouseEvent *)pData;
 			if ( !bDeleteDataOnly && pFrame && pFrame->mbVisible )
 			{
-				USHORT nModifiers = getModifiers();
-				USHORT nButtons = nModifiers & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
 				if ( !pMouseEvent )
 				{
+					USHORT nModifiers = getModifiers();
 					pMouseEvent = new SalMouseEvent();
 					pMouseEvent->mnTime = getWhen();
 					pMouseEvent->mnX = getX();
@@ -554,9 +553,10 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					if ( nID == SALEVENT_MOUSELEAVE || nID == SALEVENT_MOUSEMOVE )
 						pMouseEvent->mnButton = 0;
 					else
-						pMouseEvent->mnButton = nButtons;
+						pMouseEvent->mnButton = nModifiers & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
 				}
 
+				USHORT nButtons = pMouseEvent->mnCode & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
 				if ( nButtons && nID == SALEVENT_MOUSEMOVE && !pSalData->mpLastDragFrame )
 					pSalData->mpLastDragFrame = pFrame;
 
@@ -601,7 +601,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				if ( Application::GetSettings().GetLayoutRTL() )
 					pMouseEvent->mnX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pMouseEvent->mnX - 1;
 
-				pSalData->maLastPointerState.mnState = nModifiers;
+				pSalData->maLastPointerState.mnState = pMouseEvent->mnCode;
 				pSalData->maLastPointerState.maPos = Point( aScreenPoint.X(), aScreenPoint.Y() );
 				pFrame->CallCallback( nID, pMouseEvent );
 				if ( nID == SALEVENT_MOUSEBUTTONUP )
