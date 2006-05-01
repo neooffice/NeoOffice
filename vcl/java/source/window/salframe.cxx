@@ -407,7 +407,7 @@ void JavaSalFrame::GetWorkArea( Rectangle &rRect )
 		rRect = mpVCLFrame->getBounds();
 
 	SalData *pSalData = GetSalData();
-	BOOL bFullScreenMode = ( pSalData->mpPresentationFrame || pSalData->mpLastDragFrame );
+	BOOL bFullScreenMode = ( pSalData->mpPresentationFrame || ( this == pSalData->mpLastDragFrame ) );
 	NSScreen_getScreenBounds( &rRect.nLeft, &rRect.nTop, &rRect.nRight, &rRect.nBottom, bFullScreenMode, mbUseMainScreenOnly );
 }
 
