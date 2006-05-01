@@ -302,8 +302,14 @@ sal_Bool RecoveryUI::impl_doEmergencySave()
     svxdr::IExtendedTabPage*   pPage1  = new svxdr::SaveDialog        (pWizard, pCore );
     pWizard->addTabPage(pPage1);
     
+#ifdef USE_JAVA
+    // do not invoke any GUI code or the app will deadlock
+    short nRet = sal_False;
+    pCore->doEmergencySave();
+#else	// USE_JAVA
     // start the wizard
     short nRet = pWizard->Execute();
+#endif	// USE_JAVA
     
     delete pPage1 ;
     delete pWizard;
