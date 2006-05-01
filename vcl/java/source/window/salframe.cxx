@@ -228,6 +228,19 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 			if ( (*it)->mbVisible )
 			{
 				(*it)->Show( FALSE );
+
+				// Fix bug 1310 by creating a new native window with the new
+				// parent
+				(*it)->ReleaseGraphics( (*it)->mpGraphics );
+				if ( (*it)->mpVCLFrame )
+				{
+					(*it)->mpVCLFrame->dispose();
+					delete (*it)->mpVCLFrame;
+				}
+				(*it)->mpVCLFrame = new com_sun_star_vcl_VCLFrame( (*it)->mnStyle, *it, this );
+				(*it)->maSysData.aWindow = 0;
+				(*it)->SetPosSize( (*it)->maGeometry.nX - (*it)->maGeometry.nLeftDecoration - maGeometry.nX, (*it)->maGeometry.nY - (*it)->maGeometry.nTopDecoration - maGeometry.nY, (*it)->maGeometry.nWidth, (*it)->maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
+
 				(*it)->Show( TRUE, FALSE );
 			}
 		}
@@ -761,18 +774,22 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 			mpParent->mpVCLFrame->removeChild( this );
 		}
 
+		JavaSalFrame *mpOldParent = mpParent;
 		mpParent = (JavaSalFrame *)pNewParent;
 
-		// Fix bug 1310 by creating a new native window with the new parent
-		ReleaseGraphics( mpGraphics );
-		if ( mpVCLFrame )
+		if ( ( mpOldParent && mpOldParent->mbVisible ) || ( mpParent && mpParent->mbVisible ) )
 		{
-			mpVCLFrame->dispose();
-			delete mpVCLFrame;
+			// Fix bug 1310 by creating a new native window with the new parent
+			ReleaseGraphics( mpGraphics );
+			if ( mpVCLFrame )
+			{
+				mpVCLFrame->dispose();
+				delete mpVCLFrame;
+			}
+			mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, mpParent );
+			maSysData.aWindow = 0;
+			SetPosSize( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration, maGeometry.nWidth, maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
 		}
-		mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, mpParent );
-		maSysData.aWindow = 0;
-		SetPosSize( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration, maGeometry.nWidth, maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
 
 		if ( mpParent )
 		{
