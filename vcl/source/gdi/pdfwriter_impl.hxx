@@ -118,130 +118,6 @@
 #define META_ENDCONTROLAPPEARANCE_PDF_ACTION	(10027)
 #define META_DIGITLANGUAGE_PDF_ACTION			(10028)
 
-class MetaTextPDFAction : public MetaTextAction
-{
-private:
-    bool				mbTextLines;
-
-public:
-    					MetaTextPDFAction( const Point& rPt, const XubString& rStr, USHORT nIndex, USHORT nLen, bool bTextLines ) : MetaTextAction( rPt, rStr, nIndex, nLen ), mbTextLines( bTextLines ) {}
-    virtual				~MetaTextPDFAction() {}
-
-    bool				IsTextLines() const { return mbTextLines; }
-};
-
-class MetaTextLinePDFAction : public MetaTextLineAction
-{
-private:
-    bool                mbUnderlineAbove;
-
-public:
-    					MetaTextLinePDFAction( const Point& rPos, long nWidth, FontStrikeout eStrikeout, FontUnderline eUnderline, bool bUnderlineAbove ) : MetaTextLineAction( rPos, nWidth, eStrikeout, eUnderline ), mbUnderlineAbove( bUnderlineAbove ) {}
-    virtual				~MetaTextLinePDFAction() {}
-
-    bool				IsUnderlineAbove() const { return mbUnderlineAbove; }
-};
-
-class MetaTextArrayPDFAction : public MetaTextArrayAction
-{
-private:
-    long*				mpDXAry;
-    bool				mbTextLines;
-
-public:
-    					MetaTextArrayPDFAction( const Point& rPt, const XubString& rStr, const long* pDXAry, USHORT nIndex, USHORT nLen, bool bTextLines ) : MetaTextArrayAction( rPt, rStr, pDXAry, nIndex, nLen ), mpDXAry( NULL ), mbTextLines( bTextLines )
-    					{
-    						if ( pDXAry )
-    						{
-    							size_t nSize = nLen * sizeof( long );
-    							mpDXAry = (long *)rtl_allocateMemory( nSize );
-    							memcpy( mpDXAry, pDXAry, nSize );
-    						}
-    					}
-    virtual				~MetaTextArrayPDFAction()
-    					{
-    						if ( mpDXAry )
-    							rtl_freeMemory( mpDXAry );
-    					}
-
-    long*				GetDXArray() const { return mpDXAry; }
-    bool				IsTextLines() const { return mbTextLines; }
-};
-
-class MetaStretchTextPDFAction : public MetaStretchTextAction
-{
-private:
-    bool				mbTextLines;
-
-public:
-						MetaStretchTextPDFAction( const Point& rPt, ULONG nWidth, const XubString& rStr, USHORT nIndex, USHORT nLen, bool bTextLines ) : MetaStretchTextAction( rPt, nWidth, rStr, nIndex, nLen ), mbTextLines( bTextLines ) {}
-    virtual				~MetaStretchTextPDFAction() {}
-
-    bool				IsTextLines() const { return mbTextLines; }
-};
-
-class MetaTextRectPDFAction : public MetaTextRectAction
-{
-private:
-    bool				mbTextLines;
-
-public:
-    					MetaTextRectPDFAction( const Rectangle& rRect, const XubString& rStr, USHORT nStyle, bool bTextLines ) : MetaTextRectAction( rRect, rStr, nStyle ), mbTextLines( bTextLines ) {}
-    virtual				~MetaTextRectPDFAction() {}
-
-    bool				IsTextLines() const { return mbTextLines; }
-};
-
-class MetaNewPagePDFAction : public MetaAction
-{
-private:
-    sal_Int32			mnPageWidth;
-    sal_Int32			mnPageHeight;
-    ::vcl::PDFWriter::Orientation	meOrientation;
-
-public:
-    					MetaNewPagePDFAction( sal_Int32 nPageWidth, sal_Int32 nPageHeight, ::vcl::PDFWriter::Orientation eOrientation ) : MetaAction( META_NEW_PAGE_PDF_ACTION ), mnPageWidth( nPageWidth ), mnPageHeight( nPageHeight ), meOrientation( eOrientation ) {}
-    virtual				~MetaNewPagePDFAction() {}
-
-    sal_Int32			GetPageWidth() const { return mnPageWidth; }
-    sal_Int32			GetPageHeight() const { return mnPageHeight; }
-    ::vcl::PDFWriter::Orientation	GetOrientation() const { return meOrientation; }
-};
-
-class MetaPixelPDFAction : public MetaAction
-{
-private:
-    const Polygon&		mrPoints;
-    const Color*		mpColors;
-
-public:
-    					MetaPixelPDFAction( const Polygon& rPoints, const Color* pColors ) : MetaAction( META_PIXEL_PDF_ACTION ), mrPoints( rPoints ), mpColors( pColors ) {}
-    virtual				~MetaPixelPDFAction() {}
-
-    const Polygon&		GetPoints() const { return mrPoints; }
-    const Color*		GetColors() const { return mpColors; }
-};
-
-class MetaJpgPDFAction : public MetaAction
-{
-private:
-    SvMemoryStream		maStream;
-    bool				mbTrueColor;
-    Size				maSize;
-    const Rectangle&	mrRect;
-    Bitmap				maMask;
-
-public:
-    					MetaJpgPDFAction( SvStream& rStream, bool bTrueColor, const Size& rSize, const Rectangle& rRect, const Bitmap& rMask ) : MetaAction( META_JPG_PDF_ACTION ), mbTrueColor( bTrueColor ), maSize( rSize ), mrRect( rRect ), maMask( rMask ) { rStream.Seek( 0 ); maStream << rStream; }
-    virtual				~MetaJpgPDFAction() {}
-
-    const SvStream&		GetStream() const { return maStream; }
-    bool				IsTrueColor() const { return mbTrueColor; }
-    const Size&			GetSize() const { return maSize; }
-    const Rectangle&	GetRect() const { return mrRect; }
-    const Bitmap&		GetMask() const { return maMask; }
-};
-
 class MetaAntiAliasPDFAction : public MetaAction
 {
 private:
@@ -252,329 +128,6 @@ public:
     virtual				~MetaAntiAliasPDFAction() {}
 
     sal_Int32			GetAntiAlias() const { return mnAntiAlias; }
-};
-
-class MetaPolyLinePDFAction : public MetaAction
-{
-private:
-    const Polygon&		mrPoly;
-    const ::vcl::PDFWriter::ExtLineInfo&	mrInfo;
-
-public:
-    					MetaPolyLinePDFAction( const Polygon& rPoly, const ::vcl::PDFWriter::ExtLineInfo& rInfo ) : MetaAction( META_POLYLINE_PDF_ACTION ), mrPoly( rPoly ), mrInfo( rInfo ) {}
-    virtual				~MetaPolyLinePDFAction() {}
-
-    const Polygon&		GetPolygon() const { return mrPoly; }
-    const ::vcl::PDFWriter::ExtLineInfo&	GetExtLineInfo() const { return mrInfo; }
-};
-
-class MetaCreateLinkPDFAction : public MetaAction
-{
-private:
-    const Rectangle&	mrRect;
-    sal_Int32			mnPage;
-
-public:
-    					MetaCreateLinkPDFAction( const Rectangle& rRect, sal_Int32 nPage ) : MetaAction( META_CREATELINK_PDF_ACTION ), mrRect( rRect ), mnPage( nPage ) {}
-    virtual				~MetaCreateLinkPDFAction() {}
-
-    const Rectangle&	GetRect() const { return mrRect; }
-    sal_Int32			GetPage() const { return mnPage; }
-};
-
-class MetaCreateDestPDFAction : public MetaAction
-{
-private:
-    const Rectangle&	mrRect;
-    sal_Int32			mnPage;
-    ::vcl::PDFWriter::DestAreaType	meType;
-
-public:
-    					MetaCreateDestPDFAction( const Rectangle& rRect, sal_Int32 nPage, ::vcl::PDFWriter::DestAreaType eType ) : MetaAction( META_CREATEDEST_PDF_ACTION ), mrRect( rRect ), mnPage( nPage ), meType( eType ) {}
-    virtual				~MetaCreateDestPDFAction() {}
-
-    const Rectangle&	GetRect() const { return mrRect; }
-    sal_Int32			GetPage() const { return mnPage; }
-    ::vcl::PDFWriter::DestAreaType	GetType() const { return meType; }
-};
-
-class MetaSetLinkDestPDFAction : public MetaAction
-{
-private:
-    sal_Int32			mnLink;
-    sal_Int32			mnDest;
-
-public:
-    					MetaSetLinkDestPDFAction( sal_Int32 nLink, sal_Int32 nDest ) : MetaAction( META_SETLINKDEST_PDF_ACTION ), mnLink( nLink ), mnDest( nDest ) {}
-    virtual				~MetaSetLinkDestPDFAction() {}
-
-    sal_Int32			GetLink() const { return mnLink; }
-    sal_Int32			GetDest() const { return mnDest; }
-};
-
-class MetaSetLinkUrlPDFAction : public MetaAction
-{
-private:
-    sal_Int32			mnLink;
-    const rtl::OUString&	mrURL;
-
-public:
-    					MetaSetLinkUrlPDFAction( sal_Int32 nLink, const rtl::OUString& rURL ) : MetaAction( META_SETLINKURL_PDF_ACTION ), mnLink( nLink ), mrURL( rURL ) {}
-    virtual				~MetaSetLinkUrlPDFAction() {}
-
-    sal_Int32			GetLink() const { return mnLink; }
-    const rtl::OUString&	GetURL() const { return mrURL; }
-};
-
-class MetaSetLinkPropertyIdPDFAction : public MetaAction
-{
-private:
-    sal_Int32			mnLink;
-    sal_Int32			mnProp;
-
-public:
-    					MetaSetLinkPropertyIdPDFAction( sal_Int32 nLink, sal_Int32 nProp ) : MetaAction( META_SETLINKPROPERTYID_PDF_ACTION ), mnLink( nLink ), mnProp( nProp ) {}
-    virtual				~MetaSetLinkPropertyIdPDFAction() {}
-
-    sal_Int32			GetLink() const { return mnLink; }
-    sal_Int32			GetProperty() const { return mnProp; }
-};
-
-class MetaCreateOutlineItemPDFAction : public MetaAction
-{
-private:
-    sal_Int32			mnParent;
-    const rtl::OUString&	mrText;
-    sal_Int32			mnDest;
-
-public:
-    					MetaCreateOutlineItemPDFAction( sal_Int32 nParent, const rtl::OUString& rText, sal_Int32 nDest ) : MetaAction( META_CREATEOUTLINEITEM_PDF_ACTION ), mnParent( nParent ), mrText( rText ), mnDest( nDest ) {}
-    virtual				~MetaCreateOutlineItemPDFAction() {}
-
-    sal_Int32			GetParent() const { return mnParent; }
-    const rtl::OUString&	GetText() const { return mrText; }
-    sal_Int32			GetDest() const { return mnDest; }
-};
-
-class MetaSetOutlineItemParentPDFAction : public MetaAction
-{
-private:
-    sal_Int32			mnItem;
-    sal_Int32			mnParent;
-
-public:
-    					MetaSetOutlineItemParentPDFAction( sal_Int32 nItem, sal_Int32 nParent ) : MetaAction( META_SETOUTLINEITEMPARENT_PDF_ACTION ), mnItem( nItem ), mnParent( nParent ) {}
-    virtual				~MetaSetOutlineItemParentPDFAction() {}
-
-    sal_Int32			GetItem() const { return mnItem; }
-    sal_Int32			GetParent() const { return mnParent; }
-};
-
-class MetaSetOutlineItemTextPDFAction : public MetaAction
-{
-private:
-    sal_Int32			mnItem;
-    const rtl::OUString&	mrText;
-
-public:
-    					MetaSetOutlineItemTextPDFAction( sal_Int32 nItem, const rtl::OUString& rText ) : MetaAction( META_SETOUTLINEITEMTEXT_PDF_ACTION ), mnItem( nItem ), mrText( rText ) {}
-    virtual				~MetaSetOutlineItemTextPDFAction() {}
-
-    sal_Int32			GetItem() const { return mnItem; }
-    const rtl::OUString&	GetText() const { return mrText; }
-};
-
-class MetaSetOutlineItemDestPDFAction : public MetaAction
-{
-private:
-    sal_Int32			mnItem;
-    sal_Int32			mnDest;
-
-public:
-    					MetaSetOutlineItemDestPDFAction( sal_Int32 nItem, sal_Int32 nDest ) : MetaAction( META_SETOUTLINEITEMDEST_PDF_ACTION ), mnItem( nItem ), mnDest( nDest ) {}
-    virtual				~MetaSetOutlineItemDestPDFAction() {}
-
-    sal_Int32			GetItem() const { return mnItem; }
-    sal_Int32			GetDest() const { return mnDest; }
-};
-
-class MetaCreateNotePDFAction : public MetaAction
-{
-private:
-    const Rectangle&	mrRect;
-    const ::vcl::PDFNote&	mrNote;
-    sal_Int32			mnPage;
-
-public:
-    					MetaCreateNotePDFAction( const Rectangle& rRect, const ::vcl::PDFNote& rNote, sal_Int32 nPage ) : MetaAction( META_CREATENOTE_PDF_ACTION ), mrRect( rRect ), mnPage( nPage ), mrNote( rNote ) {}
-    virtual				~MetaCreateNotePDFAction() {}
-
-    const Rectangle&	GetRect() const { return mrRect; }
-    sal_Int32			GetPage() const { return mnPage; }
-    const ::vcl::PDFNote&	GetNote() const { return mrNote; }
-};
-
-class MetaCreateControlPDFAction : public MetaAction
-{
-private:
-    const ::vcl::PDFWriter::AnyWidget&	mrControl;
-    sal_Int32			mnPage;
-
-public:
-						MetaCreateControlPDFAction( const ::vcl::PDFWriter::AnyWidget& rControl, sal_Int32 nPage ) : MetaAction( META_CREATECONTROL_PDF_ACTION ), mrControl( rControl ), mnPage( nPage ) {}
-    virtual				~MetaCreateControlPDFAction() {}
-
-    const ::vcl::PDFWriter::AnyWidget&	GetControl() const { return mrControl; }
-    sal_Int32			GetPage() const { return mnPage; }
-};
-
-class MetaBeginControlAppearancePDFAction : public MetaAction
-{
-private:
-    sal_Int32			mnControl;
-
-public:
-    					MetaBeginControlAppearancePDFAction( sal_Int32 nControl ) : MetaAction( META_BEGINCONTROLAPPEARANCE_PDF_ACTION ), mnControl( nControl ) {}
-    virtual				~MetaBeginControlAppearancePDFAction() {}
-
-    sal_Int32			GetControl() const { return mnControl; }
-};
-
-class MetaEndControlAppearancePDFAction : public MetaAction
-{
-private:
-    ::vcl::PDFWriter::WidgetState	meState;
-
-public:
-    					MetaEndControlAppearancePDFAction( ::vcl::PDFWriter::WidgetState eState ) : MetaAction( META_ENDCONTROLAPPEARANCE_PDF_ACTION ), meState( eState ) {}
-    virtual				~MetaEndControlAppearancePDFAction() {}
-
-    ::vcl::PDFWriter::WidgetState	GetState() const { return meState; }
-};
-
-class MetaBeginStructureElementPDFAction : public MetaAction
-{
-private:
-    ::vcl::PDFWriter::StructElement meType;
-
-public:
-    					MetaBeginStructureElementPDFAction( ::vcl::PDFWriter::StructElement eType ) : MetaAction( META_BEGINSTRUCTUREELEMENT_PDF_ACTION ), meType( eType ) {}
-    virtual				~MetaBeginStructureElementPDFAction() {}
-
-    ::vcl::PDFWriter::StructElement	GetType() const { return meType; }
-};
-
-class MetaEndStructureElementPDFAction : public MetaAction
-{
-public:
-    					MetaEndStructureElementPDFAction() : MetaAction( META_ENDSTRUCTUREELEMENT_PDF_ACTION ) {}
-    virtual				~MetaEndStructureElementPDFAction() {}
-};
-
-class MetaSetCurrentStructureElementPDFAction : public MetaAction
-{
-private:
-    sal_Int32			mnElement;
-
-public:
-    					MetaSetCurrentStructureElementPDFAction( sal_Int32 nElement ) : MetaAction( META_SETCURRENTSTRUCTUREELEMENT_PDF_ACTION ), mnElement( nElement ) {}
-    virtual				~MetaSetCurrentStructureElementPDFAction() {}
-
-    sal_Int32			GetElement() const { return mnElement; }
-};
-
-class MetaSetStructureAttributePDFAction : public MetaAction
-{
-private:
-    enum ::vcl::PDFWriter::StructAttribute	meAttr;
-    enum ::vcl::PDFWriter::StructAttributeValue	meValue;
-
-public:
-    					MetaSetStructureAttributePDFAction( enum ::vcl::PDFWriter::StructAttribute eAttr, enum ::vcl::PDFWriter::StructAttributeValue eValue ) : MetaAction( META_SETSTRUCTUREATTRIBUTE_PDF_ACTION ), meAttr( eAttr ), meValue( eValue ) {}
-    virtual				~MetaSetStructureAttributePDFAction() {}
-
-    enum ::vcl::PDFWriter::StructAttribute	GetAttribute() const { return meAttr; }
-    enum ::vcl::PDFWriter::StructAttributeValue	GetValue() const { return meValue; }
-};
-
-class MetaSetStructureAttributeNumericalPDFAction : public MetaAction
-{
-private:
-    enum ::vcl::PDFWriter::StructAttribute	meAttr;
-    sal_Int32			mnValue;
-
-public:
-    					MetaSetStructureAttributeNumericalPDFAction( enum ::vcl::PDFWriter::StructAttribute eAttr, sal_Int32 nValue ) : MetaAction( META_SETSTRUCTUREATTRIBUTENUMERICAL_PDF_ACTION ), meAttr( eAttr ), mnValue( nValue ) {}
-    virtual				~MetaSetStructureAttributeNumericalPDFAction() {}
-
-    enum ::vcl::PDFWriter::StructAttribute	GetAttribute() const { return meAttr; }
-    sal_Int32			GetValue() const { return mnValue; }
-};
-
-class MetaSetStructureBoundingBoxPDFAction : public MetaAction
-{
-private:
-    const Rectangle&	mrRect;
-
-public:
-    					MetaSetStructureBoundingBoxPDFAction( const Rectangle& rRect ) : MetaAction( META_SETSTRUCTUREBOUNDINGBOX_PDF_ACTION ), mrRect( rRect ) {}
-    virtual				~MetaSetStructureBoundingBoxPDFAction() {}
-
-    const Rectangle&	GetRect() const { return mrRect; }
-};
-
-class MetaSetActualTextPDFAction : public MetaAction
-{
-private:
-    const String&		mrText;
-
-public:
-    					MetaSetActualTextPDFAction( const String& rText ) : MetaAction( META_SETACTUALTEXT_PDF_ACTION ), mrText( rText ) {}
-    virtual				~MetaSetActualTextPDFAction() {}
-
-    const String&		GetText() const { return mrText; }
-};
-
-class MetaSetAlternateTextPDFAction : public MetaAction
-{
-private:
-    const String&		mrText;
-
-public:
-    					MetaSetAlternateTextPDFAction( const String& rText ) : MetaAction( META_SETALTERNATETEXT_PDF_ACTION ), mrText( rText ) {}
-    virtual				~MetaSetAlternateTextPDFAction() {}
-
-    const String&		GetText() const { return mrText; }
-};
-
-class MetaSetAutoAdvanceTimePDFAction : public MetaAction
-{
-private:
-    sal_uInt32			mnSeconds;
-    sal_Int32			mnPage;
-
-public:
-    					MetaSetAutoAdvanceTimePDFAction( sal_uInt32 nSeconds, sal_Int32 nPage ) : MetaAction( META_SETAUTOADVANCETIME_PDF_ACTION ), mnSeconds( nSeconds ), mnPage( nPage ) {}
-    virtual				~MetaSetAutoAdvanceTimePDFAction() {}
-
-    sal_uInt32			GetSeconds() const { return mnSeconds; }
-    sal_Int32			GetPage() const { return mnPage; }
-};
-
-class MetaSetPageTransitionPDFAction : public MetaAction
-{
-private:
-	::vcl::PDFWriter::PageTransition	meType;
-    sal_uInt32			mnMilliSeconds;
-    sal_Int32			mnPage;
-
-public:
-    					MetaSetPageTransitionPDFAction( ::vcl::PDFWriter::PageTransition eType, sal_uInt32 nMilliSeconds, sal_Int32 nPage ) : MetaAction( META_SETPAGETRANSITION_PDF_ACTION ), meType( eType ), mnMilliSeconds( nMilliSeconds ), mnPage( nPage ) {}
-    virtual				~MetaSetPageTransitionPDFAction() {}
-
-    ::vcl::PDFWriter::PageTransition	GetType() const { return meType; }
-    sal_uInt32			GetMilliSeconds() const { return mnMilliSeconds; }
-    sal_Int32			GetPage() const { return mnPage; }
 };
 
 class MetaDigitLanguagePDFAction : public MetaAction
@@ -1626,6 +1179,457 @@ public:
 #endif
     }
 };
+
+#if defined USE_JAVA && defined MACOSX
+
+class MetaTextPDFAction : public MetaTextAction
+{
+private:
+    bool				mbTextLines;
+
+public:
+    					MetaTextPDFAction( const Point& rPt, const XubString& rStr, USHORT nIndex, USHORT nLen, bool bTextLines ) : MetaTextAction( rPt, rStr, nIndex, nLen ), mbTextLines( bTextLines ) {}
+    virtual				~MetaTextPDFAction() {}
+
+    bool				IsTextLines() const { return mbTextLines; }
+};
+
+class MetaTextLinePDFAction : public MetaTextLineAction
+{
+private:
+    bool                mbUnderlineAbove;
+
+public:
+    					MetaTextLinePDFAction( const Point& rPos, long nWidth, FontStrikeout eStrikeout, FontUnderline eUnderline, bool bUnderlineAbove ) : MetaTextLineAction( rPos, nWidth, eStrikeout, eUnderline ), mbUnderlineAbove( bUnderlineAbove ) {}
+    virtual				~MetaTextLinePDFAction() {}
+
+    bool				IsUnderlineAbove() const { return mbUnderlineAbove; }
+};
+
+class MetaTextArrayPDFAction : public MetaTextArrayAction
+{
+private:
+    long*				mpDXAry;
+    bool				mbTextLines;
+
+public:
+    					MetaTextArrayPDFAction( const Point& rPt, const XubString& rStr, const long* pDXAry, USHORT nIndex, USHORT nLen, bool bTextLines ) : MetaTextArrayAction( rPt, rStr, pDXAry, nIndex, nLen ), mpDXAry( NULL ), mbTextLines( bTextLines )
+    					{
+    						if ( pDXAry )
+    						{
+    							size_t nSize = nLen * sizeof( long );
+    							mpDXAry = (long *)rtl_allocateMemory( nSize );
+    							memcpy( mpDXAry, pDXAry, nSize );
+    						}
+    					}
+    virtual				~MetaTextArrayPDFAction()
+    					{
+    						if ( mpDXAry )
+    							rtl_freeMemory( mpDXAry );
+    					}
+
+    long*				GetDXArray() const { return mpDXAry; }
+    bool				IsTextLines() const { return mbTextLines; }
+};
+
+class MetaStretchTextPDFAction : public MetaStretchTextAction
+{
+private:
+    bool				mbTextLines;
+
+public:
+						MetaStretchTextPDFAction( const Point& rPt, ULONG nWidth, const XubString& rStr, USHORT nIndex, USHORT nLen, bool bTextLines ) : MetaStretchTextAction( rPt, nWidth, rStr, nIndex, nLen ), mbTextLines( bTextLines ) {}
+    virtual				~MetaStretchTextPDFAction() {}
+
+    bool				IsTextLines() const { return mbTextLines; }
+};
+
+class MetaTextRectPDFAction : public MetaTextRectAction
+{
+private:
+    bool				mbTextLines;
+
+public:
+    					MetaTextRectPDFAction( const Rectangle& rRect, const XubString& rStr, USHORT nStyle, bool bTextLines ) : MetaTextRectAction( rRect, rStr, nStyle ), mbTextLines( bTextLines ) {}
+    virtual				~MetaTextRectPDFAction() {}
+
+    bool				IsTextLines() const { return mbTextLines; }
+};
+
+class MetaNewPagePDFAction : public MetaAction
+{
+private:
+    sal_Int32			mnPageWidth;
+    sal_Int32			mnPageHeight;
+    ::vcl::PDFWriter::Orientation	meOrientation;
+
+public:
+    					MetaNewPagePDFAction( sal_Int32 nPageWidth, sal_Int32 nPageHeight, ::vcl::PDFWriter::Orientation eOrientation ) : MetaAction( META_NEW_PAGE_PDF_ACTION ), mnPageWidth( nPageWidth ), mnPageHeight( nPageHeight ), meOrientation( eOrientation ) {}
+    virtual				~MetaNewPagePDFAction() {}
+
+    sal_Int32			GetPageWidth() const { return mnPageWidth; }
+    sal_Int32			GetPageHeight() const { return mnPageHeight; }
+    ::vcl::PDFWriter::Orientation	GetOrientation() const { return meOrientation; }
+};
+
+class MetaPixelPDFAction : public MetaAction
+{
+private:
+    Polygon				maPoints;
+    Color*				mpColors;
+
+public:
+    					MetaPixelPDFAction( const Polygon& rPoints, const Color* pColors ) : MetaAction( META_PIXEL_PDF_ACTION ), maPoints( rPoints ), mpColors( NULL ) { int nPoints = rPoints.GetSize(); if ( nPoints ) { mpColors = new Color[ nPoints ]; for ( int i = 0; i < nPoints; i++ ) mpColors[ i ] = pColors[ i ]; } }
+    virtual				~MetaPixelPDFAction() { if ( mpColors ) delete mpColors; }
+
+    const Polygon&		GetPoints() const { return maPoints; }
+    const Color*		GetColors() const { return mpColors; }
+};
+
+class MetaJpgPDFAction : public MetaAction
+{
+private:
+    SvMemoryStream		maStream;
+    bool				mbTrueColor;
+    Size				maSize;
+    Rectangle			maRect;
+    Bitmap				maMask;
+
+public:
+    					MetaJpgPDFAction( SvStream& rStream, bool bTrueColor, const Size& rSize, const Rectangle& rRect, const Bitmap& rMask ) : MetaAction( META_JPG_PDF_ACTION ), mbTrueColor( bTrueColor ), maSize( rSize ), maRect( rRect ), maMask( rMask ) { rStream.Seek( 0 ); maStream << rStream; }
+    virtual				~MetaJpgPDFAction() {}
+
+    const SvStream&		GetStream() const { return maStream; }
+    bool				IsTrueColor() const { return mbTrueColor; }
+    const Size&			GetSize() const { return maSize; }
+    const Rectangle&	GetRect() const { return maRect; }
+    const Bitmap&		GetMask() const { return maMask; }
+};
+
+class MetaPolyLinePDFAction : public MetaAction
+{
+private:
+    Polygon				maPoly;
+    ::vcl::PDFWriter::ExtLineInfo	maInfo;
+
+public:
+    					MetaPolyLinePDFAction( const Polygon& rPoly, const ::vcl::PDFWriter::ExtLineInfo& rInfo ) : MetaAction( META_POLYLINE_PDF_ACTION ), maPoly( rPoly ), maInfo( rInfo ) {}
+    virtual				~MetaPolyLinePDFAction() {}
+
+    const Polygon&		GetPolygon() const { return maPoly; }
+    const ::vcl::PDFWriter::ExtLineInfo&	GetExtLineInfo() const { return maInfo; }
+};
+
+class MetaCreateLinkPDFAction : public MetaAction
+{
+private:
+    Rectangle			maRect;
+    sal_Int32			mnPage;
+
+public:
+    					MetaCreateLinkPDFAction( const Rectangle& rRect, sal_Int32 nPage ) : MetaAction( META_CREATELINK_PDF_ACTION ), maRect( rRect ), mnPage( nPage ) {}
+    virtual				~MetaCreateLinkPDFAction() {}
+
+    const Rectangle&	GetRect() const { return maRect; }
+    sal_Int32			GetPage() const { return mnPage; }
+};
+
+class MetaCreateDestPDFAction : public MetaAction
+{
+private:
+    Rectangle			maRect;
+    sal_Int32			mnPage;
+    ::vcl::PDFWriter::DestAreaType	meType;
+
+public:
+    					MetaCreateDestPDFAction( const Rectangle& rRect, sal_Int32 nPage, ::vcl::PDFWriter::DestAreaType eType ) : MetaAction( META_CREATEDEST_PDF_ACTION ), maRect( rRect ), mnPage( nPage ), meType( eType ) {}
+    virtual				~MetaCreateDestPDFAction() {}
+
+    const Rectangle&	GetRect() const { return maRect; }
+    sal_Int32			GetPage() const { return mnPage; }
+    ::vcl::PDFWriter::DestAreaType	GetType() const { return meType; }
+};
+
+class MetaSetLinkDestPDFAction : public MetaAction
+{
+private:
+    sal_Int32			mnLink;
+    sal_Int32			mnDest;
+
+public:
+    					MetaSetLinkDestPDFAction( sal_Int32 nLink, sal_Int32 nDest ) : MetaAction( META_SETLINKDEST_PDF_ACTION ), mnLink( nLink ), mnDest( nDest ) {}
+    virtual				~MetaSetLinkDestPDFAction() {}
+
+    sal_Int32			GetLink() const { return mnLink; }
+    sal_Int32			GetDest() const { return mnDest; }
+};
+
+class MetaSetLinkUrlPDFAction : public MetaAction
+{
+private:
+    sal_Int32			mnLink;
+    rtl::OUString		maURL;
+
+public:
+    					MetaSetLinkUrlPDFAction( sal_Int32 nLink, const rtl::OUString& rURL ) : MetaAction( META_SETLINKURL_PDF_ACTION ), mnLink( nLink ), maURL( rURL ) {}
+    virtual				~MetaSetLinkUrlPDFAction() {}
+
+    sal_Int32			GetLink() const { return mnLink; }
+    const rtl::OUString&	GetURL() const { return maURL; }
+};
+
+class MetaSetLinkPropertyIdPDFAction : public MetaAction
+{
+private:
+    sal_Int32			mnLink;
+    sal_Int32			mnProp;
+
+public:
+    					MetaSetLinkPropertyIdPDFAction( sal_Int32 nLink, sal_Int32 nProp ) : MetaAction( META_SETLINKPROPERTYID_PDF_ACTION ), mnLink( nLink ), mnProp( nProp ) {}
+    virtual				~MetaSetLinkPropertyIdPDFAction() {}
+
+    sal_Int32			GetLink() const { return mnLink; }
+    sal_Int32			GetProperty() const { return mnProp; }
+};
+
+class MetaCreateOutlineItemPDFAction : public MetaAction
+{
+private:
+    sal_Int32			mnParent;
+    rtl::OUString		maText;
+    sal_Int32			mnDest;
+
+public:
+    					MetaCreateOutlineItemPDFAction( sal_Int32 nParent, const rtl::OUString& rText, sal_Int32 nDest ) : MetaAction( META_CREATEOUTLINEITEM_PDF_ACTION ), mnParent( nParent ), maText( rText ), mnDest( nDest ) {}
+    virtual				~MetaCreateOutlineItemPDFAction() {}
+
+    sal_Int32			GetParent() const { return mnParent; }
+    const rtl::OUString&	GetText() const { return maText; }
+    sal_Int32			GetDest() const { return mnDest; }
+};
+
+class MetaSetOutlineItemParentPDFAction : public MetaAction
+{
+private:
+    sal_Int32			mnItem;
+    sal_Int32			mnParent;
+
+public:
+    					MetaSetOutlineItemParentPDFAction( sal_Int32 nItem, sal_Int32 nParent ) : MetaAction( META_SETOUTLINEITEMPARENT_PDF_ACTION ), mnItem( nItem ), mnParent( nParent ) {}
+    virtual				~MetaSetOutlineItemParentPDFAction() {}
+
+    sal_Int32			GetItem() const { return mnItem; }
+    sal_Int32			GetParent() const { return mnParent; }
+};
+
+class MetaSetOutlineItemTextPDFAction : public MetaAction
+{
+private:
+    sal_Int32			mnItem;
+    rtl::OUString		maText;
+
+public:
+    					MetaSetOutlineItemTextPDFAction( sal_Int32 nItem, const rtl::OUString& rText ) : MetaAction( META_SETOUTLINEITEMTEXT_PDF_ACTION ), mnItem( nItem ), maText( rText ) {}
+    virtual				~MetaSetOutlineItemTextPDFAction() {}
+
+    sal_Int32			GetItem() const { return mnItem; }
+    const rtl::OUString&	GetText() const { return maText; }
+};
+
+class MetaSetOutlineItemDestPDFAction : public MetaAction
+{
+private:
+    sal_Int32			mnItem;
+    sal_Int32			mnDest;
+
+public:
+    					MetaSetOutlineItemDestPDFAction( sal_Int32 nItem, sal_Int32 nDest ) : MetaAction( META_SETOUTLINEITEMDEST_PDF_ACTION ), mnItem( nItem ), mnDest( nDest ) {}
+    virtual				~MetaSetOutlineItemDestPDFAction() {}
+
+    sal_Int32			GetItem() const { return mnItem; }
+    sal_Int32			GetDest() const { return mnDest; }
+};
+
+class MetaCreateNotePDFAction : public MetaAction
+{
+private:
+    Rectangle			maRect;
+    ::vcl::PDFNote		maNote;
+    sal_Int32			mnPage;
+
+public:
+    					MetaCreateNotePDFAction( const Rectangle& rRect, const ::vcl::PDFNote& rNote, sal_Int32 nPage ) : MetaAction( META_CREATENOTE_PDF_ACTION ), maRect( rRect ), mnPage( nPage ), maNote( rNote ) {}
+    virtual				~MetaCreateNotePDFAction() {}
+
+    const Rectangle&	GetRect() const { return maRect; }
+    sal_Int32			GetPage() const { return mnPage; }
+    const ::vcl::PDFNote&	GetNote() const { return maNote; }
+};
+
+class MetaCreateControlPDFAction : public MetaAction
+{
+private:
+    ::vcl::PDFWriter::AnyWidget*	mpControl;
+    sal_Int32			mnPage;
+
+public:
+						MetaCreateControlPDFAction( const ::vcl::PDFWriter::AnyWidget& rControl, sal_Int32 nPage ) : MetaAction( META_CREATECONTROL_PDF_ACTION ), mnPage( nPage ) { mpControl = rControl.Clone(); }
+    virtual				~MetaCreateControlPDFAction() { if ( mpControl ) delete mpControl; }
+
+    const ::vcl::PDFWriter::AnyWidget&	GetControl() const { return *mpControl; }
+    sal_Int32			GetPage() const { return mnPage; }
+};
+
+class MetaBeginControlAppearancePDFAction : public MetaAction
+{
+private:
+    sal_Int32			mnControl;
+
+public:
+    					MetaBeginControlAppearancePDFAction( sal_Int32 nControl ) : MetaAction( META_BEGINCONTROLAPPEARANCE_PDF_ACTION ), mnControl( nControl ) {}
+    virtual				~MetaBeginControlAppearancePDFAction() {}
+
+    sal_Int32			GetControl() const { return mnControl; }
+};
+
+class MetaEndControlAppearancePDFAction : public MetaAction
+{
+private:
+    ::vcl::PDFWriter::WidgetState	meState;
+
+public:
+    					MetaEndControlAppearancePDFAction( ::vcl::PDFWriter::WidgetState eState ) : MetaAction( META_ENDCONTROLAPPEARANCE_PDF_ACTION ), meState( eState ) {}
+    virtual				~MetaEndControlAppearancePDFAction() {}
+
+    ::vcl::PDFWriter::WidgetState	GetState() const { return meState; }
+};
+
+class MetaBeginStructureElementPDFAction : public MetaAction
+{
+private:
+    ::vcl::PDFWriter::StructElement meType;
+
+public:
+    					MetaBeginStructureElementPDFAction( ::vcl::PDFWriter::StructElement eType ) : MetaAction( META_BEGINSTRUCTUREELEMENT_PDF_ACTION ), meType( eType ) {}
+    virtual				~MetaBeginStructureElementPDFAction() {}
+
+    ::vcl::PDFWriter::StructElement	GetType() const { return meType; }
+};
+
+class MetaEndStructureElementPDFAction : public MetaAction
+{
+public:
+    					MetaEndStructureElementPDFAction() : MetaAction( META_ENDSTRUCTUREELEMENT_PDF_ACTION ) {}
+    virtual				~MetaEndStructureElementPDFAction() {}
+};
+
+class MetaSetCurrentStructureElementPDFAction : public MetaAction
+{
+private:
+    sal_Int32			mnElement;
+
+public:
+    					MetaSetCurrentStructureElementPDFAction( sal_Int32 nElement ) : MetaAction( META_SETCURRENTSTRUCTUREELEMENT_PDF_ACTION ), mnElement( nElement ) {}
+    virtual				~MetaSetCurrentStructureElementPDFAction() {}
+
+    sal_Int32			GetElement() const { return mnElement; }
+};
+
+class MetaSetStructureAttributePDFAction : public MetaAction
+{
+private:
+    enum ::vcl::PDFWriter::StructAttribute	meAttr;
+    enum ::vcl::PDFWriter::StructAttributeValue	meValue;
+
+public:
+    					MetaSetStructureAttributePDFAction( enum ::vcl::PDFWriter::StructAttribute eAttr, enum ::vcl::PDFWriter::StructAttributeValue eValue ) : MetaAction( META_SETSTRUCTUREATTRIBUTE_PDF_ACTION ), meAttr( eAttr ), meValue( eValue ) {}
+    virtual				~MetaSetStructureAttributePDFAction() {}
+
+    enum ::vcl::PDFWriter::StructAttribute	GetAttribute() const { return meAttr; }
+    enum ::vcl::PDFWriter::StructAttributeValue	GetValue() const { return meValue; }
+};
+
+class MetaSetStructureAttributeNumericalPDFAction : public MetaAction
+{
+private:
+    enum ::vcl::PDFWriter::StructAttribute	meAttr;
+    sal_Int32			mnValue;
+
+public:
+    					MetaSetStructureAttributeNumericalPDFAction( enum ::vcl::PDFWriter::StructAttribute eAttr, sal_Int32 nValue ) : MetaAction( META_SETSTRUCTUREATTRIBUTENUMERICAL_PDF_ACTION ), meAttr( eAttr ), mnValue( nValue ) {}
+    virtual				~MetaSetStructureAttributeNumericalPDFAction() {}
+
+    enum ::vcl::PDFWriter::StructAttribute	GetAttribute() const { return meAttr; }
+    sal_Int32			GetValue() const { return mnValue; }
+};
+
+class MetaSetStructureBoundingBoxPDFAction : public MetaAction
+{
+private:
+    Rectangle			maRect;
+
+public:
+    					MetaSetStructureBoundingBoxPDFAction( const Rectangle& rRect ) : MetaAction( META_SETSTRUCTUREBOUNDINGBOX_PDF_ACTION ), maRect( rRect ) {}
+    virtual				~MetaSetStructureBoundingBoxPDFAction() {}
+
+    const Rectangle&	GetRect() const { return maRect; }
+};
+
+class MetaSetActualTextPDFAction : public MetaAction
+{
+private:
+    String				maText;
+
+public:
+    					MetaSetActualTextPDFAction( const String& rText ) : MetaAction( META_SETACTUALTEXT_PDF_ACTION ), maText( rText ) {}
+    virtual				~MetaSetActualTextPDFAction() {}
+
+    const String&		GetText() const { return maText; }
+};
+
+class MetaSetAlternateTextPDFAction : public MetaAction
+{
+private:
+    String				maText;
+
+public:
+    					MetaSetAlternateTextPDFAction( const String& rText ) : MetaAction( META_SETALTERNATETEXT_PDF_ACTION ), maText( rText ) {}
+    virtual				~MetaSetAlternateTextPDFAction() {}
+
+    const String&		GetText() const { return maText; }
+};
+
+class MetaSetAutoAdvanceTimePDFAction : public MetaAction
+{
+private:
+    sal_uInt32			mnSeconds;
+    sal_Int32			mnPage;
+
+public:
+    					MetaSetAutoAdvanceTimePDFAction( sal_uInt32 nSeconds, sal_Int32 nPage ) : MetaAction( META_SETAUTOADVANCETIME_PDF_ACTION ), mnSeconds( nSeconds ), mnPage( nPage ) {}
+    virtual				~MetaSetAutoAdvanceTimePDFAction() {}
+
+    sal_uInt32			GetSeconds() const { return mnSeconds; }
+    sal_Int32			GetPage() const { return mnPage; }
+};
+
+class MetaSetPageTransitionPDFAction : public MetaAction
+{
+private:
+	::vcl::PDFWriter::PageTransition	meType;
+    sal_uInt32			mnMilliSeconds;
+    sal_Int32			mnPage;
+
+public:
+    					MetaSetPageTransitionPDFAction( ::vcl::PDFWriter::PageTransition eType, sal_uInt32 nMilliSeconds, sal_Int32 nPage ) : MetaAction( META_SETPAGETRANSITION_PDF_ACTION ), meType( eType ), mnMilliSeconds( nMilliSeconds ), mnPage( nPage ) {}
+    virtual				~MetaSetPageTransitionPDFAction() {}
+
+    ::vcl::PDFWriter::PageTransition	GetType() const { return meType; }
+    sal_uInt32			GetMilliSeconds() const { return mnMilliSeconds; }
+    sal_Int32			GetPage() const { return mnPage; }
+};
+
+#endif	// USE_JAVA && MACOSX
 
 }
 
