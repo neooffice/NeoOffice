@@ -59,6 +59,9 @@
 #ifndef _SV_SVAPP_HXX
 #include <svapp.hxx>
 #endif
+#ifndef _SV_FLOATWIN_HXX
+#include <floatwin.hxx>
+#endif
 #ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
 #endif
@@ -603,29 +606,26 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 
 				pSalData->maLastPointerState.mnState = pMouseEvent->mnCode;
 				pSalData->maLastPointerState.maPos = Point( aScreenPoint.X(), aScreenPoint.Y() );
-				pFrame->CallCallback( nID, pMouseEvent );
-				if ( nID == SALEVENT_MOUSEBUTTONUP )
-				{
-					// For some reason, after dragging floating palette frames,
-					// the OOo code needs a mouse move event to finish up its
-					// work so we dispatch some mouse move events here
-					SalMouseEvent *pMouseMoveEvent = new SalMouseEvent();
-					pMouseMoveEvent->mnTime = pMouseEvent->mnTime;
-					pMouseMoveEvent->mnX = pMouseEvent->mnX + 1;
-					pMouseMoveEvent->mnY = pMouseEvent->mnY + 1;
-					pMouseMoveEvent->mnCode = pMouseEvent->mnCode;
-					pMouseMoveEvent->mnButton = 0;
-					com_sun_star_vcl_VCLEvent aMoveEvent( SALEVENT_MOUSEMOVE, pFrame, (void *)pMouseMoveEvent );
-					aMoveEvent.dispatch();
 
-					SalMouseEvent *pMouseMoveBackEvent = new SalMouseEvent();
-					pMouseMoveBackEvent->mnTime = pMouseEvent->mnTime;
-					pMouseMoveBackEvent->mnX = pMouseEvent->mnX;
-					pMouseMoveBackEvent->mnY = pMouseEvent->mnY;
-					pMouseMoveBackEvent->mnCode = pMouseEvent->mnCode;
-					pMouseMoveBackEvent->mnButton = 0;
-					com_sun_star_vcl_VCLEvent aMoveBackEvent( SALEVENT_MOUSEMOVE, pFrame, (void *)pMouseMoveBackEvent );
-					aMoveBackEvent.dispatch();
+				pFrame->CallCallback( nID, pMouseEvent );
+
+				// Check if we are not clicking on a floating window
+    			if ( nID == SALEVENT_MOUSEBUTTONDOWN  || nID == SALEVENT_MOUSEBUTTONUP )
+				{
+					for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+					{
+						if ( pFrame == *it && pFrame->mbVisible )
+						{
+							ImplSVData* pSVData = ImplGetSVData();
+							if ( !pFrame->IsFloatingFrame() && pSVData->maWinData.mpFirstFloat && ((JavaSalFrame *)pSVData->maWinData.mpFirstFloat->ImplGetFrame())->mpParent != pFrame )
+							{
+								static const char* pEnv = getenv( "SAL_FLOATWIN_NOAPPFOCUSCLOSE" );
+								if ( !(pSVData->maWinData.mpFirstFloat->GetPopupModeFlags() & FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE) && !(pEnv && *pEnv) )
+									pSVData->maWinData.mpFirstFloat->EndPopupMode( FLOATWIN_POPUPMODEEND_CANCEL | FLOATWIN_POPUPMODEEND_CLOSEALL );
+							}
+							break;
+						}
+					}
 				}
 			}
 			if ( pMouseEvent )
