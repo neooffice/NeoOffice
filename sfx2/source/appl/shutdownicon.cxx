@@ -651,8 +651,8 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 				SvtModuleOptions aModuleOptions;
 
 				int nItems = 0;
-				MenuCommand aIDs[ 7 ];
-				CFStringRef aStrings[ 7 ];
+				MenuCommand aIDs[ 8 ];
+				CFStringRef aStrings[ 8 ];
 				OUString aDesc;
 				if ( aModuleOptions.IsWriter() )
 				{
@@ -686,27 +686,9 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 				}
 				if ( aModuleOptions.IsDataBase() )
 				{
-					SvtDynamicMenuOptions aOpt;
-					Sequence < Sequence < PropertyValue > > aMenu = aOpt.GetMenu( E_NEWMENU );
-					for ( sal_Int32 n=0; n<aMenu.getLength(); n++ )
-					{
-					    ::rtl::OUString aURL;
-					    ::rtl::OUString aDescription;
-					    Sequence < PropertyValue >& aEntry = aMenu[n];
-					    for ( sal_Int32 m=0; m<aEntry.getLength(); m++ )
-					    {
-						if ( aEntry[m].Name.equalsAsciiL( "URL", 3 ) )
-						    aEntry[m].Value >>= aURL;
-						if ( aEntry[m].Name.equalsAsciiL( "Title", 5 ) )
-						    aEntry[m].Value >>= aDescription;
-					    }
-
-					    if ( aURL.equalsAscii( BASE_URL ) && aDescription.getLength() )
-					    {
-						aIDs[ nItems ] = BASE_COMMAND_ID;
-						aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDescription.getStr(), aDescription.getLength() );
-					    }
-					}
+					aIDs[ nItems ] = BASE_COMMAND_ID;
+					aDesc = GetUrlDescription( OUString::createFromAscii( BASE_URL ) );
+					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
 				}
 				aIDs[ nItems ] = FROMTEMPLATE_COMMAND_ID;
 				aDesc = GetResString( STR_QUICKSTART_FROMTEMPLATE );
