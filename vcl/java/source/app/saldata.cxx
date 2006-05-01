@@ -65,6 +65,7 @@ SalData::SalData()
 	mbInNativeModalSheet = false;
 	mpNativeModalSheetFrame = NULL;
 	mpLastDragFrame = NULL;
+	mbInSignalHandler = false;
 
 	// Set condition so that they don't block
 	maNativeEventCondition.set();

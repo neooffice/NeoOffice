@@ -90,10 +90,6 @@
 #include <salframe.hxx>
 #endif
 
-#include <premac.h>
-#include <Carbon/Carbon.h>
-#include <postmac.h>
-
 #endif	// USE_JAVA
 
 
@@ -649,10 +645,10 @@ short Dialog::Execute()
 #endif
 
 #ifdef USE_JAVA
-	// Do not attempt to run a modal dialog in the native event dispatch thread
-	// as it will disable the crash handler. Also, fix bug 1108 by not running
-	// it if a native sheet is being displayed.
-	if ( GetCurrentEventLoop() == GetMainEventLoop() || GetAppSalData()->mbInNativeModalSheet )
+	// Do not attempt to run a modal dialog while we are in a signal handler as
+	// it will deadlock. Also, fix bug 1108 by not running it if a native sheet
+	// is being displayed.
+	if ( GetAppSalData()->mbInSignalHandler || GetAppSalData()->mbInNativeModalSheet )
 		return 0;
 #endif	// USE_JAVA
 

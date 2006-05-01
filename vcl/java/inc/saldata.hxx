@@ -81,6 +81,7 @@ public:
 	::std::list< JavaSalGraphics* >	maGraphicsList;
 	SalFrame::SalPointerState	maLastPointerState;
 	JavaSalFrame*			mpLastDragFrame;
+	bool					mbInSignalHandler;
 
 							SalData();
 							~SalData();

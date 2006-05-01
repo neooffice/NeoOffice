@@ -445,27 +445,6 @@ void JavaSalInstance::Yield( BOOL bWait )
 {
 	SalData *pSalData = GetSalData();
 
-	// If we don't have the application mutex, we are most likely in a signal
-	// handler so try and lock the mutex first. If we cannot lock the mutex,
-	// allow any pending native timers to run but don't dispatch any events to
-	// prevent deadlocking
-	if ( mpSalYieldMutex->GetThreadId() != OThread::getCurrentIdentifier() )
-	{
-		if ( mpSalYieldMutex->tryToAcquire() )
-		{
-			Yield( FALSE );
-			mpSalYieldMutex->release();
-		}
-		else if ( GetCurrentEventLoop() == GetMainEventLoop() )
-		{
-			ReceiveNextEvent( 0, NULL, 0, false, NULL );
-			com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
-			pSalData->mpEventQueue->postCachedEvent( &aEvent );
-		}
-
-		return;
-	}
-
 	com_sun_star_vcl_VCLEvent *pEvent;
 
 	// Dispatch next pending non-AWT event
@@ -970,6 +949,13 @@ SalYieldMutex::SalYieldMutex()
 
 void SalYieldMutex::acquire()
 {
+	// If we are in a signal handler and we don't have the mutex, don't block
+	// waiting for the mutex as most likely the thread with the mutex is
+	// blocked in an [NSObject performSelectorOnMainThread] message and we
+	// will deadlock.
+	if ( GetSalData()->mbInSignalHandler && !tryToAcquire() )
+		return;
+
 	OMutex::acquire();
 	mnThreadId = OThread::getCurrentIdentifier();
 	mnCount++;
