@@ -98,6 +98,9 @@
 #ifndef _SV_JOBSET_H
 #include <jobset.h>
 #endif
+#ifndef _SV_FLOATWIN_HXX
+#include <floatwin.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 #include <com/sun/star/vcl/VCLEvent.hxx>
 #endif
@@ -223,7 +226,17 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				if ( !bAcquired )
 					return userCanceledErr;
 
+
 				pSalData->maNativeEventCondition.reset();
+
+				// Close all popups
+				ImplSVData *pSVData = ImplGetSVData();
+				if ( pSVData && pSVData->maWinData.mpFirstFloat )
+				{
+					static const char* pEnv = getenv( "SAL_FLOATWIN_NOAPPFOCUSCLOSE" );
+					if ( !(pSVData->maWinData.mpFirstFloat->GetPopupModeFlags() & FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE) && !(pEnv && *pEnv) )
+						pSVData->maWinData.mpFirstFloat->EndPopupMode( FLOATWIN_POPUPMODEEND_CANCEL | FLOATWIN_POPUPMODEEND_CLOSEALL );
+				}
 
 				// Dispatch pending VCL events until the queue is clear
 				while ( !Application::IsShutDown() && !pSalData->maNativeEventCondition.check() )

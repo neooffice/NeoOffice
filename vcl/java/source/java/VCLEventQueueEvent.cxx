@@ -248,7 +248,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			// Fix bug 168 && 607 by reposting SALEVENT_*DOCUMENT events when
 			// recursing into this method while opening a document
 			ImplSVData *pSVData = ImplGetSVData();
-			if ( pSVData->maAppData.mnDispatchLevel == 1 && !ImplGetSVData()->maWinData.mpLastExecuteDlg && !pSalData->mpPresentationFrame && !pSalData->mbInNativeModalSheet )
+			if ( pSVData && pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mpPresentationFrame && !pSalData->mbInNativeModalSheet )
 			{
 				String aEmptyStr;
 				ApplicationEvent aAppEvt( aEmptyStr, aEmptyStr, SALEVENT_OPENDOCUMENT ? APPEVENT_OPEN_STRING : APPEVENT_PRINT_STRING, getPath() );
@@ -617,7 +617,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 						if ( pFrame == *it && pFrame->mbVisible )
 						{
 							ImplSVData* pSVData = ImplGetSVData();
-							if ( !pFrame->IsFloatingFrame() && pSVData->maWinData.mpFirstFloat && ((JavaSalFrame *)pSVData->maWinData.mpFirstFloat->ImplGetFrame())->mpParent != pFrame )
+							if ( !pFrame->IsFloatingFrame() && pSVData && pSVData->maWinData.mpFirstFloat && ((JavaSalFrame *)pSVData->maWinData.mpFirstFloat->ImplGetFrame())->mpParent != pFrame )
 							{
 								static const char* pEnv = getenv( "SAL_FLOATWIN_NOAPPFOCUSCLOSE" );
 								if ( !(pSVData->maWinData.mpFirstFloat->GetPopupModeFlags() & FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE) && !(pEnv && *pEnv) )
