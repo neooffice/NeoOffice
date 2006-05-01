@@ -104,6 +104,38 @@ static BOOL InitButtonDrawInfo( HIThemeButtonDrawInfo *pButtonDrawInfo, ControlS
 // =======================================================================
 
 /**
+ * (static) Initialize an HITheme button structure to draw spinner arrows for a
+ * spinbox, an editable control with arrow controls for incrementing and
+ * decrementing a value.
+ *
+ * @param pButtonDrawInfo		HITheme button structure for drawing spinner
+ * @param pSpinbuttonValue		VCL structure holding enable state of the
+ * @return TRUE if successful, FALSE on failure
+ */
+static BOOL InitSpinbuttonDrawInfo( HIThemeButtonDrawInfo *pButtonDrawInfo, SpinbuttonValue *pSpinbuttonValue )
+{
+	memset( pButtonDrawInfo, 0, sizeof( HIThemeButtonDrawInfo ) );
+	pButtonDrawInfo->version = 0;
+	pButtonDrawInfo->kind = kThemeIncDecButton;
+	if( pSpinbuttonValue )
+	{
+		if( pSpinbuttonValue->mnUpperState & CTRL_STATE_PRESSED )
+			pButtonDrawInfo->state = kThemeStatePressedUp;
+		else if( pSpinbuttonValue->mnLowerState & CTRL_STATE_PRESSED )
+			pButtonDrawInfo->state = kThemeStatePressedDown;
+		else if( ( ! ( pSpinbuttonValue->mnUpperState & CTRL_STATE_ENABLED ) ) && ( ! ( pSpinbuttonValue->mnLowerState & CTRL_STATE_ENABLED ) ) )
+			pButtonDrawInfo->state = kThemeStateInactive;
+		else
+			pButtonDrawInfo->state = kThemeStateActive;
+	}
+	else
+		pButtonDrawInfo->state = kThemeStateActive;
+	return TRUE;
+}
+
+// =======================================================================
+
+/**
  * (static) Convert a VCL scrollbar value structure into HITheme structures.
  *
  * @param pScrollBarTrackInfo		HITheme scrollbar structure
@@ -448,9 +480,113 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
 		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
 		pGraphics->drawBitmap( &aTwoRect, scrollbarBitmap );
 	}
-	return TRUE;
+	return bRet;
 }
 
+// =======================================================================
+
+/**
+ * (static) Draw a spinbox using native controls.  This consists of a set of
+ * stepper arrows on the right portion of the control and an edit field on
+ * the left.
+ *
+ * @param pGraphics			pointer into graphics object where spinbox should
+ *							be painted
+ * @param rDestBounds		destination rectangle where object will be painted
+ * @param nState			overall control state
+ * @param pValue			optional value giving enabled & pressed state for
+ *							subcontrols.
+ * @return TRUE if drawing successful, FALSE if not
+ */
+static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, SpinbuttonValue *pValue )
+{
+	BOOL bRet = FALSE;
+	
+	JavaSalBitmap spinboxBitmap;
+	spinboxBitmap.Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
+	
+	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+	if ( !aColorSpace )
+		return bRet;
+
+	BitmapBuffer *pBuffer = spinboxBitmap.AcquireBuffer( false );
+	if ( !pBuffer )
+	{
+		CGColorSpaceRelease( aColorSpace );
+		return bRet;
+	}
+
+#ifdef POWERPC
+	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
+#else	// POWERPC
+	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+#endif	// POWERPC
+	if ( !aContext )
+	{
+		spinboxBitmap.ReleaseBuffer( pBuffer, false );
+		CGColorSpaceRelease( aColorSpace );
+		return bRet;
+	}
+
+	// Clear the image
+	memset( pBuffer->mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
+	
+	HIThemeButtonDrawInfo aButtonDrawInfo;
+	InitSpinbuttonDrawInfo( &aButtonDrawInfo, pValue );
+
+	HIRect arrowRect;
+	arrowRect.origin.x = rDestBounds.GetWidth() - 13;
+	if( arrowRect.origin.x < 0 )
+		arrowRect.origin.x = 0;
+	arrowRect.origin.y = 0;
+	arrowRect.size.width = 13;
+	arrowRect.size.height = rDestBounds.GetHeight();
+	
+	bRet = ( HIThemeDrawButton( &arrowRect, &aButtonDrawInfo, aContext, kHIThemeOrientationInverted, NULL ) == noErr );
+	if( bRet )
+	{
+		HIRect editRect;
+		editRect.origin.x = 0;
+		editRect.origin.y = 0;
+		editRect.size.width = rDestBounds.GetWidth() - arrowRect.size.width - 2;
+		editRect.size.height = arrowRect.size.height;
+		
+		HIThemeFrameDrawInfo aFrameInfo;
+		memset( &aFrameInfo, 0, sizeof( HIThemeFrameDrawInfo ) );
+		
+		aFrameInfo.kind = kHIThemeFrameTextFieldSquare;
+		if( ! nState )
+			aFrameInfo.state = kThemeStateInactive;
+		else
+			aFrameInfo.state = kThemeStateActive;
+		if( nState & CTRL_STATE_FOCUSED )
+			aFrameInfo.isFocused = TRUE;
+		else
+			aFrameInfo.isFocused = FALSE;
+		
+		bRet = ( HIThemeDrawFrame( &editRect, &aFrameInfo, aContext, kHIThemeOrientationInverted ) == noErr );
+	}
+	
+	spinboxBitmap.ReleaseBuffer( pBuffer, false );
+
+	CGContextRelease( aContext );
+	CGColorSpaceRelease( aColorSpace );
+
+	if ( bRet )
+	{
+		SalTwoRect aTwoRect;
+		aTwoRect.mnSrcX = 0;
+		aTwoRect.mnSrcY = 0;
+		aTwoRect.mnSrcWidth = rDestBounds.GetWidth();
+		aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
+		aTwoRect.mnDestX = rDestBounds.Left();
+		aTwoRect.mnDestY = rDestBounds.Top();
+		aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
+		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
+		pGraphics->drawBitmap( &aTwoRect, spinboxBitmap );
+	}
+	return bRet;
+}
 
 #endif // GENESIS_OF_THE_NEW_WEAPONS
 
@@ -499,7 +635,12 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == PART_DRAW_BACKGROUND_HORZ ) || ( nPart == PART_DRAW_BACKGROUND_VERT ) )
 				isSupported = TRUE;
 			break;
-
+		
+		case CTRL_SPINBOX:
+			if( nPart == PART_ENTIRE_CONTROL )
+				isSupported = TRUE;
+			break;
+			
 		default:
 			isSupported = FALSE;
 			break;
@@ -614,6 +755,15 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
 				ScrollbarValue *pValue = static_cast<ScrollbarValue *> ( aValue.getOptionalVal() );
 				bOK = DrawNativeScrollBar( this, buttonRect, nState, pValue );
+			}
+			break;
+		
+		case CTRL_SPINBOX:
+			if( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle buttonRect = rControlRegion.GetBoundRect();
+				SpinbuttonValue *pValue = static_cast<SpinbuttonValue *> ( aValue.getOptionalVal() );
+				bOK = DrawNativeSpinbox( this, buttonRect, nState, pValue );
 			}
 			break;
 	}
@@ -821,6 +971,56 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				rNativeContentRegion = Region( rNativeBoundingRegion );
 				
 				bReturn = TRUE;
+			}
+			break;
+		
+		case CTRL_SPINBOX:
+			{
+				Rectangle spinboxRect = rControlRegion.GetBoundRect();
+				
+				HIThemeButtonDrawInfo aThemeButtonDrawInfo;
+				SpinbuttonValue *pValue = static_cast<SpinbuttonValue *> ( aValue.getOptionalVal() );
+				InitSpinbuttonDrawInfo( &aThemeButtonDrawInfo, pValue );
+				
+				HIShapeRef preferredShape;
+				HIRect destRect;
+				destRect.origin.x = spinboxRect.Left();
+				destRect.origin.y = spinboxRect.Top();
+				destRect.size.width = spinboxRect.GetWidth();
+				destRect.size.height = spinboxRect.GetHeight();
+				if ( HIThemeGetButtonShape( &destRect, &aThemeButtonDrawInfo, &preferredShape ) == noErr )
+				{
+					HIRect preferredRect;
+					HIShapeGetBounds( preferredShape, &preferredRect );
+					CFRelease( preferredShape );
+					
+					// note that HIThemeGetButtonShape won't clip the width to the actual recommended width of spinner arrows
+					if( preferredRect.size.width > 13 )
+						preferredRect.size.width = 13;
+				
+					switch( nPart )
+					{
+						case PART_BUTTON_UP:
+							{
+								Point topLeft( (long)(spinboxRect.Right()-preferredRect.size.width), (long)(spinboxRect.Top()) );
+								Size boundsSize( (long)(preferredRect.size.width), (long)(preferredRect.size.height / 2) );
+								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+								rNativeContentRegion = Region( rNativeBoundingRegion );
+								bReturn = TRUE;
+							}
+							break;
+						
+						case PART_BUTTON_DOWN:
+							{
+								Point topLeft( (long)(spinboxRect.Right()-preferredRect.size.width), (long)(spinboxRect.Top()+(preferredRect.size.height / 2)) );
+								Size boundsSize( (long)preferredRect.size.width, (long)(preferredRect.size.height / 2) );
+								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+								rNativeContentRegion = Region( rNativeBoundingRegion );								
+								bReturn = TRUE;
+							}
+							break;
+					}
+				}
 			}
 			break;
 	}
