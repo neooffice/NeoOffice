@@ -92,6 +92,7 @@ private:
     Link            maScrollHdl;
     Link            maEndScrollHdl;
     
+    SAL_DLLPRIVATE void			ImplNewImplScrollBarData();
     SAL_DLLPRIVATE Rectangle*   ImplFindPartRect( const Point& rPt );
 	SAL_DLLPRIVATE void			ImplInit( Window* pParent, WinBits nStyle );
 	SAL_DLLPRIVATE void			ImplInitStyle( WinBits nStyle );

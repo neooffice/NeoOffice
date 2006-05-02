@@ -95,6 +95,8 @@ struct ImplScrollBarData
 {
 	AutoTimer		maTimer;			// Timer
     BOOL            mbHide;
+    BOOL			mbHasEntireControlRect;
+    Rectangle		maEntireControlRect;
 };
 
 // =======================================================================
@@ -324,7 +326,7 @@ void ScrollBar::ImplUpdateRectsNative( BOOL bUpdate )
     Rectangle   aOldPage1Rect = maPage1Rect;
     Rectangle   aOldPage2Rect = maPage2Rect;
     Rectangle   aOldThumbRect = maThumbRect;
-
+	
     mnStateFlags  &= ~SCRBAR_STATE_BTN1_DISABLE;
     mnStateFlags  &= ~SCRBAR_STATE_BTN2_DISABLE;
     
@@ -375,7 +377,16 @@ void ScrollBar::ImplUpdateRectsNative( BOOL bUpdate )
 
 	aControlValue.setOptionalVal( (void *)(&scrValue) );
 		
-	Region aPage1Region, aPage2Region, aThumbRegion, aBoundingRegion;
+	Region aEntireCtrlRegion, aPage1Region, aPage2Region, aThumbRegion, aBoundingRegion;
+	
+	if( ! mpData )
+		ImplNewImplScrollBarData();
+	
+	if( GetNativeControlRegion( CTRL_SCROLLBAR, PART_ENTIRE_CONTROL, aControlRegion, 0, aControlValue, rtl::OUString(), aBoundingRegion, aEntireCtrlRegion ) )
+	{
+		mpData->mbHasEntireControlRect = TRUE;
+		mpData->maEntireControlRect = aEntireCtrlRegion.GetBoundRect();
+	}
 	
 	GetNativeControlRegion( CTRL_SCROLLBAR, ( ( bHorz ) ? PART_TRACK_HORZ_LEFT : PART_TRACK_VERT_UPPER ), aControlRegion, 0, aControlValue, rtl::OUString(), aBoundingRegion, aPage1Region );
 	maPage1Rect = aPage1Region.GetBoundRect();
@@ -675,12 +686,22 @@ BOOL ScrollBar::ImplDrawNative( USHORT nDrawFlags )
             }
 
             aControlValue.setOptionalVal( (void *)(&scrValue) );
-
-            aCtrlRegion.Union( maBtn1Rect );
-            aCtrlRegion.Union( maBtn2Rect );
-            aCtrlRegion.Union( maPage1Rect );
-            aCtrlRegion.Union( maPage2Rect );
-            aCtrlRegion.Union( maThumbRect );
+			
+			if( mpData && mpData->mbHasEntireControlRect )
+			{
+				// use platform specific preferred boudns
+				aCtrlRegion.Union( mpData->maEntireControlRect );
+			}
+			else
+			{
+				// approximate valid full control by what we need to cover all
+				// hit test areas
+				aCtrlRegion.Union( maBtn1Rect );
+				aCtrlRegion.Union( maBtn2Rect );
+				aCtrlRegion.Union( maPage1Rect );
+				aCtrlRegion.Union( maPage2Rect );
+				aCtrlRegion.Union( maThumbRect );
+			}
 
             bNativeOK = DrawNativeControl( CTRL_SCROLLBAR, (bHorz ? PART_DRAW_BACKGROUND_HORZ : PART_DRAW_BACKGROUND_VERT),
                             aCtrlRegion, nState, aControlValue, rtl::OUString() );
@@ -1381,15 +1402,21 @@ void ScrollBar::ImplInvert()
 void ScrollBar::GetFocus()
 {
     if( !mpData )
-    {
-	    mpData = new ImplScrollBarData;
-		mpData->maTimer.SetTimeoutHdl( LINK( this, ScrollBar, ImplAutoTimerHdl ) );
-        mpData->mbHide = FALSE;
-    }
+    	ImplNewImplScrollBarData();
     ImplInvert();   // react immediately
 	mpData->maTimer.SetTimeout( GetSettings().GetStyleSettings().GetCursorBlinkTime() );
     mpData->maTimer.Start();
     Control::GetFocus();
+}
+
+// -----------------------------------------------------------------------
+
+void ScrollBar::ImplNewImplScrollBarData()
+{
+	mpData = new ImplScrollBarData;
+	mpData->maTimer.SetTimeoutHdl( LINK( this, ScrollBar, ImplAutoTimerHdl ) );
+	mpData->mbHide = FALSE;
+	mpData->mbHasEntireControlRect = FALSE;
 }
 
 // -----------------------------------------------------------------------
