@@ -157,7 +157,11 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pE
 		return;
 	}
 
+#ifdef POWERPC
 	CGImageRef aImage = CGImageCreate( _par5, _par6, 8, sizeof( jint ) * 8, nRowSize, aColorSpace, kCGImageAlphaPremultipliedFirst, aProvider, NULL, false, kCGRenderingIntentDefault );
+#else	// POWERPC
+	CGImageRef aImage = CGImageCreate( _par5, _par6, 8, sizeof( jint ) * 8, nRowSize, aColorSpace, kCGImageAlphaPremultipliedLast, aProvider, NULL, false, kCGRenderingIntentDefault );
+#endif	// POWERPC
 	CGColorSpaceRelease( aColorSpace );
 	CGDataProviderRelease( aProvider );
 
