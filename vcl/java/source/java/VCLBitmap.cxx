@@ -120,27 +120,6 @@ void com_sun_star_vcl_VCLBitmap::copyBits( const com_sun_star_vcl_VCLGraphics *_
 
 // ----------------------------------------------------------------------------
 
-USHORT com_sun_star_vcl_VCLBitmap::getBitCount()
-{
-	static jmethodID mID = NULL;
-	USHORT out = 0;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()I";
-			mID = t.pEnv->GetMethodID( getMyClass(), "getBitCount", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-			out = (USHORT)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
-	}
-	return out;
-}
-
-// ----------------------------------------------------------------------------
-
 java_lang_Object *com_sun_star_vcl_VCLBitmap::getData()
 {
 	static jmethodID mID = NULL;

@@ -56,7 +56,8 @@ JavaSalBitmap::JavaSalBitmap() :
 	mpBits( NULL ),
 	mbCopyFromVCLBitmap( false ),
 	mpData( NULL ),
-	mpVCLBitmap( NULL )
+	mpVCLBitmap( NULL ),
+	mnVCLBitmapAcquireCount( 0 )
 {
 }
 
@@ -69,30 +70,99 @@ JavaSalBitmap::~JavaSalBitmap()
 
 // ------------------------------------------------------------------
 
+com_sun_star_vcl_VCLBitmap *JavaSalBitmap::GetVCLBitmap()
+{
+	if ( !mpVCLBitmap )
+	{
+		if ( mpData )
+			delete mpData;
+
+		mpVCLBitmap = new com_sun_star_vcl_VCLBitmap( maSize.Width(), maSize.Height(), mnBitCount );
+		if ( mpVCLBitmap && mpVCLBitmap->getJavaObject() )
+		{
+			// Fill the buffer with pointers to the Java buffer
+			mpData = mpVCLBitmap->getData();
+			if ( mpData )
+			{
+				// Force copying of the buffer if it has not already been done
+				USHORT nOldAcquireCount = mnAcquireCount;
+				mnAcquireCount = 0;
+				BitmapBuffer *pBuffer = AcquireBuffer( FALSE );
+				if ( pBuffer )
+					ReleaseBuffer( pBuffer, FALSE );
+				mnAcquireCount = mnAcquireCount;
+			}
+			else
+			{
+				delete mpVCLBitmap;
+				mpVCLBitmap = NULL;
+			}
+		}
+		else
+		{
+			delete mpVCLBitmap;
+			mpVCLBitmap = NULL;
+		}
+	}
+
+	if ( mpVCLBitmap )
+		mnVCLBitmapAcquireCount++;
+
+	return mpVCLBitmap;
+}
+
+// ------------------------------------------------------------------
+
+void JavaSalBitmap::ReleaseVCLBitmap( com_sun_star_vcl_VCLBitmap *pVCLBitmap )
+{
+	if ( pVCLBitmap && pVCLBitmap == mpVCLBitmap )
+	{
+		mnVCLBitmapAcquireCount--;
+
+		// Force copying of the buffer if necessary
+		BitmapBuffer *pBuffer = AcquireBuffer( TRUE );
+		if ( pBuffer )
+			ReleaseBuffer( pBuffer, TRUE );
+
+		if ( !mnVCLBitmapAcquireCount )
+		{
+			if ( mpData )
+			{
+				delete mpData;
+				mpData = NULL;
+			}
+
+			if ( mpVCLBitmap )
+			{
+				delete mpVCLBitmap;
+				mpVCLBitmap = NULL;
+			}
+		}
+	}
+}
+
+// ------------------------------------------------------------------
+
 bool JavaSalBitmap::Create( const Size& rSize, USHORT nBitCount, const BitmapPalette& rPal )
 {
 	Destroy();
 
 	// Check size and save size
 	if ( rSize.Width() > 0 && rSize.Height() > 0 )
-	{
 		maSize = Size( rSize.Width(), rSize.Height() );
-		mpVCLBitmap = new com_sun_star_vcl_VCLBitmap( maSize.Width(), maSize.Height(), nBitCount );
-	}
 
-	if ( mpVCLBitmap && mpVCLBitmap->getJavaObject() )
-	{
-		// Cache the bit count
-		mnBitCount = mpVCLBitmap->getBitCount();
-
-		// Fill the buffer with pointers to the Java buffer
-		mpData = mpVCLBitmap->getData();
-
-	}
+	if ( nBitCount <= 1 )
+		mnBitCount = 1;
+	else if ( nBitCount <= 4 )
+		mnBitCount = 4;
+	else if ( nBitCount <= 8 )
+		mnBitCount = 8;
+	else if ( nBitCount <= 16 )
+		mnBitCount = 16;
+	else if ( nBitCount <= 24 )
+		mnBitCount = 24;
 	else
-	{
-		mnBitCount = nBitCount;
-	}
+		mnBitCount = 32;
 
 	// Save the palette
 	USHORT nColors = ( ( mnBitCount <= 8 ) ? ( 1 << mnBitCount ) : 0 );
@@ -184,6 +254,8 @@ void JavaSalBitmap::Destroy()
 		delete mpVCLBitmap;
 		mpVCLBitmap = NULL;
 	}
+
+	mnVCLBitmapAcquireCount = 0;
 }
 
 // ------------------------------------------------------------------
@@ -197,9 +269,6 @@ USHORT JavaSalBitmap::GetBitCount() const
 
 BitmapBuffer* JavaSalBitmap::AcquireBuffer( bool bReadOnly )
 {
-	if ( !mpVCLBitmap )
-		return NULL;
-
 	BitmapBuffer *pBuffer = new BitmapBuffer();
 
 	pBuffer->mnBitCount = mnBitCount;
@@ -239,9 +308,10 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( bool bReadOnly )
 	pBuffer->mnScanlineSize = AlignedWidth4Bytes( mnBitCount * maSize.Width() );
 	pBuffer->maPalette = maPalette;
 
-	if ( !mpBits )
+	if ( !mpBits || mbCopyFromVCLBitmap )
 	{
-		mpBits = (BYTE *)rtl_allocateMemory( pBuffer->mnScanlineSize * pBuffer->mnHeight );
+		if ( !mpBits )
+			mpBits = (BYTE *)rtl_allocateMemory( pBuffer->mnScanlineSize * pBuffer->mnHeight );
 		if ( mpBits )
 		{
 			if ( mbCopyFromVCLBitmap && mpData )

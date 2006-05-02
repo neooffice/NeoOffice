@@ -80,21 +80,9 @@ public final class VCLBitmap {
 	public VCLBitmap(int w, int h, int b) {
 
 		// Cache the height and width
+		bitCount = b;
 		width = w;
 		height = h;
-
-		if (b <= 1)
-			bitCount = 1;
-		else if (b <= 4)
-			bitCount = 4;
-		else if (b <= 8)
-			bitCount = 8;
-		else if (b <= 16)
-			bitCount = 16;
-		else if (b <= 24)
-			bitCount = 24;
-		else
-			bitCount = 32;
 
 		// Create the image. Note that all rasters are mapped to 32 bit rasters
 		// since this is what the JVM will convert all rasters to every time
@@ -162,7 +150,7 @@ public final class VCLBitmap {
 	 *
 	 * @return the bit count of the bitmap
 	 */
-	public int getBitCount() {
+	int getBitCount() {
 
 		return bitCount;
 
