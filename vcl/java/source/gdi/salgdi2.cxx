@@ -77,7 +77,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 	if ( pVCLBitmap )
 	{
 		mpVCLGraphics->drawBitmap( pVCLBitmap, pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight, pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight );
-		rJavaSalBitmap.ReleaseVCLBitmap( pVCLBitmap );
+		rJavaSalBitmap.ReleaseVCLBitmap( pVCLBitmap, false );
 	}
 }
 
@@ -100,9 +100,9 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 		if ( pTransparentVCLBitmap )
 		{
 			mpVCLGraphics->drawBitmap( pVCLBitmap, pTransparentVCLBitmap, pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight, pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight );
-			rTransparentJavaSalBitmap.ReleaseVCLBitmap( pTransparentVCLBitmap );
+			rTransparentJavaSalBitmap.ReleaseVCLBitmap( pTransparentVCLBitmap, false );
 		}
-		rJavaSalBitmap.ReleaseVCLBitmap( pVCLBitmap );
+		rJavaSalBitmap.ReleaseVCLBitmap( pVCLBitmap, false );
 	}
 }
 
@@ -115,7 +115,7 @@ void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSal
 	if ( pVCLBitmap )
 	{
 		mpVCLGraphics->drawMask( pVCLBitmap, nMaskColor | 0xff000000, pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight, pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight );
-		rJavaSalBitmap.ReleaseVCLBitmap( pVCLBitmap );
+		rJavaSalBitmap.ReleaseVCLBitmap( pVCLBitmap, false );
 	}
 }
 
@@ -145,8 +145,7 @@ SalBitmap* JavaSalGraphics::getBitmap( long nX, long nY, long nDX, long nDY )
 		if ( pVCLBitmap )
 		{
 			pVCLBitmap->copyBits( mpVCLGraphics, nX, nY, nDX, nDY, 0, 0 );
-			pBitmap->mbCopyFromVCLBitmap = true;
-			pBitmap->ReleaseVCLBitmap( pVCLBitmap );
+			pBitmap->ReleaseVCLBitmap( pVCLBitmap, true );
 		}
 	}
 

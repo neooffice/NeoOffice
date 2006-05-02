@@ -113,16 +113,20 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::GetVCLBitmap()
 
 // ------------------------------------------------------------------
 
-void JavaSalBitmap::ReleaseVCLBitmap( com_sun_star_vcl_VCLBitmap *pVCLBitmap )
+void JavaSalBitmap::ReleaseVCLBitmap( com_sun_star_vcl_VCLBitmap *pVCLBitmap, bool bCopyFromVCLBitmap )
 {
 	if ( pVCLBitmap && pVCLBitmap == mpVCLBitmap )
 	{
 		mnVCLBitmapAcquireCount--;
 
-		// Force copying of the buffer if necessary
-		BitmapBuffer *pBuffer = AcquireBuffer( TRUE );
-		if ( pBuffer )
-			ReleaseBuffer( pBuffer, TRUE );
+		if ( bCopyFromVCLBitmap )
+		{
+			// Force copying of the buffer if necessary
+			mbCopyFromVCLBitmap = true;
+			BitmapBuffer *pBuffer = AcquireBuffer( TRUE );
+			if ( pBuffer )
+				ReleaseBuffer( pBuffer, TRUE );
+		}
 
 		if ( !mnVCLBitmapAcquireCount )
 		{

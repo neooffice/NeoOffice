@@ -62,7 +62,6 @@ class	SalGraphics;
 
 class JavaSalBitmap : public SalBitmap
 {
-public:
 	Size					maSize;
 	USHORT					mnAcquireCount;
 	USHORT					mnBitCount;
@@ -73,11 +72,12 @@ public:
 	::vcl::com_sun_star_vcl_VCLBitmap*	mpVCLBitmap;
 	USHORT					mnVCLBitmapAcquireCount;
 
+public:
 							JavaSalBitmap();
 	virtual					~JavaSalBitmap();
 
 	::vcl::com_sun_star_vcl_VCLBitmap*	GetVCLBitmap();
-	void					ReleaseVCLBitmap( ::vcl::com_sun_star_vcl_VCLBitmap *pVCLBitmap );
+	void					ReleaseVCLBitmap( ::vcl::com_sun_star_vcl_VCLBitmap *pVCLBitmap, bool bCopyFromVCLBitmap );
 
 	virtual bool			Create( const Size& rSize, USHORT nBitCount, const BitmapPalette& rPal );
 	virtual bool			Create( const SalBitmap& rSalBmp );
