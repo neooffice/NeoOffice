@@ -73,6 +73,25 @@ void JavaSalGraphics::copyArea( long nDestX, long nDestY, long nSrcX, long nSrcY
 void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rSalBitmap )
 {
 	JavaSalBitmap& rJavaSalBitmap = (JavaSalBitmap&)rSalBitmap;
+
+	// Scale the bitmap if necessary
+	if ( pPosAry->mnSrcWidth != pPosAry->mnDestWidth || pPosAry->mnSrcHeight != pPosAry->mnDestHeight )
+	{
+		BitmapBuffer *pSrcBuffer = rJavaSalBitmap.AcquireBuffer( TRUE );
+		if ( pSrcBuffer )
+		{
+			BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, *pPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
+			rJavaSalBitmap.ReleaseBuffer( pSrcBuffer, TRUE );
+			if ( pDestBuffer )
+			{
+				JavaSalBitmap aJavaSalBitmap;
+				if ( aJavaSalBitmap.Create( pDestBuffer ) )
+					rJavaSalBitmap = aJavaSalBitmap;
+				delete pDestBuffer;
+			}
+		}
+	}
+
 	com_sun_star_vcl_VCLBitmap *pVCLBitmap = rJavaSalBitmap.GetVCLBitmap();
 	if ( pVCLBitmap )
 	{
@@ -92,10 +111,48 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rSalBitmap, const SalBitmap& rTransparentBitmap )
 {
 	JavaSalBitmap& rJavaSalBitmap = (JavaSalBitmap&)rSalBitmap;
+
+	// Scale the bitmap if necessary
+	if ( pPosAry->mnSrcWidth != pPosAry->mnDestWidth || pPosAry->mnSrcHeight != pPosAry->mnDestHeight )
+	{
+		BitmapBuffer *pSrcBuffer = rJavaSalBitmap.AcquireBuffer( TRUE );
+		if ( pSrcBuffer )
+		{
+			BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, *pPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
+			rJavaSalBitmap.ReleaseBuffer( pSrcBuffer, TRUE );
+			if ( pDestBuffer )
+			{
+				JavaSalBitmap aJavaSalBitmap;
+				if ( aJavaSalBitmap.Create( pDestBuffer ) )
+					rJavaSalBitmap = aJavaSalBitmap;
+				delete pDestBuffer;
+			}
+		}
+	}
+
 	com_sun_star_vcl_VCLBitmap *pVCLBitmap = rJavaSalBitmap.GetVCLBitmap();
 	if ( pVCLBitmap )
 	{
 		JavaSalBitmap& rTransparentJavaSalBitmap = (JavaSalBitmap&)rTransparentBitmap;
+
+		// Scale the bitmap if necessary
+		if ( pPosAry->mnSrcWidth != pPosAry->mnDestWidth || pPosAry->mnSrcHeight != pPosAry->mnDestHeight )
+		{
+			BitmapBuffer *pSrcBuffer = rTransparentJavaSalBitmap.AcquireBuffer( TRUE );
+			if ( pSrcBuffer )
+			{
+				BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, *pPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
+				rTransparentJavaSalBitmap.ReleaseBuffer( pSrcBuffer, TRUE );
+				if ( pDestBuffer )
+				{
+					JavaSalBitmap aJavaSalBitmap;
+					if ( aJavaSalBitmap.Create( pDestBuffer ) )
+						rTransparentJavaSalBitmap = aJavaSalBitmap;
+					delete pDestBuffer;
+				}
+			}
+		}
+
 		com_sun_star_vcl_VCLBitmap *pTransparentVCLBitmap = rTransparentJavaSalBitmap.GetVCLBitmap();
 		if ( pTransparentVCLBitmap )
 		{
@@ -111,6 +168,25 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSalBitmap, SalColor nMaskColor )
 {
 	JavaSalBitmap& rJavaSalBitmap = (JavaSalBitmap&)rSalBitmap;
+
+	// Scale the bitmap if necessary
+	if ( pPosAry->mnSrcWidth != pPosAry->mnDestWidth || pPosAry->mnSrcHeight != pPosAry->mnDestHeight )
+	{
+		BitmapBuffer *pSrcBuffer = rJavaSalBitmap.AcquireBuffer( TRUE );
+		if ( pSrcBuffer )
+		{
+			BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, *pPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
+			rJavaSalBitmap.ReleaseBuffer( pSrcBuffer, TRUE );
+			if ( pDestBuffer )
+			{
+				JavaSalBitmap aJavaSalBitmap;
+				if ( aJavaSalBitmap.Create( pDestBuffer ) )
+					rJavaSalBitmap = aJavaSalBitmap;
+				delete pDestBuffer;
+			}
+		}
+	}
+
 	com_sun_star_vcl_VCLBitmap *pVCLBitmap = rJavaSalBitmap.GetVCLBitmap();
 	if ( pVCLBitmap )
 	{

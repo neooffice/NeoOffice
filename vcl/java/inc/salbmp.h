@@ -73,9 +73,12 @@ class JavaSalBitmap : public SalBitmap
 	USHORT					mnVCLBitmapAcquireCount;
 
 public:
+	static ULONG			Get32BitNativeFormat();
+
 							JavaSalBitmap();
 	virtual					~JavaSalBitmap();
 
+	bool					Create( BitmapBuffer *pBuffer );
 	::vcl::com_sun_star_vcl_VCLBitmap*	GetVCLBitmap();
 	void					ReleaseVCLBitmap( ::vcl::com_sun_star_vcl_VCLBitmap *pVCLBitmap, bool bCopyFromVCLBitmap );
 

@@ -49,6 +49,17 @@ using namespace vcl;
 
 // ==================================================================
 
+ULONG JavaSalBitmap::Get32BitNativeFormat()
+{
+#ifdef POWERPC
+	return BMP_FORMAT_32BIT_TC_ARGB;
+#else	// POWERPC
+	return BMP_FORMAT_32BIT_TC_BGRA;
+#endif	// POWERPC
+}
+
+// ------------------------------------------------------------------
+
 JavaSalBitmap::JavaSalBitmap() :
 	maSize( 0, 0 ),
 	mnAcquireCount( 0 ),
@@ -147,13 +158,44 @@ void JavaSalBitmap::ReleaseVCLBitmap( com_sun_star_vcl_VCLBitmap *pVCLBitmap, bo
 
 // ------------------------------------------------------------------
 
+/**
+ * Warning: this method takes ownership of the BitmapBuffer's mpBits member
+ * so after calling this method, the mpBits member will be set to NULL.
+ */
+bool JavaSalBitmap::Create( BitmapBuffer *pBuffer )
+{
+	Destroy();
+
+	bool bRet = false;
+
+	if ( !pBuffer )
+		return bRet;
+
+	Size aSize( pBuffer->mnWidth, pBuffer->mnHeight );
+	bRet = Create( aSize, pBuffer->mnBitCount, pBuffer->maPalette );
+	if ( bRet )
+	{
+		mpBits = pBuffer->mpBits;
+		pBuffer->mpBits = NULL;
+	}
+	else if ( pBuffer->mpBits )
+	{
+		delete pBuffer->mpBits;
+		pBuffer->mpBits = NULL;
+	}
+
+	return bRet;
+}
+
+// ------------------------------------------------------------------
+
 bool JavaSalBitmap::Create( const Size& rSize, USHORT nBitCount, const BitmapPalette& rPal )
 {
 	Destroy();
 
-	// Check size and save size
-	if ( rSize.Width() > 0 && rSize.Height() > 0 )
-		maSize = Size( rSize.Width(), rSize.Height() );
+	maSize = Size( rSize );
+	if ( maSize.Width() <= 0 && maSize.Height() <= 0 )
+		return false;
 
 	if ( nBitCount <= 1 )
 		mnBitCount = 1;
@@ -300,11 +342,7 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( bool bReadOnly )
 	}
 	else
 	{
-#ifdef POWERPC
-		pBuffer->mnFormat |= BMP_FORMAT_32BIT_TC_ARGB;
-#else	// POWERPC
-		pBuffer->mnFormat |= BMP_FORMAT_32BIT_TC_BGRA;
-#endif	// POWERPC
+		pBuffer->mnFormat |= JavaSalBitmap::Get32BitNativeFormat();
 	}
 
 	pBuffer->mnWidth = maSize.Width();
