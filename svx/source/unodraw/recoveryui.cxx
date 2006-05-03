@@ -69,6 +69,10 @@
 #include <comphelper/configurationhelper.hxx>
 #endif
 
+#ifdef USE_JAVA
+#include <unistd.h>
+#endif	// USE_JAVA
+
 //===============================================
 // const
 
