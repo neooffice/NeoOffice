@@ -451,8 +451,6 @@ void JavaSalInstance::Yield( BOOL bWait )
 	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( 0, FALSE ) ) != NULL )
 	{
 		USHORT nID = pEvent->getID();
-		if ( !nID )
-			_exit( 0 );
 		pEvent->dispatch();
 		delete pEvent;
 
@@ -538,17 +536,9 @@ void JavaSalInstance::Yield( BOOL bWait )
 			nCount = 0;
 		}
 
-
 		USHORT nID = pEvent->getID();
-		if ( !nID )
-			_exit( 0 );
 		pEvent->dispatch();
 		delete pEvent;
-
-		// Fix bug 1147 by allowing non-AWT events to be dispatched after a
-		// mouse released event
-		if ( nID == SALEVENT_MOUSEBUTTONUP )
-			return;
 	}
 
 	if ( nCount )
