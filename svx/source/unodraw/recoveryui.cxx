@@ -69,10 +69,6 @@
 #include <comphelper/configurationhelper.hxx>
 #endif
 
-#ifdef USE_JAVA
-#include <unistd.h>
-#endif	// USE_JAVA
-
 //===============================================
 // const
 
@@ -298,6 +294,13 @@ sal_Bool RecoveryUI::impl_doEmergencySave()
 {
     // create core service, which implements the real "emergency save" algorithm.
     svxdr::RecoveryCore* pCore = new svxdr::RecoveryCore(m_xSMGR, sal_True);
+#ifdef USE_JAVA
+    // Do not invoke any GUI code or the app will deadlock so abort instead
+    short nRet = sal_False;
+    pCore->doEmergencySavePrepare();
+    pCore->doEmergencySave();
+	abort();
+#else	// USE_JAVA
     css::uno::Reference< css::frame::XStatusListener > xCore(pCore);
 
     // create all needed dialogs for this operation
@@ -306,19 +309,12 @@ sal_Bool RecoveryUI::impl_doEmergencySave()
     svxdr::IExtendedTabPage*   pPage1  = new svxdr::SaveDialog        (pWizard, pCore );
     pWizard->addTabPage(pPage1);
     
-#ifdef USE_JAVA
-    // Do not invoke any GUI code or the app will deadlock. Instead, exit with
-    // code 78 which is the ExitHelper::CRASH define in the desktop module.
-    short nRet = sal_False;
-    pCore->doEmergencySave();
-	_exit( 78 );
-#else	// USE_JAVA
     // start the wizard
     short nRet = pWizard->Execute();
-#endif	// USE_JAVA
     
     delete pPage1 ;
     delete pWizard;
+#endif	// USE_JAVA
     
     return (nRet==DLG_RET_OK_AUTOLUNCH);
 }
