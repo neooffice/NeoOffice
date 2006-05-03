@@ -46,4 +46,10 @@ if [ -d "$2" ] ; then
 
 fi
 
+if [ -d "$2/Contents" ] ; then
+
+	rm -Rf "$2/Contents" || exit 1
+
+fi
+
 exit 0
