@@ -109,7 +109,7 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::GetVCLBitmap()
 				mpVCLBitmap = NULL;
 			}
 		}
-		else
+		else if ( mpVCLBitmap )
 		{
 			delete mpVCLBitmap;
 			mpVCLBitmap = NULL;
@@ -168,7 +168,7 @@ bool JavaSalBitmap::Create( BitmapBuffer *pBuffer )
 
 	bool bRet = false;
 
-	if ( !pBuffer )
+	if ( !pBuffer || !pBuffer->mpBits )
 		return bRet;
 
 	Size aSize( pBuffer->mnWidth, pBuffer->mnHeight );
@@ -176,11 +176,6 @@ bool JavaSalBitmap::Create( BitmapBuffer *pBuffer )
 	if ( bRet )
 	{
 		mpBits = pBuffer->mpBits;
-		pBuffer->mpBits = NULL;
-	}
-	else if ( pBuffer->mpBits )
-	{
-		delete pBuffer->mpBits;
 		pBuffer->mpBits = NULL;
 	}
 
@@ -238,7 +233,7 @@ bool JavaSalBitmap::Create( const SalBitmap& rSalBmp )
 			BitmapBuffer *pDestBuffer = AcquireBuffer( FALSE );
 			if ( pDestBuffer )
 			{
-				memcpy( pDestBuffer->mpBits, pSrcBuffer->mpBits, sizeof( BYTE ) * pDestBuffer->mnScanlineSize * pDestBuffer->mnHeight );
+				memcpy( pDestBuffer->mpBits, pSrcBuffer->mpBits, pDestBuffer->mnScanlineSize * pDestBuffer->mnHeight );
 				ReleaseBuffer( pDestBuffer, FALSE );
 			}
 			else
@@ -283,7 +278,7 @@ void JavaSalBitmap::Destroy()
 
 	if ( mpBits )
 	{
-		rtl_freeMemory( mpBits );
+		delete[] mpBits;
 		mpBits = NULL;
 	}
 
@@ -353,7 +348,7 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( bool bReadOnly )
 	if ( !mpBits || mbCopyFromVCLBitmap )
 	{
 		if ( !mpBits )
-			mpBits = (BYTE *)rtl_allocateMemory( pBuffer->mnScanlineSize * pBuffer->mnHeight );
+			mpBits = new BYTE[ pBuffer->mnScanlineSize * pBuffer->mnHeight ];
 		if ( mpBits )
 		{
 			if ( mbCopyFromVCLBitmap && mpData )

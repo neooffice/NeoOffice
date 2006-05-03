@@ -81,6 +81,9 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pE
 {
 	static CGDataProviderDirectAccessCallbacks aProviderCallbacks = { GetBytePointerCallback, (void (*)(void*, const void*))ReleaseBytePointerCallback, NULL, NULL };
 
+	if ( !_par0 )
+		return;
+
 	float fScaleX = _par9 / _par5;
 	float fScaleY = _par10 / _par6;
 
@@ -119,15 +122,15 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pE
 	if ( !pJavaBits )
 		return;
 
-	size_t nSize = _par5 * _par6 * sizeof( jint );
 	size_t nRowSize = _par5 * sizeof( jint );
+	size_t nSize = nRowSize * _par6;
 	jint *pCGBits = (jint *)rtl_allocateMemory( nSize );
 	if ( pCGBits )
 	{
 		// Copy the subimage
 		jint *pBitsIn = pJavaBits + ( _par4 * _par1 ) + _par3;
 		jint *pBitsOut = pCGBits;
-		for ( jint i = _par4; i < _par6; i++ )
+		for ( jint i = 0; i < _par6; i++ )
 		{
 			memcpy( pBitsOut, pBitsIn, nRowSize );
 			pBitsIn += _par1;
@@ -153,7 +156,6 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pE
 	if ( !aColorSpace )
 	{
 		CGDataProviderRelease( aProvider );
-		rtl_freeMemory( pCGBits );
 		return;
 	}
 
@@ -170,9 +172,109 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pE
 		aCGImageList.push_back( aImage );
 		CGImageRef_drawInRect( aImage, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14 );
 	}
-	else
+}
+
+// ----------------------------------------------------------------------------
+
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIEnv *pEnv, jobject object, jlong _par0, jint _par1, jint _par2, jint _par3, jint _par4, jfloat _par5, jfloat _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12 )
+{
+	static CGDataProviderDirectAccessCallbacks aProviderCallbacks = { GetBytePointerCallback, (void (*)(void*, const void*))ReleaseBytePointerCallback, NULL, NULL };
+
+	if ( !_par0 )
+		return;
+
+	BitmapBuffer *pBuffer = (BitmapBuffer *)_par0;
+	if ( !pBuffer->mpBits )
+	{
+		delete pBuffer;
+		return;
+	}
+
+	float fScaleX = _par7 / _par3;
+	float fScaleY = _par8 / _par4;
+
+	// Adjust for negative source origin
+	if ( _par1 < 0 )
+	{
+		_par5 -= fScaleX * _par1;
+		_par7 += fScaleX * _par1;
+		_par3 += _par1;
+		_par1 = 0;
+	}
+	if ( _par2 < 0 )
+	{
+		_par6 -= fScaleY * _par2;
+		_par8 += fScaleY * _par2;
+		_par4 += _par2;
+		_par2 = 0;
+	}
+	
+	// Adjust for size outside of the source image
+	long nWidth = pBuffer->mnWidth;
+	long nHeight = pBuffer->mnHeight;
+	jint nExtraWidth = _par1 + _par3 - nWidth;
+	if ( nExtraWidth > 0 )
+	{
+		_par7 -= fScaleX * nExtraWidth;
+		_par3 -= nExtraWidth;
+	}
+	jint nExtraHeight = _par2 + _par4 - nHeight;
+	if ( nExtraHeight > 0 )
+	{
+		_par8 -= fScaleY * nExtraHeight;
+		_par4 -= nExtraHeight;
+	}
+
+	size_t nRowSize = _par3 * sizeof( jint );
+	size_t nSize = nRowSize * _par4;
+	jint *pBits = (jint *)pBuffer->mpBits;
+	jint *pCGBits = (jint *)rtl_allocateMemory( nSize );
+	if ( !pCGBits )
+	{
+		delete[] pBuffer->mpBits;
+		delete pBuffer;
+		return;
+	}
+
+	// Copy the subimage
+	jint *pBitsIn = pBits + ( _par2 * nWidth ) + _par1;
+	jint *pBitsOut = pCGBits;
+	for ( jint i = 0; i < _par4; i++ )
+	{
+		memcpy( pBitsOut, pBitsIn, nRowSize );
+		pBitsIn += nWidth;
+		pBitsOut += _par3;
+	}
+
+	delete[] pBuffer->mpBits;
+	delete pBuffer;
+
+	CGDataProviderRef aProvider = CGDataProviderCreateDirectAccess( pCGBits, nSize, &aProviderCallbacks );
+	if ( !aProvider )
 	{
 		rtl_freeMemory( pCGBits );
+		return;
+	}
+
+	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+	if ( !aColorSpace )
+	{
+		CGDataProviderRelease( aProvider );
+		return;
+	}
+
+#ifdef POWERPC
+	CGImageRef aImage = CGImageCreate( _par3, _par4, 8, sizeof( jint ) * 8, nRowSize, aColorSpace, kCGImageAlphaPremultipliedFirst, aProvider, NULL, false, kCGRenderingIntentDefault );
+#else	// POWERPC
+	CGImageRef aImage = CGImageCreate( _par3, _par4, 8, sizeof( jint ) * 8, nRowSize, aColorSpace, kCGImageAlphaPremultipliedLast, aProvider, NULL, false, kCGRenderingIntentDefault );
+#endif	// POWERPC
+	CGColorSpaceRelease( aColorSpace );
+	CGDataProviderRelease( aProvider );
+
+	if ( aImage )
+	{
+		aCGImageList.push_back( aImage );
+		CGImageRef_drawInRect( aImage, _par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12 );
 	}
 }
 
@@ -212,17 +314,20 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 		if ( tempClass )
 		{
 			// Register the native methods for our class
-			JNINativeMethod pMethods[3]; 
+			JNINativeMethod pMethods[4]; 
 			pMethods[0].name = "drawBitmap0";
 			pMethods[0].signature = "([IIIIIIIFFFFFFFF)V";
 			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawBitmap0;
-			pMethods[1].name = "drawEPS0";
-			pMethods[1].signature = "(JJFFFF)V";
-			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawEPS0;
-			pMethods[2].name = "releaseNativeBitmaps";
-			pMethods[2].signature = "()V";
-			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps;
-			t.pEnv->RegisterNatives( tempClass, pMethods, 3 );
+			pMethods[1].name = "drawBitmapBuffer0";
+			pMethods[1].signature = "(JIIIIFFFFFFFF)V";
+			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0;
+			pMethods[2].name = "drawEPS0";
+			pMethods[2].signature = "(JJFFFF)V";
+			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawEPS0;
+			pMethods[3].name = "releaseNativeBitmaps";
+			pMethods[3].signature = "()V";
+			pMethods[3].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps;
+			t.pEnv->RegisterNatives( tempClass, pMethods, 4 );
 		}
 
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
@@ -382,6 +487,37 @@ void com_sun_star_vcl_VCLGraphics::drawBitmap( const com_sun_star_vcl_VCLBitmap 
 			args[7].i = jint( _par7 );
 			args[8].i = jint( _par8 );
 			args[9].i = jint( _par9 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLGraphics::drawBitmapBuffer( BitmapBuffer *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(JIIIIIIII)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "drawBitmapBuffer", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[9];
+			args[0].j = jlong( _par0 );
+			args[1].i = jint( _par1 );
+			args[2].i = jint( _par2 );
+			args[3].i = jint( _par3 );
+			args[4].i = jint( _par4 );
+			args[5].i = jint( _par5 );
+			args[6].i = jint( _par6 );
+			args[7].i = jint( _par7 );
+			args[8].i = jint( _par8 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}

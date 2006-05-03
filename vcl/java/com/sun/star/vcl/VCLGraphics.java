@@ -150,6 +150,11 @@ public final class VCLGraphics {
 	private static Method drawBitmapMethod = null;
 
 	/**
+	 * The drawBitmapBufferMethod method.
+	 */
+	private static Method drawBitmapBufferMethod = null;
+
+	/**
 	 * The drawEPSMethod method.
 	 */
 	private static Method drawEPSMethod = null;
@@ -300,6 +305,12 @@ public final class VCLGraphics {
 		// Set the method references
 		try {
 			drawBitmapMethod = VCLGraphics.class.getMethod("drawBitmap", new Class[]{ VCLBitmap.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class });
+		}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
+		try {
+			drawBitmapBufferMethod = VCLGraphics.class.getMethod("drawBitmapBuffer", new Class[]{ long.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -813,6 +824,8 @@ public final class VCLGraphics {
 	 * Draws specified bitmap to the underlying graphics.
 	 *
 	 * @param bmpData the bitmap data buffer
+	 * @param width the width of the bitmap
+	 * @param height the height of the bitmap
 	 * @param srcX the x coordinate of the bitmap to be drawn
 	 * @param srcY the y coordinate of the bitmap to be drawn
 	 * @param srcWidth the width of the bitmap to be drawn
@@ -827,6 +840,94 @@ public final class VCLGraphics {
 	 * @param clipHeight the height of the graphics to clip to
 	 */
 	native void drawBitmap0(int[] bmpData, int width, int height, int srcX, int srcY, int srcWidth, int srcHeight, float destX, float destY, float destWidth, float destHeight, float clipX, float clipY, float clipWidth, float clipHeight);
+
+	/**
+	 * Draws the specified BitmapBuffer pointer to the underlying graphics.
+	 *
+	 * @param buffer the BitmapBuffer pointer to be drawn
+	 * @param srcX the x coordinate of the bitmap to be drawn
+	 * @param srcY the y coordinate of the bitmap to be drawn
+	 * @param srcWidth the width of the bitmap to be drawn
+	 * @param srcHeight the height of the bitmap to be drawn
+	 * @param destX the x coordinate of the graphics to draw to
+	 * @param destY the y coordinate of the graphics to draw to
+	 * @param destWidth the width of the graphics to copy to
+	 * @param destHeight the height of the graphics to copy to
+	 */
+	public void drawBitmapBuffer(long buffer, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight) {
+
+		// Only allow drawing of JavaSalBitmp to printer
+		if (graphics == null)
+			return;
+
+		if (pageQueue != null) {
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawBitmapBufferMethod, new Object[]{ new Long(buffer), new Integer(srcX), new Integer(srcY), new Integer(srcWidth), new Integer(srcHeight), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight) });
+			pageQueue.postDrawingOperation(pqi);
+			return;
+		}
+
+		Rectangle destBounds = new Rectangle(destX, destY, destWidth, destHeight).intersection(graphicsBounds);
+		if (destBounds.isEmpty())
+			return;
+
+		LinkedList clipList = new LinkedList();
+		Rectangle clipBounds;
+		if (graphics != null)
+			clipBounds = graphicsBounds;
+		else
+			clipBounds = destBounds;
+		if (userClipList != null) {
+			Iterator clipRects = userClipList.iterator();
+			while (clipRects.hasNext()) {
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(clipBounds);
+				if (!clip.isEmpty())
+					clipList.add(clip);
+			}
+		}
+		else {
+			clipList.add(clipBounds);
+		}
+
+		Graphics2D g = getGraphics();
+		if (g != null) {
+			try {
+				AffineTransform transform = g.getTransform();
+				float scaleX = (float)transform.getScaleX();
+				float scaleY = (float)transform.getScaleY();
+				Rectangle bounds = pageFormat.getImageableBounds();
+				Iterator clipRects = clipList.iterator();
+				while (clipRects.hasNext()) {
+					Rectangle clip = (Rectangle)clipRects.next();
+					// Note: the bitmap needs to be flipped
+					drawBitmapBuffer0(buffer, srcX, srcY, srcWidth, srcHeight, scaleX * (bounds.x + destX), scaleY * (bounds.y + destY + destHeight), scaleX * destWidth, scaleY * destHeight * -1, scaleX * (bounds.x + clip.x), scaleY * (bounds.y + clip.y + clip.height), scaleX * clip.width, scaleY * clip.height * -1);
+				}
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
+		}
+
+	}
+
+	/**
+	 * Draws specified BitmapBuffer pointer to the underlying graphics.
+	 *
+	 * @param buffer the BitmapBuffer pointer to be drawn
+	 * @param srcX the x coordinate of the bitmap to be drawn
+	 * @param srcY the y coordinate of the bitmap to be drawn
+	 * @param srcWidth the width of the bitmap to be drawn
+	 * @param srcHeight the height of the bitmap to be drawn
+	 * @param destX the x coordinate of the graphics to draw to
+	 * @param destY the y coordinate of the graphics to draw to
+	 * @param destWidth the width of the graphics to copy to
+	 * @param destHeight the height of the graphics to copy to
+	 * @param clipX the x coordinate of the graphics to clip to
+	 * @param clipY the y coordinate of the graphics to clip to
+	 * @param clipWidth the width of the graphics to clip to
+	 * @param clipHeight the height of the graphics to clip to
+	 */
+	native void drawBitmapBuffer0(long buffer, int srcX, int srcY, int srcWidth, int srcHeight, float destX, float destY, float destWidth, float destHeight, float clipX, float clipY, float clipWidth, float clipHeight);
 
 	/**
 	 * Draws specified EPS data to the underlying graphics.
