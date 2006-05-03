@@ -87,6 +87,7 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::GetVCLBitmap()
 	{
 		if ( mpData )
 			delete mpData;
+		mpData = NULL;
 
 		mpVCLBitmap = new com_sun_star_vcl_VCLBitmap( maSize.Width(), maSize.Height(), mnBitCount );
 		if ( mpVCLBitmap && mpVCLBitmap->getJavaObject() )
