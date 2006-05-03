@@ -303,9 +303,11 @@ sal_Bool RecoveryUI::impl_doEmergencySave()
     pWizard->addTabPage(pPage1);
     
 #ifdef USE_JAVA
-    // do not invoke any GUI code or the app will deadlock
+    // Do not invoke any GUI code or the app will deadlock. Instead, exit with
+    // code 78 which is the ExitHelper::CRASH define in the desktop module.
     short nRet = sal_False;
     pCore->doEmergencySave();
+	_exit( 78 );
 #else	// USE_JAVA
     // start the wizard
     short nRet = pWizard->Execute();
