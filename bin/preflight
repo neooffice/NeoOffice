@@ -73,11 +73,6 @@ if [ -d "$2/Contents" ] ; then
 			if [ -d "$2/Contents/MacOS/resource" -a ! -e "$2/resource" ]; then
 				mv -f "$2/Contents/MacOS/resource" "$2" || exit 1
 			fi
-
-			# Save font files for postflight scripts
-			if [ -d "$2/Contents/share/fonts/truetype" -a ! -e "$2/truetype" ]; then
-				mv -f "$2/Contents/share/fonts/truetype" "$2" || exit 1
-			fi
 		else
 			if [ -e "$2/ooo" ]; then
 				rm -Rf "$2/ooo" || exit 1
@@ -94,10 +89,11 @@ if [ -d "$2/Contents" ] ; then
 			if [ -e "$2/resource" ]; then
 				rm -Rf "$2/resource" || exit 1
 			fi
+		fi
 
-			if [ -e "$2/truetype" ]; then
-				rm -Rf "$2/truetype" || exit 1
-			fi
+		# Save font files for postflight scripts
+		if [ -d "$2/Contents/share/fonts/truetype" -a ! -e "$2/truetype" ]; then
+			mv -f "$2/Contents/share/fonts/truetype" "$2" || exit 1
 		fi
 
 	fi
