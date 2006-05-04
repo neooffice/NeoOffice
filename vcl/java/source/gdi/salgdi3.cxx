@@ -722,8 +722,23 @@ BOOL JavaSalGraphics::GetGlyphBoundRect( long nIndex, Rectangle& rRect )
 {
 	rRect.SetEmpty();
 
-	if ( mpVCLFont )
-		rRect = mpVCLGraphics->getGlyphBounds( nIndex & GF_IDXMASK, mpVCLFont, nIndex & GF_ROTMASK );
+	com_sun_star_vcl_VCLFont *pVCLFont = NULL;
+
+	int nFallbackLevel = nIndex >> GF_FONTSHIFT;
+	if ( !nFallbackLevel )
+	{
+		pVCLFont = mpVCLFont;
+	}
+	else
+	{
+		// Retrieve the fallback font if one has been set by a text layout
+		::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = maFallbackFonts.find( nFallbackLevel );
+		if ( ffit != maFallbackFonts.end() )
+			pVCLFont = ffit->second;
+	}
+
+	if ( pVCLFont )
+		rRect = mpVCLGraphics->getGlyphBounds( nIndex & GF_IDXMASK, pVCLFont, nIndex & GF_ROTMASK );
 
 	return !rRect.IsEmpty();
 }

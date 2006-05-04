@@ -7423,7 +7423,6 @@ BOOL OutputDevice::GetTextBoundRect( Rectangle& rRect,
 
         if( bRet )
         {
-#ifndef USE_JAVA
             // Fix for bug 188. The following code does not work correctly
             // and will cause characters to incorrectly offset downward and to
             // the right
@@ -7448,7 +7447,6 @@ BOOL OutputDevice::GetTextBoundRect( Rectangle& rRect,
             rRect = PixelToLogic( aPixelRect );
             if( mbMap )
                 rRect += Point( maMapRes.mnMapOfsX, maMapRes.mnMapOfsY );
-#endif	// !USE_JAVA
         }
 
         pSalLayout->Release();
