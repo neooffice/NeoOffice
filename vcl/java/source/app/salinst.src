@@ -37,7 +37,7 @@
 
 String DEFAULT_PRINTER
 {
+	Text = "Printer";
 	Text[ de ] = "Drucker" ;
-	Text[ en-US ] = "Printer";
 };
 

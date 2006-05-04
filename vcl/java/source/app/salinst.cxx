@@ -817,6 +817,10 @@ XubString JavaSalInstance::GetDefaultPrinter()
 			delete pResMgr;
 		}
 	}
+
+	if ( !pSalData->maDefaultPrinter.Len() )
+		pSalData->maDefaultPrinter = XubString( OUString::createFromAscii( "Printer" ) );
+
 	return pSalData->maDefaultPrinter;
 }
 
