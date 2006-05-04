@@ -150,7 +150,8 @@ build.oo_patches: build.oo_checkout \
 	build.oo_scp2_patch \
 	build.oo_sj2_patch \
 	build.oo_solenv_patch \
-	build.oo_toolkit_patch
+	build.oo_toolkit_patch \
+	build.oo_xmerge_patch
 	touch "$@"
 
 build.oo_odk_patches: build.oo_checkout
