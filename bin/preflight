@@ -48,25 +48,30 @@ fi
 
 if [ -d "$2/Contents" ] ; then
 
+	# Save dictionary files for postflight scripts
+	if [ -d "$2/Contents/share/dict/ooo" -a ! -e "$2/ooo" ]; then
+		mv -f "$2/Contents/share/dict/ooo" "$2" || exit 1
+	fi
+
+	# Save jar files for postflight scripts
+	if [ -d "$2/Contents/MacOS/classes" -a ! -e "$2/classes" ]; then
+		mv -f "$2/Contents/MacOS/classes" "$2" || exit 1
+	fi
+
+	# Save font files for postflight scripts
+	if [ -d "$2/Contents/share/fonts/truetype" -a ! -e "$2/truetype" ]; then
+		mv -f "$2/Contents/share/fonts/truetype" "$2" || exit 1
+	fi
+
 	scriptdir=`dirname "$0"`
 	if [ -d "$scriptdir" -a -f "$scriptdir/installutils" ] ; then
 
 		. "$scriptdir/installutils"
 
 		if check_installation "$2" ; then
-			# Save dictionary files for postflight scripts
-			if [ -d "$2/Contents/share/dict/ooo" -a ! -e "$2/ooo" ]; then
-				mv -f "$2/Contents/share/dict/ooo" "$2" || exit 1
-			fi
-
 			# Save help files for postflight scripts
 			if [ -d "$2/Contents/help" -a ! -e "$2/help" ]; then
 				mv -f "$2/Contents/help" "$2" || exit 1
-			fi
-
-			# Save jar files for postflight scripts
-			if [ -d "$2/Contents/MacOS/classes" -a ! -e "$2/classes" ]; then
-				mv -f "$2/Contents/MacOS/classes" "$2" || exit 1
 			fi
 
 			# Save resource files for postflight scripts
@@ -74,26 +79,13 @@ if [ -d "$2/Contents" ] ; then
 				mv -f "$2/Contents/MacOS/resource" "$2" || exit 1
 			fi
 		else
-			if [ -e "$2/ooo" ]; then
-				rm -Rf "$2/ooo" || exit 1
-			fi
-
 			if [ -e "$2/help" ]; then
 				rm -Rf "$2/help" || exit 1
-			fi
-
-			if [ -e "$2/classes" ]; then
-				rm -Rf "$2/classes" || exit 1
 			fi
 
 			if [ -e "$2/resource" ]; then
 				rm -Rf "$2/resource" || exit 1
 			fi
-		fi
-
-		# Save font files for postflight scripts
-		if [ -d "$2/Contents/share/fonts/truetype" -a ! -e "$2/truetype" ]; then
-			mv -f "$2/Contents/share/fonts/truetype" "$2" || exit 1
 		fi
 
 	fi
