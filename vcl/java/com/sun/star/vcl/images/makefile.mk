@@ -79,20 +79,7 @@ COPYFILES = \
 	$(COPYDIR)$/copyflnk.gif \
 	$(COPYDIR)$/crook.gif \
 	$(COPYDIR)$/crop.gif \
-	$(COPYDIR)$/cross.gif \
-	$(COPYDIR)$/darc.gif \
-	$(COPYDIR)$/dbezier.gif \
-	$(COPYDIR)$/dcapt.gif \
-	$(COPYDIR)$/dcirccut.gif \
-	$(COPYDIR)$/dconnect.gif \
-	$(COPYDIR)$/dellipse.gif \
 	$(COPYDIR)$/detectiv.gif \
-	$(COPYDIR)$/dfree.gif \
-	$(COPYDIR)$/dline.gif \
-	$(COPYDIR)$/dpie.gif \
-	$(COPYDIR)$/dpolygon.gif \
-	$(COPYDIR)$/drect.gif \
-	$(COPYDIR)$/dtext.gif \
 	$(COPYDIR)$/fill.gif \
 	$(COPYDIR)$/hand.gif \
 	$(COPYDIR)$/help.gif \
@@ -134,8 +121,7 @@ COPYFILES = \
 	$(COPYDIR)$/vshear.gif \
 	$(COPYDIR)$/vsize.gif \
 	$(COPYDIR)$/vsizebar.gif \
-	$(COPYDIR)$/vsplit.gif \
-	$(COPYDIR)$/vtext.gif
+	$(COPYDIR)$/vsplit.gif
 
 ALLTAR : $(COPYDIR) $(COPYFILES)
 
