@@ -72,8 +72,6 @@
 using namespace vcl;
 using namespace rtl;
 
-#ifdef GENESIS_OF_THE_NEW_WEAPONS
-
 #define COMBOBOX_BUTTON_WIDTH 22
 #define COMBOBOX_BUTTON_TRIMWIDTH 3
 
@@ -587,8 +585,6 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	}
 	return bRet;
 }
-
-#endif // GENESIS_OF_THE_NEW_WEAPONS
 
 // =======================================================================
 
