@@ -45,6 +45,7 @@ import java.awt.EventQueue;
 import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.Insets;
 import java.awt.KeyboardFocusManager;
 import java.awt.MenuBar;
@@ -78,6 +79,7 @@ import java.awt.im.InputMethodRequests;
 import java.awt.image.BufferedImage;
 import java.awt.peer.ComponentPeer;
 import java.lang.reflect.Method;
+import java.net.URL;
 import java.text.CharacterIterator;
 import java.text.AttributedCharacterIterator;
 import java.text.AttributedString;
@@ -584,6 +586,36 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public final static int POINTER_TEXT_VERTICAL = 86;
 
+	/**
+	 * POINTER_PIVOT_DELETE constant.
+	 */
+	public final static int POINTER_PIVOT_DELETE = 87;
+
+	/**
+	 * POINTER_TAB_SELECT_S constant.
+	 */
+	public final static int POINTER_TAB_SELECT_S = 88;
+
+	/**
+	 * POINTER_TAB_SELECT_E constant.
+	 */
+	public final static int POINTER_TAB_SELECT_E = 89;
+
+	/**
+	 * POINTER_TAB_SELECT_SE constant.
+	 */
+	public final static int POINTER_TAB_SELECT_SE = 90;
+
+	/**
+	 * POINTER_TAB_SELECT_W constant.
+	 */
+	public final static int POINTER_TAB_SELECT_W = 91;
+
+	/**
+	 * POINTER_TAB_SELECT_SW constant.
+	 */
+	public final static int POINTER_TAB_SELECT_SW = 92;
+
 	/** 
 	 * The component to <code>VCLFrame</code> mapping.
 	 */
@@ -629,12 +661,68 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.UP_CYCLE_TRAVERSAL_KEYS, Collections.EMPTY_SET);
 		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.DOWN_CYCLE_TRAVERSAL_KEYS, Collections.EMPTY_SET);
 
-		// Load pointer images
+		Toolkit toolkit = Toolkit.getDefaultToolkit();
+		ClassLoader cl = ClassLoader.getSystemClassLoader();
 		customCursors = new HashMap();
-		BufferedImage img = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB_PRE);
-		Cursor c = Toolkit.getDefaultToolkit().createCustomCursor(img, new Point(0, 0), "POINTER_NULL");
-		if (c != null)
-			customCursors.put(new Integer(POINTER_NULL), c);
+
+		// Create POINTER_NULL
+		URL url = cl.getSystemResource("com/sun/star/vcl/images/nullptr.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(0, 0), "POINTER_NULL");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_NULL), c);
+		}
+
+/*
+		// TODO: Find the real cursor hot spot point and add the remaining
+		// cursor files.
+
+		// Create POINTER_TAB_SELECT_S
+		url = cl.getSystemResource("com/sun/star/vcl/images/tblsels.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(img.getWidth(null) / 2, img.getHeight(null)), "POINTER_TAB_SELECT_S");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_TAB_SELECT_S), c);
+		}
+
+		// Create POINTER_TAB_SELECT_E
+		url = cl.getSystemResource("com/sun/star/vcl/images/tblsele.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(img.getWidth(null), img.getHeight(null) / 2), "POINTER_TAB_SELECT_E");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_TAB_SELECT_E), c);
+		}
+
+		// Create POINTER_TAB_SELECT_SE
+		url = cl.getSystemResource("com/sun/star/vcl/images/tblselse.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(img.getWidth(null), img.getHeight(null)), "POINTER_TAB_SELECT_SE");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_TAB_SELECT_SE), c);
+		}
+
+		// Create POINTER_TAB_SELECT_W
+		url = cl.getSystemResource("com/sun/star/vcl/images/tblselw.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(0, img.getHeight(null) / 2), "POINTER_TAB_SELECT_W");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_TAB_SELECT_W), c);
+		}
+
+		// Create POINTER_TAB_SELECT_SW
+		url = cl.getSystemResource("com/sun/star/vcl/images/tblselsw.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(0, img.getHeight(null)), "POINTER_TAB_SWLECT_SE");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_TAB_SELECT_SW), c);
+		}
+*/
 
 	}
 	
@@ -1833,6 +1921,12 @@ g.dispose();
 				case POINTER_AUTOSCROLL_WE:
 				case POINTER_AUTOSCROLL_NSWE:
 				case POINTER_AIRBRUSH:
+				case POINTER_PIVOT_DELETE:
+				case POINTER_TAB_SELECT_S:
+				case POINTER_TAB_SELECT_E:
+				case POINTER_TAB_SELECT_SE:
+				case POINTER_TAB_SELECT_W:
+				case POINTER_TAB_SELECT_SW:
 					cursor = Cursor.DEFAULT_CURSOR;
 					break;
 			}
