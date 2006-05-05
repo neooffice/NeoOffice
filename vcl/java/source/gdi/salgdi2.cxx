@@ -295,7 +295,7 @@ SalBitmap* JavaSalGraphics::getBitmap( long nX, long nY, long nDX, long nDY )
 
 SalColor JavaSalGraphics::getPixel( long nX, long nY )
 {
-	return mpVCLGraphics->getPixel( nX, nY );
+	return mpVCLGraphics->getPixel( nX, nY ) & 0x00ffffff;
 }
 
 // -----------------------------------------------------------------------
