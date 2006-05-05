@@ -1932,13 +1932,13 @@ public final class VCLGraphics {
 	public int getPixel(int x, int y) {
 
 		if (graphics != null || !graphicsBounds.contains(x, y) || (userClip != null && !userClip.contains(x, y)))
-			return 0x00000000;
+			return 0xff000000;
 
 		if (image != null) {
 			return image.getImage().getRGB(x, y);
 		}
 		else {
-			int pixel = 0x00000000;
+			int pixel = 0xff000000;
 
 			Graphics2D g = getGraphics();
 			if (g != null) {
