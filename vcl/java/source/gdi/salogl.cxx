@@ -202,7 +202,7 @@ void JavaSalOpenGL::StopScene()
 		{
 			long nWidth = mpImage->getWidth();
 			long nHeight = mpImage->getHeight();
-			mpGraphics->mpVCLGraphics->copyBits( pGraphics, 0, 0, nWidth, nHeight, 0, 0, nWidth, nHeight );
+			mpGraphics->mpVCLGraphics->copyBits( pGraphics, 0, 0, nWidth, nHeight, 0, 0, nWidth, nHeight, sal_False );
 			delete pGraphics;
 		}
 	}

@@ -578,8 +578,10 @@ public final class VCLGraphics {
 	 * @param destY the y coordinate of the graphics to copy to
 	 * @param destWidth the width of the graphics to copy to
 	 * @param destHeight the height of the graphics to copy to
+	 * @param allowXOR if <code>true</code> use the graphic's current XOR
+	 *  setting, otherwise do not perform any XORing
 	 */
-	public void copyBits(VCLGraphics vg, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight) {
+	public void copyBits(VCLGraphics vg, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight, boolean allowXOR) {
 
 		// No copy bits allowed for printing
 		if (graphics != null)
@@ -606,7 +608,7 @@ public final class VCLGraphics {
 			clipList.add(destBounds);
 		}
 
-		if (xor || vg != this || srcWidth != destWidth || srcHeight != destHeight || clipList.size() > 1) {
+		if ((xor && allowXOR) || vg != this || srcWidth != destWidth || srcHeight != destHeight || clipList.size() > 1) {
 			BufferedImage img = null;
 			if (vg.getImage() != null)
 				img = vg.getImage().getImage();
@@ -626,7 +628,7 @@ public final class VCLGraphics {
 			Graphics2D g = getGraphics();
 			if (g != null) {
 				try {
-					if (xor)
+					if (xor && allowXOR)
 						g.setComposite(VCLGraphics.xorImageComposite);
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {

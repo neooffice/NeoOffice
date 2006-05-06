@@ -375,7 +375,7 @@ void com_sun_star_vcl_VCLGraphics::beginSetClipRegion()
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::copyBits( const com_sun_star_vcl_VCLGraphics *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8 )
+void com_sun_star_vcl_VCLGraphics::copyBits( const com_sun_star_vcl_VCLGraphics *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8, sal_Bool _par9 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -383,7 +383,7 @@ void com_sun_star_vcl_VCLGraphics::copyBits( const com_sun_star_vcl_VCLGraphics 
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(Lcom/sun/star/vcl/VCLGraphics;IIIIIIII)V";
+			char *cSignature = "(Lcom/sun/star/vcl/VCLGraphics;IIIIIIIIZ)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "copyBits", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -399,6 +399,7 @@ void com_sun_star_vcl_VCLGraphics::copyBits( const com_sun_star_vcl_VCLGraphics 
 			args[6].i = jint( _par6 );
 			args[7].i = jint( _par7 );
 			args[8].i = jint( _par8 );
+			args[9].z = jboolean( _par9 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}

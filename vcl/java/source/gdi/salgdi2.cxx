@@ -41,6 +41,12 @@
 #ifndef _SV_SALBMP_H
 #include <salbmp.h>
 #endif
+#ifndef _SV_SALWTYPE_HXX
+#include <salwtype.hxx>
+#endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
+#include <com/sun/star/vcl/VCLEvent.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
@@ -58,14 +64,27 @@ void JavaSalGraphics::copyBits( const SalTwoRect* pPosAry, SalGraphics* pSrcGrap
 	if ( !pJavaSrcGraphics )
 		pJavaSrcGraphics = this;
 
-	mpVCLGraphics->copyBits( pJavaSrcGraphics->mpVCLGraphics, pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight, pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight );
+	mpVCLGraphics->copyBits( pJavaSrcGraphics->mpVCLGraphics, pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight, pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight, sal_True );
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalGraphics::copyArea( long nDestX, long nDestY, long nSrcX, long nSrcY, long nSrcWidth, long nSrcHeight, USHORT nFlags )
 {
-	mpVCLGraphics->copyBits( mpVCLGraphics, nSrcX, nSrcY, nSrcWidth, nSrcHeight, nDestX, nDestY, nSrcWidth, nSrcHeight );
+	if ( mpFrame && nFlags & SAL_COPYAREA_WINDOWINVALIDATE )
+	{
+		SalPaintEvent *pPaintEvent = new SalPaintEvent();
+		pPaintEvent->mnBoundX = nDestX;
+		pPaintEvent->mnBoundY = nDestY;
+		pPaintEvent->mnBoundWidth = nSrcWidth;
+		pPaintEvent->mnBoundHeight = nSrcHeight;
+		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_PAINT, mpFrame, pPaintEvent );
+		aEvent.dispatch();
+	}
+	else
+	{
+		mpVCLGraphics->copyBits( mpVCLGraphics, nSrcX, nSrcY, nSrcWidth, nSrcHeight, nDestX, nDestY, nSrcWidth, nSrcHeight, sal_False );
+	}
 }
 
 // -----------------------------------------------------------------------
