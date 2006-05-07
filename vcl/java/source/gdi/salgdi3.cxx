@@ -627,8 +627,9 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 		pMetric->maName = pData->GetFamilyName();
 		pMetric->maStyleName = pData->GetStyleName();
 		pMetric->meWeight = pData->GetWeight();
-		pMetric->meItalic = pData->GetSlant();
 		pMetric->meFamily = pData->GetFamilyType();
+		pMetric->meItalic = pData->GetSlant();
+		pMetric->mePitch = pData->GetPitch();
 		pMetric->mbSymbolFlag = pData->IsSymbolFont();
 	}
 	else
