@@ -106,8 +106,11 @@ if [ -d "$2" ]; then
 	# Put back user's custom localization files
 	if [ -d "$2/share" ]; then
 		for i in `cd "$2/share" ; find . -type d`; do
-			if [ -e "$2/share/$i" -a ! -e "$2/Contents/share/$i" ]; then
-				mv -f "$2/share/$i" "$2/Contents/share" || exit 1
+			mkdir -p "$2/Contents/share/$i" || exit 1
+		done
+		for i in `cd "$2/share" ; find . -type f`; do
+			if [ ! -e "$2/Contents/share/$i" ]; then
+				cp -f "$2/share/$i" "$2/Contents/share/$i" || exit 1
 			fi
 		done
 		chown -Rf root:admin "$2/Contents/share" || exit 1
