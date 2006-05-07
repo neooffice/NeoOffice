@@ -78,6 +78,11 @@ if [ -d "$2/Contents" ] ; then
 			if [ -d "$2/Contents/MacOS/resource" -a ! -e "$2/resource" ]; then
 				mv -f "$2/Contents/MacOS/resource" "$2" || exit 1
 			fi
+
+			# Save localization files
+			if [ -d "$2/Contents/share" -a ! -e "$2/share" ]; then
+				mv -f "$2/Contents/share" "$2" || exit 1
+			fi
 		else
 			if [ -e "$2/help" ]; then
 				rm -Rf "$2/help" || exit 1
@@ -85,6 +90,10 @@ if [ -d "$2/Contents" ] ; then
 
 			if [ -e "$2/resource" ]; then
 				rm -Rf "$2/resource" || exit 1
+			fi
+
+			if [ -e "$2/share" ]; then
+				rm -Rf "$2/share" || exit 1
 			fi
 		fi
 

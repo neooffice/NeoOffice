@@ -103,6 +103,18 @@ if [ -d "$2" ]; then
 		rm -Rf "$2/resource" || exit 1
 	fi
 
+	# Put back user's custom localization files
+	if [ -d "$2/share" ]; then
+		for i in `cd "$2/share" ; find . -type d`; do
+			if [ -e "$2/share/$i" -a ! -e "$2/Contents/share/$i" ]; then
+				mv -f "$2/share/$i" "$2/Contents/share" || exit 1
+			fi
+		done
+		chown -Rf root:admin "$2/Contents/share" || exit 1
+		chmod -Rf u-w,u+r "$2/Contents/share" || exit 1
+		rm -Rf "$2/share" || exit 1
+	fi
+
 	# Put back user's custom font files
 	if [ -d "$2/truetype" ]; then
 		for i in `cd "$2/truetype" ; find . -maxdepth 1`; do
