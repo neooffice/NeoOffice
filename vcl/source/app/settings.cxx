@@ -575,11 +575,7 @@ ImplStyleData::ImplStyleData( const ImplStyleData& rData ) :
 
 void ImplStyleData::SetStandardStyles()
 {
-#ifdef USE_JAVA
-    Font aStdFont( FAMILY_SWISS, Size( 0, 10 ) );
-#else	// USE_JAVA
     Font aStdFont( FAMILY_SWISS, Size( 0, 8 ) );
-#endif	// USE_JAVA
     aStdFont.SetCharSet( gsl_getSystemTextEncoding() );
     aStdFont.SetWeight( WEIGHT_NORMAL );
     aStdFont.SetName( vcl::DefaultFontConfigItem::get()->getUserInterfaceFont(com::sun::star::lang::Locale( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("en") ), rtl::OUString(), rtl::OUString() ) ) );

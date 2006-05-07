@@ -448,10 +448,15 @@ void Window::ImplUpdateGlobalSettings( AllSettings& rSettings, BOOL bCallHdl )
     if( defFontheight > maxFontheight )
         defFontheight = maxFontheight;
 
+#ifdef USE_JAVA
+    // Always use 9pt
+    defFontheight = Max(9, defFontheight);
+#else	// USE_JAVA
     // if the UI is korean, always use 9pt
     LanguageType aLang = Application::GetSettings().GetUILanguage();
     if( aLang == LANGUAGE_KOREAN || aLang == LANGUAGE_KOREAN_JOHAB )
         defFontheight = Max(9, defFontheight);
+#endif	// USE_JAVA
 
     // i22098, toolfont will be scaled differently to avoid bloated rulers and status bars for big fonts
     int toolfontheight = defFontheight;
