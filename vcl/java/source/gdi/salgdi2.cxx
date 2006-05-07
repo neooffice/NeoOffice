@@ -71,20 +71,7 @@ void JavaSalGraphics::copyBits( const SalTwoRect* pPosAry, SalGraphics* pSrcGrap
 
 void JavaSalGraphics::copyArea( long nDestX, long nDestY, long nSrcX, long nSrcY, long nSrcWidth, long nSrcHeight, USHORT nFlags )
 {
-	if ( mpFrame && nFlags & SAL_COPYAREA_WINDOWINVALIDATE )
-	{
-		SalPaintEvent *pPaintEvent = new SalPaintEvent();
-		pPaintEvent->mnBoundX = nDestX;
-		pPaintEvent->mnBoundY = nDestY;
-		pPaintEvent->mnBoundWidth = nSrcWidth;
-		pPaintEvent->mnBoundHeight = nSrcHeight;
-		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_PAINT, mpFrame, pPaintEvent );
-		aEvent.dispatch();
-	}
-	else
-	{
-		mpVCLGraphics->copyBits( mpVCLGraphics, nSrcX, nSrcY, nSrcWidth, nSrcHeight, nDestX, nDestY, nSrcWidth, nSrcHeight, sal_False );
-	}
+	mpVCLGraphics->copyBits( mpVCLGraphics, nSrcX, nSrcY, nSrcWidth, nSrcHeight, nDestX, nDestY, nSrcWidth, nSrcHeight, sal_False );
 }
 
 // -----------------------------------------------------------------------
