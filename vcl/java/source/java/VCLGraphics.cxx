@@ -389,7 +389,7 @@ void com_sun_star_vcl_VCLGraphics::copyBits( const com_sun_star_vcl_VCLGraphics 
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[9];
+			jvalue args[10];
 			args[0].l = _par0->getJavaObject();
 			args[1].i = jint( _par1 );
 			args[2].i = jint( _par2 );
