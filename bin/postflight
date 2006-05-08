@@ -71,6 +71,8 @@ if [ -d "$2" ]; then
 		for i in `cd "$2/help" ; find . -maxdepth 1`; do
 			if [ -h "$2/Contents/help/$i" ]; then
 				rm -f "$2/Contents/help/$i" || exit 1
+			fi
+			if [ ! -e "$2/Contents/help/$i" ]; then
 				mv -f "$2/help/$i" "$2/Contents/help" || exit 1
 			fi
 		done
