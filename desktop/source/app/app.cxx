@@ -2144,6 +2144,12 @@ IMPL_LINK( Desktop, OpenClients_Impl, void*, pvoid )
                                 aURL += aProductKey;
                                 aURL += OUString::createFromAscii( "&patch=" );
                                 aURL += aProductPatchKey;
+                                aURL += OUString::createFromAscii( "&platform=" );
+#ifdef POWERPC
+                                aURL += OUString::createFromAscii( "PowerPC" );
+#else	// POWERPC
+                                aURL += OUString::createFromAscii( "Intel" );
+#endif	// POWERPC
                             }
                         }
 
