@@ -379,12 +379,12 @@ void TrackDragTimerCallback( EventLoopTimerRef aTimer, void *pData )
 {
 	JavaDragSource *pSource = (JavaDragSource *)pData;
 
-	DragSourceDropEvent aDragEvent;
-	aDragEvent.Source = static_cast< OWeakObject* >(pSource);
-	aDragEvent.DragSource = static_cast< XDragSource* >(pSource);
-	aDragEvent.DragSourceContext = new DragSourceContext();
-	aDragEvent.DropAction = DNDConstants::ACTION_NONE;
-	aDragEvent.DropSuccess = sal_False;
+	DragSourceDropEvent *pDragEvent = new DragSourceDropEvent();
+	pDragEvent->Source = static_cast< OWeakObject* >(pSource);
+	pDragEvent->DragSource = static_cast< XDragSource* >(pSource);
+	pDragEvent->DragSourceContext = new DragSourceContext();
+	pDragEvent->DropAction = DNDConstants::ACTION_NONE;
+	pDragEvent->DropSuccess = sal_False;
 
 	// We need to let any pending timers run so that we don't deadlock
 	IMutex& rSolarMutex = Application::GetSolarMutex();
@@ -462,8 +462,8 @@ void TrackDragTimerCallback( EventLoopTimerRef aTimer, void *pData )
 					nCurrentAction = ImplGetDragDropAction( aDrag );
 					if ( nCurrentAction != DNDConstants::ACTION_NONE )
 					{
-						aDragEvent.DropAction = nCurrentAction;
-						aDragEvent.DropSuccess = sal_True;
+						pDragEvent->DropAction = nCurrentAction;
+						pDragEvent->DropSuccess = sal_True;
 					}
 				}
 
@@ -478,19 +478,15 @@ void TrackDragTimerCallback( EventLoopTimerRef aTimer, void *pData )
 		}
 	}
 
-	Reference< XDragSourceListener > xListener( pSource->maListener );
-
-	if ( xListener.is() )
-		xListener->dragDropEnd( aDragEvent );
-
-	pTrackDragOwner = NULL;
-	aTrackDragCondition.set();
+	// Fix bug 1442 by dispatching and deleting the DragSourceDropEvent in the
+	// VCL event dispatch thread
+	Application::PostUserEvent( LINK( pSource, JavaDragSource, dragDropEnd ), pDragEvent );
 
 	rSolarMutex.release();
 }
 
 // ========================================================================
-  
+
 namespace java
 {
 
@@ -677,6 +673,26 @@ void JavaDragSource::handleDrag( sal_Int32 nX, sal_Int32 nY )
 	if ( xListener.is() )
 		xListener->dragOver( aSourceDragEvent );
 }
+
+// ------------------------------------------------------------------------
+
+IMPL_LINK( JavaDragSource, dragDropEnd, void*, pData )
+{
+	DragSourceDropEvent *pDragEvent = (DragSourceDropEvent *)pData;
+
+	if ( pDragEvent )
+	{
+		Reference< XDragSourceListener > xListener( maListener );
+		if ( xListener.is() )
+			xListener->dragDropEnd( *pDragEvent );
+
+		delete pDragEvent;
+	}
+
+	pTrackDragOwner = NULL;
+	aTrackDragCondition.set();
+}
+
 
 // ========================================================================
 

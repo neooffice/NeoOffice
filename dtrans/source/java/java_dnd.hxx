@@ -101,6 +101,8 @@ public:
 
 	WindowRef				getNativeWindow() { return mpNativeWindow; }
 	void					handleDrag( sal_Int32 nX, sal_Int32 nY );
+
+							DECL_LINK( dragDropEnd, void* );
 };
 
 ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL JavaDragSource_getSupportedServiceNames();
