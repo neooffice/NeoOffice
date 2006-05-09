@@ -210,11 +210,6 @@ public final class VCLGraphics {
 	private static InvertComposite invertComposite = new InvertComposite();
 
 	/**
-	 * The cached mask composite.
-	 */
-	private static MaskComposite maskComposite = new MaskComposite();
-
-	/**
 	 * The radio button component.
 	 */
 	private static JRadioButton radioButton = null;
@@ -228,11 +223,6 @@ public final class VCLGraphics {
 	 * The cached screen resolution.
 	 */
 	private static int screenResolution = 0;
-
-	/**
-	 * The cached transparent composite.
-	 */
-	private static TransparentComposite transparentComposite = new TransparentComposite();
 
 	/**
 	 * The cached XOR image composite.
@@ -740,89 +730,6 @@ public final class VCLGraphics {
 	}
 
 	/**
-	 * Draws all of the pixels in the first specified <code>VCLBitmap</code>
-	 * where the pixels in the second specified <code>VCLBitmap</code> are
-	 * zero to the underlying graphics.
-	 *
-	 * @param bmp the bitmap to be drawn
-	 * @param transBmp the transparent bitmap to be drawn
-	 * @param srcX the x coordinate of the bitmap to be drawn
-	 * @param srcY the y coordinate of the bitmap to be drawn
-	 * @param srcWidth the width of the bitmap to be drawn
-	 * @param srcHeight the height of the bitmap to be drawn
-	 * @param destX the x coordinate of the graphics to draw to
-	 * @param destY the y coordinate of the graphics to draw to
-	 * @param destWidth the width of the graphics to copy to
-	 * @param destHeight the height of the graphics to copy to
-	 */
-	public void drawBitmap(VCLBitmap bmp, VCLBitmap transBmp, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight) {
-		// No draw bitmap allowed for printing
-		if (graphics != null)
-			return;
-
-		Rectangle destBounds = new Rectangle(destX, destY, destWidth, destHeight).intersection(graphicsBounds);
-		if (destBounds.isEmpty())
-			return;
-
-		LinkedList clipList = new LinkedList();
-		if (userClipList != null) {
-			Iterator clipRects = userClipList.iterator();
-			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
-				if (!clip.isEmpty())
-					clipList.add(clip);
-			}
-		}
-		else {
-			clipList.add(destBounds);
-		}
-
-		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, bmp.getWidth(), bmp.getHeight()));
-		if (srcBounds.isEmpty())
-			return;
-
-		VCLImage mergedImage = new VCLImage(srcBounds.width, srcBounds.height, bmp.getBitCount());
-		Graphics2D mergedGraphics = mergedImage.getGraphics().getGraphics();
-		if (mergedGraphics != null) {
-			try {
-				mergedGraphics.setComposite(VCLGraphics.transparentComposite);
-				VCLGraphics.transparentComposite.setFirstPass(true);
-				mergedGraphics.translate(srcBounds.x * -1, srcBounds.y * -1);
-				mergedGraphics.drawImage(transBmp.getImage(), srcX, srcY, srcX + srcWidth, srcY + srcHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
-				VCLGraphics.transparentComposite.setFirstPass(false);
-				mergedGraphics.drawImage(bmp.getImage(), srcX, srcY, srcX + srcWidth, srcY + srcHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			mergedGraphics.dispose();
-		}
-
-		srcX -= srcBounds.x;
-		srcY -= srcBounds.y;
-
-		Graphics2D g = getGraphics();
-		if (g != null) {
-			try {
-				if (xor)
-					g.setComposite(VCLGraphics.xorImageComposite);
-				Iterator clipRects = clipList.iterator();
-				while (clipRects.hasNext()) {
-					g.setClip((Rectangle)clipRects.next());
-					g.drawImage(mergedImage.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
-				}
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			g.dispose();
-		}
-
-		mergedImage.dispose();
-
-	}
-
-	/**
 	 * Draws specified bitmap to the underlying graphics.
 	 *
 	 * @param bmpData the bitmap data buffer
@@ -1159,63 +1066,6 @@ public final class VCLGraphics {
 				while (clipRects.hasNext()) {
 					g.setClip((Rectangle)clipRects.next());
 					g.drawLine(x1, y1, x2, y2);
-				}
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			g.dispose();
-		}
-
-	}
-
-	/**
-	 * Draws the specified color for all of the pixels in the specified
-	 * <code>VCLBitmap</code> where the pixels are non-white.
-	 *
-	 * @param bmp the bitmap to be drawn
-	 * @param color the color that is used to match which pixels to draw
-	 * @param srcX the x coordinate of the bitmap to be drawn
-	 * @param srcY the y coordinate of the bitmap to be drawn
-	 * @param srcWidth the width of the graphics to be drawn
-	 * @param srcHeight the height of the graphics to be drawn
-	 * @param destX the x coordinate of the graphics to draw to
-	 * @param destY the y coordinate of the graphics to draw to
-	 * @param destWidth the width of the graphics to copy to
-	 * @param destHeight the height of the graphics to copy to
-	 */
-	public void drawMask(VCLBitmap bmp, int color, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight) {
-
-		// No draw bitmap allowed for printing
-		if (graphics != null)
-			return;
-
-		Rectangle destBounds = new Rectangle(destX, destY, destWidth, destHeight).intersection(graphicsBounds);
-		if (destBounds.isEmpty())
-			return;
-
-		LinkedList clipList = new LinkedList();
-		if (userClipList != null) {
-			Iterator clipRects = userClipList.iterator();
-			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
-				if (!clip.isEmpty())
-					clipList.add(clip);
-			}
-		}
-		else {
-			clipList.add(destBounds);
-		}
-
-		Graphics2D g = getGraphics();
-		if (g != null) {
-			try {
-				g.setComposite(VCLGraphics.maskComposite);
-				VCLGraphics.maskComposite.setMaskColor(color);
-				Iterator clipRects = clipList.iterator();
-				while (clipRects.hasNext()) {
-					g.setClip((Rectangle)clipRects.next());
-					g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
 				}
 			}
 			catch (Throwable t) {
@@ -2489,108 +2339,6 @@ public final class VCLGraphics {
 		}
 
 		public void dispose() {}
-
-	}
-
-	final static class MaskComposite implements Composite, CompositeContext {
-
-		private int maskColor;
-
-		public void compose(Raster src, Raster destIn, WritableRaster destOut) {
-
-			if (destIn != destOut)
-				destOut.setDataElements(0, 0, destIn);
-
-			int w = destOut.getWidth();
-			int h = destOut.getHeight();
-			int[] srcData = new int[w];
-			int[] destData = new int[w];
-			for (int line = 0; line < h; line++) {
-				srcData = (int[])src.getDataElements(0, line, srcData.length, 1, srcData);
-				destData = (int[])destIn.getDataElements(0, line, destData.length, 1, destData);
-				for (int i = 0; i < srcData.length && i < destData.length; i++) {
-					// If the pixel is black, set the pixel to the mask color
-					if (srcData[i] == 0xff000000)
-						destData[i] = maskColor;
-				}
-				destOut.setDataElements(0, line, destData.length, 1, destData);
-			}
-
-		}
-
-		public CompositeContext createContext(ColorModel srcColorModel, ColorModel destColorModel, RenderingHints hints) {
-
-			return this;
-
-		}
-
-		public void dispose() {}
-
-		void setMaskColor(int c) {
-
-			maskColor = c;
-
-		}
-
-	}
-
-	final static class TransparentComposite implements Composite, CompositeContext {
-
-		private boolean firstPass = true;
-
-		public void compose(Raster src, Raster destIn, WritableRaster destOut) {
-
-			if (destIn != destOut)
-				destOut.setDataElements(0, 0, destIn);
-
-			int w = destOut.getWidth();
-			int h = destOut.getHeight();
-
-			if (firstPass)
-			{
-				int[] srcData = new int[w];
-				int[] destData = new int[w];
-				for (int line = 0; line < h; line++) {
-					srcData = (int[])src.getDataElements(0, line, srcData.length, 1, srcData);
-					destData = (int[])destIn.getDataElements(0, line, destData.length, 1, destData);
-					// Only copy black pixels from the source.
-					for (int i = 0; i < srcData.length && i < destData.length; i++) {
-						if (srcData[i] == 0xff000000)
-							destData[i] = srcData[i];
-					}
-					destOut.setDataElements(0, line, destData.length, 1, destData);
-				}
-			}
-			else {
-				int[] srcData = new int[w];
-				int[] destData = new int[w];
-				for (int line = 0; line < h; line++) {
-					srcData = (int[])src.getDataElements(0, line, srcData.length, 1, srcData);
-					destData = (int[])destIn.getDataElements(0, line, destData.length, 1, destData);
-					// Only copy pixel if the pixel in the destination is black
-					for (int i = 0; i < srcData.length && i < destData.length; i++) {
-						if (destData[i] == 0xff000000)
-							destData[i] = srcData[i];
-					}
-					destOut.setDataElements(0, line, destData.length, 1, destData);
-				}
-			}
-
-		}
-
-		public CompositeContext createContext(ColorModel srcColorModel, ColorModel destColorModel, RenderingHints hints) {
-
-			return this;
-
-		}
-
-		public void dispose() {}
-
-		void setFirstPass(boolean b) {
-
-			firstPass = b;
-
-		}
 
 	}
 
