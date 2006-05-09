@@ -407,11 +407,6 @@ ULONG JavaSalInstance::ReleaseYieldMutex()
 	SalYieldMutex* pYieldMutex = mpSalYieldMutex;
 	if ( pYieldMutex->GetThreadId() == OThread::getCurrentIdentifier() )
 	{
-		// Fix bug 1079 by not allowing releasing of the mutex when we are in
-		// the native event dispatch thread
-		if ( GetCurrentEventLoop() == GetMainEventLoop() )
-			return 0;
-
 		ULONG nCount = pYieldMutex->GetAcquireCount();
 		ULONG n = nCount;
 		while ( n )
