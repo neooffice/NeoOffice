@@ -94,8 +94,8 @@ ifeq ("$(UNAME)","powerpc")
 PRODUCT_PATCH_VERSION=Patch 0
 PRODUCT_DIR_PATCH_VERSION=Patch-0
 else
-PRODUCT_PATCH_VERSION=
-PRODUCT_DIR_PATCH_VERSION=
+PRODUCT_PATCH_VERSION=Patch 0
+PRODUCT_DIR_PATCH_VERSION=Patch-0
 endif
 # Don't allow patching of pre-2.0 installations
 ifeq ("$(UNAME)","powerpc")
