@@ -136,6 +136,60 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 
 void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rSalBitmap, SalColor nTransparentColor )
 {
+	// Don't do anything if this is a printer
+	if ( mpPrinter )
+		return;
+
+	fprintf( stderr, "Here\n" );
+	JavaSalBitmap *pJavaSalBitmap = (JavaSalBitmap *)&rSalBitmap;
+
+	SalTwoRect aPosAry;
+	memcpy( &aPosAry, pPosAry, sizeof( SalTwoRect ) );
+
+	// Scale the bitmap if necessary and always make a copy so that we can
+	// mask out the appropriate bits
+	JavaSalBitmap aJavaSalBitmap;
+	BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
+	if ( pSrcBuffer )
+	{
+		BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, *pPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
+		pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
+		if ( pDestBuffer )
+		{
+			if ( aJavaSalBitmap.Create( pDestBuffer ) )
+			{
+				aPosAry.mnSrcX = 0;
+				aPosAry.mnSrcY = 0;
+				aPosAry.mnSrcWidth = pDestBuffer->mnWidth;
+				aPosAry.mnSrcHeight = pDestBuffer->mnHeight;
+				BitmapBuffer *pMaskBuffer = aJavaSalBitmap.AcquireBuffer( FALSE );
+				if ( pMaskBuffer )
+				{
+					if ( pMaskBuffer->mpBits )
+					{
+						// Mark all transparent color pixels as transparent
+						nTransparentColor |= 0xff000000;
+						long nBits = pMaskBuffer->mnWidth * pMaskBuffer->mnHeight;
+						jint *pBits = (jint *)pMaskBuffer->mpBits;
+						for ( long i = 0; i < nBits; i++ )
+						{
+							if ( pBits[ i ] == nTransparentColor )
+								pBits[ i ] = 0x00000000;
+						}
+					}
+
+					aJavaSalBitmap.ReleaseBuffer( pMaskBuffer, FALSE );
+					drawBitmap( &aPosAry, aJavaSalBitmap );
+				}
+			}
+			else if ( pDestBuffer->mpBits )
+			{
+				delete[] pDestBuffer->mpBits;
+			}
+
+			delete pDestBuffer;
+		}
+	}
 }
 
 // -----------------------------------------------------------------------
