@@ -86,23 +86,23 @@ public:
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	maContents;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDragSourceListener >	maListener;
     ::osl::Mutex			maMutex;
-	WindowRef				mpNativeWindow;
+	Window*					mpWindow;
+
+							DECL_STATIC_LINK( JavaDragSource, dragDropEnd, void* );
 
 							JavaDragSource();
 	virtual					~JavaDragSource();
 
-	virtual ::rtl::OUString	SAL_CALL getImplementationName() throw();
-	virtual sal_Bool		SAL_CALL supportsService( const ::rtl::OUString& serviceName ) throw();
-	virtual ::com::sun::star::uno::Sequence< ::rtl::OUString >	SAL_CALL getSupportedServiceNames() throw();
-	virtual void			SAL_CALL initialize( const Sequence< Any >& arguments ) throw( ::com::sun::star::uno::Exception );
-	virtual sal_Bool		SAL_CALL isDragImageSupported() throw();
-	virtual sal_Int32		SAL_CALL getDefaultCursor( sal_Int8 dragAction ) throw();
-	virtual void			SAL_CALL startDrag( const ::com::sun::star::datatransfer::dnd::DragGestureEvent& trigger, sal_Int8 sourceActions, sal_Int32 cursor, sal_Int32 image, const Reference< ::com::sun::star::datatransfer::XTransferable >& transferable, const Reference< ::com::sun::star::datatransfer::dnd::XDragSourceListener >& listener ) throw();
+	virtual ::rtl::OUString	SAL_CALL getImplementationName() throw( com::sun::star::uno::RuntimeException );
+	virtual sal_Bool		SAL_CALL supportsService( const ::rtl::OUString& serviceName ) throw( com::sun::star::uno::RuntimeException );
+	virtual ::com::sun::star::uno::Sequence< ::rtl::OUString >	SAL_CALL getSupportedServiceNames() throw( com::sun::star::uno::RuntimeException );
+	virtual void			SAL_CALL initialize( const Sequence< Any >& arguments ) throw( ::com::sun::star::uno::RuntimeException );
+	virtual sal_Bool		SAL_CALL isDragImageSupported() throw( com::sun::star::uno::RuntimeException );
+	virtual sal_Int32		SAL_CALL getDefaultCursor( sal_Int8 dragAction ) throw( com::sun::star::lang::IllegalArgumentException, com::sun::star::uno::RuntimeException );
+	virtual void			SAL_CALL startDrag( const ::com::sun::star::datatransfer::dnd::DragGestureEvent& trigger, sal_Int8 sourceActions, sal_Int32 cursor, sal_Int32 image, const Reference< ::com::sun::star::datatransfer::XTransferable >& transferable, const Reference< ::com::sun::star::datatransfer::dnd::XDragSourceListener >& listener ) throw( com::sun::star::uno::RuntimeException );
 
-	WindowRef				getNativeWindow() { return mpNativeWindow; }
+	WindowRef				getNativeWindow();
 	void					handleDrag( sal_Int32 nX, sal_Int32 nY );
-
-							DECL_LINK( dragDropEnd, void* );
 };
 
 ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL JavaDragSource_getSupportedServiceNames();
@@ -115,26 +115,25 @@ public:
 	sal_Int8				mnDefaultActions;
 	::std::list< ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDropTargetListener > >	maListeners;
     ::osl::Mutex			maMutex; 
-	WindowRef				mpNativeWindow;
     bool					mbRejected;
 	Window*					mpWindow;
 
 							JavaDropTarget();
 	virtual					~JavaDropTarget();
 
-	virtual void			SAL_CALL initialize( const Sequence< Any >& arguments ) throw( ::com::sun::star::uno::Exception );
+	virtual void			SAL_CALL initialize( const Sequence< Any >& arguments ) throw( ::com::sun::star::uno::RuntimeException );
 
-	virtual void			SAL_CALL addDropTargetListener( const Reference< ::com::sun::star::datatransfer::dnd::XDropTargetListener >& xListener ) throw();
-	virtual void			SAL_CALL removeDropTargetListener( const Reference< ::com::sun::star::datatransfer::dnd::XDropTargetListener >& xListener ) throw();
-	virtual sal_Bool		SAL_CALL isActive() throw();
-	virtual void			SAL_CALL setActive( sal_Bool active ) throw();
-	virtual sal_Int8		SAL_CALL getDefaultActions() throw();
-	virtual void			SAL_CALL setDefaultActions( sal_Int8 actions ) throw();
-	virtual ::rtl::OUString	SAL_CALL getImplementationName() throw();
-	virtual sal_Bool		SAL_CALL supportsService( const ::rtl::OUString& serviceName ) throw();
-	virtual ::com::sun::star::uno::Sequence< ::rtl::OUString >	SAL_CALL getSupportedServiceNames() throw();
+	virtual void			SAL_CALL addDropTargetListener( const Reference< ::com::sun::star::datatransfer::dnd::XDropTargetListener >& xListener ) throw( com::sun::star::uno::RuntimeException );
+	virtual void			SAL_CALL removeDropTargetListener( const Reference< ::com::sun::star::datatransfer::dnd::XDropTargetListener >& xListener ) throw( com::sun::star::uno::RuntimeException );
+	virtual sal_Bool		SAL_CALL isActive() throw( com::sun::star::uno::RuntimeException );
+	virtual void			SAL_CALL setActive( sal_Bool active ) throw( com::sun::star::uno::RuntimeException );
+	virtual sal_Int8		SAL_CALL getDefaultActions() throw( com::sun::star::uno::RuntimeException );
+	virtual void			SAL_CALL setDefaultActions( sal_Int8 actions ) throw( com::sun::star::uno::RuntimeException );
+	virtual ::rtl::OUString	SAL_CALL getImplementationName() throw( com::sun::star::uno::RuntimeException );
+	virtual sal_Bool		SAL_CALL supportsService( const ::rtl::OUString& serviceName ) throw( com::sun::star::uno::RuntimeException );
+	virtual ::com::sun::star::uno::Sequence< ::rtl::OUString >	SAL_CALL getSupportedServiceNames() throw( com::sun::star::uno::RuntimeException );
 
-	WindowRef				getNativeWindow() { return mpNativeWindow; }
+	WindowRef				getNativeWindow();
 	void					handleDragEnter( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable );
 	void					handleDragExit( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable );
 	void					handleDragOver( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable );

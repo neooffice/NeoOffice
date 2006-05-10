@@ -47,12 +47,11 @@
 #ifndef _COM_SUN_STAR_DATATRANSFER_DND_DNDCONSTANTS_HPP_
 #include <com/sun/star/datatransfer/dnd/DNDConstants.hpp>
 #endif
-#ifndef _OSL_CONDITN_HXX_
-#undef check
-#include <osl/conditn.hxx>
-#endif
 #ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
+#endif
+#ifndef _SV_SYSDATA_HXX
+#include <vcl/sysdata.hxx>
 #endif
 #ifndef _VOS_MUTEX_HXX_
 #include <vos/mutex.hxx>
@@ -76,7 +75,6 @@ static DragReceiveHandlerUPP pDragReceiveHandlerUPP = NULL;
 static ::std::list< ::java::JavaDragSource* > aDragSources;
 static ::std::list< ::java::JavaDropTarget* > aDropTargets;
 static JavaDragSource *pTrackDragOwner = NULL;
-static Condition aTrackDragCondition;
 static sal_Int8 nCurrentAction = DNDConstants::ACTION_NONE;
 static sal_Int8 nStartingAction = DNDConstants::ACTION_NONE;
 static bool bNoRejectCursor = true;
@@ -226,7 +224,7 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 				{
 					MacOSPoint aPoint;
 					Rect aRect;
-					if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( pTrackDragOwner->mpNativeWindow, kWindowContentRgn, &aRect ) == noErr )
+					if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( pTrackDragOwner->getNativeWindow(), kWindowContentRgn, &aRect ) == noErr )
 						pTrackDragOwner->handleDrag( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) );
 				}
 			}
@@ -276,6 +274,7 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 					break;
 				}
 			}
+			fprintf( stderr, "Here: %p %p\n", aWindow, pTarget );
 
 			if ( pTarget )
 			{
@@ -379,14 +378,6 @@ void TrackDragTimerCallback( EventLoopTimerRef aTimer, void *pData )
 {
 	JavaDragSource *pSource = (JavaDragSource *)pData;
 
-	DragSourceDropEvent *pDragEvent = new DragSourceDropEvent();
-	pDragEvent->Source = static_cast< OWeakObject* >(pSource);
-	pDragEvent->DragSource = static_cast< XDragSource* >(pSource);
-	pDragEvent->DragSourceContext = new DragSourceContext();
-	pDragEvent->DropAction = DNDConstants::ACTION_NONE;
-	pDragEvent->DropSuccess = sal_False;
-
-	// We need to let any pending timers run so that we don't deadlock
 	IMutex& rSolarMutex = Application::GetSolarMutex();
 	TimeValue aDelay;
 	aDelay.Seconds = 0;
@@ -397,7 +388,7 @@ void TrackDragTimerCallback( EventLoopTimerRef aTimer, void *pData )
 		OThread::wait( aDelay );
 	}
 
-	if ( pTrackDragOwner == pSource )
+	if ( pSource && pTrackDragOwner == pSource )
 	{
 		DragRef aDrag;
 		if ( NewDrag( &aDrag ) == noErr )
@@ -457,14 +448,28 @@ void TrackDragTimerCallback( EventLoopTimerRef aTimer, void *pData )
 					OThread::wait( aDelay );
 				}
 
-				if ( bTrackDrag )
+				if ( pSource && pTrackDragOwner == pSource )
 				{
-					nCurrentAction = ImplGetDragDropAction( aDrag );
-					if ( nCurrentAction != DNDConstants::ACTION_NONE )
+					DragSourceDropEvent *pDragEvent = new DragSourceDropEvent();
+					pDragEvent->Source = Reference< XInterface >( static_cast< OWeakObject* >( pSource ) );
+					pDragEvent->DragSource = Reference< XDragSource >( pSource );
+					pDragEvent->DragSourceContext = Reference< XDragSourceContext >( new DragSourceContext() );
+					pDragEvent->DropAction = DNDConstants::ACTION_NONE;
+					pDragEvent->DropSuccess = sal_False;
+
+					if ( bTrackDrag )
 					{
-						pDragEvent->DropAction = nCurrentAction;
-						pDragEvent->DropSuccess = sal_True;
+						nCurrentAction = ImplGetDragDropAction( aDrag );
+						if ( nCurrentAction != DNDConstants::ACTION_NONE )
+						{
+							pDragEvent->DropAction = nCurrentAction;
+							pDragEvent->DropSuccess = sal_True;
+						}
 					}
+
+					// Fix bug 1442 by dispatching and deleting the
+					// DragSourceDropEvent in the VCL event dispatch thread
+					Application::PostUserEvent( STATIC_LINK( NULL, JavaDragSource, dragDropEnd ), pDragEvent );
 				}
 
 				delete pTransferable;
@@ -477,10 +482,6 @@ void TrackDragTimerCallback( EventLoopTimerRef aTimer, void *pData )
 			DisposeDrag( aDrag );
 		}
 	}
-
-	// Fix bug 1442 by dispatching and deleting the DragSourceDropEvent in the
-	// VCL event dispatch thread
-	Application::PostUserEvent( LINK( pSource, JavaDragSource, dragDropEnd ), pDragEvent );
 
 	rSolarMutex.release();
 }
@@ -526,10 +527,33 @@ XMultiServiceFactory >& xMultiServiceFactory )
 
 // ========================================================================
 
+IMPL_STATIC_LINK( JavaDragSource, dragDropEnd, void*, pData )
+{
+	DragSourceDropEvent *pDragEvent = (DragSourceDropEvent *)pData;
+
+	if ( pDragEvent )
+	{
+		JavaDragSource *pSource = (JavaDragSource*)pDragEvent->DragSource.get();
+
+		if ( pSource && pTrackDragOwner == pSource )
+		{
+			Reference< XDragSourceListener > xListener( pSource->maListener );
+			if ( xListener.is() )
+				xListener->dragDropEnd( *pDragEvent );
+
+			pTrackDragOwner = NULL;
+		}
+
+		delete pDragEvent;
+	}
+}
+
+// ------------------------------------------------------------------------
+
 JavaDragSource::JavaDragSource() :
 	WeakComponentImplHelper3< XDragSource, XInitialization, XServiceInfo >( maMutex ),
 	mnActions( DNDConstants::ACTION_NONE ),
-	mpNativeWindow( NULL )
+	mpWindow( NULL )
 {
 }
 
@@ -539,30 +563,23 @@ JavaDragSource::~JavaDragSource()
 {
 	// If we own the event loop timer, wait for the timer to finish
 	if ( pTrackDragOwner == this )
-	{
-		ULONG nCount = Application::ReleaseSolarMutex();
-		aTrackDragCondition.wait();
-		Application::AcquireSolarMutex( nCount );
-	}
+		pTrackDragOwner = NULL;
 }
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaDragSource::initialize( const Sequence< Any >& arguments ) throw( Exception )
+void SAL_CALL JavaDragSource::initialize( const Sequence< Any >& arguments ) throw( RuntimeException )
 {
 	if ( arguments.getLength() > 0 )
 	{
 		sal_Int32 nWindow;
 		arguments.getConstArray()[0] >>= nWindow;
 		if ( nWindow )
-			mpNativeWindow = (WindowRef)nWindow;
+			mpWindow = (Window *)nWindow;
 	}
 
-	if ( !mpNativeWindow || !IsValidWindowPtr( mpNativeWindow ) )
-	{
-		mpNativeWindow = NULL;
+	if ( !mpWindow )
 		throw RuntimeException();
-	}
 
 	if ( !pDragTrackingHandlerUPP )
 	{
@@ -574,25 +591,25 @@ void SAL_CALL JavaDragSource::initialize( const Sequence< Any >& arguments ) thr
 
 // ------------------------------------------------------------------------
 
-sal_Bool SAL_CALL JavaDragSource::isDragImageSupported() throw()
+sal_Bool SAL_CALL JavaDragSource::isDragImageSupported() throw( com::sun::star::uno::RuntimeException )
 {
 	return sal_False;
 }
 
 // ------------------------------------------------------------------------
 
-sal_Int32 SAL_CALL JavaDragSource::getDefaultCursor( sal_Int8 dragAction ) throw()
+sal_Int32 SAL_CALL JavaDragSource::getDefaultCursor( sal_Int8 dragAction ) throw( com::sun::star::lang::IllegalArgumentException, com::sun::star::uno::RuntimeException )
 {
 	return 0;
 }
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_Int8 sourceActions, sal_Int32 cursor, sal_Int32 image, const Reference< XTransferable >& transferable, const Reference< XDragSourceListener >& listener ) throw()
+void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_Int8 sourceActions, sal_Int32 cursor, sal_Int32 image, const Reference< XTransferable >& transferable, const Reference< XDragSourceListener >& listener ) throw( com::sun::star::uno::RuntimeException )
 {
 	DragSourceDropEvent aDragEvent;
-	aDragEvent.Source = static_cast< OWeakObject* >(this);
-	aDragEvent.DragSource = static_cast< XDragSource* >(this);
+	aDragEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
+	aDragEvent.DragSource = Reference< XDragSource >( this );
 	aDragEvent.DragSourceContext = Reference< XDragSourceContext >( new DragSourceContext() );
 	aDragEvent.DropAction = DNDConstants::ACTION_NONE;
 	aDragEvent.DropSuccess = sal_False;
@@ -612,10 +629,9 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 	if ( !pTrackDragTimerUPP )
 		pTrackDragTimerUPP = NewEventLoopTimerUPP( TrackDragTimerCallback );
 
-	if ( maContents.is() && pTrackDragTimerUPP && mpNativeWindow )
+	if ( maContents.is() && pTrackDragTimerUPP )
 	{
 		pTrackDragOwner = this;
-		aTrackDragCondition.reset();
 		InstallEventLoopTimer( GetMainEventLoop(), 0.001, kEventDurationForever, pTrackDragTimerUPP, (void *)this, NULL );
 	}
 	else
@@ -631,14 +647,14 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 
 // ------------------------------------------------------------------------
 
-OUString SAL_CALL JavaDragSource::getImplementationName() throw()
+OUString SAL_CALL JavaDragSource::getImplementationName() throw( RuntimeException )
 {
 	return OUString::createFromAscii( JAVA_DRAGSOURCE_IMPL_NAME );
 }
 
 // ------------------------------------------------------------------------
 
-sal_Bool SAL_CALL JavaDragSource::supportsService( const OUString& serviceName ) throw()
+sal_Bool SAL_CALL JavaDragSource::supportsService( const OUString& serviceName ) throw( RuntimeException )
 {
 	Sequence < OUString > aSupportedServicesNames = JavaDragSource_getSupportedServiceNames();
 
@@ -651,9 +667,25 @@ sal_Bool SAL_CALL JavaDragSource::supportsService( const OUString& serviceName )
 
 // ------------------------------------------------------------------------
 
-Sequence< OUString > SAL_CALL JavaDragSource::getSupportedServiceNames() throw()
+Sequence< OUString > SAL_CALL JavaDragSource::getSupportedServiceNames() throw( RuntimeException )
 {
 	return JavaDragSource_getSupportedServiceNames();
+}
+
+// ------------------------------------------------------------------------
+
+WindowRef JavaDragSource::getNativeWindow()
+{
+	WindowRef aRet = NULL;
+
+	if ( mpWindow )
+	{
+		const SystemEnvData *pEnvData = mpWindow->GetSystemData();
+		if ( pEnvData )
+			aRet = (WindowRef)pEnvData->aWindow;
+	}
+
+	return aRet;
 }
 
 // ------------------------------------------------------------------------
@@ -661,8 +693,8 @@ Sequence< OUString > SAL_CALL JavaDragSource::getSupportedServiceNames() throw()
 void JavaDragSource::handleDrag( sal_Int32 nX, sal_Int32 nY )
 {
 	DragSourceDragEvent aSourceDragEvent;
-	aSourceDragEvent.Source = static_cast< OWeakObject* >(this);
-	aSourceDragEvent.DragSource = static_cast< XDragSource* >(this);
+	aSourceDragEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
+	aSourceDragEvent.DragSource = Reference< XDragSource >( this );
 
 	aSourceDragEvent.DropAction = mnActions;
 	aSourceDragEvent.UserAction = nCurrentAction;
@@ -674,33 +706,12 @@ void JavaDragSource::handleDrag( sal_Int32 nX, sal_Int32 nY )
 		xListener->dragOver( aSourceDragEvent );
 }
 
-// ------------------------------------------------------------------------
-
-IMPL_LINK( JavaDragSource, dragDropEnd, void*, pData )
-{
-	DragSourceDropEvent *pDragEvent = (DragSourceDropEvent *)pData;
-
-	if ( pDragEvent )
-	{
-		Reference< XDragSourceListener > xListener( maListener );
-		if ( xListener.is() )
-			xListener->dragDropEnd( *pDragEvent );
-
-		delete pDragEvent;
-	}
-
-	pTrackDragOwner = NULL;
-	aTrackDragCondition.set();
-}
-
-
 // ========================================================================
 
 JavaDropTarget::JavaDropTarget() :
 	WeakComponentImplHelper3< XDropTarget, XInitialization, XServiceInfo >( maMutex ),
 	mbActive( sal_True ),
 	mnDefaultActions( DNDConstants::ACTION_NONE ),
-	mpNativeWindow( NULL ),
 	mbRejected( false ),
 	mpWindow( NULL )
 {
@@ -715,29 +726,18 @@ JavaDropTarget::~JavaDropTarget()
 
 // --------------------------------------------------------------------------
 
-void SAL_CALL JavaDropTarget::initialize( const Sequence< Any >& arguments ) throw( Exception )
+void SAL_CALL JavaDropTarget::initialize( const Sequence< Any >& arguments ) throw( RuntimeException )
 {
 	if ( arguments.getLength() > 0 )
 	{
 		sal_Int32 nWindow;
 		arguments.getConstArray()[0] >>= nWindow;
 		if ( nWindow )
-			mpNativeWindow = (WindowRef)nWindow;
-	}
-
-	if ( arguments.getLength() > 1 )
-	{
-		sal_Int32 nWindow;
-		arguments.getConstArray()[1] >>= nWindow;
-		if ( nWindow )
 			mpWindow = (Window *)nWindow;
 	}
 
-	if ( !mpNativeWindow || !IsValidWindowPtr( mpNativeWindow ) )
-	{
-		mpNativeWindow = NULL;
+	if ( !mpWindow )
 		throw RuntimeException();
-	}
 
 	aDropTargets.push_back( this );
 
@@ -758,56 +758,56 @@ void SAL_CALL JavaDropTarget::initialize( const Sequence< Any >& arguments ) thr
 
 // --------------------------------------------------------------------------
 
-void SAL_CALL JavaDropTarget::addDropTargetListener( const Reference< XDropTargetListener >& xListener ) throw()
+void SAL_CALL JavaDropTarget::addDropTargetListener( const Reference< XDropTargetListener >& xListener ) throw( ::com::sun::star::uno::RuntimeException )
 {
 	maListeners.push_back( xListener );
 }
 
 // --------------------------------------------------------------------------
 
-void SAL_CALL JavaDropTarget::removeDropTargetListener( const Reference< XDropTargetListener >& xListener ) throw()
+void SAL_CALL JavaDropTarget::removeDropTargetListener( const Reference< XDropTargetListener >& xListener ) throw( ::com::sun::star::uno::RuntimeException )
 {
 	maListeners.remove( xListener );
 }
 
 // --------------------------------------------------------------------------
 
-sal_Bool SAL_CALL JavaDropTarget::isActive() throw()
+sal_Bool SAL_CALL JavaDropTarget::isActive() throw( ::com::sun::star::uno::RuntimeException )
 {
 	return mbActive;
 }
 
 // --------------------------------------------------------------------------
 
-void SAL_CALL JavaDropTarget::setActive( sal_Bool active ) throw()
+void SAL_CALL JavaDropTarget::setActive( sal_Bool active ) throw( ::com::sun::star::uno::RuntimeException )
 {
 	mbActive = active;
 }
 
 // --------------------------------------------------------------------------
 
-sal_Int8 SAL_CALL JavaDropTarget::getDefaultActions() throw()
+sal_Int8 SAL_CALL JavaDropTarget::getDefaultActions() throw( ::com::sun::star::uno::RuntimeException )
 {
 	return mnDefaultActions;
 }
 
 // --------------------------------------------------------------------------
 
-void SAL_CALL JavaDropTarget::setDefaultActions( sal_Int8 actions ) throw()
+void SAL_CALL JavaDropTarget::setDefaultActions( sal_Int8 actions ) throw( ::com::sun::star::uno::RuntimeException )
 {
 	mnDefaultActions = actions;
 }
 
 // --------------------------------------------------------------------------
 
-OUString SAL_CALL JavaDropTarget::getImplementationName() throw()
+OUString SAL_CALL JavaDropTarget::getImplementationName() throw( RuntimeException )
 {
 	return OUString::createFromAscii( JAVA_DROPTARGET_IMPL_NAME );
 }
 
 // ------------------------------------------------------------------------
 
-sal_Bool SAL_CALL JavaDropTarget::supportsService( const OUString& ServiceName ) throw()
+sal_Bool SAL_CALL JavaDropTarget::supportsService( const OUString& ServiceName ) throw( RuntimeException )
 {
 	Sequence < OUString > aSupportedServicesNames = JavaDropTarget_getSupportedServiceNames();
 
@@ -820,9 +820,25 @@ sal_Bool SAL_CALL JavaDropTarget::supportsService( const OUString& ServiceName )
 
 // ------------------------------------------------------------------------
 
-Sequence< OUString > SAL_CALL JavaDropTarget::getSupportedServiceNames() throw()
+Sequence< OUString > SAL_CALL JavaDropTarget::getSupportedServiceNames() throw( RuntimeException )
 {
 	return JavaDropTarget_getSupportedServiceNames();
+}
+
+// ------------------------------------------------------------------------
+
+WindowRef JavaDropTarget::getNativeWindow()
+{
+	WindowRef aRet = NULL;
+
+	if ( mpWindow )
+	{
+		const SystemEnvData *pEnvData = mpWindow->GetSystemData();
+		if ( pEnvData )
+			aRet = (WindowRef)pEnvData->aWindow;
+	}
+
+	return aRet;
 }
 
 // ------------------------------------------------------------------------
@@ -832,7 +848,7 @@ void JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, DragRef aNativ
 	mbRejected = false;
 
 	DropTargetDragEnterEvent aDragEnterEvent;
-	aDragEnterEvent.Source = static_cast< XDropTarget* >(this);
+	aDragEnterEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
 	aDragEnterEvent.LocationX = nX;
 	aDragEnterEvent.LocationY = nY;
 	aDragEnterEvent.SourceActions = DNDConstants::ACTION_NONE;
@@ -877,7 +893,7 @@ void JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, DragRef aNativ
 void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable )
 {
 	DropTargetDragEvent aDragEvent;
-	aDragEvent.Source = static_cast< XDropTarget* >(this);
+	aDragEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
 	aDragEvent.LocationX = nX;
 	aDragEvent.LocationY = nY;
 	aDragEvent.SourceActions = DNDConstants::ACTION_NONE;
@@ -918,7 +934,7 @@ void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY, DragRef aNative
 void JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable )
 {
 	DropTargetDragEvent aDragEvent;
-	aDragEvent.Source = static_cast< XDropTarget* >(this);
+	aDragEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
 	aDragEvent.LocationX = nX;
 	aDragEvent.LocationY = nY;
 	aDragEvent.SourceActions = DNDConstants::ACTION_NONE;
@@ -974,7 +990,7 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTran
 		return false;
 
 	DropTargetDropEvent aDropEvent;
-	aDropEvent.Source = static_cast< OWeakObject* >(this);
+	aDropEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
 	aDropEvent.LocationX = nX;
 	aDropEvent.LocationY = nY;
 	aDropEvent.SourceActions = DNDConstants::ACTION_NONE;
