@@ -67,10 +67,18 @@ Manager::~Manager()
 
 Reference< XPlayer > SAL_CALL Manager::createPlayer( const ::rtl::OUString& rURL ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Manager::createPlayer not implemented\n" );
-#endif
 	Reference< XPlayer > xRet;
+
+	const INetURLObject aURL( rURL );
+	Player *pPlayer = new Player( mxMgr );
+	if ( pPlayer )
+	{
+		if ( pPlayer->create( aURL.GetMainURL( INetURLObject::DECODE_UNAMBIGUOUS ) ) )
+			xRet = Reference< XPlayer >( pPlayer );
+		else
+			delete pPlayer;
+	}
+
 	return xRet;
 }
 

@@ -49,6 +49,10 @@
 #include <com/sun/star/media/XPlayer.hpp>
 #endif
 
+#include <premac.h>
+#include <QuickTime/QuickTime.h>
+#include <postmac.h>
+
 namespace avmedia
 {
 namespace quicktime
@@ -60,11 +64,17 @@ namespace quicktime
 
 class Player : public ::cppu::WeakImplHelper2< ::com::sun::star::media::XPlayer, ::com::sun::star::lang::XServiceInfo >
 {
+	bool				mbLooping;
 	::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >	mxMgr;
+	Movie				maMovie;
+	GWorldPtr			maMovieGWorld;
+	bool				mbRunning;
 
 public:
 						Player( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >& rxMgr );
 						~Player();
+
+	bool				create( const ::rtl::OUString& rURL );
 
 	// XPlayer
 	virtual void SAL_CALL	start() throw( ::com::sun::star::uno::RuntimeException );

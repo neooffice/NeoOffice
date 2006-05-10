@@ -49,42 +49,116 @@ namespace quicktime
 {
 
 Player::Player( const Reference< XMultiServiceFactory >& rxMgr ) :
-	mxMgr( rxMgr )
+	mbLooping( false ),
+	mxMgr( rxMgr ),
+	maMovie( NULL ),
+	maMovieGWorld( NULL ),
+	mbRunning( false )
 {
+}
+
+// ============================================================================
+
+Player::~Player()
+{
+	stop();
+
+	if ( maMovie )
+		DisposeMovie( maMovie );
+
+	if ( maMovieGWorld )
+		DisposeGWorld( maMovieGWorld );
 }
 
 // ----------------------------------------------------------------------------
 
-Player::~Player()
+bool Player::create( const ::rtl::OUString& rURL )
 {
+	bool bRet = false;
+
+	stop();
+
+	if ( maMovie )
+	{
+		DisposeMovie( maMovie );
+		maMovie = NULL;
+	}
+
+	mbLooping = false;
+	mbRunning = false;
+
+	::rtl::OString aURLBytes( rURL.getStr(), rURL.getLength(), RTL_TEXTENCODING_UTF8 );
+	CFURLRef aURL = CFURLCreateWithBytes( NULL, (const UInt8 *)aURLBytes.getStr(), aURLBytes.getLength(), kCFStringEncodingUTF8, NULL );
+	if ( aURL )
+	{
+		Handle hHandle = NewHandle( sizeof( AliasHandle ) );
+		if ( hHandle )
+		{
+			OSType nType;
+			if ( QTNewDataReferenceFromCFURL( aURL, 0, &hHandle, &nType ) == noErr )
+			{
+				if ( !maMovieGWorld )
+				{
+					Rect aRect;
+					aRect.left = 0;
+					aRect.top = 0;
+					aRect.right = 1;
+					aRect.bottom = 1;
+					NewGWorld( &maMovieGWorld, 32, &aRect, NULL, NULL, 0 );
+				}
+
+				if ( maMovieGWorld && EnterMovies() == noErr )
+				{
+					short nID = movieInDataForkResID;
+					OSErr nErr = NewMovieFromDataRef( &maMovie, 0, &nID, hHandle, nType );
+					if ( nErr == noErr )
+					{
+						SetMovieGWorld( maMovie, maMovieGWorld, NULL );
+						MoviesTask( maMovie, 0 );
+						bRet = true;
+					}
+				}
+			}
+
+			DisposeHandle( hHandle );
+		}
+
+		CFRelease( aURL );
+	}
+
+	return bRet;
 }
 
 // ----------------------------------------------------------------------------
 
 void SAL_CALL Player::start() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Player::start not implemented\n" );
-#endif
+	if ( maMovie )
+	{
+		StartMovie( maMovie );
+		mbRunning = true;
+	}
 }
 
 // ----------------------------------------------------------------------------
 
 void SAL_CALL Player::stop() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Player::stop not implemented\n" );
-#endif
+	if ( maMovie )
+	{
+		StopMovie( maMovie );
+		mbRunning = false;
+	}
 }
 
 // ----------------------------------------------------------------------------
 
 sal_Bool SAL_CALL Player::isPlaying() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Player::isPlaying not implemented\n" );
-#endif
-	return false;
+	if ( maMovie && mbRunning && !mbLooping && IsMovieDone( maMovie ) )
+		mbRunning = false;
+
+	return mbRunning;
 }
 
 // ----------------------------------------------------------------------------
@@ -171,48 +245,51 @@ void SAL_CALL Player::setPlaybackLoop( sal_Bool bSet ) throw( RuntimeException )
 
 sal_Bool SAL_CALL Player::isPlaybackLoop() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Player::isPlaybackLoop not implemented\n" );
-#endif
-	return false;
+	return mbLooping;
 }
 
 // ----------------------------------------------------------------------------
 
 void SAL_CALL Player::setMute( sal_Bool bSet ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Player::setMute not implemented\n" );
-#endif
+	if ( maMovie )
+	{
+		short nVolume = GetMovieVolume( maMovie );
+		if ( bSet && nVolume > kNoVolume )
+			SetMovieVolume( maMovie, nVolume * -1 );
+		else if ( !bSet && nVolume < kNoVolume )
+			SetMovieVolume( maMovie, nVolume * -1 );
+	}
 }
 
 // ----------------------------------------------------------------------------
 
 sal_Bool SAL_CALL Player::isMute() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Player::isMute not implemented\n" );
-#endif
-	return false;
+	if ( maMovie && GetMovieVolume( maMovie ) < kNoVolume )
+		return true;
+	else
+		return false;
 }
 
 // ----------------------------------------------------------------------------
 
 void SAL_CALL Player::setVolumeDB( sal_Int16 nVolumeDB ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Player::setVolumeDB not implemented\n" );
-#endif
+	if ( maMovie )
+		SetMovieVolume( maMovie, kFullVolume * (short)nVolumeDB / 100 );
 }
 
 // ----------------------------------------------------------------------------
 	
 sal_Int16 SAL_CALL Player::getVolumeDB() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Player::getVolumeDB not implemented\n" );
-#endif
-	return 50;
+	sal_Int16 nRet = 0;
+
+	if ( maMovie )
+		nRet = 100 * GetMovieVolume( maMovie ) / kFullVolume;
+
+	return nRet;
 }
 
 // ----------------------------------------------------------------------------
