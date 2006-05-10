@@ -62,7 +62,7 @@ DragSourceContext::~DragSourceContext()
 
 // ------------------------------------------------------------------------
 
-sal_Int32 SAL_CALL DragSourceContext::getCurrentCursor() throw()
+sal_Int32 SAL_CALL DragSourceContext::getCurrentCursor() throw( ::com::sun::star::uno::RuntimeException )
 {
 #ifdef DEBUG
 	fprintf( stderr, "DragSourceContext::getCurrentCursor not implemented\n" );
@@ -72,7 +72,7 @@ sal_Int32 SAL_CALL DragSourceContext::getCurrentCursor() throw()
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL DragSourceContext::setCursor( sal_Int32 cursorId ) throw()
+void SAL_CALL DragSourceContext::setCursor( sal_Int32 cursorId ) throw( ::com::sun::star::uno::RuntimeException )
 {
 #ifdef DEBUG
 	fprintf( stderr, "DragSourceContext::setCursor not implemented\n" );
@@ -81,7 +81,7 @@ void SAL_CALL DragSourceContext::setCursor( sal_Int32 cursorId ) throw()
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL DragSourceContext::setImage( sal_Int32 imageId ) throw()
+void SAL_CALL DragSourceContext::setImage( sal_Int32 imageId ) throw( ::com::sun::star::uno::RuntimeException )
 {
 #ifdef DEBUG
 	fprintf( stderr, "DragSourceContext::setImage not implemented\n" );
@@ -90,7 +90,7 @@ void SAL_CALL DragSourceContext::setImage( sal_Int32 imageId ) throw()
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL DragSourceContext::transferablesFlavorsChanged() throw()
+void SAL_CALL DragSourceContext::transferablesFlavorsChanged() throw( ::com::sun::star::uno::RuntimeException )
 {
 #ifdef DEBUG
 	fprintf( stderr, "DragSourceContext::transferablesFlavorsChanged not implemented\n" );
@@ -115,7 +115,7 @@ DropTargetDropContext::~DropTargetDropContext()
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL DropTargetDropContext::acceptDrop( sal_Int8 dragOperation ) throw()
+void SAL_CALL DropTargetDropContext::acceptDrop( sal_Int8 dragOperation ) throw( ::com::sun::star::uno::RuntimeException )
 {
 	mnAction &= DNDConstants::ACTION_DEFAULT;
 
@@ -129,14 +129,14 @@ void SAL_CALL DropTargetDropContext::acceptDrop( sal_Int8 dragOperation ) throw(
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL DropTargetDropContext::rejectDrop() throw()
+void SAL_CALL DropTargetDropContext::rejectDrop() throw( ::com::sun::star::uno::RuntimeException )
 {
 	mbRejected = true;
 }
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL DropTargetDropContext::dropComplete( sal_Bool success ) throw()
+void SAL_CALL DropTargetDropContext::dropComplete( sal_Bool success ) throw( ::com::sun::star::uno::RuntimeException )
 {
 	// Multiple listeners may call this method so don't reset when false
 	if ( !mbRejected && success )
@@ -181,7 +181,7 @@ DropTargetDragContext::~DropTargetDragContext()
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL DropTargetDragContext::acceptDrag( sal_Int8 dragOperation ) throw()
+void SAL_CALL DropTargetDragContext::acceptDrag( sal_Int8 dragOperation ) throw( ::com::sun::star::uno::RuntimeException )
 {
 	mnAction &= DNDConstants::ACTION_DEFAULT;
 
@@ -195,7 +195,7 @@ void SAL_CALL DropTargetDragContext::acceptDrag( sal_Int8 dragOperation ) throw(
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL DropTargetDragContext::rejectDrag() throw()
+void SAL_CALL DropTargetDragContext::rejectDrag() throw( ::com::sun::star::uno::RuntimeException )
 {
 	mbRejected = true;
 }

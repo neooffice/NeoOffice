@@ -59,10 +59,10 @@ public:
 							DragSourceContext();
 	virtual					~DragSourceContext();
 
-	virtual sal_Int32		SAL_CALL getCurrentCursor() throw();
-	virtual void			SAL_CALL setCursor( sal_Int32 cursorId ) throw();
-	virtual void			SAL_CALL setImage( sal_Int32 imageId ) throw();
-	virtual void			SAL_CALL transferablesFlavorsChanged() throw();
+	virtual sal_Int32		SAL_CALL getCurrentCursor() throw( ::com::sun::star::uno::RuntimeException );
+	virtual void			SAL_CALL setCursor( sal_Int32 cursorId ) throw( ::com::sun::star::uno::RuntimeException );
+	virtual void			SAL_CALL setImage( sal_Int32 imageId ) throw( ::com::sun::star::uno::RuntimeException );
+	virtual void			SAL_CALL transferablesFlavorsChanged() throw( ::com::sun::star::uno::RuntimeException );
 };
 
 class DropTargetDropContext : public ::cppu::WeakImplHelper1< ::com::sun::star::datatransfer::dnd::XDropTargetDropContext >
@@ -75,9 +75,9 @@ public:
 							DropTargetDropContext( sal_Int8 nAction );
 	virtual					~DropTargetDropContext();
 
-	virtual void			SAL_CALL acceptDrop( sal_Int8 dragOperation ) throw();
-	virtual void			SAL_CALL rejectDrop() throw();
-	virtual void			SAL_CALL dropComplete( sal_Bool success ) throw();
+	virtual void			SAL_CALL acceptDrop( sal_Int8 dragOperation ) throw( ::com::sun::star::uno::RuntimeException );
+	virtual void			SAL_CALL rejectDrop() throw( ::com::sun::star::uno::RuntimeException );
+	virtual void			SAL_CALL dropComplete( sal_Bool success ) throw( ::com::sun::star::uno::RuntimeException );
 
 	sal_Int8				getDropAction();
 	bool					getDropComplete();
@@ -93,8 +93,8 @@ public:
 							DropTargetDragContext( sal_Int8 nAction );
 	virtual					~DropTargetDragContext();
 
-	virtual void			SAL_CALL acceptDrag( sal_Int8 dragOperation ) throw();
-	virtual void			SAL_CALL rejectDrag() throw();
+	virtual void			SAL_CALL acceptDrag( sal_Int8 dragOperation ) throw( ::com::sun::star::uno::RuntimeException );
+	virtual void			SAL_CALL rejectDrag() throw( ::com::sun::star::uno::RuntimeException );
 
 	sal_Int8				getDragAction();
 	bool					isRejected();

@@ -274,7 +274,6 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 					break;
 				}
 			}
-			fprintf( stderr, "Here: %p %p\n", aWindow, pTarget );
 
 			if ( pTarget )
 			{
