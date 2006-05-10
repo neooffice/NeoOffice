@@ -160,6 +160,7 @@ build.oo_patches: build.oo_checkout \
 	build.oo_sj2_patch \
 	build.oo_solenv_patch \
 	build.oo_toolkit_patch \
+	build.oo_vcl_patch \
 	build.oo_xmerge_patch
 	touch "$@"
 

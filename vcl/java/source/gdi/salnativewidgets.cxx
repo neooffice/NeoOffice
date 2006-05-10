@@ -208,6 +208,49 @@ static BOOL InitScrollBarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, HIScro
 // =======================================================================
 
 /**
+ * (static) Convert VCL progress bar codes into an HITheme progress bar
+ * structure
+ *
+ * @param pTrackDrawInfo	HITheme progress bar structure
+ * @param nState			control state of the progress bar (enabled vs. disabled)
+ * @param bounds			drawing bounds of the progress bar
+ * @param pProgressbarValue	optional value providing progress bar specific
+ *							info
+ * @return TRUE on success, FALSE on failure
+ */
+static BOOL InitProgressbarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, ControlState nState, Rectangle bounds, ProgressbarValue *pProgressbarValue )
+{
+	static UInt8 phase = 0x1;
+	
+	memset( pTrackDrawInfo, 0, sizeof( HIThemeTrackDrawInfo ) );
+	pTrackDrawInfo->version = 0;
+	pTrackDrawInfo->kind = ( ( pProgressbarValue && pProgressbarValue->mbIndeterminate ) ? kThemeIndeterminateBarLarge : kThemeProgressBarLarge );
+	pTrackDrawInfo->bounds.origin.x = 0;
+	pTrackDrawInfo->bounds.origin.y = 0;
+	pTrackDrawInfo->bounds.size.width = bounds.GetWidth();
+	pTrackDrawInfo->bounds.size.height = bounds.GetHeight();
+	if( bounds.GetWidth() > bounds.GetHeight() )
+		pTrackDrawInfo->attributes |= kThemeTrackHorizontal;
+	if( nState & CTRL_STATE_ENABLED )
+		pTrackDrawInfo->enableState = kThemeTrackActive;
+	else
+		pTrackDrawInfo->enableState = kThemeTrackDisabled;
+	pTrackDrawInfo->min = 0;
+	pTrackDrawInfo->max = 100;
+	if( pProgressbarValue )
+	{
+		pTrackDrawInfo->value = (int)pProgressbarValue->mdPercentComplete;
+		if( pProgressbarValue->mbIndeterminate )
+		{
+			pTrackDrawInfo->trackInfo.progress.phase = phase++;
+		}
+	}
+	return TRUE;
+}
+
+// =======================================================================
+
+/**
  * (static) Draw a ComboBox into the graphics port at the specified location.
  * ComboBoxes are editable pulldowns, the left portion of which is an edit
  * field and the right portion a downward arrow button used to display the
@@ -589,6 +632,85 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 // =======================================================================
 
 /**
+ * (static) Draw a progress bar using the native widget appearance.  The
+ * progressbar indicates percentage of task completion.
+ *
+ * @param pGraphics			pointer into graphics object where spinbox should
+ *							be painted
+ * @param rDestBounds		destination rectangle where object will be painted
+ * @param nState			overall control state
+ * @param pValue			value providing the percentage completion and other
+ *							progressbar state
+ * @return TRUE if drawing successful, FALSE if not
+ */
+static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, ProgressbarValue *pValue )
+{
+	BOOL bRet = FALSE;
+	
+	JavaSalBitmap progressBitmap;
+	progressBitmap.Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
+	
+	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+	if ( !aColorSpace )
+		return bRet;
+
+	BitmapBuffer *pBuffer = progressBitmap.AcquireBuffer( false );
+	if ( !pBuffer )
+	{
+		CGColorSpaceRelease( aColorSpace );
+		return bRet;
+	}
+
+#ifdef POWERPC
+	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
+#else	// POWERPC
+	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+#endif	// POWERPC
+	if ( !aContext )
+	{
+		progressBitmap.ReleaseBuffer( pBuffer, false );
+		CGColorSpaceRelease( aColorSpace );
+		return bRet;
+	}
+
+	// Clear the image
+	memset( pBuffer->mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
+	
+	HIThemeTrackDrawInfo aTrackDrawInfo;
+	InitProgressbarTrackInfo( &aTrackDrawInfo, nState, rDestBounds, pValue );
+	
+	HIRect destRect;
+	destRect.origin.x = 0;
+	destRect.origin.y = 0;
+	destRect.size.width = rDestBounds.GetWidth();
+	destRect.size.height = rDestBounds.GetHeight();
+
+	bRet = ( HIThemeDrawTrack( &aTrackDrawInfo, NULL, aContext, kHIThemeOrientationInverted ) == noErr );
+	
+	CGContextRelease( aContext );
+	CGColorSpaceRelease( aColorSpace );
+
+	progressBitmap.ReleaseBuffer( pBuffer, false );
+
+	if ( bRet )
+	{
+		SalTwoRect aTwoRect;
+		aTwoRect.mnSrcX = 0;
+		aTwoRect.mnSrcY = 0;
+		aTwoRect.mnSrcWidth = rDestBounds.GetWidth();
+		aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
+		aTwoRect.mnDestX = rDestBounds.Left();
+		aTwoRect.mnDestY = rDestBounds.Top();
+		aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
+		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
+		pGraphics->drawBitmap( &aTwoRect, progressBitmap );
+	}
+	return bRet;
+}
+
+// =======================================================================
+
+/**
  * Determine if support exists for drawing a particular native widget in the
  * interface.
  *
@@ -633,6 +755,11 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			break;
 		
 		case CTRL_SPINBOX:
+			if( nPart == PART_ENTIRE_CONTROL )
+				isSupported = TRUE;
+			break;
+		
+		case CTRL_PROGRESSBAR:
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
@@ -760,6 +887,15 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
 				SpinbuttonValue *pValue = static_cast<SpinbuttonValue *> ( aValue.getOptionalVal() );
 				bOK = DrawNativeSpinbox( this, buttonRect, nState, pValue );
+			}
+			break;
+		
+		case CTRL_PROGRESSBAR:
+			if( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle ctrlRect = rControlRegion.GetBoundRect();
+				ProgressbarValue *pValue = static_cast<ProgressbarValue *> ( aValue.getOptionalVal() );
+				bOK = DrawNativeProgressbar( this, ctrlRect, nState, pValue );
 			}
 			break;
 	}
@@ -1017,6 +1153,28 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							break;
 					}
 				}
+			}
+			break;
+		
+		case CTRL_PROGRESSBAR:
+			if ( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle controlRect = rControlRegion.GetBoundRect();
+				
+				ProgressbarValue *pValue = static_cast<ProgressbarValue *> ( aValue.getOptionalVal() );
+				
+				HIThemeTrackDrawInfo pTrackDrawInfo;
+				InitProgressbarTrackInfo( &pTrackDrawInfo, nState, controlRect, pValue );
+				
+				HIRect bounds;
+				HIThemeGetTrackBounds( &pTrackDrawInfo, &bounds );
+				
+				Point topLeft( (long)(controlRect.Left()+bounds.origin.x), (long)(controlRect.Top()+bounds.origin.y) );
+				Size boundsSize( (long)bounds.size.width, (long)bounds.size.height );
+				rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+				rNativeContentRegion = Region( rNativeBoundingRegion );
+				
+				bReturn = TRUE;
 			}
 			break;
 	}
