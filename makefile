@@ -219,6 +219,7 @@ build.neo_%_patch: % build.neo_configure
 	touch "$@"
 
 build.neo_patches: build.oo_all \
+	build.neo_avmedia_patch \
 	build.neo_canvas_patch \
 	build.neo_desktop_patch \
 	build.neo_dtrans_patch \
