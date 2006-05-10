@@ -333,18 +333,18 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	if ( !pListBoxBitmap )
 	{
 		pListBoxBitmap = new JavaSalBitmap();
-		if ( !pComboBoxBitmap )
+		if ( !pListBoxBitmap )
 			return bRet;
 	}
 
-	if ( rDestBounds.GetWidth() > pComboBoxBitmap->GetSize().Width() || rDestBounds.GetHeight() > pComboBoxBitmap->GetSize().Height() )
-		pComboBoxBitmap->Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
+	if ( rDestBounds.GetWidth() > pListBoxBitmap->GetSize().Width() || rDestBounds.GetHeight() > pListBoxBitmap->GetSize().Height() )
+		pListBoxBitmap->Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
 
 	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
 	if ( !aColorSpace )
 		return bRet;
 
-	BitmapBuffer *pBuffer = pComboBoxBitmap->AcquireBuffer( false );
+	BitmapBuffer *pBuffer = pListBoxBitmap->AcquireBuffer( false );
 	if ( !pBuffer )
 	{
 		CGColorSpaceRelease( aColorSpace );
@@ -358,7 +358,7 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 #endif	// POWERPC
 	if ( !aContext )
 	{
-		pComboBoxBitmap->ReleaseBuffer( pBuffer, false );
+		pListBoxBitmap->ReleaseBuffer( pBuffer, false );
 		CGColorSpaceRelease( aColorSpace );
 		return bRet;
 	}
@@ -383,7 +383,7 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	CGContextRelease( aContext );
 	CGColorSpaceRelease( aColorSpace );
 
-	pComboBoxBitmap->ReleaseBuffer( pBuffer, false );
+	pListBoxBitmap->ReleaseBuffer( pBuffer, false );
 
 	if ( bRet )
 	{
@@ -396,7 +396,7 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 		aTwoRect.mnDestY = rDestBounds.Top();
 		aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
 		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
-		pGraphics->drawBitmap( &aTwoRect, *pComboBoxBitmap );
+		pGraphics->drawBitmap( &aTwoRect, *pListBoxBitmap );
 	}
 
 	return TRUE;
