@@ -72,7 +72,7 @@ static const void *GetBytePointerCallback( void *pInfo )
 static const void ReleaseBytePointerCallback( void *pInfo, const void *pPointer )
 {
 	if ( pPointer )
-		rtl_freeMemory( (jint *)pPointer );
+		delete[] (jint *)pPointer;
 }
 
 // ----------------------------------------------------------------------------
@@ -124,7 +124,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pE
 
 	size_t nRowSize = _par5 * sizeof( jint );
 	size_t nSize = nRowSize * _par6;
-	jint *pCGBits = (jint *)rtl_allocateMemory( nSize );
+	jint *pCGBits = (jint *)( new jint[ nSize ] );
 	if ( pCGBits )
 	{
 		// Copy the subimage
@@ -148,7 +148,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pE
 	CGDataProviderRef aProvider = CGDataProviderCreateDirectAccess( pCGBits, nSize, &aProviderCallbacks );
 	if ( !aProvider )
 	{
-		rtl_freeMemory( pCGBits );
+		delete[] pCGBits;
 		return;
 	}
 
@@ -227,32 +227,42 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIE
 
 	size_t nRowSize = _par3 * sizeof( jint );
 	size_t nSize = nRowSize * _par4;
-	jint *pBits = (jint *)pBuffer->mpBits;
-	jint *pCGBits = (jint *)rtl_allocateMemory( nSize );
-	if ( !pCGBits )
+	jint *pCGBits;
+	if ( pBuffer->mnScanlineSize * pBuffer->mnHeight != nSize )
 	{
+		jint *pBits = (jint *)pBuffer->mpBits;
+		pCGBits = (jint *)( new jint[ nSize ] );
+		if ( !pCGBits )
+		{
+			delete[] pBuffer->mpBits;
+			delete pBuffer;
+			return;
+		}
+
+		// Copy the subimage
+		jint *pBitsIn = pBits + ( _par2 * nWidth ) + _par1;
+		jint *pBitsOut = pCGBits;
+		for ( jint i = 0; i < _par4; i++ )
+		{
+			memcpy( pBitsOut, pBitsIn, nRowSize );
+			pBitsIn += nWidth;
+			pBitsOut += _par3;
+		}
+
 		delete[] pBuffer->mpBits;
-		delete pBuffer;
-		return;
 	}
-
-	// Copy the subimage
-	jint *pBitsIn = pBits + ( _par2 * nWidth ) + _par1;
-	jint *pBitsOut = pCGBits;
-	for ( jint i = 0; i < _par4; i++ )
+	else
 	{
-		memcpy( pBitsOut, pBitsIn, nRowSize );
-		pBitsIn += nWidth;
-		pBitsOut += _par3;
+		// Transfer ownership of mpBits from the BitmapBuffer
+		pCGBits = (jint *)pBuffer->mpBits;
 	}
 
-	delete[] pBuffer->mpBits;
 	delete pBuffer;
 
 	CGDataProviderRef aProvider = CGDataProviderCreateDirectAccess( pCGBits, nSize, &aProviderCallbacks );
 	if ( !aProvider )
 	{
-		rtl_freeMemory( pCGBits );
+		delete[] pCGBits;
 		return;
 	}
 
