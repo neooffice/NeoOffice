@@ -3777,13 +3777,6 @@ void Window::ImplShowAllOverlaps()
         {
             pOverlapWindow->Show( TRUE, SHOW_NOACTIVATE );
             pOverlapWindow->mpWindowImpl->mbOverlapVisible = FALSE;
-
-#ifdef USE_JAVA
-            // Discard and recreate DragSource and DropTarget members since
-            // the native window may be new
-            pOverlapWindow->ImplStopDnd();
-            pOverlapWindow->GetDropTarget();
-#endif	// USE_JAVA
         }
 
         pOverlapWindow = pOverlapWindow->mpWindowImpl->mpNext;
@@ -6475,12 +6468,6 @@ void Window::Show( BOOL bVisible, USHORT nFlags )
         }
 #endif
 
-#ifdef USE_JAVA
-        // Ensure that DragSource and DropTarget members are created since the
-        // native window is not created until first shown
-        GetDropTarget();
-#endif	// USE_JAVA
-
         ImplShowAllOverlaps();
     }
 
@@ -8288,10 +8275,8 @@ Reference< XDragSource > Window::GetDragSource()
 #elif defined USE_JAVA
                         aDragSourceSN = OUString::createFromAscii( "com.sun.star.datatransfer.dnd.JavaDragSource" );
                         aDropTargetSN = OUString::createFromAscii( "com.sun.star.datatransfer.dnd.JavaDropTarget" );
-                        aDragSourceAL[ 0 ] = makeAny( (sal_uInt32) pEnvData->aWindow );
-                        aDragSourceAL[ 1 ] = makeAny( (sal_uInt32) this );
-                        aDropTargetAL[ 0 ] = makeAny( (sal_uInt32) pEnvData->aWindow );
-                        aDropTargetAL[ 1 ] = makeAny( (sal_uInt32) this );
+                        aDragSourceAL[ 0 ] = makeAny( (sal_uInt32) this );
+                        aDropTargetAL[ 0 ] = makeAny( (sal_uInt32) this );
 #elif defined UNX
                         aDropTargetAL.realloc( 3 );
                         aDragSourceAL.realloc( 3 );
