@@ -1524,12 +1524,14 @@ ImplDevFontList* PDFWriterImpl::filterDevFontList( ImplDevFontList* pFontList )
     DBG_ASSERT( m_aSubsets.size() == 0, "Fonts changing during PDF generation, document will be invalid" );
     ImplDevFontList* pFiltered = pFontList->Clone( true, true );
 
+#ifndef USE_JAVA
     // append the PDF builtin fonts
     for( unsigned int i = 0; i < sizeof(m_aBuiltinFonts)/sizeof(m_aBuiltinFonts[0]); i++ )
     {
         ImplFontData* pNewData = new ImplPdfBuiltinFontData( m_aBuiltinFonts[i] );
         pFiltered->Add( pNewData );
     }
+#endif	// !USE_JAVA
     return pFiltered;
 }
 
