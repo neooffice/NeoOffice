@@ -140,7 +140,8 @@ SalGraphics* JavaSalFrame::GetGraphics()
 	if ( mbGraphics )
 		return NULL;
 
-	mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
+	if ( !mpGraphics->mpVCLGraphics )
+		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
 	mbGraphics = TRUE;
 
 	return mpGraphics;
@@ -153,9 +154,6 @@ void JavaSalFrame::ReleaseGraphics( SalGraphics* pGraphics )
 	if ( pGraphics != mpGraphics )
 		return;
 
-	if ( mpGraphics->mpVCLGraphics )
-		delete mpGraphics->mpVCLGraphics;
-	mpGraphics->mpVCLGraphics = NULL;
 	mbGraphics = FALSE;
 }
 
@@ -195,6 +193,11 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 	mbVisible = bVisible;
 
+	// Make sure there is a graphics available to avoid crashing when the OOo
+	// code tries to draw while updating the menus
+	if ( !mpGraphics->mpVCLGraphics )
+		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
+
 	// Do some of the updating before the window is shown
 	if ( mbVisible )
 		UpdateMenusForFrame( this, NULL );
@@ -202,12 +205,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	mpVCLFrame->setVisible( mbVisible );
 
 	// Reset graphics
-	com_sun_star_vcl_VCLGraphics *pVCLGraphics = mpVCLFrame->getGraphics();
-	if ( pVCLGraphics )
-	{
-		pVCLGraphics->resetGraphics();
-		delete pVCLGraphics;
-	}
+	mpGraphics->mpVCLGraphics->resetGraphics();
 
 	if ( mbVisible )
 	{
@@ -231,13 +229,15 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 				// Fix bug 1310 by creating a new native window with the new
 				// parent
-				(*it)->ReleaseGraphics( (*it)->mpGraphics );
+				if ( (*it)->mpGraphics->mpVCLGraphics )
+					(*it)->mpGraphics->mpVCLGraphics;
 				if ( (*it)->mpVCLFrame )
 				{
 					(*it)->mpVCLFrame->dispose();
 					delete (*it)->mpVCLFrame;
 				}
 				(*it)->mpVCLFrame = new com_sun_star_vcl_VCLFrame( (*it)->mnStyle, *it, this );
+				(*it)->mpGraphics->mpVCLGraphics = (*it)->mpVCLFrame->getGraphics();
 				(*it)->maSysData.aWindow = 0;
 				(*it)->SetPosSize( (*it)->maGeometry.nX - (*it)->maGeometry.nLeftDecoration - maGeometry.nX, (*it)->maGeometry.nY - (*it)->maGeometry.nTopDecoration - maGeometry.nY, (*it)->maGeometry.nWidth, (*it)->maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
 
@@ -780,13 +780,15 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		if ( ( mpOldParent && mpOldParent->mbVisible ) || ( mpParent && mpParent->mbVisible ) )
 		{
 			// Fix bug 1310 by creating a new native window with the new parent
-			ReleaseGraphics( mpGraphics );
+			if ( mpGraphics->mpVCLGraphics )
+				delete mpGraphics->mpVCLGraphics;
 			if ( mpVCLFrame )
 			{
 				mpVCLFrame->dispose();
 				delete mpVCLFrame;
 			}
 			mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, mpParent );
+			mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
 			maSysData.aWindow = 0;
 			SetPosSize( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration, maGeometry.nWidth, maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
 		}

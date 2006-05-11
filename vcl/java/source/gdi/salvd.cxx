@@ -85,7 +85,8 @@ SalGraphics* JavaSalVirtualDevice::GetGraphics()
 	if ( mbGraphics )
 		return NULL;
 
-	mpGraphics->mpVCLGraphics = mpVCLImage->getGraphics();
+	if ( !mpGraphics->mpVCLGraphics )
+		mpGraphics->mpVCLGraphics = mpVCLImage->getGraphics();
 	mbGraphics = TRUE;
 
 	return mpGraphics;
@@ -98,9 +99,6 @@ void JavaSalVirtualDevice::ReleaseGraphics( SalGraphics* pGraphics )
 	if ( pGraphics != mpGraphics )
 		return;
 
-	if ( mpGraphics->mpVCLGraphics )
-		delete mpGraphics->mpVCLGraphics;
-	mpGraphics->mpVCLGraphics = NULL;
 	mbGraphics = FALSE;
 }
 
@@ -129,10 +127,21 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 
 			bRet = TRUE;
 		}
-		else
+	}
+
+	if ( !bRet )
+	{
+		if ( mpGraphics )
 		{
-			if ( pVCLImage )
-				delete pVCLImage;
+			delete mpGraphics;
+			mpGraphics = NULL;
+		}
+
+		if ( mpVCLImage )
+		{
+			mpVCLImage->dispose();
+			delete mpVCLImage;
+			mpVCLImage = NULL;
 		}
 	}
 
