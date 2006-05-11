@@ -66,11 +66,20 @@
 		if ( !nCount )
 			return;
 
-		// Fix bug 1001 by limiting virtual bounds to the main screen only
 		NSScreen *pScreen = (NSScreen *)[pScreens objectAtIndex:0];
 		NSRect aVirtualBounds = [pScreen frame];
 		if ( NSIsEmptyRect( aVirtualBounds ) )
 			return;
+
+		// Fix bug 1444 by finding the screen that extends the topmost
+		unsigned i;
+		for ( i = 1; i < nCount; i++ )
+		{
+			pScreen = (NSScreen *)[pScreens objectAtIndex:i];
+			NSRect aBounds = [pScreen frame];
+			if ( aBounds.origin.y + aBounds.size.height > aVirtualBounds.origin.y + aBounds.size.height )
+				aVirtualBounds = aBounds;
+		}
 
 		if ( mbUseMainScreenOnly )
 		{
@@ -93,7 +102,6 @@
 
 		// Iterate through screen and find the screen that the point is
 		// inside of
-		unsigned i;
 		NSRect aClosestBounds = NSMakeRect( 0, 0, 0, 0 );
 		BOOL bScreenFound = NO;
 		for ( i = 0; i < nCount; i++ )
