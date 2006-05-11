@@ -36,6 +36,19 @@
 #import <Cocoa/Cocoa.h>
 #import "VCLGraphics_cocoa.h"
 
+@interface FlippedView : NSView
+- (BOOL)isFlipped;
+@end
+
+@implementation FlippedView
+
+- (BOOL)isFlipped
+{
+	return YES;
+}
+
+@end
+
 @interface DrawEPSInRect : NSObject
 {
 	void*				mpPtr;
@@ -59,24 +72,32 @@
 		NSView *pPrintView = [pOperation view];
 		if ( pPrintView )
 		{
-			NSView *pFocusView = [NSView focusView];
-			if ( pFocusView )
-				[pFocusView unlockFocus];
-
-			[pPrintView lockFocus];
-
-			NSData *pData = [NSData dataWithBytesNoCopy:mpPtr length:mnSize freeWhenDone:NO];
-			if ( pData )
+			NSRect aFrame = [pPrintView frame];
+			NSRect aBounds = [pPrintView bounds];
+			FlippedView *pFlippedView = [[FlippedView alloc] initWithFrame:NSMakeRect( aBounds.origin.x * -1, aBounds.origin.y * -1, aFrame.size.width, aFrame.size.height )];
+			if ( pFlippedView )
 			{
-				NSEPSImageRep *pImage = [NSEPSImageRep imageRepWithData:pData];
-				if ( pImage )
-					[pImage drawInRect:NSMakeRect( mfX, mfY, mfWidth, mfHeight )];
+				NSView *pFocusView = [NSView focusView];
+				if ( pFocusView )
+					[pFocusView unlockFocus];
+
+				[pPrintView addSubview:pFlippedView];
+				[pFlippedView lockFocus];
+
+				NSData *pData = [NSData dataWithBytesNoCopy:mpPtr length:mnSize freeWhenDone:NO];
+				if ( pData )
+				{
+					NSEPSImageRep *pImage = [NSEPSImageRep imageRepWithData:pData];
+					if ( pImage )
+						[pImage drawInRect:NSMakeRect( mfX, mfY, mfWidth, mfHeight )];
+				}
+
+				[pFlippedView unlockFocus];
+				[pFlippedView removeFromSuperviewWithoutNeedingDisplay];
+
+				if ( pFocusView )
+					[pFocusView lockFocus];
 			}
-
-			[pPrintView unlockFocus];
-
-			if ( pFocusView )
-				[pFocusView lockFocus];
 		}
 	}
 }
@@ -123,30 +144,38 @@
 		NSView *pPrintView = [pOperation view];
 		if ( pPrintView )
 		{
-			NSView *pFocusView = [NSView focusView];
-			if ( pFocusView )
-				[pFocusView unlockFocus];
-
-			[pPrintView lockFocus];
-
-			NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
-			if ( pContext )
+			NSRect aFrame = [pPrintView frame];
+			NSRect aBounds = [pPrintView bounds];
+			FlippedView *pFlippedView = [[FlippedView alloc] initWithFrame:NSMakeRect( aBounds.origin.x * -1, aBounds.origin.y * -1, aFrame.size.width, aFrame.size.height )];
+			if ( pFlippedView )
 			{
-				CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
-				if ( aContext )
+				NSView *pFocusView = [NSView focusView];
+				if ( pFocusView )
+					[pFocusView unlockFocus];
+
+				[pPrintView addSubview:pFlippedView];
+				[pFlippedView lockFocus];
+
+				NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
+				if ( pContext )
 				{
-					// Fix bug 1218 by setting the clip here and not in Java
-					CGContextSaveGState( aContext );
-					CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
-					CGContextDrawImage( aContext, CGRectMake( mfX, mfY, mfWidth, mfHeight ), maImage );
-					CGContextRestoreGState( aContext );
+					CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+					if ( aContext )
+					{
+						// Fix bug 1218 by setting the clip here and not in Java
+						CGContextSaveGState( aContext );
+						CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
+						CGContextDrawImage( aContext, CGRectMake( mfX, mfY, mfWidth, mfHeight ), maImage );
+						CGContextRestoreGState( aContext );
+					}
 				}
+
+				[pFlippedView unlockFocus];
+				[pFlippedView removeFromSuperviewWithoutNeedingDisplay];
+
+				if ( pFocusView )
+					[pFocusView lockFocus];
 			}
-
-			[pPrintView unlockFocus];
-
-			if ( pFocusView )
-				[pFocusView lockFocus];
 		}
 	}
 }
