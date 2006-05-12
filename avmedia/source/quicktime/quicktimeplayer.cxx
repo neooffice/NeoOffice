@@ -267,7 +267,7 @@ sal_Bool SAL_CALL Player::isMute() throw( RuntimeException )
 void SAL_CALL Player::setVolumeDB( sal_Int16 nVolumeDB ) throw( RuntimeException )
 {
 	if ( maMovie )
-		SetMovieVolume( maMovie, X2Fix( (Float32)( AVMEDIA_DB_RANGE - nVolumeDB ) / AVMEDIA_DB_RANGE );
+		SetMovieVolume( maMovie, X2Fix( (Float32)( AVMEDIA_DB_RANGE - nVolumeDB ) / AVMEDIA_DB_RANGE ) );
 }
 
 // ----------------------------------------------------------------------------
