@@ -92,20 +92,17 @@ bool Player::create( const ::rtl::OUString& rURL )
 	CFURLRef aURL = CFURLCreateWithBytes( NULL, (const UInt8 *)aURLBytes.getStr(), aURLBytes.getLength(), kCFStringEncodingUTF8, NULL );
 	if ( aURL )
 	{
-		Handle hHandle = NewHandle( sizeof( AliasHandle ) );
-		if ( hHandle )
+		Handle hHandle = NULL;
+		OSType nType;
+		if ( QTNewDataReferenceFromCFURL( aURL, 0, &hHandle, &nType ) == noErr )
 		{
-			OSType nType;
-			if ( QTNewDataReferenceFromCFURL( aURL, 0, &hHandle, &nType ) == noErr && EnterMovies() == noErr )
+			short nID = movieInDataForkResID;
+			if ( EnterMovies() == noErr && NewMovieFromDataRef( &maMovie, 0, &nID, hHandle, nType ) == noErr && maMovie )
 			{
-				short nID = movieInDataForkResID;
-				OSErr nErr = NewMovieFromDataRef( &maMovie, 0, &nID, hHandle, nType );
-				if ( nErr == noErr )
-				{
-					SetMovieGWorld( maMovie, NULL, NULL );
-					MoviesTask( maMovie, 0 );
-					bRet = true;
-				}
+				SetMovieGWorld( maMovie, NULL, NULL );
+				SetMovieActiveSegment( maMovie, -1, 0 );
+				MoviesTask( maMovie, 0 );
+				bRet = true;
 			}
 
 			DisposeHandle( hHandle );
@@ -121,9 +118,10 @@ bool Player::create( const ::rtl::OUString& rURL )
 
 void SAL_CALL Player::start() throw( RuntimeException )
 {
-	if ( maMovie && !mbRunning )
+	stop();
+
+	if ( maMovie )
 	{
-		StopMovie( maMovie );
 		StartMovie( maMovie );
 		mbRunning = true;
 	}
@@ -144,8 +142,19 @@ void SAL_CALL Player::stop() throw( RuntimeException )
 
 sal_Bool SAL_CALL Player::isPlaying() throw( RuntimeException )
 {
-	if ( mbRunning && !mbLooping && ( !maMovie || IsMovieDone( maMovie ) ) )
-		mbRunning = false;
+	if ( mbRunning && maMovie && IsMovieDone( maMovie ) )
+	{
+		if ( mbLooping )
+		{
+			stop();
+			GoToBeginningOfMovie( maMovie );
+			start();
+		}
+		else
+		{
+			mbRunning = false;
+		}
+	}
 
 	return mbRunning;
 }
@@ -166,6 +175,8 @@ double SAL_CALL Player::getDuration() throw( RuntimeException )
 
 void SAL_CALL Player::setMediaTime( double fTime ) throw( RuntimeException )
 {
+	stop();
+
 	if ( maMovie )
 		SetMovieTimeValue( maMovie, (MacOSTimeValue)( fTime * 1000 ) );
 }
@@ -186,19 +197,27 @@ double SAL_CALL Player::getMediaTime() throw( RuntimeException )
 
 void SAL_CALL Player::setStopTime( double fTime ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Player::setStopTime not implemented\n" );
-#endif
+	if ( maMovie )
+		SetMovieActiveSegment( maMovie, -1, (MacOSTimeValue)( fTime * 1000 ) );
 }
 
 // ----------------------------------------------------------------------------
 
 double SAL_CALL Player::getStopTime() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Player::getStopTime not implemented\n" );
-#endif
-	double aRefTime( 0.0 );
+	double aRefTime = 0.0;
+
+	if ( maMovie )
+	{
+		MacOSTimeValue nStartTime;
+		MacOSTimeValue nDuration;
+		SetMovieActiveSegment( maMovie, nStartTime, nDuration );
+		if ( nDuration == -1 )
+			aRefTime = getDuration();
+		else
+			aRefTime = (double)nDuration / 1000;
+	}
+
 	return aRefTime; 
 }
 
@@ -206,19 +225,19 @@ double SAL_CALL Player::getStopTime() throw( RuntimeException )
 
 void SAL_CALL Player::setRate( double fRate ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Player::setRate not implemented\n" );
-#endif
+	if ( maMovie )
+		SetMovieRate( maMovie, X2Fix( (float)fRate ) );
 }
 
 // ----------------------------------------------------------------------------
 
 double SAL_CALL Player::getRate() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Player::getRate not implemented\n" );
-#endif
-	double fRet( 0.0 );
+	double fRet = 0.0;
+
+	if ( maMovie )
+		fRet = (double)Fix2X( GetMovieRate( maMovie ) );
+
 	return fRet;
 }
 
@@ -226,9 +245,7 @@ double SAL_CALL Player::getRate() throw( RuntimeException )
 
 void SAL_CALL Player::setPlaybackLoop( sal_Bool bSet ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Player::setPlaybackLoop not implemented\n" );
-#endif
+	mbLooping = bSet;
 }
 
 // ----------------------------------------------------------------------------

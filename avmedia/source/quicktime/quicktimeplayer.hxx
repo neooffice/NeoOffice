@@ -67,7 +67,6 @@ class Player : public ::cppu::WeakImplHelper2< ::com::sun::star::media::XPlayer,
 	bool				mbLooping;
 	::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >	mxMgr;
 	Movie				maMovie;
-	GWorldPtr			maMovieGWorld;
 	bool				mbRunning;
 
 public:
