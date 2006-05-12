@@ -256,8 +256,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			}
 			else
 			{
-				com_sun_star_vcl_VCLEvent aEvent( getJavaObject() );
-				pSalData->mpEventQueue->postCachedEvent( &aEvent );
+				com_sun_star_vcl_VCLEvent *pEvent = new com_sun_star_vcl_VCLEvent( getJavaObject() );
+				pSalData->maPendingDocumentEventsList.push_back( pEvent );
 			}
 			return;
 		}

@@ -449,15 +449,20 @@ void JavaSalInstance::Yield( BOOL bWait )
 	// Dispatch next pending non-AWT event
 	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( 0, FALSE ) ) != NULL )
 	{
-		USHORT nID = pEvent->getID();
 		pEvent->dispatch();
 		delete pEvent;
+		return;
+	}
 
-		// We need to break out of dispatching non-AWT events if this is
-		// an open or print document event as these events may be reposted
-		// which could cause an infinite loop
-		if ( nID != SALEVENT_OPENDOCUMENT && nID != SALEVENT_PRINTDOCUMENT )
-			return;
+	// Dispatch the next pending document event
+	ImplSVData *pSVData = ImplGetSVData();
+	if ( pSalData->maPendingDocumentEventsList.size() && pSVData && pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mpPresentationFrame && !pSalData->mbInNativeModalSheet )
+	{
+		pEvent = pSalData->maPendingDocumentEventsList.front();
+		pSalData->maPendingDocumentEventsList.pop_front();
+		pEvent->dispatch();
+		delete pEvent;
+		return;
 	}
 
 	ULONG nCount;
@@ -469,7 +474,6 @@ void JavaSalInstance::Yield( BOOL bWait )
 	}
 
 	// Check timer
-	ImplSVData* pSVData = ImplGetSVData();
 	if ( pSVData->mpSalTimer && pSalData->mnTimerInterval )
 	{
 		timeval aCurrentTime;

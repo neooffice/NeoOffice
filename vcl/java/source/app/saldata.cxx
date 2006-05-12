@@ -44,6 +44,9 @@
 #ifndef _SV_OUTFONT_HXX
 #include <outfont.hxx>
 #endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
+#include <com/sun/star/vcl/VCLEvent.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
@@ -81,4 +84,10 @@ SalData::~SalData()
 
 	for ( ::std::map< String, JavaImplFontData* >::const_iterator it = maFontNameMapping.begin(); it != maFontNameMapping.end(); ++it )
 		delete it->second;
+
+	while ( maPendingDocumentEventsList.size() )
+	{
+		delete maPendingDocumentEventsList.front();
+		maPendingDocumentEventsList.pop_front();
+	}
 }

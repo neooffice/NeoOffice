@@ -82,6 +82,7 @@ public:
 	SalFrame::SalPointerState	maLastPointerState;
 	JavaSalFrame*			mpLastDragFrame;
 	bool					mbInSignalHandler;
+	::std::list< ::vcl::com_sun_star_vcl_VCLEvent* >	maPendingDocumentEventsList;
 
 							SalData();
 							~SalData();
