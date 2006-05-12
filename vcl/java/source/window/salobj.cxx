@@ -36,6 +36,7 @@
 #define _SV_SALOBJ_CXX
 
 #include <stdio.h>
+#include <string.h>
 
 #ifndef _SV_SALOBJ_H
 #include <salobj.h>
@@ -43,8 +44,10 @@
 
 // =======================================================================
 
-JavaSalObject::JavaSalObject()
+JavaSalObject::JavaSalObject( SalFrame *pParent )
 {
+	memset( &maSysData, 0, sizeof( SystemEnvData ) );
+	maSysData.nSize = sizeof( SystemEnvData );
 }
 
 // -----------------------------------------------------------------------
@@ -139,26 +142,17 @@ void JavaSalObject::GrabFocus()
 
 void JavaSalObject::SetBackground()
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalObject::SetBackground not implemented\n" );
-#endif
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalObject::SetBackground( SalColor nSalColor )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalObject::SetBackground #2 not implemented\n" );
-#endif
 }
 
 // -----------------------------------------------------------------------
 
 const SystemEnvData* JavaSalObject::GetSystemData() const
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalObject::GetSystemData not implemented\n" );
-#endif
-	return NULL;
+	return &maSysData;
 }

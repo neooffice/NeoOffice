@@ -62,6 +62,9 @@
 #ifndef _SV_SALMENU_H
 #include <salmenu.h>
 #endif
+#ifndef _SV_SALOBJ_H
+#include <salobj.h>
+#endif
 #ifndef _SV_SALOGL_H
 #include <salogl.h>
 #endif
@@ -708,19 +711,15 @@ void JavaSalInstance::DestroyFrame( SalFrame* pFrame )
 
 SalObject* JavaSalInstance::CreateObject( SalFrame* pParent, SystemWindowData* pWindowData )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalInstance::CreateObject not implemented\n" );
-#endif
-	return NULL;
+	return new JavaSalObject( pParent );
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalInstance::DestroyObject( SalObject* pObject )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalInstance::DestroyObject not implemented\n" );
-#endif
+	if ( pObject )
+		delete pObject;
 }
 
 // -----------------------------------------------------------------------

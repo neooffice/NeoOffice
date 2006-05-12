@@ -38,10 +38,16 @@
 
 #ifndef _SV_SALOBJ_HXX
 #include <salobj.hxx>
-#endif 
+#endif
 #ifndef _SV_SV_H
 #include <sv.h>
-#endif 
+#endif
+#ifndef _SV_SYSDATA_HXX
+#include <sysdata.hxx>
+#endif
+
+class JavaSalFrame;
+class SalFrame;
 
 // -----------------
 // - JavaSalObject -
@@ -49,8 +55,11 @@
 
 class JavaSalObject : public SalObject
 {
+	JavaSalFrame*			mpParent;
+	SystemEnvData			maSysData;
+
 public:
-							JavaSalObject();
+							JavaSalObject( SalFrame *pParent );
 	virtual					~JavaSalObject();
 
 	virtual void			ResetClipRegion();
