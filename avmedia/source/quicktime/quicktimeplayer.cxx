@@ -41,6 +41,7 @@
 
 #define AVMEDIA_QUICKTIME_PLAYER_IMPLEMENTATIONNAME "com.sun.star.comp.avmedia.Player_QuickTime"
 #define AVMEDIA_QUICKTIME_PLAYER_SERVICENAME "com.sun.star.media.Player_QuickTime"
+#define AVMEDIA_DB_RANGE -40
 
 using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::lang;
@@ -56,7 +57,6 @@ Player::Player( const Reference< XMultiServiceFactory >& rxMgr ) :
 	mbLooping( false ),
 	mxMgr( rxMgr ),
 	maMovie( NULL ),
-	maMovieGWorld( NULL ),
 	mbRunning( false )
 {
 }
@@ -69,9 +69,6 @@ Player::~Player()
 
 	if ( maMovie )
 		DisposeMovie( maMovie );
-
-	if ( maMovieGWorld )
-		DisposeGWorld( maMovieGWorld );
 }
 
 // ----------------------------------------------------------------------------
@@ -99,28 +96,15 @@ bool Player::create( const ::rtl::OUString& rURL )
 		if ( hHandle )
 		{
 			OSType nType;
-			if ( QTNewDataReferenceFromCFURL( aURL, 0, &hHandle, &nType ) == noErr )
+			if ( QTNewDataReferenceFromCFURL( aURL, 0, &hHandle, &nType ) == noErr && EnterMovies() == noErr )
 			{
-				if ( !maMovieGWorld )
+				short nID = movieInDataForkResID;
+				OSErr nErr = NewMovieFromDataRef( &maMovie, 0, &nID, hHandle, nType );
+				if ( nErr == noErr )
 				{
-					Rect aRect;
-					aRect.left = 0;
-					aRect.top = 0;
-					aRect.right = 1;
-					aRect.bottom = 1;
-					NewGWorld( &maMovieGWorld, 32, &aRect, NULL, NULL, 0 );
-				}
-
-				if ( maMovieGWorld && EnterMovies() == noErr )
-				{
-					short nID = movieInDataForkResID;
-					OSErr nErr = NewMovieFromDataRef( &maMovie, 0, &nID, hHandle, nType );
-					if ( nErr == noErr )
-					{
-						SetMovieGWorld( maMovie, maMovieGWorld, NULL );
-						MoviesTask( maMovie, 0 );
-						bRet = true;
-					}
+					SetMovieGWorld( maMovie, NULL, NULL );
+					MoviesTask( maMovie, 0 );
+					bRet = true;
 				}
 			}
 
@@ -139,6 +123,7 @@ void SAL_CALL Player::start() throw( RuntimeException )
 {
 	if ( maMovie && !mbRunning )
 	{
+		StopMovie( maMovie );
 		StartMovie( maMovie );
 		mbRunning = true;
 	}
@@ -282,8 +267,7 @@ sal_Bool SAL_CALL Player::isMute() throw( RuntimeException )
 void SAL_CALL Player::setVolumeDB( sal_Int16 nVolumeDB ) throw( RuntimeException )
 {
 	if ( maMovie )
-		SetMovieVolume( maMovie, nVolumDB );
-	fprintf( stderr, "Here: %i\n", nVolumeDB );
+		SetMovieVolume( maMovie, X2Fix( (Float32)( AVMEDIA_DB_RANGE - nVolumeDB ) / AVMEDIA_DB_RANGE );
 }
 
 // ----------------------------------------------------------------------------
@@ -293,7 +277,7 @@ sal_Int16 SAL_CALL Player::getVolumeDB() throw( RuntimeException )
 	sal_Int16 nRet = 0;
 
 	if ( maMovie )
-		nRet = 100 * GetMovieVolume( maMovie ) / kFullVolume;
+		nRet = AVMEDIA_DB_RANGE - (sal_Int16)( Fix2X( GetMovieVolume( maMovie ) ) * AVMEDIA_DB_RANGE );
 
 	return nRet;
 }
