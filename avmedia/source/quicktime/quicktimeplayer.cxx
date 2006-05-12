@@ -54,7 +54,6 @@ namespace quicktime
 {
 
 Player::Player( const Reference< XMultiServiceFactory >& rxMgr ) :
-	mbLooping( false ),
 	mxMgr( rxMgr ),
 	maMovie( NULL ),
 	mbRunning( false )
@@ -85,7 +84,6 @@ bool Player::create( const ::rtl::OUString& rURL )
 		maMovie = NULL;
 	}
 
-	mbLooping = false;
 	mbRunning = false;
 
 	::rtl::OString aURLBytes( rURL.getStr(), rURL.getLength(), RTL_TEXTENCODING_UTF8 );
@@ -143,18 +141,7 @@ void SAL_CALL Player::stop() throw( RuntimeException )
 sal_Bool SAL_CALL Player::isPlaying() throw( RuntimeException )
 {
 	if ( mbRunning && maMovie && IsMovieDone( maMovie ) )
-	{
-		if ( mbLooping )
-		{
-			stop();
-			GoToBeginningOfMovie( maMovie );
-			start();
-		}
-		else
-		{
-			mbRunning = false;
-		}
-	}
+		stop();
 
 	return mbRunning;
 }
@@ -175,10 +162,15 @@ double SAL_CALL Player::getDuration() throw( RuntimeException )
 
 void SAL_CALL Player::setMediaTime( double fTime ) throw( RuntimeException )
 {
-	stop();
-
 	if ( maMovie )
+	{
+		sal_Bool bPlaying = isPlaying();
+		if ( bPlaying )
+			stop();
 		SetMovieTimeValue( maMovie, (MacOSTimeValue)( fTime * 1000 ) );
+		if ( bPlaying )
+			start();
+	}
 }
 
 // ----------------------------------------------------------------------------
@@ -211,7 +203,7 @@ double SAL_CALL Player::getStopTime() throw( RuntimeException )
 	{
 		MacOSTimeValue nStartTime;
 		MacOSTimeValue nDuration;
-		SetMovieActiveSegment( maMovie, nStartTime, nDuration );
+		GetMovieActiveSegment( maMovie, &nStartTime, &nDuration );
 		if ( nDuration == -1 )
 			aRefTime = getDuration();
 		else
@@ -245,14 +237,19 @@ double SAL_CALL Player::getRate() throw( RuntimeException )
 
 void SAL_CALL Player::setPlaybackLoop( sal_Bool bSet ) throw( RuntimeException )
 {
-	mbLooping = bSet;
+#ifdef DEBUG
+	fprintf( stderr, "Player::setPlaybackLoop not implemented\n" );
+#endif
 }
 
 // ----------------------------------------------------------------------------
 
 sal_Bool SAL_CALL Player::isPlaybackLoop() throw( RuntimeException )
 {
-	return mbLooping;
+#ifdef DEBUG
+	fprintf( stderr, "Player::isPlaybackLoop not implemented\n" );
+#endif
+	return sal_False;
 }
 
 // ----------------------------------------------------------------------------
