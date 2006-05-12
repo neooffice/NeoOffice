@@ -92,6 +92,12 @@ update_installation() {
 	chmod -Rf ug+w "$1/Contents/Resources" || return 1
 	chmod -Rf ug+w "$1/Contents/share/dict/ooo" || return 1
 
+	# Register libavmediaquicktime.dylib component
+	DYLD_LIBRARY_PATH="$1/Contents/MacOS"; export DYLD_LIBRARY_PATH
+	"$2/Contents/Resources/regcomp.bin" -revoke -r "$1/Contents/MacOS/services.rdb" -c "$1/Contents/MacOS/classes/avmedia.jar"
+	"$2/Contents/Resources/regcomp.bin" -register -r "$1/Contents/MacOS/services.rdb" -c "$1/Contents/MacOS/libavmediaquicktime.dylib"
+	unset DYLD_LIBRARY_PATH
+
     # Touch shared libraries to fix bug 280
 	DYLD_LIBRARY_PATH="$1/Contents/MacOS"; export DYLD_LIBRARY_PATH
 	for i in `cd "$1/Contents/MacOS" ; find . -type f -name "*.dylib*"`; do
@@ -100,6 +106,7 @@ update_installation() {
 	for i in `cd "$1/Contents/MacOS" ; find . -type f -name "*.bin" ; find . -type f -name "*.jar"`; do
 		touch -f "$1/Contents/MacOS/$i"   
 	done
+	unset DYLD_LIBRARY_PATH
 
 	# Open welcome page
 	sudoargs=

@@ -148,6 +148,7 @@ if [ -d "$2" ]; then
 	for i in `cd "$2/Contents/MacOS" ; find . -type f -name "*.dylib*" ; find . -type f -name "*.bin"`; do
 		touch -f "$2/Contents/MacOS/$i"
 	done
+	unset DYLD_LIBRARY_PATH
 
 	# Open welcome page
 	sudoargs=
