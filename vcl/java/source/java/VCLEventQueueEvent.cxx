@@ -424,7 +424,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				}
 			}
 
-			if ( !bDeleteDataOnly && pFrame && pFrame->mbVisible && pFrame != pSalData->mpFocusFrame )
+			// Ignore focus events for floating windows
+			if ( !bDeleteDataOnly && pFrame && pFrame->mbVisible && pFrame != pSalData->mpFocusFrame && !pFrame->IsFloatingFrame() )
 			{
 				if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
 					pSalData->mpFocusFrame->CallCallback( SALEVENT_LOSEFOCUS, NULL );

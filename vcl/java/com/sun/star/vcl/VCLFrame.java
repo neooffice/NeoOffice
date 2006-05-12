@@ -1086,9 +1086,7 @@ g.dispose();
 	 */
 	public synchronized void focusGained(FocusEvent e) {
 
-		// Ignore temporary focus events as Java 1.4.1 generates them for
-		// undecorated windows
-		if (disposed || e.isTemporary() || !window.isShowing())
+		if (disposed || !window.isShowing())
 			return;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_GETFOCUS, this, 0));
@@ -1102,9 +1100,7 @@ g.dispose();
 	 */
 	public synchronized void focusLost(FocusEvent e) {
 
-		// Ignore temporary focus events as Java 1.4.1 generates them for
-		// undecorated windows
-		if (disposed || e.isTemporary() || !window.isShowing())
+		if (disposed || !window.isShowing())
 			return;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));

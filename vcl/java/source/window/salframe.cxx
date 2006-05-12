@@ -571,19 +571,28 @@ void JavaSalFrame::SetAlwaysOnTop( BOOL bOnTop )
 
 void JavaSalFrame::ToTop( USHORT nFlags )
 {
-	bool bSuccess = false;
+	// Make sure frame is a top-level window
+	JavaSalFrame *pFrame = this;
+	while ( pFrame && pFrame->IsFloatingFrame() && pFrame->mpParent && pFrame->mpParent->mbVisible )
+		pFrame = pFrame->mpParent;
 
+	if ( !pFrame || pFrame->IsFloatingFrame() || !pFrame->mbVisible )
+		return;
+	
+	bool bSuccess;
 	if ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS )
-		bSuccess = mpVCLFrame->toFront();
+		bSuccess = pFrame->mpVCLFrame->toFront();
 	else if ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS_ONLY )
-		bSuccess = mpVCLFrame->requestFocus();
+		bSuccess = pFrame->mpVCLFrame->requestFocus();
+	else
+		bSuccess = false;
 
 	// If Java has set the focus, update it now in the OOo code as it may
 	// take a while before the Java event shows up in the queue. Fix bug
 	// 1203 by not doing this update if we are in the Show() method.
 	if ( bSuccess && !mbInShow )
 	{
-		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_GETFOCUS, this, NULL );
+		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_GETFOCUS, pFrame, NULL );
 		aEvent.dispatch();
 	}
 }
