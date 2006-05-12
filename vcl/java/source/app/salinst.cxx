@@ -224,11 +224,11 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 					OThread::wait( aDelay );
 				}
 
-				aEventQueueMutex.release();
-
 				if ( !bAcquired )
+				{
+					aEventQueueMutex.release();
 					return userCanceledErr;
-
+				}
 
 				pSalData->maNativeEventCondition.reset();
 
@@ -268,6 +268,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				}
 
 				rSolarMutex.release();
+				aEventQueueMutex.release();
 
 				if ( !bSucceeded )
 					return userCanceledErr;
@@ -459,9 +460,13 @@ void JavaSalInstance::Yield( BOOL bWait )
 			return;
 	}
 
-	ULONG nCount = ReleaseYieldMutex();
-	OThread::yield();
-	AcquireYieldMutex( nCount );
+	ULONG nCount;
+	if ( pSalData->maNativeEventCondition.check() )
+	{
+		nCount = ReleaseYieldMutex();
+		OThread::yield();
+		AcquireYieldMutex( nCount );
+	}
 
 	// Check timer
 	ImplSVData* pSVData = ImplGetSVData();
