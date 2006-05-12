@@ -35,6 +35,10 @@
 
 #include "quicktimeplayer.hxx"
 
+#include <premac.h>
+#include <Carbon/Carbon.h>
+#include <postmac.h>
+
 #define AVMEDIA_QUICKTIME_PLAYER_IMPLEMENTATIONNAME "com.sun.star.comp.avmedia.Player_QuickTime"
 #define AVMEDIA_QUICKTIME_PLAYER_SERVICENAME "com.sun.star.media.Player_QuickTime"
 
@@ -133,7 +137,7 @@ bool Player::create( const ::rtl::OUString& rURL )
 
 void SAL_CALL Player::start() throw( RuntimeException )
 {
-	if ( maMovie )
+	if ( maMovie && !mbRunning )
 	{
 		StartMovie( maMovie );
 		mbRunning = true;
@@ -155,7 +159,7 @@ void SAL_CALL Player::stop() throw( RuntimeException )
 
 sal_Bool SAL_CALL Player::isPlaying() throw( RuntimeException )
 {
-	if ( maMovie && mbRunning && !mbLooping && IsMovieDone( maMovie ) )
+	if ( mbRunning && !mbLooping && ( !maMovie || IsMovieDone( maMovie ) ) )
 		mbRunning = false;
 
 	return mbRunning;
@@ -165,10 +169,11 @@ sal_Bool SAL_CALL Player::isPlaying() throw( RuntimeException )
 
 double SAL_CALL Player::getDuration() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Player::getDuration not implemented\n" );
-#endif
-	double aRefTime( 0.0 );
+	double aRefTime = 0.0;
+
+	if ( maMovie )
+		aRefTime = (double)GetMovieDuration( maMovie ) / 1000;
+
 	return aRefTime;
 }
 
@@ -176,19 +181,19 @@ double SAL_CALL Player::getDuration() throw( RuntimeException )
 
 void SAL_CALL Player::setMediaTime( double fTime ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Player::setMediaTime not implemented\n" );
-#endif
+	if ( maMovie )
+		SetMovieTimeValue( maMovie, (MacOSTimeValue)( fTime * 1000 ) );
 }
 
 // ----------------------------------------------------------------------------
 
 double SAL_CALL Player::getMediaTime() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Player::getMediaTime not implemented\n" );
-#endif
-	double aRefTime( 0.0 );
+	double aRefTime = 0.0;
+
+	if ( maMovie )
+		aRefTime = (double)GetMovieTime( maMovie, NULL ) / 1000;
+
 	return aRefTime; 
 }
 
@@ -277,7 +282,8 @@ sal_Bool SAL_CALL Player::isMute() throw( RuntimeException )
 void SAL_CALL Player::setVolumeDB( sal_Int16 nVolumeDB ) throw( RuntimeException )
 {
 	if ( maMovie )
-		SetMovieVolume( maMovie, kFullVolume * (short)nVolumeDB / 100 );
+		SetMovieVolume( maMovie, nVolumDB );
+	fprintf( stderr, "Here: %i\n", nVolumeDB );
 }
 
 // ----------------------------------------------------------------------------
