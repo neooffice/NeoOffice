@@ -142,8 +142,6 @@ if [ -d "$2" ]; then
 	chmod -f ug+w "$2/Contents" || exit 1
 	chmod -Rf ug+w "$2/Contents/Resources" || exit 1
 	chmod -Rf ug+w "$2/Contents/share/dict/ooo" || exit 1
-	chmod -f ug-w "$2/Contents/share/dict" || exit 1
-	chmod -f ug-w "$2/Contents" || exit 1
 
 	# Touch shared libraries to fix bug 280
 	DYLD_LIBRARY_PATH="$2/Contents/MacOS"; export DYLD_LIBRARY_PATH

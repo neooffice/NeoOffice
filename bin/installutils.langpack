@@ -69,8 +69,6 @@ update_installation() {
 	chmod -f ug+w "$1/Contents" || return 1
 	chmod -Rf ug+w "$1/Contents/Resources" || return 1
 	chmod -Rf ug+w "$1/Contents/share/dict/ooo" || return 1
-	chmod -f ug-w "$1/Contents/share/dict" || return 1
-	chmod -f ug-w "$1/Contents" || return 1
 
 	return 0
 
