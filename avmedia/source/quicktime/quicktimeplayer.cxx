@@ -54,6 +54,7 @@ namespace quicktime
 {
 
 Player::Player( const Reference< XMultiServiceFactory >& rxMgr ) :
+	mbLooping( false ),
 	mxMgr( rxMgr ),
 	maMovie( NULL ),
 	mbRunning( false )
@@ -84,7 +85,8 @@ bool Player::create( const ::rtl::OUString& rURL )
 		maMovie = NULL;
 	}
 
-	mbRunning = false;
+	mbLooping = sal_False;
+	mbRunning = sal_False;
 
 	::rtl::OString aURLBytes( rURL.getStr(), rURL.getLength(), RTL_TEXTENCODING_UTF8 );
 	CFURLRef aURL = CFURLCreateWithBytes( NULL, (const UInt8 *)aURLBytes.getStr(), aURLBytes.getLength(), kCFStringEncodingUTF8, NULL );
@@ -121,7 +123,7 @@ void SAL_CALL Player::start() throw( RuntimeException )
 	if ( maMovie )
 	{
 		StartMovie( maMovie );
-		mbRunning = true;
+		mbRunning = sal_True;
 	}
 }
 
@@ -132,7 +134,7 @@ void SAL_CALL Player::stop() throw( RuntimeException )
 	if ( maMovie )
 	{
 		StopMovie( maMovie );
-		mbRunning = false;
+		mbRunning = sal_False;
 	}
 }
 
@@ -141,7 +143,14 @@ void SAL_CALL Player::stop() throw( RuntimeException )
 sal_Bool SAL_CALL Player::isPlaying() throw( RuntimeException )
 {
 	if ( mbRunning && maMovie && IsMovieDone( maMovie ) )
+	{
 		stop();
+		if ( mbLooping )
+		{
+			SetMovieTimeValue( maMovie, 0 );
+			start();
+		}
+	}
 
 	return mbRunning;
 }
@@ -237,19 +246,14 @@ double SAL_CALL Player::getRate() throw( RuntimeException )
 
 void SAL_CALL Player::setPlaybackLoop( sal_Bool bSet ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Player::setPlaybackLoop not implemented\n" );
-#endif
+	mbLooping = bSet;
 }
 
 // ----------------------------------------------------------------------------
 
 sal_Bool SAL_CALL Player::isPlaybackLoop() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Player::isPlaybackLoop not implemented\n" );
-#endif
-	return sal_False;
+	return mbLooping;
 }
 
 // ----------------------------------------------------------------------------

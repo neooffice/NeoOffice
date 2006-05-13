@@ -64,9 +64,10 @@ namespace quicktime
 
 class Player : public ::cppu::WeakImplHelper2< ::com::sun::star::media::XPlayer, ::com::sun::star::lang::XServiceInfo >
 {
+	sal_Bool			mbLooping;
 	::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >	mxMgr;
 	Movie				maMovie;
-	bool				mbRunning;
+	sal_Bool			mbRunning;
 
 public:
 						Player( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >& rxMgr );
