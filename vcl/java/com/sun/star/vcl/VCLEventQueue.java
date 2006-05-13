@@ -39,6 +39,7 @@ import java.awt.AWTEvent;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.EventQueue;
+import java.awt.Panel;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.Window;
@@ -502,6 +503,11 @@ public final class VCLEventQueue implements Runnable {
 						if (f != null)
 							event = e = new KeyEvent(f.getPanel(), e.getID(), e.getWhen(), e.getModifiers() | e.getModifiersEx(), e.getKeyCode(), e.getKeyChar(), e.getKeyLocation());
 					}
+				}
+				else if (event instanceof PaintEvent) {
+					// Fix bug 1258 by not allowing any paint events to clear
+					// the window
+					return;
 				}
 
 				super.dispatchEvent(event);

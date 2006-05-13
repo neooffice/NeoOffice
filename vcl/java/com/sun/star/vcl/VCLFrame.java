@@ -736,11 +736,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private LinkedList children = new LinkedList();
 
-	/** 
-	 * The detached child frames.
-	 */
-	private LinkedList detachedChildren = new LinkedList();
-
 	/**
 	 * The disposed flag.
 	 */
@@ -1000,7 +995,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		setVisible(false);
 		setMenuBar(null);
 		children = null;
-		detachedChildren = null;
 		graphics.dispose();
 		graphics = null;
 		insets = null;
@@ -1641,15 +1635,13 @@ g.dispose();
 
 	/**
 	 * Post a paint event.
-	 *
-	 * @param b the bounds to paint
 	 */
-	synchronized void paint(Rectangle b) {
+	void paint() {
 
-		if (disposed || !window.isShowing() || b.isEmpty())
+		if (disposed || !window.isShowing())
 			return;
 
-		queue.postCachedEvent(new VCLEvent(new PaintEvent(panel, PaintEvent.UPDATE, b), VCLEvent.SALEVENT_PAINT, this, 0));
+		queue.postCachedEvent(new VCLEvent(new PaintEvent(panel, PaintEvent.UPDATE, new Rectangle(panel.getSize())), VCLEvent.SALEVENT_PAINT, this, 0));
 
 	}
 
@@ -1660,10 +1652,8 @@ g.dispose();
 	 */
 	public synchronized void removeChild(VCLFrame f) {
 
-		if (f != null) {
+		if (f != null)
 			children.remove(f);
-			detachedChildren.remove(f);
-		}
 
 	}
 
@@ -1735,6 +1725,7 @@ g.dispose();
 		if (window instanceof Frame) {
 			// The menubar doesn't refresh when a child window until the focus
 			// is restored so hide any children while changing the menubar
+			LinkedList detachedChildren = new LinkedList();
 			if (menubar != null) {
 				// Detach any visible children
 				Iterator frames = children.iterator();
@@ -1765,11 +1756,11 @@ g.dispose();
 						if (!w.isShowing()) {
 							w.show();
 							f.enableFlushing(true);
+							f.paint();
 						}
 					}
 				}
 			}
-			detachedChildren.clear();
 		}
 
 	}
@@ -2004,8 +1995,6 @@ g.dispose();
 		if (b == window.isShowing())
 			return;
 
-		detachedChildren.clear();
-
 		// Set the resizable flag if needed
 		if (window instanceof Dialog)
 			((Dialog)window).setResizable(resizable);
@@ -2030,6 +2019,7 @@ g.dispose();
 			// Show the window
 			window.show();
 			enableFlushing(true);
+			paint();
 		}
 		else {
 			// Hide the window
@@ -2124,7 +2114,6 @@ g.dispose();
 					if (w.isShowing()) {
 						f.enableFlushing(false);
 						w.hide();
-						detachedChildren.add(f);
 					}
 				}
 			}
@@ -2142,21 +2131,7 @@ g.dispose();
 		if (disposed)
 			return;
 
-		// Reattach any visible children
-		Iterator frames = detachedChildren.iterator();
-		while (frames.hasNext()) {
-			VCLFrame f = (VCLFrame)frames.next();
-			synchronized (f) {
-				if (!f.isDisposed()) {
-					Window w = f.getWindow();
-					if (!w.isShowing()) {
-						w.show();
-						f.enableFlushing(true);
-					}
-				}
-			}
-		}
-		detachedChildren.clear();
+		paint();
 
 	}
 
@@ -2276,6 +2251,7 @@ g.dispose();
 
 			setMinimumSize(0, 0);
 
+			setBackground(Color.white);
 			enableInputMethods(false);
 
 		}
@@ -2405,6 +2381,7 @@ g.dispose();
 
 			setMinimumSize(0, 0);
 
+			setBackground(Color.white);
 			enableInputMethods(false);
 
 		}
@@ -2487,7 +2464,7 @@ g.dispose();
 		NoPaintPanel(VCLFrame f) {
 
 			frame = f;
-			setBackground(Color.white);
+			setBackground(new Color(0x00000000, true));
 			enableInputMethods(true);
 
 		}
@@ -2510,15 +2487,7 @@ g.dispose();
 		 *
 		 * @param g the <code>Graphics</code>
 		 */
-		public void paint(Graphics g) {
-
-			Shape clip = g.getClip();
-			if (clip != null)
-				frame.paint(clip.getBounds());
-			else
-				frame.paint(new Rectangle(getSize()));
-
-		}
+		public void paint(Graphics g) {}
 
 		/**
 		 * This method performs no painting of the panel. This method is used
@@ -2526,11 +2495,7 @@ g.dispose();
 		 *
 		 * @param g the <code>Graphics</code>
 		 */
-		public void update(Graphics g) {
-
-			paint(g);
-
-		}
+		public void update(Graphics g) {}
 
 	}
 

@@ -225,6 +225,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		{
 			if ( (*it)->mbVisible )
 			{
+				mpVCLFrame->removeChild( *it );
 				(*it)->Show( FALSE );
 
 				// Fix bug 1310 by creating a new native window with the new
@@ -242,6 +243,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 				(*it)->SetPosSize( (*it)->maGeometry.nX - (*it)->maGeometry.nLeftDecoration - maGeometry.nX, (*it)->maGeometry.nY - (*it)->maGeometry.nTopDecoration - maGeometry.nY, (*it)->maGeometry.nWidth, (*it)->maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
 
 				(*it)->Show( TRUE, FALSE );
+				mpVCLFrame->addChild( *it );
 			}
 		}
 
