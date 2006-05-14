@@ -509,10 +509,15 @@ public final class VCLEventQueue implements Runnable {
 					// the window
 					PaintEvent e = (PaintEvent)event;
 					Component c = e.getComponent();
-					if (c instanceof Window) {
-						VCLFrame f = VCLFrame.findFrame(c);
-						if (f != null)
+					VCLFrame f = VCLFrame.findFrame(c);
+					if (f != null) {
+						Rectangle r = e.getUpdateRect();
+						if (c instanceof Window) {
+							r.x -= f.getInsets().left;
+							r.y -= f.getInsets().top;
 							f.paint(e.getUpdateRect());
+						}
+						f.paint(r);
 					}
 					return;
 				}

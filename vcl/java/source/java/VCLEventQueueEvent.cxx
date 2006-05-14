@@ -676,8 +676,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					// Get paint region
 					const Rectangle &aUpdateRect = getUpdateRect();
 					pPaintEvent = new SalPaintEvent();
-					pPaintEvent->mnBoundX = aUpdateRect.nLeft - pFrame->maGeometry.nLeftDecoration;
-					pPaintEvent->mnBoundY = aUpdateRect.nTop - pFrame->maGeometry.nTopDecoration;
+					pPaintEvent->mnBoundX = aUpdateRect.nLeft;
+					pPaintEvent->mnBoundY = aUpdateRect.nTop;
 					pPaintEvent->mnBoundWidth = aUpdateRect.GetWidth();
 					pPaintEvent->mnBoundHeight = aUpdateRect.GetHeight();
 				}

@@ -737,6 +737,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private LinkedList children = new LinkedList();
 
 	/**
+	 * The detached child frames.
+	 */
+	private LinkedList detachedChildren = new LinkedList();
+
+	/**
 	 * The disposed flag.
 	 */
 	private boolean disposed = false;
@@ -995,6 +1000,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		setVisible(false);
 		setMenuBar(null);
 		children = null;
+		detachedChildren = null;
 		graphics.dispose();
 		graphics = null;
 		insets = null;
@@ -1636,9 +1642,9 @@ g.dispose();
 	/**
 	 * Post a paint event.
 	 *
-	 * @param r the bounds to paint
+	 * @param b the bounds to paint
 	 */
-	void paint(Rectangle b) {
+	synchronized void paint(Rectangle b) {
 
 		if (disposed || !window.isShowing() || b.isEmpty())
 			return;
@@ -1654,8 +1660,10 @@ g.dispose();
 	 */
 	public synchronized void removeChild(VCLFrame f) {
 
-		if (f != null)
+		if (f != null) {
 			children.remove(f);
+			detachedChildren.remove(f);
+		}
 
 	}
 
@@ -1727,7 +1735,6 @@ g.dispose();
 		if (window instanceof Frame) {
 			// The menubar doesn't refresh when a child window until the focus
 			// is restored so hide any children while changing the menubar
-			LinkedList detachedChildren = new LinkedList();
 			if (menubar != null) {
 				// Detach any visible children
 				Iterator frames = children.iterator();
@@ -1762,6 +1769,7 @@ g.dispose();
 					}
 				}
 			}
+			detachedChildren.clear();
 		}
 
 	}
@@ -1996,6 +2004,8 @@ g.dispose();
 		if (b == window.isShowing())
 			return;
 
+		detachedChildren.clear();
+
 		// Set the resizable flag if needed
 		if (window instanceof Dialog)
 			((Dialog)window).setResizable(resizable);
@@ -2114,6 +2124,7 @@ g.dispose();
 					if (w.isShowing()) {
 						f.enableFlushing(false);
 						w.hide();
+						detachedChildren.add(f);
 					}
 				}
 			}
@@ -2130,6 +2141,22 @@ g.dispose();
 
 		if (disposed)
 			return;
+
+		// Reattach any visible children
+		Iterator frames = detachedChildren.iterator();
+		while (frames.hasNext()) {
+			VCLFrame f = (VCLFrame)frames.next();
+			synchronized (f) {
+				if (!f.isDisposed()) {
+					Window w = f.getWindow();
+					if (!w.isShowing()) {
+						w.show();
+						f.enableFlushing(true);
+					}
+				}
+			}
+		}
+		detachedChildren.clear();
 
 	}
 
