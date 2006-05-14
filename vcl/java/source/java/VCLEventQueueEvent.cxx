@@ -340,6 +340,21 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				pFrame->CallCallback( nID, NULL );
 			break;
 		}
+		case SALEVENT_DEMINIMIZED:
+		{
+			if ( !bDeleteDataOnly && pFrame && pFrame->mbVisible )
+			{
+				for ( ::std::list< JavaSalFrame* >::const_iterator it = pFrame->maChildren.begin(); it != pFrame->maChildren.end(); ++it )
+				{
+					if ( (*it)->mbVisible )
+					{
+						(*it)->Show( FALSE );
+						(*it)->Show( TRUE, TRUE );
+					}
+				}
+			}
+			break;
+		}
 		case SALEVENT_ENDEXTTEXTINPUT:
 		{
 			SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)pData;

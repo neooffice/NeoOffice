@@ -857,6 +857,11 @@ public final class VCLEvent extends AWTEvent {
 	public final static int SALEVENT_PRINTDOCUMENT = 101;
 
 	/**
+	 * SALEVENT_DEMINIMIZED constant.
+	 */
+	public final static int SALEVENT_DEMINIMIZED = 102;
+
+	/**
 	 * SALEVENT_ABOUT constant.
 	 */
 	public final static int SALEVENT_ABOUT = 130;
