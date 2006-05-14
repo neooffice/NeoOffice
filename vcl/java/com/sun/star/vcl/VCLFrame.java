@@ -1635,13 +1635,15 @@ g.dispose();
 
 	/**
 	 * Post a paint event.
+	 *
+	 * @param r the bounds to paint
 	 */
-	void paint() {
+	void paint(Rectangle b) {
 
-		if (disposed || !window.isShowing())
+		if (disposed || !window.isShowing() || b.isEmpty())
 			return;
 
-		queue.postCachedEvent(new VCLEvent(new PaintEvent(panel, PaintEvent.UPDATE, new Rectangle(panel.getSize())), VCLEvent.SALEVENT_PAINT, this, 0));
+		queue.postCachedEvent(new VCLEvent(new PaintEvent(panel, PaintEvent.UPDATE, b), VCLEvent.SALEVENT_PAINT, this, 0));
 
 	}
 
@@ -1756,7 +1758,6 @@ g.dispose();
 						if (!w.isShowing()) {
 							w.show();
 							f.enableFlushing(true);
-							f.paint();
 						}
 					}
 				}
@@ -2019,7 +2020,6 @@ g.dispose();
 			// Show the window
 			window.show();
 			enableFlushing(true);
-			paint();
 		}
 		else {
 			// Hide the window
@@ -2131,8 +2131,6 @@ g.dispose();
 		if (disposed)
 			return;
 
-		paint();
-
 	}
 
 	/**
@@ -2224,6 +2222,18 @@ g.dispose();
 				return this;
 			else
 				return super.getFocusOwner();
+
+		}
+
+		/**
+		 * This method always returns <code>null</code> to prevent Java from
+		 * painting over what VCL has painted.
+		 *
+		 * @return always <code>null</code>
+		 */
+		public Graphics getGraphics() {
+
+			return null;
 
 		}
 
@@ -2358,6 +2368,18 @@ g.dispose();
 		}
 
 		/**
+		 * This method always returns <code>null</code> to prevent Java from
+		 * painting over what VCL has painted.
+		 *
+		 * @return always <code>null</code>
+		 */
+		public Graphics getGraphics() {
+
+			return null;
+
+		}
+
+		/**
 		 * Returns the minimum size for the frame.
 		 *
 		 * @return the minimum size for the frame
@@ -2470,6 +2492,18 @@ g.dispose();
 		}
 
 		/**
+		 * This method always returns <code>null</code> to prevent Java from
+		 * painting over what VCL has painted.
+		 *
+		 * @return always <code>null</code>
+		 */
+		public Graphics getGraphics() {
+
+			return null;
+
+		}
+
+		/**
 		 * Returns the input method request handler which supports requests
 		 * from input methods for this component.
 		 *
@@ -2478,6 +2512,19 @@ g.dispose();
 		public InputMethodRequests getInputMethodRequests() {
 
 			return frame;
+
+		}
+
+		/**
+		 * This method returns a graphics context or <code>null</code> if the
+		 * component is not displayable.
+		 *
+		 * @return a graphics context or <code>null</code> if the component
+		 *  is not displayable
+		 */
+		public Graphics getRealGraphics() {
+
+			return super.getGraphics();
 
 		}
 

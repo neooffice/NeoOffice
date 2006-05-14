@@ -1728,7 +1728,7 @@ public final class VCLGraphics {
 		if (image != null)
 			g = image.getImage().createGraphics();
 		else if (frame != null)
-			g = (Graphics2D)frame.getPanel().getGraphics();
+			g = (Graphics2D)((VCLFrame.NoPaintPanel)frame.getPanel()).getRealGraphics();
 		else if (graphics != null)
 			g = (Graphics2D)graphics.create();
 		else

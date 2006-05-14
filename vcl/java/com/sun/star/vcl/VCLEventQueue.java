@@ -505,8 +505,15 @@ public final class VCLEventQueue implements Runnable {
 					}
 				}
 				else if (event instanceof PaintEvent) {
-					// Fix bug 1258 by not allowing any paint events to clear
+					// Fix bug 1258 by not dispatching the paint event
 					// the window
+					PaintEvent e = (PaintEvent)event;
+					Component c = e.getComponent();
+					if (c instanceof Window) {
+						VCLFrame f = VCLFrame.findFrame(c);
+						if (f != null)
+							f.paint(e.getUpdateRect());
+					}
 					return;
 				}
 
