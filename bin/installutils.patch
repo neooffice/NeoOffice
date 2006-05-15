@@ -59,14 +59,12 @@ check_installation() {
 			elif [ "$productpatch" -le "$product_patch_version" ] ; then
 				return 0
 			fi
-		elif [ "$productkey" = "$(PRODUCT_NAME) $(PRODUCT_PREVIOUS_VERSION)" ] ; then
-			if [ -z "$product_previous_patch_version" ] ; then
-				return 0
-			elif [ -z "$productpatch" ] ; then
-				return 1
-			elif [ "$productpatch" -ge "$product_previous_patch_version" ] ; then
-				return 0
-			fi
+		fi
+
+		productnameversion="$(PRODUCT_NAME) `echo '$(PRODUCT_VERSION)' | awk '{ print $1}'`"
+		productkey=`grep "^ProductKey=$productnameversion" "$1/Contents/MacOS/bootstraprc"`
+		if [ ! -z "$productkey" ] ; then
+			return 0;
 		fi
 	fi
 
