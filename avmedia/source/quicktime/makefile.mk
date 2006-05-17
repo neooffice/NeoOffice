@@ -69,7 +69,8 @@ SHL1DEF=$(MISC)$/$(SHL1TARGET).def
 
 DEF1NAME=$(SHL1TARGET)
 
-SHL1STDLIBS += -framework CoreFoundation -framework Carbon -framework QuickTime
+# QuickTime looks for libstdc++.6.dylib
+SHL1STDLIBS += -framework CoreFoundation -framework Carbon -framework QuickTime -l stdc++.6
 
 .ENDIF	# "$(OS)" == "MACOSX"
 
