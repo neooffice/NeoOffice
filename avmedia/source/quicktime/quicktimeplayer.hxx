@@ -64,9 +64,12 @@ namespace quicktime
 
 class Player : public ::cppu::WeakImplHelper2< ::com::sun::star::media::XPlayer, ::com::sun::star::lang::XServiceInfo >
 {
+	static int			mnQuickTimeState;
+
 	sal_Bool			mbLooping;
 	::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >	mxMgr;
 	Movie				maMovie;
+	bool				mbQuickTimeLoaded;
 	sal_Bool			mbRunning;
 
 public:
@@ -100,6 +103,8 @@ public:
 	virtual ::rtl::OUString SAL_CALL	getImplementationName() throw( ::com::sun::star::uno::RuntimeException );
 	virtual sal_Bool SAL_CALL	supportsService( const ::rtl::OUString& ServiceName ) throw( ::com::sun::star::uno::RuntimeException );
 	virtual ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL	getSupportedServiceNames() throw( ::com::sun::star::uno::RuntimeException );
+
+	bool					isValid();
 };
 
 } // namespace quicktime

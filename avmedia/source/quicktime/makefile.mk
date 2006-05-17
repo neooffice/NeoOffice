@@ -61,6 +61,7 @@ SHL1STDLIBS= \
 	$(CPPUHELPERLIB) \
 	$(UNOTOOLSLIB) \
 	$(TOOLSLIB) \
+	$(VOSLIB) \
 	$(VCLLIB)
 
 SHL1IMPLIB=i$(TARGET)
@@ -69,8 +70,7 @@ SHL1DEF=$(MISC)$/$(SHL1TARGET).def
 
 DEF1NAME=$(SHL1TARGET)
 
-# QuickTime looks for libstdc++.6.dylib
-SHL1STDLIBS += -framework CoreFoundation -framework Carbon -framework QuickTime -l stdc++.6
+SHL1STDLIBS += -framework CoreFoundation -framework Carbon
 
 .ENDIF	# "$(OS)" == "MACOSX"
 
