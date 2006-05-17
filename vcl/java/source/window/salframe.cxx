@@ -677,6 +677,8 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	if ( nDblTime < 25 )
 		nDblTime = 25;
 	aMouseSettings.SetDoubleClickTime( nDblTime * 1000 / CLK_TCK );
+	aMouseSettings.SetStartDragWidth( 6 );
+	aMouseSettings.SetStartDragHeight( 6 );
 	rSettings.SetMouseSettings( aMouseSettings );
 
 	StyleSettings aStyleSettings( rSettings.GetStyleSettings() );
