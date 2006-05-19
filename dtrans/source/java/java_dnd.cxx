@@ -563,6 +563,8 @@ JavaDragSource::~JavaDragSource()
 	// If we own the event loop timer, wait for the timer to finish
 	if ( pTrackDragOwner == this )
 		pTrackDragOwner = NULL;
+
+	aDragSources.remove( this );
 }
 
 // ------------------------------------------------------------------------
