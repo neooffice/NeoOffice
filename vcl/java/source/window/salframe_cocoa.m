@@ -83,7 +83,7 @@
 
 		if ( mbUseMainScreenOnly )
 		{
-			pScreen = (NSScreen *)[pScreens objectAtIndex:0];
+			pScreen = [NSScreen mainScreen];
 			NSRect aBounds;
 			if ( mbFullScreenMode )
 				aBounds = [pScreen frame];
