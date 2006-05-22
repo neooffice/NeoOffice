@@ -224,7 +224,8 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 				{
 					MacOSPoint aPoint;
 					Rect aRect;
-					if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( pTrackDragOwner->getNativeWindow(), kWindowContentRgn, &aRect ) == noErr )
+					WindowRef aTrackDragOwnerWindow = pTrackDragOwner->getNativeWindow();
+					if ( aTrackDragOwnerWindow && GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aTrackDragOwnerWindow, kWindowContentRgn, &aRect ) == noErr )
 						pTrackDragOwner->handleDrag( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) );
 				}
 			}
@@ -722,7 +723,18 @@ JavaDropTarget::JavaDropTarget() :
 
 JavaDropTarget::~JavaDropTarget()
 {
-	aDropTargets.remove( this );
+	disposing();
+}
+
+// --------------------------------------------------------------------------
+
+void JavaDropTarget::disposing()
+{
+	if ( mpWindow )
+	{
+		mpWindow = NULL;
+		aDropTargets.remove( this );
+	}
 }
 
 // --------------------------------------------------------------------------
@@ -902,12 +914,8 @@ void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY, DragRef aNative
 
 	if ( pTrackDragOwner )
 	{
-		ClearableMutexGuard aDragSourceGuard( pTrackDragOwner->maMutex );
-
 		aDragEvent.SourceActions = pTrackDragOwner->mnActions;
 		aDragEvent.DropAction = nCurrentAction;
-
-		aDragSourceGuard.clear();
 	}
 	else if ( aNativeTransferable )
 	{

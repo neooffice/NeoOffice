@@ -121,6 +121,10 @@ public:
 							JavaDropTarget();
 	virtual					~JavaDropTarget();
 
+	// Overrides WeakComponentImplHelper::disposing() which is called by
+	// WeakComponentImplHelper::dispose()
+    virtual void			SAL_CALL disposing();
+
 	virtual void			SAL_CALL initialize( const Sequence< Any >& arguments ) throw( ::com::sun::star::uno::RuntimeException );
 
 	virtual void			SAL_CALL addDropTargetListener( const Reference< ::com::sun::star::datatransfer::dnd::XDropTargetListener >& xListener ) throw( com::sun::star::uno::RuntimeException );
