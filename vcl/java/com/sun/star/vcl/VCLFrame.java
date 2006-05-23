@@ -2287,6 +2287,9 @@ g.dispose();
 			if (isUndecorated()) {
 				setFocusable(b);
 				setFocusableWindowState(b);
+
+				// Set background to black in full screen mode
+				setBackground(b ? Color.black : Color.white);
 			}
 
 		}
@@ -2429,6 +2432,9 @@ g.dispose();
 			if (isUndecorated()) {
 				setFocusable(b);
 				setFocusableWindowState(b);
+
+				// Set background to black in full screen mode
+				setBackground(b ? Color.black : Color.white);
 			}
 
 		}
