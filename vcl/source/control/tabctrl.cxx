@@ -610,6 +610,7 @@ Rectangle TabControl::ImplGetTabRect( USHORT nPos, long nWidth, long nHeight )
                 }
             }
 
+#ifdef GENESIS_OF_THE_NEW_WEAPONS
 #ifdef MACOSX
 			{
 				pItem = mpItemList->First();
@@ -628,6 +629,7 @@ Rectangle TabControl::ImplGetTabRect( USHORT nPos, long nWidth, long nHeight )
 					curItemIndex++;
 				}
 			}
+#endif
 #endif
         }
 
