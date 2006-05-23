@@ -251,6 +251,51 @@ static BOOL InitProgressbarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, Cont
 // =======================================================================
 
 /**
+ * (static) Convert VCL tab information structure into an HITheme tab
+ * description structure.  This structure can be used to draw an
+ * individual tab/segmented control into a window.
+ *
+ * @param pTabDrawInfo		pointer to HITheme tab drawing structure
+ * @param nState			overall control state of the tab item.
+ * @param pTabValue			VCL structure containing information about
+ * 							the tab's position
+ * @return TRUE on success, FALSE on failure
+ */
+static BOOL InitTabDrawInfo( HIThemeTabDrawInfo *pTabDrawInfo, ControlState nState, TabitemValue *pTabValue )
+{
+	memset( pTabDrawInfo, 0, sizeof( HIThemeTabDrawInfo ) );
+	pTabDrawInfo->version = 1;
+	if( nState & CTRL_STATE_SELECTED )
+		pTabDrawInfo->style = kThemeTabFront;
+	else if( nState & CTRL_STATE_PRESSED )
+		pTabDrawInfo->style = kThemeTabNonFrontPressed;
+	else if( nState & CTRL_STATE_ENABLED )
+		pTabDrawInfo->style = kThemeTabNonFront;
+	else
+		pTabDrawInfo->style = kThemeTabNonFrontInactive;
+	pTabDrawInfo->direction = kThemeTabNorth;	// always assume tabs are at top of tab controls in standard position
+	pTabDrawInfo->size = kHIThemeTabSizeNormal;
+	if( nState & CTRL_STATE_FOCUSED )
+		pTabDrawInfo->adornment = kHIThemeTabAdornmentFocus;
+	else
+		pTabDrawInfo->adornment = kHIThemeTabAdornmentNone;
+	pTabDrawInfo->kind = kHIThemeTabKindNormal;
+	pTabDrawInfo->position = kHIThemeTabPositionMiddle;
+	if( pTabValue )
+	{
+		if( pTabValue->isLeftAligned() || pTabValue->isFirst() )
+			pTabDrawInfo->position = kHIThemeTabPositionFirst;
+		else if( pTabValue->isRightAligned() || pTabValue->isLast() )
+			pTabDrawInfo->position = kHIThemeTabPositionLast;
+	}
+	if( pTabDrawInfo->position != kHIThemeTabPositionLast )
+		pTabDrawInfo->adornment |= kHIThemeTabAdornmentTrailingSeparator;
+	return TRUE;
+}
+
+// =======================================================================
+
+/**
  * (static) Draw a ComboBox into the graphics port at the specified location.
  * ComboBoxes are editable pulldowns, the left portion of which is an edit
  * field and the right portion a downward arrow button used to display the
@@ -711,6 +756,89 @@ static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& 
 // =======================================================================
 
 /**
+ * (static) Draw an individual tab control using the native widget appearance.
+ * The tab consists of only a single element in a list of tabs that appear
+ * at the top of a full tab group.  Each tab gets drawn independently.
+ *
+ * @param pGraphics			pointer into graphics object where spinbox should
+ *							be painted
+ * @param rDestBounds		destination rectangle where object will be painted
+ * @param nState			overall control state
+ * @param pValue			value providing the tab style, its position in
+ *							the tab order relative to other tabs, and other
+ *							tab-specific values
+ * @return TRUE if drawing successful, FALSE if not
+ */
+static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, TabitemValue *pValue )
+{
+	BOOL bRet = FALSE;
+	
+	JavaSalBitmap tabBitmap;
+	tabBitmap.Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
+	
+	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+	if ( !aColorSpace )
+		return bRet;
+
+	BitmapBuffer *pBuffer = tabBitmap.AcquireBuffer( false );
+	if ( !pBuffer )
+	{
+		CGColorSpaceRelease( aColorSpace );
+		return bRet;
+	}
+
+#ifdef POWERPC
+	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
+#else	// POWERPC
+	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+#endif	// POWERPC
+	if ( !aContext )
+	{
+		tabBitmap.ReleaseBuffer( pBuffer, false );
+		CGColorSpaceRelease( aColorSpace );
+		return bRet;
+	}
+
+	// Clear the image
+	memset( pBuffer->mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
+	
+	HIThemeTabDrawInfo pTabDrawInfo;
+	InitTabDrawInfo( &pTabDrawInfo, nState, pValue );
+	
+	HIRect destRect;
+	destRect.origin.x = 0;
+	destRect.origin.y = 0;
+	destRect.size.width = rDestBounds.GetWidth();
+	destRect.size.height = rDestBounds.GetHeight();
+	
+	HIRect labelRect; // ignored
+	
+	bRet = ( HIThemeDrawTab( &destRect, &pTabDrawInfo, aContext, kHIThemeOrientationInverted, &labelRect ) == noErr );
+	
+	CGContextRelease( aContext );
+	CGColorSpaceRelease( aColorSpace );
+
+	tabBitmap.ReleaseBuffer( pBuffer, false );
+
+	if ( bRet )
+	{
+		SalTwoRect aTwoRect;
+		aTwoRect.mnSrcX = 0;
+		aTwoRect.mnSrcY = 0;
+		aTwoRect.mnSrcWidth = rDestBounds.GetWidth();
+		aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
+		aTwoRect.mnDestX = rDestBounds.Left();
+		aTwoRect.mnDestY = rDestBounds.Top();
+		aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
+		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
+		pGraphics->drawBitmap( &aTwoRect, tabBitmap );
+	}
+	return bRet;
+}
+
+// =======================================================================
+
+/**
  * Determine if support exists for drawing a particular native widget in the
  * interface.
  *
@@ -760,6 +888,11 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			break;
 		
 		case CTRL_PROGRESSBAR:
+			if( nPart == PART_ENTIRE_CONTROL )
+				isSupported = TRUE;
+			break;
+		
+		case CTRL_TAB_ITEM:
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
@@ -896,6 +1029,15 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				Rectangle ctrlRect = rControlRegion.GetBoundRect();
 				ProgressbarValue *pValue = static_cast<ProgressbarValue *> ( aValue.getOptionalVal() );
 				bOK = DrawNativeProgressbar( this, ctrlRect, nState, pValue );
+			}
+			break;
+		
+		case CTRL_TAB_ITEM:
+			if( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle ctrlRect = rControlRegion.GetBoundRect();				
+				TabitemValue *pValue = static_cast<TabitemValue *> ( aValue.getOptionalVal() );
+				bOK = DrawNativeTab( this, ctrlRect, nState, pValue );
 			}
 			break;
 	}
@@ -1171,6 +1313,38 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				
 				Point topLeft( (long)(controlRect.Left()+bounds.origin.x), (long)(controlRect.Top()+bounds.origin.y) );
 				Size boundsSize( (long)bounds.size.width, (long)bounds.size.height );
+				rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+				rNativeContentRegion = Region( rNativeBoundingRegion );
+				
+				bReturn = TRUE;
+			}
+			break;
+		
+		case CTRL_TAB_ITEM:
+			if ( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle controlRect = rControlRegion.GetBoundRect();
+				
+				TabitemValue *pValue = static_cast<TabitemValue *> ( aValue.getOptionalVal() );
+				
+				HIThemeTabDrawInfo pTabDrawInfo;
+				InitTabDrawInfo( &pTabDrawInfo, nState, pValue );
+				
+				HIRect proposedBounds;
+				proposedBounds.origin.x = 0;
+				proposedBounds.origin.y = 0;
+				proposedBounds.size.width = controlRect.Right() - controlRect.Left();
+				proposedBounds.size.height = controlRect.Bottom() - controlRect.Top();
+				
+				HIShapeRef tabShape;
+				HIThemeGetTabShape( &proposedBounds, &pTabDrawInfo, &tabShape );
+				
+				HIRect preferredRect;
+				HIShapeGetBounds( tabShape, &preferredRect );
+				CFRelease( tabShape );
+				
+				Point topLeft( controlRect.Left(), controlRect.Top() );
+				Size boundsSize( (long)preferredRect.size.width, (long)preferredRect.size.height );
 				rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
 				
