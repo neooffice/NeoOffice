@@ -176,11 +176,23 @@ void ExceptionThrower::throwException( Any const & exc ) throw (Exception)
     throwException( exc );
 }
 
+#include <stdio.h>
 //______________________________________________________________________________
 void ExceptionThrower::rethrowException() throw (Exception)
 {
 #if defined MACOSX && __GNUC__ < 4
-    throw Exception( OUSTR("rethrowing of exceptions is not supported on this platform!" ), Reference< XInterface >() );
+    try
+    {
+        throw;
+    }
+    catch ( Exception& exc )
+    {
+        throw;
+    }
+    catch ( ... )
+    {
+        throw RuntimeException( OUSTR( "unknown exception" ), Reference< XInterface >() );
+    }
 #else	// MACOSX && __GNUC__ < 4
     throw;
 #endif	// MACOSX && __GNUC__ < 4
