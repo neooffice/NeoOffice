@@ -183,6 +183,9 @@ static void ImplSetDragAllowableActions( DragRef aDrag, sal_Int8 nActions )
 
 static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, WindowRef aWindow, void *pData, DragRef aDrag )
 {
+	if ( !IsValidWindowPtr( aWindow ) )
+		return noErr;
+
 	if ( !Application::IsShutDown() )
 	{
 		// We need to let any pending timers run so that we don't deadlock
@@ -195,7 +198,7 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 		{
 			if ( rSolarMutex.tryToAcquire() )
 			{
-				if ( !Application::IsShutDown() )
+				if ( IsValidWindowPtr( aWindow ) && !Application::IsShutDown() )
 					bAcquired = true;
 				else
 					rSolarMutex.release();
@@ -241,6 +244,9 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 
 static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, WindowRef aWindow, void *pData, DragRef aDrag )
 {
+	if ( !IsValidWindowPtr( aWindow ) )
+		return noErr;
+
 	if ( !Application::IsShutDown() )
 	{
 		// We need to let any pending timers run so that we don't deadlock
@@ -253,7 +259,7 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 		{
 			if ( rSolarMutex.tryToAcquire() )
 			{
-				if ( !Application::IsShutDown() )
+				if ( IsValidWindowPtr( aWindow ) && !Application::IsShutDown() )
 					bAcquired = true;
 				else
 					rSolarMutex.release();
@@ -317,6 +323,9 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 {
 	OSErr nRet = dragNotAcceptedErr;
 
+	if ( !IsValidWindowPtr( aWindow ) )
+		return nRet;
+
 	if ( !Application::IsShutDown() )
 	{
 		// We need to let any pending timers run so that we don't deadlock
@@ -329,7 +338,7 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 		{
 			if ( rSolarMutex.tryToAcquire() )
 			{
-				if ( !Application::IsShutDown() )
+				if ( IsValidWindowPtr( aWindow ) && !Application::IsShutDown() )
 					bAcquired = true;
 				else
 					rSolarMutex.release();
