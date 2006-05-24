@@ -124,7 +124,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pE
 
 	size_t nRowSize = _par5 * sizeof( jint );
 	size_t nSize = nRowSize * _par6;
-	jint *pCGBits = (jint *)( new jint[ nSize ] );
+	jint *pCGBits = (jint *)( new jint[ _par5 * _par6 ] );
 	if ( pCGBits )
 	{
 		// Copy the subimage
@@ -231,7 +231,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIE
 	if ( pBuffer->mnScanlineSize * pBuffer->mnHeight != nSize )
 	{
 		jint *pBits = (jint *)pBuffer->mpBits;
-		pCGBits = (jint *)( new jint[ nSize ] );
+		pCGBits = (jint *)( new jint[ _par3 * _par4 ] );
 		if ( !pCGBits )
 		{
 			delete[] pBuffer->mpBits;
