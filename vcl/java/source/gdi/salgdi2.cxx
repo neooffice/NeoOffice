@@ -140,7 +140,6 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 	if ( mpPrinter )
 		return;
 
-	fprintf( stderr, "Here\n" );
 	JavaSalBitmap *pJavaSalBitmap = (JavaSalBitmap *)&rSalBitmap;
 
 	SalTwoRect aPosAry;
