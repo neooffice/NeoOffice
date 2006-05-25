@@ -86,6 +86,7 @@ public:
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	maContents;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDragSourceListener >	maListener;
     ::osl::Mutex			maMutex;
+	const SystemEnvData*	mpEnvData;
 	Window*					mpWindow;
 
 							DECL_STATIC_LINK( JavaDragSource, dragDropEnd, void* );
@@ -116,6 +117,7 @@ public:
 	::std::list< ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDropTargetListener > >	maListeners;
     ::osl::Mutex			maMutex; 
     bool					mbRejected;
+	const SystemEnvData*	mpEnvData;
 	Window*					mpWindow;
 
 							JavaDropTarget();

@@ -562,6 +562,7 @@ IMPL_STATIC_LINK( JavaDragSource, dragDropEnd, void*, pData )
 JavaDragSource::JavaDragSource() :
 	WeakComponentImplHelper3< XDragSource, XInitialization, XServiceInfo >( maMutex ),
 	mnActions( DNDConstants::ACTION_NONE ),
+	mpEnvData( NULL ),
 	mpWindow( NULL )
 {
 }
@@ -581,15 +582,18 @@ JavaDragSource::~JavaDragSource()
 
 void SAL_CALL JavaDragSource::initialize( const Sequence< Any >& arguments ) throw( RuntimeException )
 {
-	if ( arguments.getLength() > 0 )
+	if ( arguments.getLength() > 1 )
 	{
-		sal_Int32 nWindow;
-		arguments.getConstArray()[0] >>= nWindow;
-		if ( nWindow )
-			mpWindow = (Window *)nWindow;
+		sal_Int32 nPtr;
+		arguments.getConstArray()[0] >>= nPtr;
+		if ( nPtr )
+			mpEnvData = (SystemEnvData *)nPtr;
+		arguments.getConstArray()[1] >>= nPtr;
+		if ( nPtr )
+			mpWindow = (Window *)nPtr;
 	}
 
-	if ( !mpWindow )
+	if ( !mpEnvData || !mpWindow )
 		throw RuntimeException();
 
 	if ( !pDragTrackingHandlerUPP )
@@ -687,16 +691,10 @@ Sequence< OUString > SAL_CALL JavaDragSource::getSupportedServiceNames() throw( 
 
 WindowRef JavaDragSource::getNativeWindow()
 {
-	WindowRef aRet = NULL;
-
-	if ( mpWindow )
-	{
-		const SystemEnvData *pEnvData = mpWindow->GetSystemData();
-		if ( pEnvData )
-			aRet = (WindowRef)pEnvData->aWindow;
-	}
-
-	return aRet;
+	if ( mpEnvData )
+		return (WindowRef)mpEnvData->aWindow;
+	else
+		return NULL;
 }
 
 // ------------------------------------------------------------------------
@@ -724,6 +722,7 @@ JavaDropTarget::JavaDropTarget() :
 	mbActive( sal_True ),
 	mnDefaultActions( DNDConstants::ACTION_NONE ),
 	mbRejected( false ),
+	mpEnvData( NULL ),
 	mpWindow( NULL )
 {
 }
@@ -739,26 +738,27 @@ JavaDropTarget::~JavaDropTarget()
 
 void JavaDropTarget::disposing()
 {
-	if ( mpWindow )
-	{
-		mpWindow = NULL;
-		aDropTargets.remove( this );
-	}
+	mpEnvData = NULL;
+	mpWindow = NULL;
+	aDropTargets.remove( this );
 }
 
 // --------------------------------------------------------------------------
 
 void SAL_CALL JavaDropTarget::initialize( const Sequence< Any >& arguments ) throw( RuntimeException )
 {
-	if ( arguments.getLength() > 0 )
+	if ( arguments.getLength() > 1 )
 	{
-		sal_Int32 nWindow;
-		arguments.getConstArray()[0] >>= nWindow;
-		if ( nWindow )
-			mpWindow = (Window *)nWindow;
+		sal_Int32 nPtr;
+		arguments.getConstArray()[0] >>= nPtr;
+		if ( nPtr )
+			mpEnvData = (SystemEnvData *)nPtr;
+		arguments.getConstArray()[1] >>= nPtr;
+		if ( nPtr )
+			mpWindow = (Window *)nPtr;
 	}
 
-	if ( !mpWindow )
+	if ( !mpEnvData || !mpWindow )
 		throw RuntimeException();
 
 	aDropTargets.push_back( this );
@@ -851,16 +851,10 @@ Sequence< OUString > SAL_CALL JavaDropTarget::getSupportedServiceNames() throw( 
 
 WindowRef JavaDropTarget::getNativeWindow()
 {
-	WindowRef aRet = NULL;
-
-	if ( mpWindow )
-	{
-		const SystemEnvData *pEnvData = mpWindow->GetSystemData();
-		if ( pEnvData )
-			aRet = (WindowRef)pEnvData->aWindow;
-	}
-
-	return aRet;
+	if ( mpEnvData )
+		return (WindowRef)mpEnvData->aWindow;
+	else
+		return NULL;
 }
 
 // ------------------------------------------------------------------------
