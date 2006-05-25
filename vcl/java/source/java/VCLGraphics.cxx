@@ -185,7 +185,19 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIE
 		return;
 
 	BitmapBuffer *pBuffer = (BitmapBuffer *)_par0;
-	aBitmapBufferList.push_back( pBuffer );
+	bool bBufferFound = false;
+	for ( ::std::list< BitmapBuffer* >::const_iterator it = aBitmapBufferList.begin(); it != aBitmapBufferList.end(); ++it )
+	{
+		if ( *it == pBuffer )
+		{
+			bBufferFound = true;
+			break;
+		}
+	}
+
+	if ( !bBufferFound )
+		aBitmapBufferList.push_back( pBuffer );
+
 	if ( !pBuffer->mpBits )
 		return;
 
