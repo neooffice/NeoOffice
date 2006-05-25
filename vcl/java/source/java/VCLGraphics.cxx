@@ -56,6 +56,7 @@
 #include "VCLGraphics_cocoa.h"
 
 static ::std::list< CGImageRef > aCGImageList;
+static ::std::list< BitmapBuffer* > aBitmapBufferList;
 
 using namespace rtl;
 using namespace vcl;
@@ -124,7 +125,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pE
 
 	size_t nRowSize = _par5 * sizeof( jint );
 	size_t nSize = nRowSize * _par6;
-	jint *pCGBits = (jint *)( new jint[ _par5 * _par6 ] );
+	jint *pCGBits = new jint[ _par5 * _par6 ];
 	if ( pCGBits )
 	{
 		// Copy the subimage
@@ -184,11 +185,9 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIE
 		return;
 
 	BitmapBuffer *pBuffer = (BitmapBuffer *)_par0;
+	aBitmapBufferList.push_back( pBuffer );
 	if ( !pBuffer->mpBits )
-	{
-		delete pBuffer;
 		return;
-	}
 
 	float fScaleX = _par7 / _par3;
 	float fScaleY = _par8 / _par4;
@@ -227,37 +226,20 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIE
 
 	size_t nRowSize = _par3 * sizeof( jint );
 	size_t nSize = nRowSize * _par4;
-	jint *pCGBits;
-	if ( pBuffer->mnScanlineSize * pBuffer->mnHeight != nSize )
+	jint *pCGBits = new jint[ _par3 * _par4 ];
+	if ( !pCGBits )
+		return;
+	
+	// Copy the subimage
+	jint *pBits = (jint *)pBuffer->mpBits;
+	jint *pBitsIn = pBits + ( _par2 * nWidth ) + _par1;
+	jint *pBitsOut = pCGBits;
+	for ( jint i = 0; i < _par4; i++ )
 	{
-		jint *pBits = (jint *)pBuffer->mpBits;
-		pCGBits = (jint *)( new jint[ _par3 * _par4 ] );
-		if ( !pCGBits )
-		{
-			delete[] pBuffer->mpBits;
-			delete pBuffer;
-			return;
-		}
-
-		// Copy the subimage
-		jint *pBitsIn = pBits + ( _par2 * nWidth ) + _par1;
-		jint *pBitsOut = pCGBits;
-		for ( jint i = 0; i < _par4; i++ )
-		{
-			memcpy( pBitsOut, pBitsIn, nRowSize );
-			pBitsIn += nWidth;
-			pBitsOut += _par3;
-		}
-
-		delete[] pBuffer->mpBits;
+		memcpy( pBitsOut, pBitsIn, nRowSize );
+		pBitsIn += nWidth;
+		pBitsOut += _par3;
 	}
-	else
-	{
-		// Transfer ownership of mpBits from the BitmapBuffer
-		pCGBits = (jint *)pBuffer->mpBits;
-	}
-
-	delete pBuffer;
 
 	CGDataProviderRef aProvider = CGDataProviderCreateDirectAccess( pCGBits, nSize, &aProviderCallbacks );
 	if ( !aProvider )
@@ -296,6 +278,15 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps( J
 	{
 		CGImageRelease( aCGImageList.front() );
 		aCGImageList.pop_front();
+	}
+
+	while ( aBitmapBufferList.size() )
+	{
+		BitmapBuffer *pBuffer = aBitmapBufferList.front();
+		if ( pBuffer->mpBits )
+			delete[] pBuffer->mpBits;
+		delete pBuffer;
+		aBitmapBufferList.pop_front();
 	}
 }
 
