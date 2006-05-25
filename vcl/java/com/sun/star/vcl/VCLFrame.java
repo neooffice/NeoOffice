@@ -1635,6 +1635,18 @@ g.dispose();
 
 	/**
 	 * Post a paint event.
+	 */
+	synchronized void paint() {
+
+		if (disposed || !window.isShowing())
+			return;
+
+		paint(new Rectangle(panel.getSize()));
+
+	}
+
+	/**
+	 * Post a paint event.
 	 *
 	 * @param b the bounds to paint
 	 */

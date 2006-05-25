@@ -518,8 +518,11 @@ public final class VCLEventQueue implements Runnable {
 									r.x -= f.getInsets().left;
 									r.y -= f.getInsets().top;
 								}
+								f.paint(r);
 							}
-							f.paint(r);
+							else {
+								f.paint();
+							}
 						}
 					}
 					return;
