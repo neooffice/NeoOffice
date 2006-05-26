@@ -39,6 +39,7 @@ import java.awt.AWTEvent;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.EventQueue;
+import java.awt.Insets;
 import java.awt.Panel;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
@@ -515,8 +516,11 @@ public final class VCLEventQueue implements Runnable {
 							Rectangle r = e.getUpdateRect();
 							if (r != null) {
 								if (c instanceof Window) {
-									r.x -= f.getInsets().left;
-									r.y -= f.getInsets().top;
+									Insets i = f.getInsets();
+									if (i != null) {
+										r.x -= i.left;
+										r.y -= i.top;
+									}
 								}
 								f.paint(r);
 							}
