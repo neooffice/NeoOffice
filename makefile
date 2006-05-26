@@ -117,7 +117,7 @@ NEO_PACKAGE:=NeoOffice
 ifeq ("$(UNAME)","powerpc")
 NEO_TAG:=NeoOffice-2_0_Alpha_3
 else
-NEO_TAG:=HEAD
+NEO_TAG:=NeoOffice-2_0_Alpha-Intel
 endif
 
 all: build.all
