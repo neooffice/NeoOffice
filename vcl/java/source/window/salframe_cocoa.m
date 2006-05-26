@@ -81,6 +81,9 @@
 				aVirtualBounds = aBounds;
 		}
 
+		// Fix bug 1479 by setting the bottom of the topmost screen to 0
+		aVirtualBounds.origin.y = 0;
+
 		if ( mbUseMainScreenOnly )
 		{
 			pScreen = [NSScreen mainScreen];
