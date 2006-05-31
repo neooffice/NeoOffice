@@ -102,7 +102,7 @@ struct ImplATSLayoutData {
 	ImplATSLayoutDataHash*	mpHash;
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
 	ATSUStyle			maFontStyle;
-	bool*				mpNeedFallback;
+	int					mnNeedFallback;
 	::vcl::com_sun_star_vcl_VCLFont*	mpFallbackFont;
 	ATSUTextLayout		maLayout;
 	int					mnGlyphCount;
@@ -245,7 +245,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	mpHash( pLayoutHash ),
 	mpVCLFont( NULL ),
 	maFontStyle( NULL ),
-	mpNeedFallback( NULL ),
+	mnNeedFallback( 0 ),
 	mpFallbackFont( NULL ),
 	maLayout( NULL ),
 	mnGlyphCount( 0 ),
@@ -585,7 +585,6 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	}
 
 	// Find positions that require fallback fonts
-	mpNeedFallback = NULL;
 	UniCharArrayOffset nCurrentPos = 0;
 	UniCharCount nOffset;
 	ATSUFontID nFontID;
@@ -596,34 +595,22 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 		{
 			nCurrentPos += nOffset;
 		}
-		else if ( nErr == kATSUFontsMatched )
+		else if ( nErr == kATSUFontsMatched && nCurrentPos < mpHash->mnLen )
 		{
-			if ( !mpNeedFallback )
+			SalData *pSalData = GetSalData();
+			::std::map< int, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( (int)nFontID );
+			if ( it != pSalData->maNativeFontMapping.end() )
 			{
-				nBufSize = mpHash->mnLen * sizeof( bool );
-				mpNeedFallback = (bool *)rtl_allocateMemory( nBufSize );
-				memset( mpNeedFallback, 0, nBufSize );
+				com_sun_star_vcl_VCLFont *pVCLFont = it->second->mpVCLFont;
+				mpFallbackFont = pVCLFont->deriveFont( mpHash->mnFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
 			}
 
-			int nOffsetPos = nCurrentPos + nOffset;
-			for ( ; nCurrentPos < nOffsetPos; nCurrentPos++ )
-				mpNeedFallback[ nCurrentPos ] = true;
-
-			// Update font for next pass through
-			if ( !mpFallbackFont )
+			// Fix bug 1492 by forcing fallback layout for all remaining
+			// characters
+			if ( mpFallbackFont )
 			{
-				SalData *pSalData = GetSalData();
-				::std::map< int, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( (int)nFontID );
-				if ( it != pSalData->maNativeFontMapping.end() )
-				{
-					com_sun_star_vcl_VCLFont *pVCLFont = it->second->mpVCLFont;
-					mpFallbackFont = pVCLFont->deriveFont( mpHash->mnFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
-				}
-				else
-				{
-					rtl_freeMemory( mpNeedFallback );
-					mpNeedFallback = NULL;
-				}
+				mnNeedFallback = nCurrentPos;
+				break;
 			}
 		}
 		else
@@ -666,11 +653,7 @@ void ImplATSLayoutData::Destroy()
 		maFontStyle = NULL;
 	}
 
-	if ( mpNeedFallback )
-	{
-		rtl_freeMemory( mpNeedFallback );
-		mpNeedFallback = NULL;
-	}
+	mnNeedFallback = 0;
 
 	if ( mpFallbackFont )
 	{
@@ -922,7 +905,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				mpKashidaLayoutData = ImplATSLayoutData::GetLayoutData( aKashidaArgs, mnFallbackLevel, mpVCLFont );
 				if ( mpKashidaLayoutData )
 				{
-					if ( mpKashidaLayoutData->mpNeedFallback )
+					if ( mpKashidaLayoutData->mpFallbackFont )
 					{
 						mpKashidaLayoutData->Release();
 						mpKashidaLayoutData = NULL;
@@ -963,14 +946,14 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			return false;
 
 		// Create fallback runs
-		if ( pLayoutData->mpNeedFallback && pLayoutData->mpFallbackFont )
+		if ( pLayoutData->mpFallbackFont )
 		{
 			bool bPosRTL;
 			int nCharPos = -1;
 			aArgs.ResetPos();
 			while ( aArgs.GetNextPos( &nCharPos, &bPosRTL ) )
 			{
-				if ( pLayoutData->mpNeedFallback[ nCharPos - aFallbackArgs.mnMinCharPos ] )
+				if ( pLayoutData->mpFallbackFont && nCharPos - aFallbackArgs.mnMinCharPos >= pLayoutData->mnNeedFallback )
 					rArgs.NeedFallback( nCharPos, bPosRTL );
 			}
 
