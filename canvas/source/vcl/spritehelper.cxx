@@ -302,6 +302,15 @@ namespace vclcanvas
                         }
 
 #ifndef WNT
+#ifdef USE_JAVA
+                        if( bAtLeastOnePolygon &&
+                            bBufferedUpdate &&
+                            ::rtl::math::approxEqual(fAlpha, 1.0) )
+                        {
+                            // Noop to force redrawing which is much faster
+                            // than the horrendously slow triangular clipping
+                        }
+#else	// USE_JAVA
                         // as a matter of fact, this fast path only
                         // performs well for X11 - under Windows, the
                         // clip via SetTriangleClipRegion is faster.
@@ -340,14 +349,6 @@ namespace vclcanvas
                             rTargetSurface.Pop();
 
                             bSpriteRedrawn = true;
-                        }
-#ifdef USE_JAVA
-                        else if( bAtLeastOnePolygon &&
-                            bBufferedUpdate &&
-                            ::rtl::math::approxEqual(fAlpha, 1.0) )
-                        {
-                            // Noop to force redrawing which is much faster
-                            // than the horrendously slow triangular clipping
                         }
 #endif	// USE_JAVA
                         else
