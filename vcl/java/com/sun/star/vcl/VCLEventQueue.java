@@ -505,32 +505,6 @@ public final class VCLEventQueue implements Runnable {
 							event = e = new KeyEvent(f.getPanel(), e.getID(), e.getWhen(), e.getModifiers() | e.getModifiersEx(), e.getKeyCode(), e.getKeyChar(), e.getKeyLocation());
 					}
 				}
-				else if (event instanceof PaintEvent) {
-					// Fix bug 1258 by not dispatching the paint event to
-					// the window
-					PaintEvent e = (PaintEvent)event;
-					Component c = e.getComponent();
-					VCLFrame f = VCLFrame.findFrame(c);
-					if (f != null) {
-						synchronized (f) {
-							Rectangle r = e.getUpdateRect();
-							if (r != null) {
-								if (c instanceof Window) {
-									Insets i = f.getInsets();
-									if (i != null) {
-										r.x -= i.left;
-										r.y -= i.top;
-									}
-								}
-								f.paint(r);
-							}
-							else {
-								f.paint();
-							}
-						}
-					}
-					return;
-				}
 
 				super.dispatchEvent(event);
 

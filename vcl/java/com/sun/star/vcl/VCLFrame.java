@@ -1635,18 +1635,6 @@ g.dispose();
 
 	/**
 	 * Post a paint event.
-	 */
-	synchronized void paint() {
-
-		if (disposed || !window.isShowing())
-			return;
-
-		paint(new Rectangle(panel.getSize()));
-
-	}
-
-	/**
-	 * Post a paint event.
 	 *
 	 * @param b the bounds to paint
 	 */
@@ -2240,18 +2228,6 @@ g.dispose();
 		}
 
 		/**
-		 * This method always returns <code>null</code> to prevent Java from
-		 * painting over what VCL has painted.
-		 *
-		 * @return always <code>null</code>
-		 */
-		public Graphics getGraphics() {
-
-			return null;
-
-		}
-
-		/**
 		 * Returns the minimum size for the dialog.
 		 *
 		 * @return the minimum size for the dialog
@@ -2385,18 +2361,6 @@ g.dispose();
 		}
 
 		/**
-		 * This method always returns <code>null</code> to prevent Java from
-		 * painting over what VCL has painted.
-		 *
-		 * @return always <code>null</code>
-		 */
-		public Graphics getGraphics() {
-
-			return null;
-
-		}
-
-		/**
 		 * Returns the minimum size for the frame.
 		 *
 		 * @return the minimum size for the frame
@@ -2512,18 +2476,6 @@ g.dispose();
 		}
 
 		/**
-		 * This method always returns <code>null</code> to prevent Java from
-		 * painting over what VCL has painted.
-		 *
-		 * @return always <code>null</code>
-		 */
-		public Graphics getGraphics() {
-
-			return null;
-
-		}
-
-		/**
 		 * Returns the input method request handler which supports requests
 		 * from input methods for this component.
 		 *
@@ -2536,15 +2488,18 @@ g.dispose();
 		}
 
 		/**
-		 * This method returns a graphics context or <code>null</code> if the
-		 * component is not displayable.
+		 * This method performs no painting of the panel. This method is used
+		 * to prevent Java from painting over what VCL has painted.
 		 *
-		 * @return a graphics context or <code>null</code> if the component
-		 *  is not displayable
+		 * @param g the <code>Graphics</code>
 		 */
-		public Graphics getRealGraphics() {
+		public void paint(Graphics g) {
 
-			return super.getGraphics();
+			Shape clip = g.getClip();
+			if (clip != null)
+				frame.paint(clip.getBounds());
+			else
+				frame.paint(new Rectangle(getSize()));
 
 		}
 
@@ -2554,15 +2509,11 @@ g.dispose();
 		 *
 		 * @param g the <code>Graphics</code>
 		 */
-		public void paint(Graphics g) {}
+		public void update(Graphics g) {
 
-		/**
-		 * This method performs no painting of the panel. This method is used
-		 * to prevent Java from painting over what VCL has painted.
-		 *
-		 * @param g the <code>Graphics</code>
-		 */
-		public void update(Graphics g) {}
+			paint(g);
+
+		}
 
 	}
 
