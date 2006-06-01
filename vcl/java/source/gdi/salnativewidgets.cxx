@@ -74,6 +74,7 @@ using namespace rtl;
 
 #define COMBOBOX_BUTTON_WIDTH 22
 #define COMBOBOX_BUTTON_TRIMWIDTH 3
+#define CONTROL_TAB_PANE_TOP_OFFSET	10
 
 static JavaSalBitmap *pComboBoxBitmap = NULL;
 static JavaSalBitmap *pListBoxBitmap = NULL;
@@ -290,6 +291,30 @@ static BOOL InitTabDrawInfo( HIThemeTabDrawInfo *pTabDrawInfo, ControlState nSta
 	}
 	if( pTabDrawInfo->position != kHIThemeTabPositionLast )
 		pTabDrawInfo->adornment |= kHIThemeTabAdornmentTrailingSeparator;
+	return TRUE;
+}
+
+// =======================================================================
+
+/**
+ * (static) Initialize the HITheme strucutre used to draw the bounding box
+ * for a tab control background bounding box
+ *
+ * @param pTabPaneDrawInfo	pointer to HITheme tab drawing structure
+ * @param nState			overall control state of the tab item.
+ * @return TRUE on success, FALSE on failure
+ */
+static BOOL InitTabPaneDrawInfo( HIThemeTabPaneDrawInfo *pTabPaneDrawInfo, ControlState nState )
+{
+	memset( pTabPaneDrawInfo, 0, sizeof( HIThemeTabDrawInfo ) );
+	pTabPaneDrawInfo->version = 1;
+	pTabPaneDrawInfo->direction = kThemeTabNorth;
+	pTabPaneDrawInfo->size = kHIThemeTabSizeNormal;
+	pTabPaneDrawInfo->adornment = kHIThemeTabAdornmentNone;
+	if( ! ( nState & CTRL_STATE_ENABLED ) )
+		pTabPaneDrawInfo->state = kThemeStateInactive;
+	else
+		pTabPaneDrawInfo->state = kThemeStateActive;
 	return TRUE;
 }
 
@@ -839,6 +864,82 @@ static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBou
 // =======================================================================
 
 /**
+ * (static) Draw a native tab box.  This includes the rounded boundary and
+ * flat grey tab background.
+ *
+ * @param pGraphics			pointer into graphics object where spinbox should
+ *							be painted
+ * @param rDestBounds		destination rectangle where object will be painted
+ * @param nState			overall control state
+ */
+static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
+{
+	BOOL bRet = FALSE;
+	
+	JavaSalBitmap tabBoxBitmap;
+	tabBoxBitmap.Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
+	
+	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+	if ( !aColorSpace )
+		return bRet;
+
+	BitmapBuffer *pBuffer = tabBoxBitmap.AcquireBuffer( false );
+	if ( !pBuffer )
+	{
+		CGColorSpaceRelease( aColorSpace );
+		return bRet;
+	}
+
+#ifdef POWERPC
+	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
+#else	// POWERPC
+	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+#endif	// POWERPC
+	if ( !aContext )
+	{
+		tabBoxBitmap.ReleaseBuffer( pBuffer, false );
+		CGColorSpaceRelease( aColorSpace );
+		return bRet;
+	}
+
+	// Clear the image
+	memset( pBuffer->mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
+	
+	HIThemeTabPaneDrawInfo pTabPaneDrawInfo;
+	InitTabPaneDrawInfo( &pTabPaneDrawInfo, nState );
+	
+	HIRect destRect;
+	destRect.origin.x = 0;
+	destRect.origin.y = 0;
+	destRect.size.width = rDestBounds.GetWidth();
+	destRect.size.height = rDestBounds.GetHeight();
+	
+	bRet = ( HIThemeDrawTabPane( &destRect, &pTabPaneDrawInfo, aContext, kHIThemeOrientationInverted ) == noErr );
+	
+	CGContextRelease( aContext );
+	CGColorSpaceRelease( aColorSpace );
+
+	tabBoxBitmap.ReleaseBuffer( pBuffer, false );
+
+	if ( bRet )
+	{
+		SalTwoRect aTwoRect;
+		aTwoRect.mnSrcX = 0;
+		aTwoRect.mnSrcY = 0;
+		aTwoRect.mnSrcWidth = rDestBounds.GetWidth();
+		aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
+		aTwoRect.mnDestX = rDestBounds.Left();
+		aTwoRect.mnDestY = rDestBounds.Top();
+		aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
+		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
+		pGraphics->drawBitmap( &aTwoRect, tabBoxBitmap );
+	}
+	return bRet;
+}
+
+// =======================================================================
+
+/**
  * Determine if support exists for drawing a particular native widget in the
  * interface.
  *
@@ -893,6 +994,11 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			break;
 		
 		case CTRL_TAB_ITEM:
+			if( nPart == PART_ENTIRE_CONTROL )
+				isSupported = TRUE;
+			break;
+		
+		case CTRL_TAB_PANE:
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
@@ -1038,6 +1144,19 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				Rectangle ctrlRect = rControlRegion.GetBoundRect();				
 				TabitemValue *pValue = static_cast<TabitemValue *> ( aValue.getOptionalVal() );
 				bOK = DrawNativeTab( this, ctrlRect, nState, pValue );
+			}
+			break;
+		
+		case CTRL_TAB_PANE:
+			if( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle ctrlRect = rControlRegion.GetBoundRect();
+				// hack - on 10.3+ tab panes visually need to intersect the
+				// middle of the associated segmented control.  Subtract
+				// 15 off the height to shoehorn the drawing in.
+				ctrlRect.setY( ctrlRect.getY() - CONTROL_TAB_PANE_TOP_OFFSET );
+				ctrlRect.setHeight( ctrlRect.getHeight() + CONTROL_TAB_PANE_TOP_OFFSET );
+				bOK = DrawNativeTabBoundingBox( this, ctrlRect, nState );
 			}
 			break;
 	}
@@ -1351,6 +1470,18 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				bReturn = TRUE;
 			}
 			break;
+		
+		case CTRL_TAB_PANE:
+			if ( nPart == PART_ENTIRE_CONTROL )
+			{
+				// for now, assume tab panes will occupy the full rectangle and
+				// not require bound adjustment.
+				Rectangle controlRect = rControlRegion.GetBoundRect();
+				rNativeBoundingRegion = Region( controlRect );
+				rNativeContentRegion = Region( rNativeBoundingRegion );
+				
+				bReturn = TRUE;
+			}
 	}
 
 	return bReturn;
