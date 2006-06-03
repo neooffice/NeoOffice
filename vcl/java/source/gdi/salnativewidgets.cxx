@@ -321,6 +321,29 @@ static BOOL InitTabPaneDrawInfo( HIThemeTabPaneDrawInfo *pTabPaneDrawInfo, Contr
 // =======================================================================
 
 /**
+ * (static) Initialize an HITheme groupbox draw structure to draw a primary
+ * group box.
+ *
+ * @param pDrawInfo		pointer to the HITheme group box draw structure to
+ *						initialize
+ * @param nState		overall control state of the group box
+ * @return TRUE on success, FALSE on failure
+ */
+static BOOL InitPrimaryGroupBoxDrawInfo( HIThemeGroupBoxDrawInfo *pDrawInfo, ControlState nState )
+{
+	memset( pDrawInfo, 0, sizeof( HIThemeGroupBoxDrawInfo ) );
+	pDrawInfo->version = 0;
+	if( ! ( nState & CTRL_STATE_ENABLED ) )
+		pDrawInfo->state = kThemeStateInactive;
+	else
+		pDrawInfo->state = kThemeStateActive;
+	pDrawInfo->kind = kHIThemeGroupBoxKindPrimary;
+	return TRUE;
+}
+
+// =======================================================================
+
+/**
  * (static) Draw a ComboBox into the graphics port at the specified location.
  * ComboBoxes are editable pulldowns, the left portion of which is an edit
  * field and the right portion a downward arrow button used to display the
@@ -940,6 +963,82 @@ static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangl
 // =======================================================================
 
 /**
+ * (static) Draw a primary group box.  This includes the rounded boundary used
+ * to group controls together.
+ *
+ * @param pGraphics			pointer into graphics object where box should
+ *							be painted
+ * @param rDestBounds		destination rectangle where object will be painted
+ * @param nState			overall control state
+ */
+static BOOL DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
+{
+	BOOL bRet = FALSE;
+	
+	JavaSalBitmap groupBoxBitmap;
+	groupBoxBitmap.Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
+	
+	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+	if ( !aColorSpace )
+		return bRet;
+
+	BitmapBuffer *pBuffer = groupBoxBitmap.AcquireBuffer( false );
+	if ( !pBuffer )
+	{
+		CGColorSpaceRelease( aColorSpace );
+		return bRet;
+	}
+
+#ifdef POWERPC
+	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
+#else	// POWERPC
+	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+#endif	// POWERPC
+	if ( !aContext )
+	{
+		groupBoxBitmap.ReleaseBuffer( pBuffer, false );
+		CGColorSpaceRelease( aColorSpace );
+		return bRet;
+	}
+
+	// Clear the image
+	memset( pBuffer->mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
+	
+	HIThemeGroupBoxDrawInfo pGroupBoxDrawInfo;
+	InitPrimaryGroupBoxDrawInfo( &pGroupBoxDrawInfo, nState );
+	
+	HIRect destRect;
+	destRect.origin.x = 0;
+	destRect.origin.y = 0;
+	destRect.size.width = rDestBounds.GetWidth();
+	destRect.size.height = rDestBounds.GetHeight();
+	
+	bRet = ( HIThemeDrawGroupBox( &destRect, &pGroupBoxDrawInfo, aContext, kHIThemeOrientationInverted ) == noErr );
+	
+	CGContextRelease( aContext );
+	CGColorSpaceRelease( aColorSpace );
+
+	groupBoxBitmap.ReleaseBuffer( pBuffer, false );
+
+	if ( bRet )
+	{
+		SalTwoRect aTwoRect;
+		aTwoRect.mnSrcX = 0;
+		aTwoRect.mnSrcY = 0;
+		aTwoRect.mnSrcWidth = rDestBounds.GetWidth();
+		aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
+		aTwoRect.mnDestX = rDestBounds.Left();
+		aTwoRect.mnDestY = rDestBounds.Top();
+		aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
+		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
+		pGraphics->drawBitmap( &aTwoRect, groupBoxBitmap );
+	}
+	return bRet;
+}
+
+// =======================================================================
+
+/**
  * Determine if support exists for drawing a particular native widget in the
  * interface.
  *
@@ -999,6 +1098,12 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			break;
 		
 		case CTRL_TAB_PANE:
+			if( nPart == PART_ENTIRE_CONTROL )
+				isSupported = TRUE;
+			break;
+		
+		case CTRL_FIXEDBORDER:
+		case CTRL_GROUPBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
@@ -1159,6 +1264,14 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				bOK = DrawNativeTabBoundingBox( this, ctrlRect, nState );
 			}
 			break;
+		
+		case CTRL_FIXEDBORDER:
+		case CTRL_GROUPBOX:
+			if( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle ctrlRect = rControlRegion.GetBoundRect();				
+				bOK = DrawNativePrimaryGroupBox( this, ctrlRect, nState );
+			}
 	}
 
 	return bOK;
@@ -1482,6 +1595,21 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				
 				bReturn = TRUE;
 			}
+			break;
+		
+		case CTRL_FIXEDBORDER:
+		case CTRL_GROUPBOX:
+			if ( nPart == PART_ENTIRE_CONTROL )
+			{
+				// for now, assume primary group boxes will occupy the full rectangle and
+				// not require bound adjustment.
+				Rectangle controlRect = rControlRegion.GetBoundRect();
+				rNativeBoundingRegion = Region( controlRect );
+				rNativeContentRegion = Region( rNativeBoundingRegion );
+				
+				bReturn = TRUE;
+			}
+			break;
 	}
 
 	return bReturn;
