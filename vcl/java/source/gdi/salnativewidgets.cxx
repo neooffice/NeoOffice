@@ -1039,6 +1039,82 @@ static BOOL DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectang
 // =======================================================================
 
 /**
+ * (static) Draw the background for a native menu.
+ *
+ * @param pGraphics			pointer into graphics object where box should
+ *							be painted
+ * @param rDestBounds		destination rectangle where object will be painted
+ */
+static BOOL DrawNativeMenuBackground( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds )
+{
+	BOOL bRet = FALSE;
+	
+	JavaSalBitmap menuBgBitmap;
+	menuBgBitmap.Create( Size( rDestBounds.Left()+rDestBounds.GetWidth(), rDestBounds.Top()+rDestBounds.GetHeight() ), 32, BitmapPalette() );
+	
+	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+	if ( !aColorSpace )
+		return bRet;
+
+	BitmapBuffer *pBuffer = menuBgBitmap.AcquireBuffer( false );
+	if ( !pBuffer )
+	{
+		CGColorSpaceRelease( aColorSpace );
+		return bRet;
+	}
+
+#ifdef POWERPC
+	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
+#else	// POWERPC
+	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+#endif	// POWERPC
+	if ( !aContext )
+	{
+		menuBgBitmap.ReleaseBuffer( pBuffer, false );
+		CGColorSpaceRelease( aColorSpace );
+		return bRet;
+	}
+
+	// Clear the image
+	memset( pBuffer->mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
+	
+	HIThemeMenuDrawInfo pMenuDrawInfo;
+	memset( &pMenuDrawInfo, 0, sizeof( pMenuDrawInfo ) );
+	pMenuDrawInfo.version = 0;
+	pMenuDrawInfo.menuType = kThemeMenuTypePopUp;
+	
+	HIRect destRect;
+	destRect.origin.x = rDestBounds.Left();
+	destRect.origin.y = rDestBounds.Top();
+	destRect.size.width = rDestBounds.GetWidth();
+	destRect.size.height = rDestBounds.GetHeight();
+	
+	bRet = ( HIThemeDrawMenuBackground( &destRect, &pMenuDrawInfo, aContext, kHIThemeOrientationInverted ) == noErr );
+	
+	CGContextRelease( aContext );
+	CGColorSpaceRelease( aColorSpace );
+
+	menuBgBitmap.ReleaseBuffer( pBuffer, false );
+
+	if ( bRet )
+	{
+		SalTwoRect aTwoRect;
+		aTwoRect.mnSrcX = rDestBounds.Left();
+		aTwoRect.mnSrcY = rDestBounds.Top();
+		aTwoRect.mnSrcWidth = rDestBounds.GetWidth();
+		aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
+		aTwoRect.mnDestX = rDestBounds.Left();
+		aTwoRect.mnDestY = rDestBounds.Top();
+		aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
+		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
+		pGraphics->drawBitmap( &aTwoRect, menuBgBitmap );
+	}
+	return bRet;
+}
+
+// =======================================================================
+
+/**
  * Determine if support exists for drawing a particular native widget in the
  * interface.
  *
@@ -1107,6 +1183,11 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
+		
+		case CTRL_MENU_POPUP:
+			if( nPart == PART_ENTIRE_CONTROL )
+				isSupported = TRUE;
+			break;
 			
 		default:
 			isSupported = FALSE;
@@ -1115,6 +1196,9 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 
 	return isSupported;
 }
+
+// =======================================================================
+
 
 // =======================================================================
 
@@ -1272,6 +1356,15 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				Rectangle ctrlRect = rControlRegion.GetBoundRect();				
 				bOK = DrawNativePrimaryGroupBox( this, ctrlRect, nState );
 			}
+			break;
+		
+		case CTRL_MENU_POPUP:
+			if ( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle ctrlRect = rControlRegion.GetBoundRect();				
+				bOK = DrawNativeMenuBackground( this, ctrlRect );
+			}
+			break;
 	}
 
 	return bOK;
@@ -1603,6 +1696,18 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			{
 				// for now, assume primary group boxes will occupy the full rectangle and
 				// not require bound adjustment.
+				Rectangle controlRect = rControlRegion.GetBoundRect();
+				rNativeBoundingRegion = Region( controlRect );
+				rNativeContentRegion = Region( rNativeBoundingRegion );
+				
+				bReturn = TRUE;
+			}
+			break;
+		
+		case CTRL_MENU_POPUP:
+			if ( nPart == PART_ENTIRE_CONTROL )
+			{
+				// we can draw menu backgrounds for any size rectangular area
 				Rectangle controlRect = rControlRegion.GetBoundRect();
 				rNativeBoundingRegion = Region( controlRect );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
