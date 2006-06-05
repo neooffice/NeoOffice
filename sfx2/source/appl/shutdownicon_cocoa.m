@@ -335,7 +335,11 @@ void AddQuickstartMenuItems( int nCount, MenuCommand *pIDs, CFStringRef *pString
 }
 
 // Note: this must not be static as the symbol will be loaded by the vcl module
+#if __GNUC__ < 4
 void NativeShutdownCancelledHandler()
+#else
+__attribute__((visibility("default"))) void NativeShutdownCancelledHandler()
+#endif
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 

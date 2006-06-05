@@ -230,7 +230,11 @@ using namespace ::com::sun::star::lang;
 #ifdef MACOSX
 // [ed] 1/25/05 handler for About events.  Bug #396
 // Note: this must not be static as the symbol will be loaded by the vcl module
+#if __GNUC__ < 4
 extern "C" void NativeAboutMenuHandler()
+#else
+extern "C" __attribute__((visibility("default"))) void NativeAboutMenuHandler()
+#endif
 {
 	SfxRequest aReq( SID_ABOUT, SFX_CALLMODE_SLOT, SFX_APP()->GetPool() );
 	SFX_APP()->MiscExec_Impl( aReq );
@@ -240,7 +244,11 @@ extern "C" void NativeAboutMenuHandler()
 #ifdef MACOSX
 // [ed] 1/26/05 handler for preferences events.
 // Note: this must not be static as the symbol will be loaded by the vcl module
+#if __GNUC__ < 4
 extern "C" void NativePreferencesMenuHandler()
+#else
+extern "C" __attribute__((visibility("default"))) void NativePreferencesMenuHandler()
+#endif
 {
 	SfxRequest aReq( SID_OPTIONS_TREEDIALOG, SFX_CALLMODE_SLOT, SFX_APP()->GetPool() );
 	SFX_APP()->OfaExec_Impl( aReq );
