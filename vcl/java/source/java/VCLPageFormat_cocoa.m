@@ -105,11 +105,15 @@ static BOOL bInDialog = NO;
 
 - (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow orientation:(NSPrintingOrientation)nOrientation
 {
+	[super init];
+
 	mbFinished = YES;
 	mpInfo = pInfo;
 	mnOrientation = nOrientation;
 	mbResult = NO;
 	mpWindow = pWindow;
+
+	return self;
 }
 
 - (void)pageLayoutDidEnd:(NSPageLayout *)pLayout returnCode:(int)nCode contextInfo:(void *)pContextInfo
@@ -237,8 +241,8 @@ id NSPrintInfo_showPageLayoutDialog( id pNSPrintInfo, id pNSWindow, BOOL bLandsc
 		pRet = [[ShowPageLayoutDialog alloc] initWithPrintInfo:(NSPrintInfo *)pNSPrintInfo window:(NSWindow *)pNSWindow orientation:( bLandscape ? NSLandscapeOrientation : NSPortraitOrientation )];
 		if ( pRet )
 		{
-			[pRet performSelectorOnMainThread:@selector(showPageLayoutDialog:) withObject:pRet waitUntilDone:YES];
 			[pRet retain];
+			[pRet performSelectorOnMainThread:@selector(showPageLayoutDialog:) withObject:pRet waitUntilDone:YES];
 		}
 	}
 

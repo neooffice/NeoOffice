@@ -58,10 +58,14 @@
 
 - (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow
 {
+	[super init];
+
 	mbFinished = YES;
 	mpInfo = pInfo;
 	mbResult = NO;
 	mpWindow = pWindow;
+
+	return self;
 }
 
 - (void)printPanelDidEnd:(NSPrintPanel *)pPanel returnCode:(int)nCode contextInfo:(void *)pContextInfo
