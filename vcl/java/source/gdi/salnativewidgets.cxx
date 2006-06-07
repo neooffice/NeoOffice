@@ -344,6 +344,34 @@ static BOOL InitPrimaryGroupBoxDrawInfo( HIThemeGroupBoxDrawInfo *pDrawInfo, Con
 // =======================================================================
 
 /**
+ * (static) Initialize HITheme structures used to draw the frame of an
+ * edit field.
+ *
+ * @param pFrameInfo		pointer to the HITheme frame info structure
+ *							to be initialized
+ * @param nState			control state of the edit field
+ * @return TRUE on success, FALSE on failure
+ */
+static BOOL InitEditFieldDrawInfo( HIThemeFrameDrawInfo *pFrameInfo, ControlState nState )
+{
+	memset( pFrameInfo, 0, sizeof( HIThemeFrameDrawInfo ) );
+	pFrameInfo->version = 0;
+	pFrameInfo->kind = kHIThemeFrameTextFieldSquare;
+	if( ! ( nState & CTRL_STATE_ENABLED ) )
+		pFrameInfo->state = kThemeStateInactive;
+	else
+		pFrameInfo->state = kThemeStateActive;
+	if( nState & CTRL_STATE_FOCUSED )
+	{
+		pFrameInfo->isFocused = true;
+		pFrameInfo->state |= kThemeStateActive;	// logically we can't have a focused edit field that's inactive
+	}
+	return TRUE;
+}
+
+// =======================================================================
+
+/**
  * (static) Draw a ComboBox into the graphics port at the specified location.
  * ComboBoxes are editable pulldowns, the left portion of which is an edit
  * field and the right portion a downward arrow button used to display the
@@ -1115,6 +1143,80 @@ static BOOL DrawNativeMenuBackground( JavaSalGraphics *pGraphics, const Rectangl
 // =======================================================================
 
 /**
+ * (static) Draw the background for a native edit field.
+ *
+ * @param pGraphics			pointer into graphics object where box should
+ *							be painted
+ * @param rDestBounds		destination rectangle where object will be painted
+ */
+static BOOL DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
+{
+	BOOL bRet = FALSE;
+	
+	JavaSalBitmap editFieldBitmap;
+	editFieldBitmap.Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
+	
+	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+	if ( !aColorSpace )
+		return bRet;
+
+	BitmapBuffer *pBuffer = editFieldBitmap.AcquireBuffer( false );
+	if ( !pBuffer )
+	{
+		CGColorSpaceRelease( aColorSpace );
+		return bRet;
+	}
+
+#ifdef POWERPC
+	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
+#else	// POWERPC
+	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+#endif	// POWERPC
+	if ( !aContext )
+	{
+		editFieldBitmap.ReleaseBuffer( pBuffer, false );
+		CGColorSpaceRelease( aColorSpace );
+		return bRet;
+	}
+
+	// Clear the image
+	memset( pBuffer->mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
+	
+	HIThemeFrameDrawInfo pFrameInfo;
+	InitEditFieldDrawInfo( &pFrameInfo, nState );
+	
+	HIRect destRect;
+	destRect.origin.x = 0;
+	destRect.origin.y = 0;
+	destRect.size.width = rDestBounds.GetWidth();
+	destRect.size.height = rDestBounds.GetHeight();
+	
+	bRet = ( HIThemeDrawFrame( &destRect, &pFrameInfo, aContext, kHIThemeOrientationInverted ) == noErr );
+	
+	CGContextRelease( aContext );
+	CGColorSpaceRelease( aColorSpace );
+
+	editFieldBitmap.ReleaseBuffer( pBuffer, false );
+
+	if ( bRet )
+	{
+		SalTwoRect aTwoRect;
+		aTwoRect.mnSrcX = 0;
+		aTwoRect.mnSrcY = 0;
+		aTwoRect.mnSrcWidth = rDestBounds.GetWidth();
+		aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
+		aTwoRect.mnDestX = rDestBounds.Left();
+		aTwoRect.mnDestY = rDestBounds.Top();
+		aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
+		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
+		pGraphics->drawBitmap( &aTwoRect, editFieldBitmap );
+	}
+	return bRet;
+}
+
+// =======================================================================
+
+/**
  * Determine if support exists for drawing a particular native widget in the
  * interface.
  *
@@ -1188,6 +1290,11 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
+		
+		case CTRL_EDITBOX:
+			if( nPart == PART_ENTIRE_CONTROL )
+				isSupported = TRUE;
+			break;
 			
 		default:
 			isSupported = FALSE;
@@ -1196,9 +1303,6 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 
 	return isSupported;
 }
-
-// =======================================================================
-
 
 // =======================================================================
 
@@ -1363,6 +1467,14 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 			{
 				Rectangle ctrlRect = rControlRegion.GetBoundRect();				
 				bOK = DrawNativeMenuBackground( this, ctrlRect );
+			}
+			break;
+		
+		case CTRL_EDITBOX:
+			if( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle ctrlRect = rControlRegion.GetBoundRect();				
+				bOK = DrawNativeEditBox( this, ctrlRect, nState );
 			}
 			break;
 	}
@@ -1708,6 +1820,18 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
 				// we can draw menu backgrounds for any size rectangular area
+				Rectangle controlRect = rControlRegion.GetBoundRect();
+				rNativeBoundingRegion = Region( controlRect );
+				rNativeContentRegion = Region( rNativeBoundingRegion );
+				
+				bReturn = TRUE;
+			}
+			break;
+		
+		case CTRL_EDITBOX:
+			if ( nPart == PART_ENTIRE_CONTROL )
+			{
+				// fill entire control area with edit box
 				Rectangle controlRect = rControlRegion.GetBoundRect();
 				rNativeBoundingRegion = Region( controlRect );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
