@@ -39,6 +39,7 @@
 #ifdef __cplusplus
 BEGIN_C
 #endif
+void Java_getScreenOrigin( float *pX, float *pY );
 void NSScreen_getScreenBounds( long *nX, long *nY, long *nWidth, long *nHeight, BOOL bFullScreenMode, BOOL bUseMainScreenOnly );
 #ifdef __cplusplus
 END_C

@@ -83,6 +83,49 @@ SalColor com_sun_star_vcl_VCLScreen::getControlColor()
 
 // ----------------------------------------------------------------------------
 
+const Point com_sun_star_vcl_VCLScreen::getScreenOrigin()
+{
+	static jmethodID mID = NULL;
+	static jfieldID fIDWidth = NULL;
+	static jfieldID fIDHeight = NULL;
+	Point out( 0, 0 );
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Ljava/awt/Dimension;";
+			mID = t.pEnv->GetStaticMethodID( getMyClass(), "getScreenOrigin", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jobject tempObj = t.pEnv->CallStaticObjectMethod( getMyClass(), mID );
+			if ( tempObj )
+			{
+				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
+				if ( !fIDWidth )
+				{
+					char *cSignature = "I";
+					fIDWidth = t.pEnv->GetFieldID( tempObjClass, "width", cSignature );
+				}
+				OSL_ENSURE( fIDWidth, "Unknown field id!" );
+				if ( !fIDHeight )
+				{
+					char *cSignature = "I";
+					fIDHeight = t.pEnv->GetFieldID( tempObjClass, "height", cSignature );
+				}
+				OSL_ENSURE( fIDHeight, "Unknown field id!" );
+				if ( fIDWidth && fIDHeight )
+					out = Point( (long)t.pEnv->GetIntField( tempObj, fIDWidth ), (long)t.pEnv->GetIntField( tempObj, fIDHeight ) );
+			}
+		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
 SalColor com_sun_star_vcl_VCLScreen::getTextHighlightColor()
 {
 	static jmethodID mID = NULL;

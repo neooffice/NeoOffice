@@ -42,6 +42,9 @@
 #ifndef _SV_SALGTYPE_HXX
 #include <salgtype.hxx>
 #endif
+#ifndef _SV_GEN_HXX
+#include <tools/gen.hxx>
+#endif
 
 namespace vcl {
 
@@ -53,6 +56,7 @@ protected:
 public:
 	static jclass		getMyClass();
 	static SalColor		getControlColor();
+	static const Point	getScreenOrigin();
 	static SalColor		getTextHighlightColor();
 	static SalColor		getTextHighlightTextColor();
 	static SalColor		getTextTextColor();

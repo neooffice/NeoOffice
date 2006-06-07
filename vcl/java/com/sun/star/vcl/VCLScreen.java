@@ -38,6 +38,9 @@ package com.sun.star.vcl;
 import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.Graphics2D;
+import java.awt.GraphicsConfiguration;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -135,6 +138,39 @@ public final class VCLScreen {
 	public static Dimension getMinimumFrameSize() {
 
 		return minimumFrameSize;
+
+	}
+
+	/**
+	 * Returns the virtual screen's origin
+	 *
+	 * @return the virtual screen's origin
+	 */
+	public static Dimension getScreenOrigin() {
+
+		Dimension origin = null;
+
+		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+		if (ge != null) {
+			GraphicsDevice[] gd = ge.getScreenDevices();
+			for (int i = 0; i < gd.length; i++) {
+				GraphicsConfiguration gc = gd[i].getDefaultConfiguration();
+				if (gc != null) {
+					Rectangle r = gc.getBounds();
+					if (origin != null) {
+						if (origin.width > r.x)
+							origin.width = r.x;
+						if (origin.height > r.y)
+							origin.height = r.y;
+					}
+					else {
+						origin = new Dimension(r.x, r.y);
+					}
+				}
+			}
+		}
+
+		return origin;
 
 	}
 

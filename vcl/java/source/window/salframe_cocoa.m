@@ -66,24 +66,28 @@
 		if ( !nCount )
 			return;
 
-		NSScreen *pScreen = (NSScreen *)[pScreens objectAtIndex:0];
-		NSRect aVirtualBounds = [pScreen frame];
-		if ( NSIsEmptyRect( aVirtualBounds ) )
-			return;
-
-		// Fix bug 1444 by finding the screen that extends the topmost
+		NSRect aVirtualBounds = NSMakeRect( 0, 0, 0, 0 );
+		NSScreen *pScreen;
 		unsigned i;
-		for ( i = 1; i < nCount; i++ )
+		for ( i = 0; i < nCount; i++ )
 		{
 			pScreen = (NSScreen *)[pScreens objectAtIndex:i];
 			NSRect aBounds = [pScreen frame];
-			if ( aBounds.origin.y + aBounds.size.height > aVirtualBounds.origin.y + aBounds.size.height )
+			if ( NSIsEmptyRect( aVirtualBounds ) )
 				aVirtualBounds = aBounds;
+			else
+				aVirtualBounds = NSUnionRect( aVirtualBounds, aBounds );
 		}
 
-		// Fix bug 1479 by setting the bottom of the topmost screen to 0
-		aVirtualBounds.origin.y = 0;
+		if ( NSIsEmptyRect( aVirtualBounds ) )
+			return;
 
+		// Fix bug 1479 by including any non-zero top coordinate for the Java
+		// screen in the virtual screen
+		float fX = 0;
+		float fY = 0;
+		Java_getScreenOrigin( &fX, &fY );
+		
 		if ( mbUseMainScreenOnly )
 		{
 			pScreen = [NSScreen mainScreen];
@@ -94,7 +98,8 @@
 				aBounds = [pScreen visibleFrame];
 
 			// Flip the coordinate system to match the VCL coordinate system
-			aBounds.origin.y = aVirtualBounds.origin.y + aVirtualBounds.size.height - aBounds.origin.y - aBounds.size.height;
+			aBounds.origin.x += fX - aVirtualBounds.origin.x;
+			aBounds.origin.y = fY + aVirtualBounds.origin.y + aVirtualBounds.size.height - aBounds.origin.y - aBounds.size.height;
 
 			if ( !NSIsEmptyRect( aBounds ) )
 			{
@@ -118,7 +123,8 @@
 				aBounds = [pScreen visibleFrame];
 
 			// Flip the coordinate system to match the VCL coordinate system
-			aBounds.origin.y = aVirtualBounds.origin.y + aVirtualBounds.size.height - aBounds.origin.y - aBounds.size.height;
+			aBounds.origin.x += fX - aVirtualBounds.origin.x;
+			aBounds.origin.y = fY + aVirtualBounds.origin.y + aVirtualBounds.size.height - aBounds.origin.y - aBounds.size.height;
 
 			if ( NSPointInRect( maPoint, aBounds ) )
 			{
@@ -144,7 +150,8 @@
 					aBounds = [pScreen visibleFrame];
 
 				// Flip the coordinate system to match the VCL coordinate system
-				aBounds.origin.y = aVirtualBounds.origin.y + aVirtualBounds.size.height - aBounds.origin.y - aBounds.size.height;
+				aBounds.origin.x += fX - aVirtualBounds.origin.x;
+				aBounds.origin.y = fY + aVirtualBounds.origin.y + aVirtualBounds.size.height - aBounds.origin.y - aBounds.size.height;
 
 				// Test the closeness of the point to the center of the screen
 				unsigned nArea = abs( (unsigned)( ( ( ( aBounds.origin.x + aBounds.size.width ) / 2 ) - maPoint.x ) * ( ( ( aBounds.origin.y + aBounds.size.height ) / 2 ) - maPoint.y ) ) );

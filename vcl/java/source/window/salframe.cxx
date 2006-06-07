@@ -81,6 +81,15 @@ using namespace vcl;
 
 // =======================================================================
 
+void Java_getScreenOrigin( float *pX, float *pY )
+{
+	const Point& rPoint = com_sun_star_vcl_VCLScreen::getScreenOrigin();
+	*pX = (float)rPoint.X();
+	*pY = (float)rPoint.Y();
+}
+
+// =======================================================================
+
 long ImplSalCallbackDummy( void*, SalFrame*, USHORT, const void* )
 {
 	return 0;
