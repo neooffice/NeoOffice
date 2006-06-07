@@ -799,6 +799,9 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		JavaSalFrame *mpOldParent = mpParent;
 		mpParent = (JavaSalFrame *)pNewParent;
 
+		if ( mpParent )
+			mbUseMainScreenOnly = FALSE;
+
 		if ( ( mpOldParent && mpOldParent->mbVisible ) || ( mpParent && mpParent->mbVisible ) )
 		{
 			// Fix bug 1310 by creating a new native window with the new parent
@@ -817,7 +820,6 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 
 		if ( mpParent )
 		{
-			mbUseMainScreenOnly = FALSE;
 			mpParent->mpVCLFrame->addChild( this );
 			mpParent->maChildren.push_back( this );
 		}
