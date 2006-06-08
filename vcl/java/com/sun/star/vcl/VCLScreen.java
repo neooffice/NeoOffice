@@ -64,6 +64,11 @@ public final class VCLScreen {
 	public final static int MIN_SCREEN_RESOLUTION = 96;
 
 	/**
+	 * The default screen bounds.
+	 */
+	private static Rectangle defaultScreenBounds = new Rectangle(0, 0, 800, 600);
+
+	/**
 	 * The cached frame insets.
 	 */
 	private static Insets frameInsets = null;
@@ -142,37 +147,81 @@ public final class VCLScreen {
 	}
 
 	/**
-	 * Returns the virtual screen's origin
+	 * Returns the screen bounds that is the closest match for the specified
+	 * bounds.
 	 *
-	 * @return the virtual screen's origin
+	 * @param x the x coordinate 
+	 * @param y the y coordinate 
+	 * @param width the width
+	 * @param height the height
+	 * @param fullScreenMode if <code>true</code> ignore screen insets
+	 *  otherwise include screen insets in the screen bounds
+	 * @param useMainScreen if <code>true</code> return the main screen's
+	 *  bounds otherwise return the closest matching screen's bounds
+	 * @return the screen bounds that is the closest match for the specified
+	 * coordinates
 	 */
-	public static Dimension getScreenOrigin() {
-
-		Dimension origin = null;
+	public static Rectangle getScreenBounds(int x, int y, int width, int height, boolean fullScreenMode, boolean useMainScreenOnly) {
 
 		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 		if (ge != null) {
-			GraphicsDevice[] gd = ge.getScreenDevices();
-			for (int i = 0; i < gd.length; i++) {
-				GraphicsConfiguration gc = gd[i].getDefaultConfiguration();
-				if (gc != null) {
-					Rectangle r = gc.getBounds();
-					if (origin != null) {
-						if (origin.width > r.x)
-							origin.width = r.x;
-						if (origin.height > r.y)
-							origin.height = r.y;
+			if (useMainScreenOnly) {
+				GraphicsDevice gd = ge.getDefaultScreenDevice();
+				if (gd != null) {
+					Rectangle r = gd.getDefaultConfiguration().getBounds();
+					if (!fullScreenMode) {
+						Insets insets = VCLScreen.getScreenInsets(gd);
+						if (insets != null)
+							r = new Rectangle(r.x + insets.left, r.y + insets.top, r.width - insets.left - insets.right, r.height - insets.top - insets.bottom);
 					}
-					else {
-						origin = new Dimension(r.x, r.y);
+
+					if (r.isEmpty())
+						return VCLScreen.defaultScreenBounds;
+					else
+						return r;
+				}
+			}
+			else {
+				// Iterate through screen and find the screen that the point
+				// is inside of
+				long closestArea = Long.MAX_VALUE;
+				Rectangle closestBounds = null;
+				GraphicsDevice[] gd = ge.getScreenDevices();
+				for (int i = 0; i < gd.length; i++) {
+					Rectangle r = gd[i].getDefaultConfiguration().getBounds();
+					if (!fullScreenMode) {
+						Insets insets = VCLScreen.getScreenInsets(gd[i]);
+						if (insets != null)
+							r = new Rectangle(r.x + insets.left, r.y + insets.top, r.width - insets.left - insets.right, r.height - insets.top - insets.bottom);
+					}
+
+					// Test the closeness of the point to the center of the
+					// screen
+					long area = Math.abs((((r.x + r.width) / 2) - x) * (((r.y + r.height) / 2) - y));
+					if (closestArea > area) {
+						closestArea = area;
+						closestBounds = r;
 					}
 				}
+
+				if (closestBounds == null || closestBounds.isEmpty())
+					return VCLScreen.defaultScreenBounds;
+				else
+					return closestBounds;
 			}
 		}
 
-		return origin;
+		return VCLScreen.defaultScreenBounds;
 
 	}
+
+	/**
+	 * Returns the insets for the specified <code>GraphicsDevice</code>.
+	 *
+	 * @param gd the <code>GraphicsDevice</code>
+	 * @return the insets for the specified <code>GraphicsDevice</code>
+	 */
+	public static native Insets getScreenInsets(GraphicsDevice gd);
 
 	/**
 	 * Returns the <code>System.textHighlight</code>.

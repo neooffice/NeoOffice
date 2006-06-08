@@ -57,6 +57,7 @@ public:
 	static jclass		getMyClass();
 	static SalColor		getControlColor();
 	static const Point	getScreenOrigin();
+	static const Rectangle	getScreenBounds( long _par0, long _par1, long _par2, long _par3, sal_Bool _par4, sal_Bool _par5 );
 	static SalColor		getTextHighlightColor();
 	static SalColor		getTextHighlightTextColor();
 	static SalColor		getTextTextColor();

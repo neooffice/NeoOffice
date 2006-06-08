@@ -66,14 +66,13 @@
 #include <com/sun/star/vcl/VCLScreen.hxx>
 #endif
 
-#include "salframe_cocoa.h"
-
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 #undef check
 
-static EventHandlerUPP pEventHandlerUPP = NULL;
+#include "salframe_cocoa.h"
+
 static EventLoopTimerUPP pSetSystemUIModeTimerUPP = NULL;
 
 using namespace rtl;
@@ -81,18 +80,23 @@ using namespace vcl;
 
 // =======================================================================
 
-void Java_getScreenOrigin( float *pX, float *pY )
-{
-	const Point& rPoint = com_sun_star_vcl_VCLScreen::getScreenOrigin();
-	*pX = (float)rPoint.X();
-	*pY = (float)rPoint.Y();
-}
-
-// =======================================================================
-
 long ImplSalCallbackDummy( void*, SalFrame*, USHORT, const void* )
 {
 	return 0;
+}
+
+// -----------------------------------------------------------------------
+
+void VCLScreen_getScreenBounds( long *nX, long *nY, long *nWidth, long *nHeight, BOOL bFullScreenMode, BOOL bUseMainScreenOnly )
+{
+	Rectangle aRect = com_sun_star_vcl_VCLScreen::getScreenBounds( *nX, *nY, *nWidth, *nHeight, bFullScreenMode, bUseMainScreenOnly );
+	if ( !aRect.IsEmpty() )
+	{
+		*nX = aRect.nLeft;
+		*nY = aRect.nTop;
+		*nWidth = aRect.GetWidth();
+		*nHeight = aRect.GetHeight();
+	}
 }
 
 // =======================================================================
