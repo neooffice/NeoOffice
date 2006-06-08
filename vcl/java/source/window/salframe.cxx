@@ -233,6 +233,13 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 		UpdateMenusForFrame( this, NULL );
 
+		// Reattach floating children
+		for ( ::std::list< JavaSalFrame* >::const_iterator it = maChildren.begin(); it != maChildren.end(); ++it )
+		{
+			if ( (*it)->mbVisible )
+				(*it)->SetParent( this );
+		}
+
 		// Explicitly set focus to this frame since Java may set the focus
 		// to the child frame
 		if ( !bNoActivate )
@@ -772,51 +779,48 @@ LanguageType JavaSalFrame::GetInputLanguage()
 
 void JavaSalFrame::SetParent( SalFrame* pNewParent )
 {
-	if ( pNewParent != mpParent )
+	if ( mpParent )
 	{
-		if ( mpParent )
-		{
-			mpParent->maChildren.remove( this );
-			mpParent->mpVCLFrame->removeChild( this );
-		}
+		mpParent->maChildren.remove( this );
+		mpParent->mpVCLFrame->removeChild( this );
+	}
 
-		JavaSalFrame *mpOldParent = mpParent;
-		mpParent = (JavaSalFrame *)pNewParent;
+	JavaSalFrame *mpOldParent = mpParent;
+	mpParent = (JavaSalFrame *)pNewParent;
 
-		if ( mpParent )
-			mbUseMainScreenOnly = FALSE;
+	if ( mpParent )
+		mbUseMainScreenOnly = FALSE;
 
-		// Fix bug 1310 by creating a new native window with the new parent
-		if ( mpGraphics->mpVCLGraphics )
-			delete mpGraphics->mpVCLGraphics;
-		if ( mpVCLFrame )
-		{
-			mpVCLFrame->dispose();
-			delete mpVCLFrame;
-		}
-		mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, mpParent );
-		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
-		maSysData.aWindow = 0;
-		SetPosSize( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration, maGeometry.nWidth, maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
+	// Fix bug 1310 by creating a new native window with the new parent
+	if ( mpGraphics->mpVCLGraphics )
+		delete mpGraphics->mpVCLGraphics;
+	if ( mpVCLFrame )
+	{
+		mpVCLFrame->dispose();
+		delete mpVCLFrame;
+	}
+	mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, mpParent );
+	mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
+	maSysData.aWindow = 0;
+	SetPosSize( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration, maGeometry.nWidth, maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
 
-		if ( mpParent )
-		{
-			mpParent->mpVCLFrame->addChild( this );
-			mpParent->maChildren.push_back( this );
-		}
+	if ( mpParent )
+	{
+		mpParent->mpVCLFrame->addChild( this );
+		mpParent->maChildren.push_back( this );
+	}
 
-		if ( mbVisible )
-		{
-			Show( FALSE );
-			Show( TRUE, FALSE );
-		}
+	if ( mbVisible )
+	{
+		Show( FALSE );
+		Show( TRUE, FALSE );
+	}
 
-		// Reattach floating children
-		for ( ::std::list< JavaSalFrame* >::const_iterator it = maChildren.begin(); it != maChildren.end(); ++it )
-		{
-			if ( (*it)->IsFloatingFrame() )
-				(*it)->SetParent( this );
-		}
+	// Reattach floating children
+	for ( ::std::list< JavaSalFrame* >::const_iterator it = maChildren.begin(); it != maChildren.end(); ++it )
+	{
+		if ( (*it)->IsFloatingFrame() )
+			(*it)->SetParent( this );
 	}
 }
 
