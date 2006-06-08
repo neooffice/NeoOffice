@@ -909,11 +909,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
-		// Fix bug 1174 by forcing the JVM to update its cached location for
-		// the native window. The JVM has a bug in that when changing window
-		// state, the size of the window is updated but not the location.
-		// updateLocationOnScreen(window.getPeer());
-
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVERESIZE, this, 0));
 
 	}
