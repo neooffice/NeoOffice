@@ -423,7 +423,14 @@ void JavaSalFrame::GetWorkArea( Rectangle &rRect )
 
 	SalData *pSalData = GetSalData();
 	BOOL bFullScreenMode = ( pSalData->mpPresentationFrame || ( this == pSalData->mpLastDragFrame ) );
-	NSScreen_getScreenBounds( &rRect.nLeft, &rRect.nTop, &rRect.nRight, &rRect.nBottom, bFullScreenMode, mbUseMainScreenOnly );
+
+	long nX = rRect.nLeft;
+	long nY = rRect.nTop;
+	long nWidth = rRect.GetWidth();
+	long nHeight = rRect.GetHeight();
+	NSScreen_getScreenBounds( &nX, &nY, &nWidth, &nHeight, bFullScreenMode, mbUseMainScreenOnly );
+	if ( nWidth > 0 && nHeight > 0 )
+		rRect = Rectangle( Point( nX, nY ), Size( nWidth, nHeight ) );
 }
 
 // -----------------------------------------------------------------------

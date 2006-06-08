@@ -197,7 +197,7 @@ public final class VCLScreen {
 
 					// Test the closeness of the point to the center of the
 					// screen
-					long area = Math.abs((((r.x + r.width) / 2) - x) * (((r.y + r.height) / 2) - y));
+					long area = Math.abs((r.x + (r.width / 2) - x) * (r.y + (r.height / 2) - y));
 					if (closestArea > area) {
 						closestArea = area;
 						closestBounds = r;
