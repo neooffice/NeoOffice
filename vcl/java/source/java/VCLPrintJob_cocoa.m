@@ -128,11 +128,11 @@ BOOL NSPrintInfo_pageRange( id pNSPrintInfo, int *nFirst, int *nLast )
 			{
 				NSNumber *pFirst = [pDictionary objectForKey:NSPrintFirstPage];
 				NSNumber *pLast = [pDictionary objectForKey:NSPrintLastPage];
-				if ( pFirst )
+				if ( pFirst && pLast )
 				{
 					*nFirst = [pFirst intValue];
 					*nLast = [pLast intValue];
-					if ( nFirst > 0 && nLast > nFirst )
+					if ( *nFirst > 0 && *nLast >= *nFirst )
 						bRet = YES;
 				}
 			}
