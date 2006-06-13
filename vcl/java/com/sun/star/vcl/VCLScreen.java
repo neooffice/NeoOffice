@@ -158,14 +158,30 @@ public final class VCLScreen {
 	 *  otherwise include screen insets in the screen bounds
 	 * @param useMainScreen if <code>true</code> return the main screen's
 	 *  bounds otherwise return the closest matching screen's bounds
-	 * @return the screen bounds that is the closest match for the specified
-	 * coordinates
+	 * @return if the specified width and height are both greater than zero,
+	 *  the screen bounds that is the closest match for the specified
+	 *  coordinates is returned otherwise the entire virtual bounds is returned
 	 */
 	public static Rectangle getScreenBounds(int x, int y, int width, int height, boolean fullScreenMode, boolean useMainScreenOnly) {
 
 		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 		if (ge != null) {
-			if (useMainScreenOnly) {
+			if (width <= 0 || height <= 0) {
+				// Iterate through the screens and return the total virtual
+				// screen bounds
+				Rectangle virtualBounds = null;
+				GraphicsDevice[] gd = ge.getScreenDevices();
+				for (int i = 0; i < gd.length; i++) {
+					Rectangle r = gd[i].getDefaultConfiguration().getBounds();
+					if (virtualBounds != null)
+						virtualBounds = virtualBounds.union(r);
+					else
+						virtualBounds = r;
+				}
+
+				return virtualBounds;
+			}
+			else if (useMainScreenOnly) {
 				GraphicsDevice gd = ge.getDefaultScreenDevice();
 				if (gd != null) {
 					Rectangle r = gd.getDefaultConfiguration().getBounds();
@@ -182,11 +198,25 @@ public final class VCLScreen {
 				}
 			}
 			else {
-				// Iterate through screen and find the screen that the point
-				// is inside of
+				// Iterate through the screens and find the screen that the
+				// point is inside of
+				GraphicsDevice[] gd = ge.getScreenDevices();
+				for (int i = 0; i < gd.length; i++) {
+					Rectangle r = gd[i].getDefaultConfiguration().getBounds();
+					if (!fullScreenMode) {
+						Insets insets = VCLScreen.getScreenInsets(gd[i]);
+						if (insets != null)
+							r = new Rectangle(r.x + insets.left, r.y + insets.top, r.width - insets.left - insets.right, r.height - insets.top - insets.bottom);
+					}
+
+					// Test if the point is inside the screen
+					if (r.contains(x, y))
+						return r;
+				}
+
+				// Iterate through the screens and find the closest screen
 				long closestArea = Long.MAX_VALUE;
 				Rectangle closestBounds = null;
-				GraphicsDevice[] gd = ge.getScreenDevices();
 				for (int i = 0; i < gd.length; i++) {
 					Rectangle r = gd[i].getDefaultConfiguration().getBounds();
 					if (!fullScreenMode) {

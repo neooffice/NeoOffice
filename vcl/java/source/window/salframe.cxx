@@ -316,15 +316,21 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 		nHeight = aPosSize.GetHeight();
 
 	// Adjust position for RTL layout
+	long nParentX = 0;
+	long nParentY = 0;
 	if ( mpParent )
 	{
+		Rectangle aParentBounds( mpParent->mpVCLFrame->getBounds() );
+		nParentX = aParentBounds.nLeft + mpParent->maGeometry.nLeftDecoration;
+		nParentY = aParentBounds.nTop + mpParent->maGeometry.nTopDecoration;
+
 		if ( nFlags & ( SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y ) && Application::GetSettings().GetLayoutRTL() )
 			nX = mpParent->maGeometry.nWidth - nWidth - nX - 1;
 
 		if ( nFlags & SAL_FRAME_POSSIZE_X )
-			nX += mpParent->maGeometry.nX;
+			nX += nParentX;
 		if ( nFlags & SAL_FRAME_POSSIZE_Y )
-			nY += mpParent->maGeometry.nY;
+			nY += nParentY;
 	}
 
 	Rectangle aWorkArea;
@@ -332,15 +338,15 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	{
 		if ( mpParent && mpParent->maGeometry.nWidth >= nWidth && mpParent->maGeometry.nHeight > nHeight)
 		{
-			nX = mpParent->maGeometry.nX + ( mpParent->maGeometry.nWidth - nWidth ) / 2;
-			nY = mpParent->maGeometry.nY + ( mpParent->maGeometry.nHeight - nHeight ) / 2;
+			nX = nParentX + ( mpParent->maGeometry.nWidth - nWidth ) / 2;
+			nY = nParentY + ( mpParent->maGeometry.nHeight - nHeight ) / 2;
 
-			aWorkArea = Rectangle( Point( nX, nX ), Size( nWidth, nHeight ) );
+			aWorkArea = Rectangle( Point( nX, nY ), Size( nWidth, nHeight ) );
 			GetWorkArea( aWorkArea );
 		}
 		else
 		{
-			aWorkArea = Rectangle( Point( nX, nX ), Size( nWidth, nHeight ) );
+			aWorkArea = Rectangle( Point( nX, nY ), Size( nWidth, nHeight ) );
 			GetWorkArea( aWorkArea );
 
 			nX = aWorkArea.nLeft + ( ( aWorkArea.GetWidth() - nWidth ) / 2 );
@@ -351,7 +357,7 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	}
 	else
 	{
-		aWorkArea = Rectangle( Point( nX, nX ), Size( nWidth, nHeight ) );
+		aWorkArea = Rectangle( Point( nX, nY ), Size( nWidth, nHeight ) );
 		GetWorkArea( aWorkArea );
 	}
 
@@ -387,8 +393,7 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	mpVCLFrame->setBounds( nX, nY, nWidth, nHeight );
 
 	// Update the cached position immediately
-	Rectangle *pRect = new Rectangle( Point( nX, nY ), Size( nWidth, nHeight ) );
-	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, (void *)pRect );
+	com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, NULL );
 	aEvent.dispatch();
 
 	mbInSetPosSize = FALSE;
@@ -398,12 +403,11 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 
 void JavaSalFrame::GetWorkArea( Rectangle &rRect )
 {
-	if ( rRect.IsEmpty() )
-		rRect = mpVCLFrame->getBounds();
-
 	SalData *pSalData = GetSalData();
 	BOOL bFullScreenMode = ( pSalData->mpPresentationFrame || ( this == pSalData->mpLastDragFrame ) );
 
+	// If the input rectangle is empty, we are being called by the platform
+	// independent VCL code and so the entire virtual bounds will be returned
 	long nX = rRect.nLeft;
 	long nY = rRect.nTop;
 	long nWidth = rRect.GetWidth();
@@ -438,10 +442,10 @@ void JavaSalFrame::SetWindowState( const SalFrameState* pState )
 	{
 		mbUseMainScreenOnly = FALSE;
 
-		Rectangle aPosSize( Point( pState->mnX, pState->mnY ), Size( pState->mnWidth, pState->mnHeight ) );
-		if ( mpParent )
-			aPosSize.Move( -mpParent->maGeometry.nX, -mpParent->maGeometry.nY );
-		SetPosSize( aPosSize.nLeft, aPosSize.nTop, aPosSize.GetWidth(), aPosSize.GetHeight(), nFlags );
+		JavaSalFrame *pParent = mpParent;
+		mpParent = NULL;
+		SetPosSize( pState->mnX, pState->mnY, pState->mnWidth, pState->mnHeight, nFlags );
+		mpParent = pParent;
 	}
 
 	if ( pState->mnMask & SAL_FRAMESTATE_MASK_STATE )
@@ -480,7 +484,7 @@ void JavaSalFrame::ShowFullScreen( BOOL bFullScreen )
 	{
 		SalData *pSalData = GetSalData();
 		memcpy( &maOriginalGeometry, &maGeometry, sizeof( SalFrameGeometry ) );
-		Rectangle aWorkArea;
+		Rectangle aWorkArea( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
 		GetWorkArea( aWorkArea );
 		SetPosSize( aWorkArea.nLeft, aWorkArea.nTop, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
 	}
@@ -556,7 +560,7 @@ void JavaSalFrame::StartPresentation( BOOL bStart )
 	{
 		USHORT nFlags = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT;
 
-		Rectangle aWorkArea;
+		Rectangle aWorkArea( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
 		GetWorkArea( aWorkArea );
 
 		SetPosSize( aWorkArea.nLeft, aWorkArea.nTop, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );

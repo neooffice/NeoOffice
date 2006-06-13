@@ -1114,7 +1114,18 @@ g.dispose();
 	 */
 	public Rectangle getBounds() {
 
-		return window.getBounds();
+		Rectangle bounds = window.getBounds();
+
+		// Fix bugs 1479 and 1444 by using the window's location on the screen
+		// as the cached bounds may be incorrect with certain multiple monitor
+		// configurations
+		if (window.isShowing()) {
+			Point p = window.getLocationOnScreen();
+			if (p != null && (p.x != bounds.x || p.y != bounds.y))
+				bounds = new Rectangle(p.x, p.y, bounds.width, bounds.height);
+		}
+
+		return bounds;
 
 	}
 
