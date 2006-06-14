@@ -641,6 +641,12 @@
 <xsl:variable name="archive"><xsl:value-of select="concat(substring-before(substring-after(@href,'text/'),'/'),'/')"/></xsl:variable>
 <xsl:variable name="dbpostfix"><xsl:call-template name="createDBpostfix"><xsl:with-param name="archive" select="$archive"/></xsl:call-template></xsl:variable>
 	<xsl:choose>
+<!--
+  Fix bug 1120 by replacing the OOo support URL
+-->
+		<xsl:when test="@href='$(OO_SUPPORT_URL)' and text()='$(OO_SUPPORT_URL_TEXT)'">
+			<a href="$(PRODUCT_SUPPORT_URL)">$(PRODUCT_SUPPORT_URL_TEXT)</a>
+		</xsl:when>
 		<xsl:when test="contains(@href,'#')">
 			<xsl:variable name="anchor"><xsl:value-of select="concat('#',substring-after(@href,'#'))"/></xsl:variable>
 			<xsl:variable name="href"><xsl:value-of select="concat($linkprefix,$archive,substring-before(@href,'#'),$linkpostfix,$dbpostfix,$anchor)"/></xsl:variable>
@@ -976,20 +982,6 @@
 		</xsl:choose>
 	</xsl:variable>
 	<xsl:value-of select="concat($am,'DbPAR=',$newDB)"/>
-</xsl:template>
-
-<!--
-  Fix bug 1120 by replacing the OOo support URL
--->
-<xsl:template match="link">
-	<xsl:choose>
-		<xsl:when test="@href='$(OO_SUPPORT_URL)' and text()='$(OO_SUPPORT_URL_TEXT)'">
-			<a href="$(PRODUCT_SUPPORT_URL)">$(PRODUCT_SUPPORT_URL_TEXT)</a>
-		</xsl:when>
-		<xsl:otherwise>
-			<xsl:apply-templates/>
-		</xsl:otherwise>
-	</xsl:choose>
 </xsl:template>
 
 </xsl:stylesheet>
