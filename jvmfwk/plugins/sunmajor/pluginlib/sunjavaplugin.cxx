@@ -539,7 +539,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     // The office sets a signal handler at startup. That causes a crash
     // with java 1.3 under Solaris. To make it work, we set back the
     // handler
-#if defined UNX && !defined MACOSX
+#if defined UNX
     struct sigaction act;
     act.sa_handler=SIG_DFL;
     act.sa_flags= 0;
