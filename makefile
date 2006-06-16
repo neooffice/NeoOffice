@@ -85,8 +85,8 @@ ifeq ("$(UNAME)","powerpc")
 PRODUCT_VERSION=2.0 Alpha 3
 PRODUCT_DIR_VERSION=2.0_Alpha_3
 else
-PRODUCT_VERSION=2.0 Alpha
-PRODUCT_DIR_VERSION=2.0_Alpha
+PRODUCT_VERSION=2.0 Alpha 2
+PRODUCT_DIR_VERSION=2.0_Alpha_2
 endif
 PRODUCT_LANG_PACK_VERSION=Language Pack
 PRODUCT_DIR_LANG_PACK_VERSION=Language_Pack
@@ -117,7 +117,7 @@ NEO_PACKAGE:=NeoOffice
 ifeq ("$(UNAME)","powerpc")
 NEO_TAG:=NeoOffice-2_0_Alpha_3
 else
-NEO_TAG:=NeoOffice-2_0_Alpha-Intel
+NEO_TAG:=NeoOffice-2_0_Alpha_2-Intel
 endif
 
 all: build.all
