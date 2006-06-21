@@ -1380,6 +1380,11 @@ void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
                 aRequest.aPrintList = aData;
             else
                 aRequest.aOpenList = aData;
+
+            // Fix bug 1456 by allowing any pending application events to
+            // dispatch first
+            Application::Reschedule();
+
             OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
         }
 
