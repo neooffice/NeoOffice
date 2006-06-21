@@ -1417,7 +1417,7 @@ g.dispose();
 			VCLEvent keyModChangeEvent = new VCLEvent(e, VCLEvent.SALEVENT_KEYMODCHANGE, this, 0);
 			queue.postCachedEvent(keyModChangeEvent);
 		}
-		else if (e.isActionKey() || keyCode == KeyEvent.VK_ESCAPE || (keyCode ==KeyEvent.VK_ENTER && e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD)) {
+		else if (e.isActionKey() || keyCode == KeyEvent.VK_BACK_SPACE || keyCode == KeyEvent.VK_DELETE || keyCode == KeyEvent.VK_ESCAPE || (keyCode ==KeyEvent.VK_ENTER && e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD)) {
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
 		}
 
@@ -1440,7 +1440,7 @@ g.dispose();
 			VCLEvent keyModChangeEvent = new VCLEvent(e, VCLEvent.SALEVENT_KEYMODCHANGE, this, 0);
 			queue.postCachedEvent(keyModChangeEvent);
 		}
-		else if (e.isActionKey() || keyCode == KeyEvent.VK_ESCAPE || (keyCode ==KeyEvent.VK_ENTER && e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD)) {
+		else if (e.isActionKey() || keyCode == KeyEvent.VK_BACK_SPACE || keyCode == KeyEvent.VK_DELETE || keyCode == KeyEvent.VK_ESCAPE || (keyCode ==KeyEvent.VK_ENTER && e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD)) {
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0));
 		}
 
@@ -1458,19 +1458,23 @@ g.dispose();
 		if (disposed || !window.isShowing())
 			return;
 
+		// These are handled in the key pressed and released events
+		char keyChar = e.getKeyChar();
+		if (keyChar == (char)0x08 || keyChar == (char)0x7f)
+			return;
+
 		// Fix bug 710 by stripping out the Alt modifier. Note that we do it
 		// here because we need to let the Alt modifier through for action
 		// keys.
 		int modifiers = e.getModifiersEx();
 		if ((modifiers & InputEvent.ALT_DOWN_MASK) != 0) {
-			e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), (e.getModifiers() | modifiers) & ~(InputEvent.ALT_MASK | InputEvent.ALT_DOWN_MASK), e.getKeyCode(), e.getKeyChar());
+			e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), (e.getModifiers() | modifiers) & ~(InputEvent.ALT_MASK | InputEvent.ALT_DOWN_MASK), e.getKeyCode(), keyChar);
 		}
 
 		// Fix bug 1143 by converting any capital alpha characters to lowercase
 		// when the meta key is pressed
 		if ((modifiers & InputEvent.META_DOWN_MASK) != 0) {
-			char keyChar = e.getKeyChar();
-
+			keyChar = e.getKeyChar();
 			if (keyChar >= 'A' && keyChar <= 'Z')
 				e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | modifiers, e.getKeyCode(), (char)(keyChar + 32));
 		}
