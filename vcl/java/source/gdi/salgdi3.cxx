@@ -68,9 +68,6 @@
 #ifndef _OSL_PROCESS_H_
 #include <rtl/process.h>
 #endif
-#ifndef _FSYS_HXX
-#include <tools/fsys.hxx>
-#endif
 #ifndef _UTL_BOOTSTRAP_HXX
 #include <unotools/bootstrap.hxx>
 #endif
@@ -101,6 +98,39 @@ using namespace vcl;
 using namespace vos;
 
 // ============================================================================
+
+static void ImplLoadNativeFont( OUString aPath )
+{
+	if ( !aPath.getLength() )
+		return;
+
+	oslDirectory aDir;
+	if ( osl_openDirectory( aPath.pData, &aDir ) == osl_File_E_None )
+	{
+		oslDirectoryItem aDirItem;
+		while ( osl_getNextDirectoryItem( aDir, &aDirItem, 16 ) == osl_File_E_None )
+		{
+			oslFileStatus aStatus;
+			memset( &aStatus, 0, sizeof( oslFileStatus ) );
+			if ( osl_getFileStatus( aDirItem, &aStatus, osl_FileStatus_Mask_FileURL ) == osl_File_E_None )
+				ImplLoadNativeFont( OUString( aStatus.ustrFileURL ) );
+
+			osl_releaseDirectoryItem( aDirItem );
+		}
+	}
+	else
+	{
+		OUString aSysPath;
+		if ( osl_getSystemPathFromFileURL( aPath.pData, &aSysPath.pData ) == osl_File_E_None )
+		{
+			FSRef aFontPath;
+			FSSpec aFontSpec;
+			OString aUTF8Path( aSysPath.getStr(), aSysPath.getLength(), RTL_TEXTENCODING_UTF8 );
+			if ( FSPathMakeRef( (const UInt8 *)aUTF8Path.getStr(), &aFontPath, 0 ) == noErr && FSGetCatalogInfo( &aFontPath, kFSCatInfoNone, NULL, NULL, &aFontSpec, NULL ) == noErr )
+				ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextGlobal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDefault, NULL );
+		}
+	}
+}
 
 static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void *pData )
 {
@@ -372,37 +402,24 @@ static void LoadNativeFontsTimerCallback( EventLoopTimerRef aTimer, void *pData 
 	bInLoad = true;
 
 	// Activate the fonts in the "user/fonts" directory
-	OUString aUserStr;
 	OUString aUserPath;
-	if ( Bootstrap::locateUserInstallation( aUserStr ) == Bootstrap::PATH_EXISTS && osl_getSystemPathFromFileURL( aUserStr.pData, &aUserPath.pData ) == osl_File_E_None )
+	if ( Bootstrap::locateUserInstallation( aUserPath ) == Bootstrap::PATH_EXISTS )
 	{
-		ByteString aFontDir( aUserPath.getStr(), RTL_TEXTENCODING_UTF8 );
-		if ( aFontDir.Len() )
+		if ( aUserPath.getLength() )
 		{
-			aFontDir += ByteString( "/user/fonts", RTL_TEXTENCODING_UTF8 );
-			FSRef aFontPath;
-			FSSpec aFontSpec;
-			if ( FSPathMakeRef( (const UInt8 *)aFontDir.GetBuffer(), &aFontPath, 0 ) == noErr && FSGetCatalogInfo( &aFontPath, kFSCatInfoNone, NULL, NULL, &aFontSpec, NULL) == noErr )
-				ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextGlobal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDefault, NULL );
+			aUserPath += OUString::createFromAscii( "/user/fonts" );
+			ImplLoadNativeFont( aUserPath );
 		}
 	}
 
 	// Activate the fonts in the "share/fonts/truetype" directory
-	OUString aExecStr;
-	OUString aExecPath;
-	if ( osl_getExecutableFile( &aExecStr.pData ) == osl_Process_E_None && osl_getSystemPathFromFileURL( aExecStr.pData, &aExecPath.pData ) == osl_File_E_None )
+	OUString aBasePath;
+	if ( Bootstrap::locateBaseInstallation( aBasePath ) == Bootstrap::PATH_EXISTS )
 	{
-		ByteString aFontDir( aExecPath.getStr(), RTL_TEXTENCODING_UTF8 );
-		if ( aFontDir.Len() )
+		if ( aBasePath.getLength() )
 		{
-			DirEntry aFontDirEntry( aFontDir );
-			aFontDirEntry.ToAbs();
-			aFontDir = ByteString( aFontDirEntry.GetPath().GetFull(), RTL_TEXTENCODING_UTF8 );
-			aFontDir += ByteString( "/../share/fonts/truetype", RTL_TEXTENCODING_UTF8 );
-			FSRef aFontPath;
-			FSSpec aFontSpec;
-			if ( FSPathMakeRef( (const UInt8 *)aFontDir.GetBuffer(), &aFontPath, 0 ) == noErr && FSGetCatalogInfo( &aFontPath, kFSCatInfoNone, NULL, NULL, &aFontSpec, NULL) == noErr )
-				ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextGlobal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDefault, NULL );
+			aBasePath += OUString::createFromAscii( "/share/fonts/truetype" );
+			ImplLoadNativeFont( aBasePath );
 		}
 	}
 
