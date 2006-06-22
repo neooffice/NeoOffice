@@ -70,6 +70,7 @@ static FourCharCode aSupportedNativeTypes[] = {
 	'RTF ',
 	'utxt',
 	'TEXT',
+	'PDF ',
 	'TIFF',
 	'PICT'
 };
@@ -88,6 +89,7 @@ static OUString aSupportedMimeTypes[] = {
 	OUString::createFromAscii( "text/richtext" ),
 	OUString::createFromAscii( "text/plain;charset=utf-16" ),
 	OUString::createFromAscii( "text/plain;charset=utf-16" ),
+	OUString::createFromAscii( "image/bmp" ),
 	OUString::createFromAscii( "image/bmp" ),
 	OUString::createFromAscii( "image/bmp" )
 };
@@ -289,9 +291,9 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 										}
 									}
 								}
-								else if ( nType == 'TIFF' )
+								else if ( nType == 'PDF ' || nType == 'TIFF' )
 								{
-									// Convert to TIFF from our BMP data
+									// Convert to PDF or TIFF from our BMP data
 									ComponentInstance aImporter;
 									if ( OpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
 									{
@@ -518,7 +520,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 							CloseComponent( aExporter );
 						}
 					}
-					else if ( nRequestedType == 'TIFF' )
+					else if ( nRequestedType == 'PDF ' || nRequestedType == 'TIFF' )
 					{
 						// Convert to BMP format
 						ComponentInstance aImporter;
