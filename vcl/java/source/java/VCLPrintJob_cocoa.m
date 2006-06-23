@@ -103,6 +103,15 @@
 				PMSetJobNameCFString( aSettings, (CFStringRef)pTitle );
 		}
 
+		// Fix bug 1548 by setting to print all pages
+		NSMutableDictionary *pDictionary = [mpInfo dictionary];
+		if ( pDictionary )
+		{
+			[pDictionary setObject:[NSNumber numberWithBool:YES] forKey:NSPrintAllPages];
+			[pDictionary removeObjectForKey:NSPrintFirstPage];
+			[pDictionary removeObjectForKey:NSPrintLastPage];
+		}
+
 		mbFinished = NO;
 		NSPrintInfo_setInDialog( YES );
 		[mpInfo setPrinter:[NSPrintInfo defaultPrinter]];
