@@ -68,6 +68,11 @@ if [ -d "$2/Contents" ] ; then
 
 		. "$scriptdir/installutils"
 
+		// Fix bug 1544 by repairing permission in user install directory
+		if [ -e "$userinstall" ] ; then
+			chmod -Rf u+rw "$userinstall"
+		fi
+
 		if check_installation "$2" ; then
 			# Save help files for postflight scripts
 			if [ -d "$2/Contents/help" -a ! -e "$2/help" ]; then
