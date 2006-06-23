@@ -588,7 +588,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					if ( pMouseFrame && pMouseFrame != pFrame && pMouseFrame->mbVisible )
 					{
 						pMouseEvent->mnX = aScreenPoint.X() - pMouseFrame->maGeometry.nX + pMouseFrame->maGeometry.nLeftDecoration;
-						pMouseEvent->mnY = aScreenPoint.Y() - pMouseFrame->maGeometry.nY + pMouseFrame->maGeometry.nBottomDecoration;
+						pMouseEvent->mnY = aScreenPoint.Y() - pMouseFrame->maGeometry.nY + pMouseFrame->maGeometry.nTopDecoration;
 						pFrame = pMouseFrame;
 					}
 				}
