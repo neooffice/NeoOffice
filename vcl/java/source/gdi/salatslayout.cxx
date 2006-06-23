@@ -1048,11 +1048,12 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 	int nMaxGlyphs = maLayoutData.front()->mnGlyphCount;
 	long aGlyphArray[ nMaxGlyphs ];
 	long aDXArray[ nMaxGlyphs ];
+	int aCharPosArray[ nMaxGlyphs ];
 
 	Point aPos;
 	for ( int nStart = 0; ; )
 	{
-		int nGlyphCount = GetNextGlyphs( nMaxGlyphs, aGlyphArray, aPos, nStart, aDXArray, NULL );
+		int nGlyphCount = GetNextGlyphs( nMaxGlyphs, aGlyphArray, aPos, nStart, aDXArray, aCharPosArray );
 
 		if ( !nGlyphCount )
 			break;
@@ -1062,16 +1063,23 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			;
 		if ( i )
 		{
-			nStart -= nGlyphCount - i;
+			while ( i < nGlyphCount && aCharPosArray[ i ] == aCharPosArray[ 0 ] )
+				;
+			if ( i < nGlyphCount )
+				nStart = aCharPosArray[ i ];
 			continue;
 		}
 
-		for ( i = 0; i < nGlyphCount && !IsSpacingGlyph( aGlyphArray[ i ] ); i++ )
+		for ( i = 0 ; i < nGlyphCount && !IsSpacingGlyph( aGlyphArray[ i ] ); i++ )
 			;
-		nGlyphCount = i;
-
-		if ( !nGlyphCount )
-			break;
+		if ( i < nGlyphCount )
+		{
+			nGlyphCount = i;
+			if ( nGlyphCount )
+				nStart = aCharPosArray[ i ];
+			else
+				continue;
+		}
 
 		long nTranslateX = 0;
 		long nTranslateY = 0;
