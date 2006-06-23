@@ -5641,7 +5641,8 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
 
     OStringBuffer aLine( 512 );
 
-    const int nMaxGlyphs = 256;
+    // const int nMaxGlyphs = 256;
+    const int nMaxGlyphs = 1;
 
     sal_Int32 pGlyphs[nMaxGlyphs];
 #if defined USE_JAVA && defined MACOSX
@@ -5658,13 +5659,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
     int pCharPosAry[nMaxGlyphs];
     sal_Int32 nAdvanceWidths[nMaxGlyphs];
     ImplFontData* pFallbackFonts[nMaxGlyphs];
-#if defined USE_JAVA && defined MACOSX
-    // Fix bug 810 by always using glyph advances. This will ensure that
-    // kerning matches the kerning used when drawing to the screen or printer.
-    sal_Int32 *pAdvanceWidths = nAdvanceWidths;
-#else	// USE_JAVA && MACOSX
     sal_Int32 *pAdvanceWidths = m_aCurrentPDFState.m_aFont.IsVertical() ? nAdvanceWidths : NULL;
-#endif	// USE_JAVA && MACOSX
     sal_Int32 nGlyphFlags[nMaxGlyphs];
     int nGlyphs;
     int nIndex = 0;
@@ -5970,10 +5965,32 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
         }
         else // normal case
         {
-#if !defined USE_JAVA && !defined MACOSX
-            // Fix bug 684 by not using the optimized text drawing code on
-            // Mac OS X. For some reason, the incorrect map mode is used as a
-            // result of our running all drawing actions through a meta file.
+#if defined USE_JAVA && defined MACOSX
+            // Fix bug 810 by letting the PDF rendering application lay out
+            // words
+            int j;
+            for ( j = 0; j < nGlyphs && !pGlyphs[ j ]; j++ )
+                ;
+            if ( j )
+            {
+                while ( j < nGlyphs && pCharPosAry[ j ] == pCharPosAry[ 0 ] )
+                    ;
+                if ( j < nGlyphs )
+                    nIndex = pCharPosAry[ j ];
+                continue;
+            }
+
+            for ( j = 0; j < nGlyphs && pGlyphs[ j ]; j++ )
+                ;
+            if ( j < nGlyphs )
+            {
+                nGlyphs = j;
+                if ( nGlyphs )
+                    nIndex = pCharPosAry[ j ];
+                else
+                    continue;
+            }
+#endif	// USE_JAVA && MACOSX
 
             // optimize use of Td vs. Tm
             if( fAngle == 0.0 && fXScale == 1.0 && ( !bFirst || fSkew == 0.0 ) )
@@ -6015,7 +6032,6 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                 aLine.append( " Td " );
             }
             else
-#endif	// !USE_JAVA && !MACOSX
             {
                 Matrix3 aMat;
                 if( fSkew != 0.0 )
