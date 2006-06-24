@@ -511,10 +511,20 @@ public final class VCLEventQueue implements Runnable {
 				// The modifiers for mouse released events contain the
 				// modifiers after the event has occurred so we need to
 				// replace the modifiers with the modifiers that were released
-				if (event instanceof MouseEvent) {
+				if (event instanceof KeyEvent) {
+					int id = event.getID();
+					if (id == KeyEvent.KEY_PRESSED || id == KeyEvent.KEY_RELEASED) {
+						int modifiers = queue.getLastAdjustedMouseModifiers();
+						if (modifiers != 0) {
+							modifiers &= ~( InputEvent.SHIFT_DOWN_MASK | InputEvent.CTRL_DOWN_MASK | InputEvent.ALT_DOWN_MASK | InputEvent.META_DOWN_MASK );
+							queue.setLastAdjustedMouseModifiers(modifiers | ((KeyEvent)event).getModifiersEx());
+						}
+					}
+				}
+				else if (event instanceof MouseEvent) {
 					int id = event.getID();
 					if (id == MouseEvent.MOUSE_PRESSED || id == MouseEvent.MOUSE_RELEASED)
-						queue.setLastAdjustedMouseModifiers( ((MouseEvent)event).getModifiersEx() );
+						queue.setLastAdjustedMouseModifiers(((MouseEvent)event).getModifiersEx());
 				}
 			}
 			catch (Throwable t) {
