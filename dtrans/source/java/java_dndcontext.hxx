@@ -79,7 +79,6 @@ public:
 	virtual void			SAL_CALL rejectDrop() throw( ::com::sun::star::uno::RuntimeException );
 	virtual void			SAL_CALL dropComplete( sal_Bool success ) throw( ::com::sun::star::uno::RuntimeException );
 
-	sal_Int8				getDropAction();
 	bool					getDropComplete();
 	bool					isRejected();
 };
@@ -96,7 +95,6 @@ public:
 	virtual void			SAL_CALL acceptDrag( sal_Int8 dragOperation ) throw( ::com::sun::star::uno::RuntimeException );
 	virtual void			SAL_CALL rejectDrag() throw( ::com::sun::star::uno::RuntimeException );
 
-	sal_Int8				getDragAction();
 	bool					isRejected();
 };
 

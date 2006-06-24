@@ -103,6 +103,7 @@ public:
 	virtual void			SAL_CALL startDrag( const ::com::sun::star::datatransfer::dnd::DragGestureEvent& trigger, sal_Int8 sourceActions, sal_Int32 cursor, sal_Int32 image, const Reference< ::com::sun::star::datatransfer::XTransferable >& transferable, const Reference< ::com::sun::star::datatransfer::dnd::XDragSourceListener >& listener ) throw( com::sun::star::uno::RuntimeException );
 
 	WindowRef				getNativeWindow();
+	void					handleActionChange();
 	void					handleDrag( sal_Int32 nX, sal_Int32 nY );
 };
 

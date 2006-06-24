@@ -152,13 +152,6 @@ bool DropTargetDropContext::getDropComplete()
 
 // ------------------------------------------------------------------------
 
-sal_Int8 DropTargetDropContext::getDropAction()
-{
-	return mnAction;
-}
-
-// ------------------------------------------------------------------------
-
 bool DropTargetDropContext::isRejected()
 {
 	return mbRejected;
@@ -198,13 +191,6 @@ void SAL_CALL DropTargetDragContext::acceptDrag( sal_Int8 dragOperation ) throw(
 void SAL_CALL DropTargetDragContext::rejectDrag() throw( ::com::sun::star::uno::RuntimeException )
 {
 	mbRejected = true;
-}
-
-// ------------------------------------------------------------------------
-
-sal_Int8 DropTargetDragContext::getDragAction()
-{
-	return mnAction;
 }
 
 // ------------------------------------------------------------------------

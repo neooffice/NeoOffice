@@ -76,7 +76,6 @@ static ::std::list< ::java::JavaDragSource* > aDragSources;
 static ::std::list< ::java::JavaDropTarget* > aDropTargets;
 static JavaDragSource *pTrackDragOwner = NULL;
 static sal_Int8 nCurrentAction = DNDConstants::ACTION_NONE;
-static sal_Int8 nStartingAction = DNDConstants::ACTION_NONE;
 static bool bNoRejectCursor = true;
 
 // ========================================================================
@@ -181,6 +180,46 @@ static void ImplSetDragAllowableActions( DragRef aDrag, sal_Int8 nActions )
 
 // ------------------------------------------------------------------------
 
+static void ImplUpdateCurrentAction( DragRef aDrag )
+{
+	if ( pTrackDragOwner )
+	{
+		sal_Int8 nOldAction = nCurrentAction;
+
+		EventRecord aEventRecord;
+		aEventRecord.what = mouseDown;
+		aEventRecord.message = mouseMovedMessage;
+		GetGlobalMouse( &aEventRecord.where );
+		aEventRecord.modifiers = GetCurrentKeyModifiers();
+
+		if ( ( aEventRecord.modifiers & shiftKey ) && ! ( aEventRecord.modifiers & cmdKey ) )
+			nCurrentAction = DNDConstants::ACTION_MOVE;
+		else if ( ! ( aEventRecord.modifiers & shiftKey ) && ( aEventRecord.modifiers & cmdKey ) )
+			nCurrentAction = DNDConstants::ACTION_COPY;
+		else if ( aEventRecord.modifiers & ( shiftKey | cmdKey ) )
+			nCurrentAction = DNDConstants::ACTION_LINK;
+		else if ( pTrackDragOwner->mnActions & DNDConstants::ACTION_MOVE )
+			nCurrentAction = DNDConstants::ACTION_MOVE;
+		else if ( pTrackDragOwner->mnActions & DNDConstants::ACTION_COPY )
+			nCurrentAction = DNDConstants::ACTION_COPY;
+		else if ( pTrackDragOwner->mnActions & DNDConstants::ACTION_LINK )
+			nCurrentAction = DNDConstants::ACTION_LINK;
+		else 
+			nCurrentAction = DNDConstants::ACTION_NONE;
+
+		if ( ! ( aEventRecord.modifiers & ( shiftKey | cmdKey ) ) )
+			nCurrentAction |= DNDConstants::ACTION_DEFAULT;
+
+		if ( nCurrentAction != nOldAction )
+		{
+			ImplSetDragAllowableActions( aDrag, nCurrentAction );
+			pTrackDragOwner->handleActionChange();
+		}
+	}
+}
+
+// ------------------------------------------------------------------------
+
 static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, WindowRef aWindow, void *pData, DragRef aDrag )
 {
 	if ( !IsValidWindowPtr( aWindow ) )
@@ -229,7 +268,10 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 					Rect aRect;
 					WindowRef aTrackDragOwnerWindow = pTrackDragOwner->getNativeWindow();
 					if ( aTrackDragOwnerWindow && GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aTrackDragOwnerWindow, kWindowContentRgn, &aRect ) == noErr )
+					{
+						ImplUpdateCurrentAction( aDrag );
 						pTrackDragOwner->handleDrag( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) );
+					}
 				}
 			}
 
@@ -288,6 +330,8 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 				Rect aRect;
 				if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
 				{
+					ImplUpdateCurrentAction( aDrag );
+
 					sal_Int32 nX = (sal_Int32)( aPoint.h - aRect.left );
 					sal_Int32 nY = (sal_Int32)( aPoint.v - aRect.top );
 
@@ -365,12 +409,15 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 			{
 				MacOSPoint aPoint;
 				Rect aRect;
-				if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr && pTarget->handleDrop( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ), aDrag ) )
+				if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
 				{
-					// Update actions
-					ImplSetDragDropAction( aDrag, nCurrentAction );
-					ImplSetThemeCursor( pTarget->isRejected() ? DNDConstants::ACTION_NONE : nCurrentAction, false );
-					nRet = noErr;
+					ImplUpdateCurrentAction( aDrag );
+
+					if ( pTarget->handleDrop( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ), aDrag ) )
+					{
+						ImplSetThemeCursor( pTarget->isRejected() ? DNDConstants::ACTION_NONE : nCurrentAction, false );
+						nRet = noErr;
+					}
 				}
 			}
 
@@ -402,38 +449,12 @@ void TrackDragTimerCallback( EventLoopTimerRef aTimer, void *pData )
 		DragRef aDrag;
 		if ( NewDrag( &aDrag ) == noErr )
 		{
-			EventRecord aEventRecord;
-			aEventRecord.what = mouseDown;
-			aEventRecord.message = mouseMovedMessage;
-			GetGlobalMouse( &aEventRecord.where );
-			aEventRecord.modifiers = GetCurrentKeyModifiers();
-
-			if ( ( aEventRecord.modifiers & shiftKey ) && ! ( aEventRecord.modifiers & cmdKey ) )
-				nCurrentAction = DNDConstants::ACTION_MOVE;
-			else if ( ! ( aEventRecord.modifiers & shiftKey ) && ( aEventRecord.modifiers & cmdKey ) )
-				nCurrentAction = DNDConstants::ACTION_COPY;
-			else if ( aEventRecord.modifiers & ( shiftKey | cmdKey ) )
-				nCurrentAction = DNDConstants::ACTION_LINK;
-			else if ( pSource->mnActions & DNDConstants::ACTION_MOVE )
-				nCurrentAction = DNDConstants::ACTION_MOVE;
-			else if ( pSource->mnActions & DNDConstants::ACTION_COPY )
-				nCurrentAction = DNDConstants::ACTION_COPY;
-			else if ( pSource->mnActions & DNDConstants::ACTION_LINK )
-				nCurrentAction = DNDConstants::ACTION_LINK;
-			else 
-				nCurrentAction = DNDConstants::ACTION_NONE;
- 
-			if ( ! ( aEventRecord.modifiers & ( shiftKey | cmdKey ) ) )
-				nCurrentAction |= DNDConstants::ACTION_DEFAULT;
-
-			nStartingAction = nCurrentAction;
-
 			RgnHandle aRegion = NewRgn();
 			if ( aRegion )
 			{
 				bNoRejectCursor = false;
 
-				ImplSetDragAllowableActions( aDrag, nCurrentAction );
+				ImplUpdateCurrentAction( aDrag );
 				ImplSetThemeCursor( nCurrentAction, true );
 
 				aDragSources.push_back( pSource );
@@ -446,6 +467,11 @@ void TrackDragTimerCallback( EventLoopTimerRef aTimer, void *pData )
 				// Unlock application mutex while we are in the drag
 				rSolarMutex.release();
 
+				EventRecord aEventRecord;
+				aEventRecord.what = mouseDown;
+				aEventRecord.message = mouseMovedMessage;
+				GetGlobalMouse( &aEventRecord.where );
+				aEventRecord.modifiers = GetCurrentKeyModifiers();
 				bool bTrackDrag = ( bContentsSet && TrackDrag( aDrag, &aEventRecord, aRegion ) == noErr );
 
 				// Relock application mutex. Note that we don't check for
@@ -699,6 +725,24 @@ WindowRef JavaDragSource::getNativeWindow()
 
 // ------------------------------------------------------------------------
 
+void JavaDragSource::handleActionChange()
+{
+	DragSourceDragEvent aSourceDragEvent;
+	aSourceDragEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
+	aSourceDragEvent.DragSource = Reference< XDragSource >( this );
+
+	aSourceDragEvent.DropAction = mnActions;
+	aSourceDragEvent.UserAction = nCurrentAction;
+
+	Reference< XDragSourceListener > xListener( maListener );
+
+	// Send source drag event
+	if ( xListener.is() )
+		xListener->dropActionChanged( aSourceDragEvent );
+}
+
+// ------------------------------------------------------------------------
+
 void JavaDragSource::handleDrag( sal_Int32 nX, sal_Int32 nY )
 {
 	DragSourceDragEvent aSourceDragEvent;
@@ -873,7 +917,7 @@ void JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, DragRef aNativ
 	if ( pTrackDragOwner )
 	{
 		aDragEnterEvent.SourceActions = pTrackDragOwner->mnActions;
-		aDragEnterEvent.DropAction = nStartingAction;
+		aDragEnterEvent.DropAction = nCurrentAction;
 		aDragEnterEvent.SupportedDataFlavors = pTrackDragOwner->maContents->getTransferDataFlavors();
 	}
 	else if ( aNativeTransferable )
@@ -900,7 +944,6 @@ void JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, DragRef aNativ
 			(*it)->dragEnter( aDragEnterEvent );
 	}
 
-	nCurrentAction = pContext->getDragAction();
 	mbRejected = pContext->isRejected();
 }
 
@@ -937,7 +980,6 @@ void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY, DragRef aNative
 			(*it)->dragExit( aDragEvent );
 	}
 
-	nCurrentAction = pContext->getDragAction();
 	mbRejected = pContext->isRejected();
 }
 
@@ -974,7 +1016,6 @@ void JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY, DragRef aNative
 			(*it)->dragOver( aDragEvent );
 	}
 
-	nCurrentAction = pContext->getDragAction();
 	mbRejected = pContext->isRejected();
 }
 
@@ -1034,8 +1075,6 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTran
 		if ( (*it).is() )
 			(*it)->drop( aDropEvent );
 	}
-
-	nCurrentAction = pContext->getDropAction();
 
 	return pContext->getDropComplete();
 }
