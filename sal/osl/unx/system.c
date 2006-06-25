@@ -653,6 +653,10 @@ int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement)
     MacOSBoolean bAliased;
     char *unprocessedPath = path;
 
+    // If the path exists and is not an alias, return without changing anything
+    if ( FSPathMakeRef( (const UInt8 *)path, &aFSRef, 0 ) == noErr && FSIsAliasFile( &aFSRef, &bAliased, &bFolder ) == noErr && !bAliased )
+        return;
+
     if ( *unprocessedPath == '/' )
         unprocessedPath++;
 
