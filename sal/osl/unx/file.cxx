@@ -2255,6 +2255,10 @@ int UnicodeToText( char * buffer, size_t bufLen, const sal_Unicode * uniText, sa
     /* ensure trailing '\0' */
     buffer[nDestBytes] = '\0';
 
+#ifdef MACOSX
+    macxp_decomposeString( buffer, bufLen );
+#endif	/* MACOSX */
+
     return nDestBytes;
 }
 

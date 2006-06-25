@@ -716,6 +716,15 @@ int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement)
     return nRet;
 }
 
+void macxp_decomposeString(char *pszStr, int buflen)
+{
+    CFMutableStringRef strRef = CFStringCreateMutable (NULL, 0 );
+    CFStringAppendCString( strRef, pszStr, kCFStringEncodingUTF8 );  //UTF8 is default on Mac OSX
+    CFStringNormalize( strRef, kCFStringNormalizationFormD );
+    CFStringGetCString( strRef, pszStr, buflen, kCFStringEncodingUTF8 );
+    CFRelease( strRef );
+}
+
 #endif  /* defined MACOSX */
 
 #endif /* NO_PTHREAD_RTL */
