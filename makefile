@@ -115,9 +115,9 @@ OO_SOURCE_OUTPUT_DIR:=OOB680_m5
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
 ifeq ("$(UNAME)","powerpc")
-NEO_TAG:=NeoOffice-2_0_Alpha_3
+NEO_TAG:=NeoOffice-2_0_Alpha_4-PowerPC
 else
-NEO_TAG:=NeoOffice-2_0_Alpha_2-Intel
+NEO_TAG:=NeoOffice-2_0_Alpha_3-Intel
 endif
 
 all: build.all
