@@ -428,20 +428,14 @@ oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirect
     if (NULL == pEntry)
         return osl_File_E_NOENT;
 
-
-#if defined(MACOSX) && (BUILD_OS_MAJOR==10) && (BUILD_OS_MINOR>=2)
-    // convert decomposed filename to precomposed unicode 
-    char composed_name[BUFSIZ];  
-    CFMutableStringRef strRef = CFStringCreateMutable (NULL, 0 );
-    CFStringAppendCString( strRef, pEntry->d_name, kCFStringEncodingUTF8 );  //UTF8 is default on Mac OSX
-    CFStringNormalize( strRef, kCFStringNormalizationFormC );
-    CFStringGetCString( strRef, composed_name, BUFSIZ, kCFStringEncodingUTF8 );
-    CFRelease( strRef );
-    rtl_string2UString( &ustrFileName, composed_name, strlen( composed_name ),
+    /* convert file name to unicode */
+    rtl_string2UString( &ustrFileName, pEntry->d_name, strlen( pEntry->d_name ),
         osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
+    OSL_ASSERT(ustrFileName != 0);
 
 	osl_systemPathMakeAbsolutePath(pDirImpl->ustrPath, ustrFileName, &ustrFilePath);
 
+#if defined(MACOSX) && (BUILD_OS_MAJOR==10) && (BUILD_OS_MINOR>=2)
     /*
      * Fix bug 1246 by ensuring that the normalized directory name exists,
      * otherwise use the unnormalized name.
@@ -449,18 +443,18 @@ oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirect
     struct stat aEntryStat;
     if ( 0 > lstat_u( ustrFilePath, &aEntryStat ) )
     {
-        rtl_string2UString( &ustrFileName, pEntry->d_name, strlen( pEntry->d_name ),
+        // convert decomposed filename to precomposed unicode 
+        char composed_name[BUFSIZ];  
+        CFMutableStringRef strRef = CFStringCreateMutable (NULL, 0 );
+        CFStringAppendCString( strRef, pEntry->d_name, kCFStringEncodingUTF8 );  //UTF8 is default on Mac OSX
+        CFStringNormalize( strRef, kCFStringNormalizationFormC );
+        CFStringGetCString( strRef, composed_name, BUFSIZ, kCFStringEncodingUTF8 );
+        CFRelease( strRef );
+        rtl_string2UString( &ustrFileName, composed_name, strlen( composed_name ),
             osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
 
-	    osl_systemPathMakeAbsolutePath(pDirImpl->ustrPath, ustrFileName, &ustrFilePath);
+    	osl_systemPathMakeAbsolutePath(pDirImpl->ustrPath, ustrFileName, &ustrFilePath);
     }
-#else  // not MACOSX
-    /* convert file name to unicode */
-    rtl_string2UString( &ustrFileName, pEntry->d_name, strlen( pEntry->d_name ),
-        osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
-    OSL_ASSERT(ustrFileName != 0);
-
-	osl_systemPathMakeAbsolutePath(pDirImpl->ustrPath, ustrFileName, &ustrFilePath);
 #endif
 
     rtl_uString_release( ustrFileName );
