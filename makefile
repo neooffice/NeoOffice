@@ -81,22 +81,12 @@ PRODUCT_DIR_NAME=NeoOffice
 PRODUCT_TRADEMARKED_NAME=NeoOffice®
 PRODUCT_TRADEMARKED_NAME_RTF=NeoOffice\\\'a8
 PRODUCT_VERSION_FAMILY=2.x
-ifeq ("$(UNAME)","powerpc")
 PRODUCT_VERSION=2.0 Alpha 4
 PRODUCT_DIR_VERSION=2.0_Alpha_4
-else
-PRODUCT_VERSION=2.0 Alpha 3
-PRODUCT_DIR_VERSION=2.0_Alpha_3
-endif
 PRODUCT_LANG_PACK_VERSION=Language Pack
 PRODUCT_DIR_LANG_PACK_VERSION=Language_Pack
-ifeq ("$(UNAME)","powerpc")
 PRODUCT_PATCH_VERSION=Patch 0
 PRODUCT_DIR_PATCH_VERSION=Patch-0
-else
-PRODUCT_PATCH_VERSION=Patch 0
-PRODUCT_DIR_PATCH_VERSION=Patch-0
-endif
 PRODUCT_FILETYPE=NO%F
 PRODUCT_INSTALL_URL=http://www.planamesa.com/neojava/download.php\\\#install
 PRODUCT_BUILD_URL=http://www.planamesa.com/neojava/build.php
@@ -114,11 +104,7 @@ OO_SOURCE_TAR_GZ_FILE:=$(PWD)/OOo_2.0.2_src.tar.gz
 OO_SOURCE_OUTPUT_DIR:=OOB680_m5
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
-ifeq ("$(UNAME)","powerpc")
-NEO_TAG:=NeoOffice-2_0_Alpha_4-PowerPC
-else
-NEO_TAG:=NeoOffice-2_0_Alpha_3-Intel
-endif
+NEO_TAG:=NeoOffice-2_0_Alpha_4
 
 all: build.all
 
