@@ -228,6 +228,17 @@ namespace desktop {
             if (err == osl::FileBase::E_EXIST)
                 err = osl::FileBase::E_None;
 
+#ifdef USE_JAVA
+            if ( err == FileBase::E_None )
+            {
+                // Fix bug 1544 by ensuring that destination directory is
+                // readable, writable, and executable
+                FileStatus aDstDirStatus(FileStatusMask_Attributes);
+                aDirItem.getFileStatus( aDstDirStatus );
+                File::setAttributes( dstUnqPath, Attribute_OwnRead | Attribute_OwnWrite | Attribute_OwnExe | aDstDirStatus.getAttributes() );
+            }
+#endif	// USE_JAVA
+
             FileBase::RC next = err;
             if (err == osl::FileBase::E_None)
             {

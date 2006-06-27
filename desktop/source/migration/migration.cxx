@@ -615,7 +615,19 @@ static FileBase::RC _checkAndCreateDirectory(INetURLObject& dirURL)
         _checkAndCreateDirectory(baseURL);
         return Directory::create(dirURL.GetMainURL(INetURLObject::DECODE_TO_IURI));
     } else
+#ifdef USE_JAVA
+    {
+        // Fix bug 1544 by ensuring that destination directory is
+        // readable, writable, and executable
+        ::osl::FileStatus aDirStatus( FileStatusMask_Attributes );
+        ::osl::DirectoryItem aDirItem;
+        ::osl::DirectoryItem::get( dirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ), aDirItem );
+        aDirItem.getFileStatus( aDirStatus );
+        ::osl::File::setAttributes( dirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ), Attribute_OwnRead | Attribute_OwnWrite | Attribute_OwnExe | aDirStatus.getAttributes() );
+    }
+#else	// USE_JAVA
         return result;
+#endif	// USE_JAVA
 }       
 
 void MigrationImpl::copyFiles()
@@ -646,6 +658,18 @@ void MigrationImpl::copyFiles()
                     +  OUStringToOString(destName, RTL_TEXTENCODING_UTF8);
                 OSL_ENSURE(sal_False, msg.getStr());
             }
+#ifdef USE_JAVA
+            else
+            {
+                // Fix bug 1544 by ensuring that destination file is
+                // readable and writable
+                ::osl::FileStatus aDestFileStatus( FileStatusMask_Attributes );
+                ::osl::DirectoryItem aDirItem;
+                ::osl::DirectoryItem::get( destName, aDirItem );
+                aDirItem.getFileStatus( aDestFileStatus );
+                ::osl::File::setAttributes( destName, Attribute_OwnRead | Attribute_OwnWrite | aDestFileStatus.getAttributes() );
+            }
+#endif	// USE_JAVA
             i_file++;
         }
     } 
