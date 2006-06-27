@@ -75,6 +75,7 @@ using namespace rtl;
 #define COMBOBOX_BUTTON_WIDTH 22
 #define COMBOBOX_BUTTON_TRIMWIDTH 3
 #define CONTROL_TAB_PANE_TOP_OFFSET	10
+#define EDITBOX_TRIMWIDTH	3
 
 static JavaSalBitmap *pComboBoxBitmap = NULL;
 static JavaSalBitmap *pListBoxBitmap = NULL;
@@ -1186,12 +1187,18 @@ static BOOL DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	InitEditFieldDrawInfo( &pFrameInfo, nState );
 	
 	HIRect destRect;
-	destRect.origin.x = 0;
-	destRect.origin.y = 0;
-	destRect.size.width = rDestBounds.GetWidth();
-	destRect.size.height = rDestBounds.GetHeight();
+	destRect.origin.x = EDITBOX_TRIMWIDTH;
+	destRect.origin.y = EDITBOX_TRIMWIDTH;
+	destRect.size.width = rDestBounds.GetWidth() - 2*EDITBOX_TRIMWIDTH;
+	destRect.size.height = rDestBounds.GetHeight() - 2*EDITBOX_TRIMWIDTH;
 	
+	// clear the active editing portion of the control
+	float whiteColor[] = { 1.0, 1.0, 1.0, 1.0 };
+	CGContextSetFillColor( aContext, whiteColor );
+	CGContextFillRect( aContext, destRect );
+	// draw frame around the background
 	bRet = ( HIThemeDrawFrame( &destRect, &pFrameInfo, aContext, kHIThemeOrientationInverted ) == noErr );
+	
 	
 	CGContextRelease( aContext );
 	CGColorSpaceRelease( aColorSpace );
@@ -1292,7 +1299,7 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			break;
 		
 		case CTRL_EDITBOX:
-			if( nPart == PART_ENTIRE_CONTROL )
+			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == HAS_BACKGROUND_TEXTURE ) )
 				isSupported = TRUE;
 			break;
 			
@@ -1834,7 +1841,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				// fill entire control area with edit box
 				Rectangle controlRect = rControlRegion.GetBoundRect();
 				rNativeBoundingRegion = Region( controlRect );
-				rNativeContentRegion = Region( rNativeBoundingRegion );
+				Point contentTopLeft( controlRect.Left() + EDITBOX_TRIMWIDTH, controlRect.Top() + EDITBOX_TRIMWIDTH );
+				Size contentSize( controlRect.GetWidth() - 2*EDITBOX_TRIMWIDTH, controlRect.GetHeight() - 2*EDITBOX_TRIMWIDTH );
+				rNativeContentRegion = Region( Rectangle( contentTopLeft, contentSize ) );
 				
 				bReturn = TRUE;
 			}
