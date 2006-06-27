@@ -1004,8 +1004,8 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						nGlyph |= GetVerticalFlags( nChar );
 
 					int nGlyphFlags = bFirstGlyph ? 0 : GlyphItem::IS_IN_CLUSTER;
-					// Mark whitespace glyphs
-					if ( IsSpacingGlyph( nChar | GF_ISCHAR ) || pLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID == 0xffff || pLayoutData->mpGlyphInfoArray->glyphs[ i ].layoutFlags & kATSGlyphInfoTerminatorGlyph )
+					// Fix bug 1552 by preserving termination glyphs
+					if ( pLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID == 0xffff )
 						nGlyph = 0x0020 | GF_ISCHAR;
 					else if ( bPosRTL )
 						nGlyphFlags |= GlyphItem::IS_RTL_GLYPH;
