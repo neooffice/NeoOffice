@@ -1,35 +1,35 @@
 /*************************************************************************
  *
- *  OpenOffice.org - a multi-platform office productivity suite
- *
  *  $RCSfile$
  *
  *  $Revision$
  *
  *  last change: $Author$ $Date$
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU Lesser General Public License Version 2.1.
+ *  The Contents of this file are made available subject to the terms of
+ *  either of the following licenses
  *
+ *         - GNU General Public License Version 2.1
  *
- *    GNU Lesser General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ *  Edward Peterlin, June 2006
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU Lesser General Public
- *    License version 2.1, as published by the Free Software Foundation.
+ *  GNU General Public License Version 2.1
+ *  =============================================
+ *  Copyright 2006 by Edward Peterlin (OPENSTEP@neooffice.org)
  *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    Lesser General Public License for more details.
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public
+ *  License version 2.1, as published by the Free Software Foundation.
  *
- *    You should have received a copy of the GNU Lesser General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *  MA  02111-1307  USA
  *
  ************************************************************************/
 #ifndef _SV_SVIDS_HRC
@@ -1257,6 +1257,7 @@ void ImplSmallBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice*, co
             nState &= ~CTRL_STATE_ENABLED;
         if ( pWin->HasFocus() )
             nState |= CTRL_STATE_FOCUSED;
+#ifdef USE_JAVA
 #ifdef GENESIS_OF_THE_NEW_WEAPONS
 		if ( ( aCtrlType == CTRL_EDITBOX ) && ( ! ( nState & CTRL_STATE_FOCUSED ) ) )
 		{
@@ -1266,6 +1267,7 @@ void ImplSmallBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice*, co
 			if ( pCtrl->HasFocus() )
 				nState |= CTRL_STATE_FOCUSED;
 		}
+#endif
 #endif
         BOOL bMouseOver = FALSE;
         Window *pCtrlChild = pCtrl->GetWindow( WINDOW_FIRSTCHILD );

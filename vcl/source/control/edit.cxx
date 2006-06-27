@@ -1,35 +1,35 @@
 /*************************************************************************
  *
- *  OpenOffice.org - a multi-platform office productivity suite
- *
  *  $RCSfile$
  *
  *  $Revision$
  *
  *  last change: $Author$ $Date$
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU Lesser General Public License Version 2.1.
+ *  The Contents of this file are made available subject to the terms of
+ *  either of the following licenses
  *
+ *         - GNU General Public License Version 2.1
  *
- *    GNU Lesser General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ *  Edward Peterlin, April 2006
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU Lesser General Public
- *    License version 2.1, as published by the Free Software Foundation.
+ *  GNU General Public License Version 2.1
+ *  =============================================
+ *  Copyright 2006 by Edward Peterlin (OPENSTEP@neooffice.org)
  *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    Lesser General Public License for more details.
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public
+ *  License version 2.1, as published by the Free Software Foundation.
  *
- *    You should have received a copy of the GNU Lesser General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *  MA  02111-1307  USA
  *
  ************************************************************************/
 
@@ -919,38 +919,6 @@ void Edit::ImplClearBackground( long nXStart, long nXEnd )
     */
 	Point aTmpPoint;
 	Rectangle aRect( aTmpPoint, GetOutputSizePixel() );
-
-#if 0
-#ifdef GENESIS_OF_THE_NEW_WEAPONS
-	Edit *varEdit = (Edit *)this;
-	if ( varEdit->IsNativeControlSupported( varEdit->ImplGetNativeControlType(), PART_ENTIRE_CONTROL ) )
-	{
-        Region aBoundingRgn, aContentRgn;
-        Rectangle aCtrlRect( 0, 0, 80, 20 ); // use a constant size to avoid accumulating
-                                             // will not work if the theme has dynamic adornment sizes
-        ImplControlValue aControlValue;
-        Region			 aCtrlRegion( aCtrlRect );
-        ControlState	 nState = CTRL_STATE_DEFAULT|CTRL_STATE_ENABLED;
-
-        // get native size of a 'default' edit field
-        // and adjust the VCL edit field if more space for adornment is required
-        if( varEdit->GetNativeControlRegion( varEdit->ImplGetNativeControlType(), PART_ENTIRE_CONTROL, aCtrlRegion,
-                                nState, aControlValue, rtl::OUString(),
-								aBoundingRgn, aContentRgn ) )
-        {
-            Rectangle aCont(aContentRgn.GetBoundRect());
-            Rectangle aBound(aBoundingRgn.GetBoundRect());
-			
-			int maxInset = 0;
-            int inset;
-            aRect.Left() += aCont.Left() - aBound.Left();
-            aRect.Top() += aCont.Top() - aBound.Top();
-            aRect.Right() -= aBound.Right() - aCont.Right();
-            aRect.Bottom() -= aBound.Bottom() - aCont.Bottom();
-        }
-    }
-#endif
-#endif
 	
 	aRect.Left() = nXStart;
 	aRect.Right() = nXEnd;
@@ -1740,13 +1708,15 @@ void Edit::GetFocus()
 			else			
 				ImplCallEventListeners( VCLEVENT_EDIT_SELECTIONCHANGED );
 		}
-		
+
+#ifdef USE_JAVA		
 #ifdef GENESIS_OF_THE_NEW_WEAPONS
 		{
 			Window* pWindow = GetWindow( WINDOW_BORDER );
 			if ( pWindow )
 				pWindow->Invalidate();
 		}
+#endif
 #endif
 		ImplShowCursor();
 
@@ -1787,6 +1757,7 @@ void Edit::LoseFocus()
 
 	Control::LoseFocus();
 
+#ifdef USE_JAVA
 #ifdef GENESIS_OF_THE_NEW_WEAPONS
 	{
 		Window* pWindow = GetWindow( WINDOW_BORDER );
@@ -1812,6 +1783,7 @@ void Edit::LoseFocus()
 	
 		ImplRepaint();
 	}
+#endif
 #endif
 }
 
@@ -2531,38 +2503,6 @@ Size Edit::CalcMinimumSize() const
 {
 	Size aSz( GetTextWidth( GetText() ), GetTextHeight() );
 
-#if 0
-#ifdef GENESIS_OF_THE_NEW_WEAPONS
-	Edit *varEdit = (Edit *)this;
-	if ( varEdit->IsNativeControlSupported( varEdit->ImplGetNativeControlType(), PART_ENTIRE_CONTROL ) )
-	{
-        Region aBoundingRgn, aContentRgn;
-        Rectangle aCtrlRect( 0, 0, 80, 20 ); // use a constant size to avoid accumulating
-                                             // will not work if the theme has dynamic adornment sizes
-        ImplControlValue aControlValue;
-        Region			 aCtrlRegion( aCtrlRect );
-        ControlState	 nState = CTRL_STATE_DEFAULT|CTRL_STATE_ENABLED;
-
-        // get native size of a 'default' edit field
-        // and adjust the VCL edit field if more space for adornment is required
-        if( varEdit->GetNativeControlRegion( varEdit->ImplGetNativeControlType(), PART_ENTIRE_CONTROL, aCtrlRegion,
-                                nState, aControlValue, rtl::OUString(),
-								aBoundingRgn, aContentRgn ) )
-        {
-            Rectangle aCont(aContentRgn.GetBoundRect());
-            Rectangle aBound(aBoundingRgn.GetBoundRect());
-			
-			int maxInset = 0;
-            int inset;
-            aSz.Width() += aCont.Left() - aBound.Left();
-            aSz.Height() += aCont.Top() - aBound.Top();
-            aSz.Width() += aBound.Right() - aCont.Right();
-            aSz.Height() += aBound.Bottom() - aCont.Bottom();
-        }
-    }
-#endif
-#endif
-
 	aSz = CalcWindowSize( aSz );
 	return aSz;
 }
@@ -2575,38 +2515,6 @@ Size Edit::CalcSize( xub_StrLen nChars ) const
 	// Funktioniert nur bei FixedFont richtig, sonst Mittelwert.
 	Size aSz( GetTextWidth( XubString( 'x' ) ), GetTextHeight() );
 	aSz.Width() *= nChars;
-
-#if 0
-#ifdef GENESIS_OF_THE_NEW_WEAPONS
-	Edit *varEdit = (Edit *)this;
-	if ( varEdit->IsNativeControlSupported( varEdit->ImplGetNativeControlType(), PART_ENTIRE_CONTROL ) )
-	{
-        Region aBoundingRgn, aContentRgn;
-        Rectangle aCtrlRect( 0, 0, 80, 20 ); // use a constant size to avoid accumulating
-                                             // will not work if the theme has dynamic adornment sizes
-        ImplControlValue aControlValue;
-        Region			 aCtrlRegion( aCtrlRect );
-        ControlState	 nState = CTRL_STATE_DEFAULT|CTRL_STATE_ENABLED;
-
-        // get native size of a 'default' edit field
-        // and adjust the VCL edit field if more space for adornment is required
-        if( varEdit->GetNativeControlRegion( varEdit->ImplGetNativeControlType(), PART_ENTIRE_CONTROL, aCtrlRegion,
-                                nState, aControlValue, rtl::OUString(),
-								aBoundingRgn, aContentRgn ) )
-        {
-            Rectangle aCont(aContentRgn.GetBoundRect());
-            Rectangle aBound(aBoundingRgn.GetBoundRect());
-			
-			int maxInset = 0;
-            int inset;
-            aSz.Width() += aCont.Left() - aBound.Left();
-            aSz.Height() += aCont.Top() - aBound.Top();
-            aSz.Width() += aBound.Right() - aCont.Right();
-            aSz.Height() += aBound.Bottom() - aCont.Bottom();
-        }
-    }
-#endif
-#endif
 
 	aSz = CalcWindowSize( aSz );
 	return aSz;
