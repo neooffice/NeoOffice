@@ -592,8 +592,12 @@ Rectangle TabControl::ImplGetTabRect( USHORT nPos, long nWidth, long nHeight )
                         n++;
                     }
 
+#ifdef GENESIS_OF_THE_NEW_WEAPONS
+#ifndef MACOSX
                     pItem->maRect.Left()   += nIDX;
                     pItem->maRect.Right()  += nIDX+nDX;
+#endif
+#endif
                     pItem->maRect.Top()     = nLineHeightAry[n-1];
                     pItem->maRect.Bottom()  = nLineHeightAry[n-1]+nIH;
                     nIDX += nDX;
@@ -601,7 +605,11 @@ Rectangle TabControl::ImplGetTabRect( USHORT nPos, long nWidth, long nHeight )
                     if ( nModDX )
                     {
                         nIDX++;
-                        pItem->maRect.Right()++;
+#ifdef GENESIS_OF_THE_NEW_WEAPONS
+#ifndef MACOSX
+      					pItem->maRect.Right()++;
+#endif
+#endif
                         nModDX--;
                     }
 
@@ -619,7 +627,7 @@ Rectangle TabControl::ImplGetTabRect( USHORT nPos, long nWidth, long nHeight )
 				
 				while ( pItem )
 				{
-					if ( nLines && ( curItemIndex == nLinePosAry[lineIndex+1] ) )
+					if ( nLines && (lineIndex <= nLines ) && ( curItemIndex == nLinePosAry[lineIndex+1] ) )
 						lineIndex++;
 					
 					pItem->maRect.Left() += ( nWidth - nLineWidthAry[lineIndex] ) / 2;
@@ -1065,6 +1073,7 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
     ImplTabItem* pCurItem = NULL;
     ImplTabItem* pItem = mpItemList->First();
     pItem = mpItemList->First();
+    int curItemIndex = 0;
     while ( pItem )
     {
         if ( pItem->mnId == mnCurPageId )
@@ -1074,7 +1083,10 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
         }
 
         pItem = mpItemList->Next();
+        curItemIndex++;
     }
+    if ( ! pItem )
+    	curItemIndex = -1;
 
     // Draw the TabPage border
     const StyleSettings&    rStyleSettings  = GetSettings().GetStyleSettings();
@@ -1208,7 +1220,26 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
             if( !rRect.IsEmpty() )
                 aClipRgn.Intersect( rRect );
             if( bLayout || !aClipRgn.IsEmpty() )
-                ImplDrawItem( pItem, aCurRect, bLayout, (pItem==pFirstTab), (pItem==pLastTab), FALSE );
+            {
+            	bool isLastTabInRow = (pItem == pLastTab);
+            	bool isFirstTabInRow = (pItem == pFirstTab);
+#ifdef GENESIS_OF_THE_NEW_WEAPONS
+				if ( pItem != pFirstTab )
+				{
+					ImplTabItem * prevTab = mpItemList->GetObject(idx-1);
+					if ( prevTab && ( prevTab->maRect.Left() > pItem->maRect.Left() ) )
+						isFirstTabInRow = true;
+				}
+				
+				if ( pItem != pLastTab )
+				{
+					ImplTabItem * nextTab = mpItemList->GetObject(idx+1); 
+					if ( nextTab && ( nextTab->maRect.Left() < pItem->maRect.Left() ) )
+						isLastTabInRow = true;
+				}
+#endif
+                ImplDrawItem( pItem, aCurRect, bLayout, isFirstTabInRow, isLastTabInRow, FALSE );
+            }
         }
 
         if ( bDrawTabsRTL )
@@ -1224,7 +1255,26 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
         if( !rRect.IsEmpty() )
             aClipRgn.Intersect( rRect );
         if( bLayout || !aClipRgn.IsEmpty() )
-            ImplDrawItem( pCurItem, aCurRect, bLayout, (pCurItem==pFirstTab), (pCurItem==pLastTab), TRUE );
+        {
+			bool isLastTabInRow = (pCurItem == pLastTab);
+			bool isFirstTabInRow = (pCurItem == pFirstTab);
+#ifdef GENESIS_OF_THE_NEW_WEAPONS
+			if ( ( pCurItem != pFirstTab ) && ! ( curItemIndex < 0 ) )
+			{
+				ImplTabItem * prevTab = mpItemList->GetObject(curItemIndex-1);
+				if ( prevTab && ( prevTab->maRect.Left() > pCurItem->maRect.Left() ) )
+					isFirstTabInRow = true;
+			}
+			
+			if ( ( pCurItem != pLastTab ) && ! ( curItemIndex < 0 ) )
+			{
+				ImplTabItem * nextTab = mpItemList->GetObject(curItemIndex+1); 
+				if ( nextTab && ( nextTab->maRect.Left() < pCurItem->maRect.Left() ) )
+					isLastTabInRow = true;
+			}
+#endif
+            ImplDrawItem( pCurItem, aCurRect, bLayout, isFirstTabInRow, isLastTabInRow, TRUE );
+        }
     }
 
     if ( !bLayout && HasFocus() )
