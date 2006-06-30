@@ -51,6 +51,7 @@
 #include <sfx2/request.hxx>
 #endif
 
+#include <sfx2/app.hxx>
 
 #ifndef _SFXFLAGITEM_HXX //autogen
 #include <svtools/flagitem.hxx>
