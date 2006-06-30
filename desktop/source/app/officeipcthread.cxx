@@ -529,7 +529,7 @@ void OfficeIPCThread::DisableOfficeIPCThread()
 
 		// exit gracefully and join
 		pOfficeIPCThread->join();
-		delete pGlobalOfficeIPCThread;
+		delete pOfficeIPCThread;
 
 
 	}

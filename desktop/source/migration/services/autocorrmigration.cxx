@@ -38,8 +38,8 @@
 #include "autocorrmigration.hxx"
 #endif
 
-#ifndef _ISOLANG_HXX
-#include <tools/isolang.hxx>
+#ifndef INCLUDED_I18NPOOL_MSLANGID_HXX
+#include <i18npool/mslangid.hxx>
 #endif
 #ifndef _URLOBJ_HXX
 #include <tools/urlobj.hxx>
@@ -198,7 +198,7 @@ namespace migration
                 sal_Int32 nStart = sBaseName.getLength();
                 sal_Int32 nEnd = sSourceLocalName.lastIndexOf ( sSuffix );
                 ::rtl::OUString sLanguageType = sSourceLocalName.copy( nStart, nEnd - nStart );
-                ::rtl::OUString sIsoName = ConvertLanguageToIsoString( (LanguageType) sLanguageType.toInt32() );
+                ::rtl::OUString sIsoName = MsLangId::convertLanguageToIsoString( (LanguageType) sLanguageType.toInt32() );
                 ::rtl::OUString sTargetLocalName = sBaseName;
                 sTargetLocalName += ::rtl::OUString::createFromAscii( "_" );
                 sTargetLocalName += sIsoName;

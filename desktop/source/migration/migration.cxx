@@ -43,7 +43,7 @@
 #include <unotools/bootstrap.hxx>
 #include <rtl/bootstrap.hxx>
 #include <tools/config.hxx>
-#include <tools/lang.hxx>
+#include <i18npool/lang.h>
 #include <tools/urlobj.hxx>
 #include <osl/file.hxx>
 #include <osl/mutex.hxx>
@@ -370,7 +370,6 @@ install_info MigrationImpl::findInstallation()
         }
         i_ins++;
     }
-
     return aInfo;
 }
 

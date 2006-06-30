@@ -62,7 +62,6 @@ SLOFILES = \
         $(SLO)$/dp_xml.obj \
         $(SLO)$/dp_log.obj \
         $(SLO)$/dp_persmap.obj \
-        $(SLO)$/dp_servicefactory.obj \
         $(SLO)$/dp_services.obj       \
         $(SLO)$/db.obj
 

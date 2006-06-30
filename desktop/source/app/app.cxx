@@ -179,7 +179,7 @@
 #ifndef _COM_SUN_STAR_FRAME_XUICONTROLLERREGISTRATION_HPP_
 #include <com/sun/star/frame/XUIControllerRegistration.hpp>
 #endif
- 
+
 #include <com/sun/star/java/XJavaVM.hpp>
 
 #ifndef _TOOLS_TESTTOOLLOADER_HXX_
@@ -456,27 +456,6 @@ OUString MakeStartupConfigAccessErrorMessage( OUString const & aInternalErrMsg )
     return aDiagnosticMessage.makeStringAndClear();
 }
 
-void FatalErrorExit(OUString const & aMessage)
-{
-    OUString aProductKey = ::utl::Bootstrap::getProductKey();
-
-    if (!aProductKey.getLength())
-    {
-        ::vos::OStartupInfo aInfo;
-        aInfo.getExecutableFile( aProductKey );
-
-        sal_uInt32     lastIndex = aProductKey.lastIndexOf('/');
-        if ( lastIndex > 0 )
-            aProductKey = aProductKey.copy( lastIndex+1 );
-    }
-
-    ErrorBox aBootstrapFailedBox( NULL, WB_OK, aMessage );
-    aBootstrapFailedBox.SetText( aProductKey );
-    aBootstrapFailedBox.Execute();
-
-    _exit( ExitHelper::E_FATAL_ERROR );
-}
-
 void FatalError(OUString const & aMessage)
 {
     OUString aProductKey = ::utl::Bootstrap::getProductKey();
@@ -494,6 +473,12 @@ void FatalError(OUString const & aMessage)
     ErrorBox aBootstrapFailedBox( NULL, WB_OK, aMessage );
     aBootstrapFailedBox.SetText( aProductKey );
     aBootstrapFailedBox.Execute();
+}
+
+void FatalErrorExit(OUString const & aMessage)
+{
+    FatalError(aMessage);
+    _exit( ExitHelper::E_FATAL_ERROR );
 }
 
 static bool ShouldSuppressUI(CommandLineArgs* pCmdLine)
@@ -625,7 +610,7 @@ void Desktop::Init()
 {
     RTL_LOGFILE_CONTEXT( aLog, "desktop (cd100003) ::Desktop::Init" );
     SetBootstrapStatus(BS_OK);
-    
+
     // create service factory...
     Reference < XMultiServiceFactory > rSMgr = CreateApplicationServiceManager();
     if( rSMgr.is() )
@@ -1105,8 +1090,39 @@ void Desktop::HandleBootstrapErrors( BootstrapError aBootstrapError )
         aMessage = MakeStartupErrorMessage(
             aDiagnosticMessage.makeStringAndClear() );
         FatalError(aMessage);
-     }
-     return;
+    }
+    else if (( aBootstrapError == BE_USERINSTALL_NOTENOUGHDISKSPACE ) ||
+             ( aBootstrapError == BE_USERINSTALL_NOWRITEACCESS      ))
+    {
+        OUString       aUserInstallationURL;
+        OUString       aUserInstallationPath;
+        OUString       aMessage;
+        OUString       aErrorMsg;
+        OUStringBuffer aDiagnosticMessage( 100 );
+
+        utl::Bootstrap::locateUserInstallation( aUserInstallationURL );
+
+        if ( aBootstrapError == BE_USERINSTALL_NOTENOUGHDISKSPACE )
+            aErrorMsg = GetMsgString(
+                STR_BOOSTRAP_ERR_NOTENOUGHDISKSPACE,
+                OUString( RTL_CONSTASCII_USTRINGPARAM(
+                    "User installation could not be completed due to insufficient free disk space." )) );
+        else
+            aErrorMsg = GetMsgString(
+                STR_BOOSTRAP_ERR_NOACCESSRIGHTS,
+                OUString( RTL_CONSTASCII_USTRINGPARAM(
+                    "User installation could not be processed due to missing access rights." )) );
+        
+        osl::File::getSystemPathFromFileURL( aUserInstallationURL, aUserInstallationPath );
+        
+        aDiagnosticMessage.append( aErrorMsg );
+        aDiagnosticMessage.append( aUserInstallationPath );
+        aMessage = MakeStartupErrorMessage(
+            aDiagnosticMessage.makeStringAndClear() );
+        FatalError(aMessage);
+    }
+
+    return;
 }
 
 
@@ -1115,9 +1131,9 @@ void Desktop::retrieveCrashReporterState()
     static const ::rtl::OUString CFG_PACKAGE_RECOVERY   = ::rtl::OUString::createFromAscii("org.openoffice.Office.Recovery/");
     static const ::rtl::OUString CFG_PATH_CRASHREPORTER = ::rtl::OUString::createFromAscii("CrashReporter"                  );
     static const ::rtl::OUString CFG_ENTRY_ENABLED      = ::rtl::OUString::createFromAscii("Enabled"                                   );
-    
+
     css::uno::Reference< css::lang::XMultiServiceFactory > xSMGR = ::comphelper::getProcessServiceFactory();
-    
+
     sal_Bool bEnabled( sal_True );
     if ( xSMGR.is() )
     {
@@ -1168,7 +1184,7 @@ void impl_checkRecoveryState(sal_Bool& bCrashed           ,
     static const ::rtl::OUString PROP_EXISTSSESSION       = ::rtl::OUString::createFromAscii("ExistsSessionData"              );
     static const ::rtl::OUString CFG_PACKAGE_RECOVERY     = ::rtl::OUString::createFromAscii("org.openoffice.Office.Recovery/");
     static const ::rtl::OUString CFG_PATH_RECOVERYINFO    = ::rtl::OUString::createFromAscii("RecoveryInfo"                   );
-    
+
     bCrashed            = sal_False;
     bRecoveryDataExists = sal_False;
     bSessionDataExists  = sal_False;
@@ -1182,7 +1198,7 @@ void impl_checkRecoveryState(sal_Bool& bCrashed           ,
 
         xRecovery->getPropertyValue(PROP_CRASHED       ) >>= bCrashed           ;
         xRecovery->getPropertyValue(PROP_EXISTSRECOVERY) >>= bRecoveryDataExists;
-        xRecovery->getPropertyValue(PROP_EXISTSSESSION ) >>= bSessionDataExists ;        
+        xRecovery->getPropertyValue(PROP_EXISTSSESSION ) >>= bSessionDataExists ;
     }
     catch(const css::uno::Exception&) {}
 }
@@ -1224,7 +1240,7 @@ sal_Bool impl_callRecoveryUI(sal_Bool bEmergencySave     ,
         if (bCrashed && Desktop::isCrashReporterEnabled() )
             aURL.Complete = COMMAND_CRASHREPORT;
     }
-    
+
     sal_Bool bRet = sal_False;
     if ( aURL.Complete.getLength() > 0 )
     {
@@ -1276,14 +1292,13 @@ USHORT Desktop::Exception(USHORT nError)
     // save all modified documents ... if it's allowed doing so.
     sal_Bool bRestart                           = sal_False;
     sal_Bool bAllowRecoveryAndSessionManagement = (
-                                                    ( !pArgs->IsNoRestore() ) &&
-                                                    ( !pArgs->IsHeadless()  ) &&
-                                                    ( !pArgs->IsServer()    )
+                                                    ( !pArgs->IsNoRestore()                    ) && // some use cases of office must work without recovery
+                                                    ( !pArgs->IsHeadless()                     ) &&
+                                                    ( !pArgs->IsServer()                       ) &&
+                                                    (( nError & EXC_MAJORTYPE ) != EXC_DISPLAY ) && // recovery cant work without UI ... but UI layer seams to be the reason for this crash
+                                                    ( Application::IsInExecute()               )    // crashes during startup and shutdown should be ignored (they indicates a corrupt installation ...)
                                                   );
-    if (
-        ( bAllowRecoveryAndSessionManagement ) &&
-        (( nError & EXC_MAJORTYPE ) != EXC_DISPLAY )
-       )
+    if ( bAllowRecoveryAndSessionManagement )
         bRestart = SaveTasks(DESKTOP_SAVETASKS_MOD);
 
     // because there is no method to flush the condiguration data, we must dispose the ConfigManager
@@ -1428,7 +1443,7 @@ void Desktop::Main()
         HandleBootstrapErrors( eError );
         return;
     }
-    
+
     BootstrapStatus eStatus = GetBootstrapStatus();
     if (eStatus == BS_TERMINATE) {
         return;
@@ -1446,7 +1461,7 @@ void Desktop::Main()
         aConfigErrHandler.activate();
 
     ResMgr::SetReadStringHook( ReplaceStringHookProc );
-    
+
     // Startup screen
     RTL_LOGFILE_CONTEXT_TRACE( aLog, "desktop (lo119109) Desktop::Main { OpenSplashScreen" );
     OpenSplashScreen();
@@ -1457,7 +1472,12 @@ void Desktop::Main()
         if ( instErr_fin != UserInstall::E_None)
         {
             OSL_ENSURE(sal_False, "userinstall failed");
-            HandleBootstrapErrors( BE_USERINSTALL_FAILED );
+            if ( instErr_fin == UserInstall::E_NoDiskSpace )
+                HandleBootstrapErrors( BE_USERINSTALL_NOTENOUGHDISKSPACE );
+            else if ( instErr_fin == UserInstall::E_NoWriteAccess )
+                HandleBootstrapErrors( BE_USERINSTALL_NOWRITEACCESS );
+            else
+                HandleBootstrapErrors( BE_USERINSTALL_FAILED );
             return;
         }
 
@@ -1673,7 +1693,7 @@ void Desktop::Main()
         }
 
         SetSplashScreenProgress(50);
-        
+
         // Backing Component
         sal_Bool bCrashed            = sal_False;
         sal_Bool bExistsRecoveryData = sal_False;
@@ -1853,8 +1873,19 @@ void Desktop::Main()
     }
     catch(const com::sun::star::document::CorruptedFilterConfigurationException& exFilterCfg)
     {
+        // We show an ErrorBox here ... On the other side we know also, that users ignore such messages
+        // and may be try to open documents. But then the same office instance will be used for loading
+        // new documents. That must be prevented. Because this office shutdown and shouldnt be used further.
+        // => forward all pipe requests to dev/null
+        OfficeIPCThread::BlockAllRequests();
+
+        // Show the error to the user.
+        // TODO: Clarify with VCL, if this is legal code .-)
+        // Because we show an ErrorBox after Execute().
         FatalError( MakeStartupErrorMessage(exFilterCfg.Message) );
+
         // dont kill the office here! Terminate it in the right way. It shouldnt be a problem ...
+        // and we have to do some further work (e.g. removing temp. directories)
     }
 
 	Resource::SetResManager( NULL );
@@ -2818,6 +2849,20 @@ void Desktop::OpenClients()
                     aRequest.aModule= aOpt.GetFactoryName( SvtModuleOptions::E_DRAW );
             }
 
+            // check for printing disabled
+            if( ( aRequest.aPrintList.getLength() || aRequest.aPrintToList.getLength() )
+                && Application::GetSettings().GetMiscSettings().GetDisablePrinting() )
+            {
+                aRequest.aPrintList = rtl::OUString();
+                aRequest.aPrintToList = rtl::OUString();
+                ResMgr* pDtResMgr = GetDesktopResManager();
+                if( pDtResMgr )
+                {
+                    ErrorBox aBox( NULL, ResId( EBX_ERR_PRINTDISABLED, pDtResMgr ) );
+                    aBox.Execute();
+                }
+            }
+            
             // Process request
             OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
         }

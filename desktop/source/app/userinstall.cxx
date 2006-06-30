@@ -93,7 +93,7 @@
 #endif
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
-#include <tools/isolang.hxx>
+#include <i18npool/mslangid.hxx>
 #include <com/sun/star/uno/Any.hxx>
 #include <com/sun/star/util/XChangesBatch.hpp>
 #include <com/sun/star/beans/XHierarchicalPropertySet.hpp>
@@ -140,8 +140,7 @@ namespace desktop {
             // localize the provider to user selection
 //            Reference< XLocalizable > localizable(theConfigProvider, UNO_QUERY_THROW);
 //            LanguageType aUserLanguageType = LanguageSelection::getLanguageType();
-//            OUString aUserLanguage = ConvertLanguageToIsoString(aUserLanguageType);
-//            Locale aLocale = LanguageSelection::IsoStringToLocale(aUserLanguage);
+//            Locale aLocale( MsLangId::convertLanguageToIsoString(aUserLanguageType));
 //            localizable->setLocale(aLocale);
 
             Reference< XLocalizable > localizable(theConfigProvider, UNO_QUERY_THROW);
@@ -261,7 +260,11 @@ namespace desktop {
                     err = copy_recursive(newSrcUnqPath, newDstUnqPath);
                 }
                 aDir.close();
-                if( next != FileBase::E_NOENT ) err = FileBase::E_INVAL;
+                
+                if ( err != osl::FileBase::E_None )
+                    return err;
+                if( next != FileBase::E_NOENT ) 
+                    err = FileBase::E_INVAL;
             }
         }
         else
@@ -308,7 +311,15 @@ namespace desktop {
             rc = copy_recursive(
                     aBasePath + OUString::createFromAscii(pszSrcList[i]),
                     aUserPath + OUString::createFromAscii(pszDstList[i]));
-            if ((rc != FileBase::E_None) && (rc != FileBase::E_EXIST)) return UserInstall::E_Creation;
+            if ((rc != FileBase::E_None) && (rc != FileBase::E_EXIST)) 
+            {
+                if ( rc == FileBase::E_NOSPC )
+                    return UserInstall::E_NoDiskSpace;
+                else if ( rc == FileBase::E_ACCES )
+                    return UserInstall::E_NoWriteAccess;
+                else
+                    return UserInstall::E_Creation;
+            }
         }
         try
         {
