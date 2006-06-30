@@ -580,8 +580,11 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         if (sClassPath.match(sClassPathProp, 0) == sal_True)
         {
             char sep[] =  {SAL_PATHSEPARATOR, 0};
-            sClassPathOption = sClassPath + rtl::OString(sep) + 
-                getPluginJarPath(pInfo->sVendor, pInfo->sLocation,pInfo->sVersion);
+            OString sAddPath = getPluginJarPath(pInfo->sVendor, pInfo->sLocation,pInfo->sVersion);
+            if (sAddPath.getLength())
+                sClassPathOption = sClassPath + rtl::OString(sep) + sAddPath;
+            else
+                sClassPathOption = sClassPath;
             options[i+1].optionString = (char *) sClassPathOption.getStr();
             options[i+1].extraInfo = arOptions[i].extraInfo;
         }

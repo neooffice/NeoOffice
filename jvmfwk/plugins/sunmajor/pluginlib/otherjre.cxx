@@ -74,14 +74,13 @@ char const* const* OtherInfo::getJavaExePaths(int * size)
     return ar;
 }
 
-#include <stdio.h>
 char const* const* OtherInfo::getRuntimePaths(int * size)
 {
     static char const* ar[]= {
 #ifdef WNT
         "/bin/client/jvm.dll",
         "/bin/hotspot/jvm.dll",
-        "/bin/classic/jvm.dll"
+        "/bin/classic/jvm.dll",
 	"/bin/jrockit/jvm.dll"
 #elif UNX
 #ifdef MACOSX
@@ -97,7 +96,7 @@ char const* const* OtherInfo::getRuntimePaths(int * size)
         "/jre/bin/classic/libjvm.so", // for IBM Java
         "/lib/" JFW_PLUGIN_ARCH "/client/libjvm.so", // for Blackdown PPC
         "/lib/" JFW_PLUGIN_ARCH "/server/libjvm.so", // for Blackdown AMD64
-        "/lib/" JFW_PLUGIN_ARCH "/classic/libjvm.so" // for Blackdown PPC
+        "/lib/" JFW_PLUGIN_ARCH "/classic/libjvm.so", // for Blackdown PPC
 	"/lib/" JFW_PLUGIN_ARCH "/jrockit/libjvm.so" // for Java of BEA Systems
 #endif
 #endif
