@@ -50,7 +50,7 @@ check_installation() {
 		if [ -z "$productkey" -o -z "$productpatch" ] ; then
 			return 1;
 		fi
-		productkey=`echo $productkey | awk -F= '{ print $2 }'`
+		productkey=`echo $productkey | awk -F= '{ print $2 " " $3 }'`
 		productpatch=`echo $productpatch | awk -F= '{ print $2 }' | sed 's#^Patch ##'`
 
 		if [ "$productkey" = "$(PRODUCT_NAME) $(PRODUCT_VERSION)" ] ; then
@@ -61,7 +61,7 @@ check_installation() {
 			fi
 		fi
 
-		productnameversion="$(PRODUCT_NAME) `echo '$(PRODUCT_VERSION)' | awk '{ print $1 " " $2 }'`"
+		productnameversion="$(PRODUCT_NAME) `echo '$(PRODUCT_VERSION)' | awk '{ print $1 " " $2 " " $3 }'`"
 		productkey=`grep "^ProductKey=$productnameversion" "$1/Contents/MacOS/bootstraprc"`
 		if [ ! -z "$productkey" ] ; then
 			return 0;
