@@ -1,11 +1,11 @@
 Index: util/makefile.mk
 ===================================================================
 RCS file: /cvs/gsl/forms/util/makefile.mk,v
-retrieving revision 1.12
-diff -u -r1.12 makefile.mk
---- util/makefile.mk	8 Sep 2005 23:27:19 -0000	1.12
-+++ util/makefile.mk	22 Dec 2005 19:37:52 -0000
-@@ -104,19 +104,10 @@
+retrieving revision 1.13
+diff -u -r1.13 makefile.mk
+--- util/makefile.mk	7 Apr 2006 15:25:21 -0000	1.13
++++ util/makefile.mk	30 Jun 2006 19:10:25 -0000
+@@ -105,19 +105,10 @@
  RESLIB1SRSFILES=$(RES1FILELIST)
  
  .IF "$(GUI)"=="UNX"

@@ -1,11 +1,11 @@
 Index: makefile.mk
 ===================================================================
 RCS file: /cvs/external/berkeleydb/makefile.mk,v
-retrieving revision 1.30
-diff -u -r1.30 makefile.mk
---- makefile.mk	13 Jan 2006 16:23:55 -0000	1.30
-+++ makefile.mk	11 Apr 2006 17:18:14 -0000
-@@ -138,6 +138,11 @@
+retrieving revision 1.31
+diff -u -r1.31 makefile.mk
+--- makefile.mk	8 Mar 2006 14:13:53 -0000	1.31
++++ makefile.mk	30 Jun 2006 18:58:49 -0000
+@@ -139,6 +139,11 @@
  
  # --- Targets ------------------------------------------------------
  

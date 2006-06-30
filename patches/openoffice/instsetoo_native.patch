@@ -1,20 +1,20 @@
 Index: util/makefile.mk
 ===================================================================
 RCS file: /cvs/installation/instsetoo_native/util/makefile.mk,v
-retrieving revision 1.48
-diff -u -r1.48 makefile.mk
---- util/makefile.mk	18 Nov 2005 16:14:01 -0000	1.48
-+++ util/makefile.mk	27 Dec 2005 20:18:59 -0000
-@@ -103,7 +103,7 @@
- 	@echo "No EPM: do no packaging at this stage"
- .ELSE			# "$(GUI)"!="WNT" && "$(EPM)"=="NO" && "$(USE_PACKAGER)"==""
- .IF "$(UPDATER)"=="" || "$(USE_PACKAGER)"==""
+retrieving revision 1.56
+diff -u -r1.56 makefile.mk
+--- util/makefile.mk	26 Apr 2006 20:45:16 -0000	1.56
++++ util/makefile.mk	30 Jun 2006 19:26:21 -0000
+@@ -100,7 +100,7 @@
+ .IF "$(BUILD_TYPE)"=="$(BUILD_TYPE):s/ODK//"
+ ALLTAR : openoffice
+ .ELSE
 -ALLTAR : openoffice sdkoo_en-US ure_en-US
 +ALLTAR : openoffice sdkoo_en-US ure_en-US ooolanguagepack
+ .ENDIF
  .ELSE			# "$(UPDATER)"=="" || "$(USE_PACKAGER)"==""
  ALLTAR : updatepack
- .ENDIF			# "$(UPDATER)"=="" || "$(USE_PACKAGER)"==""
-@@ -122,7 +122,7 @@
+@@ -120,7 +120,7 @@
  
  .IF "$(alllangiso)"!=""
  
