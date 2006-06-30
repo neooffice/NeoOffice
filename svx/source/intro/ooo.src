@@ -49,12 +49,6 @@
 #include "svxids.hrc"
 #include "intro.hrc"
 
-#ifdef BUILD_SPECIAL
-#define OOO_VENDOR "Sun Microsystems Inc."
-#else
-//#define OOO_VENDOR "my company"
-#endif
-
 Bitmap RID_DEFAULT_ABOUT_BMP_LOGO
 {
 	File = "openabout.bmp" ;
