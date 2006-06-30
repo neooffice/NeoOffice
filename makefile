@@ -133,6 +133,7 @@ build.oo_patches: build.oo_checkout \
 	build.oo_instsetoo_native_patch \
 	build.oo_padmin_patch \
 	build.oo_solenv_patch \
+	build.oo_sj2_patch \
 	build.oo_toolkit_patch \
 	build.oo_vcl_patch \
 	build.oo_xmerge_patch
