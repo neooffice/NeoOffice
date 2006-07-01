@@ -33,6 +33,7 @@
  *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
+
 #ifndef _SV_SVSYS_HXX
 #include <svsys.h>
 #endif
@@ -417,7 +418,8 @@ MenuItemData* MenuItemList::SearchItem( xub_Unicode cSelectChar, KeyCode aKeyCod
                 {
                     KeyCode mnKeyCode;
                     xub_Unicode mnUnicode = pData->aText.GetChar(n+1);
-                    if( (ImplGetDefaultWindow()->ImplGetFrame()->MapUnicodeToKeyCode( mnUnicode, Application::GetSettings().GetUILanguage(), mnKeyCode ) 
+                    Window* pDefWindow = ImplGetDefaultWindow();
+                    if( (pDefWindow && pDefWindow->ImplGetFrame()->MapUnicodeToKeyCode( mnUnicode, Application::GetSettings().GetUILanguage(), mnKeyCode ) 
                         && aKeyCode.GetCode() == mnKeyCode.GetCode())
                         || (ascii && rI18nHelper.MatchMnemonic( pData->aText, ascii ) ) )
 
@@ -472,7 +474,8 @@ USHORT MenuItemList::GetItemCount( KeyCode aKeyCode ) const
                 KeyCode mnKeyCode;
                 // if MapUnicodeToKeyCode fails or is unsupported we try the pure ascii mapping of the keycodes
                 // so we have working shortcuts when ascii mnemonics are used
-                if( (ImplGetDefaultWindow()->ImplGetFrame()->MapUnicodeToKeyCode( pData->aText.GetChar(n+1), Application::GetSettings().GetUILanguage(), mnKeyCode ) 
+                Window* pDefWindow = ImplGetDefaultWindow();
+                if( (pDefWindow && pDefWindow->ImplGetFrame()->MapUnicodeToKeyCode( pData->aText.GetChar(n+1), Application::GetSettings().GetUILanguage(), mnKeyCode ) 
                     && aKeyCode.GetCode() == mnKeyCode.GetCode())
                     || ( ascii && rI18nHelper.MatchMnemonic( pData->aText, ascii ) ) )
                     nItems++;
@@ -578,7 +581,6 @@ public:
     USHORT          GetPosInParent() const { return nPosInParent; }
 
     virtual ::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessible > CreateAccessible();
-    BOOL            IsTopmostApplicationMenu();
 };
 
 // To get the transparent mouse-over look, the closer is actually a toolbox
@@ -1117,6 +1119,13 @@ void Menu::ImplCallEventListeners( ULONG nEvent, USHORT nPos )
 {
     VclMenuEvent aEvent( this, nEvent, nPos );
 
+    // This is needed by atk accessibility bridge
+    if ( nEvent == VCLEVENT_MENU_HIGHLIGHT )
+    {
+        ImplSVData* pSVData = ImplGetSVData();
+        pSVData->mpApp->ImplCallEventListeners( &aEvent );
+    }
+    
     if ( !maEventListeners.empty() )
         maEventListeners.Call( &aEvent );
 
@@ -2175,6 +2184,51 @@ void Menu::SetAccessible( const ::com::sun::star::uno::Reference< ::com::sun::st
 	mxAccessible = rxAccessible;
 }
 
+long Menu::ImplGetNativeCheckAndRadioHeight( Window* pWin, long& rCheckHeight, long& rRadioHeight ) const
+{
+    rCheckHeight = rRadioHeight = 0;
+    
+    if( ! bIsMenuBar )
+    {
+        ImplControlValue aVal;
+        Region aNativeBounds;
+        Region aNativeContent;
+        Point tmp( 0, 0 );
+        Region aCtrlRegion( Rectangle( tmp, Size( 100, 15 ) ) );
+        if( pWin->IsNativeControlSupported( CTRL_MENU_POPUP, PART_MENU_ITEM_CHECK_MARK ) )
+        {
+            if( pWin->GetNativeControlRegion( ControlType(CTRL_MENU_POPUP),
+                                              ControlPart(PART_MENU_ITEM_CHECK_MARK),
+                                              aCtrlRegion,
+                                              ControlState(CTRL_STATE_ENABLED),
+                                              aVal,
+                                              OUString(),
+                                              aNativeBounds,
+                                              aNativeContent )
+            )
+            {
+                rCheckHeight = aNativeBounds.GetBoundRect().GetHeight();
+            }
+        }
+        if( pWin->IsNativeControlSupported( CTRL_MENU_POPUP, PART_MENU_ITEM_RADIO_MARK ) )
+        {
+            if( pWin->GetNativeControlRegion( ControlType(CTRL_MENU_POPUP),
+                                              ControlPart(PART_MENU_ITEM_RADIO_MARK),
+                                              aCtrlRegion,
+                                              ControlState(CTRL_STATE_ENABLED),
+                                              aVal,
+                                              OUString(),
+                                              aNativeBounds,
+                                              aNativeContent )
+            )
+            {
+                rRadioHeight = aNativeBounds.GetBoundRect().GetHeight();
+            }
+        }
+    }
+    return (rCheckHeight > rRadioHeight) ? rCheckHeight : rRadioHeight;
+}
+
 Size Menu::ImplCalcSize( Window* pWin )
 {
     // | Checked| Image| Text| Accel/Popup|
@@ -2183,10 +2237,15 @@ Size Menu::ImplCalcSize( Window* pWin )
     long nFontHeight = pWin->GetTextHeight();
     long nExtra = nFontHeight/4;
 
+
     Size aSz;
     Size aMaxImgSz;
     long nMaxWidth = 0;
     long nMinMenuItemHeight = nFontHeight;
+    long nCheckHeight = 0, nRadioHeight = 0;
+    long nMax = ImplGetNativeCheckAndRadioHeight( pWin, nCheckHeight, nRadioHeight );
+    if( nMax > nMinMenuItemHeight )
+        nMinMenuItemHeight = nMax;
 
 	const StyleSettings& rSettings = pWin->GetSettings().GetStyleSettings();
 	if ( rSettings.GetUseImagesInMenus() )
@@ -2293,7 +2352,13 @@ Size Menu::ImplCalcSize( Window* pWin )
     {
         USHORT gfxExtra = (USHORT) Max( nExtra, 7L ); // #107710# increase space between checkmarks/images/text
         nCheckPos = (USHORT)nExtra;
-        nImagePos = (USHORT)(nCheckPos + nFontHeight/2 + gfxExtra );
+        // non-NWF case has an implicit little extra space around
+        // the symbol; NWF case has not, so image pos needs to
+        // be distinct in this case
+        if( nMax > 0 ) // NWF case
+            nImagePos = (USHORT)(nCheckPos + nMax + nExtra );
+        else // non NWF case
+            nImagePos = (USHORT)(nCheckPos + nFontHeight/2 + gfxExtra );
         nTextPos = (USHORT)(nImagePos+aMaxImgSz.Width());
         if ( aMaxImgSz.Width() )
             nTextPos += gfxExtra;
@@ -2352,6 +2417,9 @@ void Menu::ImplPaint( Window* pWin, USHORT nBorder, long nStartY, MenuItemData* 
     // Fuer Symbole: nFontHeight x nFontHeight
     long nFontHeight = pWin->GetTextHeight();
     long nExtra = nFontHeight/4;
+
+    long nCheckHeight = 0, nRadioHeight = 0;
+    long nMax = ImplGetNativeCheckAndRadioHeight( pWin, nCheckHeight, nRadioHeight );
 
     DecorationView aDecoView( pWin );
     const StyleSettings& rSettings = pWin->GetSettings().GetStyleSettings();
@@ -2475,28 +2543,63 @@ void Menu::ImplPaint( Window* pWin, USHORT nBorder, long nStartY, MenuItemData* 
                 }
 
                 // CheckMark
-                if ( !bLayout && !bIsMenuBar && pData->bChecked )
+                if ( !bLayout && !bIsMenuBar &&
+                     ( pData->bChecked  || ( pData->nBits & ( MIB_RADIOCHECK | MIB_CHECKABLE | MIB_AUTOCHECK ) ) ) )
                 {
-                    Rectangle aRect;
-                    SymbolType eSymbol;
-                    aTmpPos.Y() = aPos.Y();
-                    aTmpPos.Y() += nExtra/2;
-                    aTmpPos.Y() += pData->aSz.Height() / 2;
-                    if ( pData->nBits & MIB_RADIOCHECK )
+                    if ( pWin->IsNativeControlSupported( CTRL_MENU_POPUP,
+                                                         (pData->nBits & MIB_RADIOCHECK)
+                                                         ? PART_MENU_ITEM_CHECK_MARK
+                                                         : PART_MENU_ITEM_RADIO_MARK ) )
                     {
+                        ControlPart nPart = ((pData->nBits & MIB_RADIOCHECK)
+                                             ? PART_MENU_ITEM_RADIO_MARK
+                                             : PART_MENU_ITEM_CHECK_MARK);
+
+                        ControlState nState = 0;
+
+                        if ( pData->bChecked )
+                            nState |= CTRL_STATE_PRESSED;
+
+                        if ( pData->bEnabled )
+                            nState |= CTRL_STATE_ENABLED;
+
+                        if ( bHighlighted )
+                            nState |= CTRL_STATE_SELECTED;
+
                         aTmpPos.X() = aPos.X() + nCheckPos;
-                        eSymbol = SYMBOL_RADIOCHECKMARK;
-                        aTmpPos.Y() -= nFontHeight/4;
-                        aRect = Rectangle( aTmpPos, Size( nFontHeight/2, nFontHeight/2 ) );
+                        aTmpPos.Y() = aPos.Y() + nCheckPos;
+                        
+                        long nCtrlHeight = (pData->nBits & MIB_RADIOCHECK) ? nCheckHeight : nRadioHeight;
+                        Rectangle aCheckRect( aTmpPos, Size( nCtrlHeight, nCtrlHeight ) );                            
+                        pWin->DrawNativeControl( CTRL_MENU_POPUP, nPart,
+                                                 Region( aCheckRect ),
+                                                 nState,
+                                                 ImplControlValue(),
+                                                 OUString() );
                     }
-                    else
+                    else if ( pData->bChecked ) // by default do nothing for unchecked items
                     {
-                        aTmpPos.X() = aPos.X() + nCheckPos;
-                        eSymbol = SYMBOL_CHECKMARK;
-                        aTmpPos.Y() -= nFontHeight/4;
-                        aRect = Rectangle( aTmpPos, Size( (nFontHeight*25)/40, nFontHeight/2 ) );
+                        Rectangle aRect;
+                        SymbolType eSymbol;
+                        aTmpPos.Y() = aPos.Y();
+                        aTmpPos.Y() += nExtra/2;
+                        aTmpPos.Y() += pData->aSz.Height() / 2;
+                        if ( pData->nBits & MIB_RADIOCHECK )
+                        {
+                            aTmpPos.X() = aPos.X() + nCheckPos;
+                            eSymbol = SYMBOL_RADIOCHECKMARK;
+                            aTmpPos.Y() -= nFontHeight/4;
+                            aRect = Rectangle( aTmpPos, Size( nFontHeight/2, nFontHeight/2 ) );
+                        }
+                        else
+                        {
+                            aTmpPos.X() = aPos.X() + nCheckPos;
+                            eSymbol = SYMBOL_CHECKMARK;
+                            aTmpPos.Y() -= nFontHeight/4;
+                            aRect = Rectangle( aTmpPos, Size( (nFontHeight*25)/40, nFontHeight/2 ) );
+                        }
+                        aDecoView.DrawSymbol( aRect, eSymbol, pWin->GetTextColor(), nSymbolStyle );
                     }
-                    aDecoView.DrawSymbol( aRect, eSymbol, pWin->GetTextColor(), nSymbolStyle );
                 }
 
                 // SubMenu?
@@ -2900,7 +3003,20 @@ BOOL Menu::GetSystemMenuData( SystemMenuData* pData ) const
         return FALSE;
 }
 
-
+bool Menu::IsHighlighted( USHORT nItemPos ) const
+{
+    bool bRet = false;
+    
+    if( pWindow )
+    {
+        if( bIsMenuBar )
+            bRet = ( nItemPos == static_cast< MenuBarWindow * > (pWindow)->GetHighlightedItem() );
+        else
+            bRet = ( nItemPos == static_cast< MenuFloatingWindow * > (pWindow)->GetHighlightedItem() );
+    }
+    
+    return bRet;
+}
 
 // -----------
 // - MenuBar -
@@ -4422,9 +4538,13 @@ void MenuFloatingWindow::KeyInput( const KeyEvent& rKEvent )
             else
             {
 				StopExecute();
-                MenuFloatingWindow* pFloat = ((PopupMenu*)pMenu->pStartedFrom)->ImplGetFloatingWindow();
+                PopupMenu* pPopupMenu = (PopupMenu*)pMenu->pStartedFrom;
+                MenuFloatingWindow* pFloat = pPopupMenu->ImplGetFloatingWindow();
                 pFloat->GrabFocus();
                 pFloat->KillActivePopup();
+                DBG_ASSERT( pPopupMenu->pStartedFrom, "popup mysteriously killed" );
+                if (pPopupMenu->pStartedFrom)
+                    pPopupMenu->pStartedFrom->ImplCallHighlight(pFloat->nHighlightedItem);
             }
 		}
 		break;
@@ -4638,16 +4758,10 @@ void MenuFloatingWindow::Command( const CommandEvent& rCEvt )
 {
 	::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessible > xAcc;
 
-	if ( pMenu )
+	if ( pMenu && !pMenu->pStartedFrom )
 		xAcc = pMenu->GetAccessible();
 
 	return xAcc;
-}
-
-
-BOOL MenuFloatingWindow::IsTopmostApplicationMenu()
-{
-    return (!pMenu->pStartedFrom) ? TRUE : FALSE;
 }
 
 MenuBarWindow::MenuBarWindow( Window* pParent ) :

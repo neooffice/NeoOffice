@@ -171,6 +171,7 @@ SHL1STDLIBS+=\
             $(SOTLIB)           \
             $(UNOTOOLSLIB)      \
             $(TOOLSLIB)         \
+            $(I18NISOLANGLIB)   \
             $(COMPHELPERLIB)	\
             $(UCBHELPERLIB)     \
             $(CPPUHELPERLIB)    \
@@ -369,8 +370,10 @@ PKGCONFIG_MODULES=gtk+-2.0 gthread-2.0
 LIB4TARGET=$(SLB)$/igtk_plug_
 LIB4FILES=\
 			$(SLB)$/gtkapp.lib\
+			$(SLB)$/gtka11y.lib \
 			$(SLB)$/gtkgdi.lib\
 			$(SLB)$/gtkwin.lib
+
 SHL4TARGET=vclplug_gtk$(UPD)$(DLLPOSTFIX)
 SHL4IMPLIB=igtk_plug_
 SHL4LIBS=$(LIB4TARGET)

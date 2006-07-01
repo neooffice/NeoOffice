@@ -57,6 +57,9 @@
 
 #include <unohelp.hxx>
 
+#ifndef _TOOLS_TIME_HXX
+#include <tools/time.hxx>
+#endif
 #ifndef _DEBUG_HXX
 #include <tools/debug.hxx>
 #endif
@@ -263,10 +266,10 @@ WindowImpl::~WindowImpl()
 // -----------------------------------------------------------------------
 
 // helper method to allow inline constructor even for pWindow!=NULL case
-void ImplDelData::AttachToWindow( Window* pWindow )
+void ImplDelData::AttachToWindow( const Window* pWindow )
 {
     if( pWindow )
-        pWindow->ImplAddDel( this );
+        const_cast<Window*>(pWindow)->ImplAddDel( this );
 }
 
 // -----------------------------------------------------------------------
@@ -279,7 +282,7 @@ ImplDelData::~ImplDelData()
     if( !mbDel && mpWindow )
     {
         // the window still exists but we were not removed
-        mpWindow->ImplRemoveDel( this );
+        const_cast<Window*>(mpWindow)->ImplRemoveDel( this );
         mpWindow = NULL;
     }
 }
@@ -337,8 +340,6 @@ void Window::ImplInitAppFontData( Window* pWindow )
 
 bool Window::ImplCheckUIFont( const Font& rFont )
 {
-    ImplInitFontList();
-
     String aTestText;
     aTestText.Append( Button::GetStandardText( BUTTON_OK ) );
     aTestText.Append( Button::GetStandardText( BUTTON_CANCEL ) );
@@ -369,7 +370,7 @@ void Window::ImplUpdateGlobalSettings( AllSettings& rSettings, BOOL bCallHdl )
     if ( !bUseSystemFont )
     {
         ImplInitFontList();
-        String aConfigFont = vcl::DefaultFontConfigItem::get()->getUserInterfaceFont( rSettings.GetUILocale() );
+        String aConfigFont = vcl::DefaultFontConfiguration::get()->getUserInterfaceFont( rSettings.GetUILocale() );
         xub_StrLen nIndex = 0;
         while( nIndex != STRING_NOTFOUND )
         {
@@ -826,7 +827,7 @@ void Window::ImplInit( Window* pParent, WinBits nStyle, SystemParentData* pSyste
 
         if( nStyle & WB_NOSHADOW )
             nFrameStyle |= SAL_FRAME_STYLE_NOSHADOW;
-        
+
         if( mpWindowImpl->mnType == WINDOW_DIALOG           ||
             mpWindowImpl->mnType == WINDOW_MODALDIALOG     ||
             mpWindowImpl->mnType == WINDOW_MODELESSDIALOG )
@@ -944,7 +945,7 @@ void Window::ImplInit( Window* pParent, WinBits nStyle, SystemParentData* pSyste
         // delay settings initialization until first "real" frame
         // this relies on the IntroWindow not needing any system settings
         if ( !pSVData->maAppData.mbSettingsInit &&
-             ! (nStyle & (WB_INTROWIN|WB_DEFAULTWIN)) 
+             ! (nStyle & (WB_INTROWIN|WB_DEFAULTWIN))
              )
         {
             mpWindowImpl->mpFrame->UpdateSettings( *pSVData->maAppData.mpSettings );
@@ -995,7 +996,7 @@ void Window::ImplInit( Window* pParent, WinBits nStyle, SystemParentData* pSyste
 
     ImplUpdatePos();
 
-    // calculate app font res (except for the Intro Window or the default window) 
+    // calculate app font res (except for the Intro Window or the default window)
     if ( mpWindowImpl->mbFrame && !pSVData->maGDIData.mnAppFontX && ! (nStyle & (WB_INTROWIN|WB_DEFAULTWIN)) )
         ImplInitAppFontData( this );
 
@@ -1601,7 +1602,7 @@ void Window::ImplResetReallyVisible()
 
 void Window::ImplSetReallyVisible()
 {
-    // #i43594# it is possible that INITSHOW was never send, because the visibility state changed between 
+    // #i43594# it is possible that INITSHOW was never send, because the visibility state changed between
     // ImplCallInitShow() and ImplSetReallyVisible() when called from Show()
     // mbReallyShown is a useful indicator
     if( !mpWindowImpl->mbReallyShown )
@@ -1668,7 +1669,7 @@ void Window::ImplCallInitShow()
 
 // -----------------------------------------------------------------------
 
-void Window::ImplAddDel( ImplDelData* pDel )
+void Window::ImplAddDel( ImplDelData* pDel ) // TODO: make "const" when incompatiblity ok
 {
     DBG_ASSERT( !pDel->mpWindow, "Window::ImplAddDel(): cannot add ImplDelData twice !" );
     if( !pDel->mpWindow )
@@ -1681,7 +1682,7 @@ void Window::ImplAddDel( ImplDelData* pDel )
 
 // -----------------------------------------------------------------------
 
-void Window::ImplRemoveDel( ImplDelData* pDel )
+void Window::ImplRemoveDel( ImplDelData* pDel ) // TODO: make "const" when incompatiblity ok
 {
     pDel->mpWindow = NULL;      // #112873# pDel is not associated with a Window anymore
     if ( mpWindowImpl->mpFirstDel == pDel )
@@ -4045,6 +4046,7 @@ void Window::ImplGrabFocus( USHORT nFlags )
         }
 
         Window* pOldFocusWindow = pSVData->maWinData.mpFocusWin;
+        ImplDelData aOldFocusDel( pOldFocusWindow );
 
         pSVData->maWinData.mpFocusWin = this;
 
@@ -4182,7 +4184,7 @@ void Window::ImplGrabFocus( USHORT nFlags )
         while ( pActivateParent != this );
 */
         // call Get- and LoseFocus
-        if ( pOldFocusWindow )
+        if ( pOldFocusWindow && ! aOldFocusDel.IsDelete() )
         {
             if ( pOldFocusWindow->IsTracking() &&
                  (pSVData->maWinData.mnTrackFlags & STARTTRACK_FOCUSCANCEL) )
@@ -4212,12 +4214,13 @@ void Window::ImplGrabFocus( USHORT nFlags )
                 // notify the new focus window so it can restore the inner focus
                 // eg, toolboxes can select their recent active item
                 if( pOldFocusWindow &&
+                    ! aOldFocusDel.IsDelete() &&
                     ( pOldFocusWindow->GetDialogControlFlags() & WINDOW_DLGCTRL_FLOATWIN_POPUPMODEEND_CANCEL ) )
                     mpWindowImpl->mnGetFocusFlags |= GETFOCUS_FLOATWIN_POPUPMODEEND_CANCEL;
                 NotifyEvent aNEvt( EVENT_GETFOCUS, this );
                 if ( !ImplCallPreNotify( aNEvt ) )
                     GetFocus();
-                ImplCallActivateListeners( pOldFocusWindow );
+                ImplCallActivateListeners( (pOldFocusWindow && ! aOldFocusDel.IsDelete()) ? pOldFocusWindow : NULL );
                 if( !aDogTag.IsDelete() )
                 {
                     mpWindowImpl->mnGetFocusFlags = 0;
@@ -4454,7 +4457,7 @@ Window::~Window()
             aTempStr += ") with living SystemWindow(s) destroyed: ";
             aTempStr += aErrorStr;
             DBG_ERROR( aTempStr.GetBuffer() );
-		    GetpApp()->Abort(String());   // abort in non-pro version, this must be fixed!
+		    GetpApp()->Abort( String( aTempStr, RTL_TEXTENCODING_UTF8 ) );   // abort in non-pro version, this must be fixed!
         }
 
         bError = FALSE;
@@ -4477,7 +4480,7 @@ Window::~Window()
             aTempStr += ") with living SystemWindow(s) destroyed: ";
             aTempStr += aErrorStr;
             DBG_ERROR( aTempStr.GetBuffer() );
-		    GetpApp()->Abort(String());   // abort in non-pro version, this must be fixed!
+		    GetpApp()->Abort( String( aTempStr, RTL_TEXTENCODING_UTF8 ) );   // abort in non-pro version, this must be fixed!
         }
 
         if ( mpWindowImpl->mpFirstChild )
@@ -4494,7 +4497,7 @@ Window::~Window()
                     aTempStr += "; ";
             }
             DBG_ERROR( aTempStr.GetBuffer() );
-		    GetpApp()->Abort(String());   // abort in non-pro version, this must be fixed!
+		    GetpApp()->Abort( String( aTempStr, RTL_TEXTENCODING_UTF8 ) );   // abort in non-pro version, this must be fixed!
         }
 
         if ( mpWindowImpl->mpFirstOverlap )
@@ -4511,9 +4514,9 @@ Window::~Window()
                     aTempStr += "; ";
             }
             DBG_ERROR( aTempStr.GetBuffer() );
-		    GetpApp()->Abort(String());   // abort in non-pro version, this must be fixed!
+		    GetpApp()->Abort( String( aTempStr, RTL_TEXTENCODING_UTF8 ) );   // abort in non-pro version, this must be fixed!
         }
-        
+
         Window* pMyParent = this;
         SystemWindow* pMySysWin = NULL;
 
@@ -4529,7 +4532,7 @@ Window::~Window()
             aTempStr += ByteString( GetText(), RTL_TEXTENCODING_UTF8 );
             aTempStr += ") still in TaskPanelList!";
             DBG_ERROR( aTempStr.GetBuffer() );
-		    GetpApp()->Abort(String());   // abort in non-pro version, this must be fixed!
+		    GetpApp()->Abort( String( aTempStr, RTL_TEXTENCODING_UTF8 ) );   // abort in non-pro version, this must be fixed!
         }
     }
 #endif
@@ -4586,14 +4589,14 @@ Window::~Window()
         aTempStr += ByteString( GetText(), RTL_TEXTENCODING_UTF8 );
         aTempStr += ") with focussed child window destroyed ! THIS WILL LEAD TO CRASHES AND MUST BE FIXED !";
         DBG_ERROR( aTempStr.GetBuffer() );
-        GetpApp()->Abort( String() );   // abort in non-pro version, this must be fixed!
+        GetpApp()->Abort( String( aTempStr, RTL_TEXTENCODING_UTF8 ) );   // abort in non-pro version, this must be fixed!
 #endif
     }
 
     // Wenn wir den Focus haben, dann den Focus auf ein anderes Fenster setzen
     Window* pOverlapWindow = ImplGetFirstOverlapWindow();
-    if ( pSVData->maWinData.mpFocusWin == this 
-        || bHasFocussedChild )  // #122232#, see above, try some cleanup 
+    if ( pSVData->maWinData.mpFocusWin == this
+        || bHasFocussedChild )  // #122232#, see above, try some cleanup
     {
         if ( mpWindowImpl->mbFrame )
         {
@@ -4888,7 +4891,12 @@ void Window::GetFocus()
     }
 
     if ( HasFocus() && mpWindowImpl->mpLastFocusWindow && !(mpWindowImpl->mnDlgCtrlFlags & WINDOW_DLGCTRL_WANTFOCUS) )
+    {
+        ImplDelData aDogtag( this );
         mpWindowImpl->mpLastFocusWindow->GrabFocus();
+        if( aDogtag.IsDelete() )
+            return;
+    }
 
     NotifyEvent aNEvt( EVENT_GETFOCUS, this );
     Notify( aNEvt );
@@ -5590,7 +5598,7 @@ void Window::SetExtendedStyle( WinBits nExtendedStyle )
             SalExtStyle nExt = 0;
             if( (nExtendedStyle & WB_EXT_DOCUMENT) )
                 nExt |= SAL_FRAME_EXT_STYLE_DOCUMENT;
-            
+
             pWindow->ImplGetFrame()->SetExtendedFrameStyle( nExt );
         }
         mpWindowImpl->mnPrevExtendedStyle = mpWindowImpl->mnExtendedStyle;
@@ -6307,16 +6315,20 @@ void Window::SetParent( Window* pNewParent )
 void Window::Show( BOOL bVisible, USHORT nFlags )
 {
     DBG_CHKTHIS( Window, ImplDbgCheckWindow );
-    BOOL bRealVisibilityChanged = FALSE;
 
     if ( mpWindowImpl->mbVisible == bVisible )
         return;
 
-    mpWindowImpl->mbVisible = bVisible != 0;
+    ImplDelData aDogTag( this );
+
+    BOOL bRealVisibilityChanged = FALSE;
+    mpWindowImpl->mbVisible = (bVisible != 0);
 
     if ( !bVisible )
     {
         ImplHideAllOverlaps();
+        if( aDogTag.IsDelete() )
+            return;
 
         if ( mpWindowImpl->mpBorderWindow )
         {
@@ -6351,6 +6363,9 @@ void Window::Show( BOOL bVisible, USHORT nFlags )
                     ImplInitWinClipRegion();
                 aInvRegion = mpWindowImpl->maWinClipRegion;
             }
+
+            if( aDogTag.IsDelete() )
+                return;
 
             bRealVisibilityChanged = mpWindowImpl->mbReallyVisible;
             ImplResetReallyVisible();
@@ -6449,6 +6464,8 @@ void Window::Show( BOOL bVisible, USHORT nFlags )
             mpWindowImpl->mbPaintFrame = TRUE;
             BOOL bNoActivate = nFlags & (SHOW_NOACTIVATE|SHOW_NOFOCUSCHANGE);
             mpWindowImpl->mpFrame->Show( TRUE, bNoActivate );
+            if( aDogTag.IsDelete() )
+                return;
 
             // Query the correct size of the window, if we are waiting for
             // a system resize
@@ -6461,6 +6478,9 @@ void Window::Show( BOOL bVisible, USHORT nFlags )
             }
         }
 
+        if( aDogTag.IsDelete() )
+            return;
+
 #ifdef DBG_UTIL
         if ( IsDialog() || (GetType() == WINDOW_TABPAGE) || (GetType() == WINDOW_DOCKINGWINDOW) )
         {
@@ -6471,7 +6491,9 @@ void Window::Show( BOOL bVisible, USHORT nFlags )
         ImplShowAllOverlaps();
     }
 
-    // Hintergrund-Sicherung zuruecksetzen
+    if( aDogTag.IsDelete() )
+        return;
+    // invalidate all saved backgrounds
     if ( mpWindowImpl->mpFrameData->mpFirstBackWin )
         ImplInvalidateAllOverlapBackgrounds();
 
@@ -6482,6 +6504,8 @@ void Window::Show( BOOL bVisible, USHORT nFlags )
     // now only notify with a NULL data pointer, for all other clients except the access bridge.
     if ( !bRealVisibilityChanged )
         ImplCallEventListeners( mpWindowImpl->mbVisible ? VCLEVENT_WINDOW_SHOW : VCLEVENT_WINDOW_HIDE, NULL );
+    if( aDogTag.IsDelete() )
+        return;
 
     // #107575#, if a floating windows is shown that grabs the focus, we have to notify the toolkit about it
     // ImplGrabFocus() is not called in this case
@@ -6515,8 +6539,11 @@ Size Window::GetSizePixel() const
     // #i43257# trigger pending resize handler to assure correct window sizes
     if( mpWindowImpl->mpFrameData->maResizeTimer.IsActive() )
     {
+        ImplDelData aDogtag( this );
         mpWindowImpl->mpFrameData->maResizeTimer.Stop();
         mpWindowImpl->mpFrameData->maResizeTimer.GetTimeoutHdl().Call( NULL );
+        if( aDogtag.IsDelete() )
+            return Size(0,0);
     }
 
     return Size( mnOutWidth+mpWindowImpl->mnLeftBorder+mpWindowImpl->mnRightBorder,
@@ -6562,6 +6589,15 @@ void Window::Enable( BOOL bEnable, BOOL bChild )
              ((ImplBorderWindow*)mpWindowImpl->mpBorderWindow)->mpMenuBarWindow )
             ((ImplBorderWindow*)mpWindowImpl->mpBorderWindow)->mpMenuBarWindow->Enable( bEnable, TRUE );
     }
+
+    // #i56102# restore app focus win in case the
+    // window was disabled when the frame focus changed
+    ImplSVData* pSVData = ImplGetSVData();
+    if( bEnable &&
+        pSVData->maWinData.mpFocusWin == NULL &&
+        mpWindowImpl->mpFrameData->mbHasFocus &&
+        mpWindowImpl->mpFrameData->mpFocusWin == this )
+        pSVData->maWinData.mpFocusWin = this;
 
     if ( mpWindowImpl->mbDisabled != !bEnable )
     {
@@ -6625,6 +6661,15 @@ void Window::EnableInput( BOOL bEnable, BOOL bChild )
 //              mpWindowImpl->mpFrame->Enable( !mpWindowImpl->mbDisabled && bEnable );
         }
     }
+
+    // #i56102# restore app focus win in case the
+    // window was disabled when the frame focus changed
+    ImplSVData* pSVData = ImplGetSVData();
+    if( bEnable &&
+        pSVData->maWinData.mpFocusWin == NULL &&
+        mpWindowImpl->mpFrameData->mbHasFocus &&
+        mpWindowImpl->mpFrameData->mpFocusWin == this )
+        pSVData->maWinData.mpFocusWin = this;
 
     if ( bChild || mpWindowImpl->mbChildNotify )
     {
@@ -7858,7 +7903,7 @@ const Wallpaper& Window::GetDisplayBackground() const
         if( IsNativeWidgetEnabled() )
             return pTB->ImplGetToolBoxPrivateData()->maDisplayBackground;
     }
-    
+
     if( !IsBackground() )
     {
         if( mpWindowImpl->mpParent )
@@ -8090,7 +8135,11 @@ const SystemEnvData* Window::GetSystemData() const
 
 void Window::SetWindowPeer( ::com::sun::star::uno::Reference< ::com::sun::star::awt::XWindowPeer > xPeer, VCLXWindow* pVCLXWindow  )
 {
+    // be safe against re-entrance: first clear the old ref, then assign the new one
+    // #133706# / 2006-03-30 / frank.schoenheit@sun.com
+    mpWindowImpl->mxWindowPeer.clear();
     mpWindowImpl->mxWindowPeer = xPeer;
+
     mpWindowImpl->mpVCLXWindow = pVCLXWindow;
 }
 
@@ -8151,7 +8200,7 @@ void Window::ImplCallActivateListeners( Window *pOld )
             //           additionally the gallery is not dockable anymore, so 100759 canot occur
 			if ( ImplGetParent() ) /* && mpWindowImpl->mpFrameWindow == ImplGetParent()->mpWindowImpl->mpFrameWindow ) */
 				ImplGetParent()->ImplCallActivateListeners( pOld );
-            else
+            else if( (mpWindowImpl->mnStyle & WB_INTROWIN) == 0 )
             {
                 // top level frame reached: store hint for DefModalDialogParent
                 ImplGetSVData()->maWinData.mpActiveApplicationFrame = mpWindowImpl->mpFrameWindow;
@@ -8820,8 +8869,8 @@ USHORT Window::GetAccessibleRole() const
             case WINDOW_SYSWINDOW:      nRole = (mpWindowImpl->mbFrame) ? accessibility::AccessibleRole::FRAME :
                                                                           accessibility::AccessibleRole::PANEL; break;
 
-            case WINDOW_FLOATINGWINDOW: nRole = ( mpWindowImpl->mbFrame || 
-                                                 (mpWindowImpl->mpBorderWindow && mpWindowImpl->mpBorderWindow->mpWindowImpl->mbFrame) || 
+            case WINDOW_FLOATINGWINDOW: nRole = ( mpWindowImpl->mbFrame ||
+                                                 (mpWindowImpl->mpBorderWindow && mpWindowImpl->mpBorderWindow->mpWindowImpl->mbFrame) ||
                                                  (GetStyle() & WB_OWNERDRAWDECORATION) ) ? accessibility::AccessibleRole::FRAME :
                                                                                            accessibility::AccessibleRole::WINDOW; break;
 
@@ -9025,15 +9074,23 @@ BOOL Window::ImplGetCurrentBackgroundColor( Color& rCol )
 
 void Window::DrawSelectionBackground( const Rectangle& rRect, USHORT highlight, BOOL bChecked, BOOL bDrawBorder, BOOL bDrawExtBorderOnly )
 {
+    DrawSelectionBackground( rRect, highlight, bChecked, bDrawBorder, bDrawExtBorderOnly, NULL );
+}
+
+void Window::DrawSelectionBackground( const Rectangle& rRect, USHORT highlight, BOOL bChecked, BOOL bDrawBorder, BOOL bDrawExtBorderOnly, Color* pSelectionTextColor )
+{
     if( rRect.IsEmpty() )
         return;
 
+    const StyleSettings& rStyles = GetSettings().GetStyleSettings();
+    
+    
     // colors used for item highlighting
-    Color aSelectionBorderCol( GetSettings().GetStyleSettings().GetHighlightColor() );
+    Color aSelectionBorderCol( rStyles.GetHighlightColor() );
     Color aSelectionFillCol( aSelectionBorderCol );
 
-	BOOL bDark = GetSettings().GetStyleSettings().GetFaceColor().IsDark();
-	BOOL bBright = ( GetSettings().GetStyleSettings().GetFaceColor() == Color( COL_WHITE ) );
+	BOOL bDark = rStyles.GetFaceColor().IsDark();
+	BOOL bBright = ( rStyles.GetFaceColor() == Color( COL_WHITE ) );
 
     int c1 = aSelectionBorderCol.GetLuminance();
     int c2 = GetDisplayBackground().GetColor().GetLuminance();
@@ -9093,7 +9150,7 @@ void Window::DrawSelectionBackground( const Rectangle& rRect, USHORT highlight, 
 			if( bDark )
 			    aSelectionFillCol = COL_LIGHTGRAY;
             else if ( bBright )
-            {                    
+            {
 			    aSelectionFillCol = COL_BLACK;
                 SetLineColor( COL_BLACK );
                 if( highlight == 3 )
@@ -9107,9 +9164,23 @@ void Window::DrawSelectionBackground( const Rectangle& rRect, USHORT highlight, 
     }
 
     if( bDark && bDrawExtBorderOnly )
+    {
         SetFillColor();
+        if( pSelectionTextColor )
+            *pSelectionTextColor = rStyles.GetHighlightTextColor();
+    }
     else
+    {
         SetFillColor( aSelectionFillCol );
+        if( pSelectionTextColor )
+        {
+            Color aTextColor = IsControlBackground() ? GetControlForeground() : rStyles.GetButtonTextColor();
+            Color aHLTextColor = rStyles.GetHighlightTextColor();
+            int nTextDiff = abs(aSelectionFillCol.GetLuminance() - aTextColor.GetLuminance());
+            int nHLDiff = abs(aSelectionFillCol.GetLuminance() - aHLTextColor.GetLuminance());
+            *pSelectionTextColor = (nHLDiff >= nTextDiff) ? aHLTextColor : aTextColor;
+        }
+    }
 
 
 	if( bDark )
@@ -9614,7 +9685,8 @@ void Window::PaintToDevice( OutputDevice* pDev, const Point& rPos, const Size& r
     if( ! mpWindowImpl->mbVisible )
     {
         Window* pTempParent = ImplGetDefaultWindow();
-        pTempParent->EnableChildTransparentMode();
+        if( pTempParent )
+            pTempParent->EnableChildTransparentMode();
         pRealParent = GetParent();
         SetParent( pTempParent );
         // trigger correct visibility flags for children

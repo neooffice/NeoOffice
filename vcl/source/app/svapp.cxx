@@ -29,7 +29,7 @@
  *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
  *    MA  02111-1307  USA
  *
- *    Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+ *    Modified June 2006 by Patrick Luby. NeoOffice is distributed under
  *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
@@ -56,6 +56,12 @@
 #endif
 #ifndef _DEBUG_HXX
 #include <tools/debug.hxx>
+#endif
+#ifndef _TOOLS_TIME_HXX
+#include <tools/time.hxx>
+#endif
+#ifndef INCLUDED_I18NPOOL_MSLANGID_HXX
+#include <i18npool/mslangid.hxx>
 #endif
 #ifndef _SV_SVDATA_HXX
 #include <svdata.hxx>
@@ -165,7 +171,7 @@ namespace
     			ImplReservedKey(KeyCode(KEY_F6,KEY_SHIFT),          SV_SHORTCUT_PREVSUBWINDOW),
     			ImplReservedKey(KeyCode(KEY_F6,KEY_MOD1|KEY_SHIFT), SV_SHORTCUT_SPLITTER),
     			ImplReservedKey(KeyCode(KEY_F10,0),                 SV_SHORTCUT_MENUBAR)
-#if defined UNX && !defined USE_JAVA
+#ifdef UNX && !defined USE_JAVA
                 ,
                 ImplReservedKey(KeyCode(KEY_1,KEY_SHIFT|KEY_MOD1), 0),
                 ImplReservedKey(KeyCode(KEY_2,KEY_SHIFT|KEY_MOD1), 0),
@@ -696,15 +702,18 @@ void Application::MergeSystemSettings( AllSettings& rSettings )
     Window* pWindow = ImplGetSVData()->maWinData.mpFirstFrame;
     if( ! pWindow )
         pWindow = ImplGetDefaultWindow();
-    ImplSVData* pSVData = ImplGetSVData();
-    if ( !pSVData->maAppData.mbSettingsInit )
+    if( pWindow )
     {
-        pWindow->ImplGetFrame()->UpdateSettings( *pSVData->maAppData.mpSettings );
-        pWindow->ImplUpdateGlobalSettings( *pSVData->maAppData.mpSettings );
-        pSVData->maAppData.mbSettingsInit = TRUE;
+        ImplSVData* pSVData = ImplGetSVData();
+        if ( !pSVData->maAppData.mbSettingsInit )
+        {
+            pWindow->ImplGetFrame()->UpdateSettings( *pSVData->maAppData.mpSettings );
+            pWindow->ImplUpdateGlobalSettings( *pSVData->maAppData.mpSettings );
+            pSVData->maAppData.mbSettingsInit = TRUE;
+        }
+        pWindow->ImplGetFrame()->UpdateSettings( rSettings );
+        pWindow->ImplUpdateGlobalSettings( rSettings, FALSE );
     }
-    pWindow->ImplGetFrame()->UpdateSettings( rSettings );
-    pWindow->ImplUpdateGlobalSettings( rSettings, FALSE );
 }
 
 // -----------------------------------------------------------------------
@@ -715,15 +724,21 @@ bool Application::ValidateSystemFont()
     if( ! pWindow )
         pWindow = ImplGetDefaultWindow();
 
-    AllSettings aSettings;
-    pWindow->ImplGetFrame()->UpdateSettings( aSettings );
-    return pWindow->ImplCheckUIFont( aSettings.GetStyleSettings().GetAppFont() );
+    if( pWindow )
+    {
+        AllSettings aSettings;
+        pWindow->ImplGetFrame()->UpdateSettings( aSettings );
+        return pWindow->ImplCheckUIFont( aSettings.GetStyleSettings().GetAppFont() );
+    }
+    return false;
 }
 
 // -----------------------------------------------------------------------
 
 void Application::SetSettings( const AllSettings& rSettings )
 {
+    MsLangId::setConfiguredSystemLanguage( rSettings.GetLanguage());
+    MsLangId::setConfiguredSystemUILanguage( rSettings.GetUILanguage());
     ImplSVData* pSVData = ImplGetSVData();
     if ( !pSVData->maAppData.mpSettings )
     {
@@ -868,7 +883,7 @@ void Application::ImplCallEventListeners( ULONG nEvent, Window *pWin, void* pDat
 
 // -----------------------------------------------------------------------
 
-void Application::ImplCallEventListeners( VclWindowEvent* pEvent )
+void Application::ImplCallEventListeners( VclSimpleEvent* pEvent )
 {
     ImplSVData* pSVData = ImplGetSVData();
 
@@ -1109,7 +1124,8 @@ BOOL Application::PostUserEvent( ULONG& rEventId, ULONG nEvent, void* pEventData
     pSVEvent->mpWindow  = NULL;
     pSVEvent->mbCall    = TRUE;
     rEventId = (ULONG)pSVEvent;
-    if ( ImplGetDefaultWindow()->ImplGetFrame()->PostEvent( pSVEvent ) )
+    Window* pDefWindow = ImplGetDefaultWindow();
+    if ( pDefWindow && pDefWindow->ImplGetFrame()->PostEvent( pSVEvent ) )
         return TRUE;
     else
     {
@@ -1130,7 +1146,8 @@ BOOL Application::PostUserEvent( ULONG& rEventId, const Link& rLink, void* pCall
     pSVEvent->mpWindow  = NULL;
     pSVEvent->mbCall    = TRUE;
     rEventId = (ULONG)pSVEvent;
-    if ( ImplGetDefaultWindow()->ImplGetFrame()->PostEvent( pSVEvent ) )
+    Window* pDefWindow = ImplGetDefaultWindow();
+    if ( pDefWindow && pDefWindow->ImplGetFrame()->PostEvent( pSVEvent ) )
         return TRUE;
     else
     {
@@ -1228,7 +1245,7 @@ long    Application::GetTopWindowCount()
 {
     long nRet = 0;
     ImplSVData* pSVData = ImplGetSVData();
-    Window *pWin = pSVData->maWinData.mpFirstFrame;
+    Window *pWin = pSVData ? pSVData->maWinData.mpFirstFrame : NULL;
     while( pWin )
     {
         if( pWin->ImplGetWindow()->IsTopWindow() )
@@ -1244,7 +1261,7 @@ Window* Application::GetTopWindow( long nIndex )
 {
     long nIdx = 0;
     ImplSVData* pSVData = ImplGetSVData();
-    Window *pWin = pSVData->maWinData.mpFirstFrame;
+    Window *pWin = pSVData ? pSVData->maWinData.mpFirstFrame : NULL;
     while( pWin )
     {
         if( pWin->ImplGetWindow()->IsTopWindow() )
@@ -1456,29 +1473,32 @@ Window* Application::GetDefDialogParent()
 
         // current focus frame
         Window *pWin = NULL;
-        if( pWin = pSVData->maWinData.mpFocusWin )
+        if( (pWin = pSVData->maWinData.mpFocusWin) != NULL )
         {
             while( pWin->mpWindowImpl && pWin->mpWindowImpl->mpParent )
                 pWin = pWin->mpWindowImpl->mpParent;
 
-            // check for corrupted window hierarchy, #122232#, may be we now crash somewhere else
-            if( !pWin->mpWindowImpl )
+            if( (pWin->mpWindowImpl->mnStyle & WB_INTROWIN) == 0 )
             {
-                DBG_ERROR( "Window hierarchy corrupted!" );
-                pSVData->maWinData.mpFocusWin = NULL;   // avoid further access
-                return NULL;       
+                // check for corrupted window hierarchy, #122232#, may be we now crash somewhere else
+                if( !pWin->mpWindowImpl )
+                {
+                    DBG_ERROR( "Window hierarchy corrupted!" );
+                    pSVData->maWinData.mpFocusWin = NULL;   // avoid further access
+                    return NULL;       
+                }
+    
+                // MAV: before the implementation has used only decorated windows,
+                //      but it is not true in case of ActiveX or plugin scenario,
+                //      so this check is commented out 
+                // if( pWin->mpWindowImpl->mpFrameWindow->GetStyle() & (WB_MOVEABLE | WB_SIZEABLE) )
+                    return pWin->mpWindowImpl->mpFrameWindow->ImplGetWindow();
+                // else
+                //    return NULL;
             }
-
-            // MAV: before the implementation has used only decorated windows,
-            //      but it is not true in case of ActiveX or plugin scenario,
-            //      so this check is commented out 
-            // if( pWin->mpWindowImpl->mpFrameWindow->GetStyle() & (WB_MOVEABLE | WB_SIZEABLE) )
-                return pWin->mpWindowImpl->mpFrameWindow->ImplGetWindow();
-            // else
-            //    return NULL;
         }
         // last active application frame
-        else if( pWin = pSVData->maWinData.mpActiveApplicationFrame )
+        if( pWin = pSVData->maWinData.mpActiveApplicationFrame )
         {
             return pWin->mpWindowImpl->mpFrameWindow->ImplGetWindow();
         }
@@ -1488,7 +1508,10 @@ Window* Application::GetDefDialogParent()
             pWin = pSVData->maWinData.mpFirstFrame;
             while( pWin )
             {
-                if( pWin->ImplGetWindow()->IsTopWindow() && pWin->mpWindowImpl->mbReallyVisible )
+                if( pWin->ImplGetWindow()->IsTopWindow() &&
+                    pWin->mpWindowImpl->mbReallyVisible &&
+                    (pWin->mpWindowImpl->mnStyle & WB_INTROWIN) == 0
+                )
                 {
                     while( pWin->mpWindowImpl->mpParent )
                         pWin = pWin->mpWindowImpl->mpParent;
@@ -1808,9 +1831,9 @@ long Application::CallEvent( NotifyEvent& rEvt )
 
 // -----------------------------------------------------------------------
 
-const International& Application::GetAppInternational()
+const LocaleDataWrapper& Application::GetAppLocaleDataWrapper()
 {
-    return GetSettings().GetInternational();
+    return GetSettings().GetLocaleDataWrapper();
 }
 
 // -----------------------------------------------------------------------
@@ -1869,10 +1892,12 @@ BOOL Application::IsAccessibilityEnabled()
 
 BOOL InitAccessBridge( BOOL bShowCancel, BOOL &rCancelled )
 {
-    BOOL bRet = ImplInitAccessBridge( bShowCancel, rCancelled );
+    BOOL bRet = true;
 
-// There is no GUI to re-enable accessibility on Unix ..
+// Disable Java bridge on UNIX
 #ifndef UNX
+    bRet = ImplInitAccessBridge( bShowCancel, rCancelled );
+    
     if( !bRet && bShowCancel && !rCancelled )
     {
         // disable accessibility if the user chooses to continue
@@ -1882,7 +1907,7 @@ BOOL InitAccessBridge( BOOL bShowCancel, BOOL &rCancelled )
         aSettings.SetMiscSettings( aMisc );
         Application::SetSettings( aSettings );
     }
-#endif
+#endif // !UNX
 
     return bRet;
 }

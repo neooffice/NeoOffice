@@ -117,6 +117,27 @@
 #include <com/sun/star/datatransfer/dnd/XDropTarget.hpp>
 #endif
 
+#ifndef _COM_SUN_STAR_I18N_XEXTENDEDINPUTSEQUENCECHECKER_HDL_
+#include <com/sun/star/i18n/XExtendedInputSequenceChecker.hpp>
+#endif
+
+#ifndef _COM_SUN_STAR_I18N_INPUTSEQUENCECHECKMODE_HPP_
+#include <com/sun/star/i18n/InputSequenceCheckMode.hpp>
+#endif
+
+#ifndef _COM_SUN_STAR_I18N_SCRIPTTYPE_HPP_
+#include <com/sun/star/i18n/ScriptType.hpp>
+#endif
+
+#ifndef _COM_SUN_STAR_CONTAINER_XNAMEACCESS_HPP_
+#include <com/sun/star/container/XNameAccess.hpp>
+#endif
+
+#include <com/sun/star/uno/Any.hxx>
+
+#include <comphelper/processfactory.hxx>
+#include <comphelper/configurationhelper.hxx>
+
 #include <sot/exchange.hxx>
 #include <sot/formats.hxx>
 #include <rtl/memory.h>
@@ -491,7 +512,7 @@ long Edit::ImplGetExtraOffset() const
     long nExtraOffset = 0;
     if( ( GetStyle() & WB_BORDER ) || ( mbIsSubEdit && ( GetParent()->GetStyle() & WB_BORDER ) ) )
         nExtraOffset = 2;
-	
+
     return nExtraOffset;
 }
 
@@ -789,8 +810,48 @@ String Edit::ImplGetValidString( const String& rString ) const
 }
 
 // -----------------------------------------------------------------------
+Reference < i18n::XBreakIterator > Edit::ImplGetBreakIterator() const
+{
+    //!! since we don't want to become incompatible in the next minor update
+    //!! where this code will get integrated into, xISC will be a local
+    //!! variable instead of a class member!
+    Reference < i18n::XBreakIterator > xBI;
+//    if ( !xBI.is() )
+    {
+        Reference< lang::XMultiServiceFactory > xMSF = ::comphelper::getProcessServiceFactory();
+        Reference < XInterface > xI = xMSF->createInstance( OUString::createFromAscii( "com.sun.star.i18n.BreakIterator" ) );
+        if ( xI.is() )
+        {
+            Any x = xI->queryInterface( ::getCppuType((const Reference< i18n::XBreakIterator >*)0) );
+            x >>= xBI;
+        }
+    }
+    return xBI;
+}
+// -----------------------------------------------------------------------
 
-void Edit::ImplInsertText( const XubString& rStr, const Selection* pNewSel )
+Reference < i18n::XExtendedInputSequenceChecker > Edit::ImplGetInputSequenceChecker() const
+{
+    //!! since we don't want to become incompatible in the next minor update
+    //!! where this code will get integrated into, xISC will be a local
+    //!! variable instead of a class member!
+    Reference < i18n::XExtendedInputSequenceChecker > xISC;
+//    if ( !xISC.is() )
+    {
+        Reference< lang::XMultiServiceFactory > xMSF = ::comphelper::getProcessServiceFactory();
+        Reference < XInterface > xI = xMSF->createInstance( OUString::createFromAscii( "com.sun.star.i18n.InputSequenceChecker" ) );
+        if ( xI.is() )
+        {
+            Any x = xI->queryInterface( ::getCppuType((const Reference< i18n::XExtendedInputSequenceChecker >*)0) );
+            x >>= xISC;
+        }
+    }
+    return xISC;
+}
+
+// -----------------------------------------------------------------------
+
+void Edit::ImplInsertText( const XubString& rStr, const Selection* pNewSel, sal_Bool bIsUserInput )
 {
 	Selection aSelection( maSelection );
 	aSelection.Justify();
@@ -808,6 +869,112 @@ void Edit::ImplInsertText( const XubString& rStr, const Selection* pNewSel )
 		maText.Erase( (xub_StrLen)aSelection.Min(), (xub_StrLen)aSelection.Len() );
 	else if ( !mbInsertMode && (aSelection.Max() < maText.Len()) )
 		maText.Erase( (xub_StrLen)aSelection.Max(), 1 );
+
+    // take care of input-sequence-checking now
+    if (bIsUserInput && rStr.Len())
+    {
+        DBG_ASSERT( rStr.Len() == 1, "unexpected string length. User input is expected to providse 1 char only!" );
+
+        // determine if input-sequence-checking should be applied or not
+        //
+        static OUString sModule( OUString::createFromAscii( "/org.openoffice.Office.Common/I18N" ) );
+        static OUString sRelNode( OUString::createFromAscii( "CTL" ) );
+        static OUString sCTLSequenceChecking( OUString::createFromAscii( "CTLSequenceChecking" ) );
+        static OUString sCTLSequenceCheckingRestricted( OUString::createFromAscii( "CTLSequenceCheckingRestricted" ) );
+        static OUString sCTLSequenceCheckingTypeAndReplace( OUString::createFromAscii( "CTLSequenceCheckingTypeAndReplace" ) );
+        static OUString sCTLFont( OUString::createFromAscii( "CTLFont" ) );
+        //
+        sal_Bool bCTLSequenceChecking               = sal_False;
+        sal_Bool bCTLSequenceCheckingRestricted     = sal_False;
+        sal_Bool bCTLSequenceCheckingTypeAndReplace = sal_False;
+		sal_Bool bCTLFontEnabled					= sal_False;
+        sal_Bool bIsInputSequenceChecking			= sal_False;
+        //
+        // get access to the configuration of this office module
+		try 
+		{
+			Reference< lang::XMultiServiceFactory > xMSF = ::comphelper::getProcessServiceFactory();
+			Reference< container::XNameAccess > xModuleCfg( ::comphelper::ConfigurationHelper::openConfig(
+									xMSF,
+									sModule,
+									::comphelper::ConfigurationHelper::E_READONLY ),
+								uno::UNO_QUERY );
+
+			//!! get values from configuration.
+			//!! we can't use SvtCTLOptions here since vcl must not be linked
+			//!! against svtools. (It is already the other way around.)
+			Any aCTLSequenceChecking                = ::comphelper::ConfigurationHelper::readRelativeKey( xModuleCfg, sRelNode, sCTLSequenceChecking );
+			Any aCTLSequenceCheckingRestricted      = ::comphelper::ConfigurationHelper::readRelativeKey( xModuleCfg, sRelNode, sCTLSequenceCheckingRestricted );
+			Any aCTLSequenceCheckingTypeAndReplace  = ::comphelper::ConfigurationHelper::readRelativeKey( xModuleCfg, sRelNode, sCTLSequenceCheckingTypeAndReplace );
+            Any aCTLFontEnabled                     = ::comphelper::ConfigurationHelper::readRelativeKey( xModuleCfg, sRelNode, sCTLFont );
+			aCTLSequenceChecking                >>= bCTLSequenceChecking;
+			aCTLSequenceCheckingRestricted      >>= bCTLSequenceCheckingRestricted;
+			aCTLSequenceCheckingTypeAndReplace  >>= bCTLSequenceCheckingTypeAndReplace;
+            aCTLFontEnabled                     >>= bCTLFontEnabled;
+		}
+		catch(...)
+		{
+			bIsInputSequenceChecking = sal_False;	// continue with inserting the new text
+		}
+        //
+        uno::Reference < i18n::XBreakIterator > xBI( ImplGetBreakIterator(), UNO_QUERY );
+        bIsInputSequenceChecking = rStr.Len() == 1 &&
+                bCTLFontEnabled &&
+                bCTLSequenceChecking && 
+                aSelection.Min() > 0 && /* first char needs not to be checked */
+                xBI.is() && i18n::ScriptType::COMPLEX == xBI->getScriptType( rStr, 0 );
+
+
+		uno::Reference < i18n::XExtendedInputSequenceChecker > xISC;
+        if (bIsInputSequenceChecking && (xISC = ImplGetInputSequenceChecker()).is())
+        {
+            sal_Unicode cChar = rStr.GetChar(0);
+            xub_StrLen nTmpPos = static_cast< xub_StrLen >( aSelection.Min() );
+            sal_Int16 nCheckMode = bCTLSequenceCheckingRestricted ? 
+                    i18n::InputSequenceCheckMode::STRICT : i18n::InputSequenceCheckMode::BASIC;
+
+            // the text that needs to be checked is only the one 
+            // before the current cursor position
+            rtl::OUString aOldText( maText.Copy(0, nTmpPos) );
+            rtl::OUString aTmpText( aOldText );
+            if (bCTLSequenceCheckingTypeAndReplace)
+            {
+                const xub_StrLen nPrevPos = static_cast< xub_StrLen >( xISC->correctInputSequence( aTmpText, nTmpPos - 1, cChar, nCheckMode ) );
+
+                // find position of first character that has changed
+                sal_Int32 nOldLen = aOldText.getLength();
+                sal_Int32 nTmpLen = aTmpText.getLength();
+                const sal_Unicode *pOldTxt = aOldText.getStr();
+                const sal_Unicode *pTmpTxt = aTmpText.getStr();
+                sal_Int32 nChgPos = 0;
+                while ( nChgPos < nOldLen && nChgPos < nTmpLen &&
+                        pOldTxt[nChgPos] == pTmpTxt[nChgPos] )
+                    ++nChgPos;
+
+                xub_StrLen nChgLen = static_cast< xub_StrLen >( nTmpLen - nChgPos );
+                String aChgText( aTmpText.copy( nChgPos ), nChgLen );
+
+                // remove text from first pos to be changed to current pos
+                maText.Erase( static_cast< xub_StrLen >( nChgPos ), nTmpPos - nChgPos );
+
+                if (aChgText.Len())
+				{
+                    aNewText = aChgText;
+					aSelection.Min() = nChgPos;	// position for new text to be inserted
+				}
+                else
+                    aNewText = String::EmptyString();
+            }
+            else
+            {
+                // should the character be ignored (i.e. not get inserted) ?
+                if (!xISC->checkInputSequence( aOldText, nTmpPos - 1, cChar, nCheckMode ))
+                    aNewText = String::EmptyString();
+            }
+        }
+
+        // at this point now we will insert the non-empty text 'normally' some lines below...
+    }
 
 	if ( aNewText.Len() )
 		maText.Insert( aNewText, (xub_StrLen)aSelection.Min() );
@@ -846,13 +1013,16 @@ void Edit::ImplSetText( const XubString& rText, const Selection* pNewSelection )
 			mnXOffset = 0;
 			maText = ImplGetValidString( rText );
 
+            // #i54929# recalculate mnXOffset before ImplSetSelection,
+            // else cursor ends up in wrong position
+            ImplAlign();
+
 			if ( pNewSelection )
 				ImplSetSelection( *pNewSelection, FALSE );
 
 			if ( mnXOffset && !pNewSelection )
 				maSelection.Max() = 0;
 
-			ImplAlign();
 			Invalidate();
 		}
 		else
@@ -920,7 +1090,6 @@ void Edit::ImplClearBackground( long nXStart, long nXEnd )
     */
 	Point aTmpPoint;
 	Rectangle aRect( aTmpPoint, GetOutputSizePixel() );
-	
 	aRect.Left() = nXStart;
 	aRect.Right() = nXEnd;
 
@@ -943,9 +1112,27 @@ void Edit::ImplClearBackground( long nXStart, long nXEnd )
             if( !aClipRgn.IsNull() )
             {
                 // transform clipping region to border window's coordinate system
-                Point aBorderOffs;
-                aBorderOffs = pBorder->ScreenToOutputPixel( OutputToScreenPixel( aBorderOffs ) );
-                aClipRgn.Move( aBorderOffs.X(), aBorderOffs.Y() );
+                if( IsRTLEnabled() != pBorder->IsRTLEnabled() && Application::GetSettings().GetLayoutRTL() )
+                {
+                    // need to mirror in case border is not RTL but edit is (or vice versa)
+
+                    // mirror
+                    Rectangle aBounds( aClipRgn.GetBoundRect() );
+                    int xNew = GetOutputSizePixel().Width() - aBounds.GetWidth() - aBounds.Left();
+                    aClipRgn.Move( xNew - aBounds.Left(), 0 );
+
+                    // move offset of border window
+                    Point aBorderOffs;
+                    aBorderOffs = pBorder->ScreenToOutputPixel( OutputToScreenPixel( aBorderOffs ) );
+                    aClipRgn.Move( aBorderOffs.X(), aBorderOffs.Y() );
+                }
+                else
+                {
+                    // normal case
+                    Point aBorderOffs;
+                    aBorderOffs = pBorder->ScreenToOutputPixel( OutputToScreenPixel( aBorderOffs ) );
+                    aClipRgn.Move( aBorderOffs.X(), aBorderOffs.Y() );
+                }
 
                 Region oldRgn( pBorder->GetClipRegion() );
                 pBorder->SetClipRegion( aClipRgn );
@@ -1092,7 +1279,7 @@ void Edit::ImplAlignAndPaint( xub_StrLen nChangedFrom, long nOldWidth )
 
 // -----------------------------------------------------------------------
 
-xub_StrLen Edit::ImplGetCharPos( const Point& rWindowPos )
+xub_StrLen Edit::ImplGetCharPos( const Point& rWindowPos ) const
 {
     xub_StrLen nIndex = STRING_LEN;
     String aText = ImplGetText();
@@ -1377,7 +1564,7 @@ BOOL Edit::ImplHandleKeyEvent( const KeyEvent& rKEvt )
 		}
 	}
 
-	if ( !bDone && rKEvt.GetKeyCode().IsMod1() )
+	if ( !bDone && rKEvt.GetKeyCode().IsMod1() && !rKEvt.GetKeyCode().IsMod2() )
 	{
 		if ( nCode == KEY_A )
 		{
@@ -1531,7 +1718,7 @@ BOOL Edit::ImplHandleKeyEvent( const KeyEvent& rKEvt )
 					bDone = TRUE;	// Auch bei ReadOnly die Zeichen schlucken.
 					if ( !mbReadOnly )
 					{
-						ImplInsertText( rKEvt.GetCharCode() );
+                        ImplInsertText( rKEvt.GetCharCode(), 0, sal_True );
 						if ( maAutocompleteHdl.IsSet() )
 						{
 							if ( (maSelection.Min() == maSelection.Max()) && (maSelection.Min() == maText.Len()) )
@@ -2495,6 +2682,8 @@ void Edit::SetSubEdit( Edit* pEdit )
 	{
 		SetPointer( POINTER_ARROW );	// Nur das SubEdit hat den BEAM...
 		mpSubEdit->mbIsSubEdit = TRUE;
+
+        mpSubEdit->SetReadOnly( mbReadOnly );
 	}
 }
 
@@ -2503,7 +2692,6 @@ void Edit::SetSubEdit( Edit* pEdit )
 Size Edit::CalcMinimumSize() const
 {
 	Size aSz( GetTextWidth( GetText() ), GetTextHeight() );
-
 	aSz = CalcWindowSize( aSz );
 	return aSz;
 }
@@ -2516,7 +2704,6 @@ Size Edit::CalcSize( xub_StrLen nChars ) const
 	// Funktioniert nur bei FixedFont richtig, sonst Mittelwert.
 	Size aSz( GetTextWidth( XubString( 'x' ) ), GetTextHeight() );
 	aSz.Width() *= nChars;
-
 	aSz = CalcWindowSize( aSz );
 	return aSz;
 }
@@ -2529,6 +2716,13 @@ xub_StrLen Edit::GetMaxVisChars() const
 	long nOutWidth = pW->GetOutputSizePixel().Width();
 	long nCharWidth = GetTextWidth( XubString( 'x' ) );
 	return nCharWidth ? (xub_StrLen)(nOutWidth/nCharWidth) : 0;
+}
+
+// -----------------------------------------------------------------------
+
+xub_StrLen Edit::GetCharPos( const Point& rWindowPos ) const
+{
+    return ImplGetCharPos( rWindowPos );
 }
 
 // -----------------------------------------------------------------------

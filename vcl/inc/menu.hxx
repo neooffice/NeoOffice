@@ -208,6 +208,10 @@ protected:
     SAL_DLLPRIVATE SalMenu*         ImplGetSalMenu() { return mpSalMenu; }
     SAL_DLLPRIVATE void             ImplSetSalMenu( SalMenu *pMenu );
     SAL_DLLPRIVATE const XubString& ImplGetHelpText( USHORT nItemId ) const;
+    
+    // returns native check and option menu symbol height;
+    // return value is Max( rCheckHeight, rRadioHeight ) 
+    SAL_DLLPRIVATE long             ImplGetNativeCheckAndRadioHeight( Window*, long& rCheckHeight, long& rRadioHeight ) const;
 
 #if _SOLAR__PRIVATE
 public:
@@ -386,6 +390,9 @@ public:
 
 	void				SetAccessibleDescription( USHORT nItemId, const XubString& rStr );
 	XubString			GetAccessibleDescription( USHORT nItemId ) const;
+    
+    // returns whether the item a position nItemPos is highlighted or not.
+    bool  IsHighlighted( USHORT nItemPos ) const;
 };
 
 // -----------

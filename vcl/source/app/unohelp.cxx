@@ -215,7 +215,7 @@ uno::Reference < i18n::XCollator > vcl::unohelper::CreateCollator()
 {
 	// create variable library name suffixes
 	OUString aSUPDString( OUString::valueOf( (sal_Int32)SUPD, 10 ));
-	OUString aDLLSuffix = OUString::createFromAscii( STRING(DLLSUFFIX) );
+	OUString aDLLSuffix = OUString::createFromAscii( STRING(DLLPOSTFIX) );
 
 	OUString aLibName;
 

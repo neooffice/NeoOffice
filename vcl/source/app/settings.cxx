@@ -29,7 +29,7 @@
  *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
  *    MA  02111-1307  USA
  *
- *    Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+ *    Modified June 2006 by Patrick Luby. NeoOffice is distributed under
  *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
@@ -37,8 +37,8 @@
 #ifndef _DEBUG_HXX
 #include <tools/debug.hxx>
 #endif
-#ifndef _ISOLANG_HXX
-#include <tools/isolang.hxx>
+#ifndef INCLUDED_I18NPOOL_MSLANGID_HXX
+#include <i18npool/mslangid.hxx>
 #endif
 
 #ifndef _SV_SVAPP_HXX
@@ -76,7 +76,7 @@
 #include <unotools/confignode.hxx>
 #endif
 
-#if defined UNX && !defined USE_JAVA
+#ifdef UNX && !defined USE_JAVA
 #include <prex.h>
 #include <postx.h>
 #include <dtint.hxx>
@@ -228,6 +228,7 @@ ImplMouseData::ImplMouseData()
     mnActionDelay               = 250;
     mnMenuDelay                 = 150;
     mnFollow                    = MOUSE_FOLLOW_MENU | MOUSE_FOLLOW_DDLIST;
+    mbNoWheelActionWithoutFocus = FALSE;
 }
 
 // -----------------------------------------------------------------------
@@ -255,6 +256,7 @@ ImplMouseData::ImplMouseData( const ImplMouseData& rData )
     mnActionDelay               = rData.mnActionDelay;
     mnMenuDelay                 = rData.mnMenuDelay;
     mnFollow                    = rData.mnFollow;
+    mbNoWheelActionWithoutFocus = rData.mbNoWheelActionWithoutFocus;
 }
 
 // -----------------------------------------------------------------------
@@ -344,7 +346,8 @@ BOOL MouseSettings::operator ==( const MouseSettings& rSet ) const
          (mpData->mnButtonRepeat        == rSet.mpData->mnButtonRepeat)         &&
          (mpData->mnActionDelay         == rSet.mpData->mnActionDelay)          &&
          (mpData->mnMenuDelay           == rSet.mpData->mnMenuDelay)            &&
-         (mpData->mnFollow              == rSet.mpData->mnFollow) )
+         (mpData->mnFollow              == rSet.mpData->mnFollow)               &&
+         (mpData->mbNoWheelActionWithoutFocus == rSet.mpData->mbNoWheelActionWithoutFocus) )
         return TRUE;
     else
         return FALSE;
@@ -578,7 +581,7 @@ void ImplStyleData::SetStandardStyles()
     Font aStdFont( FAMILY_SWISS, Size( 0, 8 ) );
     aStdFont.SetCharSet( gsl_getSystemTextEncoding() );
     aStdFont.SetWeight( WEIGHT_NORMAL );
-    aStdFont.SetName( vcl::DefaultFontConfigItem::get()->getUserInterfaceFont(com::sun::star::lang::Locale( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("en") ), rtl::OUString(), rtl::OUString() ) ) );
+    aStdFont.SetName( vcl::DefaultFontConfiguration::get()->getUserInterfaceFont(com::sun::star::lang::Locale( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("en") ), rtl::OUString(), rtl::OUString() ) ) );
     maAppFont                   = aStdFont;
     maHelpFont                  = aStdFont;
     maMenuFont                  = aStdFont;
@@ -1025,6 +1028,7 @@ ImplMiscData::ImplMiscData()
     mnRefCount                  = 1;
     mnTwoDigitYearStart         = 1930;
     mnEnableATT					= ~0;
+    mnDisablePrinting			= ~0;
     static const char* pEnv = getenv("SAL_DECIMALSEP_ENABLED" ); // set default without UI
     mbEnableLocalizedDecimalSep = (pEnv != NULL) ? TRUE : FALSE;
 }
@@ -1036,6 +1040,7 @@ ImplMiscData::ImplMiscData( const ImplMiscData& rData )
     mnRefCount                  = 1;
     mnTwoDigitYearStart         = rData.mnTwoDigitYearStart;
     mnEnableATT					= rData.mnEnableATT;
+    mnDisablePrinting			= rData.mnDisablePrinting;
     mbEnableLocalizedDecimalSep = rData.mbEnableLocalizedDecimalSep;
 }
 
@@ -1109,12 +1114,28 @@ BOOL MiscSettings::operator ==( const MiscSettings& rSet ) const
 
     if ( (mpData->mnTwoDigitYearStart   == rSet.mpData->mnTwoDigitYearStart ) &&
          (mpData->mnEnableATT			== rSet.mpData->mnEnableATT ) &&
+         (mpData->mnDisablePrinting		== rSet.mpData->mnDisablePrinting ) &&
          (mpData->mbEnableLocalizedDecimalSep == rSet.mpData->mbEnableLocalizedDecimalSep ) )
         return TRUE;
     else
         return FALSE;
 }
 
+// -----------------------------------------------------------------------
+
+BOOL MiscSettings::GetDisablePrinting() const
+{
+    if( mpData->mnDisablePrinting == (USHORT)~0 )
+    {
+        rtl::OUString aEnable =
+            vcl::SettingsConfigItem::get()->
+            getValue( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "DesktopManagement" ) ),
+                      rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "DisablePrinting" ) ) );
+        mpData->mnDisablePrinting = aEnable.equalsIgnoreAsciiCaseAscii( "true" ) ? 1 : 0;
+    }
+    
+    return (BOOL)mpData->mnDisablePrinting;
+}
 // -----------------------------------------------------------------------
 
 BOOL MiscSettings::GetEnableATToolSupport() const
@@ -1175,6 +1196,20 @@ BOOL MiscSettings::GetEnableATToolSupport() const
     }
     
     return (BOOL)mpData->mnEnableATT;
+}
+
+// -----------------------------------------------------------------------
+
+void MiscSettings::SetDisablePrinting( BOOL bEnable )
+{
+    if ( bEnable != mpData->mnDisablePrinting )
+    {
+        vcl::SettingsConfigItem::get()->
+            setValue( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "DesktopManagement" ) ),
+                      rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "DisablePrinting" ) ),
+                      rtl::OUString::createFromAscii( bEnable ? "true" : "false" ) );
+        mpData->mnDisablePrinting = bEnable ? 1 : 0;
+    }
 }
 
 // -----------------------------------------------------------------------
@@ -1561,7 +1596,6 @@ ImplAllSettingsData::ImplAllSettingsData( const ImplAllSettingsData& rData ) :
     maSoundSettings( rData.maSoundSettings ),
     maNotificationSettings( rData.maNotificationSettings ),
     maHelpSettings( rData.maHelpSettings ),
-    maInternational( rData.maInternational ),
     maLocale( rData.maLocale ),
     maUILocale( rData.maUILocale )
 
@@ -1761,37 +1795,8 @@ ULONG AllSettings::Update( ULONG nFlags, const AllSettings& rSet )
 
     if ( nFlags & SETTINGS_INTERNATIONAL )
     {
-        if ( mpData->maInternational != rSet.mpData->maInternational )
-        {
-            CopyData();
-            mpData->maInternational = rSet.mpData->maInternational;
-            mpData->meLanguage = mpData->maInternational.GetFormatLanguage();
-            mpData->meUILanguage = mpData->maInternational.GetLanguage();
-            // Will be calculated in GetLocale()/GetUILocale()
-            mpData->maLocale = ::com::sun::star::lang::Locale();
-            mpData->maUILocale = ::com::sun::star::lang::Locale();
-            nChangeFlags |= SETTINGS_INTERNATIONAL;
-            if ( mpData->mpLocaleDataWrapper )
-            {
-                delete mpData->mpLocaleDataWrapper;
-                mpData->mpLocaleDataWrapper = NULL;
-            }
-            if ( mpData->mpUILocaleDataWrapper )
-            {
-                delete mpData->mpUILocaleDataWrapper;
-                mpData->mpUILocaleDataWrapper = NULL;
-            }
-            if ( mpData->mpI18nHelper )
-            {
-                delete mpData->mpI18nHelper;
-                mpData->mpI18nHelper = NULL;
-            }
-            if ( mpData->mpUII18nHelper )
-            {
-                delete mpData->mpUII18nHelper;
-                mpData->mpUII18nHelper = NULL;
-            }
-        }
+        // Nothing, class International is gone.
+        DBG_ERRORFILE("AllSettings::Update: who calls with SETTINGS_INTERNATIONAL and why? You're flogging a dead horse.");
     }
 
     if ( nFlags & SETTINGS_LOCALE )
@@ -1848,9 +1853,6 @@ ULONG AllSettings::GetChangeFlags( const AllSettings& rSet ) const
     if ( mpData->maHelpSettings != rSet.mpData->maHelpSettings )
         nChangeFlags |= SETTINGS_HELP;
 
-    if ( mpData->maInternational != rSet.mpData->maInternational )
-        nChangeFlags |= SETTINGS_INTERNATIONAL;
-
     if ( mpData->meLanguage || rSet.mpData->meLanguage )
         nChangeFlags |= SETTINGS_LOCALE;
 
@@ -1878,7 +1880,6 @@ BOOL AllSettings::operator ==( const AllSettings& rSet ) const
          (mpData->maSoundSettings           == rSet.mpData->maSoundSettings)        &&
          (mpData->maNotificationSettings    == rSet.mpData->maNotificationSettings) &&
          (mpData->maHelpSettings            == rSet.mpData->maHelpSettings)         &&
-         (mpData->maInternational           == rSet.mpData->maInternational)        &&
          (mpData->mnSystemUpdate            == rSet.mpData->mnSystemUpdate)         &&
          (mpData->mnWindowUpdate            == rSet.mpData->mnWindowUpdate) )
     {
@@ -1905,8 +1906,7 @@ void AllSettings::SetLocale( const ::com::sun::star::lang::Locale& rLocale )
     if ( !rLocale.Language.getLength() )
         mpData->meLanguage = LANGUAGE_SYSTEM;
     else
-        mpData->meLanguage = ConvertIsoNamesToLanguage( rLocale.Language, rLocale.Country );
-    mpData->maInternational = International( mpData->meUILanguage, mpData->meLanguage );
+        mpData->meLanguage = MsLangId::convertLocaleToLanguage( rLocale );
     if ( mpData->mpLocaleDataWrapper )
     {
         delete mpData->mpLocaleDataWrapper;
@@ -1930,8 +1930,7 @@ void AllSettings::SetUILocale( const ::com::sun::star::lang::Locale& rLocale )
     if ( !rLocale.Language.getLength() )
         mpData->meUILanguage = LANGUAGE_SYSTEM;
     else
-        mpData->meUILanguage = ConvertIsoNamesToLanguage( rLocale.Language, rLocale.Country );
-    mpData->maInternational = International( mpData->meUILanguage, mpData->meLanguage );
+        mpData->meUILanguage = MsLangId::convertLocaleToLanguage( rLocale );
     if ( mpData->mpUILocaleDataWrapper )
     {
         delete mpData->mpUILocaleDataWrapper;
@@ -1954,7 +1953,6 @@ void AllSettings::SetLanguage( LanguageType eLang )
 
     // Will be calculated in GetLocale()
     mpData->maLocale = ::com::sun::star::lang::Locale();
-    mpData->maInternational = International( mpData->meUILanguage, mpData->meLanguage );
     if ( mpData->mpLocaleDataWrapper )
     {
         delete mpData->mpLocaleDataWrapper;
@@ -1977,7 +1975,6 @@ void AllSettings::SetUILanguage( LanguageType eLang  )
 
     // Will be calculated in GetUILocale()
     mpData->maUILocale = ::com::sun::star::lang::Locale();
-    mpData->maInternational = International( mpData->meUILanguage, mpData->meLanguage );
     if ( mpData->mpUILocaleDataWrapper )
     {
         delete mpData->mpUILocaleDataWrapper;
@@ -2027,34 +2024,7 @@ BOOL AllSettings::GetLayoutRTL() const
         ImplSVData* pSVData = ImplGetSVData();
         if ( pSVData->maAppData.mpSettings )
             aLang = pSVData->maAppData.mpSettings->GetUILanguage();
-
-        switch( aLang )
-        {
-            // languages with right-to-left UI
-            case LANGUAGE_ARABIC:
-            case LANGUAGE_ARABIC_SAUDI_ARABIA:
-            case LANGUAGE_ARABIC_IRAQ:
-            case LANGUAGE_ARABIC_EGYPT:
-            case LANGUAGE_ARABIC_LIBYA:
-            case LANGUAGE_ARABIC_ALGERIA:
-            case LANGUAGE_ARABIC_MOROCCO:
-            case LANGUAGE_ARABIC_TUNISIA:
-            case LANGUAGE_ARABIC_OMAN:
-            case LANGUAGE_ARABIC_YEMEN:
-            case LANGUAGE_ARABIC_SYRIA:
-            case LANGUAGE_ARABIC_JORDAN:
-            case LANGUAGE_ARABIC_LEBANON:
-            case LANGUAGE_ARABIC_KUWAIT:
-            case LANGUAGE_ARABIC_UAE:
-            case LANGUAGE_ARABIC_BAHRAIN:
-            case LANGUAGE_ARABIC_QATAR:
-            case LANGUAGE_HEBREW:
-                bRTL = TRUE;
-                break;
-
-            default:
-                break;
-        }
+        bRTL = MsLangId::isRightToLeft( aLang );
     }
     else
         bRTL = (nUIMirroring == 1);
@@ -2067,13 +2037,8 @@ BOOL AllSettings::GetLayoutRTL() const
 const ::com::sun::star::lang::Locale& AllSettings::GetLocale() const
 {
     if ( !mpData->maLocale.Language.getLength() )
-    {
-        String  aLanguage;
-        String  aCountry;
-        ConvertLanguageToIsoNames( GetLanguage(), aLanguage, aCountry );
-        ((AllSettings*)this)->mpData->maLocale.Language = aLanguage;
-        ((AllSettings*)this)->mpData->maLocale.Country = aCountry;
-    }
+        MsLangId::convertLanguageToLocale( GetLanguage(),
+                ((AllSettings*)this)->mpData->maLocale );
 
     return mpData->maLocale;
 }
@@ -2083,13 +2048,8 @@ const ::com::sun::star::lang::Locale& AllSettings::GetLocale() const
 const ::com::sun::star::lang::Locale& AllSettings::GetUILocale() const
 {
     if ( !mpData->maUILocale.Language.getLength() )
-    {
-        String  aLanguage;
-        String  aCountry;
-        ConvertLanguageToIsoNames( GetUILanguage(), aLanguage, aCountry );
-        ((AllSettings*)this)->mpData->maUILocale.Language = aLanguage;
-        ((AllSettings*)this)->mpData->maUILocale.Country = aCountry;
-    }
+        MsLangId::convertLanguageToLocale( GetUILanguage(),
+                ((AllSettings*)this)->mpData->maUILocale );
 
     return mpData->maUILocale;
 }
@@ -2099,7 +2059,7 @@ const ::com::sun::star::lang::Locale& AllSettings::GetUILocale() const
 LanguageType AllSettings::GetLanguage() const
 {
     if ( mpData->meLanguage == LANGUAGE_SYSTEM )
-        return GetSystemLanguage();
+        return MsLangId::getSystemLanguage();
 
     return mpData->meLanguage;
 }
@@ -2109,7 +2069,7 @@ LanguageType AllSettings::GetLanguage() const
 LanguageType AllSettings::GetUILanguage() const
 {
     if ( mpData->meUILanguage == LANGUAGE_SYSTEM )
-        return GetSystemUILanguage();
+        return MsLangId::getSystemUILanguage();
 
     return mpData->meUILanguage;
 }

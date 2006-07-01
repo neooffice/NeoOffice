@@ -371,12 +371,13 @@ BOOL InitVCL( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XM
 
 void DeInitVCL()
 {
+    ImplSVData* pSVData = ImplGetSVData();
+    pSVData->mbDeInit = TRUE;
+    
     ImplImageTree::cleanup();
 
     delete pExceptionHandler;
     pExceptionHandler = NULL;
-
-    ImplSVData* pSVData = ImplGetSVData();
 
     // Debug Daten zuruecksetzen
     DBGGUI_DEINIT();
@@ -386,10 +387,10 @@ void DeInitVCL()
 
     if( pSVData->mpSettingsConfigItem )
         delete pSVData->mpSettingsConfigItem, pSVData->mpSettingsConfigItem = NULL;
-    if( pSVData->maGDIData.mpDefFontConfig )
-        delete pSVData->maGDIData.mpDefFontConfig, pSVData->maGDIData.mpDefFontConfig = NULL;
-    if( pSVData->maGDIData.mpFontSubstConfig )
-        delete pSVData->maGDIData.mpFontSubstConfig, pSVData->maGDIData.mpFontSubstConfig = NULL;
+    if( pSVData->maGDIData.mpDefaultFontConfiguration )
+        delete pSVData->maGDIData.mpDefaultFontConfiguration, pSVData->maGDIData.mpDefaultFontConfiguration = NULL;
+    if( pSVData->maGDIData.mpFontSubstConfiguration )
+        delete pSVData->maGDIData.mpFontSubstConfiguration, pSVData->maGDIData.mpFontSubstConfiguration = NULL;
 
     if ( pSVData->maAppData.mpIdleMgr )
         delete pSVData->maAppData.mpIdleMgr;
@@ -440,6 +441,8 @@ void DeInitVCL()
         delete pSVData->mpDefaultWin;
         pSVData->mpDefaultWin = NULL;
     }
+
+    pSVData->maAppData.mxMSF.clear();
 
     if( pSVData->mpApp )
         // call deinit to deinitialize application class
