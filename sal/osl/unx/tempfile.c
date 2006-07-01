@@ -94,12 +94,12 @@ oslFileError SAL_CALL osl_getTempDirURL( rtl_uString** pustrTempDir )
     if ( !pValue )
 	{
         pValue = getenv( "TMP" );
-#if defined(SOLARIS) || defined (LINUX) || defined (FREEBSD) || defined (MACOSX)
+#if defined(SOLARIS) || defined (LINUX) || defined (FREEBSD)
 		if ( !pValue )
 			pValue = P_tmpdir;
 #endif
 	}
-#endif	/* MACOSX */
+#endif /* MACOSX */
 
 	if ( pValue )
 	{

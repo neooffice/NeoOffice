@@ -869,15 +869,8 @@ void _imp_getProcessLocale( rtl_Locale ** ppLocale )
         {
             /* Load the locale discovery library if we are running on OS X */
 
-//FIXME : this have to be changed for Universal binaries
-#if defined INTEL
-	    const sal_Char   *aLocaleLibName		 = "libsalextra_x11osx_mxi" SAL_DLLEXTENSION;
-#elif defined POWERPC
-	    const sal_Char   *aLocaleLibName		 = "libsalextra_x11osx_mxp" SAL_DLLEXTENSION;
-#else
-//other case does not exist
-#endif
-            const sal_Char   *aGetOSXLocaleFunctionName  = "macxp_getOSXLocale";
+            const sal_Char   *aLocaleLibName            = "libsalsystools" SAL_DLLEXTENSION;
+            const sal_Char   *aGetOSXLocaleFunctionName = "macosx_getLocale";
             oslModule         pLocaleLib;
             void             *pFunc;
             int               err;

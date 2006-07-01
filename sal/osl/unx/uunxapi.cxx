@@ -29,15 +29,16 @@
  *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
  *    MA  02111-1307  USA
  *
- *    Modified December 2005 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
- *
  ************************************************************************/
  
  #ifndef _OSL_UUNXAPI_H_
  #include "uunxapi.h"
  #endif 
- 
+
+ #ifndef __OSL_SYSTEM_H__
+ #include "system.h"
+ #endif
+
  #ifndef _LIMITS_H
  #include <limits.h>
  #endif
@@ -49,10 +50,6 @@
  #ifndef _OSL_THREAD_H_
  #include <osl/thread.h>
  #endif
-
- #ifdef MACOSX
- #include "system.h"
- #endif
  
  //###########################
  inline rtl::OString OUStringToOString(const rtl_uString* s)
@@ -63,42 +60,45 @@
  }
  
  //###########################
+#ifdef MACOSX
+/*
+ * Helper function for resolving Mac native alias files (not the same as unix alias files)  
+ * and to return the resolved alias as rtl::OString
+ */
+ inline rtl::OString macxp_resolveAliasAndConvert(const rtl_uString* s)
+ {
+  rtl::OString p = OUStringToOString(s);
+  sal_Char path[PATH_MAX];
+  if (p.getLength() < PATH_MAX)
+    {
+      strcpy(path, p.getStr());
+      macxp_resolveAlias(path, PATH_MAX, sal_False);
+      p = rtl::OString(path);
+    }
+  return p;
+ }
+#endif /* MACOSX */
+ 
+ //###########################
  //access_u     
  int access_u(const rtl_uString* pustrPath, int mode)
- { 		
- #ifdef MACOSX
-	::rtl::OString p = OUStringToOString(pustrPath);
-	sal_Char path[ PATH_MAX ];
-	if ( p.getLength() < PATH_MAX )
-	{
-		strcpy( path, p.getStr() );
-		macxp_resolveAlias( path, PATH_MAX, sal_False );
-		p = rtl::OString( path );
-	}
-	return access(p.getStr(), mode);
- #else	/* MACOSX */
+ {
+#ifndef MACOSX // not MACOSX  
 	return access(OUStringToOString(pustrPath).getStr(), mode);
- #endif	/* MACOSX */
+#else
+	return access(macxp_resolveAliasAndConvert(pustrPath).getStr(), mode);
+#endif
  }
  
  //#########################
  //realpath_u  
  sal_Bool realpath_u(const rtl_uString* pustrFileName, rtl_uString** ppustrResolvedName)
  {
- 	rtl::OString fn = rtl::OUStringToOString(
-		rtl::OUString(const_cast<rtl_uString*>(pustrFileName)),
-		osl_getThreadTextEncoding());
-		
- #ifdef MACOSX
-	sal_Char path[ PATH_MAX ];
-	if ( fn.getLength() < PATH_MAX )
-	{
-		strcpy( path, fn.getStr() );
-		macxp_resolveAlias( path, PATH_MAX, sal_False );
-		fn = rtl::OString( path );
-	}
- #endif
-
+#ifndef MACOSX // not MACOSX  
+        rtl::OString fn = OUStringToOString(pustrFileName);
+#else
+	rtl::OString fn = macxp_resolveAliasAndConvert(pustrFileName);
+#endif
 	char  rp[PATH_MAX];
 	bool  bRet = realpath(fn.getStr(), rp); 
 	
@@ -117,37 +117,21 @@
  //lstat_u 
   int lstat_u(const rtl_uString* pustrPath, struct stat* buf)
  { 	
- #ifdef MACOSX
-	::rtl::OString p = OUStringToOString(pustrPath);
-	sal_Char path[ PATH_MAX ];
-	if ( p.getLength() < PATH_MAX )
-	{
-		strcpy( path, p.getStr() );
-		macxp_resolveAlias( path, PATH_MAX, sal_False );
-		p = rtl::OString( path );
-	}
-	return lstat(p.getStr(), buf);
- #else	/* MACOSX */
+#ifndef MACOSX  // not MACOSX  
 	return lstat(OUStringToOString(pustrPath).getStr(), buf);
- #endif	/* MACOSX */
+#else
+	return lstat(macxp_resolveAliasAndConvert(pustrPath).getStr(), buf);
+#endif
  } 
  
  //#########################
  // @see mkdir
  int mkdir_u(const rtl_uString* path, mode_t mode)
  {    
- #ifdef MACOSX
-	::rtl::OString p = OUStringToOString(path);
-	sal_Char tmppath[ PATH_MAX ];
-	if ( p.getLength() < PATH_MAX )
-	{
-		strcpy( tmppath, p.getStr() );
-		macxp_resolveAlias( tmppath, PATH_MAX, sal_False );
-		p = rtl::OString( tmppath );
-	}
-	return mkdir(p.getStr(), mode);
- #else	/* MACOSX */
+#ifndef MACOSX  // not MACOSX  
     return mkdir(OUStringToOString(path).getStr(), mode);     
- #endif	/* MACOSX */
+#else
+	return mkdir(macxp_resolveAliasAndConvert(pustrPath).getStr(), mode);
+#endif
  }
  

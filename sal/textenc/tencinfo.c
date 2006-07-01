@@ -559,7 +559,7 @@ rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromUnixCharset( const sal_Char* pU
         { "0", RTL_TEXTENCODING_TIS_620 },
         { "2529", RTL_TEXTENCODING_TIS_620 },
         { "2533", RTL_TEXTENCODING_TIS_620 },
-        { NULL, RTL_TEXTENCODING_TIS_620 }
+        { NULL, RTL_TEXTENCODING_DONTKNOW }
     };
     static ImplStrCharsetDef const aUnixCharsetTIS6202529Tab[] =
     {

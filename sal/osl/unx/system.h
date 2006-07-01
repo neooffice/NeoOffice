@@ -335,7 +335,13 @@ extern char *strdup(const char *);
 #endif
 
 #ifdef MACOSX
-#	define  ETIME ETIMEDOUT
+#define __OPENTRANSPORTPROVIDERS__ // these are already defined
+#define TimeValue CFTimeValue      // Do not conflict with TimeValue in sal/inc/osl/time.h
+#include <Carbon/Carbon.h>
+#undef TimeValue
+#	ifndef ETIME
+#		define  ETIME ETIMEDOUT
+#	endif
 #	include <dlfcn.h>    
 #	include <pthread.h>
 #	include <sys/file.h>
@@ -349,8 +355,6 @@ extern char *strdup(const char *);
 /* fixme are premac and postmac still needed here? */
 #	include <premac.h>
 #	include <mach-o/dyld.h> 
-#   define __OPENTRANSPORTPROVIDERS__
-#   include <Carbon/Carbon.h>
 #	include <postmac.h>
 #	if BYTE_ORDER == LITTLE_ENDIAN
 #		ifndef _LITTLE_ENDIAN
@@ -369,15 +373,9 @@ extern char *strdup(const char *);
 #	define  NO_PTHREAD_RTL
 /* for NSGetArgc/Argv/Environ */
 #       include <crt_externs.h>
-#ifndef _SAL_TYPES_H_
-#include <sal/types.h>
-#endif
-
 int  readdir_r( DIR *dirp, struct dirent *entry, struct dirent **result );
 char *asctime_r( const struct tm *tm, char *buffer );
-char *macxp_tempnam( const char *tmpdir, const char *prefix );
 void macxp_getSystemVersion( unsigned int *isDarwin, unsigned int *majorVersion, unsigned int *minorVersion, unsigned int *minorMinorVersion );
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -386,7 +384,10 @@ void macxp_decomposeString(char *pszStr, int buflen);
 #ifdef __cplusplus
 }
 #endif
-
+#endif
+/* XCode < 2.1 (Mac OS X 10.3 Panther and earlier) does not have this in unistd.h (#i64769#) */
+#ifndef _SC_GETPW_R_SIZE_MAX
+#define _SC_GETPW_R_SIZE_MAX 71
 #endif
 
 #if !defined(_WIN32)  && !defined(_WIN16) && !defined(OS2)  && \
@@ -394,7 +395,7 @@ void macxp_decomposeString(char *pszStr, int buflen);
 	!defined(AIX)     && !defined(HPUX)   && \
 	!defined(SOLARIS) && !defined(IRIX)   && !defined(MAC) && \
 	!defined(MACOSX)
-#	error "Target plattform not specified !"
+#	error "Target platform not specified!"
 #endif
 
 #if defined(NETBSD)

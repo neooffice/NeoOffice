@@ -79,7 +79,7 @@ namespace /* private */
 	
 /** Grab current locale from system.
 */
-extern "C" int macxp_getOSXLocale(char *locale, sal_uInt32 bufferLen)
+extern "C" int macosx_getLocale(char *locale, sal_uInt32 bufferLen)
 {	
 	CFStringRef sref = getProcessLocale();
 	CFStringGuard sGuard(sref);

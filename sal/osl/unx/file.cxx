@@ -142,6 +142,7 @@ static const sal_Char* MOUNTTAB="/etc/mtab";
 #include <sys/param.h>
 #include <sys/mount.h>
 #define HAVE_STATFS_H
+#define HAVE_O_EXLOCK
 
 // add MACOSX Time Value
 
@@ -317,11 +318,10 @@ oslFileError SAL_CALL osl_openDirectory(rtl_uString* ustrDirectoryURL, oslDirect
 	osl_systemPathRemoveSeparator(ustrSystemPath);
 
     /* convert unicode path to text */
-#ifdef MACOSX
-    if ( UnicodeToText( path, PATH_MAX, ustrSystemPath->buffer, ustrSystemPath->length ) && macxp_resolveAlias( path, PATH_MAX, sal_False ) == 0 )
-#else	/* MACOSX */
-    if ( UnicodeToText( path, PATH_MAX, ustrSystemPath->buffer, ustrSystemPath->length ) )
-#endif	/* MACOSX */
+    if ( UnicodeToText( path, PATH_MAX, ustrSystemPath->buffer, ustrSystemPath->length ) 
+#ifdef MACOSX 
+	 && macxp_resolveAlias( path, PATH_MAX, sal_False ) == 0 ) 
+#endif /* MACOSX */
     {
         /* open directory */
         DIR *pdir = opendir( path );
@@ -556,6 +556,7 @@ oslFileHandle osl_createFileHandleFromFD( int fd )
 	return (oslFileHandle)pHandleImpl;
 }
 
+
 /****************************************************************************
  *	osl_openFile
  ***************************************************************************/
@@ -594,11 +595,10 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
 	osl_systemPathRemoveSeparator(ustrFilePath);
 
     /* convert unicode path to text */
-#ifdef MACOSX
-    if( UnicodeToText( buffer, PATH_MAX, ustrFilePath->buffer, ustrFilePath->length ) && macxp_resolveAlias( buffer, PATH_MAX, sal_False ) == 0 )
-#else	/* MACOSX */
-    if( UnicodeToText( buffer, PATH_MAX, ustrFilePath->buffer, ustrFilePath->length ) )
-#endif	/* MACOSX */
+    if( UnicodeToText( buffer, PATH_MAX, ustrFilePath->buffer, ustrFilePath->length ) 
+#ifdef MACOSX 
+	 && macxp_resolveAlias( buffer, PATH_MAX, sal_False ) == 0 )
+#endif /* MACOSX */
     {
         /* we do not open devices or such here */
         if( !( uFlags & osl_File_OpenFlag_Create ) )
@@ -627,6 +627,9 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
             {
                 mode |= S_IWUSR | S_IWGRP | S_IWOTH;
                 flags = O_RDWR;
+#ifdef HAVE_O_EXLOCK
+                flags |= O_EXLOCK | O_NONBLOCK;
+#endif
                 aflock.l_type = F_WRLCK;
             }
 
@@ -634,12 +637,16 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
             {
                 mode |= S_IWUSR | S_IWGRP | S_IWOTH;
                 flags = O_CREAT | O_EXCL | O_RDWR;
+#ifdef HAVE_O_EXLOCK
+                flags |= O_EXLOCK | O_NONBLOCK;
+#endif
             }
 
             /* open the file */
             fd = open( buffer, flags, mode );
             if ( fd >= 0 )
             {
+#ifndef HAVE_O_EXLOCK
                 /* check if file lock is enabled and clear l_type member of flock otherwise */
                 if( (char *) -1 == pFileLockEnvVar )
                 {
@@ -649,7 +656,16 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                     if( NULL == pFileLockEnvVar)
                         pFileLockEnvVar = getenv("STAR_ENABLE_FILE_LOCKING");
                 }
-
+#else
+                /* disable range based locking */
+                pFileLockEnvVar = NULL;
+                
+                /* remove the NONBLOCK flag again */
+                flags = fcntl(fd, F_GETFL, NULL);
+                flags &= ~O_NONBLOCK;
+                if( 0 > fcntl(fd, F_GETFL, flags) )
+                    return oslTranslateFileError(OSL_FET_ERROR, errno);
+#endif
                 if( NULL == pFileLockEnvVar )
                     aflock.l_type = 0;
 
@@ -830,8 +846,8 @@ oslFileError osl_moveFile( rtl_uString* ustrFileURL, rtl_uString* ustrDestURL )
 
 #ifdef MACOSX
     if ( macxp_resolveAlias( srcPath, PATH_MAX, sal_True ) != 0 || macxp_resolveAlias( destPath, PATH_MAX, sal_False ) != 0 )
-        return oslTranslateFileError( OSL_FET_ERROR, errno );
-#endif	/* MACOSX */
+      return oslTranslateFileError( OSL_FET_ERROR, errno );
+#endif/* MACOSX */
 
     return oslDoMoveFile( srcPath, destPath );
 }
@@ -861,8 +877,8 @@ oslFileError osl_copyFile( rtl_uString* ustrFileURL, rtl_uString* ustrDestURL )
 
 #ifdef MACOSX
     if ( macxp_resolveAlias( srcPath, PATH_MAX, sal_False ) != 0 || macxp_resolveAlias( destPath, PATH_MAX, sal_False ) != 0 )
-        return oslTranslateFileError( OSL_FET_ERROR, errno );
-#endif	/* MACOSX */
+      return oslTranslateFileError( OSL_FET_ERROR, errno );
+#endif/* MACOSX */
 
     return osl_psz_copyFile( srcPath, destPath );
 }
@@ -885,8 +901,8 @@ oslFileError osl_removeFile( rtl_uString* ustrFileURL )
 
 #ifdef MACOSX
     if ( macxp_resolveAlias( path, PATH_MAX, sal_True ) != 0 )
-        return oslTranslateFileError( OSL_FET_ERROR, errno );
-#endif	/* MACOSX */
+      return oslTranslateFileError( OSL_FET_ERROR, errno );
+#endif/* MACOSX */
 
     return osl_psz_removeFile( path );
 }
@@ -910,8 +926,8 @@ oslFileError osl_getVolumeInformation( rtl_uString* ustrDirectoryURL, oslVolumeI
 
 #ifdef MACOSX
     if ( macxp_resolveAlias( path, PATH_MAX, sal_False ) != 0 )
-        return oslTranslateFileError( OSL_FET_ERROR, errno );
-#endif	/* MACOSX */
+      return oslTranslateFileError( OSL_FET_ERROR, errno );
+#endif/* MACOSX */
 
     return osl_psz_getVolumeInformation( path, pInfo, uFieldMask);
 }
@@ -934,8 +950,8 @@ oslFileError osl_createDirectory( rtl_uString* ustrDirectoryURL )
 
 #ifdef MACOSX
     if ( macxp_resolveAlias( path, PATH_MAX, sal_False ) != 0 )
-        return oslTranslateFileError( OSL_FET_ERROR, errno );
-#endif	/* MACOSX */
+      return oslTranslateFileError( OSL_FET_ERROR, errno );
+#endif/* MACOSX */
 
     return osl_psz_createDirectory( path );
 }
@@ -1068,7 +1084,7 @@ oslFileError SAL_CALL osl_createDirectoryPath(
         macxp_resolveAlias( path, PATH_MAX, sal_False );
         p = rtl::OString( path );
     }
-	sys_path = ::rtl::OStringToOUString( p, osl_getThreadTextEncoding() );
+    sys_path = ::rtl::OStringToOUString( p, osl_getThreadTextEncoding() );
 #endif	/* MACOSX */
 
     // const_cast because sys_path is a local copy which we want to modify inplace instead of 
@@ -1107,8 +1123,8 @@ oslFileError osl_setFileAttributes( rtl_uString* ustrFileURL, sal_uInt64 uAttrib
 
 #ifdef MACOSX
     if ( macxp_resolveAlias( path, PATH_MAX, sal_False ) != 0 )
-        return oslTranslateFileError( OSL_FET_ERROR, errno );
-#endif	/* MACOSX */
+      return oslTranslateFileError( OSL_FET_ERROR, errno );
+#endif/* MACOSX */
 
     return osl_psz_setFileAttributes( path, uAttributes );
 }
@@ -1132,8 +1148,8 @@ oslFileError osl_setFileTime( rtl_uString* ustrFileURL, const TimeValue* pCreati
 
 #ifdef MACOSX
     if ( macxp_resolveAlias( path, PATH_MAX, sal_False ) != 0 )
-        return oslTranslateFileError( OSL_FET_ERROR, errno );
-#endif	/* MACOSX */
+      return oslTranslateFileError( OSL_FET_ERROR, errno );
+#endif/* MACOSX */
   
     return osl_psz_setFileTime( path, pCreationTime, pLastAccessTime, pLastWriteTime );
 }
