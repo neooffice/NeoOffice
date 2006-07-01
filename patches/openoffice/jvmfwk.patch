@@ -1,0 +1,57 @@
+Index: plugins/sunmajor/javaenvsetup/makefile.mk
+===================================================================
+RCS file: /cvs/udk/jvmfwk/plugins/sunmajor/javaenvsetup/makefile.mk,v
+retrieving revision 1.5
+diff -u -r1.5 makefile.mk
+--- plugins/sunmajor/javaenvsetup/makefile.mk	7 Sep 2005 19:29:10 -0000	1.5
++++ plugins/sunmajor/javaenvsetup/makefile.mk	1 Jul 2006 16:37:42 -0000
+@@ -58,6 +58,11 @@
+ STDLIBCUIMT+=-lstdc++
+ .ENDIF
+ 
++# turn off optimizations on MACOSX due to optimization errors in gcc 4.0.1
++.IF "$(OS)"=="MACOSX"
++CFLAGSOPT = -O0
++.ENDIF
++
+ .IF "$(SOLAR_JAVA)"==""
+ nojava:
+ 	@echo "Not building jvmfwk/plugins/javaenvsetup/ because Java is disabled"
+Index: plugins/sunmajor/pluginlib/makefile.mk
+===================================================================
+RCS file: /cvs/udk/jvmfwk/plugins/sunmajor/pluginlib/makefile.mk,v
+retrieving revision 1.8
+diff -u -r1.8 makefile.mk
+--- plugins/sunmajor/pluginlib/makefile.mk	7 Sep 2005 19:30:09 -0000	1.8
++++ plugins/sunmajor/pluginlib/makefile.mk	1 Jul 2006 16:37:42 -0000
+@@ -52,6 +52,11 @@
+ 
+ # ------------------------------------------------------------------
+ 
++# turn off optimizations on MACOSX due to optimization errors in gcc 4.0.1
++.IF "$(OS)" == "MACOSX"
++CFLAGSOPT = -O0
++.ENDIF
++
+ #.INCLUDE :  ..$/cppumaker.mk
+ .IF "$(SOLAR_JAVA)"!=""
+ 
+Index: source/makefile.mk
+===================================================================
+RCS file: /cvs/udk/jvmfwk/source/makefile.mk,v
+retrieving revision 1.9
+diff -u -r1.9 makefile.mk
+--- source/makefile.mk	7 Sep 2005 19:36:34 -0000	1.9
++++ source/makefile.mk	1 Jul 2006 16:37:42 -0000
+@@ -61,6 +61,11 @@
+ 
+ #LIB1TARGET=$(SLB)$/$(FRAMEWORKLIB).lib
+ 
++# turn off optimizations on MACOSX due to optimization errors in gcc 4.0.1
++.IF "$(OS)" == "MACOSX"
++CFLAGSOPT = -O0
++.ENDIF
++
+ .IF "$(UNIXVERSIONNAMES)" == ""
+ SHL1TARGET = $(FRAMEWORKLIB)$(UDK_MAJOR)
+ .ELSE # UNIXVERSIONNAMES
