@@ -59,8 +59,8 @@
 #include <basegfx/matrix/b2dhommatrix.hxx>
 #endif
 
-#ifndef _TL_LANG_HXX
-#include <tools/lang.hxx>
+#ifndef INCLUDED_I18NPOOL_LANG_H
+#include <i18npool/lang.h>
 #endif
 
 #ifndef _TL_DEBUG_HXX
@@ -980,10 +980,11 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
         pNewGlyphWidths[ i ] = 0;
 
     bool bRTL;
-    for( int nCharPos = -1; rArgs.GetNextPos( &nCharPos, &bRTL ); )
+    for( int nCharPos = i = -1; rArgs.GetNextPos( &nCharPos, &bRTL ); )
     {
         n = nCharPos - rArgs.mnMinCharPos;
-        i = pLogCluster[ n ];
+        if( pLogCluster[ n ] >= 0 )
+            i = pLogCluster[ n ];
         if( i >= 0 )
         {
             long nDelta = rArgs.mpDXArray[ n ] ;
@@ -1704,7 +1705,7 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
     for( n = 0; n < nLevel; ++n )
         maFallbackRuns[n].ResetPos();
     int nActiveCharPos = nCharPos[0];
-    while( nValid[0] && (nLevel > 1))
+    while( nValid[0] && (nLevel > 0))
     {
         // find best fallback level
         for( n = 0; n < nLevel; ++n )

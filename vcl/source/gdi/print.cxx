@@ -811,9 +811,11 @@ BOOL Printer::Setup( Window* pWindow )
 	JobSetup aJobSetup = maJobSetup;
 	SalFrame* pFrame;
 	if ( !pWindow )
-		pFrame = ImplGetDefaultWindow()->ImplGetFrame();
-	else
-		pFrame = pWindow->ImplGetFrame();
+        pWindow = ImplGetDefaultWindow();
+    if( !pWindow )
+        return FALSE;
+
+    pFrame = pWindow->ImplGetFrame();
 	ImplReleaseGraphics();
 	ImplSVData* pSVData = ImplGetSVData();
 	pSVData->maAppData.mnModalMode++;
@@ -873,11 +875,11 @@ BOOL Printer::SetPrinterProps( const Printer* pPrinter )
 				mpGetDevSizeList = NULL;
 			}
             // clean up font list
-            mpFontList->Clear();
-			delete mpFontList;
-            mpFontList = NULL;
-
 			delete mpFontCache;
+			delete mpFontList;
+			mpFontCache = NULL;
+			mpFontList = NULL;
+
 			mbInitFont = TRUE;
 			mbNewFont = TRUE;
 			mpInfoPrinter = NULL;
@@ -916,8 +918,10 @@ BOOL Printer::SetPrinterProps( const Printer* pPrinter )
 				delete mpGetDevSizeList;
 				mpGetDevSizeList = NULL;
 			}
-			delete mpFontList;
 			delete mpFontCache;
+			delete mpFontList;
+			mpFontCache = NULL;
+			mpFontList = NULL;
 			mbInitFont = TRUE;
 			mbNewFont = TRUE;
 			mpInfoPrinter = NULL;

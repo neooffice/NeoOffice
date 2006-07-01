@@ -1049,8 +1049,9 @@ void OutputDevice::DrawEPS( const Point& rPoint, const Size& rSize,
 			if( mbInitClipRegion )
 				ImplInitClipRegion();
 
-            bDrawn = mpGraphics->DrawEPS( aRect.Left(), aRect.Top(), aRect.GetWidth(), aRect.GetHeight(),
-                                          (BYTE*) rGfxLink.GetData(), rGfxLink.GetDataSize(), this );
+            if( rGfxLink.GetData() && rGfxLink.GetDataSize() )
+                bDrawn = mpGraphics->DrawEPS( aRect.Left(), aRect.Top(), aRect.GetWidth(), aRect.GetHeight(),
+                                              (BYTE*) rGfxLink.GetData(), rGfxLink.GetDataSize(), this );
 		}
 
 		if( !bDrawn && pSubst )

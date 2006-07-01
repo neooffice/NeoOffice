@@ -156,7 +156,7 @@ void OutputDevice::ImplDrawPolyPolygon( const PolyPolygon& rPolyPoly, const Poly
 	else if( pPolyPoly->Count() )
 	{
 		USHORT				nCount = pPolyPoly->Count();
-		ULONG*				pPointAry = new ULONG[nCount];
+		sal_uInt32*			pPointAry = new sal_uInt32[nCount];
 		PCONSTSALPOINT* 	pPointAryAry = new PCONSTSALPOINT[nCount];
 		USHORT				i = 0;
 		do
