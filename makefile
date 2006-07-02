@@ -223,7 +223,7 @@ build.neo_odk_patches: \
 build.package: build.neo_patches build.source_zip
 	sh -e -c 'if [ -d "$(INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(INSTALL_HOME)" ; fi'
 	mkdir -p "$(INSTALL_HOME)/package/Contents"
-	cd "$(INSTALL_HOME)/package" ; ( ( cd "$(PWD)/$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice/install/en-US_inprogress/staging/OpenOffice.org 2.0.app/Contents/MacOS" ; gnutar cvf - * ) | ( cd "$(PWD)/$(INSTALL_HOME)/package/Contents" ; gnutar xvf - ) )
+	cd "$(INSTALL_HOME)/package" ; ( ( cd "$(PWD)/$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice/install/en-US/staging/OpenOffice.org 2.0.app/Contents/MacOS" ; gnutar cvf - * ) | ( cd "$(PWD)/$(INSTALL_HOME)/package/Contents" ; gnutar xvf - ) )
 # Regroup the OOo langauge packs
 	cd "$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice_languagepack/install" ; find . -type d -maxdepth 1 -exec basename {} \; | grep -v '^\.$$' | grep -v '^log$$' | grep -v '_download$$' > "$(PWD)/$(INSTALL_HOME)/language_names"
 # Create the language pack installers
@@ -253,7 +253,7 @@ endif
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/program" ; regcomp -revoke -r services.rdb -c "libdtransX11$${UPD}$${DLLSUFFIX}.dylib"
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/program" ; regcomp -register -r services.rdb -c "libdtransjava$${UPD}$${DLLSUFFIX}.dylib"
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/program" ; regcomp -register -r services.rdb -c "libwpft$${UPD}$${DLLSUFFIX}.dylib"
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf LICENSE* README* licenses/* "program/cde-open-url" "program/configimport" "program/gengal" "program/gnome-open-url" "program/gnome-open-url.bin" "program/kde-open-url" "program/libdtransX11$${UPD}$${DLLSUFFIX}.dylib" "program/pluginapp.bin" "program/libpsp$${UPD}$${DLLSUFFIX}.dylib" "program/libspa$${UPD}$${DLLSUFFIX}.dylib" "program/libvclplug_gen$${UPD}$${DLLSUFFIX}.dylib" "program/open-url" "program/setofficelang" "program/oo_product.bmp" "program/soffice" "program/spadmin" "program/spadmin.bin" readmes/* "share/psprint" share/readme/*
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "droplet" "program/configimport" "program/gengal" "program/libdtransX11$${UPD}$${DLLSUFFIX}.dylib" "program/libpsp$${UPD}$${DLLSUFFIX}.dylib" "program/libspa$${UPD}$${DLLSUFFIX}.dylib" "program/libvclplug_gen$${UPD}$${DLLSUFFIX}.dylib" "program/open-url" "program/setofficelang" "program/oo_product.bmp" "program/soffice" "program/spadmin" "program/spadmin.bin" "share/psprint" share/readme/*
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/etc/gpl.html" "share/readme/LICENSE_en-US.html"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/etc/gpl.txt" "share/readme/LICENSE_en-US"
 	cd "$(INSTALL_HOME)/package/Contents/program" ; ln -sf "configimport.bin" "configimport"
