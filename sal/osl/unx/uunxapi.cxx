@@ -131,7 +131,7 @@
 #ifndef MACOSX  // not MACOSX  
     return mkdir(OUStringToOString(path).getStr(), mode);     
 #else
-	return mkdir(macxp_resolveAliasAndConvert(pustrPath).getStr(), mode);
+	return mkdir(macxp_resolveAliasAndConvert(path).getStr(), mode);
 #endif
  }
  

@@ -526,8 +526,8 @@ int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement)
 {
     FSRef aFSRef;
     OSStatus nErr;
-    MacOSBoolean bFolder;
-    MacOSBoolean bAliased;
+    Boolean bFolder;
+    Boolean bAliased;
     char *unprocessedPath = path;
 
     // If the path exists and is not an alias, return without changing anything
