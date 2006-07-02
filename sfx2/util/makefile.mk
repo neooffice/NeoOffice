@@ -90,6 +90,7 @@ SHL1STDLIBS+=\
 		$(SOTLIB) \
         $(UNOTOOLSLIB) \
 		$(TOOLSLIB) \
+		$(I18NISOLANGLIB) \
 		$(SYSSHELLLIB) \
 		$(COMPHELPERLIB) \
         $(UCBHELPERLIB) \
@@ -137,18 +138,14 @@ DEFLIB1NAME	=sfx
 DEF1DES		=Sfx
 
 SFXSRSLIST=\
-		$(SRS)$/accel.srs \
 		$(SRS)$/appl.srs \
 		$(SRS)$/sfx.srs \
 		$(SRS)$/doc.srs \
 		$(SRS)$/view.srs \
 		$(SRS)$/config.srs \
 		$(SRS)$/menu.srs \
-		$(SRS)$/statbar.srs \
-		$(SRS)$/toolbox.srs \
 		$(SRS)$/dialog.srs \
-		$(SRS)$/bastyp.srs \
-		$(SRS)$/explorer.srs
+                $(SRS)$/bastyp.srs
 
 RESLIB1NAME=$(TARGET)
 RESLIB1IMAGES=$(PRJ)$/res

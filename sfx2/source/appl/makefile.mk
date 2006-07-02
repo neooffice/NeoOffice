@@ -60,58 +60,56 @@ CFLAGS+=-Od
 
 SRS1NAME=appl
 SRC1FILES =  \
-        app.src image.src newhelp.src dde.src
+        app.src newhelp.src dde.src
 
 SRS2NAME=sfx
 SRC2FILES =  \
 		sfx.src
 
 SLOFILES =  \
-	$(SLO)$/imagemgr.obj\
-	$(SLO)$/appuno.obj \
-	$(SLO)$/appmail.obj \
-	$(SLO)$/appmain.obj \
-	$(SLO)$/appopen.obj \
-	$(SLO)$/appinit.obj \
-	$(SLO)$/appmisc.obj \
-	$(SLO)$/appdemo.obj \
-	$(SLO)$/appreg.obj \
-	$(SLO)$/appcfg.obj \
-	$(SLO)$/appquit.obj \
-	$(SLO)$/appchild.obj \
-	$(SLO)$/appserv.obj \
-	$(SLO)$/appdata.obj \
 	$(SLO)$/app.obj \
 	$(SLO)$/appbas.obj \
+	$(SLO)$/appcfg.obj \
+	$(SLO)$/appchild.obj \
+	$(SLO)$/appdata.obj \
 	$(SLO)$/appdde.obj \
-	$(SLO)$/workwin.obj \
-	$(SLO)$/sfxhelp.obj \
+	$(SLO)$/appinit.obj \
+        $(SLO)$/appmain.obj \
+	$(SLO)$/appmisc.obj \
+	$(SLO)$/appopen.obj \
+	$(SLO)$/appquit.obj \
+	$(SLO)$/appreg.obj \
+	$(SLO)$/appserv.obj \
+	$(SLO)$/appuno.obj \
 	$(SLO)$/childwin.obj \
-	$(SLO)$/sfxdll.obj \
-	$(SLO)$/module.obj \
-	$(SLO)$/appsys.obj \
 	$(SLO)$/dlgcont.obj \
-	$(SLO)$/namecont.obj \
-	$(SLO)$/scriptcont.obj \
-	$(SLO)$/newhelp.obj \
+	$(SLO)$/helpdispatch.obj \
 	$(SLO)$/helpinterceptor.obj \
+	$(SLO)$/imagemgr.obj\
+        $(SLO)$/imestatuswindow.obj \
+        $(SLO)$/impldde.obj \
+        $(SLO)$/linkmgr2.obj \
+        $(SLO)$/linksrc.obj \
+        $(SLO)$/lnkbase2.obj \
+	$(SLO)$/module.obj \
+	$(SLO)$/namecont.obj \
+	$(SLO)$/newhelp.obj \
+	$(SLO)$/scriptcont.obj \
+	$(SLO)$/sfxdll.obj \
+	$(SLO)$/sfxhelp.obj \
+	$(SLO)$/sfxpicklist.obj \
 	$(SLO)$/shutdownicon.obj \
 	$(SLO)$/shutdowniconw32.obj \
-	$(SLO)$/sfxpicklist.obj \
-	$(SLO)$/helpdispatch.obj \
-    $(SLO)$/imestatuswindow.obj \
-    $(SLO)$/xpackcreator.obj\
-    $(SLO)$/linksrc.obj\
-    $(SLO)$/linkmgr2.obj\
-    $(SLO)$/lnkbase2.obj\
-    $(SLO)$/impldde.obj
+	$(SLO)$/workwin.obj \
+        $(SLO)$/xpackcreator.obj \
+    $(SLO)$/fwkhelper.obj \
+    $(SLO)$/updatedlg.obj
 
 EXCEPTIONSFILES=\
 	$(SLO)$/imagemgr.obj		\
 	$(SLO)$/appopen.obj \
 	$(SLO)$/appmain.obj			\
 	$(SLO)$/appmisc.obj			\
-	$(SLO)$/frstinit.obj		\
 	$(SLO)$/appinit.obj			\
 	$(SLO)$/appcfg.obj			\
 	$(SLO)$/helpinterceptor.obj	\
@@ -121,7 +119,8 @@ EXCEPTIONSFILES=\
 	$(SLO)$/shutdowniconw32.obj \
 	$(SLO)$/sfxpicklist.obj		\
 	$(SLO)$/helpdispatch.obj	\
-    $(SLO)$/xpackcreator.obj
+    $(SLO)$/xpackcreator.obj    \
+    $(SLO)$/updatedlg.obj
 
 .IF "$(GUI)" == "MAC"
 SLOFILES +=\

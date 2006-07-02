@@ -88,7 +88,9 @@
 #include <comphelper/sequence.hxx>
 #include <vos/mutex.hxx>
 #include <uno/current_context.hxx>
+#include <vcl/svapp.hxx>
 
+#include "app.hxx"
 #include "unoctitm.hxx"
 #include "viewfrm.hxx"
 #include "frame.hxx"
@@ -461,7 +463,7 @@ void SAL_CALL SfxOfficeDispatch::dispatchWithNotification( const ::com::sun::sta
         com::sun::star::uno::ContextLayer layer(
             new svt::JavaContext( com::sun::star::uno::getCurrentContext(),
                                   true) );
-        
+
         pControllerItem->dispatch( aURL, aArgs, rListener );
     }
 }
@@ -756,7 +758,7 @@ void SAL_CALL SfxDispatchController_Impl::dispatch( const ::com::sun::star::util
         if ( nAddArgs > 0 )
         {
             sal_uInt32 nIndex( lNewArgs.getLength() );
-            
+
             lNewArgs.realloc( lNewArgs.getLength()+aAddArgs.size() );
             for ( sal_uInt32 i = 0; i < nAddArgs; i++ )
                 lNewArgs[nIndex++] = aAddArgs[i];

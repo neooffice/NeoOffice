@@ -93,6 +93,7 @@
 #include <svtools/printdlg.hxx>
 #endif	// USE_JAVA
 
+#include "app.hxx"
 #include "sfxresid.hxx"
 #include "dinfdlg.hxx"
 #include "fltfnc.hxx"
@@ -103,13 +104,11 @@
 #include "evntconf.hxx"
 #include "sfxhelp.hxx"
 #include "dispatch.hxx"
-#include "urlframe.hxx"
 #include "printer.hxx"
 #include "topfrm.hxx"
 #include "basmgr.hxx"
 #include "doctempl.hxx"
 #include "doc.hrc"
-#include "appdata.hxx"
 #include "sfxbasemodel.hxx"
 #include "docfile.hxx"
 #include "objuno.hxx"
@@ -127,6 +126,11 @@ using namespace ::com::sun::star::uno;
 
 GDIMetaFile* SfxObjectShell::GetPreviewMetaFile( sal_Bool bFullContent ) const
 {
+	return CreatePreviewMetaFile_Impl( bFullContent, sal_False );
+}
+
+GDIMetaFile* SfxObjectShell::CreatePreviewMetaFile_Impl( sal_Bool bFullContent, sal_Bool bHighContrast ) const
+{
 	// Nur wenn gerade nicht gedruckt wird, darf DoDraw aufgerufen
 	// werden, sonst wird u.U. der Printer abgeschossen !
 	SfxViewFrame *pFrame = SfxViewFrame::GetFirst( this );
@@ -139,6 +143,10 @@ GDIMetaFile* SfxObjectShell::GetPreviewMetaFile( sal_Bool bFullContent ) const
 
 	VirtualDevice aDevice;
 	aDevice.EnableOutput( FALSE );
+
+	// adjust the output device if HC-metafile is requested
+	if ( bHighContrast )
+		aDevice.SetDrawMode( aDevice.GetDrawMode() | DRAWMODE_SETTINGSLINE | DRAWMODE_SETTINGSFILL | DRAWMODE_SETTINGSTEXT | DRAWMODE_SETTINGSGRADIENT );
 
     MapMode aMode( ((SfxObjectShell*)this)->GetMapUnit() );
     aDevice.SetMapMode( aMode );
@@ -253,11 +261,6 @@ SfxViewFrame* SfxObjectShell::LoadWindows_Impl( SfxTopFrame *pPreferedFrame )
 	SfxViewFrame *pPrefered = pPreferedFrame ? pPreferedFrame->GetCurrentViewFrame() : 0;
     SvtSaveOptions aOpt;
     BOOL bLoadDocWins = aOpt.IsSaveDocWins() && !pPrefered;
-    BOOL bLoadDocView = aOpt.IsSaveDocView();
-
-    // In a StarPortal not possible at the moment
-	if ( !bLoadDocView )
-		return 0;
 
 	// try to get viewdata information for XML format
 	REFERENCE < XVIEWDATASUPPLIER > xViewDataSupplier( GetModel(), ::com::sun::star::uno::UNO_QUERY );
@@ -468,7 +471,7 @@ void SfxObjectShell::UpdateDocInfoForSave()
 
 	// clear user data if recommend (see 'Tools - Options - Open/StarOffice - Security')
 	if ( SvtSecurityOptions().IsOptionSet( SvtSecurityOptions::E_DOCWARN_REMOVEPERSONALINFO ) )
-		rDocInfo.DeleteUserData( rDocInfo.IsUseUserData() );
+		rDocInfo.DeleteUserDataCompletely();
 
 	Broadcast( SfxDocumentInfoHint( &rDocInfo ) );
 }
@@ -650,7 +653,7 @@ USHORT SfxObjectShell::GetContentCount(USHORT nIdx1,
 
 
 //--------------------------------------------------------------------
-
+//TODO/CLEANUP: remove this method (it's virtual)
 void  SfxObjectShell::TriggerHelpPI(USHORT nIdx1, USHORT nIdx2, USHORT nIdx3)
 {
 	if(nIdx1==CONTENT_STYLE && nIdx2 != INDEX_IGNORE) //StyleSheets
@@ -1497,31 +1500,6 @@ SfxEventConfigItem_Impl* SfxObjectShell::GetEventConfig_Impl( BOOL bForce )
 //REMOVE
 //REMOVE		return xStream;
 //REMOVE	}
-
-SfxMenuBarManager* SfxObjectShell::CreateMenuBarManager_Impl( SfxViewFrame* pViewFrame )
-{
-    const ResId* pId = GetFactory().GetMenuBarId();
-    if ( pId )
-    {
-	    Reference< com::sun::star::beans::XPropertySet > xPropSet( pViewFrame->GetBindings().GetActiveFrame(), UNO_QUERY );
-        Reference< ::com::sun::star::frame::XLayoutManager > xLayoutManager;
-
-	    if ( xPropSet.is() )
-	    {
-		    Any aValue = xPropSet->getPropertyValue( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "LayoutManager" )));
-		    aValue >>= xLayoutManager;
-        }
-
-        if ( xLayoutManager.is() )
-        {
-            rtl::OUString aMenuBarURL( RTL_CONSTASCII_USTRINGPARAM( "private:resource/menubar/menubar" ));
-            xLayoutManager->createElement( aMenuBarURL );
-        }
-    }
-
-    return NULL;
-
-}
 
 SfxObjectShellRef MakeObjectShellForOrganizer_Impl( const String& aTargetURL, BOOL bForWriting )
 {

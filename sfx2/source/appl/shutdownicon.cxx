@@ -39,7 +39,6 @@
 #include <app.hxx>
 #include <vos/mutex.hxx>
 #include <svtools/imagemgr.hxx>
-#include <svtools/dynamicmenuoptions.hxx>
 // #include <cmdlineargs.hxx>
 
 #ifndef _COM_SUN_STAR_TASK_XINTERACTIONHANDLER_HPP_
@@ -108,7 +107,8 @@
 #include "sfxresid.hxx"
 
 #if defined USE_JAVA && defined MACOSX
- 
+
+#include <svtools/dynamicmenuoptions.hxx> 
 #include "shutdownicon_cocoa.h"
  
 #ifndef INCLUDED_SVTOOLS_MODULEOPTIONS_HXX
@@ -503,12 +503,16 @@ void ShutdownIcon::FromTemplate()
 }
 
 // ---------------------------------------------------------------------------
-
+#include <tools/rcid.h>
 OUString ShutdownIcon::GetResString( int id )
 {
     ::vos::OGuard aGuard( Application::GetSolarMutex() );
 
-    if( !m_pResMgr )
+    if( ! m_pResMgr )
+        m_pResMgr = SfxResId::GetResMgr();
+	ResId aResId( id, m_pResMgr );
+	aResId.SetRT( RSC_STRING );
+	if( !m_pResMgr || !m_pResMgr->IsAvailable( aResId ) )
         return OUString();
 
     UniString aRes( ResId(id, m_pResMgr) );
@@ -610,7 +614,7 @@ throw(::com::sun::star::uno::RuntimeException)
 void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any>& aArguments )
 	throw( ::com::sun::star::uno::Exception )
 {
-	::osl::ClearableMutexGuard	aGuard(	m_aMutex );
+	::osl::ResettableMutexGuard	aGuard(	m_aMutex );
 
     // third argument only sets veto, everything else will be ignored!
     if (aArguments.getLength() > 2)
@@ -631,8 +635,13 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 				bQuickstart = ::cppu::any2bool( aArguments[0] );
 				if( !bQuickstart && !GetAutostart() )
 					return;
+                aGuard.clear();
+                // access resource system and sfx only protected by solarmutex
+                vos::OGuard aSolarGuard( Application::GetSolarMutex() );
 
 				m_pResMgr = SfxResId::GetResMgr();
+				aGuard.reset();
+
 				m_xDesktop = Reference < XDesktop >( m_xServiceManager->createInstance(
 															DEFINE_CONST_UNICODE( "com.sun.star.frame.Desktop" )),
 														UNO_QUERY );

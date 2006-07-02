@@ -159,6 +159,9 @@
 #include <svtools/regoptions.hxx>
 #include <svtools/helpopt.hxx>
 #include <tools/shl.hxx>
+#include <unotools/bootstrap.hxx>
+#include <vos/process.hxx>
+#include <rtl/bootstrap.hxx>
 
 #include <com/sun/star/script/provider/XScriptProviderFactory.hpp>
 #include <com/sun/star/script/provider/ScriptFrameworkErrorException.hpp>
@@ -168,7 +171,7 @@
 #pragma hdrstop
 #endif
 
-#include "appimp.hxx"
+#include "about.hxx"
 #include "referers.hxx"
 #include "app.hxx"
 #include "request.hxx"
@@ -202,8 +205,6 @@
 #include "macrconf.hxx"
 #include "minfitem.hxx"
 #include "event.hxx"
-#include "intfrm.hxx"
-#include "urlframe.hxx"
 #include "module.hxx"
 #include "topfrm.hxx"
 #include "sfxpicklist.hxx"
@@ -212,6 +213,7 @@
 #include "dialogs.hrc"
 #include "sorgitm.hxx"
 #include "sfxhelp.hxx"
+#include "updatedlg.hxx"
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::beans;
@@ -306,7 +308,7 @@ void SfxApplication::MiscExec_Impl( SfxRequest& rReq )
                 String aName = String::CreateFromAscii("vnd.sun.star.cmd:logout");
                 SfxStringItem aNameItem( SID_FILE_NAME, aName );
                 SfxStringItem aReferer( SID_REFERER, DEFINE_CONST_UNICODE( "private/user" ) );
-                pAppDispat->Execute( SID_OPENDOC, SFX_CALLMODE_SLOT, &aNameItem, &aReferer, 0L );
+                pAppData_Impl->pAppDispat->Execute( SID_OPENDOC, SFX_CALLMODE_SLOT, &aNameItem, &aReferer, 0L );
                 return;
             }
 
@@ -337,44 +339,6 @@ void SfxApplication::MiscExec_Impl( SfxRequest& rReq )
 
 			// Returnwert setzten, ggf. terminieren
             rReq.SetReturnValue( SfxBoolItem( rReq.GetSlot(), bTerminated ) );
-			return;
-		}
-
-		case SID_PICK1:
-		case SID_PICK2:
-		case SID_PICK3:
-		case SID_PICK4:
-		case SID_PICK5:
-		case SID_PICK6:
-		case SID_PICK7:
-		case SID_PICK8:
-		case SID_PICK9:
-		{
-			SfxPickList::Get()->ExecuteEntry( rReq.GetSlot() - SID_PICK1 );
-/*
-			USHORT nPickNo = rReq.GetSlot()-SID_PICK1;
-			if ( nPickNo >= SfxPickList_Impl::Get()->GetAllowedMenuSize() )
-				break;
-
-			rReq.SetSlot( SID_OPENDOC );
-			SfxPickEntry_Impl *pPick = SfxPickList_Impl::Get()->GetMenuPickEntry( nPickNo );
-			rReq.AppendItem(SfxStringItem(SID_FILE_NAME, pPick->aName ));
-			rReq.AppendItem( SfxStringItem( SID_REFERER, DEFINE_CONST_UNICODE(SFX_REFERER_USER) ) );
-            rReq.AppendItem( SfxStringItem( SID_TARGETNAME, DEFINE_CONST_UNICODE("_blank") ) );
-			rReq.AppendItem( SfxBoolItem( SID_DOC_READONLY, FALSE ) );
-			String aFilter(pPick->aFilter);
-			USHORT nPos=aFilter.Search('|');
-			if( nPos != STRING_NOTFOUND )
-			{
-				String aOptions(aFilter.Copy( nPos ).GetBuffer()+1);
-				aFilter.Erase( nPos );
-				rReq.AppendItem(
-					SfxStringItem(SID_FILE_FILTEROPTIONS, aOptions));
-			}
-
-			rReq.AppendItem(SfxStringItem(SID_FILTER_NAME, aFilter));
-			ExecuteSlot( rReq );
-*/
 			return;
 		}
 
@@ -578,7 +542,27 @@ void SfxApplication::MiscExec_Impl( SfxRequest& rReq )
 		// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 		case SID_ABOUT:
 		{
-			ModalDialog *pDlg = CreateAboutDialog();
+            ::rtl::OUString aDefault;
+            String          aVerId( utl::Bootstrap::getBuildIdData( aDefault ));
+
+            if ( aVerId.Len() == 0 )
+                DBG_ERROR( "No BUILDID in bootstrap file" );
+
+            String aVersion( '[' );
+            ( aVersion += aVerId ) += ']';
+
+            // About-Dialog suchen
+            ResId aDialogResId( RID_DEFAULTABOUT, pAppData_Impl->pLabelResMgr );
+            ResMgr* pResMgr = pAppData_Impl->pLabelResMgr->IsAvailable(
+                                aDialogResId.SetRT( RSC_MODALDIALOG ) )
+                            ? pAppData_Impl->pLabelResMgr
+                            : 0;
+            aDialogResId.SetResMgr( pResMgr );
+            if ( !Resource::GetResManager()->IsAvailable( aDialogResId ) )
+                DBG_ERROR( "No RID_DEFAULTABOUT in label-resource-dll" );
+
+            // About-Dialog anzeigen
+            AboutDialog* pDlg = new AboutDialog( 0, aDialogResId, aVersion );
 			pDlg->Execute();
 			delete pDlg;
 			bDone = TRUE;
@@ -731,25 +715,6 @@ void SfxApplication::MiscState_Impl(SfxItemSet &rSet)
 						rSet.DisableItem(nWhich);
 					break;
 
-				case SID_PICK1:
-				case SID_PICK2:
-				case SID_PICK3:
-				case SID_PICK4:
-				case SID_PICK5:
-				case SID_PICK6:
-				case SID_PICK7:
-				case SID_PICK8:
-				case SID_PICK9:
-				{
-					SfxPickList* pPickList = SfxPickList::Get();
-					if (( nWhich - SID_PICK1 ) < (USHORT)pPickList->GetAllowedMenuSize() )
-					{
-						String aTitle = pPickList->GetMenuEntryTitle( nWhich - SID_PICK1 );
-						rSet.Put( SfxStringItem( nWhich, aTitle ));
-					}
-					break;
-				}
-
 				case SID_CURRENTTIME:
 				{
 					rSet.Put( SfxStringItem( nWhich, aLocaleWrapper.getTime( Time(), FALSE ) ) );
@@ -821,7 +786,7 @@ void SfxApplication::MiscState_Impl(SfxItemSet &rSet)
                         rSet.DisableItem(SID_SHOW_IME_STATUS_WINDOW);
                     break;
 
-				default:
+                default:
 					break;
 			}
 		}
@@ -885,9 +850,9 @@ void MacroOrganizer( INT16 nTabId )
 
 ResMgr* SfxApplication::GetOffResManager_Impl()
 {
-	if ( !pImp->pOfaResMgr )
-		pImp->pOfaResMgr = CreateResManager( "ofa");
-	return pImp->pOfaResMgr;
+    if ( !pAppData_Impl->pOfaResMgr )
+        pAppData_Impl->pOfaResMgr = CreateResManager( "ofa");
+    return pAppData_Impl->pOfaResMgr;
 }
 
 void SfxApplication::OfaExec_Impl( SfxRequest& rReq )
@@ -932,6 +897,14 @@ void SfxApplication::OfaExec_Impl( SfxRequest& rReq )
 		}
 		break;
 
+        case SID_ONLINEUPDATE:
+        {
+            SfxUpdateDialog aUpdateDlg( GetTopWindow() );
+            aUpdateDlg.Execute();
+            bDone = true;
+            break;
+        }
+
 		case SID_BASICIDE_APPEAR:
 		{
             SfxViewFrame* pView = SfxViewFrame::GetFirst();
@@ -948,7 +921,7 @@ void SfxApplication::OfaExec_Impl( SfxRequest& rReq )
                 SfxObjectShell* pDocShell = SfxObjectShell::CreateObject( aBasicName );
                 pDocShell->DoInitNew( 0 );
                 pDocShell->SetModified( FALSE );
-                pView = SFX_APP()->CreateViewFrame( *pDocShell, 0 );
+                pView = SfxViewFrame::CreateViewFrame( *pDocShell, 0 );
                 pView->SetName( String( RTL_CONSTASCII_USTRINGPARAM( "BASIC:1" ) ) );
             }
 
@@ -1044,7 +1017,7 @@ void SfxApplication::OfaExec_Impl( SfxRequest& rReq )
                             Reference< provider::XScriptProviderFactory > xFac(
                                 xCtx->getValueByName(
                                     ::rtl::OUString::createFromAscii( "/singletons/com.sun.star.script.provider.theMasterScriptProviderFactory") ), UNO_QUERY_THROW );
-    
+
                             Any aContext;
 
                             Reference< provider::XScriptProvider > xScriptProvider( xFac->createScriptProvider( aContext ),

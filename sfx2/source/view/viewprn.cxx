@@ -523,8 +523,8 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 
                     /* Now lets reset the Dialog printer, since its freed */
                     if (pPrintDlg)
-                        pPrintDlg->SetPrinter (pPrinter);					
-                    
+                        pPrintDlg->SetPrinter (pPrinter);
+
                     if ( SID_PRINTDOC == nId )
 					{
 	                    nCopies  = pPrintDlg->GetCopyCount();
@@ -628,28 +628,28 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 				}
 
 	            // does the view support ranges?
-	            if ( pPagesItem || pPrintDlg->IsRangeEnabled(PRINTDIALOG_RANGE) )
-				{
-	                // enable ranges
-					pPrintDlg->CheckRange(PRINTDIALOG_RANGE);
-
-					if ( pPagesItem )
-	                    // get range text from parameter
-						pPrintDlg->SetRangeText( pPagesItem->GetValue() );
-					else
-					{
-	                    // construct range text from page range
-						String aRange = String::CreateFromInt32( nFrom );
-						aRange += '-';
-						aRange += String::CreateFromInt32( nTo );
-						pPrintDlg->SetRangeText( aRange );
-					}
-				}
-	            else if ( pSelectItem && pSelectItem->GetValue() )
+                if ( pSelectItem && pSelectItem->GetValue() )
 	            {
-	                // print selecion only
+                    // print selection only
 	                pPrintDlg->CheckRange(PRINTDIALOG_SELECTION);
 	            }
+                else if ( pPagesItem )
+				{
+                    // get range text from parameter
+	                // enable ranges
+					pPrintDlg->CheckRange(PRINTDIALOG_RANGE);
+                    pPrintDlg->SetRangeText( pPagesItem->GetValue() );
+                }
+                else if ( pPrintDlg->IsRangeEnabled(PRINTDIALOG_RANGE) )
+				{
+	                // enable ranges
+                    // construct range text from page range
+					pPrintDlg->CheckRange(PRINTDIALOG_RANGE);
+                    String aRange = String::CreateFromInt32( nFrom );
+                    aRange += '-';
+                    aRange += String::CreateFromInt32( nTo );
+                    pPrintDlg->SetRangeText( aRange );
+				}
 	            else
 				{
 	                // print page rage
