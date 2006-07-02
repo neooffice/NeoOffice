@@ -4,22 +4,39 @@ RCS file: /cvs/installation/instsetoo_native/util/makefile.mk,v
 retrieving revision 1.56
 diff -u -r1.56 makefile.mk
 --- util/makefile.mk	26 Apr 2006 20:45:16 -0000	1.56
-+++ util/makefile.mk	30 Jun 2006 19:26:21 -0000
++++ util/makefile.mk	2 Jul 2006 18:34:41 -0000
 @@ -100,7 +100,7 @@
  .IF "$(BUILD_TYPE)"=="$(BUILD_TYPE):s/ODK//"
  ALLTAR : openoffice
  .ELSE
 -ALLTAR : openoffice sdkoo_en-US ure_en-US
-+ALLTAR : openoffice sdkoo_en-US ure_en-US ooolanguagepack
++ALLTAR : ooolanguagepack openoffice_en-US sdkoo_en-US ure_en-US
  .ENDIF
  .ELSE			# "$(UPDATER)"=="" || "$(USE_PACKAGER)"==""
  ALLTAR : updatepack
-@@ -120,7 +120,7 @@
+@@ -185,13 +185,6 @@
+ .ELSE                   # "$(OS)"!="MACOSX" || "$(PKGFORMAT)"!=""
+ 	+$(PERL) -w $(SOLARENV)$/bin$/make_installer.pl -f $(PRJ)$/util$/openoffice.lst -l $(subst,$(@:s/_/ /:1)_, $(@:b)) -p OpenOffice -packagelist $(PRJ)$/inc_openoffice$/unix$/packagelist.txt -u $(OUT) -buildid $(BUILD) -destdir $(subst,$(@:s/_/ /:1)_,$(OUT)$/OpenOffice$/install$/ $(@:b))_inprogress$/ -simple staging
+ 	+$(RM) $(subst,$(@:s/_/ /:1)_,$(OUT)$/OpenOffice$/install$/ $(@:b))$/gid_*
+-    +-$(MKDIR) $(subst,$(@:s/_/ /:1)_,$(OUT)$/OpenOffice$/install$/ $(@:b))$/staging$/.background
+-    +$(GNUCOPY) -u $(PRJ)$/res/osxdndinstall.png $(subst,$(@:s/_/ /:1)_,$(OUT)$/OpenOffice$/install$/ $(@:b))$/staging$/.background$/background.png
+-    +$(GNUCOPY) -u $(PRJ)$/res/DS_Store $(subst,$(@:s/_/ /:1)_,$(OUT)$/OpenOffice$/install$/ $(@:b))$/staging$/.DS_Store
+-	+cd $(subst,$(@:s/_/ /:1)_,$(OUT)$/OpenOffice$/install$/ $(@:b)) && hdiutil makehybrid -hfs -hfs-openfolder staging staging \
+-    -hfs-volume-name OpenOffice.org -ov -o tmp && hdiutil convert -ov -format UDZO tmp.dmg \
+-    -o $(subst,$(@:s/_/ /:1),OpenOffice.org-$(shell sed -n '/^OpenOffice$$/,/^}$$/ s/.*PACKAGEVERSION //p' openoffice.lst) $(@:b)) && $(RM) tmp.dmg
+-    
+ .ENDIF                  # "$(OS)"!="MACOSX" || "$(PKGFORMAT)"!=""
  
- .IF "$(alllangiso)"!=""
+ .IF "$(PKGFORMAT)"!=""
+@@ -216,7 +209,11 @@
+ .ELSE			# "$(PKGFORMAT)"!=""
+ ooolanguagepack_% :
+ .ENDIF			# "$(PKGFORMAT)"!=""
++.IF "$(OS)"!="MACOSX" || "$(PKGFORMAT)"!="portable"
+ 	+$(PERL) -w $(SOLARENV)$/bin$/make_installer.pl -f $(PRJ)$/util$/openoffice.lst -l $(subst,$(@:s/_/ /:1)_, $(@:b)) -p OpenOffice -packagelist $(PRJ)$/inc_openoffice$/unix$/packagelist_language.txt -u $(OUT) -buildid $(BUILD) -msitemplate $(MSILANGPACKTEMPLATEDIR) -msilanguage $(COMMONMISC)$/win_ulffiles -languagepack $(subst,xxx,$(@:e:s/.//) $(PKGFORMATSWITCH))
++.ELSE                   # "$(OS)"!="MACOSX" || "$(PKGFORMAT)"!=""
++	+$(PERL) -w $(SOLARENV)$/bin$/make_installer.pl -f $(PRJ)$/util$/openoffice.lst -l $(subst,$(@:s/_/ /:1)_, $(@:b)) -p OpenOffice -packagelist $(PRJ)$/inc_openoffice$/unix$/packagelist_language.txt -u $(OUT) -buildid $(BUILD) -destdir $(subst,$(@:s/_/ /:1)_,$(OUT)$/OpenOffice_languagepack$/install$/ $(@:b))_inprogress$/ -simple staging
++.ENDIF                  # "$(OS)"!="MACOSX" || "$(PKGFORMAT)"!=""
  
--openoffice: $(foreach,i,$(alllangiso) openoffice_$i)
-+openoffice: openoffice_en-US
- 
- openofficedev: $(foreach,i,$(alllangiso) openofficedev_$i)
- 
+ .IF "$(PKGFORMAT)"!=""
+ $(foreach,i,$(alllangiso) sdkoo_$i) : $$@{$(PKGFORMAT:^".")}
