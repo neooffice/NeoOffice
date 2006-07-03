@@ -78,7 +78,7 @@ public:
 
 	virtual ImplFontEntry*	CreateFontInstance( ImplFontSelectData& rData ) const;
 	virtual ImplFontData*   Clone() const;
-	virtual int				GetFontId() const;
+	virtual sal_IntPtr				GetFontId() const;
 };
 
 // -------------------
@@ -127,7 +127,7 @@ public:
 	virtual void			GetResolution( sal_Int32& rDPIX, sal_Int32& rDPIY );
 	virtual void			GetScreenFontResolution( sal_Int32& rDPIX, sal_Int32& rDPIY );
 	virtual USHORT			GetBitCount();
-	virtual long			GetGraphicsWidth();
+	virtual long			GetGraphicsWidth() const;
 	virtual void			ResetClipRegion();
 	virtual void			BeginSetClipRegion( ULONG nCount );
 	virtual void			EndSetClipRegion();

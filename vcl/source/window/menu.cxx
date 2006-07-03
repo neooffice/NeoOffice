@@ -101,9 +101,6 @@
 #ifndef _VCL_I18NHELP_HXX
 #include <i18nhelp.hxx>
 #endif
-#ifndef _ISOLANG_HXX
-#include <tools/isolang.hxx>
-#endif
 #ifndef _SV_TASKPANELIST_HXX
 #include <taskpanelist.hxx>
 #endif

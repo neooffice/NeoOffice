@@ -468,9 +468,9 @@ ImplFontData* JavaImplFontData::Clone() const
 
 // -----------------------------------------------------------------------
 
-int JavaImplFontData::GetFontId() const
+sal_IntPtr JavaImplFontData::GetFontId() const
 {
-	return (int)mpVCLFont->getNativeFont();
+	return (sal_IntPtr)mpVCLFont->getNativeFont();
 }
 
 // =======================================================================

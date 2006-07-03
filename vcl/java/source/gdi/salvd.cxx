@@ -147,3 +147,19 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 
 	return bRet;
 }
+
+// -----------------------------------------------------------------------
+
+void JavaSalVirtualDevice::GetSize( long& rWidth, long& rHeight )
+{
+        if ( mpVCLImage )
+        {
+                rWidth = mpVCLImage->getWidth();
+                rHeight = mpVCLImage->getHeight();
+        }
+        else
+        {
+                rWidth = 0;
+                rHeight = 0;
+        }
+}

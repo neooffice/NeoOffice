@@ -288,7 +288,7 @@ BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void
 
 // -----------------------------------------------------------------------
 
-long JavaSalGraphics::GetGraphicsWidth()
+long JavaSalGraphics::GetGraphicsWidth() const
 {
 	if ( mpFrame )
 		return mpFrame->maGeometry.nWidth;
