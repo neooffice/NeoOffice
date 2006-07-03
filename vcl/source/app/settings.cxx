@@ -76,7 +76,7 @@
 #include <unotools/confignode.hxx>
 #endif
 
-#ifdef UNX && !defined USE_JAVA
+#if defined( UNX ) && ! defined( USE_JAVA )
 #include <prex.h>
 #include <postx.h>
 #include <dtint.hxx>
