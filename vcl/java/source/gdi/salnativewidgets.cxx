@@ -77,6 +77,46 @@ using namespace rtl;
 #define CONTROL_TAB_PANE_TOP_OFFSET	10
 #define EDITBOX_TRIMWIDTH	3
 
+#if ( BUILD_OS_MAJOR == 10 ) && ( BUILD_OS_MINOR == 3 )
+// constants and structures for 10.3
+#define kThemeScrollBarMedium 0
+#define kThemeIndeterminateBarLarge kThemeLargeIndeterminateBar
+#define kThemeProgressBarLarge kThemeLargeProgressBar
+
+struct HIThemeTabDrawInfo104 {
+  UInt32              version;
+  ThemeTabStyle       style;
+  ThemeTabDirection   direction;
+  HIThemeTabSize      size;
+  HIThemeTabAdornment  adornment;             /* various tab attributes */
+  UInt32      kind;
+  UInt32  position;
+};
+
+#define kHIThemeTabKindNormal 0
+#define kHIThemeTabPositionMiddle 1
+#define kHIThemeTabPositionFirst 0
+#define kHIThemeTabPositionLast 2
+
+#define kHIThemeTabAdornmentTrailingSeparator (1 << 4)
+
+typedef UInt32 HIThemeTabKind;
+typedef UInt32 HIThemeTabPaneAdornment;
+
+struct HIThemeTabPaneDrawInfo104 {
+  UInt32              version;
+  ThemeDrawState      state;
+  ThemeTabDirection   direction;
+  HIThemeTabSize      size;
+  HIThemeTabKind      kind;
+  HIThemeTabPaneAdornment  adornment;
+};
+
+#else if ( BUILD_OS_MAJOR >= 10 ) && ( BUILD_OS_MINOR > 3 )
+typedef HIThemeTabDrawInfo HIThemeTabDrawInfo104;
+typedef HIThemeTabPaneDrawInfo HIThemeTabPaneDrawInfo104;
+#endif
+
 static JavaSalBitmap *pComboBoxBitmap = NULL;
 static JavaSalBitmap *pListBoxBitmap = NULL;
 
@@ -263,9 +303,9 @@ static BOOL InitProgressbarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, Cont
  * 							the tab's position
  * @return TRUE on success, FALSE on failure
  */
-static BOOL InitTabDrawInfo( HIThemeTabDrawInfo *pTabDrawInfo, ControlState nState, TabitemValue *pTabValue )
+static BOOL InitTabDrawInfo( HIThemeTabDrawInfo104 *pTabDrawInfo, ControlState nState, TabitemValue *pTabValue )
 {
-	memset( pTabDrawInfo, 0, sizeof( HIThemeTabDrawInfo ) );
+	memset( pTabDrawInfo, 0, sizeof( HIThemeTabDrawInfo104 ) );
 	pTabDrawInfo->version = 1;
 	if( nState & CTRL_STATE_SELECTED )
 		pTabDrawInfo->style = kThemeTabFront;
@@ -305,9 +345,9 @@ static BOOL InitTabDrawInfo( HIThemeTabDrawInfo *pTabDrawInfo, ControlState nSta
  * @param nState			overall control state of the tab item.
  * @return TRUE on success, FALSE on failure
  */
-static BOOL InitTabPaneDrawInfo( HIThemeTabPaneDrawInfo *pTabPaneDrawInfo, ControlState nState )
+static BOOL InitTabPaneDrawInfo( HIThemeTabPaneDrawInfo104 *pTabPaneDrawInfo, ControlState nState )
 {
-	memset( pTabPaneDrawInfo, 0, sizeof( HIThemeTabDrawInfo ) );
+	memset( pTabPaneDrawInfo, 0, sizeof( HIThemeTabPaneDrawInfo104 ) );
 	pTabPaneDrawInfo->version = 1;
 	pTabPaneDrawInfo->direction = kThemeTabNorth;
 	pTabPaneDrawInfo->size = kHIThemeTabSizeNormal;
@@ -879,7 +919,7 @@ static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBou
 	// Clear the image
 	memset( pBuffer->mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
 	
-	HIThemeTabDrawInfo pTabDrawInfo;
+	HIThemeTabDrawInfo104 pTabDrawInfo;
 	InitTabDrawInfo( &pTabDrawInfo, nState, pValue );
 	
 	HIRect destRect;
@@ -890,7 +930,7 @@ static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBou
 	
 	HIRect labelRect; // ignored
 	
-	bRet = ( HIThemeDrawTab( &destRect, &pTabDrawInfo, aContext, kHIThemeOrientationInverted, &labelRect ) == noErr );
+	bRet = ( HIThemeDrawTab( &destRect, (HIThemeTabDrawInfo *)&pTabDrawInfo, aContext, kHIThemeOrientationInverted, &labelRect ) == noErr );
 	
 	CGContextRelease( aContext );
 	CGColorSpaceRelease( aColorSpace );
@@ -957,7 +997,7 @@ static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangl
 	// Clear the image
 	memset( pBuffer->mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
 	
-	HIThemeTabPaneDrawInfo pTabPaneDrawInfo;
+	HIThemeTabPaneDrawInfo104 pTabPaneDrawInfo;
 	InitTabPaneDrawInfo( &pTabPaneDrawInfo, nState );
 	
 	HIRect destRect;
@@ -966,7 +1006,7 @@ static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangl
 	destRect.size.width = rDestBounds.GetWidth();
 	destRect.size.height = rDestBounds.GetHeight();
 	
-	bRet = ( HIThemeDrawTabPane( &destRect, &pTabPaneDrawInfo, aContext, kHIThemeOrientationInverted ) == noErr );
+	bRet = ( HIThemeDrawTabPane( &destRect, (HIThemeTabPaneDrawInfo *)&pTabPaneDrawInfo, aContext, kHIThemeOrientationInverted ) == noErr );
 	
 	CGContextRelease( aContext );
 	CGColorSpaceRelease( aColorSpace );
@@ -1771,7 +1811,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				
 				TabitemValue *pValue = static_cast<TabitemValue *> ( aValue.getOptionalVal() );
 				
-				HIThemeTabDrawInfo pTabDrawInfo;
+				HIThemeTabDrawInfo104 pTabDrawInfo;
 				InitTabDrawInfo( &pTabDrawInfo, nState, pValue );
 				
 				HIRect proposedBounds;
@@ -1781,7 +1821,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				proposedBounds.size.height = controlRect.Bottom() - controlRect.Top();
 				
 				HIShapeRef tabShape;
-				HIThemeGetTabShape( &proposedBounds, &pTabDrawInfo, &tabShape );
+				HIThemeGetTabShape( &proposedBounds, (HIThemeTabDrawInfo *)&pTabDrawInfo, &tabShape );
 				
 				HIRect preferredRect;
 				HIShapeGetBounds( tabShape, &preferredRect );
