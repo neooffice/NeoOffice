@@ -60,6 +60,10 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
 
+#ifndef _SV_JAVA_TOOLS_HXX
+#include <inc/java/tools.hxx>
+#endif
+
 #ifdef __cplusplus
 #include <premac.h>
 #endif
@@ -74,7 +78,7 @@ using namespace rtl;
 
 #define COMBOBOX_BUTTON_WIDTH 22
 #define COMBOBOX_BUTTON_TRIMWIDTH 3
-#define CONTROL_TAB_PANE_TOP_OFFSET	10
+#define CONTROL_TAB_PANE_TOP_OFFSET	( ( vcl::IsRunningPanther() ) ? 1 : 10 )
 #define EDITBOX_TRIMWIDTH	3
 
 #if ( BUILD_OS_MAJOR == 10 ) && ( BUILD_OS_MINOR == 3 )

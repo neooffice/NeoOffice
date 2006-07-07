@@ -39,6 +39,16 @@
 #include <java/tools.hxx>
 #endif					
 
+#ifdef GENESIS_OF_THE_NEW_WEAPONS
+#ifdef __cplusplus
+#include <premac.h>
+#endif
+#include <Carbon/Carbon.h>
+#ifdef __cplusplus
+#include <postmac.h>
+#endif
+#endif
+
 using namespace vcl;
 
 // ============================================================================
@@ -70,3 +80,23 @@ jstring vcl::StringToJavaString( JNIEnv *pEnv, const ::rtl::OUString& _rTemp )
 	}
 	return aStr;
 }
+
+// ----------------------------------------------------------------------------
+
+#ifdef GENESIS_OF_THE_NEW_WEAPONS
+bool vcl::IsRunningPanther( )
+{
+	static bool initializedOnce = false;
+	static bool isPanther = false;
+	
+	if ( ! initializedOnce )
+	{
+		long res = 0;
+		Gestalt( gestaltSystemVersion, &res );
+		isPanther = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) == 0x3 ) );
+		initializedOnce = true;
+	}
+	
+	return isPanther;
+}
+#endif
