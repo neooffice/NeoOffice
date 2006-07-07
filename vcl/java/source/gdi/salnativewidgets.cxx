@@ -80,6 +80,8 @@ using namespace rtl;
 #define COMBOBOX_BUTTON_TRIMWIDTH 3
 #define CONTROL_TAB_PANE_TOP_OFFSET	( ( vcl::IsRunningPanther() ) ? 2 : 10 )
 #define EDITBOX_TRIMWIDTH	3
+#define LISTBOX_BUTTON_HORIZ_TRIMWIDTH	0
+#define LISTBOX_BUTTON_VERT_TRIMWIDTH	2
 
 #if ( BUILD_OS_MAJOR == 10 ) && ( BUILD_OS_MINOR == 3 )
 // constants and structures for 10.3
@@ -583,10 +585,10 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	aButtonDrawInfo.kind = kThemePopupButton;
 	
 	HIRect destRect;
-	destRect.origin.x = 0;
-	destRect.origin.y = 0;
-	destRect.size.width = rDestBounds.GetWidth()/* - COMBOBOX_BUTTON_TRIMWIDTH */;
-	destRect.size.height = rDestBounds.GetHeight();
+	destRect.origin.x = LISTBOX_BUTTON_HORIZ_TRIMWIDTH;
+	destRect.origin.y = LISTBOX_BUTTON_VERT_TRIMWIDTH;
+	destRect.size.width = rDestBounds.GetWidth() - LISTBOX_BUTTON_HORIZ_TRIMWIDTH;
+	destRect.size.height = rDestBounds.GetHeight() - LISTBOX_BUTTON_VERT_TRIMWIDTH;
 	bRet = ( HIThemeDrawButton( &destRect, &aButtonDrawInfo, aContext, kHIThemeOrientationInverted, NULL ) == noErr );
 
 	CGContextRelease( aContext );
