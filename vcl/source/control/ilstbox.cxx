@@ -2808,7 +2808,14 @@ void ImplWin::DrawEntry( BOOL bDrawImage, BOOL bDrawText, BOOL bDrawTextAtImageP
 void ImplWin::Resize()
 {
     Control::Resize();
+#if defined( USE_JAVA ) && defined( GENESIS_OF_THE_NEW_WEAPONS )
+    maFocusRect.Top() = 2;
+    maFocusRect.Left() = 4;
+    maFocusRect.Bottom() = GetOutputSizePixel().Height() - 2;
+    maFocusRect.Right() = GetOutputSizePixel().Width() - 4;
+#else
 	maFocusRect.SetSize( GetOutputSizePixel() );
+#endif
 	Invalidate();
 }
 
