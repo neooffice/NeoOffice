@@ -2724,6 +2724,12 @@ void ImplWin::DrawEntry( BOOL bDrawImage, BOOL bDrawText, BOOL bDrawTextAtImageP
 	long nBorder = 1;
 	Size aOutSz = GetOutputSizePixel();
 
+#ifdef USE_JAVA
+#ifdef GENESIS_OF_THE_NEW_WEAPONS
+	nBorder = 6;
+#endif
+#endif
+
 	BOOL bImage = !!maImage;
 	if( bDrawImage && bImage && !bLayout )
 	{
