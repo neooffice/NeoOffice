@@ -484,6 +484,16 @@ void JavaSalGraphics::SetTextColor( SalColor nSalColor )
 
 USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 {
+	if ( !pFont )
+	{
+		if ( mpVCLFont )
+		{
+			delete mpVCLFont;
+			mpVCLFont = NULL;
+		}
+		return 0;
+	}
+	
 	SalData *pSalData = GetSalData();
 
 	// Don't change the font for fallback levels as we need the first font
