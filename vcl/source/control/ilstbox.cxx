@@ -2667,11 +2667,9 @@ void ImplWin::ImplDraw( bool bLayout )
             {
                 SetTextColor( rStyleSettings.GetHighlightTextColor() );
 #ifdef USE_JAVA
-#ifdef GENESIS_OF_THE_NEW_WEAPONS
 				SetFillColor();
 #else
                 SetFillColor( rStyleSettings.GetHighlightColor() );
-#endif
 #endif
                 DrawRect( maFocusRect );
             }
@@ -2725,9 +2723,7 @@ void ImplWin::DrawEntry( BOOL bDrawImage, BOOL bDrawText, BOOL bDrawTextAtImageP
 	Size aOutSz = GetOutputSizePixel();
 
 #ifdef USE_JAVA
-#ifdef GENESIS_OF_THE_NEW_WEAPONS
 	nBorder = 6;
-#endif
 #endif
 
 	BOOL bImage = !!maImage;
@@ -2808,7 +2804,7 @@ void ImplWin::DrawEntry( BOOL bDrawImage, BOOL bDrawText, BOOL bDrawTextAtImageP
 void ImplWin::Resize()
 {
     Control::Resize();
-#if defined( USE_JAVA ) && defined( GENESIS_OF_THE_NEW_WEAPONS )
+#if defined( USE_JAVA )
     maFocusRect.Top() = 2;
     maFocusRect.Left() = 4;
     maFocusRect.Bottom() = GetOutputSizePixel().Height() - 2;

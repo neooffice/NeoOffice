@@ -39,14 +39,12 @@
 #include <java/tools.hxx>
 #endif					
 
-#ifdef GENESIS_OF_THE_NEW_WEAPONS
 #ifdef __cplusplus
 #include <premac.h>
 #endif
 #include <Carbon/Carbon.h>
 #ifdef __cplusplus
 #include <postmac.h>
-#endif
 #endif
 
 using namespace vcl;
@@ -83,7 +81,6 @@ jstring vcl::StringToJavaString( JNIEnv *pEnv, const ::rtl::OUString& _rTemp )
 
 // ----------------------------------------------------------------------------
 
-#ifdef GENESIS_OF_THE_NEW_WEAPONS
 bool vcl::IsRunningPanther( )
 {
 	static bool initializedOnce = false;
@@ -99,4 +96,3 @@ bool vcl::IsRunningPanther( )
 	
 	return isPanther;
 }
-#endif

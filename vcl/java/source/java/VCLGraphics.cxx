@@ -781,7 +781,6 @@ void com_sun_star_vcl_VCLGraphics::drawRect( long _par0, long _par1, long _par2,
 
 // ----------------------------------------------------------------------------
 
-#ifdef GENESIS_OF_THE_NEW_WEAPONS
 void com_sun_star_vcl_VCLGraphics::drawPushButton( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4, sal_Bool _par5, sal_Bool _par6, sal_Bool _par7, sal_Bool _par8 )
 {
 	static jmethodID mID = NULL;
@@ -1073,7 +1072,6 @@ const Rectangle com_sun_star_vcl_VCLGraphics::getPreferredCheckBoxBounds( long _
 	}
 	return out;
 }
-#endif	// GENESIS_OF_THE_NEW_WEAPONS
 
 // ----------------------------------------------------------------------------
 

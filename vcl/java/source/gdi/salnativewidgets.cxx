@@ -33,8 +33,6 @@
  *
  ************************************************************************/
 
-#ifdef GENESIS_OF_THE_NEW_WEAPONS
-
 #define _SV_SALNATIVEWIDGETS_CXX
 
 #ifndef _SV_SVSYS_H
@@ -1899,4 +1897,3 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 	return bReturn;
 }
 
-#endif // GENESIS_OF_THE_NEW_WEAPONS

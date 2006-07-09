@@ -45,7 +45,7 @@
 #ifndef _PRGSBAR_HXX
 #include <prgsbar.hxx>
 #endif
-#ifdef GENESIS_OF_THE_NEW_WEAPONS
+#ifdef USE_JAVA
 #ifndef _SV_NATIVEWIDGETS_HXX
 #include <vcl/salnativewidgets.hxx>
 #endif
@@ -142,7 +142,7 @@ void ProgressBar::ImplInitSettings( BOOL bFont,
 
 void ProgressBar::ImplDrawProgress( USHORT nOldPerc, USHORT nNewPerc )
 {
-#ifdef GENESIS_OF_THE_NEW_WEAPONS
+#ifdef USE_JAVA
 	if ( IsNativeControlSupported( CTRL_PROGRESSBAR, PART_ENTIRE_CONTROL ) )
 	{
 		ProgressbarValue aProgressbarValue;

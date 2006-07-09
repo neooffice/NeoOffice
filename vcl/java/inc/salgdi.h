@@ -154,13 +154,11 @@ public:
 	virtual BOOL			GetGlyphOutline( long nIndex, basegfx::B2DPolyPolygon& );
 	virtual SalLayout*		GetTextLayout( ImplLayoutArgs&, int nFallbackLevel );
 	virtual void			DrawServerFontLayout( const ServerFontLayout& );
-#ifdef GENESIS_OF_THE_NEW_WEAPONS
 	virtual BOOL			IsNativeControlSupported( ControlType nType, ControlPart nPart );
 	virtual BOOL			hitTestNativeControl( ControlType nType, ControlPart nPart, const Region& rControlRegion, const Point& aPos, SalControlHandle& rControlHandle, BOOL& rIsInside );
 	virtual BOOL			drawNativeControl( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, rtl::OUString aCaption );
 	virtual BOOL			drawNativeControlText( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, rtl::OUString aCaption );
 	virtual BOOL			getNativeControlRegion( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, rtl::OUString aCaption, Region &rNativeBoundingRegion, Region &rNativeContentRegion );
-#endif	// GENESIS_OF_THE_NEW_WEAPONS
 };
 
 #endif // _SV_SALGDI_H

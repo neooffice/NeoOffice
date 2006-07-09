@@ -1898,13 +1898,11 @@ void Edit::GetFocus()
 		}
 
 #ifdef USE_JAVA		
-#ifdef GENESIS_OF_THE_NEW_WEAPONS
 		{
 			Window* pWindow = GetWindow( WINDOW_BORDER );
 			if ( pWindow )
 				pWindow->Invalidate();
 		}
-#endif
 #endif
 		ImplShowCursor();
 
@@ -1946,7 +1944,6 @@ void Edit::LoseFocus()
 	Control::LoseFocus();
 
 #ifdef USE_JAVA
-#ifdef GENESIS_OF_THE_NEW_WEAPONS
 	{
 		Window* pWindow = GetWindow( WINDOW_BORDER );
 		if ( pWindow )
@@ -1971,7 +1968,6 @@ void Edit::LoseFocus()
 	
 		ImplRepaint();
 	}
-#endif
 #endif
 }
 

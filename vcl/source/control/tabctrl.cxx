@@ -592,11 +592,9 @@ Rectangle TabControl::ImplGetTabRect( USHORT nPos, long nWidth, long nHeight )
                         n++;
                     }
 
-#ifdef GENESIS_OF_THE_NEW_WEAPONS
-#ifndef MACOSX
+#if ! defined( USE_JAVA )
                     pItem->maRect.Left()   += nIDX;
                     pItem->maRect.Right()  += nIDX+nDX;
-#endif
 #endif
                     pItem->maRect.Top()     = nLineHeightAry[n-1];
                     pItem->maRect.Bottom()  = nLineHeightAry[n-1]+nIH;
@@ -605,10 +603,8 @@ Rectangle TabControl::ImplGetTabRect( USHORT nPos, long nWidth, long nHeight )
                     if ( nModDX )
                     {
                         nIDX++;
-#ifdef GENESIS_OF_THE_NEW_WEAPONS
-#ifndef MACOSX
+#if ! defined( USE_JAVA )
       					pItem->maRect.Right()++;
-#endif
 #endif
                         nModDX--;
                     }
@@ -618,8 +614,7 @@ Rectangle TabControl::ImplGetTabRect( USHORT nPos, long nWidth, long nHeight )
                 }
             }
 
-#ifdef GENESIS_OF_THE_NEW_WEAPONS
-#ifdef MACOSX
+#ifdef USE_JAVA
 			{
 				pItem = mpItemList->First();
 				USHORT lineIndex = 0;
@@ -637,7 +632,6 @@ Rectangle TabControl::ImplGetTabRect( USHORT nPos, long nWidth, long nHeight )
 					curItemIndex++;
 				}
 			}
-#endif
 #endif
         }
 
@@ -1223,7 +1217,7 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
             {
             	bool isLastTabInRow = (pItem == pLastTab);
             	bool isFirstTabInRow = (pItem == pFirstTab);
-#ifdef GENESIS_OF_THE_NEW_WEAPONS
+#ifdef USE_JAVA
 				if ( pItem != pFirstTab )
 				{
 					ImplTabItem * prevTab = mpItemList->GetObject(idx-1);
@@ -1258,7 +1252,7 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
         {
 			bool isLastTabInRow = (pCurItem == pLastTab);
 			bool isFirstTabInRow = (pCurItem == pFirstTab);
-#ifdef GENESIS_OF_THE_NEW_WEAPONS
+#ifdef USE_JAVA
 			if ( ( pCurItem != pFirstTab ) && ! ( curItemIndex < 0 ) )
 			{
 				ImplTabItem * prevTab = mpItemList->GetObject(curItemIndex-1);

@@ -1259,7 +1259,6 @@ void ImplSmallBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice*, co
         if ( pWin->HasFocus() )
             nState |= CTRL_STATE_FOCUSED;
 #ifdef USE_JAVA
-#ifdef GENESIS_OF_THE_NEW_WEAPONS
 		if ( ( aCtrlType == CTRL_EDITBOX ) && ( ! ( nState & CTRL_STATE_FOCUSED ) ) )
 		{
 			// for edit boxes, we want to check to see if the edit itself
@@ -1268,7 +1267,6 @@ void ImplSmallBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice*, co
 			if ( pCtrl->HasFocus() )
 				nState |= CTRL_STATE_FOCUSED;
 		}
-#endif
 #endif
         BOOL bMouseOver = FALSE;
         Window *pCtrlChild = pCtrl->GetWindow( WINDOW_FIRSTCHILD );

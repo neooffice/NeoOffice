@@ -1389,11 +1389,10 @@ void PushButton::ImplDrawPushButton( bool bLayout )
                                    (nState&CTRL_STATE_ROLLOVER) ? WINDOW_DRAW_ROLLOVER : 0,
                                    aInRect, aTextRect, bLayout );
 
-#ifdef USE_JAVA
-#ifndef GENESIS_OF_THE_NEW_WEAPONS
+#if ! defined( USE_JAVA )
+	// [ed] note : focus rect not used for neo native widgets
         if ( HasFocus() )
             ShowFocus( ImplGetFocusRect() );
-#endif
 #endif
     }
 
@@ -1746,10 +1745,9 @@ void PushButton::Resize()
 
 void PushButton::GetFocus()
 {
-#ifdef USE_JAVA
-#ifndef GENESIS_OF_THE_NEW_WEAPONS
+#if ! defined( USE_JAVA )
+  // [ed] Note : ShowFocus() not used for neo NWF
     ShowFocus( ImplGetFocusRect() );
-#endif
 #endif
     SetInputContext( InputContext( GetFont() ) );
     Button::GetFocus();

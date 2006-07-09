@@ -68,9 +68,7 @@ namespace vcl {
 		return xOut;
 	}
 
-#ifdef GENESIS_OF_THE_NEW_WEAPONS
 	bool					IsRunningPanther( );
-#endif
 
 } // namespace vcl
 
