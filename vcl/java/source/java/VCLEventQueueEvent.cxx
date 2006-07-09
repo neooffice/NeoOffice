@@ -230,7 +230,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				{
 					OUString aLibName = OUString::createFromAscii( "libsfx" );
 					aLibName += OUString::valueOf( (sal_Int32)SUPD, 10 );
-					aLibName += OUString::createFromAscii( STRING( DLLSUFFIX ) );
+					aLibName += OUString::createFromAscii( STRING( DLLPOSTFIX ) );
 					aLibName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
 					if ( aShutdownCancelledHandlerModule.load( aLibName ) )
 						pShutdownCancelledHandler = (NativeShutdownCancelledHandler_Type *)aShutdownCancelledHandlerModule.getSymbol( OUString::createFromAscii( "NativeShutdownCancelledHandler" ) );
@@ -268,7 +268,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			{
 				OUString aLibName = OUString::createFromAscii( "libsfx" );
 				aLibName += OUString::valueOf( (sal_Int32)SUPD, 10 );
-				aLibName += OUString::createFromAscii( STRING( DLLSUFFIX ) );
+				aLibName += OUString::createFromAscii( STRING( DLLPOSTFIX ) );
 				aLibName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
 				if ( aAboutHandlerModule.load( aLibName ) )
 					pAboutHandler = (NativeAboutMenuHandler_Type *)aAboutHandlerModule.getSymbol( OUString::createFromAscii( "NativeAboutMenuHandler" ) );
@@ -286,7 +286,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			{
 				OUString aLibName = OUString::createFromAscii( "libsfx" );
 				aLibName += OUString::valueOf( (sal_Int32)SUPD, 10 );
-				aLibName += OUString::createFromAscii( STRING( DLLSUFFIX ) );
+				aLibName += OUString::createFromAscii( STRING( DLLPOSTFIX ) );
 				aLibName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
 				if ( aPreferencesHandlerModule.load( aLibName ) )
 					pPreferencesHandler = (NativePreferencesMenuHandler_Type *)aPreferencesHandlerModule.getSymbol( OUString::createFromAscii( "NativePreferencesMenuHandler" ) );

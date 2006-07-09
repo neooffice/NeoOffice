@@ -44,7 +44,7 @@ TARGET=saljava
 .INCLUDE :  settings.mk
 .INCLUDE :  sv.mk
 
-CDEFS+=-DDLLSUFFIX=$(DLLSUFFIX)
+CDEFS+=-DDLLPOSTFIX=$(DLLPOSTFIX)
 
 # --- Files --------------------------------------------------------
 
