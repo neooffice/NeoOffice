@@ -864,6 +864,7 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
     else
         nOff = 0;
 
+#if ! defined( USE_JAVA )
     // Wenn wir die aktuelle Page sind, muessen wir etwas mehr zeichnen
     if ( pItem->mnId == mnCurPageId )
     {
@@ -871,6 +872,7 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
         nOff3 = 1;
     }
     else
+#endif
     {
         Point aLeftTestPos = aRect.BottomLeft();
         Point aRightTestPos = aRect.BottomRight();
