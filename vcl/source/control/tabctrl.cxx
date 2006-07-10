@@ -820,6 +820,10 @@ void TabControl::ImplShowFocus()
     aRect.Top()    = aRect.Top()+((aTabSize.Height()-nTextHeight)/2)-1-1;
     aRect.Right()  = aRect.Left()+nTextWidth+2;
     aRect.Bottom() = aRect.Top()+nTextHeight+2;
+#ifdef USE_JAVA
+	aRect.Left() = aRect.Left()+2;
+	aRect.Top() = aRect.Top()+2;
+#endif
     ShowFocus( aRect );
 
     SetFont( aOldFont );
