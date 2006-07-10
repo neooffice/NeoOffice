@@ -461,9 +461,11 @@ Rectangle TabControl::ImplGetTabRect( USHORT nPos, long nWidth, long nHeight )
     if ( nPos == TAB_PAGERECT )
     {
         USHORT nLastPos;
+#ifndef USE_JAVA
         if ( mnCurPageId )
             nLastPos = GetPagePos( mnCurPageId );
         else
+#endif
             nLastPos = 0;
 
         Rectangle aRect = ImplGetTabRect( nLastPos, nWidth, nHeight );
@@ -568,11 +570,16 @@ Rectangle TabControl::ImplGetTabRect( USHORT nPos, long nWidth, long nHeight )
                 i = 0;
                 while ( i < nLines+1 )
                 {
+#ifdef USE_JAVA
+					nLineHeightAry[i] = nIH*(nLines-i) + GetItemsOffset().Y();
+					i++;
+#else
                     if ( i <= nCurLine )
                         nLineHeightAry[i] = nIH*(nLines-(nCurLine-i)) + GetItemsOffset().Y();
                     else
                         nLineHeightAry[i] = nIH*(i-nCurLine-1) + GetItemsOffset().Y();
                     i++;
+#endif
                 }
 
                 i = 0;
