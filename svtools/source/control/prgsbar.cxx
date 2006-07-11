@@ -155,7 +155,8 @@ void ProgressBar::ImplDrawProgress( USHORT nOldPerc, USHORT nNewPerc )
 		if( Window::IsEnabled() )
 			nState |= CTRL_STATE_ENABLED;
 			
-		Region aCtrlRegion( Rectangle( Point( 0, 0 ), GetOutputSizePixel() ) );
+		Rectangle aCtrlRect( Point( 0, 0 ), GetOutputSizePixel() );
+		Region aCtrlRegion( aCtrlRect );
 		BOOL bOK = DrawNativeControl( CTRL_PROGRESSBAR, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, rtl::OUString() );
 		if ( bOK )
 			return;
