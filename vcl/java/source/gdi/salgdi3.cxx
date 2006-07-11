@@ -393,14 +393,12 @@ JavaImplFontData::JavaImplFontData( const ImplDevFontAttributes& rAttributes, OU
 	// fonts as infinitely scalable and provide lists of default font sizes.
 	// The size of zero matches the unx implementation. Bug 196.
 	SetBitmapSize( 0, 0 );
-	fprintf( stderr, "Create: %p\n", this );
 }
 
 // -----------------------------------------------------------------------
 
 JavaImplFontData::~JavaImplFontData()
 {
-	fprintf( stderr, "Delete: %p\n", this );
 }
 
 // -----------------------------------------------------------------------
@@ -457,7 +455,6 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		{
 			BOOL bBold = ( pFont->GetWeight() > WEIGHT_MEDIUM );
 			BOOL bItalic = ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL );
-			fprintf( stderr, "SetFont: %p\n", pFont );
 			OUString aFontName( ((JavaImplFontData *)pFont->mpFontData)->maVCLFontName );
 			CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aFontName.getStr(), aFontName.getLength(), kCFAllocatorNull );
 			CFStringRef aMatchedString = NSFontManager_findFontNameWithStyle( aString, bBold, bItalic, pFont->mnHeight );
