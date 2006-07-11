@@ -121,9 +121,6 @@ typedef HIThemeTabDrawInfo HIThemeTabDrawInfo104;
 typedef HIThemeTabPaneDrawInfo HIThemeTabPaneDrawInfo104;
 #endif
 
-static JavaSalBitmap *pComboBoxBitmap = NULL;
-static JavaSalBitmap *pListBoxBitmap = NULL;
-
 // =======================================================================
 
 static BOOL InitButtonDrawInfo( HIThemeButtonDrawInfo *pButtonDrawInfo, ControlState nState )
@@ -443,21 +440,14 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 {
 	BOOL bRet = FALSE;
 
-	if ( !pComboBoxBitmap )
-	{
-		pComboBoxBitmap = new JavaSalBitmap();
-		if ( !pComboBoxBitmap )
-			return bRet;
-	}
-
-	if ( rDestBounds.GetWidth() > pComboBoxBitmap->GetSize().Width() || rDestBounds.GetHeight() > pComboBoxBitmap->GetSize().Height() )
-		pComboBoxBitmap->Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
+	JavaSalBitmap comboBoxBitmap;
+	comboBoxBitmap.Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
 
 	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
 	if ( !aColorSpace )
 		return bRet;
 
-	BitmapBuffer *pBuffer = pComboBoxBitmap->AcquireBuffer( false );
+	BitmapBuffer *pBuffer = comboBoxBitmap.AcquireBuffer( false );
 	if ( !pBuffer )
 	{
 		CGColorSpaceRelease( aColorSpace );
@@ -471,7 +461,7 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 #endif	// POWERPC
 	if ( !aContext )
 	{
-		pComboBoxBitmap->ReleaseBuffer( pBuffer, false );
+		comboBoxBitmap.ReleaseBuffer( pBuffer, false );
 		CGColorSpaceRelease( aColorSpace );
 		return bRet;
 	}
@@ -492,7 +482,7 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 	CGContextRelease( aContext );
 	CGColorSpaceRelease( aColorSpace );
 
-	pComboBoxBitmap->ReleaseBuffer( pBuffer, false );
+	comboBoxBitmap.ReleaseBuffer( pBuffer, false );
 
 	if ( bRet )
 	{
@@ -505,7 +495,7 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 		aTwoRect.mnDestY = rDestBounds.Top();
 		aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
 		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
-		pGraphics->drawBitmap( &aTwoRect, *pComboBoxBitmap );
+		pGraphics->drawBitmap( &aTwoRect, comboBoxBitmap );
 	}
 
 	return TRUE;
@@ -539,21 +529,14 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 {
 	BOOL bRet = FALSE;
 
-	if ( !pListBoxBitmap )
-	{
-		pListBoxBitmap = new JavaSalBitmap();
-		if ( !pListBoxBitmap )
-			return bRet;
-	}
-
-	if ( rDestBounds.GetWidth() > pListBoxBitmap->GetSize().Width() || rDestBounds.GetHeight() > pListBoxBitmap->GetSize().Height() )
-		pListBoxBitmap->Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
+	JavaSalBitmap listBoxBitmap;
+	listBoxBitmap.Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
 
 	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
 	if ( !aColorSpace )
 		return bRet;
 
-	BitmapBuffer *pBuffer = pListBoxBitmap->AcquireBuffer( false );
+	BitmapBuffer *pBuffer = listBoxBitmap.AcquireBuffer( false );
 	if ( !pBuffer )
 	{
 		CGColorSpaceRelease( aColorSpace );
@@ -567,7 +550,7 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 #endif	// POWERPC
 	if ( !aContext )
 	{
-		pListBoxBitmap->ReleaseBuffer( pBuffer, false );
+		listBoxBitmap.ReleaseBuffer( pBuffer, false );
 		CGColorSpaceRelease( aColorSpace );
 		return bRet;
 	}
@@ -592,7 +575,7 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	CGContextRelease( aContext );
 	CGColorSpaceRelease( aColorSpace );
 
-	pListBoxBitmap->ReleaseBuffer( pBuffer, false );
+	listBoxBitmap.ReleaseBuffer( pBuffer, false );
 
 	if ( bRet )
 	{
@@ -605,7 +588,7 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 		aTwoRect.mnDestY = rDestBounds.Top();
 		aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
 		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
-		pGraphics->drawBitmap( &aTwoRect, *pListBoxBitmap );
+		pGraphics->drawBitmap( &aTwoRect, listBoxBitmap );
 	}
 
 	return TRUE;
@@ -1682,13 +1665,28 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 						break;
 						
 					case PART_BUTTON_LEFT:
+						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &bounds );
+						bounds.origin.x++;
+						bounds.size.width--;
+						bounds.origin.x -= bounds.size.width;
+						break;
+
 					case PART_BUTTON_UP:
-						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartUpButton, &bounds );
+						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &bounds );
+						bounds.origin.y++;
+						bounds.size.height--;
+						bounds.origin.y -= bounds.size.height;
 						break;
 					
 					case PART_BUTTON_RIGHT:
+						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &bounds );
+						bounds.origin.x++;
+						bounds.size.width--;
+
 					case PART_BUTTON_DOWN:
 						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &bounds );
+						bounds.origin.y++;
+						bounds.size.height--;
 						break;
 					
 					case PART_TRACK_HORZ_LEFT:
