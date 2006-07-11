@@ -825,13 +825,13 @@ void FontNameBox::UserDraw( const UserDrawEvent& rUDEvt )
 
 #ifdef USE_JAVA
         BOOL bSymbolFont = FALSE;
-#else	USE_JAVA
+#else	// USE_JAVA
         BOOL bSymbolFont = (rInfo.GetCharSet() == RTL_TEXTENCODING_SYMBOL);
         // starsymbol is a unicode font, but cannot display its own name
         if( rInfo.GetName().EqualsIgnoreCaseAscii( "starsymbol" )
          || rInfo.GetName().EqualsIgnoreCaseAscii( "opensymbol" ) )
             bSymbolFont = TRUE;
-#endif	USE_JAVA
+#endif	// USE_JAVA
 
         if ( bSymbolFont )
         {
@@ -845,10 +845,10 @@ void FontNameBox::UserDraw( const UserDrawEvent& rUDEvt )
         Color aTextColor = rUDEvt.GetDevice()->GetTextColor();
         Font aOldFont( rUDEvt.GetDevice()->GetFont() );
         Size aSize( aOldFont.GetSize() );
-        aSize.Height() += EXTRAFONTSIZE;
 #ifdef USE_JAVA
         Font aFont( aOldFont );
 #else	// USE_JAVA
+        aSize.Height() += EXTRAFONTSIZE;
         Font aFont( rInfo );
 #endif	// USE_JAVA
         aFont.SetSize( aSize );
