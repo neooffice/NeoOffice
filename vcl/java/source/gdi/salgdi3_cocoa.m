@@ -50,20 +50,11 @@ ATSFontRef NSFont_getATSFontRef( id pNSFont )
 			aRet = (ATSFontRef)[pNSFont _atsFontID];
 			if ( aRet )
 			{
-				CFStringRef aString;
-				if ( ATSFontGetPostScriptName( aRet, kATSOptionFlagsDefault, &aString ) == noErr )
-				{
-					// In some cases, _atsFontID may return a different font
-					// so ignore if names don't match
-					if ( CFStringCompare( aPSName, aString, 0 ) )
-						aRet = nil;
-					CFRelease( aString );
-				}
+				FSSpec aFile;
+				if ( ATSFontGetFileSpecification( aRet, &aFile ) != noErr )
+					aRet = nil;
 			}
 		}
-
-		if ( !aRet )
-			aRet = ATSFontFindFromPostScriptName( aPSName, kATSOptionFlagsDefault );
 	}
 
 	[pPool release];

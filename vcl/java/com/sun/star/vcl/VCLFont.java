@@ -195,9 +195,6 @@ public final class VCLFont {
 				leading *= -1;
 		}
 
-		if (ascent == 0 && descent == 0 && leading == 0)
-			throw new FontFormatException("Font " + font.getName() + " has no height");
-
 		// Mac OS X seems to understate the actual advance
 		ascent++;
 
