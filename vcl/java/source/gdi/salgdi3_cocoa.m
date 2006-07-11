@@ -168,8 +168,8 @@ BOOL NSFontManager_isFixedPitch( id pNSFont )
 	if ( pNSFont )
 	{
 		NSFontManager *pFontManager = [NSFontManager sharedFontManager];
-		if ( pFontManager )
-			bRet = ( [pFontManager traitsOfFont:(NSFont *)pNSFont] & NSFixedPitchFontMask );
+		if ( pFontManager && [pFontManager traitsOfFont:(NSFont *)pNSFont] & NSFixedPitchFontMask )
+			bRet = YES;
 	}
 
 	[pPool release];
@@ -186,8 +186,8 @@ BOOL NSFontManager_isItalic( id pNSFont )
 	if ( pNSFont )
 	{
 		NSFontManager *pFontManager = [NSFontManager sharedFontManager];
-		if ( pFontManager )
-			bRet = ( [pFontManager traitsOfFont:(NSFont *)pNSFont] & NSItalicFontMask );
+		if ( pFontManager && [pFontManager traitsOfFont:(NSFont *)pNSFont] & NSItalicFontMask )
+			bRet = YES;
 	}
 
 	[pPool release];
