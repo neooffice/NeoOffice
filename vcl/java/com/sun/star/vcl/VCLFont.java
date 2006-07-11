@@ -93,32 +93,6 @@ public final class VCLFont {
 	private static BufferedImage image = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB_PRE);
 
 	/**
-	 * Returns an array containing one-point instances of all fonts
-	 * available in the local <code>GraphicsEnvironment</code>.
-	 *
-	 * @return an array of <code>VCLFont</code> objects
-	 */
-	public static VCLFont[] getAllFonts() {
-
-		Font[] javaFonts = GraphicsEnvironment.getLocalGraphicsEnvironment().getAllFonts();
-		VCLFont[] vclFonts = new VCLFont[javaFonts.length];
-
-		// Copy JVM's fonts
-		int i;
-		for (i = 0; i < javaFonts.length; i++) {
-			try {
-				vclFonts[i] = new VCLFont(javaFonts[i], 0, javaFonts[i].getSize(), (short)0, true, false, 1.0);
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-		}
-
-		return vclFonts;
-
-	}
-
-	/**
 	 * The antialiased flag.
 	 */
 	private boolean antialiased = false;
@@ -195,7 +169,7 @@ public final class VCLFont {
 		vertical = v;
 
 		// Cache font and font metrics
-		font = f.deriveFont((float)s);
+		font = f.deriveFont(Font.PLAIN, size);
 		Graphics2D g = VCLFont.image.createGraphics();
 		if (g != null)
 		{
@@ -226,6 +200,24 @@ public final class VCLFont {
 
 		// Mac OS X seems to understate the actual advance
 		ascent++;
+
+	}
+
+	/**
+	 * Constructs a new <code>VCLFont</code> instance.
+	 *
+	 * @param n the name of the font
+	 * @param nf the native font
+	 * @param s the size of the font
+	 * @param o the orientation of the new <code>VCLFont</code> in degrees
+	 * @param a <code>true</code> to enable antialiasing and <code>false</code>
+	 *  to disable antialiasing
+	 * @param v <code>true</code> if the font is vertical 
+	 * @param x the X axis scale factor
+	 */
+	public VCLFont(String n, int nf, int s, short o, boolean a, boolean v, double x) throws FontFormatException {
+
+		this(new Font(n, Font.PLAIN, s), nf, s, o, a, v, x);
 
 	}
 
@@ -399,17 +391,6 @@ public final class VCLFont {
 	public boolean isVertical() {
 
 		return vertical;
-
-	}
-
-	/**
-	 * Sets the native font.
-	 *
-	 * @param nf the native font
-	 */
-	public void setNativeFont(int nf) {
-
-		nativeFont = nf;
 
 	}
 

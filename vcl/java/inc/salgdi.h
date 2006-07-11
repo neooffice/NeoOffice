@@ -71,14 +71,15 @@ class com_sun_star_vcl_VCLGraphics;
 class JavaImplFontData : public ImplFontData
 {
 public:
-	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
+	::rtl::OUString			maVCLFontName;
+	sal_IntPtr				mnATSUFontID;
 
-							JavaImplFontData( const ImplDevFontAttributes& rAttibutes, const ::vcl::com_sun_star_vcl_VCLFont *pVCLFont );
+							JavaImplFontData( const ImplDevFontAttributes& rAttibutes, ::rtl::OUString aVCLFontName, sal_IntPtr nATSUFontID );
 	virtual					~JavaImplFontData();
 
 	virtual ImplFontEntry*	CreateFontInstance( ImplFontSelectData& rData ) const;
 	virtual ImplFontData*   Clone() const;
-	virtual sal_IntPtr				GetFontId() const;
+	virtual sal_IntPtr		GetFontId() const;
 };
 
 // -------------------

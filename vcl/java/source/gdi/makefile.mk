@@ -42,7 +42,7 @@ TARGET=salgdi
 
 .INCLUDE :  settings.mk
 
-CDEFS+=-DDLLSUFFIX=$(DLLSUFFIX)
+CDEFS+=-DDLLPOSTFIX=$(DLLPOSTFIX)
 
 # --- Files --------------------------------------------------------
 
