@@ -55,11 +55,11 @@ protected:
 	static jclass		theClass;
 
 public:
-	static java_lang_Object*	getAllFonts();
 	static jclass		getMyClass();
 
-						com_sun_star_vcl_VCLFont( jobject myObj ) : java_lang_Object( myObj ) {};
-	virtual				~com_sun_star_vcl_VCLFont() {};
+						com_sun_star_vcl_VCLFont( jobject myObj ) : java_lang_Object( myObj ) {}
+						com_sun_star_vcl_VCLFont( ::rtl::OUString aFontName, int nNativeFont, long nSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX );
+	void				setNativeFont( int _par0 );
 
 	com_sun_star_vcl_VCLFont*	deriveFont( long _par0, short _par1, sal_Bool _par2, sal_Bool _par3, double _par4 );
 	long				getAscent();
@@ -74,7 +74,6 @@ public:
 	long				getSize();
 	sal_Bool			isAntialiased();
 	sal_Bool			isVertical();
-	void				setNativeFont( int _par0 );
 };
 
 } // namespace vcl

@@ -616,8 +616,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 				::std::map< int, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( (int)nFontID );
 				if ( it != pSalData->maNativeFontMapping.end() )
 				{
-					com_sun_star_vcl_VCLFont *pVCLFont = it->second->mpVCLFont;
-					mpFallbackFont = pVCLFont->deriveFont( mpHash->mnFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
+					mpFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, it->second->mnATSUFontID, mpHash->mnFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
 				}
 				else
 				{

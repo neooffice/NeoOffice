@@ -36,24 +36,6 @@
 #import <Cocoa/Cocoa.h>
 #import "salgdi3_cocoa.h"
 
-id NSFont_create( CFStringRef aFontName, long nSize )
-{
-	NSFont *pRet = nil;
-
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	if ( aFontName && nSize )
-	{
-		pRet = [NSFont fontWithName:(NSString *)aFontName size:(float)nSize];
-		if ( pRet )
-			pRet = [pRet retain];
-	}
-
-	[pPool release];
-
-	return pRet;
-}
-
 ATSFontRef NSFont_getATSFontRef( id pNSFont )
 {
 	ATSFontRef aRet = nil;
@@ -141,14 +123,63 @@ CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, BOOL bBo
 	return aRet;
 }
 
+id NSFontManager_getFontEnumerator()
+{
+	NSEnumerator *pRet = nil;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	NSFontManager *pFontManager = [NSFontManager sharedFontManager];
+	if ( pFontManager )
+	{
+		NSArray *pArray = [pFontManager availableFonts];
+		if ( pArray )
+		{
+			pRet = [pArray objectEnumerator];
+			if ( pRet )
+				[pRet retain];
+		}
+	}
+
+	[pPool release];
+
+	return pRet;
+}
+
+id NSFontManager_getNextFont( id pNSEnumerator )
+{
+	NSFont *pRet = nil;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pNSEnumerator )
+	{
+		NSString *pFontName = (NSString *)[(NSEnumerator *)pNSEnumerator nextObject];
+		if ( pFontName )
+		{
+			pRet = [NSFont fontWithName:pFontName size:(float)12];
+			if ( pRet )
+				pRet = [pRet retain];
+		}
+	}
+
+	[pPool release];
+
+	return pRet;
+}
+
 BOOL NSFontManager_isFixedPitch( id pNSFont )
 {
-	BOOL bRet = FALSE;
+	BOOL bRet = NO;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pNSFont )
-		bRet = [pNSFont isFixedPitch];
+	{
+		NSFontManager *pFontManager = [NSFontManager sharedFontManager];
+		if ( pFontManager )
+			bRet = ( [pFontManager traitsOfFont:(NSFont *)pNSFont] & NSFixedPitchFontMask );
+	}
 
 	[pPool release];
 
@@ -157,7 +188,7 @@ BOOL NSFontManager_isFixedPitch( id pNSFont )
 
 BOOL NSFontManager_isItalic( id pNSFont )
 {
-	BOOL bRet = FALSE;
+	BOOL bRet = NO;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -171,6 +202,16 @@ BOOL NSFontManager_isItalic( id pNSFont )
 	[pPool release];
 
 	return bRet;
+}
+
+void NSFontManager_releaseFontEnumerator( id pNSEnumerator )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pNSEnumerator )
+		[(NSEnumerator *)pNSEnumerator release];
+
+	[pPool release];
 }
 
 int NSFontManager_widthOfFont( id pNSFont )
