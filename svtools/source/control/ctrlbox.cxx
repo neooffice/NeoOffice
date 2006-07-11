@@ -845,12 +845,12 @@ void FontNameBox::UserDraw( const UserDrawEvent& rUDEvt )
         Color aTextColor = rUDEvt.GetDevice()->GetTextColor();
         Font aOldFont( rUDEvt.GetDevice()->GetFont() );
         Size aSize( aOldFont.GetSize() );
-        aSize.Height() += EXTRAFONTSIZE;
 #ifdef USE_JAVA
         Font aFont( aOldFont );
-#else	USE_JAVA
+#else	// USE_JAVA
+        aSize.Height() += EXTRAFONTSIZE;
         Font aFont( rInfo );
-#endif	USE_JAVA
+#endif	// USE_JAVA
         aFont.SetSize( aSize );
         rUDEvt.GetDevice()->SetFont( aFont );
         rUDEvt.GetDevice()->SetTextColor( aTextColor );
