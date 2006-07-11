@@ -823,8 +823,10 @@ void FontNameBox::UserDraw( const UserDrawEvent& rUDEvt )
     {
         nX += IMGTEXTSPACE;
 
+#ifdef USE_JAVA
+        BOOL bSymbolFont = FALSE;
+#else	// USE_JAVA
         BOOL bSymbolFont = (rInfo.GetCharSet() == RTL_TEXTENCODING_SYMBOL);
-#ifndef USE_JAVA
         // starsymbol is a unicode font, but cannot display its own name
         if( rInfo.GetName().EqualsIgnoreCaseAscii( "starsymbol" )
          || rInfo.GetName().EqualsIgnoreCaseAscii( "opensymbol" ) )
