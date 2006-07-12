@@ -148,7 +148,7 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::GetVCLBitmap( long nX, long nY, long 
 						else if ( pBuffer->mnFormat & BMP_FORMAT_16BIT_TC_MSB_MASK )
 						{
 							BitmapColor aColor;
-							for ( long i = 0; i < pBuffer->mnHeight; i++ )
+							for ( long i = 0; i < nHeight; i++ )
 							{
 								for ( long j = 0; j < pBuffer->mnWidth; j++ )
 								{
@@ -162,7 +162,7 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::GetVCLBitmap( long nX, long nY, long 
 						}
 						else if ( pBuffer->mnFormat & BMP_FORMAT_24BIT_TC_RGB )
 						{
-							for ( long i = 0; i < pBuffer->mnHeight; i++ )
+							for ( long i = 0; i < nHeight; i++ )
 							{
 								long j;
 								long k;
@@ -281,7 +281,7 @@ void JavaSalBitmap::ReleaseVCLBitmap( com_sun_star_vcl_VCLBitmap *pVCLBitmap, bo
 							}
 							else if ( pBuffer->mnFormat & BMP_FORMAT_16BIT_TC_MSB_MASK )
 							{
-								for ( long i = 0; i < pBuffer->mnHeight; i++ )
+								for ( long i = 0; i < nHeight; i++ )
 								{
 									for ( long j = 0; j < pBuffer->mnWidth; j++ )
 										pBuffer->maColorMask.SetColorFor16BitMSB( BitmapColor( (BYTE)( pBitsIn[ j ] >> 16 ), (BYTE)( pBitsIn[ j ] >> 8 ), (BYTE)pBitsIn[ j ] ), pBitsOut + ( j << 1UL ) );
@@ -292,7 +292,7 @@ void JavaSalBitmap::ReleaseVCLBitmap( com_sun_star_vcl_VCLBitmap *pVCLBitmap, bo
 							}
 							else if ( pBuffer->mnFormat & BMP_FORMAT_24BIT_TC_RGB )
 							{
-								for ( long i = 0; i < pBuffer->mnHeight; i++ )
+								for ( long i = 0; i < nHeight; i++ )
 								{
 									long j;
 									long k;
