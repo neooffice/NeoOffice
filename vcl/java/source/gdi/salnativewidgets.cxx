@@ -86,6 +86,10 @@ using namespace rtl;
 #define kThemeScrollBarMedium 0
 #define kThemeIndeterminateBarLarge kThemeLargeIndeterminateBar
 #define kThemeProgressBarLarge kThemeLargeProgressBar
+#define kHIThemeTabPositionFirst 0
+#define kHIThemeTabPositionMiddle 1
+#define kHIThemeTabPositionLast 2
+#define kHIThemeTabPositionOnly 3
 
 struct HIThemeTabDrawInfo104 {
   UInt32              version;
