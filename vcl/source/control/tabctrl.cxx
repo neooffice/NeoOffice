@@ -739,6 +739,16 @@ void TabControl::ImplChangeTabPage( USHORT nId, USHORT nOldId )
     if ( pOldPage )
         pOldPage->Hide();
 
+#ifdef USE_JAVA
+	if ( pOldItem )
+	{
+		Rectangle aRect;
+		aRect.Right() = Control::GetOutputSizePixel().Width();
+		aRect.Bottom() = Control::GetOutputSizePixel().Height();
+		Invalidate( aRect );
+	}
+#endif
+
     // Invalidate the same region that will be send to NWF
     // to always allow for bitmap caching
     // see Window::DrawNativeControl()
