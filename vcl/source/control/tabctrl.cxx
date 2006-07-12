@@ -1244,14 +1244,14 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
 				if ( pItem != pFirstTab )
 				{
 					ImplTabItem * prevTab = mpItemList->GetObject(idx-1);
-					if ( prevTab && ( prevTab->maRect.Left() > pItem->maRect.Left() ) )
+					if ( prevTab && ( prevTab->mnLine != pItem->mnLine ) )
 						isFirstTabInRow = true;
 				}
 				
 				if ( pItem != pLastTab )
 				{
 					ImplTabItem * nextTab = mpItemList->GetObject(idx+1); 
-					if ( nextTab && ( nextTab->maRect.Left() < pItem->maRect.Left() ) )
+					if ( nextTab && ( nextTab->mnLine != pItem->mnLine ) )
 						isLastTabInRow = true;
 				}
 #endif
@@ -1279,14 +1279,14 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
 			if ( ( pCurItem != pFirstTab ) && ! ( curItemIndex < 0 ) )
 			{
 				ImplTabItem * prevTab = mpItemList->GetObject(curItemIndex-1);
-				if ( prevTab && ( prevTab->maRect.Left() > pCurItem->maRect.Left() ) )
+				if ( prevTab && ( prevTab->mnLine != pCurItem->mnLine ) )
 					isFirstTabInRow = true;
 			}
 			
 			if ( ( pCurItem != pLastTab ) && ! ( curItemIndex < 0 ) )
 			{
 				ImplTabItem * nextTab = mpItemList->GetObject(curItemIndex+1); 
-				if ( nextTab && ( nextTab->maRect.Left() < pCurItem->maRect.Left() ) )
+				if ( nextTab && ( nextTab->mnLine != pCurItem->mnLine ) )
 					isLastTabInRow = true;
 			}
 #endif

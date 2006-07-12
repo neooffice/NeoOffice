@@ -326,13 +326,20 @@ static BOOL InitTabDrawInfo( HIThemeTabDrawInfo104 *pTabDrawInfo, ControlState n
 	pTabDrawInfo->position = kHIThemeTabPositionMiddle;
 	if( pTabValue )
 	{
-		if( pTabValue->isLeftAligned() || pTabValue->isFirst() )
+		if ( pTabValue->isFirst() && pTabValue->isLast() )
+			pTabDrawInfo->position = kHIThemeTabPositionOnly;
+		else if( pTabValue->isFirst() )
 			pTabDrawInfo->position = kHIThemeTabPositionFirst;
-		else if( pTabValue->isRightAligned() || pTabValue->isLast() )
+		else if( pTabValue->isLast() )
 			pTabDrawInfo->position = kHIThemeTabPositionLast;
 	}
-	if( pTabDrawInfo->position != kHIThemeTabPositionLast )
-		pTabDrawInfo->adornment |= kHIThemeTabAdornmentTrailingSeparator;
+	switch( pTabDrawInfo->position )
+	{
+		case kHIThemeTabPositionMiddle:
+		case kHIThemeTabPositionFirst:
+			pTabDrawInfo->adornment |= kHIThemeTabAdornmentTrailingSeparator;
+			break;
+	}
 	return TRUE;
 }
 
