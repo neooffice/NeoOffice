@@ -3884,6 +3884,12 @@ long CheckBox::PreNotify( NotifyEvent& rNEvt )
 void CheckBox::Toggle()
 {
     ImplCallEventListenersAndHandler( VCLEVENT_CHECKBOX_TOGGLE, maToggleHdl, this );
+#ifdef USE_JAVA
+	Rectangle aRect;
+	aRect.Right() = Control::GetOutputSizePixel().Width();
+	aRect.Bottom() = Control::GetOutputSizePixel().Height();
+	Invalidate( aRect );
+#endif
 }
 
 // -----------------------------------------------------------------------
