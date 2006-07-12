@@ -54,12 +54,14 @@
 #endif
 #include <osl/module.h>
 
+#ifndef _SV_COM_SUN_STAR_VCL_VCLBITMAP_HXX
+#include <com/sun/star/vcl/VCLBitmap.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
-
 #ifndef _SV_JAVA_TOOLS_HXX
-#include <inc/java/tools.hxx>
+#include <java/tools.hxx>
 #endif
 
 #ifdef __cplusplus
@@ -86,10 +88,6 @@ using namespace rtl;
 #define kThemeScrollBarMedium 0
 #define kThemeIndeterminateBarLarge kThemeLargeIndeterminateBar
 #define kThemeProgressBarLarge kThemeLargeProgressBar
-#define kHIThemeTabPositionFirst 0
-#define kHIThemeTabPositionMiddle 1
-#define kHIThemeTabPositionLast 2
-#define kHIThemeTabPositionOnly 3
 
 struct HIThemeTabDrawInfo104 {
   UInt32              version;
@@ -102,9 +100,10 @@ struct HIThemeTabDrawInfo104 {
 };
 
 #define kHIThemeTabKindNormal 0
-#define kHIThemeTabPositionMiddle 1
 #define kHIThemeTabPositionFirst 0
+#define kHIThemeTabPositionMiddle 1
 #define kHIThemeTabPositionLast 2
+#define kHIThemeTabPositionOnly 3
 
 #define kHIThemeTabAdornmentTrailingSeparator (1 << 4)
 
@@ -124,6 +123,140 @@ struct HIThemeTabPaneDrawInfo104 {
 typedef HIThemeTabDrawInfo HIThemeTabDrawInfo104;
 typedef HIThemeTabPaneDrawInfo HIThemeTabPaneDrawInfo104;
 #endif
+
+struct VCLBitmapBuffer : BitmapBuffer
+{
+	com_sun_star_vcl_VCLBitmap* 	mpVCLBitmap;
+	java_lang_Object*	 	mpData;
+	CGColorSpaceRef			maColorSpace;
+	CGContextRef			maContext;
+
+							VCLBitmapBuffer();
+	virtual					~VCLBitmapBuffer();
+
+	BOOL					Create( long nWidth, long nHeight );
+	void					Destroy();
+};
+
+// =======================================================================
+
+VCLBitmapBuffer::VCLBitmapBuffer() : BitmapBuffer(), mpVCLBitmap( NULL ), mpData( NULL ), maColorSpace( NULL ), maContext( NULL )
+{
+	mnFormat = 0;
+	mnWidth = 0;
+	mnHeight = 0;
+	mnScanlineSize = 0;
+	mnBitCount = 0;
+	mpBits = NULL;
+}
+
+// -----------------------------------------------------------------------
+
+VCLBitmapBuffer::~VCLBitmapBuffer()
+{
+	Destroy();
+}
+
+BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight )
+{
+	CGColorSpaceRef maColorSpace = CGColorSpaceCreateDeviceRGB();
+	if ( !maColorSpace )
+		return FALSE;
+
+	mpVCLBitmap = new com_sun_star_vcl_VCLBitmap( nWidth, nHeight, 32 );
+	if ( !mpVCLBitmap || !mpVCLBitmap->getJavaObject() )
+	{
+		Destroy();
+		return FALSE;
+	}
+
+	VCLThreadAttach t;
+	if ( !t.pEnv )
+	{
+		Destroy();
+		return FALSE;
+	}
+
+	java_lang_Object *mpData = mpVCLBitmap->getData();
+	if ( !mpData )
+	{
+		Destroy();
+		return FALSE;
+	}
+
+	mnFormat = JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN;
+	mnWidth = nWidth;
+	mnHeight = nHeight;
+	mnScanlineSize = nWidth * sizeof( jint );
+	mnBitCount = 32;
+
+	jboolean bCopy( sal_False );
+	mpBits = (BYTE *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), &bCopy );
+	if ( !mpBits )
+	{
+		Destroy();
+		return FALSE;
+	}
+
+#ifdef POWERPC
+	maContext = CGBitmapContextCreate( mpBits, nWidth, nHeight, 8, mnScanlineSize, maColorSpace, kCGImageAlphaPremultipliedFirst );
+#else	// POWERPC
+	maContext = CGBitmapContextCreate( mpBits, nWidth, nHeight, 8, mnScanlineSize, maColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+#endif	// POWERPC
+	if ( !maContext )
+	{
+		Destroy();
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+// -----------------------------------------------------------------------
+
+void VCLBitmapBuffer::Destroy()
+{
+	mnFormat = 0;
+	mnWidth = 0;
+	mnHeight = 0;
+	mnScanlineSize = 0;
+	mnBitCount = 0;
+
+	if ( maContext )
+	{
+		CGContextRelease( maContext );
+		maContext = NULL;
+	}
+
+	if ( mpBits )
+	{
+		if ( mpData )
+		{
+			VCLThreadAttach t;
+			if ( !t.pEnv )
+				t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), mpBits, 0 );
+		}
+		mpBits = NULL;
+	}
+
+	if ( mpData )
+	{
+		delete mpData;
+		mpData = NULL;
+	}
+
+	if ( mpVCLBitmap )
+	{
+		delete mpVCLBitmap;
+		mpVCLBitmap = NULL;
+	}
+
+	if ( maColorSpace )
+	{
+		CGColorSpaceRelease( maColorSpace );
+		maColorSpace = NULL;
+	}
+}
 
 // =======================================================================
 
@@ -238,7 +371,7 @@ static BOOL InitScrollBarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, HIScro
 		// in order for scrollbar metrics to be computed properly by HITheme.
 		// If the values are all equal, HITheme will return a NULL rectangle
 		// for all potential scrollbar parts.
-		
+
 		pTrackDrawInfo->min = 0;
 		pTrackDrawInfo->max = 1;
 		pTrackDrawInfo->value = 0;
@@ -268,7 +401,7 @@ static BOOL InitScrollBarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, HIScro
 static BOOL InitProgressbarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, ControlState nState, Rectangle bounds, ProgressbarValue *pProgressbarValue )
 {
 	static UInt8 phase = 0x1;
-	
+
 	memset( pTrackDrawInfo, 0, sizeof( HIThemeTrackDrawInfo ) );
 	pTrackDrawInfo->version = 0;
 	pTrackDrawInfo->kind = ( ( pProgressbarValue && pProgressbarValue->mbIndeterminate ) ? kThemeIndeterminateBarLarge : kThemeProgressBarLarge );
@@ -449,67 +582,25 @@ static BOOL InitEditFieldDrawInfo( HIThemeFrameDrawInfo *pFrameInfo, ControlStat
  */
 static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, OUString aCaption )
 {
-	BOOL bRet = FALSE;
-
-	JavaSalBitmap comboBoxBitmap;
-	comboBoxBitmap.Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
-
-	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
-	if ( !aColorSpace )
-		return bRet;
-
-	BitmapBuffer *pBuffer = comboBoxBitmap.AcquireBuffer( false );
-	if ( !pBuffer )
-	{
-		CGColorSpaceRelease( aColorSpace );
-		return bRet;
-	}
-
-#ifdef POWERPC
-	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
-#else	// POWERPC
-	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
-#endif	// POWERPC
-	if ( !aContext )
-	{
-		comboBoxBitmap.ReleaseBuffer( pBuffer, false );
-		CGColorSpaceRelease( aColorSpace );
-		return bRet;
-	}
-
-	// Clear the image
-	memset( pBuffer->mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
-
-	HIThemeButtonDrawInfo aButtonDrawInfo;
-	InitButtonDrawInfo( &aButtonDrawInfo, nState );
-
-	HIRect destRect;
-	destRect.origin.x = 0;
-	destRect.origin.y = 0;
-	destRect.size.width = rDestBounds.GetWidth() - COMBOBOX_BUTTON_TRIMWIDTH;
-	destRect.size.height = rDestBounds.GetHeight();
-	bRet = ( HIThemeDrawButton( &destRect, &aButtonDrawInfo, aContext, kHIThemeOrientationInverted, NULL ) == noErr );
-
-	CGContextRelease( aContext );
-	CGColorSpaceRelease( aColorSpace );
-
-	comboBoxBitmap.ReleaseBuffer( pBuffer, false );
-
+	VCLBitmapBuffer aBuffer;
+	BOOL bRet = aBuffer.Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
 	if ( bRet )
 	{
-		SalTwoRect aTwoRect;
-		aTwoRect.mnSrcX = 0;
-		aTwoRect.mnSrcY = 0;
-		aTwoRect.mnSrcWidth = rDestBounds.GetWidth();
-		aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
-		aTwoRect.mnDestX = rDestBounds.Left();
-		aTwoRect.mnDestY = rDestBounds.Top();
-		aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
-		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
-		pGraphics->drawBitmap( &aTwoRect, comboBoxBitmap );
+		HIThemeButtonDrawInfo aButtonDrawInfo;
+		InitButtonDrawInfo( &aButtonDrawInfo, nState );
+
+		HIRect destRect;
+		destRect.origin.x = 0;
+		destRect.origin.y = 0;
+		destRect.size.width = rDestBounds.GetWidth() - COMBOBOX_BUTTON_TRIMWIDTH;
+		destRect.size.height = rDestBounds.GetHeight();
+		bRet = ( HIThemeDrawButton( &destRect, &aButtonDrawInfo, aBuffer.maContext, kHIThemeOrientationInverted, NULL ) == noErr );
 	}
 
-	return TRUE;
+	if ( bRet )
+		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, aBuffer.mnWidth, aBuffer.mnHeight, rDestBounds.Left(), rDestBounds.Top(), aBuffer.mnWidth, aBuffer.mnHeight );
+
+	return bRet;
 }
 
 // =======================================================================
@@ -538,69 +629,30 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
  */
 static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, OUString aCaption )
 {
-	BOOL bRet = FALSE;
-
-	JavaSalBitmap listBoxBitmap;
-	listBoxBitmap.Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
-
-	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
-	if ( !aColorSpace )
-		return bRet;
-
-	BitmapBuffer *pBuffer = listBoxBitmap.AcquireBuffer( false );
-	if ( !pBuffer )
-	{
-		CGColorSpaceRelease( aColorSpace );
-		return bRet;
-	}
-
-#ifdef POWERPC
-	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
-#else	// POWERPC
-	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
-#endif	// POWERPC
-	if ( !aContext )
-	{
-		listBoxBitmap.ReleaseBuffer( pBuffer, false );
-		CGColorSpaceRelease( aColorSpace );
-		return bRet;
-	}
-
-	// Set the background to the fill color
-	long nBits = pBuffer->mnWidth * pBuffer->mnHeight;
-	int *pBits = (int *)pBuffer->mpBits;
-	for ( long i = 0; i < nBits; i++ )
-		pBits[ i ] = pGraphics->mnFillColor;
-
-	HIThemeButtonDrawInfo aButtonDrawInfo;
-	InitButtonDrawInfo( &aButtonDrawInfo, nState );
-	aButtonDrawInfo.kind = kThemePopupButton;
-	
-	HIRect destRect;
-	destRect.origin.x = LISTBOX_BUTTON_HORIZ_TRIMWIDTH;
-	destRect.origin.y = LISTBOX_BUTTON_VERT_TRIMWIDTH;
-	destRect.size.width = rDestBounds.GetWidth() - LISTBOX_BUTTON_HORIZ_TRIMWIDTH;
-	destRect.size.height = rDestBounds.GetHeight() - LISTBOX_BUTTON_VERT_TRIMWIDTH;
-	bRet = ( HIThemeDrawButton( &destRect, &aButtonDrawInfo, aContext, kHIThemeOrientationInverted, NULL ) == noErr );
-
-	CGContextRelease( aContext );
-	CGColorSpaceRelease( aColorSpace );
-
-	listBoxBitmap.ReleaseBuffer( pBuffer, false );
-
+	VCLBitmapBuffer aBuffer;
+	BOOL bRet = aBuffer.Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
 	if ( bRet )
 	{
-		SalTwoRect aTwoRect;
-		aTwoRect.mnSrcX = 0;
-		aTwoRect.mnSrcY = 0;
-		aTwoRect.mnSrcWidth = rDestBounds.GetWidth();
-		aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
-		aTwoRect.mnDestX = rDestBounds.Left();
-		aTwoRect.mnDestY = rDestBounds.Top();
-		aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
-		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
-		pGraphics->drawBitmap( &aTwoRect, listBoxBitmap );
+		// Set the background to the fill color
+		long nBits = aBuffer.mnWidth * aBuffer.mnHeight;
+		int *pBits = (int *)aBuffer.mpBits;
+		for ( long i = 0; i < nBits; i++ )
+			pBits[ i ] = pGraphics->mnFillColor;
+
+		HIThemeButtonDrawInfo aButtonDrawInfo;
+		InitButtonDrawInfo( &aButtonDrawInfo, nState );
+		aButtonDrawInfo.kind = kThemePopupButton;
+
+		HIRect destRect;
+		destRect.origin.x = LISTBOX_BUTTON_HORIZ_TRIMWIDTH;
+		destRect.origin.y = LISTBOX_BUTTON_VERT_TRIMWIDTH;
+		destRect.size.width = rDestBounds.GetWidth() - LISTBOX_BUTTON_HORIZ_TRIMWIDTH;
+		destRect.size.height = rDestBounds.GetHeight() - LISTBOX_BUTTON_VERT_TRIMWIDTH;
+		bRet = ( HIThemeDrawButton( &destRect, &aButtonDrawInfo, aBuffer.maContext, kHIThemeOrientationInverted, NULL ) == noErr );
 	}
+
+	if ( bRet )
+		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, aBuffer.mnWidth, aBuffer.mnHeight, rDestBounds.Left(), rDestBounds.Top(), aBuffer.mnWidth, aBuffer.mnHeight );
 
 	return TRUE;
 }
@@ -621,66 +673,25 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
  */
 static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, ScrollbarValue *pScrollbarValue )
 {
-	BOOL bRet = FALSE;
-	
-	JavaSalBitmap scrollbarBitmap;
-	scrollbarBitmap.Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
-	
-	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
-	if ( !aColorSpace )
-		return bRet;
-
-	BitmapBuffer *pBuffer = scrollbarBitmap.AcquireBuffer( false );
-	if ( !pBuffer )
-	{
-		CGColorSpaceRelease( aColorSpace );
-		return bRet;
-	}
-
-#ifdef POWERPC
-	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
-#else	// POWERPC
-	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
-#endif	// POWERPC
-	if ( !aContext )
-	{
-		scrollbarBitmap.ReleaseBuffer( pBuffer, false );
-		CGColorSpaceRelease( aColorSpace );
-		return bRet;
-	}
-
-	// Clear the image
-	memset( pBuffer->mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
-					
-	HIThemeTrackDrawInfo pTrackDrawInfo;
-	InitScrollBarTrackInfo( &pTrackDrawInfo, NULL, nState, rDestBounds, pScrollbarValue );
-	
-	HIRect destRect;
-	destRect.origin.x = 0;
-	destRect.origin.y = 0;
-	destRect.size.width = rDestBounds.GetWidth();
-	destRect.size.height = rDestBounds.GetHeight();
-
-	bRet = ( HIThemeDrawTrack( &pTrackDrawInfo, NULL, aContext, kHIThemeOrientationInverted ) == noErr );
-	
-	CGContextRelease( aContext );
-	CGColorSpaceRelease( aColorSpace );
-
-	scrollbarBitmap.ReleaseBuffer( pBuffer, false );
-
+	VCLBitmapBuffer aBuffer;
+	BOOL bRet = aBuffer.Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
 	if ( bRet )
 	{
-		SalTwoRect aTwoRect;
-		aTwoRect.mnSrcX = 0;
-		aTwoRect.mnSrcY = 0;
-		aTwoRect.mnSrcWidth = rDestBounds.GetWidth();
-		aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
-		aTwoRect.mnDestX = rDestBounds.Left();
-		aTwoRect.mnDestY = rDestBounds.Top();
-		aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
-		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
-		pGraphics->drawBitmap( &aTwoRect, scrollbarBitmap );
+		HIThemeTrackDrawInfo pTrackDrawInfo;
+		InitScrollBarTrackInfo( &pTrackDrawInfo, NULL, nState, rDestBounds, pScrollbarValue );
+
+		HIRect destRect;
+		destRect.origin.x = 0;
+		destRect.origin.y = 0;
+		destRect.size.width = rDestBounds.GetWidth();
+		destRect.size.height = rDestBounds.GetHeight();
+
+		bRet = ( HIThemeDrawTrack( &pTrackDrawInfo, NULL, aBuffer.maContext, kHIThemeOrientationInverted ) == noErr );
 	}
+
+	if ( bRet )
+		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, aBuffer.mnWidth, aBuffer.mnHeight, rDestBounds.Left(), rDestBounds.Top(), aBuffer.mnWidth, aBuffer.mnHeight );
+
 	return bRet;
 }
 
@@ -701,91 +712,51 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
  */
 static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, SpinbuttonValue *pValue )
 {
-	BOOL bRet = FALSE;
-	
-	JavaSalBitmap spinboxBitmap;
-	spinboxBitmap.Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
-	
-	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
-	if ( !aColorSpace )
-		return bRet;
-
-	BitmapBuffer *pBuffer = spinboxBitmap.AcquireBuffer( false );
-	if ( !pBuffer )
-	{
-		CGColorSpaceRelease( aColorSpace );
-		return bRet;
-	}
-
-#ifdef POWERPC
-	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
-#else	// POWERPC
-	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
-#endif	// POWERPC
-	if ( !aContext )
-	{
-		spinboxBitmap.ReleaseBuffer( pBuffer, false );
-		CGColorSpaceRelease( aColorSpace );
-		return bRet;
-	}
-
-	// Clear the image
-	memset( pBuffer->mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
-	
-	HIThemeButtonDrawInfo aButtonDrawInfo;
-	InitSpinbuttonDrawInfo( &aButtonDrawInfo, pValue );
-
-	HIRect arrowRect;
-	arrowRect.origin.x = rDestBounds.GetWidth() - 13;
-	if( arrowRect.origin.x < 0 )
-		arrowRect.origin.x = 0;
-	arrowRect.origin.y = 0;
-	arrowRect.size.width = 13;
-	arrowRect.size.height = rDestBounds.GetHeight();
-	
-	bRet = ( HIThemeDrawButton( &arrowRect, &aButtonDrawInfo, aContext, kHIThemeOrientationInverted, NULL ) == noErr );
-	if( bRet )
-	{
-		HIRect editRect;
-		editRect.origin.x = 0;
-		editRect.origin.y = 0;
-		editRect.size.width = rDestBounds.GetWidth() - arrowRect.size.width - 2;
-		editRect.size.height = arrowRect.size.height;
-		
-		HIThemeFrameDrawInfo aFrameInfo;
-		memset( &aFrameInfo, 0, sizeof( HIThemeFrameDrawInfo ) );
-		
-		aFrameInfo.kind = kHIThemeFrameTextFieldSquare;
-		if( ! nState )
-			aFrameInfo.state = kThemeStateInactive;
-		else
-			aFrameInfo.state = kThemeStateActive;
-		if( nState & CTRL_STATE_FOCUSED )
-			aFrameInfo.isFocused = TRUE;
-		else
-			aFrameInfo.isFocused = FALSE;
-		
-		bRet = ( HIThemeDrawFrame( &editRect, &aFrameInfo, aContext, kHIThemeOrientationInverted ) == noErr );
-	}
-	
-	spinboxBitmap.ReleaseBuffer( pBuffer, false );
-
-	CGContextRelease( aContext );
-	CGColorSpaceRelease( aColorSpace );
-
+	VCLBitmapBuffer aBuffer;
+	BOOL bRet = aBuffer.Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
 	if ( bRet )
 	{
-		SalTwoRect aTwoRect;
-		aTwoRect.mnSrcX = 0;
-		aTwoRect.mnSrcY = 0;
-		aTwoRect.mnSrcWidth = rDestBounds.GetWidth();
-		aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
-		aTwoRect.mnDestX = rDestBounds.Left();
-		aTwoRect.mnDestY = rDestBounds.Top();
-		aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
-		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
-		pGraphics->drawBitmap( &aTwoRect, spinboxBitmap );
+		HIThemeButtonDrawInfo aButtonDrawInfo;
+		InitSpinbuttonDrawInfo( &aButtonDrawInfo, pValue );
+
+		HIRect arrowRect;
+		arrowRect.origin.x = rDestBounds.GetWidth() - 13;
+		if( arrowRect.origin.x < 0 )
+			arrowRect.origin.x = 0;
+		arrowRect.origin.y = 0;
+		arrowRect.size.width = 13;
+		arrowRect.size.height = rDestBounds.GetHeight();
+
+		bRet = ( HIThemeDrawButton( &arrowRect, &aButtonDrawInfo, aBuffer.maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+
+		if( bRet )
+		{
+			HIRect editRect;
+			editRect.origin.x = 0;
+			editRect.origin.y = 0;
+			editRect.size.width = rDestBounds.GetWidth() - arrowRect.size.width - 2;
+			editRect.size.height = arrowRect.size.height;
+
+			HIThemeFrameDrawInfo aFrameInfo;
+			memset( &aFrameInfo, 0, sizeof( HIThemeFrameDrawInfo ) );
+
+			aFrameInfo.kind = kHIThemeFrameTextFieldSquare;
+			if( ! nState )
+				aFrameInfo.state = kThemeStateInactive;
+			else
+				aFrameInfo.state = kThemeStateActive;
+			if( nState & CTRL_STATE_FOCUSED )
+				aFrameInfo.isFocused = TRUE;
+			else
+				aFrameInfo.isFocused = FALSE;
+
+			bRet = ( HIThemeDrawFrame( &editRect, &aFrameInfo, aBuffer.maContext, kHIThemeOrientationInverted ) == noErr );
+		}
 	}
+
+	if ( bRet )
+		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, aBuffer.mnWidth, aBuffer.mnHeight, rDestBounds.Left(), rDestBounds.Top(), aBuffer.mnWidth, aBuffer.mnHeight );
+
 	return bRet;
 }
 
@@ -805,66 +776,25 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
  */
 static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, ProgressbarValue *pValue )
 {
-	BOOL bRet = FALSE;
-	
-	JavaSalBitmap progressBitmap;
-	progressBitmap.Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
-	
-	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
-	if ( !aColorSpace )
-		return bRet;
-
-	BitmapBuffer *pBuffer = progressBitmap.AcquireBuffer( false );
-	if ( !pBuffer )
-	{
-		CGColorSpaceRelease( aColorSpace );
-		return bRet;
-	}
-
-#ifdef POWERPC
-	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
-#else	// POWERPC
-	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
-#endif	// POWERPC
-	if ( !aContext )
-	{
-		progressBitmap.ReleaseBuffer( pBuffer, false );
-		CGColorSpaceRelease( aColorSpace );
-		return bRet;
-	}
-
-	// Clear the image
-	memset( pBuffer->mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
-	
-	HIThemeTrackDrawInfo aTrackDrawInfo;
-	InitProgressbarTrackInfo( &aTrackDrawInfo, nState, rDestBounds, pValue );
-	
-	HIRect destRect;
-	destRect.origin.x = 0;
-	destRect.origin.y = 0;
-	destRect.size.width = rDestBounds.GetWidth();
-	destRect.size.height = rDestBounds.GetHeight();
-
-	bRet = ( HIThemeDrawTrack( &aTrackDrawInfo, NULL, aContext, kHIThemeOrientationInverted ) == noErr );
-	
-	CGContextRelease( aContext );
-	CGColorSpaceRelease( aColorSpace );
-
-	progressBitmap.ReleaseBuffer( pBuffer, false );
-
+	VCLBitmapBuffer aBuffer;
+	BOOL bRet = aBuffer.Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
 	if ( bRet )
 	{
-		SalTwoRect aTwoRect;
-		aTwoRect.mnSrcX = 0;
-		aTwoRect.mnSrcY = 0;
-		aTwoRect.mnSrcWidth = rDestBounds.GetWidth();
-		aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
-		aTwoRect.mnDestX = rDestBounds.Left();
-		aTwoRect.mnDestY = rDestBounds.Top();
-		aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
-		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
-		pGraphics->drawBitmap( &aTwoRect, progressBitmap );
+		HIThemeTrackDrawInfo aTrackDrawInfo;
+		InitProgressbarTrackInfo( &aTrackDrawInfo, nState, rDestBounds, pValue );
+
+		HIRect destRect;
+		destRect.origin.x = 0;
+		destRect.origin.y = 0;
+		destRect.size.width = rDestBounds.GetWidth();
+		destRect.size.height = rDestBounds.GetHeight();
+
+		bRet = ( HIThemeDrawTrack( &aTrackDrawInfo, NULL, aBuffer.maContext, kHIThemeOrientationInverted ) == noErr );
 	}
+
+	if ( bRet )
+		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, aBuffer.mnWidth, aBuffer.mnHeight, rDestBounds.Left(), rDestBounds.Top(), aBuffer.mnWidth, aBuffer.mnHeight );
+
 	return bRet;
 }
 
@@ -886,68 +816,27 @@ static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& 
  */
 static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, TabitemValue *pValue )
 {
-	BOOL bRet = FALSE;
-	
-	JavaSalBitmap tabBitmap;
-	tabBitmap.Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
-	
-	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
-	if ( !aColorSpace )
-		return bRet;
-
-	BitmapBuffer *pBuffer = tabBitmap.AcquireBuffer( false );
-	if ( !pBuffer )
-	{
-		CGColorSpaceRelease( aColorSpace );
-		return bRet;
-	}
-
-#ifdef POWERPC
-	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
-#else	// POWERPC
-	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
-#endif	// POWERPC
-	if ( !aContext )
-	{
-		tabBitmap.ReleaseBuffer( pBuffer, false );
-		CGColorSpaceRelease( aColorSpace );
-		return bRet;
-	}
-
-	// Clear the image
-	memset( pBuffer->mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
-	
-	HIThemeTabDrawInfo104 pTabDrawInfo;
-	InitTabDrawInfo( &pTabDrawInfo, nState, pValue );
-	
-	HIRect destRect;
-	destRect.origin.x = 0;
-	destRect.origin.y = 0;
-	destRect.size.width = rDestBounds.GetWidth();
-	destRect.size.height = rDestBounds.GetHeight();
-	
-	HIRect labelRect; // ignored
-	
-	bRet = ( HIThemeDrawTab( &destRect, (HIThemeTabDrawInfo *)&pTabDrawInfo, aContext, kHIThemeOrientationInverted, &labelRect ) == noErr );
-	
-	CGContextRelease( aContext );
-	CGColorSpaceRelease( aColorSpace );
-
-	tabBitmap.ReleaseBuffer( pBuffer, false );
-
+	VCLBitmapBuffer aBuffer;
+	BOOL bRet = aBuffer.Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
 	if ( bRet )
 	{
-		SalTwoRect aTwoRect;
-		aTwoRect.mnSrcX = 0;
-		aTwoRect.mnSrcY = 0;
-		aTwoRect.mnSrcWidth = rDestBounds.GetWidth();
-		aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
-		aTwoRect.mnDestX = rDestBounds.Left();
-		aTwoRect.mnDestY = rDestBounds.Top();
-		aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
-		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
-		pGraphics->drawBitmap( &aTwoRect, tabBitmap );
+		HIThemeTabDrawInfo104 pTabDrawInfo;
+		InitTabDrawInfo( &pTabDrawInfo, nState, pValue );
+
+		HIRect destRect;
+		destRect.origin.x = 0;
+		destRect.origin.y = 0;
+		destRect.size.width = rDestBounds.GetWidth();
+		destRect.size.height = rDestBounds.GetHeight();
+
+		HIRect labelRect; // ignored
+
+		bRet = ( HIThemeDrawTab( &destRect, (HIThemeTabDrawInfo *)&pTabDrawInfo, aBuffer.maContext, kHIThemeOrientationInverted, &labelRect ) == noErr );
 	}
+
+	if ( bRet )
+		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, aBuffer.mnWidth, aBuffer.mnHeight, rDestBounds.Left(), rDestBounds.Top(), aBuffer.mnWidth, aBuffer.mnHeight );
+
 	return bRet;
 }
 
@@ -964,66 +853,25 @@ static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBou
  */
 static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
-	BOOL bRet = FALSE;
-	
-	JavaSalBitmap tabBoxBitmap;
-	tabBoxBitmap.Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
-	
-	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
-	if ( !aColorSpace )
-		return bRet;
-
-	BitmapBuffer *pBuffer = tabBoxBitmap.AcquireBuffer( false );
-	if ( !pBuffer )
-	{
-		CGColorSpaceRelease( aColorSpace );
-		return bRet;
-	}
-
-#ifdef POWERPC
-	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
-#else	// POWERPC
-	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
-#endif	// POWERPC
-	if ( !aContext )
-	{
-		tabBoxBitmap.ReleaseBuffer( pBuffer, false );
-		CGColorSpaceRelease( aColorSpace );
-		return bRet;
-	}
-
-	// Clear the image
-	memset( pBuffer->mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
-	
-	HIThemeTabPaneDrawInfo104 pTabPaneDrawInfo;
-	InitTabPaneDrawInfo( &pTabPaneDrawInfo, nState );
-	
-	HIRect destRect;
-	destRect.origin.x = 0;
-	destRect.origin.y = 0;
-	destRect.size.width = rDestBounds.GetWidth();
-	destRect.size.height = rDestBounds.GetHeight();
-	
-	bRet = ( HIThemeDrawTabPane( &destRect, (HIThemeTabPaneDrawInfo *)&pTabPaneDrawInfo, aContext, kHIThemeOrientationInverted ) == noErr );
-	
-	CGContextRelease( aContext );
-	CGColorSpaceRelease( aColorSpace );
-
-	tabBoxBitmap.ReleaseBuffer( pBuffer, false );
-
+	VCLBitmapBuffer aBuffer;
+	BOOL bRet = aBuffer.Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
 	if ( bRet )
 	{
-		SalTwoRect aTwoRect;
-		aTwoRect.mnSrcX = 0;
-		aTwoRect.mnSrcY = 0;
-		aTwoRect.mnSrcWidth = rDestBounds.GetWidth();
-		aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
-		aTwoRect.mnDestX = rDestBounds.Left();
-		aTwoRect.mnDestY = rDestBounds.Top();
-		aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
-		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
-		pGraphics->drawBitmap( &aTwoRect, tabBoxBitmap );
+		HIThemeTabPaneDrawInfo104 pTabPaneDrawInfo;
+		InitTabPaneDrawInfo( &pTabPaneDrawInfo, nState );
+
+		HIRect destRect;
+		destRect.origin.x = 0;
+		destRect.origin.y = 0;
+		destRect.size.width = rDestBounds.GetWidth();
+		destRect.size.height = rDestBounds.GetHeight();
+
+		bRet = ( HIThemeDrawTabPane( &destRect, (HIThemeTabPaneDrawInfo *)&pTabPaneDrawInfo, aBuffer.maContext, kHIThemeOrientationInverted ) == noErr );
 	}
+
+	if ( bRet )
+		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, aBuffer.mnWidth, aBuffer.mnHeight, rDestBounds.Left(), rDestBounds.Top(), aBuffer.mnWidth, aBuffer.mnHeight );
+
 	return bRet;
 }
 
@@ -1040,66 +888,25 @@ static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangl
  */
 static BOOL DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
-	BOOL bRet = FALSE;
-	
-	JavaSalBitmap groupBoxBitmap;
-	groupBoxBitmap.Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
-	
-	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
-	if ( !aColorSpace )
-		return bRet;
-
-	BitmapBuffer *pBuffer = groupBoxBitmap.AcquireBuffer( false );
-	if ( !pBuffer )
-	{
-		CGColorSpaceRelease( aColorSpace );
-		return bRet;
-	}
-
-#ifdef POWERPC
-	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
-#else	// POWERPC
-	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
-#endif	// POWERPC
-	if ( !aContext )
-	{
-		groupBoxBitmap.ReleaseBuffer( pBuffer, false );
-		CGColorSpaceRelease( aColorSpace );
-		return bRet;
-	}
-
-	// Clear the image
-	memset( pBuffer->mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
-	
-	HIThemeGroupBoxDrawInfo pGroupBoxDrawInfo;
-	InitPrimaryGroupBoxDrawInfo( &pGroupBoxDrawInfo, nState );
-	
-	HIRect destRect;
-	destRect.origin.x = 0;
-	destRect.origin.y = 0;
-	destRect.size.width = rDestBounds.GetWidth();
-	destRect.size.height = rDestBounds.GetHeight();
-	
-	bRet = ( HIThemeDrawGroupBox( &destRect, &pGroupBoxDrawInfo, aContext, kHIThemeOrientationInverted ) == noErr );
-	
-	CGContextRelease( aContext );
-	CGColorSpaceRelease( aColorSpace );
-
-	groupBoxBitmap.ReleaseBuffer( pBuffer, false );
-
+	VCLBitmapBuffer aBuffer;
+	BOOL bRet = aBuffer.Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
 	if ( bRet )
 	{
-		SalTwoRect aTwoRect;
-		aTwoRect.mnSrcX = 0;
-		aTwoRect.mnSrcY = 0;
-		aTwoRect.mnSrcWidth = rDestBounds.GetWidth();
-		aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
-		aTwoRect.mnDestX = rDestBounds.Left();
-		aTwoRect.mnDestY = rDestBounds.Top();
-		aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
-		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
-		pGraphics->drawBitmap( &aTwoRect, groupBoxBitmap );
+		HIThemeGroupBoxDrawInfo pGroupBoxDrawInfo;
+		InitPrimaryGroupBoxDrawInfo( &pGroupBoxDrawInfo, nState );
+
+		HIRect destRect;
+		destRect.origin.x = 0;
+		destRect.origin.y = 0;
+		destRect.size.width = rDestBounds.GetWidth();
+		destRect.size.height = rDestBounds.GetHeight();
+
+		bRet = ( HIThemeDrawGroupBox( &destRect, &pGroupBoxDrawInfo, aBuffer.maContext, kHIThemeOrientationInverted ) == noErr );
 	}
+
+	if ( bRet )
+		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, aBuffer.mnWidth, aBuffer.mnHeight, rDestBounds.Left(), rDestBounds.Top(), aBuffer.mnWidth, aBuffer.mnHeight );
+
 	return bRet;
 }
 
@@ -1114,68 +921,27 @@ static BOOL DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectang
  */
 static BOOL DrawNativeMenuBackground( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds )
 {
-	BOOL bRet = FALSE;
-	
-	JavaSalBitmap menuBgBitmap;
-	menuBgBitmap.Create( Size( rDestBounds.Left()+rDestBounds.GetWidth(), rDestBounds.Top()+rDestBounds.GetHeight() ), 32, BitmapPalette() );
-	
-	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
-	if ( !aColorSpace )
-		return bRet;
-
-	BitmapBuffer *pBuffer = menuBgBitmap.AcquireBuffer( false );
-	if ( !pBuffer )
-	{
-		CGColorSpaceRelease( aColorSpace );
-		return bRet;
-	}
-
-#ifdef POWERPC
-	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
-#else	// POWERPC
-	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
-#endif	// POWERPC
-	if ( !aContext )
-	{
-		menuBgBitmap.ReleaseBuffer( pBuffer, false );
-		CGColorSpaceRelease( aColorSpace );
-		return bRet;
-	}
-
-	// Clear the image
-	memset( pBuffer->mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
-	
-	HIThemeMenuDrawInfo pMenuDrawInfo;
-	memset( &pMenuDrawInfo, 0, sizeof( pMenuDrawInfo ) );
-	pMenuDrawInfo.version = 0;
-	pMenuDrawInfo.menuType = kThemeMenuTypePopUp;
-	
-	HIRect destRect;
-	destRect.origin.x = rDestBounds.Left();
-	destRect.origin.y = rDestBounds.Top();
-	destRect.size.width = rDestBounds.GetWidth();
-	destRect.size.height = rDestBounds.GetHeight();
-	
-	bRet = ( HIThemeDrawMenuBackground( &destRect, &pMenuDrawInfo, aContext, kHIThemeOrientationInverted ) == noErr );
-	
-	CGContextRelease( aContext );
-	CGColorSpaceRelease( aColorSpace );
-
-	menuBgBitmap.ReleaseBuffer( pBuffer, false );
-
+	VCLBitmapBuffer aBuffer;
+	BOOL bRet = aBuffer.Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
 	if ( bRet )
 	{
-		SalTwoRect aTwoRect;
-		aTwoRect.mnSrcX = rDestBounds.Left();
-		aTwoRect.mnSrcY = rDestBounds.Top();
-		aTwoRect.mnSrcWidth = rDestBounds.GetWidth();
-		aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
-		aTwoRect.mnDestX = rDestBounds.Left();
-		aTwoRect.mnDestY = rDestBounds.Top();
-		aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
-		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
-		pGraphics->drawBitmap( &aTwoRect, menuBgBitmap );
+		HIThemeMenuDrawInfo pMenuDrawInfo;
+		memset( &pMenuDrawInfo, 0, sizeof( pMenuDrawInfo ) );
+		pMenuDrawInfo.version = 0;
+		pMenuDrawInfo.menuType = kThemeMenuTypePopUp;
+
+		HIRect destRect;
+		destRect.origin.x = rDestBounds.Left();
+		destRect.origin.y = rDestBounds.Top();
+		destRect.size.width = rDestBounds.GetWidth();
+		destRect.size.height = rDestBounds.GetHeight();
+
+		bRet = ( HIThemeDrawMenuBackground( &destRect, &pMenuDrawInfo, aBuffer.maContext, kHIThemeOrientationInverted ) == noErr );
 	}
+
+	if ( bRet )
+		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, aBuffer.mnWidth, aBuffer.mnHeight, rDestBounds.Left(), rDestBounds.Top(), aBuffer.mnWidth, aBuffer.mnHeight );
+
 	return bRet;
 }
 
@@ -1190,72 +956,30 @@ static BOOL DrawNativeMenuBackground( JavaSalGraphics *pGraphics, const Rectangl
  */
 static BOOL DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
-	BOOL bRet = FALSE;
-	
-	JavaSalBitmap editFieldBitmap;
-	editFieldBitmap.Create( Size( rDestBounds.GetWidth(), rDestBounds.GetHeight() ), 32, BitmapPalette() );
-	
-	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
-	if ( !aColorSpace )
-		return bRet;
-
-	BitmapBuffer *pBuffer = editFieldBitmap.AcquireBuffer( false );
-	if ( !pBuffer )
-	{
-		CGColorSpaceRelease( aColorSpace );
-		return bRet;
-	}
-
-#ifdef POWERPC
-	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
-#else	// POWERPC
-	CGContextRef aContext = CGBitmapContextCreate( pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
-#endif	// POWERPC
-	if ( !aContext )
-	{
-		editFieldBitmap.ReleaseBuffer( pBuffer, false );
-		CGColorSpaceRelease( aColorSpace );
-		return bRet;
-	}
-
-	// Clear the image
-	memset( pBuffer->mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );
-	
-	HIThemeFrameDrawInfo pFrameInfo;
-	InitEditFieldDrawInfo( &pFrameInfo, nState );
-	
-	HIRect destRect;
-	destRect.origin.x = EDITBOX_TRIMWIDTH;
-	destRect.origin.y = EDITBOX_TRIMWIDTH;
-	destRect.size.width = rDestBounds.GetWidth() - 2*EDITBOX_TRIMWIDTH;
-	destRect.size.height = rDestBounds.GetHeight() - 2*EDITBOX_TRIMWIDTH;
-	
-	// clear the active editing portion of the control
-	float whiteColor[] = { 1.0, 1.0, 1.0, 1.0 };
-	CGContextSetFillColor( aContext, whiteColor );
-	CGContextFillRect( aContext, destRect );
-	// draw frame around the background
-	bRet = ( HIThemeDrawFrame( &destRect, &pFrameInfo, aContext, kHIThemeOrientationInverted ) == noErr );
-	
-	
-	CGContextRelease( aContext );
-	CGColorSpaceRelease( aColorSpace );
-
-	editFieldBitmap.ReleaseBuffer( pBuffer, false );
-
+	VCLBitmapBuffer aBuffer;
+	BOOL bRet = aBuffer.Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
 	if ( bRet )
 	{
-		SalTwoRect aTwoRect;
-		aTwoRect.mnSrcX = 0;
-		aTwoRect.mnSrcY = 0;
-		aTwoRect.mnSrcWidth = rDestBounds.GetWidth();
-		aTwoRect.mnSrcHeight = rDestBounds.GetHeight();
-		aTwoRect.mnDestX = rDestBounds.Left();
-		aTwoRect.mnDestY = rDestBounds.Top();
-		aTwoRect.mnDestWidth = aTwoRect.mnSrcWidth;
-		aTwoRect.mnDestHeight = aTwoRect.mnSrcHeight;
-		pGraphics->drawBitmap( &aTwoRect, editFieldBitmap );
+		HIThemeFrameDrawInfo pFrameInfo;
+		InitEditFieldDrawInfo( &pFrameInfo, nState );
+
+		HIRect destRect;
+		destRect.origin.x = EDITBOX_TRIMWIDTH;
+		destRect.origin.y = EDITBOX_TRIMWIDTH;
+		destRect.size.width = rDestBounds.GetWidth() - 2*EDITBOX_TRIMWIDTH;
+		destRect.size.height = rDestBounds.GetHeight() - 2*EDITBOX_TRIMWIDTH;
+
+		// clear the active editing portion of the control
+		float whiteColor[] = { 1.0, 1.0, 1.0, 1.0 };
+		CGContextSetFillColor( aBuffer.maContext, whiteColor );
+		CGContextFillRect( aBuffer.maContext, destRect );
+		// draw frame around the background
+		bRet = ( HIThemeDrawFrame( &destRect, &pFrameInfo, aBuffer.maContext, kHIThemeOrientationInverted ) == noErr );
 	}
+
+	if ( bRet )
+		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, aBuffer.mnWidth, aBuffer.mnHeight, rDestBounds.Left(), rDestBounds.Top(), aBuffer.mnWidth, aBuffer.mnHeight );
+
 	return bRet;
 }
 
@@ -1294,53 +1018,53 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == HAS_BACKGROUND_TEXTURE ) )
 				isSupported = TRUE;
 			break;
-		
+
 		case CTRL_LISTBOX:
 			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == HAS_BACKGROUND_TEXTURE ) )
 				isSupported = TRUE;
 			break;
-		
+
 		case CTRL_SCROLLBAR:
 			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == PART_DRAW_BACKGROUND_HORZ ) || ( nPart == PART_DRAW_BACKGROUND_VERT ) )
 				isSupported = TRUE;
 			break;
-		
+
 		case CTRL_SPINBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
-		
+
 		case CTRL_PROGRESSBAR:
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
-		
+
 		case CTRL_TAB_ITEM:
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
-		
+
 		case CTRL_TAB_PANE:
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
-		
+
 		case CTRL_FIXEDBORDER:
 		case CTRL_GROUPBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
-		
+
 		case CTRL_MENU_POPUP:
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
-		
+
 		case CTRL_EDITBOX:
 			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == HAS_BACKGROUND_TEXTURE ) )
 				isSupported = TRUE;
 			break;
-			
+
 		default:
 			isSupported = FALSE;
 			break;
@@ -1372,10 +1096,10 @@ BOOL JavaSalGraphics::hitTestNativeControl( ControlType nType, ControlPart nPart
 	// a full description of the scrollbar is required including its values
 	// and visible width.  We'll rely on the VCL scrollbar, which queried
 	// these regions, to perform our hit testing.
-	
+
 	if( nType== CTRL_SCROLLBAR )
 		return FALSE;
-	
+
 	Region aNativeBoundingRegion;
 	Region aNativeContentRegion;
 	if ( getNativeControlRegion( nType, nPart, rControlRegion, 0, ImplControlValue(), rControlHandle, OUString(), aNativeBoundingRegion, aNativeContentRegion ) )
@@ -1440,7 +1164,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				bOK = DrawNativeComboBox( this, buttonRect, nState, aCaption );
 			}
 			break;
-		
+
 		case CTRL_LISTBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
@@ -1448,7 +1172,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				bOK = DrawNativeListBox( this, buttonRect, nState, aCaption );
 			}
 			break;
-		
+
 		case CTRL_SCROLLBAR:
 			if( ( nPart == PART_ENTIRE_CONTROL) || ( nPart == PART_DRAW_BACKGROUND_HORZ ) || ( nPart == PART_DRAW_BACKGROUND_VERT ) )
 			{
@@ -1457,7 +1181,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				bOK = DrawNativeScrollBar( this, buttonRect, nState, pValue );
 			}
 			break;
-		
+
 		case CTRL_SPINBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
@@ -1466,7 +1190,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				bOK = DrawNativeSpinbox( this, buttonRect, nState, pValue );
 			}
 			break;
-		
+
 		case CTRL_PROGRESSBAR:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
@@ -1475,16 +1199,16 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				bOK = DrawNativeProgressbar( this, ctrlRect, nState, pValue );
 			}
 			break;
-		
+
 		case CTRL_TAB_ITEM:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle ctrlRect = rControlRegion.GetBoundRect();				
+				Rectangle ctrlRect = rControlRegion.GetBoundRect();
 				TabitemValue *pValue = static_cast<TabitemValue *> ( aValue.getOptionalVal() );
 				bOK = DrawNativeTab( this, ctrlRect, nState, pValue );
 			}
 			break;
-		
+
 		case CTRL_TAB_PANE:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
@@ -1497,28 +1221,28 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				bOK = DrawNativeTabBoundingBox( this, ctrlRect, nState );
 			}
 			break;
-		
+
 		case CTRL_FIXEDBORDER:
 		case CTRL_GROUPBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle ctrlRect = rControlRegion.GetBoundRect();				
+				Rectangle ctrlRect = rControlRegion.GetBoundRect();
 				bOK = DrawNativePrimaryGroupBox( this, ctrlRect, nState );
 			}
 			break;
-		
+
 		case CTRL_MENU_POPUP:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle ctrlRect = rControlRegion.GetBoundRect();				
+				Rectangle ctrlRect = rControlRegion.GetBoundRect();
 				bOK = DrawNativeMenuBackground( this, ctrlRect );
 			}
 			break;
-		
+
 		case CTRL_EDITBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				Rectangle ctrlRect = rControlRegion.GetBoundRect();				
+				Rectangle ctrlRect = rControlRegion.GetBoundRect();
 				bOK = DrawNativeEditBox( this, ctrlRect, nState );
 			}
 			break;
@@ -1656,25 +1380,25 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				}
 			}
 			break;
-		
+
 		case CTRL_SCROLLBAR:
 			{
 				Rectangle comboBoxRect = rControlRegion.GetBoundRect();
-				
+
 				ScrollbarValue *pValue = static_cast<ScrollbarValue *> ( aValue.getOptionalVal() );
-				
+
 				HIThemeTrackDrawInfo pTrackDrawInfo;
 				HIScrollBarTrackInfo pScrollBarTrackInfo;
 				InitScrollBarTrackInfo( &pTrackDrawInfo, &pScrollBarTrackInfo, nState, comboBoxRect, pValue );
-				
+
 				HIRect bounds;
-				
+
 				switch ( nPart )
 				{
 					case PART_ENTIRE_CONTROL:
 						HIThemeGetTrackBounds( &pTrackDrawInfo, &bounds );
 						break;
-						
+
 					case PART_BUTTON_LEFT:
 						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &bounds );
 						bounds.origin.x++;
@@ -1688,7 +1412,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 						bounds.size.height--;
 						bounds.origin.y -= bounds.size.height;
 						break;
-					
+
 					case PART_BUTTON_RIGHT:
 						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &bounds );
 						bounds.origin.x++;
@@ -1699,7 +1423,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 						bounds.origin.y++;
 						bounds.size.height--;
 						break;
-					
+
 					case PART_TRACK_HORZ_LEFT:
 					case PART_TRACK_VERT_UPPER:
 						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageUpArea, &bounds );
@@ -1707,11 +1431,11 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 						{
 							// disabled control or other invalid settings.  Set to the entire
 							// track.
-							
+
 							HIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
 						}
 						break;
-					
+
 					case PART_TRACK_HORZ_RIGHT:
 					case PART_TRACK_VERT_LOWER:
 						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageDownArea, &bounds );
@@ -1719,10 +1443,10 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 						{
 							// disabled control or other invalid settings.  Set to the entire
 							// track.
-							
+
 							HIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
 						}break;
-					
+
 					case PART_THUMB_HORZ:
 					case PART_THUMB_VERT:
 						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartIndicator, &bounds );
@@ -1730,29 +1454,29 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 						{
 							// disabled control or other invalid settings.  Set to the entire
 							// track.
-							
+
 							HIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
 						}
 						break;
 				}
-				
+
 				Point topLeft( (long)(comboBoxRect.Left()+bounds.origin.x), (long)(comboBoxRect.Top()+bounds.origin.y) );
 				Size boundsSize( (long)bounds.size.width, (long)bounds.size.height );
 				rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
-				
+
 				bReturn = TRUE;
 			}
 			break;
-		
+
 		case CTRL_SPINBOX:
 			{
 				Rectangle spinboxRect = rControlRegion.GetBoundRect();
-				
+
 				HIThemeButtonDrawInfo aThemeButtonDrawInfo;
 				SpinbuttonValue *pValue = static_cast<SpinbuttonValue *> ( aValue.getOptionalVal() );
 				InitSpinbuttonDrawInfo( &aThemeButtonDrawInfo, pValue );
-				
+
 				HIShapeRef preferredShape;
 				HIRect destRect;
 				destRect.origin.x = spinboxRect.Left();
@@ -1764,11 +1488,11 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					HIRect preferredRect;
 					HIShapeGetBounds( preferredShape, &preferredRect );
 					CFRelease( preferredShape );
-					
+
 					// note that HIThemeGetButtonShape won't clip the width to the actual recommended width of spinner arrows
 					if( preferredRect.size.width > 13 )
 						preferredRect.size.width = 13;
-				
+
 					switch( nPart )
 					{
 						case PART_BUTTON_UP:
@@ -1780,13 +1504,13 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 								bReturn = TRUE;
 							}
 							break;
-						
+
 						case PART_BUTTON_DOWN:
 							{
 								Point topLeft( (long)(spinboxRect.Right()-preferredRect.size.width), (long)(spinboxRect.Top()+(preferredRect.size.height / 2)) );
 								Size boundsSize( (long)preferredRect.size.width, (long)(preferredRect.size.height / 2) );
 								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-								rNativeContentRegion = Region( rNativeBoundingRegion );								
+								rNativeContentRegion = Region( rNativeBoundingRegion );
 								bReturn = TRUE;
 							}
 							break;
@@ -1794,61 +1518,61 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				}
 			}
 			break;
-		
+
 		case CTRL_PROGRESSBAR:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle controlRect = rControlRegion.GetBoundRect();
-				
+
 				ProgressbarValue *pValue = static_cast<ProgressbarValue *> ( aValue.getOptionalVal() );
-				
+
 				HIThemeTrackDrawInfo pTrackDrawInfo;
 				InitProgressbarTrackInfo( &pTrackDrawInfo, nState, controlRect, pValue );
-				
+
 				HIRect bounds;
 				HIThemeGetTrackBounds( &pTrackDrawInfo, &bounds );
-				
+
 				Point topLeft( (long)(controlRect.Left()+bounds.origin.x), (long)(controlRect.Top()+bounds.origin.y) );
 				Size boundsSize( (long)bounds.size.width, (long)bounds.size.height );
 				rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
-				
+
 				bReturn = TRUE;
 			}
 			break;
-		
+
 		case CTRL_TAB_ITEM:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle controlRect = rControlRegion.GetBoundRect();
-				
+
 				TabitemValue *pValue = static_cast<TabitemValue *> ( aValue.getOptionalVal() );
-				
+
 				HIThemeTabDrawInfo104 pTabDrawInfo;
 				InitTabDrawInfo( &pTabDrawInfo, nState, pValue );
-				
+
 				HIRect proposedBounds;
 				proposedBounds.origin.x = 0;
 				proposedBounds.origin.y = 0;
 				proposedBounds.size.width = controlRect.Right() - controlRect.Left();
 				proposedBounds.size.height = controlRect.Bottom() - controlRect.Top();
-				
+
 				HIShapeRef tabShape;
 				HIThemeGetTabShape( &proposedBounds, (HIThemeTabDrawInfo *)&pTabDrawInfo, &tabShape );
-				
+
 				HIRect preferredRect;
 				HIShapeGetBounds( tabShape, &preferredRect );
 				CFRelease( tabShape );
-				
+
 				Point topLeft( controlRect.Left(), controlRect.Top() );
 				Size boundsSize( (long)preferredRect.size.width, (long)preferredRect.size.height );
 				rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
-				
+
 				bReturn = TRUE;
 			}
 			break;
-		
+
 		case CTRL_TAB_PANE:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
@@ -1857,11 +1581,11 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				Rectangle controlRect = rControlRegion.GetBoundRect();
 				rNativeBoundingRegion = Region( controlRect );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
-				
+
 				bReturn = TRUE;
 			}
 			break;
-		
+
 		case CTRL_FIXEDBORDER:
 		case CTRL_GROUPBOX:
 			if ( nPart == PART_ENTIRE_CONTROL )
@@ -1871,11 +1595,11 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				Rectangle controlRect = rControlRegion.GetBoundRect();
 				rNativeBoundingRegion = Region( controlRect );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
-				
+
 				bReturn = TRUE;
 			}
 			break;
-		
+
 		case CTRL_MENU_POPUP:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
@@ -1883,11 +1607,11 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				Rectangle controlRect = rControlRegion.GetBoundRect();
 				rNativeBoundingRegion = Region( controlRect );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
-				
+
 				bReturn = TRUE;
 			}
 			break;
-		
+
 		case CTRL_EDITBOX:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
@@ -1897,7 +1621,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				Point contentTopLeft( controlRect.Left() + EDITBOX_TRIMWIDTH, controlRect.Top() + EDITBOX_TRIMWIDTH );
 				Size contentSize( controlRect.GetWidth() - 2*EDITBOX_TRIMWIDTH, controlRect.GetHeight() - 2*EDITBOX_TRIMWIDTH );
 				rNativeContentRegion = Region( Rectangle( contentTopLeft, contentSize ) );
-				
+
 				bReturn = TRUE;
 			}
 			break;
