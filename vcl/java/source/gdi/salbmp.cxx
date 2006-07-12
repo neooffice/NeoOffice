@@ -150,7 +150,7 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::GetVCLBitmap( long nX, long nY, long 
 							BitmapColor aColor;
 							for ( long i = 0; i < nHeight; i++ )
 							{
-								for ( long j = 0; j < pBuffer->mnWidth; j++ )
+								for ( long j = 0; j < nWidth; j++ )
 								{
 									pBuffer->maColorMask.GetColorFor16BitMSB( aColor, pBitsIn + ( j << 1UL ) );
 									pBitsOut[ j ] = MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000;
@@ -166,7 +166,7 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::GetVCLBitmap( long nX, long nY, long 
 							{
 								long j;
 								long k;
-								for ( j = 0, k = 0; j < pBuffer->mnWidth; j++, k += 3 )
+								for ( j = 0, k = 0; j < nWidth; j++, k += 3 )
 									pBitsOut[ j ] = MAKE_SALCOLOR( pBitsIn[ k ], pBitsIn[ k + 1 ], pBitsIn[ k + 2 ] ) | 0xff000000;
 		
 								pBitsIn += pBuffer->mnScanlineSize;
@@ -283,7 +283,7 @@ void JavaSalBitmap::ReleaseVCLBitmap( com_sun_star_vcl_VCLBitmap *pVCLBitmap, bo
 							{
 								for ( long i = 0; i < nHeight; i++ )
 								{
-									for ( long j = 0; j < pBuffer->mnWidth; j++ )
+									for ( long j = 0; j < nWidth; j++ )
 										pBuffer->maColorMask.SetColorFor16BitMSB( BitmapColor( (BYTE)( pBitsIn[ j ] >> 16 ), (BYTE)( pBitsIn[ j ] >> 8 ), (BYTE)pBitsIn[ j ] ), pBitsOut + ( j << 1UL ) );
 
 									pBitsIn += nWidth;
@@ -296,7 +296,7 @@ void JavaSalBitmap::ReleaseVCLBitmap( com_sun_star_vcl_VCLBitmap *pVCLBitmap, bo
 								{
 									long j;
 									long k;
-									for ( j = 0, k = 0; j < pBuffer->mnWidth; j++ )
+									for ( j = 0, k = 0; j < nWidth; j++ )
 									{
 										pBitsOut[ k++ ] = SALCOLOR_RED( pBitsIn[ j ] );
 										pBitsOut[ k++ ] = SALCOLOR_GREEN( pBitsIn[ j ] );
