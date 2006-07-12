@@ -1462,26 +1462,27 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					case PART_BUTTON_LEFT:
 						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &bounds );
 						bounds.origin.x++;
-						bounds.size.width--;
 						bounds.origin.x -= bounds.size.width;
 						break;
 
 					case PART_BUTTON_UP:
 						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &bounds );
-						bounds.origin.y++;
-						bounds.size.height--;
+						if ( !vcl::IsRunningPanther() )
+							bounds.origin.y++;
 						bounds.origin.y -= bounds.size.height;
 						break;
 
 					case PART_BUTTON_RIGHT:
 						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &bounds );
 						bounds.origin.x++;
-						bounds.size.width--;
 
 					case PART_BUTTON_DOWN:
 						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &bounds );
-						bounds.origin.y++;
-						bounds.size.height--;
+						if ( !vcl::IsRunningPanther() )
+						{
+							bounds.origin.y++;
+							bounds.size.height--;
+						}
 						break;
 
 					case PART_TRACK_HORZ_LEFT:
@@ -1505,7 +1506,8 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							// track.
 
 							HIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
-						}break;
+						}
+						break;
 
 					case PART_THUMB_HORZ:
 					case PART_THUMB_VERT:
