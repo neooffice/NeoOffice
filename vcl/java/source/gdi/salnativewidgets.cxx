@@ -128,7 +128,6 @@ struct VCLBitmapBuffer : BitmapBuffer
 {
 	com_sun_star_vcl_VCLBitmap* 	mpVCLBitmap;
 	java_lang_Object*	 	mpData;
-	CGColorSpaceRef			maColorSpace;
 	CGContextRef			maContext;
 
 							VCLBitmapBuffer();
@@ -136,11 +135,12 @@ struct VCLBitmapBuffer : BitmapBuffer
 
 	BOOL					Create( long nWidth, long nHeight );
 	void					Destroy();
+	void					ReleaseContext();
 };
 
 // =======================================================================
 
-VCLBitmapBuffer::VCLBitmapBuffer() : BitmapBuffer(), mpVCLBitmap( NULL ), mpData( NULL ), maColorSpace( NULL ), maContext( NULL )
+VCLBitmapBuffer::VCLBitmapBuffer() : BitmapBuffer(), mpVCLBitmap( NULL ), mpData( NULL ), maContext( NULL )
 {
 	mnFormat = 0;
 	mnWidth = 0;
@@ -157,11 +157,11 @@ VCLBitmapBuffer::~VCLBitmapBuffer()
 	Destroy();
 }
 
+// -----------------------------------------------------------------------
+
 BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight )
 {
-	CGColorSpaceRef maColorSpace = CGColorSpaceCreateDeviceRGB();
-	if ( !maColorSpace )
-		return FALSE;
+	Destroy();
 
 	mpVCLBitmap = new com_sun_star_vcl_VCLBitmap( nWidth, nHeight, 32 );
 	if ( !mpVCLBitmap || !mpVCLBitmap->getJavaObject() )
@@ -177,7 +177,7 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight )
 		return FALSE;
 	}
 
-	java_lang_Object *mpData = mpVCLBitmap->getData();
+	mpData = mpVCLBitmap->getData();
 	if ( !mpData )
 	{
 		Destroy();
@@ -198,11 +198,19 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight )
 		return FALSE;
 	}
 
+	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+	if ( !aColorSpace )
+	{
+		Destroy();
+		return FALSE;
+	}
+
 #ifdef POWERPC
-	maContext = CGBitmapContextCreate( mpBits, nWidth, nHeight, 8, mnScanlineSize, maColorSpace, kCGImageAlphaPremultipliedFirst );
+	maContext = CGBitmapContextCreate( mpBits, nWidth, nHeight, 8, mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
 #else	// POWERPC
-	maContext = CGBitmapContextCreate( mpBits, nWidth, nHeight, 8, mnScanlineSize, maColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+	maContext = CGBitmapContextCreate( mpBits, nWidth, nHeight, 8, mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
 #endif	// POWERPC
+	CGColorSpaceRelease( aColorSpace );
 	if ( !maContext )
 	{
 		Destroy();
@@ -233,8 +241,8 @@ void VCLBitmapBuffer::Destroy()
 		if ( mpData )
 		{
 			VCLThreadAttach t;
-			if ( !t.pEnv )
-				t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), mpBits, 0 );
+			if ( t.pEnv )
+				t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), mpBits, JNI_ABORT );
 		}
 		mpBits = NULL;
 	}
@@ -250,11 +258,33 @@ void VCLBitmapBuffer::Destroy()
 		delete mpVCLBitmap;
 		mpVCLBitmap = NULL;
 	}
+}
 
-	if ( maColorSpace )
+// -----------------------------------------------------------------------
+
+void VCLBitmapBuffer::ReleaseContext()
+{
+	if ( maContext )
 	{
-		CGColorSpaceRelease( maColorSpace );
-		maColorSpace = NULL;
+		CGContextRelease( maContext );
+		maContext = NULL;
+	}
+
+	if ( mpBits )
+	{
+		if ( mpData )
+		{
+			VCLThreadAttach t;
+			if ( t.pEnv )
+				t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), mpBits, 0 );
+		}
+		mpBits = NULL;
+	}
+
+	if ( mpData )
+	{
+		delete mpData;
+		mpData = NULL;
 	}
 }
 
@@ -598,7 +628,10 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 	}
 
 	if ( bRet )
-		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, aBuffer.mnWidth, aBuffer.mnHeight, rDestBounds.Left(), rDestBounds.Top(), aBuffer.mnWidth, aBuffer.mnHeight );
+	{
+		aBuffer.ReleaseContext();
+		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+	}
 
 	return bRet;
 }
@@ -652,7 +685,10 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	}
 
 	if ( bRet )
-		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, aBuffer.mnWidth, aBuffer.mnHeight, rDestBounds.Left(), rDestBounds.Top(), aBuffer.mnWidth, aBuffer.mnHeight );
+	{
+		aBuffer.ReleaseContext();
+		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+	}
 
 	return TRUE;
 }
@@ -690,7 +726,10 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
 	}
 
 	if ( bRet )
-		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, aBuffer.mnWidth, aBuffer.mnHeight, rDestBounds.Left(), rDestBounds.Top(), aBuffer.mnWidth, aBuffer.mnHeight );
+	{
+		aBuffer.ReleaseContext();
+		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+	}
 
 	return bRet;
 }
@@ -755,7 +794,10 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	}
 
 	if ( bRet )
-		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, aBuffer.mnWidth, aBuffer.mnHeight, rDestBounds.Left(), rDestBounds.Top(), aBuffer.mnWidth, aBuffer.mnHeight );
+	{
+		aBuffer.ReleaseContext();
+		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+	}
 
 	return bRet;
 }
@@ -793,7 +835,10 @@ static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& 
 	}
 
 	if ( bRet )
-		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, aBuffer.mnWidth, aBuffer.mnHeight, rDestBounds.Left(), rDestBounds.Top(), aBuffer.mnWidth, aBuffer.mnHeight );
+	{
+		aBuffer.ReleaseContext();
+		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+	}
 
 	return bRet;
 }
@@ -835,7 +880,10 @@ static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBou
 	}
 
 	if ( bRet )
-		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, aBuffer.mnWidth, aBuffer.mnHeight, rDestBounds.Left(), rDestBounds.Top(), aBuffer.mnWidth, aBuffer.mnHeight );
+	{
+		aBuffer.ReleaseContext();
+		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+	}
 
 	return bRet;
 }
@@ -870,7 +918,10 @@ static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangl
 	}
 
 	if ( bRet )
-		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, aBuffer.mnWidth, aBuffer.mnHeight, rDestBounds.Left(), rDestBounds.Top(), aBuffer.mnWidth, aBuffer.mnHeight );
+	{
+		aBuffer.ReleaseContext();
+		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+	}
 
 	return bRet;
 }
@@ -905,7 +956,10 @@ static BOOL DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectang
 	}
 
 	if ( bRet )
-		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, aBuffer.mnWidth, aBuffer.mnHeight, rDestBounds.Left(), rDestBounds.Top(), aBuffer.mnWidth, aBuffer.mnHeight );
+	{
+		aBuffer.ReleaseContext();
+		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+	}
 
 	return bRet;
 }
@@ -931,8 +985,8 @@ static BOOL DrawNativeMenuBackground( JavaSalGraphics *pGraphics, const Rectangl
 		pMenuDrawInfo.menuType = kThemeMenuTypePopUp;
 
 		HIRect destRect;
-		destRect.origin.x = rDestBounds.Left();
-		destRect.origin.y = rDestBounds.Top();
+		destRect.origin.x = 0;
+		destRect.origin.y = 0;
 		destRect.size.width = rDestBounds.GetWidth();
 		destRect.size.height = rDestBounds.GetHeight();
 
@@ -940,7 +994,10 @@ static BOOL DrawNativeMenuBackground( JavaSalGraphics *pGraphics, const Rectangl
 	}
 
 	if ( bRet )
-		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, aBuffer.mnWidth, aBuffer.mnHeight, rDestBounds.Left(), rDestBounds.Top(), aBuffer.mnWidth, aBuffer.mnHeight );
+	{
+		aBuffer.ReleaseContext();
+		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+	}
 
 	return bRet;
 }
@@ -978,7 +1035,10 @@ static BOOL DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	}
 
 	if ( bRet )
-		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, aBuffer.mnWidth, aBuffer.mnHeight, rDestBounds.Left(), rDestBounds.Top(), aBuffer.mnWidth, aBuffer.mnHeight );
+	{
+		aBuffer.ReleaseContext();
+		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+	}
 
 	return bRet;
 }
