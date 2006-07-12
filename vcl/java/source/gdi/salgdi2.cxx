@@ -149,7 +149,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 		BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
 		if ( pSrcBuffer )
 		{
-			BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, *pPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
+			BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
 			pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
 			if ( pDestBuffer )
 			{
@@ -269,7 +269,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 	BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
 	if ( pSrcBuffer )
 	{
-		BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, *pPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
+		BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
 		pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
 		if ( pDestBuffer )
 		{
@@ -525,7 +525,7 @@ void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSal
 	BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
 	if ( pSrcBuffer )
 	{
-		BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, *pPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
+		BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
 		pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
 		if ( pDestBuffer )
 		{
