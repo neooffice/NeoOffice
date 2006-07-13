@@ -767,13 +767,21 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 		InitSpinbuttonDrawInfo( &aButtonDrawInfo, pValue );
 
 		HIRect arrowRect;
-		arrowRect.origin.x = rDestBounds.GetWidth() - 13;
+		arrowRect.origin.x = rDestBounds.GetWidth() - 15;
 		if( arrowRect.origin.x < 0 )
 			arrowRect.origin.x = 0;
 		arrowRect.origin.y = 0;
-		arrowRect.size.width = 13;
-		arrowRect.size.height = rDestBounds.GetHeight();
-
+		arrowRect.size.width = 15;
+		arrowRect.size.height = rDestBounds.GetHeight() - 1;
+		
+		// ensure we won't overdraw our buffer beyond its boundaries
+		CGRect clipBounds;
+		clipBounds.origin.x = 0;
+		clipBounds.origin.y = 0;
+		clipBounds.size.width = rDestBounds.GetWidth();
+		clipBounds.size.height = rDestBounds.GetHeight();
+		CGContextClipToRect( aBuffer.maContext, clipBounds );
+		
 		bRet = ( HIThemeDrawButton( &arrowRect, &aButtonDrawInfo, aBuffer.maContext, kHIThemeOrientationInverted, NULL ) == noErr );
 
 		if( bRet )
@@ -781,8 +789,8 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 			HIRect editRect;
 			editRect.origin.x = 0;
 			editRect.origin.y = 0;
-			editRect.size.width = rDestBounds.GetWidth() - arrowRect.size.width - 2;
-			editRect.size.height = arrowRect.size.height;
+			editRect.size.width = rDestBounds.GetWidth() - arrowRect.size.width - 4;
+			editRect.size.height = rDestBounds.GetHeight();
 
 			HIThemeFrameDrawInfo aFrameInfo;
 			memset( &aFrameInfo, 0, sizeof( HIThemeFrameDrawInfo ) );
@@ -1560,8 +1568,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					CFRelease( preferredShape );
 
 					// note that HIThemeGetButtonShape won't clip the width to the actual recommended width of spinner arrows
-					if( preferredRect.size.width > 13 )
-						preferredRect.size.width = 13;
+					// leave room for left edge adornments
+					if( preferredRect.size.width > 20 )
+						preferredRect.size.width = 20;
 
 					switch( nPart )
 					{
