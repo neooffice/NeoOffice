@@ -305,7 +305,6 @@ BitmapBuffer* StretchAndConvert( const BitmapBuffer& rSrcBuffer, const SalTwoRec
 #else	// USE_JAVA
 								 ULONG nDstBitmapFormat, BitmapPalette* pDstPal, ColorMask* pDstMask )
 #endif	// USE_JAVA
-
 {
     FncGetPixel		pFncGetPixel;
     FncSetPixel		pFncSetPixel;
