@@ -21,15 +21,16 @@
 				<string>application/vnd.oasis.opendocument.graphics</string>
 			</array>
 			<key>CFBundleTypeName</key>
-			<string>$(PRODUCT_NAME) Document</string>
+			<string>$(PRODUCT_NAME) Drawing Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<true/>
 		</dict>
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>ods</string>
-				<string>odc</string>
 				<string>sdc</string>
 				<string>sxc</string>
 			</array>
@@ -40,13 +41,14 @@
 				<string>application/vnd.sun.xml.calc</string>
 				<string>application/vnd.stardivision.calc</string>
 				<string>application/x-starcalc</string>
-				<string>application/vnd.oasis.opendocument.chart</string>
 				<string>application/vnd.oasis.opendocument.spreadsheet</string>
 			</array>
 			<key>CFBundleTypeName</key>
-			<string>$(PRODUCT_NAME) Document</string>
+			<string>$(PRODUCT_NAME) Spreadsheet Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<true/>
 		</dict>
 		<dict>
 			<key>CFBundleTypeExtensions</key>
@@ -68,59 +70,60 @@
 				<string>application/vnd.oasis.openoffice.presentation</string>
 			</array>
 			<key>CFBundleTypeName</key>
-			<string>$(PRODUCT_NAME) Document</string>
+			<string>$(PRODUCT_NAME) Presentation Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<true/>
 		</dict>
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>sds</string>
+				<string>odc</string>
+				<string>otc</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>sds.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>application/vnd.stardivision.chart</string>
+				<string>application/vnd.oasis.opendocument.chart</string>
+				<string>application/vnd.oasis.opendocument.chart-template</string>
 			</array>
 			<key>CFBundleTypeName</key>
-			<string>$(PRODUCT_NAME) Document</string>
+			<string>$(PRODUCT_NAME) Chart Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<true/>
 		</dict>
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
-				<string>odm</string>
 				<string>odt</string>
-				<string>oth</string>
 				<string>sdw</string>
 				<string>sxw</string>
-				<string>sgl</string>
-				<string>sxg</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>sxw_sdw_doc_Option_1.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>application/vnd.sun.xml.writer</string>
-				<string>application/vnd.sun.xml.writer.global</string>
 				<string>application/vnd.stardivision.writer</string>
-				<string>application/vnd.stardivision.writer-global</string>
 				<string>application/x-starwriter</string>
 				<string>application/vnd.oasis.opendocument.text</string>
-				<string>application/vnd.oasis.opendocument.text-master</string>
-				<string>application/vnd.oasis.opendocument.text-web</string>
 			</array>
 			<key>CFBundleTypeName</key>
-			<string>$(PRODUCT_NAME) Document</string>
+			<string>$(PRODUCT_NAME) Text Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<true/>
 		</dict>
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
-				<string>otc</string>
 				<string>ots</string>
 				<string>stc</string>
 			</array>
@@ -130,28 +133,33 @@
 			<array>
 				<string>application/vnd.sun.xml.calc.template</string>
 				<string>application/vnd.oasis.opendocument.spreadsheet-template</string>
-				<string>application/vnd.oasis.opendocument.chart-template</string>
 			</array>
 			<key>CFBundleTypeName</key>
-			<string>$(PRODUCT_NAME) Document</string>
+			<string>$(PRODUCT_NAME) Spreadsheet Template</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<true/>
 		</dict>
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>std</string>
+				<string>otg</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>std.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>application/vnd.sun.xml.draw.template</string>
+				<string>application/vnd.oasis.opendocument.graphics-template</string>
 			</array>
 			<key>CFBundleTypeName</key>
-			<string>$(PRODUCT_NAME) Document</string>
+			<string>$(PRODUCT_NAME) Drawing Template</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<true/>
 		</dict>
 		<dict>
 			<key>CFBundleTypeExtensions</key>
@@ -167,14 +175,15 @@
 				<string>application/vnd.oasis.opendocument.presentation-template</string>
 			</array>
 			<key>CFBundleTypeName</key>
-			<string>$(PRODUCT_NAME) Document</string>
+			<string>$(PRODUCT_NAME) Presentation Template</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<true/>
 		</dict>
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
-				<string>dot</string>
 				<string>ott</string>
 				<string>stw</string>
 			</array>
@@ -186,15 +195,11 @@
 				<string>application/vnd.oasis.opendocument.text-template</string>
 			</array>
 			<key>CFBundleTypeName</key>
-			<string>$(PRODUCT_NAME) Document</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>W8TN</string>
-				<string>s8BN</string>
-				<string>s6BN</string>
-			</array>
+			<string>$(PRODUCT_NAME) Text Template</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<true/>
 		</dict>
 		<dict>
 			<key>CFBundleTypeExtensions</key>
@@ -213,7 +218,7 @@
 				<string>application/vnd.oasis.opendocument.formula</string>
 			</array>
 			<key>CFBundleTypeName</key>
-			<string>$(PRODUCT_NAME) Document</string>
+			<string>$(PRODUCT_NAME) Formula Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 		</dict>
@@ -229,7 +234,7 @@
 				<string>application/vnd.oasis.opendocument.image</string>
 			</array>
 			<key>CFBundleTypeName</key>
-			<string>$(PRODUCT_NAME) Document</string>
+			<string>$(PRODUCT_NAME) Image Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 		</dict>
@@ -245,9 +250,11 @@
 				<string>application/vnd.oasis.opendocument.image-template</string>
 			</array>
 			<key>CFBundleTypeName</key>
-			<string>$(PRODUCT_NAME) Document</string>
+			<string>$(PRODUCT_NAME) Image Template</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<true/>
 		</dict>
 		<dict>
 			<key>CFBundleTypeExtensions</key>
@@ -261,14 +268,40 @@
 				<string>application/vnd.oasis.opendocument.database</string>
 			</array>
 			<key>CFBundleTypeName</key>
-			<string>$(PRODUCT_NAME) Document</string>
+			<string>$(PRODUCT_NAME) Database Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<true/>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>odm</string>
+				<string>sgl</string>
+				<string>sxg</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>generic.icns</string>
+			<key>CFBundleTypeMIMETypes</key>
+			<array>
+				<string>application/vnd.sun.xml.writer.global</string>
+				<string>application/vnd.stardivision.writer-global</string>
+				<string>application/vnd.oasis.opendocument.text-master</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Master Document</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<true/>
 		</dict>
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>bmp</string>
+				<string>cgm</string>
+				<string>dxf</string>
 				<string>emf</string>
 				<string>gif</string>
 				<string>jpeg</string>
@@ -277,26 +310,42 @@
 				<string>pbm</string>
 				<string>pct</string>
 				<string>pict</string>
+				<string>pcd</string>
+				<string>pcx</string>
 				<string>pgm</string>
 				<string>psd</string>
 				<string>png</string>
 				<string>ppm</string>
 				<string>ras</string>
-				<string>svg</string>
 				<string>svm</string>
+				<string>tga</string>
 				<string>tif</string>
 				<string>tiff</string>
 				<string>wmf</string>
+				<string>xbm</string>
 				<string>xpm</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>sxd_sda.icns</string>
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
+				<string>image/x-bmp</string>
+				<string>image/cgm</string>
+				<string>image/vnd.dxf</string>
 				<string>image/gif</string>
 				<string>image/jpeg</string>
+				<string>image/x-portable-bitmap</string>
+				<string>image/x-pict</string>
+				<string>image/x-portable-graymap</string>
+				<string>image/x-photo-cd</string>
+				<string>image/vnd.adobe.photoshop</string>
 				<string>image/png</string>
+				<string>image/x-portable-pixmap</string>
+				<string>image/x-portable-bitmap</string>
+				<string>image/x-targa</string>
 				<string>image/tiff</string>
+				<string>image/x-bitmap</string>
+				<string>image/x-pixmap</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
@@ -348,6 +397,12 @@
 				<string>wp</string>
 				<string>wpd</string>
 				<string>wri</string>
+				<string>jtd</string>
+				<string>hwp</string>
+				<string>wps</string>
+				<string>xml</string>
+				<string>psw</string>
+				<string>pdb</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>sxw_sdw_doc_Option_1.icns</string>
@@ -358,6 +413,10 @@
 				<string>application/vnd.wordperfect5.1</string>
 				<string>application/wordperfect5.1</string>
 				<string>application/vnd.wordperfect6.1</string>
+				<string>application/docbook+xml</string>
+				<string>application/x-aportisdoc</string>
+				<string>application/vnd.aportisdoc</string>
+				<string>application/x-pocket-word</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
@@ -379,6 +438,26 @@
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
+				<string>dot</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>stw_dot_Option_1.icns</string>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Document</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>W8TN</string>
+				<string>s8BN</string>
+				<string>s6BN</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSIsAppleDefaultForType</key>
+			<false/>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
 				<string>htm</string>
 				<string>html</string>
 			</array>
@@ -389,11 +468,29 @@
 				<string>text/html</string>
 			</array>
 			<key>CFBundleTypeName</key>
-			<string>$(PRODUCT_NAME) Document</string>
+			<string>$(PRODUCT_NAME) HTML Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 			<key>LSIsAppleDefaultForType</key>
 			<false/>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>oth</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>oth.icns</string>
+			<key>CFBundleTypeMIMETypes</key>
+			<array>
+				<string>application/vnd.oasis.opendocument.text-web</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) HTML Template</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<true/>
 		</dict>
 		<dict>
 			<key>CFBundleTypeExtensions</key>
@@ -407,7 +504,7 @@
 				<string>text/mathml</string>
 			</array>
 			<key>CFBundleTypeName</key>
-			<string>$(PRODUCT_NAME) Document</string>
+			<string>$(PRODUCT_NAME) MathML Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 			<key>LSIsAppleDefaultForType</key>
@@ -509,11 +606,14 @@
 				<string>sylk</string>
 				<string>wk1</string>
 				<string>wks</string>
+				<string>wb2</string>
 				<string>xl</string>
 				<string>xlc</string>
 				<string>xlm</string>
 				<string>xls</string>
 				<string>xlw</string>
+				<string>xml</string>
+				<string>pxl</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>sxc_sdc_slk_xls.icns</string>
@@ -528,6 +628,8 @@
 				<string>application/lotus123</string>
 				<string>application/x-lotus123</string>
 				<string>application/wk1</string>
+				<string>applivation/x-quattropro</string>
+				<string>application/x-pocket-excel</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
