@@ -666,12 +666,6 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	BOOL bRet = aBuffer.Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
 	if ( bRet )
 	{
-		// Set the background to the fill color
-		long nBits = aBuffer.mnWidth * aBuffer.mnHeight;
-		int *pBits = (int *)aBuffer.mpBits;
-		for ( long i = 0; i < nBits; i++ )
-			pBits[ i ] = pGraphics->mnFillColor;
-
 		HIThemeButtonDrawInfo aButtonDrawInfo;
 		InitButtonDrawInfo( &aButtonDrawInfo, nState );
 		aButtonDrawInfo.kind = kThemePopupButton;
