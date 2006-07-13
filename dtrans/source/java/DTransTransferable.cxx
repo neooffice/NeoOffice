@@ -63,7 +63,7 @@ using namespace rtl;
 using namespace vcl;
 using namespace vos;
 
-static UInt32 nSupportedTypes = 5;
+static UInt32 nSupportedTypes = 6;
 
 // List of supported native types in priority order
 static FourCharCode aSupportedNativeTypes[] = {
