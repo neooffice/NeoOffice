@@ -101,6 +101,7 @@ static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
 	getCppuType( ( OUString* )0 ),
 	getCppuType( ( OUString* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
+	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 )
 };
 
