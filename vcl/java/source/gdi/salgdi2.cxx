@@ -142,6 +142,9 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 		aPosAry.mnDestY = 0;
 	}
 
+	if ( aPosAry.mnSrcWidth < 1 || aPosAry.mnSrcHeight < 1 || aPosAry.mnDestWidth < 1 || aPosAry.mnDestHeight < 1 )
+		return;
+
 	// Scale the bitmap if necessary
 	bool bDrawn = false;
 	if ( mpPrinter || aPosAry.mnSrcWidth != aPosAry.mnDestWidth || aPosAry.mnSrcHeight != aPosAry.mnDestHeight )
@@ -160,7 +163,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 					aPosAry.mnSrcY = 0;
 					aPosAry.mnSrcWidth = pDestBuffer->mnWidth;
 					aPosAry.mnSrcHeight = pDestBuffer->mnHeight;
-					mpVCLGraphics->drawBitmapBuffer( pDestBuffer, aPosAry.mnSrcX, aPosAry.mnSrcY, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight );
+					mpVCLGraphics->drawBitmapBuffer( pDestBuffer, 0, 0, pDestBuffer->mnWidth, pDestBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, pDestBuffer->mnWidth, pDestBuffer->mnHeight );
 
 					bDrawn = true;
 				}
@@ -187,11 +190,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 									t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, 0 );
 									pBits = NULL;
 
-									aPosAry.mnSrcX = 0;
-									aPosAry.mnSrcY = 0;
-									aPosAry.mnSrcWidth = pDestBuffer->mnWidth;
-									aPosAry.mnSrcHeight = pDestBuffer->mnHeight;
-									mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight );
+									mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, pDestBuffer->mnWidth, pDestBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, pDestBuffer->mnWidth, pDestBuffer->mnHeight );
 
 									delete pDestBuffer;
 									bDrawn = true;
@@ -294,6 +293,9 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 		aPosAry.mnDestY = 0;
 	}
 
+	if ( aPosAry.mnSrcWidth < 1 || aPosAry.mnSrcHeight < 1 || aPosAry.mnDestWidth < 1 || aPosAry.mnDestHeight < 1 )
+		return;
+
 	// Scale the bitmap if necessary and always make a copy so that we can
 	// mask out the appropriate bits
 	BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
@@ -329,11 +331,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 							t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, 0 );
 							pBits = NULL;
 
-							aPosAry.mnSrcX = 0;
-							aPosAry.mnSrcY = 0;
-							aPosAry.mnSrcWidth = pDestBuffer->mnWidth;
-							aPosAry.mnSrcHeight = pDestBuffer->mnHeight;
-							mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight );
+							mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, pDestBuffer->mnWidth, pDestBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, pDestBuffer->mnWidth, pDestBuffer->mnHeight );
 
 							delete pDestBuffer;
 						}
@@ -424,6 +422,9 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 		aPosAry.mnDestY = 0;
 	}
 
+	if ( aPosAry.mnSrcWidth < 1 || aPosAry.mnSrcHeight < 1 || aPosAry.mnDestWidth < 1 || aPosAry.mnDestHeight < 1 )
+		return;
+
 	// Scale the bitmap if necessary and always make a copy so that we can
 	// mask out the appropriate bits
 	BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
@@ -469,11 +470,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 										t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, 0 );
 										pBits = NULL;
 
-										aPosAry.mnSrcX = 0;
-										aPosAry.mnSrcY = 0;
-										aPosAry.mnSrcWidth = pDestBuffer->mnWidth;
-										aPosAry.mnSrcHeight = pDestBuffer->mnHeight;
-										mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight );
+										mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, pDestBuffer->mnWidth, pDestBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, pDestBuffer->mnWidth, pDestBuffer->mnHeight );
 									}
 
 									delete pTransDestBuffer;
@@ -568,6 +565,9 @@ void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSal
 		aPosAry.mnDestY = 0;
 	}
 
+	if ( aPosAry.mnSrcWidth < 1 || aPosAry.mnSrcHeight < 1 || aPosAry.mnDestWidth < 1 || aPosAry.mnDestHeight < 1 )
+		return;
+
 	// Scale the bitmap if necessary and always make a copy so that we can
 	// mask out the appropriate bits
 	BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
@@ -603,11 +603,8 @@ void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSal
 							t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, 0 );
 							pBits = NULL;
 
-							aPosAry.mnSrcX = 0;
-							aPosAry.mnSrcY = 0;
-							aPosAry.mnSrcWidth = pDestBuffer->mnWidth;
-							aPosAry.mnSrcHeight = pDestBuffer->mnHeight;
 							mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight );
+							mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, pDestBuffer->mnWidth, pDestBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, pDestBuffer->mnWidth, pDestBuffer->mnHeight );
 
 							delete pDestBuffer;
 						}
