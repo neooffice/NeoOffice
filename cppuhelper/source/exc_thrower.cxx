@@ -44,6 +44,9 @@
 
 #define OUSTR(x) ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM(x) )
 
+#if defined MACOSX && __GNUC__ < 4
+extern "C" void *__cxa_current_exception_type();
+#endif
 
 using namespace ::rtl;
 using namespace ::osl;
@@ -181,18 +184,10 @@ void ExceptionThrower::throwException( Any const & exc ) throw (Exception)
 void ExceptionThrower::rethrowException() throw (Exception)
 {
 #if defined MACOSX && __GNUC__ < 4
-    try
-    {
+    if ( __cxa_current_exception_type() )
         throw;
-    }
-    catch ( Exception& exc )
-    {
-        throw;
-    }
-    catch ( ... )
-    {
-        throw RuntimeException( OUSTR( "unknown exception" ), Reference< XInterface >() );
-    }
+    else
+        throw RuntimeException( OUSTR( "rethrowing C++ exception failed!" ), Reference< XInterface >() );
 #else	// MACOSX && __GNUC__ < 4
     throw;
 #endif	// MACOSX && __GNUC__ < 4
