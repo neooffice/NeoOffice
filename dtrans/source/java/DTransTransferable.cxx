@@ -81,6 +81,7 @@ static bool aSupportedTextTypes[] = {
 	true,
 	true,
 	false,
+	false,
 	false
 };
 
