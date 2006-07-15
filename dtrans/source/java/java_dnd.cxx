@@ -966,7 +966,7 @@ void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY, DragRef aNative
 	else if ( aNativeTransferable )
 	{
 		aDragEvent.SourceActions = ImplGetDragAllowableActions( aNativeTransferable );
-		aDragEvent.DropAction = nCurrentAction;
+		aDragEvent.DropAction = ImplGetDragDropAction( aNativeTransferable );
 	}
 
 	DropTargetDragContext *pContext = new DropTargetDragContext( aDragEvent.DropAction );
@@ -1002,7 +1002,7 @@ void JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY, DragRef aNative
 	else if ( aNativeTransferable )
 	{
 		aDragEvent.SourceActions = ImplGetDragAllowableActions( aNativeTransferable );
-		aDragEvent.DropAction = nCurrentAction;
+		aDragEvent.DropAction = ImplGetDragDropAction( aNativeTransferable );
 	}
 
 	DropTargetDragContext *pContext = new DropTargetDragContext( aDragEvent.DropAction );
@@ -1058,7 +1058,7 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTran
 	else if ( aNativeTransferable )
 	{
 		aDropEvent.SourceActions = ImplGetDragAllowableActions( aNativeTransferable );
-		aDropEvent.DropAction = nCurrentAction;
+		aDropEvent.DropAction = ImplGetDragDropAction( aNativeTransferable );
 
 		DTransTransferable *pTransferable = new DTransTransferable( aNativeTransferable, TRANSFERABLE_TYPE_DRAG );
 		if ( pTransferable )
