@@ -441,10 +441,7 @@ static BOOL InitProgressbarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, Cont
 	pTrackDrawInfo->bounds.size.height = bounds.GetHeight();
 	if( bounds.GetWidth() > bounds.GetHeight() )
 		pTrackDrawInfo->attributes |= kThemeTrackHorizontal;
-	if( nState & CTRL_STATE_ENABLED )
-		pTrackDrawInfo->enableState = kThemeTrackActive;
-	else
-		pTrackDrawInfo->enableState = kThemeTrackDisabled;
+	pTrackDrawInfo->enableState = kThemeTrackActive;
 	pTrackDrawInfo->min = 0;
 	pTrackDrawInfo->max = 100;
 	if( pProgressbarValue )
