@@ -384,7 +384,12 @@ static BOOL InitScrollBarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, HIScro
 		pTrackDrawInfo->value = pScrollbarValue->mnCur;
 		pTrackDrawInfo->trackInfo.scrollbar.viewsize = pScrollbarValue->mnVisibleSize;
 		if( pScrollbarValue->mnButton1State & CTRL_STATE_PRESSED )
-			pTrackDrawInfo->trackInfo.scrollbar.pressState |= ( kThemeLeftInsideArrowPressed );
+		{
+			if ( vcl::IsRunningPanther() )
+				pTrackDrawInfo->trackInfo.scrollbar.pressState |= ( kThemeLeftOutsideArrowPressed );
+			else
+				pTrackDrawInfo->trackInfo.scrollbar.pressState |= ( kThemeLeftInsideArrowPressed );
+		}
 		if( pScrollbarValue->mnButton2State & CTRL_STATE_PRESSED )
 			pTrackDrawInfo->trackInfo.scrollbar.pressState |= ( kThemeRightOutsideArrowPressed );
 		if( pScrollbarValue->mnPage1State & CTRL_STATE_PRESSED )
