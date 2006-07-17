@@ -33,6 +33,8 @@
  *
  ************************************************************************/
 
+#include <stdio.h>
+
 #ifndef _JAVA_FOLDERPICKER_HXX_
 #include "java_folderpicker.hxx"
 #endif
@@ -72,12 +74,18 @@ JavaFolderPicker::~JavaFolderPicker()
 
 void SAL_CALL JavaFolderPicker::setTitle( const OUString& aTitle ) throw( RuntimeException )
 {
+#ifdef DEBUG
+	fprintf( stderr, "JavaFolderPicker::setTitle not implemented\n" );
+#endif
 }
 
 // ------------------------------------------------------------------------
 
 sal_Int16 SAL_CALL JavaFolderPicker::execute() throw( RuntimeException )
 {
+#ifdef DEBUG
+	fprintf( stderr, "JavaFolderPicker::execute not implemented\n" );
+#endif
 	return 0;
 }
 
@@ -85,12 +93,18 @@ sal_Int16 SAL_CALL JavaFolderPicker::execute() throw( RuntimeException )
 
 void SAL_CALL JavaFolderPicker::setDisplayDirectory( const OUString& rDirectory ) throw( IllegalArgumentException, RuntimeException )
 {
+#ifdef DEBUG
+	fprintf( stderr, "JavaFolderPicker::setDisplayDirectory not implemented\n" );
+#endif
 }
 
 // ------------------------------------------------------------------------
 
 OUString SAL_CALL JavaFolderPicker::getDisplayDirectory() throw( RuntimeException )
 {
+#ifdef DEBUG
+	fprintf( stderr, "JavaFolderPicker::getDisplayDirectory not implemented\n" );
+#endif
 	return OUString();
 }
 
@@ -98,6 +112,9 @@ OUString SAL_CALL JavaFolderPicker::getDisplayDirectory() throw( RuntimeExceptio
 
 OUString SAL_CALL JavaFolderPicker::getDirectory() throw( RuntimeException )
 {
+#ifdef DEBUG
+	fprintf( stderr, "JavaFolderPicker::getDirectory not implemented\n" );
+#endif
 	return OUString();
 }
 
@@ -105,12 +122,18 @@ OUString SAL_CALL JavaFolderPicker::getDirectory() throw( RuntimeException )
 
 void SAL_CALL JavaFolderPicker::setDescription( const OUString& rDescription ) throw( RuntimeException )
 {
+#ifdef DEBUG
+	fprintf( stderr, "JavaFolderPicker::setDescription not implemented\n" );
+#endif
 }
 
 // ------------------------------------------------------------------------
 
 OUString SAL_CALL JavaFolderPicker::getImplementationName() throw( RuntimeException )
 {
+#ifdef DEBUG
+	fprintf( stderr, "JavaFolderPicker::getImplementationName not implemented\n" );
+#endif
 	return OUString();
 }
 
@@ -118,6 +141,9 @@ OUString SAL_CALL JavaFolderPicker::getImplementationName() throw( RuntimeExcept
 
 sal_Bool SAL_CALL JavaFolderPicker::supportsService( const OUString& ServiceName ) throw( RuntimeException )
 {
+#ifdef DEBUG
+	fprintf( stderr, "JavaFolderPicker::supportsService not implemented\n" );
+#endif
 	return sal_False;
 }
 
@@ -125,6 +151,9 @@ sal_Bool SAL_CALL JavaFolderPicker::supportsService( const OUString& ServiceName
 
 Sequence< OUString > SAL_CALL JavaFolderPicker::getSupportedServiceNames() throw( RuntimeException )
 {
+#ifdef DEBUG
+	fprintf( stderr, "JavaFolderPicker::getSupportedServiceNames not implemented\n" );
+#endif
 	return Sequence< OUString >();
 }
 
@@ -132,10 +161,16 @@ Sequence< OUString > SAL_CALL JavaFolderPicker::getSupportedServiceNames() throw
 
 void SAL_CALL JavaFolderPicker::cancel() throw( RuntimeException )
 {
+#ifdef DEBUG
+	fprintf( stderr, "JavaFolderPicker::cancel not implemented\n" );
+#endif
 }
 
 // ------------------------------------------------------------------------
 
 void SAL_CALL JavaFolderPicker::disposing( const EventObject& aEvent ) throw( RuntimeException )
 {
+#ifdef DEBUG
+	fprintf( stderr, "JavaFolderPicker::disposing not implemented\n" );
+#endif
 }
