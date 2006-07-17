@@ -36,6 +36,8 @@
 #ifndef _JAVA_FILEPICKER_HXX_
 #define _JAVA_FILEPICKER_HXX_
 
+#include <list>
+
 #ifndef _CPPUHELPER_COMPBASE9_HXX_
 #include <cppuhelper/compbase9.hxx>
 #endif
@@ -74,6 +76,7 @@ namespace java {
 
 class JavaFilePicker : public ::cppu::WeakComponentImplHelper9< ::com::sun::star::ui::dialogs::XFilterManager, ::com::sun::star::ui::dialogs::XFilterGroupManager, ::com::sun::star::ui::dialogs::XFilePickerControlAccess, ::com::sun::star::ui::dialogs::XFilePickerNotifier, ::com::sun::star::ui::dialogs::XFilePreview, ::com::sun::star::lang::XInitialization, ::com::sun::star::util::XCancellable, ::com::sun::star::lang::XEventListener, ::com::sun::star::lang::XServiceInfo >
 {
+	::std::list< ::com::sun::star::uno::Reference< ::com::sun::star::ui::dialogs::XFilePickerListener > >	maListeners;
 	::osl::Mutex		maMutex;
 
 public:

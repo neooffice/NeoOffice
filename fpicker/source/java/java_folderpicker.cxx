@@ -164,10 +164,7 @@ sal_Bool SAL_CALL JavaFolderPicker::supportsService( const OUString& ServiceName
 
 Sequence< OUString > SAL_CALL JavaFolderPicker::getSupportedServiceNames() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFolderPicker::getSupportedServiceNames not implemented\n" );
-#endif
-	return Sequence< OUString >();
+	return JavaFolderPicker_getSupportedServiceNames();
 }
 
 // ------------------------------------------------------------------------

@@ -44,6 +44,7 @@ using namespace com::sun::star::beans;
 using namespace com::sun::star::lang;
 using namespace com::sun::star::uno;
 using namespace com::sun::star::ui::dialogs;
+using namespace osl;
 using namespace rtl;
 using namespace java;
 
@@ -84,18 +85,16 @@ JavaFilePicker::~JavaFilePicker()
 
 void SAL_CALL JavaFilePicker::addFilePickerListener( const Reference< XFilePickerListener >& xListener ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::addFilePickerListener not implemented\n" );
-#endif
+    Guard< Mutex > aGuard( maMutex );
+    maListeners.push_back( xListener );
 }
 
 // ------------------------------------------------------------------------
 
 void SAL_CALL JavaFilePicker::removeFilePickerListener( const Reference< XFilePickerListener >& xListener ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::removeFilePickerListener not implemented\n" );
-#endif
+    Guard< Mutex > aGuard( maMutex );
+    maListeners.remove( xListener );
 }
 
 // ------------------------------------------------------------------------
@@ -371,28 +370,41 @@ sal_Bool SAL_CALL JavaFilePicker::supportsService( const OUString& ServiceName )
 
 Sequence< OUString > SAL_CALL JavaFilePicker::getSupportedServiceNames() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::getSupportedServiceNames not implemented\n" );
-#endif
-	return Sequence< OUString >();
+	return JavaFilePicker_getSupportedServiceNames();
 }
 
 // ------------------------------------------------------------------------
 
 void SAL_CALL JavaFilePicker::fileSelectionChanged( FilePickerEvent aEvent )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::fileSelectionChanged not implemented\n" );
-#endif
+    ClearableMutexGuard aGuard( maMutex );
+
+	::std::list< Reference< XFilePickerListener > > listeners( maListeners );
+
+	aGuard.clear();
+
+    for ( ::std::list< Reference< XFilePickerListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
+    {
+        if ( (*it).is() )
+			(*it)->fileSelectionChanged( aEvent );
+    }
 }
 
 // ------------------------------------------------------------------------
 
 void SAL_CALL JavaFilePicker::directoryChanged( FilePickerEvent aEvent )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::directoryChanged not implemented\n" );
-#endif
+    ClearableMutexGuard aGuard( maMutex );
+
+	::std::list< Reference< XFilePickerListener > > listeners( maListeners );
+
+	aGuard.clear();
+
+    for ( ::std::list< Reference< XFilePickerListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
+    {
+        if ( (*it).is() )
+			(*it)->directoryChanged( aEvent );
+    }
 }
 
 // ------------------------------------------------------------------------
@@ -409,16 +421,32 @@ OUString SAL_CALL JavaFilePicker::helpRequested( FilePickerEvent aEvent ) const
 
 void SAL_CALL JavaFilePicker::controlStateChanged( FilePickerEvent aEvent )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::controlStateChanged not implemented\n" );
-#endif
+    ClearableMutexGuard aGuard( maMutex );
+
+	::std::list< Reference< XFilePickerListener > > listeners( maListeners );
+
+	aGuard.clear();
+
+    for ( ::std::list< Reference< XFilePickerListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
+    {
+        if ( (*it).is() )
+			(*it)->controlStateChanged( aEvent );
+    }
 }
 
 // ------------------------------------------------------------------------
 
 void SAL_CALL JavaFilePicker::dialogSizeChanged()
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::dialogSizeChanged not implemented\n" );
-#endif
+    ClearableMutexGuard aGuard( maMutex );
+
+	::std::list< Reference< XFilePickerListener > > listeners( maListeners );
+
+	aGuard.clear();
+
+    for ( ::std::list< Reference< XFilePickerListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
+    {
+        if ( (*it).is() )
+			(*it)->dialogSizeChanged();
+    }
 }
