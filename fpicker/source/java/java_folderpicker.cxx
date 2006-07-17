@@ -47,6 +47,17 @@ using namespace java;
 
 // ========================================================================
 
+namespace java {
+ 
+Reference< XInterface > SAL_CALL JavaFolderPicker_createInstance( const Reference< XMultiServiceFactory >& xMultiServiceFactory )
+{
+	return Reference< XInterface >( static_cast< OWeakObject* >( new JavaFolderPicker( xMultiServiceFactory ) ) );
+}
+
+}
+
+// ========================================================================
+
 JavaFolderPicker::JavaFolderPicker( const Reference< XMultiServiceFactory >& xServiceMgr ) : WeakComponentImplHelper3< XFolderPicker, XServiceInfo, XCancellable >( maMutex )
 {
 }

@@ -47,6 +47,17 @@ using namespace java;
 
 // ========================================================================
 
+namespace java {
+
+Reference< XInterface > SAL_CALL JavaFilePicker_createInstance( const Reference< XMultiServiceFactory >& xMultiServiceFactory )
+{
+	return Reference< XInterface >( static_cast< OWeakObject* >( new JavaFilePicker( xMultiServiceFactory ) ) );
+}
+
+}
+
+// ========================================================================
+
 JavaFilePicker::JavaFilePicker( const Reference< XMultiServiceFactory >& xServiceMgr ) : WeakComponentImplHelper9< XFilterManager, XFilterGroupManager, XFilePickerControlAccess, XFilePickerNotifier, XFilePreview, XInitialization, XCancellable, XEventListener, XServiceInfo >( maMutex )
 {
 }

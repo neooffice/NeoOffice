@@ -118,6 +118,8 @@ public:
 	void				SAL_CALL dialogSizeChanged();
 };
 
+::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface > SAL_CALL JavaFilePicker_createInstance( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >& xMultiServiceFactory );
+
 }
 
 #endif	// _JAVA_FILEPICKER_HXX_
