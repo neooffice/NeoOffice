@@ -263,7 +263,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 		return;
 	}
 
-	mpVCLFont = new com_sun_star_vcl_VCLFont( pVCLFont->getJavaObject() );
+	mpVCLFont = new com_sun_star_vcl_VCLFont( pVCLFont->getJavaObject(), pVCLFont->getNativeFont() );
 	if ( !mpVCLFont )
 	{
 		Destroy();
@@ -616,7 +616,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 				::std::map< int, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( (int)nFontID );
 				if ( it != pSalData->maNativeFontMapping.end() )
 				{
-					mpFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, it->second->mnATSUFontID, mpHash->mnFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
+					mpFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpHash->mnFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX, 0 );
 				}
 				else
 				{
@@ -820,11 +820,11 @@ SalATSLayout::SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel ) :
 	{
 		::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = mpGraphics->maFallbackFonts.find( mnFallbackLevel );
 		if ( it != mpGraphics->maFallbackFonts.end() )
-			mpVCLFont = new com_sun_star_vcl_VCLFont( it->second->getJavaObject() );
+			mpVCLFont = new com_sun_star_vcl_VCLFont( it->second->getJavaObject(), it->second->getNativeFont() );
 	}
 	else
 	{
-		mpVCLFont = new com_sun_star_vcl_VCLFont( mpGraphics->mpVCLFont->getJavaObject() );
+		mpVCLFont = new com_sun_star_vcl_VCLFont( mpGraphics->mpVCLFont->getJavaObject(), mpGraphics->mpVCLFont->getNativeFont() );
 	}
 }
 
@@ -977,7 +977,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = mpGraphics->maFallbackFonts.find( nNextLevel );
 			if ( it != mpGraphics->maFallbackFonts.end() )
 				delete it->second;
-			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pLayoutData->mpFallbackFont->getJavaObject() );
+			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pLayoutData->mpFallbackFont->getJavaObject(), pLayoutData->mpFallbackFont->getNativeFont() );
 			rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 		}
 

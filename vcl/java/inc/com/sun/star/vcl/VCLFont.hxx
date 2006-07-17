@@ -51,17 +51,18 @@ class com_sun_star_vcl_VCLGraphics;
 
 class com_sun_star_vcl_VCLFont : public java_lang_Object
 {
+	int					mnNativeFont;
+
 protected:
 	static jclass		theClass;
 
 public:
 	static jclass		getMyClass();
 
-						com_sun_star_vcl_VCLFont( jobject myObj ) : java_lang_Object( myObj ) {}
-						com_sun_star_vcl_VCLFont( ::rtl::OUString aFontName, int nNativeFont, long nSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX );
-	void				setNativeFont( int _par0 );
+						com_sun_star_vcl_VCLFont( jobject myObj, int nNativeFont ) : java_lang_Object( myObj ), mnNativeFont( nNativeFont ) {}
+						com_sun_star_vcl_VCLFont( ::rtl::OUString aFontName, long nSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX, int nNativeFont );
 
-	com_sun_star_vcl_VCLFont*	deriveFont( long _par0, short _par1, sal_Bool _par2, sal_Bool _par3, double _par4 );
+	com_sun_star_vcl_VCLFont*	deriveFont( short _par0, sal_Bool _par1, sal_Bool _par2, double _par3 );
 	long				getAscent();
 	long				getDescent();
 	long				getKerning( USHORT _par0, USHORT _par1 );
