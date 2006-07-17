@@ -50,10 +50,20 @@ using namespace java;
 // ========================================================================
 
 namespace java {
+
+Sequence< OUString > SAL_CALL JavaFolderPicker_getSupportedServiceNames()
+{
+	Sequence< OUString > aRet( 2 );
+	aRet[0] = OUString::createFromAscii( "com.sun.star.ui.dialogs.FolderPicker" );
+	aRet[1] = OUString::createFromAscii( "com.sun.star.ui.dialogs.SystemFolderPicker" );
+	return aRet;
+}
  
+// ------------------------------------------------------------------------
+
 Reference< XInterface > SAL_CALL JavaFolderPicker_createInstance( const Reference< XMultiServiceFactory >& xMultiServiceFactory )
 {
-	return Reference< XInterface >( static_cast< OWeakObject* >( new JavaFolderPicker( xMultiServiceFactory ) ) );
+	return Reference< XInterface >( static_cast< XFolderPicker* >( new JavaFolderPicker( xMultiServiceFactory ) ) );
 }
 
 }
@@ -141,9 +151,12 @@ OUString SAL_CALL JavaFolderPicker::getImplementationName() throw( RuntimeExcept
 
 sal_Bool SAL_CALL JavaFolderPicker::supportsService( const OUString& ServiceName ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFolderPicker::supportsService not implemented\n" );
-#endif
+	Sequence < OUString > aSupportedServicesNames = JavaFolderPicker_getSupportedServiceNames();
+ 
+	for ( sal_Int32 n = aSupportedServicesNames.getLength(); n--; )
+		if ( aSupportedServicesNames[n].compareTo(ServiceName) == 0 )
+			return sal_True;
+ 
 	return sal_False;
 }
 

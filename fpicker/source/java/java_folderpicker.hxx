@@ -75,6 +75,7 @@ public:
 	virtual void				SAL_CALL disposing( const ::com::sun::star::lang::EventObject& aEvent ) throw( ::com::sun::star::uno::RuntimeException );
 };
 
+::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL JavaFolderPicker_getSupportedServiceNames();
 ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface > SAL_CALL JavaFolderPicker_createInstance( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >& xMultiServiceFactory );
 
 }

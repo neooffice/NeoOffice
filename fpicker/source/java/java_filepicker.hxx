@@ -118,6 +118,7 @@ public:
 	void				SAL_CALL dialogSizeChanged();
 };
 
+::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL JavaFilePicker_getSupportedServiceNames();
 ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface > SAL_CALL JavaFilePicker_createInstance( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >& xMultiServiceFactory );
 
 }

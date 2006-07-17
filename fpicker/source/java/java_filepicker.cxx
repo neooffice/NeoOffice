@@ -51,9 +51,19 @@ using namespace java;
 
 namespace java {
 
+Sequence< OUString > SAL_CALL JavaFilePicker_getSupportedServiceNames()
+{
+	Sequence< OUString > aRet( 2 );
+	aRet[0] = OUString::createFromAscii( "com.sun.star.ui.dialogs.FilePicker" );
+	aRet[1] = OUString::createFromAscii( "com.sun.star.ui.dialogs.SystemFilePicker" );
+	return aRet;
+}
+
+// ------------------------------------------------------------------------
+
 Reference< XInterface > SAL_CALL JavaFilePicker_createInstance( const Reference< XMultiServiceFactory >& xMultiServiceFactory )
 {
-	return Reference< XInterface >( static_cast< OWeakObject* >( new JavaFilePicker( xMultiServiceFactory ) ) );
+	return Reference< XInterface >( static_cast< XFilePicker* >( new JavaFilePicker( xMultiServiceFactory ) ) );
 }
 
 }
@@ -348,9 +358,12 @@ OUString SAL_CALL JavaFilePicker::getImplementationName() throw( RuntimeExceptio
 
 sal_Bool SAL_CALL JavaFilePicker::supportsService( const OUString& ServiceName ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::supportsService not implemented\n" );
-#endif
+	Sequence < OUString > aSupportedServicesNames = JavaFilePicker_getSupportedServiceNames();
+ 
+	for ( sal_Int32 n = aSupportedServicesNames.getLength(); n--; )
+		if ( aSupportedServicesNames[n].compareTo(ServiceName) == 0 )
+			return sal_True;
+ 
 	return sal_False;
 }
 
