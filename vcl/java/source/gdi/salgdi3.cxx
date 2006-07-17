@@ -127,7 +127,10 @@ static void ImplLoadNativeFont( OUString aPath )
 			FSSpec aFontSpec;
 			OString aUTF8Path( aSysPath.getStr(), aSysPath.getLength(), RTL_TEXTENCODING_UTF8 );
 			if ( FSPathMakeRef( (const UInt8 *)aUTF8Path.getStr(), &aFontPath, 0 ) == noErr && FSGetCatalogInfo( &aFontPath, kFSCatInfoNone, NULL, NULL, &aFontSpec, NULL ) == noErr )
+			{
 				ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextGlobal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDefault, NULL );
+				ReceiveNextEvent( 0, NULL, 0, false, NULL );
+			}
 		}
 	}
 }
@@ -174,26 +177,24 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 					OUString aSerif( OUString::createFromAscii( "Serif" ) );
 					OUString aTimes( OUString::createFromAscii( "Times" ) );
 					OUString aTimesRoman( OUString::createFromAscii( "Times Roman" ) );
-					void *pFonts = NSFontManager_getFontEnumerator();
+					long *pFonts = NSFontManager_getAllFonts();
 					if ( pFonts )
 					{
-						void *pNSFont;
-						while ( ( pNSFont = NSFontManager_getNextFont( pFonts ) ) != NULL )
+						for ( int i = 0; pFonts[ i ]; i++ )
 						{
+							void *pNSFont = (void *)pFonts[ i ];
+							if ( !pNSFont )
+								break;
+
 							ATSFontRef aFont = NSFont_getATSFontRef( pNSFont );
 							if ( !aFont )
-							{
-								NSFont_release( pNSFont );
 								continue;
-							}
 
 							// Get font attributes
 							FontWeight nWeight = (FontWeight)NSFontManager_weightOfFont( pNSFont );
 							FontItalic nItalic = ( NSFontManager_isItalic( pNSFont ) ? ITALIC_NORMAL : ITALIC_NONE );
 							FontWidth nWidth = (FontWidth)NSFontManager_widthOfFont( pNSFont );
 							FontPitch nPitch = ( NSFontManager_isFixedPitch( pNSFont ) ? PITCH_FIXED : PITCH_VARIABLE );
-
-							NSFont_release( pNSFont );
 
 							CFStringRef aPSString;
 							if ( ATSFontGetPostScriptName( aFont, kATSOptionFlagsDefault, &aPSString ) != noErr )
@@ -304,7 +305,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							pSalData->maJavaFontNameMapping[ aPSName ] = pData;
 						}
 
-						NSFontManager_releaseFontEnumerator( pFonts );
+						NSFontManager_releaseAllFonts( pFonts );
 					}
 				}
 
