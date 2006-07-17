@@ -90,6 +90,10 @@ update_installation() {
 	chmod -Rf ug+w "$1/Contents/Resources" || return 1
 	chmod -Rf ug+w "$1/Contents/share/dict/ooo" || return 1
 
+	# Fix bug 1584 by marking certain directories writable for root user
+	chmod -Rf u+w "$1/Contents/presets" || exit 1
+	chmod -Rf u+w "$1/Contents/share" || exit 1
+
 	# Register libavmediaquicktime.dylib component
 	DYLD_LIBRARY_PATH="$1/Contents/MacOS"; export DYLD_LIBRARY_PATH
 	"$2/Contents/Resources/regcomp.bin" -revoke -r "$1/Contents/MacOS/services.rdb" -c "$1/Contents/MacOS/classes/avmedia.jar"
