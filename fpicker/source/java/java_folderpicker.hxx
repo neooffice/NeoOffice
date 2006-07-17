@@ -52,6 +52,8 @@
 #include <rtl/ustring.hxx>
 #endif
 
+namespace java {
+
 class JavaFolderPicker : public ::cppu::WeakComponentImplHelper3< ::com::sun::star::ui::dialogs::XFolderPicker, ::com::sun::star::lang::XServiceInfo, ::com::sun::star::util::XCancellable >
 {
 	::osl::Mutex		maMutex;
@@ -71,6 +73,8 @@ public:
 	virtual ::com::sun::star::uno::Sequence< ::rtl::OUString >	SAL_CALL getSupportedServiceNames() throw( ::com::sun::star::uno::RuntimeException );
 	virtual void				SAL_CALL cancel() throw( ::com::sun::star::uno::RuntimeException );
 	virtual void				SAL_CALL disposing( const ::com::sun::star::lang::EventObject& aEvent ) throw( ::com::sun::star::uno::RuntimeException );
-}; 
+};
+
+}
 
 #endif	// _JAVA_FOLDERPICKER_HXX_

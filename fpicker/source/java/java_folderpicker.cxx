@@ -43,6 +43,7 @@ using namespace com::sun::star::uno;
 using namespace com::sun::star::ui::dialogs;
 using namespace com::sun::star::util;
 using namespace rtl;
+using namespace java;
 
 // ========================================================================
 

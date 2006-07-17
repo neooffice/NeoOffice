@@ -70,6 +70,8 @@
 #include <rtl/ustring.hxx>
 #endif
 
+namespace java {
+
 class JavaFilePicker : public ::cppu::WeakComponentImplHelper9< ::com::sun::star::ui::dialogs::XFilterManager, ::com::sun::star::ui::dialogs::XFilterGroupManager, ::com::sun::star::ui::dialogs::XFilePickerControlAccess, ::com::sun::star::ui::dialogs::XFilePickerNotifier, ::com::sun::star::ui::dialogs::XFilePreview, ::com::sun::star::lang::XInitialization, ::com::sun::star::util::XCancellable, ::com::sun::star::lang::XEventListener, ::com::sun::star::lang::XServiceInfo >
 {
 	::osl::Mutex		maMutex;
@@ -115,5 +117,7 @@ public:
 	void				SAL_CALL controlStateChanged( ::com::sun::star::ui::dialogs::FilePickerEvent aEvent );
 	void				SAL_CALL dialogSizeChanged();
 };
+
+}
 
 #endif	// _JAVA_FILEPICKER_HXX_
