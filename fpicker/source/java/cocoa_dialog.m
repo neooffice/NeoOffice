@@ -41,6 +41,8 @@
 
 @interface ShowFileDialog : NSObject
 {
+	NSString*				mpDirectory;
+	BOOL					mbMultiSelectionMode;
 	int						mnResult;
 	BOOL					mbShowAutoExtension;
 	BOOL					mbShowFilterOptions;
@@ -52,19 +54,34 @@
 	BOOL					mbShowSelection;
 	BOOL					mbShowTemplate;
 	BOOL					mbShowVersion;
+	NSString*				mpTitle;
 	BOOL					mbUseFileOpenDialog;
 }
+- (void)dealloc;
 - (id)initWithOptions:(BOOL)bUseFileOpenDialog showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showPreview:(BOOL)bShowPreview showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion;
 - (int)result;
 - (void)showFileDialog:(id)pObject;
+- (void)setDirectory:(NSString *)pDirectory;
+- (void)setMultiSelectionMode:(BOOL)bMultiSelectionMode;
+- (void)setTitle:(NSString *)pTitle;
 @end
 
 @implementation ShowFileDialog
+
+- (void)dealloc
+{
+	if ( mpTitle )
+		[mpTitle release];
+
+	[super dealloc];
+}
 
 - (id)initWithOptions:(BOOL)bUseFileOpenDialog showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showPreview:(BOOL)bShowPreview showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion
 {
 	[super init];
 
+	mpDirectory = nil;
+	mbMultiSelectionMode = NO;
 	mnResult = NSCancelButton;
 	mbShowAutoExtension = bShowAutoExtension;
 	mbShowFilterOptions = bShowFilterOptions;
@@ -76,6 +93,7 @@
 	mbShowSelection = bShowSelection;
 	mbShowTemplate = bShowTemplate;
 	mbShowVersion = bShowVersion;
+	mpTitle = nil;
 	mbUseFileOpenDialog = bUseFileOpenDialog;
 
 	return self;
@@ -88,21 +106,63 @@
 
 - (void)showFileDialog:(id)pObject;
 {
-	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( pApp )
+	NSSavePanel *pFilePanel;
+	if ( mbUseFileOpenDialog )
+		pFilePanel = (NSSavePanel *)[NSOpenPanel openPanel];
+	else
+		pFilePanel = [NSSavePanel savePanel];
+
+	if ( mpTitle )
+		[pFilePanel setTitle:mpTitle];
+
+	if ( pFilePanel )
 	{
 		if ( mbUseFileOpenDialog )
 		{
-			NSOpenPanel *pOpenPanel = [NSOpenPanel openPanel];
-			if ( pOpenPanel )
-				mnResult = [pOpenPanel runModalForDirectory:nil file:nil types:nil];
+			NSOpenPanel *pOpenPanel = (NSOpenPanel *)pFilePanel;
+			[pOpenPanel setAllowsMultipleSelection:mbMultiSelectionMode];
+
+			mnResult = [pOpenPanel runModalForDirectory:mpDirectory file:nil types:nil];
 		}
 		else
 		{
-			NSSavePanel *pSavePanel = [NSSavePanel savePanel];
-			if ( pSavePanel )
-				mnResult = [pSavePanel runModalForDirectory:nil file:nil];
+			mnResult = [pFilePanel runModalForDirectory:mpDirectory file:nil];
 		}
+	}
+}
+
+- (void)setDirectory:(NSString *)pDirectory
+{
+	if ( mpDirectory )
+	{
+		[mpDirectory release];
+		mpDirectory = nil;
+	}
+
+	if ( pDirectory )
+	{
+		[pDirectory retain];
+		mpDirectory = pDirectory;
+	}
+}
+
+- (void)setMultiSelectionMode:(BOOL)bMultiSelectionMode
+{
+	mbMultiSelectionMode = bMultiSelectionMode;
+}
+
+- (void)setTitle:(NSString *)pTitle
+{
+	if ( mpTitle )
+	{
+		[mpTitle release];
+		mpTitle = nil;
+	}
+
+	if ( pTitle )
+	{
+		[pTitle retain];
+		mpTitle = pTitle;
 	}
 }
 
@@ -125,8 +185,12 @@ id NSFileDialog_create( BOOL bUseFileOpenDialog, BOOL bShowAutoExtension, BOOL b
 
 void NSFileDialog_release( void *pDialog )
 {
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	if ( pDialog )
 		[(ShowFileDialog *)pDialog release];
+
+	[pPool release];
 }
 
 int NSFileDialog_result( id pDialog )
@@ -146,7 +210,7 @@ int NSFileDialog_result( id pDialog )
 	return nRet;
 }
 
-int NSFileDialog_showPrintDialog( id pDialog )
+int NSFileDialog_showFileDialog( id pDialog )
 {
 	int nRet = NO;
 
@@ -161,4 +225,34 @@ int NSFileDialog_showPrintDialog( id pDialog )
 	[pPool release];
 
 	return nRet;
+}
+
+void NSFileDialog_setDirectory( void *pDialog, CFStringRef aDirectory )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pDialog )
+		[(ShowFileDialog *)pDialog setDirectory:(NSString *)aDirectory ];
+
+	[pPool release];
+}
+
+void NSFileDialog_setMultiSelectionMode( void *pDialog, BOOL bMultiSelectionMode )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pDialog )
+		[(ShowFileDialog *)pDialog setMultiSelectionMode:bMultiSelectionMode];
+
+	[pPool release];
+}
+
+void NSFileDialog_setTitle( void *pDialog, CFStringRef aTitle )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pDialog )
+		[(ShowFileDialog *)pDialog setTitle:(NSString *)aTitle];
+
+	[pPool release];
 }

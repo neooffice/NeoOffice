@@ -44,6 +44,9 @@
 #ifndef _COM_SUN_STAR_UI_DIALOGS_TEMPLATEDESCRIPTION_HPP_
 #include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
 #endif
+#ifndef _OSL_FILE_HXX_
+#include <osl/file.hxx>
+#endif
 #ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
 #endif
@@ -90,8 +93,6 @@ JavaFilePicker::JavaFilePicker( const Reference< XMultiServiceFactory >& xServic
 
 JavaFilePicker::~JavaFilePicker()
 {
-	if ( mpDialog )
-		NSFileDialog_release( mpDialog );
 }
 
 // ------------------------------------------------------------------------
@@ -114,19 +115,22 @@ void SAL_CALL JavaFilePicker::removeFilePickerListener( const Reference< XFilePi
 
 void SAL_CALL JavaFilePicker::setTitle( const OUString& aTitle ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::setTitle not implemented\n" );
-#endif
+	CFStringRef aString = CFStringCreateWithCharacters( NULL, aTitle.getStr(), aTitle.getLength() );
+	if ( aString )
+	{
+		NSFileDialog_setTitle( mpDialog, aString );
+		CFRelease( aString );
+	}
 }
 
 // ------------------------------------------------------------------------
 
 sal_Int16 SAL_CALL JavaFilePicker::execute() throw( RuntimeException )
 {
-	sal_Int16 nRet = 0;
 
-	if ( mpDialog )
-		nRet = NSFileDialog_showPrintDialog( mpDialog );
+	ULONG nCount = Application::ReleaseSolarMutex();
+	sal_Int16 nRet = NSFileDialog_showFileDialog( mpDialog );
+	Application::AcquireSolarMutex( nCount );
 
 	return nRet;
 }
@@ -135,9 +139,7 @@ sal_Int16 SAL_CALL JavaFilePicker::execute() throw( RuntimeException )
 
 void SAL_CALL JavaFilePicker::setMultiSelectionMode( sal_Bool bMode ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::setMultiSelectionMode not implemented\n" );
-#endif
+	NSFileDialog_setMultiSelectionMode( mpDialog, bMode ? TRUE : FALSE );
 }
 
 // ------------------------------------------------------------------------
@@ -153,9 +155,17 @@ void SAL_CALL JavaFilePicker::setDefaultName( const OUString& aName ) throw( Run
 
 void SAL_CALL JavaFilePicker::setDisplayDirectory( const OUString& aDirectory ) throw( com::sun::star::lang::IllegalArgumentException, RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::setDisplayDirectory not implemented\n" );
-#endif
+	OUString aPath;
+	File::getSystemPathFromFileURL( aDirectory, aPath );
+	if ( aPath.getLength() )
+	{
+		CFStringRef aString = CFStringCreateWithCharacters( NULL, aPath.getStr(), aPath.getLength() );
+		if ( aString )
+		{
+			NSFileDialog_setDirectory( mpDialog, aString );
+			CFRelease( aString );
+		}
+	}
 }
 
 // ------------------------------------------------------------------------
