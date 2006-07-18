@@ -161,8 +161,10 @@ static Reference< css::uno::XInterface > FolderPicker_createInstance (
 		Reference< css::lang::XMultiComponentFactory > xFactory (rxContext->getServiceManager());
 		if (xFactory.is())
 		{
+#ifndef USE_JAVA
 			if (SvtMiscOptions().UseSystemFileDialog())
 			{
+#endif	// USE_JAVA
 				try
 				{
 					xResult = xFactory->createInstanceWithContext (
@@ -186,7 +188,9 @@ static Reference< css::uno::XInterface > FolderPicker_createInstance (
 				// Add to FolderPicker history.
 				svt::addFolderPicker (xResult);
 			}
+#ifndef USE_JAVA
 		}
+#endif	// USE_JAVA
 	}
 	return xResult;
 }
