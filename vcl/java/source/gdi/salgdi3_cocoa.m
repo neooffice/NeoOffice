@@ -62,16 +62,6 @@ ATSFontRef NSFont_getATSFontRef( id pNSFont )
 	return aRet;
 }
 
-void NSFont_release( id pNSFont )
-{
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	if ( pNSFont )
-		[(NSFont *)pNSFont release];
-
-	[pPool release];
-}
-
 CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, BOOL bBold, BOOL bItalic, long nSize )
 {
 	CFStringRef aRet = nil;
@@ -114,43 +104,39 @@ CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, BOOL bBo
 	return aRet;
 }
 
-id NSFontManager_getFontEnumerator()
+long *NSFontManager_getAllFonts()
 {
-	NSEnumerator *pRet = nil;
+	long *pRet = nil;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	NSFontManager *pFontManager = [NSFontManager sharedFontManager];
-	if ( pFontManager )
+	NSFontManager *pManager = [NSFontManager sharedFontManager];
+	if ( pManager )
 	{
-		NSArray *pArray = [pFontManager availableFonts];
-		if ( pArray )
+		NSArray *pFontNames = [pManager availableFonts];
+		if ( pFontNames )
 		{
-			pRet = [pArray objectEnumerator];
-			if ( pRet )
-				[pRet retain];
-		}
-	}
+			unsigned nCount = [pFontNames count];
+			if ( nCount )
+			{
+				pRet = (long *)malloc( ( nCount + 1 ) * sizeof( long* ) );
+				if ( pRet )
+				{
+					unsigned nIndex = 0;
+					unsigned i = 0;
+					for ( ; i < nCount; i++ )
+					{
+						NSFont *pCurrentFont = [NSFont fontWithName:(NSString *)[pFontNames objectAtIndex:i] size:(float)12];
+						if ( pCurrentFont )
+						{
+							[pCurrentFont retain];
+							pRet[ nIndex++ ] = (long)pCurrentFont;
+						}
+					}
 
-	[pPool release];
-
-	return pRet;
-}
-
-id NSFontManager_getNextFont( id pNSEnumerator )
-{
-	NSFont *pRet = nil;
-
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	if ( pNSEnumerator )
-	{
-		NSString *pFontName = (NSString *)[(NSEnumerator *)pNSEnumerator nextObject];
-		if ( pFontName )
-		{
-			pRet = [NSFont fontWithName:pFontName size:(float)12];
-			if ( pRet )
-				pRet = [pRet retain];
+					pRet[ nIndex ] = 0;
+				}
+			}
 		}
 	}
 
@@ -195,12 +181,17 @@ BOOL NSFontManager_isItalic( id pNSFont )
 	return bRet;
 }
 
-void NSFontManager_releaseFontEnumerator( id pNSEnumerator )
+void NSFontManager_releaseAllFonts( long *pFonts )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( pNSEnumerator )
-		[(NSEnumerator *)pNSEnumerator release];
+	if ( pFonts )
+	{
+		unsigned nIndex = 0;
+		for ( ; pFonts[ nIndex ]; nIndex++ )
+			[(NSFont *)pFonts[ nIndex ] release];
+		free( pFonts );
+	}
 
 	[pPool release];
 }
@@ -234,6 +225,7 @@ int NSFontManager_widthOfFont( id pNSFont )
 
 	return nRet;
 }
+
 int NSFontManager_weightOfFont( id pNSFont )
 {
 	int nRet = 0;

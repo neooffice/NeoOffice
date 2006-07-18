@@ -44,13 +44,11 @@ typedef void* id;
 BEGIN_C
 #endif
 ATSFontRef NSFont_getATSFontRef( id pNSFont );
-void NSFont_release( id pNSFont );
 CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, BOOL bBold, BOOL bItalic, long nSize );
-id NSFontManager_getFontEnumerator();
-id NSFontManager_getNextFont( id pNSEnumerator );
+long *NSFontManager_getAllFonts();
 BOOL NSFontManager_isFixedPitch( id pNSFont );
 BOOL NSFontManager_isItalic( id pNSFont );
-void NSFontManager_releaseFontEnumerator( id pNSEnumerator );
+void NSFontManager_releaseAllFonts( long *pFonts );
 int NSFontManager_widthOfFont( id pNSFont );
 int NSFontManager_weightOfFont( id pNSFont );
 #ifdef __cplusplus

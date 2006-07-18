@@ -127,10 +127,15 @@ static void ImplLoadNativeFont( OUString aPath )
 			FSSpec aFontSpec;
 			OString aUTF8Path( aSysPath.getStr(), aSysPath.getLength(), RTL_TEXTENCODING_UTF8 );
 			if ( FSPathMakeRef( (const UInt8 *)aUTF8Path.getStr(), &aFontPath, 0 ) == noErr && FSGetCatalogInfo( &aFontPath, kFSCatInfoNone, NULL, NULL, &aFontSpec, NULL ) == noErr )
+			{
 				ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextGlobal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDefault, NULL );
+				ReceiveNextEvent( 0, NULL, 0, false, NULL );
+			}
 		}
 	}
 }
+
+// -----------------------------------------------------------------------
 
 static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void *pData )
 {
@@ -158,6 +163,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 		{
 			SalData *pSalData = GetSalData();
 
+			pSalData->maJavaNativeFontMapping.clear();
 			SalATSLayout::ClearLayoutDataCache();
 
 			if ( !Application::IsShutDown() )
@@ -171,26 +177,22 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 					OUString aSerif( OUString::createFromAscii( "Serif" ) );
 					OUString aTimes( OUString::createFromAscii( "Times" ) );
 					OUString aTimesRoman( OUString::createFromAscii( "Times Roman" ) );
-					void *pFonts = NSFontManager_getFontEnumerator();
+					long *pFonts = NSFontManager_getAllFonts();
 					if ( pFonts )
 					{
-						void *pNSFont;
-						while ( ( pNSFont = NSFontManager_getNextFont( pFonts ) ) != NULL )
+						for ( int i = 0; pFonts[ i ]; i++ )
 						{
+							void *pNSFont = (void *)pFonts[ i ];
+
 							ATSFontRef aFont = NSFont_getATSFontRef( pNSFont );
 							if ( !aFont )
-							{
-								NSFont_release( pNSFont );
 								continue;
-							}
 
 							// Get font attributes
 							FontWeight nWeight = (FontWeight)NSFontManager_weightOfFont( pNSFont );
 							FontItalic nItalic = ( NSFontManager_isItalic( pNSFont ) ? ITALIC_NORMAL : ITALIC_NONE );
 							FontWidth nWidth = (FontWidth)NSFontManager_widthOfFont( pNSFont );
 							FontPitch nPitch = ( NSFontManager_isFixedPitch( pNSFont ) ? PITCH_FIXED : PITCH_VARIABLE );
-
-							NSFont_release( pNSFont );
 
 							CFStringRef aPSString;
 							if ( ATSFontGetPostScriptName( aFont, kATSOptionFlagsDefault, &aPSString ) != noErr )
@@ -301,7 +303,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							pSalData->maJavaFontNameMapping[ aPSName ] = pData;
 						}
 
-						NSFontManager_releaseFontEnumerator( pFonts );
+						NSFontManager_releaseAllFonts( pFonts );
 					}
 				}
 
@@ -315,7 +317,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						::std::map< OUString, JavaImplFontData* >::const_iterator it = pSalData->maJavaFontNameMapping.find( aFontName );
 						if ( it != pSalData->maJavaFontNameMapping.end() )
 						{
-							(*git)->mpVCLFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, it->second->mnATSUFontID, pCurrentFont->getSize(), pCurrentFont->getOrientation(), pCurrentFont->isAntialiased(), pCurrentFont->isVertical(), pCurrentFont->getScaleX() );
+							(*git)->mpVCLFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, pCurrentFont->getSize(), pCurrentFont->getOrientation(), pCurrentFont->isAntialiased(), pCurrentFont->isVertical(), pCurrentFont->getScaleX(), 0 );
 							delete pCurrentFont;
 						}
 
@@ -328,7 +330,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								::std::map< OUString, JavaImplFontData* >::const_iterator it = pSalData->maJavaFontNameMapping.find( aFontName );
 								if ( it != pSalData->maJavaFontNameMapping.end() )
 								{
-									ffit->second = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, it->second->mnATSUFontID, pCurrentFont->getSize(), pCurrentFont->getOrientation(), pCurrentFont->isAntialiased(), pCurrentFont->isVertical(), pCurrentFont->getScaleX() );
+									ffit->second = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, pCurrentFont->getSize(), pCurrentFont->getOrientation(), pCurrentFont->isAntialiased(), pCurrentFont->isVertical(), pCurrentFont->getScaleX(), 0 );
 									delete pCurrentFont;
 								}
 							}
@@ -385,7 +387,7 @@ static void LoadNativeFontsTimerCallback( EventLoopTimerRef aTimer, void *pData 
 
 // =======================================================================
 
-JavaImplFontData::JavaImplFontData( const ImplDevFontAttributes& rAttributes, OUString aVCLFontName, sal_IntPtr nATSUFontID ) : ImplFontData( rAttributes, 0 ), maVCLFontName( aVCLFontName ), mnATSUFontID( nATSUFontID )
+JavaImplFontData::JavaImplFontData( const ImplDevFontAttributes& rAttributes, OUString aVCLFontName, sal_IntPtr nATSUFontID, int nJavaFontID ) : ImplFontData( rAttributes, 0 ), maVCLFontName( aVCLFontName ), mnATSUFontID( nATSUFontID ), mnJavaFontID( nJavaFontID )
 {
 
 	// [ed] 11/1/04 Scalable fonts should always report their width and height
@@ -412,14 +414,20 @@ ImplFontEntry* JavaImplFontData::CreateFontInstance( ImplFontSelectData& rData )
 
 ImplFontData* JavaImplFontData::Clone() const
 {
-	return new JavaImplFontData( *this, maVCLFontName, mnATSUFontID );
+	return new JavaImplFontData( *this, maVCLFontName, mnATSUFontID, mnJavaFontID );
 }
 
 // -----------------------------------------------------------------------
 
 sal_IntPtr JavaImplFontData::GetFontId() const
 {
-	return mnATSUFontID;
+	if ( !mnJavaFontID )
+	{
+		com_sun_star_vcl_VCLFont aVCLFont( maVCLFontName, GetHeight(), 0, sal_True, sal_False, GetWidth() ? (double)GetWidth() / (double)GetHeight() : 1.0, 0 );
+		mnJavaFontID = aVCLFont.getNativeFont();
+	}
+
+	return mnJavaFontID;
 }
 
 // =======================================================================
@@ -557,7 +565,7 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		// Set font for graphics device
 		if ( mpVCLFont )
 			delete mpVCLFont;
-		mpVCLFont = new com_sun_star_vcl_VCLFont( ((JavaImplFontData *)pFont->mpFontData)->maVCLFontName, ((JavaImplFontData *)pFont->mpFontData)->mnATSUFontID, pFont->mnHeight, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical, pFont->mnWidth ? (double)pFont->mnWidth / (double)pFont->mnHeight : 1.0 );
+		mpVCLFont = new com_sun_star_vcl_VCLFont( ((JavaImplFontData *)pFont->mpFontData)->maVCLFontName, pFont->mnHeight, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical, pFont->mnWidth ? (double)pFont->mnWidth / (double)pFont->mnHeight : 1.0, 0 );
 	}
 
 	return 0;
@@ -657,7 +665,7 @@ void JavaSalGraphics::GetDevFontList( ImplDevFontList* pList )
 		{
 			OUString aLibName = OUString::createFromAscii( "libsfx" );
 			aLibName += OUString::valueOf( (sal_Int32)SUPD, 10 );
-			aLibName += OUString::createFromAscii( STRING( DLLPOSTFIX ) );
+			aLibName += OUString::createFromAscii( STRING( DLLSUFFIX ) );
 			aLibName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
 			if ( aShutdownCancelledHandlerModule.load( aLibName ) )
 				pShutdownCancelledHandler = (NativeShutdownCancelledHandler_Type *)aShutdownCancelledHandlerModule.getSymbol( OUString::createFromAscii( "NativeShutdownCancelledHandler" ) );

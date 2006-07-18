@@ -73,8 +73,9 @@ class JavaImplFontData : public ImplFontData
 public:
 	::rtl::OUString			maVCLFontName;
 	sal_IntPtr				mnATSUFontID;
+	mutable int				mnJavaFontID;
 
-							JavaImplFontData( const ImplDevFontAttributes& rAttibutes, ::rtl::OUString aVCLFontName, sal_IntPtr nATSUFontID );
+							JavaImplFontData( const ImplDevFontAttributes& rAttibutes, ::rtl::OUString aVCLFontName, sal_IntPtr nATSUFontID, int nJavaFontID = 0 );
 	virtual					~JavaImplFontData();
 
 	virtual ImplFontEntry*	CreateFontInstance( ImplFontSelectData& rData ) const;

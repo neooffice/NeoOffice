@@ -123,11 +123,6 @@ public final class VCLFont {
 	private int leading = 0;
 
 	/**
-	 * The cached native font.
-	 */
-	private int nativeFont = 0;
-
-	/**
 	 * The cached orientation.
 	 */
 	private short orientation = 0;
@@ -151,7 +146,6 @@ public final class VCLFont {
 	 * Constructs a new <code>VCLFont</code> instance.
 	 *
 	 * @param f the font
-	 * @param nf the native font
 	 * @param s the size of the font
 	 * @param o the orientation of the new <code>VCLFont</code> in degrees
 	 * @param a <code>true</code> to enable antialiasing and <code>false</code>
@@ -159,10 +153,9 @@ public final class VCLFont {
 	 * @param v <code>true</code> if the font is vertical 
 	 * @param x the X axis scale factor
 	 */
-	VCLFont(Font f, int nf, int s, short o, boolean a, boolean v, double x) throws FontFormatException {
+	VCLFont(Font f, int s, short o, boolean a, boolean v, double x) throws FontFormatException {
 
 		antialiased = a;
-		nativeFont = nf;
 		orientation = o;
 		scaleX = x;
 		size = s;
@@ -204,7 +197,6 @@ public final class VCLFont {
 	 * Constructs a new <code>VCLFont</code> instance.
 	 *
 	 * @param n the name of the font
-	 * @param nf the native font
 	 * @param s the size of the font
 	 * @param o the orientation of the new <code>VCLFont</code> in degrees
 	 * @param a <code>true</code> to enable antialiasing and <code>false</code>
@@ -212,9 +204,9 @@ public final class VCLFont {
 	 * @param v <code>true</code> if the font is vertical 
 	 * @param x the X axis scale factor
 	 */
-	public VCLFont(String n, int nf, int s, short o, boolean a, boolean v, double x) throws FontFormatException {
+	public VCLFont(String n, int s, short o, boolean a, boolean v, double x) throws FontFormatException {
 
-		this(new Font(n, Font.PLAIN, s), nf, s, o, a, v, x);
+		this(new Font(n, Font.PLAIN, s), s, o, a, v, x);
 
 	}
 
@@ -232,7 +224,7 @@ public final class VCLFont {
 	 */
 	public VCLFont deriveFont(int s, short o, boolean a, boolean v, double x) throws FontFormatException {
 
-		return new VCLFont(font, nativeFont, s, o, a, v, x);
+		return new VCLFont(font, s, o, a, v, x);
 
 	}
 
@@ -311,17 +303,6 @@ public final class VCLFont {
 	public String getName() {
 
 		return font.getName();
-
-	}
-
-	/**
-	 * Returns the native font.
-	 *
-	 * @return the native font
-	 */
-	public int getNativeFont() {
-
-		return nativeFont;
 
 	}
 
