@@ -44,7 +44,7 @@ typedef void* id;
 #ifdef __cplusplus
 BEGIN_C
 #endif
-id NSFileDialog_create();
+id NSFileDialog_create( BOOL bUseFileOpenDialog, BOOL bShowAutoExtension, BOOL bShowFilterOptions, BOOL bShowImageTemplate, BOOL bShowLink, BOOL bShowPassword, BOOL bShowPreview, BOOL bShowReadOnly, BOOL bShowSelection, BOOL bShowTemplate, BOOL bShowVersion );
 BOOL NSFileDialog_finished( id pDialog );
 void NSFileDialog_release( void *pDialog );
 int NSFileDialog_result( id pDialog );

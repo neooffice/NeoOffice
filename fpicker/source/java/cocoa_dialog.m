@@ -41,28 +41,42 @@
 
 @interface ShowFileDialog : NSObject
 {
-	BOOL					mbFinished;
 	int						mnResult;
+	BOOL					mbShowAutoExtension;
+	BOOL					mbShowFilterOptions;
+	BOOL					mbShowImageTemplate;
+	BOOL					mbShowLink;
+	BOOL					mbShowPassword;
+	BOOL					mbShowPreview;
+	BOOL					mbShowReadOnly;
+	BOOL					mbShowSelection;
+	BOOL					mbShowTemplate;
+	BOOL					mbShowVersion;
+	BOOL					mbUseFileOpenDialog;
 }
-- (BOOL)finished;
-- (id)init;
+- (id)initWithOptions:(BOOL)bUseFileOpenDialog showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showPreview:(BOOL)bShowPreview showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion;
 - (int)result;
 - (void)showFileDialog:(id)pObject;
 @end
 
 @implementation ShowFileDialog
 
-- (BOOL)finished;
-{
-	return mbFinished;
-}
-
-- (id)init
+- (id)initWithOptions:(BOOL)bUseFileOpenDialog showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showPreview:(BOOL)bShowPreview showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion
 {
 	[super init];
 
-	mbFinished = NO;
 	mnResult = NSCancelButton;
+	mbShowAutoExtension = bShowAutoExtension;
+	mbShowFilterOptions = bShowFilterOptions;
+	mbShowImageTemplate = bShowImageTemplate;
+	mbShowLink = bShowLink;
+	mbShowPassword = bShowPassword;
+	mbShowPreview = bShowPreview;
+	mbShowReadOnly = bShowReadOnly;
+	mbShowSelection = bShowSelection;
+	mbShowTemplate = bShowTemplate;
+	mbShowVersion = bShowVersion;
+	mbUseFileOpenDialog = bUseFileOpenDialog;
 
 	return self;
 }
@@ -77,43 +91,36 @@
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 	{
-		NSOpenPanel *pOpenPanel = [NSOpenPanel openPanel];
-		if ( pOpenPanel )
-			mnResult = [pOpenPanel runModalForDirectory:nil file:nil types:nil];
+		if ( mbUseFileOpenDialog )
+		{
+			NSOpenPanel *pOpenPanel = [NSOpenPanel openPanel];
+			if ( pOpenPanel )
+				mnResult = [pOpenPanel runModalForDirectory:nil file:nil types:nil];
+		}
+		else
+		{
+			NSSavePanel *pSavePanel = [NSSavePanel savePanel];
+			if ( pSavePanel )
+				mnResult = [pSavePanel runModalForDirectory:nil file:nil];
+		}
 	}
-
-	mbFinished = YES;
 }
 
 @end
 
-id NSFileDialog_create()
+id NSFileDialog_create( BOOL bUseFileOpenDialog, BOOL bShowAutoExtension, BOOL bShowFilterOptions, BOOL bShowImageTemplate, BOOL bShowLink, BOOL bShowPassword, BOOL bShowPreview, BOOL bShowReadOnly, BOOL bShowSelection, BOOL bShowTemplate, BOOL bShowVersion )
 {
 	ShowFileDialog *pRet = nil;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	pRet = [[ShowFileDialog alloc] init];
+	pRet = [[ShowFileDialog alloc] initWithOptions:bUseFileOpenDialog showAutoExtension:bShowAutoExtension showFilterOptions:bShowFilterOptions showImageTemplate:bShowImageTemplate showLink:bShowLink showPassword:bShowPassword showPreview:bShowPreview showReadOnly:bShowReadOnly showSelction:bShowSelection showTemplate:bShowTemplate showVersion:bShowVersion];
 	if ( pRet )
 		[pRet retain];
 
 	[pPool release];
 
 	return pRet;
-}
-
-BOOL NSFileDialog_finished( id pDialog )
-{
-	BOOL bRet = YES;
-
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	if ( pDialog )
-		bRet = [(ShowFileDialog *)pDialog finished];
-
-	[pPool release];
-
-	return bRet;
 }
 
 void NSFileDialog_release( void *pDialog )

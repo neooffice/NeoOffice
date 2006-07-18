@@ -38,6 +38,12 @@
 #ifndef _JAVA_FILEPICKER_HXX_
 #include "java_filepicker.hxx"
 #endif
+#ifndef _COM_SUN_STAR_LANG_NULLPOINTEREXCEPTION_HPP_
+#include <com/sun/star/lang/NullPointerException.hpp>
+#endif
+#ifndef _COM_SUN_STAR_UI_DIALOGS_TEMPLATEDESCRIPTION_HPP_
+#include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
+#endif
 #ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
 #endif
@@ -76,7 +82,7 @@ Reference< XInterface > SAL_CALL JavaFilePicker_createInstance( const Reference<
 
 // ========================================================================
 
-JavaFilePicker::JavaFilePicker( const Reference< XMultiServiceFactory >& xServiceMgr ) : WeakComponentImplHelper9< XFilterManager, XFilterGroupManager, XFilePickerControlAccess, XFilePickerNotifier, XFilePreview, XInitialization, XCancellable, XEventListener, XServiceInfo >( maMutex )
+JavaFilePicker::JavaFilePicker( const Reference< XMultiServiceFactory >& xServiceMgr ) : WeakComponentImplHelper9< XFilterManager, XFilterGroupManager, XFilePickerControlAccess, XFilePickerNotifier, XFilePreview, XInitialization, XCancellable, XEventListener, XServiceInfo >( maMutex ), mpDialog( NULL )
 {
 }
 
@@ -84,6 +90,8 @@ JavaFilePicker::JavaFilePicker( const Reference< XMultiServiceFactory >& xServic
 
 JavaFilePicker::~JavaFilePicker()
 {
+	if ( mpDialog )
+		NSFileDialog_release( mpDialog );
 }
 
 // ------------------------------------------------------------------------
@@ -117,12 +125,8 @@ sal_Int16 SAL_CALL JavaFilePicker::execute() throw( RuntimeException )
 {
 	sal_Int16 nRet = 0;
 
-	void *pDialog = NSFileDialog_create();
-	if ( pDialog )
-	{
-		nRet = NSFileDialog_showPrintDialog( pDialog );
-		NSFileDialog_release( pDialog );
-	}
+	if ( mpDialog )
+		nRet = NSFileDialog_showPrintDialog( mpDialog );
 
 	return nRet;
 }
@@ -331,9 +335,82 @@ sal_Bool SAL_CALL JavaFilePicker::getShowState() throw( RuntimeException )
 
 void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments ) throw( Exception, RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::initialize not implemented\n" );
-#endif
+	Any aAny;
+	if ( !aArguments.getLength() )
+		throw IllegalArgumentException( OUString::createFromAscii( "no arguments" ), static_cast< XFilePicker* >( this ), 1 );
+
+	aAny = aArguments[0];
+	if ( ( aAny.getValueType() != getCppuType( (sal_Int16*)0) ) && ( aAny.getValueType() != getCppuType( (sal_Int8*)0 ) ) )
+		throw IllegalArgumentException( OUString::createFromAscii( "invalid argument type" ), static_cast< XFilePicker* >( this ), 1 );
+
+	BOOL bUseFileOpenDialog = TRUE;
+    BOOL bShowAutoExtension = FALSE;
+    BOOL bShowFilterOptions = FALSE;
+    BOOL bShowImageTemplate = FALSE;
+    BOOL bShowLink = FALSE;
+    BOOL bShowPassword = FALSE;
+    BOOL bShowPreview = FALSE;
+    BOOL bShowReadOnly = FALSE;
+    BOOL bShowSelection = FALSE;
+    BOOL bShowTemplate = FALSE;
+    BOOL bShowVersion = FALSE;
+
+	sal_Int16 nType = -1;
+	aAny >>= nType;
+	switch ( nType )
+	{
+		case TemplateDescription::FILEOPEN_SIMPLE:
+			break;
+		case TemplateDescription::FILESAVE_SIMPLE:
+			bUseFileOpenDialog = FALSE;
+			break;
+		case TemplateDescription::FILESAVE_AUTOEXTENSION_PASSWORD:
+			bUseFileOpenDialog = FALSE;
+    		bShowAutoExtension = TRUE;
+    		bShowPassword = TRUE;
+			break;
+		case TemplateDescription::FILESAVE_AUTOEXTENSION_PASSWORD_FILTEROPTIONS:
+			bUseFileOpenDialog = FALSE;
+    		bShowAutoExtension = TRUE;
+    		bShowFilterOptions = TRUE;
+    		bShowPassword = TRUE;
+			break;
+		case TemplateDescription::FILESAVE_AUTOEXTENSION_SELECTION:
+			bUseFileOpenDialog = FALSE;
+    		bShowAutoExtension = TRUE;
+    		bShowSelection = TRUE;
+			break;
+		case TemplateDescription::FILESAVE_AUTOEXTENSION_TEMPLATE:
+			bUseFileOpenDialog = FALSE;
+    		bShowAutoExtension = TRUE;
+			bShowTemplate = TRUE;
+			break;
+		case TemplateDescription::FILEOPEN_LINK_PREVIEW_IMAGE_TEMPLATE:
+			bShowLink = TRUE;
+			bShowImageTemplate = TRUE;
+			bShowPreview = TRUE;
+			break;
+		case TemplateDescription::FILEOPEN_PLAY:        
+			break;
+		case TemplateDescription::FILEOPEN_READONLY_VERSION:
+			bShowReadOnly = TRUE;
+			bShowVersion = TRUE;
+			break;
+		case TemplateDescription::FILEOPEN_LINK_PREVIEW:
+			bShowLink = TRUE;
+			bShowPreview = TRUE;
+			break;
+		case TemplateDescription::FILESAVE_AUTOEXTENSION:
+			bUseFileOpenDialog = FALSE;
+    		bShowAutoExtension = TRUE;
+			break;
+		default:
+			throw IllegalArgumentException( OUString::createFromAscii( "Unknown template" ), static_cast< XFilePicker* >( this ), 1 );
+    }
+
+	mpDialog = NSFileDialog_create( bUseFileOpenDialog, bShowAutoExtension, bShowFilterOptions, bShowImageTemplate, bShowLink, bShowPassword, bShowPreview, bShowReadOnly, bShowSelection, bShowTemplate, bShowVersion );
+	if ( !mpDialog )
+		throw NullPointerException();
 }
 
 // ------------------------------------------------------------------------
