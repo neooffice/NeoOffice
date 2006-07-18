@@ -183,8 +183,6 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						for ( int i = 0; pFonts[ i ]; i++ )
 						{
 							void *pNSFont = (void *)pFonts[ i ];
-							if ( !pNSFont )
-								break;
 
 							ATSFontRef aFont = NSFont_getATSFontRef( pNSFont );
 							if ( !aFont )
