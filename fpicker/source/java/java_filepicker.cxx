@@ -193,10 +193,41 @@ OUString SAL_CALL JavaFilePicker::getDisplayDirectory() throw( RuntimeException 
 
 Sequence< OUString > SAL_CALL JavaFilePicker::getFiles() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::getFiles not implemented\n" );
-#endif
-	return Sequence< OUString >();
+    Guard< Mutex > aGuard( maMutex );
+
+	Sequence< OUString > aRet;
+
+	CFStringRef *pFileNames = NSFileDialog_fileNames( mpDialog );
+	if ( pFileNames )
+	{
+		int nCount = 0;
+		for ( ; pFileNames[ nCount ]; nCount++ )
+			;
+
+		if ( nCount )
+		{
+			aRet = Sequence< OUString >( nCount );
+			for ( int i = 0; i < nCount; i++ )
+			{
+				CFStringRef aString = pFileNames[ i ];
+				CFIndex nLen = CFStringGetLength( aString );
+				CFRange aRange = CFRangeMake( 0, nLen );
+				sal_Unicode pBuffer[ nLen + 1 ];
+				CFStringGetCharacters( aString, aRange, pBuffer ); 
+				pBuffer[ nLen ] = 0;
+				OUString aPath( pBuffer );
+
+				OUString aURL;
+				File::getFileURLFromSystemPath( aPath, aURL );
+				if ( aURL.getLength() )
+					aRet[ i ] = aURL;
+			}
+		}
+
+		NSFontManager_releaseFileNames( pFileNames );
+	}
+
+	return aRet;
 }
 
 // ------------------------------------------------------------------------
@@ -429,7 +460,7 @@ void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments ) th
 			throw IllegalArgumentException( OUString::createFromAscii( "Unknown template" ), static_cast< XFilePicker* >( this ), 1 );
     }
 
-	mpDialog = NSFileDialog_create( bUseFileOpenDialog, FALSE, bShowAutoExtension, bShowFilterOptions, bShowImageTemplate, bShowLink, bShowPassword, bShowPreview, bShowReadOnly, bShowSelection, bShowTemplate, bShowVersion );
+	mpDialog = NSFileDialog_create( bUseFileOpenDialog, TRUE, bShowAutoExtension, bShowFilterOptions, bShowImageTemplate, bShowLink, bShowPassword, bShowPreview, bShowReadOnly, bShowSelection, bShowTemplate, bShowVersion );
 	if ( !mpDialog )
 		throw NullPointerException();
 }

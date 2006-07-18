@@ -84,7 +84,7 @@ Reference< XInterface > SAL_CALL JavaFolderPicker_createInstance( const Referenc
 
 JavaFolderPicker::JavaFolderPicker( const Reference< XMultiServiceFactory >& xServiceMgr ) : WeakComponentImplHelper3< XFolderPicker, XServiceInfo, XCancellable >( maMutex )
 {
-	mpDialog = NSFileDialog_create( TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE );
+	mpDialog = NSFileDialog_create( TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE );
 	if ( !mpDialog )
 		throw NullPointerException();
 }
@@ -157,10 +157,33 @@ OUString SAL_CALL JavaFolderPicker::getDisplayDirectory() throw( RuntimeExceptio
 
 OUString SAL_CALL JavaFolderPicker::getDirectory() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFolderPicker::getDirectory not implemented\n" );
-#endif
-	return OUString();
+    Guard< Mutex > aGuard( maMutex );
+
+	OUString aRet;
+
+	CFStringRef *pFileNames = NSFileDialog_fileNames( mpDialog );
+	if ( pFileNames )
+	{
+		if ( pFileNames[ 0 ] )
+		{
+			CFStringRef aString = pFileNames[ 0 ];
+			CFIndex nLen = CFStringGetLength( aString );
+			CFRange aRange = CFRangeMake( 0, nLen );
+			sal_Unicode pBuffer[ nLen + 1 ];
+			CFStringGetCharacters( aString, aRange, pBuffer ); 
+			pBuffer[ nLen ] = 0;
+			OUString aPath( pBuffer );
+
+			OUString aURL;
+			File::getFileURLFromSystemPath( aPath, aURL );
+			if ( aURL.getLength() )
+				aRet = aURL;
+		}
+
+		NSFontManager_releaseFileNames( pFileNames );
+	}
+
+	return aRet;
 }
 
 // ------------------------------------------------------------------------

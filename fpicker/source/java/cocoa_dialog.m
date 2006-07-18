@@ -43,6 +43,7 @@
 {
 	BOOL					mbChooseFiles;
 	NSString*				mpDirectory;
+	NSArray*				mpFileNames;
 	BOOL					mbMultiSelectionMode;
 	int						mnResult;
 	BOOL					mbShowAutoExtension;
@@ -59,6 +60,7 @@
 	BOOL					mbUseFileOpenDialog;
 }
 - (void)dealloc;
+- (NSArray *)filenames;
 - (id)initWithOptions:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showPreview:(BOOL)bShowPreview showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion;
 - (int)result;
 - (void)showFileDialog:(id)pObject;
@@ -71,10 +73,18 @@
 
 - (void)dealloc
 {
+	if ( mpFileNames )
+		[mpFileNames release];
+
 	if ( mpTitle )
 		[mpTitle release];
 
 	[super dealloc];
+}
+
+- (NSArray *)filenames
+{
+	return mpFileNames;
 }
 
 - (id)initWithOptions:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showPreview:(BOOL)bShowPreview showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion
@@ -83,6 +93,7 @@
 
 	mpDirectory = nil;
 	mbChooseFiles = bChooseFiles;
+	mpFileNames = nil;
 	mbMultiSelectionMode = NO;
 	mnResult = NSCancelButton;
 	mbShowAutoExtension = bShowAutoExtension;
@@ -108,31 +119,74 @@
 
 - (void)showFileDialog:(id)pObject;
 {
+	if ( mpFileNames )
+	{
+		[mpFileNames release];
+		mpFileNames = nil;
+	}
+
+	mnResult = NSCancelButton;
+
 	NSSavePanel *pFilePanel;
 	if ( mbUseFileOpenDialog )
 		pFilePanel = (NSSavePanel *)[NSOpenPanel openPanel];
 	else
 		pFilePanel = [NSSavePanel savePanel];
 
-	if ( mpTitle )
-		[pFilePanel setTitle:mpTitle];
-
 	if ( pFilePanel )
 	{
+		if ( mpTitle )
+			[pFilePanel setTitle:mpTitle];
+
+		[pFilePanel setCanCreateDirectories:YES];
+		[pFilePanel setCanSelectHiddenExtension:YES];
+
 		if ( mbUseFileOpenDialog )
 		{
 			NSOpenPanel *pOpenPanel = (NSOpenPanel *)pFilePanel;
 
 			[pOpenPanel setAllowsMultipleSelection:mbMultiSelectionMode];
-			[pOpenPanel setCanChooseDirectories:YES];
 			[pOpenPanel setCanChooseFiles:mbChooseFiles];
-			[pOpenPanel setResolvesAliases:NO];
+			[pOpenPanel setResolvesAliases:YES];
+
+			if ( mbChooseFiles )
+			{
+				[pOpenPanel setCanChooseDirectories:NO];
+				[pOpenPanel setTreatsFilePackagesAsDirectories:YES];
+			}
+			else
+			{
+				[pOpenPanel setCanChooseDirectories:YES];
+				[pOpenPanel setTreatsFilePackagesAsDirectories:NO];
+			}
 
 			mnResult = [pOpenPanel runModalForDirectory:mpDirectory file:nil types:nil];
+			if ( mnResult == NSOKButton )
+			{
+				NSArray *pArray = [pOpenPanel filenames];
+				if ( pArray )
+				{
+					mpFileNames = [NSArray arrayWithArray:pArray];
+					if ( mpFileNames )
+						[mpFileNames retain];
+				}
+			}
 		}
 		else
 		{
+			[pFilePanel setTreatsFilePackagesAsDirectories:NO];
+
 			mnResult = [pFilePanel runModalForDirectory:mpDirectory file:nil];
+			if ( mnResult == NSOKButton )
+			{
+				NSString *pFileName = [pFilePanel filename];
+				if ( pFileName )
+				{
+					mpFileNames = [NSArray arrayWithObject:pFileName];
+					if ( mpFileNames )
+						[mpFileNames retain];
+				}
+			}
 		}
 	}
 }
@@ -189,12 +243,75 @@ id NSFileDialog_create( BOOL bUseFileOpenDialog, BOOL bChooseFiles, BOOL bShowAu
 	return pRet;
 }
 
+CFStringRef *NSFileDialog_fileNames( void *pDialog )
+{
+	CFStringRef *pRet = nil;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pDialog )
+	{
+		fprintf( stderr, "Here 0\n" );
+		NSArray *pFileNames = [(ShowFileDialog *)pDialog filenames];
+		if ( pFileNames )
+		{
+			fprintf( stderr, "Here 1\n" );
+			unsigned nCount = [pFileNames count];
+			if ( nCount )
+			{
+				fprintf( stderr, "Here 2\n" );
+				pRet = (CFStringRef *)malloc( ( nCount + 1 ) * sizeof( CFStringRef ) );
+				if ( pRet )
+				{
+					fprintf( stderr, "Here 3\n" );
+					unsigned nIndex = 0;
+					unsigned i = 0;
+					for ( ; i < nCount; i++ )
+					{
+						fprintf( stderr, "Here 4: %i\n", i );
+						NSString *pCurrentName = (NSString *)[pFileNames objectAtIndex:i];
+						if ( pCurrentName )
+						{
+							fprintf( stderr, "Here 5: %i\n", i );
+							[pCurrentName retain];
+							pRet[ nIndex++ ] = (CFStringRef)pCurrentName;
+							fprintf( stderr, "Here 6: %i\n", i );
+						}
+					}
+
+					pRet[ nIndex ] = nil;
+					fprintf( stderr, "Here 7: %i\n", i );
+				}
+			}
+		}
+	}
+
+	[pPool release];
+
+	return pRet;
+}
+
 void NSFileDialog_release( void *pDialog )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pDialog )
 		[(ShowFileDialog *)pDialog release];
+
+	[pPool release];
+}
+
+void NSFontManager_releaseFileNames( CFStringRef *pFileNames )
+{           
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pFileNames )
+	{
+		unsigned nIndex = 0;
+		for ( ; pFileNames [ nIndex ]; nIndex++ )
+			CFRelease( pFileNames[ nIndex ] );
+		free( pFileNames );
+	}
 
 	[pPool release];
 }
