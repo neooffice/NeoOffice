@@ -38,6 +38,9 @@
 #ifndef _JAVA_FILEPICKER_HXX_
 #include "java_filepicker.hxx"
 #endif
+#ifndef  _COM_SUN_STAR_UI_DIALOGS_EXTENDEDFILEPICKERELEMENTIDS_HPP_
+#include <com/sun/star/ui/dialogs/ExtendedFilePickerElementIds.hpp>
+#endif
 #ifndef _COM_SUN_STAR_LANG_NULLPOINTEREXCEPTION_HPP_
 #include <com/sun/star/lang/NullPointerException.hpp>
 #endif
@@ -271,19 +274,44 @@ void SAL_CALL JavaFilePicker::appendFilterGroup( const OUString& sGroupTitle, co
 
 void SAL_CALL JavaFilePicker::setValue( sal_Int16 nControlId, sal_Int16 nControlAction, const Any& aValue ) throw( RuntimeException )
 {
+    Guard< Mutex > aGuard( maMutex );
+
+	switch ( nControlId )
+	{
+		case ExtendedFilePickerElementIds::CHECKBOX_AUTOEXTENSION:
+			sal_Bool bChecked;
+			aValue >>= bChecked;
+			NSFileDialog_setExtensionHidden( mpDialog, bChecked ? TRUE : FALSE );
+			break;
+		default:
 #ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::setValue not implemented\n" );
+			fprintf( stderr, "JavaFilePicker::setValue: %i not implemented\n", nControlId );
 #endif
+			break;
+	}
 }
 
 // ------------------------------------------------------------------------
 
-Any SAL_CALL JavaFilePicker::getValue( sal_Int16 aControlId, sal_Int16 aControlAction ) throw( RuntimeException )
+Any SAL_CALL JavaFilePicker::getValue( sal_Int16 nControlId, sal_Int16 nControlAction ) throw( RuntimeException )
 {
+    Guard< Mutex > aGuard( maMutex );
+
+	Any aRet;
+
+	switch ( nControlId )
+	{
+		case ExtendedFilePickerElementIds::CHECKBOX_AUTOEXTENSION:
+			aRet <<= (sal_Bool)NSFileDialog_isExtensionHidden( mpDialog );
+			break;
+		default:
 #ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::getValue not implemented\n" );
+			fprintf( stderr, "JavaFilePicker::getValue: %i not implemented\n", nControlId );
 #endif
-	return Any();
+			break;
+	}
+
+	return aRet;
 }
 
 // ------------------------------------------------------------------------
@@ -299,19 +327,44 @@ void SAL_CALL JavaFilePicker::enableControl( sal_Int16 nControlId, sal_Bool bEna
 
 void SAL_CALL JavaFilePicker::setLabel( sal_Int16 nControlId, const OUString& aLabel ) throw( RuntimeException )
 {
+    Guard< Mutex > aGuard( maMutex );
+
+	switch ( nControlId )
+	{
+		case ExtendedFilePickerElementIds::CHECKBOX_AUTOEXTENSION:
+			// This is not changeable since we are using a control that is
+			// already in Mac OS X's native file dialog
+			break;
+		default:
 #ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::setLabel not implemented\n" );
+			fprintf( stderr, "JavaFilePicker::setLabel: %i not implemented\n", nControlId );
 #endif
+			break;
+	}
 }
 
 // ------------------------------------------------------------------------
 
 OUString SAL_CALL JavaFilePicker::getLabel( sal_Int16 nControlId ) throw( RuntimeException )
 {
+    Guard< Mutex > aGuard( maMutex );
+
+	OUString aRet;
+
+	switch ( nControlId )
+	{
+		case ExtendedFilePickerElementIds::CHECKBOX_AUTOEXTENSION:
+			// This is not changeable since we are using a control that is
+			// already in Mac OS X's native file dialog
+			break;
+		default:
 #ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::getLabel not implemented\n" );
+			fprintf( stderr, "JavaFilePicker::getLabel: %i not implemented\n", nControlId );
 #endif
-	return OUString();
+			break;
+	}
+
+	return aRet;
 }
 
 // ------------------------------------------------------------------------

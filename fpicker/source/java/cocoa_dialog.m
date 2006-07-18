@@ -43,6 +43,7 @@
 {
 	BOOL					mbChooseFiles;
 	NSString*				mpDirectory;
+	BOOL					mbExtensionHidden;
 	NSArray*				mpFileNames;
 	BOOL					mbMultiSelectionMode;
 	int						mnResult;
@@ -62,9 +63,11 @@
 - (void)dealloc;
 - (NSArray *)filenames;
 - (id)initWithOptions:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showPreview:(BOOL)bShowPreview showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion;
+- (BOOL)isExtensionHidden;
 - (int)result;
 - (void)showFileDialog:(id)pObject;
 - (void)setDirectory:(NSString *)pDirectory;
+- (void)setExtensionHidden:(BOOL)bExtensionHidden;
 - (void)setMultiSelectionMode:(BOOL)bMultiSelectionMode;
 - (void)setTitle:(NSString *)pTitle;
 @end
@@ -93,6 +96,7 @@
 
 	mpDirectory = nil;
 	mbChooseFiles = bChooseFiles;
+	mbExtensionHidden = NO;
 	mpFileNames = nil;
 	mbMultiSelectionMode = NO;
 	mnResult = NSCancelButton;
@@ -110,6 +114,11 @@
 	mbUseFileOpenDialog = bUseFileOpenDialog;
 
 	return self;
+}
+
+- (BOOL)isExtensionHidden
+{
+	return mbExtensionHidden;
 }
 
 - (int)result;
@@ -139,7 +148,8 @@
 			[pFilePanel setTitle:mpTitle];
 
 		[pFilePanel setCanCreateDirectories:YES];
-		[pFilePanel setCanSelectHiddenExtension:YES];
+		[pFilePanel setCanSelectHiddenExtension:mbShowAutoExtension];
+		[pFilePanel setExtensionHidden:mbExtensionHidden];
 
 		if ( mbUseFileOpenDialog )
 		{
@@ -188,6 +198,8 @@
 				}
 			}
 		}
+
+		mbExtensionHidden = [pFilePanel isExtensionHidden];
 	}
 }
 
@@ -204,6 +216,11 @@
 		[pDirectory retain];
 		mpDirectory = pDirectory;
 	}
+}
+
+- (void)setExtensionHidden:(BOOL)bExtensionHidden
+{
+	mbExtensionHidden = bExtensionHidden;
 }
 
 - (void)setMultiSelectionMode:(BOOL)bMultiSelectionMode
@@ -251,36 +268,28 @@ CFStringRef *NSFileDialog_fileNames( void *pDialog )
 
 	if ( pDialog )
 	{
-		fprintf( stderr, "Here 0\n" );
 		NSArray *pFileNames = [(ShowFileDialog *)pDialog filenames];
 		if ( pFileNames )
 		{
-			fprintf( stderr, "Here 1\n" );
 			unsigned nCount = [pFileNames count];
 			if ( nCount )
 			{
-				fprintf( stderr, "Here 2\n" );
 				pRet = (CFStringRef *)malloc( ( nCount + 1 ) * sizeof( CFStringRef ) );
 				if ( pRet )
 				{
-					fprintf( stderr, "Here 3\n" );
 					unsigned nIndex = 0;
 					unsigned i = 0;
 					for ( ; i < nCount; i++ )
 					{
-						fprintf( stderr, "Here 4: %i\n", i );
 						NSString *pCurrentName = (NSString *)[pFileNames objectAtIndex:i];
 						if ( pCurrentName )
 						{
-							fprintf( stderr, "Here 5: %i\n", i );
 							[pCurrentName retain];
 							pRet[ nIndex++ ] = (CFStringRef)pCurrentName;
-							fprintf( stderr, "Here 6: %i\n", i );
 						}
 					}
 
 					pRet[ nIndex ] = nil;
-					fprintf( stderr, "Here 7: %i\n", i );
 				}
 			}
 		}
@@ -289,6 +298,20 @@ CFStringRef *NSFileDialog_fileNames( void *pDialog )
 	[pPool release];
 
 	return pRet;
+}
+
+BOOL NSFileDialog_isExtensionHidden( void *pDialog )
+{
+	BOOL bRet = NO;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pDialog )
+		bRet = [(ShowFileDialog *)pDialog isExtensionHidden];
+
+	[pPool release];
+
+	return bRet;
 }
 
 void NSFileDialog_release( void *pDialog )
@@ -356,6 +379,16 @@ void NSFileDialog_setDirectory( void *pDialog, CFStringRef aDirectory )
 
 	if ( pDialog )
 		[(ShowFileDialog *)pDialog setDirectory:(NSString *)aDirectory ];
+
+	[pPool release];
+}
+
+void NSFileDialog_setExtensionHidden( void *pDialog, BOOL bExtensionHidden )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pDialog )
+		[(ShowFileDialog *)pDialog setExtensionHidden:bExtensionHidden];
 
 	[pPool release];
 }

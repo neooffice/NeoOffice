@@ -98,7 +98,7 @@ public:
 	virtual ::rtl::OUString	SAL_CALL getCurrentFilter() throw( ::com::sun::star::uno::RuntimeException );
 	virtual void		SAL_CALL appendFilterGroup( const ::rtl::OUString& sGroupTitle, const ::com::sun::star::uno::Sequence< ::com::sun::star::beans::StringPair >& aFilters ) throw( ::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::uno::RuntimeException );
 	virtual void		SAL_CALL setValue( sal_Int16 nControlId, sal_Int16 nControlAction, const ::com::sun::star::uno::Any& aValue ) throw( ::com::sun::star::uno::RuntimeException );
-	virtual ::com::sun::star::uno::Any	SAL_CALL getValue( sal_Int16 aControlId, sal_Int16 aControlAction ) throw( ::com::sun::star::uno::RuntimeException );
+	virtual ::com::sun::star::uno::Any	SAL_CALL getValue( sal_Int16 nControlId, sal_Int16 nControlAction ) throw( ::com::sun::star::uno::RuntimeException );
 	virtual void		SAL_CALL enableControl( sal_Int16 nControlId, sal_Bool bEnable ) throw( ::com::sun::star::uno::RuntimeException );
 	virtual void		SAL_CALL setLabel( sal_Int16 nControlId, const ::rtl::OUString& aLabel ) throw( ::com::sun::star::uno::RuntimeException );
 	virtual ::rtl::OUString	SAL_CALL getLabel( sal_Int16 nControlId ) throw( ::com::sun::star::uno::RuntimeException );
