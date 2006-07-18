@@ -58,6 +58,7 @@ dummy:
 # --- Files --------------------------------------------------------
 
 SLOFILES =\
+		$(SLO)$/cocoa_dialog.obj				\
 		$(SLO)$/java_filepicker.obj				\
 		$(SLO)$/java_folderpicker.obj			\
 		$(SLO)$/java_service.obj

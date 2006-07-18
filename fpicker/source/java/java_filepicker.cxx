@@ -38,6 +38,11 @@
 #ifndef _JAVA_FILEPICKER_HXX_
 #include "java_filepicker.hxx"
 #endif
+#ifndef _SV_SVAPP_HXX
+#include <vcl/svapp.hxx>
+#endif
+
+#include "cocoa_dialog.h"
 
 using namespace cppu;
 using namespace com::sun::star::beans;
@@ -110,10 +115,16 @@ void SAL_CALL JavaFilePicker::setTitle( const OUString& aTitle ) throw( RuntimeE
 
 sal_Int16 SAL_CALL JavaFilePicker::execute() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::execute not implemented\n" );
-#endif
-	return 0;
+	sal_Int16 nRet = 0;
+
+	void *pDialog = NSFileDialog_create();
+	if ( pDialog )
+	{
+		nRet = NSFileDialog_showPrintDialog( pDialog );
+		NSFileDialog_release( pDialog );
+	}
+
+	return nRet;
 }
 
 // ------------------------------------------------------------------------
