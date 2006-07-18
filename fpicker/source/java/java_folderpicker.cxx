@@ -38,12 +38,24 @@
 #ifndef _JAVA_FOLDERPICKER_HXX_
 #include "java_folderpicker.hxx"
 #endif
+#ifndef _COM_SUN_STAR_LANG_NULLPOINTEREXCEPTION_HPP_
+#include <com/sun/star/lang/NullPointerException.hpp>
+#endif
+#ifndef _OSL_FILE_HXX_
+#include <osl/file.hxx>
+#endif
+#ifndef _SV_SVAPP_HXX
+#include <vcl/svapp.hxx>
+#endif
+
+#include "cocoa_dialog.h"
 
 using namespace cppu;
 using namespace com::sun::star::lang;
 using namespace com::sun::star::uno;
 using namespace com::sun::star::ui::dialogs;
 using namespace com::sun::star::util;
+using namespace osl;
 using namespace rtl;
 using namespace java;
 
@@ -72,40 +84,63 @@ Reference< XInterface > SAL_CALL JavaFolderPicker_createInstance( const Referenc
 
 JavaFolderPicker::JavaFolderPicker( const Reference< XMultiServiceFactory >& xServiceMgr ) : WeakComponentImplHelper3< XFolderPicker, XServiceInfo, XCancellable >( maMutex )
 {
+	mpDialog = NSFileDialog_create( TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE );
+	if ( !mpDialog )
+		throw NullPointerException();
 }
 
 // ------------------------------------------------------------------------
 
 JavaFolderPicker::~JavaFolderPicker()
 {
+	if ( mpDialog )
+		NSFileDialog_release( mpDialog );
 }
 
 // ------------------------------------------------------------------------
 
 void SAL_CALL JavaFolderPicker::setTitle( const OUString& aTitle ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFolderPicker::setTitle not implemented\n" );
-#endif
+    Guard< Mutex > aGuard( maMutex );
+
+	CFStringRef aString = CFStringCreateWithCharacters( NULL, aTitle.getStr(), aTitle.getLength() );
+	if ( aString )
+	{
+		NSFileDialog_setTitle( mpDialog, aString );
+		CFRelease( aString );
+	}
 }
 
 // ------------------------------------------------------------------------
 
 sal_Int16 SAL_CALL JavaFolderPicker::execute() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFolderPicker::execute not implemented\n" );
-#endif
-	return 0;
+	// Don't lock mutex as we expect callbacks to this object from a
+	// a different thread while the dialog is showing
+	ULONG nCount = Application::ReleaseSolarMutex();
+	sal_Int16 nRet = NSFileDialog_showFileDialog( mpDialog );
+	Application::AcquireSolarMutex( nCount );
+
+	return nRet;
 }
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaFolderPicker::setDisplayDirectory( const OUString& rDirectory ) throw( IllegalArgumentException, RuntimeException )
+void SAL_CALL JavaFolderPicker::setDisplayDirectory( const OUString& aDirectory ) throw( IllegalArgumentException, RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFolderPicker::setDisplayDirectory not implemented\n" );
-#endif
+    Guard< Mutex > aGuard( maMutex );
+
+	OUString aPath;
+	File::getSystemPathFromFileURL( aDirectory, aPath );
+	if ( aPath.getLength() )
+	{
+		CFStringRef aString = CFStringCreateWithCharacters( NULL, aPath.getStr(), aPath.getLength() );
+		if ( aString )
+		{
+			NSFileDialog_setDirectory( mpDialog, aString );
+			CFRelease( aString );
+		}
+	}
 }
 
 // ------------------------------------------------------------------------
@@ -180,7 +215,4 @@ void SAL_CALL JavaFolderPicker::cancel() throw( RuntimeException )
 
 void SAL_CALL JavaFolderPicker::disposing( const EventObject& aEvent ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFolderPicker::disposing not implemented\n" );
-#endif
 }

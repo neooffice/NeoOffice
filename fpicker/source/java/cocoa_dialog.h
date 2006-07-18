@@ -49,7 +49,7 @@ typedef void* id;
 #ifdef __cplusplus
 BEGIN_C
 #endif
-id NSFileDialog_create( BOOL bUseFileOpenDialog, BOOL bShowAutoExtension, BOOL bShowFilterOptions, BOOL bShowImageTemplate, BOOL bShowLink, BOOL bShowPassword, BOOL bShowPreview, BOOL bShowReadOnly, BOOL bShowSelection, BOOL bShowTemplate, BOOL bShowVersion );
+id NSFileDialog_create( BOOL bUseFileOpenDialog, BOOL bChooseFiles, BOOL bShowAutoExtension, BOOL bShowFilterOptions, BOOL bShowImageTemplate, BOOL bShowLink, BOOL bShowPassword, BOOL bShowPreview, BOOL bShowReadOnly, BOOL bShowSelection, BOOL bShowTemplate, BOOL bShowVersion );
 void NSFileDialog_release( void *pDialog );
 int NSFileDialog_result( id pDialog );
 int NSFileDialog_showFileDialog( id pDialog );

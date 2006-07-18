@@ -41,6 +41,7 @@
 
 @interface ShowFileDialog : NSObject
 {
+	BOOL					mbChooseFiles;
 	NSString*				mpDirectory;
 	BOOL					mbMultiSelectionMode;
 	int						mnResult;
@@ -58,7 +59,7 @@
 	BOOL					mbUseFileOpenDialog;
 }
 - (void)dealloc;
-- (id)initWithOptions:(BOOL)bUseFileOpenDialog showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showPreview:(BOOL)bShowPreview showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion;
+- (id)initWithOptions:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showPreview:(BOOL)bShowPreview showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion;
 - (int)result;
 - (void)showFileDialog:(id)pObject;
 - (void)setDirectory:(NSString *)pDirectory;
@@ -76,11 +77,12 @@
 	[super dealloc];
 }
 
-- (id)initWithOptions:(BOOL)bUseFileOpenDialog showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showPreview:(BOOL)bShowPreview showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion
+- (id)initWithOptions:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showPreview:(BOOL)bShowPreview showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion
 {
 	[super init];
 
 	mpDirectory = nil;
+	mbChooseFiles = bChooseFiles;
 	mbMultiSelectionMode = NO;
 	mnResult = NSCancelButton;
 	mbShowAutoExtension = bShowAutoExtension;
@@ -120,7 +122,11 @@
 		if ( mbUseFileOpenDialog )
 		{
 			NSOpenPanel *pOpenPanel = (NSOpenPanel *)pFilePanel;
+
 			[pOpenPanel setAllowsMultipleSelection:mbMultiSelectionMode];
+			[pOpenPanel setCanChooseDirectories:YES];
+			[pOpenPanel setCanChooseFiles:mbChooseFiles];
+			[pOpenPanel setResolvesAliases:NO];
 
 			mnResult = [pOpenPanel runModalForDirectory:mpDirectory file:nil types:nil];
 		}
@@ -168,13 +174,13 @@
 
 @end
 
-id NSFileDialog_create( BOOL bUseFileOpenDialog, BOOL bShowAutoExtension, BOOL bShowFilterOptions, BOOL bShowImageTemplate, BOOL bShowLink, BOOL bShowPassword, BOOL bShowPreview, BOOL bShowReadOnly, BOOL bShowSelection, BOOL bShowTemplate, BOOL bShowVersion )
+id NSFileDialog_create( BOOL bUseFileOpenDialog, BOOL bChooseFiles, BOOL bShowAutoExtension, BOOL bShowFilterOptions, BOOL bShowImageTemplate, BOOL bShowLink, BOOL bShowPassword, BOOL bShowPreview, BOOL bShowReadOnly, BOOL bShowSelection, BOOL bShowTemplate, BOOL bShowVersion )
 {
 	ShowFileDialog *pRet = nil;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	pRet = [[ShowFileDialog alloc] initWithOptions:bUseFileOpenDialog showAutoExtension:bShowAutoExtension showFilterOptions:bShowFilterOptions showImageTemplate:bShowImageTemplate showLink:bShowLink showPassword:bShowPassword showPreview:bShowPreview showReadOnly:bShowReadOnly showSelction:bShowSelection showTemplate:bShowTemplate showVersion:bShowVersion];
+	pRet = [[ShowFileDialog alloc] initWithOptions:bUseFileOpenDialog chooseFiles:bChooseFiles showAutoExtension:bShowAutoExtension showFilterOptions:bShowFilterOptions showImageTemplate:bShowImageTemplate showLink:bShowLink showPassword:bShowPassword showPreview:bShowPreview showReadOnly:bShowReadOnly showSelction:bShowSelection showTemplate:bShowTemplate showVersion:bShowVersion];
 	if ( pRet )
 		[pRet retain];
 

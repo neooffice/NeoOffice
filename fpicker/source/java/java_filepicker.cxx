@@ -93,6 +93,8 @@ JavaFilePicker::JavaFilePicker( const Reference< XMultiServiceFactory >& xServic
 
 JavaFilePicker::~JavaFilePicker()
 {
+	if ( mpDialog )
+		NSFileDialog_release( mpDialog );
 }
 
 // ------------------------------------------------------------------------
@@ -100,6 +102,7 @@ JavaFilePicker::~JavaFilePicker()
 void SAL_CALL JavaFilePicker::addFilePickerListener( const Reference< XFilePickerListener >& xListener ) throw( RuntimeException )
 {
     Guard< Mutex > aGuard( maMutex );
+
     maListeners.push_back( xListener );
 }
 
@@ -108,6 +111,7 @@ void SAL_CALL JavaFilePicker::addFilePickerListener( const Reference< XFilePicke
 void SAL_CALL JavaFilePicker::removeFilePickerListener( const Reference< XFilePickerListener >& xListener ) throw( RuntimeException )
 {
     Guard< Mutex > aGuard( maMutex );
+
     maListeners.remove( xListener );
 }
 
@@ -115,6 +119,8 @@ void SAL_CALL JavaFilePicker::removeFilePickerListener( const Reference< XFilePi
 
 void SAL_CALL JavaFilePicker::setTitle( const OUString& aTitle ) throw( RuntimeException )
 {
+    Guard< Mutex > aGuard( maMutex );
+
 	CFStringRef aString = CFStringCreateWithCharacters( NULL, aTitle.getStr(), aTitle.getLength() );
 	if ( aString )
 	{
@@ -127,7 +133,8 @@ void SAL_CALL JavaFilePicker::setTitle( const OUString& aTitle ) throw( RuntimeE
 
 sal_Int16 SAL_CALL JavaFilePicker::execute() throw( RuntimeException )
 {
-
+	// Don't lock mutex as we expect callbacks to this object from a
+	// a different thread while the dialog is showing
 	ULONG nCount = Application::ReleaseSolarMutex();
 	sal_Int16 nRet = NSFileDialog_showFileDialog( mpDialog );
 	Application::AcquireSolarMutex( nCount );
@@ -139,6 +146,8 @@ sal_Int16 SAL_CALL JavaFilePicker::execute() throw( RuntimeException )
 
 void SAL_CALL JavaFilePicker::setMultiSelectionMode( sal_Bool bMode ) throw( RuntimeException )
 {
+    Guard< Mutex > aGuard( maMutex );
+
 	NSFileDialog_setMultiSelectionMode( mpDialog, bMode ? TRUE : FALSE );
 }
 
@@ -155,6 +164,8 @@ void SAL_CALL JavaFilePicker::setDefaultName( const OUString& aName ) throw( Run
 
 void SAL_CALL JavaFilePicker::setDisplayDirectory( const OUString& aDirectory ) throw( com::sun::star::lang::IllegalArgumentException, RuntimeException )
 {
+    Guard< Mutex > aGuard( maMutex );
+
 	OUString aPath;
 	File::getSystemPathFromFileURL( aDirectory, aPath );
 	if ( aPath.getLength() )
@@ -418,7 +429,7 @@ void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments ) th
 			throw IllegalArgumentException( OUString::createFromAscii( "Unknown template" ), static_cast< XFilePicker* >( this ), 1 );
     }
 
-	mpDialog = NSFileDialog_create( bUseFileOpenDialog, bShowAutoExtension, bShowFilterOptions, bShowImageTemplate, bShowLink, bShowPassword, bShowPreview, bShowReadOnly, bShowSelection, bShowTemplate, bShowVersion );
+	mpDialog = NSFileDialog_create( bUseFileOpenDialog, FALSE, bShowAutoExtension, bShowFilterOptions, bShowImageTemplate, bShowLink, bShowPassword, bShowPreview, bShowReadOnly, bShowSelection, bShowTemplate, bShowVersion );
 	if ( !mpDialog )
 		throw NullPointerException();
 }
@@ -436,9 +447,9 @@ void SAL_CALL JavaFilePicker::cancel() throw( RuntimeException )
 
 void SAL_CALL JavaFilePicker::disposing( const EventObject& aEvent ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::disposing not implemented\n" );
-#endif
+	Reference< XFilePickerListener > xListener( aEvent.Source, UNO_QUERY );
+	if ( xListener.is() )
+		removeFilePickerListener( xListener );
 }
 
 // ------------------------------------------------------------------------

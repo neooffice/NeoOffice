@@ -56,6 +56,7 @@ namespace java {
 
 class JavaFolderPicker : public ::cppu::WeakComponentImplHelper3< ::com::sun::star::ui::dialogs::XFolderPicker, ::com::sun::star::lang::XServiceInfo, ::com::sun::star::util::XCancellable >
 {
+	void*				mpDialog;
 	::osl::Mutex		maMutex;
 
 public:
@@ -64,7 +65,7 @@ public:
 
 	virtual void				SAL_CALL setTitle( const ::rtl::OUString& aTitle ) throw( ::com::sun::star::uno::RuntimeException );
 	virtual sal_Int16			SAL_CALL execute() throw( ::com::sun::star::uno::RuntimeException );
-	virtual void				SAL_CALL setDisplayDirectory( const ::rtl::OUString& rDirectory ) throw( com::sun::star::lang::IllegalArgumentException, com::sun::star::uno::RuntimeException );
+	virtual void				SAL_CALL setDisplayDirectory( const ::rtl::OUString& aDirectory ) throw( com::sun::star::lang::IllegalArgumentException, com::sun::star::uno::RuntimeException );
 	virtual ::rtl::OUString		SAL_CALL getDisplayDirectory() throw( com::sun::star::uno::RuntimeException );
 	virtual ::rtl::OUString		SAL_CALL getDirectory() throw( com::sun::star::uno::RuntimeException );
 	virtual void				SAL_CALL setDescription( const ::rtl::OUString& rDescription ) throw( com::sun::star::uno::RuntimeException );
