@@ -50,7 +50,7 @@ check_installation() {
 		if [ -z "$productkey" -o -z "$productpatch" ] ; then
 			return 1;
 		fi
-		productkey=`echo $productkey | awk -F= '{ print $2 " " $3 }'`
+		productkey=`echo $productkey | awk -F= '{ print $2 }'`
 		productpatch=`echo $productpatch | awk -F= '{ print $2 }' | sed 's#^Patch ##'`
 
 		if [ "$productkey" = "$(PRODUCT_NAME) $(PRODUCT_VERSION)" ] ; then
@@ -61,7 +61,7 @@ check_installation() {
 			fi
 		fi
 
-		productnameversion="$(PRODUCT_NAME) `echo '$(PRODUCT_VERSION)' | awk '{ print $1 " " $2 " " $3 }'`"
+		productnameversion="$(PRODUCT_NAME) `echo '$(PRODUCT_VERSION)' | awk '{ print $1 " " $2 }'`"
 		productkey=`grep "^ProductKey=$productnameversion" "$1/Contents/MacOS/bootstraprc"`
 		if [ ! -z "$productkey" ] ; then
 			return 0;
@@ -89,6 +89,10 @@ update_installation() {
 	chmod -f ug+w "$1/Contents" || return 1
 	chmod -Rf ug+w "$1/Contents/Resources" || return 1
 	chmod -Rf ug+w "$1/Contents/share/dict/ooo" || return 1
+
+	# Fix bug 1584 by marking certain directories writable for root user
+	chmod -Rf u+w "$1/Contents/presets" || exit 1
+	chmod -Rf u+w "$1/Contents/share" || exit 1
 
 	# Register libavmediaquicktime.dylib component
 	DYLD_LIBRARY_PATH="$1/Contents/MacOS"; export DYLD_LIBRARY_PATH
