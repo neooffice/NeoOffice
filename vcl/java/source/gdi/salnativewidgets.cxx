@@ -590,6 +590,42 @@ static BOOL InitEditFieldDrawInfo( HIThemeFrameDrawInfo *pFrameInfo, ControlStat
 // =======================================================================
 
 /**
+ * (static) Initialize HITheme structures used to draw a disclosure arrow
+ *
+ * @param pButtonInfo	pointer to HITheme button info structure to be
+ *						initialized
+ * @param nState		control state of the disclosure button
+ * @param pValue		pointer to VCL disclosure button value structure
+ * @return TRUE on success, FALSE on failure
+ */
+static BOOL InitDisclosureButtonDrawInfo( HIThemeButtonDrawInfo *pButtonInfo, ControlState nState, DisclosureBtnValue *pValue )
+{
+	memset( pButtonInfo, 0, sizeof( HIThemeButtonDrawInfo ) );
+	pButtonInfo->version = 0;
+	pButtonInfo->kind = kThemeDisclosureTriangle;
+	if ( pValue->mnOpenCloseState == DISCLOSUREBTN_OPEN )
+	{
+		pButtonInfo->value = kThemeDisclosureDown;
+	}
+	else
+	{
+		if ( pValue->mnAlignment == DISCLOSUREBTN_ALIGN_LEFT )
+			pButtonInfo->value = kThemeDisclosureRight; // if left of container, point to the right
+		else
+			pButtonInfo->value = kThemeDisclosureLeft;
+	}
+	if ( nState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED ) )
+		pButtonInfo->state = kThemeStatePressed;
+	else if ( nState & CTRL_STATE_ENABLED )
+		pButtonInfo->state = kThemeStateActive;
+	else
+		pButtonInfo->state = kThemeStateInactive;
+	return TRUE;
+}
+
+// =======================================================================
+
+/**
  * (static) Draw a ComboBox into the graphics port at the specified location.
  * ComboBoxes are editable pulldowns, the left portion of which is an edit
  * field and the right portion a downward arrow button used to display the
@@ -1058,6 +1094,48 @@ static BOOL DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 // =======================================================================
 
 /**
+ * (static) Draw a native disclosure button used on the side of items in
+ * hierarchical lists that can collapse and expand a container.
+ *
+ * @param pGraphics		pointer to the graphics object where the button should
+ *						be painted
+ * @param rDestBounds	destination drawing rectangle for the disclosure button
+ * @param nState		current control enabled/disabled/focused state
+ * @param pValue		NWF structure providing additional disclosure
+ *						button state including alignment and collapsed/expanded
+ *						state
+ * @return OK if successful, FALSE on failure
+ */
+static BOOL DrawNativeDisclosureBtn( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, DisclosureBtnValue *pValue )
+{
+	VCLBitmapBuffer aBuffer;
+	BOOL bRet = aBuffer.Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+	if ( bRet )
+	{
+		HIThemeButtonDrawInfo pButtonInfo;
+		InitDisclosureButtonDrawInfo( &pButtonInfo, nState, pValue );
+
+		HIRect destRect;
+		destRect.origin.x = 0;
+		destRect.origin.y = 0;
+		destRect.size.width = rDestBounds.GetWidth();
+		destRect.size.height = rDestBounds.GetHeight();
+
+		bRet = ( HIThemeDrawButton( &destRect, &pButtonInfo, aBuffer.maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+	}
+
+	if ( bRet )
+	{
+		aBuffer.ReleaseContext();
+		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+	}
+
+	return bRet;
+}
+
+// =======================================================================
+
+/**
  * Determine if support exists for drawing a particular native widget in the
  * interface.
  *
@@ -1134,6 +1212,11 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 
 		case CTRL_EDITBOX:
 			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == HAS_BACKGROUND_TEXTURE ) )
+				isSupported = TRUE;
+			break;
+		
+		case CTRL_DISCLOSUREBTN:
+			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
 
@@ -1316,6 +1399,15 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 			{
 				Rectangle ctrlRect = rControlRegion.GetBoundRect();
 				bOK = DrawNativeEditBox( this, ctrlRect, nState );
+			}
+			break;
+		
+		case CTRL_DISCLOSUREBTN:
+			if( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle ctrlRect = rControlRegion.GetBoundRect();
+				DisclosureBtnValue *pValue = static_cast<DisclosureBtnValue *> ( aValue.getOptionalVal() );
+				bOK = DrawNativeDisclosureBtn( this, ctrlRect, nState, pValue );
 			}
 			break;
 	}
@@ -1696,6 +1788,17 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				Point contentTopLeft( controlRect.Left() + EDITBOX_TRIMWIDTH, controlRect.Top() + EDITBOX_TRIMWIDTH );
 				Size contentSize( controlRect.GetWidth() - 2*EDITBOX_TRIMWIDTH, controlRect.GetHeight() - 2*EDITBOX_TRIMWIDTH );
 				rNativeContentRegion = Region( Rectangle( contentTopLeft, contentSize ) );
+
+				bReturn = TRUE;
+			}
+			break;
+		
+		case CTRL_DISCLOSUREBTN:
+			if ( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle controlRect = rControlRegion.GetBoundRect();
+				rNativeBoundingRegion = Region( controlRect );
+				rNativeContentRegion = Region( rNativeBoundingRegion );
 
 				bReturn = TRUE;
 			}

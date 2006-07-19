@@ -1,21 +1,25 @@
+? unxmacxp.pro.oo
 Index: inc/salnativewidgets.hxx
 ===================================================================
 RCS file: /cvs/gsl/vcl/inc/salnativewidgets.hxx,v
 retrieving revision 1.8
 diff -u -r1.8 salnativewidgets.hxx
 --- inc/salnativewidgets.hxx	5 May 2006 08:58:39 -0000	1.8
-+++ inc/salnativewidgets.hxx	30 Jun 2006 19:20:48 -0000
-@@ -134,6 +134,9 @@
++++ inc/salnativewidgets.hxx	19 Jul 2006 05:38:48 -0000
+@@ -134,6 +134,12 @@
  // tool tips
  #define CTRL_TOOLTIP            140
  
 +// progress bars
 +#define CTRL_PROGRESSBAR		150
 +
++// hierarchical tree control expand/collapse handle
++#define CTRL_DISCLOSUREBTN		160
++
  /* Control Parts:
   *
   *   Uniquely identify a part of a control,
-@@ -336,6 +339,25 @@
+@@ -336,6 +342,53 @@
      int             maTopDockingAreaHeight;
  };
  
@@ -36,6 +40,34 @@ diff -u -r1.8 salnativewidgets.hxx
 +			};
 +		
 +		~ProgressbarValue() {};
++};
++
++#define DISCLOSUREBTN_CLOSED	0		// group for this control is currently closed, displaying the container only
++#define DISCLOSUREBTN_OPEN		1		// group for this control is currently expanded, displaying all elements within the container
++
++#define DISCLOSUREBTN_ALIGN_LEFT	0	// disclosure controls appear to the left of any items in the left margin of the column
++#define DISCLOSUREBTN_ALIGN_RIGHT	1	// disclosure contorls appear to the right of any items in the right margin of the column
++
++/*	DisclosureBtnValue:
++ *
++ *	Value container for disclosure buttons used for control of expanding/collapsing
++ *	tree views
++ */
++class DisclosureBtnValue
++{
++	public:
++		USHORT mnOpenCloseState;		// indicates whether the controls associated container is open or closed, DISCLOSURE_OPEN/CLOSED
++		USHORT mnAlignment;				// indicates whether the disclosure control appears to the left or right of containers
++		BOOL mbHasChildren;				// true if the node has any children, false if not
++		
++		DisclosureBtnValue()
++			{
++				mnOpenCloseState = DISCLOSUREBTN_CLOSED;
++				mnAlignment = DISCLOSUREBTN_ALIGN_LEFT;
++				mbHasChildren = 1;
++			};
++		
++		~DisclosureBtnValue() {};
 +};
 +
  /* ImplControlValue:
