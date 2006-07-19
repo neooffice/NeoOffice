@@ -293,9 +293,9 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 										}
 									}
 								}
-								else if ( nType == 'PDF ' || nType == 'TIFF' )
+								else if ( nType == 'TIFF' )
 								{
-									// Convert to PDF or TIFF from our BMP data
+									// Convert to TIFF from our BMP data
 									ComponentInstance aImporter;
 									if ( OpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
 									{
@@ -809,6 +809,11 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 						if ( xFlavors[ i ].MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ j ] ) )
 						{
 							if ( bTextOnly && !aSupportedTextTypes[ j ] )
+								continue;
+
+							// Converting to PDF doesn't work (only converting
+							// from PDF works) so don't add the PDF flavor
+							if ( aSupportedNativeTypes[ j ] == 'PDF ' )
 								continue;
 
 							if ( bRenderImmediately )
