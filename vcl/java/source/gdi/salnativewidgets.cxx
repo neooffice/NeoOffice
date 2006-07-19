@@ -119,6 +119,8 @@ struct HIThemeTabPaneDrawInfo104 {
   HIThemeTabPaneAdornment  adornment;
 };
 
+#define kThemeDisclosureTriangle	kThemeDisclosureButton
+
 #else if ( BUILD_OS_MAJOR >= 10 ) && ( BUILD_OS_MINOR > 3 )
 typedef HIThemeTabDrawInfo HIThemeTabDrawInfo104;
 typedef HIThemeTabPaneDrawInfo HIThemeTabPaneDrawInfo104;
