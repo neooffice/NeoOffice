@@ -1318,9 +1318,8 @@ public final class VCLEvent extends AWTEvent {
 							keyCode = VCLEvent.KEY_DIVIDE;
 						else if (keyChar == 0x3d)
 							keyCode = VCLEvent.KEY_EQUAL;
-						else {
+						else
 							keyCode = 0;
-						}
 						break;
 					case KeyEvent.VK_ENTER:
 						keyCode = VCLEvent.KEY_RETURN;
