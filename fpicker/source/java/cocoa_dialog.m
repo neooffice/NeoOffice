@@ -139,16 +139,81 @@
 	if ( mpFilePanel )
 		[mpFilePanel retain];
 
+	// Create filter options checkbox
+	if ( mbShowFilterOptions )
+	{
+		NSButton *pButton = [[NSButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
+		if ( pButton )
+		{
+			[pButton setButtonType:NSSwitchButton];
+			[pButton setState:NSOffState];
+			[pButton setTitle:@""];
+			[mpControls setValue:pButton forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILTEROPTIONS] stringValue]];
+		}
+	}
+
+	// Create link checkbox
+	if ( mbShowLink )
+	{
+		NSButton *pButton = [[NSButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
+		if ( pButton )
+		{
+			[pButton setButtonType:NSSwitchButton];
+			[pButton setState:NSOffState];
+			[pButton setTitle:@""];
+			[mpControls setValue:pButton forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_LINK] stringValue]];
+		}
+	}
+
+	// Create password checkbox
+	if ( mbShowPassword )
+	{
+		NSButton *pButton = [[NSButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
+		if ( pButton )
+		{
+			[pButton setButtonType:NSSwitchButton];
+			[pButton setState:NSOffState];
+			[pButton setTitle:@""];
+			[mpControls setValue:pButton forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_PASSWORD] stringValue]];
+		}
+	}
+
+	// Create preview checkbox
+	if ( mbShowPreview )
+	{
+		NSButton *pButton = [[NSButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
+		if ( pButton )
+		{
+			[pButton setButtonType:NSSwitchButton];
+			[pButton setState:NSOffState];
+			[pButton setTitle:@""];
+			[mpControls setValue:pButton forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_PREVIEW] stringValue]];
+		}
+	}
+
 	// Create read only checkbox
 	if ( mbShowReadOnly )
 	{
-		NSButton *pReadOnlyButton = [[NSButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
-		if ( pReadOnlyButton )
+		NSButton *pButton = [[NSButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
+		if ( pButton )
 		{
-			[pReadOnlyButton setButtonType:NSSwitchButton];
-			[pReadOnlyButton setState:NSOffState];
-			[pReadOnlyButton setTitle:@""];
-			[mpControls setValue:pReadOnlyButton forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_READONLY] stringValue]];
+			[pButton setButtonType:NSSwitchButton];
+			[pButton setState:NSOffState];
+			[pButton setTitle:@""];
+			[mpControls setValue:pButton forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_READONLY] stringValue]];
+		}
+	}
+
+	// Create selection checkbox
+	if ( mbShowSelection )
+	{
+		NSButton *pButton = [[NSButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
+		if ( pButton )
+		{
+			[pButton setButtonType:NSSwitchButton];
+			[pButton setState:NSOffState];
+			[pButton setTitle:@""];
+			[mpControls setValue:pButton forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_SELECTION] stringValue]];
 		}
 	}
 
@@ -212,16 +277,20 @@
 		float nCurrentY = 0;
 		float nCurrentWidth = 0;
 
-		NSButton *pReadOnlyButton = (NSButton *)[mpControls objectForKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_READONLY] stringValue]];
-		if ( pReadOnlyButton )
+		int i = 0;
+		for ( ; i < MAX_COCOA_CONTROL_ID; i++ )
 		{
-			[pReadOnlyButton setFrameOrigin:NSMakePoint( 0, nCurrentY )];
-			[pReadOnlyButton sizeToFit];
-			nCurrentY += [pReadOnlyButton bounds].size.height;
-			float nWidth = [pReadOnlyButton bounds].size.width;
-			if ( nWidth > nCurrentWidth )
-				nCurrentWidth = nWidth;
-			[pAccessoryView addSubview:pReadOnlyButton];
+			NSControl *pControl = (NSButton *)[mpControls objectForKey:[[NSNumber numberWithInt:i] stringValue]];
+			if ( pControl )
+			{
+				[pControl setFrameOrigin:NSMakePoint( 0, nCurrentY )];
+				[pControl sizeToFit];
+				nCurrentY += [pControl bounds].size.height;
+				float nWidth = [pControl bounds].size.width;
+				if ( nWidth > nCurrentWidth )
+					nCurrentWidth = nWidth;
+				[pAccessoryView addSubview:pControl];
+			}
 		}
 
 		NSArray *pSubviews = [pAccessoryView subviews];
@@ -263,8 +332,7 @@
 		if ( pSubviews && [pSubviews count] )
 		{
 			int nCount = [pSubviews count];
-			int i = 0;
-			for ( ; i < nCount; i++ )
+			for ( i = 0; i < nCount; i++ )
 				[[pSubviews objectAtIndex:i] removeFromSuperview];
 		}
 	}
@@ -282,7 +350,12 @@
 		case COCOA_CONTROL_ID_AUTOEXTENSION:
 			[mpFilePanel setExtensionHidden:bChecked];
 			break;
+		case COCOA_CONTROL_ID_FILTEROPTIONS:
+		case COCOA_CONTROL_ID_LINK:
+		case COCOA_CONTROL_ID_PASSWORD:
+		case COCOA_CONTROL_ID_PREVIEW:
 		case COCOA_CONTROL_ID_READONLY:
+		case COCOA_CONTROL_ID_SELECTION:
 			{
 				NSButton *pButton = (NSButton *)[mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
 				if ( pButton )
@@ -302,7 +375,12 @@
 	{
 		switch ( nID )
 		{
+			case COCOA_CONTROL_ID_FILTEROPTIONS:
+			case COCOA_CONTROL_ID_LINK:
+			case COCOA_CONTROL_ID_PASSWORD:
+			case COCOA_CONTROL_ID_PREVIEW:
 			case COCOA_CONTROL_ID_READONLY:
+			case COCOA_CONTROL_ID_SELECTION:
 				return [(NSButton *)pControl setTitle:pLabel];
 		}
 	}

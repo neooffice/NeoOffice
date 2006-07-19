@@ -298,14 +298,53 @@ void SAL_CALL JavaFilePicker::setValue( sal_Int16 nControlId, sal_Int16 nControl
 	switch ( nControlId )
 	{
 		case ExtendedFilePickerElementIds::CHECKBOX_AUTOEXTENSION:
-			sal_Bool bAutoExtensionChecked;
-			aValue >>= bAutoExtensionChecked;
-			NSFileDialog_setChecked( mpDialog, COCOA_CONTROL_ID_AUTOEXTENSION, bAutoExtensionChecked ? TRUE : FALSE );
+			{
+				sal_Bool bChecked;
+				aValue >>= bChecked;
+				NSFileDialog_setChecked( mpDialog, COCOA_CONTROL_ID_AUTOEXTENSION, bChecked ? TRUE : FALSE );
+			}
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_FILTEROPTIONS:
+			{
+				sal_Bool bChecked;
+				aValue >>= bChecked;
+				NSFileDialog_setChecked( mpDialog, COCOA_CONTROL_ID_FILTEROPTIONS, bChecked ? TRUE : FALSE );
+			}
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_LINK:
+			{
+				sal_Bool bChecked;
+				aValue >>= bChecked;
+				NSFileDialog_setChecked( mpDialog, COCOA_CONTROL_ID_LINK, bChecked ? TRUE : FALSE );
+			}
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_PASSWORD:
+			{
+				sal_Bool bChecked;
+				aValue >>= bChecked;
+				NSFileDialog_setChecked( mpDialog, COCOA_CONTROL_ID_PASSWORD, bChecked ? TRUE : FALSE );
+			}
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_PREVIEW:
+			{
+				sal_Bool bChecked;
+				aValue >>= bChecked;
+				NSFileDialog_setChecked( mpDialog, COCOA_CONTROL_ID_PREVIEW, bChecked ? TRUE : FALSE );
+			}
 			break;
 		case ExtendedFilePickerElementIds::CHECKBOX_READONLY:
-			sal_Bool bReadOnlyChecked;
-			aValue >>= bReadOnlyChecked;
-			NSFileDialog_setChecked( mpDialog, COCOA_CONTROL_ID_READONLY, bReadOnlyChecked ? TRUE : FALSE );
+			{
+				sal_Bool bChecked;
+				aValue >>= bChecked;
+				NSFileDialog_setChecked( mpDialog, COCOA_CONTROL_ID_READONLY, bChecked ? TRUE : FALSE );
+			}
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_SELECTION:
+			{
+				sal_Bool bChecked;
+				aValue >>= bChecked;
+				NSFileDialog_setChecked( mpDialog, COCOA_CONTROL_ID_SELECTION, bChecked ? TRUE : FALSE );
+			}
 			break;
 		default:
 #ifdef DEBUG
@@ -328,8 +367,23 @@ Any SAL_CALL JavaFilePicker::getValue( sal_Int16 nControlId, sal_Int16 nControlA
 		case ExtendedFilePickerElementIds::CHECKBOX_AUTOEXTENSION:
 			aRet <<= (sal_Bool)NSFileDialog_isChecked( mpDialog, COCOA_CONTROL_ID_AUTOEXTENSION );
 			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_FILTEROPTIONS:
+			aRet <<= (sal_Bool)NSFileDialog_isChecked( mpDialog, COCOA_CONTROL_ID_FILTEROPTIONS );
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_LINK:
+			aRet <<= (sal_Bool)NSFileDialog_isChecked( mpDialog, COCOA_CONTROL_ID_LINK );
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_PASSWORD:
+			aRet <<= (sal_Bool)NSFileDialog_isChecked( mpDialog, COCOA_CONTROL_ID_PASSWORD );
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_PREVIEW:
+			aRet <<= (sal_Bool)NSFileDialog_isChecked( mpDialog, COCOA_CONTROL_ID_PREVIEW );
+			break;
 		case ExtendedFilePickerElementIds::CHECKBOX_READONLY:
 			aRet <<= (sal_Bool)NSFileDialog_isChecked( mpDialog, COCOA_CONTROL_ID_READONLY );
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_SELECTION:
+			aRet <<= (sal_Bool)NSFileDialog_isChecked( mpDialog, COCOA_CONTROL_ID_SELECTION );
 			break;
 		default:
 #ifdef DEBUG
@@ -363,8 +417,23 @@ void SAL_CALL JavaFilePicker::setLabel( sal_Int16 nControlId, const OUString& aL
 			// This is not changeable since we are using a control that is
 			// already in Mac OS X's native file dialog
 			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_FILTEROPTIONS:
+			nCocoaControlId = COCOA_CONTROL_ID_FILTEROPTIONS;
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_LINK:
+			nCocoaControlId = COCOA_CONTROL_ID_LINK;
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_PASSWORD:
+			nCocoaControlId = COCOA_CONTROL_ID_PASSWORD;
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_PREVIEW:
+			nCocoaControlId = COCOA_CONTROL_ID_PREVIEW;
+			break;
 		case ExtendedFilePickerElementIds::CHECKBOX_READONLY:
 			nCocoaControlId = COCOA_CONTROL_ID_READONLY;
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_SELECTION:
+			nCocoaControlId = COCOA_CONTROL_ID_SELECTION;
 			break;
 		default:
 #ifdef DEBUG
@@ -401,8 +470,23 @@ OUString SAL_CALL JavaFilePicker::getLabel( sal_Int16 nControlId ) throw( Runtim
 			// This is not changeable since we are using a control that is
 			// already in Mac OS X's native file dialog
 			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_FILTEROPTIONS:
+			nCocoaControlId = COCOA_CONTROL_ID_FILTEROPTIONS;
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_LINK:
+			nCocoaControlId = COCOA_CONTROL_ID_LINK;
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_PASSWORD:
+			nCocoaControlId = COCOA_CONTROL_ID_PASSWORD;
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_PREVIEW:
+			nCocoaControlId = COCOA_CONTROL_ID_PREVIEW;
+			break;
 		case ExtendedFilePickerElementIds::CHECKBOX_READONLY:
 			nCocoaControlId = COCOA_CONTROL_ID_READONLY;
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_SELECTION:
+			nCocoaControlId = COCOA_CONTROL_ID_SELECTION;
 			break;
 		default:
 #ifdef DEBUG
@@ -584,10 +668,35 @@ void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments ) th
 		throw NullPointerException();
 
 	// Set initial values
+	if ( bShowFilterOptions )
+	{
+		OUString aLabel( mpResMgr->ReadString( STR_SVT_FILEPICKER_FILTER_OPTIONS ) );
+		setLabel( ExtendedFilePickerElementIds::CHECKBOX_FILTEROPTIONS, aLabel );
+	}
+	if ( bShowLink )
+	{
+		OUString aLabel( mpResMgr->ReadString( STR_SVT_FILEPICKER_INSERT_AS_LINK ) );
+		setLabel( ExtendedFilePickerElementIds::CHECKBOX_LINK, aLabel );
+	}
+	if ( bShowPassword )
+	{
+		OUString aLabel( mpResMgr->ReadString( STR_SVT_FILEPICKER_PASSWORD ) );
+		setLabel( ExtendedFilePickerElementIds::CHECKBOX_PASSWORD, aLabel );
+	}
+	if ( bShowPreview )
+	{
+		OUString aLabel( mpResMgr->ReadString( STR_SVT_FILEPICKER_SHOW_PREVIEW ) );
+		setLabel( ExtendedFilePickerElementIds::CHECKBOX_PREVIEW, aLabel );
+	}
 	if ( bShowReadOnly )
 	{
 		OUString aLabel( mpResMgr->ReadString( STR_SVT_FILEPICKER_READONLY ) );
 		setLabel( ExtendedFilePickerElementIds::CHECKBOX_READONLY, aLabel );
+	}
+	if ( bShowSelection )
+	{
+		OUString aLabel( mpResMgr->ReadString( STR_SVT_FILEPICKER_SELECTION ) );
+		setLabel( ExtendedFilePickerElementIds::CHECKBOX_SELECTION, aLabel );
 	}
 }
 
