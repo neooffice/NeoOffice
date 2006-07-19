@@ -71,6 +71,7 @@ int NSFileDialog_result( id pDialog );
 int NSFileDialog_showFileDialog( id pDialog );
 void NSFileDialog_setChecked( void *pDialog, int nID, BOOL bChecked );
 void NSFileDialog_setDirectory( void *pDialog, CFStringRef aDirectory );
+void NSFileDialog_setEnabled( void *pDialog, int nID, BOOL bEnabled );
 void NSFileDialog_setLabel( void *pDialog, int nID, CFStringRef aLabel );
 void NSFileDialog_setMultiSelectionMode( void *pDialog, BOOL bMultiSelectionMode );
 void NSFileDialog_setTitle( void *pDialog, CFStringRef aTitle );

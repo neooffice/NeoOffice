@@ -399,9 +399,42 @@ Any SAL_CALL JavaFilePicker::getValue( sal_Int16 nControlId, sal_Int16 nControlA
 
 void SAL_CALL JavaFilePicker::enableControl( sal_Int16 nControlId, sal_Bool bEnable ) throw( RuntimeException )
 {
+    Guard< Mutex > aGuard( maMutex );
+
+	CocoaControlID nCocoaControlId = MAX_COCOA_CONTROL_ID;
+	switch ( nControlId )
+	{
+		case ExtendedFilePickerElementIds::CHECKBOX_AUTOEXTENSION:
+			// This is not changeable since we are using a control that is
+			// already in Mac OS X's native file dialog
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_FILTEROPTIONS:
+			nCocoaControlId = COCOA_CONTROL_ID_FILTEROPTIONS;
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_LINK:
+			nCocoaControlId = COCOA_CONTROL_ID_LINK;
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_PASSWORD:
+			nCocoaControlId = COCOA_CONTROL_ID_PASSWORD;
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_PREVIEW:
+			nCocoaControlId = COCOA_CONTROL_ID_PREVIEW;
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_READONLY:
+			nCocoaControlId = COCOA_CONTROL_ID_READONLY;
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_SELECTION:
+			nCocoaControlId = COCOA_CONTROL_ID_SELECTION;
+			break;
+		default:
 #ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::enableControl not implemented\n" );
+			fprintf( stderr, "JavaFilePicker::enableControl: %i not implemented\n", nControlId );
 #endif
+			break;
+	}
+
+	if ( nCocoaControlId < MAX_COCOA_CONTROL_ID )
+		NSFileDialog_setEnabled( mpDialog, nCocoaControlId, bEnable );
 }
 
 // ------------------------------------------------------------------------

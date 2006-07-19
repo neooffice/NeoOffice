@@ -67,6 +67,7 @@
 - (void)showFileDialog:(id)pObject;
 - (void)setChecked:(int)nID checked:(BOOL)bChecked;
 - (void)setDirectory:(NSString *)pDirectory;
+- (void)setEnabled:(int)nID enabled:(BOOL)bEnabled;
 - (void)setLabel:(int)nID label:(NSString *)pLabel;
 - (void)setMultiSelectionMode:(BOOL)bMultiSelectionMode;
 - (void)setTitle:(NSString *)pTitle;
@@ -329,11 +330,11 @@
 
 		[mpFilePanel setAccessoryView:pOldAccessoryView];
 
-		if ( pSubviews && [pSubviews count] )
+		for ( i = 0; i < MAX_COCOA_CONTROL_ID; i++ )
 		{
-			int nCount = [pSubviews count];
-			for ( i = 0; i < nCount; i++ )
-				[[pSubviews objectAtIndex:i] removeFromSuperview];
+			NSControl *pControl = (NSButton *)[mpControls objectForKey:[[NSNumber numberWithInt:i] stringValue]];
+			if ( pControl )
+				[pControl removeFromSuperview];
 		}
 	}
 }
@@ -365,7 +366,14 @@
 	}
 }
 
-- (void)setLabel:(int)nID label:(NSString *)pLabel;
+- (void)setEnabled:(int)nID enabled:(BOOL)bEnabled
+{
+	NSControl *pControl = (NSControl *)[mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
+	if ( pControl )
+		[pControl setEnabled:bEnabled];
+}
+
+- (void)setLabel:(int)nID label:(NSString *)pLabel
 {
 	if ( !pLabel )
 		pLabel = @"";
@@ -381,7 +389,7 @@
 			case COCOA_CONTROL_ID_PREVIEW:
 			case COCOA_CONTROL_ID_READONLY:
 			case COCOA_CONTROL_ID_SELECTION:
-				return [(NSButton *)pControl setTitle:pLabel];
+				[(NSButton *)pControl setTitle:pLabel];
 		}
 	}
 }
@@ -584,6 +592,16 @@ void NSFileDialog_setDirectory( void *pDialog, CFStringRef aDirectory )
 
 	if ( pDialog )
 		[(ShowFileDialog *)pDialog setDirectory:(NSString *)aDirectory ];
+
+	[pPool release];
+}
+
+void NSFileDialog_setEnabled( void *pDialog, int nID, BOOL bEnabled )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pDialog )
+		[(ShowFileDialog *)pDialog setEnabled:nID enabled:bEnabled ];
 
 	[pPool release];
 }
