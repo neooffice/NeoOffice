@@ -496,17 +496,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					pKeyEvent->mnCharCode = getKeyChar();
 					pKeyEvent->mnRepeat = getRepeatCount();
 				}
-				// Fix bug 529 by manually converting KEY_MOD1-Dash into a
-				// non-breaking hyphen since Mac OS X does not normally have a
-				// key mapping for this character
-				if ( pKeyEvent->mnCharCode == 0x002d )
-				{
-					USHORT nModifiers = ( pKeyEvent->mnCode & ( KEY_MOD1 | KEY_MOD2 | KEY_SHIFT | KEY_CONTROLMOD ) );
-					if ( nModifiers == ( KEY_MOD1 | KEY_SHIFT ) )
-						pKeyEvent->mnCharCode = 0x2011;
-					else if ( nModifiers == KEY_MOD1 )
-						pKeyEvent->mnCharCode = 0x00ad;
-				}
 				// The OOo code expects that Ctrl-key events will have the key
 				// char resolved to their respective ASCII equivalents. Since
 				// we convert Mac OS X Meta-key events into Ctrl-key events,

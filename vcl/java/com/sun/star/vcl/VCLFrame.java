@@ -1417,18 +1417,8 @@ g.dispose();
 			VCLEvent keyModChangeEvent = new VCLEvent(e, VCLEvent.SALEVENT_KEYMODCHANGE, this, 0);
 			queue.postCachedEvent(keyModChangeEvent);
 		}
-		else if (e.isActionKey() || keyCode == KeyEvent.VK_BACK_SPACE || keyCode == KeyEvent.VK_DELETE || keyCode == KeyEvent.VK_ESCAPE) {
+		else if (e.isActionKey() || keyCode == KeyEvent.VK_BACK_SPACE || keyCode == KeyEvent.VK_DELETE || keyCode == KeyEvent.VK_ESCAPE || (e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD && keyCode == KeyEvent.VK_ENTER)) {
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
-		}
-		else if (e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD) {
-			boolean handleEvent = false;
-			if (keyCode == KeyEvent.VK_ENTER)
-				handleEvent = true;
-			else if (((e.getModifiers() | e.getModifiersEx()) & InputEvent.META_DOWN_MASK) != 0)
-				handleEvent = true;
-
-			if (handleEvent)
-				queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
 		}
 
 	}
@@ -1450,18 +1440,8 @@ g.dispose();
 			VCLEvent keyModChangeEvent = new VCLEvent(e, VCLEvent.SALEVENT_KEYMODCHANGE, this, 0);
 			queue.postCachedEvent(keyModChangeEvent);
 		}
-		else if (e.isActionKey() || keyCode == KeyEvent.VK_BACK_SPACE || keyCode == KeyEvent.VK_DELETE || keyCode == KeyEvent.VK_ESCAPE) {
+		else if (e.isActionKey() || keyCode == KeyEvent.VK_BACK_SPACE || keyCode == KeyEvent.VK_DELETE || keyCode == KeyEvent.VK_ESCAPE || (e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD && keyCode == KeyEvent.VK_ENTER)) {
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0));
-		}
-		else if (e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD) {
-			boolean handleEvent = false;
-			if (keyCode == KeyEvent.VK_ENTER)
-				handleEvent = true;
-			else if (((e.getModifiers() | e.getModifiersEx()) & InputEvent.META_DOWN_MASK) != 0)
-				handleEvent = true;
-
-			if (handleEvent)
-				queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0));
 		}
 
 	}
