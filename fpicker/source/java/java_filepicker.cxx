@@ -396,9 +396,6 @@ OUString SAL_CALL JavaFilePicker::getLabel( sal_Int16 nControlId ) throw( Runtim
 		case ExtendedFilePickerElementIds::CHECKBOX_READONLY:
 			nCocoaControlId = COCOA_CONTROL_ID_READONLY;
 			break;
-		case ExtendedFilePickerElementIds::CHECKBOX_READONLY:
-			nCocoaControlId = COCOA_CONTROL_ID_READONLY;
-			break;
 		default:
 #ifdef DEBUG
 			fprintf( stderr, "JavaFilePicker::getLabel: %i not implemented\n", nControlId );
