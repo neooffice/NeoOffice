@@ -45,6 +45,7 @@
 	NSString*				mpDirectory;
 	BOOL					mbExtensionHidden;
 	NSArray*				mpFileNames;
+	NSMutableArray*			mpLabels;
 	BOOL					mbMultiSelectionMode;
 	int						mnResult;
 	BOOL					mbShowAutoExtension;
@@ -65,10 +66,12 @@
 - (NSArray *)filenames;
 - (id)initWithOptions:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showPreview:(BOOL)bShowPreview showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion;
 - (BOOL)isExtensionHidden;
+- (NSString *)label:(int)nID;
 - (int)result;
 - (void)showFileDialog:(id)pObject;
 - (void)setDirectory:(NSString *)pDirectory;
 - (void)setExtensionHidden:(BOOL)bExtensionHidden;
+- (void)setLabel:(int)nID label:(NSString *)pLabel;
 - (void)setMultiSelectionMode:(BOOL)bMultiSelectionMode;
 - (void)setTitle:(NSString *)pTitle;
 @end
@@ -77,8 +80,14 @@
 
 - (void)dealloc
 {
+	if ( mpDirectory )
+		[mpDirectory release];
+
 	if ( mpFileNames )
 		[mpFileNames release];
+
+	if ( mpLabels )
+		[mpLabels release];
 
 	if ( mpTitle )
 		[mpTitle release];
@@ -104,6 +113,7 @@
 	mbChooseFiles = bChooseFiles;
 	mbExtensionHidden = NO;
 	mpFileNames = nil;
+	mpLabels = [NSMutableArray arrayWithCapacity:MAX_COCOA_CONTROL_ID];
 	mbMultiSelectionMode = NO;
 	mnResult = NSCancelButton;
 	mbShowAutoExtension = bShowAutoExtension;
@@ -119,12 +129,28 @@
 	mpTitle = nil;
 	mbUseFileOpenDialog = bUseFileOpenDialog;
 
+	if ( mpLabels )
+	{
+		[mpLabels retain];
+		int i = 0;
+		for ( ; i < MAX_COCOA_CONTROL_ID; i++ )
+			[mpLabels addObject:@""];
+	}
+
 	return self;
 }
 
 - (BOOL)isExtensionHidden
 {
 	return mbExtensionHidden;
+}
+
+- (NSString *)label:(int)nID
+{
+	if ( nID < 0 || nID >= MAX_COCOA_CONTROL_ID )
+		return nil;
+	else
+		return [mpLabels objectAtIndex:nID];
 }
 
 - (int)result;
@@ -157,50 +183,83 @@
 		[pFilePanel setCanSelectHiddenExtension:mbShowAutoExtension];
 		[pFilePanel setExtensionHidden:mbExtensionHidden];
 
-		if ( mbUseFileOpenDialog )
+		// Create accessory view
+		NSView *pAccessoryView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 0, 0)];
+		if ( pAccessoryView )
 		{
-			NSOpenPanel *pOpenPanel = (NSOpenPanel *)pFilePanel;
+			float nCurrentY = 0;
+			float nCurrentWidth = 0;
 
-			[pOpenPanel setAllowsMultipleSelection:mbMultiSelectionMode];
-			[pOpenPanel setCanChooseFiles:mbChooseFiles];
-			[pOpenPanel setResolvesAliases:YES];
-
-			if ( mbChooseFiles )
+			// Create read only checkbox
+			NSButton *pReadOnlyBox = nil;
+			if ( mbShowReadOnly )
 			{
-				[pOpenPanel setCanChooseDirectories:NO];
-				[pOpenPanel setTreatsFilePackagesAsDirectories:YES];
+				pReadOnlyBox = [[NSButton alloc] initWithFrame:NSMakeRect( 0, nCurrentY, 0, 0 )];
+				if ( pReadOnlyBox )
+				{
+					[pReadOnlyBox setButtonType:NSSwitchButton];
+					[pReadOnlyBox setTitle:(NSString *)[mpLabels objectAtIndex:COCOA_CONTROL_ID_READONLY]];
+					[pReadOnlyBox sizeToFit];
+					[pAccessoryView addSubview:pReadOnlyBox];
+					nCurrentY += [pReadOnlyBox bounds].size.height;
+					float nWidth = [pReadOnlyBox bounds].size.width;
+					if ( nWidth > nCurrentWidth )
+						nCurrentWidth = nWidth;
+				}
+			}
+
+			NSArray *pSubviews = [pAccessoryView subviews];
+			if ( pSubviews && [pSubviews count] )
+			{
+				[pAccessoryView setFrameSize:NSMakeSize( nCurrentWidth, nCurrentY )];
+				[pFilePanel setAccessoryView:pAccessoryView];
+			}
+
+			if ( mbUseFileOpenDialog )
+			{
+				NSOpenPanel *pOpenPanel = (NSOpenPanel *)pFilePanel;
+	
+				[pOpenPanel setAllowsMultipleSelection:mbMultiSelectionMode];
+				[pOpenPanel setCanChooseFiles:mbChooseFiles];
+				[pOpenPanel setResolvesAliases:YES];
+
+				if ( mbChooseFiles )
+				{
+					[pOpenPanel setCanChooseDirectories:NO];
+					[pOpenPanel setTreatsFilePackagesAsDirectories:YES];
+				}
+				else
+				{
+					[pOpenPanel setCanChooseDirectories:YES];
+					[pOpenPanel setTreatsFilePackagesAsDirectories:NO];
+				}
+
+				mnResult = [pOpenPanel runModalForDirectory:mpDirectory file:nil types:nil];
+				if ( mnResult == NSOKButton )
+				{
+					NSArray *pArray = [pOpenPanel filenames];
+					if ( pArray )
+					{
+						mpFileNames = [NSArray arrayWithArray:pArray];
+						if ( mpFileNames )
+							[mpFileNames retain];
+					}
+				}
 			}
 			else
 			{
-				[pOpenPanel setCanChooseDirectories:YES];
-				[pOpenPanel setTreatsFilePackagesAsDirectories:NO];
-			}
+				[pFilePanel setTreatsFilePackagesAsDirectories:NO];
 
-			mnResult = [pOpenPanel runModalForDirectory:mpDirectory file:nil types:nil];
-			if ( mnResult == NSOKButton )
-			{
-				NSArray *pArray = [pOpenPanel filenames];
-				if ( pArray )
+				mnResult = [pFilePanel runModalForDirectory:mpDirectory file:nil];
+				if ( mnResult == NSOKButton )
 				{
-					mpFileNames = [NSArray arrayWithArray:pArray];
-					if ( mpFileNames )
-						[mpFileNames retain];
-				}
-			}
-		}
-		else
-		{
-			[pFilePanel setTreatsFilePackagesAsDirectories:NO];
-
-			mnResult = [pFilePanel runModalForDirectory:mpDirectory file:nil];
-			if ( mnResult == NSOKButton )
-			{
-				NSString *pFileName = [pFilePanel filename];
-				if ( pFileName )
-				{
-					mpFileNames = [NSArray arrayWithObject:pFileName];
-					if ( mpFileNames )
-						[mpFileNames retain];
+					NSString *pFileName = [pFilePanel filename];
+					if ( pFileName )
+					{
+						mpFileNames = [NSArray arrayWithObject:pFileName];
+						if ( mpFileNames )
+							[mpFileNames retain];
+					}
 				}
 			}
 		}
@@ -228,6 +287,15 @@
 - (void)setExtensionHidden:(BOOL)bExtensionHidden
 {
 	mbExtensionHidden = bExtensionHidden;
+}
+
+- (void)setLabel:(int)nID label:(NSString *)pLabel;
+{
+	if ( nID < 0 || nID >= MAX_COCOA_CONTROL_ID )
+		return;
+	else if ( !pLabel )
+		pLabel = @"";
+	[mpLabels replaceObjectAtIndex:nID withObject:pLabel];
 }
 
 - (void)setMultiSelectionMode:(BOOL)bMultiSelectionMode
@@ -342,6 +410,27 @@ BOOL NSFileDialog_isExtensionHidden( void *pDialog )
 	return bRet;
 }
 
+CFStringRef NSFileDialog_label( void *pDialog, int nID )
+{
+	CFStringRef aRet = nil;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pDialog )
+	{
+		NSString *pLabel = [(ShowFileDialog *)pDialog label:nID];
+		if ( pLabel )
+		{
+			[pLabel retain];
+			aRet = (CFStringRef)pLabel;
+		}
+	}
+
+	[pPool release];
+
+	return aRet;
+}
+
 void NSFileDialog_release( void *pDialog )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -417,6 +506,16 @@ void NSFileDialog_setExtensionHidden( void *pDialog, BOOL bExtensionHidden )
 
 	if ( pDialog )
 		[(ShowFileDialog *)pDialog setExtensionHidden:bExtensionHidden];
+
+	[pPool release];
+}
+
+void NSFileDialog_setLabel( void *pDialog, int nID, CFStringRef aLabel )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pDialog )
+		[(ShowFileDialog *)pDialog setLabel:nID label:(NSString *)aLabel];
 
 	[pPool release];
 }

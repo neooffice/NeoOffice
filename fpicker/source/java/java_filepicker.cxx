@@ -54,6 +54,7 @@
 #include <vcl/svapp.hxx>
 #endif
 
+#include "svtools/svtools.hrc"
 #include "cocoa_dialog.h"
 
 using namespace cppu;
@@ -98,6 +99,9 @@ JavaFilePicker::~JavaFilePicker()
 {
 	if ( mpDialog )
 		NSFileDialog_release( mpDialog );
+
+	if ( mpResMgr )
+		delete mpResMgr;
 }
 
 // ------------------------------------------------------------------------
@@ -235,11 +239,7 @@ Sequence< OUString > SAL_CALL JavaFilePicker::getFiles() throw( RuntimeException
 				CFStringGetCharacters( aString, aRange, pBuffer ); 
 				pBuffer[ nLen ] = 0;
 				OUString aPath( pBuffer );
-
-				OUString aURL;
-				File::getFileURLFromSystemPath( aPath, aURL );
-				if ( aURL.getLength() )
-					aRet[ i ] = aURL;
+				File::getFileURLFromSystemPath( aPath, aRet[ i ] );
 			}
 		}
 
@@ -254,7 +254,7 @@ Sequence< OUString > SAL_CALL JavaFilePicker::getFiles() throw( RuntimeException
 void SAL_CALL JavaFilePicker::appendFilter( const OUString& aTitle, const OUString& aFilter ) throw( IllegalArgumentException, RuntimeException )
 {
 #ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::appendFilter not implemented\n" );
+	fprintf( stderr, "JavaFilePicker::appendFilter: %s not implemented\n", OUStringToOString( aTitle, RTL_TEXTENCODING_UTF8 ).getStr() );
 #endif
 }
 
@@ -263,7 +263,7 @@ void SAL_CALL JavaFilePicker::appendFilter( const OUString& aTitle, const OUStri
 void SAL_CALL JavaFilePicker::setCurrentFilter( const OUString& aTitle ) throw( IllegalArgumentException, RuntimeException )
 {
 #ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::setCurrentFilter not implemented\n" );
+	fprintf( stderr, "JavaFilePicker::setCurrentFilter: %s not implemented\n", OUStringToOString( aTitle, RTL_TEXTENCODING_UTF8 ).getStr() );
 #endif
 }
 
@@ -282,7 +282,10 @@ OUString SAL_CALL JavaFilePicker::getCurrentFilter() throw( RuntimeException )
 void SAL_CALL JavaFilePicker::appendFilterGroup( const OUString& sGroupTitle, const Sequence< StringPair >& aFilters ) throw( IllegalArgumentException, RuntimeException )
 {
 #ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::appendFilterGroup not implemented\n" );
+	fprintf( stderr, "JavaFilePicker::appendFilterGroup: %s not implemented\n", OUStringToOString( sGroupTitle, RTL_TEXTENCODING_UTF8 ).getStr() );
+	int nCount = aFilters.getLength();
+	for ( int i = 0; i < nCount; i++ )
+		fprintf( stderr, "    %s : %s\n", aFilters[ i ].First.getStr(), aFilters[ i ].Second.getStr() );
 #endif
 }
 
@@ -345,17 +348,33 @@ void SAL_CALL JavaFilePicker::setLabel( sal_Int16 nControlId, const OUString& aL
 {
     Guard< Mutex > aGuard( maMutex );
 
+	CocoaControlID nCocoaControlId = MAX_COCOA_CONTROL_ID;
 	switch ( nControlId )
 	{
 		case ExtendedFilePickerElementIds::CHECKBOX_AUTOEXTENSION:
 			// This is not changeable since we are using a control that is
 			// already in Mac OS X's native file dialog
 			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_READONLY:
+			nCocoaControlId = COCOA_CONTROL_ID_READONLY;
+			break;
 		default:
 #ifdef DEBUG
 			fprintf( stderr, "JavaFilePicker::setLabel: %i not implemented\n", nControlId );
 #endif
 			break;
+	}
+
+	if ( nCocoaControlId < MAX_COCOA_CONTROL_ID )
+	{
+		XubString aRealLabel( aLabel );
+		aRealLabel.EraseAllChars('~');
+		CFStringRef aString = CFStringCreateWithCharacters( NULL, aRealLabel.GetBuffer(), aRealLabel.Len() );
+		if ( aString )
+		{
+			NSFileDialog_setLabel( mpDialog, nCocoaControlId, aString );
+			CFRelease( aString );
+		}
 	}
 }
 
@@ -367,17 +386,39 @@ OUString SAL_CALL JavaFilePicker::getLabel( sal_Int16 nControlId ) throw( Runtim
 
 	OUString aRet;
 
+	CocoaControlID nCocoaControlId = MAX_COCOA_CONTROL_ID;
 	switch ( nControlId )
 	{
 		case ExtendedFilePickerElementIds::CHECKBOX_AUTOEXTENSION:
 			// This is not changeable since we are using a control that is
 			// already in Mac OS X's native file dialog
 			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_READONLY:
+			nCocoaControlId = COCOA_CONTROL_ID_READONLY;
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_READONLY:
+			nCocoaControlId = COCOA_CONTROL_ID_READONLY;
+			break;
 		default:
 #ifdef DEBUG
 			fprintf( stderr, "JavaFilePicker::getLabel: %i not implemented\n", nControlId );
 #endif
 			break;
+	}
+
+	if ( nCocoaControlId < MAX_COCOA_CONTROL_ID )
+	{
+		CFStringRef aString = NSFileDialog_label( mpDialog, nCocoaControlId );
+		if ( aString )
+		{
+			CFIndex nLen = CFStringGetLength( aString );
+			CFRange aRange = CFRangeMake( 0, nLen );
+			sal_Unicode pBuffer[ nLen + 1 ];
+			CFStringGetCharacters( aString, aRange, pBuffer );
+			pBuffer[ nLen ] = 0;
+			CFRelease( aString );
+			aRet = OUString( pBuffer );
+		}
 	}
 
 	return aRet;
@@ -464,6 +505,10 @@ void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments ) th
 	if ( ( aAny.getValueType() != getCppuType( (sal_Int16*)0) ) && ( aAny.getValueType() != getCppuType( (sal_Int8*)0 ) ) )
 		throw IllegalArgumentException( OUString::createFromAscii( "invalid argument type" ), static_cast< XFilePicker* >( this ), 1 );
 
+	mpResMgr = SimpleResMgr::Create( CREATEVERSIONRESMGR_NAME( fps_office ) );
+	if ( !mpResMgr )
+		throw NullPointerException();
+
 	BOOL bUseFileOpenDialog = TRUE;
     BOOL bShowAutoExtension = FALSE;
     BOOL bShowFilterOptions = FALSE;
@@ -532,6 +577,13 @@ void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments ) th
 	mpDialog = NSFileDialog_create( bUseFileOpenDialog, TRUE, bShowAutoExtension, bShowFilterOptions, bShowImageTemplate, bShowLink, bShowPassword, bShowPreview, bShowReadOnly, bShowSelection, bShowTemplate, bShowVersion );
 	if ( !mpDialog )
 		throw NullPointerException();
+
+	// Set initial values
+	if ( bShowReadOnly )
+	{
+		OUString aLabel( mpResMgr->ReadString( STR_SVT_FILEPICKER_READONLY ) );
+		setLabel( ExtendedFilePickerElementIds::CHECKBOX_READONLY, aLabel );
+	}
 }
 
 // ------------------------------------------------------------------------

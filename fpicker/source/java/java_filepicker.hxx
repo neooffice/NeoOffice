@@ -71,6 +71,9 @@
 #ifndef _RTL_USTRING_H_
 #include <rtl/ustring.hxx>
 #endif
+#ifndef _TOOLS_SIMPLERESMGR_HXX_
+#include <tools/simplerm.hxx>
+#endif
 
 namespace java {
 
@@ -79,6 +82,7 @@ class JavaFilePicker : public ::cppu::WeakComponentImplHelper9< ::com::sun::star
 	void*				mpDialog;
 	::std::list< ::com::sun::star::uno::Reference< ::com::sun::star::ui::dialogs::XFilePickerListener > >	maListeners;
 	::osl::Mutex		maMutex;
+	SimpleResMgr*		mpResMgr;
 
 public:
 						JavaFilePicker( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >& xServiceMgr );

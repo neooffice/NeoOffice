@@ -161,8 +161,6 @@ OUString SAL_CALL JavaFolderPicker::getDisplayDirectory() throw( RuntimeExceptio
 		pBuffer[ nLen ] = 0;
 		CFRelease( aString );
 		OUString aPath( pBuffer );
-
-		OUString aURL;
 		File::getFileURLFromSystemPath( aPath, aRet );
 	}
 
