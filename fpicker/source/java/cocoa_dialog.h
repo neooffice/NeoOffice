@@ -50,6 +50,7 @@ typedef void* id;
 BEGIN_C
 #endif
 id NSFileDialog_create( BOOL bUseFileOpenDialog, BOOL bChooseFiles, BOOL bShowAutoExtension, BOOL bShowFilterOptions, BOOL bShowImageTemplate, BOOL bShowLink, BOOL bShowPassword, BOOL bShowPreview, BOOL bShowReadOnly, BOOL bShowSelection, BOOL bShowTemplate, BOOL bShowVersion );
+CFStringRef NSFileDialog_directory( void *pDialog );
 CFStringRef *NSFileDialog_fileNames( void *pDialog );
 BOOL NSFileDialog_isExtensionHidden( void *pDialog );
 void NSFileDialog_release( void *pDialog );

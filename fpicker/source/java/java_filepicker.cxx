@@ -186,10 +186,26 @@ void SAL_CALL JavaFilePicker::setDisplayDirectory( const OUString& aDirectory ) 
 
 OUString SAL_CALL JavaFilePicker::getDisplayDirectory() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::getDisplayDirectory not implemented\n" );
-#endif
-	return OUString();
+    Guard< Mutex > aGuard( maMutex );
+
+	OUString aRet;
+
+	CFStringRef aString = NSFileDialog_directory( mpDialog );
+	if ( aString )
+	{
+		CFIndex nLen = CFStringGetLength( aString );
+		CFRange aRange = CFRangeMake( 0, nLen );
+		sal_Unicode pBuffer[ nLen + 1 ];
+		CFStringGetCharacters( aString, aRange, pBuffer );
+		pBuffer[ nLen ] = 0;
+		CFRelease( aString );
+		OUString aPath( pBuffer );
+
+		OUString aURL;
+		File::getFileURLFromSystemPath( aPath, aRet );
+	}
+
+	return aRet;
 }
 
 // ------------------------------------------------------------------------
