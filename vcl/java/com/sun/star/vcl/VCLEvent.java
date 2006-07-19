@@ -1308,6 +1308,16 @@ public final class VCLEvent extends AWTEvent {
 							keyCode = VCLEvent.KEY_SPACE;
 						else if (keyChar == 0x7f)
 							keyCode = VCLEvent.KEY_DELETE;
+						else if (keyChar == 0x2b)
+							keyCode = VCLEvent.KEY_ADD;
+						else if (keyChar == 0x2d)
+							keyCode = VCLEvent.KEY_SUBTRACT;
+						else if (keyChar == 0x2e)
+							keyCode = VCLEvent.KEY_POINT;
+						else if (keyChar == 0x2f)
+							keyCode = VCLEvent.KEY_DIVIDE;
+						else if (keyChar == 0x3d)
+							keyCode = VCLEvent.KEY_EQUAL;
 						else
 							keyCode = 0;
 						break;
