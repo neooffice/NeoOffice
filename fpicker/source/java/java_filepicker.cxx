@@ -298,9 +298,14 @@ void SAL_CALL JavaFilePicker::setValue( sal_Int16 nControlId, sal_Int16 nControl
 	switch ( nControlId )
 	{
 		case ExtendedFilePickerElementIds::CHECKBOX_AUTOEXTENSION:
-			sal_Bool bChecked;
-			aValue >>= bChecked;
-			NSFileDialog_setExtensionHidden( mpDialog, bChecked ? TRUE : FALSE );
+			sal_Bool bAutoExtensionChecked;
+			aValue >>= bAutoExtensionChecked;
+			NSFileDialog_setChecked( mpDialog, COCOA_CONTROL_ID_AUTOEXTENSION, bAutoExtensionChecked ? TRUE : FALSE );
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_READONLY:
+			sal_Bool bReadOnlyChecked;
+			aValue >>= bReadOnlyChecked;
+			NSFileDialog_setChecked( mpDialog, COCOA_CONTROL_ID_READONLY, bReadOnlyChecked ? TRUE : FALSE );
 			break;
 		default:
 #ifdef DEBUG
@@ -321,7 +326,10 @@ Any SAL_CALL JavaFilePicker::getValue( sal_Int16 nControlId, sal_Int16 nControlA
 	switch ( nControlId )
 	{
 		case ExtendedFilePickerElementIds::CHECKBOX_AUTOEXTENSION:
-			aRet <<= (sal_Bool)NSFileDialog_isExtensionHidden( mpDialog );
+			aRet <<= (sal_Bool)NSFileDialog_isChecked( mpDialog, COCOA_CONTROL_ID_AUTOEXTENSION );
+			break;
+		case ExtendedFilePickerElementIds::CHECKBOX_READONLY:
+			aRet <<= (sal_Bool)NSFileDialog_isChecked( mpDialog, COCOA_CONTROL_ID_READONLY );
 			break;
 		default:
 #ifdef DEBUG
