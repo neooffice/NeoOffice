@@ -5,8 +5,8 @@ RCS file: /cvs/gsl/vcl/inc/salnativewidgets.hxx,v
 retrieving revision 1.8
 diff -u -r1.8 salnativewidgets.hxx
 --- inc/salnativewidgets.hxx	5 May 2006 08:58:39 -0000	1.8
-+++ inc/salnativewidgets.hxx	19 Jul 2006 05:38:48 -0000
-@@ -134,6 +134,12 @@
++++ inc/salnativewidgets.hxx	20 Jul 2006 06:58:34 -0000
+@@ -134,6 +134,15 @@
  // tool tips
  #define CTRL_TOOLTIP            140
  
@@ -16,10 +16,21 @@ diff -u -r1.8 salnativewidgets.hxx
 +// hierarchical tree control expand/collapse handle
 +#define CTRL_DISCLOSUREBTN		160
 +
++// list view header cell appearing above columns in lists
++#define CTRL_LISTVIEWHEADER		170
++
  /* Control Parts:
   *
   *   Uniquely identify a part of a control,
-@@ -336,6 +342,53 @@
+@@ -159,6 +168,7 @@
+ #define PART_MENU_ITEM              250
+ #define PART_MENU_ITEM_CHECK_MARK   251
+ #define PART_MENU_ITEM_RADIO_MARK   252
++#define PART_LISTVIEWHEADER_SORT_MARK	150	// used for list view headers to indicate whether they draw an ascending/descending sort indicator or whether VCL should handle the indicator
+ 
+ /** The edit field part of a control, e.g. of the combo box.
+ 
+@@ -336,6 +346,79 @@
      int             maTopDockingAreaHeight;
  };
  
@@ -68,6 +79,32 @@ diff -u -r1.8 salnativewidgets.hxx
 +			};
 +		
 +		~DisclosureBtnValue() {};
++};
++
++#define LISTVIEWHEADER_SORT_DONTKNOW	0	// indicates the current sort of the column is unknown
++#define LISTVIEWHEADER_SORT_DESCENDING	1	// indicates the column is sorted in descending order
++#define LISTVIEWHEADER_SORT_ASCENDING	2	// indicates the column is sorted in ascending order
++#define LISTVIEWHEADER_SORT_UNSORTED	3	// indicates the column is not sorted
++
++/*	ListViewHeaderValue
++ *
++ *	Value container for list view header cells drawn above columns of scrollable
++ *	lists.  Indicates whether the clumn is the primary sort column and
++ *	any direction of the sort
++ */
++class ListViewHeaderValue
++{
++	public:
++		BOOL mbPrimarySortColumn;		// true if the column is the primary active column on which data is sorted, false if it is a secondary informational column
++		USHORT mnSortDirection;			// sort direction for the column.
++		
++		ListViewHeaderValue()
++			{
++				mbPrimarySortColumn = FALSE;
++				mnSortDirection = LISTVIEWHEADER_SORT_DONTKNOW;
++			};
++		
++		~ListViewHeaderValue() {};
 +};
 +
  /* ImplControlValue:

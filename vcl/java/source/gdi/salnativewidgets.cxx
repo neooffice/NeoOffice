@@ -121,6 +121,8 @@ struct HIThemeTabPaneDrawInfo104 {
 
 #define kThemeDisclosureTriangle	kThemeDisclosureButton
 
+#define kThemeAdornmentHeaderButtonNoSortArrow	((ThemeButtonAdornment)(1 << 12))
+
 #else if ( BUILD_OS_MAJOR >= 10 ) && ( BUILD_OS_MINOR > 3 )
 typedef HIThemeTabDrawInfo HIThemeTabDrawInfo104;
 typedef HIThemeTabPaneDrawInfo HIThemeTabPaneDrawInfo104;
@@ -622,6 +624,50 @@ static BOOL InitDisclosureButtonDrawInfo( HIThemeButtonDrawInfo *pButtonInfo, Co
 		pButtonInfo->state = kThemeStateActive;
 	else
 		pButtonInfo->state = kThemeStateInactive;
+	return TRUE;
+}
+
+// =======================================================================
+
+/**
+ * (static) Initialize HITheme structures used to draw a list view header
+ *
+ * @param pButtonInfo	pointer to HITheme button info structure to be
+ *						initialized
+ * @param nState		control state of the disclosure button
+ * @param pValue		pointer to VCL list header button value structure
+ * @return TRUE on success, FALSE on failure
+ */
+static BOOL InitListViewHeaderButtonDrawInfo( HIThemeButtonDrawInfo *pButtonInfo, ControlState nState, ListViewHeaderValue *pValue )
+{
+	memset( pButtonInfo, 0, sizeof( HIThemeButtonDrawInfo ) );
+	pButtonInfo->version = 0;
+	pButtonInfo->kind = kThemeListHeaderButton;
+	if ( pValue->mbPrimarySortColumn )
+		pButtonInfo->value = kThemeButtonOn;
+	else
+		pButtonInfo->value = kThemeButtonOff;
+	if ( nState & ( CTRL_STATE_PRESSED | CTRL_STATE_SELECTED ) )
+		pButtonInfo->state = kThemeStatePressed;
+	else if ( nState & CTRL_STATE_ENABLED )
+		pButtonInfo->state = kThemeStateActive;
+	else
+		pButtonInfo->state = kThemeStateInactive;
+	switch ( pValue->mnSortDirection )
+	{
+		case LISTVIEWHEADER_SORT_ASCENDING:
+			pButtonInfo->adornment = kThemeAdornmentHeaderButtonSortUp;
+			break;
+		
+		case LISTVIEWHEADER_SORT_DESCENDING:
+			// default is to have downward pointing arrow
+			break;
+			
+		default:
+			// for unknown sort orders
+			pButtonInfo->adornment = kThemeAdornmentHeaderButtonNoSortArrow;
+			break;
+	}
 	return TRUE;
 }
 
@@ -1138,6 +1184,47 @@ static BOOL DrawNativeDisclosureBtn( JavaSalGraphics *pGraphics, const Rectangle
 // =======================================================================
 
 /**
+ * (static) Draw a native header button for a list view.  The header buttons
+ * are drawn using the theme brushes for primary sort columns and non-primary
+ * columns.  Sort indicators are not drawn at present.
+ *
+ * @param pGraphics		pointer to the graphics object where the button should
+ *						be painted
+ * @param rDestBounds	destination drawing rectangle for the disclosure button
+ * @param nState		current control enabled/disabled/focused state
+ * @param pValue		NWF structure providing information about primary
+ *						sort column and additional sort order state
+ */
+static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, ListViewHeaderValue *pValue )
+{
+	VCLBitmapBuffer aBuffer;
+	BOOL bRet = aBuffer.Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+	if ( bRet )
+	{
+		HIThemeButtonDrawInfo pButtonInfo;
+		InitListViewHeaderButtonDrawInfo( &pButtonInfo, nState, pValue );
+		
+		HIRect destRect;
+		destRect.origin.x = 0;
+		destRect.origin.y = 0;
+		destRect.size.width = rDestBounds.GetWidth();
+		destRect.size.height = rDestBounds.GetHeight();
+				
+		bRet = ( HIThemeDrawButton( &destRect, &pButtonInfo, aBuffer.maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+	}
+
+	if ( bRet )
+	{
+		aBuffer.ReleaseContext();
+		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+	}
+
+	return bRet;
+}
+
+// =======================================================================
+
+/**
  * Determine if support exists for drawing a particular native widget in the
  * interface.
  *
@@ -1221,7 +1308,12 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
-
+		
+		case CTRL_LISTVIEWHEADER:
+			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == PART_LISTVIEWHEADER_SORT_MARK ) )
+				isSupported = TRUE;
+			break;
+			
 		default:
 			isSupported = FALSE;
 			break;
@@ -1410,6 +1502,15 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				Rectangle ctrlRect = rControlRegion.GetBoundRect();
 				DisclosureBtnValue *pValue = static_cast<DisclosureBtnValue *> ( aValue.getOptionalVal() );
 				bOK = DrawNativeDisclosureBtn( this, ctrlRect, nState, pValue );
+			}
+			break;
+		
+		case CTRL_LISTVIEWHEADER:
+			if( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle ctrlRect = rControlRegion.GetBoundRect();
+				ListViewHeaderValue *pValue = static_cast<ListViewHeaderValue *> ( aValue.getOptionalVal() );
+				bOK = DrawNativeListViewHeader( this, ctrlRect, nState, pValue );
 			}
 			break;
 	}
@@ -1796,6 +1897,17 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			break;
 		
 		case CTRL_DISCLOSUREBTN:
+			if ( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle controlRect = rControlRegion.GetBoundRect();
+				rNativeBoundingRegion = Region( controlRect );
+				rNativeContentRegion = Region( rNativeBoundingRegion );
+
+				bReturn = TRUE;
+			}
+			break;
+		
+		case CTRL_LISTVIEWHEADER:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle controlRect = rControlRegion.GetBoundRect();
