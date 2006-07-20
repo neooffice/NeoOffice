@@ -46,10 +46,12 @@ static NSString *pBlankItem = @" ";
 	BOOL					mbChooseFiles;
 	NSMutableDictionary*	mpControls;
 	NSSavePanel*			mpFilePanel;
+	NSMutableDictionary*	mpFilters;
 	int						mnResult;
 	NSMutableDictionary*	mpTextFields;
 	BOOL					mbUseFileOpenDialog;
 }
+- (void)addFilter:(NSString *)pItem filter:(NSString *)pFilter;
 - (void)addItem:(int)nID item:(NSString *)pItem;
 - (void)dealloc;
 - (void)deleteItem:(int)nID item:(NSString *)pItem;
@@ -65,15 +67,61 @@ static NSString *pBlankItem = @" ";
 - (void)setEnabled:(int)nID enabled:(BOOL)bEnabled;
 - (void)setLabel:(int)nID label:(NSString *)pLabel;
 - (void)setMultiSelectionMode:(BOOL)bMultiSelectionMode;
+- (void)setSelectedFilter:(NSString *)pItem;
 - (void)setSelectedItem:(int)nID item:(int)nItem;
 - (void)setTitle:(NSString *)pTitle;
 @end
 
 @implementation ShowFileDialog
 
+- (void)addFilter:(NSString *)pItem filter:(NSString *)pFilter
+{
+	if ( !pItem || !pFilter )
+		return;
+
+	NSArray *pFilters = [pFilter componentsSeparatedByString:@";"];
+	if ( pFilters && [pFilters count] )
+	{
+		NSMutableArray *pArray = [NSMutableArray arrayWithArray:pFilters];
+		if ( pArray )
+		{
+			int nCount = [pArray count];
+			BOOL bAllowAll = NO;
+			int i = 0;
+			for ( ; i < nCount; i++ )
+			{
+				NSString *pCurrentFilter = [pArray objectAtIndex:i];
+				NSRange aRange = [pCurrentFilter rangeOfString:@"." options:NSLiteralSearch | NSBackwardsSearch];
+				if ( aRange.location != NSNotFound )
+				{
+					pCurrentFilter = [pCurrentFilter substringFromIndex:aRange.location + 1];
+					[pArray insertObject:pCurrentFilter atIndex:i];
+				}
+
+				if ( [pCurrentFilter isEqualToString:@"*"] )
+				{
+					bAllowAll = YES;
+					break;
+				}
+			}
+
+			if ( !bAllowAll )
+				[mpFilters setValue:pFilters forKey:pFilter];
+		}
+	}
+
+	NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILETYPE] stringValue]];
+	if ( pPopup )
+	{
+		if ( [pPopup numberOfItems] == 1 && [pBlankItem isEqualToString:[pPopup itemTitleAtIndex:0]] )
+			[pPopup removeAllItems];
+		[pPopup addItemWithTitle:pItem];
+	}
+}
+
 - (void)addItem:(int)nID item:(NSString *)pItem
 {
-	if ( !pItem )
+	if ( !pItem || nID == COCOA_CONTROL_ID_FILETYPE )
 		return;
 
 	if ( NSFileDialog_controlType( nID ) == COCOA_CONTROL_TYPE_POPUP )
@@ -96,6 +144,9 @@ static NSString *pBlankItem = @" ";
 	if ( mpFilePanel )
 		[mpFilePanel release];
 
+	if ( mpFilters )
+		[mpFilters release];
+
 	if ( mpTextFields )
 		[mpTextFields release];
 
@@ -104,7 +155,7 @@ static NSString *pBlankItem = @" ";
 
 - (void)deleteItem:(int)nID item:(NSString *)pItem
 {
-	if ( !pItem )
+	if ( !pItem || nID == COCOA_CONTROL_ID_FILETYPE )
 		return;
 
 	if ( NSFileDialog_controlType( nID ) == COCOA_CONTROL_TYPE_POPUP )
@@ -154,6 +205,10 @@ static NSString *pBlankItem = @" ";
 	mpControls = [[NSMutableDictionary alloc] init];
 	if ( mpControls )
 		[mpControls retain];
+
+	mpFilters = [[NSMutableDictionary alloc] init];
+	if ( mpFilters )
+		[mpFilters retain];
 
 	mpTextFields = [[NSMutableDictionary alloc] init];
 	if ( mpTextFields )
@@ -535,8 +590,20 @@ static NSString *pBlankItem = @" ";
 		[(NSOpenPanel *)mpFilePanel setAllowsMultipleSelection:bMultiSelectionMode];
 }
 
+- (void)setSelectedFilter:(NSString *)pItem
+{
+	[mpFilePanel setAllowedFileTypes:(NSArray *)[mpFilters objectForKey:pItem]];
+
+	NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILETYPE] stringValue]];
+	if ( pPopup )
+		[pPopup selectItemWithTitle:pItem];
+}
+
 - (void)setSelectedItem:(int)nID item:(int)nItem
 {
+	if ( nID == COCOA_CONTROL_ID_FILETYPE )
+		return;
+
 	if ( NSFileDialog_controlType( nID ) == COCOA_CONTROL_TYPE_POPUP )
 	{
 		NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
@@ -578,6 +645,16 @@ int NSFileDialog_controlType( int nID )
 	}
 
 	return nRet;
+}
+
+void NSFileDialog_addFilter( id pDialog, CFStringRef aItem, CFStringRef aFilter )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pDialog )
+		[(ShowFileDialog *)pDialog addFilter:(NSString *)aItem filter:(NSString *)aFilter];
+
+	[pPool release];
 }
 
 void NSFileDialog_addItem( id pDialog, int nID, CFStringRef aItem )
@@ -816,6 +893,16 @@ void NSFileDialog_setMultiSelectionMode( id pDialog, BOOL bMultiSelectionMode )
 
 	if ( pDialog )
 		[(ShowFileDialog *)pDialog setMultiSelectionMode:bMultiSelectionMode];
+
+	[pPool release];
+}
+
+void NSFileDialog_setSelectedFilter( id pDialog, CFStringRef aItem )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pDialog )
+		[(ShowFileDialog *)pDialog setSelectedFilter:(NSString *)aItem];
 
 	[pPool release];
 }

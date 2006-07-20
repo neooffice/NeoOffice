@@ -342,18 +342,34 @@ Sequence< OUString > SAL_CALL JavaFilePicker::getFiles() throw( RuntimeException
 
 void SAL_CALL JavaFilePicker::appendFilter( const OUString& aTitle, const OUString& aFilter ) throw( IllegalArgumentException, RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::appendFilter: %s not implemented\n", OUStringToOString( aTitle, RTL_TEXTENCODING_UTF8 ).getStr() );
-#endif
+    Guard< Mutex > aGuard( maMutex );
+
+	CFStringRef aString = CFStringCreateWithCharacters( NULL, aTitle.getStr(), aTitle.getLength() );
+	if ( aString )
+	{
+		CFStringRef aFilterString = CFStringCreateWithCharacters( NULL, aFilter.getStr(), aFilter.getLength() );
+		if ( aFilterString )
+		{
+			NSFileDialog_addFilter( mpDialog, aString, aFilterString );
+			CFRelease( aFilterString );
+		}
+
+		CFRelease( aString );
+	}
 }
 
 // ------------------------------------------------------------------------
 
 void SAL_CALL JavaFilePicker::setCurrentFilter( const OUString& aTitle ) throw( IllegalArgumentException, RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::setCurrentFilter: %s not implemented\n", OUStringToOString( aTitle, RTL_TEXTENCODING_UTF8 ).getStr() );
-#endif
+    Guard< Mutex > aGuard( maMutex );
+
+	CFStringRef aString = CFStringCreateWithCharacters( NULL, aTitle.getStr(), aTitle.getLength() );
+	if ( aString )
+	{
+		NSFileDialog_setSelectedFilter( mpDialog, aString );
+		CFRelease( aString );
+	}
 }
 
 // ------------------------------------------------------------------------
@@ -370,12 +386,9 @@ OUString SAL_CALL JavaFilePicker::getCurrentFilter() throw( RuntimeException )
 
 void SAL_CALL JavaFilePicker::appendFilterGroup( const OUString& sGroupTitle, const Sequence< StringPair >& aFilters ) throw( IllegalArgumentException, RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::appendFilterGroup: %s not implemented\n", OUStringToOString( sGroupTitle, RTL_TEXTENCODING_UTF8 ).getStr() );
 	int nCount = aFilters.getLength();
 	for ( int i = 0; i < nCount; i++ )
-		fprintf( stderr, "    %s : %s\n", OUStringToOString( aFilters[ i ].First, RTL_TEXTENCODING_UTF8 ).getStr(), OUStringToOString( aFilters[ i ].Second, RTL_TEXTENCODING_UTF8 ).getStr() );
-#endif
+		appendFilter( aFilters[ i ].First, aFilters[ i ].Second );
 }
 
 // ------------------------------------------------------------------------
