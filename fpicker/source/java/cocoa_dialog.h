@@ -71,8 +71,10 @@ enum CocoaControlID {
 #ifdef __cplusplus
 BEGIN_C
 #endif
+void NSFileDialog_addItem( id pDialog, int nID, CFStringRef aItem );
 int NSFileDialog_controlType( int nID );
 id NSFileDialog_create( BOOL bUseFileOpenDialog, BOOL bChooseFiles, BOOL bShowAutoExtension, BOOL bShowFilterOptions, BOOL bShowImageTemplate, BOOL bShowLink, BOOL bShowPassword, BOOL bShowReadOnly, BOOL bShowSelection, BOOL bShowTemplate, BOOL bShowVersion );
+void NSFileDialog_deleteItem( id pDialog, int nID, CFStringRef aItem );
 CFStringRef NSFileDialog_directory( id pDialog );
 CFStringRef *NSFileDialog_fileNames( id pDialog );
 BOOL NSFileDialog_isChecked( id pDialog, int nID );
@@ -86,6 +88,7 @@ void NSFileDialog_setDirectory( id pDialog, CFStringRef aDirectory );
 void NSFileDialog_setEnabled( id pDialog, int nID, BOOL bEnabled );
 void NSFileDialog_setLabel( id pDialog, int nID, CFStringRef aLabel );
 void NSFileDialog_setMultiSelectionMode( id pDialog, BOOL bMultiSelectionMode );
+void NSFileDialog_setSelectedItem( id pDialog, int nID, int nItem );
 void NSFileDialog_setTitle( id pDialog, CFStringRef aTitle );
 #ifdef __cplusplus
 END_C

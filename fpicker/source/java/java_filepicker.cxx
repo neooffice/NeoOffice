@@ -44,6 +44,9 @@
 #ifndef _COM_SUN_STAR_LANG_NULLPOINTEREXCEPTION_HPP_
 #include <com/sun/star/lang/NullPointerException.hpp>
 #endif
+#ifndef _COM_SUN_STAR_UI_DIALOGS_CONTROLACTIONS_HPP_
+#include <com/sun/star/ui/dialogs/ControlActions.hpp>
+#endif
 #ifndef _COM_SUN_STAR_UI_DIALOGS_TEMPLATEDESCRIPTION_HPP_
 #include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
 #endif
@@ -351,6 +354,79 @@ void SAL_CALL JavaFilePicker::setValue( sal_Int16 nControlId, sal_Int16 nControl
 			sal_Bool bChecked;
 			aValue >>= bChecked;
 			NSFileDialog_setChecked( mpDialog, nCocoaControlId, bChecked ? TRUE : FALSE );
+			break;
+		case COCOA_CONTROL_TYPE_POPUP:
+			switch ( nControlAction )
+			{
+				case ControlActions::ADD_ITEM:
+					{
+						OUString aItem;
+						aValue >>= aItem;
+						CFStringRef aString = CFStringCreateWithCharacters( NULL, aItem.getStr(), aItem.getLength() );
+						if ( aString )
+						{
+							NSFileDialog_addItem( mpDialog, nCocoaControlId, aString );
+							CFShow( aString );
+							CFRelease( aString );
+						}
+					}
+					break;
+				case ControlActions::ADD_ITEMS:
+					{
+						Sequence< OUString > aItems;
+						aValue >>= aItems;
+						sal_Int32 nCount = aItems.getLength();
+						for ( sal_Int32 i = 0; i < nCount; i++ )
+						{
+							CFStringRef aString = CFStringCreateWithCharacters( NULL, aItems[ i ].getStr(), aItems[ i ].getLength() );
+							if ( aString )
+							{
+								NSFileDialog_addItem( mpDialog, nCocoaControlId, aString );
+								CFShow( aString );
+								CFRelease( aString );
+							}
+						}
+					}
+					break;
+				case ControlActions::DELETE_ITEM:
+					{
+						OUString aItem;
+						aValue >>= aItem;
+						CFStringRef aString = CFStringCreateWithCharacters( NULL, aItem.getStr(), aItem.getLength() );
+						if ( aString )
+						{
+							NSFileDialog_deleteItem( mpDialog, nCocoaControlId, aString );
+							CFShow( aString );
+							CFRelease( aString );
+						}
+					}
+					break;
+				case ControlActions::DELETE_ITEMS:
+					{
+						Sequence< OUString > aItems;
+						aValue >>= aItems;
+						sal_Int32 nCount = aItems.getLength();
+						for ( sal_Int32 i = 0; i < nCount; i++ )
+						{
+							CFStringRef aString = CFStringCreateWithCharacters( NULL, aItems[ i ].getStr(), aItems[ i ].getLength() );
+							if ( aString )
+							{
+								NSFileDialog_addItem( mpDialog, nCocoaControlId, aString );
+								CFShow( aString );
+								CFRelease( aString );
+							}
+						}
+					}
+					break;
+				case ControlActions::SET_SELECT_ITEM:
+					{
+						sal_Int32 nItem;
+						aValue >>= nItem;
+						NSFileDialog_setSelectedItem( mpDialog, nCocoaControlId, nItem );
+					}
+					break;
+					break;
+			}
 			break;
 		default:
 #ifdef DEBUG

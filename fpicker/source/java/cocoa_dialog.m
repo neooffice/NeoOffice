@@ -39,25 +39,20 @@
 #import "cocoa_dialog.h"
 #endif
 
+static NSString *pBlankItem = @" ";
+
 @interface ShowFileDialog : NSObject
 {
 	BOOL					mbChooseFiles;
 	NSMutableDictionary*	mpControls;
 	NSSavePanel*			mpFilePanel;
 	int						mnResult;
-	BOOL					mbShowAutoExtension;
-	BOOL					mbShowFilterOptions;
-	BOOL					mbShowImageTemplate;
-	BOOL					mbShowLink;
-	BOOL					mbShowPassword;
-	BOOL					mbShowReadOnly;
-	BOOL					mbShowSelection;
-	BOOL					mbShowTemplate;
-	BOOL					mbShowVersion;
 	NSMutableDictionary*	mpTextFields;
 	BOOL					mbUseFileOpenDialog;
 }
+- (void)addItem:(int)nID item:(NSString *)pItem;
 - (void)dealloc;
+- (void)deleteItem:(int)nID item:(NSString *)pItem;
 - (NSString *)directory;
 - (NSArray *)filenames;
 - (id)initWithOptions:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion;
@@ -70,10 +65,28 @@
 - (void)setEnabled:(int)nID enabled:(BOOL)bEnabled;
 - (void)setLabel:(int)nID label:(NSString *)pLabel;
 - (void)setMultiSelectionMode:(BOOL)bMultiSelectionMode;
+- (void)setSelectedItem:(int)nID item:(int)nItem;
 - (void)setTitle:(NSString *)pTitle;
 @end
 
 @implementation ShowFileDialog
+
+- (void)addItem:(int)nID item:(NSString *)pItem
+{
+	if ( !pItem )
+		return;
+
+	if ( NSFileDialog_controlType( nID ) == COCOA_CONTROL_TYPE_POPUP )
+	{
+		NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
+		if ( pPopup )
+		{
+			if ( [pPopup numberOfItems] == 1 && [pBlankItem isEqualToString:[pPopup itemTitleAtIndex:0]] )
+				[pPopup removeAllItems];
+			[pPopup addItemWithTitle:pItem];
+		}
+	}
+}
 
 - (void)dealloc
 {
@@ -87,6 +100,23 @@
 		[mpTextFields release];
 
 	[super dealloc];
+}
+
+- (void)deleteItem:(int)nID item:(NSString *)pItem
+{
+	if ( !pItem )
+		return;
+
+	if ( NSFileDialog_controlType( nID ) == COCOA_CONTROL_TYPE_POPUP )
+	{
+		NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
+		if ( pPopup )
+		{
+			[pPopup removeItemWithTitle:pItem];
+			if ( ![pPopup numberOfItems] )
+				[pPopup addItemWithTitle:pBlankItem];
+		}
+	}
 }
 
 - (NSString *)directory
@@ -119,15 +149,6 @@
 
 	mbChooseFiles = bChooseFiles;
 	mnResult = NSCancelButton;
-	mbShowAutoExtension = bShowAutoExtension;
-	mbShowFilterOptions = bShowFilterOptions;
-	mbShowImageTemplate = bShowImageTemplate;
-	mbShowLink = bShowLink;
-	mbShowPassword = bShowPassword;
-	mbShowReadOnly = bShowReadOnly;
-	mbShowSelection = bShowSelection;
-	mbShowTemplate = bShowTemplate;
-	mbShowVersion = bShowVersion;
 	mbUseFileOpenDialog = bUseFileOpenDialog;
 
 	mpControls = [[NSMutableDictionary alloc] init];
@@ -148,7 +169,7 @@
 		[mpFilePanel retain];
 
 		[mpFilePanel setCanCreateDirectories:YES];
-		[mpFilePanel setCanSelectHiddenExtension:mbShowAutoExtension];
+		[mpFilePanel setCanSelectHiddenExtension:bShowAutoExtension];
 
 		if ( mbUseFileOpenDialog )
 		{
@@ -175,7 +196,7 @@
 	}
 
 	// Create filter options checkbox
-	if ( mbShowFilterOptions )
+	if ( bShowFilterOptions )
 	{
 		NSButton *pButton = [[NSButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
 		if ( pButton )
@@ -188,11 +209,14 @@
 	}
 
 	// Create image template popup
-	if ( mbShowImageTemplate )
+	if ( bShowImageTemplate )
 	{
-		NSPopUpButton *pPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
+		NSPopUpButton *pPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 ) pullsDown:NO];
 		if ( pPopup )
+		{
+			[pPopup addItemWithTitle:pBlankItem];
 			[mpControls setValue:pPopup forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_IMAGE_TEMPLATE] stringValue]];
+		}
 
 		NSTextField *pTextField = [[NSTextField alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
 		if ( pTextField )
@@ -206,7 +230,7 @@
 	}
 
 	// Create link checkbox
-	if ( mbShowLink )
+	if ( bShowLink )
 	{
 		NSButton *pButton = [[NSButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
 		if ( pButton )
@@ -219,7 +243,7 @@
 	}
 
 	// Create password checkbox
-	if ( mbShowPassword )
+	if ( bShowPassword )
 	{
 		NSButton *pButton = [[NSButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
 		if ( pButton )
@@ -232,7 +256,7 @@
 	}
 
 	// Create read only checkbox
-	if ( mbShowReadOnly )
+	if ( bShowReadOnly )
 	{
 		NSButton *pButton = [[NSButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
 		if ( pButton )
@@ -245,7 +269,7 @@
 	}
 
 	// Create selection checkbox
-	if ( mbShowSelection )
+	if ( bShowSelection )
 	{
 		NSButton *pButton = [[NSButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
 		if ( pButton )
@@ -258,11 +282,14 @@
 	}
 
 	// Create template popup
-	if ( mbShowTemplate )
+	if ( bShowTemplate )
 	{
-		NSPopUpButton *pPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
+		NSPopUpButton *pPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 ) pullsDown:NO];
 		if ( pPopup )
+		{
+			[pPopup addItemWithTitle:pBlankItem];
 			[mpControls setValue:pPopup forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_TEMPLATE] stringValue]];
+		}
 
 		NSTextField *pTextField = [[NSTextField alloc] initWithFrame:NSMakeRect( 0, 0, 1000, 0 )];
 		if ( pTextField )
@@ -276,11 +303,14 @@
 	}
 
 	// Create template popup
-	if ( mbShowVersion )
+	if ( bShowVersion )
 	{
-		NSPopUpButton *pPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
+		NSPopUpButton *pPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 ) pullsDown:NO];
 		if ( pPopup )
+		{
+			[pPopup addItemWithTitle:pBlankItem];
 			[mpControls setValue:pPopup forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_VERSION] stringValue]];
+		}
 
 		NSTextField *pTextField = [[NSTextField alloc] initWithFrame:NSMakeRect( 0, 0, 1000, 0 )];
 		if ( pTextField )
@@ -484,6 +514,16 @@
 		[(NSOpenPanel *)mpFilePanel setAllowsMultipleSelection:bMultiSelectionMode];
 }
 
+- (void)setSelectedItem:(int)nID item:(int)nItem
+{
+	if ( NSFileDialog_controlType( nID ) == COCOA_CONTROL_TYPE_POPUP )
+	{
+		NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
+		if ( pPopup )
+			[pPopup selectItemAtIndex:nItem];
+	}
+}
+
 - (void)setTitle:(NSString *)pTitle
 {
 }
@@ -518,6 +558,16 @@ int NSFileDialog_controlType( int nID )
 	return nRet;
 }
 
+void NSFileDialog_addItem( id pDialog, int nID, CFStringRef aItem )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pDialog )
+		[(ShowFileDialog *)pDialog addItem:nID item:(NSString *)aItem];
+
+	[pPool release];
+}
+
 id NSFileDialog_create( BOOL bUseFileOpenDialog, BOOL bChooseFiles, BOOL bShowAutoExtension, BOOL bShowFilterOptions, BOOL bShowImageTemplate, BOOL bShowLink, BOOL bShowPassword, BOOL bShowReadOnly, BOOL bShowSelection, BOOL bShowTemplate, BOOL bShowVersion )
 {
 	ShowFileDialog *pRet = nil;
@@ -531,6 +581,16 @@ id NSFileDialog_create( BOOL bUseFileOpenDialog, BOOL bChooseFiles, BOOL bShowAu
 	[pPool release];
 
 	return pRet;
+}
+
+void NSFileDialog_deleteItem( id pDialog, int nID, CFStringRef aItem )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pDialog )
+		[(ShowFileDialog *)pDialog deleteItem:nID item:(NSString *)aItem];
+
+	[pPool release];
 }
 
 CFStringRef NSFileDialog_directory( id pDialog )
@@ -734,6 +794,16 @@ void NSFileDialog_setMultiSelectionMode( id pDialog, BOOL bMultiSelectionMode )
 
 	if ( pDialog )
 		[(ShowFileDialog *)pDialog setMultiSelectionMode:bMultiSelectionMode];
+
+	[pPool release];
+}
+
+void NSFileDialog_setSelectedItem( id pDialog, int nID, int nItem )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pDialog )
+		[(ShowFileDialog *)pDialog setSelectedItem:nID item:nItem];
 
 	[pPool release];
 }
