@@ -69,6 +69,8 @@ namespace vcl {
 	}
 
 	bool					IsRunningPanther( );
+	
+	bool					IsFullKeyboardAccessEnabled( );
 
 } // namespace vcl
 

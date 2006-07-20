@@ -96,3 +96,29 @@ bool vcl::IsRunningPanther( )
 	
 	return isPanther;
 }
+
+// ----------------------------------------------------------------------------
+
+bool vcl::IsFullKeyboardAccessEnabled( )
+{
+	static bool initializedOnce = false;
+	static bool isFullAccessEnabled = false;
+	
+	if ( ! initializedOnce )
+	{
+		CFPropertyListRef keyboardNavigationPref = NULL;
+		keyboardNavigationPref = CFPreferencesCopyValue( CFSTR( "AppleKeyboardUIMode" ), kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost );
+		if ( keyboardNavigationPref )
+		{
+			int prefVal;
+			if ( CFNumberGetValue( (CFNumberRef)keyboardNavigationPref, kCFNumberIntType, &prefVal ) )
+			{
+				isFullAccessEnabled = ( prefVal > 0 );
+			}
+			CFRelease( keyboardNavigationPref );
+		}
+		initializedOnce = true;
+	}
+	
+	return isFullAccessEnabled;
+}

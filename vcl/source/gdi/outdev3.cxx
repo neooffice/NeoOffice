@@ -154,6 +154,12 @@
 #include <com/sun/star/i18n/WordType.hpp>
 #endif
 
+#ifdef USE_JAVA
+#ifndef _SV_JAVA_TOOLS_HXX
+#include <java/tools.hxx>
+#endif
+#endif
+
 #if defined UNX
 #define GLYPH_FONT_HEIGHT   128
 #elif defined OS2
@@ -4480,6 +4486,10 @@ void OutputDevice::ImplDrawTextLines( SalLayout& rSalLayout,
 
 void OutputDevice::ImplDrawMnemonicLine( long nX, long nY, long nWidth )
 {
+#ifdef USE_JAVA
+	if( ! vcl::IsFullKeyboardAccessEnabled() )
+		return;
+#endif
     long nBaseX = nX;
     if( ImplHasMirroredGraphics() && IsRTLEnabled() )
     {
