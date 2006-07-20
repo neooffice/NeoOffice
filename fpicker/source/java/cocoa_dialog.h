@@ -81,11 +81,15 @@ void NSFileDialog_deleteItem( id pDialog, int nID, CFStringRef aItem );
 CFStringRef NSFileDialog_directory( id pDialog );
 CFStringRef *NSFileDialog_fileNames( id pDialog );
 BOOL NSFileDialog_isChecked( id pDialog, int nID );
+CFStringRef *NSFileDialog_items( id pDialog, int nID );
 CFStringRef NSFileDialog_label( id pDialog, int nID );
 void NSFileDialog_release( id pDialog );
-void NSFontManager_releaseFileNames( CFStringRef *pURLs );
+void NSFileManager_releaseFileNames( CFStringRef *pURLs );
+void NSFileManager_releaseItems( CFStringRef *pItems );
 int NSFileDialog_result( id pDialog );
-int NSFileDialog_showFileDialog( id pDialog );
+CFStringRef NSFileDialog_selectedFilter( id pDialog );
+CFStringRef NSFileDialog_selectedItem( id pDialog, int nID );
+int NSFileDialog_selectedItemIndex( id pDialog, int nID );
 void NSFileDialog_setChecked( id pDialog, int nID, BOOL bChecked );
 void NSFileDialog_setDirectory( id pDialog, CFStringRef aDirectory );
 void NSFileDialog_setEnabled( id pDialog, int nID, BOOL bEnabled );
@@ -94,6 +98,7 @@ void NSFileDialog_setMultiSelectionMode( id pDialog, BOOL bMultiSelectionMode );
 void NSFileDialog_setSelectedFilter( id pDialog, CFStringRef aItem );
 void NSFileDialog_setSelectedItem( id pDialog, int nID, int nItem );
 void NSFileDialog_setTitle( id pDialog, CFStringRef aTitle );
+int NSFileDialog_showFileDialog( id pDialog );
 #ifdef __cplusplus
 END_C
 #endif

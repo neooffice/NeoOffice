@@ -332,7 +332,7 @@ Sequence< OUString > SAL_CALL JavaFilePicker::getFiles() throw( RuntimeException
 			}
 		}
 
-		NSFontManager_releaseFileNames( pFileNames );
+		NSFileManager_releaseFileNames( pFileNames );
 	}
 
 	return aRet;
@@ -376,10 +376,23 @@ void SAL_CALL JavaFilePicker::setCurrentFilter( const OUString& aTitle ) throw( 
 
 OUString SAL_CALL JavaFilePicker::getCurrentFilter() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::getCurrentFilter not implemented\n" );
-#endif
-	return OUString();
+    Guard< Mutex > aGuard( maMutex );
+
+	OUString aRet;
+
+	CFStringRef aString = NSFileDialog_selectedFilter( mpDialog );
+	if ( aString )
+	{
+		CFIndex nLen = CFStringGetLength( aString );
+		CFRange aRange = CFRangeMake( 0, nLen );
+		sal_Unicode pBuffer[ nLen + 1 ];
+		CFStringGetCharacters( aString, aRange, pBuffer );
+		pBuffer[ nLen ] = 0;
+		CFRelease( aString );
+		aRet = OUString( pBuffer );
+	}
+
+	return aRet;
 }
 
 // ------------------------------------------------------------------------
@@ -480,7 +493,6 @@ void SAL_CALL JavaFilePicker::setValue( sal_Int16 nControlId, sal_Int16 nControl
 						NSFileDialog_setSelectedItem( mpDialog, nCocoaControlId, nItem );
 					}
 					break;
-					break;
 			}
 			break;
 		default:
@@ -505,6 +517,59 @@ Any SAL_CALL JavaFilePicker::getValue( sal_Int16 nControlId, sal_Int16 nControlA
 	{
 		case COCOA_CONTROL_TYPE_CHECKBOX:
 			aRet <<= (sal_Bool)NSFileDialog_isChecked( mpDialog, nCocoaControlId );
+			break;
+		case COCOA_CONTROL_TYPE_POPUP:
+			switch ( nControlAction )
+			{
+				case ControlActions::GET_ITEMS:
+					{
+						CFStringRef *pItems = NSFileDialog_items( mpDialog, nCocoaControlId );
+						if ( pItems )
+						{
+							int nCount = 0;
+							for ( ; pItems[ nCount ]; nCount++ )
+								;
+
+							if ( nCount )
+							{
+								Sequence< OUString > aItems( nCount );
+								for ( int i = 0; i < nCount; i++ )
+								{
+									CFStringRef aString = pItems[ i ];
+									CFIndex nLen = CFStringGetLength( aString );
+									CFRange aRange = CFRangeMake( 0, nLen );
+									sal_Unicode pBuffer[ nLen + 1 ];
+									CFStringGetCharacters( aString, aRange, pBuffer ); 
+									pBuffer[ nLen ] = 0;
+									aItems[ i ] = OUString( pBuffer );
+								}
+
+								aRet <<= aItems;
+							}
+
+							NSFileManager_releaseItems( pItems );
+						}
+					}
+					break;
+				case ControlActions::GET_SELECTED_ITEM:
+					{
+						CFStringRef aString = NSFileDialog_selectedItem( mpDialog, nCocoaControlId );
+						if ( aString )
+						{
+							CFIndex nLen = CFStringGetLength( aString );
+							CFRange aRange = CFRangeMake( 0, nLen );
+							sal_Unicode pBuffer[ nLen + 1 ];
+							CFStringGetCharacters( aString, aRange, pBuffer ); 
+							pBuffer[ nLen ] = 0;
+							CFRelease( aString );
+							aRet <<= OUString( pBuffer );
+						}
+					}
+					break;
+				case ControlActions::GET_SELECTED_ITEM_INDEX:
+					aRet <<= (sal_Int32)NSFileDialog_selectedItemIndex( mpDialog, nCocoaControlId );
+					break;
+			}
 			break;
 		default:
 #ifdef DEBUG

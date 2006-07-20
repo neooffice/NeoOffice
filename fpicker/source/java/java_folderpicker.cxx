@@ -194,7 +194,7 @@ OUString SAL_CALL JavaFolderPicker::getDirectory() throw( RuntimeException )
 				aRet = aURL;
 		}
 
-		NSFontManager_releaseFileNames( pFileNames );
+		NSFileManager_releaseFileNames( pFileNames );
 	}
 
 	return aRet;
