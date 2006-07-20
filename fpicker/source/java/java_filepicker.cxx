@@ -53,12 +53,22 @@
 #ifndef _OSL_FILE_HXX_
 #include <osl/file.hxx>
 #endif
+#ifndef _SV_FIXED_HXX
+#include <vcl/fixed.hxx>
+#endif
 #ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
 #endif
+#ifndef _SV_DIALOG_HXX
+#include <vcl/dialog.hxx>
+#endif
 
 #include "svtools/svtools.hrc"
+#include "svtools/filedlg2.hrc"
 #include "cocoa_dialog.h"
+
+#define LISTBOX_FILETYPE			150
+#define LISTBOX_FILETYPE_LABEL		250
 
 using namespace cppu;
 using namespace com::sun::star::beans;
@@ -71,7 +81,28 @@ using namespace java;
 
 // ========================================================================
 
-static CocoaControlID GetCocoaControlId( sal_Int16 nControlId )
+    struct ResMgrHolder
+    {
+        ResMgr * operator ()()
+        {
+            return ResMgr::CreateResMgr (CREATEVERSIONRESMGR_NAME(fps_office));
+        }
+ 
+        static ResMgr * getOrCreate()
+        {
+            return rtl_Instance<
+                ResMgr, ResMgrHolder,
+                osl::MutexGuard, osl::GetGlobalMutex >::create (
+                    ResMgrHolder(), osl::GetGlobalMutex());
+        } 
+    };
+ 
+    struct SvtResId : public ResId 
+    { 
+        SvtResId (USHORT nId) : ResId (nId, ResMgrHolder::getOrCreate()) {}
+    };
+
+CocoaControlID GetCocoaControlId( sal_Int16 nControlId )
 {
 	CocoaControlID nRet = MAX_COCOA_CONTROL_ID;
 
@@ -84,6 +115,7 @@ static CocoaControlID GetCocoaControlId( sal_Int16 nControlId )
 			nRet = COCOA_CONTROL_ID_FILTEROPTIONS;
 			break;
 		case ExtendedFilePickerElementIds::LISTBOX_IMAGE_TEMPLATE:
+		case ExtendedFilePickerElementIds::LISTBOX_IMAGE_TEMPLATE_LABEL:
 			nRet = COCOA_CONTROL_ID_IMAGE_TEMPLATE;
 			break;
 		case ExtendedFilePickerElementIds::CHECKBOX_LINK:
@@ -105,10 +137,16 @@ static CocoaControlID GetCocoaControlId( sal_Int16 nControlId )
 			nRet = COCOA_CONTROL_ID_SELECTION;
 			break;
 		case ExtendedFilePickerElementIds::LISTBOX_TEMPLATE:
+		case ExtendedFilePickerElementIds::LISTBOX_TEMPLATE_LABEL:
 			nRet = COCOA_CONTROL_ID_TEMPLATE;
 			break;
 		case ExtendedFilePickerElementIds::LISTBOX_VERSION:
+		case ExtendedFilePickerElementIds::LISTBOX_VERSION_LABEL:
 			nRet = COCOA_CONTROL_ID_VERSION;
+			break;
+		case LISTBOX_FILETYPE:
+		case LISTBOX_FILETYPE_LABEL:
+			nRet = COCOA_CONTROL_ID_FILETYPE;
 			break;
 		default:
 			break;
@@ -336,7 +374,7 @@ void SAL_CALL JavaFilePicker::appendFilterGroup( const OUString& sGroupTitle, co
 	fprintf( stderr, "JavaFilePicker::appendFilterGroup: %s not implemented\n", OUStringToOString( sGroupTitle, RTL_TEXTENCODING_UTF8 ).getStr() );
 	int nCount = aFilters.getLength();
 	for ( int i = 0; i < nCount; i++ )
-		fprintf( stderr, "    %s : %s\n", aFilters[ i ].First.getStr(), aFilters[ i ].Second.getStr() );
+		fprintf( stderr, "    %s : %s\n", OUStringToOString( aFilters[ i ].First, RTL_TEXTENCODING_UTF8 ).getStr(), OUStringToOString( aFilters[ i ].Second, RTL_TEXTENCODING_UTF8 ).getStr() );
 #endif
 }
 
@@ -362,11 +400,12 @@ void SAL_CALL JavaFilePicker::setValue( sal_Int16 nControlId, sal_Int16 nControl
 					{
 						OUString aItem;
 						aValue >>= aItem;
-						CFStringRef aString = CFStringCreateWithCharacters( NULL, aItem.getStr(), aItem.getLength() );
+						XubString aRealItem( aItem );
+						aRealItem.EraseAllChars('~');
+						CFStringRef aString = CFStringCreateWithCharacters( NULL, aRealItem.GetBuffer(), aRealItem.Len() );
 						if ( aString )
 						{
 							NSFileDialog_addItem( mpDialog, nCocoaControlId, aString );
-							CFShow( aString );
 							CFRelease( aString );
 						}
 					}
@@ -378,11 +417,12 @@ void SAL_CALL JavaFilePicker::setValue( sal_Int16 nControlId, sal_Int16 nControl
 						sal_Int32 nCount = aItems.getLength();
 						for ( sal_Int32 i = 0; i < nCount; i++ )
 						{
-							CFStringRef aString = CFStringCreateWithCharacters( NULL, aItems[ i ].getStr(), aItems[ i ].getLength() );
+							XubString aRealItem( aItems[ i ] );
+							aRealItem.EraseAllChars('~');
+							CFStringRef aString = CFStringCreateWithCharacters( NULL, aRealItem.GetBuffer(), aRealItem.Len() );
 							if ( aString )
 							{
 								NSFileDialog_addItem( mpDialog, nCocoaControlId, aString );
-								CFShow( aString );
 								CFRelease( aString );
 							}
 						}
@@ -392,11 +432,12 @@ void SAL_CALL JavaFilePicker::setValue( sal_Int16 nControlId, sal_Int16 nControl
 					{
 						OUString aItem;
 						aValue >>= aItem;
-						CFStringRef aString = CFStringCreateWithCharacters( NULL, aItem.getStr(), aItem.getLength() );
+						XubString aRealItem( aItem );
+						aRealItem.EraseAllChars('~');
+						CFStringRef aString = CFStringCreateWithCharacters( NULL, aRealItem.GetBuffer(), aRealItem.Len() );
 						if ( aString )
 						{
 							NSFileDialog_deleteItem( mpDialog, nCocoaControlId, aString );
-							CFShow( aString );
 							CFRelease( aString );
 						}
 					}
@@ -408,11 +449,12 @@ void SAL_CALL JavaFilePicker::setValue( sal_Int16 nControlId, sal_Int16 nControl
 						sal_Int32 nCount = aItems.getLength();
 						for ( sal_Int32 i = 0; i < nCount; i++ )
 						{
-							CFStringRef aString = CFStringCreateWithCharacters( NULL, aItems[ i ].getStr(), aItems[ i ].getLength() );
+							XubString aRealItem( aItems[ i ] );
+							aRealItem.EraseAllChars('~');
+							CFStringRef aString = CFStringCreateWithCharacters( NULL, aRealItem.GetBuffer(), aRealItem.Len() );
 							if ( aString )
 							{
 								NSFileDialog_addItem( mpDialog, nCocoaControlId, aString );
-								CFShow( aString );
 								CFRelease( aString );
 							}
 						}
@@ -488,7 +530,7 @@ void SAL_CALL JavaFilePicker::setLabel( sal_Int16 nControlId, const OUString& aL
 {
     Guard< Mutex > aGuard( maMutex );
 
-	UniString aRealLabel( aLabel );
+	XubString aRealLabel( aLabel );
 	aRealLabel.EraseAllChars('~');
 
 	CFStringRef aString = CFStringCreateWithCharacters( NULL, aRealLabel.GetBuffer(), aRealLabel.Len() );
@@ -679,6 +721,18 @@ void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments ) th
 	if ( !mpDialog )
 		throw NullPointerException();
 
+	SimpleResMgr *pSvtResMgr = SimpleResMgr::Create( CREATEVERSIONRESMGR_NAME( svt ) );
+	if ( pSvtResMgr )
+	{
+		OUString aLabel( pSvtResMgr->ReadString( STR_FILEDLG_TYPE ) );
+		setLabel( LISTBOX_FILETYPE_LABEL, aLabel );
+		delete pSvtResMgr;
+	}
+	else
+	{
+		throw NullPointerException();
+	}
+
 	// Set initial values
 	if ( bShowFilterOptions )
 	{
@@ -688,7 +742,7 @@ void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments ) th
 	if ( bShowImageTemplate )
 	{
 		OUString aLabel( mpResMgr->ReadString( STR_SVT_FILEPICKER_IMAGE_TEMPLATE ) );
-		setLabel( ExtendedFilePickerElementIds::LISTBOX_IMAGE_TEMPLATE, aLabel );
+		setLabel( ExtendedFilePickerElementIds::LISTBOX_IMAGE_TEMPLATE_LABEL, aLabel );
 	}
 	if ( bShowLink )
 	{
@@ -718,12 +772,12 @@ void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments ) th
 	if ( bShowTemplate )
 	{
 		OUString aLabel( mpResMgr->ReadString( STR_SVT_FILEPICKER_TEMPLATES ) );
-		setLabel( ExtendedFilePickerElementIds::LISTBOX_IMAGE_TEMPLATE, aLabel );
+		setLabel( ExtendedFilePickerElementIds::LISTBOX_IMAGE_TEMPLATE_LABEL, aLabel );
 	}
 	if ( bShowVersion )
 	{
 		OUString aLabel( mpResMgr->ReadString( STR_SVT_FILEPICKER_VERSION ) );
-		setLabel( ExtendedFilePickerElementIds::LISTBOX_VERSION, aLabel );
+		setLabel( ExtendedFilePickerElementIds::LISTBOX_VERSION_LABEL, aLabel );
 	}
 }
 

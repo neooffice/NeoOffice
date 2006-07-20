@@ -195,6 +195,27 @@ static NSString *pBlankItem = @" ";
 		}
 	}
 
+	// Create file type popup
+	if ( mbChooseFiles )
+	{
+		NSPopUpButton *pPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 ) pullsDown:NO];
+		if ( pPopup )
+		{
+			[pPopup addItemWithTitle:pBlankItem];
+			[mpControls setValue:pPopup forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILETYPE] stringValue]];
+		}
+
+		NSTextField *pTextField = [[NSTextField alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
+		if ( pTextField )
+		{
+			[pTextField setBordered:NO];
+			[pTextField setDrawsBackground:NO];
+			[pTextField setEditable:NO];
+			[pTextField setSelectable:NO];
+			[mpTextFields setValue:pTextField forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILETYPE] stringValue]];
+		}
+	}
+
 	// Create filter options checkbox
 	if ( bShowFilterOptions )
 	{
@@ -551,6 +572,7 @@ int NSFileDialog_controlType( int nID )
 		case COCOA_CONTROL_ID_IMAGE_TEMPLATE:
 		case COCOA_CONTROL_ID_TEMPLATE:
 		case COCOA_CONTROL_ID_VERSION:
+		case COCOA_CONTROL_ID_FILETYPE:
 			nRet = COCOA_CONTROL_TYPE_POPUP;
 			break;
 	}

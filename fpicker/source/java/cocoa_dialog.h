@@ -53,6 +53,7 @@ enum CocoaControlType {
 	MAX_COCOA_CONTROL_TYPE
 };
 
+// These are defined in reverse order of their appearance
 enum CocoaControlID {
 	COCOA_CONTROL_ID_AUTOEXTENSION,
 	COCOA_CONTROL_ID_FILTEROPTIONS,
@@ -65,6 +66,7 @@ enum CocoaControlID {
 	COCOA_CONTROL_ID_SELECTION,
 	COCOA_CONTROL_ID_TEMPLATE,
 	COCOA_CONTROL_ID_VERSION,
+	COCOA_CONTROL_ID_FILETYPE,
 	MAX_COCOA_CONTROL_ID
 };
 
