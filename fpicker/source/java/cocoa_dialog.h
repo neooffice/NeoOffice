@@ -46,35 +46,47 @@
 typedef void* id;
 #endif
 
+enum CocoaControlType {
+	COCOA_CONTROL_TYPE_BUTTON,
+	COCOA_CONTROL_TYPE_CHECKBOX,
+	COCOA_CONTROL_TYPE_POPUP,
+	MAX_COCOA_CONTROL_TYPE
+};
+
 enum CocoaControlID {
 	COCOA_CONTROL_ID_AUTOEXTENSION,
 	COCOA_CONTROL_ID_FILTEROPTIONS,
+	COCOA_CONTROL_ID_IMAGE_TEMPLATE,
 	COCOA_CONTROL_ID_LINK,
 	COCOA_CONTROL_ID_PASSWORD,
+	COCOA_CONTROL_ID_PLAY,
 	COCOA_CONTROL_ID_PREVIEW,
 	COCOA_CONTROL_ID_READONLY,
 	COCOA_CONTROL_ID_SELECTION,
+	COCOA_CONTROL_ID_TEMPLATE,
+	COCOA_CONTROL_ID_VERSION,
 	MAX_COCOA_CONTROL_ID
 };
 
 #ifdef __cplusplus
 BEGIN_C
 #endif
+int NSFileDialog_controlType( int nID );
 id NSFileDialog_create( BOOL bUseFileOpenDialog, BOOL bChooseFiles, BOOL bShowAutoExtension, BOOL bShowFilterOptions, BOOL bShowImageTemplate, BOOL bShowLink, BOOL bShowPassword, BOOL bShowPreview, BOOL bShowReadOnly, BOOL bShowSelection, BOOL bShowTemplate, BOOL bShowVersion );
-CFStringRef NSFileDialog_directory( void *pDialog );
-CFStringRef *NSFileDialog_fileNames( void *pDialog );
-BOOL NSFileDialog_isChecked( void *pDialog, int nID );
-CFStringRef NSFileDialog_label( void *pDialog, int nID );
-void NSFileDialog_release( void *pDialog );
+CFStringRef NSFileDialog_directory( id pDialog );
+CFStringRef *NSFileDialog_fileNames( id pDialog );
+BOOL NSFileDialog_isChecked( id pDialog, int nID );
+CFStringRef NSFileDialog_label( id pDialog, int nID );
+void NSFileDialog_release( id pDialog );
 void NSFontManager_releaseFileNames( CFStringRef *pURLs );
 int NSFileDialog_result( id pDialog );
 int NSFileDialog_showFileDialog( id pDialog );
-void NSFileDialog_setChecked( void *pDialog, int nID, BOOL bChecked );
-void NSFileDialog_setDirectory( void *pDialog, CFStringRef aDirectory );
-void NSFileDialog_setEnabled( void *pDialog, int nID, BOOL bEnabled );
-void NSFileDialog_setLabel( void *pDialog, int nID, CFStringRef aLabel );
-void NSFileDialog_setMultiSelectionMode( void *pDialog, BOOL bMultiSelectionMode );
-void NSFileDialog_setTitle( void *pDialog, CFStringRef aTitle );
+void NSFileDialog_setChecked( id pDialog, int nID, BOOL bChecked );
+void NSFileDialog_setDirectory( id pDialog, CFStringRef aDirectory );
+void NSFileDialog_setEnabled( id pDialog, int nID, BOOL bEnabled );
+void NSFileDialog_setLabel( id pDialog, int nID, CFStringRef aLabel );
+void NSFileDialog_setMultiSelectionMode( id pDialog, BOOL bMultiSelectionMode );
+void NSFileDialog_setTitle( id pDialog, CFStringRef aTitle );
 #ifdef __cplusplus
 END_C
 #endif

@@ -225,18 +225,16 @@
 {
 	BOOL bRet = NO;
 
-	switch ( nID )
+	int nCocoaControlType = NSFileDialog_controlType( nID );
+	if ( nID == COCOA_CONTROL_ID_AUTOEXTENSION )
 	{
-		case COCOA_CONTROL_ID_AUTOEXTENSION:
-			bRet = [mpFilePanel isExtensionHidden];
-			break;
-		case COCOA_CONTROL_ID_READONLY:
-			{
-				NSButton *pButton = (NSButton *)[mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
-				if ( pButton )
-					bRet = ( [pButton state] == NSOnState );
-			}
-			break;
+		bRet = [mpFilePanel isExtensionHidden];
+	}
+	else if ( nCocoaControlType == COCOA_CONTROL_TYPE_CHECKBOX )
+	{
+		NSButton *pButton = (NSButton *)[mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
+		if ( pButton )
+			bRet = ( [pButton state] == NSOnState );
 	}
 
 	return bRet;
@@ -244,17 +242,17 @@
 
 - (NSString *)label:(int)nID
 {
-	NSControl *pControl = (NSControl *)[mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
-	if ( pControl )
+	NSString *pRet = nil;
+
+	int nCocoaControlType = NSFileDialog_controlType( nID );
+	if ( nCocoaControlType == COCOA_CONTROL_TYPE_BUTTON || nCocoaControlType == COCOA_CONTROL_TYPE_CHECKBOX )
 	{
-		switch ( nID )
-		{
-			case COCOA_CONTROL_ID_READONLY:
-				return [(NSButton *)pControl title];
-		}
+		NSButton *pButton = (NSButton *)[mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
+		if ( pButton )
+			pRet = [pButton title];
 	}
 
-	return nil;
+	return pRet;
 }
 
 - (int)result;
@@ -281,7 +279,7 @@
 		int i = 0;
 		for ( ; i < MAX_COCOA_CONTROL_ID; i++ )
 		{
-			NSControl *pControl = (NSButton *)[mpControls objectForKey:[[NSNumber numberWithInt:i] stringValue]];
+			NSControl *pControl = (NSControl *)[mpControls objectForKey:[[NSNumber numberWithInt:i] stringValue]];
 			if ( pControl )
 			{
 				[pControl setFrameOrigin:NSMakePoint( 0, nCurrentY )];
@@ -332,7 +330,7 @@
 
 		for ( i = 0; i < MAX_COCOA_CONTROL_ID; i++ )
 		{
-			NSControl *pControl = (NSButton *)[mpControls objectForKey:[[NSNumber numberWithInt:i] stringValue]];
+			NSControl *pControl = (NSControl *)[mpControls objectForKey:[[NSNumber numberWithInt:i] stringValue]];
 			if ( pControl )
 				[pControl removeFromSuperview];
 		}
@@ -346,23 +344,16 @@
 
 - (void)setChecked:(int)nID checked:(BOOL)bChecked
 {
-	switch ( nID )
+	int nCocoaControlType = NSFileDialog_controlType( nID );
+	if ( nID == COCOA_CONTROL_ID_AUTOEXTENSION )
 	{
-		case COCOA_CONTROL_ID_AUTOEXTENSION:
-			[mpFilePanel setExtensionHidden:bChecked];
-			break;
-		case COCOA_CONTROL_ID_FILTEROPTIONS:
-		case COCOA_CONTROL_ID_LINK:
-		case COCOA_CONTROL_ID_PASSWORD:
-		case COCOA_CONTROL_ID_PREVIEW:
-		case COCOA_CONTROL_ID_READONLY:
-		case COCOA_CONTROL_ID_SELECTION:
-			{
-				NSButton *pButton = (NSButton *)[mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
-				if ( pButton )
-					[pButton setState:( bChecked ? NSOnState : NSOffState )];
-			}
-			break;
+		[mpFilePanel setExtensionHidden:bChecked];
+	}
+	else if ( nCocoaControlType == COCOA_CONTROL_TYPE_CHECKBOX )
+	{
+		NSButton *pButton = (NSButton *)[mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
+		if ( pButton )
+			[pButton setState:( bChecked ? NSOnState : NSOffState )];
 	}
 }
 
@@ -378,19 +369,12 @@
 	if ( !pLabel )
 		pLabel = @"";
 
-	NSControl *pControl = (NSControl *)[mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
-	if ( pControl )
+	int nCocoaControlType = NSFileDialog_controlType( nID );
+	if ( nCocoaControlType == COCOA_CONTROL_TYPE_CHECKBOX )
 	{
-		switch ( nID )
-		{
-			case COCOA_CONTROL_ID_FILTEROPTIONS:
-			case COCOA_CONTROL_ID_LINK:
-			case COCOA_CONTROL_ID_PASSWORD:
-			case COCOA_CONTROL_ID_PREVIEW:
-			case COCOA_CONTROL_ID_READONLY:
-			case COCOA_CONTROL_ID_SELECTION:
-				[(NSButton *)pControl setTitle:pLabel];
-		}
+		NSButton *pButton = (NSButton *)[mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
+		if ( pButton )
+			[pButton setTitle:pLabel];
 	}
 }
 
@@ -405,6 +389,34 @@
 }
 
 @end
+
+int NSFileDialog_controlType( int nID )
+{
+	int nRet = MAX_COCOA_CONTROL_TYPE;
+
+	switch ( nID )
+	{
+		case COCOA_CONTROL_ID_PLAY:
+			nRet = COCOA_CONTROL_TYPE_BUTTON;
+			break;
+		case COCOA_CONTROL_ID_AUTOEXTENSION:
+		case COCOA_CONTROL_ID_FILTEROPTIONS:
+		case COCOA_CONTROL_ID_LINK:
+		case COCOA_CONTROL_ID_PASSWORD:
+		case COCOA_CONTROL_ID_PREVIEW:
+		case COCOA_CONTROL_ID_READONLY:
+		case COCOA_CONTROL_ID_SELECTION:
+			nRet = COCOA_CONTROL_TYPE_CHECKBOX;
+			break;
+		case COCOA_CONTROL_ID_IMAGE_TEMPLATE:
+		case COCOA_CONTROL_ID_TEMPLATE:
+		case COCOA_CONTROL_ID_VERSION:
+			nRet = COCOA_CONTROL_TYPE_POPUP;
+			break;
+	}
+
+	return nRet;
+}
 
 id NSFileDialog_create( BOOL bUseFileOpenDialog, BOOL bChooseFiles, BOOL bShowAutoExtension, BOOL bShowFilterOptions, BOOL bShowImageTemplate, BOOL bShowLink, BOOL bShowPassword, BOOL bShowPreview, BOOL bShowReadOnly, BOOL bShowSelection, BOOL bShowTemplate, BOOL bShowVersion )
 {
@@ -421,7 +433,7 @@ id NSFileDialog_create( BOOL bUseFileOpenDialog, BOOL bChooseFiles, BOOL bShowAu
 	return pRet;
 }
 
-CFStringRef NSFileDialog_directory( void *pDialog )
+CFStringRef NSFileDialog_directory( id pDialog )
 {
 	CFStringRef aRet = nil;
 
@@ -442,7 +454,7 @@ CFStringRef NSFileDialog_directory( void *pDialog )
 	return aRet;
 }
 
-CFStringRef *NSFileDialog_fileNames( void *pDialog )
+CFStringRef *NSFileDialog_fileNames( id pDialog )
 {
 	CFStringRef *pRet = nil;
 
@@ -482,7 +494,7 @@ CFStringRef *NSFileDialog_fileNames( void *pDialog )
 	return pRet;
 }
 
-BOOL NSFileDialog_isChecked( void *pDialog, int nID )
+BOOL NSFileDialog_isChecked( id pDialog, int nID )
 {
 	BOOL bRet = NO;
 
@@ -496,7 +508,7 @@ BOOL NSFileDialog_isChecked( void *pDialog, int nID )
 	return bRet;
 }
 
-CFStringRef NSFileDialog_label( void *pDialog, int nID )
+CFStringRef NSFileDialog_label( id pDialog, int nID )
 {
 	CFStringRef aRet = nil;
 
@@ -517,7 +529,7 @@ CFStringRef NSFileDialog_label( void *pDialog, int nID )
 	return aRet;
 }
 
-void NSFileDialog_release( void *pDialog )
+void NSFileDialog_release( id pDialog )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -576,7 +588,7 @@ int NSFileDialog_showFileDialog( id pDialog )
 	return nRet;
 }
 
-void NSFileDialog_setChecked( void *pDialog, int nID, BOOL bChecked )
+void NSFileDialog_setChecked( id pDialog, int nID, BOOL bChecked )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -586,7 +598,7 @@ void NSFileDialog_setChecked( void *pDialog, int nID, BOOL bChecked )
 	[pPool release];
 }
 
-void NSFileDialog_setDirectory( void *pDialog, CFStringRef aDirectory )
+void NSFileDialog_setDirectory( id pDialog, CFStringRef aDirectory )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -596,7 +608,7 @@ void NSFileDialog_setDirectory( void *pDialog, CFStringRef aDirectory )
 	[pPool release];
 }
 
-void NSFileDialog_setEnabled( void *pDialog, int nID, BOOL bEnabled )
+void NSFileDialog_setEnabled( id pDialog, int nID, BOOL bEnabled )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -606,7 +618,7 @@ void NSFileDialog_setEnabled( void *pDialog, int nID, BOOL bEnabled )
 	[pPool release];
 }
 
-void NSFileDialog_setLabel( void *pDialog, int nID, CFStringRef aLabel )
+void NSFileDialog_setLabel( id pDialog, int nID, CFStringRef aLabel )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -616,7 +628,7 @@ void NSFileDialog_setLabel( void *pDialog, int nID, CFStringRef aLabel )
 	[pPool release];
 }
 
-void NSFileDialog_setMultiSelectionMode( void *pDialog, BOOL bMultiSelectionMode )
+void NSFileDialog_setMultiSelectionMode( id pDialog, BOOL bMultiSelectionMode )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -626,7 +638,7 @@ void NSFileDialog_setMultiSelectionMode( void *pDialog, BOOL bMultiSelectionMode
 	[pPool release];
 }
 
-void NSFileDialog_setTitle( void *pDialog, CFStringRef aTitle )
+void NSFileDialog_setTitle( id pDialog, CFStringRef aTitle )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
