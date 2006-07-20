@@ -822,9 +822,7 @@ void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments ) th
 
 void SAL_CALL JavaFilePicker::cancel() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::cancel not implemented\n" );
-#endif
+	NSFileDialog_cancel( mpDialog );
 }
 
 // ------------------------------------------------------------------------
@@ -867,34 +865,18 @@ Sequence< OUString > SAL_CALL JavaFilePicker::getSupportedServiceNames() throw( 
 
 void SAL_CALL JavaFilePicker::fileSelectionChanged( FilePickerEvent aEvent )
 {
-    ClearableMutexGuard aGuard( maMutex );
-
-	::std::list< Reference< XFilePickerListener > > listeners( maListeners );
-
-	aGuard.clear();
-
-    for ( ::std::list< Reference< XFilePickerListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
-    {
-        if ( (*it).is() )
-			(*it)->fileSelectionChanged( aEvent );
-    }
+#ifdef DEBUG
+	fprintf( stderr, "JavaFilePicker::fileSelectionChanged not implemented\n" );
+#endif
 }
 
 // ------------------------------------------------------------------------
 
 void SAL_CALL JavaFilePicker::directoryChanged( FilePickerEvent aEvent )
 {
-    ClearableMutexGuard aGuard( maMutex );
-
-	::std::list< Reference< XFilePickerListener > > listeners( maListeners );
-
-	aGuard.clear();
-
-    for ( ::std::list< Reference< XFilePickerListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
-    {
-        if ( (*it).is() )
-			(*it)->directoryChanged( aEvent );
-    }
+#ifdef DEBUG
+	fprintf( stderr, "JavaFilePicker::directoryChanged not implemented\n" );
+#endif
 }
 
 // ------------------------------------------------------------------------
@@ -926,15 +908,7 @@ void SAL_CALL JavaFilePicker::controlStateChanged( FilePickerEvent aEvent )
 
 void SAL_CALL JavaFilePicker::dialogSizeChanged()
 {
-    ClearableMutexGuard aGuard( maMutex );
-
-	::std::list< Reference< XFilePickerListener > > listeners( maListeners );
-
-	aGuard.clear();
-
-    for ( ::std::list< Reference< XFilePickerListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
-    {
-        if ( (*it).is() )
-			(*it)->dialogSizeChanged();
-    }
+#ifdef DEBUG
+	fprintf( stderr, "JavaFilePicker::dialogSizeChanged not implemented\n" );
+#endif
 }

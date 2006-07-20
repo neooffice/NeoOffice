@@ -243,9 +243,7 @@ Sequence< OUString > SAL_CALL JavaFolderPicker::getSupportedServiceNames() throw
 
 void SAL_CALL JavaFolderPicker::cancel() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFolderPicker::cancel not implemented\n" );
-#endif
+	NSFileDialog_cancel( mpDialog );
 }
 
 // ------------------------------------------------------------------------

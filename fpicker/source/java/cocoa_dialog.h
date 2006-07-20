@@ -75,6 +75,7 @@ BEGIN_C
 #endif
 void NSFileDialog_addFilter( id pDialog, CFStringRef aItem, CFStringRef aFilter );
 void NSFileDialog_addItem( id pDialog, int nID, CFStringRef aItem );
+void NSFileDialog_cancel( id pDialog );
 int NSFileDialog_controlType( int nID );
 id NSFileDialog_create( BOOL bUseFileOpenDialog, BOOL bChooseFiles, BOOL bShowAutoExtension, BOOL bShowFilterOptions, BOOL bShowImageTemplate, BOOL bShowLink, BOOL bShowPassword, BOOL bShowReadOnly, BOOL bShowSelection, BOOL bShowTemplate, BOOL bShowVersion );
 void NSFileDialog_deleteItem( id pDialog, int nID, CFStringRef aItem );

@@ -54,6 +54,7 @@ static NSString *pBlankItem = @" ";
 }
 - (void)addFilter:(NSString *)pItem filter:(NSString *)pFilter;
 - (void)addItem:(int)nID item:(NSString *)pItem;
+- (void)cancel;
 - (void)dealloc;
 - (void)deleteItem:(int)nID item:(NSString *)pItem;
 - (NSString *)directory;
@@ -140,6 +141,11 @@ static NSString *pBlankItem = @" ";
 			[pPopup addItemWithTitle:pItem];
 		}
 	}
+}
+
+- (void)cancel
+{
+	[mpFilePanel cancel:self];
 }
 
 - (void)dealloc
@@ -741,6 +747,16 @@ void NSFileDialog_addItem( id pDialog, int nID, CFStringRef aItem )
 
 	if ( pDialog )
 		[(ShowFileDialog *)pDialog addItem:nID item:(NSString *)aItem];
+
+	[pPool release];
+}
+
+void NSFileDialog_cancel( id pDialog )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pDialog )
+		[(ShowFileDialog *)pDialog cancel];
 
 	[pPool release];
 }
