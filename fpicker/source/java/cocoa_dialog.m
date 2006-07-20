@@ -50,17 +50,17 @@
 	BOOL					mbShowImageTemplate;
 	BOOL					mbShowLink;
 	BOOL					mbShowPassword;
-	BOOL					mbShowPreview;
 	BOOL					mbShowReadOnly;
 	BOOL					mbShowSelection;
 	BOOL					mbShowTemplate;
 	BOOL					mbShowVersion;
+	NSMutableDictionary*	mpTextFields;
 	BOOL					mbUseFileOpenDialog;
 }
 - (void)dealloc;
 - (NSString *)directory;
 - (NSArray *)filenames;
-- (id)initWithOptions:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showPreview:(BOOL)bShowPreview showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion;
+- (id)initWithOptions:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion;
 - (BOOL)isChecked:(int)nID;
 - (NSString *)label:(int)nID;
 - (int)result;
@@ -82,6 +82,9 @@
 
 	if ( mpFilePanel )
 		[mpFilePanel release];
+
+	if ( mpTextFields )
+		[mpTextFields release];
 
 	[super dealloc];
 }
@@ -110,7 +113,7 @@
 	}
 }
 
-- (id)initWithOptions:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showPreview:(BOOL)bShowPreview showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion
+- (id)initWithOptions:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion
 {
 	[super init];
 
@@ -121,7 +124,6 @@
 	mbShowImageTemplate = bShowImageTemplate;
 	mbShowLink = bShowLink;
 	mbShowPassword = bShowPassword;
-	mbShowPreview = bShowPreview;
 	mbShowReadOnly = bShowReadOnly;
 	mbShowSelection = bShowSelection;
 	mbShowTemplate = bShowTemplate;
@@ -132,13 +134,45 @@
 	if ( mpControls )
 		[mpControls retain];
 
+	mpTextFields = [[NSMutableDictionary alloc] init];
+	if ( mpTextFields )
+		[mpTextFields retain];
+
 	if ( mbUseFileOpenDialog )
 		mpFilePanel = (NSSavePanel *)[NSOpenPanel openPanel];
 	else
 		mpFilePanel = [NSSavePanel savePanel];
 
 	if ( mpFilePanel )
+	{
 		[mpFilePanel retain];
+
+		[mpFilePanel setCanCreateDirectories:YES];
+		[mpFilePanel setCanSelectHiddenExtension:mbShowAutoExtension];
+
+		if ( mbUseFileOpenDialog )
+		{
+			NSOpenPanel *pOpenPanel = (NSOpenPanel *)mpFilePanel;
+
+			[pOpenPanel setCanChooseFiles:mbChooseFiles];
+			[pOpenPanel setResolvesAliases:YES];
+
+			if ( mbChooseFiles )
+			{
+				[pOpenPanel setCanChooseDirectories:NO];
+				[pOpenPanel setTreatsFilePackagesAsDirectories:YES];
+			}
+			else
+			{
+				[pOpenPanel setCanChooseDirectories:YES];
+				[pOpenPanel setTreatsFilePackagesAsDirectories:NO];
+			}
+		}
+		else
+		{
+			[mpFilePanel setTreatsFilePackagesAsDirectories:NO];
+		}
+	}
 
 	// Create filter options checkbox
 	if ( mbShowFilterOptions )
@@ -150,6 +184,24 @@
 			[pButton setState:NSOffState];
 			[pButton setTitle:@""];
 			[mpControls setValue:pButton forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILTEROPTIONS] stringValue]];
+		}
+	}
+
+	// Create image template popup
+	if ( mbShowImageTemplate )
+	{
+		NSPopUpButton *pPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
+		if ( pPopup )
+			[mpControls setValue:pPopup forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_IMAGE_TEMPLATE] stringValue]];
+
+		NSTextField *pTextField = [[NSTextField alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
+		if ( pTextField )
+		{
+			[pTextField setBordered:NO];
+			[pTextField setDrawsBackground:NO];
+			[pTextField setEditable:NO];
+			[pTextField setSelectable:NO];
+			[mpTextFields setValue:pTextField forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_IMAGE_TEMPLATE] stringValue]];
 		}
 	}
 
@@ -179,19 +231,6 @@
 		}
 	}
 
-	// Create preview checkbox
-	if ( mbShowPreview )
-	{
-		NSButton *pButton = [[NSButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
-		if ( pButton )
-		{
-			[pButton setButtonType:NSSwitchButton];
-			[pButton setState:NSOffState];
-			[pButton setTitle:@""];
-			[mpControls setValue:pButton forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_PREVIEW] stringValue]];
-		}
-	}
-
 	// Create read only checkbox
 	if ( mbShowReadOnly )
 	{
@@ -215,6 +254,42 @@
 			[pButton setState:NSOffState];
 			[pButton setTitle:@""];
 			[mpControls setValue:pButton forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_SELECTION] stringValue]];
+		}
+	}
+
+	// Create template popup
+	if ( mbShowTemplate )
+	{
+		NSPopUpButton *pPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
+		if ( pPopup )
+			[mpControls setValue:pPopup forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_TEMPLATE] stringValue]];
+
+		NSTextField *pTextField = [[NSTextField alloc] initWithFrame:NSMakeRect( 0, 0, 1000, 0 )];
+		if ( pTextField )
+		{
+			[pTextField setBordered:NO];
+			[pTextField setDrawsBackground:NO];
+			[pTextField setEditable:NO];
+			[pTextField setSelectable:NO];
+			[mpTextFields setValue:pTextField forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_TEMPLATE] stringValue]];
+		}
+	}
+
+	// Create template popup
+	if ( mbShowVersion )
+	{
+		NSPopUpButton *pPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
+		if ( pPopup )
+			[mpControls setValue:pPopup forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_VERSION] stringValue]];
+
+		NSTextField *pTextField = [[NSTextField alloc] initWithFrame:NSMakeRect( 0, 0, 1000, 0 )];
+		if ( pTextField )
+		{
+			[pTextField setBordered:NO];
+			[pTextField setDrawsBackground:NO];
+			[pTextField setEditable:NO];
+			[pTextField setSelectable:NO];
+			[mpTextFields setValue:pTextField forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_VERSION] stringValue]];
 		}
 	}
 
@@ -251,6 +326,13 @@
 		if ( pButton )
 			pRet = [pButton title];
 	}
+	else if ( nCocoaControlType == COCOA_CONTROL_TYPE_POPUP )
+	{
+		NSTextField *pTextField = (NSTextField *)[mpTextFields objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
+		if ( pTextField )
+			pRet = [pTextField stringValue];
+	}
+
 
 	return pRet;
 }
@@ -263,9 +345,6 @@
 - (void)showFileDialog:(id)pObject;
 {
 	mnResult = NSCancelButton;
-
-	[mpFilePanel setCanCreateDirectories:YES];
-	[mpFilePanel setCanSelectHiddenExtension:mbShowAutoExtension];
 
 	// Create accessory view
 	NSView *pAccessoryView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 0, 0)];
@@ -282,13 +361,45 @@
 			NSControl *pControl = (NSControl *)[mpControls objectForKey:[[NSNumber numberWithInt:i] stringValue]];
 			if ( pControl )
 			{
-				[pControl setFrameOrigin:NSMakePoint( 0, nCurrentY )];
+				float nTextWidth = 0;
+				float nTextHeight = 0;
+				NSTextField *pTextField = nil;
+				if ( NSFileDialog_controlType( i ) == COCOA_CONTROL_TYPE_POPUP )
+				{
+					pTextField = (NSTextField *)[mpTextFields objectForKey:[[NSNumber numberWithInt:i] stringValue]];
+					if ( pTextField )
+					{
+						[pTextField setFrameOrigin:NSMakePoint( 0, nCurrentY )];
+						[pTextField sizeToFit];
+						nTextWidth = [pTextField bounds].size.width;
+						nTextHeight = [pTextField bounds].size.height;
+					}
+				}
+
+				[pControl setFrameOrigin:NSMakePoint( nTextWidth, nCurrentY )];
 				[pControl sizeToFit];
-				nCurrentY += [pControl bounds].size.height;
-				float nWidth = [pControl bounds].size.width;
-				if ( nWidth > nCurrentWidth )
+				float nWidth = nTextWidth + [pControl bounds].size.width;
+				if ( nCurrentWidth < nWidth )
 					nCurrentWidth = nWidth;
+
+				// Adjust text label vertically to match popup position
+				float nHeight = [pControl bounds].size.height;
+				if ( pTextField )
+				{
+					if ( nHeight < nTextHeight )
+						[pControl setFrameOrigin:NSMakePoint( 0, nCurrentY + ( ( nTextHeight - nHeight ) / 2 ) )];
+					else
+						[pTextField setFrameOrigin:NSMakePoint( 0, nCurrentY + ( ( nHeight - nTextHeight ) / 2 ) )];
+					[pAccessoryView addSubview:pTextField];
+				}
+
+				if ( nHeight < nTextHeight )
+					nCurrentY += nTextHeight;
+				else
+					nCurrentY += nHeight;
+
 				[pAccessoryView addSubview:pControl];
+					
 			}
 		}
 
@@ -302,27 +413,10 @@
 		if ( mbUseFileOpenDialog )
 		{
 			NSOpenPanel *pOpenPanel = (NSOpenPanel *)mpFilePanel;
-
-			[pOpenPanel setCanChooseFiles:mbChooseFiles];
-			[pOpenPanel setResolvesAliases:YES];
-
-			if ( mbChooseFiles )
-			{
-				[pOpenPanel setCanChooseDirectories:NO];
-				[pOpenPanel setTreatsFilePackagesAsDirectories:YES];
-			}
-			else
-			{
-				[pOpenPanel setCanChooseDirectories:YES];
-				[pOpenPanel setTreatsFilePackagesAsDirectories:NO];
-			}
-
 			mnResult = [pOpenPanel runModalForDirectory:nil file:nil types:nil];
 		}
 		else
 		{
-			[mpFilePanel setTreatsFilePackagesAsDirectories:NO];
-
 			mnResult = [mpFilePanel runModalForDirectory:nil file:nil];
 		}
 
@@ -376,6 +470,12 @@
 		if ( pButton )
 			[pButton setTitle:pLabel];
 	}
+	else if ( nCocoaControlType == COCOA_CONTROL_TYPE_POPUP )
+	{
+		NSTextField *pTextField = (NSTextField *)[mpTextFields objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
+		if ( pTextField )
+			[pTextField setStringValue:pLabel];
+	}
 }
 
 - (void)setMultiSelectionMode:(BOOL)bMultiSelectionMode
@@ -418,13 +518,13 @@ int NSFileDialog_controlType( int nID )
 	return nRet;
 }
 
-id NSFileDialog_create( BOOL bUseFileOpenDialog, BOOL bChooseFiles, BOOL bShowAutoExtension, BOOL bShowFilterOptions, BOOL bShowImageTemplate, BOOL bShowLink, BOOL bShowPassword, BOOL bShowPreview, BOOL bShowReadOnly, BOOL bShowSelection, BOOL bShowTemplate, BOOL bShowVersion )
+id NSFileDialog_create( BOOL bUseFileOpenDialog, BOOL bChooseFiles, BOOL bShowAutoExtension, BOOL bShowFilterOptions, BOOL bShowImageTemplate, BOOL bShowLink, BOOL bShowPassword, BOOL bShowReadOnly, BOOL bShowSelection, BOOL bShowTemplate, BOOL bShowVersion )
 {
 	ShowFileDialog *pRet = nil;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	pRet = [[ShowFileDialog alloc] initWithOptions:bUseFileOpenDialog chooseFiles:bChooseFiles showAutoExtension:bShowAutoExtension showFilterOptions:bShowFilterOptions showImageTemplate:bShowImageTemplate showLink:bShowLink showPassword:bShowPassword showPreview:bShowPreview showReadOnly:bShowReadOnly showSelction:bShowSelection showTemplate:bShowTemplate showVersion:bShowVersion];
+	pRet = [[ShowFileDialog alloc] initWithOptions:bUseFileOpenDialog chooseFiles:bChooseFiles showAutoExtension:bShowAutoExtension showFilterOptions:bShowFilterOptions showImageTemplate:bShowImageTemplate showLink:bShowLink showPassword:bShowPassword showReadOnly:bShowReadOnly showSelction:bShowSelection showTemplate:bShowTemplate showVersion:bShowVersion];
 	if ( pRet )
 		[pRet retain];
 

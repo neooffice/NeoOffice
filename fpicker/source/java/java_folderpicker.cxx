@@ -84,7 +84,7 @@ Reference< XInterface > SAL_CALL JavaFolderPicker_createInstance( const Referenc
 
 JavaFolderPicker::JavaFolderPicker( const Reference< XMultiServiceFactory >& xServiceMgr ) : WeakComponentImplHelper3< XFolderPicker, XServiceInfo, XCancellable >( maMutex )
 {
-	mpDialog = NSFileDialog_create( TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE );
+	mpDialog = NSFileDialog_create( TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE );
 	if ( !mpDialog )
 		throw NullPointerException();
 }

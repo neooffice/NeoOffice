@@ -419,19 +419,7 @@ void SAL_CALL JavaFilePicker::setLabel( sal_Int16 nControlId, const OUString& aL
 	if ( !aString )
 		return;
 
-	CocoaControlID nCocoaControlId = GetCocoaControlId( nControlId );
-	int nCocoaControlType = NSFileDialog_controlType( nCocoaControlId );
-	switch ( nCocoaControlType )
-	{
-		case COCOA_CONTROL_TYPE_CHECKBOX:
-			NSFileDialog_setLabel( mpDialog, nCocoaControlId, aString );
-			break;
-		default:
-#ifdef DEBUG
-			fprintf( stderr, "JavaFilePicker::setLabel: %i not implemented\n", nControlId );
-#endif
-			break;
-	}
+	NSFileDialog_setLabel( mpDialog, GetCocoaControlId( nControlId ), aString );
 
 	CFRelease( aString );
 }
@@ -444,28 +432,16 @@ OUString SAL_CALL JavaFilePicker::getLabel( sal_Int16 nControlId ) throw( Runtim
 
 	OUString aRet;
 
-	CocoaControlID nCocoaControlId = GetCocoaControlId( nControlId );
-	int nCocoaControlType = NSFileDialog_controlType( nCocoaControlId );
-	switch ( nCocoaControlType )
+	CFStringRef aString = NSFileDialog_label( mpDialog, GetCocoaControlId( nControlId ) );
+	if ( aString )
 	{
-		case COCOA_CONTROL_TYPE_CHECKBOX:
-			CFStringRef aString = NSFileDialog_label( mpDialog, nCocoaControlId );
-			if ( aString )
-			{
-				CFIndex nLen = CFStringGetLength( aString );
-				CFRange aRange = CFRangeMake( 0, nLen );
-				sal_Unicode pBuffer[ nLen + 1 ];
-				CFStringGetCharacters( aString, aRange, pBuffer );
-				pBuffer[ nLen ] = 0;
-				CFRelease( aString );
-				aRet = OUString( pBuffer );
-			}
-			break;
-		default:
-#ifdef DEBUG
-			fprintf( stderr, "JavaFilePicker::getLabel: %i not implemented\n", nControlId );
-#endif
-			break;
+		CFIndex nLen = CFStringGetLength( aString );
+		CFRange aRange = CFRangeMake( 0, nLen );
+		sal_Unicode pBuffer[ nLen + 1 ];
+		CFStringGetCharacters( aString, aRange, pBuffer );
+		pBuffer[ nLen ] = 0;
+		CFRelease( aString );
+		aRet = OUString( pBuffer );
 	}
 
 	return aRet;
@@ -562,6 +538,7 @@ void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments ) th
     BOOL bShowImageTemplate = FALSE;
     BOOL bShowLink = FALSE;
     BOOL bShowPassword = FALSE;
+    BOOL bShowPlay = FALSE;
     BOOL bShowPreview = FALSE;
     BOOL bShowReadOnly = FALSE;
     BOOL bShowSelection = FALSE;
@@ -604,6 +581,7 @@ void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments ) th
 			bShowPreview = TRUE;
 			break;
 		case TemplateDescription::FILEOPEN_PLAY:        
+			bShowPlay = TRUE;
 			break;
 		case TemplateDescription::FILEOPEN_READONLY_VERSION:
 			bShowReadOnly = TRUE;
@@ -621,7 +599,7 @@ void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments ) th
 			throw IllegalArgumentException( OUString::createFromAscii( "Unknown template" ), static_cast< XFilePicker* >( this ), 1 );
     }
 
-	mpDialog = NSFileDialog_create( bUseFileOpenDialog, TRUE, bShowAutoExtension, bShowFilterOptions, bShowImageTemplate, bShowLink, bShowPassword, bShowPreview, bShowReadOnly, bShowSelection, bShowTemplate, bShowVersion );
+	mpDialog = NSFileDialog_create( bUseFileOpenDialog, TRUE, bShowAutoExtension, bShowFilterOptions, bShowImageTemplate, bShowLink, bShowPassword, bShowReadOnly, bShowSelection, bShowTemplate, bShowVersion );
 	if ( !mpDialog )
 		throw NullPointerException();
 
@@ -630,6 +608,16 @@ void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments ) th
 	{
 		OUString aLabel( mpResMgr->ReadString( STR_SVT_FILEPICKER_FILTER_OPTIONS ) );
 		setLabel( ExtendedFilePickerElementIds::CHECKBOX_FILTEROPTIONS, aLabel );
+	}
+	if ( bShowImageTemplate )
+	{
+		OUString aLabel( mpResMgr->ReadString( STR_SVT_FILEPICKER_IMAGE_TEMPLATE ) );
+		setLabel( ExtendedFilePickerElementIds::LISTBOX_IMAGE_TEMPLATE, aLabel );
+	}
+	if ( bShowLink )
+	{
+		OUString aLabel( mpResMgr->ReadString( STR_SVT_FILEPICKER_INSERT_AS_LINK ) );
+		setLabel( ExtendedFilePickerElementIds::CHECKBOX_LINK, aLabel );
 	}
 	if ( bShowLink )
 	{
@@ -641,11 +629,6 @@ void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments ) th
 		OUString aLabel( mpResMgr->ReadString( STR_SVT_FILEPICKER_PASSWORD ) );
 		setLabel( ExtendedFilePickerElementIds::CHECKBOX_PASSWORD, aLabel );
 	}
-	if ( bShowPreview )
-	{
-		OUString aLabel( mpResMgr->ReadString( STR_SVT_FILEPICKER_SHOW_PREVIEW ) );
-		setLabel( ExtendedFilePickerElementIds::CHECKBOX_PREVIEW, aLabel );
-	}
 	if ( bShowReadOnly )
 	{
 		OUString aLabel( mpResMgr->ReadString( STR_SVT_FILEPICKER_READONLY ) );
@@ -655,6 +638,16 @@ void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments ) th
 	{
 		OUString aLabel( mpResMgr->ReadString( STR_SVT_FILEPICKER_SELECTION ) );
 		setLabel( ExtendedFilePickerElementIds::CHECKBOX_SELECTION, aLabel );
+	}
+	if ( bShowTemplate )
+	{
+		OUString aLabel( mpResMgr->ReadString( STR_SVT_FILEPICKER_TEMPLATES ) );
+		setLabel( ExtendedFilePickerElementIds::LISTBOX_IMAGE_TEMPLATE, aLabel );
+	}
+	if ( bShowVersion )
+	{
+		OUString aLabel( mpResMgr->ReadString( STR_SVT_FILEPICKER_VERSION ) );
+		setLabel( ExtendedFilePickerElementIds::LISTBOX_VERSION, aLabel );
 	}
 }
 
