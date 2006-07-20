@@ -45,6 +45,7 @@ static NSString *pBlankItem = @" ";
 {
 	BOOL					mbChooseFiles;
 	NSMutableDictionary*	mpControls;
+	NSString*				mpDefaultName;
 	NSSavePanel*			mpFilePanel;
 	NSMutableDictionary*	mpFilters;
 	int						mnResult;
@@ -66,6 +67,7 @@ static NSString *pBlankItem = @" ";
 - (int)selectedItemIndex:(int)nID;
 - (NSString *)selectedFilter;
 - (void)setChecked:(int)nID checked:(BOOL)bChecked;
+- (void)setDefaultName:(NSString *)pName;
 - (void)setDirectory:(NSString *)pDirectory;
 - (void)setEnabled:(int)nID enabled:(BOOL)bEnabled;
 - (void)setLabel:(int)nID label:(NSString *)pLabel;
@@ -145,6 +147,9 @@ static NSString *pBlankItem = @" ";
 	if ( mpControls )
 		[mpControls release];
 
+	if ( mpDefaultName )
+		[mpDefaultName release];
+
 	if ( mpFilePanel )
 		[mpFilePanel release];
 
@@ -218,6 +223,7 @@ static NSString *pBlankItem = @" ";
 	[super init];
 
 	mbChooseFiles = bChooseFiles;
+	mpDefaultName = nil;
 	mnResult = NSCancelButton;
 	mbUseFileOpenDialog = bUseFileOpenDialog;
 
@@ -520,6 +526,21 @@ static NSString *pBlankItem = @" ";
 	}
 }
 
+- (void)setDefaultName:(NSString *)pName
+{
+	if ( mpDefaultName )
+	{
+		[mpDefaultName release];
+		mpDefaultName = nil;
+	}
+
+	if ( pName )
+	{
+		[pName retain];
+		mpDefaultName = pName;
+	}
+}
+
 - (void)setDirectory:(NSString *)pDirectory
 {
 	[mpFilePanel setDirectory:pDirectory];
@@ -655,11 +676,11 @@ static NSString *pBlankItem = @" ";
 		if ( mbUseFileOpenDialog )
 		{
 			NSOpenPanel *pOpenPanel = (NSOpenPanel *)mpFilePanel;
-			mnResult = [pOpenPanel runModalForDirectory:nil file:nil types:nil];
+			mnResult = [pOpenPanel runModalForDirectory:[pOpenPanel directory] file:mpDefaultName types:[pOpenPanel allowedFileTypes]];
 		}
 		else
 		{
-			mnResult = [mpFilePanel runModalForDirectory:nil file:nil];
+			mnResult = [mpFilePanel runModalForDirectory:[mpFilePanel directory] file:mpDefaultName];
 		}
 
 		[mpFilePanel setAccessoryView:pOldAccessoryView];
@@ -1004,6 +1025,16 @@ void NSFileDialog_setChecked( id pDialog, int nID, BOOL bChecked )
 
 	if ( pDialog )
 		[(ShowFileDialog *)pDialog setChecked:nID checked:bChecked];
+
+	[pPool release];
+}
+
+void NSFileDialog_setDefaultName( id pDialog, CFStringRef aName )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pDialog )
+		[(ShowFileDialog *)pDialog setDefaultName:(NSString *)aName];
 
 	[pPool release];
 }

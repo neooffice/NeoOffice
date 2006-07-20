@@ -81,27 +81,6 @@ using namespace java;
 
 // ========================================================================
 
-    struct ResMgrHolder
-    {
-        ResMgr * operator ()()
-        {
-            return ResMgr::CreateResMgr (CREATEVERSIONRESMGR_NAME(fps_office));
-        }
- 
-        static ResMgr * getOrCreate()
-        {
-            return rtl_Instance<
-                ResMgr, ResMgrHolder,
-                osl::MutexGuard, osl::GetGlobalMutex >::create (
-                    ResMgrHolder(), osl::GetGlobalMutex());
-        } 
-    };
- 
-    struct SvtResId : public ResId 
-    { 
-        SvtResId (USHORT nId) : ResId (nId, ResMgrHolder::getOrCreate()) {}
-    };
-
 CocoaControlID GetCocoaControlId( sal_Int16 nControlId )
 {
 	CocoaControlID nRet = MAX_COCOA_CONTROL_ID;
@@ -251,9 +230,14 @@ void SAL_CALL JavaFilePicker::setMultiSelectionMode( sal_Bool bMode ) throw( Run
 
 void SAL_CALL JavaFilePicker::setDefaultName( const OUString& aName ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::setDefaultName not implemented\n" );
-#endif
+    Guard< Mutex > aGuard( maMutex );
+
+	CFStringRef aString = CFStringCreateWithCharacters( NULL, aName.getStr(), aName.getLength() );
+	if ( aString )
+	{
+		NSFileDialog_setDefaultName( mpDialog, aString );
+		CFRelease( aString );
+	}
 }
 
 // ------------------------------------------------------------------------

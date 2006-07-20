@@ -91,6 +91,7 @@ CFStringRef NSFileDialog_selectedFilter( id pDialog );
 CFStringRef NSFileDialog_selectedItem( id pDialog, int nID );
 int NSFileDialog_selectedItemIndex( id pDialog, int nID );
 void NSFileDialog_setChecked( id pDialog, int nID, BOOL bChecked );
+void NSFileDialog_setDefaultName( id pDialog, CFStringRef aName );
 void NSFileDialog_setDirectory( id pDialog, CFStringRef aDirectory );
 void NSFileDialog_setEnabled( id pDialog, int nID, BOOL bEnabled );
 void NSFileDialog_setLabel( id pDialog, int nID, CFStringRef aLabel );
