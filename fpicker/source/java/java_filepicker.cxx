@@ -38,6 +38,9 @@
 #ifndef _JAVA_FILEPICKER_HXX_
 #include "java_filepicker.hxx"
 #endif
+#ifndef _JAVA_SERVICE_HXX_
+#include "java_service.hxx"
+#endif
 #ifndef  _COM_SUN_STAR_UI_DIALOGS_EXTENDEDFILEPICKERELEMENTIDS_HPP_
 #include <com/sun/star/ui/dialogs/ExtendedFilePickerElementIds.hpp>
 #endif
@@ -142,7 +145,7 @@ Sequence< OUString > SAL_CALL JavaFilePicker_getSupportedServiceNames()
 {
 	Sequence< OUString > aRet( 2 );
 	aRet[0] = OUString::createFromAscii( "com.sun.star.ui.dialogs.FilePicker" );
-	aRet[1] = OUString::createFromAscii( "com.sun.star.ui.dialogs.SystemFilePicker" );
+	aRet[1] = OUString::createFromAscii( FILE_PICKER_SERVICE_NAME );
 	return aRet;
 }
 
@@ -480,9 +483,6 @@ void SAL_CALL JavaFilePicker::setValue( sal_Int16 nControlId, sal_Int16 nControl
 			}
 			break;
 		default:
-#ifdef DEBUG
-			fprintf( stderr, "JavaFilePicker::setValue: %i not implemented\n", nControlId );
-#endif
 			break;
 	}
 }
@@ -556,9 +556,6 @@ Any SAL_CALL JavaFilePicker::getValue( sal_Int16 nControlId, sal_Int16 nControlA
 			}
 			break;
 		default:
-#ifdef DEBUG
-			fprintf( stderr, "JavaFilePicker::getValue: %i not implemented\n", nControlId );
-#endif
 			break;
 	}
 
@@ -571,19 +568,7 @@ void SAL_CALL JavaFilePicker::enableControl( sal_Int16 nControlId, sal_Bool bEna
 {
     Guard< Mutex > aGuard( maMutex );
 
-	CocoaControlID nCocoaControlId = GetCocoaControlId( nControlId );
-	int nCocoaControlType = NSFileDialog_controlType( nCocoaControlId );
-	switch ( nCocoaControlType )
-	{
-		case COCOA_CONTROL_TYPE_CHECKBOX:
-			NSFileDialog_setEnabled( mpDialog, nCocoaControlId, bEnable );
-			break;
-		default:
-#ifdef DEBUG
-			fprintf( stderr, "JavaFilePicker::enableControl: %i not implemented\n", nControlId );
-#endif
-			break;
-	}
+	NSFileDialog_setEnabled( mpDialog, GetCocoaControlId( nControlId ), bEnable );
 }
 
 // ------------------------------------------------------------------------
@@ -631,9 +616,7 @@ OUString SAL_CALL JavaFilePicker::getLabel( sal_Int16 nControlId ) throw( Runtim
 
 Sequence< sal_Int16 > SAL_CALL JavaFilePicker::getSupportedImageFormats() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::getSupportedImageFormats not implemented\n" );
-#endif
+	// The native Cocoa file dialog does all previewing for us
 	return Sequence< sal_Int16 >();
 }
 
@@ -671,18 +654,14 @@ sal_Int32 SAL_CALL JavaFilePicker::getAvailableHeight() throw( RuntimeException 
 
 void SAL_CALL JavaFilePicker::setImage( sal_Int16 aImageFormat, const Any& aImage ) throw( IllegalArgumentException, RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::setImage not implemented\n" );
-#endif
+	// The native Cocoa file dialog does all previewing for us
 }
 
 // ------------------------------------------------------------------------
 
 sal_Bool SAL_CALL JavaFilePicker::setShowState( sal_Bool bShowState ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::setShowState not implemented\n" );
-#endif
+	// Previewing is done by the native Cocoa file dialog
 	return sal_False;
 }
 
@@ -690,9 +669,7 @@ sal_Bool SAL_CALL JavaFilePicker::setShowState( sal_Bool bShowState ) throw( Run
 
 sal_Bool SAL_CALL JavaFilePicker::getShowState() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::getShowState not implemented\n" );
-#endif
+	// Previewing is done by the native Cocoa file dialog
 	return sal_False;
 }
 
@@ -718,13 +695,14 @@ void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments ) th
     BOOL bShowImageTemplate = FALSE;
     BOOL bShowLink = FALSE;
     BOOL bShowPassword = FALSE;
-    BOOL bShowPlay = FALSE;
-    BOOL bShowPreview = FALSE;
     BOOL bShowReadOnly = FALSE;
     BOOL bShowSelection = FALSE;
     BOOL bShowTemplate = FALSE;
     BOOL bShowVersion = FALSE;
 
+	// Determine which native Cocoa controls to show. Note that we do not
+	// do anything if the preview or play settings are set as the Mac OS X
+	// native Cocoa file dialog already handles these functions.
 	sal_Int16 nType = -1;
 	aAny >>= nType;
 	switch ( nType )
@@ -758,10 +736,8 @@ void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments ) th
 		case TemplateDescription::FILEOPEN_LINK_PREVIEW_IMAGE_TEMPLATE:
 			bShowLink = TRUE;
 			bShowImageTemplate = TRUE;
-			bShowPreview = TRUE;
 			break;
 		case TemplateDescription::FILEOPEN_PLAY:        
-			bShowPlay = TRUE;
 			break;
 		case TemplateDescription::FILEOPEN_READONLY_VERSION:
 			bShowReadOnly = TRUE;
@@ -769,7 +745,6 @@ void SAL_CALL JavaFilePicker::initialize( const Sequence< Any >& aArguments ) th
 			break;
 		case TemplateDescription::FILEOPEN_LINK_PREVIEW:
 			bShowLink = TRUE;
-			bShowPreview = TRUE;
 			break;
 		case TemplateDescription::FILESAVE_AUTOEXTENSION:
 			bUseFileOpenDialog = FALSE;
@@ -865,10 +840,7 @@ void SAL_CALL JavaFilePicker::disposing( const EventObject& aEvent ) throw( Runt
 
 OUString SAL_CALL JavaFilePicker::getImplementationName() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::getImplementationName not implemented\n" );
-#endif
-	return OUString();
+	return OUString::createFromAscii( FILE_PICKER_IMPL_NAME );
 }
 
 // ------------------------------------------------------------------------
@@ -929,9 +901,7 @@ void SAL_CALL JavaFilePicker::directoryChanged( FilePickerEvent aEvent )
 
 OUString SAL_CALL JavaFilePicker::helpRequested( FilePickerEvent aEvent ) const
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFilePicker::helpRequested not implemented\n" );
-#endif
+	// The native Cocoa file dialog does not have any help buttons
 	return OUString();
 }
 

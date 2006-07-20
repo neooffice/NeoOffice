@@ -38,6 +38,9 @@
 #ifndef _JAVA_FOLDERPICKER_HXX_
 #include "java_folderpicker.hxx"
 #endif
+#ifndef _JAVA_SERVICE_HXX_
+#include "java_service.hxx"
+#endif
 #ifndef _COM_SUN_STAR_LANG_NULLPOINTEREXCEPTION_HPP_
 #include <com/sun/star/lang/NullPointerException.hpp>
 #endif
@@ -67,7 +70,7 @@ Sequence< OUString > SAL_CALL JavaFolderPicker_getSupportedServiceNames()
 {
 	Sequence< OUString > aRet( 2 );
 	aRet[0] = OUString::createFromAscii( "com.sun.star.ui.dialogs.FolderPicker" );
-	aRet[1] = OUString::createFromAscii( "com.sun.star.ui.dialogs.SystemFolderPicker" );
+	aRet[1] = OUString::createFromAscii( FOLDER_PICKER_SERVICE_NAME );
 	return aRet;
 }
  
@@ -213,10 +216,7 @@ void SAL_CALL JavaFolderPicker::setDescription( const OUString& rDescription ) t
 
 OUString SAL_CALL JavaFolderPicker::getImplementationName() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaFolderPicker::getImplementationName not implemented\n" );
-#endif
-	return OUString();
+	return OUString::createFromAscii( FOLDER_PICKER_IMPL_NAME );
 }
 
 // ------------------------------------------------------------------------
