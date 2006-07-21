@@ -48,21 +48,24 @@ static NSString *pBlankItem = @" ";
 	NSString*				mpDefaultName;
 	NSSavePanel*			mpFilePanel;
 	NSMutableDictionary*	mpFilters;
+	void*					mpPicker;
 	int						mnResult;
 	NSMutableDictionary*	mpTextFields;
 	BOOL					mbUseFileOpenDialog;
 }
 - (void)addFilter:(NSString *)pItem filter:(NSString *)pFilter;
 - (void)addItem:(int)nID item:(NSString *)pItem;
-- (void)cancel;
+- (void)cancel:(id)pObject;
 - (void)dealloc;
 - (void)deleteItem:(int)nID item:(NSString *)pItem;
 - (NSString *)directory;
 - (NSArray *)filenames;
 - (NSArray *)items:(int)nID;
-- (id)initWithOptions:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion;
+- (id)initWithPicker:(void *)pPicker useFileOpenDialog:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion;
 - (BOOL)isChecked:(int)nID;
 - (NSString *)label:(int)nID;
+- (BOOL)panel:(id)pObject shouldShowFilename:(NSString *)pFilename;
+- (void *)picker;
 - (int)result;
 - (NSString *)selectedItem:(int)nID;
 - (int)selectedItemIndex:(int)nID;
@@ -77,6 +80,15 @@ static NSString *pBlankItem = @" ";
 - (void)setSelectedItem:(int)nID item:(int)nItem;
 - (void)setTitle:(NSString *)pTitle;
 - (void)showFileDialog:(id)pObject;
+@end
+
+@interface ShowDialogPopUpButtonCell : NSPopUpButtonCell
+{
+	int						mnID;
+	ShowFileDialog*			mpDialog;
+}
+- (void)dismissPopUp;
+- (id)initWithShowFileDialog:(ShowFileDialog *)pDialog control:(int)nID;
 @end
 
 @implementation ShowFileDialog
@@ -98,22 +110,25 @@ static NSString *pBlankItem = @" ";
 			for ( ; i < nCount; i++ )
 			{
 				NSString *pCurrentFilter = [pArray objectAtIndex:i];
-				NSRange aRange = [pCurrentFilter rangeOfString:@"." options:NSLiteralSearch | NSBackwardsSearch];
-				if ( aRange.location != NSNotFound )
+				NSArray *pSplit = [pCurrentFilter componentsSeparatedByString:@"."];
+				if ( pSplit )
 				{
-					pCurrentFilter = [pCurrentFilter substringFromIndex:aRange.location + 1];
-					[pArray insertObject:pCurrentFilter atIndex:i];
+					int nLen = [pSplit count];
+					if ( nLen )
+						pCurrentFilter = [pSplit objectAtIndex:nLen - 1];
 				}
 
-				if ( [pCurrentFilter isEqualToString:@"*"] )
+				if ( !pCurrentFilter || [pCurrentFilter isEqualToString:@"*"] )
 				{
 					bAllowAll = YES;
 					break;
 				}
+
+				[pArray replaceObjectAtIndex:i withObject:pCurrentFilter];
 			}
 
 			if ( !bAllowAll )
-				[mpFilters setValue:pFilters forKey:pFilter];
+				[mpFilters setValue:pArray forKey:pItem];
 		}
 	}
 
@@ -143,9 +158,9 @@ static NSString *pBlankItem = @" ";
 	}
 }
 
-- (void)cancel
+- (void)cancel:(id)pObject;
 {
-	[mpFilePanel cancel:self];
+	[mpFilePanel cancel:pObject];
 }
 
 - (void)dealloc
@@ -157,7 +172,10 @@ static NSString *pBlankItem = @" ";
 		[mpDefaultName release];
 
 	if ( mpFilePanel )
+	{
+		[mpFilePanel setDelegate:nil];
 		[mpFilePanel release];
+	}
 
 	if ( mpFilters )
 		[mpFilters release];
@@ -224,12 +242,13 @@ static NSString *pBlankItem = @" ";
 	return pRet;
 }
 
-- (id)initWithOptions:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion
+- (id)initWithPicker:(void *)pPicker useFileOpenDialog:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion
 {
 	[super init];
 
 	mbChooseFiles = bChooseFiles;
 	mpDefaultName = nil;
+	mpPicker = pPicker;
 	mnResult = NSCancelButton;
 	mbUseFileOpenDialog = bUseFileOpenDialog;
 
@@ -254,6 +273,7 @@ static NSString *pBlankItem = @" ";
 	{
 		[mpFilePanel retain];
 
+		[mpFilePanel setDelegate:self];
 		[mpFilePanel setCanCreateDirectories:YES];
 		[mpFilePanel setCanSelectHiddenExtension:bShowAutoExtension];
 
@@ -287,6 +307,11 @@ static NSString *pBlankItem = @" ";
 		NSPopUpButton *pPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 ) pullsDown:NO];
 		if ( pPopup )
 		{
+			// Swap in our own custom cell instance to handle selection changes
+			ShowDialogPopUpButtonCell *pCell = [[ShowDialogPopUpButtonCell alloc] initWithShowFileDialog:self control:COCOA_CONTROL_ID_FILETYPE];
+			if ( pCell )
+				[pPopup setCell:pCell];
+
 			[pPopup addItemWithTitle:pBlankItem];
 			[mpControls setValue:pPopup forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILETYPE] stringValue]];
 		}
@@ -471,6 +496,64 @@ static NSString *pBlankItem = @" ";
 	}
 
 	return pRet;
+}
+
+- (BOOL)panel:(id)pObject shouldShowFilename:(NSString *)pFilename
+{
+	BOOL bRet = NO;
+
+	NSFileManager *pFileManager = [NSFileManager defaultManager];
+	if ( pFileManager )
+	{
+		BOOL bDir = NO;
+		if ( [pFileManager fileExistsAtPath:pFilename isDirectory:&bDir] )
+		{
+			if ( bDir )
+			{
+				bRet = YES;
+			}
+			else if ( mbChooseFiles )
+			{
+				NSArray *pArray = [mpFilePanel allowedFileTypes];
+				if ( pArray )
+				{
+					NSArray *pSplit = [pFilename componentsSeparatedByString:@"."];
+					if ( pSplit )
+					{
+						int nLen = [pSplit count];
+						if ( nLen )
+						{
+							NSString *pExt = (NSString *)[pSplit objectAtIndex:nLen - 1];
+							if ( pExt )
+							{
+								int nCount = [pArray count];
+								int i = 0;
+								for ( ; i < nCount; i++ )
+								{
+									if ( [pExt isEqualToString:[pArray objectAtIndex:i]] )
+									{
+										bRet = YES;
+										break;
+									}
+								}
+							}
+						}
+					}
+				}
+				else
+				{
+					bRet = YES;
+				}
+			}
+		}
+	}
+
+	return bRet;
+}
+
+- (void *)picker
+{
+	return mpPicker;
 }
 
 - (int)result;
@@ -702,6 +785,35 @@ static NSString *pBlankItem = @" ";
 
 @end
 
+@implementation ShowDialogPopUpButtonCell
+
+- (void)dismissPopUp
+{
+	[super dismissPopUp];
+
+	if ( mpDialog )
+	{
+		void *pPicker = [mpDialog picker];
+		if ( pPicker )
+			JavaFilePicker_controlStateChanged( mnID, pPicker );
+
+		// Update filtering
+		[mpDialog setSelectedFilter:[mpDialog selectedFilter]];
+	}
+}
+
+- (id)initWithShowFileDialog:(ShowFileDialog *)pDialog control:(int)nID
+{
+	[super initTextCell:pBlankItem pullsDown:NO];
+
+	mnID = nID;
+	mpDialog = pDialog;
+
+	return self;
+}
+
+@end
+
 int NSFileDialog_controlType( int nID )
 {
 	int nRet = MAX_COCOA_CONTROL_TYPE;
@@ -756,18 +868,18 @@ void NSFileDialog_cancel( id pDialog )
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pDialog )
-		[(ShowFileDialog *)pDialog cancel];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(cancel:) withObject:pDialog waitUntilDone:YES];
 
 	[pPool release];
 }
 
-id NSFileDialog_create( BOOL bUseFileOpenDialog, BOOL bChooseFiles, BOOL bShowAutoExtension, BOOL bShowFilterOptions, BOOL bShowImageTemplate, BOOL bShowLink, BOOL bShowPassword, BOOL bShowReadOnly, BOOL bShowSelection, BOOL bShowTemplate, BOOL bShowVersion )
+id NSFileDialog_create( void *pPicker, BOOL bUseFileOpenDialog, BOOL bChooseFiles, BOOL bShowAutoExtension, BOOL bShowFilterOptions, BOOL bShowImageTemplate, BOOL bShowLink, BOOL bShowPassword, BOOL bShowReadOnly, BOOL bShowSelection, BOOL bShowTemplate, BOOL bShowVersion )
 {
 	ShowFileDialog *pRet = nil;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	pRet = [[ShowFileDialog alloc] initWithOptions:bUseFileOpenDialog chooseFiles:bChooseFiles showAutoExtension:bShowAutoExtension showFilterOptions:bShowFilterOptions showImageTemplate:bShowImageTemplate showLink:bShowLink showPassword:bShowPassword showReadOnly:bShowReadOnly showSelction:bShowSelection showTemplate:bShowTemplate showVersion:bShowVersion];
+	pRet = [[ShowFileDialog alloc] initWithPicker:pPicker useFileOpenDialog:bUseFileOpenDialog chooseFiles:bChooseFiles showAutoExtension:bShowAutoExtension showFilterOptions:bShowFilterOptions showImageTemplate:bShowImageTemplate showLink:bShowLink showPassword:bShowPassword showReadOnly:bShowReadOnly showSelction:bShowSelection showTemplate:bShowTemplate showVersion:bShowVersion];
 	if ( pRet )
 		[pRet retain];
 

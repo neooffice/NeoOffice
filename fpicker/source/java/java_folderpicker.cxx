@@ -87,7 +87,7 @@ Reference< XInterface > SAL_CALL JavaFolderPicker_createInstance( const Referenc
 
 JavaFolderPicker::JavaFolderPicker( const Reference< XMultiServiceFactory >& xServiceMgr ) : WeakComponentImplHelper3< XFolderPicker, XServiceInfo, XCancellable >( maMutex )
 {
-	mpDialog = NSFileDialog_create( TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE );
+	mpDialog = NSFileDialog_create( NULL, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE );
 	if ( !mpDialog )
 		throw NullPointerException();
 }
@@ -104,8 +104,6 @@ JavaFolderPicker::~JavaFolderPicker()
 
 void SAL_CALL JavaFolderPicker::setTitle( const OUString& aTitle ) throw( RuntimeException )
 {
-    Guard< Mutex > aGuard( maMutex );
-
 	CFStringRef aString = CFStringCreateWithCharacters( NULL, aTitle.getStr(), aTitle.getLength() );
 	if ( aString )
 	{
@@ -131,8 +129,6 @@ sal_Int16 SAL_CALL JavaFolderPicker::execute() throw( RuntimeException )
 
 void SAL_CALL JavaFolderPicker::setDisplayDirectory( const OUString& aDirectory ) throw( IllegalArgumentException, RuntimeException )
 {
-    Guard< Mutex > aGuard( maMutex );
-
 	OUString aPath;
 	File::getSystemPathFromFileURL( aDirectory, aPath );
 	if ( aPath.getLength() )
@@ -150,8 +146,6 @@ void SAL_CALL JavaFolderPicker::setDisplayDirectory( const OUString& aDirectory 
 
 OUString SAL_CALL JavaFolderPicker::getDisplayDirectory() throw( RuntimeException )
 {
-    Guard< Mutex > aGuard( maMutex );
-
 	OUString aRet;
 
 	CFStringRef aString = NSFileDialog_directory( mpDialog );
@@ -174,8 +168,6 @@ OUString SAL_CALL JavaFolderPicker::getDisplayDirectory() throw( RuntimeExceptio
 
 OUString SAL_CALL JavaFolderPicker::getDirectory() throw( RuntimeException )
 {
-    Guard< Mutex > aGuard( maMutex );
-
 	OUString aRet;
 
 	CFStringRef *pFileNames = NSFileDialog_fileNames( mpDialog );
