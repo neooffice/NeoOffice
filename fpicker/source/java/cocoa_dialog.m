@@ -283,17 +283,12 @@ static NSString *pBlankItem = @" ";
 
 			[pOpenPanel setCanChooseFiles:mbChooseFiles];
 			[pOpenPanel setResolvesAliases:YES];
+			[pOpenPanel setTreatsFilePackagesAsDirectories:NO];
 
 			if ( mbChooseFiles )
-			{
 				[pOpenPanel setCanChooseDirectories:NO];
-				[pOpenPanel setTreatsFilePackagesAsDirectories:YES];
-			}
 			else
-			{
 				[pOpenPanel setCanChooseDirectories:YES];
-				[pOpenPanel setTreatsFilePackagesAsDirectories:NO];
-			}
 		}
 		else
 		{
