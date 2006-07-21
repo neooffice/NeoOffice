@@ -316,7 +316,7 @@ static NSString *pBlankItem = @" ";
 			[mpControls setValue:pPopup forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILETYPE] stringValue]];
 		}
 
-		NSTextField *pTextField = [[NSTextField alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
+		NSTextField *pTextField = [[NSTextField alloc] initWithFrame:NSMakeRect( 0, 0, 1000, 0 )];
 		if ( pTextField )
 		{
 			[pTextField setBordered:NO];
@@ -350,7 +350,7 @@ static NSString *pBlankItem = @" ";
 			[mpControls setValue:pPopup forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_IMAGE_TEMPLATE] stringValue]];
 		}
 
-		NSTextField *pTextField = [[NSTextField alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
+		NSTextField *pTextField = [[NSTextField alloc] initWithFrame:NSMakeRect( 0, 0, 1000, 0 )];
 		if ( pTextField )
 		{
 			[pTextField setBordered:NO];
@@ -742,16 +742,43 @@ static NSString *pBlankItem = @" ";
 						[pControl setFrameOrigin:NSMakePoint( 0, nCurrentY + ( ( nTextHeight - nHeight ) / 2 ) )];
 					else
 						[pTextField setFrameOrigin:NSMakePoint( 0, nCurrentY + ( ( nHeight - nTextHeight ) / 2 ) )];
-					[pAccessoryView addSubview:pTextField];
 				}
 
 				if ( nHeight < nTextHeight )
 					nCurrentY += nTextHeight;
 				else
 					nCurrentY += nHeight;
+			}
+		}
 
+		// Center controls in view
+		for ( i = 0; i < MAX_COCOA_CONTROL_ID; i++ )
+		{
+			NSControl *pControl = (NSControl *)[mpControls objectForKey:[[NSNumber numberWithInt:i] stringValue]];
+			if ( pControl )
+			{
+				float nTextWidth = 0;
+				NSTextField *pTextField = nil;
+				if ( NSFileDialog_controlType( i ) == COCOA_CONTROL_TYPE_POPUP )
+				{
+					pTextField = (NSTextField *)[mpTextFields objectForKey:[[NSNumber numberWithInt:i] stringValue]];
+					if ( pTextField )
+						nTextWidth = [pTextField bounds].size.width;
+				}
+
+				float nAdjustWidth = ( nCurrentWidth - nTextWidth - [pControl bounds].size.width ) / 2;
+
+				NSRect aBounds;
+				if ( pTextField )
+				{
+					aBounds = [pTextField frame];
+					[pTextField setFrameOrigin:NSMakePoint( aBounds.origin.x + nAdjustWidth, aBounds.origin.y )];
+					[pAccessoryView addSubview:pTextField];
+				}
+
+				aBounds = [pControl frame];
+				[pControl setFrameOrigin:NSMakePoint( aBounds.origin.x + nAdjustWidth, aBounds.origin.y )];
 				[pAccessoryView addSubview:pControl];
-					
 			}
 		}
 
