@@ -2002,7 +2002,11 @@ BOOL AllSettings::GetLayoutRTL() const
 
     if( nUIMirroring == -1 )
     {
+#ifdef USE_JAVA
+        nUIMirroring = 2; // mirroring is not compatible with Aqua controls
+#else	// USE_JAVA
         nUIMirroring = 0; // ask configuration only once
+        // Mirroring is really screwy with native Aqua widgets so don't mirror
         utl::OConfigurationNode aNode = utl::OConfigurationTreeRoot::tryCreateWithServiceFactory( 
             vcl::unohelper::GetMultiServiceFactory(),
             OUString::createFromAscii( "org.openoffice.Office.Common/I18N/CTL" ) );    // note: case sensisitive !
@@ -2016,6 +2020,7 @@ BOOL AllSettings::GetLayoutRTL() const
                 nUIMirroring = bTmp ? 1 : 2;
             }
         }
+#endif	// USE_JAVA
     }
 
     if( nUIMirroring == 0 )  // no config found (eg, setup) or default (nil) was set: check language
