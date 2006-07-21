@@ -78,14 +78,15 @@ using namespace rtl;
 
 #define COMBOBOX_BUTTON_WIDTH			22
 #define COMBOBOX_BUTTON_TRIMWIDTH		3
-#define CONTROL_TAB_PANE_TOP_OFFSET	( ( vcl::IsRunningPanther() ) ? 2 : 10 )
+#define CONTROL_TAB_PANE_TOP_OFFSET		( ( vcl::IsRunningPanther() ) ? 2 : 10 )
 #define EDITBOX_TRIMWIDTH				3
 #define LISTBOX_BUTTON_HORIZ_TRIMWIDTH	0
 #define LISTBOX_BUTTON_VERT_TRIMWIDTH	2
 #define SCROLLBAR_ARROW_TRIMX			13
-#define SCROLLBAR_ARROW_TRIMY			13
-#define SCROLLBAR_ARROW_TRIMWIDTH		12
-#define SCROLLBAR_ARROW_TRIMHEIGHT		12
+#define SCROLLBAR_ARROW_TRIMY			( ( vcl::IsRunningPanther() ) ? 13 : 14 )
+#define SCROLLBAR_ARROW_TRIMWIDTH		( ( vcl::IsRunningPanther() ) ? 13 : 11 )
+#define SCROLLBAR_ARROW_TOP_TRIMHEIGHT	( ( vcl::IsRunningPanther() ) ? 12 : 10 )
+#define SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT	( ( vcl::IsRunningPanther() ) ? 12 : 13 )
 
 #if ( BUILD_OS_MAJOR == 10 ) && ( BUILD_OS_MINOR == 3 )
 // constants and structures for 10.3
@@ -391,13 +392,9 @@ static BOOL InitScrollBarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, HIScro
 		pTrackDrawInfo->max = pScrollbarValue->mnMax-pScrollbarValue->mnVisibleSize;
 		pTrackDrawInfo->value = pScrollbarValue->mnCur;
 		pTrackDrawInfo->trackInfo.scrollbar.viewsize = pScrollbarValue->mnVisibleSize;
+		// We need to paint both inside and outside for the left/up arrows
 		if( pScrollbarValue->mnButton1State & CTRL_STATE_PRESSED )
-		{
-			if ( vcl::IsRunningPanther() )
-				pTrackDrawInfo->trackInfo.scrollbar.pressState |= ( kThemeLeftOutsideArrowPressed );
-			else
-				pTrackDrawInfo->trackInfo.scrollbar.pressState |= ( kThemeLeftInsideArrowPressed );
-		}
+			pTrackDrawInfo->trackInfo.scrollbar.pressState |= ( kThemeLeftInsideArrowPressed | kThemeLeftOutsideArrowPressed );
 		if( pScrollbarValue->mnButton2State & CTRL_STATE_PRESSED )
 			pTrackDrawInfo->trackInfo.scrollbar.pressState |= ( kThemeRightOutsideArrowPressed );
 		if( pScrollbarValue->mnPage1State & CTRL_STATE_PRESSED )
@@ -1744,50 +1741,58 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 						break;
 
 					case PART_BUTTON_LEFT:
-						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartLeftButton, &bounds );
-						if ( vcl::IsRunningPanther() )
 						{
-							HIRect otherBounds;
-							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartRightButton, &otherBounds );
-							if ( bounds.origin.x + bounds.size.width + 1 >= otherBounds.origin.x )
+							HIRect trackBounds;
+							HIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
+							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartLeftButton, &bounds );
+							if ( bounds.origin.x > trackBounds.origin.x )
 								bounds.origin.x += SCROLLBAR_ARROW_TRIMX;
 							bounds.size.width -= SCROLLBAR_ARROW_TRIMWIDTH;
 						}
 						break;
 
 					case PART_BUTTON_UP:
-						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartUpButton, &bounds );
-						if ( vcl::IsRunningPanther() )
 						{
-							HIRect otherBounds;
-							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &otherBounds );
-							if ( bounds.origin.y + bounds.size.height >= otherBounds.origin.y )
+							HIRect trackBounds;
+							HIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
+							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartUpButton, &bounds );
+							if ( bounds.origin.y > trackBounds.origin.y )
+							{
 								bounds.origin.y += SCROLLBAR_ARROW_TRIMY;
-							bounds.size.height -= SCROLLBAR_ARROW_TRIMHEIGHT;
+								bounds.size.height -= SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT;
+							}
+							else
+							{
+								bounds.size.height -= SCROLLBAR_ARROW_TOP_TRIMHEIGHT;
+							}
 						}
 						break;
 
 					case PART_BUTTON_RIGHT:
-						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartRightButton, &bounds );
-						if ( vcl::IsRunningPanther() )
 						{
+							HIRect trackBounds;
+							HIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
+							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartRightButton, &bounds );
+
 							HIRect otherBounds;
 							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartLeftButton, &otherBounds );
-							if ( bounds.origin.x > otherBounds.origin.x + otherBounds.size.width )
+							if ( otherBounds.origin.x <= trackBounds.origin.x )
 								bounds.origin.x += SCROLLBAR_ARROW_TRIMX;
-							bounds.size.width -= SCROLLBAR_ARROW_TRIMWIDTH;
+							bounds.size.width = trackBounds.origin.x + trackBounds.size.width - bounds.size.width;
 						}
 						break;
 
 					case PART_BUTTON_DOWN:
-						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &bounds );
-						if ( vcl::IsRunningPanther() )
 						{
+							HIRect trackBounds;
+							HIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
+							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &bounds );
+
 							HIRect otherBounds;
 							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartUpButton, &otherBounds );
-							if ( bounds.origin.y > otherBounds.origin.y + otherBounds.size.height )
+							if ( otherBounds.origin.y <= trackBounds.origin.y )
 								bounds.origin.y += SCROLLBAR_ARROW_TRIMY;
-							bounds.size.height -= SCROLLBAR_ARROW_TRIMHEIGHT;
+							bounds.size.height = trackBounds.origin.y + trackBounds.size.height - bounds.size.height;
 						}
 						break;
 
