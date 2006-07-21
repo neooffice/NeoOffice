@@ -1756,6 +1756,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					case PART_BUTTON_RIGHT:
 						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &bounds );
 						bounds.origin.x++;
+						break;
 
 					case PART_BUTTON_DOWN:
 						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &bounds );
