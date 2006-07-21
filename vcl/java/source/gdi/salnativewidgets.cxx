@@ -84,8 +84,8 @@ using namespace rtl;
 #define LISTBOX_BUTTON_VERT_TRIMWIDTH	2
 #define SCROLLBAR_ARROW_TRIMX			13
 #define SCROLLBAR_ARROW_TRIMY			( ( vcl::IsRunningPanther() ) ? 13 : 14 )
-#define SCROLLBAR_ARROW_TRIMWIDTH		( ( vcl::IsRunningPanther() ) ? 13 : 11 )
-#define SCROLLBAR_ARROW_TOP_TRIMHEIGHT	( ( vcl::IsRunningPanther() ) ? 12 : 10 )
+#define SCROLLBAR_ARROW_TRIMWIDTH		11
+#define SCROLLBAR_ARROW_TOP_TRIMHEIGHT	10
 #define SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT	( ( vcl::IsRunningPanther() ) ? 12 : 13 )
 
 #if ( BUILD_OS_MAJOR == 10 ) && ( BUILD_OS_MINOR == 3 )
@@ -1777,8 +1777,10 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							HIRect otherBounds;
 							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartLeftButton, &otherBounds );
 							if ( otherBounds.origin.x <= trackBounds.origin.x )
+							{
 								bounds.origin.x += SCROLLBAR_ARROW_TRIMX;
-							bounds.size.width = trackBounds.origin.x + trackBounds.size.width - bounds.size.width;
+								bounds.size.width -= SCROLLBAR_ARROW_TRIMWIDTH;
+							}
 						}
 						break;
 
@@ -1791,8 +1793,10 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							HIRect otherBounds;
 							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartUpButton, &otherBounds );
 							if ( otherBounds.origin.y <= trackBounds.origin.y )
+							{
 								bounds.origin.y += SCROLLBAR_ARROW_TRIMY;
-							bounds.size.height = trackBounds.origin.y + trackBounds.size.height - bounds.size.height;
+								bounds.size.height -= SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT;
+							}
 						}
 						break;
 
