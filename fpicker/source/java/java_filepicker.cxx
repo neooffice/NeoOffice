@@ -337,8 +337,6 @@ OUString SAL_CALL JavaFilePicker::getDisplayDirectory() throw( RuntimeException 
 		pBuffer[ nLen ] = 0;
 		CFRelease( aString );
 		OUString aPath( pBuffer );
-
-		OUString aURL;
 		File::getFileURLFromSystemPath( aPath, aRet );
 	}
 
@@ -358,19 +356,62 @@ Sequence< OUString > SAL_CALL JavaFilePicker::getFiles() throw( RuntimeException
 		for ( ; pFileNames[ nCount ]; nCount++ )
 			;
 
-		if ( nCount )
+		if ( nCount == 1 )
 		{
 			aRet = Sequence< OUString >( nCount );
+			CFStringRef aString = pFileNames[ 0 ];
+			CFIndex nLen = CFStringGetLength( aString );
+			CFRange aRange = CFRangeMake( 0, nLen );
+			sal_Unicode pBuffer[ nLen + 1 ];
+			CFStringGetCharacters( aString, aRange, pBuffer ); 
+			pBuffer[ nLen ] = 0;
+			OUString aPath( pBuffer );
+			File::getFileURLFromSystemPath( aPath, aRet[ 0 ] );
+		}
+		else if ( nCount > 1 )
+		{
+			// Apparently, when there is more than one file returned, OOo
+			// expects the first element to be the directory and each
+			// following element to be the file name
+			aRet = Sequence< OUString >( ++nCount );
 			for ( int i = 0; i < nCount; i++ )
 			{
-				CFStringRef aString = pFileNames[ i ];
-				CFIndex nLen = CFStringGetLength( aString );
-				CFRange aRange = CFRangeMake( 0, nLen );
-				sal_Unicode pBuffer[ nLen + 1 ];
-				CFStringGetCharacters( aString, aRange, pBuffer ); 
-				pBuffer[ nLen ] = 0;
-				OUString aPath( pBuffer );
-				File::getFileURLFromSystemPath( aPath, aRet[ i ] );
+				CFStringRef aString = pFileNames[ i ? i - 1 : 0 ];
+				CFRange aSearchRange;
+				aSearchRange.location = 0;
+				aSearchRange.length = CFStringGetLength( aString );
+				CFRange aFoundRange;
+				if ( CFStringFindWithOptions( aString, CFSTR( "/" ), aSearchRange, kCFCompareBackwards, &aFoundRange ) )
+				{
+					CFStringRef aSplitString = NULL;
+					if ( i )
+					{
+						aFoundRange.location++;
+						aFoundRange.length = aSearchRange.length - aFoundRange.location;
+						aSplitString = CFStringCreateWithSubstring( NULL, aString, aFoundRange );
+					}
+					else
+					{
+						aFoundRange.length = aFoundRange.location + 1;
+						aFoundRange.location = 0;
+						aSplitString = CFStringCreateWithSubstring( NULL, aString, aFoundRange );
+					}
+
+					if ( aSplitString )
+					{
+						CFIndex nLen = CFStringGetLength( aSplitString );
+						CFRange aRange = CFRangeMake( 0, nLen );
+						sal_Unicode pBuffer[ nLen + 1 ];
+						CFStringGetCharacters( aSplitString, aRange, pBuffer ); 
+						pBuffer[ nLen ] = 0;
+						CFRelease( aSplitString );
+						OUString aPath( pBuffer );
+						if ( i )
+							aRet[ i ] = aPath;
+						else
+							File::getFileURLFromSystemPath( aPath, aRet[ i ] );
+					}
+				}
 			}
 		}
 
