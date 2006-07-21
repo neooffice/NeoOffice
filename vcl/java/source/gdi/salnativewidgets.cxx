@@ -1740,16 +1740,17 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 						break;
 
 					case PART_BUTTON_LEFT:
-						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &bounds );
-						bounds.origin.x++;
-						bounds.origin.x -= bounds.size.width;
+						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartUpButton, &bounds );
+						bounds.origin.y++;
 						break;
 
 					case PART_BUTTON_UP:
-						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &bounds );
+						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartUpButton, &bounds );
 						if ( !vcl::IsRunningPanther() )
+						{
 							bounds.origin.y++;
-						bounds.origin.y -= bounds.size.height;
+							bounds.size.height--;
+						}
 						break;
 
 					case PART_BUTTON_RIGHT:
