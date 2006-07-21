@@ -1028,7 +1028,15 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public void enableFlushing(boolean b)
 	{
-		if (b != flushingEnabled && window.isShowing())
+		// Fix occasion crashing by invoking this in the Java event dispatch
+		// thread
+		if (!EventQueue.isDispatchThread())	{
+			FlushingHandler handler = new FlushingHandler(this, b);
+			Toolkit.getDefaultToolkit().getSystemEventQueue().invokeLater(handler);
+			return;
+		}
+
+		if (!disposed && b != flushingEnabled && window.isShowing())
 		{
 			Graphics2D g = graphics.getGraphics();
 			if (g != null) {
@@ -2522,6 +2530,43 @@ g.dispose();
 		public void update(Graphics g) {
 
 			paint(g);
+
+		}
+
+	}
+
+	/**
+	 * A class that handles flushing updates.
+	 */
+	final class FlushingHandler implements Runnable {
+
+		/**
+		 * The flushing enabled flag.
+		 */
+		private boolean flushingEnabled = true;
+
+		/**
+		 * The <code>VCLFrame</code>.
+		 */
+		private VCLFrame frame = null;
+
+		/**
+		 * Constructs a new <code>VCLFrame.FlushingHandler</code> instance.
+		 *
+		 * @param f the <code>VCLFrame</code>
+		 * @param b <code>true</code> to enable flushing and <code>false</code>
+		 *  to disable flushing
+		 */
+		FlushingHandler(VCLFrame f, boolean b) {
+
+			frame = f;
+			flushingEnabled = b;
+
+		}
+
+		public void run() {
+
+			frame.enableFlushing(flushingEnabled);
 
 		}
 
