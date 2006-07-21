@@ -674,6 +674,27 @@ static BOOL InitListViewHeaderButtonDrawInfo( HIThemeButtonDrawInfo *pButtonInfo
 // =======================================================================
 
 /**
+ * (static) Initialize HITheme structures used to draw a separator line
+ *
+ * @param pSepInfo	pointer to HITheme separator info structure to be
+ *						initialized
+ * @param nState		control state of the separator
+ * @return TRUE on success, FALSE on failure
+ */
+static BOOL InitSeparatorDrawInfo( HIThemeSeparatorDrawInfo *pSepInfo, ControlState nState )
+{
+	memset( pSepInfo, 0, sizeof( HIThemeSeparatorDrawInfo ) );
+	pSepInfo->version = 0;
+	if ( nState & CTRL_STATE_ENABLED )
+		pSepInfo->state = kThemeStateActive;
+	else
+		pSepInfo->state = kThemeStateInactive;
+	return TRUE;
+}
+
+// =======================================================================
+
+/**
  * (static) Draw a ComboBox into the graphics port at the specified location.
  * ComboBoxes are editable pulldowns, the left portion of which is an edit
  * field and the right portion a downward arrow button used to display the
@@ -1184,6 +1205,45 @@ static BOOL DrawNativeDisclosureBtn( JavaSalGraphics *pGraphics, const Rectangle
 // =======================================================================
 
 /**
+ * (static) Draw a native separator line.
+ *
+ * @param pGraphics		pointer to the graphics object where the line should
+ *						be painted
+ * @param rDestBounds	destination drawing rectangle for the separator
+ * @param nState		current control enabled/disabled/focused state.
+ *						really, this is meaningless for separators but is used
+ *						by both VCL and Carbon, so we go for it
+ */
+static BOOL DrawNativeSeparatorLine( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
+{
+	VCLBitmapBuffer aBuffer;
+	BOOL bRet = aBuffer.Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+	if ( bRet )
+	{
+		HIThemeSeparatorDrawInfo pSepInfo;
+		InitSeparatorDrawInfo( &pSepInfo, nState );
+		
+		HIRect destRect;
+		destRect.origin.x = 0;
+		destRect.origin.y = 0;
+		destRect.size.width = rDestBounds.GetWidth();
+		destRect.size.height = rDestBounds.GetHeight();
+				
+		bRet = ( HIThemeDrawSeparator( &destRect, &pSepInfo, aBuffer.maContext, kHIThemeOrientationInverted ) == noErr );
+	}
+
+	if ( bRet )
+	{
+		aBuffer.ReleaseContext();
+		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+	}
+
+	return bRet;
+}
+
+// =======================================================================
+
+/**
  * (static) Draw a native header button for a list view.  The header buttons
  * are drawn using the theme brushes for primary sort columns and non-primary
  * columns.  Sort indicators are not drawn at present.
@@ -1311,6 +1371,11 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 		
 		case CTRL_LISTVIEWHEADER:
 			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == PART_LISTVIEWHEADER_SORT_MARK ) )
+				isSupported = TRUE;
+			break;
+		
+		case CTRL_FIXEDLINE:
+			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
 			
@@ -1511,6 +1576,14 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				Rectangle ctrlRect = rControlRegion.GetBoundRect();
 				ListViewHeaderValue *pValue = static_cast<ListViewHeaderValue *> ( aValue.getOptionalVal() );
 				bOK = DrawNativeListViewHeader( this, ctrlRect, nState, pValue );
+			}
+			break;
+		
+		case CTRL_FIXEDLINE:
+			if( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle ctrlRect = rControlRegion.GetBoundRect();
+				bOK = DrawNativeSeparatorLine( this, ctrlRect, nState );
 			}
 			break;
 	}
