@@ -542,7 +542,7 @@ void FixedLine::ImplDraw( bool bLayout )
 				else
 				{
 					aPoint = Point( 0, (aOutSize.Height()-1)/2 );
-					aSize = Size( aOutSize.Height()-1, 1 );
+					aSize = Size( aOutSize.Width()-1, 1 );
 				}
 				
 				Region aCtrlRegion( Rectangle( aPoint, aSize ) );
