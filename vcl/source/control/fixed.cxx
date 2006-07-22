@@ -179,6 +179,33 @@ void FixedText::ImplInitSettings( BOOL bFont,
 				SetBackground( pParent->GetBackground() );
 		}
 	}
+#ifdef USE_JAVA
+	if ( IsNativeControlSupported( CTRL_FIXEDBORDER, PART_ENTIRE_CONTROL ) && GetParent() )
+	{
+		if ( GetParent()->GetType() == WINDOW_FIXEDBORDER )
+		{
+			EnableChildTransparentMode( TRUE );
+			Invalidate( Rectangle( Point(), GetOutputSizePixel() ) );
+		}
+		else
+		{
+			// dialogs will implement tabpages as peers of their borders, not
+			// as contained
+			for ( USHORT i = 0; i < GetParent()->GetChildCount(); i++ )
+			{
+				Window* pChild = GetParent()->GetChild( i );
+				if ( pChild->GetType() == WINDOW_FIXEDBORDER )
+				{
+					EnableChildTransparentMode( TRUE );
+					Invalidate( Rectangle( Point(), GetOutputSizePixel() ) );
+					SetBackground();
+					SetControlBackground();
+					break;
+				}
+			}
+		}
+	}
+#endif
 }
 
 // -----------------------------------------------------------------------
@@ -282,6 +309,30 @@ void FixedText::ImplDraw( OutputDevice* pDev, ULONG nDrawFlags,
     }
     else
         pDev->DrawText( Rectangle( aPos, rSize ), aText, nTextStyle );
+#ifdef USE_JAVA
+	if ( ((FixedText *)this)->IsNativeControlSupported( CTRL_FIXEDBORDER, PART_ENTIRE_CONTROL ) && GetParent() )
+	{
+		if ( GetParent()->GetType() == WINDOW_FIXEDBORDER )
+		{
+			GetParent()->Invalidate( Rectangle( GetParent()->ScreenToOutputPixel( OutputToScreenPixel( Point() ) ), GetOutputSizePixel() ) );
+		}
+		else
+		{
+			// dialogs will implement tabpages as peers of their borders, not
+			// as contained
+			for ( USHORT i = 0; i < GetParent()->GetChildCount(); i++ )
+			{
+				Window* pChild = GetParent()->GetChild( i );
+				if ( pChild->GetType() == WINDOW_FIXEDBORDER )
+				{
+					GetParent()->Invalidate( Rectangle( GetParent()->ScreenToOutputPixel( OutputToScreenPixel( Point() ) ), GetOutputSizePixel() ) );
+					break;
+				}
+			}
+		}
+	}
+#endif
+
 }
 
 // -----------------------------------------------------------------------
@@ -1030,6 +1081,31 @@ void FixedImage::ImplInitSettings()
 		else
 			SetBackground( pParent->GetBackground() );
 	}
+#ifdef USE_JAVA
+	if ( IsNativeControlSupported( CTRL_FIXEDBORDER, PART_ENTIRE_CONTROL ) && GetParent() )
+	{
+		if ( GetParent()->GetType() == WINDOW_FIXEDBORDER )
+		{
+			EnableChildTransparentMode( TRUE );
+		}
+		else
+		{
+			// dialogs will implement tabpages as peers of their borders, not
+			// as contained
+			for ( USHORT i = 0; i < GetParent()->GetChildCount(); i++ )
+			{
+				Window* pChild = GetParent()->GetChild( i );
+				if ( pChild->GetType() == WINDOW_FIXEDBORDER )
+				{
+					EnableChildTransparentMode( TRUE );
+					SetBackground();
+					SetControlBackground();
+					break;
+				}
+			}
+		}
+	}
+#endif
 }
 
 // -----------------------------------------------------------------------
@@ -1108,6 +1184,29 @@ void FixedImage::ImplDraw( OutputDevice* pDev, ULONG nDrawFlags,
 			Point aPos = ImplCalcPos( GetStyle(), rPos, pImage->GetSizePixel(), rSize );
 			pDev->DrawImage( aPos, *pImage, nStyle );
 		}
+#ifdef USE_JAVA
+		if ( IsNativeControlSupported( CTRL_FIXEDBORDER, PART_ENTIRE_CONTROL ) && GetParent() )
+		{
+			if ( GetParent()->GetType() == WINDOW_FIXEDBORDER )
+			{
+				GetParent()->Invalidate( Rectangle( GetParent()->ScreenToOutputPixel( OutputToScreenPixel( Point() ) ), GetOutputSizePixel() ) );
+			}
+			else
+			{
+				// dialogs will implement tabpages as peers of their borders, not
+				// as contained
+				for ( USHORT i = 0; i < GetParent()->GetChildCount(); i++ )
+				{
+					Window* pChild = GetParent()->GetChild( i );
+					if ( pChild->GetType() == WINDOW_FIXEDBORDER )
+					{
+						GetParent()->Invalidate( Rectangle( GetParent()->ScreenToOutputPixel( OutputToScreenPixel( Point() ) ), GetOutputSizePixel() ) );
+						break;
+					}
+				}
+			}
+		}
+#endif
 	}
 
 	mbInUserDraw = TRUE;
