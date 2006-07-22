@@ -1427,7 +1427,7 @@ public final class VCLGraphics {
 				m.setSelected(pressed);
 				m.setEnabled(enabled);
 
-				Rectangle bounds = getPreferredPushButtonBounds(x, y, width, height, title);
+				Rectangle bounds = new Rectangle(x, y, width, height);
 				VCLGraphics.button.setSize(bounds.width, bounds.height);
 				Iterator clipRects = clipList.iterator();
 				while (clipRects.hasNext()) {
@@ -1466,8 +1466,10 @@ public final class VCLGraphics {
 		// draw with the appropriate style.
 		VCLGraphics.button.setLabel(title);
 		Rectangle bounds = new Rectangle(x, y, width, VCLGraphics.button.getPreferredSize().height);
-		if (bounds.height >= width)
-			bounds.height = height;
+		if (bounds.height >= width) {
+			bounds.width++;
+			bounds.height = height + 1;
+		}
 		bounds.y += (height - bounds.height) / 2;
 		return bounds;
 
