@@ -3283,6 +3283,34 @@ void Window::ImplPosSizeWindow( long nX, long nY,
         }
     }
 
+#ifdef USE_JAVA
+    WindowType nWindowType = GetType();
+    ControlType aCtrlType = 0;
+    switch ( nWindowType )
+    {
+        case WINDOW_PUSHBUTTON:
+            aCtrlType = CTRL_PUSHBUTTON;
+            break;
+    }
+
+    if ( aCtrlType && IsNativeControlSupported( aCtrlType, PART_ENTIRE_CONTROL ) )
+    {
+        // Don't let the new width or height clip the native width or height
+        ImplControlValue aControlValue;
+        Region aCtrlRegion = Region( Rectangle( Point( 0, 0 ), Size( mnOutWidth, mnOutHeight ) ) );
+        ControlState nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED;
+        Region aBoundingRgn, aContentRgn;
+        if ( GetNativeControlRegion( aCtrlType, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, OUString(), aBoundingRgn, aContentRgn ) )
+        {
+            Rectangle aNativeRect = aBoundingRgn.GetBoundRect();
+			if ( mnOutWidth < aNativeRect.GetWidth() )
+				mnOutWidth = aNativeRect.GetWidth();
+			if ( mnOutHeight < aNativeRect.GetHeight() )
+				mnOutHeight = aNativeRect.GetHeight();
+        }
+    }
+#endif	// USE_JAVA
+
     if ( nFlags & WINDOW_POSSIZE_X )
     {
         long nOrgX = nX;
