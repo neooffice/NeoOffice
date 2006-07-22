@@ -735,6 +735,10 @@ void SvImpLBox::ShowCursor( BOOL bShow )
 		pView->ShowFocus( aRect );
 		pView->SetClipRegion( aOldClip );
 	}
+#ifdef USE_JAVA
+	if( pView->IsNativeControlSupported( CTRL_DISCLOSUREBTN, PART_ENTIRE_CONTROL ) )
+		pView->Invalidate( Rectangle( Point(), pView->GetOutputSizePixel() ) );
+#endif
 }
 
 
