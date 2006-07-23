@@ -62,6 +62,63 @@
 
 using namespace rtl;
 
+#ifdef USE_JAVA
+
+#include <deque>
+#ifdef __cplusplus
+#include <premac.h>
+#endif
+#include <Carbon/Carbon.h>
+#ifdef __cplusplus
+#include <postmac.h>
+#endif
+
+typedef std::deque< ScrollBar * > ScrollBarList;
+static ScrollBarList gScrollBars;
+
+// =======================================================================
+
+static OSStatus RelayoutScrollBars(  EventHandlerCallRef inHandlerCallRef, EventRef inEvent, void * inUserData )
+{
+	for ( ScrollBarList::iterator iter = gScrollBars.begin(); iter != gScrollBars.end(); iter++ )
+	{
+		(*iter)->Resize();
+		(*iter)->Invalidate();
+	}
+	return noErr;
+}
+
+// =======================================================================
+
+static void BeginTrackingScrollBar( ScrollBar *toTrack )
+{
+	gScrollBars.push_back( toTrack );
+	
+	static bool bInstalledCarbonEventHandler = false;
+	if ( ! bInstalledCarbonEventHandler )
+	{
+		EventHandlerRef myRef;
+		EventTypeSpec appearanceScrollEvent = { kEventClassAppearance, kEventAppearanceScrollBarVariantChanged };
+		InstallEventHandler( GetApplicationEventTarget(), NewEventHandlerUPP( RelayoutScrollBars ), 1, &appearanceScrollEvent, NULL, &myRef );
+		bInstalledCarbonEventHandler = true;
+	}
+}
+
+// =======================================================================
+
+static void EndTrackingScrollBar( ScrollBar *toTrack )
+{
+	for ( ScrollBarList::iterator iter = gScrollBars.begin(); iter != gScrollBars.end(); iter++ )
+	{
+		if ( ( *iter ) == toTrack )
+		{
+			gScrollBars.erase( iter );
+			break;
+		}
+	}
+}
+#endif
+
 // =======================================================================
 
 static long ImplMulDiv( long nNumber, long nNumerator, long nDenominator )
@@ -128,6 +185,10 @@ void ScrollBar::ImplInit( Window* pParent, WinBits nStyle )
     long nScrollSize = GetSettings().GetStyleSettings().GetScrollBarSize();
     SetSizePixel( Size( nScrollSize, nScrollSize ) );
     SetBackground();
+
+#ifdef USE_JAVA
+	BeginTrackingScrollBar( this );
+#endif
 }
 
 // -----------------------------------------------------------------------
@@ -168,6 +229,9 @@ ScrollBar::~ScrollBar()
 {
     if( mpData )
         delete mpData;
+#ifdef USE_JAVA
+	EndTrackingScrollBar( this );
+#endif
 }
 
 // -----------------------------------------------------------------------
