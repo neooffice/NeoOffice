@@ -1898,10 +1898,14 @@ void Edit::GetFocus()
 		}
 
 #ifdef USE_JAVA		
+		if ( IsNativeControlSupported( CTRL_EDITBOX, PART_ENTIRE_CONTROL ) )
 		{
 			Window* pWindow = GetWindow( WINDOW_BORDER );
 			if ( pWindow )
-				pWindow->Invalidate();
+			{
+				pWindow->GetParent()->Invalidate();
+				pWindow->GetParent()->Update();
+			}
 		}
 #endif
 		ImplShowCursor();
@@ -1944,29 +1948,14 @@ void Edit::LoseFocus()
 	Control::LoseFocus();
 
 #ifdef USE_JAVA
+	if ( IsNativeControlSupported( CTRL_EDITBOX, PART_ENTIRE_CONTROL ) )
 	{
 		Window* pWindow = GetWindow( WINDOW_BORDER );
 		if ( pWindow )
 		{
-			pWindow->Invalidate();
-				
-			Point aTmpPoint;
-			Rectangle aRect( aTmpPoint, pWindow->GetOutputSizePixel() );
-			if ( pWindow->IsBackground() )
-				pWindow->Erase( aRect );
-			else
-			{
-				Color oldFillColor = pWindow->GetFillColor();
-				Color oldLineColor = pWindow->GetLineColor();
-				pWindow->SetLineColor();
-				pWindow->SetFillColor( GetSettings().GetStyleSettings().GetDialogColor() );
-				pWindow->DrawRect( aRect );
-				pWindow->SetLineColor( oldLineColor );
-				pWindow->SetFillColor( oldFillColor );
-			}
+			pWindow->GetParent()->Invalidate();
+			pWindow->GetParent()->Update();
 		}
-	
-		ImplRepaint();
 	}
 #endif
 }
