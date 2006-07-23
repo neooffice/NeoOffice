@@ -1258,26 +1258,33 @@ static BOOL DrawNativeSeparatorLine( JavaSalGraphics *pGraphics, const Rectangle
  */
 static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, ListViewHeaderValue *pValue )
 {
-	VCLBitmapBuffer aBuffer;
-	BOOL bRet = aBuffer.Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+	SInt32 themeListViewHeaderHeight;
+	BOOL bRet = ( GetThemeMetric( kThemeMetricListHeaderHeight, &themeListViewHeaderHeight ) == noErr );
+	
 	if ( bRet )
 	{
-		HIThemeButtonDrawInfo pButtonInfo;
-		InitListViewHeaderButtonDrawInfo( &pButtonInfo, nState, pValue );
-		
-		HIRect destRect;
-		destRect.origin.x = 0;
-		destRect.origin.y = 0;
-		destRect.size.width = rDestBounds.GetWidth();
-		destRect.size.height = rDestBounds.GetHeight();
-				
-		bRet = ( HIThemeDrawButton( &destRect, &pButtonInfo, aBuffer.maContext, kHIThemeOrientationInverted, NULL ) == noErr );
-	}
-
-	if ( bRet )
-	{
-		aBuffer.ReleaseContext();
-		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+		VCLBitmapBuffer aBuffer;
+		bRet = aBuffer.Create( rDestBounds.GetWidth(), themeListViewHeaderHeight );
+		if ( bRet )
+		{		
+			HIThemeButtonDrawInfo pButtonInfo;
+			InitListViewHeaderButtonDrawInfo( &pButtonInfo, nState, pValue );
+			
+			HIRect destRect;
+			destRect.origin.x = 0;
+			destRect.origin.y = 0;
+			destRect.size.width = rDestBounds.GetWidth();
+			destRect.size.height = themeListViewHeaderHeight;
+					
+			bRet = ( HIThemeDrawButton( &destRect, &pButtonInfo, aBuffer.maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+		}
+	
+		if ( bRet )
+		{
+			aBuffer.ReleaseContext();
+	
+			pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), themeListViewHeaderHeight, rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+		}
 	}
 
 	return bRet;
