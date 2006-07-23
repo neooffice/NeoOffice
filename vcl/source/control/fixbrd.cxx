@@ -60,9 +60,11 @@ void FixedBorder::ImplInit( Window* pParent, WinBits nStyle )
 #ifdef USE_JAVA
 	if( IsNativeControlSupported( CTRL_FIXEDBORDER, PART_ENTIRE_CONTROL ) )
 	{
+		SetMouseTransparent( TRUE );
+		EnableChildTransparentMode( TRUE );
+		SetParentClipMode( PARENTCLIPMODE_NOCLIP );
+		SetPaintTransparent( TRUE );
 		SetBackground();
-		SetControlBackground();
-        EnableChildTransparentMode( TRUE );
     }
 #endif
 }

@@ -81,7 +81,11 @@ void TabPage::ImplInit( Window* pParent, WinBits nStyle )
 	{
 		if ( GetParent()->GetType() == WINDOW_FIXEDBORDER )
 		{
+			SetMouseTransparent( TRUE );
 			EnableChildTransparentMode( TRUE );
+			SetParentClipMode( PARENTCLIPMODE_NOCLIP );
+			SetPaintTransparent( TRUE );
+			SetBackground();
 		}
 		else
 		{
@@ -92,10 +96,12 @@ void TabPage::ImplInit( Window* pParent, WinBits nStyle )
 				Window* pChild = GetParent()->GetChild( i );
 				if ( pChild->GetType() == WINDOW_FIXEDBORDER )
 				{
-					EnableChildTransparentMode( TRUE );
-					SetBackground();
-					SetControlBackground();
-					break;
+						SetMouseTransparent( TRUE );
+						EnableChildTransparentMode( TRUE );
+						SetParentClipMode( PARENTCLIPMODE_NOCLIP );
+						SetPaintTransparent( TRUE );
+						SetBackground();
+						break;
 				}
 			}
 		}
