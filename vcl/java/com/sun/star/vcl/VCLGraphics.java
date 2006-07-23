@@ -1427,7 +1427,11 @@ public final class VCLGraphics {
 				m.setSelected(pressed);
 				m.setEnabled(enabled);
 
-				Rectangle bounds = new Rectangle(x, y, width, height);
+				VCLGraphics.button.setLabel(title);
+				Rectangle bounds = new Rectangle(x, y, width, VCLGraphics.button.getPreferredSize().height);
+				if (bounds.height >= width)
+					bounds.height = height;
+
 				VCLGraphics.button.setSize(bounds.width, bounds.height);
 				Iterator clipRects = clipList.iterator();
 				while (clipRects.hasNext()) {
