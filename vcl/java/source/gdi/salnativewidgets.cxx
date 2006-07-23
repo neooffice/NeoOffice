@@ -861,60 +861,65 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
  */
 static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, SpinbuttonValue *pValue )
 {
-	VCLBitmapBuffer aBuffer;
-	BOOL bRet = aBuffer.Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+	SInt32 spinnerThemeHeight;
+	BOOL bRet = ( GetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight) == noErr );
+	if ( ! bRet )
+		return FALSE;
+	
+	SInt32 spinnerThemeWidth;
+	bRet = ( GetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr );
+	
 	if ( bRet )
 	{
-		HIThemeButtonDrawInfo aButtonDrawInfo;
-		InitSpinbuttonDrawInfo( &aButtonDrawInfo, pValue );
-
-		HIRect arrowRect;
-		arrowRect.origin.x = rDestBounds.GetWidth() - 15;
-		if( arrowRect.origin.x < 0 )
-			arrowRect.origin.x = 0;
-		arrowRect.origin.y = 0;
-		arrowRect.size.width = 15;
-		arrowRect.size.height = rDestBounds.GetHeight() - 1;
+		int offscreenHeight = ( ( rDestBounds.GetHeight() > spinnerThemeHeight ) ? rDestBounds.GetHeight() : spinnerThemeHeight );
 		
-		// ensure we won't overdraw our buffer beyond its boundaries
-		CGRect clipBounds;
-		clipBounds.origin.x = 0;
-		clipBounds.origin.y = 0;
-		clipBounds.size.width = rDestBounds.GetWidth();
-		clipBounds.size.height = rDestBounds.GetHeight();
-		CGContextClipToRect( aBuffer.maContext, clipBounds );
-		
-		bRet = ( HIThemeDrawButton( &arrowRect, &aButtonDrawInfo, aBuffer.maContext, kHIThemeOrientationInverted, NULL ) == noErr );
-
-		if( bRet )
+		VCLBitmapBuffer aBuffer;
+		BOOL bRet = aBuffer.Create( rDestBounds.GetWidth(), offscreenHeight );
+		if ( bRet )
 		{
-			HIRect editRect;
-			editRect.origin.x = 0;
-			editRect.origin.y = 0;
-			editRect.size.width = rDestBounds.GetWidth() - arrowRect.size.width - 4;
-			editRect.size.height = rDestBounds.GetHeight();
-
-			HIThemeFrameDrawInfo aFrameInfo;
-			memset( &aFrameInfo, 0, sizeof( HIThemeFrameDrawInfo ) );
-
-			aFrameInfo.kind = kHIThemeFrameTextFieldSquare;
-			if( ! nState )
-				aFrameInfo.state = kThemeStateInactive;
-			else
-				aFrameInfo.state = kThemeStateActive;
-			if( nState & CTRL_STATE_FOCUSED )
-				aFrameInfo.isFocused = TRUE;
-			else
-				aFrameInfo.isFocused = FALSE;
-
-			bRet = ( HIThemeDrawFrame( &editRect, &aFrameInfo, aBuffer.maContext, kHIThemeOrientationInverted ) == noErr );
+			HIThemeButtonDrawInfo aButtonDrawInfo;
+			InitSpinbuttonDrawInfo( &aButtonDrawInfo, pValue );
+	
+			HIRect arrowRect;
+			arrowRect.origin.x = rDestBounds.GetWidth() - spinnerThemeWidth;
+			if( arrowRect.origin.x < 0 )
+				arrowRect.origin.x = 0;
+			arrowRect.origin.y = 0;
+			arrowRect.size.width = spinnerThemeWidth;
+			arrowRect.size.height = offscreenHeight;
+						
+			bRet = ( HIThemeDrawButton( &arrowRect, &aButtonDrawInfo, aBuffer.maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+	
+			if( bRet )
+			{
+				HIRect editRect;
+				editRect.origin.x = 0;
+				editRect.origin.y = 0;
+				editRect.size.width = rDestBounds.GetWidth() - arrowRect.size.width - 4;
+				editRect.size.height = offscreenHeight;
+	
+				HIThemeFrameDrawInfo aFrameInfo;
+				memset( &aFrameInfo, 0, sizeof( HIThemeFrameDrawInfo ) );
+	
+				aFrameInfo.kind = kHIThemeFrameTextFieldSquare;
+				if( ! nState )
+					aFrameInfo.state = kThemeStateInactive;
+				else
+					aFrameInfo.state = kThemeStateActive;
+				if( nState & CTRL_STATE_FOCUSED )
+					aFrameInfo.isFocused = TRUE;
+				else
+					aFrameInfo.isFocused = FALSE;
+	
+				bRet = ( HIThemeDrawFrame( &editRect, &aFrameInfo, aBuffer.maContext, kHIThemeOrientationInverted ) == noErr );
+			}
 		}
-	}
-
-	if ( bRet )
-	{
-		aBuffer.ReleaseContext();
-		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+	
+		if ( bRet )
+		{
+			aBuffer.ReleaseContext();
+			pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), offscreenHeight, rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+		}
 	}
 
 	return bRet;
