@@ -1429,18 +1429,27 @@ public final class VCLGraphics {
 
 				VCLGraphics.button.setLabel(title);
 				Rectangle bounds = new Rectangle(x, y, width, VCLGraphics.button.getPreferredSize().height);
-				if (bounds.height >= width) {
+				if (bounds.height >= width - 1) {
 					bounds.width--;
-					bounds.height = height;
+					bounds.height = height - 1;
 				}
 
-				VCLGraphics.button.setSize(bounds.width, bounds.height);
-				Iterator clipRects = clipList.iterator();
-				while (clipRects.hasNext()) {
-					g.setClip((Rectangle)clipRects.next());
-					g.translate(bounds.x, bounds.y);
-					VCLGraphics.button.getUI().paint(g, VCLGraphics.button);
-					g.translate(bounds.x * -1, bounds.y * -1);
+				if (bounds.height > height) {
+					VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
+					VCLGraphics srcGraphics = srcImage.getGraphics();
+					srcGraphics.drawPushButton(0, 0, bounds.width, bounds.height, title, enabled, focused, pressed, isDefault);
+					copyBits(srcGraphics, 0, 0, bounds.width, bounds.height, x, y, bounds.width, height, false);
+					srcImage.dispose();
+				}
+				else {
+					VCLGraphics.button.setSize(bounds.width, bounds.height);
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						g.setClip((Rectangle)clipRects.next());
+						g.translate(bounds.x, bounds.y);
+						VCLGraphics.button.getUI().paint(g, VCLGraphics.button);
+						g.translate(bounds.x * -1, bounds.y * -1);
+					}
 				}
 			}
 			catch (Throwable t) {
@@ -1475,6 +1484,9 @@ public final class VCLGraphics {
 		if (bounds.height >= width) {
 			bounds.width++;
 			bounds.height = height + 1;
+		}
+		else if (bounds.height != height) {
+			bounds.height = height;
 		}
 		bounds.y += (height - bounds.height) / 2;
 		return bounds;
@@ -1527,14 +1539,25 @@ public final class VCLGraphics {
 					m.setSelected(true);
 				else
 					m.setSelected(false);
-				Rectangle bounds = getPreferredRadioButtonBounds(x, y, width, height, title);
-				VCLGraphics.radioButton.setSize(bounds.width, bounds.height);
-				Iterator clipRects = clipList.iterator();
-				while (clipRects.hasNext()) {
-					g.setClip((Rectangle)clipRects.next());
-					g.translate(bounds.x, bounds.y);
-					VCLGraphics.radioButton.getUI().paint(g, VCLGraphics.radioButton);
-					g.translate(bounds.x * -1, bounds.y * -1);
+
+				Dimension d = VCLGraphics.radioButton.getPreferredSize();
+				Rectangle bounds = new Rectangle(x, y, d.width, d.height);
+				if (bounds.width > width || bounds.height > height) {
+					VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
+					VCLGraphics srcGraphics = srcImage.getGraphics();
+					srcGraphics.drawRadioButton(0, 0, bounds.width, bounds.height, title, enabled, focused, pressed, buttonState);
+					copyBits(srcGraphics, 0, 0, bounds.width, bounds.height, x, y, width, height, false);
+					srcImage.dispose();
+				}
+				else {
+					VCLGraphics.radioButton.setSize(bounds.width, bounds.height);
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						g.setClip((Rectangle)clipRects.next());
+						g.translate(bounds.x, bounds.y);
+						VCLGraphics.radioButton.getUI().paint(g, VCLGraphics.radioButton);
+						g.translate(bounds.x * -1, bounds.y * -1);
+					}
 				}
 			}
 			catch (Throwable t) {
@@ -1558,11 +1581,16 @@ public final class VCLGraphics {
 	 */
 	public Rectangle getPreferredRadioButtonBounds(int x, int y, int width, int height, String title) {
 
-		VCLGraphics.radioButton.setLabel(title);
+		// Make width and height equal since check boxes are square
+        if (width > height)
+        	width = height;
+		else
+        	height = width;
+
+		VCLGraphics.checkBoxButton.setLabel(title);
 		Dimension d = VCLGraphics.radioButton.getPreferredSize();
-		Rectangle bounds = new Rectangle(x, y, d.width, height < d.height ? height : d.height);
-		bounds.x += (width - bounds.width) / 2;
-		bounds.y += (height - bounds.height) / 2;
+
+		Rectangle bounds = new Rectangle(x, y, d.width < width ? d.width : width, d.height < height ? d.height : height);
 		return bounds;
 
 	}
