@@ -277,15 +277,12 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 		return;
 	}
 
-	// Fix bug 449 by turning off Unicode composition and turn off rare
-	// ligatures to be more consistent with TextEdit's layout behavior
-	ATSUFontFeatureType aTypes[2];
-	ATSUFontFeatureSelector aSelectors[2];
-	aTypes[0] = kDiacriticsType;
-	aSelectors[0] = kDecomposeDiacriticsSelector;
-	aTypes[1] = kLigaturesType;
-	aSelectors[1] = kRareLigaturesOffSelector;
-	if ( ATSUSetFontFeatures( maFontStyle, 2, aTypes, aSelectors ) != noErr )
+	// Fix bug 1595 by allowing rare ligatures
+	ATSUFontFeatureType aType;
+	ATSUFontFeatureSelector aSelector;
+	aType = kDiacriticsType;
+	aSelector = kDecomposeDiacriticsSelector;
+	if ( ATSUSetFontFeatures( maFontStyle, 1, &aType, &aSelector ) != noErr )
 	{
 		Destroy();
 		return;
@@ -1003,10 +1000,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						nGlyph |= GetVerticalFlags( nChar );
 
 					int nGlyphFlags = bFirstGlyph ? 0 : GlyphItem::IS_IN_CLUSTER;
-					// Fix bug 1552 by preserving termination glyphs
-					if ( pLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID == 0xffff )
-						nGlyph = 0x0020 | GF_ISCHAR;
-					else if ( bPosRTL )
+					if ( bPosRTL )
 						nGlyphFlags |= GlyphItem::IS_RTL_GLYPH;
 
 					AppendGlyph( GlyphItem( nCharPos, nGlyph, aPos, nGlyphFlags, nCharWidth ) );

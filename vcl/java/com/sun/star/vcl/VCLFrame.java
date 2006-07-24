@@ -1026,7 +1026,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param b <code>true</code> to enable flushing and <code>false</code> to
 	 *  disable flushing
 	 */
-	public void enableFlushing(boolean b)
+	public synchronized void enableFlushing(boolean b)
 	{
 		// Fix occasion crashing by invoking this in the Java event dispatch
 		// thread
