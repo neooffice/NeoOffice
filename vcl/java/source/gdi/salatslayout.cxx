@@ -1003,10 +1003,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						nGlyph |= GetVerticalFlags( nChar );
 
 					int nGlyphFlags = bFirstGlyph ? 0 : GlyphItem::IS_IN_CLUSTER;
-					// Fix bug 1552 by preserving termination glyphs
-					if ( pLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID == 0xffff )
-						nGlyph = 0x0020 | GF_ISCHAR;
-					else if ( bPosRTL )
+					if ( bPosRTL )
 						nGlyphFlags |= GlyphItem::IS_RTL_GLYPH;
 
 					AppendGlyph( GlyphItem( nCharPos, nGlyph, aPos, nGlyphFlags, nCharWidth ) );
