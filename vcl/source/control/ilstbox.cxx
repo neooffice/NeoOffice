@@ -2594,7 +2594,7 @@ long ImplWin::PreNotify( NotifyEvent& rNEvt )
 			&& ! IsNativeControlSupported(CTRL_LISTBOX, PART_BUTTON_DOWN) )
             {
 #ifdef USE_JAVA
-                GetParent()->Invalidate();
+                GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
                 GetParent()->Update();
 #else	// USE_JAVA
                 GetParent()->GetWindow( WINDOW_BORDER )->Invalidate( INVALIDATE_NOERASE );

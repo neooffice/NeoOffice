@@ -185,7 +185,7 @@ void FixedText::ImplInitSettings( BOOL bFont,
 		if ( GetParent()->GetType() == WINDOW_FIXEDBORDER )
 		{
 			EnableChildTransparentMode( TRUE );
-			Invalidate( Rectangle( Point(), GetOutputSizePixel() ) );
+			Invalidate();
 		}
 		else
 		{
@@ -197,7 +197,7 @@ void FixedText::ImplInitSettings( BOOL bFont,
 				if ( pChild->GetType() == WINDOW_FIXEDBORDER )
 				{
 					EnableChildTransparentMode( TRUE );
-					Invalidate( Rectangle( Point(), GetOutputSizePixel() ) );
+					Invalidate();
 					SetBackground();
 					SetControlBackground();
 					break;
@@ -314,7 +314,7 @@ void FixedText::ImplDraw( OutputDevice* pDev, ULONG nDrawFlags,
 	{
 		if ( GetParent()->GetType() == WINDOW_FIXEDBORDER )
 		{
-			GetParent()->Invalidate( Rectangle( GetParent()->ScreenToOutputPixel( OutputToScreenPixel( Point() ) ), GetOutputSizePixel() ) );
+			GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
 		}
 		else
 		{
@@ -1189,7 +1189,7 @@ void FixedImage::ImplDraw( OutputDevice* pDev, ULONG nDrawFlags,
 		{
 			if ( GetParent()->GetType() == WINDOW_FIXEDBORDER )
 			{
-				GetParent()->Invalidate( Rectangle( GetParent()->ScreenToOutputPixel( OutputToScreenPixel( Point() ) ), GetOutputSizePixel() ) );
+				GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
 			}
 			else
 			{
@@ -1200,7 +1200,7 @@ void FixedImage::ImplDraw( OutputDevice* pDev, ULONG nDrawFlags,
 					Window* pChild = GetParent()->GetChild( i );
 					if ( pChild->GetType() == WINDOW_FIXEDBORDER )
 					{
-						GetParent()->Invalidate( Rectangle( GetParent()->ScreenToOutputPixel( OutputToScreenPixel( Point() ) ), GetOutputSizePixel() ) );
+						GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
 						break;
 					}
 				}

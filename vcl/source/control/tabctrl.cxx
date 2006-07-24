@@ -741,12 +741,7 @@ void TabControl::ImplChangeTabPage( USHORT nId, USHORT nOldId )
 
 #ifdef USE_JAVA
 	if ( pOldItem )
-	{
-		Rectangle aRect;
-		aRect.Right() = Control::GetOutputSizePixel().Width();
-		aRect.Bottom() = Control::GetOutputSizePixel().Height();
-		Invalidate( aRect );
-	}
+		Invalidate();
 #endif
 
     // Invalidate the same region that will be send to NWF

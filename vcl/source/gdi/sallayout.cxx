@@ -829,6 +829,17 @@ void GenericSalLayout::AppendGlyph( const GlyphItem& rGlyphItem )
     }
 
     mpGlyphItems[ mnGlyphCount++ ] = rGlyphItem;
+
+#ifdef USE_JAVA
+    GlyphItem *pG = mpGlyphItems + mnGlyphCount - 1;
+    if ( ( pG->mnGlyphIndex & GF_IDXMASK ) == 0x0000ffff )
+    {
+        if ( pG > mpGlyphItems )
+            pG[-1].mnNewWidth += pG->mnOrigWidth;
+
+        mnGlyphCount--;
+    }
+#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------

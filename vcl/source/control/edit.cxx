@@ -1903,7 +1903,7 @@ void Edit::GetFocus()
 			Window* pWindow = GetWindow( WINDOW_BORDER );
 			if ( pWindow )
 			{
-				pWindow->GetParent()->Invalidate();
+				GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
 				pWindow->GetParent()->Update();
 			}
 		}
@@ -1953,7 +1953,7 @@ void Edit::LoseFocus()
 		Window* pWindow = GetWindow( WINDOW_BORDER );
 		if ( pWindow )
 		{
-			pWindow->GetParent()->Invalidate();
+			GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
 			pWindow->GetParent()->Update();
 		}
 	}

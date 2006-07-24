@@ -3980,7 +3980,7 @@ void CheckBox::Toggle()
 {
     ImplCallEventListenersAndHandler( VCLEVENT_CHECKBOX_TOGGLE, maToggleHdl, this );
 #ifdef USE_JAVA
-	Invalidate( Rectangle( Point(), GetOutputSizePixel() ) );
+	Invalidate();
 #endif
 }
 

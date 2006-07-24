@@ -444,7 +444,7 @@ void SpinField::MouseButtonDown( const MouseEvent& rMEvt )
 #ifdef USE_JAVA
 			if ( IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
 			{
-				GetParent()->Invalidate();
+				GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
 				GetParent()->Update();
 			}
 			else
@@ -458,7 +458,7 @@ void SpinField::MouseButtonDown( const MouseEvent& rMEvt )
 #ifdef USE_JAVA
 			if ( IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
 			{
-				GetParent()->Invalidate();
+				GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
 				GetParent()->Update();
 			}
 			else
@@ -500,7 +500,7 @@ void SpinField::MouseButtonUp( const MouseEvent& rMEvt )
 #ifdef USE_JAVA
 		if ( IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
 		{
-			GetParent()->Invalidate();
+			GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
 			GetParent()->Update();
 		}
 		else
@@ -519,7 +519,7 @@ void SpinField::MouseButtonUp( const MouseEvent& rMEvt )
 #ifdef USE_JAVA
 		if ( IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
 		{
-			GetParent()->Invalidate();
+			GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
 			GetParent()->Update();
 		}
 		else
@@ -583,7 +583,7 @@ void SpinField::MouseMove( const MouseEvent& rMEvt )
 #ifdef USE_JAVA
 	if ( IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
 	{
-		GetParent()->Invalidate();
+		GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
 		GetParent()->Update();
 	}
 #endif
