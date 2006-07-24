@@ -183,14 +183,7 @@ void ExceptionThrower::throwException( Any const & exc ) throw (Exception)
 //______________________________________________________________________________
 void ExceptionThrower::rethrowException() throw (Exception)
 {
-#if defined MACOSX && __GNUC__ < 4
-    if ( __cxa_current_exception_type() )
-        throw;
-    else
-        throw RuntimeException( OUSTR( "rethrowing C++ exception failed!" ), Reference< XInterface >() );
-#else	// MACOSX && __GNUC__ < 4
     throw;
-#endif	// MACOSX && __GNUC__ < 4
 }
 
 //______________________________________________________________________________
@@ -257,6 +250,11 @@ void SAL_CALL throwException( Any const & exc ) SAL_THROW( (Exception) )
 //==============================================================================
 Any SAL_CALL getCaughtException()
 {
+#if defined MACOSX && __GNUC__ < 4
+    if ( !__cxa_current_exception_type() )
+        return Any();
+#endif	// MACOSX && __GNUC__ < 4
+
     Mapping cpp2uno(
         OUSTR(CPPU_CURRENT_LANGUAGE_BINDING_NAME), OUSTR(UNO_LB_UNO) );
     if (! cpp2uno.is())
