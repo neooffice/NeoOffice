@@ -3183,7 +3183,86 @@ Image RadioButton::GetRadioImage( const AllSettings& rSettings, USHORT nFlags )
         if( pResMgr )
             aBmp = Bitmap( ResId( SV_RESID_BITMAP_RADIO+nStyle, ImplGetResMgr() ) );
         aBmp.Replace( pColorAry1, pColorAry2, 6, NULL );
+
+#ifdef USE_JAVA
+        Size aBmpSize( aBmp.GetSizePixel() );
+        SalVirtualDevice *pSalVirDev = pSVData->mpDefInst->CreateVirtualDevice( NULL, aBmpSize.Width(), aBmpSize.Height(), 32 );
+        if ( pSalVirDev )
+        {
+            JavaSalGraphics *pGraphics = (JavaSalGraphics *)pSalVirDev->GetGraphics();
+            if ( pGraphics )
+            { 
+                if ( pGraphics->IsNativeControlSupported( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL ) )
+                {
+                    Point aPos;
+                    Size aSize( aBmpSize.Width() / 6, aBmpSize.Height() );
+
+                    ControlState nState = 0;
+                    ImplControlValue aControlValue;
+                    SalControlHandle aControlHandle;
+                    for ( int i = 0; i < 6; i++ )
+                    {
+                        switch ( i + 1 )
+                        {
+                            case 1:
+                                nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED;
+                                aControlValue.setTristateVal( BUTTONVALUE_OFF );
+                                break;
+                            case 2:
+                                nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED;
+                                aControlValue.setTristateVal( BUTTONVALUE_ON );
+                                break;
+                            case 3:
+                                nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED | CTRL_STATE_PRESSED;
+                                aControlValue.setTristateVal( BUTTONVALUE_OFF );
+                                break;
+                            case 4:
+                                nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED | CTRL_STATE_PRESSED;
+                                aControlValue.setTristateVal( BUTTONVALUE_ON );
+                                break;
+                            case 5:
+                                nState = CTRL_STATE_DEFAULT;
+                                aControlValue.setTristateVal( BUTTONVALUE_OFF );
+                                break;
+                            case 6:
+                                nState = CTRL_STATE_DEFAULT;
+                                aControlValue.setTristateVal( BUTTONVALUE_ON );
+                                break;
+                            default:
+                                nState = CTRL_STATE_DEFAULT;
+                                aControlValue.setTristateVal( BUTTONVALUE_MIXED );
+                                break;
+                        }
+
+        				// Shrink the image by two pixels on the top and right
+                        Region aCtrlRegion = Region( Rectangle( aPos, Size( aSize.Width(), aSize.Height() ) ) );
+                        pGraphics->drawNativeControl( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString() );
+                        pGraphics->drawNativeControl( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString() );
+                        aPos.X() += aSize.Width();
+                    }
+
+                    SalBitmap *pSalBmp = pGraphics->GetBitmap( 0, 0, aBmpSize.Width(), aBmpSize.Height(), NULL );
+                    if ( pSalBmp )
+                    {
+                        Bitmap aBmp;
+                        ImpBitmap* pImpBmp = new ImpBitmap(); 
+                        pImpBmp->ImplSetSalBitmap( pSalBmp );
+                        aBmp.ImplSetImpBitmap( pImpBmp );
+                        pSVData->maCtrlData.mpRadioImgList = new ImageList( aBmp, 6 );
+                    }
+                }
+
+                pSalVirDev->ReleaseGraphics( pGraphics );
+            }
+
+            pSVData->mpDefInst->DestroyVirtualDevice( pSalVirDev );
+        }
+
+        if ( !pSVData->maCtrlData.mpRadioImgList )
+            pSVData->maCtrlData.mpRadioImgList = new ImageList( aBmp, Color( 0x00, 0x00, 0xFF ), 6 );
+#else	// USE_JAVA
         pSVData->maCtrlData.mpRadioImgList = new ImageList( aBmp, Color( 0x00, 0x00, 0xFF ), 6 );
+#endif	// USE_JAVA
         pSVData->maCtrlData.mnRadioStyle = nStyle;
     }
 
