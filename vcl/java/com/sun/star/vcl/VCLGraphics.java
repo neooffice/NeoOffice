@@ -1613,14 +1613,31 @@ public final class VCLGraphics {
 					m.setSelected(true);
 				else
 					m.setSelected(false);
-				Rectangle bounds = getPreferredCheckBoxBounds(x, y, width, height, title);
-				VCLGraphics.checkBoxButton.setSize(bounds.width, bounds.height);
-				Iterator clipRects = clipList.iterator();
-				while (clipRects.hasNext()) {
-					g.setClip((Rectangle)clipRects.next());
-					g.translate(bounds.x, bounds.y);
-					VCLGraphics.checkBoxButton.getUI().paint(g, VCLGraphics.checkBoxButton);
-					g.translate(bounds.x * -1, bounds.y * -1);
+
+				// Make width and height equal since check boxes are square
+				if (width > height)
+					width = height;
+				else
+					height = width;
+
+				Dimension d = VCLGraphics.checkBoxButton.getPreferredSize();
+				Rectangle bounds = new Rectangle(x, y, d.width, d.height);
+				if (bounds.width > width || bounds.height > height) {
+					VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
+					VCLGraphics srcGraphics = srcImage.getGraphics();
+					srcGraphics.drawCheckBox(0, 0, bounds.width, bounds.height, title, enabled, focused, pressed, buttonState);
+					copyBits(srcGraphics, 0, 0, bounds.width, bounds.height, x, y, width, height, false);
+					srcImage.dispose();
+				}
+				else {
+					VCLGraphics.checkBoxButton.setSize(bounds.width, bounds.height);
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						g.setClip((Rectangle)clipRects.next());
+						g.translate(bounds.x, bounds.y);
+						VCLGraphics.checkBoxButton.getUI().paint(g, VCLGraphics.checkBoxButton);
+						g.translate(bounds.x * -1, bounds.y * -1);
+					}
 				}
 			}
 			catch (Throwable t) {
@@ -1644,9 +1661,16 @@ public final class VCLGraphics {
 	 */
 	public Rectangle getPreferredCheckBoxBounds(int x, int y, int width, int height, String title) {
 
+		// Make width and height equal since check boxes are square
+        if (width > height)
+        	width = height;
+		else
+        	height = width;
+
 		VCLGraphics.checkBoxButton.setLabel(title);
 		Dimension d = VCLGraphics.checkBoxButton.getPreferredSize();
-		Rectangle bounds = new Rectangle(x, y, d.width, height < d.height ? height : d.height);
+
+		Rectangle bounds = new Rectangle(x, y, d.width < width ? d.width : width, d.height < height ? d.height : height);
 		bounds.x += (width - bounds.width) / 2;
 		bounds.y += (height - bounds.height) / 2;
 		return bounds;

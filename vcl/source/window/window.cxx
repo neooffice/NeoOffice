@@ -3291,6 +3291,11 @@ void Window::ImplPosSizeWindow( long nX, long nY,
         case WINDOW_PUSHBUTTON:
             aCtrlType = CTRL_PUSHBUTTON;
             break;
+/*
+        case WINDOW_CHECKBOX:
+            aCtrlType = CTRL_CHECKBOX;
+            break;
+*/
     }
 
     if ( aCtrlType && IsNativeControlSupported( aCtrlType, PART_ENTIRE_CONTROL ) )

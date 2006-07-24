@@ -93,6 +93,22 @@
 #include <tools/rc.h>
 #endif
 
+#ifdef USE_JAVA
+
+#ifndef _SV_IMPBMP_HXX
+#include <impbmp.hxx>
+#endif
+#ifndef _SV_SALGDI_H
+#include <salgdi.h>
+#endif
+#ifndef _SV_SALINST_HXX
+#include <salinst.hxx>
+#endif
+#ifndef _SV_SALVD_HXX
+#include <salvd.hxx>
+#endif
+
+#endif	// USE_JAVA
 
 
 // =======================================================================
@@ -3992,7 +4008,96 @@ Image CheckBox::GetCheckImage( const AllSettings& rSettings, USHORT nFlags )
         if( pResMgr )
             aBmp = Bitmap( ResId( SV_RESID_BITMAP_CHECK+nStyle, ImplGetResMgr() ) );
         aBmp.Replace( pColorAry1, pColorAry2, 6, NULL );
+
+#ifdef USE_JAVA
+        Size aBmpSize( aBmp.GetSizePixel() );
+        SalVirtualDevice *pSalVirDev = pSVData->mpDefInst->CreateVirtualDevice( NULL, aBmpSize.Width(), aBmpSize.Height(), 32 );
+        if ( pSalVirDev )
+        {
+            JavaSalGraphics *pGraphics = (JavaSalGraphics *)pSalVirDev->GetGraphics();
+            if ( pGraphics )
+            { 
+                if ( pGraphics->IsNativeControlSupported( CTRL_CHECKBOX, PART_ENTIRE_CONTROL ) )
+                {
+                    Point aPos;
+                    Size aSize( aBmpSize.Width() / 9, aBmpSize.Height() );
+
+                    ControlState nState = 0;
+                    ImplControlValue aControlValue;
+                    SalControlHandle aControlHandle;
+                    for ( int i = 0; i < 9; i++ )
+                    {
+                        switch ( i + 1 )
+                        {
+                            case 1:
+                                nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED;
+                                aControlValue.setTristateVal( BUTTONVALUE_OFF );
+                                break;
+                            case 2:
+                                nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED;
+                                aControlValue.setTristateVal( BUTTONVALUE_ON );
+                                break;
+                            case 3:
+                                nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED | CTRL_STATE_PRESSED;
+                                aControlValue.setTristateVal( BUTTONVALUE_OFF );
+                                break;
+                            case 4:
+                                nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED | CTRL_STATE_PRESSED;
+                                aControlValue.setTristateVal( BUTTONVALUE_ON );
+                                break;
+                            case 5:
+                                nState = CTRL_STATE_DEFAULT;
+                                aControlValue.setTristateVal( BUTTONVALUE_OFF );
+                                break;
+                            case 6:
+                                nState = CTRL_STATE_DEFAULT;
+                                aControlValue.setTristateVal( BUTTONVALUE_ON );
+                                break;
+                            case 7:
+                                nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED;
+                                aControlValue.setTristateVal( BUTTONVALUE_MIXED );
+                            case 8:
+                                nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED | CTRL_STATE_PRESSED;
+                                aControlValue.setTristateVal( BUTTONVALUE_MIXED );
+                            case 9:
+                                nState = CTRL_STATE_DEFAULT;
+                                aControlValue.setTristateVal( BUTTONVALUE_MIXED );
+                                break;
+                            default:
+                                nState = CTRL_STATE_DEFAULT;
+                                aControlValue.setTristateVal( BUTTONVALUE_DONTKNOW );
+                                break;
+                        }
+
+        				// Shrink the image by two pixels on the top and right
+                        Region aCtrlRegion = Region( Rectangle( aPos, Size( aSize.Width(), aSize.Height() ) ) );
+                        pGraphics->drawNativeControl( CTRL_CHECKBOX, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString() );
+                        pGraphics->drawNativeControl( CTRL_CHECKBOX, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString() );
+                        aPos.X() += aSize.Width();
+                    }
+
+                    SalBitmap *pSalBmp = pGraphics->GetBitmap( 0, 0, aBmpSize.Width(), aBmpSize.Height(), NULL );
+                    if ( pSalBmp )
+                    {
+                        Bitmap aBmp;
+                        ImpBitmap* pImpBmp = new ImpBitmap(); 
+                        pImpBmp->ImplSetSalBitmap( pSalBmp );
+                        aBmp.ImplSetImpBitmap( pImpBmp );
+                        pSVData->maCtrlData.mpCheckImgList = new ImageList( aBmp, 9 );
+                    }
+                }
+
+                pSalVirDev->ReleaseGraphics( pGraphics );
+            }
+
+            pSVData->mpDefInst->DestroyVirtualDevice( pSalVirDev );
+        }
+
+        if ( !pSVData->maCtrlData.mpCheckImgList )
+            pSVData->maCtrlData.mpCheckImgList = new ImageList( aBmp, 9 );
+#else	// USE_JAVA
         pSVData->maCtrlData.mpCheckImgList = new ImageList( aBmp, 9 );
+#endif	// USE_JAVA
         pSVData->maCtrlData.mnCheckStyle = nStyle;
     }
 
