@@ -329,17 +329,6 @@ install_info MigrationImpl::findInstallation()
             aInfo.userdata = usAltInstall;
             return aInfo;
         }
-        else if (rtl::Bootstrap::get(OUString::createFromAscii("SYSUSERCONFIG"), usAltInstall))
-        {
-            usAltInstall += OUString::createFromAscii("/Library/NeoOfficeJ-1.1");
-            Directory dir2(usAltInstall);
-            if (dir2.open() == FileBase::E_None)
-            {
-                aInfo.productname = OUString::createFromAscii("NeoOffice/J 1.1");
-                aInfo.userdata = usAltInstall;
-                return aInfo;
-	    	}
-        }
     }
 #endif	// USE_JAVA
 
