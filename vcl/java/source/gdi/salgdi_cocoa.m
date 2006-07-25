@@ -75,14 +75,14 @@
 				int *pBitmapBuffer = (int *)[pBitmapImageRep bitmapData];
 				if ( pBitmapBuffer )
 				{
-#ifdef POWERPC
-					// Pixels are in ARBG format
-					memcpy( mpDestPtr, pBitmapBuffer, mnDestWidth * mnDestHeight * sizeof( int ) );
-#else	// POWERPC
-					// Pixels are in ABGR format
+					// Pixels are in RBGA format on PowerPC and in ABGR format
+					// on Intel
 					long nPixels = mnDestWidth * mnDestHeight;
 					long i = 0;
 					for ( ; i < nPixels; i++ )
+#ifdef POWERPC
+						mpDestPtr[ i ] = ( ( pBitmapBuffer[ i ] & 0xffffff00 ) >> 8 ) | ( ( pBitmapBuffer[ i ] & 0x000000ff ) << 24 );
+#else	// POWERPC
 						mpDestPtr[ i ] = ( pBitmapBuffer[ i ] & 0xff00ff00 ) | ( ( pBitmapBuffer[ i ] & 0x00ff0000 ) >> 16 ) | ( ( pBitmapBuffer[ i ] & 0x000000ff ) << 16 );
 #endif	// POWERPC
 
