@@ -401,6 +401,11 @@ void FixedText::StateChanged( StateChangedType nType )
 		 (nType == STATE_CHANGE_UPDATEMODE) )
 	{
 		if ( IsReallyVisible() && IsUpdateMode() )
+#ifdef USE_JAVA
+			if ( IsChildTransparentModeEnabled() || ( GetBackground().GetStyle() == WALLPAPER_NULL ) )
+				GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+			else
+#endif
 			Invalidate();
 	}
 	else if ( nType == STATE_CHANGE_STYLE )
@@ -429,6 +434,12 @@ void FixedText::StateChanged( StateChangedType nType )
 		ImplInitSettings( FALSE, FALSE, TRUE );
 		Invalidate();
 	}
+#ifdef USE_JAVA
+	else if ( ( nType == WINDOW_FIRSTOVERLAP ) && ( IsChildTransparentModeEnabled() || ( GetBackground().GetStyle() == WALLPAPER_NULL ) ) )
+	{
+		Invalidate();
+	}
+#endif
 }
 
 // -----------------------------------------------------------------------
