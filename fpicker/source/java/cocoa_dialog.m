@@ -230,13 +230,29 @@ static NSString *pBlankItem = @" ";
 
 - (NSArray *)items:(int)nID
 {
-	NSArray *pRet = nil;
+	NSMutableArray *pRet = nil;
 
 	if ( NSFileDialog_controlType( nID ) == COCOA_CONTROL_TYPE_CHECKBOX )
 	{
 		NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
 		if ( pPopup )
-			pRet = [pPopup itemArray];
+		{
+			int nCount = [pPopup numberOfItems];
+			if ( nCount )
+			{
+				pRet = [[NSMutableArray alloc] initWithCapacity:nCount];
+				if ( pRet )
+				{
+					int i = 0;
+					for ( ; i < nCount; i++ )
+					{
+						NSString *pTitle = (NSString *)[pPopup itemTitleAtIndex:i];
+						if ( pTitle )
+							[pRet addObject:[pPopup itemTitleAtIndex:i]];
+					}
+				}
+			}
+		}
 	}
 
 	return pRet;
@@ -669,7 +685,29 @@ static NSString *pBlankItem = @" ";
 
 	NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILETYPE] stringValue]];
 	if ( pPopup )
+	{
 		[pPopup selectItemWithTitle:pItem];
+
+		// OOo sometimes passes substrings of the full title
+		if ( pItem && ![pPopup titleOfSelectedItem] )
+		{
+			int nCount = [pPopup numberOfItems];
+			int i = 0;
+			for ( ; i < nCount; i++ )
+			{
+				NSString *pTitle = [pPopup itemTitleAtIndex:i];
+				if ( pTitle )
+				{
+					NSRange aRange = [pTitle rangeOfString:pItem];
+					if ( aRange.location == 0 )
+					{
+						[pPopup selectItemAtIndex:i];
+						break;
+					}
+				}
+			}
+		}
+	}
 }
 
 - (void)setSelectedItem:(int)nID item:(int)nItem
@@ -711,7 +749,8 @@ static NSString *pBlankItem = @" ";
 				float nTextWidth = 0;
 				float nTextHeight = 0;
 				NSTextField *pTextField = nil;
-				if ( NSFileDialog_controlType( i ) == COCOA_CONTROL_TYPE_POPUP )
+				int nControlType = NSFileDialog_controlType( i );
+				if ( nControlType == COCOA_CONTROL_TYPE_POPUP )
 				{
 					pTextField = (NSTextField *)[mpTextFields objectForKey:[[NSNumber numberWithInt:i] stringValue]];
 					if ( pTextField )
@@ -725,6 +764,9 @@ static NSString *pBlankItem = @" ";
 
 				[pControl setFrameOrigin:NSMakePoint( nTextWidth, nCurrentY )];
 				[pControl sizeToFit];
+				if ( nControlType == COCOA_CONTROL_TYPE_POPUP )
+					[pControl setFrameSize:NSMakeSize( 200, [pControl frame].size.height )];
+					
 				float nWidth = nTextWidth + [pControl bounds].size.width;
 				if ( nCurrentWidth < nWidth )
 					nCurrentWidth = nWidth;
