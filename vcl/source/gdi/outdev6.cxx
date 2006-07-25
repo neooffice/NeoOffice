@@ -1041,7 +1041,9 @@ void OutputDevice::DrawEPS( const Point& rPoint, const Size& rSize,
 	{
 		aRect.Justify();
 
+#ifndef USE_JAVA
 		if( GetOutDevType() == OUTDEV_PRINTER )
+#endif	// !USE_JAVA
 		{
 			if( !mpGraphics && !ImplGetGraphics() )
 				return;

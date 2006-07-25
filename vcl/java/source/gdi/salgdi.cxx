@@ -44,12 +44,17 @@
 #ifndef _SV_SALFRAME_H
 #include <salframe.h>
 #endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLBITMAP_HXX
+#include <com/sun/star/vcl/VCLBitmap.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
 #include <com/sun/star/vcl/VCLFont.hxx>
 #endif
+
+#include "salgdi_cocoa.h"
 
 using namespace vcl;
 
@@ -277,13 +282,47 @@ sal_Bool JavaSalGraphics::drawPolyPolygonBezier( ULONG nPoly, const ULONG* nPoin
 
 BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void* pPtr, ULONG nSize )
 {
+	BOOL bRet = FALSE;
+
 	if ( mpPrinter )
 	{
 		mpVCLGraphics->drawEPS( pPtr, nSize, nX, nY, nWidth, nHeight );
-		return TRUE;
+		bRet = TRUE;
+	}
+	else
+	{
+		com_sun_star_vcl_VCLBitmap aVCLBitmap( nWidth, nHeight, 32 );
+		if ( aVCLBitmap.getJavaObject() )
+		{
+			java_lang_Object *pData = aVCLBitmap.getData();
+			if ( pData )
+			{
+				VCLThreadAttach t;
+				if ( t.pEnv )
+				{
+					jboolean bCopy( sal_False );
+					jint *pBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
+					if ( pBits )
+					{
+						bRet = NSEPSImageRep_drawInBitmap( pPtr, nSize, (int *)pBits, nWidth, nHeight );
+						if ( bRet )
+						{
+							t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, 0 );
+							mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, nWidth, nHeight, nX, nY, nWidth, nHeight );
+						}
+						else
+						{
+							t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, JNI_ABORT );
+						}
+					}
+				}
+
+				delete pData;
+			}
+		}
 	}
 
-	return FALSE;
+	return bRet;
 }
 
 // -----------------------------------------------------------------------

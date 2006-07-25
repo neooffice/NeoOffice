@@ -44,14 +44,14 @@
 #ifndef _SV_SALWTYPE_HXX
 #include <salwtype.hxx>
 #endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLBITMAP_HXX
+#include <com/sun/star/vcl/VCLBitmap.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 #include <com/sun/star/vcl/VCLEvent.hxx>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLIMAGE_HXX
-#include <com/sun/star/vcl/VCLImage.hxx>
 #endif
 
 using namespace vcl;

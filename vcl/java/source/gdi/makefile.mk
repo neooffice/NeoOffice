@@ -57,6 +57,7 @@ SLOFILES= \
 	$(SLO)$/salatslayout.obj \
 	$(SLO)$/salbmp.obj \
 	$(SLO)$/salgdi.obj \
+	$(SLO)$/salgdi_cocoa.obj \
 	$(SLO)$/salgdi2.obj \
 	$(SLO)$/salgdi3.obj \
 	$(SLO)$/salgdi3_cocoa.obj \
