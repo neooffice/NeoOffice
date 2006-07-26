@@ -639,8 +639,8 @@ void StatusBar::ImplDrawProgress( BOOL bPaint,
 		if ( bOK )
 			return;
 	}
+#endif	// USE_JAVA
 
-#endif
 	Point aPos( maPrgsFrameRect.Left()+STATUSBAR_PRGS_OFFSET,
 				maPrgsFrameRect.Top()+STATUSBAR_PRGS_OFFSET );
 	DrawProgress( this, aPos, mnPrgsSize/2, mnPrgsSize, mnPrgsSize,
@@ -1555,25 +1555,10 @@ void StatusBar::SetProgressValue( USHORT nNewPercent )
 
 	if ( mbProgressMode && IsReallyVisible() )
 	{
-#ifdef USE_JAVA
-		if ( ! IsNativeControlSupported( CTRL_PROGRESSBAR, PART_ENTIRE_CONTROL ) )
-		{
-#endif
 		Update();
 		SetLineColor();
-#ifdef USE_JAVA
-		}
-		if ( nNewPercent != mnPercent )
-#endif
 		ImplDrawProgress( FALSE, mnPercent, nNewPercent );
-#ifdef USE_JAVA
-		if ( ! IsNativeControlSupported( CTRL_PROGRESSBAR, PART_ENTIRE_CONTROL ) )
-		{
-#endif
 		Flush();
-#ifdef USE_JAVA
-		}
-#endif
 	}
 	mnPercent = nNewPercent;
 }
