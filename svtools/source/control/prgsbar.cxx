@@ -154,13 +154,47 @@ void ProgressBar::ImplDrawProgress( USHORT nOldPerc, USHORT nNewPerc )
 		ControlState	 nState = 0;
 		if( Window::IsEnabled() )
 			nState |= CTRL_STATE_ENABLED;
-		
-		Rectangle aCtrlRect( Point( 0, 0 ), GetOutputSizePixel() );
-		
-		Erase( aCtrlRect );
-		
+
+		Rectangle aCtrlRect( GetPosPixel(), GetSizePixel() );
+
+		Rectangle aClipRect( aCtrlRect );
+		if ( nOldPerc == nNewPerc )
+		{
+			return;
+		}
+		else if ( nOldPerc < nNewPerc )
+		{
+			long nOldWidth;
+			long nNewWidth;
+			if ( nOldPerc )
+			{
+				nOldWidth = ( aClipRect.GetWidth() * nOldPerc / 100 );
+				if ( nOldWidth )
+				nOldWidth--;
+				nNewWidth = ( aClipRect.GetWidth() * nNewPerc / 100 ) - nOldWidth;
+				if ( nNewWidth + nOldWidth < aCtrlRect.GetWidth() )
+					nNewWidth++;
+			}
+			else
+			{
+				nOldWidth = 0;
+				nNewWidth = aClipRect.GetWidth();
+			}
+
+			aClipRect = Rectangle( Point( aClipRect.Left() + nOldWidth, aClipRect.Top() ), Size( nNewWidth, aClipRect.GetHeight() ) );
+Rectangle aEraseRect = Rectangle( Point( aClipRect.Left() + nOldWidth, aClipRect.Top() + aClipRect.GetHeight() - 2 ), Size( nNewWidth, 2 ) );
+			Erase( aClipRect );
+		}
+		else
+		{
+			Erase( aCtrlRect );
+		}
+
 		Region aCtrlRegion( aCtrlRect );
+		Region aOldClipRgn = GetClipRegion();
+		SetClipRegion( Region( aClipRect ) );
 		BOOL bOK = DrawNativeControl( CTRL_PROGRESSBAR, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, rtl::OUString() );
+		SetClipRegion( aOldClipRgn );
 		if ( bOK )
 			return;
 	}
@@ -226,9 +260,6 @@ void ProgressBar::SetValue( USHORT nNewPercent )
 	}
 	else
 	{
-#ifdef USE_JAVA
-		if ( nNewPercent != mnPercent )
-#endif
 		ImplDrawProgress( mnPercent, nNewPercent );
 		mnPercent = nNewPercent;
 	}
