@@ -154,8 +154,11 @@ void ProgressBar::ImplDrawProgress( USHORT nOldPerc, USHORT nNewPerc )
 		ControlState	 nState = 0;
 		if( Window::IsEnabled() )
 			nState |= CTRL_STATE_ENABLED;
-			
+		
 		Rectangle aCtrlRect( Point( 0, 0 ), GetOutputSizePixel() );
+		
+		Erase( aCtrlRect );
+		
 		Region aCtrlRegion( aCtrlRect );
 		BOOL bOK = DrawNativeControl( CTRL_PROGRESSBAR, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, rtl::OUString() );
 		if ( bOK )
@@ -223,6 +226,9 @@ void ProgressBar::SetValue( USHORT nNewPercent )
 	}
 	else
 	{
+#ifdef USE_JAVA
+		if ( nNewPercent != mnPercent )
+#endif
 		ImplDrawProgress( mnPercent, nNewPercent );
 		mnPercent = nNewPercent;
 	}
