@@ -155,7 +155,7 @@ void ProgressBar::ImplDrawProgress( USHORT nOldPerc, USHORT nNewPerc )
 		if( Window::IsEnabled() )
 			nState |= CTRL_STATE_ENABLED;
 
-		Rectangle aCtrlRect( Point(), GetSizePixel() );
+		Rectangle aCtrlRect( Point( 0, 0 ), GetSizePixel() );
 
 		Rectangle aClipRect( aCtrlRect );
 		if ( nOldPerc == nNewPerc )
