@@ -155,7 +155,7 @@ void ProgressBar::ImplDrawProgress( USHORT nOldPerc, USHORT nNewPerc )
 		if( Window::IsEnabled() )
 			nState |= CTRL_STATE_ENABLED;
 
-		Rectangle aCtrlRect( GetPosPixel(), GetSizePixel() );
+		Rectangle aCtrlRect( Point(), GetSizePixel() );
 
 		Rectangle aClipRect( aCtrlRect );
 		if ( nOldPerc == nNewPerc )
@@ -182,7 +182,7 @@ void ProgressBar::ImplDrawProgress( USHORT nOldPerc, USHORT nNewPerc )
 			}
 
 			aClipRect = Rectangle( Point( aClipRect.Left() + nOldWidth, aClipRect.Top() ), Size( nNewWidth, aClipRect.GetHeight() ) );
-Rectangle aEraseRect = Rectangle( Point( aClipRect.Left() + nOldWidth, aClipRect.Top() + aClipRect.GetHeight() - 2 ), Size( nNewWidth, 2 ) );
+			Rectangle aEraseRect = Rectangle( Point( aClipRect.Left() + nOldWidth, aClipRect.Top() + aClipRect.GetHeight() - 2 ), Size( nNewWidth, 2 ) );
 			Erase( aClipRect );
 		}
 		else
