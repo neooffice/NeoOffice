@@ -3182,14 +3182,39 @@ Image RadioButton::GetRadioImage( const AllSettings& rSettings, USHORT nFlags )
         Bitmap aBmp;
         if( pResMgr )
             aBmp = Bitmap( ResId( SV_RESID_BITMAP_RADIO+nStyle, ImplGetResMgr() ) );
-        aBmp.Replace( pColorAry1, pColorAry2, 6, NULL );
-
 #ifdef USE_JAVA
         Size aBmpSize( aBmp.GetSizePixel() );
         SalVirtualDevice *pSalVirDev = pSVData->mpDefInst->CreateVirtualDevice( NULL, aBmpSize.Width(), aBmpSize.Height(), 32 );
         if ( pSalVirDev )
         {
             JavaSalGraphics *pGraphics = (JavaSalGraphics *)pSalVirDev->GetGraphics();
+            if ( pGraphics )
+            {
+                if ( pGraphics->IsNativeControlSupported( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL ) )
+                {
+                    ImplControlValue aControlValue;
+                    Region aCtrlRegion = Region( Rectangle( Point( 0, 0 ), Size( 1, 1 ) ) );
+                    ControlState nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED;
+                    SalControlHandle aControlHandle;
+                    Region aBoundingRgn, aContentRgn;
+                    if ( pGraphics->GetNativeControlRegion( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString(), aBoundingRgn, aContentRgn, NULL ) )
+                    {
+                        aBmpSize = aContentRgn.GetBoundRect().GetSize();
+                        if ( aBmpSize.Width() > 20 )
+                        	aBmpSize.Width() = 20;
+                        aBmpSize.Width() *= 6;
+                        if ( aBmpSize.Height() > 20 )
+                        	aBmpSize.Height() = 20;
+                        pSalVirDev->ReleaseGraphics( pGraphics );
+                        pGraphics = NULL;
+                        pSalVirDev->SetSize( aBmpSize.Width(), aBmpSize.Height() );
+                    }
+                }
+            }
+
+            if ( !pGraphics )
+                pGraphics = (JavaSalGraphics *)pSalVirDev->GetGraphics();
+
             if ( pGraphics )
             { 
                 if ( pGraphics->IsNativeControlSupported( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL ) )
@@ -3234,8 +3259,7 @@ Image RadioButton::GetRadioImage( const AllSettings& rSettings, USHORT nFlags )
                                 break;
                         }
 
-        				// Shrink the image by two pixels on the top and right
-                        Region aCtrlRegion = Region( Rectangle( aPos, Size( aSize.Width(), aSize.Height() ) ) );
+                        Region aCtrlRegion = Region( Rectangle( aPos, aSize ) );
                         pGraphics->drawNativeControl( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString() );
                         pGraphics->drawNativeControl( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString() );
                         aPos.X() += aSize.Width();
@@ -3244,7 +3268,6 @@ Image RadioButton::GetRadioImage( const AllSettings& rSettings, USHORT nFlags )
                     SalBitmap *pSalBmp = pGraphics->GetBitmap( 0, 0, aBmpSize.Width(), aBmpSize.Height(), NULL );
                     if ( pSalBmp )
                     {
-                        Bitmap aBmp;
                         ImpBitmap* pImpBmp = new ImpBitmap(); 
                         pImpBmp->ImplSetSalBitmap( pSalBmp );
                         aBmp.ImplSetImpBitmap( pImpBmp );
@@ -3259,9 +3282,12 @@ Image RadioButton::GetRadioImage( const AllSettings& rSettings, USHORT nFlags )
         }
 
         if ( !pSVData->maCtrlData.mpRadioImgList )
-            pSVData->maCtrlData.mpRadioImgList = new ImageList( aBmp, Color( 0x00, 0x00, 0xFF ), 6 );
-#else	// USE_JAVA
+        {
+#endif	// USE_JAVA
+        aBmp.Replace( pColorAry1, pColorAry2, 6, NULL );
         pSVData->maCtrlData.mpRadioImgList = new ImageList( aBmp, Color( 0x00, 0x00, 0xFF ), 6 );
+#ifdef USE_JAVA
+        }
 #endif	// USE_JAVA
         pSVData->maCtrlData.mnRadioStyle = nStyle;
     }
@@ -4086,8 +4112,6 @@ Image CheckBox::GetCheckImage( const AllSettings& rSettings, USHORT nFlags )
         Bitmap aBmp;
         if( pResMgr )
             aBmp = Bitmap( ResId( SV_RESID_BITMAP_CHECK+nStyle, ImplGetResMgr() ) );
-        aBmp.Replace( pColorAry1, pColorAry2, 6, NULL );
-
 #ifdef USE_JAVA
         Size aBmpSize( aBmp.GetSizePixel() );
         SalVirtualDevice *pSalVirDev = pSVData->mpDefInst->CreateVirtualDevice( NULL, aBmpSize.Width(), aBmpSize.Height(), 32 );
@@ -4095,7 +4119,34 @@ Image CheckBox::GetCheckImage( const AllSettings& rSettings, USHORT nFlags )
         {
             JavaSalGraphics *pGraphics = (JavaSalGraphics *)pSalVirDev->GetGraphics();
             if ( pGraphics )
-            { 
+            {
+                if ( pGraphics->IsNativeControlSupported( CTRL_CHECKBOX, PART_ENTIRE_CONTROL ) )
+                {
+                    ImplControlValue aControlValue;
+                    Region aCtrlRegion = Region( Rectangle( Point( 0, 0 ), Size( 1, 1 ) ) );
+                    ControlState nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED;
+                    SalControlHandle aControlHandle;
+                    Region aBoundingRgn, aContentRgn;
+                    if ( pGraphics->GetNativeControlRegion( CTRL_CHECKBOX, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString(), aBoundingRgn, aContentRgn, NULL ) )
+                    {
+                        aBmpSize = aContentRgn.GetBoundRect().GetSize();
+                        if ( aBmpSize.Width() > 20 )
+                        	aBmpSize.Width() = 20;
+                        aBmpSize.Width() *= 9;
+                        if ( aBmpSize.Height() > 20 )
+                        	aBmpSize.Height() = 20;
+                        pSalVirDev->ReleaseGraphics( pGraphics );
+                        pGraphics = NULL;
+                        pSalVirDev->SetSize( aBmpSize.Width(), aBmpSize.Height() );
+                    }
+                }
+            }
+
+            if ( !pGraphics )
+                pGraphics = (JavaSalGraphics *)pSalVirDev->GetGraphics();
+
+            if ( pGraphics )
+            {
                 if ( pGraphics->IsNativeControlSupported( CTRL_CHECKBOX, PART_ENTIRE_CONTROL ) )
                 {
                     Point aPos;
@@ -4148,8 +4199,7 @@ Image CheckBox::GetCheckImage( const AllSettings& rSettings, USHORT nFlags )
                                 break;
                         }
 
-        				// Shrink the image by two pixels on the top and right
-                        Region aCtrlRegion = Region( Rectangle( aPos, Size( aSize.Width(), aSize.Height() ) ) );
+                        Region aCtrlRegion = Region( Rectangle( aPos, aSize ) );
                         pGraphics->drawNativeControl( CTRL_CHECKBOX, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString() );
                         pGraphics->drawNativeControl( CTRL_CHECKBOX, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString() );
                         aPos.X() += aSize.Width();
@@ -4158,7 +4208,6 @@ Image CheckBox::GetCheckImage( const AllSettings& rSettings, USHORT nFlags )
                     SalBitmap *pSalBmp = pGraphics->GetBitmap( 0, 0, aBmpSize.Width(), aBmpSize.Height(), NULL );
                     if ( pSalBmp )
                     {
-                        Bitmap aBmp;
                         ImpBitmap* pImpBmp = new ImpBitmap(); 
                         pImpBmp->ImplSetSalBitmap( pSalBmp );
                         aBmp.ImplSetImpBitmap( pImpBmp );
@@ -4173,9 +4222,12 @@ Image CheckBox::GetCheckImage( const AllSettings& rSettings, USHORT nFlags )
         }
 
         if ( !pSVData->maCtrlData.mpCheckImgList )
-            pSVData->maCtrlData.mpCheckImgList = new ImageList( aBmp, 9 );
-#else	// USE_JAVA
+        {
+#endif	// USE_JAVA
+        aBmp.Replace( pColorAry1, pColorAry2, 6, NULL );
         pSVData->maCtrlData.mpCheckImgList = new ImageList( aBmp, 9 );
+#ifdef USE_JAVA
+        }
 #endif	// USE_JAVA
         pSVData->maCtrlData.mnCheckStyle = nStyle;
     }

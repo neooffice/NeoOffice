@@ -1590,7 +1590,7 @@ public final class VCLGraphics {
 		VCLGraphics.checkBoxButton.setLabel(title);
 		Dimension d = VCLGraphics.radioButton.getPreferredSize();
 
-		Rectangle bounds = new Rectangle(x, y, d.width < width ? d.width : width, d.height < height ? d.height : height);
+		Rectangle bounds = new Rectangle(x, y, d.width > width ? d.width : width, d.height > height ? d.height : height);
 		return bounds;
 
 	}
@@ -1698,7 +1698,7 @@ public final class VCLGraphics {
 		VCLGraphics.checkBoxButton.setLabel(title);
 		Dimension d = VCLGraphics.checkBoxButton.getPreferredSize();
 
-		Rectangle bounds = new Rectangle(x, y, d.width < width ? d.width : width, d.height < height ? d.height : height);
+		Rectangle bounds = new Rectangle(x, y, d.width > width ? d.width : width, d.height > height ? d.height : height);
 		bounds.x += (width - bounds.width) / 2;
 		bounds.y += (height - bounds.height) / 2;
 		return bounds;
