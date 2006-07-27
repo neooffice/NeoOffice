@@ -83,6 +83,17 @@
 #endif
 #include <tools/debug.hxx>
 
+#ifdef USE_JAVA
+
+#ifndef _SV_COMBOBOX_HXX
+#include <combobox.hxx>
+#endif
+#ifndef _SV_ILSTBOX_HXX
+#include <ilstbox.hxx>
+#endif
+
+#endif	// USE_JAVA
+
 using namespace ::com::sun::star::uno;
 
 // useful caption height for title bar buttons
@@ -1344,6 +1355,16 @@ void ImplSmallBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice*, co
     	
         if( bMouseOver )
             nState |= CTRL_STATE_ROLLOVER;
+
+#ifdef USE_JAVA
+        ComboBox *pComboBox = dynamic_cast< ComboBox* >( pCtrl );
+        if ( pComboBox )
+        {
+            const ImplBtn *pImplBtn = pComboBox->GetImplBtn();
+            if ( pImplBtn && pImplBtn->IsPressed() )
+                nState |= CTRL_STATE_PRESSED;
+        }
+#endif	// USE_JAVA
 
         Point aPoint;
         Region aCtrlRegion( Rectangle( aPoint, Size( mnWidth, mnHeight ) ) );

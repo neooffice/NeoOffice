@@ -1,7 +1,5 @@
 /*************************************************************************
  *
- *  OpenOffice.org - a multi-platform office productivity suite
- *
  *  $RCSfile$
  *
  *  $Revision$
@@ -81,6 +79,13 @@
 #include <com/sun/star/accessibility/XAccessible.hpp>
 #endif
 
+#ifdef USE_JAVA
+
+#ifndef _SV_LSTBOX_HXX
+#include <lstbox.hxx>
+#endif
+
+#endif	// USE_JAVA
 
 
 using namespace ::com::sun::star;
@@ -2651,6 +2656,15 @@ void ImplWin::ImplDraw( bool bLayout )
             if( bMouseOver )
                 nState |= CTRL_STATE_ROLLOVER;
             
+#ifdef USE_JAVA
+            ListBox *pListBox = dynamic_cast< ListBox* >( pWin );
+            if ( pListBox )
+            {
+                const ImplBtn *pImplBtn = pListBox->GetImplBtn();
+                if ( pImplBtn && pImplBtn->IsPressed() )
+                    nState |= CTRL_STATE_PRESSED;
+            }
+#else	// USE_JAVA
             // if parent has no border, then nobody has drawn the background
             // since no border window exists. so draw it here.
             WinBits nParentStyle = pWin->GetStyle();
@@ -2661,6 +2675,7 @@ void ImplWin::ImplDraw( bool bLayout )
                 pWin->DrawNativeControl( CTRL_LISTBOX, PART_ENTIRE_CONTROL, aParentReg,
                                          nState, aControlValue, rtl::OUString() );
             }
+#endif	// USE_JAVA
             
 	        bNativeOK = DrawNativeControl( CTRL_LISTBOX, PART_ENTIRE_CONTROL, aCtrlRegion, nState,
 		        aControlValue, rtl::OUString() );
