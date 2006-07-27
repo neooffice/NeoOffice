@@ -1315,7 +1315,7 @@ static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangl
  */
 BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart nPart )
 {
-	BOOL isSupported = NULL;
+	BOOL isSupported = FALSE;
 
 	switch( nType )
 	{
