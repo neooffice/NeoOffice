@@ -863,6 +863,11 @@ void SpinField::Resize()
 			Invalidate( Rectangle( maUpperRect.TopLeft(), maLowerRect.BottomRight() ) );
 		if ( GetStyle() & WB_DROPDOWN )
 			Invalidate( maDropDownRect );
+
+#ifdef USE_JAVA
+		if ( IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
+			GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+#endif
 	}
 }
 

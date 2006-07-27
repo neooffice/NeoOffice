@@ -897,7 +897,15 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 				editRect.origin.y = 0;
 				editRect.size.width = rDestBounds.GetWidth() - arrowRect.size.width - 4;
 				editRect.size.height = offscreenHeight;
-	
+				
+				// erase out our background first
+				
+				float whiteColor[] = { 1.0, 1.0, 1.0, 1.0 };
+				CGContextSetFillColor( aBuffer.maContext, whiteColor );
+				CGContextFillRect( aBuffer.maContext, editRect );
+				
+				// draw our edit frame
+				
 				HIThemeFrameDrawInfo aFrameInfo;
 				memset( &aFrameInfo, 0, sizeof( HIThemeFrameDrawInfo ) );
 	
@@ -1342,7 +1350,7 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			break;
 
 		case CTRL_SPINBOX:
-			if( nPart == PART_ENTIRE_CONTROL )
+			if( nPart == PART_ENTIRE_CONTROL || ( nPart == HAS_BACKGROUND_TEXTURE ) )
 				isSupported = TRUE;
 			break;
 
@@ -1880,8 +1888,14 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 					// note that HIThemeGetButtonShape won't clip the width to the actual recommended width of spinner arrows
 					// leave room for left edge adornments
-					if( preferredRect.size.width > 20 )
-						preferredRect.size.width = 20;
+					
+					SInt32 spinnerThemeWidth;
+					bReturn = ( GetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr );
+					if ( ! bReturn )
+						return bReturn;
+						
+					if( preferredRect.size.width > spinnerThemeWidth )
+						preferredRect.size.width = spinnerThemeWidth;
 
 					switch( nPart )
 					{
@@ -1900,6 +1914,14 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 								Point topLeft( (long)(spinboxRect.Right()-preferredRect.size.width), (long)(spinboxRect.Top()+(preferredRect.size.height / 2)) );
 								Size boundsSize( (long)preferredRect.size.width, (long)(preferredRect.size.height / 2) );
 								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+								rNativeContentRegion = Region( rNativeBoundingRegion );
+								bReturn = TRUE;
+							}
+							break;
+						
+						case PART_SUB_EDIT:
+							{
+								rNativeBoundingRegion = Region( Rectangle( Point( spinboxRect.Left(), spinboxRect.Top() ), Size( (long)(spinboxRect.GetWidth() - preferredRect.size.width - 4 ), spinboxRect.GetHeight() ) ) );
 								rNativeContentRegion = Region( rNativeBoundingRegion );
 								bReturn = TRUE;
 							}
