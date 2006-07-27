@@ -98,6 +98,12 @@
 #ifndef _SV_IMPBMP_HXX
 #include <impbmp.hxx>
 #endif
+#ifndef _SV_SALBMP_HXX
+#include <salbmp.hxx>
+#endif
+#ifndef _SV_SALBTYPE_HXX
+#include <salbtype.hxx>
+#endif
 #ifndef _SV_SALGDI_H
 #include <salgdi.h>
 #endif
@@ -4208,6 +4214,25 @@ Image CheckBox::GetCheckImage( const AllSettings& rSettings, USHORT nFlags )
                     SalBitmap *pSalBmp = pGraphics->GetBitmap( 0, 0, aBmpSize.Width(), aBmpSize.Height(), NULL );
                     if ( pSalBmp )
                     {
+                        // OOo will change some semi-transparent pixels to pink
+                        // so force those pixels to fully transparent
+                        BitmapBuffer *pBuffer = pSalBmp->AcquireBuffer( false );
+                        if ( pBuffer )
+                        {
+                            if ( pBuffer->mpBits )
+                            {
+                                long nPixels = pBuffer->mnWidth * pBuffer->mnHeight;
+                                int *pBits = (int *)pBuffer->mpBits;
+                                for ( long i = 0; i < nPixels; i++ )
+                                {
+                                    if ( ( pBits[ i ] & 0xFF000000 ) < 0xF1000000 )
+                                        pBits[ i ] = 0x00000000;
+                                }
+                            }
+
+                            pSalBmp->ReleaseBuffer( pBuffer, false );
+                        }
+
                         ImpBitmap* pImpBmp = new ImpBitmap(); 
                         pImpBmp->ImplSetSalBitmap( pSalBmp );
                         aBmp.ImplSetImpBitmap( pImpBmp );
