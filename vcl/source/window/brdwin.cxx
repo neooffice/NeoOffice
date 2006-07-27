@@ -90,6 +90,72 @@ using namespace ::com::sun::star::uno;
 
 // =======================================================================
 
+static void ImplGetNativeControlData( Window *pCtrl, ControlType& nCtrlType, ControlPart& nCtrlPart )
+{
+	nCtrlType = 0;
+	nCtrlPart = PART_ENTIRE_CONTROL;
+
+	if ( pCtrl )
+	{
+		switch ( pCtrl->GetType() )
+		{
+			case WINDOW_MULTILINEEDIT:
+				nCtrlType = CTRL_MULTILINE_EDITBOX;
+				break;
+			case WINDOW_EDIT:
+			case WINDOW_PATTERNFIELD:
+			case WINDOW_METRICFIELD:
+			case WINDOW_CURRENCYFIELD:
+			case WINDOW_DATEFIELD:
+			case WINDOW_TIMEFIELD:
+			case WINDOW_LONGCURRENCYFIELD:
+			case WINDOW_NUMERICFIELD:
+			case WINDOW_SPINFIELD:
+				if( pCtrl->GetStyle() & WB_SPIN )
+					nCtrlType = CTRL_SPINBOX;
+				else
+					nCtrlType = CTRL_EDITBOX;
+				break;
+			case WINDOW_LISTBOX:
+			case WINDOW_MULTILISTBOX:
+			case WINDOW_TREELISTBOX:
+				nCtrlType = CTRL_LISTBOX;
+				if( pCtrl->GetStyle() & WB_DROPDOWN )
+					nCtrlPart = PART_ENTIRE_CONTROL;
+				else
+					nCtrlPart = PART_WINDOW;
+				break;
+			case WINDOW_LISTBOXWINDOW:
+				nCtrlType = CTRL_LISTBOX;
+				nCtrlPart = PART_WINDOW;
+				break;
+			case WINDOW_COMBOBOX:
+			case WINDOW_PATTERNBOX:			
+			case WINDOW_NUMERICBOX:			
+			case WINDOW_METRICBOX:			
+			case WINDOW_CURRENCYBOX:
+			case WINDOW_DATEBOX:		
+			case WINDOW_TIMEBOX:			
+			case WINDOW_LONGCURRENCYBOX:
+				if( pCtrl->GetStyle() & WB_DROPDOWN )
+				{
+					nCtrlType = CTRL_COMBOBOX;
+					nCtrlPart = PART_ENTIRE_CONTROL;
+				}
+				else
+				{
+					nCtrlType = CTRL_LISTBOX;
+					nCtrlPart = PART_WINDOW;
+				}
+				break;
+			default:
+				break;
+		}
+	}
+}
+
+// -----------------------------------------------------------------------
+
 static void ImplGetPinImage( USHORT nStyle, BOOL bPinIn, Image& rImage )
 {
 	// ImageListe laden, wenn noch nicht vorhanden
@@ -1185,9 +1251,11 @@ void ImplSmallBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice*, co
 
     ControlType aCtrlType = 0;
     ControlPart aCtrlPart = PART_ENTIRE_CONTROL;
-
     if( pWin && (pCtrl = mpBorderWindow->GetWindow( WINDOW_CLIENT )) != NULL )
     {
+#ifdef USE_JAVA
+        ImplGetNativeControlData( pCtrl, aCtrlType, aCtrlPart );
+#else	// USE_JAVA
         switch( pCtrl->GetType() )
         {
             case WINDOW_MULTILINEEDIT:
@@ -1247,6 +1315,7 @@ void ImplSmallBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice*, co
             default:
                 break;
         }
+#endif	// USE_JAVA
     }
 
     if ( aCtrlType && pCtrl->IsNativeControlSupported(aCtrlType, aCtrlPart) )
@@ -2027,6 +2096,39 @@ void ImplBorderWindow::DataChanged( const DataChangedEvent& rDCEvt )
 
 	Window::DataChanged( rDCEvt );
 }
+
+// -----------------------------------------------------------------------
+
+#ifdef USE_JAVA
+
+long ImplBorderWindow::PreNotify( NotifyEvent& rNEvt )
+{
+	long nDone = 0;
+	const MouseEvent *pMouseEvt = NULL;
+ 
+	if ( rNEvt.GetType() == EVENT_MOUSEMOVE && ( pMouseEvt = rNEvt.GetMouseEvent() ) )
+	{
+		if ( GetOutDevType() == OUTDEV_WINDOW && ( pMouseEvt->IsEnterWindow() || pMouseEvt->IsLeaveWindow() ) )
+		{
+			Window *pCtrl = GetWindow( WINDOW_CLIENT );
+			if ( pCtrl )
+			{
+				ControlType nCtrlType = 0;
+				ControlPart nCtrlPart = PART_ENTIRE_CONTROL;
+				ImplGetNativeControlData( pCtrl, nCtrlType, nCtrlPart );
+				if ( nCtrlType && pCtrl->IsNativeControlSupported( nCtrlType, nCtrlPart ) )
+				{
+					GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+					GetParent()->Update();
+				}
+			}
+		}
+	}
+
+	return nDone ? nDone : Window::PreNotify( rNEvt );
+}
+
+#endif	// USE_JAVA
 
 // -----------------------------------------------------------------------
 
