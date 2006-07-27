@@ -87,6 +87,8 @@ using namespace rtl;
 #define SCROLLBAR_ARROW_TRIMWIDTH		11
 #define SCROLLBAR_ARROW_TOP_TRIMHEIGHT	10
 #define SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT	( ( vcl::IsRunningPanther() ) ? 12 : 13 )
+#define SPINNER_TRIMWIDTH				3
+#define SPINNER_TRIMHEIGHT				1
 
 #if ( BUILD_OS_MAJOR == 10 ) && ( BUILD_OS_MINOR == 3 )
 // constants and structures for 10.3
@@ -871,6 +873,7 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	
 	if ( bRet )
 	{
+		spinnerThemeHeight += SPINNER_TRIMHEIGHT * 2;
 		int offscreenHeight = ( ( rDestBounds.GetHeight() > spinnerThemeHeight ) ? rDestBounds.GetHeight() : spinnerThemeHeight );
 		
 		VCLBitmapBuffer aBuffer;
@@ -881,11 +884,11 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 			InitSpinbuttonDrawInfo( &aButtonDrawInfo, pValue );
 	
 			HIRect arrowRect;
-			arrowRect.origin.x = rDestBounds.GetWidth() - spinnerThemeWidth;
+			arrowRect.origin.x = rDestBounds.GetWidth() - spinnerThemeWidth - SPINNER_TRIMWIDTH;
 			if( arrowRect.origin.x < 0 )
 				arrowRect.origin.x = 0;
-			arrowRect.origin.y = 0;
-			arrowRect.size.width = spinnerThemeWidth;
+			arrowRect.origin.y = ( ( spinnerThemeHeight - offscreenHeight ) / 2 ) - SPINNER_TRIMHEIGHT;
+			arrowRect.size.width = spinnerThemeWidth + ( SPINNER_TRIMWIDTH * 2 );
 			arrowRect.size.height = offscreenHeight;
 						
 			bRet = ( HIThemeDrawButton( &arrowRect, &aButtonDrawInfo, aBuffer.maContext, kHIThemeOrientationInverted, NULL ) == noErr );
@@ -895,7 +898,7 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 				HIRect editRect;
 				editRect.origin.x = 0;
 				editRect.origin.y = 0;
-				editRect.size.width = rDestBounds.GetWidth() - arrowRect.size.width - 4;
+				editRect.size.width = rDestBounds.GetWidth() - arrowRect.size.width;
 				editRect.size.height = offscreenHeight;
 				
 				// erase out our background first
@@ -1888,12 +1891,13 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 					// note that HIThemeGetButtonShape won't clip the width to the actual recommended width of spinner arrows
 					// leave room for left edge adornments
-					
+
 					SInt32 spinnerThemeWidth;
 					bReturn = ( GetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr );
 					if ( ! bReturn )
 						return bReturn;
 						
+					spinnerThemeWidth += SPINNER_TRIMWIDTH * 2;
 					if( preferredRect.size.width > spinnerThemeWidth )
 						preferredRect.size.width = spinnerThemeWidth;
 
