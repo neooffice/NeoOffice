@@ -2598,13 +2598,8 @@ long ImplWin::PreNotify( NotifyEvent& rNEvt )
             if ( IsNativeControlSupported(CTRL_LISTBOX, PART_ENTIRE_CONTROL)
 			&& ! IsNativeControlSupported(CTRL_LISTBOX, PART_BUTTON_DOWN) )
             {
-#ifdef USE_JAVA
-                GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-                GetParent()->Update();
-#else	// USE_JAVA
                 GetParent()->GetWindow( WINDOW_BORDER )->Invalidate( INVALIDATE_NOERASE );
                 GetParent()->GetWindow( WINDOW_BORDER )->Update();
-#endif	// USE_JAVA
             }
         }
     }

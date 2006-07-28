@@ -315,7 +315,7 @@ IMPL_LINK( ComboBox, ImplClickBtnHdl, void*, EMPTYARG )
         mpImplLB->GetMainWindow()->ImplClearLayoutData();
 
 #ifdef USE_JAVA
-	GetParent()->Invalidate();
+	GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
 #endif	// USE_JAVA
 
 	return 0;
@@ -344,7 +344,7 @@ IMPL_LINK( ComboBox, ImplPopupModeEndHdl, void*, p )
 	mpBtn->SetPressed( FALSE );
     ImplCallEventListeners( VCLEVENT_DROPDOWN_CLOSE );
 #ifdef USE_JAVA
-	GetParent()->Invalidate();
+	GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
 #endif	// USE_JAVA
 	return 0;
 }
