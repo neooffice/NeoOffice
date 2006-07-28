@@ -309,30 +309,6 @@ void FixedText::ImplDraw( OutputDevice* pDev, ULONG nDrawFlags,
     }
     else
         pDev->DrawText( Rectangle( aPos, rSize ), aText, nTextStyle );
-#ifdef USE_JAVA
-	if ( ((FixedText *)this)->IsNativeControlSupported( CTRL_FIXEDBORDER, PART_ENTIRE_CONTROL ) && GetParent() )
-	{
-		if ( GetParent()->GetType() == WINDOW_FIXEDBORDER )
-		{
-			GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-		}
-		else
-		{
-			// dialogs will implement tabpages as peers of their borders, not
-			// as contained
-			for ( USHORT i = 0; i < GetParent()->GetChildCount(); i++ )
-			{
-				Window* pChild = GetParent()->GetChild( i );
-				if ( pChild->GetType() == WINDOW_FIXEDBORDER )
-				{
-					GetParent()->Invalidate( Rectangle( GetParent()->ScreenToOutputPixel( OutputToScreenPixel( Point() ) ), GetOutputSizePixel() ) );
-					break;
-				}
-			}
-		}
-	}
-#endif
-
 }
 
 // -----------------------------------------------------------------------
@@ -1195,29 +1171,6 @@ void FixedImage::ImplDraw( OutputDevice* pDev, ULONG nDrawFlags,
 			Point aPos = ImplCalcPos( GetStyle(), rPos, pImage->GetSizePixel(), rSize );
 			pDev->DrawImage( aPos, *pImage, nStyle );
 		}
-#ifdef USE_JAVA
-		if ( IsNativeControlSupported( CTRL_FIXEDBORDER, PART_ENTIRE_CONTROL ) && GetParent() )
-		{
-			if ( GetParent()->GetType() == WINDOW_FIXEDBORDER )
-			{
-				GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-			}
-			else
-			{
-				// dialogs will implement tabpages as peers of their borders, not
-				// as contained
-				for ( USHORT i = 0; i < GetParent()->GetChildCount(); i++ )
-				{
-					Window* pChild = GetParent()->GetChild( i );
-					if ( pChild->GetType() == WINDOW_FIXEDBORDER )
-					{
-						GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-						break;
-					}
-				}
-			}
-		}
-#endif
 	}
 
 	mbInUserDraw = TRUE;
@@ -1281,6 +1234,11 @@ void FixedImage::StateChanged( StateChangedType nType )
 		 (nType == STATE_CHANGE_UPDATEMODE) )
 	{
 		if ( IsReallyVisible() && IsUpdateMode() )
+#ifdef USE_JAVA
+			if ( IsChildTransparentModeEnabled() || ( GetBackground().GetStyle() == WALLPAPER_NULL ) )
+				GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+			else
+#endif
 			Invalidate();
 	}
 	else if ( nType == STATE_CHANGE_STYLE )
@@ -1295,6 +1253,12 @@ void FixedImage::StateChanged( StateChangedType nType )
 		ImplInitSettings();
 		Invalidate();
 	}
+#ifdef USE_JAVA
+	else if ( ( nType == WINDOW_FIRSTOVERLAP ) && ( IsChildTransparentModeEnabled() || ( GetBackground().GetStyle() == WALLPAPER_NULL ) ) )
+	{
+		Invalidate();
+	}
+#endif
 }
 
 // -----------------------------------------------------------------------
