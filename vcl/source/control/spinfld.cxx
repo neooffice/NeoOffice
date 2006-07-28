@@ -1060,6 +1060,11 @@ IMPL_LINK( SpinField, ImplTimeout, Timer*, pTimer )
 			Up();
 		else
 			Down();
+
+#ifdef USE_JAVA
+		GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+		GetParent()->Update();
+#endif	// USE_JAVA
 	}
 	return 0;
 }
