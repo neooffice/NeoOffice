@@ -328,7 +328,8 @@ IMPL_LINK( ListBox, ImplClickBtnHdl, void*, EMPTYARG )
 #ifdef USE_JAVA
 	ImplControlValue aControlValue;
 	Region aBoundingRgn, aContentRgn;
-	Region aArea( Rectangle( GetPosPixel(), GetSizePixel() ) );
+	Rectangle aRect( GetPosPixel(), GetSizePixel() );
+	Region aArea( aRect );
 	if ( GetNativeControlRegion( CTRL_LISTBOX, PART_BUTTON_DOWN, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
 	{
 		GetParent()->Invalidate( aContentRgn.GetBoundRect() );
@@ -374,7 +375,8 @@ IMPL_LINK( ListBox, ImplPopupModeEndHdl, void*, p )
 #ifdef USE_JAVA
 	ImplControlValue aControlValue;
 	Region aBoundingRgn, aContentRgn;
-	Region aArea( Rectangle( GetPosPixel(), GetSizePixel() ) );
+	Rectangle aRect( GetPosPixel(), GetSizePixel() );
+	Region aArea( aRect );
 	if ( GetNativeControlRegion( CTRL_LISTBOX, PART_BUTTON_DOWN, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
 	{
 		GetParent()->Invalidate( aContentRgn.GetBoundRect() );

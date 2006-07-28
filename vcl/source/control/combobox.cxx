@@ -317,7 +317,8 @@ IMPL_LINK( ComboBox, ImplClickBtnHdl, void*, EMPTYARG )
 #ifdef USE_JAVA
     ImplControlValue aControlValue;
     Region aBoundingRgn, aContentRgn;
-    Region aArea( Rectangle( GetPosPixel(), GetSizePixel() ) );
+    Rectangle aRect( GetPosPixel(), GetSizePixel() );
+    Region aArea( aRect );
     if ( GetNativeControlRegion( CTRL_COMBOBOX, PART_BUTTON_DOWN, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
     {
 	    GetParent()->Invalidate( aContentRgn.GetBoundRect() );
@@ -354,7 +355,8 @@ IMPL_LINK( ComboBox, ImplPopupModeEndHdl, void*, p )
     ImplControlValue aControlValue;
     Point aPoint;
     Region aBoundingRgn, aContentRgn;
-    Region aArea( Rectangle( GetPosPixel(), GetSizePixel() ) );
+    Rectangle aRect( GetPosPixel(), GetSizePixel() );
+    Region aArea( aRect );
     if ( GetNativeControlRegion( CTRL_COMBOBOX, PART_BUTTON_DOWN, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
     {
 	    GetParent()->Invalidate( aContentRgn.GetBoundRect() );
