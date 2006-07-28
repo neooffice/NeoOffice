@@ -2761,7 +2761,14 @@ void RadioButton::Tracking( const TrackingEvent& rTEvt )
             if ( !rTEvt.IsTrackingCanceled() )
                 ImplCallClick();
             else
+#ifdef USE_JAVA
+            {
+                GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+                GetParent()->Update();
+            }
+#else	// USE_JAVA
                 ImplDrawRadioButtonState();
+#endif	// USE_JAVA
         }
     }
     else
@@ -2771,7 +2778,12 @@ void RadioButton::Tracking( const TrackingEvent& rTEvt )
             if ( !(ImplGetButtonState() & BUTTON_DRAW_PRESSED) )
             {
                 ImplGetButtonState() |= BUTTON_DRAW_PRESSED;
+#ifdef USE_JAVA
+                GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+                GetParent()->Update();
+#else	// USE_JAVA
                 ImplDrawRadioButtonState();
+#endif	// USE_JAVA
             }
         }
         else
@@ -2779,7 +2791,12 @@ void RadioButton::Tracking( const TrackingEvent& rTEvt )
             if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )
             {
                 ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
+#ifdef USE_JAVA
+                GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+                GetParent()->Update();
+#else	// USE_JAVA
                 ImplDrawRadioButtonState();
+#endif	// USE_JAVA
             }
         }
     }
@@ -3690,7 +3707,14 @@ void CheckBox::Tracking( const TrackingEvent& rTEvt )
             if ( !rTEvt.IsTrackingCanceled() )
                 ImplCheck();
             else
+#ifdef USE_JAVA
+            {
+                GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+                GetParent()->Update();
+            }
+#else	// USE_JAVA
                 ImplDrawCheckBoxState();
+#endif	// USE_JAVA
         }
     }
     else
@@ -3700,7 +3724,12 @@ void CheckBox::Tracking( const TrackingEvent& rTEvt )
             if ( !(ImplGetButtonState() & BUTTON_DRAW_PRESSED) )
             {
                 ImplGetButtonState() |= BUTTON_DRAW_PRESSED;
+#ifdef USE_JAVA
+                GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+                GetParent()->Update();
+#else	// USE_JAVA
                 ImplDrawCheckBoxState();
+#endif	// USE_JAVA
             }
         }
         else
@@ -3708,7 +3737,12 @@ void CheckBox::Tracking( const TrackingEvent& rTEvt )
             if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )
             {
                 ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
+#ifdef USE_JAVA
+                GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+                GetParent()->Update();
+#else	// USE_JAVA
                 ImplDrawCheckBoxState();
+#endif	// USE_JAVA
             }
         }
     }
