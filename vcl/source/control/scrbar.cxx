@@ -739,6 +739,13 @@ void ScrollBar::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, 
 BOOL ScrollBar::ImplDrawNative( USHORT nDrawFlags )
 {
     BOOL bNativeOK = FALSE;
+
+#ifdef USE_JAVA
+    SetLineColor();
+    SetFillColor( GetSettings().GetStyleSettings().GetCheckedColor() );
+    DrawRect( Rectangle( Point( 0, 0 ), GetSizePixel() ) );
+#endif	// USE_JAVA
+
     ImplControlValue aControlValue( BUTTONVALUE_DONTKNOW, rtl::OUString(), 0 );
 
     if( bNativeOK = IsNativeControlSupported(CTRL_SCROLLBAR, PART_ENTIRE_CONTROL) )

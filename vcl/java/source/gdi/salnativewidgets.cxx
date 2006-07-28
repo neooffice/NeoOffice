@@ -842,15 +842,6 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
 		destRect.origin.y = 0;
 		destRect.size.width = rDestBounds.GetWidth();
 		destRect.size.height = rDestBounds.GetHeight();
-		
-		// note that Aqua scrollbars always are 15 pixels in width and the rest
-		// of the background will not be drawn.  use an opaque white fill to 
-		// prevent graphics glitches from anything still left in the buffer
-		// should it not be sized to exact Aqua metrics.
-		float whiteColor[] = { 1.0, 1.0, 1.0, 1.0 };
-		CGContextSetFillColor( aBuffer.maContext, whiteColor );
-		CGContextFillRect( aBuffer.maContext, destRect );
-		
 		bRet = ( HIThemeDrawTrack( &pTrackDrawInfo, NULL, aBuffer.maContext, kHIThemeOrientationInverted ) == noErr );
 	}
 
