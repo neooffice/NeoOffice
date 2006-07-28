@@ -60,31 +60,67 @@
 
 
 
-using namespace rtl;
-
 #ifdef USE_JAVA
 
-#include <deque>
-#ifdef __cplusplus
-#include <premac.h>
+#include <list>
+
+#ifndef _SV_SVAPP_HXX
+#include <svapp.hxx>
 #endif
-#include <Carbon/Carbon.h>
-#ifdef __cplusplus
-#include <postmac.h>
+#ifndef _VOS_MUTEX_HXX_
+#include <vos/mutex.hxx>
 #endif
 
-typedef std::deque< ScrollBar * > ScrollBarList;
-static ScrollBarList gScrollBars;
+#include <premac.h>
+#include <Carbon/Carbon.h>
+#include <postmac.h>
+
+static ::std::list< ScrollBar* > gScrollBars;
+static EventHandlerUPP pRelayoutScrollBarHandler = NULL;
+
+using namespace vos;
+
+#endif	// USE_JAVA
+
+using namespace rtl;
 
 // =======================================================================
 
+#ifdef USE_JAVA
+
 static OSStatus RelayoutScrollBars(  EventHandlerCallRef inHandlerCallRef, EventRef inEvent, void * inUserData )
 {
-	for ( ScrollBarList::iterator iter = gScrollBars.begin(); iter != gScrollBars.end(); iter++ )
+	// We need to let any pending timers run so that we don't deadlock
+	TimeValue aDelay;
+	aDelay.Seconds = 0;
+	aDelay.Nanosec = 10;
+	IMutex& rSolarMutex = Application::GetSolarMutex();
+	bool bAcquired = false;
+	while ( !Application::IsShutDown() )
 	{
-		(*iter)->Resize();
-		(*iter)->Invalidate();
+		if ( rSolarMutex.tryToAcquire() )
+		{
+			if ( !Application::IsShutDown() )
+				bAcquired = true; 
+			else
+				rSolarMutex.release();
+			break;
+		}
+		ReceiveNextEvent( 0, NULL, 0, false, NULL );
+		OThread::wait( aDelay );
 	}
+
+	if ( bAcquired )
+	{
+		for ( ::std::list< ScrollBar* >::const_iterator iter = gScrollBars.begin(); iter != gScrollBars.end(); iter++ )
+		{
+			(*iter)->Resize();
+			(*iter)->Invalidate();
+		}
+
+		rSolarMutex.release();
+	}
+
 	return noErr;
 }
 
@@ -92,32 +128,28 @@ static OSStatus RelayoutScrollBars(  EventHandlerCallRef inHandlerCallRef, Event
 
 static void BeginTrackingScrollBar( ScrollBar *toTrack )
 {
-	gScrollBars.push_back( toTrack );
-	
-	static bool bInstalledCarbonEventHandler = false;
-	if ( ! bInstalledCarbonEventHandler )
+	if ( !pRelayoutScrollBarHandler )
 	{
-		EventHandlerRef myRef;
-		EventTypeSpec appearanceScrollEvent = { kEventClassAppearance, kEventAppearanceScrollBarVariantChanged };
-		InstallEventHandler( GetApplicationEventTarget(), NewEventHandlerUPP( RelayoutScrollBars ), 1, &appearanceScrollEvent, NULL, &myRef );
-		bInstalledCarbonEventHandler = true;
+		pRelayoutScrollBarHandler = NewEventHandlerUPP( RelayoutScrollBars );
+		if ( pRelayoutScrollBarHandler )
+		{
+			EventHandlerRef myRef;
+			EventTypeSpec appearanceScrollEvent = { kEventClassAppearance, kEventAppearanceScrollBarVariantChanged };
+			InstallEventHandler( GetApplicationEventTarget(), pRelayoutScrollBarHandler, 1, &appearanceScrollEvent, NULL, &myRef );
+		}
 	}
+
+	gScrollBars.push_back( toTrack );
 }
 
 // =======================================================================
 
 static void EndTrackingScrollBar( ScrollBar *toTrack )
 {
-	for ( ScrollBarList::iterator iter = gScrollBars.begin(); iter != gScrollBars.end(); iter++ )
-	{
-		if ( ( *iter ) == toTrack )
-		{
-			gScrollBars.erase( iter );
-			break;
-		}
-	}
+	gScrollBars.remove( toTrack );
 }
-#endif
+
+#endif	// USE_JAVA
 
 // =======================================================================
 
@@ -153,8 +185,10 @@ struct ImplScrollBarData
 {
 	AutoTimer		maTimer;			// Timer
     BOOL            mbHide;
-    BOOL			mbHasEntireControlRect;
-    Rectangle		maEntireControlRect;
+#ifdef USE_JAVA
+    BOOL            mbHasEntireControlRect;
+    Rectangle       maEntireControlRect;
+#endif	// USE_JAVA
 };
 
 // =======================================================================
@@ -188,7 +222,7 @@ void ScrollBar::ImplInit( Window* pParent, WinBits nStyle )
 
 #ifdef USE_JAVA
 	BeginTrackingScrollBar( this );
-#endif
+#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
@@ -231,7 +265,7 @@ ScrollBar::~ScrollBar()
         delete mpData;
 #ifdef USE_JAVA
 	EndTrackingScrollBar( this );
-#endif
+#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
