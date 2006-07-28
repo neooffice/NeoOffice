@@ -92,14 +92,18 @@ private:
     Link            maScrollHdl;
     Link            maEndScrollHdl;
     
+#ifdef USE_JAVA
     SAL_DLLPRIVATE void			ImplNewImplScrollBarData();
+#endif
     SAL_DLLPRIVATE Rectangle*   ImplFindPartRect( const Point& rPt );
 	SAL_DLLPRIVATE void			ImplInit( Window* pParent, WinBits nStyle );
 	SAL_DLLPRIVATE void			ImplInitStyle( WinBits nStyle );
 	SAL_DLLPRIVATE void			ImplLoadRes( const ResId& rResId );
 	SAL_DLLPRIVATE BOOL			ImplUpdateThumbRect( const Rectangle& rOldRect );
 	SAL_DLLPRIVATE void			ImplUpdateRects( BOOL bUpdate = TRUE );
+#ifdef USE_JAVA
 	SAL_DLLPRIVATE void			ImplUpdateRectsNative( BOOL bUpdate = TRUE );
+#endif
 	SAL_DLLPRIVATE long			ImplCalcThumbPos( long nPixPos );
 	SAL_DLLPRIVATE long			ImplCalcThumbPosPix( long nPos );
 	SAL_DLLPRIVATE void			ImplCalc( BOOL bUpdate = TRUE );

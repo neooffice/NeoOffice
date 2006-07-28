@@ -149,10 +149,9 @@ static void EndTrackingScrollBar( ScrollBar *toTrack )
 	gScrollBars.remove( toTrack );
 }
 
-#endif	// USE_JAVA
-
 // =======================================================================
 
+#endif	// USE_JAVA
 static long ImplMulDiv( long nNumber, long nNumerator, long nDenominator )
 {
     double n = ((double)nNumber * (double)nNumerator) / (double)nDenominator;
@@ -219,7 +218,6 @@ void ScrollBar::ImplInit( Window* pParent, WinBits nStyle )
     long nScrollSize = GetSettings().GetStyleSettings().GetScrollBarSize();
     SetSizePixel( Size( nScrollSize, nScrollSize ) );
     SetBackground();
-
 #ifdef USE_JAVA
 	BeginTrackingScrollBar( this );
 #endif	// USE_JAVA
@@ -309,12 +307,13 @@ BOOL ScrollBar::ImplUpdateThumbRect( const Rectangle& rOldRect )
 
 void ScrollBar::ImplUpdateRects( BOOL bUpdate )
 {
+#ifdef USE_JAVA
 	if( IsNativeControlSupported( CTRL_SCROLLBAR, PART_ENTIRE_CONTROL ) )
 	{
 		ImplUpdateRectsNative();
 		return;
 	}
-	
+#endif
     USHORT      nOldStateFlags  = mnStateFlags;
     Rectangle   aOldPage1Rect = maPage1Rect;
     Rectangle   aOldPage2Rect = maPage2Rect;
@@ -419,6 +418,7 @@ void ScrollBar::ImplUpdateRects( BOOL bUpdate )
 
 // -----------------------------------------------------------------------
 
+#ifdef USE_JAVA
 void ScrollBar::ImplUpdateRectsNative( BOOL bUpdate )
 {
 	USHORT      nOldStateFlags  = mnStateFlags;
@@ -520,6 +520,7 @@ void ScrollBar::ImplUpdateRectsNative( BOOL bUpdate )
 
 // -----------------------------------------------------------------------
 
+#endif
 long ScrollBar::ImplCalcThumbPos( long nPixPos )
 {
     // Position berechnen
@@ -785,7 +786,8 @@ BOOL ScrollBar::ImplDrawNative( USHORT nDrawFlags )
             }
 
             aControlValue.setOptionalVal( (void *)(&scrValue) );
-			
+
+#ifdef USE_JAVA			
 			if( mpData && mpData->mbHasEntireControlRect )
 			{
 				// use platform specific preferred boudns
@@ -795,12 +797,15 @@ BOOL ScrollBar::ImplDrawNative( USHORT nDrawFlags )
 			{
 				// approximate valid full control by what we need to cover all
 				// hit test areas
-				aCtrlRegion.Union( maBtn1Rect );
-				aCtrlRegion.Union( maBtn2Rect );
-				aCtrlRegion.Union( maPage1Rect );
-				aCtrlRegion.Union( maPage2Rect );
-				aCtrlRegion.Union( maThumbRect );
+#endif
+            aCtrlRegion.Union( maBtn1Rect );
+            aCtrlRegion.Union( maBtn2Rect );
+            aCtrlRegion.Union( maPage1Rect );
+            aCtrlRegion.Union( maPage2Rect );
+            aCtrlRegion.Union( maThumbRect );
+#ifdef USE_JAVA
 			}
+#endif
 
             bNativeOK = DrawNativeControl( CTRL_SCROLLBAR, (bHorz ? PART_DRAW_BACKGROUND_HORZ : PART_DRAW_BACKGROUND_VERT),
                             aCtrlRegion, nState, aControlValue, rtl::OUString() );
@@ -1501,7 +1506,15 @@ void ScrollBar::ImplInvert()
 void ScrollBar::GetFocus()
 {
     if( !mpData )
+#ifdef USE_JAVA
     	ImplNewImplScrollBarData();
+#else
+    {
+	    mpData = new ImplScrollBarData;
+		mpData->maTimer.SetTimeoutHdl( LINK( this, ScrollBar, ImplAutoTimerHdl ) );
+        mpData->mbHide = FALSE;
+    }
+#endif
     ImplInvert();   // react immediately
 	mpData->maTimer.SetTimeout( GetSettings().GetStyleSettings().GetCursorBlinkTime() );
     mpData->maTimer.Start();
@@ -1510,6 +1523,7 @@ void ScrollBar::GetFocus()
 
 // -----------------------------------------------------------------------
 
+#ifdef USE_JAVA
 void ScrollBar::ImplNewImplScrollBarData()
 {
 	mpData = new ImplScrollBarData;
@@ -1520,6 +1534,7 @@ void ScrollBar::ImplNewImplScrollBarData()
 
 // -----------------------------------------------------------------------
 
+#endif
 void ScrollBar::LoseFocus()
 {
     if( mpData )
