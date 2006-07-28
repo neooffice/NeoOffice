@@ -328,27 +328,44 @@ static BOOL InitButtonDrawInfo( HIThemeButtonDrawInfo *pButtonDrawInfo, ControlS
  * decrementing a value.
  *
  * @param pButtonDrawInfo		HITheme button structure for drawing spinner
+ * @param nState				overall conrol state of the control; overall
+ *								disabled control state will override individual
+ *								button state
  * @param pSpinbuttonValue		VCL structure holding enable state of the
  * @return TRUE if successful, FALSE on failure
  */
-static BOOL InitSpinbuttonDrawInfo( HIThemeButtonDrawInfo *pButtonDrawInfo, SpinbuttonValue *pSpinbuttonValue )
+static BOOL InitSpinbuttonDrawInfo( HIThemeButtonDrawInfo *pButtonDrawInfo, ControlState nState, SpinbuttonValue *pSpinbuttonValue )
 {
 	memset( pButtonDrawInfo, 0, sizeof( HIThemeButtonDrawInfo ) );
 	pButtonDrawInfo->version = 0;
 	pButtonDrawInfo->kind = kThemeIncDecButton;
 	if( pSpinbuttonValue )
 	{
-		if( pSpinbuttonValue->mnUpperState & CTRL_STATE_PRESSED )
-			pButtonDrawInfo->state = kThemeStatePressedUp;
-		else if( pSpinbuttonValue->mnLowerState & CTRL_STATE_PRESSED )
-			pButtonDrawInfo->state = kThemeStatePressedDown;
-		else if( ( ! ( pSpinbuttonValue->mnUpperState & CTRL_STATE_ENABLED ) ) && ( ! ( pSpinbuttonValue->mnLowerState & CTRL_STATE_ENABLED ) ) )
+		if( ! ( nState & ( CTRL_STATE_ENABLED | CTRL_STATE_PRESSED ) ) )
+		{
+			// entire control is disabled, trumps sub-part state
+			pButtonDrawInfo->state = kThemeStateInactive;
+		}
+		else
+		{
+			// use individual arrow state
+			if( pSpinbuttonValue->mnUpperState & CTRL_STATE_PRESSED )
+				pButtonDrawInfo->state = kThemeStatePressedUp;
+			else if( pSpinbuttonValue->mnLowerState & CTRL_STATE_PRESSED )
+				pButtonDrawInfo->state = kThemeStatePressedDown;
+			else if( ( ! ( pSpinbuttonValue->mnUpperState & CTRL_STATE_ENABLED ) ) && ( ! ( pSpinbuttonValue->mnLowerState & CTRL_STATE_ENABLED ) ) )
+				pButtonDrawInfo->state = kThemeStateInactive;
+			else
+				pButtonDrawInfo->state = kThemeStateActive;
+		}
+	}
+	else
+	{
+		if( ! ( nState & CTRL_STATE_ENABLED ) )
 			pButtonDrawInfo->state = kThemeStateInactive;
 		else
 			pButtonDrawInfo->state = kThemeStateActive;
 	}
-	else
-		pButtonDrawInfo->state = kThemeStateActive;
 	return TRUE;
 }
 
@@ -881,7 +898,7 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 		if ( bRet )
 		{
 			HIThemeButtonDrawInfo aButtonDrawInfo;
-			InitSpinbuttonDrawInfo( &aButtonDrawInfo, pValue );
+			InitSpinbuttonDrawInfo( &aButtonDrawInfo, nState, pValue );
 	
 			HIRect arrowRect;
 			arrowRect.origin.x = rDestBounds.GetWidth() - spinnerThemeWidth - SPINNER_TRIMWIDTH;
@@ -1875,7 +1892,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 				HIThemeButtonDrawInfo aThemeButtonDrawInfo;
 				SpinbuttonValue *pValue = static_cast<SpinbuttonValue *> ( aValue.getOptionalVal() );
-				InitSpinbuttonDrawInfo( &aThemeButtonDrawInfo, pValue );
+				InitSpinbuttonDrawInfo( &aThemeButtonDrawInfo, nState, pValue );
 
 				HIShapeRef preferredShape;
 				HIRect destRect;

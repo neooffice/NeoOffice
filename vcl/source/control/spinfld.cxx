@@ -112,8 +112,13 @@ BOOL ImplDrawNativeSpinfield( Window *pWin, const SpinbuttonValue& rSpinbuttonVa
             pWin->IsNativeControlSupported(CTRL_SPINBOX, rSpinbuttonValue.mnLowerPart) )
         {
             // only paint the embedded spin buttons, all buttons are painted at once
+#ifdef USE_JAVA
+            bNativeOK = pWin->DrawNativeControl( CTRL_SPINBOX, PART_ALL_BUTTONS, Region(), ( ( pWin->IsEnabled() ) ? CTRL_STATE_ENABLED : 0 ),
+                        aControlValue, rtl::OUString() );
+#else
             bNativeOK = pWin->DrawNativeControl( CTRL_SPINBOX, PART_ALL_BUTTONS, Region(), CTRL_STATE_ENABLED,
                         aControlValue, rtl::OUString() );
+#endif
         }
         else
         {
@@ -133,8 +138,13 @@ BOOL ImplDrawNativeSpinfield( Window *pWin, const SpinbuttonValue& rSpinbuttonVa
             Point aPt;
             Size aSize( pBorder->GetOutputSizePixel() );    // the size of the border window, i.e., the whole control
             Region aRgn( Rectangle( aPt, aSize ) );
+#ifdef USE_JAVA
+            bNativeOK = pBorder->DrawNativeControl( CTRL_SPINBOX, PART_ENTIRE_CONTROL, aRgn, ( ( pWin->IsEnabled() ) ? CTRL_STATE_ENABLED : 0 ),
+                        aControlValue, rtl::OUString() );
+#else
             bNativeOK = pBorder->DrawNativeControl( CTRL_SPINBOX, PART_ENTIRE_CONTROL, aRgn, CTRL_STATE_ENABLED,
                         aControlValue, rtl::OUString() );
+#endif
 
             pBorder->SetClipRegion( oldRgn );
         }
@@ -890,6 +900,10 @@ void SpinField::StateChanged( StateChangedType nType )
 			}
 			if ( GetStyle() & WB_DROPDOWN )
 				Invalidate( maDropDownRect );
+#ifdef USE_JAVA
+			if ( IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
+				GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+#endif
 		}
 	}
 	else if ( nType == STATE_CHANGE_STYLE )
