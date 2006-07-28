@@ -1594,7 +1594,12 @@ void PushButton::Tracking( const TrackingEvent& rTEvt )
             else
                 ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
 
+#ifdef USE_JAVA
+                GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+                GetParent()->Update();
+#else	// USE_JAVA
             ImplDrawPushButton();
+#endif	// USE_JAVA
 
             // Bei Abbruch kein Click-Handler rufen
             if ( !rTEvt.IsTrackingCanceled() )
@@ -1618,7 +1623,12 @@ void PushButton::Tracking( const TrackingEvent& rTEvt )
             else
             {
                 ImplGetButtonState() |= BUTTON_DRAW_PRESSED;
+#ifdef USE_JAVA
+                GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+                GetParent()->Update();
+#else	// USE_JAVA
                 ImplDrawPushButton();
+#endif	// USE_JAVA
             }
         }
         else
@@ -1626,7 +1636,12 @@ void PushButton::Tracking( const TrackingEvent& rTEvt )
             if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )
             {
                 ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
+#ifdef USE_JAVA
+                GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+                GetParent()->Update();
+#else	// USE_JAVA
                 ImplDrawPushButton();
+#endif	// USE_JAVA
             }
         }
     }
