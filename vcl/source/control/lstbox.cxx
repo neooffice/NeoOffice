@@ -326,7 +326,7 @@ IMPL_LINK( ListBox, ImplClickBtnHdl, void*, EMPTYARG )
 	}
 
 #ifdef USE_JAVA
-	Invalidate();
+	GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
 #endif	// USE_JAVA
 
 	return 0;
@@ -365,7 +365,7 @@ IMPL_LINK( ListBox, ImplPopupModeEndHdl, void*, p )
     mpBtn->SetPressed( FALSE );
     ImplCallEventListeners( VCLEVENT_DROPDOWN_CLOSE );
 #ifdef USE_JAVA
-	Invalidate();
+	GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
 #endif	// USE_JAVA
 	return 0;
 }

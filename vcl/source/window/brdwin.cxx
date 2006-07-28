@@ -91,6 +91,9 @@
 #ifndef _SV_ILSTBOX_HXX
 #include <ilstbox.hxx>
 #endif
+#ifndef _SV_LSTBOX_HXX
+#include <lstbox.hxx>
+#endif
 
 #endif	// USE_JAVA
 
@@ -1363,6 +1366,16 @@ void ImplSmallBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice*, co
             const ImplBtn *pImplBtn = pComboBox->GetImplBtn();
             if ( pImplBtn && pImplBtn->IsPressed() )
                 nState |= CTRL_STATE_PRESSED;
+        }
+        else
+        {
+        	ListBox *pListBox = dynamic_cast< ListBox* >( pCtrl );
+			if ( pListBox )
+			{
+				const ImplBtn *pImplBtn = pListBox->GetImplBtn();
+				if ( pImplBtn && pImplBtn->IsPressed() )
+					nState |= CTRL_STATE_PRESSED;
+			}
         }
 #endif	// USE_JAVA
 
