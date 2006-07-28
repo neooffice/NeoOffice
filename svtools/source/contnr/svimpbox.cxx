@@ -737,7 +737,10 @@ void SvImpLBox::ShowCursor( BOOL bShow )
 	}
 #ifdef USE_JAVA
 	if( pView->IsNativeControlSupported( CTRL_DISCLOSUREBTN, PART_ENTIRE_CONTROL ) )
+	{
 		pView->Invalidate();
+		pView->Update();
+	}
 #endif
 }
 
