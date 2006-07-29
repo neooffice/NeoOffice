@@ -964,6 +964,11 @@ static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& 
 	BOOL bRet = aBuffer.Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
 	if ( bRet )
 	{
+		long nPixels = aBuffer.mnWidth * aBuffer.mnHeight;
+		jint *pBits = (jint *)aBuffer.mpBits;
+		for ( long i = 0; i < nPixels; i++ )
+			pBits[ i ] = pGraphics->mnFillColor;
+
 		HIThemeTrackDrawInfo aTrackDrawInfo;
 		InitProgressbarTrackInfo( &aTrackDrawInfo, nState, rDestBounds, pValue );
 

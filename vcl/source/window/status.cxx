@@ -598,44 +598,11 @@ void StatusBar::ImplDrawProgress( BOOL bPaint,
 		if( Window::IsEnabled() )
 			nState |= CTRL_STATE_ENABLED;
 
-		Rectangle aClipRect( maPrgsFrameRect );
-		if ( nPercent1 == nPercent2 )
-		{
-			return;
-		}
-		else if ( nPercent1 < nPercent2 )
-		{
-			long nOldWidth;
-			long nNewWidth;
-			if ( nPercent1 )
-			{
-				nOldWidth = ( aClipRect.GetWidth() * nPercent1 / 100 );
-				if ( nOldWidth )
-					nOldWidth--;
-				nNewWidth = ( aClipRect.GetWidth() * nPercent2 / 100 ) - nOldWidth;
-				if ( nNewWidth + nOldWidth < maPrgsFrameRect.GetWidth() )
-					nNewWidth++;
-			}
-			else
-			{
-				nOldWidth = 0;
-				nNewWidth = aClipRect.GetWidth();
-			}
-
-			aClipRect = Rectangle( Point( aClipRect.Left() + nOldWidth, aClipRect.Top() ), Size( nNewWidth, aClipRect.GetHeight() ) );
-			Rectangle aEraseRect = Rectangle( Point( aClipRect.Left() + nOldWidth, aClipRect.Top() + aClipRect.GetHeight() - 2 ), Size( nNewWidth, 2 ) );
-			Erase( aClipRect );
-		}
-		else
-		{
-			Erase( maPrgsFrameRect );
-		}
+		// We need to set the background color in the native drawing method
+		SetFillColor( GetBackground().GetColor() );
 
 		Region aCtrlRegion( maPrgsFrameRect );
-		Region aOldClipRgn = GetClipRegion();
-		SetClipRegion( Region( aClipRect ) );
 		BOOL bOK = DrawNativeControl( CTRL_PROGRESSBAR, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, rtl::OUString() );
-		SetClipRegion( aOldClipRgn );
 		if ( bOK )
 			return;
 	}
