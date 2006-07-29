@@ -310,7 +310,7 @@ void ScrollBar::ImplUpdateRects( BOOL bUpdate )
 #ifdef USE_JAVA
 	if( IsNativeControlSupported( CTRL_SCROLLBAR, PART_ENTIRE_CONTROL ) )
 	{
-		ImplUpdateRectsNative();
+		ImplUpdateRectsNative( bUpdate );
 		return;
 	}
 #endif
