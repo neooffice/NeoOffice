@@ -92,6 +92,14 @@ Image*	SvImpLBox::s_pDefCollapsedHC	= NULL;
 Image*	SvImpLBox::s_pDefExpandedHC		= NULL;
 sal_Int32 SvImpLBox::s_nImageRefCount	= 0;
 
+#ifdef USE_JAVA
+
+#include <map>
+
+static ::std::map< SvImpLBox*, SvImpLBox* > aInShowCursorMap;
+
+#endif	// USE_JAVA
+
 SvImpLBox::SvImpLBox( SvTreeListBox* pLBView, SvLBoxTreeList* pLBTree, WinBits nWinStyle) :
 
 	aVerSBar( pLBView, WB_DRAG | WB_VSCROLL ),
@@ -738,8 +746,14 @@ void SvImpLBox::ShowCursor( BOOL bShow )
 #ifdef USE_JAVA
 	if( pView->IsNativeControlSupported( CTRL_DISCLOSUREBTN, PART_ENTIRE_CONTROL ) )
 	{
-		pView->Invalidate();
-		pView->Update();
+		::std::map< SvImpLBox*, SvImpLBox* >::const_iterator it = aInShowCursorMap.find( this );
+		if ( it == aInShowCursorMap.end() )
+		{
+			aInShowCursorMap[ this ] = this;
+			pView->Invalidate();
+			pView->Update();
+			aInShowCursorMap.erase( this );
+		}
 	}
 #endif
 }
