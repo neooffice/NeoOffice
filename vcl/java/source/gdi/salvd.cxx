@@ -129,22 +129,6 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 		}
 	}
 
-	if ( !bRet )
-	{
-		if ( mpGraphics )
-		{
-			delete mpGraphics;
-			mpGraphics = NULL;
-		}
-
-		if ( mpVCLImage )
-		{
-			mpVCLImage->dispose();
-			delete mpVCLImage;
-			mpVCLImage = NULL;
-		}
-	}
-
 	return bRet;
 }
 
