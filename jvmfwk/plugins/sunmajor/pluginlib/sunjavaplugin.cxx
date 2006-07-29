@@ -641,7 +641,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 		// memory or 256 MB.
 		int pMib[2];
 		size_t nMinMem = 256 * 1024 * 1024;
-		size_t nMaxMem = nMinMem * 3;
+		size_t nMaxMem = nMinMem * 4;
 		size_t nUserMem = 0;
 		size_t nLen = sizeof( nUserMem );
 		pMib[0] = CTL_HW;
