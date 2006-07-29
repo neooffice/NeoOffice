@@ -106,7 +106,7 @@ OO_SOURCE_TAR_GZ_FILE:=$(PWD)/OOo_2.0.3_src.tar.gz
 OO_SOURCE_OUTPUT_DIR:=OOC680_m7
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
-NEO_TAG:=HEAD
+NEO_TAG:=NeoOffice-2_0_Aqua_Beta
 
 all: build.all
 
