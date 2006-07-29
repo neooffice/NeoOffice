@@ -87,7 +87,13 @@ public final class VCLBitmap {
 		// Create the image. Note that all rasters are mapped to 32 bit rasters
 		// since this is what the JVM will convert all rasters to every time
 		// a non-32 bit raster is drawn.
-		image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE);
+		try {
+			image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE);
+		}
+		catch (OutOfMemoryError ome) {
+			System.gc();
+			image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE);
+		}
 
 	}
 

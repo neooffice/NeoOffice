@@ -106,7 +106,13 @@ public final class VCLImage {
 		bitCount = 32;
 
 		// Create the image
-		image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE);
+		try {
+			image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE);
+		}
+		catch (OutOfMemoryError ome) {
+			System.gc();
+			image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE);
+		}
 
 		// Cache the graphics
 		pageFormat = p;
