@@ -826,6 +826,8 @@ static NSString *pBlankItem = @" ";
 			[mpFilePanel setAccessoryView:pAccessoryView];
 		}
 
+		[mpFilePanel validateVisibleColumns];
+
 		if ( mbUseFileOpenDialog )
 		{
 			NSOpenPanel *pOpenPanel = (NSOpenPanel *)mpFilePanel;
