@@ -452,11 +452,7 @@ void SplashScreen::Paint( const Rectangle& r)
 	if(!_bVisible) return;
 
 	// draw bitmap
-#ifdef USE_JAVA
-	if (_bPaintBitmap && !_iProgress)
-#else	// USE_JAVA
 	if (_bPaintBitmap)
-#endif	// USE_JAVA
 		_vdev.DrawBitmap( Point(), _aIntroBmp );
 
 #ifndef USE_JAVA
@@ -482,17 +478,37 @@ void SplashScreen::Paint( const Rectangle& r)
     //_vdev.DrawOutDev(Point(), GetOutputSize(), Point(), GetOutputSize(), *((IntroWindow*)this) );
 
 #ifdef USE_JAVA
-    if ( _bPaintBitmap && !_iProgress )
-        DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
-	if ( _bPaintProgress )
+    // HACK: clip out the top pixel as it will be merely background color
+    Rectangle aClipRect( Point( _pProgressBar->GetPosPixel().X(), _pProgressBar->GetPosPixel().Y() + 1 ), Size( _pProgressBar->GetSizePixel().Width(), _pProgressBar->GetSizePixel().Height() - 1 ) );
+    if ( _bPaintProgress )
     {
-        // HACK: clip out the top pixel as it will be merely background color
-        Rectangle aClipRect( Point( 0, 1 ), Size( GetSizePixel().Width(), GetSizePixel().Height() - 1 ) );
-        Region aOldClipRgn = _pProgressBar->GetClipRegion();
-        _pProgressBar->SetClipRegion( Region( aClipRect ) );
+        SetClipRegion( Region( aClipRect ) );
         _pProgressBar->SetValue( _iProgress );
-        _pProgressBar->SetClipRegion( aOldClipRgn );
+        SetClipRegion();
     }
+
+    // Copy top to screen
+    Rectangle aCurrentClip( Point( 0, 0 ), Size( GetSizePixel().Width(), aClipRect.Top() + 2 ) );
+    SetClipRegion( aCurrentClip );
+    DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
+
+    // Copy bottom to screen
+    aCurrentClip = Rectangle( Point( 0, aClipRect.Top() + aClipRect.GetHeight() - 2 ), Size( GetSizePixel().Width(), GetSizePixel().Height() - aClipRect.Top() - aClipRect.GetHeight() + 2 ) );
+    SetClipRegion( aCurrentClip );
+    DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
+
+    // Copy left to screen
+    aCurrentClip = Rectangle( Point( 0, aClipRect.Top() ), Size( aClipRect.Left() + 2, aClipRect.GetHeight() ) );
+    SetClipRegion( aCurrentClip );
+    DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
+
+    // Copy right to screen
+    aCurrentClip = Rectangle( Point( aClipRect.Left() + aClipRect.GetWidth() - 2, aClipRect.Top() ), Size( GetSizePixel().Width() - aClipRect.Left() - aClipRect.GetWidth() + 2, aClipRect.GetHeight() ) );
+    SetClipRegion( aCurrentClip );
+    DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
+
+    SetClipRegion();
+    
 #else	// USE_JAVA
     DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
 #endif	// USE_JAVA
