@@ -108,25 +108,43 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 {
 	BOOL bRet = FALSE;
 
+	if ( mpGraphics->mpVCLGraphics )
+	{
+		delete mpGraphics->mpVCLGraphics;
+		mpGraphics->mpVCLGraphics = NULL;
+	}
+
+	if ( mpVCLImage )
+	{
+		mpVCLImage->dispose();
+		delete mpVCLImage;
+		mpVCLImage = NULL;
+	}
+
 	if ( nDX > 0 && nDY > 0 )
 	{
 		com_sun_star_vcl_VCLImage *pVCLImage = new com_sun_star_vcl_VCLImage( nDX, nDY, mnBitCount );
-		if ( pVCLImage && pVCLImage->getJavaObject() )
+		if ( pVCLImage )
 		{
-			if ( mpVCLImage )
+			if ( pVCLImage->getJavaObject() )
 			{
-				mpVCLImage->dispose();
-				delete mpVCLImage;
+				mpVCLImage = pVCLImage;
+				mpGraphics->mpVCLGraphics = mpVCLImage->getGraphics();
+				bRet = TRUE;
 			}
-
-			mpVCLImage = pVCLImage;
-
-			if ( mpGraphics->mpVCLGraphics )
-				delete mpGraphics->mpVCLGraphics;
-			mpGraphics->mpVCLGraphics = mpVCLImage->getGraphics();
-
-			bRet = TRUE;
+			else
+			{
+				delete pVCLImage;
+			}
 		}
+	}
+
+	if ( !mpVCLImage )
+	{
+		// Try to create something so that we don't crash
+		mpVCLImage = new com_sun_star_vcl_VCLImage( 1, 1, mnBitCount );
+		if ( mpVCLImage && mpVCLImage->getJavaObject() )
+			mpGraphics->mpVCLGraphics = mpVCLImage->getGraphics();
 	}
 
 	return bRet;
@@ -136,14 +154,14 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 
 void JavaSalVirtualDevice::GetSize( long& rWidth, long& rHeight )
 {
-        if ( mpVCLImage )
-        {
-                rWidth = mpVCLImage->getWidth();
-                rHeight = mpVCLImage->getHeight();
-        }
-        else
-        {
-                rWidth = 0;
-                rHeight = 0;
-        }
+	if ( mpVCLImage )
+	{
+		rWidth = mpVCLImage->getWidth();
+		rHeight = mpVCLImage->getHeight();
+	}
+	else
+	{
+		rWidth = 0;
+		rHeight = 0;
+	}
 }
