@@ -149,6 +149,9 @@ struct VCLBitmapBuffer : BitmapBuffer
 	void					ReleaseContext();
 };
 
+static VCLBitmapBuffer aSharedHorizontalScrollBarBuffer;
+static VCLBitmapBuffer aSharedVerticalScrollBarBuffer;
+
 // =======================================================================
 
 VCLBitmapBuffer::VCLBitmapBuffer() : BitmapBuffer(), mpVCLBitmap( NULL ), mpData( NULL ), maContext( NULL )
@@ -172,13 +175,23 @@ VCLBitmapBuffer::~VCLBitmapBuffer()
 
 BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight )
 {
-	Destroy();
-
-	mpVCLBitmap = new com_sun_star_vcl_VCLBitmap( nWidth, nHeight, 32 );
-	if ( !mpVCLBitmap || !mpVCLBitmap->getJavaObject() )
+	bool bReused = false;
+	if ( mpVCLBitmap && mpVCLBitmap->getJavaObject() && nWidth <= mnWidth && nHeight <= mnHeight )
+	{
+		ReleaseContext();
+		nWidth = mnWidth;
+		nHeight = mnHeight;
+		bReused = true;
+	}
+	else
 	{
 		Destroy();
-		return FALSE;
+		mpVCLBitmap = new com_sun_star_vcl_VCLBitmap( nWidth, nHeight, 32 );
+		if ( !mpVCLBitmap || !mpVCLBitmap->getJavaObject() )
+		{
+			Destroy();
+			return FALSE;
+		}
 	}
 
 	VCLThreadAttach t;
@@ -208,6 +221,9 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight )
 		Destroy();
 		return FALSE;
 	}
+
+	if ( bReused )
+		memset( mpBits, 0, mnScanlineSize * mnHeight );
 
 	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
 	if ( !aColorSpace )
@@ -830,8 +846,13 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
  */
 static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, ScrollbarValue *pScrollbarValue )
 {
-	VCLBitmapBuffer aBuffer;
-	BOOL bRet = aBuffer.Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+	VCLBitmapBuffer *pBuffer;
+	if ( rDestBounds.GetWidth() > rDestBounds.GetHeight() )
+		pBuffer = &aSharedHorizontalScrollBarBuffer;
+	else
+		pBuffer = &aSharedVerticalScrollBarBuffer;
+
+	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
 	if ( bRet )
 	{
 		HIThemeTrackDrawInfo pTrackDrawInfo;
@@ -842,14 +863,13 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
 		destRect.origin.y = 0;
 		destRect.size.width = rDestBounds.GetWidth();
 		destRect.size.height = rDestBounds.GetHeight();
-		bRet = ( HIThemeDrawTrack( &pTrackDrawInfo, NULL, aBuffer.maContext, kHIThemeOrientationInverted ) == noErr );
+		bRet = ( HIThemeDrawTrack( &pTrackDrawInfo, NULL, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
 	}
 
+	pBuffer->ReleaseContext();
+
 	if ( bRet )
-	{
-		aBuffer.ReleaseContext();
-		pGraphics->mpVCLGraphics->drawBitmap( aBuffer.mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
-	}
+		pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
 
 	return bRet;
 }
