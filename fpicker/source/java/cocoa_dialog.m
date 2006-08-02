@@ -42,14 +42,38 @@
 static NSString *pBlankItem = @" ";
 
 @interface InitializeFileDialogs : NSObject
+{
+	NSSavePanel*			mpFilePanel;
+	BOOL					mbUseFileOpenDialog;
+}
+- (NSSavePanel *)filePanel;
+- (id)init:(BOOL)bUseFileOpenDialog;
+- (void)initialize:(id)pObject;
 @end
 
 @implementation InitializeFileDialogs
 
+- (NSSavePanel *)filePanel
+{
+	return mpFilePanel;
+}
+
+- (id)init:(BOOL)bUseFileOpenDialog
+{
+	[super init];
+
+	mpFilePanel = nil;
+	mbUseFileOpenDialog = bUseFileOpenDialog;
+
+	return self;
+}
+
 - (void)initialize:(id)pObject
 {
-	[NSSavePanel savePanel];
-	[NSOpenPanel savePanel];
+	if ( mbUseFileOpenDialog )
+		mpFilePanel = (NSSavePanel *)[NSOpenPanel openPanel];
+	else
+		mpFilePanel = [NSOpenPanel savePanel];
 }
 
 @end
@@ -275,12 +299,6 @@ static NSString *pBlankItem = @" ";
 {
 	[super init];
 
-	// Fix bug 1601 by ensuring the first save and open panels are created on
-	// the main thread
-	InitializeFileDialogs *pInitializer = [[InitializeFileDialogs alloc] init];
-	if ( pInitializer )
-		[pInitializer performSelectorOnMainThread:@selector(initialize:) withObject:pInitializer waitUntilDone:YES];
-
 	mbChooseFiles = bChooseFiles;
 	mpDefaultName = nil;
 	mpPicker = pPicker;
@@ -299,10 +317,14 @@ static NSString *pBlankItem = @" ";
 	if ( mpTextFields )
 		[mpTextFields retain];
 
-	if ( mbUseFileOpenDialog )
-		mpFilePanel = (NSSavePanel *)[NSOpenPanel openPanel];
-	else
-		mpFilePanel = [NSSavePanel savePanel];
+	// Fix bug 1601 by ensuring the first save and open panels are created on
+	// the main thread
+	InitializeFileDialogs *pInitializer = [[InitializeFileDialogs alloc] init];
+	if ( pInitializer )
+	{
+		[pInitializer performSelectorOnMainThread:@selector(initialize:) withObject:pInitializer waitUntilDone:YES];
+		mpFilePanel = [pInitializer filePanel];
+	}
 
 	if ( mpFilePanel )
 	{
