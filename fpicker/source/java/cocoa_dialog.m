@@ -58,6 +58,8 @@ static NSString *pBlankItem = @" ";
 {
 	if ( mpFilePanel )
 		[mpFilePanel release];
+
+	[super dealloc];
 }
 
 - (NSSavePanel *)filePanel
@@ -80,7 +82,7 @@ static NSString *pBlankItem = @" ";
 	if ( mbUseFileOpenDialog )
 		mpFilePanel = (NSSavePanel *)[NSOpenPanel openPanel];
 	else
-		mpFilePanel = [NSOpenPanel savePanel];
+		mpFilePanel = [NSSavePanel savePanel];
 
 	if ( mpFilePanel )
 		[mpFilePanel retain];
@@ -329,7 +331,7 @@ static NSString *pBlankItem = @" ";
 
 	// Fix bug 1601 by ensuring the first save and open panels are created on
 	// the main thread
-	InitializeFileDialogs *pInitializer = [[InitializeFileDialogs alloc] init];
+	InitializeFileDialogs *pInitializer = [[InitializeFileDialogs alloc] init:mbUseFileOpenDialog];
 	if ( pInitializer )
 	{
 		[pInitializer performSelectorOnMainThread:@selector(initialize:) withObject:pInitializer waitUntilDone:YES];
