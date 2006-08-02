@@ -64,8 +64,9 @@ static NSString *pBlankItem = @" ";
 - (id)initWithPicker:(void *)pPicker useFileOpenDialog:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion;
 - (BOOL)isChecked:(int)nID;
 - (NSString *)label:(int)nID;
-- (void)panel:(id)pObject directoryDidChange:(NSString *)pDirectory;
 - (BOOL)panel:(id)pObject shouldShowFilename:(NSString *)pFilename;
+- (BOOL)panel:(id)pObject willExpand:(BOOL)bExpand;
+- (void)panelSelectionDidChange:(id)pObject;
 - (void *)picker;
 - (int)result;
 - (NSString *)selectedItem:(int)nID;
@@ -299,7 +300,6 @@ static NSString *pBlankItem = @" ";
 			NSOpenPanel *pOpenPanel = (NSOpenPanel *)mpFilePanel;
 
 			[pOpenPanel setCanChooseFiles:mbChooseFiles];
-			[pOpenPanel setResolvesAliases:YES];
 			[pOpenPanel setTreatsFilePackagesAsDirectories:NO];
 
 			if ( mbChooseFiles )
@@ -510,62 +510,71 @@ static NSString *pBlankItem = @" ";
 	return pRet;
 }
 
-- (void)panel:(id)pObject directoryDidChange:(NSString *)pDirectory
-{
-	[mpFilePanel validateVisibleColumns];
-}
-
 - (BOOL)panel:(id)pObject shouldShowFilename:(NSString *)pFilename
 {
 	BOOL bRet = NO;
 
-	NSFileManager *pFileManager = [NSFileManager defaultManager];
-	if ( pFileManager )
+	CFURLRef aURL = CFURLCreateWithFileSystemPath( NULL, (CFStringRef)pFilename, kCFURLPOSIXPathStyle, NO );
+	if ( aURL )
 	{
-		BOOL bDir = NO;
-		if ( [pFileManager fileExistsAtPath:pFilename isDirectory:&bDir] )
+		FSRef aFSRef;
+		if ( CFURLGetFSRef( aURL, &aFSRef ) )
 		{
-			if ( bDir )
+			Boolean bFolder;
+			Boolean bAliased;
+			if ( FSResolveAliasFileWithMountFlags( &aFSRef, YES, &bFolder, &bAliased, kResolveAliasFileNoUI ) == noErr )
 			{
-				bRet = YES;
-			}
-			else if ( mbChooseFiles )
-			{
-				NSArray *pArray = [mpFilePanel allowedFileTypes];
-				if ( pArray )
+				if ( bFolder )
 				{
-					NSArray *pSplit = [pFilename componentsSeparatedByString:@"."];
-					if ( pSplit )
+					bRet = YES;
+				}
+				else if ( mbChooseFiles )
+				{
+					CFURLRef aResolvedURL = CFURLCreateFromFSRef( NULL, &aFSRef );
+					if ( aResolvedURL )
 					{
-						int nLen = [pSplit count];
-						if ( nLen )
+						NSString *pResolvedPath = (NSString *)CFURLCopyFileSystemPath( aResolvedURL, kCFURLPOSIXPathStyle );
+						if ( pResolvedPath )
 						{
-							NSString *pExt = (NSString *)[pSplit objectAtIndex:nLen - 1];
-							if ( pExt )
+							NSArray *pArray = [mpFilePanel allowedFileTypes];
+							if ( pArray )
 							{
-								int nCount = [pArray count];
-								int i = 0;
-								for ( ; i < nCount; i++ )
+								NSString *pExt = (NSString *)[pResolvedPath pathExtension];
+								if ( pExt )
 								{
-									if ( [pExt isEqualToString:[pArray objectAtIndex:i]] )
+									int nCount = [pArray count];
+									int i = 0;
+									for ( ; i < nCount; i++ )
 									{
-										bRet = YES;
-										break;
+										NSString *pCurrentType = (NSString *)[pArray objectAtIndex:i];
+										if ( pCurrentType && ( [pCurrentType isEqualToString:@"*"] || [pCurrentType isEqualToString:pExt] ) )
+										{
+											bRet = YES;
+											break;
+										}
 									}
 								}
 							}
+							else
+							{
+								bRet = YES;
+							}
 						}
 					}
-				}
-				else
-				{
-					bRet = YES;
 				}
 			}
 		}
 	}
 
 	return bRet;
+}
+
+- (void)panelSelectionDidChange:(id)pObject
+{
+}
+
+- (BOOL)panel:(id)pObject willExpand:(BOOL)bExpand
+{
 }
 
 - (void *)picker
