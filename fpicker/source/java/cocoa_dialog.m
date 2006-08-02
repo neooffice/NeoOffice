@@ -64,6 +64,7 @@ static NSString *pBlankItem = @" ";
 - (id)initWithPicker:(void *)pPicker useFileOpenDialog:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion;
 - (BOOL)isChecked:(int)nID;
 - (NSString *)label:(int)nID;
+- (void)panel:(id)pObject directoryDidChange:(NSString *)pDirectory;
 - (BOOL)panel:(id)pObject shouldShowFilename:(NSString *)pFilename;
 - (BOOL)panel:(id)pObject willExpand:(BOOL)bExpand;
 - (void)panelSelectionDidChange:(id)pObject;
@@ -508,6 +509,10 @@ static NSString *pBlankItem = @" ";
 	}
 
 	return pRet;
+}
+
+- (void)panel:(id)pObject directoryDidChange:(NSString *)pDirectory
+{
 }
 
 - (BOOL)panel:(id)pObject shouldShowFilename:(NSString *)pFilename
