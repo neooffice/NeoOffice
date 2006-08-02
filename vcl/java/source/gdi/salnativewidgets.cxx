@@ -872,6 +872,11 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
 	if ( bRet )
 	{
+		long nPixels = pBuffer->mnWidth * pBuffer->mnHeight;
+		jint *pBits = (jint *)pBuffer->mpBits;
+		for ( long i = 0; i < nPixels; i++ )
+			pBits[ i ] = pGraphics->mnFillColor;
+
 		HIThemeTrackDrawInfo pTrackDrawInfo;
 		InitScrollBarTrackInfo( &pTrackDrawInfo, NULL, nState, rDestBounds, pScrollbarValue );
 
