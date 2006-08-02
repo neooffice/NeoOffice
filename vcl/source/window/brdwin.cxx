@@ -1377,6 +1377,9 @@ void ImplSmallBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice*, co
 					nState |= CTRL_STATE_PRESSED;
 			}
         }
+
+		// We need to set the background color in the native drawing method
+		pCtrl->SetFillColor( pCtrl->GetBackground().GetColor() );
 #endif	// USE_JAVA
 
         Point aPoint;
@@ -1386,9 +1389,6 @@ void ImplSmallBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice*, co
 
         // if the native theme draws the spinbuttons in one call, make sure the proper settings
         // are passed, this might force a redraw though.... (TODO: improve)
-#ifdef USE_JAVA
-		if ( (aCtrlType == CTRL_SPINBOX) && !pCtrl->IsNativeControlSupported( CTRL_SPINBOX, HAS_BACKGROUND_TEXTURE ) )
-#endif
         if ( (aCtrlType == CTRL_SPINBOX) && !pCtrl->IsNativeControlSupported( CTRL_SPINBOX, PART_BUTTON_UP ) )
         {
             Edit *pEdit = ((Edit*) pCtrl)->GetSubEdit();
@@ -2155,8 +2155,8 @@ long ImplBorderWindow::PreNotify( NotifyEvent& rNEvt )
 				ImplGetNativeControlData( pCtrl, nCtrlType, nCtrlPart );
 				if ( nCtrlType && pCtrl->IsNativeControlSupported( nCtrlType, nCtrlPart ) )
 				{
-					GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-					GetParent()->Update();
+					Invalidate();
+					Update();
 				}
 			}
 		}

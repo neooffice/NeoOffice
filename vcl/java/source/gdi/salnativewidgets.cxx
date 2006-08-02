@@ -778,6 +778,15 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
 	if ( bRet )
 	{
+		HIRect bgRect;
+		bgRect.origin.x = 0;
+		bgRect.origin.y = 0;
+		bgRect.size.width = rDestBounds.GetWidth();
+		bgRect.size.height = rDestBounds.GetHeight();
+		float bgColor[] = { 1.0, (float)SALCOLOR_RED( pGraphics->mnFillColor ) / 0xff, (float)SALCOLOR_GREEN( pGraphics->mnFillColor ) / 0xff, (float)SALCOLOR_BLUE( pGraphics->mnFillColor ) / 0xff };
+		CGContextSetFillColor( pBuffer->maContext, bgColor );
+		CGContextFillRect( pBuffer->maContext, bgRect );
+
 		HIThemeButtonDrawInfo aButtonDrawInfo;
 		InitButtonDrawInfo( &aButtonDrawInfo, nState );
 
@@ -827,6 +836,15 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
 	if ( bRet )
 	{
+		HIRect bgRect;
+		bgRect.origin.x = 0;
+		bgRect.origin.y = 0;
+		bgRect.size.width = rDestBounds.GetWidth();
+		bgRect.size.height = rDestBounds.GetHeight();
+		float bgColor[] = { 1.0, (float)SALCOLOR_RED( pGraphics->mnFillColor ) / 0xff, (float)SALCOLOR_GREEN( pGraphics->mnFillColor ) / 0xff, (float)SALCOLOR_BLUE( pGraphics->mnFillColor ) / 0xff };
+		CGContextSetFillColor( pBuffer->maContext, bgColor );
+		CGContextFillRect( pBuffer->maContext, bgRect );
+
 		HIThemeButtonDrawInfo aButtonDrawInfo;
 		InitButtonDrawInfo( &aButtonDrawInfo, nState );
 		aButtonDrawInfo.kind = kThemePopupButton;
@@ -872,10 +890,14 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
 	if ( bRet )
 	{
-		long nPixels = pBuffer->mnWidth * pBuffer->mnHeight;
-		jint *pBits = (jint *)pBuffer->mpBits;
-		for ( long i = 0; i < nPixels; i++ )
-			pBits[ i ] = pGraphics->mnFillColor;
+		HIRect bgRect;
+		bgRect.origin.x = 0;
+		bgRect.origin.y = 0;
+		bgRect.size.width = rDestBounds.GetWidth();
+		bgRect.size.height = rDestBounds.GetHeight();
+		float bgColor[] = { 1.0, (float)SALCOLOR_RED( pGraphics->mnFillColor ) / 0xff, (float)SALCOLOR_GREEN( pGraphics->mnFillColor ) / 0xff, (float)SALCOLOR_BLUE( pGraphics->mnFillColor ) / 0xff };
+		CGContextSetFillColor( pBuffer->maContext, bgColor );
+		CGContextFillRect( pBuffer->maContext, bgRect );
 
 		HIThemeTrackDrawInfo pTrackDrawInfo;
 		InitScrollBarTrackInfo( &pTrackDrawInfo, NULL, nState, rDestBounds, pScrollbarValue );

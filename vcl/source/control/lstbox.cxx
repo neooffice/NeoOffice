@@ -326,15 +326,8 @@ IMPL_LINK( ListBox, ImplClickBtnHdl, void*, EMPTYARG )
 	}
 
 #ifdef USE_JAVA
-	ImplControlValue aControlValue;
-	Region aBoundingRgn, aContentRgn;
-	Rectangle aRect( GetPosPixel(), GetSizePixel() );
-	Region aArea( aRect );
-	if ( GetNativeControlRegion( CTRL_LISTBOX, PART_BUTTON_DOWN, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
-	{
-		GetParent()->Invalidate( aContentRgn.GetBoundRect() );
-		GetParent()->Update();
-	}
+	GetWindow( WINDOW_BORDER )->Invalidate();
+	GetWindow( WINDOW_BORDER )->Update();
 #endif	// USE_JAVA
 
 	return 0;
@@ -373,15 +366,8 @@ IMPL_LINK( ListBox, ImplPopupModeEndHdl, void*, p )
     mpBtn->SetPressed( FALSE );
     ImplCallEventListeners( VCLEVENT_DROPDOWN_CLOSE );
 #ifdef USE_JAVA
-	ImplControlValue aControlValue;
-	Region aBoundingRgn, aContentRgn;
-	Rectangle aRect( GetPosPixel(), GetSizePixel() );
-	Region aArea( aRect );
-	if ( GetNativeControlRegion( CTRL_LISTBOX, PART_BUTTON_DOWN, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
-	{
-		GetParent()->Invalidate( aContentRgn.GetBoundRect() );
-		GetParent()->Update();
-	}
+	GetWindow( WINDOW_BORDER )->Invalidate();
+	GetWindow( WINDOW_BORDER )->Update();
 #endif	// USE_JAVA
 	return 0;
 }
