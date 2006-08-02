@@ -41,6 +41,19 @@
 
 static NSString *pBlankItem = @" ";
 
+@interface InitializeFileDialogs : NSObject
+@end
+
+@implementation InitializeFileDialogs
+
+- (void)initialize:(id)pObject
+{
+	[NSSavePanel savePanel];
+	[NSOpenPanel savePanel];
+}
+
+@end
+
 @interface ShowFileDialog : NSObject
 {
 	BOOL					mbChooseFiles;
@@ -64,9 +77,7 @@ static NSString *pBlankItem = @" ";
 - (id)initWithPicker:(void *)pPicker useFileOpenDialog:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion;
 - (BOOL)isChecked:(int)nID;
 - (NSString *)label:(int)nID;
-- (void)panel:(id)pObject directoryDidChange:(NSString *)pDirectory;
 - (BOOL)panel:(id)pObject shouldShowFilename:(NSString *)pFilename;
-- (void)panelSelectionDidChange:(id)pObject;
 - (void *)picker;
 - (int)result;
 - (NSString *)selectedItem:(int)nID;
@@ -263,6 +274,12 @@ static NSString *pBlankItem = @" ";
 - (id)initWithPicker:(void *)pPicker useFileOpenDialog:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showReadOnly:(BOOL)bShowReadOnly showSelction:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion
 {
 	[super init];
+
+	// Fix bug 1601 by ensuring the first save and open panels are created on
+	// the main thread
+	InitializeFileDialogs *pInitializer = [[InitializeFileDialogs alloc] init];
+	if ( pInitializer )
+		[pInitializer performSelectorOnMainThread:@selector(initialize:) withObject:pInitializer waitUntilDone:YES];
 
 	mbChooseFiles = bChooseFiles;
 	mpDefaultName = nil;
@@ -510,10 +527,6 @@ static NSString *pBlankItem = @" ";
 	return pRet;
 }
 
-- (void)panel:(id)pObject directoryDidChange:(NSString *)pDirectory
-{
-}
-
 - (BOOL)panel:(id)pObject shouldShowFilename:(NSString *)pFilename
 {
 	BOOL bRet = NO;
@@ -571,10 +584,6 @@ static NSString *pBlankItem = @" ";
 	}
 
 	return bRet;
-}
-
-- (void)panelSelectionDidChange:(id)pObject
-{
 }
 
 - (void *)picker
