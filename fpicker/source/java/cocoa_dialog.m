@@ -46,12 +46,19 @@ static NSString *pBlankItem = @" ";
 	NSSavePanel*			mpFilePanel;
 	BOOL					mbUseFileOpenDialog;
 }
+- (void)dealloc;
 - (NSSavePanel *)filePanel;
 - (id)init:(BOOL)bUseFileOpenDialog;
 - (void)initialize:(id)pObject;
 @end
 
 @implementation InitializeFileDialogs
+
+- (void)dealloc
+{
+	if ( mpFilePanel )
+		[mpFilePanel release];
+}
 
 - (NSSavePanel *)filePanel
 {
@@ -74,6 +81,9 @@ static NSString *pBlankItem = @" ";
 		mpFilePanel = (NSSavePanel *)[NSOpenPanel openPanel];
 	else
 		mpFilePanel = [NSOpenPanel savePanel];
+
+	if ( mpFilePanel )
+		[mpFilePanel retain];
 }
 
 @end
