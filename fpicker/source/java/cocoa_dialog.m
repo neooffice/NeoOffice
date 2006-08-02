@@ -66,7 +66,6 @@ static NSString *pBlankItem = @" ";
 - (NSString *)label:(int)nID;
 - (void)panel:(id)pObject directoryDidChange:(NSString *)pDirectory;
 - (BOOL)panel:(id)pObject shouldShowFilename:(NSString *)pFilename;
-- (BOOL)panel:(id)pObject willExpand:(BOOL)bExpand;
 - (void)panelSelectionDidChange:(id)pObject;
 - (void *)picker;
 - (int)result;
@@ -575,10 +574,6 @@ static NSString *pBlankItem = @" ";
 }
 
 - (void)panelSelectionDidChange:(id)pObject
-{
-}
-
-- (BOOL)panel:(id)pObject willExpand:(BOOL)bExpand
 {
 }
 
