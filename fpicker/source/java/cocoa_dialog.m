@@ -158,16 +158,8 @@ static NSString *pBlankItem = @" ";
 			int i = 0;
 			for ( ; i < nCount; i++ )
 			{
-				NSString *pCurrentFilter = [pArray objectAtIndex:i];
-				NSArray *pSplit = [pCurrentFilter componentsSeparatedByString:@"."];
-				if ( pSplit )
-				{
-					int nLen = [pSplit count];
-					if ( nLen )
-						pCurrentFilter = [pSplit objectAtIndex:nLen - 1];
-				}
-
-				if ( !pCurrentFilter || [pCurrentFilter isEqualToString:@"*"] )
+				NSString *pCurrentFilter = [(NSString *)[pArray objectAtIndex:i] pathExtension];
+				if ( !pCurrentFilter || ![pCurrentFilter length] || [pCurrentFilter isEqualToString:@"*"] )
 				{
 					bAllowAll = YES;
 					break;
@@ -694,6 +686,13 @@ static NSString *pBlankItem = @" ";
 
 	if ( pName )
 	{
+		if ( !mbUseFileOpenDialog )
+		{
+			NSString *pExt = [pName pathExtension];
+			if ( pExt && [pExt length] )
+				pName = [pName substringToIndex:[pName length] - [pExt length] - 1];
+		}
+
 		[pName retain];
 		mpDefaultName = pName;
 	}
