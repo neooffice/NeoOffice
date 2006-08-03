@@ -324,7 +324,6 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 
 	if ( ATSUSetAttributes( maFontStyle, 3, nTags, nBytes, nVals ) != noErr )
 	{
-		fprintf( stderr, "Here 3: %i\n", mpHash->mnFontID );
 		Destroy();
 		return;
 	}
