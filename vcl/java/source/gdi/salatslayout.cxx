@@ -301,17 +301,16 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	// we need to use a more reasonably sized font or else we will exceed the
 	// 32K Fixed data type limit that the ATSTrapezoid struct uses so we
 	// preemptively limit font size to 100 like in the OOo 1.1.x code.
-	Fixed nSize = Long2Fix( mpHash->mnFontSize );
-	float fSize = Fix2X( nSize );
+	float fSize = (float)mpHash->mnFontSize;
 	float fAdjustedSize;
 	if ( fSize > 100 )
 		fAdjustedSize = 100;
 	else
 		fAdjustedSize = fSize;
-	Fixed nAdjustedSize = X2Fix( fAdjustedSize );
+	Fixed fCurrentSize = X2Fix( fAdjustedSize );
 	nTags[1] = kATSUSizeTag;
 	nBytes[1] = sizeof( Fixed );
-	nVals[1] = &nAdjustedSize;
+	nVals[1] = &fCurrentSize;
 
 	// Set antialiasing
 	ATSStyleRenderingOptions nOptions;
@@ -325,6 +324,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 
 	if ( ATSUSetAttributes( maFontStyle, 3, nTags, nBytes, nVals ) != noErr )
 	{
+		fprintf( stderr, "Here 3: %i\n", mpHash->mnFontID );
 		Destroy();
 		return;
 	}
@@ -410,10 +410,10 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	{
 		// Reset font size
 		fAdjustedSize /= 10;
-		nAdjustedSize = X2Fix( fAdjustedSize );
+		fCurrentSize = X2Fix( fAdjustedSize );
 		nTags[0] = kATSUSizeTag;
 		nBytes[0] = sizeof( Fixed );
-		nVals[0] = &nAdjustedSize;
+		nVals[0] = &fCurrentSize;
 
 		if ( fAdjustedSize < 1 || ATSUSetAttributes( maFontStyle, 1, nTags, nBytes, nVals ) != noErr || ATSUGetGlyphBounds( maLayout, 0, 0, kATSUFromTextBeginning, kATSUToTextEnd, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) != noErr )
 		{
@@ -567,12 +567,12 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 		}
 	}
 
-	if ( nAdjustedSize != nSize )
+	if ( fAdjustedSize != fSize )
 	{
 		// Reset font size
 		nTags[0] = kATSUSizeTag;
 		nBytes[0] = sizeof( Fixed );
-		nVals[0] = &nSize;
+		nVals[0] = &fSize;
 
 		if ( ATSUSetAttributes( maFontStyle, 1, nTags, nBytes, nVals ) != noErr )
 		{
@@ -957,6 +957,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		ImplATSLayoutData *pLayoutData = ImplATSLayoutData::GetLayoutData( aFallbackArgs, mnFallbackLevel, mpVCLFont );
 		if ( !pLayoutData )
 			return false;
+
 
 		// Create fallback runs
 		if ( pLayoutData->mpNeedFallback && pLayoutData->mpFallbackFont )
