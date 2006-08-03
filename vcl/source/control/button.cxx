@@ -1595,8 +1595,8 @@ void PushButton::Tracking( const TrackingEvent& rTEvt )
                 ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
 
 #ifdef USE_JAVA
-                GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-                GetParent()->Update();
+            GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+            GetParent()->Update();
 #else	// USE_JAVA
             ImplDrawPushButton();
 #endif	// USE_JAVA
