@@ -45,6 +45,10 @@
 #include <saldata.hxx>
 #endif
 
+#include <premac.h>
+#include <Carbon/Carbon.h>
+#include <postmac.h>
+
 using namespace rtl;
 using namespace vcl;
 
@@ -257,6 +261,20 @@ sal_IntPtr com_sun_star_vcl_VCLFont::getNativeFont()
 			{
 				mnNativeFont = jit->second->mnATSUFontID;
 				pSalData->maJavaNativeFontMapping[ aPSName ] = mnNativeFont;
+			}
+			else
+			{
+				// Fix bug 1611 by adding another search for mismatched names
+				CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aPSName.getStr(), aPSName.getLength(), kCFAllocatorNull );
+				if ( aString )
+				{
+					ATSFontRef aFont = ATSFontFindFromPostScriptName( aString, kATSOptionFlagsDefault );
+					if ( aFont )
+					{
+						mnNativeFont = (int)FMGetFontFromATSFontRef( aFont );
+						pSalData->maJavaNativeFontMapping[ aPSName ] = mnNativeFont;
+					}
+				}
 			}
 		}
 		else
