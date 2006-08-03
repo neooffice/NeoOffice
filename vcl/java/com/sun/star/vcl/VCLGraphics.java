@@ -1479,7 +1479,6 @@ public final class VCLGraphics {
 		// as a placard button instead of a rounded button. This makes buttons
 		// used as parts of subcontrols (combo boxes, small toolbar buttons)
 		// draw with the appropriate style.
-		VCLGraphics.button.setLabel(title);
 		Rectangle bounds = new Rectangle(x, y, width, VCLGraphics.button.getPreferredSize().height);
 		if (bounds.height >= width) {
 			bounds.width++;
@@ -1540,6 +1539,9 @@ public final class VCLGraphics {
 				else
 					m.setSelected(false);
 
+				// Set width to height
+				width = height;
+
 				Dimension d = VCLGraphics.radioButton.getPreferredSize();
 				Rectangle bounds = new Rectangle(x, y, d.width, d.height);
 				if (bounds.width > width || bounds.height > height) {
@@ -1581,17 +1583,9 @@ public final class VCLGraphics {
 	 */
 	public Rectangle getPreferredRadioButtonBounds(int x, int y, int width, int height, String title) {
 
-		// Make width and height equal since check boxes are square
-        if (width > height)
-        	width = height;
-		else
-        	height = width;
-
 		VCLGraphics.checkBoxButton.setLabel(title);
 		Dimension d = VCLGraphics.radioButton.getPreferredSize();
-
-		Rectangle bounds = new Rectangle(x, y, d.width > width ? d.width : width, d.height > height ? d.height : height);
-		return bounds;
+		return new Rectangle(x, y, d.width, d.height);
 
 	}
 	
@@ -1642,11 +1636,8 @@ public final class VCLGraphics {
 				else
 					m.setSelected(false);
 
-				// Make width and height equal since check boxes are square
-				if (width > height)
-					width = height;
-				else
-					height = width;
+				// Set width to height
+				width = height;
 
 				Dimension d = VCLGraphics.checkBoxButton.getPreferredSize();
 				Rectangle bounds = new Rectangle(x, y, d.width, d.height);
@@ -1689,19 +1680,9 @@ public final class VCLGraphics {
 	 */
 	public Rectangle getPreferredCheckBoxBounds(int x, int y, int width, int height, String title) {
 
-		// Make width and height equal since check boxes are square
-        if (width > height)
-        	width = height;
-		else
-        	height = width;
-
 		VCLGraphics.checkBoxButton.setLabel(title);
 		Dimension d = VCLGraphics.checkBoxButton.getPreferredSize();
-
-		Rectangle bounds = new Rectangle(x, y, d.width > width ? d.width : width, d.height > height ? d.height : height);
-		bounds.x += (width - bounds.width) / 2;
-		bounds.y += (height - bounds.height) / 2;
-		return bounds;
+		return new Rectangle(x, y, d.width, d.height);
 
 	}
 
