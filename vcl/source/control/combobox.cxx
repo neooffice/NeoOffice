@@ -315,8 +315,15 @@ IMPL_LINK( ComboBox, ImplClickBtnHdl, void*, EMPTYARG )
         mpImplLB->GetMainWindow()->ImplClearLayoutData();
 
 #ifdef USE_JAVA
-	GetWindow( WINDOW_BORDER )->Invalidate();
-	GetWindow( WINDOW_BORDER )->Update();
+    ImplControlValue aControlValue;
+    Region aBoundingRgn, aContentRgn;
+    Rectangle aRect( GetPosPixel(), GetSizePixel() );
+    Region aArea( aRect );
+    if ( GetNativeControlRegion( CTRL_COMBOBOX, PART_BUTTON_DOWN, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
+    {
+	    GetParent()->Invalidate( aContentRgn.GetBoundRect() );
+	    GetParent()->Update();
+    }
 #endif	// USE_JAVA
 
 	return 0;
@@ -345,8 +352,16 @@ IMPL_LINK( ComboBox, ImplPopupModeEndHdl, void*, p )
 	mpBtn->SetPressed( FALSE );
     ImplCallEventListeners( VCLEVENT_DROPDOWN_CLOSE );
 #ifdef USE_JAVA
-	GetWindow( WINDOW_BORDER )->Invalidate();
-	GetWindow( WINDOW_BORDER )->Update();
+    ImplControlValue aControlValue;
+    Point aPoint;
+    Region aBoundingRgn, aContentRgn;
+    Rectangle aRect( GetPosPixel(), GetSizePixel() );
+    Region aArea( aRect );
+    if ( GetNativeControlRegion( CTRL_COMBOBOX, PART_BUTTON_DOWN, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
+    {
+	    GetParent()->Invalidate( aContentRgn.GetBoundRect() );
+	    GetParent()->Update();
+    }
 #endif	// USE_JAVA
 	return 0;
 }

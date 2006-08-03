@@ -1377,9 +1377,6 @@ void ImplSmallBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice*, co
 					nState |= CTRL_STATE_PRESSED;
 			}
         }
-
-		// We need to set the background color in the native drawing method
-		pCtrl->SetFillColor( pCtrl->GetBackground().GetColor() );
 #endif	// USE_JAVA
 
         Point aPoint;
@@ -2155,8 +2152,8 @@ long ImplBorderWindow::PreNotify( NotifyEvent& rNEvt )
 				ImplGetNativeControlData( pCtrl, nCtrlType, nCtrlPart );
 				if ( nCtrlType && pCtrl->IsNativeControlSupported( nCtrlType, nCtrlPart ) )
 				{
-					Invalidate();
-					Update();
+					GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+					GetParent()->Update();
 				}
 			}
 		}
