@@ -665,7 +665,7 @@ void JavaSalGraphics::GetDevFontList( ImplDevFontList* pList )
 		{
 			OUString aLibName = OUString::createFromAscii( "libsfx" );
 			aLibName += OUString::valueOf( (sal_Int32)SUPD, 10 );
-			aLibName += OUString::createFromAscii( STRING( DLLSUFFIX ) );
+			aLibName += OUString::createFromAscii( STRING( DLLPOSTFIX ) );
 			aLibName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
 			if ( aShutdownCancelledHandlerModule.load( aLibName ) )
 				pShutdownCancelledHandler = (NativeShutdownCancelledHandler_Type *)aShutdownCancelledHandlerModule.getSymbol( OUString::createFromAscii( "NativeShutdownCancelledHandler" ) );
