@@ -81,17 +81,6 @@
 ListBox::ListBox( WindowType nType ) : Control( nType )
 {
 	ImplInitData();
-
-#ifdef USE_JAVA
-	if ( IsNativeControlSupported( CTRL_LISTBOX, PART_ENTIRE_CONTROL ) )
-	{
-		SetMouseTransparent( TRUE );
-		EnableChildTransparentMode( TRUE );
-		SetParentClipMode( PARENTCLIPMODE_NOCLIP );
-		SetPaintTransparent( TRUE );
-		SetBackground();
-	}
-#endif
 }
 
 // -----------------------------------------------------------------------
@@ -102,7 +91,7 @@ ListBox::ListBox( Window* pParent, WinBits nStyle ) : Control( WINDOW_LISTBOX )
 	ImplInit( pParent, nStyle );
 
 #ifdef USE_JAVA
-	if ( IsNativeControlSupported( CTRL_LISTBOX, PART_ENTIRE_CONTROL ) )
+	if ( pParent && IsNativeControlSupported( CTRL_LISTBOX, PART_ENTIRE_CONTROL ) )
 	{
 		SetMouseTransparent( TRUE );
 		EnableChildTransparentMode( TRUE );
@@ -128,7 +117,7 @@ ListBox::ListBox( Window* pParent, const ResId& rResId ) :
 		Show();
 
 #ifdef USE_JAVA
-	if ( IsNativeControlSupported( CTRL_LISTBOX, PART_ENTIRE_CONTROL ) )
+	if ( pParent && IsNativeControlSupported( CTRL_LISTBOX, PART_ENTIRE_CONTROL ) )
 	{
 		SetMouseTransparent( TRUE );
 		EnableChildTransparentMode( TRUE );

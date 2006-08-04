@@ -102,17 +102,6 @@ ComboBox::ComboBox( WindowType nType ) :
 	Edit( nType )
 {
 	ImplInitData();
-
-#ifdef USE_JAVA
-    if ( IsNativeControlSupported( CTRL_COMBOBOX, PART_ENTIRE_CONTROL ) )
-    { 
-        SetMouseTransparent( TRUE );
-        EnableChildTransparentMode( TRUE );
-        SetParentClipMode( PARENTCLIPMODE_NOCLIP );
-        SetPaintTransparent( TRUE ); 
-        SetBackground();
-    } 
-#endif
 }
 
 // -----------------------------------------------------------------------
@@ -124,12 +113,11 @@ ComboBox::ComboBox( Window* pParent, WinBits nStyle ) :
 	ImplInit( pParent, nStyle );
 
 #ifdef USE_JAVA
-    if ( IsNativeControlSupported( CTRL_COMBOBOX, PART_ENTIRE_CONTROL ) )
+    if ( pParent && IsNativeControlSupported( CTRL_COMBOBOX, PART_ENTIRE_CONTROL ) )
     { 
         SetMouseTransparent( TRUE );
         EnableChildTransparentMode( TRUE );
-        SetParentClipMode( PARENTCLIPMODE_NOCLIP );
-        SetPaintTransparent( TRUE ); 
+        SetParentClipMode( PARENTCLIPMODE_NOCLIP );        SetPaintTransparent( TRUE ); 
         SetBackground();
     } 
 #endif
@@ -147,7 +135,7 @@ ComboBox::ComboBox( Window* pParent, const ResId& rResId ) :
 	ImplLoadRes( rResId );
 
 #ifdef USE_JAVA
-    if ( IsNativeControlSupported( CTRL_COMBOBOX, PART_ENTIRE_CONTROL ) )
+    if ( pParent && IsNativeControlSupported( CTRL_COMBOBOX, PART_ENTIRE_CONTROL ) )
     { 
         SetMouseTransparent( TRUE );
         EnableChildTransparentMode( TRUE );
