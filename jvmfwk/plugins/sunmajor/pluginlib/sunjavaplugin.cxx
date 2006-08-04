@@ -606,21 +606,27 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         options[i+2].optionString = (char *)aExtPath.getStr();
         options[i+2].extraInfo = NULL;
 
-        // Unset the endorsed directory to force use of the JVM's XML parser
-        options[i+3].optionString = "-Djava.endorsed.dirs=";
+        rtl::OString aLibPath( "-Djava.library.path=/usr/lib/java:");
+        rtl::OString aEndorsedPath( "-Djava.endorsed.dirs=" );
+        rtl::OUString aExe;
+        rtl::OUString aSysPath;
+        osl_getExecutableFile( &aExe.pData );
+        if ( aExe.getLength() && osl_getSystemPathFromFileURL( aExe.pData, &aSysPath.pData ) == osl_File_E_None )
+        {
+            aSysPath = rtl::OUString( aSysPath, aSysPath.lastIndexOf('/') );
+            aLibPath += rtl::OUStringToOString( aSysPath, osl_getThreadTextEncoding() );
+            aSysPath += rtl::OUString::createFromAscii( "/classes" );
+           	aEndorsedPath += rtl::OUStringToOString( aSysPath, osl_getThreadTextEncoding() );
+        }
+
+        // Set the endorsed directory to force use of the JVM's XML parser
+        // Set the endorsed directory to include the executable path's classes
+		// subdirectory
+        options[i+3].optionString = (char *)aEndorsedPath.getStr();
         options[i+3].extraInfo = NULL;
 
         // Set the library path to include the executable path but none of the
         // extensions
-        rtl::OString aLibPath("-Djava.library.path=/usr/lib/java:");
-        rtl_uString *sExe = NULL;
-        osl_getExecutableFile(&sExe);
-        if (sExe)
-        {
-           rtl::OUString aExecPath(sExe, SAL_NO_ACQUIRE);
-           aExecPath = rtl::OUString(aExecPath, aExecPath.lastIndexOf('/'));
-           aLibPath += rtl::OUStringToOString(aExecPath, osl_getThreadTextEncoding());
-        }
         options[i+4].optionString = (char *)aLibPath.getStr();
         options[i+4].extraInfo = NULL;
 
