@@ -478,10 +478,12 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 						nDialogRet = pPrintDlg->Execute();
 						if ( pExecutor && pExecutor->GetOptions() )
 						{
+#ifndef USE_JAVA
 							if ( nDialogRet == RET_OK )
 		                        // remark: have to be recorded if possible!
 								pDlgPrinter->SetOptions( *pExecutor->GetOptions() );
 							else
+#endif	// !USE_JAVA
 							{
 								pPrinter->SetOptions( *pExecutor->GetOptions() );
 								SetPrinter( pPrinter, SFX_PRINTER_OPTIONS );
