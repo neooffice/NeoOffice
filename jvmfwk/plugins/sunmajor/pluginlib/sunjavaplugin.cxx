@@ -606,28 +606,38 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         options[i+2].optionString = (char *)aExtPath.getStr();
         options[i+2].extraInfo = NULL;
 
-        rtl::OString aLibPath( "-Djava.library.path=/usr/lib/java:");
-        rtl::OString aEndorsedPath( "-Djava.endorsed.dirs=" );
-        rtl::OUString aExe;
-        rtl::OUString aSysPath;
-        osl_getExecutableFile( &aExe.pData );
-        if ( aExe.getLength() && osl_getSystemPathFromFileURL( aExe.pData, &aSysPath.pData ) == osl_File_E_None )
+        rtl::OString aLibPath( "-Djava.library.path=/usr/lib/java" );
+        rtl::OUString aJavaLibPath( pInfo->sLocation );
+        aJavaLibPath = rtl::OUString( aJavaLibPath, aJavaLibPath.lastIndexOf('/') );
+        aJavaLibPath += OUString::createFromAscii( "/Libraries" );
+        rtl::OUString aJavaLibSysPath;
+        if ( osl_getSystemPathFromFileURL( aJavaLibPath.pData, &aJavaLibSysPath.pData ) == osl_File_E_None )
         {
-            aSysPath = rtl::OUString( aSysPath, aSysPath.lastIndexOf('/') );
-            aLibPath += rtl::OUStringToOString( aSysPath, osl_getThreadTextEncoding() );
-            aSysPath += rtl::OUString::createFromAscii( "/classes" );
-           	aEndorsedPath += rtl::OUStringToOString( aSysPath, osl_getThreadTextEncoding() );
+            aLibPath += ":";
+            aLibPath += rtl::OUStringToOString( aJavaLibSysPath, RTL_TEXTENCODING_UTF8 );
         }
 
-        // Set the endorsed directory to force use of the JVM's XML parser
-        // Set the endorsed directory to include the executable path's classes
-		// subdirectory
-        options[i+3].optionString = (char *)aEndorsedPath.getStr();
-        options[i+3].extraInfo = NULL;
+        rtl::OString aEndorsedPath( "-Djava.endorsed.dirs=" );
+        rtl::OUString aExe;
+        osl_getExecutableFile( &aExe.pData );
+        rtl::OUString aExeSysPath;
+        if ( aExe.getLength() && osl_getSystemPathFromFileURL( aExe.pData, &aExeSysPath.pData ) == osl_File_E_None )
+        {
+            aExeSysPath = rtl::OUString( aExeSysPath, aExeSysPath.lastIndexOf('/') );
+            aLibPath += ":";
+            aLibPath += rtl::OUStringToOString( aExeSysPath, osl_getThreadTextEncoding() );
+            aExeSysPath += rtl::OUString::createFromAscii( "/classes" );
+            aEndorsedPath += rtl::OUStringToOString( aExeSysPath, osl_getThreadTextEncoding() );
+        }
 
         // Set the library path to include the executable path but none of the
         // extensions
-        options[i+4].optionString = (char *)aLibPath.getStr();
+        options[i+3].optionString = (char *)aLibPath.getStr();
+        options[i+3].extraInfo = NULL;
+
+        // Set the endorsed directory to force use of the JVM's XML parser
+        // to include the executable path's classes subdirectory
+        options[i+4].optionString = (char *)aEndorsedPath.getStr();
         options[i+4].extraInfo = NULL;
 
         // Set miscellaneous optimizations for the JVM
@@ -643,26 +653,26 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         options[i+7].optionString = "-Dapple.awt.window.position.forceSafeProgrammaticPositioning=false";
         options[i+7].extraInfo = NULL;
 
-		// Set the Java max memory to the greater of half of physical user
-		// memory or 256 MB.
-		int pMib[2];
-		size_t nMinMem = 256 * 1024 * 1024;
-		size_t nMaxMem = nMinMem * 4;
-		size_t nUserMem = 0;
-		size_t nLen = sizeof( nUserMem );
-		pMib[0] = CTL_HW;
-		pMib[1] = HW_USERMEM;
-		if ( !sysctl( pMib, 2, &nUserMem, &nLen, NULL, 0 ) )
-			nUserMem /= 2;
-		if ( nUserMem > nMaxMem )
-			nUserMem = nMaxMem;
-		else if ( nUserMem < nMinMem )
-			nUserMem = nMinMem;
-		rtl::OStringBuffer aBuf( "-Xmx" );
-		aBuf.append( (sal_Int32)( nUserMem / ( 1024 * 1024 ) ) );
-		aBuf.append( "m" );
-		options[i+8].optionString = (char *)aBuf.makeStringAndClear().getStr();
-		options[i+8].extraInfo = NULL;
+        // Set the Java max memory to the greater of half of physical user
+        // memory or 256 MB.
+        int pMib[2];
+        size_t nMinMem = 256 * 1024 * 1024;
+        size_t nMaxMem = nMinMem * 4;
+        size_t nUserMem = 0;
+        size_t nLen = sizeof( nUserMem );
+        pMib[0] = CTL_HW;
+        pMib[1] = HW_USERMEM;
+        if ( !sysctl( pMib, 2, &nUserMem, &nLen, NULL, 0 ) )
+            nUserMem /= 2;
+        if ( nUserMem > nMaxMem )
+            nUserMem = nMaxMem;
+        else if ( nUserMem < nMinMem )
+            nUserMem = nMinMem;
+        rtl::OStringBuffer aBuf( "-Xmx" );
+        aBuf.append( (sal_Int32)( nUserMem / ( 1024 * 1024 ) ) );
+        aBuf.append( "m" );
+        options[i+8].optionString = (char *)aBuf.makeStringAndClear().getStr();
+        options[i+8].extraInfo = NULL;
 #endif	// USE_JAVA && MACOSX
 
 #if OSL_DEBUG_LEVEL >= 2
