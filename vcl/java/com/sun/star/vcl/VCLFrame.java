@@ -1033,6 +1033,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (!EventQueue.isDispatchThread())	{
 			FlushingHandler handler = new FlushingHandler(this, b);
 			Toolkit.getDefaultToolkit().getSystemEventQueue().invokeLater(handler);
+			Thread.yield();
 			return;
 		}
 
