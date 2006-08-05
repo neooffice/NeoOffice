@@ -606,6 +606,11 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         options[i+2].optionString = (char *)aExtPath.getStr();
         options[i+2].extraInfo = NULL;
 
+        rtl::OString aEndorsedPath( "-Djava.endorsed.dirs=" );
+        // Set the endorsed directory to use the JVM's XML parser
+        options[i+3].optionString = "-Djava.endorsed.dirs=";
+        options[i+3].extraInfo = NULL;
+
         rtl::OString aLibPath( "-Djava.library.path=/usr/lib/java" );
         rtl::OUString aJavaLibPath( pInfo->sLocation );
         aJavaLibPath = rtl::OUString( aJavaLibPath, aJavaLibPath.lastIndexOf('/') );
@@ -616,28 +621,22 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
             aLibPath += ":";
             aLibPath += rtl::OUStringToOString( aJavaLibSysPath, RTL_TEXTENCODING_UTF8 );
         }
-
-        rtl::OString aEndorsedPath( "-Djava.endorsed.dirs=" );
-        rtl::OUString aExe;
-        osl_getExecutableFile( &aExe.pData );
-        rtl::OUString aExeSysPath;
-        if ( aExe.getLength() && osl_getSystemPathFromFileURL( aExe.pData, &aExeSysPath.pData ) == osl_File_E_None )
-        {
-            aExeSysPath = rtl::OUString( aExeSysPath, aExeSysPath.lastIndexOf('/') );
+        rtl::OString aEnvLibPath( getenv( "DYLD_LIBRARY_PATH" ) );
+		if ( aEnvLibPath.getLength() )
+		{
             aLibPath += ":";
-            aLibPath += rtl::OUStringToOString( aExeSysPath, osl_getThreadTextEncoding() );
-            aExeSysPath += rtl::OUString::createFromAscii( "/classes" );
-            aEndorsedPath += rtl::OUStringToOString( aExeSysPath, osl_getThreadTextEncoding() );
-        }
+            aLibPath += aEnvLibPath;
+		}
+        rtl::OString aEnvFallbackLibPath( getenv( "DYLD_FALLBACK_LIBRARY_PATH" ) );
+		if ( aEnvFallbackLibPath.getLength() )
+		{
+            aLibPath += ":";
+            aLibPath += aEnvFallbackLibPath;
+		}
 
         // Set the library path to include the executable path but none of the
         // extensions
-        options[i+3].optionString = (char *)aLibPath.getStr();
-        options[i+3].extraInfo = NULL;
-
-        // Set the endorsed directory to force use of the JVM's XML parser
-        // to include the executable path's classes subdirectory
-        options[i+4].optionString = (char *)aEndorsedPath.getStr();
+        options[i+4].optionString = (char *)aLibPath.getStr();
         options[i+4].extraInfo = NULL;
 
         // Set miscellaneous optimizations for the JVM
