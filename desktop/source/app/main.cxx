@@ -172,11 +172,8 @@ SAL_IMPLEMENT_MAIN()
 	// We have to set SAL_NO_FORCE_SYSALLOC to some value in order to turn
 	// on OOo's custom memory manager which is, apparently, required for
 	// XML export to work but it cannot be used before we invoke execv().
-	if ( bRestart || getenv( "SAL_NO_FORCE_SYSALLOC" ) == NULL )
-	{
-		putenv( "SAL_NO_FORCE_SYSALLOC=1" );
+	if ( bRestart )
 		execv( pCmdPath, argv );
-	}
 
 	// File locking is enabled by default
 	putenv( "SAL_ENABLE_FILE_LOCKING=1" );
