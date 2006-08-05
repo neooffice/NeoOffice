@@ -149,8 +149,8 @@ if [ -d "$2" ]; then
 
 	# Bad things happen with OOo and Xerces when the memory manager is turned
 	# off so delete it
-	rm -f "$2/Contents/MacOS/program/classes/xercesImpl.jar"
-	rm -f "$2/Contents/MacOS/program/classes/xml-apis.jar"
+	rm -f "$2/Contents/MacOS/classes/xercesImpl.jar"
+	rm -f "$2/Contents/MacOS/classes/xml-apis.jar"
 
 	# Touch shared libraries to fix bug 280
 	DYLD_LIBRARY_PATH="$2/Contents/MacOS"; export DYLD_LIBRARY_PATH
