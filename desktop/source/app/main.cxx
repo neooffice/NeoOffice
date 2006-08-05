@@ -116,82 +116,67 @@ SAL_IMPLEMENT_MAIN()
 	// Assign command's directory to PATH environment variable
 	ByteString aPath( getenv( "PATH" ) );
 	ByteString aStandardPath( aCmdPath );
-	aStandardPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
-	aStandardPath += ByteString( "/bin:/sbin:/usr/bin:/usr/sbin" );
-	if ( aPath.CompareTo( aStandardPath, aStandardPath.Len() ) != COMPARE_EQUAL || ( aPath.Len() > aStandardPath.Len() && aPath.GetChar( aStandardPath.Len() ) != ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 ).GetChar( 0 ) ) )
+	aStandardPath += ByteString( ":/bin:/sbin:/usr/bin:/usr/sbin:" );
+	if ( aPath.CompareTo( aStandardPath, aStandardPath.Len() ) != COMPARE_EQUAL )
 	{
 		ByteString aTmpPath( "PATH=" );
 		aTmpPath += aStandardPath;
 		if ( aPath.Len() )
 		{
-			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
+			aTmpPath += ByteString( ":" );
 			aTmpPath += aPath;
 		}
 		putenv( (char *)aTmpPath.GetBuffer() );
 	}
 
-	// Assign command's directory and DYLD_LIBRARY_PATH to
-	// DYLD_FALLBACK_LIBRARY_PATH. Also, fix bug 1198 and eliminate
-	// "libzip.jnilib not found" crashes by unsetting DYLD_FRAMEWORK_PATH and
-	// DYLD_LIBRARY_PATH.
+	// Fix bug 1198 and eliminate "libzip.jnilib not found" crashes by
+	// unsetting DYLD_FRAMEWORK_PATH
 	bool bRestart = false;
-	char *pFrameworkPath = getenv( "DYLD_FRAMEWORK_PATH" );
-	if ( pFrameworkPath )
+	ByteString aFrameworkPath( getenv( "DYLD_FRAMEWORK_PATH" ) );
+	if ( aFrameworkPath.Len() )
 	{
-		ByteString aFrameworkPath( pFrameworkPath );
 		ByteString aFallbackFrameworkPath( getenv( "DYLD_FALLBACK_LIBRARY_PATH" ) );
 		if ( aFallbackFrameworkPath.Len() )
 		{
-			aFrameworkPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
+			aFrameworkPath += ByteString( ":" );
 			aFrameworkPath += aFallbackFrameworkPath;
 		}
 		if ( aFrameworkPath.Len() )
 		{
 			ByteString aTmpPath( "DYLD_FALLBACK_FRAMEWORK_PATH=" );
-			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
 			aTmpPath += aFrameworkPath;
 			putenv( (char *)aTmpPath.GetBuffer() );
 		}
 		unsetenv( "DYLD_FRAMEWORK_PATH" );
 		bRestart = true;
 	}
-	char *pLibPath = getenv( "DYLD_LIBRARY_PATH" );
-	ByteString aFallbackLibPath( getenv( "DYLD_FALLBACK_LIBRARY_PATH" ) );
-	if ( !aFallbackLibPath.Len() )
+
+	ByteString aStandardLibPath( aCmdPath );
+	aStandardLibPath += ByteString( ":/usr/local/lib:/lib:/usr/lib:" );
+	ByteString aLibPath( getenv( "DYLD_LIBRARY_PATH" ) );
+	if ( aLibPath.CompareTo( aStandardLibPath, aStandardLibPath.Len() ) != COMPARE_EQUAL )
 	{
-		// Explicitly set the default value specified in the dyld man pages
-		ByteString aHomePath( getenv( "HOME" ) );
-		if ( aHomePath.Len() )
-		{
-			aFallbackLibPath += aHomePath;
-			aFallbackLibPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
-		}
-		aFallbackLibPath += ByteString( "/usr/local/lib:/lib:/usr/lib" );
-	}
-	if ( pLibPath || aFallbackLibPath.CompareTo( aCmdPath, aCmdPath.Len() ) != COMPARE_EQUAL || ( aFallbackLibPath.Len() > aCmdPath.Len() && aFallbackLibPath.GetChar( aCmdPath.Len() ) != ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 ).GetChar( 0 ) ) )
-	{
-		ByteString aTmpPath( "DYLD_FALLBACK_LIBRARY_PATH=" );
-		aTmpPath += aCmdPath;
-		ByteString aLibPath( pLibPath );
+		ByteString aTmpPath( "DYLD_LIBRARY_PATH=" );
+		aTmpPath += aStandardLibPath;
 		if ( aLibPath.Len() )
 		{
-			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
+			aTmpPath += ByteString( ":" );
 			aTmpPath += aLibPath;
 		}
-		if ( aFallbackLibPath.Len() )
-		{
-			aTmpPath += ByteString( DirEntry::GetSearchDelimiter(), RTL_TEXTENCODING_UTF8 );
-			aTmpPath += aFallbackLibPath;
-		}
 		putenv( (char *)aTmpPath.GetBuffer() );
-		unsetenv( "DYLD_LIBRARY_PATH" );
 		bRestart = true;
 	}
 
 	// Restart if necessary since most library path changes don't have any
-	// effect after the application has already started on most platforms
-	if ( bRestart )
+	// effect after the application has already started on most platforms.
+	// We have to set SAL_NO_FORCE_SYSALLOC to some value in order to turn
+	// on OOo's custom memory manager which is, apparently, required for
+	// XML export to work but it cannot be used before we invoke execv().
+	if ( bRestart || getenv( "SAL_NO_FORCE_SYSALLOC" ) == NULL )
+	{
+		putenv( "SAL_NO_FORCE_SYSALLOC=1" );
 		execv( pCmdPath, argv );
+	}
 
 	// File locking is enabled by default
 	putenv( "SAL_ENABLE_FILE_LOCKING=1" );
