@@ -110,4 +110,4 @@ if [ -d "$2/Contents" ] ; then
 
 fi
 
-exit 0
+exit 1
