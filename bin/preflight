@@ -46,16 +46,6 @@ if [ -d "$2" ] ; then
 
 fi
 
-if [ ! -f "$1/Contents/Info.plist" ] ; then
-    return 1;
-fi
-
-// Check for matching build machine
-grep '$(BUILD_MACHINE)' "$1/Contents/Info.plist" >/dev/null 2>&1
-if [ "$?" != "0" ] ; then
-    return 1;
-fi
-
 if [ -d "$2/Contents" ] ; then
 
 	# Save dictionary files for postflight scripts
@@ -120,4 +110,4 @@ if [ -d "$2/Contents" ] ; then
 
 fi
 
-exit 0
+exit 1
