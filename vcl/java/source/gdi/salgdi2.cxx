@@ -120,7 +120,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 		aPosAry.mnSrcHeight -= nExcessHeight;
 		if ( aPosAry.mnSrcHeight < 1 )
 			return;
-		aPosAry.mnDestHeight = (long)( ( fScaleX * aPosAry.mnSrcHeight ) + 0.5 );
+		aPosAry.mnDestHeight = (long)( ( fScaleY * aPosAry.mnSrcHeight ) + 0.5 );
 	}
 
 	if ( aPosAry.mnDestX < 0 )
@@ -137,7 +137,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 		aPosAry.mnDestHeight += aPosAry.mnDestY;
 		if ( aPosAry.mnDestHeight < 1 )
 			return;
-		aPosAry.mnSrcHeight = (long)( ( aPosAry.mnDestHeight / fScaleX ) + 0.5 );
+		aPosAry.mnSrcHeight = (long)( ( aPosAry.mnDestHeight / fScaleY ) + 0.5 );
 		aPosAry.mnSrcY -= (long)( ( aPosAry.mnDestY / fScaleY ) + 0.5 );
 		aPosAry.mnDestY = 0;
 	}
@@ -271,7 +271,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 		aPosAry.mnSrcHeight -= nExcessHeight;
 		if ( aPosAry.mnSrcHeight < 1 )
 			return;
-		aPosAry.mnDestHeight = (long)( ( fScaleX * aPosAry.mnSrcHeight ) + 0.5 );
+		aPosAry.mnDestHeight = (long)( ( fScaleY * aPosAry.mnSrcHeight ) + 0.5 );
 	}
 
 	if ( aPosAry.mnDestX < 0 )
@@ -288,7 +288,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 		aPosAry.mnDestHeight += aPosAry.mnDestY;
 		if ( aPosAry.mnDestHeight < 1 )
 			return;
-		aPosAry.mnSrcHeight = (long)( ( aPosAry.mnDestHeight / fScaleX ) + 0.5 );
+		aPosAry.mnSrcHeight = (long)( ( aPosAry.mnDestHeight / fScaleY ) + 0.5 );
 		aPosAry.mnSrcY -= (long)( ( aPosAry.mnDestY / fScaleY ) + 0.5 );
 		aPosAry.mnDestY = 0;
 	}
@@ -400,7 +400,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 		aPosAry.mnSrcHeight -= nExcessHeight;
 		if ( aPosAry.mnSrcHeight < 1 )
 			return;
-		aPosAry.mnDestHeight = (long)( ( fScaleX * aPosAry.mnSrcHeight ) + 0.5 );
+		aPosAry.mnDestHeight = (long)( ( fScaleY * aPosAry.mnSrcHeight ) + 0.5 );
 	}
 
 	if ( aPosAry.mnDestX < 0 )
@@ -417,7 +417,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 		aPosAry.mnDestHeight += aPosAry.mnDestY;
 		if ( aPosAry.mnDestHeight < 1 )
 			return;
-		aPosAry.mnSrcHeight = (long)( ( aPosAry.mnDestHeight / fScaleX ) + 0.5 );
+		aPosAry.mnSrcHeight = (long)( ( aPosAry.mnDestHeight / fScaleY ) + 0.5 );
 		aPosAry.mnSrcY -= (long)( ( aPosAry.mnDestY / fScaleY ) + 0.5 );
 		aPosAry.mnDestY = 0;
 	}
@@ -543,7 +543,7 @@ void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSal
 		aPosAry.mnSrcHeight -= nExcessHeight;
 		if ( aPosAry.mnSrcHeight < 1 )
 			return;
-		aPosAry.mnDestHeight = (long)( ( fScaleX * aPosAry.mnSrcHeight ) + 0.5 );
+		aPosAry.mnDestHeight = (long)( ( fScaleY * aPosAry.mnSrcHeight ) + 0.5 );
 	}
 
 	if ( aPosAry.mnDestX < 0 )
@@ -560,7 +560,7 @@ void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSal
 		aPosAry.mnDestHeight += aPosAry.mnDestY;
 		if ( aPosAry.mnDestHeight < 1 )
 			return;
-		aPosAry.mnSrcHeight = (long)( ( aPosAry.mnDestHeight / fScaleX ) + 0.5 );
+		aPosAry.mnSrcHeight = (long)( ( aPosAry.mnDestHeight / fScaleY ) + 0.5 );
 		aPosAry.mnSrcY -= (long)( ( aPosAry.mnDestY / fScaleY ) + 0.5 );
 		aPosAry.mnDestY = 0;
 	}
