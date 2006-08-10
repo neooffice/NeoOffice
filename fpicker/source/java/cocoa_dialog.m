@@ -557,6 +557,10 @@ static NSString *pBlankItem = @" ";
 {
 	BOOL bRet = NO;
 
+	// Fix bug 1622 by checking for nil argument
+	if ( !pFilename )
+		return bRet;
+
 	CFURLRef aURL = CFURLCreateWithFileSystemPath( NULL, (CFStringRef)pFilename, kCFURLPOSIXPathStyle, NO );
 	if ( aURL )
 	{
