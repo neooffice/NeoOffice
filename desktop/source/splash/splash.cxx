@@ -498,7 +498,7 @@ void SplashScreen::Paint( const Rectangle& r)
     DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
 
     // Copy left to screen
-    aCurrentClip = Rectangle( Point( 0, aClipRect.Top() ), Size( aClipRect.Left() + 2, aClipRect.GetHeight() ) );
+    aCurrentClip = Rectangle( Point( 0, aClipRect.Top() ), Size( aClipRect.Left() + 3, aClipRect.GetHeight() ) );
     SetClipRegion( aCurrentClip );
     DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
 
