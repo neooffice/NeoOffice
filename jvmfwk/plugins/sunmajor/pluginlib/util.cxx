@@ -98,8 +98,11 @@ char const *g_arCollectDirs[] = {
 char const *g_arSearchPaths[] = {
 #ifdef MACOSX
     "",
-    "System/Library/Frameworks/JavaVM.framework/Versions/1.4.1/",
+#ifdef USE_JAVA
+    "System/Library/Frameworks/JavaVM.framework/"
+#else	// USE_JAVA
     "System/Library/Frameworks/JavaVM.framework/Versions/1.4.2/"
+#endif	// USE_JAVA
 #else
     "",
     "usr/",
