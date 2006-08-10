@@ -59,7 +59,7 @@ if [ -d "$scriptdir" -a -f "$scriptdir/installutils" ] ; then
 		volume="$3"
 	fi
 
-	// Fix bug 1544 by repairing permission in user install directory
+	# Fix bug 1544 by repairing permission in user install directory
 	if [ -e "$userinstall" ] ; then
 		chmod -Rf u+rw "$userinstall"
 	fi

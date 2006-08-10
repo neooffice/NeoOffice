@@ -48,7 +48,7 @@ check_installation() {
 		return 1;
 	fi
 
-	// Check for matching build machine
+	# Check for matching build machine
 	grep '$(BUILD_MACHINE)' "$1/Contents/Info.plist" >/dev/null 2>&1
 	if [ "$?" != "0" ] ; then
 		return 1;
