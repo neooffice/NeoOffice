@@ -78,7 +78,7 @@ static const void ReleaseBytePointerCallback( void *pInfo, const void *pPointer 
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pEnv, jobject object, jintArray _par0, jint _par1, jint _par2, jint _par3, jint _par4, jint _par5, jint _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14 )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pEnv, jobject object, jintArray _par0, jint _par1, jint _par2, jint _par3, jint _par4, jint _par5, jint _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14, jboolean _par15 )
 {
 	static CGDataProviderDirectAccessCallbacks aProviderCallbacks = { GetBytePointerCallback, (void (*)(void*, const void*))ReleaseBytePointerCallback, NULL, NULL };
 
@@ -171,13 +171,13 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pE
 	if ( aImage )
 	{
 		aCGImageList.push_back( aImage );
-		CGImageRef_drawInRect( aImage, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14 );
+		CGImageRef_drawInRect( aImage, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14, _par15 );
 	}
 }
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIEnv *pEnv, jobject object, jlong _par0, jint _par1, jint _par2, jint _par3, jint _par4, jfloat _par5, jfloat _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12 )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIEnv *pEnv, jobject object, jlong _par0, jint _par1, jint _par2, jint _par3, jint _par4, jfloat _par5, jfloat _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12, jboolean _par13 )
 {
 	static CGDataProviderDirectAccessCallbacks aProviderCallbacks = { GetBytePointerCallback, (void (*)(void*, const void*))ReleaseBytePointerCallback, NULL, NULL };
 
@@ -278,7 +278,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIE
 	if ( aImage )
 	{
 		aCGImageList.push_back( aImage );
-		CGImageRef_drawInRect( aImage, _par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12 );
+		CGImageRef_drawInRect( aImage, _par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12, _par13 );
 	}
 }
 
@@ -304,9 +304,9 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps( J
 
 // ============================================================================
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawEPS0( JNIEnv *pEnv, jobject object, jlong _par0, jlong _par1, jfloat _par2, jfloat _par3, jfloat _par4, jfloat _par5 )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawEPS0( JNIEnv *pEnv, jobject object, jlong _par0, jlong _par1, jfloat _par2, jfloat _par3, jfloat _par4, jfloat _par5, jboolean _par6 )
 {
-	NSEPSImageRep_drawInRect( (void *)_par0, _par1, _par2, _par3, _par4, _par5 );
+	NSEPSImageRep_drawInRect( (void *)_par0, _par1, _par2, _par3, _par4, _par5, _par6 );
 }
 
 // ============================================================================
@@ -329,13 +329,13 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 			// Register the native methods for our class
 			JNINativeMethod pMethods[4]; 
 			pMethods[0].name = "drawBitmap0";
-			pMethods[0].signature = "([IIIIIIIFFFFFFFF)V";
+			pMethods[0].signature = "([IIIIIIIFFFFFFFFZ)V";
 			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawBitmap0;
 			pMethods[1].name = "drawBitmapBuffer0";
-			pMethods[1].signature = "(JIIIIFFFFFFFF)V";
+			pMethods[1].signature = "(JIIIIFFFFFFFFZ)V";
 			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0;
 			pMethods[2].name = "drawEPS0";
-			pMethods[2].signature = "(JJFFFF)V";
+			pMethods[2].signature = "(JJFFFFZ)V";
 			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawEPS0;
 			pMethods[3].name = "releaseNativeBitmaps";
 			pMethods[3].signature = "()V";

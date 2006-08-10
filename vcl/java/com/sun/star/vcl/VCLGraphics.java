@@ -170,6 +170,11 @@ public final class VCLGraphics {
 	private static Method drawLineMethod = null;
 
 	/**
+	 * The draw on main thread flag.
+	 */
+	private static boolean drawOnMainThread = true;
+
+	/**
 	 * The drawPolygon method.
 	 */
 	private static Method drawPolygonMethod = null;
@@ -263,6 +268,15 @@ public final class VCLGraphics {
 	 * Initialize static data.
 	 */
 	static {
+
+		// Set the draw on main thread flag
+		try {
+			// Test for Java 1.5 or higher
+			Class.forName("java.lang.Appendable");
+			drawOnMainThread = false;
+		}
+		catch (Throwable t) {
+		}
 
 		Color c = new Color(0x00000000, true);
 
@@ -708,7 +722,7 @@ public final class VCLGraphics {
 					while (clipRects.hasNext()) {
 						Rectangle clip = (Rectangle)clipRects.next();
 						// Note: the bitmap needs to be flipped
-						drawBitmap0(bmp.getData(), bmp.getWidth(), bmp.getHeight(), srcX, srcY, srcWidth, srcHeight, scaleX * (bounds.x + destX), scaleY * (bounds.y + destY + destHeight), scaleX * destWidth, scaleY * destHeight * -1, scaleX * (bounds.x + clip.x), scaleY * (bounds.y + clip.y + clip.height), scaleX * clip.width, scaleY * clip.height * -1);
+						drawBitmap0(bmp.getData(), bmp.getWidth(), bmp.getHeight(), srcX, srcY, srcWidth, srcHeight, scaleX * (bounds.x + destX), scaleY * (bounds.y + destY + destHeight), scaleX * destWidth, scaleY * destHeight * -1, scaleX * (bounds.x + clip.x), scaleY * (bounds.y + clip.y + clip.height), scaleX * clip.width, scaleY * clip.height * -1, VCLGraphics.drawOnMainThread);
 					}
 				}
 				else {
@@ -747,8 +761,9 @@ public final class VCLGraphics {
 	 * @param clipY the y coordinate of the graphics to clip to
 	 * @param clipWidth the width of the graphics to clip to
 	 * @param clipHeight the height of the graphics to clip to
+	 * @param drawOnMainThread do drawing on main event dispatch thread
 	 */
-	native void drawBitmap0(int[] bmpData, int width, int height, int srcX, int srcY, int srcWidth, int srcHeight, float destX, float destY, float destWidth, float destHeight, float clipX, float clipY, float clipWidth, float clipHeight);
+	native void drawBitmap0(int[] bmpData, int width, int height, int srcX, int srcY, int srcWidth, int srcHeight, float destX, float destY, float destWidth, float destHeight, float clipX, float clipY, float clipWidth, float clipHeight, boolean drawOnMainThread);
 
 	/**
 	 * Draws the specified BitmapBuffer pointer to the underlying graphics.
@@ -808,7 +823,7 @@ public final class VCLGraphics {
 				while (clipRects.hasNext()) {
 					Rectangle clip = (Rectangle)clipRects.next();
 					// Note: the bitmap needs to be flipped
-					drawBitmapBuffer0(buffer, srcX, srcY, srcWidth, srcHeight, scaleX * (bounds.x + destX), scaleY * (bounds.y + destY + destHeight), scaleX * destWidth, scaleY * destHeight * -1, scaleX * (bounds.x + clip.x), scaleY * (bounds.y + clip.y + clip.height), scaleX * clip.width, scaleY * clip.height * -1);
+					drawBitmapBuffer0(buffer, srcX, srcY, srcWidth, srcHeight, scaleX * (bounds.x + destX), scaleY * (bounds.y + destY + destHeight), scaleX * destWidth, scaleY * destHeight * -1, scaleX * (bounds.x + clip.x), scaleY * (bounds.y + clip.y + clip.height), scaleX * clip.width, scaleY * clip.height * -1, VCLGraphics.drawOnMainThread);
 				}
 			}
 			catch (Throwable t) {
@@ -835,8 +850,9 @@ public final class VCLGraphics {
 	 * @param clipY the y coordinate of the graphics to clip to
 	 * @param clipWidth the width of the graphics to clip to
 	 * @param clipHeight the height of the graphics to clip to
+	 * @param drawOnMainThread do drawing on main event dispatch thread
 	 */
-	native void drawBitmapBuffer0(long buffer, int srcX, int srcY, int srcWidth, int srcHeight, float destX, float destY, float destWidth, float destHeight, float clipX, float clipY, float clipWidth, float clipHeight);
+	native void drawBitmapBuffer0(long buffer, int srcX, int srcY, int srcWidth, int srcHeight, float destX, float destY, float destWidth, float destHeight, float clipX, float clipY, float clipWidth, float clipHeight, boolean drawOnMainThread);
 
 	/**
 	 * Draws specified EPS data to the underlying graphics.
@@ -888,7 +904,7 @@ public final class VCLGraphics {
 				while (clipRects.hasNext()) {
 					g.setClip((Rectangle)clipRects.next());
 					// Note: the EPS image needs to be flipped
-					drawEPS0(epsData, epsDataSize, scaleX * (bounds.x + destX), scaleY * (bounds.y + destY + destHeight), scaleX * destWidth, scaleY * destHeight * -1);
+					drawEPS0(epsData, epsDataSize, scaleX * (bounds.x + destX), scaleY * (bounds.y + destY + destHeight), scaleX * destWidth, scaleY * destHeight * -1, VCLGraphics.drawOnMainThread);
 				}
 			}
 			catch (Throwable t) {
@@ -908,8 +924,9 @@ public final class VCLGraphics {
 	 * @param destY the y coordinate of the graphics to draw to
 	 * @param destWidth the width of the graphics to copy to
 	 * @param destHeight the height of the graphics to copy to
+	 * @param drawOnMainThread do drawing on main event dispatch thread
 	 */
-	native void drawEPS0(long epsData, long epsDataSize, float destX, float destY, float destWidth, float destHeight);
+	native void drawEPS0(long epsData, long epsDataSize, float destX, float destY, float destWidth, float destHeight, boolean drawOnMainThread);
 
 	/**
 	 * Draws the specified glyph codes using the specified font and color. Note
@@ -2150,7 +2167,7 @@ public final class VCLGraphics {
 						float scaleY = (float)transform.getScaleY();
 						Rectangle bounds = pageFormat.getImageableBounds();
 						// Note: the bitmap needs to be flipped
-						drawBitmap0(singlePixelBitmap.getData(), singlePixelBitmap.getWidth(), singlePixelBitmap.getHeight(), 0, 0, 1, 1, scaleX * (bounds.x + x), scaleY * (bounds.y + y), scaleX, scaleY * -1, scaleX * (bounds.x + x), scaleY * (bounds.y + y), scaleX, scaleY * -1);
+						drawBitmap0(singlePixelBitmap.getData(), singlePixelBitmap.getWidth(), singlePixelBitmap.getHeight(), 0, 0, 1, 1, scaleX * (bounds.x + x), scaleY * (bounds.y + y), scaleX, scaleY * -1, scaleX * (bounds.x + x), scaleY * (bounds.y + y), scaleX, scaleY * -1, VCLGraphics.drawOnMainThread);
 					}
 					else {
 						if (xor)

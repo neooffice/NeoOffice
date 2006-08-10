@@ -199,7 +199,7 @@
 
 @end
 
-void CGImageRef_drawInRect( CGImageRef aImage, float fX, float fY, float fWidth, float fHeight, float fClipX, float fClipY, float fClipWidth, float fClipHeight )
+void CGImageRef_drawInRect( CGImageRef aImage, float fX, float fY, float fWidth, float fHeight, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -207,13 +207,16 @@ void CGImageRef_drawInRect( CGImageRef aImage, float fX, float fY, float fWidth,
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, @"AWTRunLoopMode", nil];
 		DrawImageInRect *pDrawImageInRect = [[DrawImageInRect alloc] initWithImage:aImage x:fX y:fY width:fWidth height:fHeight clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight];
-		[pDrawImageInRect performSelectorOnMainThread:@selector(drawImageInRect:) withObject:pDrawImageInRect waitUntilDone:YES modes:pModes];
+		if ( bDrawInMainThread )
+			[pDrawImageInRect performSelectorOnMainThread:@selector(drawImageInRect:) withObject:pDrawImageInRect waitUntilDone:YES modes:pModes];
+		else
+			[pDrawImageInRect drawImageInRect:pDrawImageInRect];
 	}
 
 	[pPool release];
 }
 
-void NSEPSImageRep_drawInRect( void *pPtr, unsigned nSize, float fX, float fY, float fWidth, float fHeight )
+void NSEPSImageRep_drawInRect( void *pPtr, unsigned nSize, float fX, float fY, float fWidth, float fHeight, BOOL bDrawInMainThread )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -221,7 +224,10 @@ void NSEPSImageRep_drawInRect( void *pPtr, unsigned nSize, float fX, float fY, f
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, @"AWTRunLoopMode", nil];
 		DrawEPSInRect *pDrawEPSInRect = [[DrawEPSInRect alloc] initWithPtr:pPtr size:nSize x:fX y:fY width:fWidth height:fHeight];
-		[pDrawEPSInRect performSelectorOnMainThread:@selector(drawEPSInRect:) withObject:pDrawEPSInRect waitUntilDone:YES modes:pModes];
+		if ( bDrawInMainThread )
+			[pDrawEPSInRect performSelectorOnMainThread:@selector(drawEPSInRect:) withObject:pDrawEPSInRect waitUntilDone:YES modes:pModes];
+		else
+			[pDrawEPSInRect drawEPSInRect:pDrawEPSInRect];
 	}
 
 	[pPool release];

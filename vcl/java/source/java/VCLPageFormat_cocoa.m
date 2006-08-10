@@ -68,15 +68,33 @@ static BOOL bInDialog = NO;
 
 @end
 
-@interface InstallVCLPrintInfo : NSObject
-- (void)installVCLPrintInfo:(id)pObject;
+@interface VCLPrintOperation : NSPrintOperation
++ (NSPrintOperation *)printOperationWithView:(NSView *)aView printInfo:(NSPrintInfo *)aPrintInfo;
 @end
 
-@implementation InstallVCLPrintInfo
+@implementation VCLPrintOperation
 
-- (void)installVCLPrintInfo:(id)pObject
++ (NSPrintOperation *)printOperationWithView:(NSView *)aView printInfo:(NSPrintInfo *)aPrintInfo
+{
+	NSPrintOperation *pOperation = [[VCLPrintOperation superclass] printOperationWithView:aView printInfo:aPrintInfo];
+
+	[NSPrintOperation setCurrentOperation:pOperation];
+
+	return pOperation;
+}
+
+@end
+
+@interface InstallVCLPrintClasses : NSObject
+- (void)installVCLPrintClasses:(id)pObject;
+@end
+
+@implementation InstallVCLPrintClasses
+
+- (void)installVCLPrintClasses:(id)pObject
 {
 	[VCLPrintInfo poseAsClass:[NSPrintInfo class]];
+	[VCLPrintOperation poseAsClass:[NSPrintOperation class]];
 }
 
 @end
@@ -205,12 +223,12 @@ id NSPrintInfo_create()
 	return pRet;
 }
 
-void NSPrintInfo_installVCLPrintInfo()
+void NSPrintInfo_installVCLPrintClasses()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	InstallVCLPrintInfo *pInstallVCLPrintInfo = [[InstallVCLPrintInfo alloc] init];
-	[pInstallVCLPrintInfo performSelectorOnMainThread:@selector(installVCLPrintInfo:) withObject:pInstallVCLPrintInfo waitUntilDone:YES];
+	InstallVCLPrintClasses *pInstallVCLPrintClasses = [[InstallVCLPrintClasses alloc] init];
+	[pInstallVCLPrintClasses performSelectorOnMainThread:@selector(installVCLPrintClasses:) withObject:pInstallVCLPrintClasses waitUntilDone:YES];
 
 	[pPool release];
 }
