@@ -569,9 +569,10 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 	if ( fAdjustedSize != fSize )
 	{
 		// Reset font size
+		fCurrentSize = X2Fix( fSize );
 		nTags[0] = kATSUSizeTag;
 		nBytes[0] = sizeof( Fixed );
-		nVals[0] = &fSize;
+		nVals[0] = &fCurrentSize;
 
 		if ( ATSUSetAttributes( maFontStyle, 1, nTags, nBytes, nVals ) != noErr )
 		{
