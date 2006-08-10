@@ -710,11 +710,5 @@
 	<string>$(PRODUCT_FILETYPE)</string>
 	<key>CFBundleVersion</key>
 	<string>$(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION) $(ULONGNAME) ($(BUILD_MACHINE))</string>
-	<key>Java</key>
-	<dict>
-		<!-- Don't allow Java 1.5 to be used -->
-		<key>JVMVersion</key>
-		<string>1.4*</string>
-	</dict>
 </dict>
 </plist>
