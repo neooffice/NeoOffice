@@ -106,6 +106,7 @@ update_installation() {
 
 	# Bad things happen with OOo and Xerces when the memory manager is turned
 	# off so delete it
+	rm -f "$1/Contents/MacOS/classes/xalan.jar"
 	rm -f "$1/Contents/MacOS/classes/xercesImpl.jar"
 	rm -f "$1/Contents/MacOS/classes/xml-apis.jar"
 
