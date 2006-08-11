@@ -99,7 +99,13 @@ char const *g_arSearchPaths[] = {
 #ifdef MACOSX
     "",
 #ifdef USE_JAVA
-    "System/Library/Frameworks/JavaVM.framework/"
+    "System/Library/Frameworks/JavaVM.framework/Versions/1.6.1/",
+    "System/Library/Frameworks/JavaVM.framework/Versions/1.6.0/",
+    "System/Library/Frameworks/JavaVM.framework/Versions/1.5.1/",
+    "System/Library/Frameworks/JavaVM.framework/Versions/1.5.0/",
+    "System/Library/Frameworks/JavaVM.framework/Versions/1.4.3/",
+    "System/Library/Frameworks/JavaVM.framework/Versions/1.4.2/",
+    "System/Library/Frameworks/JavaVM.framework/Versions/1.4.1/"
 #else	// USE_JAVA
     "System/Library/Frameworks/JavaVM.framework/Versions/1.4.2/"
 #endif	// USE_JAVA

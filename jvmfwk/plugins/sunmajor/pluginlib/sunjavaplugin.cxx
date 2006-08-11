@@ -606,9 +606,9 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         options[i+2].optionString = (char *)aExtPath.getStr();
         options[i+2].extraInfo = NULL;
 
-        rtl::OString aEndorsedPath( "-Djava.endorsed.dirs=" );
         // Set the endorsed directory to use the JVM's XML parser
-        options[i+3].optionString = "-Djava.endorsed.dirs=";
+        rtl::OString aEndorsedPath( "-Djava.endorsed.dirs=" );
+        options[i+3].optionString = (char *)aEndorsedPath.getStr();
         options[i+3].extraInfo = NULL;
 
         rtl::OString aLibPath( "-Djava.library.path=/usr/lib/java" );
