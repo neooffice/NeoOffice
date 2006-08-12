@@ -108,6 +108,8 @@
 		if ( pDictionary )
 		{
 			[pDictionary setObject:[NSNumber numberWithBool:YES] forKey:NSPrintAllPages];
+			[pDictionary setObject:[NSNumber numberWithBool:YES] forKey:NSPrintMustCollate];
+			[pDictionary removeObjectForKey:NSPrintCopies];
 			[pDictionary removeObjectForKey:NSPrintFirstPage];
 			[pDictionary removeObjectForKey:NSPrintLastPage];
 		}
