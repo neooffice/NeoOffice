@@ -1432,6 +1432,7 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			break;
 
 		case CTRL_EDITBOX:
+		case CTRL_EDITBOX_NOBORDER:
 			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == HAS_BACKGROUND_TEXTURE ) )
 				isSupported = TRUE;
 			break;
@@ -1626,6 +1627,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 			break;
 
 		case CTRL_EDITBOX:
+		case CTRL_EDITBOX_NOBORDER:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle ctrlRect = rControlRegion.GetBoundRect();
@@ -2077,6 +2079,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			break;
 
 		case CTRL_EDITBOX:
+		case CTRL_EDITBOX_NOBORDER:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
 				// fill entire control area with edit box
