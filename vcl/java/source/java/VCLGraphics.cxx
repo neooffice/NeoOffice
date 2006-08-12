@@ -36,6 +36,7 @@
 #define _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_CXX
 
 #include <list>
+#include <map>
 
 #ifndef _SV_JAVA_LANG_CLASS_HXX
 #include <java/lang/Class.hxx>
@@ -56,32 +57,49 @@
 #include "VCLGraphics_cocoa.h"
 
 static ::std::list< CGImageRef > aCGImageList;
-static ::std::list< BitmapBuffer* > aBitmapBufferList;
+static ::osl::Mutex aBitmapBufferMutex;
+static ::std::map< BitmapBuffer*, USHORT > aBitmapBufferMap;
 
+using namespace osl;
 using namespace rtl;
 using namespace vcl;
 
 // ============================================================================
  
-static const void *GetBytePointerCallback( void *pInfo )
+static void ReleaseBytePointerCallback( void *pInfo, const void *pPointer, size_t nSize )
 {
-	return pInfo;
+	BYTE *pBits = (BYTE *)pPointer;
+	if ( pBits )
+		delete[] pBits;
 }
 
 // ----------------------------------------------------------------------------
-
-static const void ReleaseBytePointerCallback( void *pInfo, const void *pPointer )
+ 
+static void ReleaseBitmapBufferCallback( void *pInfo, const void *pPointer, size_t nSize )
 {
-	if ( pPointer )
-		delete[] (jint *)pPointer;
+	BitmapBuffer *pBuffer = (BitmapBuffer *)pInfo;
+	if ( pBuffer )
+	{
+		MutexGuard aGuard( aBitmapBufferMutex );
+		::std::map< BitmapBuffer*, USHORT >::iterator it = aBitmapBufferMap.find( pBuffer );
+		if ( it != aBitmapBufferMap.end() )
+		{
+			it->second--;
+			if ( !it->second )
+			{
+				aBitmapBufferMap.erase( it );
+				if ( pBuffer->mpBits )
+					delete[] pBuffer->mpBits;
+				delete pBuffer;
+			}
+		}
+	}
 }
 
 // ----------------------------------------------------------------------------
 
 JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pEnv, jobject object, jintArray _par0, jint _par1, jint _par2, jint _par3, jint _par4, jint _par5, jint _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14, jboolean _par15 )
 {
-	static CGDataProviderDirectAccessCallbacks aProviderCallbacks = { GetBytePointerCallback, (void (*)(void*, const void*))ReleaseBytePointerCallback, NULL, NULL };
-
 	if ( !_par0 )
 		return;
 
@@ -146,7 +164,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pE
 		return;
 	}
 
-	CGDataProviderRef aProvider = CGDataProviderCreateDirectAccess( pCGBits, nSize, &aProviderCallbacks );
+	CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, pCGBits, nSize, ReleaseBytePointerCallback );
 	if ( !aProvider )
 	{
 		delete[] pCGBits;
@@ -179,27 +197,15 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pE
 
 JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIEnv *pEnv, jobject object, jlong _par0, jint _par1, jint _par2, jint _par3, jint _par4, jfloat _par5, jfloat _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12, jboolean _par13 )
 {
-	static CGDataProviderDirectAccessCallbacks aProviderCallbacks = { GetBytePointerCallback, (void (*)(void*, const void*))ReleaseBytePointerCallback, NULL, NULL };
-
-	if ( !_par0 )
-		return;
-
 	BitmapBuffer *pBuffer = (BitmapBuffer *)_par0;
-	bool bBufferFound = false;
-	for ( ::std::list< BitmapBuffer* >::const_iterator it = aBitmapBufferList.begin(); it != aBitmapBufferList.end(); ++it )
-	{
-		if ( *it == pBuffer )
-		{
-			bBufferFound = true;
-			break;
-		}
-	}
-
-	if ( !bBufferFound )
-		aBitmapBufferList.push_back( pBuffer );
+	if ( !pBuffer )
+		return;
 
 	if ( !pBuffer->mpBits )
+	{
+		delete pBuffer;
 		return;
+	}
 
 	float fScaleX = _par7 / _par3;
 	float fScaleY = _par8 / _par4;
@@ -236,29 +242,22 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIE
 		_par4 -= nExtraHeight;
 	}
 
-	size_t nRowSize = _par3 * sizeof( jint );
-	size_t nSize = nRowSize * _par4;
-	jint *pCGBits = new jint[ _par3 * _par4 ];
-	if ( !pCGBits )
-		return;
-	
-	// Copy the subimage
-	jint *pBits = (jint *)pBuffer->mpBits;
-	jint *pBitsIn = pBits + ( _par2 * nWidth ) + _par1;
-	jint *pBitsOut = pCGBits;
-	for ( jint i = 0; i < _par4; i++ )
-	{
-		memcpy( pBitsOut, pBitsIn, nRowSize );
-		pBitsIn += nWidth;
-		pBitsOut += _par3;
-	}
-
-	CGDataProviderRef aProvider = CGDataProviderCreateDirectAccess( pCGBits, nSize, &aProviderCallbacks );
+	BYTE *pCGBits = pBuffer->mpBits + ( _par2 * pBuffer->mnScanlineSize ) + ( _par1 * sizeof( jint ) );
+	CGDataProviderRef aProvider = CGDataProviderCreateWithData( pBuffer, pCGBits, pBuffer->mnScanlineSize * ( pBuffer->mnHeight - _par2 ), ReleaseBitmapBufferCallback );
 	if ( !aProvider )
 	{
-		delete[] pCGBits;
+		delete[] pBuffer->mpBits;
+		delete pBuffer;
 		return;
 	}
+
+	ClearableMutexGuard aGuard( aBitmapBufferMutex );
+	::std::map< BitmapBuffer*, USHORT >::iterator it = aBitmapBufferMap.find( pBuffer );
+	if ( it != aBitmapBufferMap.end() )
+		it->second++;
+	else
+		aBitmapBufferMap[ pBuffer ] = 1;
+	aGuard.clear();
 
 	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
 	if ( !aColorSpace )
@@ -268,9 +267,9 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIE
 	}
 
 #ifdef POWERPC
-	CGImageRef aImage = CGImageCreate( _par3, _par4, 8, sizeof( jint ) * 8, nRowSize, aColorSpace, kCGImageAlphaPremultipliedFirst, aProvider, NULL, false, kCGRenderingIntentDefault );
+	CGImageRef aImage = CGImageCreate( _par3, _par4, 8, sizeof( jint ) * 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst, aProvider, NULL, false, kCGRenderingIntentDefault );
 #else	// POWERPC
-	CGImageRef aImage = CGImageCreate( _par3, _par4, 8, sizeof( jint ) * 8, nRowSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little, aProvider, NULL, false, kCGRenderingIntentDefault );
+	CGImageRef aImage = CGImageCreate( _par3, _par4, 8, sizeof( jint ) * 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little, aProvider, NULL, false, kCGRenderingIntentDefault );
 #endif	// POWERPC
 	CGColorSpaceRelease( aColorSpace );
 	CGDataProviderRelease( aProvider );
@@ -290,15 +289,6 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps( J
 	{
 		CGImageRelease( aCGImageList.front() );
 		aCGImageList.pop_front();
-	}
-
-	while ( aBitmapBufferList.size() )
-	{
-		BitmapBuffer *pBuffer = aBitmapBufferList.front();
-		if ( pBuffer->mpBits )
-			delete[] pBuffer->mpBits;
-		delete pBuffer;
-		aBitmapBufferList.pop_front();
 	}
 }
 
