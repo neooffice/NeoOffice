@@ -62,6 +62,7 @@ SLOFILES = \
 	$(SLO)/Throwable.obj \
 	$(SLO)/VCLBitmap.obj \
 	$(SLO)/VCLEventQueue.obj \
+	$(SLO)/VCLEventQueue_cocoa.obj \
 	$(SLO)/VCLEventQueueEvent.obj \
 	$(SLO)/VCLFont.obj \
 	$(SLO)/VCLFrame.obj \
