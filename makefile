@@ -38,6 +38,15 @@ CC=cc
 CXX=c++
 GNUCP=/opt/local/bin/gcp
 PKG_CONFIG=/opt/local/bin/pkg-config
+PRODUCT_NAME=My Untested Office Suite
+PRODUCT_DIR_NAME=My_Untested_Office_Suite
+# Important: Note that there may be escape characters in the PRODUCT_NAME for
+# the UTF-8 trademark symbol. Don't replace these with "\x##" literal strings!
+PRODUCT_TRADEMARKED_NAME=$(PRODUCT_NAME)
+PRODUCT_TRADEMARKED_NAME_RTF=$(PRODUCT_NAME)
+
+# Custom overrides go in the following file
+-include custom.mk
 
 # Set the shell to tcsh since the OpenOffice.org build requires it
 SHELL:=/bin/tcsh
@@ -77,15 +86,9 @@ OO_DIR_NAME=openoffice.org2.0
 OO_REGISTRATION_URL=http://www.openoffice.org/welcome/registration20.html
 OO_SUPPORT_URL=http://www.openoffice.org
 OO_SUPPORT_URL_TEXT=www.openoffice.org
-PRODUCT_NAME=NeoOffice
-PRODUCT_DIR_NAME=NeoOffice
-# Important: Note that there are escape characters in the PRODUCT_NAME for the
-# UTF-8 trademark symbol. Don't replace these with "\x##" literal strings!
-PRODUCT_TRADEMARKED_NAME=NeoOffice®
-PRODUCT_TRADEMARKED_NAME_RTF=NeoOffice\\\'a8
 PRODUCT_VERSION_FAMILY=2.x
-PRODUCT_VERSION=2.0 Aqua Beta
-PRODUCT_DIR_VERSION=2.0_Aqua_Beta
+PRODUCT_VERSION=2.0 Aqua Beta 2
+PRODUCT_DIR_VERSION=2.0_Aqua_Beta_2
 PRODUCT_LANG_PACK_VERSION=Language Pack
 PRODUCT_DIR_LANG_PACK_VERSION=Language_Pack
 PRODUCT_PATCH_VERSION=Patch 0
@@ -107,7 +110,7 @@ OO_SOURCE_TAR_GZ_FILE:=$(PWD)/OOo_2.0.3_src.tar.gz
 OO_SOURCE_OUTPUT_DIR:=OOC680_m7
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
-NEO_TAG:=NeoOffice-2_0_Aqua_Beta
+NEO_TAG:=HEAD
 
 all: build.all
 
@@ -224,6 +227,7 @@ build.neo_odk_patches: \
 	touch "$@"
 
 build.package: build.neo_patches build.source_zip
+	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
 	sh -e -c 'if [ -d "$(INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(INSTALL_HOME)" ; fi'
 	mkdir -p "$(INSTALL_HOME)/package/Contents"
 	cd "$(INSTALL_HOME)/package" ; ( ( cd "$(PWD)/$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice/install/en-US/staging/OpenOffice.org 2.0.app/Contents/MacOS" ; gnutar cvf - * ) | ( cd "$(PWD)/$(INSTALL_HOME)/package/Contents" ; gnutar xvf - ) )
@@ -327,6 +331,7 @@ build.odk_package: build.neo_odk_patches
 	touch "$@"
 
 build.patch_package: build.package
+	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
 	sh -e -c 'if [ -d "$(PATCH_INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(PATCH_INSTALL_HOME)" ; fi'
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/program/classes"
 	chmod -Rf u+w,a+r "$(PATCH_INSTALL_HOME)/package"
@@ -385,6 +390,7 @@ endif
 	touch "$@"
 
 build.package_%: $(INSTALL_HOME)/package_%
+	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
 	chmod -Rf u+w,a+r "$<"
 	cd "$</Contents" ; rm -Rf LICENSE* README* licenses/* share/readme/*
 	cd "$</Contents" ; cp "$(PWD)/etc/gpl.html" "share/readme/LICENSE_$(PRODUCT_LANG_PACK_LOCALE).html"
@@ -435,6 +441,7 @@ build.source_zip:
 	touch "$@"
 
 build.cd_package: build.package
+	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
 	sh -e -c 'if [ -d "$(CD_INSTALL_HOME)" ] ; then chmod -Rf a+rw "$(CD_INSTALL_HOME)" ; fi'
 	rm -Rf "$(CD_INSTALL_HOME)"
 	mkdir -p "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)/Language Packs"
