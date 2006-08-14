@@ -489,7 +489,6 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 
 	// Fix bug 448 by eliminating subpixel advances.
 	float nScaleY = fSize / fAdjustedSize;
-	int nLastValidCharPos = -1;
 	UniCharArrayOffset nNextCaretPos = 0;
 	for ( i = 0; i < mpHash->mnLen; i = nNextCaretPos )
 	{
@@ -510,26 +509,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 				mpCharAdvances[ i ] = 1;
 			}
 
-			bool bValidChar = true;
-			int j;
-			for ( j = mpCharsToGlyphs[ i ]; j >= 0 && j < mnGlyphCount && mpGlyphInfoArray->glyphs[ j ].charIndex == i; j++ )
-			{
-				if ( mpGlyphInfoArray->glyphs[ j ].glyphID == 0xffff || mpGlyphInfoArray->glyphs[ j ].layoutFlags & kATSGlyphInfoTerminatorGlyph )
-				{
-					bValidChar = false;
-					if ( nNextCaretPos < mpHash->mnLen )
-						mpCharAdvances[ nNextCaretPos ]--;
-					if ( nLastValidCharPos >= 0 )
-						mpCharAdvances[ nLastValidCharPos ] += mpCharAdvances[ i ];
-					mpCharAdvances[ i ] = 1;
-					break;
-				}
-			}
-
-			if ( bValidChar )
-				nLastValidCharPos = i;
-
-			for ( j = i + 1; j < nNextCaretPos; j++ )
+			for ( int j = i + 1; j < nNextCaretPos; j++ )
 			{
 				if ( nNextCaretPos < mpHash->mnLen )
 					mpCharAdvances[ nNextCaretPos ] += mpCharAdvances[ j ] - 1;
@@ -1017,7 +997,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 			if ( bFirstGlyph )
 			{
-				AppendGlyph( GlyphItem( nCharPos, 0x0020 | GF_ISCHAR, aPos, 0, nCharWidth ) );
+				AppendGlyph( GlyphItem( nCharPos, 0x0020 | GF_ISCHAR, aPos, bPosRTL ? GlyphItem::IS_RTL_GLYPH : 0, nCharWidth ) );
 				aPos.X() += nCharWidth;
 			}
 		}

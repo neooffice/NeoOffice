@@ -92,10 +92,10 @@ int GetVerticalFlags( sal_Unicode nChar )
         || (nChar >= 0xFF5B && nChar <= 0xFF9F) // halfwidth forms
         ||  nChar == 0xFFE3 )
             return GF_NONE; // not rotated
-#if !defined USE_JAVA || !defined MACOSX
+#ifndef USE_JAVA
         else if( nChar == 0x30fc )
             return GF_ROTR; // right
-#endif	// !USE_JAVA || !MACOSX
+#endif	// !USE_JAVA
         return GF_ROTL;     // left
     }
 
@@ -786,11 +786,11 @@ bool SalLayout::IsSpacingGlyph( long nGlyph ) const
             || (nChar >= 0x2000 && nChar <= 0x200F) // whitespace
             || (nChar == 0x3000);                   // ideographic space
     }
-#if !defined USE_JAVA || !defined MACOSX
+#ifndef USE_JAVA
     // Glyph ID 3 can be a valid glyph on Mac OS X
     else
         bRet = ((nGlyph & GF_IDXMASK) == 3);
-#endif	// !USE_JAVA || !MACOSX
+#endif	// !USE_JAVA
     return bRet;
 }
 
@@ -829,17 +829,6 @@ void GenericSalLayout::AppendGlyph( const GlyphItem& rGlyphItem )
     }
 
     mpGlyphItems[ mnGlyphCount++ ] = rGlyphItem;
-
-#ifdef USE_JAVA
-    GlyphItem *pG = mpGlyphItems + mnGlyphCount - 1;
-    if ( ( pG->mnGlyphIndex & GF_IDXMASK ) == 0x0000ffff )
-    {
-        if ( pG > mpGlyphItems )
-            pG[-1].mnNewWidth += pG->mnOrigWidth;
-
-        mnGlyphCount--;
-    }
-#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
@@ -1028,7 +1017,7 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
 
             // adjust cluster glyph widths and positions
             nDelta = nBasePointX + (nNewPos - pG->maLinearPos.X());
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
             if ( !pG->IsRTLGlyph() )
             {
                 // for LTR case extend rightmost glyph in cluster
@@ -1042,7 +1031,7 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
                 {
                     // Fix bug 823 by handling inappropriate placement of
                     // kashidas by upper layers
-                    if ( pG > mpGlyphItems && pG[-1].IsRTLGlyph() && pG[-1].mnCharPos - pG->mnCharPos == 1 )
+                    if ( pG > mpGlyphItems && pG[-1].IsRTLGlyph() && ( pG[-1].mnGlyphIndex & GF_IDXMASK ) < 0x0000FFFF && pG[-1].mnCharPos - pG->mnCharPos == 1 )
                     {
                         UJoiningType nTypeLeft = (UJoiningType)u_getIntPropertyValue( rArgs.mpStr[ pG[-1].mnCharPos ], UCHAR_JOINING_TYPE );
                         UJoiningType nTypeRight = (UJoiningType)u_getIntPropertyValue( rArgs.mpStr[ pG->mnCharPos ], UCHAR_JOINING_TYPE );
@@ -1077,7 +1066,7 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
                     pG->mnNewWidth += nDiff;
                 nDelta += nDiff;
             }
-#else	// USE_JAVA && MACOSX
+#else	// USE_JAVA
             if( !pG->IsRTLGlyph()
             || (rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON) )
             {
@@ -1090,7 +1079,7 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
                 pG->mnNewWidth += nDiff;
                 nDelta += nDiff;
             }
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
 
             nNewPos += nNewClusterWidth;
         }
@@ -1239,15 +1228,15 @@ void GenericSalLayout::KashidaJustify( long nKashidaIndex, int nKashidaWidth )
         if( nDelta < 0 )
         {
             aPos.X() += nDelta;
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
             // Fix bug 1245 by not shifting the kashida
             pG2[-1].mnNewWidth += nDelta; // adjust kashida width to gap width
-#else	// USE_JAVA && MACOSX
+#else	// USE_JAVA
             if( nKashidaCount <= 1 )
                 nDelta /= 2;              // for small gap move kashida to middle
             pG2[-1].mnNewWidth += nDelta; // adjust kashida width to gap width
             pG2[-1].maLinearPos.X() += nDelta;
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
         }
 
         // when kashidas were used move the original glyph
