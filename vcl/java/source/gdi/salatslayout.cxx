@@ -1079,11 +1079,30 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			}
 		}
 
-		for ( i = 0; i < nGlyphCount; i++ )
-			aGlyphArray[ i ] &= GF_IDXMASK;
-
 		JavaSalGraphics& rJavaGraphics = (JavaSalGraphics&)rGraphics;
-		rJavaGraphics.mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), nGlyphCount, aGlyphArray, aDXArray, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, nTranslateX, nTranslateY );
+		int nLastStart = 0;
+		int nLastX = 0;
+		long *pGlyphArray = aGlyphArray;
+		long *pDXArray = aDXArray;
+		for ( i = 0; i < nGlyphCount; i++ )
+		{
+			nLastX += aDXArray[ i ];
+			aGlyphArray[ i ] &= GF_IDXMASK;
+			if ( aGlyphArray[ i ] >= 0x0000ffff )
+			{
+				if ( i - nLastStart )
+					rJavaGraphics.mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), i - nLastStart, pGlyphArray, pDXArray, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, nTranslateX, nTranslateY );
+				nLastStart = i + 1;
+				pGlyphArray = aGlyphArray + nLastStart;
+				pDXArray = aDXArray + nLastStart;
+				aPos.X() += nLastX;
+				nLastX = 0;
+				continue;
+			}
+		}
+
+		if ( i - nLastStart )
+			rJavaGraphics.mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), i - nLastStart, pGlyphArray, pDXArray, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, nTranslateX, nTranslateY );
 	}
 }
 
@@ -1113,7 +1132,7 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 		if ( !nGlyphCount )
 			break;
 
-		if ( IsSpacingGlyph( aGlyphArray[ 0 ] ) )
+		if ( IsSpacingGlyph( aGlyphArray[ 0 ] ) || ( aGlyphArray[ 0 ] & GF_IDXMASK ) >= 0x0000ffff )
 		{
 			bRet = true;
 			continue;
