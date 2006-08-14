@@ -2079,14 +2079,30 @@ public final class VCLGraphics {
 			}
 		}
 		else {
-			Graphics2D g = getGraphics();
+			VCLImage srcImage = new VCLImage(destBounds.width, destBounds.height, bitCount);
+			VCLGraphics srcGraphics = srcImage.getGraphics();
+			srcGraphics.drawPolygon(npoints, xpoints, ypoints, 0xff000000, true);
+			Graphics2D g = srcGraphics.getGraphics();
+			if (g != null) {
+				try {
+					g.setColor(Color.black);
+					g.translate(destBounds.x * -1, destBounds.y * -1);
+					g.fillPolygon(polygon);
+				}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
+				g.dispose();
+			}
+
+			g = getGraphics();
 			if (g != null) {
 				try {
 					g.setComposite(VCLGraphics.invertComposite);
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {
 						g.setClip(((Rectangle)clipRects.next()).intersection(destBounds));
-						g.fillPolygon(polygon);
+						g.drawImage(srcImage.getImage(), destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, 0, 0, destBounds.width, destBounds.height, null);
 					}
 				}
 				catch (Throwable t) {
@@ -2094,6 +2110,8 @@ public final class VCLGraphics {
 				}
 				g.dispose();
 			}
+
+			srcImage.dispose();
 		}
 
 	}
@@ -2376,12 +2394,17 @@ public final class VCLGraphics {
 
 			int w = destOut.getWidth();
 			int h = destOut.getHeight();
-			int[] data = new int[w];
+
+			int[] srcData = new int[w];
+			int[] destData = new int[w];
 			for (int line = 0; line < h; line++) {
-				data = (int[])destIn.getDataElements(0, line, data.length, 1, data);
-				for (int i = 0; i < data.length; i++)
-					data[i] = ~data[i] | ( data[i] & 0xff000000 );
-				destOut.setDataElements(0, line, data.length, 1, data);
+				srcData = (int[])src.getDataElements(0, line, srcData.length, 1, srcData);
+				destData = (int[])destIn.getDataElements(0, line, destData.length, 1, destData);
+				for (int i = 0; i < srcData.length && i < destData.length; i++) {
+					if ((srcData[i] & 0xff000000) == 0xff000000)
+						destData[i] = ~destData[i] | 0xff000000;
+				}
+				destOut.setDataElements(0, line, destData.length, 1, destData);
 			}
 
 		}
@@ -2411,8 +2434,10 @@ public final class VCLGraphics {
 			for (int line = 0; line < h; line++) {
 				srcData = (int[])src.getDataElements(0, line, srcData.length, 1, srcData);
 				destData = (int[])destIn.getDataElements(0, line, destData.length, 1, destData);
-				for (int i = 0; i < srcData.length && i < destData.length; i++)
-					destData[i] = (destData[i] ^ 0xff000000 ^ srcData[i]) | ( destData[i] & 0xff000000 );
+				for (int i = 0; i < srcData.length && i < destData.length; i++) {
+					if ((srcData[i] & 0xff000000) == 0xff000000)
+						destData[i] = (destData[i] ^ 0xff000000 ^ srcData[i]) | 0xff000000;
+				}
 				destOut.setDataElements(0, line, destData.length, 1, destData);
 			}
 
