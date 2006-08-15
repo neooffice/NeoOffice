@@ -68,6 +68,10 @@ static NSResponder *pResponder = nil;
 	[super dealloc];
 }
 
+- (void)doCommandBySelector:(SEL)aSelector
+{
+}
+
 - (id)init
 {
 	[super init];
