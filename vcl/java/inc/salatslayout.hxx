@@ -66,6 +66,7 @@ class SalATSLayout : public GenericSalLayout
 	::std::vector< ImplATSLayoutData* >	maLayoutData;
 	::std::vector< int >	maLayoutMinCharPos;
 	ImplATSLayoutData*	mpKashidaLayoutData;
+	ImplATSLayoutData*	mpParensLayoutData;
 
 public:
 	static void			ClearLayoutDataCache();
