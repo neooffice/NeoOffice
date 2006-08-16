@@ -1837,8 +1837,9 @@ long SvTreeListBox::PaintEntry1(SvLBoxEntry* pEntry,long nLine,USHORT nTabFlags,
 					Rectangle boundsRect = aBoundingRgn.GetBoundRect();
 					if( boundsRect.GetHeight() < nTempEntryHeight )
 						aPos.Y() += (nTempEntryHeight - boundsRect.GetHeight()) / 2;
-					
-					Region aCtrlDrawRegion = Region( Rectangle( aPos, Size( boundsRect.GetWidth(), boundsRect.GetHeight() ) ) );
+
+					// Fix bug 1646 by adjusting for the map mode's origin
+					Region aCtrlDrawRegion = Region( Rectangle( Point( aPos.X() + GetMapMode().GetOrigin().X(), aPos.Y() ), Size( boundsRect.GetWidth(), boundsRect.GetHeight() ) ) );
 					DrawNativeControl( CTRL_DISCLOSUREBTN, PART_ENTIRE_CONTROL, aCtrlDrawRegion, nState, aControlValue, rtl::OUString() );
 				}
 				else
