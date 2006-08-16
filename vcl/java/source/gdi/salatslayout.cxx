@@ -186,15 +186,7 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 	// spaces so that ATSUGetGlyphInfo() will not fail as described in
 	// bug 554
 	pLayoutHash->mpStr = (sal_Unicode *)rtl_allocateMemory( pLayoutHash->mnLen * sizeof( sal_Unicode ) );
-	if ( pLayoutHash->mbRTL && rArgs.mnFlags & SAL_LAYOUT_COMPLEX_DISABLED )
-	{
-		for ( int i = 0; i < pLayoutHash->mnLen; i++ )
-			pLayoutHash->mpStr[ i ] = GetMirroredChar( rArgs.mpStr[ i + rArgs.mnMinCharPos ] );
-	}
-	else
-	{
-		memcpy( pLayoutHash->mpStr, rArgs.mpStr + rArgs.mnMinCharPos, pLayoutHash->mnLen * sizeof( sal_Unicode ) );
-	}
+	memcpy( pLayoutHash->mpStr, rArgs.mpStr + rArgs.mnMinCharPos, pLayoutHash->mnLen * sizeof( sal_Unicode ) );
 	pLayoutHash->mnStrHash = rtl_ustr_hashCode_WithLength( pLayoutHash->mpStr, pLayoutHash->mnLen );
 
 	// Search cache for matching layout
@@ -791,7 +783,8 @@ SalATSLayout::SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel ) :
 	mpGraphics( pGraphics ),
 	mnFallbackLevel( nFallbackLevel ),
 	mpVCLFont( NULL ),
-	mpKashidaLayoutData( NULL )
+	mpKashidaLayoutData( NULL ),
+	mpParensLayoutData( NULL )
 {
 	if ( mnFallbackLevel )
 	{
@@ -898,7 +891,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				mpKashidaLayoutData = ImplATSLayoutData::GetLayoutData( aKashidaArgs, mnFallbackLevel, mpVCLFont );
 				if ( mpKashidaLayoutData )
 				{
-					if ( mpKashidaLayoutData->mpNeedFallback )
+					if ( mpKashidaLayoutData->mpNeedFallback || mpKashidaLayoutData->mnGlyphCount != 1 )
 					{
 						mpKashidaLayoutData->Release();
 						mpKashidaLayoutData = NULL;
@@ -908,6 +901,22 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						rArgs.mnFlags |= SAL_LAYOUT_KASHIDA_JUSTIFICATON;
 					}
 				}
+			}
+		}
+
+		// Fix bug 1637 by laying out RTL parentheses separately
+		if ( bRunRTL && !mpParensLayoutData )
+		{
+			sal_Unicode aParens[ 2 ];
+			aParens[ 0 ] = 0x0028;
+			aParens[ 1 ] = 0x0029;
+			ImplLayoutArgs aParensArgs( aParens, 2, 0, 2, ( rArgs.mnFlags & ~SAL_LAYOUT_BIDI_RTL ) | SAL_LAYOUT_BIDI_STRONG );
+
+			mpParensLayoutData = ImplATSLayoutData::GetLayoutData( aParensArgs, mnFallbackLevel, mpVCLFont );
+			if ( mpParensLayoutData->mpNeedFallback || mpParensLayoutData->mnGlyphCount != 2 )
+			{
+				mpParensLayoutData->Release();
+				mpParensLayoutData = NULL;
 			}
 		}
 
@@ -975,7 +984,20 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 				for ( int i = pLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pLayoutData->mnGlyphCount && pLayoutData->mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
 				{
-					long nGlyph = pLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID;
+					long nGlyph;
+					if ( mpParensLayoutData )
+					{
+						if ( nChar == 0x0028 )
+							nGlyph = mpParensLayoutData->mpGlyphInfoArray->glyphs[ 1 ].glyphID;
+						else if ( nChar == 0x0029 )
+							nGlyph = mpParensLayoutData->mpGlyphInfoArray->glyphs[ 0 ].glyphID;
+						else
+							nGlyph = pLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID;
+					}
+					else
+					{
+						nGlyph = pLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID;
+					}
 
 					if ( pLayoutData->maVerticalFontStyle )
 						nGlyph |= GetVerticalFlags( nChar );
@@ -1221,6 +1243,12 @@ void SalATSLayout::Destroy()
 	{
 		mpKashidaLayoutData->Release();
 		mpKashidaLayoutData = NULL;
+	}
+
+	if ( mpParensLayoutData )
+	{
+		mpParensLayoutData->Release();
+		mpParensLayoutData = NULL;
 	}
 }
 
