@@ -1450,6 +1450,8 @@ public final class VCLGraphics {
 					bounds.width--;
 					bounds.height = height - 1;
 				}
+				// Fix bug 1633 by vertically centering button
+				bounds.y += (height - bounds.height) / 2;
 
 				if (bounds.height > height) {
 					VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
