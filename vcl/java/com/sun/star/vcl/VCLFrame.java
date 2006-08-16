@@ -945,7 +945,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// lightweight title bar so we need to ignore move events associated
 		// with that action as they will be out of sync with what the OOo
 		// code expects
-		if ( isFloatingWindow() && queue.getLastAdjustedMouseModifiers() != 0 )
+		if (isFloatingWindow() && queue.getLastAdjustedMouseModifiers() != 0)
 			return;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVERESIZE, this, 0));
@@ -1106,9 +1106,10 @@ g.dispose();
 	 */
 	public synchronized void focusGained(FocusEvent e) {
 
-		if (disposed || !window.isShowing())
+		if (disposed || isFloatingWindow() || !window.isShowing())
 			return;
 
+		System.out.println(e);
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_GETFOCUS, this, 0));
 
 	}
@@ -1120,8 +1121,18 @@ g.dispose();
 	 */
 	public synchronized void focusLost(FocusEvent e) {
 
-		if (disposed || !window.isShowing())
+		if (disposed || isFloatingWindow() || !window.isShowing())
 			return;
+
+		// Fix bug 1645 by ensuring that we don't lose focus to a floating
+		// window
+		VCLFrame f = findFrame(e.getOppositeComponent());
+		if (f != null) {
+			synchronized (f) {
+				if (f.isFloatingWindow())
+					return;
+			}
+		}
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
 
