@@ -772,6 +772,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private Insets insets = null;
 
 	/**
+	 * The last uncommitted input method event.
+	 */
+	private InputMethodEvent lastUncommittedInputMethodEvent = null;
+
+	/**
 	 * The native window's panel.
 	 */
 	private VCLFrame.NoPaintPanel panel = null;
@@ -960,6 +965,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed)
 			return;
 
+		lastUncommittedInputMethodEvent = null;
+
 		// Remove window and panel from mapping
 		VCLFrame.componentMap.remove(window);
 		VCLFrame.componentMap.remove(panel);
@@ -993,6 +1000,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		graphics.dispose();
 		graphics = null;
 		insets = null;
+		lastUncommittedInputMethodEvent = null;
 
 		// Unregister listeners
 		panel.removeFocusListener(this);
@@ -1072,7 +1080,8 @@ g.dispose();
 		if (ic != null)
 			ic.endComposition();
 
-		InputMethodEvent e = new InputMethodEvent(panel, InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, TextHitInfo.afterOffset(0), TextHitInfo.afterOffset(0));
+		lastUncommittedInputMethodEvent = null;
+		InputMethodEvent e = new InputMethodEvent(panel, InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, TextHitInfo.beforeOffset(0), TextHitInfo.beforeOffset(0));
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_EXTTEXTINPUT, this, 0));
 
 	}
@@ -1368,6 +1377,39 @@ g.dispose();
 
 		if (disposed || !window.isShowing())
 			return;
+
+		// Fix bug 1429 by committing the uncommitted text in the last input 
+		// method event if the caret's index is less than 0
+		if (e.getCaret().getCharIndex() < 0) {
+			if (lastUncommittedInputMethodEvent != null) {
+				AttributedCharacterIterator text = lastUncommittedInputMethodEvent.getText();
+				int count = 0;
+				for (char c = text.first(); c != CharacterIterator.DONE; c = text.next())
+					count++;
+				e = new InputMethodEvent((Component)lastUncommittedInputMethodEvent.getSource(), lastUncommittedInputMethodEvent.getID(), lastUncommittedInputMethodEvent.getWhen(), text, count, lastUncommittedInputMethodEvent.getCaret(), lastUncommittedInputMethodEvent.getVisiblePosition());
+			}
+
+			lastUncommittedInputMethodEvent = null;
+		}
+		else {
+			AttributedCharacterIterator text = e.getText();
+			int count = 0;
+			for (char c = text.first(); c != CharacterIterator.DONE; c = text.next())
+				count++;
+
+			if (count > e.getCommittedCharacterCount()) {
+				lastUncommittedInputMethodEvent = e;
+			}
+			else {
+				lastUncommittedInputMethodEvent = null;
+
+				// The JVM will sometimes send both a commit string and a
+				// duplicate key typed event so if the string is committed and
+				// the index is zero, cancel the commit
+				if (e.getCaret().getCharIndex() == 0)
+					e = new InputMethodEvent(panel, InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, TextHitInfo.beforeOffset(0), TextHitInfo.beforeOffset(0));
+			}
+		}
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_EXTTEXTINPUT, this, 0));
 
