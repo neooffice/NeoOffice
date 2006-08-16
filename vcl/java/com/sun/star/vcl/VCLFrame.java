@@ -1109,7 +1109,6 @@ g.dispose();
 		if (disposed || isFloatingWindow() || !window.isShowing())
 			return;
 
-		System.out.println(e);
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_GETFOCUS, this, 0));
 
 	}
