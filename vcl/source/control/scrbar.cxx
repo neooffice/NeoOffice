@@ -148,10 +148,10 @@ static void EndTrackingScrollBar( ScrollBar *toTrack )
 {
 	gScrollBars.remove( toTrack );
 }
+#endif	// USE_JAVA
 
 // =======================================================================
 
-#endif	// USE_JAVA
 static long ImplMulDiv( long nNumber, long nNumerator, long nDenominator )
 {
     double n = ((double)nNumber * (double)nNumerator) / (double)nDenominator;
@@ -313,7 +313,8 @@ void ScrollBar::ImplUpdateRects( BOOL bUpdate )
 		ImplUpdateRectsNative( bUpdate );
 		return;
 	}
-#endif
+#endif	// USE_JAVA
+
     USHORT      nOldStateFlags  = mnStateFlags;
     Rectangle   aOldPage1Rect = maPage1Rect;
     Rectangle   aOldPage2Rect = maPage2Rect;
@@ -517,10 +518,10 @@ void ScrollBar::ImplUpdateRectsNative( BOOL bUpdate )
         ImplDraw( nDraw, this );
     }
 }
+#endif	// USE_JAVA
 
 // -----------------------------------------------------------------------
 
-#endif
 long ScrollBar::ImplCalcThumbPos( long nPixPos )
 {
     // Position berechnen
@@ -803,7 +804,7 @@ BOOL ScrollBar::ImplDrawNative( USHORT nDrawFlags )
 			{
 				// approximate valid full control by what we need to cover all
 				// hit test areas
-#endif
+#endif	// USE_JAVA
             aCtrlRegion.Union( maBtn1Rect );
             aCtrlRegion.Union( maBtn2Rect );
             aCtrlRegion.Union( maPage1Rect );
@@ -811,7 +812,7 @@ BOOL ScrollBar::ImplDrawNative( USHORT nDrawFlags )
             aCtrlRegion.Union( maThumbRect );
 #ifdef USE_JAVA
 			}
-#endif
+#endif	// USE_JAVA
 
             bNativeOK = DrawNativeControl( CTRL_SCROLLBAR, (bHorz ? PART_DRAW_BACKGROUND_HORZ : PART_DRAW_BACKGROUND_VERT),
                             aCtrlRegion, nState, aControlValue, rtl::OUString() );
@@ -1514,13 +1515,13 @@ void ScrollBar::GetFocus()
     if( !mpData )
 #ifdef USE_JAVA
     	ImplNewImplScrollBarData();
-#else
+#else	// USE_JAVA
     {
 	    mpData = new ImplScrollBarData;
 		mpData->maTimer.SetTimeoutHdl( LINK( this, ScrollBar, ImplAutoTimerHdl ) );
         mpData->mbHide = FALSE;
     }
-#endif
+#endif	// USE_JAVA
     ImplInvert();   // react immediately
 	mpData->maTimer.SetTimeout( GetSettings().GetStyleSettings().GetCursorBlinkTime() );
     mpData->maTimer.Start();
@@ -1537,10 +1538,10 @@ void ScrollBar::ImplNewImplScrollBarData()
 	mpData->mbHide = FALSE;
 	mpData->mbHasEntireControlRect = FALSE;
 }
+#endif	// USE_JAVA
 
 // -----------------------------------------------------------------------
 
-#endif
 void ScrollBar::LoseFocus()
 {
     if( mpData )
