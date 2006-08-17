@@ -159,8 +159,8 @@ SAL_IMPLEMENT_MAIN()
 
 	UNLIMIT_DESCRIPTORS();
 
-    SVMain();
+	SVMain();
 
-    // Force exit since some JVMs won't shutdown when only exit() is invoked
-    _exit( 0 );
+	// Force exit since some JVMs won't shutdown when only exit() is invoked
+	_exit( 0 );
 }
