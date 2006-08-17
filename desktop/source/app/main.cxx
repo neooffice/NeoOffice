@@ -152,7 +152,7 @@ SAL_IMPLEMENT_MAIN()
 	}
 
 	ByteString aStandardLibPath( aCmdPath );
-	aStandardLibPath += ByteString( ":/usr/local/lib:/lib:/usr/lib:" );
+	aStandardLibPath += ByteString( ":/usr/lib:/usr/local/lib:/lib:" );
 	ByteString aLibPath( getenv( "DYLD_LIBRARY_PATH" ) );
 	if ( aLibPath.CompareTo( aStandardLibPath, aStandardLibPath.Len() ) != COMPARE_EQUAL )
 	{
