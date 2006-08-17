@@ -644,6 +644,14 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
 
             /* open the file */
             fd = open( buffer, flags, mode );
+#ifdef MACOSX
+            /* Fix bug 1643 by not forcing exclusive lock on iDisk servers */
+            if ( fd < 0 && errno == ENOTSUP && flags & O_EXLOCK )
+            {
+                flags &= ~O_EXLOCK;
+                fd = open( buffer, flags, mode );
+            }
+#endif	/* MACOSX */
             if ( fd >= 0 )
             {
 #ifndef HAVE_O_EXLOCK
@@ -708,15 +716,11 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
 #ifdef MACOSX
             /*
              * Handle case where we cannot open a file for writing because it
-             * is locked in the Finder's GetInfo panel
+             * is locked in the Finder's GetInfo panel. Also, fix bug 1643 by
+             * converting all EPERM errors to EACCESS.
              */
             if ( errno == EPERM )
-            {
-                struct stat aFileStat;
-
-                if( stat( buffer, &aFileStat ) >= 0 && ( aFileStat.st_flags & ( UF_IMMUTABLE | SF_IMMUTABLE ) ) )
-                    errno = EACCES;
-            }
+                errno = EACCES;
 #endif	/* MACOSX */
 
             PERROR( "osl_openFile", buffer );
