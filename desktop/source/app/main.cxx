@@ -170,7 +170,7 @@ SAL_IMPLEMENT_MAIN()
 		if ( aDyLibPath.Len() )
 		{
 			aTmpPath += ByteString( ":" );
-			aTmpPath += aLibPath;
+			aTmpPath += aDyLibPath;
 		}
 		putenv( (char *)aTmpPath.GetBuffer() );
 		bRestart = true;
