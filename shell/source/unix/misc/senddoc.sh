@@ -92,11 +92,9 @@ if [ "$1" = "--mailclient" ]; then
 fi
 
 if [ `uname -s` = Darwin ]; then
-	# Find the .app directory in the mailer or set it to "Mail" if one is not
-	if echo "$MAILER" | grep -e '\.app$' -e '\.app\/' >/dev/null; then
-		MAILER=`echo "$MAILER" | sed 's/\.app\/.*$/\.app/' 2>/dev/null`
-	else
-		MAILER=Mail
+	MAILER=`echo "$MAILER" | sed 's/\.app\/.*$/\.app/' 2>/dev/null`
+	if [ -z "$MAILER" ]; then
+		MAILER=Mail;
 	fi
 
 	# We can only use the attachment so ignore the other arguments
@@ -113,7 +111,11 @@ if [ `uname -s` = Darwin ]; then
 	done
 
 	if [ "$ATTACH" != "" ]; then
-		exec /usr/bin/open -a "$MAILER" "$ATTACH"
+		/usr/bin/open -a "$MAILER" "$ATTACH"
+		if [ "$?" != "0" ]; then
+			/usr/bin/open -a Mail "$ATTACH"
+		fi
+		exit "$?"
 	else
 		exit 0
 	fi
