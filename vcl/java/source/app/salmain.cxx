@@ -115,6 +115,8 @@ SAL_IMPLEMENT_MAIN()
 	// unsetting DYLD_FRAMEWORK_PATH
 	bool bRestart = false;
 	ByteString aFrameworkPath( getenv( "DYLD_FRAMEWORK_PATH" ) );
+	// Always unset DYLD_FRAMEWORK_PATH
+	unsetenv( "DYLD_FRAMEWORK_PATH" );
 	if ( aFrameworkPath.Len() )
 	{
 		ByteString aFallbackFrameworkPath( getenv( "DYLD_FALLBACK_LIBRARY_PATH" ) );
@@ -129,14 +131,16 @@ SAL_IMPLEMENT_MAIN()
 			aTmpPath += aFrameworkPath;
 			putenv( (char *)aTmpPath.GetBuffer() );
 		}
-		unsetenv( "DYLD_FRAMEWORK_PATH" );
 		bRestart = true;
 	}
 
 	ByteString aStandardLibPath( aCmdPath );
 	aStandardLibPath += ByteString( ":/usr/lib:/usr/local/lib:/lib:" );
-	ByteString aLibPath( getenv( "DYLD_LIBRARY_PATH" ) );
-	if ( aLibPath.CompareTo( aStandardLibPath, aStandardLibPath.Len() ) != COMPARE_EQUAL )
+	ByteString aLibPath( getenv( "LD_LIBRARY_PATH" ) );
+	ByteString aDyLibPath( getenv( "DYLD_LIBRARY_PATH" ) );
+	// Always unset LD_FRAMEWORK_PATH
+	unsetenv( "LD_FRAMEWORK_PATH" );
+	if ( aDyLibPath.CompareTo( aStandardLibPath, aStandardLibPath.Len() ) != COMPARE_EQUAL )
 	{
 		ByteString aTmpPath( "DYLD_LIBRARY_PATH=" );
 		aTmpPath += aStandardLibPath;
@@ -144,6 +148,11 @@ SAL_IMPLEMENT_MAIN()
 		{
 			aTmpPath += ByteString( ":" );
 			aTmpPath += aLibPath;
+		}
+		if ( aDyLibPath.Len() )
+		{
+			aTmpPath += ByteString( ":" );
+			aTmpPath += aDyLibPath;
 		}
 		putenv( (char *)aTmpPath.GetBuffer() );
 		bRestart = true;
