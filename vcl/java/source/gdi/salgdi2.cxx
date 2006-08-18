@@ -454,7 +454,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 							{
 								BitmapBuffer *pTransDestBuffer;
 								if ( aPosAry.mnSrcWidth != aPosAry.mnDestWidth || aPosAry.mnSrcHeight != aPosAry.mnDestHeight )
-									pTransDestBuffer = StretchAndConvert( *pTransSrcBuffer, aPosAry,  BMP_FORMAT_1BIT_MSB_PAL | BMP_FORMAT_TOP_DOWN, &pTransSrcBuffer->maPalette );
+									pTransDestBuffer = StretchAndConvert( *pTransSrcBuffer, aPosAry, pTransSrcBuffer->mnFormat, &pTransSrcBuffer->maPalette );
 								else
 									pTransDestBuffer = pTransSrcBuffer;
 
@@ -480,7 +480,8 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 											{
 												for ( int j = 0; j < pDestBuffer->mnWidth; j++ )
 												{
-													if ( ( pTransDestBuffer->maPalette[ pFncGetPixel( pTransBits, j, pTransDestBuffer->maColorMask ) ] | 0xff000000 ) != 0xff000000 )
+													BitmapColor aColor( pTransDestBuffer->maPalette[ pFncGetPixel( pTransBits, j, pTransDestBuffer->maColorMask ) ] );
+                                    				if ( ( MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000 ) != 0xff000000 )
 														pBits[ j ] = 0x00000000;
 												}
 	
@@ -494,7 +495,8 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 											{
 												for ( int j = 0; j < pDestBuffer->mnWidth; j++ )
 												{
-													if ( ( pFncGetPixel( pTransBits, j, pTransDestBuffer->maColorMask ) | 0xff000000 ) != 0xff000000 )
+													BitmapColor aColor( pFncGetPixel( pTransBits, j, pTransDestBuffer->maColorMask ) );
+                                    				if ( ( MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000 ) != 0xff000000 )
 														pBits[ j ] = 0x00000000;
 												}
 	
