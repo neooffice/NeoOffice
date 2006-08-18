@@ -1232,7 +1232,12 @@ void ScrollBar::ImplDragThumb( const Point& rMousePos )
             mnThumbPixPos = mnThumbPixRange-mnThumbPixSize;
         long nOldPos = mnThumbPos;
         mnThumbPos = ImplCalcThumbPos( mnThumbPixPos );
+#ifdef USE_JAVA
+        // Fix bug 1649 by forcing a full size recalculation before drawing
+        ImplCalc();
+#else	// !USE_JAVA
         ImplUpdateRects();
+#endif	// !USE_JAVA
         if ( mbFullDrag && (nOldPos != mnThumbPos) )
         {
             mnDelta = mnThumbPos-nOldPos;

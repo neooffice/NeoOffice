@@ -159,6 +159,10 @@ BOOL JavaSalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 		pSetupData->mnPaperWidth = aSize.Width();
 		pSetupData->mnPaperHeight = aSize.Height();
 	}
+	else
+	{
+		mpVCLPageFormat->setPaperType( pSetupData->mePaperFormat, pSetupData->mnPaperWidth, pSetupData->mnPaperHeight );
+	}
 
 	return TRUE;
 }
@@ -183,10 +187,20 @@ XubString JavaSalInfoPrinter::GetPaperBinName( const ImplJobSetup* pSetupData, U
 
 ULONG JavaSalInfoPrinter::GetCapabilities( const ImplJobSetup* pSetupData, USHORT nType )
 {
-	if ( nType == PRINTER_CAPABILITIES_SETORIENTATION )
-		return 1;
-	else
-		return 0;
+	ULONG nRet = 0;
+
+	switch ( nType )
+	{
+		case PRINTER_CAPABILITIES_SETORIENTATION:
+		case PRINTER_CAPABILITIES_SETPAPER:
+		case PRINTER_CAPABILITIES_SETPAPERSIZE:
+			nRet = 1;
+			break;
+		default:
+			break;
+	}
+
+	return nRet;
 }
 
 // -----------------------------------------------------------------------
@@ -269,9 +283,15 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 						   ULONG nCopies, BOOL bCollate,
 						   ImplJobSetup* pSetupData )
 {
+	sal_Bool bFirstPass = ( rJobName.Len() ? sal_False : sal_True );
+
+	// Set paper type
+	if ( !bFirstPass )
+		mpVCLPageFormat->setPaperType( pSetupData->mePaperFormat, pSetupData->mnPaperWidth, pSetupData->mnPaperHeight );
+
 	// Fix bug by detecting when an OOo printer job is being reused for serial
 	// print jobs
-	mbStarted = mpVCLPrintJob->startJob( mpVCLPageFormat, OUString( rJobName ), rJobName.Len() ? sal_True : mbStarted );
+	mbStarted = mpVCLPrintJob->startJob( mpVCLPageFormat, OUString( rJobName ), !bFirstPass ? sal_True : mbStarted );
 	return mbStarted;
 }
 

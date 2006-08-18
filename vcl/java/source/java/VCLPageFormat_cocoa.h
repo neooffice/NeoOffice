@@ -48,6 +48,7 @@ BOOL NSPageLayout_result( id pDialog );
 id NSPrintInfo_create();
 void NSPrintInfo_installVCLPrintClasses();
 void NSPrintInfo_setInDialog( BOOL bIn );
+void NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight );
 void NSPrintInfo_setSharedPrintInfo( id pNSPrintInfo );
 id NSPrintInfo_showPageLayoutDialog( id pNSPrintInfo, id pNSWindow, BOOL bLandscape );
 #ifdef __cplusplus

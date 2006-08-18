@@ -238,6 +238,16 @@ void NSPrintInfo_setInDialog( BOOL bIn )
 	[VCLPrintInfo setInDialog:bIn];
 }
 
+void NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pNSPrintInfo )
+		[pNSPrintInfo setPaperSize:NSMakeSize((float)nWidth, (float)nHeight)];
+
+	[pPool release];
+}
+
 void NSPrintInfo_setSharedPrintInfo( id pNSPrintInfo )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];

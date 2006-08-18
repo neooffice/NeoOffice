@@ -583,55 +583,76 @@ void com_sun_star_vcl_VCLPageFormat::setOrientation( Orientation _par0 )
 
 sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 {
-	static jmethodID mID = NULL;
 	sal_Bool out = sal_False;
 
+	SalData *pSalData = GetSalData();
+
+	JavaSalFrame *pFocusFrame = pSalData->mpFocusFrame;
+	if ( pFocusFrame )
+	{
+		updatePageFormat();
+
+		// Ignore any AWT events while the page layout dialog is showing to
+		// emulate a modal dialog
+		void *pNSPrintInfo = getNativePrinterJob();
+		void *pDialog = NSPrintInfo_showPageLayoutDialog( pNSPrintInfo, pFocusFrame->mpVCLFrame->getNativeWindow(), ( getOrientation() == ORIENTATION_LANDSCAPE ) ? TRUE : FALSE );
+
+		pSalData->mpNativeModalSheetFrame = pFocusFrame;
+		pSalData->mbInNativeModalSheet = true;
+		while ( !NSPageLayout_finished( pDialog ) )
+			Application::Yield();
+		pSalData->mbInNativeModalSheet = false;
+		pSalData->mpNativeModalSheetFrame = NULL;
+
+		out = (sal_Bool)NSPageLayout_result( pDialog );
+
+		if ( out )
+			updatePageFormat();
+	}
+	
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLPageFormat::setPaperType( Paper _par0, long _par1, long _par2 )
+{
+	void *pNSPrintInfo = getNativePrinterJob();
+	if ( _par0 == PAPER_A3 )
+		NSPrintInfo_setPaperSize( pNSPrintInfo, 842, 1191 );
+	else if ( _par0 == PAPER_A4 )
+		NSPrintInfo_setPaperSize( pNSPrintInfo, 595, 842 );
+	else if ( _par0 == PAPER_A5 )
+		NSPrintInfo_setPaperSize( pNSPrintInfo, 420, 595 );
+	else if ( _par0 == PAPER_B4 )
+		NSPrintInfo_setPaperSize( pNSPrintInfo, 709, 1001 );
+	else if ( _par0 == PAPER_B5 )
+		NSPrintInfo_setPaperSize( pNSPrintInfo, 499, 709 );
+	else if ( _par0 == PAPER_LETTER )
+		NSPrintInfo_setPaperSize( pNSPrintInfo, 612, 792 );
+	else if ( _par0 == PAPER_LEGAL )
+		NSPrintInfo_setPaperSize( pNSPrintInfo, 612, 1008 );
+	else if ( _par0 == PAPER_TABLOID )
+		NSPrintInfo_setPaperSize( pNSPrintInfo, 792, 1224 );
+	else
+		NSPrintInfo_setPaperSize( pNSPrintInfo, _par1 * 72 / 2540, _par2 * 72 / 2540);
+
+	updatePageFormat();
+}
+
+void com_sun_star_vcl_VCLPageFormat::updatePageFormat()
+{
+	static jmethodID mID = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(Z)Z";
-			mID = t.pEnv->GetMethodID( getMyClass(), "setup", cSignature );
+			char *cSignature = "()V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "updatePageFormat", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
-			jvalue args[1];
-			args[0].z = jboolean( sal_False );
-			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethodA( object, getMyClass(), mID, args );
-		}
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 	}
-
-	if ( out )
-	{
-		SalData *pSalData = GetSalData();
-
-		JavaSalFrame *pFocusFrame = pSalData->mpFocusFrame;
-		if ( pFocusFrame )
-		{
-			// Ignore any AWT events while the page layout dialog is showing to
-			// emulate a modal dialog
-			void *pNSPrintInfo = getNativePrinterJob();
-			void *pDialog = NSPrintInfo_showPageLayoutDialog( pNSPrintInfo, pFocusFrame->mpVCLFrame->getNativeWindow(), ( getOrientation() == ORIENTATION_LANDSCAPE ) ? TRUE : FALSE );
-
-			pSalData->mpNativeModalSheetFrame = pFocusFrame;
-			pSalData->mbInNativeModalSheet = true;
-			while ( !NSPageLayout_finished( pDialog ) )
-				Application::Yield();
-			pSalData->mbInNativeModalSheet = false;
-			pSalData->mpNativeModalSheetFrame = NULL;
-
-			out = (sal_Bool)NSPageLayout_result( pDialog );
-
-			if ( out && mID )
-			{
-				jvalue args[1];
-				args[0].z = jboolean( sal_True );
-				out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethodA( object, getMyClass(), mID, args );
-			}
-		}
-	}
-	
-	return out;
 }

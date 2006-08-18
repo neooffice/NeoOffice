@@ -106,11 +106,6 @@ public final class VCLPageFormat {
 	 */
 	public final static int PAPER_USER = 8;
 
-	/** 
-	 * The editable flag.
-	 */
-	private boolean editable = true;
-
 	/**
 	 * The printer orientation.
 	 */
@@ -289,26 +284,11 @@ public final class VCLPageFormat {
 	}  
 
 	/**
-	 * Set the editability of this component.
-	 *
-	 * @param b <code>true</code> to make this component editable or else
-	 *  <code>false</code>
-	 */
-	void setEditable(boolean b) {
-
-		editable = b;
-
-	}
-
-	/**
 	 * Set the page orientation.
 	 *
 	 * @param o the page orientation
 	 */
 	public void setOrientation(int o) {
-
-		if (!editable)
-			return;
 
 		if (o == ORIENTATION_PORTRAIT && VCLPageFormat.printerOrientation == PageFormat.PORTRAIT)
 			pageFormat.setOrientation(PageFormat.PORTRAIT);
@@ -320,20 +300,11 @@ public final class VCLPageFormat {
 	}
 
 	/**
-	 * Setup the page configuration. This method displays a native page setup
-	 * dialog and saves any changes made by the user.
-	 *
-	 * @param <code>true</code> to update the cached page format and
-	 *  <code>false</code> to only return whether the page format is updateable
-	 * @return <code>false</code> if the user pressed the page dialog's
-	 *  cancel button or else <code>true</code>
+	 * Update the page format.
 	 */
-	public boolean setup(boolean b) {
+	public void updatePageFormat() {
 
-		if (b && editable)
-			pageFormat = job.defaultPage();
-
-		return editable;
+		pageFormat = job.defaultPage();
 
 	}
 
