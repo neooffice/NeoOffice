@@ -1120,7 +1120,7 @@ g.dispose();
 	 */
 	public synchronized void focusLost(FocusEvent e) {
 
-		if (disposed || isFloatingWindow() || !window.isShowing())
+		if (disposed || isFloatingWindow() || !window.isShowing() || e.isTemporary())
 			return;
 
 		// Fix bug 1645 by ensuring that we don't lose focus to a floating
