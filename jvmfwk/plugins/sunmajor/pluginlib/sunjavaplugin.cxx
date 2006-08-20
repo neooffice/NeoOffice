@@ -593,7 +593,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
             rtl::OUString aExeSysPath;
             if ( aExe.getLength() && osl_getSystemPathFromFileURL( aExe.pData, &aExeSysPath.pData ) == osl_File_E_None )
             {
-                rtl:OString aJREPropsSysPath = rtl::OString( aExeSysPath, aExeSysPath.lastIndexOf('/'), RTL_TEXTENCODING_UTF8 );
+                rtl::OString aJREPropsSysPath( aExeSysPath, aExeSysPath.lastIndexOf('/'), RTL_TEXTENCODING_UTF8 );
                 sClassPathOption = sClassPathOption + rtl::OString(sep) + aJREPropsSysPath;
             }
 #endif	// USE_JAVA
