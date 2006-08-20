@@ -435,6 +435,18 @@ javaFrameworkError SAL_CALL jfw_startVM(JavaVMOption *arOptions, sal_Int32 cOpti
 		javaPluginError plerr = (*pFunc)(aInfo, arOpt, index, & pVm, ppEnv);
 		if (plerr == JFW_PLUGIN_E_VM_CREATION_FAILED)
 		{
+#ifdef USE_JAVA
+			// If loading of the JVM fails, search for an alternative JVM
+			// since we absolutely need a JVM to run the application
+			static bool bInFallback = false;
+			if ( !bInFallback )
+			{
+				bInFallback = true;
+				if ( jfw_findAndSelectJRE( NULL ) == JFW_E_NONE )
+					plerr = JFW_PLUGIN_E_NONE;
+				bInFallback = false;
+			}
+#endif	// USE_JAVA
 			errcode = JFW_E_VM_CREATION_FAILED;
 		}
 		else if (plerr != JFW_PLUGIN_E_NONE )
