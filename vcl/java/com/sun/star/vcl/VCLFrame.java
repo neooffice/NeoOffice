@@ -1107,16 +1107,23 @@ g.dispose();
 	 */
 	public synchronized void focusLost(FocusEvent e) {
 
-		if (disposed || isFloatingWindow() || !window.isShowing() || e.isTemporary())
+		if (disposed || isFloatingWindow() || !window.isShowing())
 			return;
+
+ 		if (e.isTemporary()) {
+			requestFocus();
+			return;
+		}
 
 		// Fix bug 1645 by ensuring that we don't lose focus to a floating
 		// window
 		VCLFrame f = findFrame(e.getOppositeComponent());
 		if (f != null) {
 			synchronized (f) {
-				if (f.isFloatingWindow())
+				if (f.isFloatingWindow()) {
+					requestFocus();
 					return;
+				}
 			}
 		}
 
@@ -1730,13 +1737,10 @@ g.dispose();
 	 */
 	public boolean requestFocus() {
 
-		if (window.isShowing() && !isFloatingWindow()) {
-			panel.requestFocus();
-			return true;
-		}
-		else {
+		if (window.isShowing() && !isFloatingWindow())
+			return panel.requestFocusInWindow();
+		else
 			return false;
-		}
 
 	}
 
@@ -2113,9 +2117,10 @@ g.dispose();
 	public boolean toFront() {
 
 		if (window.isShowing() && !isFloatingWindow()) {
-			panel.requestFocus();
-			window.toFront();
-			return true;
+			boolean ret = panel.requestFocusInWindow();
+			if (ret)
+				window.toFront();
+			return ret;
 		}
 		else {
 			return false;
