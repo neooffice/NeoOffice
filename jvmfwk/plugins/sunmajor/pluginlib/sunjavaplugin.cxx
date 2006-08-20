@@ -59,12 +59,12 @@
 #include "vendorlist.hxx"
 #include "diagnostics.h"
 
-#if defined USE_JAVA && defined MACOSX
+#if defined USE_JAVA
 #include "osl/process.h"
 #include "rtl/strbuf.hxx"
 #include <sys/sysctl.h>
 #include <unistd.h>
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
 
 #define OUSTR(x) ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM(x) )
 #define SUN_MICRO "Sun Microsystems Inc."
@@ -513,13 +513,13 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     typedef jint JNICALL JNI_InitArgs_Type(void *);
     typedef jint JNICALL JNI_CreateVM_Type(JavaVM **, JNIEnv **, void *);
     rtl::OUString sSymbolCreateJava(
-#if defined USE_JAVA && defined MACOSX
+#if defined USE_JAVA
             // Fix bug 1257 by explicitly loading the JVM instead of loading the
             // shared JavaVM library
             RTL_CONSTASCII_USTRINGPARAM("JNI_CreateJavaVM_Impl"));
-#else	// USE_JAVA && MACOSX
+#else	// USE_JAVA
             RTL_CONSTASCII_USTRINGPARAM("JNI_CreateJavaVM"));
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
         
     JNI_CreateVM_Type * pCreateJavaVM = (JNI_CreateVM_Type *) osl_getSymbol(
         moduleRt, sSymbolCreateJava.pData);
@@ -555,11 +555,11 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     JavaVMInitArgs vm_args;
 
     boost::scoped_array<JavaVMOption> sarOptions(
-#if defined USE_JAVA && defined MACOSX
+#if defined USE_JAVA
         new JavaVMOption[cOptions + 8]);
-#else	// USE_JAVA && MACOSX
+#else	// USE_JAVA
         new JavaVMOption[cOptions + 1]);
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
     JavaVMOption * options = sarOptions.get();
     
     // We set an abort handler which is called when the VM calls _exit during
@@ -585,6 +585,19 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
                 sClassPathOption = sClassPath + rtl::OString(sep) + sAddPath;
             else
                 sClassPathOption = sClassPath;
+
+#ifdef USE_JAVA
+            // Add JREProperties.class to the classpath
+            rtl::OUString aExe;
+            osl_getExecutableFile( &aExe.pData );
+            rtl::OUString aExeSysPath;
+            if ( aExe.getLength() && osl_getSystemPathFromFileURL( aExe.pData, &aExeSysPath.pData ) == osl_File_E_None )
+            {
+                rtl:OString aJREPropsSysPath = rtl::OString( aExeSysPath, aExeSysPath.lastIndexOf('/'), RTL_TEXTENCODING_UTF8 );
+                sClassPathOption = sClassPathOption + rtl::OString(sep) + aJREPropsSysPath;
+            }
+#endif	// USE_JAVA
+
             options[i+1].optionString = (char *) sClassPathOption.getStr();
             options[i+1].extraInfo = arOptions[i].extraInfo;
         }
@@ -597,7 +610,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         }
 #endif
 
-#if defined USE_JAVA && defined MACOSX
+#if defined USE_JAVA
         // Limit the directories that extensions can be loaded from to prevent
         // random JVM crashing
         rtl::OString aExtPath("-Djava.ext.dirs=");
@@ -672,7 +685,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         aBuf.append( "m" );
         options[i+8].optionString = (char *)aBuf.makeStringAndClear().getStr();
         options[i+8].extraInfo = NULL;
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
 
 #if OSL_DEBUG_LEVEL >= 2
         JFW_TRACE2(OString("VM option: ") + OString(options[i+1].optionString) +
@@ -680,17 +693,17 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 #endif
     }
    
-#if defined USE_JAVA && defined MACOSX
+#if defined USE_JAVA
     vm_args.version= JNI_VERSION_1_4;
-#else	// USE_JAVA && MACOSX
+#else	// USE_JAVA
     vm_args.version= JNI_VERSION_1_2;
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
     vm_args.options= options;
-#if defined USE_JAVA && defined MACOSX
+#if defined USE_JAVA
     vm_args.nOptions= cOptions + 8;
-#else	// USE_JAVA && MACOSX
+#else	// USE_JAVA
     vm_args.nOptions= cOptions + 1;
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
     vm_args.ignoreUnrecognized= JNI_TRUE;
 
     /* We set a global flag which is used by the abort handler in order to
@@ -712,12 +725,25 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         err= pCreateJavaVM(&pJavaVM, ppEnv, &vm_args);
         g_bInGetJavaVM = 0;
 
-#if defined USE_JAVA && defined MACOSX
+#if defined USE_JAVA
+        // We cannot trust that the OOo build has honored the -source flag so
+        // don't use it here. This will will prevent loading of JVM's that
+        //  cannot load all classes built by OOo.
+        if (err == 0)
+        {
+            jclass aClass = (*ppEnv)->FindClass( "JREProperties" );
+            if ((*ppEnv)->ExceptionCheck())
+            {
+                (*ppEnv)->ExceptionDescribe();
+                err = 1;
+            }
+        }
+
         // The JVM's native drawing methods print many spurious error messages
         // on Mac OS X 10.4 which will flood the system log so we need to
         // filter out the messages
         int fd[2];
-        if (!pipe(fd))
+        if (err == 0 && !pipe(fd))
         {
             pid_t pid = fork();
             if (!pid)
@@ -743,7 +769,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
                 close(fd[1]);
             }
         }
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
     }
     else
         // set err to a positive number, so as or recognize that an abort (longjmp)
