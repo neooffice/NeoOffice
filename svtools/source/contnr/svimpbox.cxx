@@ -49,7 +49,7 @@
 #ifndef _SV_NATIVEWIDGETS_HXX
 #include <vcl/salnativewidgets.hxx>
 #endif
-#endif
+#endif	// USE_JAVA
 
 #ifndef _STACK_
 #include <stack>
@@ -743,6 +743,7 @@ void SvImpLBox::ShowCursor( BOOL bShow )
 		pView->ShowFocus( aRect );
 		pView->SetClipRegion( aOldClip );
 	}
+
 #ifdef USE_JAVA
 	if( pView->IsNativeControlSupported( CTRL_DISCLOSUREBTN, PART_ENTIRE_CONTROL ) )
 	{
@@ -751,11 +752,13 @@ void SvImpLBox::ShowCursor( BOOL bShow )
 		{
 			aInShowCursorMap[ this ] = this;
 			pView->Invalidate();
-			pView->Update();
+			// Fix bug 1660 by only updating if we are in a paint event
+			if ( pView->IsInPaint() )
+				pView->Update();
 			aInShowCursorMap.erase( this );
 		}
 	}
-#endif
+#endif	// USE_JAVA
 }
 
 
@@ -1123,7 +1126,7 @@ void SvImpLBox::DrawNet()
 	
 	if( pView->IsNativeControlSupported( CTRL_DISCLOSUREBTN, PART_ENTIRE_CONTROL ) )
 		return;
-#endif
+#endif	// USE_JAVA
 
 	if( pView->GetVisibleCount() < 2 && !pStartEntry->HasChildsOnDemand() &&
 		!pStartEntry->HasChilds() )
