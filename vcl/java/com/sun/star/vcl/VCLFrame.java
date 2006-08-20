@@ -637,11 +637,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private final static Rectangle defaultTextLocation = new Rectangle(300, 300, 0, 12);
 
 	/**
-	 * The suppress duplicate input method event.
-	 */
-	private static boolean suppressDuplicateInputMethodEvent = false;
-
-	/**
 	 * Find the matching <code>VCLFrame</code> for the specified component.
 	 *
 	 * @param c the component
@@ -657,14 +652,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * Initialize static data members.
 	 */
 	static {
-
-		// Set the suppress duplicate input method events flag
-		try {
-			// Test for Java 1.5 or higher
-			Class.forName("java.lang.Appendable");
-			suppressDuplicateInputMethodEvent = true;
-		}
-		catch (Throwable t) {}
 
 		// Set the keyboard focus manager so that Java's default focus
 		// switching key events are passed are not consumed
@@ -1420,18 +1407,10 @@ g.dispose();
 			for (char c = text.first(); c != CharacterIterator.DONE; c = text.next())
 				count++;
 
-			if (count > e.getCommittedCharacterCount()) {
+			if (count > e.getCommittedCharacterCount())
 				lastUncommittedInputMethodEvent = e;
-			}
-			else {
+			else
 				lastUncommittedInputMethodEvent = null;
-
-				// Java 1.5 and higher will sometimes send both a commit
-				// string and a duplicate key typed event so if the string is
-				// committed and the index is zero, cancel the commit
-				if (suppressDuplicateInputMethodEvent && e.getCaret().getCharIndex() == 0)
-					e = new InputMethodEvent(panel, InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, TextHitInfo.beforeOffset(0), TextHitInfo.beforeOffset(0));
-			}
 		}
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_EXTTEXTINPUT, this, 0));
