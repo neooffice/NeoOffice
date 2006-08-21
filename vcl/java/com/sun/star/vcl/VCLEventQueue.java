@@ -38,8 +38,10 @@ package com.sun.star.vcl;
 import java.awt.AWTEvent;
 import java.awt.Component;
 import java.awt.Container;
+import java.awt.DefaultKeyboardFocusManager;
 import java.awt.EventQueue;
 import java.awt.Insets;
+import java.awt.KeyboardFocusManager;
 import java.awt.Panel;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
@@ -147,6 +149,10 @@ public final class VCLEventQueue implements Runnable {
 		catch (Throwable t) {
 			t.printStackTrace();
 		}
+
+		// Set keyboard focus manager
+		KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+		kfm.setCurrentKeyboardFocusManager(new NoEnqueueKeyboardFocusManager());
 
 	}
 
@@ -550,6 +556,21 @@ public final class VCLEventQueue implements Runnable {
 			this.event = event;
 
 		}
+
+	}
+
+	/**
+	 * The <code>NoEnqueueKeyboardFocusManager</code> is a subclass of
+	 * the <code>DefaultKeyboardFocusManager</code> class that does not enqueue
+	 * any key events.
+	 */
+	final class NoEnqueueKeyboardFocusManager extends DefaultKeyboardFocusManager {
+
+		/**
+		 * Does no delay of dispatching of key events. This is needed to fully
+		 * fix bug 1658.
+		 */
+		protected void enqueueKeyEvents(long after, Component untilFocused) {}
 
 	}
 
