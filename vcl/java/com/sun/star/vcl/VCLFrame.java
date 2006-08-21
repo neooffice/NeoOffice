@@ -866,13 +866,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		// Register listeners
 		panel.addFocusListener(this);
-		panel.addKeyListener(this);
 		panel.addInputMethodListener(this);
+		panel.addKeyListener(this);
 		panel.addMouseListener(this);
 		panel.addMouseMotionListener(this);
 		panel.addMouseWheelListener(this);
 		window.addComponentListener(this);
 		window.addFocusListener(this);
+		window.addInputMethodListener(this);
+		window.addKeyListener(this);
+		window.addMouseListener(this);
+		window.addMouseMotionListener(this);
+		window.addMouseWheelListener(this);
 		window.addWindowListener(this);
 		window.addWindowStateListener(this);
 
@@ -1004,13 +1009,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		// Unregister listeners
 		panel.removeFocusListener(this);
-		panel.removeKeyListener(this);
 		panel.removeInputMethodListener(this);
+		panel.removeKeyListener(this);
 		panel.removeMouseListener(this);
 		panel.removeMouseMotionListener(this);
 		panel.removeMouseWheelListener(this);
 		window.removeComponentListener(this);
 		window.removeFocusListener(this);
+		window.removeInputMethodListener(this);
+		window.removeKeyListener(this);
+		window.removeMouseListener(this);
+		window.removeMouseMotionListener(this);
+		window.removeMouseWheelListener(this);
 		window.removeWindowListener(this);
 		window.removeWindowStateListener(this);
 		queue.removeCachedEvents(frame);
