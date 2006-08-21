@@ -142,7 +142,9 @@ static const sal_Char* MOUNTTAB="/etc/mtab";
 #include <sys/param.h>
 #include <sys/mount.h>
 #define HAVE_STATFS_H
+#ifndef USE_JAVA
 #define HAVE_O_EXLOCK
+#endif	/* USE_JAVA */
 
 // add MACOSX Time Value
 
@@ -644,14 +646,6 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
 
             /* open the file */
             fd = open( buffer, flags, mode );
-#ifdef MACOSX
-            /* Fix bug 1643 by not forcing exclusive lock on iDisk servers */
-            if ( fd < 0 && errno == ENOTSUP && flags & O_EXLOCK )
-            {
-                flags &= ~O_EXLOCK;
-                fd = open( buffer, flags, mode );
-            }
-#endif	/* MACOSX */
             if ( fd >= 0 )
             {
 #ifndef HAVE_O_EXLOCK
