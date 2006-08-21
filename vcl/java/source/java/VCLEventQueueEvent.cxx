@@ -139,14 +139,14 @@ com_sun_star_vcl_VCLEvent::com_sun_star_vcl_VCLEvent( USHORT nID, const JavaSalF
 		return;
 	if ( !mID )
 	{
-		char *cSignature = "(ILcom/sun/star/vcl/VCLFrame;I)V";
+		char *cSignature = "(ILcom/sun/star/vcl/VCLFrame;J)V";
 		mID = t.pEnv->GetMethodID( getMyClass(), "<init>", cSignature );
 	}
 	OSL_ENSURE( mID, "Unknown method id!" );
 	jvalue args[3];
 	args[0].i = jint( nID );
 	args[1].l = pFrame ? pFrame->mpVCLFrame->getJavaObject() : NULL;
-	args[2].i = jint( pData );
+	args[2].j = jlong( pData );
 	jobject tempObj;
 	tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
 	saveRef( tempObj );
@@ -162,14 +162,14 @@ com_sun_star_vcl_VCLEvent::com_sun_star_vcl_VCLEvent( USHORT nID, const JavaSalF
 		return;
 	if ( !mID )
 	{
-		char *cSignature = "(ILcom/sun/star/vcl/VCLFrame;ILjava/lang/String;)V";
+		char *cSignature = "(ILcom/sun/star/vcl/VCLFrame;JLjava/lang/String;)V";
 		mID = t.pEnv->GetMethodID( getMyClass(), "<init>", cSignature );
 	}
 	OSL_ENSURE( mID, "Unknown method id!" );
 	jvalue args[4];
 	args[0].i = jint( nID );
 	args[1].l = pFrame ? pFrame->mpVCLFrame->getJavaObject() : NULL;
-	args[2].i = jint( pData );
+	args[2].j = jlong( pData );
 	args[3].l = t.pEnv->NewStringUTF( str );
 
 	jobject tempObj;
@@ -400,13 +400,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					aEvent.dispatch();
 				}
 				pFrame->CallCallback( nID, pInputEvent );
-				// Update the cached location
-				if ( pFrame->mpVCLFrame )
-				{
-					SalExtTextInputPosEvent aPosEvent;
-					pFrame->CallCallback( SALEVENT_EXTTEXTINPUTPOS, (void *)&aPosEvent );
-					pFrame->mpVCLFrame->setTextLocation( pFrame->maGeometry.nX - pFrame->maGeometry.nLeftDecoration + aPosEvent.mnX, pFrame->maGeometry.nY - pFrame->maGeometry.nTopDecoration + aPosEvent.mnY, aPosEvent.mnWidth, aPosEvent.mnHeight, aPosEvent.mbVertical );
-				}
 				// If there is no text, the character is committed
 				if ( pInputEvent->maText.Len() == nCommitted )
 					pFrame->CallCallback( SALEVENT_ENDEXTTEXTINPUT, NULL );
@@ -417,6 +410,12 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			if ( pInputEvent )
 				delete pInputEvent;
 			break;
+		}
+		case SALEVENT_EXTTEXTINPUTPOS:
+		{
+			SalExtTextInputPosEvent *pInputPosEvent = (SalExtTextInputPosEvent *)pData;
+			if ( pInputPosEvent && !bDeleteDataOnly && pFrame && pFrame->mbVisible )
+				pFrame->CallCallback( SALEVENT_EXTTEXTINPUTPOS, (void *)pInputPosEvent );
 		}
 		case SALEVENT_GETFOCUS:
 		{
@@ -833,7 +832,7 @@ void *com_sun_star_vcl_VCLEvent::getData()
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()I";
+			char *cSignature = "()J";
 			mID = t.pEnv->GetMethodID( getMyClass(), "getData", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -854,7 +853,7 @@ JavaSalFrame *com_sun_star_vcl_VCLEvent::getFrame()
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()I";
+			char *cSignature = "()J";
 			mID = t.pEnv->GetMethodID( getMyClass(), "getFrame", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -1205,21 +1204,21 @@ short com_sun_star_vcl_VCLEvent::getMenuID()
 
 // ----------------------------------------------------------------------------
 
-int com_sun_star_vcl_VCLEvent::getMenuCookie()
+void *com_sun_star_vcl_VCLEvent::getMenuCookie()
 {
 	static jmethodID mID = NULL;
-	int out = 0;
+	void *out = 0;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()I";
+			char *cSignature = "()J";
 			mID = t.pEnv->GetMethodID( getMyClass(), "getMenuCookie", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (int)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+			out = (void *)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
 }

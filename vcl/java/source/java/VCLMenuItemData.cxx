@@ -70,7 +70,7 @@ com_sun_star_vcl_VCLMenuItemData::com_sun_star_vcl_VCLMenuItemData( ::rtl::OUStr
 		return;
 	if ( !mID )
 	{
-		char *cSignature = "(Ljava/lang/String;ZSI)V";
+		char *cSignature = "(Ljava/lang/String;ZSJ)V";
 		mID = t.pEnv->GetMethodID( getMyClass(), "<init>", cSignature );
 	}
 	OSL_ENSURE( mID, "Unknown method id!" );
@@ -78,7 +78,7 @@ com_sun_star_vcl_VCLMenuItemData::com_sun_star_vcl_VCLMenuItemData( ::rtl::OUStr
 	args[0].l = StringToJavaString( t.pEnv, newTitle );
 	args[1].z = jboolean( separator );
 	args[2].s = jshort( id );
-	args[3].i = jint( m );
+	args[3].j = jlong( m );
 	jobject tempObj;
 	tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
 	saveRef( tempObj );

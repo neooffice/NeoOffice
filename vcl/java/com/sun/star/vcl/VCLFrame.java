@@ -631,11 +631,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private final static AttributedCharacterIterator defaultAttributedCharacterIterator = new AttributedString("").getIterator();
 
-	/** 
-	 * The default text location.
-	 */
-	private final static Rectangle defaultTextLocation = new Rectangle(300, 300, 0, 12);
-
 	/**
 	 * Find the matching <code>VCLFrame</code> for the specified component.
 	 *
@@ -749,7 +744,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	/**
 	 * The frame pointer.
 	 */
-	private int frame = 0;
+	private long frame = 0;
 
 	/**
 	 * The full screen mode.
@@ -797,11 +792,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private long style = 0;
 
 	/**
-	 * The text location.
-	 */
-	private Rectangle textLocation = null;
-
-	/**
 	 * The native window.
 	 */
 	private Window window = null;
@@ -819,7 +809,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param f the frame pointer
 	 * @param p the parent frame
 	 */
-	public VCLFrame(long s, VCLEventQueue q, int f, VCLFrame p) {
+	public VCLFrame(long s, VCLEventQueue q, long f, VCLFrame p) {
 
 		queue = q;
 		frame = f;
@@ -1030,7 +1020,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		window.remove(panel);
 		panel = null;
 
-		textLocation = null;
 		window = null;
 		queue = null;
 
@@ -1208,7 +1197,7 @@ g.dispose();
 	 *
      * @return the frame pointer for this component
 	 */
-	synchronized int getFrame() {
+	synchronized long getFrame() {
 
 		return frame;
 
@@ -1366,21 +1355,39 @@ g.dispose();
 	 */
 	public Rectangle getTextLocation(TextHitInfo offset) {
 
-		if (disposed || !window.isShowing())
-			return defaultTextLocation;
-
-		// Give the VCL event queue a chance to dispatch any pending input
-		// method events before we return the location
-		Thread.yield();
+		Rectangle bounds = new Rectangle(300, 300, 2, 12);
 
 		synchronized (this) {
-			if (textLocation != null && textLocation.width >= 0 && textLocation.height >= 0)
-				return textLocation;
-			else
-				return defaultTextLocation;
+			if (disposed || !window.isShowing())
+				return bounds;
 		}
 
+		// Get the position from the OOo code
+		Rectangle b = getTextLocation0(frame);
+
+		synchronized (this) {
+			if (disposed || !window.isShowing())
+				return bounds;
+
+			if (b != null) {
+				Point loc = window.getLocationOnScreen();
+				b.x += loc.x;
+				b.y += loc.y;
+				bounds = b;
+			}
+		}
+
+		return bounds;
+
 	}
+
+	/**
+	 * Gets the bounds of the text cursor.
+	 *
+	 * @param f the frame pointer
+	 * @return the bounds of the text cursor
+	 */
+	native Rectangle getTextLocation0(long f);
 
 	/**
 	 * Returns the native window.
@@ -2004,25 +2011,6 @@ g.dispose();
 			window.setCursor(c);
 			Toolkit.getDefaultToolkit().sync();
 		}
-
-	}
-
-	/**
-	 * Sets the text location.
-	 *
-	 * @param x the x coordinate of the cursor
-	 * @param y the y coordinate of the cursor
-	 * @param width the width of the cursor
-	 * @param height the height of the cursor
-	 * @param vertical <code>true</code> if the text is vertical and
-	 *  <code>false</code> if the text is horizontal
-	 */
-	public synchronized void setTextLocation(int x, int y, int width, int height, boolean vertical) {
-
-		if (vertical)
-			textLocation = new Rectangle(x + height, y + width, width, height);
-		else
-			textLocation = new Rectangle(x + width, y + height, 0, height);
 
 	}
 

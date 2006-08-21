@@ -380,7 +380,7 @@ public final class VCLEventQueue implements Runnable {
 	 *
      * @param frame the frame pointer
 	 */
-	void removeCachedEvents(int frame) {
+	void removeCachedEvents(long frame) {
 
 		synchronized (queueList) {
 			for (int i = 0; i < queueList.length; i++) {

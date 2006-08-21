@@ -38,6 +38,9 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
 #include <com/sun/star/vcl/VCLFrame.hxx>
 #endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
+#include <com/sun/star/vcl/VCLEvent.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
@@ -47,12 +50,68 @@
 #ifndef _SV_SALFRAME_H
 #include <salframe.h>
 #endif
+#ifndef _SV_SVAPP_HXX
+#include <svapp.hxx>
+#endif
+#ifndef _VOS_MUTEX_HXX_
+#include <vos/mutex.hxx>
+#endif
 
 #include "VCLFrame_cocoa.h"
 
 using namespace vcl;
+using namespace vos;
 
 // ============================================================================
+
+static jobject JNICALL Java_com_sun_star_vcl_VCLFrame_getTextLocation0( JNIEnv *pEnv, jobject object, jlong _par0 )
+{
+	jobject out = NULL;
+
+	IMutex& rSolarMutex = Application::GetSolarMutex();
+	rSolarMutex.acquire();
+
+	static jmethodID mID = NULL;
+
+	jclass pointClass = pEnv->FindClass( "java/awt/Rectangle" );
+	if ( pointClass )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(IIII)V";
+			mID = pEnv->GetMethodID( pointClass, "<init>", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			SalExtTextInputPosEvent aInputPosEvent;
+			memset( &aInputPosEvent, 0, sizeof( SalExtTextInputPosEvent ) );
+			com_sun_star_vcl_VCLEvent aEvent( SALEVENT_EXTTEXTINPUTPOS, (JavaSalFrame *)_par0, &aInputPosEvent );
+			aEvent.dispatch();
+
+			jvalue args[4];
+			if ( aInputPosEvent.mbVertical )
+			{
+				args[0].i = jint( aInputPosEvent.mnX + aInputPosEvent.mnWidth + 25 );
+				args[1].i = jint( aInputPosEvent.mnY - aInputPosEvent.mnHeight + 15 );
+			}
+			else
+			{
+				args[0].i = jint( aInputPosEvent.mnX + aInputPosEvent.mnWidth );
+				args[1].i = jint( aInputPosEvent.mnY + 20 );
+			}
+			args[2].i = jint( aInputPosEvent.mnWidth );
+			args[3].i = jint( aInputPosEvent.mnHeight );
+			out = pEnv->NewObjectA( pointClass, mID, args );
+		}
+	}
+
+	rSolarMutex.release();
+
+	return out;
+}
+
+// ----------------------------------------------------------------------------
 
 static void JNICALL Java_com_sun_star_vcl_VCLFrame_updateLocation( JNIEnv *pEnv, jobject object, jobject _par0 )
 {
@@ -109,11 +168,14 @@ jclass com_sun_star_vcl_VCLFrame::getMyClass()
 		if ( tempClass )
 		{
 			// Register the native methods for our class
-			JNINativeMethod aMethod;
-			aMethod.name = "updateLocation";
-			aMethod.signature = "(Ljava/awt/peer/ComponentPeer;)V";
-			aMethod.fnPtr = (void *)Java_com_sun_star_vcl_VCLFrame_updateLocation;
-			t.pEnv->RegisterNatives( tempClass, &aMethod, 1 );
+			JNINativeMethod pMethods[2];
+			pMethods[0].name = "getTextLocation0";
+			pMethods[0].signature = "(J)Ljava/awt/Rectangle;";
+			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLFrame_getTextLocation0;
+			pMethods[1].name = "updateLocation";
+			pMethods[1].signature = "(Ljava/awt/peer/ComponentPeer;)V";
+			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLFrame_updateLocation;
+			t.pEnv->RegisterNatives( tempClass, pMethods, 2 );
 		}
 
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
@@ -131,7 +193,7 @@ com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, cons
 		return;
 	if ( !mID )
 	{
-		char *cSignature = "(JLcom/sun/star/vcl/VCLEventQueue;ILcom/sun/star/vcl/VCLFrame;)V";
+		char *cSignature = "(JLcom/sun/star/vcl/VCLEventQueue;JLcom/sun/star/vcl/VCLFrame;)V";
 		mID = t.pEnv->GetMethodID( getMyClass(), "<init>", cSignature );
 	}
 	OSL_ENSURE( mID, "Unknown method id!" );
@@ -139,7 +201,7 @@ com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, cons
 	jvalue args[4];
 	args[0].j = jlong( nSalFrameStyle );
 	args[1].l = GetSalData()->mpEventQueue->getJavaObject();
-	args[2].i = jint( pFrame );
+	args[2].j = jlong( pFrame );
 	if ( pParent )
 		args[3].l = pParent->mpVCLFrame->getJavaObject();
 	else
@@ -714,33 +776,6 @@ void com_sun_star_vcl_VCLFrame::setState( ULONG _par0 )
 		{
 			jvalue args[1];
 			args[0].j = jlong( _par0 );
-			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
-		}
-	}
-}
-
-// ----------------------------------------------------------------------------
-
-void com_sun_star_vcl_VCLFrame::setTextLocation( long _par0, long _par1, long _par2, long _par3, sal_Bool _par4 )
-{
-	static jmethodID mID = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "(IIIIZ)V";
-			mID = t.pEnv->GetMethodID( getMyClass(), "setTextLocation", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jvalue args[5];
-			args[0].i = jint( _par0 );
-			args[1].i = jint( _par1 );
-			args[2].i = jint( _par2 );
-			args[3].i = jint( _par3 );
-			args[4].z = jboolean( _par4 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}

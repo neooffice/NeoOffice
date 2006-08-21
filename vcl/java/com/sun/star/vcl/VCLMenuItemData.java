@@ -92,10 +92,9 @@ public final class VCLMenuItemData extends Component {
 	/**
 	 * Cookie needed to make the association between the C++ VCL Menu object
 	 * that is spawning SALEVENT_MENU* events. Used in conjunction with the id.
-	 * Note that this is actually a void ** pointer (!). For now we'll use the
-	 * Java int type which is 32 bits.
+	 * Note that this is actually a void ** pointer (!).
 	 */
-	private int vclMenuCookie=0;
+	private long vclMenuCookie=0;
 
 	/**
 	 * True if this item is a separator, false if not.
@@ -153,7 +152,7 @@ public final class VCLMenuItemData extends Component {
 	 * @param cookie cookie used in SALEVENT_MENU* events to tie the id to a
 	 *  specific menu
 	 */
-	public VCLMenuItemData(String newTitle, boolean separator, short id, int cookie) {
+	public VCLMenuItemData(String newTitle, boolean separator, short id, long cookie) {
 
 		if(separator) {
 			isSeparator=true;
@@ -361,7 +360,7 @@ public final class VCLMenuItemData extends Component {
 	 * Get the cookie corresponding to the menu item that should be used to
 	 * refer to this menu in VCL events.
 	 */
-	int getVCLCookie() {
+	long getVCLCookie() {
 
 		if(delegate!=null)
 			return(delegate.getVCLCookie());

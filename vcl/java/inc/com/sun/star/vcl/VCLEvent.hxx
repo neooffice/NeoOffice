@@ -88,7 +88,7 @@ public:
 	long				getX();
 	long				getY();
 	short				getMenuID();
-	int					getMenuCookie();
+	void*				getMenuCookie();
 	long				getScrollAmount();
 	ULONG				getVisiblePosition();
 	long				getWheelRotation();

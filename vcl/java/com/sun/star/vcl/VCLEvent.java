@@ -917,14 +917,19 @@ public final class VCLEvent extends AWTEvent {
 	private boolean awtEvent = false;
 
 	/**
+	 * The caret.
+	 */
+	private TextHitInfo caret = null;
+
+	/**
 	 * The data pointer.
 	 */
-	private int data = 0;
+	private long data = 0;
 
 	/**
 	 * The frame pointer.
 	 */
-	private int frame = 0;
+	private long frame = 0;
 
 	/**
 	 * The cached key character.
@@ -974,7 +979,7 @@ public final class VCLEvent extends AWTEvent {
 	/**
 	 * The C++ object Menu pointer
 	 */
-	private int menuCookie=0;
+	private long menuCookie=0;
 
 	/**
 	 * Constructs a new <code>VCLEvent</code> instance.
@@ -983,7 +988,7 @@ public final class VCLEvent extends AWTEvent {
 	 * @param f the <code>VCLFrame</code> instance
 	 * @param d the data pointer
 	 */
-	public VCLEvent(int id, VCLFrame f, int d) {
+	public VCLEvent(int id, VCLFrame f, long d) {
 
 		super(new Object(), id);
 		if (f != null)
@@ -1000,7 +1005,7 @@ public final class VCLEvent extends AWTEvent {
 	 * @param mID the menu id
 	 * @param mCookie the menu pointer
 	 */
-	public VCLEvent(int id, VCLFrame f, short mID, int mCookie) {
+	public VCLEvent(int id, VCLFrame f, short mID, long mCookie) {
 	    
 		super(new Object(), id);
 		if (f != null)
@@ -1018,7 +1023,7 @@ public final class VCLEvent extends AWTEvent {
 	 * @param d the data pointer
 	 * @param p the document path
 	 */
-	public VCLEvent(int id, VCLFrame f, int d, String p) {
+	public VCLEvent(int id, VCLFrame f, long d, String p) {
 
 		this(id, f, d);
 		path = p;
@@ -1033,7 +1038,7 @@ public final class VCLEvent extends AWTEvent {
 	 * @param f the <code>VCLFrame</code> instance
 	 * @param d the data pointer
 	 */
-	VCLEvent(AWTEvent event, int id, VCLFrame f, int d) {
+	VCLEvent(AWTEvent event, int id, VCLFrame f, long d) {
 
 		this(id, f, d);
 
@@ -1106,7 +1111,8 @@ public final class VCLEvent extends AWTEvent {
 			}
 		}
 		else if (event instanceof InputMethodEvent) {
-			AttributedCharacterIterator i = ((InputMethodEvent)event).getText();
+			InputMethodEvent e = (InputMethodEvent)event;
+			AttributedCharacterIterator i = e.getText();
 			if (i != null) {
 				StringBuffer buf = new StringBuffer();
 				int count = 0;
@@ -1115,6 +1121,8 @@ public final class VCLEvent extends AWTEvent {
 					count++;
 				}
 				text = buf.toString();
+
+				caret = e.getCaret();
 
 				int committedCount = getCommittedCharacterCount();
 				if (count > committedCount)
@@ -1133,6 +1141,11 @@ public final class VCLEvent extends AWTEvent {
 									selected = true;
 									for (int j = 0; j < count; j++)
 										textAttributes[j] = SAL_EXTTEXTINPUT_ATTR_UNDERLINE;
+									// Fix bug 1598 by setting the cursor to
+									// the first selected character if the
+									// caret is null
+									if (caret == null)
+										caret = TextHitInfo.beforeOffset(count);
 								}
 								attribute = SAL_EXTTEXTINPUT_ATTR_HIGHLIGHT;
 							}
@@ -1218,9 +1231,8 @@ public final class VCLEvent extends AWTEvent {
 	 */
 	public int getCursorPosition() {
 
-		if (source instanceof InputMethodEvent) {
-			TextHitInfo hi = ((InputMethodEvent)source).getCaret();
-			return (hi != null ? hi.getInsertionIndex() : 0);
+		if (caret != null) {
+			return (caret != null ? caret.getInsertionIndex() : 0);
 		}
 		else {
 			return 0;
@@ -1233,7 +1245,7 @@ public final class VCLEvent extends AWTEvent {
 	 *
 	 * @return the data pointer.
 	 */
-	public int getData() {
+	public long getData() {
 
 		return data;
 
@@ -1244,7 +1256,7 @@ public final class VCLEvent extends AWTEvent {
 	 *
 	 * @return the frame pointer.
 	 */
-	public int getFrame() {
+	public long getFrame() {
 
 		return frame;
 
@@ -1694,7 +1706,7 @@ public final class VCLEvent extends AWTEvent {
 	 *
 	 * @return cookie provided by VCL on AWT menu item creation
 	 */
-	public int getMenuCookie() {
+	public long getMenuCookie() {
 	    
 	    return menuCookie;
 
