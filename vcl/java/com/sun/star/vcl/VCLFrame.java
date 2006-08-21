@@ -1407,7 +1407,8 @@ g.dispose();
 
 		// Fix bug 1429 by committing the uncommitted text in the last input 
 		// method event if the caret's index is less than 0
-		if (e.getCaret().getCharIndex() < 0) {
+		TextHitInfo caret = e.getCaret();
+		if (caret != null && caret.getCharIndex() < 0) {
 			if (lastUncommittedInputMethodEvent != null) {
 				AttributedCharacterIterator text = lastUncommittedInputMethodEvent.getText();
 				int count = 0;
