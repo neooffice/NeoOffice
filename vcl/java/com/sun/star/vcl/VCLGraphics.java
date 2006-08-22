@@ -275,8 +275,7 @@ public final class VCLGraphics {
 			Class.forName("java.lang.Appendable");
 			drawOnMainThread = false;
 		}
-		catch (Throwable t) {
-		}
+		catch (Throwable t) {}
 
 		Color c = new Color(0x00000000, true);
 
