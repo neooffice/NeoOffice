@@ -558,6 +558,49 @@ Paper com_sun_star_vcl_VCLPageFormat::getPaperType()
 
 // ----------------------------------------------------------------------------
 
+const Size com_sun_star_vcl_VCLPageFormat::getTextResolution()
+{ 
+	static jmethodID mID = NULL;
+	static jfieldID fIDWidth = NULL;
+	static jfieldID fIDHeight = NULL;
+	Size out( 0, 0 );
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Ljava/awt/Dimension;";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getTextResolution", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
+			if ( tempObj )
+			{
+				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
+				if ( !fIDWidth )
+				{
+					char *cSignature = "I";
+					fIDWidth = t.pEnv->GetFieldID( tempObjClass, "width", cSignature );
+				}
+				OSL_ENSURE( fIDWidth, "Unknown field id!" );
+				if ( !fIDHeight )
+				{
+					char *cSignature = "I";
+					fIDHeight = t.pEnv->GetFieldID( tempObjClass, "height", cSignature );
+				}
+				OSL_ENSURE( fIDHeight, "Unknown field id!" );
+				if ( fIDWidth && fIDHeight )
+					out = Size( (long)t.pEnv->GetIntField( tempObj, fIDWidth ), (long)t.pEnv->GetIntField( tempObj, fIDHeight ) );
+			}
+		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLPageFormat::setOrientation( Orientation _par0 )
 {
 	static jmethodID mID = NULL;
@@ -635,7 +678,7 @@ void com_sun_star_vcl_VCLPageFormat::setPaperType( Paper _par0, long _par1, long
 	else if ( _par0 == PAPER_TABLOID )
 		NSPrintInfo_setPaperSize( pNSPrintInfo, 792, 1224 );
 	else
-		NSPrintInfo_setPaperSize( pNSPrintInfo, _par1 * 72 / 2540, _par2 * 72 / 2540);
+		NSPrintInfo_setPaperSize( pNSPrintInfo, _par1, _par2 );
 
 	updatePageFormat();
 }

@@ -284,6 +284,17 @@ public final class VCLPageFormat {
 	}  
 
 	/**
+	 * Get the text resolution.
+	 *
+	 * @return the text resolution
+	 */
+	public Dimension getTextResolution() {
+
+		return printerTextResolution;
+
+	}
+
+	/**
 	 * Set the page orientation.
 	 *
 	 * @param o the page orientation

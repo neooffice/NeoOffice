@@ -71,6 +71,7 @@ public:
 	java_lang_Object*	getPrinterJob();
 	void				setOrientation( Orientation _par0 );
 	Paper				getPaperType();
+	const Size			getTextResolution();
 	void				setPaperType( Paper _par0, long _par1, long _par2 );
 	sal_Bool			setup();
 	void				updatePageFormat();

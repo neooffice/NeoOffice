@@ -155,13 +155,23 @@ BOOL JavaSalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 	if ( ! ( nFlags & SAL_JOBSET_PAPERSIZE ) )
 	{
 		pSetupData->mePaperFormat = mpVCLPageFormat->getPaperType();
-		Size aSize( mpVCLPageFormat->getPageSize() );
-		pSetupData->mnPaperWidth = aSize.Width();
-		pSetupData->mnPaperHeight = aSize.Height();
+		if ( pSetupData->mePaperFormat == PAPER_USER )
+		{
+			Size aSize( mpVCLPageFormat->getPageSize() );
+			Size aResolution( mpVCLPageFormat->getTextResolution() );
+			pSetupData->mnPaperWidth = aSize.Width() * 2540 / aResolution.Width();
+			pSetupData->mnPaperHeight = aSize.Height() * 2540 / aResolution.Height();
+		}
+		else
+		{
+			pSetupData->mnPaperWidth = 0;
+			pSetupData->mnPaperHeight = 0;
+		}
 	}
 	else
 	{
-		mpVCLPageFormat->setPaperType( pSetupData->mePaperFormat, pSetupData->mnPaperWidth, pSetupData->mnPaperHeight );
+		mpVCLPageFormat->setPaperType( pSetupData->mePaperFormat, pSetupData->mnPaperWidth * 72 / 2540, pSetupData->mnPaperHeight * 72 / 2540 );
+		pSetupData->meOrientation = mpVCLPageFormat->getOrientation();
 	}
 
 	return TRUE;
@@ -287,7 +297,10 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 
 	// Set paper type
 	if ( !bFirstPass )
-		mpVCLPageFormat->setPaperType( pSetupData->mePaperFormat, pSetupData->mnPaperWidth, pSetupData->mnPaperHeight );
+	{
+		mpVCLPageFormat->setPaperType( pSetupData->mePaperFormat, pSetupData->mnPaperWidth * 72 / 2540, pSetupData->mnPaperHeight * 72 / 2540 );
+		pSetupData->meOrientation = mpVCLPageFormat->getOrientation();
+	}
 
 	// Fix bug by detecting when an OOo printer job is being reused for serial
 	// print jobs
