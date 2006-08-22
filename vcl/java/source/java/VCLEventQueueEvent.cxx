@@ -837,7 +837,7 @@ void *com_sun_star_vcl_VCLEvent::getData()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (void *)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+			out = (void *)t.pEnv->CallNonvirtualLongMethod( object, getMyClass(), mID );
 	}
 	return out;
 }
@@ -858,7 +858,7 @@ JavaSalFrame *com_sun_star_vcl_VCLEvent::getFrame()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (JavaSalFrame *)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+			out = (JavaSalFrame *)t.pEnv->CallNonvirtualLongMethod( object, getMyClass(), mID );
 	}
 	return out;
 }
@@ -1218,7 +1218,7 @@ void *com_sun_star_vcl_VCLEvent::getMenuCookie()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (void *)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+			out = (void *)t.pEnv->CallNonvirtualLongMethod( object, getMyClass(), mID );
 	}
 	return out;
 }
