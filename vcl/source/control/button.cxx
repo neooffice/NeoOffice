@@ -4268,7 +4268,7 @@ Image CheckBox::GetCheckImage( const AllSettings& rSettings, USHORT nFlags )
                                 int *pBits = (int *)pBuffer->mpBits;
                                 for ( long i = 0; i < nPixels; i++ )
                                 {
-                                    if ( ( pBits[ i ] & 0xFF000000 ) < 0xF1000000 )
+                                    if ( ( pBits[ i ] & 0xFF000000 ) < 0xC7000000 )
                                         pBits[ i ] = 0x00000000;
                                 }
                             }
