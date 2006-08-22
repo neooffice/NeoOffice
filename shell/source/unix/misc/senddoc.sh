@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 URI_ENCODE="awk -f `dirname $0`/uri-encode"
 
 # tries to locate the executable specified 
