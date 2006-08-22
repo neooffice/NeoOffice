@@ -3295,7 +3295,6 @@ Image RadioButton::GetRadioImage( const AllSettings& rSettings, USHORT nFlags )
 
                         Region aCtrlRegion = Region( Rectangle( aPos, aSize ) );
                         pGraphics->drawNativeControl( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString() );
-                        pGraphics->drawNativeControl( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString() );
                         aPos.X() += aSize.Width();
                     }
 
@@ -4251,7 +4250,6 @@ Image CheckBox::GetCheckImage( const AllSettings& rSettings, USHORT nFlags )
                         }
 
                         Region aCtrlRegion = Region( Rectangle( aPos, aSize ) );
-                        pGraphics->drawNativeControl( CTRL_CHECKBOX, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString() );
                         pGraphics->drawNativeControl( CTRL_CHECKBOX, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString() );
                         aPos.X() += aSize.Width();
                     }
