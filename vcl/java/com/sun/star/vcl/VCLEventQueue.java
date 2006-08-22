@@ -53,6 +53,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.PaintEvent;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.util.Collections;
 
 /**
  * An class that subclass that intercepts Java events and caches them for
@@ -153,6 +154,14 @@ public final class VCLEventQueue implements Runnable {
 		// Set keyboard focus manager
 		KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
 		kfm.setCurrentKeyboardFocusManager(new NoEnqueueKeyboardFocusManager());
+
+		// Set the keyboard focus manager so that Java's default focus
+		// switching key events are passed are not consumed
+		kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS, Collections.EMPTY_SET);
+		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.BACKWARD_TRAVERSAL_KEYS, Collections.EMPTY_SET);
+		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.UP_CYCLE_TRAVERSAL_KEYS, Collections.EMPTY_SET);
+		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.DOWN_CYCLE_TRAVERSAL_KEYS, Collections.EMPTY_SET);
 
 	}
 

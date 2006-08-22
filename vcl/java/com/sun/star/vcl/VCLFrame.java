@@ -47,7 +47,6 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Insets;
-import java.awt.KeyboardFocusManager;
 import java.awt.MenuBar;
 import java.awt.Panel;
 import java.awt.Point;
@@ -83,7 +82,6 @@ import java.net.URL;
 import java.text.CharacterIterator;
 import java.text.AttributedCharacterIterator;
 import java.text.AttributedString;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -631,6 +629,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private final static AttributedCharacterIterator defaultAttributedCharacterIterator = new AttributedString("").getIterator();
 
+	/** 
+	 * The trap temporary focus events flag.
+	 */
+	private static boolean trapTemporaryFocusEvents = false;
+
 	/**
 	 * Find the matching <code>VCLFrame</code> for the specified component.
 	 *
@@ -648,13 +651,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	static {
 
-		// Set the keyboard focus manager so that Java's default focus
-		// switching key events are passed are not consumed
-		KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
-		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS, Collections.EMPTY_SET);
-		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.BACKWARD_TRAVERSAL_KEYS, Collections.EMPTY_SET);
-		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.UP_CYCLE_TRAVERSAL_KEYS, Collections.EMPTY_SET);
-		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.DOWN_CYCLE_TRAVERSAL_KEYS, Collections.EMPTY_SET);
+		// Set the trap temporary focus events flag
+		try { 
+			// Test for Java 1.5 or higher
+			Class.forName("java.lang.Appendable");
+			trapTemporaryFocusEvents = false;
+		}
+		catch (Throwable t) {}
 
 		Toolkit toolkit = Toolkit.getDefaultToolkit();
 		ClassLoader cl = ClassLoader.getSystemClassLoader();
@@ -1109,7 +1112,7 @@ g.dispose();
 		if (disposed || isFloatingWindow() || !window.isShowing())
 			return;
 
- 		if (e.isTemporary()) {
+ 		if (e.isTemporary() && VCLFrame.trapTemporaryFocusEvents) {
 			requestFocus();
 			return;
 		}
