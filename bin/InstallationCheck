@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/bin/bash -x
 ##########################################################################
 # 
 #   $RCSfile$
@@ -80,7 +80,7 @@ if [ -d "$scriptdir" -a -f "$scriptdir/installutils" ] ; then
         # Return 96 + 25 if any instances are running
         check_installation "$i" && exit 121
     done << !
-`ps -U "$id" -o command | grep '/Contents/MacOS/soffice\.bin' | sed 's#/Contents/MacOS/soffice\.bin.*$##'`
+`ps -a -x -w -w -o command | grep '/Contents/MacOS/soffice\.bin' | sed 's#/Contents/MacOS/soffice\.bin.*$##'`
 !
 
 fi
