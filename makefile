@@ -87,12 +87,12 @@ OO_REGISTRATION_URL=http://www.openoffice.org/welcome/registration20.html
 OO_SUPPORT_URL=http://www.openoffice.org
 OO_SUPPORT_URL_TEXT=www.openoffice.org
 PRODUCT_VERSION_FAMILY=2.x
-PRODUCT_VERSION=2.0 Aqua Beta 2
-PRODUCT_DIR_VERSION=2.0_Aqua_Beta_2
+PRODUCT_VERSION=2.0 Aqua Beta 3
+PRODUCT_DIR_VERSION=2.0_Aqua_Beta_3
 PRODUCT_LANG_PACK_VERSION=Language Pack
 PRODUCT_DIR_LANG_PACK_VERSION=Language_Pack
-PRODUCT_PATCH_VERSION=Patch 2
-PRODUCT_DIR_PATCH_VERSION=Patch-2
+PRODUCT_PATCH_VERSION=Patch 0
+PRODUCT_DIR_PATCH_VERSION=Patch-0
 PRODUCT_FILETYPE=NO%F
 PRODUCT_INSTALL_URL=http://www.planamesa.com/neojava/download.php\\\#install
 PRODUCT_BUILD_URL=http://www.planamesa.com/neojava/build.php
@@ -110,7 +110,7 @@ OO_SOURCE_TAR_GZ_FILE:=$(PWD)/OOo_2.0.3_src.tar.gz
 OO_SOURCE_OUTPUT_DIR:=OOC680_m7
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
-NEO_TAG:=NeoOffice-2_0_Aqua_Beta_2
+NEO_TAG:=NeoOffice-2_0_Aqua_Beta_3
 
 all: build.all
 
@@ -185,7 +185,6 @@ build.neo_configure: build.oo_all
 	echo "setenv PRODUCT_NAME '$(PRODUCT_NAME)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_DIR_NAME '$(PRODUCT_DIR_NAME)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_DONATION_URL '$(PRODUCT_DONATION_URL)'" >> "$(OO_ENV_JAVA)"
-	echo "setenv PRODUCT_TRADEMARKED_NAME '$(PRODUCT_TRADEMARKED_NAME)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_FILETYPE '$(PRODUCT_FILETYPE)'" >> "$(OO_ENV_JAVA)"
 	touch "$@"
 
