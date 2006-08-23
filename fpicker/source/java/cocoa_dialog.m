@@ -1372,7 +1372,8 @@ int NSFileDialog_showFileDialog( id pDialog )
 
 	if ( pDialog )
 	{
-		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(showFileDialog:) withObject:pDialog waitUntilDone:YES];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, @"AWTRunLoopMode", nil];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(showFileDialog:) withObject:pDialog waitUntilDone:YES modes:pModes];
 		nRet = [(ShowFileDialog *)pDialog result];
 	}
 
