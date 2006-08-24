@@ -245,7 +245,13 @@ static void	ImplTCToTC( const BitmapBuffer& rSrcBuffer, BitmapBuffer& rDstBuffer
 		{
 			Scanline pSrcScan( pSrcScanMap[ nMapY = pMapY[ nActY ] ] ), pDstScan( pDstScanMap[ nActY ] );
 
-			memcpy( pDstScan, pSrcScan + ( pMapX[ 0 ] * 4 ), nWidth * 4 );
+			for( long nX = 0L; nX < nWidth; nX++ )
+			{
+				int *pSrcBits = (int *)pSrcScan;
+				int *pDstBits = (int *)pDstScan;
+				pDstBits[ nX ] = pSrcBits[ pMapX[ nX ] ];
+			}
+
 			DOUBLE_SCANLINES();
 		}
     }
