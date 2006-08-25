@@ -655,7 +655,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		try { 
 			// Test for Java 1.5 or higher
 			Class.forName("java.lang.Appendable");
-			trapTemporaryFocusEvents = false;
+			trapTemporaryFocusEvents = true;
 		}
 		catch (Throwable t) {}
 
