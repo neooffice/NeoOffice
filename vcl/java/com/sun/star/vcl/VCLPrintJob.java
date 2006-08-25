@@ -353,6 +353,13 @@ public final class VCLPrintJob implements Printable, Runnable {
 			// Set the origin to the origin of the printable area
 			printGraphics.translate((int)printPageFormat.getImageableX(), (int)printPageFormat.getImageableY());
 
+			if (pageFormat.getPaperOrientation() != PageFormat.PORTRAIT) {
+				if (o == VCLPageFormat.ORIENTATION_PORTRAIT)
+					o = VCLPageFormat.ORIENTATION_LANDSCAPE;
+				else
+					o = VCLPageFormat.ORIENTATION_PORTRAIT;
+			}
+
 			// Rotate the page if necessary
 			int orientation = printPageFormat.getOrientation();
 			boolean rotatedPage = false;

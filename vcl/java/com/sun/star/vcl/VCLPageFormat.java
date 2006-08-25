@@ -107,25 +107,9 @@ public final class VCLPageFormat {
 	public final static int PAPER_USER = 8;
 
 	/**
-	 * The printer orientation.
-	 */
-	private static int printerOrientation = PageFormat.PORTRAIT;
-
-	/**
 	 * The printer text resolution.
 	 */
-	private static Dimension printerTextResolution = new Dimension(300, 300);
-
-	/**
-	 * Returns the printer orientation.
-	 *
-	 * @return the printer orientation
-	 */
-	static int getPrinterOrientation() {
-
-		return printerOrientation;
-
-	}
+	private static int printerTextResolution = 300;
 
 	/**
 	 * Cached <code>VCLImage</code>.
@@ -143,13 +127,18 @@ public final class VCLPageFormat {
 	private PageFormat pageFormat = null;
 
 	/**
+	 * The paper orientation.
+	 */
+	private int paperOrientation = PageFormat.PORTRAIT;
+
+	/**
 	 * Constructs a new <code>VCLPageFormat</code> instance.
 	 */
 	public VCLPageFormat() {
 
 		job = PrinterJob.getPrinterJob();
 		pageFormat = job.defaultPage();
-		pageFormat.setOrientation(VCLPageFormat.printerOrientation);
+		pageFormat.setOrientation(paperOrientation);
 		image = new VCLImage(1, 1, 32, this);
 
 	}
@@ -186,7 +175,10 @@ public final class VCLPageFormat {
 	 */
 	public Rectangle getImageableBounds() {
 
-		return new Rectangle((int)(pageFormat.getImageableX() * printerTextResolution.width / 72), (int)(pageFormat.getImageableY() * printerTextResolution.height / 72), (int)(pageFormat.getImageableWidth() * printerTextResolution.width / 72), (int)(pageFormat.getImageableHeight() * printerTextResolution.height / 72));
+		if (paperOrientation == PageFormat.PORTRAIT)
+			return new Rectangle((int)(pageFormat.getImageableX() * printerTextResolution / 72), (int)(pageFormat.getImageableY() * printerTextResolution / 72), (int)(pageFormat.getImageableWidth() * printerTextResolution / 72), (int)(pageFormat.getImageableHeight() * printerTextResolution / 72));
+		else
+			return new Rectangle((int)(pageFormat.getImageableY() * printerTextResolution / 72), (int)(pageFormat.getImageableX() * printerTextResolution / 72), (int)(pageFormat.getImageableHeight() * printerTextResolution / 72), (int)(pageFormat.getImageableWidth() * printerTextResolution / 72));
 
 	}
 
@@ -222,10 +214,7 @@ public final class VCLPageFormat {
 	 */
 	Dimension getPageResolution() {
 
-		if (pageFormat.getOrientation() == PageFormat.PORTRAIT)
-			return new Dimension(printerTextResolution.width, printerTextResolution.height);
-		else
-			return new Dimension(printerTextResolution.height, printerTextResolution.width);
+		return new Dimension(printerTextResolution, printerTextResolution);
 
 	}
 
@@ -236,7 +225,21 @@ public final class VCLPageFormat {
 	 */
 	public Dimension getPageSize() {
 
-		return new Dimension((int)(pageFormat.getWidth() * printerTextResolution.width / 72), (int)(pageFormat.getHeight() * printerTextResolution.height / 72));
+		if (paperOrientation == PageFormat.PORTRAIT)
+			return new Dimension((int)(pageFormat.getWidth() * printerTextResolution / 72), (int)(pageFormat.getHeight() * printerTextResolution / 72));
+		else
+			return new Dimension((int)(pageFormat.getHeight() * printerTextResolution / 72), (int)(pageFormat.getWidth() * printerTextResolution / 72));
+
+	}
+
+	/**
+	 * Get the paper orientation
+	 *
+	 * @return the paper orientation
+	 */
+	int getPaperOrientation() {
+
+		return paperOrientation;
 
 	}
 
@@ -248,8 +251,16 @@ public final class VCLPageFormat {
 	public int getPaperType() {
 
 		Paper paper = pageFormat.getPaper();
-		long width = Math.round(paper.getWidth());
-		long height = Math.round(paper.getHeight());
+		long width;
+		long height;
+		if (paperOrientation == PageFormat.PORTRAIT) {
+			width = Math.round(paper.getWidth());
+			height = Math.round(paper.getHeight());
+		}
+		else {
+			width = Math.round(paper.getHeight());
+			height = Math.round(paper.getWidth());
+		}
 
 		if (width == 842 && height == 1191)
 			return VCLPageFormat.PAPER_A3;
@@ -290,7 +301,7 @@ public final class VCLPageFormat {
 	 */
 	public Dimension getTextResolution() {
 
-		return printerTextResolution;
+		return new Dimension(printerTextResolution, printerTextResolution);
 
 	}
 
@@ -301,21 +312,31 @@ public final class VCLPageFormat {
 	 */
 	public void setOrientation(int o) {
 
-		if (o == ORIENTATION_PORTRAIT && VCLPageFormat.printerOrientation == PageFormat.PORTRAIT)
+		if (o == ORIENTATION_PORTRAIT)
 			pageFormat.setOrientation(PageFormat.PORTRAIT);
-		else if (o != ORIENTATION_PORTRAIT && VCLPageFormat.printerOrientation != PageFormat.REVERSE_LANDSCAPE)
-			pageFormat.setOrientation(PageFormat.LANDSCAPE);
 		else
-			pageFormat.setOrientation(VCLPageFormat.printerOrientation);
+			pageFormat.setOrientation(PageFormat.LANDSCAPE);
 
 	}
 
 	/**
 	 * Update the page format.
+	 *
+	 * @param o the page orientation
 	 */
-	public void updatePageFormat() {
+	public void updatePageFormat(int o) {
+
+		int oldOrientation = pageFormat.getOrientation();
+
+		if (o == ORIENTATION_PORTRAIT)
+			paperOrientation = PageFormat.PORTRAIT;
+		else {
+			paperOrientation = PageFormat.LANDSCAPE;
+		}
 
 		pageFormat = job.defaultPage();
+
+		pageFormat.setOrientation(oldOrientation);
 
 	}
 

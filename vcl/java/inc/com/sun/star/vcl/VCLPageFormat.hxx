@@ -74,7 +74,7 @@ public:
 	const Size			getTextResolution();
 	void				setPaperType( Paper _par0, long _par1, long _par2 );
 	sal_Bool			setup();
-	void				updatePageFormat();
+	void				updatePageFormat( Orientation _par0 );
 };
 
 } // namespace vcl

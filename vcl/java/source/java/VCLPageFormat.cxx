@@ -633,7 +633,7 @@ sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 	JavaSalFrame *pFocusFrame = pSalData->mpFocusFrame;
 	if ( pFocusFrame )
 	{
-		updatePageFormat();
+		updatePageFormat( ORIENTATION_PORTRAIT );
 
 		// Ignore any AWT events while the page layout dialog is showing to
 		// emulate a modal dialog
@@ -650,7 +650,7 @@ sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 		out = (sal_Bool)NSPageLayout_result( pDialog );
 
 		if ( out )
-			updatePageFormat();
+			updatePageFormat( ORIENTATION_PORTRAIT );
 	}
 	
 	return out;
@@ -661,29 +661,54 @@ sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 void com_sun_star_vcl_VCLPageFormat::setPaperType( Paper _par0, long _par1, long _par2 )
 {
 	void *pNSPrintInfo = getNativePrinterJob();
-	if ( _par0 == PAPER_A3 )
-		NSPrintInfo_setPaperSize( pNSPrintInfo, 842, 1191 );
-	else if ( _par0 == PAPER_A4 )
-		NSPrintInfo_setPaperSize( pNSPrintInfo, 595, 842 );
-	else if ( _par0 == PAPER_A5 )
-		NSPrintInfo_setPaperSize( pNSPrintInfo, 420, 595 );
-	else if ( _par0 == PAPER_B4 )
-		NSPrintInfo_setPaperSize( pNSPrintInfo, 709, 1001 );
-	else if ( _par0 == PAPER_B5 )
-		NSPrintInfo_setPaperSize( pNSPrintInfo, 499, 709 );
-	else if ( _par0 == PAPER_LETTER )
-		NSPrintInfo_setPaperSize( pNSPrintInfo, 612, 792 );
-	else if ( _par0 == PAPER_LEGAL )
-		NSPrintInfo_setPaperSize( pNSPrintInfo, 612, 1008 );
-	else if ( _par0 == PAPER_TABLOID )
-		NSPrintInfo_setPaperSize( pNSPrintInfo, 792, 1224 );
-	else
-		NSPrintInfo_setPaperSize( pNSPrintInfo, _par1, _par2 );
 
-	updatePageFormat();
+	if ( _par0 == PAPER_A3 )
+	{
+		_par1 = 842;
+		_par2 = 1191;
+	}
+	else if ( _par0 == PAPER_A4 )
+	{
+		_par1 = 595;
+		_par2 = 842;
+	}
+	else if ( _par0 == PAPER_A5 )
+	{
+		_par1 = 420;
+		_par2 = 595;
+	}
+	else if ( _par0 == PAPER_B4 )
+	{
+		_par1 = 709;
+		_par2 = 1001;
+	}
+	else if ( _par0 == PAPER_B5 )
+	{
+		_par1 = 499;
+		_par2 = 709;
+	}
+	else if ( _par0 == PAPER_LETTER )
+	{
+		_par1 = 612;
+		_par2 = 792;
+	}
+	else if ( _par0 == PAPER_LEGAL )
+	{
+		_par1 = 612;
+		_par2 = 1008;
+	}
+	else if ( _par0 == PAPER_TABLOID )
+	{
+		_par1 = 792;
+		_par2 = 1224;
+	}
+
+	BOOL bLandscape = NSPrintInfo_setPaperSize( pNSPrintInfo, _par1, _par2 );
+
+	updatePageFormat( bLandscape ? ORIENTATION_LANDSCAPE : ORIENTATION_PORTRAIT );
 }
 
-void com_sun_star_vcl_VCLPageFormat::updatePageFormat()
+void com_sun_star_vcl_VCLPageFormat::updatePageFormat( Orientation _par0 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -691,11 +716,15 @@ void com_sun_star_vcl_VCLPageFormat::updatePageFormat()
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()V";
+			char *cSignature = "(I)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "updatePageFormat", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+		{
+			jvalue args[1];
+			args[0].i = jint( _par0 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
 	}
 }

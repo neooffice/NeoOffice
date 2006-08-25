@@ -238,14 +238,29 @@ void NSPrintInfo_setInDialog( BOOL bIn )
 	[VCLPrintInfo setInDialog:bIn];
 }
 
-void NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
+BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
 {
+	BOOL bRet = NO;
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pNSPrintInfo )
-		[pNSPrintInfo setPaperSize:NSMakeSize((float)nWidth, (float)nHeight)];
+	{
+		NSPrintingOrientation nOrientation = [(NSPrintInfo *)pNSPrintInfo orientation];
+		[(NSPrintInfo *)pNSPrintInfo setOrientation:NSPortraitOrientation];
+		[(NSPrintInfo *)pNSPrintInfo setPaperSize:NSMakeSize((float)nWidth, (float)nHeight)];
+
+		// Fix bug 1678 by detecting when the selected paper is rotated
+		float fRatio = (float)nWidth / (float)nHeight;
+		NSSize aSize = [(NSPrintInfo *)pNSPrintInfo paperSize];
+		float fNewRatio = aSize.width / aSize.height;
+		if ( ( fRatio < 1.0 && fNewRatio > 1.0 ) || ( fRatio > 1.0 && fNewRatio < 1.0 ) )
+			bRet = YES;
+	}
 
 	[pPool release];
+
+	return bRet;
 }
 
 void NSPrintInfo_setSharedPrintInfo( id pNSPrintInfo )
@@ -253,7 +268,7 @@ void NSPrintInfo_setSharedPrintInfo( id pNSPrintInfo )
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pNSPrintInfo )
-		[VCLPrintInfo setSharedPrintInfo:pNSPrintInfo];
+		[VCLPrintInfo setSharedPrintInfo:(NSPrintInfo *)pNSPrintInfo];
 
 	[pPool release];
 }

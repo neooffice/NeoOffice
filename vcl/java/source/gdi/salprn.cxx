@@ -171,7 +171,6 @@ BOOL JavaSalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 	else
 	{
 		mpVCLPageFormat->setPaperType( pSetupData->mePaperFormat, pSetupData->mnPaperWidth * 72 / 2540, pSetupData->mnPaperHeight * 72 / 2540 );
-		pSetupData->meOrientation = mpVCLPageFormat->getOrientation();
 	}
 
 	return TRUE;
@@ -297,10 +296,7 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 
 	// Set paper type
 	if ( !bFirstPass )
-	{
 		mpVCLPageFormat->setPaperType( pSetupData->mePaperFormat, pSetupData->mnPaperWidth * 72 / 2540, pSetupData->mnPaperHeight * 72 / 2540 );
-		pSetupData->meOrientation = mpVCLPageFormat->getOrientation();
-	}
 
 	// Fix bug by detecting when an OOo printer job is being reused for serial
 	// print jobs
