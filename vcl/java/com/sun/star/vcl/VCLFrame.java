@@ -1758,10 +1758,13 @@ g.dispose();
 	 */
 	public boolean requestFocus() {
 
-		if (window.isShowing() && !isFloatingWindow())
-			return panel.requestFocusInWindow();
-		else
+		if (window.isShowing() && !isFloatingWindow()) {
+			panel.requestFocusInWindow();
+			return true;
+		}
+		else {
 			return false;
+		}
 
 	}
 
@@ -2119,10 +2122,9 @@ g.dispose();
 	public boolean toFront() {
 
 		if (window.isShowing() && !isFloatingWindow()) {
-			boolean ret = panel.requestFocusInWindow();
-			if (ret)
-				window.toFront();
-			return ret;
+			window.toFront();
+			panel.requestFocusInWindow();
+			return true;
 		}
 		else {
 			return false;
