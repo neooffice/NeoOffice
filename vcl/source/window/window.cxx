@@ -9391,7 +9391,11 @@ void Window::EnableNativeWidget( BOOL bEnable )
 
 BOOL Window::IsNativeWidgetEnabled() const
 {
+#ifdef USE_JAVA
+	return TRUE;
+#else
     return ImplGetWinData()->mbEnableNativeWidget;
+#endif
 }
 
 Reference< ::com::sun::star::rendering::XCanvas > Window::GetCanvas() const
