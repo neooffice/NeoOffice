@@ -155,6 +155,7 @@ static VCLBitmapBuffer aSharedHorizontalScrollBarBuffer;
 static VCLBitmapBuffer aSharedVerticalScrollBarBuffer;
 static VCLBitmapBuffer aSharedScrollBarBuffer;
 static VCLBitmapBuffer aSharedSpinboxBuffer;
+static VCLBitmapBuffer aSharedSpinbuttonBuffer;
 static VCLBitmapBuffer aSharedProgressbarBuffer;
 static VCLBitmapBuffer aSharedTabBuffer;
 static VCLBitmapBuffer aSharedTabBoundingBoxBuffer;
@@ -992,6 +993,62 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 // =======================================================================
 
 /**
+ * (static) Draw a spinbutton using Aqua control scaling.  This is a set of
+ * stepper arrows 
+ *
+ * @param pGraphics			pointer into graphics object where spinbutton should
+ *							be painted
+ * @param rDestBounds		destination rectangle where object will be painted
+ * @param nState			overall control state
+ * @param pValue			optional value giving enabled & pressed state for
+ *							subcontrols.
+ * @return TRUE if drawing successful, FALSE if not
+ */
+static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, SpinbuttonValue *pValue )
+{
+	SInt32 spinnerThemeHeight;
+	BOOL bRet = ( GetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight) == noErr );
+	if ( ! bRet )
+		return FALSE;
+	
+	SInt32 spinnerThemeWidth;
+	bRet = ( GetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr );
+	
+	if ( bRet )
+	{
+		int offscreenHeight = spinnerThemeHeight + SPINNER_TRIMHEIGHT * 2;
+		int offscreenWidth = spinnerThemeWidth + ( SPINNER_TRIMWIDTH * 2 );
+		
+		VCLBitmapBuffer *pBuffer = &aSharedSpinbuttonBuffer;
+		BOOL bRet = pBuffer->Create( offscreenWidth, offscreenHeight );
+		if ( bRet )
+		{
+			HIThemeButtonDrawInfo aButtonDrawInfo;
+			InitSpinbuttonDrawInfo( &aButtonDrawInfo, nState, pValue );
+	
+			HIRect arrowRect;
+			arrowRect.origin.x = SPINNER_TRIMWIDTH;
+			if( arrowRect.origin.x < 0 )
+				arrowRect.origin.x = 0;
+			arrowRect.origin.y = SPINNER_TRIMHEIGHT;
+			arrowRect.size.width = spinnerThemeWidth;
+			arrowRect.size.height = spinnerThemeHeight;
+						
+			bRet = ( HIThemeDrawButton( &arrowRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+		}
+	
+		pBuffer->ReleaseContext();
+
+		if ( bRet )
+			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, offscreenWidth, offscreenHeight, rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+	}
+
+	return bRet;
+}
+
+// =======================================================================
+
+/**
  * (static) Draw a progress bar using the native widget appearance.  The
  * progressbar indicates percentage of task completion.
  *
@@ -1404,6 +1461,11 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			if( nPart == PART_ENTIRE_CONTROL || ( nPart == HAS_BACKGROUND_TEXTURE ) )
 				isSupported = TRUE;
 			break;
+		
+		case CTRL_SPINBUTTONS:
+			if( nPart == PART_ENTIRE_CONTROL )
+				isSupported = TRUE;
+			break;
 
 		case CTRL_PROGRESSBAR:
 			if( nPart == PART_ENTIRE_CONTROL )
@@ -1575,6 +1637,15 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
 				SpinbuttonValue *pValue = static_cast<SpinbuttonValue *> ( aValue.getOptionalVal() );
 				bOK = DrawNativeSpinbox( this, buttonRect, nState, pValue );
+			}
+			break;
+		
+		case CTRL_SPINBUTTONS:
+			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == PART_ALL_BUTTONS ) )
+			{
+				Rectangle buttonRect = rControlRegion.GetBoundRect();
+				SpinbuttonValue *pValue = static_cast<SpinbuttonValue *> ( aValue.getOptionalVal() );
+				bOK = DrawNativeSpinbutton( this, buttonRect, nState, pValue );
 			}
 			break;
 
@@ -1981,6 +2052,35 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							}
 							break;
 					}
+				}
+			}
+			break;
+		
+		case CTRL_SPINBUTTONS:
+			{
+				Rectangle spinbuttonRect = rControlRegion.GetBoundRect();
+
+				switch( nPart )
+				{
+					case PART_BUTTON_UP:
+						{
+							Point topLeft( (long)(spinbuttonRect.Left()), (long)(spinbuttonRect.Top()) );
+							Size boundsSize( (long)(spinbuttonRect.GetWidth()), (long)(spinbuttonRect.GetHeight() / 2) );
+							rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+							rNativeContentRegion = Region( rNativeBoundingRegion );
+							bReturn = TRUE;
+						}
+						break;
+
+					case PART_BUTTON_DOWN:
+						{
+							Point topLeft( (long)(spinbuttonRect.Left()), (long)(spinbuttonRect.Top()+(spinbuttonRect.GetHeight() / 2)) );
+							Size boundsSize( (long)(spinbuttonRect.GetWidth()), (long)(spinbuttonRect.GetHeight() / 2) );
+							rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+							rNativeContentRegion = Region( rNativeBoundingRegion );
+							bReturn = TRUE;
+						}
+						break;
 				}
 			}
 			break;

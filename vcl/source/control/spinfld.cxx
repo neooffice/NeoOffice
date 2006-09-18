@@ -162,8 +162,16 @@ BOOL ImplDrawNativeSpinbuttons( Window *pWin, const SpinbuttonValue& rSpinbutton
         aControlValue.setOptionalVal( (void*) &rSpinbuttonValue );
 
         // only paint the standalone spin buttons, all buttons are painted at once
+#ifdef USE_JAVA
+		Point aPt;
+		Size aSize( pWin->GetOutputSizePixel() );
+		Region aRgn( Rectangle( aPt, aSize ) );
+		bNativeOK = pWin->DrawNativeControl( CTRL_SPINBUTTONS, PART_ALL_BUTTONS, aRgn, CTRL_STATE_ENABLED,
+                    aControlValue, rtl::OUString() );
+#else
         bNativeOK = pWin->DrawNativeControl( CTRL_SPINBUTTONS, PART_ALL_BUTTONS, Region(), CTRL_STATE_ENABLED,
                     aControlValue, rtl::OUString() );
+#endif
     }
     return bNativeOK;
 }
