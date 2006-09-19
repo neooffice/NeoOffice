@@ -60,7 +60,7 @@ public:
 	static jclass		getMyClass();
 
 						com_sun_star_vcl_VCLFont( jobject myObj, int nNativeFont ) : java_lang_Object( myObj ), mnNativeFont( nNativeFont ) {}
-						com_sun_star_vcl_VCLFont( ::rtl::OUString aFontName, long nSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX, int nNativeFont );
+						com_sun_star_vcl_VCLFont( ::rtl::OUString aFontName, long nSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX, int nNativeFont, sal_Bool bBold, sal_Bool bItalic );
 
 	com_sun_star_vcl_VCLFont*	deriveFont( short _par0, sal_Bool _par1, sal_Bool _par2, double _par3 );
 	long				getAscent();
@@ -74,6 +74,8 @@ public:
 	double				getScaleX();
 	long				getSize();
 	sal_Bool			isAntialiased();
+	sal_Bool			isBold();
+	sal_Bool			isItalic();
 	sal_Bool			isVertical();
 };
 
