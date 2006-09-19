@@ -1397,7 +1397,9 @@ void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
                 aRequest.aOpenList = aData;
 
             // Fix bug 1456 by allowing any pending application events to
-            // dispatch first
+            // dispatch first. Starting with OOo 2.0.3, we have to invoke
+			// this fix twice.
+            Application::Reschedule();
             Application::Reschedule();
 
             OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
