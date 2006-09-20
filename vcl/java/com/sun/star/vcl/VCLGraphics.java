@@ -41,7 +41,6 @@ import java.awt.Composite;
 import java.awt.CompositeContext;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.Panel;
@@ -969,7 +968,6 @@ public final class VCLGraphics {
 			try {
 				// The graphics may adjust the font
 				Font f = font.getFont();
-				FontMetrics fm = g.getFontMetrics(f);
 				g.setFont(f);
 
 				RenderingHints hints = g.getRenderingHints();

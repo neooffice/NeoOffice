@@ -590,7 +590,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 				::std::map< int, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( (int)nFontID );
 				if ( it != pSalData->maNativeFontMapping.end() )
 				{
-					mpFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpHash->mnFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX, 0, mpVCLFont->isBold(), mpVCLFont->isItalic() );
+					mpFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpHash->mnFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX, 0 );
 				}
 				else
 				{

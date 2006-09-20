@@ -37,7 +37,6 @@ package com.sun.star.vcl;
 
 import java.awt.Font;
 import java.awt.FontFormatException;
-import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.image.BufferedImage;
@@ -156,13 +155,10 @@ public final class VCLFont {
 	 *  to disable antialiasing
 	 * @param v <code>true</code> if the font is vertical 
 	 * @param x the X axis scale factor
-	 * @param b <code>true</code> to bold the font otherwise <code>false</code>
-	 * @param i <code>true</code> to italicize the font otherwise
-	 *  <code>false</code>
 	 */
-	public VCLFont(String n, int s, short o, boolean a, boolean v, double x, boolean b, boolean i) throws FontFormatException {
+	public VCLFont(String n, int s, short o, boolean a, boolean v, double x) throws FontFormatException {
 
-		this(new Font(n, (b && i ? Font.BOLD | Font.ITALIC : (b ? Font.BOLD : (i ? Font.ITALIC : Font.PLAIN))), s), s, o, a, v, x);
+		this(new Font(n, Font.PLAIN, s), s, o, a, v, x);
 
 	}
 
@@ -258,28 +254,6 @@ public final class VCLFont {
 	public boolean isAntialiased() {
 
 		return antialiased;
-
-	}
-
-	/**
-	 * Indicates whether or not the <code>Font</code> is bold.
-	 *
-	 * @return <code>true</code> if the <code>Font</code> is bold
-	 */
-	public boolean isBold() {
-
-		return ((font.getStyle() & Font.BOLD) != 0);
-
-	}
-
-	/**
-	 * Indicates whether or not the <code>Font</code> is italic.
-	 *
-	 * @return <code>true</code> if the <code>Font</code> is italic
-	 */
-	public boolean isItalic() {
-
-		return ((font.getStyle() & Font.ITALIC) != 0);
 
 	}
 
