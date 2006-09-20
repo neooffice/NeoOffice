@@ -98,29 +98,9 @@ public final class VCLFont {
 	private boolean antialiased = false;
 
 	/**
-	 * The cached ascent.
-	 */
-	private int ascent = 0;
-
-	/**
-	 * The cached descent.
-	 */
-	private int descent = 0;
-
-	/**
 	 * The cached font.
 	 */
 	private Font font = null;
-
-	/**
-	 * The cached font metrics.
-	 */
-	private FontMetrics fontMetrics = null;
-
-	/**
-	 * The cached leading.
-	 */
-	private int leading = 0;
 
 	/**
 	 * The cached orientation.
@@ -163,33 +143,6 @@ public final class VCLFont {
 
 		// Cache font and font metrics
 		font = f.deriveFont((float)size);
-		Graphics2D g = VCLFont.image.createGraphics();
-		if (g != null)
-		{
-			try {
-				fontMetrics = g.getFontMetrics(font);
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			g.dispose();
-		}
-
-		// Get size metrics
-		if (fontMetrics != null) {
-			ascent = fontMetrics.getMaxAscent();
-			descent = fontMetrics.getMaxDescent();
-			leading = fontMetrics.getLeading();
-			if (ascent < 0)
-				ascent *= -1;
-			if (descent < 0)
-				descent *= -1;
-			if (leading < 0)
-				leading *= -1;
-		}
-
-		// Mac OS X seems to understate the actual advance
-		ascent++;
 
 	}
 
@@ -232,28 +185,6 @@ public final class VCLFont {
 	}
 
 	/**
-	 * Determines the font ascent of the <code>Font</code>.
-	 *
-	 * @return the font ascent of the <code>Font</code>
-	 */
-	public int getAscent() {
-
-		return ascent;
-
-	}
-
-	/**
-	 * Determines the font descent of the <code>Font</code>.
-	 *
-	 * @return the font descent of the <code>Font</code>
-	 */
-	public int getDescent() {
-
-		return descent;
-
-	}
-
-	/**
 	 * Returns the <code>Font</code>.
 	 *
 	 * @return the <code>Font</code>
@@ -261,40 +192,6 @@ public final class VCLFont {
 	Font getFont() {
 
 		return font;
-
-	}
-
-	/**
-	 * Determines the kerning adjustment for the specified characters.
-	 *
-	 * @param a the first character
-	 * @param b the second character
-	 * @return the kerning adjustment for the specified characters
-	 */
-	public int getKerning(char a, char b) {
-
-		// Get width without kerning
-		int width = 0;
-		if (Character.getType(a) != Character.NON_SPACING_MARK || !font.canDisplay(a))
-			width += fontMetrics.charWidth(a);
-		if (Character.getType(b) != Character.NON_SPACING_MARK || !font.canDisplay(b))
-			width += fontMetrics.charWidth(b);
-
-		// Subtract the width with kerning
-		width -= fontMetrics.charsWidth(new char[]{ a, b }, 0, 2);
-
-		return width;
-
-	}
-
-	/**
-	 * Determines the standard leading of the <code>Font</code>.
-	 *
-	 * @return the standard leading of the <code>Font</code>
-	 */
-	public int getLeading() {
-
-		return leading;
 
 	}
 

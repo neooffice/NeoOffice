@@ -53,9 +53,18 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLIMAGE_HXX
 #include <com/sun/star/vcl/VCLImage.hxx>
 #endif
+#ifndef _VOS_MODULE_HXX_
+#include <vos/module.hxx>
+#endif
 
 #include "VCLGraphics_cocoa.h"
 
+typedef void Java_apple_awt_CTextPipe_doDrawGlyphs_Type( JNIEnv *pEnv, jobject object, jobject _par0, jobject _par1, jfloat _par2, jfloat _par3 );
+ 
+static ::vos::OModule aModule;
+static Java_apple_awt_CTextPipe_doDrawGlyphs_Type *pDoDrawGlyphs = NULL;
+static ::osl::Mutex aDoDrawGlyphsMutex;
+static CFStringRef aDoDrawFontName = NULL;
 static ::std::list< CGImageRef > aCGImageList;
 static ::osl::Mutex aBitmapBufferMutex;
 static ::std::map< BitmapBuffer*, USHORT > aBitmapBufferMap;
@@ -65,7 +74,80 @@ using namespace rtl;
 using namespace vcl;
 
 // ============================================================================
+
+static void JNICALL Java_apple_awt_CTextPipe_doDrawGlyphs( JNIEnv *pEnv, jobject object, jobject _par0, jobject _par1, jfloat _par2, jfloat _par3 )
+{
+	if ( !pDoDrawGlyphs )
+		return;
+
+	MutexGuard aGuard( aDoDrawGlyphsMutex );
+
+	jclass glyphVectorClass = pEnv->GetObjectClass( _par1 );
+	if ( glyphVectorClass )
+	{
+		static jmethodID mIDGetFont = NULL;
+		if ( !mIDGetFont )
+		{
+			char *cSignature = "()Ljava/awt/Font;";
+			mIDGetFont = pEnv->GetMethodID( glyphVectorClass, "getFont", cSignature );
+		}
+		OSL_ENSURE( mIDGetFont, "Unknown method id!" );
+		if ( mIDGetFont )
+		{
+			jobject fontObj = pEnv->CallObjectMethod( _par1, mIDGetFont );
+			if ( fontObj )
+			{
+				jclass fontClass = pEnv->GetObjectClass( fontObj );
+				if ( fontClass )
+				{
+					static jmethodID mIDGetPSName = NULL;
+					if ( !mIDGetPSName )
+					{
+						char *cSignature = "()Ljava/lang/String;";
+						mIDGetPSName = pEnv->GetMethodID( fontClass, "getPSName", cSignature );
+					}
+					OSL_ENSURE( mIDGetPSName, "Unknown method id!" );
+					if ( mIDGetPSName )
+					{
+						jstring psName = (jstring)pEnv->CallObjectMethod( fontObj, mIDGetPSName );
+						if ( psName )
+						{
+							// Cache the name of the selected font so that our
+							// fix for bug 1685 in the VCLGraphics_cocoa.m file
+							// can correctly set the font 
+							jboolean bCopy( sal_True );
+							const jchar *pChar = pEnv->GetStringChars( psName, &bCopy );
+							jsize len = pEnv->GetStringLength( psName );
+							aDoDrawFontName = CFStringCreateWithCharacters( NULL, pChar, len );
+							pEnv->ReleaseStringChars( psName, pChar );
+
+							// Do the real JVM call
+							pDoDrawGlyphs( pEnv, object, _par0, _par1, _par2, _par3 );
+
+							if ( aDoDrawFontName )
+							{
+								CFRelease( aDoDrawFontName );
+								aDoDrawFontName = NULL;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
  
+CFStringRef GetDoDrawFontName()
+{
+	MutexGuard aGuard( aDoDrawGlyphsMutex );
+
+	return aDoDrawFontName;
+}
+
+// ============================================================================
+
 static void ReleaseBytePointerCallback( void *pInfo, const void *pPointer, size_t nSize )
 {
 	BYTE *pBits = (BYTE *)pPointer;
@@ -311,6 +393,48 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 	{
 		VCLThreadAttach t;
 		if ( !t.pEnv ) return (jclass)NULL;
+
+		// Cache existing functions from libawt.jnilib
+		jclass systemClass = t.pEnv->FindClass( "java/lang/System" );
+		if ( systemClass )
+		{
+			// Find libawt.jnilib
+			jmethodID mID = NULL;
+			OUString aJavaHomePath;
+			if ( !mID )
+			{
+				char *cSignature = "(Ljava/lang/String;)Ljava/lang/String;";
+				mID = t.pEnv->GetStaticMethodID( systemClass, "getProperty", cSignature );
+			}
+			OSL_ENSURE( mID, "Unknown method id!" );
+			if ( mID )
+			{
+				jvalue args[1];
+				args[0].l = StringToJavaString( t.pEnv, OUString::createFromAscii( "java.home" ) );
+				jstring out = (jstring)t.pEnv->CallStaticObjectMethodA( systemClass, mID, args );
+				if ( out )
+					aJavaHomePath = JavaString2String( t.pEnv, out );
+			}
+
+			if ( aJavaHomePath.getLength() )
+			{
+				OUString aAWTPath( aJavaHomePath );
+				aAWTPath += OUString::createFromAscii( "/../Libraries/libawt.jnilib" );
+				if ( aModule.load( aAWTPath ) )
+					pDoDrawGlyphs = (Java_apple_awt_CTextPipe_doDrawGlyphs_Type *)aModule.getSymbol( OUString::createFromAscii( "Java_apple_awt_CTextPipe_doDrawGlyphs" ) );
+			}
+		}
+
+		jclass aTextPipeClass = t.pEnv->FindClass( "apple/awt/CTextPipe" );
+		if ( aTextPipeClass )
+		{
+			JNINativeMethod aMethod;
+			aMethod.name = "doDrawGlyphs";
+			aMethod.signature = "(Lsun/java2d/SurfaceData;Ljava/awt/font/GlyphVector;FF)V";
+			aMethod.fnPtr = (void *)Java_apple_awt_CTextPipe_doDrawGlyphs;
+			t.pEnv->RegisterNatives( aTextPipeClass, &aMethod, 1 );
+		}
+
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLGraphics" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
 

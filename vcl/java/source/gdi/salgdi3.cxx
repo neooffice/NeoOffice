@@ -587,25 +587,36 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 	if ( mpVCLFont )
 	{
 		pMetric->mnWidth = mpVCLFont->getSize();
-		pMetric->mnAscent = mpVCLFont->getAscent();
-		pMetric->mnDescent = mpVCLFont->getDescent();
-		pMetric->mnIntLeading = mpVCLFont->getLeading();
 		pMetric->mnOrientation = mpVCLFont->getOrientation();
 	}
 	else
 	{
 		pMetric->mnWidth = 0;
-		pMetric->mnAscent = 0;
-		pMetric->mnDescent = 0;
-		pMetric->mnIntLeading = 0;
 		pMetric->mnOrientation = 0;
 	}
 
 	if ( pData )
 	{
+		ATSFontMetrics aFontMetrics;
+		ATSFontRef aFont = FMGetATSFontRefFromFont( pData->mnATSUFontID );
+		if ( mpVCLFont && ATSFontGetHorizontalMetrics( aFont, kATSOptionFlagsDefault, &aFontMetrics ) == noErr )
+		{
+			pMetric->mnAscent = (long)( ( fabs( aFontMetrics.ascent ) * mpVCLFont->getSize() ) + 0.5 );
+			pMetric->mnDescent = (long)( ( fabs( aFontMetrics.descent ) * mpVCLFont->getSize() ) + 0.5 );
+			pMetric->mnIntLeading = (long)( ( fabs( aFontMetrics.leading ) * mpVCLFont->getSize() ) + 0.5 );
+
+			// Mac OS X seems to understate the actual ascent
+			pMetric->mnAscent++;
+		}
+		else
+		{
+			pMetric->mnAscent = 0;
+			pMetric->mnDescent = 0;
+			pMetric->mnIntLeading = 0;
+		}
+
 		pMetric->mbDevice = pData->mbDevice;
 		pMetric->mbScalableFont = true;
-		pMetric->mbKernableFont = true;
 		pMetric->maName = pData->GetFamilyName();
 		pMetric->maStyleName = pData->GetStyleName();
 		pMetric->meWeight = pData->GetWeight();
@@ -616,9 +627,13 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 	}
 	else
 	{
+		pMetric->mnAscent = 0;
+		pMetric->mnDescent = 0;
+		pMetric->mnIntLeading = 0;
+		pMetric->mnSlant = 0;
+
 		pMetric->mbDevice = false;
 		pMetric->mbScalableFont = false;
-		pMetric->mbKernableFont = false;
 		pMetric->maName = String();
 		pMetric->maStyleName = String();
 		pMetric->meWeight = WEIGHT_NORMAL;
@@ -628,6 +643,7 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 		pMetric->mbSymbolFlag = false;
 	}
 
+	pMetric->mbKernableFont = false;
 	pMetric->mnExtLeading = 0;
 	pMetric->mnSlant = 0;
 }
@@ -636,17 +652,7 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 
 ULONG JavaSalGraphics::GetKernPairs( ULONG nPairs, ImplKernPairData* pKernPairs )
 {
-	if ( !mpVCLFont )
-		return 0;
-	
-	ImplKernPairData *pPair = pKernPairs;
-	for ( ULONG i = 0; i < nPairs; i++ )
-	{
-		pPair->mnKern = mpVCLFont->getKerning( pPair->mnChar1, pPair->mnChar2 );
-		pPair++;
-	}
-
-	return nPairs;
+	return 0;
 }
 
 // -----------------------------------------------------------------------

@@ -47,6 +47,7 @@
 #ifdef __cplusplus
 BEGIN_C
 #endif
+CFStringRef GetDoDrawFontName();
 void CGImageRef_drawInRect( CGImageRef aImage, float fX, float fY, float fWidth, float fHeight, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread );
 void NSEPSImageRep_drawInRect( void *pPtr, unsigned nSize, float fX, float fY, float fWidth, float fHeight, BOOL bDrawInMainThread );
 #ifdef __cplusplus

@@ -63,10 +63,6 @@ public:
 						com_sun_star_vcl_VCLFont( ::rtl::OUString aFontName, long nSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX, int nNativeFont, sal_Bool bBold, sal_Bool bItalic );
 
 	com_sun_star_vcl_VCLFont*	deriveFont( short _par0, sal_Bool _par1, sal_Bool _par2, double _par3 );
-	long				getAscent();
-	long				getDescent();
-	long				getKerning( USHORT _par0, USHORT _par1 );
-	long				getLeading();
 	::rtl::OUString		getName();
 	sal_IntPtr			getNativeFont();
 	short				getOrientation();

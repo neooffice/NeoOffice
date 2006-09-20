@@ -36,6 +36,80 @@
 #import <Cocoa/Cocoa.h>
 #import "VCLGraphics_cocoa.h"
 
+// Fix for bug 1685. Java 1.5 and higher will arbitrarily change the selected
+// font based on the Java font style. As a result, fonts with custom widths
+// and weights can never be drawn. To fix this bug, I used gdb to find where
+// the CGFontCreateWithPlatformFont() function is called and created a
+// custom implementation of the closest Cocoa class in the stack. The closest
+// Cocoa class is AWTFont and, by creating a custom reimplementation of the
+// that class in this library, our version of the class will be used by the
+// Objective-C runtime instead of the JVM's.
+
+@interface AWTFont : NSObject
+{
+	NSFont*				fFont;
+	float*				fTransform;
+	float				fPointSize;
+	NSCharacterSet*		fCharacterSet;
+	CGFontRef			fNativeCGFont;
+}
++ (id)fontWithFont:(NSFont *)pFont matrix:(float *)pTransform;
+- (id)initWithFont:(NSFont *)pFont matrix:(float *)pTransform;
+- (void)dealloc;
+@end
+
+@implementation AWTFont
+
++ (id)fontWithFont:(NSFont *)pFont matrix:(float *)pTransform
+{
+	return [[AWTFont alloc] initWithFont:pFont matrix:pTransform];
+}
+
+- (id)initWithFont:(NSFont *)pFont matrix:(float *)pTransform
+{
+	[super init];
+
+	// Check if we are in the doDrawGlyphs method
+	CFStringRef aDoDrawFontName = GetDoDrawFontName();
+	if ( aDoDrawFontName && pFont )
+		pFont = [NSFont fontWithName:(NSString *)aDoDrawFontName size:[pFont pointSize]];
+
+	fFont = pFont;
+	if ( fFont )
+	{
+		[fFont retain];
+		fPointSize = [fFont pointSize];
+		fCharacterSet = [fFont coveredCharacterSet];
+		if ( fCharacterSet )
+			[fCharacterSet retain];
+
+		if ( [fFont respondsToSelector:@selector(_atsFontID)] )
+		{
+            ATSFontRef aATSFont = (ATSFontRef)[fFont _atsFontID];
+			fNativeCGFont = CGFontCreateWithPlatformFont( (void *)&aATSFont );
+		}
+	}
+
+	fTransform = pTransform;
+
+	return self;
+}
+
+- (void)dealloc
+{
+	if ( fFont )
+		[fFont release];
+
+	if ( fCharacterSet )
+		[fCharacterSet release];
+
+	CGFontRelease( fNativeCGFont );
+
+	[super dealloc];
+}
+
+@end
+
 @interface FlippedView : NSView
 - (BOOL)isFlipped;
 @end
