@@ -662,36 +662,41 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 				int nItems = 0;
 				MenuCommand aIDs[ 8 ];
 				CFStringRef aStrings[ 8 ];
-				OUString aDesc;
+				XubString aDesc;
 				if ( aModuleOptions.IsWriter() )
 				{
 					aIDs[ nItems ] = WRITER_COMMAND_ID;
-					aDesc = GetUrlDescription( OUString::createFromAscii( WRITER_URL ) );
-					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+					aDesc = XubString( GetUrlDescription( OUString::createFromAscii( WRITER_URL ) ) );
+					aDesc.EraseAllChars( '~' );
+					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
 				}
 				if ( aModuleOptions.IsCalc() )
 				{
 					aIDs[ nItems ] = CALC_COMMAND_ID;
-					aDesc = GetUrlDescription( OUString::createFromAscii( CALC_URL ) );
-					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+					aDesc = XubString( GetUrlDescription( OUString::createFromAscii( CALC_URL ) ) );
+					aDesc.EraseAllChars( '~' );
+					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
 				}
 				if ( aModuleOptions.IsImpress() )
 				{
 					aIDs[ nItems ] = IMPRESS_COMMAND_ID;
-					aDesc = GetUrlDescription( OUString::createFromAscii( IMPRESS_URL ) );
-					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+					aDesc = XubString( GetUrlDescription( OUString::createFromAscii( IMPRESS_URL ) ) );
+					aDesc.EraseAllChars( '~' );
+					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
 				}
 				if ( aModuleOptions.IsDraw() )
 				{
 					aIDs[ nItems ] = DRAW_COMMAND_ID;
-					aDesc = GetUrlDescription( OUString::createFromAscii( DRAW_URL ) );
-					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+					aDesc = XubString( GetUrlDescription( OUString::createFromAscii( DRAW_URL ) ) );
+					aDesc.EraseAllChars( '~' );
+					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
 				}
 				if ( aModuleOptions.IsMath() )
 				{
 					aIDs[ nItems ] = MATH_COMMAND_ID;
-					aDesc = GetUrlDescription( OUString::createFromAscii( MATH_URL ) );
-					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+					aDesc = XubString( GetUrlDescription( OUString::createFromAscii( MATH_URL ) ) );
+					aDesc.EraseAllChars( '~' );
+					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
 				}
 				if ( aModuleOptions.IsDataBase() )
 				{
@@ -713,16 +718,20 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 						if ( aURL.equalsAscii( BASE_URL ) && aDescription.getLength() )
 						{
 							aIDs[ nItems ] = BASE_COMMAND_ID;
-							aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDescription.getStr(), aDescription.getLength() );
+							aDesc = XubString( aDescription );
+							aDesc.EraseAllChars( '~' );
+							aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
 						}
 					}
 				}
 				aIDs[ nItems ] = FROMTEMPLATE_COMMAND_ID;
-				aDesc = GetResString( STR_QUICKSTART_FROMTEMPLATE );
-				aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+				aDesc = XubString( GetResString( STR_QUICKSTART_FROMTEMPLATE ) );
+				aDesc.EraseAllChars( '~' );
+				aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
 				aIDs[ nItems ] = FILEOPEN_COMMAND_ID;
-				aDesc = GetResString( STR_QUICKSTART_FILEOPEN );
-				aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.getStr(), aDesc.getLength() );
+				aDesc = XubString( GetResString( STR_QUICKSTART_FILEOPEN ) );
+				aDesc.EraseAllChars( '~' );
+				aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
 
 				ULONG nCount = Application::ReleaseSolarMutex();
 				AddQuickstartMenuItems( nItems, aIDs, aStrings );
