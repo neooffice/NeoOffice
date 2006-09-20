@@ -594,7 +594,7 @@ static NSString *pBlankItem = @" ";
 									for ( ; i < nCount; i++ )
 									{
 										NSString *pCurrentType = (NSString *)[pArray objectAtIndex:i];
-										if ( pCurrentType && ( [pCurrentType isEqualToString:@"*"] || [pCurrentType isEqualToString:pExt] ) )
+										if ( pCurrentType && ( [pCurrentType isEqualToString:@"*"] || [pCurrentType caseInsensitiveCompare:pExt] == NSOrderedSame ) )
 										{
 											bRet = YES;
 											break;
