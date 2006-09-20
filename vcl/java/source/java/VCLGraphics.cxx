@@ -433,6 +433,11 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 			aMethod.signature = "(Lsun/java2d/SurfaceData;Ljava/awt/font/GlyphVector;FF)V";
 			aMethod.fnPtr = (void *)Java_apple_awt_CTextPipe_doDrawGlyphs;
 			t.pEnv->RegisterNatives( aTextPipeClass, &aMethod, 1 );
+
+			// Java 1.4.x has a different signature but we bug 1685 does not
+			// occur with Java 1.4.x so ignore any exception
+			if ( t.pEnv->ExceptionCheck() )
+				t.pEnv->ExceptionClear();
 		}
 
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLGraphics" );
