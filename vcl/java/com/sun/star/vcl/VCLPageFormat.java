@@ -306,6 +306,17 @@ public final class VCLPageFormat {
 	}
 
 	/**
+	 * Set the number of copies.
+	 *
+	 * @param n the number of copies
+	 */
+	public void setCopies(int n) {
+
+		job.setCopies(n);
+
+	}
+
+	/**
 	 * Set the page orientation.
 	 *
 	 * @param o the page orientation

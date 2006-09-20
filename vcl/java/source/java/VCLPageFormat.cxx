@@ -601,6 +601,29 @@ const Size com_sun_star_vcl_VCLPageFormat::getTextResolution()
 
 // ----------------------------------------------------------------------------
 
+void com_sun_star_vcl_VCLPageFormat::setCopies( int _par0 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(I)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "setCopies", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[1];
+			args[0].i = jint( _par0 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLPageFormat::setOrientation( Orientation _par0 )
 {
 	static jmethodID mID = NULL;

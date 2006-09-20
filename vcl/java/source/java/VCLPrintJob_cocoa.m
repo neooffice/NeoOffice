@@ -38,11 +38,13 @@
 
 @interface ShowPrintDialog : NSObject
 {
+	int						mnCopies;
 	BOOL					mbFinished;
 	NSPrintInfo*			mpInfo;
 	BOOL					mbResult;
 	NSWindow*				mpWindow;
 }
+- (int)copies;
 - (BOOL)finished;
 - (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow;
 - (BOOL)result;
@@ -50,6 +52,11 @@
 @end
 
 @implementation ShowPrintDialog
+
+- (int)copies
+{
+	return mnCopies;
+}
 
 - (BOOL)finished
 {
@@ -60,6 +67,7 @@
 {
 	[super init];
 
+	mnCopies = 1;
 	mbFinished = YES;
 	mpInfo = pInfo;
 	mbResult = NO;
@@ -73,9 +81,25 @@
 	NSPrintInfo_setInDialog( NO );
 	mbFinished = YES;
 	if ( nCode == NSOKButton )
+	{
 		mbResult = YES;
+
+		NSMutableDictionary *pDictionary = [(NSPrintInfo *)mpInfo dictionary];
+		if ( pDictionary )
+		{
+			NSNumber *pNumber = [pDictionary objectForKey:NSPrintCopies];
+			if ( pNumber )
+			{
+				mnCopies = [pNumber intValue];
+				if ( mnCopies < 1 )
+					mnCopies = 1;
+			}
+		}
+	}
 	else
+	{
 		mbResult = NO;
+	}
 }
 
 - (BOOL)result
@@ -196,6 +220,20 @@ id NSPrintInfo_showPrintDialog( id pNSPrintInfo, id pNSWindow )
 	[pPool release];
 
 	return pRet;
+}
+
+int NSPrintPanel_copies( id pDialog )
+{
+	int nRet = 1;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pDialog )
+		nRet = [(ShowPrintDialog *)pDialog copies];
+
+	[pPool release];
+
+	return nRet;
 }
 
 BOOL NSPrintPanel_finished( id pDialog )
