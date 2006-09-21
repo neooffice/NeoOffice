@@ -1500,7 +1500,7 @@ public final class VCLGraphics {
 			bounds.width++;
 			bounds.height = height + 1;
 		}
-		else if (bounds.height != height) {
+		else if (bounds.height != height && height > 0) {
 			bounds.height = height;
 		}
 		bounds.y += (height - bounds.height) / 2;
