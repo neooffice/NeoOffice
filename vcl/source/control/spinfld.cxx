@@ -97,7 +97,7 @@ void ImplGetSpinbuttonValue( Window *pWin, const Rectangle& rUpperRect,
 }
 
 
-BOOL ImplDrawNativeSpinfield( Window *pWin, const SpinbuttonValue& rSpinbuttonValue )
+BOOL ImplDrawNativeSpinfield( Window *pWin, const SpinbuttonValue& rSpinbuttonValue, BOOL bInDropDown = FALSE )
 {
     BOOL bNativeOK = FALSE;
 
@@ -149,6 +149,23 @@ BOOL ImplDrawNativeSpinfield( Window *pWin, const SpinbuttonValue& rSpinbuttonVa
             pBorder->SetClipRegion( oldRgn );
         }
     }
+#ifdef USE_JAVA
+	// on OS X, render spinfields with dropdowns as combo boxes
+	else if( (pWin->GetStyle() & WB_DROPDOWN) && pWin->IsNativeControlSupported(CTRL_COMBOBOX, PART_ENTIRE_CONTROL) )
+	{
+		Window *pBorder = pWin->GetWindow( WINDOW_BORDER );
+		Point aPt;
+		Size aSize( pBorder->GetOutputSizePixel() );
+		Region aRgn( Rectangle( aPt, aSize ) );
+		ImplControlValue aControlValue;
+		ControlState nState = 0;
+		if( pWin->IsEnabled() )
+			nState |= CTRL_STATE_ENABLED;
+		if( bInDropDown )
+			nState |= CTRL_STATE_PRESSED;
+		bNativeOK = pBorder->DrawNativeControl( CTRL_COMBOBOX, PART_ENTIRE_CONTROL, aRgn, nState, aControlValue, rtl::OUString() );
+	}
+#endif
     return bNativeOK;
 }
 
@@ -176,12 +193,39 @@ BOOL ImplDrawNativeSpinbuttons( Window *pWin, const SpinbuttonValue& rSpinbutton
     return bNativeOK;
 }
 
+#ifdef USE_JAVA
+
+static void ImplDrawSpinButton( OutputDevice* pOutDev,
+						 const Rectangle& rUpperRect,
+						 const Rectangle& rLowerRect,
+						 BOOL bUpperIn, BOOL bLowerIn,
+						 BOOL bUpperEnabled, BOOL bLowerEnabled, BOOL bHorz, BOOL bMirrorHorz,
+						 BOOL bInDropDown = FALSE);
+
 void ImplDrawSpinButton( OutputDevice* pOutDev,
 						 const Rectangle& rUpperRect,
 						 const Rectangle& rLowerRect,
 						 BOOL bUpperIn, BOOL bLowerIn,
 						 BOOL bUpperEnabled, BOOL bLowerEnabled, BOOL bHorz, BOOL bMirrorHorz )
 {
+	ImplDrawSpinButton( pOutDev, rUpperRect, rLowerRect, bUpperIn, bLowerIn, bUpperEnabled, bLowerEnabled, bHorz, bMirrorHorz, FALSE );
+}
+
+static void ImplDrawSpinButton( OutputDevice* pOutDev,
+						 const Rectangle& rUpperRect,
+						 const Rectangle& rLowerRect,
+						 BOOL bUpperIn, BOOL bLowerIn,
+						 BOOL bUpperEnabled, BOOL bLowerEnabled, BOOL bHorz, BOOL bMirrorHorz,
+						 BOOL bInDropDown )
+{
+#else
+void ImplDrawSpinButton( OutputDevice* pOutDev,
+						 const Rectangle& rUpperRect,
+						 const Rectangle& rLowerRect,
+						 BOOL bUpperIn, BOOL bLowerIn,
+						 BOOL bUpperEnabled, BOOL bLowerEnabled, BOOL bHorz, BOOL bMirrorHorz )
+{
+#endif // ifdef USE_JAVA
 	DecorationView aDecoView( pOutDev );
 
 	USHORT nStyle = BUTTON_DRAW_NOLEFTLIGHTBORDER;
@@ -257,7 +301,11 @@ void ImplDrawSpinButton( OutputDevice* pOutDev,
                                 bHorz, aValue );
 
         if( aControl == CTRL_SPINBOX )
+#ifdef USE_JAVA
+            bNativeOK = ImplDrawNativeSpinfield( pWin, aValue, bInDropDown );
+#else
             bNativeOK = ImplDrawNativeSpinfield( pWin, aValue );
+#endif
         else if( aControl == CTRL_SPINBUTTONS )
             bNativeOK = ImplDrawNativeSpinbuttons( pWin, aValue );
     }
@@ -353,8 +401,12 @@ void SpinField::ImplInit( Window* pParent, WinBits nWinStyle )
 		// Some themes want external spin buttons, therefore the main
 		// spinfield should not overdraw the border between its encapsulated
 		// edit field and the spin buttons
+#ifdef USE_JAVA
+		if ( ImplUseNativeBorder( nWinStyle ) ) 
+#else
 		if ( (nWinStyle & WB_SPIN) && ImplUseNativeBorder( nWinStyle ) ) 
-		{
+#endif
+{
 			SetBackground();
 			mpEdit = new Edit( this, WB_NOBORDER );
 			mpEdit->SetBackground();
@@ -487,6 +539,14 @@ void SpinField::MouseButtonDown( const MouseEvent& rMEvt )
 		{
 			// Rechts daneben liegt der DropDownButton:
 			mbInDropDown = ShowDropDown( mbInDropDown ? FALSE : TRUE );
+#ifdef USE_JAVA
+			if ( IsNativeControlSupported( CTRL_COMBOBOX, PART_ENTIRE_CONTROL ) )
+			{
+				GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+				GetParent()->Update();
+			}
+			else
+#endif
 			Paint( Rectangle( Point(), GetOutputSizePixel() ) );
 		}
 
@@ -726,6 +786,15 @@ void SpinField::Paint( const Rectangle& rRect )
 
 	if ( GetStyle() & WB_DROPDOWN )
 	{
+#ifdef USE_JAVA
+		if( IsNativeControlSupported( CTRL_COMBOBOX, PART_ENTIRE_CONTROL ) )
+		{
+			BOOL	bEnable = IsEnabled();
+			ImplDrawSpinButton( this, maUpperRect, maLowerRect, mbUpperIn, mbLowerIn, bEnable, bEnable, FALSE, FALSE, mbInDropDown );
+		}
+		else
+		{
+#endif
 		DecorationView aView( this );
 
 		USHORT nStyle = BUTTON_DRAW_NOLIGHTBORDER;
@@ -739,6 +808,9 @@ void SpinField::Paint( const Rectangle& rRect )
 
 		nStyle = IsEnabled() ? 0 : SYMBOL_DRAW_DISABLE;
 		aView.DrawSymbol( aInnerRect, eSymbol, GetSettings().GetStyleSettings().GetButtonTextColor(), nStyle );
+#ifdef USE_JAVA
+		}
+#endif
 	}
 
 	Edit::Paint( rRect );
@@ -1133,6 +1205,9 @@ void SpinField::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, 
 
 		if ( GetStyle() & WB_DROPDOWN )
 		{
+#ifdef USE_JAVA
+			ImplDrawSpinButton( pDev, aUp, aDown, FALSE, FALSE, TRUE, TRUE, mbInDropDown );
+#else
 			DecorationView aView( pDev );
 			USHORT nStyle = BUTTON_DRAW_NOLIGHTBORDER;
 			Rectangle aInnerRect = aView.DrawButton( aDD, nStyle );
@@ -1142,6 +1217,7 @@ void SpinField::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, 
 
 			nStyle = ( IsEnabled() || ( nFlags & WINDOW_DRAW_NODISABLE ) ) ? 0 : SYMBOL_DRAW_DISABLE;
 			aView.DrawSymbol( aInnerRect, eSymbol, aButtonTextColor, nStyle );
+#endif // ifdef USE_JAVA
 		}
 
 		if ( GetStyle() & WB_SPIN )
