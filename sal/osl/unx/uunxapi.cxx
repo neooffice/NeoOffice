@@ -131,6 +131,13 @@
 #ifndef MACOSX  // not MACOSX  
     return mkdir(OUStringToOString(path).getStr(), mode);     
 #else
+#ifdef USE_JAVA
+    if ( !macxp_checkCreateDirectory( OUStringToOString( path ).getStr() ) )
+    { 
+        errno = EACCES;
+        return -1;
+    } 
+#endif  /* USE_JAVA */
 	return mkdir(macxp_resolveAliasAndConvert(path).getStr(), mode);
 #endif
  }

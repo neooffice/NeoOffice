@@ -593,6 +593,8 @@ int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement)
     return nRet;
 }
 
+#ifdef USE_JAVA
+
 void macxp_decomposeString(char *pszStr, int buflen)
 {
     CFMutableStringRef strRef = CFStringCreateMutable (NULL, 0 );
@@ -601,6 +603,26 @@ void macxp_decomposeString(char *pszStr, int buflen)
     CFStringGetCString( strRef, pszStr, buflen, kCFStringEncodingUTF8 );
     CFRelease( strRef );
 }
+
+sal_Bool macxp_checkCreateDirectory(const char *pszStr)
+{
+    /*
+     * Fix bug 1523 by not allowing the creation of a directory in the
+	 * /Volumes directory
+	 */
+    if ( pszStr && !strncmp( pszStr, "/Volumes", 8 ) )
+    {
+        const char *currentDir = pszStr + 8;
+        if ( *currentDir == '\0' )
+            return sal_False;
+        else if ( *currentDir == '/' && !strchr( ++currentDir, '/' ) )
+            return sal_False;
+    }
+
+    return sal_True;
+}
+
+#endif  /* USE_JAVA */
 
 #endif  /* defined MACOSX */
 

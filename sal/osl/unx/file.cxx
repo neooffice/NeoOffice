@@ -1788,6 +1788,14 @@ static oslFileError osl_psz_createDirectory( const sal_Char* pszPath )
     int nRet=0;
     int mode = S_IRWXU | S_IRWXG | S_IRWXO;
 
+#ifdef USE_JAVA
+    if ( !macxp_checkCreateDirectory( pszPath ) )
+    {
+        errno = EACCES;
+        return oslTranslateFileError(OSL_FET_ERROR, nRet);
+    }
+#endif	/* USE_JAVA */
+
     nRet = mkdir(pszPath,mode);
 
     if ( nRet < 0 )
