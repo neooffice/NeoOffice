@@ -398,11 +398,13 @@ void HeaderBar::ImplDrawItem( OutputDevice* pDev,
 			nState |= CTRL_STATE_FOCUSED;
 		
 		ListViewHeaderValue headerValue;
-		headerValue.mbPrimarySortColumn =  ( ( nBits & (HIB_UPARROW | HIB_DOWNARROW) ) != 0 );
+		headerValue.mbPrimarySortColumn =  ( bHigh || ( ( nBits & (HIB_UPARROW | HIB_DOWNARROW | HIB_FLAT ) ) != 0 ) );
 		if ( nBits & HIB_UPARROW )
 			headerValue.mnSortDirection = LISTVIEWHEADER_SORT_ASCENDING;
 		else if ( nBits & HIB_DOWNARROW )
 			headerValue.mnSortDirection = LISTVIEWHEADER_SORT_DESCENDING;
+		else if ( bHigh || ( ( nBits & HIB_FLAT ) != 0 ) )
+			headerValue.mnSortDirection = LISTVIEWHEADER_SORT_DONTKNOW;
 		
 		ImplControlValue aControlValue;
 		aControlValue.setOptionalVal( &headerValue );
