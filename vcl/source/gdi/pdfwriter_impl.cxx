@@ -5968,7 +5968,11 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                 }
                 aDeltaPos += (m_pReferenceDevice->PixelToLogic( Point( (int)((double)nXOffset/fXScale)/rLayout.GetUnitsPerPixel(), 0 ) ) - m_pReferenceDevice->PixelToLogic( Point() ) );
                 nXOffset += pAdvanceWidths[n];
+#ifdef USE_JAVA
                 if( ! pGlyphs[n] || ( pGlyphs[n] & GF_IDXMASK ) >= 0x0000ffff )
+#else	// USE_JAVA
+                if( ! pGlyphs[n] )
+#endif	// USE_JAVA
                     continue;
 
 
@@ -6099,7 +6103,11 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
             int nLast = 0;
             while( nLast < nGlyphs )
             {
+#ifdef USE_JAVA
                 while( ( ! pGlyphs[nLast] || ( pGlyphs[nLast] & GF_IDXMASK ) >= 0x0000ffff ) && nLast < nGlyphs )
+#else	// USE_JAVA
+                while( ! pGlyphs[nLast] && nLast < nGlyphs )
+#endif	// USE_JAVA
                     nLast++;
                 if( nLast >= nGlyphs )
                     break;
