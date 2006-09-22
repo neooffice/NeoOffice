@@ -1443,14 +1443,16 @@ public final class VCLGraphics {
 
 				VCLGraphics.button.setLabel(title);
 				Rectangle bounds = new Rectangle(x, y, width, VCLGraphics.button.getPreferredSize().height);
+				boolean placard = false;
 				if (bounds.height >= width - 1) {
 					bounds.width--;
 					bounds.height = height - 1;
+					placard = true;
 				}
 				// Fix bug 1633 by vertically centering button
 				bounds.y += (height - bounds.height) / 2;
 
-				if (bounds.height > height) {
+				if (!placard && bounds.height > height) {
 					VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
 					VCLGraphics srcGraphics = srcImage.getGraphics();
 					srcGraphics.drawPushButton(0, 0, bounds.width, bounds.height, title, enabled, focused, pressed, isDefault);
