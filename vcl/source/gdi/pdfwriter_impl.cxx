@@ -6025,7 +6025,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
             // Fix bug 810 by letting the PDF rendering application lay out
             // words
             int j;
-            for ( j = 0; j < nGlyphs && !pGlyphs[ j ]; j++ )
+            for ( j = 0; j < nGlyphs && ( !pGlyphs[ j ] || ( pGlyphs[ j ] & GF_IDXMASK ) >= 0x0000ffff ); j++ )
                 ;
             if ( j )
             {
@@ -6036,7 +6036,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                 continue;
             }
 
-            for ( j = 0; j < nGlyphs && pGlyphs[ j ]; j++ )
+            for ( j = 0; j < nGlyphs && pGlyphs[ j ] && ( pGlyphs[ j ] & GF_IDXMASK ) < 0x0000ffff; j++ )
                 ;
             if ( j < nGlyphs )
             {
