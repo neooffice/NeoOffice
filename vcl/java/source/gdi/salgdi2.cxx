@@ -452,12 +452,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 							BitmapBuffer *pTransSrcBuffer = pTransJavaSalBitmap->AcquireBuffer( TRUE );
 							if ( pTransSrcBuffer )
 							{
-								BitmapBuffer *pTransDestBuffer;
-								if ( aPosAry.mnSrcWidth != aPosAry.mnDestWidth || aPosAry.mnSrcHeight != aPosAry.mnDestHeight )
-									pTransDestBuffer = StretchAndConvert( *pTransSrcBuffer, aPosAry, pTransSrcBuffer->mnFormat, &pTransSrcBuffer->maPalette );
-								else
-									pTransDestBuffer = pTransSrcBuffer;
-
+								BitmapBuffer *pTransDestBuffer = StretchAndConvert( *pTransSrcBuffer, aPosAry, BMP_FORMAT_1BIT_MSB_PAL | BMP_FORMAT_TOP_DOWN, &pTransSrcBuffer->maPalette );
 								if ( pTransDestBuffer )
 								{
 									if ( pTransDestBuffer->mpBits )
@@ -466,47 +461,21 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 										// transparent bitmap as transparent in
 										// the mask bitmap
 										Scanline pTransBits = (Scanline)pTransDestBuffer->mpBits;
-										FncGetPixel pFncGetPixel;
-										if ( pTransDestBuffer->mnBitCount <= 8 )
+										FncGetPixel pFncGetPixel = BitmapReadAccess::GetPixelFor_1BIT_MSB_PAL;
+										for ( int i = 0; i < pDestBuffer->mnHeight; i++ )
 										{
-											if ( pTransDestBuffer->mnBitCount <= 1 )
-												pFncGetPixel = BitmapReadAccess::GetPixelFor_1BIT_MSB_PAL;
-											else if ( pTransDestBuffer->mnBitCount <= 4 )
-												pFncGetPixel = BitmapReadAccess::GetPixelFor_4BIT_MSN_PAL;
-											else if ( pTransDestBuffer->mnBitCount <= 8 )
-												pFncGetPixel = BitmapReadAccess::GetPixelFor_8BIT_PAL;
-
-											for ( int i = 0; i < pDestBuffer->mnHeight; i++ )
+											for ( int j = 0; j < pDestBuffer->mnWidth; j++ )
 											{
-												for ( int j = 0; j < pDestBuffer->mnWidth; j++ )
-												{
-													BitmapColor aColor( pTransDestBuffer->maPalette[ pFncGetPixel( pTransBits, j, pTransDestBuffer->maColorMask ) ] );
-                                    				if ( ( MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000 ) != 0xff000000 )
-														pBits[ j ] = 0x00000000;
-												}
-	
-												pBits += pDestBuffer->mnWidth;
-												pTransBits += pTransDestBuffer->mnScanlineSize;
+												BitmapColor aColor( pTransDestBuffer->maPalette[ pFncGetPixel( pTransBits, j, pTransDestBuffer->maColorMask ) ] );
+                                    			if ( ( MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000 ) != 0xff000000 )
+													pBits[ j ] = 0x00000000;
 											}
-										}
-										else
-										{
-											for ( int i = 0; i < pDestBuffer->mnHeight; i++ )
-											{
-												for ( int j = 0; j < pDestBuffer->mnWidth; j++ )
-												{
-													BitmapColor aColor( pFncGetPixel( pTransBits, j, pTransDestBuffer->maColorMask ) );
-                                    				if ( ( MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000 ) != 0xff000000 )
-														pBits[ j ] = 0x00000000;
-												}
 	
-												pBits += pDestBuffer->mnWidth;
-												pTransBits += pTransDestBuffer->mnScanlineSize;
-											}
+											pBits += pDestBuffer->mnWidth;
+											pTransBits += pTransDestBuffer->mnScanlineSize;
 										}
 
-										if ( pTransDestBuffer != pTransSrcBuffer )
-											delete[] pTransDestBuffer->mpBits;
+										delete[] pTransDestBuffer->mpBits;
 
 										t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, 0 );
 										pBits = NULL;
@@ -514,8 +483,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 										mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, pDestBuffer->mnWidth, pDestBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, pDestBuffer->mnWidth, pDestBuffer->mnHeight );
 									}
 
-									if ( pTransDestBuffer != pTransSrcBuffer )
-										delete pTransDestBuffer;
+									delete pTransDestBuffer;
 								}
 
 								pTransJavaSalBitmap->ReleaseBuffer( pTransSrcBuffer, TRUE );
