@@ -466,31 +466,19 @@ static BOOL InitScrollBarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, HIScro
 		pTrackDrawInfo->trackInfo.scrollbar.viewsize = pScrollbarValue->mnVisibleSize;
 		if( pScrollbarValue->mnButton1State & CTRL_STATE_PRESSED )
 		{
+			// We need to draw both inside and outside buttons if single arrow
+			// sets are used as there are drawing problems on Panther
 			if( pScrollbarValue->mnButton1State & CTRL_STATE_SELECTED )
-			{
-				if ( GetSalData()->mbDoubleScrollbarArrows )
-					pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeRightInsideArrowPressed;
-				else
-					pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeLeftInsideArrowPressed;
-			}
+				pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeRightInsideArrowPressed;
 			else
-			{
-				pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeLeftOutsideArrowPressed;
-			}
+				pTrackDrawInfo->trackInfo.scrollbar.pressState |= ( kThemeLeftOutsideArrowPressed | kThemeLeftOutsideArrowPressed );
 		}
 		if( pScrollbarValue->mnButton2State & CTRL_STATE_PRESSED )
 		{
 			if( pScrollbarValue->mnButton2State & CTRL_STATE_SELECTED )
-			{
-				if ( GetSalData()->mbDoubleScrollbarArrows )
-					pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeLeftInsideArrowPressed;
-				else
-					pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeRightInsideArrowPressed;
-			}
+				pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeLeftInsideArrowPressed;
 			else
-			{
 				pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeRightOutsideArrowPressed;
-			}
 		}
 		if( pScrollbarValue->mnPage1State & CTRL_STATE_PRESSED )
 			pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeLeftTrackPressed;

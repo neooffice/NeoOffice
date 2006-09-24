@@ -1227,10 +1227,6 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, BOOL bCallAction )
             {
                 bAction = bCallAction;
                 mnStateFlags |= SCRBAR_STATE_BTN1_DOWN;
-#ifdef USE_JAVA
-                if ( !GetSalData()->mbDoubleScrollbarArrows && ( ( bHorizontal && maBtn1Rect.Left() > maThumbRect.Left() ) || ( !bHorizontal && maBtn1Rect.Top() > maThumbRect.Top() ) ) )
-                    mnStateFlags |= SCRBAR_STATE_BTN1_INSIDE;
-#endif	// USE_JAVA
             }
 #ifdef USE_JAVA
             else if ( GetSalData()->mbDoubleScrollbarArrows && ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_BUTTON_LEFT: PART_BUTTON_UP,
