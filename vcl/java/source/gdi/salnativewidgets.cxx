@@ -337,6 +337,23 @@ void VCLBitmapBuffer::ReleaseContext()
 
 // =======================================================================
 
+static bool DoubleArrowsEnabled()
+{
+	bool out = false;
+
+	CFStringRef aString = (CFStringRef)CFPreferencesCopyAppValue( CFSTR( "AppleScrollBarVariant" ), kCFPreferencesAnyApplication );
+	if ( aString )
+	{
+		if ( CFStringCompare( aString, CFSTR( "DoubleBoth" ), kCFCompareCaseInsensitive ) == kCFCompareEqualTo )
+			out = true;
+		CFRelease( aString );
+	}
+
+	return out;
+}
+
+// =======================================================================
+
 static BOOL InitButtonDrawInfo( HIThemeButtonDrawInfo *pButtonDrawInfo, ControlState nState )
 {
 	memset( pButtonDrawInfo, 0, sizeof( HIThemeButtonDrawInfo ) );
@@ -1866,6 +1883,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 		case CTRL_SCROLLBAR:
 			{
+				// Fix bug 1600 by detecting if double arrows are at both ends
 				Rectangle comboBoxRect = rControlRegion.GetBoundRect();
 
 				ScrollbarValue *pValue = static_cast<ScrollbarValue *> ( aValue.getOptionalVal() );
@@ -1887,9 +1905,17 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							HIRect trackBounds;
 							HIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
 							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartLeftButton, &bounds );
-							if ( bounds.origin.x > trackBounds.origin.x )
-								bounds.origin.x += SCROLLBAR_ARROW_TRIMX;
-							bounds.size.width -= SCROLLBAR_ARROW_TRIMWIDTH;
+							if ( GetSalData()->mbDoubleScrollbarArrows )
+							{
+								bounds.origin.x = trackBounds.origin.y;
+								bounds.size.width *= 2;
+							}
+							else
+							{
+								if ( bounds.origin.x > trackBounds.origin.x )
+									bounds.origin.x += SCROLLBAR_ARROW_TRIMX;
+								bounds.size.width -= SCROLLBAR_ARROW_TRIMWIDTH;
+							}
 						}
 						break;
 
@@ -1898,14 +1924,22 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							HIRect trackBounds;
 							HIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
 							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartUpButton, &bounds );
-							if ( bounds.origin.y > trackBounds.origin.y )
+							if ( GetSalData()->mbDoubleScrollbarArrows )
 							{
-								bounds.origin.y += SCROLLBAR_ARROW_TRIMY;
-								bounds.size.height -= SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT;
+								bounds.origin.y = trackBounds.origin.y;
+								bounds.size.height *= 2;
 							}
 							else
 							{
-								bounds.size.height -= SCROLLBAR_ARROW_TOP_TRIMHEIGHT;
+								if ( bounds.origin.y > trackBounds.origin.y )
+								{
+									bounds.origin.y += SCROLLBAR_ARROW_TRIMY;
+									bounds.size.height -= SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT;
+								}
+								else
+								{
+									bounds.size.height -= SCROLLBAR_ARROW_TOP_TRIMHEIGHT;
+								}
 							}
 						}
 						break;
@@ -1915,13 +1949,20 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							HIRect trackBounds;
 							HIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
 							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartRightButton, &bounds );
-
-							HIRect otherBounds;
-							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartLeftButton, &otherBounds );
-							if ( otherBounds.origin.x <= trackBounds.origin.x )
+							if ( GetSalData()->mbDoubleScrollbarArrows )
 							{
-								bounds.origin.x += SCROLLBAR_ARROW_TRIMX;
-								bounds.size.width -= SCROLLBAR_ARROW_TRIMWIDTH;
+								bounds.size.width *= 2;
+								bounds.origin.x = trackBounds.origin.x + trackBounds.size.width - bounds.size.width;
+							}
+							else
+							{
+								HIRect otherBounds;
+								HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartLeftButton, &otherBounds );
+								if ( otherBounds.origin.x <= trackBounds.origin.x )
+								{
+									bounds.origin.x += SCROLLBAR_ARROW_TRIMX;
+									bounds.size.width -= SCROLLBAR_ARROW_TRIMWIDTH;
+								}
 							}
 						}
 						break;
@@ -1931,13 +1972,20 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							HIRect trackBounds;
 							HIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
 							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &bounds );
-
-							HIRect otherBounds;
-							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartUpButton, &otherBounds );
-							if ( otherBounds.origin.y <= trackBounds.origin.y )
+							if ( GetSalData()->mbDoubleScrollbarArrows )
 							{
-								bounds.origin.y += SCROLLBAR_ARROW_TRIMY;
-								bounds.size.height -= SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT;
+								bounds.size.height *= 2;
+								bounds.origin.y = trackBounds.origin.y + trackBounds.size.height - bounds.size.height;
+							}
+							else
+							{
+								HIRect otherBounds;
+								HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartUpButton, &otherBounds );
+								if ( otherBounds.origin.y <= trackBounds.origin.y )
+								{
+									bounds.origin.y += SCROLLBAR_ARROW_TRIMY;
+									bounds.size.height -= SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT;
+								}
 							}
 						}
 						break;

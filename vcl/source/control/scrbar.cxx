@@ -64,6 +64,9 @@
 
 #include <list>
 
+#ifndef _SV_SALDATA_HXX
+#include <saldata.hxx>
+#endif
 #ifndef _SV_SVAPP_HXX
 #include <svapp.hxx>
 #endif
@@ -77,6 +80,8 @@
 
 static ::std::list< ScrollBar* > gScrollBars;
 static EventHandlerUPP pRelayoutScrollBarHandler = NULL;
+static EventLoopTimerUPP pInitializeScrollBarPreferencesTimerUPP = NULL;
+static ::osl::Condition aInitializeScrollBarPreferencesCondition;
 
 using namespace vos;
 
@@ -88,7 +93,7 @@ using namespace rtl;
 
 #ifdef USE_JAVA
 
-static OSStatus RelayoutScrollBars(  EventHandlerCallRef inHandlerCallRef, EventRef inEvent, void * inUserData )
+static OSStatus RelayoutScrollBars( EventHandlerCallRef inHandlerCallRef, EventRef inEvent, void * inUserData )
 {
 	// We need to let any pending timers run so that we don't deadlock
 	TimeValue aDelay;
@@ -112,6 +117,17 @@ static OSStatus RelayoutScrollBars(  EventHandlerCallRef inHandlerCallRef, Event
 
 	if ( bAcquired )
 	{
+		// Check if double scrollbar arrows are enabled
+		bool bDoubleScrollbarArrows = false;
+		CFStringRef aString = (CFStringRef)CFPreferencesCopyAppValue( CFSTR( "AppleScrollBarVariant" ), kCFPreferencesAnyApplication );
+		if ( aString )
+		{
+			if ( CFStringCompare( aString, CFSTR( "DoubleBoth" ), 0 ) == kCFCompareEqualTo )
+				bDoubleScrollbarArrows = true;
+			CFRelease( aString );
+		}
+		GetSalData()->mbDoubleScrollbarArrows = bDoubleScrollbarArrows;
+
 		for ( ::std::list< ScrollBar* >::const_iterator iter = gScrollBars.begin(); iter != gScrollBars.end(); iter++ )
 		{
 			(*iter)->Resize();
@@ -122,6 +138,16 @@ static OSStatus RelayoutScrollBars(  EventHandlerCallRef inHandlerCallRef, Event
 	}
 
 	return noErr;
+}
+
+// =======================================================================
+
+static void InitializeScrollBarPreferencesTimerCallback( EventLoopTimerRef aTimer, void *pData )
+{
+	RelayoutScrollBars( NULL, NULL, NULL );
+
+	// Release any waiting thread
+	aInitializeScrollBarPreferencesCondition.set();
 }
 
 // =======================================================================
@@ -139,6 +165,26 @@ static void BeginTrackingScrollBar( ScrollBar *toTrack )
 		}
 	}
 
+	if ( !pInitializeScrollBarPreferencesTimerUPP )
+	{
+		pInitializeScrollBarPreferencesTimerUPP = NewEventLoopTimerUPP( InitializeScrollBarPreferencesTimerCallback );
+		if ( pInitializeScrollBarPreferencesTimerUPP )
+		{
+			if ( GetCurrentEventLoop() != GetMainEventLoop() )
+			{
+				aInitializeScrollBarPreferencesCondition.reset();
+				InstallEventLoopTimer( GetMainEventLoop(), 0.001, kEventDurationForever, pInitializeScrollBarPreferencesTimerUPP, NULL, NULL );
+				ULONG nCount = Application::ReleaseSolarMutex();
+				aInitializeScrollBarPreferencesCondition.wait();
+				Application::AcquireSolarMutex( nCount );
+			}
+			else
+			{
+				InitializeScrollBarPreferencesTimerCallback( NULL, NULL );
+			}
+		}
+	}
+
 	gScrollBars.push_back( toTrack );
 }
 
@@ -148,6 +194,7 @@ static void EndTrackingScrollBar( ScrollBar *toTrack )
 {
 	gScrollBars.remove( toTrack );
 }
+
 #endif	// USE_JAVA
 
 // =======================================================================
@@ -792,6 +839,7 @@ BOOL ScrollBar::ImplDrawNative( USHORT nDrawFlags )
                 }
             }
 
+            fprintf( stderr, "Here: %p %p\n", scrValue.mnButton1State, scrValue.mnButton2State );
             aControlValue.setOptionalVal( (void *)(&scrValue) );
 
 #ifdef USE_JAVA			
@@ -1166,6 +1214,17 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, BOOL bCallAction )
                 bAction = bCallAction;
                 mnStateFlags |= SCRBAR_STATE_BTN1_DOWN;
             }
+#ifdef USE_JAVA
+            else if ( GetSalData()->mbDoubleScrollbarArrows && ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_BUTTON_LEFT: PART_BUTTON_UP,
+                        aControlRegion, rMousePos, bIsInside )?
+                    bIsInside:
+                    maBtn2Rect.IsInside( rMousePos ) ) )
+            {
+                bAction = bCallAction;
+                mnStateFlags &= ~SCRBAR_STATE_BTN1_DOWN;
+                mnStateFlags |= SCRBAR_STATE_BTN2_DOWN;
+            }
+#endif	// USE_JAVA
             else
                 mnStateFlags &= ~SCRBAR_STATE_BTN1_DOWN;
             break;
@@ -1179,6 +1238,17 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, BOOL bCallAction )
                 bAction = bCallAction;
                 mnStateFlags |= SCRBAR_STATE_BTN2_DOWN;
             }
+#ifdef USE_JAVA
+            else if ( GetSalData()->mbDoubleScrollbarArrows && ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_BUTTON_RIGHT: PART_BUTTON_DOWN,
+                        aControlRegion, rMousePos, bIsInside )?
+                    bIsInside:
+                    maBtn1Rect.IsInside( rMousePos ) ) )
+            {
+                bAction = bCallAction;
+                mnStateFlags &= ~SCRBAR_STATE_BTN2_DOWN;
+                mnStateFlags |= SCRBAR_STATE_BTN1_DOWN;
+            }
+#endif	// USE_JAVA
             else
                 mnStateFlags &= ~SCRBAR_STATE_BTN2_DOWN;
             break;
@@ -1270,6 +1340,13 @@ void ScrollBar::MouseButtonDown( const MouseEvent& rMEvt )
             if ( !(mnStateFlags & SCRBAR_STATE_BTN1_DISABLE) )
             {
                 nTrackFlags     = STARTTRACK_BUTTONREPEAT;
+#ifdef USE_JAVA
+                if ( GetSalData()->mbDoubleScrollbarArrows &&
+                      ( ( bHorizontal && rMousePos.X() > maBtn1Rect.Left() + ( maBtn1Rect.GetWidth() / 2 ) ) ||
+                     ( !bHorizontal && rMousePos.Y() > maBtn1Rect.Top() + ( maBtn1Rect.GetHeight() / 2 ) ) ) )
+                    meScrollType    = SCROLL_LINEDOWN;
+                else
+#endif	// USE_JAVA
                 meScrollType    = SCROLL_LINEUP;
                 mnDragDraw      = SCRBAR_DRAW_BTN1;
             }
@@ -1284,6 +1361,13 @@ void ScrollBar::MouseButtonDown( const MouseEvent& rMEvt )
             if ( !(mnStateFlags & SCRBAR_STATE_BTN2_DISABLE) )
             {
                 nTrackFlags     = STARTTRACK_BUTTONREPEAT;
+#ifdef USE_JAVA
+                if ( GetSalData()->mbDoubleScrollbarArrows &&
+                     ( ( bHorizontal && rMousePos.X() <= maBtn2Rect.Left() + ( maBtn2Rect.GetWidth() / 2 ) ) ||
+                     ( !bHorizontal && rMousePos.Y() <= maBtn2Rect.Top() + ( maBtn2Rect.GetHeight() / 2 ) ) ) )
+                    meScrollType    = SCROLL_LINEUP;
+                else
+#endif	// USE_JAVA
                 meScrollType    = SCROLL_LINEDOWN;
                 mnDragDraw      = SCRBAR_DRAW_BTN2;
             }
