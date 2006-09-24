@@ -225,6 +225,11 @@ static long ImplMulDiv( long nNumber, long nNumerator, long nDenominator )
 #define SCRBAR_STATE_PAGE2_DOWN     ((USHORT)0x0020)
 #define SCRBAR_STATE_THUMB_DOWN     ((USHORT)0x0040)
 
+#ifdef USE_JAVA
+#define SCRBAR_STATE_BTN1_INSIDE    ((USHORT)0x0100)
+#define SCRBAR_STATE_BTN2_INSIDE    ((USHORT)0x0200)
+#endif	// USE_JAVA
+
 #define SCRBAR_VIEW_STYLE           (WB_3DLOOK | WB_HORZ | WB_VERT)
 
 struct ImplScrollBarData
@@ -814,8 +819,15 @@ BOOL ScrollBar::ImplDrawNative( USHORT nDrawFlags )
             scrValue.maButton1Rect = maBtn1Rect;
             scrValue.maButton2Rect = maBtn2Rect;
             scrValue.mnButton1State = ((mnStateFlags & SCRBAR_STATE_BTN1_DOWN) ? CTRL_STATE_PRESSED : 0) |
+#ifdef USE_JAVA
+           	                    ((mnStateFlags & SCRBAR_STATE_BTN1_INSIDE) ? CTRL_STATE_SELECTED : 0) |
+#endif	// USE_JAVA
+
 								((!(mnStateFlags & SCRBAR_STATE_BTN1_DISABLE)) ? CTRL_STATE_ENABLED : 0);
             scrValue.mnButton2State = ((mnStateFlags & SCRBAR_STATE_BTN2_DOWN) ? CTRL_STATE_PRESSED : 0) |
+#ifdef USE_JAVA
+           	                    ((mnStateFlags & SCRBAR_STATE_BTN2_INSIDE) ? CTRL_STATE_SELECTED : 0) |
+#endif	// USE_JAVA
 								((!(mnStateFlags & SCRBAR_STATE_BTN2_DISABLE)) ? CTRL_STATE_ENABLED : 0);
             scrValue.mnThumbState = nState | ((mnStateFlags & SCRBAR_STATE_THUMB_DOWN) ? CTRL_STATE_PRESSED : 0);
             scrValue.mnPage1State = nState | ((mnStateFlags & SCRBAR_STATE_PAGE1_DOWN) ? CTRL_STATE_PRESSED : 0);
@@ -839,10 +851,9 @@ BOOL ScrollBar::ImplDrawNative( USHORT nDrawFlags )
                 }
             }
 
-            fprintf( stderr, "Here: %p %p\n", scrValue.mnButton1State, scrValue.mnButton2State );
             aControlValue.setOptionalVal( (void *)(&scrValue) );
 
-#ifdef USE_JAVA			
+#ifdef USE_JAVA
 			if( mpData && mpData->mbHasEntireControlRect )
 			{
 				// use platform specific preferred boudns
@@ -1206,6 +1217,9 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, BOOL bCallAction )
     switch ( meScrollType )
     {
         case SCROLL_LINEUP:
+#ifdef USE_JAVA
+            mnStateFlags &= ~SCRBAR_STATE_BTN1_INSIDE;
+#endif	// USE_JAVA
             if ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_BUTTON_LEFT: PART_BUTTON_UP,
                         aControlRegion, rMousePos, bIsInside )?
                     bIsInside:
@@ -1213,6 +1227,10 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, BOOL bCallAction )
             {
                 bAction = bCallAction;
                 mnStateFlags |= SCRBAR_STATE_BTN1_DOWN;
+#ifdef USE_JAVA
+                if ( !GetSalData()->mbDoubleScrollbarArrows && ( ( bHorizontal && maBtn1Rect.Left() > maThumbRect.Left() ) || ( !bHorizontal && maBtn1Rect.Top() > maThumbRect.Top() ) ) )
+                    mnStateFlags |= SCRBAR_STATE_BTN1_INSIDE;
+#endif	// USE_JAVA
             }
 #ifdef USE_JAVA
             else if ( GetSalData()->mbDoubleScrollbarArrows && ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_BUTTON_LEFT: PART_BUTTON_UP,
@@ -1222,7 +1240,7 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, BOOL bCallAction )
             {
                 bAction = bCallAction;
                 mnStateFlags &= ~SCRBAR_STATE_BTN1_DOWN;
-                mnStateFlags |= SCRBAR_STATE_BTN2_DOWN;
+                mnStateFlags |= SCRBAR_STATE_BTN2_DOWN | SCRBAR_STATE_BTN2_INSIDE;
             }
 #endif	// USE_JAVA
             else
@@ -1230,6 +1248,9 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, BOOL bCallAction )
             break;
 
         case SCROLL_LINEDOWN:
+#ifdef USE_JAVA
+            mnStateFlags &= ~SCRBAR_STATE_BTN2_INSIDE;
+#endif	// USE_JAVA
             if ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_BUTTON_RIGHT: PART_BUTTON_DOWN,
                         aControlRegion, rMousePos, bIsInside )?
                     bIsInside:
@@ -1246,7 +1267,7 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, BOOL bCallAction )
             {
                 bAction = bCallAction;
                 mnStateFlags &= ~SCRBAR_STATE_BTN2_DOWN;
-                mnStateFlags |= SCRBAR_STATE_BTN1_DOWN;
+                mnStateFlags |= SCRBAR_STATE_BTN1_DOWN | SCRBAR_STATE_BTN1_INSIDE;
             }
 #endif	// USE_JAVA
             else
@@ -1456,6 +1477,9 @@ void ScrollBar::Tracking( const TrackingEvent& rTEvt )
         mnStateFlags &= ~(SCRBAR_STATE_BTN1_DOWN | SCRBAR_STATE_BTN2_DOWN |
                           SCRBAR_STATE_PAGE1_DOWN | SCRBAR_STATE_PAGE2_DOWN |
                           SCRBAR_STATE_THUMB_DOWN);
+#ifdef USE_JAVA
+        mnStateFlags &= ~(SCRBAR_STATE_BTN1_INSIDE | SCRBAR_STATE_BTN2_INSIDE);
+#endif	// USE_JAVA
         if ( nOldStateFlags != mnStateFlags )
             ImplDraw( mnDragDraw, this );
         mnDragDraw = 0;

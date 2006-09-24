@@ -464,11 +464,34 @@ static BOOL InitScrollBarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, HIScro
 		pTrackDrawInfo->max = pScrollbarValue->mnMax-pScrollbarValue->mnVisibleSize;
 		pTrackDrawInfo->value = pScrollbarValue->mnCur;
 		pTrackDrawInfo->trackInfo.scrollbar.viewsize = pScrollbarValue->mnVisibleSize;
-		// We need to paint both inside and outside for the left/up arrows
 		if( pScrollbarValue->mnButton1State & CTRL_STATE_PRESSED )
-			pTrackDrawInfo->trackInfo.scrollbar.pressState |= ( kThemeLeftInsideArrowPressed | kThemeLeftOutsideArrowPressed );
+		{
+			if( pScrollbarValue->mnButton1State & CTRL_STATE_SELECTED )
+			{
+				if ( GetSalData()->mbDoubleScrollbarArrows )
+					pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeRightInsideArrowPressed;
+				else
+					pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeLeftInsideArrowPressed;
+			}
+			else
+			{
+				pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeLeftOutsideArrowPressed;
+			}
+		}
 		if( pScrollbarValue->mnButton2State & CTRL_STATE_PRESSED )
-			pTrackDrawInfo->trackInfo.scrollbar.pressState |= ( kThemeRightOutsideArrowPressed );
+		{
+			if( pScrollbarValue->mnButton2State & CTRL_STATE_SELECTED )
+			{
+				if ( GetSalData()->mbDoubleScrollbarArrows )
+					pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeLeftInsideArrowPressed;
+				else
+					pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeRightInsideArrowPressed;
+			}
+			else
+			{
+				pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeRightOutsideArrowPressed;
+			}
+		}
 		if( pScrollbarValue->mnPage1State & CTRL_STATE_PRESSED )
 			pTrackDrawInfo->trackInfo.scrollbar.pressState |= kThemeLeftTrackPressed;
 		if( pScrollbarValue->mnPage2State & CTRL_STATE_PRESSED )
