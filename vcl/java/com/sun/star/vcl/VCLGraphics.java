@@ -630,12 +630,25 @@ public final class VCLGraphics {
 			Graphics2D g = getGraphics();
 			if (g != null) {
 				try {
-					if (xor && allowXOR)
+					if (xor && allowXOR) {
 						g.setComposite(VCLGraphics.xorImageComposite);
+						VCLGraphics.xorImageComposite.setXORMode(Color.black);
+					}
 					Iterator clipRects = clipList.iterator();
-					while (clipRects.hasNext()) {
-						g.setClip((Rectangle)clipRects.next());
-						g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+					if (srcWidth == destWidth && srcHeight == destHeight) {
+						while (clipRects.hasNext()) {
+							Rectangle clipRect = ((Rectangle)clipRects.next()).intersection(destBounds);
+							int srcClipX = srcX + clipRect.x - destX;
+							int srcClipY = srcY + clipRect.y - destY;
+							g.setClip(clipRect);
+							g.drawImage(img, clipRect.x, clipRect.y, clipRect.x + clipRect.width, clipRect.y + clipRect.height, srcClipX, srcClipY, srcClipX + clipRect.width, srcClipY + clipRect.height, null);
+						}
+					}
+					else {
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+						}
 					}
 				}
 				catch (Throwable t) {
@@ -724,12 +737,25 @@ public final class VCLGraphics {
 					}
 				}
 				else {
-					if (xor)
+					if (xor) {
 						g.setComposite(VCLGraphics.xorImageComposite);
+						VCLGraphics.xorImageComposite.setXORMode(Color.black);
+					}
 					Iterator clipRects = clipList.iterator();
-					while (clipRects.hasNext()) {
-						g.setClip((Rectangle)clipRects.next());
-						g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+					if (srcWidth == destWidth && srcHeight == destHeight) {
+						while (clipRects.hasNext()) {
+							Rectangle clipRect = ((Rectangle)clipRects.next()).intersection(destBounds);
+							int srcClipX = srcX + clipRect.x - destX;
+							int srcClipY = srcY + clipRect.y - destY;
+							g.setClip(clipRect);
+							g.drawImage(bmp.getImage(), clipRect.x, clipRect.y, clipRect.x + clipRect.width, clipRect.y + clipRect.height, srcClipX, srcClipY, srcClipX + clipRect.width, srcClipY + clipRect.height, null);
+						}
+					}
+					else {
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+						}
 					}
 				}
 			}
@@ -1141,25 +1167,62 @@ public final class VCLGraphics {
 			clipList.add(clipBounds);
 		}
 
-		Graphics2D g = getGraphics();
-		if (g != null) {
-			try {
-				if (xor)
-					g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
-				g.setColor(new Color(color));
-				Iterator clipRects = clipList.iterator();
-				while (clipRects.hasNext()) {
-					g.setClip((Rectangle)clipRects.next());
-					if (fill)
-						g.fillPolygon(polygon);
-					else
-						g.drawPolygon(polygon);
+		if (xor) {
+			// Fix bug 1459 by using our own custom XOR composite for polygons
+			VCLImage srcImage = new VCLImage(destBounds.width, destBounds.height, bitCount);
+			VCLGraphics srcGraphics = srcImage.getGraphics();
+			Graphics2D g = srcGraphics.getGraphics();
+			if (g != null) {
+				try {
+					g.setColor(new Color(color));
+					g.translate(destBounds.x * -1, destBounds.y * -1);
+					g.fillPolygon(polygon);
 				}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
+				g.dispose();
 			}
-			catch (Throwable t) {
-				t.printStackTrace();
+
+			g = getGraphics();
+			if (g != null) {
+				try {
+					g.setComposite(VCLGraphics.xorImageComposite);
+					VCLGraphics.xorImageComposite.setXORMode(Color.black);
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						Rectangle clipRect = ((Rectangle)clipRects.next()).intersection(destBounds);
+						g.setClip(clipRect);
+						g.drawImage(srcImage.getImage(), clipRect.x, clipRect.y, clipRect.x + clipRect.width, clipRect.y + clipRect.height, 0, 0, clipRect.width, clipRect.height, null);
+					}
+				}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
+				g.dispose();
 			}
-			g.dispose();
+
+			srcImage.dispose();
+		}
+		else {
+			Graphics2D g = getGraphics();
+			if (g != null) {
+				try {
+					g.setColor(new Color(color));
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						g.setClip((Rectangle)clipRects.next());
+						if (fill)
+							g.fillPolygon(polygon);
+						else
+							g.drawPolygon(polygon);
+					}
+				}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
+				g.dispose();
+			}
 		}
 
 	}
@@ -1250,11 +1313,15 @@ public final class VCLGraphics {
 			return;
 		}
 
-		if (npoly == 0)
+		if (npoly == 0) {
 			return;
-
-		// Fix bug 786 by drawing overlapping polygons in XOR mode
-		if (xor) {
+		}
+		else if (npoly == 1) {
+			drawPolygon(npoints[0], xpoints[0], ypoints[0], color, fill);
+			return;
+		}
+		else if (xor) {
+			// Fix bug 786 by drawing overlapping polygons in XOR mode
 			for (int i = 0; i < npoly; i++)
 				drawPolygon(npoints[i], xpoints[i], ypoints[i], color, fill);
 			return;
@@ -2082,7 +2149,6 @@ public final class VCLGraphics {
 		else {
 			VCLImage srcImage = new VCLImage(destBounds.width, destBounds.height, bitCount);
 			VCLGraphics srcGraphics = srcImage.getGraphics();
-			srcGraphics.drawPolygon(npoints, xpoints, ypoints, 0xff000000, true);
 			Graphics2D g = srcGraphics.getGraphics();
 			if (g != null) {
 				try {
@@ -2102,8 +2168,9 @@ public final class VCLGraphics {
 					g.setComposite(VCLGraphics.invertComposite);
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {
-						g.setClip(((Rectangle)clipRects.next()).intersection(destBounds));
-						g.drawImage(srcImage.getImage(), destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, 0, 0, destBounds.width, destBounds.height, null);
+						Rectangle clipRect = ((Rectangle)clipRects.next()).intersection(destBounds);
+						g.setClip(clipRect);
+						g.drawImage(srcImage.getImage(), clipRect.x, clipRect.y, clipRect.x + clipRect.width, clipRect.y + clipRect.height, 0, 0, clipRect.width, clipRect.height, null);
 					}
 				}
 				catch (Throwable t) {
@@ -2422,6 +2489,8 @@ public final class VCLGraphics {
 
 	final static class XORImageComposite implements Composite, CompositeContext {
 
+		private int color = Color.black.getRGB();
+
 		public void compose(Raster src, Raster destIn, WritableRaster destOut) {
 
 			if (destIn != destOut)
@@ -2437,7 +2506,7 @@ public final class VCLGraphics {
 				destData = (int[])destIn.getDataElements(0, line, destData.length, 1, destData);
 				for (int i = 0; i < srcData.length && i < destData.length; i++) {
 					if ((srcData[i] & 0xff000000) == 0xff000000)
-						destData[i] = (destData[i] ^ 0xff000000 ^ srcData[i]) | 0xff000000;
+						destData[i] = (destData[i] ^ color ^ srcData[i]) | 0xff000000;
 				}
 				destOut.setDataElements(0, line, destData.length, 1, destData);
 			}
@@ -2451,6 +2520,12 @@ public final class VCLGraphics {
 		}
 
 		public void dispose() {}
+
+		public void setXORMode(Color c) {
+
+			color = c.getRGB();
+
+		}
 
 	}
 
