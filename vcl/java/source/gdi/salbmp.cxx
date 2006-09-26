@@ -103,7 +103,7 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::GetVCLBitmap( long nX, long nY, long 
 					jint *pBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
 					if ( pBits )
 					{
-						Scanline pBitsIn = (Scanline)( mpBits + ( nY * pBuffer->mnScanlineSize ) + ( nX * mnBitCount / 8 ) );
+						Scanline pBitsIn = (Scanline)( pBuffer->mpBits + ( nY * pBuffer->mnScanlineSize ) + ( nX * mnBitCount / 8 ) );
 						jint *pBitsOut = pBits;
 
 						if ( pBuffer->mnFormat & BMP_FORMAT_1BIT_MSB_PAL )
@@ -229,7 +229,7 @@ void JavaSalBitmap::ReleaseVCLBitmap( com_sun_star_vcl_VCLBitmap *pVCLBitmap, bo
 						if ( pBits )
 						{
 							jint *pBitsIn = pBits;
-							Scanline pBitsOut = (Scanline)( mpBits + ( nY * pBuffer->mnScanlineSize ) + ( nX * mnBitCount / 8 ) );
+							Scanline pBitsOut = (Scanline)( pBuffer->mpBits + ( nY * pBuffer->mnScanlineSize ) + ( nX * mnBitCount / 8 ) );
 
 							if ( pBuffer->mnFormat & BMP_FORMAT_1BIT_MSB_PAL )
 							{
