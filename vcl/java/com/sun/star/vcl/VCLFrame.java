@@ -632,7 +632,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	/** 
 	 * The trap temporary focus events flag.
 	 */
-	private static boolean trapTemporaryFocusEvents = false;
+	private static boolean trapNullOppositeFocusEvents = false;
 
 	/**
 	 * Find the matching <code>VCLFrame</code> for the specified component.
@@ -655,7 +655,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		try { 
 			// Test for Java 1.5 or higher
 			Class.forName("java.lang.Appendable");
-			trapTemporaryFocusEvents = true;
+			trapNullOppositeFocusEvents = true;
 		}
 		catch (Throwable t) {}
 
@@ -1112,11 +1112,6 @@ g.dispose();
 		if (disposed || isFloatingWindow() || !window.isShowing())
 			return;
 
- 		if (e.isTemporary() && VCLFrame.trapTemporaryFocusEvents) {
-			requestFocus();
-			return;
-		}
-
 		// Fix bug 1645 by ensuring that we don't lose focus to a floating
 		// window
 		VCLFrame f = findFrame(e.getOppositeComponent());
@@ -1127,6 +1122,10 @@ g.dispose();
 					return;
 				}
 			}
+		}
+ 		else if (VCLFrame.trapNullOppositeFocusEvents) {
+			requestFocus();
+			return;
 		}
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
@@ -2223,7 +2222,28 @@ g.dispose();
 	 *
 	 * @param e the <code>WindowEvent</code>
 	 */
-	public void windowDeactivated(WindowEvent e) {}
+	public void windowDeactivated(WindowEvent e) {
+
+		if (disposed || isFloatingWindow() || !window.isShowing())
+			return;
+
+		// Fix bug 1645 by ensuring that we don't lose focus to a floating
+		// window
+		VCLFrame f = findFrame(e.getOppositeWindow());
+		if (f != null) {
+			synchronized (f) {
+				if (f.isFloatingWindow()) {
+					requestFocus();
+					return;
+				}
+			}
+		}
+ 		else if (VCLFrame.trapNullOppositeFocusEvents) {
+			requestFocus();
+			return;
+		}
+
+	}
 
 	/**
 	 * Invoked when the the native window's state changes.
