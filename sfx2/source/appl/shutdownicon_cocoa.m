@@ -336,7 +336,8 @@ void AddQuickstartMenuItems( int nCount, MenuCommand *pIDs, CFStringRef *pString
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	QuickstartMenuItems *pItems = [[QuickstartMenuItems alloc] initWithCount:nCount menuCommands:pIDs strings:pStrings];
-	[pItems performSelectorOnMainThread:@selector(addMenuItems:) withObject:pItems waitUntilDone:YES];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pItems performSelectorOnMainThread:@selector(addMenuItems:) withObject:pItems waitUntilDone:YES modes:pModes];
 
 	[pPool release];
 }
@@ -351,7 +352,8 @@ __attribute__((visibility("default"))) void NativeShutdownCancelledHandler()
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	CancelTermination *pCancelTermination = [[CancelTermination alloc] init];
-	[pCancelTermination performSelectorOnMainThread:@selector(cancelTermination:) withObject:pCancelTermination waitUntilDone:YES];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pCancelTermination performSelectorOnMainThread:@selector(cancelTermination:) withObject:pCancelTermination waitUntilDone:YES modes:pModes];
 
 	[pPool release];
 }

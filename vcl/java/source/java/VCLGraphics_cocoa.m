@@ -279,12 +279,16 @@ void CGImageRef_drawInRect( CGImageRef aImage, float fX, float fY, float fWidth,
 
 	if ( aImage && fWidth && fHeight )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, @"AWTRunLoopMode", nil];
 		DrawImageInRect *pDrawImageInRect = [[DrawImageInRect alloc] initWithImage:aImage x:fX y:fY width:fWidth height:fHeight clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight];
 		if ( bDrawInMainThread )
+		{
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 			[pDrawImageInRect performSelectorOnMainThread:@selector(drawImageInRect:) withObject:pDrawImageInRect waitUntilDone:YES modes:pModes];
+		}
 		else
+		{
 			[pDrawImageInRect drawImageInRect:pDrawImageInRect];
+		}
 	}
 
 	[pPool release];
@@ -296,12 +300,16 @@ void NSEPSImageRep_drawInRect( void *pPtr, unsigned nSize, float fX, float fY, f
 
 	if ( pPtr && nSize && fWidth && fHeight )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, @"AWTRunLoopMode", nil];
 		DrawEPSInRect *pDrawEPSInRect = [[DrawEPSInRect alloc] initWithPtr:pPtr size:nSize x:fX y:fY width:fWidth height:fHeight];
 		if ( bDrawInMainThread )
+		{
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 			[pDrawEPSInRect performSelectorOnMainThread:@selector(drawEPSInRect:) withObject:pDrawEPSInRect waitUntilDone:YES modes:pModes];
+		}
 		else
+		{
 			[pDrawEPSInRect drawEPSInRect:pDrawEPSInRect];
+		}
 	}
 
 	[pPool release];

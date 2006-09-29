@@ -326,7 +326,8 @@ static NSString *pBlankItem = @" ";
 	InitializeFileDialogs *pInitializer = [[InitializeFileDialogs alloc] init:mbUseFileOpenDialog];
 	if ( pInitializer )
 	{
-		[pInitializer performSelectorOnMainThread:@selector(initialize:) withObject:pInitializer waitUntilDone:YES];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[pInitializer performSelectorOnMainThread:@selector(initialize:) withObject:pInitializer waitUntilDone:YES modes:pModes];
 		mpFilePanel = [pInitializer filePanel];
 	}
 
@@ -995,7 +996,10 @@ void NSFileDialog_cancel( id pDialog )
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pDialog )
-		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(cancel:) withObject:pDialog waitUntilDone:YES];
+	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(cancel:) withObject:pDialog waitUntilDone:YES modes:pModes];
+	}
 
 	[pPool release];
 }
@@ -1366,13 +1370,13 @@ void NSFileDialog_setTitle( id pDialog, CFStringRef aTitle )
 
 int NSFileDialog_showFileDialog( id pDialog )
 {
-	int nRet = NO;
+	int nRet = NSCancelButton;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pDialog )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, @"AWTRunLoopMode", nil];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(showFileDialog:) withObject:pDialog waitUntilDone:YES modes:pModes];
 		nRet = [(ShowFileDialog *)pDialog result];
 	}

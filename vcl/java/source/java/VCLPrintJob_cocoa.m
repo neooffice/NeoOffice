@@ -213,7 +213,8 @@ id NSPrintInfo_showPrintDialog( id pNSPrintInfo, id pNSWindow )
 		if ( pRet )
 		{
 			[pRet retain];
-			[pRet performSelectorOnMainThread:@selector(showPrintDialog:) withObject:pRet waitUntilDone:YES];
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[pRet performSelectorOnMainThread:@selector(showPrintDialog:) withObject:pRet waitUntilDone:YES modes:pModes];
 		}
 	}
 

@@ -79,7 +79,8 @@ void NSScreen_getScreenBounds( long *nX, long *nY, long *nWidth, long *nHeight, 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	ScreenBounds *pScreenBounds = [[ScreenBounds alloc] initWithX:nX y:nY width:nWidth height:nHeight fullScreenMode:bFullScreenMode useMainScreenOnly:bUseMainScreenOnly];
-	[pScreenBounds performSelectorOnMainThread:@selector(calcBounds:) withObject:pScreenBounds waitUntilDone:YES];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pScreenBounds performSelectorOnMainThread:@selector(calcBounds:) withObject:pScreenBounds waitUntilDone:YES modes:pModes];
 
 	[pPool release];
 }
