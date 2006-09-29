@@ -160,12 +160,12 @@ if [ -d "$2" ]; then
 	done
 	unset DYLD_LIBRARY_PATH
 
-	# Open welcome page
+	# Open welcome page but fix bug 1834 by suppressing it when run as root
 	sudoargs=
-	if [ ! -z "$USER" ] ; then
+	if [ ! -z "$USER" -a `id -u "$USER"` != "0" ] ; then
 		sudoargs="-u $USER"
+		sudo $sudoargs open "http://www.planamesa.com/neojava/welcome.php?product=$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)&host=`hostname`.`domainname`&buildmachine=$(BUILD_MACHINE)"
 	fi
-	sudo $sudoargs open "http://www.planamesa.com/neojava/welcome.php?product=$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)&host=`hostname`.`domainname`&buildmachine=$(BUILD_MACHINE)"
 	sudo $sudoargs /System/Library/Frameworks/ApplicationServices.framework/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister -f "$2"
 
 	# Touch installation directory to force activation of any bundled Spotlight
