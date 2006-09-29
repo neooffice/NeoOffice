@@ -37,8 +37,13 @@
 #define __VCLEVENTQUEUE_COCOA_H__
 
 #ifdef __cplusplus
+typedef void* id;
+#endif
+
+#ifdef __cplusplus
 BEGIN_C
 #endif
+void VCLEventQueue_postInputMethodTextCancelled( WindowRef aWindow );
 void NSPrintInfo_installVCLEventQueueClasses();
 #ifdef __cplusplus
 END_C

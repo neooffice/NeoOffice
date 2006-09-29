@@ -640,7 +640,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param c the component
 	 * @return the matching <code>VCLFrame</code>
 	 */
-	static VCLFrame findFrame(Component c) {
+	static synchronized VCLFrame findFrame(Component c) {
 
 		return (VCLFrame)componentMap.get(c);
 
@@ -948,8 +948,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			return;
 
 		// Add window and panel to mapping
-		VCLFrame.componentMap.put(window, this);
-		VCLFrame.componentMap.put(panel, this);
+		synchronized (VCLFrame.class) {
+			VCLFrame.componentMap.put(window, this);
+			VCLFrame.componentMap.put(panel, this);
+		}
 
 	}
 
@@ -1036,7 +1038,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param b <code>true</code> to enable flushing and <code>false</code> to
 	 *  disable flushing
 	 */
-	public synchronized void enableFlushing(boolean b)
+	public void enableFlushing(boolean b)
 	{
 		// Fix occasion crashing by invoking this in the Java event dispatch
 		// thread
@@ -1047,28 +1049,30 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			return;
 		}
 
-		if (!disposed && b != flushingEnabled && window.isShowing())
-		{
-			Graphics2D g = graphics.getGraphics();
-			if (g != null) {
-				try {
-					if (g instanceof sun.java2d.SunGraphics2D) {
-						sun.java2d.SurfaceData sd = ((sun.java2d.SunGraphics2D)g).getSurfaceData();
-						if (sd instanceof apple.awt.CPeerSurfaceData) {
-							if (b)
-								((apple.awt.CPeerSurfaceData)sd).enableFlushing();
-							else if (!fullScreenMode)
-								((apple.awt.CPeerSurfaceData)sd).disableFlushing();
-							flushingEnabled = b;
+		synchronized (this) {
+			if (!disposed && b != flushingEnabled && window.isShowing()) {
+				Graphics2D g = graphics.getGraphics();
+				if (g != null) {
+					try {
+						if (g instanceof sun.java2d.SunGraphics2D) {
+							sun.java2d.SurfaceData sd = ((sun.java2d.SunGraphics2D)g).getSurfaceData();
+							if (sd instanceof apple.awt.CPeerSurfaceData) {
+								if (b)
+									((apple.awt.CPeerSurfaceData)sd).enableFlushing();
+								else if (!fullScreenMode)
+									((apple.awt.CPeerSurfaceData)sd).disableFlushing();
+								flushingEnabled = b;
+							}
 						}
 					}
+					catch (Throwable t) {
+						t.printStackTrace();
+					}
+					g.dispose();
 				}
-				catch (Throwable t) {
-					t.printStackTrace();
-				}
-g.dispose();
 			}
 		}
+
 	}
 
 	/**
@@ -1414,29 +1418,32 @@ g.dispose();
 		if (disposed || !window.isShowing())
 			return;
 
-		// Fix bug 1429 by committing the uncommitted text in the last input 
-		// method event if the caret's index is less than 0
-		TextHitInfo caret = e.getCaret();
-		if (caret != null && caret.getCharIndex() < 0) {
-			if (lastUncommittedInputMethodEvent != null) {
-				AttributedCharacterIterator text = lastUncommittedInputMethodEvent.getText();
-				int count = 0;
-				for (char c = text.first(); c != CharacterIterator.DONE; c = text.next())
-					count++;
-				e = new InputMethodEvent((Component)lastUncommittedInputMethodEvent.getSource(), lastUncommittedInputMethodEvent.getID(), lastUncommittedInputMethodEvent.getWhen(), text, count, lastUncommittedInputMethodEvent.getCaret(), lastUncommittedInputMethodEvent.getVisiblePosition());
-			}
-
-			lastUncommittedInputMethodEvent = null;
-		}
-		else {
-			AttributedCharacterIterator text = e.getText();
-			int count = 0;
+		AttributedCharacterIterator text = e.getText();
+		int count = 0;
+		if (text != null) {
 			for (char c = text.first(); c != CharacterIterator.DONE; c = text.next())
 				count++;
+		}
 
-			if (count > e.getCommittedCharacterCount())
+		// Fix bug 1429 by committing last uncommitted text if there is no
+		// text in this event. Since this code assumes that uncommitted text
+		// is never cancelled, there are fixes in the C++ code that post
+		// input method events with the text set to null to indicate that the
+		// uncommitted text should be cancelled.
+		if (text != null && count == 0) {
+			if (lastUncommittedInputMethodEvent != null) {
+				AttributedCharacterIterator lastText = lastUncommittedInputMethodEvent.getText();
+				int lastCount = 0;
+				for (char c = lastText.first(); c != CharacterIterator.DONE; c = lastText.next())
+					lastCount++;
+				e = new InputMethodEvent((Component)lastUncommittedInputMethodEvent.getSource(), lastUncommittedInputMethodEvent.getID(), lastUncommittedInputMethodEvent.getWhen(), lastText, lastCount, lastUncommittedInputMethodEvent.getCaret(), lastUncommittedInputMethodEvent.getVisiblePosition());
+				lastUncommittedInputMethodEvent = null;
+			}
+		}
+		else if (text != null && count > e.getCommittedCharacterCount()) {
 				lastUncommittedInputMethodEvent = e;
-			else
+		}
+		else {
 				lastUncommittedInputMethodEvent = null;
 		}
 
@@ -1734,6 +1741,26 @@ g.dispose();
 			return;
 
 		queue.postCachedEvent(new VCLEvent(new PaintEvent(panel, PaintEvent.UPDATE, b), VCLEvent.SALEVENT_PAINT, this, 0));
+
+	}
+
+	/**
+	 * Create and post event to notify that uncommitted text has been cancelled.
+	 *
+	 * @param
+	 */
+	public void postInputMethodTextCancelled() {
+
+		InputMethodEvent e = null;
+
+		// Post an input method event with null text
+		synchronized (this) {
+			if (!disposed)
+				e = new InputMethodEvent(panel, InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, TextHitInfo.beforeOffset(0), TextHitInfo.beforeOffset(0));
+		}
+
+		if (e != null)
+			Toolkit.getDefaultToolkit().getSystemEventQueue().postEvent(e);
 
 	}
 

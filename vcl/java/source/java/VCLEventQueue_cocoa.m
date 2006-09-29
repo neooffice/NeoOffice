@@ -36,17 +36,16 @@
 #import <Cocoa/Cocoa.h>
 #import "VCLEventQueue_cocoa.h"
 
-static NSResponder *pResponder = nil;
-
 @interface VCLResponder : NSResponder
 {
 	NSString*				mpLastText;
+	NSView*					mpView;
 }
 - (void)clearLastText;
 - (void)dealloc;
 - (id)init;
 - (void)insertText:(NSString *)pString;
-- (void)interpretKeyEvents:(NSArray *)pEvents;
+- (void)interpretKeyEvents:(NSArray *)pEvents view:(NSView *)pView;
 - (NSString *)lastText;
 @end
 
@@ -65,11 +64,27 @@ static NSResponder *pResponder = nil;
 {
 	[self clearLastText];
 
+	if ( mpView )
+		[mpView release];
+
 	[super dealloc];
 }
 
 - (void)doCommandBySelector:(SEL)aSelector
 {
+	NSString *pSelectorName = NSStringFromSelector( aSelector );
+	if ( pSelectorName )
+	{
+		if ( [pSelectorName compare:@"cancelOperation:"] == NSOrderedSame || [pSelectorName compare:@"deleteBackward:"] == NSOrderedSame )
+		{
+			if ( mpView )
+			{
+				NSWindow *pWindow = [mpView window];
+				if ( pWindow )
+					VCLEventQueue_postInputMethodTextCancelled( [pWindow windowRef] );
+			}
+		}
+	}
 }
 
 - (id)init
@@ -77,6 +92,7 @@ static NSResponder *pResponder = nil;
 	[super init];
 
 	mpLastText = nil;
+	mpView = nil;
 
 	return self;
 }
@@ -90,11 +106,23 @@ static NSResponder *pResponder = nil;
 		[mpLastText retain];
 }
 
-- (void)interpretKeyEvents:(NSArray *)pEvents
+- (void)interpretKeyEvents:(NSArray *)pEvents view:(NSView *)pView
 {
 	[self clearLastText];
 
+	if ( mpView )
+		[mpView release];
+	mpView = pView;
+	if ( mpView )
+		[mpView retain];
+
 	[super interpretKeyEvents:pEvents];
+
+	if ( mpView )
+	{
+		[mpView release];
+		mpView = nil;
+	}
 }
 
 - (NSString *)lastText
@@ -104,6 +132,8 @@ static NSResponder *pResponder = nil;
 
 @end
 
+static VCLResponder *pResponder = nil;
+
 @interface VCLView : NSView
 - (void)interpretKeyEvents:(NSArray *)pEvents;
 @end
@@ -112,8 +142,6 @@ static NSResponder *pResponder = nil;
 
 - (void)interpretKeyEvents:(NSArray *)pEvents
 {
-	[super interpretKeyEvents:pEvents];
-
 	// Fix bugs 1390 and 1619 by reprocessing any events with more than one
 	// character as the JVM only seems to process the first character
 	if ( pEvents )
@@ -132,7 +160,7 @@ static NSResponder *pResponder = nil;
 
 			if ( pApp && pResponder )
 			{
-				[pResponder interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
+				[pResponder interpretKeyEvents:pEvents view:self];
 				NSString *pText = [(VCLResponder *)pResponder lastText];
 				if ( pText )
 				{
@@ -158,6 +186,8 @@ static NSResponder *pResponder = nil;
 			}
 		}
 	}
+
+	[super interpretKeyEvents:pEvents];
 }
 
 @end

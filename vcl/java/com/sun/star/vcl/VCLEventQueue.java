@@ -299,52 +299,78 @@ public final class VCLEventQueue implements Runnable {
 		VCLEventQueue.QueueItem newItem = new VCLEventQueue.QueueItem(event);
 		synchronized (queueList) {
 			// Coalesce events
-			if (id == VCLEvent.SALEVENT_CLOSE) {
-				VCLEventQueue.QueueItem eqi = queue.head;
-				while (eqi != null) {
-					if (eqi.event.getID() == VCLEvent.SALEVENT_CLOSE && eqi.event.getFrame() == newItem.event.getFrame())
-						return;
-					eqi = eqi.next;
-				}
-			}
-			else if (id == VCLEvent.SALEVENT_KEYINPUT) {
-				if (queue.keyInput != null && !queue.keyInput.remove && queue.keyInput.event.getFrame() == newItem.event.getFrame() && queue.keyInput.event.getKeyChar() == newItem.event.getKeyChar() && queue.keyInput.event.getKeyCode() == newItem.event.getKeyCode() && queue.keyInput.event.getModifiers() == newItem.event.getModifiers()) {
-					queue.keyInput.remove = true;
-					newItem.event.addRepeatCount((short)1);
-				}
-				queue.keyInput = newItem;
-			}
-			else if (id == VCLEvent.SALEVENT_KEYUP) {
-				queue.keyInput = null;
-			}
-			else if (id == VCLEvent.SALEVENT_MOUSEMOVE) {
-				if (queue.tail != null && !queue.tail.remove && queue.tail.event.getID() == VCLEvent.SALEVENT_MOUSEMOVE && queue.tail.event.getFrame() == newItem.event.getFrame())
-					queue.tail.remove = true;
-			}
-			else if (id == VCLEvent.SALEVENT_WHEELMOUSE) {
-				if (queue.tail != null && !queue.tail.remove && queue.tail.event.getID() == VCLEvent.SALEVENT_WHEELMOUSE && queue.tail.event.getFrame() == newItem.event.getFrame()) {
-					queue.tail.remove = true;
-					newItem.event.addWheelRotation(queue.tail.event.getWheelRotation());
-				}
-			}
-			else if (id == VCLEvent.SALEVENT_MOVERESIZE) {
-				if (queue.moveResize != null && !queue.moveResize.remove && queue.moveResize.event.getFrame() == newItem.event.getFrame())
-					queue.moveResize.remove = true;
-				queue.moveResize = newItem;
-			}
-			else if (id == VCLEvent.SALEVENT_PAINT) {
-				if (queue.paint != null && !queue.paint.remove && queue.paint.event.getFrame() == newItem.event.getFrame()) {
-					queue.paint.remove = true;
-					Rectangle oldBounds = queue.paint.event.getUpdateRect();
-					if (oldBounds != null) {
-						Rectangle newBounds = newItem.event.getUpdateRect();
-						if (newBounds != null)
-							newItem.event.setUpdateRect(oldBounds.union(newBounds));
-						else
-							newItem.event.setUpdateRect(oldBounds);
+			switch (id) {
+				case VCLEvent.SALEVENT_CLOSE:
+					{
+						VCLEventQueue.QueueItem eqi = queue.head;
+						while (eqi != null) {
+							if (eqi.event.getID() == VCLEvent.SALEVENT_CLOSE && eqi.event.getFrame() == newItem.event.getFrame())
+								return;
+							eqi = eqi.next;
+						}
 					}
-				}
-				queue.paint = newItem;
+					break;
+				case VCLEvent.SALEVENT_EXTTEXTINPUT:
+					{
+						// Reduce flicker when backspacing through uncommitted
+						// text
+						if (queue.tail != null && queue.tail.event.getID() == VCLEvent.SALEVENT_EXTTEXTINPUT && queue.tail.event.getText() == null)
+							queue.tail.remove = true;
+					}
+					break;
+				case VCLEvent.SALEVENT_KEYINPUT:
+					{
+						if (queue.keyInput != null && !queue.keyInput.remove && queue.keyInput.event.getFrame() == newItem.event.getFrame() && queue.keyInput.event.getKeyChar() == newItem.event.getKeyChar() && queue.keyInput.event.getKeyCode() == newItem.event.getKeyCode() && queue.keyInput.event.getModifiers() == newItem.event.getModifiers()) {
+							queue.keyInput.remove = true;
+							newItem.event.addRepeatCount((short)1);
+						}
+						queue.keyInput = newItem;
+					}
+					break;
+				case VCLEvent.SALEVENT_KEYUP:
+					{
+						queue.keyInput = null;
+					}
+					break;
+				case VCLEvent.SALEVENT_MOUSEMOVE:
+					{
+						if (queue.tail != null && !queue.tail.remove && queue.tail.event.getID() == VCLEvent.SALEVENT_MOUSEMOVE && queue.tail.event.getFrame() == newItem.event.getFrame())
+							queue.tail.remove = true;
+					}
+					break;
+				case VCLEvent.SALEVENT_WHEELMOUSE:
+					{
+						if (queue.tail != null && !queue.tail.remove && queue.tail.event.getID() == VCLEvent.SALEVENT_WHEELMOUSE && queue.tail.event.getFrame() == newItem.event.getFrame()) {
+							queue.tail.remove = true;
+							newItem.event.addWheelRotation(queue.tail.event.getWheelRotation());
+						}
+					}
+					break;
+				case VCLEvent.SALEVENT_MOVERESIZE:
+					{
+						if (queue.moveResize != null && !queue.moveResize.remove && queue.moveResize.event.getFrame() == newItem.event.getFrame())
+							queue.moveResize.remove = true;
+						queue.moveResize = newItem;
+					}
+					break;
+				case VCLEvent.SALEVENT_PAINT:
+					{
+						if (queue.paint != null && !queue.paint.remove && queue.paint.event.getFrame() == newItem.event.getFrame()) {
+							queue.paint.remove = true;
+							Rectangle oldBounds = queue.paint.event.getUpdateRect();
+							if (oldBounds != null) {
+								Rectangle newBounds = newItem.event.getUpdateRect();
+								if (newBounds != null)
+									newItem.event.setUpdateRect(oldBounds.union(newBounds));
+								else
+									newItem.event.setUpdateRect(oldBounds);
+							}
+						}
+						queue.paint = newItem;
+					}
+					break;
+				default:
+					break;
 			}
 
 			// Purge removed events from the front of the queue

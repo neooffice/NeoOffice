@@ -73,6 +73,7 @@ public:
 	void*				getNativeWindowRef();
 	java_lang_Object*	getPeer();
 	ULONG				getState();
+	void				postInputMethodTextCancelled();
 	void				removeChild( JavaSalFrame *_par0 );
 	sal_Bool			requestFocus();
 	void				setBounds( long _par0, long _par1, long _par2, long _par3 );

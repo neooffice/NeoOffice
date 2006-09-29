@@ -35,9 +35,6 @@
 
 #define _SV_COM_SUN_STAR_VCL_VCLEVENTQUEUE_CXX
 
-#ifndef _SV_SALFRAME_HXX
-#include <salframe.hxx>
-#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLEVENTQUEUE_HXX
 #include <com/sun/star/vcl/VCLEventQueue.hxx>
 #endif
@@ -47,10 +44,71 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
 #include <com/sun/star/vcl/VCLFrame.hxx>
 #endif
+#ifndef _SV_SALDATA_HXX
+#include <saldata.hxx>
+#endif
+#ifndef _SV_SALFRAME_H
+#include <salframe.h>
+#endif
+#ifndef _SV_SVAPP_HXX
+#include <svapp.hxx>
+#endif
+#ifndef _VOS_MUTEX_HXX_
+#include <vos/mutex.hxx>
+#endif
+
+#include <premac.h>
+#include <Carbon/Carbon.h>
+#include <postmac.h>
 
 #include "VCLEventQueue_cocoa.h"
 
 using namespace vcl;
+using namespace vos;
+
+// ============================================================================
+
+void VCLEventQueue_postInputMethodTextCancelled( WindowRef aWindow )
+{
+	if ( !aWindow )
+		return;
+
+	// We need to let any pending timers run so that we don't deadlock
+	TimeValue aDelay;
+	aDelay.Seconds = 0;
+	aDelay.Nanosec = 10;
+	IMutex& rSolarMutex = Application::GetSolarMutex();
+	bool bAcquired = false;
+	while ( !Application::IsShutDown() )
+	{
+		if ( rSolarMutex.tryToAcquire() )
+		{
+			if ( !Application::IsShutDown() )
+				bAcquired = true; 
+			else
+				rSolarMutex.release();
+			break;
+		}
+		ReceiveNextEvent( 0, NULL, 0, false, NULL );
+		OThread::wait( aDelay );
+	}
+
+	if ( bAcquired )
+	{
+		SalData *pSalData = GetSalData();
+
+		for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+        {
+            if ( (WindowRef)( (*it)->GetSystemData()->aWindow ) == aWindow )
+			{
+                (*it)->mpVCLFrame->postInputMethodTextCancelled();
+				break;
+			}
+        }
+
+		rSolarMutex.release();
+	}
+}
 
 // ============================================================================
 
