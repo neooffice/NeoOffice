@@ -49,6 +49,7 @@
 }
 - (BOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename;
 - (BOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename;
+- (void)applicationDidBecomeActive:(NSNotification *)pNotification;
 - (void)applicationDidChangeScreenParameters:(NSNotification *)pNotification;
 - (NSMenu *)applicationDockMenu:(NSApplication *)pApplication;
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag;
@@ -89,6 +90,12 @@
 {   
     return mpDockMenu;
 } 
+
+- (void)applicationDidBecomeActive:(NSNotification *)pNotification
+{
+	// Fix bug 221 by explicitly reenabling all keyboards
+	KeyScript( smKeyEnableKybds );
+}
 
 - (void)applicationDidChangeScreenParameters:(NSNotification *)pNotification
 {

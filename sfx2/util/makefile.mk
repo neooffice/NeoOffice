@@ -114,7 +114,7 @@ SHL1STDLIBS+=\
 
 .IF "$(OS)"=="MACOSX"
 .IF "$(GUIBASE)"=="java"
-SHL1STDLIBS += -framework AppKit
+SHL1STDLIBS += -framework AppKit -framework Carbon
 .ENDIF
 .ENDIF
 
