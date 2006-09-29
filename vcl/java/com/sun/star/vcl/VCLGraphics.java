@@ -268,9 +268,6 @@ public final class VCLGraphics {
 	 */
 	static {
 
-		// Fix bug 1800 by explicitly setting the look and feel to Aqua
-		System.setProperty("swing.defaultlaf", "apple.laf.AquaLookAndFeel");
-
 		// Set the draw on main thread flag
 		try {
 			// Test for Java 1.5 or higher

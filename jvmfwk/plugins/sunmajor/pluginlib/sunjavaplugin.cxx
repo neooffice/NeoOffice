@@ -556,7 +556,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 
     boost::scoped_array<JavaVMOption> sarOptions(
 #if defined USE_JAVA
-        new JavaVMOption[cOptions + 8]);
+        new JavaVMOption[cOptions + 9]);
 #else	// USE_JAVA
         new JavaVMOption[cOptions + 1]);
 #endif	// USE_JAVA
@@ -665,6 +665,10 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         options[i+7].optionString = "-Dapple.awt.window.position.forceSafeProgrammaticPositioning=false";
         options[i+7].extraInfo = NULL;
 
+        // Fix bug 1800 by explicitly setting the look and feel to Aqua
+        options[i+8].optionString = "-Dswing.defaultlaf=apple.laf.AquaLookAndFeel";
+        options[i+8].extraInfo = NULL;
+
         // Set the Java max memory to the greater of half of physical user
         // memory or 256 MB.
         int pMib[2];
@@ -683,8 +687,8 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         rtl::OStringBuffer aBuf( "-Xmx" );
         aBuf.append( (sal_Int32)( nUserMem / ( 1024 * 1024 ) ) );
         aBuf.append( "m" );
-        options[i+8].optionString = (char *)aBuf.makeStringAndClear().getStr();
-        options[i+8].extraInfo = NULL;
+        options[i+9].optionString = (char *)aBuf.makeStringAndClear().getStr();
+        options[i+9].extraInfo = NULL;
 #endif	// USE_JAVA
 
 #if OSL_DEBUG_LEVEL >= 2
@@ -700,7 +704,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 #endif	// USE_JAVA
     vm_args.options= options;
 #if defined USE_JAVA
-    vm_args.nOptions= cOptions + 8;
+    vm_args.nOptions= cOptions + 9;
 #else	// USE_JAVA
     vm_args.nOptions= cOptions + 1;
 #endif	// USE_JAVA
