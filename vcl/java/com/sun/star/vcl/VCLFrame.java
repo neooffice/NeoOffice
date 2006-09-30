@@ -968,8 +968,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		lastUncommittedInputMethodEvent = null;
 
 		// Remove window and panel from mapping
-		VCLFrame.componentMap.remove(window);
-		VCLFrame.componentMap.remove(panel);
+		synchronized (VCLFrame.class) {
+			VCLFrame.componentMap.remove(window);
+			VCLFrame.componentMap.remove(panel);
+		}
 
 	}
 
