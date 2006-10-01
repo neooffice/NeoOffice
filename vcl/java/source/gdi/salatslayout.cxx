@@ -795,7 +795,24 @@ SalATSLayout::SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel ) :
 	{
 		::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = mpGraphics->maFallbackFonts.find( mnFallbackLevel );
 		if ( it != mpGraphics->maFallbackFonts.end() )
-			mpVCLFont = new com_sun_star_vcl_VCLFont( it->second->getJavaObject(), it->second->getNativeFont() );
+		{
+			int nNativeFont = it->second->getNativeFont();	
+			mpVCLFont = new com_sun_star_vcl_VCLFont( it->second->getJavaObject(), nNativeFont );
+
+			// Prevent infinite fallback
+			if ( mpVCLFont )
+			{
+				for ( ::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = mpGraphics->maFallbackFonts.begin(); ffit != mpGraphics->maFallbackFonts.end(); ++ffit )
+				{
+					if ( ffit->second->getNativeFont() == nNativeFont && ffit->first < mnFallbackLevel )
+					{
+						delete mpVCLFont;
+						mpVCLFont = NULL;
+						break;
+					}
+				}
+			}
+		}
 	}
 	else
 	{
