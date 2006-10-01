@@ -84,6 +84,7 @@ class JavaFilePicker : public ::cppu::WeakComponentImplHelper9< ::com::sun::star
 	::std::list< ::com::sun::star::uno::Reference< ::com::sun::star::ui::dialogs::XFilePickerListener > >	maListeners;
 	::osl::Mutex		maMutex;
 	SimpleResMgr*		mpResMgr;
+	sal_Int16			mnType;
 
 public:
 						JavaFilePicker( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >& xServiceMgr );
@@ -125,6 +126,9 @@ public:
 	::rtl::OUString		SAL_CALL helpRequested( ::com::sun::star::ui::dialogs::FilePickerEvent aEvent ) const;
 	void				SAL_CALL controlStateChanged( ::com::sun::star::ui::dialogs::FilePickerEvent aEvent );
 	void				SAL_CALL dialogSizeChanged();
+
+private:
+	void				implInit() throw( ::com::sun::star::uno::Exception );
 };
 
 ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL JavaFilePicker_getSupportedServiceNames();
