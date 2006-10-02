@@ -78,10 +78,9 @@ public:
 	virtual bool		LayoutText( ImplLayoutArgs& rArgs );
 	virtual void		DrawText( SalGraphics& rGraphics ) const;
 	virtual bool		GetOutline( SalGraphics& rGraphics, ::basegfx::B2DPolyPolygonVector& rVector ) const;
-	virtual void		GetVerticalGlyphTranslation( long nGlyph, long& nX, long& nY ) const;
+	virtual void		GetVerticalGlyphTranslation( long nGlyph, int nCharPos, long& nX, long& nY ) const;
 
 	void				Destroy();
-	long				GetBaselineDelta() const;
 };
 
 #endif // _SV_SALATSLAYOUT_HXX

@@ -126,6 +126,11 @@ struct ImplATSLayoutData {
 	void				Release() const;
 };
 
+static ATSCubicMoveToUPP pATSCubicMoveToUPP = NULL;
+static ATSCubicLineToUPP pATSCubicLineToUPP = NULL;
+static ATSCubicCurveToUPP pATSCubicCurveToUPP = NULL;
+static ATSCubicClosePathUPP pATSCubicClosePathUPP = NULL;
+
 using namespace basegfx;
 using namespace osl;
 using namespace rtl;
@@ -1110,7 +1115,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 
 			long nX;
 			long nY;
-			GetVerticalGlyphTranslation( aGlyphArray[ 0 ], nX, nY );
+			GetVerticalGlyphTranslation( aGlyphArray[ 0 ], aCharPosArray[ 0 ], nX, nY );
 			if ( nGlyphOrientation == GF_ROTL )
 			{
 				nTranslateX = nX;
@@ -1159,6 +1164,17 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 	if ( !maLayoutData.size() )
 		return bRet;
 
+	if ( !pATSCubicMoveToUPP )
+		pATSCubicMoveToUPP = NewATSCubicMoveToUPP( SalATSCubicMoveToCallback );
+	if ( !pATSCubicLineToUPP )
+		pATSCubicLineToUPP = NewATSCubicLineToUPP( SalATSCubicLineToCallback );
+	if ( !pATSCubicCurveToUPP )
+		pATSCubicCurveToUPP = NewATSCubicCurveToUPP( SalATSCubicCurveToCallback );
+	if ( !pATSCubicClosePathUPP )
+		pATSCubicClosePathUPP = NewATSCubicClosePathUPP( SalATSCubicClosePathCallback );
+	if ( !pATSCubicMoveToUPP || !pATSCubicLineToUPP || !pATSCubicCurveToUPP  || !pATSCubicClosePathUPP )
+		return bRet;
+
 	int nMaxGlyphs( 1 );
 	long aGlyphArray[ nMaxGlyphs ];
 	long aDXArray[ nMaxGlyphs ];
@@ -1191,10 +1207,21 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 			{
 				maRuns.NextRun();
 				nRunIndex++;
-				pLayoutData = maLayoutData[ nRunIndex ];
-				nMinCharPos = maLayoutMinCharPos[ nRunIndex ];
+				if ( nRunIndex < maLayoutData.size() )
+				{
+					pLayoutData = maLayoutData[ nRunIndex ];
+					nMinCharPos = maLayoutMinCharPos[ nRunIndex ];
+				}
+				else
+				{
+					pLayoutData = NULL;
+					break;
+				}
 			}
 		}
+
+		if ( !pLayoutData )
+			continue;
 
 		int nIndex = pLayoutData->mpCharsToChars[ aCharPosArray[ 0 ] - nMinCharPos ];
 		if ( nIndex < 0 )
@@ -1208,7 +1235,7 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 
 			::std::list< Polygon > aPolygonList;
 			OSStatus nErr;
-			if ( ATSUGlyphGetCubicPaths( pLayoutData->mpGlyphInfoArray->glyphs[ i ].style, pLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID, SalATSCubicMoveToCallback, SalATSCubicLineToCallback, SalATSCubicCurveToCallback, SalATSCubicClosePathCallback, (void *)&aPolygonList, &nErr ) != noErr )
+			if ( ATSUGlyphGetCubicPaths( pLayoutData->mpGlyphInfoArray->glyphs[ i ].style, pLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID, pATSCubicMoveToUPP, pATSCubicLineToUPP, pATSCubicCurveToUPP, pATSCubicClosePathUPP, (void *)&aPolygonList, &nErr ) != noErr || nErr != noErr )
 				continue;
 
 			PolyPolygon aPolyPolygon;
@@ -1276,19 +1303,33 @@ void SalATSLayout::Destroy()
 
 // ----------------------------------------------------------------------------
 
-long SalATSLayout::GetBaselineDelta() const
-{
-	return ( maLayoutData.size() ? maLayoutData.front()->mnBaselineDelta : 0 );
-}
-
-// ----------------------------------------------------------------------------
-
-void SalATSLayout::GetVerticalGlyphTranslation( long nGlyph, long& nX, long& nY ) const
+void SalATSLayout::GetVerticalGlyphTranslation( long nGlyph, int nCharPos, long& nX, long& nY ) const
 {
 	nX = 0;
 	nY = 0;
 
 	if ( !maLayoutData.size() )
+		return;
+
+	int nRunIndex = 0;
+	ImplATSLayoutData *pLayoutData = maLayoutData[ nRunIndex ];
+	maRuns.ResetPos();
+	while ( !maRuns.PosIsInRun( nCharPos ) )
+	{
+		maRuns.NextRun();
+		nRunIndex++;
+		if ( nRunIndex < maLayoutData.size() )
+		{
+			pLayoutData = maLayoutData[ nRunIndex ];
+		}
+		else
+		{
+			pLayoutData = NULL;
+			break;
+		}
+	}
+
+	if ( !pLayoutData )
 		return;
 
 	long nGlyphOrientation = nGlyph & GF_ROTMASK;
@@ -1299,13 +1340,13 @@ void SalATSLayout::GetVerticalGlyphTranslation( long nGlyph, long& nX, long& nY 
 
 		ATSGlyphScreenMetrics aVerticalMetrics;
 		ATSGlyphScreenMetrics aHorizontalMetrics;
-		if ( ATSUGlyphGetScreenMetrics( maLayoutData.front()->maVerticalFontStyle, 1, &nGlyphID, sizeof( GlyphID ), maLayoutData.front()->mpHash->mbAntialiased, maLayoutData.front()->mpHash->mbAntialiased, &aVerticalMetrics ) == noErr && ATSUGlyphGetScreenMetrics( maLayoutData.front()->maFontStyle, 1, &nGlyphID, sizeof( GlyphID ), maLayoutData.front()->mpHash->mbAntialiased, maLayoutData.front()->mpHash->mbAntialiased, &aHorizontalMetrics ) == noErr )
+		if ( ATSUGlyphGetScreenMetrics( pLayoutData->maVerticalFontStyle, 1, &nGlyphID, sizeof( GlyphID ), pLayoutData->mpHash->mbAntialiased, pLayoutData->mpHash->mbAntialiased, &aVerticalMetrics ) == noErr && ATSUGlyphGetScreenMetrics( pLayoutData->maFontStyle, 1, &nGlyphID, sizeof( GlyphID ), pLayoutData->mpHash->mbAntialiased, pLayoutData->mpHash->mbAntialiased, &aHorizontalMetrics ) == noErr )
 		{
 			nX = Float32ToLong( aVerticalMetrics.topLeft.x - aHorizontalMetrics.topLeft.x );
 			if ( nGlyphOrientation == GF_ROTL )
-				nX += GetBaselineDelta();
+				nX += pLayoutData->mnBaselineDelta;
 			else
-				nX -= GetBaselineDelta();
+				nX -= pLayoutData->mnBaselineDelta;
 			nY = Float32ToLong( aHorizontalMetrics.topLeft.y - aVerticalMetrics.topLeft.y );
 		}
 	}
