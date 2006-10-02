@@ -36,6 +36,7 @@
 #ifndef _SV_SALATSLAYOUT_HXX
 #define _SV_SALATSLAYOUT_HXX
 
+#include <map>
 #include <vector>
 
 #ifndef _SV_SALLAYOUT_HXX
@@ -66,7 +67,7 @@ class SalATSLayout : public GenericSalLayout
 	::std::vector< ImplATSLayoutData* >	maLayoutData;
 	::std::vector< int >	maLayoutMinCharPos;
 	ImplATSLayoutData*	mpKashidaLayoutData;
-	ImplATSLayoutData*	mpParensLayoutData;
+	::std::map< sal_Unicode, ImplATSLayoutData* >	maMirroredLayoutData;
 
 public:
 	static void			ClearLayoutDataCache();
@@ -78,7 +79,7 @@ public:
 	virtual bool		LayoutText( ImplLayoutArgs& rArgs );
 	virtual void		DrawText( SalGraphics& rGraphics ) const;
 	virtual bool		GetOutline( SalGraphics& rGraphics, ::basegfx::B2DPolyPolygonVector& rVector ) const;
-	virtual void		GetVerticalGlyphTranslation( long nGlyph, int nCharPos, long& nX, long& nY ) const;
+	virtual ImplATSLayoutData*	GetVerticalGlyphTranslation( long nGlyph, int nCharPos, long& nX, long& nY ) const;
 
 	void				Destroy();
 };
