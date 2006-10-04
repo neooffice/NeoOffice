@@ -151,13 +151,9 @@ public final class VCLEventQueue implements Runnable {
 			t.printStackTrace();
 		}
 
-		// Set keyboard focus manager
-		KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
-		kfm.setCurrentKeyboardFocusManager(new NoEnqueueKeyboardFocusManager());
-
 		// Set the keyboard focus manager so that Java's default focus
 		// switching key events are passed are not consumed
-		kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+		KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
 		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS, Collections.EMPTY_SET);
 		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.BACKWARD_TRAVERSAL_KEYS, Collections.EMPTY_SET);
 		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.UP_CYCLE_TRAVERSAL_KEYS, Collections.EMPTY_SET);
@@ -591,21 +587,6 @@ public final class VCLEventQueue implements Runnable {
 			this.event = event;
 
 		}
-
-	}
-
-	/**
-	 * The <code>NoEnqueueKeyboardFocusManager</code> is a subclass of
-	 * the <code>DefaultKeyboardFocusManager</code> class that does not enqueue
-	 * any key events.
-	 */
-	final class NoEnqueueKeyboardFocusManager extends DefaultKeyboardFocusManager {
-
-		/**
-		 * Does no delay of dispatching of key events. This is needed to fully
-		 * fix bug 1658.
-		 */
-		protected void enqueueKeyEvents(long after, Component untilFocused) {}
 
 	}
 
