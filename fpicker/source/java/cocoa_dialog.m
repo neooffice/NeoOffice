@@ -169,7 +169,7 @@ static NSString *pBlankItem = @" ";
 			}
 
 			if ( !bAllowAll )
-				[mpFilters setValue:pArray forKey:pItem];
+				[mpFilters setObject:pArray forKey:pItem];
 		}
 	}
 
@@ -584,23 +584,31 @@ static NSString *pBlankItem = @" ";
 						NSString *pResolvedPath = (NSString *)CFURLCopyFileSystemPath( aResolvedURL, kCFURLPOSIXPathStyle );
 						if ( pResolvedPath )
 						{
-							NSArray *pArray = [mpFilePanel allowedFileTypes];
-							if ( pArray )
+							NSString *pItem = [self selectedFilter];
+							if ( pItem )
 							{
-								NSString *pExt = (NSString *)[pResolvedPath pathExtension];
-								if ( pExt )
+								NSArray *pArray = (NSArray *)[mpFilters objectForKey:pItem];
+								if ( pArray )
 								{
-									int nCount = [pArray count];
-									int i = 0;
-									for ( ; i < nCount; i++ )
+									NSString *pExt = (NSString *)[pResolvedPath pathExtension];
+									if ( pExt )
 									{
-										NSString *pCurrentType = (NSString *)[pArray objectAtIndex:i];
-										if ( pCurrentType && ( [pCurrentType isEqualToString:@"*"] || [pCurrentType caseInsensitiveCompare:pExt] == NSOrderedSame ) )
+										int nCount = [pArray count];
+										int i = 0;
+										for ( ; i < nCount; i++ )
 										{
-											bRet = YES;
-											break;
+											NSString *pCurrentType = (NSString *)[pArray objectAtIndex:i];
+											if ( pCurrentType && ( [pCurrentType isEqualToString:@"*"] || [pCurrentType caseInsensitiveCompare:pExt] == NSOrderedSame ) )
+											{
+												bRet = YES;
+												break;
+											}
 										}
 									}
+								}
+								else
+								{
+									bRet = YES;
 								}
 							}
 							else
@@ -743,7 +751,7 @@ static NSString *pBlankItem = @" ";
 
 - (void)setSelectedFilter:(NSString *)pItem
 {
-	[mpFilePanel setAllowedFileTypes:(NSArray *)[mpFilters objectForKey:pItem]];
+	[mpFilePanel validateVisibleColumns];
 
 	NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILETYPE] stringValue]];
 	if ( pPopup )
@@ -893,7 +901,7 @@ static NSString *pBlankItem = @" ";
 		if ( mbUseFileOpenDialog )
 		{
 			NSOpenPanel *pOpenPanel = (NSOpenPanel *)mpFilePanel;
-			mnResult = [pOpenPanel runModalForDirectory:[pOpenPanel directory] file:mpDefaultName types:[pOpenPanel allowedFileTypes]];
+			mnResult = [pOpenPanel runModalForDirectory:[pOpenPanel directory] file:mpDefaultName types:nil];
 		}
 		else
 		{
