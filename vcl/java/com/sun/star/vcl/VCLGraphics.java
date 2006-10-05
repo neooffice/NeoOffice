@@ -217,11 +217,21 @@ public final class VCLGraphics {
 	 * The radio button component.
 	 */
 	private static JRadioButton radioButton = null;
-	
+
 	/**
-	 * The radio button component.
+	 * The radio button preferred size.
+	 */
+	private final static Dimension radioButtonPreferredSize = new Dimension(16, 16);
+
+	/**
+	 * The checkbox component.
 	 */
 	private static JCheckBox checkBoxButton = null;
+
+	/**
+	 * The checkbox preferred size.
+	 */
+	private final static Dimension checkBoxButtonPreferredSize = new Dimension(16, 16);
 
 	/**
 	 * The cached screen resolution.
@@ -1624,11 +1634,12 @@ public final class VCLGraphics {
 				else
 					m.setSelected(false);
 
-				// Set width to height
-				width = height;
-
-				Dimension d = VCLGraphics.radioButton.getPreferredSize();
-				Rectangle bounds = new Rectangle(x, y, d.width, d.height);
+				Dimension d = VCLGraphics.checkBoxButton.getPreferredSize();
+				Rectangle bounds = new Rectangle(x - 4, y - 4, VCLGraphics.radioButtonPreferredSize.width, VCLGraphics.radioButtonPreferredSize.height);
+				if (width > d.width)
+					bounds.x += (width - d.width) / 2;
+				if (height > d.height)
+					bounds.y += (height - d.height) / 2;
 				if (bounds.width > width || bounds.height > height) {
 					VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
 					VCLGraphics srcGraphics = srcImage.getGraphics();
@@ -1637,7 +1648,7 @@ public final class VCLGraphics {
 					srcImage.dispose();
 				}
 				else {
-					VCLGraphics.radioButton.setSize(bounds.width, bounds.height);
+					VCLGraphics.radioButton.setSize(d.width, d.height);
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {
 						g.setClip((Rectangle)clipRects.next());
@@ -1668,9 +1679,7 @@ public final class VCLGraphics {
 	 */
 	public Rectangle getPreferredRadioButtonBounds(int x, int y, int width, int height, String title) {
 
-		VCLGraphics.checkBoxButton.setLabel(title);
-		Dimension d = VCLGraphics.radioButton.getPreferredSize();
-		return new Rectangle(x, y, d.width, d.height);
+		return new Rectangle(x, y, VCLGraphics.radioButtonPreferredSize.width, VCLGraphics.radioButtonPreferredSize.height);
 
 	}
 	
@@ -1721,11 +1730,13 @@ public final class VCLGraphics {
 				else
 					m.setSelected(false);
 
-				// Set width to height
-				width = height;
 
 				Dimension d = VCLGraphics.checkBoxButton.getPreferredSize();
-				Rectangle bounds = new Rectangle(x, y, d.width, d.height);
+				Rectangle bounds = new Rectangle(x - 4, y - 4, VCLGraphics.checkBoxButtonPreferredSize.width, VCLGraphics.checkBoxButtonPreferredSize.height);
+				if (width > d.width)
+					bounds.x += (width - d.width) / 2;
+				if (height > d.height)
+					bounds.y += (height - d.height) / 2;
 				if (bounds.width > width || bounds.height > height) {
 					VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
 					VCLGraphics srcGraphics = srcImage.getGraphics();
@@ -1734,7 +1745,7 @@ public final class VCLGraphics {
 					srcImage.dispose();
 				}
 				else {
-					VCLGraphics.checkBoxButton.setSize(bounds.width, bounds.height);
+					VCLGraphics.checkBoxButton.setSize(d.width, d.height);
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {
 						g.setClip((Rectangle)clipRects.next());
@@ -1765,9 +1776,7 @@ public final class VCLGraphics {
 	 */
 	public Rectangle getPreferredCheckBoxBounds(int x, int y, int width, int height, String title) {
 
-		VCLGraphics.checkBoxButton.setLabel(title);
-		Dimension d = VCLGraphics.checkBoxButton.getPreferredSize();
-		return new Rectangle(x, y, d.width, d.height);
+		return new Rectangle(x, y, VCLGraphics.checkBoxButtonPreferredSize.width, VCLGraphics.checkBoxButtonPreferredSize.height);
 
 	}
 

@@ -3234,11 +3234,7 @@ Image RadioButton::GetRadioImage( const AllSettings& rSettings, USHORT nFlags )
                     if ( pGraphics->GetNativeControlRegion( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString(), aBoundingRgn, aContentRgn, NULL ) )
                     {
                         aBmpSize = aContentRgn.GetBoundRect().GetSize();
-                        if ( aBmpSize.Width() > 20 )
-                        	aBmpSize.Width() = 20;
                         aBmpSize.Width() *= 6;
-                        if ( aBmpSize.Height() > 20 )
-                        	aBmpSize.Height() = 20;
                         pSalVirDev->ReleaseGraphics( pGraphics );
                         pGraphics = NULL;
                         pSalVirDev->SetSize( aBmpSize.Width(), aBmpSize.Height() );
@@ -4180,11 +4176,7 @@ Image CheckBox::GetCheckImage( const AllSettings& rSettings, USHORT nFlags )
                     if ( pGraphics->GetNativeControlRegion( CTRL_CHECKBOX, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString(), aBoundingRgn, aContentRgn, NULL ) )
                     {
                         aBmpSize = aContentRgn.GetBoundRect().GetSize();
-                        if ( aBmpSize.Width() > 20 )
-                        	aBmpSize.Width() = 20;
                         aBmpSize.Width() *= 9;
-                        if ( aBmpSize.Height() > 20 )
-                        	aBmpSize.Height() = 20;
                         pSalVirDev->ReleaseGraphics( pGraphics );
                         pGraphics = NULL;
                         pSalVirDev->SetSize( aBmpSize.Width(), aBmpSize.Height() );
