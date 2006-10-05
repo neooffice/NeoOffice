@@ -1426,6 +1426,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			for (char c = text.first(); c != CharacterIterator.DONE; c = text.next())
 				count++;
 		}
+		else if (lastUncommittedInputMethodEvent == null) {
+			// Fix bug 1861 by ignoring events posted by the
+			// postInputMethodTextCancelled method that are really just a
+			// backspace
+			return;
+		}
 
 		// Fix bug 1429 by committing last uncommitted text if there is no
 		// text in this event. Since this code assumes that uncommitted text
@@ -1443,10 +1449,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			}
 		}
 		else if (text != null && count > e.getCommittedCharacterCount()) {
-				lastUncommittedInputMethodEvent = e;
+			lastUncommittedInputMethodEvent = e;
 		}
 		else {
-				lastUncommittedInputMethodEvent = null;
+			lastUncommittedInputMethodEvent = null;
 		}
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_EXTTEXTINPUT, this, 0));
