@@ -751,6 +751,9 @@ static NSString *pBlankItem = @" ";
 
 - (void)setSelectedFilter:(NSString *)pItem
 {
+	if ( !mbUseFileOpenDialog )
+		[mpFilePanel setAllowedFileTypes:(NSArray *)[mpFilters objectForKey:pItem]];
+
 	[mpFilePanel validateVisibleColumns];
 
 	NSPopUpButton *pPopup = (NSPopUpButton *)[mpControls objectForKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_FILETYPE] stringValue]];
