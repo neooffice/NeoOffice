@@ -84,6 +84,9 @@
 #ifndef _SV_LSTBOX_HXX
 #include <lstbox.hxx>
 #endif
+#ifndef _SV_COMBOBOX_HXX
+#include <combobox.hxx>
+#endif
 
 #endif	// USE_JAVA
 
@@ -3031,6 +3034,33 @@ void ImplListBoxFloatingWindow::StartFloat( BOOL bStartTracking )
         mnPopupModeStartSaveSelection = nPos;
 
         Size aSz = GetParent()->GetSizePixel();
+#ifdef USE_JAVA
+		// respect NWF preferred drawing bounds.  Bug #1769
+		if( dynamic_cast<ComboBox *>(GetParent()) && IsNativeControlSupported( CTRL_COMBOBOX, PART_ENTIRE_CONTROL ) )
+		{
+			ImplControlValue aControlValue;
+			Region aBoundingRgn, aContentRgn;
+			Rectangle aRect( GetParent()->GetPosPixel(), GetParent()->GetSizePixel() );
+			Region aArea( aRect );
+			if ( GetNativeControlRegion( CTRL_COMBOBOX, PART_ENTIRE_CONTROL, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
+			{
+				Rectangle preferredRect = aContentRgn.GetBoundRect();
+				aSz = Size( preferredRect.GetWidth(), preferredRect.GetHeight() );
+			}
+		}
+		if( dynamic_cast<ListBox *>(GetParent()) && IsNativeControlSupported( CTRL_LISTBOX, PART_ENTIRE_CONTROL ) )
+		{
+			ImplControlValue aControlValue;
+			Region aBoundingRgn, aContentRgn;
+			Rectangle aRect( GetParent()->GetPosPixel(), GetParent()->GetSizePixel() );
+			Region aArea( aRect );
+			if ( GetNativeControlRegion( CTRL_LISTBOX, PART_ENTIRE_CONTROL, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
+			{
+				Rectangle preferredRect = aContentRgn.GetBoundRect();
+				aSz = Size( preferredRect.GetWidth(), preferredRect.GetHeight() );
+			}
+		}
+#endif
 		Point aPos = GetParent()->GetPosPixel();
 		aPos = GetParent()->GetParent()->OutputToScreenPixel( aPos );
 		Rectangle aRect( aPos, aSz );

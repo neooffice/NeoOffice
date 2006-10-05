@@ -1868,6 +1868,16 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 					switch( nPart )
 					{
+						case PART_ENTIRE_CONTROL:
+							{
+								Point topLeft( (long)preferredRect.origin.x, (long)preferredRect.origin.y );
+								Size boundsSize( (long)preferredRect.size.width, (long)preferredRect.size.height );
+								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+								rNativeContentRegion = Region( rNativeBoundingRegion );
+								bReturn = TRUE;
+							}
+							break;
+							
 						case PART_BUTTON_DOWN:
 							{
 								Point topLeft( (long)preferredRect.origin.x + (long)preferredRect.size.width - COMBOBOX_BUTTON_WIDTH, (long)preferredRect.origin.y );
