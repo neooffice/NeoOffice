@@ -205,7 +205,7 @@ static VCLResponder *pResponder = nil;
 
 @end
 
-void NSPrintInfo_installVCLEventQueueClasses()
+void VCLEventQueue_installVCLEventQueueClasses()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 

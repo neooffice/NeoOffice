@@ -127,7 +127,7 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 		// the NSView class. We need to do this because the JVM does not
 		// properly handle key events where a single key press generates more
 		// than one Unicode character.
-        NSPrintInfo_installVCLEventQueueClasses();
+        VCLEventQueue_installVCLEventQueueClasses();
 
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLEventQueue" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );

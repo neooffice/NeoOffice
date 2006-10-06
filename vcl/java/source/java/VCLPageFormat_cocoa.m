@@ -223,17 +223,6 @@ id NSPrintInfo_create()
 	return pRet;
 }
 
-void NSPrintInfo_installVCLPrintClasses()
-{
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	InstallVCLPrintClasses *pInstallVCLPrintClasses = [[InstallVCLPrintClasses alloc] init];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pInstallVCLPrintClasses performSelectorOnMainThread:@selector(installVCLPrintClasses:) withObject:pInstallVCLPrintClasses waitUntilDone:YES modes:pModes];
-
-	[pPool release];
-}
-
 void NSPrintInfo_setInDialog( BOOL bIn )
 {
 	[VCLPrintInfo setInDialog:bIn];
@@ -294,4 +283,15 @@ id NSPrintInfo_showPageLayoutDialog( id pNSPrintInfo, id pNSWindow, BOOL bLandsc
 	[pPool release];
 
 	return pRet;
+}
+
+void VCLPrintInfo_installVCLPrintClasses()
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	InstallVCLPrintClasses *pInstallVCLPrintClasses = [[InstallVCLPrintClasses alloc] init];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pInstallVCLPrintClasses performSelectorOnMainThread:@selector(installVCLPrintClasses:) withObject:pInstallVCLPrintClasses waitUntilDone:YES modes:pModes];
+
+	[pPool release];
 }

@@ -212,7 +212,7 @@ jclass com_sun_star_vcl_VCLPageFormat::getMyClass()
 		// printer has changed in a dialog, the JVM will print to the wrong
 		// printer if the default printer is set to a specific printer in the
 		// printer preferences in the System Preferences application.
-		NSPrintInfo_installVCLPrintClasses();
+		VCLPrintInfo_installVCLPrintClasses();
 
 		// Cache existing functions from libawt.jnilib
 		jclass systemClass = t.pEnv->FindClass( "java/lang/System" );

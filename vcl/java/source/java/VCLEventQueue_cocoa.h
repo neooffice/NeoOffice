@@ -44,7 +44,7 @@ typedef void* id;
 BEGIN_C
 #endif
 void VCLEventQueue_postInputMethodTextCancelled( WindowRef aWindow );
-void NSPrintInfo_installVCLEventQueueClasses();
+void VCLEventQueue_installVCLEventQueueClasses();
 #ifdef __cplusplus
 END_C
 #endif
