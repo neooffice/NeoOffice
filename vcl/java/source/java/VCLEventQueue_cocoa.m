@@ -144,15 +144,18 @@
 
 	// Fix bug 1819 by forcing cancellation of the input method by posting
 	// a Command-. event
-	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( pApp )
+	if ( [[self className] isEqualToString:@"CocoaAppWindow"] )
 	{
-		NSEvent *pKeyPressedEvent = [NSEvent keyEventWithType:NSKeyDown location:NSMakePoint( 0, 0 ) modifierFlags:NSCommandKeyMask timestamp:[NSDate timeIntervalSinceReferenceDate] windowNumber:[self windowNumber] context:nil characters:@"." charactersIgnoringModifiers:@"." isARepeat:NO keyCode:0];
-		NSEvent *pKeyReleasedEvent = [NSEvent keyEventWithType:NSKeyUp location:NSMakePoint( 0, 0 ) modifierFlags:NSCommandKeyMask timestamp:[NSDate timeIntervalSinceReferenceDate] windowNumber:[self windowNumber] context:nil characters:@"." charactersIgnoringModifiers:@"." isARepeat:NO keyCode:0];
-		if ( pKeyPressedEvent && pKeyReleasedEvent )
+		NSApplication *pApp = [NSApplication sharedApplication];
+		if ( pApp )
 		{
-			[pApp postEvent:pKeyPressedEvent atStart:NO];
-			[pApp postEvent:pKeyReleasedEvent atStart:NO];
+			NSEvent *pKeyPressedEvent = [NSEvent keyEventWithType:NSKeyDown location:NSMakePoint( 0, 0 ) modifierFlags:NSCommandKeyMask timestamp:[NSDate timeIntervalSinceReferenceDate] windowNumber:[self windowNumber] context:nil characters:@"." charactersIgnoringModifiers:@"." isARepeat:NO keyCode:0];
+			NSEvent *pKeyReleasedEvent = [NSEvent keyEventWithType:NSKeyUp location:NSMakePoint( 0, 0 ) modifierFlags:NSCommandKeyMask timestamp:[NSDate timeIntervalSinceReferenceDate] windowNumber:[self windowNumber] context:nil characters:@"." charactersIgnoringModifiers:@"." isARepeat:NO keyCode:0];
+			if ( pKeyPressedEvent && pKeyReleasedEvent )
+			{
+				[pApp postEvent:pKeyPressedEvent atStart:NO];
+				[pApp postEvent:pKeyReleasedEvent atStart:NO];
+			}
 		}
 	}
 }
