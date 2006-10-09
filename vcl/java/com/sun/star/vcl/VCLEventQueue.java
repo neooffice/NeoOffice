@@ -46,11 +46,13 @@ import java.awt.Panel;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.Window;
+import java.awt.event.FocusEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.InputMethodEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.PaintEvent;
+import java.awt.event.WindowEvent;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.Collections;
@@ -151,9 +153,13 @@ public final class VCLEventQueue implements Runnable {
 			t.printStackTrace();
 		}
 
+		// Set keyboard focus manager
+		KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+		kfm.setCurrentKeyboardFocusManager(new NoEnqueueKeyboardFocusManager());
+
 		// Set the keyboard focus manager so that Java's default focus
 		// switching key events are passed are not consumed
-		KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+		kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
 		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS, Collections.EMPTY_SET);
 		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.BACKWARD_TRAVERSAL_KEYS, Collections.EMPTY_SET);
 		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.UP_CYCLE_TRAVERSAL_KEYS, Collections.EMPTY_SET);
@@ -585,6 +591,31 @@ public final class VCLEventQueue implements Runnable {
 		QueueItem(VCLEvent event) {
 
 			this.event = event;
+
+		}
+
+	}
+
+	/**
+	 * The <code>NoEnqueueKeyboardFocusManager</code> is a subclass of
+	 * the <code>DefaultKeyboardFocusManager</code> class that does not enqueue
+	 * any key events.
+	 */
+	final class NoEnqueueKeyboardFocusManager extends DefaultKeyboardFocusManager {
+
+		/**
+		 * Fix bug 1715 by ensuring that the focus owner does not get set to
+		 * null if there is a permanent focus owner.
+		 */
+		public boolean dispatchKeyEvent(KeyEvent e) {
+
+			if (getFocusOwner() == null) {
+				Component c = getPermanentFocusOwner();
+				if (c != null)
+					c.requestFocusInWindow();
+			}
+
+			return super.dispatchKeyEvent(e);
 
 		}
 

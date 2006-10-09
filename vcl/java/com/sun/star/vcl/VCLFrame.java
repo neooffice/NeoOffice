@@ -70,7 +70,6 @@ import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.event.PaintEvent;
 import java.awt.event.WindowEvent;
-import java.awt.event.WindowFocusListener;
 import java.awt.event.WindowListener;
 import java.awt.event.WindowStateListener;
 import java.awt.font.TextHitInfo;
@@ -93,7 +92,7 @@ import java.util.LinkedList;
  * @version		$Revision$ $Date$
  * @author		$Author$
  */
-public final class VCLFrame implements ComponentListener, FocusListener, KeyListener, InputMethodListener, InputMethodRequests, MouseListener, MouseMotionListener, MouseWheelListener, WindowFocusListener, WindowListener, WindowStateListener {
+public final class VCLFrame implements ComponentListener, FocusListener, KeyListener, InputMethodListener, InputMethodRequests, MouseListener, MouseMotionListener, MouseWheelListener, WindowListener, WindowStateListener {
 
 	/**
 	 * SAL_FRAME_STYLE_DEFAULT constant.
@@ -872,7 +871,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		window.addMouseListener(this);
 		window.addMouseMotionListener(this);
 		window.addMouseWheelListener(this);
-		window.addWindowFocusListener(this);
 		window.addWindowListener(this);
 		window.addWindowStateListener(this);
 
@@ -1020,7 +1018,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		window.removeMouseListener(this);
 		window.removeMouseMotionListener(this);
 		window.removeMouseWheelListener(this);
-		window.removeWindowFocusListener(this);
 		window.removeWindowListener(this);
 		window.removeWindowStateListener(this);
 		queue.removeCachedEvents(frame);
@@ -1131,10 +1128,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 					return;
 				}
 			}
-		}
- 		else if (VCLFrame.trapNullOppositeFocusEvents) {
-			requestFocus();
-			return;
 		}
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
@@ -2252,14 +2245,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>WindowEvent</code>
 	 */
-	public void windowActivated(WindowEvent e) {
-
-		if (disposed || isFloatingWindow() || !window.isShowing())
-			return;
-
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_GETFOCUS, this, 0));
-
-	}
+	public void windowActivated(WindowEvent e) {}
 
 	/**
 	 * Invoked when a window is no longer the user's active window, which
@@ -2268,78 +2254,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param e the <code>WindowEvent</code>
 	 */
-	public void windowDeactivated(WindowEvent e) {
-
-		if (disposed || isFloatingWindow() || !window.isShowing())
-			return;
-
-		// Fix bug 1645 by ensuring that we don't lose focus to a floating
-		// window
-		VCLFrame f = findFrame(e.getOppositeWindow());
-		if (f != null) {
-			synchronized (f) {
-				if (f.isFloatingWindow()) {
-					requestFocus();
-					return;
-				}
-			}
-		}
- 		else if (VCLFrame.trapNullOppositeFocusEvents) {
-			requestFocus();
-			return;
-		}
-
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
-
-	}
-
-	/**
-	 * Invoked when the window is set to be the focused window, which
-	 * means the window (or one of its subcomponents) will receive keyboard
-	 * events.
-	 *
-	 * @param e the <code>WindowEvent</code>
-	 */
-	public void windowGainedFocus(WindowEvent e) {
-
-		if (disposed || isFloatingWindow() || !window.isShowing())
-			return;
-
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_GETFOCUS, this, 0));
-
-	}
-
-	/**
-	 * Invoked when a window is no longer the focused window, which
-	 * means that keyboard events will no longer be delivered to the window
-	 * or its subcomponents.
-	 *
-	 * @param e the <code>WindowEvent</code>
-	 */
-	public void windowLostFocus(WindowEvent e) {
-
-		if (disposed || isFloatingWindow() || !window.isShowing())
-			return;
-
-		// Fix bug 1645 by ensuring that we don't lose focus to a floating
-		// window
-		VCLFrame f = findFrame(e.getOppositeWindow());
-		if (f != null) {
-			synchronized (f) {
-				if (f.isFloatingWindow()) {
-					requestFocus();
-					return;
-				}
-			}
-		}
- 		else if (VCLFrame.trapNullOppositeFocusEvents) {
-			requestFocus();
-			return;
-		}
-
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
-
-	}
+	public void windowDeactivated(WindowEvent e) {}
 
 	/**
 	 * Invoked when the the native window's state changes.
