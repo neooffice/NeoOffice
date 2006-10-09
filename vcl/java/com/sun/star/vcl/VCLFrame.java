@@ -1556,18 +1556,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
-		// These are handled in the key pressed and released events
+		// These are handled in the key pressed and released events. Also,
+		// Command-. events are generated as a fix for bug 1819 so ignore
+		// them.
 		char keyChar = e.getKeyChar();
-		if (keyChar == (char)0x08 || keyChar == (char)0x7f)
+		int modifiers = e.getModifiersEx();
+		if (keyChar == (char)0x08 || keyChar == (char)0x7f || (keyChar == (char)0x2e && modifiers == InputEvent.META_DOWN_MASK))
 			return;
 
 		// Fix bug 710 by stripping out the Alt modifier. Note that we do it
 		// here because we need to let the Alt modifier through for action
 		// keys.
-		int modifiers = e.getModifiersEx();
-		if ((modifiers & InputEvent.ALT_DOWN_MASK) != 0) {
+		if ((modifiers & InputEvent.ALT_DOWN_MASK) != 0)
 			e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), (e.getModifiers() | modifiers) & ~(InputEvent.ALT_MASK | InputEvent.ALT_DOWN_MASK), e.getKeyCode(), keyChar);
-		}
 
 		// Fix bug 1143 by converting any capital alpha characters to lowercase
 		// when the meta key is pressed
