@@ -78,11 +78,7 @@
 		if ( [pSelectorName compare:@"cancelOperation:"] == NSOrderedSame || [pSelectorName compare:@"deleteBackward:"] == NSOrderedSame )
 		{
 			if ( mpView )
-			{
-				NSWindow *pWindow = [mpView window];
-				if ( pWindow )
-					VCLEventQueue_postInputMethodTextCancelled( [pWindow windowRef] );
-			}
+				[mpView cancelOperation:self];
 		}
 	}
 }
@@ -165,10 +161,18 @@
 static VCLResponder *pResponder = nil;
 
 @interface VCLView : NSView
+- (void)cancelOperation:(id)pSender;
 - (void)interpretKeyEvents:(NSArray *)pEvents;
 @end
 
 @implementation VCLView
+
+- (void)cancelOperation:(id)pSender
+{
+	NSWindow *pWindow = [self window];
+	if ( pWindow )
+		VCLEventQueue_postInputMethodTextCancelled( [pWindow windowRef] );
+}
 
 - (void)interpretKeyEvents:(NSArray *)pEvents
 {
