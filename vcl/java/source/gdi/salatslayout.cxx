@@ -1095,7 +1095,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 		if ( i )
 		{
 			while ( i < nGlyphCount && aCharPosArray[ i ] == aCharPosArray[ 0 ] )
-				;
+				i++;
 			if ( i < nGlyphCount )
 				nStart = aCharPosArray[ i ];
 			continue;
