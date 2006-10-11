@@ -571,7 +571,12 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     int index = 1;
     rtl::OString sClassPathProp("-Djava.class.path=");
     rtl::OString sClassPathOption;
+#if defined USE_JAVA
+    int i = 0;
+    for (; i < cOptions; i++)
+#else	// USE_JAVA
     for (int i = 0; i < cOptions; i++)
+#endif	// USE_JAVA
     {
 #ifdef UNX
     // Until java 1.5 we need to put a plugin.jar or javaplugin.jar (<1.4.2)
@@ -609,93 +614,100 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 #ifdef UNX
         }
 #endif
-
-#if defined USE_JAVA
-        // Limit the directories that extensions can be loaded from to prevent
-        // random JVM crashing
-        rtl::OString aExtPath("-Djava.ext.dirs=");
-        aExtPath += rtl::OUStringToOString(sPathLocation, osl_getThreadTextEncoding());
-        aExtPath += rtl::OString("/lib/ext");
-        options[i+2].optionString = (char *)aExtPath.getStr();
-        options[i+2].extraInfo = NULL;
-
-        // Set the endorsed directory to use the JVM's XML parser
-        rtl::OString aEndorsedPath( "-Djava.endorsed.dirs=" );
-        options[i+3].optionString = (char *)aEndorsedPath.getStr();
-        options[i+3].extraInfo = NULL;
-
-        rtl::OString aLibPath( "-Djava.library.path=/usr/lib/java" );
-        rtl::OUString aJavaLibPath( pInfo->sLocation );
-        aJavaLibPath = rtl::OUString( aJavaLibPath, aJavaLibPath.lastIndexOf('/') );
-        aJavaLibPath += OUString::createFromAscii( "/Libraries" );
-        rtl::OUString aJavaLibSysPath;
-        if ( osl_getSystemPathFromFileURL( aJavaLibPath.pData, &aJavaLibSysPath.pData ) == osl_File_E_None )
-        {
-            aLibPath += ":";
-            aLibPath += rtl::OUStringToOString( aJavaLibSysPath, RTL_TEXTENCODING_UTF8 );
-        }
-        rtl::OString aEnvLibPath( getenv( "DYLD_LIBRARY_PATH" ) );
-		if ( aEnvLibPath.getLength() )
-		{
-            aLibPath += ":";
-            aLibPath += aEnvLibPath;
-		}
-        rtl::OString aEnvFallbackLibPath( getenv( "DYLD_FALLBACK_LIBRARY_PATH" ) );
-		if ( aEnvFallbackLibPath.getLength() )
-		{
-            aLibPath += ":";
-            aLibPath += aEnvFallbackLibPath;
-		}
-
-        // Set the library path to include the executable path but none of the
-        // extensions
-        options[i+4].optionString = (char *)aLibPath.getStr();
-        options[i+4].extraInfo = NULL;
-
-        // Set miscellaneous optimizations for the JVM
-        options[i+5].optionString = "-Xrs";
-        options[i+5].extraInfo = NULL;
-
-        options[i+6].optionString = "-XX:+UseParallelGC";
-        options[i+6].extraInfo = NULL;
-
-        // We need to turn off some of Java 1.4's graphics optimizations as
-        // they cause full screen window positioning, clipping, and image
-        // drawing speed to get messed up
-        options[i+7].optionString = "-Dapple.awt.window.position.forceSafeProgrammaticPositioning=false";
-        options[i+7].extraInfo = NULL;
-
-        // Fix bug 1800 by explicitly setting the look and feel to Aqua
-        options[i+8].optionString = "-Dswing.defaultlaf=apple.laf.AquaLookAndFeel";
-        options[i+8].extraInfo = NULL;
-
-        // Set the Java max memory to the greater of half of physical user
-        // memory or 256 MB.
-        int pMib[2];
-        size_t nMinMem = 256 * 1024 * 1024;
-        size_t nMaxMem = nMinMem * 4;
-        size_t nUserMem = 0;
-        size_t nLen = sizeof( nUserMem );
-        pMib[0] = CTL_HW;
-        pMib[1] = HW_USERMEM;
-        if ( !sysctl( pMib, 2, &nUserMem, &nLen, NULL, 0 ) )
-            nUserMem /= 2;
-        if ( nUserMem > nMaxMem )
-            nUserMem = nMaxMem;
-        else if ( nUserMem < nMinMem )
-            nUserMem = nMinMem;
-        rtl::OStringBuffer aBuf( "-Xmx" );
-        aBuf.append( (sal_Int32)( nUserMem / ( 1024 * 1024 ) ) );
-        aBuf.append( "m" );
-        options[i+9].optionString = (char *)aBuf.makeStringAndClear().getStr();
-        options[i+9].extraInfo = NULL;
-#endif	// USE_JAVA
-
 #if OSL_DEBUG_LEVEL >= 2
         JFW_TRACE2(OString("VM option: ") + OString(options[i+1].optionString) +
                    OString("\n"));
 #endif
     }
+
+#if defined USE_JAVA
+    // Limit the directories that extensions can be loaded from to prevent
+    // random JVM crashing
+    rtl::OString aExtPath( "-Djava.ext.dirs=" );
+    aExtPath += rtl::OUStringToOString( sPathLocation, osl_getThreadTextEncoding() );
+    aExtPath += rtl::OString( "/lib/ext" );
+    options[i+1].optionString = (char *)aExtPath.getStr();
+    options[i+1].extraInfo = NULL;
+
+    // Set the endorsed directory to use the JVM's XML parser
+    rtl::OString aEndorsedPath( "-Djava.endorsed.dirs=" );
+    rtl::OUString aExe;
+    osl_getExecutableFile( &aExe.pData );
+    rtl::OUString aExeSysPath;
+    if ( aExe.getLength() && osl_getSystemPathFromFileURL( aExe.pData, &aExeSysPath.pData ) == osl_File_E_None )
+    {
+        aEndorsedPath += rtl::OString( aExeSysPath, aExeSysPath.lastIndexOf('/'), RTL_TEXTENCODING_UTF8 );
+        aEndorsedPath += rtl::OString( "/classes/endorsed" );
+    }
+    options[i+2].optionString = (char *)aEndorsedPath.getStr();
+    options[i+2].extraInfo = NULL;
+
+    rtl::OString aLibPath( "-Djava.library.path=/usr/lib/java" );
+    rtl::OUString aJavaLibPath( pInfo->sLocation );
+    aJavaLibPath = rtl::OUString( aJavaLibPath, aJavaLibPath.lastIndexOf('/') );
+    aJavaLibPath += OUString::createFromAscii( "/Libraries" );
+    rtl::OUString aJavaLibSysPath;
+    if ( osl_getSystemPathFromFileURL( aJavaLibPath.pData, &aJavaLibSysPath.pData ) == osl_File_E_None )
+    {
+        aLibPath += ":";
+        aLibPath += rtl::OUStringToOString( aJavaLibSysPath, RTL_TEXTENCODING_UTF8 );
+    }
+    rtl::OString aEnvLibPath( getenv( "DYLD_LIBRARY_PATH" ) );
+    if  ( aEnvLibPath.getLength() )
+    {
+        aLibPath += ":";
+        aLibPath += aEnvLibPath;
+    }
+    rtl::OString aEnvFallbackLibPath( getenv( "DYLD_FALLBACK_LIBRARY_PATH" ) );
+    if ( aEnvFallbackLibPath.getLength() )
+    {
+        aLibPath += ":";
+        aLibPath += aEnvFallbackLibPath;
+    }
+
+    // Set the library path to include the executable path but none of the
+    // extensions
+    options[i+3].optionString = (char *)aLibPath.getStr();
+    options[i+3].extraInfo = NULL;
+
+    // Set miscellaneous optimizations for the JVM
+    options[i+4].optionString = "-Xrs";
+    options[i+4].extraInfo = NULL;
+
+    options[i+5].optionString = "-XX:+UseParallelGC";
+    options[i+5].extraInfo = NULL;
+
+    // We need to turn off some of Java 1.4's graphics optimizations as
+    // they cause full screen window positioning, clipping, and image
+    // drawing speed to get messed up
+    options[i+6].optionString = "-Dapple.awt.window.position.forceSafeProgrammaticPositioning=false";
+    options[i+6].extraInfo = NULL;
+
+    // Fix bug 1800 by explicitly setting the look and feel to Aqua
+    options[i+7].optionString = "-Dswing.defaultlaf=apple.laf.AquaLookAndFeel";
+    options[i+7].extraInfo = NULL;
+
+    // Set the Java max memory to the greater of half of physical user
+    // memory or 256 MB.
+    int pMib[2];
+    size_t nMinMem = 256 * 1024 * 1024;
+    size_t nMaxMem = nMinMem * 4;
+    size_t nUserMem = 0;
+    size_t nLen = sizeof( nUserMem );
+    pMib[0] = CTL_HW;
+    pMib[1] = HW_USERMEM;
+    if ( !sysctl( pMib, 2, &nUserMem, &nLen, NULL, 0 ) )
+        nUserMem /= 2;
+    if ( nUserMem > nMaxMem )
+        nUserMem = nMaxMem;
+    else if ( nUserMem < nMinMem )
+        nUserMem = nMinMem;
+    rtl::OStringBuffer aBuf( "-Xmx" );
+    aBuf.append( (sal_Int32)( nUserMem / ( 1024 * 1024 ) ) );
+    aBuf.append( "m" );
+    options[i+8].optionString = (char *)aBuf.makeStringAndClear().getStr();
+    options[i+8].extraInfo = NULL;
+#endif	// USE_JAVA
    
 #if defined USE_JAVA
     vm_args.version= JNI_VERSION_1_4;
