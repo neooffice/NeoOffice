@@ -35,6 +35,52 @@
 
 #import <Cocoa/Cocoa.h>
 #import "VCLEventQueue_cocoa.h"
+#import "VCLGraphics_cocoa.h"
+
+// Fix for bugs 1685, 1694, and 1859. Java 1.5 and higher will arbitrarily
+// change the selected font by creating a new font from the font's family
+// name and style. We fix these bugs by prepending the font names to the
+// list of font family names so that Java will think that each font's
+// family name is the same as its font name.
+
+@interface VCLFontManager : NSFontManager
+- (NSArray *)availableFontFamilies;
+- (NSArray *)availableMembersOfFontFamily:(NSString *)family;
+@end
+
+@implementation VCLFontManager
+
+- (NSArray *)availableFontFamilies
+{
+	NSMutableArray *pRet = [NSMutableArray arrayWithArray:[super availableFonts]];
+	if ( pRet )
+		[pRet addObjectsFromArray:[super availableFontFamilies]];
+
+	return pRet;
+}
+
+- (NSArray *)availableMembersOfFontFamily:(NSString *)family
+{
+	NSArray *pRet = nil;
+
+	NSFont *pFont = [NSFont fontWithName:family size:12];
+	if ( pFont )
+	{
+		NSMutableArray *pFontEntries = [NSMutableArray arrayWithCapacity:4];
+		if ( pFontEntries )
+		{
+			[pFontEntries addObject:[pFont fontName]];
+			[pFontEntries addObject:@""];
+			[pFontEntries addObject:[NSNumber numberWithInt:[self weightOfFont:pFont]]];
+			[pFontEntries addObject:[NSNumber numberWithUnsignedInt:[self traitsOfFont:pFont]]];
+			pRet = [NSArray arrayWithObject:pFontEntries];
+		}
+	}
+
+	return pRet;
+}
+
+@end
 
 @interface VCLResponder : NSResponder
 {
@@ -234,6 +280,7 @@ static VCLResponder *pResponder = nil;
 
 - (void)installVCLEventQueueClasses:(id)pObject
 {
+	[VCLFontManager poseAsClass:[NSFontManager class]];
 	[VCLWindow poseAsClass:[NSWindow class]];
 	[VCLView poseAsClass:[NSView class]];
 }
