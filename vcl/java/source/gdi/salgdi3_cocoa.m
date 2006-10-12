@@ -77,7 +77,7 @@ CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, BOOL bBo
 			if ( pNSFont )
 			{
 				int nWeight = [pFontManager weightOfFont:pNSFont];
-				NSFontTraitMask nTraits = ( [pFontManager traitsOfFont:pNSFont] & ( NSBoldFontMask | NSItalicFontMask ) );
+				NSFontTraitMask nTraits = [pFontManager traitsOfFont:pNSFont] & ( NSItalicFontMask | NSBoldFontMask | NSExpandedFontMask | NSCondensedFontMask | NSCompressedFontMask );
 				if ( bBold )
 				{
 					nTraits |= NSBoldFontMask;
