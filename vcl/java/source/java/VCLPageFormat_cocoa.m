@@ -236,16 +236,26 @@ BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
 
 	if ( pNSPrintInfo )
 	{
-		NSPrintingOrientation nOrientation = [(NSPrintInfo *)pNSPrintInfo orientation];
+		NSPrintingOrientation nOldOrientation = [(NSPrintInfo *)pNSPrintInfo orientation];
+		NSSize aOldSize = [(NSPrintInfo *)pNSPrintInfo paperSize];
+
 		[(NSPrintInfo *)pNSPrintInfo setOrientation:NSPortraitOrientation];
 		[(NSPrintInfo *)pNSPrintInfo setPaperSize:NSMakeSize((float)nWidth, (float)nHeight)];
 
-		// Fix bug 1678 by detecting when the selected paper is rotated
-		float fRatio = (float)nWidth / (float)nHeight;
+		// Make sure that the selected paper within a pixel of the old size
+		// otherwise set it back to the old size and orientation
 		NSSize aSize = [(NSPrintInfo *)pNSPrintInfo paperSize];
-		float fNewRatio = aSize.width / aSize.height;
-		if ( ( fRatio < 1.0 && fNewRatio > 1.0 ) || ( fRatio > 1.0 && fNewRatio < 1.0 ) )
-			bRet = YES;
+		if ( fabs( nWidth - aSize.width ) <= 1 && fabs( nHeight - aSize.height ) <= 1 )
+		{
+			// Fix bug 1678 by handling when the selected paper is rotated
+			if ( [(NSPrintInfo *)pNSPrintInfo orientation] != nOldOrientation )
+				bRet = YES;
+		}
+		else
+		{
+			[(NSPrintInfo *)pNSPrintInfo setOrientation:nOldOrientation];
+			[(NSPrintInfo *)pNSPrintInfo setPaperSize:aOldSize];
+		}
 	}
 
 	[pPool release];
