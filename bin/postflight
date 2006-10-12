@@ -147,8 +147,7 @@ if [ -d "$2" ]; then
 	chmod -Rf u+w "$2/Contents/presets" || exit 1
 	chmod -Rf u+w "$2/Contents/share" || exit 1
 
-	# Bad things happen with OOo and Xerces when the memory manager is turned
-	# off so delete it
+	# Xalan and Xerces are now in their own endorsed subdirectory
 	rm -f "$2/Contents/MacOS/classes/xalan.jar"
 	rm -f "$2/Contents/MacOS/classes/xercesImpl.jar"
 	rm -f "$2/Contents/MacOS/classes/xml-apis.jar"
