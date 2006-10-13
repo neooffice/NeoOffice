@@ -506,7 +506,7 @@ void JavaSalInstance::Yield( BOOL bWait )
 
 	// Determine timeout
 	ULONG nTimeout = 0;
-	if ( pSalData->mnTimerInterval && pSalData->maNativeEventCondition.check() && !Application::IsShutDown() )
+	if ( bWait && pSalData->mnTimerInterval && pSalData->maNativeEventCondition.check() && !Application::IsShutDown() )
 	{
 		timeval aTimeout;
 
@@ -521,7 +521,7 @@ void JavaSalInstance::Yield( BOOL bWait )
 		if ( nTimeout < 10 )
 			nTimeout = 10;
 	}
-	else if ( bWait && !Application::IsShutDown() )
+	else if ( !bWait && !Application::IsShutDown() )
 	{
 		// Wait a little bit to prevent excessive CPU usage
 		nTimeout = 10;
