@@ -108,10 +108,15 @@ VCLThreadAttach::~VCLThreadAttach()
 
 void VCLThreadAttach::AttachThread()
 {
-	if ( xVM.is() && xRG11Ref.is() && pJVM && pJVM->GetEnv( (void**)&pEnv, JNI_VERSION_1_4 ) != JNI_OK )
+	if ( xVM.is() && xRG11Ref.is() && pJVM )
 	{
 		pJVM->AttachCurrentThread( (void**)&pEnv, NULL );
-		xRG11Ref->registerThread();
+		if ( pEnv )
+			xRG11Ref->registerThread();
+	}
+	else
+	{
+		pEnv = NULL;
 	}
 }
 
@@ -164,19 +169,14 @@ sal_Bool VCLThreadAttach::StartJava()
 
 			xRG11Ref = Reference< XJavaThreadRegister_11 >( xVM, UNO_QUERY );
 			if ( xRG11Ref.is() )
-				xRG11Ref->registerThread();
-
-		  	pJVM->AttachCurrentThread( (void **)&pEnv, NULL );
-
-			if ( pEnv )
 			{
-				InitJavaAWT();
+		  		pJVM->AttachCurrentThread( (void **)&pEnv, NULL );
 
-				if ( xRG11Ref.is() )
-					xRG11Ref->revokeThread();
-				
-				if ( !xRG11Ref.is() || !xRG11Ref->isThreadAttached() )
-					pJVM->DetachCurrentThread();
+				if ( pEnv )
+				{
+					xRG11Ref->registerThread();
+					InitJavaAWT();
+				}
 			}
 
 			return sal_True;
