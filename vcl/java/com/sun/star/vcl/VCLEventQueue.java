@@ -607,7 +607,9 @@ public final class VCLEventQueue implements Runnable {
 		 * Fix bug 1715 by ensuring that the focus owner does not get set to
 		 * null if there is a permanent focus owner.
 		 */
-		public boolean dispatchKeyEvent(KeyEvent e) {
+		public boolean dispatchEvent(AWTEvent e) {
+
+			boolean ret = super.dispatchEvent(e);
 
 			if (getFocusOwner() == null) {
 				Component c = getPermanentFocusOwner();
@@ -615,7 +617,7 @@ public final class VCLEventQueue implements Runnable {
 					c.requestFocusInWindow();
 			}
 
-			return super.dispatchKeyEvent(e);
+			return ret;
 
 		}
 
