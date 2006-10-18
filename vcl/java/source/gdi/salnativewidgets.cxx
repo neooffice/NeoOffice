@@ -78,7 +78,7 @@ using namespace rtl;
 
 #define COMBOBOX_BUTTON_WIDTH			22
 #define COMBOBOX_BUTTON_TRIMWIDTH		3
-#define CONTROL_TAB_PANE_TOP_OFFSET		( ( vcl::IsRunningPanther() ) ? 2 : 10 )
+#define CONTROL_TAB_PANE_TOP_OFFSET		( ( vcl::IsRunningPanther() ) ? 2 : 12 )
 #define EDITBOX_TRIMWIDTH				3
 #define LISTBOX_BUTTON_HORIZ_TRIMWIDTH	0
 #define LISTBOX_BUTTON_VERT_TRIMWIDTH	2
@@ -89,6 +89,7 @@ using namespace rtl;
 #define SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT	( ( vcl::IsRunningPanther() ) ? 12 : 13 )
 #define SPINNER_TRIMWIDTH				3
 #define SPINNER_TRIMHEIGHT				1
+#define TABITEM_HEIGHT_SLOP				( ( vcl::IsRunningPanther() ) ? 0 : 4 )
 
 #if ( BUILD_OS_MAJOR == 10 ) && ( BUILD_OS_MINOR == 3 )
 // constants and structures for 10.3
@@ -2196,7 +2197,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				HIRect preferredRect;
 				HIShapeGetBounds( tabShape, &preferredRect );
 				CFRelease( tabShape );
-
+				
+				preferredRect.size.height += TABITEM_HEIGHT_SLOP;
+				
 				Point topLeft( controlRect.Left(), controlRect.Top() );
 				Size boundsSize( (long)preferredRect.size.width, (long)preferredRect.size.height );
 				rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );

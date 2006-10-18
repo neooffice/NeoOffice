@@ -412,6 +412,30 @@ Size TabControl::ImplGetItemSize( ImplTabItem* pItem, long nMaxWidth ) const
     Size aSize( GetCtrlTextWidth( pItem->maFormatText ), GetTextHeight() );
     aSize.Width()  += TAB_TABOFFSET_X*2;
     aSize.Height() += TAB_TABOFFSET_Y*2;
+#ifdef USE_JAVA
+	// [ed] 10/17/06 Call through to the NWF to get recommended tab item sizes
+	TabControl * aNonConstTabControl = (TabControl *)this;
+	if ( aNonConstTabControl->IsNativeControlSupported( CTRL_TAB_ITEM, PART_ENTIRE_CONTROL ) )
+	{
+		ImplControlValue aControlValue;
+		Region aCtrlRegion( Rectangle( Point( 0, 0 ), aSize ) );
+		ControlState nState = 0;
+		
+		TabitemValue tiValue;
+		aControlValue.setOptionalVal( (void *)(&tiValue) );
+		
+		Region aBoundingRegion, aEntireCtrlRegion;
+		
+		if( aNonConstTabControl->GetNativeControlRegion( CTRL_TAB_ITEM, PART_ENTIRE_CONTROL, aCtrlRegion, 0, aControlValue, pItem->maText, aBoundingRegion, aEntireCtrlRegion ) )
+		{
+			Rectangle aNativeBoundRect = aEntireCtrlRegion.GetBoundRect();
+			if ( aNativeBoundRect.GetWidth() > aSize.Width() )
+				aSize.Width() = aNativeBoundRect.GetWidth();
+			if ( aNativeBoundRect.GetHeight() > aSize.Height() )
+				aSize.Height() = aNativeBoundRect.GetHeight();
+		}
+	}
+#endif
     // For systems without synthetic bold support
     if ( mbExtraSpace )
         aSize.Width() += TAB_EXTRASPACE_X;
