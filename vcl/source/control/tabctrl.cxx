@@ -418,7 +418,8 @@ Size TabControl::ImplGetItemSize( ImplTabItem* pItem, long nMaxWidth ) const
 	if ( aNonConstTabControl->IsNativeControlSupported( CTRL_TAB_ITEM, PART_ENTIRE_CONTROL ) )
 	{
 		ImplControlValue aControlValue;
-		Region aCtrlRegion( Rectangle( Point( 0, 0 ), aSize ) );
+		Point aPoint( 0, 0 );
+		Region aCtrlRegion( Rectangle( aPoint, aSize ) );
 		ControlState nState = 0;
 		
 		TabitemValue tiValue;
