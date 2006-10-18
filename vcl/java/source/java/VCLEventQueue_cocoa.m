@@ -231,14 +231,6 @@ static VCLResponder *pResponder = nil;
 		if ( pEvent )
 		{
 			NSApplication *pApp = [NSApplication sharedApplication];
-
-			if ( !pResponder )
-			{
-				pResponder = [[VCLResponder alloc] init];
-				if ( pResponder )
-					[pResponder retain];
-			}
-
 			if ( pApp && pResponder )
 			{
 				[pResponder interpretKeyEvents:pEvents view:self];
@@ -281,6 +273,11 @@ static VCLResponder *pResponder = nil;
 
 - (void)installVCLEventQueueClasses:(id)pObject
 {
+	// Initialize statics
+	pResponder = [[VCLResponder alloc] init];
+	if ( pResponder )
+		[pResponder retain];
+
 	[VCLFontManager poseAsClass:[NSFontManager class]];
 	[VCLWindow poseAsClass:[NSWindow class]];
 	[VCLView poseAsClass:[NSView class]];
