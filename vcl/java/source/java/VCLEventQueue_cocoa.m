@@ -93,6 +93,7 @@
 - (void)insertText:(NSString *)pString;
 - (void)interpretKeyEvents:(NSArray *)pEvents view:(NSView *)pView;
 - (NSString *)lastText;
+- (unsigned)retainCount;
 @end
 
 @implementation VCLResponder
@@ -170,6 +171,11 @@
 - (NSString *)lastText
 {
 	return mpLastText;
+}
+
+- (unsigned)retainCount
+{
+	return UINT_MAX;
 }
 
 @end
