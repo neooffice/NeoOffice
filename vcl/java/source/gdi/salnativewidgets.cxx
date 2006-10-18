@@ -78,7 +78,7 @@ using namespace rtl;
 
 #define COMBOBOX_BUTTON_WIDTH			22
 #define COMBOBOX_BUTTON_TRIMWIDTH		3
-#define CONTROL_TAB_PANE_TOP_OFFSET		( ( vcl::IsRunningPanther() ) ? 2 : 12 )
+#define CONTROL_TAB_PANE_TOP_OFFSET		( ( vcl::IsRunningPanther() ) ? 1 : 12 )
 #define EDITBOX_TRIMWIDTH				3
 #define LISTBOX_BUTTON_HORIZ_TRIMWIDTH	0
 #define LISTBOX_BUTTON_VERT_TRIMWIDTH	2
