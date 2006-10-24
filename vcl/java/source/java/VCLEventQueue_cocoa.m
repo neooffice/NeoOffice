@@ -160,12 +160,6 @@
 		[mpView retain];
 
 	[super interpretKeyEvents:pEvents];
-
-	if ( mpView )
-	{
-		[mpView release];
-		mpView = nil;
-	}
 }
 
 - (NSString *)lastText
