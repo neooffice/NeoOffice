@@ -108,6 +108,9 @@ OO_PACKAGES:=OpenOffice2
 OO_TAG:=OOC680_m7
 OO_SOURCE_TAR_GZ_FILE:=$(PWD)/OOo_2.0.3_src.tar.gz
 OO_SOURCE_OUTPUT_DIR:=OOC680_m7
+OOO-BUILD_CVSROOT:=:pserver:anonymous@anoncvs.gnome.org:/cvs/gnome
+OOO-BUILD_PACKAGES:=ooo-build
+OOO-BUILD_TAG:=OOO_BUILD_OOD680_M1
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
 NEO_TAG:=NeoOffice-2_0_Aqua_Beta_3
@@ -128,6 +131,12 @@ build.oo_checkout:
 	cd "$(BUILD_HOME)/agg" ; cvs -d "$(OO_CVSROOT)" update -r "$(OO_TAG)"
 	sh -e -c 'if [ ! -e "$(OO_SOURCE_TAR_GZ_FILE)" ] ; then cd "$(BUILD_HOME)/agg" ; cvs -d "$(OO_CVSROOT)" update -r "$(OO_TAG)" ; fi'
 	chmod -Rf u+w "$(BUILD_HOME)"
+	touch "$@"
+
+build.ooo-build_checkout:
+	mkdir -p "$(BUILD_HOME)"
+	cd "$(BUILD_HOME)" ; cvs -d "$(OOO-BUILD_CVSROOT)" co -r "$(OOO-BUILD_TAG)" $(OOO-BUILD_PACKAGES)
+	cd "$(BUILD_HOME)" ; chmod -Rf u+w "$(OOO-BUILD_PACKAGES)"
 	touch "$@"
 
 build.oo_patches: build.oo_checkout \
@@ -157,9 +166,19 @@ build.oo_external_patch: build.oo_checkout
 	rm -Rf "$(BUILD_HOME)/external/gpc/gpc231"
 	touch "$@"
 
+build.oo_moz_patch: build.oo_checkout
+	cd "$(BUILD_HOME)/moz/download" ; curl -O "$(MOZ_SOURCE_URL)"
+	touch "$@"
+
+build.oo_ooo-build_patch : build.oo_checkout build.ooo-build_checkout
+# Enable following commands when ooo-build has code available
+#	-sh -e -c 'for i in `find "$(PWD)/$(BUILD_HOME)/ooo-build/patches/vba" -name "*.diff"` ; do ( cd "$(BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$$i" ; if [ "$$?" != "0" ] ; then exit 1 ; fi ; done'
+#	sh -e -c 'for i in `find "$(PWD)/$(BUILD_HOME)/ooo-build/patches/vba" -name "*.diff"` ; do ( cd "$(BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$$i" ; if [ "$$?" != "0" ] ; then exit 1 ; fi ; done'
+	touch "$@"
+
 build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.oo_checkout
-	-( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+	-( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	touch "$@"
 
 build.configure: build.oo_patches
