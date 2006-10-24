@@ -153,9 +153,17 @@ public final class VCLEventQueue implements Runnable {
 			t.printStackTrace();
 		}
 
-		// Set keyboard focus manager
 		KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
-		kfm.setCurrentKeyboardFocusManager(new NoEnqueueKeyboardFocusManager());
+
+        // Fix bug 1924 by not overriding the keyboard focus manager when
+		// using Java 1.4
+		try { 
+			// Test for Java 1.5 or higher
+			Class.forName("java.lang.Appendable");
+			// Set keyboard focus manager
+			kfm.setCurrentKeyboardFocusManager(new NoEnqueueKeyboardFocusManager());
+		}
+		catch (Throwable t) {}
 
 		// Set the keyboard focus manager so that Java's default focus
 		// switching key events are passed are not consumed
