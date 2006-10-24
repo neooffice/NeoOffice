@@ -629,11 +629,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private final static AttributedCharacterIterator defaultAttributedCharacterIterator = new AttributedString("").getIterator();
 
-	/** 
-	 * The trap temporary focus events flag.
-	 */
-	private static boolean trapNullOppositeFocusEvents = false;
-
 	/**
 	 * Find the matching <code>VCLFrame</code> for the specified component.
 	 *
@@ -650,14 +645,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * Initialize static data members.
 	 */
 	static {
-
-		// Set the trap temporary focus events flag
-		try { 
-			// Test for Java 1.5 or higher
-			Class.forName("java.lang.Appendable");
-			trapNullOppositeFocusEvents = true;
-		}
-		catch (Throwable t) {}
 
 		Toolkit toolkit = Toolkit.getDefaultToolkit();
 		ClassLoader cl = ClassLoader.getSystemClassLoader();
