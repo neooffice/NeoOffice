@@ -5463,7 +5463,12 @@ void PDFWriterImpl::registerGlyphs(
     ImplFontData* pDevFont = m_pReferenceDevice->mpFontEntry->maFontSelData.mpFontData;
     for( int i = 0; i < nGlyphs; i++ )
     {
+#ifdef USE_JAVA
+        // Fix bug 1927 by not rendering 0x0000ffff glyphs
+        if( ! pGlyphs[i] || ( pGlyphs[i] & GF_IDXMASK ) >= 0x0000ffff )
+#else	// USE_JAVA
         if( ! pGlyphs[i] )
+#endif	// USE_JAVA
             continue;
 
         ImplFontData* pCurrentFont = pFallbackFonts[i] ? pFallbackFonts[i] : pDevFont;
