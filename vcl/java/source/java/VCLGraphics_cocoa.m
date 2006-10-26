@@ -36,6 +36,70 @@
 #import <Cocoa/Cocoa.h>
 #import "VCLGraphics_cocoa.h"
 
+// Fix for bug 1928. Java 1.5 and higher will try to set its own arbitrary
+// italic angle so we create a custom implementation of the JVM's private
+// AWTFont class to ignore the custom transform that Java passes in.
+
+@interface AWTFont : NSObject
+{
+	NSFont*				fFont;
+	float*				fTransform;
+	float				fPointSize;
+	NSCharacterSet*		fCharacterSet;
+	CGFontRef			fNativeCGFont;
+}
++ (id)fontWithFont:(NSFont *)pFont matrix:(float *)pTransform;
+- (id)initWithFont:(NSFont *)pFont matrix:(float *)pTransform;
+- (void)dealloc;
+@end
+
+@implementation AWTFont
+
++ (id)fontWithFont:(NSFont *)pFont matrix:(float *)pTransform
+{
+	return [[AWTFont alloc] initWithFont:pFont matrix:pTransform];
+}
+
+- (id)initWithFont:(NSFont *)pFont matrix:(float *)pTransform
+{
+	[super init];
+
+	fFont = pFont;
+	if ( fFont )
+	{
+		[fFont retain];
+		fPointSize = [fFont pointSize];
+		fCharacterSet = [fFont coveredCharacterSet];
+		if ( fCharacterSet )
+			[fCharacterSet retain];
+
+		if ( [fFont respondsToSelector:@selector(_atsFontID)] )
+		{
+            ATSFontRef aATSFont = (ATSFontRef)[fFont _atsFontID];
+			fNativeCGFont = CGFontCreateWithPlatformFont( (void *)&aATSFont );
+		}
+	}
+
+	fTransform = nil;
+
+	return self;
+}
+
+- (void)dealloc
+{
+	if ( fFont )
+		[fFont release];
+
+	if ( fCharacterSet )
+		[fCharacterSet release];
+
+	CGFontRelease( fNativeCGFont );
+
+	[super dealloc];
+}
+
+@end
+
 @interface FlippedView : NSView
 - (BOOL)isFlipped;
 @end
