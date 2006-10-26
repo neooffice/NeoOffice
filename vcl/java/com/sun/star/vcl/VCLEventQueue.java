@@ -629,6 +629,17 @@ public final class VCLEventQueue implements Runnable {
 
 		}
 
+		/**
+		 * Fix bug 1715 by never enqueue any events.
+		 *
+		 * @param after timestamp of current event, or the current, system time
+		 *  if the current event has no timestamp, or the AWT cannot determine
+		 *  which event is currently being handled
+		 * @param untilFocused the component which will receive a FOCUS_GAINED
+		 *  event before any pending key events
+		 */
+		protected void enqueueKeyEvents(long after, Component untilFocused) {}
+
 	}
 
 }
