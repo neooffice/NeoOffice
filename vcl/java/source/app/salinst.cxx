@@ -556,6 +556,10 @@ void JavaSalInstance::Yield( BOOL bWait )
 		USHORT nID = pEvent->getID();
 		pEvent->dispatch();
 		delete pEvent;
+
+		// Fix bug 1971 by breaking after releasing a key
+		if ( nID == SALEVENT_KEYUP )
+			break;
 	}
 
 	if ( nCount )
