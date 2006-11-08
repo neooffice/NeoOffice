@@ -111,9 +111,6 @@
 {
 	[self clearLastText];
 
-	if ( mpView )
-		[mpView release];
-
 	[super dealloc];
 }
 
@@ -153,13 +150,9 @@
 {
 	[self clearLastText];
 
-	if ( mpView )
-		[mpView release];
 	mpView = pView;
-	if ( mpView )
-		[mpView retain];
-
 	[super interpretKeyEvents:pEvents];
+	mpView = nil;
 }
 
 - (NSString *)lastText
