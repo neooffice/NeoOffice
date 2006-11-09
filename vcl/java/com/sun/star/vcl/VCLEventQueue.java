@@ -155,15 +155,8 @@ public final class VCLEventQueue implements Runnable {
 
 		KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
 
-        // Fix bug 1924 by not overriding the keyboard focus manager when
-		// using Java 1.4
-		try { 
-			// Test for Java 1.5 or higher
-			Class.forName("java.lang.Appendable");
-			// Set keyboard focus manager
-			kfm.setCurrentKeyboardFocusManager(new NoEnqueueKeyboardFocusManager());
-		}
-		catch (Throwable t) {}
+		// Set keyboard focus manager
+		kfm.setCurrentKeyboardFocusManager(new NoEnqueueKeyboardFocusManager(this));
 
 		// Set the keyboard focus manager so that Java's default focus
 		// switching key events are passed are not consumed
@@ -289,6 +282,13 @@ public final class VCLEventQueue implements Runnable {
 		}
 
 	}
+
+	/**
+	 * Returns <code>true</code> if a native modal window showing.
+	 *
+	 * @return <code>true</code> if a native modal window showing
+	 */
+	public native boolean isNativeModalWindowShowing();
 
 	/**
 	 * Add an event to the cache.
@@ -612,6 +612,22 @@ public final class VCLEventQueue implements Runnable {
 	final class NoEnqueueKeyboardFocusManager extends DefaultKeyboardFocusManager {
 
 		/**
+		 * The queue.
+		 */
+		private VCLEventQueue queue = null;
+
+		/**
+		 * Construct a VCLEventQueue.NoEnqueueKeyboardFocusManager instance.
+		 *
+		 * @param q the queue
+		 */
+		NoEnqueueKeyboardFocusManager(VCLEventQueue q) {
+
+			queue = q;
+
+		}
+
+		/**
 		 * Fix bug 1715 by ensuring that the focus owner does not get set to
 		 * null if there is a permanent focus owner.
 		 */
@@ -619,7 +635,8 @@ public final class VCLEventQueue implements Runnable {
 
 			boolean ret = super.dispatchEvent(e);
 
-			if (getFocusOwner() == null) {
+			// Fix bug 1924 by checking if a native modal window is showing
+			if (getFocusOwner() == null && !queue.isNativeModalWindowShowing()) {
 				Component c = getPermanentFocusOwner();
 				if (c != null)
 					c.requestFocusInWindow();

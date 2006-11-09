@@ -62,11 +62,19 @@
 #include <postmac.h>
 
 #include "VCLEventQueue_cocoa.h"
+#include "../app/salinst_cocoa.h"
 
 using namespace vcl;
 using namespace vos;
 
 // ============================================================================
+
+JNIEXPORT jboolean JNICALL Java_com_sun_star_vcl_VCLEventQueue_isNativeModalWindowShowing( JNIEnv *pEnv, jobject object )
+{
+	return ( NSApplication_getModalWindow() ? JNI_TRUE : JNI_FALSE );
+}
+
+// ----------------------------------------------------------------------------
 
 void VCLEventQueue_postInputMethodTextCancelled( WindowRef aWindow )
 {
@@ -131,6 +139,17 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLEventQueue" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
+
+		if ( tempClass )
+		{
+			// Register the native methods for our class
+			JNINativeMethod aMethod; 
+			aMethod.name = "isNativeModalWindowShowing";
+			aMethod.signature = "()Z";
+			aMethod.fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isNativeModalWindowShowing;
+			t.pEnv->RegisterNatives( tempClass, &aMethod, 1 );
+		}
+
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
 	}
 	return theClass;
