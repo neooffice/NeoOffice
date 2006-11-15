@@ -179,7 +179,7 @@
 
 	// Fix bug 1819 by forcing cancellation of the input method by posting
 	// a Command-. event
-	if ( [[self className] isEqualToString:@"CocoaAppWindow"] )
+	if ( [self isVisible] && [[self className] isEqualToString:@"CocoaAppWindow"] )
 	{
 		NSApplication *pApp = [NSApplication sharedApplication];
 		if ( pApp )
@@ -210,8 +210,11 @@ static VCLResponder *pResponder = nil;
 - (void)cancelOperation:(id)pSender
 {
 	NSWindow *pWindow = [self window];
-	if ( pWindow )
+	if ( pWindow && [pWindow isVisible] ) {
+		[pWindow retain];
 		VCLEventQueue_postInputMethodTextCancelled( [pWindow windowRef] );
+		[pWindow release];
+	}
 }
 
 - (void)interpretKeyEvents:(NSArray *)pEvents
