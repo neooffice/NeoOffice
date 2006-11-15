@@ -1580,9 +1580,14 @@ BOOL JavaSalGraphics::hitTestNativeControl( ControlType nType, ControlPart nPart
 	Region aNativeBoundingRegion;
 	Region aNativeContentRegion;
 	if ( getNativeControlRegion( nType, nPart, rControlRegion, 0, ImplControlValue(), rControlHandle, OUString(), aNativeBoundingRegion, aNativeContentRegion ) )
-		return aNativeBoundingRegion.IsInside( aPos );
+	{
+		rIsInside = aNativeBoundingRegion.IsInside( aPos );
+		return TRUE;
+	}
 	else
+	{
 		return FALSE;
+	}
 }
 
 // =======================================================================
