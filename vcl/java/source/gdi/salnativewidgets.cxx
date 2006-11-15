@@ -959,7 +959,7 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	{
 		spinnerThemeHeight += SPINNER_TRIMHEIGHT * 2;
 		int offscreenHeight = ( ( rDestBounds.GetHeight() > spinnerThemeHeight ) ? rDestBounds.GetHeight() : spinnerThemeHeight );
-		
+
 		VCLBitmapBuffer *pBuffer = &aSharedSpinboxBuffer;
 		BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), offscreenHeight );
 		if ( bRet )
@@ -971,12 +971,12 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 			arrowRect.origin.x = rDestBounds.GetWidth() - spinnerThemeWidth - SPINNER_TRIMWIDTH;
 			if( arrowRect.origin.x < 0 )
 				arrowRect.origin.x = 0;
-			arrowRect.origin.y = ( ( spinnerThemeHeight - offscreenHeight ) / 2 ) - SPINNER_TRIMHEIGHT;
+			arrowRect.origin.y = ( ( offscreenHeight - spinnerThemeHeight ) / 2 ) - SPINNER_TRIMHEIGHT;
 			arrowRect.size.width = spinnerThemeWidth + ( SPINNER_TRIMWIDTH * 2 );
-			arrowRect.size.height = offscreenHeight;
-						
+			arrowRect.size.height = spinnerThemeHeight;
+
 			bRet = ( HIThemeDrawButton( &arrowRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
-	
+
 			if( bRet )
 			{
 				HIRect editRect;
@@ -1045,31 +1045,31 @@ static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& r
 	
 	if ( bRet )
 	{
-		int offscreenHeight = spinnerThemeHeight + SPINNER_TRIMHEIGHT * 2;
-		int offscreenWidth = spinnerThemeWidth + ( SPINNER_TRIMWIDTH * 2 );
-		
+		spinnerThemeHeight += SPINNER_TRIMHEIGHT * 2;
+		int offscreenHeight = ( ( rDestBounds.GetHeight() > spinnerThemeHeight ) ? rDestBounds.GetHeight() : spinnerThemeHeight );
+
 		VCLBitmapBuffer *pBuffer = &aSharedSpinbuttonBuffer;
-		BOOL bRet = pBuffer->Create( offscreenWidth, offscreenHeight );
+		BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), offscreenHeight );
 		if ( bRet )
 		{
 			HIThemeButtonDrawInfo aButtonDrawInfo;
 			InitSpinbuttonDrawInfo( &aButtonDrawInfo, nState, pValue );
 	
 			HIRect arrowRect;
-			arrowRect.origin.x = SPINNER_TRIMWIDTH;
+			arrowRect.origin.x = rDestBounds.GetWidth() - spinnerThemeWidth - SPINNER_TRIMWIDTH;
 			if( arrowRect.origin.x < 0 )
 				arrowRect.origin.x = 0;
-			arrowRect.origin.y = SPINNER_TRIMHEIGHT;
-			arrowRect.size.width = spinnerThemeWidth;
+			arrowRect.origin.y = ( ( offscreenHeight - spinnerThemeHeight ) / 2 ) - SPINNER_TRIMHEIGHT;
+			arrowRect.size.width = spinnerThemeWidth + ( SPINNER_TRIMWIDTH * 2 );
 			arrowRect.size.height = spinnerThemeHeight;
-						
+
 			bRet = ( HIThemeDrawButton( &arrowRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
 		}
-	
+
 		pBuffer->ReleaseContext();
 
 		if ( bRet )
-			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, offscreenWidth, offscreenHeight, rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), offscreenHeight, rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
 	}
 
 	return bRet;
@@ -2062,78 +2062,27 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			{
 				Rectangle spinboxRect = rControlRegion.GetBoundRect();
 
-				HIThemeButtonDrawInfo aThemeButtonDrawInfo;
-				SpinbuttonValue *pValue = static_cast<SpinbuttonValue *> ( aValue.getOptionalVal() );
-				InitSpinbuttonDrawInfo( &aThemeButtonDrawInfo, nState, pValue );
+				// note that HIThemeGetButtonShape won't clip the width to the actual recommended width of spinner arrows
+				// leave room for left edge adornments
 
-				HIShapeRef preferredShape;
-				HIRect destRect;
-				destRect.origin.x = spinboxRect.Left();
-				destRect.origin.y = spinboxRect.Top();
-				destRect.size.width = spinboxRect.GetWidth();
-				destRect.size.height = spinboxRect.GetHeight();
-				if ( HIThemeGetButtonShape( &destRect, &aThemeButtonDrawInfo, &preferredShape ) == noErr )
-				{
-					HIRect preferredRect;
-					HIShapeGetBounds( preferredShape, &preferredRect );
-					CFRelease( preferredShape );
+				SInt32 spinnerThemeWidth;
+				bReturn = ( GetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr );
+				if ( ! bReturn )
+					return bReturn;
 
-					// note that HIThemeGetButtonShape won't clip the width to the actual recommended width of spinner arrows
-					// leave room for left edge adornments
+				SInt32 spinnerThemeHeight;
+				bReturn = ( GetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight ) == noErr );
+				if ( ! bReturn )
+					return bReturn;
 
-					SInt32 spinnerThemeWidth;
-					bReturn = ( GetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr );
-					if ( ! bReturn )
-						return bReturn;
-						
-					spinnerThemeWidth += SPINNER_TRIMWIDTH * 2;
-					if( preferredRect.size.width > spinnerThemeWidth )
-						preferredRect.size.width = spinnerThemeWidth;
-
-					switch( nPart )
-					{
-						case PART_BUTTON_UP:
-							{
-								Point topLeft( (long)(spinboxRect.Right()-preferredRect.size.width), (long)(spinboxRect.Top()) );
-								Size boundsSize( (long)(preferredRect.size.width), (long)(preferredRect.size.height / 2) );
-								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-								rNativeContentRegion = Region( rNativeBoundingRegion );
-								bReturn = TRUE;
-							}
-							break;
-
-						case PART_BUTTON_DOWN:
-							{
-								Point topLeft( (long)(spinboxRect.Right()-preferredRect.size.width), (long)(spinboxRect.Top()+(preferredRect.size.height / 2)) );
-								Size boundsSize( (long)preferredRect.size.width, (long)(preferredRect.size.height / 2) );
-								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
-								rNativeContentRegion = Region( rNativeBoundingRegion );
-								bReturn = TRUE;
-							}
-							break;
-						
-						case PART_SUB_EDIT:
-							{
-								rNativeBoundingRegion = Region( Rectangle( Point( spinboxRect.Left(), spinboxRect.Top() ), Size( (long)(spinboxRect.GetWidth() - preferredRect.size.width - 4 ), spinboxRect.GetHeight() ) ) );
-								rNativeContentRegion = Region( rNativeBoundingRegion );
-								bReturn = TRUE;
-							}
-							break;
-					}
-				}
-			}
-			break;
-		
-		case CTRL_SPINBUTTONS:
-			{
-				Rectangle spinbuttonRect = rControlRegion.GetBoundRect();
+				spinnerThemeWidth += SPINNER_TRIMWIDTH * 2;
 
 				switch( nPart )
 				{
 					case PART_BUTTON_UP:
 						{
-							Point topLeft( (long)(spinbuttonRect.Left()), (long)(spinbuttonRect.Top()) );
-							Size boundsSize( (long)(spinbuttonRect.GetWidth()), (long)(spinbuttonRect.GetHeight() / 2) );
+							Point topLeft( (long)( spinboxRect.Right() - spinnerThemeWidth ), (long)( spinboxRect.Top() + ( spinboxRect.GetHeight() / 2 ) - spinnerThemeHeight ) );
+							Size boundsSize( (long)spinnerThemeWidth, (long)spinnerThemeHeight );
 							rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
 							rNativeContentRegion = Region( rNativeBoundingRegion );
 							bReturn = TRUE;
@@ -2142,8 +2091,60 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 					case PART_BUTTON_DOWN:
 						{
-							Point topLeft( (long)(spinbuttonRect.Left()), (long)(spinbuttonRect.Top()+(spinbuttonRect.GetHeight() / 2)) );
-							Size boundsSize( (long)(spinbuttonRect.GetWidth()), (long)(spinbuttonRect.GetHeight() / 2) );
+							Point topLeft( (long)( spinboxRect.Right() - spinnerThemeWidth ), (long)( spinboxRect.Top() + ( spinboxRect.GetHeight() / 2 ) ) );
+							Size boundsSize( (long)spinnerThemeWidth, (long)spinnerThemeHeight );
+							rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+							rNativeContentRegion = Region( rNativeBoundingRegion );
+							bReturn = TRUE;
+						}
+						break;
+					
+					case PART_SUB_EDIT:
+						{
+							rNativeBoundingRegion = Region( Rectangle( Point( spinboxRect.Left(), spinboxRect.Top() ), Size( (long)(spinboxRect.GetWidth() - spinnerThemeWidth - 4 ), spinboxRect.GetHeight() ) ) );
+							rNativeContentRegion = Region( rNativeBoundingRegion );
+							bReturn = TRUE;
+						}
+						break;
+				}
+			}
+			break;
+		
+		case CTRL_SPINBUTTONS:
+			{
+				Rectangle spinboxRect = rControlRegion.GetBoundRect();
+
+				// note that HIThemeGetButtonShape won't clip the width to the actual recommended width of spinner arrows
+				// leave room for left edge adornments
+
+				SInt32 spinnerThemeWidth;
+				bReturn = ( GetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr );
+				if ( ! bReturn )
+					return bReturn;
+
+				SInt32 spinnerThemeHeight;
+				bReturn = ( GetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight ) == noErr );
+				if ( ! bReturn )
+					return bReturn;
+
+				spinnerThemeWidth += SPINNER_TRIMWIDTH * 2;
+
+				switch( nPart )
+				{
+					case PART_BUTTON_UP:
+						{
+							Point topLeft( (long)( spinboxRect.Right() - spinnerThemeWidth ), (long)( spinboxRect.Top() + ( spinboxRect.GetHeight() / 2 ) - spinnerThemeHeight ) );
+							Size boundsSize( (long)spinnerThemeWidth, (long)spinnerThemeHeight );
+							rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+							rNativeContentRegion = Region( rNativeBoundingRegion );
+							bReturn = TRUE;
+						}
+						break;
+
+					case PART_BUTTON_DOWN:
+						{
+							Point topLeft( (long)( spinboxRect.Right() - spinnerThemeWidth ), (long)( spinboxRect.Top() + ( spinboxRect.GetHeight() / 2 ) ) );
+							Size boundsSize( (long)spinnerThemeWidth, (long)spinnerThemeHeight );
 							rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
 							rNativeContentRegion = Region( rNativeBoundingRegion );
 							bReturn = TRUE;
