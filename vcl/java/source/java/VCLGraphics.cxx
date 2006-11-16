@@ -59,6 +59,8 @@
 static ::std::list< CGImageRef > aCGImageList;
 static ::osl::Mutex aBitmapBufferMutex;
 static ::std::map< BitmapBuffer*, USHORT > aBitmapBufferMap;
+static ::std::map< ATSFontRef, CGFontRef > aATSFontMap;
+static ::osl::Mutex aATSFontMutex;
 
 using namespace osl;
 using namespace rtl;
@@ -297,6 +299,32 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps( J
 JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawEPS0( JNIEnv *pEnv, jobject object, jlong _par0, jlong _par1, jfloat _par2, jfloat _par3, jfloat _par4, jfloat _par5, jboolean _par6 )
 {
 	NSEPSImageRep_drawInRect( (void *)_par0, _par1, _par2, _par3, _par4, _par5, _par6 );
+}
+
+// ----------------------------------------------------------------------------
+
+CGFontRef CreateCachedCGFont( ATSFontRef aATSFont )
+{
+	CGFontRef aFont = NULL;
+
+	MutexGuard aGuard( aATSFontMutex );
+
+	::std::map< ATSFontRef, CGFontRef >::iterator it = aATSFontMap.find( aATSFont );
+	if ( it != aATSFontMap.end() )
+	{
+		aFont = it->second;
+	}
+	else
+	{
+		aFont = CGFontCreateWithPlatformFont( (void *)&aATSFont );
+		if ( aFont )
+			aATSFontMap[ aATSFont ] = aFont;
+	}
+
+	if ( aFont )
+		CGFontRetain( aFont );
+
+	return aFont;
 }
 
 // ============================================================================

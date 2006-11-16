@@ -73,11 +73,9 @@
 		if ( fCharacterSet )
 			[fCharacterSet retain];
 
+		// Fix bug 1990 by caching and reusing CGFontRefs
 		if ( [fFont respondsToSelector:@selector(_atsFontID)] )
-		{
-            ATSFontRef aATSFont = (ATSFontRef)[fFont _atsFontID];
-			fNativeCGFont = CGFontCreateWithPlatformFont( (void *)&aATSFont );
-		}
+            fNativeCGFont = CreateCachedCGFont( (ATSFontRef)[fFont _atsFontID] );
 	}
 
 	fTransform = nil;
