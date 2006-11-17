@@ -264,13 +264,9 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		{
 			pSalData->mpFocusFrame = NULL;
 
-			// Make sure frame is a top-level window
-			JavaSalFrame *pFocusFrame = this;
-			while ( pFocusFrame->mpParent && pFocusFrame->mpParent->mbVisible )
-				pFocusFrame = pFocusFrame->mpParent;
-	
-			if ( pFocusFrame != this )
-				pFocusFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+			// Set focus to parent frame
+			if ( mpParent && mpParent->mbVisible )
+				mpParent->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
 		}
 
 		if ( pSalData->mpLastDragFrame == this )
