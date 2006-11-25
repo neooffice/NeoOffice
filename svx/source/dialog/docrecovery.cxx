@@ -1089,6 +1089,13 @@ RecoveryDialog::RecoveryDialog(Window*       pParent,
     , m_bWasRecoveryStarted (sal_False)
     , m_bRecoveryOnly       (sal_False)
 {
+#ifdef USE_JAVA
+    // Fix bug 1845 by stripping out the reference to the crash reporter.
+    xub_StrLen nIndex = m_aTitleRecoveryInProgress.SearchAscii( "\n\n" );
+    if ( nIndex != STRING_NOTFOUND )
+        m_aTitleRecoveryInProgress.Erase( nIndex );
+#endif	// USE_JAVA
+
     static long nTabs[] = { 2, 0, 40*RECOV_CONTROLWIDTH/100 };
     m_aFileListLB.SetTabs( &nTabs[0] );
     m_aFileListLB.InsertHeaderEntry( String( ResId( STR_HEADERBAR ) ) );
