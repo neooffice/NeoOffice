@@ -221,8 +221,7 @@ static VCLResponder *pResponder = nil;
 {
 	// Fix bugs 1390 and 1619 by reprocessing any events with more than one
 	// character as the JVM only seems to process the first character
-	NSWindow *pWindow = [self window];
-	if ( pEvents && pWindow && [pWindow isVisible] )
+	if ( pEvents )
 	{
 		NSEvent *pEvent = [pEvents objectAtIndex:0];
 		if ( pEvent )
@@ -255,9 +254,9 @@ static VCLResponder *pResponder = nil;
 				}
 			}
 		}
-
-		[super interpretKeyEvents:pEvents];
 	}
+
+	[super interpretKeyEvents:pEvents];
 }
 
 @end
