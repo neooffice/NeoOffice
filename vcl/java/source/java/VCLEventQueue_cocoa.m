@@ -219,6 +219,8 @@ static VCLResponder *pResponder = nil;
 
 - (void)interpretKeyEvents:(NSArray *)pEvents
 {
+	[self retain];
+
 	// Fix bugs 1390 and 1619 by reprocessing any events with more than one
 	// character as the JVM only seems to process the first character
 	if ( pEvents )
@@ -257,6 +259,8 @@ static VCLResponder *pResponder = nil;
 	}
 
 	[super interpretKeyEvents:pEvents];
+
+	[self release];
 }
 
 @end
