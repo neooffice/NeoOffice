@@ -133,8 +133,10 @@ public final class VCLEventQueue implements Runnable {
 
 	/**
 	 * Construct a VCLEventQueue and make it the system queue.
+	 *
+	 * @param isPanther <code>true</code> if we are running on Mac OS X 10.3.x
 	 */
-	public VCLEventQueue() {
+	public VCLEventQueue(boolean isPanther) {
 
 		// Create the list of queues
 		queueList[0] = new VCLEventQueue.Queue();
@@ -156,11 +158,13 @@ public final class VCLEventQueue implements Runnable {
 		KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
 
 		// Set keyboard focus manager
-		kfm.setCurrentKeyboardFocusManager(new NoEnqueueKeyboardFocusManager(this));
+		if (!isPanther) {
+			kfm.setCurrentKeyboardFocusManager(new NoEnqueueKeyboardFocusManager(this));
+			kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+		}
 
 		// Set the keyboard focus manager so that Java's default focus
 		// switching key events are passed are not consumed
-		kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
 		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS, Collections.EMPTY_SET);
 		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.BACKWARD_TRAVERSAL_KEYS, Collections.EMPTY_SET);
 		kfm.setDefaultFocusTraversalKeys(KeyboardFocusManager.UP_CYCLE_TRAVERSAL_KEYS, Collections.EMPTY_SET);
@@ -282,13 +286,6 @@ public final class VCLEventQueue implements Runnable {
 		}
 
 	}
-
-	/**
-	 * Returns <code>true</code> if a native modal window showing.
-	 *
-	 * @return <code>true</code> if a native modal window showing
-	 */
-	public native boolean isNativeModalWindowShowing();
 
 	/**
 	 * Add an event to the cache.
@@ -635,8 +632,7 @@ public final class VCLEventQueue implements Runnable {
 
 			boolean ret = super.dispatchEvent(e);
 
-			// Fix bug 1924 by checking if a native modal window is showing
-			if (getFocusOwner() == null && !queue.isNativeModalWindowShowing()) {
+			if (getFocusOwner() == null) {
 				Component c = getPermanentFocusOwner();
 				if (c != null)
 					c.requestFocusInWindow();

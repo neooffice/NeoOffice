@@ -44,6 +44,9 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
 #include <com/sun/star/vcl/VCLFrame.hxx>
 #endif
+#ifndef _SV_JAVA_TOOLS_HXX
+#include <java/tools.hxx>
+#endif
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
@@ -62,19 +65,11 @@
 #include <postmac.h>
 
 #include "VCLEventQueue_cocoa.h"
-#include "../app/salinst_cocoa.h"
 
 using namespace vcl;
 using namespace vos;
 
 // ============================================================================
-
-JNIEXPORT jboolean JNICALL Java_com_sun_star_vcl_VCLEventQueue_isNativeModalWindowShowing( JNIEnv *pEnv, jobject object )
-{
-	return ( NSApplication_getModalWindow() ? JNI_TRUE : JNI_FALSE );
-}
-
-// ----------------------------------------------------------------------------
 
 void VCLEventQueue_postInputMethodTextCancelled( WindowRef aWindow )
 {
@@ -139,17 +134,6 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLEventQueue" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
-
-		if ( tempClass )
-		{
-			// Register the native methods for our class
-			JNINativeMethod aMethod; 
-			aMethod.name = "isNativeModalWindowShowing";
-			aMethod.signature = "()Z";
-			aMethod.fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isNativeModalWindowShowing;
-			t.pEnv->RegisterNatives( tempClass, &aMethod, 1 );
-		}
-
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
 	}
 	return theClass;
@@ -165,12 +149,14 @@ com_sun_star_vcl_VCLEventQueue::com_sun_star_vcl_VCLEventQueue( jobject myObj ) 
 		return;
 	if ( !mID )
 	{
-		char *cSignature = "()V";
+		char *cSignature = "(Z)V";
 		mID = t.pEnv->GetMethodID( getMyClass(), "<init>", cSignature );
 	}
 	OSL_ENSURE( mID, "Unknown method id!" );
-	jobject tempObj;
-	tempObj = t.pEnv->NewObject( getMyClass(), mID );
+
+	jvalue args[1];
+	args[0].z = jboolean( IsRunningPanther() );
+	jobject tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
 	saveRef( tempObj );
 }
 
