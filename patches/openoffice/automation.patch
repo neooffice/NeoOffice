@@ -1,10 +1,10 @@
 Index: source/testtool/makefile.mk
 ===================================================================
 RCS file: /cvs/util/automation/source/testtool/makefile.mk,v
-retrieving revision 1.6
-diff -u -r1.6 makefile.mk
---- source/testtool/makefile.mk	5 May 2006 08:06:10 -0000	1.6
-+++ source/testtool/makefile.mk	30 Jun 2006 18:57:38 -0000
+retrieving revision 1.8
+diff -u -r1.8 makefile.mk
+--- source/testtool/makefile.mk	4 Aug 2006 10:23:59 -0000	1.8
++++ source/testtool/makefile.mk	21 Nov 2006 17:42:42 -0000
 @@ -44,13 +44,21 @@
  
  # --- Allgemein ------------------------------------------------------------
@@ -27,4 +27,4 @@ diff -u -r1.6 makefile.mk
 -	
  
  EXCEPTIONSFILES= \
- 	$(OBJ)$/cmdstrm.obj              \
+ 	$(OBJ)$/tcommuni.obj             \

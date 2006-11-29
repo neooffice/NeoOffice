@@ -1,22 +1,23 @@
-? unxmacxi.pro
-? util/SDK
 Index: util/makefile.mk
 ===================================================================
 RCS file: /cvs/installation/instsetoo_native/util/makefile.mk,v
-retrieving revision 1.56
-diff -u -r1.56 makefile.mk
---- util/makefile.mk	26 Apr 2006 20:45:16 -0000	1.56
-+++ util/makefile.mk	2 Jul 2006 19:41:50 -0000
-@@ -100,7 +100,7 @@
- .IF "$(BUILD_TYPE)"=="$(BUILD_TYPE):s/ODK//"
- ALLTAR : openoffice
+retrieving revision 1.58
+diff -u -r1.58 makefile.mk
+--- util/makefile.mk	13 Jul 2006 15:15:45 -0000	1.58
++++ util/makefile.mk	23 Nov 2006 17:24:04 -0000
+@@ -106,9 +106,9 @@
+ .ELSE			# "$(GUI)"!="WNT" && "$(EPM)"=="NO" && "$(USE_PACKAGER)"==""
+ .IF "$(UPDATER)"=="" || "$(USE_PACKAGER)"==""
+ .IF "$(BUILD_TYPE)"=="$(BUILD_TYPE:s/ODK//)"
+-ALLTAR : openoffice
++ALLTAR : openoffice_en-US ooolanguagepack
  .ELSE
 -ALLTAR : openoffice sdkoo_en-US ure_en-US
 +ALLTAR : openoffice_en-US sdkoo_en-US ure_en-US ooolanguagepack
  .ENDIF
  .ELSE			# "$(UPDATER)"=="" || "$(USE_PACKAGER)"==""
  ALLTAR : updatepack
-@@ -184,14 +184,6 @@
+@@ -192,14 +192,6 @@
  	+$(PERL) -w $(SOLARENV)$/bin$/make_installer.pl -f $(PRJ)$/util$/openoffice.lst -l $(subst,$(@:s/_/ /:1)_, $(@:b)) -p OpenOffice -packagelist $(PRJ)$/inc_openoffice$/unix$/packagelist.txt -u $(OUT) -buildid $(BUILD) -msitemplate $(MSIOFFICETEMPLATEDIR) -msilanguage $(COMMONMISC)$/win_ulffiles -addsystemintegration $(subst,xxx,$(@:e:s/.//) $(PKGFORMATSWITCH))
  .ELSE                   # "$(OS)"!="MACOSX" || "$(PKGFORMAT)"!=""
  	+$(PERL) -w $(SOLARENV)$/bin$/make_installer.pl -f $(PRJ)$/util$/openoffice.lst -l $(subst,$(@:s/_/ /:1)_, $(@:b)) -p OpenOffice -packagelist $(PRJ)$/inc_openoffice$/unix$/packagelist.txt -u $(OUT) -buildid $(BUILD) -destdir $(subst,$(@:s/_/ /:1)_,$(OUT)$/OpenOffice$/install$/ $(@:b))_inprogress$/ -simple staging
@@ -31,7 +32,7 @@ diff -u -r1.56 makefile.mk
  .ENDIF                  # "$(OS)"!="MACOSX" || "$(PKGFORMAT)"!=""
  
  .IF "$(PKGFORMAT)"!=""
-@@ -216,7 +208,11 @@
+@@ -224,7 +216,11 @@
  .ELSE			# "$(PKGFORMAT)"!=""
  ooolanguagepack_% :
  .ENDIF			# "$(PKGFORMAT)"!=""

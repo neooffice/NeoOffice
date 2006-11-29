@@ -15,7 +15,7 @@ Mac OS X 10.3 (Panther)
 
 3. Make sure that you have downloaded and installed the following dependencies from http://connect.apple.com/ website:
 
-   Xcode Tools v1.5
+   Xcode Tools v1.5 (the Mac OS X 10.2.8 SDK option must be checked)
    November 2004 GCC 3.3 Updater
    Java 1.4.1 Developer Tools Update
 
@@ -27,17 +27,18 @@ Mac OS X 10.3 (Panther)
 
    Archive::Zip
 
-6. Make sure that you have installed the "gcp" and "pkg-config" commands. You can download, compile, and install these commands by downloading, compiling, and installing the following packages from the http://www.darwinports.org/ website. Note that you will need to follow the instructions on the website for downloading, compiling, and installing the DarwinPorts "port" command. The "port" commis then used to do the downloading, compiling, and installation of the following packages:
+6. Make sure that you have installed the "gcp" and "pkg-config" commands. You can download, compile, and install these commands by downloading, compiling, and installing the following packages from the http://www.macports.org/ website. Note that you will need to follow the instructions on the website for downloading, compiling, and installing the DarwinPorts "port" command. Then, invoke the following commands to do the downloading, compiling, and installation of the required packages:
 
-   coreutils
-   pkgconfig
+   sudo /path/to/port/command install coreutils
+   sudo /path/to/port/command install pkgconfig
+   sudo /path/to/port/command install libIDL
 
 7. Make sure that the /Applications/Utilities/X11 application is running.
 
 8. Start the build by invoking the following commands. Note that you should replace $NEO_HOME with absolute path of your workspace's "neojava" directory:
 
    cd $NEO_HOME
-   make GNUCP=</absolute/path/of/your/gcp/command> PKG_CONFIG=</absolute/path/of/your/pkg-config/command>
+   make GNUCP=</absolute/path/of/your/gcp/command> LIBIDL_CONFIG=</absolute/path/of/your/libIDL-config-2/command> PKG_CONFIG=</absolute/path/of/your/pkg-config/command>
 
 TODO: Currently, the build will only build through the build.neo_sysui_patch. Updating of the NeoOffice vcl custom code and installer still needs to be done.
 
@@ -51,7 +52,7 @@ Mac OS X 10.4 (Tiger) for both PowerPC and Intel
 
 2. Make sure that you have downloaded and installed the following dependencies from http://connect.apple.com/ website:
 
-   Xcode Tools v2.2.1
+   Xcode Tools v2.4
 
 3. Make sure that you have set the compiler version to 4.0.1 by executing the following command:
 
@@ -63,13 +64,14 @@ Mac OS X 10.4 (Tiger) for both PowerPC and Intel
 
 5. Make sure that you have installed the "gcp" and "pkg-config" commands. You can download, compile, and install these commands by downloading, compiling, and installing the following packages from the http://www.darwinports.org/ website. Note that you will need to follow the instructions on the website for downloading, compiling, and installing the DarwinPorts "port" command. The "port" commis then used to do the downloading, compiling, and installation of the following packages:
 
-   coreutils
-   pkgconfig
+   sudo /path/to/port/command install coreutils
+   sudo /path/to/port/command install pkgconfig
+   sudo /path/to/port/command install libIDL
 
 6. Make sure that the /Applications/Utilities/X11 application is running.
 
 7. Start the build by invoking the following commands. Note that you should replace $NEO_HOME with absolute path of your workspace's "neojava" directory:
 
    cd $NEO_HOME
-   make GNUCP=</absolute/path/of/your/gcp/command> PKG_CONFIG=</absolute/path/of/your/pkg-config/command>
+   make GNUCP=</absolute/path/of/your/gcp/command> LIBIDL_CONFIG=</absolute/path/of/your/libIDL-config-2/command> PKG_CONFIG=</absolute/path/of/your/pkg-config/command>
 

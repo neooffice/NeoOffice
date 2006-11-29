@@ -1,0 +1,13 @@
+--- org/openoffice/configuration/makefile.mk	Sat Nov 25 09:15:05 2006
++++ org/openoffice/configuration/makefile.mk	Sat Nov 25 09:25:13 2006
+@@ -41,8 +41,8 @@
+ 
+ # --- Settings -----------------------------------------------------
+ 
+-@all:
+-	@echo "disabled."
++#@all:
++#	@echo "disabled."
+ 
+ .INCLUDE :  settings.mk
+ 

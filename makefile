@@ -36,8 +36,10 @@
 # Macros that are overridable by make command line options
 CC=cc
 CXX=c++
-GNUCP=/opt/local/bin/gcp
-PKG_CONFIG=/opt/local/bin/pkg-config
+EXTRA_PATH=/opt/local/bin
+GNUCP=$(EXTRA_PATH)/gcp
+LIBIDL_CONFIG=$(EXTRA_PATH)/libIDL-config-2
+PKG_CONFIG=$(EXTRA_PATH)/pkg-config
 PRODUCT_NAME=My Untested Office Suite
 PRODUCT_DIR_NAME=My_Untested_Office_Suite
 # Important: Note that there may be escape characters in the PRODUCT_NAME for
@@ -87,12 +89,12 @@ OO_REGISTRATION_URL=http://www.openoffice.org/welcome/registration20.html
 OO_SUPPORT_URL=http://www.openoffice.org
 OO_SUPPORT_URL_TEXT=www.openoffice.org
 PRODUCT_VERSION_FAMILY=2.x
-PRODUCT_VERSION=2.0 Aqua Beta 3
-PRODUCT_DIR_VERSION=2.0_Aqua_Beta_3
+PRODUCT_VERSION=2.0 Release Candidate
+PRODUCT_DIR_VERSION=2.0_Release_Candidate
 PRODUCT_LANG_PACK_VERSION=Language Pack
 PRODUCT_DIR_LANG_PACK_VERSION=Language_Pack
-PRODUCT_PATCH_VERSION=Patch 8
-PRODUCT_DIR_PATCH_VERSION=Patch-8
+PRODUCT_PATCH_VERSION=Patch 0
+PRODUCT_DIR_PATCH_VERSION=Patch-0
 PRODUCT_FILETYPE=NO%F
 PRODUCT_INSTALL_URL=http://www.planamesa.com/neojava/download.php\\\#install
 PRODUCT_BUILD_URL=http://www.planamesa.com/neojava/build.php
@@ -105,15 +107,19 @@ PRODUCT_SUPPORT_URL_TEXT:=$(PRODUCT_NAME) Support
 # CVS macros
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
 OO_PACKAGES:=OpenOffice2
-OO_TAG:=OOC680_m7
-OO_SOURCE_TAR_GZ_FILE:=$(PWD)/OOo_2.0.3_src.tar.gz
-OO_SOURCE_OUTPUT_DIR:=OOC680_m7
+OO_TAG:=OOD680_m5
+OO_SOURCE_TAR_GZ_FILE:=$(PWD)/OOo_2.0.4_src.tar.gz
+OO_SOURCE_OUTPUT_DIR:=OOD680_m5
 OOO-BUILD_CVSROOT:=:pserver:anonymous@anoncvs.gnome.org:/cvs/gnome
 OOO-BUILD_PACKAGES:=ooo-build
-OOO-BUILD_TAG:=OOO_BUILD_OOD680_M1
+OOO-BUILD_TAG:=OOO_BUILD_2_0_4_7
+LPSOLVE_SOURCE_URL=http://go-ooo.org/packages/SRC680/lp_solve_5.5.tar.gz
+MDBTOOLS_SOURCE_URL=http://go-ooo.org/packages/SRC680/mdbtools-0.6pre1.tar.gz
+MOZ_SOURCE_URL=ftp://ftp.mozilla.org/pub/mozilla.org/mozilla/releases/mozilla1.7.5/source/mozilla-source-1.7.5.tar.gz
+XT_SOURCE_URL=http://go-ooo.org/packages/xt/xt-20051206-src-only.zip
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
-NEO_TAG:=NeoOffice-2_0_Aqua_Beta_3
+NEO_TAG:=HEAD
 
 all: build.all
 
@@ -128,37 +134,50 @@ build.oo_checkout:
 	sh -e -c 'if [ -e "$(OO_SOURCE_TAR_GZ_FILE)" ] ; then pax -z -v -r -s "#$(OO_SOURCE_OUTPUT_DIR)#$(BUILD_HOME)#" -f "$(OO_SOURCE_TAR_GZ_FILE)" ; fi'
 	-sh -e -c 'if [ ! -e "$(OO_SOURCE_TAR_GZ_FILE)" ] ; then cd "$(BUILD_HOME)" ; cvs -d "$(OO_CVSROOT)" co -r "$(OO_TAG)" $(OO_PACKAGES) ; fi'
 # cvs seems to always fail so check that the last module has been checked out
-	cd "$(BUILD_HOME)/agg" ; cvs -d "$(OO_CVSROOT)" update -r "$(OO_TAG)"
-	sh -e -c 'if [ ! -e "$(OO_SOURCE_TAR_GZ_FILE)" ] ; then cd "$(BUILD_HOME)/agg" ; cvs -d "$(OO_CVSROOT)" update -r "$(OO_TAG)" ; fi'
+	sh -e -c 'if [ ! -e "$(OO_SOURCE_TAR_GZ_FILE)" ] ; then cd "$(BUILD_HOME)/basebmp" ; cvs -d "$(OO_CVSROOT)" update -r "$(OO_TAG)" ; fi'
 	chmod -Rf u+w "$(BUILD_HOME)"
 	touch "$@"
 
-build.ooo-build_checkout:
+build.ooo-build_checkout: build.oo_checkout
 	mkdir -p "$(BUILD_HOME)"
 	cd "$(BUILD_HOME)" ; cvs -d "$(OOO-BUILD_CVSROOT)" co -r "$(OOO-BUILD_TAG)" $(OOO-BUILD_PACKAGES)
 	cd "$(BUILD_HOME)" ; chmod -Rf u+w "$(OOO-BUILD_PACKAGES)"
 	touch "$@"
 
-build.oo_patches: build.oo_checkout \
+build.oo_patches: build.oo_ooo-build_patch \
 	build.oo_automation_patch \
 	build.oo_berkeleydb_patch \
 	build.oo_binfilter_patch \
+	build.oo_boost_patch \
+	build.oo_chart2_patch \
 	build.oo_external_patch \
 	build.oo_forms_patch \
 	build.oo_instsetoo_native_patch \
 	build.oo_jvmfwk_patch \
+	build.oo_lpsolve_patch \
+	build.oo_moz_patch \
+	build.oo_officecfg_patch \
 	build.oo_padmin_patch \
+	build.oo_scp2_patch \
+	build.oo_scripting_patch \
 	build.oo_solenv_patch \
 	build.oo_sj2_patch \
 	build.oo_toolkit_patch \
-	build.oo_vcl_patch \
-	build.oo_xmerge_patch
+	build.oo_ucb_patch \
+	build.oo_vcl_patch
 	touch "$@"
 
-build.oo_odk_patches: build.oo_checkout
+build.oo_berkeleydb_patch: $(OO_PATCHES_HOME)/berkeleydb.patch build.oo_ooo-build_patch
+	-( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+	touch "$(BUILD_HOME)/berkeleydb/db-4.3.29.patch"
+	cp "$(OO_PATCHES_HOME)/db-4.3.29.tar.gz" "$(BUILD_HOME)/berkeleydb/download"
 	touch "$@"
 
-build.oo_external_patch: build.oo_checkout
+build.oo_odk_patches: build.oo_ooo-build_patch
+	touch "$@"
+
+build.oo_external_patch: build.oo_ooo-build_patch
 	chmod -Rf u+w "$(BUILD_HOME)/external/gpc"
 	gnutar zxf "$(OO_PATCHES_HOME)/gpc231.tar.Z" -C "$(BUILD_HOME)/external/gpc"
 	chmod -Rf u+w "$(BUILD_HOME)/external/gpc"
@@ -166,27 +185,34 @@ build.oo_external_patch: build.oo_checkout
 	rm -Rf "$(BUILD_HOME)/external/gpc/gpc231"
 	touch "$@"
 
-build.oo_moz_patch: build.oo_checkout
+build.oo_moz_patch: build.oo_ooo-build_patch
 	cd "$(BUILD_HOME)/moz/download" ; curl -O "$(MOZ_SOURCE_URL)"
 	touch "$@"
 
 build.oo_ooo-build_patch : build.oo_checkout build.ooo-build_checkout
-# Enable following commands when ooo-build has code available
-#	-sh -e -c 'for i in `find "$(PWD)/$(BUILD_HOME)/ooo-build/patches/vba" -name "*.diff"` ; do ( cd "$(BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$$i" ; if [ "$$?" != "0" ] ; then exit 1 ; fi ; done'
-#	sh -e -c 'for i in `find "$(PWD)/$(BUILD_HOME)/ooo-build/patches/vba" -name "*.diff"` ; do ( cd "$(BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$$i" ; if [ "$$?" != "0" ] ; then exit 1 ; fi ; done'
+	cd "$(BUILD_HOME)/ooo-build/patches/src680" ; sed 's#^debian#\#&#g' "apply" | sed 's#^fontconfig-substitute#\#&#g' | sed 's#^localized-fontname#\#&#g' > out ; mv -f "out" "apply"
+	"$(BUILD_HOME)/ooo-build/patches/apply.pl" "$(PWD)/$(BUILD_HOME)/ooo-build/patches/src680" "$(PWD)/$(BUILD_HOME)"
+	cp "$(BUILD_HOME)/ooo-build/src/go-oo-team.png" "$(BUILD_HOME)/default_images/sw/res"
+	cp "$(BUILD_HOME)/ooo-build/src/evolocal.odb" "$(BUILD_HOME)/extras/source/database"
+	cp "$(BUILD_HOME)/ooo-build/fonts/opens___.ttf" "$(BUILD_HOME)/extras/source/truetype/symbol"
+	mkdir -p "$(BUILD_HOME)/lpsolve/download" ; cd "$(BUILD_HOME)/lpsolve/download" ; curl -O "$(LPSOLVE_SOURCE_URL)"
+	mkdir -p "$(BUILD_HOME)/mdbtools/download" ; cd "$(BUILD_HOME)/mdbtools/download" ; curl -O "$(MDBTOOLS_SOURCE_URL)"
+	cd "$(BUILD_HOME)/xt/download" ; curl -O "$(XT_SOURCE_URL)"
 	touch "$@"
 
-build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.oo_checkout
+build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.oo_ooo-build_patch
 	-( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
 	( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	touch "$@"
 
 build.configure: build.oo_patches
 	cd "$(BUILD_HOME)/config_office" ; autoconf
-	( cd "$(BUILD_HOME)/config_office" ; setenv PATH "/bin:/sbin:/usr/bin:/usr/sbin" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) PKG_CONFIG=$(PKG_CONFIG) --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-epm=internal --disable-gtk --disable-mozilla --without-nas --with-gnu-cp="$(GNUCP)" --with-system-curl --with-x --x-includes=/usr/X11R6/include --with-lang="$(OO_LANGUAGES)" )
-	echo "unsetenv LD_SEG_ADDR_TABLE" >> "$(OO_ENV_X11)"
-	echo "unsetenv LD_PREBIND" >> "$(OO_ENV_X11)"
-	echo "unsetenv LD_PREBIND_ALLOW_OVERLAP" >> "$(OO_ENV_X11)"
+	( cd "$(BUILD_HOME)/config_office" ; setenv PATH "/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) PKG_CONFIG=$(PKG_CONFIG) --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-epm=internal --disable-cups --disable-gtk --disable-odk --without-nas --with-mozilla-toolkit=xlib --with-gnu-cp="$(GNUCP)" --with-system-curl --with-x --x-includes=/usr/X11R6/include --with-lang="$(OO_LANGUAGES)" )
+	echo 'setenv LIBIDL_CONFIG "$(LIBIDL_CONFIG)"' >> "$(OO_ENV_X11)"
+	echo 'setenv PKG_CONFIG "$(PKG_CONFIG)"' >> "$(OO_ENV_X11)"
+	echo 'unsetenv LD_SEG_ADDR_TABLE' >> "$(OO_ENV_X11)"
+	echo 'unsetenv LD_PREBIND' >> "$(OO_ENV_X11)"
+	echo 'unsetenv LD_PREBIND_ALLOW_OVERLAP' >> "$(OO_ENV_X11)"
 	( cd "$(BUILD_HOME)" ; ./bootstrap )
 	touch "$@"
 

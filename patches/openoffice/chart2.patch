@@ -1,0 +1,26 @@
+Index: source/view/charttypes/Splines.cxx
+===================================================================
+RCS file: /cvs/graphics/chart2/source/view/charttypes/Splines.cxx,v
+retrieving revision 1.6
+diff -u -r1.6 Splines.cxx
+--- source/view/charttypes/Splines.cxx	8 Mar 2004 16:03:51 -0000	1.6
++++ source/view/charttypes/Splines.cxx	27 Nov 2006 17:45:02 -0000
+@@ -35,15 +35,15 @@
+ 
+ struct Point3D
+ {
+-    Point3D( double X, double Y, double Z );
++    Point3D( double x, double y, double z );
+     Point3D();
+ 
+     double X;
+     double Y;
+     double Z;
+ };
+-Point3D::Point3D( double _X, double _Y, double _Z )
+-: X(_X), Y(_Y), Z(_Z)
++Point3D::Point3D( double x, double y, double z )
++: X(x), Y(y), Z(z)
+ {
+ }
+ Point3D::Point3D()

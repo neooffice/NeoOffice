@@ -1,19 +1,60 @@
 Index: makefile.mk
 ===================================================================
 RCS file: /cvs/external/berkeleydb/makefile.mk,v
-retrieving revision 1.31
-diff -u -r1.31 makefile.mk
---- makefile.mk	8 Mar 2006 14:13:53 -0000	1.31
-+++ makefile.mk	30 Jun 2006 18:58:49 -0000
-@@ -139,6 +139,11 @@
+retrieving revision 1.32
+diff -u -r1.32 makefile.mk
+--- makefile.mk	5 Jul 2006 21:52:16 -0000	1.32
++++ makefile.mk	28 Nov 2006 05:34:38 -0000
+@@ -50,7 +50,7 @@
+ 
+ # --- Files --------------------------------------------------------
+ 
+-TARFILE_NAME=db-4.2.52.NC
++TARFILE_NAME=db-4.3.29
+ ADDITIONAL_FILES=    \
+ 	makefile.mk btree$/makefile.mk clib$/makefile.mk common$/makefile.mk  \
+ 	cxx$/makefile.mk db$/makefile.mk dbm$/makefile.mk dbreg$/makefile.mk  \
+@@ -63,7 +63,7 @@
+ 
+ 
+ # not needed for win32. comment out when causing problems...
+-PATCH_FILE_NAME=db-4.2.52.patch
++PATCH_FILE_NAME=db-4.3.29.patch
+ 
+ .IF "$(GUI)"=="UNX"
+ .IF "$(OS)$(COM)"=="LINUXGCC"
+@@ -141,6 +141,11 @@
  
  # --- Targets ------------------------------------------------------
  
 +.IF "$(OS)"=="MACOSX"
 +ALL: ALLTAR
-+	install_name_tool -id @executable_path/$(DLLPRE)db-4.2$(DLLPOST) $(LB)$/$(DLLPRE)db-4.2$(DLLPOST)
++	install_name_tool -id @executable_path/$(DLLPRE)db-4.3$(DLLPOST) $(LB)$/$(DLLPRE)db-4.3$(DLLPOST)
 +.ENDIF
 +
  .INCLUDE : set_ext.mk
  .INCLUDE :	target.mk
  .INCLUDE :	tg_ext.mk
+Index: prj/d.lst
+===================================================================
+RCS file: /cvs/external/berkeleydb/prj/d.lst,v
+retrieving revision 1.8
+diff -u -r1.8 d.lst
+--- prj/d.lst	13 Jan 2006 16:24:10 -0000	1.8
++++ prj/d.lst	28 Nov 2006 06:08:58 -0000
+@@ -7,11 +7,11 @@
+ ..\%__SRC%\lib\libdb42.lib %_DEST%\lib%_EXT%\libdb42.lib
+ ..\%__SRC%\lib\libdb_java42.lib %_DEST%\lib%_EXT%\libdb_java42.lib
+ 
+-..\%__SRC%\lib\libdb-4.2.so %_DEST%\lib%_EXT%\libdb-4.2.so
+-..\%__SRC%\lib\libdb_java-4.2.so %_DEST%\lib%_EXT%\libdb_java-4.2.so
++..\%__SRC%\lib\libdb-4.3.so %_DEST%\lib%_EXT%\libdb-4.3.so
++..\%__SRC%\lib\libdb_java-4.3.so %_DEST%\lib%_EXT%\libdb_java-4.3.so
+ 
+-..\%__SRC%\lib\libdb-4.2.dylib %_DEST%\lib%_EXT%\libdb-4.2.dylib
+-..\%__SRC%\lib\libdb_java-4.2.jnilib %_DEST%\lib%_EXT%\libdb_java-4.2.jnilib
++..\%__SRC%\lib\libdb-4.3.dylib %_DEST%\lib%_EXT%\libdb-4.3.dylib
++..\%__SRC%\lib\libdb_java-4.3.jnilib %_DEST%\lib%_EXT%\libdb_java-4.3.jnilib
+ 
+ ..\%__SRC%\bin\libdb42.dll %_DEST%\bin%_EXT%\libdb42.dll
+ ..\%__SRC%\bin\libdb_java42.dll %_DEST%\bin%_EXT%\libdb_java42.dll
