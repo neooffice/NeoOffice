@@ -29,19 +29,18 @@ diff -u -r1.209 file_library_ooo.scp
      #endif
   #else
      Name = "libdb_java42.dll";
-@@ -2454,6 +2454,15 @@
- End
- #endif
+--- source/ooo/file_library_ooo.scp.bak	2006-11-30 09:59:33.000000000 -0800
++++ source/ooo/file_library_ooo.scp	2006-11-30 10:04:30.000000000 -0800
+@@ -2456,10 +2456,12 @@
  
-+#ifdef ENABLE_ACCESS
-+#ifdef UNX
+ #ifdef ENABLE_ACCESS
+ #ifdef UNX
 +#ifndef MACOSX
-+STD_UNO_LIB_FILE( gid_File_Lib_Mdb2, mdb )
-+STD_UNO_LIB_FILE( gid_File_Lib_Mdb2_Impl, mdbimpl )
+ STD_UNO_LIB_FILE( gid_File_Lib_Mdb2, mdb )
+ STD_UNO_LIB_FILE( gid_File_Lib_Mdb2_Impl, mdbimpl )
+ #endif
+ #endif
 +#endif
-+#endif
-+#endif
-+
+ 
  // AVMedia
  STD_LIB_FILE_PATCH( gid_File_Lib_AVMedia, avmedia )
- 
