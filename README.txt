@@ -62,7 +62,7 @@ Mac OS X 10.4 (Tiger) for both PowerPC and Intel
 
    Archive::Zip
 
-5. Make sure that you have installed the "gcp" and "pkg-config" commands. You can download, compile, and install these commands by downloading, compiling, and installing the following packages from the http://www.darwinports.org/ website. Note that you will need to follow the instructions on the website for downloading, compiling, and installing the DarwinPorts "port" command. The "port" commis then used to do the downloading, compiling, and installation of the following packages:
+5. Make sure that you have installed the "gcp" and "pkg-config" commands. You can download, compile, and install these commands by downloading, compiling, and installing the following packages from the http://www.darwinports.org/ website. Note that you will need to follow the instructions on the website for downloading, compiling, and installing the DarwinPorts "port" command. The "port" command is then used to do the downloading, compiling, and installation of the following packages:
 
    sudo /path/to/port/command install coreutils
    sudo /path/to/port/command install pkgconfig
