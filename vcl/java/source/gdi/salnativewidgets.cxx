@@ -2106,7 +2106,12 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					
 					case PART_SUB_EDIT:
 						{
-							rNativeBoundingRegion = Region( Rectangle( Point( spinboxRect.Left(), spinboxRect.Top() ), Size( (long)(spinboxRect.GetWidth() - spinnerThemeWidth - 4 ), spinboxRect.GetHeight() ) ) );
+							SInt32 editFramePadding;
+							bReturn = ( GetThemeMetric( kThemeMetricEditTextFrameOutset, &editFramePadding ) == noErr );
+							if ( ! bReturn )
+								return bReturn;
+								
+							rNativeBoundingRegion = Region( Rectangle( Point( spinboxRect.Left() + editFramePadding, spinboxRect.Top() + editFramePadding ), Size( (long)(spinboxRect.GetWidth() - spinnerThemeWidth - 4 - (editFramePadding*2) ), spinboxRect.GetHeight() - (editFramePadding*2) ) ) );
 							rNativeContentRegion = Region( rNativeBoundingRegion );
 							bReturn = TRUE;
 						}
