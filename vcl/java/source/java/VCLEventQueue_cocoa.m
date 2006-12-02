@@ -168,14 +168,14 @@
 @end
 
 @interface VCLWindow : NSWindow
-- (void)becomeKeyWindow;
+- (void)resignKeyWindow;
 @end
 
 @implementation VCLWindow
 
-- (void)becomeKeyWindow
+- (void)resignKeyWindow
 {
-	[super becomeKeyWindow];
+	[super resignKeyWindow];
 
 	// Fix bug 1819 by forcing cancellation of the input method by posting
 	// a Command-. event

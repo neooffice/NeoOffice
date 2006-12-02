@@ -995,6 +995,30 @@ void Edit::ImplInsertText( const XubString& rStr, const Selection* pNewSel, sal_
 
 	ImplAlignAndPaint( (xub_StrLen)aSelection.Min(), nOldWidth );
 	mbInternModified = TRUE;
+
+#ifdef USE_JAVA
+	// modifying text with the border erase will result in spinner arrows
+	// being redrawn by the border win.  Add in an invalidate to redraw
+	// controls outside the edit area to avoid cheap whore effect.  Bug 1880
+	
+	if( ImplGetNativeControlType() == CTRL_SPINBOX )
+	{
+		Window *pControl = this;
+		Window *pBorder = GetWindow( WINDOW_BORDER );
+		if( pBorder == this )
+		{
+			// we have no border, use parent
+			pControl = mbIsSubEdit ? GetParent() : this;
+			pBorder = pControl->GetWindow( WINDOW_BORDER );
+		}
+		
+		if( pBorder )
+		{
+			pBorder->GetParent()->Invalidate( Rectangle( pBorder->GetPosPixel(), pBorder->GetSizePixel() ) );
+			pBorder->GetParent()->Update();
+		}
+	}
+#endif
 }
 
 // -----------------------------------------------------------------------
@@ -1024,6 +1048,30 @@ void Edit::ImplSetText( const XubString& rText, const Selection* pNewSelection )
 				maSelection.Max() = 0;
 
 			Invalidate();
+
+#ifdef USE_JAVA
+			// modifying text with the border erase will result in spinner arrows
+			// being redrawn by the border win.  Add in an invalidate to redraw
+			// controls outside the edit area to avoid cheap whore effect.  Bug 1880
+			
+			if( ImplGetNativeControlType() == CTRL_SPINBOX )
+			{
+				Window *pControl = this;
+				Window *pBorder = GetWindow( WINDOW_BORDER );
+				if( pBorder == this )
+				{
+					// we have no border, use parent
+					pControl = mbIsSubEdit ? GetParent() : this;
+					pBorder = pControl->GetWindow( WINDOW_BORDER );
+				}
+				
+				if( pBorder )
+				{
+					pBorder->GetParent()->Invalidate( Rectangle( pBorder->GetPosPixel(), pBorder->GetSizePixel() ) );
+					pBorder->GetParent()->Update();
+				}
+			}
+#endif
 		}
 		else
 			ImplInsertText( rText, pNewSelection );
@@ -1118,7 +1166,6 @@ void Edit::ImplClearBackground( long nXStart, long nXEnd )
 				Region aContent, aBound;
 		
 				// use the full extent of the control
-				Window *pBorder = GetWindow( WINDOW_BORDER );
 				Region aArea( Rectangle(aPoint, pBorder->GetOutputSizePixel()) );
 	
 				// adjust position and size of the edit field
@@ -1139,7 +1186,6 @@ void Edit::ImplClearBackground( long nXStart, long nXEnd )
 					Region aContent, aBound;
 			
 					// use the full extent of the control
-					Window *pBorder = GetWindow( WINDOW_BORDER );
 					Region aArea( Rectangle(aPoint, pBorder->GetOutputSizePixel()) );
 		
 					// adjust position and size of the edit field

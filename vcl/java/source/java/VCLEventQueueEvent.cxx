@@ -604,32 +604,40 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 						pSalData->mpLastDragFrame = NULL;
 				}
 
-				// Adjust position for RTL layout
-				if ( Application::GetSettings().GetLayoutRTL() )
-					pMouseEvent->mnX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pMouseEvent->mnX - 1;
-
-				pSalData->maLastPointerState.mnState = pMouseEvent->mnCode;
-				pSalData->maLastPointerState.maPos = Point( aScreenPoint.X(), aScreenPoint.Y() );
-
-				pFrame->CallCallback( nID, pMouseEvent );
-
 				// Check if we are not clicking on a floating window
-    			if ( nID == SALEVENT_MOUSEBUTTONDOWN  || nID == SALEVENT_MOUSEBUTTONUP )
+				FloatingWindow *pPopupWindow = NULL;
+    			if ( nID == SALEVENT_MOUSEBUTTONDOWN )
 				{
 					for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 					{
 						if ( pFrame == *it && pFrame->mbVisible )
 						{
 							ImplSVData* pSVData = ImplGetSVData();
-							if ( !pFrame->IsFloatingFrame() && pSVData && pSVData->maWinData.mpFirstFloat && ((JavaSalFrame *)pSVData->maWinData.mpFirstFloat->ImplGetFrame())->mpParent != pFrame )
+							if ( !pFrame->IsFloatingFrame() && pSVData && pSVData->maWinData.mpFirstFloat )
 							{
 								static const char* pEnv = getenv( "SAL_FLOATWIN_NOAPPFOCUSCLOSE" );
 								if ( !(pSVData->maWinData.mpFirstFloat->GetPopupModeFlags() & FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE) && !(pEnv && *pEnv) )
-									pSVData->maWinData.mpFirstFloat->EndPopupMode( FLOATWIN_POPUPMODEEND_CANCEL | FLOATWIN_POPUPMODEEND_CLOSEALL );
+									pPopupWindow = pSVData->maWinData.mpFirstFloat;
 							}
 							break;
 						}
 					}
+				}
+
+				// Adjust position for RTL layout
+				if ( Application::GetSettings().GetLayoutRTL() )
+					pMouseEvent->mnX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pMouseEvent->mnX - 1;
+
+				pFrame->CallCallback( nID, pMouseEvent );
+
+				pSalData->maLastPointerState.mnState = pMouseEvent->mnCode;
+				pSalData->maLastPointerState.maPos = Point( aScreenPoint.X(), aScreenPoint.Y() );
+
+    			if ( pPopupWindow )
+				{
+					ImplSVData* pSVData = ImplGetSVData();
+					if ( pSVData && pSVData->maWinData.mpFirstFloat == pPopupWindow )
+						pPopupWindow->EndPopupMode( FLOATWIN_POPUPMODEEND_CANCEL | FLOATWIN_POPUPMODEEND_CLOSEALL );
 				}
 			}
 			if ( pMouseEvent )
