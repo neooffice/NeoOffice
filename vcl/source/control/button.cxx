@@ -685,7 +685,11 @@ void Button::ImplDrawAlignedImage( OutputDevice* pDev, Point& rPos,
     
     if ( ! ( nDrawFlags & WINDOW_DRAW_NODISABLE ) &&
          ! IsEnabled() )
+#ifdef USE_JAVA
+        nStyle |= IMAGE_DRAW_SEMITRANSPARENT;
+#else
         nStyle |= IMAGE_DRAW_DISABLE;
+#endif
 
     if ( pBitmapEx && ( pDev->GetOutDevType() == OUTDEV_PRINTER ) )
     {
@@ -2380,7 +2384,11 @@ if ( bNativeOK == FALSE )
         // Image ausgeben
         nStyle = 0;
         if ( !bEnabled )
+#ifdef USE_JAVA
+            nStyle |= IMAGE_DRAW_SEMITRANSPARENT;
+#else
             nStyle |= IMAGE_DRAW_DISABLE;
+#endif
 
 		// check for HC mode
 		Image *pImage = &maImage;
