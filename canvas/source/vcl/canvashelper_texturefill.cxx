@@ -716,15 +716,10 @@ namespace vclcanvas
                 // output gradient the hard way: XORing out the polygon
 #ifdef USE_JAVA
                 MapMode aVDevMap;
-                OutputDevice *pVDev = p2ndOutDev;
-                if ( !pVDev )
+                VirtualDevice aVDev( rOutDev );
+                if ( aVDev.SetOutputSizePixel( aPolygonDeviceRectOrig.GetSize() ) )
                 {
-                    pVDev = new VirtualDevice( rOutDev );
-                    if ( !((VirtualDevice *)pVDev)->SetOutputSizePixel( aPolygonDeviceRectOrig.GetSize() ) )
-                        pVDev = NULL;
-                }
-                if ( pVDev )
-                {
+                    aVDev.DrawOutDev( Point(), aPolygonDeviceRectOrig.GetSize(), aPolygonDeviceRectOrig.TopLeft(), aPolygonDeviceRectOrig.GetSize(), rOutDev );
                     rOutDev.Push( PUSH_CLIPREGION );
                     rOutDev.IntersectClipRegion( aPolygonDeviceRectOrig );
                     doGradientFill( rOutDev,
@@ -736,34 +731,54 @@ namespace vclcanvas
                                     nStepCount,
                                     true );
                     rOutDev.Pop();
-                    pVDev->Push( PUSH_RASTEROP );
-                    pVDev->DrawOutDev( p2ndOutDev ? aPolygonDeviceRectOrig.TopLeft() : Point(), aPolygonDeviceRectOrig.GetSize(), aPolygonDeviceRectOrig.TopLeft(), aPolygonDeviceRectOrig.GetSize(), rOutDev );
-                    pVDev->SetFillColor( COL_BLACK );
-                    if ( !p2ndOutDev )
-                    {
-                        aVDevMap.SetOrigin( Point( -aPolygonDeviceRectOrig.Left(), -aPolygonDeviceRectOrig.Top() ) );
-                        pVDev->SetMapMode( aVDevMap );
-                    }
-                    pVDev->DrawPolyPolygon( rPoly );
-                    if ( !p2ndOutDev )
-                    {
-                        aVDevMap.SetOrigin( Point() );
-                        pVDev->SetMapMode( aVDevMap );
-                    }
-                    pVDev->Pop();
+                    aVDev.Push( PUSH_RASTEROP );
+                    aVDev.SetRasterOp( ROP_XOR );
+                    aVDev.DrawOutDev( Point(), aPolygonDeviceRectOrig.GetSize(), aPolygonDeviceRectOrig.TopLeft(), aPolygonDeviceRectOrig.GetSize(), rOutDev );
+                    aVDev.SetFillColor( COL_BLACK );
+                    aVDev.SetRasterOp( ROP_0 );
+                    aVDevMap.SetOrigin( Point( -aPolygonDeviceRectOrig.Left(), -aPolygonDeviceRectOrig.Top() ) );
+                    aVDev.SetMapMode( aVDevMap );
+                    aVDev.DrawPolyPolygon( rPoly );
+                    aVDevMap.SetOrigin( Point() );
+                    aVDev.SetMapMode( aVDevMap );
+                    aVDev.Pop();
                     rOutDev.Push( PUSH_RASTEROP );
                     rOutDev.SetRasterOp( ROP_XOR );
-                    rOutDev.DrawOutDev( aPolygonDeviceRectOrig.TopLeft(), aPolygonDeviceRectOrig.GetSize(), Point(), aPolygonDeviceRectOrig.GetSize(), *pVDev );
+                    rOutDev.DrawOutDev( aPolygonDeviceRectOrig.TopLeft(), aPolygonDeviceRectOrig.GetSize(), Point(), aPolygonDeviceRectOrig.GetSize(), aVDev );
                     rOutDev.Pop();
                     if( p2ndOutDev )
                     {
+                        aVDev.SetLineColor();
+                        aVDev.SetFillColor( COL_BLACK );
+                        aVDev.DrawRect( Rectangle( Point(), aPolygonDeviceRectOrig.GetSize() ) );
+                        aVDev.DrawOutDev( Point(), aPolygonDeviceRectOrig.GetSize(), aPolygonDeviceRectOrig.TopLeft(), aPolygonDeviceRectOrig.GetSize(), *p2ndOutDev );
+                        p2ndOutDev->Push( PUSH_CLIPREGION );
+                        p2ndOutDev->IntersectClipRegion( aPolygonDeviceRectOrig );
+                        doGradientFill( *p2ndOutDev,
+                                        rValues,
+                                        rColor1,
+                                        rColor2,
+                                        aTextureTransform,
+                                        aPolygonDeviceRectOrig,
+                                        nStepCount,
+                                        true );
+                        p2ndOutDev->Pop();
+                        aVDev.Push( PUSH_RASTEROP );
+                        aVDev.SetRasterOp( ROP_XOR );
+                        aVDev.DrawOutDev( Point(), aPolygonDeviceRectOrig.GetSize(), aPolygonDeviceRectOrig.TopLeft(), aPolygonDeviceRectOrig.GetSize(), *p2ndOutDev );
+                        aVDev.SetFillColor( COL_BLACK );
+                        aVDev.SetRasterOp( ROP_0 );
+                        aVDevMap.SetOrigin( Point( -aPolygonDeviceRectOrig.Left(), -aPolygonDeviceRectOrig.Top() ) );
+                        aVDev.SetMapMode( aVDevMap );
+                        aVDev.DrawPolyPolygon( rPoly );
+                        aVDevMap.SetOrigin( Point() );
+                        aVDev.SetMapMode( aVDevMap );
+                        aVDev.Pop();
                         p2ndOutDev->Push( PUSH_RASTEROP );
-                        p2ndOutDev->SetRasterOp( ROP_0 );
-                        p2ndOutDev->DrawOutDev( aPolygonDeviceRectOrig.TopLeft(), aPolygonDeviceRectOrig.GetSize(), aPolygonDeviceRectOrig.TopLeft(), aPolygonDeviceRectOrig.GetSize(), rOutDev );
+                        p2ndOutDev->SetRasterOp( ROP_XOR );
+                        p2ndOutDev->DrawOutDev( aPolygonDeviceRectOrig.TopLeft(), aPolygonDeviceRectOrig.GetSize(), Point(), aPolygonDeviceRectOrig.GetSize(), aVDev );
                         p2ndOutDev->Pop();
                     }
-                    if ( pVDev != p2ndOutDev )
-                        delete pVDev;
                 }
 #else	// USE_JAVA
                 rOutDev.Push( PUSH_RASTEROP );
@@ -1252,60 +1267,6 @@ namespace vclcanvas
                         else
                         {
                             // output via repeated XORing
-#ifdef USE_JAVA
-                            VirtualDevice aVDev( rOutDev );
-                            MapMode aVDevMap;
-                            OutputDevice *pVDev = ( mp2ndOutDev ? &( mp2ndOutDev->getOutDev() ) : NULL );
-                            if ( !pVDev )
-                            {
-                                pVDev = new VirtualDevice( rOutDev );
-                                if ( !((VirtualDevice *)pVDev)->SetOutputSizePixel( aPolygonDeviceRect.GetSize() ) )
-                                    pVDev = NULL;
-                            }
-                            if ( pVDev )
-                            {
-                                rOutDev.Push( PUSH_CLIPREGION );
-                                rOutDev.IntersectClipRegion( aPolygonDeviceRect );
-                                textureFill( rOutDev,
-                                             *pGrfObj,
-                                             Point(),
-                                             aIntegerNextTileX,
-                                             aIntegerNextTileY,
-                                             nTilesX,
-                                             nTilesY,
-                                             aSz,
-                                             aGrfAttr );
-                                rOutDev.Pop();
-                                pVDev->Push( PUSH_RASTEROP );
-                                pVDev->SetRasterOp( ROP_0 );
-                                pVDev->DrawOutDev( mp2ndOutDev ? aPolygonDeviceRect.TopLeft() : Point(), aPolygonDeviceRect.GetSize(), aPolygonDeviceRect.TopLeft(), aPolygonDeviceRect.GetSize(), rOutDev );
-                                pVDev->SetFillColor( COL_BLACK );
-                                if ( !mp2ndOutDev )
-                                {
-                                    aVDevMap.SetOrigin( Point( -aPolygonDeviceRect.Left(), -aPolygonDeviceRect.Top() ) );
-                                    pVDev->SetMapMode( aVDevMap );
-                                }
-                                pVDev->DrawPolyPolygon( aPolyPoly );
-                                if( !mp2ndOutDev )
-                                {
-                                    aVDevMap.SetOrigin( Point() );
-                                    pVDev->SetMapMode( aVDevMap );
-                                }
-                                pVDev->Pop();
-                                rOutDev.Push( PUSH_RASTEROP );
-                                rOutDev.SetRasterOp( ROP_XOR );
-                                rOutDev.DrawOutDev( aPolygonDeviceRect.TopLeft(), aPolygonDeviceRect.GetSize(), Point(), aPolygonDeviceRect.GetSize(), *pVDev );
-                                rOutDev.Pop();
-                                if( mp2ndOutDev )
-                                {
-                                    OutputDevice& r2ndOutDev( mp2ndOutDev->getOutDev() );
-                                    r2ndOutDev.Push( PUSH_RASTEROP );
-                                    r2ndOutDev.SetRasterOp( ROP_0 );
-                                    r2ndOutDev.DrawOutDev( aPolygonDeviceRect.TopLeft(), aPolygonDeviceRect.GetSize(), aPolygonDeviceRect.TopLeft(), aPolygonDeviceRect.GetSize(), rOutDev );
-                                    r2ndOutDev.Pop();
-                                }
-                            }
-#else	// USE_JAVA
                             rOutDev.Push( PUSH_RASTEROP );
                             rOutDev.SetRasterOp( ROP_XOR );
                             textureFill( rOutDev,
@@ -1361,7 +1322,6 @@ namespace vclcanvas
                                              aGrfAttr );
                                 r2ndOutDev.Pop();
                             }
-#endif	// USE_JAVA
                         }
                     }
                 }
