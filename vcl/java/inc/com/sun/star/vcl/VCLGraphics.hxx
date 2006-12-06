@@ -49,6 +49,8 @@
 #include <tools/gen.hxx>
 #endif
 
+class JavaSalBitmap;
+
 namespace vcl {
 
 class com_sun_star_vcl_VCLBitmap;
@@ -67,6 +69,7 @@ public:
 						com_sun_star_vcl_VCLGraphics( jobject myObj ) : java_lang_Object( myObj ) {};
 	virtual				~com_sun_star_vcl_VCLGraphics() {};
 
+	void				addGraphicsChangeListener( JavaSalBitmap *_par0 );
 	void				beginSetClipRegion();
 	void				copyBits( const com_sun_star_vcl_VCLGraphics *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8, sal_Bool _par9 );
 	com_sun_star_vcl_VCLImage*	createImage();
@@ -79,6 +82,12 @@ public:
 	void				drawPolyline( ULONG _par0, const SalPoint *_par1, SalColor _par2 );
 	void				drawPolyPolygon( ULONG _par0, const ULONG *_par1, PCONSTSALPOINT *_par2, SalColor _par3, sal_Bool _par4 );
 	void				drawRect( long _par0, long _par1, long _par2, long _par3, SalColor _par4, sal_Bool _par5 );
+	void				drawPushButton( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4, sal_Bool _par5, sal_Bool _par6, sal_Bool _par7, sal_Bool _par8 );
+	const Rectangle		getPreferredPushButtonBounds( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 );
+	void				drawRadioButton( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4, sal_Bool _par5, sal_Bool _par6, sal_Bool _par7, long _par8 );
+	const Rectangle		getPreferredRadioButtonBounds( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 );
+	void				drawCheckBox( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4, sal_Bool _par5, sal_Bool _par6, sal_Bool _par7, long _par8 );
+	const Rectangle		getPreferredCheckBoxBounds( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 );
 	void				endSetClipRegion();
 	USHORT				getBitCount();
 	const Rectangle		getGlyphBounds( int _par0, com_sun_star_vcl_VCLFont *_par1, int _par2 );
@@ -87,17 +96,12 @@ public:
 	const Size			getScreenFontResolution();
 	void				invert( long _par0, long _par1, long _par2, long _par3, SalInvert _par4 );
 	void				invert( ULONG _par0, const SalPoint *_par1, SalInvert _par2 );
+	void				removeGraphicsChangeListener( JavaSalBitmap *_par0 );
 	void				resetClipRegion();
 	void				resetGraphics();
 	void				setPixel( long _par0, long _par1, SalColor _par2 );
 	void				setXORMode( sal_Bool _par0 );
 	void				unionClipRegion( long _par0, long _par1, long _par2, long _par3 );
-	void				drawPushButton( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4, sal_Bool _par5, sal_Bool _par6, sal_Bool _par7, sal_Bool _par8 );
-	const Rectangle		getPreferredPushButtonBounds( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 );
-	void				drawRadioButton( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4, sal_Bool _par5, sal_Bool _par6, sal_Bool _par7, long _par8 );
-	const Rectangle		getPreferredRadioButtonBounds( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 );
-	void				drawCheckBox( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4, sal_Bool _par5, sal_Bool _par6, sal_Bool _par7, long _par8 );
-	const Rectangle		getPreferredCheckBoxBounds( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 );
 };
 
 } // namespace vcl

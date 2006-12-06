@@ -38,6 +38,9 @@
 #include <list>
 #include <map>
 
+#ifndef _SV_SALBMP_H
+#include <salbmp.h>
+#endif
 #ifndef _SV_JAVA_LANG_CLASS_HXX
 #include <java/lang/Class.hxx>
 #endif
@@ -285,6 +288,15 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIE
 
 // ----------------------------------------------------------------------------
 
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged( JNIEnv *pEnv, jobject object, jlong _par0 )
+{
+	JavaSalBitmap *pBitmap = (JavaSalBitmap *)_par0;
+	if ( pBitmap )
+		pBitmap->NotifyGraphicsChanged();
+}
+
+// ----------------------------------------------------------------------------
+
 JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps( JNIEnv *pEnv, jobject object )
 {
 	while ( aCGImageList.size() )
@@ -346,7 +358,7 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 		if ( tempClass )
 		{
 			// Register the native methods for our class
-			JNINativeMethod pMethods[4]; 
+			JNINativeMethod pMethods[5]; 
 			pMethods[0].name = "drawBitmap0";
 			pMethods[0].signature = "([IIIIIIIFFFFFFFFZ)V";
 			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawBitmap0;
@@ -356,10 +368,13 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 			pMethods[2].name = "drawEPS0";
 			pMethods[2].signature = "(JJFFFFZ)V";
 			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawEPS0;
-			pMethods[3].name = "releaseNativeBitmaps";
-			pMethods[3].signature = "()V";
-			pMethods[3].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps;
-			t.pEnv->RegisterNatives( tempClass, pMethods, 4 );
+			pMethods[3].name = "notifyGraphicsChanged";
+			pMethods[3].signature = "(J)V";
+			pMethods[3].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged;
+			pMethods[4].name = "releaseNativeBitmaps";
+			pMethods[4].signature = "()V";
+			pMethods[4].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps;
+			t.pEnv->RegisterNatives( tempClass, pMethods, 5 );
 		}
 
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
@@ -383,6 +398,29 @@ void com_sun_star_vcl_VCLGraphics::beep()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 			t.pEnv->CallStaticVoidMethod( getMyClass(), mID );
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLGraphics::addGraphicsChangeListener( JavaSalBitmap *_par0 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(J)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "addGraphicsChangeListener", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[1];
+			args[0].j = jlong( _par0 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
 	}
 }
 
@@ -1371,6 +1409,29 @@ void com_sun_star_vcl_VCLGraphics::invert( ULONG _par0, const SalPoint *_par1, S
 			args[1].l = xarray;
 			args[2].l = yarray;
 			args[3].i = jint( _par2 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLGraphics::removeGraphicsChangeListener( JavaSalBitmap *_par0 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(J)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "removeGraphicsChangeListener", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[1];
+			args[0].j = jlong( _par0 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}

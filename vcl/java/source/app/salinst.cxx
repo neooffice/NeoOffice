@@ -506,25 +506,23 @@ void JavaSalInstance::Yield( BOOL bWait )
 
 	// Determine timeout
 	ULONG nTimeout = 0;
-	if ( bWait && pSalData->mnTimerInterval && pSalData->maNativeEventCondition.check() && !Application::IsShutDown() )
+	if ( pSalData->maNativeEventCondition.check() && !Application::IsShutDown() )
 	{
-		timeval aTimeout;
-
-		gettimeofday( &aTimeout, NULL );
-		if ( pSalData->maTimeout > aTimeout )
+		if ( bWait && pSalData->mnTimerInterval )
 		{
-			aTimeout = pSalData->maTimeout - aTimeout;
-			nTimeout = aTimeout.tv_sec * 1000 + aTimeout.tv_usec / 1000;
+			timeval aTimeout;
+
+			gettimeofday( &aTimeout, NULL );
+			if ( pSalData->maTimeout > aTimeout )
+			{
+				aTimeout = pSalData->maTimeout - aTimeout;
+				nTimeout = aTimeout.tv_sec * 1000 + aTimeout.tv_usec / 1000;
+			}
 		}
 
-		// Prevent excessively short timeouts
+		// Wait a little bit to prevent excessive CPU usage
 		if ( nTimeout < 10 )
 			nTimeout = 10;
-	}
-	else if ( !bWait && !Application::IsShutDown() )
-	{
-		// Wait a little bit to prevent excessive CPU usage
-		nTimeout = 10;
 	}
 
 	// Dispatch any newly posted events
