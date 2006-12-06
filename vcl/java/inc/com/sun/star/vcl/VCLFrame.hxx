@@ -56,6 +56,7 @@ protected:
 
 public:
 	static jclass		getMyClass();
+	static com_sun_star_vcl_VCLFrame*	getVCLFrameForNSWindow( void *pNSWindow );
 
 						com_sun_star_vcl_VCLFrame( jobject myObj ) : java_lang_Object( myObj ) {}
 						com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, const JavaSalFrame *pFrame, const JavaSalFrame *pParent );

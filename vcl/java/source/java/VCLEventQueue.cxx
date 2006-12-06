@@ -76,45 +76,13 @@ JNIEXPORT jboolean JNICALL Java_com_sun_star_vcl_VCLEventQueue_isNativeModalWind
 
 // ----------------------------------------------------------------------------
 
-void VCLEventQueue_postInputMethodTextCancelled( WindowRef aWindow )
+void VCLEventQueue_postInputMethodTextCancelled( void *pNSWindow )
 {
-	if ( !aWindow )
-		return;
-
-	// We need to let any pending timers run so that we don't deadlock
-	TimeValue aDelay;
-	aDelay.Seconds = 0;
-	aDelay.Nanosec = 10;
-	IMutex& rSolarMutex = Application::GetSolarMutex();
-	bool bAcquired = false;
-	while ( !Application::IsShutDown() )
+	com_sun_star_vcl_VCLFrame *pVCLFrame = com_sun_star_vcl_VCLFrame::getVCLFrameForNSWindow( pNSWindow );
+	if ( pVCLFrame )
 	{
-		if ( rSolarMutex.tryToAcquire() )
-		{
-			if ( !Application::IsShutDown() )
-				bAcquired = true; 
-			else
-				rSolarMutex.release();
-			break;
-		}
-		ReceiveNextEvent( 0, NULL, 0, false, NULL );
-		OThread::wait( aDelay );
-	}
-
-	if ( bAcquired )
-	{
-		SalData *pSalData = GetSalData();
-
-		for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-        {
-            if ( (WindowRef)( (*it)->GetSystemData()->aWindow ) == aWindow )
-			{
-                (*it)->mpVCLFrame->postInputMethodTextCancelled();
-				break;
-			}
-        }
-
-		rSolarMutex.release();
+    	pVCLFrame->postInputMethodTextCancelled();
+		delete pVCLFrame;
 	}
 }
 
