@@ -59,6 +59,11 @@
 
 #include "VCLFrame_cocoa.h"
 
+static ::std::map< void*, ::vcl::com_sun_star_vcl_VCLFrame* > aNSWindowMap;
+static ::std::map< ::vcl::com_sun_star_vcl_VCLFrame*, void* > aNSWindowLookupMap;
+static ::osl::Mutex aNSWindowMutex;
+
+using namespace osl;
 using namespace vcl;
 using namespace vos;
 
@@ -185,6 +190,22 @@ jclass com_sun_star_vcl_VCLFrame::getMyClass()
 
 // ----------------------------------------------------------------------------
 
+com_sun_star_vcl_VCLFrame *com_sun_star_vcl_VCLFrame::getVCLFrameForNSWindow( void *pNSWindow )
+{
+	if ( !pNSWindow )
+		return NULL;
+
+	MutexGuard aGuard( aNSWindowMutex );
+
+	::std::map< void*, com_sun_star_vcl_VCLFrame* >::const_iterator it = aNSWindowMap.find( pNSWindow );
+	if ( it != aNSWindowMap.end() )
+		return new com_sun_star_vcl_VCLFrame( it->second->getJavaObject() );
+	else
+		return NULL;
+}
+
+// ----------------------------------------------------------------------------
+
 com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, const JavaSalFrame *pFrame, const JavaSalFrame *pParent ) : java_lang_Object( (jobject)NULL )
 {
 	static jmethodID mID = NULL;
@@ -251,6 +272,15 @@ void com_sun_star_vcl_VCLFrame::dispose()
 
 		if ( mID )
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+	}
+
+	// Remove any old references
+	MutexGuard aGuard( aNSWindowMutex );
+	::std::map< com_sun_star_vcl_VCLFrame*, void* >::const_iterator it = aNSWindowLookupMap.find( this );
+	if ( it != aNSWindowLookupMap.end() )
+	{
+		aNSWindowMap.erase( it->second );
+		aNSWindowLookupMap.erase( this );
 	}
 }
 
@@ -843,6 +873,28 @@ void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0 )
 			args[0].z = jboolean( _par0 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
+	}
+
+	void *pNSWindow;
+	if ( _par0 )
+		pNSWindow = getNativeWindow();
+	else
+		pNSWindow = NULL;
+
+	// Remove any old references
+	MutexGuard aGuard( aNSWindowMutex );
+	::std::map< com_sun_star_vcl_VCLFrame*, void* >::const_iterator it = aNSWindowLookupMap.find( this );
+	if ( it != aNSWindowLookupMap.end() )
+	{
+		aNSWindowMap.erase( it->second );
+		aNSWindowLookupMap.erase( this );
+	}
+
+	// Update NSWindow map
+	if ( pNSWindow )
+	{
+		aNSWindowMap[ pNSWindow ] = this;
+		aNSWindowLookupMap[ this ] = pNSWindow;
 	}
 }
 

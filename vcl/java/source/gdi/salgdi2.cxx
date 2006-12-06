@@ -215,11 +215,21 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 
 	if ( !bDrawn )
 	{
-		com_sun_star_vcl_VCLBitmap *pVCLBitmap = pJavaSalBitmap->GetVCLBitmap( aPosAry.mnSrcX, aPosAry.mnSrcY, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight );
-		if ( pVCLBitmap )
+		// If the bitmap is backed by a VCLGraphics instance, draw that
+		com_sun_star_vcl_VCLGraphics *pBitmapGraphics = pJavaSalBitmap->GetVCLGraphics();
+		if ( pBitmapGraphics )
 		{
-			mpVCLGraphics->drawBitmap( pVCLBitmap, 0, 0, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight );
-			pJavaSalBitmap->ReleaseVCLBitmap( pVCLBitmap, false, 0, 0, 0, 0 );
+			Point aPoint( pJavaSalBitmap->GetPoint() );
+			mpVCLGraphics->copyBits( pBitmapGraphics, aPoint.X(), aPoint.Y(), aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, sal_True );
+		}
+		else
+		{
+			com_sun_star_vcl_VCLBitmap *pVCLBitmap = pJavaSalBitmap->GetVCLBitmap( aPosAry.mnSrcX, aPosAry.mnSrcY, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight );
+			if ( pVCLBitmap )
+			{
+				mpVCLGraphics->drawBitmap( pVCLBitmap, 0, 0, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight );
+				pJavaSalBitmap->ReleaseVCLBitmap( pVCLBitmap );
+			}
 		}
 	}
 }
@@ -644,20 +654,10 @@ SalBitmap* JavaSalGraphics::getBitmap( long nX, long nY, long nDX, long nDY )
 
 	JavaSalBitmap *pBitmap = new JavaSalBitmap();
 
-	if ( !pBitmap->Create( Size( nDX, nDY ), GetBitCount(), BitmapPalette() ) )
+	if ( !pBitmap->Create( Point( nX, nY ), Size( nDX, nDY ), mpVCLGraphics, BitmapPalette() ) )
 	{
 		delete pBitmap;
 		pBitmap = NULL;
-	}
-
-	if ( pBitmap )
-	{
-		com_sun_star_vcl_VCLBitmap *pVCLBitmap = pBitmap->GetVCLBitmap( 0, 0, nDX, nDY );
-		if ( pVCLBitmap )
-		{
-			pVCLBitmap->copyBits( mpVCLGraphics, nX, nY, nDX, nDY, 0, 0 );
-			pBitmap->ReleaseVCLBitmap( pVCLBitmap, true, 0, 0, nDX, nDY );
-		}
 	}
 
 	return pBitmap;

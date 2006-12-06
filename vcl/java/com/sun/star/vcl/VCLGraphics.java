@@ -63,6 +63,7 @@ import java.awt.image.ColorModel;
 import java.awt.image.Raster;
 import java.awt.image.WritableRaster;
 import java.lang.reflect.Method;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import javax.swing.ButtonModel;
@@ -383,6 +384,11 @@ public final class VCLGraphics {
 	private int bitCount = 0;
 
 	/**
+	 * The change listeners.
+	 */
+	private HashSet changeListeners = null;
+
+	/**
 	 * The frame that the graphics draws to.
 	 */
 	private VCLFrame frame = null;
@@ -495,6 +501,19 @@ public final class VCLGraphics {
 	}
 
 	/**
+	 * Adds a change listener.
+	 *
+	 * @param listener a pointer to a C++ JavaSalBitmap instance
+	 */
+	public void addGraphicsChangeListener(long listener) {
+
+		if (changeListeners == null)
+			changeListeners = new HashSet();
+		changeListeners.add(new Long(listener));
+
+	}
+
+	/**
 	 * Sets the cached clipping area to an empty area. The cached clipping
 	 * area is not actually applied until the {@link #endSetClipRegion()}
 	 * method is called.
@@ -538,7 +557,7 @@ public final class VCLGraphics {
 
 		VCLImage img = null;
 
-		Graphics2D g = getGraphics();
+		Graphics2D g = getGraphics(false);
 		if (g != null) {
 			try {
 				img = new VCLImage(width, height, bitCount);
@@ -565,6 +584,8 @@ public final class VCLGraphics {
 	 */
 	void dispose() {
 
+		notifyGraphicsChanged();
+		changeListeners = null;
 		if (pageQueue != null)
 			pageQueue.drawOperations();
 		pageQueue = null;
@@ -1820,7 +1841,7 @@ public final class VCLGraphics {
 
 		Rectangle2D bounds = null;
 
-		Graphics2D g = getGraphics();
+		Graphics2D g = getGraphics(false);
 		if (g != null) {
 			try {
 				GlyphVector glyphs = font.getFont().createGlyphVector(g.getFontRenderContext(), new int[]{ glyph });
@@ -1855,6 +1876,19 @@ public final class VCLGraphics {
 	 */
 	Graphics2D getGraphics() {
 
+		return getGraphics(true);
+
+	}
+
+	/**
+	 * Returns the graphics context.
+	 *
+	 * @param notify <code>true</code> to notify any attached bitmaps that
+	 *  the content in this graphics is likely to be changed
+	 * @return the graphics context
+	 */
+	Graphics2D getGraphics(boolean notify) {
+
 		// Don't bother painting if we haven't attached to the panel yet
 		if (frame != null && image != null)
 			return null;
@@ -1869,8 +1903,11 @@ public final class VCLGraphics {
 		else
 			g = null;
 
-		if (g != null)
+		if (g != null) {
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+			if (notify)
+				notifyGraphicsChanged();
+		}
 
 		return g;
 
@@ -1927,7 +1964,7 @@ public final class VCLGraphics {
 		else {
 			int pixel = 0xff000000;
 
-			Graphics2D g = getGraphics();
+			Graphics2D g = getGraphics(false);
 			if (g != null) {
 				try {
 					g.setComposite(VCLGraphics.copyComposite);
@@ -2194,6 +2231,39 @@ public final class VCLGraphics {
 	}
 
 	/**
+	 * Notifies the specified change listener.
+	 *
+	 * @param listener a pointer to a C++ JavaSalBitmap instance
+	 */
+	native void notifyGraphicsChanged(long listener);
+
+	/**
+	 * Notifies all change listeners.
+	 */
+	void notifyGraphicsChanged() {
+
+		if (changeListeners != null) {
+			HashSet currentListeners = new HashSet(changeListeners);
+			Iterator listeners = currentListeners.iterator();
+			while (listeners.hasNext())
+				notifyGraphicsChanged(((Long)listeners.next()).longValue());
+		}
+
+	}
+
+	/**
+	 * Removes a change listener.
+	 *
+	 * @param listener a pointer to a C++ JavaSalBitmap instance
+	 */
+	public void removeGraphicsChangeListener(long listener) {
+
+		if (changeListeners != null)
+			changeListeners.remove(new Long(listener));
+
+	}
+
+	/**
 	 * Resets the applied clipping area.
 	 */
 	public void resetClipRegion() {
@@ -2209,6 +2279,7 @@ public final class VCLGraphics {
 	public void resetGraphics() {
 
 		if (frame != null) {
+			notifyGraphicsChanged();
 			if (image != null)
 				image = null;
 			if (frame.getWindow().isShowing()) {
