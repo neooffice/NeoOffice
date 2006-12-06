@@ -136,6 +136,10 @@
 			[pDictionary removeObjectForKey:NSPrintCopies];
 			[pDictionary removeObjectForKey:NSPrintFirstPage];
 			[pDictionary removeObjectForKey:NSPrintLastPage];
+
+			// Fix bug 2030 by resetting the layout
+			[pDictionary setObject:[NSNumber numberWithUnsignedInt:1] forKey:@"NSPagesAcross"];
+			[pDictionary setObject:[NSNumber numberWithUnsignedInt:1] forKey:@"NSPagesDown"];
 		}
 
 		mbFinished = NO;
