@@ -875,6 +875,12 @@ void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0 )
 		}
 	}
 
+	void *pNSWindow;
+	if ( _par0 )
+		pNSWindow = getNativeWindow();
+	else
+		pNSWindow = NULL;
+
 	// Remove any old references
 	MutexGuard aGuard( aNSWindowMutex );
 	::std::map< com_sun_star_vcl_VCLFrame*, void* >::const_iterator it = aNSWindowLookupMap.find( this );
@@ -885,14 +891,10 @@ void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0 )
 	}
 
 	// Update NSWindow map
-	if ( _par0 )
+	if ( pNSWindow )
 	{
-		void *pNSWindow = getNativeWindow();
-		if ( pNSWindow )
-		{
-			aNSWindowMap[ pNSWindow ] = this;
-			aNSWindowLookupMap[ this ] = pNSWindow;
-		}
+		aNSWindowMap[ pNSWindow ] = this;
+		aNSWindowLookupMap[ this ] = pNSWindow;
 	}
 }
 
