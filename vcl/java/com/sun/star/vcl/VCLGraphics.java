@@ -560,13 +560,12 @@ public final class VCLGraphics {
 		Graphics2D g = getGraphics(false);
 		if (g != null) {
 			try {
-				img = new VCLImage(width, height, bitCount);
 				x = destBounds.x - x;
 				y = destBounds.y - y;
 				g.setComposite(VCLGraphics.copyComposite);
-				VCLGraphics.copyComposite.setRaster(img.getImage().getRaster(), x, y);
 				g.setClip(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
-				g.drawImage(img.getImage(), destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, x, y, destBounds.width, destBounds.height, null);
+				g.fillRect(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
+				img = new VCLImage(VCLGraphics.copyComposite.getRaster());
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -1968,13 +1967,11 @@ public final class VCLGraphics {
 			if (g != null) {
 				try {
 					g.setComposite(VCLGraphics.copyComposite);
-					if (singlePixelBitmap == null)
-						singlePixelBitmap = new VCLBitmap(1, 1, bitCount);
-					BufferedImage i = singlePixelBitmap.getImage();
-					VCLGraphics.copyComposite.setRaster(i.getRaster(), 0, 0);
 					g.setClip(x, y, 1, 1);
-					g.drawImage(i, x, y, x + 1, y + 1, 0, 0, 1, 1, null);
-					pixel = i.getRGB(0, 0);
+					g.fillRect(x, y, 1, 1);
+					int[] srcData = new int[1];
+					srcData = (int[])VCLGraphics.copyComposite.getRaster().getDataElements(0, 0, srcData.length, 1, srcData);
+					pixel = srcData[0] | 0xff000000;
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
@@ -2503,15 +2500,12 @@ public final class VCLGraphics {
 
 		private WritableRaster raster = null;
 
-		private int rasterX = 0;
-
-		private int rasterY = 0;
-
 		public void compose(Raster src, Raster destIn, WritableRaster destOut) {
 
-			raster.setDataElements(rasterX, rasterY, destIn);
+			if (destIn != destOut)
+				destOut.setDataElements(0, 0, destIn);
 
-			raster = null;
+			raster = destOut;
 
 		}
 
@@ -2523,11 +2517,9 @@ public final class VCLGraphics {
 
 		public void dispose() {}
 
-		void setRaster(WritableRaster r, int x, int y) {
+		WritableRaster getRaster() {
 
-			raster = r;
-			rasterX = x;
-			rasterY = y;
+			return raster;
 
 		}
 

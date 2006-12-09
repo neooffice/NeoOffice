@@ -36,7 +36,9 @@
 package com.sun.star.vcl;
 
 import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
 import java.awt.image.DataBufferInt;
+import java.awt.image.WritableRaster;
 
 /**
  * The Java class that implements the SalFrame C++ class methods.
@@ -116,6 +118,28 @@ public final class VCLImage {
 
 		// Cache the graphics
 		pageFormat = p;
+		graphics = new VCLGraphics(this, pageFormat);
+
+	}
+
+	/**
+	 * Constructs a new <code>VCLImage</code> instance.
+	 *
+	 * @param r the writable raster
+	 */
+	VCLImage(WritableRaster r) {
+
+		width = r.getWidth();
+		height = r.getHeight();
+
+		// Always set bit count to 32
+		bitCount = 32;
+
+		// Create the image
+		image = new BufferedImage(ColorModel.getRGBdefault(), r, true, null);
+
+		// Cache the graphics
+		pageFormat = null;
 		graphics = new VCLGraphics(this, pageFormat);
 
 	}
