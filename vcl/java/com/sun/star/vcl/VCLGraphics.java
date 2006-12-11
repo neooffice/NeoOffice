@@ -652,6 +652,8 @@ public final class VCLGraphics {
 
 				srcX = 0;
 				srcY = 0;
+				srcWidth = srcImage.getWidth();
+				srcHeight = srcImage.getHeight();
 
 				img = srcImage.getImage();
 				srcImage.dispose();

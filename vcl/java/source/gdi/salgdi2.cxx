@@ -215,20 +215,26 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 
 	if ( !bDrawn )
 	{
-		// If the bitmap is backed by a VCLGraphics instance, draw that
-		com_sun_star_vcl_VCLGraphics *pBitmapGraphics = pJavaSalBitmap->GetVCLGraphics();
-		if ( pBitmapGraphics )
+		// If the bitmap is backed by a VCLBitmap or a VCLGraphics instance,
+		// draw that
+		com_sun_star_vcl_VCLBitmap *pVCLBitmap = pJavaSalBitmap->GetVCLBitmap();
+		com_sun_star_vcl_VCLGraphics *pVCLGraphics = pJavaSalBitmap->GetVCLGraphics();
+		if ( pVCLBitmap )
+		{
+			mpVCLGraphics->drawBitmap( pVCLBitmap, aPosAry.mnSrcX, aPosAry.mnSrcY, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight );
+		}
+		else if ( pVCLGraphics )
 		{
 			Point aPoint( pJavaSalBitmap->GetPoint() );
-			mpVCLGraphics->copyBits( pBitmapGraphics, aPoint.X(), aPoint.Y(), aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, sal_True );
+			mpVCLGraphics->copyBits( pVCLGraphics, aPoint.X() + aPosAry.mnSrcX, aPoint.Y() + aPosAry.mnSrcY, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, sal_True );
 		}
 		else
 		{
-			com_sun_star_vcl_VCLBitmap *pVCLBitmap = pJavaSalBitmap->GetVCLBitmap( aPosAry.mnSrcX, aPosAry.mnSrcY, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight );
-			if ( pVCLBitmap )
+			com_sun_star_vcl_VCLBitmap *pNewVCLBitmap = pJavaSalBitmap->CreateVCLBitmap( aPosAry.mnSrcX, aPosAry.mnSrcY, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight );
+			if ( pNewVCLBitmap )
 			{
-				mpVCLGraphics->drawBitmap( pVCLBitmap, 0, 0, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight );
-				pJavaSalBitmap->ReleaseVCLBitmap( pVCLBitmap );
+				mpVCLGraphics->drawBitmap( pNewVCLBitmap, 0, 0, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight );
+				pJavaSalBitmap->ReleaseVCLBitmap( pNewVCLBitmap );
 			}
 		}
 	}

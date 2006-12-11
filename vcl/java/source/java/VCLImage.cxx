@@ -107,31 +107,6 @@ void com_sun_star_vcl_VCLImage::dispose()
 
 // ----------------------------------------------------------------------------
 
-java_lang_Object *com_sun_star_vcl_VCLImage::getData()
-{
-	static jmethodID mID = NULL;
-	java_lang_Object *out = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()[I";
-			mID = t.pEnv->GetMethodID( getMyClass(), "getData", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
-			if ( tempObj )
-				out = new java_lang_Object( tempObj );
-		}
-	}
-	return out;
-}
-
-// ----------------------------------------------------------------------------
-
 com_sun_star_vcl_VCLGraphics *com_sun_star_vcl_VCLImage::getGraphics()
 {
 	static jmethodID mID = NULL;

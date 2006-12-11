@@ -84,17 +84,6 @@ public final class VCLBitmap {
 		width = w;
 		height = h;
 
-		// Create the image. Note that all rasters are mapped to 32 bit rasters
-		// since this is what the JVM will convert all rasters to every time
-		// a non-32 bit raster is drawn.
-		try {
-			image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE);
-		}
-		catch (OutOfMemoryError ome) {
-			System.gc();
-			image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE);
-		}
-
 	}
 
 	/**
@@ -116,33 +105,24 @@ public final class VCLBitmap {
 			return;
 
 		if (!srcBounds.contains(srcX, srcY, srcWidth, srcHeight)) {
-			destX = srcBounds.x - srcX;
-			destY = srcBounds.y - srcY;
+			destX += srcBounds.x - srcX;
+			destY += srcBounds.y - srcY;
 			srcX = srcBounds.x;
 			srcY = srcBounds.y;
 			srcWidth = srcBounds.width;
-			srcY = srcBounds.height;
+			srcHeight = srcBounds.height;
 		}
 
-		BufferedImage img = null;
-		if ( graphics.getImage() != null)
-			img = graphics.getImage().getImage();
+		VCLImage srcImage = graphics.createImage(srcX, srcY, srcWidth, srcHeight);
+		if (srcImage == null)
+			return;
 
-		if (img == null) {
-            VCLImage srcImage = graphics.createImage(srcX, srcY, srcWidth, srcHeight);
-            if (srcImage == null)
-                return;
+		BufferedImage img = srcImage.getImage();
+		srcImage.dispose();
 
-			srcX = 0;
-			srcY = 0;
-
-			img = srcImage.getImage();
-			srcImage.dispose();
-		}
-
-		Graphics2D g = image.createGraphics();
+		Graphics2D g = getImage().createGraphics();
 		try {
-			g.drawImage(img, destX, destY, destX + srcWidth, destY + srcHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+			g.drawImage(img, destX, destY, destX + srcWidth, destY + srcHeight, 0, 0, srcWidth, srcHeight, null);
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -172,7 +152,7 @@ public final class VCLBitmap {
 	 */
 	public int[] getData() {
 
-		return ((DataBufferInt)image.getRaster().getDataBuffer()).getData();
+		return ((DataBufferInt)getImage().getRaster().getDataBuffer()).getData();
 
 	}
 
@@ -193,6 +173,23 @@ public final class VCLBitmap {
 	 * @return the underlying image
 	 */
 	BufferedImage getImage() {
+
+		// Create the image. Note that all rasters are mapped to 32 bit rasters
+		// since this is what the JVM will convert all rasters to every time
+		// a non-32 bit raster is drawn.
+		if (image == null) {
+			synchronized (this) {
+				if (image == null) {
+					try {
+						image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE);
+					}
+					catch (OutOfMemoryError ome) {
+						System.gc();
+						image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE);
+					}
+				}
+			}
+		}
 
 		return image;
 

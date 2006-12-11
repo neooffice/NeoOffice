@@ -170,20 +170,6 @@ public final class VCLImage {
 	}
 
 	/**
-	 * Returns the image's data. Warning: calling this method will cause all
-	 * succeeding drawing operations to this image to be an order of magnitude
-	 * slower on Mac OS X 10.4 due to the way the JVM does graphics
-	 * acceleration.
-	 *
-	 * @return the image's data
-	 */
-	public int[] getData() {
-
-		return ((DataBufferInt)image.getRaster().getDataBuffer()).getData();
-
-	}
-
-	/**
 	 * Creates a graphics context for this component.
 	 *
 	 * @return a graphics context for this component

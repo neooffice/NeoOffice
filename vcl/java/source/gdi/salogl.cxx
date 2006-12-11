@@ -40,6 +40,9 @@
 #ifndef _SV_SALOGL_H
 #include <salogl.h>
 #endif
+#ifndef _SV_SALBMP_H
+#include <salbmp.h>
+#endif
 #ifndef _SV_SALFRAME_H
 #include <salframe.h>
 #endif
@@ -49,8 +52,8 @@
 #ifndef _SV_SALVD_H
 #include <salvd.h>
 #endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
-#include <com/sun/star/vcl/VCLGraphics.hxx>
+#ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
+#include <com/sun/star/vcl/VCLFrame.hxx>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLIMAGE_HXX
 #include <com/sun/star/vcl/VCLImage.hxx>
@@ -80,9 +83,8 @@ ULONG JavaSalOpenGL::mnOGLState = OGL_STATE_UNLOADED;
 // ------------------------------------------------------------------------
 
 JavaSalOpenGL::JavaSalOpenGL() :
-	mpBits( NULL ),
-	mpData( NULL ),
-	mpImage( NULL ),
+	mpBitmap( NULL ),
+	mpBuffer( NULL ),
 	mpGraphics( NULL )
 {
 }
@@ -91,11 +93,11 @@ JavaSalOpenGL::JavaSalOpenGL() :
 
 JavaSalOpenGL::~JavaSalOpenGL()
 {
-	if ( mpImage )
+	if ( mpBitmap )
 	{
-		mpImage->dispose();
-		delete mpImage;
-		mpImage = NULL;
+		if ( mpBuffer )
+			mpBitmap->ReleaseBuffer( mpBuffer, FALSE );
+		delete mpBitmap;
 	}
 }
 
@@ -151,25 +153,33 @@ void JavaSalOpenGL::StartScene( SalGraphics* pGraphics )
 
 	mpGraphics = (JavaSalGraphics *)pGraphics;
 
-	if ( !mpImage )
-		mpImage = mpGraphics->mpVCLGraphics->createImage();
-
-	if ( mpImage )
+	if ( !mpBitmap )
 	{
-		mpData = mpImage->getData();
-		if ( mpData )
+		long nWidth = 0;
+		long nHeight = 0;
+		if ( mpGraphics->mpFrame )
 		{
-			VCLThreadAttach t;
-			if ( t.pEnv )
-			{
-				long nWidth = mpImage->getWidth();
-				long nHeight = mpImage->getHeight();
-				jboolean bCopy( sal_False );
-				mpBits = (BYTE *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), &bCopy );
-				if ( mpBits )
-					NSOpenGLContext_setOffScreen( mpNativeContext, mpBits, nWidth, nHeight, nWidth * 4 );
-			}
+			Rectangle aRect( mpGraphics->mpFrame->mpVCLFrame->getBounds() );
+			nWidth = aRect.GetWidth();
+			nHeight = aRect.GetHeight();
 		}
+		else if ( mpGraphics->mpVirDev )
+		{
+			nWidth = mpGraphics->mpVirDev->mpVCLImage->getWidth();
+			nHeight = mpGraphics->mpVirDev->mpVCLImage->getHeight();
+		}
+
+		if ( nWidth > 0 && nHeight > 0 )
+			mpBitmap = (JavaSalBitmap *)mpGraphics->getBitmap( 0, 0, nWidth, nHeight );
+	}
+
+	if ( mpBitmap )
+	{
+		if ( !mpBuffer )
+			mpBuffer = mpBitmap->AcquireBuffer( FALSE );
+
+		if ( mpBuffer && mpBuffer->mpBits )
+			NSOpenGLContext_setOffScreen( mpNativeContext, mpBuffer->mpBits, mpBuffer->mnWidth, mpBuffer->mnHeight, mpBuffer->mnScanlineSize );
 	}
 
 	NSOpenGLContext_makeCurrentContext( mpNativeContext );
@@ -182,28 +192,27 @@ void JavaSalOpenGL::StopScene()
 	NSOpenGLContext_flushBuffer( mpNativeContext );
 	NSOpenGLContext_clearDrawable( mpNativeContext );
 
-	if ( mpData )
+	if ( mpBitmap )
 	{
-		if ( mpBits )
+		if ( mpBuffer )
 		{
-			VCLThreadAttach t;
-			if ( t.pEnv )
-				t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), (jint *)mpBits, 0 );
-		}
-		delete mpData;
-	}
-	mpBits = NULL;
-	mpData = NULL;
+			SalTwoRect aPosAry;
+			aPosAry.mnSrcX = 0;
+			aPosAry.mnSrcY = 0;
+			aPosAry.mnSrcWidth = mpBuffer->mnWidth;
+			aPosAry.mnSrcHeight = mpBuffer->mnHeight;
+			aPosAry.mnDestX = 0;
+			aPosAry.mnDestY = 0;
+			aPosAry.mnDestWidth = mpBuffer->mnWidth;
+			aPosAry.mnDestHeight = mpBuffer->mnHeight;
 
-	if ( mpImage )
-	{
-		com_sun_star_vcl_VCLGraphics *pGraphics = mpImage->getGraphics();
-		if ( pGraphics )
-		{
-			long nWidth = mpImage->getWidth();
-			long nHeight = mpImage->getHeight();
-			mpGraphics->mpVCLGraphics->copyBits( pGraphics, 0, 0, nWidth, nHeight, 0, 0, nWidth, nHeight, sal_False );
-			delete pGraphics;
+			mpBitmap->ReleaseBuffer( mpBuffer, FALSE );
+			mpBuffer = NULL;
+
+			mpGraphics->drawBitmap( &aPosAry, *mpBitmap );
 		}
+
+		delete mpBitmap;
+		mpBitmap = NULL;
 	}
 }
