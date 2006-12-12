@@ -477,36 +477,38 @@ void com_sun_star_vcl_VCLGraphics::copyBits( const com_sun_star_vcl_VCLGraphics 
 
 // ----------------------------------------------------------------------------
 
-java_lang_Object *com_sun_star_vcl_VCLGraphics::copyBits( long _par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7 )
+void com_sun_star_vcl_VCLGraphics::copyBits( BYTE *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8, long _par9 )
 {
 	static jmethodID mID = NULL;
-	java_lang_Object *out = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(IIIIIIII)[I";
+			char *cSignature = "(Ljava/nio/ByteBuffer;IIIIIIIII)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "copyBits", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[8];
-			args[0].i = jint( _par0 );
-			args[1].i = jint( _par1 );
-			args[2].i = jint( _par2 );
-			args[3].i = jint( _par3 );
-			args[4].i = jint( _par4 );
-			args[5].i = jint( _par5 );
-			args[6].i = jint( _par6 );
-			args[7].i = jint( _par7 );
-			jobject tempObj = t.pEnv->CallNonvirtualObjectMethodA( object, getMyClass(), mID, args );
-			if ( tempObj )
-				out = new java_lang_Object( tempObj );
+			jobject byteBuffer = t.pEnv->NewDirectByteBuffer( _par0, _par1 );
+			if ( byteBuffer )
+			{
+				jvalue args[10];
+				args[0].l = byteBuffer;
+				args[1].i = jint( _par1 );
+				args[2].i = jint( _par2 );
+				args[3].i = jint( _par3 );
+				args[4].i = jint( _par4 );
+				args[5].i = jint( _par5 );
+				args[6].i = jint( _par6 );
+				args[7].i = jint( _par7 );
+				args[8].i = jint( _par8 );
+				args[9].i = jint( _par9 );
+				t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+			}
 		}
 	}
-	return out;
 }
 
 // ----------------------------------------------------------------------------

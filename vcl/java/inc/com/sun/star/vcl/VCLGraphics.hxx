@@ -72,7 +72,7 @@ public:
 	void				addGraphicsChangeListener( JavaSalBitmap *_par0 );
 	void				beginSetClipRegion();
 	void				copyBits( const com_sun_star_vcl_VCLGraphics *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8, sal_Bool _par9 );
-	java_lang_Object*	copyBits( long _par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7 );
+	void				copyBits( BYTE *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8, long _par9 );
 	com_sun_star_vcl_VCLImage*	createImage();
 	void				drawBitmap( const com_sun_star_vcl_VCLBitmap *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8 );
 	void				drawBitmapBuffer( BitmapBuffer *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8 );

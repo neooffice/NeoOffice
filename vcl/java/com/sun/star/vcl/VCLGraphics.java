@@ -63,6 +63,7 @@ import java.awt.image.ColorModel;
 import java.awt.image.Raster;
 import java.awt.image.WritableRaster;
 import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -429,11 +430,6 @@ public final class VCLGraphics {
 	private boolean rotatedPage = false;
 
 	/**
-	 * The single pixel buffer.
-	 */
-	private VCLBitmap singlePixelBitmap = null;
-
-	/**
 	 * The cached clipping area.
 	 */
 	private Area userClip = null;
@@ -595,7 +591,6 @@ public final class VCLGraphics {
 		image = null;
 		frame = null;
 		pageFormat = null;
-		singlePixelBitmap = null;
 		userClip = null;
 		userClipList = null;
 
@@ -714,6 +709,8 @@ public final class VCLGraphics {
 	/**
 	 * Draws the underlying graphics to the specified buffer.
 	 *
+	 * @param buffer the by buffer to draw into
+	 * @param capacity the size of the buffer in bytes
 	 * @param srcX the x coordinate of the graphics to be copied
 	 * @param srcY the y coordinate of the graphics to be copied 
 	 * @param srcWidth the width of the graphics to be copied
@@ -722,21 +719,20 @@ public final class VCLGraphics {
 	 * @param destY the y coordinate of the graphics to copy to
 	 * @param dataWidth the width of the graphics to copy to
 	 * @param dataHeight the height of the graphics to copy to
-	 * @return the data buffer
 	 */
-	public int[] copyBits(int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int dataWidth, int dataHeight) {
+	public void copyBits(ByteBuffer buffer, int capacity, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int dataWidth, int dataHeight) {
 
 		// No copy bits allowed for printing
-		if (graphics != null)
-			return null;
+		if (graphics != null || capacity < dataWidth * dataHeight * 4)
+			return;
 
 		Rectangle destBounds = new Rectangle(destX, destY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, dataWidth, dataHeight));
 		if (destBounds.isEmpty())
-			return null;
+			return;
 
 		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(graphicsBounds);
 		if (destBounds.isEmpty())
-			return null;
+			return;
 
 		destBounds.x += srcBounds.x - srcX;
 		destBounds.y += srcBounds.y - srcY;
@@ -746,21 +742,11 @@ public final class VCLGraphics {
 		if (srcBounds.height > destBounds.y + destBounds.height)
 			srcBounds.height = destBounds.y + destBounds.height;
 
-		int[] data = null;
-
-		try {
- 			data = new int[dataWidth * dataHeight];
-		}
-		catch (OutOfMemoryError ome) {
-			System.gc();
- 			data = new int[dataWidth * dataHeight];
-		}
-
 		Graphics2D g = getGraphics(false);
 		if (g != null) {
 			try {
 				g.setComposite(VCLGraphics.copyComposite);
-				VCLGraphics.copyComposite.setData(data, destBounds, dataWidth, dataHeight);
+				VCLGraphics.copyComposite.setData(buffer, destBounds, dataWidth, dataHeight);
 				g.setClip(srcBounds.x, srcBounds.y, srcBounds.width, srcBounds.height);
 				g.fillRect(srcBounds.x, srcBounds.y, srcBounds.width, srcBounds.height);
 			}
@@ -769,8 +755,6 @@ public final class VCLGraphics {
 			}
 			g.dispose();
 		}
-
-		return data;
 
 	}
 
@@ -1958,6 +1942,9 @@ public final class VCLGraphics {
 		if (frame != null && image != null)
 			return null;
 
+		Runtime r = Runtime.getRuntime();
+		long usedMemory = r.totalMemory() - r.freeMemory();
+
 		Graphics2D g;
 		if (image != null)
 			g = image.getImage().createGraphics();
@@ -2381,23 +2368,20 @@ public final class VCLGraphics {
 			Graphics2D g = getGraphics();
 			if (g != null) {
 				try {
-					if (singlePixelBitmap == null)
-						singlePixelBitmap = new VCLBitmap(1, 1, bitCount);
-					BufferedImage i = singlePixelBitmap.getImage();
-					i.setRGB(0, 0, color);
 					if (graphics != null) {
 						AffineTransform transform = g.getTransform();
 						float scaleX = (float)transform.getScaleX();
 						float scaleY = (float)transform.getScaleY();
 						Rectangle bounds = pageFormat.getImageableBounds();
 						// Note: the bitmap needs to be flipped
-						drawBitmap0(singlePixelBitmap.getData(), singlePixelBitmap.getWidth(), singlePixelBitmap.getHeight(), 0, 0, 1, 1, scaleX * (bounds.x + x), scaleY * (bounds.y + y), scaleX, scaleY * -1, scaleX * (bounds.x + x), scaleY * (bounds.y + y), scaleX, scaleY * -1, VCLGraphics.drawOnMainThread);
+						drawBitmap0(new int[]{ color }, 1, 1, 0, 0, 1, 1, scaleX * (bounds.x + x), scaleY * (bounds.y + y), scaleX, scaleY * -1, scaleX * (bounds.x + x), scaleY * (bounds.y + y), scaleX, scaleY * -1, VCLGraphics.drawOnMainThread);
 					}
 					else {
 						if (xor)
 							g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 						g.setClip(x, y, 1, 1);
-						g.drawImage(i, x, y, x + 1, y + 1, 0, 0, 1, 1, null);
+						g.setColor(new Color(color));
+						g.fillRect(x, y, 1, 1);
 					}
 				}
 				catch (Throwable t) {
@@ -2561,7 +2545,7 @@ public final class VCLGraphics {
 
 		private Rectangle bounds = null;
 
-		private int[] data = null;
+		private ByteBuffer dataBuffer = null;
 
 		private int dataWidth = 0;
 
@@ -2586,15 +2570,18 @@ public final class VCLGraphics {
 				h = dataHeight - bounds.y;
 
 			int[] destData = new int[w];
-			int dataElement = (bounds.y * dataWidth) + bounds.x;
+			dataWidth *= 4;
+			int offset = (bounds.y * dataWidth) + bounds.x;
 			for (int line = 0; line < h; line++) {
 				destData = (int[])destIn.getDataElements(0, line, destData.length, 1, destData);
-				System.arraycopy(destData, 0, data, dataElement, destData.length);
-				dataElement += dataWidth;
+				dataBuffer.position(offset);
+				for (int i = 0; i < destData.length; i++)
+					dataBuffer.putInt(destData[i]);
+				offset += dataWidth;
 			}
 
 			bounds = null;
-			data = null;
+			dataBuffer = null;
 			dataWidth = 0;
 			dataHeight = 0;
 
@@ -2608,10 +2595,10 @@ public final class VCLGraphics {
 
 		public void dispose() {}
 
-		void setData(int[] d, Rectangle b, int w, int h) {
+		void setData(ByteBuffer d, Rectangle b, int w, int h) {
 
 			bounds = b;
-			data = d;
+			dataBuffer = d;
 			dataWidth = w;
 			dataHeight = h;
 
