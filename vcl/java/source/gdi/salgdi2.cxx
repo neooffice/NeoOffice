@@ -215,26 +215,20 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 
 	if ( !bDrawn )
 	{
-		// If the bitmap is backed by a VCLBitmap or a VCLGraphics instance,
-		// draw that
-		com_sun_star_vcl_VCLBitmap *pVCLBitmap = pJavaSalBitmap->GetVCLBitmap();
+		// If the bitmap is backed by a VCLGraphics instance, draw that
 		com_sun_star_vcl_VCLGraphics *pVCLGraphics = pJavaSalBitmap->GetVCLGraphics();
-		if ( pVCLBitmap )
-		{
-			mpVCLGraphics->drawBitmap( pVCLBitmap, aPosAry.mnSrcX, aPosAry.mnSrcY, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight );
-		}
-		else if ( pVCLGraphics )
+		if ( pVCLGraphics )
 		{
 			Point aPoint( pJavaSalBitmap->GetPoint() );
 			mpVCLGraphics->copyBits( pVCLGraphics, aPoint.X() + aPosAry.mnSrcX, aPoint.Y() + aPosAry.mnSrcY, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, sal_True );
 		}
 		else
 		{
-			com_sun_star_vcl_VCLBitmap *pNewVCLBitmap = pJavaSalBitmap->CreateVCLBitmap( aPosAry.mnSrcX, aPosAry.mnSrcY, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight );
-			if ( pNewVCLBitmap )
+			com_sun_star_vcl_VCLBitmap *pVCLBitmap = pJavaSalBitmap->CreateVCLBitmap( aPosAry.mnSrcX, aPosAry.mnSrcY, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight );
+			if ( pVCLBitmap )
 			{
-				mpVCLGraphics->drawBitmap( pNewVCLBitmap, 0, 0, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight );
-				pJavaSalBitmap->ReleaseVCLBitmap( pNewVCLBitmap );
+				mpVCLGraphics->drawBitmap( pVCLBitmap, 0, 0, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight );
+				pJavaSalBitmap->ReleaseVCLBitmap( pVCLBitmap );
 			}
 		}
 	}

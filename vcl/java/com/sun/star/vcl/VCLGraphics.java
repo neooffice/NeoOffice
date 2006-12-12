@@ -145,6 +145,11 @@ public final class VCLGraphics {
 	private static CopyComposite copyComposite = new CopyComposite();
 
 	/**
+	 * The cached create copy composite.
+	 */
+	private static CreateCopyComposite createCopyComposite = new CreateCopyComposite();
+
+	/**
 	 * The drawBitmapMethod method.
 	 */
 	private static Method drawBitmapMethod = null;
@@ -560,12 +565,10 @@ public final class VCLGraphics {
 		Graphics2D g = getGraphics(false);
 		if (g != null) {
 			try {
-				x = destBounds.x - x;
-				y = destBounds.y - y;
-				g.setComposite(VCLGraphics.copyComposite);
+				g.setComposite(VCLGraphics.createCopyComposite);
 				g.setClip(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
 				g.fillRect(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
-				img = new VCLImage(VCLGraphics.copyComposite.getRaster());
+				img = new VCLImage(VCLGraphics.createCopyComposite.getRaster());
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -606,7 +609,7 @@ public final class VCLGraphics {
 	 * @param srcY the y coordinate of the graphics to be copied 
 	 * @param srcWidth the width of the graphics to be copied
 	 * @param srcHeight the height of the graphics to be copied
-	 * @param destY the x coordinate of the graphics to copy to
+	 * @param destX the x coordinate of the graphics to copy to
 	 * @param destY the y coordinate of the graphics to copy to
 	 * @param destWidth the width of the graphics to copy to
 	 * @param destHeight the height of the graphics to copy to
@@ -650,10 +653,8 @@ public final class VCLGraphics {
 				if (srcImage == null)
 					return;
 
-				srcX = 0;
-				srcY = 0;
-				srcWidth = srcImage.getWidth();
-				srcHeight = srcImage.getHeight();
+				srcX = srcBounds.x - srcX;
+				srcY = srcBounds.y - srcY;
 
 				img = srcImage.getImage();
 				srcImage.dispose();
@@ -707,6 +708,69 @@ public final class VCLGraphics {
 				g.dispose();
 			}
 		}
+
+	}
+
+	/**
+	 * Draws the underlying graphics to the specified buffer.
+	 *
+	 * @param srcX the x coordinate of the graphics to be copied
+	 * @param srcY the y coordinate of the graphics to be copied 
+	 * @param srcWidth the width of the graphics to be copied
+	 * @param srcHeight the height of the graphics to be copied
+	 * @param destX the x coordinate of the graphics to copy to
+	 * @param destY the y coordinate of the graphics to copy to
+	 * @param dataWidth the width of the graphics to copy to
+	 * @param dataHeight the height of the graphics to copy to
+	 * @return the data buffer
+	 */
+	public int[] copyBits(int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int dataWidth, int dataHeight) {
+
+		// No copy bits allowed for printing
+		if (graphics != null)
+			return null;
+
+		Rectangle destBounds = new Rectangle(destX, destY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, dataWidth, dataHeight));
+		if (destBounds.isEmpty())
+			return null;
+
+		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(graphicsBounds);
+		if (destBounds.isEmpty())
+			return null;
+
+		destBounds.x += srcBounds.x - srcX;
+		destBounds.y += srcBounds.y - srcY;
+
+		if (srcBounds.width > destBounds.x + destBounds.width)
+			srcBounds.width = destBounds.x + destBounds.width;
+		if (srcBounds.height > destBounds.y + destBounds.height)
+			srcBounds.height = destBounds.y + destBounds.height;
+
+		int[] data = null;
+
+		try {
+ 			data = new int[dataWidth * dataHeight];
+		}
+		catch (OutOfMemoryError ome) {
+			System.gc();
+ 			data = new int[dataWidth * dataHeight];
+		}
+
+		Graphics2D g = getGraphics(false);
+		if (g != null) {
+			try {
+				g.setComposite(VCLGraphics.copyComposite);
+				VCLGraphics.copyComposite.setData(data, destBounds, dataWidth, dataHeight);
+				g.setClip(srcBounds.x, srcBounds.y, srcBounds.width, srcBounds.height);
+				g.fillRect(srcBounds.x, srcBounds.y, srcBounds.width, srcBounds.height);
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
+		}
+
+		return data;
 
 	}
 
@@ -1959,30 +2023,25 @@ public final class VCLGraphics {
 		if (graphics != null || !graphicsBounds.contains(x, y) || (userClip != null && !userClip.contains(x, y)))
 			return 0xff000000;
 
-		if (image != null) {
-			return image.getImage().getRGB(x, y);
-		}
-		else {
-			int pixel = 0xff000000;
+		int pixel = 0xff000000;
 
-			Graphics2D g = getGraphics(false);
-			if (g != null) {
-				try {
-					g.setComposite(VCLGraphics.copyComposite);
-					g.setClip(x, y, 1, 1);
-					g.fillRect(x, y, 1, 1);
-					int[] srcData = new int[1];
-					srcData = (int[])VCLGraphics.copyComposite.getRaster().getDataElements(0, 0, srcData.length, 1, srcData);
-					pixel = srcData[0] | 0xff000000;
-				}
-				catch (Throwable t) {
-					t.printStackTrace();
-				}
-				g.dispose();
+		Graphics2D g = getGraphics(false);
+		if (g != null) {
+			try {
+				g.setComposite(VCLGraphics.createCopyComposite);
+				g.setClip(x, y, 1, 1);
+				g.fillRect(x, y, 1, 1);
+				int[] srcData = new int[1];
+				srcData = (int[])VCLGraphics.createCopyComposite.getRaster().getDataElements(0, 0, srcData.length, 1, srcData);
+				pixel = srcData[0] | 0xff000000;
 			}
-
-			return pixel;
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
 		}
+
+		return pixel;
 
 	}
 
@@ -2500,6 +2559,68 @@ public final class VCLGraphics {
 
 	final static class CopyComposite implements Composite, CompositeContext {
 
+		private Rectangle bounds = null;
+
+		private int[] data = null;
+
+		private int dataWidth = 0;
+
+		private int dataHeight = 0;
+
+		public void compose(Raster src, Raster destIn, WritableRaster destOut) {
+
+			if (destIn != destOut)
+				destOut.setDataElements(0, 0, destIn);
+
+			int w = destOut.getWidth();
+			int h = destOut.getHeight();
+
+			if (w > bounds.width)
+				w = bounds.width;
+			if (h > bounds.height)
+				h = bounds.height;
+
+			if (w > dataWidth - bounds.x)
+				w = dataWidth - bounds.x;
+			if (h > dataHeight - bounds.y)
+				h = dataHeight - bounds.y;
+
+			int[] destData = new int[w];
+			int dataElement = (bounds.y * dataWidth) + bounds.x;
+			for (int line = 0; line < h; line++) {
+				destData = (int[])destIn.getDataElements(0, line, destData.length, 1, destData);
+				System.arraycopy(destData, 0, data, dataElement, destData.length);
+				dataElement += dataWidth;
+			}
+
+			bounds = null;
+			data = null;
+			dataWidth = 0;
+			dataHeight = 0;
+
+		}
+
+		public CompositeContext createContext(ColorModel srcColorModel, ColorModel destColorModel, RenderingHints hints) {
+
+			return this;
+
+		}
+
+		public void dispose() {}
+
+		void setData(int[] d, Rectangle b, int w, int h) {
+
+			bounds = b;
+			data = d;
+			dataWidth = w;
+			dataHeight = h;
+
+		}
+
+	}
+
+	final static class CreateCopyComposite implements Composite, CompositeContext {
+
 		private WritableRaster raster = null;
 
 		public void compose(Raster src, Raster destIn, WritableRaster destOut) {
@@ -2521,7 +2642,9 @@ public final class VCLGraphics {
 
 		WritableRaster getRaster() {
 
-			return raster;
+			WritableRaster r = raster;
+			raster = null;
+			return r;
 
 		}
 

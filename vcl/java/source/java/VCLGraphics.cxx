@@ -477,6 +477,40 @@ void com_sun_star_vcl_VCLGraphics::copyBits( const com_sun_star_vcl_VCLGraphics 
 
 // ----------------------------------------------------------------------------
 
+java_lang_Object *com_sun_star_vcl_VCLGraphics::copyBits( long _par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7 )
+{
+	static jmethodID mID = NULL;
+	java_lang_Object *out = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(IIIIIIII)[I";
+			mID = t.pEnv->GetMethodID( getMyClass(), "copyBits", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[8];
+			args[0].i = jint( _par0 );
+			args[1].i = jint( _par1 );
+			args[2].i = jint( _par2 );
+			args[3].i = jint( _par3 );
+			args[4].i = jint( _par4 );
+			args[5].i = jint( _par5 );
+			args[6].i = jint( _par6 );
+			args[7].i = jint( _par7 );
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethodA( object, getMyClass(), mID, args );
+			if ( tempObj )
+				out = new java_lang_Object( tempObj );
+		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
 com_sun_star_vcl_VCLImage *com_sun_star_vcl_VCLGraphics::createImage()
 {
 	static jmethodID mID = NULL;
