@@ -64,6 +64,7 @@ import java.awt.image.Raster;
 import java.awt.image.WritableRaster;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -725,6 +726,8 @@ public final class VCLGraphics {
 		// No copy bits allowed for printing
 		if (graphics != null || capacity < dataWidth * dataHeight * 4)
 			return;
+
+		buffer.order(ByteOrder.nativeOrder());
 
 		Rectangle destBounds = new Rectangle(destX, destY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, dataWidth, dataHeight));
 		if (destBounds.isEmpty())
