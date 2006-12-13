@@ -49,6 +49,11 @@ import java.awt.image.WritableRaster;
 public final class VCLImage {
 
 	/**
+	 * The LARGE_IMAGE_PIXELS constant.
+	 */
+	public static int LARGE_IMAGE_PIXELS = 500 * 500;
+
+	/**
 	 * The bit count.
 	 */
 	private int bitCount = 0;
@@ -155,6 +160,10 @@ public final class VCLImage {
 		graphics = null;
 		image = null;
 		pageFormat = null;
+
+		// Run the garbage collector after disposing large images
+		if (width * height > VCLImage.LARGE_IMAGE_PIXELS)
+			System.gc();
 
 	}
 
