@@ -41,6 +41,9 @@
 #ifndef _SV_SALBMP_H
 #include <salbmp.h>
 #endif
+#ifndef _SV_SALDATA_HXX
+#include <saldata.hxx>
+#endif
 #ifndef _SV_JAVA_LANG_CLASS_HXX
 #include <java/lang/Class.hxx>
 #endif
@@ -56,6 +59,16 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLIMAGE_HXX
 #include <com/sun/star/vcl/VCLImage.hxx>
 #endif
+#ifndef _SV_SVAPP_HXX
+#include <svapp.hxx>
+#endif
+#ifndef _VOS_MUTEX_HXX_
+#include <vos/mutex.hxx>
+#endif
+
+#include <premac.h>
+#include <Carbon/Carbon.h>
+#include <postmac.h>
 
 #include "VCLGraphics_cocoa.h"
 
@@ -68,6 +81,7 @@ static ::osl::Mutex aATSFontMutex;
 using namespace osl;
 using namespace rtl;
 using namespace vcl;
+using namespace vos;
 
 // ============================================================================
 
@@ -292,7 +306,42 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged( 
 {
 	JavaSalBitmap *pBitmap = (JavaSalBitmap *)_par0;
 	if ( pBitmap )
-		pBitmap->NotifyGraphicsChanged();
+	{
+		// We need to let any pending timers run so that we don't deadlock
+		TimeValue aDelay;
+		aDelay.Seconds = 0;
+		aDelay.Nanosec = 10;
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		bool bAcquired = false;
+		while ( !Application::IsShutDown() )
+		{
+			if ( rSolarMutex.tryToAcquire() )
+			{
+				if ( !Application::IsShutDown() )
+					bAcquired = true; 
+				else
+					rSolarMutex.release();
+				break;
+			}
+			ReceiveNextEvent( 0, NULL, 0, false, NULL );
+			OThread::wait( aDelay );
+		}
+
+		if ( bAcquired )
+		{
+			SalData *pSalData = GetSalData();
+			for ( ::std::list< JavaSalBitmap* >::const_iterator it = pSalData->maBitmapList.begin(); it != pSalData->maBitmapList.end(); ++it )
+			{
+				if ( pBitmap == *it )
+				{
+					pBitmap->NotifyGraphicsChanged();
+					break;
+				}
+			}
+
+			rSolarMutex.release();
+		}
+	}
 }
 
 // ----------------------------------------------------------------------------
