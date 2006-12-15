@@ -400,7 +400,7 @@ public final class VCLGraphics {
 	 */
 	private VCLFrame frame = null;
 
-	/** 
+	/**
 	 * The graphics context.
 	 */
 	private Graphics2D graphics = null;
@@ -600,9 +600,9 @@ public final class VCLGraphics {
 	/**
 	 * Draws specified <code>VCLGraphics</code> to the underlying graphics.
 	 *
-	 * @param g the graphics to be copied 
+	 * @param g the graphics to be copied
 	 * @param srcX the x coordinate of the graphics to be copied
-	 * @param srcY the y coordinate of the graphics to be copied 
+	 * @param srcY the y coordinate of the graphics to be copied
 	 * @param srcWidth the width of the graphics to be copied
 	 * @param srcHeight the height of the graphics to be copied
 	 * @param destX the x coordinate of the graphics to copy to
@@ -626,12 +626,25 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
+		LinkedList clipList = new LinkedList();
+		if (userClipList != null) {
+			Iterator clipRects = userClipList.iterator();
+			while (clipRects.hasNext()) {
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				if (!clip.isEmpty())
+					clipList.add(clip);
+			}
+		}
+		else {
+			clipList.add(destBounds);
+		}
+
 		if ((xor && allowXOR) || vg != this || srcWidth != destWidth || srcHeight != destHeight) {
 			BufferedImage img = null;
 			if (vg.getImage() != null)
 				img = vg.getImage().getImage();
 
-			if (img == null || !srcBounds.contains(srcX, srcY, srcWidth, srcHeight)) {
+			if (img == null) {
 				VCLImage srcImage = vg.createImage(srcX, srcY, srcWidth, srcHeight);
 				if (srcImage == null)
 					return;
@@ -650,8 +663,22 @@ public final class VCLGraphics {
 						g.setComposite(VCLGraphics.xorImageComposite);
 						VCLGraphics.xorImageComposite.setXORMode(Color.black);
 					}
-					g.setClip(userClip);
-					g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+					Iterator clipRects = clipList.iterator();
+					if (srcWidth == destWidth && srcHeight == destHeight) {
+						while (clipRects.hasNext()) {
+							Rectangle clipRect = ((Rectangle)clipRects.next()).intersection(destBounds);
+							int srcClipX = srcX + clipRect.x - destX;
+							int srcClipY = srcY + clipRect.y - destY;
+							g.setClip(clipRect);
+							g.drawImage(img, clipRect.x, clipRect.y, clipRect.x + clipRect.width, clipRect.y + clipRect.height, srcClipX, srcClipY, srcClipX + clipRect.width, srcClipY + clipRect.height, null);
+						}
+					}
+					else {
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+						}
+					}
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
@@ -660,19 +687,6 @@ public final class VCLGraphics {
 			}
 		}
 		else {
-			LinkedList clipList = new LinkedList();
-			if (userClipList != null) {
-				Iterator clipRects = userClipList.iterator();
-				while (clipRects.hasNext()) {
-					Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
-					if (!clip.isEmpty())
-						clipList.add(clip);
-				}
-			}
-			else {
-				clipList.add(destBounds);
-			}
-
 			Graphics2D g = getGraphics();
 			if (g != null) {
 				try {
@@ -699,7 +713,7 @@ public final class VCLGraphics {
 	 * @param buffer the by buffer to draw into
 	 * @param capacity the size of the buffer in bytes
 	 * @param srcX the x coordinate of the graphics to be copied
-	 * @param srcY the y coordinate of the graphics to be copied 
+	 * @param srcY the y coordinate of the graphics to be copied
 	 * @param srcWidth the width of the graphics to be copied
 	 * @param srcHeight the height of the graphics to be copied
 	 * @param destX the x coordinate of the graphics to copy to
@@ -772,23 +786,28 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
+		LinkedList clipList = new LinkedList();
+		Rectangle clipBounds;
+		if (graphics != null)
+			clipBounds = graphicsBounds;
+		else
+			clipBounds = destBounds;
+		if (userClipList != null) {
+			Iterator clipRects = userClipList.iterator();
+			while (clipRects.hasNext()) {
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(clipBounds);
+				if (!clip.isEmpty())
+					clipList.add(clip);
+			}
+		}
+		else {
+			clipList.add(clipBounds);
+		}
+
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
 				if (graphics != null) {
-					LinkedList clipList = new LinkedList();
-					if (userClipList != null) {
-						Iterator clipRects = userClipList.iterator();
-						while (clipRects.hasNext()) {
-							Rectangle clip = ((Rectangle)clipRects.next()).intersection(graphicsBounds);
-							if (!clip.isEmpty())
-								clipList.add(clip);
-						}
-					}
-					else {
-						clipList.add(graphicsBounds);
-					}
-
 					AffineTransform transform = g.getTransform();
 					float scaleX = (float)transform.getScaleX();
 					float scaleY = (float)transform.getScaleY();
@@ -805,8 +824,22 @@ public final class VCLGraphics {
 						g.setComposite(VCLGraphics.xorImageComposite);
 						VCLGraphics.xorImageComposite.setXORMode(Color.black);
 					}
-					g.setClip(userClip);
-					g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+					Iterator clipRects = clipList.iterator();
+					if (srcWidth == destWidth && srcHeight == destHeight) {
+						while (clipRects.hasNext()) {
+							Rectangle clipRect = ((Rectangle)clipRects.next()).intersection(destBounds);
+							int srcClipX = srcX + clipRect.x - destX;
+							int srcClipY = srcY + clipRect.y - destY;
+							g.setClip(clipRect);
+							g.drawImage(bmp.getImage(), clipRect.x, clipRect.y, clipRect.x + clipRect.width, clipRect.y + clipRect.height, srcClipX, srcClipY, srcClipX + clipRect.width, srcClipY + clipRect.height, null);
+						}
+					}
+					else {
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
+						}
+					}
 				}
 			}
 			catch (Throwable t) {
@@ -1025,7 +1058,21 @@ public final class VCLGraphics {
 			return;
 		}
 
+		LinkedList clipList = new LinkedList();
+		if (userClipList != null) {
+			Iterator clipRects = userClipList.iterator();
+			while (clipRects.hasNext()) {
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(graphicsBounds);
+				if (!clip.isEmpty())
+					clipList.add(clip);
+			}
+		}
+		else {
+			clipList.add(graphicsBounds);
+		}
+
 		Graphics2D g = getGraphics();
+		Graphics2D g2 = null;
 		if (g != null) {
 			try {
 				// The graphics may adjust the font
@@ -1051,29 +1098,38 @@ public final class VCLGraphics {
 					advance += advances[i] / fScaleX;
 				}
 
-				g.setClip(userClip);
-				g.translate(x, y);
+				Iterator clipRects = clipList.iterator();
+				while (clipRects.hasNext()) {
+					g2 = (Graphics2D)g.create();
+					g2.setClip((Rectangle)clipRects.next());
+					g2.translate(x, y);
 
-				// Set rotation
-				if (orientation != 0)
-					g.rotate(Math.toRadians((double)orientation / 10) * -1);
+					// Set rotation
+					if (orientation != 0)
+						g2.rotate(Math.toRadians((double)orientation / 10) * -1);
 
-				g.scale(fScaleX, 1.0);
+					g2.scale(fScaleX, 1.0);
 
-				glyphOrientation &= VCLGraphics.GF_ROTMASK;
-				if ((glyphOrientation & VCLGraphics.GF_ROTMASK) != 0) {
-					if (glyphOrientation == VCLGraphics.GF_ROTL)
-						g.rotate(Math.toRadians(-90));
-					else
-						g.rotate(Math.toRadians(90));
+					glyphOrientation &= VCLGraphics.GF_ROTMASK;
+					if ((glyphOrientation & VCLGraphics.GF_ROTMASK) != 0) {
+						if (glyphOrientation == VCLGraphics.GF_ROTL)
+							g2.rotate(Math.toRadians(-90));
+						else
+							g2.rotate(Math.toRadians(90));
+					}
+
+					// Draw the text to a scaled graphics
+					g2.drawGlyphVector(gv, translateX, translateY);
+
+					g2.dispose();
+					g2 = null;
 				}
-
-				// Draw the text to a scaled graphics
-				g.drawGlyphVector(gv, translateX, translateY);
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
 			}
+			if (g2 != null)
+				g2.dispose();
 			g.dispose();
 		}
 
@@ -1105,14 +1161,35 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
+		LinkedList clipList = new LinkedList();
+		Rectangle clipBounds;
+		if (graphics != null)
+			clipBounds = graphicsBounds;
+		else
+			clipBounds = destBounds;
+		if (userClipList != null) {
+			Iterator clipRects = userClipList.iterator();
+			while (clipRects.hasNext()) {
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(clipBounds);
+				if (!clip.isEmpty())
+					clipList.add(clip);
+			}
+		}
+		else {
+			clipList.add(clipBounds);
+		}
+
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
 				if (xor)
 					g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 				g.setColor(new Color(color));
-				g.setClip(userClip);
-				g.drawLine(x1, y1, x2, y2);
+				Iterator clipRects = clipList.iterator();
+				while (clipRects.hasNext()) {
+					g.setClip((Rectangle)clipRects.next());
+					g.drawLine(x1, y1, x2, y2);
+				}
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -1155,56 +1232,44 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
-		if (xor) {
-			// Fix bug 1459 by using our own custom XOR composite for polygons
-			VCLImage srcImage = new VCLImage(destBounds.width, destBounds.height, bitCount);
-			VCLGraphics srcGraphics = srcImage.getGraphics();
-			Graphics2D g = srcGraphics.getGraphics();
-			if (g != null) {
-				try {
-					g.setColor(new Color(color));
-					g.translate(destBounds.x * -1, destBounds.y * -1);
-					g.fillPolygon(polygon);
-				}
-				catch (Throwable t) {
-					t.printStackTrace();
-				}
-				g.dispose();
+		LinkedList clipList = new LinkedList();
+		Rectangle clipBounds;
+		if (graphics != null)
+			clipBounds = graphicsBounds;
+		else
+			clipBounds = destBounds;
+		if (userClipList != null) {
+			Iterator clipRects = userClipList.iterator();
+			while (clipRects.hasNext()) {
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(clipBounds);
+				if (!clip.isEmpty())
+					clipList.add(clip);
 			}
-
-			g = getGraphics();
-			if (g != null) {
-				try {
-					g.setComposite(VCLGraphics.xorImageComposite);
-					VCLGraphics.xorImageComposite.setXORMode(Color.black);
-					g.setClip(userClip);
-					g.drawImage(srcImage.getImage(), destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, 0, 0, destBounds.width, destBounds.height, null);
-				}
-				catch (Throwable t) {
-					t.printStackTrace();
-				}
-				g.dispose();
-			}
-
-			srcImage.dispose();
 		}
 		else {
-			Graphics2D g = getGraphics();
-			if (g != null) {
-				try {
-					g.setColor(new Color(color));
-					g.setClip(userClip);
+			clipList.add(clipBounds);
+		}
+
+		Graphics2D g = getGraphics();
+		if (g != null) {
+			try {
+				if (xor)
+					g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
+				g.setColor(new Color(color));
+				Iterator clipRects = clipList.iterator();
+				while (clipRects.hasNext()) {
+					g.setClip((Rectangle)clipRects.next());
 					if (fill)
 						g.fillPolygon(polygon);
 					else
 						g.drawPolygon(polygon);
 				}
-				catch (Throwable t) {
-					t.printStackTrace();
-				}
-				g.dispose();
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
 			}
 		}
+		g.dispose();
 
 	}
 
@@ -1237,14 +1302,35 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
+		LinkedList clipList = new LinkedList();
+		Rectangle clipBounds;
+		if (graphics != null)
+			clipBounds = graphicsBounds;
+		else
+			clipBounds = destBounds;
+		if (userClipList != null) {
+			Iterator clipRects = userClipList.iterator();
+			while (clipRects.hasNext()) {
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(clipBounds);
+				if (!clip.isEmpty())
+					clipList.add(clip);
+			}
+		}
+		else {
+			clipList.add(clipBounds);
+		}
+
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
 				if (xor)
 					g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 				g.setColor(new Color(color));
-				g.setClip(userClip);
-				g.drawPolyline(xpoints, ypoints, npoints);
+				Iterator clipRects = clipList.iterator();
+				while (clipRects.hasNext()) {
+					g.setClip((Rectangle)clipRects.next());
+					g.drawPolyline(xpoints, ypoints, npoints);
+				}
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -1313,15 +1399,40 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
+		LinkedList clipList = new LinkedList();
+		Rectangle clipBounds;
+		if (graphics != null)
+			clipBounds = graphicsBounds;
+		else
+			clipBounds = destBounds;
+		if (userClipList != null) {
+			Iterator clipRects = userClipList.iterator();
+			while (clipRects.hasNext()) {
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(clipBounds);
+				if (!clip.isEmpty())
+					clipList.add(clip);
+			}
+		}
+		else {
+			clipList.add(clipBounds);
+		}
+
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
+				if (xor) {
+					g.setComposite(VCLGraphics.xorImageComposite);
+					VCLGraphics.xorImageComposite.setXORMode(Color.black);
+				}
 				g.setColor(new Color(color));
-				g.setClip(userClip);
-				if (fill)
-					g.fill(area);
-				else
-					g.draw(area);
+				Iterator clipRects = clipList.iterator();
+				while (clipRects.hasNext()) {
+					g.setClip((Rectangle)clipRects.next());
+					if (fill)
+						g.fill(area);
+					else
+						g.draw(area);
+				}
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -1363,17 +1474,39 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
+		LinkedList clipList = new LinkedList();
+		Rectangle clipBounds;
+		if (graphics != null)
+			clipBounds = graphicsBounds;
+		else
+			clipBounds = destBounds;
+		if (userClipList != null) {
+			Iterator clipRects = userClipList.iterator();
+			while (clipRects.hasNext()) {
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(clipBounds);
+				if (!clip.isEmpty())
+					clipList.add(clip);
+			}
+		}
+		else {
+			clipList.add(clipBounds);
+		}
+
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
 				if (xor)
 					g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 				g.setColor(new Color(color));
-				g.setClip(userClip);
-				if (fill)
-					g.fillRect(x, y, width, height);
-				else
-					g.drawRect(x, y, width - 1, height - 1);
+				Iterator clipRects = clipList.iterator();
+				while (clipRects.hasNext()) {
+					Rectangle clipRect = (Rectangle)clipRects.next();
+					g.setClip(clipRect);
+					if (fill)
+						g.fillRect(clipRect.x, clipRect.y, clipRect.width, clipRect.height);
+					else
+						g.drawRect(x, y, width - 1, height - 1);
+				}
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -1401,6 +1534,19 @@ public final class VCLGraphics {
 		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
+
+		LinkedList clipList = new LinkedList();
+		if (userClipList != null) {
+			Iterator clipRects = userClipList.iterator();
+			while (clipRects.hasNext()) {
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				if (!clip.isEmpty())
+					clipList.add(clip);
+			}
+		}
+		else {
+			clipList.add(destBounds);
+		}
 
 		Graphics2D g = getGraphics();
 		if (g != null) {
@@ -1433,9 +1579,13 @@ public final class VCLGraphics {
 				}
 				else {
 					VCLGraphics.button.setSize(bounds.width, bounds.height);
-					g.setClip(userClip);
-					g.translate(bounds.x, bounds.y);
-					VCLGraphics.button.getUI().paint(g, VCLGraphics.button);
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						g.setClip((Rectangle)clipRects.next());
+						g.translate(bounds.x, bounds.y);
+						VCLGraphics.button.getUI().paint(g, VCLGraphics.button);
+						g.translate(bounds.x * -1, bounds.y * -1);
+					}
 				}
 			}
 			catch (Throwable t) {
@@ -1497,6 +1647,19 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
+		LinkedList clipList = new LinkedList();
+		if (userClipList != null) {
+			Iterator clipRects = userClipList.iterator();
+			while (clipRects.hasNext()) {
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				if (!clip.isEmpty())
+					clipList.add(clip);
+			}
+		}
+		else {
+			clipList.add(destBounds);
+		}
+
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
@@ -1527,9 +1690,13 @@ public final class VCLGraphics {
 				}
 				else {
 					VCLGraphics.radioButton.setSize(d.width, d.height);
-					g.setClip(userClip);
-					g.translate(bounds.x, bounds.y);
-					VCLGraphics.radioButton.getUI().paint(g, VCLGraphics.radioButton);
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						g.setClip((Rectangle)clipRects.next());
+						g.translate(bounds.x, bounds.y);
+						VCLGraphics.radioButton.getUI().paint(g, VCLGraphics.radioButton);
+						g.translate(bounds.x * -1, bounds.y * -1);
+					}
 				}
 			}
 			catch (Throwable t) {
@@ -1576,6 +1743,19 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
+		LinkedList clipList = new LinkedList();
+		if (userClipList != null) {
+			Iterator clipRects = userClipList.iterator();
+			while (clipRects.hasNext()) {
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				if (!clip.isEmpty())
+					clipList.add(clip);
+			}
+		}
+		else {
+			clipList.add(destBounds);
+		}
+
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
@@ -1607,9 +1787,13 @@ public final class VCLGraphics {
 				}
 				else {
 					VCLGraphics.checkBoxButton.setSize(d.width, d.height);
-					g.setClip(userClip);
-					g.translate(bounds.x, bounds.y);
-					VCLGraphics.checkBoxButton.getUI().paint(g, VCLGraphics.checkBoxButton);
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						g.setClip((Rectangle)clipRects.next());
+						g.translate(bounds.x, bounds.y);
+						VCLGraphics.checkBoxButton.getUI().paint(g, VCLGraphics.checkBoxButton);
+						g.translate(bounds.x * -1, bounds.y * -1);
+					}
 				}
 			}
 			catch (Throwable t) {
@@ -1870,7 +2054,20 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
-		// Invert the image 
+		LinkedList clipList = new LinkedList();
+		if (userClipList != null) {
+			Iterator clipRects = userClipList.iterator();
+			while (clipRects.hasNext()) {
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				if (!clip.isEmpty())
+					clipList.add(clip);
+			}
+		}
+		else {
+			clipList.add(destBounds);
+		}
+
+		// Invert the image
 		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME) {
 			Graphics2D g = getGraphics();
 			if (g != null) {
@@ -1879,11 +2076,14 @@ public final class VCLGraphics {
 					g.setStroke(new BasicStroke(stroke.getLineWidth(), BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, stroke.getMiterLimit(), new float[]{ 1.0f, 1.0f }, 0.0f));
 					g.setXORMode(Color.white);
 					g.setColor(Color.black);
-					g.setClip(userClip);
 					// Note: the JVM seems to have a bug and drawRect()
 					// draws dashed strokes one pixel above the
 					// specified y coordinate
-					g.drawRect(x, y + 1, width - 1, height - 2);
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						g.setClip((Rectangle)clipRects.next());
+						g.drawRect(x, y + 1, width - 1, height - 2);
+					}
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
@@ -1897,8 +2097,11 @@ public final class VCLGraphics {
 				try {
 					g.setXORMode(Color.white);
 					g.setPaint(new TexturePaint(VCLGraphics.image50.getImage(), new Rectangle(0, 0, VCLGraphics.image50.getWidth(), VCLGraphics.image50.getHeight()).getBounds2D()));
-					g.setClip(userClip);
-					g.fillRect(x, y, width, height);
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						g.setClip((Rectangle)clipRects.next());
+						g.fillRect(x, y, width, height);
+					}
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
@@ -1912,8 +2115,12 @@ public final class VCLGraphics {
 			if (g != null) {
 				try {
 					g.setComposite(VCLGraphics.invertComposite);
-					g.setClip(userClip);
-					g.fillRect(x, y, width, height);
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						Rectangle clipRect = (Rectangle)clipRects.next();
+						g.setClip(clipRect);
+						g.fillRect(clipRect.x, clipRect.y, clipRect.width, clipRect.height);
+					}
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
@@ -1950,7 +2157,20 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
-		// Invert the image 
+		LinkedList clipList = new LinkedList();
+		if (userClipList != null) {
+			Iterator clipRects = userClipList.iterator();
+			while (clipRects.hasNext()) {
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				if (!clip.isEmpty())
+					clipList.add(clip);
+			}
+		}
+		else {
+			clipList.add(destBounds);
+		}
+
+		// Invert the image
 		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME) {
 			Graphics2D g = getGraphics();
 			if (g != null) {
@@ -1959,8 +2179,11 @@ public final class VCLGraphics {
 					g.setStroke(new BasicStroke(stroke.getLineWidth(), BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, stroke.getMiterLimit(), new float[]{ 1.0f, 1.0f }, 0.0f));
 					g.setXORMode(Color.white);
 					g.setColor(Color.black);
-					g.setClip(userClip);
-					g.drawPolyline(xpoints, ypoints, npoints);
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						g.setClip((Rectangle)clipRects.next());
+						g.drawPolyline(xpoints, ypoints, npoints);
+					}
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
@@ -1974,8 +2197,11 @@ public final class VCLGraphics {
 				try {
 					g.setXORMode(Color.white);
 					g.setPaint(new TexturePaint(VCLGraphics.image50.getImage(), new Rectangle(0, 0, VCLGraphics.image50.getWidth(), VCLGraphics.image50.getHeight()).getBounds2D()));
-					g.setClip(userClip);
-					g.fillPolygon(polygon);
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						g.setClip((Rectangle)clipRects.next());
+						g.fillPolygon(polygon);
+					}
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
@@ -1984,35 +2210,22 @@ public final class VCLGraphics {
 			}
 		}
 		else {
-			VCLImage srcImage = new VCLImage(destBounds.width, destBounds.height, bitCount);
-			VCLGraphics srcGraphics = srcImage.getGraphics();
-			Graphics2D g = srcGraphics.getGraphics();
-			if (g != null) {
-				try {
-					g.setColor(Color.black);
-					g.translate(destBounds.x * -1, destBounds.y * -1);
-					g.fillPolygon(polygon);
-				}
-				catch (Throwable t) {
-					t.printStackTrace();
-				}
-				g.dispose();
-			}
-
-			g = getGraphics();
+			Graphics2D g = getGraphics();
 			if (g != null) {
 				try {
 					g.setComposite(VCLGraphics.invertComposite);
-					g.setClip(userClip);
-					g.drawImage(srcImage.getImage(), destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, 0, 0, destBounds.width, destBounds.height, null);
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						Rectangle clipRect = (Rectangle)clipRects.next();
+						g.setClip(clipRect);
+						g.fillPolygon(polygon);
+					}
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
 				}
 				g.dispose();
 			}
-
-			srcImage.dispose();
 		}
 
 	}
@@ -2090,7 +2303,7 @@ public final class VCLGraphics {
 	 *
 	 * @param x the x coordinate of the source rectangle
 	 * @param y the y coordinate of the source rectangle
-	 * @param color the color of the pixel 
+	 * @param color the color of the pixel
 	 */
 	public void setPixel(int x, int y, int color) {
 
@@ -2121,8 +2334,8 @@ public final class VCLGraphics {
 					else {
 						if (xor)
 							g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
-						g.setClip(x, y, 1, 1);
 						g.setColor(new Color(color));
+						g.setClip(x, y, 1, 1);
 						g.fillRect(x, y, 1, 1);
 					}
 				}
