@@ -509,6 +509,12 @@ public final class VCLGraphics {
 	 */
 	public void addGraphicsChangeListener(long listener) {
 
+		// No listeners allowed for printing
+		if (graphics != null) {
+			notifyGraphicsChanged(listener);
+			return;
+		}
+
 		if (changeListeners == null)
 			changeListeners = new HashSet();
 		changeListeners.add(new Long(listener));
