@@ -1034,7 +1034,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		synchronized (this) {
 			if (!disposed && b != flushingEnabled && window.isShowing()) {
-				Graphics2D g = graphics.getGraphics();
+				Graphics2D g = (Graphics2D)panel.getGraphics();
 				if (g != null) {
 					try {
 						if (g instanceof sun.java2d.SunGraphics2D) {
