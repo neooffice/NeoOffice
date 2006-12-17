@@ -1894,9 +1894,6 @@ public final class VCLGraphics {
 		if (frame != null && image != null)
 			return null;
 
-		Runtime r = Runtime.getRuntime();
-		long usedMemory = r.totalMemory() - r.freeMemory();
-
 		Graphics2D g;
 		if (image != null)
 			g = image.getImage().createGraphics();
