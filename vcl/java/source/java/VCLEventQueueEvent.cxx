@@ -355,6 +355,19 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			}
 			break;
 		}
+		case SALEVENT_MINIMIZED:
+		{
+			if ( !bDeleteDataOnly && pFrame && pFrame->mbVisible )
+			{
+				for ( ::std::list< JavaSalFrame* >::const_iterator it = pFrame->maChildren.begin(); it != pFrame->maChildren.end(); ++it )
+				{
+					// Hide Java window but leave visible flag set to true
+					if ( (*it)->mbVisible )
+						(*it)->mpVCLFrame->setVisible( sal_False );
+				}
+			}
+			break;
+		}
 		case SALEVENT_ENDEXTTEXTINPUT:
 		{
 			SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)pData;

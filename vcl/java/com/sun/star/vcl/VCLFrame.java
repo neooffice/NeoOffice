@@ -1840,8 +1840,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 						if (!f.isDisposed()) {
 							Window w = f.getWindow();
 							if (w.isShowing()) {
-								f.enableFlushing(false);
-								w.hide();
+								f.setVisible(false);
 								detachedChildren.add(f);
 							}
 						}
@@ -1856,13 +1855,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			while (frames.hasNext()) {
 				VCLFrame f = (VCLFrame)frames.next();
 				synchronized (f) {
-					if (!f.isDisposed()) {
-						Window w = f.getWindow();
-						if (!w.isShowing()) {
-							w.show();
-							f.enableFlushing(true);
-						}
-					}
+					if (!f.isDisposed())
+						f.setVisible(true);
 				}
 			}
 		}
@@ -2086,6 +2080,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else if (window instanceof Frame)
 			((Frame)window).setResizable(resizable);
 
+		graphics.notifyGraphicsChanged();
+
 		if (b) {
 			// Fix bug 1012 by deiconifying the parent window
 			Window w = window;
@@ -2188,20 +2184,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public synchronized void windowIconified(WindowEvent e) {
 
-		// Detach any visible children
-		Iterator frames = children.iterator();
-		while (frames.hasNext()) {
-			VCLFrame f = (VCLFrame)frames.next();
-			synchronized (f) {
-				if (!f.isDisposed()) {
-					Window w = f.getWindow();
-					if (w.isShowing()) {
-						f.enableFlushing(false);
-						w.hide();
-					}
-				}
-			}
-		}
+		if (disposed || !window.isShowing())
+			return;
+
+		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MINIMIZED, this, 0));
 
 	}
 
