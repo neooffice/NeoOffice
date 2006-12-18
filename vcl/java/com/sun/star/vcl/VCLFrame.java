@@ -727,6 +727,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private boolean disposed = false;
 
 	/**
+	 * The flushing enabled flag.
+	 */
+	private boolean flushingEnabled = true;
+
+	/**
 	 * The frame pointer.
 	 */
 	private long frame = 0;
@@ -1007,6 +1012,49 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		queue = null;
 
 		disposed = true;
+
+	}
+
+	/**
+	 * Enable or disable flushing of the native window.
+	 *
+	 * @param b <code>true</code> to enable flushing and <code>false</code> to
+	 *  disable flushing
+	 */
+	public void enableFlushing(boolean b)
+	{
+		// Fix occasion crashing by invoking this in the Java event dispatch
+		// thread
+		if (!EventQueue.isDispatchThread())	{
+			FlushingHandler handler = new FlushingHandler(this, b);
+			Toolkit.getDefaultToolkit().getSystemEventQueue().invokeLater(handler);
+			Thread.yield();
+			return;
+		}
+
+		synchronized (this) {
+			if (!disposed && b != flushingEnabled && window.isShowing()) {
+				Graphics2D g = (Graphics2D)panel.getGraphics();
+				if (g != null) {
+					try {
+						if (g instanceof sun.java2d.SunGraphics2D) {
+							sun.java2d.SurfaceData sd = ((sun.java2d.SunGraphics2D)g).getSurfaceData();
+							if (sd instanceof apple.awt.CPeerSurfaceData) {
+								if (b)
+									((apple.awt.CPeerSurfaceData)sd).enableFlushing();
+								else if (!fullScreenMode)
+									((apple.awt.CPeerSurfaceData)sd).disableFlushing();
+								flushingEnabled = b;
+							}
+						}
+					}
+					catch (Throwable t) {
+						t.printStackTrace();
+					}
+					g.dispose();
+				}
+			}
+		}
 
 	}
 
@@ -2051,9 +2099,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			// Show the window
 			window.show();
+			enableFlushing(true);
 		}
 		else {
 			// Hide the window
+			enableFlushing(false);
 			window.hide();
 		}
 
@@ -2532,6 +2582,43 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		public void update(Graphics g) {
 
 			paint(g);
+
+		}
+
+	}
+
+	/**
+	 * A class that handles flushing updates.
+	 */
+	final class FlushingHandler implements Runnable {
+
+		/**
+		 * The flushing enabled flag.
+		 */
+		private boolean flushingEnabled = true;
+
+		/**
+		 * The <code>VCLFrame</code>.
+		 */
+		private VCLFrame frame = null;
+
+		/**
+		 * Constructs a new <code>VCLFrame.FlushingHandler</code> instance.
+		 *
+		 * @param f the <code>VCLFrame</code>
+		 * @param b <code>true</code> to enable flushing and <code>false</code>
+		 *  to disable flushing
+		 */
+		FlushingHandler(VCLFrame f, boolean b) {
+
+			frame = f;
+			flushingEnabled = b;
+
+		}
+
+		public void run() {
+
+			frame.enableFlushing(flushingEnabled);
 
 		}
 

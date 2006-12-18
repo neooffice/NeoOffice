@@ -485,9 +485,22 @@ void JavaSalInstance::Yield( BOOL bWait )
 		gettimeofday( &aCurrentTime, NULL );
 		if ( aCurrentTime >= pSalData->maTimeout )
 		{
+			::std::list< JavaSalFrame* >::const_iterator it;
+			for ( it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+			{
+				if ( (*it)->mbVisible )
+					(*it)->mpVCLFrame->enableFlushing( sal_False );
+			}
+
 			gettimeofday( &pSalData->maTimeout, NULL );
 			pSalData->maTimeout += pSalData->mnTimerInterval;
 			pSVData->mpSalTimer->CallCallback();
+
+			for ( it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+			{
+				if ( (*it)->mbVisible )
+					(*it)->mpVCLFrame->enableFlushing( sal_True );
+			}
 		}
 	}
 
