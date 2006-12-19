@@ -655,9 +655,6 @@ public final class VCLGraphics {
 				if (srcImage == null)
 					return;
 
-				srcX = srcBounds.x - srcX;
-				srcY = srcBounds.y - srcY;
-
 				img = srcImage.getImage();
 				srcImage.dispose();
 			}
@@ -665,25 +662,21 @@ public final class VCLGraphics {
 			Graphics2D g = getGraphics();
 			if (g != null) {
 				try {
+					// Make sure source bounds don't fall outside the bitmap
+					float scaleX = destWidth / srcWidth;
+					float scaleY = destHeight / srcHeight;
+					destX += (int)((srcBounds.x - srcX) * scaleX);
+					destY += (int)((srcBounds.y - srcY) * scaleY);
+					destWidth += (int)((srcBounds.width - srcWidth) * scaleX);
+					destHeight += (int)((srcBounds.height - srcHeight) * scaleX);
 					if (xor && allowXOR) {
 						g.setComposite(VCLGraphics.xorImageComposite);
 						VCLGraphics.xorImageComposite.setXORMode(Color.black);
 					}
 					Iterator clipRects = clipList.iterator();
-					if (srcWidth == destWidth && srcHeight == destHeight) {
-						while (clipRects.hasNext()) {
-							Rectangle clipRect = ((Rectangle)clipRects.next()).intersection(destBounds);
-							int srcClipX = srcX + clipRect.x - destX;
-							int srcClipY = srcY + clipRect.y - destY;
-							g.setClip(clipRect);
-							g.drawImage(img, clipRect.x, clipRect.y, clipRect.x + clipRect.width, clipRect.y + clipRect.height, srcClipX, srcClipY, srcClipX + clipRect.width, srcClipY + clipRect.height, null);
-						}
-					}
-					else {
-						while (clipRects.hasNext()) {
-							g.setClip((Rectangle)clipRects.next());
-							g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
-						}
+					while (clipRects.hasNext()) {
+						g.setClip((Rectangle)clipRects.next());
+						g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
 					}
 				}
 				catch (Throwable t) {
@@ -788,6 +781,10 @@ public final class VCLGraphics {
 			return;
 		}
 
+		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, bmp.getWidth(), bmp.getHeight()));
+		if (srcBounds.isEmpty())
+			return;
+
 		Rectangle destBounds = new Rectangle(destX, destY, destWidth, destHeight).intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
@@ -826,25 +823,21 @@ public final class VCLGraphics {
 					}
 				}
 				else {
+					// Make sure source bounds don't fall outside the bitmap
+					float scaleX = destWidth / srcWidth;
+					float scaleY = destHeight / srcHeight;
+					destX += (int)((srcBounds.x - srcX) * scaleX);
+					destY += (int)((srcBounds.y - srcY) * scaleY);
+					destWidth += (int)((srcBounds.width - srcWidth) * scaleX);
+					destHeight += (int)((srcBounds.height - srcHeight) * scaleX);
 					if (xor) {
 						g.setComposite(VCLGraphics.xorImageComposite);
 						VCLGraphics.xorImageComposite.setXORMode(Color.black);
 					}
 					Iterator clipRects = clipList.iterator();
-					if (srcWidth == destWidth && srcHeight == destHeight) {
-						while (clipRects.hasNext()) {
-							Rectangle clipRect = ((Rectangle)clipRects.next()).intersection(destBounds);
-							int srcClipX = srcX + clipRect.x - destX;
-							int srcClipY = srcY + clipRect.y - destY;
-							g.setClip(clipRect);
-							g.drawImage(bmp.getImage(), clipRect.x, clipRect.y, clipRect.x + clipRect.width, clipRect.y + clipRect.height, srcClipX, srcClipY, srcClipX + clipRect.width, srcClipY + clipRect.height, null);
-						}
-					}
-					else {
-						while (clipRects.hasNext()) {
-							g.setClip((Rectangle)clipRects.next());
-							g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
-						}
+					while (clipRects.hasNext()) {
+						g.setClip((Rectangle)clipRects.next());
+						g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
 					}
 				}
 			}
