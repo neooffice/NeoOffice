@@ -776,19 +776,13 @@ public final class VCLGraphics {
 			return;
 		}
 
-		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(graphicsBounds);
+		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, bmp.getWidth(), bmp.getHeight()));
 		if (srcBounds.isEmpty())
 			return;
 
-		destX += srcBounds.x - srcX;
-		destY += srcBounds.y - srcY;
-
-		Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, dataWidth, dataHeight));
+		Rectangle destBounds = new Rectangle(destX, destY, destWidth, destHeight).intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
-
-		srcBounds.x += destBounds.x - destX;
-		srcBounds.y += destBounds.y - destY;
 
 		Graphics2D g = getGraphics();
 		if (g != null) {
