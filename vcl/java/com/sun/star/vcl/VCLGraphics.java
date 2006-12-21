@@ -655,7 +655,7 @@ public final class VCLGraphics {
 					destX += (int)((srcBounds.x - srcX) * scaleX);
 					destY += (int)((srcBounds.y - srcY) * scaleY);
 					destWidth += (int)((srcBounds.width - srcWidth) * scaleX);
-					destHeight += (int)((srcBounds.height - srcHeight) * scaleX);
+					destHeight += (int)((srcBounds.height - srcHeight) * scaleY);
 					if (xor && allowXOR) {
 						g.setComposite(VCLGraphics.xorImageComposite);
 						VCLGraphics.xorImageComposite.setXORMode(Color.black);
@@ -725,29 +725,27 @@ public final class VCLGraphics {
 
 		buffer.order(ByteOrder.nativeOrder());
 
-		Rectangle destBounds = new Rectangle(destX, destY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, dataWidth, dataHeight));
-		if (destBounds.isEmpty())
-			return;
-
 		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(graphicsBounds);
+		if (srcBounds.isEmpty())
+			return;
+
+		destX += srcBounds.x - srcX;
+		destY += srcBounds.y - srcY;
+
+		Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, dataWidth, dataHeight));
 		if (destBounds.isEmpty())
 			return;
 
-		destBounds.x += srcBounds.x - srcX;
-		destBounds.y += srcBounds.y - srcY;
-
-		if (srcBounds.width > destBounds.x + destBounds.width)
-			srcBounds.width = destBounds.x + destBounds.width;
-		if (srcBounds.height > destBounds.y + destBounds.height)
-			srcBounds.height = destBounds.y + destBounds.height;
+		srcBounds.x += destBounds.x - destX;
+		srcBounds.y += destBounds.y - destY;
 
 		Graphics2D g = getGraphics(false);
 		if (g != null) {
 			try {
 				g.setComposite(VCLGraphics.copyComposite);
 				VCLGraphics.copyComposite.setData(buffer, destBounds, dataWidth, dataHeight);
-				g.setClip(srcBounds.x, srcBounds.y, srcBounds.width, srcBounds.height);
-				g.fillRect(srcBounds.x, srcBounds.y, srcBounds.width, srcBounds.height);
+				g.setClip(srcBounds.x, srcBounds.y, destBounds.width, destBounds.height);
+				g.fillRect(srcBounds.x, srcBounds.y, destBounds.width, destBounds.height);
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -778,13 +776,19 @@ public final class VCLGraphics {
 			return;
 		}
 
-		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(new Rectangle(0, 0, bmp.getWidth(), bmp.getHeight()));
+		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(graphicsBounds);
 		if (srcBounds.isEmpty())
 			return;
 
-		Rectangle destBounds = new Rectangle(destX, destY, destWidth, destHeight).intersection(graphicsBounds);
+		destX += srcBounds.x - srcX;
+		destY += srcBounds.y - srcY;
+
+		Rectangle destBounds = new Rectangle(destX, destY, srcBounds.width, srcBounds.height).intersection(new Rectangle(0, 0, dataWidth, dataHeight));
 		if (destBounds.isEmpty())
 			return;
+
+		srcBounds.x += destBounds.x - destX;
+		srcBounds.y += destBounds.y - destY;
 
 		Graphics2D g = getGraphics();
 		if (g != null) {
@@ -821,7 +825,7 @@ public final class VCLGraphics {
 					destX += (int)((srcBounds.x - srcX) * scaleX);
 					destY += (int)((srcBounds.y - srcY) * scaleY);
 					destWidth += (int)((srcBounds.width - srcWidth) * scaleX);
-					destHeight += (int)((srcBounds.height - srcHeight) * scaleX);
+					destHeight += (int)((srcBounds.height - srcHeight) * scaleY);
 					if (xor) {
 						g.setComposite(VCLGraphics.xorImageComposite);
 						VCLGraphics.xorImageComposite.setXORMode(Color.black);
