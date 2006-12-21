@@ -534,18 +534,6 @@ public final class VCLGraphics {
 	}
 
 	/**
-	 * Returns a new <code>VCLImage</code> with the same size as the drawable
-	 * area of this graphics.
-	 *
-	 * @return a new <code>VCLImage</code>
-	 */
-	public VCLImage createImage() {
-
-		return createImage(0, 0, graphicsBounds.width, graphicsBounds.height);
-
-	}
-
-	/**
 	 * Returns a <code>VCLImage</code> of the frame's pixels.
 	 *
 	 * @param x the x coordinate of the rectangle
@@ -638,10 +626,16 @@ public final class VCLGraphics {
 				img = vg.getImage().getImage();
 
 			if (img == null) {
-				VCLImage srcImage = vg.createImage(srcX, srcY, srcWidth, srcHeight);
+				VCLImage srcImage = vg.createImage(srcBounds.x, srcBounds.y, srcBounds.width, srcBounds.height);
 				if (srcImage == null)
 					return;
 
+				srcX = srcBounds.x - srcX;
+				srcY = srcBounds.y - srcY;
+				srcBounds.x = 0;
+				srcBounds.y = 0;
+				srcBounds.width = srcImage.getWidth();
+				srcBounds.height = srcImage.getHeight();
 				img = srcImage.getImage();
 				srcImage.dispose();
 			}
