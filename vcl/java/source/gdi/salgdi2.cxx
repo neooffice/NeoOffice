@@ -648,8 +648,20 @@ void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSal
 SalBitmap* JavaSalGraphics::getBitmap( long nX, long nY, long nDX, long nDY )
 {
 	// Don't do anything if this is a printer
-	if ( mpPrinter || nDX < 1 || nDY < 1 )
+	if ( mpPrinter || !nDX || !nDY )
 		return NULL;
+
+	// Normalize the bounds
+	if ( nDX < 0 )
+	{
+		nX += nDX;
+		nDX = -nDX;
+    }
+	if ( nDY < 0 )
+	{
+		nY += nDY;
+		nDY = -nDY;
+	}
 
 	JavaSalBitmap *pBitmap = new JavaSalBitmap();
 

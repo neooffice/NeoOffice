@@ -290,6 +290,12 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, const com_su
 	mpVCLGraphics->addGraphicsChangeListener( this );
 
 	mnBitCount = mpVCLGraphics->getBitCount();
+	if ( mnBitCount != 32 )
+	{
+		delete mpVCLGraphics;
+		mpVCLGraphics = NULL;
+		return false;
+	}
 
 	// Save the palette
 	USHORT nColors = ( ( mnBitCount <= 8 ) ? ( 1 << mnBitCount ) : 0 );
