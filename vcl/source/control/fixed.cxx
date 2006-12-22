@@ -185,7 +185,7 @@ void FixedText::ImplInitSettings( BOOL bFont,
 		if ( GetParent()->GetType() == WINDOW_FIXEDBORDER )
 		{
 			EnableChildTransparentMode( TRUE );
-			GetParent()->Invalidate();
+			Invalidate();
 		}
 		else
 		{
@@ -197,7 +197,7 @@ void FixedText::ImplInitSettings( BOOL bFont,
 				if ( pChild->GetType() == WINDOW_FIXEDBORDER )
 				{
 					EnableChildTransparentMode( TRUE );
-					GetParent()->Invalidate();
+					Invalidate();
 					SetBackground();
 					SetControlBackground();
 					break;
@@ -379,7 +379,7 @@ void FixedText::StateChanged( StateChangedType nType )
 		if ( IsReallyVisible() && IsUpdateMode() )
 #ifdef USE_JAVA
 			if ( IsChildTransparentModeEnabled() || ( GetBackground().GetStyle() == WALLPAPER_NULL ) )
-				GetParent()->Invalidate();
+				GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
 			else
 #endif	// USE_JAVA
 			Invalidate();
@@ -413,7 +413,7 @@ void FixedText::StateChanged( StateChangedType nType )
 #ifdef USE_JAVA
 	else if ( ( nType == WINDOW_FIRSTOVERLAP ) && ( IsChildTransparentModeEnabled() || ( GetBackground().GetStyle() == WALLPAPER_NULL ) ) )
 	{
-		GetParent()->Invalidate();
+		Invalidate();
 	}
 #endif	// USE_JAVA
 }
@@ -1236,7 +1236,7 @@ void FixedImage::StateChanged( StateChangedType nType )
 		if ( IsReallyVisible() && IsUpdateMode() )
 #ifdef USE_JAVA
 			if ( IsChildTransparentModeEnabled() || ( GetBackground().GetStyle() == WALLPAPER_NULL ) )
-				GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+				GetParent()->Invalidate();
 			else
 #endif	// USE_JAVA
 			Invalidate();
@@ -1256,7 +1256,7 @@ void FixedImage::StateChanged( StateChangedType nType )
 #ifdef USE_JAVA
 	else if ( ( nType == WINDOW_FIRSTOVERLAP ) && ( IsChildTransparentModeEnabled() || ( GetBackground().GetStyle() == WALLPAPER_NULL ) ) )
 	{
-		Invalidate();
+		GetParent()->Invalidate();
 	}
 #endif	// USE_JAVA
 }
