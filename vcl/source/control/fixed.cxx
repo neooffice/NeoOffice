@@ -205,7 +205,7 @@ void FixedText::ImplInitSettings( BOOL bFont,
 			}
 		}
 	}
-#endif
+#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
@@ -381,7 +381,7 @@ void FixedText::StateChanged( StateChangedType nType )
 			if ( IsChildTransparentModeEnabled() || ( GetBackground().GetStyle() == WALLPAPER_NULL ) )
 				GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
 			else
-#endif
+#endif	// USE_JAVA
 			Invalidate();
 	}
 	else if ( nType == STATE_CHANGE_STYLE )
@@ -415,7 +415,7 @@ void FixedText::StateChanged( StateChangedType nType )
 	{
 		Invalidate();
 	}
-#endif
+#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
@@ -546,7 +546,7 @@ void FixedLine::ImplDraw( bool bLayout )
     String*					pDisplayText = bLayout ? &mpLayoutData->m_aDisplayText : NULL;
 #ifdef USE_JAVA
 	BOOL					bNativeOK = FALSE;
-#endif
+#endif	// USE_JAVA
 
 	if ( rStyleSettings.GetOptions() & STYLE_OPTION_MONO )
 		SetLineColor( Color( COL_BLACK ) );
@@ -589,7 +589,7 @@ void FixedLine::ImplDraw( bool bLayout )
 			
 			if ( ! bNativeOK )
 			{
-#endif
+#endif	// USE_JAVA
             long nX = 0;
             long nY = 0;
             
@@ -614,7 +614,7 @@ void FixedLine::ImplDraw( bool bLayout )
             }
 #ifdef USE_JAVA
 			}
-#endif
+#endif	// USE_JAVA
         }
 	}
 	else
@@ -656,7 +656,7 @@ void FixedLine::ImplDraw( bool bLayout )
 			
 			if ( ! bNativeOK )
 			{
-#endif
+#endif	// USE_JAVA
             DrawLine( Point( aRect.Right()+FIXEDLINE_TEXT_BORDER, nTop ), Point( aOutSize.Width()-1, nTop ) );
             if ( !(rStyleSettings.GetOptions() & STYLE_OPTION_MONO) )
             {
@@ -665,7 +665,7 @@ void FixedLine::ImplDraw( bool bLayout )
             }
 #ifdef USE_JAVA
 			}
-#endif
+#endif	// USE_JAVA
         }
     }
 }
@@ -1092,7 +1092,7 @@ void FixedImage::ImplInitSettings()
 			}
 		}
 	}
-#endif
+#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
@@ -1236,9 +1236,9 @@ void FixedImage::StateChanged( StateChangedType nType )
 		if ( IsReallyVisible() && IsUpdateMode() )
 #ifdef USE_JAVA
 			if ( IsChildTransparentModeEnabled() || ( GetBackground().GetStyle() == WALLPAPER_NULL ) )
-				GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+				GetParent()->Invalidate();
 			else
-#endif
+#endif	// USE_JAVA
 			Invalidate();
 	}
 	else if ( nType == STATE_CHANGE_STYLE )
@@ -1256,9 +1256,9 @@ void FixedImage::StateChanged( StateChangedType nType )
 #ifdef USE_JAVA
 	else if ( ( nType == WINDOW_FIRSTOVERLAP ) && ( IsChildTransparentModeEnabled() || ( GetBackground().GetStyle() == WALLPAPER_NULL ) ) )
 	{
-		Invalidate();
+		GetParent()->Invalidate();
 	}
-#endif
+#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------

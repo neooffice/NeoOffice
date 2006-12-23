@@ -41,6 +41,9 @@
 #ifndef _SV_SALBMP_H
 #include <salbmp.h>
 #endif
+#ifndef _SV_SALDATA_HXX
+#include <saldata.hxx>
+#endif
 #ifndef _SV_JAVA_LANG_CLASS_HXX
 #include <java/lang/Class.hxx>
 #endif
@@ -477,27 +480,38 @@ void com_sun_star_vcl_VCLGraphics::copyBits( const com_sun_star_vcl_VCLGraphics 
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLImage *com_sun_star_vcl_VCLGraphics::createImage()
+void com_sun_star_vcl_VCLGraphics::copyBits( BYTE *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8, long _par9 )
 {
 	static jmethodID mID = NULL;
-	com_sun_star_vcl_VCLImage *out = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()Lcom/sun/star/vcl/VCLImage;";
-			mID = t.pEnv->GetMethodID( getMyClass(), "createImage", cSignature );
+			char *cSignature = "(Ljava/nio/ByteBuffer;IIIIIIIII)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "copyBits", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
-			if ( tempObj )
-				out = new com_sun_star_vcl_VCLImage( tempObj );
+			jobject byteBuffer = t.pEnv->NewDirectByteBuffer( _par0, _par1 );
+			if ( byteBuffer )
+			{
+				jvalue args[10];
+				args[0].l = byteBuffer;
+				args[1].i = jint( _par1 );
+				args[2].i = jint( _par2 );
+				args[3].i = jint( _par3 );
+				args[4].i = jint( _par4 );
+				args[5].i = jint( _par5 );
+				args[6].i = jint( _par6 );
+				args[7].i = jint( _par7 );
+				args[8].i = jint( _par8 );
+				args[9].i = jint( _par9 );
+				t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+			}
 		}
 	}
-	return out;
 }
 
 // ----------------------------------------------------------------------------

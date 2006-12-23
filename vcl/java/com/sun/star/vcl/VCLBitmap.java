@@ -98,60 +98,6 @@ public final class VCLBitmap {
 	}
 
 	/**
-	 * Copies the pixels from the specified <code>VCLGraphics</code> to the
-	 * bitmap with scaling.
-	 *
-	 * @param g the <code>VCLGraphics</code>
-	 * @param srcX the x coordinate of the graphics
-	 * @param srcY the y coordinate of the graphics
-	 * @param srcWidth the width to be copied
-	 * @param srcHeight the height to be copied
-	 * @param destX the x coordinate of the bitmap
-	 * @param destY the y coordinate of the bitmap
-	 */
-	public void copyBits(VCLGraphics graphics, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY) {
-
-		Rectangle srcBounds = new Rectangle(srcX, srcY, srcWidth, srcHeight).intersection(graphics.getGraphicsBounds());
-		if (srcBounds.isEmpty())
-			return;
-
-		if (!srcBounds.contains(srcX, srcY, srcWidth, srcHeight)) {
-			destX = srcBounds.x - srcX;
-			destY = srcBounds.y - srcY;
-			srcX = srcBounds.x;
-			srcY = srcBounds.y;
-			srcWidth = srcBounds.width;
-			srcY = srcBounds.height;
-		}
-
-		BufferedImage img = null;
-		if ( graphics.getImage() != null)
-			img = graphics.getImage().getImage();
-
-		if (img == null) {
-            VCLImage srcImage = graphics.createImage(srcX, srcY, srcWidth, srcHeight);
-            if (srcImage == null)
-                return;
-
-			srcX = 0;
-			srcY = 0;
-
-			img = srcImage.getImage();
-			srcImage.dispose();
-		}
-
-		Graphics2D g = image.createGraphics();
-		try {
-			g.drawImage(img, destX, destY, destX + srcWidth, destY + srcHeight, srcX, srcY, srcX + srcWidth, srcY + srcHeight, null);
-		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-		g.dispose();
-
-	}
-
-	/**
 	 * Returns the bit count of the bitmap.
 	 *
 	 * @return the bit count of the bitmap

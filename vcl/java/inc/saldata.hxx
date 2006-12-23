@@ -53,6 +53,7 @@
 #endif
 
 class JavaImplFontData;
+class JavaSalBitmap;
 class JavaSalFrame;
 class JavaSalGraphics;
 class JavaSalInstance;

@@ -683,8 +683,8 @@ SalFrame* JavaSalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle 
 				const SalFrameGeometry& rGeom( pNextFrame->GetGeometry() );
 				nX = rGeom.nX - rGeom.nLeftDecoration;
 				nY = rGeom.nY - rGeom.nTopDecoration;
-				nWidth = rGeom.nWidth + rGeom.nLeftDecoration + rGeom.nRightDecoration;
-				nHeight = rGeom.nHeight + rGeom.nTopDecoration + rGeom.nBottomDecoration;
+				nWidth = rGeom.nWidth;
+				nHeight = rGeom.nHeight;
 			}
 		}
 	}

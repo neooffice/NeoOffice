@@ -51,12 +51,8 @@
 #define OGL_STATE_INVALID		(0x00000001)
 #define	OGL_STATE_VALID			(0x00000002)
 
-namespace vcl
-{
-class java_lang_Object;
-class com_sun_star_vcl_VCLImage;
-}
-
+class BitmapBuffer;
+class JavaSalBitmap;
 class JavaSalGraphics;
 
 // -----------------
@@ -69,10 +65,9 @@ private:
 	static void*			mpNativeContext;
 	static ULONG			mnOGLState;
 
-	BYTE*					mpBits;
-	::vcl::java_lang_Object*	mpData;
+	JavaSalBitmap*			mpBitmap;
+	BitmapBuffer*			mpBuffer;
 	JavaSalGraphics*		mpGraphics;
-	::vcl::com_sun_star_vcl_VCLImage*	mpImage;
 
 public:					
 							JavaSalOpenGL();

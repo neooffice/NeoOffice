@@ -36,7 +36,9 @@
 package com.sun.star.vcl;
 
 import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
 import java.awt.image.DataBufferInt;
+import java.awt.image.WritableRaster;
 
 /**
  * The Java class that implements the SalFrame C++ class methods.
@@ -45,6 +47,11 @@ import java.awt.image.DataBufferInt;
  * @author 	    $Author$
  */
 public final class VCLImage {
+
+	/**
+	 * The LARGE_IMAGE_PIXELS constant.
+	 */
+	public static int LARGE_IMAGE_PIXELS = 500 * 500;
 
 	/**
 	 * The bit count.
@@ -121,6 +128,28 @@ public final class VCLImage {
 	}
 
 	/**
+	 * Constructs a new <code>VCLImage</code> instance.
+	 *
+	 * @param r the writable raster
+	 */
+	VCLImage(WritableRaster r) {
+
+		width = r.getWidth();
+		height = r.getHeight();
+
+		// Always set bit count to 32
+		bitCount = 32;
+
+		// Create the image
+		image = new BufferedImage(ColorModel.getRGBdefault(), r, true, null);
+
+		// Cache the graphics
+		pageFormat = null;
+		graphics = new VCLGraphics(this, pageFormat);
+
+	}
+
+	/**
  	 * Disposes the image and releases any system resources that it is
 	 * using.
 	 */
@@ -132,6 +161,10 @@ public final class VCLImage {
 		image = null;
 		pageFormat = null;
 
+		// Run the garbage collector after disposing large images
+		if (width * height > VCLImage.LARGE_IMAGE_PIXELS)
+			System.gc();
+
 	}
 
 	/**
@@ -142,20 +175,6 @@ public final class VCLImage {
 	int getBitCount() {
 
 		return bitCount;
-
-	}
-
-	/**
-	 * Returns the image's data. Warning: calling this method will cause all
-	 * succeeding drawing operations to this image to be an order of magnitude
-	 * slower on Mac OS X 10.4 due to the way the JVM does graphics
-	 * acceleration.
-	 *
-	 * @return the image's data
-	 */
-	public int[] getData() {
-
-		return ((DataBufferInt)image.getRaster().getDataBuffer()).getData();
 
 	}
 

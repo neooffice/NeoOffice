@@ -234,7 +234,7 @@ BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( pNSPrintInfo )
+	if ( pNSPrintInfo && nWidth > 0 && nHeight > 0 )
 	{
 		NSPrintingOrientation nOldOrientation = [(NSPrintInfo *)pNSPrintInfo orientation];
 		NSSize aOldSize = [(NSPrintInfo *)pNSPrintInfo paperSize];

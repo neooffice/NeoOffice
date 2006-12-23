@@ -216,15 +216,15 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 	if ( !bDrawn )
 	{
 		// If the bitmap is backed by a VCLGraphics instance, draw that
-		com_sun_star_vcl_VCLGraphics *pBitmapGraphics = pJavaSalBitmap->GetVCLGraphics();
-		if ( pBitmapGraphics )
+		com_sun_star_vcl_VCLGraphics *pVCLGraphics = pJavaSalBitmap->GetVCLGraphics();
+		if ( pVCLGraphics )
 		{
 			Point aPoint( pJavaSalBitmap->GetPoint() );
-			mpVCLGraphics->copyBits( pBitmapGraphics, aPoint.X(), aPoint.Y(), aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, sal_True );
+			mpVCLGraphics->copyBits( pVCLGraphics, aPoint.X() + aPosAry.mnSrcX, aPoint.Y() + aPosAry.mnSrcY, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, sal_True );
 		}
 		else
 		{
-			com_sun_star_vcl_VCLBitmap *pVCLBitmap = pJavaSalBitmap->GetVCLBitmap( aPosAry.mnSrcX, aPosAry.mnSrcY, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight );
+			com_sun_star_vcl_VCLBitmap *pVCLBitmap = pJavaSalBitmap->CreateVCLBitmap( aPosAry.mnSrcX, aPosAry.mnSrcY, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight );
 			if ( pVCLBitmap )
 			{
 				mpVCLGraphics->drawBitmap( pVCLBitmap, 0, 0, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight );
@@ -626,7 +626,6 @@ void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSal
 							pBits = NULL;
 
 							mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight );
-							mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, pDestBuffer->mnWidth, pDestBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, pDestBuffer->mnWidth, pDestBuffer->mnHeight );
 
 							delete pDestBuffer;
 						}
@@ -649,8 +648,20 @@ void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSal
 SalBitmap* JavaSalGraphics::getBitmap( long nX, long nY, long nDX, long nDY )
 {
 	// Don't do anything if this is a printer
-	if ( mpPrinter || nDX < 1 || nDY < 1 )
+	if ( mpPrinter || !nDX || !nDY )
 		return NULL;
+
+	// Normalize the bounds
+	if ( nDX < 0 )
+	{
+		nX += nDX;
+		nDX = -nDX;
+    }
+	if ( nDY < 0 )
+	{
+		nY += nDY;
+		nDY = -nDY;
+	}
 
 	JavaSalBitmap *pBitmap = new JavaSalBitmap();
 

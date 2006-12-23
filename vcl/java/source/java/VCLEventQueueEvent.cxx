@@ -302,7 +302,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 	// Handle events that require a JavaSalFrame pointer
 	JavaSalFrame *pFrame = getFrame();
 	bool bFound = false;
-	bool bFlushingDisabled = false;
+	JavaSalFrame* pFlushingDisabled = NULL;
 	if ( pFrame && pFrame->GetInstance() )
 	{
 		for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
@@ -312,7 +312,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				bFound = true;
 				if ( pFrame->mbVisible )
 				{
-					bFlushingDisabled = true;
+					pFlushingDisabled = pFrame;
 					pFrame->mpVCLFrame->enableFlushing( sal_False );
 				}
 				break;
@@ -351,6 +351,19 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 						(*it)->Show( FALSE );
 						(*it)->Show( TRUE, TRUE );
 					}
+				}
+			}
+			break;
+		}
+		case SALEVENT_MINIMIZED:
+		{
+			if ( !bDeleteDataOnly && pFrame && pFrame->mbVisible )
+			{
+				for ( ::std::list< JavaSalFrame* >::const_iterator it = pFrame->maChildren.begin(); it != pFrame->maChildren.end(); ++it )
+				{
+					// Hide Java window but leave visible flag set to true
+					if ( (*it)->mbVisible )
+						(*it)->mpVCLFrame->setVisible( sal_False );
 				}
 			}
 			break;
@@ -770,17 +783,14 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 	}
 
-	if ( bFlushingDisabled )
+	if ( pFlushingDisabled )
 	{
 		for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 		{
-			if ( pFrame == *it )
+			if ( pFlushingDisabled == *it )
 			{
-				if ( pFrame->mbVisible )
-				{
-					bFlushingDisabled = false;
-					pFrame->mpVCLFrame->enableFlushing( sal_True );
-				}
+				if ( pFlushingDisabled->mbVisible )
+					pFlushingDisabled->mpVCLFrame->enableFlushing( sal_True );
 				break;
 			}
 		}
