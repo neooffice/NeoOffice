@@ -1,0 +1,90 @@
+Index: source/timer.cxx
+===================================================================
+RCS file: /cvs/udk/vos/source/timer.cxx,v
+retrieving revision 1.6
+diff -u -r1.6 timer.cxx
+--- source/timer.cxx	2 Jun 2006 12:45:24 -0000	1.6
++++ source/timer.cxx	31 Dec 2006 19:58:00 -0000
+@@ -328,7 +328,11 @@
+ 		return sal_False;
+ 	}
+ 	
++#ifdef MACOSX
++	m_Lock.acquire();
++#else	// MACOSX
+ 	OGuard Guard(&m_Lock);
++#endif	// MACOSX
+ 
+ 	// try to find one with equal or lower remaining time.
+ 	OTimer** ppIter = &m_pHead;
+@@ -357,6 +361,10 @@
+         m_notEmpty.set();
+ 	}
+ 
++#ifdef MACOSX
++	m_Lock.release();
++#endif	// MACOSX
++
+ 	return sal_True;
+ }
+ 
+@@ -370,7 +378,11 @@
+ 	}
+ 	
+ 	// lock access
++#ifdef MACOSX
++	m_Lock.acquire();
++#else	// MACOSX
+ 	OGuard Guard(&m_Lock);
++#endif	// MACOSX
+ 
+ 	OTimer** ppIter = &m_pHead;
+ 
+@@ -380,11 +392,18 @@
+ 		{	
+ 			// remove timer from list
+ 			*ppIter = (*ppIter)->m_pNext;
++#ifdef MACOSX
++			m_Lock.release();
++#endif	// MACOSX
+ 			return sal_True;
+ 		}
+ 		ppIter= &((*ppIter)->m_pNext);
+ 	} 
+ 
++#ifdef MACOSX
++	m_Lock.release();
++#endif	// MACOSX
++
+ 	return sal_False;
+ }
+ 
+@@ -398,17 +417,28 @@
+ 	}
+ 	
+ 	// lock access
++#ifdef MACOSX
++	m_Lock.acquire();
++#else	// MACOSX
+ 	OGuard Guard(&m_Lock);
++#endif	// MACOSX
+ 
+ 	// check the list
+ 	for (OTimer* pIter = m_pHead; pIter != 0; pIter= pIter->m_pNext)
+ 	{
+ 		if (pIter == pTimer)
+         {    
++#ifdef MACOSX
++			m_Lock.release();
++#endif	// MACOSX
+ 			return sal_True;
+         }
+ 	}
+ 
++#ifdef MACOSX
++	m_Lock.release();
++#endif	// MACOSX
++
+ 	return sal_False;
+ }
+ 

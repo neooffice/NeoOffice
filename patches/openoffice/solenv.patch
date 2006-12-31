@@ -1,11 +1,11 @@
 Index: inc/unxmacx.mk
 ===================================================================
 RCS file: /cvs/tools/solenv/inc/unxmacx.mk,v
-retrieving revision 1.3
-diff -u -r1.3 unxmacx.mk
---- inc/unxmacx.mk	5 Jul 2006 22:04:13 -0000	1.3
-+++ inc/unxmacx.mk	21 Nov 2006 18:07:02 -0000
-@@ -200,10 +200,10 @@
+retrieving revision 1.4.2.1
+diff -u -r1.4.2.1 unxmacx.mk
+--- inc/unxmacx.mk	8 Nov 2006 09:43:51 -0000	1.4.2.1
++++ inc/unxmacx.mk	23 Dec 2006 20:11:37 -0000
+@@ -269,10 +269,10 @@
  STDSLOCUI=
  
  STDLIBGUIST=-lm
@@ -19,21 +19,3 @@ diff -u -r1.3 unxmacx.mk
  STDSHLCUIMT=-lpthread CPPRUNTIME -lm
  
  LIBMGR=ar
-Index: inc/libs.mk
-===================================================================
-RCS file: /cvs/tools/solenv/inc/libs.mk,v
-retrieving revision 1.101.40.1
-diff -u -r1.101.40.1 libs.mk
---- inc/libs.mk	10 Aug 2006 14:45:20 -0000	1.101.40.1
-+++ inc/libs.mk	28 Nov 2006 06:12:12 -0000
-@@ -196,10 +196,10 @@
- BERKELEYLIB=-ldb
- BERKELEYCPPLIB=-ldb_cxx
- .ELSE
--BERKELEYLIB=-ldb-4.2
--BERKELEYCPPLIB=-ldb_cxx-4.2
-+BERKELEYLIB=-ldb-4.3
-+BERKELEYCPPLIB=-ldb_cxx-4.3
- .ENDIF
- CURLLIB=-lcurl
- SFX2LIB=-lsfx$(OFFICEUPD)$(DLLPOSTFIX)

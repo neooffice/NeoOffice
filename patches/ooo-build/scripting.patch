@@ -1,0 +1,10 @@
+--- source/vbaevents/makefile.mk	Sat Nov 25 14:34:57 2006
++++ source/vbaevents/makefile.mk	Mon Nov 27 16:02:35 2006
+@@ -1,6 +1,6 @@
+ PRJ=..$/..
+ 
+-PRJNAME=
++PRJNAME=vbaevents
+ TARGET=vbaevents
+ .IF "$(ENABLE_VBA)"!="YES"
+ dummy:

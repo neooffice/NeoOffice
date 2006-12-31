@@ -1,0 +1,24 @@
+Index: source/testtool/file_testtool.scp
+===================================================================
+RCS file: /cvs/installation/scp2/source/testtool/file_testtool.scp,v
+retrieving revision 1.5
+diff -u -r1.5 file_testtool.scp
+--- source/testtool/file_testtool.scp	4 Aug 2006 10:25:33 -0000	1.5
++++ source/testtool/file_testtool.scp	30 Dec 2006 05:20:30 -0000
+@@ -38,6 +38,8 @@
+ STD_LIB_FILE( gid_File_Lib_Communi, communi )
+ STD_LIB_FILE( gid_File_Lib_Simplecm, simplecm )
+ 
++// The ooo-build VBA changes break linking of the testtool
++#ifndef MACOSX
+ File gid_File_Bin_Testtool
+     BIN_FILE_BODY;
+     Dir = gid_Dir_Program;
+@@ -48,6 +50,7 @@
+     Name = "testtool.exe";
+   #endif
+ End
++#endif
+ 
+ File gid_File_Hid_Testtool
+     BIN_FILE_BODY;

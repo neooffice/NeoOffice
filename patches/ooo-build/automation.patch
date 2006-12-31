@@ -1,0 +1,26 @@
+Index: util/makefile.mk
+===================================================================
+RCS file: /cvs/util/automation/util/makefile.mk,v
+retrieving revision 1.22
+diff -u -r1.22 makefile.mk
+--- util/makefile.mk	20 Jun 2006 00:27:47 -0000	1.22
++++ util/makefile.mk	30 Dec 2006 05:10:38 -0000
+@@ -148,6 +148,9 @@
+ 
+ # --- TESTTOOL IDE ------------------------------------------------------
+ 
++# The ooo-build VBA changes break linking of the testtool
++.IF "$(OS)"!="MACOSX"
++
+ APP1TARGET=testtool
+ 
+ .IF "$(GUI)" == "UNX"
+@@ -216,6 +219,8 @@
+                 $(OBJ)$/cmdbasestream.obj \
+                 $(OBJ)$/svcommstream.obj
+ 
++.ENDIF		# "$(OS)"!="MACOSX"
++
+ # --- TESTTOOL MINIAPP ------------------------------------------------------
+ # ressources are linked here
+ 

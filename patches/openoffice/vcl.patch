@@ -109,3 +109,14 @@ diff -u -r1.9 salnativewidgets.hxx
  /* ImplControlValue:
   *
   *   Generic value container for all control parts.
+--- util/makefile.mk	2006-12-29 08:27:46.000000000 -0800
++++ util/makefile.mk	2006-12-29 08:28:28.000000000 -0800
+@@ -275,7 +275,7 @@
+ .IF "$(USE_XINERAMA)" != "NO"
+ 
+ .IF "$(OS)"=="MACOSX"
+-XINERAMALIBS=-lXinerama
++XINERAMALIBS= /usr/X11R6/lib/libXinerama.a
+ .ELSE
+ .IF "$(OS)" != "SOLARIS" || "$(USE_XINERAMA_VERSION)" == "Xorg"
+ .IF "$(XINERAMA_LINK)" == "dynamic"
