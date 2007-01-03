@@ -109,9 +109,9 @@ PRODUCT_SUPPORT_URL_TEXT:=$(PRODUCT_NAME) Support
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
 OO_PACKAGES:=OpenOffice2
 OO_TAG:=-rOpenOffice_2_1_0
-OOO-BUILD_CVSROOT:=:pserver:anonymous@anoncvs.gnome.org:/cvs/gnome
-OOO-BUILD_PACKAGES:=ooo-build
-OOO-BUILD_TAG:=-D12/29/2006
+OOO-BUILD_SVNROOT:=http://svn.gnome.org/svn/ooo-build/trunk
+OOO-BUILD_PACKAGE:=ooo-build
+OOO-BUILD_TAG:=--revision '{2007-01-03}'
 OOO-BUILD_APPLY_TAG:=ooe680-m6
 LPSOLVE_SOURCE_URL=http://go-ooo.org/packages/SRC680/lp_solve_5.5.tar.gz
 XT_SOURCE_URL=http://go-ooo.org/packages/xt/xt-20051206-src-only.zip
@@ -138,8 +138,8 @@ build.oo_checkout:
 
 build.ooo-build_checkout: build.oo_checkout
 	mkdir -p "$(BUILD_HOME)"
-	cd "$(BUILD_HOME)" ; cvs -d "$(OOO-BUILD_CVSROOT)" co $(OOO-BUILD_TAG) $(OOO-BUILD_PACKAGES)
-	cd "$(BUILD_HOME)" ; chmod -Rf u+w "$(OOO-BUILD_PACKAGES)"
+	cd "$(BUILD_HOME)" ; svn co $(OOO-BUILD_TAG) $(OOO-BUILD_SVNROOT) "$(OOO-BUILD_PACKAGE)"
+	cd "$(BUILD_HOME)" ; chmod -Rf u+w "$(OOO-BUILD_PACKAGE)"
 	touch "$@"
 
 build.oo_patches: build.ooo-build_patches \
@@ -181,12 +181,7 @@ build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches
 	( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	touch "$@"
 
-build.ooo-build_patches: build.ooo-build_apply_patch \
-	build.ooo-build_automation_patch \
-	build.ooo-build_lpsolve_patch \
-	build.ooo-build_scp2_patch \
-	build.ooo-build_scripting_patch \
-	build.ooo-build_sfx2_patch
+build.ooo-build_patches: build.ooo-build_apply_patch
 	touch "$@"
 
 build.ooo-build_apply_patch: $(OOO-BUILD_PATCHES_HOME)/apply.patch build.oo_checkout build.ooo-build_checkout

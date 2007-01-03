@@ -33,7 +33,11 @@ Steps for building on Mac OS X 10.4 (Tiger) for both PowerPC and Intel
 
    ftp://www.go-mono.com/archive/1.2.2.1/macos-10-universal/0/MonoFramework-1.2.2.1_0.macos10.novell.universal.dmg
 
-7. Start the build by invoking the following commands. Note that you should replace $NEO_HOME with absolute path of your workspace's "neojava" directory:
+7. Make sure that you have downloaded and installed the Subversion client and have the "svn" command in your PATH. Subversion binaries can be downloaded from here:
+
+   http://subversion.tigris.org/project_packages.html
+
+8. Start the build by invoking the following commands. Note that you should replace $NEO_HOME with absolute path of your workspace's "neojava" directory:
 
    cd $NEO_HOME
    make GNUCP=</absolute/path/of/your/gcp/command> LIBIDL_CONFIG=</absolute/path/of/your/libIDL-config-2/command> PKG_CONFIG=</absolute/path/of/your/pkg-config/command>
