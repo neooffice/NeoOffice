@@ -1,52 +1,33 @@
 Index: patches/src680/apply
 ===================================================================
-RCS file: /cvs/gnome/ooo-build/patches/src680/apply,v
-retrieving revision 1.1500
-diff -u -r1.1500 apply
---- patches/src680/apply	28 Dec 2006 19:48:35 -0000	1.1500
-+++ patches/src680/apply	29 Dec 2006 16:09:23 -0000
-@@ -14,10 +14,12 @@
- 	 Fixes, Defaults, Features, VCL, Misc, \
- 	 Icons, Branding, VBABits, VBAObjects, CalcFixes, Leaks, Egg, \
- 	 QuickStartTray, SpeedImageList, GStreamer, Shrink
--LinuxCommon : Common, FedoraFixes, BuildBitsLinuxOnly, LinuxOnly, SystemBits, CWSBackports, GCJ, \
-+LinuxCommon : Common, FontConfigTemporaryHacks, 64bitTemporaryHacks, FedoraFixes, BuildBitsLinuxOnly, LinuxOnly, SystemBits, CWSBackports, GCJ, \
- 	      QPro, Lwp, cairocanvas, msaccess, KDE, \
- 	      64bitPatches, Fpickers, Mono, AddressBooks, QuickStarter
--Win32Common : Common, Win32Only, NotDebian
-+Win32Common : Common, FontConfigTemporaryHacks, 64bitTemporaryHacks, Win32Only, NotDebian
-+MacOSXCommon : Common, SystemBits, CWSBackports, Lwp, 64bitPatches
-+Win32Common : Common, FontConfigTemporaryHacks, 64bitTemporaryHacks, Win32Only, NotDebian
- 64bit : SystemJavaBits
- # Binfilter patches: a special distro; applied only when building with binfilter
- Binfilter : BFBuildBits, BFFixes, BFIcons, BF64bitPatches
-@@ -92,6 +94,8 @@
- # Novell
- NovellWin32: Win32, NovellOnly, NovellOnlyWin32, Lockdown, CalcSolver, cairocanvas, Fpickers
- NovellWin32ISO: Win32, NovellOnly, NovellOnlyWin32, Lockdown, CalcSolver, cairocanvas
-+# Mac OS X
-+MacOSX : MacOSXCommon, SystemJavaBits, CalcSolver
- # -------- [ Tag [ >= <tag> etc. ], ] patch sets --------
+--- patches/src680/apply	(revision 8487)
++++ patches/src680/apply	(working copy)
+@@ -1895,6 +1895,8 @@
  
+ # fix lpsolve build for OSX
+ macosx-lpsolve-makefile.diff
++# fix scripting build for OSX
++macosx-scripting-events.diff
+ # don't include malloc.h on OSX
+ macosx-sfx2-objstor.diff
  
-@@ -170,6 +174,7 @@
- # workaround for a crash in the help on amd64.
- sal-doublefree.diff, i#67740, mklose
- 
-+[ FontConfigTemporaryHacks ]
- # use fontconfig for font fallback
- # upate it for cjk charactor check   
- # name convertion localized <-> english font name 
-@@ -181,11 +186,11 @@
- # for mixed font set
- find-chinese-font.diff, Lin Peifeng
- 
-+[ 64bitTemporaryHacks ]
- # 64bit - return values smaller than 16bytes
- 64bit-returning-small-struct.diff, i#71815, caolan
- # 64bit - don't destroy floats
- 64bit-return-double.diff, i#71888, jholesov
--
- 
- [ CWSBackports ]
- # 64bit stuff
+Index: patches/src680/macosx-automation-testtool.diff
+===================================================================
+--- patches/src680/macosx-automation-testtool.diff	(revision 8487)
++++ patches/src680/macosx-automation-testtool.diff	(working copy)
+@@ -1,4 +1,4 @@
+-Index: util/makefile.mk
++Index: automation/util/makefile.mk
+ ===================================================================
+ RCS file: /cvs/util/automation/util/makefile.mk,v
+ retrieving revision 1.22
+Index: patches/src680/macosx-scp2-testtool.diff
+===================================================================
+--- patches/src680/macosx-scp2-testtool.diff	(revision 8487)
++++ patches/src680/macosx-scp2-testtool.diff	(working copy)
+@@ -1,4 +1,4 @@
+-Index: source/testtool/file_testtool.scp
++Index: scp2/source/testtool/file_testtool.scp
+ ===================================================================
+ RCS file: /cvs/installation/scp2/source/testtool/file_testtool.scp,v
+ retrieving revision 1.5
