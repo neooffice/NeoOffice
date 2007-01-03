@@ -11,23 +11,3 @@ Index: patches/src680/apply
  # don't include malloc.h on OSX
  macosx-sfx2-objstor.diff
  
-Index: patches/src680/macosx-automation-testtool.diff
-===================================================================
---- patches/src680/macosx-automation-testtool.diff	(revision 8487)
-+++ patches/src680/macosx-automation-testtool.diff	(working copy)
-@@ -1,4 +1,4 @@
--Index: util/makefile.mk
-+Index: automation/util/makefile.mk
- ===================================================================
- RCS file: /cvs/util/automation/util/makefile.mk,v
- retrieving revision 1.22
-Index: patches/src680/macosx-scp2-testtool.diff
-===================================================================
---- patches/src680/macosx-scp2-testtool.diff	(revision 8487)
-+++ patches/src680/macosx-scp2-testtool.diff	(working copy)
-@@ -1,4 +1,4 @@
--Index: source/testtool/file_testtool.scp
-+Index: scp2/source/testtool/file_testtool.scp
- ===================================================================
- RCS file: /cvs/installation/scp2/source/testtool/file_testtool.scp,v
- retrieving revision 1.5
