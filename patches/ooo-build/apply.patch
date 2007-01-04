@@ -1,0 +1,12 @@
+Index: patches/src680/apply
+===================================================================
+--- patches/src680/apply	(revision 8487)
++++ patches/src680/apply	(working copy)
+@@ -1897,7 +1897,3 @@
+ macosx-lpsolve-makefile.diff
+ # don't include malloc.h on OSX
+ macosx-sfx2-objstor.diff
+-
+-# ooo-build VBA bits break testtool linkage
+-macosx-scp2-testtool.diff, i#68883, noelp
+-macosx-automation-testtool.diff, i#68883, noelp
