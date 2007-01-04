@@ -19,17 +19,3 @@ diff -u -r1.4.2.1 unxmacx.mk
  STDSHLCUIMT=-lpthread CPPRUNTIME -lm
  
  LIBMGR=ar
-@@ -289,3 +289,13 @@
- RCLINK=
- RCLINKFLAGS=
- RCSETVERSION=
-+
-+.IF "$(BUILD_OS_MAJOR)"=="10"
-+.IF "$(CPUNAME)"=="POWERPC" && "$(BUILD_OS_MINOR)">="4"
-+CFLAGS+=-isysroot /Developer/SDKs/MacOSX10.3.9.sdk
-+LINKFLAGS+=-isysroot /Developer/SDKs/MacOSX10.3.9.sdk -Wl,-syslibroot,/Developer/SDKs/MacOSX10.3.9.sdk
-+.ELIF "$(CPUNAME)"=="INTEL" && "$(BUILD_OS_MINOR)">="5"
-+CFLAGS+=-isysroot /Developer/SDKs/MacOSX10.4.0.sdk
-+LINKFLAGS+=-isysroot /Developer/SDKs/MacOSX10.4.0.sdk -Wl,-syslibroot,/Developer/SDKs/MacOSX10.4.0.sdk
-+.ENDIF
-+.ENDIF
