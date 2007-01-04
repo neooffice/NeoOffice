@@ -4,7 +4,7 @@ RCS file: /cvs/tools/solenv/inc/unxmacx.mk,v
 retrieving revision 1.4.2.1
 diff -u -r1.4.2.1 unxmacx.mk
 --- inc/unxmacx.mk	8 Nov 2006 09:43:51 -0000	1.4.2.1
-+++ inc/unxmacx.mk	4 Jan 2007 04:54:01 -0000
++++ inc/unxmacx.mk	4 Jan 2007 06:37:31 -0000
 @@ -269,10 +269,10 @@
  STDSLOCUI=
  
@@ -27,9 +27,9 @@ diff -u -r1.4.2.1 unxmacx.mk
 +.IF "$(BUILD_OS_MAJOR)"=="10"
 +.IF "$(CPUNAME)"=="POWERPC" && "$(BUILD_OS_MINOR)">="4"
 +CFLAGS+=-isysroot /Developer/SDKs/MacOSX10.3.9.sdk
-+LDFLAGS+=-isysroot /Developer/SDKs/MacOSX10.3.9.sdk -Wl,-syslibroot,/Developer/SDKs/MacOSX10.3.9.sdk
++LINKFLAGS+=-isysroot /Developer/SDKs/MacOSX10.3.9.sdk -Wl,-syslibroot,/Developer/SDKs/MacOSX10.3.9.sdk
 +.ELIF "$(CPUNAME)"=="INTEL" && "$(BUILD_OS_MINOR)">="5"
 +CFLAGS+=-isysroot /Developer/SDKs/MacOSX10.4.0.sdk
-+LDFLAGS+=-isysroot /Developer/SDKs/MacOSX10.4.0.sdk -Wl,-syslibroot,/Developer/SDKs/MacOSX10.4.0.sdk
++LINKFLAGS+=-isysroot /Developer/SDKs/MacOSX10.4.0.sdk -Wl,-syslibroot,/Developer/SDKs/MacOSX10.4.0.sdk
 +.ENDIF
 +.ENDIF
