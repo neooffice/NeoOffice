@@ -25,7 +25,7 @@ diff -u -r1.4.2.1 unxmacx.mk
 +
 +# enable visibility define in "sal/types.h"
 +.IF "$(HAVE_GCC_VISIBILITY_FEATURE)" == "TRUE"
-+CFLAGSCXX += -fvisibility=default -fvisibility-inlines-hidden
++CFLAGSCXX += -fvisibility=default
 +HAVE_GCC_VISIBILITY_FEATURE:=
 +.ENDIF # "$(HAVE_GCC_VISIBILITY_FEATURE)" == "TRUE"
 +
