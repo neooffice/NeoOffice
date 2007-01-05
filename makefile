@@ -111,7 +111,7 @@ OO_PACKAGES:=OpenOffice2
 OO_TAG:=-rOpenOffice_2_1_0
 OOO-BUILD_SVNROOT:=http://svn.gnome.org/svn/ooo-build/trunk
 OOO-BUILD_PACKAGE:=ooo-build
-OOO-BUILD_TAG:=--revision '{2007-01-03 12:00}'
+OOO-BUILD_TAG:=--revision '{2007-01-04 15:00}'
 OOO-BUILD_APPLY_TAG:=OOE680_m6
 LPSOLVE_SOURCE_URL=http://go-ooo.org/packages/SRC680/lp_solve_5.5.tar.gz
 XT_SOURCE_URL=http://go-ooo.org/packages/xt/xt-20051206-src-only.zip
@@ -182,8 +182,7 @@ build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches
 	touch "$@"
 
 build.ooo-build_patches: build.ooo-build_checkout \
-	build.ooo-build_apply_patch \
-	build.ooo-build_config_office_patch
+	build.ooo-build_solenv_patch
 	touch "$@"
 
 build.ooo-build_apply_patch: $(OOO-BUILD_PATCHES_HOME)/apply.patch build.oo_checkout build.ooo-build_checkout

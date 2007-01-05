@@ -1,0 +1,10 @@
+Index: inc/unxmacx.mk
+===================================================================
+RCS file: /cvs/tools/solenv/inc/unxmacx.mk,v
+retrieving revision 1.4.2.1
+diff -r1.4.2.1 unxmacx.mk
+65c65,66
+< CDEFS += -DHAVE_GCC_VISIBILITY_FEATURE
+---
+> CDEFS += -fvisibility=default -fvisibility-inlines-hidden
+> HAVE_GCC_VISIBILITY_FEATURE:=
