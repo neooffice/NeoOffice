@@ -13,7 +13,7 @@ Steps for building on Mac OS X 10.4 (Tiger) for both PowerPC and Intel
 
 2. Make sure that you have downloaded and installed the following dependencies from http://connect.apple.com/ website:
 
-   Xcode Tools v2.4
+   Xcode Tools v2.4.1
 
 3. Make sure that you have set the compiler version to 4.0.1 by executing the following command:
 
