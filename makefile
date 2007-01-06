@@ -153,6 +153,7 @@ build.oo_patches: build.ooo-build_patches \
 	build.oo_jvmfwk_patch \
 	build.oo_moz_patch \
 	build.oo_padmin_patch \
+	build.oo_sal_patch \
 	build.oo_sj2_patch \
 	build.oo_solenv_patch \
 	build.oo_toolkit_patch \

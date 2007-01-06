@@ -1,0 +1,38 @@
+Index: inc/sal/types.h
+===================================================================
+RCS file: /cvs/porting/sal/inc/sal/types.h,v
+retrieving revision 1.29
+diff -r1.29 types.h
+352a353,367
+> #if defined MACOSX && __GNUC__ > 3
+> /**
+>    When compiling with gcc 4.0.1 on Mac OS X 10.4 or higher, exceptions thrown
+>    across shared object boundaries will not be caught when run on Mac OS X
+>    10.3.9 unless the exception's class has a non-inlined virtual method. So
+>    we use this class as base class for all OOo classes that exhibit this
+>    Mac OS X 10.3.9 bug.
+> */
+> class SAL_DLLPUBLIC_EXPORT MacOSXGCC4BaseClass
+> {
+> public:
+>     virtual void MacOSXNoOpMethodForPanther();
+> };
+> #endif	/* MACOSX && __GNUC__ > 3 */
+> 
+Index: osl/all/utility.cxx
+===================================================================
+RCS file: /cvs/porting/sal/osl/all/utility.cxx,v
+retrieving revision 1.4
+diff -r1.4 utility.cxx
+44a45,55
+> #if defined MACOSX && __GNUC__ > 3
+> namespace sal
+> {
+> 
+> void MacOSXGCC4BaseClass::MacOSXNoOpMethodForPanther()
+> {
+> }
+> 
+> }
+> #endif	/* MACOSX && __GNUC__ > 3 */
+> 
