@@ -11,9 +11,9 @@ diff -u -r1.10 Exception.idl
   */
 +#if defined MACOSX && __GNUC__ > 3
 +published exception Exception: sal::MacOSXGCC4BaseClass
-+#else	/* MACOSX && __GNUC__ > 3 */
++#else
  published exception Exception
-+#endif	/* MACOSX && __GNUC__ > 3 */
++#endif
  {
  	/** gives a detailed description of the reason, why the exception was thrown.
          <p>
