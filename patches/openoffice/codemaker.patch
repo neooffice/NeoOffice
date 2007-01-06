@@ -1,0 +1,18 @@
+Index: source/cppumaker/cpputype.cxx
+===================================================================
+RCS file: /cvs/udk/codemaker/source/cppumaker/cpputype.cxx,v
+retrieving revision 1.43
+diff -u -r1.43 cpputype.cxx
+--- source/cppumaker/cpputype.cxx	12 Oct 2006 11:33:25 -0000	1.43
++++ source/cppumaker/cpputype.cxx	6 Jan 2007 23:21:45 -0000
+@@ -3069,6 +3069,10 @@
+     }
+ 	if (superType.getLength() > 0)
+ 					o << " : public " << scopedCppName(superType);
++#if defined MACOSX && __GNUC__ > 3
++	else
++					o << " : public " << "::sal::MacOSXGCC4BaseClass";
++#endif  // MACOSX && __GNUC__ > 3
+ 		
+ 	o << "\n{\npublic:\n";
+ 	inc();

@@ -147,6 +147,7 @@ build.oo_patches: build.ooo-build_patches \
 	build.oo_berkeleydb_patch \
 	build.oo_binfilter_patch \
 	build.oo_chart2_patch \
+	build.oo_codemaker_patch \
 	build.oo_external_patch \
 	build.oo_forms_patch \
 	build.oo_instsetoo_native_patch \
@@ -158,7 +159,6 @@ build.oo_patches: build.ooo-build_patches \
 	build.oo_solenv_patch \
 	build.oo_toolkit_patch \
 	build.oo_ucb_patch \
-	build.oo_udkapi_patch \
 	build.oo_vcl_patch \
 	build.oo_vos_patch
 	touch "$@"
