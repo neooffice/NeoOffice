@@ -157,14 +157,12 @@ build.oo_patches: build.ooo-build_patches \
 	build.oo_berkeleydb_patch \
 	build.oo_binfilter_patch \
 	build.oo_chart2_patch \
-	build.oo_codemaker_patch \
 	build.oo_external_patch \
 	build.oo_forms_patch \
 	build.oo_instsetoo_native_patch \
 	build.oo_jvmfwk_patch \
 	build.oo_moz_patch \
 	build.oo_padmin_patch \
-	build.oo_sal_patch \
 	build.oo_sj2_patch \
 	build.oo_solenv_patch \
 	build.oo_toolkit_patch \
