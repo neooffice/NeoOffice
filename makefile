@@ -72,6 +72,7 @@ SOURCE_HOME:=source
 CD_INSTALL_HOME:=cd_install
 OO_PATCHES_HOME:=patches/openoffice
 OOO-BUILD_PATCHES_HOME:=patches/ooo-build
+ODF-CONVERTER_PATCHES_HOME:=patches/odf-converter
 ifeq ("$(UNAME)","powerpc")
 OO_ENV_X11:=$(BUILD_HOME)/MacOSXPPCEnv.Set
 OO_ENV_JAVA:=$(BUILD_HOME)/MacOSXPPCEnvJava.Set
@@ -116,6 +117,9 @@ OOO-BUILD_APPLY_TAG:=OOE680_m6
 LPSOLVE_SOURCE_URL=http://go-ooo.org/packages/SRC680/lp_solve_5.5.tar.gz
 XT_SOURCE_URL=http://go-ooo.org/packages/xt/xt-20051206-src-only.zip
 MOZ_SOURCE_URL=ftp://ftp.mozilla.org/pub/mozilla.org/mozilla/releases/mozilla1.7.5/source/mozilla-source-1.7.5.tar.gz
+ODF-CONVERTER_SVNROOT=https://odf-converter.svn.sourceforge.net/svnroot/odf-converter/trunk
+ODF-CONVERTER_PACKAGE=odf-converter
+ODF-CONVERTER_TAG:=--revision '{2007-01-06}'
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
 NEO_TAG:=
@@ -142,6 +146,12 @@ build.ooo-build_checkout: build.oo_checkout
 	cd "$(BUILD_HOME)" ; chmod -Rf u+w "$(OOO-BUILD_PACKAGE)"
 	touch "$@"
 
+build.odf-converter_checkout:
+	mkdir -p "$(BUILD_HOME)"
+	cd "$(BUILD_HOME)" ; svn co $(ODF-CONVERTER_TAG) $(ODF-CONVERTER_SVNROOT) "$(ODF-CONVERTER_PACKAGE)"
+	cd "$(BUILD_HOME)" ; chmod -Rf u+w "$(ODF-CONVERTER_PACKAGE)"
+	touch "$@"
+
 build.oo_patches: build.ooo-build_patches \
 	build.oo_automation_patch \
 	build.oo_berkeleydb_patch \
@@ -163,7 +173,7 @@ build.oo_patches: build.ooo-build_patches \
 	build.oo_vos_patch
 	touch "$@"
 
-build.oo_odk_patches: build.ooo-build_patches
+build.oo_odk_patches: build.oo_patches
 	touch "$@"
 
 build.oo_external_patch: build.ooo-build_patches
@@ -200,6 +210,12 @@ build.ooo-build_apply_patch: $(OOO-BUILD_PATCHES_HOME)/apply.patch build.oo_chec
 build.ooo-build_%_patch: $(OOO-BUILD_PATCHES_HOME)/%.patch build.oo_checkout build.ooo-build_checkout
 	-( cd "$(BUILD_HOME)/$(@:build.ooo-build_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
 	( cd "$(BUILD_HOME)/$(@:build.ooo-build_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+	touch "$@"
+
+build.odf-converter_patches: $(ODF-CONVERTER_PATCHES_HOME)/odf-converter.patch build.odf-converter_checkout
+	-( cd "$(BUILD_HOME)/odf-converter" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(BUILD_HOME)/odf-converter" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)" ; "$(MAKE)" $(MFLAGS)
 	touch "$@"
 
 build.configure: build.oo_patches
@@ -240,7 +256,7 @@ build.neo_%_patch: % build.neo_configure
 	source "$(OO_ENV_JAVA)" ; cd "$<" ; `alias build` $(NEO_BUILD_ARGS)
 	touch "$@"
 
-build.neo_patches: build.oo_all \
+build.neo_patches: build.oo_all build.odf-converter_patches \
 	build.neo_avmedia_patch \
 	build.neo_bridges_patch \
 	build.neo_canvas_patch \

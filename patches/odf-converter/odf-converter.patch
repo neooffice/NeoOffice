@@ -1,0 +1,32 @@
+Index: build/common.mk
+===================================================================
+--- build/common.mk	(revision 1367)
++++ build/common.mk	(working copy)
+@@ -2,6 +2,11 @@
+ 
+ OS:=$(shell uname -o)
+ 
++# uname doesn't have a -o option on all platforms
++ifndef OS
++OS:=$(shell uname)
++endif
++
+ CC=gcc
+ LD=ld
+ CSC=gmcs
+Index: source/OdfConverterTest/Makefile
+===================================================================
+--- source/OdfConverterTest/Makefile	(revision 1367)
++++ source/OdfConverterTest/Makefile	(working copy)
+@@ -13,7 +13,11 @@
+ UNZOPEN=_unzOpen@4
+ OTHERLIBS=-lole32 -loleaut32 -lws2_32 -lpsapi -luser32 -lkernel32
+ else
++ifeq ($(OS),Darwin)
++MACHINE_CONFIG_FILE=
++else
+ MACHINE_CONFIG_FILE=--machine-config "`pkg-config --variable=prefix mono`/etc/mono/2.0/machine.config"
++endif
+ EXEEXT=
+ PATHSEP=:
+ EXPORTDYNAMIC=-Wl,--export-dynamic
