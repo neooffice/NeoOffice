@@ -73,14 +73,14 @@ JAVAFILES  = \
 
 JAVAFILES += win/WindowAdapter.java
 
-.ELSE		# "$(GUIBASE)"!="unx" && "$(GUIBASE)"!="unx"
+.ELSE		# "$(GUIBASE)"!="unx" && "$(GUIBASE)"!="java"
 
 JAVAFILES += x11/WindowAdapter.java
 
-.ENDIF		# "$(GUIBASE)"!="unx" && "$(GUIBASE)"!="unx"
+.ENDIF		# "$(GUIBASE)"!="unx" && "$(GUIBASE)"!="java"
 
 JARFILES 		= jurt.jar unoil.jar ridl.jar juh.jar java_uno.jar
-JAVACLASSFILES	= $(foreach,i,$(JAVAFILES) $(CLASSDIR)$/$(PACKAGE)$/$(i:b).class)
+#JAVACLASSFILES	= $(foreach,i,$(JAVAFILES) $(CLASSDIR)$/$(PACKAGE)$/$(i:b).class)
 
 JARTARGET               = $(TARGET).uno.jar
 JARCOMPRESS             = TRUE
