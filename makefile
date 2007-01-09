@@ -156,6 +156,7 @@ build.oo_patches: build.ooo-build_patches \
 	build.oo_automation_patch \
 	build.oo_berkeleydb_patch \
 	build.oo_binfilter_patch \
+	build.oo_boost_patch \
 	build.oo_chart2_patch \
 	build.oo_external_patch \
 	build.oo_forms_patch \

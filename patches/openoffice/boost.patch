@@ -1,0 +1,41 @@
+Index: boost-1.30.2.patch
+===================================================================
+RCS file: /cvs/external/boost/boost-1.30.2.patch,v
+retrieving revision 1.5
+diff -u -r1.5 boost-1.30.2.patch
+--- boost-1.30.2.patch	12 Oct 2006 11:16:36 -0000	1.5
++++ boost-1.30.2.patch	9 Jan 2007 16:56:14 -0000
+@@ -645,3 +645,33 @@
+ + #endif
+ + 
+   #endif // BOOST_MPL_SEQUENCE_TAG_HPP_INCLUDED
++--- misc/build/boost-1.30.2/boost/numeric/ublas/matrix_expression.hpp	2003-02-17 23:32:46.000000000 -0800
+++++ misc/build/boost-1.30.2/boost/numeric/ublas/matrix_expression.hpp	2007-01-09 08:50:53.000000000 -0800
++@@ -4949,10 +4949,12 @@
++             return e_;
++         }
++ 
+++#if __GNUC__ > 3
++         BOOST_UBLAS_INLINE
++         operator value_type () const {
++             return functor_type () (e_);
++         }
+++#endif
++ 
++     private:
++         expression_closure_type e_;
++--- misc/build/boost-1.30.2/boost/numeric/ublas/vector_expression.hpp	2003-02-17 23:32:47.000000000 -0800
+++++ misc/build/boost-1.30.2/boost/numeric/ublas/vector_expression.hpp	2007-01-09 08:52:26.000000000 -0800
++@@ -1774,10 +1774,12 @@
++             return functor_type () (e1_.begin (), e1_.end (), e2_.begin (), e2_.end (), sparse_bidirectional_iterator_tag ());
++         }
++ 
+++#if __GNUC__ > 3
++         BOOST_UBLAS_INLINE
++         operator value_type () const {
++             return evaluate (iterator_category ());
++         }
+++#endif
++ 
++     private:
++         expression1_closure_type e1_;
