@@ -1,0 +1,16 @@
+Index: util/makefile.mk
+===================================================================
+RCS file: /cvs/ucb/store/util/makefile.mk,v
+retrieving revision 1.17
+diff -u -r1.17 makefile.mk
+--- util/makefile.mk	29 Jun 2006 11:27:36 -0000	1.17
++++ util/makefile.mk	9 Jan 2007 13:57:47 -0000
+@@ -82,7 +82,7 @@
+ .IF "$(OS)"=="FREEBSD" || "$(OS)"=="NETBSD"
+ SHL1STDLIBS+= 	-lsupc++
+ .ELIF "$(OS)"=="MACOSX"
+-.IF "$(CCNUMVER)"<="000399999999"
++.IF "$(CCNUMVER)"<="000399999999" && "$(BUILD_OS_MAJOR)"=="10" && "$(BUILD_OS_MINOR)"<="3"
+ SHL1STDLIBS+=	-lsupc++
+ .ENDIF # CCNUMVER
+ .ELIF "$(CCNUMVER)"<="000400000999"
