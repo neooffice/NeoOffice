@@ -156,7 +156,6 @@ build.oo_patches: build.ooo-build_patches \
 	build.oo_automation_patch \
 	build.oo_berkeleydb_patch \
 	build.oo_binfilter_patch \
-	build.oo_boost_patch \
 	build.oo_chart2_patch \
 	build.oo_external_patch \
 	build.oo_forms_patch \
@@ -194,7 +193,8 @@ build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches
 	touch "$@"
 
 build.ooo-build_patches: build.ooo-build_checkout \
-	build.ooo-build_apply_patch
+	build.ooo-build_apply_patch \
+	build.ooo-build_boost_patch
 	touch "$@"
 
 build.ooo-build_apply_patch: $(OOO-BUILD_PATCHES_HOME)/apply.patch build.oo_checkout build.ooo-build_checkout
