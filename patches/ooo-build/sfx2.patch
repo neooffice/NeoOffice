@@ -1,0 +1,22 @@
+--- source/doc/objstor.cxx.bak	2007-01-07 18:34:43.000000000 -0800
++++ source/doc/objstor.cxx	2007-01-10 11:35:51.000000000 -0800
+@@ -882,9 +882,6 @@
+ 						if (aArg.EqualsIgnoreCaseAscii("vnd.sun.star.expand:", 0, 20)) {
+ 							rtl::OUString argStr(aArg.GetBuffer()+20);
+ 							aArg=xExpander->expandMacros(argStr);
+-							rtl::OUString ret;
+-							osl::FileBase::getSystemPathFromFileURL(aArg, ret);
+-							aArg=ret;
+ 						} else if (aArg.EqualsIgnoreCaseAscii("%source%", 0, 8)) {
+ 							aArg=::rtl::OUString(pMed->GetPhysicalName());
+ 						} else if (aArg.EqualsIgnoreCaseAscii("%target%", 0, 8)) {
+@@ -1913,9 +1910,6 @@
+ 			if (aArg.EqualsIgnoreCaseAscii("vnd.sun.star.expand:", 0, 20)) {
+ 				rtl::OUString argStr(aArg.GetBuffer()+20);
+ 				aArg=xExpander->expandMacros(argStr);
+-				rtl::OUString ret;
+-				osl::FileBase::getSystemPathFromFileURL(aArg, ret);
+-				aArg=ret;
+ 			} else if (aArg.EqualsIgnoreCaseAscii("%source%", 0, 8)) {
+ 				::rtl::OUString tmpFile;
+ 				osl::FileBase::getSystemPathFromFileURL(aTmpVersionURL, tmpFile);
