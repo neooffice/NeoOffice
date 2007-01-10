@@ -15,9 +15,10 @@ Steps for building on Mac OS X 10.4 (Tiger) for both PowerPC and Intel
 
    Xcode Tools v2.4.1
 
-3. Make sure that you have set the compiler version to 4.0.1 by executing the following command:
+3. Make sure that you have set the compiler version to the correct version by executing the following command. Note that PowerPC machines require that gcc 3.3 be used. gcc 3.3 is required for the build to be runnable on Mac OS X 10.3.x machines:
 
-   sudo gcc_select 4.0
+   On PowerPC machines: sudo gcc_select 3.3
+   On Intel machines: sudo gcc_select 4.0
 
 4. Make sure that you have downloaded and installed the following Perl module from the http://www.cpan.org/modules/index.html website. Note that you will need to follow the instructions on the website to download and install the Archive::Zip module:
 
