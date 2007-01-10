@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_cppuhelper.hxx"
+
 #include "osl/diagnose.h"
 #include "osl/doublecheckedlocking.h"
 #include "osl/mutex.hxx"
@@ -179,7 +182,6 @@ void ExceptionThrower::throwException( Any const & exc ) throw (Exception)
     throwException( exc );
 }
 
-#include <stdio.h>
 //______________________________________________________________________________
 void ExceptionThrower::rethrowException() throw (Exception)
 {
@@ -303,7 +305,7 @@ Any SAL_CALL getCaughtException()
     }
     
     Any ret;
-    uno_any_destruct( &ret, cpp_release );
+    uno_any_destruct( &ret, reinterpret_cast< uno_ReleaseFunc >(cpp_release) );
     uno_type_any_constructAndConvert(
         &ret, exc->pData, exc->pType, uno2cpp.get() );
     uno_any_destruct( exc, 0 );
