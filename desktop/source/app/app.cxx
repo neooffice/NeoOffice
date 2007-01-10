@@ -710,12 +710,7 @@ BOOL Desktop::QueryExit()
         xPropertySet->setPropertyValue( OUSTRING(RTL_CONSTASCII_USTRINGPARAM( SUSPEND_QUICKSTARTVETO )), a );
     }
 
-#ifdef USE_JAVA
-    // Don't allow termination if we haven't finished startup
-    BOOL bExit = ( ::desktop::Desktop::bSuppressOpenDefault && ( !xDesktop.is() || xDesktop->terminate() ) );
-#else	// USE_JAVA
     BOOL bExit = ( !xDesktop.is() || xDesktop->terminate() );
-#endif	// USE_JAVA
 
 
     if ( !bExit && xPropertySet.is() )
@@ -1405,9 +1400,6 @@ void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
         if ( GetCommandLineArgs()->IsInvisible() )
             return;
 
-        if ( !::desktop::Desktop::bSuppressOpenDefault )
-            ::desktop::Desktop::bSuppressOpenDefault = sal_True;
-
         ProcessDocumentsRequest aRequest;
         aRequest.pcProcessed = NULL;
         OUString aData( rAppEvent.GetData() );
@@ -1442,9 +1434,7 @@ void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
         }
 
         // Fix bug 1379 by opening default window if there are no windows open
-        ::desktop::Desktop::bSuppressOpenDefault = sal_False;
         OpenDefault();
-        ::desktop::Desktop::bSuppressOpenDefault = sal_True;
 
         return;
 	}
@@ -2902,14 +2892,7 @@ void Desktop::OpenClients()
 
 	// Don't do anything if we have successfully called terminate at desktop
 	if ( bShutdown )
-#ifdef USE_JAVA
-    {
-        ::desktop::Desktop::bSuppressOpenDefault = sal_True;
-        return;
-    }
-#else	// USE_JAVA
 		return;
-#endif	// USE_JAVA
 
     // no default document if a document was loaded by recovery or by command line or if soffice is used as server
     Reference< XFramesSupplier > xTasksSupplier(
@@ -2917,30 +2900,13 @@ void Desktop::OpenClients()
             ::com::sun::star::uno::UNO_QUERY_THROW );
     Reference< XElementAccess > xList( xTasksSupplier->getFrames(), UNO_QUERY_THROW );
     if ( xList->hasElements() || pArgs->IsServer() )
-#ifdef USE_JAVA
-    {
-        ::desktop::Desktop::bSuppressOpenDefault = sal_True;
         return;
-    }
-#else	// USE_JAVA
-        return;
-#endif	// USE_JAVA
 
     if ( pArgs->IsQuickstart() || pArgs->IsInvisible() || pArgs->IsBean() )
-#ifdef USE_JAVA
-    {
-        ::desktop::Desktop::bSuppressOpenDefault = sal_True;
-        return;
-    }
-#else	// USE_JAVA
         // soffice was started as tray icon ...
         return;
-#endif	// USE_JAVA
     {
         OpenDefault();
-#ifdef USE_JAVA
-        ::desktop::Desktop::bSuppressOpenDefault = sal_True;
-#endif	// USE_JAVA
     }
 }
 
