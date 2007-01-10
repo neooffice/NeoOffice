@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_desktop.hxx"
+
 #if defined(UNX)
 #if defined(MACOSX) || defined(FREEBSD)
 #include <sys/types.h>
@@ -82,7 +85,11 @@ BOOL SVMain();
 
 // -=-= main() -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-SAL_IMPLEMENT_MAIN()
+#ifdef USE_JAVA
+SAL_IMPLEMENT_MAIN_WITH_ARGS(argc, argv)
+#else	// USE_JAVA
+SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
+#endif	// USE_JAVA
 {
 #ifdef USE_JAVA
 	char *pCmdPath = argv[ 0 ];

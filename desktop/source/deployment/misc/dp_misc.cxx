@@ -34,12 +34,16 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_desktop.hxx"
+
 #include "dp_misc.h"
 #include "dp_interact.h"
 #include "rtl/uri.hxx"
 #include "rtl/digest.h"
 #include "rtl/random.h"
 #include "rtl/bootstrap.hxx"
+#include "unotools/bootstrap.hxx"
 #include "osl/file.hxx"
 #include "osl/pipe.hxx"
 #include "osl/security.hxx"
@@ -100,32 +104,14 @@ struct OfficePipeId : public rtl::StaticWithInit<const OUString, OfficePipeId> {
 
 const OUString OfficePipeId::operator () ()
 {
-    OUString userPath = OUSTR("${$SYSBINDIR/" SAL_CONFIGFILE("bootstrap")
-                              ":UserInstallation}");
-    ::rtl::Bootstrap::expandMacros( userPath );
-    OSL_ASSERT( userPath.getLength() > 0 );
-    
-    // normalize path:
-    osl::FileStatus status( FileStatusMask_FileURL );
-    osl::DirectoryItem dirItem;
-    if (osl::DirectoryItem::get( userPath, dirItem )
-        == osl::DirectoryItem::E_None &&
-        dirItem.getFileStatus( status )
-        == osl::DirectoryItem::E_None &&
-        status.isValid( FileStatusMask_FileURL ))
-    {
-        // path exists:
-        if (osl::FileBase::getAbsoluteFileURL(
-                OUString(), status.getFileURL(), userPath )
-            != ::osl::FileBase::E_None)
-        {
-            // but cannot be made absolute:
-            throw RuntimeException(
-                OUSTR("Cannot make absolute URL: ") + status.getFileURL(),
-                Reference<XInterface>() );
-        }
-    }
-    // else invalid path, seems that user installation hasn't been written yet
+    OUString userPath;
+	::utl::Bootstrap::PathStatus aLocateResult =
+	::utl::Bootstrap::locateUserInstallation( userPath );
+	if (!(aLocateResult == ::utl::Bootstrap::PATH_EXISTS || 
+		aLocateResult == ::utl::Bootstrap::PATH_VALID))
+	{
+		throw Exception(OUSTR("Extension Manager: Could not obtain path for UserInstallation."), 0);
+	}
     
     rtlDigest digest = rtl_digest_create( rtl_Digest_AlgorithmMD5 );
     if (digest <= 0) {

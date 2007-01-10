@@ -39,6 +39,7 @@ PRJ = ..$/..$/..
 PRJNAME = desktop
 TARGET = deployment_misc
 ENABLE_EXCEPTIONS = TRUE
+LIBTARGET = NO
 
 .INCLUDE : settings.mk
 
@@ -54,7 +55,8 @@ SRS1NAME = $(TARGET)
 SRC1FILES = \
 	dp_misc.src
 
-SLOFILES = \
+LIB1TARGET = $(SLB)$/$(TARGET).lib
+LIB1OBJFILES = \
         $(SLO)$/dp_misc.obj \
         $(SLO)$/dp_resource.obj \
         $(SLO)$/dp_interact.obj \
@@ -63,7 +65,12 @@ SLOFILES = \
         $(SLO)$/dp_log.obj \
         $(SLO)$/dp_persmap.obj \
         $(SLO)$/dp_services.obj       \
-        $(SLO)$/db.obj
+        $(SLO)$/db.obj \
+        $(SLO)$/dp_version.obj
+
+SLOFILES = $(LIB1OBJFILES)
+
+OBJFILES = $(OBJ)$/dp_version.obj
 
 .INCLUDE : ..$/target.pmk
 .INCLUDE : target.mk

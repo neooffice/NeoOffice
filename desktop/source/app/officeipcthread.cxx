@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_desktop.hxx"
+
 #include "app.hxx"
 #include "officeipcthread.hxx"
 #include "cmdlineargs.hxx"
@@ -150,7 +153,7 @@ public:
 	DECL_STATIC_LINK( ProcessEventsClass_Impl, ProcessDocumentsEvent, void* pEvent );
 };
 
-IMPL_STATIC_LINK( ProcessEventsClass_Impl, CallEvent, void*, pEvent )
+IMPL_STATIC_LINK_NOINSTANCE( ProcessEventsClass_Impl, CallEvent, void*, pEvent )
 {
 	// Application events are processed by the Desktop::HandleAppEvent implementation.
 	Desktop::HandleAppEvent( *((ApplicationEvent*)pEvent) );
@@ -158,7 +161,7 @@ IMPL_STATIC_LINK( ProcessEventsClass_Impl, CallEvent, void*, pEvent )
 	return 0;
 }
 
-IMPL_STATIC_LINK( ProcessEventsClass_Impl, ProcessDocumentsEvent, void*, pEvent )
+IMPL_STATIC_LINK_NOINSTANCE( ProcessEventsClass_Impl, ProcessDocumentsEvent, void*, pEvent )
 {
 	// Documents requests are processed by the OfficeIPCThread implementation
 	ProcessDocumentsRequest* pDocsRequest = (ProcessDocumentsRequest*)pEvent;
@@ -206,7 +209,7 @@ throw ( RuntimeException )
 	return OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.comp.OfficeIPCThreadController" ));
 }
 
-sal_Bool SAL_CALL OfficeIPCThreadController::supportsService( const OUString& ServiceName )
+sal_Bool SAL_CALL OfficeIPCThreadController::supportsService( const OUString& )
 throw ( RuntimeException )
 {
 	return sal_False;
@@ -220,13 +223,13 @@ throw ( RuntimeException )
 }
 
 // XEventListener
-void SAL_CALL OfficeIPCThreadController::disposing( const EventObject& Source )
+void SAL_CALL OfficeIPCThreadController::disposing( const EventObject& )
 throw( RuntimeException )
 {
 }
 
 // XTerminateListener
-void SAL_CALL OfficeIPCThreadController::queryTermination( const EventObject& aEvent )
+void SAL_CALL OfficeIPCThreadController::queryTermination( const EventObject& )
 throw( TerminationVetoException, RuntimeException )
 {
 	// Desktop ask about pending request through our office ipc pipe. We have to
@@ -239,7 +242,7 @@ throw( TerminationVetoException, RuntimeException )
 		OfficeIPCThread::BlockAllRequests();
 }
 
-void SAL_CALL OfficeIPCThreadController::notifyTermination( const EventObject& aEvent )
+void SAL_CALL OfficeIPCThreadController::notifyTermination( const EventObject& )
 throw( RuntimeException )
 {
 }
@@ -409,7 +412,7 @@ OfficeIPCThread::Status OfficeIPCThread::EnableOfficeIPCThread()
 	{
 		// Seems we are the one and only, so start listening thread
 		pGlobalOfficeIPCThread = pThread;
-		pThread->create(); // starts thread
+		pThread->createWithStack( 1024 ); // starts thread
 	}
 	else
 	{
@@ -790,8 +793,8 @@ void SAL_CALL OfficeIPCThread::run()
 				delete pRequest;
 				pRequest = NULL;
 			}
-			if ((( aArguments.CompareTo( sc_aShowSequence, sc_nShSeqLength ) == COMPARE_EQUAL ) ||
-				!bDocRequestSent ) && !bAcceptorRequest )
+			if (( aArguments.CompareTo( sc_aShowSequence, sc_nShSeqLength ) == COMPARE_EQUAL ) ||
+				aArguments.Len() == 0 )
 			{
 				// no document was sent, just bring Office to front
 				ApplicationEvent* pAppEvent =
@@ -847,7 +850,7 @@ static void AddToDispatchList(
 	}
 }
 
-void OfficeIPCThread::ExecuteCmdLineRequests( ProcessDocumentsRequest& aRequest )
+sal_Bool OfficeIPCThread::ExecuteCmdLineRequests( ProcessDocumentsRequest& aRequest )
 {
 	::rtl::OUString					aEmpty;
 	DispatchWatcher::DispatchList	aDispatchList;
@@ -862,6 +865,7 @@ void OfficeIPCThread::ExecuteCmdLineRequests( ProcessDocumentsRequest& aRequest 
     AddToDispatchList( aDispatchList, aRequest.aForceNewList, DispatchWatcher::REQUEST_FORCENEW, aEmpty, aRequest.aModule );
 
 	osl::ClearableMutexGuard aGuard( GetMutex() );
+	sal_Bool bShutdown( sal_False );
 
 	if ( pGlobalOfficeIPCThread )
 	{
@@ -875,12 +879,14 @@ void OfficeIPCThread::ExecuteCmdLineRequests( ProcessDocumentsRequest& aRequest 
 		aGuard.clear();
 
 		// Execute dispatch requests
-		pGlobalOfficeIPCThread->mpDispatchWatcher->executeDispatchRequests( aDispatchList );
+		bShutdown = pGlobalOfficeIPCThread->mpDispatchWatcher->executeDispatchRequests( aDispatchList );
 
 		// set processed flag
 		if (aRequest.pcProcessed != NULL)
 			aRequest.pcProcessed->set();
 	}
+
+	return bShutdown;
 }
 
 }

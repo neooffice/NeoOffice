@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_desktop.hxx"
+
 #include <unistd.h>
 #include "app.hxx"
 #include "desktop.hrc"
@@ -344,7 +347,6 @@ using namespace ::com::sun::star::container;
 namespace css = ::com::sun::star;
 
 ResMgr*                 desktop::Desktop::pResMgr = 0;
-sal_Bool                desktop::Desktop::bSuppressOpenDefault = sal_False;
 
 namespace desktop
 {
@@ -409,11 +411,11 @@ ResMgr* Desktop::GetDesktopResManager()
 
 OUString Desktop::GetMsgString( USHORT nId, const OUString& aFaultBackMsg )
 {
-    ResMgr* pResMgr = GetDesktopResManager();
-    if ( !pResMgr )
+    ResMgr* resMgr = GetDesktopResManager();
+    if ( !resMgr )
         return aFaultBackMsg;
     else
-        return OUString( String( ResId( nId, pResMgr )));
+        return OUString( String( ResId( nId, resMgr )));
 }
 
 OUString MakeStartupErrorMessage(OUString const & aErrorMessage)
@@ -594,10 +596,10 @@ void ReplaceStringHookProc( UniString& rStr )
 }
 
 Desktop::Desktop()
-: m_pIntro( 0 )
+: m_bServicesRegistered( false )
+, m_pIntro( 0 )
 , m_aBootstrapError( BE_OK )
 , m_pLockfile( NULL )
-, m_bServicesRegistered( false )
 {
     RTL_LOGFILE_TRACE( "desktop (cd100003) ::Desktop::Desktop" );
 }
@@ -936,6 +938,21 @@ void Desktop::HandleBootstrapPathErrors( ::utl::Bootstrap::Status aBootstrapStat
             bFileInfo = sal_False;
         }
         break;
+
+        case ::utl::Bootstrap::INVALID_VERSION_FILE_ENTRY:
+        {
+            // This needs to be improved, see #i67575#:
+            aMsg = OUString(
+                RTL_CONSTASCII_USTRINGPARAM( "Invalid version file entry" ) );
+            bFileInfo = sal_False;
+        }
+        break;
+
+        case ::utl::Bootstrap::NO_FAILURE:
+        {
+            OSL_ASSERT(false);
+        }
+        break;
     }
 
     if ( bFileInfo )
@@ -1007,6 +1024,12 @@ void Desktop::HandleBootstrapErrors( BootstrapError aBootstrapError )
 
                     utl::Bootstrap::locateUserInstallation( aUserInstallationURL );
                     aErrorMsg = CreateErrorMsgString( nFailureCode, aUserInstallationURL );
+                }
+                break;
+
+                case ::utl::Bootstrap::NO_FAILURE:
+                {
+                    OSL_ASSERT(false);
                 }
                 break;
             }
@@ -1112,9 +1135,9 @@ void Desktop::HandleBootstrapErrors( BootstrapError aBootstrapError )
                 STR_BOOSTRAP_ERR_NOACCESSRIGHTS,
                 OUString( RTL_CONSTASCII_USTRINGPARAM(
                     "User installation could not be processed due to missing access rights." )) );
-        
+
         osl::File::getSystemPathFromFileURL( aUserInstallationURL, aUserInstallationPath );
-        
+
         aDiagnosticMessage.append( aErrorMsg );
         aDiagnosticMessage.append( aUserInstallationPath );
         aMessage = MakeStartupErrorMessage(
@@ -1262,7 +1285,7 @@ sal_Bool impl_callRecoveryUI(sal_Bool bEmergencySave     ,
 
 sal_Bool Desktop::_bTasksSaved = sal_False;
 
-sal_Bool Desktop::SaveTasks(sal_Int32 options)
+sal_Bool Desktop::SaveTasks()
 {
     return impl_callRecoveryUI(
         sal_True , // sal_True => force emergency save
@@ -1286,7 +1309,6 @@ USHORT Desktop::Exception(USHORT nError)
     }
 
     bInException = TRUE;
-    BOOL bRecovery = FALSE;
     CommandLineArgs* pArgs = GetCommandLineArgs();
 
     // save all modified documents ... if it's allowed doing so.
@@ -1299,7 +1321,7 @@ USHORT Desktop::Exception(USHORT nError)
                                                     ( Application::IsInExecute()               )    // crashes during startup and shutdown should be ignored (they indicates a corrupt installation ...)
                                                   );
     if ( bAllowRecoveryAndSessionManagement )
-        bRestart = SaveTasks(DESKTOP_SAVETASKS_MOD);
+        bRestart = SaveTasks();
 
     // because there is no method to flush the condiguration data, we must dispose the ConfigManager
     Reference < XFlushable > xCFGFlush( ::utl::ConfigManager::GetConfigManager()->GetConfigurationProvider(), UNO_QUERY );
@@ -1671,12 +1693,19 @@ void Desktop::Main()
 
         // First Start Wizard
         {
+            sal_Bool bWidthUI = sal_True;
+            if (pCmdLineArgs->IsNoFirstStartWizard())
+              bWidthUI = sal_False;
+
             Reference< XJob > xFirstStartJob( xSMgr->createInstance(
                 DEFINE_CONST_UNICODE( "com.sun.star.comp.desktop.FirstStart" ) ), UNO_QUERY );
             if (xFirstStartJob.is())
             {
                 sal_Bool bDone = sal_False;
-                xFirstStartJob->execute(Sequence<NamedValue>()) >>= bDone;
+                Sequence< NamedValue > lArgs(1);
+                lArgs[0].Name    = ::rtl::OUString::createFromAscii("WidthUI");
+                lArgs[0].Value <<= bWidthUI;
+                xFirstStartJob->execute(lArgs) >>= bDone;
                 if (!bDone) {
                     return;
                 }
@@ -1713,7 +1742,6 @@ void Desktop::Main()
             (!bExistsSessionData                                                   )
            )
         {
-            ::desktop::Desktop::bSuppressOpenDefault = sal_True;
             RTL_LOGFILE_CONTEXT_TRACE( aLog, "{ create BackingComponent" );
             Reference< XFrame > xDesktopFrame( xSMgr->createInstance(
                 OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ))), UNO_QUERY );
@@ -1868,7 +1896,7 @@ void Desktop::Main()
     {
         // The JavaContext contains an interaction handler which is used when
         // the creation of a Java Virtual Machine fails
-        com::sun::star::uno::ContextLayer layer(
+        com::sun::star::uno::ContextLayer layer2(
             new svt::JavaContext( com::sun::star::uno::getCurrentContext() ) );
 
         Execute();
@@ -2019,7 +2047,7 @@ sal_Bool Desktop::InitializeQuickstartMode( Reference< XMultiServiceFactory >& r
     }
 }
 
-void Desktop::SystemSettingsChanging( AllSettings& rSettings, Window* pFrame )
+void Desktop::SystemSettingsChanging( AllSettings& rSettings, Window* )
 {
 	if ( !SvtTabAppearanceCfg::IsInitialized () )
 		return;
@@ -2075,7 +2103,7 @@ void Desktop::SystemSettingsChanging( AllSettings& rSettings, Window* pFrame )
 }
 
 // ========================================================================
-IMPL_LINK( Desktop, AsyncInitFirstRun, void*, NOTINTERESTEDIN )
+IMPL_LINK( Desktop, AsyncInitFirstRun, void*, EMPTYARG )
 {
     DoFirstRunInitializations();
     return 0L;
@@ -2083,7 +2111,7 @@ IMPL_LINK( Desktop, AsyncInitFirstRun, void*, NOTINTERESTEDIN )
 
 // ========================================================================
 
-IMPL_STATIC_LINK( Desktop, AsyncTerminate, void*, NOTINTERESTEDIN )
+IMPL_STATIC_LINK_NOINSTANCE( Desktop, AsyncTerminate, void*, EMPTYARG )
 {
     Reference<XMultiServiceFactory> rFactory = ::comphelper::getProcessServiceFactory();
     Reference< XDesktop > xDesktop( rFactory->createInstance(
@@ -2093,12 +2121,13 @@ IMPL_STATIC_LINK( Desktop, AsyncTerminate, void*, NOTINTERESTEDIN )
     return 0L;
 }
 
-IMPL_LINK( Desktop, OpenClients_Impl, void*, pvoid )
+IMPL_LINK( Desktop, OpenClients_Impl, void*, EMPTYARG )
 {
 	RTL_LOGFILE_PRODUCT_CONTEXT( aLog, "PERFORMANCE - DesktopOpenClients_Impl()" );
 
-    OfficeIPCThread::SetReady();
     OpenClients();
+
+    OfficeIPCThread::SetReady();
 
     // CloseStartupScreen();
     CloseSplashScreen();
@@ -2214,7 +2243,7 @@ IMPL_LINK( Desktop, OpenClients_Impl, void*, pvoid )
 }
 
 // enable acceptos
-IMPL_LINK( Desktop, EnableAcceptors_Impl, void*, pvoid )
+IMPL_LINK( Desktop, EnableAcceptors_Impl, void*, EMPTYARG )
 {
     enableAcceptors();
     return 0;
@@ -2261,7 +2290,7 @@ void Desktop::PreloadModuleData( CommandLineArgs* pArgs )
 
     if ( !xLoader.is() )
         return;
-    
+
     if ( pArgs->IsWriter() )
     {
         try
@@ -2315,14 +2344,14 @@ void Desktop::PreloadModuleData( CommandLineArgs* pArgs )
 void Desktop::PreloadConfigurationData()
 {
     Reference< XMultiServiceFactory > rFactory = ::comphelper::getProcessServiceFactory();
-    Reference< XNameAccess > xNameAccess( rFactory->createInstance( 
+    Reference< XNameAccess > xNameAccess( rFactory->createInstance(
         DEFINE_CONST_UNICODE( "com.sun.star.frame.UICommandDescription" )), UNO_QUERY );
 
     rtl::OUString aWriterDoc( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.text.TextDocument" ));
     rtl::OUString aCalcDoc( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.sheet.SpreadsheetDocument" ));
     rtl::OUString aDrawDoc( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.drawing.DrawingDocument" ));
     rtl::OUString aImpressDoc( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.presentation.PresentationDocument" ));
-    
+
     // preload commands configuration
     if ( xNameAccess.is() )
     {
@@ -2342,7 +2371,7 @@ void Desktop::PreloadConfigurationData()
         catch ( ::com::sun::star::uno::Exception& )
         {
         }
-        
+
         try
         {
             a = xNameAccess->getByName( aCalcDoc );
@@ -2353,7 +2382,7 @@ void Desktop::PreloadConfigurationData()
         catch ( ::com::sun::star::uno::Exception& )
         {
         }
-        
+
         try
         {
             // draw and impress share the same configuration file (DrawImpressCommands.xcu)
@@ -2419,7 +2448,7 @@ void Desktop::PreloadConfigurationData()
     // preload user interface element factories
     Sequence< Sequence< css::beans::PropertyValue > > aSeqSeqPropValue;
     Reference< ::com::sun::star::ui::XUIElementFactoryRegistration > xUIElementFactory(
-        rFactory->createInstance( 
+        rFactory->createInstance(
             DEFINE_CONST_UNICODE( "com.sun.star.ui.UIElementFactoryManager" )),
             UNO_QUERY );
     if ( xUIElementFactory.is() )
@@ -2432,18 +2461,18 @@ void Desktop::PreloadConfigurationData()
         {
         }
     }
-    
+
     // preload popup menu controller factories. As all controllers are in the same
     // configuration file they also get preloaded!
-    Reference< ::com::sun::star::frame::XUIControllerRegistration > xPopupMenuControllerFactory( 
-        rFactory->createInstance( 
+    Reference< ::com::sun::star::frame::XUIControllerRegistration > xPopupMenuControllerFactory(
+        rFactory->createInstance(
             DEFINE_CONST_UNICODE( "com.sun.star.frame.PopupMenuControllerFactory" )),
             UNO_QUERY );
     if ( xPopupMenuControllerFactory.is() )
     {
         try
         {
-            xPopupMenuControllerFactory->hasController( 
+            xPopupMenuControllerFactory->hasController(
                         DEFINE_CONST_UNICODE( ".uno:CharFontName" ),
                         OUString() );
         }
@@ -2451,10 +2480,10 @@ void Desktop::PreloadConfigurationData()
         {
         }
     }
-        
+
     // preload filter configuration
     Sequence< OUString > aSeq;
-    xNameAccess = Reference< XNameAccess >( rFactory->createInstance( 
+    xNameAccess = Reference< XNameAccess >( rFactory->createInstance(
                     DEFINE_CONST_UNICODE( "com.sun.star.document.FilterFactory" )), UNO_QUERY );
     if ( xNameAccess.is() )
     {
@@ -2466,9 +2495,9 @@ void Desktop::PreloadConfigurationData()
         {
         }
     }
-    
+
     // preload type detection configuration
-    xNameAccess = Reference< XNameAccess >( rFactory->createInstance( 
+    xNameAccess = Reference< XNameAccess >( rFactory->createInstance(
                     DEFINE_CONST_UNICODE( "com.sun.star.document.TypeDetection" )), UNO_QUERY );
     if ( xNameAccess.is() )
     {
@@ -2483,7 +2512,7 @@ void Desktop::PreloadConfigurationData()
 
     OUString sConfigSrvc = OUString::createFromAscii("com.sun.star.configuration.ConfigurationProvider");
     OUString sAccessSrvc = OUString::createFromAscii("com.sun.star.configuration.ConfigurationAccess");
-            
+
     // get configuration provider
     Reference< XMultiServiceFactory > xConfigProvider;
     xConfigProvider = Reference< XMultiServiceFactory > (
@@ -2496,7 +2525,7 @@ void Desktop::PreloadConfigurationData()
         theArgs[ 0 ] <<= OUString::createFromAscii( "org.openoffice.Office.Writer/MailMergeWizard" );
         try
         {
-            xNameAccess = Reference< XNameAccess >( 
+            xNameAccess = Reference< XNameAccess >(
                 xConfigProvider->createInstanceWithArguments( sAccessSrvc, theArgs ), UNO_QUERY );
         }
         catch (::com::sun::star::uno::Exception& )
@@ -2507,7 +2536,7 @@ void Desktop::PreloadConfigurationData()
         theArgs[ 0 ] <<= OUString::createFromAscii( "org.openoffice.Office.WriterWeb/Content" );
         try
         {
-            xNameAccess = Reference< XNameAccess >( 
+            xNameAccess = Reference< XNameAccess >(
                 xConfigProvider->createInstanceWithArguments( sAccessSrvc, theArgs ), UNO_QUERY );
         }
         catch (::com::sun::star::uno::Exception& )
@@ -2518,61 +2547,61 @@ void Desktop::PreloadConfigurationData()
         theArgs[ 0 ] <<= OUString::createFromAscii( "org.openoffice.Office.Compatibility/WriterCompatibilityVersion" );
         try
         {
-            xNameAccess = Reference< XNameAccess >( 
+            xNameAccess = Reference< XNameAccess >(
                 xConfigProvider->createInstanceWithArguments( sAccessSrvc, theArgs ), UNO_QUERY );
         }
         catch (::com::sun::star::uno::Exception& )
         {
         }
-        
+
         // preload calc configuration
         theArgs[ 0 ] <<= OUString::createFromAscii( "org.openoffice.Office.Calc/Content" );
         try
         {
-            xNameAccess = Reference< XNameAccess >( 
+            xNameAccess = Reference< XNameAccess >(
                 xConfigProvider->createInstanceWithArguments( sAccessSrvc, theArgs ), UNO_QUERY );
         }
         catch (::com::sun::star::uno::Exception& )
         {
         }
-        
+
         // preload impress configuration
         theArgs[ 0 ] <<= OUString::createFromAscii( "org.openoffice.Office.UI.Effects/UserInterface" );
         try
         {
-            xNameAccess = Reference< XNameAccess >( 
+            xNameAccess = Reference< XNameAccess >(
                 xConfigProvider->createInstanceWithArguments( sAccessSrvc, theArgs ), UNO_QUERY );
         }
         catch (::com::sun::star::uno::Exception& )
         {
         }
-        
+
         theArgs[ 0 ] <<= OUString::createFromAscii( "org.openoffice.Office.Impress/Layout" );
         try
         {
-            xNameAccess = Reference< XNameAccess >( 
+            xNameAccess = Reference< XNameAccess >(
                 xConfigProvider->createInstanceWithArguments( sAccessSrvc, theArgs ), UNO_QUERY );
         }
         catch (::com::sun::star::uno::Exception& )
         {
         }
-        
+
         // preload draw configuration
         theArgs[ 0 ] <<= OUString::createFromAscii( "org.openoffice.Office.Draw/Layout" );
         try
         {
-            xNameAccess = Reference< XNameAccess >( 
+            xNameAccess = Reference< XNameAccess >(
                 xConfigProvider->createInstanceWithArguments( sAccessSrvc, theArgs ), UNO_QUERY );
         }
         catch (::com::sun::star::uno::Exception& )
         {
         }
-        
+
         // preload ui configuration
         theArgs[ 0 ] <<= OUString::createFromAscii( "org.openoffice.Office.UI/FilterClassification" );
         try
         {
-            xNameAccess = Reference< XNameAccess >( 
+            xNameAccess = Reference< XNameAccess >(
                 xConfigProvider->createInstanceWithArguments( sAccessSrvc, theArgs ), UNO_QUERY );
         }
         catch (::com::sun::star::uno::Exception& )
@@ -2583,7 +2612,7 @@ void Desktop::PreloadConfigurationData()
         theArgs[ 0 ] <<= OUString::createFromAscii( "org.openoffice.Office.Addons/AddonUI" );
         try
         {
-            xNameAccess = Reference< XNameAccess >( 
+            xNameAccess = Reference< XNameAccess >(
                 xConfigProvider->createInstanceWithArguments( sAccessSrvc, theArgs ), UNO_QUERY );
         }
         catch (::com::sun::star::uno::Exception& )
@@ -2653,7 +2682,7 @@ void Desktop::OpenClients()
     {
         OUString            aIniName;
         ::vos::OStartupInfo aInfo;
-        
+
         aInfo.getExecutableFile( aIniName );
         sal_uInt32     lastIndex = aIniName.lastIndexOf('/');
         if ( lastIndex > 0 )
@@ -2666,12 +2695,12 @@ void Desktop::OpenClients()
             aIniName    += OUString( RTL_CONSTASCII_USTRINGPARAM( "rc" ));
 #endif
         }
-        
+
         rtl::Bootstrap aPerfTuneIniFile( aIniName );
-        
+
         OUString aDefault( RTL_CONSTASCII_USTRINGPARAM( "0" ));
         OUString aPreloadData;
-        
+
         aPerfTuneIniFile.getFrom( OUString( RTL_CONSTASCII_USTRINGPARAM( "QuickstartPreloadConfiguration" )), aPreloadData, aDefault );
         if ( aPreloadData.equalsAscii( "1" ))
         {
@@ -2699,7 +2728,7 @@ void Desktop::OpenClients()
                                                     ( !pArgs->IsHeadless()  ) &&
                                                     ( !pArgs->IsServer()    )
                                                   );
-    
+
     if ( ! bAllowRecoveryAndSessionManagement )
     {
      /*
@@ -2710,22 +2739,22 @@ void Desktop::OpenClients()
                 ::rtl::OUString::createFromAscii("Enabled"),
                 ::com::sun::star::uno::makeAny(sal_False),
                 ::comphelper::ConfigurationHelper::E_STANDARD);
-                 
+
         */
         try
         {
             Reference< XDispatch > xRecovery(
                     ::comphelper::getProcessServiceFactory()->createInstance( OUSTRING(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.AutoRecovery")) ),
                     ::com::sun::star::uno::UNO_QUERY_THROW );
-                    
+
             Reference< XURLTransformer > xParser(
                     ::comphelper::getProcessServiceFactory()->createInstance( OUSTRING(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.util.URLTransformer")) ),
                     ::com::sun::star::uno::UNO_QUERY_THROW );
-                    
+
             css::util::URL aCmd;
             aCmd.Complete = ::rtl::OUString::createFromAscii("vnd.sun.star.autorecovery:/disableRecovery");
             xParser->parseStrict(aCmd);
-            
+
             xRecovery->dispatch(aCmd, css::uno::Sequence< css::beans::PropertyValue >());
         }
         catch(const css::uno::Exception& e)
@@ -2743,7 +2772,7 @@ void Desktop::OpenClients()
 
         impl_checkRecoveryState(bCrashed, bExistsRecoveryData, bExistsSessionData);
 
-        if (
+        if ( !getenv ("OOO_DISABLE_RECOVERY") &&
             ( ! bLoaded ) &&
             (
                 ( bExistsRecoveryData ) || // => crash with files    => recovery
@@ -2812,7 +2841,8 @@ void Desktop::OpenClients()
         }
     }
 
-    if ( !pArgs->IsServer() )
+	sal_Bool bShutdown( sal_False );
+	if ( !pArgs->IsServer() )
     {
         ProcessDocumentsRequest aRequest;
 		aRequest.pcProcessed = NULL;
@@ -2864,14 +2894,29 @@ void Desktop::OpenClients()
                     aBox.Execute();
                 }
             }
-            
+
             // Process request
-            OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
+            bShutdown = OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
         }
     }
 
+	// Don't do anything if we have successfully called terminate at desktop
+	if ( bShutdown )
+#ifdef USE_JAVA
+    {
+        ::desktop::Desktop::bSuppressOpenDefault = sal_True;
+        return;
+    }
+#else	// USE_JAVA
+		return;
+#endif	// USE_JAVA
+
     // no default document if a document was loaded by recovery or by command line or if soffice is used as server
-    if ( bLoaded || xFirst.is() || pArgs->IsServer() )
+    Reference< XFramesSupplier > xTasksSupplier(
+            ::comphelper::getProcessServiceFactory()->createInstance( OUSTRING(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.Desktop")) ),
+            ::com::sun::star::uno::UNO_QUERY_THROW );
+    Reference< XElementAccess > xList( xTasksSupplier->getFrames(), UNO_QUERY_THROW );
+    if ( xList->hasElements() || pArgs->IsServer() )
 #ifdef USE_JAVA
     {
         ::desktop::Desktop::bSuppressOpenDefault = sal_True;
@@ -2901,8 +2946,6 @@ void Desktop::OpenClients()
 
 void Desktop::OpenDefault()
 {
-    if (::desktop::Desktop::bSuppressOpenDefault)
-        return;
 
     RTL_LOGFILE_CONTEXT( aLog, "desktop (cd100003) ::Desktop::OpenDefault" );
 
@@ -3016,9 +3059,11 @@ void Desktop::HandleAppEvent( const ApplicationEvent& rAppEvent )
 {
     if ( rAppEvent.GetEvent() == "APPEAR" && !GetCommandLineArgs()->IsInvisible() )
     {
+        css::uno::Reference< css::lang::XMultiServiceFactory > xSMGR = ::comphelper::getProcessServiceFactory();
+
         // find active task - the active task is always a visible task
         ::com::sun::star::uno::Reference< ::com::sun::star::frame::XFramesSupplier >
-                xDesktop( ::comphelper::getProcessServiceFactory()->createInstance( OUSTRING(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.Desktop")) ),
+                xDesktop( xSMGR->createInstance( OUSTRING(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.Desktop")) ),
                 ::com::sun::star::uno::UNO_QUERY );
         ::com::sun::star::uno::Reference< ::com::sun::star::frame::XFrame > xTask = xDesktop->getActiveFrame();
         if ( !xTask.is() )
@@ -3035,8 +3080,38 @@ void Desktop::HandleAppEvent( const ApplicationEvent& rAppEvent )
             xTop->toFront();
         }
         else
+        {
             // no visible task that could be activated found
-            OpenDefault();
+            Reference< XFrame > xBackingFrame;
+            Reference< ::com::sun::star::awt::XWindow > xContainerWindow;
+            ::com::sun::star::uno::Reference< ::com::sun::star::frame::XFrame > xDesktopFrame( xDesktop, UNO_QUERY );
+
+            xBackingFrame = xDesktopFrame->findFrame(OUString( RTL_CONSTASCII_USTRINGPARAM( "_blank" )), 0);
+            if (xBackingFrame.is())
+                xContainerWindow = xBackingFrame->getContainerWindow();
+            if (xContainerWindow.is())
+            {
+                Sequence< Any > lArgs(1);
+                lArgs[0] <<= xContainerWindow;
+                Reference< XController > xBackingComp(
+                    xSMGR->createInstanceWithArguments(OUString( RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.StartModule") ), lArgs),
+                    UNO_QUERY);
+                if (xBackingComp.is())
+                {
+                    Reference< ::com::sun::star::awt::XWindow > xBackingWin(xBackingComp, UNO_QUERY);
+                    // Attention: You MUST(!) call setComponent() before you call attachFrame().
+                    // Because the backing component set the property "IsBackingMode" of the frame
+                    // to true inside attachFrame(). But setComponent() reset this state everytimes ...
+                    xBackingFrame->setComponent(xBackingWin, xBackingComp);
+                    xBackingComp->attachFrame(xBackingFrame);
+                    xContainerWindow->setVisible(sal_True);
+
+                    Window* pCompWindow = VCLUnoHelper::GetWindow(xBackingFrame->getComponentWindow());
+                    if (pCompWindow)
+                        pCompWindow->Update();
+                }
+            }
+        }
     }
     else if ( rAppEvent.GetEvent() == "QUICKSTART" && !GetCommandLineArgs()->IsInvisible()  )
     {
@@ -3071,8 +3146,7 @@ void Desktop::HandleAppEvent( const ApplicationEvent& rAppEvent )
     else if ( rAppEvent.GetEvent() == "SaveDocuments" )
     {
         Desktop::_bTasksSaved = sal_False;
-        Desktop::_bTasksSaved = SaveTasks(DESKTOP_SAVETASKS_ALL);
-        // SaveTasks(DESKTOP_SAVETASKS_MOD);
+        Desktop::_bTasksSaved = SaveTasks();
     }
     else if ( rAppEvent.GetEvent() == "OPENHELPURL" )
     {
@@ -3092,7 +3166,7 @@ void Desktop::HandleAppEvent( const ApplicationEvent& rAppEvent )
 
 void Desktop::OpenSplashScreen()
 {
-       ::rtl::OUString        aTmpString;
+    ::rtl::OUString     aTmpString;
     CommandLineArgs*    pCmdLine = GetCommandLineArgs();
     sal_Bool bVisible = sal_False;
     // Show intro only if this is normal start (e.g. no server, no quickstart, no printing )
@@ -3104,9 +3178,29 @@ void Desktop::OpenSplashScreen()
          !pCmdLine->GetPrintList( aTmpString ) &&
          !pCmdLine->GetPrintToList( aTmpString ) )
     {
+        // Determine application name from command line parameters
+        OUString aAppName;
+        if ( pCmdLine->IsWriter() )
+            aAppName = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "writer" ));
+        else if ( pCmdLine->IsCalc() )
+            aAppName = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "calc" ));
+        else if ( pCmdLine->IsDraw() )
+            aAppName = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "draw" ));
+        else if ( pCmdLine->IsImpress() )
+            aAppName = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "impress" ));
+        else if ( pCmdLine->IsBase() )
+            aAppName = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "base" ));
+        else if ( pCmdLine->IsGlobal() )
+            aAppName = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "global" ));
+        else if ( pCmdLine->IsMath() )
+            aAppName = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "math" ));
+        else if ( pCmdLine->IsWeb() )
+            aAppName = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "web" ));
+
         bVisible = sal_True;
-        Sequence< Any > aSeq( 1 );
+        Sequence< Any > aSeq( 2 );
         aSeq[0] <<= bVisible;
+        aSeq[1] <<= aAppName;
         m_rSplashScreen = Reference<XStatusIndicator>(
             comphelper::getProcessServiceFactory()->createInstanceWithArguments(
             OUString::createFromAscii("com.sun.star.office.SplashScreen"),

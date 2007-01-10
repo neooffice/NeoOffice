@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_desktop.hxx"
+
 #include "migration.hxx"
 #include "migration_impl.hxx"
 #include "cfgfilter.hxx"
@@ -140,8 +143,8 @@ sal_Bool MigrationImpl::checkMigration()
 }
 
 MigrationImpl::MigrationImpl(const Reference< XMultiServiceFactory >& xFactory)
-    : m_xFactory(xFactory)
-    , m_vrVersions(new strings_v)
+    : m_vrVersions(new strings_v)
+    , m_xFactory(xFactory)
     , m_vrMigrations(readMigrationSteps())
     , m_aInfo(findInstallation())    
     , m_vrFileList(compileFileList())
@@ -215,7 +218,7 @@ sal_Bool MigrationImpl::checkMigrationCompleted()
             getConfigAccess("org.openoffice.Setup/Office"), UNO_QUERY_THROW);    
         aPropertySet->getPropertyValue(
             OUString::createFromAscii("MigrationCompleted")) >>= bMigrationCompleted;
-    } catch (Exception& e) {
+    } catch (Exception&) {
         // just return false...
     }
     return bMigrationCompleted;
@@ -337,7 +340,7 @@ install_info MigrationImpl::findInstallation()
     
     strings_v vInst;
     ByteString sInst;
-    for (int i=0; i<aVersion.GetKeyCount(); i++) {
+    for (USHORT i=0; i<aVersion.GetKeyCount(); i++) {
         sInst =aVersion.GetKeyName(i);
         vInst.push_back(OUString(static_cast< OString >(sInst), sInst.Len(), RTL_TEXTENCODING_UTF8));
     }
@@ -503,7 +506,7 @@ void MigrationImpl::copyConfig()
                 OUString component = seqComponents[i];
                 importerArgs[2].Value = makeAny(seqComponents[i]);                
                 try {
-                    Any aResult = xImporter->execute(importerArgs);
+                    aResult = xImporter->execute(importerArgs);
                     Exception myException;
                     if (aResult >>= myException) throw myException;
                 } catch(Exception& aException) {
@@ -612,6 +615,7 @@ static FileBase::RC _checkAndCreateDirectory(INetURLObject& dirURL)
         ::osl::DirectoryItem::get( dirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ), aDirItem );
         aDirItem.getFileStatus( aDirStatus );
         ::osl::File::setAttributes( dirURL.GetMainURL( INetURLObject::DECODE_TO_IURI ), Attribute_OwnRead | Attribute_OwnWrite | Attribute_OwnExe | aDirStatus.getAttributes() );
+        return result;
     }
 #else	// USE_JAVA
         return result;

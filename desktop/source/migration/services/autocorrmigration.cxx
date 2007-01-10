@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_desktop.hxx"
+
 #ifndef _DESKTOP_AUTOCORRMIGRATION_HXX_
 #include "autocorrmigration.hxx"
 #endif
@@ -281,8 +284,10 @@ namespace migration
             *pIter >>= aValue;
             if ( aValue.Name.equalsAscii( "UserData" ) )
             {
-                sal_Bool bSuccess = aValue.Value >>= m_sSourceDir;
-                OSL_ENSURE( bSuccess == sal_True, "AutocorrectionMigration::initialize: argument UserData has wrong type!" );
+                if ( !(aValue.Value >>= m_sSourceDir) )
+                {
+                    OSL_ENSURE( false, "AutocorrectionMigration::initialize: argument UserData has wrong type!" );
+                }
                 m_sSourceDir += sSourceSubDir;
                 break;
             }
@@ -293,7 +298,7 @@ namespace migration
     // XJob
     // -----------------------------------------------------------------------------
 
-    Any AutocorrectionMigration::execute( const Sequence< beans::NamedValue >& Arguments )
+    Any AutocorrectionMigration::execute( const Sequence< beans::NamedValue >& )
         throw (lang::IllegalArgumentException, Exception, RuntimeException)
     {
         ::osl::MutexGuard aGuard( m_aMutex );
@@ -308,7 +313,7 @@ namespace migration
     // =============================================================================
 
     Reference< XInterface > SAL_CALL AutocorrectionMigration_create(
-        Reference< XComponentContext > const & xContext )
+        Reference< XComponentContext > const & )
         SAL_THROW( () )
     {
         return static_cast< lang::XTypeProvider * >( new AutocorrectionMigration() );

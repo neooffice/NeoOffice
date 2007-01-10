@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_desktop.hxx"
+
 #ifndef _DESKTOP_COMMANDLINEARGS_HXX_
 #include <cmdlineargs.hxx>
 #endif
@@ -368,6 +371,11 @@ sal_Bool CommandLineArgs::InterpretCommandLineParameter( const ::rtl::OUString& 
 		SetBoolParam_Impl( CMD_BOOLPARAM_TERMINATEAFTERINIT, sal_True );
 		return sal_True;
 	}
+	else if ( aArg.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "-nofirststartwizard" )) == sal_True )
+	{
+		SetBoolParam_Impl( CMD_BOOLPARAM_NOFIRSTSTARTWIZARD, sal_True );
+		return sal_True;
+	}
 	else if ( aArg.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "-nologo" )) == sal_True )
 	{
 		SetBoolParam_Impl( CMD_BOOLPARAM_NOLOGO, sal_True );
@@ -560,7 +568,7 @@ void CommandLineArgs::SetBoolParam( BoolParam eParam, sal_Bool bNewValue )
 	m_aBoolParams[eParam] = bNewValue;
 }
 
-const rtl::OUString& CommandLineArgs::GetStringParam( BoolParam eParam ) const
+const rtl::OUString& CommandLineArgs::GetStringParam( StringParam eParam ) const
 {
 	osl::MutexGuard  aMutexGuard( m_aMutex );
 
@@ -568,7 +576,7 @@ const rtl::OUString& CommandLineArgs::GetStringParam( BoolParam eParam ) const
 	return m_aStrParams[eParam];
 }
 
-void CommandLineArgs::SetStringParam( BoolParam eParam, const rtl::OUString& aNewValue )
+void CommandLineArgs::SetStringParam( StringParam eParam, const rtl::OUString& aNewValue )
 {
 	osl::MutexGuard  aMutexGuard( m_aMutex );
 
@@ -634,6 +642,12 @@ sal_Bool CommandLineArgs::IsTerminateAfterInit() const
 {
 	osl::MutexGuard  aMutexGuard( m_aMutex );
 	return m_aBoolParams[ CMD_BOOLPARAM_TERMINATEAFTERINIT ];
+}
+
+sal_Bool CommandLineArgs::IsNoFirstStartWizard() const
+{
+	osl::MutexGuard  aMutexGuard( m_aMutex );
+	return m_aBoolParams[ CMD_BOOLPARAM_NOFIRSTSTARTWIZARD ];
 }
 
 sal_Bool CommandLineArgs::IsNoLogo() const
