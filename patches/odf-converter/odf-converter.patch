@@ -30,6 +30,15 @@ Index: source/OdfConverterTest/Makefile
  EXEEXT=
  PATHSEP=:
  EXPORTDYNAMIC=-Wl,--export-dynamic
+@@ -52,7 +56,7 @@
+ # Don't even try static linking to mono as we need to bundle glib and all of
+ # its dependencies which are not included in a standard Mac OS X installation
+ 	$(CC) -o OdfConverter -Wall `pkg-config --cflags mono` main.c \
+-		`pkg-config --libs-only-L mono` -bind_at_load \
++		`pkg-config --libs-only-L mono` -bind_at_load -all_load -lz \
+ 	    ../AdditionalTools/zlib123/contrib/minizip/libzlibwapi.a \
+ 		`pkg-config --libs-only-l mono` bundle.o
+ else
 Index: source/AdditionalTools/zlib123/contrib/minizip/Makefile
 ===================================================================
 --- source/AdditionalTools/zlib123/contrib/minizip/Makefile	(revision 1367)
