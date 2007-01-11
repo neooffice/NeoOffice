@@ -1034,6 +1034,12 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				for ( int i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
 				{
 					long nGlyph = pCurrentLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID;
+
+					// Fix bugs 810, 1806, 1927, and 2089 by treating all
+					// 0x0000ffff as spaces
+					if ( nGlyph >= 0x0000ffff )
+						nGlyph = 0x0020 | GF_ISCHAR;
+
 					if ( pCurrentLayoutData->maVerticalFontStyle )
 						nGlyph |= GetVerticalFlags( nChar );
 
@@ -1143,29 +1149,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 		}
 
 		JavaSalGraphics& rJavaGraphics = (JavaSalGraphics&)rGraphics;
-		int nLastStart = 0;
-		int nLastX = 0;
-		long *pGlyphArray = aGlyphArray;
-		long *pDXArray = aDXArray;
-		for ( i = 0; i < nGlyphCount; i++ )
-		{
-			nLastX += aDXArray[ i ];
-			aGlyphArray[ i ] &= GF_IDXMASK;
-			if ( aGlyphArray[ i ] >= 0x0000ffff )
-			{
-				if ( i - nLastStart )
-					rJavaGraphics.mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), i - nLastStart, pGlyphArray, pDXArray, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, nTranslateX, nTranslateY );
-				nLastStart = i + 1;
-				pGlyphArray = aGlyphArray + nLastStart;
-				pDXArray = aDXArray + nLastStart;
-				aPos.X() += nLastX;
-				nLastX = 0;
-				continue;
-			}
-		}
-
-		if ( i - nLastStart )
-			rJavaGraphics.mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), i - nLastStart, pGlyphArray, pDXArray, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, nTranslateX, nTranslateY );
+		rJavaGraphics.mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), nGlyphCount, aGlyphArray, aDXArray, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, nTranslateX, nTranslateY );
 	}
 }
 
@@ -1206,7 +1190,7 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 		if ( !nGlyphCount )
 			break;
 
-		if ( IsSpacingGlyph( aGlyphArray[ 0 ] ) || ( aGlyphArray[ 0 ] & GF_IDXMASK ) >= 0x0000ffff )
+		if ( IsSpacingGlyph( aGlyphArray[ 0 ] ) )
 		{
 			bRet = true;
 			continue;
