@@ -5463,12 +5463,7 @@ void PDFWriterImpl::registerGlyphs(
     ImplFontData* pDevFont = m_pReferenceDevice->mpFontEntry->maFontSelData.mpFontData;
     for( int i = 0; i < nGlyphs; i++ )
     {
-#ifdef USE_JAVA
-        // Fix bug 1927 by not rendering 0x0000ffff glyphs
-        if( ! pGlyphs[i] || ( pGlyphs[i] & GF_IDXMASK ) >= 0x0000ffff )
-#else	// USE_JAVA
         if( ! pGlyphs[i] )
-#endif	// USE_JAVA
             continue;
 
         ImplFontData* pCurrentFont = pFallbackFonts[i] ? pFallbackFonts[i] : pDevFont;
@@ -5973,11 +5968,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                 }
                 aDeltaPos += (m_pReferenceDevice->PixelToLogic( Point( (int)((double)nXOffset/fXScale)/rLayout.GetUnitsPerPixel(), 0 ) ) - m_pReferenceDevice->PixelToLogic( Point() ) );
                 nXOffset += pAdvanceWidths[n];
-#ifdef USE_JAVA
-                if( ! pGlyphs[n] || ( pGlyphs[n] & GF_IDXMASK ) >= 0x0000ffff )
-#else	// USE_JAVA
                 if( ! pGlyphs[n] )
-#endif	// USE_JAVA
                     continue;
 
 
@@ -6026,33 +6017,6 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
         }
         else // normal case
         {
-#ifdef USE_JAVA
-            // Fix bug 810 by letting the PDF rendering application lay out
-            // words
-            int j;
-            for ( j = 0; j < nGlyphs && !pGlyphs[ j ]; j++ )
-                ;
-            if ( j )
-            {
-                while ( j < nGlyphs && pCharPosAry[ j ] == pCharPosAry[ 0 ] )
-                    j++;
-                if ( j < nGlyphs )
-                    nIndex = pCharPosAry[ j ];
-                continue;
-            }
-
-            for ( j = 0; j < nGlyphs && pGlyphs[ j ]; j++ )
-                ;
-            if ( j < nGlyphs )
-            {
-                nGlyphs = j;
-                if ( nGlyphs )
-                    nIndex = pCharPosAry[ j ];
-                else
-                    continue;
-            }
-#endif	// USE_JAVA
-
             // optimize use of Td vs. Tm
             if( fAngle == 0.0 && fXScale == 1.0 && ( !bFirst || fSkew == 0.0 ) )
             {
@@ -6108,18 +6072,14 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
             int nLast = 0;
             while( nLast < nGlyphs )
             {
-#ifdef USE_JAVA
-                while( ( ! pGlyphs[nLast] || ( pGlyphs[nLast] & GF_IDXMASK ) >= 0x0000ffff ) && nLast < nGlyphs )
-#else	// USE_JAVA
                 while( ! pGlyphs[nLast] && nLast < nGlyphs )
-#endif	// USE_JAVA
                     nLast++;
                 if( nLast >= nGlyphs )
                     break;
 
                 int nNext = nLast+1;
 #ifdef USE_JAVA
-                while( nNext < nGlyphs && pMappedFontObjects[ nNext ] == pMappedFontObjects[nLast] && pMappedFontSubObjects[ nNext ] == pMappedFontSubObjects[nLast] && pGlyphs[nNext] && ( pGlyphs[nNext] & GF_IDXMASK ) < 0x0000ffff )
+                while( nNext < nGlyphs && pMappedFontObjects[ nNext ] == pMappedFontObjects[nLast] && pMappedFontSubObjects[ nNext ] == pMappedFontSubObjects[nLast] && pGlyphs[nNext] )
                     nNext++;
                 if( nLastMappedFont != pMappedFontObjects[nLast] || nLastMappedFontSub != pMappedFontSubObjects[nLast] )
                 {
