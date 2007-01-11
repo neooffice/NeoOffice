@@ -1,0 +1,18 @@
+Index: source/filter/eppt/eppt.hxx
+===================================================================
+RCS file: /cvs/graphics/sd/source/filter/eppt/eppt.hxx,v
+retrieving revision 1.42
+diff -u -r1.42 eppt.hxx
+--- source/filter/eppt/eppt.hxx	6 Mar 2006 09:03:19 -0000	1.42
++++ source/filter/eppt/eppt.hxx	11 Jan 2007 21:42:50 -0000
+@@ -672,6 +672,10 @@
+ 
+ // ------------------------------------------------------------------------
+ 
++#if defined MACOSX && __GNUC__ > 3
++// Fix bug 1527 avoiding a namespace collision for gcc 4 and higher
++#define FieldEntry EPPTFieldEntry
++#endif
+ struct FieldEntry;
+ class PortionObj : public PropStateValue
+ {

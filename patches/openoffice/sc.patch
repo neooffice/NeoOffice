@@ -1,0 +1,20 @@
+Index: source/core/data/cell.cxx
+===================================================================
+RCS file: /cvs/sc/sc/source/core/data/cell.cxx,v
+retrieving revision 1.35
+diff -u -r1.35 cell.cxx
+--- source/core/data/cell.cxx	24 Oct 2006 13:05:45 -0000	1.35
++++ source/core/data/cell.cxx	11 Jan 2007 21:50:13 -0000
+@@ -86,7 +86,12 @@
+ // hand, if the value fits all recursions, execution is quicker as no resumes
+ // are necessary. Could be made a configurable option.
+ // Allow for a year's calendar (366).
++#if defined MACOSX && defined POWERPC
++// Fix bug 1571 by limiting max recursion size
++const USHORT MAXRECURSION = 300;
++#else	// MACOSX && POWERPC
+ const USHORT MAXRECURSION = 400;
++#endif	// MACOSX && POWERPC
+ 
+ // STATIC DATA -----------------------------------------------------------
+ 
