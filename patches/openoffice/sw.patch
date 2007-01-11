@@ -1,0 +1,24 @@
+Index: source/ui/uiview/viewprt.cxx
+===================================================================
+RCS file: /cvs/sw/sw/source/ui/uiview/viewprt.cxx,v
+retrieving revision 1.31
+diff -u -r1.31 viewprt.cxx
+--- source/ui/uiview/viewprt.cxx	16 Sep 2006 23:26:26 -0000	1.31
++++ source/ui/uiview/viewprt.cxx	11 Jan 2007 22:27:22 -0000
+@@ -533,9 +533,16 @@
+             SFX_REQUEST_ARG(rReq, pSilentItem, SfxBoolItem, SID_SILENT, FALSE);
+             BOOL bSilent = pSilentItem ? pSilentItem->GetValue() : FALSE;
+             SFX_REQUEST_ARG(rReq, pPrintFromMergeItem, SfxBoolItem, FN_QRY_MERGE, FALSE);
++#ifdef MACOSX
++            // Fix bug 206 by retrieving the value before removing it as once
++            // it is removed, it will sometimes be set by the compiler to FALSE
++            BOOL bFromMerge = pPrintFromMergeItem ? pPrintFromMergeItem->GetValue() : FALSE;
++#endif	// MACOSX
+ 			if(pPrintFromMergeItem)
+ 				rReq.RemoveItem(FN_QRY_MERGE);
++#ifndef MACOSX
+             BOOL bFromMerge = pPrintFromMergeItem ? pPrintFromMergeItem->GetValue() : FALSE;
++#endif	// !MACOSX
+             SwMiscConfig aMiscConfig;
+             if(!bSilent && !bFromMerge &&
+                     SW_MOD()->GetModuleConfig()->IsAskForMailMerge() && pSh->IsAnyDatabaseFieldInDoc())

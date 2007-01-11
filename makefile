@@ -169,6 +169,7 @@ build.oo_patches: build.ooo-build_patches \
 	build.oo_sj2_patch \
 	build.oo_solenv_patch \
 	build.oo_store_patch \
+	build.oo_sw_patch \
 	build.oo_toolkit_patch \
 	build.oo_ucb_patch \
 	build.oo_vcl_patch \
