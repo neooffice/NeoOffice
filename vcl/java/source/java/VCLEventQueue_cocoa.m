@@ -129,9 +129,10 @@
 		}
 		else if ( [pSelectorName compare:@"deleteBackward:"] == NSOrderedSame )
 		{
-			if ( mpView && [mpView respondsToSelector:@selector(abandonInput)] )
+			if ( mpView && [mpView respondsToSelector:@selector(abandonInput)] && [mpView respondsToSelector:@selector(unmarkText)] )
 			{
 				[mpView abandonInput];
+				[mpView unmarkText];
 			}
 		}
 	}
@@ -188,7 +189,7 @@
 	BOOL bRet = [super makeFirstResponder:pResponder];
 
 	// Fix bug 1819 by forcing cancellation of the input method
-	if ( bRet && [pResponder respondsToSelector:@selector(abandonInput)] )
+	if ( bRet && pResponder && [pResponder respondsToSelector:@selector(abandonInput)] )
 		[pResponder abandonInput];
 
 	return bRet;
@@ -196,7 +197,7 @@
 
 @end
 
-static VCLResponder *pResponder = nil;
+static VCLResponder *pSharedResponder = nil;
 
 @interface VCLView : NSView
 - (void)interpretKeyEvents:(NSArray *)pEvents;
@@ -214,10 +215,10 @@ static VCLResponder *pResponder = nil;
 		if ( pEvent )
 		{
 			NSApplication *pApp = [NSApplication sharedApplication];
-			if ( pApp && pResponder )
+			if ( pApp && pSharedResponder )
 			{
-				[pResponder interpretKeyEvents:pEvents view:self];
-				NSString *pText = [(VCLResponder *)pResponder lastText];
+				[pSharedResponder interpretKeyEvents:pEvents view:self];
+				NSString *pText = [(VCLResponder *)pSharedResponder lastText];
 				if ( pText )
 				{
 					int nLen = [pText length];
@@ -257,9 +258,9 @@ static VCLResponder *pResponder = nil;
 - (void)installVCLEventQueueClasses:(id)pObject
 {
 	// Initialize statics
-	pResponder = [[VCLResponder alloc] init];
-	if ( pResponder )
-		[pResponder retain];
+	pSharedResponder = [[VCLResponder alloc] init];
+	if ( pSharedResponder )
+		[pSharedResponder retain];
 
 	[VCLFontManager poseAsClass:[NSFontManager class]];
 	[VCLWindow poseAsClass:[NSWindow class]];
