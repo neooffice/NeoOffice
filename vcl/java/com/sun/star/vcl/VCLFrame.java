@@ -1735,7 +1735,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public synchronized void postInputMethodTextCancelled() {
 
-
 		if (disposed || !window.isShowing())
 			return;
 

@@ -117,12 +117,22 @@
 - (void)doCommandBySelector:(SEL)aSelector
 {
 	NSString *pSelectorName = NSStringFromSelector( aSelector );
-	if ( pSelectorName )
+	if ( pSelectorName ) 
 	{
-		if ( [pSelectorName compare:@"cancelOperation:"] == NSOrderedSame || [pSelectorName compare:@"deleteBackward:"] == NSOrderedSame )
+		if ( [pSelectorName compare:@"cancelOperation:"] == NSOrderedSame )
 		{
-			if ( mpView )
-				[mpView cancelOperation:self];
+			if ( mpView && [mpView respondsToSelector:@selector(abandonInput)] )
+			{
+				[mpView abandonInput];
+				VCLEventQueue_postInputMethodTextCancelled( [mpView window] );
+			}
+		}
+		else if ( [pSelectorName compare:@"deleteBackward:"] == NSOrderedSame )
+		{
+			if ( mpView && [mpView respondsToSelector:@selector(abandonInput)] )
+			{
+				[mpView abandonInput];
+			}
 		}
 	}
 }
@@ -168,32 +178,20 @@
 @end
 
 @interface VCLWindow : NSWindow
-- (void)resignKeyWindow;
+- (BOOL)makeFirstResponder:(NSResponder *)pResponder;
 @end
 
 @implementation VCLWindow
 
-- (void)resignKeyWindow
+- (BOOL)makeFirstResponder:(NSResponder *)pResponder;
 {
-	[super resignKeyWindow];
+	BOOL bRet = [super makeFirstResponder:pResponder];
 
-	// Fix bug 1819 by forcing cancellation of the input method by posting
-	// a Command-. event
-	if ( [self isVisible] && [[self className] isEqualToString:@"CocoaAppWindow"] )
-	{
-		NSApplication *pApp = [NSApplication sharedApplication];
-		if ( pApp )
-		{
-			// Fix bug 1881 by specifying the correct key code
-			NSEvent *pKeyPressedEvent = [NSEvent keyEventWithType:NSKeyDown location:NSMakePoint( 0, 0 ) modifierFlags:NSCommandKeyMask timestamp:[NSDate timeIntervalSinceReferenceDate] windowNumber:[self windowNumber] context:nil characters:@"." charactersIgnoringModifiers:@"." isARepeat:NO keyCode:47];
-			NSEvent *pKeyReleasedEvent = [NSEvent keyEventWithType:NSKeyUp location:NSMakePoint( 0, 0 ) modifierFlags:NSCommandKeyMask timestamp:[NSDate timeIntervalSinceReferenceDate] windowNumber:[self windowNumber] context:nil characters:@"." charactersIgnoringModifiers:@"." isARepeat:NO keyCode:47];
-			if ( pKeyPressedEvent && pKeyReleasedEvent )
-			{
-				[pApp postEvent:pKeyPressedEvent atStart:NO];
-				[pApp postEvent:pKeyReleasedEvent atStart:NO];
-			}
-		}
-	}
+	// Fix bug 1819 by forcing cancellation of the input method
+	if ( bRet && [pResponder respondsToSelector:@selector(abandonInput)] )
+		[pResponder abandonInput];
+
+	return bRet;
 }
 
 @end
@@ -201,18 +199,10 @@
 static VCLResponder *pResponder = nil;
 
 @interface VCLView : NSView
-- (void)cancelOperation:(id)pSender;
 - (void)interpretKeyEvents:(NSArray *)pEvents;
 @end
 
 @implementation VCLView
-
-- (void)cancelOperation:(id)pSender
-{
-	NSWindow *pWindow = [self window];
-	if ( pWindow && [pWindow isVisible] && [[pWindow className] isEqualToString:@"CocoaAppWindow"] )
-		VCLEventQueue_postInputMethodTextCancelled( pWindow );
-}
 
 - (void)interpretKeyEvents:(NSArray *)pEvents
 {

@@ -692,6 +692,8 @@ sal_Bool com_sun_star_vcl_VCLFrame::requestFocus()
 	return out;
 }
 
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLFrame::postInputMethodTextCancelled()
 {
 	static jmethodID mID = NULL;
@@ -708,8 +710,6 @@ void com_sun_star_vcl_VCLFrame::postInputMethodTextCancelled()
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 	}
 }
-
-// ----------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------
 
