@@ -1732,21 +1732,16 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 	/**
 	 * Create and post event to notify that uncommitted text has been cancelled.
-	 *
-	 * @param
 	 */
-	public void postInputMethodTextCancelled() {
+	public synchronized void postInputMethodTextCancelled() {
 
-		InputMethodEvent e = null;
+
+		if (disposed || !window.isShowing())
+			return;
 
 		// Post an input method event with null text
-		synchronized (this) {
-			if (!disposed)
-				e = new InputMethodEvent(panel, InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, TextHitInfo.beforeOffset(0), TextHitInfo.beforeOffset(0));
-		}
-
-		if (e != null)
-			Toolkit.getDefaultToolkit().getSystemEventQueue().postEvent(e);
+		InputMethodEvent e = new InputMethodEvent(panel, InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, TextHitInfo.beforeOffset(0), TextHitInfo.beforeOffset(0));
+		Toolkit.getDefaultToolkit().getSystemEventQueue().postEvent(e);
 
 	}
 
