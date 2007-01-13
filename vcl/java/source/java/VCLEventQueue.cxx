@@ -74,18 +74,6 @@ JNIEXPORT jboolean JNICALL Java_com_sun_star_vcl_VCLEventQueue_isNativeModalWind
 	return ( NSApplication_getModalWindow() ? JNI_TRUE : JNI_FALSE );
 }
 
-// ----------------------------------------------------------------------------
-
-void VCLEventQueue_postInputMethodTextCancelled( void *pNSWindow )
-{
-	com_sun_star_vcl_VCLFrame *pVCLFrame = com_sun_star_vcl_VCLFrame::getVCLFrameForNSWindow( pNSWindow );
-	if ( pVCLFrame )
-	{
-    	pVCLFrame->postInputMethodTextCancelled();
-		delete pVCLFrame;
-	}
-}
-
 // ============================================================================
 
 jclass com_sun_star_vcl_VCLEventQueue::theClass = NULL;

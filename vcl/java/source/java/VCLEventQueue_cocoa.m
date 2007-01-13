@@ -82,6 +82,8 @@
 
 @end
 
+const static NSString *pCancelInputMethodText = @" ";
+
 @interface VCLResponder : NSResponder
 {
 	NSString*				mpLastText;
@@ -117,12 +119,24 @@
 - (void)doCommandBySelector:(SEL)aSelector
 {
 	NSString *pSelectorName = NSStringFromSelector( aSelector );
-	if ( pSelectorName )
+	if ( pSelectorName ) 
 	{
-		if ( [pSelectorName compare:@"cancelOperation:"] == NSOrderedSame || [pSelectorName compare:@"deleteBackward:"] == NSOrderedSame )
+		if ( [pSelectorName compare:@"cancelOperation:"] == NSOrderedSame )
 		{
-			if ( mpView )
-				[mpView cancelOperation:self];
+			if ( mpView && [mpView respondsToSelector:@selector(abandonInput)] && [mpView respondsToSelector:@selector(hasMarkedText)] && [mpView respondsToSelector:@selector(insertText:)] )
+			{
+				if ( [mpView hasMarkedText] )
+					[mpView insertText:pCancelInputMethodText];
+				[mpView abandonInput];
+			}
+		}
+		else if ( [pSelectorName compare:@"deleteBackward:"] == NSOrderedSame )
+		{
+			if ( mpView && [mpView respondsToSelector:@selector(abandonInput)] && [mpView respondsToSelector:@selector(unmarkText)] )
+			{
+				[mpView abandonInput];
+				[mpView unmarkText];
+			}
 		}
 	}
 }
@@ -168,51 +182,91 @@
 @end
 
 @interface VCLWindow : NSWindow
+- (void)becomeKeyWindow;
+- (BOOL)makeFirstResponder:(NSResponder *)pResponder;
+- (void)orderOut:(id)pSender;
 - (void)resignKeyWindow;
 @end
 
 @implementation VCLWindow
 
-- (void)resignKeyWindow
+- (void)becomeKeyWindow
 {
-	[super resignKeyWindow];
+	[super becomeKeyWindow];
 
-	// Fix bug 1819 by forcing cancellation of the input method by posting
-	// a Command-. event
-	if ( [self isVisible] && [[self className] isEqualToString:@"CocoaAppWindow"] )
+	// Fix bug 1819 by forcing cancellation of the input method
+	NSResponder *pResponder = [self firstResponder];
+	if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
 	{
-		NSApplication *pApp = [NSApplication sharedApplication];
-		if ( pApp )
+		if ( [pResponder hasMarkedText] )
+			[pResponder insertText:pCancelInputMethodText];
+		[pResponder abandonInput];
+	}
+}
+
+- (BOOL)makeFirstResponder:(NSResponder *)pResponder
+{
+	NSResponder *pOldResponder = [self firstResponder];
+	BOOL bRet = [super makeFirstResponder:pResponder];
+
+	// Fix bug 1819 by forcing cancellation of the input method
+	if ( bRet )
+	{
+		if ( pOldResponder && [pOldResponder respondsToSelector:@selector(abandonInput)] && [pOldResponder respondsToSelector:@selector(hasMarkedText)] && [pOldResponder respondsToSelector:@selector(insertText:)] )
 		{
-			// Fix bug 1881 by specifying the correct key code
-			NSEvent *pKeyPressedEvent = [NSEvent keyEventWithType:NSKeyDown location:NSMakePoint( 0, 0 ) modifierFlags:NSCommandKeyMask timestamp:[NSDate timeIntervalSinceReferenceDate] windowNumber:[self windowNumber] context:nil characters:@"." charactersIgnoringModifiers:@"." isARepeat:NO keyCode:47];
-			NSEvent *pKeyReleasedEvent = [NSEvent keyEventWithType:NSKeyUp location:NSMakePoint( 0, 0 ) modifierFlags:NSCommandKeyMask timestamp:[NSDate timeIntervalSinceReferenceDate] windowNumber:[self windowNumber] context:nil characters:@"." charactersIgnoringModifiers:@"." isARepeat:NO keyCode:47];
-			if ( pKeyPressedEvent && pKeyReleasedEvent )
-			{
-				[pApp postEvent:pKeyPressedEvent atStart:NO];
-				[pApp postEvent:pKeyReleasedEvent atStart:NO];
-			}
+			if ( [pOldResponder hasMarkedText] )
+				[pOldResponder insertText:pCancelInputMethodText];
+			[pOldResponder abandonInput];
+		}
+
+		if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
+		{
+			if ( [pResponder hasMarkedText] )
+				[pResponder insertText:pCancelInputMethodText];
+			[pResponder abandonInput];
 		}
 	}
+
+	return bRet;
+}
+
+- (void)orderOut:(id)pSender
+{
+	// Fix bug 1819 by forcing cancellation of the input method
+	NSResponder *pResponder = [self firstResponder];
+	if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
+	{
+		if ( [pResponder hasMarkedText] )
+			[pResponder insertText:pCancelInputMethodText];
+		[pResponder abandonInput];
+	}
+
+	[super orderOut:pSender];
+}
+
+- (void)resignKeyWindow
+{
+	// Fix bug 1819 by forcing cancellation of the input method
+	NSResponder *pResponder = [self firstResponder];
+	if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
+	{
+		if ( [pResponder hasMarkedText] )
+			[pResponder insertText:pCancelInputMethodText];
+		[pResponder abandonInput];
+	}
+
+	[super resignKeyWindow];
 }
 
 @end
 
-static VCLResponder *pResponder = nil;
+static VCLResponder *pSharedResponder = nil;
 
 @interface VCLView : NSView
-- (void)cancelOperation:(id)pSender;
 - (void)interpretKeyEvents:(NSArray *)pEvents;
 @end
 
 @implementation VCLView
-
-- (void)cancelOperation:(id)pSender
-{
-	NSWindow *pWindow = [self window];
-	if ( pWindow && [pWindow isVisible] && [[pWindow className] isEqualToString:@"CocoaAppWindow"] )
-		VCLEventQueue_postInputMethodTextCancelled( pWindow );
-}
 
 - (void)interpretKeyEvents:(NSArray *)pEvents
 {
@@ -224,10 +278,10 @@ static VCLResponder *pResponder = nil;
 		if ( pEvent )
 		{
 			NSApplication *pApp = [NSApplication sharedApplication];
-			if ( pApp && pResponder )
+			if ( pApp && pSharedResponder )
 			{
-				[pResponder interpretKeyEvents:pEvents view:self];
-				NSString *pText = [(VCLResponder *)pResponder lastText];
+				[pSharedResponder interpretKeyEvents:pEvents view:self];
+				NSString *pText = [(VCLResponder *)pSharedResponder lastText];
 				if ( pText )
 				{
 					int nLen = [pText length];
@@ -267,9 +321,9 @@ static VCLResponder *pResponder = nil;
 - (void)installVCLEventQueueClasses:(id)pObject
 {
 	// Initialize statics
-	pResponder = [[VCLResponder alloc] init];
-	if ( pResponder )
-		[pResponder retain];
+	pSharedResponder = [[VCLResponder alloc] init];
+	if ( pSharedResponder )
+		[pSharedResponder retain];
 
 	[VCLFontManager poseAsClass:[NSFontManager class]];
 	[VCLWindow poseAsClass:[NSWindow class]];
