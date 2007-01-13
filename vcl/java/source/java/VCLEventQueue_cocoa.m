@@ -232,8 +232,6 @@ const static NSString *pCancelInputMethodText = @" ";
 
 - (void)orderOut:(id)pSender
 {
-	[super orderOut:pSender];
-
 	// Fix bug 1819 by forcing cancellation of the input method
 	NSResponder *pResponder = [self firstResponder];
 	if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
@@ -242,12 +240,12 @@ const static NSString *pCancelInputMethodText = @" ";
 			[pResponder insertText:pCancelInputMethodText];
 		[pResponder abandonInput];
 	}
+
+	[super orderOut:pSender];
 }
 
 - (void)resignKeyWindow
 {
-	[super resignKeyWindow];
-
 	// Fix bug 1819 by forcing cancellation of the input method
 	NSResponder *pResponder = [self firstResponder];
 	if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
@@ -256,6 +254,8 @@ const static NSString *pCancelInputMethodText = @" ";
 			[pResponder insertText:pCancelInputMethodText];
 		[pResponder abandonInput];
 	}
+
+	[super resignKeyWindow];
 }
 
 @end
