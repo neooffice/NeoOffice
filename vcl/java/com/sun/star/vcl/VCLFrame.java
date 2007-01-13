@@ -1410,6 +1410,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else if (count > e.getCommittedCharacterCount()) {
 			lastUncommittedInputMethodEvent = e;
 		}
+		else if (count == e.getCommittedCharacterCount() && lastUncommittedInputMethodEvent == null) {
+			// When switching from a window with uncommitted text, Java will
+			// erroneously repost the last cancelled text
+			return;
+		}
 		else {
 			lastUncommittedInputMethodEvent = null;
 		}
