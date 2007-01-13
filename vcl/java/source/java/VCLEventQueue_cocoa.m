@@ -182,23 +182,80 @@ const static NSString *pCancelInputMethodText = @" ";
 @end
 
 @interface VCLWindow : NSWindow
+- (void)becomeKeyWindow;
 - (BOOL)makeFirstResponder:(NSResponder *)pResponder;
+- (void)orderOut:(id)pSender;
+- (void)resignKeyWindow;
 @end
 
 @implementation VCLWindow
 
+- (void)becomeKeyWindow
+{
+	[super becomeKeyWindow];
+
+	// Fix bug 1819 by forcing cancellation of the input method
+	NSResponder *pResponder = [self firstResponder];
+	if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
+	{
+		if ( [pResponder hasMarkedText] )
+			[pResponder insertText:pCancelInputMethodText];
+		[pResponder abandonInput];
+	}
+}
+
 - (BOOL)makeFirstResponder:(NSResponder *)pResponder
 {
+	NSResponder *pOldResponder = [self firstResponder];
 	BOOL bRet = [super makeFirstResponder:pResponder];
 
 	// Fix bug 1819 by forcing cancellation of the input method
-	if ( bRet && pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(insertText:)] )
+	if ( bRet )
 	{
-		[pResponder insertText:pCancelInputMethodText];
-		[pResponder abandonInput];
+		if ( pOldResponder && [pOldResponder respondsToSelector:@selector(abandonInput)] && [pOldResponder respondsToSelector:@selector(hasMarkedText)] && [pOldResponder respondsToSelector:@selector(insertText:)] )
+		{
+			if ( [pOldResponder hasMarkedText] )
+				[pOldResponder insertText:pCancelInputMethodText];
+			[pOldResponder abandonInput];
+		}
+
+		if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
+		{
+			if ( [pResponder hasMarkedText] )
+				[pResponder insertText:pCancelInputMethodText];
+			[pResponder abandonInput];
+		}
 	}
 
 	return bRet;
+}
+
+- (void)orderOut:(id)pSender
+{
+	[super orderOut:pSender];
+
+	// Fix bug 1819 by forcing cancellation of the input method
+	NSResponder *pResponder = [self firstResponder];
+	if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
+	{
+		if ( [pResponder hasMarkedText] )
+			[pResponder insertText:pCancelInputMethodText];
+		[pResponder abandonInput];
+	}
+}
+
+- (void)resignKeyWindow
+{
+	[super resignKeyWindow];
+
+	// Fix bug 1819 by forcing cancellation of the input method
+	NSResponder *pResponder = [self firstResponder];
+	if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
+	{
+		if ( [pResponder hasMarkedText] )
+			[pResponder insertText:pCancelInputMethodText];
+		[pResponder abandonInput];
+	}
 }
 
 @end

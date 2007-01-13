@@ -1094,12 +1094,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			}
 		}
 
-		// Cancel any uncommitted text
-		if (lastUncommittedInputMethodEvent != null) {
-			InputMethodEvent inputMethodEvent = new InputMethodEvent(panel, InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, System.currentTimeMillis(), defaultAttributedCharacterIterator, 0, TextHitInfo.beforeOffset(0), TextHitInfo.beforeOffset(0));
-			inputMethodTextChanged(inputMethodEvent);
-		}
-
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
 
 	}
@@ -1394,12 +1388,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		for (char c = text.first(); c != CharacterIterator.DONE; c = text.next())
 			count++;
 
-		// Fix bug 1429 by committing last uncommitted text if there is no
-		// text in this event. Since this code assumes that uncommitted text
-		// is never cancelled, there are fixes in the C++ code that post
-		// input method events with the text set to null to indicate that the
-		// uncommitted text should be cancelled.
 		if (count == 0) {
+			// Fix bug 1429 by committing last uncommitted text if there is no
+			// text in this event. Since this code assumes that uncommitted text
+			// is never cancelled, there are fixes in the C++ code that post
+			// input method events with the text set to null to indicate that
+			// the uncommitted text should be cancelled.
 			if (lastUncommittedInputMethodEvent != null) {
 				AttributedCharacterIterator lastText = lastUncommittedInputMethodEvent.getText();
 				int lastCount = 0;
@@ -1415,6 +1409,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 		else if (count > e.getCommittedCharacterCount()) {
 			lastUncommittedInputMethodEvent = e;
+		}
+		else if (count == e.getCommittedCharacterCount() && lastUncommittedInputMethodEvent == null) {
+			// When switching from a window with uncommitted text, Java will
+			// erroneously repost the last cancelled text
+			return;
 		}
 		else {
 			lastUncommittedInputMethodEvent = null;
