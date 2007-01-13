@@ -1034,6 +1034,11 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				for ( int i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
 				{
 					long nGlyph = pCurrentLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID;
+					// Fix bug 2091 by suppressing zero glyphs if there is a
+					// fallback font
+
+					if ( !nGlyph && pCurrentLayoutData->mpFallbackFont )
+						continue;
 
 					// Fix bugs 810, 1806, 1927, and 2089 by treating all
 					// 0x0000ffff as spaces
