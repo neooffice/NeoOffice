@@ -56,7 +56,6 @@ protected:
 
 public:
 	static jclass		getMyClass();
-	static com_sun_star_vcl_VCLFrame*	getVCLFrameForNSWindow( void *pNSWindow );
 
 						com_sun_star_vcl_VCLFrame( jobject myObj ) : java_lang_Object( myObj ) {}
 						com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, const JavaSalFrame *pFrame, const JavaSalFrame *pParent );
@@ -65,7 +64,6 @@ public:
 	void				addChild( JavaSalFrame *_par0 );
 	void				dispose();
 	void				enableFlushing( sal_Bool _par0 );
-	void				endComposition();
 	const Rectangle		getBounds();
 	com_sun_star_vcl_VCLGraphics*	getGraphics();
 	const Rectangle		getInsets();
@@ -74,7 +72,6 @@ public:
 	void*				getNativeWindowRef();
 	java_lang_Object*	getPeer();
 	ULONG				getState();
-	void				postInputMethodTextCancelled();
 	void				removeChild( JavaSalFrame *_par0 );
 	sal_Bool			requestFocus();
 	void				setBounds( long _par0, long _par1, long _par2, long _par3 );

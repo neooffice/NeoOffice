@@ -1059,23 +1059,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
-	 * Create and post event to end any uncommitted key input.
-	 */
-	public void endComposition() {
-
-		// Invoking InputContext.endComposition() does nothing on Mac OS X
-		// but we invoke it anyway in the hopes that it does do something
-		InputContext ic = window.getInputContext();
-		if (ic != null)
-			ic.endComposition();
-
-		lastUncommittedInputMethodEvent = null;
-		InputMethodEvent e = new InputMethodEvent(panel, InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, TextHitInfo.beforeOffset(0), TextHitInfo.beforeOffset(0));
-		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_EXTTEXTINPUT, this, 0));
-
-	}
-
-	/**
 	 * Invoked when the native window has gained focus.
 	 *
 	 * @param e the <code>FocusEvent</code>
@@ -1109,6 +1092,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 					return;
 				}
 			}
+		}
+
+		// Cancel any uncommitted text
+		if (lastUncommittedInputMethodEvent != null) {
+			InputMethodEvent inputMethodEvent = new InputMethodEvent(panel, InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, System.currentTimeMillis(), defaultAttributedCharacterIterator, 0, TextHitInfo.beforeOffset(0), TextHitInfo.beforeOffset(0));
+			inputMethodTextChanged(inputMethodEvent);
 		}
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
@@ -1398,24 +1387,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			return;
 
 		AttributedCharacterIterator text = e.getText();
-		int count = 0;
-		if (text != null) {
-			for (char c = text.first(); c != CharacterIterator.DONE; c = text.next())
-				count++;
-		}
-		else if (lastUncommittedInputMethodEvent == null) {
-			// Fix bug 1861 by ignoring events posted by the
-			// postInputMethodTextCancelled method that are really just a
-			// backspace
+		if (text == null)
 			return;
-		}
+
+		int count = 0;
+		for (char c = text.first(); c != CharacterIterator.DONE; c = text.next())
+			count++;
 
 		// Fix bug 1429 by committing last uncommitted text if there is no
 		// text in this event. Since this code assumes that uncommitted text
 		// is never cancelled, there are fixes in the C++ code that post
 		// input method events with the text set to null to indicate that the
 		// uncommitted text should be cancelled.
-		if (text != null && count == 0) {
+		if (count == 0) {
 			if (lastUncommittedInputMethodEvent != null) {
 				AttributedCharacterIterator lastText = lastUncommittedInputMethodEvent.getText();
 				int lastCount = 0;
@@ -1425,7 +1409,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				lastUncommittedInputMethodEvent = null;
 			}
 		}
-		else if (text != null && count > e.getCommittedCharacterCount()) {
+		else if (count == 1 && text.first() == ' ') {
+			e = new InputMethodEvent((Component)e.getSource(), e.getID(), e.getWhen(), defaultAttributedCharacterIterator, 0, TextHitInfo.beforeOffset(0), TextHitInfo.beforeOffset(0));
+			lastUncommittedInputMethodEvent = null;
+		}
+		else if (count > e.getCommittedCharacterCount()) {
 			lastUncommittedInputMethodEvent = e;
 		}
 		else {
@@ -1727,20 +1715,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			return;
 
 		queue.postCachedEvent(new VCLEvent(new PaintEvent(panel, PaintEvent.UPDATE, b), VCLEvent.SALEVENT_PAINT, this, 0));
-
-	}
-
-	/**
-	 * Create and post event to notify that uncommitted text has been cancelled.
-	 */
-	public synchronized void postInputMethodTextCancelled() {
-
-		if (disposed || !window.isShowing())
-			return;
-
-		// Post an input method event with null text
-		InputMethodEvent e = new InputMethodEvent(panel, InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, TextHitInfo.beforeOffset(0), TextHitInfo.beforeOffset(0));
-		Toolkit.getDefaultToolkit().getSystemEventQueue().postEvent(e);
 
 	}
 

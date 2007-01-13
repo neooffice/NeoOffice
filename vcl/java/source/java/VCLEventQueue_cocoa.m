@@ -82,6 +82,8 @@
 
 @end
 
+const static NSString *pCancelInputMethodText = @" ";
+
 @interface VCLResponder : NSResponder
 {
 	NSString*				mpLastText;
@@ -121,10 +123,11 @@
 	{
 		if ( [pSelectorName compare:@"cancelOperation:"] == NSOrderedSame )
 		{
-			if ( mpView && [mpView respondsToSelector:@selector(abandonInput)] )
+			if ( mpView && [mpView respondsToSelector:@selector(abandonInput)] && [mpView respondsToSelector:@selector(hasMarkedText)] && [mpView respondsToSelector:@selector(insertText:)] )
 			{
+				if ( [mpView hasMarkedText] )
+					[mpView insertText:pCancelInputMethodText];
 				[mpView abandonInput];
-				VCLEventQueue_postInputMethodTextCancelled( [mpView window] );
 			}
 		}
 		else if ( [pSelectorName compare:@"deleteBackward:"] == NSOrderedSame )
@@ -184,13 +187,16 @@
 
 @implementation VCLWindow
 
-- (BOOL)makeFirstResponder:(NSResponder *)pResponder;
+- (BOOL)makeFirstResponder:(NSResponder *)pResponder
 {
 	BOOL bRet = [super makeFirstResponder:pResponder];
 
 	// Fix bug 1819 by forcing cancellation of the input method
-	if ( bRet && pResponder && [pResponder respondsToSelector:@selector(abandonInput)] )
+	if ( bRet && pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(insertText:)] )
+	{
+		[pResponder insertText:pCancelInputMethodText];
 		[pResponder abandonInput];
+	}
 
 	return bRet;
 }

@@ -651,7 +651,9 @@ void JavaSalFrame::SetInputContext( SalInputContext* pContext )
 
 void JavaSalFrame::EndExtTextInput( USHORT nFlags )
 {
-	mpVCLFrame->endComposition();
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalFrame::EndExtTextInput not implemented\n" );
+#endif
 }
 
 // -----------------------------------------------------------------------
