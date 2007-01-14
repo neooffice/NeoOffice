@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_framework.hxx"
+
 //_______________________________________________
 // my own includes
 
@@ -107,13 +110,12 @@ static ::rtl::OUString URL_CLOSEFRAME  = DECLARE_ASCII(".uno:CloseFrame");
 //_______________________________________________
 // declarations
 
-DEFINE_XINTERFACE_5(CloseDispatcher                                           ,
+DEFINE_XINTERFACE_4(CloseDispatcher                                           ,
                     OWeakObject                                               ,
                     DIRECT_INTERFACE(css::lang::XTypeProvider                ),
                     DIRECT_INTERFACE(css::frame::XNotifyingDispatch          ),
                     DIRECT_INTERFACE(css::frame::XDispatch                   ),
-                    DIRECT_INTERFACE(css::frame::XDispatchInformationProvider),
-                    DIRECT_INTERFACE(css::frame::XStatusListener             ))
+                    DIRECT_INTERFACE(css::frame::XDispatchInformationProvider))
 
 // Note: XStatusListener is an implementation detail. Hide it for scripting!
 DEFINE_XTYPEPROVIDER_4(CloseDispatcher                         ,
@@ -184,22 +186,22 @@ css::uno::Sequence< css::frame::DispatchInformation > SAL_CALL CloseDispatcher::
 }
 
 //-----------------------------------------------
-void SAL_CALL CloseDispatcher::addStatusListener(const css::uno::Reference< css::frame::XStatusListener >& xListener,
-                                                 const css::util::URL&                                     aURL     )
+void SAL_CALL CloseDispatcher::addStatusListener(const css::uno::Reference< css::frame::XStatusListener >& /*xListener*/,
+                                                 const css::util::URL&                                     /*aURL*/     )
     throw(css::uno::RuntimeException)
 {
 }
 
 //-----------------------------------------------
-void SAL_CALL CloseDispatcher::removeStatusListener(const css::uno::Reference< css::frame::XStatusListener >& xListener,
-                                                    const css::util::URL&                                     aURL     )
+void SAL_CALL CloseDispatcher::removeStatusListener(const css::uno::Reference< css::frame::XStatusListener >& /*xListener*/,
+                                                    const css::util::URL&                                     /*aURL*/     )
     throw(css::uno::RuntimeException)
 {
 }
 
 //-----------------------------------------------
 void SAL_CALL CloseDispatcher::dispatchWithNotification(const css::util::URL&                                             aURL      ,
-                                                        const css::uno::Sequence< css::beans::PropertyValue >&            lArguments,
+                                                        const css::uno::Sequence< css::beans::PropertyValue >&            /*lArguments*/,
                                                         const css::uno::Reference< css::frame::XDispatchResultListener >& xListener )
     throw(css::uno::RuntimeException)
 {
@@ -269,45 +271,6 @@ void SAL_CALL CloseDispatcher::dispatchWithNotification(const css::util::URL&   
 
 //-----------------------------------------------
 /**
-    @short  special way to get notifications from the special menu closer.
-
-    @descr  Its not part of the specification of this object doing so.
-            But our new layout manager doesnt provide any other mechanis.
-            So this special dispatcher is registered for the menu closer as callback ...
-
-    @param  aState
-            normaly not needed - because the call itself is enough.
- */
-void SAL_CALL CloseDispatcher::statusChanged(const css::frame::FeatureStateEvent& aState)
-    throw(css::uno::RuntimeException)
-{
-    // SAFE -> ----------------------------------
-    WriteGuard aWriteLock(m_aLock);
-
-    // Check for still running asynchronous operations, which was started before.
-    // Ignore new requests. Our UI user can try it again, if nothing will happen.
-    if (m_xSelfHold.is())
-        return;
-
-    m_xResultListener.clear();
-    m_eOperation = E_CLOSE_WIN;
-    m_xSelfHold  = css::uno::Reference< css::uno::XInterface >(static_cast< ::cppu::OWeakObject* >(this), css::uno::UNO_QUERY);
-
-    aWriteLock.unlock();
-    // <- SAFE ----------------------------------
-
-    m_aAsyncCallback.Post(0);
-}
-
-//-----------------------------------------------
-void SAL_CALL CloseDispatcher::disposing(const css::lang::EventObject& aSource)
-    throw(css::uno::RuntimeException)
-{
-    LOG_WARNING("CloseDispatcher::disposing()", "Not allowed to be called. Listener interface is an implementation helper only .-)")
-}
-
-//-----------------------------------------------
-/**
     @short      asynchronous callback
     @descr      We start all actions inside this object asnychronoue.
                 (see comments there).
@@ -323,7 +286,7 @@ void SAL_CALL CloseDispatcher::disposing(const css::lang::EventObject& aSource)
                 - decide then, if we must close this frame only, establish the backing mode
                   or shutdown the whole application.
 */
-IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, pVoid )
+IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, EMPTYARG )
 {
     try
     {
