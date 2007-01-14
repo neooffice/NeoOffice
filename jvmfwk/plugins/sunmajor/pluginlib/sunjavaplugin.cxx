@@ -33,6 +33,9 @@
  *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
+
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_jvmfwk.hxx"
 #if OSL_DEBUG_LEVEL > 0
 #include <stdio.h>
 #endif
@@ -59,7 +62,7 @@
 #include "vendorlist.hxx"
 #include "diagnostics.h"
 
-#if defined USE_JAVA
+#ifdef USE_JAVA
 #include "osl/process.h"
 #include "rtl/strbuf.hxx"
 #include <sys/sysctl.h>
@@ -132,7 +135,6 @@ OString getPluginJarPath(
         OUString sName(sLocation + OUSTR("/lib/") + sName1);
         OUString sPath1;
         OUString sPath2;
-        bool bOk = false;
         if (osl_getSystemPathFromFileURL(sName.pData, & sPath1.pData)
             == osl_File_E_None)
         {
@@ -300,9 +302,9 @@ javaPluginError jfw_plugin_getAllJavaInfos(
         if (arExcludeList > 0)
         {
             bool bExclude = false;
-            for (int i = 0; i < nLenList; i++)
+            for (int j = 0; j < nLenList; j++)
             {
-                rtl::OUString sExVer(arExcludeList[i]);
+                rtl::OUString sExVer(arExcludeList[j]);
                 try
                 {
                     if (cur->compareVersions(sExVer) == 0)
@@ -470,7 +472,9 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     JNIEnv ** ppEnv)
 {
     osl::MutexGuard guard(getPluginMutex());
-    javaPluginError errcode = JFW_PLUGIN_E_NONE;
+    // unless errcode is volatile the following warning occurs on gcc:
+    // warning: variable 'errcode' might be clobbered by `longjmp' or `vfork'
+    volatile javaPluginError errcode = JFW_PLUGIN_E_NONE;
     if ( pInfo == NULL || ppVm == NULL || ppEnv == NULL)
         return JFW_PLUGIN_E_INVALID_ARG;
     //Check if the Vendor (pInfo->sVendor) is supported by this plugin
@@ -513,7 +517,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     typedef jint JNICALL JNI_InitArgs_Type(void *);
     typedef jint JNICALL JNI_CreateVM_Type(JavaVM **, JNIEnv **, void *);
     rtl::OUString sSymbolCreateJava(
-#if defined USE_JAVA
+#ifdef USE_JAVA
             // Fix bug 1257 by explicitly loading the JVM instead of loading the
             // shared JavaVM library
             RTL_CONSTASCII_USTRINGPARAM("JNI_CreateJavaVM_Impl"));
@@ -521,7 +525,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
             RTL_CONSTASCII_USTRINGPARAM("JNI_CreateJavaVM"));
 #endif	// USE_JAVA
         
-    JNI_CreateVM_Type * pCreateJavaVM = (JNI_CreateVM_Type *) osl_getSymbol(
+    JNI_CreateVM_Type * pCreateJavaVM = (JNI_CreateVM_Type *) osl_getFunctionSymbol(
         moduleRt, sSymbolCreateJava.pData);
     if (!pCreateJavaVM)
     {
@@ -539,7 +543,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     // The office sets a signal handler at startup. That causes a crash
     // with java 1.3 under Solaris. To make it work, we set back the
     // handler
-#if defined UNX
+#ifdef UNX
     struct sigaction act;
     act.sa_handler=SIG_DFL;
     act.sa_flags= 0;
@@ -555,7 +559,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     JavaVMInitArgs vm_args;
 
     boost::scoped_array<JavaVMOption> sarOptions(
-#if defined USE_JAVA
+#ifdef USE_JAVA
         new JavaVMOption[cOptions + 8]);
 #else	// USE_JAVA
         new JavaVMOption[cOptions + 1]);
@@ -567,11 +571,10 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     // all some directories of the Java installation. This is necessary for
     // all versions below 1.5.1
     options[0].optionString= (char *) "abort";
-    options[0].extraInfo= (void* )abort_handler;
-    int index = 1;
+    options[0].extraInfo= (void* )(sal_IntPtr)abort_handler;
     rtl::OString sClassPathProp("-Djava.class.path=");
     rtl::OString sClassPathOption;
-#if defined USE_JAVA
+#ifdef USE_JAVA
     int i = 0;
     for (; i < cOptions; i++)
 #else	// USE_JAVA
@@ -620,7 +623,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 #endif
     }
 
-#if defined USE_JAVA
+#ifdef USE_JAVA
     // Limit the directories that extensions can be loaded from to prevent
     // random JVM crashing
     rtl::OString aExtPath( "-Djava.ext.dirs=" );
@@ -704,15 +707,13 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     aBuf.append( "m" );
     options[i+7].optionString = (char *)aBuf.makeStringAndClear().getStr();
     options[i+7].extraInfo = NULL;
-#endif	// USE_JAVA
    
-#if defined USE_JAVA
     vm_args.version= JNI_VERSION_1_4;
 #else	// USE_JAVA
     vm_args.version= JNI_VERSION_1_2;
 #endif	// USE_JAVA
     vm_args.options= options;
-#if defined USE_JAVA
+#ifdef USE_JAVA
     vm_args.nOptions= cOptions + 8;
 #else	// USE_JAVA
     vm_args.nOptions= cOptions + 1;
@@ -726,7 +727,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     */
     g_bInGetJavaVM = 1;
     jint err;
-    JavaVM * pJavaVM;
+    JavaVM * pJavaVM = 0;
     memset( jmp_jvm_abort, 0, sizeof(jmp_jvm_abort));
     int jmpval= setjmp( jmp_jvm_abort );
     /* If jmpval is not "0" then this point was reached by a longjmp in the
@@ -738,7 +739,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         err= pCreateJavaVM(&pJavaVM, ppEnv, &vm_args);
         g_bInGetJavaVM = 0;
 
-#if defined USE_JAVA
+#ifdef USE_JAVA
         // We cannot trust that the OOo build has honored the -source flag so
         // don't use it here. This will will prevent loading of JVM's that
         //  cannot load all classes built by OOo.

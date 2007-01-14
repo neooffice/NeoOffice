@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_jvmfwk.hxx"
+
 #include "osl/thread.h"
 #include "otherjre.hxx"
 
@@ -130,12 +133,17 @@ char const* const* OtherInfo::getLibraryPaths(int* size)
 
     *size = sizeof(ar) / sizeof (char*);
     return ar;
-#endif
+#else
     size = 0;
     return NULL;
+#endif
 }
 
+#ifdef MACOSX
 int OtherInfo::compareVersions(const rtl::OUString& sSecond) const
+#else	// MACOSX
+int OtherInfo::compareVersions(const rtl::OUString& /*sSecond*/) const
+#endif	// MACOSX
 {
 #ifdef MACOSX
     OUString sFirst = getVersion();

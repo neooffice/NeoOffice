@@ -2,10 +2,10 @@
 
 <javaSelection xmlns="http://openoffice.org/2004/java/framework/1.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
- 
- <updated>2005-12-17</updated>
- 
- <vendorInfos> 
+
+ <updated>2006-05-02</updated>
+
+ <vendorInfos>
   <vendor name="Apple Computer, Inc.">
     <minVersion>1.4.1</minVersion>
     <maxVersion>1.5.999</maxVersion>
