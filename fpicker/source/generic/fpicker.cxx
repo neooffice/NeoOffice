@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_fpicker.hxx"
+
 #ifndef _SAL_TYPES_H_
 #include "sal/types.h"
 #endif
