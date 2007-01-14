@@ -38,6 +38,7 @@ PRJ=..$/..
 
 PRJNAME=sal
 TARGET=cpprtl
+ENABLE_EXCEPTIONS=TRUE
 USE_LDUMP2=TRUE
 
 PROJECTPCH4DLL=TRUE
@@ -153,14 +154,14 @@ TARGETDEPS+=$(ALWAYSDBGTARGET)
 # - ALWAYSDBG - files always compiled with debugging
 # --------------------------------------------------
 $(ALWAYSDBGTARGET):
-	@+echo --- ALWAYSDBGFILES ---
+	@echo --- ALWAYSDBGFILES ---
 	@dmake $(MFLAGS) $(MAKEFILE) debug=true $(ALWAYSDBGFILES) ALWAYSDBG_FLAG=TRUE $(CALLMACROS)
-	@+echo --- ALWAYSDBGFILES OVER ---
+	@echo --- ALWAYSDBGFILES OVER ---
 
 $(ALWAYSDBGFILES):
-	@+echo --- ALWAYSDBG ---
+	@echo --- ALWAYSDBG ---
 	@dmake $(MFLAGS) $(MAKEFILE) debug=true ALWAYSDBG_FLAG=TRUE $(CALLMACROS) $@
-	@+echo --- ALWAYSDBG OVER ---
+	@echo --- ALWAYSDBG OVER ---
 .ENDIF
 .ENDIF
 

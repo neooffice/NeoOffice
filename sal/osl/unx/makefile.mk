@@ -60,6 +60,16 @@ ENVCDEFS += -DPRODUCT_FILETYPE=\'$(PRODUCT_FILETYPE)\'
 
 .INCLUDE :  settings.mk
 
+.IF "$(HAVE_READDIR_R)"=="YES"
+CDEFS+=-DHAVE_READDIR_H
+.ELSE
+.IF "$(OS)" == "WNT"
+SHL1STDLIBS+= gnu_readdir.lih
+.ELSE
+SHL1STDLIBS+= -lgnu_readdir
+.ENDIF
+.ENDIF
+
 # --- Files --------------------------------------------------------
 
 SLOFILES=   $(SLO)$/conditn.obj  \
@@ -127,13 +137,23 @@ OBJFILES += $(OBJ)$/backtrace.obj
 APP1STDLIBS+=-lC
 .ENDIF
 
-.IF "$(LINUX)" == "YES"
+.IF "$(OS)" == "LINUX"
+.IF "$(PAM)" == "NO"
+CFLAGS+=-DNOPAM
+.IF "$(NEW_SHADOW_API)" == "YES"
+CFLAGS+=-DNEW_SHADOW_API
+.ENDIF
+.ENDIF
 .IF "$(PAM_LINK)" == "YES"
 CFLAGS+=-DPAM_LINK
 .ENDIF
 .IF "$(CRYPT_LINK)" == "YES"
 CFLAGS+=-DCRYPT_LINK
 .ENDIF
+.ENDIF
+
+.IF "$(ENABLE_CRASHDUMP)" != "" || "$(PRODUCT)" == ""
+CFLAGS+=-DSAL_ENABLE_CRASH_REPORT
 .ENDIF
 
 .INCLUDE :  target.mk

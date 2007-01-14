@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_sal.hxx"
+
 #include <sal/types.h>
 #include <assert.h>
 
@@ -89,6 +92,7 @@ extern "C" int macosx_getLocale(char *locale, sal_uInt32 bufferLen)
 	// split the string into substrings; the first two (if there are two) substrings 
 	// are language and country
 	CFArrayRef subs = CFStringCreateArrayBySeparatingStrings(NULL, sref, CFSTR("_"));	
+#ifdef USE_JAVA
 	if (CFArrayGetCount(subs) < 2)
 	{
 		CFRelease(subs);
@@ -96,6 +100,7 @@ extern "C" int macosx_getLocale(char *locale, sal_uInt32 bufferLen)
 		// Mac OS X will sometimes use "-" as its delimiter
 		subs = CFStringCreateArrayBySeparatingStrings(NULL, sref, CFSTR("-"));	
 	}
+#endif	// USE_JAVA
 	CFArrayGuard arrGuard(subs);
 		
 	CFStringRef lang = (CFStringRef)CFArrayGetValueAtIndex(subs, 0);
@@ -105,7 +110,12 @@ extern "C" int macosx_getLocale(char *locale, sal_uInt32 bufferLen)
 	// value the second value is always the country!
 	if (CFArrayGetCount(subs) > 1)
 	{
+#ifndef USE_JAVA
+		strlcat(locale, "_", bufferLen - strlen(locale));
+#endif	// !USE_JAVA
+			
 		CFStringRef country = (CFStringRef)CFArrayGetValueAtIndex(subs, 1);
+#ifdef USE_JAVA
 		if (CFStringGetLength(country) > 2)
 		{
 			if (CFStringCompare(country, CFSTR("Hans"), 0) == kCFCompareEqualTo)
@@ -121,6 +131,9 @@ extern "C" int macosx_getLocale(char *locale, sal_uInt32 bufferLen)
 			strlcat(locale, "_", bufferLen - strlen(locale));
 			CFStringGetCString(country, locale + strlen(locale), bufferLen - strlen(locale), kCFStringEncodingASCII);
 		}
+#else	// USE_JAVA
+		CFStringGetCString(country, locale + strlen(locale), bufferLen - strlen(locale), kCFStringEncodingASCII);			
+#endif	// USE_JAVA
 	}	    
     // Append 'UTF-8' to the locale because the Mac OS X file
     // system interface is UTF-8 based and sal tries to determine

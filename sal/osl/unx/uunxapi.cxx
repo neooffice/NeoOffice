@@ -30,6 +30,9 @@
  *    MA  02111-1307  USA
  *
  ************************************************************************/
+
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_sal.hxx"
  
  #ifndef _OSL_UUNXAPI_H_
  #include "uunxapi.h"

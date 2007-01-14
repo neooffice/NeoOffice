@@ -36,6 +36,12 @@
 
 #include <stddef.h>
 
+/* Solaris 8 has no C99 stdint.h, and Solaris generally seems not to miss it for
+   SIZE_MAX: */
+#if !defined __SUNPRO_C
+#include <stdint.h>
+#endif
+
 #include "system.h"
 
 #include <osl/security.h>
@@ -48,14 +54,16 @@
 #include "osl/thread.h"
 #include "osl/file.h"
 
-#ifdef SOLARIS
+#if defined LINUX || defined SOLARIS
 #include <crypt.h>
 #endif
 
 #include "secimpl.h"
 
+#ifndef NOPAM
 #ifndef PAM_BINARY_MSG
 #define PAM_BINARY_MSG 6
+#endif
 #endif
 
 extern oslModule SAL_CALL osl_psz_loadModule(const sal_Char *pszModuleName, sal_Int32 nRtldMode);
@@ -69,8 +77,8 @@ static sal_Bool SAL_CALL osl_psz_getHomeDir(oslSecurity Security, sal_Char* pszD
 static sal_Bool SAL_CALL osl_psz_getConfigDir(oslSecurity Security, sal_Char* pszDirectory, sal_uInt32 nMax);
 
 static oslSecurityImpl * newSecurityImpl(size_t * bufSize) {
-#ifdef MACOSX
-    /* #i64906#: sysconf(_SC_GETPW_R_SIZE_MAX) returns -1 on Mac OS X */
+#if defined (MACOSX) || defined (FREEBSD)
+    /* #i64906#: sysconf(_SC_GETPW_R_SIZE_MAX) returns -1 on Mac OS X and FreeBSD */
     size_t n = 1024;
 #else
     size_t n = (size_t) sysconf(_SC_GETPW_R_SIZE_MAX);
@@ -106,7 +114,7 @@ oslSecurity SAL_CALL osl_getCurrentSecurity()
 }
 
 
-#ifdef LINUX
+#if defined LINUX && !defined NOPAM
 
 /*
  *
@@ -333,6 +341,7 @@ osl_PamAuthentification( const sal_Char* name, const sal_Char* password )
 static const sal_Char* SAL_CALL
 osl_noCrypt ( const sal_Char *key, const sal_Char *salt )
 {
+    (void) salt; /* unused */
 	return key;
 }
 
@@ -366,7 +375,7 @@ osl_getCrypt()
 static sal_Char* SAL_CALL
 osl_dynamicCrypt ( const sal_Char *key, const sal_Char *salt )
 {
-	char* (*dynamic_crypt)(char *key, char *salt);
+	char* (*dynamic_crypt)(char *, char *);
 
 	dynamic_crypt = (char * (*)(char *, char *)) osl_getCrypt();
 
@@ -408,7 +417,7 @@ osl_equalPasswords ( const sal_Char *pEncryptedPassword, const sal_Char *pPlainP
 	return success;
 }
 
-#endif
+#endif /* defined LINUX && !defined NOPAM */
 oslSecurityError SAL_CALL osl_loginUser(
     rtl_uString *ustrUserName,
 	rtl_uString *ustrPassword,
@@ -488,7 +497,7 @@ osl_psz_loginUser(const sal_Char* pszUserName, const sal_Char* pszPasswd,
                 if (found == NULL) {
                     nError = osl_Security_E_UserUnknown;
                 } else {
-#if defined LINUX
+#if defined LINUX && !defined NOPAM
                     /* only root is able to read the /etc/shadow passwd, a
                        normal user even can't read his own encrypted passwd */
                     if (osl_equalPasswords(p->m_pPasswd.pw_passwd, pszPasswd) ||
@@ -543,9 +552,11 @@ osl_psz_loginUser(const sal_Char* pszUserName, const sal_Char* pszPasswd,
                     char buffer[1024];
                     struct spwd spwdStruct;
                     buffer[0] = '\0';
-                    if (getspnam_r(
-                            pszUserName, &spwdStruct, buffer, sizeof buffer) !=
-                        NULL)
+#ifndef NEW_SHADOW_API
+                    if (getspnam_r(pszUserName, &spwdStruct, buffer, sizeof buffer) != NULL)
+#else
+                    if (getspnam_r(pszUserName, &spwdStruct, buffer, sizeof buffer, NULL) == 0)
+#endif
                     {
                         char salt[3];
                         char * cryptPasswd;
@@ -555,10 +566,11 @@ osl_psz_loginUser(const sal_Char* pszUserName, const sal_Char* pszPasswd,
                         if (strcmp(spwdStruct.sp_pwdp, cryptPasswd) == 0) {
                             nError = osl_Security_E_None;
                         } else if (getuid() == 0 &&
-                                   (getspnam_r(
-                                       "root", &spwdStruct, buffer,
-                                       sizeof buffer)
-                                    != NULL))
+#ifndef NEW_SHADOW_API
+                                   (getspnam_r("root", &spwdStruct, buffer, sizeof buffer) != NULL))
+#else
+                                   (getspnam_r("root", &spwdStruct, buffer, sizeof buffer, NULL) == 0))
+#endif
                         {
                             /* if current process is running as root, allow to
                                logon as any other user */
@@ -595,8 +607,11 @@ oslSecurityError SAL_CALL osl_loginUserOnFileServer(
 	oslSecurity *pSecurity
 	)
 {
-	oslSecurityError erg;
-	return erg = osl_Security_E_UserUnknown;   
+    (void) strUserName; /* unused */
+    (void) strPasswd; /* unused */
+    (void) strFileServer; /* unused */
+    (void) pSecurity; /* unused */
+	return osl_Security_E_UserUnknown;   
 }
 
 
@@ -627,7 +642,8 @@ sal_Bool SAL_CALL osl_psz_getUserIdent(oslSecurity Security, sal_Char *pszIdent,
 	    return sal_False;
 
 	nChr = snprintf(buffer, sizeof(buffer), "%u", pSecImpl->m_pPasswd.pw_uid);
-    if ( nChr < 0 || nChr >= sizeof(buffer) || nChr >= nMax )
+    if ( nChr < 0 || SAL_INT_CAST(sal_uInt32, nChr) >= sizeof(buffer)
+         || SAL_INT_CAST(sal_uInt32, nChr) >= nMax )
         return sal_False; /* leave *pszIdent unmodified in case of failure */
 
 	memcpy(pszIdent, buffer, nChr+1);
@@ -744,10 +760,35 @@ sal_Bool SAL_CALL osl_getConfigDir(oslSecurity Security, rtl_uString **pustrDire
     return bRet;
 }
 
+#if !defined MACOSX || defined USE_JAVA
+
 static sal_Bool SAL_CALL osl_psz_getConfigDir(oslSecurity Security, sal_Char* pszDirectory, sal_uInt32 nMax)
 {
 	return (osl_psz_getHomeDir(Security, pszDirectory, nMax));
 }
+
+#else
+
+/*
+ * FIXME: rewrite to use more flexible
+ * NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES)
+ * as soon as we can bumb the baseline to Tiger (for NSApplicationSupportDirectory) and have
+ * support for Objective-C in the build environment
+ */
+ 
+#define MACOSX_CONFIG_DIR "/Library/Application Support"
+static sal_Bool SAL_CALL osl_psz_getConfigDir(oslSecurity Security, sal_Char* pszDirectory, sal_uInt32 nMax)
+{
+    if( osl_psz_getHomeDir(Security, pszDirectory, nMax - sizeof(MACOSX_CONFIG_DIR) + 1) )
+    {
+        strcat( pszDirectory, MACOSX_CONFIG_DIR );
+        return sal_True;
+    }
+    
+    return sal_False;
+}
+
+#endif
 
 sal_Bool SAL_CALL osl_isAdministrator(oslSecurity Security)
 {
@@ -770,8 +811,11 @@ void SAL_CALL osl_freeSecurityHandle(oslSecurity Security)
 
 sal_Bool SAL_CALL osl_loadUserProfile(oslSecurity Security)
 {
+    (void) Security; /* unused */
     return sal_False;
 }
 
 void SAL_CALL osl_unloadUserProfile(oslSecurity Security)
-{}
+{
+    (void) Security; /* unused */
+}

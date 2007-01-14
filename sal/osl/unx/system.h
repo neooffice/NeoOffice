@@ -71,12 +71,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#define max(a, b)	((a) < (b) ? (b) : (a))
-#define min(a, b)	((a) > (b) ? (b) : (a))
-#ifndef abs
-#define abs(x)		((x) >= 0 ? (x) : -(x))
-#endif
-
 #ifdef SYSV
 #   include <sys/utsname.h>
 #endif
@@ -373,8 +367,12 @@ extern char *strdup(const char *);
 #	define  NO_PTHREAD_RTL
 /* for NSGetArgc/Argv/Environ */
 #       include <crt_externs.h>
+#ifdef USE_JAVA
 #       include <sal/types.h>
+#endif	/* USE_JAVA */
+#ifndef HAVE_READDIR_H
 int  readdir_r( DIR *dirp, struct dirent *entry, struct dirent **result );
+#endif
 char *asctime_r( const struct tm *tm, char *buffer );
 void macxp_getSystemVersion( unsigned int *isDarwin, unsigned int *majorVersion, unsigned int *minorVersion, unsigned int *minorMinorVersion );
 #ifdef __cplusplus
@@ -549,8 +547,10 @@ extern struct spwd *getspnam_r(const char *name, struct spwd *result,
 struct tm *localtime_r(const time_t *timep, struct tm *buffer);
 struct tm *gmtime_r(const time_t *timep, struct tm *buffer);
 #endif /* !defined FREEBSD || (__FreeBSD_version < 500112) */
+#if !defined(FREEBSD) || (__FreeBSD_version < 700015)
 struct hostent *gethostbyname_r(const char *name, struct hostent *result,
 								char *buffer, int buflen, int *h_errnop);
+#endif /* !defined(FREEBSD) || (__FreeBSD_version < 700015) */
 #endif
 
 #endif /* __OSL_SYSTEM_H__ */

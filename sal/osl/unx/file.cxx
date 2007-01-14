@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_sal.hxx"
+
 
 /************************************************************************
  *   ToDo
@@ -49,6 +52,8 @@
  *   - check size/use of oslFileHandle
  ***********************************************************************/
 
+#include <algorithm>
+#include <limits>
 
 #ifndef __OSL_SYSTEM_H__
 #include "system.h"
@@ -142,9 +147,7 @@ static const sal_Char* MOUNTTAB="/etc/mtab";
 #include <sys/param.h>
 #include <sys/mount.h>
 #define HAVE_STATFS_H
-#ifndef USE_JAVA
 #define HAVE_O_EXLOCK
-#endif	/* USE_JAVA */
 
 // add MACOSX Time Value
 
@@ -152,6 +155,42 @@ static const sal_Char* MOUNTTAB="/etc/mtab";
 #include <CoreFoundation/CoreFoundation.h>
 #undef TimeValue
 
+#endif
+
+#ifdef _DIRENT_HAVE_D_TYPE
+#include "file_impl.hxx"
+	oslDirectoryItemImpl* oslDirectoryItemImpl_CreateNew( rtl_uString* _ustrFilePath, bool _bHasDType, unsigned char _DType )
+	{
+		oslDirectoryItemImpl *pItemObject = (oslDirectoryItemImpl*) malloc( sizeof( oslDirectoryItemImpl ) );
+		pItemObject->RefCount = 1;
+		pItemObject->bHasType = _bHasDType;
+		pItemObject->DType = _DType;
+		pItemObject->ustrFilePath = _ustrFilePath;
+
+		return pItemObject;
+	}
+
+	void oslDirectoryItemImpl_Destroy( oslDirectoryItemImpl* pItem )
+	{
+		if( pItem->ustrFilePath ) {
+			rtl_uString_release( pItem->ustrFilePath );
+			pItem->ustrFilePath = NULL;
+		}
+		free( pItem );
+	}
+
+	void oslDirectoryItemImpl_acquire( oslDirectoryItemImpl* pItem )
+	{
+		pItem->RefCount ++;
+	}
+
+	void oslDirectoryItemImpl_release( oslDirectoryItemImpl* pItem )
+	{
+		pItem->RefCount --;
+
+		if( pItem->RefCount <= 0 )
+			oslDirectoryItemImpl_Destroy( pItem );
+	}
 #endif
 
 #if OSL_DEBUG_LEVEL > 1
@@ -292,6 +331,36 @@ static sal_Bool       osl_getFloppyMountEntry(const sal_Char* pszPath, oslVolume
 static void           osl_printFloppyHandle(oslVolumeDeviceHandleImpl* hFloppy);
 #endif
 
+#ifdef MACOSX
+
+/*******************************************************************
+ *	adjustLockFlags
+ ******************************************************************/
+
+/* The AFP implementation of MacOS X 10.4 treats O_EXLOCK in a way 
+ * that makes it impossible for OOo to create a backup copy of the
+ * file it keeps opened. OTOH O_SHLOCK for AFP behaves as desired by
+ * the OOo file handling, so we need to check the path of the file
+ * for the filesystem name.
+ */
+ 
+static int adjustLockFlags(const char * path, int flags)
+{
+    struct statfs s;
+  
+    if( 0 <= statfs( path, &s ) )
+    {
+        if( 0 == strncmp("afpfs", s.f_fstypename, 5) )
+        {
+            flags &= ~O_EXLOCK;
+            flags |= O_SHLOCK;
+        }    
+    }
+
+    return flags;
+}
+
+#endif
 
 
 /*******************************************************************
@@ -322,8 +391,9 @@ oslFileError SAL_CALL osl_openDirectory(rtl_uString* ustrDirectoryURL, oslDirect
     /* convert unicode path to text */
     if ( UnicodeToText( path, PATH_MAX, ustrSystemPath->buffer, ustrSystemPath->length ) 
 #ifdef MACOSX 
-	 && macxp_resolveAlias( path, PATH_MAX, sal_False ) == 0 ) 
+	 && macxp_resolveAlias( path, PATH_MAX, sal_False ) == 0 
 #endif /* MACOSX */
+	 )
     {
         /* open directory */
         DIR *pdir = opendir( path );
@@ -461,8 +531,16 @@ oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirect
 
     rtl_uString_release( ustrFileName );
 
+#ifdef _DIRENT_HAVE_D_TYPE
+    if(*pItem)
+	oslDirectoryItemImpl_release( ( oslDirectoryItemImpl* )( *pItem ) );
+    *pItem = (oslDirectoryItem) oslDirectoryItemImpl_CreateNew( ustrFilePath, true, pEntry->d_type );
+#else
     /* use path as directory item */
+	if (*pItem)
+		rtl_uString_release( (rtl_uString *) *pItem );
     *pItem = (oslDirectoryItem) ustrFilePath;
+#endif
 
     return osl_File_E_None;
 }
@@ -491,7 +569,11 @@ oslFileError SAL_CALL osl_getDirectoryItem( rtl_uString* ustrFileURL, oslDirecto
 
 	if (0 == access_u(ustrSystemPath, F_OK))
 	{
+#ifdef _DIRENT_HAVE_D_TYPE
+		*pItem = (oslDirectoryItem) oslDirectoryItemImpl_CreateNew( ustrSystemPath, false );
+#else
 		*pItem = (oslDirectoryItem)ustrSystemPath;
+#endif
 		osl_error = osl_File_E_None;
 	}
 	else
@@ -509,12 +591,21 @@ oslFileError SAL_CALL osl_getDirectoryItem( rtl_uString* ustrFileURL, oslDirecto
 
 oslFileError osl_acquireDirectoryItem( oslDirectoryItem Item )
 {
+#ifdef _DIRENT_HAVE_D_TYPE
+	oslDirectoryItemImpl* pImpl = (oslDirectoryItemImpl*) Item;
+#else
     rtl_uString* ustrFilePath = (rtl_uString *) Item;
+#endif
 
     OSL_ASSERT( Item );
 
+#ifdef _DIRENT_HAVE_D_TYPE
+	if( pImpl )
+		oslDirectoryItemImpl_acquire( pImpl );
+#else
     if( ustrFilePath )
         rtl_uString_acquire( ustrFilePath );
+#endif
 
     return osl_File_E_None;
 }
@@ -525,12 +616,21 @@ oslFileError osl_acquireDirectoryItem( oslDirectoryItem Item )
 
 oslFileError osl_releaseDirectoryItem( oslDirectoryItem Item )
 {
+#ifdef _DIRENT_HAVE_D_TYPE
+	oslDirectoryItemImpl* pImpl = (oslDirectoryItemImpl*) Item;
+#else
     rtl_uString* ustrFilePath = (rtl_uString *) Item;
+#endif
 
     OSL_ASSERT( Item );
 
+#ifdef _DIRENT_HAVE_D_TYPE
+	if( pImpl )
+		oslDirectoryItemImpl_release( pImpl );
+#else
     if( ustrFilePath )
         rtl_uString_release( ustrFilePath );
+#endif
 
     return osl_File_E_None;
 }
@@ -562,6 +662,14 @@ oslFileHandle osl_createFileHandleFromFD( int fd )
 /****************************************************************************
  *	osl_openFile
  ***************************************************************************/
+
+#ifdef HAVE_O_EXLOCK
+#define OPEN_WRITE_FLAGS ( O_RDWR | O_EXLOCK | O_NONBLOCK )
+#define OPEN_CREATE_FLAGS ( O_CREAT | O_EXCL | O_RDWR | O_EXLOCK | O_NONBLOCK )
+#else
+#define OPEN_WRITE_FLAGS ( O_RDWR )
+#define OPEN_CREATE_FLAGS ( O_CREAT | O_EXCL | O_RDWR )
+#endif
 
 oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal_uInt32 uFlags )
 {
@@ -599,8 +707,9 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
     /* convert unicode path to text */
     if( UnicodeToText( buffer, PATH_MAX, ustrFilePath->buffer, ustrFilePath->length ) 
 #ifdef MACOSX 
-	 && macxp_resolveAlias( buffer, PATH_MAX, sal_False ) == 0 )
+	 && macxp_resolveAlias( buffer, PATH_MAX, sal_False ) == 0 
 #endif /* MACOSX */
+	 )
     {
         /* we do not open devices or such here */
         if( !( uFlags & osl_File_OpenFlag_Create ) )
@@ -628,9 +737,9 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
             if ( uFlags & osl_File_OpenFlag_Write )
             {
                 mode |= S_IWUSR | S_IWGRP | S_IWOTH;
-                flags = O_RDWR;
-#ifdef HAVE_O_EXLOCK
-                flags |= O_EXLOCK | O_NONBLOCK;
+                flags = OPEN_WRITE_FLAGS;
+#ifdef MACOSX
+                flags = adjustLockFlags(buffer, flags);
 #endif
                 aflock.l_type = F_WRLCK;
             }
@@ -638,9 +747,9 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
             if ( uFlags & osl_File_OpenFlag_Create )
             {
                 mode |= S_IWUSR | S_IWGRP | S_IWOTH;
-                flags = O_CREAT | O_EXCL | O_RDWR;
-#ifdef HAVE_O_EXLOCK
-                flags |= O_EXLOCK | O_NONBLOCK;
+                flags = OPEN_CREATE_FLAGS;
+#ifdef MACOSX
+                flags = adjustLockFlags(buffer, flags);
 #endif
             }
 
@@ -969,6 +1078,7 @@ oslFileError osl_removeDirectory( rtl_uString* ustrDirectoryURL )
     eRet = FileURLToPath( path, PATH_MAX, ustrDirectoryURL );
     if( eRet != osl_File_E_None )
         return eRet;
+
 #ifdef MACOSX
     if ( macxp_resolveAlias( path, PATH_MAX, sal_True ) == 0 )
     {
@@ -1148,7 +1258,7 @@ oslFileError osl_setFileTime( rtl_uString* ustrFileURL, const TimeValue* pCreati
     if ( macxp_resolveAlias( path, PATH_MAX, sal_False ) != 0 )
       return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif/* MACOSX */
-  
+
     return osl_psz_setFileTime( path, pCreationTime, pLastAccessTime, pLastWriteTime );
 }
 
@@ -1172,7 +1282,12 @@ oslFileError osl_readFile(oslFileHandle Handle, void* pBuffer, sal_uInt64 uBytes
     if ((0 == pHandleImpl) || (pHandleImpl->fd < 0) || (0 == pBuffer) || (0 == pBytesRead))
         return osl_File_E_INVAL;
     
-    nBytes = read(pHandleImpl->fd, pBuffer, uBytesRequested);
+    nBytes = read(
+        pHandleImpl->fd, pBuffer,
+        ((uBytesRequested
+          <= static_cast< size_t >(std::numeric_limits< ssize_t >::max()))
+         ? static_cast< size_t >(uBytesRequested)
+         : static_cast< size_t >(std::numeric_limits< ssize_t >::max())));
 
     if (-1 == nBytes)
         return oslTranslateFileError(OSL_FET_ERROR, errno);
@@ -1202,7 +1317,12 @@ oslFileError osl_writeFile(oslFileHandle Handle, const void* pBuffer, sal_uInt64
     if (pHandleImpl->fd < 0)
         return osl_File_E_INVAL;
 
-    nBytes = write(pHandleImpl->fd, pBuffer, uBytesToWrite);
+    nBytes = write(
+        pHandleImpl->fd, pBuffer,
+        ((uBytesToWrite
+          <= static_cast< size_t >(std::numeric_limits< ssize_t >::max()))
+         ? static_cast< size_t >(uBytesToWrite)
+         : static_cast< size_t >(std::numeric_limits< ssize_t >::max())));
 
     if (-1 == nBytes)
         return oslTranslateFileError(OSL_FET_ERROR, errno);
@@ -2170,7 +2290,7 @@ static int oslDoCopyFile(const sal_Char* pszSourceFileName, const sal_Char* pszD
              we have to fail of course; because it's not exactly specified if 'write'
             sets errno if less than requested byte could be written we set nRet
            explicitly to ENOSPC */
-    if ((nRet < 0) || (nRet != nSourceSize))
+    if ((nRet < 0) || (nRet != sal::static_int_cast< int >(nSourceSize)))
     {				
         if (nRet < 0)
             nRet = errno;

@@ -137,7 +137,7 @@ static void* osl_thread_start_Impl (void * pData);
 static void  osl_thread_cleanup_Impl (void * pData);
 
 static oslThread osl_thread_create_Impl (
-	oslWorkerFunction pWorker, void * pThreadData, short nFlags);
+	oslWorkerFunction pWorker, void * pThreadData, short nFlags, sal_Int32 nFrames );
 
 static void osl_thread_join_cleanup_Impl (void * opaque);
 static void osl_thread_wait_cleanup_Impl (void * opaque);
@@ -291,7 +291,8 @@ static void* osl_thread_start_Impl (void* pData)
 static oslThread osl_thread_create_Impl (
 	oslWorkerFunction pWorker,
 	void*             pThreadData,
-	short             nFlags)
+	short             nFlags,
+	sal_Int32         nFrames)
 {
 	Thread_Impl* pImpl;
     int nRet=0;
@@ -306,10 +307,24 @@ static oslThread osl_thread_create_Impl (
 
     pthread_mutex_lock (&(pImpl->m_Lock));
 
+	pthread_attr_t attr;
+	pthread_attr_init (&attr);
+
+#if defined (LINUX) || defined (SOLARIS)
+	if (nFrames > 0)
+	{
+	  size_t stack_size = sysconf (_SC_THREAD_STACK_MIN);
+	  if (nFrames * 128 > stack_size)
+		  stack_size = nFrames * 128;
+//	  if (!getenv ("DISABLE_SIZE"))
+		  pthread_attr_setstacksize (&attr, stack_size);
+//	  fprintf (stderr, "Set stack size %d\n", stack_size);
+	}
+#endif
+
 	if ((nRet = pthread_create (
 		&(pImpl->m_hThread),
-		PTHREAD_ATTR_DEFAULT,
-		osl_thread_start_Impl,
+		&attr, osl_thread_start_Impl,
 		(void*)(pImpl))) != 0)
 	{
 	    OSL_TRACE("osl_thread_create_Impl(): errno: %d, %s\n",
@@ -345,7 +360,21 @@ oslThread osl_createThread (
     return osl_thread_create_Impl (
 		pWorker,
 		pThreadData,
-		THREADIMPL_FLAGS_ATTACHED);
+		THREADIMPL_FLAGS_ATTACHED,
+		-1);
+}
+
+oslThread
+osl_createThreadWithStack(
+		oslWorkerFunction pWorker,
+		void *            pThreadData,
+		sal_Int32         nFrames)
+{
+    return osl_thread_create_Impl (
+		pWorker,
+		pThreadData,
+		THREADIMPL_FLAGS_ATTACHED,
+		nFrames);
 }
 
 /*****************************************************************************/
@@ -359,7 +388,21 @@ oslThread osl_createSuspendedThread (
 		pWorker,
 		pThreadData,
 		THREADIMPL_FLAGS_ATTACHED |
-		THREADIMPL_FLAGS_SUSPENDED );
+		THREADIMPL_FLAGS_SUSPENDED,
+		-1);
+}
+
+oslThread osl_createSuspendedThreadWithStack (
+	oslWorkerFunction pWorker,
+	void *            pThreadData,
+	sal_Int32         nFrames)
+{
+    return osl_thread_create_Impl (
+		pWorker,
+		pThreadData,
+		THREADIMPL_FLAGS_ATTACHED |
+		THREADIMPL_FLAGS_SUSPENDED,
+		nFrames);
 }
 
 /*****************************************************************************/
@@ -598,14 +641,11 @@ static sal_uInt16 LastIdent = 0;
 
 static sal_uInt16 lookupThreadId (pthread_t hThread)
 {
-	int		  i, n;
 	HashEntry *pEntry;
 
 	pthread_mutex_lock(&HashLock);
 
-	for (n = 0, i = HASHID(hThread); n < HashSize; n++, i = ++i % HashSize)
-	{
-		pEntry = HashTable[i];
+		pEntry = HashTable[HASHID(hThread)];
 		while (pEntry != NULL)
 		{
 			if (pthread_equal(pEntry->Handle, hThread))
@@ -615,7 +655,6 @@ static sal_uInt16 lookupThreadId (pthread_t hThread)
 			}
 			pEntry = pEntry->Next;
 		}
-	}
 
 	pthread_mutex_unlock(&HashLock);
 
@@ -820,7 +859,9 @@ void SAL_CALL osl_setThreadPriority (
 	if (!pImpl)
 		return; /* EINVAL */
 
-#ifndef NO_PTHREAD_PRIORITY
+#ifdef NO_PTHREAD_PRIORITY
+    (void) Priority; /* unused */
+#else /* NO_PTHREAD_PRIORITY */
 
     if (pthread_getschedparam(pImpl->m_hThread, &policy, &Param) != 0)
 		return; /* ESRCH */
@@ -1013,8 +1054,9 @@ rtl_TextEncoding SAL_CALL osl_getThreadTextEncoding()
 	pthread_once (&(g_thread.m_once), osl_thread_init_Impl);
 
     /* check for thread specific encoding, use default if not set */
-	threadEncoding =
-		(rtl_TextEncoding)pthread_getspecific(g_thread.m_textencoding.m_key);
+	threadEncoding = SAL_INT_CAST(
+        rtl_TextEncoding,
+        (sal_uIntPtr) pthread_getspecific(g_thread.m_textencoding.m_key));
 	if (0 == threadEncoding)
 #ifdef USE_JAVA
 		threadEncoding = RTL_TEXTENCODING_UTF8;
@@ -1033,7 +1075,9 @@ rtl_TextEncoding osl_setThreadTextEncoding(rtl_TextEncoding Encoding)
     rtl_TextEncoding oldThreadEncoding = osl_getThreadTextEncoding();
 
     /* save encoding in thread local storage */
-    pthread_setspecific (g_thread.m_textencoding.m_key, (void*)Encoding);
+    pthread_setspecific (
+        g_thread.m_textencoding.m_key,
+        (void*) SAL_INT_CAST(sal_uIntPtr, Encoding));
 
     return oldThreadEncoding;
 }

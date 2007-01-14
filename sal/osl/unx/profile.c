@@ -174,7 +174,7 @@ static void removeSection(osl_TProfileImpl* pProfile, osl_TProfileSection *pSect
 static osl_TProfileSection* findEntry(osl_TProfileImpl* pProfile, const sal_Char* Section,
                                       const sal_Char* Entry, sal_uInt32 *pNoEntry);
 static sal_Bool loadProfile(osl_TFile* pFile, osl_TProfileImpl* pProfile);
-static sal_Bool storeProfile(osl_TFile* pFile, osl_TProfileImpl* pProfile, sal_Bool bCleanup);
+static sal_Bool storeProfile(osl_TProfileImpl* pProfile, sal_Bool bCleanup);
 static osl_TProfileImpl* acquireProfile(oslProfile Profile, sal_Bool bWriteable);
 static sal_Bool releaseProfile(osl_TProfileImpl* pProfile);
 
@@ -321,7 +321,7 @@ sal_Bool SAL_CALL osl_closeProfile(oslProfile Profile)
 
         if ( pProfile != 0 )
         {
-			bRet=storeProfile(pProfile->m_pFile, pProfile, sal_True);
+			bRet=storeProfile(pProfile, sal_True);
             OSL_ASSERT(bRet);
 		}
 	}
@@ -349,15 +349,15 @@ sal_Bool SAL_CALL osl_closeProfile(oslProfile Profile)
 	/* release whole profile data types memory */
 	if ( pProfile->m_NoLines > 0)
 	{
-		unsigned int index=0;
+		unsigned int idx=0;
 		if ( pProfile->m_Lines != 0 )
 		{
-			for ( index = 0 ; index < pProfile->m_NoLines ; ++index)
+			for ( idx = 0 ; idx < pProfile->m_NoLines ; ++idx)
 			{
-				if ( pProfile->m_Lines[index] != 0 )
+				if ( pProfile->m_Lines[idx] != 0 )
 				{
-					free(pProfile->m_Lines[index]);
-                    pProfile->m_Lines[index]=0;
+					free(pProfile->m_Lines[idx]);
+                    pProfile->m_Lines[idx]=0;
 				}
 			}
 			free(pProfile->m_Lines);
@@ -366,12 +366,12 @@ sal_Bool SAL_CALL osl_closeProfile(oslProfile Profile)
 		if ( pProfile->m_Sections != 0 )
 		{
 			/*osl_TProfileSection* pSections=pProfile->m_Sections;*/
-			for ( index = 0 ; index < pProfile->m_NoSections ; ++index )
+			for ( idx = 0 ; idx < pProfile->m_NoSections ; ++idx )
 			{
-				if ( pProfile->m_Sections[index].m_Entries != 0 )
+				if ( pProfile->m_Sections[idx].m_Entries != 0 )
 				{
-					free(pProfile->m_Sections[index].m_Entries);
-                    pProfile->m_Sections[index].m_Entries=0;
+					free(pProfile->m_Sections[idx].m_Entries);
+                    pProfile->m_Sections[idx].m_Entries=0;
 				}
 			}
 			free(pProfile->m_Sections);
@@ -437,7 +437,7 @@ sal_Bool SAL_CALL osl_flushProfile(oslProfile Profile)
 #ifdef DEBUG_OSL_PROFILE
         OSL_TRACE("swapping to storeprofile\n");
 #endif
-		bRet = storeProfile(pFile,pProfile,sal_False);
+		bRet = storeProfile(pProfile,sal_False);
         OSL_ASSERT(bRet);
 	}
 
@@ -481,7 +481,8 @@ static sal_Bool writeProfileImpl(osl_TFile* pFile)
     }
 
 #if OSL_DEBUG_LEVEL > 1
-    OSL_ASSERT(BytesWritten == nLen);
+    OSL_ASSERT(
+        BytesWritten >= 0 && SAL_INT_CAST(unsigned int, BytesWritten) == nLen);
 #endif
 
     free(pFile->m_pWriteBuf);
@@ -1549,15 +1550,15 @@ static sal_Char* addLine(osl_TProfileImpl* pProfile, const sal_Char* Line)
         }
         else
         {
-			unsigned int index=0;
+			unsigned int idx=0;
 			unsigned int oldmax=pProfile->m_MaxLines;
 
             pProfile->m_MaxLines += LINES_ADD;
             pProfile->m_Lines = (sal_Char **)realloc(pProfile->m_Lines,
 				                                 pProfile->m_MaxLines * sizeof(sal_Char *));
-			for ( index = oldmax ; index < pProfile->m_MaxLines ; ++index )
+			for ( idx = oldmax ; idx < pProfile->m_MaxLines ; ++idx )
 			{
-				pProfile->m_Lines[index]=0;
+				pProfile->m_Lines[idx]=0;
 			}
         }
 
@@ -1766,15 +1767,15 @@ static sal_Bool addSection(osl_TProfileImpl* pProfile, int Line, const sal_Char*
         }
         else
         {
-			unsigned int index=0;
+			unsigned int idx=0;
 			unsigned int oldmax=pProfile->m_MaxSections;
 
             pProfile->m_MaxSections += SECTIONS_ADD;
             pProfile->m_Sections = (osl_TProfileSection *)realloc(pProfile->m_Sections,
                                           pProfile->m_MaxSections * sizeof(osl_TProfileSection));
-			for ( index = oldmax ; index < pProfile->m_MaxSections ; ++index )
+			for ( idx = oldmax ; idx < pProfile->m_MaxSections ; ++idx )
 			{
-				pProfile->m_Sections[index].m_Entries=0;
+				pProfile->m_Sections[idx].m_Entries=0;
 			}
         }
 
@@ -1958,7 +1959,7 @@ static sal_Bool loadProfile(osl_TFile* pFile, osl_TProfileImpl* pProfile)
     return (sal_True);
 }
 
-static sal_Bool storeProfile(osl_TFile* pFile, osl_TProfileImpl* pProfile, sal_Bool bCleanup)
+static sal_Bool storeProfile(osl_TProfileImpl* pProfile, sal_Bool bCleanup)
 {
 #ifdef TRACE_OSL_PROFILE
     OSL_TRACE("In  storeProfile\n");
@@ -2217,7 +2218,7 @@ static sal_Bool releaseProfile(osl_TProfileImpl* pProfile)
 		{
 			if (pProfile->m_Flags & FLG_MODIFIED)
             {
-				bRet=storeProfile(pProfile->m_pFile, pProfile, sal_False);
+				bRet=storeProfile(pProfile, sal_False);
                 OSL_ASSERT(bRet);
             }
 

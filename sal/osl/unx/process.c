@@ -698,7 +698,7 @@ oslProcessError SAL_CALL osl_executeProcess_WithRedirectedIO(
     sal_Char* pszWorkDir=0;
     sal_Char** pArguments=0;
     sal_Char** pEnvironment=0;
-    unsigned int index;
+    unsigned int idx;
     
     char szImagePath[PATH_MAX] = "";
     char szWorkDir[PATH_MAX] = "";
@@ -720,23 +720,23 @@ oslProcessError SAL_CALL osl_executeProcess_WithRedirectedIO(
     }
 
 
-    for ( index = 0 ; index < nArguments ; ++index )
+    for ( idx = 0 ; idx < nArguments ; ++idx )
     {
         rtl_String* strArg =0;
 
 
         rtl_uString2String( &strArg,
-                            rtl_uString_getStr(ustrArguments[index]),
-                            rtl_uString_getLength(ustrArguments[index]),
+                            rtl_uString_getStr(ustrArguments[idx]),
+                            rtl_uString_getLength(ustrArguments[idx]),
                             osl_getThreadTextEncoding(),
                             OUSTRING_TO_OSTRING_CVTFLAGS );
 
-        pArguments[index]=strdup(rtl_string_getStr(strArg));
+        pArguments[idx]=strdup(rtl_string_getStr(strArg));
         rtl_string_release(strArg);
-		pArguments[index+1]=0;
+		pArguments[idx+1]=0;
     }
 
-    for ( index = 0 ; index < nEnvironmentVars ; ++index )
+    for ( idx = 0 ; idx < nEnvironmentVars ; ++idx )
     {
         rtl_String* strEnv=0;
 
@@ -746,14 +746,14 @@ oslProcessError SAL_CALL osl_executeProcess_WithRedirectedIO(
         }
 
         rtl_uString2String( &strEnv,
-                            rtl_uString_getStr(ustrEnvironment[index]),
-                            rtl_uString_getLength(ustrEnvironment[index]),
+                            rtl_uString_getStr(ustrEnvironment[idx]),
+                            rtl_uString_getLength(ustrEnvironment[idx]),
                             osl_getThreadTextEncoding(),
                             OUSTRING_TO_OSTRING_CVTFLAGS );
 
-        pEnvironment[index]=strdup(rtl_string_getStr(strEnv));
+        pEnvironment[idx]=strdup(rtl_string_getStr(strEnv));
         rtl_string_release(strEnv);
-        pEnvironment[index+1]=0;
+        pEnvironment[idx+1]=0;
     }
 
 
@@ -771,11 +771,11 @@ oslProcessError SAL_CALL osl_executeProcess_WithRedirectedIO(
 
     if ( pArguments != 0 )
     {
-        for ( index = 0 ; index < nArguments ; ++index )
+        for ( idx = 0 ; idx < nArguments ; ++idx )
         {
-            if ( pArguments[index] != 0 )
+            if ( pArguments[idx] != 0 )
             {
-                free(pArguments[index]);
+                free(pArguments[idx]);
             }
         }
         free(pArguments);
@@ -783,11 +783,11 @@ oslProcessError SAL_CALL osl_executeProcess_WithRedirectedIO(
 
     if ( pEnvironment != 0 )
     {
-        for ( index = 0 ; index < nEnvironmentVars ; ++index )
+        for ( idx = 0 ; idx < nEnvironmentVars ; ++idx )
         {
-            if ( pEnvironment[index] != 0 )
+            if ( pEnvironment[idx] != 0 )
             {
-                free(pEnvironment[index]);
+                free(pEnvironment[idx]);
             }
         }
         free(pEnvironment);
@@ -1471,13 +1471,15 @@ oslProcessError SAL_CALL osl_getProcessInfo(oslProcess Process, oslProcessData F
 			 *   to work in 2.0.36)
 			 */
 
-			unsigned long userseconds=(procstat.utime/HZ);
-			unsigned long systemseconds=(procstat.stime/HZ);
+			unsigned long clockticks=sysconf(_SC_CLK_TCK);
+
+			unsigned long userseconds=(procstat.utime/clockticks);
+			unsigned long systemseconds=(procstat.stime/clockticks);
 
 			pInfo->UserTime.Seconds   = userseconds;
-			pInfo->UserTime.Nanosec   = procstat.utime - (userseconds * HZ);
+			pInfo->UserTime.Nanosec   = procstat.utime - (userseconds * clockticks);
 			pInfo->SystemTime.Seconds = systemseconds;
-			pInfo->SystemTime.Nanosec = procstat.stime - (systemseconds * HZ);
+			pInfo->SystemTime.Nanosec = procstat.stime - (systemseconds * clockticks);
 
 			pInfo->Fields |= osl_Process_CPUTIMES;
 		}

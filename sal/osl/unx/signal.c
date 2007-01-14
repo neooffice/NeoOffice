@@ -183,16 +183,16 @@ static void getExecutableName_Impl (rtl_String ** ppstrProgName)
 
 static sal_Bool is_soffice_Impl (void)
 {
-	sal_Int32    index       = -1;
+	sal_Int32    idx       = -1;
 	rtl_String * strProgName = 0;
 
 	getExecutableName_Impl (&strProgName);
 	if (strProgName)
 	{
-		index = rtl_str_indexOfStr (rtl_string_getStr (strProgName), "soffice");
+		idx = rtl_str_indexOfStr (rtl_string_getStr (strProgName), "soffice");
 		rtl_string_release (strProgName);
 	}
-	return (index != -1);
+	return (idx != -1);
 }
 
 static sal_Bool InitSignal()
@@ -390,16 +390,17 @@ static int fputs_xml( const char *string, FILE *stream )
 
 static int ReportCrash( int Signal )
 {
+#ifdef SAL_ENABLE_CRASH_REPORT
 	static sal_Bool bCrashReporterExecuted = sal_False;
 	sal_Bool		bAutoCrashReport = sal_False;
-
-	if ( !bErrorReportingEnabled )
-		return -1;
 
 	sal_uInt32	argi;
 	sal_uInt32	argc;
 	rtl_uString *ustrCommandArg = NULL;
 	
+	if ( !bErrorReportingEnabled )
+		return -1;
+
 	argc = osl_getCommandArgCount();
 	
 	for ( argi = 0; argi < argc; argi++ )
@@ -523,7 +524,7 @@ static int ReportCrash( int Signal )
 						if ( dladdr( stackframes[iFrame], &dl_info) )
 						{
 							const char *dli_fname = NULL;
-							const char *dli_fdir = NULL;
+							char *dli_fdir = NULL;
 							char szDirectory[PATH_MAX];
 							char szCanonicDirectory[PATH_MAX];
 
@@ -553,12 +554,14 @@ static int ReportCrash( int Signal )
 									dl_info.dli_fname, checksum, sizeof(checksum) );
 								if ( nBytesProcessed )
 								{
-									int i;
+									int j;
 
 									fprintf( checksumout, "<errormail:Checksum sum=\"0x" );
-									for ( i = 0; i < 16; fprintf( checksumout, "%02X", checksum[i++] ) );
-									fprintf( checksumout, "\" bytes=\"%d\" file=\"%s\"/>\n",
-										nBytesProcessed,
+									for ( j = 0; j < 16; fprintf( checksumout, "%02X", checksum[j++] ) );
+									fprintf( checksumout,
+                                        "\" bytes=\"%lu\" file=\"%s\"/>\n",
+                                        SAL_INT_CAST(
+                                            unsigned long, nBytesProcessed),
 										dli_fname );
 								}
 							}
@@ -671,22 +674,34 @@ static int ReportCrash( int Signal )
 	}
 	
 	return 1;
+#else /* defined SAL_ENABLE_CRASH_REPORT */
+    /* the utility crash_report is not build, so do the same as when
+       the option -nocrashreport is used */
+    (void) Signal; // avoid warnings
+    return -1;
+#endif /* defined SAL_ENABLE_CRASH_REPORT */
 }
 
 static void PrintStack( int sig )
 {
-#ifndef MACOSX
+#ifndef USE_JAVA
 	void *buffer[MAX_STACK_FRAMES];
+#ifndef MACOSX
 	int size = backtrace( buffer, sizeof(buffer) / sizeof(buffer[0]) );
+#endif
 
 	fprintf( stderr, "\n\nFatal exception: Signal %d\n", sig );
 
+#ifdef MACOSX
+	fprintf( stderr, "Please turn on Enable Crash Reporting and\nAutomatic Display of Crashlogs in the Console application\n" );
+#else
 	if ( size > 0 )
 	{
 		fputs( "Stack:\n", stderr );
 		backtrace_symbols_fd( buffer, size, fileno(stderr) );
 	}
-#endif	/* MACOSX */
+#endif
+#endif	/* !USE_JAVA */
 }
 
 static oslSignalAction CallSignalHandler(oslSignalInfo *pInfo)
@@ -940,9 +955,7 @@ oslSignalAction SAL_CALL osl_raiseSignal(sal_Int32 UserSignal, void* UserData)
 sal_Bool SAL_CALL osl_setErrorReporting( sal_Bool bEnable )
 {
 	sal_Bool bOld = bErrorReportingEnabled;
-#ifndef MACOSX
 	bErrorReportingEnabled = bEnable;
-#endif	/* !MACOSX */
 
 	return bOld;
 }

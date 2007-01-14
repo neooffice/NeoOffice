@@ -344,6 +344,8 @@ struct passwd *getpwnam_r(const char* name, struct passwd* s, char* buffer, int 
 }
 #endif /* defined SCO */
 
+#if !defined(FREEBSD) || (__FreeBSD_version < 700015)
+
 extern int h_errno;
 
 struct hostent *gethostbyname_r(const char *name, struct hostent *result,
@@ -434,12 +436,15 @@ struct hostent *gethostbyname_r(const char *name, struct hostent *result,
 
   	return res;
 }
+#endif /* !defined(FREEBSD) || (__FreeBSD_version < 700015) */
 
 #if defined(MACOSX)
 /*
  * This section works around calls that are missing or broken
  * in MacOS X 10.1.x and earlier.
  */
+
+#ifndef HAVE_READDIR_H
 
 /* MacOS X doesn't have readdir_r() standard, plus readdir() isn't threadsafe. */
 
@@ -478,6 +483,8 @@ int readdir_r( DIR *dirp, struct dirent *entry, struct dirent **result )
 
     return nRet;
 }
+
+#endif
 
 /* No reentrant asctime() either... */
 
@@ -532,7 +539,7 @@ int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement)
 
     // If the path exists and is not an alias, return without changing anything
     if ( FSPathMakeRef( (const UInt8 *)path, &aFSRef, 0 ) == noErr && FSIsAliasFile( &aFSRef, &bAliased, &bFolder ) == noErr && !bAliased )
-        return;
+        return 0;
 
     if ( *unprocessedPath == '/' )
         unprocessedPath++;
@@ -633,6 +640,9 @@ sal_Bool macxp_checkCreateDirectory(const char *pszStr)
    thread subprocess and not of the main process. So we save the main
    pid at startup
 */
+
+// Directly from libc.so.6, obviously missing from some unistd.h:
+extern __pid_t __getpid(void);
 
 static pid_t pid = -1;
 
