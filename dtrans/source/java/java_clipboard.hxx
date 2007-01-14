@@ -36,8 +36,8 @@
 #ifndef _JAVA_CLIPBOARD_HXX_
 #define _JAVA_CLIPBOARD_HXX_
 
-#ifndef _RTL_USTRING_
-#include <rtl/ustring>
+#ifndef _RTL_USTRING_HXX_
+#include <rtl/ustring.hxx>
 #endif
 #ifndef _SAL_TYPES_H_
 #include <sal/types.h>
