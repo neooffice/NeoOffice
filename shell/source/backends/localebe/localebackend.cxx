@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_shell.hxx"
+
 #include "localebackend.hxx"
 #include "localelayer.hxx"
 
@@ -176,6 +179,7 @@ namespace /* private */
 			// split the string into substrings; the first two (if there are two) substrings 
 			// are language and country
 			CFArrayRef subs = CFStringCreateArrayBySeparatingStrings(NULL, sref, CFSTR("_"));
+#ifdef USE_JAVA
 			if (subs && CFArrayGetCount(subs) < 2)
 			{
 				CFRelease(subs);
@@ -183,11 +187,12 @@ namespace /* private */
 				// Mac OS X will sometimes use "-" as its delimiter
 				subs = CFStringCreateArrayBySeparatingStrings(NULL, sref, CFSTR("-"));
 			}
+#endif	// USE_JAVA
+				
+			CFArrayGuard subsGuard(subs);
 				
 			if (subs != NULL)
 			{
-				CFArrayGuard subsGuard(subs);
-
 				aLocaleBuffer.setLength(0); // clear buffer which still contains fallback value
 				
 				CFStringRef lang = (CFStringRef)CFArrayGetValueAtIndex(subs, 0);
@@ -197,6 +202,7 @@ namespace /* private */
 				// value the second value is always the country!
 				if (CFArrayGetCount(subs) > 1) 
 				{	
+#ifdef USE_JAVA
 					CFStringRef country = (CFStringRef)CFArrayGetValueAtIndex(subs, 1);
 					if (CFStringGetLength(country) > 2)
 					{
@@ -213,6 +219,11 @@ namespace /* private */
 						aLocaleBuffer.appendAscii("-");
 						OUStringBufferAppendCFString(aLocaleBuffer, country);
 					}
+#else	// USE_JAVA
+					aLocaleBuffer.appendAscii("-");
+					CFStringRef country = (CFStringRef)CFArrayGetValueAtIndex(subs, 1);
+					OUStringBufferAppendCFString(aLocaleBuffer, country);
+#endif	// USE_JAVA
 				}					
 			}
 		}
@@ -232,7 +243,13 @@ namespace /* private */
 #endif
 #define WINVER 0x0501
 
+#if defined _MSC_VER
+#pragma warning(push, 1)
+#endif
 #include <windows.h>
+#if defined _MSC_VER
+#pragma warning(pop)
+#endif 
 
 rtl::OUString ImplGetLocale(LCID lcid)
 {
@@ -327,11 +344,12 @@ rtl::OUString LocaleBackend::createTimeStamp()
 //------------------------------------------------------------------------------
 
 uno::Reference<backend::XLayer> SAL_CALL LocaleBackend::getLayer(
-        const rtl::OUString& aComponent, const rtl::OUString& aTimestamp)
+        const rtl::OUString& aComponent, const rtl::OUString& /*aTimestamp*/)
     throw (backend::BackendAccessException, lang::IllegalArgumentException)
 {
 
-    if( aComponent.equals( getSupportedComponents()[0]) )
+    uno::Sequence<rtl::OUString> aComps( getSupportedComponents() );
+    if( aComponent.equals( aComps[0]) )
     {
         if( ! m_xSystemLayer.is() )
         {
@@ -364,7 +382,7 @@ uno::Reference<backend::XLayer> SAL_CALL LocaleBackend::getLayer(
 //------------------------------------------------------------------------------
 
 uno::Reference<backend::XUpdatableLayer> SAL_CALL
-LocaleBackend::getUpdatableLayer(const rtl::OUString& aComponent) 
+LocaleBackend::getUpdatableLayer(const rtl::OUString& /*aComponent*/) 
     throw (backend::BackendAccessException,lang::NoSupportException,	   
 		   lang::IllegalArgumentException)
 {
@@ -372,8 +390,6 @@ LocaleBackend::getUpdatableLayer(const rtl::OUString& aComponent)
         rtl::OUString( RTL_CONSTASCII_USTRINGPARAM(
             "LocaleBackend: No Update Operation allowed, Read Only access") ),
         *this) ; 
-	
-    return NULL; 
 }
 
 //------------------------------------------------------------------------------

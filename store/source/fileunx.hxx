@@ -116,7 +116,7 @@ inline HSTORE __store_fmap (HSTORE hFile)
 /*
  * __store_funmap.
  */
-inline void __store_funmap (HSTORE hMap)
+inline void __store_funmap (HSTORE)
 {
 	// Nothing to do, see '__store_fmap()'.
 }
@@ -303,7 +303,7 @@ inline storeError __store_ftrunc (HSTORE h, sal_uInt32 n)
 		sal_uInt32 k = (sal_uInt32)::lseek (h, (off_t)0, SEEK_END);
 		if (k == (sal_uInt32)(-1))
 			return (result);
-		if ((0 <= n) && (n <= k))
+		if (n <= k)
 			return (result);
 
 		// Try 'expand' via 'lseek()' and 'write()'.

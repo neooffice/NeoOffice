@@ -33,6 +33,9 @@
  *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
+
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_shell.hxx"
  
 #ifndef _SYSTEMSHELL_HXX_
 #include "systemshell.hxx"
@@ -48,6 +51,10 @@
 
 #ifndef _RTL_STRING_HXX_
 #include "rtl/string.hxx"
+#endif
+
+#ifndef _RTL_STRBUF_HXX_
+#include "rtl/strbuf.hxx"
 #endif
 
 #include "osl/thread.h"
@@ -163,13 +170,13 @@ namespace /* private */ {
                 timestamp_ = t;
         }
     
-        void set_is_private(const string_t& character)
+        void set_is_private(const string_t& /*character*/)
         { is_private_ = true; }
     
         void set_groups(const string_t& character)
         { groups_.push_back(character); }
 
-        void set_nothing(const string_t& character)
+        void set_nothing(const string_t& /*character*/)
         {}
 		
         bool has_groups() const
@@ -205,7 +212,7 @@ namespace /* private */ {
                 string_container_t::const_iterator iter = groups_.begin();
                 string_container_t::const_iterator iter_end = groups_.end();
                 
-                for (/**/; iter != iter_end; ++iter)                
+                for ( ; iter != iter_end; ++iter)                
                     write_xml_tag(TAG_GROUP, (*iter), file);                    
                 
                 write_xml_end_tag(TAG_GROUPS, file);                
@@ -213,10 +220,33 @@ namespace /* private */ {
             write_xml_end_tag(TAG_RECENT_ITEM, file);            
         }
         
+        static rtl::OString escape_content(const string_t &text)
+        {
+            rtl::OStringBuffer aBuf;
+            for (sal_uInt32 i = 0; i < text.length(); i++)
+            {
+#               define MAP(a,b) case a: aBuf.append(b); break
+                switch (text[i])
+                {
+                    MAP ('&',  "&amp;");
+                    MAP ('<',  "&lt;");
+                    MAP ('>',  "&gt;");
+                    MAP ('\'', "&apos;");
+                    MAP ('"',  "&quot;");
+                default:
+                    aBuf.append(text[i]);
+                    break;
+                }
+#               undef MAP
+            }
+            return aBuf.makeStringAndClear();
+        }
+        
         void write_xml_tag(const string_t& name, const string_t& value, const recently_used_file& file) const
         {            
             write_xml_start_tag(name, file);
-            file.write(value.c_str(), value.length());
+            rtl::OString escaped = escape_content (value);
+            file.write(escaped.getStr(), escaped.getLength());
             write_xml_end_tag(name, file);
         }
         
@@ -277,15 +307,15 @@ namespace /* private */ {
         }
             
         virtual void start_element(
-            const string_t& raw_name, 
+            const string_t& /*raw_name*/, 
             const string_t& local_name, 
-            const xml_tag_attribute_container_t& attributes)
+            const xml_tag_attribute_container_t& /*attributes*/)
         {
             if ((local_name == TAG_RECENT_ITEM) && (NULL == item_))                            
                 item_ = new recently_used_item;            
         }
 
-        virtual void end_element(const string_t& raw_name, const string_t& local_name)
+        virtual void end_element(const string_t& /*raw_name*/, const string_t& local_name)
         {
             if (named_command_map_.find(local_name) != named_command_map_.end())
                 (item_->*named_command_map_[local_name])(current_element_);
@@ -312,14 +342,14 @@ namespace /* private */ {
         virtual void start_document() {}        
         virtual void end_document()   {}
  
-        virtual void ignore_whitespace(const string_t& whitespaces)
+        virtual void ignore_whitespace(const string_t& /*whitespaces*/)
         {}  
         
         virtual void processing_instruction(
-            const string_t& target, const string_t& data)
+            const string_t& /*target*/, const string_t& /*data*/)
         {}
         
-        virtual void comment(const string_t& comment)
+        virtual void comment(const string_t& /*comment*/)
         {}        
     private:
         recently_used_item* item_;
@@ -542,7 +572,7 @@ const rtl::OUString DEFAULT_CONTEXT = rtl::OUString::createFromAscii("DefaultCon
 
 // We need to re-encode file urls because osl_getFileURLFromSystemPath converts
 // to UTF-8 before encoding non ascii characters, which is not what other apps expect.
-rtl::OUString translateToExternalUrl(const rtl::OUString& internalUrl)
+static rtl::OUString translateToExternalUrl(const rtl::OUString& internalUrl)
 {
 	rtl::OUString extUrl;
 		
@@ -574,7 +604,7 @@ extern "C" void add_to_recently_used_file_list(const rtl::OUString& file_url, co
         rtl::OUString externalUrl = translateToExternalUrl(file_url);
 	
         read_recently_used_items(ruf, item_list);	
-        recently_used_item_list_add(item_list, (externalUrl.getLength()) ? externalUrl : file_url, mime_type);
+        recently_used_item_list_add(item_list, externalUrl.getLength() ? externalUrl : file_url, mime_type);
         write_recently_used_items(ruf, item_list);                                
     }
     catch(const char* ex)
