@@ -572,7 +572,7 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
             {
                 CFIndex nCount = CFArrayGetCount( aExcList );
                 rtl::OUString aFullyQualifiedHost;
-                for ( CFIndex i; i < nCount; i++ )
+                for ( CFIndex i = 0; i < nCount; i++ )
                 {
                     CFStringRef aHostString = (CFStringRef)CFArrayGetValueAtIndex( aExcList, i );
                     if ( !aHostString )
