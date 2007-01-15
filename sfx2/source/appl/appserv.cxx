@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_sfx2.hxx"
+
 #ifndef _COM_SUN_STAR_UNO_REFERENCE_HXX_
 #include <com/sun/star/uno/Reference.hxx>
 #endif
@@ -168,7 +171,6 @@
 #include <com/sun/star/beans/XPropertySet.hpp>
 
 #ifndef GCC
-#pragma hdrstop
 #endif
 
 #include "about.hxx"
@@ -232,11 +234,7 @@ using namespace ::com::sun::star::lang;
 #ifdef MACOSX
 // [ed] 1/25/05 handler for About events.  Bug #396
 // Note: this must not be static as the symbol will be loaded by the vcl module
-#if __GNUC__ < 4
-extern "C" void NativeAboutMenuHandler()
-#else
-extern "C" __attribute__((visibility("default"))) void NativeAboutMenuHandler()
-#endif
+extern "C" void SAL_DLLPUBLIC_EXPORT NativeAboutMenuHandler()
 {
 	SfxRequest aReq( SID_ABOUT, SFX_CALLMODE_SLOT, SFX_APP()->GetPool() );
 	SFX_APP()->MiscExec_Impl( aReq );
@@ -246,11 +244,7 @@ extern "C" __attribute__((visibility("default"))) void NativeAboutMenuHandler()
 #ifdef MACOSX
 // [ed] 1/26/05 handler for preferences events.
 // Note: this must not be static as the symbol will be loaded by the vcl module
-#if __GNUC__ < 4
-extern "C" void NativePreferencesMenuHandler()
-#else
-extern "C" __attribute__((visibility("default"))) void NativePreferencesMenuHandler()
-#endif
+extern "C" void SAL_DLLPUBLIC_EXPORT NativePreferencesMenuHandler()
 {
 	SfxRequest aReq( SID_OPTIONS_TREEDIALOG, SFX_CALLMODE_SLOT, SFX_APP()->GetPool() );
 	SFX_APP()->OfaExec_Impl( aReq );
@@ -427,7 +421,7 @@ void SfxApplication::MiscExec_Impl( SfxRequest& rReq )
 		case SID_SAVEDOCS:
 		{
 			BOOL bOK = TRUE;
-			BOOL bDone = TRUE;
+			BOOL bTmpDone = TRUE;
 			for ( SfxObjectShell *pObjSh = SfxObjectShell::GetFirst();
 				  pObjSh;
 				  pObjSh = SfxObjectShell::GetNext( *pObjSh ) )
@@ -437,7 +431,7 @@ void SfxApplication::MiscExec_Impl( SfxRequest& rReq )
 				{
 					pObjSh->ExecuteSlot( aReq );
 					SfxBoolItem *pItem = PTR_CAST( SfxBoolItem, aReq.GetReturnValue() );
-					bDone = aReq.IsDone();
+					bTmpDone = aReq.IsDone();
 					if ( !pItem || !pItem->GetValue() )
 						bOK = FALSE;
 				}
@@ -478,7 +472,7 @@ void SfxApplication::MiscExec_Impl( SfxRequest& rReq )
 		{
 			// Parameter aus werten
 			SFX_REQUEST_ARG(rReq, pOnItem, SfxBoolItem, SID_HELPTIPS, FALSE);
-			FASTBOOL bOn = pOnItem
+			bool bOn = pOnItem
 							? ((SfxBoolItem*)pOnItem)->GetValue()
 							: !Help::IsQuickHelpEnabled();
 
@@ -506,7 +500,7 @@ void SfxApplication::MiscExec_Impl( SfxRequest& rReq )
 		{
 			// Parameter auswerten
 			SFX_REQUEST_ARG(rReq, pOnItem, SfxBoolItem, SID_HELPBALLOONS, FALSE);
-			FASTBOOL bOn = pOnItem
+			bool bOn = pOnItem
 							? ((SfxBoolItem*)pOnItem)->GetValue()
 							: !Help::IsBalloonHelpEnabled();
 
@@ -545,8 +539,7 @@ void SfxApplication::MiscExec_Impl( SfxRequest& rReq )
             ::rtl::OUString aDefault;
             String          aVerId( utl::Bootstrap::getBuildIdData( aDefault ));
 
-            if ( aVerId.Len() == 0 )
-                DBG_ERROR( "No BUILDID in bootstrap file" );
+            OSL_ENSURE( aVerId.Len() != 0, "No BUILDID in bootstrap file" );
 
             String aVersion( '[' );
             ( aVersion += aVerId ) += ']';
@@ -559,7 +552,9 @@ void SfxApplication::MiscExec_Impl( SfxRequest& rReq )
                             : 0;
             aDialogResId.SetResMgr( pResMgr );
             if ( !Resource::GetResManager()->IsAvailable( aDialogResId ) )
+            {
                 DBG_ERROR( "No RID_DEFAULTABOUT in label-resource-dll" );
+            }
 
             // About-Dialog anzeigen
             AboutDialog* pDlg = new AboutDialog( 0, aDialogResId, aVersion );
@@ -819,7 +814,7 @@ typedef	void (SAL_CALL *basicide_macro_organizer)( INT16 );
 
     // get symbol
     ::rtl::OUString aSymbol( RTL_CONSTASCII_USTRINGPARAM( "basicide_choose_macro" ) );
-    basicide_choose_macro pSymbol = (basicide_choose_macro) osl_getSymbol( handleMod, aSymbol.pData );
+    basicide_choose_macro pSymbol = (basicide_choose_macro) osl_getFunctionSymbol( handleMod, aSymbol.pData );
 
     // call basicide_choose_macro in basctl
     rtl_uString* pScriptURL = pSymbol( bExecute, bChooseOnly, rMacroDesc.pData );
@@ -840,7 +835,7 @@ void MacroOrganizer( INT16 nTabId )
 
     // get symbol
     ::rtl::OUString aSymbol( RTL_CONSTASCII_USTRINGPARAM( "basicide_macro_organizer" ) );
-    basicide_macro_organizer pSymbol = (basicide_macro_organizer) osl_getSymbol( handleMod, aSymbol.pData );
+    basicide_macro_organizer pSymbol = (basicide_macro_organizer) osl_getFunctionSymbol( handleMod, aSymbol.pData );
 
     // call basicide_macro_organizer in basctl
     pSymbol( nTabId );
@@ -858,15 +853,19 @@ ResMgr* SfxApplication::GetOffResManager_Impl()
 void SfxApplication::OfaExec_Impl( SfxRequest& rReq )
 {
 	DBG_MEMTEST();
-	FASTBOOL bDone = FALSE;
 	switch ( rReq.GetSlot() )
 	{
 		case SID_OPTIONS_TREEDIALOG:
 		{
+            const SfxItemSet* pArgs = rReq.GetInternalArgs_Impl();
+            const SfxPoolItem* pItem = NULL;
+            Reference < XFrame > xFrame;
+            if ( pArgs && pArgs->GetItemState( SID_DOCFRAME, sal_False, &pItem ) == SFX_ITEM_SET )
+                 ( (SfxUnoAnyItem*)pItem )->GetValue() >>= xFrame;
 			SfxAbstractDialogFactory* pFact = SfxAbstractDialogFactory::Create();
 			if ( pFact )
 			{
-			  	VclAbstractDialog* pDlg = pFact->CreateVclDialog( NULL, ResId( rReq.GetSlot() ) );
+                VclAbstractDialog* pDlg = pFact->CreateFrameDialog( NULL, xFrame, ResId( rReq.GetSlot() ) );
 			  	pDlg->Execute();
 			  	delete pDlg;
 			}
@@ -901,7 +900,6 @@ void SfxApplication::OfaExec_Impl( SfxRequest& rReq )
         {
             SfxUpdateDialog aUpdateDlg( GetTopWindow() );
             aUpdateDlg.Execute();
-            bDone = true;
             break;
         }
 
@@ -1000,7 +998,11 @@ void SfxApplication::OfaExec_Impl( SfxRequest& rReq )
                     Any aRet;
                     Sequence< sal_Int16 > outIndex;
                     Sequence< Any > outArgs( 0 );
-                    if ( pView && ( pObjShell = pView->GetObjectShell() ) )
+                    if ( pView )
+                    {
+                        pObjShell = pView->GetObjectShell();
+                    }
+                    if ( pObjShell )
                     {
                         pObjShell->CallXScript(scriptURL, args, aRet, outIndex, outArgs);
                     }
@@ -1025,7 +1027,7 @@ void SfxApplication::OfaExec_Impl( SfxRequest& rReq )
                             Reference< provider::XScript > xScript(
                                 xScriptProvider->getScript( scriptURL ), UNO_QUERY_THROW );
 
-                            Any aRet = xScript->invoke( args, outIndex, outArgs );
+                            xScript->invoke( args, outIndex, outArgs );
                         }
     					catch ( provider::ScriptFrameworkErrorException& se )
     					{
@@ -1055,19 +1057,16 @@ void SfxApplication::OfaExec_Impl( SfxRequest& rReq )
 
  						if ( bCaughtException )
 						{
-							SfxAbstractDialogFactory* pFact =
-								SfxAbstractDialogFactory::Create();
-
 							if ( pFact != NULL )
 							{
-								VclAbstractDialog* pDlg =
+								VclAbstractDialog* pScriptErrDlg =
 									pFact->CreateScriptErrorDialog(
 										NULL, aException );
 
-								if ( pDlg != NULL )
+								if ( pScriptErrDlg != NULL )
 								{
-									pDlg->Execute();
-									delete pDlg;
+									pScriptErrDlg->Execute();
+									delete pScriptErrDlg;
 								}
 							}
    						}
@@ -1134,8 +1133,8 @@ void SfxApplication::OfaExec_Impl( SfxRequest& rReq )
 				SfxItemSet aSet(GetPool(), SID_AUTO_CORRECT_DLG, SID_AUTO_CORRECT_DLG);
 				const SfxPoolItem* pItem=NULL;
 				const SfxItemSet* pSet = rReq.GetArgs();
-				SfxItemPool* pPool = pSet ? pSet->GetPool() : NULL;
-				if ( pSet && pSet->GetItemState( pPool->GetWhich( SID_AUTO_CORRECT_DLG ), FALSE, &pItem ) == SFX_ITEM_SET )
+				SfxItemPool* pSetPool = pSet ? pSet->GetPool() : NULL;
+				if ( pSet && pSet->GetItemState( pSetPool->GetWhich( SID_AUTO_CORRECT_DLG ), FALSE, &pItem ) == SFX_ITEM_SET )
 					aSet.Put( *pItem );
 
 			  	SfxAbstractTabDialog* pDlg = pFact->CreateTabDialog( ResId( RID_OFA_AUTOCORR_DLG ), NULL, &aSet, NULL );

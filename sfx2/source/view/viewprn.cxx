@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_sfx2.hxx"
+
 #ifdef OS2
 #include <vcl/sysdep.hxx>
 #endif
@@ -72,7 +75,6 @@
 #include <svtools/useroptions.hxx>
 #include <svtools/printwarningoptions.hxx>
 #ifndef GCC
-#pragma hdrstop
 #endif
 
 #include "viewsh.hxx"
@@ -199,11 +201,10 @@ IMPL_LINK( SfxDialogExecutor_Impl, Execute, void *, EMPTYARG )
 
 //-------------------------------------------------------------------------
 
-BOOL UseStandardPrinter_Impl( Window *pParent, SfxPrinter *pDocPrinter )
+BOOL UseStandardPrinter_Impl( Window* /*pParent*/, SfxPrinter* pDocPrinter )
 {
 	// Optionen abfragen, ob gewarnt werden soll (Doc uebersteuert App)
 	BOOL bWarn = FALSE;
-	SfxApplication *pSfxApp = SFX_APP();
 	const SfxItemSet *pDocOptions = &pDocPrinter->GetOptions();
 	if ( pDocOptions )
 	{
@@ -360,7 +361,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 	SfxPrinter*             pPrinter = 0;
 	PrintDialog*            pPrintDlg = 0;
 	SfxDialogExecutor_Impl* pExecutor = 0;
-	FASTBOOL                bSilent = FALSE;
+	bool                    bSilent = false;
     BOOL bIsAPI = rReq.GetArgs() && rReq.GetArgs()->Count();
 
 	const USHORT nId = rReq.GetSlot();
@@ -374,7 +375,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 		{
 	        // quiet mode (AppEvent, API call)
 			SFX_REQUEST_ARG(rReq, pSilentItem, SfxBoolItem, SID_SILENT, FALSE);
-			bSilent = pSilentItem ? pSilentItem->GetValue() : FALSE;
+			bSilent = pSilentItem && pSilentItem->GetValue();
 
 	        // get printer and printer settings from the document
 			SfxPrinter *pDocPrinter = GetPrinter(TRUE);
@@ -909,7 +910,7 @@ void SfxViewShell::LockPrinter( BOOL bLock)
 
 //--------------------------------------------------------------------
 
-USHORT SfxViewShell::Print( SfxProgress &rProgress, PrintDialog *pDlg )
+USHORT SfxViewShell::Print( SfxProgress& /*rProgress*/, PrintDialog *pDlg )
 {
 	SfxObjectShell *pObjShell = GetViewFrame()->GetObjectShell();
 	SFX_APP()->NotifyEvent(SfxEventHint(SFX_EVENT_PRINTDOC, pObjShell));
@@ -919,14 +920,14 @@ USHORT SfxViewShell::Print( SfxProgress &rProgress, PrintDialog *pDlg )
 
 //--------------------------------------------------------------------
 
-SfxPrinter* SfxViewShell::GetPrinter( BOOL bCreate )
+SfxPrinter* SfxViewShell::GetPrinter( BOOL /*bCreate*/ )
 {
 	return 0;
 }
 
 //--------------------------------------------------------------------
 
-USHORT SfxViewShell::SetPrinter( SfxPrinter *pNewPrinter, USHORT nDiffFlags )
+USHORT SfxViewShell::SetPrinter( SfxPrinter* /*pNewPrinter*/, USHORT /*nDiffFlags*/ )
 {
 	return 0;
 }
@@ -935,8 +936,8 @@ USHORT SfxViewShell::SetPrinter( SfxPrinter *pNewPrinter, USHORT nDiffFlags )
 
 SfxTabPage* SfxViewShell::CreatePrintOptionsPage
 (
-	Window*             pParent,
-	const SfxItemSet&   rOptions
+	Window*             /*pParent*/,
+	const SfxItemSet&   /*rOptions*/
 )
 
 /*  [Beschreibung]

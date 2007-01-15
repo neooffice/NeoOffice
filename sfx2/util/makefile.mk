@@ -122,14 +122,9 @@ SHL1STDLIBS += -framework AppKit -framework Carbon
 SHL1DEPN += $(shell $(FIND) $(SLO) -type f -name "*.OBJ" -print)
 .ENDIF
 
-.IF "$(SOLAR_JAVA)" != ""
-SHL1DEPN+= \
-			$(L)$/sj.lib
-.ENDIF
-
 SHL1LIBS=   $(LIB1TARGET)
 
-SHL1OBJS=   $(SLO)$/sfxdll.obj
+#SHL1OBJS=   $(SLO)$/sfxdll.obj
 
 SHL1DEF=    $(MISC)$/$(SHL1TARGET).def
 
@@ -150,6 +145,27 @@ SFXSRSLIST=\
 RESLIB1NAME=$(TARGET)
 RESLIB1IMAGES=$(PRJ)$/res
 RESLIB1SRSFILES=$(SFXSRSLIST)
+
+# gtk quick-starter
+.IF "$(GUI)"=="UNX"
+.IF "$(ENABLE_SYSTRAY_GTK)"=="TRUE"
+PKGCONFIG_MODULES=gtk+-2.0
+.INCLUDE: pkg_config.mk
+CFLAGS+=$(PKGCONFIG_CFLAGS)
+
+SHL3TARGET=qstart_gtk$(UPD)$(DLLPOSTFIX)
+SHL3LIBS=$(SLB)$/quickstart.lib
+SHL3DEPN=$(SHL1IMPLIBN) $(SHL1TARGETN)
+# libs for gtk plugin
+SHL3STDLIBS=$(SHL1STDLIBS) $(SFX2LIB) $(EGGTRAYLIB)
+SHL3STDLIBS+=$(PKGCONFIG_LIBS:s/ -lpangoxft-1.0//)
+# hack for faked SO environment
+.IF "$(PKGCONFIG_ROOT)"!=""
+SHL3SONAME+=-z nodefs
+SHL3NOCHECK=TRUE
+.ENDIF          # "$(PKGCONFIG_ROOT)"!=""
+.ENDIF # "$(ENABLE_SYSTRAY_GTK)"=="TRUE"
+.ENDIF # "$(GUI)"=="UNX"
 
 # --- Targets ------------------------------------------------------
 

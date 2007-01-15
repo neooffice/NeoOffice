@@ -39,6 +39,7 @@ PRJ=..$/..
 PRJNAME=sfx2
 TARGET=appl
 ENABLE_EXCEPTIONS=TRUE
+LIBTARGET=NO
 
 # --- Settings -----------------------------------------------------
 
@@ -48,10 +49,18 @@ ENABLE_EXCEPTIONS=TRUE
 # w.g. compilerbugs
 .IF "$(GUI)"=="WNT"
 CFLAGS+=-Od
+CFLAGS+=-DENABLE_QUICKSTART_APPLET
 .ENDIF
 
 .IF "$(GUI)"=="UNX"
         CDEFS+=-DDLL_NAME=libsfx$(UPD)$(DLLPOSTFIX)$(DLLPOST)
+.IF "$(ENABLE_SYSTRAY_GTK)"=="TRUE"
+        PKGCONFIG_MODULES=gtk+-2.0
+        .INCLUDE: pkg_config.mk
+        CFLAGS+=$(PKGCONFIG_CFLAGS)
+        CFLAGS+=-DENABLE_QUICKSTART_APPLET
+        CDEFS+=-DPLUGIN_NAME=libqstart_gtk$(UPD)$(DLLPOSTFIX)$(DLLPOST)
+.ENDIF # "$(ENABLE_SYSTRAY_GTK)"=="TRUE"
 .ELSE
         CDEFS+=-DDLL_NAME=sfx$(UPD)$(DLLPOSTFIX)$(DLLPOST)
 .ENDIF
@@ -66,7 +75,7 @@ SRS2NAME=sfx
 SRC2FILES =  \
 		sfx.src
 
-SLOFILES =  \
+SFX_OBJECTS = \
 	$(SLO)$/app.obj \
 	$(SLO)$/appbas.obj \
 	$(SLO)$/appcfg.obj \
@@ -103,7 +112,27 @@ SLOFILES =  \
 	$(SLO)$/workwin.obj \
         $(SLO)$/xpackcreator.obj \
     $(SLO)$/fwkhelper.obj \
+    $(SLO)$/modsizeexceeded.obj \
     $(SLO)$/updatedlg.obj
+
+.IF "$(OS)" == "MACOSX"
+.IF "$(GUIBASE)" == "java"
+SFX_OBJECTS += \
+	$(SLO)$/shutdownicon_cocoa.obj
+.ENDIF
+.ENDIF
+
+SLOFILES = $(SFX_OBJECTS)
+LIB1TARGET= $(SLB)$/$(TARGET).lib
+LIB1OBJFILES= $(SFX_OBJECTS)
+
+.IF "$(ENABLE_SYSTRAY_GTK)"=="TRUE"
+QUICKSTART_OBJECTS = $(SLO)$/shutdowniconunx.obj
+SLOFILES += $(QUICKSTART_OBJECTS)
+
+LIB2TARGET= $(SLB)$/quickstart.lib
+LIB2OBJFILES= $(QUICKSTART_OBJECTS)
+.ENDIF
 
 EXCEPTIONSFILES=\
 	$(SLO)$/imagemgr.obj		\
@@ -125,13 +154,6 @@ EXCEPTIONSFILES=\
 .IF "$(GUI)" == "MAC"
 SLOFILES +=\
 		$(SLO)$/appmac.obj
-.ENDIF
-
-.IF "$(OS)" == "MACOSX"
-.IF "$(GUIBASE)" == "java"
-SLOFILES += \
-	$(SLO)$/shutdownicon_cocoa.obj
-.ENDIF
 .ENDIF
 
 # --- Targets -------------------------------------------------------

@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_sfx2.hxx"
+
 #include <tools/debug.hxx>
 
 #ifndef _SFXENUMITEM_HXX //autogen
@@ -191,13 +194,13 @@ void SAL_CALL SfxUnoControllerItem::statusChanged(const ::com::sun::star::frame:
 
 			if ( pType == ::getBooleanCppuType() )
 			{
-				sal_Bool bTemp ;
+				sal_Bool bTemp = false;
 				rEvent.State >>= bTemp ;
 				pItem = new SfxBoolItem( pCtrlItem->GetId(), bTemp );
 			}
 			else if ( pType == ::getCppuType((const sal_uInt16*)0) )
 			{
-				sal_uInt16 nTemp ;
+				sal_uInt16 nTemp = 0;
 				rEvent.State >>= nTemp ;
 				pItem = new SfxUInt16Item( pCtrlItem->GetId(), nTemp );
 			}
@@ -222,7 +225,7 @@ void SAL_CALL SfxUnoControllerItem::statusChanged(const ::com::sun::star::frame:
 	}
 }
 
-void  SAL_CALL SfxUnoControllerItem::disposing( const ::com::sun::star::lang::EventObject& rEvent ) throw ( ::com::sun::star::uno::RuntimeException )
+void  SAL_CALL SfxUnoControllerItem::disposing( const ::com::sun::star::lang::EventObject& ) throw ( ::com::sun::star::uno::RuntimeException )
 {
 	::com::sun::star::uno::Reference< ::com::sun::star::frame::XStatusListener >  aRef( (::cppu::OWeakObject*)this, ::com::sun::star::uno::UNO_QUERY );
 	ReleaseDispatch();
@@ -326,9 +329,10 @@ void SAL_CALL SfxStatusDispatcher::dispatch( const ::com::sun::star::util::URL&,
 {
 }
 
-void SAL_CALL SfxStatusDispatcher::dispatchWithNotification( const ::com::sun::star::util::URL& aURL,
-        const ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >& aArgs,
-        const ::com::sun::star::uno::Reference< ::com::sun::star::frame::XDispatchResultListener >& rListener ) throw( ::com::sun::star::uno::RuntimeException )
+void SAL_CALL SfxStatusDispatcher::dispatchWithNotification( 
+    const ::com::sun::star::util::URL&,
+    const ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >&,
+    const ::com::sun::star::uno::Reference< ::com::sun::star::frame::XDispatchResultListener >& ) throw( ::com::sun::star::uno::RuntimeException )
 {
 }
 
@@ -368,10 +372,10 @@ SFX_IMPL_XTYPEPROVIDER_2( SfxOfficeDispatch, ::com::sun::star::frame::XNotifying
 // XUnoTunnel
 sal_Int64 SAL_CALL SfxOfficeDispatch::getSomething( const ::com::sun::star::uno::Sequence< sal_Int8 >& aIdentifier ) throw(::com::sun::star::uno::RuntimeException)
 {
-	if ( aIdentifier == impl_getStaticIdentifier() )
-        return (sal_Int64)this;
-	else
-		return 0;
+    if ( aIdentifier == impl_getStaticIdentifier() )
+        return sal::static_int_cast< sal_Int64 >( reinterpret_cast< sal_IntPtr >( this ));
+    else
+        return 0;
 }
 
 /* ASDBG
@@ -531,15 +535,15 @@ SfxDispatchController_Impl::SfxDispatchController_Impl(
     SfxDispatcher*                     pDispat,
     const SfxSlot*                     pSlot,
     const ::com::sun::star::util::URL& rURL )
-    : pDispatch( pDisp )
-	, aDispatchURL( rURL )
+    : aDispatchURL( rURL )
     , pDispatcher( pDispat )
     , pBindings( pBind )
-    , pUnoName( pSlot->pUnoName )
-	, pLastState( 0 )
+    , pLastState( 0 )
     , nSlot( pSlot->GetSlotId() )
-    , bVisible( sal_True )
+    , pDispatch( pDisp )
     , bMasterSlave( sal_False )
+    , bVisible( sal_True )
+    , pUnoName( pSlot->pUnoName )
 {
     if ( aDispatchURL.Protocol.equalsAscii("slot:") && pUnoName )
     {
@@ -683,9 +687,9 @@ void SfxDispatchController_Impl::addParametersToArgs( const com::sun::star::util
     }
 }
 
-SfxMapUnit SfxDispatchController_Impl::GetCoreMetric( SfxItemPool& rPool, sal_uInt16 nSlot )
+SfxMapUnit SfxDispatchController_Impl::GetCoreMetric( SfxItemPool& rPool, sal_uInt16 nSlotId )
 {
-    USHORT nWhich = rPool.GetWhich( nSlot );
+    USHORT nWhich = rPool.GetWhich( nSlotId );
     return rPool.GetMetric( nWhich );
 }
 
@@ -731,7 +735,7 @@ void SAL_CALL SfxDispatchController_Impl::dispatch( const ::com::sun::star::util
         sal_Int32   nMarkArg = -1;
 
         // Filter arguments which shouldn't be part of the sequence property value
-        sal_Bool    bTemp;
+        sal_Bool    bTemp = sal_Bool();
         sal_uInt16  nModifier(0);
         std::vector< ::com::sun::star::beans::PropertyValue > aAddArgs;
         for( sal_Int32 n=0; n<nCount; n++ )

@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_sfx2.hxx"
+
 #include <shutdownicon.hxx>
 #include <app.hrc>
 #include <app.hxx>
@@ -103,14 +106,31 @@
 #ifndef _URLOBJ_HXX
 #include <tools/urlobj.hxx>
 #endif
+#ifndef _OSL_SECURITY_HXX_
+#include <osl/security.hxx>
+#endif
+#ifndef _OSL_FILE_HXX_
+#include <osl/file.hxx>
+#endif
+#ifndef _UTL_BOOTSTRAP_HXX
+#include <unotools/bootstrap.hxx>
+#endif
 
+#ifdef UNX // need symlink
+#include <unistd.h>
+#endif
 #include "sfxresid.hxx"
 
 #if defined USE_JAVA && defined MACOSX
 
+#include <set>
+
 #include <svtools/dynamicmenuoptions.hxx> 
 #include "shutdownicon_cocoa.h"
- 
+
+#ifndef _COMPHELPER_SEQUENCEASHASHMAP_HXX_
+#include <comphelper/sequenceashashmap.hxx>
+#endif 
 #ifndef INCLUDED_SVTOOLS_MODULEOPTIONS_HXX
 #include <svtools/moduleoptions.hxx>
 #endif
@@ -118,7 +138,7 @@
 #define WRITER_URL			"private:factory/swriter"
 #define CALC_URL			"private:factory/scalc"
 #define IMPRESS_URL			"private:factory/simpress"
-#define IMPRESS_WIZARD_URL	"private:factory/simpress?slot=10425"
+#define IMPRESS_WIZARD_URL	"private:factory/simpress?slot=6686"
 #define DRAW_URL			"private:factory/sdraw"
 #define MATH_URL			"private:factory/smath"
 #define BASE_URL			"private:factory/sdatabase?Interactive"
@@ -220,76 +240,135 @@ public:
     virtual void SAL_CALL disposing( const EventObject& aEvent ) throw( RuntimeException );
 };
 
-void SAL_CALL SfxNotificationListener_Impl::dispatchFinished( const DispatchResultEvent& aEvent ) throw( RuntimeException )
+void SAL_CALL SfxNotificationListener_Impl::dispatchFinished( const DispatchResultEvent& ) throw( RuntimeException )
 {
-#ifdef WNT
 	ShutdownIcon::LeaveModalMode();
-#endif
 }
 
-void SAL_CALL SfxNotificationListener_Impl::disposing( const EventObject& aEvent ) throw( RuntimeException )
+void SAL_CALL SfxNotificationListener_Impl::disposing( const EventObject& ) throw( RuntimeException )
 {
 }
 
 SFX_IMPL_XSERVICEINFO( ShutdownIcon, "com.sun.star.office.Quickstart", "com.sun.star.comp.desktop.QuickstartWrapper" )	\
 SFX_IMPL_ONEINSTANCEFACTORY( ShutdownIcon );
 
+bool ShutdownIcon::bModalMode = false;
 ShutdownIcon* ShutdownIcon::pShutdownIcon = 0;
+
+// To remove conditionals
+extern "C" {
+	static void disabled_initSystray() { }
+	static void disabled_deInitSystray() { }
+}
+#define DOSTRING( x )			   			#x
+#define STRING( x )				   			DOSTRING( x )
+
+bool ShutdownIcon::LoadModule( osl::Module **pModule,
+							   oslGenericFunction *pInit,
+							   oslGenericFunction *pDeInit )
+{
+	if ( pModule )
+	{
+		OSL_ASSERT ( pInit && pDeInit );
+		*pInit = *pDeInit = NULL;
+		*pModule = NULL;
+	}
+
+#ifdef ENABLE_QUICKSTART_APPLET
+#  ifdef WIN32
+	if ( pModule )
+	{
+		*pInit = win32_init_sys_tray;
+		*pDeInit = win32_shutdown_sys_tray;
+	}
+	return true;
+#  else // UNX
+	osl::Module *pPlugin;
+	pPlugin = new osl::Module();
+
+	oslGenericFunction pTmpInit = NULL;
+	oslGenericFunction pTmpDeInit = NULL;
+	if ( pPlugin->load( OUString (RTL_CONSTASCII_USTRINGPARAM( STRING( PLUGIN_NAME ) ) ) ) )
+	{
+		pTmpInit = pPlugin->getFunctionSymbol(
+			OUString( RTL_CONSTASCII_USTRINGPARAM( "plugin_init_sys_tray" ) ) );
+		pTmpDeInit = pPlugin->getFunctionSymbol(
+			OUString( RTL_CONSTASCII_USTRINGPARAM( "plugin_shutdown_sys_tray" ) ) );
+	}
+	if ( !pTmpInit || !pTmpDeInit )
+	{
+		delete pPlugin;
+		pPlugin = NULL;
+	}
+	if ( pModule )
+	{
+		*pModule = pPlugin;
+		*pInit = pTmpInit;
+		*pDeInit = pTmpDeInit;
+	}
+	else
+	{
+		bool bRet = pPlugin != NULL;
+		delete pPlugin;
+		return bRet;
+	}
+#  endif // UNX
+#endif // ENABLE_QUICKSTART_APPLET
+	if ( pModule )
+	{
+		if ( !*pInit )
+			*pInit = disabled_initSystray;
+		if ( !*pDeInit )
+			*pDeInit = disabled_deInitSystray;
+	}
+
+	return true;
+}
+
+void ShutdownIcon::initSystray()
+{
+	if (m_bInitialized)
+		return;
+	m_bInitialized = true;
+
+	(void) LoadModule( &m_pPlugin, &m_pInitSystray, &m_pDeInitSystray );
+	m_bVeto = true;
+	m_pInitSystray();
+}
+
+void ShutdownIcon::deInitSystray()
+{
+	if (!m_bInitialized)
+		return;
+    if (m_pDeInitSystray)
+	m_pDeInitSystray();
+
+	m_bVeto = false;
+	m_pInitSystray = 0;
+	m_pDeInitSystray = 0;
+	if (m_pPlugin)
+		delete m_pPlugin;
+	m_pPlugin = 0;
+	m_bInitialized = false;
+}
+
 
 ShutdownIcon::ShutdownIcon( Reference< XMultiServiceFactory > aSMgr ) :
 	ShutdownIconServiceBase( m_aMutex ),
 	m_bVeto ( false ),
 	m_pResMgr( 0 ),
-	m_xServiceManager( aSMgr )
+	m_xServiceManager( aSMgr ),
+	m_pInitSystray( 0 ),
+	m_pDeInitSystray( 0 ),
+	m_pPlugin( 0 ),
+	m_bInitialized( false )
 {
 }
 
 ShutdownIcon::~ShutdownIcon()
 {
-#ifdef WNT
-    deInitSystray();
-#endif
+	deInitSystray();
 }
-
-// ---------------------------------------------------------------------------
-
-void ShutdownIcon::SetAutostart( bool bActivate )
-{
-#ifdef WNT
-    OUString aShortcutName( RTL_CONSTASCII_USTRINGPARAM( "StarOffice 6.0" ) );
-	ResMgr* pMgr = SfxResId::GetResMgr();
-    if( pMgr )
-    {
-        ::vos::OGuard aGuard( Application::GetSolarMutex() );
-        UniString aRes( SfxResId( STR_QUICKSTART_LNKNAME ) );
-        aShortcutName = OUString( aRes );
-    }
-
-    aShortcutName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".lnk" ) );
-
-    SetAutostartW32( aShortcutName, bActivate );
-#endif
-}
-
-bool ShutdownIcon::GetAutostart( )
-{
-#ifdef WNT
-    OUString aShortcutName( RTL_CONSTASCII_USTRINGPARAM( "StarOffice 6.0" ) );
-	ResMgr* pMgr = SfxResId::GetResMgr();
-    if( pMgr )
-    {
-        ::vos::OGuard aGuard( Application::GetSolarMutex() );
-        UniString aRes( SfxResId( STR_QUICKSTART_LNKNAME ) );
-        aShortcutName = OUString( aRes );
-    }
-    aShortcutName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".lnk" ) );
-
-    return GetAutostartW32( aShortcutName );
-#else
-    return false;
-#endif
-}
-
 
 // ---------------------------------------------------------------------------
 
@@ -297,24 +376,33 @@ void ShutdownIcon::OpenURL( const ::rtl::OUString& aURL, const ::rtl::OUString& 
 {
     if ( getInstance() && getInstance()->m_xDesktop.is() )
     {
-        Reference < XComponentLoader > xLoader ( getInstance()->m_xDesktop, UNO_QUERY );
-        if( xLoader.is() )
+        Reference < XDispatchProvider > xDispatchProvider( getInstance()->m_xDesktop, UNO_QUERY );
+        if ( xDispatchProvider.is() )
         {
-            try
+            com::sun::star::util::URL aDispatchURL;
+            aDispatchURL.Complete = aURL;
+            
+            Reference < com::sun::star::util::XURLTransformer > xURLTransformer(
+                ::comphelper::getProcessServiceFactory()->createInstance( OUString::createFromAscii("com.sun.star.util.URLTransformer") ),
+                com::sun::star::uno::UNO_QUERY );
+            if ( xURLTransformer.is() )
             {
-                xLoader->loadComponentFromURL(
-                    aURL,
-                    rTarget,
-                    0,
-                    aArgs );
-            }
-            catch( IOException )
-            {
-                OSL_ENSURE( 0, "IOException in loadComponentFromURL!");
-            }
-            catch( IllegalArgumentException )
-            {
-                OSL_ENSURE( 0, "IllegalArgumentException in loadComponentFromURL!");
+                try
+                {
+                    Reference< com::sun::star::frame::XDispatch > xDispatch;
+
+                    xURLTransformer->parseStrict( aDispatchURL );
+                    xDispatch = xDispatchProvider->queryDispatch( aDispatchURL, rTarget, 0 );
+                    if ( xDispatch.is() )
+                        xDispatch->dispatch( aDispatchURL, aArgs );
+                }
+                catch ( com::sun::star::uno::RuntimeException& )
+                {
+                    throw;
+                }
+                catch ( com::sun::star::uno::Exception& )
+                {
+                }
             }
         }
     }
@@ -327,9 +415,7 @@ void ShutdownIcon::FileOpen()
     if ( getInstance() && getInstance()->m_xDesktop.is() )
     {
         ::vos::OGuard aGuard( Application::GetSolarMutex() );
-#ifdef WNT
 		EnterModalMode();
-#endif
 		// use ctor for filling up filters automatically! #89169#
 		FileDialogHelper dlg( WB_OPEN | SFXWB_MULTISELECTION, String() );
         if ( ERRCODE_NONE == dlg.Execute() )
@@ -348,23 +434,11 @@ void ShutdownIcon::FileOpen()
 					Sequence< OUString >		sFiles = xPicker->getFiles();
 					int							nFiles = sFiles.getLength();
 
-                    int                         nArgs=3;
-                    Sequence< PropertyValue >   aArgs(3);
+                    int                         nArgs=0;
+                    Sequence< PropertyValue >   aArgs;
 
-                    Reference < com::sun::star::task::XInteractionHandler > xInteraction(
-                        ::comphelper::getProcessServiceFactory()->createInstance( OUString::createFromAscii("com.sun.star.task.InteractionHandler") ),
-                        com::sun::star::uno::UNO_QUERY );
-
-                    aArgs[0].Name = OUString::createFromAscii( "InteractionHandler" );
-                    aArgs[0].Value <<= xInteraction;
-
-					sal_Int16 nMacroExecMode = ::com::sun::star::document::MacroExecMode::USE_CONFIG;
-                    aArgs[1].Name = OUString::createFromAscii( "MacroExecutionMode" );
-                    aArgs[1].Value <<= nMacroExecMode;
-
-					sal_Int16 nUpdateDoc = ::com::sun::star::document::UpdateDocMode::ACCORDING_TO_CONFIG;
-                    aArgs[2].Name = OUString::createFromAscii( "UpdateDocMode" );
-                    aArgs[2].Value <<= nUpdateDoc;
+                    // No default arguments anymore as they are provided by the dispatch 
+                    // provider automatically.
 
 					// pb: #102643# use the filedlghelper to get the current filter name,
 					// because it removes the extensions before you get the filter name.
@@ -453,9 +527,7 @@ void ShutdownIcon::FileOpen()
 			{
 			}
 		}
-#ifdef WNT
 		LeaveModalMode();
-#endif
     }
 }
 
@@ -491,9 +563,7 @@ void ShutdownIcon::FromTemplate()
             Reference< ::com::sun::star::frame::XNotifyingDispatch > xNotifyer( xDisp, UNO_QUERY );
             if ( xNotifyer.is() )
 			{
-#ifdef WNT
 				EnterModalMode();
-#endif
                 xNotifyer->dispatchWithNotification( aTargetURL, aArgs, new SfxNotificationListener_Impl() );
 			}
             else
@@ -571,6 +641,41 @@ ShutdownIcon* ShutdownIcon::getInstance()
 	return pShutdownIcon;
 }
 
+// ---------------------------------------------------------------------------
+
+ShutdownIcon* ShutdownIcon::createInstance()
+{
+	if (pShutdownIcon)
+        return pShutdownIcon;
+
+	ShutdownIcon *pIcon = NULL;
+	try {
+		Reference< XMultiServiceFactory > xSMgr( comphelper::getProcessServiceFactory() );
+		pIcon = new ShutdownIcon( xSMgr );
+		pIcon->init ();
+		pShutdownIcon = pIcon;
+	} catch (...) {
+		delete pIcon;
+	}
+	
+	return pShutdownIcon;
+}
+
+void ShutdownIcon::init() throw( ::com::sun::star::uno::Exception )
+{
+	// access resource system and sfx only protected by solarmutex
+	vos::OGuard aSolarGuard( Application::GetSolarMutex() );
+	ResMgr *pResMgr = SfxResId::GetResMgr();
+
+	::osl::ResettableMutexGuard	aGuard(	m_aMutex );
+	m_pResMgr = pResMgr;
+	aGuard.clear();
+	Reference < XDesktop > xDesktop( m_xServiceManager->createInstance(
+											 DEFINE_CONST_UNICODE( "com.sun.star.frame.Desktop" )),
+									 UNO_QUERY );
+	aGuard.reset();
+	m_xDesktop = xDesktop;
+}
 
 // ---------------------------------------------------------------------------
 
@@ -583,7 +688,7 @@ void SAL_CALL ShutdownIcon::disposing()
 // ---------------------------------------------------------------------------
 
 // XEventListener
-void SAL_CALL ShutdownIcon::disposing( const ::com::sun::star::lang::EventObject& Source )
+void SAL_CALL ShutdownIcon::disposing( const ::com::sun::star::lang::EventObject& )
 	throw(::com::sun::star::uno::RuntimeException)
 {
 }
@@ -591,7 +696,7 @@ void SAL_CALL ShutdownIcon::disposing( const ::com::sun::star::lang::EventObject
 // ---------------------------------------------------------------------------
 
 // XTerminateListener
-void SAL_CALL ShutdownIcon::queryTermination( const ::com::sun::star::lang::EventObject& aEvent )
+void SAL_CALL ShutdownIcon::queryTermination( const ::com::sun::star::lang::EventObject& )
 throw(::com::sun::star::frame::TerminationVetoException, ::com::sun::star::uno::RuntimeException)
 {
 	::osl::ClearableMutexGuard	aGuard(	m_aMutex );
@@ -603,7 +708,7 @@ throw(::com::sun::star::frame::TerminationVetoException, ::com::sun::star::uno::
 
 // ---------------------------------------------------------------------------
 
-void SAL_CALL ShutdownIcon::notifyTermination( const ::com::sun::star::lang::EventObject& aEvent )
+void SAL_CALL ShutdownIcon::notifyTermination( const ::com::sun::star::lang::EventObject& )
 throw(::com::sun::star::uno::RuntimeException)
 {
 }
@@ -636,94 +741,78 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 				if( !bQuickstart && !GetAutostart() )
 					return;
                 aGuard.clear();
-                // access resource system and sfx only protected by solarmutex
-                vos::OGuard aSolarGuard( Application::GetSolarMutex() );
-
-				m_pResMgr = SfxResId::GetResMgr();
-				aGuard.reset();
-
-				m_xDesktop = Reference < XDesktop >( m_xServiceManager->createInstance(
-															DEFINE_CONST_UNICODE( "com.sun.star.frame.Desktop" )),
-														UNO_QUERY );
-
+				init ();
+                aGuard.reset();
 				if ( !m_xDesktop.is() )
 					return;
 
+				/* Create a sub-classed instance - foo */
 				ShutdownIcon::pShutdownIcon = this;
 #ifdef WNT
 				initSystray();
 #elif defined USE_JAVA && defined MACOSX
+			    // collect the URLs of the entries in the File/New menu
+				::std::set< ::rtl::OUString > aFileNewAppsAvailable;
+				SvtDynamicMenuOptions aOpt;
+				Sequence < Sequence < PropertyValue > > aNewMenu = aOpt.GetMenu( E_NEWMENU );
+				const ::rtl::OUString sURLKey( RTL_CONSTASCII_USTRINGPARAM( "URL" ) );
+
+				const Sequence< PropertyValue >* pNewMenu = aNewMenu.getConstArray();
+				const Sequence< PropertyValue >* pNewMenuEnd = aNewMenu.getConstArray() + aNewMenu.getLength();
+				for ( ; pNewMenu != pNewMenuEnd; ++pNewMenu )
+				{
+					::comphelper::SequenceAsHashMap aEntryItems( *pNewMenu );
+					::rtl::OUString sURL( aEntryItems.getUnpackedValueOrDefault( sURLKey, ::rtl::OUString() ) );
+					if ( sURL.getLength() )
+						aFileNewAppsAvailable.insert( sURL );
+				}
+
+				// describe the menu entries for launching the applications
+				struct MenuEntryDescriptor
+				{
+					SvtModuleOptions::EModule	eModuleIdentifier;
+					MenuCommand					nMenuItemID;
+					const char*					pAsciiURLDescription;
+				} aMenuItems[] =
+				{
+					{ SvtModuleOptions::E_SWRITER, WRITER_COMMAND_ID, WRITER_URL },
+					{ SvtModuleOptions::E_SCALC, CALC_COMMAND_ID, CALC_URL },
+					{ SvtModuleOptions::E_SIMPRESS, IMPRESS_COMMAND_ID, IMPRESS_WIZARD_URL },
+					{ SvtModuleOptions::E_SDRAW, DRAW_COMMAND_ID, DRAW_URL },
+					{ SvtModuleOptions::E_SDATABASE, BASE_COMMAND_ID, BASE_URL }
+				};
+
 				// Disable shutdown
 				SetVeto( true );
 				addTerminateListener();
 
-				SvtModuleOptions aModuleOptions;
-
+				// insert the menu entries for launching the applications
 				int nItems = 0;
 				MenuCommand aIDs[ 8 ];
 				CFStringRef aStrings[ 8 ];
 				XubString aDesc;
-				if ( aModuleOptions.IsWriter() )
+				SvtModuleOptions aModuleOptions;
+				for ( size_t i = 0; i < sizeof( aMenuItems ) / sizeof( aMenuItems[0] ); ++i )
 				{
-					aIDs[ nItems ] = WRITER_COMMAND_ID;
+					// the complete application is not even installed
+					if ( !aModuleOptions.IsModuleInstalled( aMenuItems[i].eModuleIdentifier ) )
+						continue;
+
+					::rtl::OUString sURL( ::rtl::OUString::createFromAscii( aMenuItems[i].pAsciiURLDescription ) );
+
+					// the application is installed, but the entry has been
+					// configured to *not* appear in the File/New menu =>
+					//  also let not appear it in the quickstarter
+					if ( aFileNewAppsAvailable.find( sURL ) == aFileNewAppsAvailable.end() )
+						continue;
+
+					aIDs[ nItems ] = aMenuItems[i].nMenuItemID;
 					aDesc = XubString( GetUrlDescription( OUString::createFromAscii( WRITER_URL ) ) );
 					aDesc.EraseAllChars( '~' );
 					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
 				}
-				if ( aModuleOptions.IsCalc() )
-				{
-					aIDs[ nItems ] = CALC_COMMAND_ID;
-					aDesc = XubString( GetUrlDescription( OUString::createFromAscii( CALC_URL ) ) );
-					aDesc.EraseAllChars( '~' );
-					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
-				}
-				if ( aModuleOptions.IsImpress() )
-				{
-					aIDs[ nItems ] = IMPRESS_COMMAND_ID;
-					aDesc = XubString( GetUrlDescription( OUString::createFromAscii( IMPRESS_URL ) ) );
-					aDesc.EraseAllChars( '~' );
-					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
-				}
-				if ( aModuleOptions.IsDraw() )
-				{
-					aIDs[ nItems ] = DRAW_COMMAND_ID;
-					aDesc = XubString( GetUrlDescription( OUString::createFromAscii( DRAW_URL ) ) );
-					aDesc.EraseAllChars( '~' );
-					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
-				}
-				if ( aModuleOptions.IsMath() )
-				{
-					aIDs[ nItems ] = MATH_COMMAND_ID;
-					aDesc = XubString( GetUrlDescription( OUString::createFromAscii( MATH_URL ) ) );
-					aDesc.EraseAllChars( '~' );
-					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
-				}
-				if ( aModuleOptions.IsDataBase() )
-				{
-					SvtDynamicMenuOptions aOpt;
-					Sequence < Sequence < PropertyValue > > aMenu = aOpt.GetMenu( E_NEWMENU );
-					for ( sal_Int32 n=0; n<aMenu.getLength(); n++ )
-					{
-						::rtl::OUString aURL;
-						::rtl::OUString aDescription;
-						Sequence < PropertyValue >& aEntry = aMenu[n];
-						for ( sal_Int32 m=0; m<aEntry.getLength(); m++ )
-						{
-							if ( aEntry[m].Name.equalsAsciiL( "URL", 3 ) )
-								aEntry[m].Value >>= aURL;
-							if ( aEntry[m].Name.equalsAsciiL( "Title", 5 ) )
-								aEntry[m].Value >>= aDescription;
-						}
 
-						if ( aURL.equalsAscii( BASE_URL ) && aDescription.getLength() )
-						{
-							aIDs[ nItems ] = BASE_COMMAND_ID;
-							aDesc = XubString( aDescription );
-							aDesc.EraseAllChars( '~' );
-							aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
-						}
-					}
-				}
+				// insert the remaining menu entries
 				aIDs[ nItems ] = FROMTEMPLATE_COMMAND_ID;
 				aDesc = XubString( GetResString( STR_QUICKSTART_FROMTEMPLATE ) );
 				aDesc.EraseAllChars( '~' );
@@ -756,4 +845,149 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
                 SetAutostart( sal_False );
     }
 
+}
+
+// -------------------------------
+
+void ShutdownIcon::EnterModalMode()
+{
+	bModalMode = TRUE;
+}
+
+// -------------------------------
+
+void ShutdownIcon::LeaveModalMode()
+{
+	bModalMode = FALSE;
+}
+
+#ifdef WNT
+// defined in shutdowniconw32.cxx
+#else
+bool ShutdownIcon::IsQuickstarterInstalled()
+{
+#ifndef ENABLE_QUICKSTART_APPLET
+	return false;
+#else // !ENABLE_QUICKSTART_APPLET
+#ifdef UNX
+	return LoadModule( NULL, NULL, NULL);
+#endif // UNX
+#endif // !ENABLE_QUICKSTART_APPLET
+}
+#endif // !WNT
+
+// ---------------------------------------------------------------------------
+
+#if defined (ENABLE_QUICKSTART_APPLET) && defined (UNX)
+static OUString getDotAutostart( bool bCreate = false )
+{
+	OUString aShortcut;
+	const char *pConfigHome;
+	if( (pConfigHome = getenv("XDG_CONFIG_HOME") ) )
+		aShortcut = OStringToOUString( OString( pConfigHome ), RTL_TEXTENCODING_UTF8 );
+	else
+	{
+		OUString aHomeURL;
+		osl::Security().getHomeDir( aHomeURL );
+		::osl::File::getSystemPathFromFileURL( aHomeURL, aShortcut );
+		aShortcut += OUString( RTL_CONSTASCII_USTRINGPARAM( "/.config" ) );
+	}
+	aShortcut += OUString( RTL_CONSTASCII_USTRINGPARAM( "/autostart" ) );
+	if (bCreate)
+	{
+		OUString aShortcutUrl;
+		osl::File::getFileURLFromSystemPath( aShortcut, aShortcutUrl );
+		osl::Directory::createPath( aShortcutUrl );
+	}
+	return aShortcut;
+}
+#endif
+
+rtl::OUString ShutdownIcon::getShortcutName()
+{
+#ifndef ENABLE_QUICKSTART_APPLET
+	return OUString();
+#else
+
+    OUString aShortcutName( RTL_CONSTASCII_USTRINGPARAM( "StarOffice 6.0" ) );
+	ResMgr* pMgr = SfxResId::GetResMgr();
+    if( pMgr )
+    {
+        ::vos::OGuard aGuard( Application::GetSolarMutex() );
+        UniString aRes( SfxResId( STR_QUICKSTART_LNKNAME ) );
+        aShortcutName = OUString( aRes );
+    }
+#ifdef WNT
+    aShortcutName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".lnk" ) );
+
+	OUString aShortcut(GetAutostartFolderNameW32());
+	aShortcut += OUString( RTL_CONSTASCII_USTRINGPARAM( "\\" ) );
+	aShortcut += aShortcutName;
+#else // UNX
+	OUString aShortcut = getDotAutostart();
+	aShortcut += OUString( RTL_CONSTASCII_USTRINGPARAM( "/qstart.desktop" ) );
+#endif // UNX
+	return aShortcut;
+#endif // ENABLE_QUICKSTART_APPLET
+}
+
+bool ShutdownIcon::GetAutostart( )
+{
+	bool bRet = false;
+#ifdef ENABLE_QUICKSTART_APPLET
+	OUString aShortcut( getShortcutName() );
+	OUString aShortcutUrl;
+	osl::File::getFileURLFromSystemPath( aShortcut, aShortcutUrl );
+	osl::File f( aShortcutUrl );
+	osl::File::RC error = f.open( OpenFlag_Read );
+	if( error == osl::File::E_None )
+	{
+		f.close();
+		bRet = true;
+	}
+#endif // ENABLE_QUICKSTART_APPLET
+    return bRet;
+}
+
+void ShutdownIcon::SetAutostart( bool bActivate )
+{
+#ifdef ENABLE_QUICKSTART_APPLET
+	OUString aShortcut( getShortcutName() );
+
+    if( bActivate && IsQuickstarterInstalled() )
+    {
+#ifdef WNT
+		EnableAutostartW32( aShortcut );
+#else // UNX
+		getDotAutostart( true );
+
+		OUString aPath;
+		::utl::Bootstrap::locateBaseInstallation(aPath);
+
+		OUString aDesktopFile;
+		::osl::File::getSystemPathFromFileURL( aPath, aDesktopFile );
+		aDesktopFile += OUString( RTL_CONSTASCII_USTRINGPARAM( "/share/xdg/qstart.desktop" ) );
+
+		OString aDesktopFileUnx = OUStringToOString( aDesktopFile,
+													 osl_getThreadTextEncoding() );
+		OString aShortcutUnx = OUStringToOString( aShortcut,
+												  osl_getThreadTextEncoding() );
+		symlink( aDesktopFileUnx, aShortcutUnx );
+#endif // UNX
+		ShutdownIcon *pIcon = ShutdownIcon::createInstance();
+		if( pIcon )
+			pIcon->initSystray();
+    }
+    else
+    {
+        OUString aShortcutUrl;
+        ::osl::File::getFileURLFromSystemPath( aShortcut, aShortcutUrl );
+        ::osl::File::remove( aShortcutUrl );
+		ShutdownIcon *pIcon = getInstance();
+		if( pIcon )
+			pIcon->deInitSystray();
+    }
+#else
+    (void)bActivate; // unused variable
+#endif // ENABLE_QUICKSTART_APPLET
 }
