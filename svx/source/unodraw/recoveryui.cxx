@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_svx.hxx"
+
 //===============================================
 // includes
 
@@ -90,8 +93,8 @@ using namespace ::osl;
 //===============================================
 RecoveryUI::RecoveryUI(const css::uno::Reference< css::lang::XMultiServiceFactory >& xSMGR)
     : m_xSMGR        (xSMGR                    )
-    , m_eJob         (RecoveryUI::E_JOB_UNKNOWN)
     , m_pParentWindow(0                        )
+    , m_eJob         (RecoveryUI::E_JOB_UNKNOWN)
 {
 }
 
@@ -132,7 +135,7 @@ css::uno::Sequence< ::rtl::OUString > SAL_CALL RecoveryUI::getSupportedServiceNa
 
 //===============================================
 css::uno::Any SAL_CALL RecoveryUI::dispatchWithReturnValue(const css::util::URL& aURL,
-                                                   const css::uno::Sequence< css::beans::PropertyValue >& lArguments )
+                                                   const css::uno::Sequence< css::beans::PropertyValue >& )
     throw(css::uno::RuntimeException)
 {
     css::uno::Any aRet;
@@ -173,17 +176,14 @@ void SAL_CALL RecoveryUI::dispatch(const css::util::URL&                        
 }
 
 //===============================================
-void SAL_CALL RecoveryUI::addStatusListener(const css::uno::Reference< css::frame::XStatusListener >& xListener,
-                                            const css::util::URL&                                     aURL     )
-    throw(css::uno::RuntimeException)
+void SAL_CALL RecoveryUI::addStatusListener(const css::uno::Reference< css::frame::XStatusListener >&, const css::util::URL& ) throw(css::uno::RuntimeException)
 {
     // TODO
     OSL_ENSURE(sal_False, "RecoveryUI::addStatusListener()\nNot implemented yet!");
 }
 
 //===============================================
-void SAL_CALL RecoveryUI::removeStatusListener(const css::uno::Reference< css::frame::XStatusListener >& xListener,
-                                               const css::util::URL&                                     aURL     )
+void SAL_CALL RecoveryUI::removeStatusListener(const css::uno::Reference< css::frame::XStatusListener >&, const css::util::URL& )
     throw(css::uno::RuntimeException)
 {
     // TODO
@@ -354,7 +354,7 @@ void RecoveryUI::impl_doRecovery()
     svxdr::IExtendedTabPage*   pPage3  = 0;
     
     pWizard->addTabPage(pPage1);
-    if ( !bRecoveryOnly )
+    if ( !bRecoveryOnly && new_crash_pending() )
     {
         pPage2 = new svxdr::ErrorRepWelcomeDialog(pWizard        );
         pPage3 = new svxdr::ErrorRepSendDialog   (pWizard        );
@@ -363,7 +363,7 @@ void RecoveryUI::impl_doRecovery()
     }   
     
     // start the wizard
-    short nRet = pWizard->Execute();
+    pWizard->Execute();
 
     impl_showAllRecoveredDocs();
     
@@ -388,7 +388,7 @@ void RecoveryUI::impl_doCrashReport()
 		pWizard->addTabPage(pPage2);
 	    
 		// start the wizard
-		short nRet = pWizard->Execute();
+		pWizard->Execute();
 	    
 		delete pPage2 ;
 		delete pPage1 ;

@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_svx.hxx"
+
 #ifndef _COM_SUN_STAR_CONTAINER_XCHILD_HPP_
 #include <com/sun/star/container/XChild.hpp>
 #endif
@@ -93,9 +96,6 @@
 #endif
 #ifndef _SVDMODEL_HXX
 #include "svdmodel.hxx"
-#endif
-#ifndef _SVDIO_HXX
-#include "svdio.hxx"
 #endif
 #ifndef _SVDGLOB_HXX
 #include "svdglob.hxx"  // Stringcache
@@ -159,7 +159,7 @@ public:
 };
 
 // XEventListener
-void SAL_CALL SdrControlEventListenerImpl::disposing( const ::com::sun::star::lang::EventObject& Source )
+void SAL_CALL SdrControlEventListenerImpl::disposing( const ::com::sun::star::lang::EventObject& /*Source*/)
 	throw(::com::sun::star::uno::RuntimeException)
 {
 	if (pObj)
@@ -258,8 +258,8 @@ namespace
 TYPEINIT1(SdrUnoObj, SdrRectObj);
 
 SdrUnoObj::SdrUnoObj(const String& rModelName, BOOL _bOwnUnoControlModel)
-    :bOwnUnoControlModel( _bOwnUnoControlModel )
-    ,m_pImpl( new SdrUnoObjDataHolder )
+:	m_pImpl( new SdrUnoObjDataHolder ),
+	bOwnUnoControlModel( _bOwnUnoControlModel )
 {
 	bIsUnoObj = TRUE;
 
@@ -273,8 +273,8 @@ SdrUnoObj::SdrUnoObj(const String& rModelName, BOOL _bOwnUnoControlModel)
 SdrUnoObj::SdrUnoObj(const String& rModelName,
 					 const uno::Reference< lang::XMultiServiceFactory >& rxSFac,
 					 BOOL _bOwnUnoControlModel)
-    :bOwnUnoControlModel( _bOwnUnoControlModel )
-    ,m_pImpl( new SdrUnoObjDataHolder )
+:	m_pImpl( new SdrUnoObjDataHolder ),
+	bOwnUnoControlModel( _bOwnUnoControlModel )
 {
 	bIsUnoObj = TRUE;
 
