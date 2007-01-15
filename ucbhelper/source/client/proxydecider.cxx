@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_ucbhelper.hxx"
+
 /**************************************************************************
 								TODO
  **************************************************************************
@@ -127,10 +130,10 @@ class HostnameCache
     typedef std::pair< rtl::OUString, rtl::OUString > HostListEntry;
 
     std::list< HostListEntry >     m_aHostList;
-    sal_Int32                      m_nCapacity;                           
+    sal_uInt32                     m_nCapacity;                           
 
 public:
-    explicit HostnameCache( sal_Int32 nCapacity )
+    explicit HostnameCache( sal_uInt32 nCapacity )
         : m_nCapacity( nCapacity ) {}
 
     bool get( const rtl::OUString & rKey, rtl::OUString & rValue ) const
@@ -572,7 +575,7 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
             {
                 CFIndex nCount = CFArrayGetCount( aExcList );
                 rtl::OUString aFullyQualifiedHost;
-                for ( CFIndex i; i < nCount; i++ )
+                for ( CFIndex i = 0; i < nCount; i++ )
                 {
                     CFStringRef aHostString = (CFStringRef)CFArrayGetValueAtIndex( aExcList, i );
                     if ( !aHostString )
@@ -874,8 +877,7 @@ void SAL_CALL InternetProxyDecider_Impl::changesOccurred(
 
 //=========================================================================
 // virtual
-void SAL_CALL InternetProxyDecider_Impl::disposing(
-                                        const lang::EventObject& Source )
+void SAL_CALL InternetProxyDecider_Impl::disposing(const lang::EventObject&)
     throw( uno::RuntimeException )
 {
     if ( m_xNotifier.is() )
