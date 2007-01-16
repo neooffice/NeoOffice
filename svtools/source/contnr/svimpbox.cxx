@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_svtools.hxx"
+
 #ifndef _SV_SVAPP_HXX //autogen
 #include <vcl/svapp.hxx>
 #endif
@@ -54,8 +57,6 @@
 #ifndef _STACK_
 #include <stack>
 #endif
-
-#pragma hdrstop
 
 #define _SVTREEBX_CXX
 #include <svtreebx.hxx>
@@ -102,17 +103,16 @@ static ::std::map< SvImpLBox*, SvImpLBox* > aInShowCursorMap;
 
 SvImpLBox::SvImpLBox( SvTreeListBox* pLBView, SvLBoxTreeList* pLBTree, WinBits nWinStyle) :
 
+	pTabBar( NULL ),
 	aVerSBar( pLBView, WB_DRAG | WB_VSCROLL ),
 	aHorSBar( pLBView, WB_DRAG | WB_HSCROLL ),
 	aScrBarBox( pLBView ),
 	aOutputSize( 0, 0 ),
 	aSelEng( pLBView, (FunctionSet*)0 ),
 	aFctSet( this, &aSelEng, pLBView ),
-	pIntlWrapper( NULL ), // #102891# -----------------------
-	pTabBar( NULL ),
     nExtendedWinBits( 0 ),
-    bAreChildrenTransient( sal_True )
-
+    bAreChildrenTransient( sal_True ),
+	pIntlWrapper( NULL ) // #102891# -----------------------
 {
 	osl_incrementInterlockedCount(&s_nImageRefCount);
 	pView = pLBView;
@@ -212,7 +212,7 @@ short SvImpLBox::UpdateContextBmpWidthVector( SvLBoxEntry* pEntry, short nWidth 
 
 	USHORT nDepth = pView->pModel->GetDepth( pEntry );
 	// initialize vector if necessary
-	USHORT nSize = aContextBmpWidthVector.size();
+	std::vector< short >::size_type nSize = aContextBmpWidthVector.size();
 	while ( nDepth > nSize )
 	{
 		aContextBmpWidthVector.resize( nSize + 1 );
@@ -238,7 +238,6 @@ void SvImpLBox::UpdateContextBmpWidthVectorFromMovedEntry( SvLBoxEntry* pEntry )
 {
 	DBG_ASSERT( pEntry, "Moved Entry is invalid!" );
 
-	short nDepth = pView->pModel->GetDepth( pEntry );
 	SvLBoxContextBmp* pBmpItem = static_cast< SvLBoxContextBmp* >( pEntry->GetFirstItem( SV_ITEM_ID_LBOXCONTEXTBMP ) );
 	short nExpWidth = (short)pBmpItem->GetBitmap1().GetSizePixel().Width();
 	short nColWidth = (short)pBmpItem->GetBitmap2().GetSizePixel().Width();
@@ -357,7 +356,7 @@ void SvImpLBox::Clear()
 // Painten, Navigieren, Scrollen
 // *********************************************************************
 
-IMPL_LINK_INLINE_START( SvImpLBox, EndScrollHdl, ScrollBar *, pScrollBar )
+IMPL_LINK_INLINE_START( SvImpLBox, EndScrollHdl, ScrollBar *, EMPTYARG )
 {
 	if( nFlags & F_ENDSCROLL_SET_VIS_SIZE )
 	{
@@ -1069,7 +1068,10 @@ void SvImpLBox::MakeVisible( SvLBoxEntry* pEntry, BOOL bMoveToTop )
 			{
 				if( !pView->IsExpanded( pParent ) )
 				{
-					BOOL bRet = pView->Expand( pParent );
+                    #ifdef DBG_UTIL
+                    BOOL bRet =
+                    #endif
+					    pView->Expand( pParent );
 					DBG_ASSERT(bRet,"Not expanded!");
 				}
 				pParent = pView->GetParent( pParent );
@@ -1448,10 +1450,10 @@ void SvImpLBox::FillView()
 {
 	if( !pStartEntry )
 	{
-		USHORT nVisibleCount = (USHORT)(pView->GetVisibleCount());
+		USHORT nVisibleViewCount = (USHORT)(pView->GetVisibleCount());
 		USHORT nTempThumb = (USHORT)aVerSBar.GetThumbPos();
-		if( nTempThumb >= nVisibleCount )
-			nTempThumb = nVisibleCount - 1;
+		if( nTempThumb >= nVisibleViewCount )
+			nTempThumb = nVisibleViewCount - 1;
 		pStartEntry = (SvLBoxEntry*)(pView->GetEntryAtVisPos(nTempThumb));
 	}
 	if( pStartEntry )
@@ -1493,7 +1495,7 @@ void SvImpLBox::FillView()
 void SvImpLBox::ShowVerSBar()
 {
 	BOOL bVerBar = ( pView->nWindowStyle & WB_VSCROLL ) != 0;
-	ULONG nVis;
+	ULONG nVis = 0;
 	if( !bVerBar )
 		nVis = pView->GetVisibleCount();
 	if( bVerBar || (nVisibleCount && nVis > (ULONG)(nVisibleCount-1)) )
@@ -1963,7 +1965,6 @@ void SvImpLBox::EntryInserted( SvLBoxEntry* pEntry )
 //		ShowCursor( FALSE ); // falls sich Cursor nach unten verschiebt
 		long nY = GetEntryLine( pEntry );
 		BOOL bEntryVisible = IsLineVisible( nY );
-		BOOL bPrevEntryVisible = IsLineVisible(nY-pView->GetEntryHeight());
 		if( bEntryVisible )
 		{
 			ShowCursor( FALSE ); // falls sich Cursor nach unten verschiebt
@@ -2765,7 +2766,6 @@ void __EXPORT SvImpLBox::GetFocus()
 		SvLBoxEntry* pEntry = pView->FirstSelected();
 		while( pEntry )
 		{
-			SvViewData* pViewData = pView->GetViewData( pEntry );
 			InvalidateEntry( pEntry );
 			pEntry = pView->NextSelected( pEntry );
 		}
@@ -2799,7 +2799,7 @@ void __EXPORT SvImpLBox::LoseFocus()
 		SvLBoxEntry* pEntry = pView->FirstSelected();
 		while( pEntry )
 		{
-			SvViewData* pViewData = pView->GetViewData( pEntry );
+			//SvViewData* pViewData = pView->GetViewData( pEntry );
 			//pViewData->SetCursored( TRUE );
 			InvalidateEntry( pEntry );
 			pEntry = pView->NextSelected( pEntry );
@@ -3199,7 +3199,6 @@ void SvImpLBox::Command( const CommandEvent& rCEvt )
 				BOOL				bClickedIsSelected = FALSE;
 
 				// collect the currently selected entries
-				INT32				nSelectedEntries = pView->GetSelectionCount();
 				SvLBoxEntry*		pSelected = pView->FirstSelected();
 				while( pSelected )
 				{
@@ -3255,7 +3254,7 @@ void SvImpLBox::Command( const CommandEvent& rCEvt )
 					pView->MakeVisible( pSelected );
 				}
 
-				aPopupPos = pView->GetFocusRect( pSelected, pView->GetEntryPos( pSelected ).Y() ).Center();
+				aPopupPos = pView->GetFocusRect( pSelected, pView->GetEntryPosition( pSelected ).Y() ).Center();
 			}
 			else
 				aPopupPos = Point( 0, 0 );
@@ -3345,7 +3344,7 @@ void SvImpLBox::SetCurEntry( SvLBoxEntry* pEntry )
 		pView->Select( pEntry, TRUE );
 }
 
-IMPL_LINK( SvImpLBox, EditTimerCall, Timer *, pTimer )
+IMPL_LINK( SvImpLBox, EditTimerCall, Timer *, EMPTYARG )
 {
 	if( pView->IsInplaceEditingEnabled() )
 	{
@@ -3389,7 +3388,7 @@ BOOL SvImpLBox::RequestHelp( const HelpEvent& rHEvt )
 			if( !pItem || pItem->IsA() != SV_ITEM_ID_LBOXSTRING )
 				return FALSE;
 
-			aPos = GetEntryPos( pEntry );
+			aPos = GetEntryPosition( pEntry );
 			aPos.X() = pView->GetTabPos( pEntry, pTab ); //pTab->GetPos();
 			Size aSize( pItem->GetSize( pView, pEntry ) );
 			SvLBoxTab* pNextTab = NextTab( pTab );

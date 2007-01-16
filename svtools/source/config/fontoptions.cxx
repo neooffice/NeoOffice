@@ -33,8 +33,10 @@
  *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
+
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_svtools.hxx"
 #ifndef GCC
-#pragma hdrstop
 #endif
 
 //_________________________________________________________________________________________________________________
@@ -480,7 +482,7 @@ SvtFontOptions::SvtFontOptions()
 	// ... and initialize ouer data container only if it not already exist!
     if( m_pDataContainer == NULL )
 	{
-        RTL_LOGFILE_CONTEXT(aLog, "svtools (???) ::SvtFontOptions_Impl::ctor()");
+        RTL_LOGFILE_CONTEXT(aLog, "svtools ( ??? ) ::SvtFontOptions_Impl::ctor()");
         m_pDataContainer = new SvtFontOptions_Impl;
         
         ItemHolder1::holdConfigItem(E_FONTOPTIONS);

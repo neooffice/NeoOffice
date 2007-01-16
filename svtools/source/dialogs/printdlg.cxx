@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_svtools.hxx"
+
 #ifndef _TOOLS_DEBUG_HXX
 #include <tools/debug.hxx>
 #endif
@@ -50,7 +53,6 @@
 #include <vcl/jobset.hxx>
 #endif
 #include <tools/urlobj.hxx>
-#pragma hdrstop
 
 #include "printdlg.hrc"
 #include <prnsetup.hxx>
@@ -118,6 +120,8 @@ PrintDialog::PrintDialog( Window* pWindow ) :
 	maFiComment 	( this, SvtResId( FI_COMMENT ) ),
 	maCbxFilePrint	( this, SvtResId( CBX_FILEPRINT ) ),
 	maFiPrintFile	( this, SvtResId( FI_PRINTFILE ) ),
+	maFiFaxNo		( this, SvtResId( FI_FAXNO ) ),
+	maEdtFaxNo		( this, SvtResId( EDT_FAXNO ) ),    
 	maBtnBrowse_nomore 	( this, SvtResId( BTN_BROWSE ) ),
 	maFlPrintRange 	( this, SvtResId( FL_PRINTRANGE ) ),
 	maRbtAll		( this, SvtResId( RBT_ALL ) ),
@@ -131,11 +135,9 @@ PrintDialog::PrintDialog( Window* pWindow ) :
 	maImgNotCollate ( this, SvtResId( IMG_NOT_COLLATE ) ),
 	maCbxCollate	( this, SvtResId( CBX_COLLATE ) ),
 	maBtnOptions	( this, SvtResId( BTN_OPTIONS ) ),
-	maBtnHelp		( this, SvtResId( BTN_HELP ) ),
 	maBtnOK 		( this, SvtResId( BTN_OK ) ),
 	maBtnCancel 	( this, SvtResId( BTN_CANCEL ) ),
-	maFiFaxNo		( this, SvtResId( FI_FAXNO ) ),
-	maEdtFaxNo		( this, SvtResId( EDT_FAXNO ) ),
+	maBtnHelp		( this, SvtResId( BTN_HELP ) ),
     maFlSepCopiesRange( this, SvtResId( FL_SEPCOPIESRANGE ) ),
     maFlSepButtonLine( this, SvtResId( FL_SEPBUTTONLINE ) ),
     maAllFilterStr	( SvtResId( STR_ALLFILTER ) )

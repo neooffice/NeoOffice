@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_svtools.hxx"
+
 #define _SV_PRGSBAR_CXX
 
 #ifndef _TOOLS_DEBUGS_HXX

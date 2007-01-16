@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_svtools.hxx"
+
 #define _SV_HEADBAR_CXX
 
 #ifndef _HEADBAR_HXX
@@ -65,7 +68,7 @@
 #ifndef _SV_NATIVEWIDGETS_HXX
 #include <vcl/salnativewidgets.hxx>
 #endif
-#endif
+#endif	// USE_JAVA
 
 // =======================================================================
 
@@ -82,7 +85,7 @@ struct ImplHeadItem
 	void*				mpUserData;
 };
 
-DECLARE_LIST( ImplHeadItemList, ImplHeadItem* );
+DECLARE_LIST( ImplHeadItemList, ImplHeadItem* )
 
 // =======================================================================
 
@@ -354,10 +357,9 @@ void HeaderBar::ImplDrawItem( OutputDevice* pDev,
 							  USHORT nPos, BOOL bHigh, BOOL bDrag,
 							  const Rectangle& rItemRect,
 							  const Rectangle* pRect,
-							  ULONG nFlags )
+							  ULONG )
 {
 	Rectangle aRect = rItemRect;
-    Color aSelectionTextColor( COL_TRANSPARENT );
 
 	// Wenn kein Platz, dann brauchen wir auch nichts ausgeben
 	if ( aRect.GetWidth() <= 1 )
@@ -388,10 +390,10 @@ void HeaderBar::ImplDrawItem( OutputDevice* pDev,
 	aRect.Bottom()	-= mnBorderOff2;
 
 #ifdef USE_JAVA
+    Color aSelectionTextColor( COL_TRANSPARENT );
 	if ( IsNativeControlSupported( CTRL_LISTVIEWHEADER, PART_ENTIRE_CONTROL ) )
 	{
 		ControlState nState = CTRL_STATE_ENABLED;
-		int part = PART_ENTIRE_CONTROL;
 		if ( !IsEnabled() )
 			nState &= ~CTRL_STATE_ENABLED;
 		if ( HasFocus() )
@@ -415,7 +417,7 @@ void HeaderBar::ImplDrawItem( OutputDevice* pDev,
 	}
 	else
 	{
-#endif
+#endif	// USE_JAVA
 	// Hintergrund loeschen
 	if ( !pRect || bDrag )
 	{
@@ -436,13 +438,16 @@ void HeaderBar::ImplDrawItem( OutputDevice* pDev,
 
 	// ButtonStyle malen
     // avoid 3D borders
+#ifndef USE_JAVA
+    Color aSelectionTextColor( COL_TRANSPARENT );
+#endif // !USE_JAVA
     if( bHigh )
         DrawSelectionBackground( aRect, 1, TRUE, FALSE, FALSE, &aSelectionTextColor );
 	else if ( !mbButtonStyle || (nBits & HIB_FLAT) )
         DrawSelectionBackground( aRect, 0, TRUE, FALSE, FALSE, &aSelectionTextColor );
 #ifdef USE_JAVA
 	}
-#endif
+#endif // USE_JAVA
 
 	// Wenn kein Platz, dann brauchen wir auch nichts ausgeben
 	if ( aRect.GetWidth() < 1 )
@@ -623,7 +628,7 @@ void HeaderBar::ImplDrawItem( OutputDevice* pDev,
 	
 	if ( ! IsNativeControlSupported( CTRL_LISTVIEWHEADER, PART_LISTVIEWHEADER_SORT_MARK ) )
 	{
-#endif
+#endif	// USE_JAVA
 	if ( nBits & (HIB_UPARROW | HIB_DOWNARROW) )
 	{
 		long nArrowX = nTxtPos;
@@ -689,7 +694,7 @@ void HeaderBar::ImplDrawItem( OutputDevice* pDev,
 	}
 #ifdef USE_JAVA
 	}
-#endif
+#endif	// USE_JAVA
 
 	// Gegebenenfalls auch UserDraw aufrufen
 	if ( nBits & HIB_USERDRAW )
