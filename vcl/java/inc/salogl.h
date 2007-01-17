@@ -74,7 +74,7 @@ public:
 	virtual					~JavaSalOpenGL();
 
 	virtual bool			IsValid();
-	virtual void*			GetOGLFnc( const char * );
+	virtual oglFunction		GetOGLFnc( const char* pFncName );
 	virtual void			OGLEntry( SalGraphics* pGraphics );
 	virtual void			OGLExit( SalGraphics* pGraphics );
 	virtual void			StartScene( SalGraphics* pGraphics );

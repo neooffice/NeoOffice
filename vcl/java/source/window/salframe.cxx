@@ -469,7 +469,7 @@ BOOL JavaSalFrame::GetWindowState( SalFrameState* pState )
 
 // -----------------------------------------------------------------------
 
-void JavaSalFrame::ShowFullScreen( BOOL bFullScreen )
+void JavaSalFrame::ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay )
 {
 	if ( bFullScreen == mbFullScreen )
 		return;
@@ -478,7 +478,6 @@ void JavaSalFrame::ShowFullScreen( BOOL bFullScreen )
 
 	if ( bFullScreen )
 	{
-		SalData *pSalData = GetSalData();
 		memcpy( &maOriginalGeometry, &maGeometry, sizeof( SalFrameGeometry ) );
 		Rectangle aWorkArea( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
 		GetWorkArea( aWorkArea );
@@ -787,7 +786,6 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		mpParent->mpVCLFrame->removeChild( this );
 	}
 
-	JavaSalFrame *mpOldParent = mpParent;
 	mpParent = (JavaSalFrame *)pNewParent;
 
 	if ( mpParent )

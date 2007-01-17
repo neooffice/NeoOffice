@@ -112,7 +112,7 @@ public:
 	virtual SalFrame*		GetParent() const;
 	virtual void			SetWindowState( const SalFrameState* pState );
 	virtual BOOL			GetWindowState( SalFrameState* pState );
-	virtual void			ShowFullScreen( BOOL bFullScreen );
+	virtual void			ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay );
 	virtual void			StartPresentation( BOOL bStart );
 	virtual void			SetAlwaysOnTop( BOOL bOnTop );
 	virtual void			ToTop( USHORT nFlags );

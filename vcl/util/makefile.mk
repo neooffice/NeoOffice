@@ -148,7 +148,8 @@ LIB1FILES=  $(SLB)$/app.lib     \
             $(SLB)$/gdi.lib     \
             $(SLB)$/win.lib     \
             $(SLB)$/ctrl.lib    \
-            $(SLB)$/helper.lib
+            $(SLB)$/helper.lib	\
+            $(SLB)$/components.lib
 
 
 .IF "$(GUI)" == "UNX" && "$(GUIBASE)" != "java"
@@ -188,11 +189,6 @@ SHL1USE_EXPORTS=ordinal
     LIB1FILES +=    $(SLB)$/glyphs.lib
     SHL1STDLIBS+=   $(FREETYPELIB)
 .ENDIF # USE_BUILTIN_RASTERIZER
-
-
-.IF "$(GUI)"!="MAC"
-SHL1DEPN=   $(L)$/itools.lib $(L)$/sot.lib
-.ENDIF
 
 SHL1LIBS=   $(LIB1TARGET)
 .IF "$(GUI)"!="UNX"
@@ -291,9 +287,9 @@ SHL2STDLIBS=\
 .IF "$(USE_XINERAMA)" != "NO"
 
 .IF "$(OS)"=="MACOSX"
-XINERAMALIBS=-lXinerama
+XINERAMALIBS= /usr/X11R6/lib/libXinerama.a
 .ELSE
-.IF "$(OS)" != "SOLARIS"
+.IF "$(OS)" != "SOLARIS" || "$(USE_XINERAMA_VERSION)" == "Xorg"
 .IF "$(XINERAMA_LINK)" == "dynamic"
 XINERAMALIBS= -lXinerama
 .ELSE
@@ -319,6 +315,9 @@ SHL2STDLIBS += -lsndfile -lportaudio
 
 .IF "$(ENABLE_NAS)" != ""
 SHL2STDLIBS += -laudio
+.IF "$(XAU_LIBS)" != ""
+SHL2STDLIBS += $(XAU_LIBS)
+.ENDIF
 .IF "$(OS)"=="SOLARIS"
 # needed by libaudio.a
 SHL2STDLIBS += -ldl -lnsl -lsocket
@@ -364,7 +363,11 @@ SHL3STDLIBS=\
 
 # gtk plugin
 .IF "$(ENABLE_GTK)" != ""
-PKGCONFIG_MODULES=gtk+-2.0 gthread-2.0
+.IF "$(ENABLE_DBUS)" == "YES"
+CDEFS+= -DENABLE_DBUS
+.ENDIF
+
+PKGCONFIG_MODULES=gtk+-2.0 gthread-2.0 $(DBUS_PACKAGE)
 .INCLUDE: pkg_config.mk
 
 LIB4TARGET=$(SLB)$/igtk_plug_

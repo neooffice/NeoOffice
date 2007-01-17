@@ -1216,7 +1216,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		StringBuffer buf = new StringBuffer();
 		if ((keyCode & VCLEvent.KEY_SHIFT) == VCLEvent.KEY_SHIFT)
 			buf.append("\u21e7");
-		if ((keyCode & VCLEvent.KEY_CONTROLMOD) == VCLEvent.KEY_CONTROLMOD)
+		if ((keyCode & VCLEvent.KEY_MOD5) == VCLEvent.KEY_MOD5)
 			buf.append("\u2303");
 		if ((keyCode & VCLEvent.KEY_MOD1) == VCLEvent.KEY_MOD1)
 			buf.append("\u2318");

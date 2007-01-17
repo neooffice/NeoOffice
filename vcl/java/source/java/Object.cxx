@@ -142,7 +142,7 @@ sal_Bool VCLThreadAttach::StartJava()
 			if ( !xFactory.is() )
 				return sal_False;
 
-		    JNIEnv *pEnv = NULL;
+		    JNIEnv *pTmpEnv = NULL;
 
 			xVM = Reference< XJavaVM >( xFactory->createInstance( rtl::OUString::createFromAscii( "com.sun.star.java.JavaVirtualMachine") ), UNO_QUERY );
 
@@ -157,7 +157,7 @@ sal_Bool VCLThreadAttach::StartJava()
 
 			if ( uaJVM.hasValue() )
 			{
-				sal_Int32 nValue;
+				sal_Int32 nValue = 0;
 				uaJVM >>= nValue;
 				pJVM = (JavaVM *)nValue;
 			}
@@ -170,9 +170,9 @@ sal_Bool VCLThreadAttach::StartJava()
 			xRG11Ref = Reference< XJavaThreadRegister_11 >( xVM, UNO_QUERY );
 			if ( xRG11Ref.is() )
 			{
-		  		pJVM->AttachCurrentThread( (void **)&pEnv, NULL );
+		  		pJVM->AttachCurrentThread( (void **)&pTmpEnv, NULL );
 
-				if ( pEnv )
+				if ( pTmpEnv )
 				{
 					xRG11Ref->registerThread();
 					InitJavaAWT();

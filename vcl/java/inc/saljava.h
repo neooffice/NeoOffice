@@ -39,7 +39,6 @@
 #ifdef UNX
 
 #include <sys/time.h>
-#include <unxmacxp_protos.h>
 
 #define capacityof(a)	(sizeof(a)/sizeof(*a))
 

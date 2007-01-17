@@ -55,12 +55,52 @@ JavaSalSystem::~JavaSalSystem()
 
 // -----------------------------------------------------------------------
 
-bool JavaSalSystem::GetSalSystemDisplayInfo( DisplayInfo& rInfo )
+unsigned int JavaSalSystem::GetDisplayScreenCount()
 {
 #ifdef DEBUG
-	fprintf( stderr, "GetSalSystemDisplayInfo not implemented\n" );
+	fprintf( stderr, "JavaSalSystem::GetDisplayScreenCount not implemented\n" );
+#endif
+	return 1;
+}
+
+// -----------------------------------------------------------------------
+
+bool JavaSalSystem::IsMultiDisplay()
+{
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalSystem::IsMultiDisplay not implemented\n" );
 #endif
 	return false;
+}
+
+// -----------------------------------------------------------------------
+
+unsigned int JavaSalSystem::GetDefaultDisplayNumber()
+{
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalSystem::GetDefaultDisplayNumber not implemented\n" );
+#endif
+	return 0;
+}
+
+// -----------------------------------------------------------------------
+
+Rectangle JavaSalSystem::GetDisplayScreenPosSizePixel( unsigned int nScreen )
+{
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalSystem::GetDisplayScreenPosSizePixel not implemented\n" );
+#endif
+	return Rectangle();
+}
+
+// -----------------------------------------------------------------------
+
+Rectangle JavaSalSystem::GetDisplayWorkAreaPosSizePixel( unsigned int nScreen )
+{
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalSystem::GetDisplayWorkAreaPosSizePixel not implemented\n" );
+#endif
+	return Rectangle();
 }
 
 // -----------------------------------------------------------------------
@@ -68,7 +108,7 @@ bool JavaSalSystem::GetSalSystemDisplayInfo( DisplayInfo& rInfo )
 int JavaSalSystem::ShowNativeMessageBox( const String& rTitle, const String& rMessage, int nButtonCombination, int nDefaultButton )
 {
 #ifdef DEBUG
-	fprintf( stderr, "ShowNativeMessageBox not implemented\n" );
+	fprintf( stderr, "JavaSalSystem::ShowNativeMessageBox not implemented\n" );
 #endif
 	return -1;
 }

@@ -186,8 +186,8 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				while ( !Application::IsShutDown() )
 				{
 					// Wakeup the event queue by sending it a dummy event
-					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_USEREVENT, NULL, NULL );
-					pSalData->mpEventQueue->postCachedEvent( &aEvent );
+					com_sun_star_vcl_VCLEvent aUserEvent( SALEVENT_USEREVENT, NULL, NULL );
+					pSalData->mpEventQueue->postCachedEvent( &aUserEvent );
 
 					if ( aEventQueueMutex.tryToAcquire() )
 					{
@@ -243,7 +243,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 				// Dispatch pending VCL events until the queue is clear
 				while ( !Application::IsShutDown() && !pSalData->maNativeEventCondition.check() )
-					pSalData->mpFirstInstance->Yield( FALSE );
+					pSalData->mpFirstInstance->Yield( false, true );
 
 				bool bSucceeded = ( !Application::IsShutDown() && !pSalData->mbInNativeModalSheet );
 				if ( bSucceeded )
@@ -445,7 +445,7 @@ void JavaSalInstance::AcquireYieldMutex( ULONG nCount )
 
 // -----------------------------------------------------------------------
 
-void JavaSalInstance::Yield( BOOL bWait )
+void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 {
 	SalData *pSalData = GetSalData();
 
@@ -540,7 +540,8 @@ void JavaSalInstance::Yield( BOOL bWait )
 	}
 
 	// Dispatch any pending AWT events
-	while ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
+	int nMaxEvents = bHandleAllCurrentEvents ? 100 : 1;
+	while ( nMaxEvents-- > 0 && !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
 	{
 		nTimeout = 0;
 
@@ -775,8 +776,6 @@ void JavaSalInstance::DeletePrinterQueueInfo( SalPrinterQueueInfo* pInfo )
 SalInfoPrinter* JavaSalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
                                                 ImplJobSetup* pSetupData )
 {
-	SalData *pSalData = GetSalData();
-
 	// Create a dummy printer configuration for our dummy printer
 	JavaSalInfoPrinter *pPrinter = new JavaSalInfoPrinter();
 

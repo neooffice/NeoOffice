@@ -123,14 +123,14 @@ bool JavaSalOpenGL::IsValid()
 
 // ------------------------------------------------------------------------
 
-void *JavaSalOpenGL::GetOGLFnc( const char* pFncName )
+oglFunction JavaSalOpenGL::GetOGLFnc( const char* pFncName )
 {
-	void *pRet = NULL;
+	oglFunction aRet = NULL;
 
 	if ( mnOGLState == OGL_STATE_VALID )
-		pRet = aModule.getSymbol( OUString::createFromAscii( pFncName ) );
+		aRet = (oglFunction)aModule.getSymbol( OUString::createFromAscii( pFncName ) );
 
-	return pRet;
+	return aRet;
 }
 
 // ------------------------------------------------------------------------
