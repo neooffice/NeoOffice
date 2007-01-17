@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_vcl.hxx"
+
 #ifndef _TOOLS_DEBUG_HXX
 #include <tools/debug.hxx>
 #endif
@@ -280,7 +283,7 @@ static void ImplMouseAutoPos( Dialog* pDialog )
 
 // =======================================================================
 
-void Dialog::ImplInitData()
+void Dialog::ImplInitDialogData()
 {
     mpWindowImpl->mbDialog            = TRUE;
 
@@ -441,7 +444,7 @@ void Dialog::ImplCenterDialog()
 Dialog::Dialog( WindowType nType ) :
     SystemWindow( nType )
 {
-    ImplInitData();
+    ImplInitDialogData();
 }
 
 // -----------------------------------------------------------------------
@@ -449,7 +452,7 @@ Dialog::Dialog( WindowType nType ) :
 Dialog::Dialog( Window* pParent, WinBits nStyle ) :
     SystemWindow( WINDOW_DIALOG )
 {
-    ImplInitData();
+    ImplInitDialogData();
     ImplInit( pParent, nStyle );
 }
 
@@ -458,7 +461,7 @@ Dialog::Dialog( Window* pParent, WinBits nStyle ) :
 Dialog::Dialog( Window* pParent, const ResId& rResId ) :
     SystemWindow( WINDOW_DIALOG )
 {
-    ImplInitData();
+    ImplInitDialogData();
     rResId.SetRT( RSC_DIALOG );
     ImplInit( pParent, ImplInitRes( rResId ) );
     ImplLoadRes( rResId );
@@ -576,7 +579,6 @@ BOOL Dialog::Close()
     if ( !(GetStyle() & WB_CLOSEABLE) )
     {
         BOOL bRet = TRUE;
-        ImplDelData aDelData;
         ImplAddDel( &aDelData );
         PushButton* pButton = ImplGetCancelButton( this );
         if ( pButton )
@@ -931,7 +933,7 @@ void Dialog::GetDrawWindowBorder( sal_Int32& rLeftBorder, sal_Int32& rTopBorder,
 }
 
 
-void Dialog::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, ULONG nFlags )
+void Dialog::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, ULONG )
 {
     Point aPos = pDev->LogicToPixel( rPos );
     Size aSize = pDev->LogicToPixel( rSize );

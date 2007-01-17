@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_vcl.hxx"
+
   
 #ifdef SOLAR_JAVA
 #include <jni.h>
@@ -142,7 +145,6 @@ sal_Int32 JavaChildWindow::getParentWindowHandleForJava()
     {
         try
         {
-            JavaVM*                                         pJVM;
             ::rtl::Reference< ::jvmaccess::VirtualMachine > xVM;
             uno::Reference< java::XJavaVM >                 xJavaVM( xFactory->createInstance( rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.java.JavaVirtualMachine") ) ), uno::UNO_QUERY );
             uno::Sequence< sal_Int8 >                       aProcessID( 17 );

@@ -33,6 +33,9 @@
  *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
+
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_vcl.hxx"
 #ifndef _SV_SVSYS_HXX
 #include <svsys.h>
 #endif
@@ -208,7 +211,7 @@ using ::com::sun::star::awt::XTopWindow;
 
 // =======================================================================
 
-DBG_NAME( Window );
+DBG_NAME( Window )
 
 // =======================================================================
 
@@ -513,7 +516,7 @@ void Window::ImplUpdateGlobalSettings( AllSettings& rSettings, BOOL bCallHdl )
     // #104427# auto detect HC mode ?
     if( !rSettings.GetStyleSettings().GetHighContrastMode() )
     {
-        sal_Bool bTmp, bAutoHCMode = sal_True;
+        sal_Bool bTmp = sal_False, bAutoHCMode = sal_True;
         utl::OConfigurationNode aNode = utl::OConfigurationTreeRoot::tryCreateWithServiceFactory(
             vcl::unohelper::GetMultiServiceFactory(),
             OUString::createFromAscii( "org.openoffice.Office.Common/Accessibility" ) );    // note: case sensisitive !
@@ -528,7 +531,7 @@ void Window::ImplUpdateGlobalSettings( AllSettings& rSettings, BOOL bCallHdl )
             if( rSettings.GetStyleSettings().GetFaceColor().IsDark()
              || rSettings.GetStyleSettings().GetWindowColor().IsDark() )
             {
-                StyleSettings aStyleSettings = rSettings.GetStyleSettings();
+                aStyleSettings = rSettings.GetStyleSettings();
                 aStyleSettings.SetHighContrastMode( TRUE );
                 rSettings.SetStyleSettings( aStyleSettings );
             }
@@ -537,7 +540,7 @@ void Window::ImplUpdateGlobalSettings( AllSettings& rSettings, BOOL bCallHdl )
 
 	// Detect if images in menus are allowed or not
     {
-        sal_Bool bTmp, bUseImagesInMenus = sal_True;
+        sal_Bool bTmp = sal_False, bUseImagesInMenus = sal_True;
         utl::OConfigurationNode aNode = utl::OConfigurationTreeRoot::tryCreateWithServiceFactory(
             vcl::unohelper::GetMultiServiceFactory(),
             OUString::createFromAscii( "org.openoffice.Office.Common/View/Menu" ) );    // note: case sensisitive !
@@ -548,7 +551,7 @@ void Window::ImplUpdateGlobalSettings( AllSettings& rSettings, BOOL bCallHdl )
                 bUseImagesInMenus = bTmp;
         }
 
-        StyleSettings aStyleSettings = rSettings.GetStyleSettings();
+        aStyleSettings = rSettings.GetStyleSettings();
         aStyleSettings.SetUseImagesInMenus( bUseImagesInMenus );
         rSettings.SetStyleSettings( aStyleSettings );
     }
@@ -559,8 +562,8 @@ void Window::ImplUpdateGlobalSettings( AllSettings& rSettings, BOOL bCallHdl )
     // vorhanden ist
     if ( DbgIsBoldAppFont() )
     {
-        StyleSettings aStyleSettings = rSettings.GetStyleSettings();
-        Font aFont = aStyleSettings.GetAppFont();
+        aStyleSettings = rSettings.GetStyleSettings();
+        aFont = aStyleSettings.GetAppFont();
         aFont.SetWeight( WEIGHT_BOLD );
         aStyleSettings.SetAppFont( aFont );
         aFont = aStyleSettings.GetGroupFont();
@@ -612,7 +615,7 @@ CommandEvent ImplTranslateCommandEvent( const CommandEvent& rCEvt, Window* pSour
 
 // =======================================================================
 
-void Window::ImplInitData( WindowType nType )
+void Window::ImplInitWindowData( WindowType nType )
 {
     mpWindowImpl = new WindowImpl;
 
@@ -748,7 +751,7 @@ void Window::ImplInitData( WindowType nType )
 
 // -----------------------------------------------------------------------
 
-void Window::ImplInit( Window* pParent, WinBits nStyle, const ::com::sun::star::uno::Any& aSystemWorkWindowToken )
+void Window::ImplInit( Window* pParent, WinBits nStyle, const ::com::sun::star::uno::Any& /*aSystemWorkWindowToken*/ )
 {
     ImplInit( pParent, nStyle, NULL );
 }
@@ -820,15 +823,14 @@ void Window::ImplInit( Window* pParent, WinBits nStyle, SystemParentData* pSyste
         else if( mpWindowImpl->mbFloatWin )
             nFrameStyle |= SAL_FRAME_STYLE_TOOLWINDOW;
 
-        if( nStyle & WB_INTROWIN )
-            nFrameStyle |= SAL_FRAME_STYLE_INTRO;
         if( nStyle & WB_TOOLTIPWIN )
             nFrameStyle |= SAL_FRAME_STYLE_TOOLTIP;
 
         if( nStyle & WB_NOSHADOW )
             nFrameStyle |= SAL_FRAME_STYLE_NOSHADOW;
 
-        if( mpWindowImpl->mnType == WINDOW_DIALOG           ||
+        if( mpWindowImpl->mnType == WINDOW_DIALOG          ||
+            mpWindowImpl->mnType == WINDOW_TABDIALOG       ||
             mpWindowImpl->mnType == WINDOW_MODALDIALOG     ||
             mpWindowImpl->mnType == WINDOW_MODELESSDIALOG )
             nFrameStyle |= SAL_FRAME_STYLE_DIALOG;
@@ -901,13 +903,10 @@ void Window::ImplInit( Window* pParent, WinBits nStyle, SystemParentData* pSyste
         mpWindowImpl->mpFrameData->maResizeTimer.SetTimeout( 50 );
         mpWindowImpl->mpFrameData->maResizeTimer.SetTimeoutHdl( LINK( this, Window, ImplHandleResizeTimerHdl ) );
         mpWindowImpl->mpFrameData->mbInternalDragGestureRecognizer = FALSE;
-        mpWindowImpl->mpFrameData->mbTriggerHangulHanja = FALSE;
 
         if ( pRealParent && IsTopWindow() )
         {
             ImplWinData* pParentWinData = pRealParent->ImplGetWinData();
-            ImplWinData* pWinData = ImplGetWinData();
-
             pParentWinData->maTopWindowChildren.push_back( this );
         }
     }
@@ -1242,7 +1241,7 @@ WinBits Window::ImplInitRes( const ResId& rResId )
 
 // -----------------------------------------------------------------------
 
-void Window::ImplLoadRes( const ResId& rResId )
+void Window::ImplLoadRes( const ResId& /*rResId*/ )
 {
     // newer move this line after IncrementRes
     char* pRes = (char*)GetClassRes();
@@ -4218,9 +4217,10 @@ void Window::ImplGrabFocus( USHORT nFlags )
                     ( pOldFocusWindow->GetDialogControlFlags() & WINDOW_DLGCTRL_FLOATWIN_POPUPMODEEND_CANCEL ) )
                     mpWindowImpl->mnGetFocusFlags |= GETFOCUS_FLOATWIN_POPUPMODEEND_CANCEL;
                 NotifyEvent aNEvt( EVENT_GETFOCUS, this );
-                if ( !ImplCallPreNotify( aNEvt ) )
+                if ( !ImplCallPreNotify( aNEvt ) && !aDogTag.IsDelete() )
                     GetFocus();
-                ImplCallActivateListeners( (pOldFocusWindow && ! aOldFocusDel.IsDelete()) ? pOldFocusWindow : NULL );
+                if( !aDogTag.IsDelete() )
+                    ImplCallActivateListeners( (pOldFocusWindow && ! aOldFocusDel.IsDelete()) ? pOldFocusWindow : NULL );
                 if( !aDogTag.IsDelete() )
                 {
                     mpWindowImpl->mnGetFocusFlags = 0;
@@ -4285,7 +4285,7 @@ Window::Window( WindowType nType )
 {
     DBG_CTOR( Window, ImplDbgCheckWindow );
 
-    ImplInitData( nType );
+    ImplInitWindowData( nType );
 }
 
 // -----------------------------------------------------------------------
@@ -4294,7 +4294,7 @@ Window::Window( Window* pParent, WinBits nStyle )
 {
     DBG_CTOR( Window, ImplDbgCheckWindow );
 
-    ImplInitData( WINDOW_WINDOW );
+    ImplInitWindowData( WINDOW_WINDOW );
     ImplInit( pParent, nStyle, NULL );
 }
 
@@ -4304,7 +4304,7 @@ Window::Window( Window* pParent, const ResId& rResId )
 {
     DBG_CTOR( Window, ImplDbgCheckWindow );
 
-    ImplInitData( WINDOW_WINDOW );
+    ImplInitWindowData( WINDOW_WINDOW );
     rResId.SetRT( RSC_WINDOW );
     WinBits nStyle = ImplInitRes( rResId );
     ImplInit( pParent, nStyle, NULL );
@@ -4357,10 +4357,10 @@ Window::~Window()
     }
 
     // shutdown drag and drop
-    ::com::sun::star::uno::Reference < ::com::sun::star::lang::XComponent > xComponent( mpWindowImpl->mxDNDListenerContainer, ::com::sun::star::uno::UNO_QUERY );
+    ::com::sun::star::uno::Reference < ::com::sun::star::lang::XComponent > xDnDComponent( mpWindowImpl->mxDNDListenerContainer, ::com::sun::star::uno::UNO_QUERY );
 
-    if( xComponent.is() )
-        xComponent->dispose();
+    if( xDnDComponent.is() )
+        xDnDComponent->dispose();
 
     if( mpWindowImpl->mbFrame && mpWindowImpl->mpFrameData )
     {
@@ -4415,7 +4415,7 @@ Window::~Window()
     ImplSVData* pSVData = ImplGetSVData();
 
     if ( pSVData->maHelpData.mpHelpWin && (pSVData->maHelpData.mpHelpWin->GetParent() == this) )
-        ImplDestroyHelpWindow( FALSE );
+        ImplDestroyHelpWindow();
 
     DBG_ASSERT( pSVData->maWinData.mpTrackWin != this,
                 "Window::~Window(): Window is in TrackingMode" );
@@ -4488,7 +4488,7 @@ Window::~Window()
             ByteString aTempStr( "Window (" );
             aTempStr += ByteString( GetText(), RTL_TEXTENCODING_UTF8 );
             aTempStr += ") with living Child(s) destroyed: ";
-            Window* pTempWin = mpWindowImpl->mpFirstChild;
+            pTempWin = mpWindowImpl->mpFirstChild;
             while ( pTempWin )
             {
                 aTempStr += ByteString( pTempWin->GetText(), RTL_TEXTENCODING_UTF8 );
@@ -4505,7 +4505,7 @@ Window::~Window()
             ByteString aTempStr( "Window (" );
             aTempStr += ByteString( GetText(), RTL_TEXTENCODING_UTF8 );
             aTempStr += ") with living SystemWindow(s) destroyed: ";
-            Window* pTempWin = mpWindowImpl->mpFirstOverlap;
+            pTempWin = mpWindowImpl->mpFirstOverlap;
             while ( pTempWin )
             {
                 aTempStr += ByteString( pTempWin->GetText(), RTL_TEXTENCODING_UTF8 );
@@ -4678,7 +4678,7 @@ Window::~Window()
     ImplRemoveWindow( TRUE );
 
     // de-register as "top window child" at our parent, if necessary
-    if ( !mpWindowImpl->mpBorderWindow && mpWindowImpl->mpFrame )
+    if ( mpWindowImpl->mbFrame )
     {
         BOOL bIsTopWindow = mpWindowImpl->mpWinData && ( mpWindowImpl->mpWinData->mnIsTopWindow == 1 );
         if ( mpWindowImpl->mpRealParent && bIsTopWindow )
@@ -5360,8 +5360,7 @@ void Window::CallEventListeners( ULONG nEvent, void* pData )
     ImplDelData aDelData;
     ImplAddDel( &aDelData );
 
-    ImplSVData* pSVData = ImplGetSVData();
-    pSVData->mpApp->ImplCallEventListeners( &aEvent );
+    ImplGetSVData()->mpApp->ImplCallEventListeners( &aEvent );
 
     if ( aDelData.IsDelete() )
         return;
@@ -5549,27 +5548,6 @@ BOOL Window::IsLocked( BOOL bChilds ) const
 
 // -----------------------------------------------------------------------
 
-BOOL Window::IsUICaptured( BOOL bChilds ) const
-{
-    return Application::IsUICaptured();
-}
-
-// -----------------------------------------------------------------------
-
-BOOL Window::IsUserActive( USHORT nTest, BOOL bChilds ) const
-{
-    return Application::IsUserActive( nTest );
-}
-
-// -----------------------------------------------------------------------
-
-ULONG Window::GetLastInputInterval() const
-{
-    return Application::GetLastInputInterval();
-}
-
-// -----------------------------------------------------------------------
-
 void Window::SetStyle( WinBits nStyle )
 {
     DBG_CHKTHIS( Window, ImplDbgCheckWindow );
@@ -5614,7 +5592,7 @@ SystemWindow* Window::GetSystemWindow() const
     DBG_CHKTHIS( Window, ImplDbgCheckWindow );
 
     const Window* pWin = this;
-    while ( !pWin->IsSystemWindow() )
+    while ( pWin && !pWin->IsSystemWindow() )
         pWin  = pWin->GetParent();
     return (SystemWindow*)pWin;
 }
@@ -5794,6 +5772,10 @@ long Window::GetCursorExtTextInputWidth() const
 }
 
 // -----------------------------------------------------------------------
+void Window::SetSettings( const AllSettings& rSettings )
+{
+    SetSettings( rSettings, FALSE );
+}
 
 void Window::SetSettings( const AllSettings& rSettings, BOOL bChild )
 {
@@ -6462,7 +6444,7 @@ void Window::Show( BOOL bVisible, USHORT nFlags )
             mpWindowImpl->mbSuppressAccessibilityEvents = FALSE;
 
             mpWindowImpl->mbPaintFrame = TRUE;
-            BOOL bNoActivate = nFlags & (SHOW_NOACTIVATE|SHOW_NOFOCUSCHANGE);
+            BOOL bNoActivate = (nFlags & (SHOW_NOACTIVATE|SHOW_NOFOCUSCHANGE)) ? TRUE : FALSE;
             mpWindowImpl->mpFrame->Show( TRUE, bNoActivate );
             if( aDogTag.IsDelete() )
                 return;
@@ -6562,7 +6544,7 @@ void Window::GetBorder( sal_Int32& rLeftBorder, sal_Int32& rTopBorder,
 
 // -----------------------------------------------------------------------
 
-void Window::Enable( BOOL bEnable, BOOL bChild )
+void Window::Enable( bool bEnable, bool bChild )
 {
     DBG_CHKTHIS( Window, ImplDbgCheckWindow );
 
@@ -8173,7 +8155,11 @@ void Window::ImplCallDeactivateListeners( Window *pNew )
     // no deactivation if the the newly activated window is my child
     if ( !pNew || !ImplIsChild( pNew ) )
     {
+        ImplDelData aDogtag( this );
         ImplCallEventListeners( VCLEVENT_WINDOW_DEACTIVATE );
+        if( aDogtag.IsDelete() )
+            return;
+
         // #100759#, avoid walking the wrong frame's hierarchy
         //           eg, undocked docking windows (ImplDockFloatWin)
         if ( ImplGetParent() && mpWindowImpl->mpFrameWindow == ImplGetParent()->mpWindowImpl->mpFrameWindow )
@@ -8188,7 +8174,11 @@ void Window::ImplCallActivateListeners( Window *pOld )
     // no activation if the the old active window is my child
     if ( !pOld || !ImplIsChild( pOld ) )
     {
+        ImplDelData aDogtag( this );
         ImplCallEventListeners( VCLEVENT_WINDOW_ACTIVATE, pOld );
+        if( aDogtag.IsDelete() )
+            return;
+
 		// #106298# revoke the change for 105369, because this change
 		//          disabled the activate event for the parent,
 		//          if the parent is a compound control
@@ -8442,7 +8432,7 @@ Reference< XClipboard > Window::GetClipboard()
 
 // -----------------------------------------------------------------------
 
-Reference< XClipboard > Window::GetSelection()
+Reference< XClipboard > Window::GetPrimarySelection()
 {
     DBG_CHKTHIS( Window, ImplDbgCheckWindow );
 
@@ -8556,7 +8546,7 @@ USHORT Window::ImplGetAccessibleCandidateChildWindowCount( USHORT nFirstWindowTy
         if( pChild->ImplIsAccessibleCandidate() )
             nChildren++;
         else
-            nChildren += pChild->ImplGetAccessibleCandidateChildWindowCount( WINDOW_FIRSTCHILD );
+            nChildren = sal::static_int_cast<USHORT>(nChildren + pChild->ImplGetAccessibleCandidateChildWindowCount( WINDOW_FIRSTCHILD ));
         pChild = pChild->mpWindowImpl->mpNext;
     }
     return nChildren;
@@ -9016,7 +9006,7 @@ BOOL Window::IsAccessibilityEventsSuppressed( BOOL bTraverseParentPath )
     else
     {
         Window *pParent = this;
-        while ( pParent )
+        while ( pParent && pParent->mpWindowImpl)
         {
             if( pParent->mpWindowImpl->mbSuppressAccessibilityEvents )
                 return TRUE;
@@ -9083,8 +9073,8 @@ void Window::DrawSelectionBackground( const Rectangle& rRect, USHORT highlight, 
         return;
 
     const StyleSettings& rStyles = GetSettings().GetStyleSettings();
-    
-    
+
+
     // colors used for item highlighting
     Color aSelectionBorderCol( rStyles.GetHighlightColor() );
     Color aSelectionFillCol( aSelectionBorderCol );
@@ -9364,6 +9354,10 @@ BOOL Window::IsNativeWidgetEnabled() const
 #endif
 }
 
+#ifdef WNT // see #140456#
+#include <salframe.h>
+#endif
+
 Reference< ::com::sun::star::rendering::XCanvas > Window::GetCanvas() const
 {
     // try to retrieve hard reference from weak member
@@ -9429,10 +9423,18 @@ Reference< ::com::sun::star::rendering::XCanvas > Window::GetCanvas() const
                 OUString( RTL_CONSTASCII_USTRINGPARAM(
                               "com.sun.star."
                               "rendering.CanvasFactory") ) ), UNO_QUERY );
-        if (xCanvasFactory.is()) {
+        if (xCanvasFactory.is())
+		{
+			OUString sService;
+#ifdef WNT // see #140456#
+			const sal_uInt32 nDisplay = static_cast< WinSalFrame* >( mpWindowImpl->mpFrame )->mnDisplay;
+			if( (nDisplay >= Application::GetScreenCount()) )
+				sService = OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.rendering.VCLCanvas" ) );
+#endif
             xCanvas.set( xCanvasFactory->createInstanceWithArguments(
-                             OUString() /* no preference */, aArg ),
-                         UNO_QUERY );
+                             sService /* no preference */, aArg ),
+
+							 UNO_QUERY );
 
             mpWindowImpl->mxCanvas = xCanvas;
 
@@ -9680,8 +9682,9 @@ void Window::ImplPaintToMetaFile( GDIMetaFile* pMtf, OutputDevice* pTargetOutDev
     mnDPIY = nOldDPIY;
 }
 
-void Window::PaintToDevice( OutputDevice* pDev, const Point& rPos, const Size& rSize )
+void Window::PaintToDevice( OutputDevice* pDev, const Point& rPos, const Size& /*rSize*/ )
 {
+    // FIXME: scaling: currently this is for pixel copying only
     GDIMetaFile aMF;
     Point       aPos  = pDev->LogicToPixel( rPos );
 

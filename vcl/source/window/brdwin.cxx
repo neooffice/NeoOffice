@@ -33,6 +33,9 @@
  *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
+
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_vcl.hxx"
 #ifndef _SV_SVIDS_HRC
 #include <svids.hrc>
 #endif
@@ -104,6 +107,7 @@ using namespace ::com::sun::star::uno;
 
 // =======================================================================
 
+#ifdef USE_JAVA
 static void ImplGetNativeControlData( Window *pCtrl, ControlType& nCtrlType, ControlPart& nCtrlPart )
 {
 	nCtrlType = 0;
@@ -167,6 +171,7 @@ static void ImplGetNativeControlData( Window *pCtrl, ControlType& nCtrlType, Con
 		}
 	}
 }
+#endif	// USE_JAVA
 
 // -----------------------------------------------------------------------
 
@@ -176,11 +181,15 @@ static void ImplGetPinImage( USHORT nStyle, BOOL bPinIn, Image& rImage )
 	ImplSVData* pSVData = ImplGetSVData();
 	if ( !pSVData->maCtrlData.mpPinImgList )
 	{
-		Bitmap aBmp;
         ResMgr* pResMgr = ImplGetResMgr();
+		pSVData->maCtrlData.mpPinImgList = new ImageList();
         if( pResMgr )
-            aBmp = Bitmap( ResId( SV_RESID_BITMAP_PIN, ImplGetResMgr() ) );
-		pSVData->maCtrlData.mpPinImgList = new ImageList( aBmp, Color( 0x00, 0x00, 0xFF ), 4 );
+		{
+			Color aMaskColor( 0x00, 0x00, 0xFF );
+			pSVData->maCtrlData.mpPinImgList->InsertFromHorizontalBitmap
+				( ResId( SV_RESID_BITMAP_PIN, ImplGetResMgr() ), 4,
+				  &aMaskColor, NULL, NULL, 0);
+		}
 	}
 
 	// Image ermitteln und zurueckgeben
@@ -254,7 +263,7 @@ static void ImplDrawBrdWinSymbolButton( OutputDevice* pDev,
             pWin->SetFillColor( pDev->GetSettings().GetStyleSettings().GetWindowColor() );
             pWin->SetLineColor();
             pWin->DrawRect( rRect );
-            pWin->DrawSelectionBackground( rRect, 2, nState & BUTTON_DRAW_PRESSED,
+            pWin->DrawSelectionBackground( rRect, 2, (nState & BUTTON_DRAW_PRESSED) ? TRUE : FALSE,
                                             TRUE, FALSE );
         }
         aTempRect = rRect;
@@ -284,28 +293,28 @@ ImplBorderWindowView::~ImplBorderWindowView()
 
 // -----------------------------------------------------------------------
 
-BOOL ImplBorderWindowView::MouseMove( const MouseEvent& rMEvt )
+BOOL ImplBorderWindowView::MouseMove( const MouseEvent& )
 {
 	return FALSE;
 }
 
 // -----------------------------------------------------------------------
 
-BOOL ImplBorderWindowView::MouseButtonDown( const MouseEvent& rMEvt )
+BOOL ImplBorderWindowView::MouseButtonDown( const MouseEvent& )
 {
 	return FALSE;
 }
 
 // -----------------------------------------------------------------------
 
-BOOL ImplBorderWindowView::Tracking( const TrackingEvent& rTEvt )
+BOOL ImplBorderWindowView::Tracking( const TrackingEvent& )
 {
 	return FALSE;
 }
 
 // -----------------------------------------------------------------------
 
-String ImplBorderWindowView::RequestHelp( const Point& rPos, Rectangle& rHelpRect )
+String ImplBorderWindowView::RequestHelp( const Point&, Rectangle& )
 {
 	return String();
 }
@@ -1145,13 +1154,13 @@ long ImplBorderWindowView::ImplCalcTitleWidth( const ImplBorderFrameData* pData 
 // - ImplNoBorderWindowView -
 // --------------------------
 
-ImplNoBorderWindowView::ImplNoBorderWindowView( ImplBorderWindow* pBorderWindow )
+ImplNoBorderWindowView::ImplNoBorderWindowView( ImplBorderWindow* )
 {
 }
 
 // -----------------------------------------------------------------------
 
-void ImplNoBorderWindowView::Init( OutputDevice* pDev, long nWidth, long nHeight )
+void ImplNoBorderWindowView::Init( OutputDevice*, long, long )
 {
 }
 
@@ -1175,7 +1184,7 @@ long ImplNoBorderWindowView::CalcTitleWidth() const
 
 // -----------------------------------------------------------------------
 
-void ImplNoBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice*, const Point* )
+void ImplNoBorderWindowView::DrawWindow( USHORT, OutputDevice*, const Point* )
 {
 }
 
@@ -1265,6 +1274,7 @@ void ImplSmallBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice*, co
 
     ControlType aCtrlType = 0;
     ControlPart aCtrlPart = PART_ENTIRE_CONTROL;
+
     if( pWin && (pCtrl = mpBorderWindow->GetWindow( WINDOW_CLIENT )) != NULL )
     {
 #ifdef USE_JAVA
@@ -1324,7 +1334,6 @@ void ImplSmallBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice*, co
                     aCtrlPart = PART_WINDOW;
                 }
                 break;
-                break;
 
             default:
                 break;
@@ -1353,7 +1362,7 @@ void ImplSmallBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice*, co
 #endif
         BOOL bMouseOver = FALSE;
         Window *pCtrlChild = pCtrl->GetWindow( WINDOW_FIRSTCHILD );
-        while( pCtrlChild && !(bMouseOver = pCtrlChild->IsMouseOver()) )
+        while( pCtrlChild && (bMouseOver = pCtrlChild->IsMouseOver()) == FALSE )
             pCtrlChild = pCtrlChild->GetWindow( WINDOW_NEXT );
     	
         if( bMouseOver )
@@ -1851,7 +1860,7 @@ void ImplStdBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice* pOutD
 // =======================================================================
 void ImplBorderWindow::ImplInit( Window* pParent,
 								 WinBits nStyle, USHORT nTypeStyle,
-								 const ::com::sun::star::uno::Any& aSystemToken )
+								 const ::com::sun::star::uno::Any& )
 {
 	ImplInit( pParent, nStyle, nTypeStyle, NULL );
 }
@@ -1986,12 +1995,12 @@ void ImplBorderWindow::Tracking( const TrackingEvent& rTEvt )
 
 // -----------------------------------------------------------------------
 
-void ImplBorderWindow::Paint( const Rectangle& rRect )
+void ImplBorderWindow::Paint( const Rectangle& )
 {
 	mpBorderView->DrawWindow( BORDERWINDOW_DRAW_ALL );
 }
 
-void ImplBorderWindow::Draw( const Rectangle& rRect, OutputDevice* pOutDev, const Point& rPos )
+void ImplBorderWindow::Draw( const Rectangle&, OutputDevice* pOutDev, const Point& rPos )
 {
 	mpBorderView->DrawWindow( BORDERWINDOW_DRAW_ALL, pOutDev, &rPos );
 }

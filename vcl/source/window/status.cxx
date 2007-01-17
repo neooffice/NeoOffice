@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_vcl.hxx"
+
 #ifndef _LIST_HXX
 #include <tools/list.hxx>
 #endif
@@ -117,7 +120,7 @@ struct ImplStatusItem
     XubString           maCommand;
 };
 
-DECLARE_LIST( ImplStatusItemList, ImplStatusItem* );
+DECLARE_LIST( ImplStatusItemList, ImplStatusItem* )
 
 // =======================================================================
 
@@ -498,7 +501,7 @@ void StatusBar::ImplDrawItem( BOOL bOffScreen, USHORT nPos, BOOL bDrawText, BOOL
 	}
 
 	if ( !ImplIsRecordLayout() )
-		ImplCallEventListeners( VCLEVENT_STATUSBAR_DRAWITEM, (void*) pItem->mnId );
+		ImplCallEventListeners( VCLEVENT_STATUSBAR_DRAWITEM, (void*) sal_IntPtr(pItem->mnId) );
 }
 
 // -----------------------------------------------------------------------
@@ -957,7 +960,7 @@ void StatusBar::InsertItem( USHORT nItemId, ULONG nWidth,
 	if ( ImplIsItemUpdate() )
 		Invalidate();
 
-	ImplCallEventListeners( VCLEVENT_STATUSBAR_ITEMADDED, (void*) nItemId );
+	ImplCallEventListeners( VCLEVENT_STATUSBAR_ITEMADDED, (void*) sal_IntPtr(nItemId) );
 }
 
 // -----------------------------------------------------------------------
@@ -974,7 +977,7 @@ void StatusBar::RemoveItem( USHORT nItemId )
 		if ( ImplIsItemUpdate() )
 			Invalidate();
 
-		ImplCallEventListeners( VCLEVENT_STATUSBAR_ITEMREMOVED, (void*) nItemId );
+		ImplCallEventListeners( VCLEVENT_STATUSBAR_ITEMREMOVED, (void*) sal_IntPtr(nItemId) );
 	}
 }
 
@@ -995,7 +998,7 @@ void StatusBar::ShowItem( USHORT nItemId )
 			if ( ImplIsItemUpdate() )
 				Invalidate();
 
-			ImplCallEventListeners( VCLEVENT_STATUSBAR_SHOWITEM, (void*) nItemId );
+			ImplCallEventListeners( VCLEVENT_STATUSBAR_SHOWITEM, (void*) sal_IntPtr(nItemId) );
 		}
 	}
 }
@@ -1017,7 +1020,7 @@ void StatusBar::HideItem( USHORT nItemId )
 			if ( ImplIsItemUpdate() )
 				Invalidate();
 
-			ImplCallEventListeners( VCLEVENT_STATUSBAR_HIDEITEM, (void*) nItemId );
+			ImplCallEventListeners( VCLEVENT_STATUSBAR_HIDEITEM, (void*) sal_IntPtr(nItemId) );
 		}
 	}
 }
@@ -1643,7 +1646,7 @@ void StatusBar::SetAccessibleName( USHORT nItemId, const XubString& rName )
 		if ( pItem->maAccessibleName != rName )
 		{
 			pItem->maAccessibleName = rName;
-			ImplCallEventListeners( VCLEVENT_STATUSBAR_NAMECHANGED, (void*) pItem->mnId );
+			ImplCallEventListeners( VCLEVENT_STATUSBAR_NAMECHANGED, (void*) sal_IntPtr(pItem->mnId) );
 		}
 	}
 }
