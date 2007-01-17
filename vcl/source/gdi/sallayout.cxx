@@ -1620,85 +1620,6 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
     }
     mnLevel = nLevel;
 
-#ifdef USE_JAVA
-    // merge the fallback levels
-    long nXPos = 0;
-    for( n = 0; n < nLevel; ++n )
-        maFallbackRuns[n].ResetPos();
-    while( nValid[0] )
-    {
-        // find best fallback level
-        for( n = 0; n < nLevel; ++n )
-            if( nValid[n] && !maFallbackRuns[n].PosIsInRun( nCharPos[0] ) )
-                // fallback level n wins when it requested no further fallback
-                break;
-
-        if( n < nLevel )
-        {
-            // use base(n==0) or fallback(n>=1) level
-            long nNewPos = nXPos;
-            if( mpLayouts[n]->GetUnitsPerPixel() != mnUnitsPerPixel )
-            {
-                nNewPos *= mpLayouts[n]->GetUnitsPerPixel();
-                nNewPos /= mnUnitsPerPixel;
-            }
-            mpLayouts[n]->MoveGlyph( nStartOld[n], nNewPos );
-        }
-        else
-        {
-            // if no fallback level has been found and the charpos in question
-            // has been resolved/unresolved then drop/keep the NotDef glyph
-            if( rLastLevelRuns.PosIsInRun( nCharPos[0] ) )
-                n = 0;  // keep NotDef in base level
-            else
-                n = -1; // drop NotDef in base level
-        }
-
-        if( n >= 0 )
-        {
-            // use glyph from best matching layout
-            nXPos += nGlyphAdv[n] * mnUnitsPerPixel / mpLayouts[n]->GetUnitsPerPixel();
-
-            // complete this glyph cluster, then advance to next
-            for( int nActivePos = nCharPos[0];; )
-            {
-                nStartOld[n] = nStartNew[n];
-                nValid[n] = mpLayouts[n]->GetNextGlyphs( 1, &nDummy, aPos,
-                    nStartNew[n], &nGlyphAdv[n], &nCharPos[n] );
-                if( !nValid[n] || (nCharPos[n] != nActivePos) )
-                    break;
-                nXPos += nGlyphAdv[n] * mnUnitsPerPixel / mpLayouts[n]->GetUnitsPerPixel();
-            }
-
-            // performance optimization (fallback level is completed)
-            if( !nValid[n] && (n >= nLevel-1) )
-                --nLevel;
-        }
-
-        if( n != 0 ) // glyph fallback was successful
-        {
-            // drop NotDef glyph from base layout
-            mpLayouts[0]->DropGlyph( nStartOld[0] );
-            mpLayouts[0]->MoveGlyph( nStartNew[0], nXPos*mpLayouts[0]->GetUnitsPerPixel()/mnUnitsPerPixel );
-
-            // get next glyph in base layout
-            nStartOld[0] = nStartNew[0];
-            nValid[0] = mpLayouts[0]->GetNextGlyphs( 1, &nDummy, aPos,
-                nStartNew[0], &nGlyphAdv[0], &nCharPos[0] );
-
-            // advance runs if necessary
-            if( n < 0 )
-                n = nLevel;
-            while( --n >= 0 )
-            {
-                // if no more overlap with base level get next run
-                if( !maFallbackRuns[n].PosIsInRun( nCharPos[0] ) )
-                    maFallbackRuns[n].NextRun();
-            }
-        }
-    }
-
-#else	// USE_JAVA
     // merge the fallback levels
     long nXPos = 0;
     double fUnitMul = 1.0;
@@ -1815,7 +1736,6 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
             if( !maFallbackRuns[i].PosIsInRun( nActiveCharPos ) )
                 maFallbackRuns[i].NextRun();
     }
-#endif	// USE_JAVA
 
     mpLayouts[0]->Simplify( true );
 }
