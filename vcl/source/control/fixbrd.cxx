@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_vcl.hxx"
+
 #ifndef _SV_RC_H
 #include <tools/rc.h>
 #endif
@@ -66,7 +69,7 @@ void FixedBorder::ImplInit( Window* pParent, WinBits nStyle )
 		SetPaintTransparent( TRUE );
 		SetBackground();
     }
-#endif
+#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
@@ -152,8 +155,8 @@ void FixedBorder::ImplDraw( OutputDevice* pDev, ULONG nDrawFlags,
     // seems only to be used in tools->options around a tabpage (ie, no tabcontrol!)
     // as tabpages that are not embedded in a tabcontrol should not be drawn natively
     // the fixedborder must also not be drawn (reason was, that it looks too ugly, dialogs must be redesigned)
-    Window *pWin = ( ( pDev->GetOutDevType() == OUTDEV_WINDOW ) ? (Window*) pDev : NULL );
-    if( pWin && pWin->IsNativeControlSupported( CTRL_FIXEDBORDER, PART_ENTIRE_CONTROL ) )
+    Window *pWin = pDev->GetOutDevType() == OUTDEV_WINDOW ? (Window*) pDev : NULL;
+    if( !(nBorderStyle & FRAME_DRAW_MONO) && pWin && pWin->IsNativeControlSupported( CTRL_FIXEDBORDER, PART_ENTIRE_CONTROL ) )
     {
         ImplControlValue aControlValue;
         Point aPt;
@@ -163,7 +166,7 @@ void FixedBorder::ImplDraw( OutputDevice* pDev, ULONG nDrawFlags,
 	     						aControlValue, rtl::OUString() );
     }
     else
-#endif
+#endif	// USE_JAVA
     {
 	    DecorationView	aDecoView( pDev );
 	    aDecoView.DrawFrame( aRect, nBorderStyle );
@@ -172,7 +175,7 @@ void FixedBorder::ImplDraw( OutputDevice* pDev, ULONG nDrawFlags,
 
 // -----------------------------------------------------------------------
 
-void FixedBorder::Paint( const Rectangle& rRect )
+void FixedBorder::Paint( const Rectangle& )
 {
 	ImplDraw( this, 0, Point(), GetOutputSizePixel() );
 }

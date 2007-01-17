@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_vcl.hxx"
+
 
 
 #include <unohelp.hxx>
@@ -251,7 +254,7 @@ void vcl::unohelper::NotifyAccessibleStateEventGlobally( const ::com::sun::star:
     if ( xExtToolkit.is() )
     {
         // Only for focus events
-        sal_Int16 nType;
+        sal_Int16 nType = ::com::sun::star::accessibility::AccessibleStateType::INVALID;
         rEventObject.NewValue >>= nType;
         if ( nType == ::com::sun::star::accessibility::AccessibleStateType::FOCUSED )
             xExtToolkit->fireFocusGained( rEventObject.Source );

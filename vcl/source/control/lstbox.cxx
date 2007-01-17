@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_vcl.hxx"
+
 #ifndef _SV_RC_H
 #include <tools/rc.h>
 #endif
@@ -80,14 +83,14 @@
 
 ListBox::ListBox( WindowType nType ) : Control( nType )
 {
-	ImplInitData();
+	ImplInitListBoxData();
 }
 
 // -----------------------------------------------------------------------
 
 ListBox::ListBox( Window* pParent, WinBits nStyle ) : Control( WINDOW_LISTBOX )
 {
-	ImplInitData();
+	ImplInitListBoxData();
 	ImplInit( pParent, nStyle );
 
 #ifdef USE_JAVA
@@ -99,7 +102,7 @@ ListBox::ListBox( Window* pParent, WinBits nStyle ) : Control( WINDOW_LISTBOX )
 		SetPaintTransparent( TRUE );
 		SetBackground();
 	}
-#endif
+#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
@@ -107,7 +110,7 @@ ListBox::ListBox( Window* pParent, WinBits nStyle ) : Control( WINDOW_LISTBOX )
 ListBox::ListBox( Window* pParent, const ResId& rResId ) :
 	Control( WINDOW_LISTBOX )
 {
-	ImplInitData();
+	ImplInitListBoxData();
 	rResId.SetRT( RSC_LISTBOX );
 	WinBits nStyle = ImplInitRes( rResId );
 	ImplInit( pParent, nStyle );
@@ -125,7 +128,7 @@ ListBox::ListBox( Window* pParent, const ResId& rResId ) :
 		SetPaintTransparent( TRUE );
 		SetBackground();
 	}
-#endif
+#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
@@ -148,7 +151,7 @@ ListBox::~ListBox()
 
 // -----------------------------------------------------------------------
 
-void ListBox::ImplInitData()
+void ListBox::ImplInitListBoxData()
 {
 	mpFloatWin		= NULL;
 	mpImplWin		= NULL;
@@ -233,7 +236,7 @@ void ListBox::ImplLoadRes( const ResId& rResId )
 	Control::ImplLoadRes( rResId );
 
 	USHORT nSelPos = ReadShortRes();
-	USHORT nNumber = ReadLongRes();
+	USHORT nNumber = sal::static_int_cast<USHORT>(ReadLongRes());
 
 	for( USHORT i = 0; i < nNumber; i++ )
 	{
@@ -323,7 +326,7 @@ IMPL_LINK( ListBox, ImplSelectionChangedHdl, void*, n )
 
 // -----------------------------------------------------------------------
 
-IMPL_LINK( ListBox, ImplDoubleClickHdl, void*, p )
+IMPL_LINK( ListBox, ImplDoubleClickHdl, void*, EMPTYARG )
 {
 	DoubleClick();
 	return 1;
@@ -364,7 +367,7 @@ IMPL_LINK( ListBox, ImplClickBtnHdl, void*, EMPTYARG )
 
 // -----------------------------------------------------------------------
 
-IMPL_LINK( ListBox, ImplPopupModeEndHdl, void*, p )
+IMPL_LINK( ListBox, ImplPopupModeEndHdl, void*, EMPTYARG )
 {
     if( mpFloatWin->IsPopupModeCanceled() )
     {
@@ -1039,7 +1042,7 @@ void ListBox::Clear()
 		mpImplWin->SetImage( aImage );
 		mpImplWin->Invalidate();
 	}
-    CallEventListeners( VCLEVENT_LISTBOX_ITEMREMOVED, (void*) (-1) );
+    CallEventListeners( VCLEVENT_LISTBOX_ITEMREMOVED, (void*) sal_IntPtr(-1) );
 }
 
 // -----------------------------------------------------------------------
@@ -1062,8 +1065,8 @@ void ListBox::SetNoSelection()
 USHORT ListBox::InsertEntry( const XubString& rStr, USHORT nPos )
 {
 	USHORT nRealPos = mpImplLB->InsertEntry( nPos + mpImplLB->GetEntryList()->GetMRUCount(), rStr );
-	nRealPos -= mpImplLB->GetEntryList()->GetMRUCount();
-    CallEventListeners( VCLEVENT_LISTBOX_ITEMADDED, (void*) nRealPos );
+	nRealPos = sal::static_int_cast<USHORT>(nRealPos - mpImplLB->GetEntryList()->GetMRUCount());
+    CallEventListeners( VCLEVENT_LISTBOX_ITEMADDED, (void*) sal_IntPtr(nRealPos) );
 	return nRealPos;
 }
 
@@ -1072,8 +1075,8 @@ USHORT ListBox::InsertEntry( const XubString& rStr, USHORT nPos )
 USHORT ListBox::InsertEntry( const Image& rImage, USHORT nPos )
 {
 	USHORT nRealPos = mpImplLB->InsertEntry( nPos + mpImplLB->GetEntryList()->GetMRUCount(), rImage );
-	nRealPos -= mpImplLB->GetEntryList()->GetMRUCount();
-    CallEventListeners( VCLEVENT_LISTBOX_ITEMADDED, (void*) nRealPos );
+	nRealPos = sal::static_int_cast<USHORT>(nRealPos - mpImplLB->GetEntryList()->GetMRUCount());
+    CallEventListeners( VCLEVENT_LISTBOX_ITEMADDED, (void*) sal_IntPtr(nRealPos) );
 	return nRealPos;
 }
 
@@ -1082,8 +1085,8 @@ USHORT ListBox::InsertEntry( const Image& rImage, USHORT nPos )
 USHORT ListBox::InsertEntry( const XubString& rStr, const Image& rImage, USHORT nPos )
 {
 	USHORT nRealPos = mpImplLB->InsertEntry( nPos + mpImplLB->GetEntryList()->GetMRUCount(), rStr, rImage );
-	nRealPos -= mpImplLB->GetEntryList()->GetMRUCount();
-    CallEventListeners( VCLEVENT_LISTBOX_ITEMADDED, (void*) nRealPos );
+	nRealPos = sal::static_int_cast<USHORT>(nRealPos - mpImplLB->GetEntryList()->GetMRUCount());
+    CallEventListeners( VCLEVENT_LISTBOX_ITEMADDED, (void*) sal_IntPtr(nRealPos) );
 	return nRealPos;
 }
 
@@ -1099,7 +1102,7 @@ void ListBox::RemoveEntry( const XubString& rStr )
 void ListBox::RemoveEntry( USHORT nPos )
 {
 	mpImplLB->RemoveEntry( nPos + mpImplLB->GetEntryList()->GetMRUCount() );
-    CallEventListeners( VCLEVENT_LISTBOX_ITEMREMOVED, (void*) nPos );
+    CallEventListeners( VCLEVENT_LISTBOX_ITEMREMOVED, (void*) sal_IntPtr(nPos) );
 }
 
 // -----------------------------------------------------------------------
@@ -1108,7 +1111,7 @@ USHORT ListBox::GetEntryPos( const XubString& rStr ) const
 {
 	USHORT nPos = mpImplLB->GetEntryList()->FindEntry( rStr );
 	if ( nPos != LISTBOX_ENTRY_NOTFOUND )
-		nPos -= mpImplLB->GetEntryList()->GetMRUCount();
+		nPos = sal::static_int_cast<USHORT>(nPos - mpImplLB->GetEntryList()->GetMRUCount());
 	return nPos;
 }
 
@@ -1118,7 +1121,7 @@ USHORT ListBox::GetEntryPos( const void* pData ) const
 {
 	USHORT nPos = mpImplLB->GetEntryList()->FindEntry( pData );
 	if ( nPos != LISTBOX_ENTRY_NOTFOUND )
-		nPos -= mpImplLB->GetEntryList()->GetMRUCount();
+		nPos = sal::static_int_cast<USHORT>(nPos - mpImplLB->GetEntryList()->GetMRUCount());
 	return nPos;
 }
 
@@ -1159,7 +1162,7 @@ USHORT ListBox::GetSelectEntryPos( USHORT nIndex ) const
 	{
 		if ( nPos < mpImplLB->GetEntryList()->GetMRUCount() )
 			nPos = mpImplLB->GetEntryList()->FindEntry( mpImplLB->GetEntryList()->GetEntryText( nPos ) );
-		nPos -= mpImplLB->GetEntryList()->GetMRUCount();
+		nPos = sal::static_int_cast<USHORT>(nPos - mpImplLB->GetEntryList()->GetMRUCount());
 	}
 	return nPos;
 }

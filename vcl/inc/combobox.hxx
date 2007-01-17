@@ -78,7 +78,7 @@ private:
 
 #if _SOLAR__PRIVATE
 private:
-    SAL_DLLPRIVATE void     ImplInitData();
+    SAL_DLLPRIVATE void     ImplInitComboBoxData();
     SAL_DLLPRIVATE void     ImplUpdateFloatSelection();
 
     DECL_DLLPRIVATE_LINK(   ImplSelectHdl, void* );
@@ -91,6 +91,7 @@ private:
     DECL_DLLPRIVATE_LINK(   ImplAutocompleteHdl, Edit* );
 
 protected:
+    using Window::ImplInit;
     SAL_DLLPRIVATE void     ImplInit( Window* pParent, WinBits nStyle );
     SAL_DLLPRIVATE WinBits  ImplInitStyle( WinBits nStyle );
     SAL_DLLPRIVATE void     ImplLoadRes( const ResId& rResId );
@@ -192,6 +193,7 @@ public:
 
     Size            CalcMinimumSize() const;
     Size            CalcAdjustedSize( const Size& rPrefSize ) const;
+    using Edit::CalcSize;
     Size            CalcSize( USHORT nColumns, USHORT nLines ) const;
     void            GetMaxVisColumnsAndLines( USHORT& rnCols, USHORT& rnLines ) const;
 
@@ -233,6 +235,7 @@ public:
         the item-relative character index at point <code>rPos</code> or -1
         if no item is at that point.
      */
+    using Control::GetIndexForPoint;
     long GetIndexForPoint( const Point& rPoint, USHORT& rPos ) const;
 
 #ifdef USE_JAVA

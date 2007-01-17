@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_vcl.hxx"
+
 #include <tools/debug.hxx>
 
 #ifndef _SV_SVIDS_HRC
@@ -457,13 +460,15 @@ void Button::ImplDrawAlignedImage( OutputDevice* pDev, Point& rPos,
     }
     else if ( bDrawText && !bDrawImage && !bHasSymbol )
     {
+        Rectangle aDrawRect = aOutRect;
+
         aOutRect = pDev->GetTextRect( aOutRect, aText, nTextStyle );
         rSize = aOutRect.GetSize();
         rPos = aOutRect.TopLeft();
 
         ImplSetFocusRect( aOutRect );
         
-        pDev->DrawText( aOutRect, aText, nTextStyle, pVector, pDisplayText );
+        pDev->DrawText( aDrawRect, aText, nTextStyle, pVector, pDisplayText );
         return;
     }
 
@@ -852,7 +857,7 @@ void Button::DataChanged( const DataChangedEvent& rDCEvt )
 
 // =======================================================================
 
-void PushButton::ImplInitData()
+void PushButton::ImplInitPushButtonData()
 {
     mpWindowImpl->mbPushButton    = TRUE;
 
@@ -1097,7 +1102,7 @@ void PushButton::ImplDrawPushButtonFrame( Window* pDev,
 // -----------------------------------------------------------------------
 
 BOOL PushButton::ImplHitTestPushButton( Window* pDev,
-                                        const Point& rPos, USHORT nStyle )
+                                        const Point& rPos )
 {
     Point       aTempPoint;
     Rectangle   aTestRect( aTempPoint, pDev->GetOutputSizePixel() );
@@ -1187,7 +1192,7 @@ static void ImplDrawBtnDropDownArrow( OutputDevice* pDev,
 // -----------------------------------------------------------------------
 
 void PushButton::ImplDrawPushButtonContent( OutputDevice* pDev, ULONG nDrawFlags,
-                                            const Rectangle& rRect, Rectangle& rTextRect,
+                                            const Rectangle& rRect,
                                             bool bLayout )
 {
     const StyleSettings&    rStyleSettings = GetSettings().GetStyleSettings();
@@ -1409,7 +1414,7 @@ void PushButton::ImplDrawPushButton( bool bLayout )
         // draw content using the same aInRect as non-native VCL would do
         ImplDrawPushButtonContent( this,
                                    (nState&CTRL_STATE_ROLLOVER) ? WINDOW_DRAW_ROLLOVER : 0,
-                                   aInRect, aTextRect, bLayout );
+                                   aInRect, bLayout );
 
 #if ! defined( USE_JAVA )
 	// [ed] note : focus rect not used for neo native widgets
@@ -1425,7 +1430,7 @@ void PushButton::ImplDrawPushButton( bool bLayout )
             ImplDrawPushButtonFrame( this, aInRect, nButtonStyle );
 
         // draw content
-        ImplDrawPushButtonContent( this, 0, aInRect, aTextRect, bLayout );
+        ImplDrawPushButtonContent( this, 0, aInRect, bLayout );
 
         if( ! bLayout && HasFocus() )
         {
@@ -1509,7 +1514,7 @@ BOOL PushButton::ImplIsDefButton() const
 PushButton::PushButton( WindowType nType ) :
     Button( nType )
 {
-    ImplInitData();
+    ImplInitPushButtonData();
 }
 
 // -----------------------------------------------------------------------
@@ -1517,7 +1522,7 @@ PushButton::PushButton( WindowType nType ) :
 PushButton::PushButton( Window* pParent, WinBits nStyle ) :
     Button( WINDOW_PUSHBUTTON )
 {
-    ImplInitData();
+    ImplInitPushButtonData();
     ImplInit( pParent, nStyle );
 }
 
@@ -1526,7 +1531,7 @@ PushButton::PushButton( Window* pParent, WinBits nStyle ) :
 PushButton::PushButton( Window* pParent, const ResId& rResId ) :
     Button( WINDOW_PUSHBUTTON )
 {
-    ImplInitData();
+    ImplInitPushButtonData();
     rResId.SetRT( RSC_PUSHBUTTON );
     WinBits nStyle = ImplInitRes( rResId );
     ImplInit( pParent, nStyle );
@@ -1547,7 +1552,7 @@ PushButton::~PushButton()
 void PushButton::MouseButtonDown( const MouseEvent& rMEvt )
 {
     if ( rMEvt.IsLeft() &&
-         ImplHitTestPushButton( this, rMEvt.GetPosPixel(), ImplGetButtonState() ) )
+         ImplHitTestPushButton( this, rMEvt.GetPosPixel() ) )
     {
         USHORT nTrackFlags = 0;
 
@@ -1612,7 +1617,7 @@ void PushButton::Tracking( const TrackingEvent& rTEvt )
     }
     else
     {
-        if ( ImplHitTestPushButton( this, rTEvt.GetMouseEvent().GetPosPixel(), ImplGetButtonState() ) )
+        if ( ImplHitTestPushButton( this, rTEvt.GetMouseEvent().GetPosPixel() ) )
         {
             if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )
             {
@@ -1719,7 +1724,7 @@ void PushButton::FillLayoutData() const
 
 // -----------------------------------------------------------------------
 
-void PushButton::Paint( const Rectangle& rRect )
+void PushButton::Paint( const Rectangle& )
 {
     ImplDrawPushButton();
 }
@@ -1766,7 +1771,7 @@ void PushButton::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize,
         nButtonStyle |= BUTTON_DRAW_CHECKED;
     aRect = aDecoView.DrawButton( aRect, nButtonStyle );
 
-    ImplDrawPushButtonContent( pDev, nFlags, aRect, aTextRect, false );
+    ImplDrawPushButtonContent( pDev, nFlags, aRect, false );
     pDev->Pop();
 }
 
@@ -1867,7 +1872,7 @@ long PushButton::PreNotify( NotifyEvent& rNEvt )
     long nDone = 0;
     const MouseEvent* pMouseEvt = NULL;
 
-    if( (rNEvt.GetType() == EVENT_MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) )
+    if( (rNEvt.GetType() == EVENT_MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != NULL )
     {
         if( pMouseEvt->IsEnterWindow() || pMouseEvt->IsLeaveWindow() )
         {
@@ -2220,7 +2225,7 @@ void HelpButton::Click()
 
 // =======================================================================
 
-void RadioButton::ImplInitData()
+void RadioButton::ImplInitRadioButtonData()
 {
     mbChecked       = FALSE;
     mbSaveValue     = FALSE;
@@ -2318,7 +2323,7 @@ void RadioButton::DrawRadioButtonState( )
 
 void RadioButton::ImplDrawRadioButtonState()
 {
-    USHORT nStyle = 0;
+    USHORT nButtonStyle = 0;
     BOOL   bNativeOK = FALSE;
 
     // no native drawing for image radio buttons
@@ -2372,8 +2377,8 @@ if ( bNativeOK == FALSE )
         aImageSize.Height() = CalcZoom( aImageSize.Height() );
 
         // Border und Selektionsstatus ausgeben
-        nStyle = FRAME_DRAW_DOUBLEIN;
-        aImageRect = aDecoView.DrawFrame( aImageRect, nStyle );
+        nButtonStyle = FRAME_DRAW_DOUBLEIN;
+        aImageRect = aDecoView.DrawFrame( aImageRect, nButtonStyle );
         if ( (ImplGetButtonState() & BUTTON_DRAW_PRESSED) || !bEnabled )
             SetFillColor( rStyleSettings.GetFaceColor() );
         else
@@ -2382,12 +2387,12 @@ if ( bNativeOK == FALSE )
         DrawRect( aImageRect );
 
         // Image ausgeben
-        nStyle = 0;
+        nButtonStyle = 0;
         if ( !bEnabled )
 #ifdef USE_JAVA
-            nStyle |= IMAGE_DRAW_SEMITRANSPARENT;
+            nButtonStyle |= IMAGE_DRAW_SEMITRANSPARENT;
 #else
-            nStyle |= IMAGE_DRAW_DISABLE;
+            nButtonStyle |= IMAGE_DRAW_DISABLE;
 #endif
 
 		// check for HC mode
@@ -2406,9 +2411,9 @@ if ( bNativeOK == FALSE )
         aImagePos.X() += (aImageRect.GetWidth()-aImageSize.Width())/2;
         aImagePos.Y() += (aImageRect.GetHeight()-aImageSize.Height())/2;
         if ( IsZoom() )
-            DrawImage( aImagePos, aImageSize, *pImage, nStyle );
+            DrawImage( aImagePos, aImageSize, *pImage, nButtonStyle );
         else
-            DrawImage( aImagePos, *pImage, nStyle );
+            DrawImage( aImagePos, *pImage, nButtonStyle );
 
         aImageRect.Left()++;
         aImageRect.Top()++;
@@ -2696,7 +2701,7 @@ void RadioButton::ImplCallClick( BOOL bGrabFocus, USHORT nFocusFlags )
 RadioButton::RadioButton( Window* pParent, WinBits nStyle ) :
     Button( WINDOW_RADIOBUTTON )
 {
-    ImplInitData();
+    ImplInitRadioButtonData();
     ImplInit( pParent, nStyle );
 }
 
@@ -2705,7 +2710,7 @@ RadioButton::RadioButton( Window* pParent, WinBits nStyle ) :
 RadioButton::RadioButton( Window* pParent, const ResId& rResId ) :
     Button( WINDOW_RADIOBUTTON )
 {
-    ImplInitData();
+    ImplInitRadioButtonData();
     rResId.SetRT( RSC_RADIOBUTTON );
     WinBits nStyle = ImplInitRes( rResId );
     ImplInit( pParent, nStyle );
@@ -2854,7 +2859,7 @@ void RadioButton::FillLayoutData() const
 
 // -----------------------------------------------------------------------
 
-void RadioButton::Paint( const Rectangle& rRect )
+void RadioButton::Paint( const Rectangle& )
 {
     ImplDrawRadioButton();
 }
@@ -3040,7 +3045,7 @@ long RadioButton::PreNotify( NotifyEvent& rNEvt )
     long nDone = 0;
     const MouseEvent* pMouseEvt = NULL;
 
-    if( (rNEvt.GetType() == EVENT_MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) )
+    if( (rNEvt.GetType() == EVENT_MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != NULL )
     {
         if( !pMouseEvt->GetButtons() && !pMouseEvt->IsSynthetic() && !pMouseEvt->IsModifierChanged() )
         {
@@ -3181,6 +3186,31 @@ Size RadioButton::ImplGetRadioImageSize() const
     return aSize;
 }
 
+static void LoadThemedImageList (const StyleSettings &rStyleSettings,
+								 ImageList *pList, const ResId &rResId,
+								 int nImages)
+{
+	Color pColorAry1[6];
+	Color pColorAry2[6];
+	pColorAry1[0] = Color( 0xC0, 0xC0, 0xC0 );
+	pColorAry1[1] = Color( 0xFF, 0xFF, 0x00 );
+	pColorAry1[2] = Color( 0xFF, 0xFF, 0xFF );
+	pColorAry1[3] = Color( 0x80, 0x80, 0x80 );
+	pColorAry1[4] = Color( 0x00, 0x00, 0x00 );
+	pColorAry1[5] = Color( 0x00, 0xFF, 0x00 );
+	pColorAry2[0] = rStyleSettings.GetFaceColor();
+	pColorAry2[1] = rStyleSettings.GetWindowColor();
+	pColorAry2[2] = rStyleSettings.GetLightColor();
+	pColorAry2[3] = rStyleSettings.GetShadowColor();
+	pColorAry2[4] = rStyleSettings.GetDarkShadowColor();
+	pColorAry2[5] = rStyleSettings.GetWindowTextColor();
+	
+	Color aMaskColor(0x00, 0x00, 0xFF );
+	// FIXME: do we want the mask for the checkbox ?
+	pList->InsertFromHorizontalBitmap (rResId, nImages, &aMaskColor,
+									   pColorAry1, pColorAry2, 6);
+}
+
 Image RadioButton::GetRadioImage( const AllSettings& rSettings, USHORT nFlags )
 {
     ImplSVData*             pSVData = ImplGetSVData();
@@ -3203,10 +3233,8 @@ Image RadioButton::GetRadioImage( const AllSettings& rSettings, USHORT nFlags )
         pSVData->maCtrlData.mnLastRadioWColor = rStyleSettings.GetWindowColor().GetColor();
         pSVData->maCtrlData.mnLastRadioLColor = rStyleSettings.GetLightColor().GetColor();
 
-        long    aTempAry1[(6*sizeof(Color))/sizeof(long)];
-        long    aTempAry2[(6*sizeof(Color))/sizeof(long)];
-        Color*  pColorAry1 = (Color*)aTempAry1;
-        Color*  pColorAry2 = (Color*)aTempAry2;
+        Color pColorAry1[6];
+        Color pColorAry2[6];
         pColorAry1[0] = Color( 0xC0, 0xC0, 0xC0 );
         pColorAry1[1] = Color( 0xFF, 0xFF, 0x00 );
         pColorAry1[2] = Color( 0xFF, 0xFF, 0xFF );
@@ -3221,112 +3249,110 @@ Image RadioButton::GetRadioImage( const AllSettings& rSettings, USHORT nFlags )
         pColorAry2[5] = rStyleSettings.GetWindowTextColor();
 
         ResMgr* pResMgr = ImplGetResMgr();
-        Bitmap aBmp;
+        pSVData->maCtrlData.mpRadioImgList = new ImageList();
         if( pResMgr )
-            aBmp = Bitmap( ResId( SV_RESID_BITMAP_RADIO+nStyle, ImplGetResMgr() ) );
+			LoadThemedImageList( rStyleSettings,
+								 pSVData->maCtrlData.mpRadioImgList,
+								 ResId( SV_RESID_BITMAP_RADIO+nStyle, ImplGetResMgr() ), 6 );
+		pSVData->maCtrlData.mnRadioStyle = nStyle;
+
 #ifdef USE_JAVA
-        Size aBmpSize( aBmp.GetSizePixel() );
-        SalVirtualDevice *pSalVirDev = pSVData->mpDefInst->CreateVirtualDevice( NULL, aBmpSize.Width(), aBmpSize.Height(), 32 );
-        if ( pSalVirDev )
+        USHORT nItems = pSVData->maCtrlData.mpRadioImgList->GetImageCount();
+        Size aBmpSize( pSVData->maCtrlData.mpRadioImgList->GetImageSize() );
+        if ( nItems > 0 && aBmpSize.Width() > 0 && aBmpSize.Height() > 0 )
         {
-            JavaSalGraphics *pGraphics = (JavaSalGraphics *)pSalVirDev->GetGraphics();
-            if ( pGraphics )
+            SalVirtualDevice *pSalVirDev = pSVData->mpDefInst->CreateVirtualDevice( NULL, aBmpSize.Width(), aBmpSize.Height(), 32 );
+            if ( pSalVirDev )
             {
-                if ( pGraphics->IsNativeControlSupported( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL ) )
+                JavaSalGraphics *pGraphics = (JavaSalGraphics *)pSalVirDev->GetGraphics();
+                if ( pGraphics )
                 {
-                    ImplControlValue aControlValue;
-                    Region aCtrlRegion = Region( Rectangle( Point( 0, 0 ), Size( 1, 1 ) ) );
-                    ControlState nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED;
-                    SalControlHandle aControlHandle;
-                    Region aBoundingRgn, aContentRgn;
-                    if ( pGraphics->GetNativeControlRegion( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString(), aBoundingRgn, aContentRgn, NULL ) )
+                    if ( pGraphics->IsNativeControlSupported( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL ) )
                     {
-                        aBmpSize = aContentRgn.GetBoundRect().GetSize();
-                        aBmpSize.Width() *= 6;
-                        pSalVirDev->ReleaseGraphics( pGraphics );
-                        pGraphics = NULL;
-                        pSalVirDev->SetSize( aBmpSize.Width(), aBmpSize.Height() );
-                    }
-                }
-            }
-
-            if ( !pGraphics )
-                pGraphics = (JavaSalGraphics *)pSalVirDev->GetGraphics();
-
-            if ( pGraphics )
-            { 
-                if ( pGraphics->IsNativeControlSupported( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL ) )
-                {
-                    Point aPos;
-                    Size aSize( aBmpSize.Width() / 6, aBmpSize.Height() );
-
-                    ControlState nState = 0;
-                    ImplControlValue aControlValue;
-                    SalControlHandle aControlHandle;
-                    for ( int i = 0; i < 6; i++ )
-                    {
-                        switch ( i + 1 )
+                        ImplControlValue aControlValue;
+                        Region aCtrlRegion = Region( Rectangle( Point( 0, 0 ), Size( 1, 1 ) ) );
+                        ControlState nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED;
+                        SalControlHandle aControlHandle;
+                        Region aBoundingRgn, aContentRgn;
+                        if ( pGraphics->GetNativeControlRegion( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString(), aBoundingRgn, aContentRgn, NULL ) )
                         {
-                            case 1:
-                                nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED;
-                                aControlValue.setTristateVal( BUTTONVALUE_OFF );
-                                break;
-                            case 2:
-                                nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED;
-                                aControlValue.setTristateVal( BUTTONVALUE_ON );
-                                break;
-                            case 3:
-                                nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED | CTRL_STATE_PRESSED;
-                                aControlValue.setTristateVal( BUTTONVALUE_OFF );
-                                break;
-                            case 4:
-                                nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED | CTRL_STATE_PRESSED;
-                                aControlValue.setTristateVal( BUTTONVALUE_ON );
-                                break;
-                            case 5:
-                                nState = CTRL_STATE_DEFAULT;
-                                aControlValue.setTristateVal( BUTTONVALUE_OFF );
-                                break;
-                            case 6:
-                                nState = CTRL_STATE_DEFAULT;
-                                aControlValue.setTristateVal( BUTTONVALUE_ON );
-                                break;
-                            default:
-                                nState = CTRL_STATE_DEFAULT;
-                                aControlValue.setTristateVal( BUTTONVALUE_MIXED );
-                                break;
+                            aBmpSize = aContentRgn.GetBoundRect().GetSize();
+                            aBmpSize.Width() *= nItems;
+                            pSalVirDev->ReleaseGraphics( pGraphics );
+                            pGraphics = NULL;
+                            pSalVirDev->SetSize( aBmpSize.Width(), aBmpSize.Height() );
                         }
-
-                        Region aCtrlRegion = Region( Rectangle( aPos, aSize ) );
-                        pGraphics->drawNativeControl( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString() );
-                        aPos.X() += aSize.Width();
-                    }
-
-                    SalBitmap *pSalBmp = pGraphics->GetBitmap( 0, 0, aBmpSize.Width(), aBmpSize.Height(), NULL );
-                    if ( pSalBmp )
-                    {
-                        ImpBitmap* pImpBmp = new ImpBitmap(); 
-                        pImpBmp->ImplSetSalBitmap( pSalBmp );
-                        aBmp.ImplSetImpBitmap( pImpBmp );
-                        pSVData->maCtrlData.mpRadioImgList = new ImageList( aBmp, 6 );
                     }
                 }
 
-                pSalVirDev->ReleaseGraphics( pGraphics );
+                if ( !pGraphics )
+                    pGraphics = (JavaSalGraphics *)pSalVirDev->GetGraphics();
+
+                if ( pGraphics )
+                { 
+                    if ( pGraphics->IsNativeControlSupported( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL ) )
+                    {
+                        Point aPos;
+                        Size aSize( aBmpSize.Width() / nItems, aBmpSize.Height() );
+
+                        ControlState nState = 0;
+                        ImplControlValue aControlValue;
+                        SalControlHandle aControlHandle;
+                        for ( USHORT i = 0; i < nItems; i++ )
+                        {
+                            switch ( i + 1 )
+                            {
+                                case 1:
+                                    nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED;
+                                    aControlValue.setTristateVal( BUTTONVALUE_OFF );
+                                    break;
+                                case 2:
+                                    nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED;
+                                    aControlValue.setTristateVal( BUTTONVALUE_ON );
+                                    break;
+                                case 3:
+                                    nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED | CTRL_STATE_PRESSED;
+                                    aControlValue.setTristateVal( BUTTONVALUE_OFF );
+                                    break;
+                                case 4:
+                                    nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED | CTRL_STATE_PRESSED;
+                                    aControlValue.setTristateVal( BUTTONVALUE_ON );
+                                    break;
+                                case 5:
+                                    nState = CTRL_STATE_DEFAULT;
+                                    aControlValue.setTristateVal( BUTTONVALUE_OFF );
+                                    break;
+                                case 6:
+                                    nState = CTRL_STATE_DEFAULT;
+                                    aControlValue.setTristateVal( BUTTONVALUE_ON );
+                                    break;
+                                default:
+                                    nState = CTRL_STATE_DEFAULT;
+                                    aControlValue.setTristateVal( BUTTONVALUE_MIXED );
+                                    break;
+                            }
+
+                            Region aCtrlRegion = Region( Rectangle( aPos, aSize ) );
+                            pGraphics->drawNativeControl( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString() );
+
+                            SalBitmap *pSalBmp = pGraphics->GetBitmap( aPos.X(), 0, aSize.Width(), aBmpSize.Height(), NULL );
+                            if ( pSalBmp )
+                            {
+                                Bitmap aBmp( pSalBmp );
+                                pSVData->maCtrlData.mpRadioImgList->AddImage( i + 1, Image( aBmp ) );
+                            }
+
+                            aPos.X() += aSize.Width();
+                        }
+                    }
+
+                    pSalVirDev->ReleaseGraphics( pGraphics );
+                }
+
+                pSVData->mpDefInst->DestroyVirtualDevice( pSalVirDev );
             }
-
-            pSVData->mpDefInst->DestroyVirtualDevice( pSalVirDev );
-        }
-
-        if ( !pSVData->maCtrlData.mpRadioImgList )
-        {
-#endif	// USE_JAVA
-        aBmp.Replace( pColorAry1, pColorAry2, 6, NULL );
-        pSVData->maCtrlData.mpRadioImgList = new ImageList( aBmp, Color( 0x00, 0x00, 0xFF ), 6 );
-#ifdef USE_JAVA
         }
 #endif	// USE_JAVA
-        pSVData->maCtrlData.mnRadioStyle = nStyle;
     }
 
     USHORT nId;
@@ -3394,7 +3420,7 @@ Size RadioButton::CalcMinimumSize( long nMaxWidth ) const
 
 // =======================================================================
 
-void CheckBox::ImplInitData()
+void CheckBox::ImplInitCheckBoxData()
 {
     meState         = STATE_NOCHECK;
     meSaveValue     = STATE_NOCHECK;
@@ -3655,7 +3681,7 @@ void CheckBox::ImplCheck()
 CheckBox::CheckBox( Window* pParent, WinBits nStyle ) :
     Button( WINDOW_CHECKBOX )
 {
-    ImplInitData();
+    ImplInitCheckBoxData();
     ImplInit( pParent, nStyle );
 }
 
@@ -3664,7 +3690,7 @@ CheckBox::CheckBox( Window* pParent, WinBits nStyle ) :
 CheckBox::CheckBox( Window* pParent, const ResId& rResId ) :
     Button( WINDOW_CHECKBOX )
 {
-    ImplInitData();
+    ImplInitCheckBoxData();
     rResId.SetRT( RSC_CHECKBOX );
     WinBits nStyle = ImplInitRes( rResId );
     ImplInit( pParent, nStyle );
@@ -3795,7 +3821,7 @@ void CheckBox::FillLayoutData() const
 
 // -----------------------------------------------------------------------
 
-void CheckBox::Paint( const Rectangle& rRect )
+void CheckBox::Paint( const Rectangle& )
 {
     ImplDrawCheckBox();
 }
@@ -4032,7 +4058,7 @@ long CheckBox::PreNotify( NotifyEvent& rNEvt )
     long nDone = 0;
     const MouseEvent* pMouseEvt = NULL;
 
-    if( (rNEvt.GetType() == EVENT_MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) )
+    if( (rNEvt.GetType() == EVENT_MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != NULL )
     {
         if( !pMouseEvt->GetButtons() && !pMouseEvt->IsSynthetic() && !pMouseEvt->IsModifierChanged() )
         {
@@ -4145,159 +4171,141 @@ Image CheckBox::GetCheckImage( const AllSettings& rSettings, USHORT nFlags )
         pSVData->maCtrlData.mnLastCheckWColor = rStyleSettings.GetWindowColor().GetColor();
         pSVData->maCtrlData.mnLastCheckLColor = rStyleSettings.GetLightColor().GetColor();
 
-        long    aTempAry1[(6*sizeof(Color))/sizeof(long)];
-        long    aTempAry2[(6*sizeof(Color))/sizeof(long)];
-        Color*  pColorAry1 = (Color*)aTempAry1;
-        Color*  pColorAry2 = (Color*)aTempAry2;
-        pColorAry1[0] = Color( 0xC0, 0xC0, 0xC0 );
-        pColorAry1[1] = Color( 0xFF, 0xFF, 0x00 );
-        pColorAry1[2] = Color( 0xFF, 0xFF, 0xFF );
-        pColorAry1[3] = Color( 0x80, 0x80, 0x80 );
-        pColorAry1[4] = Color( 0x00, 0x00, 0x00 );
-        pColorAry1[5] = Color( 0x00, 0xFF, 0x00 );
-        pColorAry2[0] = rStyleSettings.GetFaceColor();
-        pColorAry2[1] = rStyleSettings.GetWindowColor();
-        pColorAry2[2] = rStyleSettings.GetLightColor();
-        pColorAry2[3] = rStyleSettings.GetShadowColor();
-        pColorAry2[4] = rStyleSettings.GetDarkShadowColor();
-        pColorAry2[5] = rStyleSettings.GetWindowTextColor();
-
         ResMgr* pResMgr = ImplGetResMgr();
-        Bitmap aBmp;
+        pSVData->maCtrlData.mpCheckImgList = new ImageList();
         if( pResMgr )
-            aBmp = Bitmap( ResId( SV_RESID_BITMAP_CHECK+nStyle, ImplGetResMgr() ) );
+			LoadThemedImageList( rStyleSettings,
+								 pSVData->maCtrlData.mpCheckImgList,
+								 ResId( SV_RESID_BITMAP_CHECK+nStyle, ImplGetResMgr() ), 9 );
+        pSVData->maCtrlData.mnCheckStyle = nStyle;
+
 #ifdef USE_JAVA
-        Size aBmpSize( aBmp.GetSizePixel() );
-        SalVirtualDevice *pSalVirDev = pSVData->mpDefInst->CreateVirtualDevice( NULL, aBmpSize.Width(), aBmpSize.Height(), 32 );
-        if ( pSalVirDev )
+        USHORT nItems = pSVData->maCtrlData.mpCheckImgList->GetImageCount();
+        Size aBmpSize( pSVData->maCtrlData.mpCheckImgList->GetImageSize() );
+        if ( nItems > 0 && aBmpSize.Width() > 0 && aBmpSize.Height() > 0 )
         {
-            JavaSalGraphics *pGraphics = (JavaSalGraphics *)pSalVirDev->GetGraphics();
-            if ( pGraphics )
+            SalVirtualDevice *pSalVirDev = pSVData->mpDefInst->CreateVirtualDevice( NULL, aBmpSize.Width(), aBmpSize.Height(), 32 );
+            if ( pSalVirDev )
             {
-                if ( pGraphics->IsNativeControlSupported( CTRL_CHECKBOX, PART_ENTIRE_CONTROL ) )
+                JavaSalGraphics *pGraphics = (JavaSalGraphics *)pSalVirDev->GetGraphics();
+                if ( pGraphics )
                 {
-                    ImplControlValue aControlValue;
-                    Region aCtrlRegion = Region( Rectangle( Point( 0, 0 ), Size( 1, 1 ) ) );
-                    ControlState nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED;
-                    SalControlHandle aControlHandle;
-                    Region aBoundingRgn, aContentRgn;
-                    if ( pGraphics->GetNativeControlRegion( CTRL_CHECKBOX, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString(), aBoundingRgn, aContentRgn, NULL ) )
+                    if ( pGraphics->IsNativeControlSupported( CTRL_CHECKBOX, PART_ENTIRE_CONTROL ) )
                     {
-                        aBmpSize = aContentRgn.GetBoundRect().GetSize();
-                        aBmpSize.Width() *= 9;
-                        pSalVirDev->ReleaseGraphics( pGraphics );
-                        pGraphics = NULL;
-                        pSalVirDev->SetSize( aBmpSize.Width(), aBmpSize.Height() );
+                        ImplControlValue aControlValue;
+                        Region aCtrlRegion = Region( Rectangle( Point( 0, 0 ), Size( 1, 1 ) ) );
+                        ControlState nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED;
+                        SalControlHandle aControlHandle;
+                        Region aBoundingRgn, aContentRgn;
+                        if ( pGraphics->GetNativeControlRegion( CTRL_CHECKBOX, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString(), aBoundingRgn, aContentRgn, NULL ) )
+                        {
+                            aBmpSize = aContentRgn.GetBoundRect().GetSize();
+                            aBmpSize.Width() *= nItems;
+                            pSalVirDev->ReleaseGraphics( pGraphics );
+                            pGraphics = NULL;
+                            pSalVirDev->SetSize( aBmpSize.Width(), aBmpSize.Height() );
+                        }
                     }
                 }
-            }
 
-            if ( !pGraphics )
-                pGraphics = (JavaSalGraphics *)pSalVirDev->GetGraphics();
+                if ( !pGraphics )
+                    pGraphics = (JavaSalGraphics *)pSalVirDev->GetGraphics();
 
-            if ( pGraphics )
-            {
-                if ( pGraphics->IsNativeControlSupported( CTRL_CHECKBOX, PART_ENTIRE_CONTROL ) )
+                if ( pGraphics )
                 {
-                    Point aPos;
-                    Size aSize( aBmpSize.Width() / 9, aBmpSize.Height() );
-
-                    ControlState nState = 0;
-                    ImplControlValue aControlValue;
-                    SalControlHandle aControlHandle;
-                    for ( int i = 0; i < 9; i++ )
+                    if ( pGraphics->IsNativeControlSupported( CTRL_CHECKBOX, PART_ENTIRE_CONTROL ) )
                     {
-                        switch ( i + 1 )
-                        {
-                            case 1:
-                                nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED;
-                                aControlValue.setTristateVal( BUTTONVALUE_OFF );
-                                break;
-                            case 2:
-                                nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED;
-                                aControlValue.setTristateVal( BUTTONVALUE_ON );
-                                break;
-                            case 3:
-                                nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED | CTRL_STATE_PRESSED;
-                                aControlValue.setTristateVal( BUTTONVALUE_OFF );
-                                break;
-                            case 4:
-                                nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED | CTRL_STATE_PRESSED;
-                                aControlValue.setTristateVal( BUTTONVALUE_ON );
-                                break;
-                            case 5:
-                                nState = CTRL_STATE_DEFAULT;
-                                aControlValue.setTristateVal( BUTTONVALUE_OFF );
-                                break;
-                            case 6:
-                                nState = CTRL_STATE_DEFAULT;
-                                aControlValue.setTristateVal( BUTTONVALUE_ON );
-                                break;
-                            case 7:
-                                nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED;
-                                aControlValue.setTristateVal( BUTTONVALUE_MIXED );
-                            case 8:
-                                nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED | CTRL_STATE_PRESSED;
-                                aControlValue.setTristateVal( BUTTONVALUE_MIXED );
-                            case 9:
-                                nState = CTRL_STATE_DEFAULT;
-                                aControlValue.setTristateVal( BUTTONVALUE_MIXED );
-                                break;
-                            default:
-                                nState = CTRL_STATE_DEFAULT;
-                                aControlValue.setTristateVal( BUTTONVALUE_DONTKNOW );
-                                break;
-                        }
+                        Point aPos;
+                        Size aSize( aBmpSize.Width() / nItems, aBmpSize.Height() );
 
-                        Region aCtrlRegion = Region( Rectangle( aPos, aSize ) );
-                        pGraphics->drawNativeControl( CTRL_CHECKBOX, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString() );
-                        aPos.X() += aSize.Width();
-                    }
-
-                    SalBitmap *pSalBmp = pGraphics->GetBitmap( 0, 0, aBmpSize.Width(), aBmpSize.Height(), NULL );
-                    if ( pSalBmp )
-                    {
-                        // OOo will change some semi-transparent pixels to pink
-                        // so force those pixels to fully transparent
-                        BitmapBuffer *pBuffer = pSalBmp->AcquireBuffer( false );
-                        if ( pBuffer )
+                        ControlState nState = 0;
+                        ImplControlValue aControlValue;
+                        SalControlHandle aControlHandle;
+                        for ( int i = 0; i < nItems; i++ )
                         {
-                            if ( pBuffer->mpBits )
+                            switch ( i + 1 )
                             {
-                                long nPixels = pBuffer->mnWidth * pBuffer->mnHeight;
-                                int *pBits = (int *)pBuffer->mpBits;
-                                for ( long i = 0; i < nPixels; i++ )
-                                {
-                                    if ( ( pBits[ i ] & 0xFF000000 ) < 0xC7000000 )
-                                        pBits[ i ] = 0x00000000;
-                                }
+                                case 1:
+                                    nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED;
+                                    aControlValue.setTristateVal( BUTTONVALUE_OFF );
+                                    break;
+                                case 2:
+                                    nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED;
+                                    aControlValue.setTristateVal( BUTTONVALUE_ON );
+                                    break;
+                                case 3:
+                                    nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED | CTRL_STATE_PRESSED;
+                                    aControlValue.setTristateVal( BUTTONVALUE_OFF );
+                                    break;
+                                case 4:
+                                    nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED | CTRL_STATE_PRESSED;
+                                    aControlValue.setTristateVal( BUTTONVALUE_ON );
+                                    break;
+                                case 5:
+                                    nState = CTRL_STATE_DEFAULT;
+                                    aControlValue.setTristateVal( BUTTONVALUE_OFF );
+                                    break;
+                                case 6:
+                                    nState = CTRL_STATE_DEFAULT;
+                                    aControlValue.setTristateVal( BUTTONVALUE_ON );
+                                    break;
+                                case 7:
+                                    nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED;
+                                    aControlValue.setTristateVal( BUTTONVALUE_MIXED );
+                                case 8:
+                                    nState = CTRL_STATE_DEFAULT | CTRL_STATE_ENABLED | CTRL_STATE_PRESSED;
+                                    aControlValue.setTristateVal( BUTTONVALUE_MIXED );
+                                case 9:
+                                    nState = CTRL_STATE_DEFAULT;
+                                    aControlValue.setTristateVal( BUTTONVALUE_MIXED );
+                                    break;
+                                default:
+                                    nState = CTRL_STATE_DEFAULT;
+                                    aControlValue.setTristateVal( BUTTONVALUE_DONTKNOW );
+                                    break;
                             }
 
-                            pSalBmp->ReleaseBuffer( pBuffer, false );
-                        }
+                            Region aCtrlRegion = Region( Rectangle( aPos, aSize ) );
+                            pGraphics->drawNativeControl( CTRL_CHECKBOX, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString() );
 
-                        ImpBitmap* pImpBmp = new ImpBitmap(); 
-                        pImpBmp->ImplSetSalBitmap( pSalBmp );
-                        aBmp.ImplSetImpBitmap( pImpBmp );
-                        pSVData->maCtrlData.mpCheckImgList = new ImageList( aBmp, 9 );
+                            SalBitmap *pSalBmp = pGraphics->GetBitmap( 0, 0, aBmpSize.Width(), aBmpSize.Height(), NULL );
+                            if ( pSalBmp )
+                            {
+                                // OOo will change some semi-transparent pixels
+                                // to pink so force those pixels to fully
+                                // transparent
+                                BitmapBuffer *pBuffer = pSalBmp->AcquireBuffer( false );
+                                if ( pBuffer )
+                                {
+                                    if ( pBuffer->mpBits )
+                                    {
+                                        long nPixels = pBuffer->mnWidth * pBuffer->mnHeight;
+                                        int *pBits = (int *)pBuffer->mpBits;
+                                        for ( long j = 0; j < nPixels; j++ )
+                                        {
+                                            if ( ( pBits[ j ] & 0xFF000000 ) < 0xC7000000 )
+                                                pBits[ j ] = 0x00000000;
+                                        }
+                                    }
+
+                                    pSalBmp->ReleaseBuffer( pBuffer, false );
+                                }
+
+                                Bitmap aBmp( pSalBmp );
+                                pSVData->maCtrlData.mpCheckImgList->AddImage( i + 1, Image( aBmp ) );
+                            }
+
+                            aPos.X() += aSize.Width();
+                        }
                     }
+
+                    pSalVirDev->ReleaseGraphics( pGraphics );
                 }
 
-                pSalVirDev->ReleaseGraphics( pGraphics );
+                pSVData->mpDefInst->DestroyVirtualDevice( pSalVirDev );
             }
-
-            pSVData->mpDefInst->DestroyVirtualDevice( pSalVirDev );
-        }
-
-        if ( !pSVData->maCtrlData.mpCheckImgList )
-        {
-#endif	// USE_JAVA
-        aBmp.Replace( pColorAry1, pColorAry2, 6, NULL );
-        pSVData->maCtrlData.mpCheckImgList = new ImageList( aBmp, 9 );
-#ifdef USE_JAVA
         }
 #endif	// USE_JAVA
-        pSVData->maCtrlData.mnCheckStyle = nStyle;
     }
 
     USHORT nId;

@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_vcl.hxx"
+
 #ifndef _TOOLS_DEBUG_HXX
 #include <tools/debug.hxx>
 #endif
@@ -183,7 +186,7 @@ void ImplEntryList::SelectEntry( USHORT nPos, BOOL bSelect )
 	{
 		pImplEntry->mbIsSelected = bSelect;
 		if ( mbCallSelectionChangedHdl )
-			maSelectionChangedHdl.Call( (void*)nPos );
+			maSelectionChangedHdl.Call( (void*)sal_IntPtr(nPos) );
 	}
 }
 
@@ -332,7 +335,7 @@ USHORT ImplEntryList::FindMatchingEntry( const XubString& rStr, USHORT nStart, B
 			n--;
 
 		ImplEntryType* pImplEntry = GetEntry( n );
-        BOOL bMatch = bLazy ? rI18nHelper.MatchString( rStr, pImplEntry->maStr ) : ( rStr.Match( pImplEntry->maStr ) == STRING_MATCH );
+        BOOL bMatch = bLazy ? rI18nHelper.MatchString( rStr, pImplEntry->maStr ) != 0 : ( rStr.Match( pImplEntry->maStr ) == STRING_MATCH );
 		if ( bMatch )
 		{
 			nPos = n;
@@ -1339,7 +1342,6 @@ BOOL ImplListBoxWindow::ProcessKeyInput( const KeyEvent& rKEvt )
 	BOOL bCtrl	= aKeyCode.IsMod1();
 	BOOL bMod2 = aKeyCode.IsMod2();
 	BOOL bDone = FALSE;
-	USHORT nSelectDirection = IMPL_SELECT_NODIRECTION;
 
 	switch( aKeyCode.GetCode() )
 	{
@@ -1654,7 +1656,7 @@ void ImplListBoxWindow::ImplPaint( USHORT nPos, BOOL bErase, bool bLayout )
 		aRect.Left() -= mnLeft;
 		if ( nPos < GetEntryList()->GetMRUCount() )
 			nPos = GetEntryList()->FindEntry( GetEntryList()->GetEntryText( nPos ) );
-		nPos -= GetEntryList()->GetMRUCount();
+		nPos = sal::static_int_cast<USHORT>(nPos - GetEntryList()->GetMRUCount());
 		UserDrawEvent aUDEvt( this, aRect, nPos, 0 );
 		maUserDrawHdl.Call( &aUDEvt );
 		mbInUserDraw = FALSE;
@@ -1718,8 +1720,8 @@ void ImplListBoxWindow::DrawEntry( USHORT nPos, BOOL bDrawImage, BOOL bDrawText,
 
             if( !bDrawTextAtImagePos && ( mpEntryList->HasEntryImage(nPos) || IsUserDrawEnabled() ) )
 			{
-				USHORT nMaxWidth = Max( mnMaxImgWidth, (USHORT)maUserItemSize.Width() );
-                aTextRect.Left() += nMaxWidth + IMG_TXT_DISTANCE;
+				USHORT nImageWidth = Max( mnMaxImgWidth, (USHORT)maUserItemSize.Width() );
+                aTextRect.Left() += nImageWidth + IMG_TXT_DISTANCE;
 			}
 
             if( bLayout )
@@ -1928,7 +1930,7 @@ void ImplListBoxWindow::ScrollHorz( short n )
 	if ( nDiff )
 	{
         delete mpLayoutData, mpLayoutData = NULL;
-		mnLeft += nDiff;
+		mnLeft = sal::static_int_cast<USHORT>(mnLeft + nDiff);
         Update();
 		ImplHideFocusRect();
 		Scroll( -nDiff, 0 );
@@ -2569,7 +2571,7 @@ void ImplWin::MBDown()
 
 // -----------------------------------------------------------------------
 
-void ImplWin::MouseButtonDown( const MouseEvent& rMEvt )
+void ImplWin::MouseButtonDown( const MouseEvent& )
 {
 	if( IsEnabled() )
 	{
@@ -2593,7 +2595,7 @@ long ImplWin::PreNotify( NotifyEvent& rNEvt )
     long nDone = 0;
     const MouseEvent* pMouseEvt = NULL;
 
-    if( (rNEvt.GetType() == EVENT_MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) )
+    if( (rNEvt.GetType() == EVENT_MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != NULL )
     {
         if( pMouseEvt->IsEnterWindow() || pMouseEvt->IsLeaveWindow() )
         {
@@ -2647,7 +2649,7 @@ void ImplWin::ImplDraw( bool bLayout )
             if( GetParent() )
             {
                 Window *pChild = GetParent()->GetWindow( WINDOW_FIRSTCHILD );
-                while( pChild && !(bMouseOver = pChild->IsMouseOver()) )
+                while( pChild && (bMouseOver = pChild->IsMouseOver()) == FALSE )
                     pChild = pChild->GetWindow( WINDOW_NEXT );
             }
     	    
@@ -2726,7 +2728,7 @@ void ImplWin::ImplDraw( bool bLayout )
 
 // -----------------------------------------------------------------------
 
-void ImplWin::Paint( const Rectangle& rRect )
+void ImplWin::Paint( const Rectangle& )
 {
     ImplDraw();
 }
@@ -2740,7 +2742,7 @@ void ImplWin::DrawEntry( BOOL bDrawImage, BOOL bDrawText, BOOL bDrawTextAtImageP
 
 #ifdef USE_JAVA
 	nBorder = 6;
-#endif
+#endif	// USE_JAVA
 
 	BOOL bImage = !!maImage;
 	if( bDrawImage && bImage && !bLayout )
@@ -2825,9 +2827,9 @@ void ImplWin::Resize()
     maFocusRect.Left() = 4;
     maFocusRect.Bottom() = GetOutputSizePixel().Height() - 2;
     maFocusRect.Right() = GetOutputSizePixel().Width() - 4;
-#else
+#else	// USE_JAVA
 	maFocusRect.SetSize( GetOutputSizePixel() );
-#endif
+#endif	// USE_JAVA
 	Invalidate();
 }
 
@@ -2867,7 +2869,7 @@ void ImplBtn::MBDown()
 
 // -----------------------------------------------------------------------
 
-void ImplBtn::MouseButtonDown( const MouseEvent& rMEvt )
+void ImplBtn::MouseButtonDown( const MouseEvent& )
 {
 	//PushButton::MouseButtonDown( rMEvt );
 	if( IsEnabled() )
@@ -3060,7 +3062,7 @@ void ImplListBoxFloatingWindow::StartFloat( BOOL bStartTracking )
 				aSz = Size( preferredRect.GetWidth(), preferredRect.GetHeight() );
 			}
 		}
-#endif
+#endif	// USE_JAVA
 		Point aPos = GetParent()->GetPosPixel();
 		aPos = GetParent()->GetParent()->OutputToScreenPixel( aPos );
 		Rectangle aRect( aPos, aSz );

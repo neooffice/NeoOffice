@@ -33,6 +33,9 @@
  *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
+
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_vcl.hxx"
 #ifndef _SV_OUTDEV_HXX
 #include <outdev.hxx>
 #endif
@@ -71,8 +74,9 @@
 // ----------------
 
 ImageAryData::ImageAryData() :
+	maName(),
 	mnId( 0 ),
-	mnRefCount( 0 )
+	maBitmapEx()
 {
 }
 
@@ -81,7 +85,13 @@ ImageAryData::ImageAryData() :
 ImageAryData::ImageAryData( const ImageAryData& rData ) :
 	maName( rData.maName ),
 	mnId( rData.mnId ),
-	mnRefCount( rData.mnRefCount )
+	maBitmapEx( rData.maBitmapEx )
+{
+}
+
+ImageAryData::ImageAryData( const rtl::OUString &aName,
+							USHORT nId, const BitmapEx &aBitmap )
+		: maName( aName ), mnId( nId ), maBitmapEx( aBitmap )
 {
 }
 
@@ -97,7 +107,7 @@ ImageAryData& ImageAryData::operator=( const ImageAryData& rData )
 {
 	maName = rData.maName;
 	mnId = rData.mnId;
-	mnRefCount = rData.mnRefCount;
+	maBitmapEx = rData.maBitmapEx;
 
 	return *this;
 }
@@ -110,38 +120,41 @@ ImplImageList::ImplImageList()
 {
 }
 
-// -----------------------------------------------------------------------
+ImplImageList::ImplImageList( const ImplImageList &aSrc )
+{
+	maImageSize = aSrc.maImageSize;
+	maPrefix = aSrc.maPrefix;
+	maImages.reserve( aSrc.maImages.size() );
+	mnRefCount = 1;
+	for (sal_uInt32 i = 0; i < aSrc.maImages.size(); i++)
+	{
+		maImages[ i ] = new ImageAryData( *aSrc.maImages[ i ] );
+		if( maImages[ i ]->maName.getLength() )
+			maNameHash [ maImages[ i ]->maName ] = maImages[ i ];
+	}
+}
 
 ImplImageList::~ImplImageList()
 {
-	delete mpImageBitmap;
-	delete[] mpAry;
+	for (int i = 0; i < maImages.size(); i++)
+		delete maImages[i];
 }
 
-// --------------------
-// - ImplImageRefData -
-// --------------------
-
-ImplImageRefData::~ImplImageRefData()
+void ImplImageList::AddImage( const ::rtl::OUString &aName,
+							  USHORT nId, const BitmapEx &aBitmapEx )
 {
-	--mpImplData->mnIRefCount;
-	
-	if( mpImplData->mnRefCount || mpImplData->mnIRefCount )
-	{
-		--mpImplData->mpAry[mnIndex].mnRefCount;
-		
-		if( !mpImplData->mpAry[mnIndex].mnRefCount )
-			--mpImplData->mnRealCount;
-	}
-	else
-		delete mpImplData;
+	ImageAryData *pImg = new ImageAryData( aName, nId, aBitmapEx );
+	maImages.push_back( pImg );
+	if( aName.getLength() )
+		maNameHash [ aName ] = pImg;
 }
 
-// -----------------------------------------------------------------------
-
-BOOL ImplImageRefData::IsEqual( const ImplImageRefData& rData )
+void ImplImageList::RemoveImage( USHORT nPos )
 {
-	return( ( mpImplData == rData.mpImplData ) && ( mnIndex == rData.mnIndex ) );
+	ImageAryData *pImg = maImages[ nPos ];
+	if( pImg->maName.getLength() )
+		maNameHash.erase( pImg->maName );
+	maImages.erase( maImages.begin() + nPos );
 }
 
 // -----------------
@@ -149,8 +162,8 @@ BOOL ImplImageRefData::IsEqual( const ImplImageRefData& rData )
 // -----------------
 
 ImplImageData::ImplImageData( const BitmapEx& rBmpEx ) :
-	maBmpEx( rBmpEx ),
-	mpImageBitmap( NULL )
+	mpImageBitmap( NULL ),
+	maBmpEx( rBmpEx )
 {
 }
 
@@ -191,10 +204,6 @@ ImplImage::~ImplImage()
 		case IMAGETYPE_IMAGE:
 			delete static_cast< ImplImageData* >( mpData );
 		break;
-
-		case IMAGETYPE_IMAGEREF:
-			delete static_cast< ImplImageRefData* >( mpData );
-		break;
 	}
 }
 
@@ -226,7 +235,7 @@ void ImplImageBmp::Create( long nItemWidth, long nItemHeight, USHORT nInitSize )
 	const Size aTotalSize( nInitSize * nItemWidth, nItemHeight );
 
 	maBmpEx = Bitmap( aTotalSize, 24 );
-	maDisabledBmp.SetEmpty();
+	maDisabledBmpEx.SetEmpty();
 
 	delete mpDisplayBmp;
 	mpDisplayBmp = NULL; 
@@ -244,7 +253,7 @@ void ImplImageBmp::Create( long nItemWidth, long nItemHeight, USHORT nInitSize )
 void ImplImageBmp::Create( const BitmapEx& rBmpEx, long nItemWidth, long nItemHeight, USHORT nInitSize )
 {
 	maBmpEx = rBmpEx;
-	maDisabledBmp.SetEmpty();
+	maDisabledBmpEx.SetEmpty();
 	
 	delete mpDisplayBmp;
 	mpDisplayBmp = NULL; 
@@ -265,12 +274,12 @@ void ImplImageBmp::Expand( USHORT nGrowSize )
 {
 	const ULONG 	nDX = nGrowSize * maSize.Width();
 	const USHORT	nOldSize = mnSize;
-	BYTE*			pNewAry = new BYTE[ mnSize += nGrowSize ];
+	BYTE*			pNewAry = new BYTE[ mnSize = sal::static_int_cast<USHORT>(mnSize+nGrowSize) ];
 
 	maBmpEx.Expand( nDX, 0UL );
 
-	if( !maDisabledBmp.IsEmpty() )
-		maDisabledBmp.Expand( nDX, 0UL );
+	if( !maDisabledBmpEx.IsEmpty() )
+		maDisabledBmpEx.Expand( nDX, 0UL );
 
 	delete mpDisplayBmp;
 	mpDisplayBmp = NULL; 
@@ -301,8 +310,8 @@ void ImplImageBmp::Replace( USHORT nPos, USHORT nSrcPos )
 
 	maBmpEx.CopyPixel( aDstRect, aSrcRect );
 
-	if( !maDisabledBmp.IsEmpty() )
-		maDisabledBmp.CopyPixel( aDstRect, aSrcRect );
+	if( !maDisabledBmpEx.IsEmpty() )
+		maDisabledBmpEx.CopyPixel( aDstRect, aSrcRect );
 
 	delete mpDisplayBmp;
 	mpDisplayBmp = NULL; 
@@ -413,8 +422,15 @@ void ImplImageBmp::Draw( USHORT nPos, OutputDevice* pOutDev,
 
 			ImplUpdateDisabledBmp( -1 );
 
-			pOutDev->DrawMask( aOutPos1, aOutSize, aSrcPos, maSize, maDisabledBmp, rSettings.GetLightColor() );
-			pOutDev->DrawMask( rPos, aOutSize, aSrcPos, maSize, maDisabledBmp, rSettings.GetShadowColor() );
+			if( maDisabledBmpEx.IsAlpha() )
+				pOutDev->DrawBitmapEx( rPos, aOutSize, aSrcPos, maSize, maDisabledBmpEx );
+			else
+			{
+				pOutDev->DrawMask( aOutPos1, aOutSize, aSrcPos, maSize, maDisabledBmpEx.GetBitmap(),
+								   rSettings.GetLightColor() );
+				pOutDev->DrawMask( rPos, aOutSize, aSrcPos, maSize, maDisabledBmpEx.GetBitmap(),
+								   rSettings.GetShadowColor() );
+			}
 		}
 		else
 		{
@@ -571,7 +587,11 @@ void ImplImageBmp::Draw( USHORT nPos, OutputDevice* pOutDev,
 
 // -----------------------------------------------------------------------
 
-void ImplImageBmp::ImplUpdateDisplayBmp( OutputDevice* pOutDev )
+void ImplImageBmp::ImplUpdateDisplayBmp( OutputDevice*
+#if defined WIN || defined WNT
+pOutDev
+#endif
+)
 {
 	if( !mpDisplayBmp && !maBmpEx.IsEmpty() )
 	{
@@ -595,160 +615,121 @@ void ImplImageBmp::ImplUpdateDisplayBmp( OutputDevice* pOutDev )
 
 // -----------------------------------------------------------------------
 
+static unsigned char deSaturate (unsigned char col, unsigned char intensity)
+{
+	int i = (int) ((0.2 * intensity + col * 0.8) * 0.7);
+	if (i <= 0)
+		return 0;
+	if (i >= 255)
+		return 255;
+	return (unsigned char) i;
+}
+
 void ImplImageBmp::ImplUpdateDisabledBmp( int nPos )
 {
-	if( ( nPos >= 0 && !maDisabledBmp.IsEmpty() ) || 
-		( nPos < 0 && maDisabledBmp.IsEmpty() ) )
+	if( ! ( nPos >= 0 && !maDisabledBmpEx.IsEmpty() ) &&
+	    ! ( nPos < 0 && maDisabledBmpEx.IsEmpty() ) )
+		return;
+
+	Bitmap aBitmap;
+
+	if( maBmpEx.IsAlpha() )
+		aBitmap = Bitmap( maBmpEx.GetSizePixel(),
+						  maBmpEx.GetBitCount() );
+	else
+        aBitmap = Bitmap( maBmpEx.GetSizePixel(), 1 );
+
+	Bitmap aSrcBitmap = maBmpEx.GetBitmap();
+	BitmapReadAccess  *pAcc = aSrcBitmap.AcquireReadAccess();
+	if( !pAcc )
+		return;
+	BitmapWriteAccess *pDis = aBitmap.AcquireWriteAccess();
+
+	if( !pDis )
 	{
-		Bitmap aBmp( maBmpEx.GetBitmap() );
-		Bitmap aMask;
-
-		if( maBmpEx.IsTransparent() )
-			aMask = maBmpEx.GetMask();
-		else
-		{
-			aMask = aBmp;
-			aMask.Convert( BMP_CONVERSION_1BIT_THRESHOLD );
-		}
-		
-		if( maDisabledBmp.IsEmpty() )
-			maDisabledBmp = Bitmap( aBmp.GetSizePixel(), 1 );
-		
-		BitmapReadAccess*	pAcc = aBmp.AcquireReadAccess();
-		BitmapReadAccess*	pMsk = aMask.AcquireReadAccess();
-		BitmapWriteAccess*	pDis = maDisabledBmp.AcquireWriteAccess();
-
-		if( pAcc && pMsk && pDis )
-		{
-			const Color 		aWhite( COL_WHITE );
-			const Color 		aBlack( COL_BLACK );
-			const BitmapColor	aAccWhite( pAcc->GetBestMatchingColor( aWhite ) );
-			const BitmapColor	aMskWhite( pMsk->GetBestMatchingColor( aWhite ) );
-			const BitmapColor	aDisWhite( pDis->GetBestMatchingColor( aWhite ) );
-			const BitmapColor	aDisBlack( pDis->GetBestMatchingColor( aBlack ) );
-			long				nLeft, nTop, nRight, nBottom;
-			long				nCurLeft, nCurRight;
-			const long			nBlackThreshold = FRound( maSize.Width() * maSize.Height() * 0.10 );
-
-			if( nPos >= 0 )
-			{
-				const Point aPos( nPos * maSize.Width(), 0 );
-
-				nLeft = aPos.X();
-				nTop = 0;
-				nRight = nLeft + maSize.Width();
-				nBottom = nTop + maSize.Height();
-			}
-			else
-			{
-				nLeft = nTop = 0L;
-				nRight = pDis->Width();
-				nBottom = pDis->Height();
-			}
-
-			nCurLeft = nLeft;
-			nCurRight = nCurLeft + maSize.Width();
-
-			while( nCurLeft < nRight )
-			{
-				sal_Int32 nBlackCount = 0;
-
-				if( pAcc->GetScanlineFormat() == BMP_FORMAT_4BIT_MSN_PAL &&
-					pMsk->GetScanlineFormat() == BMP_FORMAT_1BIT_MSB_PAL )
-				{
-					// optimized version
-					const BYTE cAccTest = aAccWhite.GetIndex();
-					const BYTE cMskTest = aMskWhite.GetIndex();
-
-					for( long nY = nTop; nY < nBottom; nY++ )
-					{
-						Scanline pAccScan = pAcc->GetScanline( nY );
-						Scanline pMskScan = pMsk->GetScanline( nY );
-				
-						for( long nX = nCurLeft; nX < nCurRight; nX++ )
-						{
-							if( ( cMskTest == ( pMskScan[ nX >> 3 ] & ( 1 << ( 7 - ( nX & 7 ) ) ) ? 1 : 0 ) ) || 
-								( cAccTest == ( ( pAccScan[ nX >> 1 ] >> ( nX & 1 ? 0 : 4 ) ) & 0x0f ) ) )
-							{
-								pDis->SetPixel( nY, nX, aDisWhite );
-							}
-							else
-							{
-								pDis->SetPixel( nY, nX, aDisBlack );
-								++nBlackCount;
-							}
-						}
-					}
-				}
-				else if( pAcc->GetScanlineFormat() == BMP_FORMAT_8BIT_PAL &&
-						pMsk->GetScanlineFormat() == BMP_FORMAT_1BIT_MSB_PAL )
-				{
-					// optimized version
-					const BYTE cAccTest = aAccWhite.GetIndex();
-					const BYTE cMskTest = aMskWhite.GetIndex();
-
-					for( long nY = nTop; nY < nBottom; nY++ )
-					{
-						Scanline pAccScan = pAcc->GetScanline( nY );
-						Scanline pMskScan = pMsk->GetScanline( nY );
-				
-						for( long nX = nCurLeft; nX < nCurRight; nX++ )
-						{
-							if( ( cMskTest == ( pMskScan[ nX >> 3 ] & ( 1 << ( 7 - ( nX & 7 ) ) ) ? 1 : 0 ) ) || 
-								( cAccTest == pAccScan[ nX ] ) )
-							{
-								pDis->SetPixel( nY, nX, aDisWhite );
-							}
-							else
-							{
-								pDis->SetPixel( nY, nX, aDisBlack );
-								++nBlackCount;
-							}
-						}
-					}
-				}
-				else
-				{	
-					for( long nY = nTop; nY < nBottom; nY++ )
-					{
-						for( long nX = nCurLeft; nX < nCurRight; nX++ )
-						{
-							if( ( aMskWhite == pMsk->GetPixel( nY, nX ) ) || 
-								( aAccWhite == pAcc->GetPixel( nY, nX ) ) )
-							{
-								pDis->SetPixel( nY, nX, aDisWhite );
-							}
-							else
-							{
-								pDis->SetPixel( nY, nX, aDisBlack );
-								++nBlackCount;
-							}
-						}
-					}
-				}
-
-				if( nBlackCount < nBlackThreshold )
-				{
-					// emergency solution if paint bitmap is mostly white
-					for( long nY = nTop; nY < nBottom; nY++ )
-					{
-						for( long nX = nCurLeft; nX < nCurRight; nX++ )
-						{
-							if( aMskWhite == pMsk->GetPixel( nY, nX ) )
-								pDis->SetPixel( nY, nX, aDisWhite );
-							else
-								pDis->SetPixel( nY, nX, aDisBlack );
-						}
-					}
-				}
-
-				nCurLeft += maSize.Width();
-				nCurRight += maSize.Width();
-			}
-		}
-
-		aBmp.ReleaseAccess( pAcc );
-		aMask.ReleaseAccess( pMsk );
-		maDisabledBmp.ReleaseAccess( pDis );
+		aSrcBitmap.ReleaseAccess( pAcc );
+		return;
 	}
+
+	long nLeft, nTop, nRight, nBottom;
+
+	if( nPos >= 0 )
+	{
+		const Point aPos( nPos * maSize.Width(), 0 );
+
+		nLeft = aPos.X();
+		nTop = 0;
+		nRight = nLeft + maSize.Width();
+		nBottom = nTop + maSize.Height();
+	}
+	else
+	{
+		nLeft = nTop = 0L;
+		nRight = pDis->Width();
+		nBottom = pDis->Height();
+	}
+
+	if( maBmpEx.IsAlpha() )
+	{
+		if( pAcc && pDis )
+		{
+			for( long nY = nTop; nY < nBottom; nY++ )
+			{
+				for( long nX = nLeft; nX < nRight; nX++ )
+ 				{
+					BitmapColor col = pAcc->GetPixel( nY, nX );
+					unsigned char i;
+
+					i = (unsigned char ) ( col.GetRed() * 0.3 + // magic numbers
+										   col.GetGreen() * 0.59 +
+										   col.GetBlue () * 0.11 );
+					if ((nY + nX) % 2 == 0)
+					{
+						col.SetRed   (i / 2 + 127);
+						col.SetGreen (i / 2 + 127);
+						col.SetBlue  (i / 2 + 127);
+					}
+					else
+					{
+						col.SetRed   (deSaturate (col.GetRed(), i));
+						col.SetGreen (deSaturate (col.GetGreen(), i));
+						col.SetBlue  (deSaturate (col.GetBlue(), i));
+					}
+					pDis->SetPixel( nY, nX, col );
+				}
+			}
+		}
+	}
+	else
+	{
+		BitmapReadAccess *pMsk = aBitmap.AcquireReadAccess();
+
+		const Color aWhite( COL_WHITE );
+		const Color aBlack( COL_BLACK );
+		const BitmapColor aAccWhite( pAcc->GetBestMatchingColor( aWhite ) );
+		const BitmapColor aMskWhite( pMsk->GetBestMatchingColor( aWhite ) );
+		const BitmapColor aDisWhite( pDis->GetBestMatchingColor( aWhite ) );
+		const BitmapColor aDisBlack( pDis->GetBestMatchingColor( aBlack ) );
+
+		for( long nY = nTop; nY < nBottom; nY++ )
+		{
+			for( long nX = nLeft; nX < nRight; nX++ )
+			{
+				if( ( aMskWhite == pMsk->GetPixel( nY, nX ) ) &&
+				    ( aAccWhite != pAcc->GetPixel( nY, nX ) ) )
+					pDis->SetPixel( nY, nX, aDisBlack );
+				else
+					pDis->SetPixel( nY, nX, aDisWhite );
+			}
+		}
+		aBitmap.ReleaseAccess( pMsk );
+	}
+
+	aSrcBitmap.ReleaseAccess( pAcc );
+	aBitmap.ReleaseAccess( pDis );
+
+	if( maBmpEx.IsAlpha() )
+			maDisabledBmpEx = BitmapEx( aBitmap, maBmpEx.GetAlpha() );
+	else
+			maDisabledBmpEx = BitmapEx( aBitmap );
 }

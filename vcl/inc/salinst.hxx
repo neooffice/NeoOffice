@@ -161,7 +161,7 @@ public:
 	// wait next event and dispatch
     // must returned by UserEvent (SalFrame::PostEvent)
     // and timer
-    virtual void				Yield( BOOL bWait ) = 0;
+    virtual void				Yield( bool bWait, bool bHandleAllCurrentEvents ) = 0;
     virtual bool				AnyInput( USHORT nType ) = 0;
 
                             // Menues

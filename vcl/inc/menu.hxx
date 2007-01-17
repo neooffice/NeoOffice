@@ -130,6 +130,9 @@ typedef USHORT MenuItemBits;
 // overrides default hiding of disabled entries in popup menus
 #define MENU_FLAG_ALWAYSSHOWDISABLEDENTRIES	0x0004
 
+// forces images & toggle visibility for toolbar config popup
+#define MENU_FLAG_SHOWCHECKIMAGES     0x0008
+
 // --------
 // - Menu -
 // --------
@@ -211,7 +214,7 @@ protected:
     
     // returns native check and option menu symbol height;
     // return value is Max( rCheckHeight, rRadioHeight ) 
-    SAL_DLLPRIVATE long             ImplGetNativeCheckAndRadioHeight( Window*, long& rCheckHeight, long& rRadioHeight ) const;
+    SAL_DLLPRIVATE long             ImplGetNativeCheckAndRadioSize( Window*, long& rCheckHeight, long& rRadioHeight, long &rMaxWidth ) const;
 
 #if _SOLAR__PRIVATE
 public:
@@ -393,6 +396,9 @@ public:
     
     // returns whether the item a position nItemPos is highlighted or not.
     bool  IsHighlighted( USHORT nItemPos ) const;
+
+    void                HighlightItem( USHORT nItemPos );
+    void                DeHighlight() { HighlightItem( 0xFFFF ); } // MENUITEMPOS_INVALID
 };
 
 // -----------
@@ -457,6 +463,24 @@ public:
     void                SetDisplayable( BOOL bDisplayable );
     BOOL                IsDisplayable() const                       { return mbDisplayable; }
 
+    struct MenuBarButtonCallbackArg
+    {
+        USHORT      nId;             // Id of the button
+        bool        bHighlight;      // highlight on/off
+        MenuBar*    pMenuBar;        // menubar the button belongs to
+    };
+    // add an arbitrary button to the menubar (will appear next to closer)
+    // passed link will be call with a MenuBarButtonCallbackArg on press
+    USHORT              AddMenuBarButton( const Image&, const Link&, USHORT nPos = 0 );
+    // set the highlight link for additional button with ID nId
+    // highlight link will be called with a MenuBarButtonHighlightArg
+    // the bHighlight member of that struct shall contain the new state
+    void                SetMenuBarButtonHighlightHdl( USHORT nId, const Link& );
+    // returns the rectangle occupied by the additional button named nId
+    // coordinates are relative to the systemwindiow the menubar is attached to
+    // if the menubar is unattached an empty rectangle is returned
+    Rectangle           GetMenuBarButtonRectPixel( USHORT nId );
+    void                RemoveMenuBarButton( USHORT nId );
 };
 
 inline MenuBar& MenuBar::operator =( const MenuBar& rMenu )

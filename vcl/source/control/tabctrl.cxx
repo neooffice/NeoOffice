@@ -6,32 +6,36 @@
  *
  *  last change: $Author$ $Date$
  *
- *  The Contents of this file are made available subject to the terms of
- *  either of the following licenses
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- *         - GNU General Public License Version 2.1
  *
- *  Edward Peterlin, April 2006
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- *  GNU General Public License Version 2.1
- *  =============================================
- *  Copyright 2006 by Edward Peterlin (OPENSTEP@neooffice.org)
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
  *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public
- *  License version 2.1, as published by the Free Software Foundation.
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
  *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
  *
- *  You should have received a copy of the GNU General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *  MA  02111-1307  USA
+ *    Modified May 2006 by Edward H. Peterlin. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
+
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_vcl.hxx"
 
 #ifndef _DEBUG_HXX
 #include <tools/debug.hxx>
@@ -99,10 +103,12 @@ struct ImplTabItem
     BOOL                mbFullVisible;
 };
 
-DECLARE_LIST( ImplTabItemList, ImplTabItem* );
+DECLARE_LIST( ImplTabItemList, ImplTabItem* )
 
 // -----------------------------------------------------------------------
 
+#if 0
+// not used
 #define TABCOLORCOUNT   10
 
 static ColorData aImplTabColorAry[TABCOLORCOUNT] =
@@ -118,6 +124,7 @@ static ColorData aImplTabColorAry[TABCOLORCOUNT] =
     RGB_COLORDATA( 248, 180, 168 ),
     RGB_COLORDATA( 248, 216, 168 )
 };
+#endif
 
 // -----------------------------------------------------------------------
 
@@ -420,7 +427,6 @@ Size TabControl::ImplGetItemSize( ImplTabItem* pItem, long nMaxWidth ) const
 		ImplControlValue aControlValue;
 		Point aPoint( 0, 0 );
 		Region aCtrlRegion( Rectangle( aPoint, aSize ) );
-		ControlState nState = 0;
 		
 		TabitemValue tiValue;
 		aControlValue.setOptionalVal( (void *)(&tiValue) );
@@ -436,7 +442,7 @@ Size TabControl::ImplGetItemSize( ImplTabItem* pItem, long nMaxWidth ) const
 				aSize.Height() = aNativeBoundRect.GetHeight();
 		}
 	}
-#endif
+#endif	// USE_JAVA
     // For systems without synthetic bold support
     if ( mbExtraSpace )
         aSize.Width() += TAB_EXTRASPACE_X;
@@ -469,7 +475,7 @@ Size TabControl::ImplGetItemSize( ImplTabItem* pItem, long nMaxWidth ) const
 
 // -----------------------------------------------------------------------
 
-Rectangle TabControl::ImplGetTabRect( USHORT nPos, long nWidth, long nHeight )
+Rectangle TabControl::ImplGetTabRect( USHORT nItemPos, long nWidth, long nHeight )
 {
     Size aWinSize = Control::GetOutputSizePixel();
     if ( nWidth == -1 )
@@ -483,14 +489,14 @@ Rectangle TabControl::ImplGetTabRect( USHORT nPos, long nWidth, long nHeight )
                           Size( nWidth-TAB_OFFSET*2, nHeight-TAB_OFFSET*2 ) );
     }
 
-    if ( nPos == TAB_PAGERECT )
+    if ( nItemPos == TAB_PAGERECT )
     {
         USHORT nLastPos;
 #ifndef USE_JAVA
         if ( mnCurPageId )
             nLastPos = GetPagePos( mnCurPageId );
         else
-#endif
+#endif	// !USE_JAVA
             nLastPos = 0;
 
         Rectangle aRect = ImplGetTabRect( nLastPos, nWidth, nHeight );
@@ -598,13 +604,13 @@ Rectangle TabControl::ImplGetTabRect( USHORT nPos, long nWidth, long nHeight )
 #ifdef USE_JAVA
 					nLineHeightAry[i] = nIH*(nLines-i) + GetItemsOffset().Y();
 					i++;
-#else
+#else	// USE_JAVA
                     if ( i <= nCurLine )
                         nLineHeightAry[i] = nIH*(nLines-(nCurLine-i)) + GetItemsOffset().Y();
                     else
                         nLineHeightAry[i] = nIH*(i-nCurLine-1) + GetItemsOffset().Y();
                     i++;
-#endif
+#endif	// USE_JAVA
                 }
 
                 i = 0;
@@ -624,10 +630,10 @@ Rectangle TabControl::ImplGetTabRect( USHORT nPos, long nWidth, long nHeight )
                         n++;
                     }
 
-#if ! defined( USE_JAVA )
+#ifndef USE_JAVA
                     pItem->maRect.Left()   += nIDX;
                     pItem->maRect.Right()  += nIDX+nDX;
-#endif
+#endif	// !USE_JAVA
                     pItem->maRect.Top()     = nLineHeightAry[n-1];
                     pItem->maRect.Bottom()  = nLineHeightAry[n-1]+nIH;
                     nIDX += nDX;
@@ -635,9 +641,9 @@ Rectangle TabControl::ImplGetTabRect( USHORT nPos, long nWidth, long nHeight )
                     if ( nModDX )
                     {
                         nIDX++;
-#if ! defined( USE_JAVA )
-      					pItem->maRect.Right()++;
-#endif
+#ifndef USE_JAVA
+                        pItem->maRect.Right()++;
+#endif	// !USE_JAVA
                         nModDX--;
                     }
 
@@ -664,7 +670,7 @@ Rectangle TabControl::ImplGetTabRect( USHORT nPos, long nWidth, long nHeight )
 					curItemIndex++;
 				}
 			}
-#endif
+#endif	// USE_JAVA
         }
 
         mnLastWidth     = nWidth;
@@ -674,7 +680,7 @@ Rectangle TabControl::ImplGetTabRect( USHORT nPos, long nWidth, long nHeight )
         ImplPosScrollBtns();
     }
 
-    return mpItemList->GetObject( nPos )->maRect;
+    return mpItemList->GetObject( nItemPos )->maRect;
 }
 
 // -----------------------------------------------------------------------
@@ -767,7 +773,7 @@ void TabControl::ImplChangeTabPage( USHORT nId, USHORT nOldId )
 #ifdef USE_JAVA
 	if ( pOldItem )
 		Invalidate();
-#endif
+#endif	// USE_JAVA
 
     // Invalidate the same region that will be send to NWF
     // to always allow for bitmap caching
@@ -820,7 +826,7 @@ void TabControl::ImplActivateTabPage( BOOL bNext )
 
 // -----------------------------------------------------------------------
 
-void TabControl::ImplSetFirstPagePos( USHORT nPagePos )
+void TabControl::ImplSetFirstPagePos( USHORT )
 {
     return; // was only required for single line
 }
@@ -860,7 +866,7 @@ void TabControl::ImplShowFocus()
 #ifdef USE_JAVA
 	aRect.Left() = aRect.Left()+2;
 	aRect.Top() = aRect.Top()+2;
-#endif
+#endif	// USE_JAVA
     ShowFocus( aRect );
 
     SetFont( aOldFont );
@@ -901,7 +907,7 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
     else
         nOff = 0;
 
-#if ! defined( USE_JAVA )
+#ifndef USE_JAVA
     // Wenn wir die aktuelle Page sind, muessen wir etwas mehr zeichnen
     if ( pItem->mnId == mnCurPageId )
     {
@@ -909,7 +915,7 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
         nOff3 = 1;
     }
     else
-#endif
+#endif	// !USE_JAVA
     {
         Point aLeftTestPos = aRect.BottomLeft();
         Point aRightTestPos = aRect.BottomRight();
@@ -951,7 +957,7 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
             nState |= CTRL_STATE_ROLLOVER;
             ImplTabItem* pI;
             int idx=0;
-            while( (pI = mpItemList->GetObject(idx++)) )
+            while( (pI = mpItemList->GetObject(idx++)) != NULL )
                 if( (pI != pItem) && (pI->maRect.IsInside( GetPointerPosPixel() ) ) )
                 {
                     nState &= ~CTRL_STATE_ROLLOVER; // avoid multiple highlighted tabs
@@ -1032,13 +1038,13 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
     // we set the font attributes always before drawing to be re-entrant (DrawNativeControl may trigger additional paints)
     Font aFont( GetFont() );
     aFont.SetTransparent( TRUE );
-#ifdef MACOSX
+#ifdef USE_JAVA
 	// tab highlighting is sufficient for indicating active tab, leave text
 	// alone
 	aFont.SetWeight( WEIGHT_LIGHT );
-#else
+#else	// USE_JAVA
     aFont.SetWeight( bIsCurrentItem ? WEIGHT_BOLD : WEIGHT_LIGHT );
-#endif
+#endif	// USE_JAVA
     SetFont( aFont );
 
     Size aTabSize = aRect.GetSize();
@@ -1055,7 +1061,7 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
 
 // -----------------------------------------------------------------------
 
-IMPL_LINK( TabControl, ImplScrollBtnHdl, PushButton*, pBtn )
+IMPL_LINK( TabControl, ImplScrollBtnHdl, PushButton*, EMPTYARG )
 {
     ImplSetScrollBtnsState();
     return 0;
@@ -1106,11 +1112,12 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
     Rectangle aRect = ImplGetTabRect( TAB_PAGERECT );
 
     // find current item
-    ImplTabItem* pPrevCurItem = NULL;
     ImplTabItem* pCurItem = NULL;
     ImplTabItem* pItem = mpItemList->First();
     pItem = mpItemList->First();
+#ifdef USE_JAVA
     int curItemIndex = 0;
+#endif	// USE_JAVA
     while ( pItem )
     {
         if ( pItem->mnId == mnCurPageId )
@@ -1120,10 +1127,14 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
         }
 
         pItem = mpItemList->Next();
-        curItemIndex++;
+#ifdef USE_JAVA
+       curItemIndex++;
+#endif	// USE_JAVA
     }
+#ifdef USE_JAVA
     if ( ! pItem )
-    	curItemIndex = -1;
+       curItemIndex = -1;
+#endif	// USE_JAVA
 
     // Draw the TabPage border
     const StyleSettings&    rStyleSettings  = GetSettings().GetStyleSettings();
@@ -1257,10 +1268,10 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
             if( !rRect.IsEmpty() )
                 aClipRgn.Intersect( rRect );
             if( bLayout || !aClipRgn.IsEmpty() )
+#ifdef USE_JAVA
             {
             	bool isLastTabInRow = (pItem == pLastTab);
             	bool isFirstTabInRow = (pItem == pFirstTab);
-#ifdef USE_JAVA
 				if ( pItem != pFirstTab )
 				{
 					ImplTabItem * prevTab = mpItemList->GetObject(idx-1);
@@ -1274,9 +1285,11 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
 					if ( nextTab && ( nextTab->mnLine != pItem->mnLine ) )
 						isLastTabInRow = true;
 				}
-#endif
                 ImplDrawItem( pItem, aCurRect, bLayout, isFirstTabInRow, isLastTabInRow, FALSE );
             }
+#else	// USE_JAVA
+                ImplDrawItem( pItem, aCurRect, bLayout, (pItem==pFirstTab), (pItem==pLastTab), FALSE );
+#endif	// USE_JAVA
         }
 
         if ( bDrawTabsRTL )
@@ -1292,10 +1305,10 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
         if( !rRect.IsEmpty() )
             aClipRgn.Intersect( rRect );
         if( bLayout || !aClipRgn.IsEmpty() )
+#ifdef USE_JAVA
         {
 			bool isLastTabInRow = (pCurItem == pLastTab);
 			bool isFirstTabInRow = (pCurItem == pFirstTab);
-#ifdef USE_JAVA
 			if ( ( pCurItem != pFirstTab ) && ! ( curItemIndex < 0 ) )
 			{
 				ImplTabItem * prevTab = mpItemList->GetObject(curItemIndex-1);
@@ -1309,9 +1322,11 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
 				if ( nextTab && ( nextTab->mnLine != pCurItem->mnLine ) )
 					isLastTabInRow = true;
 			}
-#endif
             ImplDrawItem( pCurItem, aCurRect, bLayout, isFirstTabInRow, isLastTabInRow, TRUE );
-        }
+		}
+#else	// USE_JAVA
+            ImplDrawItem( pCurItem, aCurRect, bLayout, (pCurItem==pFirstTab), (pItem==pLastTab), TRUE );
+#endif	// USE_JAVA
     }
 
     if ( !bLayout && HasFocus() )
@@ -1577,7 +1592,7 @@ long TabControl::PreNotify( NotifyEvent& rNEvt )
     long nDone = 0;
     const MouseEvent* pMouseEvt = NULL;
 
-    if( (rNEvt.GetType() == EVENT_MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) )
+    if( (rNEvt.GetType() == EVENT_MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != NULL )
     {
         if( !pMouseEvt->GetButtons() && !pMouseEvt->IsSynthetic() && !pMouseEvt->IsModifierChanged() )
         {
@@ -1705,7 +1720,7 @@ void TabControl::InsertPage( const ResId& rResId, USHORT nPos )
 
     // ID
     if ( nObjMask & RSC_TABCONTROLITEM_ID )
-        nItemId = ReadLongRes();
+        nItemId = sal::static_int_cast<USHORT>(ReadLongRes());
 
     // Text
     XubString aTmpStr;
@@ -1717,7 +1732,7 @@ void TabControl::InsertPage( const ResId& rResId, USHORT nPos )
     if ( nObjMask & RSC_TABCONTROLITEM_PAGERESID )
     {
         ImplTabItem* pItem = mpItemList->GetObject( GetPagePos( nItemId ) );
-        pItem->mnTabPageResId = ReadLongRes();
+        pItem->mnTabPageResId = sal::static_int_cast<USHORT>(ReadLongRes());
     }
 }
 
@@ -1909,7 +1924,7 @@ USHORT TabControl::GetCurPageId() const
 
 // -----------------------------------------------------------------------
 
-void TabControl::SetFirstPageId( USHORT nPageId )
+void TabControl::SetFirstPageId( USHORT )
 {
     return; // was only required for single line
 }
@@ -2146,7 +2161,7 @@ Rectangle TabControl::GetTabPageBounds( USHORT nPage ) const
         std::hash_map< int, int >::const_iterator it = mpTabCtrlData->maLayoutPageIdToLine.find( (int)nPage );
         if( it != mpTabCtrlData->maLayoutPageIdToLine.end() )
         {
-            if( it->second >= 0 && it->second < mpTabCtrlData->maTabRectangles.size() )
+            if( it->second >= 0 && it->second < static_cast<int>(mpTabCtrlData->maTabRectangles.size()) )
             {
                 aRet = mpTabCtrlData->maTabRectangles[ it->second ];
                 aRet.Union( const_cast<TabControl*>(this)->ImplGetTabRect( TAB_PAGERECT ) );

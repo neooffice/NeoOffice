@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_vcl.hxx"
+
 #ifndef _SV_EVENT_HXX
 #include <event.hxx>
 #endif
@@ -340,23 +343,6 @@ void ScrollBar::ImplLoadRes( const ResId& rResId )
 
 // -----------------------------------------------------------------------
 
-BOOL ScrollBar::ImplUpdateThumbRect( const Rectangle& rOldRect )
-{
-/* !!! Wegen ueberlappenden Fenstern ... !!!
-    Size aThumbRectSize  = rOldRect.GetSize();
-    if ( aThumbRectSize == maThumbRect.GetSize() )
-    {
-        DrawOutDev( maThumbRect.TopLeft(), aThumbRectSize,
-                    rOldRect.TopLeft(), aThumbRectSize );
-        return TRUE;
-    }
-    else
-*/
-        return FALSE;
-}
-
-// -----------------------------------------------------------------------
-
 void ScrollBar::ImplUpdateRects( BOOL bUpdate )
 {
 #ifdef USE_JAVA
@@ -461,10 +447,7 @@ void ScrollBar::ImplUpdateRects( BOOL bUpdate )
         if ( aOldPage2Rect != maPage2Rect )
             nDraw |= SCRBAR_DRAW_PAGE2;
         if ( aOldThumbRect != maThumbRect )
-        {
-            if ( !ImplUpdateThumbRect( aOldThumbRect ) )
-                nDraw |= SCRBAR_DRAW_THUMB;
-        }
+            nDraw |= SCRBAR_DRAW_THUMB;
         ImplDraw( nDraw, this );
     }
 }
@@ -563,10 +546,7 @@ void ScrollBar::ImplUpdateRectsNative( BOOL bUpdate )
         if ( aOldPage2Rect != maPage2Rect )
             nDraw |= SCRBAR_DRAW_PAGE2;
         if ( aOldThumbRect != maThumbRect )
-        {
-            if ( !ImplUpdateThumbRect( aOldThumbRect ) )
-                nDraw |= SCRBAR_DRAW_THUMB;
-        }
+            nDraw |= SCRBAR_DRAW_THUMB;
         ImplDraw( nDraw, this );
     }
 }
@@ -791,17 +771,16 @@ void ScrollBar::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, 
 
 BOOL ScrollBar::ImplDrawNative( USHORT nDrawFlags )
 {
-    BOOL bNativeOK = FALSE;
-
-#ifdef USE_JAVA
-	// We need to set the background color in the native drawing method
-	SetFillColor( GetBackground().GetColor() );
-#endif	// USE_JAVA
-
     ImplControlValue aControlValue( BUTTONVALUE_DONTKNOW, rtl::OUString(), 0 );
 
-    if( bNativeOK = IsNativeControlSupported(CTRL_SCROLLBAR, PART_ENTIRE_CONTROL) )
+    BOOL bNativeOK = IsNativeControlSupported(CTRL_SCROLLBAR, PART_ENTIRE_CONTROL);
+    if( bNativeOK )
     {
+#ifdef USE_JAVA
+		// We need to set the background color in the native drawing method
+ 		SetFillColor( GetBackground().GetColor() );
+#endif	// USE_JAVA
+
         BOOL bHorz = (GetStyle() & WB_HORZ ? true : false);
 
         // Draw the entire background if the control supports it
@@ -1574,7 +1553,7 @@ void ScrollBar::KeyInput( const KeyEvent& rKEvt )
 
 // -----------------------------------------------------------------------
 
-void ScrollBar::Paint( const Rectangle& rRect )
+void ScrollBar::Paint( const Rectangle& )
 {
     ImplDraw( SCRBAR_DRAW_ALL, this );
 }
@@ -1752,7 +1731,7 @@ long ScrollBar::PreNotify( NotifyEvent& rNEvt )
     long nDone = 0;
     const MouseEvent* pMouseEvt = NULL;
 
-    if( (rNEvt.GetType() == EVENT_MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) )
+    if( (rNEvt.GetType() == EVENT_MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != NULL )
     {
         if( !pMouseEvt->GetButtons() && !pMouseEvt->IsSynthetic() && !pMouseEvt->IsModifierChanged() )
         {

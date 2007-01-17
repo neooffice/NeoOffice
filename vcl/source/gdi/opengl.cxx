@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_vcl.hxx"
+
 #include <svsys.h>
 #include <window.hxx>
 
@@ -66,12 +69,6 @@
 // -----------
 // - Defines -
 // -----------
-
-#ifdef WNT
-#define __OPENGL_CALL __stdcall
-#else
-#define __OPENGL_CALL
-#endif
 
 // -----------------------
 // - Fnc-Pointer-Typedef -
@@ -169,7 +166,7 @@ typedef void ( __OPENGL_CALL *OGLFncBlendFunc ) ( GLenum sfactor, GLenum dfactor
 
 #define OGL_INIT() (mpOGL && (mpOutDev->mpGraphics || mpOutDev->ImplGetGraphics()))
 
-#define INIT_OGLFNC( FncName ) static OGLFnc##FncName pImplOpenGLFnc##FncName = NULL;
+#define INIT_OGLFNC( FncName ) static OGLFnc##FncName pImplOpenGLFnc##FncName = NULL
 #define GET_OGLFNC_GL( FncName )													\
 pImplOpenGLFnc##FncName = (OGLFnc##FncName) mpOGL->GetOGLFnc( "gl" #FncName );    \
 if( !pImplOpenGLFnc##FncName ) bRet = FALSE;

@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_vcl.hxx"
+
 #ifndef _SV_DECOVIEW_HXX
 #include <decoview.hxx>
 #endif
@@ -313,7 +316,7 @@ void FixedText::ImplDraw( OutputDevice* pDev, ULONG nDrawFlags,
 
 // -----------------------------------------------------------------------
 
-void FixedText::Paint( const Rectangle& rRect )
+void FixedText::Paint( const Rectangle& )
 {
 	ImplDraw( this, 0, Point(), GetOutputSizePixel() );
 }
@@ -704,15 +707,14 @@ void  FixedLine::FillLayoutData() const
 
 // -----------------------------------------------------------------------
 
-void FixedLine::Paint( const Rectangle& rRect )
+void FixedLine::Paint( const Rectangle& )
 {
     ImplDraw();
 }
 
 // -----------------------------------------------------------------------
 
-void FixedLine::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize,
-					  ULONG nFlags )
+void FixedLine::Draw( OutputDevice*, const Point&, const Size&, ULONG )
 {
 }
 
@@ -915,7 +917,7 @@ void FixedBitmap::ImplDraw( OutputDevice* pDev, ULONG /* nDrawFlags */,
 
 // -----------------------------------------------------------------------
 
-void FixedBitmap::Paint( const Rectangle& rRect )
+void FixedBitmap::Paint( const Rectangle& )
 {
 	ImplDraw( this, 0, Point(), GetOutputSizePixel() );
 }
@@ -1181,7 +1183,7 @@ void FixedImage::ImplDraw( OutputDevice* pDev, ULONG nDrawFlags,
 
 // -----------------------------------------------------------------------
 
-void FixedImage::Paint( const Rectangle& rRect )
+void FixedImage::Paint( const Rectangle& )
 {
 	ImplDraw( this, 0, Point(), GetOutputSizePixel() );
 }

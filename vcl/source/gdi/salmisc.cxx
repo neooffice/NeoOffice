@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_vcl.hxx"
+
 #ifndef _RTL_MEMORY_H_
 #include <rtl/memory.h>
 #endif
@@ -113,9 +116,9 @@ static void	ImplPALToPAL( const BitmapBuffer& rSrcBuffer, BitmapBuffer& rDstBuff
 	for( USHORT i = 0, nSrcCount = aColMap.GetEntryCount(), nDstCount = rDstBuffer.maPalette.GetEntryCount(); i < nSrcCount; i++ )
 	{
 	    if( ( i < nDstCount ) && ( rSrcBuffer.maPalette[ i ] == rDstBuffer.maPalette[ i ] ) )
-		    aIndex.SetIndex( i );
+		    aIndex.SetIndex( sal::static_int_cast<BYTE>(i) );
 		else
-			aIndex.SetIndex( rDstBuffer.maPalette.GetBestIndex( rSrcBuffer.maPalette[ i ] ) );
+			aIndex.SetIndex( sal::static_int_cast<BYTE>(rDstBuffer.maPalette.GetBestIndex( rSrcBuffer.maPalette[ i ] )) );
 
 		pColMapBuf[ i ] = aIndex;
 	}
@@ -289,7 +292,9 @@ static void	ImplTCToPAL( const BitmapBuffer& rSrcBuffer, BitmapBuffer& rDstBuffe
 		{
 			for( long nB = 0; nB < 16; nB++ )
 			{
-				BitmapColor aCol( nR << 4, nG << 4, nB << 4 );
+				BitmapColor aCol( sal::static_int_cast<BYTE>(nR << 4),
+                                  sal::static_int_cast<BYTE>(nG << 4),
+                                  sal::static_int_cast<BYTE>(nB << 4) );
 				pColToPalMap[ ImplIndexFromColor( aCol ) ] = (BYTE) rDstBuffer.maPalette.GetBestIndex( aCol );
 			}
 		}

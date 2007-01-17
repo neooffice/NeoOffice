@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_vcl.hxx"
+
 #include <math.h>
 
 #ifndef _SV_SVSYS_HXX
@@ -107,8 +110,8 @@ extern "C" int __LOADONCALLAPI ImplHatchCmpFnc( const void* p1, const void* p2 )
 
 // =======================================================================
 
-DBG_NAMEEX( OutputDevice );
-DBG_NAMEEX( Gradient );
+DBG_NAMEEX( OutputDevice )
+DBG_NAMEEX( Gradient )
 
 // =======================================================================
 

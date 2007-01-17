@@ -65,6 +65,8 @@
 
 typedef BYTE*		HPBYTE;
 typedef HPBYTE		Scanline;
+typedef const BYTE*	ConstHPBYTE;
+typedef ConstHPBYTE	ConstScanline;
 
 // --------------------
 // - Helper functions -
@@ -178,6 +180,8 @@ public:
 	operator			Color() const;
 	inline operator 	BYTE() const;
 
+    inline BYTE         GetBlueOrIndex() const;
+
 	inline BitmapColor& Invert();
 
 	inline BYTE 		GetLuminance() const;
@@ -265,18 +269,18 @@ public:
 	inline ULONG		GetGreenMask() const;
 	inline ULONG		GetBlueMask() const;
 
-	inline void 		GetColorFor8Bit( BitmapColor& rColor, HPBYTE pPixel ) const;
+	inline void 		GetColorFor8Bit( BitmapColor& rColor, ConstHPBYTE pPixel ) const;
 	inline void 		SetColorFor8Bit( const BitmapColor& rColor, HPBYTE pPixel ) const;
 
-	inline void 		GetColorFor16BitMSB( BitmapColor& rColor, HPBYTE pPixel ) const;
+	inline void 		GetColorFor16BitMSB( BitmapColor& rColor, ConstHPBYTE pPixel ) const;
 	inline void 		SetColorFor16BitMSB( const BitmapColor& rColor, HPBYTE pPixel ) const;
-	inline void 		GetColorFor16BitLSB( BitmapColor& rColor, HPBYTE pPixel ) const;
+	inline void 		GetColorFor16BitLSB( BitmapColor& rColor, ConstHPBYTE pPixel ) const;
 	inline void 		SetColorFor16BitLSB( const BitmapColor& rColor, HPBYTE pPixel ) const;
 
-	inline void 		GetColorFor24Bit( BitmapColor& rColor, HPBYTE pPixel ) const;
+	inline void 		GetColorFor24Bit( BitmapColor& rColor, ConstHPBYTE pPixel ) const;
 	inline void 		SetColorFor24Bit( const BitmapColor& rColor, HPBYTE pPixel ) const;
 
-	inline void 		GetColorFor32Bit( BitmapColor& rColor, HPBYTE pPixel ) const;
+	inline void 		GetColorFor32Bit( BitmapColor& rColor, ConstHPBYTE pPixel ) const;
 	inline void 		SetColorFor32Bit( const BitmapColor& rColor, HPBYTE pPixel ) const;
 };
 
@@ -495,6 +499,14 @@ inline BitmapColor::operator Color() const
 inline BitmapColor::operator BYTE() const
 {
 	DBG_ASSERT( mbIndex, "Pixel represents color values!" );
+	return mcBlueOrIndex;
+}
+
+// ------------------------------------------------------------------
+
+inline BYTE BitmapColor::GetBlueOrIndex() const
+{
+    // #i47518# Yield a value regardless of mbIndex
 	return mcBlueOrIndex;
 }
 
@@ -823,7 +835,7 @@ inline ULONG ColorMask::GetBlueMask() const
 
 // ------------------------------------------------------------------
 
-inline void ColorMask::GetColorFor8Bit( BitmapColor& rColor, HPBYTE pPixel ) const
+inline void ColorMask::GetColorFor8Bit( BitmapColor& rColor, ConstHPBYTE pPixel ) const
 {
 	const UINT32 nVal = *pPixel;
 	MASK_TO_COLOR( nVal, mnRMask, mnGMask, mnBMask, mnRShift, mnGShift, mnBShift, rColor );
@@ -838,7 +850,7 @@ inline void ColorMask::SetColorFor8Bit( const BitmapColor& rColor, HPBYTE pPixel
 
 // ------------------------------------------------------------------
 
-inline void ColorMask::GetColorFor16BitMSB( BitmapColor& rColor, HPBYTE pPixel ) const
+inline void ColorMask::GetColorFor16BitMSB( BitmapColor& rColor, ConstHPBYTE pPixel ) const
 {
 #ifdef OSL_BIGENDIAN
 	const UINT32 nVal = *(UINT16*) pPixel;
@@ -865,7 +877,7 @@ inline void ColorMask::SetColorFor16BitMSB( const BitmapColor& rColor, HPBYTE pP
 
 // ------------------------------------------------------------------
 
-inline void ColorMask::GetColorFor16BitLSB( BitmapColor& rColor, HPBYTE pPixel ) const
+inline void ColorMask::GetColorFor16BitLSB( BitmapColor& rColor, ConstHPBYTE pPixel ) const
 {
 #ifdef OSL_BIGENDIAN
     const UINT32 nVal = pPixel[ 0 ] | ( (UINT32) pPixel[ 1 ] << 8UL );
@@ -893,7 +905,7 @@ inline void ColorMask::SetColorFor16BitLSB( const BitmapColor& rColor, HPBYTE pP
 
 // ------------------------------------------------------------------
 
-inline void ColorMask::GetColorFor24Bit( BitmapColor& rColor, HPBYTE pPixel ) const
+inline void ColorMask::GetColorFor24Bit( BitmapColor& rColor, ConstHPBYTE pPixel ) const
 {
 	const UINT32 nVal = pPixel[ 0 ] | ( (UINT32) pPixel[ 1 ] << 8UL ) | ( (UINT32) pPixel[ 2 ] << 16UL );
 	MASK_TO_COLOR( nVal, mnRMask, mnGMask, mnBMask, mnRShift, mnGShift, mnBShift, rColor );
@@ -909,7 +921,7 @@ inline void ColorMask::SetColorFor24Bit( const BitmapColor& rColor, HPBYTE pPixe
 
 // ------------------------------------------------------------------
 
-inline void ColorMask::GetColorFor32Bit( BitmapColor& rColor, HPBYTE pPixel ) const
+inline void ColorMask::GetColorFor32Bit( BitmapColor& rColor, ConstHPBYTE pPixel ) const
 {
 #ifdef OSL_BIGENDIAN
 	const UINT32 nVal = (UINT32) pPixel[ 0 ] | ( (UINT32) pPixel[ 1 ] << 8UL ) |

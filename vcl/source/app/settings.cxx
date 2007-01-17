@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_vcl.hxx"
+
 #ifndef _DEBUG_HXX
 #include <tools/debug.hxx>
 #endif
@@ -95,7 +98,7 @@ using namespace rtl;
 
 // =======================================================================
 
-DBG_NAME( AllSettings );
+DBG_NAME( AllSettings )
 
 // =======================================================================
 
@@ -137,7 +140,7 @@ MachineSettings::MachineSettings()
 
 MachineSettings::MachineSettings( const MachineSettings& rSet )
 {
-    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFE, "MachineSettings: RefCount overflow" );
+    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFFFFFE, "MachineSettings: RefCount overflow" );
 
     // shared Instance Daten uebernehmen und Referenzcounter erhoehen
     mpData = rSet.mpData;
@@ -159,7 +162,7 @@ MachineSettings::~MachineSettings()
 
 const MachineSettings& MachineSettings::operator =( const MachineSettings& rSet )
 {
-    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFE, "MachineSettings: RefCount overflow" );
+    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFFFFFE, "MachineSettings: RefCount overflow" );
 
     // Zuerst Referenzcounter erhoehen, damit man sich selbst zuweisen kann
     rSet.mpData->mnRefCount++;
@@ -270,7 +273,7 @@ MouseSettings::MouseSettings()
 
 MouseSettings::MouseSettings( const MouseSettings& rSet )
 {
-    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFE, "MouseSettings: RefCount overflow" );
+    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFFFFFE, "MouseSettings: RefCount overflow" );
 
     // shared Instance Daten uebernehmen und Referenzcounter erhoehen
     mpData = rSet.mpData;
@@ -292,7 +295,7 @@ MouseSettings::~MouseSettings()
 
 const MouseSettings& MouseSettings::operator =( const MouseSettings& rSet )
 {
-    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFE, "MouseSettings: RefCount overflow" );
+    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFFFFFE, "MouseSettings: RefCount overflow" );
 
     // Zuerst Referenzcounter erhoehen, damit man sich selbst zuweisen kann
     rSet.mpData->mnRefCount++;
@@ -380,7 +383,7 @@ KeyboardSettings::KeyboardSettings()
 
 KeyboardSettings::KeyboardSettings( const KeyboardSettings& rSet )
 {
-    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFE, "KeyboardSettings: RefCount overflow" );
+    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFFFFFE, "KeyboardSettings: RefCount overflow" );
 
     // shared Instance Daten uebernehmen und Referenzcounter erhoehen
     mpData = rSet.mpData;
@@ -402,7 +405,7 @@ KeyboardSettings::~KeyboardSettings()
 
 const KeyboardSettings& KeyboardSettings::operator =( const KeyboardSettings& rSet )
 {
-    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFE, "KeyboardSettings: RefCount overflow" );
+    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFFFFFE, "KeyboardSettings: RefCount overflow" );
 
     // Zuerst Referenzcounter erhoehen, damit man sich selbst zuweisen kann
     rSet.mpData->mnRefCount++;
@@ -484,6 +487,7 @@ ImplStyleData::ImplStyleData( const ImplStyleData& rData ) :
     maActiveColor2( rData.maActiveColor2 ),
     maActiveTextColor( rData.maActiveTextColor ),
     maButtonTextColor( rData.maButtonTextColor ),
+    maButtonRolloverTextColor( rData.maButtonRolloverTextColor ),
     maCheckedColor( rData.maCheckedColor ),
     maDarkShadowColor( rData.maDarkShadowColor ),
     maDeactiveBorderColor( rData.maDeactiveBorderColor ),
@@ -496,6 +500,7 @@ ImplStyleData::ImplStyleData( const ImplStyleData& rData ) :
     maFaceColor( rData.maFaceColor ),
     maFieldColor( rData.maFieldColor ),
     maFieldTextColor( rData.maFieldTextColor ),
+    maFieldRolloverTextColor( rData.maFieldRolloverTextColor ),
 	maFontColor( rData.maFontColor ),
     maGroupTextColor( rData.maGroupTextColor ),
     maHelpColor( rData.maHelpColor ),
@@ -514,13 +519,13 @@ ImplStyleData::ImplStyleData( const ImplStyleData& rData ) :
     maMenuHighlightColor( rData.maMenuHighlightColor ),
     maMenuHighlightTextColor( rData.maMenuHighlightTextColor ),
     maMenuTextColor( rData.maMenuTextColor ),
+    maMonoColor( rData.maMonoColor ),
     maRadioCheckTextColor( rData.maRadioCheckTextColor ),
     maShadowColor( rData.maShadowColor ),
     maVisitedLinkColor( rData.maLinkColor ),
     maWindowColor( rData.maWindowColor ),
     maWindowTextColor( rData.maWindowTextColor ),
     maWorkspaceColor( rData.maWorkspaceColor ),
-    maMonoColor( rData.maMonoColor ),
     maAppFont( rData.maAppFont ),
     maHelpFont( rData.maAppFont ),
     maTitleFont( rData.maTitleFont ),
@@ -528,14 +533,12 @@ ImplStyleData::ImplStyleData( const ImplStyleData& rData ) :
     maMenuFont( rData.maMenuFont ),
     maToolFont( rData.maToolFont ),
     maLabelFont( rData.maLabelFont ),
-    maGroupFont( rData.maGroupFont ),
     maInfoFont( rData.maInfoFont ),
     maRadioCheckFont( rData.maRadioCheckFont ),
     maPushButtonFont( rData.maPushButtonFont ),
     maFieldFont( rData.maFieldFont ),
     maIconFont( rData.maIconFont ),
-    maButtonRolloverTextColor( rData.maButtonRolloverTextColor ),
-    maFieldRolloverTextColor( rData.maButtonRolloverTextColor )
+    maGroupFont( rData.maGroupFont )
 {
     mnRefCount                  = 1;
     mnBorderSize                = rData.mnBorderSize;
@@ -570,6 +573,7 @@ ImplStyleData::ImplStyleData( const ImplStyleData& rData ) :
 	mnUseFlatMenues 			= rData.mnUseFlatMenues;
     mnAutoMnemonic				= rData.mnAutoMnemonic;
     mnUseImagesInMenus			= rData.mnUseImagesInMenus;
+    mnSkipDisabledInMenus		= rData.mnSkipDisabledInMenus;
     mnToolbarIconSize			= rData.mnToolbarIconSize;
     mnSymbolsStyle				= rData.mnSymbolsStyle;
 }
@@ -578,7 +582,7 @@ ImplStyleData::ImplStyleData( const ImplStyleData& rData ) :
 
 void ImplStyleData::SetStandardStyles()
 {
-    Font aStdFont( FAMILY_SWISS, Size( 0, 8 ) );
+    Font aStdFont( FAMILY_SWISS, Size( 0, 10 ) );
     aStdFont.SetCharSet( gsl_getSystemTextEncoding() );
     aStdFont.SetWeight( WEIGHT_NORMAL );
     aStdFont.SetName( vcl::DefaultFontConfiguration::get()->getUserInterfaceFont(com::sun::star::lang::Locale( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("en") ), rtl::OUString(), rtl::OUString() ) ) );
@@ -658,6 +662,7 @@ void ImplStyleData::SetStandardStyles()
 	mnUseFlatBorders 			= 0;
 	mnUseFlatMenues 			= 0;
 	mnUseImagesInMenus			= (USHORT)TRUE;
+	mnSkipDisabledInMenus		= (USHORT)FALSE;
 }
 
 // -----------------------------------------------------------------------
@@ -671,7 +676,7 @@ StyleSettings::StyleSettings()
 
 StyleSettings::StyleSettings( const StyleSettings& rSet )
 {
-    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFE, "StyleSettings: RefCount overflow" );
+    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFFFFFE, "StyleSettings: RefCount overflow" );
 
     // shared Instance Daten uebernehmen und Referenzcounter erhoehen
     mpData = rSet.mpData;
@@ -766,7 +771,8 @@ ULONG StyleSettings::GetCurrentSymbolsStyle() const
 		{
 			const ::rtl::OUString &rDesktopEnvironment = Application::GetDesktopEnvironment();
 
-			if( rDesktopEnvironment.equalsIgnoreAsciiCaseAscii( "gnome" ) )
+			if( rDesktopEnvironment.equalsIgnoreAsciiCaseAscii( "gnome" ) ||
+			    rDesktopEnvironment.equalsIgnoreAsciiCaseAscii( "windows" ) )
 				snDesktopStyle = STYLE_SYMBOLS_INDUSTRIAL;
 			else if( rDesktopEnvironment.equalsIgnoreAsciiCaseAscii( "kde" ) )
 				snDesktopStyle = STYLE_SYMBOLS_CRYSTAL;
@@ -846,7 +852,7 @@ Color StyleSettings::GetSeparatorColor() const
 
 const StyleSettings& StyleSettings::operator =( const StyleSettings& rSet )
 {
-    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFE, "StyleSettings: RefCount overflow" );
+    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFFFFFE, "StyleSettings: RefCount overflow" );
 
     // Zuerst Referenzcounter erhoehen, damit man sich selbst zuweisen kann
     rSet.mpData->mnRefCount++;
@@ -1015,6 +1021,7 @@ BOOL StyleSettings::operator ==( const StyleSettings& rSet ) const
          (mpData->maFieldFont               == rSet.mpData->maFieldFont)                &&
          (mpData->maIconFont                == rSet.mpData->maIconFont)					&&
          (mpData->mnUseImagesInMenus		== rSet.mpData->mnUseImagesInMenus)			&&
+         (mpData->mnSkipDisabledInMenus		== rSet.mpData->mnSkipDisabledInMenus)		&&
 		 (mpData->maFontColor				== rSet.mpData->maFontColor ))
         return TRUE;
     else
@@ -1027,8 +1034,8 @@ ImplMiscData::ImplMiscData()
 {
     mnRefCount                  = 1;
     mnTwoDigitYearStart         = 1930;
-    mnEnableATT					= ~0;
-    mnDisablePrinting			= ~0;
+    mnEnableATT					= sal::static_int_cast<USHORT>(~0U);
+    mnDisablePrinting			= sal::static_int_cast<USHORT>(~0U);
     static const char* pEnv = getenv("SAL_DECIMALSEP_ENABLED" ); // set default without UI
     mbEnableLocalizedDecimalSep = (pEnv != NULL) ? TRUE : FALSE;
 }
@@ -1055,7 +1062,7 @@ MiscSettings::MiscSettings()
 
 MiscSettings::MiscSettings( const MiscSettings& rSet )
 {
-    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFE, "MiscSettings: RefCount overflow" );
+    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFFFFFE, "MiscSettings: RefCount overflow" );
 
     // shared Instance Daten uebernehmen und Referenzcounter erhoehen
     mpData = rSet.mpData;
@@ -1077,7 +1084,7 @@ MiscSettings::~MiscSettings()
 
 const MiscSettings& MiscSettings::operator =( const MiscSettings& rSet )
 {
-    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFE, "MiscSettings: RefCount overflow" );
+    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFFFFFE, "MiscSettings: RefCount overflow" );
 
     // Zuerst Referenzcounter erhoehen, damit man sich selbst zuweisen kann
     rSet.mpData->mnRefCount++;
@@ -1308,7 +1315,7 @@ SoundSettings::SoundSettings()
 
 SoundSettings::SoundSettings( const SoundSettings& rSet )
 {
-    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFE, "SoundSettings: RefCount overflow" );
+    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFFFFFE, "SoundSettings: RefCount overflow" );
 
     // shared Instance Daten uebernehmen und Referenzcounter erhoehen
     mpData = rSet.mpData;
@@ -1330,7 +1337,7 @@ SoundSettings::~SoundSettings()
 
 const SoundSettings& SoundSettings::operator =( const SoundSettings& rSet )
 {
-    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFE, "SoundSettings: RefCount overflow" );
+    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFFFFFE, "SoundSettings: RefCount overflow" );
 
     // Zuerst Referenzcounter erhoehen, damit man sich selbst zuweisen kann
     rSet.mpData->mnRefCount++;
@@ -1398,7 +1405,7 @@ NotificationSettings::NotificationSettings()
 
 NotificationSettings::NotificationSettings( const NotificationSettings& rSet )
 {
-    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFE, "NotificationSettings: RefCount overflow" );
+    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFFFFFE, "NotificationSettings: RefCount overflow" );
 
     // shared Instance Daten uebernehmen und Referenzcounter erhoehen
     mpData = rSet.mpData;
@@ -1420,7 +1427,7 @@ NotificationSettings::~NotificationSettings()
 
 const NotificationSettings& NotificationSettings::operator =( const NotificationSettings& rSet )
 {
-    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFE, "NotificationSettings: RefCount overflow" );
+    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFFFFFE, "NotificationSettings: RefCount overflow" );
 
     // Zuerst Referenzcounter erhoehen, damit man sich selbst zuweisen kann
     rSet.mpData->mnRefCount++;
@@ -1494,7 +1501,7 @@ HelpSettings::HelpSettings()
 
 HelpSettings::HelpSettings( const HelpSettings& rSet )
 {
-    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFE, "HelpSettings: RefCount overflow" );
+    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFFFFFE, "HelpSettings: RefCount overflow" );
 
     // shared Instance Daten uebernehmen und Referenzcounter erhoehen
     mpData = rSet.mpData;
@@ -1516,7 +1523,7 @@ HelpSettings::~HelpSettings()
 
 const HelpSettings& HelpSettings::operator =( const HelpSettings& rSet )
 {
-    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFE, "HelpSettings: RefCount overflow" );
+    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFFFFFE, "HelpSettings: RefCount overflow" );
 
     // Zuerst Referenzcounter erhoehen, damit man sich selbst zuweisen kann
     rSet.mpData->mnRefCount++;
@@ -1630,7 +1637,7 @@ ImplAllSettingsData::~ImplAllSettingsData()
         delete mpUICollatorWrapper;
     if ( mpI18nHelper )
         delete mpI18nHelper;
-    if ( mpI18nHelper )
+    if ( mpUII18nHelper )
         delete mpUII18nHelper;
 }
 
@@ -1648,7 +1655,7 @@ AllSettings::AllSettings()
 AllSettings::AllSettings( const AllSettings& rSet )
 {
     DBG_CTOR( AllSettings, NULL );
-    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFE, "Settings: RefCount overflow" );
+    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFFFFFE, "Settings: RefCount overflow" );
 
     // shared Instance Daten uebernehmen und Referenzcounter erhoehen
     mpData = rSet.mpData;
@@ -1672,7 +1679,7 @@ AllSettings::~AllSettings()
 
 const AllSettings& AllSettings::operator =( const AllSettings& rSet )
 {
-    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFE, "AllSettings: RefCount overflow" );
+    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFFFFFE, "AllSettings: RefCount overflow" );
     DBG_CHKTHIS( AllSettings, NULL );
     DBG_CHKOBJ( &rSet, AllSettings, NULL );
 
@@ -2006,13 +2013,12 @@ BOOL AllSettings::GetLayoutRTL() const
         nUIMirroring = 2; // mirroring is not compatible with Aqua controls
 #else	// USE_JAVA
         nUIMirroring = 0; // ask configuration only once
-        // Mirroring is really screwy with native Aqua widgets so don't mirror
         utl::OConfigurationNode aNode = utl::OConfigurationTreeRoot::tryCreateWithServiceFactory( 
             vcl::unohelper::GetMultiServiceFactory(),
             OUString::createFromAscii( "org.openoffice.Office.Common/I18N/CTL" ) );    // note: case sensisitive !
         if ( aNode.isValid() )
         {
-            BOOL bTmp;
+            BOOL bTmp = BOOL();
             ::com::sun::star::uno::Any aValue = aNode.getNodeValue( OUString::createFromAscii( "UIMirroring" ) );
             if( aValue >>= bTmp )
             {

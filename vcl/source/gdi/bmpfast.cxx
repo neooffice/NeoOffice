@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_vcl.hxx"
+
 #include <bmpfast.hxx>
 
 #ifndef NO_OPTIMIZED_BITMAP_ACCESS
@@ -42,7 +45,7 @@
 #define _SOLAR__PRIVATE 1
 #include <bmpacc.hxx>
 
-//#define FAST_ARGB_BGRA
+#define FAST_ARGB_BGRA
 
 #include <stdlib.h>
 static bool bDisableFastBitops = (getenv( "SAL_DISABLE_BITMAPS_OPTS" ) != NULL);
@@ -57,7 +60,7 @@ public:
     PIXBYTE* GetRawPtr( void ) const                    { return mpPixel; }
     void    AddByteOffset( int nByteOffset )            { mpPixel += nByteOffset; }
     bool    operator<( const BasePixelPtr& rCmp ) const { return (mpPixel < rCmp.mpPixel); }
-   
+
 protected:
    PIXBYTE* mpPixel;
 };
@@ -70,7 +73,7 @@ public:
     PIXBYTE GetGreen() const;
     PIXBYTE GetBlue() const;
     PIXBYTE GetAlpha() const;
-    
+
     void    SetColor( PIXBYTE r, PIXBYTE g, PIXBYTE b ) const;
     void    SetAlpha( PIXBYTE a ) const;
     void    operator++(int);
@@ -84,13 +87,13 @@ class TrueColorPixelPtr<BMP_FORMAT_24BIT_TC_RGB> : public BasePixelPtr
 {
 public:
     void    operator++()       { mpPixel += 3; }
-    
+
     PIXBYTE GetRed() const     { return mpPixel[0]; }
     PIXBYTE GetGreen() const   { return mpPixel[1]; }
     PIXBYTE GetBlue() const    { return mpPixel[2]; }
     PIXBYTE GetAlpha() const   { return 0; }
     void SetAlpha( PIXBYTE ) const {}
-    
+
     void SetColor( PIXBYTE r, PIXBYTE g, PIXBYTE b ) const
     {
         mpPixel[0] = r;
@@ -104,13 +107,13 @@ class TrueColorPixelPtr<BMP_FORMAT_24BIT_TC_BGR> : public BasePixelPtr
 {
 public:
     void    operator++()        { mpPixel += 3; }
-    
+
     PIXBYTE GetRed() const      { return mpPixel[2]; }
     PIXBYTE GetGreen() const    { return mpPixel[1]; }
     PIXBYTE GetBlue() const     { return mpPixel[0]; }
     PIXBYTE GetAlpha() const    { return 0; }
     void SetAlpha( PIXBYTE ) const  {}
-    
+
     void SetColor( PIXBYTE r, PIXBYTE g, PIXBYTE b ) const
     {
         mpPixel[0] = b;
@@ -124,13 +127,13 @@ class TrueColorPixelPtr<BMP_FORMAT_32BIT_TC_ARGB> : public BasePixelPtr
 {
 public:
     void    operator++()        { mpPixel += 4; }
-    
+
     PIXBYTE GetRed() const      { return mpPixel[1]; }
     PIXBYTE GetGreen() const    { return mpPixel[2]; }
     PIXBYTE GetBlue() const     { return mpPixel[3]; }
     PIXBYTE GetAlpha() const    { return mpPixel[0]; }
     void SetAlpha( PIXBYTE a ) const { mpPixel[0] = a; }
-    
+
     void SetColor( PIXBYTE r, PIXBYTE g, PIXBYTE b ) const
     {
         mpPixel[1] = r;
@@ -144,13 +147,13 @@ class TrueColorPixelPtr<BMP_FORMAT_32BIT_TC_ABGR> : public BasePixelPtr
 {
 public:
     void    operator++()        { mpPixel += 4; }
-    
+
     PIXBYTE GetRed() const      { return mpPixel[3]; }
     PIXBYTE GetGreen() const    { return mpPixel[2]; }
     PIXBYTE GetBlue() const     { return mpPixel[1]; }
     PIXBYTE GetAlpha() const    { return mpPixel[0]; }
     void SetAlpha( PIXBYTE a ) const { mpPixel[0] = a; }
-    
+
     void SetColor( PIXBYTE r, PIXBYTE g, PIXBYTE b ) const
     {
         mpPixel[1] = b;
@@ -164,13 +167,13 @@ class TrueColorPixelPtr<BMP_FORMAT_32BIT_TC_RGBA> : public BasePixelPtr
 {
 public:
     void    operator++()            { mpPixel += 4; }
-    
+
     PIXBYTE GetRed() const          { return mpPixel[0]; }
     PIXBYTE GetGreen() const        { return mpPixel[1]; }
     PIXBYTE GetBlue() const         { return mpPixel[2]; }
     PIXBYTE GetAlpha() const        { return mpPixel[3]; }
     void SetAlpha( PIXBYTE a ) const{ mpPixel[3] = a; }
-    
+
     void SetColor( PIXBYTE r, PIXBYTE g, PIXBYTE b ) const
     {
         mpPixel[0] = r;
@@ -184,13 +187,13 @@ class TrueColorPixelPtr<BMP_FORMAT_32BIT_TC_BGRA> : public BasePixelPtr
 {
 public:
     void    operator++()            { mpPixel += 4; }
-    
+
     PIXBYTE GetRed() const          { return mpPixel[2]; }
     PIXBYTE GetGreen() const        { return mpPixel[1]; }
     PIXBYTE GetBlue() const         { return mpPixel[0]; }
     PIXBYTE GetAlpha() const        { return mpPixel[3]; }
     void SetAlpha( PIXBYTE a ) const{ mpPixel[3] = a; }
-    
+
     void SetColor( PIXBYTE r, PIXBYTE g, PIXBYTE b ) const
     {
         mpPixel[0] = b;
@@ -204,14 +207,14 @@ class TrueColorPixelPtr<BMP_FORMAT_16BIT_TC_MSB_MASK> : public BasePixelPtr
 {
 public:
     void    operator++()            { mpPixel += 2; }
-    
+
     // TODO: non565-RGB
     PIXBYTE GetRed() const          { return (mpPixel[0] & 0xF8U); }
     PIXBYTE GetGreen() const        { return (mpPixel[0]<<5U) | ((mpPixel[1]>>3U)&28U); }
     PIXBYTE GetBlue() const         { return (mpPixel[1]<<3U); }
     PIXBYTE GetAlpha() const        { return 0; }
     void SetAlpha( PIXBYTE ) const  {}
-    
+
     void SetColor( PIXBYTE r, PIXBYTE g, PIXBYTE b ) const
     {
         mpPixel[0] = ((g >> 5U) & 7U) | (r & 0xF8U);
@@ -224,14 +227,14 @@ class TrueColorPixelPtr<BMP_FORMAT_16BIT_TC_LSB_MASK> : public BasePixelPtr
 {
 public:
     void    operator++()            { mpPixel += 2; }
-    
+
     // TODO: non565-RGB
     PIXBYTE GetRed() const          { return (mpPixel[1] & 0xF8U); }
     PIXBYTE GetGreen() const        { return (mpPixel[1]<<5U) | ((mpPixel[0]>>3U)&28U); }
     PIXBYTE GetBlue() const         { return (mpPixel[0]<<3U); }
     PIXBYTE GetAlpha() const        { return 0; }
     void SetAlpha( PIXBYTE ) const  {}
-    
+
     void SetColor( PIXBYTE r, PIXBYTE g, PIXBYTE b ) const
     {
         mpPixel[0] = ((g & 28U)<< 3U) | (b >> 3U);
@@ -286,7 +289,7 @@ class TrueColorPixelPtr<BMP_FORMAT_32BIT_TC_MASK> : public BasePixelPtr
 {
 public:
     void operator++()   { mpPixel += 4; }
-    
+
     unsigned GetAlpha() const
     {
 #ifdef OSL_BIGENDIAN
@@ -299,7 +302,7 @@ public:
 #endif
         return nAlpha;
     }
-    
+
     void SetAlpha( unsigned nAlpha ) const
     {
 #ifdef OSL_BIGENDIAN
@@ -383,7 +386,9 @@ inline void ImplBlendPixels( const TrueColorPixelPtr<DSTFMT>& rDst,
         nS = rSrc.GetBlue();
         nB = nS + (((nB - nS) * nAlphaVal) >> nAlphaShift);
 
-        rDst.SetColor( nR, nG, nB );
+        rDst.SetColor( sal::static_int_cast<PIXBYTE>(nR),
+                       sal::static_int_cast<PIXBYTE>(nG),
+                       sal::static_int_cast<PIXBYTE>(nB) );
     }
 }
 
@@ -434,7 +439,7 @@ static bool ImplCopyImage( BitmapBuffer& rDstBuffer, const BitmapBuffer& rSrcBuf
 {
     const int nSrcLinestep = rSrcBuffer.mnScanlineSize;
     int nDstLinestep = rDstBuffer.mnScanlineSize;
-    
+
     const PIXBYTE* pRawSrc = rSrcBuffer.mpBits;
     PIXBYTE* pRawDst = rDstBuffer.mpBits;
 
@@ -449,51 +454,51 @@ static bool ImplCopyImage( BitmapBuffer& rDstBuffer, const BitmapBuffer& rSrcBuf
         memcpy( pRawDst, pRawSrc, rSrcBuffer.mnHeight * nDstLinestep );
         return true;
     }
-    
+
     int nByteWidth = nSrcLinestep;
     if( nByteWidth > rDstBuffer.mnScanlineSize )
         nByteWidth = rDstBuffer.mnScanlineSize;
-    
+
     for( int y = rSrcBuffer.mnHeight; --y >= 0; )
     {
         memcpy( pRawDst, pRawSrc, nByteWidth );
         pRawSrc += nSrcLinestep;
         pRawDst += nDstLinestep;
     }
-    
+
     return true;
 }
 
 // -----------------------------------------------------------------------
 
 template <ULONG DSTFMT,ULONG SRCFMT>
-static bool ImplConvertToBitmap( TrueColorPixelPtr<SRCFMT>& rSrcLine,
+bool ImplConvertToBitmap( TrueColorPixelPtr<SRCFMT>& rSrcLine,
     BitmapBuffer& rDstBuffer, const BitmapBuffer& rSrcBuffer )
 {
     // help the compiler to avoid instantiations of unneeded conversions
     DBG_ASSERT( SRCFMT != DSTFMT, "ImplConvertToBitmap into same format");
     if( SRCFMT == DSTFMT )
         return false;
-        
+
     const int nSrcLinestep = rSrcBuffer.mnScanlineSize;
     int nDstLinestep = rDstBuffer.mnScanlineSize;
-    
+
     TrueColorPixelPtr<DSTFMT> aDstLine; aDstLine.SetRawPtr( rDstBuffer.mpBits );
-    
+
     // source and destination don't match upside down
     if( BMP_FORMAT_TOP_DOWN & (rSrcBuffer.mnFormat ^ rDstBuffer.mnFormat) )
     {
         aDstLine.AddByteOffset( (rSrcBuffer.mnHeight - 1) * nDstLinestep );
         nDstLinestep = -nDstLinestep;
     }
-        
+
     for( int y = rSrcBuffer.mnHeight; --y >= 0; )
     {
         ImplConvertLine( aDstLine, rSrcLine, rSrcBuffer.mnWidth );
         rSrcLine.AddByteOffset( nSrcLinestep );
         aDstLine.AddByteOffset( nDstLinestep );
     }
-    
+
     return true;
 }
 
@@ -503,7 +508,7 @@ template <ULONG SRCFMT>
 inline bool ImplConvertFromBitmap( BitmapBuffer& rDst, const BitmapBuffer& rSrc )
 {
     TrueColorPixelPtr<SRCFMT> aSrcType; aSrcType.SetRawPtr( rSrc.mpBits );
-    
+
     // select the matching instantiation for the destination's bitmap format
     switch( rDst.mnFormat & ~BMP_FORMAT_TOP_DOWN )
     {
@@ -513,7 +518,7 @@ inline bool ImplConvertFromBitmap( BitmapBuffer& rDst, const BitmapBuffer& rSrc 
         case BMP_FORMAT_4BIT_LSN_PAL:
         case BMP_FORMAT_8BIT_PAL:
             break;
-        
+
         case BMP_FORMAT_8BIT_TC_MASK:
 //            return ImplConvertToBitmap<BMP_FORMAT_8BIT_TC_MASK>( aSrcType, rDst, rSrc );
         case BMP_FORMAT_24BIT_TC_MASK:
@@ -521,12 +526,12 @@ inline bool ImplConvertFromBitmap( BitmapBuffer& rDst, const BitmapBuffer& rSrc 
         case BMP_FORMAT_32BIT_TC_MASK:
 //            return ImplConvertToBitmap<BMP_FORMAT_32BIT_TC_MASK>( aSrcType, rDst, rSrc );
             break;
-        
+
         case BMP_FORMAT_16BIT_TC_MSB_MASK:
             return ImplConvertToBitmap<BMP_FORMAT_16BIT_TC_MSB_MASK>( aSrcType, rDst, rSrc );
         case BMP_FORMAT_16BIT_TC_LSB_MASK:
             return ImplConvertToBitmap<BMP_FORMAT_16BIT_TC_LSB_MASK>( aSrcType, rDst, rSrc );
-        
+
         case BMP_FORMAT_24BIT_TC_BGR:
             return ImplConvertToBitmap<BMP_FORMAT_24BIT_TC_BGR>( aSrcType, rDst, rSrc );
         case BMP_FORMAT_24BIT_TC_RGB:
@@ -539,7 +544,7 @@ inline bool ImplConvertFromBitmap( BitmapBuffer& rDst, const BitmapBuffer& rSrc 
             return ImplConvertToBitmap<BMP_FORMAT_32BIT_TC_ARGB>( aSrcType, rDst, rSrc );
         case BMP_FORMAT_32BIT_TC_BGRA:
             return ImplConvertToBitmap<BMP_FORMAT_32BIT_TC_BGRA>( aSrcType, rDst, rSrc );
-#endif           
+#endif
         case BMP_FORMAT_32BIT_TC_RGBA:
             return ImplConvertToBitmap<BMP_FORMAT_32BIT_TC_RGBA>( aSrcType, rDst, rSrc );
     }
@@ -548,13 +553,16 @@ inline bool ImplConvertFromBitmap( BitmapBuffer& rDst, const BitmapBuffer& rSrc 
     static int nNotAccelerated = 0;
     if( rSrc.mnWidth * rSrc.mnHeight >= 4000 )
         if( ++nNotAccelerated == 100 )
+		{
+			int foo = 0; (void)foo; // so no warning is created when building on pro with debug
             DBG_WARNING2( "ImplConvertFromBitmap for not accelerated case (0x%04X->0x%04X)",
                 rSrc.mnFormat, rDst.mnFormat );
+		}
 #endif
 
     return false;
 }
-    
+
 // =======================================================================
 
 // an universal stretching conversion is overkill in most common situations
@@ -572,19 +580,19 @@ bool ImplFastBitmapConversion( BitmapBuffer& rDst, const BitmapBuffer& rSrc,
     if( rTR.mnDestHeight < 0 )
         // TODO: rDst.mnFormat ^= BMP_FORMAT_TOP_DOWN;
         return false;
-    
+
     // offseted conversion is not implemented yet
     if( rTR.mnSrcX || rTR.mnSrcY )
         return false;
     if( rTR.mnDestX || rTR.mnDestY )
         return false;
-        
+
     // stretched conversion is not implemented yet
     if( rTR.mnDestWidth != rTR.mnSrcWidth )
         return false;
     if( rTR.mnDestHeight!= rTR.mnSrcHeight )
         return false;
-    
+
     // check source image size
     if( rSrc.mnWidth < rTR.mnSrcX + rTR.mnSrcWidth )
         return false;
@@ -611,7 +619,7 @@ bool ImplFastBitmapConversion( BitmapBuffer& rDst, const BitmapBuffer& rSrc,
         ||  rDst.maColorMask.GetGreenMask()!= 0x07E0
         ||  rDst.maColorMask.GetBlueMask() != 0x001F )
             return false;
-    
+
     // special handling of trivial cases
     if( nSrcFormat == nDstFormat )
     {
@@ -625,8 +633,8 @@ bool ImplFastBitmapConversion( BitmapBuffer& rDst, const BitmapBuffer& rSrc,
             return false;
 #endif	// USE_JAVA
         return ImplCopyImage( rDst, rSrc );
-    }            
-    
+    }
+
     // select the matching instantiation for the source's bitmap format
     switch( nSrcFormat )
     {
@@ -636,7 +644,7 @@ bool ImplFastBitmapConversion( BitmapBuffer& rDst, const BitmapBuffer& rSrc,
         case BMP_FORMAT_4BIT_LSN_PAL:
         case BMP_FORMAT_8BIT_PAL:
             break;
-        
+
         case BMP_FORMAT_8BIT_TC_MASK:
 //            return ImplConvertFromBitmap<BMP_FORMAT_8BIT_TC_MASK>( rDst, rSrc );
         case BMP_FORMAT_24BIT_TC_MASK:
@@ -644,17 +652,17 @@ bool ImplFastBitmapConversion( BitmapBuffer& rDst, const BitmapBuffer& rSrc,
         case BMP_FORMAT_32BIT_TC_MASK:
 //            return ImplConvertFromBitmap<BMP_FORMAT_32BIT_TC_MASK>( rDst, rSrc );
             break;
-        
+
         case BMP_FORMAT_16BIT_TC_MSB_MASK:
             return ImplConvertFromBitmap<BMP_FORMAT_16BIT_TC_MSB_MASK>( rDst, rSrc );
         case BMP_FORMAT_16BIT_TC_LSB_MASK:
             return ImplConvertFromBitmap<BMP_FORMAT_16BIT_TC_LSB_MASK>( rDst, rSrc );
-        
+
         case BMP_FORMAT_24BIT_TC_BGR:
             return ImplConvertFromBitmap<BMP_FORMAT_24BIT_TC_BGR>( rDst, rSrc );
         case BMP_FORMAT_24BIT_TC_RGB:
             return ImplConvertFromBitmap<BMP_FORMAT_24BIT_TC_RGB>( rDst, rSrc );
-        
+
         case BMP_FORMAT_32BIT_TC_ABGR:
             return ImplConvertFromBitmap<BMP_FORMAT_32BIT_TC_ABGR>( rDst, rSrc );
 #ifdef FAST_ARGB_BGRA
@@ -670,9 +678,13 @@ bool ImplFastBitmapConversion( BitmapBuffer& rDst, const BitmapBuffer& rSrc,
 #ifdef DEBUG
     static int nNotAccelerated = 0;
     if( rSrc.mnWidth * rSrc.mnHeight >= 4000 )
+	{
         if( ++nNotAccelerated == 100 )
-            DBG_WARNING2( "ImplFastBitmapConversion for not accelerated case (0x%04X->0x%04X)",
-                rSrc.mnFormat, rDst.mnFormat );
+		{
+			int foo = 0; (void)foo; // so no warning is created when building on pro with debug
+            DBG_WARNING2( "ImplFastBitmapConversion for not accelerated case (0x%04X->0x%04X)", rSrc.mnFormat, rDst.mnFormat );
+		}
+	}
 #endif
 
     return false;
@@ -681,7 +693,7 @@ bool ImplFastBitmapConversion( BitmapBuffer& rDst, const BitmapBuffer& rSrc,
 // =======================================================================
 
 template <ULONG DSTFMT,ULONG SRCFMT> //,ULONG MSKFMT>
-static bool ImplBlendToBitmap( TrueColorPixelPtr<SRCFMT>& rSrcLine,
+bool ImplBlendToBitmap( TrueColorPixelPtr<SRCFMT>& rSrcLine,
     BitmapBuffer& rDstBuffer, const BitmapBuffer& rSrcBuffer,
     const BitmapBuffer& rMskBuffer )
 {
@@ -691,14 +703,14 @@ static bool ImplBlendToBitmap( TrueColorPixelPtr<SRCFMT>& rSrcLine,
     const int nSrcLinestep = rSrcBuffer.mnScanlineSize;
     int nMskLinestep = rMskBuffer.mnScanlineSize;
     int nDstLinestep = rDstBuffer.mnScanlineSize;
-    
+
     TrueColorPixelPtr<BMP_FORMAT_8BIT_PAL> aMskLine; aMskLine.SetRawPtr( rMskBuffer.mpBits );
     TrueColorPixelPtr<DSTFMT> aDstLine; aDstLine.SetRawPtr( rDstBuffer.mpBits );
-    
+
     // special case for single line masks
     if( rMskBuffer.mnHeight == 1 )
         nMskLinestep = 0;
-    
+
     // source and mask don't match: upside down
     if( (rSrcBuffer.mnFormat ^ rMskBuffer.mnFormat) & BMP_FORMAT_TOP_DOWN )
     {
@@ -712,7 +724,7 @@ static bool ImplBlendToBitmap( TrueColorPixelPtr<SRCFMT>& rSrcLine,
         aDstLine.AddByteOffset( (rSrcBuffer.mnHeight - 1) * nDstLinestep );
         nDstLinestep = -nDstLinestep;
     }
-        
+
     for( int y = rSrcBuffer.mnHeight; --y >= 0; )
     {
         ImplBlendLines<8>( aDstLine, rSrcLine, aMskLine, rDstBuffer.mnWidth );
@@ -720,14 +732,14 @@ static bool ImplBlendToBitmap( TrueColorPixelPtr<SRCFMT>& rSrcLine,
         rSrcLine.AddByteOffset( nSrcLinestep );
         aMskLine.AddByteOffset( nMskLinestep );
     }
-    
+
     return true;
 }
 
 // some specializations to reduce the code size
 template <>
 inline bool ImplBlendToBitmap<BMP_FORMAT_24BIT_TC_BGR,BMP_FORMAT_24BIT_TC_BGR>(
-    TrueColorPixelPtr<BMP_FORMAT_24BIT_TC_BGR>& rSrcLine,
+    TrueColorPixelPtr<BMP_FORMAT_24BIT_TC_BGR>&,
     BitmapBuffer& rDstBuffer, const BitmapBuffer& rSrcBuffer,
     const BitmapBuffer& rMskBuffer )
  {
@@ -737,7 +749,7 @@ inline bool ImplBlendToBitmap<BMP_FORMAT_24BIT_TC_BGR,BMP_FORMAT_24BIT_TC_BGR>(
 
 template <>
 inline bool ImplBlendToBitmap<BMP_FORMAT_32BIT_TC_ABGR,BMP_FORMAT_32BIT_TC_ABGR>(
-    TrueColorPixelPtr<BMP_FORMAT_32BIT_TC_ABGR>& rSrcLine,
+    TrueColorPixelPtr<BMP_FORMAT_32BIT_TC_ABGR>&,
     BitmapBuffer& rDstBuffer, const BitmapBuffer& rSrcBuffer,
     const BitmapBuffer& rMskBuffer )
  {
@@ -747,7 +759,7 @@ inline bool ImplBlendToBitmap<BMP_FORMAT_32BIT_TC_ABGR,BMP_FORMAT_32BIT_TC_ABGR>
 
 template <>
 inline bool ImplBlendToBitmap<BMP_FORMAT_32BIT_TC_BGRA,BMP_FORMAT_32BIT_TC_BGRA>(
-    TrueColorPixelPtr<BMP_FORMAT_32BIT_TC_BGRA>& rSrcLine,
+    TrueColorPixelPtr<BMP_FORMAT_32BIT_TC_BGRA>&,
     BitmapBuffer& rDstBuffer, const BitmapBuffer& rSrcBuffer,
     const BitmapBuffer& rMskBuffer )
  {
@@ -758,10 +770,10 @@ inline bool ImplBlendToBitmap<BMP_FORMAT_32BIT_TC_BGRA,BMP_FORMAT_32BIT_TC_BGRA>
 // -----------------------------------------------------------------------
 
 template <ULONG SRCFMT>
-static bool ImplBlendFromBitmap( BitmapBuffer& rDst, const BitmapBuffer& rSrc, const BitmapBuffer& rMsk )
+bool ImplBlendFromBitmap( BitmapBuffer& rDst, const BitmapBuffer& rSrc, const BitmapBuffer& rMsk )
 {
     TrueColorPixelPtr<SRCFMT> aSrcType; aSrcType.SetRawPtr( rSrc.mpBits );
-    
+
     // select the matching instantiation for the destination's bitmap format
     switch( rDst.mnFormat & ~BMP_FORMAT_TOP_DOWN )
     {
@@ -771,7 +783,7 @@ static bool ImplBlendFromBitmap( BitmapBuffer& rDst, const BitmapBuffer& rSrc, c
         case BMP_FORMAT_4BIT_LSN_PAL:
         case BMP_FORMAT_8BIT_PAL:
             break;
-        
+
         case BMP_FORMAT_8BIT_TC_MASK:
 //            return ImplBlendToBitmap<BMP_FORMAT_8BIT_TC_MASK>( aSrcType, rDst, rSrc, rMsk );
         case BMP_FORMAT_24BIT_TC_MASK:
@@ -779,12 +791,12 @@ static bool ImplBlendFromBitmap( BitmapBuffer& rDst, const BitmapBuffer& rSrc, c
         case BMP_FORMAT_32BIT_TC_MASK:
 //            return ImplBlendToBitmap<BMP_FORMAT_32BIT_TC_MASK>( aSrcType, rDst, rSrc, rMsk );
             break;
-        
+
         case BMP_FORMAT_16BIT_TC_MSB_MASK:
             return ImplBlendToBitmap<BMP_FORMAT_16BIT_TC_MSB_MASK>( aSrcType, rDst, rSrc, rMsk );
         case BMP_FORMAT_16BIT_TC_LSB_MASK:
             return ImplBlendToBitmap<BMP_FORMAT_16BIT_TC_LSB_MASK>( aSrcType, rDst, rSrc, rMsk );
-        
+
         case BMP_FORMAT_24BIT_TC_BGR:
             return ImplBlendToBitmap<BMP_FORMAT_24BIT_TC_BGR>( aSrcType, rDst, rSrc, rMsk );
         case BMP_FORMAT_24BIT_TC_RGB:
@@ -806,8 +818,11 @@ static bool ImplBlendFromBitmap( BitmapBuffer& rDst, const BitmapBuffer& rSrc, c
     static int nNotAccelerated = 0;
     if( rSrc.mnWidth * rSrc.mnHeight >= 4000 )
         if( ++nNotAccelerated == 100 )
+		{
+			int foo = 0; (void)foo; // so no warning is created when building on pro with debug
             DBG_WARNING3( "ImplBlendFromBitmap for not accelerated case (0x%04X*0x%04X->0x%04X)",
                 rSrc.mnFormat, rMsk.mnFormat, rDst.mnFormat );
+		}
 #endif
 
     return false;
@@ -836,19 +851,19 @@ bool ImplFastBitmapBlending( BitmapWriteAccess& rDstWA,
     if( rTR.mnDestHeight < 0 )
         // TODO: rDst.mnFormat ^= BMP_FORMAT_TOP_DOWN;
         return false;
-    
+
     // offseted blending is not implemented yet
     if( rTR.mnSrcX || rTR.mnSrcY )
         return false;
     if( rTR.mnDestX || rTR.mnDestY )
         return false;
-        
+
     // stretched blending is not implemented yet
     if( rTR.mnDestWidth != rTR.mnSrcWidth )
         return false;
     if( rTR.mnDestHeight!= rTR.mnSrcHeight )
         return false;
-    
+
     // check source image size
     if( rSrcRA.Width() < rTR.mnSrcX + rTR.mnSrcWidth )
         return false;
@@ -867,14 +882,14 @@ bool ImplFastBitmapBlending( BitmapWriteAccess& rDstWA,
         return false;
     if( rDstWA.Height() < rTR.mnDestY + rTR.mnDestHeight )
         return false;
-    
+
     BitmapBuffer& rDst = *rDstWA.ImplGetBitmapBuffer();
     const BitmapBuffer& rSrc = *rSrcRA.ImplGetBitmapBuffer();
     const BitmapBuffer& rMsk = *rMskRA.ImplGetBitmapBuffer();
 
     const ULONG nSrcFormat = rSrc.mnFormat & ~BMP_FORMAT_TOP_DOWN;
     const ULONG nDstFormat = rDst.mnFormat & ~BMP_FORMAT_TOP_DOWN;
-    
+
     // accelerated conversions for 16bit colormasks with non-565 format are not yet implemented
     if( nSrcFormat & (BMP_FORMAT_16BIT_TC_LSB_MASK | BMP_FORMAT_16BIT_TC_MSB_MASK) )
         if( rSrc.maColorMask.GetRedMask()  != 0xF800
@@ -886,7 +901,7 @@ bool ImplFastBitmapBlending( BitmapWriteAccess& rDstWA,
         ||  rDst.maColorMask.GetGreenMask()!= 0x07E0
         ||  rDst.maColorMask.GetBlueMask() != 0x001F)
             return false;
-    
+
     // select the matching instantiation for the source's bitmap format
     switch( nSrcFormat )
     {
@@ -896,7 +911,7 @@ bool ImplFastBitmapBlending( BitmapWriteAccess& rDstWA,
         case BMP_FORMAT_4BIT_LSN_PAL:
         case BMP_FORMAT_8BIT_PAL:
             break;
-        
+
         case BMP_FORMAT_8BIT_TC_MASK:
 //            return ImplBlendFromBitmap<BMP_FORMAT_8BIT_TC_MASK>( rDst, rSrc );
         case BMP_FORMAT_24BIT_TC_MASK:
@@ -904,17 +919,17 @@ bool ImplFastBitmapBlending( BitmapWriteAccess& rDstWA,
         case BMP_FORMAT_32BIT_TC_MASK:
 //            return ImplBlendFromBitmap<BMP_FORMAT_32BIT_TC_MASK>( rDst, rSrc );
             break;
-        
+
         case BMP_FORMAT_16BIT_TC_MSB_MASK:
             return ImplBlendFromBitmap<BMP_FORMAT_16BIT_TC_MSB_MASK>( rDst, rSrc, rMsk );
         case BMP_FORMAT_16BIT_TC_LSB_MASK:
             return ImplBlendFromBitmap<BMP_FORMAT_16BIT_TC_LSB_MASK>( rDst, rSrc, rMsk );
-        
+
         case BMP_FORMAT_24BIT_TC_BGR:
             return ImplBlendFromBitmap<BMP_FORMAT_24BIT_TC_BGR>( rDst, rSrc, rMsk );
         case BMP_FORMAT_24BIT_TC_RGB:
             return ImplBlendFromBitmap<BMP_FORMAT_24BIT_TC_RGB>( rDst, rSrc, rMsk );
-        
+
         case BMP_FORMAT_32BIT_TC_ABGR:
             return ImplBlendFromBitmap<BMP_FORMAT_32BIT_TC_ABGR>( rDst, rSrc, rMsk );
 #ifdef FAST_ARGB_BGRA
@@ -931,9 +946,88 @@ bool ImplFastBitmapBlending( BitmapWriteAccess& rDstWA,
     static int nNotAccelerated = 0;
     if( rSrc.mnWidth * rSrc.mnHeight >= 4000 )
         if( ++nNotAccelerated == 100 )
+		{
+			int foo = 0; (void)foo; // so no warning is created when building on pro with debug
             DBG_WARNING3( "ImplFastBlend for not accelerated case (0x%04X*0x%04X->0x%04X)",
                 rSrc.mnFormat, rMsk.mnFormat, rDst.mnFormat );
+		}
 #endif
+
+    return false;
+}
+
+bool ImplFastEraseBitmap( BitmapBuffer& rDst, const BitmapColor& rColor )
+{
+    if( bDisableFastBitops )
+        return false;
+
+    const ULONG nDstFormat = rDst.mnFormat & ~BMP_FORMAT_TOP_DOWN;
+
+    // erasing a bitmap is often just a byte-wise memory fill
+    bool bByteFill = true;
+    BYTE nFillByte;
+
+    switch( nDstFormat )
+    {
+        case BMP_FORMAT_1BIT_MSB_PAL:
+        case BMP_FORMAT_1BIT_LSB_PAL:
+            nFillByte = rColor.GetIndex();
+            nFillByte = static_cast<BYTE>( -(nFillByte & 1) ); // 0x00 or 0xFF
+            break;
+        case BMP_FORMAT_4BIT_MSN_PAL:
+        case BMP_FORMAT_4BIT_LSN_PAL:
+            nFillByte = rColor.GetIndex();
+            nFillByte &= 0x0F;
+            nFillByte |= (nFillByte << 4);
+            break;
+        case BMP_FORMAT_8BIT_PAL:
+        case BMP_FORMAT_8BIT_TC_MASK:
+            nFillByte = rColor.GetIndex();
+            break;
+
+        case BMP_FORMAT_24BIT_TC_MASK:
+        case BMP_FORMAT_24BIT_TC_BGR:
+        case BMP_FORMAT_24BIT_TC_RGB:
+            nFillByte = rColor.GetRed();
+            if( (nFillByte != rColor.GetGreen())
+            ||  (nFillByte != rColor.GetBlue()) )
+                bByteFill = false;
+            break;
+
+        default:
+            bByteFill = false;
+            nFillByte = 0x00;
+            break;
+    }
+
+    if( bByteFill )
+    {
+        long nByteCount = rDst.mnHeight * rDst.mnScanlineSize;
+        rtl_fillMemory( rDst.mpBits, nByteCount, nFillByte );
+        return true;
+    }
+
+    // TODO: handle other bitmap formats
+    switch( nDstFormat )
+    {
+        case BMP_FORMAT_32BIT_TC_MASK:
+        case BMP_FORMAT_16BIT_TC_MSB_MASK:
+        case BMP_FORMAT_16BIT_TC_LSB_MASK:
+
+        case BMP_FORMAT_24BIT_TC_BGR:
+        case BMP_FORMAT_24BIT_TC_RGB:
+
+        case BMP_FORMAT_32BIT_TC_ABGR:
+#ifdef FAST_ARGB_BGRA
+        case BMP_FORMAT_32BIT_TC_ARGB:
+        case BMP_FORMAT_32BIT_TC_BGRA:
+#endif
+        case BMP_FORMAT_32BIT_TC_RGBA:
+            break;
+
+        default:
+            break;
+    }
 
     return false;
 }
@@ -950,6 +1044,11 @@ bool ImplFastBitmapConversion( BitmapBuffer&, const BitmapBuffer& )
 bool ImplFastBitmapBlending( BitmapWriteAccess&,
     const BitmapReadAccess&, const BitmapReadAccess&,
     const Size&, const Point& )
+{
+    return false;
+}
+
+bool ImplFastEraseBitmap( BitmapBuffer&, const BitmapColor& )
 {
     return false;
 }

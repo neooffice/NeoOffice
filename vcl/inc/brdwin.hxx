@@ -133,6 +133,7 @@ private:
     BOOL                    mbMenuBtn;
 	BOOL					mbDisplayActive;
 
+    using Window::ImplInit;
 	void					ImplInit( Window* pParent,
 									  WinBits nStyle, USHORT nTypeStyle,
 									  SystemParentData* pParentData );
@@ -174,6 +175,7 @@ public:
 	void					UpdateView( BOOL bNewView, const Size& rNewOutSize );
 	void					InvalidateBorder();
 
+    using Window::Draw;
 	void					Draw( const Rectangle& rRect, OutputDevice* pDev, const Point& rPos );
 
 	void					SetDisplayActive( BOOL bActive );

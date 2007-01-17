@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_vcl.hxx"
+
 #ifndef _SV_RC_H
 #include <tools/rc.h>
 #endif
@@ -65,7 +68,7 @@ using namespace vcl;
 
 // =======================================================================
 
-void Control::ImplInitData()
+void Control::ImplInitControlData()
 {
     mbHasFocus		= FALSE;
     mpLayoutData	= NULL;
@@ -76,7 +79,7 @@ void Control::ImplInitData()
 Control::Control( WindowType nType ) :
     Window( nType )
 {
-    ImplInitData();
+    ImplInitControlData();
 }
 
 // -----------------------------------------------------------------------
@@ -84,7 +87,7 @@ Control::Control( WindowType nType ) :
 Control::Control( Window* pParent, WinBits nStyle ) :
     Window( WINDOW_CONTROL )
 {
-    ImplInitData();
+    ImplInitControlData();
     Window::ImplInit( pParent, nStyle, NULL );
 }
 
@@ -93,7 +96,7 @@ Control::Control( Window* pParent, WinBits nStyle ) :
 Control::Control( Window* pParent, const ResId& rResId ) :
     Window( WINDOW_CONTROL )
 {
-    ImplInitData();
+    ImplInitControlData();
     rResId.SetRT( RSC_CONTROL );
     WinBits nStyle = ImplInitRes( rResId );
     ImplInit( pParent, nStyle, NULL );
@@ -434,12 +437,14 @@ void Control::ImplDrawFrame( OutputDevice* pDev, Rectangle& rRect )
     aStyle.SetMonoColor( GetSettings().GetStyleSettings().GetMonoColor() );
 
     aNewSettings.SetStyleSettings( aStyle );
-    pDev->SetSettings( aNewSettings );
+    // #i67023# do not call data changed listeners for this fake
+    // since they may understandably invalidate on settings changed
+    pDev->OutputDevice::SetSettings( aNewSettings );
 
     DecorationView aDecoView( pDev );
     rRect = aDecoView.DrawFrame( rRect, FRAME_DRAW_WINDOWBORDER );
 
-    pDev->SetSettings( aOriginalSettings );
+    pDev->OutputDevice::SetSettings( aOriginalSettings );
 }
 
 // -----------------------------------------------------------------------

@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_vcl.hxx"
+
 #ifdef WNT
 #include <tools/prewin.h>
 #include <process.h>    // for _beginthreadex
@@ -133,6 +136,9 @@
 #ifndef _SV_IMPIMAGETREE_HXX
 #include <impimagetree.hxx>
 #endif
+#ifndef _VCL_XCONNECTION_HXX
+#include <xconnection.hxx>
+#endif
 
 #include <vos/process.hxx>
 #include <osl/file.hxx>
@@ -164,6 +170,12 @@ using namespace ::com::sun::star::lang;
 #include <fontcfg.hxx>
 #include <configsettings.hxx>
 
+#ifndef _CPPUHELPER_IMPLBASE1_HXX_
+#include <cppuhelper/implbase1.hxx>
+#endif
+#ifndef _UNO_CURRENT_CONTEXT_HXX_
+#include <uno/current_context.hxx>
+#endif
 
 
 // =======================================================================
@@ -186,24 +198,24 @@ public:
         USHORT nVCLException = 0;
 
         // UAE
-        if ( (pInfo->Signal == TSignal_AccessViolation)     ||
-             (pInfo->Signal == TSignal_IntegerDivideByZero) ||
-             (pInfo->Signal == TSignal_FloatDivideByZero)   ||
-             (pInfo->Signal == TSignal_DebugBreak) )
+        if ( (pInfo->Signal == osl_Signal_AccessViolation)     ||
+             (pInfo->Signal == osl_Signal_IntegerDivideByZero) ||
+             (pInfo->Signal == osl_Signal_FloatDivideByZero)   ||
+             (pInfo->Signal == osl_Signal_DebugBreak) )
             nVCLException = EXC_SYSTEM;
 
         // RC
-        if ((pInfo->Signal == TSignal_SignalUser) &&
+        if ((pInfo->Signal == osl_Signal_User) &&
             (pInfo->UserSignal == OSL_SIGNAL_USER_RESOURCEFAILURE) )
             nVCLException = EXC_RSCNOTLOADED;
 
         // DISPLAY-Unix
-        if ((pInfo->Signal == TSignal_SignalUser) &&
+        if ((pInfo->Signal == osl_Signal_User) &&
             (pInfo->UserSignal == OSL_SIGNAL_USER_X11SUBSYSTEMERROR) )
             nVCLException = EXC_DISPLAY;
 
         // Remote-Client
-        if ((pInfo->Signal == TSignal_SignalUser) &&
+        if ((pInfo->Signal == osl_Signal_User) &&
             (pInfo->UserSignal == OSL_SIGNAL_USER_RVPCONNECTIONERROR) )
             nVCLException = EXC_REMOTE;
 
@@ -257,6 +269,16 @@ BOOL ImplSVMain()
         pSVData->mpApp->Main();
         pSVData->maAppData.mbInAppMain = FALSE;
     }
+    
+    if( pSVData->mxDisplayConnection.is() )
+    {
+        vcl::DisplayConnection* pConnection = 
+            dynamic_cast<vcl::DisplayConnection*>(pSVData->mxDisplayConnection.get());
+
+        if( pConnection )
+            pConnection->dispatchDowningEvent();
+        pSVData->mxDisplayConnection.clear();
+    }
 
     // This is a hack to work around the problem of the asynchronous nature
     // of bridging accessibility through Java: on shutdown there might still 
@@ -299,6 +321,36 @@ public:
     void                Main(){};
 };
 
+class DesktopEnvironmentContext: public cppu::WeakImplHelper1< com::sun::star::uno::XCurrentContext >
+{
+public:
+    DesktopEnvironmentContext( const com::sun::star::uno::Reference< com::sun::star::uno::XCurrentContext > & ctx)
+        : m_xNextContext( ctx ) {}
+
+    // XCurrentContext
+    virtual com::sun::star::uno::Any SAL_CALL getValueByName( const rtl::OUString& Name )
+            throw (com::sun::star::uno::RuntimeException);
+
+private:
+    com::sun::star::uno::Reference< com::sun::star::uno::XCurrentContext > m_xNextContext;
+};
+
+Any SAL_CALL DesktopEnvironmentContext::getValueByName( const rtl::OUString& Name) throw (RuntimeException)
+{
+    Any retVal;
+
+    if ( 0 == Name.compareToAscii( "system.desktop-environment" ) )
+    {
+        retVal = makeAny( Application::GetDesktopEnvironment() );
+    }
+    else if( m_xNextContext.is() )
+    {
+        // Call next context in chain if found
+        retVal = m_xNextContext->getValueByName( Name );
+    }
+    return retVal;
+}
+
 BOOL InitVCL( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory > & rSMgr )
 {
     RTL_LOGFILE_CONTEXT( aLog, "vcl (ss112471) ::InitVCL" );
@@ -339,6 +391,10 @@ BOOL InitVCL( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XM
     if ( !pSVData->mpDefInst )
         return FALSE;
     RTL_LOGFILE_CONTEXT_TRACE( aLog, "} ::CreateSalInstance" );
+
+    // Desktop Environment context (to be able to get value of "system.desktop-environment" as soon as possible)
+    com::sun::star::uno::setCurrentContext(
+        new DesktopEnvironmentContext( com::sun::star::uno::getCurrentContext() ) );
 
 	// Initialize application instance (should be done after initialization of VCL SAL part)
     if( pSVData->mpApp )
@@ -394,7 +450,7 @@ void DeInitVCL()
 
     if ( pSVData->maAppData.mpIdleMgr )
         delete pSVData->maAppData.mpIdleMgr;
-    ImplDeInitTimer();
+    Timer::ImplDeInitTimer();
 
     if ( pSVData->maWinData.mpMsgBoxImgList )
     {
@@ -566,12 +622,15 @@ static unsigned __stdcall _threadmain( void *pArgs )
 }
 #else
 static oslThread hThreadID = 0;
+extern "C"
+{
 static void SAL_CALL MainWorkerFunction( void* pArgs )
 {
     ((WorkerThreadData*)pArgs)->pWorker( ((WorkerThreadData*)pArgs)->pThreadData );
     delete (WorkerThreadData*)pArgs;
     hThreadID = 0;
 }
+} // extern "C"
 #endif
 
 void CreateMainLoopThread( oslWorkerFunction pWorker, void * pThreadData )

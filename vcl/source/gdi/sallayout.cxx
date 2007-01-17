@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_vcl.hxx"
+
 #include <cstdio>
 
 #define _USE_MATH_DEFINES
@@ -68,8 +71,15 @@
 #endif
 
 #include <limits.h>
+
+#if defined _MSC_VER
+#pragma warning(push, 1)
+#endif
 #include <unicode/ubidi.h>
 #include <unicode/uchar.h>
+#if defined _MSC_VER
+#pragma warning(pop)
+#endif 
 
 // =======================================================================
 
@@ -104,10 +114,11 @@ int GetVerticalFlags( sal_Unicode nChar )
 
 // -----------------------------------------------------------------------
 
-sal_Unicode GetVerticalChar( sal_Unicode nChar )
+sal_Unicode GetVerticalChar( sal_Unicode )
 {
     return 0; // #i14788# input method is responsible vertical char changes
 
+#if 0
 	int nVert = 0;
     switch( nChar )
     {
@@ -147,6 +158,7 @@ sal_Unicode GetVerticalChar( sal_Unicode nChar )
     }
 
     return nVert;
+#endif
 }
 
 // -----------------------------------------------------------------------
@@ -155,6 +167,91 @@ sal_Unicode GetMirroredChar( sal_Unicode nChar )
 {
     nChar = (sal_Unicode)u_charMirror( nChar );
     return nChar;
+}
+
+// -----------------------------------------------------------------------
+
+// Get simple approximations for unicodes
+const char* GetAutofallback( sal_Unicode nChar )
+{
+    const char* pStr = NULL;
+    switch( nChar )
+    {
+        case 0x01C0:
+        case 0x2223:
+        case 0x2758:
+            pStr = "|"; break;
+        case 0x02DC:
+            pStr = "~"; break;
+        case 0x037E:
+            pStr = ";"; break;
+        case 0x2000:
+        case 0x2001:
+        case 0x2002:
+        case 0x2003:
+        case 0x2004:
+        case 0x2005:
+        case 0x2006:
+        case 0x2007:
+        case 0x2008:
+        case 0x2009:
+        case 0x200A:
+        case 0x202F:
+            pStr = " "; break;
+        case 0x2010:
+        case 0x2011:
+        case 0x2012:
+        case 0x2013:
+        case 0x2014:
+            pStr = "-"; break;
+        case 0x2015:
+            pStr = "--"; break;
+        case 0x2016:
+            pStr = "||"; break;
+        case 0x2017:
+            pStr = "_"; break;
+        case 0x2018:
+        case 0x2019:
+        case 0x201B:
+            pStr = "\'"; break;
+        case 0x201A:
+            pStr = ","; break;
+        case 0x201C:
+        case 0x201D:
+        case 0x201E:
+        case 0x201F:
+        case 0x2033:
+            pStr = "\""; break;
+        case 0x2039:
+            pStr = "<"; break;
+        case 0x203A:
+            pStr = ">"; break;
+        case 0x203C:
+            pStr = "!!"; break;
+        case 0x203D:
+            pStr = "?"; break;
+        case 0x2044:
+        case 0x2215:
+            pStr = "/"; break;
+        case 0x2048:
+            pStr = "?!"; break;
+        case 0x2049:
+            pStr = "!?"; break;
+        case 0x2216:
+            pStr = "\\"; break;
+        case 0x2217:
+            pStr = "*"; break;
+        case 0x2236:
+            pStr = ":"; break;
+        case 0x2264:
+            pStr = "<="; break;
+        case 0x2265:
+            pStr = "<="; break;
+        case 0x2303:
+            pStr = "^"; break;
+    }
+
+    return pStr;
 }
 
 // -----------------------------------------------------------------------
@@ -200,15 +297,19 @@ sal_Unicode GetLocalizedChar( sal_Unicode nChar, LanguageType eLang )
         case LANGUAGE_HINDI:
             nOffset = 0x0966 - '0';  // devanagari
             break;
+        #if 0
         // TODO case:
             nOffset = 0x1369 - '0';  // ethiopic
             break;
+        #endif
         case LANGUAGE_GUJARATI:
             nOffset = 0x0AE6 - '0';  // gujarati
             break;
+        #if 0
         // TODO case:
             nOffset = 0x0A66 - '0';  // gurmukhi
             break;
+        #endif
         case LANGUAGE_KANNADA:
             nOffset = 0x0CE6 - '0';  // kannada
             break;
@@ -224,9 +325,11 @@ sal_Unicode GetLocalizedChar( sal_Unicode nChar, LanguageType eLang )
         case LANGUAGE_MONGOLIAN:
             nOffset = 0x1810 - '0';   // mongolian
             break;
+        #if 0
         // TODO case:
             nOffset = 0x1040 - '0';   // myanmar
             break;
+        #endif
         case LANGUAGE_ORIYA:
             nOffset = 0x0B66 - '0';   // oriya
             break;
@@ -255,7 +358,7 @@ sal_Unicode GetLocalizedChar( sal_Unicode nChar, LanguageType eLang )
 #endif
     }
 
-    nChar += nOffset;
+    nChar = sal::static_int_cast<sal_Unicode>(nChar + nOffset);
     return nChar;
 }
 
@@ -267,7 +370,7 @@ inline bool IsControlChar( sal_Unicode cChar )
     if( (0x0001 <= cChar) && (cChar <= 0x001F) )
         return true;
     // formatting characters
-    if( (0x200B <= cChar) && (cChar <= 0x200F) )
+    if( (0x200E <= cChar) && (cChar <= 0x200F) )
         return true;
     if( (0x2028 <= cChar) && (cChar <= 0x202E) )
         return true;
@@ -427,11 +530,11 @@ bool ImplLayoutRuns::GetRun( int* nMinRunPos, int* nEndRunPos, bool* bRightToLef
 
 // =======================================================================
 
-ImplLayoutArgs::ImplLayoutArgs( const xub_Unicode* pStr, int nLength,
+ImplLayoutArgs::ImplLayoutArgs( const xub_Unicode* pStr, int nLen,
     int nMinCharPos, int nEndCharPos, int nFlags )
 :
     mnFlags( nFlags ),
-    mnLength( nLength ),
+    mnLength( nLen ),
     mnMinCharPos( nMinCharPos ),
     mnEndCharPos( nEndCharPos ),
     mpStr( pStr ),
@@ -736,7 +839,7 @@ bool SalLayout::GetOutline( SalGraphics& rSalGraphics,
 		aMatrix.translate( aPos.X(), aPos.Y() );
 		aGlyphOutline.transform( aMatrix );
 	    }
-    
+
             // insert outline at correct position
             rVector.push_back( aGlyphOutline );
         }
@@ -1100,36 +1203,62 @@ void GenericSalLayout::Justify( long nNewWidth )
     // find rightmost glyph, it won't get stretched
     GlyphItem* pGRight = mpGlyphItems + mnGlyphCount - 1;
 
-    // move rightmost glyph to requested position, correct adjustment widths
-    nOldWidth -= pGRight->mnOrigWidth;
-    nNewWidth -= pGRight->mnOrigWidth;
-    if( (nOldWidth < 0) || (nNewWidth < 0) )
-        return;
-    const long nBasePos = maBasePoint.X();
-    pGRight->maLinearPos.X() = nBasePos + nNewWidth;
-
     // count stretchable glyphs
     GlyphItem* pG;
     int nStretchable = 0;
+    int nMaxGlyphWidth = 0;
     for( pG = mpGlyphItems; pG < pGRight; ++pG )
+    {
         if( pG->mnOrigWidth > 0 )
             ++nStretchable;
+	if( nMaxGlyphWidth < pG->mnOrigWidth)
+	    nMaxGlyphWidth = pG->mnOrigWidth;
+    }
 
-    // interpolate inbetween glyph positions
+    // move rightmost glyph to requested position
+    nOldWidth -= pGRight->mnOrigWidth;
+    if( nOldWidth <= 0)
+        return;
+    if( nNewWidth < nMaxGlyphWidth)
+        nNewWidth = nMaxGlyphWidth;
+    nNewWidth -= pGRight->mnOrigWidth;
+    pGRight->maLinearPos.X() = maBasePoint.X() + nNewWidth;
+
+    // justify glyph widths and positions
     int nDiffWidth = nNewWidth - nOldWidth;
-    int nDeltaSum = 0;
-    for( pG = mpGlyphItems; (pG < pGRight) && (nStretchable > 0); ++pG )
+    if( nDiffWidth >= 0) // expanded case
     {
-        if( pG->mnOrigWidth <= 0 )
-            continue;
+        // expand width by distributing space between glyphs evenly
+        int nDeltaSum = 0;
+        for( pG = mpGlyphItems; pG < pGRight; ++pG )
+        {
+            // move glyph to justified position
+            pG->maLinearPos.X() += nDeltaSum;
 
-        int nDeltaWidth = nDiffWidth / nStretchable;
-        nDiffWidth -= nDeltaWidth;
-        --nStretchable;
+            // do not stretch non-stretchable glyphs
+            if( (pG->mnOrigWidth <= 0) || (nStretchable <= 0) )
+                continue;
 
-        pG->mnNewWidth += nDeltaWidth;
-        pG->maLinearPos.X() += nDeltaSum;
-	nDeltaSum += nDeltaWidth;
+            // distribute extra space equally to stretchable glyphs
+            int nDeltaWidth = nDiffWidth / nStretchable--;
+            nDiffWidth     -= nDeltaWidth;
+            pG->mnNewWidth += nDeltaWidth;
+            nDeltaSum      += nDeltaWidth;
+        }
+    }
+    else // condensed case
+    {
+        // squeeze width by moving glyphs proportionally
+        double fSqueeze = (double)nNewWidth / nOldWidth;
+        for( pG = mpGlyphItems; ++pG < pGRight;)
+        {
+            int nX = pG->maLinearPos.X() - maBasePoint.X();
+            nX = (int)(nX * fSqueeze);
+            pG->maLinearPos.X() = nX + maBasePoint.X();
+        }
+        // adjust glyph widths to new positions
+        for( pG = mpGlyphItems; pG < pGRight; ++pG )
+            pG->mnNewWidth = pG[1].maLinearPos.X() - pG[0].maLinearPos.X();
     }
 }
 
@@ -1576,10 +1705,7 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
     int nCharPos[ MAX_FALLBACK ];
     sal_Int32 nGlyphAdv[ MAX_FALLBACK ];
     int nValid[ MAX_FALLBACK ];
-#ifdef USE_JAVA
-    const ImplLayoutRuns& rLastLevelRuns = maFallbackRuns[ mnLevel-1 ];
-#endif	// USE_JAVA
-    
+
     sal_Int32 nDummy;
     Point aPos;
     int nLevel = 0, n;
@@ -1620,85 +1746,6 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
     }
     mnLevel = nLevel;
 
-#ifdef USE_JAVA
-    // merge the fallback levels
-    long nXPos = 0;
-    for( n = 0; n < nLevel; ++n )
-        maFallbackRuns[n].ResetPos();
-    while( nValid[0] )
-    {
-        // find best fallback level
-        for( n = 0; n < nLevel; ++n )
-            if( nValid[n] && !maFallbackRuns[n].PosIsInRun( nCharPos[0] ) )
-                // fallback level n wins when it requested no further fallback
-                break;
-
-        if( n < nLevel )
-        {
-            // use base(n==0) or fallback(n>=1) level
-            long nNewPos = nXPos;
-            if( mpLayouts[n]->GetUnitsPerPixel() != mnUnitsPerPixel )
-            {
-                nNewPos *= mpLayouts[n]->GetUnitsPerPixel();
-                nNewPos /= mnUnitsPerPixel;
-            }
-            mpLayouts[n]->MoveGlyph( nStartOld[n], nNewPos );
-        }
-        else
-        {
-            // if no fallback level has been found and the charpos in question
-            // has been resolved/unresolved then drop/keep the NotDef glyph
-            if( rLastLevelRuns.PosIsInRun( nCharPos[0] ) )
-                n = 0;  // keep NotDef in base level
-            else
-                n = -1; // drop NotDef in base level
-        }
-
-        if( n >= 0 )
-        {
-            // use glyph from best matching layout
-            nXPos += nGlyphAdv[n] * mnUnitsPerPixel / mpLayouts[n]->GetUnitsPerPixel();
-
-            // complete this glyph cluster, then advance to next
-            for( int nActivePos = nCharPos[0];; )
-            {
-                nStartOld[n] = nStartNew[n];
-                nValid[n] = mpLayouts[n]->GetNextGlyphs( 1, &nDummy, aPos,
-                    nStartNew[n], &nGlyphAdv[n], &nCharPos[n] );
-                if( !nValid[n] || (nCharPos[n] != nActivePos) )
-                    break;
-                nXPos += nGlyphAdv[n] * mnUnitsPerPixel / mpLayouts[n]->GetUnitsPerPixel();
-            }
-
-            // performance optimization (fallback level is completed)
-            if( !nValid[n] && (n >= nLevel-1) )
-                --nLevel;
-        }
-
-        if( n != 0 ) // glyph fallback was successful
-        {
-            // drop NotDef glyph from base layout
-            mpLayouts[0]->DropGlyph( nStartOld[0] );
-            mpLayouts[0]->MoveGlyph( nStartNew[0], nXPos*mpLayouts[0]->GetUnitsPerPixel()/mnUnitsPerPixel );
-
-            // get next glyph in base layout
-            nStartOld[0] = nStartNew[0];
-            nValid[0] = mpLayouts[0]->GetNextGlyphs( 1, &nDummy, aPos,
-                nStartNew[0], &nGlyphAdv[0], &nCharPos[0] );
-
-            // advance runs if necessary
-            if( n < 0 )
-                n = nLevel;
-            while( --n >= 0 )
-            {
-                // if no more overlap with base level get next run
-                if( !maFallbackRuns[n].PosIsInRun( nCharPos[0] ) )
-                    maFallbackRuns[n].NextRun();
-            }
-        }
-    }
-
-#else	// USE_JAVA
     // merge the fallback levels
     long nXPos = 0;
     double fUnitMul = 1.0;
@@ -1815,7 +1862,6 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
             if( !maFallbackRuns[i].PosIsInRun( nActiveCharPos ) )
                 maFallbackRuns[i].NextRun();
     }
-#endif	// USE_JAVA
 
     mpLayouts[0]->Simplify( true );
 }

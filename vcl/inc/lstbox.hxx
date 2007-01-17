@@ -73,7 +73,7 @@ private:
 
 #if _SOLAR__PRIVATE
 private:
-	SAL_DLLPRIVATE void    ImplInitData();
+	SAL_DLLPRIVATE void    ImplInitListBoxData();
 
 	DECL_DLLPRIVATE_LINK(  ImplSelectHdl, void* );
 	DECL_DLLPRIVATE_LINK(  ImplScrollHdl, void* );
@@ -85,82 +85,83 @@ private:
 	DECL_DLLPRIVATE_LINK(  ImplUserDrawHdl, UserDrawEvent* );
 
 protected:
+    using Window::ImplInit;
 	SAL_DLLPRIVATE void    ImplInit( Window* pParent, WinBits nStyle );
 	SAL_DLLPRIVATE WinBits ImplInitStyle( WinBits nStyle );
 	SAL_DLLPRIVATE void    ImplLoadRes( const ResId& rResId );
 #endif
-	BOOL			IsDropDownBox() const { return mpFloatWin ? TRUE : FALSE; }
+	BOOL			    IsDropDownBox() const { return mpFloatWin ? TRUE : FALSE; }
 
 protected:
-					ListBox( WindowType nType );
+					    ListBox( WindowType nType );
 
-    virtual void    FillLayoutData() const;
+    virtual void        FillLayoutData() const;
 
 public:
-					ListBox( Window* pParent, WinBits nStyle = WB_BORDER );
-					ListBox( Window* pParent, const ResId& rResId );
-					~ListBox();
+					    ListBox( Window* pParent, WinBits nStyle = WB_BORDER );
+                        ListBox( Window* pParent, const ResId& rResId );
+                        ~ListBox();
 
-	virtual void	Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, ULONG nFlags );
-	virtual void	Resize();
-	virtual long	PreNotify( NotifyEvent& rNEvt );
-	virtual void	StateChanged( StateChangedType nType );
-	virtual void	DataChanged( const DataChangedEvent& rDCEvt );
-	virtual void	UserDraw( const UserDrawEvent& rUDEvt );
+	virtual void	    Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, ULONG nFlags );
+	virtual void	    Resize();
+	virtual long	    PreNotify( NotifyEvent& rNEvt );
+	virtual void	    StateChanged( StateChangedType nType );
+	virtual void	    DataChanged( const DataChangedEvent& rDCEvt );
+	virtual void	    UserDraw( const UserDrawEvent& rUDEvt );
 
-	virtual void	Select();
-	virtual void	DoubleClick();
-	virtual void	GetFocus();
-	virtual void	LoseFocus();
-    virtual Window* GetPreferredKeyInputWindow();
+	virtual void    	Select();
+	virtual void	    DoubleClick();
+	virtual void	    GetFocus();
+	virtual void	    LoseFocus();
+    virtual Window*     GetPreferredKeyInputWindow();
 
     virtual const Wallpaper& GetDisplayBackground() const;
 
-	virtual void	SetPosSizePixel( long nX, long nY,
-									 long nWidth, long nHeight, USHORT nFlags = WINDOW_POSSIZE_ALL );
-	void			SetPosSizePixel( const Point& rNewPos, const Size& rNewSize )
+	virtual void	    SetPosSizePixel( long nX, long nY,
+						    			 long nWidth, long nHeight, USHORT nFlags = WINDOW_POSSIZE_ALL );
+	void			    SetPosSizePixel( const Point& rNewPos, const Size& rNewSize )
 						{ Control::SetPosSizePixel( rNewPos, rNewSize ); }
-    void			SetDropDownSizePixel( const Size& rNewSize )
+    void			    SetDropDownSizePixel( const Size& rNewSize )
     { if( IsDropDownBox() ) SetPosSizePixel( 0, 0, rNewSize.Width(), rNewSize.Height(), WINDOW_POSSIZE_SIZE | WINDOW_POSSIZE_DROPDOWN ); }
 
-    Rectangle		GetDropDownPosSizePixel() const;
+    Rectangle		    GetDropDownPosSizePixel() const;
 
-	void			SetDropDownLineCount( USHORT nLines );
-	USHORT			GetDropDownLineCount() const;
+	void			    SetDropDownLineCount( USHORT nLines );
+	USHORT			    GetDropDownLineCount() const;
 
-	void			EnableAutoSize( BOOL bAuto );
-	BOOL			IsAutoSizeEnabled() const { return mbDDAutoSize; }
+	void			    EnableAutoSize( BOOL bAuto );
+	BOOL			    IsAutoSizeEnabled() const { return mbDDAutoSize; }
 
-    void            EnableDDAutoWidth( BOOL b );
-    BOOL            IsDDAutoWidthEnabled() const;
+    void                EnableDDAutoWidth( BOOL b );
+    BOOL                IsDDAutoWidthEnabled() const;
 
 
-	USHORT			InsertEntry( const XubString& rStr, USHORT nPos = LISTBOX_APPEND );
-	USHORT			InsertEntry( const Image& rImage, USHORT nPos = LISTBOX_APPEND );
-	USHORT			InsertEntry( const XubString& rStr, const Image& rImage, USHORT nPos = LISTBOX_APPEND );
-	void			RemoveEntry( const XubString& rStr );
-	void			RemoveEntry( USHORT nPos );
+	virtual USHORT	    InsertEntry( const XubString& rStr, USHORT nPos = LISTBOX_APPEND );
+	virtual USHORT	    InsertEntry( const Image& rImage, USHORT nPos = LISTBOX_APPEND );
+	virtual USHORT	    InsertEntry( const XubString& rStr, const Image& rImage, USHORT nPos = LISTBOX_APPEND );
+	virtual void	    RemoveEntry( const XubString& rStr );
+	virtual void	    RemoveEntry( USHORT nPos );
 
-	void			Clear();
+	virtual void	    Clear();
 
-	USHORT			GetEntryPos( const XubString& rStr ) const;
-	USHORT			GetEntryPos( const void* pData ) const;
-	XubString		GetEntry( USHORT nPos ) const;
-	USHORT			GetEntryCount() const;
+	virtual USHORT	    GetEntryPos( const XubString& rStr ) const;
+	virtual USHORT	    GetEntryPos( const void* pData ) const;
+	virtual XubString   GetEntry( USHORT nPos ) const;
+	virtual USHORT	    GetEntryCount() const;
 
-	void			SelectEntry( const XubString& rStr, BOOL bSelect = TRUE );
-	void			SelectEntryPos( USHORT nPos, BOOL bSelect = TRUE );
+	virtual void	    SelectEntry( const XubString& rStr, BOOL bSelect = TRUE );
+	virtual void	    SelectEntryPos( USHORT nPos, BOOL bSelect = TRUE );
 
-	USHORT			GetSelectEntryCount() const;
-	XubString		GetSelectEntry( USHORT nSelIndex = 0 ) const;
-	USHORT			GetSelectEntryPos( USHORT nSelIndex = 0 ) const;
+	virtual USHORT	    GetSelectEntryCount() const;
+	virtual XubString	GetSelectEntry( USHORT nSelIndex = 0 ) const;
+	virtual USHORT		GetSelectEntryPos( USHORT nSelIndex = 0 ) const;
 
-	BOOL			IsEntrySelected( const XubString& rStr ) const;
-	BOOL			IsEntryPosSelected( USHORT nPos ) const;
-	void			SetNoSelection();
+	virtual BOOL		IsEntrySelected( const XubString& rStr ) const;
+	virtual BOOL		IsEntryPosSelected( USHORT nPos ) const;
+	virtual void		SetNoSelection();
 
-	void			SetEntryData( USHORT nPos, void* pNewData );
-	void*			GetEntryData( USHORT nPos ) const;
+	void		        SetEntryData( USHORT nPos, void* pNewData );
+	void*		        GetEntryData( USHORT nPos ) const;
 
 	/** this methods stores a combination of flags from the
 		LISTBOX_ENTRY_FLAG_* defines at the given entry.
@@ -249,6 +250,7 @@ public:
         the item-relative character index at point <code>rPos</code> or -1
         if no item is at that point.
      */
+    using Control::GetIndexForPoint;
     long GetIndexForPoint( const Point& rPoint, USHORT& rPos ) const;
 
 #ifdef USE_JAVA
@@ -263,6 +265,9 @@ public:
 
 class VCL_DLLPUBLIC MultiListBox : public ListBox
 {
+public:
+    using ListBox::SaveValue;
+    using ListBox::GetSavedValue;
 private:
 	// Bei MultiListBox nicht erlaubt...
 	void			SaveValue();

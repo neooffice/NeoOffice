@@ -34,6 +34,9 @@
  *
  ************************************************************************/
 
+// MARKER(update_precomp.py): autogen include statement, do not remove
+#include "precompiled_vcl.hxx"
+
 #include <math.h>
 #ifndef _SV_SVSYS_HXX
 #include <svsys.h>
@@ -97,7 +100,7 @@
 
 // ========================================================================
 
-DBG_NAMEEX( OutputDevice );
+DBG_NAMEEX( OutputDevice )
 
 // ------------------------------------------------------------------------
 
@@ -171,8 +174,8 @@ void OutputDevice::DrawGrid( const Rectangle& rRect, const Size& rDist, ULONG nF
 		if ( pVirDev )
 		{
 			for( long i = 0L; i < nVertCount; i++ )
-				for( long j = 0L, nY = aVertBuf[ i ]; j < nHorzCount; j++ )
-					mpGraphics->DrawPixel( aHorzBuf[ j ], nY, this );
+				for( long j = 0L, Y = aVertBuf[ i ]; j < nHorzCount; j++ )
+					mpGraphics->DrawPixel( aHorzBuf[ j ], Y, this );
 		}
 		else
 		{
@@ -207,8 +210,8 @@ void OutputDevice::DrawGrid( const Rectangle& rRect, const Size& rDist, ULONG nF
 					{
 						pGraphics->SetLineColor( ImplColorToSal( maLineColor ) );
 						for( long i = nVertCount - 1; i >= 0L; i-- )
-							for( long j = nHorzCount - 1, nX = aHorzBuf[ j ] - aSrcPt.X(), nY = aVertBuf[ i ] - aSrcPt.Y(); j >= 0L && nX >= 0L && nY >= 0L; j--, nX = aHorzBuf[ j ] - aSrcPt.X() )
-								pGraphics->DrawPixel( nX, nY, NULL );
+							for( long j = nHorzCount - 1, nX = aHorzBuf[ j ] - aSrcPt.X(), Y = aVertBuf[ i ] - aSrcPt.Y(); j >= 0L && nX >= 0L && Y >= 0L; j--, nX = aHorzBuf[ j ] - aSrcPt.X() )
+								pGraphics->DrawPixel( nX, Y, NULL );
 
 						SalTwoRect aPosAry;
 						aPosAry.mnSrcX = aDestPt.X();
@@ -230,8 +233,8 @@ void OutputDevice::DrawGrid( const Rectangle& rRect, const Size& rDist, ULONG nF
 		}
 #else	// USE_JAVA
 		for( long i = 0L; i < nVertCount; i++ )
-			for( long j = 0L, nY = aVertBuf[ i ]; j < nHorzCount; j++ )
-				mpGraphics->DrawPixel( aHorzBuf[ j ], nY, this );
+			for( long j = 0L, Y = aVertBuf[ i ]; j < nHorzCount; j++ )
+				mpGraphics->DrawPixel( aHorzBuf[ j ], Y, this );
 #endif	// USE_JAVA
 	}
 	else
@@ -513,9 +516,9 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
         if( mpAlphaVDev )
         {
             const Color aFillCol( mpAlphaVDev->GetFillColor() );
-            mpAlphaVDev->SetFillColor( Color(255*nTransparencePercent/100,
-                                             255*nTransparencePercent/100,
-                                             255*nTransparencePercent/100) );
+            mpAlphaVDev->SetFillColor( Color(sal::static_int_cast<UINT8>(255*nTransparencePercent/100),
+                                             sal::static_int_cast<UINT8>(255*nTransparencePercent/100),
+                                             sal::static_int_cast<UINT8>(255*nTransparencePercent/100)) );
 
             mpAlphaVDev->DrawTransparent( rPolyPoly, nTransparencePercent );
 
