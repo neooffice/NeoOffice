@@ -1576,10 +1576,7 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
     int nCharPos[ MAX_FALLBACK ];
     sal_Int32 nGlyphAdv[ MAX_FALLBACK ];
     int nValid[ MAX_FALLBACK ];
-#ifdef USE_JAVA
-    const ImplLayoutRuns& rLastLevelRuns = maFallbackRuns[ mnLevel-1 ];
-#endif	// USE_JAVA
-    
+
     sal_Int32 nDummy;
     Point aPos;
     int nLevel = 0, n;
