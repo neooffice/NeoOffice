@@ -182,8 +182,8 @@ com_sun_star_vcl_VCLEvent *com_sun_star_vcl_VCLEventQueue::getNextCachedEvent( U
 			if ( tempObj )
 				out = new com_sun_star_vcl_VCLEvent( tempObj );
 		}
-		return out;
 	}
+	return out;
 }
 
 // ----------------------------------------------------------------------------
