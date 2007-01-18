@@ -324,11 +324,11 @@ install_info MigrationImpl::findInstallation()
     OUString usAltInstall;
     if (rtl::Bootstrap::get(OUString::createFromAscii("SYSUSERCONFIG"), usAltInstall))
     {
-        usAltInstall += OUString::createFromAscii("/Library/Preferences/NeoOffice-1.x");
+        usAltInstall += OUString::createFromAscii("/Library/Preferences/NeoOffice-2.x");
         Directory dir(usAltInstall);
         if (dir.open() == FileBase::E_None)
         {
-            aInfo.productname = OUString::createFromAscii("NeoOffice 1.2");
+            aInfo.productname = OUString::createFromAscii("NeoOffice 2.0");
             aInfo.userdata = usAltInstall;
             return aInfo;
         }
