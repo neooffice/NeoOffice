@@ -7,7 +7,7 @@
 
  <vendorInfos>
   <vendor name="Apple Computer, Inc.">
-    <minVersion>1.4.1</minVersion>
+    <minVersion>1.4.2</minVersion>
     <maxVersion>1.5.999</maxVersion>
   </vendor>
  </vendorInfos>
