@@ -338,23 +338,6 @@ void VCLBitmapBuffer::ReleaseContext()
 
 // =======================================================================
 
-static bool DoubleArrowsEnabled()
-{
-	bool out = false;
-
-	CFStringRef aString = (CFStringRef)CFPreferencesCopyAppValue( CFSTR( "AppleScrollBarVariant" ), kCFPreferencesAnyApplication );
-	if ( aString )
-	{
-		if ( CFStringCompare( aString, CFSTR( "DoubleBoth" ), kCFCompareCaseInsensitive ) == kCFCompareEqualTo )
-			out = true;
-		CFRelease( aString );
-	}
-
-	return out;
-}
-
-// =======================================================================
-
 static BOOL InitButtonDrawInfo( HIThemeButtonDrawInfo *pButtonDrawInfo, ControlState nState )
 {
 	memset( pButtonDrawInfo, 0, sizeof( HIThemeButtonDrawInfo ) );
@@ -797,12 +780,12 @@ static BOOL InitSeparatorDrawInfo( HIThemeSeparatorDrawInfo *pSepInfo, ControlSt
  *				the entire control, editing area as well as
  *				popup arrow
  * @param nState		state of the button to b drawn (enabled/pressed/etc.)
- * @param aCaption		text used for the control.  Presently ignored
+ * @param rCaption		text used for the control.  Presently ignored
  *				as we draw only the frame and let VCL draw
  *				the text
  * @return TRUE if successful, FALSE on error
  */
-static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, OUString aCaption )
+static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const OUString& rCaption )
 {
 	VCLBitmapBuffer *pBuffer = &aSharedComboBoxBuffer;
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
@@ -846,12 +829,12 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
  *				the entire control, editing area as well as
  *				popup arrow
  * @param nState		state of the button to b drawn (enabled/pressed/etc.)
- * @param aCaption		text used for the control.  Presently ignored
+ * @param rCaption		text used for the control.  Presently ignored
  *				as we draw only the frame and let VCL draw
  *				the text
  * @return TRUE if successful, FALSE on error
  */
-static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, OUString aCaption )
+static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const OUString& rCaption )
 {
 	VCLBitmapBuffer *pBuffer = &aSharedListBoxBuffer;
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
@@ -961,7 +944,7 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 		int offscreenHeight = ( ( rDestBounds.GetHeight() > spinnerThemeHeight ) ? rDestBounds.GetHeight() : spinnerThemeHeight );
 
 		VCLBitmapBuffer *pBuffer = &aSharedSpinboxBuffer;
-		BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), offscreenHeight );
+		bRet = pBuffer->Create( rDestBounds.GetWidth(), offscreenHeight );
 		if ( bRet )
 		{
 			HIThemeButtonDrawInfo aButtonDrawInfo;
@@ -1049,7 +1032,7 @@ static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& r
 		int offscreenHeight = ( ( rDestBounds.GetHeight() > spinnerThemeHeight ) ? rDestBounds.GetHeight() : spinnerThemeHeight );
 
 		VCLBitmapBuffer *pBuffer = &aSharedSpinbuttonBuffer;
-		BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), offscreenHeight );
+		bRet = pBuffer->Create( rDestBounds.GetWidth(), offscreenHeight );
 		if ( bRet )
 		{
 			HIThemeButtonDrawInfo aButtonDrawInfo;
@@ -1602,11 +1585,11 @@ BOOL JavaSalGraphics::hitTestNativeControl( ControlType nType, ControlPart nPart
  *				frame coordinates
  * @param aValue		An optional value used for certain control types
  * @param rControlHandle	Platform dependent control data
- * @param aCaption		Caption title or string for the control.
+ * @param rCaption		Caption title or string for the control.
  *				Contains keyboard shortcuts prefixed with ~
  * @return TRUE if drawing was successful, FALSE if drawing was not successful
  */
-BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, OUString aCaption )
+BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, const OUString& rCaption )
 {
 	BOOL bOK = FALSE;
 
@@ -1616,7 +1599,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
-				mpVCLGraphics->drawPushButton( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), aCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), ( nState & CTRL_STATE_DEFAULT ) );
+				mpVCLGraphics->drawPushButton( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), ( nState & CTRL_STATE_DEFAULT ) );
 				bOK = TRUE;
 			}
 			break;
@@ -1625,7 +1608,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
-				mpVCLGraphics->drawRadioButton( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), aCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), aValue.getTristateVal() );
+				mpVCLGraphics->drawRadioButton( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), aValue.getTristateVal() );
 				bOK = TRUE;
 			}
 			break;
@@ -1634,7 +1617,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
-				mpVCLGraphics->drawCheckBox( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), aCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), aValue.getTristateVal() );
+				mpVCLGraphics->drawCheckBox( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), aValue.getTristateVal() );
 				bOK = TRUE;
 			}
 			break;
@@ -1643,7 +1626,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
-				bOK = DrawNativeComboBox( this, buttonRect, nState, aCaption );
+				bOK = DrawNativeComboBox( this, buttonRect, nState, rCaption );
 			}
 			break;
 
@@ -1651,7 +1634,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
-				bOK = DrawNativeListBox( this, buttonRect, nState, aCaption );
+				bOK = DrawNativeListBox( this, buttonRect, nState, rCaption );
 			}
 			break;
 
@@ -1781,12 +1764,12 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
  * @param nState		current control state (e.g. pressed, disabled)
  * @param aValue		An optional value used for certain control types
  * @param rControlHandle	Platform dependent control data
- * @param aCaption		Caption title or string for the control.
+ * @param rCaption		Caption title or string for the control.
  *				Contains keyboard shortcuts prefixed with ~
  * @return TRUE if the text was drawn, FALSE if the control had its text drawn
  *	with drawNativeControl()
  */
-BOOL JavaSalGraphics::drawNativeControlText( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, OUString aCaption )
+BOOL JavaSalGraphics::drawNativeControlText( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, const OUString& rCaption )
 {
 	return FALSE;
 }
@@ -1803,7 +1786,7 @@ BOOL JavaSalGraphics::drawNativeControlText( ControlType nType, ControlPart nPar
  * @param nState		current control state (e.g. pressed, disabled)
  * @param aValue		An optional value used for certain control types
  * @param rControlHandle	Platform dependent control data
- * @param aCaption		Caption title or string for the control.
+ * @param rCaption		Caption title or string for the control.
  *				Contains keyboard shortcuts prefixed with ~
  * @param rNativeBoundingRegion	return parameter that contains the true bounds
  *				of the control along with any platform specific
@@ -1816,7 +1799,7 @@ BOOL JavaSalGraphics::drawNativeControlText( ControlType nType, ControlPart nPar
  *	drawing areas, FALSE if the entire control region can be considered
  *	an accurate enough representation of the native widget area
  */
-BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, OUString aCaption, Region &rNativeBoundingRegion, Region &rNativeContentRegion )
+BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, const OUString& rCaption, Region &rNativeBoundingRegion, Region &rNativeContentRegion )
 {
 	BOOL bReturn = FALSE;
 
@@ -1826,7 +1809,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
-				rNativeBoundingRegion = Region( mpVCLGraphics->getPreferredPushButtonBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), aCaption ) );
+				rNativeBoundingRegion = Region( mpVCLGraphics->getPreferredPushButtonBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption ) );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
 				bReturn = TRUE;
 			}
@@ -1836,7 +1819,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
-				rNativeBoundingRegion = Region( mpVCLGraphics->getPreferredRadioButtonBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), aCaption ) );
+				rNativeBoundingRegion = Region( mpVCLGraphics->getPreferredRadioButtonBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption ) );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
 				bReturn = TRUE;
 			}
@@ -1846,7 +1829,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
-				rNativeBoundingRegion = Region( mpVCLGraphics->getPreferredCheckBoxBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), aCaption ) );
+				rNativeBoundingRegion = Region( mpVCLGraphics->getPreferredCheckBoxBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption ) );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
 				bReturn = TRUE;
 			}

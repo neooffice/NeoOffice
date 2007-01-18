@@ -158,9 +158,9 @@ public:
 	virtual void			DrawServerFontLayout( const ServerFontLayout& );
 	virtual BOOL			IsNativeControlSupported( ControlType nType, ControlPart nPart );
 	virtual BOOL			hitTestNativeControl( ControlType nType, ControlPart nPart, const Region& rControlRegion, const Point& aPos, SalControlHandle& rControlHandle, BOOL& rIsInside );
-	virtual BOOL			drawNativeControl( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, rtl::OUString aCaption );
-	virtual BOOL			drawNativeControlText( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, rtl::OUString aCaption );
-	virtual BOOL			getNativeControlRegion( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, rtl::OUString aCaption, Region &rNativeBoundingRegion, Region &rNativeContentRegion );
+	virtual BOOL			drawNativeControl( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, const rtl::OUString& rCaption );
+	virtual BOOL			drawNativeControlText( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, const rtl::OUString& rCaption );
+	virtual BOOL			getNativeControlRegion( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, const rtl::OUString& rCaption, Region &rNativeBoundingRegion, Region &rNativeContentRegion );
 };
 
 #endif // _SV_SALGDI_H
