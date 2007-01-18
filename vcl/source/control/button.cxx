@@ -3335,7 +3335,7 @@ Image RadioButton::GetRadioImage( const AllSettings& rSettings, USHORT nFlags )
                             Region aCtrlRegion = Region( Rectangle( aPos, aSize ) );
                             pGraphics->drawNativeControl( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString() );
 
-                            SalBitmap *pSalBmp = pGraphics->GetBitmap( aPos.X(), 0, aSize.Width(), aBmpSize.Height(), NULL );
+                            SalBitmap *pSalBmp = pGraphics->GetBitmap( aPos.X(), aPos.Y(), aSize.Width(), aSize.Height(), NULL );
                             if ( pSalBmp )
                             {
                                 Bitmap aBmp( pSalBmp );
@@ -4268,7 +4268,7 @@ Image CheckBox::GetCheckImage( const AllSettings& rSettings, USHORT nFlags )
                             Region aCtrlRegion = Region( Rectangle( aPos, aSize ) );
                             pGraphics->drawNativeControl( CTRL_CHECKBOX, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, aControlHandle, rtl::OUString() );
 
-                            SalBitmap *pSalBmp = pGraphics->GetBitmap( 0, 0, aBmpSize.Width(), aBmpSize.Height(), NULL );
+                            SalBitmap *pSalBmp = pGraphics->GetBitmap( aPos.X(), aPos.Y(), aSize.Width(), aSize.Height(), NULL );
                             if ( pSalBmp )
                             {
                                 // OOo will change some semi-transparent pixels
