@@ -104,19 +104,19 @@ static void ImplLoadNativeFont( OUString aPath )
 	if ( !aPath.getLength() )
 		return;
 
-	oslDirectory aDir;
+	oslDirectory aDir = NULL;
 	if ( osl_openDirectory( aPath.pData, &aDir ) == osl_File_E_None )
 	{
-		oslDirectoryItem aDirItem;
+		oslDirectoryItem aDirItem = NULL;
 		while ( osl_getNextDirectoryItem( aDir, &aDirItem, 16 ) == osl_File_E_None )
 		{
 			oslFileStatus aStatus;
 			memset( &aStatus, 0, sizeof( oslFileStatus ) );
 			if ( osl_getFileStatus( aDirItem, &aStatus, osl_FileStatus_Mask_FileURL ) == osl_File_E_None )
 				ImplLoadNativeFont( OUString( aStatus.ustrFileURL ) );
-
-			osl_releaseDirectoryItem( aDirItem );
 		}
+		if ( aDirItem )
+			osl_releaseDirectoryItem( aDirItem );
 	}
 	else
 	{
@@ -291,16 +291,16 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							aAttributes.mbSubsettable = true;
 							aAttributes.mbEmbeddable = false;
 
-							JavaImplFontData *pData = new JavaImplFontData( aAttributes, aPSName, pNativeFont );
-							pSalData->maFontNameMapping[ aXubDisplayName ] = pData;
+							JavaImplFontData *pFontData = new JavaImplFontData( aAttributes, aPSName, pNativeFont );
+							pSalData->maFontNameMapping[ aXubDisplayName ] = pFontData;
 
 							// Multiple native fonts can map to the same font
 							// due to disabling and reenabling of fonts with
 							// the same name. Also, note that multiple font
 							// names can map to a single native font so do not
 							// rely on the native font to look up the font name.
-							pSalData->maNativeFontMapping[ pNativeFont ] = pData;
-							pSalData->maJavaFontNameMapping[ aPSName ] = pData;
+							pSalData->maNativeFontMapping[ pNativeFont ] = pFontData;
+							pSalData->maJavaFontNameMapping[ aPSName ] = pFontData;
 						}
 
 						NSFontManager_releaseAllFonts( pFonts );
@@ -326,11 +326,11 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							pCurrentFont = ffit->second;
 							if ( pCurrentFont )
 							{
-								OUString aFontName( pCurrentFont->getName() );
-								::std::map< OUString, JavaImplFontData* >::const_iterator it = pSalData->maJavaFontNameMapping.find( aFontName );
-								if ( it != pSalData->maJavaFontNameMapping.end() )
+								OUString aCurrentFontName( pCurrentFont->getName() );
+								::std::map< OUString, JavaImplFontData* >::const_iterator mit = pSalData->maJavaFontNameMapping.find( aCurrentFontName );
+								if ( mit != pSalData->maJavaFontNameMapping.end() )
 								{
-									ffit->second = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, pCurrentFont->getSize(), pCurrentFont->getOrientation(), pCurrentFont->isAntialiased(), pCurrentFont->isVertical(), pCurrentFont->getScaleX(), 0 );
+									ffit->second = new com_sun_star_vcl_VCLFont( mit->second->maVCLFontName, pCurrentFont->getSize(), pCurrentFont->getOrientation(), pCurrentFont->isAntialiased(), pCurrentFont->isVertical(), pCurrentFont->getScaleX(), 0 );
 									delete pCurrentFont;
 								}
 							}
@@ -519,8 +519,8 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 				CFRelease( aMatchedString );
 			}
 
-			String aXubFontName( aFontName );
-			::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aXubFontName );
+			aXubFontName = XubString( aFontName );
+			it = pSalData->maFontNameMapping.find( aXubFontName );
 			if ( it != pSalData->maFontNameMapping.end() && it->second->meWeight > WEIGHT_MEDIUM )
 			{
 				pFont->mpFontData = it->second;
@@ -545,8 +545,8 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 					CFRelease( aMatchedString );
 				}
 
-				String aXubFontName( aFontName );
-				::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aXubFontName );
+				aXubFontName = XubString( aFontName );
+				it = pSalData->maFontNameMapping.find( aXubFontName );
 				if ( it != pSalData->maFontNameMapping.end() && ( it->second->meItalic == ITALIC_OBLIQUE || it->second->meItalic == ITALIC_NORMAL ) )
 					pFont->mpFontData = it->second;
 			}
