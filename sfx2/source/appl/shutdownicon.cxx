@@ -792,7 +792,7 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 				CFStringRef aStrings[ 8 ];
 				XubString aDesc;
 				SvtModuleOptions aModuleOptions;
-				for ( size_t i = 0; i < sizeof( aMenuItems ) / sizeof( aMenuItems[0] ); ++i )
+				for ( size_t i = 0; i < sizeof( aMenuItems ) / sizeof( MenuEntryDescriptor ); ++i )
 				{
 					// the complete application is not even installed
 					if ( !aModuleOptions.IsModuleInstalled( aMenuItems[i].eModuleIdentifier ) )
@@ -807,7 +807,7 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 						continue;
 
 					aIDs[ nItems ] = aMenuItems[i].nMenuItemID;
-					aDesc = XubString( GetUrlDescription( OUString::createFromAscii( WRITER_URL ) ) );
+					aDesc = XubString( GetUrlDescription( sURL ) );
 					aDesc.EraseAllChars( '~' );
 					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
 				}
