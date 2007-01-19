@@ -71,7 +71,7 @@ check_installation() {
 			fi
 		fi
 
-		productnameversion="$(PRODUCT_NAME) `echo '$(PRODUCT_VERSION)' | awk '{ print $1 " " $2 }'`"
+		productnameversion="$(PRODUCT_NAME) `echo '$(PRODUCT_VERSION)' | awk '{ print $1 }'`"
 		productkey=`grep "^ProductKey=$productnameversion" "$1/Contents/MacOS/bootstraprc"`
 		if [ ! -z "$productkey" ] ; then
 			return 0;
