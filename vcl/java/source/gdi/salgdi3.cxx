@@ -163,6 +163,12 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 		{
 			SalData *pSalData = GetSalData();
 
+			// Clean out caches
+			for ( ::std::map< String, JavaImplFontData* >::const_iterator fnit = pSalData->maFontNameMapping.begin(); fnit != pSalData->maFontNameMapping.end(); ++fnit )
+				delete fnit->second;
+			pSalData->maFontNameMapping.clear();
+			pSalData->maNativeFontMapping.clear();
+			pSalData->maJavaFontNameMapping.clear();
 			pSalData->maJavaNativeFontMapping.clear();
 			SalATSLayout::ClearLayoutDataCache();
 
@@ -172,14 +178,17 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 				if ( t.pEnv )
 				{
 					// Update cached fonts
-					OUString aRoman( OUString::createFromAscii( "Roman" ) );
-					OUString aSans( OUString::createFromAscii( "Sans" ) );
-					OUString aSerif( OUString::createFromAscii( "Serif" ) );
-					OUString aTimes( OUString::createFromAscii( "Times" ) );
-					OUString aTimesRoman( OUString::createFromAscii( "Times Roman" ) );
 					long *pFonts = NSFontManager_getAllFonts();
 					if ( pFonts )
 					{
+						const OUString aRoman( OUString::createFromAscii( "Roman" ) );
+						const OUString aSans( OUString::createFromAscii( "Sans" ) );
+						const OUString aSerif( OUString::createFromAscii( "Serif" ) );
+						const OUString aSymbol( OUString::createFromAscii( "Symbol" ) );
+						const OUString aNeoSymbol( OUString::createFromAscii( "Neo Symbol" ) );
+						const OUString aOpenSymbol( OUString::createFromAscii( "OpenSymbol" ) );
+						const OUString aTimes( OUString::createFromAscii( "Times" ) );
+						const OUString aTimesRoman( OUString::createFromAscii( "Times Roman" ) );
 						for ( int i = 0; pFonts[ i ]; i++ )
 						{
 							void *pNSFont = (void *)pFonts[ i ];
@@ -228,6 +237,8 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							sal_Unicode pDisplayBuffer[ nDisplayLen + 1 ];
 							CFStringGetCharacters( aDisplayString, aDisplayRange, pDisplayBuffer );
 							pDisplayBuffer[ nDisplayLen ] = 0;
+							CFRelease( aDisplayString );
+
 							OUString aMapName;
 							OUString aDisplayName( pDisplayBuffer );
 							sal_Int32 nColon = aDisplayName.indexOf( (sal_Unicode)':' );
@@ -237,32 +248,28 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								aDisplayName = OUString( aDisplayName.getStr(), nColon );
 							}
 
-							if ( aDisplayName == aTimesRoman )
-								aMapName = aTimes;
-
-							CFRelease( aDisplayString );
-
 							// Ignore empty font names or font names that start
 							// with a "."
 							if ( !aDisplayName.getLength() || aDisplayName.toChar() == (sal_Unicode)'.' )
 								continue;
 
+							if ( aDisplayName == aNeoSymbol )
+							{
+								aDisplayName = OUString( aOpenSymbol );
+								aMapName = aSymbol + OUString::createFromAscii( ";" ) + aNeoSymbol;
+							}
+							else if ( aDisplayName == aTimesRoman )
+							{
+								aMapName = aTimes;
+							}
+
 							String aXubMapName( aMapName );
 							String aXubDisplayName( aDisplayName );
 
-							// Delete old font data
+							// Skip the font if we already have it
 							::std::map< String, JavaImplFontData* >::iterator it = pSalData->maFontNameMapping.find( aXubDisplayName );
 							if ( it != pSalData->maFontNameMapping.end() )
-							{
-								delete it->second;
-								pSalData->maFontNameMapping.erase( it );
-							}
-							::std::map< int, JavaImplFontData* >::iterator nit = pSalData->maNativeFontMapping.find( pNativeFont );
-							if ( nit != pSalData->maNativeFontMapping.end() )
-								pSalData->maNativeFontMapping.erase( nit );
-							::std::map< OUString, JavaImplFontData* >::iterator jit = pSalData->maJavaFontNameMapping.find( aPSName );
-							if ( jit != pSalData->maJavaFontNameMapping.end() )
-								pSalData->maJavaFontNameMapping.erase( jit );
+								continue;
 
 							ImplDevFontAttributes aAttributes;
 
@@ -703,8 +710,16 @@ void JavaSalGraphics::GetDevFontList( ImplDevFontList* pList )
 	}
 
 	// Iterate through fonts and add each to the font list
+	String aSymbol( OUString::createFromAscii( "Symbol" ) );
 	for ( ::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.begin(); it != pSalData->maFontNameMapping.end(); ++it )
-		pList->Add( it->second->Clone() );
+	{
+		// Fix bugs 747 and 1040 by only allowing the Mac OS X Symbol font to
+		// be used as a fallback font. This is necessary because when importing
+		// many MS Office documents, the OOo code implicitly assumes that it
+		// is using the Windows Symbol font and so nothing renders correctly.
+		if ( it->first != aSymbol )
+			pList->Add( it->second->Clone() );
+	}
 }
 
 // -----------------------------------------------------------------------
