@@ -559,13 +559,9 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
 {
     osl::Guard< osl::Mutex > aGuard( m_aMutex );
 
-    if ( m_nProxyType == 0 )
-    {
-        // Never use proxy.
-        return m_aEmptyProxy;
-    }
 #ifdef MACOSX
-    else if ( m_nProxyType == 1 )
+    // Use system proxy even if no proxies are set
+    if ( m_nProxyType == 0 || m_nProxyType == 1 )
     {
         CFDictionaryRef aDict = SCDynamicStoreCopyProxies( NULL );
         if ( aDict )
@@ -707,6 +703,12 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
             CFRelease( aDict );
         }
 
+        return m_aEmptyProxy;
+    }
+#else	// MACOSX
+    if ( m_nProxyType == 0 )
+    {
+        // Never use proxy.
         return m_aEmptyProxy;
     }
 #endif	// MACOSX
