@@ -1,10 +1,10 @@
 Index: patches/src680/apply
 ===================================================================
---- patches/src680/apply	(revision 8516)
+--- patches/src680/apply	(revision 8621)
 +++ patches/src680/apply	(working copy)
-@@ -1905,5 +1905,3 @@
+@@ -1928,5 +1928,3 @@
+ 
+ # fix lpsolve build for OSX
  macosx-lpsolve-makefile.diff
- # don't include malloc.h on OSX
- macosx-sfx2-objstor.diff, i#73121
--# disabling visibility doesn't allow running gcc 4 builds on Mac OS X 10.3.9
--macosx-config_office-visibility.diff
+-# don't include malloc.h on OSX
+-macosx-sfx2-objstor.diff, i#73121
