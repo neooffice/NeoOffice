@@ -394,6 +394,7 @@
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>doc</string>
+				<string>docx</string>
 				<string>wp</string>
 				<string>wpd</string>
 				<string>wri</string>
@@ -417,6 +418,7 @@
 				<string>application/x-aportisdoc</string>
 				<string>application/vnd.aportisdoc</string>
 				<string>application/x-pocket-word</string>
+				<string>application/vnd.openxmlformats-officedocument.wordprocessingml.document</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
