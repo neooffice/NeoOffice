@@ -1208,6 +1208,75 @@ void PushButton::ImplDrawPushButtonContent( OutputDevice* pDev, ULONG nDrawFlags
     pDev->Push( PUSH_CLIPREGION );
     pDev->IntersectClipRegion( aInRect );
 
+#ifdef USE_JAVA
+    BOOL bNativeOK = FALSE;
+    
+    BOOL bDropDown = ( IsSymbol() && (GetSymbol()==SYMBOL_SPIN_DOWN) && !GetText().Len() );
+	
+	ControlType aCtrlType = 0;
+    switch( GetParent()->GetType() )
+    {
+        case WINDOW_LISTBOX:
+        case WINDOW_MULTILISTBOX:
+        case WINDOW_TREELISTBOX:
+            aCtrlType = CTRL_LISTBOX;
+            break;
+
+        case WINDOW_COMBOBOX:
+        case WINDOW_PATTERNBOX:			
+        case WINDOW_NUMERICBOX:			
+        case WINDOW_METRICBOX:			
+        case WINDOW_CURRENCYBOX:
+        case WINDOW_DATEBOX:		
+        case WINDOW_TIMEBOX:			
+        case WINDOW_LONGCURRENCYBOX:
+            aCtrlType = CTRL_COMBOBOX;
+            break;
+        default:
+            break;
+    }
+    
+    if( bDropDown && (aCtrlType == CTRL_COMBOBOX || aCtrlType == CTRL_LISTBOX ) )
+    {
+		// let the theme draw it, note we then need support
+		// for CTRL_LISTBOX/PART_BUTTON_DOWN and CTRL_COMBOBOX/PART_BUTTON_DOWN
+
+		ImplControlValue    aControlValue;
+		Region              aCtrlRegion( aInRect );
+		ControlState        nState = 0;
+
+		if ( mbPressed ) 						nState |= CTRL_STATE_PRESSED;
+		if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )	nState |= CTRL_STATE_PRESSED;
+		if ( HasFocus() )						nState |= CTRL_STATE_FOCUSED;
+		if ( ImplGetButtonState() & BUTTON_DRAW_DEFAULT )	nState |= CTRL_STATE_DEFAULT;
+		if ( Window::IsEnabled() ) 				nState |= CTRL_STATE_ENABLED;
+
+		if ( IsMouseOver() && aInRect.IsInside( GetPointerPosPixel() ) )
+			nState |= CTRL_STATE_ROLLOVER;
+
+		bNativeOK = GetNativeControlTextColor( aCtrlType, PART_BUTTON_DOWN, nState, aControlValue, aColor );
+	}
+	else
+	{
+		ImplControlValue aControlValue;
+        Region			 aCtrlRegion( aInRect );
+        ControlState	 nState = 0;
+
+        if ( mbPressed || IsChecked() )                   nState |= CTRL_STATE_PRESSED;
+        if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED ) nState |= CTRL_STATE_PRESSED;
+        if ( HasFocus() )						nState |= CTRL_STATE_FOCUSED;
+        if ( ImplGetButtonState() & BUTTON_DRAW_DEFAULT )	nState |= CTRL_STATE_DEFAULT;
+        if ( Window::IsEnabled() ) 				nState |= CTRL_STATE_ENABLED;
+
+        if ( IsMouseOver() && aInRect.IsInside( GetPointerPosPixel() ) )
+            nState |= CTRL_STATE_ROLLOVER;
+
+        bNativeOK = GetNativeControlTextColor( CTRL_PUSHBUTTON, PART_ENTIRE_CONTROL, nState, aControlValue, aColor );
+	}
+	
+	if ( ! bNativeOK )
+    {
+#endif	// USE_JAVA
     if ( nDrawFlags & WINDOW_DRAW_MONO )
         aColor = Color( COL_BLACK );
     else if ( IsControlForeground() )
@@ -1216,6 +1285,9 @@ void PushButton::ImplDrawPushButtonContent( OutputDevice* pDev, ULONG nDrawFlags
         aColor = rStyleSettings.GetButtonRolloverTextColor();
     else
         aColor = rStyleSettings.GetButtonTextColor();
+#ifdef USE_JAVA
+    }
+#endif	// USE_JAVA
 
     pDev->SetTextColor( aColor );
 

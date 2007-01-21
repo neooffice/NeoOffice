@@ -2281,3 +2281,57 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 	return bReturn;
 }
+
+/**
+ * (static) Convert a Mac RGBColor value into a SalColor.
+ *
+ * @param macColor 	Macintosh RGBColor struct
+ * @return appropriate SalColor struct
+ */
+static SalColor ConvertRGBColorToSalColor( const RGBColor& theColor )
+{
+	return( MAKE_SALCOLOR( ((double)theColor.red/(double)SHRT_MAX)*0xFF, ((double)theColor.green/(double)SHRT_MAX)*0xFF, ((double)theColor.blue/(double)SHRT_MAX)*0xFF ) );
+}
+/**
+ * Get the color that should be used to draw the textual element of a control.
+ * This allows VCL controls that use widget renderig to get control backgrounds
+ * and parts to use the correct color for the VCL rendered control text.
+ *
+ * @param nType		type of control whose text is being drawn
+ * @param nPart		part of the control whose text is being drawn
+ * @param nState	current state of the control
+ * @param aValue	extra control-specific data of the ucrrent control state
+ * @param textColor	location in which color to draw text should be returned
+ * @return TRUE if a native widget text color is provided, FALSE if the standard
+ *	VCL text color should be used.
+ */
+BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart nPart, ControlState nState, const ImplControlValue& aValue, SalColor& textColor )
+{
+	BOOL bReturn = FALSE;
+	RGBColor nativeColor;
+	
+	switch( nType )
+	{
+		case CTRL_PUSHBUTTON:
+			{				
+				if( nState & CTRL_STATE_PRESSED )
+				{
+					bReturn = ( GetThemeTextColor(kThemeTextColorPushButtonPressed, 32, true, &nativeColor) == noErr);
+				}
+				else if ( ! ( nState & CTRL_STATE_ENABLED ) )
+				{
+					bReturn = ( GetThemeTextColor(kThemeTextColorPushButtonInactive, 32, true, &nativeColor) == noErr);
+				}
+				else
+				{
+					bReturn = ( GetThemeTextColor(kThemeTextColorPushButtonActive, 32, true, &nativeColor) == noErr);
+				}
+			}
+			break;
+	}
+	
+	if( bReturn )
+		textColor = ConvertRGBColorToSalColor( nativeColor );
+	
+	return bReturn;
+}
