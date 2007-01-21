@@ -3225,6 +3225,7 @@ Image RadioButton::GetRadioImage( const AllSettings& rSettings, USHORT nFlags )
         if( pResMgr )
             aBmp = Bitmap( ResId( SV_RESID_BITMAP_RADIO+nStyle, ImplGetResMgr() ) );
 #ifdef USE_JAVA
+        pSVData->maCtrlData.mpRadioImgList = NULL;
         Size aBmpSize( aBmp.GetSizePixel() );
         SalVirtualDevice *pSalVirDev = pSVData->mpDefInst->CreateVirtualDevice( NULL, aBmpSize.Width(), aBmpSize.Height(), 32 );
         if ( pSalVirDev )
@@ -4167,6 +4168,7 @@ Image CheckBox::GetCheckImage( const AllSettings& rSettings, USHORT nFlags )
         if( pResMgr )
             aBmp = Bitmap( ResId( SV_RESID_BITMAP_CHECK+nStyle, ImplGetResMgr() ) );
 #ifdef USE_JAVA
+        pSVData->maCtrlData.mpCheckImgList = NULL;
         Size aBmpSize( aBmp.GetSizePixel() );
         SalVirtualDevice *pSalVirDev = pSVData->mpDefInst->CreateVirtualDevice( NULL, aBmpSize.Width(), aBmpSize.Height(), 32 );
         if ( pSalVirDev )
