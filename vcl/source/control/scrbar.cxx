@@ -70,6 +70,9 @@
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
+#ifndef _SV_IMAGE_HXX
+#include <image.hxx>
+#endif
 #ifndef _SV_SVAPP_HXX
 #include <svapp.hxx>
 #endif
@@ -135,6 +138,19 @@ static OSStatus RelayoutScrollBars( EventHandlerCallRef inHandlerCallRef, EventR
 		{
 			(*iter)->Resize();
 			(*iter)->Invalidate();
+		}
+
+		// Reset the radio button and checkbox images
+		ImplSVData *pSVData = ImplGetSVData();
+		if ( pSVData->maCtrlData.mpRadioImgList )
+		{
+			delete pSVData->maCtrlData.mpRadioImgList;
+			pSVData->maCtrlData.mpRadioImgList = NULL;
+		}
+		if ( pSVData->maCtrlData.mpCheckImgList )
+		{
+			delete pSVData->maCtrlData.mpCheckImgList;
+			pSVData->maCtrlData.mpCheckImgList = NULL;
 		}
 
 		rSolarMutex.release();
