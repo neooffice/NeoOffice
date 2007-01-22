@@ -353,9 +353,6 @@ namespace desktop
 
 static SalMainPipeExchangeSignalHandler* pSignalHandler = 0;
 static sal_Bool _bCrashReporterEnabled = sal_True;
-#ifdef USE_JAVA
-static bool _bSuppressOpenDefault = false;
-#endif	// USE_JAVA
 
 // ----------------------------------------------------------------------------
 
@@ -1402,8 +1399,6 @@ void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
     {
         if ( GetCommandLineArgs()->IsInvisible() )
             return;
-
-        _bSuppressOpenDefault = true;
 
         ProcessDocumentsRequest aRequest;
         aRequest.pcProcessed = NULL;
@@ -2804,10 +2799,7 @@ void Desktop::OpenDefault()
     RTL_LOGFILE_CONTEXT( aLog, "desktop (cd100003) ::Desktop::OpenDefault" );
 
 #ifdef USE_JAVA
-    if ( _bSuppressOpenDefault )
-        return;
-
-    _bSuppressOpenDefault = true;
+    bool bOpenDefault = true;
 
     // If no component was created, open the default window
     Reference< XMultiServiceFactory > xSMgr = ::comphelper::getProcessServiceFactory();
@@ -2819,11 +2811,13 @@ void Desktop::OpenDefault()
         {
             Reference< XEnumeration > xEnum( xAccess->createEnumeration() );
             if ( xEnum.is() && xEnum->hasMoreElements() )
-                return;
+                bOpenDefault = false;
         }
     }
-#endif	// USE_JAVA
 
+    if ( !bOpenDefault )
+    {
+#endif	// USE_JAVA
     ::rtl::OUString        aName;
     SvtModuleOptions    aOpt;
 
@@ -2849,6 +2843,31 @@ void Desktop::OpenDefault()
         else if ( pArgs->IsWeb() && aOpt.IsModuleInstalled( SvtModuleOptions::E_SWRITER ) )
             aName = aOpt.GetFactoryEmptyDocumentURL( SvtModuleOptions::E_WRITERWEB );
     }
+
+    if ( !aName.getLength() )
+    {
+        // Old way to create a default document
+        if ( aOpt.IsModuleInstalled( SvtModuleOptions::E_SWRITER ) )
+            aName = aOpt.GetFactoryEmptyDocumentURL( SvtModuleOptions::E_WRITER );
+        else if ( aOpt.IsModuleInstalled( SvtModuleOptions::E_SCALC ) )
+            aName = aOpt.GetFactoryEmptyDocumentURL( SvtModuleOptions::E_CALC );
+        else if ( aOpt.IsModuleInstalled( SvtModuleOptions::E_SIMPRESS ) )
+            aName = aOpt.GetFactoryEmptyDocumentURL( SvtModuleOptions::E_IMPRESS );
+		else if ( aOpt.IsModuleInstalled( SvtModuleOptions::E_SDATABASE ) )
+            aName = aOpt.GetFactoryEmptyDocumentURL( SvtModuleOptions::E_DATABASE );
+        else if ( aOpt.IsModuleInstalled( SvtModuleOptions::E_SDRAW ) )
+            aName = aOpt.GetFactoryEmptyDocumentURL( SvtModuleOptions::E_DRAW );
+        else
+            return;
+    }
+
+    ProcessDocumentsRequest aRequest;
+	aRequest.pcProcessed = NULL;
+    aRequest.aOpenList   = aName;
+    OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
+#ifdef USE_JAVA
+    }
+#endif	// USE_JAVA
 
 #ifdef PRODUCT_DONATION_URL
     bool bShowDonationPage = true;
@@ -2949,28 +2968,6 @@ void Desktop::OpenDefault()
         }
     }
 #endif	// PRODUCT_DONATION_URL
-
-    if ( !aName.getLength() )
-    {
-        // Old way to create a default document
-        if ( aOpt.IsModuleInstalled( SvtModuleOptions::E_SWRITER ) )
-            aName = aOpt.GetFactoryEmptyDocumentURL( SvtModuleOptions::E_WRITER );
-        else if ( aOpt.IsModuleInstalled( SvtModuleOptions::E_SCALC ) )
-            aName = aOpt.GetFactoryEmptyDocumentURL( SvtModuleOptions::E_CALC );
-        else if ( aOpt.IsModuleInstalled( SvtModuleOptions::E_SIMPRESS ) )
-            aName = aOpt.GetFactoryEmptyDocumentURL( SvtModuleOptions::E_IMPRESS );
-		else if ( aOpt.IsModuleInstalled( SvtModuleOptions::E_SDATABASE ) )
-            aName = aOpt.GetFactoryEmptyDocumentURL( SvtModuleOptions::E_DATABASE );
-        else if ( aOpt.IsModuleInstalled( SvtModuleOptions::E_SDRAW ) )
-            aName = aOpt.GetFactoryEmptyDocumentURL( SvtModuleOptions::E_DRAW );
-        else
-            return;
-    }
-
-    ProcessDocumentsRequest aRequest;
-	aRequest.pcProcessed = NULL;
-    aRequest.aOpenList   = aName;
-    OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
 }
 
 
