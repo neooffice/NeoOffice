@@ -3933,7 +3933,7 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
 						</info>
 					</enumeration>
 				</constraints>
-				<value>0</value>
+				<value>1</value>
 			</prop>
 			<prop oor:name="SymbolStyle" oor:type="xs:string">
 				<info>
