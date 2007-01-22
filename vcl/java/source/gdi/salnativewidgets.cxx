@@ -885,23 +885,19 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
 	if ( bRet )
 	{
-		HIRect bgRect;
-		bgRect.origin.x = 0;
-		bgRect.origin.y = 0;
-		bgRect.size.width = rDestBounds.GetWidth();
-		bgRect.size.height = rDestBounds.GetHeight();
-		float bgColor[] = { 1.0, (float)SALCOLOR_RED( pGraphics->mnFillColor ) / 0xff, (float)SALCOLOR_GREEN( pGraphics->mnFillColor ) / 0xff, (float)SALCOLOR_BLUE( pGraphics->mnFillColor ) / 0xff };
-		CGContextSetFillColor( pBuffer->maContext, bgColor );
-		CGContextFillRect( pBuffer->maContext, bgRect );
-
-		HIThemeTrackDrawInfo pTrackDrawInfo;
-		InitScrollBarTrackInfo( &pTrackDrawInfo, NULL, nState, rDestBounds, pScrollbarValue );
-
+		// Fix bug 2031 by always filling the background with white
 		HIRect destRect;
 		destRect.origin.x = 0;
 		destRect.origin.y = 0;
 		destRect.size.width = rDestBounds.GetWidth();
 		destRect.size.height = rDestBounds.GetHeight();
+		float whiteColor[] = { 1.0, 1.0, 1.0, 1.0 };
+		CGContextSetFillColor( pBuffer->maContext, whiteColor );
+		CGContextFillRect( pBuffer->maContext, destRect );
+
+		HIThemeTrackDrawInfo pTrackDrawInfo;
+		InitScrollBarTrackInfo( &pTrackDrawInfo, NULL, nState, rDestBounds, pScrollbarValue );
+
 		bRet = ( HIThemeDrawTrack( &pTrackDrawInfo, NULL, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
 	}
 
@@ -2037,6 +2033,11 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 						break;
 				}
 
+				// Fix bug 2031 by incrementing the scrollbar width slightly
+				if ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() )
+					bounds.size.height++;
+				else
+					bounds.size.width++;
 				Point topLeft( (long)(comboBoxRect.Left()+bounds.origin.x), (long)(comboBoxRect.Top()+bounds.origin.y) );
 				Size boundsSize( (long)bounds.size.width, (long)bounds.size.height );
 				rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
