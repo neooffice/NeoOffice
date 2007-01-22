@@ -353,6 +353,9 @@ namespace desktop
 
 static SalMainPipeExchangeSignalHandler* pSignalHandler = 0;
 static sal_Bool _bCrashReporterEnabled = sal_True;
+#ifdef USE_JAVA
+static bool _bSuppressOpenDefault = false;
+#endif	// USE_JAVA
 
 // ----------------------------------------------------------------------------
 
@@ -1400,6 +1403,8 @@ void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
         if ( GetCommandLineArgs()->IsInvisible() )
             return;
 
+        _bSuppressOpenDefault = true;
+
         ProcessDocumentsRequest aRequest;
         aRequest.pcProcessed = NULL;
         OUString aData( rAppEvent.GetData() );
@@ -1418,23 +1423,6 @@ void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
 
             OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
         }
-
-        // If no component was created, open the default window
-        Reference< XMultiServiceFactory > xSMgr = ::comphelper::getProcessServiceFactory();
-        Reference< XDesktop > xDesktop( xSMgr->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
-        if ( xDesktop.is() )
-        {
-            Reference< XEnumerationAccess > xAccess( xDesktop->getComponents() );
-            if ( xAccess.is() )
-            {
-                Reference< XEnumeration > xEnum( xAccess->createEnumeration() );
-                if ( xEnum.is() && xEnum->hasMoreElements() )
-                    return;
-            }
-        }
-
-        // Fix bug 1379 by opening default window if there are no windows open
-        OpenDefault();
 
         return;
 	}
@@ -2814,6 +2802,27 @@ void Desktop::OpenDefault()
 {
 
     RTL_LOGFILE_CONTEXT( aLog, "desktop (cd100003) ::Desktop::OpenDefault" );
+
+#ifdef USE_JAVA
+    if ( _bSuppressOpenDefault )
+        return;
+
+    _bSuppressOpenDefault = true;
+
+    // If no component was created, open the default window
+    Reference< XMultiServiceFactory > xSMgr = ::comphelper::getProcessServiceFactory();
+    Reference< XDesktop > xDesktop( xSMgr->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
+    if ( xDesktop.is() )
+    {
+        Reference< XEnumerationAccess > xAccess( xDesktop->getComponents() );
+        if ( xAccess.is() )
+        {
+            Reference< XEnumeration > xEnum( xAccess->createEnumeration() );
+            if ( xEnum.is() && xEnum->hasMoreElements() )
+                return;
+        }
+    }
+#endif	// USE_JAVA
 
     ::rtl::OUString        aName;
     SvtModuleOptions    aOpt;
