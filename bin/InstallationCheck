@@ -69,6 +69,21 @@ if [ "$target_machine" != "$machine" ] ; then
     esac
 fi
 
+# Check that the user has a supported Java version
+javaversion=`java -version 2>&1 | grep '^java version '`
+javafound=
+if [ ! -z "$javaversion" ] ; then 
+    if echo "$javaversion" | grep -q 'java version "1\.4\.[23]' ; then 
+        javafound="$javaversion"
+    elif echo "$javaversion" | grep -q 'java version "1\.5\.' ; then 
+        javafound="$javaversion"
+    fi
+fi
+if [ -z "$javafound" ] ; then
+    # Return 96 + 24 if we didn't find a supported Java version
+    exit 120;
+fi
+
 scriptdir=`dirname "$0"`
 if [ -d "$scriptdir" -a -f "$scriptdir/installutils" ] ; then
 
