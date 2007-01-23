@@ -190,7 +190,7 @@ void CWindow_updateLocation( id pCWindow )
 	if ( pCWindow )
 	{
 		UpdateLocation *pUpdateLocation = [[UpdateLocation alloc] initWithCWindow:pCWindow];
-		[pUpdateLocation performSelectorOnMainThread:@selector(updateLocation:) withObject:pUpdateLocation waitUntilDone:YES];
+		[pUpdateLocation performSelectorOnMainThread:@selector(updateLocation:) withObject:pUpdateLocation waitUntilDone:NO];
 	}
 
 	[pPool release];
