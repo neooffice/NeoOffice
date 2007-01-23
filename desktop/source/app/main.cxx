@@ -197,7 +197,46 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
 	// on OOo's custom memory manager which is, apparently, required for
 	// XML export to work but it cannot be used before we invoke execv().
 	if ( bRestart )
+	{
+		ByteString aPageinPath( aCmdPath );
+		aPageinPath += ByteString( "/pagein" );
+		char *pPageinPath = (char *)aPageinPath.GetBuffer();
+		if ( !access( pPageinPath, R_OK | X_OK ) )
+		{
+			int nCurrentArg = 0;
+			char *pPageinArgs[ argc + 3 ];
+			pPageinArgs[ nCurrentArg++ ] = pPageinPath;
+			ByteString aPageinSearchArg( "-L" );
+			aPageinSearchArg += aCmdPath;
+			pPageinArgs[ nCurrentArg++ ] = (char *)aPageinSearchArg.GetBuffer();
+			for ( int i = 1; i < argc; i++ )
+			{
+				if ( !strcmp( "-calc", argv[ i ] ) )
+					pPageinArgs[ nCurrentArg++ ] = "@pagein-calc";
+				else if ( !strcmp( "-draw", argv[ i ] ) )
+					pPageinArgs[ nCurrentArg++ ] = "@pagein-draw";
+				else if ( !strcmp( "-impress", argv[ i ] ) )
+					pPageinArgs[ nCurrentArg++ ] = "@pagein-impress";
+				else if ( !strcmp( "-writer", argv[ i ] ) )
+					pPageinArgs[ nCurrentArg++ ] = "@pagein-writer";
+			}
+			if ( nCurrentArg == 1 )
+				pPageinArgs[ nCurrentArg++ ] = "@pagein-writer";
+			pPageinArgs[ nCurrentArg++ ] = "@pagein-common";
+			pPageinArgs[ nCurrentArg++ ] = NULL;
+
+			// Execute the pagein command in child process
+			pid_t pid = fork();
+			if ( !pid )
+			{
+				execvp( pPageinPath, pPageinArgs );
+				exit( 1 );
+			}
+		}
+
+		// Reexecute the parent process
 		execv( pCmdPath, argv );
+	}
 
 	// File locking is enabled by default
 	putenv( "SAL_ENABLE_FILE_LOCKING=1" );
