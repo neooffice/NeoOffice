@@ -51,7 +51,9 @@
 #include <tools/fsys.hxx>
 #endif
 
+#include <errno.h>
 #include <stdio.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #define TMPDIR "/tmp"
@@ -229,8 +231,16 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
 			pid_t pid = fork();
 			if ( !pid )
 			{
+				close( 0 );
 				execvp( pPageinPath, pPageinArgs );
-				exit( 1 );
+				_exit( 1 );
+			}
+			else if ( pid > 0 )
+			{
+				// Invoke waitpid to prevent zombie processes
+				int status;
+				while ( waitpid( pid, &status, 0 ) > 0 && EINTR == errno )
+					;
 			}
 		}
 
