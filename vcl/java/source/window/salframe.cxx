@@ -80,6 +80,15 @@ using namespace vcl;
 
 // =======================================================================
 
+static inline Color RGBColorToColor( RGBColor *theColor )
+{
+	return Color( (unsigned char)( ( (double)theColor->red / (double)0xFFFF ) * (double)0xFF ),
+		(unsigned char)( ( (double)theColor->green / (double)0xFFFF ) * (double)0xFF ),
+		(unsigned char)( ( (double)theColor->blue / (double)0xFFFF ) * (double)0xFF ) );
+}
+
+// =======================================================================
+
 long ImplSalCallbackDummy( void*, SalFrame*, USHORT, const void* )
 {
 	return 0;
@@ -685,15 +694,25 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	StyleSettings aStyleSettings( rSettings.GetStyleSettings() );
 
 	aStyleSettings.SetCursorBlinkTime( 500 );
-
+	
+	RGBColor theColor;
+	
+	BOOL useThemeDialogColor = FALSE;
+	Color themeDialogColor;
+	if( GetThemeTextColor( kThemeTextColorPushButtonActive /* used for text of all controls */, 32, true, &theColor ) == noErr )
+	{
+		themeDialogColor = RGBColorToColor( &theColor );
+		useThemeDialogColor = TRUE;
+	}
+	
 	SalColor nTextTextColor = com_sun_star_vcl_VCLScreen::getTextTextColor();
 	Color aTextColor( SALCOLOR_RED( nTextTextColor ), SALCOLOR_GREEN( nTextTextColor ), SALCOLOR_BLUE( nTextTextColor ) );
-	aStyleSettings.SetDialogTextColor( aTextColor );
+	aStyleSettings.SetDialogTextColor( ( useThemeDialogColor ) ? themeDialogColor : aTextColor );
 	aStyleSettings.SetMenuTextColor( aTextColor );
-	aStyleSettings.SetButtonTextColor( aTextColor );
-	aStyleSettings.SetRadioCheckTextColor( aTextColor );
-	aStyleSettings.SetGroupTextColor( aTextColor );
-	aStyleSettings.SetLabelTextColor( aTextColor );
+	aStyleSettings.SetButtonTextColor( ( useThemeDialogColor) ? themeDialogColor : aTextColor );
+	aStyleSettings.SetRadioCheckTextColor( ( useThemeDialogColor ) ? themeDialogColor : aTextColor );
+	aStyleSettings.SetGroupTextColor( ( useThemeDialogColor ) ? themeDialogColor : aTextColor );
+	aStyleSettings.SetLabelTextColor( ( useThemeDialogColor ) ? themeDialogColor : aTextColor );
 	aStyleSettings.SetInfoTextColor( aTextColor );
 	aStyleSettings.SetWindowTextColor( aTextColor );
 	aStyleSettings.SetFieldTextColor( aTextColor );
@@ -710,13 +729,20 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	Color aHighlightTextColor( SALCOLOR_RED( nTextHighlightTextColor ), SALCOLOR_GREEN( nTextHighlightTextColor ), SALCOLOR_BLUE( nTextHighlightTextColor ) );
 	aStyleSettings.SetHighlightTextColor( aHighlightTextColor );
 	aStyleSettings.SetMenuHighlightTextColor( aHighlightTextColor );
-
+	
+	useThemeDialogColor = FALSE;
+	if( GetThemeTextColor( kThemeTextColorPushButtonInactive /* used for text of all disabled controls */, 32, true, &theColor ) == noErr )
+	{
+		themeDialogColor = RGBColorToColor( &theColor );
+		useThemeDialogColor = TRUE;
+	}
+	
 	SalColor nControlColor = com_sun_star_vcl_VCLScreen::getControlColor();
 	Color aBackColor( SALCOLOR_RED( nControlColor ), SALCOLOR_GREEN( nControlColor ), SALCOLOR_BLUE( nControlColor ) );
 	aStyleSettings.Set3DColors( aBackColor );
 	aStyleSettings.SetDeactiveBorderColor( aBackColor );
 	aStyleSettings.SetDeactiveColor( aBackColor );
-	aStyleSettings.SetDeactiveTextColor( aBackColor );
+	aStyleSettings.SetDeactiveTextColor( ( useThemeDialogColor ) ? themeDialogColor : aBackColor );
 	aStyleSettings.SetDialogColor( aBackColor );
 	aStyleSettings.SetDisableColor( aBackColor );
 	aStyleSettings.SetFaceColor( aBackColor );
