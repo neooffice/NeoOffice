@@ -157,17 +157,20 @@ if [ -d "$2" ]; then
 	for i in `cd "$2/Contents/MacOS" ; find . -type f -name "*.dylib*" ; find . -type f -name "*.bin"`; do
 		touch -f "$2/Contents/MacOS/$i"
 	done
-	unset DYLD_LIBRARY_PATH
 
 	# Open welcome page but fix bug 1834 by suppressing it when run as root.
 	earlyaccess=true;
 	sudoargs=
 	if [ ! -z "$USER" -a `id -u "$USER"` != "0" ] ; then
 		sudoargs="-u $USER"
+		sudo $sudoargs "$2/Contents/MacOS/pagein" "-L$2/Contents/MacOS/pagein" @pagein-writer @pagein-common
 		sudo $sudoargs "$2/Contents/MacOS/soffice.bin" -view "http://www.planamesa.com/neojava/welcome.php?product=$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)&host=`hostname`.`domainname`&buildmachine=$(BUILD_MACHINE)" &
+		sleep 15
 	elif [ ! -z "$earlyaccess" ] ; then
-		 open "http://www.planamesa.com/neojava/welcome.php?product=$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)&host=`hostname`.`domainname`&buildmachine=$(BUILD_MACHINE)"
+		unset DYLD_LIBRARY_PATH
+		open "http://www.planamesa.com/neojava/welcome.php?product=$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)&host=`hostname`.`domainname`&buildmachine=$(BUILD_MACHINE)"
 	fi
+	unset DYLD_LIBRARY_PATH
 
 	sudo $sudoargs /System/Library/Frameworks/ApplicationServices.framework/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister -f "$2"
 
@@ -179,6 +182,7 @@ if [ -d "$2" ]; then
 	if [ -x "/usr/bin/mdimport" ] ; then
 		/usr/bin/mdimport -r "$2/Library/Spotlight/neolight.mdimporter"
 	fi
+
 fi
 
 exit 0
