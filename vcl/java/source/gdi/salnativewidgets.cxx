@@ -2293,6 +2293,7 @@ static SalColor ConvertRGBColorToSalColor( const RGBColor& theColor )
 {
 	return( MAKE_SALCOLOR( ((double)theColor.red/(double)SHRT_MAX)*0xFF, ((double)theColor.green/(double)SHRT_MAX)*0xFF, ((double)theColor.blue/(double)SHRT_MAX)*0xFF ) );
 }
+
 /**
  * Get the color that should be used to draw the textual element of a control.
  * This allows VCL controls that use widget renderig to get control backgrounds
@@ -2326,6 +2327,23 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 				else
 				{
 					bReturn = ( GetThemeTextColor(kThemeTextColorPushButtonActive, 32, true, &nativeColor) == noErr);
+				}
+			}
+			break;
+		
+		case CTRL_LISTBOX:
+			{
+				if( nState & CTRL_STATE_PRESSED )
+				{
+					bReturn = ( GetThemeTextColor(kThemeTextColorPopupButtonPressed, 32, true, &nativeColor) == noErr);
+				}
+				else if ( ! ( nState & CTRL_STATE_ENABLED ) )
+				{
+					bReturn = ( GetThemeTextColor(kThemeTextColorPopupButtonInactive, 32, true, &nativeColor) == noErr);
+				}
+				else
+				{
+					bReturn = ( GetThemeTextColor(kThemeTextColorPopupButtonActive, 32, true, &nativeColor) == noErr);
 				}
 			}
 			break;

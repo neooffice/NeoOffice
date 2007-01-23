@@ -2681,6 +2681,26 @@ void ImplWin::ImplDraw( bool bLayout )
 		        aControlValue, rtl::OUString() );
 	    }
 
+#ifdef USE_JAVA
+		BOOL bNativeTextOK = false;
+		Color aTextColor;
+		
+		if ( IsNativeControlSupported( CTRL_LISTBOX, PART_ENTIRE_CONTROL ) )
+		{
+			ImplControlValue aValue;
+			
+			// assume nState's been set properly above, which should be true if we're set properly
+			
+			bNativeTextOK = GetNativeControlTextColor( CTRL_LISTBOX, PART_ENTIRE_CONTROL, nState, aValue, aTextColor );
+		}
+		
+		if ( bNativeTextOK )
+		{
+			SetTextColor( aTextColor );
+		}
+		else
+		{
+#endif // USE_JAVA
         if( IsEnabled() )
         {
             if( HasFocus() )
@@ -2711,6 +2731,9 @@ void ImplWin::ImplDraw( bool bLayout )
 	        if ( !bNativeOK )
 		        Erase( maFocusRect );
         }
+#ifdef USE_JAVA
+		}
+#endif // USE_JAVA
     }
 
 	if ( IsUserDrawEnabled() )

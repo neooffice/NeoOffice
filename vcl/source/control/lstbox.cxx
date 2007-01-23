@@ -464,6 +464,34 @@ void ListBox::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, UL
 		}
 	}
 
+#ifdef USE_JAVA
+	BOOL bNativeOK = false;
+	Color aTextColor;
+	
+	if ( IsNativeControlSupported( CTRL_LISTBOX, PART_ENTIRE_CONTROL ) )
+	{
+		ImplControlValue aValue;
+        ControlState	 nState = 0;
+
+		const ImplBtn *pImplBtn = GetImplBtn();
+		if ( pImplBtn && pImplBtn->IsPressed() )
+			nState |= CTRL_STATE_PRESSED;
+        if ( HasFocus() )						nState |= CTRL_STATE_FOCUSED;
+        if ( Window::IsEnabled() ) 				nState |= CTRL_STATE_ENABLED;
+
+        if ( IsMouseOver() )
+            nState |= CTRL_STATE_ROLLOVER;
+
+		bNativeOK = GetNativeControlTextColor( CTRL_LISTBOX, PART_ENTIRE_CONTROL, nState, aValue, aTextColor );
+	}
+	
+	if ( bNativeOK )
+	{
+		pDev->SetTextColor( aTextColor );
+	}
+	else
+	{
+#endif	// USE_JAVA
 	// Inhalt
 	if ( ( nFlags & WINDOW_DRAW_MONO ) || ( eOutDevType == OUTDEV_PRINTER ) )
 	{
@@ -481,7 +509,10 @@ void ListBox::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, UL
 			pDev->SetTextColor( GetTextColor() );
 		}
 	}
-
+#ifdef USE_JAVA
+	}
+#endif // USE_JAVA
+	
 	long        nOnePixel = GetDrawPixel( pDev, 1 );
     USHORT      nTextStyle = TEXT_DRAW_VCENTER;
     Rectangle   aTextRect( aPos, aSize );
