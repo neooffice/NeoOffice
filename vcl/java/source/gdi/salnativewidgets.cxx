@@ -2368,6 +2368,23 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 				}
 			}
 			break;
+		
+		case CTRL_MENU_POPUP:
+			{
+				if( nState & CTRL_STATE_SELECTED )
+				{
+					bReturn = ( GetThemeTextColor(kThemeTextColorMenuItemSelected , 32, true, &nativeColor) == noErr);
+				}
+				else if ( ! ( nState & CTRL_STATE_ENABLED ) )
+				{
+					bReturn = ( GetThemeTextColor(kThemeTextColorMenuItemDisabled, 32, true, &nativeColor) == noErr);
+				}
+				else
+				{
+					bReturn = ( GetThemeTextColor(kThemeTextColorMenuItemActive, 32, true, &nativeColor) == noErr);
+				}
+			}
+			break;
 	}
 	
 	if( bReturn )

@@ -2502,8 +2502,41 @@ void Menu::ImplPaint( Window* pWin, USHORT nBorder, long nStartY, MenuItemData* 
         if ( ImplIsVisible( n ) && ( !pThisItemOnly || ( pData == pThisItemOnly ) ) )
         {
             if ( pThisItemOnly && bHighlighted )
+#ifdef USE_JAVA
+			{
+				Color aTextColor;
+				
+				BOOL bNativeTextOK = false;
+				if ( pWin->IsNativeControlSupported( CTRL_MENU_POPUP, PART_ENTIRE_CONTROL ) )
+				{
+					ImplControlValue aValue;
+					
+					bNativeTextOK = pWin->GetNativeControlTextColor( CTRL_MENU_POPUP, PART_ENTIRE_CONTROL, CTRL_STATE_SELECTED, aValue, aTextColor );
+				}
+				
+				if ( bNativeTextOK )
+					pWin->SetTextColor( aTextColor );
+				else
+#endif
                 pWin->SetTextColor( rSettings.GetMenuHighlightTextColor() );
-
+#ifdef USE_JAVA
+			}
+			else
+			{
+				Color aTextColor;
+				
+				BOOL bNativeTextOK = false;
+				if ( pWin->IsNativeControlSupported( CTRL_MENU_POPUP, PART_ENTIRE_CONTROL ) )
+				{
+					ImplControlValue aValue;
+					
+					bNativeTextOK = pWin->GetNativeControlTextColor( CTRL_MENU_POPUP, PART_ENTIRE_CONTROL, ( ( pData->bEnabled ) ? CTRL_STATE_ENABLED : 0 ), aValue, aTextColor );
+				}
+				
+				if ( bNativeTextOK )
+					pWin->SetTextColor( aTextColor );
+			}
+#endif
             Point aPos( aTopLeft );
             aPos.Y() += nBorder;
             aPos.Y() += nStartY;
