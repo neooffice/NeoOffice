@@ -2347,6 +2347,27 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 				}
 			}
 			break;
+		
+		case CTRL_TAB_ITEM:
+			{
+				if( nState & CTRL_STATE_SELECTED )
+				{
+					bReturn = ( GetThemeTextColor(kThemeTextColorTabFrontActive, 32, true, &nativeColor) == noErr);
+				}
+				else if( nState & CTRL_STATE_PRESSED )
+				{
+					bReturn = ( GetThemeTextColor(kThemeTextColorTabNonFrontPressed, 32, true, &nativeColor) == noErr);
+				}
+				else if ( ! ( nState & CTRL_STATE_ENABLED ) )
+				{
+					bReturn = ( GetThemeTextColor(kThemeTextColorTabNonFrontInactive, 32, true, &nativeColor) == noErr);
+				}
+				else
+				{
+					bReturn = ( GetThemeTextColor(kThemeTextColorTabNonFrontActive, 32, true, &nativeColor) == noErr);
+				}
+			}
+			break;
 	}
 	
 	if( bReturn )

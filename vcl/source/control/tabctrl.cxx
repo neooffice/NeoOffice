@@ -978,6 +978,14 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
 
         bNativeOK = DrawNativeControl( CTRL_TAB_ITEM, PART_ENTIRE_CONTROL, aCtrlRegion, nState,
                     aControlValue, rtl::OUString() );
+#ifdef USE_JAVA
+		if ( bNativeOK )
+		{
+			Color aTextColor;
+			if ( GetNativeControlTextColor( CTRL_TAB_ITEM, PART_ENTIRE_CONTROL, nState, aControlValue, aTextColor ) )
+				SetTextColor( aTextColor );
+		}
+#endif
     }
 
     if( ! bLayout && !bNativeOK )
