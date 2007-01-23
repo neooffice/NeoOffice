@@ -757,7 +757,8 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         // on Mac OS X 10.4 which will flood the system log so we need to
         // filter out the messages
         int fd[2];
-        if (err == 0 && !pipe(fd))
+		const char *pGrepCmd = "/usr/bin/grep";
+        if (err == 0 && !access( pGrepCmd, R_OK | X_OK ) && !pipe(fd))
         {
             pid_t pid = fork();
             if (!pid)
@@ -767,7 +768,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
                 dup2(fd[0], 0);
                 close(fd[0]);
                 close(fd[1]);
-                execlp( "/usr/bin/grep", "grep", "-v", "^ERROR: ", NULL );
+                execlp( pGrepCmd, pGrepCmd, "-v", "^ERROR: ", NULL );
                 exit(0);
             }
             else if (pid > 0)
