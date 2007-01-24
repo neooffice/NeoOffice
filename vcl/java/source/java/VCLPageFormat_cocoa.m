@@ -241,7 +241,6 @@ BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
 		[(NSPrintInfo *)pNSPrintInfo setOrientation:NSPortraitOrientation];
 		[(NSPrintInfo *)pNSPrintInfo setPaperSize:NSMakeSize((float)nWidth, (float)nHeight)];
 
-		NSSize aSize = [(NSPrintInfo *)pNSPrintInfo paperSize];
 		// Fix bug 1678 by handling when the selected paper is rotated
 		if ( [(NSPrintInfo *)pNSPrintInfo orientation] != nOldOrientation )
 			bRet = YES;
