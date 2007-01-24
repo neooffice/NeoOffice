@@ -2291,7 +2291,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
  */
 static SalColor ConvertRGBColorToSalColor( const RGBColor& theColor )
 {
-	return( MAKE_SALCOLOR( ((double)theColor.red/(double)SHRT_MAX)*0xFF, ((double)theColor.green/(double)SHRT_MAX)*0xFF, ((double)theColor.blue/(double)SHRT_MAX)*0xFF ) );
+	return( MAKE_SALCOLOR( ((double)theColor.red/(double)USHRT_MAX)*0xFF, ((double)theColor.green/(double)USHRT_MAX)*0xFF, ((double)theColor.blue/(double)USHRT_MAX)*0xFF ) );
 }
 
 /**
@@ -2315,6 +2315,8 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 	switch( nType )
 	{
 		case CTRL_PUSHBUTTON:
+		case CTRL_RADIOBUTTON:
+		case CTRL_CHECKBOX:
 			{				
 				if( nState & CTRL_STATE_PRESSED )
 				{

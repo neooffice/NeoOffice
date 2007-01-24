@@ -409,7 +409,21 @@ USHORT Button::ImplGetTextStyle( XubString& rText, WinBits nWinStyle,
     if ( !(nDrawFlags & WINDOW_DRAW_NODISABLE) )
     {
         if ( !IsEnabled() )
+#ifdef USE_JAVA
+		{
+			Color aColor;
+			ImplControlValue aValue;
+			
+			// assume if we have native control support for pushbuttons we've
+			// properly mapped disabled radio button text and other text
+			// to proper color as well.
+			
+			if ( ! ( IsNativeControlSupported( CTRL_PUSHBUTTON, PART_ENTIRE_CONTROL ) && GetNativeControlTextColor( CTRL_PUSHBUTTON, PART_ENTIRE_CONTROL, 0, aValue, aColor ) ) )
+#endif // USE_JAVA
             nTextStyle |= TEXT_DRAW_DISABLE;
+#ifdef USE_JAVA
+		}
+#endif
     }
 
     if ( (nDrawFlags & WINDOW_DRAW_MONO) ||
@@ -1156,7 +1170,18 @@ USHORT PushButton::ImplGetTextStyle( ULONG nDrawFlags ) const
         nTextStyle |= TEXT_DRAW_VCENTER;
 
     if ( ! ( (nDrawFlags & WINDOW_DRAW_NODISABLE) || IsEnabled() ) )
+#ifdef USE_JAVA
+	{
+		Color aColor;
+		ImplControlValue aValue;
+		PushButton *nonConstButton = (PushButton *)this;
+		
+		if ( ! ( nonConstButton->IsNativeControlSupported( CTRL_PUSHBUTTON, PART_ENTIRE_CONTROL ) && nonConstButton->GetNativeControlTextColor( CTRL_PUSHBUTTON, PART_ENTIRE_CONTROL, 0, aValue, aColor ) ) )
+#endif // USE_JAVA
         nTextStyle |= TEXT_DRAW_DISABLE;
+#ifdef USE_JAVA
+	}
+#endif // USE_JAVA
 
     return nTextStyle;
 }
@@ -2545,6 +2570,27 @@ void RadioButton::ImplDraw( OutputDevice* pDev, ULONG nDrawFlags,
         {
             USHORT nTextStyle = Button::ImplGetTextStyle( aText, nWinStyle, nDrawFlags );
 
+#ifdef USE_JAVA
+			if ( IsNativeControlSupported( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL ) )
+			{
+				ImplControlValue aControlValue;
+				ControlState	 nState = 0;
+				Color aColor;
+				
+				if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED ) nState |= CTRL_STATE_PRESSED;
+				if ( HasFocus() )						nState |= CTRL_STATE_FOCUSED;
+				if ( ImplGetButtonState() & BUTTON_DRAW_DEFAULT )	nState |= CTRL_STATE_DEFAULT;
+				if ( Window::IsEnabled() ) 				nState |= CTRL_STATE_ENABLED;
+		
+				if ( IsMouseOver() )
+					nState |= CTRL_STATE_ROLLOVER;
+		
+				BOOL bNativeOK = GetNativeControlTextColor( CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL, nState, aControlValue, aColor );
+				if ( bNativeOK )
+					SetTextColor( aColor );
+			}
+#endif
+
             Size aSize( rSize );
             Point aPos( rPos );
 
@@ -3651,6 +3697,27 @@ void CheckBox::ImplDraw( OutputDevice* pDev, ULONG nDrawFlags,
          ( HasImage() && !  (ImplGetButtonState() & BUTTON_DRAW_NOIMAGE) ) )
     {
         USHORT nTextStyle = Button::ImplGetTextStyle( aText, nWinStyle, nDrawFlags );
+
+#ifdef USE_JAVA
+		if ( IsNativeControlSupported( CTRL_CHECKBOX, PART_ENTIRE_CONTROL ) )
+		{
+			ImplControlValue aControlValue;
+			ControlState	 nState = 0;
+			Color aColor;
+			
+			if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED ) nState |= CTRL_STATE_PRESSED;
+			if ( HasFocus() )						nState |= CTRL_STATE_FOCUSED;
+			if ( ImplGetButtonState() & BUTTON_DRAW_DEFAULT )	nState |= CTRL_STATE_DEFAULT;
+			if ( Window::IsEnabled() ) 				nState |= CTRL_STATE_ENABLED;
+	
+			if ( IsMouseOver() )
+				nState |= CTRL_STATE_ROLLOVER;
+	
+			BOOL bNativeOK = GetNativeControlTextColor( CTRL_CHECKBOX, PART_ENTIRE_CONTROL, nState, aControlValue, aColor );
+			if ( bNativeOK )
+				SetTextColor( aColor );
+		}
+#endif
 
         Size aSize( rSize );
         Point aPos( rPos );

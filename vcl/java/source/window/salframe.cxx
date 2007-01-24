@@ -82,9 +82,9 @@ using namespace vcl;
 
 static inline Color RGBColorToColor( RGBColor *theColor )
 {
-	return Color( (unsigned char)( ( (double)theColor->red / (double)0xFFFF ) * (double)0xFF ),
-		(unsigned char)( ( (double)theColor->green / (double)0xFFFF ) * (double)0xFF ),
-		(unsigned char)( ( (double)theColor->blue / (double)0xFFFF ) * (double)0xFF ) );
+	return Color( (unsigned char)( ( (double)theColor->red / (double)USHRT_MAX ) * (double)0xFF ),
+		(unsigned char)( ( (double)theColor->green / (double)USHRT_MAX ) * (double)0xFF ),
+		(unsigned char)( ( (double)theColor->blue / (double)USHRT_MAX ) * (double)0xFF ) );
 }
 
 // =======================================================================
