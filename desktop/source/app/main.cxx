@@ -255,6 +255,18 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
 	ByteString aTmpPath( "OPENOFFICE_MOZILLA_FIVE_HOME=" );
 	aTmpPath += aCmdPath;
 	putenv( (char *)aTmpPath.GetBuffer() );
+
+	// Set Mono environment variables
+	aTmpPath = ByteString( "MONO_ROOT=" );
+	aTmpPath += aCmdPath;
+	putenv( (char *)aTmpPath.GetBuffer() );
+	aTmpPath = ByteString( "MONO_CFG_DIR=" );
+	aTmpPath += aCmdPath;
+	putenv( (char *)aTmpPath.GetBuffer() );
+	aTmpPath = ByteString( "MONO_CONFIG=" );
+	aTmpPath += aCmdPath;
+	aTmpPath += ByteString( "/mono/2.0/machine.config" );
+	putenv( (char *)aTmpPath.GetBuffer() );
 #endif	// USE_JAVA
 
 	RTL_LOGFILE_PRODUCT_TRACE( "PERFORMANCE - enter Main()" );
