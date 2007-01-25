@@ -80,6 +80,7 @@ using namespace rtl;
 #define COMBOBOX_BUTTON_TRIMWIDTH		3
 #define CONTROL_TAB_PANE_TOP_OFFSET		( ( vcl::IsRunningPanther() ) ? 1 : 12 )
 #define EDITBOX_TRIMWIDTH				3
+#define LISTVIEWFRAME_TRIMWIDTH			1
 #define LISTBOX_BUTTON_HORIZ_TRIMWIDTH	0
 #define LISTBOX_BUTTON_VERT_TRIMWIDTH	2
 #define SCROLLBAR_ARROW_TRIMX			13
@@ -163,6 +164,7 @@ static VCLBitmapBuffer aSharedTabBoundingBoxBuffer;
 static VCLBitmapBuffer aSharedPrimaryGroupBoxBuffer;
 static VCLBitmapBuffer aSharedMenuBackgroundBuffer;
 static VCLBitmapBuffer aSharedEditBoxBuffer;
+static VCLBitmapBuffer aSharedListViewFrameBuffer;
 static VCLBitmapBuffer aSharedDisclosureBtnBuffer;
 static VCLBitmapBuffer aSharedSeparatorLineBuffer;
 static VCLBitmapBuffer aSharedListViewHeaderBuffer;
@@ -655,6 +657,34 @@ static BOOL InitEditFieldDrawInfo( HIThemeFrameDrawInfo *pFrameInfo, ControlStat
 	{
 		pFrameInfo->isFocused = true;
 		pFrameInfo->state |= kThemeStateActive;	// logically we can't have a focused edit field that's inactive
+	}
+	return TRUE;
+}
+
+// =======================================================================
+
+/**
+ * (static) Initialize HITheme structures used to draw the frame of an
+ * list box.
+ *
+ * @param pFrameInfo		pointer to the HITheme frame info structure
+ *							to be initialized
+ * @param nState			control state of the list box
+ * @return TRUE on success, FALSE on failure
+ */
+static BOOL InitListBoxDrawInfo( HIThemeFrameDrawInfo *pFrameInfo, ControlState nState )
+{
+	memset( pFrameInfo, 0, sizeof( HIThemeFrameDrawInfo ) );
+	pFrameInfo->version = 0;
+	pFrameInfo->kind = kHIThemeFrameListBox;
+	if( ! ( nState & CTRL_STATE_ENABLED ) )
+		pFrameInfo->state = kThemeStateInactive;
+	else
+		pFrameInfo->state = kThemeStateActive;
+	if( nState & CTRL_STATE_FOCUSED )
+	{
+		pFrameInfo->isFocused = true;
+		pFrameInfo->state |= kThemeStateActive;
 	}
 	return TRUE;
 }
@@ -1297,6 +1327,41 @@ static BOOL DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 // =======================================================================
 
 /**
+ * (static) Draw the background for a native lis view widget.
+ *
+ * @param pGraphics			pointer into graphics object where box should
+ *							be painted
+ * @param rDestBounds		destination rectangle where object will be painted
+ */
+static BOOL DrawNativeListBoxFrame( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
+{
+	VCLBitmapBuffer *pBuffer = &aSharedListViewFrameBuffer;
+	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+	if ( bRet )
+	{
+		HIThemeFrameDrawInfo pFrameInfo;
+		InitListBoxDrawInfo( &pFrameInfo, nState );
+
+		HIRect destRect;
+		destRect.origin.x = LISTVIEWFRAME_TRIMWIDTH;
+		destRect.origin.y = LISTVIEWFRAME_TRIMWIDTH;
+		destRect.size.width = rDestBounds.GetWidth() - 2*LISTVIEWFRAME_TRIMWIDTH;
+		destRect.size.height = rDestBounds.GetHeight() - 2*LISTVIEWFRAME_TRIMWIDTH;
+
+		bRet = ( HIThemeDrawFrame( &destRect, &pFrameInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
+	}
+
+	pBuffer->ReleaseContext();
+
+	if ( bRet )
+		pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+
+	return bRet;
+}
+
+// =======================================================================
+
+/**
  * (static) Draw a native disclosure button used on the side of items in
  * hierarchical lists that can collapse and expand a container.
  *
@@ -1520,6 +1585,11 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
+		
+		case CTRL_LISTVIEWBOX:
+			if( nPart == PART_ENTIRE_CONTROL )
+				isSupported = TRUE;
+			break;
 			
 		default:
 			isSupported = FALSE;
@@ -1740,6 +1810,14 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 			{
 				Rectangle ctrlRect = rControlRegion.GetBoundRect();
 				bOK = DrawNativeSeparatorLine( this, ctrlRect, nState );
+			}
+			break;
+		
+		case CTRL_LISTVIEWBOX:
+			if( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle ctrlRect = rControlRegion.GetBoundRect();
+				bOK = DrawNativeListBoxFrame( this, ctrlRect, nState );
 			}
 			break;
 	}
@@ -2269,6 +2347,17 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			break;
 		
 		case CTRL_LISTVIEWHEADER:
+			if ( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle controlRect = rControlRegion.GetBoundRect();
+				rNativeBoundingRegion = Region( controlRect );
+				rNativeContentRegion = Region( rNativeBoundingRegion );
+
+				bReturn = TRUE;
+			}
+			break;
+		
+		case CTRL_LISTVIEWBOX:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle controlRect = rControlRegion.GetBoundRect();

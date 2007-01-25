@@ -137,11 +137,18 @@ static void ImplGetNativeControlData( Window *pCtrl, ControlType& nCtrlType, Con
 			case WINDOW_LISTBOX:
 			case WINDOW_MULTILISTBOX:
 			case WINDOW_TREELISTBOX:
-				nCtrlType = CTRL_LISTBOX;
 				if( pCtrl->GetStyle() & WB_DROPDOWN )
+				{
+					// popup menu
+					nCtrlType = CTRL_LISTBOX;
 					nCtrlPart = PART_ENTIRE_CONTROL;
+				}
 				else
-					nCtrlPart = PART_WINDOW;
+				{
+					// scrollable list
+					nCtrlType = CTRL_LISTVIEWBOX;
+					nCtrlPart = PART_ENTIRE_CONTROL;
+				}
 				break;
 			case WINDOW_LISTBOXWINDOW:
 				nCtrlType = CTRL_LISTBOX;
