@@ -233,7 +233,7 @@ java_lang_Object::~java_lang_Object()
 
 void java_lang_Object::saveRef( jobject myObj )
 {
-	OSL_ENSURE( myObj, "object in c++ -> Java Wrapper" );
+//	OSL_ENSURE( myObj, "object in c++ -> Java Wrapper" );
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
