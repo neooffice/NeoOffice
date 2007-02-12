@@ -341,13 +341,12 @@ public final class VCLPageFormat {
 
 		if (o == ORIENTATION_PORTRAIT)
 			paperOrientation = PageFormat.PORTRAIT;
-		else {
+		else
 			paperOrientation = PageFormat.LANDSCAPE;
-		}
 
 		pageFormat = job.defaultPage();
 
-		pageFormat.setOrientation(oldOrientation);
+		pageFormat.setOrientation(paperOrientation);
 
 	}
 

@@ -342,7 +342,7 @@ public final class VCLGraphics {
 			t.printStackTrace();
 		}
 		try {
-			drawGlyphsMethod = VCLGraphics.class.getMethod("drawGlyphs", new Class[]{ int.class, int.class, int[].class, int[].class, VCLFont.class, int.class, int.class, int.class, int.class, int.class });
+			drawGlyphsMethod = VCLGraphics.class.getMethod("drawGlyphs", new Class[]{ int.class, int.class, int[].class, int[].class, VCLFont.class, int.class, int.class, int.class, int.class, int.class, float.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -1035,11 +1035,13 @@ public final class VCLGraphics {
 	 * @param glyphOrientation the glyph rotation constant
 	 * @param translateX the x coordinate to translate after rotation
 	 * @param translateY the y coordinate to translate after rotation
+	 * @param glyphScaleX the scale factor to apply in addition to the font's
+	 *  scale factor
 	 */
-	public void drawGlyphs(int x, int y, int[] glyphs, int[] advances, VCLFont font, int color, int orientation, int glyphOrientation, int translateX, int translateY) {
+	public void drawGlyphs(int x, int y, int[] glyphs, int[] advances, VCLFont font, int color, int orientation, int glyphOrientation, int translateX, int translateY, float glyphScaleX) {
 
 		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawGlyphsMethod, new Object[]{ new Integer(x), new Integer(y), glyphs, advances, font, new Integer(color), new Integer(orientation), new Integer(glyphOrientation), new Integer(translateX), new Integer(translateY) });
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawGlyphsMethod, new Object[]{ new Integer(x), new Integer(y), glyphs, advances, font, new Integer(color), new Integer(orientation), new Integer(glyphOrientation), new Integer(translateX), new Integer(translateY), new Float(glyphScaleX) });
 			pageQueue.postDrawingOperation(pqi);
 			return;
 		}
@@ -1094,14 +1096,16 @@ public final class VCLGraphics {
 					if (orientation != 0)
 						g2.rotate(Math.toRadians((double)orientation / 10) * -1);
 
-					g2.scale(fScaleX, 1.0);
-
 					glyphOrientation &= VCLGraphics.GF_ROTMASK;
 					if ((glyphOrientation & VCLGraphics.GF_ROTMASK) != 0) {
+						g2.scale(fScaleX, glyphScaleX);
 						if (glyphOrientation == VCLGraphics.GF_ROTL)
 							g2.rotate(Math.toRadians(-90));
 						else
 							g2.rotate(Math.toRadians(90));
+					}
+					else {
+						g2.scale(fScaleX * glyphScaleX, 1.0);
 					}
 
 					// Draw the text to a scaled graphics
