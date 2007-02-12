@@ -795,7 +795,8 @@ SalATSLayout::SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel ) :
 	mpVCLFont( NULL ),
 	mpKashidaLayoutData( NULL ),
 	mnOrigWidth( 0 ),
-	mfGlyphScaleX( 1.0 )
+	mfGlyphScaleX( 1.0 ),
+	mpLargestLayoutData( NULL )
 {
 	if ( mnFallbackLevel )
 	{
@@ -1093,6 +1094,8 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 		maLayoutData.push_back( pLayoutData );
 		maLayoutMinCharPos.push_back( aFallbackArgs.mnMinCharPos );
+		if ( !mpLargestLayoutData || pLayoutData->mnGlyphCount > mpLargestLayoutData->mnGlyphCount )
+			mpLargestLayoutData = pLayoutData;
 	}
 
 	return bRet;
@@ -1102,10 +1105,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 {
-	if ( !maLayoutData.size() )
+	if ( !mpLargestLayoutData )
 		return;
 
-	int nMaxGlyphs = maLayoutData.front()->mnGlyphCount;
+	int nMaxGlyphs = mpLargestLayoutData->mnGlyphCount;
 	long aGlyphArray[ nMaxGlyphs ];
 	long aDXArray[ nMaxGlyphs ];
 	int aCharPosArray[ nMaxGlyphs ];
@@ -1123,17 +1126,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			;
 		if ( i )
 		{
-			while ( i < nGlyphCount && aCharPosArray[ i ] == aCharPosArray[ 0 ] )
-				i++;
-			if ( i < nGlyphCount )
-			{
-				while ( i < nGlyphCount && aCharPosArray[ i ] == nStart )
-					i++;
-				if ( i < nGlyphCount )
-					nStart = aCharPosArray[ i ];
-				else
-					nStart = STRING_LEN;
-			}
+			nStart -= nGlyphCount - i;
 			continue;
 		}
 
@@ -1141,21 +1134,8 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			;
 		if ( i < nGlyphCount )
 		{
-			int nOldGlyphCount = nGlyphCount;
+			nStart -= nGlyphCount - i;
 			nGlyphCount = i;
-			if ( nGlyphCount )
-			{
-				while ( i < nOldGlyphCount && aCharPosArray[ i ] == nStart )
-					i++;
-				if ( i < nGlyphCount )
-					nStart = aCharPosArray[ i ];
-				else
-					nStart = STRING_LEN;
-			}
-			else
-			{
-				continue;
-			}
 		}
 
 		long nTranslateX = 0;
@@ -1164,14 +1144,14 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 		long nGlyphOrientation = aGlyphArray[ 0 ] & GF_ROTMASK;
 		if ( nGlyphOrientation )
 		{
-			i = 1;
-			while ( i < nGlyphCount && aCharPosArray[ i ] == nStart )
-				i++;
-			if ( i < nGlyphCount )
-				nStart = aCharPosArray[ i ];
-			else
-				nStart = STRING_LEN;
+			nStart -= nGlyphCount - 1;
+			int nOldGlyphCount = nGlyphCount;
 			nGlyphCount = 1;
+			for ( i = 1; i < nOldGlyphCount && aCharPosArray[ i ] == aCharPosArray[ 0 ]; i++ )
+			{
+				nStart++;
+				nGlyphCount++;
+			}
 
 			long nX;
 			long nY;
@@ -1195,15 +1175,18 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 		}
 		else if ( mfGlyphScaleX != 1.0 )
 		{
-			i = 1;
-			while ( i < nGlyphCount && aCharPosArray[ i ] == nStart )
-				i++;
-			if ( i < nGlyphCount )
-				nStart = aCharPosArray[ i ];
-			else
-				nStart = STRING_LEN;
+			nStart -= nGlyphCount - 1;
+			int nOldGlyphCount = nGlyphCount;
 			nGlyphCount = 1;
+			for ( i = 1; i < nOldGlyphCount && aCharPosArray[ i ] == aCharPosArray[ 0 ]; i++ )
+			{
+				nStart++;
+				nGlyphCount++;
+			}
 		}
+
+		for ( i = 0; i < nGlyphCount; i++ )
+			aGlyphArray[ i ] &= GF_IDXMASK;
 
 		JavaSalGraphics& rJavaGraphics = (JavaSalGraphics&)rGraphics;
 		rJavaGraphics.mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), nGlyphCount, aGlyphArray, aDXArray, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, nTranslateX, nTranslateY, mfGlyphScaleX );
@@ -1216,7 +1199,7 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 {
 	bool bRet = false;
 
-	if ( !maLayoutData.size() )
+	if ( !mpLargestLayoutData )
 		return bRet;
 
 	if ( !pATSCubicMoveToUPP )
@@ -1370,6 +1353,7 @@ void SalATSLayout::Destroy()
 
 	mnOrigWidth = 0;
 	mfGlyphScaleX = 1.0;
+	mpLargestLayoutData = NULL;
 }
 
 // ----------------------------------------------------------------------------
@@ -1381,7 +1365,7 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( long nGlyph, int n
 	nX = 0;
 	nY = 0;
 
-	if ( !maLayoutData.size() )
+	if ( !mpLargestLayoutData )
 		return pRet;
 
 	int nRunIndex = 0;
@@ -1424,7 +1408,7 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( long nGlyph, int n
 
 	long nGlyphOrientation = nGlyph & GF_ROTMASK;
 
-	if ( maLayoutData.front()->maVerticalFontStyle && nGlyphOrientation & GF_ROTMASK )
+	if ( pRet->maVerticalFontStyle && nGlyphOrientation & GF_ROTMASK )
 	{
 		GlyphID nGlyphID = (GlyphID)( nGlyph & GF_IDXMASK );
 

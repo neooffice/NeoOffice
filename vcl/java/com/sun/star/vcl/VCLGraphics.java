@@ -1096,14 +1096,16 @@ public final class VCLGraphics {
 					if (orientation != 0)
 						g2.rotate(Math.toRadians((double)orientation / 10) * -1);
 
-					g2.scale(fScaleX * glyphScaleX, 1.0);
-
 					glyphOrientation &= VCLGraphics.GF_ROTMASK;
 					if ((glyphOrientation & VCLGraphics.GF_ROTMASK) != 0) {
+						g2.scale(fScaleX, glyphScaleX);
 						if (glyphOrientation == VCLGraphics.GF_ROTL)
 							g2.rotate(Math.toRadians(-90));
 						else
 							g2.rotate(Math.toRadians(90));
+					}
+					else {
+						g2.scale(fScaleX * glyphScaleX, 1.0);
 					}
 
 					// Draw the text to a scaled graphics
