@@ -1003,10 +1003,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		window.removeWindowStateListener(this);
 		queue.removeCachedEvents(frame);
 
-		// Fix bug 1145 by destroying the native window
-		window.removeNotify();
+		// Fix bug 1899 by removing the panel before destroying the window
 		window.remove(panel);
 		panel = null;
+
+		// Fix bug 1145 by destroying the native window
+		window.removeNotify();
 
 		window = null;
 		queue = null;
