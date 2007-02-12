@@ -793,7 +793,9 @@ SalATSLayout::SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel ) :
 	mpGraphics( pGraphics ),
 	mnFallbackLevel( nFallbackLevel ),
 	mpVCLFont( NULL ),
-	mpKashidaLayoutData( NULL )
+	mpKashidaLayoutData( NULL ),
+	mnOrigWidth( 0 ),
+	mfGlyphScaleX( 1.0 )
 {
 	if ( mnFallbackLevel )
 	{
@@ -839,6 +841,19 @@ SalATSLayout::~SalATSLayout()
 void SalATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 {
 	GenericSalLayout::AdjustLayout( rArgs );
+
+	long nWidth;
+	if ( rArgs.mpDXArray )
+		nWidth = rArgs.mpDXArray[ rArgs.mnEndCharPos - rArgs.mnMinCharPos - 1 ];
+	else if ( rArgs.mnLayoutWidth )
+		nWidth = rArgs.mnLayoutWidth;
+	else
+		nWidth = mnOrigWidth;
+
+	// Fix bug 2133 by scaling width of characters if the new width is narrower
+	// than the original width
+	if ( nWidth + 1 < mnOrigWidth )
+		mfGlyphScaleX = (float)nWidth / mnOrigWidth;
 
 	if ( rArgs.mnFlags & SAL_LAYOUT_KERNING_ASIAN && ! ( rArgs.mnFlags & SAL_LAYOUT_VERTICAL ) )
 		ApplyAsianKerning( rArgs.mpStr, rArgs.mnLength );
@@ -1071,7 +1086,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		}
 
 		if ( nCharPos >= 0 )
+		{
+			mnOrigWidth = GetTextWidth();
 			bRet = true;
+		}
 
 		maLayoutData.push_back( pLayoutData );
 		maLayoutMinCharPos.push_back( aFallbackArgs.mnMinCharPos );
@@ -1108,7 +1126,14 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			while ( i < nGlyphCount && aCharPosArray[ i ] == aCharPosArray[ 0 ] )
 				i++;
 			if ( i < nGlyphCount )
-				nStart = aCharPosArray[ i ];
+			{
+				while ( i < nGlyphCount && aCharPosArray[ i ] == nStart )
+					i++;
+				if ( i < nGlyphCount )
+					nStart = aCharPosArray[ i ];
+				else
+					nStart = STRING_LEN;
+			}
 			continue;
 		}
 
@@ -1116,11 +1141,21 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			;
 		if ( i < nGlyphCount )
 		{
+			int nOldGlyphCount = nGlyphCount;
 			nGlyphCount = i;
 			if ( nGlyphCount )
-				nStart = aCharPosArray[ i ];
+			{
+				while ( i < nOldGlyphCount && aCharPosArray[ i ] == nStart )
+					i++;
+				if ( i < nGlyphCount )
+					nStart = aCharPosArray[ i ];
+				else
+					nStart = STRING_LEN;
+			}
 			else
+			{
 				continue;
+			}
 		}
 
 		long nTranslateX = 0;
@@ -1129,7 +1164,13 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 		long nGlyphOrientation = aGlyphArray[ 0 ] & GF_ROTMASK;
 		if ( nGlyphOrientation )
 		{
-			nStart -= nGlyphCount - 1;
+			i = 1;
+			while ( i < nGlyphCount && aCharPosArray[ i ] == nStart )
+				i++;
+			if ( i < nGlyphCount )
+				nStart = aCharPosArray[ i ];
+			else
+				nStart = STRING_LEN;
 			nGlyphCount = 1;
 
 			long nX;
@@ -1152,9 +1193,20 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 					nTranslateY = nY;
 			}
 		}
+		else if ( mfGlyphScaleX != 1.0 )
+		{
+			i = 1;
+			while ( i < nGlyphCount && aCharPosArray[ i ] == nStart )
+				i++;
+			if ( i < nGlyphCount )
+				nStart = aCharPosArray[ i ];
+			else
+				nStart = STRING_LEN;
+			nGlyphCount = 1;
+		}
 
 		JavaSalGraphics& rJavaGraphics = (JavaSalGraphics&)rGraphics;
-		rJavaGraphics.mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), nGlyphCount, aGlyphArray, aDXArray, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, nTranslateX, nTranslateY );
+		rJavaGraphics.mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), nGlyphCount, aGlyphArray, aDXArray, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, nTranslateX, nTranslateY, mfGlyphScaleX );
 	}
 }
 
@@ -1315,6 +1367,9 @@ void SalATSLayout::Destroy()
 			mit->second->Release();
 		maMirroredLayoutData.clear();
 	}
+
+	mnOrigWidth = 0;
+	mfGlyphScaleX = 1.0;
 }
 
 // ----------------------------------------------------------------------------

@@ -578,7 +578,7 @@ void com_sun_star_vcl_VCLGraphics::drawBitmapBuffer( BitmapBuffer *_par0, long _
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2, long *_par3, long *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, int _par8, long _par9, long _par10 )
+void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2, long *_par3, long *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, int _par8, long _par9, long _par10, float _par11 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -586,7 +586,7 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(II[I[ILcom/sun/star/vcl/VCLFont;IIIII)V";
+			char *cSignature = "(II[I[ILcom/sun/star/vcl/VCLFont;IIIIIF)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "drawGlyphs", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -605,7 +605,7 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2
 			memcpy( pAdvanceBits, (jint *)_par4, elements * sizeof( jint ) );
 			t.pEnv->ReleasePrimitiveArrayCritical( advancearray, pAdvanceBits, 0 );
 
-			jvalue args[10];
+			jvalue args[11];
 			args[0].i = jint( _par0 );
 			args[1].i = jint( _par1 );
 			args[2].l = glypharray;
@@ -616,6 +616,7 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2
 			args[7].i = jint( _par8 );
 			args[8].i = jint( _par9 );
 			args[9].i = jint( _par10 );
+			args[10].f = jfloat( _par11 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
