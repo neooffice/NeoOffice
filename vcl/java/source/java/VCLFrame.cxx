@@ -787,7 +787,7 @@ void com_sun_star_vcl_VCLFrame::setTitle( ::rtl::OUString _par0 )
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0 )
+void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0, sal_Bool _par1 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -795,14 +795,15 @@ void com_sun_star_vcl_VCLFrame::setVisible( sal_Bool _par0 )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(Z)V";
+			char *cSignature = "(ZZ)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "setVisible", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[1];
+			jvalue args[2];
 			args[0].z = jboolean( _par0 );
+			args[1].z = jboolean( _par1 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}

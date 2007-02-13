@@ -363,7 +363,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				{
 					// Hide Java window but leave visible flag set to true
 					if ( (*it)->mbVisible )
-						(*it)->mpVCLFrame->setVisible( sal_False );
+						(*it)->mpVCLFrame->setVisible( sal_False, sal_False );
 				}
 			}
 			break;
@@ -507,22 +507,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					pKeyEvent->mnCode = getKeyCode() | getModifiers();
 					pKeyEvent->mnCharCode = getKeyChar();
 					pKeyEvent->mnRepeat = getRepeatCount();
-				}
-				// The OOo code expects that Ctrl-key events will have the key
-				// char resolved to their respective ASCII equivalents. Since
-				// we convert Mac OS X Meta-key events into Ctrl-key events,
-				// we need to do the resolving manually. Also, Java 1.4.x
-				// changes Command-Backspace events into Command-Delete events
-				// so fix bug 420 changing them back.
-				if ( pKeyEvent->mnCode & KEY_MOD1 )
-				{
-					if ( ! ( pKeyEvent->mnCode & KEY_CONTROLMOD ) && pKeyEvent->mnCharCode >= 0x0061 && pKeyEvent->mnCharCode <= 0x007d )
-						pKeyEvent->mnCharCode -= 0x0060;
-					else if ( pKeyEvent->mnCharCode == 0x007f )
-					{
-						pKeyEvent->mnCode = ( pKeyEvent->mnCode & ~KEY_DELETE ) | KEY_BACKSPACE;
-						pKeyEvent->mnCharCode = 0x0008;
-					}
 				}
 				// Fix bug 1158 by resetting the focus to whichever window is
 				// receiving key events

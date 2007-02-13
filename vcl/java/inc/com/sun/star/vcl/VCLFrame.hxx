@@ -80,7 +80,7 @@ public:
 	void				setPointer( USHORT _par0 );
 	void				setState( ULONG _par0 );
 	void				setTitle( ::rtl::OUString _par0 );
-	void				setVisible( sal_Bool _par0 );
+	void				setVisible( sal_Bool _par0, sal_Bool bNoActivate );
 	void				sync();
 	sal_Bool			toFront();
 };
