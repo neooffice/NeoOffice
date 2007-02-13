@@ -96,7 +96,7 @@ public:
 				KeyCode( KeyFuncType eFunction );
 
 	USHORT		GetFullCode() const { return nCode; }
-#ifdef MACOSX
+#if defined MACOSX && !defined USE_JAVA
 	USHORT		GetFullKeyCode() const { return (nCode) ; }
 #else
 	USHORT		GetFullKeyCode() const { return (nCode & ~KEY_CONTROLMOD); }

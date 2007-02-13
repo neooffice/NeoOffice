@@ -1059,23 +1059,43 @@ public final class VCLEvent extends AWTEvent {
 			// key as the meta key
 			if (awtModifiers != 0 && event instanceof KeyEvent)
 			{
+				KeyEvent ke = (KeyEvent)e;
+				char keyChar = ke.getKeyChar();
+				int keyCode = ke.getKeyCode();
 				if ((awtModifiers & (InputEvent.CTRL_DOWN_MASK | InputEvent.META_DOWN_MASK)) == (InputEvent.CTRL_DOWN_MASK | InputEvent.META_DOWN_MASK)) {
 					; // No switching is needed
 				}
 				else if ((awtModifiers & InputEvent.CTRL_DOWN_MASK) != 0) {
-					KeyEvent ke = (KeyEvent)e;
-					int keyCode = ke.getKeyCode();
 					if (keyCode == KeyEvent.VK_CONTROL) {
 						keyCode = KeyEvent.VK_META;
-						event = e = new KeyEvent(e.getComponent(), eid, e.getWhen(), awtModifiers, keyCode, ke.getKeyChar());
+						event = e = new KeyEvent(e.getComponent(), eid, e.getWhen(), awtModifiers, keyCode, keyChar);
 					}
 				}
 				else if ((awtModifiers & InputEvent.META_DOWN_MASK) != 0) {
-					KeyEvent ke = (KeyEvent)e;
-					int keyCode = ke.getKeyCode();
 					if (keyCode == KeyEvent.VK_META) {
 						keyCode = KeyEvent.VK_CONTROL;
-						event = e = new KeyEvent(e.getComponent(), eid, e.getWhen(), awtModifiers, keyCode, ke.getKeyChar());
+						event = e = new KeyEvent(e.getComponent(), eid, e.getWhen(), awtModifiers, keyCode, keyChar);
+					}
+				}
+
+				// The C++ code expects that Ctrl-key events will have the key
+				// char resolved to their respective ASCII equivalents. Since
+				// we convert Mac OS X Meta-key events into Ctrl-key events,
+				// we need to do the resolving manually.
+				if (keyChar >= 0x61 && keyChar <= 0x7d && (awtModifiers & InputEvent.CTRL_DOWN_MASK) != 0) {
+					keyChar -= 0x60;
+					event = e = new KeyEvent(e.getComponent(), eid, e.getWhen(), awtModifiers, keyCode, keyChar);
+				}
+				// Fix bug 420 if the key code is backspace and the character
+				// is delete
+				else if (keyChar == 0x7f && keyCode == KeyEvent.VK_BACK_SPACE) {
+ 					if ((awtModifiers & InputEvent.CTRL_DOWN_MASK) != 0) {
+						keyCode = KeyEvent.VK_DELETE;
+						event = e = new KeyEvent(e.getComponent(), eid, e.getWhen(), awtModifiers, keyCode, keyChar);
+					}
+ 					else if ((awtModifiers & (InputEvent.ALT_DOWN_MASK | InputEvent.META_DOWN_MASK)) != 0) {
+						keyChar = 0x08;
+						event = e = new KeyEvent(e.getComponent(), eid, e.getWhen(), awtModifiers, keyCode, keyChar);
 					}
 				}
 			}
@@ -1282,12 +1302,6 @@ public final class VCLEvent extends AWTEvent {
 				keyChar = e.getKeyChar();
 				if (keyChar == KeyEvent.CHAR_UNDEFINED)
 					keyChar = 0;
-				// The C++ code expects that Ctrl-key events will have the key
-				// char resolved to their respective ASCII equivalents. Since
-				// we convert Mac OS X Meta-key events into Ctrl-key events,
-				// we need to do the resolving manually.
-				if ((e.getModifiersEx() & InputEvent.CTRL_DOWN_MASK) != 0 && keyChar >= 'a' && keyChar <= 0x7d )
-					keyChar -= 0x60;
 			}
 		}
 		return keyChar;
