@@ -612,14 +612,14 @@ public final class VCLEvent extends AWTEvent {
 	public final static int KEY_MOD2 = 0x4000;
 
 	/**
-	 * KEY_MOD5 constant.
-	 */
-	public final static int KEY_MOD5 = 0x8000;
-
-	/**
 	 * KEY_MODTYPE constant.
 	 */
-	public final static int KEY_MODTYPE = 0xf000;
+	public final static int KEY_MODTYPE = 0x7000;
+
+	/**
+	 * KEY_CONTROLMOD constant.
+	 */
+	public final static int KEY_CONTROLMOD = 0x8000;
 
 	/**
 	 * KEY_ALLMODTYPE constant.
@@ -1095,7 +1095,7 @@ public final class VCLEvent extends AWTEvent {
 				if ((awtModifiers & InputEvent.SHIFT_DOWN_MASK) != 0)
 					modifiers |= VCLEvent.KEY_SHIFT;
 				if ((awtModifiers & InputEvent.CTRL_DOWN_MASK) != 0)
-					modifiers |= VCLEvent.KEY_MOD5;
+					modifiers |= VCLEvent.KEY_CONTROLMOD;
 
 				// If command plus left or middle button is pressed, Java
 				// will add the right button so we need to strip it out
@@ -1105,8 +1105,8 @@ public final class VCLEvent extends AWTEvent {
 				if ((modifiers & VCLEvent.MOUSE_LEFT) != 0) {
 					// Convert control plus left button events to right button
 					// events since one button mice have no right button
-					if ((modifiers & VCLEvent.KEY_MOD5) != 0)
-						modifiers = (modifiers & ~(VCLEvent.KEY_MOD5 | VCLEvent.MOUSE_LEFT)) | VCLEvent.MOUSE_RIGHT;
+					if ((modifiers & VCLEvent.KEY_CONTROLMOD) != 0)
+						modifiers = (modifiers & ~(VCLEvent.KEY_CONTROLMOD | VCLEvent.MOUSE_LEFT)) | VCLEvent.MOUSE_RIGHT;
 
 					// Convert alt plus left button events to middle button
 					// events since one button mice have no middle button
@@ -1357,7 +1357,7 @@ public final class VCLEvent extends AWTEvent {
 						keyCode = VCLEvent.KEY_MOD2;
 						break;
 					case KeyEvent.VK_META:
-						keyCode = VCLEvent.KEY_MOD5;
+						keyCode = VCLEvent.KEY_CONTROLMOD;
 						break;
 					case KeyEvent.VK_ESCAPE:
 						keyCode = VCLEvent.KEY_ESCAPE;

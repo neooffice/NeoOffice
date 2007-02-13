@@ -1003,10 +1003,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		window.removeWindowStateListener(this);
 		queue.removeCachedEvents(frame);
 
-		// Fix bug 1145 by destroying the native window
-		window.removeNotify();
+		// Fix bug 1899 by removing the panel before destroying the window
 		window.remove(panel);
 		panel = null;
+
+		// Fix bug 1145 by destroying the native window
+		window.removeNotify();
 
 		window = null;
 		queue = null;
@@ -1216,7 +1218,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		StringBuffer buf = new StringBuffer();
 		if ((keyCode & VCLEvent.KEY_SHIFT) == VCLEvent.KEY_SHIFT)
 			buf.append("\u21e7");
-		if ((keyCode & VCLEvent.KEY_MOD5) == VCLEvent.KEY_MOD5)
+		if ((keyCode & VCLEvent.KEY_CONTROLMOD) == VCLEvent.KEY_CONTROLMOD)
 			buf.append("\u2303");
 		if ((keyCode & VCLEvent.KEY_MOD1) == VCLEvent.KEY_MOD1)
 			buf.append("\u2318");

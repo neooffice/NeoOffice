@@ -516,7 +516,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				// so fix bug 420 changing them back.
 				if ( pKeyEvent->mnCode & KEY_MOD1 )
 				{
-					if ( ! ( pKeyEvent->mnCode & KEY_MOD5 ) && pKeyEvent->mnCharCode >= 0x0061 && pKeyEvent->mnCharCode <= 0x007d )
+					if ( ! ( pKeyEvent->mnCode & KEY_CONTROLMOD ) && pKeyEvent->mnCharCode >= 0x0061 && pKeyEvent->mnCharCode <= 0x007d )
 						pKeyEvent->mnCharCode -= 0x0060;
 					else if ( pKeyEvent->mnCharCode == 0x007f )
 					{
