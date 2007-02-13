@@ -556,9 +556,20 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		pEvent->dispatch();
 		delete pEvent;
 
-		// Fix bug 1971 by breaking after releasing a key
-		if ( nID == SALEVENT_KEYUP )
-			break;
+		switch ( nID )
+		{
+			case SALEVENT_KEYUP:
+				// Fix bug 1971 by breaking after releasing a key
+				nMaxEvents = 0;
+				break;
+			case SALEVENT_MOUSEBUTTONDOWN:
+				// Fix bug 437 by ensuring that if the next event is a
+				// SALEVENT_MOUSEBUTTONUP event, it will be dispatched
+				// before the painting timer runs
+				nMaxEvents++;
+				OThread::yield();
+				break;
+		}
 	}
 
 	if ( nCount )
