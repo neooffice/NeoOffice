@@ -224,7 +224,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	if ( mbVisible )
 		UpdateMenusForFrame( this, NULL );
 
-	mpVCLFrame->setVisible( mbVisible );
+	mpVCLFrame->setVisible( mbVisible, bNoActivate );
 
 	// Reset graphics
 	mpGraphics->mpVCLGraphics->resetGraphics();
@@ -253,8 +253,6 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		// to the child frame
 		if ( !bNoActivate )
 			ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
-		else if ( pSalData->mpFocusFrame )
-			pSalData->mpFocusFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
 
 		mbInShow = FALSE;
 	}

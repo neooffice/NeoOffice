@@ -980,7 +980,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed)
 			return;
 
-		setVisible(false);
+		setVisible(false, false);
 		setMenuBar(null);
 		children = null;
 		graphics.dispose();
@@ -1802,7 +1802,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 						if (!f.isDisposed()) {
 							Window w = f.getWindow();
 							if (w.isShowing()) {
-								f.setVisible(false);
+								f.setVisible(false, false);
 								detachedChildren.add(f);
 							}
 						}
@@ -1818,7 +1818,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				VCLFrame f = (VCLFrame)frames.next();
 				synchronized (f) {
 					if (!f.isDisposed())
-						f.setVisible(true);
+						f.setVisible(true, true);
 				}
 			}
 		}
@@ -2030,8 +2030,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param b <code>true</code> shows this component and <code>false</code>
 	 *  hides this component
+	 * @param noActivate <code>true</code> displays the window without giving
+	 *  it focus
 	 */
-	public synchronized void setVisible(boolean b) {
+	public synchronized void setVisible(boolean b, boolean noActivate) {
 
 		if (b == window.isShowing())
 			return;
@@ -2060,7 +2062,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			}
 
 			// Show the window
+			boolean focusable;
+			if (noActivate)
+				focusable = window.isFocusable();
+			else
+				focusable = false;
+			if (focusable) {
+				window.setFocusable(false);
+				window.setFocusableWindowState(false);
+			}
 			window.show();
+			if (focusable) {
+				window.setFocusable(true);
+				window.setFocusableWindowState(true);
+			}
 			enableFlushing(true);
 		}
 		else {

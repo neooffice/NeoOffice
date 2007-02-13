@@ -363,7 +363,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				{
 					// Hide Java window but leave visible flag set to true
 					if ( (*it)->mbVisible )
-						(*it)->mpVCLFrame->setVisible( sal_False );
+						(*it)->mpVCLFrame->setVisible( sal_False, sal_False );
 				}
 			}
 			break;
