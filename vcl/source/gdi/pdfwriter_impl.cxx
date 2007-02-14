@@ -11332,6 +11332,10 @@ sal_Int32 PDFWriterImpl::writePDFObjectTree( PDFEmitObject& rObj, oslFileHandle 
     OStringBuffer aLine;
     aLine.append( nNewID );
     aLine.append( " 0 obj\n" );
+#ifndef DEBUG_DISABLE_PDFCOMPRESSION
+    if ( rObj.m_bStream )
+        aLine.append( "/Filter/FlateDecode" );
+#endif
 
     // Copy content and perform any required substitutions
     OString aRefTag( "0 R " );
@@ -11425,6 +11429,9 @@ sal_Int32 PDFWriterImpl::writePDFObjectTree( PDFEmitObject& rObj, oslFileHandle 
         aLine.append( "stream\n" );
         CHECK_RETURN( writeBuffer( aLine.getStr(), aLine.getLength() ) );
 
+        beginCompression();
+        checkAndEnableStreamEncryption( nNewID );
+
         sal_uInt64 nBufSize = 8192;
         sal_Char aBuf[ nBufSize ];
         sal_uInt64 nBytesRead;
@@ -11440,8 +11447,8 @@ sal_Int32 PDFWriterImpl::writePDFObjectTree( PDFEmitObject& rObj, oslFileHandle 
             CHECK_RETURN( ( osl_File_E_None == osl_isEndOfFile( aFile, &bEOF ) ) );
         } while ( nBytesLeft && !bEOF );
 
-        if ( nBytesLeft )
-            return 0;
+        endCompression();
+        disableStreamEncryption();
 
         aLine.setLength( 0 );
         aLine.append( "\nendstream\n" );
