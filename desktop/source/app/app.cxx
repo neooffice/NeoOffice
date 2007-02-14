@@ -2863,31 +2863,52 @@ void Desktop::OpenDefault()
     bool bShowDonationPage = true;
     bool bCheckForPatches = true;
 
+    OUString aUserInstallURL;
+    ::utl::Bootstrap::PathStatus aUserInstallStatus = ::utl::Bootstrap::locateUserInstallation( aUserInstallURL );
+
     OUString aProgName;
     ::vos::OStartupInfo aInfo;
     aInfo.getExecutableFile( aProgName );
     sal_uInt32 lastIndex = aProgName.lastIndexOf('/');
     if ( lastIndex > 0 )
     {
+        OUString aNoShowDonationPage = OUString::createFromAscii( ".noshowdonationpage" );
         aProgName = aProgName.copy( 0, lastIndex+1 );
         OUString aNoShowDonationName( aProgName );
-        aNoShowDonationName += OUString::createFromAscii( ".noshowdonationpage" );
+        aNoShowDonationName += aNoShowDonationPage;
         ::osl::FileStatus aStatus( FileStatusMask_CreationTime | FileStatusMask_ModifyTime );
         ::osl::DirectoryItem aItem;
         if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aNoShowDonationName, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) && aStatus.getAttributes() )
             bShowDonationPage = false;
 
+        if ( bShowDonationPage && aUserInstallStatus == ::utl::Bootstrap::PATH_EXISTS )
+        {
+            aNoShowDonationName = aUserInstallURL;
+            aNoShowDonationName += OUString::createFromAscii( "/" );
+            aNoShowDonationName += aNoShowDonationPage;
+            if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aNoShowDonationName, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) && aStatus.getAttributes() )
+                bShowDonationPage = false;
+        }
+
         OUString aNoShowPatchesName( aProgName );
-        aNoShowPatchesName += OUString::createFromAscii( ".nocheckforpatches" );
+        OUString aNoShowPatchesPage = OUString::createFromAscii( ".nocheckforpatches" );
+        aNoShowPatchesName += aNoShowPatchesPage;
         if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aNoShowPatchesName, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) && aStatus.getAttributes() )
             bCheckForPatches = false;
+
+        if ( bCheckForPatches && aUserInstallStatus == ::utl::Bootstrap::PATH_EXISTS )
+        {
+            aNoShowPatchesName = aUserInstallURL;
+            aNoShowPatchesName += OUString::createFromAscii( "/" );
+            aNoShowPatchesName += aNoShowPatchesPage;
+            if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aNoShowPatchesName, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) && aStatus.getAttributes() )
+                bCheckForPatches = false;
+        }
     }
 
-    if ( bShowDonationPage )
+    if ( aUserInstallStatus == ::utl::Bootstrap::PATH_EXISTS )
     {
-        OUString aUserInstallURL;
-        ::utl::Bootstrap::PathStatus aUserInstallStatus = ::utl::Bootstrap::locateUserInstallation( aUserInstallURL );
-        if ( aUserInstallStatus == ::utl::Bootstrap::PATH_EXISTS )
+        if ( bShowDonationPage )
         {
             aUserInstallURL += OUString::createFromAscii( "/.nextshowdonationpage" );
 
