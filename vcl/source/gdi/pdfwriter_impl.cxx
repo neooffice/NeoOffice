@@ -10825,9 +10825,6 @@ sal_Int32 PDFWriterImpl::writePDFObjectTree( PDFEmitObject& rObj, oslFileHandle 
             CHECK_RETURN( ( osl_File_E_None == osl_isEndOfFile( aFile, &bEOF ) ) );
         } while ( nBytesLeft && !bEOF );
 
-        if ( nBytesLeft )
-            return 0;
-
         aLine.setLength( 0 );
         aLine.append( "\nendstream\n" );
         CHECK_RETURN( writeBuffer( aLine.getStr(), aLine.getLength() ) );
