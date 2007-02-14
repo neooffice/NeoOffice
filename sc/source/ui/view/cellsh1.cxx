@@ -358,12 +358,20 @@ void ScCellShell::ExecuteEdit( SfxRequest& rReq )
 		//	Inhalte von Zellen loeschen
 		//
 
+#ifdef USE_JAVA
 		case SID_DELETE_CONTENTS:
+#else	// USE_JAVA
+		case SID_DELETE:
+#endif	// USE_JAVA
 			pTabViewShell->DeleteContents( IDF_CONTENTS );
 			rReq.Done();
 			break;
 
+#ifdef USE_JAVA
 		case SID_DELETE:
+#else	// USE_JAVA
+		case SID_DELETE_CONTENTS:
+#endif	// USE_JAVA
 			{
 				USHORT	nFlags = IDF_NONE;
 
