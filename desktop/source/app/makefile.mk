@@ -54,6 +54,14 @@ CDEFS += -DPRODUCT_DIR_NAME='"$(PRODUCT_DIR_NAME)"'
 CDEFS += -DPRODUCT_DONATION_URL='"$(PRODUCT_DONATION_URL)"'
 .ENDIF
 
+.IF "$(PRODUCT_WELCOME_URL)" != ""
+CDEFS += -DPRODUCT_WELCOME_URL='"$(PRODUCT_WELCOME_URL)"'
+.ENDIF
+
+.IF "$(BUILD_MACHINE)" != ""
+CDEFS += -DBUILD_MACHINE='"$(BUILD_MACHINE)"'
+.ENDIF
+
 # --- Files --------------------------------------------------------
 
 OBJFILES = \

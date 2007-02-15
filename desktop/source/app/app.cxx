@@ -318,9 +318,10 @@
 
 #include <stdio.h>
 
-#ifdef PRODUCT_DONATION_URL
+#if defined PRODUCT_WELCOME_URL || defined PRODUCT_DONATION_URL
+#include <sys/param.h>
 #include <rtl/uri.hxx>
-#endif	// PRODUCT_DONATION_URL
+#endif	// PRODUCT_WELCOME_URL || PRODUCT_DONATION_URL
 
 #define DEFINE_CONST_UNICODE(CONSTASCII)        UniString(RTL_CONSTASCII_USTRINGPARAM(CONSTASCII))
 #define U2S(STRING)                                ::rtl::OUStringToOString(STRING, RTL_TEXTENCODING_UTF8)
@@ -2859,83 +2860,136 @@ void Desktop::OpenDefault()
     _bSuppressOpenDefault = true;
 #endif	// USE_JAVA
 
-#ifdef PRODUCT_DONATION_URL
-    bool bShowDonationPage = true;
-    bool bCheckForPatches = true;
+#if defined PRODUCT_WELCOME_URL || defined PRODUCT_DONATION_URL
+    bool bShowWelcomePage = true;
 
     OUString aUserInstallURL;
     ::utl::Bootstrap::PathStatus aUserInstallStatus = ::utl::Bootstrap::locateUserInstallation( aUserInstallURL );
 
-    OUString aProgName;
-    ::vos::OStartupInfo aInfo;
-    aInfo.getExecutableFile( aProgName );
-    sal_uInt32 lastIndex = aProgName.lastIndexOf('/');
-    if ( lastIndex > 0 )
+    OUString aProductKey;
+    aProductKey = ::utl::Bootstrap::getProductKey( aProductKey );
+#endif	// PRODUCT_WELCOME_URL || PRODUCT_DONATION_URL
+
+#if defined PRODUCT_WELCOME_URL && defined BUILD_MACHINE
+    if ( aUserInstallStatus == ::utl::Bootstrap::PATH_EXISTS )
     {
-        OUString aNoShowDonationPage = OUString::createFromAscii( ".noshowdonationpage" );
-        aProgName = aProgName.copy( 0, lastIndex+1 );
-        OUString aNoShowDonationName( aProgName );
-        aNoShowDonationName += aNoShowDonationPage;
-        ::osl::FileStatus aStatus( FileStatusMask_CreationTime | FileStatusMask_ModifyTime );
-        ::osl::DirectoryItem aItem;
-        if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aNoShowDonationName, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) && aStatus.getAttributes() )
-            bShowDonationPage = false;
-
-        if ( bShowDonationPage && aUserInstallStatus == ::utl::Bootstrap::PATH_EXISTS )
+        OUString aWelcomeName = aUserInstallURL;
+        aWelcomeName += OUString::createFromAscii( "/.welcomepage." );
+        aWelcomeName += aProductKey;
+        ::osl::File aFile( aWelcomeName );
+        ::osl::FileBase::RC nError = aFile.open( osl_File_OpenFlag_Read );
+        if ( nError == ::osl::FileBase::E_None )
         {
-            aNoShowDonationName = aUserInstallURL;
-            aNoShowDonationName += OUString::createFromAscii( "/" );
-            aNoShowDonationName += aNoShowDonationPage;
-            if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aNoShowDonationName, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) && aStatus.getAttributes() )
-                bShowDonationPage = false;
+            bShowWelcomePage = false;
+            aFile.close();
         }
-
-        OUString aNoShowPatchesName( aProgName );
-        OUString aNoShowPatchesPage = OUString::createFromAscii( ".nocheckforpatches" );
-        aNoShowPatchesName += aNoShowPatchesPage;
-        if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aNoShowPatchesName, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) && aStatus.getAttributes() )
-            bCheckForPatches = false;
-
-        if ( bCheckForPatches && aUserInstallStatus == ::utl::Bootstrap::PATH_EXISTS )
+        else
         {
-            aNoShowPatchesName = aUserInstallURL;
-            aNoShowPatchesName += OUString::createFromAscii( "/" );
-            aNoShowPatchesName += aNoShowPatchesPage;
-            if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aNoShowPatchesName, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) && aStatus.getAttributes() )
-                bCheckForPatches = false;
+            // Create the file so that the welcome page will not show next time
+            nError = aFile.open( osl_File_OpenFlag_Read | osl_File_OpenFlag_Create );
+            if ( nError == ::osl::FileBase::E_None )
+                aFile.close();
         }
     }
 
-    if ( aUserInstallStatus == ::utl::Bootstrap::PATH_EXISTS )
+    if ( bShowWelcomePage )
     {
-        if ( bShowDonationPage )
+        // Open URL in application in read-only mode
+        OUString aURL( RTL_CONSTASCII_USTRINGPARAM( PRODUCT_WELCOME_URL ) );
+        OUString aHost;
+        char aBuf[ MAXHOSTNAMELEN ];
+        if ( !gethostname( aBuf, sizeof( aBuf ) ) )
+            aHost += OUString::createFromAscii( aBuf );
+        aHost += OUString::createFromAscii( "." );
+        if ( !getdomainname( aBuf, sizeof( aBuf ) ) )
+            aHost += OUString::createFromAscii( aBuf );
+
+        aURL += OUString::createFromAscii( "?product=" );
+        aURL += aProductKey;
+        aURL += OUString::createFromAscii( "&host=" );
+        aURL += aHost;
+        aURL += OUString::createFromAscii( "&buildmachine=" );
+        aURL += OUString( RTL_CONSTASCII_USTRINGPARAM( BUILD_MACHINE ) );
+
+        ProcessDocumentsRequest aRequest;
+        aRequest.pcProcessed = NULL;
+        aRequest.aViewList = ::rtl::Uri::encode( aURL, rtl_UriCharClassUric, rtl_UriEncodeStrict, RTL_TEXTENCODING_UTF8 );
+        OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
+    }
+#endif	// PRODUCT_WELCOME_URL || BUILD_MACHINE
+
+#ifdef PRODUCT_DONATION_URL
+    if ( !bShowWelcomePage )
+    {
+        bool bShowDonationPage = true;
+        bool bCheckForPatches = true;
+
+        OUString aProgName;
+        ::vos::OStartupInfo aInfo;
+        aInfo.getExecutableFile( aProgName );
+        sal_uInt32 lastIndex = aProgName.lastIndexOf('/');
+        if ( lastIndex > 0 )
         {
-            aUserInstallURL += OUString::createFromAscii( "/.nextshowdonationpage" );
-
-            // Create the file if it does not exist
-            ::osl::File aFile( aUserInstallURL );
-            ::osl::FileBase::RC eError = aFile.open( osl_File_OpenFlag_Write | osl_File_OpenFlag_Create );
-            aFile.close();
-
+            OUString aNoShowDonationPage = OUString::createFromAscii( ".noshowdonationpage" );
+            aProgName = aProgName.copy( 0, lastIndex+1 );
+            OUString aNoShowDonationName( aProgName );
+            aNoShowDonationName += aNoShowDonationPage;
             ::osl::FileStatus aStatus( FileStatusMask_CreationTime | FileStatusMask_ModifyTime );
             ::osl::DirectoryItem aItem;
-            if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aUserInstallURL, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) )
+            if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aNoShowDonationName, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) && aStatus.getAttributes() )
+                bShowDonationPage = false;
+
+            if ( bShowDonationPage && aUserInstallStatus == ::utl::Bootstrap::PATH_EXISTS )
             {
-                bool bUpdateTimeStamp = false;
-                if ( eError != ::osl::FileBase::E_None )
+                aNoShowDonationName = aUserInstallURL;
+                aNoShowDonationName += OUString::createFromAscii( "/" );
+                aNoShowDonationName += aNoShowDonationPage;
+                if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aNoShowDonationName, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) && aStatus.getAttributes() )
+                    bShowDonationPage = false;
+            }
+
+            OUString aNoShowPatchesName( aProgName );
+            OUString aNoShowPatchesPage = OUString::createFromAscii( ".nocheckforpatches" );
+            aNoShowPatchesName += aNoShowPatchesPage;
+            if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aNoShowPatchesName, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) && aStatus.getAttributes() )
+                bCheckForPatches = false;
+
+            if ( bCheckForPatches && aUserInstallStatus == ::utl::Bootstrap::PATH_EXISTS )
+            {
+                aNoShowPatchesName = aUserInstallURL;
+                aNoShowPatchesName += OUString::createFromAscii( "/" );
+                aNoShowPatchesName += aNoShowPatchesPage;
+                if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aNoShowPatchesName, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) && aStatus.getAttributes() )
+                    bCheckForPatches = false;
+            }
+        }
+
+        if ( aUserInstallStatus == ::utl::Bootstrap::PATH_EXISTS )
+        {
+            if ( bShowDonationPage )
+            {
+                aUserInstallURL += OUString::createFromAscii( "/.nextshowdonationpage" );
+
+                // Create the file if it does not exist
+                ::osl::File aFile( aUserInstallURL );
+                ::osl::FileBase::RC eError = aFile.open( osl_File_OpenFlag_Write | osl_File_OpenFlag_Create );
+                aFile.close();
+
+                ::osl::FileStatus aStatus( FileStatusMask_CreationTime | FileStatusMask_ModifyTime );
+                ::osl::DirectoryItem aItem;
+                if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aUserInstallURL, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) )
                 {
-                    // Check the last modified data of the file
-                    TimeValue aModifyTime = aStatus.getModifyTime();
-                    TimeValue aCurrentTime;
-                    if ( osl_getSystemTime( &aCurrentTime ) && aCurrentTime.Seconds >= aModifyTime.Seconds )
+                    bool bUpdateTimeStamp = false;
+                    if ( eError != ::osl::FileBase::E_None )
                     {
-                        // Open URL in application in read-only mode
-                        OUString aURL( RTL_CONSTASCII_USTRINGPARAM( PRODUCT_DONATION_URL ) );
-                        if ( bCheckForPatches )
+                        // Check the last modified data of the file
+                        TimeValue aModifyTime = aStatus.getModifyTime();
+                        TimeValue aCurrentTime;
+                        if ( osl_getSystemTime( &aCurrentTime ) && aCurrentTime.Seconds >= aModifyTime.Seconds )
                         {
-                            OUString aProductKey;
-                            aProductKey = ::utl::Bootstrap::getProductKey( aProductKey );
-                            if ( aProductKey.getLength() )
+                            // Open URL in application in read-only mode
+                            OUString aURL( RTL_CONSTASCII_USTRINGPARAM( PRODUCT_DONATION_URL ) );
+                            if ( bCheckForPatches )
                             {
                                 OUString aProductPatchKey;
                                 aProductPatchKey = ::utl::Bootstrap::getProductPatchLevel( aProductPatchKey );
@@ -2950,29 +3004,29 @@ void Desktop::OpenDefault()
                                 aURL += OUString::createFromAscii( "Intel" );
 #endif	// POWERPC
                             }
-                        }
 
-                        ProcessDocumentsRequest aRequest;
-	                    aRequest.pcProcessed = NULL;
-                        aRequest.aViewList = ::rtl::Uri::encode( aURL, rtl_UriCharClassUric, rtl_UriEncodeStrict, RTL_TEXTENCODING_UTF8 );
-                        OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
+                            ProcessDocumentsRequest aRequest;
+                            aRequest.pcProcessed = NULL;
+                            aRequest.aViewList = ::rtl::Uri::encode( aURL, rtl_UriCharClassUric, rtl_UriEncodeStrict, RTL_TEXTENCODING_UTF8 );
+                            OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
+                            bUpdateTimeStamp = true;
+                        }
+                    }
+                    else
+                    {
                         bUpdateTimeStamp = true;
                     }
-                }
-                else
-                {
-                    bUpdateTimeStamp = true;
-                }
 
-                if ( bUpdateTimeStamp )
-                {
-                    // Touch file
-                    TimeValue aCurrentTime;
-                    if ( osl_getSystemTime( &aCurrentTime ) )
+                    if ( bUpdateTimeStamp )
                     {
-                        TimeValue aUpdateTime( aCurrentTime );
-                        aUpdateTime.Seconds += 15 * 24 * 60 * 60; // 15 days
-                        ::osl::File::setTime( aUserInstallURL, aCurrentTime, aCurrentTime, aUpdateTime );
+                        // Touch file
+                        TimeValue aCurrentTime;
+                        if ( osl_getSystemTime( &aCurrentTime ) )
+                        {
+                            TimeValue aUpdateTime( aCurrentTime );
+                            aUpdateTime.Seconds += 15 * 24 * 60 * 60; // 15 days
+                            ::osl::File::setTime( aUserInstallURL, aCurrentTime, aCurrentTime, aUpdateTime );
+                        }
                     }
                 }
             }

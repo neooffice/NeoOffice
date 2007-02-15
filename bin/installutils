@@ -35,11 +35,17 @@
 ##########################################################################
 
 userinstall="$HOME/Library/Preferences/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)"
+target_file_type="$(TARGET_FILE_TYPE)"
 
 check_installation() {
 
 	if [ -z "$1" ] ; then
 		return 1;
+	fi
+
+	file_type=`file "$1/Contents/MacOS/soffice.bin" | awk -F: '{ print $2 }'`
+	if [ "$file_type" != "$target_file_type" ] ; then
+		return 1
 	fi
 
 	if [ -f "$1/Contents/MacOS/bootstraprc" ] ; then
