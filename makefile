@@ -57,12 +57,12 @@ ifeq ("$(UNAME)","powerpc")
 ULONGNAME=PowerPC
 UOUTPUTDIR=unxmacxp.pro
 DLLSUFFIX=mxp
-TARGET_FILE_TYPE= Mach-O executable ppc
+TARGET_FILE_TYPE=Mach-O executable ppc
 else
 ULONGNAME=Intel
 UOUTPUTDIR=unxmacxi.pro
 DLLSUFFIX=mxi
-TARGET_FILE_TYPE= Mach-O executable i386
+TARGET_FILE_TYPE=Mach-O executable i386
 endif
 BUILD_MACHINE=$(shell echo `id -nu`:`hostname`.`domainname`)
 

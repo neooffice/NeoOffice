@@ -45,7 +45,7 @@ check_installation() {
 		return 1;
 	fi
 
-	file_type=`file "$1/Contents/MacOS/soffice.bin" | awk -F: '{ print $2 }'`
+	file_type=`file "$1/Contents/MacOS/soffice.bin" | sed 's#^.*: ##'`
 	if [ "$file_type" != "$target_file_type" ] ; then
 		return 1
 	fi
