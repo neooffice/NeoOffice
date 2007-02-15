@@ -1,0 +1,22 @@
+*** misc/build/hsqldb/src/org/hsqldb/persist/LockFile.java	Sun Jul 16 15:29:33 2006
+--- misc/build/hsqldb/src/org/hsqldb/persist/LockFile.java	Thu Feb 15 09:18:17 2007
+***************
+*** 568,573 ****
+--- 568,584 ----
+          FileUtil.makeParentDirectories(f);
+          lf.setFile(f);
+  
++         // Some platforms like Mac OS X cannot lock mounted file systems
++         // so test for such problems no so that we can fall back to the
++         // this class' locking behavior.
++         if (!lf.tryLock()) {
++             lf = new LockFile();
++             lf.setFile(f);
++         }
++         else {
++             lf.tryRelease();
++         }
++ 
+          return lf;
+      }
+  
