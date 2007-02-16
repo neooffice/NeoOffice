@@ -1003,15 +1003,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		window.removeWindowStateListener(this);
 		queue.removeCachedEvents(frame);
 
-		// Fix bug 1899 by removing the panel before destroying the window
-		window.remove(panel);
 		panel = null;
-
-		// Fix bug 1145 by destroying the native window
-		window.removeNotify();
-
-		window = null;
 		queue = null;
+
+		// Fix bug 1899 by removing all components before destroying the
+		// window
+		window.removeAll();
+
+		// Fix bug 1145 by destroying the native window and fix bug 2151 by
+		// destroying it in the Java event thread
+		RemoveNotifyHandler handler = new RemoveNotifyHandler(window);
+		Toolkit.getDefaultToolkit().getSystemEventQueue().invokeLater(handler);
+		window = null;
 
 		disposed = true;
 
@@ -2596,6 +2599,35 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		public void run() {
 
 			frame.enableFlushing(flushingEnabled);
+
+		}
+
+	}
+
+	/**
+	 * A class that handles destroying windows.
+	 */
+	final class RemoveNotifyHandler implements Runnable {
+
+		/**
+		 * The window.
+		 */
+		private Window window = null;
+
+		/**
+		 * Constructs a new <code>VCLFrame.RemoveNotifyHandler</code> instance.
+		 *
+		 * @param w the window.
+		 */
+		RemoveNotifyHandler(Window w) {
+
+			window = w;
+
+		}
+
+		public void run() {
+
+			window.removeNotify();
 
 		}
 
