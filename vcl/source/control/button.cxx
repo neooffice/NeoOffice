@@ -103,6 +103,9 @@
 #ifndef _SV_SALBTYPE_HXX
 #include <salbtype.hxx>
 #endif
+#ifndef _SV_SALBMP_H
+#include <salbmp.h>
+#endif
 #ifndef _SV_SALGDI_H
 #include <salgdi.h>
 #endif
@@ -3456,6 +3459,10 @@ Image RadioButton::GetRadioImage( const AllSettings& rSettings, USHORT nFlags )
                             SalBitmap *pSalBmp = pGraphics->GetBitmap( aPos.X(), aPos.Y(), aSize.Width(), aSize.Height(), NULL );
                             if ( pSalBmp )
                             {
+                                // Force the pixels to be fixed otherwise the
+                                // image will be blank when passed to the image list
+                                ((JavaSalBitmap *)pSalBmp)->NotifyGraphicsChanged();
+
                                 Bitmap aBmp( pSalBmp );
                                 pSVData->maCtrlData.mpRadioImgList->AddImage( i + 1, Image( aBmp ) );
                             }
@@ -4410,6 +4417,10 @@ Image CheckBox::GetCheckImage( const AllSettings& rSettings, USHORT nFlags )
                             SalBitmap *pSalBmp = pGraphics->GetBitmap( aPos.X(), aPos.Y(), aSize.Width(), aSize.Height(), NULL );
                             if ( pSalBmp )
                             {
+                                // Force the pixels to be fixed otherwise the
+                                // image will be blank when passed to the image list
+                                ((JavaSalBitmap *)pSalBmp)->NotifyGraphicsChanged();
+
                                 // OOo will change some semi-transparent pixels
                                 // to pink so force those pixels to fully
                                 // transparent
