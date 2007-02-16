@@ -65,7 +65,6 @@ import java.awt.image.WritableRaster;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import javax.swing.ButtonModel;
@@ -393,7 +392,7 @@ public final class VCLGraphics {
 	/**
 	 * The change listeners.
 	 */
-	private HashSet changeListeners = null;
+	private LinkedList changeListeners = null;
 
 	/**
 	 * The frame that the graphics draws to.
@@ -516,8 +515,10 @@ public final class VCLGraphics {
 		}
 
 		if (changeListeners == null)
-			changeListeners = new HashSet();
-		changeListeners.add(new Long(listener));
+			changeListeners = new LinkedList();
+		Long l = new Long(listener);
+		if (changeListeners.contains(l))
+			changeListeners.add(l);
 
 	}
 
@@ -2205,10 +2206,8 @@ public final class VCLGraphics {
 	void notifyGraphicsChanged() {
 
 		if (changeListeners != null) {
-			HashSet currentListeners = new HashSet(changeListeners);
-			Iterator listeners = currentListeners.iterator();
-			while (listeners.hasNext())
-				notifyGraphicsChanged(((Long)listeners.next()).longValue());
+			while (changeListeners.size() > 0)
+				notifyGraphicsChanged(((Long)changeListeners.removeLast()).longValue());
 		}
 
 	}
