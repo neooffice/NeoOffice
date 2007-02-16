@@ -71,8 +71,6 @@
 #include <postmac.h>
 #undef check
 
-#include "salframe_cocoa.h"
-
 static EventLoopTimerUPP pSetSystemUIModeTimerUPP = NULL;
 
 using namespace rtl;
@@ -92,20 +90,6 @@ static inline Color RGBColorToColor( RGBColor *theColor )
 long ImplSalCallbackDummy( void*, SalFrame*, USHORT, const void* )
 {
 	return 0;
-}
-
-// -----------------------------------------------------------------------
-
-void VCLScreen_getScreenBounds( long *nX, long *nY, long *nWidth, long *nHeight, BOOL bFullScreenMode, BOOL bUseMainScreenOnly )
-{
-	Rectangle aRect = com_sun_star_vcl_VCLScreen::getScreenBounds( *nX, *nY, *nWidth, *nHeight, bFullScreenMode, bUseMainScreenOnly );
-	if ( !aRect.IsEmpty() )
-	{
-		*nX = aRect.nLeft;
-		*nY = aRect.nTop;
-		*nWidth = aRect.GetWidth();
-		*nHeight = aRect.GetHeight();
-	}
 }
 
 // =======================================================================
@@ -407,7 +391,7 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 void JavaSalFrame::GetWorkArea( Rectangle &rRect )
 {
 	SalData *pSalData = GetSalData();
-	BOOL bFullScreenMode = ( pSalData->mpPresentationFrame || ( this == pSalData->mpLastDragFrame ) );
+	sal_Bool bFullScreenMode = ( pSalData->mpPresentationFrame || ( this == pSalData->mpLastDragFrame ) );
 
 	// If the input rectangle is empty, we are being called by the platform
 	// independent VCL code and so the entire virtual bounds will be returned
@@ -415,9 +399,9 @@ void JavaSalFrame::GetWorkArea( Rectangle &rRect )
 	long nY = rRect.nTop;
 	long nWidth = rRect.GetWidth();
 	long nHeight = rRect.GetHeight();
-	NSScreen_getScreenBounds( &nX, &nY, &nWidth, &nHeight, bFullScreenMode, mbUseMainScreenOnly );
-	if ( nWidth > 0 && nHeight > 0 )
-		rRect = Rectangle( Point( nX, nY ), Size( nWidth, nHeight ) );
+	Rectangle aRect( com_sun_star_vcl_VCLScreen::getScreenBounds( nX, nY, nWidth, nHeight, bFullScreenMode, mbUseMainScreenOnly ) );
+	if ( aRect.GetWidth() > 0 && aRect.GetHeight() > 0 )
+		rRect = aRect;
 }
 
 // -----------------------------------------------------------------------

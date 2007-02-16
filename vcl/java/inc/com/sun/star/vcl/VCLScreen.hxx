@@ -56,11 +56,14 @@ protected:
 public:
 	static jclass		getMyClass();
 	static SalColor		getControlColor();
-	static const Point	getScreenOrigin();
+	static unsigned int	getDefaultScreenNumber();
 	static const Rectangle	getScreenBounds( long _par0, long _par1, long _par2, long _par3, sal_Bool _par4, sal_Bool _par5 );
+	static const Rectangle	getScreenBounds( unsigned int _par0, sal_Bool _par1 );
+	static unsigned int	getScreenCount();
 	static SalColor		getTextHighlightColor();
 	static SalColor		getTextHighlightTextColor();
 	static SalColor		getTextTextColor();
+	static const Rectangle	getVirtualScreenBounds();
 
 						com_sun_star_vcl_VCLScreen( jobject myObj ) : java_lang_Object( myObj ) {};
 	virtual				~com_sun_star_vcl_VCLScreen() {};

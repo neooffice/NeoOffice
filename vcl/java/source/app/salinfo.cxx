@@ -40,6 +40,11 @@
 #ifndef _SV_SALSYS_H
 #include <salsys.h>
 #endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLSCREEN_HXX
+#include <com/sun/star/vcl/VCLScreen.hxx>
+#endif
+
+using namespace vcl;
 
 // =======================================================================
 
@@ -57,50 +62,35 @@ JavaSalSystem::~JavaSalSystem()
 
 unsigned int JavaSalSystem::GetDisplayScreenCount()
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalSystem::GetDisplayScreenCount not implemented\n" );
-#endif
-	return 1;
+	return com_sun_star_vcl_VCLScreen::getScreenCount();
 }
 
 // -----------------------------------------------------------------------
 
 bool JavaSalSystem::IsMultiDisplay()
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalSystem::IsMultiDisplay not implemented\n" );
-#endif
-	return false;
+	return true;
 }
 
 // -----------------------------------------------------------------------
 
 unsigned int JavaSalSystem::GetDefaultDisplayNumber()
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalSystem::GetDefaultDisplayNumber not implemented\n" );
-#endif
-	return 0;
+	return com_sun_star_vcl_VCLScreen::getDefaultScreenNumber();
 }
 
 // -----------------------------------------------------------------------
 
 Rectangle JavaSalSystem::GetDisplayScreenPosSizePixel( unsigned int nScreen )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalSystem::GetDisplayScreenPosSizePixel not implemented\n" );
-#endif
-	return Rectangle();
+	return com_sun_star_vcl_VCLScreen::getScreenBounds( nScreen, sal_False );
 }
 
 // -----------------------------------------------------------------------
 
 Rectangle JavaSalSystem::GetDisplayWorkAreaPosSizePixel( unsigned int nScreen )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalSystem::GetDisplayWorkAreaPosSizePixel not implemented\n" );
-#endif
-	return Rectangle();
+	return com_sun_star_vcl_VCLScreen::getScreenBounds( nScreen, sal_True );
 }
 
 // -----------------------------------------------------------------------

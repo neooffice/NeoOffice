@@ -100,7 +100,7 @@ static JavaSalFrame *FindMouseEventFrame( JavaSalFrame *pFrame, const Point &rSc
 			return pRet;
 	}
 
-	if ( pFrame->IsFloatingFrame() && ! ( pFrame->mnStyle & SAL_FRAME_STYLE_TOOLTIP ) && pFrame != GetSalData()->mpPresentationFrame )
+	if ( pFrame->IsFloatingFrame() && ! ( pFrame->mnStyle & SAL_FRAME_STYLE_TOOLTIP ) )
 	{
 		Rectangle aBounds( Point( pFrame->maGeometry.nX - pFrame->maGeometry.nLeftDecoration, pFrame->maGeometry.nY - pFrame->maGeometry.nTopDecoration ), Size( pFrame->maGeometry.nWidth + pFrame->maGeometry.nLeftDecoration + pFrame->maGeometry.nRightDecoration, pFrame->maGeometry.nHeight + pFrame->maGeometry.nTopDecoration + pFrame->maGeometry.nBottomDecoration ) );
 		if ( aBounds.IsInside( rScreenPoint ) )
@@ -214,7 +214,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			// Ignore SALEVENT_SHUTDOWN events when recursing into this
 			// method or when in presentation mode
 			ImplSVData *pSVData = ImplGetSVData();
-			if ( pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpFirstFloat && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mpPresentationFrame && !pSalData->mbInNativeModalSheet && pSalData->maFrameList.size() )
+			if ( pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpFirstFloat && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mbInNativeModalSheet && pSalData->maFrameList.size() )
 			{
 				JavaSalFrame *pFrame = pSalData->maFrameList.front();
 				if ( pFrame && !pFrame->CallCallback( nID, NULL ) )
@@ -248,7 +248,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			// Fix bug 168 && 607 by reposting SALEVENT_*DOCUMENT events when
 			// recursing into this method while opening a document
 			ImplSVData *pSVData = ImplGetSVData();
-			if ( pSVData && pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mpPresentationFrame && !pSalData->mbInNativeModalSheet )
+			if ( pSVData && pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mbInNativeModalSheet )
 			{
 				String aEmptyStr;
 				ApplicationEvent aAppEvt( aEmptyStr, aEmptyStr, SALEVENT_OPENDOCUMENT ? APPEVENT_OPEN_STRING : APPEVENT_PRINT_STRING, getPath() );
@@ -432,25 +432,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_GETFOCUS:
 		{
-			if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame->mbVisible && pFrame != pSalData->mpPresentationFrame )
-			{
-				// Make sure document window does not float to front
-				JavaSalFrame *pParent = pFrame;
-				while ( pParent )
-				{
-					if ( pParent == pSalData->mpPresentationFrame )
-						break;
-					pParent = pParent->mpParent;
-				}
-
-				if ( !pParent )
-				{
-					// Reset the focus and don't dispatch the event
-					pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
-					pFrame = NULL;
-				}
-			}
-
 			// Ignore focus events for floating windows
 			if ( !bDeleteDataOnly && pFrame && pFrame->mbVisible && pFrame != pSalData->mpFocusFrame && !pFrame->IsFloatingFrame() )
 			{
@@ -464,27 +445,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_LOSEFOCUS:
 		{
-			if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame->mbVisible && pFrame == pSalData->mpPresentationFrame )
-			{
-				// If the presentation frame has no visible children, reset the
-				// focus and don't dispatch the event
-				bool bNoVisibleChildren = true;
-				for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->mpPresentationFrame->maChildren.begin(); it != pSalData->mpPresentationFrame->maChildren.end(); ++it )
-				{
-					if ( (*it)->mbVisible )
-					{
-						bNoVisibleChildren = false;
-						break;
-					}
-				}
-
-				if ( bNoVisibleChildren )
-				{
-					pSalData->mpPresentationFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
-					pFrame = NULL;
-				}
-			}
-
 			if ( !bDeleteDataOnly && pFrame && pFrame == pSalData->mpFocusFrame )
 			{
 				if ( pFrame->mbVisible )

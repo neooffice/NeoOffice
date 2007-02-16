@@ -120,6 +120,27 @@ SalColor com_sun_star_vcl_VCLScreen::getControlColor()
 
 // ----------------------------------------------------------------------------
 
+unsigned int com_sun_star_vcl_VCLScreen::getDefaultScreenNumber()
+{
+	static jmethodID mID = NULL;
+	unsigned int out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()I";
+			mID = t.pEnv->GetStaticMethodID( getMyClass(), "getDefaultScreenNumber", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (unsigned int)t.pEnv->CallStaticIntMethod( getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
 const Rectangle com_sun_star_vcl_VCLScreen::getScreenBounds( long _par0, long _par1, long _par2, long _par3, sal_Bool _par4, sal_Bool _par5 )
 {
 	static jmethodID mID = NULL;
@@ -188,6 +209,91 @@ const Rectangle com_sun_star_vcl_VCLScreen::getScreenBounds( long _par0, long _p
 
 // ----------------------------------------------------------------------------
 
+const Rectangle com_sun_star_vcl_VCLScreen::getScreenBounds( unsigned int _par0, sal_Bool _par1 )
+{
+	static jmethodID mID = NULL;
+	static jfieldID fIDX = NULL;
+	static jfieldID fIDY = NULL;
+	static jfieldID fIDWidth = NULL;
+	static jfieldID fIDHeight = NULL;
+	Rectangle out( Point( 0, 0 ), Size( 0, 0 ) );
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(IZ)Ljava/awt/Rectangle;";
+			mID = t.pEnv->GetStaticMethodID( getMyClass(), "getScreenBounds", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[2];
+			args[0].i = jint( _par0 );
+			args[1].z = jint( _par1 );
+			jobject tempObj = t.pEnv->CallStaticObjectMethodA( getMyClass(), mID, args );
+			if ( tempObj )
+			{
+				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
+				if ( !fIDX )
+				{
+					char *cSignature = "I";
+					fIDX = t.pEnv->GetFieldID( tempObjClass, "x", cSignature );
+				}
+				OSL_ENSURE( fIDX, "Unknown field id!" );
+				if ( !fIDY )
+				{
+					char *cSignature = "I";
+					fIDY = t.pEnv->GetFieldID( tempObjClass, "y", cSignature );
+				}
+				OSL_ENSURE( fIDY, "Unknown field id!" );
+				if ( !fIDWidth )
+				{
+					char *cSignature = "I";
+					fIDWidth = t.pEnv->GetFieldID( tempObjClass, "width", cSignature );
+				}
+				OSL_ENSURE( fIDWidth, "Unknown field id!" );
+				if ( !fIDHeight )
+				{
+					char *cSignature = "I";
+					fIDHeight = t.pEnv->GetFieldID( tempObjClass, "height", cSignature );
+				}
+				OSL_ENSURE( fIDHeight, "Unknown field id!" );
+				if ( fIDX && fIDY && fIDWidth && fIDHeight )
+				{
+					Point aPoint( (long)t.pEnv->GetIntField( tempObj, fIDX ), (long)t.pEnv->GetIntField( tempObj, fIDY ) );
+					Size aSize( (long)t.pEnv->GetIntField( tempObj, fIDWidth ), (long)t.pEnv->GetIntField( tempObj, fIDHeight ) );
+					out = Rectangle( aPoint, aSize );
+				}
+			}
+		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+unsigned int com_sun_star_vcl_VCLScreen::getScreenCount()
+{
+	static jmethodID mID = NULL;
+	unsigned int out = 0;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()I";
+			mID = t.pEnv->GetStaticMethodID( getMyClass(), "getScreenCount", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (unsigned int)t.pEnv->CallStaticIntMethod( getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
 SalColor com_sun_star_vcl_VCLScreen::getTextHighlightColor()
 {
 	static jmethodID mID = NULL;
@@ -245,6 +351,67 @@ SalColor com_sun_star_vcl_VCLScreen::getTextTextColor()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 			out = (SalColor)t.pEnv->CallStaticIntMethod( getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+const Rectangle com_sun_star_vcl_VCLScreen::getVirtualScreenBounds()
+{
+	static jmethodID mID = NULL;
+	static jfieldID fIDX = NULL;
+	static jfieldID fIDY = NULL;
+	static jfieldID fIDWidth = NULL;
+	static jfieldID fIDHeight = NULL;
+	Rectangle out( Point( 0, 0 ), Size( 0, 0 ) );
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Ljava/awt/Rectangle;";
+			mID = t.pEnv->GetStaticMethodID( getMyClass(), "getVirtualScreenBounds", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jobject tempObj = t.pEnv->CallStaticObjectMethod( getMyClass(), mID );
+			if ( tempObj )
+			{
+				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
+				if ( !fIDX )
+				{
+					char *cSignature = "I";
+					fIDX = t.pEnv->GetFieldID( tempObjClass, "x", cSignature );
+				}
+				OSL_ENSURE( fIDX, "Unknown field id!" );
+				if ( !fIDY )
+				{
+					char *cSignature = "I";
+					fIDY = t.pEnv->GetFieldID( tempObjClass, "y", cSignature );
+				}
+				OSL_ENSURE( fIDY, "Unknown field id!" );
+				if ( !fIDWidth )
+				{
+					char *cSignature = "I";
+					fIDWidth = t.pEnv->GetFieldID( tempObjClass, "width", cSignature );
+				}
+				OSL_ENSURE( fIDWidth, "Unknown field id!" );
+				if ( !fIDHeight )
+				{
+					char *cSignature = "I";
+					fIDHeight = t.pEnv->GetFieldID( tempObjClass, "height", cSignature );
+				}
+				OSL_ENSURE( fIDHeight, "Unknown field id!" );
+				if ( fIDX && fIDY && fIDWidth && fIDHeight )
+				{
+					Point aPoint( (long)t.pEnv->GetIntField( tempObj, fIDX ), (long)t.pEnv->GetIntField( tempObj, fIDY ) );
+					Size aSize( (long)t.pEnv->GetIntField( tempObj, fIDWidth ), (long)t.pEnv->GetIntField( tempObj, fIDHeight ) );
+					out = Rectangle( aPoint, aSize );
+				}
+			}
+		}
 	}
 	return out;
 }

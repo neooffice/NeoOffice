@@ -461,7 +461,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 
 	// Dispatch the next pending document event
 	ImplSVData *pSVData = ImplGetSVData();
-	if ( pSalData->maPendingDocumentEventsList.size() && pSVData && pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mpPresentationFrame && !pSalData->mbInNativeModalSheet )
+	if ( pSalData->maPendingDocumentEventsList.size() && pSVData && pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mbInNativeModalSheet )
 	{
 		pEvent = pSalData->maPendingDocumentEventsList.front();
 		pSalData->maPendingDocumentEventsList.pop_front();

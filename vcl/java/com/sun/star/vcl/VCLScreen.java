@@ -125,6 +125,29 @@ public final class VCLScreen {
 	}
 
 	/**
+	 * Return the default screen number.
+	 *
+	 * @return the default screen number
+	 */
+	public static int getDefaultScreenNumber() {
+
+		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+		if (ge != null) {
+			GraphicsDevice dsd = ge.getDefaultScreenDevice();
+			GraphicsDevice[] gd = ge.getScreenDevices();
+			if (dsd != null && gd != null) {
+				for (int i = 0; i < gd.length; i++) {
+					if (dsd == gd[i])
+						return i;
+				}
+			}
+		}
+
+		return 0;
+
+	}
+
+	/**
 	 * Gets the <code>Frame</code> insets.
 	 *
 	 * @return the <code>Frame</code> insets
@@ -242,6 +265,55 @@ public final class VCLScreen {
 		}
 
 		return VCLScreen.defaultScreenBounds;
+
+	}
+
+	/**
+	 * Returns the screen bounds for the specified screen number.
+	 *
+	 * @param n the screen number
+	 * @param b <code>true</code> to obtain only the displayable screen area
+	 *  and <code>false</code> to obtain the entire screen area
+	 * @return the screen bounds or <code>null</code> if the specified
+	 *  screen number does not exist
+	 */
+	public static Rectangle getScreenBounds(int n, boolean b) {
+
+		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+		if (ge != null && n >= 0) {
+			GraphicsDevice[] gd = ge.getScreenDevices();
+			if (gd != null || n < gd.length)
+				return null;
+
+			Rectangle r = gd[n].getDefaultConfiguration().getBounds();
+			if (b) {
+				Insets insets = VCLScreen.getScreenInsets(gd[n]);
+				if (insets != null)
+					r = new Rectangle(r.x + insets.left, r.y + insets.top, r.width - insets.left - insets.right, r.height - insets.top - insets.bottom);
+			}
+			if (!r.isEmpty())
+				return r;
+		}
+
+		return null;
+
+	}
+
+	/**
+	 * Return the number of screens.
+	 *
+	 * @return the number of screens
+	 */
+	public static int getScreenCount() {
+
+		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+		if (ge != null) {
+			GraphicsDevice[] gd = ge.getScreenDevices();
+			if (gd != null && gd.length > 0)
+				return gd.length;
+		}
+
+		return 1;
 
 	}
 
