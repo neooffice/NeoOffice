@@ -50,9 +50,6 @@ PRODUCT_TRADEMARKED_NAME_RTF=$(PRODUCT_NAME)
 # Custom overrides go in the following file
 -include custom.mk
 
-# Include dependent makefiles
-include neo_configure.mk
-
 # Set the shell to tcsh since the OpenOffice.org build requires it
 SHELL:=/bin/tcsh
 UNAME:=$(shell uname -p)
@@ -67,7 +64,6 @@ UOUTPUTDIR=unxmacxi.pro
 DLLSUFFIX=mxi
 TARGET_FILE_TYPE=Mach-O executable i386
 endif
-BUILD_MACHINE=$(shell echo `id -nu`:`hostname`.`domainname`)
 
 # Build location macros
 BUILD_HOME:=build
@@ -125,6 +121,9 @@ NEO_PACKAGE:=NeoOffice
 NEO_TAG:=
 
 all: build.all
+
+# Include dependent makefiles
+include neo_configure.mk
 
 # Create the build directory and checkout the OpenOffice.org sources
 build.oo_checkout:
