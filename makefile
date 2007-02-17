@@ -100,8 +100,6 @@ PRODUCT_DIR_LANG_PACK_VERSION=Language_Pack
 PRODUCT_PATCH_VERSION=Patch 0
 PRODUCT_DIR_PATCH_VERSION=Patch-0
 PRODUCT_FILETYPE=NO%F
-PRODUCT_INSTALL_URL=http://www.planamesa.com/neojava/download.php\\\#install
-PRODUCT_PATCH_DOWNLOAD_URL=http://www.planamesa.com/neojava/patch.php
 PRODUCT_REGISTRATION_URL=http://trinity.neooffice.org/modules.php?name=Your_Account\&amp\;redirect=index
 PRODUCT_DONATION_URL=http://www.planamesa.com/neojava/donate.php
 PRODUCT_SUPPORT_URL=http://trinity.neooffice.org/modules.php?name=Forums
