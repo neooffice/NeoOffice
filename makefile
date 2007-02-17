@@ -50,6 +50,9 @@ PRODUCT_TRADEMARKED_NAME_RTF=$(PRODUCT_NAME)
 # Custom overrides go in the following file
 -include custom.mk
 
+# Include dependent makefiles
+include neo_configure.mk
+
 # Set the shell to tcsh since the OpenOffice.org build requires it
 SHELL:=/bin/tcsh
 UNAME:=$(shell uname -p)
@@ -99,12 +102,9 @@ PRODUCT_LANG_PACK_VERSION=Language Pack
 PRODUCT_DIR_LANG_PACK_VERSION=Language_Pack
 PRODUCT_PATCH_VERSION=Patch 0
 PRODUCT_DIR_PATCH_VERSION=Patch-0
-PRODUCT_FILETYPE=NO%F
 PRODUCT_REGISTRATION_URL=http://trinity.neooffice.org/modules.php?name=Your_Account\&amp\;redirect=index
-PRODUCT_DONATION_URL=http://www.planamesa.com/neojava/donate.php
 PRODUCT_SUPPORT_URL=http://trinity.neooffice.org/modules.php?name=Forums
 PRODUCT_SUPPORT_URL_TEXT:=$(PRODUCT_NAME) Support
-PRODUCT_WELCOME_URL=http://www.planamesa.com/neojava/welcome.php
 
 # CVS macros
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
@@ -256,8 +256,6 @@ build.oo_all: build.configure
 build.oo_odk_all: build.configure build.oo_all build.oo_odk_patches
 	source "$(OO_ENV_X11)" ; cd "$(BUILD_HOME)/odk" ; `alias build` $(OO_BUILD_ARGS)
 	touch "$@"
-
-include neo_configure.mk
 
 build.neo_configure: build.oo_all neo_configure.mk
 	rm -f "$(OO_ENV_JAVA)"
