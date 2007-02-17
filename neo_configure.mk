@@ -1,7 +1,7 @@
 .PHONY: build.neo_configure_phony
 
-PRODUCT_DONATION_URL=http://www.planamesa.com/neojava/donate.php
-PRODUCT_WELCOME_URL=http://www.planamesa.com/neojava/welcome.php
+PRODUCT_DONATION_URL=http://download.neooffice.org/neojava/donate.php
+PRODUCT_WELCOME_URL=http://download.neooffice.org/neojava/welcome.php
 PRODUCT_FILETYPE=NO%F
 BUILD_MACHINE=$(shell echo `id -nu`:`hostname`.`domainname`)
 
