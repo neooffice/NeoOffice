@@ -87,11 +87,55 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 		VCLThreadAttach t;
 		if ( !t.pEnv ) return (jclass)NULL;
 
+		// Determine if fixes for Java 1.4.x and early versions of Java 1.5
+		// are needed
+		BOOL bUseKeyEntryFix = FALSE;
+		jclass systemClass = t.pEnv->FindClass( "java/lang/System" );
+		if ( systemClass )
+		{
+			jmethodID mID = NULL;
+			OUString aJavaHomePath;
+			if ( !mID )
+			{
+				char *cSignature = "(Ljava/lang/String;)Ljava/lang/String;";
+				mID = t.pEnv->GetStaticMethodID( systemClass, "getProperty", cSignature );
+			}
+			OSL_ENSURE( mID, "Unknown method id!" );
+			if ( mID )
+			{
+				jvalue args[1];
+				args[0].l = StringToJavaString( t.pEnv, OUString::createFromAscii( "java.specification.version" ) );
+				jstring tempJavaSpecVersion = (jstring)t.pEnv->CallStaticObjectMethodA( systemClass, mID, args );
+				if ( tempJavaSpecVersion )
+				{
+					OUString aJavaSpecVersion = JavaString2String( t.pEnv, tempJavaSpecVersion );
+					if ( aJavaSpecVersion.getLength() )
+					{
+						if ( aJavaSpecVersion == OUString::createFromAscii( "1.4" ) )
+						{
+							bUseKeyEntryFix = TRUE;
+						}
+						else if ( aJavaSpecVersion == OUString::createFromAscii( "1.5" ) )
+						{
+							args[0].l = StringToJavaString( t.pEnv, OUString::createFromAscii( "java.version" ) );
+							jstring tempJavaVersion = (jstring)t.pEnv->CallStaticObjectMethodA( systemClass, mID, args );
+							if ( tempJavaVersion )
+							{
+								OUString aJavaVersion = JavaString2String( t.pEnv, tempJavaVersion );
+								if ( aJavaVersion.compareTo( OUString::createFromAscii( "1.5.0_06" ) ) < 0 )
+									bUseKeyEntryFix = TRUE;
+							}
+						}
+					}
+				}
+			}
+		}
+
 		// Fix bugs 1390 and 1619 by inserting our own Cocoa class in place of
 		// the NSView class. We need to do this because the JVM does not
 		// properly handle key events where a single key press generates more
 		// than one Unicode character.
-        VCLEventQueue_installVCLEventQueueClasses();
+        VCLEventQueue_installVCLEventQueueClasses(bUseKeyEntryFix);
 
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLEventQueue" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );

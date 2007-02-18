@@ -313,30 +313,47 @@ static VCLResponder *pSharedResponder = nil;
 @end
 
 @interface InstallVCLEventQueueClasses : NSObject
+{
+	BOOL					mbUseKeyEntryFix;
+}
+- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix;
 - (void)installVCLEventQueueClasses:(id)pObject;
 @end
 
 @implementation InstallVCLEventQueueClasses
 
+- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix
+{
+	[super init];
+
+	mbUseKeyEntryFix = bUseKeyEntryFix;
+
+	return self;
+}
+
 - (void)installVCLEventQueueClasses:(id)pObject
 {
-	// Initialize statics
-	pSharedResponder = [[VCLResponder alloc] init];
-	if ( pSharedResponder )
-		[pSharedResponder retain];
-
 	[VCLFontManager poseAsClass:[NSFontManager class]];
 	[VCLWindow poseAsClass:[NSWindow class]];
-	[VCLView poseAsClass:[NSView class]];
+
+	if ( mbUseKeyEntryFix )
+	{
+		// Initialize statics
+		pSharedResponder = [[VCLResponder alloc] init];
+		if ( pSharedResponder )
+			[pSharedResponder retain];
+
+		[VCLView poseAsClass:[NSView class]];
+	}
 }
 
 @end
 
-void VCLEventQueue_installVCLEventQueueClasses()
+void VCLEventQueue_installVCLEventQueueClasses(BOOL bUseKeyEntryFix)
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	InstallVCLEventQueueClasses *pInstallVCLEventQueueClasses = [[InstallVCLEventQueueClasses alloc] init];
+	InstallVCLEventQueueClasses *pInstallVCLEventQueueClasses = [[InstallVCLEventQueueClasses alloc] initWithUseKeyEntryFix:bUseKeyEntryFix];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pInstallVCLEventQueueClasses performSelectorOnMainThread:@selector(installVCLEventQueueClasses:) withObject:pInstallVCLEventQueueClasses waitUntilDone:YES modes:pModes];
 
