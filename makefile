@@ -34,8 +34,6 @@
 ##########################################################################
 
 # Macros that are overridable by make command line options
-CC=cc
-CXX=c++
 EXTRA_PATH=/opt/local/bin
 GNUCP=$(EXTRA_PATH)/gcp
 LIBIDL_CONFIG=$(EXTRA_PATH)/libIDL-config-2
@@ -64,6 +62,9 @@ UOUTPUTDIR=unxmacxi.pro
 DLLSUFFIX=mxi
 TARGET_FILE_TYPE=Mach-O executable i386
 endif
+COMPILERDIR=$(BUILD_HOME)/solenv/`basename $(UOUTPUTDIR) .pro`/bin
+CC=$(COMPILERDIR)/cc
+CXX=$(COMPILERDIR)/c++
 
 # Build location macros
 BUILD_HOME:=build
@@ -175,8 +176,8 @@ build.oo_patches: build.ooo-build_patches \
 	build.oo_vos_patch
 # Copy modified compiler scripts to work around gcc 3.3 breakage in Apple's
 # latest system updates
-	mkdir -p "$(BUILD_HOME)/solenv/`basename $(UOUTPUTDIR) .pro`/bin"
-	cd "$(BUILD_HOME)/solenv/`basename $(UOUTPUTDIR) .pro`/bin" ; sh -c -e 'for i in cc gcc c++ g++ ; do cp "$(PWD)/$(OO_PATCHES_HOME)/cc" "$$i" ; chmod 755 "$$i"; done'
+	mkdir -p "$(COMPILERDIR)"
+	cd "$(COMPILERDIR)" ; sh -c -e 'for i in cc gcc c++ g++ ; do cp "$(PWD)/$(OO_PATCHES_HOME)/cc" "$$i" ; chmod 755 "$$i"; done'
 	touch "$@"
 
 build.oo_odk_patches: build.oo_patches
@@ -223,7 +224,7 @@ build.ooo-build_%_patch: $(OOO-BUILD_PATCHES_HOME)/%.patch build.oo_checkout bui
 build.odf-converter_patches: $(ODF-CONVERTER_PATCHES_HOME)/odf-converter.patch build.odf-converter_checkout
 	-( cd "$(BUILD_HOME)/odf-converter" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
 	( cd "$(BUILD_HOME)/odf-converter" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
-	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)" ; setenv PATH "$(PWD)/$(BUILD_HOME)/solenv/`basename $(UOUTPUTDIR) .pro`/bin":/usr/bin:"$$PATH" ; "$(MAKE)" $(MFLAGS)
+	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)" ; setenv PATH "$(PWD)/$(COMPILERDIR)":/usr/bin:"$$PATH" ; "$(MAKE)" $(MFLAGS)
 	rm -Rf "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist"
 	mkdir -p "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist"
 	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist" ; ( ( cd "`/usr/bin/pkg-config --variable=prefix mono`/etc" ; gnutar cvf - mono ) | ( cd "$(PWD)/$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist" ; gnutar xvf - ) )
@@ -243,7 +244,7 @@ build.odf-converter_patches: $(ODF-CONVERTER_PATCHES_HOME)/odf-converter.patch b
 
 build.configure: build.oo_patches
 	cd "$(BUILD_HOME)/config_office" ; autoconf
-	( cd "$(BUILD_HOME)/config_office" ; setenv PATH "/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) PKG_CONFIG=$(PKG_CONFIG) --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-java-target-version=1.4 --with-epm=internal --disable-cups --disable-gtk --disable-odk --without-nas --with-mozilla-toolkit=xlib --with-gnu-cp="$(GNUCP)" --with-system-curl --without-system-mdbtools --with-x --x-includes=/usr/X11R6/include --with-lang="$(OO_LANGUAGES)" )
+	( cd "$(BUILD_HOME)/config_office" ; setenv PATH "$(COMPILERDIR):/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) PKG_CONFIG=$(PKG_CONFIG) --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-java-target-version=1.4 --with-epm=internal --disable-cups --disable-gtk --disable-odk --without-nas --with-mozilla-toolkit=xlib --with-gnu-cp="$(GNUCP)" --with-system-curl --without-system-mdbtools --with-x --x-includes=/usr/X11R6/include --with-lang="$(OO_LANGUAGES)" )
 	echo 'setenv LIBIDL_CONFIG "$(LIBIDL_CONFIG)"' >> "$(OO_ENV_X11)"
 	echo 'setenv PKG_CONFIG "$(PKG_CONFIG)"' >> "$(OO_ENV_X11)"
 	echo 'unsetenv LD_SEG_ADDR_TABLE' >> "$(OO_ENV_X11)"
