@@ -173,6 +173,10 @@ build.oo_patches: build.ooo-build_patches \
 	build.oo_ucb_patch \
 	build.oo_vcl_patch \
 	build.oo_vos_patch
+# Copy modified compiler scripts to work around gcc 3.3 breakage in Apple's
+# latest system updates
+	mkdir -p "$(BUILD_HOME)/solenv/`basename $(UOUTPUTDIR) .pro`/bin"
+	cd "$(BUILD_HOME)/solenv/`basename $(UOUTPUTDIR) .pro`/bin" ; sh -c -e 'for i in cc gcc c++ g++ ; do cp "$(PWD)/$(OO_PATCHES_HOME)/cc" "$$i" ; chmod 755 "$$i"; done'
 	touch "$@"
 
 build.oo_odk_patches: build.oo_patches
@@ -219,7 +223,7 @@ build.ooo-build_%_patch: $(OOO-BUILD_PATCHES_HOME)/%.patch build.oo_checkout bui
 build.odf-converter_patches: $(ODF-CONVERTER_PATCHES_HOME)/odf-converter.patch build.odf-converter_checkout
 	-( cd "$(BUILD_HOME)/odf-converter" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
 	( cd "$(BUILD_HOME)/odf-converter" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
-	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)" ; setenv PATH /usr/bin:"$$PATH" ; "$(MAKE)" $(MFLAGS)
+	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)" ; setenv PATH "$(PWD)/$(BUILD_HOME)/solenv/`basename $(UOUTPUTDIR) .pro`/bin":/usr/bin:"$$PATH" ; "$(MAKE)" $(MFLAGS)
 	rm -Rf "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist"
 	mkdir -p "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist"
 	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist" ; ( ( cd "`/usr/bin/pkg-config --variable=prefix mono`/etc" ; gnutar cvf - mono ) | ( cd "$(PWD)/$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist" ; gnutar xvf - ) )

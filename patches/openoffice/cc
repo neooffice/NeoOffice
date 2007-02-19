@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# Fix gcc 3.3 breakage caused by Apple's latest system updates
+exec /usr/bin/`basename "$0"` -isystem/usr/include "${@}"
