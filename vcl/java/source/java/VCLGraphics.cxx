@@ -295,7 +295,17 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged( 
 {
 	JavaSalBitmap *pBitmap = (JavaSalBitmap *)_par0;
 	if ( pBitmap )
-		pBitmap->NotifyGraphicsChanged();
+	{
+		SalData *pSalData = GetSalData();
+		for ( ::std::list< JavaSalBitmap* >::const_iterator it = pSalData->maBitmapList.begin(); it != pSalData->maBitmapList.end(); ++it )
+		{
+			if ( *it == pBitmap )
+			{
+				pBitmap->NotifyGraphicsChanged();
+				return;
+			}
+		}
+	}
 }
 
 // ----------------------------------------------------------------------------

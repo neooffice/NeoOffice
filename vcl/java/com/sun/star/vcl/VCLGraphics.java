@@ -516,9 +516,7 @@ public final class VCLGraphics {
 
 		if (changeListeners == null)
 			changeListeners = new LinkedList();
-		Long l = new Long(listener);
-		if (changeListeners.contains(l))
-			changeListeners.add(l);
+		changeListeners.add(new Long(listener));
 
 	}
 
