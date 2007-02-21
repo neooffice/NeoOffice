@@ -130,14 +130,6 @@ const static NSString *pCancelInputMethodText = @" ";
 				[mpView abandonInput];
 			}
 		}
-		else if ( [pSelectorName compare:@"deleteBackward:"] == NSOrderedSame )
-		{
-			if ( mpView && [mpView respondsToSelector:@selector(abandonInput)] && [mpView respondsToSelector:@selector(unmarkText)] )
-			{
-				[mpView abandonInput];
-				[mpView unmarkText];
-			}
-		}
 	}
 }
 
