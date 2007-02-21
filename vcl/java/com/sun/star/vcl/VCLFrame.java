@@ -1005,11 +1005,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		panel = null;
 		queue = null;
-
-		// Fix bug 1145 by destroying the native window and fix bug 2151 by
-		// destroying it in the Java event thread
-		RemoveNotifyHandler handler = new RemoveNotifyHandler(window);
-		Toolkit.getDefaultToolkit().getSystemEventQueue().invokeLater(handler);
 		window = null;
 
 		disposed = true;
@@ -2260,6 +2255,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		/**
+		 * Called by the garbage collector on an object when garbage collection
+		 * determines that there are no more references to the object.
+		 */
+		protected void finalize() throws Throwable
+		{
+			// Fix bug 1145 by destroying the native window and fix bugs
+			// 1899 and  2151 by destroying it in the finalizer
+			removeNotify();
+			super.removeNotify();
+
+		}
+
+		/**
 		 * Returns the focus owner of this dialog.
 		 *
 		 * @return the focus owner of this dialog
@@ -2389,6 +2397,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			frame = f;
 			initialize();
+
+		}
+
+		/**
+		 * Called by the garbage collector on an object when garbage collection
+		 * determines that there are no more references to the object.
+		 */
+		protected void finalize() throws Throwable
+		{
+			// Fix bug 1145 by destroying the native window and fix bugs
+			// 1899 and  2151 by destroying it in the finalizer
+			removeNotify();
+			super.removeNotify();
 
 		}
 
@@ -2595,35 +2616,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		public void run() {
 
 			frame.enableFlushing(flushingEnabled);
-
-		}
-
-	}
-
-	/**
-	 * A class that handles destroying windows.
-	 */
-	final class RemoveNotifyHandler implements Runnable {
-
-		/**
-		 * The window.
-		 */
-		private Window window = null;
-
-		/**
-		 * Constructs a new <code>VCLFrame.RemoveNotifyHandler</code> instance.
-		 *
-		 * @param w the window.
-		 */
-		RemoveNotifyHandler(Window w) {
-
-			window = w;
-
-		}
-
-		public void run() {
-
-			window.removeNotify();
 
 		}
 
