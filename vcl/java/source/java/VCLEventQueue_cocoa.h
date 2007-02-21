@@ -43,7 +43,7 @@ typedef void* id;
 #ifdef __cplusplus
 BEGIN_C
 #endif
-void VCLEventQueue_installVCLEventQueueClasses();
+void VCLEventQueue_installVCLEventQueueClasses(BOOL bUseKeyEntryFix);
 #ifdef __cplusplus
 END_C
 #endif
