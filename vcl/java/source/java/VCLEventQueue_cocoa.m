@@ -118,19 +118,8 @@ const static NSString *pCancelInputMethodText = @" ";
 
 - (void)doCommandBySelector:(SEL)aSelector
 {
-	NSString *pSelectorName = NSStringFromSelector( aSelector );
-	if ( pSelectorName ) 
-	{
-		if ( [pSelectorName compare:@"cancelOperation:"] == NSOrderedSame )
-		{
-			if ( mpView && [mpView respondsToSelector:@selector(abandonInput)] && [mpView respondsToSelector:@selector(hasMarkedText)] && [mpView respondsToSelector:@selector(insertText:)] )
-			{
-				if ( [mpView hasMarkedText] )
-					[mpView insertText:pCancelInputMethodText];
-				[mpView abandonInput];
-			}
-		}
-	}
+	// Fix bugs 2125 and 2167 by not overriding Java's handling of the cancel
+	// action
 }
 
 - (id)init
@@ -252,6 +241,7 @@ const static NSString *pCancelInputMethodText = @" ";
 
 @end
 
+static BOOL bUseKeyEntryFix = NO;
 static VCLResponder *pSharedResponder = nil;
 
 @interface VCLView : NSView
@@ -273,24 +263,34 @@ static VCLResponder *pSharedResponder = nil;
 			if ( pApp && pSharedResponder )
 			{
 				[pSharedResponder interpretKeyEvents:pEvents view:self];
-				NSString *pText = [(VCLResponder *)pSharedResponder lastText];
-				if ( pText )
-				{
-					int nLen = [pText length];
-					if ( nLen > 1 )
-					{
-						unichar pChars[ nLen ];
-						[pText getCharacters:pChars];
 
-						int i = 1;
-						for ( ; i < nLen; i++ )
+				// We still need the key entry fix if there is marked text
+				// otherwise bug 1429 reoccurs
+				BOOL bNeedKeyEntryFix = bUseKeyEntryFix;
+				if ( !bNeedKeyEntryFix && [self respondsToSelector:@selector(hasMarkedText)] )
+					bNeedKeyEntryFix = [self hasMarkedText];
+
+				if ( bNeedKeyEntryFix )
+				{
+					NSString *pText = [(VCLResponder *)pSharedResponder lastText];
+					if ( pText )
+					{
+						int nLen = [pText length];
+						if ( nLen > 1 )
 						{
-							NSString *pChar = [NSString stringWithCharacters:&pChars[i] length:1];
-							if ( pChar )
+							unichar pChars[ nLen ];
+							[pText getCharacters:pChars];
+
+							int i = 1;
+							for ( ; i < nLen; i++ )
 							{
-								NSEvent *pNewEvent = [NSEvent keyEventWithType:[pEvent type] location:[pEvent locationInWindow] modifierFlags:[pEvent modifierFlags] timestamp:[pEvent timestamp] windowNumber:[pEvent windowNumber] context:[pEvent context] characters:pChar charactersIgnoringModifiers:pChar isARepeat:[pEvent isARepeat] keyCode:0];
-								if ( pNewEvent )
-									[pApp postEvent:pNewEvent atStart:YES];
+								NSString *pChar = [NSString stringWithCharacters:&pChars[i] length:1];
+								if ( pChar )
+								{
+									NSEvent *pNewEvent = [NSEvent keyEventWithType:[pEvent type] location:[pEvent locationInWindow] modifierFlags:[pEvent modifierFlags] timestamp:[pEvent timestamp] windowNumber:[pEvent windowNumber] context:[pEvent context] characters:pChar charactersIgnoringModifiers:pChar isARepeat:[pEvent isARepeat] keyCode:0];
+									if ( pNewEvent )
+										[pApp postEvent:pNewEvent atStart:YES];
+								}
 							}
 						}
 					}
@@ -325,18 +325,15 @@ static VCLResponder *pSharedResponder = nil;
 
 - (void)installVCLEventQueueClasses:(id)pObject
 {
+	// Initialize statics
+	bUseKeyEntryFix = mbUseKeyEntryFix;
+	pSharedResponder = [[VCLResponder alloc] init];
+	if ( pSharedResponder )
+		[pSharedResponder retain];
+
+	[VCLView poseAsClass:[NSView class]];
 	[VCLFontManager poseAsClass:[NSFontManager class]];
 	[VCLWindow poseAsClass:[NSWindow class]];
-
-	if ( mbUseKeyEntryFix )
-	{
-		// Initialize statics
-		pSharedResponder = [[VCLResponder alloc] init];
-		if ( pSharedResponder )
-			[pSharedResponder retain];
-
-		[VCLView poseAsClass:[NSView class]];
-	}
 }
 
 @end
