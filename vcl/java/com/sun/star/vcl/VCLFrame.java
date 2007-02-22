@@ -1392,10 +1392,17 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			// the uncommitted text should be cancelled.
 			if (lastUncommittedInputMethodEvent != null) {
 				AttributedCharacterIterator lastText = lastUncommittedInputMethodEvent.getText();
+				boolean commitLast = false;
 				int lastCount = 0;
-				for (char c = lastText.first(); c != CharacterIterator.DONE; c = lastText.next())
+				for (char c = lastText.first(); c != CharacterIterator.DONE; c = lastText.next()) {
+					// Only commit if there are uncommitted Indic characters
+					if (!commitLast && c >= 0x0900 && c < 0x0E00)
+						commitLast = true;
 					lastCount++;
-				e = new InputMethodEvent((Component)lastUncommittedInputMethodEvent.getSource(), lastUncommittedInputMethodEvent.getID(), lastUncommittedInputMethodEvent.getWhen(), lastText, lastCount, lastUncommittedInputMethodEvent.getCaret(), lastUncommittedInputMethodEvent.getVisiblePosition());
+				}
+
+				if (commitLast)
+					e = new InputMethodEvent((Component)lastUncommittedInputMethodEvent.getSource(), lastUncommittedInputMethodEvent.getID(), lastUncommittedInputMethodEvent.getWhen(), lastText, lastCount, lastUncommittedInputMethodEvent.getCaret(), lastUncommittedInputMethodEvent.getVisiblePosition());
 				lastUncommittedInputMethodEvent = null;
 			}
 		}
