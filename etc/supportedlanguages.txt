@@ -1,28 +1,28 @@
 af,0,Afrikaans
 ar,0,Arabic
 be-BY,0,Byelorussian
-bg,0,Bulgarian
+bg,1,Bulgarian
 br,0,Breton
 ca,0,Catalan
 cs,1,Czech
 cy,0,Welsh
 da,1,Danish
 de,1,German
-el,0,Greek
-en-GB,1,British English
+el,1,Greek
+en-GB,0,British English
 en-US,1,American English
 eo,0,Esperanto
 es,1,Spanish
 et,1,Estonian
 eu,0,Basque
-fa,0,Persian
+fa,1,Persian
 fi,0,Finnish
 fr,1,French
 ga,0,Irish
 gl,0,Galician
 gu-IN,0,Gujurati
 he,0,Hebrew
-hi-IN,0,Hindi
+hi-IN,1,Hindi
 hr,0,Croatian
 hu,1,Hungarian
 it,1,Italian
@@ -33,11 +33,11 @@ lv,0,Latvian
 mk,1,Macedonian
 mr,0,Marathi
 nb,0,Norwegian
-ne,0,Nepali
+ne,1,Nepali
 nl,1,Dutch
 pa-IN,0,Punjabi
 pl,1,Polish
-pt,0,Portuguese
+pt,1,Portuguese
 pt-BR,1,Brazilian Portuguese
 ru,1,Russian
 rw,0,Kinyarwanda
@@ -48,9 +48,9 @@ sv,1,Swedish
 sw,0,Swihili
 sw-TZ,0,Tanzanian Swahili
 ta-IN,0,Tamil
-tg,0,Tajiki
-th,0,Thai
-tr,0,Turkish
+tg,1,Tajiki
+th,1,Thai
+tr,1,Turkish
 uk,0,Ukrainian
 ur-IN,0,Urdu
 vi,0,Vietnamese
