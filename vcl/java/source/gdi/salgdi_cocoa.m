@@ -44,7 +44,7 @@
 	void*				mpEPSPtr;
 	unsigned			mnEPSSize;
 }
-- (void)drawEPSInBitmap;
+- (BOOL)drawEPSInBitmap;
 - (id)initWithPtr:(void *)pEPSPtr size:(unsigned)nEPSSize destPtr:(int *)pDestPtr destWidth:(int)nDestWidth destHeight:(int)nDestHeight;
 @end
 
