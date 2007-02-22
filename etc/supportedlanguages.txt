@@ -31,6 +31,7 @@ ko,1,Korean
 lt,0,Lithuanian
 lv,0,Latvian
 mk,1,Macedonian
+mr,0,Marathi
 nb,0,Norwegian
 ne,0,Nepali
 nl,1,Dutch
@@ -47,8 +48,11 @@ sv,1,Swedish
 sw,0,Swihili
 sw-TZ,0,Tanzanian Swahili
 ta-IN,0,Tamil
+tg,0,Tajiki
 th,0,Thai
 tr,0,Turkish
+uk,0,Ukrainian
+ur-IN,0,Urdu
 vi,0,Vietnamese
 zh-CN,1,Simplified Chinese
 zh-TW,1,Traditional Chinese
