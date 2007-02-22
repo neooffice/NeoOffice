@@ -369,36 +369,37 @@ public final class VCLPrintJob implements Printable, Runnable {
 
 			// Rotate the page if necessary
 			int orientation = printPageFormat.getOrientation();
-			boolean rotatedPage = false;
+			float rotatedPageAngle = 0.0f;
 			if (o == VCLPageFormat.ORIENTATION_PORTRAIT && orientation != PageFormat.PORTRAIT) {
 				if (orientation == PageFormat.REVERSE_LANDSCAPE) {
 					printGraphics.translate(0, (int)printPageFormat.getImageableHeight());
-					printGraphics.rotate(Math.toRadians(-90));
+					rotatedPageAngle = (float)Math.toRadians(-90);
+					printGraphics.rotate(rotatedPageAngle);
 				}
 				else {
 					printGraphics.translate((int)printPageFormat.getImageableWidth(), 0);
-					printGraphics.rotate(Math.toRadians(90));
+					rotatedPageAngle = (float)Math.toRadians(-90);
+					printGraphics.rotate(rotatedPageAngle);
 				}
-				rotatedPage = true;
 			}
 			else if (o != VCLPageFormat.ORIENTATION_PORTRAIT && orientation == PageFormat.PORTRAIT ) {
 				printGraphics.translate(0, (int)printPageFormat.getImageableHeight());
-				printGraphics.rotate(Math.toRadians(-90));
-				rotatedPage = true;
+				rotatedPageAngle = (float)Math.toRadians(-90);
+				printGraphics.rotate(rotatedPageAngle);
 			}
 
 			// Scale to printer resolution
 			Dimension pageResolution = pageFormat.getPageResolution();
 			double pageScaleX = (double)72 / pageResolution.width;
 			double pageScaleY = (double)72 / pageResolution.height;
-			if (rotatedPage) {
+			if (rotatedPageAngle != 0.0f) {
 				printGraphics.scale(pageScaleY, pageScaleX);
 			}
 			else {
 				printGraphics.scale(pageScaleX, pageScaleY);
 			}
 
-			graphics = new VCLGraphics(printGraphics, pageFormat, rotatedPage, (float)(scaleX * pageScaleX), (float)(scaleY * pageScaleY));
+			graphics = new VCLGraphics(printGraphics, pageFormat, rotatedPageAngle, (float)(scaleX * pageScaleX), (float)(scaleY * pageScaleY));
 		}
 		else {
 			graphics = null;

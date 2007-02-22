@@ -284,41 +284,33 @@ BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void
 {
 	BOOL bRet = FALSE;
 
-	if ( mpPrinter )
+	com_sun_star_vcl_VCLBitmap aVCLBitmap( nWidth, nHeight, 32 );
+	if ( aVCLBitmap.getJavaObject() )
 	{
-		mpVCLGraphics->drawEPS( pPtr, nSize, nX, nY, nWidth, nHeight );
-		bRet = TRUE;
-	}
-	else
-	{
-		com_sun_star_vcl_VCLBitmap aVCLBitmap( nWidth, nHeight, 32 );
-		if ( aVCLBitmap.getJavaObject() )
+		java_lang_Object *pData = aVCLBitmap.getData();
+		if ( pData )
 		{
-			java_lang_Object *pData = aVCLBitmap.getData();
-			if ( pData )
+			VCLThreadAttach t;
+			if ( t.pEnv )
 			{
-				VCLThreadAttach t;
-				if ( t.pEnv )
+				jboolean bCopy( sal_False );
+				jint *pBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
+				if ( pBits )
 				{
-					jboolean bCopy( sal_False );
-					jint *pBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
-					if ( pBits )
+					bRet = NSEPSImageRep_drawInBitmap( pPtr, nSize, (int *)pBits, nWidth, nHeight );
+					if ( bRet )
 					{
-						bRet = NSEPSImageRep_drawInBitmap( pPtr, nSize, (int *)pBits, nWidth, nHeight );
-						if ( bRet )
-						{
-							t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, 0 );
-							mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, nWidth, nHeight, nX, nY, nWidth, nHeight );
-						}
-						else
-						{
-							t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, JNI_ABORT );
-						}
+						t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, 0 );
+						mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, nWidth, nHeight, nX, nY, nWidth, nHeight );
+					}
+					else
+					{
+						t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, JNI_ABORT );
 					}
 				}
-
-				delete pData;
 			}
+
+			delete pData;
 		}
 	}
 

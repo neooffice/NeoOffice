@@ -106,7 +106,7 @@ static void ReleaseBitmapBufferCallback( void *pInfo, const void *pPointer, size
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pEnv, jobject object, jintArray _par0, jint _par1, jint _par2, jint _par3, jint _par4, jint _par5, jint _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14, jboolean _par15 )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pEnv, jobject object, jintArray _par0, jint _par1, jint _par2, jint _par3, jint _par4, jint _par5, jint _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14, jboolean _par15, jfloat _par16, jfloat _par17, jfloat _par18, jfloat _par19, jfloat _par20 )
 {
 	if ( !_par0 )
 		return;
@@ -197,13 +197,13 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pE
 	if ( aImage )
 	{
 		aCGImageList.push_back( aImage );
-		CGImageRef_drawInRect( aImage, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14, _par15 );
+		CGImageRef_drawInRect( aImage, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14, _par15, _par16, _par17, _par18, _par19, _par20 );
 	}
 }
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIEnv *pEnv, jobject object, jlong _par0, jint _par1, jint _par2, jint _par3, jint _par4, jfloat _par5, jfloat _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12, jboolean _par13 )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIEnv *pEnv, jobject object, jlong _par0, jint _par1, jint _par2, jint _par3, jint _par4, jfloat _par5, jfloat _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12, jboolean _par13, jfloat _par14, jfloat _par15, jfloat _par16, jfloat _par17, jfloat _par18 )
 {
 	BitmapBuffer *pBuffer = (BitmapBuffer *)_par0;
 	if ( !pBuffer )
@@ -285,7 +285,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIE
 	if ( aImage )
 	{
 		aCGImageList.push_back( aImage );
-		CGImageRef_drawInRect( aImage, _par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12, _par13 );
+		CGImageRef_drawInRect( aImage, _par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14, _par15, _par16, _par17, _par18 );
 	}
 }
 
@@ -321,13 +321,6 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps( J
 }
 
 // ============================================================================
-
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawEPS0( JNIEnv *pEnv, jobject object, jlong _par0, jlong _par1, jfloat _par2, jfloat _par3, jfloat _par4, jfloat _par5, jboolean _par6 )
-{
-	NSEPSImageRep_drawInRect( (void *)_par0, _par1, _par2, _par3, _par4, _par5, _par6 );
-}
-
-// ----------------------------------------------------------------------------
 
 CGFontRef CreateCachedCGFont( ATSFontRef aATSFont )
 {
@@ -372,23 +365,20 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 		if ( tempClass )
 		{
 			// Register the native methods for our class
-			JNINativeMethod pMethods[5]; 
+			JNINativeMethod pMethods[4]; 
 			pMethods[0].name = "drawBitmap0";
-			pMethods[0].signature = "([IIIIIIIFFFFFFFFZ)V";
+			pMethods[0].signature = "([IIIIIIIFFFFFFFFZFFFFF)V";
 			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawBitmap0;
 			pMethods[1].name = "drawBitmapBuffer0";
-			pMethods[1].signature = "(JIIIIFFFFFFFFZ)V";
+			pMethods[1].signature = "(JIIIIFFFFFFFFZFFFFF)V";
 			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0;
-			pMethods[2].name = "drawEPS0";
-			pMethods[2].signature = "(JJFFFFZ)V";
-			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawEPS0;
-			pMethods[3].name = "notifyGraphicsChanged";
-			pMethods[3].signature = "(J)V";
-			pMethods[3].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged;
-			pMethods[4].name = "releaseNativeBitmaps";
-			pMethods[4].signature = "()V";
-			pMethods[4].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps;
-			t.pEnv->RegisterNatives( tempClass, pMethods, 5 );
+			pMethods[2].name = "notifyGraphicsChanged";
+			pMethods[2].signature = "(J)V";
+			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged;
+			pMethods[3].name = "releaseNativeBitmaps";
+			pMethods[3].signature = "()V";
+			pMethods[3].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps;
+			t.pEnv->RegisterNatives( tempClass, pMethods, 4 );
 		}
 
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
@@ -628,34 +618,6 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2
 			args[8].i = jint( _par9 );
 			args[9].i = jint( _par10 );
 			args[10].f = jfloat( _par11 );
-			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
-		}
-	}
-}
-
-// ----------------------------------------------------------------------------
-
-void com_sun_star_vcl_VCLGraphics::drawEPS( void *_par0, long _par1, long _par2, long _par3, long _par4, long _par5 )
-{
-	static jmethodID mID = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "(JJIIII)V";
-			mID = t.pEnv->GetMethodID( getMyClass(), "drawEPS", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jvalue args[6];
-			args[0].j = jlong( _par0 );
-			args[1].j = jlong( _par1 );
-			args[2].i = jint( _par2 );
-			args[3].i = jint( _par3 );
-			args[4].i = jint( _par4 );
-			args[5].i = jint( _par5 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}

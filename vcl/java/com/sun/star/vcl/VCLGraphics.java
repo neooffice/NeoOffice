@@ -54,6 +54,7 @@ import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.font.FontRenderContext;
 import java.awt.font.GlyphVector;
+import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
@@ -158,11 +159,6 @@ public final class VCLGraphics {
 	 * The drawBitmapBufferMethod method.
 	 */
 	private static Method drawBitmapBufferMethod = null;
-
-	/**
-	 * The drawEPSMethod method.
-	 */
-	private static Method drawEPSMethod = null;
 
 	/**
 	 * The drawGlyphs method.
@@ -334,12 +330,6 @@ public final class VCLGraphics {
 			t.printStackTrace();
 		}
 		try {
-			drawEPSMethod = VCLGraphics.class.getMethod("drawEPS", new Class[]{ long.class, long.class, int.class, int.class, int.class, int.class });
-		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-		try {
 			drawGlyphsMethod = VCLGraphics.class.getMethod("drawGlyphs", new Class[]{ int.class, int.class, int[].class, int[].class, VCLFont.class, int.class, int.class, int.class, int.class, int.class, float.class });
 		}
 		catch (Throwable t) {
@@ -434,9 +424,9 @@ public final class VCLGraphics {
 	private float pageScaleY = 1.0f;
 
 	/**
-	 * The rotated page flag.
+	 * The rotate page angle.
 	 */
-	private boolean rotatedPage = false;
+	private float rotatedPageAngle = 0.0f;
 
 	/**
 	 * The cached clipping area.
@@ -487,17 +477,16 @@ public final class VCLGraphics {
 	 *
 	 * @param g the <code>Graphics2D</code> instance
 	 * @param p the <code>VCLPageFormat</code> instance
-	 * @param r <code>true</code> if the page is rotated otherwise
-	 *  <code>false</code>
+	 * @param r the rotation angle
 	 * @param x the horizontal scale factor
 	 * @param y the vertical scale factor
      */
-    VCLGraphics(Graphics2D g, VCLPageFormat p, boolean r, float x, float y) {
+    VCLGraphics(Graphics2D g, VCLPageFormat p, float r, float x, float y) {
 
 		pageFormat = p;
-		rotatedPage = r;
+		rotatedPageAngle = r;
 		Rectangle bounds = pageFormat.getImageableBounds();
-		if (rotatedPage) {
+		if (rotatedPageAngle != 0.0f) {
 			graphicsBounds = new Rectangle(0, 0, bounds.height, bounds.width);
 			pageScaleX = y;
 			pageScaleY = x;
@@ -814,12 +803,11 @@ public final class VCLGraphics {
 		if (g != null) {
 			try {
 				if (graphics != null) {
-					Rectangle bounds = pageFormat.getImageableBounds();
+					AffineTransform transform = g.getTransform();
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {
 						Rectangle clip = (Rectangle)clipRects.next();
-						// Note: the bitmap needs to be flipped
-						drawBitmap0(bmp.getData(), bmp.getWidth(), bmp.getHeight(), srcX, srcY, srcWidth, srcHeight, pageScaleX * (bounds.x + destX), pageScaleY * (bounds.y + destY + destHeight), pageScaleX * destWidth, pageScaleY * destHeight * -1, pageScaleX * (bounds.x + clip.x), pageScaleY * (bounds.y + clip.y + clip.height), pageScaleX * clip.width, pageScaleY * clip.height * -1, VCLGraphics.drawOnMainThread);
+						drawBitmap0(bmp.getData(), bmp.getWidth(), bmp.getHeight(), srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 					}
 				}
 				else {
@@ -868,8 +856,13 @@ public final class VCLGraphics {
 	 * @param clipWidth the width of the graphics to clip to
 	 * @param clipHeight the height of the graphics to clip to
 	 * @param drawOnMainThread do drawing on main event dispatch thread
+	 * @param translateX the horizontal translation
+	 * @param translateY the vertical translation
+	 * @param rotateAngle the rotation angle
+	 * @param scaleX the horizontal scale factor
+	 * @param scaleY the vertical scale factor
 	 */
-	native void drawBitmap0(int[] bmpData, int width, int height, int srcX, int srcY, int srcWidth, int srcHeight, float destX, float destY, float destWidth, float destHeight, float clipX, float clipY, float clipWidth, float clipHeight, boolean drawOnMainThread);
+	native void drawBitmap0(int[] bmpData, int width, int height, int srcX, int srcY, int srcWidth, int srcHeight, float destX, float destY, float destWidth, float destHeight, float clipX, float clipY, float clipWidth, float clipHeight, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
 
 	/**
 	 * Draws the specified BitmapBuffer pointer to the underlying graphics.
@@ -921,12 +914,11 @@ public final class VCLGraphics {
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
-				Rectangle bounds = pageFormat.getImageableBounds();
+				AffineTransform transform = g.getTransform();
 				Iterator clipRects = clipList.iterator();
 				while (clipRects.hasNext()) {
 					Rectangle clip = (Rectangle)clipRects.next();
-					// Note: the bitmap needs to be flipped
-					drawBitmapBuffer0(buffer, srcX, srcY, srcWidth, srcHeight, pageScaleX * (bounds.x + destX), pageScaleY * (bounds.y + destY + destHeight), pageScaleX * destWidth, pageScaleY * destHeight * -1, pageScaleX * (bounds.x + clip.x), pageScaleY * (bounds.y + clip.y + clip.height), pageScaleX * clip.width, pageScaleY * clip.height * -1, VCLGraphics.drawOnMainThread);
+					drawBitmapBuffer0(buffer, srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 				}
 			}
 			catch (Throwable t) {
@@ -954,79 +946,13 @@ public final class VCLGraphics {
 	 * @param clipWidth the width of the graphics to clip to
 	 * @param clipHeight the height of the graphics to clip to
 	 * @param drawOnMainThread do drawing on main event dispatch thread
+	 * @param translateX the horizontal translation
+	 * @param translateY the vertical translation
+	 * @param rotateAngle the rotation angle
+	 * @param scaleX the horizontal scale factor
+	 * @param scaleY the vertical scale factor
 	 */
-	native void drawBitmapBuffer0(long buffer, int srcX, int srcY, int srcWidth, int srcHeight, float destX, float destY, float destWidth, float destHeight, float clipX, float clipY, float clipWidth, float clipHeight, boolean drawOnMainThread);
-
-	/**
-	 * Draws specified EPS data to the underlying graphics.
-	 *
-	 * @param epsData the pointer to the EPS data
-	 * @param epsDataSize the size of the EPS data pointer
-	 * @param destX the x coordinate of the graphics to draw to
-	 * @param destY the y coordinate of the graphics to draw to
-	 * @param destWidth the width of the graphics to copy to
-	 * @param destHeight the height of the graphics to copy to
-	 */
-	public void drawEPS(long epsData, long epsDataSize, int destX, int destY, int destWidth, int destHeight) {
-
-		// Only allow drawing of EPS data to printer
-		if (graphics == null)
-			return;
-
-		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawEPSMethod, new Object[]{ new Long(epsData), new Long(epsDataSize), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight) });
-			pageQueue.postDrawingOperation(pqi);
-			return;
-		}
-
-		Rectangle destBounds = new Rectangle(destX, destY, destWidth, destHeight).intersection(graphicsBounds);
-		if (destBounds.isEmpty())
-			return;
-
-		LinkedList clipList = new LinkedList();
-		if (userClipList != null) {
-			Iterator clipRects = userClipList.iterator();
-			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(graphicsBounds);
-				if (!clip.isEmpty())
-					clipList.add(clip);
-			}
-		}
-		else {
-			clipList.add(graphicsBounds);
-		}
-
-		Graphics2D g = getGraphics();
-		if (g != null) {
-			Rectangle bounds = pageFormat.getImageableBounds();
-			try {
-				Iterator clipRects = clipList.iterator();
-				while (clipRects.hasNext()) {
-					g.setClip((Rectangle)clipRects.next());
-					// Note: the EPS image needs to be flipped
-					drawEPS0(epsData, epsDataSize, pageScaleX * (bounds.x + destX), pageScaleY * (bounds.y + destY + destHeight), pageScaleX * destWidth, pageScaleY * destHeight * -1, VCLGraphics.drawOnMainThread);
-				}
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			g.dispose();
-		}
-
-	}
-
-	/**
-	 * Draws specified EPS data to the underlying graphics.
-	 *
-	 * @param epsData the pointer to the EPS data
-	 * @param epsDataSize the size of the EPS data pointer
-	 * @param destX the x coordinate of the graphics to draw to
-	 * @param destY the y coordinate of the graphics to draw to
-	 * @param destWidth the width of the graphics to copy to
-	 * @param destHeight the height of the graphics to copy to
-	 * @param drawOnMainThread do drawing on main event dispatch thread
-	 */
-	native void drawEPS0(long epsData, long epsDataSize, float destX, float destY, float destWidth, float destHeight, boolean drawOnMainThread);
+	native void drawBitmapBuffer0(long buffer, int srcX, int srcY, int srcWidth, int srcHeight, float destX, float destY, float destWidth, float destHeight, float clipX, float clipY, float clipWidth, float clipHeight, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
 
 	/**
 	 * Draws the specified glyph codes using the specified font and color. Note
@@ -1981,7 +1907,7 @@ public final class VCLGraphics {
 
 		if (pageFormat != null) {
 			Dimension pageResolution = pageFormat.getPageResolution();
-			if (rotatedPage)
+			if (rotatedPageAngle != 0.0f)
 				return new Dimension(pageResolution.height, pageResolution.width);
 			else
 				return new Dimension(pageResolution.width, pageResolution.height);
@@ -2291,9 +2217,8 @@ public final class VCLGraphics {
 			if (g != null) {
 				try {
 					if (graphics != null) {
-						Rectangle bounds = pageFormat.getImageableBounds();
-						// Note: the bitmap needs to be flipped
-						drawBitmap0(new int[]{ color }, 1, 1, 0, 0, 1, 1, pageScaleX * (bounds.x + x), pageScaleY * (bounds.y + y), pageScaleX, pageScaleY * -1, pageScaleX * (bounds.x + x), pageScaleY * (bounds.y + y), pageScaleX, pageScaleY * -1, VCLGraphics.drawOnMainThread);
+						AffineTransform transform = g.getTransform();
+						drawBitmap0(new int[]{ color }, 1, 1, 0, 0, 1, 1, x, y, 1, 1, x, y, 1, 1, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 					}
 					else {
 						if (xor)
