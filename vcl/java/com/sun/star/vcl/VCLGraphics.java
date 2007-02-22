@@ -54,7 +54,6 @@ import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.font.FontRenderContext;
 import java.awt.font.GlyphVector;
-import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
@@ -425,6 +424,16 @@ public final class VCLGraphics {
 	private VCLGraphics.PageQueue pageQueue = null;
 
 	/**
+	 * The horizontal scale factor.
+	 */
+	private float pageScaleX = 1.0f;
+
+	/**
+	 * The vertical scale factor.
+	 */
+	private float pageScaleY = 1.0f;
+
+	/**
 	 * The rotated page flag.
 	 */
 	private boolean rotatedPage = false;
@@ -480,16 +489,24 @@ public final class VCLGraphics {
 	 * @param p the <code>VCLPageFormat</code> instance
 	 * @param r <code>true</code> if the page is rotated otherwise
 	 *  <code>false</code>
-	 */
-	VCLGraphics(Graphics2D g, VCLPageFormat p, boolean r) {
+	 * @param x the horizontal scale factor
+	 * @param y the vertical scale factor
+     */
+    VCLGraphics(Graphics2D g, VCLPageFormat p, boolean r, float x, float y) {
 
 		pageFormat = p;
 		rotatedPage = r;
 		Rectangle bounds = pageFormat.getImageableBounds();
-		if (rotatedPage)
+		if (rotatedPage) {
 			graphicsBounds = new Rectangle(0, 0, bounds.height, bounds.width);
-		else
+			pageScaleX = y;
+			pageScaleY = x;
+		}
+		else {
 			graphicsBounds = new Rectangle(0, 0, bounds.width, bounds.height);
+			pageScaleX = x;
+			pageScaleY = y;
+		}
 		graphics = (Graphics2D)g;
 		bitCount = 24;
 
@@ -797,15 +814,12 @@ public final class VCLGraphics {
 		if (g != null) {
 			try {
 				if (graphics != null) {
-					AffineTransform transform = g.getTransform();
-					float scaleX = (float)transform.getScaleX();
-					float scaleY = (float)transform.getScaleY();
 					Rectangle bounds = pageFormat.getImageableBounds();
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {
 						Rectangle clip = (Rectangle)clipRects.next();
 						// Note: the bitmap needs to be flipped
-						drawBitmap0(bmp.getData(), bmp.getWidth(), bmp.getHeight(), srcX, srcY, srcWidth, srcHeight, scaleX * (bounds.x + destX), scaleY * (bounds.y + destY + destHeight), scaleX * destWidth, scaleY * destHeight * -1, scaleX * (bounds.x + clip.x), scaleY * (bounds.y + clip.y + clip.height), scaleX * clip.width, scaleY * clip.height * -1, VCLGraphics.drawOnMainThread);
+						drawBitmap0(bmp.getData(), bmp.getWidth(), bmp.getHeight(), srcX, srcY, srcWidth, srcHeight, pageScaleX * (bounds.x + destX), pageScaleY * (bounds.y + destY + destHeight), pageScaleX * destWidth, pageScaleY * destHeight * -1, pageScaleX * (bounds.x + clip.x), pageScaleY * (bounds.y + clip.y + clip.height), pageScaleX * clip.width, pageScaleY * clip.height * -1, VCLGraphics.drawOnMainThread);
 					}
 				}
 				else {
@@ -907,15 +921,12 @@ public final class VCLGraphics {
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
-				AffineTransform transform = g.getTransform();
-				float scaleX = (float)transform.getScaleX();
-				float scaleY = (float)transform.getScaleY();
 				Rectangle bounds = pageFormat.getImageableBounds();
 				Iterator clipRects = clipList.iterator();
 				while (clipRects.hasNext()) {
 					Rectangle clip = (Rectangle)clipRects.next();
 					// Note: the bitmap needs to be flipped
-					drawBitmapBuffer0(buffer, srcX, srcY, srcWidth, srcHeight, scaleX * (bounds.x + destX), scaleY * (bounds.y + destY + destHeight), scaleX * destWidth, scaleY * destHeight * -1, scaleX * (bounds.x + clip.x), scaleY * (bounds.y + clip.y + clip.height), scaleX * clip.width, scaleY * clip.height * -1, VCLGraphics.drawOnMainThread);
+					drawBitmapBuffer0(buffer, srcX, srcY, srcWidth, srcHeight, pageScaleX * (bounds.x + destX), pageScaleY * (bounds.y + destY + destHeight), pageScaleX * destWidth, pageScaleY * destHeight * -1, pageScaleX * (bounds.x + clip.x), pageScaleY * (bounds.y + clip.y + clip.height), pageScaleX * clip.width, pageScaleY * clip.height * -1, VCLGraphics.drawOnMainThread);
 				}
 			}
 			catch (Throwable t) {
@@ -987,16 +998,13 @@ public final class VCLGraphics {
 
 		Graphics2D g = getGraphics();
 		if (g != null) {
-			AffineTransform transform = g.getTransform();
-			float scaleX = (float)transform.getScaleX();
-			float scaleY = (float)transform.getScaleY();
 			Rectangle bounds = pageFormat.getImageableBounds();
 			try {
 				Iterator clipRects = clipList.iterator();
 				while (clipRects.hasNext()) {
 					g.setClip((Rectangle)clipRects.next());
 					// Note: the EPS image needs to be flipped
-					drawEPS0(epsData, epsDataSize, scaleX * (bounds.x + destX), scaleY * (bounds.y + destY + destHeight), scaleX * destWidth, scaleY * destHeight * -1, VCLGraphics.drawOnMainThread);
+					drawEPS0(epsData, epsDataSize, pageScaleX * (bounds.x + destX), pageScaleY * (bounds.y + destY + destHeight), pageScaleX * destWidth, pageScaleY * destHeight * -1, VCLGraphics.drawOnMainThread);
 				}
 			}
 			catch (Throwable t) {
@@ -2283,12 +2291,9 @@ public final class VCLGraphics {
 			if (g != null) {
 				try {
 					if (graphics != null) {
-						AffineTransform transform = g.getTransform();
-						float scaleX = (float)transform.getScaleX();
-						float scaleY = (float)transform.getScaleY();
 						Rectangle bounds = pageFormat.getImageableBounds();
 						// Note: the bitmap needs to be flipped
-						drawBitmap0(new int[]{ color }, 1, 1, 0, 0, 1, 1, scaleX * (bounds.x + x), scaleY * (bounds.y + y), scaleX, scaleY * -1, scaleX * (bounds.x + x), scaleY * (bounds.y + y), scaleX, scaleY * -1, VCLGraphics.drawOnMainThread);
+						drawBitmap0(new int[]{ color }, 1, 1, 0, 0, 1, 1, pageScaleX * (bounds.x + x), pageScaleY * (bounds.y + y), pageScaleX, pageScaleY * -1, pageScaleX * (bounds.x + x), pageScaleY * (bounds.y + y), pageScaleX, pageScaleY * -1, VCLGraphics.drawOnMainThread);
 					}
 					else {
 						if (xor)

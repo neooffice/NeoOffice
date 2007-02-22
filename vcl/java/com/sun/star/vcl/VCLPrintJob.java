@@ -39,6 +39,7 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
+import java.awt.geom.AffineTransform;
 import java.awt.print.PageFormat;
 import java.awt.print.Printable;
 import java.awt.print.PrinterAbortException;
@@ -350,6 +351,12 @@ public final class VCLPrintJob implements Printable, Runnable {
 
 		// Get the current page's printGraphics context
 		if (printStarted && printThread != null) {
+			// The printer graphics' transform returns zero for scaling when
+			// the graphics is rotated so we need to cache our own copy
+			AffineTransform transform = printGraphics.getTransform();
+			double scaleX = transform.getScaleX();
+			double scaleY = transform.getScaleY();
+
 			// Set the origin to the origin of the printable area
 			printGraphics.translate((int)printPageFormat.getImageableX(), (int)printPageFormat.getImageableY());
 
@@ -382,12 +389,16 @@ public final class VCLPrintJob implements Printable, Runnable {
 
 			// Scale to printer resolution
 			Dimension pageResolution = pageFormat.getPageResolution();
-			if (rotatedPage)
-				printGraphics.scale((double)72 / pageResolution.height, (double)72 / pageResolution.width);
-			else
-				printGraphics.scale((double)72 / pageResolution.width, (double)72 / pageResolution.height);
+			double pageScaleX = (double)72 / pageResolution.width;
+			double pageScaleY = (double)72 / pageResolution.height;
+			if (rotatedPage) {
+				printGraphics.scale(pageScaleY, pageScaleX);
+			}
+			else {
+				printGraphics.scale(pageScaleX, pageScaleY);
+			}
 
-			graphics = new VCLGraphics(printGraphics, pageFormat, rotatedPage);
+			graphics = new VCLGraphics(printGraphics, pageFormat, rotatedPage, (float)(scaleX * pageScaleX), (float)(scaleY * pageScaleY));
 		}
 		else {
 			graphics = null;
