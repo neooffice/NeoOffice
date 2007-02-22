@@ -43,17 +43,17 @@
 	int*				mpDestPtr;
 	void*				mpEPSPtr;
 	unsigned			mnEPSSize;
-	BOOL				mbResult;
 }
-- (void)drawEPSInBitmap:(id)pObject;
+- (BOOL)drawEPSInBitmap;
 - (id)initWithPtr:(void *)pEPSPtr size:(unsigned)nEPSSize destPtr:(int *)pDestPtr destWidth:(int)nDestWidth destHeight:(int)nDestHeight;
-- (BOOL)result;
 @end
 
 @implementation DrawEPSInBitmap
 
-- (void)drawEPSInBitmap:(id)pObject
+- (BOOL)drawEPSInBitmap
 {
+	BOOL bRet = NO;
+
 	NSData *pEPSData = [NSData dataWithBytesNoCopy:mpEPSPtr length:mnEPSSize freeWhenDone:NO];
 	if ( pEPSData )
 	{
@@ -86,7 +86,7 @@
 						mpDestPtr[ i ] = ( pBitmapBuffer[ i ] & 0xff00ff00 ) | ( ( pBitmapBuffer[ i ] & 0x00ff0000 ) >> 16 ) | ( ( pBitmapBuffer[ i ] & 0x000000ff ) << 16 );
 #endif	// POWERPC
 
-					mbResult = YES;
+					bRet = YES;
 				}	
 			}
 
@@ -96,6 +96,8 @@
 				[pFocusView lockFocus];
 		}
 	}
+
+	return bRet;
 }
 
 - (id)initWithPtr:(void *)pEPSPtr size:(unsigned)nEPSSize destPtr:(int *)pDestPtr destWidth:(int)nDestWidth destHeight:(int)nDestHeight
@@ -107,14 +109,8 @@
 	mnDestHeight = nDestHeight;
 	mpEPSPtr = pEPSPtr;
 	mnEPSSize = nEPSSize;
-	mbResult = NO;
 
 	return self;
-}
-
-- (BOOL)result
-{
-	return mbResult;
 }
 
 @end
@@ -128,8 +124,7 @@ BOOL NSEPSImageRep_drawInBitmap( void *pEPSPtr, unsigned nEPSSize, int *pDestPtr
 	if ( pEPSPtr && nEPSSize && pDestPtr && nDestWidth && nDestHeight )
 	{
 		DrawEPSInBitmap *pDrawEPSInBitmap = [[DrawEPSInBitmap alloc] initWithPtr:pEPSPtr size:nEPSSize destPtr:pDestPtr destWidth:nDestWidth destHeight:nDestHeight];
-		[pDrawEPSInBitmap performSelectorOnMainThread:@selector(drawEPSInBitmap:) withObject:pDrawEPSInBitmap waitUntilDone:YES];
-		bRet = [pDrawEPSInBitmap result];
+		bRet = [pDrawEPSInBitmap drawEPSInBitmap];
 	}
 
 	[pPool release];
