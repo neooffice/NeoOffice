@@ -346,7 +346,7 @@ public final class VCLPageFormat {
 
 		pageFormat = job.defaultPage();
 
-		pageFormat.setOrientation(paperOrientation);
+		pageFormat.setOrientation(oldOrientation);
 
 	}
 
