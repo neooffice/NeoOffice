@@ -31,7 +31,7 @@ ko,1,Korean
 lt,0,Lithuanian
 lv,0,Latvian
 mk,1,Macedonian
-mr,0,Marathi
+mr-IN,0,Marathi
 nb,0,Norwegian
 ne,1,Nepali
 nl,1,Dutch
