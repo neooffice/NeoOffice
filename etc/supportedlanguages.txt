@@ -45,7 +45,7 @@ sk,1,Slovak
 sl,1,Slovenian
 sr-CS,0,Serbian
 sv,1,Swedish
-sw,0,Swihili
+sw,0,Swahili
 sw-TZ,0,Tanzanian Swahili
 ta-IN,0,Tamil
 tg,1,Tajiki
