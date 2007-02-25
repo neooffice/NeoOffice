@@ -44,6 +44,11 @@ GEN_HID=TRUE
 GEN_HID_OTHER=TRUE
 USE_DEFFILE=TRUE
 
+.IF "$(GUIBASE)"=="java"
+# Link to modified libsysshell.a
+SOLARLIB:=-L$(PRJ)$/..$/shell$/$(INPATH)$/slb $(SOLARLIB)
+.ENDIF
+
 # --- Settings -----------------------------------------------------
 
 .INCLUDE :  settings.mk

@@ -97,6 +97,20 @@
 #include <algorithm>
 #include <functional>
 
+#ifdef USE_JAVA
+
+#ifndef _SOLAR_H
+#include <tools/solar.h>
+#endif
+
+#include <premac.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <postmac.h>
+
+#include "recently_used_file_handler_cocoa.h"
+
+#endif	// USE_JAVA
+
 using namespace ::com::sun::star;
 
 namespace /* private */ {
@@ -594,7 +608,14 @@ static rtl::OUString translateToExternalUrl(const rtl::OUString& internalUrl)
 
 extern "C" void add_to_recently_used_file_list(const rtl::OUString& file_url, const rtl::OUString& mime_type)
 {
-#if !defined USE_JAVA && !defined MACOSX
+#if defined USE_JAVA
+	CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, file_url.getStr(), file_url.getLength(), kCFAllocatorNull );
+	if ( aString )
+	{
+		NSDocumentController_noteNewRecentDocumentURL( aString );
+		CFRelease( aString );
+	}
+#else	// USE_JAVA
     try
     {
         recently_used_file ruf;			
@@ -619,6 +640,6 @@ extern "C" void add_to_recently_used_file_list(const rtl::OUString& file_url, co
     {
         OSL_ENSURE(false, "XML format unknown");
     }        
-#endif	// !USE_JAVA && !MACOSX
+#endif	// USE_JAVA
 }
     
