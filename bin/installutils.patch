@@ -102,11 +102,11 @@ update_installation() {
 	sync
 
 	# Mark certain directories writable for admin group
+	chmod -f ug+w "$1" || exit 1
 	chmod -f ug+w "$1/Contents" || return 1
 	chmod -Rf ug+w "$1/Contents/Resources" || return 1
 	chmod -Rf ug+w "$1/Contents/share/dict/ooo" || return 1
 
-	# Fix bug 1584 by marking certain directories writable for root user
 	chmod -Rf u+w "$1/Contents/presets" || exit 1
 	chmod -Rf u+w "$1/Contents/share" || exit 1
 

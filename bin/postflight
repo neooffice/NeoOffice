@@ -139,6 +139,7 @@ if [ -d "$2" ]; then
 	sync
 
 	# Mark certain directories writable for admin group
+	chmod -f ug+w "$2" || exit 1
 	chmod -f ug+w "$2/Contents" || exit 1
 	chmod -Rf ug+w "$2/Contents/Resources" || exit 1
 	chmod -Rf ug+w "$2/Contents/share/dict/ooo" || exit 1
