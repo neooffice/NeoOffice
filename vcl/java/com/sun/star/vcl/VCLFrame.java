@@ -1518,7 +1518,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// These are handled in the key pressed and released events.
 		char keyChar = e.getKeyChar();
 		int modifiers = e.getModifiersEx();
-		if (keyChar == (char)0x08 || keyChar == (char)0x7f)
+		if (keyChar == (char)0x08 || keyChar == (char)0x7f || (e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD && keyChar == (char)0x0a))
 			return;
 
 		// Fix bug 710 by stripping out the Alt modifier. Note that we do it
