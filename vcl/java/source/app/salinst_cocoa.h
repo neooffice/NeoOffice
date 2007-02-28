@@ -43,7 +43,6 @@ typedef void* id;
 #ifdef __cplusplus
 BEGIN_C
 #endif
-void NSApplication_enableFlushing( BOOL bEnable );
 id NSApplication_getModalWindow();
 #ifdef __cplusplus
 END_C

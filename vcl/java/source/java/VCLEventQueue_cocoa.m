@@ -223,10 +223,6 @@ const static NSString *pCancelInputMethodText = @" ";
 	}
 
 	[super orderOut:pSender];
-
-	// Disable flushing to prevent excessive CPU usage
-	if ( [self isFlushWindowDisabled] )
-		[self disableFlushWindow];
 }
 
 - (void)resignKeyWindow
