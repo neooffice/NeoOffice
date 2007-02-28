@@ -2073,6 +2073,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				window.setFocusableWindowState(false);
 			}
 			window.show();
+			panel.setVisible(true);
 			if (focusable) {
 				window.setFocusable(true);
 				window.setFocusableWindowState(true);
@@ -2082,6 +2083,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else {
 			// Hide the window
 			enableFlushing(false);
+			panel.setVisible(false);
 			window.hide();
 		}
 
